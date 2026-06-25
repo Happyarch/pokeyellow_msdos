@@ -430,8 +430,11 @@ commit but too specific to belong in TODO.md.
 - `docs/current_plan_script_engine.md` — gen-1 script system (event-gated dialog,
   per-map `_Script`/`text_asm`). In progress.
 - `docs/current_plan_pokemon_engine.md` — Pokémon data/stats layer (party structs,
-  base stats, `CalcStats`, experience/leveling, `AddPartyMon`). In progress;
-  unblocks items, battle, and the deferred Oak starter gift.
+  base stats, `CalcStats`, experience/leveling, `AddPartyMon`, learnset/moves,
+  TM/HM, names). Data + creation logic complete; evolution/PC/naming deferred
+  (need the battle/menu systems).
+- `docs/current_plan_items.md` — item/bag layer (sequenced after pokemon, before
+  battle). Inventory bookkeeping (add/remove) done; data + non-UI effects next.
 
 (NPC implementation is complete and archived at `docs/plans/npc_implementation.md`.)
 

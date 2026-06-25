@@ -121,6 +121,10 @@ POKEMON_SRCS := \
     src/engine/pokemon/remove_mon.asm \
     src/engine/pokemon/write_moves.asm
 
+# Items layer (current_plan_items.md). Non-UI inventory/bag logic.
+ITEMS_SRCS := \
+    src/engine/items/inventory.asm
+
 # Debug-only sources (linked only when the corresponding flag is set).
 # Any debug flag implies SKIP_TITLE — debug harnesses boot straight to the overworld.
 ifdef DEBUG_DUMP
@@ -165,7 +169,7 @@ ifdef DEBUG_OAK_EVENT
 NASMFLAGS += -D DEBUG_OAK_EVENT
 endif
 
-ALL_SRCS := $(BOOT_SRCS) $(HOME_SRCS) $(HAL_SRCS) $(GAME_SRCS) $(POKEMON_SRCS)
+ALL_SRCS := $(BOOT_SRCS) $(HOME_SRCS) $(HAL_SRCS) $(GAME_SRCS) $(POKEMON_SRCS) $(ITEMS_SRCS)
 ALL_OBJS := $(ALL_SRCS:.asm=.o)
 
 # ---------------------------------------------------------------------------

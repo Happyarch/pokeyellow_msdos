@@ -78,6 +78,10 @@ MOVE_TYPE               equ 0x03
 MOVE_ACC                equ 0x04
 MOVE_PP                 equ 0x05
 
+; --- item inventory capacities (constants/menu_constants.asm) ---
+BAG_ITEM_CAPACITY       equ 20
+PC_ITEM_CAPACITY        equ 50
+
 ; --- mon data locations (wMonDataLocation values) ---
 PLAYER_PARTY_DATA       equ 0
 ENEMY_PARTY_DATA        equ 1

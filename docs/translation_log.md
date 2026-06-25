@@ -2266,3 +2266,26 @@ so it's read directly (not via EBP-relative CopyData). Native harness: gift
 Bulbasaur nickname encodes to "BULBASAUR" (81 94 8B 81 80 92 80 94 91 50 50).
 
 ---
+
+## Items engine — Stage 1: bag/PC inventory bookkeeping (no UI)
+
+- **Source:** engine/items/inventory.asm (AddItemToInventory_, RemoveItemFromInventory_)
+- **Translated:** dos_port/src/engine/items/inventory.asm (replaces the swarm draft),
+  + WRAM aliases / BAG_ITEM_CAPACITY/PC_ITEM_CAPACITY in gb_memmap.inc/gb_constants.inc
+- **Date:** 2026-06-25
+- **H-flag / Bug tags:** none.
+
+Pure data manipulation of a bag/PC inventory (count, then (id,qty) pairs, then
+$FF). No UI. `RemoveItemFromInventory_` resets a few menu-state bytes (scroll/
+cursor) — plain WRAM writes; the rendering that consumes them is UI elsewhere.
+
+**Draft bug fixed:** the swarm draft advanced hl before the empty-inventory
+zero-count test (pret's `ld a,[hli]` reads the count THEN increments), so a fresh
+`00 FF` bag tested the wrong byte and misbehaved. The SM83 `push af`/`pop bc`
+trick that stashes wItemQuantity is replaced by an explicit save/restore.
+
+**Native validation (ELF32 + gcc -m32):** add-new, stack-existing, ≥100 overflow
+(99 in slot + leftover in a new slot), bag-full rejection (CF clear), remove-
+partial, and remove-to-zero (slot dropped, following slots shifted up) — all exact.
+
+---

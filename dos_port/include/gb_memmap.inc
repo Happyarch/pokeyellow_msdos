@@ -163,6 +163,23 @@ wPredefHL          equ 0xCC4F
 wPredefDE          equ 0xCC51
 wPredefBC          equ 0xCC53
 
+; --- item bag / PC inventory (engine/items/inventory.asm) ---
+; An inventory is: db count, then (item id, quantity) pairs, then $FF terminator.
+wNumBagItems       equ 0xD31C
+wBagItems          equ 0xD31D
+wNumBoxItems       equ 0xD539   ; PC item storage
+wBoxItems          equ 0xD53A
+wCurItem           equ 0xCF90   ; = wCurPartySpecies (shared "current" slot)
+wItemQuantity      equ 0xCF95
+wMaxItemQuantity   equ 0xCF96
+; Menu state these routines reset (plain WRAM writes; the rendering is elsewhere).
+wListScrollOffset      equ 0xCC36
+wCurrentMenuItem       equ 0xCC26
+wBagSavedMenuItem      equ 0xCC2C
+wSavedListScrollOffset equ 0xD07D   ; = W_SAVED_LIST_SCROLL_OFFSET
+wListCount             equ 0xD129   ; = W_LIST_COUNT
+wMaxMenuItem           equ 0xCC28
+
 ; Loaded-mon + enemy / current-box / daycare aliases — the Stage 1 cross-section
 ; deferrals, now resolved against pokeyellow.sym (symbols branch).
 wLoadedMon         equ 0xCF97   ; LoadMonData_ destination (party_struct)
