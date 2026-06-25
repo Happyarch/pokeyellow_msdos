@@ -22,11 +22,26 @@ extern Divide
 
 global CalcStats
 global CalcStat
+global AddPartyMon
+extern _AddPartyMon
 
 MAX_STAT_HIGH   equ (MAX_STAT_VALUE >> 8) & 0xFF    ; HIGH(999) = 0x03
 MAX_STAT_LOW    equ MAX_STAT_VALUE & 0xFF            ; LOW(999)  = 0xE7
 
 section .text
+
+; ---------------------------------------------------------------------------
+; AddPartyMon — home wrapper around _AddPartyMon (pret home/move_mon.asm).
+; In pret this push/pops hl/de/bc around a farcall; in our flat model there is
+; no banking, so it is just a guarded call. _AddPartyMon reads W_CUR_PARTY_SPECIES
+; / W_CUR_ENEMY_LEVEL / W_MON_DATA_LOCATION and appends to the party arrays.
+; All registers preserved (matches pret's push/pop hl/de/bc contract).
+; ---------------------------------------------------------------------------
+AddPartyMon:
+    pushad
+    call _AddPartyMon
+    popad
+    ret
 
 ; calculates all 5 stats of the current mon and writes them to [de] (2 bytes each)
 ; In: BH (b) = consider stat exp?; ESI (hl) = base ptr to stat exp values;

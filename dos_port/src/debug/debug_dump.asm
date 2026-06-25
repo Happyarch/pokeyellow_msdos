@@ -27,6 +27,10 @@ extern GetMonHeader
 extern CalcStats
 global RunCalcStatsTest
 %endif
+%ifdef DEBUG_PARTY
+extern PrepareNewGameDebug
+global RunPartySeedTest
+%endif
 
 global DebugDumpMemory
 global DumpBackbuffer
@@ -85,6 +89,19 @@ windows:
     dd 0xD1E0
     dd 0xD1E0
     dd 0xD1E0
+%elifdef DEBUG_PARTY
+; Party-seed gate: party count + species list, the four seeded mon structs
+; (44 B each from $D16A), party nicknames, and the bag (count + (id,qty) pairs).
+windows:
+    dd 0xD162    ; wPartyCount + wPartySpecies (6 + $FF) + start of mon1
+    dd 0xD16A    ; party mon 1 struct (Snorlax)
+    dd 0xD196    ; party mon 2 struct (Persian)  = $D16A + 44
+    dd 0xD1C2    ; party mon 3 struct (Jigglypuff)
+    dd 0xD1EE    ; party mon 4 struct (Pikachu)
+    dd 0xD2B4    ; wPartyMonNicks (6 x 11)
+    dd 0xD31C    ; wNumBagItems + bag (id,qty) pairs
+    dd 0xD33C    ; bag items continued
+    dd 0xD162    ; overview repeat
 %else
 windows:
     dd 0x4600
@@ -142,6 +159,24 @@ RunCalcStatsTest:
     mov edx, 0xD210
     call CalcStats
     jmp DebugDumpMemory                     ; writes DUMP.BIN, exits
+%endif
+
+%ifdef DEBUG_PARTY
+; ---------------------------------------------------------------------------
+; RunPartySeedTest — zero the party + bag counts, run the full debug new-game
+; seed (PrepareNewGameDebug: AddPartyMon ×4, AddItemToInventory ×N, Pokédex,
+; money), then dump party + bag WRAM to DUMP.BIN. Validates that _AddPartyMon /
+; AddItemToInventory_ run correctly inside the real binary (not just the native
+; harnesses). Never returns. In: EBP = GB memory base.
+; ---------------------------------------------------------------------------
+RunPartySeedTest:
+    ; Start from an empty party + bag (WRAM is not guaranteed zeroed pre-Init).
+    mov byte [ebp + 0xD162], 0      ; wPartyCount = 0
+    mov byte [ebp + 0xD163], 0xFF   ; wPartySpecies sentinel
+    mov byte [ebp + 0xD31C], 0      ; wNumBagItems = 0
+    mov byte [ebp + 0xD31D], 0xFF   ; wBagItems sentinel
+    call PrepareNewGameDebug
+    jmp DebugDumpMemory             ; writes DUMP.BIN, exits
 %endif
 
 ; ---------------------------------------------------------------------------

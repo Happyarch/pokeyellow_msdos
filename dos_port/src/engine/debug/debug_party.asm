@@ -17,7 +17,7 @@ extern AddItemToInventory
 %define STRENGTH 70
 
 %define SNORLAX 132
-%define PERSIAN 113
+%define PERSIAN 144        ; internal index (113 was wrong — that's KAKUNA; see data/pokemon/dex_order.asm)
 %define JIGGLYPUFF 100
 %define STARTER_PIKACHU 84
 

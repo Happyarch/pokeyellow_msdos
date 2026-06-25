@@ -28,9 +28,22 @@ bits 32
 %include "gb_constants.inc"
 
 global AddItemToInventory_
+global AddItemToInventory
 global RemoveItemFromInventory_
 
 section .text
+
+; ---------------------------------------------------------------------------
+; AddItemToInventory — home wrapper around AddItemToInventory_ (pret
+; home/inventory.asm: push bc / homecall_sf / pop bc). Flat model: no banking,
+; just preserve EBX(bc) around the call. Caller sets ESI = inventory count addr
+; (W_NUM_BAG_ITEMS for the bag), [wCurItem], [wItemQuantity].
+; ---------------------------------------------------------------------------
+AddItemToInventory:
+    push ebx
+    call AddItemToInventory_
+    pop ebx
+    ret
 
 ; In:  ESI (hl) = inventory count addr; [wCurItem]; [wItemQuantity].
 ; Out: CF set on success, clear if full. wItemQuantity restored to its input.

@@ -168,6 +168,15 @@ NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_STARTMENU
 NASMFLAGS += -D SKIP_TITLE
 endif
+# Party-seed gate: run the debug new-game seed (party + bag + Pokédex) at boot,
+# dump party/bag WRAM to DUMP.BIN, exit. Verifies the pokemon/items engine runs
+# inside the real binary. make DEBUG_PARTY=1
+ifdef DEBUG_PARTY
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_PARTY
+NASMFLAGS += -D SKIP_TITLE
+GAME_SRCS += src/engine/debug/debug_party.asm
+endif
 ifdef NEED_DEBUG_DUMP
 GAME_SRCS += src/debug/debug_dump.asm
 endif

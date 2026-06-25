@@ -33,6 +33,9 @@ extern Init              ; src/init/init.asm — power-on init
 %ifdef DEBUG_CALCSTATS
 extern RunCalcStatsTest  ; src/debug/debug_dump.asm — Pokémon CalcStats gate
 %endif
+%ifdef DEBUG_PARTY
+extern RunPartySeedTest  ; src/debug/debug_dump.asm — party/bag runtime-seed gate
+%endif
 
 ; ---------------------------------------------------------------------------
 ; Exported symbols
@@ -87,6 +90,9 @@ start:
 
 %ifdef DEBUG_CALCSTATS
     call RunCalcStatsTest    ; compute known stats, dump DUMP.BIN, exit (never returns)
+%endif
+%ifdef DEBUG_PARTY
+    call RunPartySeedTest    ; seed party+bag, dump DUMP.BIN, exit (never returns)
 %endif
 
     call Init                ; power-on init → title screen (runs game loop)
