@@ -30,9 +30,12 @@ stats were right in isolation while the absolute placement was one byte high.
 Now pinned to the sym; the `load_mon_data` ELF test reads back correct Bulbasaur
 base stats at the corrected addresses, confirming GetMonHeader/CalcStat agree.
 
-**Done & verified:** Stages 1–4, 5a (`CalcExperience`), 5b (`_AddPartyMon`), and
-the **Stage 5 tail** (`load_mon_data`, `set_types`, `remove_mon` + their support
-routines `CopyDataUntil`/`GetPredefRegisters`). All wired into the Makefile.
+**Done & verified:** Stages 1–4, 5a (`CalcExperience`), 5b (`_AddPartyMon`), the
+**Stage 5 tail** (`load_mon_data`, `set_types`, `remove_mon` + support routines
+`CopyDataUntil`/`GetPredefRegisters`), and the **Stage 6 learnset/moves core**
+(`gen_moves.py`/`gen_evos_moves.py` data; `GetMonLearnset`/`WriteMonMoves`;
+`_AddPartyMon` now writes real level-up moves + PP). All wired into the Makefile.
+Stage 6 remainder (evolution flow, `MonsterNames`, `bills_pc`, TM/HM bits) deferred.
 
 **Build note (this fresh container):** the full `make -C dos_port` link is blocked
 only by the unrelated rgbds asset bootstrap (missing extended-map `*_blk.inc` →
@@ -154,9 +157,27 @@ then Stage 6: write a Moves-table generator (`gen_moves.py`, unblocks real PP in
     Grass $16 / Poison $03 at the corrected wMonHeader; `SetPartyMonTypes`
     writes Grass/Poison to the mon's MON_TYPE bytes.
 
-- [ ] **Stage 6 — Evolution / learnset / PC.** Generate `EvosMovesPointerTable` +
-  `MonsterNames`; wire `evos_moves.asm` (`WriteMonMoves`/`GetMonLearnset` needed by
-  `_AddPartyMon`; stub evolution/rename UI) and `bills_pc.asm`.
+- [~] **Stage 6 — Evolution / learnset / PC.** IN PROGRESS — learnset/moves core DONE.
+  - [x] Data generators: `tools/gen_moves.py` → `assets/moves.inc` (`Moves`, 165×6),
+    `tools/gen_evos_moves.py` → `assets/evos_moves.inc` (`EvosMovesPointerTable` as
+    **flat `dd`** 190 entries + per-mon evo/learnset blobs). Both wired into
+    `pokemon_data.asm` + the Makefile `assets` target.
+  - [x] `GetMonLearnset` (rewritten for the flat 32-bit pointer table, ×4 index;
+    the draft read a 16-bit pointer — unusable as a flat program address),
+    `WriteMonMoves` + `WriteMonMoves_ShiftMoveData` (`src/engine/pokemon/write_moves.asm`),
+    and `AddPartyMon_WriteMovePP` (`add_party_mon.asm`). Key care: the learnset
+    cursor is FLAT (`[esi]`) while move slots are WRAM (`[ebp+edx]`). The daycare
+    branch is translated but unreachable (no day-care system) — TODO-DAYCARE.
+  - [x] **Integrated into `_AddPartyMon`**: the move/PP stubs are gone — it now
+    sets `wPredefDE` = MON_MOVES base and calls `WriteMonMoves` (real level-up
+    moves), then `AddPartyMon_WriteMovePP` (real base PP from the Moves table).
+    Validated natively: L15 Bulbasaur → moves Tackle/Growl/Leech Seed/Vine Whip,
+    PP 35/40/10/10; L48 Bulbasaur → the slot-shift path yields Razor Leaf/Growth/
+    Sleep Powder/SolarBeam (base moves pushed out), PP 25/.../10. djgpp partial
+    link of the whole pokemon closure: zero unresolved externals.
+  - [ ] DEFERRED: evolution flow (`TryEvolvingMon`/`LearnMoveFromLevelUp` + rename
+    UI), `MonsterNames` (needs the text charmap; only the gift nickname depends on
+    it), `bills_pc.asm`, and the TM/HM learnset bitfield in base stats.
 
 ## What exists vs. needs writing (from exploration)
 - **Exists (drafted, unwired):** `experience.asm`, `set_types.asm`,

@@ -69,6 +69,15 @@ MON_SPD                 equ 0x28
 MON_SPC                 equ 0x2A
 PARTYMON_STRUCT_LENGTH  equ 0x2C    ; 44
 
+; --- Moves table record (data/moves/moves.asm; gen_moves.py) ---
+MOVE_LENGTH             equ 6
+MOVE_ANIM               equ 0x00
+MOVE_EFFECT             equ 0x01
+MOVE_POWER              equ 0x02
+MOVE_TYPE               equ 0x03
+MOVE_ACC                equ 0x04
+MOVE_PP                 equ 0x05
+
 ; --- mon data locations (wMonDataLocation values) ---
 PLAYER_PARTY_DATA       equ 0
 ENEMY_PARTY_DATA        equ 1

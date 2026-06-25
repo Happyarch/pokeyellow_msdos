@@ -118,7 +118,8 @@ POKEMON_SRCS := \
     src/engine/pokemon/add_party_mon.asm \
     src/engine/pokemon/load_mon_data.asm \
     src/engine/pokemon/set_types.asm \
-    src/engine/pokemon/remove_mon.asm
+    src/engine/pokemon/remove_mon.asm \
+    src/engine/pokemon/write_moves.asm
 
 # Debug-only sources (linked only when the corresponding flag is set).
 # Any debug flag implies SKIP_TITLE — debug harnesses boot straight to the overworld.
@@ -233,13 +234,23 @@ assets/base_stats.inc:
 assets/growth_rates.inc:
 	python3 tools/gen_growth_rates.py
 
-src/data/pokemon_data.o: assets/base_stats.inc assets/growth_rates.inc
+# Moves table (static data, generated from data/moves/moves.asm).
+assets/moves.inc:
+	python3 tools/gen_moves.py
+
+# Evolution + level-up learnset data (generated from data/pokemon/evos_moves.asm).
+assets/evos_moves.inc:
+	python3 tools/gen_evos_moves.py
+
+src/data/pokemon_data.o: assets/base_stats.inc assets/growth_rates.inc \
+                         assets/moves.inc assets/evos_moves.inc
 
 assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_blk.inc \
         assets/map_headers.inc assets/extra_includes.inc \
         assets/npc_sprite_data_table.inc assets/npc_dialogs/all_dialogs.inc \
         assets/toggleable_objects.inc assets/event_constants.inc \
-        assets/base_stats.inc assets/growth_rates.inc
+        assets/base_stats.inc assets/growth_rates.inc \
+        assets/moves.inc assets/evos_moves.inc
 
 all: $(TARGET)
 

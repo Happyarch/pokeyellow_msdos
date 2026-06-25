@@ -2185,3 +2185,53 @@ The full `make` link is blocked only by the unrelated rgbds map-asset bootstrap
 (`*_blk.inc` ← `.2bpp`), which affects `overworld.o`, not pokemon code.
 
 ---
+
+## Pokémon engine — Stage 6 learnset/moves core (data + WriteMonMoves + integration)
+
+- **Source:** `engine/pokemon/evos_moves.asm` (GetMonLearnset, WriteMonMoves,
+  WriteMonMoves_ShiftMoveData), `engine/pokemon/add_mon.asm`
+  (AddPartyMon_WriteMovePP + the _AddPartyMon move/PP path), `data/moves/moves.asm`,
+  `data/pokemon/evos_moves.asm`
+- **Translated:** `dos_port/src/engine/pokemon/write_moves.asm`,
+  `dos_port/src/engine/pokemon/add_party_mon.asm` (integration + WriteMovePP),
+  `dos_port/tools/gen_moves.py`, `dos_port/tools/gen_evos_moves.py`,
+  `dos_port/src/data/pokemon_data.asm` (+globals), `gb_constants.inc` (MOVE_*),
+  `gb_memmap.inc` (wLearningMovesFromDayCare/wDayCareStartLevel)
+- **Date:** 2026-06-25
+- **H-flag:** Not involved.
+- **Bug tags:** None.
+
+**Data (generated, never hand-authored).** `gen_moves.py` emits `Moves`
+(165 × MOVE_LENGTH=6: anim,effect,power,type,acc,pp; the rgbds `percent` macro is
+`* $ff / 100`). `gen_evos_moves.py` emits `EvosMovesPointerTable` + per-mon blobs
+(evolution entries, db 0, level/move learnset pairs, db 0), resolving every db
+operand against a merged EVOLVE_*/species/item/move constant table. **DOS
+divergence:** the pointer table is flat 32-bit `dd` (program-image labels), not
+pret's 16-bit `dw` bank pointers — so `GetMonLearnset` indexes it ×4 and reads a
+32-bit pointer. Both wired into `pokemon_data.asm` and the Makefile `assets` target.
+
+**Routines.** `GetMonLearnset` rewritten for the flat table (the draft read a
+16-bit pointer and used it as a flat address — unusable). `WriteMonMoves` +
+`WriteMonMoves_ShiftMoveData`: the learnset cursor (hl→ESI) is a FLAT program
+pointer read with `[esi]`, while the mon's move slots (de→EDX) are GB WRAM read
+`[ebp+edx]`; inside the shift branch ESI is reloaded from EDX and is a WRAM
+offset. The day-care branch (`wLearningMovesFromDayCare != 0`) is translated but
+unreachable today (no day-care system); its PP write reads the flat `Moves`
+table directly (like GetMonHeader) rather than via EBP-relative FarCopyData —
+TODO-DAYCARE. `AddPartyMon_WriteMovePP` likewise reads base PP straight from the
+flat `Moves` table.
+
+**Integration.** `_AddPartyMon`'s move/PP stubs are replaced: after writing the
+level-1 base moves it sets `wPredefDE` = MON_MOVES base (the predef contract
+`WriteMonMoves` restores via GetPredefRegisters) and calls `WriteMonMoves`, then
+`AddPartyMon_WriteMovePP` for real PP.
+
+**Validation (native ELF32 + gcc -m32 harness).** L15 Bulbasaur →
+Tackle/Growl/Leech Seed/Vine Whip, PP 35/40/10/10 (base + L7/L13 learnset). L48
+Bulbasaur exercises the slot-shift: base moves pushed out, final slots
+Razor Leaf/Growth/Sleep Powder/SolarBeam, PP 25/…/10 — exact vs Gen-1. A djgpp
+partial link (`ld -r`) of the full pokemon closure resolves with zero unresolved
+externals. (Full `make` link still gated only by the unrelated rgbds map-asset
+bootstrap.) DEFERRED: evolution flow, MonsterNames, bills_pc, TM/HM learnset bits.
+
+---

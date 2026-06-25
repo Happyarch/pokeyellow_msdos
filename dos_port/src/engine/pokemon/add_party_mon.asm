@@ -32,6 +32,8 @@ extern Random_
 extern SkipFixedLengthTextEntries
 extern CopyData
 extern AddNTimes
+extern WriteMonMoves
+extern Moves
 
 global _AddPartyMon
 
@@ -142,6 +144,19 @@ _AddPartyMon:
     inc edx
     mov [ebp + edx], al              ; de = struct+11
 
+    ; Stage 6: add the moves this mon would know by wCurEnemyLevel. pret does
+    ; `predef WriteMonMoves` with de = MON_MOVES base; the predef dispatch stashes
+    ; de in wPredefDE, which WriteMonMoves restores via GetPredefRegisters. We set
+    ; wPredefDE directly (MON_MOVES base = edx-3, since edx = MON_MOVES+3 here).
+    lea ecx, [edx - 3]               ; MON_MOVES base (GB addr, < 0x10000)
+    mov [ebp + wPredefDE], ch        ; big-endian: high byte
+    mov [ebp + wPredefDE + 1], cl    ;             low byte
+    xor al, al
+    mov [ebp + wLearningMovesFromDayCare], al
+    push edx                         ; save de = struct+11 (WriteMonMoves clobbers edx)
+    call WriteMonMoves
+    pop edx                          ; restore de = struct+11
+
     ; OT id (stub 0)
     inc edx
     mov byte [ebp + edx], 0          ; OTID hi (struct+12)
@@ -174,14 +189,8 @@ _AddPartyMon:
 
     inc edx
     inc edx                          ; de = struct+0x1C
-    pop esi                          ; [S2] moves ptr (PP stub doesn't use it; balances)
-    ; PP stub: advance de by NUM_MOVES, writing 0 (TODO real PP — Moves table)
-    mov bh, NUM_MOVES
-.ppStub:
-    inc edx
-    mov byte [ebp + edx], 0
-    dec bh
-    jnz .ppStub                      ; de = struct+0x20
+    pop esi                          ; [S2] moves ptr (MON_MOVES base) = WritePP source
+    call AddPartyMon_WriteMovePP     ; fill PP from the Moves table; de = struct+0x20
 
     ; level
     inc edx
@@ -195,4 +204,27 @@ _AddPartyMon:
     mov bh, 0
     call CalcStats
     stc                              ; success
+    ret
+
+; AddPartyMon_WriteMovePP — write each move slot's base PP into the PP region.
+; Source: engine/pokemon/add_mon.asm:AddPartyMon_WriteMovePP.
+; In: ESI (hl) = MON_MOVES base (move ids, WRAM); EDX (de) = MON_PP - 1 (WRAM).
+; DIVERGENCE: read the PP byte straight from the flat Moves table (like
+; GetMonHeader) instead of FarCopyData-ing the record to wMoveData.
+AddPartyMon_WriteMovePP:
+    mov bh, NUM_MOVES
+.pploop:
+    mov al, [ebp + esi]              ; ld a,[hli] — move id from slot
+    inc esi
+    test al, al
+    jz .empty                       ; empty slot ⇒ PP 0
+    movzx eax, al
+    dec eax
+    imul eax, eax, MOVE_LENGTH
+    mov al, [Moves + eax + MOVE_PP]  ; base PP (flat table)
+.empty:
+    inc edx
+    mov [ebp + edx], al              ; ld [de],a (PP, or 0 for empty)
+    dec bh
+    jnz .pploop
     ret

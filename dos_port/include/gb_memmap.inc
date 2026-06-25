@@ -146,6 +146,8 @@ wCurPartySpecies   equ 0xCF90
 wWhichPokemon      equ 0xCF91
 wMonDataLocation   equ 0xCC49
 wRemoveMonFromBox  equ 0xCF94   ; = W_REMOVE_MON_FROM_BOX (0=party, !=0=box)
+wLearningMovesFromDayCare equ 0xCEE9 ; WriteMonMoves daycare gate (0 = normal)
+wDayCareStartLevel equ 0xCD3D   ; WriteMonMoves daycare min-level check
 wPokedexNum        equ 0xD11D   ; SetPartyMonTypes input (sym)
 wPartyCount        equ 0xD162
 wPartySpecies      equ 0xD163   ; wPartyCount+1; 6 species + $FF sentinel
