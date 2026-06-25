@@ -21,6 +21,7 @@ bits 32
 
 global CopyData
 global FarCopyData
+global CopyDataUntil
 
 section .text
 
@@ -54,3 +55,24 @@ CopyData:
 ; ---------------------------------------------------------------------------
 FarCopyData:
     jmp CopyData
+
+; ---------------------------------------------------------------------------
+; CopyDataUntil — copy [HL, BC) to [DE, ...). Source runs from HL up to (but
+; not including) BC; destination starts at DE.  Source: home/move_mon.asm.
+;
+; In:  ESI = source GB offset (HL), EDX = dest GB offset (DE),
+;      BX  = end-of-source GB offset, exclusive (BC).
+; Out: ESI = BX, EDX = DE + (BX - HL). AL clobbered; EBX preserved.
+;
+; The SM83 does a 16-bit equality via two 8-bit compares (cp b / cp c); the
+; whole-register `cmp si, bx` is the faithful equivalent. All these pointers
+; are WRAM ($C000-$DFFF), so the low-16-bit compare matches GB semantics.
+; ---------------------------------------------------------------------------
+CopyDataUntil:
+    mov al, [ebp + esi]
+    inc esi
+    mov [ebp + edx], al
+    inc edx
+    cmp si, bx
+    jne CopyDataUntil
+    ret

@@ -1,53 +1,39 @@
-%include "include/gb_memmap.inc"
+; set_types.asm — SetPartyMonTypes (Pokémon data/stats plan, Stage 5 tail).
+;
+; Source: engine/pokemon/set_types.asm:SetPartyMonTypes (pret/pokeyellow).
+;
+; Updates the two type bytes of a party mon (pointed to by HL/ESI) to the types
+; of the species in [wPokedexNum]. Normally invoked via `predef SetPartyMonTypes`
+; with HL = &partymon; GetPredefRegisters restores HL from wPredefHL.
+;
+; Register map: a=AL, bc=EBX, hl=ESI; GB memory at [EBP+addr]. MON_TYPE is a
+; struct field offset (gb_constants.inc), not a GB address.
+;
+; Build: nasm -f coff -I include/ -I . -o set_types.o set_types.asm
 
-SECTION .text
+bits 32
+
+%include "gb_memmap.inc"
+%include "gb_constants.inc"
 
 global SetPartyMonTypes
 
 extern GetPredefRegisters
 extern GetMonHeader
 
-extern wPokedexNum
-extern wCurSpecies
-extern wMonHType1
-extern wMonHType2
-extern MON_TYPE
+section .text
 
-; updates the types of a party mon (pointed to in ESI) to the ones of the mon specified in [wPokedexNum]
 SetPartyMonTypes:
-    call GetPredefRegisters
-    
-    ; ld bc, MON_TYPE
-    ; add hl, bc
-    ; Optimized into single LEA instruction, taking 2 cycles instead of an ADD
-    lea esi, [esi + MON_TYPE]
-
-    ; ld a, [wPokedexNum]
+    call GetPredefRegisters          ; ESI (hl) = &partymon (from wPredefHL)
+    lea esi, [esi + MON_TYPE]        ; ld bc, MON_TYPE / add hl, bc
     mov al, [ebp + wPokedexNum]
-
-    ; ld [wCurSpecies], a
     mov [ebp + wCurSpecies], al
-
-    ; push hl
     push esi
-
-    ; call GetMonHeader
     call GetMonHeader
-
-    ; pop hl
     pop esi
-
-    ; ld a, [wMonHType1]
     mov al, [ebp + wMonHType1]
-
-    ; ld [hli], a
-    mov [ebp + esi], al
+    mov [ebp + esi], al              ; ld [hli], a
     inc esi
-
-    ; ld a, [wMonHType2]
     mov al, [ebp + wMonHType2]
-
-    ; ld [hl], a
-    mov [ebp + esi], al
-
+    mov [ebp + esi], al              ; ld [hl], a
     ret

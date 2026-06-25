@@ -1,9 +1,28 @@
-; dos_port/src/pokemon/remove_mon.asm
+; remove_mon.asm — _RemovePokemon (Pokémon data/stats plan, Stage 5 tail).
+;
+; Source: home/move_mon.asm:RemovePokemon -> _RemovePokemon (pret/pokeyellow).
+;
+; Removes the mon at [wWhichPokemon] from the party (wRemoveMonFromBox == 0) or
+; current box (!= 0), shifting every subsequent species/OT/struct/nick entry up
+; one slot. Faithful to the original, including its documented quirk: when the
+; last mon is removed only the species-list terminator is rewritten (the stale
+; nick/struct bytes are left untouched, which is harmless — the species list
+; decides which slots are live).
+;
+; Register map: a=AL, b=BH, c=BL (bc=EBX), d=DH, e=DL (de=EDX), hl=ESI.
+; GB memory at [EBP+addr]. Helper contracts (must match the home routines):
+;   SkipFixedLengthTextEntries: in AL=count, ESI=base; out ESI += NAME_LENGTH*AL.
+;   AddNTimes:                  in AL=count, BX=stride, ESI=base; out ESI += AL*BX.
+;   CopyDataUntil:              in ESI=src, EDX=dst, BX=end-of-src (exclusive).
+; The original passes these strides/end-pointers in bc, so they go in BX here —
+; the draft's use of ECX was a bug (the helpers read BX, ignoring ECX).
+;
+; Build: nasm -f coff -I include/ -I . -o remove_mon.o remove_mon.asm
 
-%include "gb_macros.inc"
+bits 32
+
 %include "gb_memmap.inc"
-
-section .text
+%include "gb_constants.inc"
 
 global _RemovePokemon
 
@@ -11,120 +30,104 @@ extern SkipFixedLengthTextEntries
 extern CopyDataUntil
 extern AddNTimes
 
-%define PARTY_LENGTH 6
-%define MONS_PER_BOX 20
-%define NAME_LENGTH 11
-%define PARTYMON_STRUCT_LENGTH 44
-%define BOXMON_STRUCT_LENGTH 33
+section .text
 
-; -----------------------------------------------------------------------------
-; _RemovePokemon
-;
-; Removes the pokemon at [wWhichPokemon] from the party or box, shifting
-; all subsequent data up one slot.
-; -----------------------------------------------------------------------------
 _RemovePokemon:
-    mov esi, W_PARTY_COUNT
-    mov al, byte [ebp + W_REMOVE_MON_FROM_BOX]
-    test al, al
+    mov esi, wPartyCount
+    mov al, [ebp + wRemoveMonFromBox]
+    and al, al
     jz .gotCount
-    mov esi, W_BOX_COUNT
+    mov esi, wBoxCount
 .gotCount:
-    mov al, byte [ebp + esi]
+    mov al, [ebp + esi]
     dec al
-    mov byte [ebp + esi], al
-    inc esi
-    
-    movzx ecx, byte [ebp + W_WHICH_POKEMON]
-    add esi, ecx
-    lea edx, [esi + 1]
+    mov [ebp + esi], al              ; ld [hli], a (write decremented count)
+    inc esi                          ; esi -> species list
+
+    movzx ecx, byte [ebp + wWhichPokemon]   ; ld c,a / ld b,0
+    add esi, ecx                     ; add hl, bc -> &species[which]
+    mov edx, esi                     ; ld e,l / ld d,h
+    inc edx                          ; inc de -> &species[which+1]
 
 .shiftMonSpeciesLoop:
-    mov al, byte [ebp + edx]
+    mov al, [ebp + edx]
     inc edx
-    mov byte [ebp + esi], al
+    mov [ebp + esi], al              ; ld [hli], a
     inc esi
-    inc al ; reached terminator (0xFF)?
+    inc al                           ; reached terminator (0xFF)?
     jnz .shiftMonSpeciesLoop
 
-    mov esi, W_PARTY_MON_OT
-    mov dh, PARTY_LENGTH - 1
-    mov al, byte [ebp + W_REMOVE_MON_FROM_BOX]
-    test al, al
+    mov esi, wPartyMonOT
+    mov dh, PARTY_LENGTH - 1         ; max mon index to shift
+    mov al, [ebp + wRemoveMonFromBox]
+    and al, al
     jz .gotOTsPointer
-    mov esi, W_BOX_MON_OT
+    mov esi, wBoxMonOT
     mov dh, MONS_PER_BOX - 1
 .gotOTsPointer:
-    mov al, byte [ebp + W_WHICH_POKEMON]
-    call SkipFixedLengthTextEntries
-    
-    mov al, byte [ebp + W_WHICH_POKEMON]
-    cmp al, dh
+    mov al, [ebp + wWhichPokemon]
+    call SkipFixedLengthTextEntries  ; esi -> &OT[which]
+
+    mov al, [ebp + wWhichPokemon]
+    cmp al, dh                       ; removing the last mon?
     jnz .notRemovingLastMon
-    
+
+    ; quirk (pret): should be '@' to blank the string, but only $ff is written;
+    ; harmless since wPartySpecies/wBoxSpecies decide which slots are used.
     mov byte [ebp + esi], 0xFF
     ret
 
 .notRemovingLastMon:
-    mov edx, esi
-    lea esi, [esi + NAME_LENGTH]
-    
-    mov ecx, W_PARTY_MON_NICKS
-    mov al, byte [ebp + W_REMOVE_MON_FROM_BOX]
-    test al, al
+    mov edx, esi                     ; de = &OT[which] (dest)
+    add esi, NAME_LENGTH             ; hl = &OT[which+1] (src); ld bc,NAME_LENGTH/add hl,bc
+    mov bx, wPartyMonNicks           ; bc = end-of-OT region
+    mov al, [ebp + wRemoveMonFromBox]
+    and al, al
     jz .gotNicksPointer
-    mov ecx, W_BOX_MON_NICKS
+    mov bx, wBoxMonNicks
 .gotNicksPointer:
-    call CopyDataUntil
+    call CopyDataUntil               ; shift OT names up one slot
 
-    mov esi, W_PARTY_MONS
-    mov ecx, PARTYMON_STRUCT_LENGTH
-    mov al, byte [ebp + W_REMOVE_MON_FROM_BOX]
-    test al, al
+    mov esi, wPartyMons
+    mov bx, PARTYMON_STRUCT_LENGTH
+    mov al, [ebp + wRemoveMonFromBox]
+    and al, al
     jz .gotMonStructs
-    mov esi, W_BOX_MONS
-    mov ecx, BOXMON_STRUCT_LENGTH
+    mov esi, wBoxMons
+    mov bx, BOXMON_STRUCT_LENGTH
 .gotMonStructs:
-    mov al, byte [ebp + W_WHICH_POKEMON]
-    call AddNTimes
-    
-    mov edx, esi
-    mov al, byte [ebp + W_REMOVE_MON_FROM_BOX]
-    test al, al
+    mov al, [ebp + wWhichPokemon]
+    call AddNTimes                   ; esi -> &mon[which]
+
+    mov edx, esi                     ; de = &mon[which] (dest)
+    mov al, [ebp + wRemoveMonFromBox]
+    and al, al
     jz .copyUntilPartyMonOT
-
-    ; copy until W_BOX_MON_OT
-    mov ecx, BOXMON_STRUCT_LENGTH
-    add esi, ecx
-    mov ecx, W_BOX_MON_OT
+    add esi, BOXMON_STRUCT_LENGTH    ; hl = &mon[which+1]
+    mov bx, wBoxMonOT                ; bc = end-of-structs region
     jmp .shiftOTs
-
 .copyUntilPartyMonOT:
-    mov ecx, PARTYMON_STRUCT_LENGTH
-    add esi, ecx
-    mov ecx, W_PARTY_MON_OT
-
+    add esi, PARTYMON_STRUCT_LENGTH  ; hl = &mon[which+1]
+    mov bx, wPartyMonOT
 .shiftOTs:
-    call CopyDataUntil
+    call CopyDataUntil               ; shift mon structs up one slot
 
-    mov esi, W_PARTY_MON_NICKS
-    mov al, byte [ebp + W_REMOVE_MON_FROM_BOX]
-    test al, al
+    mov esi, wPartyMonNicks
+    mov al, [ebp + wRemoveMonFromBox]
+    and al, al
     jz .gotNicksPointer2
-    mov esi, W_BOX_MON_NICKS
+    mov esi, wBoxMonNicks
 .gotNicksPointer2:
-    mov ecx, NAME_LENGTH
-    mov al, byte [ebp + W_WHICH_POKEMON]
-    call AddNTimes
-    
-    mov edx, esi
-    mov ecx, NAME_LENGTH
-    add esi, ecx
-    
-    mov ecx, W_PARTY_MON_NICKS_END
-    mov al, byte [ebp + W_REMOVE_MON_FROM_BOX]
-    test al, al
+    mov bx, NAME_LENGTH
+    mov al, [ebp + wWhichPokemon]
+    call AddNTimes                   ; esi -> &nick[which]
+
+    mov edx, esi                     ; de = &nick[which] (dest)
+    add esi, NAME_LENGTH             ; hl = &nick[which+1] (src)
+    mov bx, wPartyMonNicksEnd        ; bc = end-of-nicks region
+    mov al, [ebp + wRemoveMonFromBox]
+    and al, al
     jz .shiftMonNicks
-    mov ecx, W_BOX_MON_NICKS_END
+    mov bx, wBoxMonNicksEnd
 .shiftMonNicks:
-    jmp CopyDataUntil
+    jmp CopyDataUntil                ; shift nicknames up one slot

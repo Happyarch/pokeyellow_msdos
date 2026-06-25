@@ -87,7 +87,7 @@ W_SLOT_MACHINE_WHEEL2_SLIP_COUNTER equ 0xCD4E
 W_SLOT_MACHINE_ALLOW_MATCHES_COUNTER equ 0xD095
 W_LOADED_MON_EXP         equ 0xCFA5
 W_CUR_SPECIES            equ 0xD0B4
-W_MON_H_GROWTH_RATE      equ 0xD0CB   ; corrected: wMonHeader($D0B8)+BASE_GROWTH_RATE($13). Was $D0CA (off-by-one → 4th move byte); only the unwired experience.asm draft consumed it.
+W_MON_H_GROWTH_RATE      equ 0xD0CA   ; sym-verified (wMonHeader $D0B7 + BASE_GROWTH_RATE $13). A prior pass wrongly "corrected" this to $D0CB on the false premise that wMonHeader was $D0B8; the symbols-branch pokeyellow.sym puts wMonHGrowthRate at $D0CA. experience.asm (CalcExperience) consumes it; was masked by the self-contained native harness.
 W_REMOVE_MON_FROM_BOX  equ 0xCF94
 W_MOVE_MON_TYPE          equ 0xCF94
 W_PARTY_COUNT            equ 0xD162
@@ -114,35 +114,67 @@ W_LIST_COUNT             equ 0xD129
 ; their cross-section addresses.
 ; ---------------------------------------------------------------------------
 wCurSpecies        equ 0xD0B4
-wMonHeader         equ 0xD0B8
-wMonHIndex         equ 0xD0B8
-wMonHBaseStats     equ 0xD0B9
-wMonHBaseHP        equ 0xD0B9
-wMonHBaseAttack    equ 0xD0BA
-wMonHBaseDefense   equ 0xD0BB
-wMonHBaseSpeed     equ 0xD0BC
-wMonHBaseSpecial   equ 0xD0BD
-wMonHTypes         equ 0xD0BE
-wMonHType1         equ 0xD0BE
-wMonHType2         equ 0xD0BF
-wMonHCatchRate     equ 0xD0C0
-wMonHBaseEXP       equ 0xD0C1
-wMonHSpriteDim     equ 0xD0C2
-wMonHFrontSprite   equ 0xD0C3
-wMonHBackSprite    equ 0xD0C5
-wMonHMoves         equ 0xD0C7
-wMonHGrowthRate    equ 0xD0CB
-wMonHLearnset      equ 0xD0CC
+; wMonHeader region — addresses now pinned to pokeyellow.sym (symbols branch).
+; The whole block was previously off by one (too high): wMonHeader read $D0B8,
+; but the sym (and hand-derivation from ram/wram.asm) put it at $D0B7. The error
+; was masked because every CalcStats/GetMonHeader/add_party_mon validation
+; harness is self-contained (the writer and reader share the same constant), so
+; the computed stats were correct in isolation while the absolute placement was
+; one byte high — i.e. it would corrupt the byte past wMonHeaderEnd and read the
+; wrong cells once integrated with real game WRAM. Corrected here.
+wMonHeader         equ 0xD0B7
+wMonHIndex         equ 0xD0B7
+wMonHBaseStats     equ 0xD0B8
+wMonHBaseHP        equ 0xD0B8
+wMonHBaseAttack    equ 0xD0B9
+wMonHBaseDefense   equ 0xD0BA
+wMonHBaseSpeed     equ 0xD0BB
+wMonHBaseSpecial   equ 0xD0BC
+wMonHTypes         equ 0xD0BD
+wMonHType1         equ 0xD0BD
+wMonHType2         equ 0xD0BE
+wMonHCatchRate     equ 0xD0BF
+wMonHBaseEXP       equ 0xD0C0
+wMonHSpriteDim     equ 0xD0C1
+wMonHFrontSprite   equ 0xD0C2
+wMonHBackSprite    equ 0xD0C4
+wMonHMoves         equ 0xD0C6
+wMonHGrowthRate    equ 0xD0CA   ; sym-verified; NOT $D0CB (see W_MON_H_GROWTH_RATE note above)
+wMonHLearnset      equ 0xD0CB
 wCurEnemyLevel     equ 0xD126   ; CalcStat level input
 wCurPartySpecies   equ 0xCF90
 wWhichPokemon      equ 0xCF91
 wMonDataLocation   equ 0xCC49
+wRemoveMonFromBox  equ 0xCF94   ; = W_REMOVE_MON_FROM_BOX (0=party, !=0=box)
+wPokedexNum        equ 0xD11D   ; SetPartyMonTypes input (sym)
 wPartyCount        equ 0xD162
 wPartySpecies      equ 0xD163   ; wPartyCount+1; 6 species + $FF sentinel
 wPartyMons         equ 0xD16A
 wPartyMonOT        equ 0xD272
 wPartyMonNicks     equ 0xD2B4
+wPartyMonNicksEnd  equ 0xD2F6
 wPlayerName        equ 0xD157   ; = W_PLAYER_NAME (OT name source)
+
+; Predef register save slots (home/predef.asm:GetPredefRegisters). Big-endian:
+; [addr] = high byte, [addr+1] = low byte.
+wPredefHL          equ 0xCC4F
+wPredefDE          equ 0xCC51
+wPredefBC          equ 0xCC53
+
+; Loaded-mon + enemy / current-box / daycare aliases — the Stage 1 cross-section
+; deferrals, now resolved against pokeyellow.sym (symbols branch).
+wLoadedMon         equ 0xCF97   ; LoadMonData_ destination (party_struct)
+wEnemyPartyCount   equ 0xD89B
+wEnemyPartySpecies equ 0xD89C   ; PARTY_LENGTH+1 species + $FF sentinel
+wEnemyMons         equ 0xD8A3
+wDayCareMon        equ 0xDA5E   ; box_struct (wDayCareMonSpecies = first byte)
+wDayCareMonSpecies equ 0xDA5E
+wBoxCount          equ 0xDA7F
+wBoxSpecies        equ 0xDA80   ; MONS_PER_BOX+1 species + $FF sentinel
+wBoxMons           equ 0xDA95
+wBoxMonOT          equ 0xDD29
+wBoxMonNicks       equ 0xDE05
+wBoxMonNicksEnd    equ 0xDEE1
 
 ; Sprite state data — 16 slots × $10 bytes each, two parallel arrays.
 ; wSpriteStateData1 ($C100) and wSpriteStateData2 ($C200) — sym-verified.

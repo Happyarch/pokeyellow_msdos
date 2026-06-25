@@ -111,10 +111,14 @@ POKEMON_SRCS := \
     src/home/math.asm \
     src/engine/math/multiply_divide.asm \
     src/home/array.asm \
+    src/home/predef.asm \
     src/home/pokemon.asm \
     src/home/move_mon.asm \
     src/engine/pokemon/experience.asm \
-    src/engine/pokemon/add_party_mon.asm
+    src/engine/pokemon/add_party_mon.asm \
+    src/engine/pokemon/load_mon_data.asm \
+    src/engine/pokemon/set_types.asm \
+    src/engine/pokemon/remove_mon.asm
 
 # Debug-only sources (linked only when the corresponding flag is set).
 # Any debug flag implies SKIP_TITLE — debug harnesses boot straight to the overworld.
@@ -225,13 +229,17 @@ src/scripts/pallet_town.o: assets/event_constants.inc
 assets/base_stats.inc:
 	python3 tools/gen_base_stats.py
 
+# GrowthRateTable (static data, generated from data/growth_rates.asm).
+assets/growth_rates.inc:
+	python3 tools/gen_growth_rates.py
+
 src/data/pokemon_data.o: assets/base_stats.inc assets/growth_rates.inc
 
 assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_blk.inc \
         assets/map_headers.inc assets/extra_includes.inc \
         assets/npc_sprite_data_table.inc assets/npc_dialogs/all_dialogs.inc \
         assets/toggleable_objects.inc assets/event_constants.inc \
-        assets/base_stats.inc
+        assets/base_stats.inc assets/growth_rates.inc
 
 all: $(TARGET)
 
