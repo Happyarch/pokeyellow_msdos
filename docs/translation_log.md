@@ -2235,3 +2235,34 @@ externals. (Full `make` link still gated only by the unrelated rgbds map-asset
 bootstrap.) DEFERRED: evolution flow, MonsterNames, bills_pc, TM/HM learnset bits.
 
 ---
+
+## Pokémon engine — Stage 6 data: TM/HM bitfield + MonsterNames + default nickname
+
+- **Source:** base_stats `tmhm` macro (macros/data.asm) + constants/item_constants.asm
+  (TMNUM order); data/pokemon/names.asm + constants/charmap.asm; engine/pokemon/
+  add_mon.asm (the AskName default-name behaviour)
+- **Translated/generated:** `tools/gen_base_stats.py` (TM/HM bitfield now filled),
+  `tools/gen_monster_names.py` (new), `src/data/pokemon_data.asm` (+MonsterNames),
+  `src/engine/pokemon/add_party_mon.asm` (default nickname)
+- **Date:** 2026-06-25
+- **H-flag / Bug tags:** none.
+
+**TM/HM bitfield.** `gen_base_stats.py` no longer zeroes the 7-byte field at +20:
+it parses each species' `tmhm` move list (joining `\`-continued lines) and sets
+bit (TMNUM-1) per move, where TMNUM is built from `item_constants.asm`'s `add_tm`
+order (1..50) + `add_hm` order (51..55). Verified against the hand-computed
+Bulbasaur field `A4 03 38 C0 03 08 06`. Consumers (TM-item usage) remain deferred.
+
+**MonsterNames.** `gen_monster_names.py` encodes data/pokemon/names.asm with the
+GB charmap (reusing the gen_npc_dialogs loader pattern) into 190 × 10-byte
+'@'-padded records, internal-index order. Verified RHYDON / NIDORAN♂ (♂=0xEF).
+
+**Default nickname (UI stub).** `_AddPartyMon` writes the species name from
+MonsterNames into the new mon's nick slot — the non-UI outcome of pret's
+`predef AskName`. STUB documented at `add_party_mon.asm:.nickCopy`: the
+interactive naming screen is deferred; when built it should branch on
+wMonDataLocation==0 and fall back to this default. MonsterNames is a flat table,
+so it's read directly (not via EBP-relative CopyData). Native harness: gift
+Bulbasaur nickname encodes to "BULBASAUR" (81 94 8B 81 80 92 80 94 91 50 50).
+
+---

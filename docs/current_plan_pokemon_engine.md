@@ -175,9 +175,19 @@ then Stage 6: write a Moves-table generator (`gen_moves.py`, unblocks real PP in
     PP 35/40/10/10; L48 Bulbasaur → the slot-shift path yields Razor Leaf/Growth/
     Sleep Powder/SolarBeam (base moves pushed out), PP 25/.../10. djgpp partial
     link of the whole pokemon closure: zero unresolved externals.
-  - [ ] DEFERRED: evolution flow (`TryEvolvingMon`/`LearnMoveFromLevelUp` + rename
-    UI), `MonsterNames` (needs the text charmap; only the gift nickname depends on
-    it), `bills_pc.asm`, and the TM/HM learnset bitfield in base stats.
+  - [x] **TM/HM learnset bitfield** filled in `gen_base_stats.py` (from each mon's
+    `tmhm` macro; TMNUM map from `item_constants.asm`). Verified vs hand-computed
+    Bulbasaur field `A4 03 38 C0 03 08 06`. (Consumers — TM-item usage / CanLearnTM
+    — are separate and still deferred; the data is now correct.)
+  - [x] **MonsterNames** generated (`tools/gen_monster_names.py`, GB-charmap encoded,
+    190×10 '@'-padded) and wired. `_AddPartyMon` now writes the **default nickname**
+    = species name (the non-UI outcome of `AskName`); the interactive naming screen
+    is the deferred UI stub (marked in `add_party_mon.asm:.nickCopy`). Validated:
+    gift Bulbasaur nickname = "BULBASAUR".
+  - [ ] DEFERRED (UI-coupled): evolution flow (`TryEvolvingMon`/`EvolveMon`/
+    `LearnMoveFromLevelUp` — data logic portable, but evolution text/animation and
+    the "forget which move?" menu are UI), the interactive naming screen, and
+    `bills_pc.asm` (box deposit/withdraw/release logic portable; the PC menu is UI).
 
 ## What exists vs. needs writing (from exploration)
 - **Exists (drafted, unwired):** `experience.asm`, `set_types.asm`,

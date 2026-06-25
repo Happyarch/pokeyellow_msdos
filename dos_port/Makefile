@@ -242,15 +242,19 @@ assets/moves.inc:
 assets/evos_moves.inc:
 	python3 tools/gen_evos_moves.py
 
+# Species names (generated from data/pokemon/names.asm via the GB charmap).
+assets/monster_names.inc:
+	python3 tools/gen_monster_names.py
+
 src/data/pokemon_data.o: assets/base_stats.inc assets/growth_rates.inc \
-                         assets/moves.inc assets/evos_moves.inc
+                         assets/moves.inc assets/evos_moves.inc assets/monster_names.inc
 
 assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_blk.inc \
         assets/map_headers.inc assets/extra_includes.inc \
         assets/npc_sprite_data_table.inc assets/npc_dialogs/all_dialogs.inc \
         assets/toggleable_objects.inc assets/event_constants.inc \
         assets/base_stats.inc assets/growth_rates.inc \
-        assets/moves.inc assets/evos_moves.inc
+        assets/moves.inc assets/evos_moves.inc assets/monster_names.inc
 
 all: $(TARGET)
 

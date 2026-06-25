@@ -34,6 +34,7 @@ extern CopyData
 extern AddNTimes
 extern WriteMonMoves
 extern Moves
+extern MonsterNames
 
 global _AddPartyMon
 
@@ -65,6 +66,33 @@ _AddPartyMon:
     mov esi, wPlayerName
     mov bx, NAME_LENGTH
     call CopyData
+
+    ; nickname default = species name (MonsterNames[species-1]).
+    ; STUB (UI deferred): pret runs `predef AskName`, the interactive naming
+    ; screen pre-filled with this species name; here we just write that default
+    ; (the "player kept the default name" outcome). When the naming-screen UI is
+    ; built, branch on wMonDataLocation==0 to invoke it instead, falling back to
+    ; this default. MonsterNames is a flat program-image table (entries are
+    ; NAME_LENGTH-1 = 10 bytes, '@'-padded), so it's read directly, not via the
+    ; EBP-relative CopyData.
+    mov esi, wPartyMonNicks
+    mov al, [ebp + wPartyCount]
+    dec al
+    call SkipFixedLengthTextEntries          ; esi = &nick[count-1] (WRAM)
+    mov edx, esi                             ; de = nick dest (WRAM)
+    movzx eax, byte [ebp + wCurPartySpecies]
+    dec eax
+    imul eax, eax, NAME_LENGTH - 1
+    lea esi, [MonsterNames + eax]            ; flat source
+    mov ecx, NAME_LENGTH - 1
+.nickCopy:
+    mov al, [esi]                            ; flat read
+    inc esi
+    mov [ebp + edx], al                      ; WRAM write
+    inc edx
+    dec ecx
+    jnz .nickCopy
+    mov byte [ebp + edx], 0x50               ; 11th byte '@' terminator
 
     ; esi = wPartyMons + (count-1)*PARTYMON_STRUCT_LENGTH
     mov esi, wPartyMons

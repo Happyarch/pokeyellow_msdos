@@ -8,6 +8,7 @@
 ; GrowthRateTable            : tools/gen_growth_rates.py (from data/growth_rates.asm).
 ; Moves                      : tools/gen_moves.py (from data/moves/moves.asm).
 ; EvosMovesPointerTable      : tools/gen_evos_moves.py (flat dd pointers + blobs).
+; MonsterNames               : tools/gen_monster_names.py (charmap-encoded names).
 ;
 ; Build: nasm -f coff -I include/ -I . -o pokemon_data.o pokemon_data.asm
 
@@ -18,6 +19,7 @@ global IndexToPokedex
 global GrowthRateTable
 global Moves
 global EvosMovesPointerTable
+global MonsterNames
 
 section .data
 align 4
@@ -26,3 +28,4 @@ align 4
 %include "assets/growth_rates.inc"
 %include "assets/moves.inc"
 %include "assets/evos_moves.inc"
+%include "assets/monster_names.inc"
