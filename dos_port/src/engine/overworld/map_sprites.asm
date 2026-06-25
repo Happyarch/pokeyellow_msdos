@@ -38,6 +38,7 @@ extern LoadPlayerSpriteGraphics
 extern HandleDownArrowBlinkTiming
 
 global InitMapSprites
+global LoadNPCSpriteTiles
 global CheckNPCInteraction
 global ShowTextStream
 global IsNPCAtTargetBlock

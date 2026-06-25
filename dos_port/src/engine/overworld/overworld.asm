@@ -58,6 +58,7 @@ extern CheckNPCInteraction
 extern IsNPCAtTargetBlock
 extern CheckTrainerSight
 extern TrainerEncounterFlow
+extern DisplayStartMenu
 extern w_map_text_table_ptr
 extern MapTextTablePointers
 %ifdef DEBUG_DUMP
@@ -299,6 +300,9 @@ EnterMap:
     call DelayFrame
     call DumpBackbuffer                    ; writes FRAME.BIN, exits
 %endif
+%ifdef DEBUG_STARTMENU
+    call DisplayStartMenu                  ; draws menu, renders one frame, dumps FRAME.BIN, exits
+%endif
     ; fall through to OverworldLoop
 
 ; ---------------------------------------------------------------------------
@@ -359,6 +363,15 @@ OverworldLoop:
 .checkJoyDisable:
     test byte [ebp + W_STATUS_FLAGS_5], (1 << BIT_DISABLE_JOYPAD)
     jnz .noDirection                            ; input suppressed during warp-arrival window
+
+    ; START-press: open the start menu (pret: OverworldLoopLessDelay TEXT_START_MENU).
+    ; Read from H_JOY_HELD like the A-press below; DisplayStartMenu's close path waits
+    ; for START release before returning, so a held START can't re-open it next frame.
+    test al, PAD_START
+    jz .checkAPress
+    call DisplayStartMenu
+    jmp OverworldLoop
+.checkAPress:
 
     ; A-press: check for NPC or sign. EAX = H_JOY_HELD (level-triggered, reliable).
     test al, PAD_A

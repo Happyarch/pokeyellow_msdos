@@ -103,7 +103,8 @@ GAME_SRCS := \
     src/engine/overworld/movement.asm \
     src/engine/overworld/map_sprites.asm \
     src/scripts/pallet_town.asm \
-    src/engine/math/random.asm
+    src/engine/math/random.asm \
+    src/engine/menus/start_menu.asm
 
 # Pokémon data/stats engine (current_plan_pokemon_engine.md). Grows per stage.
 POKEMON_SRCS := \
@@ -158,6 +159,13 @@ endif
 ifdef DEBUG_CALCSTATS
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_CALCSTATS
+NASMFLAGS += -D SKIP_TITLE
+endif
+# Start-menu gate: boot to overworld, force the START menu open, render one frame,
+# dump FRAME.BIN, exit. make DEBUG_STARTMENU=1
+ifdef DEBUG_STARTMENU
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_STARTMENU
 NASMFLAGS += -D SKIP_TITLE
 endif
 ifdef NEED_DEBUG_DUMP
@@ -231,6 +239,19 @@ src/engine/overworld/map_sprites.o: \
 # Pallet Town text_asm scripts include events.inc → event_constants.inc.
 src/scripts/pallet_town.o: assets/event_constants.inc
 
+# GB character map in the unicode_converter's format (single-char → byte), for
+# the converter submodule + gb_text.py. Generated from constants/charmap.asm.
+assets/gb_charmap.txt:
+	python3 tools/gen_charmap.py
+
+# START-menu item labels, encoded via the unicode_converter submodule (gb_text).
+assets/menu_strings.inc: assets/gb_charmap.txt tools/gen_menu_strings.py tools/gb_text.py
+	python3 tools/gen_menu_strings.py
+
+# Start menu checks EVENT_GOT_POKEDEX via events.inc → event_constants.inc, and
+# %includes the generated menu_strings.inc label block.
+src/engine/menus/start_menu.o: assets/event_constants.inc assets/menu_strings.inc
+
 # Pokémon base stats + IndexToPokedex (static data, generated from pret source).
 assets/base_stats.inc:
 	python3 tools/gen_base_stats.py
@@ -266,7 +287,7 @@ assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_
         assets/toggleable_objects.inc assets/event_constants.inc \
         assets/base_stats.inc assets/growth_rates.inc \
         assets/moves.inc assets/evos_moves.inc assets/monster_names.inc \
-        assets/items.inc
+        assets/items.inc assets/gb_charmap.txt assets/menu_strings.inc
 
 all: $(TARGET)
 

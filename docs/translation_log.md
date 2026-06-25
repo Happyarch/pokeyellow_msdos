@@ -2321,3 +2321,38 @@ and party↔box/trade/save paths must carry offset 7 verbatim. Native harness:
 Bulbasaur keeps catch rate 0x2D in +7; Kadabra shows 0x60.
 
 ---
+
+## Overworld START menu — DisplayStartMenu
+
+- **Source:** home/start_menu.asm (DisplayStartMenu), engine/menus/draw_start_menu.asm
+- **Translated:** dos_port/src/engine/menus/start_menu.asm; trigger in
+  src/engine/overworld/overworld.asm (OverworldLoop START-press); window
+  generalization in src/ppu/ppu.asm; place_flat_str export in src/text/text.asm;
+  LoadNPCSpriteTiles export in src/engine/overworld/map_sprites.asm.
+- **Date:** 2026-06-25.
+
+The corner menu box renders through the **GB window layer** (same path as the NPC
+dialog box), not the BG: the box + item labels are drawn into wTileMap (the text
+engine's 20-wide scratch grid, unused for BG in the overworld) with TextBoxBorder /
+place_flat_str, then the 10×{14,16} box rect is copied into GB_TILEMAP1 and shown
+by render_window. render_window gained two box-bound globals — **g_win_clip_w**
+(blit width) and **g_win_max_y** (bottom row) — defaulting to SCREEN_W / RENDER_H
+so the existing full-width bottom dialog box is byte-for-byte unchanged; the menu
+narrows them to an 80px × {112,128}px corner box at WX=167 (the centered GB col 10).
+
+**Font-swap gotcha (the whole reason text first rendered as garbage):** vFont
+($8800) is time-shared with the player's/NPCs' walk tiles in the overworld, so the
+glyphs are not resident until loaded. DisplayStartMenu mirrors the dialog path —
+force the player to a standing pose, set BIT_FONT_LOADED (freezes NPC movement),
+call LoadFontTilePatterns before drawing, and on close restore the walk tiles
+(LoadNPCSpriteTiles + LoadPlayerSpriteGraphics). Input uses H_JOY_PRESSED (reliable
+here: this loop calls DelayFrame exactly once per iteration, unlike OverworldLoop's
+double-delay idle path). Pokédex slot is event-gated (EVENT_GOT_POKEDEX → 7 vs 6
+items). All sub-menus are no-op stubs returning to the menu — **SAVE is an
+intentional dead-end** (no save system) and the rest are hooks for the item / party
+/ options UIs; EXIT / B / START close. Verified via the DEBUG_STARTMENU harness
+(FRAME.BIN dump): box, border, cursor, and "POKéMON / ITEM / NINTEN / SAVE / OPTION
+/ EXIT" all render correctly over Pallet Town; dialog box + baseline overworld
+unaffected.
+
+---

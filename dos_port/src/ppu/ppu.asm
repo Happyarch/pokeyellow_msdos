@@ -74,6 +74,15 @@ section .data
 align 4
 g_tilecache_dirty: db 1     ; nonzero → render_bg rebuilds tile_cache this frame
 
+; render_window box bounds. Defaults reproduce the full-width bottom dialog box;
+; the start menu narrows them to a corner box and restores them on close.
+;   g_win_clip_w — visible window width in px (cols blitted from row_buf).
+;   g_win_max_y  — first screen row the window stops drawing at (exclusive).
+align 4
+global g_win_clip_w, g_win_max_y
+g_win_clip_w: dd SCREEN_W   ; default 160px (20-tile dialog content width)
+g_win_max_y:  dd RENDER_H   ; default 200 (window draws to bottom of screen)
+
 ; ---------------------------------------------------------------------------
 ; BSS
 ; ---------------------------------------------------------------------------
@@ -608,6 +617,9 @@ render_window:
     ; Skip scanlines above the window's vertical trigger.
     cmp ecx, ebx                       ; cur_y < WY?
     jb .next_scanline
+    ; Skip scanlines at/below the box bottom (g_win_max_y; default RENDER_H = no-op).
+    cmp ecx, [g_win_max_y]
+    jae .next_scanline
 
     ; ── Decode one window tile row (32 tiles) into row_buf ──────────────────
 
@@ -662,9 +674,10 @@ render_window:
     ; must NOT be blitted — otherwise they paint blank tiles over the BG to the
     ; right of the box (the box is 160px centered in our 320px viewport, so BG is
     ; visible past its right edge). 160 < 256, so this also stays within row_buf.
-    cmp ecx, SCREEN_W
+    ; g_win_clip_w defaults to SCREEN_W (160); the start menu narrows it.
+    cmp ecx, [g_win_clip_w]
     jbe .do_right_copy
-    mov ecx, SCREEN_W
+    mov ecx, [g_win_clip_w]
 .do_right_copy:
     add edi, edx                       ; advance dest to screen_x_start
     rep movsb
@@ -677,7 +690,7 @@ render_window:
     lea esi, [row_buf + edx]
     push ecx
     mov ecx, RENDER_W
-    mov eax, SCREEN_W                   ; box content width (see right-copy clamp above)
+    mov eax, [g_win_clip_w]             ; box content width (see right-copy clamp above)
     sub eax, edx                       ; content px remaining after the clip
     cmp ecx, eax
     jbe .do_left_copy

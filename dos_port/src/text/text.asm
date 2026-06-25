@@ -115,6 +115,7 @@ global TextCommandProcessor
 global PrintText
 global PrintText_NoBox
 global HandleDownArrowBlinkTiming
+global place_flat_str
 
 ; ---------------------------------------------------------------------------
 ; External
