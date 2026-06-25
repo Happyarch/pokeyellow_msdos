@@ -54,11 +54,13 @@ SM_FIRST_ROW      equ 2       ; first item row (pret wTopMenuItemY)
 SM_ROW_STEP       equ 2       ; rows between items
 SM_BOX_NCOLS      equ 10      ; TL..TR inclusive (SM_BOX_W + 2 borders)
 
-; Window placement in the 320×200 viewport: the centered GB screen spans px
-; 80–240, so GB col 10 lands at px 80+10*8 = 160. render_window's left edge is
-; WX-7, so WX = 167 puts the box at px 160. The box rect is copied to GB_TILEMAP1
-; column 0, so blitting 10 tiles (80px) at px 160 reproduces the GB col 10–19 box.
-SM_WIN_WX         equ 167
+; Window placement: the original renders the menu flush to the top-right of the
+; 20-tile GB screen. Our viewport is wider (40 tiles / 320px), so we translate the
+; box to the right EDGE of the actual viewport rather than the centered GB screen.
+; The box is 10 tiles (80px) wide; flush-right puts its left edge at px 320-80=240
+; (col 30). render_window's left edge is WX-7, so WX = 247 → left at px 240, and
+; the 80px blit fills px 240-319 exactly (clipped at the right edge, no overflow).
+SM_WIN_WX         equ 247
 SM_WIN_CLIP_W     equ 80       ; 10 tiles
 
 CHAR_CURSOR       equ 0xED     ; ▶  (constants/charmap.asm)
