@@ -41,6 +41,12 @@ BASE_TMHM               equ 0x14    ; (NUM_TM_HM + 7) / 8 = 7 bytes
 BASE_DATA_SIZE          equ 0x1C    ; 28 bytes total (incl. 1 padding byte)
 
 ; --- party_struct / box_struct members (macros/ram.asm) ---
+; GEN-2 FORWARD-COMPAT: these offsets and the struct lengths below
+; (PARTYMON=44, BOXMON=33) must stay byte-identical to Gen 1. Gen 2's Time
+; Capsule stores a traded mon's HELD ITEM in the MON_CATCH_RATE byte (+7), so
+; that slot is load-bearing for the planned Gen 2 port — do NOT repurpose it or
+; shrink/realign the struct. Party↔box conversion (deposit/withdraw, when added)
+; must preserve +7 verbatim.
 MON_SPECIES             equ 0x00
 MON_HP                  equ 0x01    ; word (big-endian)
 MON_BOX_LEVEL           equ 0x03
@@ -81,6 +87,12 @@ MOVE_PP                 equ 0x05
 ; --- item inventory capacities (constants/menu_constants.asm) ---
 BAG_ITEM_CAPACITY       equ 20
 PC_ITEM_CAPACITY        equ 50
+
+; --- Gen-2 forward-compat: held item carried in the catch-rate byte ---
+; The party/box mon struct's MON_CATCH_RATE byte (offset 7) is Gen 2's held-item
+; slot across the Time Capsule. Kadabra ships holding a TwistedSpoon (pret).
+KADABRA                 equ 0x26    ; internal species index
+TWISTEDSPOON_GSC        equ 0x60    ; Gen-2 held item id stored in the catch-rate byte
 
 ; --- mon data locations (wMonDataLocation values) ---
 PLAYER_PARTY_DATA       equ 0

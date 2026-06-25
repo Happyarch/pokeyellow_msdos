@@ -2304,3 +2304,20 @@ ItemNames: 97 names, GB-charmap encoded and '@'-terminated ($50), variable lengt
 consumer yet (mart/bag UI deferred); foundational data for those.
 
 ---
+
+## Pokémon engine — Gen-2 forward-compat: held item in the catch-rate byte
+
+- **Source:** engine/pokemon/add_mon.asm (the KADABRA / TWISTEDSPOON_GSC case)
+- **Translated:** dos_port/src/engine/pokemon/add_party_mon.asm; constants +
+  forward-compat notes in gb_constants.inc; CLAUDE.md "Gen 2 Forward-Compatibility".
+- **Date:** 2026-06-25.
+
+Restored the pret behaviour my _AddPartyMon rewrite had dropped: the
+MON_CATCH_RATE byte (struct offset 7) is Gen 2's held-item slot across the Time
+Capsule, so Kadabra (internal idx $26) is written holding TWISTEDSPOON_GSC ($60)
+there. Documented that the party (44) / box (33) struct layout must stay
+byte-identical to Gen 1 for the planned Gen 2 port — no shrinking/repurposing,
+and party↔box/trade/save paths must carry offset 7 verbatim. Native harness:
+Bulbasaur keeps catch rate 0x2D in +7; Kadabra shows 0x60.
+
+---

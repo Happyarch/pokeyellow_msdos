@@ -451,6 +451,20 @@ the environment, installs may proceed without prompting.
 
 ---
 
+## Gen 2 Forward-Compatibility (a Gen 2 port is planned)
+
+Keep the Pokémon party/box data structures **byte-identical to Gen 1** — same
+field offsets, same lengths (party = 44 bytes, box = 33 bytes), same "blank"/
+reserved bytes. Do **not** shrink, realign, or repurpose any byte to save space.
+
+Why it matters: Gen 2's Time Capsule stores a traded mon's **held item** in the
+Gen-1 **catch-rate byte** (`MON_CATCH_RATE`, struct offset 7). Preserving that
+slot is how held items survive a Gen 1 ↔ Gen 2 trade, and some species ship
+already holding an item via it (e.g. Kadabra → `TWISTEDSPOON_GSC` $60, written by
+`_AddPartyMon`). Any new code that builds/copies/converts a mon (party↔box
+deposit/withdraw, trades, save format) must carry offset 7 through verbatim.
+See `dos_port/include/gb_constants.inc` (struct members) for the load-bearing note.
+
 ## Save File Notes (Phase 5 — Not Yet Implemented)
 
 - GB `.sav`: raw 32 KB SRAM dump (MBC5+RAM+BATTERY)

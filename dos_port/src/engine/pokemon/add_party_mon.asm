@@ -151,6 +151,16 @@ _AddPartyMon:
     inc edx
     mov al, [ebp + esi]
     mov [ebp + edx], al              ; catch rate (de not yet incremented)
+    ; Gen-1↔Gen-2 forward-compat (faithful to pret): the MON_CATCH_RATE byte
+    ; (struct offset 7) is the held-item slot in Gen 2's Time Capsule, so a mon
+    ; traded up keeps an item here. Kadabra ships already holding a TwistedSpoon,
+    ; so overwrite its catch rate with TWISTEDSPOON_GSC. Keep this byte intact and
+    ; never repurpose/shrink the struct, or the future Gen 2 port loses held items.
+    mov al, [ebp + wCurPartySpecies]
+    cmp al, KADABRA
+    jne .notKadabra
+    mov byte [ebp + edx], TWISTEDSPOON_GSC
+.notKadabra:
 
     ; level-1 moves from wMonHMoves
     mov esi, wMonHMoves
