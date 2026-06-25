@@ -2289,3 +2289,18 @@ trick that stashes wItemQuantity is replaced by an explicit save/restore.
 partial, and remove-to-zero (slot dropped, following slots shifted up) — all exact.
 
 ---
+
+## Items engine — Stage 2 (partial): item names + prices data
+
+- **Source:** data/items/names.asm (ItemNames), data/items/prices.asm (ItemPrices)
+- **Generated:** dos_port/tools/gen_items.py -> assets/items.inc;
+  src/data/item_data.asm (globals ItemNames/ItemPrices)
+- **Date:** 2026-06-25 — pure data, no UI.
+
+ItemNames: 97 names, GB-charmap encoded and '@'-terminated ($50), variable length
+(as pret's `li` macro). ItemPrices: 97 x 3-byte BCD (pret's bcd3: nibble-packed
+6-digit). Verified POKé BALL encoding (8F 8E 8A BA 7F 81 80 8B 8B 50) and prices
+(MASTER_BALL 0, ULTRA_BALL 1200 -> 00 12 00, POKE_BALL 200 -> 00 02 00). No
+consumer yet (mart/bag UI deferred); foundational data for those.
+
+---

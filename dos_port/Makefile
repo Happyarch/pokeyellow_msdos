@@ -121,8 +121,9 @@ POKEMON_SRCS := \
     src/engine/pokemon/remove_mon.asm \
     src/engine/pokemon/write_moves.asm
 
-# Items layer (current_plan_items.md). Non-UI inventory/bag logic.
+# Items layer (current_plan_items.md). Non-UI inventory/bag logic + item data.
 ITEMS_SRCS := \
+    src/data/item_data.asm \
     src/engine/items/inventory.asm
 
 # Debug-only sources (linked only when the corresponding flag is set).
@@ -250,6 +251,12 @@ assets/evos_moves.inc:
 assets/monster_names.inc:
 	python3 tools/gen_monster_names.py
 
+# Item names + prices (generated from data/items/{names,prices}.asm).
+assets/items.inc:
+	python3 tools/gen_items.py
+
+src/data/item_data.o: assets/items.inc
+
 src/data/pokemon_data.o: assets/base_stats.inc assets/growth_rates.inc \
                          assets/moves.inc assets/evos_moves.inc assets/monster_names.inc
 
@@ -258,7 +265,8 @@ assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_
         assets/npc_sprite_data_table.inc assets/npc_dialogs/all_dialogs.inc \
         assets/toggleable_objects.inc assets/event_constants.inc \
         assets/base_stats.inc assets/growth_rates.inc \
-        assets/moves.inc assets/evos_moves.inc assets/monster_names.inc
+        assets/moves.inc assets/evos_moves.inc assets/monster_names.inc \
+        assets/items.inc
 
 all: $(TARGET)
 

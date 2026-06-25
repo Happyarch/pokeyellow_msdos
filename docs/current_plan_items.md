@@ -25,8 +25,12 @@ inventory bookkeeping and most item *effects* are not.
   Native-validated (add/stack/overflow/full/remove-partial/remove+shift). Wired
   (`ITEMS_SRCS`).
 
-- [ ] **Stage 2 — item static data.** Generate item names + prices
-  (`data/items/*`), and the `ItemUsePtrTable` mapping. Names/prices are pure data.
+- [~] **Stage 2 — item static data.** `tools/gen_items.py` → `assets/items.inc`:
+  `ItemNames` (97 '@'-terminated, GB-charmap-encoded, variable length) +
+  `ItemPrices` (97 × 3-byte BCD). Exposed via `src/data/item_data.asm`; wired
+  (`ITEMS_SRCS` + Makefile assets). Spot-checked: POKé BALL bytes, BCD prices
+  (MASTER 0, ULTRA 1200→`00 12 00`, POKé 200→`00 02 00`). TODO: `ItemUsePtrTable`
+  / mart inventories (`data/items/marts.asm`).
 
 - [ ] **Stage 3 — non-UI item effects.** The data-only parts of `ItemUse*`:
   e.g. potion HP math, status-cure flags, stat-boost (X Attack) application, PP
