@@ -200,6 +200,7 @@ BATTLE_SRCS := \
     src/engine/battle/move_effects/reflect_light_screen.asm \
     src/engine/battle/stat_mod_effects.asm \
     src/engine/battle/building_rage.asm \
+    src/engine/battle/get_current_move.asm \
     src/data/wild_data.asm \
     src/engine/overworld/wild_mons.asm \
     src/engine/battle/wild_encounters.asm

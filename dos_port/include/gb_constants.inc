@@ -149,6 +149,10 @@ RAGE                    equ 63         ; move id (HandleBuildingRage restores it
 ; --- text id: "REPEL's effect wore off" (constants/text_constants.asm) ---
 TEXT_REPEL_WORE_OFF     equ 0xD2
 
+; --- move record load (GetCurrentMove) ---
+MOVE_LENGTH             equ 6          ; anim, effect, power, type, accuracy, pp
+BIT_TEST_BATTLE         equ 0          ; wStatusFlags7 bit (debug TestBattle)
+
 ; ===========================================================================
 ; Battle engine constants (current_plan_battle_engine.md)
 ; Sources: constants/battle_constants.asm, type_constants.asm,

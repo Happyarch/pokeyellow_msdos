@@ -2591,3 +2591,23 @@ wPlayerMoveNum restored to RAGE (63) / effect cleared / hWhoseTurn restored; no-
 the target isn't raging or its Attack mod is already +6 (13). Wired into BATTLE_SRCS.
 
 ---
+
+## 2026-06-26 — Battle: GetCurrentMove (move-record load backend)
+
+Battle engine plan (a listed deferred backend item). Faithful translation of
+`engine/battle/core.asm:GetCurrentMove` into `src/engine/battle/get_current_move.asm`.
+Loads the selected move's 6-byte record (anim, effect, power, type, accuracy, pp)
+from the flat `Moves` table into wPlayerMove*/wEnemyMove*, picked by hWhoseTurn,
+including the debug TestBattle forced-move override. Like LoadWildData, it indexes
+the flat table (esi = Moves + (id-1)*MOVE_LENGTH) and copies flat→WRAM inline,
+since the port's FarCopyData/CopyData bias the source by EBP (for GB WRAM) whereas
+Moves is a flat program-image table. wNameListIndex is set (the non-UI half); the
+GetMoveName name fetch is the deferred UI tail.
+
+This is the move-record load `MoveHitTest`, `CalculateDamage`, and the trainer-AI
+move-scoring (`ReadMove`) all consume — so it unblocks the AI layer. Wired into
+BATTLE_SRCS. Native-validated (links the generated Moves table): player move 1 →
+[01,00,28,00,FF,23] + wNameListIndex 1; enemy move 2 → [02,00,32,00,FF,19];
+TestBattle-forced move 3 → [03,1D,0F,00,D8,0A]. All exact.
+
+---

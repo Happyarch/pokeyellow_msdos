@@ -721,6 +721,9 @@ wMovementFlags               equ 0xD735
 wStringBuffer                equ 0xCF4A   ; PrintStatText destination (Stage 5)
 wGrassTile                   equ 0xD534   ; = W_GRASS_TILE (tall-grass tile id)
 wPartyMon1Level              equ 0xD18B   ; lead party mon level (repel check)
+wNameListIndex               equ 0xD0B4   ; selected move id (GetCurrentMove → name)
+wStatusFlags7                equ 0xD732   ; = W_STATUS_FLAGS_7 (BIT_TEST_BATTLE)
+wTestBattlePlayerSelectedMove equ 0xCCD9  ; debug TestBattle forced move
 
 ; Connection-strip headers (each 11 bytes: map, strip-src, strip-dst, length, map-width, Y-align, X-align, view-ptr)
 W_NORTH_CONNECTED_MAP        equ 0xD370 ; wNorthConnectedMap ($FF = none)

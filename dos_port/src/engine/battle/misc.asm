@@ -10,7 +10,6 @@ global FormatMovesString
 
 extern wMoves
 extern wMovesString
-extern wNameListIndex
 extern BANK_MoveNames
 extern wPredefBank
 extern MOVE_NAME

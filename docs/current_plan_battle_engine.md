@@ -168,6 +168,7 @@ method the pokemon-engine plan used.
 | StatModifierDownEffect | Atk −1 (unmod 100) | mod 6 stat 66 ✓ |
 | StatModifierDownEffect | −1 to mod 1, unmod 1 (0.25×→0) | mod 1 stat floored to 1 ✓ |
 | HandleBuildingRage | raging / not raging / maxed | Atk 7→8 stat 150, move→RAGE / no-op / no-op ✓ |
+| GetCurrentMove | player move 1 / enemy move 2 / TestBattle move 3 | records [01,00,28,00,FF,23] / [02…] / [03…] exact ✓ |
 
 Toolchain note (this fresh container): also installed `gcc-multilib` (the `-m32`
 libc the earlier session lacked), so harnesses can use either freestanding ELF32
@@ -185,8 +186,12 @@ introduce no symbol collisions in existing pokemon/items/menu/home/battle files.
   `ExecuteEnemyMove`, move-effect dispatch `JumpMoveEffect`) — interleaved with
   text/animation; this is the front end's backbone.
 - `CheckTargetSubstitute`, HP-bar update, HUD draw (UI).
-- `GetCurrentMove` move-record load (backend core + name/UI tail; needs flat-source copy).
-- Status residual damage (`HandlePoisonBurnLeechSeed`), `HandleBuildingRage`.
+- ~~`GetCurrentMove` move-record load~~ — **DONE** (backend core,
+  `src/engine/battle/get_current_move.asm`): flat `Moves`-table → wPlayerMove* /
+  wEnemyMove* copy, picked by hWhoseTurn, incl. the TestBattle override; native-
+  validated (player/enemy/test paths exact). Only the `GetMoveName` name tail
+  (wNameListIndex → UI) remains deferred. Unblocks the AI move-scoring (`ReadMove`).
+- Status residual damage (`HandlePoisonBurnLeechSeed`). (`HandleBuildingRage` is now done.)
 - `experience.asm` (mechanical bugs fixed; needs the level-up/EXP subsystem to link).
 - AI move-scoring (`AIMoveChoiceModification*`), `read_trainer_party.asm`.
 - Wild-encounter generation (`TryDoWildEncounter`) — needs per-map encounter data tables.

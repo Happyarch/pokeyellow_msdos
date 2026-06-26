@@ -6,7 +6,6 @@ section .text
 global GetTrainerName_
 
 extern wLinkEnemyTrainerName
-extern wNameListIndex
 extern wNameListType
 extern wPredefBank
 extern wNameBuffer
