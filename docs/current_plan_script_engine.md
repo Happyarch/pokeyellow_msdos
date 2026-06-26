@@ -49,7 +49,11 @@ Code via targeted claims and the `wired`/`verified` transitions:
       `SwitchToMapRomBank` are deferred no-ops (see header `; TODO` notes). A faithful
       `PalletTown_Script` skeleton (`src/scripts/pallet_town.asm`) does the
       `EVENT_GOT_POKEBALLS_FROM_OAK` → `EVENT_PALLET_AFTER_GETTING_POKEBALLS` event-gate,
-      then `CallFunctionInTable` on `wPalletTownCurScript`. **Native-validated** (ELF32):
+      then `CallFunctionInTable` on `wPalletTownCurScript`. `EnableAutoTextBoxDrawing` /
+      `DisableAutoTextBoxDrawing` are translated (`src/text/auto_textbox.asm`); the
+      common-case map default (`DefaultMapScript`) and `PalletTown_Script` both use it
+      faithfully (most pret `_Script`s that do nothing else are `jp EnableAutoTextBoxDrawing`).
+      **Native-validated** (ELF32):
       CallFunctionInTable index dispatch (0/1/2), the Pallet event-gate (set/clear),
       all 10 Pallet states dispatch + return cleanly, and a default map → no-op. The
       script bundle partial-links (only `ShowTextStream` external); `overworld.asm`

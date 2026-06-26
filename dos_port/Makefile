@@ -136,6 +136,7 @@ GAME_SRCS := \
     src/gfx/sprite_oam.asm \
     src/gfx/load_font.asm \
     src/text/text.asm \
+    src/text/auto_textbox.asm \
     src/movie/title.asm \
     src/engine/overworld/overworld.asm \
     src/engine/overworld/movement.asm \

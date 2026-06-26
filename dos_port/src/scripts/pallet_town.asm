@@ -21,6 +21,7 @@ global PalletTownOakText
 global PalletTown_Script
 extern ShowTextStream            ; (ESI = flat TX stream, ECX = byte count)
 extern CallFunctionInTable       ; (AL = index, ESI = flat dd jumptable)
+extern EnableAutoTextBoxDrawing
 
 ; PalletTown_ScriptPointers state indices (pret: def_script_pointers in
 ; scripts/PalletTown.asm — SCRIPT_PALLETTOWN_*).
@@ -81,7 +82,7 @@ PalletTown_Script:
     jz .next
     SetEvent EVENT_PALLET_AFTER_GETTING_POKEBALLS
 .next:
-    ; ; TODO-DEFERRED: EnableAutoTextBoxDrawing (text-box auto-draw mode) — text engine.
+    call EnableAutoTextBoxDrawing              ; faithful: pret calls this before dispatch
     mov al, [ebp + wPalletTownCurScript]
     mov esi, PalletTown_ScriptPointers
     jmp CallFunctionInTable                    ; tail-call: run the current state

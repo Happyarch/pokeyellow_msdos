@@ -24,6 +24,7 @@ bits 32
 %include "gb_memmap.inc"
 
 extern MapScriptPointers
+extern EnableAutoTextBoxDrawing
 
 section .text
 
@@ -36,9 +37,11 @@ RunMapScript:
     call dword [MapScriptPointers + ecx*4]   ; run this map's _Script (flat ptr)
     ret
 
-; No-op script for maps without a ported _Script (the table default).
+; Default _Script for maps without a ported one. Most pret map scripts that do
+; nothing else are exactly `jp EnableAutoTextBoxDrawing`, so that is the faithful
+; default (a few, e.g. Indigo Plateau, are a bare ret — close enough here).
 DefaultMapScript:
-    ret
+    jmp EnableAutoTextBoxDrawing
 
 ; CallFunctionInTable — call function index AL in the flat dd jumptable ESI.
 ; pret's version is a 16-bit table (add a / ld a,[hli] / ld h,[hl]); here the table

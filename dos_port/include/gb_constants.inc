@@ -153,6 +153,9 @@ TEXT_REPEL_WORE_OFF     equ 0xD2
 MOVE_LENGTH             equ 6          ; anim, effect, power, type, accuracy, pp
 BIT_TEST_BATTLE         equ 0          ; wStatusFlags7 bit (debug TestBattle)
 
+; --- auto text-box drawing control (EnableAutoTextBoxDrawing) ---
+BIT_NO_AUTO_TEXT_BOX    equ 0          ; wAutoTextBoxDrawingControl bit
+
 ; ===========================================================================
 ; Battle engine constants (current_plan_battle_engine.md)
 ; Sources: constants/battle_constants.asm, type_constants.asm,

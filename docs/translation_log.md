@@ -2650,3 +2650,17 @@ no-op leaves scratch untouched. Script bundle partial-links (only ShowTextStream
 external); overworld.asm assembles with the new call.
 
 ---
+
+## 2026-06-26 — Script engine: EnableAutoTextBoxDrawing + faithful DefaultMapScript
+
+Faithful translation of home/text.asm:EnableAutoTextBoxDrawing /
+DisableAutoTextBoxDrawing (src/text/auto_textbox.asm): set wAutoTextBoxDrawingControl
+(bit BIT_NO_AUTO_TEXT_BOX) and clear wDoNotWaitForButtonPressAfterDisplayingText.
+Used by map _Scripts (and the wild-encounter repel message). Made the script
+dispatch faithful: DefaultMapScript is now `jmp EnableAutoTextBoxDrawing` (most pret
+map scripts that do nothing else are exactly that), and PalletTown_Script calls it
+before CallFunctionInTable, matching pret. Added the two WRAM aliases +
+BIT_NO_AUTO_TEXT_BOX; wired into GAME_SRCS. Native-validated: RunMapScript on a
+default map sets wAutoTextBoxDrawingControl to 0 (auto-draw on).
+
+---
