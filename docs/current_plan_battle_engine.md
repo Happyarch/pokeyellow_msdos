@@ -84,8 +84,14 @@ Authoritative addresses: `git show origin/symbols:pokeyellow.sym` (bank:addr).
   — the move-effects call deferred UI/animation/text routines. That's expected;
   the front end is deferred per the user.
 
-- [ ] **Stage 7 — Status + turn helpers.** Status-condition application/checks,
-  speed compare / turn order, `HandleBuildingRage`, `ApplyBurnAndParalysisPenalties`.
+- [~] **Stage 7 — Status + turn helpers.** `ApplyBurnAndParalysisPenalties(ToPlayer/
+  ToEnemy)`, `QuarterSpeedDueToParalysis`, `HalveAttackDueToBurn` done in
+  `src/engine/battle/status_penalties.asm` and **native-validated** (Spd 200→50,
+  2→1 min-clamp, Atk 100→50, unstatused 300→unchanged). These resolve the
+  `QuarterSpeedDueToParalysis` extern the move-effects reference. REMAINING:
+  residual poison/burn/leech-seed damage (`HandlePoisonBurnLeechSeed`, HUD-coupled),
+  `HandleBuildingRage`, and the inline turn-order speed compare (in the deferred
+  main battle loop).
 
 - [ ] **Stage 8 — Trainer AI backend.** `trainer_ai.asm` move-scoring logic
   (no UI). `read_trainer_party.asm`.

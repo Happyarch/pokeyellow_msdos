@@ -138,6 +138,7 @@ BATTLE_SRCS := \
     src/data/battle_data.asm \
     src/engine/battle/core_damage.asm \
     src/engine/battle/badge_boosts.asm \
+    src/engine/battle/status_penalties.asm \
     src/engine/battle/decrement_pp.asm \
     src/engine/battle/get_trainer_name.asm \
     src/engine/battle/misc.asm \
