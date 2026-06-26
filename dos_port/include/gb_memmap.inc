@@ -195,6 +195,178 @@ wBoxMonOT          equ 0xDD29
 wBoxMonNicks       equ 0xDE05
 wBoxMonNicksEnd    equ 0xDEE1
 
+; ===========================================================================
+; Battle engine WRAM aliases (current_plan_battle_engine.md)
+; All sym-pinned (git show origin/symbols:pokeyellow.sym, bank 00).
+; ===========================================================================
+
+; --- selected / used moves and per-side move scratch ($CCxx) ---
+wPlayerMoveListIndex   equ 0xCC2E
+wPlayerMonNumber       equ 0xCC2F   ; party index of the active player mon
+wPlayerSubstituteHP    equ 0xCCD7
+wEnemySubstituteHP     equ 0xCCD8
+wMoveMenuType          equ 0xCCDB
+wPlayerSelectedMove    equ 0xCCDC
+wEnemySelectedMove     equ 0xCCDD
+wEnemyMoveListIndex    equ 0xCCE2
+wPlayerDisabledMoveNumber equ 0xCCEE
+wEnemyDisabledMoveNumber  equ 0xCCEF
+wInHandlePlayerMonFainted equ 0xCCF0
+wPlayerUsedMove        equ 0xCCF1
+wEnemyUsedMove         equ 0xCCF2
+wEnemyMonMinimized     equ 0xCCF3
+wMoveDidntMiss         equ 0xCCF4
+wPlayerMonMinimized    equ 0xCCF7
+
+; --- enemy "Bide"/multi-hit accumulators ($CD05) ---
+wEnemyBideAccumulatedDamage equ 0xCD05
+wEnemyNumHits          equ 0xCD05
+
+; --- unmodified (pre-stat-stage) stats, player ($CD0F) ---
+wPlayerMonUnmodifiedLevel    equ 0xCD0F
+wPlayerMonUnmodifiedMaxHP    equ 0xCD10
+wPlayerMonUnmodifiedAttack   equ 0xCD12
+wPlayerMonUnmodifiedDefense  equ 0xCD14
+wPlayerMonUnmodifiedSpeed    equ 0xCD16
+wPlayerMonUnmodifiedSpecial  equ 0xCD18
+; --- player stat-stage modifiers (6 bytes, base value 7) ---
+wPlayerMonStatMods     equ 0xCD1A
+wPlayerMonAttackMod    equ 0xCD1A
+wPlayerMonDefenseMod   equ 0xCD1B
+wPlayerMonSpeedMod     equ 0xCD1C
+wPlayerMonSpecialMod   equ 0xCD1D
+wPlayerMonAccuracyMod  equ 0xCD1E
+wPlayerMonEvasionMod   equ 0xCD1F
+wPlayerMonStatModsEnd  equ 0xCD22
+
+; --- unmodified stats, enemy ($CD23) ---
+wEnemyMonUnmodifiedLevel    equ 0xCD23
+wEnemyMonUnmodifiedMaxHP    equ 0xCD24
+wEnemyMonUnmodifiedAttack   equ 0xCD26
+wEnemyMonUnmodifiedDefense  equ 0xCD28
+wEnemyMonUnmodifiedSpeed    equ 0xCD2A
+wEnemyMonUnmodifiedSpecial  equ 0xCD2C
+wEngagedTrainerClass   equ 0xCD2D
+wEngagedTrainerSet     equ 0xCD2E
+; --- enemy stat-stage modifiers ---
+wEnemyMonStatMods      equ 0xCD2E
+wEnemyMonAttackMod     equ 0xCD2E
+wEnemyMonDefenseMod    equ 0xCD2F
+wEnemyMonSpeedMod      equ 0xCD30
+wEnemyMonSpecialMod    equ 0xCD31
+wEnemyMonAccuracyMod   equ 0xCD32
+wEnemyMonEvasionMod    equ 0xCD33
+wEnemyMonStatModsEnd   equ 0xCD36
+
+wNumMovesMinusOne      equ 0xCD6C
+wMoveData              equ 0xCD6D   ; 6-byte scratch move record (GetMoveData)
+
+; --- per-side current-move struct ($CFCB enemy / $CFD1 player) ---
+wEnemyMoveNum          equ 0xCFCB
+wEnemyMoveEffect       equ 0xCFCC
+wEnemyMovePower        equ 0xCFCD
+wEnemyMoveType         equ 0xCFCE
+wEnemyMoveAccuracy     equ 0xCFCF
+wEnemyMoveMaxPP        equ 0xCFD0
+wPlayerMoveNum         equ 0xCFD1
+wPlayerMoveEffect      equ 0xCFD2
+wPlayerMovePower       equ 0xCFD3
+wPlayerMoveType        equ 0xCFD4
+wPlayerMoveAccuracy    equ 0xCFD5
+wPlayerMoveMaxPP       equ 0xCFD6
+wEnemyMonSpecies2      equ 0xCFD7
+wBattleMonSpecies2     equ 0xCFD8
+
+; --- enemy battle-mon struct ($CFE4, 29-byte battle_struct) ---
+wEnemyMonNick          equ 0xCFD9   ; NAME_LENGTH bytes
+wEnemyMon              equ 0xCFE4
+wEnemyMonSpecies       equ 0xCFE4
+wEnemyMonHP            equ 0xCFE5   ; word, big-endian
+wEnemyMonBoxLevel      equ 0xCFE7
+wEnemyMonPartyPos      equ 0xCFE7
+wEnemyMonStatus        equ 0xCFE8
+wEnemyMonType          equ 0xCFE9
+wEnemyMonType1         equ 0xCFE9
+wEnemyMonType2         equ 0xCFEA
+wEnemyMonCatchRate     equ 0xCFEB
+wEnemyMonMoves         equ 0xCFEC   ; 4 bytes
+wEnemyMonDVs           equ 0xCFF0   ; word
+wEnemyMonLevel         equ 0xCFF2
+wEnemyMonMaxHP         equ 0xCFF3   ; word
+wEnemyMonStats         equ 0xCFF3
+wEnemyMonAttack        equ 0xCFF5
+wEnemyMonDefense       equ 0xCFF7
+wEnemyMonSpeed         equ 0xCFF9
+wEnemyMonSpecial       equ 0xCFFB
+wEnemyMonPP            equ 0xCFFD   ; 4 bytes
+wEnemyMonBaseStats     equ 0xD001
+wEnemyMonActualCatchRate equ 0xD006
+wEnemyMonBaseExp       equ 0xD007
+
+; --- player battle-mon struct ($D013, 29-byte battle_struct) ---
+wBattleMonNick         equ 0xD008   ; NAME_LENGTH bytes
+wBattleMon             equ 0xD013
+wBattleMonSpecies      equ 0xD013
+wBattleMonHP           equ 0xD014   ; word, big-endian
+wBattleMonBoxLevel     equ 0xD016
+wBattleMonPartyPos     equ 0xD016
+wBattleMonStatus       equ 0xD017
+wBattleMonType         equ 0xD018
+wBattleMonType1        equ 0xD018
+wBattleMonType2        equ 0xD019
+wBattleMonCatchRate    equ 0xD01A
+wBattleMonMoves        equ 0xD01B   ; 4 bytes
+wBattleMonDVs          equ 0xD01F   ; word
+wBattleMonLevel        equ 0xD021
+wBattleMonMaxHP        equ 0xD022   ; word
+wBattleMonStats        equ 0xD022
+wBattleMonAttack       equ 0xD024
+wBattleMonDefense      equ 0xD026
+wBattleMonSpeed        equ 0xD028
+wBattleMonSpecial      equ 0xD02A
+wBattleMonPP           equ 0xD02C   ; 4 bytes
+
+wTrainerClass          equ 0xD030
+wIsInBattle            equ 0xD056   ; 0 none, 1 wild, 2 trainer ($FF = lost)
+wBattleType            equ 0xD059
+wDamageMultipliers     equ 0xD05A   ; bit 7 = STAB, low bits = type-eff numerator
+wCriticalHitOrOHKO     equ 0xD05D
+wMoveMissed            equ 0xD05E
+wPlayerBattleStatus1   equ 0xD061
+wPlayerBattleStatus2   equ 0xD062
+wPlayerBattleStatus3   equ 0xD063
+wEnemyBattleStatus1    equ 0xD066
+wEnemyBattleStatus2    equ 0xD067
+wEnemyBattleStatus3    equ 0xD068
+wPlayerNumAttacksLeft  equ 0xD069
+wPlayerDisabledMove    equ 0xD06C
+wEnemyNumAttacksLeft   equ 0xD06E
+wEnemyDisabledMove     equ 0xD071
+wPlayerBideAccumulatedDamage equ 0xD073
+wPlayerNumHits         equ 0xD073
+
+wDamage                equ 0xD0D6   ; word, big-endian
+wTypeEffectiveness     equ 0xD11D   ; shared scratch byte (=wPokedexNum union)
+
+; --- HP-bar update scratch (UpdateHPBar / used by drain_hp etc.) — sym-pinned ---
+wHPBarMaxHP            equ 0xCEE9   ; word
+wHPBarOldHP            equ 0xCEEB   ; word
+wHPBarNewHP            equ 0xCEED   ; word
+wHPBarDelta            equ 0xCEEF
+wHPBarTempHP           equ 0xCEF0   ; word
+wHPBarHPDifference     equ 0xCEFD   ; word
+wHPBarType             equ 0xCF93
+
+; --- battle math / turn aliases (lowercase, for pret-faithful drafts) ---
+; hWhoseTurn: 0 on player's turn, 1 on enemy's turn.
+hWhoseTurn             equ 0xFFF3
+hMultiplicand          equ 0xFF96   ; 3 bytes
+hMultiplier            equ 0xFF99
+hDividend              equ 0xFF95   ; 4 bytes (overlaps hProduct/hQuotient)
+hQuotient              equ 0xFF95
+hDivisor               equ 0xFF99
+hRemainder             equ 0xFF99
+
 ; Sprite state data — 16 slots × $10 bytes each, two parallel arrays.
 ; wSpriteStateData1 ($C100) and wSpriteStateData2 ($C200) — sym-verified.
 ; The high byte of a pointer in one array +1 reaches the other (the engine
