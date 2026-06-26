@@ -39,10 +39,27 @@ Code via targeted claims and the `wired`/`verified` transitions:
 - [x] **Stage 4 — Pallet Town reference** (`src/scripts/pallet_town.asm`): `PalletTownOakText`
       gates on `EVENT_GOT_POKEBALLS_FROM_OAK` (`CheckEvent`) → two branches. Test with
       `DEBUG_OAK_EVENT=1` once Oak is spawn-gated into the map.
-- [ ] **Stage 5 — `RunMapScript`** dispatch skeleton (no-op default; cutscenes deferred to
-      the movement + battle milestone).
-- [ ] **Stage 6 — stub conventions** (force-set success flags; record via `stub add`).
-      Started: deferred Oak intro recorded as stubs on `PalletTownOakText` (battle, misc).
+- [x] **Stage 5 — `RunMapScript` dispatch skeleton.** DONE. New
+      `tools/gen_map_scripts.py` → `assets/map_scripts.inc`: `MapScriptPointers`
+      (249 = NUM_MAPS flat `dd`, indexed by `wCurMap`, default `DefaultMapScript`,
+      `SCRIPT_OVERRIDES` registry → `PALLET_TOWN`), exposed by `src/data/map_scripts.asm`.
+      `RunMapScript` + `DefaultMapScript` + `CallFunctionInTable` (flat-`dd` jumptable
+      dispatch) in `src/engine/overworld/run_map_script.asm`; **wired into `OverworldLoop`**
+      (runs every frame, right after `RunNPCMovementScript`). Boulder push / dust /
+      `SwitchToMapRomBank` are deferred no-ops (see header `; TODO` notes). A faithful
+      `PalletTown_Script` skeleton (`src/scripts/pallet_town.asm`) does the
+      `EVENT_GOT_POKEBALLS_FROM_OAK` → `EVENT_PALLET_AFTER_GETTING_POKEBALLS` event-gate,
+      then `CallFunctionInTable` on `wPalletTownCurScript`. **Native-validated** (ELF32):
+      CallFunctionInTable index dispatch (0/1/2), the Pallet event-gate (set/clear),
+      all 10 Pallet states dispatch + return cleanly, and a default map → no-op. The
+      script bundle partial-links (only `ShowTextStream` external); `overworld.asm`
+      assembles with the new call.
+- [~] **Stage 6 — stub conventions.** Pallet Town cutscene states recorded as stubs in
+      `PalletTown_ScriptPointers`: `PalletTownDefaultScript` (the Oak-intro trigger,
+      `; STUB(misc)`) and `PalletTown_CutsceneStub` (OAK_HEY_WAIT … DAISY,
+      `; STUB(battle,misc)` — need scripted NPC movement + the Pikachu battle). These
+      keep the dispatch total and faithful while the cutscene lands in a later milestone.
+      Earlier: deferred Oak intro recorded as stubs on `PalletTownOakText` (battle, misc).
 
 ## Testing note
 

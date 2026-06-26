@@ -140,6 +140,8 @@ GAME_SRCS := \
     src/engine/overworld/overworld.asm \
     src/engine/overworld/movement.asm \
     src/engine/overworld/map_sprites.asm \
+    src/engine/overworld/run_map_script.asm \
+    src/data/map_scripts.asm \
     src/scripts/pallet_town.asm \
     src/engine/math/random.asm \
     src/engine/menus/start_menu.asm \
@@ -381,6 +383,12 @@ src/engine/overworld/map_sprites.o: \
 # Pallet Town text_asm scripts include events.inc → event_constants.inc.
 src/scripts/pallet_town.o: assets/event_constants.inc
 
+# Per-map script dispatch table (generated from constants/map_constants.asm).
+assets/map_scripts.inc:
+	python3 tools/gen_map_scripts.py
+
+src/data/map_scripts.o: assets/map_scripts.inc
+
 # GB character map in the unicode_converter's format (single-char → byte), for
 # the converter submodule + gb_text.py. Generated from constants/charmap.asm.
 assets/gb_charmap.txt:
@@ -442,7 +450,7 @@ assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_
         assets/base_stats.inc assets/growth_rates.inc \
         assets/moves.inc assets/evos_moves.inc assets/monster_names.inc \
         assets/items.inc assets/gb_charmap.txt assets/menu_strings.inc \
-        assets/type_matchups.inc assets/wild_data.inc
+        assets/type_matchups.inc assets/wild_data.inc assets/map_scripts.inc
 
 all: $(TARGET)
 

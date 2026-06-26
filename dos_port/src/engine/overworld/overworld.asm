@@ -42,6 +42,7 @@ bits 32
 extern FillMemory
 extern CopyData
 extern FarCopyData
+extern RunMapScript           ; per-frame map _Script dispatch (script engine)
 extern DisableLCD
 extern EnableLCD
 extern DelayFrame
@@ -369,6 +370,7 @@ EnterMap:
 ; ---------------------------------------------------------------------------
 OverworldLoop:
     call RunNPCMovementScript                    ; door-exit auto-walk (BIT_STANDING_ON_DOOR path)
+    call RunMapScript                            ; per-frame map _Script (default no-op; Pallet event-gate)
     ; Count down wIgnoreInputCounter each frame — pret: CountDownIgnoreInputBitReset (home/play_time.asm)
     cmp byte [ebp + W_IGNORE_INPUT_COUNTER], 0
     je .joyCountDone

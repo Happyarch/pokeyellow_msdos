@@ -722,6 +722,7 @@ wStringBuffer                equ 0xCF4A   ; PrintStatText destination (Stage 5)
 wGrassTile                   equ 0xD534   ; = W_GRASS_TILE (tall-grass tile id)
 wPartyMon1Level              equ 0xD18B   ; lead party mon level (repel check)
 wNameListIndex               equ 0xD0B4   ; selected move id (GetCurrentMove → name)
+wPalletTownCurScript         equ 0xD5F0   ; Pallet Town _Script state index (sym)
 wStatusFlags7                equ 0xD732   ; = W_STATUS_FLAGS_7 (BIT_TEST_BATTLE)
 wTestBattlePlayerSelectedMove equ 0xCCD9  ; debug TestBattle forced move
 
