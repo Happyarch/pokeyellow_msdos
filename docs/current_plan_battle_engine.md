@@ -93,8 +93,12 @@ Authoritative addresses: `git show origin/symbols:pokeyellow.sym` (bank:addr).
   `HandleBuildingRage`, and the inline turn-order speed compare (in the deferred
   main battle loop).
 
-- [ ] **Stage 8 — Trainer AI backend.** `trainer_ai.asm` move-scoring logic
-  (no UI). `read_trainer_party.asm`.
+- [~] **Stage 8 — Trainer AI backend.** `AIGetTypeEffectiveness` done in
+  core_damage.asm (single-type effectiveness vs the player mon → wTypeEffectiveness;
+  preserves the faithful `$10`-init bug and the Lorelei/Dewgong 40%-ignore case).
+  Native-validated (WATER→FIRE=20, NORMAL→GRASS=16 [the bug], GROUND→FLYING=0,
+  GRASS→WATER=20). REMAINING: the AI move-scoring layer (`AIMoveChoiceModification*`,
+  trainer-class AI pointers) and `read_trainer_party.asm`.
 
 - [ ] **Stage 9 — Wild-encounter generation.** `wild_encounters.asm`
   (`TryDoWildEncounter` data/RNG path; the overworld trigger is the consumer).

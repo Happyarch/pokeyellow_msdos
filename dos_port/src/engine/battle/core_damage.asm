@@ -881,3 +881,57 @@ RandomizeDamage:
     mov [ebp + esi], al                ; [hl]
 .ret:
     ret
+
+; ===========================================================================
+; AIGetTypeEffectiveness — single-type effectiveness of the enemy move vs the
+; player mon, stored in wTypeEffectiveness (scaled by 10). Does NOT handle dual-
+; type stacking (4x / cancel). Used by trainer AI move selection.
+;
+; BUG (faithful, original): initializes wTypeEffectiveness to $10 (16) rather
+; than EFFECTIVE (10). Preserved at BUG_FIX_LEVEL 0; pret ref core.asm:5371.
+; ===========================================================================
+global AIGetTypeEffectiveness
+
+AIGetTypeEffectiveness:
+    mov al, [ebp + wEnemyMoveType]
+    mov dh, al                       ; d = enemy move type
+    mov esi, wBattleMonType1
+    mov bh, [ebp + esi]              ; b = player type 1
+    inc esi
+    mov bl, [ebp + esi]              ; c = player type 2
+    mov byte [ebp + wTypeEffectiveness], 0x10   ; BUG(faithful): should be 10
+    mov esi, TypeEffects             ; flat table -> [esi]
+.loop:
+    mov al, [esi]
+    inc esi
+    cmp al, 0xFF
+    je .ret
+    cmp al, dh
+    jne .nextTypePair1
+    mov al, [esi]
+    inc esi
+    cmp al, bh
+    je .done
+    cmp al, bl
+    je .done
+    jmp .nextTypePair2
+.nextTypePair1:
+    inc esi
+.nextTypePair2:
+    inc esi
+    jmp .loop
+.done:
+    mov al, [ebp + wTrainerClass]
+    cmp al, LORELEI
+    jne .ok
+    mov al, [ebp + wEnemyMonSpecies]
+    cmp al, DEWGONG
+    jne .ok
+    call BattleRandom
+    cmp al, 0x66                     ; 40% chance to ignore effectiveness
+    jb .ret
+.ok:
+    mov al, [esi]                    ; effectiveness factor
+    mov [ebp + wTypeEffectiveness], al
+.ret:
+    ret

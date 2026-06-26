@@ -323,6 +323,10 @@ STRUGGLE                equ 0xA5
 ; --- serial / link state (battle RNG boundary) ---
 LINK_STATE_BATTLING     equ 0x04
 
+; --- trainer class / species ids name-checked by AI (constants/*.asm) ---
+LORELEI                 equ 0x2C       ; trainer class
+DEWGONG                 equ 0x78       ; species
+
 ; --- battle-mon struct field offsets (battle_struct, macros/ram.asm) ---
 ; wBattleMon ($D013) and wEnemyMon ($CFE4) share this 29-byte layout. Direct
 ; per-field WRAM aliases are also defined in gb_memmap.inc; these offsets let
