@@ -27,6 +27,8 @@ extern TextBoxBorder         ; ESI=top-left, BL=interior width, BH=interior heig
 extern place_flat_str        ; ESI=dest (EBP-rel), EAX=flat '@'-terminated src
 extern DelayFrame
 extern ItemNames             ; src/data/item_data.asm — flat '@'-terminated name table
+extern KeyItemFlags          ; src/data/item_data.asm — LSB-first key-item bit array
+extern RemoveItemFromInventory_  ; src/engine/items/inventory.asm
 extern g_win_clip_w
 extern g_win_max_y
 %ifdef DEBUG_BAGMENU
@@ -69,6 +71,7 @@ align 4
 bm_selected:   resd 1        ; absolute index into the entry list (0..num_entries-1)
 bm_scroll:     resd 1        ; index of the top visible entry
 bm_num_entries: resd 1       ; bag item count + 1 (the CANCEL tail)
+bm_toss_qty:   resd 1        ; quantity being chosen to toss (1..item qty)
 
 section .text
 
@@ -140,11 +143,90 @@ DisplayBagMenu:
     jmp .loop
 
 .select:
-    ; CANCEL (last entry) closes; an item is a no-op for now (USE/TOSS deferred).
+    ; CANCEL (last entry) closes. An item → TOSS flow (USE is deferred).
     mov eax, [bm_selected]
     inc eax
     cmp eax, [bm_num_entries]   ; selected == num_entries-1 ?
     je .exit
+
+    ; item id at wBagItems + bm_selected*2 — key items can't be tossed.
+    mov ecx, [bm_selected]
+    shl ecx, 1
+    movzx eax, byte [ebp + wBagItems + ecx]
+    call .is_key_item           ; ZF=0 (NZ) if key item
+    jnz .loop                   ; key item → can't toss (no-op for now)
+
+    ; tossable: if only 1, toss it; else let the player choose 1..qty.
+    mov ecx, [bm_selected]
+    shl ecx, 1
+    movzx edx, byte [ebp + wBagItems + ecx + 1]   ; item quantity
+    mov dword [bm_toss_qty], 1
+    cmp edx, 1
+    je .toss_do
+
+.tc_render:
+    call .render_toss_qty       ; show the chosen count in the item's qty field
+.tc_loop:
+    call DelayFrame
+    movzx eax, byte [ebp + H_JOY_PRESSED]
+    test al, PAD_UP
+    jnz .tc_up
+    test al, PAD_DOWN
+    jnz .tc_down
+    test al, PAD_A
+    jnz .toss_do
+    test al, PAD_B
+    jnz .tc_cancel
+    jmp .tc_loop
+.tc_up:
+    mov eax, [bm_toss_qty]
+    inc eax
+    mov ecx, [bm_selected]
+    shl ecx, 1
+    movzx edx, byte [ebp + wBagItems + ecx + 1]   ; item qty (ceiling)
+    cmp eax, edx
+    jbe .tc_store
+    mov eax, 1                  ; past max → wrap to 1
+    jmp .tc_store
+.tc_down:
+    mov eax, [bm_toss_qty]
+    dec eax
+    jnz .tc_store
+    mov ecx, [bm_selected]
+    shl ecx, 1
+    movzx eax, byte [ebp + wBagItems + ecx + 1]   ; below 1 → wrap to max
+.tc_store:
+    mov [bm_toss_qty], eax
+    jmp .tc_render
+.tc_cancel:
+    call .render                ; restore the real qty display
+    jmp .wait_a_release
+
+.toss_do:
+    ; wWhichPokemon = bm_selected (bag slot); wItemQuantity = bm_toss_qty.
+    mov eax, [bm_selected]
+    mov [ebp + wWhichPokemon], al
+    mov eax, [bm_toss_qty]
+    mov [ebp + wItemQuantity], al
+    mov esi, wNumBagItems
+    call RemoveItemFromInventory_
+    ; refresh entry count; clamp selection into range.
+    movzx eax, byte [ebp + wNumBagItems]
+    inc eax
+    mov [bm_num_entries], eax
+    mov eax, [bm_selected]
+    cmp eax, [bm_num_entries]
+    jb .td_sel_ok
+    mov eax, [bm_num_entries]
+    dec eax
+    mov [bm_selected], eax
+.td_sel_ok:
+    call .fix_scroll
+    call .render
+.wait_a_release:
+    call DelayFrame
+    test byte [ebp + H_JOY_HELD], PAD_A | PAD_B
+    jnz .wait_a_release
     jmp .loop
 
 .exit:
@@ -307,4 +389,58 @@ DisplayBagMenu:
     dec ecx
     jmp .fin_skip
 .fin_done:
+    ret
+
+; --- AL = item id → key-item test (pret IsKeyItem_). ZF=0 (NZ) if key/untossable,
+;     ZF=1 (Z) if tossable. Clobbers EAX, ECX. ---------------------------------
+; HMs ($C4-$C8) are key; TMs ($C9+) are tossable; everything below uses the
+; KeyItemFlags bit array, testing bit (id-1).
+.is_key_item:
+    cmp al, 0xC4
+    jb .ik_bitfield
+    cmp al, 0xC9
+    jb .ik_key                  ; $C4..$C8 = HM → key
+    xor al, al                  ; $C9+ = TM → tossable (ZF=1)
+    ret
+.ik_bitfield:
+    movzx ecx, al
+    dec ecx                     ; bit index (id - 1)
+    mov eax, ecx
+    shr eax, 3                  ; byte index
+    and ecx, 7                  ; bit within byte
+    mov al, [KeyItemFlags + eax]   ; flat table
+    shr al, cl
+    and al, 1                   ; ZF=0 if key bit set, ZF=1 if clear
+    ret
+.ik_key:
+    mov al, 1
+    and al, al                  ; ZF=0 → key
+    ret
+
+; --- write "×NN" (bm_toss_qty, 2 digits) into the selected item's qty field in
+;     GB_TILEMAP1 (live feedback during the toss-quantity choice). ------------
+.render_toss_qty:
+    mov eax, [bm_selected]
+    sub eax, [bm_scroll]
+    imul eax, eax, BM_ROW_STEP
+    add eax, BM_FIRST_ROW
+    imul eax, eax, 32           ; GB_TILEMAP1 row stride
+    add eax, GB_TILEMAP1 + BM_QTY_COL
+    mov edi, eax                ; EDI = GB_TILEMAP1 qty offset
+    mov byte [ebp + edi], CHAR_TIMES
+    movzx eax, byte [bm_toss_qty]
+    mov cl, 10
+    div cl                      ; AL = tens, AH = ones
+    movzx ecx, ah
+    movzx eax, al
+    test eax, eax
+    jnz .rtq_tens
+    mov byte [ebp + edi + 1], TILE_SPC
+    jmp .rtq_ones
+.rtq_tens:
+    add eax, CHAR_DIGIT0
+    mov [ebp + edi + 1], al
+.rtq_ones:
+    add ecx, CHAR_DIGIT0
+    mov [ebp + edi + 2], cl
     ret

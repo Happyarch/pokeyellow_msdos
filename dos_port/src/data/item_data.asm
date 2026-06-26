@@ -13,6 +13,7 @@ bits 32
 
 global ItemNames
 global ItemPrices
+global KeyItemFlags
 
 section .data
 align 4

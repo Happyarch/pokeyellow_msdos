@@ -70,12 +70,35 @@ overworld boots with an empty party + bag. So coupling has three layers:
   Jigglypuff L15 59/59, Pikachu L5 18/18 — HP matches hand-computed CalcStats
   exactly. Deferred polish: HP bar, status, the per-mon action sub-menu/summary,
   level/HP right-alignment.
-- [ ] **TOSS (easy, after Stage 3).** Per user: TOSS is low-effort — a
-  "how many?" quantity prompt + `IsKeyItem` guard, then `RemoveItemFromInventory_`
-  (already built). Good first interactive action on the bag list. (Item **USE** is
-  much larger — the per-item effect dispatch — so it stays deferred.)
-- [ ] **Later (deferred):** item USE dispatch, party→summary/switch, the real
-  new-game/Oak-gift data path replacing the DEBUG_PARTY seed.
+- [~] **TOSS — logic complete (manual test pending).** A on a tossable bag item →
+  quantity chooser (up/down 1..qty, wrap) → `RemoveItemFromInventory_`; A on a key
+  item is a no-op. Key-item guard `bag_menu.asm:.is_key_item` uses the generated
+  `KeyItemFlags` bit array (gen_items.py, byte0 `0xF0` verified) + the HM range
+  ($C4-$C8 key, $C9+ TM tossable). The bag refreshes (entry count + scroll clamp)
+  after a toss. `RemoveItemFromInventory_` was audited (faithful to pret) and is
+  native-validated. NOT yet frame-verified interactively (needs an input sequence
+  the headless harness can't drive) — **manual test before relying on it**:
+  build normally, START→ITEM, A on e.g. FULL RESTORE (tossable) vs TOWN MAP (key).
+  Deferred polish: "TOSS how many?" / "TOO IMPORTANT!" text; the USE/TOSS sub-menu
+  (A currently jumps straight to toss since USE isn't implemented).
+
+## Handoff — resume here
+
+Two threads remain before this is "real" (both deferred deliberately):
+
+1. **Party screen polish** (`party_menu.asm`): the HP **bar** (needs the HP-bar
+   tiles + a fill calc), status condition, and the per-mon **action sub-menu**
+   (STATS / SWITCH / CANCEL → summary screen, party reorder). Level/HP currently
+   use right-aligned `.print_num3` (":L 80", "59/ 59"); tidy alignment if desired.
+2. **Real data path** — replace the `DEBUG_PARTY` debug seed (`debug_party.asm` +
+   `PrepareNewGameDebug`) with the actual new-game init + Oak starter-gift flow
+   (the deferred item in `current_plan_script_engine.md` that needs `AddPartyMon`),
+   so the party/bag are populated by gameplay, not a `make DEBUG_*` flag. Until
+   then, the menus only show data under `DEBUG_PARTY`/`DEBUG_BAGMENU`/`DEBUG_PARTYMENU`.
+
+Also pending: **item USE** dispatch (the large per-item effect engine — separate
+from TOSS), and generalizing the bag/party list rendering into one shared list-menu
+substrate if a third list type appears.
 
 ## Notes
 - The DEBUG_PARTY seed is scaffolding for *testing* the UI against live data; the

@@ -66,6 +66,18 @@ def main() -> int:
         if m:
             prices.append(int(m.group(1)))
 
+    # KeyItemFlags bit array (data/items/key_items.asm): one bit per item id,
+    # LSB-first (bit i = byte i//8, bit i&7), TRUE = key item (can't be tossed).
+    keybits = []
+    for line in (ROOT / "data/items/key_items.asm").read_text().splitlines():
+        m = re.match(r"\s*dbit\s+(TRUE|FALSE)", line)
+        if m:
+            keybits.append(1 if m.group(1) == "TRUE" else 0)
+    keyflags = bytearray((len(keybits) + 7) // 8)
+    for i, b in enumerate(keybits):
+        if b:
+            keyflags[i // 8] |= 1 << (i & 7)
+
     pricebytes = bytearray()
     for p in prices:
         pricebytes += bcd3(p)
@@ -89,11 +101,21 @@ def main() -> int:
         out.append("    db " + ", ".join(f"0x{b:02X}" for b in rec) + f"    ; item {i+1}: {p}")
     out += ["ItemPrices_end:", ""]
 
+    out += [
+        f"; KeyItemFlags: {len(keybits)}-bit array (LSB-first), TRUE = key item",
+        "; (untossable). Test bit (item_id - 1). HMs ($C4-$C8) are key via a",
+        "; separate range check, not this table.",
+        "KeyItemFlags:",
+        "    db " + ", ".join(f"0x{b:02X}" for b in keyflags),
+        "",
+    ]
+
     ASSETS.mkdir(parents=True, exist_ok=True)
     dst = ASSETS / "items.inc"
     dst.write_text("\n".join(out))
     print(f"wrote {dst} (ItemNames {len(names)} names / {len(namebytes)} bytes, "
-          f"ItemPrices {len(prices)} x 3 = {len(pricebytes)} bytes)")
+          f"ItemPrices {len(prices)} x 3 = {len(pricebytes)} bytes, "
+          f"KeyItemFlags {len(keyflags)} bytes / {len(keybits)} items)")
     return 0
 
 
