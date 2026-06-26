@@ -104,6 +104,40 @@ Authoritative addresses: `git show origin/symbols:pokeyellow.sym` (bank:addr).
   (`TryDoWildEncounter` data/RNG path; the overworld trigger is the consumer).
 
 ## Verification log
-(fill as stages complete)
+
+Toolchain installed in the web container: NASM 2.16.01 (`apt`). No DPMI host /
+no `-m32` libc, so pure-computation routines are validated with freestanding
+NASM ELF32 harnesses (`nasm -f elf32` + `ld -m elf_i386`, syscalls), exactly the
+method the pokemon-engine plan used.
+
+| Routine | Inputs → output | Result |
+|---|---|---|
+| CalculateDamage | L50 P40 A100 D100 | 19 ✓ |
+| CalculateDamage | L100 P80 A150 D120 | 86 ✓ |
+| CalculateDamage | L5 P40 A20 D20 | 5 ✓ |
+| CalculateDamage | L100 P250 A255 D10 (997-cap + 24-bit mul path) | 999 ✓ |
+| AdjustDamageForMoveType | GRASS-STAB vs WATER, dmg 100 | 300, mult $94 ✓ |
+| AdjustDamageForMoveType | FIRE vs WATER | 50 ✓ |
+| AdjustDamageForMoveType | GROUND vs FLYING (immune) | 0 + wMoveMissed ✓ |
+| ApplyBadgeStatBoosts | Atk100/Def900/Spd8/Spc255, all badges | 112/999(cap)/9/286 ✓ |
+| QuarterSpeedDueToParalysis | Spd 200 / Spd 2 | 50 / 1(min) ✓ |
+| HalveAttackDueToBurn | Atk 100 | 50 ✓ |
+| (penalty, unstatused) | Spd 300 | 300 (unchanged) ✓ |
+| AIGetTypeEffectiveness | WATER→FIRE / NORMAL→GRASS / GROUND→FLYING / GRASS→WATER | 20 / 16(faithful bug) / 0 / 20 ✓ |
+
+All battle files assemble under the Makefile flags (`make check`). Include
+additions introduce no symbol collisions in existing pokemon/items/menu/home files.
+
+## What remains (all UI- or subsystem-coupled — deferred per the user)
+
+- The main battle loop / turn flow (`MainInBattle`, `ExecutePlayerMove`/
+  `ExecuteEnemyMove`, move-effect dispatch `JumpMoveEffect`) — interleaved with
+  text/animation; this is the front end's backbone.
+- `CheckTargetSubstitute`, HP-bar update, HUD draw (UI).
+- `GetCurrentMove` move-record load (backend core + name/UI tail; needs flat-source copy).
+- Status residual damage (`HandlePoisonBurnLeechSeed`), `HandleBuildingRage`.
+- `experience.asm` (mechanical bugs fixed; needs the level-up/EXP subsystem to link).
+- AI move-scoring (`AIMoveChoiceModification*`), `read_trainer_party.asm`.
+- Wild-encounter generation (`TryDoWildEncounter`) — needs per-map encounter data tables.
 </content>
 </invoke>
