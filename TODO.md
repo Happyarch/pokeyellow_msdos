@@ -4,6 +4,20 @@ Prioritized task list. Check off items as they complete; add new items with phas
 
 ---
 
+## Known Regressions
+
+- [ ] **Overworld player walks too fast** (noted 2026-06-26). The player moves
+  noticeably faster than intended in the overworld. Cause not yet identified — it
+  is NOT DOSBox cycle tuning (this port uses PIT-based 60 Hz timing, not
+  cycle-counted delays). The party-UI work merged in `40257149` does not touch the
+  walk path (`OverworldLoop` / `AdvancePlayerSprite` / `DelayFrame`); its only
+  shared-render change is the `g_bg_whiteout` guard, which is 0 in the overworld
+  and falls through to identical behaviour. Investigate the `DelayFrame` PIT/vblank
+  cap (is the loop actually frame-capped, or render-bound?) and the
+  two-`DelayFrame`-per-`AdvancePlayerSprite` cadence in `OverworldLoop`.
+
+---
+
 ## Phase 0: Bootstrapping
 
 - [x] Create project structure (`dos_port/`, `docs/references/`, etc.)
