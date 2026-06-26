@@ -1,20 +1,31 @@
 ; party_menu.asm — overworld party (POKéMON) screen.
 ;
-; Lists the player's party — nickname, level, and current/max HP — opened from the
-; START menu's POKéMON entry. Read-only for now: A is a no-op (the party action
-; sub-menu, summary, and HP bar are deferred UI); B exits to the START menu.
+; Lists the player's party the way the original game's party menu does: for each
+; mon a name row ("NICK  :Llvl  STATUS") and an HP row (the 6-segment HP-bar
+; gauge + "cur/ max"), opened from the START menu's POKéMON entry. Read-only for
+; now: A is a no-op (the per-mon action sub-menu / summary screen are deferred);
+; B exits to the START menu.
 ;
-; The party is capped at 6, so every entry fits and there is no scrolling (unlike
-; the bag). Each mon takes two rows: "▶NICK  :Lnn" then "HP cur/max". Rendered
-; through the GB window layer like the START / bag menus (draw into the 20-wide
-; wTileMap scratch grid, copy the box rect to GB_TILEMAP1, blit via render_window
-; with g_win_clip_w/g_win_max_y bounding).
+; Faithful to pret engine/menus/party_menu.asm:RedrawPartyMenu_ — name
+; (GetPartyMonName/PlaceString), PrintLevel (":L" + digits), PrintStatusCondition
+; (FNT / PSN / BRN / FRZ / PAR / SLP or blank), and DrawHP2 → DrawHPBar
+; (engine/gfx/hp_bar.asm GetHPBarLength: pixels = curHP * 48 / maxHP, a 6-tile /
+; 48-pixel gauge). The animated party-mon ICON sprites and the full-screen white
+; takeover are still deferred (see the party-menu polish handoff).
 ;
-; CALLER CONTRACT: the text font must already be resident in vFont (the START menu
-; loads it before dispatching here). Input uses H_JOY_PRESSED.
+; The HP-bar gauge + ":L" tiles ($62-$6e) live in the HpBarAndStatus tile set
+; (font_battle_extra), which is NOT resident in the overworld — so we load it on
+; entry (LoadHpBarAndStatusTilePatterns) and restore the box-drawing tiles it
+; clobbers (LoadTextBoxTilePatterns) on exit so the START menu border redraws.
 ;
-; Pret ref: home/list_menu.asm PCPOKEMONLISTMENU path + PrintLevel (HP-bar/summary
-; omitted in this first cut).
+; The party is capped at 6, so every entry fits and there is no scrolling. The
+; panel is borderless (cleared to the blank space tile $7F) and rendered through
+; the GB window layer like the START / bag menus (draw into the 20-wide wTileMap
+; scratch grid, copy cols 0-19 to GB_TILEMAP1, blit via render_window with
+; g_win_clip_w/g_win_max_y bounding).
+;
+; CALLER CONTRACT: the text font must already be resident in vFont (the START
+; menu loads it before dispatching here). Input uses H_JOY_PRESSED.
 ; ---------------------------------------------------------------------------
 bits 32
 
@@ -24,41 +35,90 @@ bits 32
 
 global DisplayPartyMenu
 
-extern TextBoxBorder         ; ESI=top-left, BL=interior width, BH=interior height
 extern PlaceString           ; ESI=dest (EBP-rel), EDX=src offset (EBP-rel)
 extern DelayFrame
 extern g_win_clip_w
 extern g_win_max_y
+extern g_bg_whiteout                     ; src/ppu/ppu.asm — full-screen white field
+extern LoadHpBarAndStatusTilePatterns   ; src/gfx/load_font.asm
+extern LoadTextBoxTilePatterns          ; restore box tiles for the START menu
+extern LoadTilesetTilePatternData       ; restore overworld tileset ($9000) on exit
 %ifdef DEBUG_PARTYMENU
 extern DumpBackbuffer
 %endif
 
 ; --- layout (GB 20-wide logical wTileMap coords) ---
-PM_BOX_W       equ 18        ; interior width → box cols 0-19
-PM_CURSOR_COL  equ 1
-PM_NAME_COL    equ 2
-PM_LEVEL_COL   equ 13        ; ":" col; "L" at +1; level digits at +2..+4
-PM_HP_COL      equ 3         ; "HP" col; cur at +3, "/" at +6, max at +7
-PM_FIRST_ROW   equ 1         ; first name row (interior)
+; Faithful to pret: cursor(0), 2x2 icon(1-2), name(3), level(13), status(17),
+; and on the HP row the gauge(4-12) + cur/max fraction(13-19).
+PM_CURSOR_COL  equ 0         ; ▶ cursor
+PM_ICON_COL    equ 1         ; 2x2 mon icon (cols 1-2, spanning both rows)
+PM_NAME_COL    equ 3         ; nickname (≤10 chars → cols 3-12)
+PM_LV_COL      equ 13        ; ":L" combined tile
+PM_LEVEL_COL   equ 14        ; level digits (3-wide, leading spaces → 14-16)
+PM_STATUS_COL  equ 17        ; status text (3 chars) / blank → 17-19
+PM_HP_BAR_COL  equ 4         ; HP row: "HP:" gauge (9 tiles → cols 4-12)
+PM_HP_FRAC_COL equ 13        ; cur(13-15) "/"(16) max(17-19)
+PM_FIRST_ROW   equ 0         ; first name row (no border)
+
+; Mon-icon VRAM tiles: slot i uses 4 consecutive tiles (TL,TR,BL,BR) starting at
+; ICON_TILE_BASE + i*4, living in the vTileset region ($9000+) that the overworld
+; reloads on exit. Animation swaps the VRAM contents of the selected slot's tiles
+; (the window decoder reads VRAM directly, so the tilemap IDs stay fixed).
+PM_ICON_TILE_BASE equ 0x01
 
 ; window: full 20-tile (160px) box centered in the 320px viewport (WX-7=80).
 PM_WIN_WX      equ 87
 PM_WIN_CLIP_W  equ 160
 
+; HP-bar gauge tiles (HpBarAndStatus set, loaded over $62+).
+HPB_HP         equ 0x71      ; narrow "HP" label
+HPB_LEFT       equ 0x62      ; ":" + gauge left edge
+HPB_EMPTY      equ 0x63      ; empty gauge segment; $63+n = n-pixel partial fill
+HPB_FULL       equ 0x6b      ; full (8px) gauge segment
+HPB_END        equ 0x6c      ; gauge right cap (pokemon menu variant)
+TILE_LV        equ 0x6e      ; ":L" level prefix
+
 CHAR_CURSOR    equ 0xED      ; ▶
-CHAR_COLON     equ 0x9C      ; :
-CHAR_L         equ 0x8B      ; L
-CHAR_H         equ 0x87      ; H
-CHAR_P         equ 0x8F      ; P
 CHAR_SLASH     equ 0xF3      ; /
 CHAR_DIGIT0    equ 0xF6      ; '0'; digit d → +d
 TILE_SPC       equ 0x7F
+
+; status-condition bits within MON_STATUS (constants/battle_constants.asm).
+ST_PSN_BIT     equ 3
+ST_BRN_BIT     equ 4
+ST_FRZ_BIT     equ 5
+ST_PAR_BIT     equ 6
+ST_SLP_MASK    equ 0x07
+
+section .data
+align 4
+; Mon-icon tile data + internal-index → ICON_* map (tools/gen_mon_icons_inc.py).
+; NOTE (flipping): the right half of each icon is baked here as a HORIZONTAL
+; MIRROR of the left half, because the window/BG layer this menu renders through
+; has no per-tile X-flip (only OBJ sprites do). This assumes every party icon has
+; a vertical line of symmetry — true for all non-helix icons in pret. If a future
+; icon needs a genuine left/right-distinct or runtime-flipped layout (e.g. the
+; helix/fossil sprite, or an OAM-based rewrite), revisit this and the generator.
+%include "assets/mon_icons.inc"
+
+; 3-tile status strings (font letters: tile = $80 + (letter-'A')).
+st_fnt:   db 0x85, 0x8D, 0x93        ; FNT
+st_psn:   db 0x8F, 0x92, 0x8D        ; PSN
+st_brn:   db 0x81, 0x91, 0x8D        ; BRN
+st_frz:   db 0x85, 0x91, 0x99        ; FRZ
+st_par:   db 0x8F, 0x80, 0x91        ; PAR
+st_slp:   db 0x92, 0x8B, 0x8F        ; SLP
+st_blank: db TILE_SPC, TILE_SPC, TILE_SPC
 
 section .bss
 align 4
 pm_count:      resd 1        ; party size (1..6)
 pm_selected:   resd 1        ; selected entry index (0..count-1)
 pm_slot:       resd 1        ; render-loop slot counter (survives PlaceString/div)
+pm_pixels:     resd 1        ; current entry's HP-bar fill in pixels (0..48)
+pm_anim_ctr:   resd 1        ; vblank counter for the selected mon's icon bob
+pm_anim_frame: resd 1        ; 0/1 — current animation frame of the selected icon
+pm_anim_period: resd 1       ; vblanks per frame (6 green / 17 yellow / 33 red)
 
 section .text
 
@@ -75,17 +135,29 @@ DisplayPartyMenu:
     mov [pm_count], eax
     mov dword [pm_selected], 0
 
-    ; window placement: box total rows = count*2 + 2 (borders); max_y = rows*8.
-    mov byte  [ebp + H_WY], 0
+    ; Bring in the HP-bar/status/":L" tiles (clobbers box-drawing tiles $79-$7E).
+    call LoadHpBarAndStatusTilePatterns
+
+    ; Whiteout the overworld behind the menu so the GB pokemon menu sits centered
+    ; on a clean white field instead of over Pallet Town.
+    mov dword [g_bg_whiteout], 1
+
+    ; window placement: 160px (20-tile) box centered horizontally; the list block
+    ; (count*2 rows) centered vertically: WY = (RENDER_H - rows*8) / 2.
     mov byte  [ebp + IO_WX], PM_WIN_WX
     mov dword [g_win_clip_w], PM_WIN_CLIP_W
     mov eax, [pm_count]
-    shl eax, 1
-    add eax, 2                  ; total box rows
-    shl eax, 3                  ; * 8 px
+    shl eax, 1                  ; total box rows
+    shl eax, 3                  ; pixel height
+    mov ecx, RENDER_H
+    sub ecx, eax                ; RENDER_H - pixel_h
+    shr ecx, 1                  ; WY (centered top)
+    mov [ebp + H_WY], cl
+    add eax, ecx                ; max_y = WY + pixel_h (exclusive bottom)
     mov [g_win_max_y], eax
 
     call .render
+    call .refresh_icons             ; load icon gfx into VRAM + reset the bob timer
 
 %ifdef DEBUG_PARTYMENU
     call DelayFrame
@@ -99,6 +171,21 @@ DisplayPartyMenu:
 
 .loop:
     call DelayFrame
+    ; advance the selected mon's icon bob (only the cursor mon animates, at a
+    ; period set by its HP fraction — pret AnimatePartyMon / GetHealthBarColor).
+    mov eax, [pm_anim_ctr]
+    inc eax
+    cmp eax, [pm_anim_period]
+    jb .anim_store
+    mov edx, [pm_anim_frame]
+    xor edx, 1                      ; toggle frame
+    mov [pm_anim_frame], edx
+    mov eax, [pm_selected]
+    call .load_icon_slot            ; reload selected slot's VRAM with the new frame
+    xor eax, eax                    ; counter back to 0
+.anim_store:
+    mov [pm_anim_ctr], eax
+
     movzx eax, byte [ebp + H_JOY_PRESSED]
     test al, PAD_DOWN
     jnz .down
@@ -116,6 +203,7 @@ DisplayPartyMenu:
     jae .loop
     mov [pm_selected], eax
     call .render
+    call .refresh_icons
     jmp .loop
 .up:
     mov eax, [pm_selected]
@@ -124,6 +212,7 @@ DisplayPartyMenu:
     dec eax
     mov [pm_selected], eax
     call .render
+    call .refresh_icons
     jmp .loop
 
 .exit:
@@ -131,19 +220,24 @@ DisplayPartyMenu:
     call DelayFrame
     test byte [ebp + H_JOY_HELD], PAD_A | PAD_B
     jnz .exit_release
+    mov dword [g_bg_whiteout], 0         ; restore the overworld behind the START menu
+    ; restore the VRAM tiles the menu borrowed: tileset ($00-$5F, icons) and the
+    ; box-drawing tiles ($60-$7F) so the START menu border redraws correctly.
+    call LoadTilesetTilePatternData
+    call LoadTextBoxTilePatterns
 .exit_now:
     popad
     ret
 
-; --- redraw box + all party entries + cursor into wTileMap, then copy ---------
+; --- redraw the whole panel + all party entries + cursor, then copy ----------
 .render:
-    ; box border (clears interior); interior height = count*2.
-    mov esi, W_TILEMAP
-    mov bl, PM_BOX_W
+    ; clear the panel (count*2 rows × 20 cols) to blank space.
     mov eax, [pm_count]
     shl eax, 1
-    mov bh, al
-    call TextBoxBorder
+    imul ecx, eax, 20           ; total tiles to clear
+    lea edi, [ebp + W_TILEMAP]
+    mov al, TILE_SPC
+    rep stosb
 
     mov dword [pm_slot], 0
 .entry_loop:
@@ -156,8 +250,7 @@ DisplayPartyMenu:
     mov eax, [pm_slot]
     shl eax, 1
     add eax, PM_FIRST_ROW
-    imul eax, eax, 20
-    mov edi, eax                        ; EDI = name row base (col 0)
+    imul edi, eax, 20                   ; EDI = name row base (col 0)
 
     ; nickname (PlaceString: ESI=dest, EDX=src; clobbers EAX/EBX/EDX — save EBX/EDI)
     push ebx
@@ -170,43 +263,111 @@ DisplayPartyMenu:
     pop edi
     pop ebx
 
-    ; ":L" + level
-    mov byte [ebp + edi + W_TILEMAP + PM_LEVEL_COL], CHAR_COLON
-    mov byte [ebp + edi + W_TILEMAP + PM_LEVEL_COL + 1], CHAR_L
+    ; ":L" tile + level (3-digit, leading spaces)
+    mov byte [ebp + edi + W_TILEMAP + PM_LV_COL], TILE_LV
     movzx eax, byte [ebp + ebx + MON_LEVEL]
     push edi
     push ebx
-    lea edi, [edi + W_TILEMAP + PM_LEVEL_COL + 2]
+    lea edi, [edi + W_TILEMAP + PM_LEVEL_COL]
     call .print_num3
     pop ebx
     pop edi
 
-    ; HP row = name row + 1 → "HP" + cur "/" max
-    mov esi, edi
-    add esi, 20                         ; HP row base (col 0)
-    mov byte [ebp + esi + W_TILEMAP + PM_HP_COL], CHAR_H
-    mov byte [ebp + esi + W_TILEMAP + PM_HP_COL + 1], CHAR_P
-    mov byte [ebp + esi + W_TILEMAP + PM_HP_COL + 6], CHAR_SLASH
-    ; current HP (big-endian word at struct+MON_HP)
-    movzx eax, byte [ebp + ebx + MON_HP]
+    ; status condition (FNT / PSN / ... / blank) at the right of the name row
+    push edi
+    push ebx
+    lea edi, [edi + W_TILEMAP + PM_STATUS_COL]
+    call .print_status
+    pop ebx
+    pop edi
+
+    ; --- HP-bar fill: pixels = curHP * 48 / maxHP (≥1 if alive, 0 if fainted) --
+    movzx eax, byte [ebp + ebx + MON_HP]        ; curHP big-endian
+    shl eax, 8
+    mov al, [ebp + ebx + MON_HP + 1]
+    mov ecx, eax                                ; ECX = curHP
+    movzx eax, byte [ebp + ebx + MON_MAXHP]     ; maxHP big-endian
+    shl eax, 8
+    mov al, [ebp + ebx + MON_MAXHP + 1]
+    mov esi, eax                                ; ESI = maxHP (divisor)
+    test ecx, ecx
+    jz .px_zero
+    mov eax, ecx
+    imul eax, eax, 48
+    xor edx, edx
+    div esi                                     ; EAX = curHP*48 / maxHP
+    test eax, eax
+    jnz .px_ok
+    mov eax, 1                                  ; alive → at least a sliver
+.px_ok:
+    mov [pm_pixels], eax
+    jmp .px_done
+.px_zero:
+    mov dword [pm_pixels], 0
+.px_done:
+
+    ; --- draw the HP-bar gauge on the HP row (name row + 1) -------------------
+    mov eax, [pm_slot]
+    shl eax, 1
+    add eax, PM_FIRST_ROW
+    inc eax                                      ; HP row
+    imul edi, eax, 20                            ; EDI = HP row base (col 0)
+    push edi                                     ; keep HP row base for the fraction
+
+    lea esi, [ebp + edi + W_TILEMAP + PM_HP_BAR_COL]
+    mov byte [esi], HPB_HP                        ; "HP"
+    mov byte [esi + 1], HPB_LEFT                  ; ":" + gauge left
+    mov byte [esi + 8], HPB_END                   ; gauge right cap
+    mov edx, [pm_pixels]                          ; remaining pixels
+    lea edi, [esi + 2]                            ; first of 6 gauge segments
+    mov ecx, 6
+.seg_loop:
+    cmp edx, 8
+    jb .seg_partial
+    mov byte [edi], HPB_FULL
+    sub edx, 8
+    jmp .seg_next
+.seg_partial:
+    lea eax, [edx + HPB_EMPTY]                    ; $63 + n-pixel partial (n=0 → empty)
+    mov [edi], al
+    xor edx, edx                                 ; rest of the gauge stays empty
+.seg_next:
+    inc edi
+    dec ecx
+    jnz .seg_loop
+
+    ; --- HP fraction "cur/ max" to the right of the gauge --------------------
+    pop edi                                       ; EDI = HP row base
+    movzx eax, byte [ebp + ebx + MON_HP]          ; curHP big-endian
     shl eax, 8
     mov al, [ebp + ebx + MON_HP + 1]
     push edi
     push ebx
-    push esi
-    lea edi, [esi + W_TILEMAP + PM_HP_COL + 3]
+    lea edi, [edi + W_TILEMAP + PM_HP_FRAC_COL]
     call .print_num3
-    pop esi
     pop ebx
     pop edi
-    ; max HP (big-endian word at struct+MON_MAXHP)
-    movzx eax, byte [ebp + ebx + MON_MAXHP]
+    mov byte [ebp + edi + W_TILEMAP + PM_HP_FRAC_COL + 3], CHAR_SLASH
+    movzx eax, byte [ebp + ebx + MON_MAXHP]       ; maxHP big-endian
     shl eax, 8
     mov al, [ebp + ebx + MON_MAXHP + 1]
     push edi
-    lea edi, [esi + W_TILEMAP + PM_HP_COL + 7]
+    lea edi, [edi + W_TILEMAP + PM_HP_FRAC_COL + 4]
     call .print_num3
     pop edi
+
+    ; --- place the 2x2 mon-icon tile IDs (cols 1-2 of name + HP rows) ----------
+    ; EDI = HP row base; name row base = EDI - 20. VRAM content is loaded later.
+    mov eax, [pm_slot]
+    shl eax, 2                                          ; slot*4
+    add eax, PM_ICON_TILE_BASE                          ; AL = TL tile id
+    mov byte [ebp + edi - 20 + W_TILEMAP + PM_ICON_COL], al       ; TL
+    inc eax
+    mov byte [ebp + edi - 20 + W_TILEMAP + PM_ICON_COL + 1], al   ; TR
+    inc eax
+    mov byte [ebp + edi + W_TILEMAP + PM_ICON_COL], al            ; BL
+    inc eax
+    mov byte [ebp + edi + W_TILEMAP + PM_ICON_COL + 1], al        ; BR
 
     inc dword [pm_slot]
     mov eax, [pm_slot]
@@ -220,10 +381,9 @@ DisplayPartyMenu:
     imul eax, eax, 20
     mov byte [ebp + eax + W_TILEMAP + PM_CURSOR_COL], CHAR_CURSOR
 
-    ; copy the box rect (cols 0-19) → GB_TILEMAP1 (cols 0-19)
+    ; copy the panel (cols 0-19) → GB_TILEMAP1 (cols 0-19)
     mov eax, [pm_count]
-    shl eax, 1
-    add eax, 2                          ; total box rows
+    shl eax, 1                          ; total rows
     mov [pm_slot], eax                  ; reuse pm_slot as row limit
     xor ecx, ecx
 .copy_row:
@@ -239,6 +399,85 @@ DisplayPartyMenu:
     inc ecx
     cmp ecx, [pm_slot]
     jb .copy_row
+    ret
+
+; --- (re)load every slot's icon to frame A, reset the bob timer, set its speed --
+.refresh_icons:
+    call .load_all_icons
+    mov dword [pm_anim_ctr], 0
+    mov dword [pm_anim_frame], 0
+    jmp .calc_period            ; tail — sets pm_anim_period and returns
+
+; --- load all party slots' icon gfx (frame 0) into their VRAM tiles ------------
+.load_all_icons:
+    xor ebx, ebx                ; slot
+.lai_loop:
+    mov eax, ebx
+    xor edx, edx                ; frame 0
+    push ebx
+    call .load_icon_slot
+    pop ebx
+    inc ebx
+    cmp ebx, [pm_count]
+    jb .lai_loop
+    ret
+
+; --- load one slot's icon frame into VRAM ------------------------------------
+; In: EAX = slot (0..5), EDX = frame (0/1). Clobbers EAX/ECX/EDX/ESI/EDI (EBX kept).
+.load_icon_slot:
+    push eax                                  ; save slot
+    imul ecx, eax, PARTYMON_STRUCT_LENGTH
+    movzx ecx, byte [ebp + ecx + wPartyMons + MON_SPECIES]   ; internal index (1-based)
+    dec ecx
+    movzx ecx, byte [mon_icon_by_index + ecx] ; ICON_* id (0..10)
+    imul ecx, ecx, MON_ICON_BYTES             ; → icon base in mon_icon_data
+    mov eax, edx
+    imul eax, eax, MON_ICON_FRAME_BYTES        ; + frame offset
+    add ecx, eax
+    lea esi, [mon_icon_data + ecx]            ; src = chosen frame's 4 tiles
+    pop eax                                   ; slot
+    shl eax, 2
+    add eax, PM_ICON_TILE_BASE                 ; first tile id of this slot
+    shl eax, 4                                ; * TILE_SIZE → byte offset
+    lea edi, [ebp + GB_VCHARS2 + eax]         ; dest = vTileset slot
+    mov ecx, MON_ICON_FRAME_BYTES / 4
+    rep movsd
+    ret
+
+; --- set pm_anim_period from the selected mon's HP fraction -------------------
+; green (≥27px) → 6, yellow (≥10px) → 17, red (<10px / fainted) → 33 vblanks/frame.
+.calc_period:
+    mov eax, [pm_selected]
+    imul eax, eax, PARTYMON_STRUCT_LENGTH
+    lea ebx, [eax + wPartyMons]
+    movzx eax, byte [ebp + ebx + MON_HP]      ; curHP big-endian
+    shl eax, 8
+    mov al, [ebp + ebx + MON_HP + 1]
+    mov ecx, eax                              ; curHP
+    movzx eax, byte [ebp + ebx + MON_MAXHP]   ; maxHP big-endian
+    shl eax, 8
+    mov al, [ebp + ebx + MON_MAXHP + 1]
+    mov esi, eax                              ; maxHP
+    test ecx, ecx
+    jz .cp_red
+    test esi, esi
+    jz .cp_red
+    mov eax, ecx
+    imul eax, eax, 48
+    xor edx, edx
+    div esi                                   ; EAX = HP-bar pixels (0..48)
+    cmp eax, 27
+    jae .cp_green
+    cmp eax, 10
+    jae .cp_yellow
+.cp_red:
+    mov dword [pm_anim_period], 33
+    ret
+.cp_yellow:
+    mov dword [pm_anim_period], 17
+    ret
+.cp_green:
+    mov dword [pm_anim_period], 6
     ret
 
 ; --- print EAX (0..999) as 3 tiles at [ebp+EDI], leading zeros as spaces -------
@@ -271,4 +510,50 @@ DisplayPartyMenu:
 .ones:
     add cl, CHAR_DIGIT0
     mov [ebp + edi + 2], cl
+    ret
+
+; --- place 3-tile status text at [ebp+EDI] from the mon at EBX ------------------
+; "FNT" if fainted, else PSN/BRN/FRZ/PAR/SLP by priority, else 3 blanks.
+; Clobbers EAX/ESI. EBX/EDI preserved.
+.print_status:
+    movzx eax, byte [ebp + ebx + MON_HP]
+    or al, [ebp + ebx + MON_HP + 1]
+    jz .st_fnt                          ; HP == 0 → fainted
+    mov al, [ebp + ebx + MON_STATUS]
+    test al, 1 << ST_PSN_BIT
+    jnz .st_psn
+    test al, 1 << ST_BRN_BIT
+    jnz .st_brn
+    test al, 1 << ST_FRZ_BIT
+    jnz .st_frz
+    test al, 1 << ST_PAR_BIT
+    jnz .st_par
+    test al, ST_SLP_MASK
+    jnz .st_slp
+    mov esi, st_blank
+    jmp .st_put
+.st_fnt:
+    mov esi, st_fnt
+    jmp .st_put
+.st_psn:
+    mov esi, st_psn
+    jmp .st_put
+.st_brn:
+    mov esi, st_brn
+    jmp .st_put
+.st_frz:
+    mov esi, st_frz
+    jmp .st_put
+.st_par:
+    mov esi, st_par
+    jmp .st_put
+.st_slp:
+    mov esi, st_slp
+.st_put:
+    mov al, [esi]
+    mov [ebp + edi], al
+    mov al, [esi + 1]
+    mov [ebp + edi + 1], al
+    mov al, [esi + 2]
+    mov [ebp + edi + 2], al
     ret

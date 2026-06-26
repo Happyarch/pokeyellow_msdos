@@ -21,12 +21,14 @@ bits 32
 
 global LoadFontTilePatterns
 global LoadTextBoxTilePatterns
+global LoadHpBarAndStatusTilePatterns
 extern g_tilecache_dirty
 
 section .data
 align 4
 %include "assets/font_1bpp.inc"
 %include "assets/font_extra_2bpp.inc"
+%include "assets/font_battle_extra_2bpp.inc"
 
 section .text
 
@@ -79,6 +81,40 @@ LoadTextBoxTilePatterns:
     mov esi, font_extra_2bpp_data
     lea edi, [ebp + GB_VCHARS2 + 0x60 * TILE_SIZE]
     mov ecx, FONT_EXTRA_2BPP_SIZE / 4
+    rep movsd
+
+    pop edi
+    pop esi
+    pop ecx
+    pop eax
+    ret
+
+; ---------------------------------------------------------------------------
+; LoadHpBarAndStatusTilePatterns — copy the HP-bar/status 2bpp tiles to
+; vChars2 tile $62.
+;
+; Source: home/load_font.asm:LoadHpBarAndStatusTilePatterns (pret
+; HpBarAndStatusGraphics = gfx/font/font_battle_extra.2bpp).
+; Destination: vChars2 tile $62 = EBP + GB_VCHARS2 + $62*TILE_SIZE = EBP+$9620.
+; Data: 30 tiles ($62-$7F) — the HP-bar gauge segments, the ":L" tile ($6e),
+; the narrow "HP"/"to" tiles, and status glyphs. This OVERWRITES the box-drawing
+; tiles $79-$7E that LoadTextBoxTilePatterns supplies, so callers that need a
+; TextBoxBorder afterward (e.g. the START menu) must call LoadTextBoxTilePatterns
+; again on exit. The space tile $7F is blank in both sets, so panel backgrounds
+; filled with spaces stay clean either way.
+; In:  EBP = GB memory base.
+; Out: all registers preserved.
+; ---------------------------------------------------------------------------
+LoadHpBarAndStatusTilePatterns:
+    mov byte [g_tilecache_dirty], 1     ; VRAM tile data changes → rebuild decode cache
+    push eax
+    push ecx
+    push esi
+    push edi
+
+    mov esi, font_battle_extra_2bpp_data
+    lea edi, [ebp + GB_VCHARS2 + 0x62 * TILE_SIZE]
+    mov ecx, FONT_BATTLE_EXTRA_2BPP_SIZE / 4
     rep movsd
 
     pop edi

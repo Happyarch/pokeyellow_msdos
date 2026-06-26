@@ -68,8 +68,26 @@ overworld boots with an empty party + bag. So coupling has three layers:
   (`start_menu.asm:.open_party`, reusing `.draw_full` to restore on close).
   Verified via DEBUG_PARTYMENU: Snorlax L80 346/346, Persian L80 194/194,
   Jigglypuff L15 59/59, Pikachu L5 18/18 — HP matches hand-computed CalcStats
-  exactly. Deferred polish: HP bar, status, the per-mon action sub-menu/summary,
-  level/HP right-alignment.
+  exactly.
+- [x] **Stage 3b — faithful party rows: HP-bar gauge + status.** DONE. Rebuilt the
+  party screen to match the original game's per-mon layout (pret
+  `RedrawPartyMenu_`): a borderless full-width panel with, per mon, a name row
+  ("NICK  :Llvl  STATUS" using the real combined `:L` tile $6e) and an HP row (the
+  6-segment / 48-pixel HP-bar gauge + "cur/ max"). The HP-bar/`:L` tiles ($62-$6e)
+  live in the HpBarAndStatus set (`font_battle_extra`), absent in the overworld, so
+  `party_menu.asm` loads it on entry (new `LoadHpBarAndStatusTilePatterns` in
+  `src/gfx/load_font.asm`, embed `assets/font_battle_extra_2bpp.inc` via new
+  `tools/gen_font_battle_extra_inc.py`) and restores the box-drawing tiles it
+  clobbers (`LoadTextBoxTilePatterns`) on exit so the START border redraws. Bar
+  fill is the faithful `GetHPBarLength`/`DrawHPBar` math (pixels = curHP·48/maxHP,
+  ≥1 alive / 0 fainted; full/partial/empty segment tiles). Status text = FNT (HP 0)
+  / PSN / BRN / FRZ / PAR / SLP / blank, by `MON_STATUS` bit priority. Verified via
+  DEBUG_PARTYMENU (+ a temporary damaged-HP poke): Persian 97/194 → exact half bar,
+  Jigglypuff 5/59 → sliver + PSN, Pikachu 0/18 → empty bar + FNT; full-HP mons full
+  bars. NOTE: the generated `assets/font_battle_extra_2bpp.inc` is under a gitignored
+  dir — `git add -f` it at commit time (same as the sibling `font_extra_2bpp.inc`).
+  Still deferred: animated mon ICON sprites, full-screen white takeover, per-mon
+  action sub-menu/summary.
 - [~] **TOSS — logic complete (manual test pending).** A on a tossable bag item →
   quantity chooser (up/down 1..qty, wrap) → `RemoveItemFromInventory_`; A on a key
   item is a no-op. Key-item guard `bag_menu.asm:.is_key_item` uses the generated
@@ -86,10 +104,35 @@ overworld boots with an empty party + bag. So coupling has three layers:
 
 Two threads remain before this is "real" (both deferred deliberately):
 
-1. **Party screen polish** (`party_menu.asm`): the HP **bar** (needs the HP-bar
-   tiles + a fill calc), status condition, and the per-mon **action sub-menu**
-   (STATS / SWITCH / CANCEL → summary screen, party reorder). Level/HP currently
-   use right-aligned `.print_num3` (":L 80", "59/ 59"); tidy alignment if desired.
+1. **Party screen polish** (`party_menu.asm`): HP **bar**, **status**, the
+   **whiteout + centered** layout, and the **animated mon icons** are all DONE
+   (Stages 3b–3d). Remaining: the per-mon **action sub-menu** (STATS / SWITCH /
+   CANCEL → summary screen, party reorder), and a possible **runtime X-flip** for
+   any asymmetric icon (see Stage 3d note — currently the right half is a baked
+   mirror, valid for all symmetric party icons).
+
+- [x] **Stage 3c — whiteout + centered menu.** DONE. Added a `g_bg_whiteout` flag
+  (`ppu.asm`): when set, `render_bg` fills the whole 320×200 back buffer with BG
+  color 0 and `render_sprites` is skipped, so the party menu sits on a clean white
+  field instead of over Pallet Town. `party_menu.asm` sets it on entry / clears on
+  exit, and centers the 160px window both horizontally (WX) and vertically
+  (WY = (RENDER_H − rows·8)/2). The flag is 0 everywhere else, so the overworld
+  path is unchanged (two extra `cmp/je`). Verified via DEBUG_PARTYMENU FRAME.BIN.
+- [x] **Stage 3d — animated mon icons.** DONE. Faithful 2×2 party-sprite icons left
+  of each name (cols 1-2), with the original layout shift (cursor/icon/name/level/
+  status; HP gauge at col 4). New `tools/gen_mon_icons_inc.py` bakes
+  `assets/mon_icons.inc`: 11 ICON_* types × 2 frames × 4 tiles (right half = baked
+  horizontal mirror since the window/BG layer has no per-tile X-flip — revisit if
+  an asymmetric/helix icon is ever needed), plus an internal-index→ICON map
+  (PokedexOrder ∘ MonPartyData). Icons load into the vTileset region ($9000+, tiles
+  $01-$18, restored on exit via `LoadTilesetTilePatternData`) and render as window
+  tiles (the decoder reads VRAM directly). Animation matches pret AnimatePartyMon:
+  ONLY the cursor-selected mon bobs, at a period from its HP-bar color
+  (green ≥27px → 6, yellow ≥10px → 17, red/fainted <10px → 33 vblanks/frame); other
+  slots stay on frame A. NOTE: status does NOT affect speed in pret (only HP
+  fraction does); fainting maps to red via 0 HP. Verified via DEBUG_PARTYMENU:
+  correct icons (Snorlax/Persian MON, Jigglypuff FAIRY, Pikachu PIKACHU), frame-A vs
+  frame-B differ, and a diff confirmed only the selected icon animates.
 2. **Real data path** — replace the `DEBUG_PARTY` debug seed (`debug_party.asm` +
    `PrepareNewGameDebug`) with the actual new-game init + Oak starter-gift flow
    (the deferred item in `current_plan_script_engine.md` that needs `AddPartyMon`),

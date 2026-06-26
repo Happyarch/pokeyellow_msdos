@@ -83,6 +83,13 @@ global g_win_clip_w, g_win_max_y
 g_win_clip_w: dd SCREEN_W   ; default 160px (20-tile dialog content width)
 g_win_max_y:  dd RENDER_H   ; default 200 (window draws to bottom of screen)
 
+; Full-screen whiteout: when nonzero, render_bg fills the whole back buffer with
+; BG color 0 (the menu's white) and render_sprites is skipped, so a window-layer
+; menu (e.g. the party screen) can sit centered on a clean white field instead of
+; over the overworld. Set on menu entry, cleared on exit.
+global g_bg_whiteout
+g_bg_whiteout: dd 0
+
 ; ---------------------------------------------------------------------------
 ; BSS
 ; ---------------------------------------------------------------------------
@@ -140,6 +147,17 @@ section .text
 ; ---------------------------------------------------------------------------
 render_bg:
     pushad
+
+    ; Full-screen whiteout: fill the back buffer with BG color 0 and skip the map.
+    cmp dword [g_bg_whiteout], 0
+    je .no_whiteout
+    lea edi, [ebp + GB_BACKBUF]
+    mov ecx, RENDER_W * RENDER_H / 4
+    xor eax, eax
+    rep stosd
+    popad
+    ret
+.no_whiteout:
 
     ; Tile-data addressing mode (LCDC bit 4): 1 = $8000 unsigned, 0 = $8800 signed
     movzx eax, byte [ebp + IO_LCDC]
@@ -434,6 +452,10 @@ rebuild_tile_cache:
 ; ---------------------------------------------------------------------------
 render_sprites:
     pushad
+    ; Skip OBJ sprites during a full-screen whiteout (overworld player/NPCs must
+    ; not paint over the menu's clean white field).
+    cmp dword [g_bg_whiteout], 0
+    jne .done
     test byte [ebp + IO_LCDC], LCDCF_OBJ_ON
     jz .done
 
