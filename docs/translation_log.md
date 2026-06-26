@@ -2575,3 +2575,19 @@ Up with stat already 999 → mod bump reverted; Down Atk −1 → mod 6 / 66 (10
 Down to mod 1 with unmod 1 (0.25×→0) → floored to 1.
 
 ---
+
+## 2026-06-26 — Battle Stage 7: HandleBuildingRage
+
+Battle engine plan, Stage 7 (one of the named remaining items). Faithful translation
+of `engine/battle/core.asm:HandleBuildingRage` into `src/engine/battle/building_rage.asm`.
+When the mon being attacked is under Rage, it flips hWhoseTurn, temporarily rewrites
+the target's move to a null move with ATTACK_UP1_EFFECT, calls `StatModifierUpEffect`
+(the new Stage-5 routine) to raise its Attack one stage, then restores the Rage move
+number and the turn flag. PrintText/BuildingRageText are the deferred front end (extern).
+
+Validated natively end to end (links the real StatModifierUpEffect + Multiply/Divide
++ StatModifierRatios): raging enemy-turn case → player Attack mod 7→8, stat 100→150,
+wPlayerMoveNum restored to RAGE (63) / effect cleared / hWhoseTurn restored; no-op when
+the target isn't raging or its Attack mod is already +6 (13). Wired into BATTLE_SRCS.
+
+---

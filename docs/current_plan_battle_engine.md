@@ -101,10 +101,14 @@ Authoritative addresses: `git show origin/symbols:pokeyellow.sym` (bank:addr).
   ToEnemy)`, `QuarterSpeedDueToParalysis`, `HalveAttackDueToBurn` done in
   `src/engine/battle/status_penalties.asm` and **native-validated** (Spd 200→50,
   2→1 min-clamp, Atk 100→50, unstatused 300→unchanged). These resolve the
-  `QuarterSpeedDueToParalysis` extern the move-effects reference. REMAINING:
-  residual poison/burn/leech-seed damage (`HandlePoisonBurnLeechSeed`, HUD-coupled),
-  `HandleBuildingRage`, and the inline turn-order speed compare (in the deferred
-  main battle loop).
+  `QuarterSpeedDueToParalysis` extern the move-effects reference. `HandleBuildingRage`
+  is now also done (`src/engine/battle/building_rage.asm`): when the attacked mon
+  is under Rage it flips hWhoseTurn, injects a null move + ATTACK_UP1_EFFECT, runs
+  `StatModifierUpEffect` (Stage 5), then restores the Rage move — **native-validated**
+  end to end (raging → Atk mod 7→8 / stat 100→150 / move restored to RAGE; no-op when
+  not raging or already at +6). REMAINING: residual poison/burn/leech-seed damage
+  (`HandlePoisonBurnLeechSeed`, HUD-coupled) and the inline turn-order speed compare
+  (in the deferred main battle loop).
 
 - [~] **Stage 8 — Trainer AI backend.** `AIGetTypeEffectiveness` done in
   core_damage.asm (single-type effectiveness vs the player mon → wTypeEffectiveness;
@@ -163,6 +167,7 @@ method the pokemon-engine plan used.
 | StatModifierUpEffect | +1 with stat already 999 | mod bump reverted, stat 999 ✓ |
 | StatModifierDownEffect | Atk −1 (unmod 100) | mod 6 stat 66 ✓ |
 | StatModifierDownEffect | −1 to mod 1, unmod 1 (0.25×→0) | mod 1 stat floored to 1 ✓ |
+| HandleBuildingRage | raging / not raging / maxed | Atk 7→8 stat 150, move→RAGE / no-op / no-op ✓ |
 
 Toolchain note (this fresh container): also installed `gcc-multilib` (the `-m32`
 libc the earlier session lacked), so harnesses can use either freestanding ELF32

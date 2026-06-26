@@ -144,6 +144,7 @@ FOREST                  equ 3
 ; --- MINIMIZE move id + stat-name length (stat-modifier effects, Stage 5) ---
 MINIMIZE                equ 0x6B
 STAT_NAME_LENGTH        equ 10
+RAGE                    equ 63         ; move id (HandleBuildingRage restores it)
 
 ; --- text id: "REPEL's effect wore off" (constants/text_constants.asm) ---
 TEXT_REPEL_WORE_OFF     equ 0xD2
