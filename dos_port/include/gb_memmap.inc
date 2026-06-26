@@ -398,6 +398,10 @@ hDividend              equ 0xFF95   ; 4 bytes (overlaps hProduct/hQuotient)
 hQuotient              equ 0xFF95
 hDivisor               equ 0xFF99
 hRemainder             equ 0xFF99
+hProduct               equ 0xFF95   ; 4 bytes (= hQuotient/hDividend; Multiply/Divide result)
+hRandomAdd             equ 0xFFD3   ; PRNG output byte 1 (wild encounter rate compare)
+hRandomSub             equ 0xFFD4   ; PRNG output byte 2 (wild encounter slot select)
+hTextID                equ 0xFF8C   ; DisplayTextID input
 
 ; Sprite state data — 16 slots × $10 bytes each, two parallel arrays.
 ; wSpriteStateData1 ($C100) and wSpriteStateData2 ($C200) — sym-verified.
@@ -700,6 +704,23 @@ W_CUR_MAP_SCRIPT_PTR         equ 0xD36D ; wCurMapScriptPtr (2 bytes, LE)
 W_CUR_MAP_CONNECTIONS        equ 0xD36F ; wCurMapConnections (NORTH|SOUTH|WEST|EAST bits)
 W_CUR_MAP_HEADER_END         equ 0xD370 ; wCurMapHeaderEnd (byte after connections)
 W_CUR_MAP_HEADER_SIZE        equ W_CUR_MAP_HEADER_END - W_CUR_MAP_HEADER  ; = 10 bytes
+
+; lowercase aliases (pret-faithful wild-encounter / battle drafts)
+wCurMap                      equ 0xD35D ; = W_CUR_MAP
+wCurMapTileset               equ 0xD366 ; = W_CUR_MAP_TILESET
+
+; --- wild encounter WRAM (sym-pinned, origin/symbols:pokeyellow.sym) ---
+; wGrassMons/wWaterMons each hold WILDDATA_LENGTH-1 (=20) bytes: 10×(level,species).
+wGrassRate                   equ 0xD886
+wGrassMons                   equ 0xD887
+wWaterRate                   equ 0xD8A3
+wWaterMons                   equ 0xD8A4
+wRepelRemainingSteps         equ 0xD0DA
+wNPCMovementScriptPointerTableNum equ 0xCC57
+wMovementFlags               equ 0xD735
+wStringBuffer                equ 0xCF4A   ; PrintStatText destination (Stage 5)
+wGrassTile                   equ 0xD534   ; = W_GRASS_TILE (tall-grass tile id)
+wPartyMon1Level              equ 0xD18B   ; lead party mon level (repel check)
 
 ; Connection-strip headers (each 11 bytes: map, strip-src, strip-dst, length, map-width, Y-align, X-align, view-ptr)
 W_NORTH_CONNECTED_MAP        equ 0xD370 ; wNorthConnectedMap ($FF = none)

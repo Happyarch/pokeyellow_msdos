@@ -2502,3 +2502,41 @@ border, "YES"/"NO" labels, cursor, and "THROW AWAY?" prompt render correctly ove
 the bag list. Production `make SKIP_TITLE=1` builds clean.
 
 ---
+
+## 2026-06-26 — Battle Stage 9: wild-encounter generation (`LoadWildData`, `TryDoWildEncounter`)
+
+Battle engine plan, Stage 9. New generator `tools/gen_wild_encounters.py` parses
+`data/wild/` (the `WildDataPointers` order, the per-map `def_grass_wildmons` /
+`def_water_wildmons` blobs, and `probabilities.asm`) and emits
+`assets/wild_data.inc`: a flat `dd` `WildDataPointers` table (249 = NUM_MAPS,
+mirroring the port's EvosMovesPointerTable pointer model), 60 unique map blobs
+(`[grass_rate (+20 mon bytes iff !=0)][water_rate (+20 iff !=0)]`, species names
+resolved to internal indices via `pokemon_constants.asm`), and the 10-entry
+`WildMonEncounterSlotChances` cumulative table. Exposed by `src/data/wild_data.asm`.
+
+`LoadWildData` (`src/engine/overworld/wild_mons.asm`) — faithful port of
+`engine/overworld/wild_mons.asm`. Indexes `WildDataPointers[wCurMap]` (flat ×4),
+reads the grass rate, copies 20 grass-mon bytes to `wGrassMons` (flat→WRAM inline
+loop, since CopyData biases the source by EBP and the table is flat), then the
+water rate + 20 water bytes. Preserves the faithful no-clear behaviour: a rate-0
+section leaves the prior map's mon buffer untouched.
+
+`TryDoWildEncounter` (`src/engine/battle/wild_encounters.asm`) — faithful port of
+`engine/battle/wild_encounters.asm`. Gate bytes → standing-tile grass/water rate
+select → `hRandomAdd` rate compare → `WildMonEncounterSlotChances` slot walk with
+`hRandomSub` → species/level pick → repel check. Returns Z = encounter. The
+overworld helpers (door/warp, just-outside-map, repel text) are deferred externs
+(the overworld step *trigger* is the consumer), and the player-standing-tile read
+is a `; TODO-OVERWORLD` placeholder (the port's 40-wide viewport differs from the
+GB's 20-wide centred screen).
+
+### Validation
+
+Freestanding ELF32 harnesses (link the real `wild_data.o`; stub the overworld
+externs). `LoadWildData`: PALLET all-zero, ROUTE_1 rate 25 / mons [3,36(PIDGEY),
+4,36], ROUTE_19 water rate 5 / mons [5,24(TENTACOOL),…], plus the stale-retention
+case. `TryDoWildEncounter`: rate-fail no-encounter; grass slot 0/1 → PIDGEY L3/L4;
+water slot 0 → TENTACOOL L5; repel blocks (wild<lead) with step 3→2; indoor rate-0
+no-encounter. All exact. Added `gcc-multilib` + `nasm` to the fresh container.
+
+---

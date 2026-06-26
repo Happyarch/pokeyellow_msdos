@@ -197,7 +197,10 @@ BATTLE_SRCS := \
     src/engine/battle/move_effects/paralyze.asm \
     src/engine/battle/move_effects/pay_day.asm \
     src/engine/battle/move_effects/recoil.asm \
-    src/engine/battle/move_effects/reflect_light_screen.asm
+    src/engine/battle/move_effects/reflect_light_screen.asm \
+    src/data/wild_data.asm \
+    src/engine/overworld/wild_mons.asm \
+    src/engine/battle/wild_encounters.asm
 # experience.asm is intentionally NOT listed: it depends on the deferred
 # level-up/EXP subsystem + battle UI and is not yet linkable (see its header).
 
@@ -423,6 +426,12 @@ assets/type_matchups.inc:
 
 src/data/battle_data.o: assets/type_matchups.inc
 
+# Wild-encounter tables (static data, generated from data/wild/).
+assets/wild_data.inc:
+	python3 tools/gen_wild_encounters.py
+
+src/data/wild_data.o: assets/wild_data.inc
+
 assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_blk.inc \
         assets/map_headers.inc assets/extra_includes.inc \
         assets/npc_sprite_data_table.inc assets/npc_dialogs/all_dialogs.inc \
@@ -430,7 +439,7 @@ assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_
         assets/base_stats.inc assets/growth_rates.inc \
         assets/moves.inc assets/evos_moves.inc assets/monster_names.inc \
         assets/items.inc assets/gb_charmap.txt assets/menu_strings.inc \
-        assets/type_matchups.inc
+        assets/type_matchups.inc assets/wild_data.inc
 
 all: $(TARGET)
 

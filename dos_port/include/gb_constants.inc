@@ -132,6 +132,22 @@ GROWTH_SLOW             equ 5
 MAX_STAT_VALUE          equ 999
 MAX_LEVEL               equ 100
 
+; --- wild encounter constants (constants/pokemon_data_constants.asm) ---
+NUM_WILDMONS            equ 10
+WILDDATA_LENGTH         equ 1 + NUM_WILDMONS * 2   ; = 21 (rate + 10×(level,species))
+
+; --- map / tileset constants used by wild-encounter generation ---
+; FIRST_INDOOR_MAP = REDS_HOUSE_1F ($25); FOREST = Viridian Forest/Safari tileset.
+FIRST_INDOOR_MAP        equ 0x25
+FOREST                  equ 3
+
+; --- MINIMIZE move id + stat-name length (stat-modifier effects, Stage 5) ---
+MINIMIZE                equ 0x6B
+STAT_NAME_LENGTH        equ 10
+
+; --- text id: "REPEL's effect wore off" (constants/text_constants.asm) ---
+TEXT_REPEL_WORE_OFF     equ 0xD2
+
 ; ===========================================================================
 ; Battle engine constants (current_plan_battle_engine.md)
 ; Sources: constants/battle_constants.asm, type_constants.asm,

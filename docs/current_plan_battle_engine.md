@@ -100,8 +100,22 @@ Authoritative addresses: `git show origin/symbols:pokeyellow.sym` (bank:addr).
   GRASS→WATER=20). REMAINING: the AI move-scoring layer (`AIMoveChoiceModification*`,
   trainer-class AI pointers) and `read_trainer_party.asm`.
 
-- [ ] **Stage 9 — Wild-encounter generation.** `wild_encounters.asm`
-  (`TryDoWildEncounter` data/RNG path; the overworld trigger is the consumer).
+- [x] **Stage 9 — Wild-encounter generation.** DONE. New generator
+  `tools/gen_wild_encounters.py` → `assets/wild_data.inc`: `WildDataPointers`
+  (249 = NUM_MAPS flat `dd` pointers, like EvosMovesPointerTable), the 60 unique
+  per-map blobs (`[grass_rate (+20 mon bytes)][water_rate (+20)]`, species resolved
+  to internal indices), and `WildMonEncounterSlotChances` (10 cumulative slots).
+  Exposed via `src/data/wild_data.asm`; wired into the Makefile (`assets` target +
+  `BATTLE_SRCS`). `LoadWildData` (`src/engine/overworld/wild_mons.asm`, flat→WRAM
+  copy of the map's blob into wGrassRate/wGrassMons/wWaterRate/wWaterMons) and
+  `TryDoWildEncounter` (`src/engine/battle/wild_encounters.asm`, the rate-compare +
+  slot-roll + species/level pick + repel logic) both translated faithfully and
+  **native-validated** (ELF32 harnesses; tables verified vs ROM). The overworld
+  externs (door/warp/outside-map checks, repel text) are deferred — the overworld
+  step **trigger** is the consumer — and the player-standing-tile read is a
+  documented `; TODO-OVERWORLD` placeholder (the 40-wide port viewport differs from
+  the GB's 20-wide centred screen). All three files assemble; they don't link into
+  the EXE yet (overworld trigger + standing-tile offset deferred to the consumer).
 
 ## Verification log
 
@@ -124,9 +138,23 @@ method the pokemon-engine plan used.
 | HalveAttackDueToBurn | Atk 100 | 50 ✓ |
 | (penalty, unstatused) | Spd 300 | 300 (unchanged) ✓ |
 | AIGetTypeEffectiveness | WATER→FIRE / NORMAL→GRASS / GROUND→FLYING / GRASS→WATER | 20 / 16(faithful bug) / 0 / 20 ✓ |
+| LoadWildData | PALLET / ROUTE_1 / ROUTE_19 | all-0 / rate25 mons[3,36,4,36] / water rate5 mons[5,24,…] ✓ |
+| LoadWildData (stale-retention) | ROUTE_19 after ROUTE_1 (grass rate 0) | wGrassMons keeps ROUTE_1 data (faithful) ✓ |
+| TryDoWildEncounter | grass, rand≥rate | no encounter (Z clear) ✓ |
+| TryDoWildEncounter | grass, slot 0 / slot 1 (hRandomSub 0 / 51) | PIDGEY L3 / PIDGEY L4 ✓ |
+| TryDoWildEncounter | water, slot 0 | TENTACOOL L5 ✓ |
+| TryDoWildEncounter | repel, wild<lead | blocked (Z clear) + steps 3→2 ✓ |
+| TryDoWildEncounter | indoor, grass rate 0 | no encounter ✓ |
 
-All battle files assemble under the Makefile flags (`make check`). Include
-additions introduce no symbol collisions in existing pokemon/items/menu/home files.
+Toolchain note (this fresh container): also installed `gcc-multilib` (the `-m32`
+libc the earlier session lacked), so harnesses can use either freestanding ELF32
+or `gcc -m32`. The wild-encounter harnesses are freestanding ELF32 (link the real
+`wild_data.o` for the live tables, stub the overworld externs).
+
+All battle files assemble under the Makefile flags. (`make check` over the *whole*
+tree currently stops earlier at a pre-existing, unrelated `init.asm:110`
+`g_window_count` error — present at HEAD, not introduced here.) Include additions
+introduce no symbol collisions in existing pokemon/items/menu/home/battle files.
 
 ## What remains (all UI- or subsystem-coupled — deferred per the user)
 
