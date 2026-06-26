@@ -355,6 +355,11 @@ wPartyMon1Attack       equ 0xD18E
 wPartyMon1Defense      equ 0xD190
 wPartyMon1Special      equ 0xD194
 wEnemyMon1Stats        equ 0xD8C5   ; link-battle enemy party stats (GetEnemyMonStat)
+; party-mon struct (pret wPartyMon1* = wPartyMons base $D16A; DecrementPP/GainExp)
+wPartyMon1             equ 0xD16A
+wPartyMon1Status       equ 0xD16E
+wPartyMon1PP           equ 0xD187
+wPartyGainExpFlags     equ 0xD057   ; bitfield: which party mons gain exp this battle
 
 ; --- HP-bar update scratch (UpdateHPBar / used by drain_hp etc.) — sym-pinned ---
 wHPBarMaxHP            equ 0xCEE9   ; word

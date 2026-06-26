@@ -136,7 +136,9 @@ ITEMS_SRCS := \
 # are validated by native ELF harnesses (see the plan's verification log).
 BATTLE_SRCS := \
     src/data/battle_data.asm \
-    src/engine/battle/core_damage.asm
+    src/engine/battle/core_damage.asm \
+    src/engine/battle/badge_boosts.asm \
+    src/engine/battle/decrement_pp.asm
 
 # Debug-only sources (linked only when the corresponding flag is set).
 # Any debug flag implies SKIP_TITLE — debug harnesses boot straight to the overworld.

@@ -1,79 +1,60 @@
-%include "dos_port/include/gb_memmap.inc"
+; decrement_pp.asm — DecrementPP (battle engine plan, Stage 6).
+;
+; After using a move in battle, decrement its PP in the battle struct and (unless
+; Transformed) in the party struct. Faithful translation of
+; engine/battle/decrement_pp.asm (pret/pokeyellow).
+;
+; Register map: a=AL, b=BH, c=BL (bc=BX), d=DH, e=DL (de=DX), hl=ESI.
+; In: DX (de) = pointer to the move id just used.
+;
+; AUDIT (2026-06-26): the prior swarm draft had two bugs, both fixed here:
+;   1. it %include'd "dos_port/include/gb_memmap.inc" and omitted gb_constants.inc,
+;      so STRUGGLE / PARTYMON_STRUCT_LENGTH / the battle-status bit names were
+;      undefined.
+;   2. it loaded the AddNTimes stride into CX, but AddNTimes reads BX (bc) — the
+;      exact "helper reads BX" bug flagged in the pokemon-engine plan. The party
+;      PP address was therefore computed from garbage.
+;
+; Build: nasm -f coff -I include/ -I . -o decrement_pp.o decrement_pp.asm
 
-SECTION .text
+bits 32
+
+%include "gb_memmap.inc"
+%include "gb_constants.inc"
+
+section .text
 
 global DecrementPP
-global DecrementPP_DecrementPP
 
-; after using a move, decrement pp in battle and (if not transformed?) in party
+extern AddNTimes
+
 DecrementPP:
-	; ld a, [de]
-	movzx edx, dx
-	mov al, [ebp + edx]
+    mov al, [ebp + edx]              ; ld a, [de] — move id just used
+    cmp al, STRUGGLE
+    je .done                         ; Struggle has no PP to decrement
+    mov esi, wPlayerBattleStatus1
+    mov al, [ebp + esi]              ; ld a, [hli]
+    inc esi
+    test al, (1 << STORING_ENERGY) | (1 << THRASHING_ABOUT) | (1 << ATTACKING_MULTIPLE_TIMES)
+    jnz .done                        ; mid multi-turn move: no PP decrement
+    mov al, [ebp + esi]              ; wPlayerBattleStatus2
+    test al, 1 << USING_RAGE
+    jnz .done                        ; Rage: no PP decrement
+    mov esi, wBattleMonPP            ; PP of first move (battle struct)
+    call .DecrementPP
 
-	; cp STRUGGLE
-	; STRUGGLE is a constant
-	cmp al, STRUGGLE
-	je .done
+    mov al, [ebp + wPlayerBattleStatus3]
+    test al, 1 << TRANSFORMED
+    jnz .done                        ; Transformed: battle PP is separate from party PP
 
-	; ld hl, wPlayerBattleStatus1
-	mov esi, wPlayerBattleStatus1
-
-	; ld a, [hli]
-	mov al, [ebp + esi]
-	inc esi
-
-	; and (1 << STORING_ENERGY) | (1 << THRASHING_ABOUT) | (1 << ATTACKING_MULTIPLE_TIMES)
-	test al, (1 << STORING_ENERGY) | (1 << THRASHING_ABOUT) | (1 << ATTACKING_MULTIPLE_TIMES)
-	jnz .done
-
-	; bit USING_RAGE, [hl]
-	; USING_RAGE is a bit index, we use test al, (1 << USING_RAGE)
-	mov al, [ebp + esi]
-	test al, (1 << USING_RAGE)
-	jnz .done
-
-	; ld hl, wBattleMonPP
-	mov esi, wBattleMonPP
-
-	; call .DecrementPP
-	call DecrementPP_DecrementPP
-
-	; ld a, [wPlayerBattleStatus3]
-	mov al, [ebp + wPlayerBattleStatus3]
-
-	; bit TRANSFORMED, a
-	test al, (1 << TRANSFORMED)
-	jnz .done
-
-	; ld hl, wPartyMon1PP
-	mov esi, wPartyMon1PP
-
-	; ld a, [wPlayerMonNumber]
-	mov al, [ebp + wPlayerMonNumber]
-
-	; ld bc, PARTYMON_STRUCT_LENGTH
-	mov cx, PARTYMON_STRUCT_LENGTH
-
-	; call AddNTimes
-	; Since we don't know if AddNTimes is ported directly or if we should inline it,
-	; we'll call it. But inlining is also very easy:
-	; ESI += AL * CX
-	; Let's just call the AddNTimes ported function.
-	call AddNTimes
-
-DecrementPP_DecrementPP:
-	; ld a, [wPlayerMoveListIndex]
-	mov al, [ebp + wPlayerMoveListIndex]
-
-	; ld c, a
-	; ld b, 0
-	; add hl, bc
-	movzx ecx, al
-	add esi, ecx
-
-	; dec [hl]
-	dec byte [ebp + esi]
-
+    mov esi, wPartyMon1PP            ; PP of first move (party struct)
+    mov al, [ebp + wPlayerMonNumber]
+    mov bx, PARTYMON_STRUCT_LENGTH   ; bc (BX), NOT cx — AddNTimes reads BX
+    call AddNTimes
+.DecrementPP:
+    mov al, [ebp + wPlayerMoveListIndex]  ; which move (0..3)
+    movzx ecx, al
+    add esi, ecx                     ; ld c,a; ld b,0; add hl,bc
+    dec byte [ebp + esi]             ; dec [hl]
 .done:
-	ret
+    ret
