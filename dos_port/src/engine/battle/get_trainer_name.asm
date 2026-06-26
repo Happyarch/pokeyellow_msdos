@@ -1,12 +1,11 @@
 %include "gb_memmap.inc"
+%include "gb_constants.inc"
 
 section .text
 
 global GetTrainerName_
 
 extern wLinkEnemyTrainerName
-extern wLinkState
-extern wTrainerClass
 extern wNameListIndex
 extern wNameListType
 extern wPredefBank
@@ -16,7 +15,6 @@ extern TrainerNames
 extern GetName
 extern CopyData
 
-W_RIVAL_NAME        equ 0xD349
 RIVAL1              equ 0x19
 RIVAL2              equ 0x2A
 RIVAL3              equ 0x2B

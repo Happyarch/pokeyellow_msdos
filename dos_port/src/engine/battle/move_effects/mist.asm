@@ -1,19 +1,16 @@
 %include "gb_memmap.inc"
+%include "gb_constants.inc"
 %include "gb_macros.inc"
 
 extern PlayCurrentMoveAnimation
 extern PrintText
 extern PrintButItFailedText_
 extern _ShroudedInMistText
-extern wPlayerBattleStatus2
-extern hWhoseTurn
-extern wEnemyBattleStatus2
 
 section .text
 global MistEffect_
 global ShroudedInMistText
 
-PROTECTED_BY_MIST equ 1
 
 MistEffect_:
     mov esi, wPlayerBattleStatus2

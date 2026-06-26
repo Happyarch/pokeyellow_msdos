@@ -1,20 +1,8 @@
 %include "gb_memmap.inc"
+%include "gb_constants.inc"
 %include "gb_macros.inc"
 
 
-extern hWhoseTurn
-extern wBattleMonHP
-extern wBattleMonMaxHP
-extern wPlayerMoveNum
-extern wEnemyMonHP
-extern wEnemyMonMaxHP
-extern wEnemyMoveNum
-extern wBattleMonStatus
-extern wEnemyMonStatus
-extern wHPBarMaxHP
-extern wHPBarOldHP
-extern wHPBarNewHP
-extern wHPBarType
 extern PlayCurrentMoveAnimation
 extern EffectCallBattleCore
 extern UpdateHPBar2

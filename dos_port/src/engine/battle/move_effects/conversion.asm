@@ -1,4 +1,5 @@
 %include "gb_memmap.inc"
+%include "gb_constants.inc"
 
 section .text
 
@@ -21,16 +22,10 @@ CallBankF:
 ; ---------------------------------------------------------------------------
 global ConversionEffect_
 
-extern wEnemyMonType1
-extern wBattleMonType1
-extern hWhoseTurn
-extern wEnemyBattleStatus1
-extern wPlayerBattleStatus1
 extern PlayCurrentMoveAnimation
 extern PrintText
 extern PrintButItFailedText_
 
-INVULNERABLE equ 6
 
 ConversionEffect_:
     mov esi, wEnemyMonType1

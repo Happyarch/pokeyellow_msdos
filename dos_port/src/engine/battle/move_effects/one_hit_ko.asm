@@ -1,12 +1,7 @@
 %include "gb_memmap.inc"
+%include "gb_constants.inc"
 %include "gb_macros.inc"
 
-extern wDamage
-extern wCriticalHitOrOHKO
-extern wBattleMonSpeed
-extern wEnemyMonSpeed
-extern hWhoseTurn
-extern wMoveMissed
 
 section .text
 global OneHitKOEffect_

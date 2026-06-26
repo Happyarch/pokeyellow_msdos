@@ -1,17 +1,11 @@
 %include "gb_memmap.inc"
+%include "gb_constants.inc"
 %include "gb_macros.inc"
 
 extern Divide
 extern AddBCDPredef
 extern PrintText
 extern wPayDayMoney
-extern hWhoseTurn
-extern wBattleMonLevel
-extern wEnemyMonLevel
-extern hDividend
-extern hDivisor
-extern hQuotient
-extern hRemainder
 extern wTotalPayDayMoney
 extern _CoinsScatteredText
 

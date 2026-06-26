@@ -1,16 +1,6 @@
 %include "gb_memmap.inc"
+%include "gb_constants.inc"
 
-extern wDamage
-extern wBattleMonHP
-extern wBattleMonMaxHP
-extern wEnemyMonHP
-extern wEnemyMonMaxHP
-extern wHPBarOldHP
-extern wHPBarNewHP
-extern wHPBarType
-extern hWhoseTurn
-extern wPlayerMoveEffect
-extern wEnemyMoveEffect
 
 extern UpdateHPBar2
 extern DrawPlayerHUDAndHPBar

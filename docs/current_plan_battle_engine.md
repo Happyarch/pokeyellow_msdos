@@ -63,9 +63,26 @@ Authoritative addresses: `git show origin/symbols:pokeyellow.sym` (bank:addr).
   effect handlers (`StatModifierUpEffect`/`StatModifierDownEffect`) and the
   `GetStatMod` / unmodified-stat recompute helpers.
 
-- [ ] **Stage 6 — Audit + wire existing drafts.** `move_effects/*` (13 files),
-  `misc.asm`, `decrement_pp.asm`, `experience.asm`, `get_trainer_name.asm`.
-  Audit each against pret; resolve externs; add to Makefile `BATTLE_SRCS`.
+- [x] **Stage 6 — Audit + wire existing swarm drafts.** Audited every draft
+  against pret. All redundant externs (WRAM symbols now defined by Stage 1) were
+  dropped, includes normalized, and redundant local `equ`s (shadowing the
+  includes, all same-value) removed. Wired the assembling files into BATTLE_SRCS.
+  **Audit results:**
+  - **Correct as translated** (only the extern/include cleanup needed): the 13
+    `move_effects/*` (spot-audited focus_energy, mist, conversion, haze, paralyze,
+    one_hit_ko, recoil line-by-line — all faithful, incl. the OHKO speed-compare
+    borrow and the recoil negative-offset HP pointer math), `misc.asm`,
+    `get_trainer_name.asm`.
+  - **`decrement_pp.asm` — rewrote, 2 bugs fixed**: missing gb_constants include;
+    AddNTimes stride in CX instead of BX (helper reads BX).
+  - **`experience.asm` — 6 mechanical bugs fixed (sbc→sbb ×3, cx→bx ×3) but
+    NOT wired/validated**: deeply coupled to the deferred level-up/EXP subsystem
+    + battle UI (CalcExperience, CalcLevelFromExperience, LearnMoveFromLevelUp,
+    PrintStatsBox, FlagActionPredef, …) and lacks extern decls. Left out of
+    BATTLE_SRCS; revisit when that subsystem exists.
+  NOTE: BATTLE_SRCS assembles (`make check`) but does not yet *link* into the EXE
+  — the move-effects call deferred UI/animation/text routines. That's expected;
+  the front end is deferred per the user.
 
 - [ ] **Stage 7 — Status + turn helpers.** Status-condition application/checks,
   speed compare / turn order, `HandleBuildingRage`, `ApplyBurnAndParalysisPenalties`.

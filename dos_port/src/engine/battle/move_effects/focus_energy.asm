@@ -1,16 +1,13 @@
 %include "gb_memmap.inc"
+%include "gb_constants.inc"
 %include "gb_macros.inc"
 
-extern wPlayerBattleStatus2
-extern hWhoseTurn
-extern wEnemyBattleStatus2
 extern PlayCurrentMoveAnimation
 extern PrintText
 extern DelayFrames
 extern PrintButItFailedText_
 extern _GettingPumpedText
 
-GETTING_PUMPED equ 2
 
 section .text
 global FocusEnergyEffect_

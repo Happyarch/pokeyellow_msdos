@@ -1,12 +1,7 @@
 %include "gb_memmap.inc"
+%include "gb_constants.inc"
 %include "gb_macros.inc"
 
-extern wEnemyMonStatus
-extern wPlayerMoveType
-extern hWhoseTurn
-extern wBattleMonStatus
-extern wEnemyMoveType
-extern wMoveMissed
 extern MoveHitTest
 extern QuarterSpeedDueToParalysis
 extern DelayFrames
@@ -15,9 +10,6 @@ extern PrintMayNotAttackText
 extern PrintDidntAffectText
 extern PrintDoesntAffectText
 
-ELECTRIC equ 23
-GROUND equ 4
-PAR equ 6
 
 section .text
 global ParalyzeEffect_

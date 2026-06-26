@@ -138,7 +138,23 @@ BATTLE_SRCS := \
     src/data/battle_data.asm \
     src/engine/battle/core_damage.asm \
     src/engine/battle/badge_boosts.asm \
-    src/engine/battle/decrement_pp.asm
+    src/engine/battle/decrement_pp.asm \
+    src/engine/battle/get_trainer_name.asm \
+    src/engine/battle/misc.asm \
+    src/engine/battle/move_effects/conversion.asm \
+    src/engine/battle/move_effects/drain_hp.asm \
+    src/engine/battle/move_effects/focus_energy.asm \
+    src/engine/battle/move_effects/haze.asm \
+    src/engine/battle/move_effects/heal.asm \
+    src/engine/battle/move_effects/leech_seed.asm \
+    src/engine/battle/move_effects/mist.asm \
+    src/engine/battle/move_effects/one_hit_ko.asm \
+    src/engine/battle/move_effects/paralyze.asm \
+    src/engine/battle/move_effects/pay_day.asm \
+    src/engine/battle/move_effects/recoil.asm \
+    src/engine/battle/move_effects/reflect_light_screen.asm
+# experience.asm is intentionally NOT listed: it depends on the deferred
+# level-up/EXP subsystem + battle UI and is not yet linkable (see its header).
 
 # Debug-only sources (linked only when the corresponding flag is set).
 # Any debug flag implies SKIP_TITLE — debug harnesses boot straight to the overworld.

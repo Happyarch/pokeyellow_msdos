@@ -1,9 +1,8 @@
 %include "gb_memmap.inc"
+%include "gb_constants.inc"
 %include "gb_macros.inc"
 %include "gb_text.inc"
 
-GRASS equ 22
-SEEDED equ 7
 
 extern MoveHitTest
 extern PlayCurrentMoveAnimation
@@ -12,12 +11,6 @@ extern DelayFrames
 extern _WasSeededText
 extern _EvadedAttackText
 
-extern wMoveMissed
-extern wEnemyBattleStatus2
-extern wEnemyMonType1
-extern hWhoseTurn
-extern wPlayerBattleStatus2
-extern wBattleMonType1
 
 global LeechSeedEffect_
 

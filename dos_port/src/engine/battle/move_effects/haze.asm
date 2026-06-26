@@ -1,39 +1,14 @@
 %include "gb_memmap.inc"
+%include "gb_constants.inc"
 %include "gb_macros.inc"
 
-extern wPlayerMonAttackMod
-extern wEnemyMonAttackMod
-extern wPlayerMonUnmodifiedAttack
-extern wBattleMonAttack
-extern wEnemyMonUnmodifiedAttack
-extern wEnemyMonAttack
-extern wEnemyMonStatus
-extern wEnemySelectedMove
-extern hWhoseTurn
-extern wBattleMonStatus
-extern wPlayerSelectedMove
-extern wPlayerDisabledMove
-extern wEnemyDisabledMove
-extern wPlayerDisabledMoveNumber
-extern wPlayerBattleStatus1
-extern wEnemyBattleStatus1
 extern PlayCurrentMoveAnimation
 extern CallBankF
 extern PrintText
 extern _StatusChangesEliminatedText
 
-CONFUSED equ 7
-USING_X_ACCURACY equ 0
-PROTECTED_BY_MIST equ 1
-GETTING_PUMPED equ 2
-TRANSFORMED equ 3
-SEEDED equ 7
 
-NUM_STAT_MODS equ 8
-NUM_STATS equ 5
 
-FRZ equ 5
-SLP_MASK equ 7
 
 section .text
 global HazeEffect_

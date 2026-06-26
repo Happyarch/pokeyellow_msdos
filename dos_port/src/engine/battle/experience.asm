@@ -1,4 +1,16 @@
-%include "dos_port/include/gb_memmap.inc"
+; experience.asm — GainExperience post-battle EXP/stat-exp distribution.
+;
+; AUDIT (2026-06-26): swarm draft. Mechanical bugs fixed below — sbc→sbb (x86
+; has no `sbc`), and the AddNTimes/CopyData strides loaded into CX instead of BX
+; (both helpers read BX). NOT yet validated or linkable: this routine is deeply
+; coupled to the (still-deferred) level-up/EXP subsystem and battle UI
+; (CalcExperience, CalcLevelFromExperience, LearnMoveFromLevelUp, PrintStatsBox,
+; FlagActionPredef, ModifyPikachuHappiness, CallBattleCore→BattleCore, PrintText,
+; LoadMonData, …), none of which exist yet, and it lacks the extern declarations
+; for them. Left out of BATTLE_SRCS until that subsystem is built; revisit then.
+;
+%include "gb_memmap.inc"
+%include "gb_constants.inc"
 
 SECTION .text
 
@@ -139,9 +151,9 @@ GainExperience:
 	sub al, dh
 	mov al, [ebp + esi]
 	dec esi
-	sbc al, cl
+	sbb al, cl
 	mov al, [ebp + esi]
-	sbc al, bh
+	sbb al, bh
 	jc .next2
 	mov al, bh
 	mov [ebp + esi], al
@@ -199,7 +211,7 @@ GainExperience:
 	sub al, cl
 	mov cl, al
 	mov al, [ebp + esi]
-	sbc al, bh
+	sbb al, bh
 	mov bh, al
 	add esi, (MON_HP + 1) - MON_MAXHP
 	mov al, [ebp + esi]
@@ -224,14 +236,14 @@ GainExperience:
 	add esi, MON_LEVEL - (MON_HP + 1)
 	push esi
 	mov edi, wBattleMonLevel
-	mov cx, 1 + NUM_STATS * 2
+	mov bx, 1 + NUM_STATS * 2
 	call CopyData
 	pop esi
 	mov al, [ebp + wPlayerBattleStatus3]
 	test al, 1 << TRANSFORMED
 	jnz .recalcStatChanges
 	mov edi, wPlayerMonUnmodifiedLevel
-	mov cx, 1 + NUM_STATS * 2
+	mov bx, 1 + NUM_STATS * 2
 	call CopyData
 .recalcStatChanges:
 	xor al, al
@@ -283,7 +295,7 @@ GainExperience:
 	cmp al, bh
 	je .done
 	mov [ebp + wWhichPokemon], al
-	mov cx, PARTYMON_STRUCT_LENGTH
+	mov bx, PARTYMON_STRUCT_LENGTH
 	mov esi, wPartyMon1
 	call AddNTimes
 	jmp .partyMonLoop

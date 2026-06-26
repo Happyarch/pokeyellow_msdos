@@ -1,4 +1,5 @@
 %include "gb_memmap.inc"
+%include "gb_constants.inc"
 
 section .text
 
@@ -16,8 +17,6 @@ extern MOVE_NAME
 extern wNameListType
 extern GetName
 extern wNameBuffer
-extern wNumMovesMinusOne
-extern NUM_MOVES
 
 FormatMovesString:
     mov esi, wMoves
@@ -82,11 +81,9 @@ global InitList
 
 extern wInitListType
 extern INIT_ENEMYOT_LIST
-extern wEnemyPartyCount
 extern wEnemyMonOT
 extern ENEMYOT_NAME
 extern INIT_PLAYEROT_LIST
-extern wPartyCount
 extern PLAYEROT_NAME
 extern INIT_MON_LIST
 extern wItemList
@@ -100,8 +97,6 @@ extern wUnusedNamePointer
 extern ItemPrices
 extern wItemPrices
 
-W_NUM_BAG_ITEMS equ 0xD31C
-W_PARTY_MON_OT  equ 0xD272
 
 InitList:
     mov al, byte [ebp + wInitListType]

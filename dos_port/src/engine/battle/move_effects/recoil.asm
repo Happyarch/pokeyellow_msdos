@@ -1,23 +1,12 @@
 %include "gb_memmap.inc"
+%include "gb_constants.inc"
 %include "gb_macros.inc"
 
-extern hWhoseTurn
-extern wPlayerMoveNum
-extern wBattleMonMaxHP
-extern wEnemyMoveNum
-extern wEnemyMonMaxHP
-extern wDamage
-extern wBattleMonHP
-extern wHPBarMaxHP
-extern wHPBarOldHP
-extern wHPBarNewHP
 extern wTileMap
-extern wHPBarType
 extern predef_UpdateHPBar2
 extern PrintText
 extern _HitWithRecoilText
 
-STRUGGLE equ 0xA5
 
 global RecoilEffect_
 RecoilEffect_:
