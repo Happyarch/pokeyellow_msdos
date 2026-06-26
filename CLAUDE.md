@@ -131,6 +131,7 @@ docs/
   translation_log.md       ← per-routine translation notes
   glitch_safety.md         ← glitch sandbox guidance
   386_optimization_strategy.md ← Guide for fast and faithful 386 assembly optimizations
+  ui_projection.md         ← per-subsystem GB→port UI coordinate registry + ; PROJ tags
   current_plan.md          ← active multi-step implementation plan (see below)
   references/
     README.md              ← reference link index
@@ -217,7 +218,11 @@ Other verified DPMI gotchas:
   from the CGB palette data, not an expanded DMG ramp).
 
 ### Timing
-- PIT channel 0: divisor 19886, mode 3 → ~60 Hz
+- PIT channel 0, mode 3; divisor chosen by the Makefile `TIMING` mode (the GB is
+  not exactly 60 Hz). Default **SGB** = 61.1685 Hz (divisor 19506, the Super Game
+  Boy's ~+2.4% SNES-clock speed-up); `TIMING=DMG` = 59.7275 Hz (19977, real
+  handheld); `TIMING=PC` = 60 Hz (19886); or `TIMING_HZ=`/`TIMING_DIVISOR=` custom.
+  `timing.asm` reads `-D PIT_DIVISOR=`.
 - Frame loop: `wait_vblank → wait_pit_tick → update → render → present`
 - VBlank detection: port 0x3DA bit 3 (VSync active high)
 - No cycle-counted delay loops

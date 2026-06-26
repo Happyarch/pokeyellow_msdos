@@ -74,14 +74,15 @@ section .data
 align 4
 g_tilecache_dirty: db 1     ; nonzero → render_bg rebuilds tile_cache this frame
 
-; render_window box bounds. Defaults reproduce the full-width bottom dialog box;
-; the start menu narrows them to a corner box and restores them on close.
-;   g_win_clip_w — visible window width in px (cols blitted from row_buf).
-;   g_win_max_y  — first screen row the window stops drawing at (exclusive).
+; --- Unified window-compositor descriptor list ----------------------------------
+; g_windows[] is the ONE source of truth for what the window layer draws.
+; frame.asm loops g_window_count descriptors (painter's order); render_window draws
+; one. A screen fully (re)defines this list whenever its window state changes —
+; never rely on prior contents. count==0 ⇒ nothing drawn. (Layout/field offsets:
+; gb_memmap.inc WIN_*; default count=0 = hidden until a screen populates it.)
 align 4
-global g_win_clip_w, g_win_max_y
-g_win_clip_w: dd SCREEN_W   ; default 160px (20-tile dialog content width)
-g_win_max_y:  dd RENDER_H   ; default 200 (window draws to bottom of screen)
+global g_windows, g_window_count
+g_window_count: dd 0
 
 ; Full-screen whiteout: when nonzero, render_bg fills the whole back buffer with
 ; BG color 0 (the menu's white) and render_sprites is skipped, so a window-layer
@@ -131,7 +132,17 @@ alignb 4
 row_buf:         resb 256  ; decoded 256-px virtual window row (shade 0–3)
 win_map_row:     resd 1    ; EBP-relative offset of current window tilemap row
 win_fine_y2:     resd 1    ; (WLY & 7) * 2
-win_line_ctr:    resd 1    ; WLY — window internal line counter (resets each frame)
+win_line_ctr:    resd 1    ; WLY — window internal line counter (resets per descriptor)
+
+; window descriptor storage + per-call cached fields (read once at render_window top
+; so decode_win_row / row copies may clobber ESI without losing the descriptor ptr)
+alignb 4
+g_windows:       resb MAX_WINDOWS * WIN_DESC_SIZE  ; ordered painter's-order list
+win_wx:          resd 1    ; cached descriptor WIN_WX
+win_wy:          resd 1    ; cached descriptor WIN_WY
+win_clip_w:      resd 1    ; cached descriptor WIN_CLIP_W
+win_max_y:       resd 1    ; cached descriptor WIN_MAX_Y
+win_map_base:    resd 1    ; tilemap_base + start_row*32 (row WLY=0 maps to)
 
 ; ---------------------------------------------------------------------------
 ; Code
@@ -586,18 +597,23 @@ render_sprites:
 ; render_window — composite the GB window layer over the back buffer.
 ;
 ; The window is a non-scrolling BG-like plane that overlays the main BG from
-; screen position (WX-7, WY) downward. It is enabled by LCDC bit 5 (and the
-; BG/Window master enable, LCDC bit 0). LCDC bit 6 selects its tilemap
-; ($9800 vs $9C00). Tile data addressing follows LCDC bit 4, identical to the
-; BG. BGP applies — the window is fully opaque (color 0 is NOT transparent).
+; screen position (WX-7, WY) downward. Under the unified compositor each box is
+; described by a window descriptor (gb_memmap.inc WIN_*): the box geometry
+; (wx/wy/clip_w/max_y) and its source (tilemap_base + start_row) come from the
+; descriptor, NOT the loose IO_WX/IO_WY/g_win_* globals. Tile data addressing
+; still follows the shared LCDC bit 4, identical to the BG. BGP applies — the
+; window is fully opaque (color 0 is NOT transparent). Visibility is purely
+; count-driven now (frame.asm loops g_window_count descriptors), so the old LCDC
+; bit-5/bit-0 enable gate moved out to the legacy shim during migration.
 ;
 ; WLY — window internal line counter:
-;   WLY starts at 0 each frame and increments once for every scanline on which
-;   the window is drawn (cur_y >= WY). It is NOT the same as LY. WLY is what
-;   indexes the window tilemap row, so if the window becomes visible only at
-;   screen row 72, the first window tilemap row (WLY=0) maps there — not row 9.
-;   This prevents visual drift when the window starts mid-frame. The implementation
-;   stores WLY in win_line_ctr (BSS) and increments it after each active scanline.
+;   WLY starts at 0 per descriptor and increments once for every scanline on
+;   which the box is drawn (cur_y >= wy). It is NOT the same as LY. WLY (offset by
+;   the descriptor's start_row) indexes the box's tilemap row, so a box that
+;   becomes visible only at screen row 72 maps its first source row (WLY=0) there
+;   — not row 9. This prevents visual drift when a box starts mid-screen. The
+;   implementation stores WLY in win_line_ctr (BSS), reset at each render_window
+;   call and incremented after each active scanline.
 ;
 ; Call after render_bg AND render_sprites. NOTE: this inverts the GB hardware
 ; layer order — on real DMG/CGB, OBJ sprites draw over the window, so the HW
@@ -606,21 +622,30 @@ render_sprites:
 ; bug only shows up because this port's extended 40×25 player-centered viewport
 ; renders NPCs in the bottom rows that the GB's 20×18 screen never put under the
 ; box. See the DIVERGENCE note in src/video/frame.asm:DelayFrame.
-; In:  EBP = GB memory base. All registers preserved.
+; In:  EBP = GB memory base, ESI = flat pointer to the window descriptor to draw.
+;      All registers preserved.
 ; ---------------------------------------------------------------------------
 render_window:
     pushad
 
-    ; Exit if LCDC bit 5 (window enable) is clear.
-    test byte [ebp + IO_LCDC], 1 << LCDC_WIN_EN_BIT
-    jz .done
-    ; GLITCH: LCDC bit 0 is the DMG BG+Window master enable — if clear, both
-    ; the BG and window are disabled (screen shows BGP color 0 only on DMG).
-    test byte [ebp + IO_LCDC], 1
-    jz .done
-
     ; No BGP unpack: the window writes raw color (0-3) like the BG; the DAC
     ; (commit_palette) maps it via BGP — the window shares the BG palette.
+
+    ; Cache descriptor fields up front so decode_win_row / the row copies are free
+    ; to clobber ESI without losing the descriptor pointer.
+    mov eax, [esi + WIN_WX]
+    mov [win_wx], eax
+    mov eax, [esi + WIN_WY]
+    mov [win_wy], eax
+    mov eax, [esi + WIN_CLIP_W]
+    mov [win_clip_w], eax
+    mov eax, [esi + WIN_MAX_Y]
+    mov [win_max_y], eax
+    ; win_map_base = tilemap_base + start_row*32 (the tilemap row WLY=0 maps to)
+    mov eax, [esi + WIN_START_ROW]
+    shl eax, 5
+    add eax, [esi + WIN_TILEMAP]
+    mov [win_map_base], eax
 
     ; Cache tile data addressing mode (shared LCDC bit 4).
     movzx eax, byte [ebp + IO_LCDC]
@@ -628,10 +653,10 @@ render_window:
     and eax, 1
     mov [tiledata_mode], eax
 
-    ; Reset WLY for this frame.
+    ; Reset WLY for this descriptor.
     mov dword [win_line_ctr], 0
 
-    movzx ebx, byte [ebp + IO_WY]     ; EBX = WY (window top edge, screen-Y units)
+    mov ebx, [win_wy]                  ; EBX = wy (window top edge, screen-Y units)
 
     xor ecx, ecx                       ; cur_y = 0
 
@@ -639,8 +664,8 @@ render_window:
     ; Skip scanlines above the window's vertical trigger.
     cmp ecx, ebx                       ; cur_y < WY?
     jb .next_scanline
-    ; Skip scanlines at/below the box bottom (g_win_max_y; default RENDER_H = no-op).
-    cmp ecx, [g_win_max_y]
+    ; Skip scanlines at/below the box bottom (descriptor max_y).
+    cmp ecx, [win_max_y]
     jae .next_scanline
 
     ; ── Decode one window tile row (32 tiles) into row_buf ──────────────────
@@ -652,16 +677,10 @@ render_window:
     shl eax, 1
     mov [win_fine_y2], eax
 
-    ; map_row = window_tilemap_base + (WLY >> 3) * 32
+    ; map_row = win_map_base + (WLY >> 3) * 32   (win_map_base folds in start_row)
     shr edx, 3
     shl edx, 5
-    test byte [ebp + IO_LCDC], 1 << LCDC_WIN_MAP_BIT
-    jz .winmap0
-    add edx, GB_TILEMAP1
-    jmp .winmap_done
-.winmap0:
-    add edx, GB_TILEMAP0
-.winmap_done:
+    add edx, [win_map_base]
     mov [win_map_row], edx
 
     push ecx                            ; save scanline counter — decode_win_row clobbers ECX
@@ -670,8 +689,8 @@ render_window:
 
     ; ── Copy visible window pixels into the back buffer ─────────────────────
 
-    ; wx_adj = WX - 7: signed screen X of the window's left column.
-    movzx edx, byte [ebp + IO_WX]
+    ; wx_adj = wx - 7: signed screen X of the window's left column.
+    mov edx, [win_wx]
     sub edx, 7                         ; EDX = wx_adj (signed)
 
     ; EDI = start of this back-buffer row.
@@ -696,10 +715,11 @@ render_window:
     ; must NOT be blitted — otherwise they paint blank tiles over the BG to the
     ; right of the box (the box is 160px centered in our 320px viewport, so BG is
     ; visible past its right edge). 160 < 256, so this also stays within row_buf.
-    ; g_win_clip_w defaults to SCREEN_W (160); the start menu narrows it.
-    cmp ecx, [g_win_clip_w]
+    ; The descriptor's clip_w is SCREEN_W (160) for the full dialog; the start menu
+    ; narrows it; the bag's sub-boxes set their own widths.
+    cmp ecx, [win_clip_w]
     jbe .do_right_copy
-    mov ecx, [g_win_clip_w]
+    mov ecx, [win_clip_w]
 .do_right_copy:
     add edi, edx                       ; advance dest to screen_x_start
     rep movsb
@@ -712,7 +732,7 @@ render_window:
     lea esi, [row_buf + edx]
     push ecx
     mov ecx, RENDER_W
-    mov eax, [g_win_clip_w]             ; box content width (see right-copy clamp above)
+    mov eax, [win_clip_w]              ; box content width (see right-copy clamp above)
     sub eax, edx                       ; content px remaining after the clip
     cmp ecx, eax
     jbe .do_left_copy
@@ -733,6 +753,77 @@ render_window:
 
 .done:
     popad
+    ret
+
+; ---------------------------------------------------------------------------
+; set_single_window — define g_windows[] as exactly one descriptor (count=1).
+;
+; The migration target for single-box screens (dialog / START / party): replaces
+; the old "write IO_WX/H_WY/g_win_clip_w/g_win_max_y then present" pattern with one
+; call that fully (re)defines the window list. Pass count=0 directly (via
+;   mov dword [g_window_count], 0) to hide instead.
+;
+; In:  EAX = wx (WX units), EBX = wy (screen-Y px), ECX = clip_w (px),
+;      EDX = max_y (px, exclusive), ESI = tilemap_base (EBP-rel: GB_TILEMAP0/1),
+;      EDI = start_row (tilemap row mapped to WLY=0), EBP = GB memory base.
+; Out: g_window_count = 1, g_windows[0] populated. Also mirrors wy→H_WY and
+;      wx→IO_WX so the legacy "is the dialog open?" flag (sync_dialog_window reads
+;      H_WY) and rWX/rWY faithfulness stay in sync. All registers preserved.
+; ---------------------------------------------------------------------------
+global set_single_window
+set_single_window:
+    mov [g_windows + WIN_WX], eax
+    mov [g_windows + WIN_WY], ebx
+    mov [g_windows + WIN_CLIP_W], ecx
+    mov [g_windows + WIN_MAX_Y], edx
+    mov [g_windows + WIN_TILEMAP], esi
+    mov [g_windows + WIN_START_ROW], edi
+    mov dword [g_window_count], 1
+    mov [ebp + H_WY], bl                ; mirror wy → rWY (legacy dialog-open flag)
+    mov [ebp + IO_WX], al               ; mirror wx → rWX (faithfulness)
+    ret
+
+; ---------------------------------------------------------------------------
+; hide_window — empty the window list (count=0 ⇒ nothing drawn).
+;
+; The migration target for the old "hide" paths (H_WY=RENDER_H + restore the
+; g_win_* defaults). Also parks rWY off-screen (RENDER_H) so the legacy
+; sync_dialog_window gate (H_WY == RENDER_H) still reads "closed".
+; In:  EBP = GB memory base. All registers preserved.
+; ---------------------------------------------------------------------------
+global hide_window
+hide_window:
+    mov dword [g_window_count], 0
+    mov byte [ebp + H_WY], RENDER_H
+    ret
+
+; ---------------------------------------------------------------------------
+; add_window — append one descriptor to g_windows[] (g_window_count++).
+;
+; For multi-box screens (the bag: list + USE/TOSS + quantity + YES/NO). The owner
+; first resets the list (hide_window, or directly g_window_count=0), then appends
+; each box in painter's order (later descriptors draw on top). Unlike
+; set_single_window this does NOT mirror wy→H_WY / wx→IO_WX — those exist only for
+; the dialog-open gate (sync_dialog_window), which sub-boxes must not disturb.
+; Caller must keep the resulting count <= MAX_WINDOWS.
+; In:  EAX=wx, EBX=wy, ECX=clip_w, EDX=max_y, ESI=tilemap_base (EBP-rel), EDI=start_row.
+; Out: g_windows[old_count] populated; g_window_count incremented. All regs preserved.
+;      ([g_windows + ebp + ..] uses ebp as INDEX (not base) → defaults to DS, matching
+;       set_single_window's direct [g_windows + ..] writes; not SS-relative.)
+; ---------------------------------------------------------------------------
+global add_window
+add_window:
+    push ebp
+    mov ebp, [g_window_count]
+    imul ebp, ebp, WIN_DESC_SIZE
+    mov [g_windows + ebp + WIN_WX], eax
+    mov [g_windows + ebp + WIN_WY], ebx
+    mov [g_windows + ebp + WIN_CLIP_W], ecx
+    mov [g_windows + ebp + WIN_MAX_Y], edx
+    mov [g_windows + ebp + WIN_TILEMAP], esi
+    mov [g_windows + ebp + WIN_START_ROW], edi
+    pop ebp
+    inc dword [g_window_count]
     ret
 
 ; ---------------------------------------------------------------------------

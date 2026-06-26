@@ -252,8 +252,8 @@ SubBCD:
 .sub_loop:
     mov al, [ebp + edx]
     mov bl, [ebp + esi]
-    
-    sbc al, bl
+
+    sbb al, bl
     das
     
     mov [ebp + edx], al

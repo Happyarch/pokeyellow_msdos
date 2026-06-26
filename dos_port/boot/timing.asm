@@ -1,15 +1,20 @@
-; timing.asm — PIT 60 Hz reprogramming, tick ISR, and VBlank sync.
+; timing.asm — PIT frame-rate reprogramming, tick ISR, and VBlank sync.
 ;
-; PIT channel 0 is reprogrammed to fire IRQ 0 at ~60 Hz (divisor 19886,
-; mode 3 square wave). The ISR increments [tick_count] and sets [tick_flag].
+; PIT channel 0 is reprogrammed to fire IRQ 0 at the build's frame rate (mode 3
+; square wave). The ISR increments [tick_count] and sets [tick_flag]. The divisor
+; is chosen by the Makefile TIMING mode (see the Makefile header): SGB default
+; (61.1685 Hz, divisor 19506), DMG (59.7275 Hz, 19977), PC (60 Hz, 19886), or a
+; custom TIMING_HZ / TIMING_DIVISOR. The Game Boy is not exactly 60 Hz, so this
+; rate is an explicit choice rather than a magic constant.
 ;
 ; ISR SEGMENT NOTE: a DPMI hardware interrupt may arrive with segment
 ; registers that are NOT our flat DS (the host provides a locked stack).
 ; The standard DJGPP technique: read our data selector from a variable via a
 ; CS override (CS and DS share the same base under DJGPP), then load DS/ES.
 ;
-; PIT frequency math:
-;   1,193,182 Hz / 19,886 = 59.999 Hz ≈ 60 Hz
+; PIT frequency math (input clock 1,193,181.666 Hz):
+;   divisor 19506 → 61.169 Hz (SGB)   19886 → 59.999 Hz (PC 60)
+;   divisor 19977 → 59.728 Hz (DMG)   divisor = round(clock / desired_Hz)
 ;
 ; Build: nasm -f coff -I include/ -o timing.o timing.asm
 
@@ -18,7 +23,11 @@ bits 32
 %include "gb_memmap.inc"
 %include "gb_macros.inc"
 
-PIT_DIVISOR     equ 19886   ; ~60 Hz
+; PIT_DIVISOR is normally supplied by the Makefile (-D PIT_DIVISOR=…, from the
+; TIMING mode). Fall back to the SGB default for a bare `nasm` assemble check.
+%ifndef PIT_DIVISOR
+%define PIT_DIVISOR 19506   ; SGB ~61.17 Hz
+%endif
 PIT_CMD_PORT    equ 0x43    ; PIT command register
 PIT_CH0_PORT    equ 0x40    ; PIT channel 0 data
 PIT_CMD_CH0_RW  equ 0x36    ; channel 0, lobyte/hibyte, mode 3 (square wave)

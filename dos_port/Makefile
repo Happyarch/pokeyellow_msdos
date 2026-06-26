@@ -18,6 +18,44 @@ NASMFLAGS := -f coff -I include/ -I . -O0
 BUG_FIX_LEVEL ?= 0
 NASMFLAGS += -D BUG_FIX_LEVEL=$(BUG_FIX_LEVEL)
 
+# ---------------------------------------------------------------------------
+# Frame-timing mode — picks the PIT channel-0 divisor (the IRQ 0 / emulated
+# vblank rate that paces the whole game). The Game Boy is NOT exactly 60 Hz, so
+# this is an explicit, documented choice instead of a magic constant:
+#
+#   make TIMING=SGB    61.1685 Hz — Super Game Boy 1 (SNES-derived 4.2954 MHz
+#                                   GB clock, ~+2.41% vs DMG). The authentic SGB
+#                                   speed-up/pitch-up. DEFAULT.
+#   make TIMING=DMG    59.7275 Hz — real DMG/CGB handheld (4194304 / 70224).
+#   make TIMING=PC     60.0000 Hz — clean PC 60 Hz (the port's old fixed value).
+#   make TIMING_HZ=61.17        — any custom refresh rate in Hz (overrides TIMING).
+#   make TIMING_DIVISOR=19506   — raw PIT divisor (overrides TIMING and TIMING_HZ).
+#
+# PIT input clock = 1,193,181.666 Hz; divisor = round(clock / Hz). Changing the
+# rate scales movement, animation, and (later) audio pitch uniformly — exactly
+# how the real SGB ran fast. Verify a build with `make DEBUG_WALKSPEED=1`
+# (ticks/tile is rate-invariant at 16; the real-time tiles/sec is what shifts).
+PIT_CLOCK := 1193181.666
+TIMING    ?= SGB
+ifeq ($(TIMING),SGB)
+TIMING_HZ ?= 61.1685
+else ifeq ($(TIMING),DMG)
+TIMING_HZ ?= 59.7275
+else ifeq ($(TIMING),PC)
+TIMING_HZ ?= 60.0
+else
+$(error TIMING must be SGB, DMG, or PC — or use TIMING_HZ=<hz> / TIMING_DIVISOR=<n>)
+endif
+ifdef TIMING_DIVISOR
+PIT_DIVISOR := $(TIMING_DIVISOR)
+else
+PIT_DIVISOR := $(shell python3 -c "d=round($(PIT_CLOCK)/$(TIMING_HZ)); print(d if 1<=d<=65535 else '')")
+endif
+ifeq ($(PIT_DIVISOR),)
+$(error TIMING_HZ=$(TIMING_HZ) yields a PIT divisor outside 1..65535)
+endif
+NASMFLAGS += -D PIT_DIVISOR=$(PIT_DIVISOR)
+
 # Test flag: skip title screen, go straight to overworld. make SKIP_TITLE=1
 ifdef SKIP_TITLE
 NASMFLAGS += -D SKIP_TITLE
@@ -127,7 +165,13 @@ POKEMON_SRCS := \
 # Items layer (current_plan_items.md). Non-UI inventory/bag logic + item data.
 ITEMS_SRCS := \
     src/data/item_data.asm \
-    src/engine/items/inventory.asm
+    src/engine/items/inventory.asm \
+    src/engine/items/item_effects.asm \
+    src/engine/items/item_price.asm \
+    src/engine/items/tm_prices.asm \
+    src/engine/items/subtract_paid_money.asm \
+    src/home/compare.asm \
+    src/engine/math/bcd.asm
 
 # Battle engine backend (current_plan_battle_engine.md). Damage pipeline + data.
 # NOTE: the backend depends on UI/effect routines (JumpMoveEffect, CheckTarget-
@@ -170,6 +214,18 @@ endif
 ifdef DEBUG_WALK_NORTH
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D SKIP_TITLE
+endif
+# Frame-rate probe: run a fixed number of DelayFrame calls in the loaded overworld
+# and dump the tick_count delta to DUMP.BIN ($D1E0). delta < count proves the loop
+# free-runs faster than 60 Hz (the "walks too fast" regression). make DEBUG_WALKSPEED=1
+# Optional: DEBUG_WALKSPEED_FRAMES=N (default 180).
+ifdef DEBUG_WALKSPEED
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_WALKSPEED
+NASMFLAGS += -D SKIP_TITLE
+endif
+ifdef DEBUG_WALKSPEED_FRAMES
+NASMFLAGS += -D DEBUG_WALKSPEED_FRAMES=$(DEBUG_WALKSPEED_FRAMES)
 endif
 ifdef DEBUG_DIALOG
 NEED_DEBUG_DUMP := 1
@@ -215,6 +271,22 @@ NASMFLAGS += -D DEBUG_BAGMENU
 NASMFLAGS += -D SKIP_TITLE
 GAME_SRCS += src/engine/debug/debug_party.asm
 endif
+# Variant of DEBUG_BAGMENU that also overlays the toss YES/NO confirmation box
+# (static, for a visual check of the confirm menu). make DEBUG_BAGMENU_CONFIRM=1
+ifdef DEBUG_BAGMENU_CONFIRM
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_BAGMENU -D DEBUG_BAGMENU_CONFIRM
+NASMFLAGS += -D SKIP_TITLE
+GAME_SRCS += src/engine/debug/debug_party.asm
+endif
+# Live, interactive bag test: seed a full bag + money and boot to the overworld;
+# open the bag via START -> ITEM to drive the list / toss / YES-NO confirm by hand.
+# make DEBUG_BAGMENU_LIVE=1 (then dos_port/run, or build + launch DOSBox-X).
+ifdef DEBUG_BAGMENU_LIVE
+NASMFLAGS += -D DEBUG_BAGMENU_LIVE
+NASMFLAGS += -D SKIP_TITLE
+GAME_SRCS += src/engine/debug/debug_party.asm
+endif
 # Party-menu gate: seed the party, open the POKéMON screen over the overworld,
 # render one frame, dump FRAME.BIN, exit. make DEBUG_PARTYMENU=1
 ifdef DEBUG_PARTYMENU
@@ -233,7 +305,16 @@ ifdef DEBUG_OAK_EVENT
 NASMFLAGS += -D DEBUG_OAK_EVENT
 endif
 
-ALL_SRCS := $(BOOT_SRCS) $(HOME_SRCS) $(HAL_SRCS) $(GAME_SRCS) $(POKEMON_SRCS) $(ITEMS_SRCS) $(BATTLE_SRCS)
+# LINK_SRCS = what actually goes into PKMN.EXE. BATTLE_SRCS is deliberately
+# excluded: the battle backend depends on deferred UI/effect routines and does
+# not yet link (see the BATTLE_SRCS note above). It is still assembled by
+# `make check` and validated by native harnesses via ALL_SRCS below.
+LINK_SRCS := $(BOOT_SRCS) $(HOME_SRCS) $(HAL_SRCS) $(GAME_SRCS) $(POKEMON_SRCS) $(ITEMS_SRCS)
+LINK_OBJS := $(LINK_SRCS:.asm=.o)
+
+# ALL_SRCS = everything that must assemble cleanly (check) and be cleaned, incl.
+# the not-yet-linked battle backend.
+ALL_SRCS := $(LINK_SRCS) $(BATTLE_SRCS)
 ALL_OBJS := $(ALL_SRCS:.asm=.o)
 
 # ---------------------------------------------------------------------------
@@ -353,8 +434,8 @@ assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_
 
 all: $(TARGET)
 
-$(TARGET): $(ALL_OBJS) link.ld
-	$(LD) $(LDFLAGS) -Map=pkmn.map $(ALL_OBJS) -o $@
+$(TARGET): $(LINK_OBJS) link.ld
+	$(LD) $(LDFLAGS) -Map=pkmn.map $(LINK_OBJS) -o $@
 	@echo "Built: $@"
 
 %.o: %.asm

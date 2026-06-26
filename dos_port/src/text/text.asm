@@ -121,6 +121,8 @@ global place_flat_str
 ; External
 ; ---------------------------------------------------------------------------
 extern pad_buttons   ; joypad.asm — button held state (bit 0=A, bit 1=B)
+extern set_single_window   ; src/ppu/ppu.asm — define g_windows[] as one descriptor
+extern g_window_count      ; src/ppu/ppu.asm — unified window list count (open flag)
 
 ; ---------------------------------------------------------------------------
 ; .data — inline substitution strings in DS (flat, not EBP-relative).
@@ -366,8 +368,14 @@ manual_text_scroll:
     dec ecx
     jnz .copy_row
     ; Enable window at bottom of 320×200 viewport; center 160px box in 320px width.
-    mov byte [ebp + H_WY], 152
-    mov byte [ebp + IO_WX], 87            ; WX-7=80 → x=80..239 centers 160px in 320px
+    ; PROJ overworld-ui: GB(0,19) 20x6 --(dialog, X+0/centered, WX-7=80)--> wx=87 wy=152 clip=160 max_y=200
+    mov eax, 87                  ; wx (WX-7=80 → x=80..239 centers 160px in 320px)
+    mov ebx, 152                 ; wy (bottom of 320×200 viewport)
+    mov ecx, SCREEN_W            ; clip_w = 160px (20-tile dialog content)
+    mov edx, RENDER_H            ; max_y = 200 (draws to bottom)
+    mov esi, GB_TILEMAP1         ; dialog box source tilemap
+    xor edi, edi                 ; start_row = 0
+    call set_single_window       ; also mirrors wy→H_WY (sync_dialog_window flag), wx→IO_WX
     ; Place ▼ arrow and init blink counters.
     ; Pret ref: home/joypad2.asm:WaitForTextScrollButtonPress places coord(18,16).
     mov esi, GB_TILEMAP1 + DIALOG_ARROW_TILEMAP_OFFSET
@@ -996,9 +1004,17 @@ PrintText:
     pop esi             ; SM83: pop hl — restore command stream ptr
 
     ; Show the empty box now so text characters appear one-by-one as typed.
-    ; The window stays open until CheckNPCInteraction resets H_WY = RENDER_H.
-    mov byte [ebp + H_WY], 152
-    mov byte [ebp + IO_WX], 87
+    ; The window stays open until CheckNPCInteraction hides it (hide_window).
+    ; PROJ overworld-ui: GB(0,19) 20x6 --(dialog, X+0/centered, WX-7=80)--> wx=87 wy=152 clip=160 max_y=200
+    push esi
+    mov eax, 87
+    mov ebx, 152
+    mov ecx, SCREEN_W
+    mov edx, RENDER_H
+    mov esi, GB_TILEMAP1
+    xor edi, edi
+    call set_single_window       ; count=1; mirrors wy→H_WY (dialog-open flag), wx→IO_WX
+    pop esi
     call sync_dialog_window
     call DelayFrame
 

@@ -2356,3 +2356,149 @@ intentional dead-end** (no save system) and the rest are hooks for the item / pa
 unaffected.
 
 ---
+
+## Item effects (heal / cure / PP / wake / vitamin / rare candy) + mart data
+
+- **Source:** `engine/items/item_effects.asm` (the `.addHealAmount` / `.cureStatusAilment`
+  / `.restorePP` / `.useVitamin` / `.useRareCandy` cores), `data/items/marts.asm`
+- **Translated:** `dos_port/src/engine/items/item_effects.asm`,
+  `dos_port/tools/gen_items.py` → `assets/items.inc`
+- **Date:** 2026-06-26
+- **H-flag:** Not involved (8/16-bit add/sub with CF carried into `sbb`/`rcr`; no DAA/CPL).
+- **Bug tags:** GLITCH(faithful) — Max-Ether/Max-Elixer PP-Up bug reproduced (full
+  PP-restore path doesn't mask the upper two PP-Up bits, so a maxed move with PP Ups
+  isn't detected as "no effect").
+
+### Summary
+
+Items-plan Stage 3 (non-UI effect math) + Stage 2 finish (mart inventories).
+
+**Effects.** Lifted the pure WRAM-mutation cores out of the `ItemUse*` handlers,
+dropping the surrounding text/menu/animation/in-battle-stat-copy (UI boundary).
+Caller passes the target pointer (ESI) + amount (BL); CF returns had-effect.
+Replaces the swarm draft, which (a) declared every constant `extern` instead of
+`%include`-ing the const headers, and (b) had a 16-bit `mov dx,/mov bx,` width bug
+in the evo-stone path. `ApplyHealingItem` keeps the big-endian HP layout and the
+exact branch order (REVIVE → half-max; current≥max → clamp; FULL_RESTORE/MAX_POTION
+/MAX_REVIVE → force max). x86 note: `dec`/`inc` preserve CF, so the borrow from the
+`sub`/`sbb` HP compare and the `shr`→`rcr` half-max rotate survive the pointer
+arithmetic between them.
+
+`ApplyVitamin` adds 2560 stat exp (256*10) to the chosen stat's big-endian
+stat-exp word MSB, capped when the MSB already reaches 100 (25600); the dead +255
+clamp from pret is kept faithfully. `RareCandyLevelUp` is the data core of
+`.useRareCandy`: +1 level (no-op at MAX_LEVEL), `CalcExperience` → set experience
+to the new level's minimum, `CalcStats` recalc, then add (new max HP − old max HP)
+to current HP. Ordering note: the experience write must precede CalcStats because
+`H_EXPERIENCE` aliases `H_MULTIPLICAND` (CalcStats scratch). Both reuse the existing
+pokemon-engine `CalcStats`/`CalcExperience`; the move-learn / evolution / stats-box
+/ party-menu redraw tail is deferred (engine + UI).
+
+**Deferred:** `Func_d85d` (evo-stone applicability) reads `EvosMovesPointerTable`,
+which the DOS port stores with its own flat addressing (`evos_moves.asm`); the pret
+`add hl,bc` ×2 / copy-2-bytes-as-a-pointer logic isn't a verbatim carry-over, so it
+belongs with the evolution path. The X-stat / X-Accuracy / Guard Spec / Dire Hit
+items are battle-engine integration (set a `wPlayerBattleStatus2` bit / call
+`StatModifierUpEffect`), deferred to the battle work.
+
+**Marts.** `gen_items.py` parses `script_mart ITEM, …` lines (resolving constant
+names → ids from the `; $XX` comments in `item_constants.asm`, incl. `add_tm`/`add_hm`
+→ `TM_`/`HM_`) and emits `MartInventories` (16 marts, each `db count, ids, $FF` —
+the `script_mart` body minus the TX_SCRIPT_MART dispatch byte) + a flat `MartPointers`
+dd-table + `NUM_MARTS`.
+
+### Validation
+
+Native ELF32 + `gcc -m32`, 38 checks all pass: potion partial/overheal-clamp,
+revive half-max, antidote hit/miss + full-heal-any, ether +10/cap/already-full +
+max-ether PP-Up bug, party sleep-clear + wake-flag set/clear, vitamin
+add/cap/other-stat-untouched/last-stat (Calcium), and rare-candy
+level+exp+new-maxHP+HP-delta + max-level no-op. The rare-candy test stubs
+`CalcExperience`/`CalcStats` to inject known values (the real ones need the full
+growth-rate / base-stat subsystems), so it validates this routine's pointer
+arithmetic and HP-delta math; the production build links the real engine routines.
+Mart bytes spot-checked vs pret (Viridian, Celadon-2F TM clerk). Full
+`make SKIP_TITLE=1` links with `item_effects.asm` wired into `ITEMS_SRCS`.
+
+---
+
+## Mart money math + GetItemPrice (SubtractAmountPaidFromMoney_ / AddAmountSoldToMoney_ / GetItemPrice)
+
+- **Source:** `engine/items/subtract_paid_money.asm`, `home/inventory.asm`
+  (AddAmountSoldToMoney), `home/item_price.asm`, `data/items/tm_prices.asm`
+- **Translated:** `dos_port/src/engine/items/subtract_paid_money.asm`,
+  `dos_port/src/engine/items/item_price.asm`, `dos_port/tools/gen_items.py`
+  (TechnicalMachinePrices)
+- **Date:** 2026-06-26
+- **H-flag:** Not involved (BCD via x86 `daa`/`das`; H is consumed inside the BCD
+  helpers, not by these callers).
+- **Bug tags:** None new. Reproduces the GB BCD overflow saturation (fill 0x99).
+
+### Summary
+
+Items-plan Stage 4: the non-UI buy/sell money math + item price lookup.
+
+**Money.** `SubtractAmountPaidFromMoney_` BCD-compares wPlayerMoney vs hMoney
+(MSB→LSB, `StringCmp`) and, if affordable, subtracts (`SubBCD`), returning CF=0
+success / CF=1 can't-afford. `AddAmountSoldToMoney_` BCD-adds the sale total
+(`AddBCD`). The MONEY text-box redraw + SFX_PURCHASE are UI, dropped. The prior
+swarm draft fed `StringCmp` the operands in EDI/CL, but the port's StringCmp reads
+EDX (de) and BL (c) — so the compare ran on stale registers; fixed, and the
+`*Predef` wrappers (which reload args from predef regs) swapped for direct
+`AddBCD`/`SubBCD` since we set the registers ourselves. Linking these also pulled
+in `engine/math/bcd.asm` for the first time, surfacing a latent `sbc`→`sbb`
+NASM-syntax error in SubBCD (fixed).
+
+**Price.** `GetItemPrice` indexes the flat `ItemPrices` table for regular items
+(`ItemPrices + 3*(id-1)`, big-endian BCD → hItemPrice) and tail-calls
+`GetMachinePrice` for TMs/HMs (id ≥ HM01; HMs are priceless and leave hItemPrice
+untouched). pret's ROM-bank juggling and the `wListMenuID == MOVESLISTMENU`
+price-by-move special case are bank/UI concerns and dropped. `gen_items.py` now
+emits `TechnicalMachinePrices` (50 TM prices in thousands, nybble-packed two-per-
+byte high-first, matching rgbds `nybble_array`); `HM01`/`TM01` added to
+gb_constants.inc.
+
+### Validation
+
+Native ELF32 + `gcc -m32`, 14 checks all pass: GetItemPrice for Poké Ball (200),
+Ultra Ball (1200), Master Ball (0), TM01 (3000), TM02 (2000), priceless HM01
+(hItemPrice untouched); subtract afford/can't-afford/exact (CF + money); add
+normal + 999999 overflow saturation. Full `make SKIP_TITLE=1` links with the three
+item files + shared compare.asm/bcd.asm wired into `ITEMS_SRCS`.
+
+---
+
+## Bag TOSS confirmation: in-window YES/NO menu (bag_menu.asm)
+
+- **Source:** engine/items/item_effects.asm (TossItem_ confirm flow), home/item.asm
+- **Translated:** `dos_port/src/engine/menus/bag_menu.asm`
+- **Date:** 2026-06-26
+- **H-flag:** Not involved.
+- **Bug tags:** None.
+
+### Summary
+
+The bag's TOSS already had a quantity chooser + key-item guard + a direct
+`RemoveItemFromInventory_` call ("logic complete"). This adds the missing
+confirmation UI: a reusable in-window **YES/NO two-option menu** (`.yes_no_menu` /
+`.draw_yes_no`) — a small bordered box drawn into the bag's window (wTileMap →
+GB_TILEMAP1), UP/DOWN to move the ▶ cursor, A confirms, B = NO, default YES (top).
+The `.render` copy loop was factored into a reusable `.copy_window` the menu shares.
+
+Toss flow now: choose quantity → "THROW AWAY?" prompt + YES/NO → YES removes the
+items, NO/B returns to the list. Selecting a key item or HM (which can't be tossed)
+now shows a "TOO IMPORTANT!" notice (`.key_item_notice`) instead of the previous
+silent no-op. Strings are inline charmap glyphs (letters $80+(c-'A'), '?'=$E6,
+'!'=$E7), matching the existing `bm_str_cancel` pattern.
+
+The USE branch remains deferred (most item effects are battle/UI coupled).
+
+### Validation
+
+Visual via the deterministic FRAME.BIN harness: `DEBUG_BAGMENU` confirms the list
+still renders after the `.copy_window` refactor (no regression), and the new
+`DEBUG_BAGMENU_CONFIRM` flag overlays the prompt + YES/NO box — verified the box,
+border, "YES"/"NO" labels, cursor, and "THROW AWAY?" prompt render correctly over
+the bag list. Production `make SKIP_TITLE=1` builds clean.
+
+---

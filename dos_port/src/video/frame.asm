@@ -24,6 +24,8 @@ extern wait_pit_tick
 extern commit_palette
 extern render_bg
 extern render_window
+extern g_windows
+extern g_window_count
 extern render_sprites
 extern draw_player_marker
 extern present
@@ -33,6 +35,9 @@ extern cleanup
 extern PrepareOAMData
 %ifdef DEBUG_NPC_WALK
 extern DumpNpcLog       ; dump NPC walk-decision log to NPCLOG.BIN on quit
+%endif
+%ifdef DEBUG_WALKSPEED
+extern DebugDumpMemory  ; dump ticks-per-tile stats to DUMP.BIN on quit
 %endif
 
 global DelayFrame
@@ -70,7 +75,7 @@ DelayFrame:
     ; far more of the map than the GB's 20×18 screen, exposing NPCs in the bottom
     ; rows that the original camera never placed under the textbox. The player
     ; sprite sits at screen center (well above WY=152), so it is never occluded.
-    call render_window          ; composite window layer (textbox/menu) OVER sprites
+    call present_windows        ; composite the window descriptor list OVER sprites
     call draw_player_marker     ; legacy placeholder (no-op unless explicitly enabled)
     call present
     cmp byte [pad_quit], 0
@@ -79,8 +84,38 @@ DelayFrame:
 %ifdef DEBUG_NPC_WALK
     call DumpNpcLog             ; writes NPCLOG.BIN, then exits (never returns)
 %endif
+%ifdef DEBUG_WALKSPEED
+    call DebugDumpMemory        ; writes DUMP.BIN (ticks/tile stats), then exits
+%endif
     mov ax, 0x4C00
     int 0x21
+.done:
+    popad
+    ret
+
+; ---------------------------------------------------------------------------
+; present_windows — composite the unified window descriptor list over the back
+; buffer. Draws g_windows[0..g_window_count-1] in order (painter's order: later
+; descriptors draw on top). count==0 ⇒ nothing drawn.
+;
+; The only caller of render_window. Each screen fully (re)defines g_windows /
+; g_window_count on entry/state-change (via set_single_window / hide_window, or by
+; appending descriptors directly), so present_windows just walks whatever the
+; current owner left.
+;
+; In: EBP = GB memory base. All registers preserved.
+; ---------------------------------------------------------------------------
+present_windows:
+    pushad
+    xor ebx, ebx                    ; descriptor index
+.loop:
+    cmp ebx, [g_window_count]
+    jae .done
+    imul esi, ebx, WIN_DESC_SIZE
+    add esi, g_windows
+    call render_window              ; ESI = &g_windows[ebx]
+    inc ebx
+    jmp .loop
 .done:
     popad
     ret

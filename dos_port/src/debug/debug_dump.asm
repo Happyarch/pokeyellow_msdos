@@ -114,6 +114,20 @@ windows:
     dd 0xD31C    ; wNumBagItems + bag (id,qty) pairs
     dd 0xD33C    ; bag items continued
     dd 0xD162    ; overview repeat
+%elifdef DEBUG_WALKSPEED
+; Walk-speed probe: one 64-byte window over the $D1E0 scratch holds the frame-rate
+; measurement — +$00 start tick (dword), +$04 end tick, +$08 DelayFrame count.
+; delta (end-start) == count → clean 60 Hz; delta < count → loop free-runs faster.
+windows:
+    dd 0xD1E0
+    dd 0xD1E0
+    dd 0xD1E0
+    dd 0xD1E0
+    dd 0xD1E0
+    dd 0xD1E0
+    dd 0xD1E0
+    dd 0xD1E0
+    dd 0xD1E0
 %else
 windows:
     dd 0x4600

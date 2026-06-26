@@ -49,6 +49,50 @@ def bcd3(v: int) -> bytes:
                   (digits[4] << 4) | digits[5]))
 
 
+def load_item_ids(path: Path) -> dict:
+    """Map every item-constant name -> numeric id from constants/item_constants.asm.
+
+    Each `const NAME`, `add_tm NAME`, `add_hm NAME` line carries a trailing
+    `; $XX` comment with the resolved id (the macros compute it via const_value);
+    we read that rather than re-implement the const_def/const_next bookkeeping.
+    add_tm/add_hm define the item as TM_NAME / HM_NAME respectively.
+    """
+    ids = {}
+    pat = re.compile(r"\s*(const|add_tm|add_hm)\s+(\w+)\s*;\s*\$([0-9A-Fa-f]+)")
+    for line in path.read_text().splitlines():
+        m = pat.match(line)
+        if not m:
+            continue
+        kind, name, hexval = m.group(1), m.group(2), int(m.group(3), 16)
+        if kind == "add_tm":
+            name = "TM_" + name
+        elif kind == "add_hm":
+            name = "HM_" + name
+        ids[name] = hexval
+    return ids
+
+
+def load_marts(path: Path, ids: dict) -> list:
+    """Parse `script_mart ITEM, ITEM, ...` entries from data/items/marts.asm.
+
+    Returns [(clerk_label, [item_id, ...]), ...] in source order. The mart's
+    text-script label (e.g. ViridianMartClerkText) is the line above; the
+    TX_SCRIPT_MART dispatch byte is script-engine territory and omitted — we
+    keep only the inventory (count, ids, $FF terminator).
+    """
+    marts, label = [], None
+    for line in path.read_text().splitlines():
+        m = re.match(r"(\w+)::", line)
+        if m:
+            label = m.group(1)
+            continue
+        m = re.match(r"\s*script_mart\s+(.*?)\s*(?:;.*)?$", line)
+        if m:
+            toks = [t.strip() for t in m.group(1).split(",") if t.strip()]
+            marts.append((label, [ids[t] for t in toks]))
+    return marts
+
+
 def main() -> int:
     charmap = load_charmap(ROOT / "constants/charmap.asm")
 
@@ -77,6 +121,23 @@ def main() -> int:
     for i, b in enumerate(keybits):
         if b:
             keyflags[i // 8] |= 1 << (i & 7)
+
+    item_ids = load_item_ids(ROOT / "constants/item_constants.asm")
+    marts = load_marts(ROOT / "data/items/marts.asm", item_ids)
+
+    # TechnicalMachinePrices (data/items/tm_prices.asm): one nybble per TM (price
+    # in thousands), packed two-per-byte high-nybble-first as rgbds' nybble_array
+    # does — byte = (even << 4) | odd. 50 TMs -> 25 bytes.
+    tm_nybbles = []
+    for line in (ROOT / "data/items/tm_prices.asm").read_text().splitlines():
+        m = re.match(r"\s*nybble\s+(\d+)", line)
+        if m:
+            tm_nybbles.append(int(m.group(1)))
+    tm_pricebytes = bytearray()
+    for i in range(0, len(tm_nybbles), 2):
+        hi = tm_nybbles[i]
+        lo = tm_nybbles[i + 1] if i + 1 < len(tm_nybbles) else 0
+        tm_pricebytes.append((hi << 4) | lo)
 
     pricebytes = bytearray()
     for p in prices:
@@ -110,12 +171,43 @@ def main() -> int:
         "",
     ]
 
+    # Mart inventories (data/items/marts.asm). Each entry: db count, item ids,
+    # $FF terminator — mirroring script_mart's body (count, ids, -1) minus the
+    # TX_SCRIPT_MART dispatch byte. MartPointers is a flat dd table indexed in
+    # source order; clerk label kept as a comment for the future script engine.
+    out += [
+        f"; MartInventories: {len(marts)} marts, each = db count, item ids, 0xFF.",
+        "; MartPointers: dd per mart (source order). NUM_MARTS exposed below.",
+        "MartInventories:",
+    ]
+    martlabels = []
+    for label, items in marts:
+        sub = f"Mart_{label}"
+        martlabels.append(sub)
+        body = ", ".join([f"{len(items)}"] + [f"0x{i:02X}" for i in items] + ["0xFF"])
+        out.append(f"{sub}:")
+        out.append(f"    db {body}    ; {label}")
+    out += ["MartInventories_end:", "", "MartPointers:"]
+    for sub in martlabels:
+        out.append(f"    dd {sub}")
+    out += ["MartPointers_end:", "", f"NUM_MARTS equ {len(marts)}", ""]
+
+    out += [
+        f"; TechnicalMachinePrices: {len(tm_nybbles)} TM prices (thousands), packed",
+        "; two nybbles per byte, high nybble first (GetMachinePrice indexes this).",
+        "TechnicalMachinePrices:",
+        "    db " + ", ".join(f"0x{b:02X}" for b in tm_pricebytes),
+        "",
+    ]
+
     ASSETS.mkdir(parents=True, exist_ok=True)
     dst = ASSETS / "items.inc"
     dst.write_text("\n".join(out))
     print(f"wrote {dst} (ItemNames {len(names)} names / {len(namebytes)} bytes, "
           f"ItemPrices {len(prices)} x 3 = {len(pricebytes)} bytes, "
-          f"KeyItemFlags {len(keyflags)} bytes / {len(keybits)} items)")
+          f"KeyItemFlags {len(keyflags)} bytes / {len(keybits)} items, "
+          f"MartInventories {len(marts)} marts, "
+          f"TechnicalMachinePrices {len(tm_pricebytes)} bytes)")
     return 0
 
 

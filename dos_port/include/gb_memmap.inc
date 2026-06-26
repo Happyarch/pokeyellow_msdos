@@ -32,6 +32,21 @@ GB_TILEMAP0     equ 0x9800
 ; Matches TILEMAP1 (0x9C00) in constants/hardware.inc.
 GB_TILEMAP1     equ 0x9C00
 
+; --- Unified window-compositor descriptor (see docs/current_plan_window_compositor.md) ---
+; An ordered painter's-order list of window-layer boxes. render_window draws ONE
+; descriptor per call; src/video/frame.asm loops g_window_count of them (later
+; entries draw on top). These are field offsets within one descriptor; the actual
+; storage (g_windows[]/g_window_count) and the set_single_window helper live in
+; src/ppu/ppu.asm. A screen fully (re)defines the list on entry/state-change.
+WIN_WX          equ 0      ; dd: window left edge in WX units (screen-left col = WX-7)
+WIN_WY          equ 4      ; dd: window top edge (screen-Y px); >= RENDER_H hides it
+WIN_CLIP_W      equ 8      ; dd: visible width in px (cols blitted from row_buf)
+WIN_MAX_Y       equ 12     ; dd: first screen row the box stops drawing at (exclusive)
+WIN_TILEMAP     equ 16     ; dd: EBP-relative tilemap base (GB_TILEMAP0 / GB_TILEMAP1)
+WIN_START_ROW   equ 20     ; dd: tilemap row that WLY=0 maps to (the box's first src row)
+WIN_DESC_SIZE   equ 24     ; bytes per descriptor (6 dwords)
+MAX_WINDOWS     equ 6      ; bag needs <=4 simultaneously (list + sub-menu/qty + dialog)
+
 ; WRAM bank 0 — $C000–$CFFF (4 KB)
 ; Always available. General-purpose work RAM.
 GB_WRAM0        equ 0xC000
@@ -172,6 +187,10 @@ wBoxItems          equ 0xD53A
 wCurItem           equ 0xCF90   ; = wCurPartySpecies (shared "current" slot)
 wItemQuantity      equ 0xCF95
 wMaxItemQuantity   equ 0xCF96
+; --- item-use effect scratch (engine/items/item_effects.asm) ---
+wPPRestoreItem         equ 0xCD3D   ; which Ether/Elixer item is being used
+wWereAnyMonsAsleep     equ 0xCD3D   ; Poke Flute: set if a party mon woke (aliased)
+wMaxPP                 equ 0xD11D   ; max PP of the move being PP-restored
 ; Menu state these routines reset (plain WRAM writes; the rendering is elsewhere).
 wListScrollOffset      equ 0xCC36
 wCurrentMenuItem       equ 0xCC26

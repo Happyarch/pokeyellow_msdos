@@ -11,9 +11,9 @@
 ; Rendering: the box + item labels are drawn into wTileMap (the text engine's
 ; 20-wide scratch grid, which is NOT the BG source in the overworld) with
 ; TextBoxBorder / place_flat_str, then the 10×{14,16} box rect is copied into the
-; window tilemap (GB_TILEMAP1) and shown by render_window. g_win_clip_w /
-; g_win_max_y bound the window to the box rect so it does not paint over the rest
-; of the overworld (their defaults reproduce the full-screen bottom dialog box).
+; window tilemap (GB_TILEMAP1) and shown via the window descriptor list. A single
+; descriptor (set_single_window) bounds the window to the box rect so it does not
+; paint over the rest of the overworld.
 ; Window placement mirrors the dialog box's "center the 20-tile GB screen in the
 ; 320px viewport" convention (see src/engine/overworld/map_sprites.asm).
 ;
@@ -41,8 +41,8 @@ extern LoadNPCSpriteTiles    ; map_sprites.asm — restore NPC walk tiles to vFo
 extern LoadPlayerSpriteGraphics ; overworld.asm — restore player walk tiles to vFont
 extern DisplayBagMenu        ; src/engine/menus/bag_menu.asm — START→ITEM bag list
 extern DisplayPartyMenu      ; src/engine/menus/party_menu.asm — START→POKéMON party list
-extern g_win_clip_w          ; src/ppu/ppu.asm — window blit width (px)
-extern g_win_max_y           ; src/ppu/ppu.asm — first window row NOT drawn (excl.)
+extern set_single_window     ; src/ppu/ppu.asm — define g_windows[] as one descriptor
+extern hide_window           ; src/ppu/ppu.asm — empty the window list (count=0)
 %ifdef DEBUG_STARTMENU
 extern DumpBackbuffer        ; src/debug/debug_dump.asm — dump FRAME.BIN + exit
 %endif
@@ -202,13 +202,16 @@ DisplayStartMenu:
     cmp ecx, [sm_box_rows]
     jb .copy_row
 
-    ; --- position + bound the window over the box ---
-    mov byte  [ebp + H_WY], 0           ; window top at screen row 0 (→ IO_WY via commit_shadow_regs)
-    mov byte  [ebp + IO_WX], SM_WIN_WX
-    mov dword [g_win_clip_w], SM_WIN_CLIP_W
-    mov eax, [sm_box_rows]
-    shl eax, 3                          ; rows * 8 px → box bottom
-    mov [g_win_max_y], eax
+    ; --- position + bound the window over the box (single descriptor) ---
+    ; PROJ overworld-ui: GB(10,0) 10xN --(anchor=top-right, X+20, Y+0)--> wx=247 wy=0 clip=80 max_y=rows*8
+    mov eax, SM_WIN_WX                  ; wx = 247 (flush-right)
+    xor ebx, ebx                        ; wy = 0 (top)
+    mov ecx, SM_WIN_CLIP_W              ; clip_w = 80px (10 tiles)
+    mov edx, [sm_box_rows]
+    shl edx, 3                          ; max_y = rows * 8 px → box bottom
+    mov esi, GB_TILEMAP1                ; menu box source tilemap
+    xor edi, edi                        ; start_row = 0
+    call set_single_window              ; count=1; mirrors wy→H_WY, wx→IO_WX
 
     call .draw_cursor
     ret
@@ -280,10 +283,8 @@ DisplayStartMenu:
 .close:
     movzx eax, byte [ebp + W_CURRENT_MENU_ITEM]
     mov [sm_saved_item], al             ; remember selection for next open
-    ; Hide the window and restore the default full-screen dialog-box bounds.
-    mov byte  [ebp + H_WY], RENDER_H
-    mov dword [g_win_clip_w], SCREEN_W
-    mov dword [g_win_max_y], RENDER_H
+    ; Hide the window (count=0). The next box owner fully redefines the list.
+    call hide_window
     ; Swap the walk tiles back into vFont (font was loaded for the menu).
     and byte [ebp + W_FONT_LOADED], ~(1 << BIT_FONT_LOADED)
     call LoadNPCSpriteTiles

@@ -21,8 +21,8 @@
 ; The party is capped at 6, so every entry fits and there is no scrolling. The
 ; panel is borderless (cleared to the blank space tile $7F) and rendered through
 ; the GB window layer like the START / bag menus (draw into the 20-wide wTileMap
-; scratch grid, copy cols 0-19 to GB_TILEMAP1, blit via render_window with
-; g_win_clip_w/g_win_max_y bounding).
+; scratch grid, copy cols 0-19 to GB_TILEMAP1, shown via a single window
+; descriptor (set_single_window) bounding the box rect).
 ;
 ; CALLER CONTRACT: the text font must already be resident in vFont (the START
 ; menu loads it before dispatching here). Input uses H_JOY_PRESSED.
@@ -37,8 +37,7 @@ global DisplayPartyMenu
 
 extern PlaceString           ; ESI=dest (EBP-rel), EDX=src offset (EBP-rel)
 extern DelayFrame
-extern g_win_clip_w
-extern g_win_max_y
+extern set_single_window                 ; src/ppu/ppu.asm — define g_windows[] as one descriptor
 extern g_bg_whiteout                     ; src/ppu/ppu.asm — full-screen white field
 extern LoadHpBarAndStatusTilePatterns   ; src/gfx/load_font.asm
 extern LoadTextBoxTilePatterns          ; restore box tiles for the START menu
@@ -143,18 +142,19 @@ DisplayPartyMenu:
     mov dword [g_bg_whiteout], 1
 
     ; window placement: 160px (20-tile) box centered horizontally; the list block
-    ; (count*2 rows) centered vertically: WY = (RENDER_H - rows*8) / 2.
-    mov byte  [ebp + IO_WX], PM_WIN_WX
-    mov dword [g_win_clip_w], PM_WIN_CLIP_W
-    mov eax, [pm_count]
-    shl eax, 1                  ; total box rows
-    shl eax, 3                  ; pixel height
-    mov ecx, RENDER_H
-    sub ecx, eax                ; RENDER_H - pixel_h
-    shr ecx, 1                  ; WY (centered top)
-    mov [ebp + H_WY], cl
-    add eax, ecx                ; max_y = WY + pixel_h (exclusive bottom)
-    mov [g_win_max_y], eax
+    ; (count*2 rows) centered vertically: wy = (RENDER_H - rows*8) / 2.
+    ; PROJ overworld-ui: GB(0,?) 20xN --(party, X centered, Y centered)--> wx=87 clip=160 wy/max_y computed
+    mov ecx, [pm_count]
+    shl ecx, 4                  ; pixel_h = count*2 rows * 8 px
+    mov ebx, RENDER_H
+    sub ebx, ecx                ; RENDER_H - pixel_h
+    shr ebx, 1                  ; wy = centered top
+    lea edx, [ebx + ecx]        ; max_y = wy + pixel_h (exclusive bottom)
+    mov eax, PM_WIN_WX          ; wx = 87
+    mov ecx, PM_WIN_CLIP_W      ; clip_w = 160
+    mov esi, GB_TILEMAP1        ; party panel source tilemap
+    xor edi, edi                ; start_row = 0
+    call set_single_window      ; count=1; mirrors wy→H_WY, wx→IO_WX
 
     call .render
     call .refresh_icons             ; load icon gfx into VRAM + reset the bob timer

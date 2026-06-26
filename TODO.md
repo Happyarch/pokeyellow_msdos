@@ -6,15 +6,18 @@ Prioritized task list. Check off items as they complete; add new items with phas
 
 ## Known Regressions
 
-- [ ] **Overworld player walks too fast** (noted 2026-06-26). The player moves
-  noticeably faster than intended in the overworld. Cause not yet identified — it
-  is NOT DOSBox cycle tuning (this port uses PIT-based 60 Hz timing, not
-  cycle-counted delays). The party-UI work merged in `40257149` does not touch the
-  walk path (`OverworldLoop` / `AdvancePlayerSprite` / `DelayFrame`); its only
-  shared-render change is the `g_bg_whiteout` guard, which is 0 in the overworld
-  and falls through to identical behaviour. Investigate the `DelayFrame` PIT/vblank
-  cap (is the loop actually frame-capped, or render-bound?) and the
-  two-`DelayFrame`-per-`AdvancePlayerSprite` cadence in `OverworldLoop`.
+- [x] **Overworld player walks too fast** (noted 2026-06-26, resolved 2026-06-26).
+  Root cause was a **stale-object build**, not a code bug: `make` only rebuilds on
+  source-file timestamps, not on `-D` flag changes, so an old object (same class as
+  the stale `init.o` that revived the title screen) left the loop running at the
+  wrong rate. A clean rebuild restored faithful cadence. Verified with the new
+  `DEBUG_WALKSPEED` harness over a real 37-tile walk: **16 ticks/tile minimum**
+  (exactly the pret `OverworldLoopLessDelay` cadence — two `DelayFrame` per
+  `AdvancePlayerSprite`, `wWalkCounter` = 8), ~16.83 average (turn-delay + map-
+  transition overhead, also GB-faithful). The frame loop is a clean PIT-capped
+  60 Hz (no render-bound free-run). Separately, frame rate is now a documented
+  build choice via the Makefile `TIMING` mode (SGB default 61.17 Hz / DMG 59.73 /
+  PC 60 / custom `TIMING_HZ`/`TIMING_DIVISOR`), since the GB is not exactly 60 Hz.
 
 ---
 

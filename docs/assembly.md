@@ -132,6 +132,13 @@ Pass as `make FLAG=1` or `make FLAG=value`. All NASM flags are passed via
 |------|---------|--------|
 | `SKIP_TITLE=1` | off | Boot straight to overworld, skipping title screen |
 | `BUG_FIX_LEVEL=N` | `0` | `0` = original bugs, `1` = critical fixes only (`/FIXCRIT`), `2` = all fixes (`/FIXALL`) |
+| `TIMING=MODE` | `SGB` | Frame rate (PIT divisor). `SGB` = 61.1685 Hz (Super Game Boy, ~+2.4%); `DMG` = 59.7275 Hz (real handheld); `PC` = 60 Hz |
+| `TIMING_HZ=H` | — | Custom refresh rate in Hz (overrides `TIMING`), e.g. `TIMING_HZ=62` |
+| `TIMING_DIVISOR=N` | — | Raw PIT channel-0 divisor (overrides `TIMING`/`TIMING_HZ`), 1..65535 |
+
+The Game Boy is not exactly 60 Hz, so the frame rate is an explicit build choice;
+it scales movement/animation (and later audio pitch) uniformly. Verify with
+`DEBUG_WALKSPEED` (below).
 
 ### Debug harness flags
 
@@ -145,10 +152,15 @@ These force deterministic execution paths and write output files (`FRAME.BIN` /
 | `DEBUG_BASELINE=1` | Sub-flag of `DEBUG_TRANSITION`: dump pristine map before crossing | `FRAME.BIN` |
 | `DEBUG_WALK_NORTH=1` | Simulate N northward steps then dump frame | `FRAME.BIN` |
 | `DEBUG_WALK_STEPS=N` | Number of steps for `DEBUG_WALK_NORTH` (default: 8) | — |
+| `DEBUG_WALKSPEED=1` | Boots normally; records ticks-per-tile of real keyboard walking, dumps on **Esc** | `DUMP.BIN` |
 | `DEBUG_NOCLIP=1` | Press **W** in-game to toggle walk-through-walls | — |
 
-`DEBUG_DUMP`, `DEBUG_TRANSITION`, and `DEBUG_WALK_NORTH` also link in
-`src/debug/debug_dump.asm`. `DEBUG_NOCLIP` does not imply `SKIP_TITLE`.
+`DEBUG_WALKSPEED` is interactive (not exit-on-dump): walk with the arrows, press
+**Esc** to write `DUMP.BIN` at `$D1E0` (first/last tick, tiles, min Δ). Decode:
+`avg ticks/tile = (last-first)/(tiles-1)`; 16 = faithful cadence (rate-invariant).
+
+`DEBUG_DUMP`, `DEBUG_TRANSITION`, `DEBUG_WALK_NORTH`, and `DEBUG_WALKSPEED` also
+link in `src/debug/debug_dump.asm`. `DEBUG_NOCLIP` does not imply `SKIP_TITLE`.
 
 Typical debug loop:
 ```sh

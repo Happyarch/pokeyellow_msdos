@@ -148,6 +148,8 @@ DebugNewGameParty:
 ; Item ids per constants/item_constants.asm (decimal). Several were hand-guessed
 ; wrong originally (TOWN_MAP/FULL_RESTORE/SECRET_KEY/CARD_KEY/S_S_TICKET/LIFT_KEY/
 ; PP_UP) — corrected here.
+%define POTION 20         ; $14 (tossable, seeded qty 1 → skips the quantity chooser)
+%define ANTIDOTE 11       ; $0B (tossable, low qty for an easy quantity-chooser test)
 %define MASTER_BALL 1     ; $01
 %define TOWN_MAP 5        ; $05 (was 4 = POKE_BALL)
 %define BICYCLE 6         ; $06
@@ -164,6 +166,8 @@ DebugNewGameParty:
 %define PP_UP 79          ; $4F (was 49)
 
 DebugNewGameItemsList:
+    db POTION, 1            ; qty-1 tossable: toss skips straight to YES/NO confirm
+    db ANTIDOTE, 3         ; low qty: easy quantity-chooser exercise
     db MASTER_BALL, 99
     db TOWN_MAP, 1
     db BICYCLE, 1

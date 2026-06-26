@@ -51,6 +51,8 @@ extern g_player_marker_on
 extern UpdateSprites
 extern ClearSprites
 extern g_tilecache_dirty
+extern hide_window           ; src/ppu/ppu.asm — empty the window list (count=0)
+extern set_single_window     ; src/ppu/ppu.asm — define g_windows[] as one descriptor
 extern InitMapSprites
 extern InitToggleableObjectFlags
 extern text_engine_init
@@ -77,8 +79,15 @@ extern pad_noclip
 %ifdef DEBUG_BAGMENU
 extern RunBagMenuTest
 %endif
+%ifdef DEBUG_BAGMENU_LIVE
+extern PrepareNewGameDebug
+%endif
 %ifdef DEBUG_PARTYMENU
 extern RunPartyMenuTest
+%endif
+%ifdef DEBUG_WALKSPEED
+extern DebugDumpMemory
+extern tick_count
 %endif
 
 global EnterMap
@@ -299,8 +308,13 @@ EnterMap:
     inc edi
     sub ecx, 2
     jnz .dd_fill
-    mov byte [ebp + H_WY], 152
-    mov byte [ebp + IO_WX], 87
+    mov eax, 87                            ; wx (centered dialog: WX-7=80)
+    mov ebx, 152                           ; wy (bottom of viewport)
+    mov ecx, SCREEN_W                      ; clip_w = 160px
+    mov edx, RENDER_H                      ; max_y = 200
+    mov esi, GB_TILEMAP1
+    xor edi, edi
+    call set_single_window
     call DelayFrame
     call DelayFrame
     call DelayFrame
@@ -312,8 +326,31 @@ EnterMap:
 %ifdef DEBUG_BAGMENU
     call RunBagMenuTest                    ; seed bag, open bag screen, render one frame, dump FRAME.BIN, exits
 %endif
+%ifdef DEBUG_BAGMENU_LIVE
+    ; Live, interactive: seed a full bag + money, then fall through to the normal
+    ; OverworldLoop. Open the bag via START → ITEM (the real path) to exercise the
+    ; list, TOSS quantity chooser, YES/NO confirm, and the "TOO IMPORTANT!" notice.
+    mov byte [ebp + 0xD162], 0             ; wPartyCount = 0
+    mov byte [ebp + 0xD163], 0xFF          ; wPartySpecies sentinel
+    mov byte [ebp + 0xD31C], 0             ; wNumBagItems = 0
+    mov byte [ebp + 0xD31D], 0xFF          ; wBagItems sentinel
+    call PrepareNewGameDebug               ; seed party + bag + money (returns)
+%endif
 %ifdef DEBUG_PARTYMENU
     call RunPartyMenuTest                  ; seed party, open party screen, render one frame, dump FRAME.BIN, exits
+%endif
+%ifdef DEBUG_WALKSPEED
+    ; Live walk-speed instrumentation: boots normally into OverworldLoop so you can
+    ; WALK with the keyboard. WalkSpeedSample (called at each real tile completion)
+    ; records ticks-per-tile into $D1E0; pressing Esc dumps DUMP.BIN via DelayFrame's
+    ; quit hook. tick_count is the true 60 Hz PIT counter, so avg ticks/tile = 16 →
+    ; faithful walk speed; notably < 16 → movement really is too fast.
+    ;   $D1E0 first tick   $D1E4 last tick   $D1E8 tiles   $D1EC min Δ   $D1F0 init flag
+    mov dword [ebp + 0xD1E0], 0
+    mov dword [ebp + 0xD1E4], 0
+    mov dword [ebp + 0xD1E8], 0
+    mov dword [ebp + 0xD1EC], 0xFFFFFFFF
+    mov dword [ebp + 0xD1F0], 0
 %endif
     ; fall through to OverworldLoop
 
@@ -486,6 +523,9 @@ OverworldLoop:
     jc .mapTransition
     cmp byte [ebp + W_WALK_COUNTER], 0
     jne OverworldLoop
+%ifdef DEBUG_WALKSPEED
+    call WalkSpeedSample                       ; tile just completed → record ticks/tile
+%endif
     ; Edge-detect: save previous BIT_STANDING_ON_WARP then clear it.
     ; Mirrors pret: res BIT_STANDING_ON_WARP first, then set it if coords match.
     test byte [ebp + W_MOVEMENT_FLAGS], (1 << BIT_STANDING_ON_WARP)
@@ -909,12 +949,11 @@ ResetMapVariables:
     mov byte [ebp + W_UNUSED_CUR_MAP_TILESET_COPY], al
     mov byte [ebp + W_SPRITE_SET_ID],             al
     mov byte [ebp + W_WALK_BIKE_SURF_STATE_COPY], al
-    ; Park the window layer off-screen on map entry. LCDC bit 5 (window enable)
-    ; is permanently set (LCDC default $E3), so render_window runs every frame
-    ; gated only on WY/WX. The title's go_to_main_menu leaves H_WY=0, which would
-    ; otherwise leak in here and paint a stale window block over the overworld.
-    ; RENDER_H = off-screen; dialog code re-shows the box at WY=152/WX=87.
-    mov byte [ebp + H_WY],  RENDER_H
+    ; Empty the window list on map entry: visibility is count-driven now, so this
+    ; guarantees no stale box leaks over the overworld (e.g. the title's
+    ; go_to_main_menu path). Dialog/menu code re-populates the list when it opens a
+    ; box. The rWY/rWX shadows are parked off-screen for faithfulness.
+    call hide_window                    ; count=0; sets H_WY = RENDER_H
     mov byte [ebp + IO_WY], RENDER_H
     mov byte [ebp + IO_WX], 7
     ret
@@ -1353,6 +1392,38 @@ RefreshCollisionTileMap:
 ; Each 40-tile row is split: first 32 tiles fill a VRAM row, remaining 8
 ; wrap to columns 0-7 of the same VRAM row (handled by the tile-blitter's
 ; (SCX/8+col)&31 modular addressing).
+%ifdef DEBUG_WALKSPEED
+; ---------------------------------------------------------------------------
+; WalkSpeedSample — called once per completed tile-step (from .moveAhead). Accrues
+; ticks-per-tile stats into the $D1E0 scratch for DUMP.BIN. Reached only by call;
+; sits between two ret-terminated routines so nothing falls through into it.
+; In: EBP = GB base. Preserves all registers.
+; ---------------------------------------------------------------------------
+WalkSpeedSample:
+    push eax
+    push edx
+    mov eax, [tick_count]
+    cmp dword [ebp + 0xD1F0], 0
+    jne .have
+    mov [ebp + 0xD1E0], eax                 ; first tick
+    mov [ebp + 0xD1E4], eax                 ; last tick
+    mov dword [ebp + 0xD1E8], 1             ; tiles = 1
+    mov dword [ebp + 0xD1F0], 1             ; initialized
+    jmp .done
+.have:
+    mov edx, eax
+    sub edx, [ebp + 0xD1E4]                 ; delta = now - last
+    mov [ebp + 0xD1E4], eax                 ; last = now
+    inc dword [ebp + 0xD1E8]                ; tiles++
+    cmp edx, [ebp + 0xD1EC]
+    jae .done
+    mov [ebp + 0xD1EC], edx                 ; min delta
+.done:
+    pop edx
+    pop eax
+    ret
+%endif
+
 ; ---------------------------------------------------------------------------
 ; AdvancePlayerSprite — faithful translation.
 ; Pret ref: home/overworld.asm:AdvancePlayerSprite +

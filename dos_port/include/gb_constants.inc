@@ -88,6 +88,26 @@ MOVE_PP                 equ 0x05
 BAG_ITEM_CAPACITY       equ 20
 PC_ITEM_CAPACITY        equ 50
 
+; --- item ids referenced by item-use effects (constants/item_constants.asm) ---
+HP_UP                   equ 0x23    ; first vitamin (PROTEIN/IRON/CARBOS/CALCIUM follow)
+RARE_CANDY              equ 0x28
+HM01                    equ 0xC4    ; first HM; HMs $C4-$C8, TMs $C9-$FA
+TM01                    equ 0xC9    ; first TM (index into TechnicalMachinePrices)
+ANTIDOTE                equ 0x0B
+BURN_HEAL               equ 0x0C
+ICE_HEAL                equ 0x0D
+AWAKENING               equ 0x0E
+PARLYZ_HEAL             equ 0x0F
+HYPER_POTION            equ 0x12
+FULL_HEAL               equ 0x34
+REVIVE                  equ 0x35
+MAX_REVIVE              equ 0x36
+MAX_ETHER               equ 0x51
+
+; --- move PP byte fields (constants/battle_constants.asm) ---
+PP_UP_MASK              equ 0xC0    ; %11000000, PP Ups applied
+PP_MASK                 equ 0x3F    ; %00111111, remaining PP
+
 ; --- Gen-2 forward-compat: held item carried in the catch-rate byte ---
 ; The party/box mon struct's MON_CATCH_RATE byte (offset 7) is Gen 2's held-item
 ; slot across the Time Capsule. Kadabra ships holding a TwistedSpoon (pret).

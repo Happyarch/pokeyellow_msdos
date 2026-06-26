@@ -25,21 +25,76 @@ inventory bookkeeping and most item *effects* are not.
   Native-validated (add/stack/overflow/full/remove-partial/remove+shift). Wired
   (`ITEMS_SRCS`).
 
-- [~] **Stage 2 — item static data.** `tools/gen_items.py` → `assets/items.inc`:
+- [x] **Stage 2 — item static data.** `tools/gen_items.py` → `assets/items.inc`:
   `ItemNames` (97 '@'-terminated, GB-charmap-encoded, variable length) +
-  `ItemPrices` (97 × 3-byte BCD). Exposed via `src/data/item_data.asm`; wired
-  (`ITEMS_SRCS` + Makefile assets). Spot-checked: POKé BALL bytes, BCD prices
-  (MASTER 0, ULTRA 1200→`00 12 00`, POKé 200→`00 02 00`). TODO: `ItemUsePtrTable`
-  / mart inventories (`data/items/marts.asm`).
+  `ItemPrices` (97 × 3-byte BCD) + `KeyItemFlags` + **mart inventories**.
+  `gen_items.py` now parses `data/items/marts.asm` `script_mart` lines (resolving
+  item-constant names → ids via the `; $XX` comments in `item_constants.asm`) and
+  emits `MartInventories` (16 marts, each `db count, item ids, $FF` — the
+  `script_mart` body minus the TX_SCRIPT_MART dispatch byte) + a flat `MartPointers`
+  dd-table + `NUM_MARTS`. Exposed via `src/data/item_data.asm`; wired (`ITEMS_SRCS`
+  + Makefile assets). Spot-checked: POKé BALL bytes, BCD prices, Viridian mart
+  (`04 14 0B 0F 0C`) and Celadon 2F TM clerk (`E8 E9 CA CF ED C9 CD D1 D9`).
+  `ItemUsePtrTable` is the use-dispatch jump table → moved to Stage 4 (it indexes
+  the `ItemUse*` handlers, which are dispatch glue, not static data).
 
-- [ ] **Stage 3 — non-UI item effects.** The data-only parts of `ItemUse*`:
-  e.g. potion HP math, status-cure flags, stat-boost (X Attack) application, PP
-  restore, rare-candy level-up (calls the pokemon engine). Stub the surrounding
-  text/animation/menu UI; keep the WRAM mutations. Many of these call routines
-  the pokemon engine already provides (CalcStats, WriteMonMoves, …).
+- [~] **Stage 3 — non-UI item effects.** `src/engine/items/item_effects.asm`
+  (replaces the swarm draft; it had declared every constant as `extern` instead
+  of `%include`-ing the const headers, and a 16-bit `mov dx,/mov bx,` width bug in
+  the evo-stone path). Translated the data-only cores: `ApplyHealingItem`
+  (potion/revive HP math + max-HP clamp + half-max revive), `CureStatusAilment`
+  (status-flag clear), `RestorePPAmount` (Ether/Elixer PP raise, **faithful**
+  Max-Ether PP-Up-bit bug preserved), `WakeUpEntireParty` (Poke Flute sleep
+  clear). Added the item-id / PP-mask constants to `gb_constants.inc` and the
+  effect-scratch WRAM aliases (`wPPRestoreItem`/`wWereAnyMonsAsleep`/`wMaxPP`) to
+  `gb_memmap.inc`. Then added `ApplyVitamin` (HP Up/Protein/…: +2560 stat exp to
+  the matching stat's big-endian word MSB, capped at 25600 — caller follows with
+  GetMonHeader + CalcStats recalc, the UI-adjacent boundary) and `RareCandyLevelUp`
+  (+1 level, set experience to the new level's minimum via `CalcExperience`, recalc
+  all five stats via `CalcStats`, add the max-HP gain to current HP; move-learn /
+  evolution / stats-box redraw are deferred engine+UI follow-ups). Both reuse the
+  pokemon engine's `CalcStats`/`CalcExperience`. Native-validated (ELF32 +
+  `gcc -m32`, 38 checks: heal partial/overheal + revive-half, antidote hit/miss +
+  full-heal, ether +10/cap/full + max-ether bug, party sleep-clear + wake flag,
+  vitamin add/cap/other-stat-untouched/last-stat, rare-candy level+exp+maxHP-delta+
+  current-HP-gain + max-level no-op — the candy test stubs CalcExperience/CalcStats
+  to drive known values, validating the pointer arithmetic). Wired (`ITEMS_SRCS`);
+  full port links against the real engine routines.
+  **Deferred:** `Func_d85d` (evo-stone applicability) — depends on the DOS port's
+  flat `EvosMovesPointerTable` addressing (see `evos_moves.asm`), so it belongs
+  with the evolution path, not a verbatim pret copy. The X-stat / X-Accuracy /
+  Guard Spec / Dire Hit items just `set` a `wPlayerBattleStatus2` bit (or call the
+  battle engine's `StatModifierUpEffect`) — battle-engine integration, deferred to
+  that work, not standalone data math.
 
-- [ ] **Stage 4 — bag operations glue.** Toss/use/give dispatch logic minus the
-  menus; vending/mart buy/sell math (`subtract_paid_money` exists as a draft).
+- [~] **Stage 4 — bag operations glue.** Mart/vendor money math done:
+  `subtract_paid_money.asm` rewritten (`SubtractAmountPaidFromMoney_` BCD
+  compare-then-subtract + `AddAmountSoldToMoney_` BCD add, UI box-redraw/SFX
+  dropped) — the swarm draft fed StringCmp the wrong registers (EDI/CL; StringCmp
+  reads EDX/BL) and used the predef wrappers; fixed to direct `StringCmp`/`AddBCD`/
+  `SubBCD`. Added `GetItemPrice` (`item_price.asm`: flat `ItemPrices` index for
+  regular items, `GetMachinePrice` for TMs/HMs; pret's ROM-bank + MOVESLISTMENU
+  paths dropped). Generated `TechnicalMachinePrices` (50 TM prices, nybble-packed)
+  into `items.inc` via `gen_items.py`; added `HM01`/`TM01` constants. Wired
+  `item_price.asm` / `tm_prices.asm` / `subtract_paid_money.asm` + the shared
+  `home/compare.asm` (StringCmp) and `engine/math/bcd.asm` (which had a latent
+  `sbc`→`sbb` NASM-syntax bug, fixed — that file had never been linked before).
+  Native-validated (ELF32 + `gcc -m32`, 14 checks: Poké/Ultra/Master Ball + TM01/
+  TM02 + priceless-HM prices, money afford/can't-afford/exact subtract, add +
+  999999 BCD overflow saturation). Full port links.
+  Toss is now wired into the bag UI faithfully to pret's `ItemMenuLoop`: selecting
+  an item opens a **USE/TOSS sub-menu** (USE is deferred — battle/UI-coupled), TOSS
+  runs the key-item/HM guard ("TOO IMPORTANT!" notice), then a quantity chooser
+  (capped at held; the commit also clamps to held as a safety net), then a **YES/NO
+  confirmation**. Both menus share a generic in-window two-option menu (`.opt2_menu`
+  / `.draw_opt2`: box + ▶ cursor, UP/DOWN, A=confirm/B=cancel) pinned to the
+  **top-right corner** of the window (flush against the right edge, like the GB).
+  YES calls `RemoveItemFromInventory_`. Interactive `DEBUG_BAGMENU_LIVE` harness
+  (seed full bag + boot to overworld; open via START→ITEM) for hands-on testing;
+  static `DEBUG_BAGMENU_CONFIRM` overlay → FRAME.BIN for layout checks.
+  **Still TODO:** USE *dispatch* (`UseItem_`/`ItemUsePtrTable`) routes to the
+  per-item handlers — most are battle/UI coupled, so it needs the battle engine
+  and is best done with it.
 
 ## Stubs / deferred (UI)
 - Bag & PC item menus, item list rendering, "TOSS how many?" / "throw away ITEM?"

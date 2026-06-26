@@ -29,6 +29,8 @@ bits 32
 %include "events.inc"
 
 extern g_tilecache_dirty
+extern set_single_window     ; src/ppu/ppu.asm — define g_windows[] as one descriptor
+extern hide_window           ; src/ppu/ppu.asm — empty the window list (count=0)
 extern PrintText
 extern DelayFrame
 extern LoadCurrentMapView
@@ -680,7 +682,7 @@ CheckNPCInteraction:
 
 .dialog_done:
     ; Hide window and clear font-loaded flag.
-    mov byte [ebp + H_WY], RENDER_H     ; 200 = off-screen in 320×200 viewport
+    call hide_window                    ; count=0 (nothing drawn); parks H_WY off-screen
     and byte [ebp + W_FONT_LOADED], ~(1 << BIT_FONT_LOADED)
 
     ; Reload NPC and player walk tiles into GB_VFONT (font was loaded for dialog).
@@ -741,8 +743,15 @@ npc_dialog_wait_impl:
     add edi, 32                             ; next GB_TILEMAP1 row (32 wide)
     dec ecx
     jnz .sdw_row
-    mov byte [ebp + H_WY], 152             ; show window at bottom of 320×200 viewport
-    mov byte [ebp + IO_WX], 87            ; WX-7=80 → center 160px dialog in 320px wide buffer
+    ; Show the dialog box via the window descriptor list.
+    ; PROJ overworld-ui: GB(0,19) 20x6 --(dialog, X+0/centered, WX-7=80)--> wx=87 wy=152 clip=160 max_y=200
+    mov eax, 87                            ; wx (WX-7=80 → center 160px dialog in 320px)
+    mov ebx, 152                           ; wy (bottom of 320×200 viewport)
+    mov ecx, SCREEN_W                      ; clip_w = 160px
+    mov edx, RENDER_H                      ; max_y = 200
+    mov esi, GB_TILEMAP1                   ; dialog box source tilemap
+    xor edi, edi                           ; start_row = 0
+    call set_single_window                 ; count=1; mirrors wy→H_WY, wx→IO_WX
     ; Place ▼ arrow and init blink counters; save existing state to restore after.
     movzx ecx, byte [ebp + H_DOWN_ARROW_COUNT1]
     push ecx
@@ -953,7 +962,7 @@ TrainerEncounterFlow:
     call npc_dialog_wait_impl
 
 .tef_text_done:
-    mov byte [ebp + H_WY], RENDER_H
+    call hide_window                    ; count=0 (nothing drawn); parks H_WY off-screen
     and byte [ebp + W_FONT_LOADED], ~(1 << BIT_FONT_LOADED)
     call LoadNPCSpriteTiles
     call LoadPlayerSpriteGraphics

@@ -40,6 +40,7 @@ extern ClearSprites
 extern PrepareTitleScreen
 %ifdef SKIP_TITLE
 extern EnterMap
+extern g_window_count        ; src/ppu/ppu.asm — unified window descriptor list count
 %endif
 
 global Init
@@ -103,7 +104,10 @@ Init:
 
     mov byte [ebp + GB_IE], IE_DEFAULT_VAL
 
-    ; Move window off-screen (200 = past bottom of 320×200 viewport)
+    ; Move window off-screen (200 = past bottom of 320×200 viewport). The unified
+    ; window compositor starts with an empty list (count=0 ⇒ nothing drawn); the
+    ; rWY/rWX shadows are kept for faithfulness + the sync_dialog_window flag.
+    mov dword [g_window_count], 0
     mov byte [ebp + H_WY],   200
     mov byte [ebp + IO_WY],  200
     mov byte [ebp + IO_WX],  7
