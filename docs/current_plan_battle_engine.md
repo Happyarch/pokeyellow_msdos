@@ -32,23 +32,32 @@ Authoritative addresses: `git show origin/symbols:pokeyellow.sym` (bank:addr).
 
 ## Stages
 
-- [ ] **Stage 1 — Foundations (constants + WRAM aliases).** Add battle/move/type/
+- [x] **Stage 1 — Foundations (constants + WRAM aliases).** Add battle/move/type/
   move-effect constants to `gb_constants.inc`; add all battle WRAM aliases
   (player/enemy battle-mon struct fields, stat mods, move struct, wDamage,
   wCriticalHitOrOHKO, wMoveMissed, wTypeEffectiveness, battle-status bytes,
   wDamageMultipliers, etc.) to `gb_memmap.inc`, sym-pinned. Unblocks everything.
 
-- [ ] **Stage 2 — Type-effectiveness data.** Generate `assets/type_matchups.inc`
-  (`TypeEffects` table from `data/types/type_matchups.asm`) via a Python tool;
-  expose in a data module. Pure data → generated, never hand-authored.
+- [x] **Stage 2 — Type-effectiveness data.** `tools/gen_type_matchups.py` →
+  `assets/type_matchups.inc` (`TypeEffects`, 82 matchups + $FF). Plus the two
+  small fixed tables `HighCriticalMoves` / `StatModifierRatios` embedded in
+  `src/data/battle_data.asm`. Wired into Makefile.
 
-- [ ] **Stage 3 — Damage pipeline (core.asm subset).** `GetDamageVarsForPlayerAttack`,
-  `GetDamageVarsForEnemyAttack`, `CriticalHitTest`, `CalculateDamage`,
-  `AdjustDamageForMoveType` (STAB + type via `TypeEffects`), `RandomizeDamage`.
-  Native-harness the formula against known matchups (e.g. L50 Tackle, crit, SE/NVE).
+- [x] **Stage 3 — Damage pipeline (core.asm subset).** Done in
+  `src/engine/battle/core_damage.asm`: `GetDamageVarsForPlayerAttack/EnemyAttack`,
+  `GetEnemyMonStat`, `CalculateDamage`, `JumpToOHKOMoveEffect`, `CriticalHitTest`,
+  `AdjustDamageForMoveType`, `RandomizeDamage`, `BattleRandom`.
+  **Native-validated** (ELF32 harness): CalculateDamage L50/P40/A100/D100=19,
+  L100/P80/A150/D120=86, L5/P40/A20/D20=5, L100/P250/A255/D10=999 (997-cap +
+  24-bit multiply path) — all exact. AdjustDamageForMoveType: GRASS-STAB vs WATER
+  =300 (multipliers $94), FIRE vs WATER=50, GROUND vs FLYING=0+miss, ELECTRIC-STAB
+  vs WATER=300 — all exact. (BattleRandom link path is a Phase-4 TODO-HW stub.)
 
-- [ ] **Stage 4 — Move hit test / accuracy.** `MoveHitTest`, accuracy/evasion stat
-  stages, `AdjustDamageForMoveType` neutral/immune branches.
+- [x] **Stage 4 — Move hit test / accuracy.** `MoveHitTest` + `CalcHitChance`
+  done in core_damage.asm (mist/substitute/invulnerable/X-Accuracy/accuracy-roll;
+  stat-stage accuracy/evasion ratios via `StatModifierRatios`). `CheckTargetSubstitute`
+  is a deferred extern. Type immune→miss branch validated above. (Runtime accuracy
+  roll depends on BattleRandom; logic verified by assembly + structural audit.)
 
 - [ ] **Stage 5 — Stat-stage modifiers.** `ApplyBadgeStatBoosts`, the stat up/down
   effect handlers (`StatModifierUpEffect`/`StatModifierDownEffect`) and the

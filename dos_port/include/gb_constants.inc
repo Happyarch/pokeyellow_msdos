@@ -310,6 +310,19 @@ SPLASH_EFFECT              equ 0x55
 DISABLE_EFFECT             equ 0x56
 NUM_MOVE_EFFECTS           equ 0x56
 
+; --- move ids referenced by battle logic (constants/move_constants.asm) ---
+; (Only the handful the engine name-checks; the Moves table is indexed by id.)
+NO_MOVE                 equ 0x00
+KARATE_CHOP             equ 0x02
+COUNTER                 equ 0x44
+RAZOR_LEAF              equ 0x4B
+CRABHAMMER              equ 0x98
+SLASH                   equ 0xA3
+STRUGGLE                equ 0xA5
+
+; --- serial / link state (battle RNG boundary) ---
+LINK_STATE_BATTLING     equ 0x04
+
 ; --- battle-mon struct field offsets (battle_struct, macros/ram.asm) ---
 ; wBattleMon ($D013) and wEnemyMon ($CFE4) share this 29-byte layout. Direct
 ; per-field WRAM aliases are also defined in gb_memmap.inc; these offsets let

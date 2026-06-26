@@ -347,6 +347,14 @@ wPlayerNumHits         equ 0xD073
 
 wDamage                equ 0xD0D6   ; word, big-endian
 wTypeEffectiveness     equ 0xD11D   ; shared scratch byte (=wPokedexNum union)
+wMoveType              equ 0xD11D   ; scratch (AdjustDamageForMoveType); shares $D11D
+wLinkState             equ 0xD12A   ; LINK_STATE_*; non-link single-player = 0
+wLoadedMonSpeedExp     equ 0xCFAE   ; wLoadedMon + MON_SPD_EXP (GetEnemyMonStat)
+; party-mon stat fields (wPartyMons base $D16A + MON_* offsets) used by crit recompute
+wPartyMon1Attack       equ 0xD18E
+wPartyMon1Defense      equ 0xD190
+wPartyMon1Special      equ 0xD194
+wEnemyMon1Stats        equ 0xD8C5   ; link-battle enemy party stats (GetEnemyMonStat)
 
 ; --- HP-bar update scratch (UpdateHPBar / used by drain_hp etc.) — sym-pinned ---
 wHPBarMaxHP            equ 0xCEE9   ; word

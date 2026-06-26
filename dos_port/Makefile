@@ -129,6 +129,15 @@ ITEMS_SRCS := \
     src/data/item_data.asm \
     src/engine/items/inventory.asm
 
+# Battle engine backend (current_plan_battle_engine.md). Damage pipeline + data.
+# NOTE: the backend depends on UI/effect routines (JumpMoveEffect, CheckTarget-
+# Substitute, …) that are still deferred, so this does not yet link into the
+# final EXE — but every file assembles (make check) and the pure-math routines
+# are validated by native ELF harnesses (see the plan's verification log).
+BATTLE_SRCS := \
+    src/data/battle_data.asm \
+    src/engine/battle/core_damage.asm
+
 # Debug-only sources (linked only when the corresponding flag is set).
 # Any debug flag implies SKIP_TITLE — debug harnesses boot straight to the overworld.
 ifdef DEBUG_DUMP
@@ -205,7 +214,7 @@ ifdef DEBUG_OAK_EVENT
 NASMFLAGS += -D DEBUG_OAK_EVENT
 endif
 
-ALL_SRCS := $(BOOT_SRCS) $(HOME_SRCS) $(HAL_SRCS) $(GAME_SRCS) $(POKEMON_SRCS) $(ITEMS_SRCS)
+ALL_SRCS := $(BOOT_SRCS) $(HOME_SRCS) $(HAL_SRCS) $(GAME_SRCS) $(POKEMON_SRCS) $(ITEMS_SRCS) $(BATTLE_SRCS)
 ALL_OBJS := $(ALL_SRCS:.asm=.o)
 
 # ---------------------------------------------------------------------------
@@ -308,13 +317,20 @@ src/data/item_data.o: assets/items.inc
 src/data/pokemon_data.o: assets/base_stats.inc assets/growth_rates.inc \
                          assets/moves.inc assets/evos_moves.inc assets/monster_names.inc
 
+# Type effectiveness table (static data, generated from data/types/type_matchups.asm).
+assets/type_matchups.inc:
+	python3 tools/gen_type_matchups.py
+
+src/data/battle_data.o: assets/type_matchups.inc
+
 assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_blk.inc \
         assets/map_headers.inc assets/extra_includes.inc \
         assets/npc_sprite_data_table.inc assets/npc_dialogs/all_dialogs.inc \
         assets/toggleable_objects.inc assets/event_constants.inc \
         assets/base_stats.inc assets/growth_rates.inc \
         assets/moves.inc assets/evos_moves.inc assets/monster_names.inc \
-        assets/items.inc assets/gb_charmap.txt assets/menu_strings.inc
+        assets/items.inc assets/gb_charmap.txt assets/menu_strings.inc \
+        assets/type_matchups.inc
 
 all: $(TARGET)
 
