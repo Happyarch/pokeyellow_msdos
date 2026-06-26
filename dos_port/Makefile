@@ -104,7 +104,8 @@ GAME_SRCS := \
     src/engine/overworld/map_sprites.asm \
     src/scripts/pallet_town.asm \
     src/engine/math/random.asm \
-    src/engine/menus/start_menu.asm
+    src/engine/menus/start_menu.asm \
+    src/engine/menus/bag_menu.asm
 
 # Pokémon data/stats engine (current_plan_pokemon_engine.md). Grows per stage.
 POKEMON_SRCS := \
@@ -174,6 +175,14 @@ endif
 ifdef DEBUG_PARTY
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_PARTY
+NASMFLAGS += -D SKIP_TITLE
+GAME_SRCS += src/engine/debug/debug_party.asm
+endif
+# Bag-menu gate: seed the bag, open the bag (ITEM) screen over the overworld,
+# render one frame, dump FRAME.BIN, exit. make DEBUG_BAGMENU=1
+ifdef DEBUG_BAGMENU
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_BAGMENU
 NASMFLAGS += -D SKIP_TITLE
 GAME_SRCS += src/engine/debug/debug_party.asm
 endif

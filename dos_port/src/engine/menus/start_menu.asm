@@ -39,6 +39,7 @@ extern DelayFrame            ; src/video/frame.asm — one frame: render + input
 extern LoadFontTilePatterns  ; src/gfx/load_font.asm — swap font glyphs into vFont
 extern LoadNPCSpriteTiles    ; map_sprites.asm — restore NPC walk tiles to vFont
 extern LoadPlayerSpriteGraphics ; overworld.asm — restore player walk tiles to vFont
+extern DisplayBagMenu        ; src/engine/menus/bag_menu.asm — START→ITEM bag list
 extern g_win_clip_w          ; src/ppu/ppu.asm — window blit width (px)
 extern g_win_max_y           ; src/ppu/ppu.asm — first window row NOT drawn (excl.)
 %ifdef DEBUG_STARTMENU
@@ -68,6 +69,7 @@ TILE_SPC          equ 0x7F     ; blank space tile
 
 ; logical item ids — pret's dispatch numbering (Pokédex present). When the dex is
 ; absent the displayed index is shifted up by 1 to land on this same scale.
+ITEM_ITEM         equ 2
 ITEM_EXIT         equ 6
 
 section .data
@@ -117,17 +119,45 @@ DisplayStartMenu:
     mov dword [sm_has_dex], 1
     mov dword [sm_num_items], 7
     mov dword [sm_box_rows], 16         ; interior 14 + 2 borders
-    mov bh, 14
-    jmp .draw_box
+    jmp .state_done
 .no_dex:
     mov dword [sm_has_dex], 0
     mov dword [sm_num_items], 6
     mov dword [sm_box_rows], 14         ; interior 12 + 2 borders
-    mov bh, 12
 
-.draw_box:
+.state_done:
+    ; --- restore saved cursor, clamp to the current max index (initial open) ---
+    movzx eax, byte [sm_saved_item]
+    mov edx, [sm_num_items]
+    dec edx                             ; max valid index
+    cmp eax, edx
+    jbe .sel_ok
+    xor eax, eax
+.sel_ok:
+    mov [ebp + W_CURRENT_MENU_ITEM], al
+
+    call .draw_full                     ; box + items + window bounds + cursor
+
+%ifdef DEBUG_STARTMENU
+    call DelayFrame                     ; render one frame with the menu window shown
+    call DumpBackbuffer                 ; dump FRAME.BIN + exit (never returns)
+%endif
+
+    ; --- swallow the opening press: wait for START/A release first ---
+.wait_open_release:
+    call DelayFrame
+    test byte [ebp + H_JOY_HELD], PAD_START | PAD_A
+    jnz .wait_open_release
+    jmp .loop
+
+; --- draw_full: (re)draw the whole box + items + window bounds + cursor. ret. ---
+; Used on initial open and to restore the menu after a sub-menu (e.g. the bag).
+.draw_full:
     mov esi, W_TILEMAP + SM_BOX_COL     ; (col 10, row 0)
-    mov bl, SM_BOX_W                    ; BH already = interior height
+    mov bl, SM_BOX_W
+    mov eax, [sm_box_rows]
+    sub eax, 2                          ; interior height (rows - 2 borders)
+    mov bh, al
     call TextBoxBorder
 
     ; --- place item labels (text col 12, rows 2,4,...) ---
@@ -178,27 +208,8 @@ DisplayStartMenu:
     shl eax, 3                          ; rows * 8 px → box bottom
     mov [g_win_max_y], eax
 
-    ; --- restore saved cursor, clamp to the current max index ---
-    movzx eax, byte [sm_saved_item]
-    mov edx, [sm_num_items]
-    dec edx                             ; max valid index
-    cmp eax, edx
-    jbe .sel_ok
-    xor eax, eax
-.sel_ok:
-    mov [ebp + W_CURRENT_MENU_ITEM], al
     call .draw_cursor
-
-%ifdef DEBUG_STARTMENU
-    call DelayFrame                     ; render one frame with the menu window shown
-    call DumpBackbuffer                 ; dump FRAME.BIN + exit (never returns)
-%endif
-
-    ; --- swallow the opening press: wait for START/A release first ---
-.wait_open_release:
-    call DelayFrame
-    test byte [ebp + H_JOY_HELD], PAD_START | PAD_A
-    jnz .wait_open_release
+    ret
 
     ; ======================= navigation loop =======================
 .loop:
@@ -245,10 +256,16 @@ DisplayStartMenu:
 .have_logical:
     cmp eax, ITEM_EXIT
     je .close
-    ; Pokédex / Pokémon / Item / Trainer / Save / Option: no-op stubs for now.
-    ; SAVE is an intentional dead-end (no save system). The rest are hooks for
-    ; the upcoming UIs — e.g. ITEM → bag UI (docs/current_plan_items.md). Each
-    ; just returns to the menu; the edge-triggered read keeps A from re-firing.
+    cmp eax, ITEM_ITEM
+    je .open_item
+    ; Pokédex / Pokémon / Trainer / Save / Option: no-op stubs for now. SAVE is an
+    ; intentional dead-end (no save system); the rest are hooks for upcoming UIs.
+    ; Each just returns to the menu; the edge-triggered read keeps A from re-firing.
+    jmp .loop
+
+.open_item:
+    call DisplayBagMenu                 ; bag list (its own loop); font stays loaded
+    call .draw_full                     ; restore START menu box + window bounds + cursor
     jmp .loop
 
 .close:

@@ -74,6 +74,9 @@ extern DumpBackbuffer
 %ifdef DEBUG_NOCLIP
 extern pad_noclip
 %endif
+%ifdef DEBUG_BAGMENU
+extern RunBagMenuTest
+%endif
 
 global EnterMap
 global ResetMapVariables
@@ -302,6 +305,9 @@ EnterMap:
 %endif
 %ifdef DEBUG_STARTMENU
     call DisplayStartMenu                  ; draws menu, renders one frame, dumps FRAME.BIN, exits
+%endif
+%ifdef DEBUG_BAGMENU
+    call RunBagMenuTest                    ; seed bag, open bag screen, render one frame, dump FRAME.BIN, exits
 %endif
     ; fall through to OverworldLoop
 

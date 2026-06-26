@@ -31,6 +31,12 @@ global RunCalcStatsTest
 extern PrepareNewGameDebug
 global RunPartySeedTest
 %endif
+%ifdef DEBUG_BAGMENU
+extern PrepareNewGameDebug
+extern LoadFontTilePatterns
+extern DisplayBagMenu
+global RunBagMenuTest
+%endif
 
 global DebugDumpMemory
 global DumpBackbuffer
@@ -177,6 +183,27 @@ RunPartySeedTest:
     mov byte [ebp + 0xD31D], 0xFF   ; wBagItems sentinel
     call PrepareNewGameDebug
     jmp DebugDumpMemory             ; writes DUMP.BIN, exits
+%endif
+
+%ifdef DEBUG_BAGMENU
+; ---------------------------------------------------------------------------
+; RunBagMenuTest — seed the party + bag, load the font, open the bag (ITEM)
+; screen over the (already set-up) overworld. DisplayBagMenu's DEBUG_BAGMENU hook
+; renders one frame and dumps FRAME.BIN. Never returns. In: EBP = GB memory base.
+; Call from EnterMap (after the overworld is loaded) so Pallet Town backs the box.
+; ---------------------------------------------------------------------------
+RunBagMenuTest:
+    mov byte [ebp + 0xD162], 0      ; wPartyCount = 0
+    mov byte [ebp + 0xD163], 0xFF   ; wPartySpecies sentinel
+    mov byte [ebp + 0xD31C], 0      ; wNumBagItems = 0
+    mov byte [ebp + 0xD31D], 0xFF   ; wBagItems sentinel
+    call PrepareNewGameDebug        ; seed party + bag
+    ; Swap the font into vFont so the list glyphs render (DisplayBagMenu assumes it).
+    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    call LoadFontTilePatterns
+    call DisplayBagMenu             ; DEBUG_BAGMENU hook: render 1 frame + dump + exit
+.hang:
+    jmp .hang                       ; unreachable (DisplayBagMenu dumps + exits)
 %endif
 
 ; ---------------------------------------------------------------------------

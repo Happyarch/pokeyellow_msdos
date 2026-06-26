@@ -44,17 +44,30 @@ overworld boots with an empty party + bag. So coupling has three layers:
   nicknames SNORLAX/PERSIAN/JIGGLYPUFF/PIKACHU (internal→dex→name correct); bag = 14
   items matching the seed exactly. Fixed a debug-seed bug: `PERSIAN` was `113`
   (= KAKUNA's internal index) → `144` (per `data/pokemon/dex_order.asm`).
-- [ ] **Stage 1 — Generic list menu.** Translate the `DisplayListMenuID` subset
-  needed for a scrollable vertical list (cursor, up/down with scroll, A select /
-  B cancel) rendered via the window layer, reusing the start-menu's font-swap +
-  `g_win_clip_w`/`g_win_max_y` box-bounding.
-- [ ] **Stage 2 — ITEM (bag) screen.** Wire START→ITEM to a bag list: item name
-  (`ItemNames`) + quantity from `wBagItems`. Read-only first (no toss/use). The
-  simpler of the two list types — no stats.
+- [x] **Stage 1+2 — ITEM (bag) screen.** DONE. Built `src/engine/menus/bag_menu.asm`
+  (`DisplayBagMenu`): a scrollable list of `wBagItems` showing item name
+  (`ItemNames` walk) + "×NN" quantity, 4 visible entries, a CANCEL tail, ▼ "more
+  below" indicator, cursor, up/down scroll (`.fix_scroll`), A no-op on items /
+  CANCEL or B to exit. Rendered through the window layer like the START menu
+  (render into the 20-wide wTileMap, copy box rect → GB_TILEMAP1, blit via
+  `render_window` with `g_win_clip_w`/`g_win_max_y`). Wired START→ITEM
+  (`start_menu.asm:.open_item`); refactored the START menu draw into a reusable
+  `.draw_full` so the menu restores after the bag closes. Verified via DEBUG_BAGMENU
+  (FRAME.BIN): MASTER BALL ×99 / TOWN MAP ×1 / BICYCLE ×1 / FULL RESTORE ×99 + ▼,
+  over Pallet Town. (The generic Stage-1 list menu was implemented directly as the
+  bag list; generalize it when the party screen needs the same substrate.)
+  Found + fixed more hand-guessed Gen-1 constants in the debug seed: 7 item ids
+  (TOWN_MAP/FULL_RESTORE/SECRET_KEY/CARD_KEY/S_S_TICKET/LIFT_KEY/PP_UP) per
+  `constants/item_constants.asm`. Deferred: USE/TOSS sub-menu; key-item quantity
+  suppression (`IsKeyItem`).
 - [ ] **Stage 3 — POKéMON (party) screen.** Wire START→POKéMON to a party list:
   nickname (`wPartyMonNicks`) + level + HP from the party structs.
-- [ ] **Later (deferred):** item use/toss dispatch, party→summary/switch, the
-  real new-game/Oak-gift data path replacing the DEBUG_PARTY seed.
+- [ ] **TOSS (easy, after Stage 3).** Per user: TOSS is low-effort — a
+  "how many?" quantity prompt + `IsKeyItem` guard, then `RemoveItemFromInventory_`
+  (already built). Good first interactive action on the bag list. (Item **USE** is
+  much larger — the per-item effect dispatch — so it stays deferred.)
+- [ ] **Later (deferred):** item USE dispatch, party→summary/switch, the real
+  new-game/Oak-gift data path replacing the DEBUG_PARTY seed.
 
 ## Notes
 - The DEBUG_PARTY seed is scaffolding for *testing* the UI against live data; the

@@ -145,20 +145,23 @@ DebugNewGameParty:
     db 0xFF ; end (-1)
 
 ; Debug items. We only use numeric values here.
-%define MASTER_BALL 1
-%define TOWN_MAP 4
-%define BICYCLE 6
-%define FULL_RESTORE 17
-%define ESCAPE_ROPE 29
-%define RARE_CANDY 40
-%define SECRET_KEY 65
-%define CARD_KEY 74
-%define FULL_HEAL 52
-%define REVIVE 53
-%define FRESH_WATER 60
-%define S_S_TICKET 69
-%define LIFT_KEY 76
-%define PP_UP 49
+; Item ids per constants/item_constants.asm (decimal). Several were hand-guessed
+; wrong originally (TOWN_MAP/FULL_RESTORE/SECRET_KEY/CARD_KEY/S_S_TICKET/LIFT_KEY/
+; PP_UP) — corrected here.
+%define MASTER_BALL 1     ; $01
+%define TOWN_MAP 5        ; $05 (was 4 = POKE_BALL)
+%define BICYCLE 6         ; $06
+%define FULL_RESTORE 16   ; $10 (was 17 = MAX_POTION)
+%define ESCAPE_ROPE 29    ; $1D
+%define RARE_CANDY 40     ; $28
+%define SECRET_KEY 43     ; $2B (was 65)
+%define CARD_KEY 48       ; $30 (was 74 = LIFT_KEY)
+%define FULL_HEAL 52      ; $34
+%define REVIVE 53         ; $35
+%define FRESH_WATER 60    ; $3C
+%define S_S_TICKET 63     ; $3F (was 69)
+%define LIFT_KEY 74       ; $4A (was 76)
+%define PP_UP 79          ; $4F (was 49)
 
 DebugNewGameItemsList:
     db MASTER_BALL, 99
