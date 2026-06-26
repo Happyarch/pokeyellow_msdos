@@ -2540,3 +2540,38 @@ water slot 0 → TENTACOOL L5; repel blocks (wild<lead) with step 3→2; indoor 
 no-encounter. All exact. Added `gcc-multilib` + `nasm` to the fresh container.
 
 ---
+
+## 2026-06-26 — Battle Stage 5: stat-stage modifier effects (`StatModifierUpEffect` / `StatModifierDownEffect`)
+
+Battle engine plan, Stage 5. Faithful translation of `engine/battle/effects.asm`'s
+two stat-stage move-effect handlers into `src/engine/battle/stat_mod_effects.asm`,
+with all their flow-control helpers (UpdateStat/UpdateStatDone, RestoreOriginal-
+StatModifier, PrintNothingHappenedText, UpdateLoweredStat/Done, CantLowerAnymore
+[_Pop], MoveMissed). Wired into BATTLE_SRCS.
+
+The handlers bump the relevant stat-mod by ±1/±2 (clamped to the 1..13 stage
+range — can't pass +6 or −6) and recompute the affected battle stat from the
+unmodified stat via `StatModifierRatios` (the HRAM Multiply/Divide contract,
+capping at 999 / flooring at 1, and reverting the mod bump when the stat is
+already 999). Care points carried over faithfully: the `hProduct+2 == hMultiplicand+1`
+overlap the GB relies on for the 999-cap write; the big-endian stat-pointer
+arithmetic; the `StatModifierRatios` entry index = mod−1; the down-effect's
+enemy-turn 25%/side-effect 33% rolls (`× $ff / 100` ⇒ 64 / 85).
+
+The presentation tail — PrintStatText, PlayCurrentMoveAnimation(2), the
+substitute/minimize Bankswitch dance, and the rose/fell/nothing-happened text —
+is the deferred battle front end (declared `extern`, like the move_effects/*
+files), so the file assembles (and all BATTLE_SRCS assemble) but does not yet link
+into the EXE. `ApplyBadgeStatBoosts` (the third routine the Stage-5 plan line
+names) was already done + validated earlier. There is no `GetStatMod` in pret; the
+"unmodified-stat recompute helpers" the plan referenced are this inline recalc.
+
+### Validation
+
+Freestanding ELF32 harness linking the **real** Multiply/Divide + StatModifierRatios
+(battle_data.o), stubbing the UI externs. Six cases, all exact: Up Atk +1 → mod 8 /
+stat 150 (100×1.5); Up Atk +2 → mod 9 / 200; Up at mod 13 → no-op, stat untouched;
+Up with stat already 999 → mod bump reverted; Down Atk −1 → mod 6 / 66 (100×0.66);
+Down to mod 1 with unmod 1 (0.25×→0) → floored to 1.
+
+---

@@ -59,9 +59,22 @@ Authoritative addresses: `git show origin/symbols:pokeyellow.sym` (bank:addr).
   is a deferred extern. Type immune→miss branch validated above. (Runtime accuracy
   roll depends on BattleRandom; logic verified by assembly + structural audit.)
 
-- [ ] **Stage 5 — Stat-stage modifiers.** `ApplyBadgeStatBoosts`, the stat up/down
-  effect handlers (`StatModifierUpEffect`/`StatModifierDownEffect`) and the
-  `GetStatMod` / unmodified-stat recompute helpers.
+- [x] **Stage 5 — Stat-stage modifiers.** DONE. `ApplyBadgeStatBoosts` was already
+  done + validated (Stage-1/badge_boosts.asm; see the log row). The stat up/down
+  effect handlers `StatModifierUpEffect` / `StatModifierDownEffect` are now
+  translated faithfully in `src/engine/battle/stat_mod_effects.asm` (incl. all
+  flow helpers: UpdateStat(Done), RestoreOriginalStatModifier, UpdateLoweredStat-
+  (Done), CantLowerAnymore(_Pop), MoveMissed, PrintNothingHappenedText) and wired
+  into BATTLE_SRCS. The stat-stage **arithmetic** — mod ±1/±2 clamp to the 1..13
+  range, recompute the affected stat via `StatModifierRatios` (Multiply/Divide,
+  cap 999 / floor 1, already-999 revert) — is **native-validated** (ELF32, real
+  Multiply/Divide + StatModifierRatios; UI stubbed). The presentation tail
+  (PrintStatText, move animation, substitute/minimize, rose/fell/nothing text) is
+  the deferred battle front end (extern, like the move_effects), so the file
+  assembles but doesn't link yet. NOTE: there is **no `GetStatMod`** routine in
+  pret — the "unmodified-stat recompute" the plan referenced is this inline
+  ratio-recalc path (now done); the `unused_stats_functions.asm` Double/Halve
+  helpers are dead glitch code and intentionally not ported.
 
 - [x] **Stage 6 — Audit + wire existing swarm drafts.** Audited every draft
   against pret. All redundant externs (WRAM symbols now defined by Stage 1) were
@@ -145,6 +158,11 @@ method the pokemon-engine plan used.
 | TryDoWildEncounter | water, slot 0 | TENTACOOL L5 ✓ |
 | TryDoWildEncounter | repel, wild<lead | blocked (Z clear) + steps 3→2 ✓ |
 | TryDoWildEncounter | indoor, grass rate 0 | no encounter ✓ |
+| StatModifierUpEffect | Atk +1 / +2 (unmod 100) | mod 8 stat 150 / mod 9 stat 200 ✓ |
+| StatModifierUpEffect | +1 at mod 13 (cap) | nothing happens, stat untouched ✓ |
+| StatModifierUpEffect | +1 with stat already 999 | mod bump reverted, stat 999 ✓ |
+| StatModifierDownEffect | Atk −1 (unmod 100) | mod 6 stat 66 ✓ |
+| StatModifierDownEffect | −1 to mod 1, unmod 1 (0.25×→0) | mod 1 stat floored to 1 ✓ |
 
 Toolchain note (this fresh container): also installed `gcc-multilib` (the `-m32`
 libc the earlier session lacked), so harnesses can use either freestanding ELF32
