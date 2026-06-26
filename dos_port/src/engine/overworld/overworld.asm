@@ -77,6 +77,9 @@ extern pad_noclip
 %ifdef DEBUG_BAGMENU
 extern RunBagMenuTest
 %endif
+%ifdef DEBUG_PARTYMENU
+extern RunPartyMenuTest
+%endif
 
 global EnterMap
 global ResetMapVariables
@@ -308,6 +311,9 @@ EnterMap:
 %endif
 %ifdef DEBUG_BAGMENU
     call RunBagMenuTest                    ; seed bag, open bag screen, render one frame, dump FRAME.BIN, exits
+%endif
+%ifdef DEBUG_PARTYMENU
+    call RunPartyMenuTest                  ; seed party, open party screen, render one frame, dump FRAME.BIN, exits
 %endif
     ; fall through to OverworldLoop
 

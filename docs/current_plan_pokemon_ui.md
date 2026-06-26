@@ -60,8 +60,16 @@ overworld boots with an empty party + bag. So coupling has three layers:
   (TOWN_MAP/FULL_RESTORE/SECRET_KEY/CARD_KEY/S_S_TICKET/LIFT_KEY/PP_UP) per
   `constants/item_constants.asm`. Deferred: USE/TOSS sub-menu; key-item quantity
   suppression (`IsKeyItem`).
-- [ ] **Stage 3 — POKéMON (party) screen.** Wire START→POKéMON to a party list:
-  nickname (`wPartyMonNicks`) + level + HP from the party structs.
+- [x] **Stage 3 — POKéMON (party) screen.** DONE. `src/engine/menus/party_menu.asm`
+  (`DisplayPartyMenu`): lists the party (≤6, so no scroll) as "▶NICK :Lnn" then
+  "HP cur/max", reading nickname (`wPartyMonNicks`, PlaceString), level
+  (`MON_LEVEL`), and big-endian `MON_HP`/`MON_MAXHP` from the structs; a local
+  `.print_num3` renders 0-999 with leading-space suppression. Wired START→POKéMON
+  (`start_menu.asm:.open_party`, reusing `.draw_full` to restore on close).
+  Verified via DEBUG_PARTYMENU: Snorlax L80 346/346, Persian L80 194/194,
+  Jigglypuff L15 59/59, Pikachu L5 18/18 — HP matches hand-computed CalcStats
+  exactly. Deferred polish: HP bar, status, the per-mon action sub-menu/summary,
+  level/HP right-alignment.
 - [ ] **TOSS (easy, after Stage 3).** Per user: TOSS is low-effort — a
   "how many?" quantity prompt + `IsKeyItem` guard, then `RemoveItemFromInventory_`
   (already built). Good first interactive action on the bag list. (Item **USE** is

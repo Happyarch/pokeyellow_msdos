@@ -40,6 +40,7 @@ extern LoadFontTilePatterns  ; src/gfx/load_font.asm — swap font glyphs into v
 extern LoadNPCSpriteTiles    ; map_sprites.asm — restore NPC walk tiles to vFont
 extern LoadPlayerSpriteGraphics ; overworld.asm — restore player walk tiles to vFont
 extern DisplayBagMenu        ; src/engine/menus/bag_menu.asm — START→ITEM bag list
+extern DisplayPartyMenu      ; src/engine/menus/party_menu.asm — START→POKéMON party list
 extern g_win_clip_w          ; src/ppu/ppu.asm — window blit width (px)
 extern g_win_max_y           ; src/ppu/ppu.asm — first window row NOT drawn (excl.)
 %ifdef DEBUG_STARTMENU
@@ -69,6 +70,7 @@ TILE_SPC          equ 0x7F     ; blank space tile
 
 ; logical item ids — pret's dispatch numbering (Pokédex present). When the dex is
 ; absent the displayed index is shifted up by 1 to land on this same scale.
+ITEM_POKEMON      equ 1
 ITEM_ITEM         equ 2
 ITEM_EXIT         equ 6
 
@@ -258,13 +260,20 @@ DisplayStartMenu:
     je .close
     cmp eax, ITEM_ITEM
     je .open_item
-    ; Pokédex / Pokémon / Trainer / Save / Option: no-op stubs for now. SAVE is an
-    ; intentional dead-end (no save system); the rest are hooks for upcoming UIs.
-    ; Each just returns to the menu; the edge-triggered read keeps A from re-firing.
+    cmp eax, ITEM_POKEMON
+    je .open_party
+    ; Pokédex / Trainer / Save / Option: no-op stubs for now. SAVE is an intentional
+    ; dead-end (no save system); the rest are hooks for upcoming UIs. Each just
+    ; returns to the menu; the edge-triggered read keeps A from re-firing.
     jmp .loop
 
 .open_item:
     call DisplayBagMenu                 ; bag list (its own loop); font stays loaded
+    call .draw_full                     ; restore START menu box + window bounds + cursor
+    jmp .loop
+
+.open_party:
+    call DisplayPartyMenu               ; party list (its own loop); font stays loaded
     call .draw_full                     ; restore START menu box + window bounds + cursor
     jmp .loop
 

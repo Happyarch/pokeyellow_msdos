@@ -37,6 +37,12 @@ extern LoadFontTilePatterns
 extern DisplayBagMenu
 global RunBagMenuTest
 %endif
+%ifdef DEBUG_PARTYMENU
+extern PrepareNewGameDebug
+extern LoadFontTilePatterns
+extern DisplayPartyMenu
+global RunPartyMenuTest
+%endif
 
 global DebugDumpMemory
 global DumpBackbuffer
@@ -204,6 +210,25 @@ RunBagMenuTest:
     call DisplayBagMenu             ; DEBUG_BAGMENU hook: render 1 frame + dump + exit
 .hang:
     jmp .hang                       ; unreachable (DisplayBagMenu dumps + exits)
+%endif
+
+%ifdef DEBUG_PARTYMENU
+; ---------------------------------------------------------------------------
+; RunPartyMenuTest — seed the party, load the font, open the POKéMON screen over
+; the overworld. DisplayPartyMenu's DEBUG_PARTYMENU hook renders one frame and
+; dumps FRAME.BIN. Never returns. In: EBP = GB memory base.
+; ---------------------------------------------------------------------------
+RunPartyMenuTest:
+    mov byte [ebp + 0xD162], 0      ; wPartyCount = 0
+    mov byte [ebp + 0xD163], 0xFF   ; wPartySpecies sentinel
+    mov byte [ebp + 0xD31C], 0      ; wNumBagItems = 0
+    mov byte [ebp + 0xD31D], 0xFF   ; wBagItems sentinel
+    call PrepareNewGameDebug
+    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    call LoadFontTilePatterns
+    call DisplayPartyMenu
+.hang:
+    jmp .hang
 %endif
 
 ; ---------------------------------------------------------------------------

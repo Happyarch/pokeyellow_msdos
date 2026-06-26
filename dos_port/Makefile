@@ -105,7 +105,8 @@ GAME_SRCS := \
     src/scripts/pallet_town.asm \
     src/engine/math/random.asm \
     src/engine/menus/start_menu.asm \
-    src/engine/menus/bag_menu.asm
+    src/engine/menus/bag_menu.asm \
+    src/engine/menus/party_menu.asm
 
 # Pokémon data/stats engine (current_plan_pokemon_engine.md). Grows per stage.
 POKEMON_SRCS := \
@@ -183,6 +184,14 @@ endif
 ifdef DEBUG_BAGMENU
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_BAGMENU
+NASMFLAGS += -D SKIP_TITLE
+GAME_SRCS += src/engine/debug/debug_party.asm
+endif
+# Party-menu gate: seed the party, open the POKéMON screen over the overworld,
+# render one frame, dump FRAME.BIN, exit. make DEBUG_PARTYMENU=1
+ifdef DEBUG_PARTYMENU
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_PARTYMENU
 NASMFLAGS += -D SKIP_TITLE
 GAME_SRCS += src/engine/debug/debug_party.asm
 endif
