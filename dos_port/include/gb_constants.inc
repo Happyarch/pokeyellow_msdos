@@ -156,6 +156,10 @@ EVOLVE_LEVEL           equ 1
 EVOLVE_ITEM            equ 2
 EVOLVE_TRADE           equ 3
 
+; --- move / battle-animation ids (constants/move_constants.asm) ---
+ABSORB                 equ 0x47    ; move #71 (Leech Seed drain anim source)
+BURN_PSN_ANIM          equ 0xBA    ; battle anim shown on burn/poison residual
+
 ; --- wild encounter constants (constants/pokemon_data_constants.asm) ---
 NUM_WILDMONS            equ 10
 WILDDATA_LENGTH         equ 1 + NUM_WILDMONS * 2   ; = 21 (rate + 10×(level,species))

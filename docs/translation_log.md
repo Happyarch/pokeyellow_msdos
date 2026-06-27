@@ -2769,3 +2769,18 @@ shared `UnportedMoveEffect` no-op (header lists each + its pret handler for Wave
 Native ELF32: 17/17 dispatch tests (index math, player/enemy path, first/last
 boundary, BH=1 postcondition, Unported no-clobber). BATTLE_SRCS (check-only, not
 linked until the Wave-2 loop calls it).
+
+### Residual damage — `src/engine/battle/residual_damage.asm` (task 2)
+Faithful port of pret `engine/battle/core.asm` `HandlePoisonBurnLeechSeed`
+(+`_DecreaseOwnHP`/`_IncreaseEnemyHP`). End-of-turn Poison/Burn = 1/16 maxHP
+(min 1); Toxic multiplies by an escalating counter; Leech Seed drains the seeded
+mon and heals the opposing mon (overheal clamped to maxHP). Two pret glitches
+carried (no BUG_FIX_LEVEL guard, neither independently fixable): the Leech-Seed +
+Toxic counter interaction (counter bumped per DecreaseOwnHP call, incl. the Leech
+path) and the overkill heal (BX uncapped when HP < drain). Deferred UI externs
+(stubbed in the harness): PrintText, PlayMoveAnimation, DrawHUDsAndHPBars,
+DelayFrames, UpdateCurMonHPBar (must preserve BX), HurtBy{Poison,Burn,LeechSeed}Text.
+Aliases added in PREP: wAnimationType/wPlayerToxicCounter/wEnemyToxicCounter,
+ABSORB/BURN_PSN_ANIM. Native ELF32: 10/10 (poison/burn 1/16+min-1, toxic
+escalation, overkill, leech drain+heal, overheal clamp, faint/alive flags, 16-bit
+maxHP, enemy-turn heal). BATTLE_SRCS check-only.

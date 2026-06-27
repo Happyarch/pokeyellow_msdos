@@ -97,7 +97,7 @@ Authoritative addresses: `git show origin/symbols:pokeyellow.sym` (bank:addr).
   — the move-effects call deferred UI/animation/text routines. That's expected;
   the front end is deferred per the user.
 
-- [~] **Stage 7 — Status + turn helpers.** `ApplyBurnAndParalysisPenalties(ToPlayer/
+- [x] **Stage 7 — Status + turn helpers.** `ApplyBurnAndParalysisPenalties(ToPlayer/
   ToEnemy)`, `QuarterSpeedDueToParalysis`, `HalveAttackDueToBurn` done in
   `src/engine/battle/status_penalties.asm` and **native-validated** (Spd 200→50,
   2→1 min-clamp, Atk 100→50, unstatused 300→unchanged). These resolve the
@@ -106,9 +106,11 @@ Authoritative addresses: `git show origin/symbols:pokeyellow.sym` (bank:addr).
   is under Rage it flips hWhoseTurn, injects a null move + ATTACK_UP1_EFFECT, runs
   `StatModifierUpEffect` (Stage 5), then restores the Rage move — **native-validated**
   end to end (raging → Atk mod 7→8 / stat 100→150 / move restored to RAGE; no-op when
-  not raging or already at +6). REMAINING: residual poison/burn/leech-seed damage
-  (`HandlePoisonBurnLeechSeed`, HUD-coupled) and the inline turn-order speed compare
-  (in the deferred main battle loop).
+  not raging or already at +6). Residual poison/burn/leech-seed damage
+  (`HandlePoisonBurnLeechSeed`, `src/engine/battle/residual_damage.asm`) is now done
+  + native-validated (10/10; both pret glitches carried) — Wave-1 task 2. The only
+  Stage-7 item left is the inline turn-order speed compare, which lives in the
+  deferred main battle loop (Wave 2), so this stage is closed for the backend.
 
 - [~] **Stage 8 — Trainer AI backend.** `AIGetTypeEffectiveness` done in
   core_damage.asm (single-type effectiveness vs the player mon → wTypeEffectiveness;

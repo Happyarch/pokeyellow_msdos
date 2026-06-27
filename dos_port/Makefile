@@ -206,6 +206,7 @@ BATTLE_SRCS := \
     src/engine/battle/stat_mod_effects.asm \
     src/engine/battle/effects.asm \
     src/engine/battle/building_rage.asm \
+    src/engine/battle/residual_damage.asm \
     src/engine/battle/get_current_move.asm \
     src/engine/battle/move_category.asm \
     src/engine/battle/animations.asm \

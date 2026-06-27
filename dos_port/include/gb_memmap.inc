@@ -397,6 +397,10 @@ wEvoNewSpecies         equ 0xCEEA
 wEvoStoneItemID        equ 0xD155
 ; Bill's PC (src/engine/pokemon/bills_pc.asm)
 wMoveMonType           equ 0xCF94   ; = W_MOVE_MON_TYPE (union wRemoveMonFromBox)
+; residual damage (src/engine/battle/residual_damage.asm)
+wAnimationType         equ 0xCC5B   ; (union W_UNUSED_FLAG)
+wPlayerToxicCounter    equ 0xD06B
+wEnemyToxicCounter     equ 0xD070
 
 ; --- HP-bar update scratch (UpdateHPBar / used by drain_hp etc.) — sym-pinned ---
 wHPBarMaxHP            equ 0xCEE9   ; word
