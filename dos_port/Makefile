@@ -212,9 +212,11 @@ BATTLE_SRCS := \
     src/engine/battle/animations.asm \
     src/data/wild_data.asm \
     src/engine/overworld/wild_mons.asm \
-    src/engine/battle/wild_encounters.asm
-# experience.asm is intentionally NOT listed: it depends on the deferred
-# level-up/EXP subsystem + battle UI and is not yet linkable (see its header).
+    src/engine/battle/wild_encounters.asm \
+    src/engine/battle/experience.asm
+# experience.asm (GainExperience) is in BATTLE_SRCS (check-only) — assembles +
+# native-validated, but stays out of LINK_SRCS until Wave 2 supplies its deferred
+# UI/display externs (PrintText, PrintStatsBox, the CallBattleCore targets, …).
 
 # Debug-only sources (linked only when the corresponding flag is set).
 # Any debug flag implies SKIP_TITLE — debug harnesses boot straight to the overworld.

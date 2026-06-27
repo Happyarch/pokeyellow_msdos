@@ -88,11 +88,10 @@ Authoritative addresses: `git show origin/symbols:pokeyellow.sym` (bank:addr).
     `get_trainer_name.asm`.
   - **`decrement_pp.asm` — rewrote, 2 bugs fixed**: missing gb_constants include;
     AddNTimes stride in CX instead of BX (helper reads BX).
-  - **`experience.asm` — 6 mechanical bugs fixed (sbc→sbb ×3, cx→bx ×3) but
-    NOT wired/validated**: deeply coupled to the deferred level-up/EXP subsystem
-    + battle UI (CalcExperience, CalcLevelFromExperience, LearnMoveFromLevelUp,
-    PrintStatsBox, FlagActionPredef, …) and lacks extern decls. Left out of
-    BATTLE_SRCS; revisit when that subsystem exists.
+  - **`experience.asm` (GainExperience) — DONE (Wave-1 task 4):** fully audited,
+    10 bugs fixed, native-validated (6/6 headless math), wired into BATTLE_SRCS
+    (check-only). See translation_log for the fix list. Wave-2 deferred externs are
+    declared; stays out of LINK_SRCS until the battle front end provides them.
   NOTE: BATTLE_SRCS assembles (`make check`) but does not yet *link* into the EXE
   — the move-effects call deferred UI/animation/text routines. That's expected;
   the front end is deferred per the user.
@@ -198,7 +197,9 @@ introduce no symbol collisions in existing pokemon/items/menu/home/battle files.
   validated (player/enemy/test paths exact). Only the `GetMoveName` name tail
   (wNameListIndex → UI) remains deferred. Unblocks the AI move-scoring (`ReadMove`).
 - Status residual damage (`HandlePoisonBurnLeechSeed`). (`HandleBuildingRage` is now done.)
-- `experience.asm` (mechanical bugs fixed; needs the level-up/EXP subsystem to link).
+- ~~`experience.asm` (GainExperience)~~ — **DONE** (Wave-1 task 4): 10 bugs fixed,
+  native-validated (6/6), wired into BATTLE_SRCS. Only LINK_SRCS wiring remains
+  (Wave 2, when the UI externs exist).
 - AI move-scoring (`AIMoveChoiceModification*`), `read_trainer_party.asm`.
 - ~~Wild-encounter generation (`TryDoWildEncounter`)~~ — **DONE** (Stage 9): generator
   + `LoadWildData`/`TryDoWildEncounter` native-validated; only the overworld step

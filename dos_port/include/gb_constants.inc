@@ -160,6 +160,10 @@ EVOLVE_TRADE           equ 3
 ABSORB                 equ 0x47    ; move #71 (Leech Seed drain anim source)
 BURN_PSN_ANIM          equ 0xBA    ; battle anim shown on burn/poison residual
 
+; --- misc menu / event constants ---
+PIKAHAPPY_LEVELUP      equ 1       ; constants/pikachu_emotion_constants.asm
+LEVEL_UP_STATS_BOX     equ 1       ; constants/menu_constants.asm (STATUS_SCREEN=0)
+
 ; --- wild encounter constants (constants/pokemon_data_constants.asm) ---
 NUM_WILDMONS            equ 10
 WILDDATA_LENGTH         equ 1 + NUM_WILDMONS * 2   ; = 21 (rate + 10×(level,species))

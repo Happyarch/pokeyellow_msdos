@@ -2784,3 +2784,19 @@ Aliases added in PREP: wAnimationType/wPlayerToxicCounter/wEnemyToxicCounter,
 ABSORB/BURN_PSN_ANIM. Native ELF32: 10/10 (poison/burn 1/16+min-1, toxic
 escalation, overkill, leech drain+heal, overheal clamp, faint/alive flags, 16-bit
 maxHP, enemy-turn heal). BATTLE_SRCS check-only.
+
+### GainExperience — `src/engine/battle/experience.asm` (task 4)
+Audited + fixed the battle-side EXP draft (NOT the pokemon-side CalcExperience,
+which was already done). 10 fixes vs the swarm draft: hExperience→H_EXPERIENCE;
+wPlayerID/wCalculateWhoseStats added to includes; PIKAHAPPY_LEVELUP/
+LEVEL_UP_STATS_BOX defined; FlagActionPredef→FlagAction at all 4 sites (the predef
+variant clobbers ESI via GetPredefRegisters); `dec esi`→`sub esi,2` in the max-EXP
+overwrite path (reach the high byte at MON_EXP, not the middle); CopyData dest is
+EDX not EDI; CallBattleCore `call BattleCore`→`call esi; ret` (flat function-pointer
+dispatch); full extern decls. Headless math (stat-exp gain w/ 0xFFFF cap, exp award
+×baseExp×level/7, BoostExp ×1.5, DivideExpDataByNumMonsGainingExp) native-validated
+6/6. Deferred Wave-2 externs: PrintText, GetPartyMonName, LoadMonData,
+ModifyPikachuHappiness, PrintStatsBox, WaitForTextScrollButtonPress,
+Save/LoadScreenTilesFromBuffer1, PrintEmptyString, LearnMoveFromLevelUp, and the
+CallBattleCore targets (CalculateModifiedStats, ApplyBurnAndParalysisPenalties-
+ToPlayer, ApplyBadgeStatBoosts, DrawPlayerHUDAndHPBar). BATTLE_SRCS check-only.

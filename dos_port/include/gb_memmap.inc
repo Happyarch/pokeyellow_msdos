@@ -401,6 +401,9 @@ wMoveMonType           equ 0xCF94   ; = W_MOVE_MON_TYPE (union wRemoveMonFromBox
 wAnimationType         equ 0xCC5B   ; (union W_UNUSED_FLAG)
 wPlayerToxicCounter    equ 0xD06B
 wEnemyToxicCounter     equ 0xD070
+; GainExperience (src/engine/battle/experience.asm)
+wPlayerID              equ 0xD358   ; word (player trainer id)
+wCalculateWhoseStats   equ 0xD11D   ; = wTempByteValue (union)
 
 ; --- HP-bar update scratch (UpdateHPBar / used by drain_hp etc.) — sym-pinned ---
 wHPBarMaxHP            equ 0xCEE9   ; word
