@@ -60,23 +60,26 @@ PPU: software BG + OAM renderer, window layer. Math/data: the full Wave-1 backen
 - **GATE:** boots into "battle mode" without crashing; FRAME.BIN renders *something*
   deterministic (even if just a cleared screen + text box).
 
-### Stage 0.5 — Full-screen tilemap renderer (engine prerequisite for widescreen)
-**Layout decision (user, 2026-06-27): WIDESCREEN 40×25** — the battle uses the full
-320×200 viewport with NEW coords (not pret's GB 20×18). Implication: neither existing
-render path fits — `render_window` caps at a 32-tile-wide GB tilemap; `render_bg`
-decodes the overworld block surface (`wSurroundingTiles`), not a raw tilemap. So add
-`render_screen_tilemap`: blit the 40×25 `W_TILEMAP` directly to `GB_BACKBUF` via the
-existing `tile_cache` (2bpp→8bpp), mirroring `render_bg`'s inner loop but from a flat
-40-wide map. The frame pipeline renders this instead of the overworld while in battle
-(gate on `wIsInBattle` / a render-mode flag). All battle drawing then writes
-`W_TILEMAP`; sub-boxes can still use the window overlay. **GATE:** a `DEBUG_BATTLE`
-build shows a deterministic 40×25 pattern / cleared battle field in FRAME.BIN.
+### Stage 0.5 — Battle render mode (centered-baseline approach)
+**Layout decision (user, 2026-06-27, refined): build the FAITHFUL GB battle UI
+(pret's 20×18 coords) CENTERED in the 320×200 viewport first, then ITERATE elements
+outward into the widescreen margins.** Iterating from a working baseline is faster
+than designing 40×25 coords cold. Consequence: the centered GB content (≤20 tiles
+wide) FITS the existing window-overlay path (`render_window`, ≤32-wide GB tilemap) —
+so **`render_screen_tilemap` is NOT needed yet** (defer until iteration pushes
+content past 32 tiles wide). The one frame-pipeline change: while `wIsInBattle`,
+clear the backbuffer to the battle background (black/blank) instead of rendering the
+overworld, so the pillarbox/letterbox margins aren't Pallet Town. Battle content is
+built in `W_TILEMAP`/`GB_TILEMAP1` and placed via a centered window descriptor
+(wx≈80, wy≈28, like the menu placement convention). **GATE:** `DEBUG_BATTLE` shows a
+deterministic centered battle field (cleared margins) in FRAME.BIN.
 
 ### Stage 1 (≈glue 2a) — Static battle screen + HUD
-**All Stage-1 coords are widescreen (40×25), decided per-placement with the user via
-FRAME.BIN and recorded as `; PROJ` / `docs/ui_projection.md` entries.**
+**Start from pret's faithful GB coords (centered); record placements as `; PROJ` /
+`docs/ui_projection.md` entries. Widescreen spacing is an ITERATION pass after the
+centered baseline renders (move HUD/sprites outward with the user via FRAME.BIN).**
 - 1a: battle screen frame — `TextBoxBorder` layout, bottom text box, `PrintText`
-  "Wild NIDORAN appeared!" style intro. **GATE:** layout approved by user.
+  "Wild NIDORAN appeared!" style intro. **GATE:** centered baseline approved by user.
 - 1b: `DrawEnemyHUDAndHPBar` + `DrawPlayerHUDAndHPBar` — name, `:L`level, HP bar
   (via `LoadHpBarAndStatusTilePatterns`), status; player side shows HP number.
   **GATE:** both HUD boxes + bars at correct coords, correct fill for seeded HP.
