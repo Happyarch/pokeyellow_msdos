@@ -20,6 +20,8 @@ extern AddItemToInventory
 %define PERSIAN 144        ; internal index (113 was wrong — that's KAKUNA; see data/pokemon/dex_order.asm)
 %define JIGGLYPUFF 100
 %define STARTER_PIKACHU 84
+%define CHARIZARD 180      ; internal index (dex_order.asm line - 2)
+%define LAPRAS 19
 
 %define RIVAL_STARTER_JOLTEON 135
 %define NUM_POKEMON 151
@@ -142,6 +144,8 @@ DebugNewGameParty:
     db PERSIAN, 80
     db JIGGLYPUFF, 15
     db STARTER_PIKACHU, 5
+    db CHARIZARD, 50
+    db LAPRAS, 34
     db 0xFF ; end (-1)
 
 ; Debug items. We only use numeric values here.

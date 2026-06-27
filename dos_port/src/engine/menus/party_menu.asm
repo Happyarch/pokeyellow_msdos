@@ -36,8 +36,12 @@ bits 32
 global DisplayPartyMenu
 
 extern PlaceString           ; ESI=dest (EBP-rel), EDX=src offset (EBP-rel)
+extern place_flat_str        ; src/text/text.asm — ESI=dest, EAX=flat src ptr
+extern TextBoxBorder         ; src/text/text.asm — ESI=top-left, BL=int width, BH=int height
 extern DelayFrame
 extern set_single_window                 ; src/ppu/ppu.asm — define g_windows[] as one descriptor
+extern add_window                        ; src/ppu/ppu.asm — append a window descriptor (multi-layer menus)
+extern g_window_count                    ; src/ppu/ppu.asm — live descriptor count
 extern g_bg_whiteout                     ; src/ppu/ppu.asm — full-screen white field
 extern LoadHpBarAndStatusTilePatterns   ; src/gfx/load_font.asm
 extern LoadTextBoxTilePatterns          ; restore box tiles for the START menu
@@ -77,10 +81,43 @@ HPB_FULL       equ 0x6b      ; full (8px) gauge segment
 HPB_END        equ 0x6c      ; gauge right cap (pokemon menu variant)
 TILE_LV        equ 0x6e      ; ":L" level prefix
 
-CHAR_CURSOR    equ 0xED      ; ▶
+CHAR_CURSOR    equ 0xED      ; ▶ (filled — navigation cursor)
+CHAR_SWAP_CUR  equ 0xEC      ; ▷ (hollow — parent cursor while a submenu has focus / swap armed)
 CHAR_SLASH     equ 0xF3      ; /
 CHAR_DIGIT0    equ 0xF6      ; '0'; digit d → +d
+CHAR_TERM      equ 0x50      ; '@' string terminator
 TILE_SPC       equ 0x7F
+
+; --- field-move pop-up (pret FIELD_MOVE_MON_MENU / DisplayFieldMoveMonMenu) -----
+; A on a mon opens this; entries are the mon's field moves (slot order) + STATS,
+; SWITCH, CANCEL. Rendered as a SECOND window over the party panel via add_window
+; (the multi-layer menu compositor). ▷ marks the party cursor while it's open.
+; Field-move move ids (constants/move_constants.asm).
+MV_CUT         equ 0x0F
+MV_FLY         equ 0x13
+MV_SURF        equ 0x39
+MV_STRENGTH    equ 0x46
+MV_DIG         equ 0x5B
+MV_TELEPORT    equ 0x64
+MV_SOFTBOILED  equ 0x87
+MV_FLASH       equ 0x94
+
+POPUP_INT_W    equ 11        ; interior width: cursor(1) + name(≤10, "SOFTBOILED")
+POPUP_BOX_W    equ 13        ; total tile width (INT_W + 2 borders)
+POPUP_CUR_COL  equ 1         ; box-rel ▶ column
+POPUP_TXT_COL  equ 2         ; box-rel text column
+POPUP_SROW     equ 18        ; GB_TILEMAP1 source row for the pop-up box (panel uses 0-11)
+POPUP_WX       equ 223       ; flush-right: left px = 320-104=216 → wx = 216+7
+POPUP_CLIP_W   equ 104       ; POPUP_BOX_W * 8 px
+
+; bottom message box (pret PartyMenu message; the standard 20×6 dialog at the
+; viewport bottom, like the overworld/bag dialog). Source GB_TILEMAP1 rows 12-17
+; (free: the panel uses 0-11), shown as a persistent window beneath the panel.
+MSG_SROW       equ 12        ; W_TILEMAP / GB_TILEMAP1 box top row
+MSG_WX         equ 87        ; center the 160px box (WX-7 = 80)
+MSG_WY         equ 152       ; bottom 48px (6 rows)
+MSG_LINE1_ROW  equ 14        ; text rows (col 1, inside the border)
+MSG_LINE2_ROW  equ 16
 
 ; status-condition bits within MON_STATUS (constants/battle_constants.asm).
 ST_PSN_BIT     equ 3
@@ -109,6 +146,27 @@ st_par:   db 0x8F, 0x80, 0x91        ; PAR
 st_slp:   db 0x92, 0x8B, 0x8F        ; SLP
 st_blank: db TILE_SPC, TILE_SPC, TILE_SPC
 
+; pop-up entry labels (GB charmap: 'A'=$80 … 'Z'=$99, '@'=$50). Field-move names
+; match pret FieldMoveNames; STATS/SWITCH/CANCEL match PokemonMenuEntries.
+fm_str_cut:        db 0x82,0x94,0x93, CHAR_TERM                                  ; CUT
+fm_str_fly:        db 0x85,0x8B,0x98, CHAR_TERM                                  ; FLY
+fm_str_surf:       db 0x92,0x94,0x91,0x85, CHAR_TERM                             ; SURF
+fm_str_strength:   db 0x92,0x93,0x91,0x84,0x8D,0x86,0x93,0x87, CHAR_TERM         ; STRENGTH
+fm_str_flash:      db 0x85,0x8B,0x80,0x92,0x87, CHAR_TERM                        ; FLASH
+fm_str_dig:        db 0x83,0x88,0x86, CHAR_TERM                                  ; DIG
+fm_str_teleport:   db 0x93,0x84,0x8B,0x84,0x8F,0x8E,0x91,0x93, CHAR_TERM         ; TELEPORT
+fm_str_softboiled: db 0x92,0x8E,0x85,0x93,0x81,0x8E,0x88,0x8B,0x84,0x83, CHAR_TERM ; SOFTBOILED
+pm_str_stats:      db 0x92,0x93,0x80,0x93,0x92, CHAR_TERM                        ; STATS
+pm_str_switch:     db 0x92,0x96,0x88,0x93,0x82,0x87, CHAR_TERM                   ; SWITCH
+pm_str_cancel:     db 0x82,0x80,0x8D,0x82,0x84,0x8B, CHAR_TERM                   ; CANCEL
+
+; bottom message box text (pret PartyMenuMessagePointers). 'a'=$A0…'z'=$B9, é=$BA,
+; '.'=$E8, '?'=$E6; "POKéMON" = P O K é M O N. Only the two states the port reaches
+; today (normal / swap); item-use, battle, and TM messages come with those systems.
+pm_msg_choose: db 0x82,0xA7,0xAE,0xAE,0xB2,0xA4,0x7F,0xA0,0x7F,0x8F,0x8E,0x8A,0xBA,0x8C,0x8E,0x8D,0xE8, CHAR_TERM ; "Choose a POKéMON."
+pm_msg_move1:  db 0x8C,0xAE,0xB5,0xA4,0x7F,0x8F,0x8E,0x8A,0xBA,0x8C,0x8E,0x8D, CHAR_TERM                          ; "Move POKéMON"
+pm_msg_move2:  db 0xB6,0xA7,0xA4,0xB1,0xA4,0xE6, CHAR_TERM                                                        ; "where?"
+
 section .bss
 align 4
 pm_count:      resd 1        ; party size (1..6)
@@ -118,6 +176,10 @@ pm_pixels:     resd 1        ; current entry's HP-bar fill in pixels (0..48)
 pm_anim_ctr:   resd 1        ; vblank counter for the selected mon's icon bob
 pm_anim_frame: resd 1        ; 0/1 — current animation frame of the selected icon
 pm_anim_period: resd 1       ; vblanks per frame (6 green / 17 yellow / 33 red)
+pm_swap:       resd 1        ; SWITCH arm: 0 = none, else (held mon index + 1)
+pm_menu_entries: resd 8      ; pop-up: flat ptrs to entry label strings (≤4 fields + 3)
+pm_menu_count: resd 1        ; pop-up entry count
+pm_menu_sel:   resd 1        ; pop-up cursor index
 
 section .text
 
@@ -133,8 +195,11 @@ DisplayPartyMenu:
     jz .exit_now                ; empty party → nothing to show
     mov [pm_count], eax
     mov dword [pm_selected], 0
+    mov dword [pm_swap], 0       ; no SWITCH armed on open
 
-    ; Bring in the HP-bar/status/":L" tiles (clobbers box-drawing tiles $79-$7E).
+    ; Bring in the HP-bar/status/":L" tiles. font_battle_extra also carries the
+    ; box-drawing tiles ($79-$7E, byte-identical to font_extra), so TextBoxBorder
+    ; still works here — used by the bottom message box and the field-move pop-up.
     call LoadHpBarAndStatusTilePatterns
 
     ; Whiteout the overworld behind the menu so the GB pokemon menu sits centered
@@ -142,19 +207,30 @@ DisplayPartyMenu:
     mov dword [g_bg_whiteout], 1
 
     ; window placement: 160px (20-tile) box centered horizontally; the list block
-    ; (count*2 rows) centered vertically: wy = (RENDER_H - rows*8) / 2.
-    ; PROJ overworld-ui: GB(0,?) 20xN --(party, X centered, Y centered)--> wx=87 clip=160 wy/max_y computed
+    ; (count*2 rows) is TOP-aligned (wy=0), faithful to the original (hlcoord 3,0):
+    ; the list fills from the top, so any unused slots / blank space fall at the
+    ; bottom (above the message box) rather than floating in the middle.
+    ; PROJ overworld-ui: GB(0,0) 20xN --(party, X centered, Y top)--> wx=87 clip=160 wy=0 max_y=rows*8
     mov ecx, [pm_count]
     shl ecx, 4                  ; pixel_h = count*2 rows * 8 px
-    mov ebx, RENDER_H
-    sub ebx, ecx                ; RENDER_H - pixel_h
-    shr ebx, 1                  ; wy = centered top
-    lea edx, [ebx + ecx]        ; max_y = wy + pixel_h (exclusive bottom)
+    xor ebx, ebx                ; wy = 0 (top-aligned)
+    mov edx, ecx                ; max_y = pixel_h (exclusive bottom)
     mov eax, PM_WIN_WX          ; wx = 87
     mov ecx, PM_WIN_CLIP_W      ; clip_w = 160
     mov esi, GB_TILEMAP1        ; party panel source tilemap
     xor edi, edi                ; start_row = 0
-    call set_single_window      ; count=1; mirrors wy→H_WY, wx→IO_WX
+    call set_single_window      ; count=1; window 0 = panel; mirrors wy→H_WY, wx→IO_WX
+
+    ; window 1 = the persistent bottom message box (stays for the menu's lifetime;
+    ; content is (re)drawn by .draw_message, which .render calls). PROJ overworld-ui:
+    ; GB(0,17) 20×6 --(center, WX-7=80)--> wx=87 wy=152.
+    mov eax, MSG_WX
+    mov ebx, MSG_WY
+    mov ecx, SCREEN_W           ; clip_w = 160
+    mov edx, RENDER_H           ; max_y = 200
+    mov esi, GB_TILEMAP1
+    mov edi, MSG_SROW           ; start_row = 12
+    call add_window             ; count = 2
 
     call .render
     call .refresh_icons             ; load icon gfx into VRAM + reset the bob timer
@@ -191,9 +267,28 @@ DisplayPartyMenu:
     jnz .down
     test al, PAD_UP
     jnz .up
+    test al, PAD_A
+    jnz .a_press
     test al, PAD_B
-    jnz .exit
-    ; A is a no-op for now (party action sub-menu deferred).
+    jnz .b_press
+    jmp .loop
+
+.a_press:
+    ; In SWITCH-arm mode, A completes the reorder; otherwise A opens the pop-up.
+    mov eax, [pm_swap]
+    test eax, eax
+    jnz .complete_swap
+    call .open_popup
+    jmp .loop
+
+.b_press:
+    ; B cancels an armed SWITCH; otherwise it leaves the party menu.
+    mov eax, [pm_swap]
+    test eax, eax
+    jz .exit
+    mov dword [pm_swap], 0
+    call .render
+    call .refresh_icons
     jmp .loop
 
 .down:
@@ -214,6 +309,263 @@ DisplayPartyMenu:
     call .render
     call .refresh_icons
     jmp .loop
+
+; ===========================================================================
+; Field-move pop-up (pret FIELD_MOVE_MON_MENU). Opened by A on a mon; appended
+; as a SECOND window over the party panel (multi-layer compositor). The party
+; cursor goes hollow ▷ while it's up. Returns here; SWITCH arms the reorder.
+; ===========================================================================
+.open_popup:
+    call .build_popup                   ; → pm_menu_entries[], pm_menu_count
+    mov dword [pm_menu_sel], 0
+    ; hollow the party panel cursor at the selected mon (visible beside the pop-up)
+    mov eax, [pm_selected]
+    shl eax, 1                          ; row = sel*2 (PM_FIRST_ROW = 0)
+    shl eax, 5                          ; * 32 (GB_TILEMAP1 stride)
+    mov byte [ebp + eax + GB_TILEMAP1 + PM_CURSOR_COL], CHAR_SWAP_CUR
+    call .run_popup                     ; EAX = chosen index, or -1 on B
+    mov dword [g_window_count], 2        ; drop the pop-up window (keep panel + message)
+    cmp eax, -1
+    je .popup_close                     ; B → just close
+    mov ecx, [pm_menu_count]
+    dec ecx
+    cmp eax, ecx
+    je .popup_close                     ; CANCEL (last)
+    dec ecx
+    cmp eax, ecx
+    je .popup_switch                    ; SWITCH (second-to-last)
+    ; STATS / field move → deferred no-op (StatusScreen + field effects not ported)
+    jmp .popup_close
+.popup_switch:
+    mov eax, [pm_count]
+    cmp eax, 2
+    jb .popup_close                     ; need ≥2 mons to reorder
+    mov eax, [pm_selected]
+    inc eax
+    mov [pm_swap], eax                   ; arm: held = selected + 1 (kept hollow by .render)
+.popup_close:
+    call .render                        ; restore ▶ (or ▷ if a SWITCH is now armed)
+    call .refresh_icons
+    ret
+
+; complete an armed SWITCH: swap the held mon with the currently selected one.
+.complete_swap:
+    mov eax, [pm_swap]
+    dec eax                             ; held index
+    mov dword [pm_swap], 0
+    mov ebx, [pm_selected]              ; target index
+    cmp eax, ebx
+    je .cs_done                         ; same mon → just deselect
+    ; wPartySpecies (1 byte)
+    lea esi, [eax + wPartySpecies]
+    lea edi, [ebx + wPartySpecies]
+    mov cl, [ebp + esi]
+    mov dl, [ebp + edi]
+    mov [ebp + esi], dl
+    mov [ebp + edi], cl
+    ; wPartyMons struct (44 bytes)
+    imul esi, eax, PARTYMON_STRUCT_LENGTH
+    add esi, wPartyMons
+    imul edi, ebx, PARTYMON_STRUCT_LENGTH
+    add edi, wPartyMons
+    mov ecx, PARTYMON_STRUCT_LENGTH
+    call .swap_bytes
+    ; OT name + nickname (NAME_LENGTH each)
+    imul esi, eax, NAME_LENGTH
+    add esi, wPartyMonOT
+    imul edi, ebx, NAME_LENGTH
+    add edi, wPartyMonOT
+    mov ecx, NAME_LENGTH
+    call .swap_bytes
+    imul esi, eax, NAME_LENGTH
+    add esi, wPartyMonNicks
+    imul edi, ebx, NAME_LENGTH
+    add edi, wPartyMonNicks
+    mov ecx, NAME_LENGTH
+    call .swap_bytes
+.cs_done:
+    call .render
+    call .refresh_icons
+    jmp .loop
+
+; swap ECX bytes between [ebp+ESI] and [ebp+EDI]. Clobbers EDX,ESI,EDI,ECX; preserves EAX/EBX.
+.swap_bytes:
+    mov dl, [ebp + esi]
+    mov dh, [ebp + edi]
+    mov [ebp + esi], dh
+    mov [ebp + edi], dl
+    inc esi
+    inc edi
+    dec ecx
+    jnz .swap_bytes
+    ret
+
+; build pm_menu_entries[] / pm_menu_count for the selected mon: its field moves
+; (slot order) then STATS, SWITCH, CANCEL.
+.build_popup:
+    xor ecx, ecx                        ; entry count
+    ; ESI = mon moves base = wPartyMons + sel*44 + MON_MOVES
+    mov eax, [pm_selected]
+    imul eax, eax, PARTYMON_STRUCT_LENGTH
+    lea esi, [eax + wPartyMons + MON_MOVES]
+    mov edx, NUM_MOVES                  ; 4 slots
+.bp_loop:
+    mov al, [ebp + esi]
+    inc esi
+    call .field_move_name               ; AL=id → EAX = name ptr or 0 (clobbers EAX)
+    test eax, eax
+    jz .bp_next
+    mov [pm_menu_entries + ecx*4], eax
+    inc ecx
+.bp_next:
+    dec edx
+    jnz .bp_loop
+    ; fixed tail: STATS, SWITCH, CANCEL
+    mov dword [pm_menu_entries + ecx*4], pm_str_stats
+    inc ecx
+    mov dword [pm_menu_entries + ecx*4], pm_str_switch
+    inc ecx
+    mov dword [pm_menu_entries + ecx*4], pm_str_cancel
+    inc ecx
+    mov [pm_menu_count], ecx
+    ret
+
+; AL = move id → EAX = flat name ptr, or 0 if not a field move. Clobbers EAX only.
+.field_move_name:
+    cmp al, MV_CUT
+    je .fmn_cut
+    cmp al, MV_FLY
+    je .fmn_fly
+    cmp al, MV_SURF
+    je .fmn_surf
+    cmp al, MV_STRENGTH
+    je .fmn_strength
+    cmp al, MV_FLASH
+    je .fmn_flash
+    cmp al, MV_DIG
+    je .fmn_dig
+    cmp al, MV_TELEPORT
+    je .fmn_teleport
+    cmp al, MV_SOFTBOILED
+    je .fmn_softboiled
+    xor eax, eax
+    ret
+.fmn_cut:        mov eax, fm_str_cut
+    ret
+.fmn_fly:        mov eax, fm_str_fly
+    ret
+.fmn_surf:       mov eax, fm_str_surf
+    ret
+.fmn_strength:   mov eax, fm_str_strength
+    ret
+.fmn_flash:      mov eax, fm_str_flash
+    ret
+.fmn_dig:        mov eax, fm_str_dig
+    ret
+.fmn_teleport:   mov eax, fm_str_teleport
+    ret
+.fmn_softboiled: mov eax, fm_str_softboiled
+    ret
+
+; render the pop-up box (border + entries + cursor) into the wTileMap scratch,
+; copy it into a free GB_TILEMAP1 region, and (re)append its window descriptor.
+.draw_popup:
+    mov esi, W_TILEMAP                   ; box top-left = scratch col 0
+    mov bl, POPUP_INT_W
+    mov eax, [pm_menu_count]
+    mov bh, al                          ; interior height = entry count
+    call TextBoxBorder
+    xor ecx, ecx
+.dpu_row:
+    cmp ecx, [pm_menu_count]
+    jae .dpu_cursor
+    push ecx
+    mov eax, ecx
+    inc eax                             ; interior row (after top border)
+    imul eax, eax, 20
+    lea esi, [eax + W_TILEMAP + POPUP_TXT_COL]
+    mov eax, [pm_menu_entries + ecx*4]
+    call place_flat_str
+    pop ecx
+    inc ecx
+    jmp .dpu_row
+.dpu_cursor:
+    mov eax, [pm_menu_sel]
+    inc eax
+    imul eax, eax, 20
+    mov byte [ebp + eax + W_TILEMAP + POPUP_CUR_COL], CHAR_CURSOR
+    ; copy box rows (count+2) × POPUP_BOX_W → GB_TILEMAP1 rows POPUP_SROW.. (stride 32)
+    xor ecx, ecx
+.dpu_copy:
+    push ecx
+    mov eax, ecx
+    imul eax, eax, 20
+    lea esi, [ebp + eax + W_TILEMAP]
+    mov eax, ecx
+    add eax, POPUP_SROW
+    shl eax, 5
+    lea edi, [ebp + eax + GB_TILEMAP1]
+    mov ecx, POPUP_BOX_W
+    rep movsb
+    pop ecx
+    inc ecx
+    mov eax, [pm_menu_count]
+    add eax, 2
+    cmp ecx, eax
+    jb .dpu_copy
+    ; (re)append the pop-up as window 2 (panel = 0, message box = 1 both stay)
+    mov dword [g_window_count], 2
+    mov ebx, [pm_menu_count]
+    add ebx, 2
+    shl ebx, 3                          ; box height in px
+    mov ecx, RENDER_H
+    sub ecx, ebx                        ; wy = bottom-aligned top
+    mov ebx, ecx                        ; EBX = wy
+    mov eax, POPUP_WX
+    mov ecx, POPUP_CLIP_W
+    mov edx, RENDER_H                   ; max_y = viewport bottom
+    mov esi, GB_TILEMAP1
+    mov edi, POPUP_SROW
+    call add_window
+    ret
+
+; pop-up input loop. Returns EAX = chosen entry index, or -1 if B pressed.
+.run_popup:
+    call .draw_popup
+.rpu_loop:
+    call DelayFrame
+    movzx eax, byte [ebp + H_JOY_PRESSED]
+    test al, PAD_DOWN
+    jnz .rpu_down
+    test al, PAD_UP
+    jnz .rpu_up
+    test al, PAD_A
+    jnz .rpu_a
+    test al, PAD_B
+    jnz .rpu_b
+    jmp .rpu_loop
+.rpu_down:
+    mov eax, [pm_menu_sel]
+    inc eax
+    cmp eax, [pm_menu_count]
+    jae .rpu_loop                       ; at bottom (field menu does not wrap)
+    mov [pm_menu_sel], eax
+    call .draw_popup
+    jmp .rpu_loop
+.rpu_up:
+    mov eax, [pm_menu_sel]
+    test eax, eax
+    jz .rpu_loop
+    dec eax
+    mov [pm_menu_sel], eax
+    call .draw_popup
+    jmp .rpu_loop
+.rpu_a:
+    mov eax, [pm_menu_sel]
+    ret
+.rpu_b:
+    mov eax, -1
+    ret
 
 .exit:
 .exit_release:
@@ -381,6 +733,17 @@ DisplayPartyMenu:
     imul eax, eax, 20
     mov byte [ebp + eax + W_TILEMAP + PM_CURSOR_COL], CHAR_CURSOR
 
+    ; hollow ▷ on the SWITCH-armed mon (parent cursor while reorder is pending)
+    mov eax, [pm_swap]
+    test eax, eax
+    jz .no_swap_cur
+    dec eax
+    shl eax, 1
+    add eax, PM_FIRST_ROW
+    imul eax, eax, 20
+    mov byte [ebp + eax + W_TILEMAP + PM_CURSOR_COL], CHAR_SWAP_CUR
+.no_swap_cur:
+
     ; copy the panel (cols 0-19) → GB_TILEMAP1 (cols 0-19)
     mov eax, [pm_count]
     shl eax, 1                          ; total rows
@@ -399,6 +762,52 @@ DisplayPartyMenu:
     inc ecx
     cmp ecx, [pm_slot]
     jb .copy_row
+    ; refresh the bottom message box content (its window was added once in init)
+    call .draw_message
+    ret
+
+; --- bottom message box: contextual text per state (pret PartyMenuMessage*) ------
+; Renders the 20×6 dialog border + text into wTileMap rows 12-17, then copies to
+; GB_TILEMAP1 rows 12-17. Normal: "Choose a POKéMON."; SWITCH armed: "Move
+; POKéMON / where?". Window descriptor (window 1) is added once by DisplayPartyMenu.
+.draw_message:
+    mov esi, W_TILEMAP + MSG_SROW * 20
+    mov bl, 18                          ; interior width (total 20)
+    mov bh, 4                           ; interior height (total 6)
+    call TextBoxBorder
+    mov eax, [pm_swap]
+    test eax, eax
+    jnz .msg_swap
+    ; normal
+    mov esi, W_TILEMAP + MSG_LINE1_ROW * 20 + 1
+    mov eax, pm_msg_choose
+    call place_flat_str
+    jmp .msg_copy
+.msg_swap:
+    mov esi, W_TILEMAP + MSG_LINE1_ROW * 20 + 1
+    mov eax, pm_msg_move1
+    call place_flat_str
+    mov esi, W_TILEMAP + MSG_LINE2_ROW * 20 + 1
+    mov eax, pm_msg_move2
+    call place_flat_str
+.msg_copy:
+    ; copy box rows MSG_SROW..MSG_SROW+5 (cols 0-19) → GB_TILEMAP1 (stride 32)
+    xor ecx, ecx
+.dm_row:
+    mov eax, ecx
+    add eax, MSG_SROW
+    imul esi, eax, 20
+    lea esi, [ebp + esi + W_TILEMAP]
+    mov edi, eax
+    shl edi, 5
+    lea edi, [ebp + edi + GB_TILEMAP1]
+    push ecx
+    mov ecx, 20
+    rep movsb
+    pop ecx
+    inc ecx
+    cmp ecx, 6
+    jb .dm_row
     ret
 
 ; --- (re)load every slot's icon to frame A, reset the bob timer, set its speed --

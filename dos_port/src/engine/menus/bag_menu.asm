@@ -110,7 +110,8 @@ OPT_B_ROW      equ 3         ; box-rel row of the bottom option
 OPT_TEXT_COL   equ 2         ; option text col (pret USE/TOSS items at 15,11 → box-rel 2)
 OPT_CURSOR_COL equ 1
 
-CHAR_CURSOR    equ 0xED      ; ▶
+CHAR_CURSOR    equ 0xED      ; ▶ (filled — navigation cursor)
+CHAR_SWAP_CUR  equ 0xEC      ; ▷ (hollow — marks the SELECT-swap held item)
 CHAR_DOWN      equ 0xEE      ; ▼ (= CHAR_DOWN_ARROW)
 CHAR_TIMES     equ 0xF1      ; ×
 CHAR_DIGIT0    equ 0xF6      ; '0'; digit d → CHAR_DIGIT0 + d
@@ -140,6 +141,7 @@ align 4
 bm_selected:    resd 1       ; absolute index into the entry list (0..num_entries-1)
 bm_scroll:      resd 1       ; index of the top visible entry
 bm_num_entries: resd 1       ; bag item count + 1 (the CANCEL tail)
+bm_swap:        resd 1       ; SELECT-swap: 0 = none pending, else (held index + 1)
 bm_toss_qty:    resd 1       ; quantity being chosen to toss (1..item qty)
 bm_toss_item:   resd 1       ; item id captured before removal (for "Threw away" msg)
 bm_opt_sel:     resd 1       ; 2-option menu cursor: 0 = top, 1 = bottom
@@ -170,6 +172,7 @@ DisplayBagMenu:
     mov [bm_num_entries], eax
     mov dword [bm_selected], 0
     mov dword [bm_scroll], 0
+    mov dword [bm_swap], 0              ; no SELECT-swap pending on open
 
     ; Render the list content, then define the window list as exactly the list box.
     call .render
@@ -216,6 +219,8 @@ DisplayBagMenu:
     jnz .down
     test al, PAD_UP
     jnz .up
+    test al, PAD_SELECT
+    jnz .swap
     test al, PAD_A
     jnz .select
     test al, PAD_B
@@ -238,6 +243,83 @@ DisplayBagMenu:
     jz .loop                    ; already at the top
     dec eax
     mov [bm_selected], eax
+    call .fix_scroll
+    call .render
+    jmp .loop
+
+; --- SELECT: reorder the bag (pret engine/menus/swap_items.asm) ---
+; The bag is an ordered list of [id,qty] pairs. The first SELECT marks the held
+; entry (bm_swap = index+1); the second swaps the two entries. Swapping two slots
+; of the SAME item merges them (cap 99; on full combine the held slot is removed
+; and the list compacts), faithfully matching HandleItemListSwapping. SELECT on
+; CANCEL or on the held entry itself is ignored.
+.swap:
+    mov eax, [bm_selected]
+    inc eax
+    cmp eax, [bm_num_entries]
+    je .loop                    ; ignore SELECT on the CANCEL tail
+    mov eax, [bm_swap]
+    test eax, eax
+    jnz .swap_second
+    ; no held entry yet → mark the current one (store index + 1), show ▷
+    mov eax, [bm_selected]
+    inc eax
+    mov [bm_swap], eax
+    call .render
+    jmp .loop
+
+.swap_second:
+    dec eax                     ; eax = held (first) absolute index
+    mov dword [bm_swap], 0      ; clear the pending state
+    mov ebx, [bm_selected]      ; ebx = second (currently selected) index
+    cmp eax, ebx
+    je .loop                    ; SELECT on the same entry → just deselect
+    lea esi, [ebp + eax*2 + wBagItems]   ; &entry[first]  (held)
+    lea edi, [ebp + ebx*2 + wBagItems]   ; &entry[second] (selected)
+    mov al, [esi]               ; first item id
+    cmp al, [edi]               ; same item type?
+    je .swap_merge
+    ; --- different items: plain 2-byte entry swap ---
+    mov ax, [esi]               ; first  id+qty
+    mov dx, [edi]               ; second id+qty
+    mov [esi], dx
+    mov [edi], ax
+    jmp .swap_redraw
+
+.swap_merge:
+    movzx eax, byte [esi + 1]   ; first (held) qty
+    movzx edx, byte [edi + 1]   ; second qty
+    add eax, edx                ; combined quantity
+    cmp eax, 100
+    jb .swap_combine
+    ; sum >= 100: cap the selected slot at 99, leftover stays in the held slot
+    sub eax, 99
+    mov byte [esi + 1], al      ; held slot keeps the leftover
+    mov byte [edi + 1], 99
+    jmp .swap_redraw
+.swap_combine:
+    mov byte [edi + 1], al      ; selected slot gets the full sum (al < 100)
+    ; remove the held slot: shift the following pairs (incl 0xFF terminator) up
+    mov edi, esi                ; dst = held slot
+    lea esi, [esi + 2]          ; src = next slot
+.swap_shift:
+    mov al, [esi]               ; id (or 0xFF terminator)
+    mov [edi], al
+    inc al                      ; 0xFF → 0 ?
+    jz .swap_compacted
+    mov al, [esi + 1]
+    mov [edi + 1], al
+    add esi, 2
+    add edi, 2
+    jmp .swap_shift
+.swap_compacted:
+    dec byte [ebp + wNumBagItems]
+    movzx eax, byte [ebp + wNumBagItems]
+    inc eax
+    mov [bm_num_entries], eax   ; refresh entry count (+ CANCEL tail)
+    mov dword [bm_selected], 0  ; original resets the cursor to the top
+    mov dword [bm_scroll], 0
+.swap_redraw:
     call .fix_scroll
     call .render
     jmp .loop
@@ -759,6 +841,23 @@ DisplayBagMenu:
     add eax, LIST_NAME_ROW0
     imul eax, eax, 20
     mov byte [ebp + eax + W_TILEMAP + LIST_CURSOR_COL], CHAR_CURSOR
+
+    ; hollow ▷ over the SELECT-swap held item, if one is pending and on-screen.
+    ; Drawn after the filled ▶ so when the navigation cursor sits on the held item
+    ; the hollow arrow wins — faithful to PlaceUnfilledArrowMenuCursor.
+    mov eax, [bm_swap]
+    test eax, eax
+    jz .no_swap_cursor
+    dec eax                     ; held item absolute index
+    sub eax, [bm_scroll]        ; → visible slot
+    js .no_swap_cursor          ; scrolled off the top
+    cmp eax, BM_VISIBLE
+    jae .no_swap_cursor         ; scrolled off the bottom
+    imul eax, eax, LIST_ROW_STEP
+    add eax, LIST_NAME_ROW0
+    imul eax, eax, 20
+    mov byte [ebp + eax + W_TILEMAP + LIST_CURSOR_COL], CHAR_SWAP_CUR
+.no_swap_cursor:
 
     ; copy 16×11 scratch → GB_TILEMAP0 list region.
     mov ecx, LIST_TOTAL_W

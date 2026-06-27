@@ -38,9 +38,9 @@ extern DisableLCD
 extern ClearBgMap
 extern ClearSprites
 extern PrepareTitleScreen
+extern g_window_count        ; src/ppu/ppu.asm — unified window descriptor list count
 %ifdef SKIP_TITLE
 extern EnterMap
-extern g_window_count        ; src/ppu/ppu.asm — unified window descriptor list count
 %endif
 
 global Init

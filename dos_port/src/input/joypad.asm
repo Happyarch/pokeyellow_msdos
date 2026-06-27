@@ -10,7 +10,7 @@
 ;   Arrow keys        → D-pad      (both E0-prefixed and numpad scancodes)
 ;   X                 → A
 ;   Z                 → B
-;   Right Shift / Tab → Select
+;   Backspace (Right Shift / Tab) → Select
 ;   Enter             → Start
 ;   Esc               → sets [pad_quit] (host-side quit, not a GB button)
 ;
@@ -47,6 +47,7 @@ SC_Z            equ 0x2C
 SC_ENTER        equ 0x1C
 SC_RSHIFT       equ 0x36
 SC_TAB          equ 0x0F
+SC_BACKSPACE    equ 0x0E    ; Select (the mGBA/VBA/SameBoy default binding)
 SC_ESC          equ 0x01
 %ifdef DEBUG_NOCLIP
 SC_W            equ 0x11    ; noclip toggle key
@@ -225,7 +226,9 @@ kbd_isr:
     mov al, 1 << PAD_START_BIT
     jmp .apply_btn
 .chk_sel1:
-    cmp bl, SC_RSHIFT
+    cmp bl, SC_BACKSPACE        ; Select — standard emulator default (mGBA/VBA)
+    je .sel
+    cmp bl, SC_RSHIFT           ; Select — alternates
     je .sel
     cmp bl, SC_TAB
     jne .chk_esc
