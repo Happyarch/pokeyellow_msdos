@@ -121,5 +121,68 @@ as a **separate agent alongside** Stage 2+, BUT it needs *hardware* verification
 (not headless/logic-only), so it does not fit the "sonnet parallel = logic-only"
 rule — treat as a serial/owner-verified track. Battles stay **silent** until then.
 
-## Handoff
-(empty — fill as stages complete)
+## Handoff — resume here (2026-06-27)
+
+**Branches/commits.** Wave 1 backend is MERGED to `master` (`750d4b57`). Wave 2 is on
+**`wave2-battle-frontend`** (off master), pushed. Key commits:
+- `793c5db3` plan + sign-offs · `cee290d3`/`86ff4c69` layout decision (widescreen →
+  refined to centered-baseline-then-iterate)
+- `065872de` Stage 0: battle WRAM aliases + `InitBattleVariables`
+- `d5077677` Stage 0.5: centered battle render mode + `DEBUG_BATTLE` harness
+- `899c7e93` `DEBUG_BATTLE_LIVE` (hold screen for inspection)
+
+**What's built & WORKING (ground-truth verified):**
+- `src/engine/battle/init_battle_variables.asm` — faithful `InitBattleVariables`
+  (WRAM clears; audio call left as `; TODO-HW`). Linked via `FRONTEND_SRCS`.
+- `src/engine/battle/init_battle.asm` — **minimal placeholder** `InitBattle`:
+  `InitBattleVariables` → `wIsInBattle=1` → `ClearSprites` → builds a full-frame
+  `TextBoxBorder` in `W_TILEMAP` (20×18) → copies 20×18 to `GB_TILEMAP1` (32-stride)
+  → `set_single_window` centered (wx=80, wy=28, clip=160, max_y=172).
+- `src/video/frame.asm` — DelayFrame now: while `wIsInBattle`, calls
+  `clear_backbuffer_battle` (fills `GB_BACKBUF` with shade 0) **instead of**
+  `render_bg`, so the overworld isn't behind the battle. Overworld path unchanged
+  (verified byte-identical Pallet Town via `DEBUG_BASELINE`).
+- `DEBUG_BATTLE` (dump 1 frame + exit) / `DEBUG_BATTLE_LIVE` (loop, Esc quits) in
+  `debug_dump.asm:RunBattleTest`, hooked in `overworld.asm` EnterMap, Makefile flags.
+
+**CURRENT VISUAL STATE (what the user saw, and why):** only the centered ~160×144
+region shows content (a placeholder box, shades 1/2 borders); everything else is
+blank shade-0. This is the intended Stage-0.5 PLACEHOLDER, not a real battle — there
+is no HUD/sprites/text yet. `DEBUG_BATTLE` (non-live) also *exits to DOS* after one
+frame by design (looked like a crash). Use `DEBUG_BATTLE_LIVE` to inspect.
+
+**Verified non-issues (don't re-investigate):**
+- Assets are NOT stale: a forced `make -B assets` changed only 2 header-comment
+  lines/file; data identical; overworld render byte-for-byte unchanged. Reverted.
+- The host image viewer serves STALE cached PNGs — it caused multiple phantom
+  "overworld still showing" diagnoses. **Verify FRAME.BIN via byte/pixel histograms,
+  not the rendered image** (see memory `frame-bin-image-viewer-unreliable`). The user
+  does the real visual gate on their own display.
+
+**USER NOTE to apply in Stage 1 (2026-06-27):** "Before the battle screen is drawn,
+pret blanks the ENTIRE screen." pret's battle init does a full screen/VRAM clear +
+loads battle tile patterns before drawing. Our per-frame `clear_backbuffer_battle`
+approximates the blank, but Stage 1 should mirror pret's init order: clear the whole
+`W_TILEMAP` (40×25, not just the 20×18 region) + load HP-bar/battle tiles, THEN draw
+the HUD. Consider clearing `W_TILEMAP` fully in `InitBattle` so stale tiles never
+linger, and confirm the blank covers the full widescreen, not only the centered box.
+
+**NEXT — Stage 1 (real HUD), still per the centered-baseline-then-iterate decision:**
+1. In `InitBattle`, replace the placeholder full-frame box with the real battle
+   layout: full-screen blank first (per the user note), then enemy HUD (top-left:
+   name/`:L`level/HP bar/status) + player HUD (bottom-right: + HP number) using
+   `LoadHpBarAndStatusTilePatterns` and pret's `DrawEnemyHUDAndHPBar` /
+   `DrawPlayerHUDAndHPBar` as references — built at GB coords, centered.
+2. Each placement = propose coords → `DEBUG_BATTLE` FRAME.BIN → user sign-off →
+   record as `; PROJ` tag + `docs/ui_projection.md` entry. Then iterate elements
+   outward into the widescreen margins with the user.
+3. Then mon pics (Stage 1c): port `pkmncompress` decode + pic load (user chose real
+   pics, not placeholders).
+
+**Build/run:**
+```
+make -C dos_port DEBUG_BATTLE_LIVE=1 && dos_port/run     # inspect live (Esc quits)
+make -C dos_port DEBUG_BATTLE=1                          # dump FRAME.BIN + exit
+python3 dos_port/tools/render_frame.py dos_port/FRAME.BIN out.png
+# clean-build trap: `make clean` leaves src/{debug,engine/debug}/*.o — rm before switching DEBUG_* flags
+```
