@@ -475,8 +475,13 @@ commit but too specific to belong in TODO.md.
   (`UseItem_`/`ItemUsePtrTable`) deferred (battle/UI-coupled).
 - `docs/current_plan_battle_engine.md` — battle backend (damage pipeline, type
   data, move category/effect data, hit/accuracy, stat stages, wild-encounter gen).
-  Backend logic + data largely landed; the front end (main battle loop, AI scoring,
-  status residual damage, HUD/animations) is deferred for manual verification.
+  **Backend complete** (Wave 1, branch `wave1-battle-backend`): + trainer AI,
+  status residual, EXP math, `JumpMoveEffect` dispatch — all native-validated,
+  BATTLE_SRCS check-only. Deferred: trainer-party data generator + `AddBCDPredef`.
+- `docs/current_plan_battle_frontend.md` — Wave-2 battle front end (HUD, turn loop,
+  wild + trainer battles). The keystone manual-verification milestone: validated by
+  FRAME.BIN / interactive DOSBox-X `DEBUG_BATTLE_*` builds, staged for per-step user
+  sign-off. Planning/sign-off stage (no battle UI code written yet).
 - `docs/current_plan_pokemon_ui.md` — couple the (harness-validated) pokemon/items
   data layers to the overworld START menu. ITEM (bag) + POKéMON (party w/ HP bars,
   status, animated icons) screens done; item USE + the real new-game/Oak-gift data
