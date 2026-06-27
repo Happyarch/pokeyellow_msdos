@@ -2800,3 +2800,21 @@ ModifyPikachuHappiness, PrintStatsBox, WaitForTextScrollButtonPress,
 Save/LoadScreenTilesFromBuffer1, PrintEmptyString, LearnMoveFromLevelUp, and the
 CallBattleCore targets (CalculateModifiedStats, ApplyBurnAndParalysisPenalties-
 ToPlayer, ApplyBadgeStatBoosts, DrawPlayerHUDAndHPBar). BATTLE_SRCS check-only.
+
+### Trainer AI + read_trainer_party — `src/engine/battle/{trainer_ai,read_trainer_party}.asm` (task 3)
+trainer_ai.asm: AIEnemyTrainerChooseMoves, AIMoveChoiceModification1/2/3/4 +
+AIMoveChoiceModificationFunctionPointers (flat dd), TrainerClassMoveChoiceModifications,
+StatusAilmentMoveEffects, ReadMove, TrainerAI/TrainerAIPointers (dd 5B/entry vs pret
+dbw), AICheckIfHPBelowFraction/AICureStatus/DecrementAICount; AIUseX*/AIRecoverHP/
+switch actions with UI parts stubbed as local no-ops. SM83 `ret z/nz`→`jnz/jz+ret`;
+`~(1<<BADLY_POISONED)` byte mask. **AUDIT (orchestrator): the draft's item-id equs
+were WRONG** (SUPER_POTION/FULL_RESTORE/GUARD_SPEC/DIRE_HIT/X_* off); replaced with
+correct constants/item_constants.asm values in gb_constants.inc (X_ACCURACY_ITEM→
+X_ACCURACY). read_trainer_party.asm: ReadTrainer — link-battle skip, flat/special
+level blob parse, SpecialTrainerMoves override loop, prize-money via AddBCDPredef
+(stubbed). Both native-validated (7/7 + 3/3; item-use branches not exercised — hence
+the audit). BATTLE_SRCS check-only. DEFERRED (reported): `TrainerDataPointers` +
+`SpecialTrainerMoves` need a `tools/gen_trainer_parties.py` generator + a
+battle_data global; `AddBCDPredef` needs the predef BCD adder. Aliases added:
+12 WRAM (wAICount/wAIItem/wBuffer/wEnemyMon1*/wTrainer*/…) + EFFECT_01/
+XSTATITEM_DUPLICATE_ANIM/NUM_TRAINERS + 10 item ids.

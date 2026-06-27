@@ -164,6 +164,24 @@ BURN_PSN_ANIM          equ 0xBA    ; battle anim shown on burn/poison residual
 PIKAHAPPY_LEVELUP      equ 1       ; constants/pikachu_emotion_constants.asm
 LEVEL_UP_STATS_BOX     equ 1       ; constants/menu_constants.asm (STATUS_SCREEN=0)
 
+; --- trainer AI (src/engine/battle/trainer_ai.asm) ---
+EFFECT_01              equ 0x01    ; unused sleep effect (StatusAilmentMoveEffects)
+XSTATITEM_DUPLICATE_ANIM equ 0xAF  ; constants/move_constants.asm line 189
+NUM_TRAINERS           equ 47      ; trainer_constants.asm (LANCE = 0x2F)
+
+; --- item ids used by trainer-AI item use (constants/item_constants.asm) ---
+; (HYPER_POTION=0x12 / FULL_HEAL=0x34 already defined above)
+FULL_RESTORE           equ 0x10
+SUPER_POTION           equ 0x13
+POTION                 equ 0x14
+X_ACCURACY             equ 0x2E
+GUARD_SPEC             equ 0x37
+DIRE_HIT               equ 0x3A
+X_ATTACK               equ 0x41
+X_DEFEND               equ 0x42
+X_SPEED                equ 0x43
+X_SPECIAL              equ 0x44
+
 ; --- wild encounter constants (constants/pokemon_data_constants.asm) ---
 NUM_WILDMONS            equ 10
 WILDDATA_LENGTH         equ 1 + NUM_WILDMONS * 2   ; = 21 (rate + 10×(level,species))

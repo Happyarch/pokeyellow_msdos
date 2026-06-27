@@ -404,6 +404,19 @@ wEnemyToxicCounter     equ 0xD070
 ; GainExperience (src/engine/battle/experience.asm)
 wPlayerID              equ 0xD358   ; word (player trainer id)
 wCalculateWhoseStats   equ 0xD11D   ; = wTempByteValue (union)
+; trainer AI + read_trainer_party (src/engine/battle/trainer_ai.asm, read_trainer_party.asm)
+wAILayer2Encouragement equ 0xCCD5
+wAICount               equ 0xCCDF
+wBuffer                equ 0xCEE9   ; (union wHPBarMaxHP, 30B scratch)
+wAIItem                equ 0xCF05
+wTrainerBaseMoney      equ 0xD045   ; word, BCD
+wLoneAttackNo          equ 0xD05B
+wTrainerNo             equ 0xD05C
+wAmountMoneyWon        equ 0xD078   ; 3 bytes, BCD
+wFirstMonsNotOutYet    equ 0xD11C
+wEnemyMon1HP           equ 0xD8A4
+wEnemyMon1Status       equ 0xD8A7
+wEnemyMon1Moves        equ 0xD8AB
 
 ; --- HP-bar update scratch (UpdateHPBar / used by drain_hp etc.) — sym-pinned ---
 wHPBarMaxHP            equ 0xCEE9   ; word

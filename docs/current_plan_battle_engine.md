@@ -111,12 +111,19 @@ Authoritative addresses: `git show origin/symbols:pokeyellow.sym` (bank:addr).
   Stage-7 item left is the inline turn-order speed compare, which lives in the
   deferred main battle loop (Wave 2), so this stage is closed for the backend.
 
-- [~] **Stage 8 — Trainer AI backend.** `AIGetTypeEffectiveness` done in
+- [x] **Stage 8 — Trainer AI backend.** `AIGetTypeEffectiveness` done in
   core_damage.asm (single-type effectiveness vs the player mon → wTypeEffectiveness;
   preserves the faithful `$10`-init bug and the Lorelei/Dewgong 40%-ignore case).
   Native-validated (WATER→FIRE=20, NORMAL→GRASS=16 [the bug], GROUND→FLYING=0,
-  GRASS→WATER=20). REMAINING: the AI move-scoring layer (`AIMoveChoiceModification*`,
-  trainer-class AI pointers) and `read_trainer_party.asm`.
+  GRASS→WATER=20). The AI move-scoring layer (`AIMoveChoiceModification1/2/3/4` +
+  the flat dispatch table, `ReadMove`, `TrainerAI`, helpers) and
+  `read_trainer_party.asm` are done + native-validated (Wave-1 task 3; 7/7 + 3/3) in
+  `src/engine/battle/trainer_ai.asm` / `read_trainer_party.asm` (BATTLE_SRCS,
+  check-only). **Orchestrator audit fixed wrong draft item-ids** (now correct in
+  gb_constants.inc). DEFERRED to Wave 2/3: the trainer party DATA tables
+  (`TrainerDataPointers`/`SpecialTrainerMoves` — need a `tools/gen_trainer_parties.py`
+  generator + a battle_data global) and `AddBCDPredef` (predef BCD adder for prize
+  money). The AI item-use / send-out / SFX paths are stubbed UI (Wave 2).
 
 - [x] **Stage 9 — Wild-encounter generation.** DONE. New generator
   `tools/gen_wild_encounters.py` → `assets/wild_data.inc`: `WildDataPointers`

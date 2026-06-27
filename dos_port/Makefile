@@ -213,7 +213,9 @@ BATTLE_SRCS := \
     src/data/wild_data.asm \
     src/engine/overworld/wild_mons.asm \
     src/engine/battle/wild_encounters.asm \
-    src/engine/battle/experience.asm
+    src/engine/battle/experience.asm \
+    src/engine/battle/trainer_ai.asm \
+    src/engine/battle/read_trainer_party.asm
 # experience.asm (GainExperience) is in BATTLE_SRCS (check-only) — assembles +
 # native-validated, but stays out of LINK_SRCS until Wave 2 supplies its deferred
 # UI/display externs (PrintText, PrintStatsBox, the CallBattleCore targets, …).
