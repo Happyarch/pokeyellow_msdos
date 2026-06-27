@@ -2731,3 +2731,116 @@ BATTLE_SRCS; `make check` + full `SKIP_TITLE=1` link clean.
 
 **Move data layer plan (`docs/current_plan_moves.md`) complete** — archived to
 `docs/plans/moves.md`.
+
+---
+
+## Wave 1 — Unblocked Backend (headless, native-ELF32-validated)
+
+Branch `wave1-battle-backend`. Parallel sonnet subagents authored each dedicated
+.asm + native harness; orchestrator (opus) audited + integrated serially.
+
+### Bill's PC box logic — `src/engine/pokemon/bills_pc.asm` (task 1)
+Faithful port of pret `engine/pokemon/bills_pc.asm`: `KnowsHMMove`,
+`BillsPCDepositLogic` (fail if party≤1 / box full → `_MoveMon` PARTY_TO_BOX +
+`_RemovePokemon` from party), `BillsPCWithdrawLogic` (fail if box empty / party
+full → `_MoveMon` BOX_TO_PARTY [CalcStats recompute] + `_RemovePokemon` from box),
+`BillsPCReleaseLogic`. Audit vs draft: externs corrected `MoveMon`/`RemovePokemon`
+→ `_MoveMon`/`_RemovePokemon`; `push/pop bx`→`ebx`; redundant local %defines
+dropped for the gb_constants includes; a local `IsInArray` added (array.asm lacks
+it). Gen-2 forward-compat: MON_CATCH_RATE (offset 7) preserved by deposit (copies
+33B verbatim) and withdraw (CalcStats starts at MON_STATS=$22) — verified in
+harness. Native ELF32: 24/24 assertions (HM detection, deposit/withdraw/release
+success+fail paths, counts, species list, offset-7 retention). **Check-only**
+(POKEMON_CHECK_SRCS): not linked — needs a link-ready `_MoveMon` (the `add_mon.asm`
+draft has a duplicate `AddPartyMon_WriteMovePP` + extern-constant errors). PC menu
+UI deferred.
+
+### JumpMoveEffect dispatch seam — `src/engine/battle/effects.asm` (task 6)
+Faithful port of pret `engine/battle/effects.asm` (`JumpMoveEffect`/`_JumpMoveEffect`)
++ `data/moves/effects_pointers.asm` (`MoveEffectPointerTable`). Reads `hWhoseTurn`
+→ selects `wPlayerMoveEffect`/`wEnemyMoveEffect`, `dec`→×4 index into an 86-entry
+flat `dd` table, `jmp dword [esi]` tail-call (handler `ret` → `mov bh,1; ret`).
+pret `dw` (16-bit bank-relative) → `dd` (32-bit flat); index ×2 → ×4. A NASM `%if`
+arity guard `%fatal`s on table drift from 86 entries. 14 handlers wired
+(StatModifierUp/Down, PayDay_, Conversion_, Haze_, OneHitKO_, Mist_, FocusEnergy_,
+Recoil_, Heal_, Paralyze_, LeechSeed_, + DrainHP_ at $03/$08 after promoting
+`DrainHPEffect_` to `global` in drain_hp.asm); the remaining ~72 effects route to a
+shared `UnportedMoveEffect` no-op (header lists each + its pret handler for Wave 2).
+Native ELF32: 17/17 dispatch tests (index math, player/enemy path, first/last
+boundary, BH=1 postcondition, Unported no-clobber). BATTLE_SRCS (check-only, not
+linked until the Wave-2 loop calls it).
+
+### Residual damage — `src/engine/battle/residual_damage.asm` (task 2)
+Faithful port of pret `engine/battle/core.asm` `HandlePoisonBurnLeechSeed`
+(+`_DecreaseOwnHP`/`_IncreaseEnemyHP`). End-of-turn Poison/Burn = 1/16 maxHP
+(min 1); Toxic multiplies by an escalating counter; Leech Seed drains the seeded
+mon and heals the opposing mon (overheal clamped to maxHP). Two pret glitches
+carried (no BUG_FIX_LEVEL guard, neither independently fixable): the Leech-Seed +
+Toxic counter interaction (counter bumped per DecreaseOwnHP call, incl. the Leech
+path) and the overkill heal (BX uncapped when HP < drain). Deferred UI externs
+(stubbed in the harness): PrintText, PlayMoveAnimation, DrawHUDsAndHPBars,
+DelayFrames, UpdateCurMonHPBar (must preserve BX), HurtBy{Poison,Burn,LeechSeed}Text.
+Aliases added in PREP: wAnimationType/wPlayerToxicCounter/wEnemyToxicCounter,
+ABSORB/BURN_PSN_ANIM. Native ELF32: 10/10 (poison/burn 1/16+min-1, toxic
+escalation, overkill, leech drain+heal, overheal clamp, faint/alive flags, 16-bit
+maxHP, enemy-turn heal). BATTLE_SRCS check-only.
+
+### GainExperience — `src/engine/battle/experience.asm` (task 4)
+Audited + fixed the battle-side EXP draft (NOT the pokemon-side CalcExperience,
+which was already done). 10 fixes vs the swarm draft: hExperience→H_EXPERIENCE;
+wPlayerID/wCalculateWhoseStats added to includes; PIKAHAPPY_LEVELUP/
+LEVEL_UP_STATS_BOX defined; FlagActionPredef→FlagAction at all 4 sites (the predef
+variant clobbers ESI via GetPredefRegisters); `dec esi`→`sub esi,2` in the max-EXP
+overwrite path (reach the high byte at MON_EXP, not the middle); CopyData dest is
+EDX not EDI; CallBattleCore `call BattleCore`→`call esi; ret` (flat function-pointer
+dispatch); full extern decls. Headless math (stat-exp gain w/ 0xFFFF cap, exp award
+×baseExp×level/7, BoostExp ×1.5, DivideExpDataByNumMonsGainingExp) native-validated
+6/6. Deferred Wave-2 externs: PrintText, GetPartyMonName, LoadMonData,
+ModifyPikachuHappiness, PrintStatsBox, WaitForTextScrollButtonPress,
+Save/LoadScreenTilesFromBuffer1, PrintEmptyString, LearnMoveFromLevelUp, and the
+CallBattleCore targets (CalculateModifiedStats, ApplyBurnAndParalysisPenalties-
+ToPlayer, ApplyBadgeStatBoosts, DrawPlayerHUDAndHPBar). BATTLE_SRCS check-only.
+
+### Trainer AI + read_trainer_party — `src/engine/battle/{trainer_ai,read_trainer_party}.asm` (task 3)
+trainer_ai.asm: AIEnemyTrainerChooseMoves, AIMoveChoiceModification1/2/3/4 +
+AIMoveChoiceModificationFunctionPointers (flat dd), TrainerClassMoveChoiceModifications,
+StatusAilmentMoveEffects, ReadMove, TrainerAI/TrainerAIPointers (dd 5B/entry vs pret
+dbw), AICheckIfHPBelowFraction/AICureStatus/DecrementAICount; AIUseX*/AIRecoverHP/
+switch actions with UI parts stubbed as local no-ops. SM83 `ret z/nz`→`jnz/jz+ret`;
+`~(1<<BADLY_POISONED)` byte mask. **AUDIT (orchestrator): the draft's item-id equs
+were WRONG** (SUPER_POTION/FULL_RESTORE/GUARD_SPEC/DIRE_HIT/X_* off); replaced with
+correct constants/item_constants.asm values in gb_constants.inc (X_ACCURACY_ITEM→
+X_ACCURACY). read_trainer_party.asm: ReadTrainer — link-battle skip, flat/special
+level blob parse, SpecialTrainerMoves override loop, prize-money via AddBCDPredef
+(stubbed). Both native-validated (7/7 + 3/3; item-use branches not exercised — hence
+the audit). BATTLE_SRCS check-only. DEFERRED (reported): `TrainerDataPointers` +
+`SpecialTrainerMoves` need a `tools/gen_trainer_parties.py` generator + a
+battle_data global; `AddBCDPredef` needs the predef BCD adder. Aliases added:
+12 WRAM (wAICount/wAIItem/wBuffer/wEnemyMon1*/wTrainer*/…) + EFFECT_01/
+XSTATITEM_DUPLICATE_ANIM/NUM_TRAINERS + 10 item ids.
+
+### Evolution + level-up move learning — `src/engine/pokemon/evolution.asm` (task 5)
+Authored by the (killed) sonnet subagent; completed + audited + validated by the
+orchestrator. Routines: TryEvolvingMon, EvolutionAfterBattle, EvolveMon (UI stub),
+RenameEvolvedMon, CancelledEvolution, LearnMoveFromLevelUp, GetMonLearnset_Evo[_BlobStart].
+**Orchestrator fixes:**
+1. Include paths `dos_port/include/...` → `gb_memmap.inc`/`gb_constants.inc` (the
+   documented swarm bug; only "assembled" before because it was tested from repo root).
+2. **Real flag bug in LearnMoveFromLevelUp**: `cmp al,bh` (level match) was followed
+   by `mov al,[esi]` + `inc esi` before `jne` — x86 `inc` clobbers ZF (SM83 `inc hl`
+   does not), so the level compare was destroyed and NO move was ever learned. Fixed
+   `inc esi`→`lea esi,[esi+1]` (flags-preserving). This was the killed agent's
+   unresolved "Test 5" failure (its own harness also linked a STUB EvosMovesPointerTable,
+   masking the data path).
+3. Exported GetMonLearnset_Evo_BlobStart (global) for reuse/validation.
+**Native ELF32 (real pokemon_data.o table, 3/3):** GetMonLearnset_Evo_BlobStart(Bulbasaur
+=0x99) → evo entry [EVOLVE_LEVEL,16,IVYSAUR=0x09] (i.e. Bulbasaur L16→Ivysaur);
+GetMonLearnset_Evo → learnset start [7,LEECH_SEED]; LearnMoveFromLevelUp@L13 → Vine Whip
+written to the empty slot.
+**KNOWN BUG deferred to Wave 2 (documented in-file):** EvolutionAfterBattle's
+evolution-success path has a stack imbalance (double-pop consumes the function-saved
+DE; species write uses a wrong pointer). It only triggers on an actual evolution,
+which needs the deferred deps (FlagActionPredef/LoadMonData_/CalcStats) — so it's
+unvalidated and must be fixed+validated end-to-end in Wave 2.
+POKEMON_CHECK_SRCS (check-only): evolution depends on GetName (check-only names.asm),
+FlagActionPredef, and pikachu, so it isn't linked into the EXE yet.

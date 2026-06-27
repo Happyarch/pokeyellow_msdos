@@ -204,15 +204,21 @@ BATTLE_SRCS := \
     src/engine/battle/move_effects/recoil.asm \
     src/engine/battle/move_effects/reflect_light_screen.asm \
     src/engine/battle/stat_mod_effects.asm \
+    src/engine/battle/effects.asm \
     src/engine/battle/building_rage.asm \
+    src/engine/battle/residual_damage.asm \
     src/engine/battle/get_current_move.asm \
     src/engine/battle/move_category.asm \
     src/engine/battle/animations.asm \
     src/data/wild_data.asm \
     src/engine/overworld/wild_mons.asm \
-    src/engine/battle/wild_encounters.asm
-# experience.asm is intentionally NOT listed: it depends on the deferred
-# level-up/EXP subsystem + battle UI and is not yet linkable (see its header).
+    src/engine/battle/wild_encounters.asm \
+    src/engine/battle/experience.asm \
+    src/engine/battle/trainer_ai.asm \
+    src/engine/battle/read_trainer_party.asm
+# experience.asm (GainExperience) is in BATTLE_SRCS (check-only) — assembles +
+# native-validated, but stays out of LINK_SRCS until Wave 2 supplies its deferred
+# UI/display externs (PrintText, PrintStatsBox, the CallBattleCore targets, …).
 
 # Debug-only sources (linked only when the corresponding flag is set).
 # Any debug flag implies SKIP_TITLE — debug harnesses boot straight to the overworld.
@@ -325,9 +331,20 @@ endif
 LINK_SRCS := $(BOOT_SRCS) $(HOME_SRCS) $(HAL_SRCS) $(GAME_SRCS) $(POKEMON_SRCS) $(ITEMS_SRCS)
 LINK_OBJS := $(LINK_SRCS:.asm=.o)
 
+# Pokémon backend that assembles + is native-harness-validated but is NOT linked
+# yet. bills_pc needs a link-ready _MoveMon (the draft in add_mon.asm has a
+# duplicate AddPartyMon_WriteMovePP symbol + extern-constant errors and an
+# unresolved dependency closure). evolution depends on GetName (check-only
+# names.asm) / FlagActionPredef / pikachu — and its EvolutionAfterBattle party
+# loop has a known stack bug (see the file) to fix+validate in Wave 2; its
+# headless decision path + LearnMoveFromLevelUp are native-validated now.
+POKEMON_CHECK_SRCS := \
+    src/engine/pokemon/bills_pc.asm \
+    src/engine/pokemon/evolution.asm
+
 # ALL_SRCS = everything that must assemble cleanly (check) and be cleaned, incl.
-# the not-yet-linked battle backend.
-ALL_SRCS := $(LINK_SRCS) $(BATTLE_SRCS)
+# the not-yet-linked battle backend + check-only pokemon backend.
+ALL_SRCS := $(LINK_SRCS) $(BATTLE_SRCS) $(POKEMON_CHECK_SRCS)
 ALL_OBJS := $(ALL_SRCS:.asm=.o)
 
 # ---------------------------------------------------------------------------

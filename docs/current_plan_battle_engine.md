@@ -88,16 +88,15 @@ Authoritative addresses: `git show origin/symbols:pokeyellow.sym` (bank:addr).
     `get_trainer_name.asm`.
   - **`decrement_pp.asm` — rewrote, 2 bugs fixed**: missing gb_constants include;
     AddNTimes stride in CX instead of BX (helper reads BX).
-  - **`experience.asm` — 6 mechanical bugs fixed (sbc→sbb ×3, cx→bx ×3) but
-    NOT wired/validated**: deeply coupled to the deferred level-up/EXP subsystem
-    + battle UI (CalcExperience, CalcLevelFromExperience, LearnMoveFromLevelUp,
-    PrintStatsBox, FlagActionPredef, …) and lacks extern decls. Left out of
-    BATTLE_SRCS; revisit when that subsystem exists.
+  - **`experience.asm` (GainExperience) — DONE (Wave-1 task 4):** fully audited,
+    10 bugs fixed, native-validated (6/6 headless math), wired into BATTLE_SRCS
+    (check-only). See translation_log for the fix list. Wave-2 deferred externs are
+    declared; stays out of LINK_SRCS until the battle front end provides them.
   NOTE: BATTLE_SRCS assembles (`make check`) but does not yet *link* into the EXE
   — the move-effects call deferred UI/animation/text routines. That's expected;
   the front end is deferred per the user.
 
-- [~] **Stage 7 — Status + turn helpers.** `ApplyBurnAndParalysisPenalties(ToPlayer/
+- [x] **Stage 7 — Status + turn helpers.** `ApplyBurnAndParalysisPenalties(ToPlayer/
   ToEnemy)`, `QuarterSpeedDueToParalysis`, `HalveAttackDueToBurn` done in
   `src/engine/battle/status_penalties.asm` and **native-validated** (Spd 200→50,
   2→1 min-clamp, Atk 100→50, unstatused 300→unchanged). These resolve the
@@ -106,16 +105,25 @@ Authoritative addresses: `git show origin/symbols:pokeyellow.sym` (bank:addr).
   is under Rage it flips hWhoseTurn, injects a null move + ATTACK_UP1_EFFECT, runs
   `StatModifierUpEffect` (Stage 5), then restores the Rage move — **native-validated**
   end to end (raging → Atk mod 7→8 / stat 100→150 / move restored to RAGE; no-op when
-  not raging or already at +6). REMAINING: residual poison/burn/leech-seed damage
-  (`HandlePoisonBurnLeechSeed`, HUD-coupled) and the inline turn-order speed compare
-  (in the deferred main battle loop).
+  not raging or already at +6). Residual poison/burn/leech-seed damage
+  (`HandlePoisonBurnLeechSeed`, `src/engine/battle/residual_damage.asm`) is now done
+  + native-validated (10/10; both pret glitches carried) — Wave-1 task 2. The only
+  Stage-7 item left is the inline turn-order speed compare, which lives in the
+  deferred main battle loop (Wave 2), so this stage is closed for the backend.
 
-- [~] **Stage 8 — Trainer AI backend.** `AIGetTypeEffectiveness` done in
+- [x] **Stage 8 — Trainer AI backend.** `AIGetTypeEffectiveness` done in
   core_damage.asm (single-type effectiveness vs the player mon → wTypeEffectiveness;
   preserves the faithful `$10`-init bug and the Lorelei/Dewgong 40%-ignore case).
   Native-validated (WATER→FIRE=20, NORMAL→GRASS=16 [the bug], GROUND→FLYING=0,
-  GRASS→WATER=20). REMAINING: the AI move-scoring layer (`AIMoveChoiceModification*`,
-  trainer-class AI pointers) and `read_trainer_party.asm`.
+  GRASS→WATER=20). The AI move-scoring layer (`AIMoveChoiceModification1/2/3/4` +
+  the flat dispatch table, `ReadMove`, `TrainerAI`, helpers) and
+  `read_trainer_party.asm` are done + native-validated (Wave-1 task 3; 7/7 + 3/3) in
+  `src/engine/battle/trainer_ai.asm` / `read_trainer_party.asm` (BATTLE_SRCS,
+  check-only). **Orchestrator audit fixed wrong draft item-ids** (now correct in
+  gb_constants.inc). DEFERRED to Wave 2/3: the trainer party DATA tables
+  (`TrainerDataPointers`/`SpecialTrainerMoves` — need a `tools/gen_trainer_parties.py`
+  generator + a battle_data global) and `AddBCDPredef` (predef BCD adder for prize
+  money). The AI item-use / send-out / SFX paths are stubbed UI (Wave 2).
 
 - [x] **Stage 9 — Wild-encounter generation.** DONE. New generator
   `tools/gen_wild_encounters.py` → `assets/wild_data.inc`: `WildDataPointers`
@@ -183,8 +191,12 @@ introduce no symbol collisions in existing pokemon/items/menu/home/battle files.
 ## What remains (all UI- or subsystem-coupled — deferred per the user)
 
 - The main battle loop / turn flow (`MainInBattle`, `ExecutePlayerMove`/
-  `ExecuteEnemyMove`, move-effect dispatch `JumpMoveEffect`) — interleaved with
-  text/animation; this is the front end's backbone.
+  `ExecuteEnemyMove`) — interleaved with text/animation; this is the front end's
+  backbone.
+- ~~move-effect dispatch `JumpMoveEffect`~~ — **DONE** (Wave 1, `src/engine/battle/
+  effects.asm`): 86-entry `dd` `MoveEffectPointerTable`, 14 handlers wired, the rest
+  → `UnportedMoveEffect` stub (header lists each + pret handler). Native-validated
+  (17/17 dispatch). Check-only until the Wave-2 loop calls it.
 - `CheckTargetSubstitute`, HP-bar update, HUD draw (UI).
 - ~~`GetCurrentMove` move-record load~~ — **DONE** (backend core,
   `src/engine/battle/get_current_move.asm`): flat `Moves`-table → wPlayerMove* /
@@ -192,8 +204,12 @@ introduce no symbol collisions in existing pokemon/items/menu/home/battle files.
   validated (player/enemy/test paths exact). Only the `GetMoveName` name tail
   (wNameListIndex → UI) remains deferred. Unblocks the AI move-scoring (`ReadMove`).
 - Status residual damage (`HandlePoisonBurnLeechSeed`). (`HandleBuildingRage` is now done.)
-- `experience.asm` (mechanical bugs fixed; needs the level-up/EXP subsystem to link).
+- ~~`experience.asm` (GainExperience)~~ — **DONE** (Wave-1 task 4): 10 bugs fixed,
+  native-validated (6/6), wired into BATTLE_SRCS. Only LINK_SRCS wiring remains
+  (Wave 2, when the UI externs exist).
 - AI move-scoring (`AIMoveChoiceModification*`), `read_trainer_party.asm`.
-- Wild-encounter generation (`TryDoWildEncounter`) — needs per-map encounter data tables.
+- ~~Wild-encounter generation (`TryDoWildEncounter`)~~ — **DONE** (Stage 9): generator
+  + `LoadWildData`/`TryDoWildEncounter` native-validated; only the overworld step
+  trigger (the consumer) remains deferred.
 </content>
 </invoke>
