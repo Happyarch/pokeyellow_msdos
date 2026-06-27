@@ -184,10 +184,14 @@ then Stage 6: write a Moves-table generator (`gen_moves.py`, unblocks real PP in
     = species name (the non-UI outcome of `AskName`); the interactive naming screen
     is the deferred UI stub (marked in `add_party_mon.asm:.nickCopy`). Validated:
     gift Bulbasaur nickname = "BULBASAUR".
-  - [ ] DEFERRED (UI-coupled): evolution flow (`TryEvolvingMon`/`EvolveMon`/
-    `LearnMoveFromLevelUp` — data logic portable, but evolution text/animation and
-    the "forget which move?" menu are UI), the interactive naming screen, and
-    `bills_pc.asm` (box deposit/withdraw/release logic portable; the PC menu is UI).
+  - [~] Box/evolution logic (Wave 1):
+    - [x] `bills_pc.asm` box deposit/withdraw/release — done + native-validated
+      (24/24, incl. Gen-2 offset-7). **Check-only** (POKEMON_CHECK_SRCS): not linked
+      until a link-ready `_MoveMon` is extracted from the broken `add_mon.asm` draft
+      (dup `AddPartyMon_WriteMovePP` + extern-constant errors). PC menu UI deferred.
+    - [ ] evolution flow (`TryEvolvingMon`/`EvolveMon`/`LearnMoveFromLevelUp`) — Wave-1
+      task 5 in progress (data logic; evo text/animation + "forget which move?" menu UI).
+    - [ ] interactive naming screen (UI).
 
 ## What exists vs. needs writing (from exploration)
 - **Exists (drafted, unwired):** `experience.asm`, `set_types.asm`,

@@ -8,6 +8,7 @@ extern DrawEnemyHUDAndHPBar
 extern ReadPlayerMonCurHPAndStatus
 extern PrintText
 
+global DrainHPEffect_
 DrainHPEffect_:
 	mov esi, wDamage
 	mov al, [ebp + esi]

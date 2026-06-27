@@ -183,8 +183,12 @@ introduce no symbol collisions in existing pokemon/items/menu/home/battle files.
 ## What remains (all UI- or subsystem-coupled — deferred per the user)
 
 - The main battle loop / turn flow (`MainInBattle`, `ExecutePlayerMove`/
-  `ExecuteEnemyMove`, move-effect dispatch `JumpMoveEffect`) — interleaved with
-  text/animation; this is the front end's backbone.
+  `ExecuteEnemyMove`) — interleaved with text/animation; this is the front end's
+  backbone.
+- ~~move-effect dispatch `JumpMoveEffect`~~ — **DONE** (Wave 1, `src/engine/battle/
+  effects.asm`): 86-entry `dd` `MoveEffectPointerTable`, 14 handlers wired, the rest
+  → `UnportedMoveEffect` stub (header lists each + pret handler). Native-validated
+  (17/17 dispatch). Check-only until the Wave-2 loop calls it.
 - `CheckTargetSubstitute`, HP-bar update, HUD draw (UI).
 - ~~`GetCurrentMove` move-record load~~ — **DONE** (backend core,
   `src/engine/battle/get_current_move.asm`): flat `Moves`-table → wPlayerMove* /

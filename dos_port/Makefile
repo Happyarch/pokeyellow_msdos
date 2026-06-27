@@ -204,6 +204,7 @@ BATTLE_SRCS := \
     src/engine/battle/move_effects/recoil.asm \
     src/engine/battle/move_effects/reflect_light_screen.asm \
     src/engine/battle/stat_mod_effects.asm \
+    src/engine/battle/effects.asm \
     src/engine/battle/building_rage.asm \
     src/engine/battle/get_current_move.asm \
     src/engine/battle/move_category.asm \
@@ -325,9 +326,16 @@ endif
 LINK_SRCS := $(BOOT_SRCS) $(HOME_SRCS) $(HAL_SRCS) $(GAME_SRCS) $(POKEMON_SRCS) $(ITEMS_SRCS)
 LINK_OBJS := $(LINK_SRCS:.asm=.o)
 
+# Pokémon backend that assembles + is native-harness-validated but is NOT linked
+# yet: bills_pc needs a link-ready _MoveMon (the draft in add_mon.asm has a
+# duplicate AddPartyMon_WriteMovePP symbol + extern-constant errors and an
+# unresolved dependency closure). Tracked for a follow-up MoveMon extraction.
+POKEMON_CHECK_SRCS := \
+    src/engine/pokemon/bills_pc.asm
+
 # ALL_SRCS = everything that must assemble cleanly (check) and be cleaned, incl.
-# the not-yet-linked battle backend.
-ALL_SRCS := $(LINK_SRCS) $(BATTLE_SRCS)
+# the not-yet-linked battle backend + check-only pokemon backend.
+ALL_SRCS := $(LINK_SRCS) $(BATTLE_SRCS) $(POKEMON_CHECK_SRCS)
 ALL_OBJS := $(ALL_SRCS:.asm=.o)
 
 # ---------------------------------------------------------------------------

@@ -2731,3 +2731,41 @@ BATTLE_SRCS; `make check` + full `SKIP_TITLE=1` link clean.
 
 **Move data layer plan (`docs/current_plan_moves.md`) complete** — archived to
 `docs/plans/moves.md`.
+
+---
+
+## Wave 1 — Unblocked Backend (headless, native-ELF32-validated)
+
+Branch `wave1-battle-backend`. Parallel sonnet subagents authored each dedicated
+.asm + native harness; orchestrator (opus) audited + integrated serially.
+
+### Bill's PC box logic — `src/engine/pokemon/bills_pc.asm` (task 1)
+Faithful port of pret `engine/pokemon/bills_pc.asm`: `KnowsHMMove`,
+`BillsPCDepositLogic` (fail if party≤1 / box full → `_MoveMon` PARTY_TO_BOX +
+`_RemovePokemon` from party), `BillsPCWithdrawLogic` (fail if box empty / party
+full → `_MoveMon` BOX_TO_PARTY [CalcStats recompute] + `_RemovePokemon` from box),
+`BillsPCReleaseLogic`. Audit vs draft: externs corrected `MoveMon`/`RemovePokemon`
+→ `_MoveMon`/`_RemovePokemon`; `push/pop bx`→`ebx`; redundant local %defines
+dropped for the gb_constants includes; a local `IsInArray` added (array.asm lacks
+it). Gen-2 forward-compat: MON_CATCH_RATE (offset 7) preserved by deposit (copies
+33B verbatim) and withdraw (CalcStats starts at MON_STATS=$22) — verified in
+harness. Native ELF32: 24/24 assertions (HM detection, deposit/withdraw/release
+success+fail paths, counts, species list, offset-7 retention). **Check-only**
+(POKEMON_CHECK_SRCS): not linked — needs a link-ready `_MoveMon` (the `add_mon.asm`
+draft has a duplicate `AddPartyMon_WriteMovePP` + extern-constant errors). PC menu
+UI deferred.
+
+### JumpMoveEffect dispatch seam — `src/engine/battle/effects.asm` (task 6)
+Faithful port of pret `engine/battle/effects.asm` (`JumpMoveEffect`/`_JumpMoveEffect`)
++ `data/moves/effects_pointers.asm` (`MoveEffectPointerTable`). Reads `hWhoseTurn`
+→ selects `wPlayerMoveEffect`/`wEnemyMoveEffect`, `dec`→×4 index into an 86-entry
+flat `dd` table, `jmp dword [esi]` tail-call (handler `ret` → `mov bh,1; ret`).
+pret `dw` (16-bit bank-relative) → `dd` (32-bit flat); index ×2 → ×4. A NASM `%if`
+arity guard `%fatal`s on table drift from 86 entries. 14 handlers wired
+(StatModifierUp/Down, PayDay_, Conversion_, Haze_, OneHitKO_, Mist_, FocusEnergy_,
+Recoil_, Heal_, Paralyze_, LeechSeed_, + DrainHP_ at $03/$08 after promoting
+`DrainHPEffect_` to `global` in drain_hp.asm); the remaining ~72 effects route to a
+shared `UnportedMoveEffect` no-op (header lists each + its pret handler for Wave 2).
+Native ELF32: 17/17 dispatch tests (index math, player/enemy path, first/last
+boundary, BH=1 postcondition, Unported no-clobber). BATTLE_SRCS (check-only, not
+linked until the Wave-2 loop calls it).
