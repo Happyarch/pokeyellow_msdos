@@ -86,6 +86,9 @@ extern PrepareNewGameDebug
 %ifdef DEBUG_PARTYMENU
 extern RunPartyMenuTest
 %endif
+%ifdef DEBUG_BATTLE
+extern RunBattleTest
+%endif
 %ifdef DEBUG_WALKSPEED
 extern DebugDumpMemory
 extern tick_count
@@ -339,6 +342,9 @@ EnterMap:
 %endif
 %ifdef DEBUG_PARTYMENU
     call RunPartyMenuTest                  ; seed party, open party screen, render one frame, dump FRAME.BIN, exits
+%endif
+%ifdef DEBUG_BATTLE
+    call RunBattleTest                     ; seed party+enemy, enter battle, render one frame, dump FRAME.BIN, exits
 %endif
 %ifdef DEBUG_WALKSPEED
     ; Live walk-speed instrumentation: boots normally into OverworldLoop so you can

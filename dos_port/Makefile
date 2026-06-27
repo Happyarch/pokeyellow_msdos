@@ -215,8 +215,7 @@ BATTLE_SRCS := \
     src/engine/battle/wild_encounters.asm \
     src/engine/battle/experience.asm \
     src/engine/battle/trainer_ai.asm \
-    src/engine/battle/read_trainer_party.asm \
-    src/engine/battle/init_battle_variables.asm
+    src/engine/battle/read_trainer_party.asm
 # experience.asm (GainExperience) is in BATTLE_SRCS (check-only) — assembles +
 # native-validated, but stays out of LINK_SRCS until Wave 2 supplies its deferred
 # UI/display externs (PrintText, PrintStatsBox, the CallBattleCore targets, …).
@@ -315,6 +314,14 @@ NASMFLAGS += -D DEBUG_PARTYMENU
 NASMFLAGS += -D SKIP_TITLE
 GAME_SRCS += src/engine/debug/debug_party.asm
 endif
+# Battle gate (Wave 2): seed party + a wild enemy, enter battle (InitBattle),
+# render one frame, dump FRAME.BIN, exit. make DEBUG_BATTLE=1
+ifdef DEBUG_BATTLE
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_BATTLE
+NASMFLAGS += -D SKIP_TITLE
+GAME_SRCS += src/engine/debug/debug_party.asm
+endif
 ifdef NEED_DEBUG_DUMP
 GAME_SRCS += src/debug/debug_dump.asm
 endif
@@ -329,7 +336,13 @@ endif
 # excluded: the battle backend depends on deferred UI/effect routines and does
 # not yet link (see the BATTLE_SRCS note above). It is still assembled by
 # `make check` and validated by native harnesses via ALL_SRCS below.
-LINK_SRCS := $(BOOT_SRCS) $(HOME_SRCS) $(HAL_SRCS) $(GAME_SRCS) $(POKEMON_SRCS) $(ITEMS_SRCS)
+# Battle front-end (Wave 2). These DO link (no unresolved externs) — unlike the
+# check-only BATTLE_SRCS backend. Grows per stage.
+FRONTEND_SRCS := \
+    src/engine/battle/init_battle_variables.asm \
+    src/engine/battle/init_battle.asm
+
+LINK_SRCS := $(BOOT_SRCS) $(HOME_SRCS) $(HAL_SRCS) $(GAME_SRCS) $(POKEMON_SRCS) $(ITEMS_SRCS) $(FRONTEND_SRCS)
 LINK_OBJS := $(LINK_SRCS:.asm=.o)
 
 # Pokémon backend that assembles + is native-harness-validated but is NOT linked

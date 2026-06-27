@@ -43,6 +43,14 @@ extern LoadFontTilePatterns
 extern DisplayPartyMenu
 global RunPartyMenuTest
 %endif
+%ifdef DEBUG_BATTLE
+extern PrepareNewGameDebug
+extern LoadFontTilePatterns
+extern LoadTextBoxTilePatterns
+extern InitBattle
+extern DelayFrame
+global RunBattleTest
+%endif
 
 global DebugDumpMemory
 global DumpBackbuffer
@@ -241,6 +249,30 @@ RunPartyMenuTest:
     or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     call DisplayPartyMenu
+.hang:
+    jmp .hang
+%endif
+
+%ifdef DEBUG_BATTLE
+; ---------------------------------------------------------------------------
+; RunBattleTest — seed party + a wild enemy, load font/textbox tiles, enter
+; battle (InitBattle), render one frame, and dump FRAME.BIN. Never returns.
+; Stage-0.5 gate: proves the centered battle render mode. In: EBP = GB base.
+; ---------------------------------------------------------------------------
+RunBattleTest:
+    mov byte [ebp + 0xD162], 0      ; wPartyCount = 0
+    mov byte [ebp + 0xD163], 0xFF   ; wPartySpecies sentinel
+    mov byte [ebp + 0xD31C], 0      ; wNumBagItems = 0
+    mov byte [ebp + 0xD31D], 0xFF   ; wBagItems sentinel
+    call PrepareNewGameDebug        ; seed party + bag (player mons for later stages)
+    mov byte [ebp + wEnemyMonSpecies], 0x99   ; placeholder wild enemy (Bulbasaur idx)
+    mov byte [ebp + wEnemyMonLevel], 5
+    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    call LoadFontTilePatterns
+    call LoadTextBoxTilePatterns
+    call InitBattle
+    call DelayFrame                 ; render the battle frame to the backbuffer
+    call DumpBackbuffer             ; dump FRAME.BIN + exit (never returns)
 .hang:
     jmp .hang
 %endif

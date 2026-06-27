@@ -64,7 +64,16 @@ DelayFrame:
     call do_bg_transfer
     call update_oam             ; PrepareOAMData → shadow OAM, then DMA to OAM
     call joypad_update
+    ; BG: while in battle, clear the backbuffer to the battle background (color 0)
+    ; instead of rendering the overworld, so the widescreen margins around the
+    ; centered battle window aren't Pallet Town. (Wave-2 Stage 0.5.)
+    cmp byte [ebp + wIsInBattle], 0
+    je .render_overworld_bg
+    call clear_backbuffer_battle
+    jmp .bg_done
+.render_overworld_bg:
     call render_bg
+.bg_done:
     call render_sprites         ; composite OAM sprites over BG
     ; DIVERGENCE FROM GB HARDWARE (intentional): on real DMG/CGB, OBJ sprites
     ; draw OVER the window layer, so the GB order is BG → window → sprites. We
@@ -202,6 +211,20 @@ do_bg_transfer:
     dec edx
     jnz .row
 .done:
+    popad
+    ret
+
+; ---------------------------------------------------------------------------
+; clear_backbuffer_battle — fill GB_BACKBUF with the battle background color
+; (raw index 0 = lightest DMG shade), used in place of render_bg while in battle.
+; In: EBP = GB memory base. All registers preserved.
+; ---------------------------------------------------------------------------
+clear_backbuffer_battle:
+    pushad
+    lea edi, [ebp + GB_BACKBUF]
+    mov ecx, RENDER_W * RENDER_H / 4
+    xor eax, eax                 ; battle background = raw index 0 (lightest DMG shade)
+    rep stosd
     popad
     ret
 
