@@ -60,9 +60,23 @@ PPU: software BG + OAM renderer, window layer. Math/data: the full Wave-1 backen
 - **GATE:** boots into "battle mode" without crashing; FRAME.BIN renders *something*
   deterministic (even if just a cleared screen + text box).
 
+### Stage 0.5 — Full-screen tilemap renderer (engine prerequisite for widescreen)
+**Layout decision (user, 2026-06-27): WIDESCREEN 40×25** — the battle uses the full
+320×200 viewport with NEW coords (not pret's GB 20×18). Implication: neither existing
+render path fits — `render_window` caps at a 32-tile-wide GB tilemap; `render_bg`
+decodes the overworld block surface (`wSurroundingTiles`), not a raw tilemap. So add
+`render_screen_tilemap`: blit the 40×25 `W_TILEMAP` directly to `GB_BACKBUF` via the
+existing `tile_cache` (2bpp→8bpp), mirroring `render_bg`'s inner loop but from a flat
+40-wide map. The frame pipeline renders this instead of the overworld while in battle
+(gate on `wIsInBattle` / a render-mode flag). All battle drawing then writes
+`W_TILEMAP`; sub-boxes can still use the window overlay. **GATE:** a `DEBUG_BATTLE`
+build shows a deterministic 40×25 pattern / cleared battle field in FRAME.BIN.
+
 ### Stage 1 (≈glue 2a) — Static battle screen + HUD
+**All Stage-1 coords are widescreen (40×25), decided per-placement with the user via
+FRAME.BIN and recorded as `; PROJ` / `docs/ui_projection.md` entries.**
 - 1a: battle screen frame — `TextBoxBorder` layout, bottom text box, `PrintText`
-  "Wild NIDORAN appeared!" style intro. **GATE:** layout matches GB proportions.
+  "Wild NIDORAN appeared!" style intro. **GATE:** layout approved by user.
 - 1b: `DrawEnemyHUDAndHPBar` + `DrawPlayerHUDAndHPBar` — name, `:L`level, HP bar
   (via `LoadHpBarAndStatusTilePatterns`), status; player side shows HP number.
   **GATE:** both HUD boxes + bars at correct coords, correct fill for seeded HP.
