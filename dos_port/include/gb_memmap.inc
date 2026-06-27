@@ -404,6 +404,18 @@ wEnemyToxicCounter     equ 0xD070
 ; GainExperience (src/engine/battle/experience.asm)
 wPlayerID              equ 0xD358   ; word (player trainer id)
 wCalculateWhoseStats   equ 0xD11D   ; = wTempByteValue (union)
+; battle init / front-end (Wave 2, src/engine/battle/init_battle*.asm)
+wPartyAndBillsPCSavedMenuItem equ 0xCC2B
+wMiscBattleData        equ 0xCCD3   ; = wCanEvolveFlags (first byte of the block)
+wMiscBattleDataEnd     equ 0xCD0F
+wActionResultOrTookBattleTurn equ 0xCD6A
+wBattleResult          equ 0xCF0B
+wPlayerHPBarColor      equ 0xCF1C
+wEnemyHPBarColor       equ 0xCF1D
+wCurOpponent           equ 0xD058
+wEscapedFromBattle     equ 0xD077
+wSavedTileAnimations   equ 0xD0D3
+wMapPalOffset          equ 0xD35C
 ; trainer AI + read_trainer_party (src/engine/battle/trainer_ai.asm, read_trainer_party.asm)
 wAILayer2Encouragement equ 0xCCD5
 wAICount               equ 0xCCDF
@@ -585,6 +597,7 @@ H_REDRAW_MAP_VIEW_ROW_OFFSET equ 0xFFBE ; hRedrawMapViewRowOffset
 H_FRAME_COUNTER          equ 0xFFD5     ; hFrameCounter
 H_VBLANK_OCCURRED        equ 0xFFD6     ; hVBlankOccurred
 H_TILE_ANIMATIONS        equ 0xFFD7     ; hTileAnimations
+hTileAnimations          equ 0xFFD7     ; lowercase pret-name alias
 H_REDRAW_ROW_COL_MODE    equ 0xFFD0     ; hRedrawRowOrColumnMode
 H_REDRAW_ROW_COL_DEST    equ 0xFFD1     ; hRedrawRowOrColumnDest
 H_UI_LAYOUT_FLAGS        equ 0xFFFA     ; hUILayoutFlags

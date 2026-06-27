@@ -164,6 +164,11 @@ BURN_PSN_ANIM          equ 0xBA    ; battle anim shown on burn/poison residual
 PIKAHAPPY_LEVELUP      equ 1       ; constants/pikachu_emotion_constants.asm
 LEVEL_UP_STATS_BOX     equ 1       ; constants/menu_constants.asm (STATUS_SCREEN=0)
 
+; --- battle init / type (constants/battle_constants.asm, map_constants.asm) ---
+BATTLE_TYPE_SAFARI     equ 2
+SAFARI_ZONE_EAST       equ 0xD9
+SAFARI_ZONE_CENTER_REST_HOUSE equ 0xDD
+
 ; --- trainer AI (src/engine/battle/trainer_ai.asm) ---
 EFFECT_01              equ 0x01    ; unused sleep effect (StatusAilmentMoveEffects)
 XSTATITEM_DUPLICATE_ANIM equ 0xAF  ; constants/move_constants.asm line 189
