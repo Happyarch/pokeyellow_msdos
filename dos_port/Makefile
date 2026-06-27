@@ -314,6 +314,13 @@ NASMFLAGS += -D DEBUG_PARTYMENU
 NASMFLAGS += -D SKIP_TITLE
 GAME_SRCS += src/engine/debug/debug_party.asm
 endif
+# Live battle view: same setup as DEBUG_BATTLE but holds the screen (loops
+# DelayFrame) so you can visually inspect it instead of dumping+exiting. Esc quits.
+# make DEBUG_BATTLE_LIVE=1 (then dos_port/run).
+ifdef DEBUG_BATTLE_LIVE
+DEBUG_BATTLE := 1
+NASMFLAGS += -D DEBUG_BATTLE_LIVE
+endif
 # Battle gate (Wave 2): seed party + a wild enemy, enter battle (InitBattle),
 # render one frame, dump FRAME.BIN, exit. make DEBUG_BATTLE=1
 ifdef DEBUG_BATTLE

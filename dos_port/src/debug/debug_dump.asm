@@ -271,10 +271,16 @@ RunBattleTest:
     call LoadFontTilePatterns
     call LoadTextBoxTilePatterns
     call InitBattle
+%ifdef DEBUG_BATTLE_LIVE
+.live:
+    call DelayFrame                 ; keep rendering so the battle screen stays up (Esc quits)
+    jmp .live
+%else
     call DelayFrame                 ; render the battle frame to the backbuffer
     call DumpBackbuffer             ; dump FRAME.BIN + exit (never returns)
 .hang:
     jmp .hang
+%endif
 %endif
 
 ; ---------------------------------------------------------------------------
