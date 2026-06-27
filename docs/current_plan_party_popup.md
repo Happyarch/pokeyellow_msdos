@@ -31,6 +31,10 @@ See memory [[gen1-swap-and-popup-menus]] for the subsystem map.
 
 - [x] 1. Field-move detection helper (`.field_move_name` + `.build_popup`): scans the
       mon's 4 moves vs the 8 field-move ids, emits matched name ptrs in slot order.
+      UPDATE (moves layer, 2026-06-27): `.field_move_name`'s baked `MV_*`/`fm_str_*`
+      cmp-chain was replaced by the shared `IsFieldMove` scan over
+      `FieldMoveDisplayData`/`FieldMoveNames` (`src/engine/menus/field_moves.asm`);
+      `.build_popup` now calls it. See `docs/plans/moves.md` (Stage 5).
 - [x] 2. Generic vertical pop-up (`.draw_popup` / `.run_popup`): data-driven
       (`pm_menu_entries[]` ptrs + `pm_menu_count`), auto-sized box → free GB_TILEMAP1
       rows (18+), appended via `add_window` as window 1 over the panel (respects the

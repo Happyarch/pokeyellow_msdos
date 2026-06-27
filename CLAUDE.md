@@ -464,13 +464,27 @@ commit but too specific to belong in TODO.md.
 
 **Currently active plans:**
 - `docs/current_plan_script_engine.md` — gen-1 script system (event-gated dialog,
-  per-map `_Script`/`text_asm`). In progress.
+  per-map `_Script`/`text_asm`). In progress (Stage 6 stub conventions; Oak walk-up
+  cutscene + `_Script` state machines + `DisplayTextID` special cases deferred).
 - `docs/current_plan_pokemon_engine.md` — Pokémon data/stats layer (party structs,
   base stats, `CalcStats`, experience/leveling, `AddPartyMon`, learnset/moves,
   TM/HM, names). Data + creation logic complete; evolution/PC/naming deferred
   (need the battle/menu systems).
 - `docs/current_plan_items.md` — item/bag layer (sequenced after pokemon, before
-  battle). Inventory bookkeeping (add/remove) done; data + non-UI effects next.
+  battle). Inventory bookkeeping (add/remove) + TOSS done; item USE dispatch
+  (`UseItem_`/`ItemUsePtrTable`) deferred (battle/UI-coupled).
+- `docs/current_plan_battle_engine.md` — battle backend (damage pipeline, type
+  data, move category/effect data, hit/accuracy, stat stages, wild-encounter gen).
+  Backend logic + data largely landed; the front end (main battle loop, AI scoring,
+  status residual damage, HUD/animations) is deferred for manual verification.
+- `docs/current_plan_pokemon_ui.md` — couple the (harness-validated) pokemon/items
+  data layers to the overworld START menu. ITEM (bag) + POKéMON (party w/ HP bars,
+  status, animated icons) screens done; item USE + the real new-game/Oak-gift data
+  path (vs the `DEBUG_PARTY` seed) pending.
+- `docs/current_plan_party_popup.md` — A-press field-move pop-up over the party
+  menu + cursor polish (now backed by the shared `FieldMoveDisplayData`/`IsFieldMove`
+  from the moves layer). Pop-up + message box done; bag-list cursor polish / blinking
+  `▼` (Stage 5) and the interactive (`DEBUG_BAGMENU_LIVE`) test remain.
 
 (NPC implementation is complete and archived at `docs/plans/npc_implementation.md`.
 The move data layer is complete and archived at `docs/plans/moves.md`.)
