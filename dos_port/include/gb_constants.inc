@@ -146,6 +146,16 @@ GROWTH_SLOW             equ 5
 MAX_STAT_VALUE          equ 999
 MAX_LEVEL               equ 100
 
+; --- flag-action predef modes (constants/misc_constants.asm) ---
+FLAG_RESET              equ 0
+FLAG_SET               equ 1
+FLAG_TEST              equ 2
+
+; --- evolution trigger types (constants/pokemon_data_constants.asm) ---
+EVOLVE_LEVEL           equ 1
+EVOLVE_ITEM            equ 2
+EVOLVE_TRADE           equ 3
+
 ; --- wild encounter constants (constants/pokemon_data_constants.asm) ---
 NUM_WILDMONS            equ 10
 WILDDATA_LENGTH         equ 1 + NUM_WILDMONS * 2   ; = 21 (rate + 10×(level,species))

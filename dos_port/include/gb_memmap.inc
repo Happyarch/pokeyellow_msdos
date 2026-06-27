@@ -381,6 +381,23 @@ wPartyMon1Status       equ 0xD16E
 wPartyMon1PP           equ 0xD187
 wPartyGainExpFlags     equ 0xD057   ; bitfield: which party mons gain exp this battle
 
+; --- Wave-1 backend aliases (sym-pinned, origin/symbols:pokeyellow.sym) ---
+; exp/level-up flow (GainExperience, src/engine/battle/experience.asm)
+wBoostExpByExpAll      equ 0xCC5B   ; (union W_UNUSED_FLAG / slot-machine scratch)
+wExpAmountGained       equ 0xCF4A   ; word (union wStringBuffer region)
+wGainBoostedExp        equ 0xCF4C
+wTempByteValue         equ 0xD11D
+wPartyFoughtCurrentEnemyFlags equ 0xCCF5
+wLearnMoveMonName      equ 0xD035
+; evolution (src/engine/pokemon/evolution.asm)
+wCanEvolveFlags        equ 0xCCD3
+wForceEvolution        equ 0xCCD4
+wEvoOldSpecies         equ 0xCEE9   ; (union wHPBarMaxHP scratch)
+wEvoNewSpecies         equ 0xCEEA
+wEvoStoneItemID        equ 0xD155
+; Bill's PC (src/engine/pokemon/bills_pc.asm)
+wMoveMonType           equ 0xCF94   ; = W_MOVE_MON_TYPE (union wRemoveMonFromBox)
+
 ; --- HP-bar update scratch (UpdateHPBar / used by drain_hp etc.) — sym-pinned ---
 wHPBarMaxHP            equ 0xCEE9   ; word
 wHPBarOldHP            equ 0xCEEB   ; word

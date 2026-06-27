@@ -194,6 +194,8 @@ introduce no symbol collisions in existing pokemon/items/menu/home/battle files.
 - Status residual damage (`HandlePoisonBurnLeechSeed`). (`HandleBuildingRage` is now done.)
 - `experience.asm` (mechanical bugs fixed; needs the level-up/EXP subsystem to link).
 - AI move-scoring (`AIMoveChoiceModification*`), `read_trainer_party.asm`.
-- Wild-encounter generation (`TryDoWildEncounter`) — needs per-map encounter data tables.
+- ~~Wild-encounter generation (`TryDoWildEncounter`)~~ — **DONE** (Stage 9): generator
+  + `LoadWildData`/`TryDoWildEncounter` native-validated; only the overworld step
+  trigger (the consumer) remains deferred.
 </content>
 </invoke>
