@@ -332,11 +332,15 @@ LINK_SRCS := $(BOOT_SRCS) $(HOME_SRCS) $(HAL_SRCS) $(GAME_SRCS) $(POKEMON_SRCS) 
 LINK_OBJS := $(LINK_SRCS:.asm=.o)
 
 # Pokémon backend that assembles + is native-harness-validated but is NOT linked
-# yet: bills_pc needs a link-ready _MoveMon (the draft in add_mon.asm has a
+# yet. bills_pc needs a link-ready _MoveMon (the draft in add_mon.asm has a
 # duplicate AddPartyMon_WriteMovePP symbol + extern-constant errors and an
-# unresolved dependency closure). Tracked for a follow-up MoveMon extraction.
+# unresolved dependency closure). evolution depends on GetName (check-only
+# names.asm) / FlagActionPredef / pikachu — and its EvolutionAfterBattle party
+# loop has a known stack bug (see the file) to fix+validate in Wave 2; its
+# headless decision path + LearnMoveFromLevelUp are native-validated now.
 POKEMON_CHECK_SRCS := \
-    src/engine/pokemon/bills_pc.asm
+    src/engine/pokemon/bills_pc.asm \
+    src/engine/pokemon/evolution.asm
 
 # ALL_SRCS = everything that must assemble cleanly (check) and be cleaned, incl.
 # the not-yet-linked battle backend + check-only pokemon backend.

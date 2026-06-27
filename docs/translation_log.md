@@ -2818,3 +2818,29 @@ the audit). BATTLE_SRCS check-only. DEFERRED (reported): `TrainerDataPointers` +
 battle_data global; `AddBCDPredef` needs the predef BCD adder. Aliases added:
 12 WRAM (wAICount/wAIItem/wBuffer/wEnemyMon1*/wTrainer*/…) + EFFECT_01/
 XSTATITEM_DUPLICATE_ANIM/NUM_TRAINERS + 10 item ids.
+
+### Evolution + level-up move learning — `src/engine/pokemon/evolution.asm` (task 5)
+Authored by the (killed) sonnet subagent; completed + audited + validated by the
+orchestrator. Routines: TryEvolvingMon, EvolutionAfterBattle, EvolveMon (UI stub),
+RenameEvolvedMon, CancelledEvolution, LearnMoveFromLevelUp, GetMonLearnset_Evo[_BlobStart].
+**Orchestrator fixes:**
+1. Include paths `dos_port/include/...` → `gb_memmap.inc`/`gb_constants.inc` (the
+   documented swarm bug; only "assembled" before because it was tested from repo root).
+2. **Real flag bug in LearnMoveFromLevelUp**: `cmp al,bh` (level match) was followed
+   by `mov al,[esi]` + `inc esi` before `jne` — x86 `inc` clobbers ZF (SM83 `inc hl`
+   does not), so the level compare was destroyed and NO move was ever learned. Fixed
+   `inc esi`→`lea esi,[esi+1]` (flags-preserving). This was the killed agent's
+   unresolved "Test 5" failure (its own harness also linked a STUB EvosMovesPointerTable,
+   masking the data path).
+3. Exported GetMonLearnset_Evo_BlobStart (global) for reuse/validation.
+**Native ELF32 (real pokemon_data.o table, 3/3):** GetMonLearnset_Evo_BlobStart(Bulbasaur
+=0x99) → evo entry [EVOLVE_LEVEL,16,IVYSAUR=0x09] (i.e. Bulbasaur L16→Ivysaur);
+GetMonLearnset_Evo → learnset start [7,LEECH_SEED]; LearnMoveFromLevelUp@L13 → Vine Whip
+written to the empty slot.
+**KNOWN BUG deferred to Wave 2 (documented in-file):** EvolutionAfterBattle's
+evolution-success path has a stack imbalance (double-pop consumes the function-saved
+DE; species write uses a wrong pointer). It only triggers on an actual evolution,
+which needs the deferred deps (FlagActionPredef/LoadMonData_/CalcStats) — so it's
+unvalidated and must be fixed+validated end-to-end in Wave 2.
+POKEMON_CHECK_SRCS (check-only): evolution depends on GetName (check-only names.asm),
+FlagActionPredef, and pikachu, so it isn't linked into the EXE yet.

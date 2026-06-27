@@ -189,8 +189,14 @@ then Stage 6: write a Moves-table generator (`gen_moves.py`, unblocks real PP in
       (24/24, incl. Gen-2 offset-7). **Check-only** (POKEMON_CHECK_SRCS): not linked
       until a link-ready `_MoveMon` is extracted from the broken `add_mon.asm` draft
       (dup `AddPartyMon_WriteMovePP` + extern-constant errors). PC menu UI deferred.
-    - [ ] evolution flow (`TryEvolvingMon`/`EvolveMon`/`LearnMoveFromLevelUp`) — Wave-1
-      task 5 in progress (data logic; evo text/animation + "forget which move?" menu UI).
+    - [~] evolution flow (`TryEvolvingMon`/`EvolveMon`/`LearnMoveFromLevelUp`,
+      `src/engine/pokemon/evolution.asm`) — Wave-1 task 5. Headless DECISION path
+      native-validated (Bulbasaur L16→Ivysaur via `GetMonLearnset_Evo_BlobStart`;
+      `LearnMoveFromLevelUp`@L13→Vine Whip, after an orchestrator fix: `inc`→`lea`
+      to preserve the level-compare ZF). Check-only (POKEMON_CHECK_SRCS). REMAINING
+      (Wave 2): a **known stack bug** in `EvolutionAfterBattle`'s success path (see
+      file) + end-to-end validation once FlagActionPredef/LoadMonData_/CalcStats are
+      linkable; evo text/animation + "forget which move?" menu are UI stubs.
     - [ ] interactive naming screen (UI).
 
 ## What exists vs. needs writing (from exploration)
