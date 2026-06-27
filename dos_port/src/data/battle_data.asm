@@ -5,6 +5,8 @@
 ; (not .rodata, which has no output-section rule and reads back as zero).
 ;
 ; TypeEffects : tools/gen_type_matchups.py (from data/types/type_matchups.asm).
+; MoveNames   : tools/gen_move_names.py   (from data/moves/names.asm; '@'-terminated,
+;               walked by GetName — see src/home/names.asm).
 ;
 ; Build: nasm -f coff -I include/ -I . -o battle_data.o battle_data.asm
 
@@ -13,11 +15,25 @@ bits 32
 global TypeEffects
 global HighCriticalMoves
 global StatModifierRatios
+global MoveNames
+global ResidualEffects1
+global ResidualEffects2
+global SpecialEffects
+global SpecialEffectsCont
+global AlwaysHappenSideEffects
+global SetDamageEffects
 
 section .data
 align 4
 
 %include "assets/type_matchups.inc"
+%include "assets/move_names.inc"
+
+; Move-effect category lists (data/battle/*.asm; $FF-terminated). Scanned linearly
+; by the battle engine to classify a move's effect (residual / special / always-
+; happens-on-faint / sets-damage). DATA ONLY — no MoveEffectPointerTable, whose
+; handler pointers would dangle until the effect handlers are ported.
+%include "assets/effect_categories.inc"
 
 ; HighCriticalMoves — moves with a 8× crit ratio (data/battle/critical_hit_moves.asm).
 ; Scanned by CriticalHitTest; $FF-terminated. Small fixed table, embedded directly

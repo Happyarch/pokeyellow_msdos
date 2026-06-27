@@ -11,8 +11,10 @@
 %define GB_CONSTANTS_INC
 
 NUM_STATS               equ 5
-NUM_MOVES               equ 4
-NAME_LENGTH             equ 11      ; '@'-terminated name field
+NUM_MOVES               equ 4       ; move slots per mon (not total moves in the game)
+NAME_LENGTH             equ 11      ; '@'-terminated fixed-width name field (mon names)
+NAME_BUFFER_LENGTH      equ 20      ; wNameBuffer size (GetName dest; bounds the copy)
+MOVE_NAME_LENGTH        equ 14      ; constants/text_constants.asm (12 printed + '@' + prefix)
 PARTY_LENGTH            equ 6
 MONS_PER_BOX            equ 20
 NUM_BOXES               equ 12
@@ -83,6 +85,18 @@ MOVE_POWER              equ 0x02
 MOVE_TYPE               equ 0x03
 MOVE_ACC                equ 0x04
 MOVE_PP                 equ 0x05
+NUM_ATTACKS             equ 165        ; total moves (constants/move_constants.asm)
+
+BANK_MoveNames          equ 0          ; flat model: ROM bank ignored (wPredefBank)
+
+; --- name-list type ids (constants/list_constants.asm; NamePointers index) ---
+MONSTER_NAME            equ 1
+MOVE_NAME               equ 2
+UNUSED_NAME             equ 3
+ITEM_NAME               equ 4
+PLAYEROT_NAME           equ 5
+ENEMYOT_NAME            equ 6
+TRAINER_NAME            equ 7
 
 ; --- item inventory capacities (constants/menu_constants.asm) ---
 BAG_ITEM_CAPACITY       equ 20
@@ -150,7 +164,7 @@ RAGE                    equ 63         ; move id (HandleBuildingRage restores it
 TEXT_REPEL_WORE_OFF     equ 0xD2
 
 ; --- move record load (GetCurrentMove) ---
-MOVE_LENGTH             equ 6          ; anim, effect, power, type, accuracy, pp
+; (MOVE_LENGTH defined once in the Moves-table-record section above.)
 BIT_TEST_BATTLE         equ 0          ; wStatusFlags7 bit (debug TestBattle)
 
 ; --- auto text-box drawing control (EnableAutoTextBoxDrawing) ---
@@ -363,6 +377,16 @@ RAZOR_LEAF              equ 0x4B
 CRABHAMMER              equ 0x98
 SLASH                   equ 0xA3
 STRUGGLE                equ 0xA5
+
+; --- field-move ids (data/moves/field_moves.asm; lifted out of party_menu.asm) ---
+CUT                     equ 0x0F
+FLY                     equ 0x13
+SURF                    equ 0x39
+STRENGTH                equ 0x46
+DIG                     equ 0x5B
+TELEPORT                equ 0x64
+SOFTBOILED              equ 0x87
+FLASH                   equ 0x94
 
 ; --- serial / link state (battle RNG boundary) ---
 LINK_STATE_BATTLING     equ 0x04

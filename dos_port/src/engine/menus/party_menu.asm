@@ -46,6 +46,7 @@ extern g_bg_whiteout                     ; src/ppu/ppu.asm — full-screen white
 extern LoadHpBarAndStatusTilePatterns   ; src/gfx/load_font.asm
 extern LoadTextBoxTilePatterns          ; restore box tiles for the START menu
 extern LoadTilesetTilePatternData       ; restore overworld tileset ($9000) on exit
+extern IsFieldMove                       ; src/engine/menus/field_moves.asm — AL=move id → CF/EAX=name ptr
 %ifdef DEBUG_PARTYMENU
 extern DumpBackbuffer
 %endif
@@ -92,15 +93,8 @@ TILE_SPC       equ 0x7F
 ; A on a mon opens this; entries are the mon's field moves (slot order) + STATS,
 ; SWITCH, CANCEL. Rendered as a SECOND window over the party panel via add_window
 ; (the multi-layer menu compositor). ▷ marks the party cursor while it's open.
-; Field-move move ids (constants/move_constants.asm).
-MV_CUT         equ 0x0F
-MV_FLY         equ 0x13
-MV_SURF        equ 0x39
-MV_STRENGTH    equ 0x46
-MV_DIG         equ 0x5B
-MV_TELEPORT    equ 0x64
-MV_SOFTBOILED  equ 0x87
-MV_FLASH       equ 0x94
+; Field-move names + ids come from the shared FieldMoveDisplayData/FieldMoveNames
+; tables via IsFieldMove (src/engine/menus/field_moves.asm), not baked here.
 
 POPUP_INT_W    equ 11        ; interior width: cursor(1) + name(≤10, "SOFTBOILED")
 POPUP_BOX_W    equ 13        ; total tile width (INT_W + 2 borders)
@@ -147,15 +141,8 @@ st_slp:   db 0x92, 0x8B, 0x8F        ; SLP
 st_blank: db TILE_SPC, TILE_SPC, TILE_SPC
 
 ; pop-up entry labels (GB charmap: 'A'=$80 … 'Z'=$99, '@'=$50). Field-move names
-; match pret FieldMoveNames; STATS/SWITCH/CANCEL match PokemonMenuEntries.
-fm_str_cut:        db 0x82,0x94,0x93, CHAR_TERM                                  ; CUT
-fm_str_fly:        db 0x85,0x8B,0x98, CHAR_TERM                                  ; FLY
-fm_str_surf:       db 0x92,0x94,0x91,0x85, CHAR_TERM                             ; SURF
-fm_str_strength:   db 0x92,0x93,0x91,0x84,0x8D,0x86,0x93,0x87, CHAR_TERM         ; STRENGTH
-fm_str_flash:      db 0x85,0x8B,0x80,0x92,0x87, CHAR_TERM                        ; FLASH
-fm_str_dig:        db 0x83,0x88,0x86, CHAR_TERM                                  ; DIG
-fm_str_teleport:   db 0x93,0x84,0x8B,0x84,0x8F,0x8E,0x91,0x93, CHAR_TERM         ; TELEPORT
-fm_str_softboiled: db 0x92,0x8E,0x85,0x93,0x81,0x8E,0x88,0x8B,0x84,0x83, CHAR_TERM ; SOFTBOILED
+; now come from the shared FieldMoveNames table (via IsFieldMove); only the fixed
+; STATS/SWITCH/CANCEL tail (pret PokemonMenuEntries) is baked here.
 pm_str_stats:      db 0x92,0x93,0x80,0x93,0x92, CHAR_TERM                        ; STATS
 pm_str_switch:     db 0x92,0x96,0x88,0x93,0x82,0x87, CHAR_TERM                   ; SWITCH
 pm_str_cancel:     db 0x82,0x80,0x8D,0x82,0x84,0x8B, CHAR_TERM                   ; CANCEL
@@ -412,9 +399,8 @@ DisplayPartyMenu:
 .bp_loop:
     mov al, [ebp + esi]
     inc esi
-    call .field_move_name               ; AL=id → EAX = name ptr or 0 (clobbers EAX)
-    test eax, eax
-    jz .bp_next
+    call IsFieldMove                    ; AL=id → CF + EAX = FieldMoveNames ptr (or 0)
+    jnc .bp_next
     mov [pm_menu_entries + ecx*4], eax
     inc ecx
 .bp_next:
@@ -428,43 +414,6 @@ DisplayPartyMenu:
     mov dword [pm_menu_entries + ecx*4], pm_str_cancel
     inc ecx
     mov [pm_menu_count], ecx
-    ret
-
-; AL = move id → EAX = flat name ptr, or 0 if not a field move. Clobbers EAX only.
-.field_move_name:
-    cmp al, MV_CUT
-    je .fmn_cut
-    cmp al, MV_FLY
-    je .fmn_fly
-    cmp al, MV_SURF
-    je .fmn_surf
-    cmp al, MV_STRENGTH
-    je .fmn_strength
-    cmp al, MV_FLASH
-    je .fmn_flash
-    cmp al, MV_DIG
-    je .fmn_dig
-    cmp al, MV_TELEPORT
-    je .fmn_teleport
-    cmp al, MV_SOFTBOILED
-    je .fmn_softboiled
-    xor eax, eax
-    ret
-.fmn_cut:        mov eax, fm_str_cut
-    ret
-.fmn_fly:        mov eax, fm_str_fly
-    ret
-.fmn_surf:       mov eax, fm_str_surf
-    ret
-.fmn_strength:   mov eax, fm_str_strength
-    ret
-.fmn_flash:      mov eax, fm_str_flash
-    ret
-.fmn_dig:        mov eax, fm_str_dig
-    ret
-.fmn_teleport:   mov eax, fm_str_teleport
-    ret
-.fmn_softboiled: mov eax, fm_str_softboiled
     ret
 
 ; render the pop-up box (border + entries + cursor) into the wTileMap scratch,

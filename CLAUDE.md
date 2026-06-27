@@ -441,7 +441,8 @@ commit but too specific to belong in TODO.md.
 - `docs/current_plan_items.md` — item/bag layer (sequenced after pokemon, before
   battle). Inventory bookkeeping (add/remove) done; data + non-UI effects next.
 
-(NPC implementation is complete and archived at `docs/plans/npc_implementation.md`.)
+(NPC implementation is complete and archived at `docs/plans/npc_implementation.md`.
+The move data layer is complete and archived at `docs/plans/moves.md`.)
 
 ---
 

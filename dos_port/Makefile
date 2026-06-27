@@ -147,7 +147,8 @@ GAME_SRCS := \
     src/engine/math/random.asm \
     src/engine/menus/start_menu.asm \
     src/engine/menus/bag_menu.asm \
-    src/engine/menus/party_menu.asm
+    src/engine/menus/party_menu.asm \
+    src/engine/menus/field_moves.asm
 
 # Pokémon data/stats engine (current_plan_pokemon_engine.md). Grows per stage.
 POKEMON_SRCS := \
@@ -183,6 +184,7 @@ ITEMS_SRCS := \
 # are validated by native ELF harnesses (see the plan's verification log).
 BATTLE_SRCS := \
     src/data/battle_data.asm \
+    src/home/names.asm \
     src/engine/battle/core_damage.asm \
     src/engine/battle/badge_boosts.asm \
     src/engine/battle/status_penalties.asm \
@@ -204,6 +206,8 @@ BATTLE_SRCS := \
     src/engine/battle/stat_mod_effects.asm \
     src/engine/battle/building_rage.asm \
     src/engine/battle/get_current_move.asm \
+    src/engine/battle/move_category.asm \
+    src/engine/battle/animations.asm \
     src/data/wild_data.asm \
     src/engine/overworld/wild_mons.asm \
     src/engine/battle/wild_encounters.asm
@@ -436,7 +440,23 @@ src/data/pokemon_data.o: assets/base_stats.inc assets/growth_rates.inc \
 assets/type_matchups.inc:
 	python3 tools/gen_type_matchups.py
 
-src/data/battle_data.o: assets/type_matchups.inc
+# Move names (generated from data/moves/names.asm via the GB charmap; '@'-terminated).
+assets/move_names.inc:
+	python3 tools/gen_move_names.py
+
+# Move-effect category lists (generated from data/battle/*.asm; $FF-terminated).
+assets/effect_categories.inc:
+	python3 tools/gen_effect_categories.py
+
+src/data/battle_data.o: assets/type_matchups.inc assets/move_names.inc \
+                        assets/effect_categories.inc
+
+# Field-move display data + names (generated from data/moves/{field_moves,
+# field_move_names}.asm; resolves move ids via constants/move_constants.asm).
+assets/field_moves.inc:
+	python3 tools/gen_field_moves.py
+
+src/engine/menus/field_moves.o: assets/field_moves.inc
 
 # Wild-encounter tables (static data, generated from data/wild/).
 assets/wild_data.inc:
@@ -451,7 +471,9 @@ assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_
         assets/base_stats.inc assets/growth_rates.inc \
         assets/moves.inc assets/evos_moves.inc assets/monster_names.inc \
         assets/items.inc assets/gb_charmap.txt assets/menu_strings.inc \
-        assets/type_matchups.inc assets/wild_data.inc assets/map_scripts.inc
+        assets/type_matchups.inc assets/move_names.inc assets/field_moves.inc \
+        assets/effect_categories.inc \
+        assets/wild_data.inc assets/map_scripts.inc
 
 all: $(TARGET)
 

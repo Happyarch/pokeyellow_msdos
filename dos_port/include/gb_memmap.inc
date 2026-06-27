@@ -168,6 +168,7 @@ wPartyCount        equ 0xD162
 wPartySpecies      equ 0xD163   ; wPartyCount+1; 6 species + $FF sentinel
 wPartyMons         equ 0xD16A
 wPartyMonOT        equ 0xD272
+wEnemyMonOT        equ 0xD9AB   ; enemy OT-name list (NamePointers ENEMYOT; sym)
 wPartyMonNicks     equ 0xD2B4
 wPartyMonNicksEnd  equ 0xD2F6
 wPlayerName        equ 0xD157   ; = W_PLAYER_NAME (OT name source)
@@ -666,7 +667,12 @@ W_CURRENT_MAP_SCRIPT_FLAGS   equ 0xD125 ; wCurrentMapScriptFlags
 ; Letter-printing delay and text speed options (text engine)
 ; Pret ref: constants/ram_constants.asm, engine/menus/main_menu.asm:InitOptions
 W_OPTIONS                    equ 0xD354 ; wOptions — bits 3-0 = text speed
+wOptions                     equ W_OPTIONS ; pret-name alias (bit 6 = battle style, 7 = battle anim)
 W_LETTER_PRINTING_DELAY      equ 0xD357 ; wLetterPrintingDelayFlags
+
+; wOptions high-bit indices (pret ref: constants/ram_constants.asm BIT_BATTLE_*)
+BIT_BATTLE_SHIFT             equ 6      ; 0=SHIFT, 1=SET battle style
+BIT_BATTLE_ANIMATION         equ 7      ; 1=battle animations OFF (skip → fixed delay)
 
 ; wLetterPrintingDelayFlags bit indices
 BIT_FAST_TEXT_DELAY          equ 0      ; 1=read speed from wOptions; 0=always 1 frame/char
@@ -721,7 +727,13 @@ wMovementFlags               equ 0xD735
 wStringBuffer                equ 0xCF4A   ; PrintStatText destination (Stage 5)
 wGrassTile                   equ 0xD534   ; = W_GRASS_TILE (tall-grass tile id)
 wPartyMon1Level              equ 0xD18B   ; lead party mon level (repel check)
-wNameListIndex               equ 0xD0B4   ; selected move id (GetCurrentMove → name)
+wNameListIndex               equ 0xD0B4   ; selected name id (GetName input; sym)
+; --- name lookup (GetName / NamePointers; sym-pinned) ---
+wNameListType                equ 0xD0B5   ; which NamePointers list (MONSTER_NAME..TRAINER_NAME)
+wPredefBank                  equ 0xD0B6   ; ROM bank of the name list (flat port: ignored)
+wNamedObjectIndex            equ 0xD11D   ; resolved name index (=wPokedexNum/wMoveType union)
+wNameBuffer                  equ 0xCD6D   ; NAME_BUFFER_LENGTH dest (=wMoveData scratch union)
+wUnusedNamePointer           equ 0xCF8C   ; faithful: GetName stores last name ptr here
 wPalletTownCurScript         equ 0xD5F0   ; Pallet Town _Script state index (sym)
 wAutoTextBoxDrawingControl   equ 0xCF0C   ; bit BIT_NO_AUTO_TEXT_BOX: 0=auto-draw boxes
 wDoNotWaitForButtonPressAfterDisplayingText equ 0xCC3C

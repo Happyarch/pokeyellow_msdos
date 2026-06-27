@@ -2664,3 +2664,70 @@ BIT_NO_AUTO_TEXT_BOX; wired into GAME_SRCS. Native-validated: RunMapScript on a
 default map sets wAutoTextBoxDrawingControl to 0 (auto-draw on).
 
 ---
+
+## 2026-06-27 — Move data layer: names dispatcher, category helper, field moves
+
+Covers move-data-plan Stages 3–5 (`docs/current_plan_moves.md`).
+
+### Names (Stage 3) — `src/home/names.asm`
+Faithful merge of `home/names.asm` + `home/names2.asm`. `GetName` dispatches on
+`wNameListType` through a flat `NamePointers` `dd` table (**mixed addressing**:
+Monster/Move/Unused/Item/Trainer names are flat data pointers walked via `[esi]`;
+`wPartyMonOT`/`wEnemyMonOT` are WRAM, walked via `[ebp+esi]`). `MONSTER_NAME` →
+`GetMonName` (fixed-width `AddNTimes`, faithful to pret — mon names stay fixed-width
+by design); name types 2–7 walk `$50`-terminated source strings and `CopyData` a
+**bounded** `NAME_BUFFER_LENGTH` (20) into `wNameBuffer`. Wrappers `GetMoveName`/
+`GetItemName`/`GetMachineName`. `BUG` tag on the `cp HM01` machine-name branch (pret
+`names2.asm:22`, range-guarded) and a `GLITCH` tag on the bounded name-walk
+(out-of-range ids walk garbage source but the 20-byte destination copy can't
+overflow → no ACE); `%if BUG_FIX_LEVEL >= 2` adds an index-validation placeholder.
+
+### Category helper (Stage 4) — `src/engine/battle/move_category.asm`
+`IsTypeSpecial` (AL = type id) and `IsMoveSpecial` (AL = move id; reads `MOVE_TYPE`
+from the flat `Moves` table). Both return AL=1/CF=1 for special, AL=0/CF=0 for
+physical — the `cp SPECIAL` / `jae` split pret uses inline in `core.asm`. Native-
+validated (POUND → physical, FIRE PUNCH → special).
+
+### Field moves (Stage 5) — `tools/gen_field_moves.py`, `src/engine/menus/field_moves.asm`
+`gen_field_moves.py` emits `assets/field_moves.inc`: `FieldMoveDisplayData` (3-byte
+records: move id, `FieldMoveNames` index, leftmost tile col; `$FF`-terminated) and
+`FieldMoveNames` (`@`-terminated, 1-based index order) from
+`data/moves/field_moves.asm` + `field_move_names.asm`, resolving move ids from
+`constants/move_constants.asm`. `IsFieldMove` (AL = move id) is the linear scan from
+pret `engine/menus/text_box.asm:GetMonFieldMoves` `.fieldMoveLoop`: walk the
+`$FF`-terminated table, on a match take the 1-based name index and skip that many
+`@`-terminated strings → CF=1 + flat `FieldMoveNames` pointer (CF=0/EAX=0 otherwise);
+preserves EBX/ECX/EDX/ESI so party_menu's slot loop keeps its live registers.
+`party_menu.asm` was rewired off its inline `MV_*` equ block, baked `fm_str_*`
+strings, and `.field_move_name` cmp-chain to call `IsFieldMove` + the shared tables.
+Lives in GAME_SRCS (linked) because party_menu calls it and `battle_data.asm`
+(BATTLE_SRCS) is not yet linked. Native ELF32 harness: CUT/SOFTBOILED/FLASH → name,
+POUND → not-found, ANIM_B4 → empty (unused slot); encoded name bytes byte-identical
+to the removed baked strings; `DEBUG_PARTYMENU` `FRAME.BIN` party list unchanged.
+`GetMonFieldMoves` (the `wFieldMoves[]` array fill) deferred — no caller yet and it
+needs the not-yet-pinned `wFieldMoves` union WRAM aliases (see the plan).
+
+### Effect-category arrays (Stage 6) — `tools/gen_effect_categories.py`
+`gen_effect_categories.py` emits `assets/effect_categories.inc` from `data/battle/`:
+`ResidualEffects1`, `ResidualEffects2`, `SpecialEffects` + `SpecialEffectsCont`
+(the original's fallthrough with a single `$FF` terminator), `AlwaysHappenSideEffects`,
+`SetDamageEffects` — each a `$FF`-terminated byte list of move-effect ids, resolved
+from `constants/move_effect_constants.asm` (handles `const_def`/`const`/`const_skip`).
+Exposed as globals via `battle_data.asm` (BATTLE_SRCS, not yet linked). DATA ONLY —
+no `MoveEffectPointerTable`, whose handler pointers would dangle until the effect
+handlers are ported. The battle engine scans these linearly to classify a move's
+effect (residual / special / always-happens-on-faint / sets-damage).
+
+### PlayMoveAnimation stub (Stage 7) — `src/engine/battle/animations.asm`
+Faithful skeleton of pret `engine/battle/animations.asm:MoveAnimation`'s
+`.moveAnimation` decision. Only the strictly-needed branch is implemented: when
+battle animations are OFF in the options (`bit BIT_BATTLE_ANIMATION, [wOptions]`
+set), substitute a flat 30-frame `DelayFrames` so message pacing matches the
+original. With animations ON the real playback (ShareMoveAnimations + PlayAnimation
++ PlayApplyingAttackAnimation screen shake) is a `; TODO-HW:` no-op deferred to the
+battle-animation HAL. Added `BIT_BATTLE_ANIMATION`(=7)/`BIT_BATTLE_SHIFT`(=6) and a
+`wOptions` pret-name alias (= `W_OPTIONS` = `$D354`) to `gb_memmap.inc`. In
+BATTLE_SRCS; `make check` + full `SKIP_TITLE=1` link clean.
+
+**Move data layer plan (`docs/current_plan_moves.md`) complete** — archived to
+`docs/plans/moves.md`.

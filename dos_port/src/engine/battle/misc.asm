@@ -10,12 +10,10 @@ global FormatMovesString
 
 extern wMoves
 extern wMovesString
-extern BANK_MoveNames
-extern wPredefBank
-extern MOVE_NAME
-extern wNameListType
 extern GetName
-extern wNameBuffer
+; BANK_MoveNames (gb_constants.inc), wPredefBank/wNameListType/wNameBuffer
+; (gb_memmap.inc), and the *_NAME type ids (gb_constants.inc) come from the
+; includes now — externing them would collide with the equ definitions.
 
 FormatMovesString:
     mov esi, wMoves
@@ -81,20 +79,17 @@ global InitList
 extern wInitListType
 extern INIT_ENEMYOT_LIST
 extern wEnemyMonOT
-extern ENEMYOT_NAME
 extern INIT_PLAYEROT_LIST
-extern PLAYEROT_NAME
 extern INIT_MON_LIST
 extern wItemList
 extern MonsterNames
-extern MONSTER_NAME
 extern INIT_BAG_ITEM_LIST
 extern ItemNames
-extern ITEM_NAME
 extern wListPointer
-extern wUnusedNamePointer
 extern ItemPrices
 extern wItemPrices
+; *_NAME type ids (MONSTER_NAME/ITEM_NAME/PLAYEROT_NAME/ENEMYOT_NAME) and
+; wUnusedNamePointer now come from the includes.
 
 
 InitList:
