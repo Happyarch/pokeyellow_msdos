@@ -242,6 +242,30 @@ Prioritized task list. Check off items as they complete; add new items with phas
 - [ ] Translate random encounter trigger
 - [ ] Translate battle engine (UI rendering pass first)
 
+### Engine data layers (backend, complete — see docs/plans/ & docs/current_plan_*.md)
+
+- [x] **Pokémon data/stats layer** — party/box structs, base stats, `CalcStats`,
+      experience math, `_AddPartyMon`, learnsets/moves, TM/HM, names.
+      (`current_plan_pokemon_engine.md`; evolution/PC/naming deferred — UI/battle-coupled.)
+- [x] **Items layer** — bag/PC inventory add/remove, item/TM data + prices, TOSS flow.
+      (`current_plan_items.md`; item USE dispatch deferred — battle/UI-coupled.)
+- [x] **Move data layer** — names + shared `GetName`, category helper, field-move
+      predicate, effect-category data, anim stub. (Archived: `docs/plans/moves.md`.)
+- [x] **Overworld UI coupling** — START menu ITEM (bag) + POKéMON (party w/ HP bars,
+      status, animated icons) screens + field-move pop-up backed by live data.
+      (`current_plan_pokemon_ui.md`, `current_plan_party_popup.md`.)
+
+### Remaining gameplay systems — sequenced as three waves (see docs/glueprompts.txt)
+
+- [ ] **Wave 1 (backend, headless):** Bill's PC box logic, status residual damage,
+      AI move-scoring, EXP/level-up, evolution data, `JumpMoveEffect` dispatch seam.
+- [ ] **Wave 2 (battle front-end, manual-verify):** HUD/transition, main turn loop,
+      wild + trainer battles. The keystone that unblocks most of the above deferrals.
+- [ ] **Wave 3 (battle-gated sweep):** item USE dispatch, real new-game/Oak-gift data
+      path, Oak walk-up cutscene, per-map `_Script` machines + mart/pokecenter/PC.
+- Cross-cuts ride each wave's tail (party_popup polish → audio HAL → GBC palette);
+  the save system (Phase 5) is last, after all waves.
+
 ---
 
 ## Phase 3: Audio
