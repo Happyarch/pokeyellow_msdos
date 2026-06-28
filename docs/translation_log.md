@@ -17,6 +17,59 @@ Format:
 
 ---
 
+## InitBattle (Wave 2 Stage 1a — battle frame + intro text)
+- **Source:** front-end scaffold (no single pret label); mirrors the battle screen
+  build order in `engine/battle/init_battle.asm` / `core.asm`.
+- **Translated:** `dos_port/src/engine/battle/init_battle.asm`
+- **Date:** 2026-06-28
+- **H-flag:** Not involved.
+- **Bug tags:** none.
+- **Notes:** Stage 1a renders the battle screen on the **full 320×200 (40×25)
+  widescreen canvas** (user direction 2026-06-28: use the wide screen, center the
+  default GB UI now, extend elements outward later). Layout: blank the whole 40×25
+  `W_TILEMAP` → hand-draw the bottom dialog box at canvas (10,15) → fixed intro text
+  "Wild POKéMON / appeared!". The GB 20×18 default layout is centered via col-offset
+  10 = (40−20)/2 and row-offset 3 ≈ (25−18)/2.
+  **Render path (key, reusable):** the battle screen is the BG plane. `render_bg`'s
+  non-overworld branch already decodes the whole 40×25 `W_TILEMAP` straight to the
+  back buffer (the title/menu path); it only renders the overworld when
+  `wCurrentTileBlockMapViewPointer` is nonzero. So `InitBattle` zeroes that pointer
+  + `IO_SCX`/`IO_SCY` and `hide_window`s, and `frame.asm` just calls `render_bg`
+  (the Stage-0.5 `clear_backbuffer_battle` + centered-window descriptor are gone).
+  No new full-screen renderer was needed.
+  **Text-helper constraint:** `TextBoxBorder`/`PlaceString` hardcode a 20-wide
+  stride (`text.asm: SCREEN_W_TILES equ 20`), so they cannot lay out into the
+  40-wide canvas. The dialog box is hand-drawn with the box-border charmap tiles
+  ($79–$7E) at stride 40; single-line text (no `<NEXT>`/`<LINE>`) is
+  stride-agnostic, so `PlaceString` still works for HUD names later. The fixed
+  intro is raw glyph tile-bytes (renderable glyphs $60+ map 1:1 to tile IDs).
+  Also clears `wUpdateSpritesEnabled` so the per-frame `update_oam`/`PrepareOAMData`
+  rebuild stops re-showing the overworld player sprite after `ClearSprites`.
+  (Superseded the first Stage-0.5/1a centered 20×18 window approach, which hit two
+  now-moot gotchas — the stride-20 build and the `wx=87` GB `WX−7` centering.)
+
+## DrawBattleHUDs (Wave 2 Stage 1b — battle HUD boxes + HP bars)
+- **Source:** `engine/battle/core.asm` (`DrawEnemyHUDAndHPBar`/`DrawPlayerHUDAndHPBar`)
+  + `home/pokemon.asm:DrawHPBar`/`PrintLevel`; logic mirrored from the shipped port
+  renderer `src/engine/menus/party_menu.asm`.
+- **Translated:** `dos_port/src/engine/battle/battle_hud.asm`
+- **Date:** 2026-06-28
+- **H-flag:** Not involved.
+- **Bug tags:** none.
+- **Notes:** Draws enemy HUD (upper-left) + player HUD (lower-right) into the 40×25
+  widescreen W_TILEMAP canvas: name (`PlaceString` from `wEnemyMonNick`/`wBattleMonNick`),
+  ":L"+level (`print_num2`), 6-segment HP bar (`draw_hp_bar`, fill =
+  `calc_hp_pixels` = curHP*48/maxHP, ≥1 sliver if alive), and the player's cur/max HP
+  fraction (`print_num3`). Centered = GB coords + (10col, 3row). All writes are linear
+  within a row → stride-agnostic, so they work on the 40-wide canvas (vs the
+  stride-20-locked TextBoxBorder/multi-line PlaceString). HP-bar gauge tiles ($62-$71,
+  ":L"=$6e) loaded by `LoadHpBarAndStatusTilePatterns` (added to `InitBattle`); tiles
+  $79-$7F are byte-identical between the box and battle tile sets, so that load does NOT
+  clobber the dialog box (load_font.asm's "OVERWRITES $79-$7E" comment is over-cautious —
+  verified by comparing the .2bpp bytes). Reads the battle-mon structs; the DEBUG_BATTLE
+  harness seeds them until `LoadBattleMonFromParty` lands (Stage 2/3). Deferred: HP-bar
+  color (Phase 5 palette), status text, decorative HUD frame/pokeballs.
+
 ## FillMemory
 
 - **Source:** `home/copy2.asm:137–155`

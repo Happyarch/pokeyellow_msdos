@@ -265,8 +265,34 @@ RunBattleTest:
     mov byte [ebp + 0xD31C], 0      ; wNumBagItems = 0
     mov byte [ebp + 0xD31D], 0xFF   ; wBagItems sentinel
     call PrepareNewGameDebug        ; seed party + bag (player mons for later stages)
+    ; --- Stage-1b HUD test data: seed enemy + player battle-mon structs so the HUD
+    ; has names / levels / HP to render (real path = LoadBattleMonFromParty, Stage 2/3).
+    ; Enemy "PIDGEY" L3, HP 14/14 (full bar). Names = charmap bytes, $50-terminated.
+    mov byte [ebp + wEnemyMonNick + 0], 0x8F  ; P
+    mov byte [ebp + wEnemyMonNick + 1], 0x88  ; I
+    mov byte [ebp + wEnemyMonNick + 2], 0x83  ; D
+    mov byte [ebp + wEnemyMonNick + 3], 0x86  ; G
+    mov byte [ebp + wEnemyMonNick + 4], 0x84  ; E
+    mov byte [ebp + wEnemyMonNick + 5], 0x98  ; Y
+    mov byte [ebp + wEnemyMonNick + 6], 0x50  ; @
+    mov byte [ebp + wEnemyMonLevel], 3
+    mov word [ebp + wEnemyMonHP], 0x0E00      ; big-endian 14
+    mov word [ebp + wEnemyMonMaxHP], 0x0E00   ; big-endian 14
+    mov byte [ebp + wEnemyMonStatus], 0
+    ; Player "PIKACHU" L6, HP 11/22 (half bar) — verifies partial fill + the fraction.
+    mov byte [ebp + wBattleMonNick + 0], 0x8F  ; P
+    mov byte [ebp + wBattleMonNick + 1], 0x88  ; I
+    mov byte [ebp + wBattleMonNick + 2], 0x8A  ; K
+    mov byte [ebp + wBattleMonNick + 3], 0x80  ; A
+    mov byte [ebp + wBattleMonNick + 4], 0x82  ; C
+    mov byte [ebp + wBattleMonNick + 5], 0x87  ; H
+    mov byte [ebp + wBattleMonNick + 6], 0x94  ; U
+    mov byte [ebp + wBattleMonNick + 7], 0x50  ; @
+    mov byte [ebp + wBattleMonLevel], 6
+    mov word [ebp + wBattleMonHP], 0x0B00     ; big-endian 11
+    mov word [ebp + wBattleMonMaxHP], 0x1600  ; big-endian 22
+    mov byte [ebp + wBattleMonStatus], 0
     mov byte [ebp + wEnemyMonSpecies], 0x99   ; placeholder wild enemy (Bulbasaur idx)
-    mov byte [ebp + wEnemyMonLevel], 5
     or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     call LoadTextBoxTilePatterns

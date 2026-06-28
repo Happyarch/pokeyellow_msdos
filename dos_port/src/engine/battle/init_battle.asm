@@ -1,14 +1,26 @@
-; init_battle.asm — InitBattle (battle front-end, Wave 2 Stage 0/0.5 scaffold).
+; init_battle.asm — InitBattle (battle front-end, Wave 2 Stage 1a).
 ;
-; Stage-0.5 baseline: enter battle mode and draw a deterministic, CENTERED GB-sized
-; battle frame so the render path is proven before the real HUD (Stage 1). Per the
-; layout decision (user, 2026-06-27) the faithful GB 20×18 screen is built and
-; centered in the 320×200 viewport; widescreen spacing is a later iteration pass.
+; WIDESCREEN CANVAS (user direction, 2026-06-28): the battle uses the FULL 320×200
+; (40×25-tile) screen, with the faithful GB default UI built CENTERED in it, so
+; individual elements can be spread out into the widescreen margins later on a
+; case-by-case basis. There is NO centered 20×18 window any more.
 ;
-; Pipeline (mirrors the menu screens): build content in W_TILEMAP (40-wide scratch)
-; → copy the 20×18 rect into GB_TILEMAP1 (32-stride GB tilemap) → one centered
-; window descriptor (set_single_window) that render_window composites over the
-; battle-cleared backbuffer (frame.asm clears to bg while wIsInBattle).
+; Render path: the battle screen is the BG plane. render_bg already has a
+; non-overworld branch that decodes the whole 40×25 W_TILEMAP straight to the
+; 320×200 back buffer (the path the title/menu screens use) — it only renders the
+; overworld when wCurrentTileBlockMapViewPointer is nonzero. So InitBattle zeroes
+; that pointer (+ SCX/SCY) and builds the layout directly in the 40-wide W_TILEMAP;
+; frame.asm then renders it via render_bg. No window descriptor (hide_window).
+;
+; NOTE on the text helpers: TextBoxBorder / PlaceString hardcode a 20-wide stride
+; (text.asm: SCREEN_W_TILES = 20), so they cannot lay out into the 40-wide canvas.
+; The dialog box is therefore hand-drawn here with the box-border charmap tiles
+; ($79-$7E) at stride 40. Single-line text (no <NEXT>/<LINE>) is stride-agnostic,
+; so PlaceString still works for names later; the fixed intro string is written as
+; raw glyph tile-bytes (renderable glyphs $60+ map 1:1 to tile IDs).
+;
+; Default GB layout centered in 40×25: col offset 10 = (40−20)/2, row offset 3
+; ≈ (25−18)/2. GB battle dialog box is at GB (0,12); centered → canvas (10,15).
 ;
 ; In (seeded by the DEBUG_BATTLE harness): wEnemyMonSpecies, wEnemyMonLevel.
 ; Register map: A=AL, HL=ESI, EBP=GB memory base; GB memory = [EBP+addr].
@@ -19,54 +31,115 @@
 
 bits 32
 
-%define TILE_SPC   0x7F          ; blank/space tile
-%define GB_W       20            ; GB screen width in tiles
-%define GB_H       18            ; GB screen height in tiles
-; centered placement of the 160×144 GB screen in 320×200
-%define BAT_WX     ((RENDER_W - GB_W*8) / 2)    ; = 80
-%define BAT_WY     ((RENDER_H - GB_H*8) / 2)    ; = 28
+; box-border / blank tiles (constants/charmap.asm $79-$7F)
+%define T_TL  0x79          ; ┌
+%define T_H   0x7A          ; ─
+%define T_TR  0x7B          ; ┐
+%define T_V   0x7C          ; │
+%define T_BL  0x7D          ; └
+%define T_BR  0x7E          ; ┘
+%define T_SP  0x7F          ; blank/space
+
+%define FW    SCREEN_TILES_W           ; 40 — canvas stride (full widescreen)
+%define COL_OFF 10                      ; (40−20)/2 — center the 20-wide GB layout
+%define ROW_OFF 3                       ; ≈(25−18)/2 — center the 18-tall GB layout
+
+; bottom dialog box (GB (0,12), interior 18×4 → total 20×6), centered:
+%define BOX_ROW   (ROW_OFF + 12)        ; 15
+%define BOX_COL   COL_OFF               ; 10
+%define BOX_INT_W 18
+%define BOX_INT_H 4
+; PROJ battle-ui: GB(0,12) 20x6 dialog box --(center, X+10col, Y+3row)--> canvas(10,15) on the 40x25 BG
+; PROJ battle-ui: GB(0,0) 20x18 default screen --(center, +10col/+3row)--> centered in 40x25 widescreen canvas
+
+section .data
+
+; Stage-1a placeholder intro lines (renderable glyphs → tile IDs).
+; "Wild POKéMON"  (W i l d _ P O K é M O N)
+intro_line1: db 0x96,0xa8,0xab,0xa3,0x7f,0x8f,0x8e,0x8a,0xba,0x8c,0x8e,0x8d
+INTRO_LINE1_LEN equ $ - intro_line1
+; "appeared!"     (a p p e a r e d !)
+intro_line2: db 0xa0,0xaf,0xaf,0xa4,0xa0,0xb1,0xa4,0xa3,0xe7
+INTRO_LINE2_LEN equ $ - intro_line2
 
 section .text
 
 global InitBattle
 extern InitBattleVariables
-extern TextBoxBorder
-extern set_single_window
 extern ClearSprites
+extern hide_window
+extern LoadHpBarAndStatusTilePatterns
+extern DrawBattleHUDs
 
 InitBattle:
     call InitBattleVariables
     mov byte [ebp + wIsInBattle], 1          ; wild battle (placeholder)
     call ClearSprites                        ; drop the overworld OAM (player etc.)
+    ; Stop the per-frame OAM rebuild (update_oam → PrepareOAMData) re-showing the
+    ; overworld player sprite after ClearSprites; battle manages its own sprites.
+    mov byte [ebp + W_UPDATE_SPRITES_ENABLED], 0
+    ; Switch render_bg to its flat-canvas (non-overworld) path: zero the overworld
+    ; view pointer so it decodes W_TILEMAP directly, and zero scroll so the 40×25
+    ; canvas blits at screen (0,0).
+    mov word [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], 0
+    mov byte [ebp + IO_SCX], 0
+    mov byte [ebp + IO_SCY], 0
+    call hide_window                         ; no window overlay — battle screen is the BG
+    ; Load the HP-bar / status / ":L" tiles ($62-$71) the HUD needs. Tiles $79-$7E
+    ; (the dialog box border) are byte-identical in both tile sets, so this does NOT
+    ; clobber the box drawn below despite the load_font.asm warning.
+    call LoadHpBarAndStatusTilePatterns
 
-    ; --- build a full-frame box over the 20×18 region of W_TILEMAP ---
-    ; TextBoxBorder: ESI=dest (W_TILEMAP offset), BL=interior width, BH=interior height.
-    mov esi, W_TILEMAP
-    mov bl, GB_W - 2                          ; interior width = 18
-    mov bh, GB_H - 2                          ; interior height = 16
-    call TextBoxBorder
+    ; --- full-screen blank: clear the whole 40×25 canvas to the space tile ---
+    ; (per pret init order — blank the entire screen before drawing the layout).
+    lea edi, [ebp + W_TILEMAP]
+    mov al, T_SP
+    mov ecx, SCREEN_TILES_W * SCREEN_TILES_H  ; 40 × 25 = 1000
+    rep stosb
 
-    ; --- copy 20×18 from W_TILEMAP (stride 40) → GB_TILEMAP1 (stride 32) ---
-    xor edx, edx                              ; row = 0
-.copyrow:
-    mov eax, edx
-    imul eax, SCREEN_TILES_W                  ; row * 40
-    lea esi, [ebp + eax + W_TILEMAP]
-    mov eax, edx
-    shl eax, 5                                ; row * 32
-    lea edi, [ebp + eax + GB_TILEMAP1]
-    mov ecx, GB_W                             ; 20 bytes
+    ; --- hand-draw the bottom dialog box (stride 40) at canvas (BOX_COL,BOX_ROW) ---
+    ; top border: ┌ + ─×18 + ┐
+    lea edi, [ebp + W_TILEMAP + BOX_ROW * FW + BOX_COL]
+    mov byte [edi], T_TL
+    lea edx, [edi + 1]                        ; save interior-fill start for reuse
+    inc edi
+    mov al, T_H
+    mov ecx, BOX_INT_W
+    rep stosb                                 ; ─×18  (edi now at right corner col)
+    mov byte [edi], T_TR
+    ; middle rows: │ + space×18 + │   (BOX_INT_H rows)
+    mov ebx, BOX_INT_H
+.midrow:
+    add edx, FW                               ; next row's interior-fill start
+    lea edi, [edx - 1]
+    mov byte [edi], T_V                        ; left wall (col 0)
+    inc edi                                    ; advance past it before filling
+    mov al, T_SP
+    mov ecx, BOX_INT_W
+    rep stosb                                 ; spaces col 1..18 (edi → col 19)
+    mov byte [edi], T_V                        ; right wall (col 19)
+    dec ebx
+    jnz .midrow
+    ; bottom border: └ + ─×18 + ┘
+    add edx, FW
+    lea edi, [edx - 1]
+    mov byte [edi], T_BL                        ; col 0
+    inc edi                                    ; advance past it before filling
+    mov al, T_H
+    mov ecx, BOX_INT_W
+    rep stosb                                 ; ─×18 col 1..18 (edi → col 19)
+    mov byte [edi], T_BR                        ; col 19
+
+    ; --- intro text into the box interior (box rows 2 & 4 → canvas rows 17 & 19) ---
+    mov esi, intro_line1                       ; flat .data source
+    lea edi, [ebp + W_TILEMAP + (BOX_ROW + 2) * FW + BOX_COL + 1]
+    mov ecx, INTRO_LINE1_LEN
     rep movsb
-    inc edx
-    cmp edx, GB_H
-    jb .copyrow
+    mov esi, intro_line2
+    lea edi, [ebp + W_TILEMAP + (BOX_ROW + 4) * FW + BOX_COL + 1]
+    mov ecx, INTRO_LINE2_LEN
+    rep movsb
 
-    ; --- one centered window descriptor showing the GB frame ---
-    mov eax, BAT_WX                           ; wx = 80
-    mov ebx, BAT_WY                           ; wy = 28
-    mov ecx, GB_W * 8                         ; clip_w = 160
-    mov edx, BAT_WY + GB_H * 8                ; max_y = 28 + 144 = 172
-    mov esi, GB_TILEMAP1
-    xor edi, edi                              ; start_row = 0
-    call set_single_window
+    ; --- HUD boxes + HP bars (enemy upper-left, player lower-right) ---
+    call DrawBattleHUDs
     ret

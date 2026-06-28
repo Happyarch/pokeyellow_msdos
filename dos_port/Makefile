@@ -347,7 +347,8 @@ endif
 # check-only BATTLE_SRCS backend. Grows per stage.
 FRONTEND_SRCS := \
     src/engine/battle/init_battle_variables.asm \
-    src/engine/battle/init_battle.asm
+    src/engine/battle/init_battle.asm \
+    src/engine/battle/battle_hud.asm
 
 LINK_SRCS := $(BOOT_SRCS) $(HOME_SRCS) $(HAL_SRCS) $(GAME_SRCS) $(POKEMON_SRCS) $(ITEMS_SRCS) $(FRONTEND_SRCS)
 LINK_OBJS := $(LINK_SRCS:.asm=.o)
