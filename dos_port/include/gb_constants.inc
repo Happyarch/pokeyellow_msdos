@@ -12,6 +12,12 @@
 
 NUM_STATS               equ 5
 NUM_MOVES               equ 4       ; move slots per mon (not total moves in the game)
+
+; --- mon-pic decompressor (constants/gfx_constants.asm) ---
+TILE_1BPP_SIZE          equ 8       ; TILE_SIZE/2 — bytes per 1bpp 8×8 tile
+PIC_WIDTH               equ 7       ; max pic size in tiles
+PIC_HEIGHT              equ 7
+SPRITEBUFFERSIZE        equ PIC_WIDTH * PIC_HEIGHT * TILE_1BPP_SIZE  ; 392 = 0x188
 NAME_LENGTH             equ 11      ; '@'-terminated fixed-width name field (mon names)
 NAME_BUFFER_LENGTH      equ 20      ; wNameBuffer size (GetName dest; bounds the copy)
 MOVE_NAME_LENGTH        equ 14      ; constants/text_constants.asm (12 printed + '@' + prefix)

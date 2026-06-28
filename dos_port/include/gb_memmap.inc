@@ -790,6 +790,33 @@ wDoNotWaitForButtonPressAfterDisplayingText equ 0xCC3C
 wStatusFlags7                equ 0xD732   ; = W_STATUS_FLAGS_7 (BIT_TEST_BATTLE)
 wTestBattlePlayerSelectedMove equ 0xCCD9  ; debug TestBattle forced move
 
+; --- Sprite (mon-pic) decompressor scratch (home/uncompress.asm) ---
+; The 20-byte decompressor var block sits immediately before wCurSpecies ($D0B4)
+; in pret's wram.asm (10 bytes + 5 words). Derived: $D0B4 - 0x14 = $D0A0; the block
+; ends exactly at wCurSpecies (verifies the count). $D0A0-$D0B3 is otherwise unused.
+wSpriteCurPosX               equ 0xD0A0
+wSpriteCurPosY               equ 0xD0A1
+wSpriteWidth                 equ 0xD0A2   ; pixels (tiles*8)
+wSpriteHeight                equ 0xD0A3   ; pixels (tiles*8)
+wSpriteInputCurByte          equ 0xD0A4
+wSpriteInputBitCounter       equ 0xD0A5
+wSpriteOutputBitOffset       equ 0xD0A6   ; 3..0 → which 2-bit column of the output byte
+wSpriteLoadFlags             equ 0xD0A7   ; bit0 = use buffer2, bit1 = last chunk
+wSpriteUnpackMode            equ 0xD0A8
+wSpriteFlipped               equ 0xD0A9
+wSpriteInputPtr              equ 0xD0AA   ; dw
+wSpriteOutputPtr             equ 0xD0AC   ; dw
+wSpriteOutputPtrCached       equ 0xD0AE   ; dw
+wSpriteDecodeTable0Ptr       equ 0xD0B0   ; dw
+wSpriteDecodeTable1Ptr       equ 0xD0B2   ; dw
+
+; Sprite buffers — pret "Sprite Buffers" SRAM section (sSpriteBuffer0/1/2, each
+; SPRITEBUFFERSIZE=0x188). SRAM ($A000-$BFFF) is free in the port (save = Phase 5).
+GB_SRAM                      equ 0xA000
+sSpriteBuffer0               equ 0xA000   ; SPRITEBUFFERSIZE
+sSpriteBuffer1               equ 0xA188   ; SPRITEBUFFERSIZE (must be contiguous with buffer2:
+sSpriteBuffer2               equ 0xA310   ;   the decompressor clears 2*SPRITEBUFFERSIZE from buffer1)
+
 ; Connection-strip headers (each 11 bytes: map, strip-src, strip-dst, length, map-width, Y-align, X-align, view-ptr)
 W_NORTH_CONNECTED_MAP        equ 0xD370 ; wNorthConnectedMap ($FF = none)
 W_SOUTH_CONNECTED_MAP        equ 0xD37B ; wSouthConnectedMap

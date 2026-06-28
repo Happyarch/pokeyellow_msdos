@@ -78,11 +78,18 @@ deterministic centered battle field (cleared margins) in FRAME.BIN.
 **Start from pret's faithful GB coords (centered); record placements as `; PROJ` /
 `docs/ui_projection.md` entries. Widescreen spacing is an ITERATION pass after the
 centered baseline renders (move HUD/sprites outward with the user via FRAME.BIN).**
-- 1a: battle screen frame — `TextBoxBorder` layout, bottom text box, `PrintText`
-  "Wild NIDORAN appeared!" style intro. **GATE:** centered baseline approved by user.
-- 1b: `DrawEnemyHUDAndHPBar` + `DrawPlayerHUDAndHPBar` — name, `:L`level, HP bar
-  (via `LoadHpBarAndStatusTilePatterns`), status; player side shows HP number.
-  **GATE:** both HUD boxes + bars at correct coords, correct fill for seeded HP.
+- [x] 1a: battle screen frame — full blank → bottom `TextBoxBorder` dialog box →
+  intro text ("Wild POKéMON / appeared!"), centered baseline. **GATE:** awaiting
+  user sign-off (FRAME.BIN render shown 2026-06-28). Done: `init_battle.asm`
+  rewritten from the Stage-0.5 full-frame placeholder; stride/centering/sprite
+  fixes (see translation_log + handoff below).
+- [x] 1b: `DrawBattleHUDs` (new `battle_hud.asm`) — enemy HUD upper-left + player HUD
+  lower-right: name, `:L`level, 6-seg HP bar (via `LoadHpBarAndStatusTilePatterns`),
+  player HP fraction. **GATE: user signed off layout 2026-06-28** (enemy PIDGEY L3
+  14/14 full bar; player PIKACHU L6 11/22 half bar + "11/ 22"). Mirrors party_menu's
+  stride-agnostic HP-bar/digit logic; reads `wEnemyMon*`/`wBattleMon*` (harness-seeded
+  until `LoadBattleMonFromParty`). Deferred: HP-bar color (Phase 5 palette), status
+  text (seeded healthy), decorative HUD frame/pokeballs.
 - 1c: mon sprites — enemy front pic (top-right) + player back pic (bottom-left).
   **DECIDED (user, 2026-06-27): real pic decompression now** — port `pkmncompress`
   decode + pic loading in this stage (not a placeholder). This is the heaviest
@@ -121,7 +128,126 @@ as a **separate agent alongside** Stage 2+, BUT it needs *hardware* verification
 (not headless/logic-only), so it does not fit the "sonnet parallel = logic-only"
 rule — treat as a serial/owner-verified track. Battles stay **silent** until then.
 
-## Handoff — resume here (2026-06-27)
+## Handoff — resume here (2026-06-28, Stage 1b done — HUDs on widescreen canvas)
+
+**Stage 1b DONE (user signed off layout).** `src/engine/battle/battle_hud.asm`
+(`DrawBattleHUDs`) draws both HUDs into the 40×25 canvas: enemy upper-left
+(name(11,3)/`:L`lv(15,4)/HP bar(12,5)), player lower-right
+(name(20,11)/lv(24,12)/HP bar(20,13)/frac(21,14)). Called from `InitBattle` after the
+box; `InitBattle` now also calls `LoadHpBarAndStatusTilePatterns` (tiles $79-$7F are
+byte-identical between the box & battle sets, so it does NOT clobber the dialog box —
+verified; the load_font.asm warning is over-cautious). HP-bar/level/digit logic mirrors
+the shipped party-menu renderer (linear within a row → stride-agnostic, drops onto the
+canvas). Reads `wEnemyMon*`/`wBattleMon*`; the DEBUG_BATTLE harness seeds them
+(PIDGEY L3 14/14, PIKACHU L6 11/22) — real path is `LoadBattleMonFromParty` (Stage 2/3).
+FRAME.BIN histogram {0, 2, 3} (shade-2 from the bar tiles). Deferred to later passes:
+HP-bar color by fraction (Phase 5 palette), status text (`.print_status` mirror; seeded
+healthy so blank now), decorative HUD frame ($73/$76 underline) + pokeball indicators.
+
+**NEXT — Stage 1c: mon sprites** (enemy front pic top-right, player back pic
+bottom-left). Heaviest sub-step. **DECISION (user, 2026-06-28): FAITHFUL runtime
+decompressor** — NOT a build-time PNG→2bpp shortcut. Reason: many Gen-1 sprite/ACE
+glitches and glitch-Pokémon front sprites depend on the decompressor's real behavior
+on malformed data; a build-time decode would silently kill them (fits the project's
+GLITCH-preservation philosophy). Plan split: 1c-i decoder (native byte-exact),
+1c-ii placement (FRAME.BIN). `HideSubstituteShowMonAnim`/`ReshowSubstituteAnim` +
+`CheckTargetSubstitute` deferred.
+
+### Stage 1c research — DONE this session (do not re-derive)
+- **Source to port:** `home/uncompress.asm` (~600 lines, fully read) =
+  `UncompressSpriteData`/`_UncompressSpriteData`/`UncompressSpriteDataLoop`,
+  `MoveToNextBufferPosition`, `WriteSpriteBitsToBuffer`, `ReadNextInputBit/Byte`,
+  `UnpackSprite`, `SpriteDifferentialDecode`, `DifferentialDecodeNybble`,
+  `XorSpriteChunks`, `ReverseNybble`, `ResetSpriteBufferPointers`,
+  `UnpackSpriteMode2`, `StoreSpriteOutputPointer`, + the 5 data tables.
+  Then `home/pics.asm`: `UncompressMonSprite`/`LoadMonFrontSprite`/
+  `LoadUncompressedSpriteData`/`AlignSpriteDataCentered`/`ZeroSpriteBuffer`/
+  `InterlaceMergeSpriteBuffers` (1c-ii placement/merge), and `LoadMonBackPic`
+  (engine/battle/init_battle.asm:160).
+- **Aliases/constants ADDED + committed-ready (this session):**
+  `gb_memmap.inc`: `wSpriteCurPosX..wSpriteDecodeTable1Ptr` at **$D0A0–$D0B3**
+  (derived: pret puts the 20-byte block (10 db + 5 dw) right before `wCurSpecies`
+  $D0B4 → $D0B4-0x14=$D0A0; lands exactly at wCurSpecies, verifying the count;
+  $D0A0-$D0B3 is otherwise unused). `GB_SRAM=$A000`, `sSpriteBuffer0/1/2 =
+  $A000/$A188/$A310` (SRAM free in port; buffer1/2 must stay contiguous — the
+  decompressor clears 2*SPRITEBUFFERSIZE from buffer1). `gb_constants.inc`:
+  `TILE_1BPP_SIZE=8`, `PIC_WIDTH/HEIGHT=7`, `SPRITEBUFFERSIZE=0x188` (392).
+- **Addressing decision for the port:** the const tables (Decode*/NybbleReverse/
+  LengthEncodingOffsetList) are ROM in pret, accessed via `[hl]`. In the port they
+  must be FLAT `.data` (NOT `[ebp+...]`), while buffers/input/WRAM vars stay
+  `[ebp+addr]`. So keep tables flat and select the differential-decode table via
+  port-local 32-bit ptrs (e.g. `decode_tbl0/1` in .bss) instead of storing flat
+  addresses in the 16-bit `wSpriteDecodeTable*Ptr` GB vars. Store pic pointers as
+  16-bit LE words (`mov word [ebp+var]`); 16-bit pointer math stays in-buffer (no
+  wrap), so 32-bit `add` is fine. `dn x,y` macro = `db (x<<4)|y` (tables already
+  hand-expanded in notes below).
+- **VALIDATION REFERENCE FOUND (native, byte-exact):** `tools/pkmncompress -u
+  <in.pic> <out>` DEcompresses → confirmed byte-identical to `gfx/pokemon/front/
+  pikachu.2bpp` (400B, native 5×5; .pic first byte 0x55 = 5×5 tiles). NOTE the
+  formats: my GB decompressor emits COLUMN-MAJOR 1bpp chunks; `pkmncompress -u`
+  finishes with `transpose_tiles` (back to row-major) + interleave
+  (`out[i*2]=plane0, out[i*2+1]=plane1`). So to byte-compare in the harness, either
+  (a) compare my two chunks against `pkmncompress -u` output AFTER de-interleaving +
+  transposing it to column-major, or (b) port the full merge (1c-ii) and compare the
+  reassembled native 2bpp. `transpose_tiles(data,width)`: tile i → j =
+  `(i*width + i/width) % (width*width)` (see tools/pkmncompress.c:46). pkmncompress
+  also picks mode/order (read from the stream by the decoder — handled automatically).
+- **Decode-table bytes (pre-expanded `dn`):**
+  `DecodeNybble0Table:        01 32 76 45 FE CD 89 BA`
+  `DecodeNybble1Table:        FE CD 89 BA 01 32 76 45`
+  `DecodeNybble0TableFlipped: 08 C4 E6 2A F7 3B 19 D5`
+  `DecodeNybble1TableFlipped: F7 3B 19 D5 08 C4 E6 2A`
+  `NybbleReverseTable:        0 8 4 C 2 A 6 E 1 9 5 D 3 B 7 F`
+  `LengthEncodingOffsetList:  dw 1,3,7,15,...,65535 (2^(n+1)-1, 16 entries)`
+- **NOT YET WRITTEN:** `src/gfx/uncompress.asm` (no code yet — only includes were
+  edited). Next session: write it, add a source list + native harness, byte-validate,
+  then do 1c-ii (merge + place enemy front top-right / player back bottom-left).
+  `LoadMonBackPic` sets `wSpriteFlipped`; front pics are not flipped.
+
+## Handoff (2026-06-28, Stage 1a built — WIDESCREEN canvas)
+
+**ARCHITECTURE PIVOT (user direction 2026-06-28):** "we should be using the wider
+screen and just centering everything. I want to extend it later." → the battle
+screen is now the **full 320×200 (40×25-tile) widescreen canvas**, with the default
+GB UI built CENTERED in it (col +10, row +3). The Stage-0.5 centered 20×18 window
+descriptor is GONE. This reverses the Stage-0.5 "defer render_screen_tilemap"
+decision — but no new renderer was needed (see below).
+
+**Stage 1a DONE (user signed off the text box display; pivot re-verified clean).**
+`src/engine/battle/init_battle.asm`: blank the whole 40×25 `W_TILEMAP` → hand-draw
+the dialog box at canvas (10,15) → fixed intro "Wild POKéMON / appeared!". FRAME.BIN
+clean (shade 0 + shade 3 only, 1404 box px, 0 sprite px, h-center 159 ≈ 160).
+
+**KEY REUSABLE FACTS (also in translation_log + memory):**
+1. **Battle screen = the BG plane via `render_bg`'s non-overworld path.** `render_bg`
+   decodes the full 40×25 `W_TILEMAP` to the back buffer whenever
+   `wCurrentTileBlockMapViewPointer == 0` (the title/menu path). `InitBattle` zeroes
+   that pointer + `IO_SCX`/`IO_SCY` and `hide_window`s; `frame.asm` just calls
+   `render_bg` (no more `clear_backbuffer_battle`, no window descriptor). To place a
+   battle element anywhere on the wide screen, write tiles into `W_TILEMAP` at 40×25
+   coords — no clip, no 20-tile cap.
+2. **`TextBoxBorder`/`PlaceString` are stride-20-locked** (`text.asm:
+   SCREEN_W_TILES equ 20`) and CANNOT build into the 40-wide canvas. Boxes are
+   hand-drawn with box-border charmap tiles ($79–$7E) at stride 40. **Single-line**
+   `PlaceString` (no `<NEXT>`/`<LINE>`) is stride-agnostic → still usable for HUD
+   names. Multi-line battle text (Stage 2 turn loop) needs a stride-40-aware text
+   placement (build a small helper, or a 20-wide scratch + center-copy).
+3. `InitBattle` clears `wUpdateSpritesEnabled` so `update_oam` stops re-showing the
+   overworld player sprite after `ClearSprites`.
+
+**NEXT — Stage 1b (HUD boxes + HP bars), now on the wide canvas.** Port the helpers
+pret's `DrawEnemyHUDAndHPBar`/`DrawPlayerHUDAndHPBar` need (none ported): `PrintLevel`,
+`DrawHPBar` (+`DrawHP`), `CenterMonName`, `PrintStatusConditionNotFainted`,
+`ClearScreenArea`, HUD-tile placers (`PlaceEnemyHUDTiles`/`PlacePlayerHUDTiles`).
+Build at the GB coords + the (10,3) centering offset (enemy HUD GB(0,0)→canvas(10,3);
+player HUD GB(9,7)→canvas(19,10)). Each placement = FRAME.BIN → user gate → `; PROJ`
++ ui_projection row. Names need `wEnemyMonNick`/`wBattleMonNick` in GB memory (seed /
+`GetMonName`) for `PlaceString` (EBP-relative source). Per the user, build centered
+first, then iterate elements outward into the margins case-by-case.
+
+---
+
+## Prior handoff (2026-06-27)
 
 **Branches/commits.** Wave 1 backend is MERGED to `master` (`750d4b57`). Wave 2 is on
 **`wave2-battle-frontend`** (off master), pushed. Key commits:
