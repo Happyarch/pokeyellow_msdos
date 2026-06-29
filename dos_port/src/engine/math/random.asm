@@ -16,13 +16,19 @@ global Random_
 ; updated by the main loop to simulate the Game Boy divider.
 ; -----------------------------------------------------------------------------
 Random_:
+    ; The GB DIV register free-runs at 16384 Hz, so it differs between reads even
+    ; inside a tight synchronous loop (e.g. RandomizeDamage's 217..255 rejection
+    ; loop). The port has no such passively-incrementing register, so advance IO_DIV
+    ; on each call here — otherwise the PRNG never churns and that loop hangs.
+    add byte [ebp + IO_DIV], 0x25      ; odd step → cycles through all 256 DIV values
+
     ; ldh a, [rDIV]
     mov al, byte [ebp + IO_DIV]
     mov bl, al
-    
+
     ; ldh a, [hRandomAdd]
     mov al, byte [ebp + H_RANDOM_ADD]
-    
+
     ; adc b
     add al, bl ; adc requires carry flag handling if needed, but the original logic just did adc from whatever carry was left?
     ; Wait, the original Game Boy code just does `adc b` right after `ld b, a`.

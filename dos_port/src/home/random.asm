@@ -1,9 +1,11 @@
 ; dos_port/home/random.asm
+%include "gb_memmap.inc"        ; hRandomAdd (HRAM equ); was wrongly extern'd while check-only
+
 global Random
 
 extern Random_
-extern hRandomAdd
 
+bits 32
 section .text
 
 ; Return a random number in AL.
