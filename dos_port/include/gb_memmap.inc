@@ -194,11 +194,16 @@ wWereAnyMonsAsleep     equ 0xCD3D   ; Poke Flute: set if a party mon woke (alias
 wMaxPP                 equ 0xD11D   ; max PP of the move being PP-restored
 ; Menu state these routines reset (plain WRAM writes; the rendering is elsewhere).
 wListScrollOffset      equ 0xCC36
+wTopMenuItemY          equ 0xCC24   ; cursor Y of menu item id 0
+wTopMenuItemX          equ 0xCC25   ; cursor X of menu item id 0
 wCurrentMenuItem       equ 0xCC26
+wTileBehindCursor      equ 0xCC27   ; tile the cursor overwrote (for erase)
 wBagSavedMenuItem      equ 0xCC2C
 wSavedListScrollOffset equ 0xD07D   ; = W_SAVED_LIST_SCROLL_OFFSET
 wListCount             equ 0xD129   ; = W_LIST_COUNT
 wMaxMenuItem           equ 0xCC28
+wMenuWatchedKeys       equ 0xCC29   ; bit mask of keys the menu responds to
+wLastMenuItem          equ 0xCC2A   ; previously selected menu item
 
 ; Loaded-mon + enemy / current-box / daycare aliases — the Stage 1 cross-section
 ; deferrals, now resolved against pokeyellow.sym (symbols branch).
@@ -772,6 +777,9 @@ wGrassMons                   equ 0xD887
 wWaterRate                   equ 0xD8A3
 wWaterMons                   equ 0xD8A4
 wRepelRemainingSteps         equ 0xD0DA
+wMoves                       equ 0xD0DB   ; 4 move ids for FormatMovesString
+wMoveNum                     equ 0xD0DF
+wMovesString                 equ 0xD0E0   ; NUM_MOVES*MOVE_NAME_LENGTH (56), <NEXT>-joined
 wNPCMovementScriptPointerTableNum equ 0xCC57
 wMovementFlags               equ 0xD735
 wStringBuffer                equ 0xCF4A   ; PrintStatText destination (Stage 5)

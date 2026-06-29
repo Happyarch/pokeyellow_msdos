@@ -2897,3 +2897,54 @@ which needs the deferred deps (FlagActionPredef/LoadMonData_/CalcStats) — so i
 unvalidated and must be fixed+validated end-to-end in Wave 2.
 POKEMON_CHECK_SRCS (check-only): evolution depends on GetName (check-only names.asm),
 FlagActionPredef, and pikachu, so it isn't linked into the EXE yet.
+
+### Sprite decompressor — `src/gfx/uncompress.asm` (Wave 2, Stage 1c-i, 2026-06-29)
+Faithful 1:1 port of `home/uncompress.asm` (the runtime SM83 sprite decompressor):
+UncompressSpriteData/`_UncompressSpriteData`/UncompressSpriteDataLoop,
+MoveToNextBufferPosition, WriteSpriteBitsToBuffer, ReadNextInputBit/Byte, UnpackSprite,
+SpriteDifferentialDecode, DifferentialDecodeNybble, XorSpriteChunks, ReverseNybble,
+ResetSpriteBufferPointers, UnpackSpriteMode2, StoreSpriteOutputPointer + the 5 const
+tables. Decodes the RLE + length-encoded bit stream into two column-major 1bpp planes
+(sSpriteBuffer1/2), then differential-decodes / XOR-merges per the stream's unpack mode.
+Ported faithfully (not a build-time PNG→2bpp shortcut) so Gen-1 sprite/ACE glitches that
+depend on the decoder's behavior on malformed data survive (user directive 2026-06-28).
+**Control-flow fidelity:** the GB ends its "endless" decode loop by popping the loop's
+return address off the stack (`MoveToNextBufferPosition .allColumnsDone: pop hl`); the
+port keeps this verbatim as `pop esi`, so the coupled cluster (`_UncompressSpriteData`,
+the Loop, MoveToNext, UnpackSprite, SpriteDifferentialDecode, XorSpriteChunks,
+UnpackSpriteMode2) carries **no register-saving prologue** — durable state lives in the
+WRAM vars, registers are transient (GB model). Leaf helpers are balanced.
+**Addressing:** GB state ($D0A0+ scratch), the input stream, and the 3 sprite buffers
+($A188/$A310) are EBP-relative; the const decode/reverse/offset tables are flat `.data`;
+the per-call differential table is held in flat 32-bit `.bss` selectors `sp_dtbl0/1`
+(the 16-bit `wSpriteDecodeTable*Ptr` GB vars can't hold a flat address — left unused).
+**Native byte-exact validation (`gcc -m32` harness):** an asm shim sets EBP=GB base and
+calls UncompressSpriteData; the harness reassembles buffer1(even)/buffer2(odd) +
+`transpose_tiles` exactly as `tools/pkmncompress.c` does, then compares to the canonical
+`.2bpp`. **353/353 committed pics byte-exact** — front 153, back 151, trainers 46,
+battle 3 — covering all unpack modes (0/1/2) and both plane orders. The flipped path
+(back pics) runs deterministically; its byte-exact check belongs to Stage 1c-ii, where
+`InterlaceMergeSpriteBuffers`'s nybble-swap completes the horizontal flip. Linked via
+FRONTEND_SRCS (only extern = FillMemory). Note: `pkmncompress -u <pic>` == the committed
+`.2bpp` (verified), so it is the canonical decode oracle. Harness is ephemeral (scratchpad).
+
+### Mon-pic merge/scale + placement — `src/gfx/pics.asm` (Wave 2, Stage 1c-ii, 2026-06-29)
+Ports home/pics.asm (LoadUncompressedSpriteData, AlignSpriteDataCentered, ZeroSpriteBuffer,
+InterlaceMergeSpriteBuffers) + engine/battle/scale_sprites.asm (ScaleSpriteByTwo and helpers
+ScaleFirstThreeSpriteColumnsByTwo / ScaleLastSpriteColumnByTwo / ScalePixelsByTwo +
+DuplicateBitsTable). Pairs with the validated decoder (uncompress.asm): front pics are
+centered in a 7x7 buffer (AlignSpriteDataCentered), back pics are 2x-scaled from 4x4→7x7
+(ScaleSpriteByTwo); both then InterlaceMergeSpriteBuffers interleaves the two 1bpp planes
+(buffer0=MSB, buffer1=LSB) into the 2bpp sprite, nybble-swaps if wSpriteFlipped, and the
+port copies the 49 tiles (784 B) from sSpriteBuffer1 to VRAM + sets g_tilecache_dirty.
+**Placement:** the battle BG uses SIGNED tile addressing (LCDC bit4=0), so tile IDs $00-$7F
+map to VRAM $9000-$97F0; PlacePicTilemap fills a 7x7 W_TILEMAP block column-major (ID =
+base + col*7 + row), matching the merged buffer's tile order (faithful to
+CopyUncompressedPicToTilemap). Enemy front pic → VRAM $9000 (tile $00), canvas (22,3);
+player back pic → VRAM $9310 (tile $31), canvas (11,8). The back pic's tile range $31-$61
+(VRAM $9310-$961F) abuts the HP-bar tiles at $9620; the 2-tile overlap at IDs $60/$61 hits
+only the box set's unused font_extra glyphs, so it is cosmetically safe. **Verified:**
+FRAME.BIN renders a full faithful battle screen (Pidgey front + Pikachu back) — user
+signed off both sprites. Test stubs (DrawEnemyFrontPic_Stub/DrawPlayerBackPic_Stub) embed
+pidgey/pikachub .pic via incbin and are driven from the DEBUG_BATTLE harness; the real
+species→pic-pointer path is a Stage 2/3 data-layer task. Wired into FRONTEND_SRCS.

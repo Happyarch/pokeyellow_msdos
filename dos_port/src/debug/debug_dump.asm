@@ -48,6 +48,22 @@ extern PrepareNewGameDebug
 extern LoadFontTilePatterns
 extern LoadTextBoxTilePatterns
 extern InitBattle
+extern DrawEnemyFrontPic_Stub
+extern DrawPlayerBackPic_Stub
+extern DrawBattleMenu
+extern DrawMoveList
+extern PrintMoveInfoBox
+extern DisplayBattleMenu
+extern SaveBattleScreen
+extern RestoreBattleScreen
+extern DrawBattleHUDs
+extern DoPlayerAttackDamage
+extern GetCurrentMove
+extern GetDamageVarsForPlayerAttack
+extern CalculateDamage
+extern AdjustDamageForMoveType
+extern RandomizeDamage
+extern RenderPlayerTurn
 extern DelayFrame
 global RunBattleTest
 %endif
@@ -136,6 +152,17 @@ windows:
     dd 0xD1E0
     dd 0xD1E0
     dd 0xD1E0
+%elifdef DEBUG_BATTLE
+windows:
+    dd 0xC468    ; W_TILEMAP row 5 (enemy HP-bar tile IDs, cols 12-20)
+    dd 0xC5A8    ; W_TILEMAP row 13 (player HP-bar tile IDs, for comparison)
+    dd 0xCFE4    ; wEnemyMon: species, HP hi(+1), HP lo(+2)
+    dd 0xD0D6    ; wDamage
+    dd 0xCFD1    ; wPlayerMove* (num,effect,power,type)
+    dd 0xC468
+    dd 0xC5A8
+    dd 0xCFE4
+    dd 0xD0D6
 %else
 windows:
     dd 0x4600
@@ -279,6 +306,12 @@ RunBattleTest:
     mov word [ebp + wEnemyMonHP], 0x0E00      ; big-endian 14
     mov word [ebp + wEnemyMonMaxHP], 0x0E00   ; big-endian 14
     mov byte [ebp + wEnemyMonStatus], 0
+    ; enemy stats/types for the damage calc (PIDGEY: Normal/Flying)
+    mov byte [ebp + wEnemyMonType1], 0x00      ; NORMAL
+    mov byte [ebp + wEnemyMonType2], 0x02      ; FLYING
+    mov word [ebp + wEnemyMonDefense], 0x0C00  ; 12 (big-endian)
+    mov word [ebp + wEnemyMonSpeed],   0x0E00  ; 14
+    mov word [ebp + wEnemyMonSpecial], 0x0800  ; 8
     ; Player "PIKACHU" L6, HP 11/22 (half bar) — verifies partial fill + the fraction.
     mov byte [ebp + wBattleMonNick + 0], 0x8F  ; P
     mov byte [ebp + wBattleMonNick + 1], 0x88  ; I
@@ -292,17 +325,40 @@ RunBattleTest:
     mov word [ebp + wBattleMonHP], 0x0B00     ; big-endian 11
     mov word [ebp + wBattleMonMaxHP], 0x1600  ; big-endian 22
     mov byte [ebp + wBattleMonStatus], 0
+    ; Pikachu's moves (FIGHT submenu): THUNDERSHOCK, GROWL, TAIL WHIP, QUICK ATTACK
+    mov byte [ebp + wBattleMonMoves + 0], 0x54  ; THUNDERSHOCK
+    mov byte [ebp + wBattleMonMoves + 1], 0x2D  ; GROWL
+    mov byte [ebp + wBattleMonMoves + 2], 0x27  ; TAIL_WHIP
+    mov byte [ebp + wBattleMonMoves + 3], 0x62  ; QUICK_ATTACK
+    mov byte [ebp + wBattleMonPP + 0], 30
+    mov byte [ebp + wBattleMonPP + 1], 40
+    mov byte [ebp + wBattleMonPP + 2], 30
+    mov byte [ebp + wBattleMonPP + 3], 30
+    ; player stats/types for the damage calc (PIKACHU: Electric)
+    mov byte [ebp + wBattleMonType1], 0x17     ; ELECTRIC
+    mov byte [ebp + wBattleMonType2], 0x17
+    mov word [ebp + wBattleMonAttack],  0x0C00 ; 12 (big-endian)
+    mov word [ebp + wBattleMonDefense], 0x0900 ; 9
+    mov word [ebp + wBattleMonSpeed],   0x1000 ; 16
+    mov word [ebp + wBattleMonSpecial], 0x0C00 ; 12
+    mov byte [ebp + wPlayerMonNumber], 0
+    mov byte [ebp + wCriticalHitOrOHKO], 0
+    mov byte [ebp + wEnemyBattleStatus3], 0
     mov byte [ebp + wEnemyMonSpecies], 0x99   ; placeholder wild enemy (Bulbasaur idx)
     or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     call LoadTextBoxTilePatterns
     call InitBattle
+    call DrawEnemyFrontPic_Stub     ; Stage 1c-ii: real-decompressed enemy front pic (top-right)
+    call DrawPlayerBackPic_Stub     ; Stage 1c-ii: real-decompressed player back pic (bottom-left)
+    call SaveBattleScreen           ; snapshot the clean screen (restored on menu re-entry)
 %ifdef DEBUG_BATTLE_LIVE
 .live:
-    call DelayFrame                 ; keep rendering so the battle screen stays up (Esc quits)
-    jmp .live
+    call DisplayBattleMenu          ; Stage 2a: faithful DisplayBattleMenu (Esc quits)
+    jmp .live                       ; on A-select, re-enter the menu (no submenu yet)
 %else
-    call DelayFrame                 ; render the battle frame to the backbuffer
+    call DrawBattleMenu             ; Stage 2a: FIGHT/PKMN/ITEM/RUN menu (static)
+    call DelayFrame
     call DumpBackbuffer             ; dump FRAME.BIN + exit (never returns)
 .hang:
     jmp .hang

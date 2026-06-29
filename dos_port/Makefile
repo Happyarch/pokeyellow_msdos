@@ -183,9 +183,7 @@ ITEMS_SRCS := \
 # final EXE — but every file assembles (make check) and the pure-math routines
 # are validated by native ELF harnesses (see the plan's verification log).
 BATTLE_SRCS := \
-    src/data/battle_data.asm \
     src/home/names.asm \
-    src/engine/battle/core_damage.asm \
     src/engine/battle/badge_boosts.asm \
     src/engine/battle/status_penalties.asm \
     src/engine/battle/decrement_pp.asm \
@@ -207,7 +205,6 @@ BATTLE_SRCS := \
     src/engine/battle/effects.asm \
     src/engine/battle/building_rage.asm \
     src/engine/battle/residual_damage.asm \
-    src/engine/battle/get_current_move.asm \
     src/engine/battle/move_category.asm \
     src/engine/battle/animations.asm \
     src/data/wild_data.asm \
@@ -348,7 +345,17 @@ endif
 FRONTEND_SRCS := \
     src/engine/battle/init_battle_variables.asm \
     src/engine/battle/init_battle.asm \
-    src/engine/battle/battle_hud.asm
+    src/engine/battle/battle_hud.asm \
+    src/engine/battle/battle_menu.asm \
+    src/text/wide_text.asm \
+    src/data/battle_data.asm \
+    src/data/type_names.asm \
+    src/home/random.asm \
+    src/engine/battle/core_damage.asm \
+    src/engine/battle/get_current_move.asm \
+    src/engine/battle/battle_stubs.asm \
+    src/gfx/uncompress.asm \
+    src/gfx/pics.asm
 
 LINK_SRCS := $(BOOT_SRCS) $(HOME_SRCS) $(HAL_SRCS) $(GAME_SRCS) $(POKEMON_SRCS) $(ITEMS_SRCS) $(FRONTEND_SRCS)
 LINK_OBJS := $(LINK_SRCS:.asm=.o)
