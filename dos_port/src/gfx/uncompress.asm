@@ -4,6 +4,13 @@
 ; Reference: docs/translation_log.md (UncompressSpriteData entry),
 ;            docs/current_plan_battle_frontend.md (Stage 1c research).
 ;
+; NOTE (bounding box): a sprite's declared dims (width×height tiles) bound the
+; NORMAL case, but the GB decoder can technically write past the box for glitch
+; sprites (e.g. MissingNo). This port is a 1:1 behavioral copy and decoded all
+; committed real pics byte-exact, so it is correct for every legitimate mon/trainer;
+; the out-of-box glitch case is not separately exercised. TODO(glitch): verify the
+; over-box write path against a known glitch-mon sprite if/when ACE glitches matter.
+;
 ; WHY a faithful runtime port (not a build-time PNG→2bpp shortcut): many Gen-1
 ; sprite/ACE glitches and glitch-Pokemon front sprites depend on the exact
 ; behavior of this RLE + length-encoded bit-stream decoder on malformed data.

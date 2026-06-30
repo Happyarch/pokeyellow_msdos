@@ -2948,3 +2948,186 @@ FRAME.BIN renders a full faithful battle screen (Pidgey front + Pikachu back) �
 signed off both sprites. Test stubs (DrawEnemyFrontPic_Stub/DrawPlayerBackPic_Stub) embed
 pidgey/pikachub .pic via incbin and are driven from the DEBUG_BATTLE harness; the real
 species→pic-pointer path is a Stage 2/3 data-layer task. Wired into FRONTEND_SRCS.
+
+### Enemy turn + wild AI + wild moveset generation (Wave 2, Stage 2b, 2026-06-29)
+Three linked pieces extending the player-attack path into a full battle round.
+
+**Enemy turn** (`src/engine/battle/battle_menu.asm`): `ExecutePlayerTurn` is now a full-round
+handler — choose the enemy move (`SelectEnemyMove`), order the two battlers by speed
+(player first if wBattleMonSpeed >= wEnemyMonSpeed; Quick Attack/Counter priority + random
+tie-break deferred), run the faster one's attack, and if its target faints the round ends
+(no retaliation). New `DoEnemyAttackDamage` (mirror of `DoPlayerAttackDamage`: hWhoseTurn=1,
+GetCurrentMove → GetDamageVarsForEnemyAttack → CalculateDamage → AdjustDamageForMoveType →
+RandomizeDamage, drains wBattleMonHP), `RenderEnemyTurn` ("Enemy <nick> / used <move>!", the
+faithful `<USER>`="Enemy "+nick on the enemy's turn per home/text.asm:PlaceMoveUsersName),
+`ShowPlayerFainted`. Step helpers `PlayerAttackStep`/`EnemyAttackStep` return CF=1 on a
+battle-ending faint. Accuracy/MoveHitTest still deferred (always hits); crit forced off.
+
+**Wild AI** — `src/engine/battle/select_enemy_move.asm`: faithful port of
+engine/battle/core.asm:SelectEnemyMove. The WILD random-move path (25% per slot, re-roll on
+disabled/empty) is the whole enemy move choice AND the default stub for every opponent
+(trainer-AI scoring `AIEnemyTrainerChooseMoves` deferred — both wild + trainer fall into
+.chooseRandomMove). Forced-move early-outs (recharge/charge/thrash/freeze/sleep/trap/bide)
+ret without choosing. Link path = TODO-HW (Phase 4). `percent` macro = n*$ff/100.
+
+**Wild moveset generation** — `src/engine/battle/load_enemy_moves.asm` (`LoadWildMonMoves`):
+faithful port of LoadEnemyMonData's `.copyStandardMoves`+`.loadMovePPs` — copy the 4 base
+moves from the mon header (wMonHMoves), WriteMonMoves fills the level-up learnset
+(assets/evos_moves.inc, already generated) up to the level, LoadMovePPs writes base PP.
+Also ported `LoadMovePPs`/`AddPartyMon_WriteMovePP` into `src/engine/pokemon/write_moves.asm`
+(flat-`Moves` PP read, like its daycare branch). Sets wCurPartySpecies (GetMonLearnset key)
++ wCurEnemyLevel + wPredefDE/HL for the two predef calls. NOTE (Gen 1): enemy PP is loaded
+for parity but never decremented; TM/HM moves are not part of wild generation (player-only
+learnset category). All three wired into FRONTEND_SRCS.
+
+**Validation (headless DUMP.BIN via DEBUG_BATTLE_ENEMYHIT, a new scripted one-shot gate):**
+PIDGEY ($24) L3 → wEnemyMonMoves=[GUST $10,0,0,0], wEnemyMonPP[0]=35 (GUST base PP);
+SelectEnemyMove picks GUST; wEnemyMove*=[$10,$00,$28(40),$FF(100%)]; GUST deals 5 (STAB,
+neutral) → player HP 11→6. Level-up fill proven at L13 → [GUST,SAND_ATTACK $1c,QUICK_ATTACK
+$62,0], matching PidgeyEvosMoves. Live FRAME.BIN sign-off pending (enemy turn already
+visually confirmed by the user).
+
+### HP-drain animation — `src/engine/battle/battle_hud.asm` (Wave 2, Stage 2b, 2026-06-29)
+The port's stride-agnostic stand-in for pret UpdateHPBar (engine/gfx/hp_bar.asm). The battle
+HUD already replaces pret's tile-based DrawHPBar with draw_hp_bar/calc_hp_pixels (the 40-wide
+canvas needs stride-agnostic drawing), so the animation replicates the BEHAVIOR rather than
+porting DrawHPBar: `AnimateEnemyHPBar`/`AnimatePlayerHPBar` tick the displayed HP from a passed
+old value (ECX) toward the final value in WRAM one unit at a time, redrawing the gauge on each
+PIXEL change with a 2-frame DelayFrame wait (pret's cadence); the player HUD's "cur" digits tick
+alongside via print_num3. Factored `hp_to_pixels` (HP value in EAX) out of calc_hp_pixels so the
+loop can price an arbitrary ticking HP. Loop state kept in BSS so draw_hp_bar/print_num3/DelayFrame
+clobbering can't corrupt it; the entries take registers. RenderPlayerTurn/RenderEnemyTurn reordered:
+DrawBattleHUDs at PRE-attack HP → print "<mon> used <move>!" → DoXAttackDamage → animate the
+defender's bar (so the gauge starts full and drains). A 0-difference (status move / miss) animates
+nothing. User signed off the live drain.
+
+### Battle terminal states (Stage 2c) — `src/engine/battle/battle_menu.asm` (Wave 2, 2026-06-29)
+Clean win/lose termination so the battle loop ends instead of re-looping the menu forever. New
+`wBattleOver` flag (0 ongoing / 1 win / 2 lose): ExecutePlayerTurn sets it from which side fainted
+(PlayerAttackStep CF=1 → enemy fainted → win; EnemyAttackStep CF=1 → active mon fainted → lose),
+DisplayBattleMenu's FIGHT path breaks its `jmp DisplayBattleMenu` loop when it is nonzero, and the
+DEBUG_BATTLE_LIVE harness resets it at battle start, polls it after each menu turn, and on end calls
+new `EndBattleScreen` (blank the canvas + present) as a clean terminal. DEFERRED: multi-mon
+switch-in (any active-mon faint currently ends the battle as a loss — pret would prompt to send out
+another party mon) and the real exit path — Stage 3 returns to the overworld and runs the victory
+EXP screen (Wave-1 GainExperience). EndBattleScreen's blank canvas is the placeholder for that.
+Live sign-off pending.
+
+### Turn-order quirks (Quick Attack priority + speed-tie) — battle_menu.asm (Wave 2, Stage 2b, 2026-06-29)
+Replaced ExecutePlayerTurn's speed-only ordering with the faithful pret order (engine/battle/
+core.asm:.noLinkBattle): Quick Attack ($62) takes priority; Counter ($44) always moves last;
+otherwise compare wBattleMonSpeed vs wEnemyMonSpeed (big-endian), with a 50/50 BattleRandom break
+on a tie (`50 percent + 1` = 128). pret's internal-clock tie invert is link-battle only → TODO-HW
+(Phase 4). Added QUICK_ATTACK to gb_constants.inc (COUNTER was already there). Observable in the
+DEBUG_BATTLE_LIVE demo: when the random wild AI rolls QUICK ATTACK and the player picks a non-QA
+move, "Enemy PIDGEY used QUICK ATTACK!" resolves before the player's move despite Pikachu being
+faster. Live sign-off pending.
+
+### FIGHT-menu cursor persistence — battle_menu.asm + init_battle.asm (Wave 2, Stage 2a polish, 2026-06-29)
+Fidelity fix (user observation, confirmed vs pret): the FIGHT move-list cursor must remember the
+last-highlighted move across move uses AND menu exits for the whole battle, cleared only at battle
+start. pret keeps it in wPlayerMoveListIndex: MoveSelectionMenu (.menuset, core.asm:2645) inits the
+cursor from it, and core.asm:2745 writes it on BOTH select (A) and back (B) — which is why backing
+out preserves it too. The port previously hardcoded wCurrentMenuItem=0 in DrawMoveList every open
+(always snapped to the first move). Now: DrawMoveList restores wCurrentMenuItem from
+wPlayerMoveListIndex (clamped to the real move count); MoveSelectionMenu writes wPlayerMoveListIndex
+= wCurrentMenuItem after WideHandleMenuInput (covers A and B); InitBattle clears wPlayerMoveListIndex
+at battle start (it sits outside InitBattleVariables' clear block — a deliberate port-side clear).
+wPlayerMoveListIndex was already aliased ($CC2E). Live sign-off pending.
+
+### Battle intro: real mon name + blinking ▼ — init_battle.asm + battle_menu.asm (Wave 2, intro polish, 2026-06-29)
+Intro polish (user, software-native battle-entry pass, order text→balls→slide). (1) intro text now
+pulls the real mon name: "Wild <wEnemyMonNick>" / "appeared!" (faithful _WildMonAppearedText) instead
+of the fixed "Wild POKéMON". (2) The intro is now actually SHOWN: it was drawn by InitBattle then
+instantly covered by the menu; the live flow waits for A/B on it first (faithful PrintBeginningBattleText
+pausing before the menu). (3) WaitForAPress now BLINKS the ▼ text-advance arrow (tile $EE) at the dialog
+box's bottom-right interior (canvas 28,19), toggling vs space every ~20 frames — the port's take on
+WaitForTextScrollButtonPress/HandleDownArrowBlinkTiming; applies to every battle text wait (intro/attack/
+faint). New DEBUG_BATTLE_INTRO FRAME hook dumps the intro screen (verified: "Wild PIDGEY appeared!" + ▼).
+Next: party-status pokéballs (DrawAllPokeballs) + a placeholder Bug Catcher trainer to test the enemy ball row.
+
+### Battle-intro party pokéballs (OAM) — pokeballs.asm + sprite_oam.asm + battle_hud.asm (Wave 2, 2026-06-29)
+Step 2 of the battle-entry polish (user: OAM sprites like pret, intro-only). New pokeballs.asm =
+faithful DrawAllPokeballs/SetupPokeballs/PickPokeball/WritePokeballOAMData: balls.2bpp (ok/status/
+fainted/empty) loads into the free OBJ tile area ($8000 tiles $00-$03), the party-status row is written
+as OAM entries (PickPokeball: HP==0→fainted, status!=0→status, else ok; past count→empty), and a new
+ppu helper PrepareStaticOAM fills render_sprites' DOS position tables straight from $FE00 (DOS=OAM-16/-8)
+so the balls composite without the wSpriteStateData/PrepareOAMData path (update_oam is gated off in
+battle). DrawBattlePokeballs sets IO_OBP0=$E4 + LCDCF_OBJ_ON; HideBattlePokeballs (HideSprites + clear
+OBJ) hands off to the HP-bar HUD. Faithful sequencing: DrawBattleHUDs split into DrawEnemyHUD/DrawPlayerHUD;
+InitBattle now draws only the enemy HUD (intro shows player balls, not the player HP bar), and the live
+intro does DrawBattlePokeballs → WaitForAPress → HideBattlePokeballs before the menu draws the player HP bar.
+Positions = pret OAM coords + the battle centering (+80,+24). Wild = player row only; trainer (wIsInBattle==2)
+adds the enemy row at OAM entries 6-11. VERIFIED (DEBUG_BATTLE_INTRO FRAME histogram + PNG): 6 balls at the
+player position, no player HP bar. Remaining: Bug Catcher test trainer (enemy ball row) + status-variety seed.
+
+### Battle HUD frame tiles + persistent shelf — LoadHudTilePatterns + gen_battle_hud_inc.py (Wave 2, 2026-06-29)
+Root-caused the "missing divider" the user flagged: pret's LoadHudAndHpBarAndStatusTilePatterns is TWO
+loads — LoadHpBarAndStatusTilePatterns (font_battle_extra → $62, ported) AND LoadHudTilePatterns
+(BattleHudTiles1 → vChars2 $6d, BattleHudTiles2+3 → $73), which OVERWRITE the font_extra "ID No."
+placeholders at $73/$74 with the real HUD frame pieces ($73 vertical, $74/$77 corners, $76 line,
+$78/$6f triangles). The port only ported the first load, so $73/$74 kept "ID No." (confirmed: generated
+.inc == source .2bpp, so no generator/load bug — the tiles simply were never loaded). FIX (generator,
+per project rule — never hand-edit tiles): new tools/gen_battle_hud_inc.py emits assets/battle_hud_2bpp.inc
+from gfx/battle/battle_hud_{1,2,3}.png (1bpp expanded 1bpp→2bpp doubled, = FarCopyDataDouble); new
+LoadHudTilePatterns (src/gfx/load_font.asm) loads tiles1 @ $6d and tiles23 @ $73; InitBattle calls it
+after LoadHpBarAndStatusTilePatterns. Re-applied the faithful PlaceHUDTiles port (DrawEnemyHUDFrame/
+DrawPlayerHUDFrame/place_hud_frame in battle_hud.asm). PERSISTENCE FIX (user): pret draws the player
+shelf in BOTH the pokéball intro (SetupOwnPartyPokeballs) AND the HP-bar HUD (DrawPlayerHUDAndHPBar), so
+it survives the send-out; the port now calls DrawPlayerHUDFrame from DrawPlayerHUD too. To give the shelf
+its own row, the player HUD shifted up one row (name/lv/bar/frac canvas rows 10-13, +3 centering like the
+enemy; shelf row 14) — the port previously used +4, colliding the frac with pret's shelf row. Also this
+thread: intro text pulls the real mon name + blinking ▼ arrow (WaitForAPress); party pokéballs as OAM
+sprites (pokeballs.asm + PrepareStaticOAM). User-signed-off live. Remaining: Bug Catcher enemy ball row +
+fainted/status ball variety; darkened silhouette slide-in.
+
+### Trainer sprite data generator — gen_trainer_pics.py + trainer_pics.asm (Wave 2, 2026-06-29)
+Generated all trainer battle graphics up front (user, saves time before trainer battles).
+New tools/gen_trainer_pics.py → assets/trainer_pics.inc: parses gfx/pics.asm (pic label → .pic
+file, incl. bare-alias labels like ChiefPic reusing ScientistPic) + data/trainers/pic_pointers_money.asm
+(class-ordered pic_money) → emits 45 unique `incbin "../gfx/trainers/*.pic"` blobs, TrainerPicPointers
+(flat dd, 47 classes, index = trainer class - 1, mirroring pret TrainerPicAndMoneyPointers), and
+TrainerBaseMoney (bcd3 prize money). The .pic blobs are the same compressed format uncompress.asm
+already validated byte-exact on all trainers, so a class's sprite loads like a wild mon's front pic.
+Tier-2 wrapper src/data/trainer_pics.asm (section .data + globals) wired into FRONTEND_SRCS; Makefile
+assets rule + `make assets` dep added. Links clean (18 KB data). Consumer (trainer _LoadTrainerPic
+path) is Stage 4 / the Bug Catcher test. assets/*.inc is gitignored→force-track on commit (git add -f).
+
+### Battle-entry silhouette slide-in — SlideBattlePicsIn (pics.asm) + faithful init flow (Wave 2, 2026-06-29)
+Software-native port of pret SlidePlayerAndEnemySilhouettesOnScreen (its per-scanline SCX raster
+trick can't be expressed in the tile renderer; user OK'd a software-native slide). Restructured the
+battle-entry flow to match pret _InitBattleCommon order: InitBattle split into setup/clear vs new
+DrawBattleIntroBox (box + "Wild <nick> appeared!" + enemy HUD); pic stubs made decode-only (VRAM only).
+SlideBattlePicsIn clears the canvas + redraws both decoded pic blocks (PlacePicSlide, clipped to the
+40-wide canvas, column-major tile IDs) at shifted columns each frame — enemy front slides in from the
+right (col 22+step), player back from the left (col 11-step), step 18→0, 2 frames each — under a
+silhouette BGP ($FC: color 0→light, 1-3→dark), then restores normal BGP at the final position. Harness
+flow now: InitBattle → decode pics → SlideBattlePicsIn → DrawBattleIntroBox → pokeballs → menu.
+Silhouette color: TODO(palette) — faithful = CGB SET_PAL_BATTLE_BLACK (Phase 5); stopgap (user-OK'd)
+forces dmg_palette shade 3 → RGB black during the slide (saved/restored), so non-transparent pixels go
+true black. dmg_palette made global. User signed off the slide ("looks decent enough"); black-tweak live.
+
+### Player battle sprites (slide-in trainer + send-out) — gen_trainer_pics.py + pics.asm (Wave 2, 2026-06-29)
+Fix (user): the wild slide-in showed Pikachu on the player side, but faithfully the PLAYER TRAINER back
+sprite slides in (pret LoadPlayerBackPic → RedPicBack); the mon's back pic only appears after send-out.
+Added PlayerPicFront (gfx/player/red.pic) + PlayerPicBack (gfx/player/redb.pic) to gen_trainer_pics.py
+(generated data, globals in trainer_pics.asm). For the test harness, DrawPlayerRedBackPic_Stub decodes the
+Red back (redb.pic, embedded; 4x4 like a mon back → LoadMonBackPicToVRAM) to VRAM $31 for the slide;
+DrawPlayerBackPic_Stub (Pikachu) now runs at the intro→battle transition as the send-out (straight VRAM
+swap over the same $31-$61 tilemap block, no grow animation yet — simplified AnimateSendingOutMon).
+Verified (FRAME): intro shows the Red/Yellow trainer back + wild PIDGEY (user signed off). Also added a
+TODO(glitch) to uncompress.asm: real mons stay in their dims box, but the GB decoder can write past it for
+glitch sprites (MissingNo) — not separately exercised (the port decoded all real pics byte-exact).
+
+### Bug Catcher trainer test + player party-status balls — debug_dump.asm + pics.asm (Wave 2, 2026-06-29)
+Test harness for the enemy pokéball row + ball-status variety (user). New DEBUG_BATTLE_TRAINER seed
+(combine with DEBUG_BATTLE_INTRO/LIVE): wIsInBattle=2, wEnemyPartyCount=3 with status variety (mon0 ok,
+mon1 fainted HP=0, mon2 statused) + player party variety (mon1 fainted, mon2 statused), and loads the Bug
+Catcher trainer sprite (DrawBugCatcherPic_Stub — 7x7 front-style via LoadMonPicToVRAM; embedded for the
+test, real path = generated TrainerPicPointers). DrawBattleIntroBox now draws the enemy HUD only for wild
+(wIsInBattle==1); a trainer shows the enemy ball row instead. VERIFIED (FRAME): Bug Catcher + player-trainer
+back + BOTH ball rows (enemy top Y41-47, player bottom Y105-111) with ok/fainted/status/empty tiles.
+Known rough edges (noted): trainer intro text still "Wild <nick> appeared!" (should be "<class> wants to
+fight!"); a live trainer battle needs the enemy send-out + AI (Stage 4). Send-out (user note): faithfully
+the trainer slides OUT then the mon comes in — starter PIKACHU just slides (no ball/grow, Yellow special),
+others get ball-throw+grow; port does a straight VRAM swap for now (TODO(send-out) in code).

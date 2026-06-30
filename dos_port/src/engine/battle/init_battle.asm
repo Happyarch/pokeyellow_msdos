@@ -54,9 +54,9 @@ bits 32
 
 section .data
 
-; Stage-1a placeholder intro lines (renderable glyphs → tile IDs).
-; "Wild POKéMON"  (W i l d _ P O K é M O N)
-intro_line1: db 0x96,0xa8,0xab,0xa3,0x7f,0x8f,0x8e,0x8a,0xba,0x8c,0x8e,0x8d
+; Intro text (faithful _WildMonAppearedText = "Wild <nick>" / "appeared!").
+; Line 1 is the "Wild " prefix; the enemy mon's nick is appended at draw time.
+intro_line1: db 0x96,0xa8,0xab,0xa3,0x7f         ; "Wild "
 INTRO_LINE1_LEN equ $ - intro_line1
 ; "appeared!"     (a p p e a r e d !)
 intro_line2: db 0xa0,0xaf,0xaf,0xa4,0xa0,0xb1,0xa4,0xa3,0xe7
@@ -65,14 +65,21 @@ INTRO_LINE2_LEN equ $ - intro_line2
 section .text
 
 global InitBattle
+global DrawBattleIntroBox
 extern InitBattleVariables
 extern ClearSprites
 extern hide_window
 extern LoadHpBarAndStatusTilePatterns
+extern LoadHudTilePatterns
 extern DrawBattleHUDs
+extern DrawEnemyHUD
 
 InitBattle:
     call InitBattleVariables
+    ; reset the remembered FIGHT-menu cursor (wPlayerMoveListIndex persists across move
+    ; uses/menu exits for the whole battle; only a new battle clears it). It sits
+    ; outside InitBattleVariables' clear block, so clear it explicitly here.
+    mov byte [ebp + wPlayerMoveListIndex], 0
     mov byte [ebp + wIsInBattle], 1          ; wild battle (placeholder)
     call ClearSprites                        ; drop the overworld OAM (player etc.)
     ; Stop the per-frame OAM rebuild (update_oam → PrepareOAMData) re-showing the
@@ -89,6 +96,7 @@ InitBattle:
     ; (the dialog box border) are byte-identical in both tile sets, so this does NOT
     ; clobber the box drawn below despite the load_font.asm warning.
     call LoadHpBarAndStatusTilePatterns
+    call LoadHudTilePatterns                 ; HUD frame/divider tiles ($6d-$6f, $73-$78)
 
     ; --- full-screen blank: clear the whole 40×25 canvas to the space tile ---
     ; (per pret init order — blank the entire screen before drawing the layout).
@@ -96,7 +104,14 @@ InitBattle:
     mov al, T_SP
     mov ecx, SCREEN_TILES_W * SCREEN_TILES_H  ; 40 × 25 = 1000
     rep stosb
+    ret
 
+; ---------------------------------------------------------------------------
+; DrawBattleIntroBox — draw the bottom dialog box + "Wild <nick> appeared!" intro
+; text + the enemy HUD. Faithful flow: this runs AFTER the silhouette slide-in
+; (SlideBattlePicsIn), so it draws over the already-slid mon pics. In: EBP = GB base.
+; ---------------------------------------------------------------------------
+DrawBattleIntroBox:
     ; --- hand-draw the bottom dialog box (stride 40) at canvas (BOX_COL,BOX_ROW) ---
     ; top border: ┌ + ─×18 + ┐
     lea edi, [ebp + W_TILEMAP + BOX_ROW * FW + BOX_COL]
@@ -131,15 +146,32 @@ InitBattle:
     mov byte [edi], T_BR                        ; col 19
 
     ; --- intro text into the box interior (box rows 2 & 4 → canvas rows 17 & 19) ---
+    ; line 1: "Wild " + enemy mon nick (faithful _WildMonAppearedText; nick is the
+    ; $50-terminated string in wEnemyMonNick).
     mov esi, intro_line1                       ; flat .data source
     lea edi, [ebp + W_TILEMAP + (BOX_ROW + 2) * FW + BOX_COL + 1]
     mov ecx, INTRO_LINE1_LEN
-    rep movsb
+    rep movsb                                  ; "Wild "
+    lea esi, [ebp + wEnemyMonNick]             ; GB WRAM nick
+.introNick:
+    mov al, [esi]
+    inc esi
+    cmp al, 0x50                               ; '@' terminator
+    je .introNickDone
+    mov [edi], al
+    inc edi
+    jmp .introNick
+.introNickDone:
     mov esi, intro_line2
     lea edi, [ebp + W_TILEMAP + (BOX_ROW + 4) * FW + BOX_COL + 1]
     mov ecx, INTRO_LINE2_LEN
     rep movsb
 
-    ; --- HUD boxes + HP bars (enemy upper-left, player lower-right) ---
-    call DrawBattleHUDs
+    ; --- enemy HUD: a WILD mon is already "out", so it shows its HP bar during the
+    ; intro; a TRAINER (wIsInBattle==2) hasn't sent a mon out yet, so the enemy side
+    ; shows the trainer's pokéball row instead (drawn by the caller). ---
+    cmp byte [ebp + wIsInBattle], 1
+    jne .skipEnemyHUD
+    call DrawEnemyHUD
+.skipEnemyHUD:
     ret

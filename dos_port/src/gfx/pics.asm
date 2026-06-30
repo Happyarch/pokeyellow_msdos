@@ -25,18 +25,24 @@
 bits 32
 
 %define FW         SCREEN_TILES_W       ; 40 — W_TILEMAP stride
+%define T_SP       0x7F                 ; blank/space tile (canvas clear)
 %define PIC_SIZE   (7 * 7)              ; 49 tiles in the centered 7x7 sprite buffer
 %define PIC_STAGE  0xA4A0               ; GB scratch for the compressed input stream
                                         ; (free SRAM just past sSpriteBuffer2 $A498)
 
 extern UncompressSpriteData
 extern g_tilecache_dirty
+extern DelayFrame
+extern dmg_palette
+global SlideBattlePicsIn
 
 global LoadMonPicToVRAM
 global LoadMonBackPicToVRAM
 global PlacePicTilemap
 global DrawEnemyFrontPic_Stub
 global DrawPlayerBackPic_Stub
+global DrawPlayerRedBackPic_Stub
+global DrawBugCatcherPic_Stub
 
 section .text
 
@@ -317,12 +323,7 @@ DrawEnemyFrontPic_Stub:
     mov byte [ebp + wSpriteFlipped], 0
     mov al, [embedded_pic]             ; dims byte
     mov edx, GB_VCHARS2                ; VRAM $9000 -> signed tile ID $00
-    call LoadMonPicToVRAM
-    ; place 7x7 at canvas (22,3): enemy pic top-right (GB (12,0) + center +10col/+3row)
-    ; PROJ battle-ui: GB(12,0) 7x7 enemy front pic --(center +10/+3)--> canvas(22,3)
-    lea edi, [ebp + W_TILEMAP + 3 * FW + 22]
-    mov al, 0x00                       ; base tile ID (VRAM $9000)
-    call PlacePicTilemap
+    call LoadMonPicToVRAM              ; decode → VRAM only; the slide-in places it
     ret
 
 ; ---------------------------------------------------------------------------
@@ -338,12 +339,135 @@ DrawPlayerBackPic_Stub:
     mov word [ebp + wSpriteInputPtr], PIC_STAGE
     mov byte [ebp + wSpriteFlipped], 0     ; player back pic is not mirrored
     mov edx, GB_VCHARS2 + 0x31 * 16        ; VRAM $9310 -> signed tile ID $31
+    call LoadMonBackPicToVRAM              ; decode → VRAM only; the slide-in places it
+    ret
+
+; ---------------------------------------------------------------------------
+; DrawPlayerRedBackPic_Stub — decode the PLAYER (Red/Yellow) back sprite to the
+; player pic VRAM ($31). This is the sprite that slides in on the player's side at
+; battle start (pret LoadPlayerBackPic → RedPicBack); the mon's back pic replaces it
+; only after the player sends a mon out. Scaled like a mon back (LoadMonBackPicToVRAM).
+; ---------------------------------------------------------------------------
+DrawPlayerRedBackPic_Stub:
+    mov esi, embedded_redback
+    lea edi, [ebp + PIC_STAGE]
+    mov ecx, embedded_redback_len
+    rep movsb
+    mov word [ebp + wSpriteInputPtr], PIC_STAGE
+    mov byte [ebp + wSpriteFlipped], 0
+    mov edx, GB_VCHARS2 + 0x31 * 16        ; VRAM $9310 -> tile ID $31
     call LoadMonBackPicToVRAM
-    ; place 7x7 at canvas (11,8): player pic bottom-left (GB (1,5) + center +10col/+3row)
-    ; PROJ battle-ui: GB(1,5) 7x7 player back pic --(center +10/+3)--> canvas(11,8)
-    lea edi, [ebp + W_TILEMAP + 8 * FW + 11]
-    mov al, 0x31                       ; base tile ID (VRAM $9310)
-    call PlacePicTilemap
+    ret
+
+; ---------------------------------------------------------------------------
+; DrawBugCatcherPic_Stub — decode the Bug Catcher trainer sprite (7x7 front-style,
+; not scaled) to the enemy pic VRAM ($00), for the trainer-battle test. The real
+; path indexes TrainerPicPointers[class-1] (generated) — Stage 4.
+; ---------------------------------------------------------------------------
+DrawBugCatcherPic_Stub:
+    mov esi, embedded_bugcatcher
+    lea edi, [ebp + PIC_STAGE]
+    mov ecx, embedded_bugcatcher_len
+    rep movsb
+    mov word [ebp + wSpriteInputPtr], PIC_STAGE
+    mov byte [ebp + wSpriteFlipped], 0
+    mov al, [embedded_bugcatcher]          ; dims byte (7x7)
+    mov edx, GB_VCHARS2                     ; VRAM $9000 -> tile ID $00
+    call LoadMonPicToVRAM
+    ret
+
+; ---------------------------------------------------------------------------
+; SlideBattlePicsIn — the silhouette slide-in (port of pret SlidePlayerAndEnemy-
+; SilhouettesOnScreen, done software-native: pret's per-scanline SCX raster trick
+; isn't expressible in the tile renderer). Both already-decoded pics (enemy front at
+; VRAM tile $00, player back at $31) slide in from the screen edges over the cleared
+; canvas, DARKENED via a silhouette BGP (color 0→light, 1-3→dark), then the palette
+; restores to normal at the final position. The caller draws the box/HUD/pokéballs
+; after. In: pics decoded to VRAM; EBP = GB base.
+; ---------------------------------------------------------------------------
+%define SLIDE_STEPS     18
+%define BGP_SILHOUETTE  0xFC            ; color 0→0 (light), 1/2/3→3 (dark)
+%define BGP_NORMAL      0xE4
+
+SlideBattlePicsIn:
+    ; TODO(palette): the faithful silhouette is pret's CGB SET_PAL_BATTLE_BLACK (the
+    ; whole CGB palette → black), which belongs to the Phase-5 GBC palette work. For
+    ; now, force the darkest DMG shade to true black during the slide so every non-
+    ; transparent pic pixel (BGP maps colors 1-3 → shade 3) renders as a black
+    ; silhouette instead of the dark-green shade-3. Not game-accurate; acceptable stopgap.
+    mov al, [dmg_palette + 9]                ; save shade-3 RGB (3 bytes)
+    mov [slide_pal_save + 0], al
+    mov al, [dmg_palette + 10]
+    mov [slide_pal_save + 1], al
+    mov al, [dmg_palette + 11]
+    mov [slide_pal_save + 2], al
+    mov byte [dmg_palette + 9], 0            ; shade 3 → black (R,G,B = 0)
+    mov byte [dmg_palette + 10], 0
+    mov byte [dmg_palette + 11], 0
+    mov byte [ebp + IO_BGP], BGP_SILHOUETTE
+    mov byte [g_tilecache_dirty], 1
+    mov dword [slide_step], SLIDE_STEPS
+.loop:
+    lea edi, [ebp + W_TILEMAP]              ; clear the canvas each frame
+    mov al, T_SP
+    mov ecx, SCREEN_TILES_W * SCREEN_TILES_H
+    rep stosb
+    mov edx, [slide_step]                   ; enemy front: col (22 + step), row 3, base $00
+    add edx, 22
+    mov ebx, 3
+    xor esi, esi
+    call PlacePicSlide
+    mov edx, 11                             ; player back: col (11 - step), row 8, base $31
+    sub edx, [slide_step]
+    mov ebx, 8
+    mov esi, 0x31
+    call PlacePicSlide
+    call DelayFrame
+    call DelayFrame
+    dec dword [slide_step]
+    jns .loop
+    mov al, [slide_pal_save + 0]            ; restore shade-3 RGB
+    mov [dmg_palette + 9], al
+    mov al, [slide_pal_save + 1]
+    mov [dmg_palette + 10], al
+    mov al, [slide_pal_save + 2]
+    mov [dmg_palette + 11], al
+    mov byte [ebp + IO_BGP], BGP_NORMAL     ; un-darken at the final position
+    mov byte [g_tilecache_dirty], 1
+    ret
+
+; PlacePicSlide — place a 7x7 pic block clipped to the canvas. ESI=base tile id,
+; EDX=signed left canvas col, EBX=top canvas row. Off-screen columns are skipped
+; (tile IDs still advance, column-major like PlacePicTilemap). Preserves EDX/EBX/ESI.
+PlacePicSlide:
+    xor ecx, ecx                            ; column index 0..6
+.col:
+    mov eax, edx
+    add eax, ecx                            ; canvas column (signed)
+    js .next                                ; off the left edge
+    cmp eax, SCREEN_TILES_W
+    jge .next                               ; off the right edge
+    push eax
+    push ecx
+    mov edi, ebx
+    imul edi, edi, SCREEN_TILES_W
+    add edi, eax                            ; W_TILEMAP offset = row*40 + col
+    mov eax, ecx
+    imul eax, eax, 7
+    add eax, esi                            ; tile id = base + colindex*7
+    mov ecx, 7                              ; 7 rows
+.row:
+    mov [ebp + edi + W_TILEMAP], al
+    add edi, SCREEN_TILES_W
+    inc eax
+    dec ecx
+    jnz .row
+    pop ecx
+    pop eax
+.next:
+    inc ecx
+    cmp ecx, 7
+    jb .col
     ret
 
 ; ---------------------------------------------------------------------------
@@ -355,6 +479,12 @@ embedded_pic_len equ $ - embedded_pic
 embedded_backpic:
     incbin "../gfx/pokemon/back/pikachub.pic"
 embedded_backpic_len equ $ - embedded_backpic
+embedded_redback:
+    incbin "../gfx/player/redb.pic"            ; player (Red/Yellow) back sprite
+embedded_redback_len equ $ - embedded_redback
+embedded_bugcatcher:
+    incbin "../gfx/trainers/bugcatcher.pic"    ; Bug Catcher trainer (test-trainer sprite)
+embedded_bugcatcher_len equ $ - embedded_bugcatcher
 
 ; repeats each input bit twice, e.g. DuplicateBitsTable[%0101] = %00110011
 DuplicateBitsTable:
@@ -370,3 +500,5 @@ hSpriteHeight:  resb 1                 ; bytes (tiles*8)
 hSpriteOffset:  resb 1                 ; centering offset, bytes
 hSpriteScaleCtr: resb 1                ; ScaleLastSpriteColumnByTwo inner counter
 pic_dims:       resb 1
+slide_step:     resd 1                 ; SlideBattlePicsIn step counter
+slide_pal_save: resb 3                 ; saved dmg_palette shade-3 RGB during the slide

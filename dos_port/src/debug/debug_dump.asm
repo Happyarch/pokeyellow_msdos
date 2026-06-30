@@ -20,6 +20,7 @@ bits 32
 
 %include "gb_memmap.inc"
 %include "gb_macros.inc"
+%include "gb_constants.inc"
 
 extern ds_base
 %ifdef DEBUG_CALCSTATS
@@ -48,7 +49,11 @@ extern PrepareNewGameDebug
 extern LoadFontTilePatterns
 extern LoadTextBoxTilePatterns
 extern InitBattle
+extern DrawBattleIntroBox
+extern SlideBattlePicsIn
 extern DrawEnemyFrontPic_Stub
+extern DrawPlayerRedBackPic_Stub
+extern DrawBugCatcherPic_Stub
 extern DrawPlayerBackPic_Stub
 extern DrawBattleMenu
 extern DrawMoveList
@@ -56,8 +61,16 @@ extern PrintMoveInfoBox
 extern DisplayBattleMenu
 extern SaveBattleScreen
 extern RestoreBattleScreen
+extern EndBattleScreen
+extern wBattleOver
+extern WaitForAPress
+extern DrawBattlePokeballs
+extern HideBattlePokeballs
 extern DrawBattleHUDs
 extern DoPlayerAttackDamage
+extern DoEnemyAttackDamage
+extern LoadWildMonMoves
+extern SelectEnemyMove
 extern GetCurrentMove
 extern GetDamageVarsForPlayerAttack
 extern CalculateDamage
@@ -159,8 +172,8 @@ windows:
     dd 0xCFE4    ; wEnemyMon: species, HP hi(+1), HP lo(+2)
     dd 0xD0D6    ; wDamage
     dd 0xCFD1    ; wPlayerMove* (num,effect,power,type)
-    dd 0xC468
-    dd 0xC5A8
+    dd 0xD014    ; wBattleMonHP (player HP, big-endian) — enemy-hit ground-truth
+    dd 0xCFCB    ; wEnemyMove* (num,effect,power,type) — enemy-hit ground-truth
     dd 0xCFE4
     dd 0xD0D6
 %else
@@ -302,17 +315,23 @@ RunBattleTest:
     mov byte [ebp + wEnemyMonNick + 4], 0x84  ; E
     mov byte [ebp + wEnemyMonNick + 5], 0x98  ; Y
     mov byte [ebp + wEnemyMonNick + 6], 0x50  ; @
-    mov byte [ebp + wEnemyMonLevel], 3
-    mov word [ebp + wEnemyMonHP], 0x0E00      ; big-endian 14
-    mov word [ebp + wEnemyMonMaxHP], 0x0E00   ; big-endian 14
+    ; PIDGEY L13 — at this level its real moveset is GUST + SAND-ATTACK (L5) +
+    ; QUICK-ATTACK (L12), so the wild random-move AI visibly varies turn to turn.
+    ; Stats are L13-appropriate (≈base+DV at L13) so the damage trades read sensibly.
+    mov byte [ebp + wEnemyMonLevel], 13
+    mov word [ebp + wEnemyMonHP], 0x2300      ; big-endian 35
+    mov word [ebp + wEnemyMonMaxHP], 0x2300   ; big-endian 35
     mov byte [ebp + wEnemyMonStatus], 0
     ; enemy stats/types for the damage calc (PIDGEY: Normal/Flying)
     mov byte [ebp + wEnemyMonType1], 0x00      ; NORMAL
     mov byte [ebp + wEnemyMonType2], 0x02      ; FLYING
-    mov word [ebp + wEnemyMonDefense], 0x0C00  ; 12 (big-endian)
-    mov word [ebp + wEnemyMonSpeed],   0x0E00  ; 14
-    mov word [ebp + wEnemyMonSpecial], 0x0800  ; 8
-    ; Player "PIKACHU" L6, HP 11/22 (half bar) — verifies partial fill + the fraction.
+    mov word [ebp + wEnemyMonAttack],  0x1200  ; 18 (big-endian)
+    mov word [ebp + wEnemyMonDefense], 0x1100  ; 17
+    mov word [ebp + wEnemyMonSpeed],   0x1500  ; 21
+    mov word [ebp + wEnemyMonSpecial], 0x1000  ; 16
+    mov byte [ebp + wEnemyMonSpecies], 0x24    ; PIDGEY (internal index) — real moveset gen
+    ; Player "PIKACHU" L18, full 45-HP bar — enough to absorb several enemy turns so
+    ; the battle runs long enough to watch the enemy's random move selection vary.
     mov byte [ebp + wBattleMonNick + 0], 0x8F  ; P
     mov byte [ebp + wBattleMonNick + 1], 0x88  ; I
     mov byte [ebp + wBattleMonNick + 2], 0x8A  ; K
@@ -321,9 +340,9 @@ RunBattleTest:
     mov byte [ebp + wBattleMonNick + 5], 0x87  ; H
     mov byte [ebp + wBattleMonNick + 6], 0x94  ; U
     mov byte [ebp + wBattleMonNick + 7], 0x50  ; @
-    mov byte [ebp + wBattleMonLevel], 6
-    mov word [ebp + wBattleMonHP], 0x0B00     ; big-endian 11
-    mov word [ebp + wBattleMonMaxHP], 0x1600  ; big-endian 22
+    mov byte [ebp + wBattleMonLevel], 18
+    mov word [ebp + wBattleMonHP], 0x2D00     ; big-endian 45
+    mov word [ebp + wBattleMonMaxHP], 0x2D00  ; big-endian 45
     mov byte [ebp + wBattleMonStatus], 0
     ; Pikachu's moves (FIGHT submenu): THUNDERSHOCK, GROWL, TAIL WHIP, QUICK ATTACK
     mov byte [ebp + wBattleMonMoves + 0], 0x54  ; THUNDERSHOCK
@@ -337,25 +356,87 @@ RunBattleTest:
     ; player stats/types for the damage calc (PIKACHU: Electric)
     mov byte [ebp + wBattleMonType1], 0x17     ; ELECTRIC
     mov byte [ebp + wBattleMonType2], 0x17
-    mov word [ebp + wBattleMonAttack],  0x0C00 ; 12 (big-endian)
-    mov word [ebp + wBattleMonDefense], 0x0900 ; 9
-    mov word [ebp + wBattleMonSpeed],   0x1000 ; 16
+    mov word [ebp + wBattleMonAttack],  0x1600 ; 22 (big-endian)
+    mov word [ebp + wBattleMonDefense], 0x0F00 ; 15
+    mov word [ebp + wBattleMonSpeed],   0x2800 ; 40 (faster than PIDGEY → player acts first)
     mov word [ebp + wBattleMonSpecial], 0x0C00 ; 12
     mov byte [ebp + wPlayerMonNumber], 0
     mov byte [ebp + wCriticalHitOrOHKO], 0
     mov byte [ebp + wEnemyBattleStatus3], 0
-    mov byte [ebp + wEnemyMonSpecies], 0x99   ; placeholder wild enemy (Bulbasaur idx)
+    mov byte [ebp + wPlayerBattleStatus3], 0   ; reflect/light-screen off (enemy-turn defense)
+    ; clean the battle-status / disabled-move bytes SelectEnemyMove inspects, so its
+    ; forced-move early-outs and the disabled-slot re-roll behave deterministically.
+    mov byte [ebp + wEnemyBattleStatus1], 0
+    mov byte [ebp + wEnemyBattleStatus2], 0
+    mov byte [ebp + wPlayerBattleStatus1], 0
+    mov byte [ebp + wEnemyDisabledMove], 0
+    ; generate the wild enemy's moveset the real way (base moves + level-up learnset
+    ; for PIDGEY $24 at its level) — replaces the old hardcoded move seed.
+    call LoadWildMonMoves
     or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     call LoadTextBoxTilePatterns
-    call InitBattle
-    call DrawEnemyFrontPic_Stub     ; Stage 1c-ii: real-decompressed enemy front pic (top-right)
-    call DrawPlayerBackPic_Stub     ; Stage 1c-ii: real-decompressed player back pic (bottom-left)
+    call InitBattle                 ; setup + clear canvas (no box/HUD yet)
+%ifdef DEBUG_BATTLE_TRAINER
+    ; --- Bug Catcher trainer test: trainer battle (enemy = trainer + ball row, not a
+    ; wild mon), with party-status variety to exercise ok/fainted/status/empty balls. ---
+    mov byte [ebp + wIsInBattle], 2
+    mov byte [ebp + wEnemyPartyCount], 3
+    ; enemy mon0 ok (HP 10), mon1 fainted (HP 0), mon2 statused (HP 10, status set)
+    mov word [ebp + wEnemyMons + 0*PARTYMON_STRUCT_LENGTH + MON_HP], 0x0A00
+    mov byte [ebp + wEnemyMons + 0*PARTYMON_STRUCT_LENGTH + MON_STATUS], 0
+    mov word [ebp + wEnemyMons + 1*PARTYMON_STRUCT_LENGTH + MON_HP], 0
+    mov byte [ebp + wEnemyMons + 1*PARTYMON_STRUCT_LENGTH + MON_STATUS], 0
+    mov word [ebp + wEnemyMons + 2*PARTYMON_STRUCT_LENGTH + MON_HP], 0x0A00
+    mov byte [ebp + wEnemyMons + 2*PARTYMON_STRUCT_LENGTH + MON_STATUS], 0x08
+    ; player party variety: mon1 fainted, mon2 statused (PrepareNewGameDebug seeded healthy)
+    mov word [ebp + wPartyMons + 1*PARTYMON_STRUCT_LENGTH + MON_HP], 0
+    mov byte [ebp + wPartyMons + 2*PARTYMON_STRUCT_LENGTH + MON_STATUS], 0x08
+    call DrawBugCatcherPic_Stub     ; decode Bug Catcher trainer sprite → enemy VRAM
+%else
+    call DrawEnemyFrontPic_Stub     ; decode enemy (wild mon) front pic → VRAM
+%endif
+    call DrawPlayerRedBackPic_Stub  ; decode player trainer (Red) back pic → VRAM (slides in)
+    call SlideBattlePicsIn          ; faithful silhouette slide-in (darkened)
+    call DrawBattleIntroBox         ; box + "Wild <nick> appeared!" + enemy HUD
     call SaveBattleScreen           ; snapshot the clean screen (restored on menu re-entry)
 %ifdef DEBUG_BATTLE_LIVE
+    ; Intro: party-status pokéballs + "Wild <nick> appeared!", wait for A/B (blinking
+    ; ▼), then the balls give way to the player HP-bar HUD (DisplayBattleMenu draws it).
+    call DrawBattlePokeballs
+    call WaitForAPress
+    call HideBattlePokeballs
+    ; send-out: faithfully the player trainer sprite slides OUT, then the mon comes in.
+    ; For the starter PIKACHU this is just a SLIDE (it never enters a ball, so there is
+    ; no throw/grow animation — Yellow special); every other mon gets the ball-throw +
+    ; grow (AnimateSendingOutMon, more involved). TODO(send-out): trainer slide-out +
+    ; Pikachu slide-in (easy) / ball+grow for others. For now: straight VRAM swap.
+    call DrawPlayerBackPic_Stub     ; decode PIKACHU back pic → VRAM $31 (same tilemap block)
+    mov byte [wBattleOver], 0        ; Stage 2c: battle starts "ongoing"
 .live:
     call DisplayBattleMenu          ; Stage 2a: faithful DisplayBattleMenu (Esc quits)
-    jmp .live                       ; on A-select, re-enter the menu (no submenu yet)
+    cmp byte [wBattleOver], 0        ; a faint (win/lose) ends the battle loop
+    je .live
+    call EndBattleScreen            ; Stage 2c: clean terminal (clears the battle screen)
+.battle_done:
+    call DelayFrame                 ; hold the terminal (real exit = overworld, Stage 3)
+    jmp .battle_done
+%elifdef DEBUG_BATTLE_ENEMYHIT
+    ; Stage-2b ground-truth: pick the enemy move via the wild AI (SelectEnemyMove),
+    ; run ONE enemy attack (no input waits), and dump battle WRAM. Proves the
+    ; generated moveset (wEnemyMonMoves) + DoEnemyAttackDamage drains the player HP.
+    call SelectEnemyMove
+    call DoEnemyAttackDamage
+    jmp DebugDumpMemory             ; writes DUMP.BIN, exits
+%elifdef DEBUG_BATTLE_INTRO
+    ; Dump the battle INTRO screen (scene + "Wild <nick> appeared!" + the ▼ advance
+    ; arrow + the party-status pokéball row), no menu.
+    mov byte [ebp + W_TILEMAP + (19 * 40 + 28)], 0xEE   ; ▼ (verify glyph renders)
+    call DrawBattlePokeballs        ; player party-status balls (OAM sprites)
+    call DelayFrame
+    call DumpBackbuffer
+.introhang:
+    jmp .introhang
 %else
     call DrawBattleMenu             ; Stage 2a: FIGHT/PKMN/ITEM/RUN menu (static)
     call DelayFrame

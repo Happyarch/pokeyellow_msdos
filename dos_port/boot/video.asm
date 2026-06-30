@@ -28,6 +28,7 @@ global video_init
 global present           ; copy 320×200 back buffer → VGA framebuffer
 global draw_tick_band    ; visible PIT tick indicator (top screen band)
 global commit_palette    ; map BGP/OBP0/OBP1 → DAC entries 0-11 (raw-index render)
+global dmg_palette       ; 4-shade DMG ramp (RGB 6-bit); SlideBattlePicsIn blacks shade 3
 
 ; ---------------------------------------------------------------------------
 ; BSS

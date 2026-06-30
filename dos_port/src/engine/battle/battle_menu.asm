@@ -61,6 +61,14 @@ str_fainted: db 0xA5,0xA0,0xA8,0xAD,0xB3,0xA4,0xA3,0xE7, 0x50  ; "fainted!"
 section .bss
 menu_saved: resb 1                        ; remembered item across opens (pret wBattleAndStartSavedMenuItem)
 move_count: resb 1                        ; number of real moves listed
+; Battle terminal state (Stage 2c): 0 = ongoing, 1 = player won (enemy fainted),
+; 2 = player lost (active mon fainted). The harness resets it at battle start, the
+; round handler sets it on a faint, and DisplayBattleMenu breaks its loop on it.
+global wBattleOver
+wBattleOver: resb 1
+; blinking-▼ text-advance arrow state (WaitForAPress)
+arrow_timer: resb 1
+arrow_on:    resb 1
 ; Saved "clean" battle screen (HUDs + sprites + dialog box, no menus) — the port's
 ; SaveScreenTilesToBuffer1 / LoadScreenTilesFromBuffer1. Restored when (re)entering
 ; the main menu so transient overlays (move box, TYPE/PP box) are wiped.
@@ -74,7 +82,10 @@ global DrawMoveList
 global PrintMoveInfoBox
 global SaveBattleScreen
 global RestoreBattleScreen
+global EndBattleScreen
+global WaitForAPress
 global DoPlayerAttackDamage
+global DoEnemyAttackDamage
 global RenderPlayerTurn
 extern WideTextBoxBorder
 extern WidePlaceString
@@ -86,11 +97,16 @@ extern Moves
 extern WideTypeNames
 extern DelayFrame
 extern DrawBattleHUDs
+extern AnimateEnemyHPBar
+extern AnimatePlayerHPBar
 extern GetCurrentMove
 extern GetDamageVarsForPlayerAttack
+extern GetDamageVarsForEnemyAttack
+extern SelectEnemyMove
 extern CalculateDamage
 extern AdjustDamageForMoveType
 extern RandomizeDamage
+extern BattleRandom
 
 ; TYPE/PP info box: pret PrintMenuItem TextBoxBorder(0,8) 9×3. GB-centered would be
 ; (10,11), but its right wall (col 20) clips the player HUD name there, so it is
@@ -151,6 +167,18 @@ RestoreBattleScreen:
     lea edi, [ebp + W_TILEMAP]
     mov ecx, SCREEN_AREA
     rep movsb
+    ret
+
+; EndBattleScreen — clean battle terminal (Stage 2c): blank the whole canvas and
+; present it, so when the loop ends the HUD/menu/sprites clear instead of the menu
+; re-appearing. Placeholder for the real exit — Stage 3 returns to the overworld
+; (and runs the victory EXP screen via the Wave-1 GainExperience). In: EBP = GB base.
+EndBattleScreen:
+    lea edi, [ebp + W_TILEMAP]
+    mov ecx, SCREEN_AREA
+    mov al, T_SP                          ; blank tile
+    rep stosb
+    call DelayFrame                       ; present the cleared screen
     ret
 
 DisplayBattleMenu:
@@ -218,6 +246,8 @@ DisplayBattleMenu:
     test al, al
     jnz .ret
     call MoveSelectionMenu               ; FIGHT → move list (B returns here)
+    cmp byte [wBattleOver], 0            ; a faint this round ends the battle
+    jne .ret
     jmp DisplayBattleMenu                ; redraw the main menu and continue
 .ret:
     ret
@@ -236,6 +266,10 @@ MoveSelectionMenu:
     mov dword [wide_menu_redraw_cb], PrintMoveInfoBox   ; refresh TYPE/PP on cursor move
     call WideHandleMenuInput
     mov dword [wide_menu_redraw_cb], 0
+    ; remember the cursor position (pret writes wPlayerMoveListIndex on BOTH select and
+    ; back, core.asm:2745 — so leaving the menu either way preserves it for next time).
+    mov dl, [ebp + wCurrentMenuItem]
+    mov [ebp + wPlayerMoveListIndex], dl
     test al, PAD_B
     jnz .back
     ; A: store the selected move and run the (Stage-2b-start) attack text
@@ -247,21 +281,110 @@ MoveSelectionMenu:
     ret
 
 ; ---------------------------------------------------------------------------
-; ExecutePlayerTurn — Stage 2b start: print the faithful "<MON> / used <MOVE>!"
-; attack text (pret DisplayUsedMoveText: _ActorNameText + _UsedMove1Text "used " +
-; move name + _EndUsedMove1Text "!") in the dialog box, then wait for A. Damage /
-; HP drain / enemy turn are the next increments. In: [wPlayerSelectedMove] set.
+; ExecutePlayerTurn — Stage 2b: run one full battle round (both battlers act once),
+; ordered by speed (pret MainInBattle / ExecutePlayerMove + ExecuteEnemyMove). The
+; player's move is already in wPlayerSelectedMove; the enemy's move is chosen here
+; (slot 0 for now — trainer AI / random selection deferred). Faster battler attacks
+; first; if its target faints the round ends (the fainted mon does not retaliate).
+;
+; Turn-order quirks deferred: Quick Attack / Counter priority and the random
+; speed-tie break (pret compares speeds and rolls BattleRandom on a tie). Here a
+; tie goes to the player. In: [wPlayerSelectedMove] set; EBP = GB base.
 ; ---------------------------------------------------------------------------
 ExecutePlayerTurn:
+    ; choose the enemy's move (wild random-move AI; also the default for trainers
+    ; for now — see select_enemy_move.asm).
+    call SelectEnemyMove
+    ; turn order (faithful pret ExecutePlayerMove ordering, core.asm:.noLinkBattle):
+    ; Quick Attack takes priority; Counter always moves last; otherwise compare speed,
+    ; with a 50/50 random break on a tie.
+    mov al, [ebp + wPlayerSelectedMove]
+    cmp al, QUICK_ATTACK
+    jne .pNotQuickAttack
+    mov al, [ebp + wEnemySelectedMove]
+    cmp al, QUICK_ATTACK
+    je .compareSpeed                      ; both Quick Attack → speed
+    jmp .playerFirst                      ; only player → player first
+.pNotQuickAttack:
+    mov al, [ebp + wEnemySelectedMove]
+    cmp al, QUICK_ATTACK
+    je .enemyFirst                        ; only enemy → enemy first
+    mov al, [ebp + wPlayerSelectedMove]
+    cmp al, COUNTER
+    jne .pNotCounter
+    mov al, [ebp + wEnemySelectedMove]
+    cmp al, COUNTER
+    je .compareSpeed                      ; both Counter → speed
+    jmp .enemyFirst                       ; only player used Counter → Counter goes last
+.pNotCounter:
+    mov al, [ebp + wEnemySelectedMove]
+    cmp al, COUNTER
+    je .playerFirst                       ; only enemy used Counter → player first
+.compareSpeed:
+    movzx eax, byte [ebp + wBattleMonSpeed]
+    shl eax, 8
+    mov al, [ebp + wBattleMonSpeed + 1]
+    movzx ecx, byte [ebp + wEnemyMonSpeed]
+    shl ecx, 8
+    mov cl, [ebp + wEnemyMonSpeed + 1]
+    cmp eax, ecx
+    ja .playerFirst                       ; player faster
+    jb .enemyFirst                        ; enemy faster
+    ; speed tie → 50/50. (pret's internal-clock invert is link-only: TODO-HW Phase 4.)
+    call BattleRandom
+    cmp al, (50 * 0xFF / 100) + 1         ; pret `50 percent + 1` = 128
+    jb .playerFirst
+    jmp .enemyFirst
+.playerFirst:
+    call PlayerAttackStep
+    jc .enemyFainted                      ; enemy fainted → player wins, round ends
+    call EnemyAttackStep
+    jc .playerFainted                     ; player mon fainted → round ends
+    ret
+.enemyFirst:
+    call EnemyAttackStep
+    jc .playerFainted
+    call PlayerAttackStep
+    jc .enemyFainted
+    ret
+.enemyFainted:
+    mov byte [wBattleOver], 1             ; victory
+    ret
+.playerFainted:
+    ; active mon fainted. Multi-mon switch-in (pret: pick another party mon) is
+    ; deferred — for now any active-mon faint ends the battle as a loss.
+    mov byte [wBattleOver], 2             ; defeat
+    ret
+
+; PlayerAttackStep — the player's move resolves: render the attack (damage + HUD +
+; text), wait for A, then faint-check the enemy. Returns CF=1 if the enemy fainted
+; (the battle-ending case), CF=0 otherwise.
+PlayerAttackStep:
     call RenderPlayerTurn
     call WaitForAPress
-    ; faint check: enemy HP == 0 → "Enemy <nick> fainted!" (pret FaintEnemyPokemon).
-    ; Full victory flow (faint anim, EXP, battle end) is the next increment.
     mov al, [ebp + wEnemyMonHP]
     or al, [ebp + wEnemyMonHP + 1]
-    jnz .done
-    call ShowEnemyFainted
-.done:
+    jnz .alive
+    call ShowEnemyFainted                 ; pret FaintEnemyPokemon (victory flow TBD)
+    stc
+    ret
+.alive:
+    clc
+    ret
+
+; EnemyAttackStep — the enemy's move resolves (mirror of PlayerAttackStep). Returns
+; CF=1 if the player mon fainted, CF=0 otherwise.
+EnemyAttackStep:
+    call RenderEnemyTurn
+    call WaitForAPress
+    mov al, [ebp + wBattleMonHP]
+    or al, [ebp + wBattleMonHP + 1]
+    jnz .alive
+    call ShowPlayerFainted
+    stc
+    ret
+.alive:
+    clc
     ret
 
 ; ShowEnemyFainted — "Enemy <nick> / fainted!" in the dialog box, then wait for A.
@@ -282,10 +405,25 @@ ShowEnemyFainted:
     call WaitForAPress
     ret
 
+; ShowPlayerFainted — "<nick> / fainted!" (no "Enemy " prefix), then wait for A.
+ShowPlayerFainted:
+    mov dword [wide_line_step], 2 * FW
+    mov esi, W_TILEMAP + OUTER_OFF
+    mov bh, OUTER_H
+    mov bl, OUTER_W
+    call WideTextBoxBorder
+    mov esi, W_TILEMAP + (17 * FW + 11)   ; player nick
+    lea eax, [ebp + wBattleMonNick]
+    call WidePlaceString
+    mov esi, W_TILEMAP + (19 * FW + 11)   ; "fainted!"
+    mov eax, str_fainted
+    call WidePlaceString
+    call WaitForAPress
+    ret
+
 RenderPlayerTurn:
     call RestoreBattleScreen              ; wipe the move box + TYPE/PP box first
-    call DoPlayerAttackDamage             ; faithful damage calc → enemy HP
-    call DrawBattleHUDs                   ; redraw HUDs (enemy HP bar now reflects it)
+    call DrawBattleHUDs                   ; HUDs at PRE-attack HP (damage applied below)
     mov dword [wide_line_step], 2 * FW
     ; redraw the dialog box (clears the move menu)
     mov esi, W_TILEMAP + OUTER_OFF
@@ -305,13 +443,115 @@ RenderPlayerTurn:
     call WidePlaceString
     mov eax, str_excl
     call WidePlaceString
+    ; capture the enemy's pre-hit HP, apply damage, then animate the bar draining
+    movzx ecx, byte [ebp + wEnemyMonHP]
+    shl ecx, 8
+    mov cl, [ebp + wEnemyMonHP + 1]
+    push ecx
+    call DoPlayerAttackDamage             ; faithful damage calc → enemy HP
+    pop ecx                               ; ECX = old enemy HP
+    call AnimateEnemyHPBar
     ret
 
+; RenderEnemyTurn — mirror of RenderPlayerTurn for the enemy's move: restore the
+; clean screen, apply the enemy's damage to the player mon, redraw the HUDs (player
+; HP bar now reflects it), and print "Enemy <nick> / used <move>!" (pret <USER> =
+; "Enemy " + nick on the enemy's turn — see home/text.asm:PlaceMoveUsersName).
+RenderEnemyTurn:
+    call RestoreBattleScreen              ; wipe any transient overlay first
+    call DrawBattleHUDs                   ; HUDs at PRE-attack HP (damage applied below)
+    mov dword [wide_line_step], 2 * FW
+    ; redraw the dialog box
+    mov esi, W_TILEMAP + OUTER_OFF
+    mov bh, OUTER_H
+    mov bl, OUTER_W
+    call WideTextBoxBorder
+    ; line 1: "Enemy " + enemy nick (chained on one line; WidePlaceString returns end ESI)
+    mov esi, W_TILEMAP + (17 * FW + 11)
+    mov eax, str_enemy
+    call WidePlaceString
+    lea eax, [ebp + wEnemyMonNick]
+    call WidePlaceString
+    ; line 2: "used " + move name + "!"
+    mov esi, W_TILEMAP + (19 * FW + 11)
+    mov eax, str_used
+    call WidePlaceString
+    mov al, [ebp + wEnemySelectedMove]
+    call FindMoveName
+    call WidePlaceString
+    mov eax, str_excl
+    call WidePlaceString
+    ; capture the player's pre-hit HP, apply damage, then animate the bar draining
+    movzx ecx, byte [ebp + wBattleMonHP]
+    shl ecx, 8
+    mov cl, [ebp + wBattleMonHP + 1]
+    push ecx
+    call DoEnemyAttackDamage              ; faithful damage calc → player HP
+    pop ecx                               ; ECX = old player HP
+    call AnimatePlayerHPBar
+    ret
+
+; ---------------------------------------------------------------------------
+; DoEnemyAttackDamage — the faithful Gen-1 damage pipeline for the enemy's selected
+; move (mirror of DoPlayerAttackDamage; pret ExecuteEnemyMove core): GetCurrentMove
+; → GetDamageVarsForEnemyAttack → CalculateDamage → (if BP>0) AdjustDamageForMoveType
+; → RandomizeDamage. Subtracts wDamage from the player mon's HP (floored at 0).
+; Accuracy/MoveHitTest deferred (always hits); crit forced off. In: [wEnemySelectedMove]
+; set; EBP = GB base.
+; ---------------------------------------------------------------------------
+DoEnemyAttackDamage:
+    mov byte [ebp + hWhoseTurn], 1
+    call GetCurrentMove                   ; enemy move → wEnemyMove*
+    mov byte [ebp + wCriticalHitOrOHKO], 0
+    call GetDamageVarsForEnemyAttack
+    call CalculateDamage
+    jz .apply                             ; 0-BP move → wDamage stays 0
+    call AdjustDamageForMoveType
+    call RandomizeDamage
+.apply:
+    ; wBattleMonHP (big-endian) -= wDamage (big-endian), floor at 0
+    movzx eax, byte [ebp + wBattleMonHP]
+    shl eax, 8
+    mov al, [ebp + wBattleMonHP + 1]
+    movzx ecx, byte [ebp + wDamage]
+    shl ecx, 8
+    mov cl, [ebp + wDamage + 1]
+    sub eax, ecx
+    jns .store
+    xor eax, eax
+.store:
+    mov [ebp + wBattleMonHP + 1], al      ; low byte
+    shr eax, 8
+    mov [ebp + wBattleMonHP], al          ; high byte
+    ret
+
+; WaitForAPress — wait for A/B to advance text, blinking the ▼ "more text" arrow at
+; the dialog box's bottom-right interior cell, faithful to WaitForTextScrollButtonPress
+; / HandleDownArrowBlinkTiming (pret toggles the '▼' tile vs a space while waiting).
+; The exact GB blink counters produce a moderate cadence; the port toggles every
+; ARROW_BLINK_FRAMES frames. Erases the arrow on exit. In: EBP = GB base.
+%define ARROW_OFF          (19 * FW + 28)   ; dialog-box bottom-right interior (canvas 28,19)
+%define T_DOWNARROW        0xEE             ; charmap "▼"
+%define ARROW_BLINK_FRAMES 20
 WaitForAPress:
+    mov byte [arrow_on], 1
+    mov byte [arrow_timer], ARROW_BLINK_FRAMES
+    mov byte [ebp + W_TILEMAP + ARROW_OFF], T_DOWNARROW
 .wait:
+    dec byte [arrow_timer]
+    jnz .present
+    mov byte [arrow_timer], ARROW_BLINK_FRAMES
+    xor byte [arrow_on], 1
+    jz .arrowOff
+    mov byte [ebp + W_TILEMAP + ARROW_OFF], T_DOWNARROW
+    jmp .present
+.arrowOff:
+    mov byte [ebp + W_TILEMAP + ARROW_OFF], T_SP
+.present:
     call DelayFrame
-    test byte [ebp + H_JOY_PRESSED], PAD_A
+    test byte [ebp + H_JOY_PRESSED], PAD_A | PAD_B
     jz .wait
+    mov byte [ebp + W_TILEMAP + ARROW_OFF], T_SP   ; erase the arrow on advance
     ret
 
 ; ---------------------------------------------------------------------------
@@ -388,8 +628,16 @@ DrawMoveList:
     mov [ebp + wMaxMenuItem], al
     mov byte [ebp + wTopMenuItemY], MOVES_ROW0
     mov byte [ebp + wTopMenuItemX], MOVES_CUR_COL
-    mov byte [ebp + wCurrentMenuItem], 0
-    mov byte [ebp + wLastMenuItem], 0
+    ; restore the remembered cursor (pret inits wCurrentMenuItem from wPlayerMoveListIndex,
+    ; so the FIGHT menu reopens on the last move used/highlighted). Clamp to the real
+    ; move count in case the index is stale (fewer moves on this mon).
+    mov al, [ebp + wPlayerMoveListIndex]
+    cmp al, [move_count]
+    jb .idxInRange
+    xor al, al                            ; out of range → first move
+.idxInRange:
+    mov [ebp + wCurrentMenuItem], al
+    mov [ebp + wLastMenuItem], al
     ; UP/DOWN are handled inside WideHandleMenuInput (it moves the cursor and loops),
     ; so only A/B end the menu — watching UP/DOWN would exit on every cursor move.
     mov byte [ebp + wMenuWatchedKeys], PAD_A | PAD_B

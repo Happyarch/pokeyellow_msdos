@@ -318,6 +318,23 @@ ifdef DEBUG_BATTLE_LIVE
 DEBUG_BATTLE := 1
 NASMFLAGS += -D DEBUG_BATTLE_LIVE
 endif
+# Scripted enemy-hit ground-truth (Stage 2b): run one enemy attack with no input
+# waits, then dump battle WRAM to DUMP.BIN. make DEBUG_BATTLE_ENEMYHIT=1
+ifdef DEBUG_BATTLE_ENEMYHIT
+DEBUG_BATTLE := 1
+NASMFLAGS += -D DEBUG_BATTLE_ENEMYHIT
+endif
+# Battle intro screen dump (scene + "Wild <nick> appeared!", no menu) → FRAME.BIN.
+ifdef DEBUG_BATTLE_INTRO
+DEBUG_BATTLE := 1
+NASMFLAGS += -D DEBUG_BATTLE_INTRO
+endif
+# Bug Catcher trainer test: seeds a trainer battle (enemy = trainer + ball row +
+# party-status variety). Combine with DEBUG_BATTLE_INTRO (dump) or DEBUG_BATTLE_LIVE.
+ifdef DEBUG_BATTLE_TRAINER
+DEBUG_BATTLE := 1
+NASMFLAGS += -D DEBUG_BATTLE_TRAINER
+endif
 # Battle gate (Wave 2): seed party + a wild enemy, enter battle (InitBattle),
 # render one frame, dump FRAME.BIN, exit. make DEBUG_BATTLE=1
 ifdef DEBUG_BATTLE
@@ -353,6 +370,10 @@ FRONTEND_SRCS := \
     src/home/random.asm \
     src/engine/battle/core_damage.asm \
     src/engine/battle/get_current_move.asm \
+    src/engine/battle/select_enemy_move.asm \
+    src/engine/battle/load_enemy_moves.asm \
+    src/engine/battle/pokeballs.asm \
+    src/data/trainer_pics.asm \
     src/engine/battle/battle_stubs.asm \
     src/gfx/uncompress.asm \
     src/gfx/pics.asm
@@ -449,6 +470,14 @@ assets/gb_charmap.txt:
 assets/menu_strings.inc: assets/gb_charmap.txt tools/gen_menu_strings.py tools/gb_text.py
 	python3 tools/gen_menu_strings.py
 
+assets/battle_hud_2bpp.inc: ../gfx/battle/battle_hud_1.png ../gfx/battle/battle_hud_2.png \
+                            ../gfx/battle/battle_hud_3.png tools/gen_battle_hud_inc.py
+	python3 tools/gen_battle_hud_inc.py
+
+assets/trainer_pics.inc: ../gfx/pics.asm ../data/trainers/pic_pointers_money.asm \
+                         tools/gen_trainer_pics.py
+	python3 tools/gen_trainer_pics.py
+
 # Start menu checks EVENT_GOT_POKEDEX via events.inc → event_constants.inc, and
 # %includes the generated menu_strings.inc label block.
 src/engine/menus/start_menu.o: assets/event_constants.inc assets/menu_strings.inc
@@ -519,7 +548,8 @@ assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_
         assets/items.inc assets/gb_charmap.txt assets/menu_strings.inc \
         assets/type_matchups.inc assets/move_names.inc assets/field_moves.inc \
         assets/effect_categories.inc \
-        assets/wild_data.inc assets/map_scripts.inc
+        assets/wild_data.inc assets/map_scripts.inc assets/battle_hud_2bpp.inc \
+        assets/trainer_pics.inc
 
 all: $(TARGET)
 

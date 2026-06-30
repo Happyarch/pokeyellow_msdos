@@ -421,6 +421,7 @@ NO_MOVE                 equ 0x00
 KARATE_CHOP             equ 0x02
 COUNTER                 equ 0x44
 RAZOR_LEAF              equ 0x4B
+QUICK_ATTACK            equ 0x62       ; turn-order priority (ExecutePlayerTurn)
 CRABHAMMER              equ 0x98
 SLASH                   equ 0xA3
 STRUGGLE                equ 0xA5

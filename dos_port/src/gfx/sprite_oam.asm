@@ -31,12 +31,40 @@ extern HideSprites
 extern spr_dos_sy, spr_dos_sx, spr_oam_valid
 
 global PrepareOAMData
+global PrepareStaticOAM
 
 section .bss
 dos_base_y_tmp: resd 1      ; per-sprite DOS base Y for extended viewport
 dos_base_x_tmp: resd 1      ; per-sprite DOS base X for extended viewport
 
 section .text
+
+; ---------------------------------------------------------------------------
+; PrepareStaticOAM — make render_sprites display ECX OAM entries that the caller
+; has written directly into $FE00 (Y, X, tile, attr), WITHOUT the wSpriteStateData
+; path PrepareOAMData uses. Fills the DOS position tables render_sprites reads from
+; the raw OAM Y/X (DOS = OAM_Y − 16, OAM_X − 8 — the standard GB OAM offset) and
+; publishes the entry count. Used by the battle pokéball row (the only OAM in the
+; OAM-disabled battle screen). In: ECX = entry count; EBP = GB base.
+; ---------------------------------------------------------------------------
+PrepareStaticOAM:
+    mov [spr_oam_valid], ecx
+    test ecx, ecx
+    jz .done
+    xor edx, edx                         ; OAM entry index
+.loop:
+    lea esi, [ebp + GB_OAM + edx*4]
+    movzx eax, byte [esi]                ; OAM Y
+    sub eax, 16
+    mov [spr_dos_sy + edx*4], eax
+    movzx eax, byte [esi + 1]            ; OAM X
+    sub eax, 8
+    mov [spr_dos_sx + edx*4], eax
+    inc edx
+    cmp edx, ecx
+    jb .loop
+.done:
+    ret
 
 ; ---------------------------------------------------------------------------
 ; PrepareOAMData — determine OAM data for visible sprites, write to wShadowOAM.

@@ -172,10 +172,28 @@ centered baseline renders (move HUD/sprites outward with the user via FRAME.BIN)
     `DisplayUsedMoveText` — "`<MON>` / used `<MOVE>`!" in the dialog box, wait for A.
 - **Stage 2a COMPLETE** (menu + move list + TYPE/PP box + teardown, all user-signed-off).
 
-### ░░ HANDOFF — resume here (2026-06-29, Stage 2b player-attack damage live) ░░
-**STATUS: the player's move now deals faithful Gen-1 damage, drains the enemy HP bar, and
-faints the enemy.** Built + signed off incrementally. UNCOMMITTED: a large clean chunk
-(Stage 1c + 2a + 2b-so-far). The user has NOT asked to commit — do not commit unprompted.
+### ░░ HANDOFF — resume here (2026-06-29, Stage 2b: full round + wild AI + moveset gen) ░░
+**STATUS: a full battle ROUND now works** — player attack + enemy retaliation, ordered by
+speed, with faints ending the round. The enemy's move is chosen by the faithful wild
+random-move AI (`SelectEnemyMove`, also the default for trainers), and the enemy's moveset
+is now GENERATED the real way (`LoadWildMonMoves`: base moves + level-up learnset + PP)
+instead of being hand-seeded. The player-attack path (prior increment) is unchanged.
+All three new pieces are **headless-validated** (DEBUG_BATTLE_ENEMYHIT DUMP.BIN — see
+translation_log 2026-06-29); the enemy turn was visually signed off ("Looks fine so far").
+The full-round LIVE FRAME.BIN sign-off (random AI picking among multiple moves) is pending.
+Nothing is committed for this session's work and the user has NOT asked to commit.
+
+**NEW FILES this increment:** `src/engine/battle/select_enemy_move.asm` (SelectEnemyMove),
+`src/engine/battle/load_enemy_moves.asm` (LoadWildMonMoves). Added `LoadMovePPs`/
+`AddPartyMon_WriteMovePP` to `src/engine/pokemon/write_moves.asm`. New scripted gate
+`DEBUG_BATTLE_ENEMYHIT` (one enemy attack, no input, dump battle WRAM) in Makefile +
+debug_dump.asm. Harness now seeds PIDGEY species $24 + calls LoadWildMonMoves (was hardcoded
+TACKLE/GUST). `ExecutePlayerTurn` in battle_menu.asm is the full-round handler.
+
+**Consequence to flag to the user:** the harness PIDGEY is L3, whose faithful moveset is GUST
+ONLY (SAND-ATTACK isn't learned until L5), so the live demo shows the enemy using GUST every
+turn — the random AI is correct but only visibly interesting at a level with ≥2 moves. Offer
+to bump the demo level if they want to see the random selection vary.
 
 **READ THESE FILES FIRST (exact):**
 1. `dos_port/src/engine/battle/battle_menu.asm` — the battle front-end heart. Now holds:
@@ -230,15 +248,21 @@ battle_hud, battle_menu. `battle_stubs.asm` = link-only `JumpMoveEffect`/`CheckT
   Stats/moves are HARNESS-SEEDED (no `LoadBattleMonFromParty` yet).
 
 **NEXT (Stage 2b/2c, in order of value):**
-1. **HP-drain ANIMATION** (pret `UpdateHPBar`): tick the gauge down 1px at a time w/ a delay (and
-   later a sound) instead of the instant redraw, so the drop reads clearly.
-2. **Enemy turn**: `ExecuteEnemyMove` mirror (`GetDamageVarsForEnemyAttack` exists in core_damage)
-   → drain the PLAYER bar → faint check on the player. Then turn ordering by speed.
-3. **Battle end (2c)**: after `ShowEnemyFainted`, do victory (EXP via Wave-1 `GainExperience`) and
-   exit the battle cleanly (currently it just loops back to the menu — the one known rough edge).
-4. Deferred polish: real species→pic + `LoadBattleMonFromParty` (vs seeds); intro text uses the mon
+1. [x] **Enemy turn** (DONE 2026-06-29): `DoEnemyAttackDamage`/`RenderEnemyTurn` mirror, speed-
+   ordered round, faint ends round. Wild random-move AI (`SelectEnemyMove`) + faithful wild
+   moveset generation (`LoadWildMonMoves`). Headless-validated; live sign-off pending.
+2. [x] **HP-drain ANIMATION** (DONE 2026-06-29): `AnimateEnemyHPBar`/`AnimatePlayerHPBar` tick the
+   gauge down per-pixel with a 2-frame wait (pret UpdateHPBar cadence); player digits tick too.
+   User signed off. Still no sound (audio HAL is the Stage-2 tail).
+3. [x] **Battle TERMINATION (2c)** (DONE + user-signed-off 2026-06-29): `wBattleOver` win/lose
+   flag breaks the menu loop; `EndBattleScreen` clears to a clean terminal. DEFERRED to Stage 3:
+   victory EXP (Wave-1 `GainExperience`), real overworld exit, multi-mon switch-in on faint.
+4. **Victory EXP screen** (Stage 3): wire Wave-1 `GainExperience` (+ PrintStatsBox / level-up / move
+   learn) on the win path; replace `EndBattleScreen`'s blank placeholder with the real exit.
+5. Speed-tie random break + Quick Attack/Counter priority (turn-order quirks deferred above).
+5. Deferred polish: real species→pic + `LoadBattleMonFromParty` (vs seeds); intro text uses the mon
    name; TYPE/PP `GetMaxPP` PP-Up scaling; move reorder (SELECT); accuracy/`MoveHitTest`+effects
-   (replace the two stubs).
+   (replace the two stubs); trainer-AI scoring (`AIEnemyTrainerChooseMoves`, wire into SelectEnemyMove).
 
 **HOW I GROUND-TRUTH BATTLE STATE** (since the PPU collapses many bugs to "blank"): point the
 `%elifdef DEBUG_BATTLE` `windows:` table in debug_dump.asm at the WRAM of interest (wEnemyMonHP

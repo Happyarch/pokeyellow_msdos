@@ -32,12 +32,46 @@ bits 32
 global GetMonLearnset
 global WriteMonMoves
 global WriteMonMoves_ShiftMoveData
+global LoadMovePPs
+global AddPartyMon_WriteMovePP
 
 extern GetPredefRegisters
 extern Moves
 extern EvosMovesPointerTable
 
 section .text
+
+; ---------------------------------------------------------------------------
+; LoadMovePPs — write each move's base PP into the 4 PP slots (pret add_mon.asm).
+; In (via predef regs): ESI (hl) = move-id source (WRAM), EDX (de) = PP dest − 1
+; (WRAM). Empty move slots get PP 0. AddPartyMon_WriteMovePP enters with the
+; registers already set (the AddPartyMon path).
+;
+; DIVERGENCE (faithful to write_moves' existing daycare branch): the base PP is
+; read straight from the flat `Moves` table — Moves[(id−1)*MOVE_LENGTH+MOVE_PP] —
+; rather than the GB FarCopyData→wMoveData the original uses. Clobbers AL/ECX, BH.
+; ---------------------------------------------------------------------------
+LoadMovePPs:
+    call GetPredefRegisters          ; esi=hl (moves src), edx=de (PP dest − 1)
+AddPartyMon_WriteMovePP:
+    mov bh, NUM_MOVES
+.pploop:
+    mov al, [ebp + esi]              ; ld a,[hli] — move id
+    inc esi
+    test al, al
+    jz .empty                        ; empty slot → PP byte 0 (al already 0)
+    movzx ecx, al
+    dec ecx
+    imul ecx, ecx, MOVE_LENGTH
+    mov al, [Moves + ecx + MOVE_PP]  ; base PP (flat Moves table)
+.empty:
+    inc edx                          ; inc de
+    mov [ebp + edx], al              ; ld [de],a
+    dec bh
+    jnz .pploop
+    ret
+
+; ---------------------------------------------------------------------------
 
 ; In:  [wCurPartySpecies] = internal index.
 ; Out: ESI (hl) = flat pointer to the level-up learnset (past the evo data).
