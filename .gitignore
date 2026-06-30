@@ -32,8 +32,29 @@ dos_port/CWSDPMI.EXE
 dos_port/CWSDPMI.SWP
 *.SWP
 
-# DOS port assets
-dos_port/assets/
+# DOS port assets — generated .inc are ignored, EXCEPT the ones below that have
+# no `make` rule (checked-in generated graphics: fonts, Pikachu/logo/title pics,
+# NPC stills, mon icons). They are NOT reproducible by `make assets`, so they must
+# stay tracked. (Untracking them silently breaks fresh-checkout builds — see the
+# 88c7f98f regression.) Use `dos_port/assets/*` so git still descends to negate.
+dos_port/assets/*
+!dos_port/assets/font_1bpp.inc
+!dos_port/assets/font_extra_2bpp.inc
+!dos_port/assets/font_battle_extra_2bpp.inc
+!dos_port/assets/gamefreak_inc_2bpp.inc
+!dos_port/assets/mon_icons.inc
+!dos_port/assets/nine_2bpp.inc
+!dos_port/assets/npc_fisher_still.inc
+!dos_port/assets/npc_girl_still.inc
+!dos_port/assets/npc_oak_still.inc
+!dos_port/assets/pika_bubble_tilemap.inc
+!dos_port/assets/pikachu_bg_2bpp.inc
+!dos_port/assets/pikachu_ob_2bpp.inc
+!dos_port/assets/pikachu_tilemap.inc
+!dos_port/assets/pokemon_logo_2bpp.inc
+!dos_port/assets/pokemon_logo_corner_2bpp.inc
+!dos_port/assets/pokemon_logo_tilemap.inc
+!dos_port/assets/title_copyright_2bpp.inc
 
 # DOS save files
 *.dsv
