@@ -206,6 +206,11 @@ FOREST                  equ 3
 MINIMIZE                equ 0x6B
 STAT_NAME_LENGTH        equ 10
 RAGE                    equ 63         ; move id (HandleBuildingRage restores it)
+TOXIC                   equ 0x5C       ; move id (PoisonEffect: badly-poison branch)
+
+; --- battle animation ids (constants/move_constants.asm; move-effect handlers) ---
+ENEMY_HUD_SHAKE_ANIM    equ 0xA9
+SHAKE_SCREEN_ANIM       equ 0xC7
 
 ; --- text id: "REPEL's effect wore off" (constants/text_constants.asm) ---
 TEXT_REPEL_WORE_OFF     equ 0xD2

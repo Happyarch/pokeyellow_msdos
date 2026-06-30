@@ -109,6 +109,34 @@ SIMPLE_PREFIXES = (
     'engine/events/hidden_events/',
 )
 
+# ── Move-effect swarm category ───────────────────────────────────────────────────
+# The move-effect translation swarm (docs/current_plan_move_swarm.md) claims its
+# work units via `--category move`. A label is category 'move' if it is:
+#   (a) any column-0 label in engine/battle/move_effects/*.asm, OR
+#   (b) one of the hand-listed inline effect-body labels in engine/battle/effects.asm
+#       (the 18 "translate fresh" bodies + StatModifierUp/DownEffect).
+# Status seeding (audit-first): the 16 drafts (14 move_effects files +
+# StatModifierUp/DownEffect) → 'translated' with their dos_port output path; the 18
+# inline effect bodies → 'needs_translation' (the swarm's claimable backlog).
+MOVE_EFFECTS_PREFIX = 'engine/battle/move_effects/'
+MOVE_EFFECTS_SRC    = 'engine/battle/effects.asm'
+
+# The 18 inline effect bodies in pret effects.asm that the swarm translates fresh.
+MOVE_INLINE_FRESH = {
+    'SleepEffect', 'PoisonEffect', 'FreezeBurnParalyzeEffect', 'ExplodeEffect',
+    'FlinchSideEffect', 'ChargeEffect', 'BideEffect', 'RageEffect',
+    'ThrashPetalDanceEffect', 'TrappingEffect', 'ConfusionEffect',
+    'ConfusionSideEffect', 'DisableEffect', 'MimicEffect', 'SplashEffect',
+    'SwitchAndTeleportEffect', 'HyperBeamEffect', 'TwoToFiveAttacksEffect',
+}
+
+# Inline effect bodies in pret effects.asm whose dos_port draft already exists
+# (status 'translated', audit-first). Mapped to their dos_port output file.
+MOVE_INLINE_TRANSLATED = {
+    'StatModifierUpEffect':   'dos_port/src/engine/battle/stat_mod_effects.asm',
+    'StatModifierDownEffect': 'dos_port/src/engine/battle/stat_mod_effects.asm',
+}
+
 # ── Files verified working in DOSBox-X (Claude Code sessions).
 # Status = 'verified'. These may use non-mirrored paths where Claude deliberately
 # chose a different name (e.g., home/copy.asm → src/util/copy_data.asm).
@@ -205,7 +233,7 @@ CREATE TABLE IF NOT EXISTS functions (
     id             INTEGER PRIMARY KEY AUTOINCREMENT,
     name           TEXT    NOT NULL,
     source_file    TEXT    NOT NULL,
-    category       TEXT    NOT NULL CHECK(category IN ('simple','complex','script')),
+    category       TEXT    NOT NULL CHECK(category IN ('simple','complex','script','move')),
     status         TEXT    NOT NULL DEFAULT 'needs_translation'
                            CHECK(status IN (
                                'needs_translation','in_progress',
@@ -236,8 +264,21 @@ CREATE TABLE IF NOT EXISTS translation_log (
 );
 """
 
-def categorise(rel_path):
+def is_move_label(rel_path, label):
+    """True if (rel_path, label) is a move-effect swarm work unit (category 'move')."""
     norm = rel_path.replace('\\', '/')
+    if norm.startswith(MOVE_EFFECTS_PREFIX):
+        return True
+    if norm == MOVE_EFFECTS_SRC and (
+            label in MOVE_INLINE_FRESH or label in MOVE_INLINE_TRANSLATED):
+        return True
+    return False
+
+def categorise(rel_path, label=None):
+    norm = rel_path.replace('\\', '/')
+    # Move-effect swarm work units take precedence (per-label; see is_move_label).
+    if label is not None and is_move_label(norm, label):
+        return 'move'
     # Per-map scripts (scripts/*.asm) are hand-translated by Claude Code, not the
     # swarm — their own 'script' category, claimed in batches.
     if norm.startswith('scripts/'):
@@ -257,6 +298,17 @@ def status_and_output(rel_path, label):
     fall back to needs_translation so the DB reflects reality.
     """
     norm = rel_path.replace('\\', '/')
+    # Move-effect swarm seeding (audit-first). Unlike VERIFIED/TRANSLATED_MAP, the
+    # dos_port body label differs from the pret label (e.g. ConversionEffect →
+    # ConversionEffect_), so we seed status by source path, not by label match.
+    if is_move_label(norm, label):
+        if norm.startswith(MOVE_EFFECTS_PREFIX):
+            # All 14 move_effects/ drafts already exist in dos_port → translated.
+            return 'translated', 'dos_port/src/' + norm
+        if norm == MOVE_EFFECTS_SRC and label in MOVE_INLINE_TRANSLATED:
+            return 'translated', MOVE_INLINE_TRANSLATED[label]
+        # The 18 inline "translate fresh" bodies — the swarm's claimable backlog.
+        return 'needs_translation', None
     if norm in VERIFIED_MAP:
         out = VERIFIED_MAP[norm]
         if label_exists_in_file(label, out):
@@ -299,8 +351,6 @@ def build(rebuild=False):
     inserted = skipped = 0
 
     for rel_path, labels in scan_source_files():
-        cat = categorise(rel_path)
-
         if not rebuild:
             cur.execute("SELECT 1 FROM functions WHERE source_file=? LIMIT 1", (rel_path,))
             if cur.fetchone():
@@ -311,6 +361,7 @@ def build(rebuild=False):
             labels = [os.path.splitext(os.path.basename(rel_path))[0]]
 
         for label in labels:
+            cat = categorise(rel_path, label)     # per-label (move category is label-scoped)
             status, out_file = status_and_output(rel_path, label)
             cur.execute("""
                 INSERT INTO functions (name, source_file, category, status,

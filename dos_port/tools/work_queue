@@ -76,7 +76,9 @@ ALL_STATUSES = [
 
 # 'script' is the per-map script-translation category (scripts/*.asm), claimed and
 # hand-translated by Claude Code — distinct from the swarm's simple/complex jobs.
-CATEGORIES = ['simple', 'complex', 'script']
+# 'move' is the move-effect translation swarm category (move_effects/*.asm + the
+# inline effect bodies in effects.asm) — see docs/current_plan_move_swarm.md.
+CATEGORIES = ['simple', 'complex', 'script', 'move']
 
 # Standardised stub kinds — a closed set so `stub list --kind X` is reliable when
 # sweeping deferrals (e.g. all 'battle' stubs once the battle engine lands). Anything
@@ -130,7 +132,8 @@ def _migrate(con):
     fsql = con.execute(
         "SELECT sql FROM sqlite_master WHERE type='table' AND name='functions'"
     ).fetchone()
-    if fsql and ("'script'" not in fsql[0] or "'verified'" not in fsql[0]):
+    if fsql and ("'script'" not in fsql[0] or "'verified'" not in fsql[0]
+                 or "'move'" not in fsql[0]):
         _rebuild_functions(con)
 
     # Stub/revisit tracking — a separate dimension from the status pipeline: a
@@ -159,7 +162,7 @@ def _rebuild_functions(con):
             name           TEXT    NOT NULL,
             source_file    TEXT    NOT NULL,
             category       TEXT    NOT NULL
-                                   CHECK(category IN ('simple','complex','script')),
+                                   CHECK(category IN ('simple','complex','script','move')),
             status         TEXT    NOT NULL DEFAULT 'needs_translation'
                                    CHECK(status IN (
                                        'needs_translation','in_progress',

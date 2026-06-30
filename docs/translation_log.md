@@ -17,6 +17,35 @@ Format:
 
 ---
 
+## Move-effect swarm scaffold (S2–S4) + PoisonEffect_
+- **Source:** pret `engine/battle/core.asm:3294-3436` (array-gated dispatch),
+  `engine/battle/effects.asm` (PoisonEffect, PrintStatText, ConditionalPrintButItFailed,
+  PrintButItFailedText_, PrintDidntAffectText, PrintMayNotAttackText, CheckTargetSubstitute),
+  `home/array2.asm:IsInArray`, `data/battle/stat_mod_names.asm`.
+- **Translated:** `src/home/array.asm` (IsInArray global); `src/engine/battle/core.asm`
+  (ExecutePlayerMove/ExecuteEnemyMove faithful 6-checkpoint dispatch); `src/engine/battle/
+  move_effect_helpers.asm` (shared helpers + faithful-anim hooks); `src/engine/battle/
+  move_effects/poison.asm` (PoisonEffect_, the gold-standard reference handler); `effects.asm`
+  (JumpMoveEffect live, table re-pointed); tooling: `tools/build_index` + `tools/work_queue`
+  (`move` category).
+- **Date:** 2026-06-30
+- **H-flag:** Not involved (flags via instruction choice; IsInArray returns CF, the dispatch
+  branches on it).
+- **Bug tags:** PoisonEffect_ carries `BUG(cosmetic)` for the Gen-1 1/256 miss inherited via
+  MoveHitTest (fix, if any, lives in MoveHitTest under BUG_FIX_LEVEL, not the handler).
+- **Notes:** `JumpMoveEffect` is now LIVE (effects.asm MoveEffectPointerTable); the core_stubs
+  stub was dropped. Only StatModifierUp/DownEffect + PoisonEffect_ are wired; every other entry
+  → `UnportedMoveEffect` no-op (battle can't crash on an unported move) until the swarm (S5)
+  audits + the master wires each. Link-cascade resolutions: the overworld `PrintText` (text.asm)
+  was renamed `PrintText_Overworld` so the bare `PrintText` is the battle printer the swarm
+  bodies extern (only linked overworld caller, map_sprites.asm, was updated); `CheckTargetSub-
+  stitute` is now the faithful helper (battle_stubs no-op removed → MoveHitTest's substitute
+  check is real); `stat_mod_effects`/`badge_boosts`/`status_penalties` moved BATTLE_SRCS→
+  FRONTEND_SRCS, and the duplicate battle_exp_stubs badge/penalty stubs were deleted.
+  `DelayFrames`/`PlayApplyingAttackAnimation` reuse the live frame.asm/animations.asm globals.
+  Verified: build green (`SKIP_TITLE=1 DEBUG_BATTLE_LIVE=1`, `make check`), and the enemy-move
+  dispatch path ran end-to-end in DOSBox-X (DEBUG_BATTLE_ENEMYHIT) without hang/crash.
+
 ## InitBattle (Wave 2 Stage 1a — battle frame + intro text)
 - **Source:** front-end scaffold (no single pret label); mirrors the battle screen
   build order in `engine/battle/init_battle.asm` / `core.asm`.

@@ -191,8 +191,6 @@ ITEMS_SRCS := \
 # routines are native-ELF-harness validated.
 BATTLE_SRCS := \
     src/home/names.asm \
-    src/engine/battle/badge_boosts.asm \
-    src/engine/battle/status_penalties.asm \
     src/engine/battle/get_trainer_name.asm \
     src/engine/battle/misc.asm \
     src/engine/battle/move_effects/conversion.asm \
@@ -207,8 +205,6 @@ BATTLE_SRCS := \
     src/engine/battle/move_effects/pay_day.asm \
     src/engine/battle/move_effects/recoil.asm \
     src/engine/battle/move_effects/reflect_light_screen.asm \
-    src/engine/battle/stat_mod_effects.asm \
-    src/engine/battle/effects.asm \
     src/engine/battle/building_rage.asm \
     src/engine/battle/residual_damage.asm \
     src/engine/battle/move_category.asm \
@@ -371,6 +367,12 @@ FRONTEND_SRCS := \
     src/engine/battle/battle_menu.asm \
     src/engine/battle/core.asm \
     src/engine/battle/core_stubs.asm \
+    src/engine/battle/effects.asm \
+    src/engine/battle/stat_mod_effects.asm \
+    src/engine/battle/move_effect_helpers.asm \
+    src/engine/battle/move_effects/poison.asm \
+    src/engine/battle/badge_boosts.asm \
+    src/engine/battle/status_penalties.asm \
     src/engine/battle/decrement_pp.asm \
     src/engine/battle/animations.asm \
     src/data/battle_data.asm \

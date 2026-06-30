@@ -128,6 +128,13 @@ extern MoveHitTest                     ; core_damage.asm (sets wMoveMissed)
 extern PlayMoveAnimation               ; animations.asm (placeholder ; TODO-HW)
 extern DecrementPP                     ; decrement_pp.asm
 extern JumpMoveEffect                  ; effects.asm — MoveEffectPointerTable dispatch
+extern IsInArray                       ; home/array.asm — AL in [ESI] ($FF-term, stride EDX) → CF
+extern ResidualEffects1                ; battle_data.asm — effect-category arrays
+extern SpecialEffectsCont
+extern SetDamageEffects
+extern ResidualEffects2
+extern AlwaysHappenSideEffects
+extern SpecialEffects
 extern FindMoveName                    ; battle_menu.asm — move id → flat name ptr
 extern GainExperience                  ; experience.asm — EXP award + level-up display
 extern TryRunningFromBattle            ; battle_menu.asm — flee odds (CF = escaped)
@@ -581,11 +588,13 @@ section .text
 ; HUD → move-effect dispatch → enemy-faint return (b=0 fainted, else ExecutePlayerMove-
 ; Done sets b=1). Returns b in BH for MainInBattleLoop.
 ;
+; Implements pret's FAITHFUL array-gated move-effect ordering (core.asm:3294-3436):
+; the six IsInArray checkpoints (ResidualEffects1 / SpecialEffectsCont / SetDamage-
+; Effects / ResidualEffects2 / AlwaysHappenSideEffects / SpecialEffects) decide where
+; JumpMoveEffect runs relative to damage, preserving the Gen-1 ordering exactly.
+;
 ; TODO(faithful, deepen — each currently simplified/skipped, clearly marked):
 ;   - PrintGhostText (Pokémon Tower ghosts)         - charging moves (Fly/Dig/SolarBeam)
-;   - the IsInArray effect-array gating (SpecialEffectsCont / SetDamageEffects /
-;     ResidualEffects2 / AlwaysHappenSideEffects / SpecialEffects) — here JumpMoveEffect
-;     runs once after damage (covers the common post-damage side effect)
 ;   - HandleCounterMove, multi-hit loop, Mirror Move / Metronome, Explosion handling
 ;   - PrintCriticalOHKOText, DisplayEffectiveness, HandleBuildingRage, move-failure text
 ; ---------------------------------------------------------------------------
@@ -608,41 +617,92 @@ ExecutePlayerMove:
 .noCondition:
     call GetCurrentMove                 ; selected move → wPlayerMove* (+ name buffer)
     call CheckForDisobedience           ; (stub: obedient)
+    ; (charging-up Fly/Charge check deferred — see TODO above)
     call DisplayUsedMoveText            ; "X used MOVE!" (no wait — pret text_end)
     mov edx, wPlayerSelectedMove        ; DE = ptr to the move id just used
     call DecrementPP
+    ; --- checkpoint 1: ResidualEffects1 → effect does everything, skip damage+accuracy ---
+    mov al, [ebp + wPlayerMoveEffect]
+    mov esi, ResidualEffects1
+    mov edx, 1
+    call IsInArray
+    jc  JumpMoveEffect                  ; jp JumpMoveEffect (tail; sets b=1, returns)
+    ; --- checkpoint 2: SpecialEffectsCont → run effect before damage, don't skip ---
+    mov al, [ebp + wPlayerMoveEffect]
+    mov esi, SpecialEffectsCont
+    mov edx, 1
+    call IsInArray
+    jnc .pCalcDamage
+    call JumpMoveEffect
+.pCalcDamage:
+    ; --- checkpoint 3: SetDamageEffects → skip damage CALC, go straight to MoveHitTest ---
+    mov al, [ebp + wPlayerMoveEffect]
+    mov esi, SetDamageEffects
+    mov edx, 1
+    call IsInArray
+    jc  .pMoveHitTest
     call CriticalHitTest
+    ; (HandleCounterMove deferred)
     call GetDamageVarsForPlayerAttack
-    call CalculateDamage                ; ZF=1 → 0 BP (status move)
-    jz  .statusMove
+    call CalculateDamage                ; ZF=1 → 0 BP (status move): skip MoveHitTest
+    jz  .pStatusMove
     call AdjustDamageForMoveType
     call RandomizeDamage
+.pMoveHitTest:
     call MoveHitTest                    ; sets wMoveMissed
     mov al, [ebp + wMoveMissed]
     and al, al
-    jnz .missed
+    jnz .pAfterDamage                   ; missed → skip anim+apply (EXPLODE special-case deferred)
     mov al, [ebp + wPlayerMoveNum]
-    call PlayMoveAnimation              ; TODO-HW: placeholder (HP-bar update below)
-    call ApplyAttackToEnemyPokemon      ; enemy HP -= wDamage (floored)
+    call PlayMoveAnimation              ; ANIMATION=OFF path (HP-bar update below)
     call DrawHUDsAndHPBars
-    mov byte [ebp + wMoveDidntMiss], 1
-    call JumpMoveEffect                 ; run the move's effect (TODO: array-gated order)
-    mov al, [ebp + wEnemyMonHP]
-    mov bh, [ebp + wEnemyMonHP + 1]
-    or  al, bh                          ; enemy fainted?
-    jz  .targetFainted
-    jmp ExecutePlayerMoveDone
-.statusMove:
+    jmp .pAfterDamage
+.pStatusMove:
+    ; pret PlayerCheckIfFlyOrChargeEffect: 0-BP move plays its status anim, no MoveHitTest
     mov al, [ebp + wPlayerMoveNum]
     call PlayMoveAnimation
     call DrawHUDsAndHPBars
-    call JumpMoveEffect                 ; 0-BP move: run its effect (e.g. GROWL)
-    jmp ExecutePlayerMoveDone
-.missed:
-    mov eax, AttackMissedText           ; generated battle text (TODO: PrintMoveFailureText variants)
+.pAfterDamage:
+    ; (MirrorMove / Metronome deferred)
+    ; --- checkpoint 4: ResidualEffects2 → run effect after damage, done ---
+    mov al, [ebp + wPlayerMoveEffect]
+    mov esi, ResidualEffects2
+    mov edx, 1
+    call IsInArray
+    jc  JumpMoveEffect                  ; jp JumpMoveEffect (tail)
+    mov al, [ebp + wMoveMissed]
+    and al, al
+    jz  .pMoveDidNotMiss
+    mov eax, AttackMissedText           ; PrintMoveFailureText (TODO: variants) — done if missed
     call PrintBattleText
     jmp ExecutePlayerMoveDone
-.targetFainted:
+.pMoveDidNotMiss:
+    call ApplyAttackToEnemyPokemon      ; enemy HP -= wDamage (floored)
+    ; (PrintCriticalOHKOText / DisplayEffectiveness deferred)
+    mov byte [ebp + wMoveDidntMiss], 1
+    ; --- checkpoint 5: AlwaysHappenSideEffects → run effect after damage, not done ---
+    mov al, [ebp + wPlayerMoveEffect]
+    mov esi, AlwaysHappenSideEffects
+    mov edx, 1
+    call IsInArray
+    jnc .pCheckFaint
+    call JumpMoveEffect
+.pCheckFaint:
+    mov al, [ebp + wEnemyMonHP]
+    or  al, [ebp + wEnemyMonHP + 1]     ; enemy fainted?
+    jz  .pTargetFainted
+    ; (HandleBuildingRage / multi-hit loop deferred)
+    ; --- checkpoint 6: SpecialEffects catch-all → call nc JumpMoveEffect (secondary effects) ---
+    mov al, [ebp + wPlayerMoveEffect]
+    and al, al
+    jz  ExecutePlayerMoveDone           ; NO_ADDITIONAL_EFFECT
+    mov esi, SpecialEffects
+    mov edx, 1
+    call IsInArray
+    jc  ExecutePlayerMoveDone           ; in SpecialEffects → already handled
+    call JumpMoveEffect                 ; not covered above → run the secondary effect
+    jmp ExecutePlayerMoveDone
+.pTargetFainted:
     xor bh, bh                          ; b = 0 → MainInBattleLoop: enemy fainted
     ret
 
@@ -753,38 +813,84 @@ ExecuteEnemyMove:
 .noCondition:
     call GetCurrentMove                 ; hWhoseTurn=1 → loads wEnemyMove*
     call DisplayUsedMoveText            ; "Enemy X used MOVE!"
+    ; (enemy PP not decremented — player-only PP, per project scope)
+    ; --- checkpoint 1: ResidualEffects1 → effect does everything, skip damage+accuracy ---
+    mov al, [ebp + wEnemyMoveEffect]
+    mov esi, ResidualEffects1
+    mov edx, 1
+    call IsInArray
+    jc  JumpMoveEffect
+    ; --- checkpoint 2: SpecialEffectsCont → run effect before damage, don't skip ---
+    mov al, [ebp + wEnemyMoveEffect]
+    mov esi, SpecialEffectsCont
+    mov edx, 1
+    call IsInArray
+    jnc .eCalcDamage
+    call JumpMoveEffect
+.eCalcDamage:
+    ; --- checkpoint 3: SetDamageEffects → skip damage CALC, go to MoveHitTest ---
+    mov al, [ebp + wEnemyMoveEffect]
+    mov esi, SetDamageEffects
+    mov edx, 1
+    call IsInArray
+    jc  .eMoveHitTest
     call CriticalHitTest
     call GetDamageVarsForEnemyAttack
     call CalculateDamage
-    jz  .statusMove
+    jz  .eStatusMove
     call AdjustDamageForMoveType
     call RandomizeDamage
+.eMoveHitTest:
     call MoveHitTest
     mov al, [ebp + wMoveMissed]
     and al, al
-    jnz .missed
-    mov al, [ebp + wEnemyMoveNum]
-    call PlayMoveAnimation
-    call ApplyAttackToPlayerPokemon     ; player HP -= wDamage (floored)
-    call DrawHUDsAndHPBars
-    mov byte [ebp + wMoveDidntMiss], 1
-    call JumpMoveEffect
-    mov al, [ebp + wBattleMonHP]
-    mov bh, [ebp + wBattleMonHP + 1]
-    or  al, bh
-    jz  .targetFainted
-    jmp ExecuteEnemyMoveDone
-.statusMove:
+    jnz .eAfterDamage
     mov al, [ebp + wEnemyMoveNum]
     call PlayMoveAnimation
     call DrawHUDsAndHPBars
-    call JumpMoveEffect
-    jmp ExecuteEnemyMoveDone
-.missed:
+    jmp .eAfterDamage
+.eStatusMove:
+    mov al, [ebp + wEnemyMoveNum]
+    call PlayMoveAnimation
+    call DrawHUDsAndHPBars
+.eAfterDamage:
+    ; --- checkpoint 4: ResidualEffects2 → run effect after damage, done ---
+    mov al, [ebp + wEnemyMoveEffect]
+    mov esi, ResidualEffects2
+    mov edx, 1
+    call IsInArray
+    jc  JumpMoveEffect
+    mov al, [ebp + wMoveMissed]
+    and al, al
+    jz  .eMoveDidNotMiss
     mov eax, AttackMissedText
     call PrintBattleText
     jmp ExecuteEnemyMoveDone
-.targetFainted:
+.eMoveDidNotMiss:
+    call ApplyAttackToPlayerPokemon     ; player HP -= wDamage (floored)
+    mov byte [ebp + wMoveDidntMiss], 1
+    ; --- checkpoint 5: AlwaysHappenSideEffects → run effect after damage, not done ---
+    mov al, [ebp + wEnemyMoveEffect]
+    mov esi, AlwaysHappenSideEffects
+    mov edx, 1
+    call IsInArray
+    jnc .eCheckFaint
+    call JumpMoveEffect
+.eCheckFaint:
+    mov al, [ebp + wBattleMonHP]
+    or  al, [ebp + wBattleMonHP + 1]
+    jz  .eTargetFainted
+    ; --- checkpoint 6: SpecialEffects catch-all → call nc JumpMoveEffect ---
+    mov al, [ebp + wEnemyMoveEffect]
+    and al, al
+    jz  ExecuteEnemyMoveDone
+    mov esi, SpecialEffects
+    mov edx, 1
+    call IsInArray
+    jc  ExecuteEnemyMoveDone
+    call JumpMoveEffect
+    jmp ExecuteEnemyMoveDone
+.eTargetFainted:
     xor bh, bh                          ; b = 0 → player mon fainted
     ret
 

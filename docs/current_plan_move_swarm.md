@@ -37,36 +37,54 @@ handled inline in `core.asm`'s main flow, Claude/master territory).
 
 ## Stages
 - [ ] **S1 — Divergence spec.** DONE (`docs/move_translation_divergence.md`).
-- [ ] **S2 — Queue.** Add `move` category to `build_index` (schema CHECK + a `move` scan of
-  `move_effects/*.asm` + the hand-listed inline `effects.asm` body labels above); mark the 16
-  drafts `translated` (audit-first), the rest `needs_translation`; `build_index --rebuild`.
-  Swarm claims `--category move`.
-- [ ] **S3 — Scaffold (master's first integration task; Claude/Opus only).** Build so handlers
-  link + fire faithfully:
-  - `IsInArray` as a shared home global (currently only local in trainer_ai/bills_pc).
-  - Translate pret `core.asm:3294-3436` **array-gated dispatch** into our `core.asm`
-    `ExecutePlayerMove`/`ExecuteEnemyMove` (replaces the simplified "JumpMoveEffect once after
-    damage"): the 6 `IsInArray` checkpoints against ResidualEffects1 / SpecialEffectsCont /
-    SetDamageEffects / ResidualEffects2 / AlwaysHappenSideEffects / SpecialEffects (arrays
-    already generated + linked in `battle_data.asm`).
-  - Wire `JumpMoveEffect` live via `effects.asm` `MoveEffectPointerTable` (drop the
-    `core_stubs.asm` stub); unported entries → an `UnportedMoveEffect` no-op so it links.
-  - Real shared helpers (text/logic): `PrintStatText`, `ConditionalPrintButItFailed` /
-    `PrintButItFailedText_`, `EffectCallBattleCore`.
-  - **Faithful-animation (ANIMATION=OFF; flagged follow-ups, can land incrementally):**
-    gradual HP-bar drain (`UpdateCurMonHPBar`), the real software-PPU damage shake
-    (`PlayApplyingAttackAnimation` — needs a renderer blit-offset/flash hook),
-    substitute pic swap (`HideSubstituteShowMonAnim`/`ReshowSubstituteAnim`).
-  - Audio/SFX + literal subanim stay as the allowlist stubs.
-- [ ] **S4 — Reference handler.** Translate ONE body end-to-end as the gold-standard template
-  (suggest `PoisonEffect` or `SleepEffect` — small, status-only, exercises text + WRAM +
-  a Gen-1 bug tag), build green; link it from the worker ticket as the example.
+- [x] **S2 — Queue.** Added `move` category to `build_index` + `work_queue` (schema/CHECK +
+  per-label categoriser: all `move_effects/*.asm` labels + the 18 inline `effects.asm` bodies +
+  StatModifierUp/DownEffect). Seeded the 16 drafts `translated` (audit-first, by source→dos_port
+  output path), the 18 inline fresh bodies `needs_translation`. `build_index --rebuild` run:
+  `list --category move` = 59 (41 translated + **18 claimable needs_translation = exactly the
+  fresh bodies**). Swarm claims `--category move`.
+- [x] **S3 — Scaffold (master's first integration task; Claude/Opus only).** Built green:
+  - `IsInArray` is now the shared home global (`src/home/array.asm`); the local copies in
+    trainer_ai/bills_pc were removed and both extern the global (trainer_ai now sets EDX=1).
+  - Faithful **array-gated dispatch** (pret `core.asm:3294-3436`) translated into our
+    `core.asm` `ExecutePlayerMove`/`ExecuteEnemyMove` — the 6 `IsInArray` checkpoints
+    (ResidualEffects1 `jp` → SpecialEffectsCont `call` → SetDamageEffects skip-calc →
+    ResidualEffects2 `jp` → AlwaysHappenSideEffects `call` → SpecialEffects catch-all
+    `call nc`) replacing the simplified "JumpMoveEffect once after damage".
+  - `JumpMoveEffect` is **LIVE** (effects.asm `MoveEffectPointerTable`; core_stubs.asm stub
+    dropped). Wired live: StatModifierUp/DownEffect + PoisonEffect_; **every other entry →
+    `UnportedMoveEffect`** no-op (the 14 drafts await audit/integration in S5).
+  - Real shared helpers in `src/engine/battle/move_effect_helpers.asm`: `PrintText` (battle —
+    the overworld `PrintText` was renamed `PrintText_Overworld`), `PrintStatText`,
+    `ConditionalPrintButItFailed`/`PrintButItFailedText_`, `PrintDidntAffectText`,
+    `PrintMayNotAttackText`, `EffectCallBattleCore`, `CheckTargetSubstitute` (faithful;
+    replaced the battle_stubs no-op), `Bankswitch` (flat passthrough). `stat_mod_effects.asm`,
+    `badge_boosts.asm`, `status_penalties.asm` now LINK (moved BATTLE_SRCS→FRONTEND_SRCS;
+    the duplicate battle_exp_stubs badge/penalty stubs were deleted).
+  - **Faithful-animation:** `UpdateCurMonHPBar` → DrawHUDsAndHPBars stand-in (gradual drain =
+    incremental TODO); `PlayApplyingAttackAnimation` reused from animations.asm (software-PPU
+    shake = incremental TODO); `HideSubstituteShowMonAnim`/`ReshowSubstituteAnim` linking
+    no-ops (no Substitute yet). Audio/SFX + literal subanim are the allowlist stubs.
+- [x] **S4 — Reference handler.** `PoisonEffect_` translated end-to-end as the gold standard
+  (`src/engine/battle/move_effects/poison.asm`), wired into `MoveEffectPointerTable` ($02/$21/
+  $42). Exercises the substitute/already-statused/type-immunity guards, the side-effect vs.
+  main-effect accuracy split, the status-byte write, Toxic's BADLY_POISONED branch, faithful
+  text, and a Gen-1 bug tag (1/256 miss via MoveHitTest). Build green; the enemy-move dispatch
+  path verified in DOSBox-X (DEBUG_BATTLE_ENEMYHIT ran end-to-end, no hang/crash).
 - [ ] **S5 — Grind.** Workers drain `--category move`; auditors gate; master integrates +
   maintains the pointer table; docs agent logs + commits.
 
 ## HANDOFF (resume here)
-DONE this session: the divergence spec (S1) + this plan. NEXT: S2 (queue) then S3 (scaffold)
-— both are Claude/master work and must precede dispatching workers. The `MoveEffectPointerTable`
-is hand-authored Tier-2 owned by the master; only the master edits it. Reuse already-live
-backend: GetCurrentMove, the damage pipeline, DecrementPP, BattleRandom, StatModifier*Effect,
-the generated effect text (`battle_text.inc`) + effect-category arrays (`battle_data.asm`).
+DONE: S1 (divergence spec) + this plan + **S2 (queue) + S3 (scaffold) + S4 (reference handler
+PoisonEffect_)** — build green, `JumpMoveEffect` live, the array-gated dispatch faithful, all
+shared externs (§4) link. NEXT: **S5 — Grind** (run the swarm). Start a FRESH session with
+`docs/move_swarm_kickoff_prompt.md`. Workers claim `--category move` (18 fresh bodies =
+needs_translation) → `dos_port/scratch/`; auditors gate; the **master** integrates each faithful
+body by repointing its `MoveEffectPointerTable` entry from `UnportedMoveEffect` to the handler
+global (Tier-2, master-only), then building. The 14 audit-first drafts (status `translated`,
+still routed to `UnportedMoveEffect`) need an audit pass + the same wiring before they go live.
+The `MoveEffectPointerTable` is hand-authored Tier-2 owned by the master; only the master edits it.
+Reuse already-live backend: GetCurrentMove, the damage pipeline, DecrementPP, BattleRandom,
+StatModifier*Effect, IsInArray, the shared helpers (move_effect_helpers.asm), the generated
+effect text (`battle_text.inc`) + effect-category arrays (`battle_data.asm`). `poison.asm` is the
+copy-this template.

@@ -31,7 +31,7 @@ bits 32
 extern g_tilecache_dirty
 extern set_single_window     ; src/ppu/ppu.asm — define g_windows[] as one descriptor
 extern hide_window           ; src/ppu/ppu.asm — empty the window list (count=0)
-extern PrintText
+extern PrintText_Overworld
 extern DelayFrame
 extern LoadCurrentMapView
 extern MakeNPCFacePlayer
@@ -715,7 +715,7 @@ ShowTextStream:
     lea edi, [ebp + NPC_DIALOG_BUF]         ; EBP-relative WRAM dest
     rep movsb                                ; flat src ESI → WRAM (both flat selectors)
     mov esi, NPC_DIALOG_BUF                  ; EBP-relative ptr for PrintText
-    call PrintText
+    call PrintText_Overworld
     call npc_dialog_wait_impl
     ret
 
@@ -958,7 +958,7 @@ TrainerEncounterFlow:
     or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     mov esi, NPC_DIALOG_BUF
-    call PrintText
+    call PrintText_Overworld
     call npc_dialog_wait_impl
 
 .tef_text_done:

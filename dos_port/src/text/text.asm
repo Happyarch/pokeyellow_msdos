@@ -114,7 +114,9 @@ global PlaceString
 global PlaceNextChar
 global PrintLetterDelay
 global TextCommandProcessor
-global PrintText
+global PrintText_Overworld      ; renamed from PrintText: the bare `PrintText` symbol is
+                                ; now the battle printer (move_effect_helpers.asm), matching
+                                ; pret semantics in battle context. Overworld dialog uses this.
 global PrintText_NoBox
 global HandleDownArrowBlinkTiming
 global place_flat_str
@@ -1089,7 +1091,7 @@ TextCommandProcessor:
 ; In:  ESI = text command stream (HL, EBP-relative)
 ; Out: ESI = past TX_END. EBX = final cursor. EAX,ECX,EDX clobbered.
 ; ---------------------------------------------------------------------------
-PrintText:
+PrintText_Overworld:
     push esi            ; SM83: push hl
 
     ; Draw the dialogue box: TextBoxBorder at coord(0,12), 18 wide x 4 tall

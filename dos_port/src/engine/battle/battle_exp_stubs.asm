@@ -30,8 +30,9 @@ global CalculateModifiedStats
 global DrawPlayerHUDAndHPBar
 ; LoadMonData is now REAL (load_mon_data.asm wrapper → LoadMonData_) — no longer stubbed;
 ; it populates wLoadedMon so GainExperience's CalcLevelFromExperience reads the right mon.
-global ApplyBadgeStatBoosts
-global ApplyBurnAndParalysisPenaltiesToPlayer
+; ApplyBadgeStatBoosts (badge_boosts.asm) and ApplyBurnAndParalysisPenaltiesToPlayer
+; (status_penalties.asm) are now REAL + linked via the move-effect scaffold — no longer
+; stubbed here (the documented latent collision is resolved by deleting these stubs).
 ; LearnMoveFromLevelUp is now REAL (battle_menu.asm) — no longer stubbed.
 
 GetPartyMonName:
@@ -39,6 +40,4 @@ ModifyPikachuHappiness:
 PrintEmptyString:
 CalculateModifiedStats:
 DrawPlayerHUDAndHPBar:
-ApplyBadgeStatBoosts:
-ApplyBurnAndParalysisPenaltiesToPlayer:
     ret

@@ -73,6 +73,7 @@ extern Divide
 extern Moves
 extern AIGetTypeEffectiveness
 extern StatModifierUpEffect
+extern IsInArray                ; src/home/array.asm (shared home global)
 
 ; ---------------------------------------------------------------------------
 ; Globals
@@ -267,7 +268,8 @@ AIMoveChoiceModification1:
     push edx
     push ebx
     mov esi, StatusAilmentMoveEffects
-    call IsInArray_local    ; CF set if found
+    mov edx, 1              ; entry stride for the shared IsInArray
+    call IsInArray          ; CF set if found (src/home/array.asm)
     pop ebx
     pop edx
     pop esi
@@ -421,35 +423,7 @@ StatusAilmentMoveEffects:
     db POISON_EFFECT
     db PARALYZE_EFFECT
     db 0xFF             ; -1 sentinel
-
-; ===========================================================================
-; IsInArray_local — local flat-table byte scan (not exported)
-; Input:  AL = search value, ESI = flat table base ($FF = sentinel).
-; Output: CF set if found; ESI/EDX/EBX preserved.
-; Report: a global IsInArray should be added to dos_port/src/home/array.asm.
-; ===========================================================================
-IsInArray_local:
-    push esi
-    push ecx
-    movzx ecx, al
-.isInArray_loop:
-    mov al, [esi]
-    cmp al, 0xFF
-    je .isInArray_notfound
-    cmp al, cl
-    je .isInArray_found
-    inc esi
-    jmp .isInArray_loop
-.isInArray_found:
-    pop ecx
-    pop esi
-    stc
-    ret
-.isInArray_notfound:
-    pop ecx
-    pop esi
-    clc
-    ret
+; (IsInArray_local removed — now the shared home global IsInArray, src/home/array.asm.)
 
 ; ===========================================================================
 ; ReadMove

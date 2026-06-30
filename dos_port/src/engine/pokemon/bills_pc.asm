@@ -12,10 +12,9 @@
 ;   _MoveMon       → dos_port/src/engine/pokemon/add_mon.asm:_MoveMon
 ;   _RemovePokemon → dos_port/src/engine/pokemon/remove_mon.asm:_RemovePokemon
 ;
-; IsInArray is not yet in array.asm; a faithful local implementation is
-; provided here and NOT exported (to avoid symbol conflicts once array.asm
-; gains it).  Report to orchestrator: add IsInArray to array.asm when that
-; file is extended.
+; IsInArray is now the shared home global in src/home/array.asm (same faithful
+; flat-read semantics: AL=value, ESI=array, EDX=stride → CF=found, BH=index).
+; KnowsHMMove already sets EDX=1 and saves ESI/EBX around the call.
 
 bits 32
 
@@ -32,38 +31,13 @@ global BillsPCReleaseLogic
 
 extern _MoveMon
 extern _RemovePokemon
+extern IsInArray                ; src/home/array.asm (shared home global)
 
 ; wMoveMonType/wRemoveMonFromBox values (constants/pokemon_data_constants.asm).
 ; Both live at the same WRAM address (wMoveMonType = wRemoveMonFromBox = $CF94).
 ; Not in the shared .inc files; defined locally.
 %define BOX_TO_PARTY  0
 %define PARTY_TO_BOX  1
-
-; ---------------------------------------------------------------------------
-; IsInArray (local, faithful to home/array2.asm:IsInArray)
-;
-; Searches an array at ESI for the value in AL. Entry size is EDX bytes.
-; Terminates on a $FF (-1) entry. Sets C and returns if found; clears C if not.
-; BH is set to the 0-based index of the matching entry on success.
-; Clobbers: BH, CL, ESI (advances past non-matching entries).
-; ---------------------------------------------------------------------------
-IsInArray:
-    xor bh, bh              ; B = 0  (running count, maps to pret ld b,0)
-.iia_loop:
-    mov cl, [esi]           ; ld a,[hl] — flat read (not EBP-relative)
-    cmp cl, 0xFF            ; cp -1 → terminator?
-    je .iia_notfound
-    cmp cl, al              ; cp c
-    je .iia_found
-    inc bh                  ; inc b
-    add esi, edx            ; add hl,de (advance by stride)
-    jmp .iia_loop
-.iia_notfound:
-    clc
-    ret
-.iia_found:
-    stc
-    ret
 
 ; ---------------------------------------------------------------------------
 ; KnowsHMMove

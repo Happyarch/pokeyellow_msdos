@@ -16,9 +16,10 @@ bits 32
 section .text
 
 global FormatMovesString
-global JumpMoveEffect
 global HandlePoisonBurnLeechSeed
 global TrainerAI
+; JumpMoveEffect is now LIVE in effects.asm (MoveEffectPointerTable dispatch) — its
+; stub here was removed when the move-effect scaffold linked effects.asm into the EXE.
 
 extern FindMoveName              ; battle_menu.asm — AL = move id → EAX = flat name ptr
 
@@ -75,16 +76,6 @@ FormatMovesString:
     jmp .dashLoop
 .done:
     mov byte [ebp + edx], 0x50          ; '@'
-    ret
-
-; ---------------------------------------------------------------------------
-; JumpMoveEffect — pret effects.asm dispatch (MoveEffectPointerTable). The full effect-
-; handler closure (stat mods, status, drain, recoil, leech seed, …) depends on deferred
-; predefs/UI/text and isn't link-ready. Stubbed to a no-op: damaging moves resolve fully;
-; status/side-effect moves print their "used MOVE!" line but apply no effect yet.
-; (core.asm: "TODO(faithful): JumpMoveEffect → effects.asm".)
-; ---------------------------------------------------------------------------
-JumpMoveEffect:
     ret
 
 ; ---------------------------------------------------------------------------
