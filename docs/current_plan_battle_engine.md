@@ -204,12 +204,13 @@ by the front end yet (most are Stage 3/4 wiring tasks tracked in the frontend pl
   `RenderPlayerTurn` + `DoEnemyAttackDamage`/`RenderEnemyTurn`, speed-ordered round,
   faint check. This is the front end's backbone; lives in `battle_menu.asm`, not a
   faithful `MainInBattle` port.
-- ~~move-effect dispatch `JumpMoveEffect`~~ — **DONE** (Wave 1, `src/engine/battle/
-  effects.asm`): 86-entry `dd` `MoveEffectPointerTable`, 14 handlers wired, the rest
-  → `UnportedMoveEffect` stub (header lists each + pret handler). Native-validated
-  (17/17 dispatch). Currently bypassed by the front end (`battle_stubs.asm` provides a
-  link-only `JumpMoveEffect ret`); wiring real effects into the turn loop is a
-  frontend-plan polish item.
+- ~~move-effect dispatch `JumpMoveEffect`~~ — **DONE** (`src/engine/battle/effects.asm`):
+  86-entry `dd` `MoveEffectPointerTable`. **All 34 non-NULL handlers are now live**
+  (move-effect translation swarm, 2026-06-30, `docs/plans/move_swarm.md`); only the 7
+  NULL-in-pret slots stay `UnportedMoveEffect`. The handlers link via FRONTEND_SRCS
+  (`move_effects/*.asm` + `move_effect_helpers.asm`) and run in the real turn loop —
+  the old `battle_stubs.asm` link-only `JumpMoveEffect ret` is no longer used. Gen-1
+  bugs preserved under `BUG_FIX_LEVEL>=2`; divergences logged in `translation_log.md`.
 - HP-bar update / HUD draw — **DONE in Wave 2** (`battle_hud.asm` `DrawBattleHUDs` +
   HP-drain animation). `CheckTargetSubstitute` is still a `battle_stubs.asm` link-only
   stub (only reached by paths the loop doesn't call yet).

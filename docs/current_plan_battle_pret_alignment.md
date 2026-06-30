@@ -296,7 +296,19 @@ Then the **data half** was generated (Tier-1, one Sonnet agent each, reviewed vs
 - Type-id handling verified end-to-end (Gen-1 0x09-0x13 gap; SPECIAL=FIRE=0x14).
 
 **So every deferred core.asm TODO(faithful) now has its Tier-1 data in place.** Remaining
-faithful work is wiring the consumers (code, Tier-2): JumpMoveEffect→effects closure,
-status conditions, residual damage, trainer AI/multi-mon/prize. Known gap: `heal.asm`'s
-`StartedSleepingEffect` text wrapper isn't `*Text`-named so the generator regex skips it
-(undefined extern, check-only) — widen the regex when move_effects get linked.
+faithful work is wiring the consumers (code, Tier-2): ~~JumpMoveEffect→effects closure~~
+(**DONE 2026-06-30** — the move-effect translation swarm; see `docs/plans/move_swarm.md`),
+status conditions, residual damage, trainer AI/multi-mon/prize.
+
+**UPDATE 2026-06-30 — JumpMoveEffect→effects closure is COMPLETE.** All 34 non-NULL
+move effects are faithfully translated, audited, and live in `MoveEffectPointerTable`
+(`src/engine/battle/move_effects/*.asm`, linked via FRONTEND_SRCS); the 7 NULL-in-pret
+slots correctly stay `UnportedMoveEffect`. Gen-1 bugs preserved under `BUG_FIX_LEVEL>=2`;
+allowlist divergences (literal subanim / audio / bank drops) logged per body in
+`translation_log.md`. The `StartedSleepingEffect` generator gap noted below is RESOLVED —
+`gen_battle_text.py`'s wrapper regex was widened (it now also emits `StartedSleepingEffect`),
+and the regen restored a stale-missing `PickUpPayDayMoneyText`. The shared scaffold gained
+`ClearHyperBeam`/`PrintDoesntAffectText` + anim no-op stubs. Still deferred (faithful
+ANIMATION=OFF no-ops): the literal-subanimation engine, audio HAL, the real Substitute
+pic-swap, and gradual HP-bar drain — to fill in during the PPU/audio passes. Next on THIS
+plan: status conditions / residual damage / trainer AI multi-mon.
