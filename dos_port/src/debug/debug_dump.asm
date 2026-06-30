@@ -412,6 +412,13 @@ RunBattleTest:
     ; grow (AnimateSendingOutMon, more involved). TODO(send-out): trainer slide-out +
     ; Pikachu slide-in (easy) / ball+grow for others. For now: straight VRAM swap.
     call DrawPlayerBackPic_Stub     ; decode PIKACHU back pic → VRAM $31 (same tilemap block)
+%ifdef DEBUG_BATTLE_TRAINER
+    ; enemy send-out: the TRAINER sends out its first mon, so the trainer sprite is
+    ; replaced by the enemy mon's front pic (decode over VRAM $00, same tilemap block);
+    ; DisplayBattleMenu's DrawBattleHUDs then draws the enemy HP bar (was suppressed for
+    ; the trainer intro). TODO(send-out): trainer slide-out + the real enemy-mon throw.
+    call DrawEnemyFrontPic_Stub     ; enemy mon (PIDGEY) front → VRAM $00 (replaces Bug Catcher)
+%endif
     mov byte [wBattleOver], 0        ; Stage 2c: battle starts "ongoing"
 .live:
     call DisplayBattleMenu          ; Stage 2a: faithful DisplayBattleMenu (Esc quits)
