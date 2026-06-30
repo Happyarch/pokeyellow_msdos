@@ -20,17 +20,29 @@ READ FIRST (in order):
    the ONLY permitted divergence; everything else is faithful, incl. gradual HP drain, the real
    damage shake, substitute swap, all text/logic, and PRESERVED Gen-1 bug/glitch tags.
 3. docs/current_plan_move_swarm.md — topology, the work-unit list, and what's done (S2–S4).
+4. dos_port/src/engine/battle/move_effects/poison.asm — THE reference handler (S4 gold
+   standard). This is the worked example every worker copies: manifest header, register-map
+   comments, shared-extern calls (PrintText / CheckTargetSubstitute / DelayFrames / the anim
+   stubs), the §2/§3 boundary in practice, and a Gen-1 bug tag. Its shared helpers live in
+   dos_port/src/engine/battle/move_effect_helpers.asm (read it for the extern interface).
 
 PRECHECK: confirm the backdrop is green before dispatching anyone —
 `make -C dos_port SKIP_TITLE=1 DEBUG_BATTLE_LIVE=1` builds, `dos_port/tools/work_queue list
---category move` shows the bodies, and the reference handler (e.g. move_effects/poison.asm) is
-wired in MoveEffectPointerTable. Read the reference handler — it is the template you give workers.
+--category move` shows the bodies (18 needs_translation + 41 translated), and the reference
+handler move_effects/poison.asm is wired in MoveEffectPointerTable ($02/$21/$42 → PoisonEffect_).
+Read poison.asm — it is the template you give every worker.
+
+NOTE (scaffold gotcha for you + workers): the bare `PrintText` symbol is now the BATTLE printer
+(move_effect_helpers.asm); the overworld one was renamed `PrintText_Overworld`. Move-effect
+bodies call `PrintText` (battle) — exactly as poison.asm does.
 
 DRIVE THE SWARM. Loop until --category move is drained:
   - Spawn up to 5 Sonnet-5 workers (Agent tool, model: sonnet, fresh general-purpose). Each gets
     ONE effect body (a `needs_translation` ticket): the pret label + output path
     dos_port/src/engine/battle/move_effects/<snake>.asm, the register-map rows, and a pointer to
-    docs/move_translation_divergence.md + the reference handler. Worker writes ONLY to
+    docs/move_translation_divergence.md + the reference handler
+    dos_port/src/engine/battle/move_effects/poison.asm (copy its structure) +
+    dos_port/src/engine/battle/move_effect_helpers.asm (the shared-extern interface). Worker writes ONLY to
     dos_port/scratch/<id>__<label>.asm, calls the shared externs, translates the rest, tags bugs,
     proves `nasm -f coff` passes, reports back. Never edits existing files; never touches the table.
   - Spawn 2 Sonnet-5 auditors per 5 workers: each reads a scratch file vs the pret label and
