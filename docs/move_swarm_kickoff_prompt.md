@@ -54,9 +54,17 @@ DRIVE THE SWARM. Loop until --category move is drained:
     (translated → wired). Never mark translated outside the tool.
   - Spawn an Opus-4.8 docs/commit agent to keep docs/translation_log.md + the plan stages current
     and commit in batches (commit only on the user's say-so; branch off master if needed;
-    Co-Authored-By trailer; never commit generated assets/*.inc).
+    Co-Authored-By trailer; never commit generated assets/*.inc). EVERY integrated body gets a
+    translation_log.md entry whose "Divergences" field lists each allowlist divergence it took
+    (literal subanim / audio / raw $FF / Bankswitch — see §2) with a one-line why for each, e.g.
+    "PlayCurrentMoveAnimation → no-op: literal subanim deferred (ANIMATION=OFF, §2.1)". A body
+    that took none records "Divergences: none (faithful)". This is the audit trail; it is not
+    optional.
 
 HARD RULES: workers/auditors never edit existing files or the dispatch table (live-graph = you).
 One worker per output file. Preserve Gen-1 bugs (BUG(level): + BUG_FIX_LEVEL blocks) and glitches
 (GLITCH:). Emit ; TODO-HW: at any $FF__ boundary. Keep the build green after every integration.
+LOG EVERY DIVERGENCE: each worker reports the allowlist divergences it took (with a one-line why),
+the auditor confirms the list is complete + allowlist-only, and the docs agent records them in the
+body's docs/translation_log.md "Divergences" entry. No divergence ships unlogged.
 ```

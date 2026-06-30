@@ -12,8 +12,14 @@ Format:
 - Date: YYYY-MM-DD
 - H-flag: <involved / not involved / lazy>
 - Bug tags: <none / BUG(critical) / BUG(cosmetic) / GLITCH>
+- Divergences: <none (faithful) | each allowlist divergence + a one-line why,
+  e.g. "PlayCurrentMoveAnimation → no-op: literal subanim deferred (ANIMATION=OFF, §2.1)">
 - Notes: <decisions and edge cases>
 ```
+
+For move-effect bodies, "Divergences" is mandatory and must list every allowed-divergence
+(docs/move_translation_divergence.md §2) the body took, with a brief reason; "none (faithful)"
+if it took none. This is the swarm's divergence audit trail.
 
 ---
 
@@ -33,6 +39,9 @@ Format:
   branches on it).
 - **Bug tags:** PoisonEffect_ carries `BUG(cosmetic)` for the Gen-1 1/256 miss inherited via
   MoveHitTest (fix, if any, lives in MoveHitTest under BUG_FIX_LEVEL, not the handler).
+- **Divergences (PoisonEffect_):** `PlayBattleAnimation2` / `PlayCurrentMoveAnimation2` → no-op
+  stubs: literal move subanimation deferred (ANIMATION=OFF path, §2.1). Everything else faithful
+  (status byte, Toxic branch, accuracy split, text via the real PrintText).
 - **Notes:** `JumpMoveEffect` is now LIVE (effects.asm MoveEffectPointerTable); the core_stubs
   stub was dropped. Only StatModifierUp/DownEffect + PoisonEffect_ are wired; every other entry
   → `UnportedMoveEffect` no-op (battle can't crash on an unported move) until the swarm (S5)
