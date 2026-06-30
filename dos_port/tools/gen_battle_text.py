@@ -216,7 +216,10 @@ def collect_wrappers(cm, mem, far_db):
         lines = p.read_text(encoding="utf-8").splitlines()
         i = 0
         while i < len(lines):
-            m = re.match(r'([A-Z]\w*Text):', lines[i].strip())
+            # Most battle stream wrappers end in "Text"; StartedSleepingEffect is the
+            # lone exception (pret named Rest's "started sleeping!" stream with an
+            # "Effect" suffix in engine/battle/move_effects/heal.asm).
+            m = re.match(r'([A-Z]\w*Text|StartedSleepingEffect):', lines[i].strip())
             if not m:
                 i += 1; continue
             label = m.group(1)

@@ -3,7 +3,6 @@
 %include "gb_macros.inc"
 
 extern PlayCurrentMoveAnimation
-extern CallBankF
 extern PrintText
 extern StatusChangesEliminatedText
 
@@ -58,8 +57,7 @@ HazeEffect_:
     call CureVolatileStatuses
     mov esi, wEnemyBattleStatus1
     call CureVolatileStatuses
-    mov esi, PlayCurrentMoveAnimation
-    call CallBankF
+    call PlayCurrentMoveAnimation        ; pret: ld hl, PlayCurrentMoveAnimation / call CallBankF (bank dropped, §2.4)
     mov esi, StatusChangesEliminatedText
     jmp PrintText
 

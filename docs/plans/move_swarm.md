@@ -71,20 +71,62 @@ handled inline in `core.asm`'s main flow, Claude/master territory).
   main-effect accuracy split, the status-byte write, Toxic's BADLY_POISONED branch, faithful
   text, and a Gen-1 bug tag (1/256 miss via MoveHitTest). Build green; the enemy-move dispatch
   path verified in DOSBox-X (DEBUG_BATTLE_ENEMYHIT ran end-to-end, no hang/crash).
-- [ ] **S5 — Grind.** Workers drain `--category move`; auditors gate; master integrates +
-  maintains the pointer table; docs agent logs + commits.
+- [x] **S5 — Grind.** Workers drain `--category move`; auditors gate; master integrates +
+  maintains the pointer table; docs agent logs + commits. **COMPLETE** (2026-06-30).
+  - **ALL 34 non-NULL handlers are live in `MoveEffectPointerTable`** (build green:
+    `make -C dos_port SKIP_TITLE=1 DEBUG_BATTLE_LIVE=1`), each logged in
+    translation_log.md with a Divergences field. **59/59 move-queue tickets verified.**
+  - **First-half integration (17 handlers):** PoisonEffect_ ($02/$21/$42, S4 ref),
+    SplashEffect_ ($55), FlinchSideEffect_ ($1F/$25), ConfusionEffect_ ($31) +
+    ConfusionSideEffect_ ($4C), SleepEffect_ ($01/$20), FreezeBurnParalyzeEffect_
+    ($04/$05/$06/$22/$23/$24), ConversionEffect_ ($18), HazeEffect_ ($19),
+    OneHitKOEffect_ ($26), MistEffect_ ($2E), FocusEnergyEffect_ ($2F), ParalyzeEffect_
+    ($43), LeechSeedEffect_ ($54), ExplodeEffect_ ($07), BideEffect_ ($1A),
+    TwoToFiveAttacksEffect_ ($1D/$1E/$2C/$4D), RageEffect_ ($51) — plus the shared
+    StatModifierUp/DownEffect bodies, live since S3.
+  - **Second-half integration (14 handlers, this session):** ChargeEffect_ ($27/$2B),
+    MimicEffect_ ($52), SwitchAndTeleportEffect_ ($1C), DisableEffect_ ($56),
+    TrappingEffect_ ($2A), HyperBeamEffect_ ($50), ThrashPetalDanceEffect_ ($1B),
+    DrainHPEffect_ ($03/$08), ReflectLightScreenEffect_ ($40/$41), RecoilEffect_ ($30),
+    PayDayEffect_ ($10), SubstituteEffect_ ($4F), HealEffect_ ($38), TransformEffect_
+    ($39). Seven of these were re-translated after failed audits (drain_hp, heal,
+    pay_day, reflect_light_screen, substitute, transform, recoil).
+  - **The 7 NULL-in-pret entries correctly stay `UnportedMoveEffect`** (no body in
+    pret; handled inline in core.asm's main flow): $09 MIRROR_MOVE, $11 SWIFT,
+    $28 SUPER_FANG, $29 SPECIAL_DAMAGE, $2D JUMP_KICK, $4E (unused), $53 METRONOME.
+  - **Shared support added during integration:** `move_effect_helpers.asm` gained
+    `ClearHyperBeam` (global; Flinch/FBP/Trapping), `PrintDoesntAffectText`, and the
+    `AnimationSubstitute` / `AnimationTransformMon` / `PlayBattleAnimation` no-op stubs;
+    `gb_memmap.inc` gained `wPlayerConfusedCounter` / `wEnemyConfusedCounter`,
+    `wUnknownSerialFlag_d499`, `wTotalPayDayMoney` / `wPayDayMoney`,
+    `wTransformedEnemyMonOriginalDVs`; `gb_constants.inc` gained `XSTATITEM_ANIM`,
+    `SHRINKING_SQUARE_ANIM`, `SLIDE_DOWN_ANIM`, `RAZOR_WIND` / `ROAR` / `SOLARBEAM` /
+    `SKULL_BASH` / `SKY_ATTACK`. `tools/gen_battle_text.py` was fixed to emit
+    `StartedSleepingEffect` (its label regex only matched `*Text` names); regen also
+    restored a stale-missing `PickUpPayDayMoneyText`.
+  - **Deferred / follow-up items (carried out of the swarm):**
+    (a) The allowlist HW stubs are still no-ops — the literal subanimation engine,
+    the audio HAL, the real Substitute pic-swap, and gradual HP-bar drain. This is
+    faithful ANIMATION=OFF behavior; fill in later (PPU/audio passes).
+    (b) **Makefile dependency gap:** the battle move-effect `.o` files don't list
+    `assets/battle_text.inc` as a prerequisite, so regenerating `battle_text.inc`
+    does NOT auto-rebuild them (the master `rm`'d stale `.o`s by hand this session).
+    Worth adding that dependency to the Makefile.
 
 ## HANDOFF (resume here)
-DONE: S1 (divergence spec) + this plan + **S2 (queue) + S3 (scaffold) + S4 (reference handler
-PoisonEffect_)** — build green, `JumpMoveEffect` live, the array-gated dispatch faithful, all
-shared externs (§4) link. NEXT: **S5 — Grind** (run the swarm). Start a FRESH session with
-`docs/move_swarm_kickoff_prompt.md`. Workers claim `--category move` (18 fresh bodies =
-needs_translation) → `dos_port/scratch/`; auditors gate; the **master** integrates each faithful
-body by repointing its `MoveEffectPointerTable` entry from `UnportedMoveEffect` to the handler
-global (Tier-2, master-only), then building. The 14 audit-first drafts (status `translated`,
-still routed to `UnportedMoveEffect`) need an audit pass + the same wiring before they go live.
-The `MoveEffectPointerTable` is hand-authored Tier-2 owned by the master; only the master edits it.
-Reuse already-live backend: GetCurrentMove, the damage pipeline, DecrementPP, BattleRandom,
-StatModifier*Effect, IsInArray, the shared helpers (move_effect_helpers.asm), the generated
-effect text (`battle_text.inc`) + effect-category arrays (`battle_data.asm`). `poison.asm` is the
-copy-this template.
+**ALL STAGES COMPLETE (S1–S5, 2026-06-30).** All 34 non-NULL move-effect handlers are
+translated, audited FAITHFUL, and live in `MoveEffectPointerTable` (effects.asm); the 7
+NULL-in-pret entries correctly stay `UnportedMoveEffect` (handled inline in core.asm). Build
+green (`make -C dos_port SKIP_TITLE=1 DEBUG_BATTLE_LIVE=1`); 59/59 move-queue tickets verified.
+
+**This plan is fully done and can be archived** per the CLAUDE.md convention —
+`git mv docs/current_plan_move_swarm.md docs/plans/move_swarm.md` (recommendation only; NOT
+performed by the docs agent).
+
+Remaining follow-ups are NOT part of this plan (tracked above under S5 deferred items):
+- The allowlist HW stubs (literal subanimation, audio HAL, real Substitute pic-swap, gradual
+  HP-bar drain) are still faithful ANIMATION=OFF no-ops — to be filled in during the PPU/audio
+  passes.
+- Makefile dependency gap: battle move-effect `.o` files don't depend on `assets/battle_text.inc`,
+  so regenerating it doesn't auto-rebuild them (worked around by hand-`rm`ing stale `.o`s this
+  session) — worth adding the prerequisite.

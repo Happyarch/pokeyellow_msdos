@@ -36,6 +36,7 @@ extern DrawHUDsAndHPBars        ; battle_menu.asm / battle_hud.asm — redraw HU
 ; --- battle_text.inc streams (global in core.o; flat addresses) ---
 extern ButItFailedText
 extern DidntAffectText
+extern DoesntAffectMonText
 extern ParalyzedMayNotAttackText
 
 section .text
@@ -105,6 +106,12 @@ PrintDidntAffectText:
     mov esi, DidntAffectText
     jmp PrintText
 
+; PrintDoesntAffectText — pret core.asm: ld hl, DoesntAffectMonText / jp PrintText.
+global PrintDoesntAffectText
+PrintDoesntAffectText:
+    mov esi, DoesntAffectMonText
+    jmp PrintText
+
 global PrintMayNotAttackText
 PrintMayNotAttackText:
     mov esi, ParalyzedMayNotAttackText
@@ -124,6 +131,26 @@ CheckTargetSubstitute:
     mov esi, wPlayerBattleStatus2
 .next:
     test byte [ebp + esi], 1 << HAS_SUBSTITUTE_UP   ; ZF=1 → no substitute
+    pop esi
+    ret
+
+; ===========================================================================
+; ClearHyperBeam — pret engine/battle/effects.asm:ClearHyperBeam. Clears the
+; NEEDS_TO_RECHARGE bit on the TARGET side's wXxxBattleStatus2 (enemy on the
+; player's turn, player on the enemy's turn — the literal pret hl selection).
+; Shared by FreezeBurnParalyzeEffect, FlinchSideEffect, TrappingEffect. Preserves
+; ESI; clobbers AL (pret clobbers AF; callers don't rely on AL surviving).
+; ===========================================================================
+global ClearHyperBeam
+ClearHyperBeam:
+    push esi
+    mov esi, wEnemyBattleStatus2        ; player's turn → target = enemy
+    mov al, [ebp + hWhoseTurn]
+    and al, al
+    jz .playerTurn
+    mov esi, wPlayerBattleStatus2
+.playerTurn:
+    and byte [ebp + esi], ~(1 << NEEDS_TO_RECHARGE) & 0xFF   ; res NEEDS_TO_RECHARGE
     pop esi
     ret
 
@@ -153,10 +180,16 @@ Bankswitch:
 ; ===========================================================================
 global PlayCurrentMoveAnimation
 global PlayCurrentMoveAnimation2
+global PlayBattleAnimation
 global PlayBattleAnimation2
+global AnimationSubstitute
+global AnimationTransformMon
 PlayCurrentMoveAnimation:
 PlayCurrentMoveAnimation2:
+PlayBattleAnimation:
 PlayBattleAnimation2:
+AnimationSubstitute:
+AnimationTransformMon:
     ret
 
 ; ===========================================================================

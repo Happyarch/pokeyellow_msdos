@@ -3521,3 +3521,399 @@ Type-id handling verified correct end-to-end (Gen-1 gap): gb_constants NORMAL=0.
 gap 0x09-0x13, SPECIAL=FIRE=0x14..DRAGON=0x1A; WideTypeNames is a 27-entry raw-id-indexed
 table (gap→tn_normal); damage split is `cmp al, SPECIAL(0x14)/jae .special`. (WideTypeNames
 is still hand-authored — candidate for a future gen_type_names.)
+
+---
+
+# Move-effect swarm — S5 integration entries (2026-06-30)
+
+The 16 faithful move-effect bodies below were integrated by the master into
+`MoveEffectPointerTable` (effects.asm) during S5 and verified (build green). Each
+is a faithful translation of the named `engine/battle/effects.asm` label per
+`docs/move_translation_divergence.md`. The mandatory **Divergences** field lists
+every §2 allowlist item the body took (§2.1 = literal move subanimation →
+ANIMATION=OFF no-op; §2.4 = bank switching dropped in the flat DPMI model).
+`PoisonEffect_` (the S4 reference handler) is logged in the swarm-scaffold entry
+near the top of this file. Earlier draft-era `## <Name>Effect_` entries (dated
+2026-06-20, no Divergences field) predate the swarm convention and are kept as
+historical notes; these are the authoritative integration entries.
+
+## SplashEffect_ (move-swarm S5)
+- **Source:** `engine/battle/effects.asm:SplashEffect`
+- **Translated:** `dos_port/src/engine/battle/move_effects/splash.asm` (`$55`)
+- **Date:** 2026-06-30
+- **H-flag:** Not involved.
+- **Bug tags:** none.
+- **Divergences:** `PlayCurrentMoveAnimation` → no-op: literal move subanimation
+  deferred (ANIMATION=OFF path, §2.1). Splash otherwise does nothing (no accuracy
+  test, no substitute check, no WRAM writes) — fully faithful.
+- **Notes:** The simplest handler: subanim then unconditional "But nothing
+  happened!" via the real PrintText.
+
+## FlinchSideEffect_ (move-swarm S5)
+- **Source:** `engine/battle/effects.asm:FlinchSideEffect`
+- **Translated:** `dos_port/src/engine/battle/move_effects/flinch_side.asm` (`$1F`/`$25`)
+- **Date:** 2026-06-30
+- **H-flag:** Not involved.
+- **Bug tags:** none.
+- **Divergences:** none (faithful).
+- **Notes:** 10%/30% flinch roll sets the FLINCHED bit on the move's target; calls
+  the shared `ClearHyperBeam` helper (added to move_effect_helpers.asm during
+  integration) once before the roll and again on a successful flinch, per pret.
+  Silent (side effects never print).
+
+## ConfusionEffect_ / ConfusionSideEffect_ (move-swarm S5)
+- **Source:** `engine/battle/effects.asm:ConfusionEffect`, `:ConfusionSideEffect`
+  (+ `ConfusionSideEffectSuccess` / `ConfusionEffectFailed`; one contiguous pret block)
+- **Translated:** `dos_port/src/engine/battle/move_effects/confusion.asm`
+  (`ConfusionEffect_` `$31`, `ConfusionSideEffect_` `$4C`; merged file)
+- **Date:** 2026-06-30
+- **H-flag:** Not involved.
+- **Bug tags:** none.
+- **Divergences:** `PlayCurrentMoveAnimation2` → no-op: literal move subanimation
+  deferred (ANIMATION=OFF path, §2.1).
+- **Notes:** Both entry points kept (the $4C side-effect rolls 10% then falls
+  through to the shared confusion-apply tail), faithful to pret's fall-through.
+
+## SleepEffect_ (move-swarm S5)
+- **Source:** `engine/battle/effects.asm:SleepEffect`
+- **Translated:** `dos_port/src/engine/battle/move_effects/sleep.asm` (`$01`/`$20`)
+- **Date:** 2026-06-30
+- **H-flag:** Not involved.
+- **Bug tags:** `BUG(cosmetic)` — Hyper Beam recharge bypasses ALL hit-tests for a
+  status move (already-asleep / already-statused / accuracy), preserved as pret's
+  behavior; the fix lives in a `%if BUG_FIX_LEVEL >= 2` block, original (buggy)
+  behavior in `%else`.
+- **Divergences:** `PlayCurrentMoveAnimation2` → no-op: literal move subanimation
+  deferred (ANIMATION=OFF path, §2.1).
+- **Notes:** 1–7 turn sleep counter with the Stadium-link reroll-restriction tail,
+  faithful.
+
+## FreezeBurnParalyzeEffect_ (move-swarm S5)
+- **Source:** `engine/battle/effects.asm:FreezeBurnParalyzeEffect`
+- **Translated:** `dos_port/src/engine/battle/move_effects/freeze_burn_paralyze.asm`
+  (`$04`/`$05`/`$06`/`$22`/`$23`/`$24`)
+- **Date:** 2026-06-30
+- **H-flag:** Not involved.
+- **Bug tags:** `BUG(cosmetic)` — the `.freeze2` path resets Hyper Beam recharge
+  asymmetrically (only the player's side via the `.freeze1`/`.freeze2` ClearHyperBeam
+  split), preserved as pret behavior under a `%if BUG_FIX_LEVEL >= 2` guard
+  (original in `%else`).
+- **Divergences:** `PlayBattleAnimation` / `PlayBattleAnimation2` → no-op: literal
+  move subanimation deferred (ANIMATION=OFF path, §2.1).
+- **Notes:** The chance-on-hit status (Body Slam paralysis, Ice Beam freeze, etc.),
+  NOT the accuracy-tested dedicated status moves.
+
+## ConversionEffect_ (move-swarm S5)
+- **Source:** `engine/battle/effects.asm:ConversionEffect`
+- **Translated:** `dos_port/src/engine/battle/move_effects/conversion.asm` (`$18`)
+- **Date:** 2026-06-30
+- **H-flag:** Not involved.
+- **Bug tags:** none.
+- **Divergences:** bank-call dropped — the `CallBankF` bank load was removed and the
+  flat target called directly (no banks in the DPMI model, §2.4).
+- **Notes:** Copies the target's type into the user's type bytes; INVULNERABLE
+  evaluated as the constant.
+
+## HazeEffect_ (move-swarm S5)
+- **Source:** `engine/battle/effects.asm:HazeEffect`
+- **Translated:** `dos_port/src/engine/battle/move_effects/haze.asm` (`$19`)
+- **Date:** 2026-06-30
+- **H-flag:** Not involved.
+- **Bug tags:** none.
+- **Divergences:** bank-call dropped (flat model, §2.4); `PlayCurrentMoveAnimation`
+  → no-op: literal move subanimation deferred (ANIMATION=OFF path, §2.1).
+- **Notes:** Resets both sides' stat stages / status / volatile flags, faithful.
+
+## OneHitKOEffect_ (move-swarm S5)
+- **Source:** `engine/battle/effects.asm:OneHitKOEffect`
+- **Translated:** `dos_port/src/engine/battle/move_effects/one_hit_ko.asm` (`$26`)
+- **Date:** 2026-06-30
+- **H-flag:** Not involved.
+- **Bug tags:** none.
+- **Divergences:** none (faithful).
+- **Notes:** Speed-gated OHKO; sets damage to max HP and the one-hit-KO message flag.
+
+## MistEffect_ (move-swarm S5)
+- **Source:** `engine/battle/effects.asm:MistEffect`
+- **Translated:** `dos_port/src/engine/battle/move_effects/mist.asm` (`$2E`)
+- **Date:** 2026-06-30
+- **H-flag:** Not involved.
+- **Bug tags:** none.
+- **Divergences:** bank-calls dropped (flat model, §2.4); literal move subanimation
+  → no-op (ANIMATION=OFF path, §2.1).
+- **Notes:** Sets the PROTECTED_BY_MIST bit; "But it failed!" when already misted.
+
+## FocusEnergyEffect_ (move-swarm S5)
+- **Source:** `engine/battle/effects.asm:FocusEnergyEffect`
+- **Translated:** `dos_port/src/engine/battle/move_effects/focus_energy.asm` (`$2F`)
+- **Date:** 2026-06-30
+- **H-flag:** Not involved.
+- **Bug tags:** none (the Gen-1 Focus Energy *crit-reduction* quirk lives in the
+  crit-rate calc, not in this setup handler).
+- **Divergences:** bank-calls dropped (flat model, §2.4); literal move subanimation
+  → no-op (ANIMATION=OFF path, §2.1).
+- **Notes:** Sets the GETTING_PUMPED bit; "But it failed!" if already pumped.
+
+## ParalyzeEffect_ (move-swarm S5)
+- **Source:** `engine/battle/effects.asm:ParalyzeEffect`
+- **Translated:** `dos_port/src/engine/battle/move_effects/paralyze.asm` (`$43`)
+- **Date:** 2026-06-30
+- **H-flag:** Not involved.
+- **Bug tags:** none.
+- **Divergences:** bank-calls dropped (flat model, §2.4); literal move subanimation
+  → no-op (ANIMATION=OFF path, §2.1).
+- **Notes:** Accuracy-tested paralysis (MoveHitTest), sets PARALYZED status +
+  QuarterSpeedDueToParalysis, faithful.
+
+## LeechSeedEffect_ (move-swarm S5)
+- **Source:** `engine/battle/effects.asm:LeechSeedEffect`
+- **Translated:** `dos_port/src/engine/battle/move_effects/leech_seed.asm` (`$54`)
+- **Date:** 2026-06-30
+- **H-flag:** Not involved.
+- **Bug tags:** none.
+- **Divergences:** literal move subanimation → no-op (ANIMATION=OFF path, §2.1).
+- **Notes:** Sets the SEEDED bit on the target (Grass-type immunity + already-seeded
+  guards), faithful.
+
+## ExplodeEffect_ (move-swarm S5)
+- **Source:** `engine/battle/effects.asm:ExplodeEffect`
+- **Translated:** `dos_port/src/engine/battle/move_effects/explode.asm` (`$07`)
+- **Date:** 2026-06-30
+- **H-flag:** Not involved.
+- **Bug tags:** none.
+- **Divergences:** none (faithful).
+- **Notes:** Zeroes the user's own HP and status and clears the user's SEEDED bit.
+  The "effect activates even on a miss" + damage-formula defense-halving special-casing
+  lives in core.asm (cp EXPLODE_EFFECT sites), not in this body.
+
+## BideEffect_ (move-swarm S5)
+- **Source:** `engine/battle/effects.asm:BideEffect`
+- **Translated:** `dos_port/src/engine/battle/move_effects/bide.asm` (`$1A`)
+- **Date:** 2026-06-30
+- **H-flag:** Not involved.
+- **Bug tags:** none.
+- **Divergences:** `PlayBattleAnimation2` → no-op: literal move subanimation deferred
+  (ANIMATION=OFF path, §2.1).
+- **Notes:** Setup-only: sets STORING_ENERGY, zeroes the accumulated-damage word,
+  clears both move-effect bytes (literal pret behavior), rolls a 2–3 turn counter.
+  Damage accumulation/release lives in core.asm.
+
+## TwoToFiveAttacksEffect_ (move-swarm S5)
+- **Source:** `engine/battle/effects.asm:TwoToFiveAttacksEffect`
+- **Translated:** `dos_port/src/engine/battle/move_effects/two_to_five_attacks.asm`
+  (`$1D`/`$1E`/`$2C`/`$4D`)
+- **Date:** 2026-06-30
+- **H-flag:** Not involved.
+- **Bug tags:** none (the Twineedle register-reuse is a faithful pret quirk, noted in
+  the file, not a bug).
+- **Divergences:** none (faithful).
+- **Notes:** Sets ATTACKING_MULTIPLE_TIMES, decides the hit count (2 for Double Kick /
+  Twineedle / Attack-Twice, 2–5 distribution for the multi-hit moves) and writes both
+  the counter and hit-count bytes.
+
+## RageEffect_ (move-swarm S5)
+- **Source:** `engine/battle/effects.asm:RageEffect`
+- **Translated:** `dos_port/src/engine/battle/move_effects/rage.asm` (`$51`)
+- **Date:** 2026-06-30
+- **H-flag:** Not involved.
+- **Bug tags:** none.
+- **Divergences:** none (faithful).
+- **Notes:** Sets the USING_RAGE bit on the user's side (hWhoseTurn-selected); no
+  accuracy test, text, or animation.
+
+## ChargeEffect_ (move-swarm S5)
+- **Source:** `engine/battle/effects.asm:ChargeEffect`
+- **Translated:** `dos_port/src/engine/battle/move_effects/charge.asm` (`$27`/`$2B`)
+- **Date:** 2026-06-30
+- **H-flag:** Not involved.
+- **Bug tags:** none.
+- **Divergences:** literal move subanimation → no-op (`PlayBattleAnimation`,
+  ANIMATION=OFF path, §2.1); bank-call dropped (flat model, §2.4); pret's
+  `ChargeMoveEffectText` uses `text_far` + `text_asm` (the generated text path
+  cannot emit a `text_asm` callback), so the displayed two-line
+  "`<MON>`\n`<message>!`" stream was reproduced as **6 hand-built local composite
+  text streams** (one per charge move) — a Tier-2 text reconstruction, not a
+  generated `battle_text.inc` entry.
+- **Notes:** Setup-turn handler for the two-turn moves (Razor Wind, Solar Beam,
+  Skull Bash, Sky Attack, Fly, Dig). Sets CHARGING_UP, clears the move animation,
+  selects the per-move "dug a hole" / "is glowing" / etc. message, and (for the
+  invulnerable moves) sets the INVULNERABLE bit. The 6 composite text streams keep
+  the per-move flavor without a `text_asm` runtime callback.
+
+## MimicEffect_ (move-swarm S5)
+- **Source:** `engine/battle/effects.asm:MimicEffect`
+- **Translated:** `dos_port/src/engine/battle/move_effects/mimic.asm` (`$52`)
+- **Date:** 2026-06-30
+- **H-flag:** Not involved.
+- **Bug tags:** `GLITCH` — the player (move chosen from the target's move list) vs
+  AI (move chosen at random) move-pick asymmetry is preserved as pret behavior.
+- **Divergences:** literal move subanimation → no-op (ANIMATION=OFF path, §2.1).
+- **Notes:** Copies a target move into the user's Mimic slot. The choose-vs-random
+  branch is intentionally left asymmetric per the original; accuracy/substitute
+  guards faithful.
+
+## SwitchAndTeleportEffect_ (move-swarm S5)
+- **Source:** `engine/battle/effects.asm:SwitchAndTeleportEffect`
+- **Translated:** `dos_port/src/engine/battle/move_effects/switch_and_teleport.asm` (`$1C`)
+- **Date:** 2026-06-30
+- **H-flag:** Not involved.
+- **Bug tags:** none.
+- **Divergences:** literal move subanimation → no-op (ANIMATION=OFF path, §2.1).
+- **Notes:** Teleport (player) / Whirlwind-Roar (run from wild). The deliberate
+  pret asymmetry is preserved: the player branch prints via `PrintButItFailedText_`
+  while the enemy branch goes through `ConditionalPrintButItFailed` — kept verbatim,
+  not normalized.
+
+## DisableEffect_ (move-swarm S5)
+- **Source:** `engine/battle/effects.asm:DisableEffect`
+- **Translated:** `dos_port/src/engine/battle/move_effects/disable.asm` (`$56`)
+- **Date:** 2026-06-30
+- **H-flag:** Not involved.
+- **Bug tags:** `BUG(cosmetic)` — in non-link battles the random move pick can skip
+  a move with 0 PP test differently than link, preserved as pret behavior under a
+  `%if BUG_FIX_LEVEL >= 2` guard (original in `%else`).
+- **Divergences:** literal move subanimation → no-op (ANIMATION=OFF path, §2.1).
+- **Notes:** Picks a target move, rolls a 1–8 turn disable counter, writes the
+  disabled-move id + counter. The non-link PP-skip quirk is the only bug tag.
+
+## TrappingEffect_ (move-swarm S5)
+- **Source:** `engine/battle/effects.asm:TrappingEffect`
+- **Translated:** `dos_port/src/engine/battle/move_effects/trapping.asm` (`$2A`)
+- **Date:** 2026-06-30
+- **H-flag:** Not involved.
+- **Bug tags:** none.
+- **Divergences:** none (faithful).
+- **Notes:** Wrap / Bind / Fire Spin / Clamp lock-in. Sets ATTACKING_MULTIPLE_TIMES,
+  rolls the 2–5 turn distribution, and calls the shared `ClearHyperBeam` helper.
+
+## HyperBeamEffect_ (move-swarm S5)
+- **Source:** `engine/battle/effects.asm:HyperBeamEffect`
+- **Translated:** `dos_port/src/engine/battle/move_effects/hyper_beam.asm` (`$50`)
+- **Date:** 2026-06-30
+- **H-flag:** Not involved.
+- **Bug tags:** none.
+- **Divergences:** none (faithful).
+- **Notes:** Sets the NEEDS_TO_RECHARGE bit on the user's side (hWhoseTurn-selected);
+  no text/animation in the body.
+
+## ThrashPetalDanceEffect_ (move-swarm S5)
+- **Source:** `engine/battle/effects.asm:ThrashPetalDanceEffect`
+- **Translated:** `dos_port/src/engine/battle/move_effects/thrash_petal_dance.asm` (`$1B`)
+- **Date:** 2026-06-30
+- **H-flag:** Not involved.
+- **Bug tags:** none.
+- **Divergences:** literal move subanimation → no-op (ANIMATION=OFF path, §2.1).
+- **Notes:** Setup for the lock-in rampage moves: sets THRASHING_ABOUT, rolls a
+  2–3 turn counter. Confusion-on-end + forced-move lives in core.asm.
+
+## DrainHPEffect_ (move-swarm S5, re-translated)
+- **Source:** `engine/battle/effects.asm:DrainHPEffect`
+- **Translated:** `dos_port/src/engine/battle/move_effects/drain_hp.asm` (`$03`/`$08`)
+- **Date:** 2026-06-30
+- **H-flag:** Not involved.
+- **Bug tags:** none.
+- **Divergences:** `predef UpdateHPBar` → direct `UpdateCurMonHPBar` call (no predef
+  table in the flat model, §2.4); `callfar` dropped → flat call (§2.4).
+- **Notes:** Absorb / Mega Drain / Leech Life (`$03`) and Dream Eater (`$08`). Heals
+  the user by half the damage dealt (min 1), capped at max HP, and shows the right
+  drain message. **Re-translated** after a failed audit of the original draft, which
+  used the wrong `DREAM_EATER_EFFECT` constant and stride-20 HP-bar coordinates; the
+  rewrite uses the correct effect id and the widescreen HUD HP-bar path.
+
+## ReflectLightScreenEffect_ (move-swarm S5, re-translated)
+- **Source:** `engine/battle/effects.asm:ReflectLightScreenEffect`
+- **Translated:** `dos_port/src/engine/battle/move_effects/reflect_light_screen.asm`
+  (`$40`/`$41`)
+- **Date:** 2026-06-30
+- **H-flag:** Not involved.
+- **Bug tags:** none.
+- **Divergences:** literal move subanimation → no-op (ANIMATION=OFF path, §2.1);
+  bank-call dropped (flat model, §2.4).
+- **Notes:** Sets the user's REFLECT (`$41`) / LIGHT_SCREEN (`$40`) bit; "But it
+  failed!" when already active. **Re-translated** — the prior draft's body was
+  missing and it wrongly redefined `EffectCallBattleCore`; the rewrite externs the
+  shared helper.
+
+## RecoilEffect_ (move-swarm S5, re-translated)
+- **Source:** `engine/battle/effects.asm:RecoilEffect`
+- **Translated:** `dos_port/src/engine/battle/move_effects/recoil.asm` (`$30`)
+- **Date:** 2026-06-30
+- **H-flag:** Not involved.
+- **Bug tags:** none.
+- **Divergences:** `predef UpdateHPBar` → direct `UpdateCurMonHPBar` call (flat
+  model, §2.4).
+- **Notes:** Take Down / Double-Edge / Submission recoil = damage/4 (min 1) off the
+  user. **Re-translated** — the prior draft used `wTileMap` stride-20 coordinates and
+  an undefined `predef_UpdateHPBar2`; the rewrite uses `UpdateCurMonHPBar`.
+
+## PayDayEffect_ (move-swarm S5, re-translated)
+- **Source:** `engine/battle/effects.asm:PayDayEffect`
+- **Translated:** `dos_port/src/engine/battle/move_effects/pay_day.asm` (`$10`)
+- **Date:** 2026-06-30
+- **H-flag:** Not involved.
+- **Bug tags:** none.
+- **Divergences:** `AddBCDPredef` → direct flat `AddBCD` (no predef table, §2.4).
+- **Notes:** Accumulates level×2 coins into `wTotalPayDayMoney` (3-byte BCD) and
+  prints "Coins scattered everywhere!". **Re-translated** — the prior draft had the
+  wrong `Divide` `BH` register setup and bad `AddBCD` register wiring; the rewrite
+  fixes the Divide divisor and the BCD operand registers.
+
+## SubstituteEffect_ (move-swarm S5, re-translated)
+- **Source:** `engine/battle/effects.asm:SubstituteEffect`
+- **Translated:** `dos_port/src/engine/battle/move_effects/substitute.asm` (`$4F`)
+- **Date:** 2026-06-30
+- **H-flag:** Not involved.
+- **Bug tags:** `BUG(cosmetic)` — the self-KO "carry-only" branch (Substitute at
+  exactly 1/4 HP setting up and fainting the user) is preserved as pret behavior
+  under a `%if BUG_FIX_LEVEL >= 2` guard (original in `%else`).
+- **Divergences:** `AnimationSubstitute` / literal subanimation → no-op stubs
+  (ANIMATION=OFF path, §2.1; the real pic-swap substitute graphic is deferred);
+  bank-call dropped (flat model, §2.4).
+- **Notes:** Builds the Substitute doll (HP/4 cost, sets HAS_SUBSTITUTE_UP), with the
+  already-up and not-enough-HP guards. **Re-translated.**
+
+## HealEffect_ (move-swarm S5, re-translated)
+- **Source:** `engine/battle/effects.asm:HealEffect`
+- **Translated:** `dos_port/src/engine/battle/move_effects/heal.asm` (`$38`)
+- **Date:** 2026-06-30
+- **H-flag:** Not involved.
+- **Bug tags:** `BUG(cosmetic)` — the MSB-only full-HP comparison can mis-detect
+  "already at full HP" (the Gen-1 Recover/Softboiled HP-check quirk), preserved under
+  a `%if BUG_FIX_LEVEL >= 2` guard (original in `%else`).
+- **Divergences:** literal move subanimation → no-op (ANIMATION=OFF path, §2.1);
+  `predef UpdateHPBar` → direct `UpdateCurMonHPBar` call (flat model, §2.4).
+- **Notes:** Recover / Softboiled / Rest. Rest's sleep-then-full-heal flag
+  persistence is reproduced via a `.bss` `isRestStash` byte (stands in for pret's
+  reuse of a battle-status register across the Rest path). **Re-translated.**
+
+## TransformEffect_ (move-swarm S5, re-translated)
+- **Source:** `engine/battle/effects.asm:TransformEffect`
+- **Translated:** `dos_port/src/engine/battle/move_effects/transform.asm` (`$39`)
+- **Date:** 2026-06-30
+- **H-flag:** Not involved.
+- **Bug tags:** **two** `BUG(cosmetic)` tags, both preserved under
+  `%if BUG_FIX_LEVEL >= 2` guards (originals in `%else`): (1) `hWhoseTurn` is
+  clobbered before the INVULNERABLE check, so the wrong side's invulnerability can be
+  read; (2) the code writes `wPlayerBattleStatus1` where it should test
+  `wEnemyBattleStatus1` (wrong target's battle-status byte).
+- **Divergences:** literal subanimation / `HideSubstitute` / `ReshowSubstitute` /
+  `AnimationTransformMon` → no-op stubs (ANIMATION=OFF path, §2.1; the transform pic
+  swap is deferred); bank-calls dropped (flat model, §2.4).
+- **Notes:** Copies the target's species/types/moves/DVs/stat-stages into the user
+  (Ditto/Mew Transform), stashing `wTransformedEnemyMonOriginalDVs`. **Re-translated**
+  — the prior draft was missing.
+
+## Move-swarm S5 — shared support added during second-half integration
+- **Date:** 2026-06-30
+- During integration of the second-half handlers the shared scaffold gained:
+  `move_effect_helpers.asm` — `ClearHyperBeam` (global; Flinch / FreezeBurnParalyze /
+  Trapping), `PrintDoesntAffectText`, and the `AnimationSubstitute` /
+  `AnimationTransformMon` / `PlayBattleAnimation` no-op stubs (faithful
+  ANIMATION=OFF). `gb_memmap.inc` — `wPlayerConfusedCounter` / `wEnemyConfusedCounter`,
+  `wUnknownSerialFlag_d499`, `wTotalPayDayMoney` / `wPayDayMoney`,
+  `wTransformedEnemyMonOriginalDVs`. `gb_constants.inc` — `XSTATITEM_ANIM`,
+  `SHRINKING_SQUARE_ANIM`, `SLIDE_DOWN_ANIM`, and the move-anim ids `RAZOR_WIND` /
+  `ROAR` / `SOLARBEAM` / `SKULL_BASH` / `SKY_ATTACK`.
+- Tooling: `tools/gen_battle_text.py` was fixed to emit `StartedSleepingEffect` (its
+  label regex only matched `*Text` names, dropping the `*Effect` text labels);
+  regenerating also restored a stale-missing `PickUpPayDayMoneyText`.

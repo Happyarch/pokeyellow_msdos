@@ -191,6 +191,7 @@ wMaxItemQuantity   equ 0xCF96
 ; --- item-use effect scratch (engine/items/item_effects.asm) ---
 wPPRestoreItem         equ 0xCD3D   ; which Ether/Elixer item is being used
 wWereAnyMonsAsleep     equ 0xCD3D   ; Poke Flute: set if a party mon woke (aliased)
+wChargeMoveNum         equ 0xCD3D   ; charge move number (aliased union lane)
 wMaxPP                 equ 0xD11D   ; max PP of the move being PP-restored
 ; Menu state these routines reset (plain WRAM writes; the rendering is elsewhere).
 wListScrollOffset      equ 0xCC36
@@ -236,6 +237,8 @@ wMoveMenuType          equ 0xCCDB
 wPlayerSelectedMove    equ 0xCCDC
 wEnemySelectedMove     equ 0xCCDD
 wEnemyMoveListIndex    equ 0xCCE2
+wTotalPayDayMoney      equ 0xCCE5   ; Pay Day running total (BCD, 3 bytes)
+wTransformedEnemyMonOriginalDVs equ 0xCCEB  ; Transform: saved target DVs (word)
 wPlayerDisabledMoveNumber equ 0xCCEE
 wEnemyDisabledMoveNumber  equ 0xCCEF
 wInHandlePlayerMonFainted equ 0xCCF0
@@ -288,6 +291,7 @@ wEnemyMonStatModsEnd   equ 0xCD36
 
 wNumMovesMinusOne      equ 0xCD6C
 wMoveData              equ 0xCD6D   ; 6-byte scratch move record (GetMoveData)
+wPayDayMoney           equ 0xCD6D   ; Pay Day scratch (BCD, 3 bytes; aliased scratch union)
 
 ; --- per-side current-move struct ($CFCB enemy / $CFD1 player) ---
 wEnemyMoveNum          equ 0xCFCB
@@ -368,8 +372,10 @@ wEnemyBattleStatus1    equ 0xD066
 wEnemyBattleStatus2    equ 0xD067
 wEnemyBattleStatus3    equ 0xD068
 wPlayerNumAttacksLeft  equ 0xD069
+wPlayerConfusedCounter equ 0xD06A
 wPlayerDisabledMove    equ 0xD06C
 wEnemyNumAttacksLeft   equ 0xD06E
+wEnemyConfusedCounter  equ 0xD06F
 wEnemyDisabledMove     equ 0xD071
 wPlayerBideAccumulatedDamage equ 0xD073
 wPlayerNumHits         equ 0xD073
@@ -846,6 +852,7 @@ W_MAP_BACKGROUND_TILE        equ 0xD3AC ; wMapBackgroundTile (border block ID fo
 W_NUMBER_OF_WARPS            equ 0xD3AD ; wNumberOfWarps
 W_WARP_ENTRIES               equ 0xD3AE ; wWarpEntries (MAX_WARP_EVENTS * 4 bytes max)
 W_DESTINATION_WARP_ID        equ 0xD42E ; wDestinationWarpID ($FF = don't update coords)
+wUnknownSerialFlag_d499      equ 0xD499 ; GB-Stadium-link flag; restricts Sleep counter reroll range when set (0 on real HW/this port)
 
 ; Sign/BG event data
 W_NUM_SIGNS                  equ 0xD4AF ; wNumSigns

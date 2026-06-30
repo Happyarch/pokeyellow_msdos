@@ -4,20 +4,6 @@
 section .text
 
 ; ---------------------------------------------------------------------------
-; CallBankF — stub: in the GB this bankswitches to bank F for PrintButItFailed.
-; In the DOS port there are no banks; just call through.
-; ---------------------------------------------------------------------------
-extern Bankswitch
-extern BANK_PrintButItFailedText_
-
-CallBankF:
-    push eax
-    mov eax, BANK_PrintButItFailedText_
-    mov bh, al
-    pop eax
-    jmp Bankswitch
-
-; ---------------------------------------------------------------------------
 ; ConversionEffect_
 ; ---------------------------------------------------------------------------
 global ConversionEffect_

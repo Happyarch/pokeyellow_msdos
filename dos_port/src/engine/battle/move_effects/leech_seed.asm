@@ -1,8 +1,11 @@
+bits 32
+
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
 %include "gb_macros.inc"
 %include "gb_text.inc"
 
+section .text
 
 extern MoveHitTest
 extern PlayCurrentMoveAnimation

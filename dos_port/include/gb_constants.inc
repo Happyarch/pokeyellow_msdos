@@ -177,7 +177,16 @@ SAFARI_ZONE_CENTER_REST_HOUSE equ 0xDD
 
 ; --- trainer AI (src/engine/battle/trainer_ai.asm) ---
 EFFECT_01              equ 0x01    ; unused sleep effect (StatusAilmentMoveEffects)
+XSTATITEM_ANIM          equ 0xAE   ; constants/move_constants.asm line 188 (X Attack/Def/Speed/Special)
 XSTATITEM_DUPLICATE_ANIM equ 0xAF  ; constants/move_constants.asm line 189
+SHRINKING_SQUARE_ANIM   equ 0xB0   ; constants/move_constants.asm line 190
+SLIDE_DOWN_ANIM         equ 0xC0   ; constants/move_constants.asm line 206
+; move ids referenced by move-effect handlers (constants/move_constants.asm)
+RAZOR_WIND              equ 0x0D
+ROAR                    equ 0x2E
+SOLARBEAM               equ 0x4C
+SKULL_BASH              equ 0x82
+SKY_ATTACK              equ 0x8F
 NUM_TRAINERS           equ 47      ; trainer_constants.asm (LANCE = 0x2F)
 
 ; --- item ids used by trainer-AI item use (constants/item_constants.asm) ---

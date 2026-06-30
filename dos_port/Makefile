@@ -190,21 +190,8 @@ ITEMS_SRCS := \
 # FormatMovesString). Every file here still assembles (make check) and the pure-math
 # routines are native-ELF-harness validated.
 BATTLE_SRCS := \
-    src/home/names.asm \
     src/engine/battle/get_trainer_name.asm \
     src/engine/battle/misc.asm \
-    src/engine/battle/move_effects/conversion.asm \
-    src/engine/battle/move_effects/drain_hp.asm \
-    src/engine/battle/move_effects/focus_energy.asm \
-    src/engine/battle/move_effects/haze.asm \
-    src/engine/battle/move_effects/heal.asm \
-    src/engine/battle/move_effects/leech_seed.asm \
-    src/engine/battle/move_effects/mist.asm \
-    src/engine/battle/move_effects/one_hit_ko.asm \
-    src/engine/battle/move_effects/paralyze.asm \
-    src/engine/battle/move_effects/pay_day.asm \
-    src/engine/battle/move_effects/recoil.asm \
-    src/engine/battle/move_effects/reflect_light_screen.asm \
     src/engine/battle/building_rage.asm \
     src/engine/battle/residual_damage.asm \
     src/engine/battle/move_category.asm \
@@ -370,7 +357,38 @@ FRONTEND_SRCS := \
     src/engine/battle/effects.asm \
     src/engine/battle/stat_mod_effects.asm \
     src/engine/battle/move_effect_helpers.asm \
+    src/home/names.asm \
     src/engine/battle/move_effects/poison.asm \
+    src/engine/battle/move_effects/splash.asm \
+    src/engine/battle/move_effects/flinch_side.asm \
+    src/engine/battle/move_effects/confusion.asm \
+    src/engine/battle/move_effects/sleep.asm \
+    src/engine/battle/move_effects/freeze_burn_paralyze.asm \
+    src/engine/battle/move_effects/conversion.asm \
+    src/engine/battle/move_effects/focus_energy.asm \
+    src/engine/battle/move_effects/haze.asm \
+    src/engine/battle/move_effects/leech_seed.asm \
+    src/engine/battle/move_effects/rage.asm \
+    src/engine/battle/move_effects/explode.asm \
+    src/engine/battle/move_effects/bide.asm \
+    src/engine/battle/move_effects/two_to_five_attacks.asm \
+    src/engine/battle/move_effects/hyper_beam.asm \
+    src/engine/battle/move_effects/thrash_petal_dance.asm \
+    src/engine/battle/move_effects/disable.asm \
+    src/engine/battle/move_effects/trapping.asm \
+    src/engine/battle/move_effects/charge.asm \
+    src/engine/battle/move_effects/mimic.asm \
+    src/engine/battle/move_effects/switch_and_teleport.asm \
+    src/engine/battle/move_effects/drain_hp.asm \
+    src/engine/battle/move_effects/reflect_light_screen.asm \
+    src/engine/battle/move_effects/recoil.asm \
+    src/engine/battle/move_effects/pay_day.asm \
+    src/engine/battle/move_effects/substitute.asm \
+    src/engine/battle/move_effects/heal.asm \
+    src/engine/battle/move_effects/transform.asm \
+    src/engine/battle/move_effects/mist.asm \
+    src/engine/battle/move_effects/one_hit_ko.asm \
+    src/engine/battle/move_effects/paralyze.asm \
     src/engine/battle/badge_boosts.asm \
     src/engine/battle/status_penalties.asm \
     src/engine/battle/decrement_pp.asm \

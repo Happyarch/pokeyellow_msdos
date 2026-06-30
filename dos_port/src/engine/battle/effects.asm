@@ -14,66 +14,53 @@
 ; is ported, update the corresponding dd entry to its global label and remove it from
 ; the unported list in the header comment. Do not touch UnportedMoveEffect itself.
 ;
-; PORTED HANDLERS (wired up in table below):
-;   StatModifierUpEffect, StatModifierDownEffect   src/engine/battle/stat_mod_effects.asm
-;   PayDayEffect_       src/engine/battle/move_effects/pay_day.asm
-;   ConversionEffect_   src/engine/battle/move_effects/conversion.asm
-;   HazeEffect_         src/engine/battle/move_effects/haze.asm
-;   OneHitKOEffect_     src/engine/battle/move_effects/one_hit_ko.asm
-;   MistEffect_         src/engine/battle/move_effects/mist.asm
-;   FocusEnergyEffect_  src/engine/battle/move_effects/focus_energy.asm
-;   RecoilEffect_       src/engine/battle/move_effects/recoil.asm
-;   HealEffect_         src/engine/battle/move_effects/heal.asm
-;   ParalyzeEffect_     src/engine/battle/move_effects/paralyze.asm
-;   LeechSeedEffect_    src/engine/battle/move_effects/leech_seed.asm
+; PORTED + WIRED HANDLERS (live in the table below; faithfully translated per
+; docs/move_translation_divergence.md, logged in docs/translation_log.md):
+;   StatModifierUpEffect, StatModifierDownEffect  src/engine/battle/stat_mod_effects.asm
+;     ($0A-$0F/$32-$37 up, $12-$17/$3A-$3F/$44-$4B down)
+;   PoisonEffect_              poison.asm                ($02/$21/$42, S4 reference)
+;   SleepEffect_              sleep.asm                  ($01/$20)
+;   FreezeBurnParalyzeEffect_ freeze_burn_paralyze.asm   ($04/$05/$06/$22/$23/$24)
+;   ExplodeEffect_            explode.asm                ($07)
+;   ConversionEffect_         conversion.asm             ($18)
+;   HazeEffect_              haze.asm                    ($19)
+;   BideEffect_              bide.asm                    ($1A)
+;   TwoToFiveAttacksEffect_  two_to_five_attacks.asm     ($1D/$1E/$2C/$4D)
+;   FlinchSideEffect_        flinch_side.asm             ($1F/$25)
+;   OneHitKOEffect_          one_hit_ko.asm              ($26)
+;   MistEffect_              mist.asm                    ($2E)
+;   FocusEnergyEffect_       focus_energy.asm            ($2F)
+;   ConfusionEffect_ / ConfusionSideEffect_  confusion.asm  ($31 / $4C)
+;   ParalyzeEffect_          paralyze.asm                ($43)
+;   LeechSeedEffect_         leech_seed.asm              ($54)
+;   RageEffect_              rage.asm                    ($51)
+;   SplashEffect_            splash.asm                  ($55)
 ;
-; UNPORTED EFFECTS (routed to UnportedMoveEffect; Wave 2 fills in):
-;   EFFECT_01 ($01)           SleepEffect
-;   POISON_SIDE_EFFECT1 ($02) PoisonEffect
-;   DRAIN_HP_EFFECT ($03)     DrainHPEffect_ [exists in drain_hp.asm but NOT global; needs
-;                             "global DrainHPEffect_" added to that file before wiring here]
-;   BURN_SIDE_EFFECT1 ($04)   FreezeBurnParalyzeEffect
-;   FREEZE_SIDE_EFFECT1 ($05) FreezeBurnParalyzeEffect
-;   PARALYZE_SIDE_EFFECT1 ($06) FreezeBurnParalyzeEffect
-;   EXPLODE_EFFECT ($07)      ExplodeEffect
-;   DREAM_EATER_EFFECT ($08)  DrainHPEffect_ [same as above; needs global]
+; UNPORTED EFFECTS (still routed to UnportedMoveEffect; the swarm fills these in):
+;   DRAIN_HP_EFFECT ($03)     DrainHPEffect_ (re-queued: failed audit; drain_hp.asm draft)
+;   DREAM_EATER_EFFECT ($08)  DrainHPEffect_ (same; re-queued)
 ;   MIRROR_MOVE_EFFECT ($09)  NULL in pret (no-op)
+;   PAY_DAY_EFFECT ($10)      PayDayEffect_ (re-queued: failed audit; pay_day.asm draft)
 ;   SWIFT_EFFECT ($11)        NULL in pret (no-op)
-;   BIDE_EFFECT ($1A)         BideEffect
-;   THRASH_PETAL_DANCE_EFFECT ($1B) ThrashPetalDanceEffect
-;   SWITCH_AND_TELEPORT_EFFECT ($1C) SwitchAndTeleportEffect
-;   TWO_TO_FIVE_ATTACKS_EFFECT ($1D) TwoToFiveAttacksEffect
-;   EFFECT_1E ($1E)           TwoToFiveAttacksEffect (unused in pret)
-;   FLINCH_SIDE_EFFECT1 ($1F) FlinchSideEffect
-;   SLEEP_EFFECT ($20)        SleepEffect
-;   POISON_SIDE_EFFECT2 ($21) PoisonEffect
-;   BURN_SIDE_EFFECT2 ($22)   FreezeBurnParalyzeEffect
-;   FREEZE_SIDE_EFFECT2 ($23) FreezeBurnParalyzeEffect (unused JP-only)
-;   PARALYZE_SIDE_EFFECT2 ($24) FreezeBurnParalyzeEffect
-;   FLINCH_SIDE_EFFECT2 ($25) FlinchSideEffect
-;   CHARGE_EFFECT ($27)       ChargeEffect
+;   THRASH_PETAL_DANCE_EFFECT ($1B) ThrashPetalDanceEffect (fresh; not yet translated)
+;   SWITCH_AND_TELEPORT_EFFECT ($1C) SwitchAndTeleportEffect (fresh)
+;   CHARGE_EFFECT ($27)       ChargeEffect (fresh)
 ;   SUPER_FANG_EFFECT ($28)   NULL in pret (no-op)
 ;   SPECIAL_DAMAGE_EFFECT ($29) NULL in pret (no-op; Seismic Toss etc.)
-;   TRAPPING_EFFECT ($2A)     TrappingEffect
-;   FLY_EFFECT ($2B)          ChargeEffect
-;   ATTACK_TWICE_EFFECT ($2C) TwoToFiveAttacksEffect
+;   TRAPPING_EFFECT ($2A)     TrappingEffect (fresh)
+;   FLY_EFFECT ($2B)          ChargeEffect (fresh)
 ;   JUMP_KICK_EFFECT ($2D)    NULL in pret (no-op)
-;   CONFUSION_EFFECT ($31)    ConfusionEffect
-;   TRANSFORM_EFFECT ($39)    TransformEffect_
-;   LIGHT_SCREEN_EFFECT ($40) ReflectLightScreenEffect_ [reflect_light_screen.asm has text
-;                             stubs only; main handler not yet ported]
-;   REFLECT_EFFECT ($41)      ReflectLightScreenEffect_ [same]
-;   POISON_EFFECT ($42)       PoisonEffect
-;   CONFUSION_SIDE_EFFECT ($4C) ConfusionSideEffect
-;   TWINEEDLE_EFFECT ($4D)    TwoToFiveAttacksEffect
+;   RECOIL_EFFECT ($30)       RecoilEffect_ (re-queued: failed audit; recoil.asm draft)
+;   HEAL_EFFECT ($38)         HealEffect_ (re-queued: failed audit; heal.asm draft)
+;   TRANSFORM_EFFECT ($39)    TransformEffect_ (re-queued: failed audit; transform.asm draft)
+;   LIGHT_SCREEN_EFFECT ($40) ReflectLightScreenEffect_ (re-queued; reflect_light_screen.asm draft)
+;   REFLECT_EFFECT ($41)      ReflectLightScreenEffect_ (same; re-queued)
 ;   unused ($4E)              NULL in pret
-;   SUBSTITUTE_EFFECT ($4F)   SubstituteEffect_
-;   HYPER_BEAM_EFFECT ($50)   HyperBeamEffect
-;   RAGE_EFFECT ($51)         RageEffect
-;   MIMIC_EFFECT ($52)        MimicEffect
+;   SUBSTITUTE_EFFECT ($4F)   SubstituteEffect_ (re-queued: failed audit; substitute.asm draft)
+;   HYPER_BEAM_EFFECT ($50)   HyperBeamEffect (fresh)
+;   MIMIC_EFFECT ($52)        MimicEffect (fresh)
 ;   METRONOME_EFFECT ($53)    NULL in pret (no-op)
-;   SPLASH_EFFECT ($55)       SplashEffect
-;   DISABLE_EFFECT ($56)      DisableEffect
+;   DISABLE_EFFECT ($56)      DisableEffect (fresh)
 ;
 ; Register map: A=AL, B=BH, C=BL (BC=BX), HL=ESI, EBP=GB memory base.
 
@@ -96,6 +83,37 @@ bits 32
 extern StatModifierUpEffect     ; src/engine/battle/stat_mod_effects.asm
 extern StatModifierDownEffect   ; src/engine/battle/stat_mod_effects.asm
 extern PoisonEffect_            ; src/engine/battle/move_effects/poison.asm
+extern SplashEffect_           ; src/engine/battle/move_effects/splash.asm
+extern FlinchSideEffect_       ; src/engine/battle/move_effects/flinch_side.asm
+extern ConfusionEffect_        ; src/engine/battle/move_effects/confusion.asm
+extern ConfusionSideEffect_    ; src/engine/battle/move_effects/confusion.asm
+extern SleepEffect_            ; src/engine/battle/move_effects/sleep.asm
+extern FreezeBurnParalyzeEffect_ ; src/engine/battle/move_effects/freeze_burn_paralyze.asm
+extern RageEffect_             ; move_effects/rage.asm
+extern ExplodeEffect_          ; move_effects/explode.asm
+extern BideEffect_             ; move_effects/bide.asm
+extern TwoToFiveAttacksEffect_ ; move_effects/two_to_five_attacks.asm
+extern HyperBeamEffect_         ; move_effects/hyper_beam.asm
+extern ThrashPetalDanceEffect_ ; move_effects/thrash_petal_dance.asm
+extern DisableEffect_          ; move_effects/disable.asm
+extern TrappingEffect_         ; move_effects/trapping.asm
+extern ChargeEffect_           ; move_effects/charge.asm
+extern MimicEffect_            ; move_effects/mimic.asm
+extern SwitchAndTeleportEffect_ ; move_effects/switch_and_teleport.asm
+extern DrainHPEffect_          ; move_effects/drain_hp.asm
+extern ReflectLightScreenEffect_ ; move_effects/reflect_light_screen.asm
+extern RecoilEffect_           ; move_effects/recoil.asm
+extern PayDayEffect_           ; move_effects/pay_day.asm
+extern SubstituteEffect_       ; move_effects/substitute.asm
+extern HealEffect_             ; move_effects/heal.asm
+extern TransformEffect_        ; move_effects/transform.asm
+extern ConversionEffect_       ; move_effects/conversion.asm
+extern FocusEnergyEffect_      ; move_effects/focus_energy.asm
+extern HazeEffect_             ; move_effects/haze.asm
+extern LeechSeedEffect_        ; move_effects/leech_seed.asm
+extern MistEffect_             ; move_effects/mist.asm
+extern OneHitKOEffect_         ; move_effects/one_hit_ko.asm
+extern ParalyzeEffect_         ; move_effects/paralyze.asm
 
 section .text
 
@@ -166,14 +184,14 @@ _JumpMoveEffect:
 ; ---------------------------------------------------------------------------
 global MoveEffectPointerTable
 MoveEffectPointerTable:
-    dd UnportedMoveEffect       ; $01 EFFECT_01            — SleepEffect (unported)
+    dd SleepEffect_             ; $01 EFFECT_01            — Sleep (Sing/Hypnosis etc.)
     dd PoisonEffect_            ; $02 [S4 reference handler]
-    dd UnportedMoveEffect       ; (draft; await audit)           ; $03 DRAIN_HP_EFFECT      — Absorb / Mega Drain
-    dd UnportedMoveEffect       ; $04 BURN_SIDE_EFFECT1    — FreezeBurnParalyzeEffect (unported)
-    dd UnportedMoveEffect       ; $05 FREEZE_SIDE_EFFECT1  — FreezeBurnParalyzeEffect (unported)
-    dd UnportedMoveEffect       ; $06 PARALYZE_SIDE_EFFECT1 — FreezeBurnParalyzeEffect (unported)
-    dd UnportedMoveEffect       ; $07 EXPLODE_EFFECT       — ExplodeEffect (unported)
-    dd UnportedMoveEffect       ; (draft; await audit)           ; $08 DREAM_EATER_EFFECT   — Dream Eater
+    dd DrainHPEffect_        ; $03 DRAIN_HP_EFFECT
+    dd FreezeBurnParalyzeEffect_ ; $04 BURN_SIDE_EFFECT1    — Burn 10%
+    dd FreezeBurnParalyzeEffect_ ; $05 FREEZE_SIDE_EFFECT1  — Freeze 10%
+    dd FreezeBurnParalyzeEffect_ ; $06 PARALYZE_SIDE_EFFECT1 — Paralyze 10%
+    dd ExplodeEffect_        ; $07 EXPLODE_EFFECT
+    dd DrainHPEffect_        ; $08 DREAM_EATER_EFFECT
     dd UnportedMoveEffect       ; $09 MIRROR_MOVE_EFFECT   — NULL in pret
     dd StatModifierUpEffect     ; $0A ATTACK_UP1_EFFECT
     dd StatModifierUpEffect     ; $0B DEFENSE_UP1_EFFECT
@@ -181,7 +199,7 @@ MoveEffectPointerTable:
     dd StatModifierUpEffect     ; $0D SPECIAL_UP1_EFFECT
     dd StatModifierUpEffect     ; $0E ACCURACY_UP1_EFFECT
     dd StatModifierUpEffect     ; $0F EVASION_UP1_EFFECT
-    dd UnportedMoveEffect       ; (draft; await audit)            ; $10 PAY_DAY_EFFECT
+    dd PayDayEffect_         ; $10 PAY_DAY_EFFECT
     dd UnportedMoveEffect       ; $11 SWIFT_EFFECT         — NULL in pret
     dd StatModifierDownEffect   ; $12 ATTACK_DOWN1_EFFECT
     dd StatModifierDownEffect   ; $13 DEFENSE_DOWN1_EFFECT
@@ -189,50 +207,50 @@ MoveEffectPointerTable:
     dd StatModifierDownEffect   ; $15 SPECIAL_DOWN1_EFFECT
     dd StatModifierDownEffect   ; $16 ACCURACY_DOWN1_EFFECT
     dd StatModifierDownEffect   ; $17 EVASION_DOWN1_EFFECT
-    dd UnportedMoveEffect       ; (draft; await audit)        ; $18 CONVERSION_EFFECT
-    dd UnportedMoveEffect       ; (draft; await audit)              ; $19 HAZE_EFFECT
-    dd UnportedMoveEffect       ; $1A BIDE_EFFECT          — BideEffect (unported)
-    dd UnportedMoveEffect       ; $1B THRASH_PETAL_DANCE_EFFECT — ThrashPetalDanceEffect (unported)
-    dd UnportedMoveEffect       ; $1C SWITCH_AND_TELEPORT_EFFECT — SwitchAndTeleportEffect (unported)
-    dd UnportedMoveEffect       ; $1D TWO_TO_FIVE_ATTACKS_EFFECT — TwoToFiveAttacksEffect (unported)
-    dd UnportedMoveEffect       ; $1E EFFECT_1E (unused)   — TwoToFiveAttacksEffect (unported)
-    dd UnportedMoveEffect       ; $1F FLINCH_SIDE_EFFECT1  — FlinchSideEffect (unported)
-    dd UnportedMoveEffect       ; $20 SLEEP_EFFECT         — SleepEffect (unported)
+    dd ConversionEffect_     ; $18 CONVERSION_EFFECT
+    dd HazeEffect_           ; $19 HAZE_EFFECT
+    dd BideEffect_           ; $1A BIDE_EFFECT
+    dd ThrashPetalDanceEffect_; $1B THRASH_PETAL_DANCE_EFFECT
+    dd SwitchAndTeleportEffect_; $1C SWITCH_AND_TELEPORT_EFFECT
+    dd TwoToFiveAttacksEffect_; $1D TWO_TO_FIVE_ATTACKS_EFFECT
+    dd TwoToFiveAttacksEffect_; $1E EFFECT_1E (unused)
+    dd FlinchSideEffect_        ; $1F FLINCH_SIDE_EFFECT1  — Flinch 10%
+    dd SleepEffect_             ; $20 SLEEP_EFFECT         — Sleep
     dd PoisonEffect_            ; $21 [S4 reference handler]
-    dd UnportedMoveEffect       ; $22 BURN_SIDE_EFFECT2    — FreezeBurnParalyzeEffect (unported)
-    dd UnportedMoveEffect       ; $23 FREEZE_SIDE_EFFECT2  — FreezeBurnParalyzeEffect (unported)
-    dd UnportedMoveEffect       ; $24 PARALYZE_SIDE_EFFECT2 — FreezeBurnParalyzeEffect (unported)
-    dd UnportedMoveEffect       ; $25 FLINCH_SIDE_EFFECT2  — FlinchSideEffect (unported)
-    dd UnportedMoveEffect       ; (draft; await audit)          ; $26 OHKO_EFFECT
-    dd UnportedMoveEffect       ; $27 CHARGE_EFFECT        — ChargeEffect (unported)
+    dd FreezeBurnParalyzeEffect_ ; $22 BURN_SIDE_EFFECT2    — Burn 30%
+    dd FreezeBurnParalyzeEffect_ ; $23 FREEZE_SIDE_EFFECT2  — Freeze 30%
+    dd FreezeBurnParalyzeEffect_ ; $24 PARALYZE_SIDE_EFFECT2 — Paralyze 30%
+    dd FlinchSideEffect_        ; $25 FLINCH_SIDE_EFFECT2  — Flinch 30%
+    dd OneHitKOEffect_       ; $26 OHKO_EFFECT
+    dd ChargeEffect_         ; $27 CHARGE_EFFECT
     dd UnportedMoveEffect       ; $28 SUPER_FANG_EFFECT    — NULL in pret
     dd UnportedMoveEffect       ; $29 SPECIAL_DAMAGE_EFFECT — NULL in pret (Seismic Toss etc.)
-    dd UnportedMoveEffect       ; $2A TRAPPING_EFFECT      — TrappingEffect (unported)
-    dd UnportedMoveEffect       ; $2B FLY_EFFECT           — ChargeEffect (unported)
-    dd UnportedMoveEffect       ; $2C ATTACK_TWICE_EFFECT  — TwoToFiveAttacksEffect (unported)
+    dd TrappingEffect_       ; $2A TRAPPING_EFFECT
+    dd ChargeEffect_         ; $2B FLY_EFFECT
+    dd TwoToFiveAttacksEffect_; $2C ATTACK_TWICE_EFFECT
     dd UnportedMoveEffect       ; $2D JUMP_KICK_EFFECT     — NULL in pret
-    dd UnportedMoveEffect       ; (draft; await audit)              ; $2E MIST_EFFECT
-    dd UnportedMoveEffect       ; (draft; await audit)       ; $2F FOCUS_ENERGY_EFFECT
-    dd UnportedMoveEffect       ; (draft; await audit)            ; $30 RECOIL_EFFECT
-    dd UnportedMoveEffect       ; $31 CONFUSION_EFFECT     — ConfusionEffect (unported)
+    dd MistEffect_           ; $2E MIST_EFFECT
+    dd FocusEnergyEffect_    ; $2F FOCUS_ENERGY_EFFECT
+    dd RecoilEffect_           ; $30 RECOIL_EFFECT
+    dd ConfusionEffect_         ; $31 CONFUSION_EFFECT     — Confuse Ray / Supersonic
     dd StatModifierUpEffect     ; $32 ATTACK_UP2_EFFECT
     dd StatModifierUpEffect     ; $33 DEFENSE_UP2_EFFECT
     dd StatModifierUpEffect     ; $34 SPEED_UP2_EFFECT
     dd StatModifierUpEffect     ; $35 SPECIAL_UP2_EFFECT
     dd StatModifierUpEffect     ; $36 ACCURACY_UP2_EFFECT
     dd StatModifierUpEffect     ; $37 EVASION_UP2_EFFECT
-    dd UnportedMoveEffect       ; (draft; await audit)              ; $38 HEAL_EFFECT
-    dd UnportedMoveEffect       ; $39 TRANSFORM_EFFECT     — TransformEffect_ (unported)
+    dd HealEffect_             ; $38 HEAL_EFFECT          — Recover/Softboiled/Rest
+    dd TransformEffect_         ; $39 TRANSFORM_EFFECT
     dd StatModifierDownEffect   ; $3A ATTACK_DOWN2_EFFECT
     dd StatModifierDownEffect   ; $3B DEFENSE_DOWN2_EFFECT
     dd StatModifierDownEffect   ; $3C SPEED_DOWN2_EFFECT
     dd StatModifierDownEffect   ; $3D SPECIAL_DOWN2_EFFECT
     dd StatModifierDownEffect   ; $3E ACCURACY_DOWN2_EFFECT
     dd StatModifierDownEffect   ; $3F EVASION_DOWN2_EFFECT
-    dd UnportedMoveEffect       ; $40 LIGHT_SCREEN_EFFECT  — ReflectLightScreenEffect_ (unported)
-    dd UnportedMoveEffect       ; $41 REFLECT_EFFECT       — ReflectLightScreenEffect_ (unported)
+    dd ReflectLightScreenEffect_ ; $40 LIGHT_SCREEN_EFFECT
+    dd ReflectLightScreenEffect_ ; $41 REFLECT_EFFECT
     dd PoisonEffect_            ; $42 [S4 reference handler]
-    dd UnportedMoveEffect       ; (draft; await audit)          ; $43 PARALYZE_EFFECT
+    dd ParalyzeEffect_       ; $43 PARALYZE_EFFECT
     dd StatModifierDownEffect   ; $44 ATTACK_DOWN_SIDE_EFFECT
     dd StatModifierDownEffect   ; $45 DEFENSE_DOWN_SIDE_EFFECT
     dd StatModifierDownEffect   ; $46 SPEED_DOWN_SIDE_EFFECT
@@ -241,17 +259,17 @@ MoveEffectPointerTable:
     dd StatModifierDownEffect   ; $49 (unused, const_skip) — pret: StatModifierDownEffect
     dd StatModifierDownEffect   ; $4A (unused, const_skip) — pret: StatModifierDownEffect
     dd StatModifierDownEffect   ; $4B (unused, const_skip) — pret: StatModifierDownEffect
-    dd UnportedMoveEffect       ; $4C CONFUSION_SIDE_EFFECT — ConfusionSideEffect (unported)
-    dd UnportedMoveEffect       ; $4D TWINEEDLE_EFFECT     — TwoToFiveAttacksEffect (unported)
+    dd ConfusionSideEffect_     ; $4C CONFUSION_SIDE_EFFECT — Confusion's 10% side effect
+    dd TwoToFiveAttacksEffect_; $4D TWINEEDLE_EFFECT
     dd UnportedMoveEffect       ; $4E (unused, const_skip) — NULL in pret
-    dd UnportedMoveEffect       ; $4F SUBSTITUTE_EFFECT    — SubstituteEffect_ (unported)
-    dd UnportedMoveEffect       ; $50 HYPER_BEAM_EFFECT    — HyperBeamEffect (unported)
-    dd UnportedMoveEffect       ; $51 RAGE_EFFECT          — RageEffect (unported)
-    dd UnportedMoveEffect       ; $52 MIMIC_EFFECT         — MimicEffect (unported)
+    dd SubstituteEffect_     ; $4F SUBSTITUTE_EFFECT
+    dd HyperBeamEffect_      ; $50 HYPER_BEAM_EFFECT
+    dd RageEffect_           ; $51 RAGE_EFFECT
+    dd MimicEffect_          ; $52 MIMIC_EFFECT
     dd UnportedMoveEffect       ; $53 METRONOME_EFFECT     — NULL in pret
-    dd UnportedMoveEffect       ; (draft; await audit)         ; $54 LEECH_SEED_EFFECT
-    dd UnportedMoveEffect       ; $55 SPLASH_EFFECT        — SplashEffect (unported)
-    dd UnportedMoveEffect       ; $56 DISABLE_EFFECT       — DisableEffect (unported)
+    dd LeechSeedEffect_      ; $54 LEECH_SEED_EFFECT
+    dd SplashEffect_            ; $55 SPLASH_EFFECT        — Splash ("But nothing happened!")
+    dd DisableEffect_        ; $56 DISABLE_EFFECT
 MoveEffectPointerTableEnd:
 
 ; Arity assertion: NUM_MOVE_EFFECTS = $56 = 86 entries ($01..$56, indexed by effect-1).
