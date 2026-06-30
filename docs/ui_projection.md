@@ -25,13 +25,13 @@ Extended viewport (40×25) with **per-element anchoring** (anchor rule below).
 Mostly pure projection, with occasional spacing overrides allowed. The START
 menu (top-right) established this convention; the bag inherits it.
 
-### Battle — GB-centered (TBD / OPEN)
+### Battle — GB-centered (RESOLVED)
 
-Keep the GB viewport default → center the whole 160×144 GB screen in ours
-(X +10 tiles), with Y centered (+3.5 tiles), Y-scaled (144→200), or hand-tuned
-spacing — to be decided when the battle engine is built. **No per-element
-anchoring**; one uniform transform for the whole screen. This entry is OPEN until
-the battle UI lands.
+The whole 160×144 GB battle screen is centered in the 40×25 canvas via a uniform
+**+10 col / +3 row** tile offset (no per-element anchoring), with the bottom dialog
+box hand-drawn at the same offset. The player HUD uses +3 (not +4) so its frame
+"shelf" gets row 14. Per-element placements are in the table below + `; PROJ` tags
+in `battle_hud.asm` / `init_battle.asm` / `pics.asm`. See `current_plan_battle_frontend.md`.
 
 ### Future subsystems
 
@@ -109,8 +109,12 @@ grep -rn '; PROJ' dos_port/src
 | overworld-ui (party)        | (0, ~3) | 20×N  | center, X+10                | 87  | .. | 160 | ..  | party_menu.asm |
 | battle-ui (whole screen)    | (0, 0)  | 20×18 | center in 40×25 BG, +10col/+3row | — | — | — | — | init_battle.asm (full widescreen canvas via render_bg) |
 | battle-ui (msg box)         | (0, 12) | 20×6  | → canvas (10,15), +10col/+3row   | — | — | — | — | init_battle.asm (hand-drawn box, stride 40) |
-| battle-ui (enemy HUD)       | (1,0)/(4,1)/(2,2) | — | +10col/+3row → name(11,3) lv(15,4) hpbar(12,5) | — | — | — | — | battle_hud.asm (DrawBattleHUDs) |
-| battle-ui (player HUD)      | (10,7)/.. | —   | +10col/+3row → name(20,11) lv(24,12) hpbar(20,13) frac(21,14) | — | — | — | — | battle_hud.asm (DrawBattleHUDs) |
+| battle-ui (enemy HUD)       | (1,0)/(4,1)/(2,2) | — | +10col/+3row → name(11,3) lv(15,4) hpbar(12,5); frame shelf row 6 | — | — | — | — | battle_hud.asm (DrawEnemyHUD/DrawEnemyHUDFrame) |
+| battle-ui (player HUD)      | (10,7)/.. | —   | +10col/+3row (shifted up 1 row) → name(20,10) lv(24,11) hpbar(20,12) frac(21,13); frame shelf row 14 | — | — | — | — | battle_hud.asm (DrawPlayerHUD/DrawPlayerHUDFrame) |
+| battle-ui (enemy front pic) | (12,0)  | 7×7   | +10col/+3row → canvas (22,3), VRAM tile $00 | — | — | — | — | pics.asm (PlacePicTilemap / slide) |
+| battle-ui (player back pic) | (1,5)   | 7×7   | +10col/+3row → canvas (11,8), VRAM tile $31 | — | — | — | — | pics.asm (player Red back → mon back at send-out) |
+| battle-ui (pokéballs)       | OAM     | 6×1   | player base OAM ($60,$60)+center; enemy ($48,$20)+center (trainer) | — | — | — | — | pokeballs.asm (OAM via PrepareStaticOAM) |
+| battle-ui (slide-in)        | —       | —     | pics slide from edges: enemy col 22+step (right), player col 11-step (left), step 18→0 | — | — | — | — | pics.asm (SlideBattlePicsIn, darkened) |
 
 ---
 

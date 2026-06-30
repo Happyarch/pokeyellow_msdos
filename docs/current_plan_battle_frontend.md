@@ -172,28 +172,44 @@ centered baseline renders (move HUD/sprites outward with the user via FRAME.BIN)
     `DisplayUsedMoveText` — "`<MON>` / used `<MOVE>`!" in the dialog box, wait for A.
 - **Stage 2a COMPLETE** (menu + move list + TYPE/PP box + teardown, all user-signed-off).
 
-### ░░ HANDOFF — resume here (2026-06-29, Stage 2b: full round + wild AI + moveset gen) ░░
-**STATUS: a full battle ROUND now works** — player attack + enemy retaliation, ordered by
-speed, with faints ending the round. The enemy's move is chosen by the faithful wild
-random-move AI (`SelectEnemyMove`, also the default for trainers), and the enemy's moveset
-is now GENERATED the real way (`LoadWildMonMoves`: base moves + level-up learnset + PP)
-instead of being hand-seeded. The player-attack path (prior increment) is unchanged.
-All three new pieces are **headless-validated** (DEBUG_BATTLE_ENEMYHIT DUMP.BIN — see
-translation_log 2026-06-29); the enemy turn was visually signed off ("Looks fine so far").
-The full-round LIVE FRAME.BIN sign-off (random AI picking among multiple moves) is pending.
-Nothing is committed for this session's work and the user has NOT asked to commit.
+### ░░ HANDOFF — resume here (2026-06-29, COMMITTED @ c73b9a9b — turn loop + battle-entry done) ░░
+**STATUS: a wild battle plays a full round AND has the faithful battle-entry sequence.** All of
+Stage 2 (turn loop) + the battle-entry polish are done and **committed** (branch
+`wave2-battle-frontend`, commit `c73b9a9b`); all user-signed-off live. The next session picks up at
+**Stage 3 (wild end-to-end: victory EXP, RUN)** and **Stage 4 (trainer battle: enemy send-out + AI)**.
 
-**NEW FILES this increment:** `src/engine/battle/select_enemy_move.asm` (SelectEnemyMove),
-`src/engine/battle/load_enemy_moves.asm` (LoadWildMonMoves). Added `LoadMovePPs`/
-`AddPartyMon_WriteMovePP` to `src/engine/pokemon/write_moves.asm`. New scripted gate
-`DEBUG_BATTLE_ENEMYHIT` (one enemy attack, no input, dump battle WRAM) in Makefile +
-debug_dump.asm. Harness now seeds PIDGEY species $24 + calls LoadWildMonMoves (was hardcoded
-TACKLE/GUST). `ExecutePlayerTurn` in battle_menu.asm is the full-round handler.
+**WHAT WORKS NOW (this session, all committed):**
+- **Full round**: player attack + enemy retaliation, speed-ordered (Quick Attack priority, Counter
+  last, 50/50 tie), faint ends the round. Wild random-move AI (`SelectEnemyMove`, also default for
+  trainers). Faithful wild moveset gen (`LoadWildMonMoves`: base moves + level-up learnset + PP).
+  HP-drain animation. Win/lose termination (`wBattleOver`/`EndBattleScreen`). FIGHT-cursor persistence.
+- **Battle entry** (faithful pret `_InitBattleCommon` order): silhouette **slide-in**
+  (`SlideBattlePicsIn`, software-native, true-black stopgap) → intro text (real mon name) + blinking
+  ▼ + party **pokéballs** (OAM, `pokeballs.asm`/`PrepareStaticOAM`) → press A → send-out → HP-bar HUD.
+  **HUD frame tiles** now load (`LoadHudTilePatterns` + `gen_battle_hud_inc.py`) — the missing piece
+  that left "ID No." garbage at $73/$74. Player **trainer (Red) back** slides in; Pikachu at send-out.
+- **Trainer data**: `gen_trainer_pics.py` → all 46 trainer pics + `TrainerPicPointers` (class→pic) +
+  `TrainerBaseMoney` + player front/back. **Bug Catcher test** (`DEBUG_BATTLE_TRAINER`): both ball
+  rows + ok/fainted/status/empty variety + trainer sprite — verified, signed off.
 
-**Consequence to flag to the user:** the harness PIDGEY is L3, whose faithful moveset is GUST
-ONLY (SAND-ATTACK isn't learned until L5), so the live demo shows the enemy using GUST every
-turn — the random AI is correct but only visibly interesting at a level with ≥2 moves. Offer
-to bump the demo level if they want to see the random selection vary.
+**DEBUG FLAGS (debug_dump.asm `RunBattleTest`):** `DEBUG_BATTLE_LIVE` (interactive wild),
+`+ DEBUG_BATTLE_TRAINER` (Bug Catcher), `DEBUG_BATTLE_INTRO` (FRAME dump of the intro),
+`DEBUG_BATTLE_ENEMYHIT` (headless one-enemy-hit DUMP.BIN). Harness PIDGEY is now **L13** (GUST/
+SAND-ATTACK/QUICK-ATTACK so the random AI varies), PIKACHU L18/45HP. Stats/moves HARNESS-SEEDED.
+
+**DEFERRED / TODO (tagged in code + translation_log):**
+- **Stage 3** — wild victory EXP (Wave-1 `GainExperience` + PrintStatsBox), RUN flow, clean overworld
+  exit (`EndBattleScreen` is the blank placeholder). Catch flow may defer to Wave 3.
+- **Stage 4** — trainer battle: enemy send-out (enemy mon appears + HP bar), trainer AI turns,
+  multi-mon, `end_of_battle` prize money (`TrainerBaseMoney` is ready), defeat text. Also: real
+  `_LoadTrainerPic` via `TrainerPicPointers` (replace `DrawBugCatcherPic_Stub`); trainer intro text
+  ("`<class>` wants to fight!", currently still "Wild <nick> appeared!").
+- **Send-out animation** `TODO(send-out)` (pics.asm/debug_dump.asm): trainer slides OUT then the mon
+  comes in — starter PIKACHU just slides (no ball/grow, Yellow special), others get ball-throw+grow.
+- **Black silhouette interior** `TODO(palette)`: BGP only blackens non-color-0 pixels; full CGB black
+  = Phase-5 palette. **Decompressor over-box** `TODO(glitch)`: MissingNo case (real mons unaffected).
+- Real `LoadBattleMonFromParty` (vs harness seeds); `GetMaxPP` PP-Up; move reorder (SELECT);
+  accuracy/`MoveHitTest`+effects (replace battle_stubs); audio HAL (battles silent).
 
 **READ THESE FILES FIRST (exact):**
 1. `dos_port/src/engine/battle/battle_menu.asm` — the battle front-end heart. Now holds:
