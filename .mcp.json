@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "dosbox-mcp": {
+      "command": "python3",
+      "args": [
+        "dos_port/tools/dosbox_mcp/server.py"
+      ],
+      "env": {
+        "DOSBOX_MCP_SOCKET": "/tmp/dosbox-mcp.sock",
+        "PKMN_MAP": "dos_port/pkmn.map",
+        "GB_MEMMAP_INC": "dos_port/include/gb_memmap.inc",
+        "DOSBOX_MCP_DIR": "dos_port"
+      }
+    }
+  }
+}

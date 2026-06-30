@@ -7,11 +7,10 @@ extern AddBCDPredef
 extern PrintText
 extern wPayDayMoney
 extern wTotalPayDayMoney
-extern _CoinsScatteredText
+extern CoinsScatteredText
 
 section .text
 global PayDayEffect_
-global CoinsScatteredText
 
 PayDayEffect_:
     xor al, al
@@ -73,8 +72,3 @@ PayDayEffect_:
     ; jp PrintText
     jmp PrintText
 
-CoinsScatteredText:
-    db 0x0A ; TX_PAUSE
-    db 0x17 ; TX_FAR
-    dd _CoinsScatteredText
-    db 0x50 ; TX_END

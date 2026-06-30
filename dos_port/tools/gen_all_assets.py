@@ -304,6 +304,11 @@ def main():
     import gen_map_headers
     import gen_npc_dialogs
     import gen_toggleable_objects
+    import gen_battle_text
+    import gen_trainer_parties
+    import gen_trainer_names
+    import gen_move_grammar
+    import gen_type_names
 
     print("chaining gen_map_headers ...")
     gen_map_headers.main(debug_warps=False)
@@ -311,6 +316,16 @@ def main():
     gen_npc_dialogs.generate_all()
     print("chaining gen_toggleable_objects ...")
     gen_toggleable_objects.generate_all()
+    print("chaining gen_battle_text ...")
+    gen_battle_text.main()
+    print("chaining gen_trainer_parties ...")
+    gen_trainer_parties.main()
+    print("chaining gen_trainer_names ...")
+    gen_trainer_names.main()
+    print("chaining gen_move_grammar ...")
+    gen_move_grammar.main()
+    print("chaining gen_type_names ...")
+    gen_type_names.main()
 
     print("done.")
 

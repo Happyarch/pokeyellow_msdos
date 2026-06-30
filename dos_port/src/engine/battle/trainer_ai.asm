@@ -922,17 +922,15 @@ AIRecoverHP:
     ; save old HP to HPBar scratch
     mov [ebp + wHPBarOldHP], dl
     mov [ebp + wHPBarOldHP + 1], cl
-    ; add heal (bh = B register = heal amount)
-    movzx eax, bh
-    add edx, eax
+    ; add heal (bh = B register = heal amount). Use an 8-bit add so the byte carry
+    ; into the HP-high byte is detected — a 32-bit `add edx,eax` on byte values never
+    ; sets CF, so the old `jnc` always skipped the high-byte bump (pret: add b / adc 0).
+    add dl, bh                      ; HP low += heal (CF = byte carry)
+    adc cl, 0                       ; HP high += carry
     mov [ebp + wEnemyMonHP + 1], dl
+    mov [ebp + wEnemyMonHP], cl
     mov [ebp + wHPBarNewHP], dl
     mov [ebp + wHPBarNewHP + 1], cl
-    jnc .recoverHP_noCarry
-    inc ecx                         ; propagate carry to high byte
-    mov [ebp + wEnemyMonHP], cl
-    mov [ebp + wHPBarNewHP + 1], cl
-.recoverHP_noCarry:
     ; cap at maxHP
     movzx eax, byte [ebp + wEnemyMonMaxHP]      ; maxHP high
     movzx ebx, byte [ebp + wEnemyMonMaxHP + 1]  ; maxHP low

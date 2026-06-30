@@ -176,7 +176,7 @@ DisplayStartMenu:
     call .place_flat_item
     ; TRAINER INFO entry = the player's name (EBP-relative → PlaceString)
     mov esi, [sm_cur_esi]
-    mov edx, W_PLAYER_NAME
+    lea eax, [ebp + W_PLAYER_NAME]       ; PlaceString src = flat-linear
     call PlaceString
     add dword [sm_cur_esi], SM_ROW_STEP * 20
     mov eax, sm_str_save

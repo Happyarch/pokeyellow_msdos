@@ -5,7 +5,7 @@
 extern PlayCurrentMoveAnimation
 extern CallBankF
 extern PrintText
-extern _StatusChangesEliminatedText
+extern StatusChangesEliminatedText
 
 
 
@@ -96,8 +96,3 @@ ResetStats:
     jnz .loop
     ret
 
-StatusChangesEliminatedText:
-    db 0x0A ; TX_PAUSE
-    db 0x17 ; TX_FAR
-    dd _StatusChangesEliminatedText
-    db 0x50 ; TX_END

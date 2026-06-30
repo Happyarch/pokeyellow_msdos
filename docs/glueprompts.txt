@@ -183,6 +183,25 @@ pokemon_engine box+evolution stage is fully closed, note it. Hand to Wave 2 a
 ##############################################################################
 # WAVE 2 — BATTLE FRONT-END (keystone; manual-verification milestone)
 ##############################################################################
+### ⚠️ STATUS 2026-06-30 — WAVE 2 IS LARGELY DONE; the FIRST attempt was UNFAITHFUL CRAP ###
+# This wave was first built as a BESPOKE, from-scratch reimplementation of the battle loop
+# (NOT a translation of pret core.asm) — which violated the whole point of the port and was
+# correctly SCRAPPED. It was rebuilt as a structure-for-structure translation of pret
+# engine/battle/core.asm (MainInBattleLoop), which links live and plays a wild battle
+# end-to-end (menu → move select → speed-ordered turns → damage → faint → EXP/level-up →
+# RUN). So 2a/2b are effectively done; 2c wild is done, trainer is partial. The CANONICAL
+# plan is docs/current_plan_battle_pret_alignment.md (the dead bespoke plan is archived at
+# docs/plans/battle_frontend.md — do NOT revive its approach). Specifics that changed:
+#   - 2a: HUD/sprites/box draw helpers live in battle_menu.asm (draw layer only now).
+#   - 2b: core.asm is the loop; PlayMoveAnimation is NO LONGER a silent stub — it is the
+#         faithful ANIMATION=OFF path (animations.asm). DecrementPP/CriticalHitTest live.
+#   - 2c: wild end-to-end live; trainer multi-mon/prize/send-out animation deferred.
+# REMAINING battle work is wiring the Tier-2 CONSUMERS behind core.asm's TODO(faithful)
+# stubs (JumpMoveEffect effects closure, status conditions, residual damage, trainer AI/
+# multi-mon) — their Tier-1 DATA now exists (battle_text extended + trainer_parties /
+# trainer_names / move_grammar / type_names generators added 2026-06-30).
+#
+# [historical prompt below — kept for reference, do not follow verbatim]
 Goal: build the battle loop tying the Wave-1 backend together. Large, deferred for
 manual verification (user directive 2026-06-26 — front end can't be validated
 headless). Confirm the Wave-1 backend (damage, type, category, effect data +

@@ -81,6 +81,8 @@ CHAR_DEXEND     equ 0x5F   ; <DEXEND>  prints "."
 
 CHAR_FIRST_GLYPH equ 0x60  ; first renderable character
 
+BIT_LEFT_ALIGN  equ 6      ; PrintNumber flag bit (constants/text_constants.asm)
+
 SCREEN_W_TILES  equ 20     ; SCREEN_WIDTH in tile units
 
 ; Message box geometry (data/text_boxes.asm: MESSAGE_BOX entry = 0,12,19,17)
@@ -116,6 +118,10 @@ global PrintText
 global PrintText_NoBox
 global HandleDownArrowBlinkTiming
 global place_flat_str
+global text_row_stride
+global text_line2
+global text_prompt_hook
+global text_arrow_pos
 
 ; ---------------------------------------------------------------------------
 ; External
@@ -123,6 +129,8 @@ global place_flat_str
 extern pad_buttons   ; joypad.asm — button held state (bit 0=A, bit 1=B)
 extern set_single_window   ; src/ppu/ppu.asm — define g_windows[] as one descriptor
 extern g_window_count      ; src/ppu/ppu.asm — unified window list count (open flag)
+extern PrintNumber         ; src/home/print_num.asm — TX_NUM (text_decimal)
+extern PrintBCDNumber      ; src/home/print_bcd.asm — TX_BCD (text_bcd / money)
 
 ; ---------------------------------------------------------------------------
 ; .data — inline substitution strings in DS (flat, not EBP-relative).
@@ -153,6 +161,21 @@ str_enemy:  db 0x84,0xAD,0xA4,0xAC,0xB8,0x7F, CHAR_TERMINATOR
 
 ; One-byte sentinel used by CHAR_DONE to signal TX_END to TextCommandProcessor
 done_sentinel: db TX_END
+
+; Runtime row stride (tiles per W_TILEMAP row) for the ONE text engine. Default 20
+; (the GB/overworld screen). The battle layout projects the GB viewport into the
+; 40-wide full-screen canvas, so it sets this to 40 — there is no separate
+; "wide" engine (see docs/current_plan_battle_pret_alignment.md Stage 0.5).
+align 4
+text_row_stride: dd 20
+; <LINE> ($4F) target tile-buffer offset (the box's 2nd text line). Default = the
+; overworld message box (1,16); the battle box sets its own (PrintBattleText).
+text_line2:      dd (W_TILEMAP + 16 * SCREEN_W_TILES + 1)
+; <PROMPT> ($58) display hook (0 = overworld window scroll via manual_text_scroll).
+; The battle path installs a routine that draws the ▼ at text_arrow_pos in W_TILEMAP,
+; waits for A/B, and erases it. text_arrow_pos = that ▼ tile-buffer offset.
+text_prompt_hook: dd 0
+text_arrow_pos:   dd 0
 
 ; ---------------------------------------------------------------------------
 ; .text
@@ -205,7 +228,7 @@ TextBoxBorder:
     mov byte [edi], BOX_TL
     call .fill_h
     mov byte [edi + ecx + 1], BOX_TR
-    add edi, SCREEN_W_TILES
+    add edi, [text_row_stride]
 
     ; middle rows: box_v + space*width + box_v (EDX times)
 .mid:
@@ -215,7 +238,7 @@ TextBoxBorder:
     call .fill_chars
     pop eax
     mov byte [edi + ecx + 1], BOX_V
-    add edi, SCREEN_W_TILES
+    add edi, [text_row_stride]
     dec edx
     jnz .mid
 
@@ -489,18 +512,23 @@ sync_dialog_window:
 ; PlaceString — render '@'-terminated charmap string at tile buffer position.
 ;
 ; Source: home/text.asm:PlaceString / PlaceNextChar
-; In:  EDX = source string (EBP-relative, DE)
-;      ESI = tile buffer write position (EBP-relative, HL)
-; Out: EBX = tile buf position at '@' terminator (BC)
+; In:  EAX = source string ptr — FLAT-LINEAR (not EBP-biased). Pass a `.data` label
+;            directly, or `lea eax,[ebp+offset]` for a GB-memory string. This matches
+;            place_flat_str / the old WidePlaceString and the DJGPP flat model. (pret
+;            passes it in DE as a GB address; the flat model collapses GB address =
+;            ebp+offset = a linear pointer, so callers hand us the linear pointer.)
+;      ESI = tile buffer write position (EBP-relative GB offset, HL)
+; Out: EBX = tile buf position at '@' terminator (BC = pret's end coord)
 ;      ESI = restored to line start (HL restored by pop on return)
-;      EDX = pointing at '@' terminator
+;      EDX = flat-linear pointer at the '@' terminator
 ;      EAX clobbered
 ; ---------------------------------------------------------------------------
 PlaceString:
+    mov edx, eax                ; EAX (flat src) → EDX (internal walking pointer)
     push esi                    ; SM83: push hl (save line start)
 
 PlaceNextChar:
-    movzx eax, byte [ebp + edx]
+    movzx eax, byte [edx]       ; source is a FLAT-LINEAR pointer (no EBP bias)
 
     ; --- Terminator '@' ($50) ---
     cmp al, CHAR_TERMINATOR
@@ -514,10 +542,10 @@ PlaceNextChar:
     cmp al, CHAR_NEXT
     jne .not_next
     pop esi                    ; restore line start
-    add esi, SCREEN_W_TILES    ; +1 row
+    add esi, [text_row_stride] ; +1 row (stride-aware: 20 overworld / 40 battle)
     test byte [ebp + H_UI_LAYOUT_FLAGS], 1 << BIT_SINGLE_SPACED_LINES
     jnz .next_push
-    add esi, SCREEN_W_TILES    ; double-spaced: +2 rows total
+    add esi, [text_row_stride]  ; double-spaced: +2 rows total
 .next_push:
     push esi
     jmp .advance
@@ -527,7 +555,7 @@ PlaceNextChar:
     cmp al, CHAR_LINE
     jne .not_line
     pop esi
-    mov esi, W_TILEMAP + 16 * SCREEN_W_TILES + 1
+    mov esi, [text_line2]              ; box 2nd text line (overworld default / battle-set)
     push esi
     jmp .advance
 
@@ -563,7 +591,10 @@ PlaceNextChar:
     je .handle_done            ; $57
     cmp al, CHAR_PROMPT
     je .handle_prompt          ; $58
-    ; $59 TARGET, $5A USER: battle-engine stubs
+    cmp al, CHAR_TARGET
+    je .handle_target          ; $59
+    cmp al, CHAR_USER
+    je .handle_user            ; $5A
     cmp al, CHAR_PC
     je .handle_pc              ; $5B
     cmp al, CHAR_TM
@@ -684,6 +715,43 @@ PlaceNextChar:
     pop edx
     jmp .advance
 
+.handle_target:
+    ; <TARGET> ($59): the move TARGET's name. Pret PlaceMoveTargetsName: hWhoseTurn ^ 1.
+    mov al, [ebp + hWhoseTurn]
+    xor al, 1
+    jmp .place_battler_name
+.handle_user:
+    ; <USER> ($5A): the move USER's name. Pret PlaceMoveUsersName: hWhoseTurn.
+    mov al, [ebp + hWhoseTurn]
+.place_battler_name:
+    ; AL == 0 → player side: wBattleMonNick (no prefix).
+    ; AL != 0 → enemy side: "Enemy " + wEnemyMonNick.  (home/text.asm:.place)
+    push edx                        ; save outer command-string ptr
+    test al, al
+    jnz .battler_enemy
+    mov edx, wBattleMonNick
+    jmp .battler_copy
+.battler_enemy:
+    push eax
+    mov eax, str_enemy              ; "Enemy " (flat DS prefix)
+    call place_flat_str             ; writes glyphs at [ebp+esi], advances ESI
+    pop eax
+    mov edx, wEnemyMonNick
+.battler_copy:
+    movzx eax, byte [ebp + edx]
+    cmp al, CHAR_TERMINATOR
+    je .battler_done
+    cmp al, CHAR_FIRST_GLYPH
+    jb .battler_next
+    mov [ebp + esi], al
+    inc esi
+.battler_next:
+    inc edx
+    jmp .battler_copy
+.battler_done:
+    pop edx                         ; restore outer string ptr
+    jmp .advance
+
 .handle_poke:
     ; '#' ($54): prints "POKe"
     push eax
@@ -711,62 +779,30 @@ PlaceNextChar:
     jmp .advance
 
 .handle_done:
-    ; <DONE> ($57): end the text command stream.
-    ; Restores the PlaceString stack frame and points EDX at a TX_END sentinel
-    ; so TextCommandProcessor exits on the next iteration.
+    ; <DONE> ($57): end the text command stream. Restore the PlaceString stack
+    ; frame and return EDX = a FLAT-LINEAR pointer at the TX_END sentinel, so that
+    ; .cmd_start's `mov esi,edx; sub esi,ebp; inc esi` lands ESI = DONE_SENTINEL_WRAM
+    ; +1 (a GB offset whose byte is TX_END, set by text_engine_init) → TCP exits.
     pop esi                         ; restore line start
-    mov edx, done_sentinel          ; EDX = flat ptr to TX_END byte
-    ; EBX = cursor (unchanged: wherever the last glyph landed)
-    ; Return to TextCommandProcessor via a normal PlaceString return path,
-    ; but with EDX = flat address (not EBP-relative).
-    ; TextCommandProcessor checks EDX for the TX_END byte via [ebp+esi] —
-    ; to handle this correctly, we set ESI = done_sentinel - ebp so that
-    ; [ebp+esi] == done_sentinel[0] == TX_END.
-    ; Simpler: we just RET from PlaceString and let TextCommandProcessor
-    ; use the .done_text flag below. But the cleanest approach is to set
-    ; EDX in a way .cmd_start will read TX_END next.
-    ; Phase 2 choice: use a well-known EBP-relative address for the sentinel.
-    ; We store TX_END at [EBP + CHAR_DONE_SENTINEL_OFS].
-    ; For now, RET from PlaceString; TextCommandProcessor will get TX_END
-    ; via the sentinel byte at DONE_SENTINEL_WRAM (set up by text_engine_init).
-    ; Since we pop esi above, EBX holds the cursor, EDX is tricky.
-    ; Pragmatic Phase 2 solution: the caller (TextCommandProcessor .cmd_start)
-    ; will read EDX+1 as the next stream position. We set EDX so that
-    ; [ebp + (EDX+1)] is not valid and TextCommandProcessor terminates.
-    ; The cleanest way is: set ESI = done_sentinel_wram (EBP-relative) so
-    ; TextCommandProcessor reads TX_END from there. But we've already returned
-    ; from PlaceString by the time TextCommandProcessor uses ESI.
-    ;
-    ; Correct solution: do NOT return from PlaceString here. Instead, jump
-    ; directly into TextCommandProcessor's .done label. This requires exporting
-    ; or forward-referencing .done. Use a shared label trick:
-    ; We set a global flag [text_engine_done] = 1 and return normally,
-    ; then check the flag in TextCommandProcessor after PlaceString returns.
-    ;
-    ; Simplest correct implementation: place TX_END in a scratch WRAM byte,
-    ; set EDX = that WRAM offset, and return normally. TextCommandProcessor
-    ; reads EDX as the next stream start, but EDX is a string position used
-    ; only by PlaceString — it's irrelevant once PlaceString returns.
-    ;
-    ; Actually: TextCommandProcessor .cmd_start sets ESI = EDX + 1 (past '@').
-    ; If we make EDX = done_sentinel_wram (EBP-relative, pointing at TX_END),
-    ; then ESI = done_sentinel_wram + 1, and the next .next_cmd reads
-    ; [ebp + done_sentinel_wram + 1] = garbage. That's wrong too.
-    ;
-    ; FINAL correct approach: store TX_END at DONE_SENTINEL_WRAM and at
-    ; DONE_SENTINEL_WRAM+1, making both bytes TX_END. Set EDX = DONE_SENTINEL_WRAM.
-    ; Then .cmd_start does mov esi, EDX; inc esi → esi = DONE_SENTINEL_WRAM+1,
-    ; and .next_cmd reads [ebp + DONE_SENTINEL_WRAM+1] = TX_END → done. ✓
-    ;
-    ; This is set up by text_engine_init (called once at startup).
-    mov edx, DONE_SENTINEL_WRAM
+    lea edx, [ebp + DONE_SENTINEL_WRAM]   ; flat ptr to the TX_END sentinel
     ret
 
 .handle_prompt:
-    ; <PROMPT> ($58): show down-arrow and wait for A or B button.
-    ; Phase 2 stub: just continue (no blocking wait).
+    ; <PROMPT> ($58): pret PromptText — draw ▼, wait for A/B, erase, then TERMINATE
+    ; the text box (PromptText falls through to DoneText). The display context is
+    ; [text_prompt_hook]: 0 = overworld window scroll; non-zero = battle routine that
+    ; draws the ▼ at text_arrow_pos in W_TILEMAP, waits, and erases it.
+    mov eax, [text_prompt_hook]
+    test eax, eax
+    jz .prompt_overworld
+    call eax
+    jmp .prompt_done
+.prompt_overworld:
     call manual_text_scroll
-    jmp .advance
+.prompt_done:
+    pop esi                            ; restore line start, terminate like <DONE>
+    lea edx, [ebp + DONE_SENTINEL_WRAM]
+    ret
 
 .handle_pc:
     push eax
@@ -864,9 +900,9 @@ TextCommandProcessor:
     cmp al, TX_START
     je .cmd_start
     cmp al, TX_RAM
-    je .cmd_skip2
+    je .cmd_ram
     cmp al, TX_BCD
-    je .cmd_skip3
+    je .cmd_bcd
     cmp al, TX_MOVE
     je .cmd_move
     cmp al, TX_BOX
@@ -881,7 +917,7 @@ TextCommandProcessor:
     cmp al, TX_START_ASM
     je .cmd_skip0
     cmp al, TX_NUM
-    je .cmd_skip3                   ; skip 2-byte addr + 1 byte format = 3
+    je .cmd_num
     cmp al, TX_PAUSE
     je .cmd_skip0
     ; TX_SOUND_GET_ITEM_1 ($0B): TODO-HW: audio
@@ -903,12 +939,13 @@ TextCommandProcessor:
 
 ; --- TX_START ($00): render '@'-terminated string at cursor ---
 .cmd_start:
-    ; ESI = source string (EBP-relative), EBX = cursor
-    mov edx, esi        ; EDX (DE) = source string
-    mov esi, ebx        ; ESI (HL) = cursor
+    ; ESI = source string (GB offset into the command stream), EBX = cursor
+    lea eax, [ebp + esi]   ; flat-linear source ptr for PlaceString
+    mov esi, ebx           ; ESI (HL) = cursor
     call PlaceString
-    ; After PlaceString: EBX = cursor at '@', ESI = line start, EDX = ptr to '@'
+    ; After PlaceString: EBX = cursor at '@', EDX = flat-linear ptr to '@'
     mov esi, edx
+    sub esi, ebp        ; flat ptr → GB offset (TCP reads its stream EBP-relative)
     inc esi             ; ESI = past '@' = next command
     jmp .next_cmd
 
@@ -970,6 +1007,66 @@ TextCommandProcessor:
     call scroll_text_up
     call scroll_text_up
     mov ebx, W_TILEMAP + 16 * SCREEN_W_TILES + 1
+    jmp .next_cmd
+
+; --- TX_RAM ($01): write an '@'-terminated string from a RAM address ---
+; Pret ref: home/text.asm:TextCommand_RAM. Operands: addr_lo, addr_hi (little-
+; endian WRAM pointer, e.g. wBattleMonNick). PlaceString it at the cursor.
+.cmd_ram:
+    movzx edx, byte [ebp + esi]    ; lo of RAM source addr
+    inc esi
+    movzx eax, byte [ebp + esi]    ; hi
+    inc esi
+    shl eax, 8
+    or  edx, eax                   ; EDX = RAM source string addr
+    push esi                       ; save command-stream ptr
+    mov esi, ebx                   ; ESI (HL) = cursor
+    lea eax, [ebp + edx]           ; flat-linear source ptr (RAM addr → linear)
+    call PlaceString               ; EBX = end cursor, ESI = line start, EDX = '@'
+    pop esi                        ; restore stream ptr
+    jmp .next_cmd
+
+; --- TX_NUM ($09 / text_decimal): print a decimal number ---
+; Pret ref: home/text.asm:TextCommand_NUM. Operands: addr_lo, addr_hi, format,
+; where format = (byte-count << 4) | digit-count. LEFT_ALIGN is forced on.
+.cmd_num:
+    movzx edx, byte [ebp + esi]    ; lo of value addr
+    inc esi
+    movzx eax, byte [ebp + esi]    ; hi
+    inc esi
+    shl eax, 8
+    or  edx, eax                   ; EDX (DE) = value source addr
+    movzx eax, byte [ebp + esi]    ; AL = format byte
+    inc esi
+    push esi                       ; save stream ptr
+    mov esi, ebx                   ; ESI (HL) = cursor
+    mov bl, al
+    and bl, 0x0F                   ; BL = digit count
+    shr al, 4                      ; AL = byte count
+    or  al, (1 << BIT_LEFT_ALIGN)  ; force left-align (TextCommand_NUM)
+    mov bh, al                     ; BH = flags | byte count
+    call PrintNumber               ; advances ESI past the field
+    mov ebx, esi                   ; cursor := end
+    pop esi                        ; restore stream ptr
+    jmp .next_cmd
+
+; --- TX_BCD ($02 / text_bcd): print a BCD number (money) ---
+; Pret ref: home/text.asm:TextCommand_BCD. Operands: addr_lo, addr_hi, flags|len.
+.cmd_bcd:
+    movzx edx, byte [ebp + esi]    ; lo of BCD addr
+    inc esi
+    movzx eax, byte [ebp + esi]    ; hi
+    inc esi
+    shl eax, 8
+    or  edx, eax                   ; EDX (DE) = BCD source addr
+    movzx eax, byte [ebp + esi]    ; AL = flags | length (C)
+    inc esi
+    push esi                       ; save stream ptr
+    mov esi, ebx                   ; ESI (HL) = cursor
+    mov bl, al                     ; BL = flags | length
+    call PrintBCDNumber            ; advances ESI
+    mov ebx, esi                   ; cursor := end
+    pop esi                        ; restore stream ptr
     jmp .next_cmd
 
 ; --- Operand-skip helpers ---

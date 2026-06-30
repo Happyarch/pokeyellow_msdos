@@ -25,6 +25,7 @@ global ConversionEffect_
 extern PlayCurrentMoveAnimation
 extern PrintText
 extern PrintButItFailedText_
+extern ConvertedTypeText
 
 
 ConversionEffect_:
@@ -53,11 +54,6 @@ ConversionEffect_:
     mov esi, ConvertedTypeText
     jmp PrintText
 
-ConvertedTypeText:
-    db 0x17
-    dw 0
-    db 0
-    db 0x50
 
 PrintButItFailedText:
     jmp PrintButItFailedText_

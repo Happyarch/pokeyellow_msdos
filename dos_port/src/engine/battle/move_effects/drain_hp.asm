@@ -7,6 +7,8 @@ extern DrawPlayerHUDAndHPBar
 extern DrawEnemyHUDAndHPBar
 extern ReadPlayerMonCurHPAndStatus
 extern PrintText
+extern SuckedHealthText
+extern DreamWasEatenText
 
 global DrainHPEffect_
 DrainHPEffect_:
@@ -119,14 +121,4 @@ DrainHPEffect_:
 .printText:
 	jmp PrintText
 
-SuckedHealthText:
-	db 0x17
-	dw 0
-	db 0
-	db 0x50
 
-DreamWasEatenText:
-	db 0x17
-	dw 0
-	db 0
-	db 0x50

@@ -6,12 +6,11 @@ extern PlayCurrentMoveAnimation
 extern PrintText
 extern DelayFrames
 extern PrintButItFailedText_
-extern _GettingPumpedText
+extern GettingPumpedText
 
 
 section .text
 global FocusEnergyEffect_
-global GettingPumpedText
 
 FocusEnergyEffect_:
     mov esi, wPlayerBattleStatus2
@@ -33,7 +32,3 @@ FocusEnergyEffect_:
     call DelayFrames
     jmp PrintButItFailedText_
 
-GettingPumpedText:
-	db 0x17 ; text_far
-	dd _GettingPumpedText
-	db 0x50 ; text_end

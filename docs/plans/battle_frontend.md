@@ -172,11 +172,33 @@ centered baseline renders (move HUD/sprites outward with the user via FRAME.BIN)
     `DisplayUsedMoveText` — "`<MON>` / used `<MOVE>`!" in the dialog box, wait for A.
 - **Stage 2a COMPLETE** (menu + move list + TYPE/PP box + teardown, all user-signed-off).
 
-### ░░ HANDOFF — resume here (2026-06-29, COMMITTED @ c73b9a9b — turn loop + battle-entry done) ░░
+### ☠️ DEAD / ARCHIVED (2026-06-30) — this plan built an UNFAITHFUL bespoke battle and was scrapped
+**Do not follow this plan. It was a mistake.** Most of what's described below — the FIGHT/turn-loop
+orchestration (`DisplayBattleMenu` loop, `ExecutePlayerTurn`, `Render*/Do*AttackDamage`, the bespoke
+fainted/no-PP/run message draws) — was a *from-scratch reimplementation* of the battle loop, NOT a
+translation of pret `engine/battle/core.asm`. That directly violates the port's governing principle
+(faithful pret translation; the front end may diverge from pret ONLY at the screen-draw primitive).
+It was correctly **torn out and replaced** by a structure-for-structure translation of pret's
+`core.asm` (`MainInBattleLoop`), which now links live and plays a wild battle end-to-end. The
+canonical, ACTIVE plan is **`docs/current_plan_battle_pret_alignment.md`** (read that, not this).
+
+What SURVIVED from this plan (and is still used): only the **draw layer** — the HUD/sprite/box draw
+helpers, the faithful battle-entry sequence (silhouette slide-in, party pokéballs, HUD frame tiles,
+trainer/player pics, send-out swap). Those live in `battle_menu.asm`/`battle_hud.asm` as draw helpers
+under pret names. Everything below that talks about turn ORCHESTRATION is dead. Archived for the
+draw-layer reference only.
+
+### ░░ HANDOFF — resume here (2026-06-29, COMMITTED @ 402d5b84 — turn loop + battle-entry + trainer send-out swap) ░░
 **STATUS: a wild battle plays a full round AND has the faithful battle-entry sequence.** All of
 Stage 2 (turn loop) + the battle-entry polish are done and **committed** (branch
-`wave2-battle-frontend`, commit `c73b9a9b`); all user-signed-off live. The next session picks up at
-**Stage 3 (wild end-to-end: victory EXP, RUN)** and **Stage 4 (trainer battle: enemy send-out + AI)**.
+`wave2-battle-frontend`, commit `c73b9a9b`); all user-signed-off live. A quick follow-up commit
+`402d5b84` then made the **trainer enemy send-out swap** work in the `DEBUG_BATTLE_TRAINER` test:
+after the trainer intro, the enemy mon's front pic is decoded over VRAM $00 (replacing the trainer
+sprite) and `DrawBattleHUDs` draws the enemy HP bar — so both sides now send out (Bug Catcher →
+PIDGEY, player → Pikachu). It's still a straight VRAM swap in the *harness* (TODO(send-out) =
+trainer slide-out + real mon throw; real trainer-party data path still pending). The next session
+picks up at **Stage 3 (wild end-to-end: victory EXP, RUN)** and **Stage 4 (trainer battle:
+slide-out/throw animation, trainer AI, multi-mon, prize money)**.
 
 **WHAT WORKS NOW (this session, all committed):**
 - **Full round**: player attack + enemy retaliation, speed-ordered (Quick Attack priority, Counter
@@ -198,12 +220,16 @@ Stage 2 (turn loop) + the battle-entry polish are done and **committed** (branch
 SAND-ATTACK/QUICK-ATTACK so the random AI varies), PIKACHU L18/45HP. Stats/moves HARNESS-SEEDED.
 
 **DEFERRED / TODO (tagged in code + translation_log):**
-- **Stage 3** — wild victory EXP (Wave-1 `GainExperience` + PrintStatsBox), RUN flow, clean overworld
-  exit (`EndBattleScreen` is the blank placeholder). Catch flow may defer to Wave 3.
-- **Stage 4** — trainer battle: enemy send-out (enemy mon appears + HP bar), trainer AI turns,
-  multi-mon, `end_of_battle` prize money (`TrainerBaseMoney` is ready), defeat text. Also: real
-  `_LoadTrainerPic` via `TrainerPicPointers` (replace `DrawBugCatcherPic_Stub`); trainer intro text
-  ("`<class>` wants to fight!", currently still "Wild <nick> appeared!").
+- **Stage 3** — RUN flow **DONE** (awaiting live gate; `TryRunningFromBattle` in `battle_menu.asm`,
+  `wBattleOver=3`="ran"). STILL PENDING: wild victory EXP (Wave-1 `GainExperience` + PrintStatsBox) on the
+  win path, clean overworld exit (`EndBattleScreen` is the blank placeholder). Catch flow may defer to Wave 3.
+- **Stage 4** — trainer battle: enemy send-out **swap done in the test harness** (commit `402d5b84`:
+  enemy mon front pic replaces the trainer sprite + HP bar appears) but still a straight VRAM swap —
+  TODO is the real `EnemySendOut` flow: trainer slide-out + mon throw/grow animation, trainer AI
+  turns (wire Wave-1 `trainer_ai` into `SelectEnemyMove`), multi-mon switch-in, `end_of_battle` prize
+  money (`TrainerBaseMoney` is ready), defeat text. Also: real `_LoadTrainerPic` via
+  `TrainerPicPointers` (replace `DrawBugCatcherPic_Stub`); trainer intro text ("`<class>` wants to
+  fight!", currently still "Wild <nick> appeared!"); real trainer-party data (`gen_trainer_parties.py`).
 - **Send-out animation** `TODO(send-out)` (pics.asm/debug_dump.asm): trainer slides OUT then the mon
   comes in — starter PIKACHU just slides (no ball/grow, Yellow special), others get ball-throw+grow.
 - **Black silhouette interior** `TODO(palette)`: BGP only blackens non-color-0 pixels; full CGB black
@@ -297,6 +323,24 @@ how I proved the damage was faithful and the "bar disappeared" was just HP=0.
 - Wild `InitBattle` entry (intro text, simple/stubbed transition), RUN flow, victory
   → `GainExperience` (Wave 1) wired with its text/`PrintStatsBox`. Catch flow may
   defer to Wave 3 (item USE) — note as stub.
+  - [x] **Victory EXP DONE + user-signed-off (2026-06-29).** Wave-1 `GainExperience` wired live on the
+    enemy-faint path (`ExecutePlayerTurn.enemyFainted` → `BattleWonGiveExp`): awards EXP/stat-exp/level
+    (data) + shows "<nick> gained / N EXP. Points!" via wide_text (`print_dec`, N=`wExpAmountGained`).
+    Verified live: "PIKACHU gained 102 EXP." `experience.asm` moved BATTLE_SRCS→FRONTEND_SRCS; pulled in
+    `flag_action.asm` + new `battle_exp_stubs.asm` (link-only stubs for the deferred UI externs);
+    `GainExperience`'s internal PrintText calls neutralized (overworld renderer would corrupt the battle
+    canvas → display done by front end). STILL DEFERRED: level-up DISPLAY (stats box / "grew to level N" /
+    move learn — data IS updated by real CalcStats; only presentation is stubbed); clean overworld exit.
+  - [x] **RUN flow DONE + user-signed-off (2026-06-29)** (both branches verified live: guaranteed
+    escape, and the odds-formula "Can't escape!" → enemy free attack → eventual escape). Faithful `TryRunningFromBattle`
+    + `BattleMenu_RunWasSelected` ported into `battle_menu.asm` (`RunWasSelected`/
+    `TryRunningFromBattle`/`PrintRunLine`): wild escape-odds formula via the real
+    `Multiply`/`Divide` HRAM pipeline, "Got away safely!" → `wBattleOver=3` ("ran" terminal),
+    "Can't escape!" → forfeit turn → enemy free attack, trainer "No! There's no running…"
+    (no turn lost). New aliases `wNumRunAttempts`=$D11F / `hEnemySpeed`=$FF8D. Builds + links
+    (`DEBUG_BATTLE_LIVE`). Harness PIKACHU spd 40 ≥ PIDGEY spd 21 → RUN reliably escapes (the
+    can't-escape branch needs a faster enemy). **GATE: press RUN in DOSBox-X → "Got away
+    safely!" → battle ends.** Victory→EXP screen + clean overworld exit still pending.
 - **GATE:** a wild battle is playable start→finish in DOSBox-X.
 
 ### Stage 4 (≈glue 2c) — Trainer battle end-to-end

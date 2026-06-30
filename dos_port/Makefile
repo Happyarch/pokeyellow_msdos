@@ -136,6 +136,9 @@ GAME_SRCS := \
     src/gfx/sprite_oam.asm \
     src/gfx/load_font.asm \
     src/text/text.asm \
+    src/home/print_num.asm \
+    src/home/print_bcd.asm \
+    src/home/window.asm \
     src/text/auto_textbox.asm \
     src/movie/title.asm \
     src/engine/overworld/overworld.asm \
@@ -178,15 +181,18 @@ ITEMS_SRCS := \
     src/engine/math/bcd.asm
 
 # Battle engine backend (current_plan_battle_engine.md). Damage pipeline + data.
-# NOTE: the backend depends on UI/effect routines (JumpMoveEffect, CheckTarget-
-# Substitute, …) that are still deferred, so this does not yet link into the
-# final EXE — but every file assembles (make check) and the pure-math routines
-# are validated by native ELF harnesses (see the plan's verification log).
+# NOTE: this list is CHECK-ONLY (assembled by `make check`, not linked). The faithful
+# battle loop (core.asm, FRONTEND_SRCS) needs only a curated subset of it, and that
+# subset has been MOVED to FRONTEND_SRCS (decrement_pp, animations); the deeper closures
+# here (effects + all move_effects, residual_damage, trainer_ai, misc/InitList, names,
+# read_trainer_party, wild_*) still depend on deferred predefs/UI/text and are stubbed at
+# link time by core_stubs.asm (JumpMoveEffect / HandlePoisonBurnLeechSeed / TrainerAI /
+# FormatMovesString). Every file here still assembles (make check) and the pure-math
+# routines are native-ELF-harness validated.
 BATTLE_SRCS := \
     src/home/names.asm \
     src/engine/battle/badge_boosts.asm \
     src/engine/battle/status_penalties.asm \
-    src/engine/battle/decrement_pp.asm \
     src/engine/battle/get_trainer_name.asm \
     src/engine/battle/misc.asm \
     src/engine/battle/move_effects/conversion.asm \
@@ -206,16 +212,15 @@ BATTLE_SRCS := \
     src/engine/battle/building_rage.asm \
     src/engine/battle/residual_damage.asm \
     src/engine/battle/move_category.asm \
-    src/engine/battle/animations.asm \
     src/data/wild_data.asm \
     src/engine/overworld/wild_mons.asm \
     src/engine/battle/wild_encounters.asm \
-    src/engine/battle/experience.asm \
     src/engine/battle/trainer_ai.asm \
     src/engine/battle/read_trainer_party.asm
-# experience.asm (GainExperience) is in BATTLE_SRCS (check-only) — assembles +
-# native-validated, but stays out of LINK_SRCS until Wave 2 supplies its deferred
-# UI/display externs (PrintText, PrintStatsBox, the CallBattleCore targets, …).
+# experience.asm (GainExperience) is now LINKED (FRONTEND_SRCS, Stage 3 victory→EXP):
+# its validated EXP/stat/level math runs live; the deferred UI/display externs
+# (PrintStatsBox, the CallBattleCore targets, the per-mon text) are satisfied by
+# battle_exp_stubs.asm and the front end (battle_menu.asm) shows the gained-EXP text.
 
 # Debug-only sources (linked only when the corresponding flag is set).
 # Any debug flag implies SKIP_TITLE — debug harnesses boot straight to the overworld.
@@ -364,8 +369,13 @@ FRONTEND_SRCS := \
     src/engine/battle/init_battle.asm \
     src/engine/battle/battle_hud.asm \
     src/engine/battle/battle_menu.asm \
-    src/text/wide_text.asm \
+    src/engine/battle/core.asm \
+    src/engine/battle/core_stubs.asm \
+    src/engine/battle/decrement_pp.asm \
+    src/engine/battle/animations.asm \
     src/data/battle_data.asm \
+    src/data/trainer_data.asm \
+    src/data/move_grammar.asm \
     src/data/type_names.asm \
     src/home/random.asm \
     src/engine/battle/core_damage.asm \
@@ -376,7 +386,10 @@ FRONTEND_SRCS := \
     src/data/trainer_pics.asm \
     src/engine/battle/battle_stubs.asm \
     src/gfx/uncompress.asm \
-    src/gfx/pics.asm
+    src/gfx/pics.asm \
+    src/engine/battle/experience.asm \
+    src/engine/battle/battle_exp_stubs.asm \
+    src/engine/flag_action.asm
 
 LINK_SRCS := $(BOOT_SRCS) $(HOME_SRCS) $(HAL_SRCS) $(GAME_SRCS) $(POKEMON_SRCS) $(ITEMS_SRCS) $(FRONTEND_SRCS)
 LINK_OBJS := $(LINK_SRCS:.asm=.o)
@@ -469,6 +482,33 @@ assets/gb_charmap.txt:
 # START-menu item labels, encoded via the unicode_converter submodule (gb_text).
 assets/menu_strings.inc: assets/gb_charmap.txt tools/gen_menu_strings.py tools/gb_text.py
 	python3 tools/gen_menu_strings.py
+
+# Battle message command streams (pret data/text + engine/battle wrappers, text_far
+# flattened). %included by the battle core engine. Generated from the read-only spec.
+assets/battle_text.inc: ../data/text/text_2.asm ../engine/battle/core.asm \
+                        ../constants/charmap.asm include/gb_memmap.inc tools/gen_battle_text.py
+	python3 tools/gen_battle_text.py
+
+# Trainer rosters + class names (consumed by read_trainer_party.asm / GetName).
+assets/trainer_parties.inc: ../data/trainers/parties.asm ../data/trainers/special_moves.asm \
+                            ../constants/trainer_constants.asm tools/gen_trainer_parties.py
+	python3 tools/gen_trainer_parties.py
+assets/trainer_names.inc: ../data/trainers/names.asm ../constants/charmap.asm \
+                          tools/gen_trainer_names.py
+	python3 tools/gen_trainer_names.py
+# Move-use sentence-grammar table (vestigial in English; carried for faithfulness).
+assets/move_grammar.inc: ../data/moves/grammar.asm ../constants/move_constants.asm \
+                         tools/gen_move_grammar.py
+	python3 tools/gen_move_grammar.py
+# Type names (raw-id-indexed pointer table, 0x09-0x13 gap -> NORMAL).
+assets/type_names.inc: ../data/types/names.asm ../constants/type_constants.asm \
+                       ../constants/charmap.asm tools/gen_type_names.py
+	python3 tools/gen_type_names.py
+
+# Wrapper objects depend on their generated includes.
+src/data/trainer_data.o: assets/trainer_parties.inc assets/trainer_names.inc
+src/data/move_grammar.o: assets/move_grammar.inc
+src/data/type_names.o: assets/type_names.inc
 
 assets/battle_hud_2bpp.inc: ../gfx/battle/battle_hud_1.png ../gfx/battle/battle_hud_2.png \
                             ../gfx/battle/battle_hud_3.png tools/gen_battle_hud_inc.py

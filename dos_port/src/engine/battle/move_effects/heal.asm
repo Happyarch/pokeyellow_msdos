@@ -13,6 +13,9 @@ extern PrintText
 extern StartedSleepingEffect
 extern FellAsleepBecameHealthyText
 extern RegainedHealthText
+extern StartedSleepingEffect
+extern FellAsleepBecameHealthyText
+extern RegainedHealthText
 
 MOVE_REST equ 44
 
@@ -157,21 +160,6 @@ HealEffect_:
 	jmp EffectCallBattleCore
 
 
-extern _StartedSleepingEffect
-StartedSleepingEffect:
-	db 0x17 ; TX_FAR
-	dd _StartedSleepingEffect
-	db 0x50 ; TX_END
 
-extern _FellAsleepBecameHealthyText
-FellAsleepBecameHealthyText:
-	db 0x17
-	dd _FellAsleepBecameHealthyText
-	db 0x50
 
-extern _RegainedHealthText
-RegainedHealthText:
-	db 0x17
-	dd _RegainedHealthText
-	db 0x50
 

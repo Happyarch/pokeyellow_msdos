@@ -56,9 +56,8 @@ extern DrawPlayerRedBackPic_Stub
 extern DrawBugCatcherPic_Stub
 extern DrawPlayerBackPic_Stub
 extern DrawBattleMenu
-extern DrawMoveList
 extern PrintMoveInfoBox
-extern DisplayBattleMenu
+extern MainInBattleLoop          ; core.asm — faithful battle loop (replaces bespoke DisplayBattleMenu loop)
 extern SaveBattleScreen
 extern RestoreBattleScreen
 extern EndBattleScreen
@@ -67,7 +66,6 @@ extern WaitForAPress
 extern DrawBattlePokeballs
 extern HideBattlePokeballs
 extern DrawBattleHUDs
-extern DoPlayerAttackDamage
 extern DoEnemyAttackDamage
 extern LoadWildMonMoves
 extern SelectEnemyMove
@@ -76,7 +74,6 @@ extern GetDamageVarsForPlayerAttack
 extern CalculateDamage
 extern AdjustDamageForMoveType
 extern RandomizeDamage
-extern RenderPlayerTurn
 extern DelayFrame
 global RunBattleTest
 %endif
@@ -319,8 +316,8 @@ RunBattleTest:
     ; QUICK-ATTACK (L12), so the wild random-move AI visibly varies turn to turn.
     ; Stats are L13-appropriate (≈base+DV at L13) so the damage trades read sensibly.
     mov byte [ebp + wEnemyMonLevel], 13
-    mov word [ebp + wEnemyMonHP], 0x2300      ; big-endian 35
-    mov word [ebp + wEnemyMonMaxHP], 0x2300   ; big-endian 35
+    mov word [ebp + wEnemyMonHP], 0xC800      ; big-endian 200 (TEMP PP-test: survives move depletion
+    mov word [ebp + wEnemyMonMaxHP], 0xC800   ; so all 4 moves can hit 0 PP → Struggle. REVERT to 0x2300.)
     mov byte [ebp + wEnemyMonStatus], 0
     ; enemy stats/types for the damage calc (PIDGEY: Normal/Flying)
     mov byte [ebp + wEnemyMonType1], 0x00      ; NORMAL
@@ -349,10 +346,11 @@ RunBattleTest:
     mov byte [ebp + wBattleMonMoves + 1], 0x2D  ; GROWL
     mov byte [ebp + wBattleMonMoves + 2], 0x27  ; TAIL_WHIP
     mov byte [ebp + wBattleMonMoves + 3], 0x62  ; QUICK_ATTACK
-    mov byte [ebp + wBattleMonPP + 0], 30
-    mov byte [ebp + wBattleMonPP + 1], 40
-    mov byte [ebp + wBattleMonPP + 2], 30
-    mov byte [ebp + wBattleMonPP + 3], 30
+    ; TEMP PP-test seed (low PP so 0-PP/Struggle are reachable; REVERT to 30/40/30/30):
+    mov byte [ebp + wBattleMonPP + 0], 2       ; THUNDERSHOCK — use twice to watch it hit 0
+    mov byte [ebp + wBattleMonPP + 1], 1       ; GROWL
+    mov byte [ebp + wBattleMonPP + 2], 1       ; TAIL_WHIP
+    mov byte [ebp + wBattleMonPP + 3], 1       ; QUICK_ATTACK
     ; player stats/types for the damage calc (PIKACHU: Electric)
     mov byte [ebp + wBattleMonType1], 0x17     ; ELECTRIC
     mov byte [ebp + wBattleMonType2], 0x17
@@ -419,12 +417,27 @@ RunBattleTest:
     ; the trainer intro). TODO(send-out): trainer slide-out + the real enemy-mon throw.
     call DrawEnemyFrontPic_Stub     ; enemy mon (PIDGEY) front → VRAM $00 (replaces Bug Catcher)
 %endif
-    mov byte [wBattleOver], 0        ; Stage 2c: battle starts "ongoing"
-.live:
-    call DisplayBattleMenu          ; Stage 2a: faithful DisplayBattleMenu (Esc quits)
-    cmp byte [wBattleOver], 0        ; a faint (win/lose) ends the battle loop
-    je .live
-    call EndBattleScreen            ; Stage 2c: clean terminal (clears the battle screen)
+    ; Stage 3 (victory EXP): seed the defeated enemy's base stats + base exp (PIDGEY:
+    ; HP40/Atk45/Def40/Spd56/Spc35, base exp 55) for GainExperience's stat-exp + EXP
+    ; award, and flag party slot 0 (wPlayerMonNumber=0) to gain EXP. Real battles set
+    ; these when the enemy mon is loaded / on send-out; the harness seeds the enemy
+    ; battle-mon directly, so they're seeded here too.
+    mov byte [ebp + wEnemyMonBaseStats + 0], 40   ; HP
+    mov byte [ebp + wEnemyMonBaseStats + 1], 45   ; Attack
+    mov byte [ebp + wEnemyMonBaseStats + 2], 40   ; Defense
+    mov byte [ebp + wEnemyMonBaseStats + 3], 56   ; Speed
+    mov byte [ebp + wEnemyMonBaseStats + 4], 35   ; Special
+    mov byte [ebp + wEnemyMonBaseExp], 55
+    ; flag the PIKACHU slot (DEBUG_PARTY party: 0=SNORLAX 1=PERSIAN 2=JIGGLYPUFF 3=PIKACHU
+    ; L5 4=CHARIZARD 5=LAPRAS) so the gaining/leveling mon matches the on-screen PIKACHU.
+    ; PIKACHU L5 + 102 EXP → L6, exercising the level-up display (grew text + stats box).
+    or byte [ebp + wPartyGainExpFlags], (1 << 3)  ; party slot 3 (PIKACHU) participates → gains EXP
+    mov byte [wBattleOver], 0        ; legacy harness flag (core.asm uses wBattleResult)
+    ; Faithful battle loop: core.asm MainInBattleLoop runs the whole battle (menu, move
+    ; select, speed-ordered turns, residual damage, faint/EXP/run) and returns on a
+    ; terminal outcome (win/lose/ran). Esc quits the process.
+    call MainInBattleLoop
+    call EndBattleScreen            ; clean terminal (clears the battle screen)
 .battle_done:
     call DelayFrame                 ; hold the terminal (real exit = overworld, Stage 3)
     jmp .battle_done

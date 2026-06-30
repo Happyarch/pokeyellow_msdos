@@ -1,6 +1,9 @@
-%include "dos_port/include/gb_memmap.inc"
+%include "gb_memmap.inc"
+%include "gb_constants.inc"     ; FLAG_TEST / FLAG_SET
 
 SECTION .text
+
+extern GetPredefRegisters       ; predef.asm (POKEMON_SRCS) — used by FlagActionPredef
 
 global FlagActionPredef
 global FlagAction

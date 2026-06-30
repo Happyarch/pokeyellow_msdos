@@ -478,14 +478,16 @@ commit but too specific to belong in TODO.md.
   **Backend complete** (Wave 1, branch `wave1-battle-backend`): + trainer AI,
   status residual, EXP math, `JumpMoveEffect` dispatch — all native-validated,
   BATTLE_SRCS check-only. Deferred: trainer-party data generator + `AddBCDPredef`.
-- `docs/current_plan_battle_frontend.md` — Wave-2 battle front end (HUD, turn loop,
-  wild + trainer battles). Validated by FRAME.BIN / interactive DOSBox-X `DEBUG_BATTLE_*`
-  builds, per-step user sign-off. **Stage 1 (HUD/sprites) + Stage 2 (turn loop) + the
-  faithful battle-entry sequence DONE & committed** (`c73b9a9b`): full speed-ordered round,
-  wild random-move AI, faithful moveset gen, HP-drain anim, win/lose, silhouette slide-in,
-  party pokéballs (OAM), HUD frame tiles, player/trainer sprites, Bug Catcher test. **NEXT:
-  Stage 3 (wild end-to-end: victory EXP + RUN) and Stage 4 (trainer battle: enemy send-out
-  + AI).** See the `░░ HANDOFF — resume here ░░` block in the plan.
+- `docs/current_plan_battle_pret_alignment.md` — **CANONICAL current battle-frontend plan.**
+  The bespoke Wave-2 orchestration was torn out and replaced by a faithful translation of
+  pret `engine/battle/core.asm` (`MainInBattleLoop`, links live; `battle_menu.asm` is now
+  draw-helpers only). Live wild battle plays end-to-end (menu, move select, speed-ordered
+  turns, damage, faint, EXP/level-up, RUN). Five battle data generators added (battle_text
+  extended + trainer_parties/trainer_names/move_grammar/type_names). NEXT: deepen the
+  core.asm `TODO(faithful)` stubs (JumpMoveEffect effects, status conditions, residual,
+  trainer AI/multi-mon) — their Tier-1 data now exists. (The earlier bespoke front-end plan
+  was an unfaithful from-scratch reimplementation — scrapped and archived at
+  `docs/plans/battle_frontend.md`; only its draw helpers survived.)
 - `docs/current_plan_pokemon_ui.md` — couple the (harness-validated) pokemon/items
   data layers to the overworld START menu. ITEM (bag) + POKéMON (party w/ HP bars,
   status, animated icons) screens done; item USE + the real new-game/Oak-gift data

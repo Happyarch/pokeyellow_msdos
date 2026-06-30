@@ -120,10 +120,11 @@ Authoritative addresses: `git show origin/symbols:pokeyellow.sym` (bank:addr).
   `read_trainer_party.asm` are done + native-validated (Wave-1 task 3; 7/7 + 3/3) in
   `src/engine/battle/trainer_ai.asm` / `read_trainer_party.asm` (BATTLE_SRCS,
   check-only). **Orchestrator audit fixed wrong draft item-ids** (now correct in
-  gb_constants.inc). DEFERRED to Wave 2/3: the trainer party DATA tables
-  (`TrainerDataPointers`/`SpecialTrainerMoves` — need a `tools/gen_trainer_parties.py`
-  generator + a battle_data global) and `AddBCDPredef` (predef BCD adder for prize
-  money). The AI item-use / send-out / SFX paths are stubbed UI (Wave 2).
+  gb_constants.inc). **UPDATE 2026-06-30:** the trainer party DATA tables are now
+  DONE — `tools/gen_trainer_parties.py` emits `TrainerDataPointers`/`SpecialTrainerMoves`
+  into `assets/trainer_parties.inc`, linked via `src/data/trainer_data.asm` (also carries
+  the new generated `TrainerNames`). Still DEFERRED: `AddBCDPredef` (predef BCD adder for
+  prize money) and the AI item-use / send-out / SFX paths (stubbed UI, Wave 2).
 
 - [x] **Stage 9 — Wild-encounter generation.** DONE. New generator
   `tools/gen_wild_encounters.py` → `assets/wild_data.inc`: `WildDataPointers`
@@ -188,26 +189,47 @@ tree currently stops earlier at a pre-existing, unrelated `init.asm:110`
 `g_window_count` error — present at HEAD, not introduced here.) Include additions
 introduce no symbol collisions in existing pokemon/items/menu/home/battle files.
 
-## What remains (all UI- or subsystem-coupled — deferred per the user)
+## What remains
 
-- The main battle loop / turn flow (`MainInBattle`, `ExecutePlayerMove`/
-  `ExecuteEnemyMove`) — interleaved with text/animation; this is the front end's
-  backbone.
+**Backend status (2026-06-29):** every Stage 1–9 item is DONE + native-validated, and
+the Wave-2 battle front end (now `current_plan_battle_pret_alignment.md`; the bespoke
+`current_plan_battle_frontend.md` was scrapped → `docs/plans/`) has now pulled the
+relevant closure into `FRONTEND_SRCS` and *linked* it — `CalculateDamage`,
+`AdjustDamageForMoveType`, `GetCurrentMove`, `RandomizeDamage` etc. run live in a
+playable wild battle. The list below is the few backend pieces still **not consumed**
+by the front end yet (most are Stage 3/4 wiring tasks tracked in the frontend plan).
+
+- ~~The main battle loop / turn flow (`MainInBattle`, `ExecutePlayerMove`/
+  `ExecuteEnemyMove`)~~ — **BUILT in Wave 2** (frontend plan Stage 2): `ExecutePlayerTurn`/
+  `RenderPlayerTurn` + `DoEnemyAttackDamage`/`RenderEnemyTurn`, speed-ordered round,
+  faint check. This is the front end's backbone; lives in `battle_menu.asm`, not a
+  faithful `MainInBattle` port.
 - ~~move-effect dispatch `JumpMoveEffect`~~ — **DONE** (Wave 1, `src/engine/battle/
   effects.asm`): 86-entry `dd` `MoveEffectPointerTable`, 14 handlers wired, the rest
   → `UnportedMoveEffect` stub (header lists each + pret handler). Native-validated
-  (17/17 dispatch). Check-only until the Wave-2 loop calls it.
-- `CheckTargetSubstitute`, HP-bar update, HUD draw (UI).
+  (17/17 dispatch). Currently bypassed by the front end (`battle_stubs.asm` provides a
+  link-only `JumpMoveEffect ret`); wiring real effects into the turn loop is a
+  frontend-plan polish item.
+- HP-bar update / HUD draw — **DONE in Wave 2** (`battle_hud.asm` `DrawBattleHUDs` +
+  HP-drain animation). `CheckTargetSubstitute` is still a `battle_stubs.asm` link-only
+  stub (only reached by paths the loop doesn't call yet).
 - ~~`GetCurrentMove` move-record load~~ — **DONE** (backend core,
   `src/engine/battle/get_current_move.asm`): flat `Moves`-table → wPlayerMove* /
   wEnemyMove* copy, picked by hWhoseTurn, incl. the TestBattle override; native-
-  validated (player/enemy/test paths exact). Only the `GetMoveName` name tail
-  (wNameListIndex → UI) remains deferred. Unblocks the AI move-scoring (`ReadMove`).
-- Status residual damage (`HandlePoisonBurnLeechSeed`). (`HandleBuildingRage` is now done.)
+  validated (player/enemy/test paths exact). Linked + live in Wave 2. Only the
+  `GetMoveName` name tail (wNameListIndex → UI) remains deferred.
+- ~~Status residual damage (`HandlePoisonBurnLeechSeed`)~~ — **DONE** (Stage 7 / Wave-1
+  task 2, `src/engine/battle/residual_damage.asm`, native-validated 10/10; both pret
+  glitches carried). (`HandleBuildingRage` is also done.) Not yet called by the Wave-2
+  turn loop — end-of-turn residual wiring is a frontend Stage 3 item.
 - ~~`experience.asm` (GainExperience)~~ — **DONE** (Wave-1 task 4): 10 bugs fixed,
-  native-validated (6/6), wired into BATTLE_SRCS. Only LINK_SRCS wiring remains
-  (Wave 2, when the UI externs exist).
-- AI move-scoring (`AIMoveChoiceModification*`), `read_trainer_party.asm`.
+  native-validated (6/6), wired into BATTLE_SRCS. LINK_SRCS wiring (victory-EXP screen)
+  is frontend Stage 3.
+- ~~AI move-scoring (`AIMoveChoiceModification*`), `read_trainer_party.asm`~~ — **DONE**
+  (Stage 8 / Wave-1 task 3, native-validated 7/7 + 3/3). The Wave-2 wild battle uses a
+  simple random-move AI (`SelectEnemyMove`); wiring `trainer_ai` scoring into the enemy
+  move pick is a frontend Stage 4 item. Trainer-party DATA tables
+  (`gen_trainer_parties.py`) + `AddBCDPredef` are still TODO (frontend Stage 4).
 - ~~Wild-encounter generation (`TryDoWildEncounter`)~~ — **DONE** (Stage 9): generator
   + `LoadWildData`/`TryDoWildEncounter` native-validated; only the overworld step
   trigger (the consumer) remains deferred.

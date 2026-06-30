@@ -53,7 +53,7 @@ bits 32
 ; centered default layout: GB coords + (10 col, 3 row). Enemy upper-left, player
 ; lower-right; the bottom dialog box (init_battle.asm) sits at rows 15-20.
 %define E_NAME    (3 * FW + 11)
-%define E_LV      (4 * FW + 15)    ; ":L" + 2 digits
+%define E_LV      (4 * FW + 14)    ; ":L" + 2 digits — pret hlcoord 4,1 → col 4+10=14
 %define E_HPBAR   (5 * FW + 12)    ; "HP" + ":" + 6 seg + cap (9 tiles)
 ; Player HUD shifted up one row (to pret's +3 centering, matching the enemy) so the
 ; HUD frame "shelf" gets its own row (14) instead of colliding with the HP fraction.
@@ -61,7 +61,7 @@ bits 32
 %define P_LV      (11 * FW + 24)
 %define P_HPBAR   (12 * FW + 20)
 %define P_HPFRAC  (13 * FW + 21)   ; "cur/max" (3 + 1 + 3 tiles)
-; PROJ battle-ui: enemy HUD GB(1,0)/(4,1)/(2,2) --(+10col,+3row)--> canvas name(11,3) lv(15,4) hpbar(12,5)
+; PROJ battle-ui: enemy HUD GB(1,0)/(4,1)/(2,2) --(+10col,+3row)--> canvas name(11,3) lv(14,4) hpbar(12,5)
 ; PROJ battle-ui: player HUD GB(10,7)/.. --(+10col,+3row)--> canvas name(20,10) lv(24,11) hpbar(20,12) frac(21,13); HUD shelf (PlacePlayerHUDTiles) row 14
 
 section .bss
@@ -90,12 +90,16 @@ extern DelayFrame
 ; player side shows party-status pokéballs until the battle proper), so the two
 ; halves are split into DrawEnemyHUD / DrawPlayerHUD.
 DrawBattleHUDs:
+    ; HUD names are drawn with PlaceString, which (like pret's PlaceNextChar) calls
+    ; PrintLetterDelay — so make sure the per-letter delay is OFF here (BIT_TEXT_DELAY is
+    ; set only while a dialog MESSAGE prints). Otherwise the mon names would type out.
+    and byte [ebp + W_LETTER_PRINTING_DELAY], (~(1 << BIT_TEXT_DELAY)) & 0xFF
     call DrawEnemyHUD
     ; fall through to DrawPlayerHUD
 DrawPlayerHUD:
     ; ===== player HUD (lower-right) =====
     mov esi, W_TILEMAP + P_NAME
-    mov edx, wBattleMonNick
+    lea eax, [ebp + wBattleMonNick]      ; PlaceString src = flat-linear
     call PlaceString
     mov byte [ebp + W_TILEMAP + P_LV], TILE_LV
     movzx eax, byte [ebp + wBattleMonLevel]
@@ -123,8 +127,8 @@ DrawPlayerHUD:
 
 DrawEnemyHUD:
     ; ===== enemy HUD (upper-left) =====
-    mov esi, W_TILEMAP + E_NAME          ; PlaceString: ESI=dest, EDX=src (both GB offsets)
-    mov edx, wEnemyMonNick
+    mov esi, W_TILEMAP + E_NAME          ; PlaceString: ESI=dest(GB offset), EAX=src(flat)
+    lea eax, [ebp + wEnemyMonNick]
     call PlaceString
     mov byte [ebp + W_TILEMAP + E_LV], TILE_LV
     movzx eax, byte [ebp + wEnemyMonLevel]
@@ -152,6 +156,9 @@ DrawEnemyHUDFrame:
     mov bl, T_ETRI
     jmp place_hud_frame
 DrawPlayerHUDFrame:
+    ; pret DrawPlayerHUDAndHPBar writes a 2nd $73 connector at hlcoord 18,9 →
+    ; canvas (28,12), above the PlacePlayerHUDTiles $73 at (28,13).
+    mov byte [ebp + W_TILEMAP + (12 * FW + 28)], T_HUD_73
     mov edi, W_TILEMAP + (13 * FW + 28)   ; $73 at canvas (28,13) = GB(18,10)+(10,3)
     mov esi, -1                           ; underline marches left
     mov bh, T_PCORNER

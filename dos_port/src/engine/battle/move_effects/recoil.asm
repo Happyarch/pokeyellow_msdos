@@ -5,7 +5,7 @@
 extern wTileMap
 extern predef_UpdateHPBar2
 extern PrintText
-extern _HitWithRecoilText
+extern HitWithRecoilText
 
 
 global RecoilEffect_
@@ -89,8 +89,3 @@ RecoilEffect_:
     mov esi, HitWithRecoilText
     jmp PrintText
 
-global HitWithRecoilText
-HitWithRecoilText:
-    db 0x17 ; TX_FAR
-    dd _HitWithRecoilText
-    db 0x50 ; TX_END

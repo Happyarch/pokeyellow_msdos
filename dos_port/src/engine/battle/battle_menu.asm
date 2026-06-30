@@ -1,22 +1,19 @@
-; battle_menu.asm — the FIGHT / PKMN / ITEM / RUN battle menu (Wave 2, Stage 2a).
+; battle_menu.asm — battle DRAW HELPERS + EXP/level-up display + run-odds.
 ;
-; Faithful port of pret's DisplayBattleMenu (engine/battle/core.asm) +
-; BATTLE_MENU_TEMPLATE (data/text_boxes.asm), built on the stride-40 primitives in
-; src/text/wide_text.asm (WideTextBoxBorder / WidePlaceString / WideHandleMenuInput,
-; the wide-canvas mirrors of TextBoxBorder / PlaceString / HandleMenuInput).
+; This file is the sanctioned DRAW-LAYER divergence point for the battle front end.
+; The bespoke battle ORCHESTRATION it used to hold (DisplayBattleMenu, MoveSelectionMenu,
+; the turn loop, Render*/Do*AttackDamage, the fainted/no-PP/run message draws) has been
+; replaced by the faithful translation in core.asm (engine/battle/core.asm). What remains
+; here are: (1) the centered-canvas draw primitives core.asm calls, exposed under pret
+; names (SaveScreenTilesToBuffer1 / LoadScreenTilesFromBuffer1 / DrawHUDsAndHPBars /
+; DrawEmptyDialogBox / DrawBattleMenuBox); (2) the EXP/level-up display routines that
+; GainExperience (experience.asm) calls inside its per-mon loop; (3) the move TYPE/PP box
+; and FindMoveName helper; (4) the faithful run-odds (TryRunningFromBattle).
 ;
-; Flow (mirrors DisplayBattleMenu): clear the announcement text from the dialog box
-; (pret PrintEmptyString) → draw the smaller menu box over it (pret DisplayTextBoxID
-; with BATTLE_MENU_TEMPLATE = TextBoxBorder(8,12,19,17) + PlaceString(BattleMenuText,
-; 10,14)) → two-column input: HandleMenuInput per column (UP/DOWN + A), LEFT/RIGHT
-; switch columns. Right-column A adds 2 to the item id; then the gen-1 ITEM/PKMN id
-; swap. Centered (+10 col, +3 row) onto the 40x25 canvas.
+; All draw coords are pret GB coords projected to our centered 40-wide W_TILEMAP with the
+; documented (+10 col, +3 row) offset — the only place the front end diverges from pret.
 ;
-; Menu item ids after the swap: 0=FIGHT 1=PKMN 2=ITEM 3=RUN.  FIGHT/PKMN/ITEM/RUN
-; dispatch is Stage 2b; for now A returns the id and the caller re-enters.
-;
-; Register map: A=AL, BC=BX, EBP=GB base; GB memory = [EBP+addr].
-;
+; Register map: A=AL, BC=BX, EBP = GB base; GB memory = [EBP+addr].
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
 
@@ -25,22 +22,37 @@ bits 32
 %define FW   SCREEN_TILES_W            ; 40 — W_TILEMAP stride
 %define T_SP 0x7F
 
-; Box: pret BATTLE_MENU_TEMPLATE 8,12,19,17 → canvas top-left (18,15), interior
-; 10×4 (x2-x1-1 by y2-y1-1). Text at GB(10,14) → canvas (20,17).
+; Menu box: pret BATTLE_MENU_TEMPLATE 8,12,19,17 → canvas top-left (18,15), interior
+; 10×4. Labels at GB(10,14) → canvas (20,17).
 %define BOX_OFF      (15 * FW + 18)
 %define BOX_W        10
 %define BOX_H        4
 %define TEXT_OFF     (17 * FW + 20)
-; Outer dialog box (InitBattle box): canvas (10,15), interior 18×4. Redrawn here
-; each time so any leftover move-box borders/corners are wiped (the port-side
-; equivalent of pret's LoadScreenTilesFromBuffer1 screen-restore on menu redraw).
+; Outer dialog box (InitBattle box): canvas (10,15), interior 18×4.
 %define OUTER_OFF    (15 * FW + 10)
 %define OUTER_W      18
 %define OUTER_H      4
-; Cursor columns: GB left x=9 / right x=15 → canvas 19 / 25. Top item row = 17.
-%define CUR_COL_L    19
-%define CUR_COL_R    25
-%define MENU_ROW_TOP 17
+
+; TYPE/PP info box (pret PrintMenuItem TextBoxBorder(0,8) 9×3 → faithful centered origin
+; GB(0,8) = canvas (10,11)). Offsets are pret-relative to the box origin.
+%define IB_COL        10
+%define IB_ROW        11
+%define INFOBOX_OFF   (IB_ROW * FW + IB_COL)
+%define CHAR_SLASH    0xF3
+%define CHAR_DIG0     0xF6
+
+; Level-up stats box — pret PrintStatsBox.LevelUpStatsBox in the centered viewport. Box
+; GB(9,2) 9x8; the 4 stat LABELS at GB(11,3/5/7/9), VALUES at GB(15,4/6/8/10).
+%define LVLBOX_OFF   (5 * FW + 19)        ; box GB(9,2)  → canvas (19,5)
+%define LVLBOX_W     9
+%define LVLBOX_H     8
+%define LVL_LBL_OFF  (6 * FW + 21)        ; first label GB(11,3) → canvas (21,6); step 2*FW
+%define LVL_VAL_OFF  (7 * FW + 25)        ; first value GB(15,4) → canvas (25,7); step 2*FW
+
+; ▼ "more text" advance arrow (dialog-box bottom-right interior, canvas 28,19).
+%define ARROW_OFF          (19 * FW + 28)
+%define T_DOWNARROW        0xEE
+%define ARROW_BLINK_FRAMES 20
 
 section .data
 ; "FIGHT <PK><MN><NEXT>ITEM  RUN@"  (raw charmap tiles)
@@ -52,116 +64,99 @@ BattleMenuText:
     db 0x7F,0x7F                          ; "  "
     db 0x91,0x94,0x8D                      ; "RUN"
     db 0x50                               ; @
-str_used:  db 0xB4,0xB2,0xA4,0xA3,0x7F, 0x50   ; "used "
 str_excl:  db 0xE7, 0x50                        ; "!"
 str_type:  db 0x93,0x98,0x8F,0x84, 0x50         ; "TYPE"
-str_enemy: db 0x84,0xAD,0xA4,0xAC,0xB8,0x7F, 0x50          ; "Enemy "
-str_fainted: db 0xA5,0xA0,0xA8,0xAD,0xB3,0xA4,0xA3,0xE7, 0x50  ; "fainted!"
+; run-from-battle text (pret GotAwayText / CantEscapeText / NoRunningText)
+str_gotaway: db 0x86,0xAE,0xB3,0x7F,0xA0,0xB6,0xA0,0xB8,0x7F,0xB2,0xA0,0xA5,0xA4,0xAB,0xB8,0xE7, 0x50 ; "Got away safely!"
+str_cantesc: db 0x82,0xA0,0xAD,0xE0,0xB3,0x7F,0xA4,0xB2,0xA2,0xA0,0xAF,0xA4,0xE7, 0x50              ; "Can't escape!"
+str_norun1:  db 0x8D,0xAE,0xE7,0x7F,0x93,0xA7,0xA4,0xB1,0xA4,0xE0,0xB2,0x7F,0xAD,0xAE, 0x50          ; "No! There's no"
+str_norun2:  db 0xB1,0xB4,0xAD,0xAD,0xA8,0xAD,0xA6,0x7F,0xA5,0xB1,0xAE,0xAC,0x7F,0xA0, 0x50          ; "running from a"
+str_norun3:  db 0xB3,0xB1,0xA0,0xA8,0xAD,0xA4,0xB1,0x7F,0xA1,0xA0,0xB3,0xB3,0xAB,0xA4,0xE7, 0x50     ; "trainer battle!"
+; victory EXP text (pret " gained" + _ExpPointsText " EXP. Points!")
+str_gained:  db 0x7F,0xA6,0xA0,0xA8,0xAD,0xA4,0xA3, 0x50                                          ; " gained"
+str_exppts:  db 0x7F,0x84,0x97,0x8F,0xE8,0x7F,0x8F,0xAE,0xA8,0xAD,0xB3,0xB2,0xE7, 0x50            ; " EXP. Points!"
+; level-up text (pret _GrewLevelText "<nick> grew / to level N!")
+str_grew:    db 0x7F,0xA6,0xB1,0xA4,0xB6, 0x50                                                    ; " grew"
+str_tolevel: db 0xB3,0xAE,0x7F,0xAB,0xA4,0xB5,0xA4,0xAB,0x7F, 0x50                                 ; "to level "
+str_learned: db 0x7F,0xAB,0xA4,0xA0,0xB1,0xAD,0xA4,0xA3, 0x50                                      ; " learned"
+; level-up stats-box labels (pret PrintStatsBox.StatsText)
+str_attack:  db 0x80,0x93,0x93,0x80,0x82,0x8A, 0x50                                               ; "ATTACK"
+str_defense: db 0x83,0x84,0x85,0x84,0x8D,0x92,0x84, 0x50                                          ; "DEFENSE"
+str_speed:   db 0x92,0x8F,0x84,0x84,0x83, 0x50                                                    ; "SPEED"
+str_special: db 0x92,0x8F,0x84,0x82,0x88,0x80,0x8B, 0x50                                          ; "SPECIAL"
 
 section .bss
-menu_saved: resb 1                        ; remembered item across opens (pret wBattleAndStartSavedMenuItem)
-move_count: resb 1                        ; number of real moves listed
-; Battle terminal state (Stage 2c): 0 = ongoing, 1 = player won (enemy fainted),
-; 2 = player lost (active mon fainted). The harness resets it at battle start, the
-; round handler sets it on a faint, and DisplayBattleMenu breaks its loop on it.
+; Battle terminal state (legacy harness hook): 0 = ongoing. core.asm uses wBattleResult;
+; the DEBUG_BATTLE harness still seeds this for compatibility.
 global wBattleOver
 wBattleOver: resb 1
 ; blinking-▼ text-advance arrow state (WaitForAPress)
 arrow_timer: resb 1
 arrow_on:    resb 1
-; Saved "clean" battle screen (HUDs + sprites + dialog box, no menus) — the port's
-; SaveScreenTilesToBuffer1 / LoadScreenTilesFromBuffer1. Restored when (re)entering
-; the main menu so transient overlays (move box, TYPE/PP box) are wiped.
+; Saved "clean" battle screen — SaveScreenTilesToBuffer1 / LoadScreenTilesFromBuffer1.
 screen_save: resb SCREEN_AREA
+lvl_mon_ptr: resd 1                       ; GB offset of the leveling party mon (PrintStatsBox)
+learned_move_id: resb 1                   ; move learned on level-up (ShowLearnedMoveText)
 
 section .text
 
-global DisplayBattleMenu
 global DrawBattleMenu
-global DrawMoveList
+global DrawBattleMenuBox
+global DrawEmptyDialogBox
 global PrintMoveInfoBox
 global SaveBattleScreen
 global RestoreBattleScreen
+global SaveScreenTilesToBuffer1
+global LoadScreenTilesFromBuffer1
+global DrawHUDsAndHPBars
 global EndBattleScreen
 global WaitForAPress
-global DoPlayerAttackDamage
+global WaitForTextScrollButtonPress
+global ShowGainedExpText
+global ShowGrewLevelText
+global PrintStatsBox
+global LearnMoveFromLevelUp
+global FindMoveName
+global TryRunningFromBattle
+global BattleItemMenu
+global BattlePartyMenu
 global DoEnemyAttackDamage
-global RenderPlayerTurn
-extern WideTextBoxBorder
-extern WidePlaceString
-extern WideHandleMenuInput
-extern wide_line_step
-extern wide_menu_redraw_cb
+
+extern TextBoxBorder                 ; unified text engine (text.asm), stride-aware
+extern PlaceString                   ; unified text engine; src=EAX, returns end in EBX
+extern PrintLetterDelay              ; shared per-letter delay; gates on BIT_TEXT_DELAY
+extern menu_item_step                ; src/home/window.asm — menu cursor item spacing
+extern text_row_stride               ; text.asm — W_TILEMAP row stride (battle sets 40)
 extern MoveNames
 extern Moves
 extern WideTypeNames
 extern DelayFrame
 extern DrawBattleHUDs
-extern AnimateEnemyHPBar
-extern AnimatePlayerHPBar
+extern BattleRandom
+extern Multiply
+extern Divide
+extern GetMonLearnset                ; write_moves.asm — flat learnset ptr for wCurPartySpecies
+; --- DEBUG_BATTLE_ENEMYHIT ground-truth scaffold only ---
 extern GetCurrentMove
-extern GetDamageVarsForPlayerAttack
 extern GetDamageVarsForEnemyAttack
-extern SelectEnemyMove
 extern CalculateDamage
 extern AdjustDamageForMoveType
 extern RandomizeDamage
-extern BattleRandom
 
-; TYPE/PP info box: pret PrintMenuItem TextBoxBorder(0,8) 9×3. GB-centered would be
-; (10,11), but its right wall (col 20) clips the player HUD name there, so it is
-; nudged 1 col left to IB_COL=9 (right wall col 19, clearing the HUD). Layout offsets
-; are pret-relative to the box origin: "TYPE/" (+1,+1)/(+5,+1), type name (+2,+2),
-; "cur/max" PP (+5,+3)/(+7,+3)/(+8,+3).
-%define IB_COL        9
-%define IB_ROW        11
-%define INFOBOX_OFF   (IB_ROW * FW + IB_COL)
-%define CHAR_SLASH    0xF3
-%define CHAR_DIG0     0xF6
+; ===========================================================================
+; Draw primitives (the sanctioned divergence point) under pret names.
+; ===========================================================================
 
-; Move-list box: pret regular menu TextBoxBorder(4,12) 14×4 → canvas (14,15);
-; moves at GB(6,13) → canvas (16,16), single-spaced; cursor col 15.
-%define MOVEBOX_OFF   (15 * FW + 14)
-%define MOVEBOX_W     14
-%define MOVEBOX_H     4
-%define MOVES_TEXT    (16 * FW + 16)
-%define MOVES_ROW0    16
-%define MOVES_CUR_COL 15
-
-; ---------------------------------------------------------------------------
-; DrawBattleMenu — clear the announcement text and draw the menu box + labels
-; (no input). In: EBP = GB base. Preserves nothing of note.
-; ---------------------------------------------------------------------------
-DrawBattleMenu:
-    mov dword [wide_line_step], 2 * FW
-    ; Redraw the full outer dialog box: clears the announcement text (PrintEmptyString)
-    ; AND overwrites any leftover move-box borders/corners from a closed FIGHT submenu.
-    mov esi, W_TILEMAP + OUTER_OFF
-    mov bh, OUTER_H
-    mov bl, OUTER_W
-    call WideTextBoxBorder
-    ; DisplayTextBoxID(BATTLE_MENU_TEMPLATE): the smaller menu box (divider) + text
-    mov esi, W_TILEMAP + BOX_OFF
-    mov bh, BOX_H
-    mov bl, BOX_W
-    call WideTextBoxBorder
-    mov esi, W_TILEMAP + TEXT_OFF
-    mov eax, BattleMenuText
-    call WidePlaceString
-    ret
-
-; ---------------------------------------------------------------------------
-; DisplayBattleMenu — draw the menu and run the two-column input loop. Returns
-; AL = selected menu id (0=FIGHT 1=PKMN 2=ITEM 3=RUN). In: EBP = GB base.
-; ---------------------------------------------------------------------------
-; SaveBattleScreen — snapshot the clean battle screen (W_TILEMAP) for later restore.
-; RestoreBattleScreen — put it back, wiping any transient menu/info overlays.
+; SaveScreenTilesToBuffer1 / LoadScreenTilesFromBuffer1 (pret names) — snapshot the
+; clean battle screen (W_TILEMAP) and restore it (wiping transient menu/info overlays).
+SaveScreenTilesToBuffer1:
 SaveBattleScreen:
     lea esi, [ebp + W_TILEMAP]
     mov edi, screen_save
     mov ecx, SCREEN_AREA
     rep movsb
     ret
+LoadScreenTilesFromBuffer1:
 RestoreBattleScreen:
     mov esi, screen_save
     lea edi, [ebp + W_TILEMAP]
@@ -169,370 +164,63 @@ RestoreBattleScreen:
     rep movsb
     ret
 
-; EndBattleScreen — clean battle terminal (Stage 2c): blank the whole canvas and
-; present it, so when the loop ends the HUD/menu/sprites clear instead of the menu
-; re-appearing. Placeholder for the real exit — Stage 3 returns to the overworld
-; (and runs the victory EXP screen via the Wave-1 GainExperience). In: EBP = GB base.
+; DrawHUDsAndHPBars (pret name) — alias to the centered-canvas HUD draw helper.
+DrawHUDsAndHPBars:
+    jmp DrawBattleHUDs
+
+; DrawEmptyDialogBox — pret PrintEmptyString: redraw the outer dialog box with a BLANK
+; interior (clears any prior message). Labels/box are instant (pret PlaceString).
+DrawEmptyDialogBox:
+    and byte [ebp + W_LETTER_PRINTING_DELAY], (~(1 << BIT_TEXT_DELAY)) & 0xFF
+    mov dword [menu_item_step], 2 * FW
+    mov esi, W_TILEMAP + OUTER_OFF
+    mov bh, OUTER_H
+    mov bl, OUTER_W
+    call TextBoxBorder
+    ret
+
+; DrawBattleMenuBox — pret DisplayTextBoxID(BATTLE_MENU_TEMPLATE): the smaller menu box
+; (divider) + the FIGHT/PKMN/ITEM/RUN labels. In: EBP = GB base.
+DrawBattleMenuBox:
+    mov dword [menu_item_step], 2 * FW
+    mov esi, W_TILEMAP + BOX_OFF
+    mov bh, BOX_H
+    mov bl, BOX_W
+    call TextBoxBorder
+    mov esi, W_TILEMAP + TEXT_OFF
+    mov eax, BattleMenuText
+    call PlaceString
+    mov esi, ebx
+    ret
+
+; DrawBattleMenu — outer dialog box + menu box + labels (static; used by the DEBUG_BATTLE
+; non-interactive dump harness). Equivalent to DrawEmptyDialogBox + DrawBattleMenuBox.
+DrawBattleMenu:
+    call DrawEmptyDialogBox
+    jmp DrawBattleMenuBox
+
+; EndBattleScreen — clean battle terminal: blank the canvas, present it, restore the
+; overworld text stride. (Placeholder exit; real exit returns to the overworld.)
 EndBattleScreen:
+    mov dword [text_row_stride], 20       ; restore the overworld/GB text stride
     lea edi, [ebp + W_TILEMAP]
     mov ecx, SCREEN_AREA
-    mov al, T_SP                          ; blank tile
+    mov al, T_SP
     rep stosb
-    call DelayFrame                       ; present the cleared screen
+    call DelayFrame
     ret
 
-DisplayBattleMenu:
-    ; pret DisplayBattleMenu: LoadScreenTilesFromBuffer1 → DrawHUDsAndHPBars →
-    ; SaveScreenTilesToBuffer1. Redrawing the HUDs with the CURRENT HP and re-saving
-    ; is what keeps a drained HP bar drained (the snapshot would otherwise hold the
-    ; battle-start full bar and "refill" it each time the menu reappears).
-    call RestoreBattleScreen              ; restore clean screen (sprites + dialog box)
-    call DrawBattleHUDs                   ; redraw HUDs with current HP
-    call SaveBattleScreen                 ; re-snapshot so the drained HP persists
-    call DrawBattleMenu
-    ; restore the saved selection; sub 2 → negative = left column, else right
-    mov al, [menu_saved]
-    mov [ebp + wCurrentMenuItem], al
-    mov [ebp + wLastMenuItem], al
-    sub al, 2
-    jc .leftColumn
-    mov [ebp + wCurrentMenuItem], al
-    mov [ebp + wLastMenuItem], al
-    jmp .rightColumn
-
-.leftColumn:
-    ; clear the right-column cursor cells, then watch RIGHT|A
-    mov byte [ebp + W_TILEMAP + MENU_ROW_TOP * FW + CUR_COL_R], T_SP
-    mov byte [ebp + W_TILEMAP + (MENU_ROW_TOP + 2) * FW + CUR_COL_R], T_SP
-    mov byte [ebp + wTopMenuItemX], CUR_COL_L
-    mov byte [ebp + wTopMenuItemY], MENU_ROW_TOP
-    mov byte [ebp + wMaxMenuItem], 1
-    mov byte [ebp + wMenuWatchedKeys], PAD_RIGHT | PAD_A
-    call WideHandleMenuInput
-    test al, PAD_RIGHT
-    jnz .rightColumn
-    jmp .selected                        ; A pressed (left column id 0/1)
-
-.rightColumn:
-    ; clear the left-column cursor cells, then watch LEFT|A
-    mov byte [ebp + W_TILEMAP + MENU_ROW_TOP * FW + CUR_COL_L], T_SP
-    mov byte [ebp + W_TILEMAP + (MENU_ROW_TOP + 2) * FW + CUR_COL_L], T_SP
-    mov byte [ebp + wTopMenuItemX], CUR_COL_R
-    mov byte [ebp + wTopMenuItemY], MENU_ROW_TOP
-    mov byte [ebp + wMaxMenuItem], 1
-    mov byte [ebp + wMenuWatchedKeys], PAD_LEFT | PAD_A
-    call WideHandleMenuInput
-    test al, PAD_LEFT
-    jnz .leftColumn
-    mov al, [ebp + wCurrentMenuItem]     ; A pressed in right column → id += 2
-    add al, 2
-    mov [ebp + wCurrentMenuItem], al
-
-.selected:
-    mov al, [ebp + wCurrentMenuItem]
-    mov [menu_saved], al
-    ; gen-1 ITEM/PKMN id swap (English versions swapped their on-screen positions)
-    cmp al, 1
-    jne .notItem
-    inc al                               ; ITEM 1 → 2
-    jmp .dispatch
-.notItem:
-    cmp al, 2
-    jne .dispatch
-    dec al                               ; PKMN 2 → 1
-.dispatch:
-    ; AL = 0 FIGHT / 1 PKMN / 2 ITEM / 3 RUN. Only FIGHT is wired (Stage 2a); the
-    ; rest are Stage 2b/3 stubs (return the id, caller re-enters).
-    test al, al
-    jnz .ret
-    call MoveSelectionMenu               ; FIGHT → move list (B returns here)
-    cmp byte [wBattleOver], 0            ; a faint this round ends the battle
-    jne .ret
-    jmp DisplayBattleMenu                ; redraw the main menu and continue
-.ret:
+; BattleItemMenu / BattlePartyMenu — deferred in-battle sub-UIs (bag / party-switch).
+; pret runs the bag / party menu here; until those are wired, they are no-ops (core.asm
+; re-shows DisplayBattleMenu after). TODO(faithful): ITEM → bag use, PKMN → switch.
+BattleItemMenu:
+BattlePartyMenu:
     ret
 
-; ---------------------------------------------------------------------------
-; MoveSelectionMenu — the player's move list (faithful to the regular-battle path
-; of pret MoveSelectionMenu). Copies wBattleMonMoves → wMoves, FormatMovesString,
-; draws the move box, lists the moves (single-spaced) and runs the cursor.
-; A selects a move (Stage 2b stub), B returns. In: EBP = GB base.
-; ---------------------------------------------------------------------------
-MoveSelectionMenu:
-    call DrawMoveList
-    mov al, [move_count]
-    test al, al
-    jz .back                              ; no moves (defensive)
-    mov dword [wide_menu_redraw_cb], PrintMoveInfoBox   ; refresh TYPE/PP on cursor move
-    call WideHandleMenuInput
-    mov dword [wide_menu_redraw_cb], 0
-    ; remember the cursor position (pret writes wPlayerMoveListIndex on BOTH select and
-    ; back, core.asm:2745 — so leaving the menu either way preserves it for next time).
-    mov dl, [ebp + wCurrentMenuItem]
-    mov [ebp + wPlayerMoveListIndex], dl
-    test al, PAD_B
-    jnz .back
-    ; A: store the selected move and run the (Stage-2b-start) attack text
-    movzx eax, byte [ebp + wCurrentMenuItem]
-    mov al, [ebp + eax + wBattleMonMoves]
-    mov [ebp + wPlayerSelectedMove], al
-    call ExecutePlayerTurn
-.back:
-    ret
-
-; ---------------------------------------------------------------------------
-; ExecutePlayerTurn — Stage 2b: run one full battle round (both battlers act once),
-; ordered by speed (pret MainInBattle / ExecutePlayerMove + ExecuteEnemyMove). The
-; player's move is already in wPlayerSelectedMove; the enemy's move is chosen here
-; (slot 0 for now — trainer AI / random selection deferred). Faster battler attacks
-; first; if its target faints the round ends (the fainted mon does not retaliate).
-;
-; Turn-order quirks deferred: Quick Attack / Counter priority and the random
-; speed-tie break (pret compares speeds and rolls BattleRandom on a tie). Here a
-; tie goes to the player. In: [wPlayerSelectedMove] set; EBP = GB base.
-; ---------------------------------------------------------------------------
-ExecutePlayerTurn:
-    ; choose the enemy's move (wild random-move AI; also the default for trainers
-    ; for now — see select_enemy_move.asm).
-    call SelectEnemyMove
-    ; turn order (faithful pret ExecutePlayerMove ordering, core.asm:.noLinkBattle):
-    ; Quick Attack takes priority; Counter always moves last; otherwise compare speed,
-    ; with a 50/50 random break on a tie.
-    mov al, [ebp + wPlayerSelectedMove]
-    cmp al, QUICK_ATTACK
-    jne .pNotQuickAttack
-    mov al, [ebp + wEnemySelectedMove]
-    cmp al, QUICK_ATTACK
-    je .compareSpeed                      ; both Quick Attack → speed
-    jmp .playerFirst                      ; only player → player first
-.pNotQuickAttack:
-    mov al, [ebp + wEnemySelectedMove]
-    cmp al, QUICK_ATTACK
-    je .enemyFirst                        ; only enemy → enemy first
-    mov al, [ebp + wPlayerSelectedMove]
-    cmp al, COUNTER
-    jne .pNotCounter
-    mov al, [ebp + wEnemySelectedMove]
-    cmp al, COUNTER
-    je .compareSpeed                      ; both Counter → speed
-    jmp .enemyFirst                       ; only player used Counter → Counter goes last
-.pNotCounter:
-    mov al, [ebp + wEnemySelectedMove]
-    cmp al, COUNTER
-    je .playerFirst                       ; only enemy used Counter → player first
-.compareSpeed:
-    movzx eax, byte [ebp + wBattleMonSpeed]
-    shl eax, 8
-    mov al, [ebp + wBattleMonSpeed + 1]
-    movzx ecx, byte [ebp + wEnemyMonSpeed]
-    shl ecx, 8
-    mov cl, [ebp + wEnemyMonSpeed + 1]
-    cmp eax, ecx
-    ja .playerFirst                       ; player faster
-    jb .enemyFirst                        ; enemy faster
-    ; speed tie → 50/50. (pret's internal-clock invert is link-only: TODO-HW Phase 4.)
-    call BattleRandom
-    cmp al, (50 * 0xFF / 100) + 1         ; pret `50 percent + 1` = 128
-    jb .playerFirst
-    jmp .enemyFirst
-.playerFirst:
-    call PlayerAttackStep
-    jc .enemyFainted                      ; enemy fainted → player wins, round ends
-    call EnemyAttackStep
-    jc .playerFainted                     ; player mon fainted → round ends
-    ret
-.enemyFirst:
-    call EnemyAttackStep
-    jc .playerFainted
-    call PlayerAttackStep
-    jc .enemyFainted
-    ret
-.enemyFainted:
-    mov byte [wBattleOver], 1             ; victory
-    ret
-.playerFainted:
-    ; active mon fainted. Multi-mon switch-in (pret: pick another party mon) is
-    ; deferred — for now any active-mon faint ends the battle as a loss.
-    mov byte [wBattleOver], 2             ; defeat
-    ret
-
-; PlayerAttackStep — the player's move resolves: render the attack (damage + HUD +
-; text), wait for A, then faint-check the enemy. Returns CF=1 if the enemy fainted
-; (the battle-ending case), CF=0 otherwise.
-PlayerAttackStep:
-    call RenderPlayerTurn
-    call WaitForAPress
-    mov al, [ebp + wEnemyMonHP]
-    or al, [ebp + wEnemyMonHP + 1]
-    jnz .alive
-    call ShowEnemyFainted                 ; pret FaintEnemyPokemon (victory flow TBD)
-    stc
-    ret
-.alive:
-    clc
-    ret
-
-; EnemyAttackStep — the enemy's move resolves (mirror of PlayerAttackStep). Returns
-; CF=1 if the player mon fainted, CF=0 otherwise.
-EnemyAttackStep:
-    call RenderEnemyTurn
-    call WaitForAPress
-    mov al, [ebp + wBattleMonHP]
-    or al, [ebp + wBattleMonHP + 1]
-    jnz .alive
-    call ShowPlayerFainted
-    stc
-    ret
-.alive:
-    clc
-    ret
-
-; ShowEnemyFainted — "Enemy <nick> / fainted!" in the dialog box, then wait for A.
-ShowEnemyFainted:
-    mov dword [wide_line_step], 2 * FW
-    mov esi, W_TILEMAP + OUTER_OFF
-    mov bh, OUTER_H
-    mov bl, OUTER_W
-    call WideTextBoxBorder
-    mov esi, W_TILEMAP + (17 * FW + 11)   ; "Enemy " + nick
-    mov eax, str_enemy
-    call WidePlaceString
-    lea eax, [ebp + wEnemyMonNick]
-    call WidePlaceString
-    mov esi, W_TILEMAP + (19 * FW + 11)   ; "fainted!"
-    mov eax, str_fainted
-    call WidePlaceString
-    call WaitForAPress
-    ret
-
-; ShowPlayerFainted — "<nick> / fainted!" (no "Enemy " prefix), then wait for A.
-ShowPlayerFainted:
-    mov dword [wide_line_step], 2 * FW
-    mov esi, W_TILEMAP + OUTER_OFF
-    mov bh, OUTER_H
-    mov bl, OUTER_W
-    call WideTextBoxBorder
-    mov esi, W_TILEMAP + (17 * FW + 11)   ; player nick
-    lea eax, [ebp + wBattleMonNick]
-    call WidePlaceString
-    mov esi, W_TILEMAP + (19 * FW + 11)   ; "fainted!"
-    mov eax, str_fainted
-    call WidePlaceString
-    call WaitForAPress
-    ret
-
-RenderPlayerTurn:
-    call RestoreBattleScreen              ; wipe the move box + TYPE/PP box first
-    call DrawBattleHUDs                   ; HUDs at PRE-attack HP (damage applied below)
-    mov dword [wide_line_step], 2 * FW
-    ; redraw the dialog box (clears the move menu)
-    mov esi, W_TILEMAP + OUTER_OFF
-    mov bh, OUTER_H
-    mov bl, OUTER_W
-    call WideTextBoxBorder
-    ; line 1: the attacking mon's name
-    mov esi, W_TILEMAP + (17 * FW + 11)
-    lea eax, [ebp + wBattleMonNick]
-    call WidePlaceString
-    ; line 2: "used " + move name + "!"
-    mov esi, W_TILEMAP + (19 * FW + 11)
-    mov eax, str_used
-    call WidePlaceString
-    mov al, [ebp + wPlayerSelectedMove]
-    call FindMoveName                     ; EAX = move-name ptr (ESI preserved)
-    call WidePlaceString
-    mov eax, str_excl
-    call WidePlaceString
-    ; capture the enemy's pre-hit HP, apply damage, then animate the bar draining
-    movzx ecx, byte [ebp + wEnemyMonHP]
-    shl ecx, 8
-    mov cl, [ebp + wEnemyMonHP + 1]
-    push ecx
-    call DoPlayerAttackDamage             ; faithful damage calc → enemy HP
-    pop ecx                               ; ECX = old enemy HP
-    call AnimateEnemyHPBar
-    ret
-
-; RenderEnemyTurn — mirror of RenderPlayerTurn for the enemy's move: restore the
-; clean screen, apply the enemy's damage to the player mon, redraw the HUDs (player
-; HP bar now reflects it), and print "Enemy <nick> / used <move>!" (pret <USER> =
-; "Enemy " + nick on the enemy's turn — see home/text.asm:PlaceMoveUsersName).
-RenderEnemyTurn:
-    call RestoreBattleScreen              ; wipe any transient overlay first
-    call DrawBattleHUDs                   ; HUDs at PRE-attack HP (damage applied below)
-    mov dword [wide_line_step], 2 * FW
-    ; redraw the dialog box
-    mov esi, W_TILEMAP + OUTER_OFF
-    mov bh, OUTER_H
-    mov bl, OUTER_W
-    call WideTextBoxBorder
-    ; line 1: "Enemy " + enemy nick (chained on one line; WidePlaceString returns end ESI)
-    mov esi, W_TILEMAP + (17 * FW + 11)
-    mov eax, str_enemy
-    call WidePlaceString
-    lea eax, [ebp + wEnemyMonNick]
-    call WidePlaceString
-    ; line 2: "used " + move name + "!"
-    mov esi, W_TILEMAP + (19 * FW + 11)
-    mov eax, str_used
-    call WidePlaceString
-    mov al, [ebp + wEnemySelectedMove]
-    call FindMoveName
-    call WidePlaceString
-    mov eax, str_excl
-    call WidePlaceString
-    ; capture the player's pre-hit HP, apply damage, then animate the bar draining
-    movzx ecx, byte [ebp + wBattleMonHP]
-    shl ecx, 8
-    mov cl, [ebp + wBattleMonHP + 1]
-    push ecx
-    call DoEnemyAttackDamage              ; faithful damage calc → player HP
-    pop ecx                               ; ECX = old player HP
-    call AnimatePlayerHPBar
-    ret
-
-; ---------------------------------------------------------------------------
-; DoEnemyAttackDamage — the faithful Gen-1 damage pipeline for the enemy's selected
-; move (mirror of DoPlayerAttackDamage; pret ExecuteEnemyMove core): GetCurrentMove
-; → GetDamageVarsForEnemyAttack → CalculateDamage → (if BP>0) AdjustDamageForMoveType
-; → RandomizeDamage. Subtracts wDamage from the player mon's HP (floored at 0).
-; Accuracy/MoveHitTest deferred (always hits); crit forced off. In: [wEnemySelectedMove]
-; set; EBP = GB base.
-; ---------------------------------------------------------------------------
-DoEnemyAttackDamage:
-    mov byte [ebp + hWhoseTurn], 1
-    call GetCurrentMove                   ; enemy move → wEnemyMove*
-    mov byte [ebp + wCriticalHitOrOHKO], 0
-    call GetDamageVarsForEnemyAttack
-    call CalculateDamage
-    jz .apply                             ; 0-BP move → wDamage stays 0
-    call AdjustDamageForMoveType
-    call RandomizeDamage
-.apply:
-    ; wBattleMonHP (big-endian) -= wDamage (big-endian), floor at 0
-    movzx eax, byte [ebp + wBattleMonHP]
-    shl eax, 8
-    mov al, [ebp + wBattleMonHP + 1]
-    movzx ecx, byte [ebp + wDamage]
-    shl ecx, 8
-    mov cl, [ebp + wDamage + 1]
-    sub eax, ecx
-    jns .store
-    xor eax, eax
-.store:
-    mov [ebp + wBattleMonHP + 1], al      ; low byte
-    shr eax, 8
-    mov [ebp + wBattleMonHP], al          ; high byte
-    ret
-
-; WaitForAPress — wait for A/B to advance text, blinking the ▼ "more text" arrow at
-; the dialog box's bottom-right interior cell, faithful to WaitForTextScrollButtonPress
-; / HandleDownArrowBlinkTiming (pret toggles the '▼' tile vs a space while waiting).
-; The exact GB blink counters produce a moderate cadence; the port toggles every
-; ARROW_BLINK_FRAMES frames. Erases the arrow on exit. In: EBP = GB base.
-%define ARROW_OFF          (19 * FW + 28)   ; dialog-box bottom-right interior (canvas 28,19)
-%define T_DOWNARROW        0xEE             ; charmap "▼"
-%define ARROW_BLINK_FRAMES 20
+; WaitForAPress / WaitForTextScrollButtonPress — wait for A/B to advance text, blinking
+; the ▼ "more text" arrow at the dialog box's bottom-right interior cell (pret
+; WaitForTextScrollButtonPress / HandleDownArrowBlinkTiming). Erases the arrow on exit.
+WaitForTextScrollButtonPress:
 WaitForAPress:
     mov byte [arrow_on], 1
     mov byte [arrow_timer], ARROW_BLINK_FRAMES
@@ -554,106 +242,400 @@ WaitForAPress:
     mov byte [ebp + W_TILEMAP + ARROW_OFF], T_SP   ; erase the arrow on advance
     ret
 
-; ---------------------------------------------------------------------------
-; DoPlayerAttackDamage — the faithful Gen-1 damage pipeline for the player's
-; selected move (pret ExecutePlayerMove core): GetCurrentMove → GetDamageVarsFor-
-; PlayerAttack → CalculateDamage → (if BP>0) AdjustDamageForMoveType (STAB +
-; type) → RandomizeDamage. Subtracts wDamage from the enemy's HP (floored at 0).
-; Status moves (0 BP, e.g. GROWL) leave wDamage=0. Accuracy/MoveHitTest deferred
-; (always hits); crit forced off. In: [wPlayerSelectedMove] set; EBP = GB base.
-; ---------------------------------------------------------------------------
-DoPlayerAttackDamage:
-    mov byte [ebp + hWhoseTurn], 0
-    call GetCurrentMove                   ; selected move → wPlayerMove*
-    mov byte [ebp + wCriticalHitOrOHKO], 0
-    call GetDamageVarsForPlayerAttack
-    call CalculateDamage
-    jz .apply                             ; 0-BP move → wDamage stays 0
-    call AdjustDamageForMoveType
-    call RandomizeDamage
-.apply:
-    ; wEnemyMonHP (big-endian) -= wDamage (big-endian), floor at 0
-    movzx eax, byte [ebp + wEnemyMonHP]
+; ===========================================================================
+; TryRunningFromBattle — faithful pret escape-odds (engine/battle/core.asm).
+; Wild-mon path only (ghost/safari/link "always escape" special cases aren't reachable;
+; trainer battles can't be fled). Returns CF=1 on escape ("Got away safely!"), CF=0
+; otherwise; on a wild failure sets wActionResultOrTookBattleTurn=1 (turn lost).
+; ===========================================================================
+TryRunningFromBattle:
+    cmp byte [ebp + wIsInBattle], 2
+    je .trainerBattle
+    inc byte [ebp + wNumRunAttempts]
+    mov al, [ebp + wBattleMonSpeed]
+    mov [ebp + hMultiplicand + 1], al
+    mov al, [ebp + wBattleMonSpeed + 1]
+    mov [ebp + hMultiplicand + 2], al
+    mov al, [ebp + wEnemyMonSpeed]
+    mov [ebp + hEnemySpeed], al
+    mov al, [ebp + wEnemyMonSpeed + 1]
+    mov [ebp + hEnemySpeed + 1], al
+    ; player speed >= enemy speed → guaranteed escape (pret StringCmp + jr nc)
+    movzx eax, byte [ebp + wBattleMonSpeed]
     shl eax, 8
-    mov al, [ebp + wEnemyMonHP + 1]
-    movzx ecx, byte [ebp + wDamage]
+    mov al, [ebp + wBattleMonSpeed + 1]
+    movzx ecx, byte [ebp + wEnemyMonSpeed]
     shl ecx, 8
-    mov cl, [ebp + wDamage + 1]
-    sub eax, ecx
-    jns .store
-    xor eax, eax
-.store:
-    mov [ebp + wEnemyMonHP + 1], al       ; low byte
-    shr eax, 8
-    mov [ebp + wEnemyMonHP], al           ; high byte
+    mov cl, [ebp + wEnemyMonSpeed + 1]
+    cmp eax, ecx
+    jae .canEscape
+    ; quotient = (player speed * 32) / ((enemy speed / 4) % 256)
+    mov byte [ebp + hMultiplicand], 0
+    mov byte [ebp + hMultiplier], 32
+    call Multiply
+    mov al, [ebp + hProduct + 2]
+    mov [ebp + hDividend], al
+    mov al, [ebp + hProduct + 3]
+    mov [ebp + hDividend + 1], al
+    mov bh, [ebp + hEnemySpeed]
+    mov al, [ebp + hEnemySpeed + 1]
+    shr bh, 1
+    rcr al, 1
+    shr bh, 1
+    rcr al, 1
+    and al, al
+    jz .canEscape
+    mov [ebp + hDivisor], al
+    mov bh, 2
+    call Divide
+    mov al, [ebp + hQuotient + 2]
+    and al, al
+    jnz .canEscape
+    movzx ecx, byte [ebp + wNumRunAttempts]
+.addLoop:
+    dec ecx
+    jz .compareRandom
+    mov al, [ebp + hQuotient + 3]
+    add al, 30
+    mov [ebp + hQuotient + 3], al
+    jc .canEscape
+    jmp .addLoop
+.compareRandom:
+    call BattleRandom
+    mov bl, al
+    mov al, [ebp + hQuotient + 3]
+    cmp al, bl
+    jae .canEscape
+    ; can't escape: forfeit the turn, print "Can't escape!"
+    mov byte [ebp + wActionResultOrTookBattleTurn], 1
+    mov eax, str_cantesc
+    call PrintRunLine
+    clc
+    ret
+.trainerBattle:
+    ; "No! There's no / running from a / trainer battle!" (3 lines, single-spaced).
+    or  byte [ebp + W_LETTER_PRINTING_DELAY], (1 << BIT_TEXT_DELAY)
+    mov dword [menu_item_step], FW
+    mov esi, W_TILEMAP + OUTER_OFF
+    mov bh, OUTER_H
+    mov bl, OUTER_W
+    call TextBoxBorder
+    mov esi, W_TILEMAP + (16 * FW + 11)
+    mov eax, str_norun1
+    call PlaceString
+    mov esi, ebx
+    mov esi, W_TILEMAP + (17 * FW + 11)
+    mov eax, str_norun2
+    call PlaceString
+    mov esi, ebx
+    mov esi, W_TILEMAP + (18 * FW + 11)
+    mov eax, str_norun3
+    call PlaceString
+    mov esi, ebx
+    call WaitForAPress
+    clc
+    ret
+.canEscape:
+    mov eax, str_gotaway
+    call PrintRunLine
+    stc
     ret
 
-; ---------------------------------------------------------------------------
-; DrawMoveList — draw the move box, list the player's moves (one per row, "-" for
-; empty), and set up the menu vars (no input). In: EBP = GB base.
-; ---------------------------------------------------------------------------
-DrawMoveList:
-    mov dword [wide_line_step], FW        ; single-spaced list
-    mov esi, W_TILEMAP + MOVEBOX_OFF
-    mov bh, MOVEBOX_H
-    mov bl, MOVEBOX_W
-    call WideTextBoxBorder
-    ; list the 4 move slots: a name per real move, "-" for empty
-    mov byte [move_count], 0
-    xor ebx, ebx                          ; bl = slot 0..3
-.movloop:
-    movzx eax, bl
-    mov cl, [ebp + eax + wBattleMonMoves] ; move id (cl; FindMoveName preserves CL? no — keep in stack-safe reg)
-    movzx esi, bl
-    imul esi, esi, FW
-    add esi, W_TILEMAP + MOVES_TEXT       ; dest row = MOVES_TEXT + slot*FW
-    test cl, cl
-    jz .dash
-    inc byte [move_count]
-    mov al, cl
-    call FindMoveName                     ; AL=id → EAX=flat name ptr
-    call WidePlaceString                  ; EAX=src, ESI=dest
-    jmp .movnext
-.dash:
-    mov byte [ebp + esi], 0xE3            ; '-'
-.movnext:
-    inc bl
-    cmp bl, NUM_MOVES
-    jb .movloop
-    ; cursor over the real moves only
-    mov al, [move_count]
+; PrintRunLine — redraw the dialog box and place a single-line run message (line 1),
+; then wait for A. In: EAX = string ptr; EBP = GB base.
+PrintRunLine:
+    push eax
+    or  byte [ebp + W_LETTER_PRINTING_DELAY], (1 << BIT_TEXT_DELAY)
+    mov dword [menu_item_step], 2 * FW
+    mov esi, W_TILEMAP + OUTER_OFF
+    mov bh, OUTER_H
+    mov bl, OUTER_W
+    call TextBoxBorder
+    pop eax
+    mov esi, W_TILEMAP + (17 * FW + 11)
+    call PlaceString
+    mov esi, ebx
+    call WaitForAPress
+    ret
+
+; ===========================================================================
+; EXP / level-up display — called by GainExperience (experience.asm) per mon.
+; ===========================================================================
+
+; ShowGainedExpText — pret GainedText→ExpPointsText: "<nick> gained / N EXP. Points!"
+; for wWhichPokemon; waits for A. N = wExpAmountGained (16-bit big-endian).
+ShowGainedExpText:
+    or  byte [ebp + W_LETTER_PRINTING_DELAY], (1 << BIT_TEXT_DELAY)
+    call RestoreBattleScreen
+    mov dword [menu_item_step], 2 * FW
+    mov esi, W_TILEMAP + OUTER_OFF
+    mov bh, OUTER_H
+    mov bl, OUTER_W
+    call TextBoxBorder
+    mov esi, W_TILEMAP + (17 * FW + 11)
+    call get_party_nick
+    call PlaceString
+    mov esi, ebx
+    mov eax, str_gained
+    call PlaceString
+    mov esi, ebx
+    mov edi, W_TILEMAP + (19 * FW + 11)
+    movzx eax, byte [ebp + wExpAmountGained]
+    shl eax, 8
+    mov al, [ebp + wExpAmountGained + 1]
+    call print_dec
+    mov esi, edi
+    mov eax, str_exppts
+    call PlaceString
+    mov esi, ebx
+    call WaitForAPress
+    ret
+
+; ShowGrewLevelText — pret GrewLevelText: "<nick> grew / to level N!" (no wait; the
+; stats box + a single WaitForTextScrollButtonPress follow). N = wCurEnemyLevel.
+ShowGrewLevelText:
+    or  byte [ebp + W_LETTER_PRINTING_DELAY], (1 << BIT_TEXT_DELAY)
+    mov dword [menu_item_step], 2 * FW
+    mov esi, W_TILEMAP + OUTER_OFF
+    mov bh, OUTER_H
+    mov bl, OUTER_W
+    call TextBoxBorder
+    mov esi, W_TILEMAP + (17 * FW + 11)
+    call get_party_nick
+    call PlaceString
+    mov esi, ebx
+    mov eax, str_grew
+    call PlaceString
+    mov esi, ebx
+    mov esi, W_TILEMAP + (19 * FW + 11)
+    mov eax, str_tolevel
+    call PlaceString
+    mov esi, ebx
+    mov edi, esi
+    movzx eax, byte [ebp + wCurEnemyLevel]
+    call print_dec
+    mov esi, edi
+    mov eax, str_excl
+    call PlaceString
+    mov esi, ebx
+    ret
+
+; LearnMoveFromLevelUp — faithful pret evos_moves.asm:LearnMoveFromLevelUp. Scans the
+; leveled mon's learnset for a move taught at wCurEnemyLevel; if unknown and a free slot
+; exists, writes it + base PP and shows "<nick> learned <move>!". All-slots-full "forget
+; a move?" menu DEFERRED. Called by GainExperience after the stats box.
+LearnMoveFromLevelUp:
+    mov al, [ebp + wPokedexNum]
+    mov [ebp + wCurPartySpecies], al
+    call GetMonLearnset
+.scan:
+    mov al, [esi]
+    inc esi
     test al, al
-    jz .dml_ret
-    dec al
-    mov [ebp + wMaxMenuItem], al
-    mov byte [ebp + wTopMenuItemY], MOVES_ROW0
-    mov byte [ebp + wTopMenuItemX], MOVES_CUR_COL
-    ; restore the remembered cursor (pret inits wCurrentMenuItem from wPlayerMoveListIndex,
-    ; so the FIGHT menu reopens on the last move used/highlighted). Clamp to the real
-    ; move count in case the index is stale (fewer moves on this mon).
-    mov al, [ebp + wPlayerMoveListIndex]
-    cmp al, [move_count]
-    jb .idxInRange
-    xor al, al                            ; out of range → first move
-.idxInRange:
-    mov [ebp + wCurrentMenuItem], al
-    mov [ebp + wLastMenuItem], al
-    ; UP/DOWN are handled inside WideHandleMenuInput (it moves the cursor and loops),
-    ; so only A/B end the menu — watching UP/DOWN would exit on every cursor move.
-    mov byte [ebp + wMenuWatchedKeys], PAD_A | PAD_B
-.dml_ret:
+    jz .restore
+    mov dh, al
+    mov al, [esi]
+    inc esi
+    mov dl, al
+    cmp dh, [ebp + wCurEnemyLevel]
+    jne .scan
+    movzx eax, byte [ebp + wWhichPokemon]
+    imul eax, eax, PARTYMON_STRUCT_LENGTH
+    add eax, wPartyMon1
+    mov [lvl_mon_ptr], eax
+    lea edi, [eax + MON_MOVES]
+    mov cl, NUM_MOVES
+.known:
+    mov al, [ebp + edi]
+    cmp al, dl
+    je .restore
+    inc edi
+    dec cl
+    jnz .known
+    mov edi, [lvl_mon_ptr]
+    add edi, MON_MOVES
+    xor bl, bl
+    mov cl, NUM_MOVES
+.free:
+    mov al, [ebp + edi]
+    test al, al
+    jz .learn
+    inc edi
+    inc bl
+    dec cl
+    jnz .free
+    jmp .restore
+.learn:
+    mov [ebp + edi], dl
+    movzx eax, dl
+    dec eax
+    imul eax, eax, MOVE_LENGTH
+    movzx eax, byte [Moves + eax + 5]
+    movzx ecx, bl
+    add ecx, [lvl_mon_ptr]
+    mov [ebp + ecx + MON_PP], al
+    mov al, dl
+    call ShowLearnedMoveText
+.restore:
+    mov al, [ebp + wCurPartySpecies]
+    mov [ebp + wPokedexNum], al
     ret
 
-; ---------------------------------------------------------------------------
-; FindMoveName — in AL = move id (1-based). Out: EAX = flat ptr to that move's
-; name in MoveNames (variable-length, '@'=0x50-terminated, move-id order).
-; Clobbers ECX, EDX. (Self-contained walk; the faithful GetName/FormatMovesString
-; path is deferred until the battle-backend name closure links.)
-; ---------------------------------------------------------------------------
+; ShowLearnedMoveText — "<nick> learned / <move>!" (AL = move id), then wait for A.
+ShowLearnedMoveText:
+    mov [learned_move_id], al
+    or  byte [ebp + W_LETTER_PRINTING_DELAY], (1 << BIT_TEXT_DELAY)
+    mov dword [menu_item_step], 2 * FW
+    mov esi, W_TILEMAP + OUTER_OFF
+    mov bh, OUTER_H
+    mov bl, OUTER_W
+    call TextBoxBorder
+    mov esi, W_TILEMAP + (17 * FW + 11)
+    call get_party_nick
+    call PlaceString
+    mov esi, ebx
+    mov eax, str_learned
+    call PlaceString
+    mov esi, ebx
+    mov esi, W_TILEMAP + (19 * FW + 11)
+    movzx eax, byte [learned_move_id]
+    call FindMoveName
+    call PlaceString
+    mov esi, ebx
+    mov eax, str_excl
+    call PlaceString
+    mov esi, ebx
+    call WaitForAPress
+    ret
+
+; PrintStatsBox — pret PrintStatsBox.LevelUpStatsBox: box + ATTACK/DEFENSE/SPEED/SPECIAL
+; with right-aligned values from the leveled party mon (CalcStats wrote the new stats).
+PrintStatsBox:
+    and byte [ebp + W_LETTER_PRINTING_DELAY], (~(1 << BIT_TEXT_DELAY)) & 0xFF
+    mov dword [menu_item_step], FW
+    mov esi, W_TILEMAP + LVLBOX_OFF
+    mov bh, LVLBOX_H
+    mov bl, LVLBOX_W
+    call TextBoxBorder
+    movzx eax, byte [ebp + wWhichPokemon]
+    imul eax, eax, PARTYMON_STRUCT_LENGTH
+    add eax, wPartyMon1
+    mov [lvl_mon_ptr], eax
+    mov esi, W_TILEMAP + LVL_LBL_OFF
+    mov eax, str_attack
+    call PlaceString
+    mov esi, ebx
+    mov esi, W_TILEMAP + LVL_LBL_OFF + 2 * FW
+    mov eax, str_defense
+    call PlaceString
+    mov esi, ebx
+    mov esi, W_TILEMAP + LVL_LBL_OFF + 4 * FW
+    mov eax, str_speed
+    call PlaceString
+    mov esi, ebx
+    mov esi, W_TILEMAP + LVL_LBL_OFF + 6 * FW
+    mov eax, str_special
+    call PlaceString
+    mov esi, ebx
+    mov ebx, [lvl_mon_ptr]
+    mov edi, W_TILEMAP + LVL_VAL_OFF
+    movzx eax, byte [ebp + ebx + MON_ATK]
+    shl eax, 8
+    mov al, [ebp + ebx + MON_ATK + 1]
+    call print_num3
+    mov ebx, [lvl_mon_ptr]
+    mov edi, W_TILEMAP + LVL_VAL_OFF + 2 * FW
+    movzx eax, byte [ebp + ebx + MON_DEF]
+    shl eax, 8
+    mov al, [ebp + ebx + MON_DEF + 1]
+    call print_num3
+    mov ebx, [lvl_mon_ptr]
+    mov edi, W_TILEMAP + LVL_VAL_OFF + 4 * FW
+    movzx eax, byte [ebp + ebx + MON_SPD]
+    shl eax, 8
+    mov al, [ebp + ebx + MON_SPD + 1]
+    call print_num3
+    mov ebx, [lvl_mon_ptr]
+    mov edi, W_TILEMAP + LVL_VAL_OFF + 6 * FW
+    movzx eax, byte [ebp + ebx + MON_SPC]
+    shl eax, 8
+    mov al, [ebp + ebx + MON_SPC + 1]
+    call print_num3
+    ret
+
+; get_party_nick — EAX = flat ptr to the wWhichPokemon party nick.
+get_party_nick:
+    movzx eax, byte [ebp + wWhichPokemon]
+    imul eax, eax, NAME_LENGTH
+    lea eax, [ebp + eax + wPartyMonNicks]
+    ret
+
+; print_num3 — EAX (0..999) → 3-digit right-aligned, space-padded, at [ebp+EDI..EDI+2].
+print_num3:
+    push ebx
+    mov ebx, 10
+    xor edx, edx
+    div ebx
+    add dl, CHAR_DIG0
+    mov [ebp + edi + 2], dl
+    xor edx, edx
+    div ebx
+    test eax, eax
+    jnz .tens
+    test edx, edx
+    jnz .tens
+    mov byte [ebp + edi + 1], 0x7F
+    jmp .hund
+.tens:
+    add dl, CHAR_DIG0
+    mov [ebp + edi + 1], dl
+.hund:
+    test eax, eax
+    jnz .hundDigit
+    mov byte [ebp + edi], 0x7F
+    jmp .num3done
+.hundDigit:
+    add al, CHAR_DIG0
+    mov [ebp + edi], al
+.num3done:
+    pop ebx
+    ret
+
+; print_dec — EAX = value → decimal at [ebp+EDI], no leading zeros, EDI advanced.
+print_dec:
+    mov ebx, 10
+    xor ecx, ecx
+.div:
+    xor edx, edx
+    div ebx
+    push edx
+    inc ecx
+    test eax, eax
+    jnz .div
+.emit:
+    pop edx
+    add dl, CHAR_DIG0
+    mov [ebp + edi], dl
+    inc edi
+    push ecx
+    push edi
+    call PrintLetterDelay
+    pop edi
+    pop ecx
+    dec ecx
+    jnz .emit
+    ret
+
+; ===========================================================================
+; Move list helpers (called by core.asm's MoveSelectionMenu).
+; ===========================================================================
+
+; FindMoveName — AL = move id (1-based). Out: EAX = flat ptr to that move's name in
+; MoveNames ('@'=0x50-terminated, move-id order). Clobbers ECX, EDX.
 FindMoveName:
     movzx ecx, al
     mov eax, MoveNames
-    dec ecx                               ; skip (id-1) names
+    dec ecx
 .skip:
     jecxz .done
 .scan:
@@ -666,58 +648,54 @@ FindMoveName:
 .done:
     ret
 
-; ---------------------------------------------------------------------------
-; PrintMoveInfoBox — the TYPE/PP box for the highlighted move (pret PrintMenuItem).
-; Drawn each cursor move via the wide_menu_redraw_cb hook. Reads wCurrentMenuItem,
-; wBattleMonMoves/PP, and the flat Moves table (type @ +3, base PP @ +5).
-; Max PP is the base value (PP-up GetMaxPP scaling is deferred). In: EBP = GB base.
-; ---------------------------------------------------------------------------
+; PrintMoveInfoBox — the TYPE/PP box for the highlighted move (pret PrintMenuItem). Drawn
+; each cursor move via the menu_redraw_cb hook. Reads wCurrentMenuItem, wBattleMonMoves/PP,
+; and the flat Moves table (type @ +3, base PP @ +5). In: EBP = GB base.
 PrintMoveInfoBox:
-    mov dword [wide_line_step], FW
-    mov esi, W_TILEMAP + INFOBOX_OFF      ; box interior 9×3
+    and byte [ebp + W_LETTER_PRINTING_DELAY], (~(1 << BIT_TEXT_DELAY)) & 0xFF
+    mov dword [menu_item_step], FW
+    mov esi, W_TILEMAP + INFOBOX_OFF
     mov bh, 3
     mov bl, 9
-    call WideTextBoxBorder
-    mov esi, W_TILEMAP + ((IB_ROW + 1) * FW + IB_COL + 1)   ; "TYPE/"
+    call TextBoxBorder
+    mov esi, W_TILEMAP + ((IB_ROW + 1) * FW + IB_COL + 1)
     mov eax, str_type
-    call WidePlaceString
+    call PlaceString
+    mov esi, ebx
     mov byte [ebp + W_TILEMAP + ((IB_ROW + 1) * FW + IB_COL + 5)], CHAR_SLASH
-    ; move data offset = (id-1) * MOVE_LENGTH  (flat Moves table)
     movzx eax, byte [ebp + wCurrentMenuItem]
     movzx eax, byte [ebp + eax + wBattleMonMoves]
     dec eax
     imul eax, eax, MOVE_LENGTH
-    ; type name at canvas (12,13)
     movzx ecx, byte [Moves + eax + 3]
     push eax
-    mov esi, W_TILEMAP + ((IB_ROW + 2) * FW + IB_COL + 2)   ; type name
+    mov esi, W_TILEMAP + ((IB_ROW + 2) * FW + IB_COL + 2)
     mov eax, [WideTypeNames + ecx * 4]
-    call WidePlaceString
+    call PlaceString
+    mov esi, ebx
     pop eax
-    ; PP "cur/max" on row IB_ROW+3
-    movzx ecx, byte [Moves + eax + 5]     ; max PP (base)
+    movzx ecx, byte [Moves + eax + 5]
     push ecx
     movzx ecx, byte [ebp + wCurrentMenuItem]
     mov al, [ebp + ecx + wBattleMonPP]
-    and al, 0x3F                          ; PP_MASK
-    mov edi, W_TILEMAP + ((IB_ROW + 3) * FW + IB_COL + 5)   ; curPP
+    and al, 0x3F
+    mov edi, W_TILEMAP + ((IB_ROW + 3) * FW + IB_COL + 5)
     call print_2d
     mov byte [ebp + W_TILEMAP + ((IB_ROW + 3) * FW + IB_COL + 7)], CHAR_SLASH
-    pop eax                               ; max PP
-    mov edi, W_TILEMAP + ((IB_ROW + 3) * FW + IB_COL + 8)   ; maxPP
+    pop eax
+    mov edi, W_TILEMAP + ((IB_ROW + 3) * FW + IB_COL + 8)
     call print_2d
     ret
 
 ; print_2d — AL = value (<100) as 2 digits at [ebp+EDI] (leading space if tens=0).
-; Clobbers EAX, ECX, EDX.
 print_2d:
     movzx eax, al
     xor edx, edx
     mov ecx, 10
-    div ecx                               ; EAX = tens, EDX = ones
+    div ecx
     test al, al
     jnz .tens
-    mov byte [ebp + edi], 0x7F            ; leading space
+    mov byte [ebp + edi], 0x7F
     jmp .ones
 .tens:
     add al, CHAR_DIG0
@@ -725,4 +703,35 @@ print_2d:
 .ones:
     add dl, CHAR_DIG0
     mov [ebp + edi + 1], dl
+    ret
+
+; ===========================================================================
+; DEBUG_BATTLE_ENEMYHIT ground-truth scaffold (NOT the live battle path).
+; ===========================================================================
+; DoEnemyAttackDamage — run the faithful Gen-1 damage pipeline for the enemy's selected
+; move and subtract wDamage from the player mon's HP (floored). Used only by the static
+; DEBUG_BATTLE_ENEMYHIT WRAM-dump harness; the live battle resolves moves via core.asm.
+DoEnemyAttackDamage:
+    mov byte [ebp + hWhoseTurn], 1
+    call GetCurrentMove
+    mov byte [ebp + wCriticalHitOrOHKO], 0
+    call GetDamageVarsForEnemyAttack
+    call CalculateDamage
+    jz .apply
+    call AdjustDamageForMoveType
+    call RandomizeDamage
+.apply:
+    movzx eax, byte [ebp + wBattleMonHP]
+    shl eax, 8
+    mov al, [ebp + wBattleMonHP + 1]
+    movzx ecx, byte [ebp + wDamage]
+    shl ecx, 8
+    mov cl, [ebp + wDamage + 1]
+    sub eax, ecx
+    jns .store
+    xor eax, eax
+.store:
+    mov [ebp + wBattleMonHP + 1], al
+    shr eax, 8
+    mov [ebp + wBattleMonHP], al
     ret

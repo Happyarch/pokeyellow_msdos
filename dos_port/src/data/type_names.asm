@@ -1,53 +1,13 @@
-; type_names.asm — type-id -> name table (faithful port of data/types/names.asm).
-; Flat .data: WideTypeNames[type_id] = dd ptr to a '@'-terminated charmap string.
-; Hand-authored reference data (no generator yet); types 9-0x13 are unused -> NORMAL.
+; type_names.asm — type-id -> name table (wrapper around generated data).
+;
+; WideTypeNames : tools/gen_type_names.py (from data/types/names.asm). Indexed by raw
+; Gen-1 type id; the unused 0x09-0x13 gap points at NORMAL (faithful to pret). Consumed
+; by PrintMoveInfoBox via [WideTypeNames + type_id*4]. The .inc declares its own global.
+;
+; Build: nasm -f coff -I include/ -I . -o type_names.o type_names.asm
 
 bits 32
 section .data
 align 4
-global WideTypeNames
-WideTypeNames:
-    dd tn_normal    ; 00 NORMAL
-    dd tn_fighting    ; 01 FIGHTING
-    dd tn_flying    ; 02 FLYING
-    dd tn_poison    ; 03 POISON
-    dd tn_ground    ; 04 GROUND
-    dd tn_rock    ; 05 ROCK
-    dd tn_bird    ; 06 BIRD
-    dd tn_bug    ; 07 BUG
-    dd tn_ghost    ; 08 GHOST
-    dd tn_normal    ; 09 NORMAL
-    dd tn_normal    ; 0A NORMAL
-    dd tn_normal    ; 0B NORMAL
-    dd tn_normal    ; 0C NORMAL
-    dd tn_normal    ; 0D NORMAL
-    dd tn_normal    ; 0E NORMAL
-    dd tn_normal    ; 0F NORMAL
-    dd tn_normal    ; 10 NORMAL
-    dd tn_normal    ; 11 NORMAL
-    dd tn_normal    ; 12 NORMAL
-    dd tn_normal    ; 13 NORMAL
-    dd tn_fire    ; 14 FIRE
-    dd tn_water    ; 15 WATER
-    dd tn_grass    ; 16 GRASS
-    dd tn_electric    ; 17 ELECTRIC
-    dd tn_psychic    ; 18 PSYCHIC
-    dd tn_ice    ; 19 ICE
-    dd tn_dragon    ; 1A DRAGON
 
-tn_normal: db 0x8D,0x8E,0x91,0x8C,0x80,0x8B,0x50
-tn_fighting: db 0x85,0x88,0x86,0x87,0x93,0x88,0x8D,0x86,0x50
-tn_flying: db 0x85,0x8B,0x98,0x88,0x8D,0x86,0x50
-tn_poison: db 0x8F,0x8E,0x88,0x92,0x8E,0x8D,0x50
-tn_ground: db 0x86,0x91,0x8E,0x94,0x8D,0x83,0x50
-tn_rock: db 0x91,0x8E,0x82,0x8A,0x50
-tn_bird: db 0x81,0x88,0x91,0x83,0x50
-tn_bug: db 0x81,0x94,0x86,0x50
-tn_ghost: db 0x86,0x87,0x8E,0x92,0x93,0x50
-tn_fire: db 0x85,0x88,0x91,0x84,0x50
-tn_water: db 0x96,0x80,0x93,0x84,0x91,0x50
-tn_grass: db 0x86,0x91,0x80,0x92,0x92,0x50
-tn_electric: db 0x84,0x8B,0x84,0x82,0x93,0x91,0x88,0x82,0x50
-tn_psychic: db 0x8F,0x92,0x98,0x82,0x87,0x88,0x82,0x50
-tn_ice: db 0x88,0x82,0x84,0x50
-tn_dragon: db 0x83,0x91,0x80,0x86,0x8E,0x8D,0x50
+%include "assets/type_names.inc"

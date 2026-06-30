@@ -8,8 +8,8 @@ extern MoveHitTest
 extern PlayCurrentMoveAnimation
 extern PrintText
 extern DelayFrames
-extern _WasSeededText
-extern _EvadedAttackText
+extern WasSeededText
+extern EvadedAttackText
 
 
 global LeechSeedEffect_
@@ -47,10 +47,4 @@ LeechSeedEffect_:
 	mov esi, EvadedAttackText
 	jmp PrintText
 
-WasSeededText:
-	text_far _WasSeededText
-	text_end
 
-EvadedAttackText:
-	text_far _EvadedAttackText
-	text_end

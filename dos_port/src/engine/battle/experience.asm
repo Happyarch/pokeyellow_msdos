@@ -89,7 +89,13 @@ extern FlagAction               ; src/engine/flag_action.asm (not the predef var
 ; COFF for type-checking but stays out of LINK_SRCS until Wave 2 wires them.
 ; ---------------------------------------------------------------------------
 ; Text / display
-extern PrintText                ; deferred: battle text rendering
+; PrintText is intentionally NOT used here: the port's PrintText is the stride-20
+; OVERWORLD renderer (opens an overworld window) and would corrupt the 40-wide battle
+; canvas. The deferred per-mon "gained EXP" / "grew level" display is done by the front
+; end (battle_menu.asm:BattleWonGiveExp) via wide_text; the two former PrintText sites
+; below route to GainExpPrintStub (a no-op) so the validated math is untouched.
+extern ShowGainedExpText        ; front end (battle_menu.asm): "<nick> gained N EXP. Points!"
+extern ShowGrewLevelText        ; front end (battle_menu.asm): "<nick> grew to level N!"
 extern GetPartyMonName          ; deferred: party name lookup
 extern LoadMonData              ; deferred: load party/box mon into wLoadedMon
 extern ModifyPikachuHappiness   ; deferred: Pikachu happiness events
@@ -337,14 +343,16 @@ GainExperience:
     ; GetPartyMonName, PrintText, LoadMonData all just return in Wave 1.
     mov al, [ebp + wWhichPokemon]
     mov esi, wPartyMonNicks
-    call GetPartyMonName            ; DEFERRED stub
-    mov esi, GainedText
-    call PrintText                  ; DEFERRED stub
+    call GetPartyMonName            ; DEFERRED stub (front end reads the party nick directly)
+    call ShowGainedExpText          ; front end: "<nick> gained N EXP. Points!" (+ wait)
     xor al, al
     mov [ebp + wMonDataLocation], al
-    call LoadMonData                ; DEFERRED stub (set W_LOADED_MON_EXP in harness)
+    call LoadMonData                ; DEFERRED stub (front end reads party stats directly)
 
     pop esi                         ; POP B: ESI = party_mon + 0x0E (EXP high)
+    ; CalcLevelFromExperience reads the loaded-mon scratch (W_LOADED_MON_SPECIES/EXP),
+    ; which the `call LoadMonData` above populated from this party mon (wWhichPokemon,
+    ; wMonDataLocation=0) — faithful to pret, which loads the mon before the level calc.
     add esi, MON_LEVEL - MON_EXP   ; 0x21 - 0x0E = 0x13 → party_mon + MON_LEVEL
     push esi                        ; PUSH C: save MON_LEVEL pointer
     call CalcLevelFromExperience    ; result: DH = new level
@@ -473,15 +481,14 @@ GainExperience:
     ; PIKAHAPPY_LEVELUP = 1 (pikachu_emotion_constants.asm)
     mov al, PIKAHAPPY_LEVELUP
     call ModifyPikachuHappiness     ; DEFERRED stub
-    mov esi, GrewLevelText
-    call PrintText                  ; DEFERRED stub
+    call ShowGrewLevelText          ; front end: "<nick> grew to level N!" (no wait)
     xor al, al
     mov [ebp + wMonDataLocation], al
-    call LoadMonData                ; DEFERRED stub
+    call LoadMonData                ; DEFERRED stub (front end reads party stats directly)
     ; LEVEL_UP_STATS_BOX = 1 (menu_constants.asm)
     mov dh, LEVEL_UP_STATS_BOX
-    call PrintStatsBox              ; DEFERRED stub
-    call WaitForTextScrollButtonPress  ; DEFERRED stub
+    call PrintStatsBox              ; front end: level-up stats box (ATTACK/DEFENSE/SPEED/SPECIAL)
+    call WaitForTextScrollButtonPress  ; front end: WaitForAPress
     call LoadScreenTilesFromBuffer1    ; DEFERRED stub
     xor al, al
     mov [ebp + wMonDataLocation], al
@@ -524,16 +531,19 @@ GainExperience:
 
     ; Set the gain-exp flag for the currently-out mon (so it gains exp next battle).
     mov al, [ebp + wPlayerMonNumber]
-    mov cl, al
+    mov cl, al                      ; CL = bit index (party slot)
     mov bh, FLAG_SET
-    push ebx                        ; save BH=FLAG_SET for second call
     call FlagAction                 ; FIX: was FlagActionPredef
 
     ; Clear wPartyFoughtCurrentEnemyFlags, then set the fought flag for current mon.
     mov esi, wPartyFoughtCurrentEnemyFlags
     xor al, al
     mov [ebp + esi], al
-    pop ebx                         ; restore BH=FLAG_SET, CL=wPlayerMonNumber
+    ; FlagAction clobbers CL (shift count + return value), so re-establish the bit
+    ; index + action before the second call (pret re-pushes bc around the calls).
+    mov al, [ebp + wPlayerMonNumber]
+    mov cl, al
+    mov bh, FLAG_SET
     call FlagAction                 ; FIX: was FlagActionPredef
 
 .return:

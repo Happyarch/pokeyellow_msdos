@@ -67,6 +67,7 @@ section .text
 global InitBattle
 global DrawBattleIntroBox
 extern InitBattleVariables
+extern text_row_stride                   ; text.asm — unified engine row stride
 extern ClearSprites
 extern hide_window
 extern LoadHpBarAndStatusTilePatterns
@@ -75,12 +76,29 @@ extern DrawBattleHUDs
 extern DrawEnemyHUD
 
 InitBattle:
+    ; The battle projects the GB viewport into the full 40-wide W_TILEMAP canvas, so
+    ; the ONE text engine renders at stride 40 here (the overworld leaves it at 20).
+    ; TODO: a clean overworld exit must restore text_row_stride to 20 (Stage 3).
+    mov dword [text_row_stride], SCREEN_TILES_W   ; 40
     call InitBattleVariables
     ; reset the remembered FIGHT-menu cursor (wPlayerMoveListIndex persists across move
     ; uses/menu exits for the whole battle; only a new battle clears it). It sits
     ; outside InitBattleVariables' clear block, so clear it explicitly here.
     mov byte [ebp + wPlayerMoveListIndex], 0
     mov byte [ebp + wIsInBattle], 1          ; wild battle (placeholder)
+    ; Text-delay config for battle dialog (faithful to pret): set BIT_FAST_TEXT_DELAY so
+    ; PrintLetterDelay reads the wOptions speed, and ensure BIT_TEXT_DELAY is OFF. The
+    ; delay is enabled ONLY while a dialog MESSAGE prints (like TextCommandProcessor) —
+    ; PlaceString/WidePlaceString call PrintLetterDelay unconditionally, so with the bit
+    ; off here the menus/HUD/boxes type out instantly; only messages reveal char-by-char.
+    mov al, [ebp + W_LETTER_PRINTING_DELAY]
+    or  al, (1 << BIT_FAST_TEXT_DELAY)
+    and al, (~(1 << BIT_TEXT_DELAY)) & 0xFF
+    mov [ebp + W_LETTER_PRINTING_DELAY], al
+    mov al, [ebp + wOptions]
+    and al, 0xF0                              ; keep battle-style/anim bits, reset speed nibble (TEXT_DELAY_MASK)
+    or al, TEXT_DELAY_MEDIUM                  ; default 3 frames/char
+    mov [ebp + wOptions], al
     call ClearSprites                        ; drop the overworld OAM (player etc.)
     ; Stop the per-frame OAM rebuild (update_oam → PrepareOAMData) re-showing the
     ; overworld player sprite after ClearSprites; battle manages its own sprites.

@@ -5,11 +5,10 @@
 extern PlayCurrentMoveAnimation
 extern PrintText
 extern PrintButItFailedText_
-extern _ShroudedInMistText
+extern ShroudedInMistText
 
 section .text
 global MistEffect_
-global ShroudedInMistText
 
 
 MistEffect_:
@@ -28,7 +27,3 @@ MistEffect_:
 .mistAlreadyInUse:
     jmp PrintButItFailedText_
 
-ShroudedInMistText:
-	db 0x17 ; text_far
-	dd _ShroudedInMistText
-	db 0x50 ; text_end

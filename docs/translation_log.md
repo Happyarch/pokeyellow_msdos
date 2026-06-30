@@ -3131,3 +3131,355 @@ Known rough edges (noted): trainer intro text still "Wild <nick> appeared!" (sho
 fight!"); a live trainer battle needs the enemy send-out + AI (Stage 4). Send-out (user note): faithfully
 the trainer slides OUT then the mon comes in — starter PIKACHU just slides (no ball/grow, Yellow special),
 others get ball-throw+grow; port does a straight VRAM swap for now (TODO(send-out) in code).
+
+### RUN flow — TryRunningFromBattle (Wave 2, Stage 3, 2026-06-29)
+Wired the battle menu's RUN option (was a no-op stub that re-opened the menu). Faithful port of pret's
+`TryRunningFromBattle` + `BattleMenu_RunWasSelected` (engine/battle/core.asm) into `battle_menu.asm`
+(`RunWasSelected`/`TryRunningFromBattle`/`PrintRunLine`). Wild-mon escape odds:
+`(playerSpeed*32) / ((enemySpeed/4) % 256)`, +30 per prior run attempt, vs a `BattleRandom` roll;
+playerSpeed ≥ enemySpeed → guaranteed escape; (enemySpeed/4)%256==0 or quotient>255 → escape. Uses the
+real `Multiply`/`Divide` HRAM pipeline (hMultiplicand/hProduct/hDividend/hDivisor/hQuotient) byte-for-byte.
+Outcomes: escape → "Got away safely!" + `wBattleOver=3` (new "ran" terminal, ends the harness `.live`
+loop via the same path as win/lose); wild fail → `wActionResultOrTookBattleTurn=1`, "Can't escape!", then
+the enemy gets its free attack (may KO → loss); trainer (`wIsInBattle==2`) → "No! There's no / running from
+a / trainer battle!" (3-line, single-spaced), no turn consumed → re-menu. New aliases pinned from
+origin/symbols: `wNumRunAttempts`=$D11F, `hEnemySpeed`=$FF8D (2B). Ghost/safari/run/link "always-escape"
+special cases omitted (unreachable in the wild/trainer harness — TODO if those battle types are added).
+Assembles + links clean into PKMN.EXE (FRONTEND_SRCS). Harness seeds PIKACHU spd 40 ≥ PIDGEY spd 21 → RUN
+reliably escapes; the can't-escape branch needs a faster enemy to exercise. GATE: awaiting live user sign-off.
+
+### Victory EXP screen — wire GainExperience live (Wave 2, Stage 3, 2026-06-29)
+On enemy faint (`ExecutePlayerTurn.enemyFainted`) the front end now runs the Wave-1 `GainExperience`
+(validated EXP/stat-exp/level math) and shows "<nick> gained / N EXP. Points!" via wide_text
+(`battle_menu.asm:BattleWonGiveExp` + `print_dec`; N = `wExpAmountGained`). To LINK the previously
+check-only `experience.asm` into PKMN.EXE: moved it from BATTLE_SRCS → FRONTEND_SRCS, added
+`flag_action.asm` (fixed its include path: `dos_port/include/...`→`gb_memmap.inc`, added gb_constants
+for FLAG_TEST + GetPredefRegisters extern), and added `battle_exp_stubs.asm` — link-only `ret` stubs
+for GainExperience's deferred UI/display externs (GetPartyMonName, PrintStatsBox, Save/LoadScreenTiles
+ToBuffer1, PrintEmptyString, WaitForTextScrollButtonPress, ModifyPikachuHappiness, CalculateModified
+Stats, DrawPlayerHUDAndHPBar, ApplyBadgeStatBoosts, ApplyBurnAndParalysisPenaltiesToPlayer,
+LearnMoveFromLevelUp, LoadMonData, + GainExpPrintStub). `experience.asm`'s two deferred `call PrintText`
+display sites now call `GainExpPrintStub` (no-op) — the port's PrintText is the stride-20 OVERWORLD
+renderer and would corrupt the 40-wide battle canvas; the display is done by the front end instead.
+LEVEL-UP DATA is still updated by the real CalcStats inside GainExperience; only the level-up DISPLAY
+(stats box / "grew to level N" / move learn) is deferred (stubs). LATENT COLLISION documented: when the
+level-up-display step wires the real ApplyBadgeStatBoosts/ApplyBurnAndParalysis/LearnMoveFromLevelUp
+(check-only backend) in, the matching stubs here must be deleted. Harness seeds PIDGEY base stats + base
+exp 55 + party-slot-0 gain flag; expected "PIKACHU gained 102 EXP. Points!" (55*13/7, wild=no boost).
+Links clean (FRONTEND_SRCS). GATE: awaiting live user sign-off. NOTE: harness battle-mon (PIKACHU,
+seeded directly) ≠ party slot 0 (SNORLAX L80, from DEBUG_PARTY) — the LoadBattleMonFromParty-deferred
+gap; the displayed name is wBattleMonNick (PIKACHU) and the EXP number is enemy-derived, so both read
+correct on screen even though slot 0 receives the points.
+
+### Level-up display — grew-text + level-up stats box (Wave 2, Stage 3, 2026-06-29)
+The deferred half of the victory flow. GainExperience's per-mon display tail now calls real front-end
+routines instead of stubs (battle_menu.asm): ShowGainedExpText ("<nick> gained / N EXP. Points!", waits),
+ShowGrewLevelText ("<nick> grew / to level N!", no wait — pret GrewLevelText), PrintStatsBox (the level-up
+stats box: ATTACK/DEFENSE/SPEED/SPECIAL with right-aligned values, pret PrintStatsBox.LevelUpStatsBox),
+and WaitForTextScrollButtonPress (= WaitForAPress). This matches pret's per-mon order (gained → grew + box
+→ one A-press), so the gained-EXP text moved from BattleWonGiveExp INTO GainExperience's loop (BattleWonGiveExp
+is now just `call GainExperience`). The display reads the leveled PARTY mon directly (wPartyMon1 +
+wWhichPokemon*PARTYMON_STRUCT_LENGTH stats / wPartyMonNicks nick / wCurEnemyLevel), so LoadMonData/
+GetPartyMonName stay stubbed (no wLoadedMon dependency). New helpers print_num3 (3-digit right-aligned,
+space-padded) + get_party_nick. Removed PrintStatsBox/WaitForTextScrollButtonPress/GainExpPrintStub from
+battle_exp_stubs.asm (now real). Coords use pret CONTENT (the 4 stat labels + values) but wide-canvas
+PLACEMENT (level-up box at canvas (26,2), 12x4) is a first pass to ITERATE with the user per the battle-UI
+placement convention. Harness: gain flag moved slot 0 → slot 3 (PIKACHU L5 + 102 EXP → L6) so the leveling
+mon matches the on-screen PIKACHU and exercises the level-up path. Builds + links clean (FRONTEND_SRCS).
+The level-up stats box is the BATTLE one (distinct from the party-menu status screen — user note). GATE:
+awaiting live user sign-off (+ placement iteration). Deferred still: move learning (LearnMoveFromLevelUp
+stub), the in-battle modified-stat recompute stubs (irrelevant post-victory), faint-sprite clear (the enemy
+pic lingers under the box). LATENT COLLISION reminder stands in battle_exp_stubs.asm for the remaining stubs.
+
+### Battle text char-by-char reveal + centered level-up box (Wave 2, Stage 3, 2026-06-29)
+Two user-flagged fixes to the level-up display:
+1. PLACEMENT (user: battle UI is drawn to the centered GB viewport, not the widescreen margins). The
+   level-up stats box now uses pret PrintStatsBox.LevelUpStatsBox's exact GB coords mapped by the
+   battle-UI (+10,+3) projection offset: box GB(9,2)→canvas(19,5) 9x8; labels GB(11,3/5/7/9), values
+   GB(15,4/6/8/10) — label-row then value-row, as the GB renders it. (Was a wrong (26,2) margin guess.)
+2. TIMING (user: battle text was instant — an oversight; the overworld already reveals char-by-char,
+   and pret uses the SAME function for both). wide_text now SHARES the overworld's PrintLetterDelay:
+   added a `wide_reveal` flag; when set, WidePlaceString (and battle_menu print_dec) call PrintLetterDelay
+   per glyph (per-letter frame delay from wOptions speed, A/B-held skips) — faithful to pret (PlaceString
+   = instant menus/HUD/stats-box; the PrintText char loop = delayed dialog). InitBattle enables the delay
+   flags (W_LETTER_PRINTING_DELAY |= BIT_TEXT_DELAY|BIT_FAST_TEXT_DELAY; wOptions speed = MEDIUM/3). The
+   dialog routines set wide_reveal=1 (attack text, faint, gained-EXP, grew-level, run/no-run); the instant
+   routines clear it (DrawBattleMenu, PrintStatsBox); HUD names use the stride-agnostic PlaceString (no
+   WidePlaceString) so they're unaffected. DEFERRED: the battle INTRO ("Wild <nick> appeared!",
+   DrawBattleIntroBox) still hand-draws via rep movsb (a separate path) → still instant; convert to reveal
+   later for full consistency. Builds + links clean. GATE: awaiting live sign-off (incl. reveal speed feel).
+
+### CORRECTION — battle text reveal gated by BIT_TEXT_DELAY, not a separate flag (2026-06-29)
+The earlier `wide_reveal` flag was wrong: it only gated wide_text's WidePlaceString, but the battle HUD
+draws mon names with text.asm's PlaceString — and the port's PlaceNextChar calls PrintLetterDelay just like
+pret. Enabling BIT_TEXT_DELAY globally in InitBattle therefore made the HUD names type out too. Faithful
+fix (matches pret exactly): BIT_TEXT_DELAY (wLetterPrintingDelayFlags) is THE single gate, shared by
+PlaceString and WidePlaceString (both call PrintLetterDelay unconditionally, like PlaceNextChar). It is OFF
+by default (InitBattle only sets BIT_FAST_TEXT_DELAY + wOptions speed) and turned ON only while a dialog
+MESSAGE prints (faithful to TextCommandProcessor): the message routines `or` it on; the instant text
+routines (DrawBattleHUDs, DrawBattleMenu, DrawMoveList, PrintMoveInfoBox, PrintStatsBox) `and` it off.
+Dropped the `wide_reveal` global entirely. Result: only dialog messages (attack/faint/gained/grew/run) type
+out; menu, move names, TYPE/PP, level-up stats box, and the HUD mon names + HP are instant — as in Gen 1.
+
+### Level-up move learning — LearnMoveFromLevelUp (Wave 2, Stage 3, 2026-06-29)
+Faithful port of pret evos_moves.asm:LearnMoveFromLevelUp into battle_menu.asm (replaces the
+battle_exp_stubs no-op; GainExperience's level-up tail now calls the real one). Sets wCurPartySpecies =
+wPokedexNum (internal index — EvosMovesPointerTable is internal-index-ordered, same as the working
+WriteMonMoves path), GetMonLearnset → flat [level,moveID] pairs, finds a move taught at wCurEnemyLevel
+(the new level); if not already known and a free (id 0) move slot exists, writes the move + its base PP
+(Moves table) and shows "<nick> learned / <move>!" (dialog message → char-by-char). Full-moveset
+"forget a move?" menu is DEFERRED (move not learned when all 4 slots full) — TODO. Reads/writes the PARTY
+mon (wPartyMon1 + wWhichPokemon*PARTYMON_STRUCT_LENGTH), pret-faithful. Harness demo: PIKACHU slot 3 L5→L6
+learns TAIL WHIP (Yellow Pikachu learnset L6) into its free slot (base Thundershock/Growl + debug SURF).
+Builds + links clean. GATE: awaiting live sign-off.
+
+### PP system (player-only) — decrement / 0-PP block / Struggle (Wave 2, Stage 3, 2026-06-29)
+Faithful to pret (user: PP applies to the PLAYER only — Gen 1 never decrements the enemy AI's PP).
+Three parts in battle_menu.asm:
+1. DecrementPlayerPP (pret DecrementPP) — `DoPlayerAttackDamage` decrements the used move's PP in
+   wBattleMonPP[wPlayerMoveListIndex] (skips Struggle). Party-struct PP sync deferred with
+   LoadBattleMonFromParty (harness battle mon is seeded directly; wBattleMonPP backs the menu/TYPE-PP box).
+   Multi-turn-status skips (Rage/Thrash/etc) not modelled (those moves aren't wired).
+2. 0-PP move block (pret SelectMenuItem) — A on a move whose PP&PP_MASK==0 → ShowNoPP ("No PP left for /
+   this move!") → RestoreBattleScreen → re-show the move menu (cursor preserved), can't be chosen.
+3. Forced Struggle (pret AnyMoveToSelect) — before the move menu, CheckAllMovesNoPP; if every move's
+   PP==0, set wPlayerSelectedMove=STRUGGLE (0xA5), ShowNoMovesLeft ("<nick> has no / moves left!"), and
+   run the turn with Struggle (skips the menu). Struggle's recoil effect is deferred (move-effects).
+PP text strings added (pret _MoveNoPPText / _NoMovesLeftText). TEMP PP-test harness seed (REVERT noted):
+PIKACHU move PP = 2/1/1/1 and enemy HP bumped 35→200 so all 4 moves can be depleted to reach Struggle.
+Builds + links clean. GATE: awaiting live sign-off.
+
+---
+
+## 2026-06-30 — Text engine completed game-wide (pret-aligned dynamic commands)
+
+Plan: docs/current_plan_battle_pret_alignment.md Stage 0. The port's
+TextCommandProcessor/PlaceString (src/text/text.asm, used by overworld NPC dialog)
+already had the layout commands + `<PLAYER>`/`<RIVAL>` name tokens, but the
+operand-bearing dynamic commands were skip-stubs. Implemented faithfully:
+
+- **TX_RAM ($01)** — was `.cmd_skip2`. Now reads the 2-byte WRAM pointer and
+  PlaceString's it at the cursor (pret home/text.asm:TextCommand_RAM). Enables
+  nicknames / arbitrary RAM strings in any text stream.
+- **TX_NUM ($09 / text_decimal)** — was `.cmd_skip3`. Reads addr + format byte
+  (`(bytes<<4)|digits`), forces LEFT_ALIGN, calls PrintNumber (pret
+  TextCommand_NUM).
+- **TX_BCD ($02 / text_bcd)** — was `.cmd_skip3`. Reads addr + flags|length,
+  calls PrintBCDNumber (pret TextCommand_BCD). For money.
+- **`<TARGET>`/`<USER>` ($59/$5A)** — added to PlaceNextChar dispatch. Per
+  hWhoseTurn (TARGET = ^1): player side → wBattleMonNick; enemy side → "Enemy " +
+  wEnemyMonNick (pret PlaceMoveTargetsName / PlaceMoveUsersName). Manual glyph
+  copy matching the existing `<PLAYER>`/`<RIVAL>` handlers.
+
+New files mirroring pret's tree (file-for-file):
+- **src/home/print_num.asm** — `PrintNumber` (mirrors home/print_num.asm). Pret's
+  3-byte power-of-ten subtraction is computed with native 32-bit DIV (value ≤ 24
+  bits); observable behaviour identical — same digits + leading-zero /
+  LEFT_ALIGN / space-pad + pointer-advance rules (.PrintLeadingZero / .NextDigit).
+- **src/home/print_bcd.asm** — `PrintBCDNumber` + `PrintBCDDigit` (faithful
+  transliteration; calls PrintLetterDelay; note bit 7 = *suppress* leading zeroes,
+  inverted vs PrintNumber, per pret).
+
+Text flag bits (BIT_MONEY_SIGN/LEFT_ALIGN/LEADING_ZEROES) added to
+gb_constants.inc (BIT_LEFT_ALIGN also defined locally in text.asm, which doesn't
+include gb_constants). Both new files added to the Makefile GAME_SRCS beside
+text.asm (always linked). Assembles + links clean.
+
+Not yet exercised live: nothing emits TX_RAM/TX_NUM yet (overworld dialog uses
+line/para/done only) — proof comes when the Stage-2 battle-text generator routes a
+message (nick + EXP number) through it. The ad-hoc print_dec/print_num3 copies in
+battle_menu/battle_hud/party_menu remain; retire them onto PrintNumber alongside
+Stage 2.
+
+---
+
+## 2026-06-30 — Text engine UNIFIED (deleted the stride-40 wide_text.asm fork)
+
+Plan: docs/current_plan_battle_pret_alignment.md Stage 0.5 (user-approved). The
+port had forked pret's single stride-20 text engine into a parallel stride-40
+clone (src/text/wide_text.asm: WidePlaceString/WideTextBoxBorder/
+WideHandleMenuInput/WidePlaceMenuCursor) so battle could draw into the 40-wide
+full-screen W_TILEMAP. pret has no such split (hardware is 20-wide everywhere) —
+it was pure divergence (double maintenance, and would have forced cloning the
+whole TextCommandProcessor too). Unified onto the ONE engine:
+
+- text.asm parameterized on a runtime `text_row_stride` (.data, default 20).
+  TextBoxBorder's row-advance and PlaceNextChar's `<NEXT>` now read it instead of
+  the SCREEN_W_TILES literal. Overworld unchanged (stays 20).
+- PlaceString now takes its source pointer in EAX (port calling convention; logic
+  byte-identical to pret, which uses DE). Updated every caller: TextCommandProcessor
+  (.cmd_start/.cmd_ram), battle_hud (2), party_menu, start_menu.
+- Menu input relocated to new pret-mirrored src/home/window.asm as HandleMenuInput
+  / PlaceMenuCursor (+ menu_item_step / menu_redraw_cb), stride-aware via
+  text_row_stride. (These are home/window.asm routines in pret.)
+- battle_menu.asm migrated off Wide*: WidePlaceString→PlaceString + `mov esi,ebx`
+  (PlaceString returns the end cursor in EBX = pret's BC; identical position to
+  Wide's returned ESI, so chaining is preserved), WideTextBoxBorder→TextBoxBorder,
+  WideHandleMenuInput→HandleMenuInput, wide_line_step→menu_item_step,
+  wide_menu_redraw_cb→menu_redraw_cb.
+- InitBattle sets text_row_stride=40; EndBattleScreen resets it to 20 (so a future
+  overworld return can't inherit the battle stride; full clean exit is Stage 3).
+- src/text/wide_text.asm DELETED; removed from Makefile; src/home/window.asm added.
+  type_names.asm (data table WideTypeNames) and init_battle.asm had no Wide *calls*
+  (only a data label / comment) — left as-is.
+
+Builds + links clean (DEBUG_BATTLE_LIVE). This is a behavior-preserving refactor;
+needs a live regression check that the battle UI (HUD names, FIGHT/PKMN/ITEM/RUN
+menu + cursor, move list + TYPE/PP box, attack/EXP/level messages) renders
+exactly as before. The Stage-0 dynamic commands (TX_RAM/TX_NUM/<USER>) now reach
+battle text via this one engine, but aren't *emitted* yet — that's Stage 2.
+
+## 2026-06-30 (fix) — unification regression: PlaceString source addressing
+
+After unifying the text engine, battles page-faulted and the FIGHT/PKMN/ITEM/RUN
+labels were blank (overworld was fine). Root cause: the deleted WidePlaceString
+read its source string FLAT (`[eax]`), while the unified PlaceString read it
+EBP-relative (`[ebp+edx]`). battle_menu passes FLAT-LINEAR source pointers
+(`mov eax, str_x` for .data labels, `lea eax,[ebp+nick]` for GB strings), so
+PlaceString did `[ebp + flat_ptr]` → garbage; with no `$50` in the garbage,
+PlaceNextChar walked off the mapped pages → page fault. (HUD names worked because
+battle_hud passed a GB *offset*.)
+
+Fix: PlaceString now reads its source FLAT-LINEAR (`[edx]`, no EBP) — matching
+place_flat_str and the DJGPP flat model — so battle_menu's 49 sites need no change.
+Updated the callers that passed GB offsets to pass flat-linear instead:
+TextCommandProcessor .cmd_start (`lea eax,[ebp+esi]` in; `sub esi,ebp` after to get
+the GB offset back for TCP) and .cmd_ram (`lea eax,[ebp+edx]`); the `<DONE>` handler
+returns `lea edx,[ebp+DONE_SENTINEL_WRAM]` (flat) so the sentinel round-trips;
+battle_hud (2), party_menu, start_menu now `lea eax,[ebp+...]`. The internal
+`<PLAYER>`/`<RIVAL>`/`<USER>` handlers still read GB WRAM via `[ebp+edx]` (unchanged).
+Static FRAME.BIN confirms FIGHT/PKMN/ITEM/RUN render. Re-touches the overworld
+TCP/`<DONE>` path → needs an overworld NPC-dialog re-check.
+
+## 2026-06-30 — Faithful battle core.asm orchestration written (Stage 3, assembles)
+
+dos_port/src/engine/battle/core.asm — a structure-for-structure translation of pret
+engine/battle/core.asm replacing the bespoke battle_menu.asm orchestration. Assembles
+clean (standalone; not yet linked). Routines: MainInBattleLoop, DisplayBattleMenu (two-
+column input + FIGHT/PKMN/ITEM/RUN dispatch), MoveSelectionMenu + AnyMoveToSelect
+(faithful FormatMovesString → '-' empty slots, 0-PP/disabled/Struggle), ExecutePlayer/
+EnemyMove (faithful core damage path), DisplayUsedMoveText (<USER> used <MOVE>!),
+ApplyAttackTo{Enemy,Player}Pokemon, PrintBattleText + RunBattleTextStream, HandleEnemy/
+PlayerMonFainted (+ GainExperience), BattleMenu_RunWasSelected, ReadPlayerMonCurHPAndStatus,
+CheckNumAttacksLeft, BattlePromptWait. %includes the generated battle_text.inc.
+
+Text engine parameterized (text.asm) for the battle box: text_line2 (<LINE> target),
+text_arrow_pos + text_prompt_hook (battle ▼ in W_TILEMAP), and <PROMPT> now faithfully
+draws ▼ → waits → TERMINATES (pret PromptText→DoneText) — data-driven ▼ (prompt=arrow,
+done/text_end=none), fixing the earlier "▼ on every battle message" issue.
+
+New gb_memmap symbols: wMenuItemToSwap CC35, wBattleAndStartSavedMenuItem CC2D,
+wAnimationID D07B, wMonIsDisobedient CCED.
+
+TODO(faithful) deepening, clearly marked in-source (translate next; not silent
+divergences): CheckPlayer/EnemyStatusConditions (sleep/freeze/para/confusion/flinch/
+Bide/Thrash/Rage), CheckForDisobedience, the IsInArray effect-array gating (currently
+JumpMoveEffect runs once after damage), HandleCounterMove, multi-hit, Mirror/Metronome,
+PrintCriticalOHKOText/DisplayEffectiveness, SlideDownFaintedMonPic + faint SFX, trainer
+multi-mon/prize/blackout, GetCurrentMove move-name-buffer tail. Move animation = HP-bar
+placeholder; audio = no-op (agreed).
+
+NEXT (Stage 5 integration): alias battle_menu draw helpers to pret names (DrawHUDsAndHPBars
+/Save+LoadScreenTilesToBuffer1/DrawBattleMenuBox/DrawEmptyDialogBox), add BattleItemMenu/
+BattlePartyMenu deferred stubs, GUT battle_menu.asm's bespoke orchestration (keep only
+draw helpers), wire JumpMoveEffect→effects.asm (remove battle_stubs stub, link the backend
+live), point the DEBUG_BATTLE harness at MainInBattleLoop, add core.asm to the Makefile,
+build + FRAME/live verify.
+
+---
+
+## 2026-06-30 — Stage 5 integration: faithful core.asm battle loop goes LIVE
+
+The faithful `engine/battle/core.asm` translation is now LINKED and drives the battle
+(replacing the bespoke battle_menu.asm orchestration). `make SKIP_TITLE=1
+DEBUG_BATTLE_LIVE=1` builds; the static `DEBUG_BATTLE=1` FRAME dump confirms the HUD
+(PIDGEY :L13 — E_LV fix), both sprites, the FIGHT/PKMN/ITEM/RUN menu and ▼ render.
+
+Changes:
+- **battle_menu.asm rewritten** to DRAW HELPERS + EXP/level-up display + run-odds only.
+  Bespoke orchestration removed (DisplayBattleMenu, MoveSelectionMenu, ExecutePlayerTurn,
+  Render*/Do*AttackDamage, the fainted/no-PP/run message draws). Kept: Save/LoadScreen-
+  TilesToBuffer1 (+ SaveBattleScreen/RestoreBattleScreen aliases), DrawHUDsAndHPBars
+  (→DrawBattleHUDs), DrawEmptyDialogBox/DrawBattleMenuBox/DrawBattleMenu, WaitForAPress,
+  TryRunningFromBattle, ShowGainedExp/GrewLevel/Learned text, PrintStatsBox,
+  LearnMoveFromLevelUp, FindMoveName, PrintMoveInfoBox. Added BattleItemMenu/
+  BattlePartyMenu deferred stubs. DoEnemyAttackDamage kept as DEBUG_BATTLE_ENEMYHIT
+  scaffold only.
+- **animations.asm**: PlayMoveAnimation now ALWAYS takes pret's ANIMATION=OFF path
+  (DelayFrames(30) + PlayApplyingAttackAnimation), per the user directive — the prior
+  version gated on the wOptions bit, whose default (animations ON) skipped the delay
+  entirely. PlayApplyingAttackAnimation is faithfully gated on wAnimationType; the visible
+  shake/blink (rWX/OBJ-palette) is a marked TODO-HW. HP-bar drop is the separate
+  DrawHUDsAndHPBars step, not the animation.
+- **core.asm**: CriticalHit → CriticalHitTest (real core_damage.asm global).
+- **core_stubs.asm (new, LINKED)**: faithful FormatMovesString (copy of misc.asm output —
+  names via the flat FindMoveName walk since GetName/names.asm is not link-ready;
+  TrainerNames undefined — and the '-' empty-slot tile is correctly 0xE3, vs misc.asm's
+  latent ASCII-0x2D bug), plus no-op/faithful stubs for JumpMoveEffect,
+  HandlePoisonBurnLeechSeed (ZF=0), TrainerAI (CF=0) — the deep effect/residual/AI
+  closures aren't link-ready.
+- **battle_stubs.asm**: JumpMoveEffect stub removed (now in core_stubs); CheckTarget-
+  Substitute stub kept.
+- **battle_exp_stubs.asm**: Save/LoadScreenTilesToBuffer1 stubs removed (battle_menu now
+  provides the real ones — the EXP display gets real screen save/restore).
+- **debug_dump.asm**: the DEBUG_BATTLE_LIVE `.live` loop now calls MainInBattleLoop
+  (returns on win/lose/ran), replacing the bespoke DisplayBattleMenu/wBattleOver loop.
+- **Makefile**: core.asm + core_stubs.asm + decrement_pp.asm + animations.asm linked
+  (FRONTEND_SRCS); BATTLE_SRCS stays check-only.
+
+Deferred (clearly marked TODO(faithful) in core.asm / core_stubs.asm): move effects
+(JumpMoveEffect), residual poison/burn/leech, trainer AI + multi-mon/prize, status
+conditions (sleep/freeze/para/confusion), CheckForDisobedience, multi-hit/charging/Counter,
+the visible screen-shake. These are later waves — the loop STRUCTURE is faithful and live.
+
+### 2026-06-30 — follow-up fixes (live-test bugs)
+- **Blank FIGHT move names**: core_stubs.asm FormatMovesString kept the wMovesString write
+  cursor in EDX across `call FindMoveName`, which clobbers DL → cursor corrupted, names
+  written off-target. Fixed: push/pop EDX around the call.
+- **"X used MOVE!" overflowed the box**: DisplayUsedMoveText composed the message on ONE
+  line; pret's _ActorNameText + _UsedMove1Text put the actor name on line 1 and `line
+  "used "` (a break) before the move name. Fixed: str_used_grammar now leads with <LINE>
+  ($4F).
+- **Level-up showed "grew to level 1"** (pre-existing engine bug, never live-tested — NOT a
+  harness artifact): GainExperience adds EXP to the party struct, then (faithfully) calls
+  LoadMonData so CalcLevelFromExperience can read the loaded-mon scratch
+  (W_LOADED_MON_SPECIES/EXP). But LoadMonData was a no-op stub (battle_exp_stubs.asm), so
+  wLoadedMon stayed stale → level computed off garbage (≈1). This would break a real battle
+  too. FAITHFUL FIX: wired the home wrapper `LoadMonData` (new, load_mon_data.asm) →
+  `LoadMonData_` (already linked; copies the full party mon into wLoadedMon + sets wMonHeader),
+  and removed the stub — exactly pret's flow (load mon, then calc level). An earlier targeted
+  hand-copy of just species+exp into wLoadedMon was reverted in favour of this. (The stat
+  recompute reads the party struct directly, so it was unaffected.) Separately, the harness
+  seeds the on-screen battle mon (L18) independently of the gaining party slot 3 (PIKACHU L5),
+  so the display reads the L5→L6 party mon, not the L18 on-screen mon — a HARNESS seam (real
+  battles LoadBattleMonFromParty), distinct from the engine bug above.
+
+### 2026-06-30 — battle data generators (4) + move-effect text de-duplication
+Added 4 Tier-1 generators (one per Sonnet subagent, reviewed against pret):
+- gen_battle_text.py EXTENDED: now scans engine/battle/move_effects/*.asm for effect text
+  wrappers and emits `global <Label>` per stream (103→123 labels). Taught it `text_pause`
+  ($0A) so GettingPumpedText generates. (building_rage/residual_damage paths are port-only
+  splits with no pret root file — harmless no-ops; that text lives in core.asm.)
+- gen_trainer_parties.py NEW → TrainerDataPointers (47 dd, class-1 indexed) + rosters (both
+  fixed-level and $FF per-mon formats) + SpecialTrainerMoves (358 B, $FF-term). Species =
+  internal index (matches gen_wild_encounters/add_party_mon).
+- gen_trainer_names.py NEW → TrainerNames (47, '@'-terminated, GetName-walked).
+- gen_move_grammar.py NEW → MoveGrammar (4 groups, db -1/db 0 pret-literal; vestigial in
+  English but carried for faithfulness).
+Wired: gen_all_assets.py chains all 4; Makefile asset rules; new linked data objects
+src/data/trainer_data.asm (+trainer_parties/_names.inc) and src/data/move_grammar.asm.
+Build green (DEBUG_BATTLE_LIVE) + make check clean.
+
+De-duplicated move-effect text (per the "text data is generated" rule): 10 move_effects/*.asm
+hand-authored their text streams in code (e.g. focus_energy `GettingPumpedText`), colliding
+with the now-generated battle_text labels and carrying dangling `extern _XxxText`. Stripped
+the inline definitions + `global` + dangling externs; each now `extern`s the generated label.
+KNOWN GAP: heal.asm's `StartedSleepingEffect` is a text wrapper that doesn't end in "Text",
+so gen_battle_text's `*Text:` regex doesn't capture it — it's now an undefined extern (fine
+check-only; needs the regex widened to `*Effect` text wrappers, or stays hand-authored, when
+move_effects get linked for JumpMoveEffect).
+
+Type-id handling verified correct end-to-end (Gen-1 gap): gb_constants NORMAL=0..GHOST=0x08,
+gap 0x09-0x13, SPECIAL=FIRE=0x14..DRAGON=0x1A; WideTypeNames is a 27-entry raw-id-indexed
+table (gap→tn_normal); damage split is `cmp al, SPECIAL(0x14)/jae .special`. (WideTypeNames
+is still hand-authored — candidate for a future gen_type_names.)

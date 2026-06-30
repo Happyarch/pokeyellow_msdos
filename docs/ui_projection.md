@@ -31,7 +31,8 @@ The whole 160×144 GB battle screen is centered in the 40×25 canvas via a unifo
 **+10 col / +3 row** tile offset (no per-element anchoring), with the bottom dialog
 box hand-drawn at the same offset. The player HUD uses +3 (not +4) so its frame
 "shelf" gets row 14. Per-element placements are in the table below + `; PROJ` tags
-in `battle_hud.asm` / `init_battle.asm` / `pics.asm`. See `current_plan_battle_frontend.md`.
+in `battle_hud.asm` / `init_battle.asm` / `pics.asm`. See `current_plan_battle_pret_alignment.md`
+(battle-frontend draw layer; the old `current_plan_battle_frontend.md` is archived at `docs/plans/`).
 
 ### Future subsystems
 

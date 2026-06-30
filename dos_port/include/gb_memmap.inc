@@ -204,6 +204,8 @@ wListCount             equ 0xD129   ; = W_LIST_COUNT
 wMaxMenuItem           equ 0xCC28
 wMenuWatchedKeys       equ 0xCC29   ; bit mask of keys the menu responds to
 wLastMenuItem          equ 0xCC2A   ; previously selected menu item
+wMenuItemToSwap        equ 0xCC35   ; SELECT-swap selection (0 = none); 1-based
+wBattleAndStartSavedMenuItem equ 0xCC2D ; remembered battle/START cursor (reset each battle)
 
 ; Loaded-mon + enemy / current-box / daycare aliases — the Stage 1 cross-section
 ; deferrals, now resolved against pokeyellow.sym (symbols branch).
@@ -240,6 +242,7 @@ wInHandlePlayerMonFainted equ 0xCCF0
 wPlayerUsedMove        equ 0xCCF1
 wEnemyUsedMove         equ 0xCCF2
 wEnemyMonMinimized     equ 0xCCF3
+wMonIsDisobedient      equ 0xCCED
 wMoveDidntMiss         equ 0xCCF4
 wPlayerMonMinimized    equ 0xCCF7
 
@@ -352,6 +355,7 @@ wBattleMonSpecial      equ 0xD02A
 wBattleMonPP           equ 0xD02C   ; 4 bytes
 
 wTrainerClass          equ 0xD030
+wNumRunAttempts        equ 0xD11F   ; run-from-battle attempt count (escape-odds boost)
 wIsInBattle            equ 0xD056   ; 0 none, 1 wild, 2 trainer ($FF = lost)
 wBattleType            equ 0xD059
 wDamageMultipliers     equ 0xD05A   ; bit 7 = STAB, low bits = type-eff numerator
@@ -430,6 +434,7 @@ wTrainerBaseMoney      equ 0xD045   ; word, BCD
 wLoneAttackNo          equ 0xD05B
 wTrainerNo             equ 0xD05C
 wAmountMoneyWon        equ 0xD078   ; 3 bytes, BCD
+wAnimationID           equ 0xD07B   ; current battle-animation id (= wMenuItemOffset/wDefaultMap union)
 wFirstMonsNotOutYet    equ 0xD11C
 wEnemyMon1HP           equ 0xD8A4
 wEnemyMon1Status       equ 0xD8A7
@@ -454,6 +459,7 @@ hQuotient              equ 0xFF95
 hDivisor               equ 0xFF99
 hRemainder             equ 0xFF99
 hProduct               equ 0xFF95   ; 4 bytes (= hQuotient/hDividend; Multiply/Divide result)
+hEnemySpeed            equ 0xFF8D   ; 2 bytes — enemy speed scratch (TryRunningFromBattle)
 hRandomAdd             equ 0xFFD3   ; PRNG output byte 1 (wild encounter rate compare)
 hRandomSub             equ 0xFFD4   ; PRNG output byte 2 (wild encounter slot select)
 hTextID                equ 0xFF8C   ; DisplayTextID input

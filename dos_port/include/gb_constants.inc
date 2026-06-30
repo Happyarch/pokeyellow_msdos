@@ -465,4 +465,10 @@ BMON_SPECIAL            equ 0x17       ; word
 BMON_PP                 equ 0x19       ; 4 bytes
 BATTLE_STRUCT_LENGTH    equ 0x1D       ; 29 bytes
 
+; --- number/BCD printing flag bits (constants/text_constants.asm) ---
+; Passed in the high bits of the flags byte to PrintNumber / PrintBCDNumber.
+BIT_MONEY_SIGN          equ 5          ; prepend '¥' currency glyph (BCD)
+BIT_LEFT_ALIGN          equ 6          ; left-justify (don't pad leading positions)
+BIT_LEADING_ZEROES      equ 7          ; print leading zeroes instead of spaces
+
 %endif ; GB_CONSTANTS_INC

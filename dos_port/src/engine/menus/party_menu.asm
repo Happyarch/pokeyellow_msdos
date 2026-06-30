@@ -559,7 +559,7 @@ DisplayPartyMenu:
     lea esi, [edi + W_TILEMAP + PM_NAME_COL]
     mov eax, [pm_slot]
     imul eax, eax, NAME_LENGTH
-    lea edx, [eax + wPartyMonNicks]
+    lea eax, [ebp + eax + wPartyMonNicks]    ; PlaceString src = flat-linear
     call PlaceString
     pop edi
     pop ebx

@@ -18,6 +18,7 @@ bits 32
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
 
+global LoadMonData
 global LoadMonData_
 global GetMonSpecies
 
@@ -26,6 +27,13 @@ extern AddNTimes
 extern CopyData
 
 section .text
+
+; LoadMonData — pret home/pokemon.asm wrapper (predef LoadMonData): bank-switch + call
+; LoadMonData_ + return. In the flat DPMI port there is no bank to switch, so it is a
+; direct tail-call. Caller sets wWhichPokemon + wMonDataLocation. (Replaces the former
+; no-op stub in battle_exp_stubs.asm, which left wLoadedMon stale for GainExperience.)
+LoadMonData:
+    jmp LoadMonData_
 
 LoadMonData_:
     mov al, [ebp + wDayCareMonSpecies]
