@@ -10,57 +10,53 @@
 ; and points directly to ported handler globals or the shared UnportedMoveEffect stub.
 ; pret uses dw (16-bit, ROM bank-relative); here dd (32-bit flat, DPMI linear).
 ;
-; DISPATCHER ROLE: Wave 2 (battle loop) calls JumpMoveEffect. When an effect handler
-; is ported, update the corresponding dd entry to its global label and remove it from
-; the unported list in the header comment. Do not touch UnportedMoveEffect itself.
+; DISPATCHER ROLE: Wave 2 (battle loop) calls JumpMoveEffect. The move-effect
+; translation swarm is COMPLETE (2026-06-30, docs/plans/move_swarm.md): every
+; non-NULL effect is faithfully translated (per docs/plans/move_translation_divergence.md)
+; and wired in the table below. Only the 7 NULL-in-pret effects stay UnportedMoveEffect.
+; Do not touch UnportedMoveEffect itself.
 ;
-; PORTED + WIRED HANDLERS (live in the table below; faithfully translated per
-; docs/move_translation_divergence.md, logged in docs/translation_log.md):
-;   StatModifierUpEffect, StatModifierDownEffect  src/engine/battle/stat_mod_effects.asm
-;     ($0A-$0F/$32-$37 up, $12-$17/$3A-$3F/$44-$4B down)
-;   PoisonEffect_              poison.asm                ($02/$21/$42, S4 reference)
+; PORTED + WIRED HANDLERS (all live in the table below; 34 non-NULL effects across
+; the listed effect bytes; logged in docs/translation_log.md):
+;   StatModifierUpEffect / StatModifierDownEffect  stat_mod_effects.asm
+;       ($0A-$0F,$32-$37 up; $12-$17,$3A-$3F,$44-$4B down)
 ;   SleepEffect_              sleep.asm                  ($01/$20)
+;   PoisonEffect_            poison.asm                  ($02/$21/$42, S4 reference)
+;   DrainHPEffect_           drain_hp.asm                ($03/$08)
 ;   FreezeBurnParalyzeEffect_ freeze_burn_paralyze.asm   ($04/$05/$06/$22/$23/$24)
-;   ExplodeEffect_            explode.asm                ($07)
-;   ConversionEffect_         conversion.asm             ($18)
-;   HazeEffect_              haze.asm                    ($19)
-;   BideEffect_              bide.asm                    ($1A)
-;   TwoToFiveAttacksEffect_  two_to_five_attacks.asm     ($1D/$1E/$2C/$4D)
-;   FlinchSideEffect_        flinch_side.asm             ($1F/$25)
-;   OneHitKOEffect_          one_hit_ko.asm              ($26)
-;   MistEffect_              mist.asm                    ($2E)
-;   FocusEnergyEffect_       focus_energy.asm            ($2F)
-;   ConfusionEffect_ / ConfusionSideEffect_  confusion.asm  ($31 / $4C)
-;   ParalyzeEffect_          paralyze.asm                ($43)
-;   LeechSeedEffect_         leech_seed.asm              ($54)
-;   RageEffect_              rage.asm                    ($51)
-;   SplashEffect_            splash.asm                  ($55)
+;   ExplodeEffect_           explode.asm                 ($07)
+;   PayDayEffect_            pay_day.asm                 ($10)
+;   ConversionEffect_        conversion.asm              ($18)
+;   HazeEffect_             haze.asm                     ($19)
+;   BideEffect_             bide.asm                     ($1A)
+;   ThrashPetalDanceEffect_ thrash_petal_dance.asm       ($1B)
+;   SwitchAndTeleportEffect_ switch_and_teleport.asm     ($1C)
+;   TwoToFiveAttacksEffect_ two_to_five_attacks.asm      ($1D/$1E/$2C/$4D)
+;   FlinchSideEffect_       flinch_side.asm              ($1F/$25)
+;   OneHitKOEffect_         one_hit_ko.asm               ($26)
+;   ChargeEffect_           charge.asm                   ($27/$2B)
+;   TrappingEffect_         trapping.asm                 ($2A)
+;   MistEffect_             mist.asm                     ($2E)
+;   FocusEnergyEffect_      focus_energy.asm             ($2F)
+;   RecoilEffect_           recoil.asm                   ($30)
+;   ConfusionEffect_        confusion.asm                ($31)
+;   HealEffect_             heal.asm                     ($38)
+;   TransformEffect_        transform.asm                ($39)
+;   ReflectLightScreenEffect_ reflect_light_screen.asm   ($40/$41)
+;   ParalyzeEffect_         paralyze.asm                 ($43)
+;   ConfusionSideEffect_    confusion.asm                ($4C)
+;   SubstituteEffect_       substitute.asm               ($4F)
+;   HyperBeamEffect_        hyper_beam.asm               ($50)
+;   RageEffect_             rage.asm                     ($51)
+;   MimicEffect_            mimic.asm                    ($52)
+;   LeechSeedEffect_        leech_seed.asm               ($54)
+;   SplashEffect_           splash.asm                   ($55)
+;   DisableEffect_          disable.asm                  ($56)
 ;
-; UNPORTED EFFECTS (still routed to UnportedMoveEffect; the swarm fills these in):
-;   DRAIN_HP_EFFECT ($03)     DrainHPEffect_ (re-queued: failed audit; drain_hp.asm draft)
-;   DREAM_EATER_EFFECT ($08)  DrainHPEffect_ (same; re-queued)
-;   MIRROR_MOVE_EFFECT ($09)  NULL in pret (no-op)
-;   PAY_DAY_EFFECT ($10)      PayDayEffect_ (re-queued: failed audit; pay_day.asm draft)
-;   SWIFT_EFFECT ($11)        NULL in pret (no-op)
-;   THRASH_PETAL_DANCE_EFFECT ($1B) ThrashPetalDanceEffect (fresh; not yet translated)
-;   SWITCH_AND_TELEPORT_EFFECT ($1C) SwitchAndTeleportEffect (fresh)
-;   CHARGE_EFFECT ($27)       ChargeEffect (fresh)
-;   SUPER_FANG_EFFECT ($28)   NULL in pret (no-op)
-;   SPECIAL_DAMAGE_EFFECT ($29) NULL in pret (no-op; Seismic Toss etc.)
-;   TRAPPING_EFFECT ($2A)     TrappingEffect (fresh)
-;   FLY_EFFECT ($2B)          ChargeEffect (fresh)
-;   JUMP_KICK_EFFECT ($2D)    NULL in pret (no-op)
-;   RECOIL_EFFECT ($30)       RecoilEffect_ (re-queued: failed audit; recoil.asm draft)
-;   HEAL_EFFECT ($38)         HealEffect_ (re-queued: failed audit; heal.asm draft)
-;   TRANSFORM_EFFECT ($39)    TransformEffect_ (re-queued: failed audit; transform.asm draft)
-;   LIGHT_SCREEN_EFFECT ($40) ReflectLightScreenEffect_ (re-queued; reflect_light_screen.asm draft)
-;   REFLECT_EFFECT ($41)      ReflectLightScreenEffect_ (same; re-queued)
-;   unused ($4E)              NULL in pret
-;   SUBSTITUTE_EFFECT ($4F)   SubstituteEffect_ (re-queued: failed audit; substitute.asm draft)
-;   HYPER_BEAM_EFFECT ($50)   HyperBeamEffect (fresh)
-;   MIMIC_EFFECT ($52)        MimicEffect (fresh)
-;   METRONOME_EFFECT ($53)    NULL in pret (no-op)
-;   DISABLE_EFFECT ($56)      DisableEffect (fresh)
+; UNPORTED — the 7 NULL-in-pret effects (no body in pret; handled inline in the
+; core.asm main flow, not via JumpMoveEffect), so they stay UnportedMoveEffect:
+;   $09 MIRROR_MOVE, $11 SWIFT, $28 SUPER_FANG, $29 SPECIAL_DAMAGE (Seismic Toss
+;   etc.), $2D JUMP_KICK, $4E (unused const_skip), $53 METRONOME.
 ;
 ; Register map: A=AL, B=BH, C=BL (BC=BX), HL=ESI, EBP=GB memory base.
 
@@ -72,14 +68,10 @@ bits 32
 ; ---------------------------------------------------------------------------
 ; Externs — ported handler globals from move_effects/*.asm and stat_mod_effects.asm
 ; ---------------------------------------------------------------------------
-; SCAFFOLD WIRING (move-effect swarm): JumpMoveEffect is now LIVE (this file links;
-; the core_stubs.asm JumpMoveEffect stub is gone). Only the handlers that are ported
-; AND integrated are wired below; every other entry routes to UnportedMoveEffect (a
-; no-op) so a battle can't crash on an unported move. The 14 audit-first drafts in
-; move_effects/* + the swarm's fresh bodies are wired in by the master as each one
-; passes audit (S5). Live now:
-;   - StatModifierUpEffect / StatModifierDownEffect  (shared stat body, §4)
-;   - PoisonEffect_                                  (S4 reference handler)
+; SCAFFOLD WIRING (move-effect swarm — COMPLETE): JumpMoveEffect is LIVE (this file
+; links; the core_stubs.asm JumpMoveEffect stub is gone). All 34 non-NULL handlers
+; are translated, audited, and externed below; the 7 NULL-in-pret effects route to
+; UnportedMoveEffect (a no-op) so a battle can't crash on a moveless effect byte.
 extern StatModifierUpEffect     ; src/engine/battle/stat_mod_effects.asm
 extern StatModifierDownEffect   ; src/engine/battle/stat_mod_effects.asm
 extern PoisonEffect_            ; src/engine/battle/move_effects/poison.asm

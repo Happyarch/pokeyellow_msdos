@@ -3526,11 +3526,16 @@ is still hand-authored — candidate for a future gen_type_names.)
 
 # Move-effect swarm — S5 integration entries (2026-06-30)
 
-The 16 faithful move-effect bodies below were integrated by the master into
-`MoveEffectPointerTable` (effects.asm) during S5 and verified (build green). Each
-is a faithful translation of the named `engine/battle/effects.asm` label per
-`docs/move_translation_divergence.md`. The mandatory **Divergences** field lists
-every §2 allowlist item the body took (§2.1 = literal move subanimation →
+The move-effect bodies below were integrated by the master into
+`MoveEffectPointerTable` (effects.asm) across the S5 integration batches (a first
+batch, then the second-half bodies + the re-translated drafts) and verified (build
+green). Together with the StatModifier* shared bodies and the PoisonEffect_
+reference handler logged earlier, they complete **all 34 non-NULL move effects**
+(the swarm is done — see `docs/plans/move_swarm.md`; the 7 NULL-in-pret effects
+correctly stay `UnportedMoveEffect`). Each is a faithful translation of the named
+`engine/battle/effects.asm` label per `docs/plans/move_translation_divergence.md`.
+The mandatory **Divergences** field lists every §2 allowlist item the body took
+(§2.1 = literal move subanimation →
 ANIMATION=OFF no-op; §2.4 = bank switching dropped in the flat DPMI model).
 `PoisonEffect_` (the S4 reference handler) is logged in the swarm-scaffold entry
 near the top of this file. Earlier draft-era `## <Name>Effect_` entries (dated
@@ -3666,12 +3671,14 @@ historical notes; these are the authoritative integration entries.
   QuarterSpeedDueToParalysis, faithful.
 
 ## LeechSeedEffect_ (move-swarm S5)
-- **Source:** `engine/battle/effects.asm:LeechSeedEffect`
+- **Source:** `engine/battle/move_effects/leech_seed.asm:LeechSeedEffect_`
 - **Translated:** `dos_port/src/engine/battle/move_effects/leech_seed.asm` (`$54`)
 - **Date:** 2026-06-30
 - **H-flag:** Not involved.
 - **Bug tags:** none.
-- **Divergences:** literal move subanimation → no-op (ANIMATION=OFF path, §2.1).
+- **Divergences:** (1) literal move subanimation → no-op (`PlayCurrentMoveAnimation`,
+  ANIMATION=OFF path, §2.1); (2) bank flattening — pret's `callfar MoveHitTest` and
+  `callfar PlayCurrentMoveAnimation` become flat `call`s (§2.4, no banks in DPMI).
 - **Notes:** Sets the SEEDED bit on the target (Grass-type immunity + already-seeded
   guards), faithful.
 
@@ -3751,6 +3758,14 @@ historical notes; these are the authoritative integration entries.
 - **Notes:** Copies a target move into the user's Mimic slot. The choose-vs-random
   branch is intentionally left asymmetric per the original; accuracy/substitute
   guards faithful.
+- **Runtime gap (faithful translation ≠ faithful in-game behavior yet):** the
+  non-link **player** path sets `wMoveMenuType = 1` and calls `MoveSelectionMenu`
+  to let the human pick *which of the foe's* moves to copy — but the live
+  `MoveSelectionMenu` (core.asm) does not yet implement the `wMoveMenuType=1`
+  (mimic) mode; it always lists the player's own moves. So `MimicEffect_` itself is
+  a faithful port, but until that menu mode lands, the human-player Mimic UI shows
+  the wrong move list. The AI/link random-pick path is unaffected. (Tracked as a
+  `TODO(master)` in mimic.asm and a deferred item in `MoveSelectionMenu`.)
 
 ## SwitchAndTeleportEffect_ (move-swarm S5)
 - **Source:** `engine/battle/effects.asm:SwitchAndTeleportEffect`
@@ -3917,3 +3932,23 @@ historical notes; these are the authoritative integration entries.
 - Tooling: `tools/gen_battle_text.py` was fixed to emit `StartedSleepingEffect` (its
   label regex only matched `*Text` names, dropping the `*Effect` text labels);
   regenerating also restored a stale-missing `PickUpPayDayMoneyText`.
+- **Honesty caveat on the `PlayBattleAnimation` / `…2` no-op stubs:** §2.1 sanctions
+  no-op'ing the *literal move subanimation*, but several handlers
+  (FreezeBurnParalyze, Bide, ThrashPetalDance) route the **HUD-shake** anims
+  (`ENEMY_HUD_SHAKE_ANIM`, `SHAKE_SCREEN_ANIM`) through these same stubs — and §3
+  lists "the screen shakes when a move lands" as faithful ANIMATION=OFF behavior
+  that *should* still happen. So today those status-infliction shakes do **not**
+  appear: the handlers call the right anim id, but the stub swallows it. The
+  translations are faithful (they invoke the shake exactly where pret does); the
+  shared *stub* is the incomplete part. This is the same deferred bucket as the
+  gradual HP-bar drain and the real Substitute pic-swap — to be filled in during
+  the PPU pass, at which point the calls light up with no handler changes. Logged
+  here so the "no-op = faithful" shorthand elsewhere isn't read as "the shake is
+  already happening."
+- **`BUG(cosmetic)` vs `BUG(critical)` labeling:** the port uses the 2-level scheme
+  from `gb_macros.inc` — `critical` = memory-unsafe (crash / corruption / ACE),
+  everything else (including outcome-affecting Gen-1 quirks like Substitute's
+  self-KO or Sleep's hit-test bypass) = `cosmetic`. So "cosmetic" here means
+  "not memory-unsafe," **not** "no gameplay effect." All such bugs are gated by
+  `%if BUG_FIX_LEVEL >= 2` either way; the label only picks which `/FIXCRIT` vs
+  `/FIXALL` tier turns the fix on.
