@@ -471,7 +471,8 @@ HOME_CHECK_SRCS := \
     src/engine/overworld/player_gfx.asm \
     src/engine/overworld/overworld_text.asm \
     src/engine/overworld/ledges.asm \
-    src/engine/overworld/pathfinding.asm
+    src/engine/overworld/pathfinding.asm \
+    src/engine/overworld/trainer_engine.asm
 
 # ALL_SRCS = everything that must assemble cleanly (check) and be cleaned, incl.
 # the not-yet-linked battle backend + check-only pokemon/items/home backends.

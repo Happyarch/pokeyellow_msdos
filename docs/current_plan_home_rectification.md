@@ -294,10 +294,16 @@ squad because it unblocks the link for everyone; subsequent waves are packed int
 - [x] **M8.1 — Sight→battle wiring.** `InitBattleEnemyParameters`: store trainer class/num
   in `InitMapSprites` (currently discarded), seed `wCurOpponent`/`wTrainerClass`/
   `wTrainerNo`, call `InitBattle`; `StartTrainerBattle`/`EndTrainerBattle`.
-- [ ] **M8.2 (DEFERRED — next session; worker hit a lea idx*3 bug in TrainerBaseMoney lookup)**  — Trainer-header engine.** `StoreTrainerHeaderPointer`, `ReadTrainerHeaderInfo`,
+- [x] **M8.2 — Trainer-header engine.** `StoreTrainerHeaderPointer`, `ReadTrainerHeaderInfo`,
   `ExecuteCurMapScriptInTable` (`wCurMapScript` + override), persistent `TrainerFlagAction`
   (replace the non-persistent `npc_beaten_flags`), `GetTrainerInformation`,
   `EngageMapTrainer`, end-battle-text pointers, real `TrainerWalkUpToPlayer` + `EmotionBubble`.
+  Landed as CHECK-only `src/engine/overworld/trainer_engine.asm` (+ isolated scaffold
+  `include/m8_2_pending_symbols.inc`, m1_3 pattern). Faithful to `home/trainers.asm`,
+  `home/trainers2.asm`, `engine/overworld/trainer_sight.asm`, `emotion_bubbles.asm`.
+  ROOT follow-ups (documented in-file): trainer-header DATA generator + wire M8.1
+  sight→battle through `TrainerFlagAction`; fold the pending-symbols scaffold into
+  canonical includes after .sym-verifying the UNVERIFIED union/event addresses.
 
 ### WAVE 9 — Pikachu follower
 

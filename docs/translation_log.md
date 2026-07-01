@@ -4400,3 +4400,26 @@ unresolved symbols (verified against the full object set + `make` + `make check`
 
 Restoring any of these = uncomment the `extern` + the `; TODO(unimplemented):` line(s)
 once the routine/data exists.
+
+## Trainer-header engine (M8.2 — home-rectification)
+- Source: home/trainers.asm, home/trainers2.asm, engine/overworld/trainer_sight.asm,
+  engine/overworld/emotion_bubbles.asm
+- Translated: dos_port/src/engine/overworld/trainer_engine.asm (CHECK-only)
+- Date: 2026-07-01
+- H-flag: not involved
+- Bug tags: none
+- Divergences: FLAT-pointer model — trainer header stored as a flat 32-bit host ptr in
+  `w_trainer_header_ptr` (.bss), superseding pret's emulated 2-byte `wTrainerHeaderPtr`
+  (matches the port precedent `w_map_text_table_ptr`); split flat TrainerPicPointers /
+  TrainerBaseMoney tables instead of pret's interleaved TrainerPicAndMoneyPointers;
+  end-battle-text pointers widened to 4-byte flat slots. Persistent `TrainerFlagAction`
+  (→ home `FlagAction`) is the faithful replacement for map_sprites.asm's non-persistent
+  `npc_beaten_flags`.
+- Notes: Completes the 33-member home/ rectification swarm (33/33). Assembles clean via
+  the isolated scaffold include/m8_2_pending_symbols.inc (m1_3 convention); its
+  union/event-region addresses are worker-estimated and tagged VERIFY — fold into
+  canonical includes only after .sym verification. Fixed two integration bugs from the
+  interrupted worker: (1) `mov [ebp+esi+ebx]` three-register sentinel store rewritten as
+  `[ebp+ebx+wNPCMovementDirections2]` (esi==const here); (2) added canonical aliases for
+  wStatusFlags3/5, hLoadedROMBank, wUpdateSpritesEnabled that the scaffold had missed.
+  CHECK-only: no runtime caller until the trainer-header data generator + M8.1 wiring land.
