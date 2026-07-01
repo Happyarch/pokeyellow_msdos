@@ -139,7 +139,7 @@ EvolutionAfterBattle:
 	mov esi, wPartyMonNicks
 	call GetPartyMonName
 	call CopyToStringBuffer
-	mov cl, 50
+	mov bl, 50                          ; DelayFrames reads BL (frame.asm:213)
 	call DelayFrames
 	xor al, al
 	mov [ebp + hAutoBGTransferEnabled], al
@@ -160,7 +160,7 @@ EvolutionAfterBattle:
 	mov [ebp + wPredefBank], al
 	call GetName
 	push esi
-	mov cl, 40
+	mov bl, 40                          ; DelayFrames reads BL (frame.asm:213)
 	call DelayFrames
 	call RenameEvolvedMon
 	

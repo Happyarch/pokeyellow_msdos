@@ -121,17 +121,21 @@ BOOT_SRCS := \
 
 HOME_SRCS := \
     src/home/fill_memory.asm \
-    src/home/copy_data.asm
+    src/home/copy_data.asm \
+    src/home/bankswitch.asm
 
 HAL_SRCS := \
     src/ppu/ppu.asm \
-    src/input/joypad.asm
+    src/input/joypad.asm \
+    src/input/joypad_lowsens.asm
 
 # Phase 2: game-loop core
 GAME_SRCS := \
     src/init/init.asm \
     src/video/lcd_control.asm \
     src/video/frame.asm \
+    src/video/bg_anim.asm \
+    src/util/play_time.asm \
     src/gfx/sprites.asm \
     src/gfx/sprite_oam.asm \
     src/gfx/load_font.asm \
@@ -151,7 +155,12 @@ GAME_SRCS := \
     src/engine/menus/start_menu.asm \
     src/engine/menus/bag_menu.asm \
     src/engine/menus/party_menu.asm \
-    src/engine/menus/field_moves.asm
+    src/engine/menus/field_moves.asm \
+    src/engine/overworld/simulate_joypad.asm \
+    src/engine/overworld/overworld_stubs.asm \
+    src/engine/overworld/wild_encounter_check.asm \
+    src/engine/overworld/warp_check.asm \
+    src/engine/overworld/hidden_events.asm
 
 # Pokémon data/stats engine (current_plan_pokemon_engine.md). Grows per stage.
 POKEMON_SRCS := \
@@ -164,6 +173,7 @@ POKEMON_SRCS := \
     src/home/move_mon.asm \
     src/engine/pokemon/experience.asm \
     src/engine/pokemon/add_party_mon.asm \
+    src/engine/pokemon/add_mon.asm \
     src/engine/pokemon/load_mon_data.asm \
     src/engine/pokemon/set_types.asm \
     src/engine/pokemon/remove_mon.asm \
@@ -176,7 +186,6 @@ ITEMS_SRCS := \
     src/engine/items/item_effects.asm \
     src/engine/items/item_price.asm \
     src/engine/items/tm_prices.asm \
-    src/engine/items/subtract_paid_money.asm \
     src/home/compare.asm \
     src/engine/math/bcd.asm
 
@@ -425,9 +434,43 @@ POKEMON_CHECK_SRCS := \
     src/engine/pokemon/bills_pc.asm \
     src/engine/pokemon/evolution.asm
 
+# Item routines that assemble-validate but aren't linked yet — either unwired
+# (nothing calls them) or dependent on not-yet-ported deps (town-map palette/video
+# engine, DisplayTextBoxID, _AlreadyKnowsText). town_map is intentionally kept
+# dangling (not in the main loop) per its port note.
+ITEMS_CHECK_SRCS := \
+    src/engine/items/subtract_paid_money.asm \
+    src/engine/items/tms.asm \
+    src/engine/items/tmhm.asm \
+    src/engine/items/super_rod.asm \
+    src/engine/items/town_map.asm \
+    src/engine/menus/swap_items.asm
+
+# Home routines that assemble-validate but aren't linked yet. count_set_bits
+# emits an undefined external for wNumSetBits (no memmap alias / no caller yet),
+# so linking it would break the build — keep it check-only until a caller lands
+# (then add wNumSetBits to gb_memmap.inc and move it to HOME_SRCS).
+HOME_CHECK_SRCS := \
+    src/home/count_set_bits.asm \
+    src/home/text_script.asm \
+    src/home/predef_text.asm \
+    src/home/yes_no.asm \
+    src/home/list_menu.asm \
+    src/home/give.asm \
+    src/home/money.asm \
+    src/home/item_predicates.asm \
+    src/home/oam.asm \
+    src/home/reset_player_sprite.asm \
+    src/home/reload_tiles.asm \
+    src/engine/overworld/reload_sprites.asm \
+    src/engine/overworld/player_gfx.asm \
+    src/engine/overworld/overworld_text.asm \
+    src/engine/overworld/ledges.asm \
+    src/engine/overworld/pathfinding.asm
+
 # ALL_SRCS = everything that must assemble cleanly (check) and be cleaned, incl.
-# the not-yet-linked battle backend + check-only pokemon backend.
-ALL_SRCS := $(LINK_SRCS) $(BATTLE_SRCS) $(POKEMON_CHECK_SRCS)
+# the not-yet-linked battle backend + check-only pokemon/items/home backends.
+ALL_SRCS := $(LINK_SRCS) $(BATTLE_SRCS) $(POKEMON_CHECK_SRCS) $(ITEMS_CHECK_SRCS) $(HOME_CHECK_SRCS)
 ALL_OBJS := $(ALL_SRCS:.asm=.o)
 
 # ---------------------------------------------------------------------------
@@ -599,6 +642,23 @@ assets/wild_data.inc:
 
 src/data/wild_data.o: assets/wild_data.inc
 
+# Super Rod fishing slots (generated from data/wild/super_rod.asm; internal-index
+# species). Embedded directly by super_rod.asm.
+assets/super_rod.inc:
+	python3 tools/gen_super_rod.py
+
+src/engine/items/super_rod.o: assets/super_rod.inc
+
+# Town-map data + graphics (generated from data/maps/{town_map_entries,
+# town_map_order,names}.asm + gfx/town_map/). Consumed by town_map.asm.
+assets/town_map_data.inc assets/town_map_gfx.inc:
+	python3 tools/gen_town_map.py
+
+src/engine/items/town_map.o: assets/town_map_data.inc assets/town_map_gfx.inc
+
+# CanLearnTM/TMToMove index TechnicalMachines (added to items.inc by gen_items.py).
+src/engine/items/tms.o: assets/items.inc
+
 assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_blk.inc \
         assets/map_headers.inc assets/extra_includes.inc \
         assets/npc_sprite_data_table.inc assets/npc_dialogs/all_dialogs.inc \
@@ -609,7 +669,8 @@ assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_
         assets/type_matchups.inc assets/move_names.inc assets/field_moves.inc \
         assets/effect_categories.inc \
         assets/wild_data.inc assets/map_scripts.inc assets/battle_hud_2bpp.inc \
-        assets/trainer_pics.inc
+        assets/trainer_pics.inc \
+        assets/super_rod.inc assets/town_map_data.inc assets/town_map_gfx.inc
 
 all: $(TARGET)
 

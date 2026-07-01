@@ -28,7 +28,7 @@ FocusEnergyEffect_:
     jmp PrintText
 
 .alreadyUsing:
-    mov cl, 50
+    mov bl, 50                          ; DelayFrames reads BL (frame.asm:213)
     call DelayFrames
     jmp PrintButItFailedText_
 

@@ -244,11 +244,21 @@ WaitForAPress:
 
 ; ===========================================================================
 ; TryRunningFromBattle — faithful pret escape-odds (engine/battle/core.asm).
-; Wild-mon path only (ghost/safari/link "always escape" special cases aren't reachable;
-; trainer battles can't be fled). Returns CF=1 on escape ("Got away safely!"), CF=0
-; otherwise; on a wild failure sets wActionResultOrTookBattleTurn=1 (turn lost).
+; Guaranteed-escape special cases first (Safari / "hurry get away" / link), then the
+; wild-mon speed odds; trainer battles can't be fled. Returns CF=1 on escape ("Got
+; away safely!"), CF=0 otherwise; on a failed escape sets wActionResultOrTookBattleTurn
+; (wild) and wForcePlayerToChooseMon (both paths).
 ; ===========================================================================
 TryRunningFromBattle:
+    ; pret core.asm:1536-1545 — guaranteed-escape special cases before the odds math.
+    ; TODO(faithful): IsGhostBattle → .canEscape (Master A's IsGhostBattle; ghost
+    ; battles are not reachable yet).
+    cmp byte [ebp + wBattleType], BATTLE_TYPE_SAFARI
+    je .canEscape                        ; Safari battle always escapes (reachable)
+    cmp byte [ebp + wBattleType], BATTLE_TYPE_RUN
+    je .canEscape                        ; "hurry, get away?" forced-run
+    cmp byte [ebp + wLinkState], LINK_STATE_BATTLING
+    je .canEscape                        ; link battle always escapes
     cmp byte [ebp + wIsInBattle], 2
     je .trainerBattle
     inc byte [ebp + wNumRunAttempts]
@@ -310,6 +320,8 @@ TryRunningFromBattle:
     mov byte [ebp + wActionResultOrTookBattleTurn], 1
     mov eax, str_cantesc
     call PrintRunLine
+    mov byte [ebp + wForcePlayerToChooseMon], 1  ; pret core.asm:1620-1622
+    call SaveScreenTilesToBuffer1
     clc
     ret
 .trainerBattle:
@@ -333,6 +345,8 @@ TryRunningFromBattle:
     call PlaceString
     mov esi, ebx
     call WaitForAPress
+    mov byte [ebp + wForcePlayerToChooseMon], 1  ; pret core.asm:1620-1622
+    call SaveScreenTilesToBuffer1
     clc
     ret
 .canEscape:
@@ -474,6 +488,37 @@ LearnMoveFromLevelUp:
     movzx ecx, bl
     add ecx, [lvl_mon_ptr]
     mov [ebp + ecx + MON_PP], al
+    ; pret LearnMove (learn_move.asm:56-73): if the leveling mon is the active
+    ; battle mon, mirror the new move + PP into the in-battle struct the FIGHT
+    ; menu reads — otherwise the move stays invisible until the next battle.
+    cmp byte [ebp + wIsInBattle], 0
+    je .noBattleSync
+    mov al, [ebp + wWhichPokemon]
+    cmp al, [ebp + wPlayerMonNumber]
+    jne .noBattleSync
+    mov esi, [lvl_mon_ptr]
+    add esi, MON_MOVES
+    mov edi, wBattleMonMoves
+    mov cl, NUM_MOVES
+.syncMoves:
+    mov al, [ebp + esi]
+    mov [ebp + edi], al
+    inc esi
+    inc edi
+    dec cl
+    jnz .syncMoves
+    mov esi, [lvl_mon_ptr]
+    add esi, MON_PP
+    mov edi, wBattleMonPP
+    mov cl, NUM_MOVES
+.syncPP:
+    mov al, [ebp + esi]
+    mov [ebp + edi], al
+    inc esi
+    inc edi
+    dec cl
+    jnz .syncPP
+.noBattleSync:
     mov al, dl
     call ShowLearnedMoveText
 .restore:

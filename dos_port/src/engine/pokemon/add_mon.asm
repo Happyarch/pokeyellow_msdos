@@ -1,96 +1,44 @@
-; dos_port/engine/pokemon/add_mon.asm
-global AddPartyMon_WriteMovePP
+; dos_port/engine/pokemon/add_mon.asm — _AddEnemyMonToPlayerParty + _MoveMon.
+;
+; Source: engine/pokemon/add_mon.asm:_AddEnemyMonToPlayerParty, _MoveMon
+;         (pret/pokeyellow). pret's _AddPartyMon half (and its
+;         AddPartyMon_WriteMovePP PP helper) live in add_party_mon.asm in this
+;         port; this file carries only the trade / box-move halves.
+;
+; DUP-SYMBOL RESOLUTION (M5.2): this file previously carried a stale, DIFFERENT
+; `global AddPartyMon_WriteMovePP` (dest in EDI, FarCopyData→wMoveData) that
+; duplicated the canonical global in write_moves.asm and the file-local copy in
+; add_party_mon.asm. It was unreferenced here (pret's only caller, _AddPartyMon,
+; is in add_party_mon.asm) so it is DELETED — dedup, not rename. The canonical
+; PP writer stays in write_moves.asm.
+;
+; Register map: a=AL, b=BH, c=BL (bc=EBX), d=DH, e=DL (de=EDX), hl=ESI.
+; GB WRAM is [ebp + sym]; data tables are flat program-image labels.
+;
+; Gen-2 forward-compat: every party↔box / enemy→party copy moves the FULL
+; BOXMON_STRUCT_LENGTH (33) bytes in one CopyData, carrying struct offset 7
+; (MON_CATCH_RATE / held item) through verbatim — see CLAUDE.md.
+;
+; Build: nasm -f coff -I include/ -I . -o add_mon.o add_mon.asm
+
+bits 32
+
+%include "gb_memmap.inc"
+%include "gb_constants.inc"
+
 global _AddEnemyMonToPlayerParty
 global _MoveMon
 
 extern AddNTimes
-extern FarCopyData
-extern wMoveData
-extern Moves
-extern wPartyCount
-extern wCurPartySpecies
-extern wPartyMons
-extern wLoadedMon
 extern CopyData
-extern wPartyMonOT
 extern SkipFixedLengthTextEntries
-extern wEnemyMonOT
-extern wWhichPokemon
-extern wPartyMonNicks
-extern wEnemyMonNicks
-extern wPokedexNum
-extern IndexToPokedex
-extern wPokedexOwned
 extern FlagAction
-extern wPokedexSeen
-extern wMoveMonType
-extern wDayCareMon
-extern wBoxCount
-extern wBoxMons
-extern wDayCareMonOT
-extern wBoxMonOT
-extern wDayCareMonName
-extern wBoxMonNicks
-extern wMonDataLocation
+extern IndexToPokedex
 extern LoadMonData
 extern CalcLevelFromExperience
-extern wCurEnemyLevel
 extern CalcStats
 
-; Constants
-extern NUM_MOVES
-extern MOVE_LENGTH
-extern MOVE_PP
-extern BANK_Moves
-extern PARTY_LENGTH
-extern PARTYMON_STRUCT_LENGTH
-extern NAME_LENGTH
-extern FLAG_SET
-extern DAYCARE_TO_PARTY
-extern PARTY_TO_DAYCARE
-extern PARTY_TO_BOX
-extern MONS_PER_BOX
-extern BOXMON_STRUCT_LENGTH
-extern MON_HP_EXP
-extern MON_STATS
-
 section .text
-
-; INPUTS:
-; ESI (HL) = pointer to moves array
-; EDI (DE) = pointer to 1 byte BEFORE the destination PP array
-AddPartyMon_WriteMovePP:
-    mov bl, NUM_MOVES
-.pploop:
-    mov al, [ebp + esi]
-    inc esi
-    test al, al
-    jz .empty
-    
-    dec al
-    
-    push esi
-    push edi
-    push bx
-    
-    mov esi, Moves
-    mov bx, MOVE_LENGTH
-    call AddNTimes
-    
-    mov dx, wMoveData
-    call FarCopyData
-    
-    pop bx
-    pop edi
-    pop esi
-    
-    mov al, [ebp + wMoveData + MOVE_PP]
-.empty:
-    inc edi
-    mov [ebp + edi], al
-    dec bl
-    jnz .pploop
-    ret
 
 _AddEnemyMonToPlayerParty:
     mov esi, wPartyCount
@@ -262,7 +210,7 @@ _MoveMon:
     cmp al, DAYCARE_TO_PARTY
     jz .findOTdest
     
-    movzx eax, word BOXMON_STRUCT_LENGTH
+    mov eax, BOXMON_STRUCT_LENGTH        ; ld bc,BOXMON_STRUCT_LENGTH (const)
     add esi, eax
     mov al, [ebp + esi] ; Level
     
@@ -354,14 +302,14 @@ _MoveMon:
     mov [ebp + wCurEnemyLevel], al
     pop esi
     
-    movzx ecx, word BOXMON_STRUCT_LENGTH
+    mov ecx, BOXMON_STRUCT_LENGTH        ; ld bc,BOXMON_STRUCT_LENGTH (const)
     add esi, ecx
     mov [ebp + esi], al
     inc esi
     
     mov edx, esi
     
-    movzx ecx, word ((MON_HP_EXP - 1) - MON_STATS)
+    mov ecx, (MON_HP_EXP - 1) - MON_STATS ; ld bc,-0x12 (sign-ext = 16-bit add hl,bc)
     add esi, ecx
     mov bl, 1
     call CalcStats

@@ -106,6 +106,16 @@ TILE_SPC equ 0x7F   ; space
 PAD_A_BIT   equ 0
 PAD_B_BIT   equ 1
 
+; --- M1.2 (control-code fidelity) local constants ---------------------------
+; The following are defined locally to keep this patch self-contained. ROOT: the
+; two hardware/gfx constants ideally belong in dos_port/include/gb_memmap.inc:
+;   BIT_PAGE_CHAR_IS_NEXT               equ 3       ; hUILayoutFlags bit (constants/gfx_constants.asm)
+;   H_CLEAR_LETTER_PRINTING_DELAY_FLAGS equ 0xFFF9  ; hClearLetterPrintingDelayFlags (ram/hram.asm)
+BIT_PAGE_CHAR_IS_NEXT               equ 3          ; hUILayoutFlags bit 3 → treat <PAGE> as <NEXT>
+H_CLEAR_LETTER_PRINTING_DELAY_FLAGS equ 0xFFF9     ; hClearLetterPrintingDelayFlags (byte before hUILayoutFlags)
+LINK_STATE_BATTLING                 equ 0x04       ; wLinkState value (constants/serial_constants.asm); in gb_constants.inc too
+CHAR_DOTS_GLYPH                     equ 0x75       ; '…' single ellipsis glyph (constants/charmap.asm)
+
 ; ---------------------------------------------------------------------------
 ; Exports
 ; ---------------------------------------------------------------------------
@@ -118,7 +128,7 @@ global PrintText_Overworld      ; renamed from PrintText: the bare `PrintText` s
                                 ; now the battle printer (move_effect_helpers.asm), matching
                                 ; pret semantics in battle context. Overworld dialog uses this.
 global PrintText_NoBox
-global HandleDownArrowBlinkTiming
+extern HandleDownArrowBlinkTiming   ; canonical def in home/window.asm (Wave 4/M4.3)
 global place_flat_str
 global text_row_stride
 global text_line2
@@ -178,6 +188,11 @@ text_line2:      dd (W_TILEMAP + 16 * SCREEN_W_TILES + 1)
 ; waits for A/B, and erases it. text_arrow_pos = that ▼ tile-buffer offset.
 text_prompt_hook: dd 0
 text_arrow_pos:   dd 0
+
+; M1.2: when nonzero, manual_text_scroll suppresses the ▼ advance arrow (used by
+; TX_WAIT_BUTTON, and by TX_PROMPT_BUTTON when in a link battle — pret shows no
+; arrow in those cases). manual_text_scroll resets it to 0 before it returns.
+mts_hide_arrow:   db 0
 
 ; ---------------------------------------------------------------------------
 ; .text
@@ -317,44 +332,9 @@ PrintLetterDelay:
     pop eax
     ret
 
-; ---------------------------------------------------------------------------
-; HandleDownArrowBlinkTiming — blink the ▼ advance arrow at [EBP+ESI].
-;
-; Pret ref: home/window.asm:HandleDownArrowBlinkTiming (timing adapted for 60 Hz;
-;           original uses count1=0→255 wrap for a tight busy-wait loop, which at
-;           one call/frame yields ~4 s per phase — replaced with direct frame counts).
-;
-; In:  ESI = EBP-relative tile offset for the arrow (e.g. GB_TILEMAP1 + 146).
-;      H_DOWN_ARROW_COUNT1: frame countdown for current blink phase.
-;      H_DOWN_ARROW_COUNT2: compat byte (kept for future use; set to 1 at init).
-; Out: [EBP+ESI] toggled between CHAR_DOWN_ARROW and TILE_SPC per blink schedule.
-; All registers preserved.
-; ---------------------------------------------------------------------------
-HandleDownArrowBlinkTiming:
-    push eax
-    movzx eax, byte [ebp + esi]
-    cmp al, CHAR_DOWN_ARROW
-    jne .arrow_off
-.arrow_on:
-    ; Arrow visible: count down ON phase; erase when it expires.
-    movzx eax, byte [ebp + H_DOWN_ARROW_COUNT1]
-    dec al
-    mov [ebp + H_DOWN_ARROW_COUNT1], al
-    jnz .done
-    mov byte [ebp + esi], TILE_SPC
-    mov byte [ebp + H_DOWN_ARROW_COUNT1], ARROW_OFF_FRAMES
-    jmp .done
-.arrow_off:
-    ; Arrow hidden: count down OFF phase; show when it expires.
-    movzx eax, byte [ebp + H_DOWN_ARROW_COUNT1]
-    dec al
-    mov [ebp + H_DOWN_ARROW_COUNT1], al
-    jnz .done
-    mov byte [ebp + esi], CHAR_DOWN_ARROW
-    mov byte [ebp + H_DOWN_ARROW_COUNT1], ARROW_ON_FRAMES
-.done:
-    pop eax
-    ret
+; HandleDownArrowBlinkTiming now lives canonically in home/window.asm (Wave 4/M4.3,
+; faithful two-phase pret port). This file's single-phase copy was removed to
+; de-duplicate; the internal caller below resolves the extern.
 
 ; ---------------------------------------------------------------------------
 ; manual_text_scroll — copy current dialog box to window layer and wait for A/B.
@@ -403,8 +383,12 @@ manual_text_scroll:
     call set_single_window       ; also mirrors wy→H_WY (sync_dialog_window flag), wx→IO_WX
     ; Place ▼ arrow and init blink counters.
     ; Pret ref: home/joypad2.asm:WaitForTextScrollButtonPress places coord(18,16).
+    ; M1.2: TX_WAIT_BUTTON / in-battle TX_PROMPT_BUTTON suppress the ▼ (mts_hide_arrow).
     mov esi, GB_TILEMAP1 + DIALOG_ARROW_TILEMAP_OFFSET
+    cmp byte [mts_hide_arrow], 0
+    jne .mts_no_arrow
     mov byte [ebp + esi], CHAR_DOWN_ARROW
+.mts_no_arrow:
     mov byte [ebp + H_DOWN_ARROW_COUNT1], ARROW_ON_FRAMES
     mov byte [ebp + H_DOWN_ARROW_COUNT2], 1
     ; Release cycle: wait until A/B is no longer held (avoids re-triggering on held button).
@@ -415,7 +399,10 @@ manual_text_scroll:
     ; Press cycle: wait for A or B; blink ▼ each frame.
 .mts_press:
     call DelayFrame
+    cmp byte [mts_hide_arrow], 0
+    jne .mts_no_blink
     call HandleDownArrowBlinkTiming
+.mts_no_blink:
     test byte [ebp + H_JOY_HELD], PAD_A | PAD_B
     jz .mts_press
     ; Clear arrow from window tilemap.
@@ -426,6 +413,7 @@ manual_text_scroll:
     mov [ebp + H_DOWN_ARROW_COUNT2], al
     pop eax
     mov [ebp + H_DOWN_ARROW_COUNT1], al
+    mov byte [mts_hide_arrow], 0        ; M1.2: re-arm arrow for the next caller
     ret
 
 ; ---------------------------------------------------------------------------
@@ -570,13 +558,13 @@ PlaceNextChar:
     cmp al, CHAR_NULL
     je .handle_null            ; $00
     cmp al, CHAR_PAGE
-    je .handle_stub            ; $49 — page break (stub)
+    je .handle_page            ; $49 — Pokedex page break (or <NEXT>)
     cmp al, CHAR_PKMN
     je .handle_pkmn            ; $4A
     cmp al, CHAR_CONT_
-    je .handle_scroll_cont     ; $4B — _ContText (stub)
+    je .handle_cont_scroll     ; $4B — _ContText (arrow+wait, then scroll)
     cmp al, CHAR_SCROLL
-    je .handle_scroll_cont     ; $4C — _ContTextNoPause (stub)
+    je .handle_scroll          ; $4C — _ContTextNoPause (scroll only)
     cmp al, CHAR_PARA
     je .handle_para            ; $51
     cmp al, CHAR_PLAYER
@@ -628,8 +616,51 @@ PlaceNextChar:
     pop esi
     ret
 
-.handle_stub:
-    ; <PAGE> ($49): complex scroll/page — stub, just advance
+.handle_page:
+    ; <PAGE> ($49): PageChar. If BIT_PAGE_CHAR_IS_NEXT is set in hUILayoutFlags,
+    ; behave exactly like <NEXT>; otherwise (Pokedex full-page break) wait for input,
+    ; clear the 7×18 text area at coord(1,10), pause ~20 frames, and re-home the
+    ; cursor at coord(1,11).  Pret ref: home/text.asm:PageChar.
+    test byte [ebp + H_UI_LAYOUT_FLAGS], 1 << BIT_PAGE_CHAR_IS_NEXT
+    jz .page_full
+    mov al, CHAR_NEXT
+    jmp .not_term                    ; process as <NEXT> (pret: jp PlaceNextChar.NotTerminator)
+.page_full:
+    call manual_text_scroll          ; ▼ + wait (pret: ProtectedDelay3 + ManualTextScroll)
+    ; ClearScreenArea b=7 rows, c=18 cols at hlcoord(1,10). EDX is the live source
+    ; ptr (DE) — preserve it; use it as the row counter only inside this block.
+    push eax
+    push ecx
+    push edx
+    push edi
+    mov edx, 7                       ; 7 rows
+    lea edi, [ebp + W_TILEMAP + 10 * SCREEN_W_TILES + 1]
+.page_clear_row:
+    push edi
+    mov al, TILE_SPC
+    mov ecx, 18                      ; 18 interior columns
+    rep stosb
+    pop edi
+    add edi, SCREEN_W_TILES
+    dec edx
+    jnz .page_clear_row
+    pop edi
+    pop edx
+    pop ecx
+    pop eax
+    ; DelayFrames c=20. Bounded DelayFrame loop — the pret set-hFrameCounter-and-spin
+    ; idiom would deadlock until Wave-2/M2.1 adds the hFrameCounter decrementer.
+    push ecx
+    mov ecx, 20
+.page_wait:
+    call DelayFrame
+    dec ecx
+    jnz .page_wait
+    pop ecx
+    ; re-home cursor at coord(1,11) (pret: pop hl / hlcoord 1,11 / push hl)
+    pop esi
+    mov esi, W_TILEMAP + 11 * SCREEN_W_TILES + 1
+    push esi
     jmp .advance
 
 .handle_pkmn:
@@ -640,8 +671,14 @@ PlaceNextChar:
     pop eax
     jmp .advance
 
-.handle_scroll_cont:
-    ; <_CONT>/$4B and <SCROLL>/$4C: scroll text up two lines (stub)
+.handle_cont_scroll:
+    ; <_CONT> ($4B): _ContText — show the ▼, wait for A/B, THEN scroll up two lines.
+    ; Pret ref: home/text.asm:_ContText (falls through into _ContTextNoPause).
+    call manual_text_scroll          ; ▼ + wait; (pret places arrow, ProtectedDelay3, ManualTextScroll)
+    ; fall through into the scroll
+.handle_scroll:
+    ; <SCROLL> ($4C): _ContTextNoPause — scroll up two lines, cursor to (1,16), no wait.
+    ; Pret ref: home/text.asm:_ContTextNoPause.
     call scroll_text_up
     call scroll_text_up
     pop esi
@@ -883,7 +920,11 @@ TextCommandProcessor:
     ; duration of this text session and restores the original value at TX_END.
     movzx eax, byte [ebp + W_LETTER_PRINTING_DELAY]
     push eax                                    ; save original wLetterPrintingDelayFlags
-    or al, (1 << BIT_TEXT_DELAY)
+    or al, (1 << BIT_TEXT_DELAY)                ; set BIT_TEXT_DELAY for this session
+    ; Pret ref: home/text.asm:TextCommandProcessor — XOR in hClearLetterPrintingDelayFlags
+    ; so a caller can force-clear delay bits for the duration of the text stream.
+    movzx ecx, byte [ebp + H_CLEAR_LETTER_PRINTING_DELAY_FLAGS]
+    xor al, cl
     mov [ebp + W_LETTER_PRINTING_DELAY], al
 
 .next_cmd:
@@ -912,7 +953,7 @@ TextCommandProcessor:
     cmp al, TX_LOW
     je .cmd_low
     cmp al, TX_PROMPT_BUTTON
-    je .cmd_wait_btn
+    je .cmd_prompt_btn
     cmp al, TX_SCROLL
     je .cmd_scroll
     ; TX_START_ASM ($08): can't translate inline ASM; skip silently
@@ -921,12 +962,12 @@ TextCommandProcessor:
     cmp al, TX_NUM
     je .cmd_num
     cmp al, TX_PAUSE
-    je .cmd_skip0
+    je .cmd_pause
     ; TX_SOUND_GET_ITEM_1 ($0B): TODO-HW: audio
     cmp al, TX_SOUND_GET_ITEM_1
     je .cmd_skip0
     cmp al, TX_DOTS
-    je .cmd_skip1                   ; skip 1-byte count
+    je .cmd_dots
     cmp al, TX_WAIT_BUTTON
     je .cmd_wait_btn
     jmp .next_cmd                   ; unknown command: skip
@@ -951,14 +992,33 @@ TextCommandProcessor:
     inc esi             ; ESI = past '@' = next command
     jmp .next_cmd
 
-; --- TX_FAR ($17): far-bank text. Flat model: just skip bank byte, read inline. ---
+; --- TX_FAR ($17): far-bank text — faithful recursive splice. ---
+; Source: home/text.asm:TextCommand_FAR (pret/pokeyellow).
+; Pret reads operands addr_lo, addr_hi, bank; saves the current ROM bank; switches
+; to the far bank; sets HL = [addr_hi:addr_lo]; recursively runs TextCommandProcessor
+; on that pointer; then restores HL/bank and continues the outer stream. The far
+; text is spliced INLINE: the recursion advances the cursor (BC/EBX) and that
+; position is carried forward, so pret never restores the cursor here — nor do we.
+; Flat EBP model: banks are a no-op (src/home/bankswitch.asm — rROMB write elided);
+; we still keep the faithful hLoadedROMBank bookkeeping so any reader sees pret's value.
 .cmd_far:
-    ; Operands: addr_lo, addr_hi, bank. In flat model we skip bank (1 byte)
-    ; and treat [addr_hi:addr_lo] as an EBP-relative pointer to a nested
-    ; command stream. For Phase 2, skip all 3 bytes safely.
-    ; TODO: implement inline far-text when ROM data is staged in EBP space.
-    add esi, 3
-    jmp .next_cmd
+    ; ESI -> operands: addr_lo, addr_hi, bank. EBX = current cursor (carried forward).
+    movzx eax, byte [ebp + esi]         ; addr_lo
+    movzx ecx, byte [ebp + esi + 1]     ; addr_hi
+    shl  ecx, 8
+    or   eax, ecx                       ; EAX = far GB offset ([addr_hi:addr_lo])
+    movzx ecx, byte [ebp + esi + 2]     ; bank byte (flat model: bookkeeping only)
+    add  esi, 3                         ; ESI = resume point in the outer stream
+    push esi                            ; save outer stream ptr        (pret: push hl)
+    movzx edx, byte [ebp + H_LOADED_ROM_BANK] ; save current bank      (pret: push af)
+    push edx
+    mov  [ebp + H_LOADED_ROM_BANK], cl  ; switch to far bank; rROMB write = flat no-op
+    mov  esi, eax                       ; ESI (HL) = far stream ptr
+    call TextCommandProcessor           ; recurse: render far text; advances EBX cursor
+    pop  edx
+    mov  [ebp + H_LOADED_ROM_BANK], dl  ; restore saved bank            (pret: pop af)
+    pop  esi                            ; restore outer stream ptr      (pret: pop hl)
+    jmp  .next_cmd
 
 ; --- TX_MOVE ($03): set cursor to new tile-buffer address ---
 .cmd_move:
@@ -999,9 +1059,56 @@ TextCommandProcessor:
     mov ebx, W_TILEMAP + 16 * SCREEN_W_TILES + 1
     jmp .next_cmd
 
-; --- TX_PROMPT_BUTTON ($06) / TX_WAIT_BUTTON ($0D): wait for button (stub) ---
+; --- TX_PROMPT_BUTTON ($06): show ▼ and wait for A/B; in a link battle, defer to
+;     TX_WAIT_BUTTON (no arrow). Pret ref: home/text.asm:TextCommand_PROMPT_BUTTON. ---
+.cmd_prompt_btn:
+    movzx eax, byte [ebp + wLinkState]
+    cmp al, LINK_STATE_BATTLING
+    je .cmd_wait_btn                    ; in battle: no arrow (fall to WAIT_BUTTON path)
+    call manual_text_scroll             ; shows ▼, blinks it, waits for A/B, erases it
+    jmp .next_cmd
+
+; --- TX_WAIT_BUTTON ($0D): wait for A/B, NO arrow. Pret ref: TextCommand_WAIT_BUTTON. ---
 .cmd_wait_btn:
+    mov byte [mts_hide_arrow], 1        ; suppress the ▼ for this wait
     call manual_text_scroll
+    jmp .next_cmd
+
+; --- TX_PAUSE ($0A): if A or B is already held, continue immediately; otherwise
+;     pause ~30 frames. Pret ref: home/text.asm:TextCommand_PAUSE. No operand. ---
+.cmd_pause:
+    movzx eax, byte [ebp + H_JOY_HELD]
+    test al, PAD_A | PAD_B
+    jnz .next_cmd
+    ; DelayFrames c=30. Bounded DelayFrame loop (the set-hFrameCounter-and-spin idiom
+    ; would deadlock until Wave-2/M2.1 adds the hFrameCounter decrementer).
+    mov ecx, 30
+.pause_wait:
+    call DelayFrame
+    dec ecx
+    jnz .pause_wait
+    jmp .next_cmd
+
+; --- TX_DOTS ($0C): print N '…' glyphs, pausing ~10 frames per glyph unless A/B is
+;     held. Operand: 1-byte glyph count. Pret ref: home/text.asm:TextCommand_DOTS.
+;     Cursor is EBX (BC); it advances by the glyph count, matching pret. ---
+.cmd_dots:
+    movzx edx, byte [ebp + esi]         ; EDX = glyph count (pret d)
+    inc esi                             ; past the 1-byte count operand
+.dots_loop:
+    mov byte [ebp + ebx], CHAR_DOTS_GLYPH   ; write '…' at the cursor
+    inc ebx
+    movzx eax, byte [ebp + H_JOY_HELD]
+    test al, PAD_A | PAD_B
+    jnz .dots_next                      ; button held: skip this glyph's delay
+    mov ecx, 10                         ; DelayFrames c=10 (bounded loop; see M2.1 note above)
+.dots_delay:
+    call DelayFrame
+    dec ecx
+    jnz .dots_delay
+.dots_next:
+    dec edx
+    jnz .dots_loop
     jmp .next_cmd
 
 ; --- TX_SCROLL ($07): scroll text up two lines ---

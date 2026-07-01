@@ -5,6 +5,16 @@ multi-mon (trainer) battles, and the in-battle bag/party sub-menus** — plus tr
 Yellow obedience. This subsystem **couples to the items and party layers**, so several units
 are integration-heavy (~3–4 effective workers).
 
+> **Triage baseline (2026-07-01, branch `battle-triage` — merge before starting).** Fixed in the
+> baseline (don't re-touch): `TryRunningFromBattle` now short-circuits Safari/`BATTLE_TYPE_RUN`/link
+> to guaranteed escape and sets `wForcePlayerToChooseMon` on failure (Ghost is a `TODO` pending
+> Master-A `IsGhostBattle`); `LearnMoveFromLevelUp` syncs the new move into `wBattleMonMoves/PP`;
+> `SwitchEnemyMon` restored its link-state `CF=0` guard.
+> **Correction:** `CheckForDisobedience` was **not** a benign "obeys" stub — it was a bare `ret`
+> that failed its ZF contract and silently no-opped every non-charging player turn. The triage
+> fixed the **flag contract** (returns ZF=0). The real Yellow obedience math is still your unit
+> (below) — you're now adding behavior to a correctly-returning stub, not fixing a no-op.
+
 ## Isolation (mandatory)
 
 `core.asm` is shared. **Work on branch/worktree `battle-swarm-C`.** You own: the faint/switch
@@ -42,8 +52,12 @@ HL=ESI/EBP base. Every divergence logged in `translation_log.md`.
 | **`BattleItemMenu`** | pret `MainInBattleLoop` ITEM branch | wire the in-battle bag → item USE dispatch (couples to `items/item_effects.asm`; today it's a re-show-the-menu stub). |
 | **`BattlePartyMenu`** | pret PKMN branch | in-battle party → switch a mon (couples to `menus/party_menu.asm`; today a re-show stub). |
 | **`TrainerAI` deepening** | `engine/battle/trainer_ai.asm` | item use / switch logic / multi-mon; today stubbed "no AI action" (correct only for wild). Its closure (AIGetTypeEffectiveness + stat-mod handlers) — check what's link-ready. |
-| **`CheckForDisobedience`** | pret Yellow obedience | traded-mon obedience by badge/level; today stubbed "obeys". |
+| **`CheckForDisobedience`** | pret Yellow obedience | traded-mon obedience by badge/level; ZF contract already fixed in triage — add the real math (was, wrongly, described as a benign "obeys" stub). |
 | **`MoveSelectionMenu` `wMoveMenuType=1`** | pret | the Mimic runtime gap — the human-player "pick a foe move to copy" path currently lists the player's own moves. |
+| **`HandleEnemyMonFainted` EXP-ALL** | pret `core.asm ~:808-867` | EXP ALL dispatch is missing (unflagged): if EXP_ALL in the bag, halve the exp inputs, award to the fought mons, then re-award the whole party (`wBoostExpByExpAll`). Also preserve the Gen-1 half-zeroed `wPlayerBideAccumulatedDamage` bug when porting `FaintEnemyPokemon`. |
+| **`SelectEnemyMove` → AI move-select** | pret `core.asm:3138-3141` | the `wIsInBattle` branch to `AIEnemyTrainerChooseMoves` is absent, so trainer battles use uniform-random selection and the whole (byte-faithful) `trainer_ai.asm` scoring engine is dead code. Wire it. |
+| **Link the trainer/encounter sources** | build | `trainer_ai.asm`, `wild_encounters.asm`, `read_trainer_party.asm` are `BATTLE_SRCS` **check-only** — not in the live EXE. The live core uses the `core_stubs.asm` `TrainerAI` (CF=0). Move them into the linked build once their consumers exist. |
+| **`ReadTrainer` prize money** | pret `read_trainer_party.asm` `.FinishUp` | `AddBCDPredef_stub` is a no-op → $0 prize. Needs `home/predef.asm`'s BCD adder (`AddBCDPredef`) ported. |
 
 ## Drive the swarm
 

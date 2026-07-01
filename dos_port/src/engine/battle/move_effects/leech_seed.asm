@@ -45,7 +45,7 @@ LeechSeedEffect_:
 	mov esi, WasSeededText
 	jmp PrintText
 .moveMissed:
-	mov cl, 50
+	mov bl, 50                          ; DelayFrames reads BL (frame.asm:213)
 	call DelayFrames
 	mov esi, EvadedAttackText
 	jmp PrintText

@@ -41,6 +41,16 @@ global Func_5349
 extern IsTilePassable
 extern Random_
 
+; Wave-9 Pikachu-follower FSM — pret home/pikachu.asm:SpawnPikachu (not yet ported).
+; _UpdateSprites dispatches slot 15 (hCurrentSpriteOffset == $f0) here, faithful to
+; pret engine/overworld/sprite_collisions.asm:_UpdateSprites. Root must supply a link
+; stub until Wave 9 lands (movement.asm is a LIVE/linked source).
+extern SpawnPikachu
+; Scripted-NPC per-frame stepper — pret engine/overworld/movement.asm:DoScriptedNPCMovement
+; (not yet ported). Dispatched from the UpdateNonPlayerSprite shim below. Root must
+; supply a link stub until the scripted-movement port lands.
+extern DoScriptedNPCMovement
+
 %ifdef DEBUG_NPC_WALK
 extern npc_log
 extern npc_log_n
@@ -155,7 +165,19 @@ _UpdateSprites:
     call UpdatePlayerSprite
     jmp .skip
 .npc:
+    ; pret: engine/overworld/sprite_collisions.asm:_UpdateSprites.updateCurrentSprite —
+    ;   ldh a, [hCurrentSpriteOffset] / cp $f0 / jp z, SpawnPikachu
+    ; Slot 15 (offset $f0) is reserved for Pikachu; dispatch to the Wave-9 follower FSM
+    ; instead of the free-roam NPC machine. ESI already equals hCurrentSpriteOffset
+    ; (set at .loop top), so compare it directly.
+    ; GATED (byte-identical default): no port map populates slot 15 — pret reserves it
+    ; for Pikachu and SpawnPikachu is unported — so this branch is never taken today.
+    cmp esi, 0xF0
+    je .pikachu
     call UpdateNonPlayerSprite
+    jmp .skip
+.pikachu:
+    call SpawnPikachu                    ; pret: jp z, SpawnPikachu (Wave 9)
 .skip:
     ; Re-derive ESI from hCurrentSpriteOffset: UpdateNonPlayerSprite reloads ESI
     ; from this field, so we must re-derive rather than trusting the pre-call value.
@@ -191,6 +213,22 @@ UpdateNonPlayerSprite:
     dec al
     ror al, 4                            ; nibble swap: (N-1) → (N-1)*16
     mov [ebp + H_TILE_PLAYER_STANDING_ON], al
+
+    ; pret: engine/overworld/sprite_collisions.asm:_UpdateSprites.UpdateNonPlayerSprite
+    ; shim — before the free-roam walk machine, route a slot under scripted movement to
+    ; DoScriptedNPCMovement (the "walk in sync with the player" stepper), tail-called.
+    ; DIVERGENCE (see SUMMARY): pret gates on wNPCMovementScriptSpriteOffset ==
+    ; hCurrentSpriteOffset (per-slot) and DoScriptedNPCMovement itself checks
+    ; BIT_SCRIPTED_MOVEMENT_STATE + wNPCMovementDirections2. The port's M3.3
+    ; (pathfinding.asm:MoveSprite) instead arms the global BIT_SCRIPTED_NPC_MOVEMENT
+    ; flag in wStatusFlags5, so this dispatch gates on that flag.
+    ; GATED (byte-identical default): nothing in the LIVE link sets
+    ; BIT_SCRIPTED_NPC_MOVEMENT (MoveSprite is check-only; play_time only clears bits),
+    ; so this branch is never taken today.
+    test byte [ebp + W_STATUS_FLAGS_5], (1 << BIT_SCRIPTED_NPC_MOVEMENT)
+    jz .notScripted
+    jmp DoScriptedNPCMovement            ; pret: jp DoScriptedNPCMovement (tail call)
+.notScripted:
 
     mov al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_MOVEMENTSTATUS]
     test al, al

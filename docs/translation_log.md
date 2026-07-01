@@ -23,6 +23,266 @@ if it took none. This is the swarm's divergence audit trail.
 
 ---
 
+## home/ rectification swarm — WAVE 0 (silent-wrong bugs & build landmines)
+- **Date:** 2026-07-01
+- **Plan:** docs/current_plan_home_rectification.md, Wave 0 (M0.1–M0.5).
+- **M0.1 `Random_` PRNG double-add fix** — Source: pret `engine/math/random.asm:1-13`.
+  Translated: `dos_port/src/engine/math/random.asm`. Bug tags: fixes an UNFAITHFUL
+  divergence (no BUG_FIX_LEVEL guard — the reliance on the caller's leftover carry is
+  a faithful Gen-1 quirk, so the fix keeps it). Divergences: none (faithful). Notes: the
+  port did `add al,bl` then `adc al,bl`, double-adding DIV and clobbering the caller's
+  incoming carry (result `hRandomAdd + 2*DIV + carry` vs pret's `+ DIV + carry_in`).
+  Fixed to a single `adc al,bl`; the caller's carry is snapshotted with `pushf` at entry
+  (before the CF-clobbering `+0x25` DIV churn) and restored with `popf` right before the
+  adc. The `+0x25` DIV churn is retained (documented faithful adaptation — no free-running
+  DIV in the port).
+- **M0.2 Bankswitch symbols** — Source: pret `home/bankswitch2.asm:BankswitchCommon`,
+  `home/bankswitch.asm:BankswitchHome/BankswitchBack`. Translated: new
+  `dos_port/src/home/bankswitch.asm` (added to Makefile `HOME_SRCS`). Divergences:
+  faithful-by-design no-op (flat EBP model has no MBC banks). Notes: records the requested
+  bank in `H_LOADED_ROM_BANK` (0xFFB8) for faithful read-back; the `rROMB` write is a
+  `; TODO-HW` no-op. Resolves the dangling `BankswitchCommon` extern. The dead twin
+  `src/home/copy.asm` (its only caller) was deleted (M0.5).
+- **M0.3 `GetMachineName` restore** — Source: pret `home/names.asm:57,96-97`. Translated:
+  `dos_port/src/home/names.asm`. Divergences: none (faithful). Notes: HM path left
+  `id + NUM_HMS` in `wNamedObjectIndex`; now `push eax` on entry / `pop eax`+write-back at
+  the single `ret` (mirrors pret push af/pop af). Verified single push/pop balance (no early
+  ret; all branches fall through). Assembles at BUG_FIX_LEVEL 0 and 2.
+- **M0.4 `GBPalWhiteOut` sprites** — Source: pret `home/palettes.asm:34-43`. Translated:
+  `dos_port/src/movie/title.asm`. Divergences: CGB `UpdateCGBPal_*` commit deferred (Phase 5,
+  same status as the pre-existing BGP stub). Notes: white-out now zeroes `IO_OBP0`/`IO_OBP1`
+  in addition to `IO_BGP`, so sprites white out too. Follow-up (logged, not done): confirm
+  `render_sprites` reads OBP0/OBP1 per-OBJ so the effect is visible.
+- **M0.5 build hygiene** — deleted dead `src/home/copy.asm` (superseded twin of
+  `copy_data.asm`; colliding CopyData/FarCopyData globals, unique routines unreferenced).
+  Added `count_set_bits.asm` as **check-only** (`HOME_CHECK_SRCS`) — linking it breaks the
+  build on undefined `wNumSetBits` (no memmap alias / no caller yet); follow-up: add
+  `wNumSetBits` alias + move to HOME_SRCS when a caller lands. Kept+annotated (still out of
+  build): `src/engine/predefs.asm` (undefined `PredefPointers` table), `src/engine/joypad.asm`
+  (superseded by HAL `src/input/joypad.asm`; ends in undefined `Joypad`),
+  `src/engine/menus/swap_items.asm` (undefined `DisplayListMenuIDLoop`; Wave 4 M4.2 wires it in).
+  Deferred to M5.2: the duplicate `AddPartyMon_WriteMovePP` global (only bites when `add_mon.asm`
+  is linked, which it isn't yet). Result: `make -C dos_port` links `PKMN.EXE`; `make check` clean.
+
+## home/ rectification swarm — WAVE 1 (text engine)
+- **Date:** 2026-07-01
+- **Plan:** docs/current_plan_home_rectification.md, Wave 1 (M1.1–M1.3).
+- **M1.1 `TX_FAR` ($17) recursive far-text** — Source: pret `home/text.asm:TextCommand_FAR (~L601)`.
+  Translated: `dos_port/src/text/text.asm` (`.cmd_far`). H-flag: n/a. Divergences: none (faithful).
+  Notes: was `add esi,3 / jmp .next_cmd` (dropped the far text → blank box). Now reads the
+  little-endian GB pointer + bank byte, saves outer ESI (GB stream ptr) and `hLoadedROMBank`,
+  sets the far pointer, recurses through the public `TextCommandProcessor` (matching pret's
+  push hl / recurse / pop hl and double delay-flag save/restore), then restores and resumes.
+  EBX (tile cursor) carries forward per pret. **Correct-but-dormant:** no live caller currently
+  stages `TX_FAR` bytes into EBP space — follow-up (non-home glue): a far-text data-staging pass
+  laying pret far-text bodies at fixed GB offsets and switching DEFERRED/hand-fused sites to
+  emit real `$17 lo hi bank` operands. Composite `text_far`+`text_asm` sites (e.g. charge.asm)
+  additionally need the still-skipped TX_START_ASM ($08) splice.
+- **M1.2 text control codes** — Source: pret `home/text.asm` (TextCommand_PAUSE/DOTS/
+  PROMPT_BUTTON/WAIT_BUTTON, _ContText, PageChar). Translated: `dos_port/src/text/text.asm`.
+  Divergences (documented): (1) timed waits (TX_PAUSE 30f, TX_DOTS ~10f/glyph, `<PAGE>` 20f)
+  use bounded `DelayFrame` loops, NOT pret's set-`hFrameCounter`-and-spin idiom — that would
+  deadlock until Wave 2/M2.1 lands the `hFrameCounter` decrementer; revisit then. (2) arrow
+  suppression via a new module byte `mts_hide_arrow` guarding the ▼ in `manual_text_scroll`.
+  Notes: TX_DOTS now animates `…` glyphs advancing the cursor; TX_PROMPT_BUTTON vs
+  TX_WAIT_BUTTON split on `wLinkState == LINK_STATE_BATTLING` (arrow vs none); `<_CONT>` ($4B,
+  wait+scroll) split from `<SCROLL>` ($4C); `<PAGE>` ($49) implemented incl. `BIT_PAGE_CHAR_IS_NEXT`
+  (hUILayoutFlags bit3 → run the `<NEXT>` body); `hClearLetterPrintingDelayFlags` folded into the
+  TCP prologue. Constants (`BIT_PAGE_CHAR_IS_NEXT`, `H_CLEAR_LETTER_PRINTING_DELAY_FLAGS`,
+  `LINK_STATE_BATTLING`, `CHAR_DOTS_GLYPH`) kept local to text.asm so the patch is standalone.
+- **M1.3 `DisplayTextID` dispatch tree** — Source: pret `home/text_script.asm` + `home/predef_text.asm`.
+  Translated: new `dos_port/src/home/text_script.asm` + `predef_text.asm` (**check-only**; added to
+  `HOME_CHECK_SRCS`). New globals: `DisplayTextID` (was extern-only, now defined), `CloseTextDisplay`,
+  `HoldTextDisplayOpen`, `AfterDisplayingTextID`, `DisplayPokemartDialogue`, `LoadItemList`,
+  `DisplayTextBoxID`, `FarPrintText`, `PrintPredefTextID`, `Set`/`RestoreMapTextPointer`. Faithful
+  skeleton; non-home/not-yet-ported deps left as `extern` with `; TODO(home-rectify M1.3 follow-up)`
+  markers (menu/PC/mart special cases → Wave 4; Pikachu emotion → Wave 9; `TextPredefs` Tier-2 table;
+  far-text data labels → M1.1 staging). Caveats flagged in-source: map text-pointer addressing model
+  (port has no 16-bit ROM text-pointer table; uses 32-bit flat labels), Safari-blackout event gate.
+  **Integration decision:** the ~40 missing WRAM/HRAM/constant symbols the agent needed are
+  heuristic-derived (a +0x2EC clean-vs-branch WRAM correction) with one placeholder HRAM slot
+  (`hSavedMapTextPtr`). Rather than inject unverified `equ`s into the canonical `gb_memmap.inc`/
+  `gb_constants.inc` (included by every file) for a not-yet-linked unit, they live in an isolated,
+  `%ifndef`-guarded scaffold `dos_port/include/m1_3_pending_symbols.inc` that only these two files
+  include. **Follow-up (when a later wave links these routines):** validate the addresses, allocate a
+  real `hSavedMapTextPtr` HRAM pair in the port scheme, migrate into the canonical includes, and drop
+  the scaffold `%include`.
+
+## home/ rectification swarm — WAVES 2 & 3 (frame/VBlank + input)
+- **Date:** 2026-07-01
+- **Plan:** docs/current_plan_home_rectification.md, Waves 2–3 (M2.1, M2.2, M3.1, M3.2, M3.3).
+- **Renderer-integrity gate:** a hard constraint was injected mid-flight — ported VBlank/BG/WY
+  routines must NOT assume the GB 32×32 torus geometry against the port's native-width
+  44×32 `wSurroundingTiles` surface / 40×25 battle canvas. Verified by static diff
+  (render_bg/render_sprites/present/present_windows untouched; WY gate byte-identical when
+  the new `wDisableVBlankWYUpdate` is 0; new DelayFrame calls are pure insertions to
+  self-gating inert routines) and a live DOSBox-X run (user-confirmed render intact).
+  See memory `renderer-native-viewport-invariant`.
+- **M2.1 frame/VBlank timers** — Source: pret `home/vblank.asm` + `home/play_time.asm`.
+  Translated: `dos_port/src/video/frame.asm` + new `dos_port/src/util/play_time.asm` (LINK).
+  Added: guarded `dec hFrameCounter` in DelayFrame (unblocks pret's set-and-spin idiom);
+  `TrackPlayTime` (frames→s→m→h + maxed, gated on `BIT_GAME_TIMER_COUNTING`) called per frame;
+  `CountDownIgnoreInputBitReset` global (re-arm + `hJoyPressed`/`hJoyHeld` clear);
+  `wDisableVBlankWYUpdate` WY-commit gate (default 0 = unchanged). **Integration fix:** removed
+  the inline `wIgnoreInputCounter` countdown at overworld.asm (was a double-decrement now that
+  `CountDownIgnoreInputBitReset` runs each frame; the DelayFrame path also clears hJoyPressed).
+- **M2.2 BG animation/transfer** — Source: pret `home/vcopy.asm`. Translated: new
+  `dos_port/src/video/bg_anim.asm` (LINK). `UpdateMovingBgTiles` (self-gated on hTileAnimations;
+  mutates only vChars pattern bytes + sets `g_tilecache_dirty`) and `VBlankCopyBgMap` (self-gated
+  on its row-count low byte; copies with GB width-20/stride-32, NOT the port's SCREEN_WIDTH=40).
+  Both inert until armed; `rLY` in-vblank guard dropped as `; TODO-HW` (DelayFrame is the port's
+  vblank). Flower frames embedded as `db`; native-surface wiring is a documented follow-up if
+  ever armed.
+- **M3.1 joypad edge/mask** — Source: pret `engine/joypad.asm` (`_Joypad`/`DiscardButtonPresses`/
+  `TrySoftReset`) + `home/init.asm:SoftReset`. Translated: `dos_port/src/input/joypad.asm`.
+  Added `hJoyLast`/`hJoyReleased`/`hJoyPressed` edges, `wJoyIgnore` mask, `DiscardButtonPresses`
+  (BIT_DISABLE_JOYPAD gate), and the A+B+Start+Select combo → new non-fatal `pad_reset` global
+  (Esc-quit untouched). Follow-up: wire `pad_reset` to an in-process SoftReset (StopAllSounds→
+  white-out→re-Init) once a re-init entry exists. Bit order confirmed identical to pret PAD_*.
+- **M3.2 `JoypadLowSensitivity`** — Source: pret `home/joypad2.asm:16-53`. Translated: new
+  `dos_port/src/input/joypad_lowsens.asm` (LINK, HAL_SRCS); wired into title.asm (dropped the
+  old local stub) + town_map.asm (check-only). 30-frame initial delay, 5-frame auto-repeat,
+  A/B-held suppression via hJoy6/hJoy7; uses the M2.1 `hFrameCounter` decrementer.
+- **M3.3 simulated joypad + scripted-NPC movement** — Source: pret `home/overworld.asm`,
+  `home/map_objects.asm`, `home/npc_movement.asm`, `home/pathfinding.asm`. Translated: new
+  `dos_port/src/engine/overworld/simulate_joypad.asm` (LINK) + `pathfinding.asm` (CHECK) +
+  overworld.asm patch. `AreInputsSimulated`/`GetSimulatedInput`/`StartSimulatingJoypadStates`
+  (full buffer/index/override-mask) generalize the door-exit hack — the verified door auto-walk
+  now routes through the faithful system (live-confirmed render OK). `MoveSprite`/`CalcDifference`/
+  `DivideBytes`/RLE decode in pathfinding.asm. Scripted-NPC dispatch half added to
+  `RunNPCMovementScript` behind `%ifdef NPC_MOVEMENT_SCRIPTS_LINKED` (inert; per-map tables +
+  M6.2 `_UpdateSprites` slot dispatch are follow-ups). New memmap symbols added canonically
+  (sim-joypad WRAM + hJoy/div2 HRAM + BIT_SCRIPTED_NPC_MOVEMENT); `W_NPC_MOVEMENT_DIRECTIONS`
+  aliases the existing `W_SIMULATED_JOYPAD_STATES_END` union base 0xCC5B.
+- **Memmap follow-up (logged):** M2.1/M3.1 flagged a `W_JOY_IGNORE` address question
+  (memmap 0xCCB7 vs sym 0xCD6B) — pre-existing, not changed this wave; revisit separately.
+
+## home/ rectification swarm — WAVE 4 (menus)
+- **Date:** 2026-07-01
+- **Plan:** docs/current_plan_home_rectification.md, Wave 4 (M4.1, M4.2, M4.3).
+- **M4.1 YES/NO framework** — Source: pret `home/yes_no.asm`. Translated: new
+  `dos_port/src/home/yes_no.asm` (CHECK-only; no live caller yet). `YesNoChoice`,
+  `TwoOptionMenu`, `DisplayYesNoChoice`, `WideYesNoChoice`, `YesNoChoicePokeCenter`,
+  `InitYesNoTextBoxParameters`; faithful carry contract (CF=0 → YES/first item). **UI
+  projection (user requirement):** box drawn box-relative into stride-20 `W_TILEMAP` and
+  shown via the existing bag `add_window` descriptor pipeline (reused, not reinvented) —
+  no raw GB coords hit the display. Per-context anchor via `yn_proj_mode`: mode 0
+  (overworld, top-right X+20) default; mode 1 (battle center X+10/Y+3) exposed but
+  UNVERIFIED (no battle caller). `; PROJ` tags at placements; registered in
+  `docs/ui_projection.md`.
+- **M4.2 generic list menu** — Source: pret `home/list_menu.asm`. Translated: new
+  `dos_port/src/home/list_menu.asm` (CHECK) + `swap_items.asm` wired in (CHECK, its
+  pre-existing assembly failure fixed). `DisplayListMenuID`/`DisplayListMenuIDLoop`/
+  `DisplayChooseQuantityMenu` keyed on `wListMenuID`. **UI projection:** reuses
+  bag_menu's exact LIST_* anchor + `add_window` so a list via the generic driver lands
+  where the bespoke bag list does; `; PROJ` tags + registry rows. Deferred (TODO):
+  PC-box/battle/mart anchors + `ClearScreenArea`/`LoadGBPal`/`PrintLevel` deps (no
+  caller). bag/party menus stay bespoke; converging them onto this driver is a follow-up.
+- **M4.3 menu-input fidelity** — Source: pret `home/window.asm`. Translated:
+  `dos_port/src/home/window.asm`. Added gated `wMenuWrappingEnabled` wrap,
+  `wMenuJoypadPollCount` timeout, `wMenuWatchMovingOutOfBounds`; `wMenuCursorLocation`-
+  backed cursor; new `EraseMenuCursor`/`PlaceUnfilledArrowMenuCursor`/two-phase
+  `HandleDownArrowBlinkTiming` globals. Default behavior byte-identical for existing
+  battle callers (all new paths flag-gated to 0). **De-dup:** the single-phase
+  `HandleDownArrowBlinkTiming` in `text.asm` was removed and re-pointed (`extern`) to
+  window.asm's canonical two-phase version (fixes a latent spurious-arrow draw).
+- **Integration / dedup (per user guidance "match upstream + deduplicate"):** all menu
+  WRAM/HRAM/constants added canonically to `gb_memmap.inc`/`gb_constants.inc`; the members'
+  local placeholder `equ` blocks were stripped (identical-value dups removed); list_menu's
+  lowercase HRAM aliases re-pointed to the canonical `H_*`/`W_*` symbols. `H_JOY5/6/7`
+  promoted to canonical memmap (completing a Wave-3/M3.2 follow-up). PKMN.EXE links,
+  `make check` clean.
+
+## home/ rectification swarm — WAVE 5 (pokemon / item data correctness)
+- **Date:** 2026-07-01
+- **Plan:** docs/current_plan_home_rectification.md, Wave 5 (M5.1–M5.4).
+- **M5.1 `_AddPartyMon` completeness** — Source: pret `engine/pokemon/add_mon.asm:_AddPartyMon`.
+  `dos_port/src/engine/pokemon/add_party_mon.asm`. Added: Pokédex owned/seen `FlagAction`
+  (flat `IndexToPokedex`); in-battle wild-catch path (copy enemy DVs/HP/status + enemy
+  MaxHP stat block instead of fresh `CalcStats`); trainer fixed IVs; real OTID from
+  `wPlayerID`. **Struct offset-7 (MON_CATCH_RATE / Gen-2 held item) preserved verbatim.**
+- **M5.2 party/box movement + dup fix** — Source: pret `home/move_mon.asm` + `home/pokemon.asm`.
+  `add_mon.asm` now **LINKS** (POKEMON_SRCS) — the M0.5-deferred duplicate `AddPartyMon_WriteMovePP`
+  resolved by **deleting** add_mon's unreferenced dead copy (canonical stays sole in
+  write_moves.asm); also fixed 3× illegal `movzx reg,word <equ>` → `mov` (which incidentally
+  fixes a latent 16-bit-wrap bug). `_MoveMon`/`_AddEnemyMonToPlayerParty` full-struct copies
+  preserve offset-7. `GetPartyMonName`/`GetPartyMonName2` implemented in home/pokemon.asm
+  (removed the `ret`-stub in battle_exp_stubs.asm). `GetMonHeader` fossil/ghost sprite-ID
+  guards added (skip OOB BaseStats index).
+- **M5.3 give / money** — Source: pret `home/give.asm` + `home/money.asm` + `home/inventory.asm`.
+  New `dos_port/src/home/give.asm` (`GiveItem`/`GivePokemon`) + `money.asm` (`HasEnoughMoney`/
+  `HasEnoughCoins`/`AddAmountSoldToMoney`) — CHECK-only (deps `_GivePokemon`/`DisplayTextBoxID`
+  not yet linked). `subtract_paid_money.asm`: restored the money-box redraw + dropped the magic
+  `wTextBoxID` (now canonical). `global CopyToStringBuffer` added in core.asm for graduation.
+- **M5.4 HM/key-item predicates** — Source: pret `home/names.asm`/`home/item.asm`/`home/map_objects.asm`.
+  New `dos_port/src/home/item_predicates.asm` (CHECK): `IsItemHM`/`IsMoveHM`/`HMMoves` (Tier-2 db
+  list)/`IsItemInBag`/`IsKeyItem`/`IsKeyItem_` (sets `wIsKeyItem`), via the established
+  `FlagAction` predef-slot convention. Follow-up: converge bag_menu's inlined `.is_key_item`.
+- **Integration/dedup:** Wave-5 WRAM/HRAM/constants added canonically (incl. lowercase Dex
+  aliases, `wPlayerCoins`/`hCoins`, `MONEY_BOX`, box-move + fossil/ghost constants); members'
+  local placeholder blocks stripped; `gb_constants.inc` include added where needed. PKMN.EXE
+  links, `make check` clean.
+
+## home/ rectification swarm — WAVE 6 (sprites & pics)
+- **Date:** 2026-07-01
+- **Plan:** docs/current_plan_home_rectification.md, Wave 6 (M6.1–M6.3).
+- **M6.1 OAM/sprite reloaders** — Source: pret `home/oam.asm`/`reload_sprites.asm`/
+  `reset_player_sprite.asm`/`reload_tiles.asm`. New (CHECK): `oam.asm` (`WriteOAMBlock` → writes
+  the shadow-OAM array `W_SHADOW_OAM`, NOT GB-OAM geometry), `reset_player_sprite.asm`
+  (`ResetPlayerSpriteData` full two-block FillMemory zero-clear + value-set), `reload_tiles.asm`
+  (`ReloadMapData`/`ReloadTilesetTilePatterns`), `reload_sprites.asm` (`ReloadMapSpriteTilePatterns`).
+  Zero missing memmap symbols. Follow-up: `SetupPlayerSprite` (overworld boot scaffold) could call
+  `ResetPlayerSpriteData`.
+- **M6.2 `_UpdateSprites` branches** — Source: pret `engine/overworld/sprite_collisions.asm`.
+  `dos_port/src/engine/overworld/movement.asm`. Added slot-$f0 → `SpawnPikachu` dispatch and
+  scripted-NPC → `DoScriptedNPCMovement` dispatch, both **gated so default behavior is byte-identical**
+  (neither trigger is armed in the live build). Documented divergence: gated on M3.3's
+  `BIT_SCRIPTED_NPC_MOVEMENT` (bit 0) vs pret's exact bit-7/`wNPCMovementScriptSpriteOffset` split —
+  reconcile when the stepper is ported.
+- **M6.3 mon front-pic dispatch** — Source: pret `home/pics.asm`/`home/pokemon.asm`.
+  `dos_port/src/gfx/pics.asm` (LINK-safe by default). `LoadFrontSpriteByMonIndex`/
+  `LoadFlippedFrontSpriteByMonIndex` (internal-index→dex via `IndexToPokedex`, faithful Rhydon trap),
+  `LoadMonFrontSprite`, `UncompressMonSprite` (reuses the existing decompressor + merge pipeline;
+  `uncompress.asm` unchanged). The Gen-1 front-pic pointer lives in the base-stats record (zeroed in
+  the flat port), so the port resolves via a dex-keyed `MonFrontPics` table — **Tier-1 generated data
+  follow-up** (turnkey `gen_mon_pics.py` + `mon_pics.asm` wrapper validated via partial link; enabled
+  with `-D MON_FRONT_PICS`). Default build falls back to the embedded debug pic; debug `.pic` stubs
+  retained (still used by `debug_dump.asm`), marked superseded.
+- **Integration stubs:** `SwitchToMapRomBank` added faithfully to `bankswitch.asm` (flat bank record;
+  unblocks reload_tiles/text_script/run_map_script); `SpawnPikachu` (→ Wave 9) + `DoScriptedNPCMovement`
+  ret-stubs in new `overworld_stubs.asm` (LINK) so the live movement.asm jumps resolve. PKMN.EXE links,
+  `make check` clean.
+
+## home/ rectification swarm — WAVE 7 (overworld gameplay systems)
+- **Date:** 2026-07-01
+- **Plan:** docs/current_plan_home_rectification.md, Wave 7 (M7.1–M7.5).
+- **Integration note:** a concurrent worker's `git checkout` reset `overworld.asm` to HEAD
+  mid-wave, wiping the session's M3.3 reroute + double-decrement fix + M7.1 hook. Recovered
+  from M3.3's full-file preview (verified HEAD→preview delta was exactly the M3.3 reroute,
+  no pre-session loss) and re-applied all edits via manual `Edit`. See memory
+  `swarm-workers-must-not-touch-git`. All four `overworld.asm` routine hooks integrated by
+  manual insertion (not `git apply`) since workers forked at different times.
+- **M7.1 wild encounters + steps** — new `wild_encounter_check.asm` (LINK). `StepCountCheck`
+  wired live in `OverworldLoop` (safe — only decrements WRAM counters); `NewBattle`/
+  `AllPokemonFainted` behind `WILD_ENCOUNTERS_LIVE` (inlines pret's DetermineWildOpponent gate,
+  since the port's InitBattle is screen-setup only). `AnyPartyAlive` party-HP scan.
+- **M7.2 signs + hidden events** — new `hidden_events.asm` (LINK subset: `CopySignData`/`SignLoop`/
+  `ArePlayerCoordsInArray`/`CheckCoords`; deep routines behind `M72_HIDDEN_EVENTS_DEEP`) +
+  `overworld_text.asm` (CHECK). `CopySignData` wired into `LoadMapHeader` (guarded on wNumSigns=0 →
+  byte-identical for sign-less maps). Sign A-press wire is a logged follow-up.
+- **M7.3 ledges + tile-pairs** — new `ledges.asm` (CHECK). `CheckForJumpingAndTilePairCollisions`/
+  `CheckForTilePairCollisions{,2}`/`HandleLedges`/`HandleMidJump`; `CollisionCheckOnLand` hook
+  behind `OVERWORLD_LEDGES` (off by default → land collision byte-identical). Needs `HandleMidJump`
+  per-frame wire + renderer Y-pixel honor before going live.
+- **M7.4 warp fidelity** — new `warp_check.asm` (LINK). Faithful `ExtraWarpCheck` function-1
+  (`IsPlayerFacingEdgeOfMap`) / function-2 (`IsWarpTileInFrontOfPlayer`) per-map dispatch replaces
+  the hardcoded "facing DOWN" test; working bottom-row door exits verified preserved (all interior
+  tilesets → fn1 at the same coordinate). `CheckIfInOutsideMap` provided.
+- **M7.5 player-gfx + bike/surf** — new `player_gfx.asm` (CHECK). `LoadWalkingPlayerSpriteGraphics`
+  family + `LoadPlayerSpriteGraphicsCommon`, `IsBikeRidingAllowed`, `ForceBikeOrSurf`,
+  `DoBikeSpeedup`, `StopBikeSurf`. Follow-up: replace the overworld.asm walking-only scaffold +
+  generate RedBike/Seel/SurfingPikachu sprites when promoted to LINK.
+
 ## Move-effect swarm scaffold (S2–S4) + PoisonEffect_
 - **Source:** pret `engine/battle/core.asm:3294-3436` (array-gated dispatch),
   `engine/battle/effects.asm` (PoisonEffect, PrintStatText, ConditionalPrintButItFailed,
@@ -4001,9 +4261,142 @@ source. pret is the spec. Build green at BUG_FIX_LEVEL 0 and 2.
   is real (linked). **Divergences:** enemy PP not decremented (project scope); enemy anim
   redraw uses DrawHUDsAndHPBars (DrawEnemyHUDAndHPBar not yet ported); leaf routines stubbed.
 - **Multi-turn lock-ins** (pret player `:3652-3750`, enemy `:6038-6133`): Bide (accumulate
-  wDamage; release 2× via SwapPlayerAndEnemyLevels → HandleIf*MoveMissed), Thrash/Petal Dance
+  wDamage; release 2× → HandleIf*MoveMissed), Thrash/Petal Dance
   (force THRASH, confuse 2-5 turns at end → *CalcMoveDamage), Wrap/Bind/Fire Spin/Clamp (force,
   last-hit damage → Get*AnimationType), Rage (force, GetMoveName+CopyToStringBuffer → *CanExecuteMove).
   Helpers `SwapPlayerAndEnemyLevels` (`:6370`) + `CopyToStringBuffer` (`home/copy_string.asm`) ported.
   Added constants THRASH $25, BIDE $75, ANIMATIONTYPE_BLINK_ENEMY_MON_SPRITE/…_SHAKE_…_LIGHT.
-- **Divergences:** none beyond the leaf stubs above. Build green (BUG_FIX_LEVEL 0 and 2).
+- **Divergences (corrected 2026-07-01 by the triage pass, see below):** the original
+  entry claimed "none beyond the leaf stubs" — that was inaccurate. Two real divergences were
+  present and are fixed in the triage: (1) the Bide-unleash blocks added an unmatched
+  `call SwapPlayerAndEnemyLevels` (pret `.UnleashEnergy` has none) → permanent level corruption;
+  (2) `ExecuteEnemyMove` omitted pret's `inc [wAILayer2Encouragement]` (`:5656`). Also
+  `CheckForDisobedience` was a bare `ret` that failed its ZF contract. Build green (levels 0/2).
+
+## Battle-engine fidelity triage (2026-07-01, branch `battle-triage`)
+
+Post-audit surgical corrections (see `docs/battle_audit_findings.md`). pret is the spec;
+Gen-1 bugs preserved under `%if BUG_FIX_LEVEL` where a fix exists.
+
+- **CheckForDisobedience** (pret `core.asm:4001`, stubbed): was a bare `ret`; the caller reaches
+  it with ZF=1 from the preceding `CHARGING_UP` test, so `jz ExecutePlayerMoveDone` fired for
+  every non-charging move (whole turn no-op). Now sets ZF=0 ("obeys"), matching sibling stubs.
+- **Bide orphaned swap**: deleted the unmatched `call SwapPlayerAndEnemyLevels` in both
+  `CheckPlayerStatusConditions` and `CheckEnemyStatusConditions` Bide-unleash paths (pret has none).
+- **wAILayer2Encouragement**: added the missing `inc` in `ExecuteEnemyMove` (pret `:5656-5657`).
+- **ApplyAttackToEnemyPokemon** (pret `:4783`) / **ApplyAttackToPlayerPokemon** (`:4902`): ported
+  the full effect dispatch — Super Fang (½ target HP, min 1), Special Damage (Seismic Toss/Night
+  Shade = level, Sonic Boom 20, Dragon Rage 40, Psywave rand — player `[1,b)`, enemy `[0,b)` Gen-1
+  asymmetry preserved), 0-BP skip, overkill `wDamage` correction, and populate `wHPBar{Old,New,Max}HP`.
+  `ApplyDamage{Enemy,Player}Pokemon` split out as the confusion-self-hit entry (skips the dispatch).
+  **AttackSubstitute** (pret `:5020`) added, shared by both sides; the "wDamage not updated on
+  substitute break" Gen-1 behavior is preserved (BUG(faithful)). Divergences (allowlist): the
+  substitute-break anim (`Func_79929`) and the gradual `UpdateHPBar2` drain stay as placeholders
+  (Master B); the instant HP subtract is retained but `wHPBar*` are faithfully populated.
+  Move-id constants SONICBOOM/SEISMIC_TOSS/DRAGON_RAGE/NIGHT_SHADE/PSYWAVE added to gb_constants.inc.
+- **MonsStatsRose / MonsStatsFell** (pret `MonsStatsRoseText` `effects.asm:552` / `MonsStatsFellText`
+  `:754`): these are `text_far` intro + `text_asm` suffix, which the generator silently truncated
+  (`gen_battle_text.py` now skips text_far+text_asm labels with a stderr note). Composed in code
+  (like `DisplayUsedMoveText`): "<USER/TARGET>'s<LINE><stat> [greatly] rose!/fell!"<PROMPT>, branch
+  on the attacker's move effect (Rose `>= ATTACK_DOWN1_EFFECT`; Fell `[BIDE_EFFECT, ATTACK_DOWN_SIDE_EFFECT)`).
+  Live scroll/pacing of the "greatly" line is deferred to Master B. `stat_mod_effects.asm` repointed.
+- **DelayFrames register bug**: `mov cl,N` → `mov bl,N` at 6 sites (focus_energy, leech_seed,
+  swap_items ×2, evos_moves ×2); `DelayFrames` reads BL only (`frame.asm:213`).
+- **battle_hud.asm**: level ≥100 now uses a 3-digit path (pret `PrintLevel`); the Gen-1 maxHP≥256
+  lossy ÷4 HP-bar quirk (`GetHPBarLength`) restored as default, exact division gated at
+  `BUG_FIX_LEVEL >= 2` (`BUG(cosmetic)`).
+- **TryRunningFromBattle**: added the guaranteed-escape short-circuits (Safari/BATTLE_TYPE_RUN/link;
+  Ghost is a TODO pending Master-A `IsGhostBattle`) and `wForcePlayerToChooseMon`=1 on failed escape
+  (pret `:1536-1546`, `:1620-1622`). Added `wForcePlayerToChooseMon` (`$D11E`) to gb_memmap.inc.
+- **LearnMoveFromLevelUp**: syncs a newly-learned move into `wBattleMonMoves`/`wBattleMonPP` when the
+  leveling mon is the active battle mon (pret `learn_move.asm:56-73`).
+- **SwitchEnemyMon**: restored pret's link-state `CF=0` guard (`trainer_ai.asm:618-622`).
+- Build: all battle objects compile at BUG_FIX_LEVEL 0 and 2; every triage symbol links (the only
+  unresolved reference in the tree is the unrelated, unported `DisplayTextBoxID` from the items layer).
+
+## Town map + TM/rod/money item routines (2026-07-01)
+
+Faithful ports of `engine/items/town_map.asm` (full, ~20 routines) plus five small
+sibling files that a prior bespoke pass got wrong. All translated 1:1 from pret;
+verified with standalone `nasm -f coff -I include/ -I . -o /dev/null`.
+
+- **town_map.asm** (`src/engine/items/town_map.asm`) — DisplayTownMap, LoadTownMap
+  (incl. the RLE decoder: high-nibble tile `+$60`, low-nibble run, `$00`-term),
+  LoadTownMap_Fly, LoadTownMap_Nest, ExitTownMap, BuildFlyLocationsList,
+  DrawPlayerOrBirdSprite, DisplayWildLocations, TownMapCoordsToOAMCoords,
+  Write{PlayerOrBird,TownMapSprite,Asymmetric/SymmetricMonPartySprite}OAM,
+  ZeroOutDuplicatesInList, LoadTownMapEntry, TownMapSpriteBlinkingAnimation.
+  DANGLING (not in the Makefile / main loop). Preserved quirks: Cerulean-Cave
+  nest-icon skip (`cp $19`), the unused dup Pallet Town external entry, the
+  `inc d`/`inc [hl]` OAM-writer quirks; dropped the unreferenced `Func_70f87`.
+  - **Port adaptations:** (1) *Centering* — the 20x18 GB screen is drawn centered
+    in the 40x25 `W_TILEMAP` via `TOWNMAP_COL_OFFSET`(10)/`ROW_OFFSET`(3),
+    `text_row_stride`=40 during the screen, an RLE decoder that wraps at width 20,
+    and OAM pixel coords shifted col*8/row*8. Pixel origin to be re-verified when
+    wired into the renderer. (2) *Widened name pointers* — entries store 4-byte host
+    labels (`dd`), so LoadTownMapEntry strides are 5 (external) / 6 (internal) vs
+    pret's 3/4; lookup logic unchanged. (3) *Charmap* — `'@'`→$50, space→$7F,
+    `'▲'`→$ED, `'▼'`→$EE (not ASCII); inline texts moved to the generator.
+  - **Deferred deps (extern, resolve when ported):** RunPaletteCommand /
+    RunDefaultPaletteCommand, GBPalWhiteOut*, ClearScreenArea, CopyVideoData /
+    CopyVideoDataDouble / FarCopyDataDouble, JoypadLowSensitivity,
+    FindWildLocationsOfMon. Town-map WRAM the port hasn't allocated (wTownMapCoords,
+    wWhichTownMapLocation, wFlyLocationsList, wShadowOAMBackup, …) is `extern`
+    (TODO: allocate in gb_memmap.inc when wiring in). SFX_TINK/SFX_HEAL_AILMENT are
+    TODO-HW(audio) placeholders (PlaySound is a stub).
+  - **Data generator:** `tools/gen_town_map.py` → `assets/town_map_data.inc`
+    (ExternalMapEntries 37, InternalMapEntries 61+term, TownMapOrder 47, 53 region
+    names, 3 inline texts — all charmap-encoded via the shared charmap) and
+    `assets/town_map_gfx.inc` (CompressedMap / WorldMapTileGraphics / cursor /
+    up-arrow / nest-icon blobs). Asserts entry counts against FIRST_INDOOR_MAP /
+    NUM_INDOOR_MAP_GROUPS.
+
+- **tms.asm** — CanLearnTM, TMToMove. `predef_jump FlagActionPredef` collapses to a
+  tail `jmp FlagAction` (index CL, array ESI, action BH=FLAG_TEST=2; result CL),
+  bypassing GetPredefRegisters since we set the registers directly.
+  `TechnicalMachines` (TM/HM → move-id list, 55+`-1`) added to `assets/items.inc`
+  via a `gen_items.py` extension (its Makefile target already exists).
+- **tmhm.asm** — CheckIfMoveIsKnown + AlreadyKnowsText (`text_far` redirect to the
+  unported `_AlreadyKnowsText`, extern). Fixed the prior bug (`mov cx` → `mov bx`
+  for AddNTimes' count).
+- **tm_prices.asm** — GetMachinePrice, re-sourced `TM01` from gb_constants.inc
+  (was a magic `%define`); logic already faithful, kept.
+- **super_rod.asm** — ReadSuperRodData + GenerateRandomFishingEncounter. Fixed the
+  prior register bug (`mov ch`/`edx` → `dl`/`dh`, result in DX). `SuperRodFishingSlots`
+  generated by new `tools/gen_super_rod.py` (internal-index species, reusing the
+  gen_wild_encounters constant model), embedded via `%include`.
+- **subtract_paid_money.asm** — faithful SubtractAmountPaidFromMoney_ (StringCmp,
+  SubBCD, MONEY_BOX + DisplayTextBoxID redraw, `and a`). Restored the
+  `DisplayTextBoxID` call the prior bespoke version dropped, and removed the
+  out-of-file `AddAmountSoldToMoney_` (belongs to home/inventory.asm; unreferenced).
+  **CAVEAT:** per the user's "fully faithful, extern it" choice + "don't touch the
+  Makefile", this file (linked via ITEMS_SRCS) now references the still-unported
+  `DisplayTextBoxID` — the same symbol already noted as the tree's one unresolved
+  reference. A full linked `make` will not resolve it until DisplayTextBoxID is
+  ported or the file is moved to a check-only tier (one Makefile line).
+
+### Follow-up (2026-07-01): unimplemented externs commented out, files link clean
+
+Per request, every dependency with **no implementation in the tree** (which would
+halt a link) is now commented out and marked `; TODO(unimplemented):` rather than
+left as a live `extern`. All five item files now assemble **and link** with zero
+unresolved symbols (verified against the full object set + `make` + `make check`).
+
+- **item_data.asm**: added `global TechnicalMachines` (it was emitted into items.inc
+  but not exported, so `tms.o` couldn't resolve it — the one real bug found).
+- **town_map.asm**: commented out the `extern`s + call/reference sites for
+  `BirdSprite`, `GBPalWhiteOut`/`GBPalWhiteOutWithDelay3`, `RunPaletteCommand`/
+  `RunDefaultPaletteCommand` (the `jp` tail → `ret`), `ClearScreenArea`,
+  `FarCopyDataDouble`, `CopyVideoData`/`CopyVideoDataDouble`, `JoypadLowSensitivity`,
+  `FindWildLocationsOfMon`. The 11 unallocated town-map WRAM symbols became
+  PLACEHOLDER `equ` offsets (`TOWNMAP_WRAM_PLACEHOLDER`, TODO: allocate in
+  gb_memmap.inc). Faithful lines are preserved verbatim in the TODO comments.
+- **subtract_paid_money.asm**: commented out `extern DisplayTextBoxID` + its call
+  (confirmed missing — not even in pret's `home/`; needs porting). Resolves the
+  earlier caveat: the file now links, so it no longer needs to sit outside the link
+  for that reason (kept in the check tier alongside the others for now).
+- **tmhm.asm**: commented out `extern _AlreadyKnowsText`; `AlreadyKnowsText` is now
+  a placeholder empty text (`text_end`) until that far text is ported.
+
+Restoring any of these = uncomment the `extern` + the `; TODO(unimplemented):` line(s)
+once the routine/data exists.

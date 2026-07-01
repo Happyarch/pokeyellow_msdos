@@ -994,7 +994,13 @@ SwitchEnemyMon:
     jnz .switchMon_copy
     ; TODO-UI: PrintText AIBattleWithdrawText (deferred Wave 2)
     ; TODO-UI: EnemySendOut (deferred Wave 2)
+    ; pret trainer_ai.asm:618-622 — CF=0 mid-link-battle, CF=1 otherwise. The
+    ; direct callfar site (core.asm:377) is reached only inside a link battle.
+    mov al, [ebp + wLinkState]
+    cmp al, LINK_STATE_BATTLING
+    je  .doneLinkSwitch                 ; equal → CF=0 (from cmp), return CF=0
     stc
+.doneLinkSwitch:
     ret
 
 ; --- AIUseXAttack / Defend / Speed / Special ---

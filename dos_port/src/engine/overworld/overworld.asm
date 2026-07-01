@@ -43,6 +43,10 @@ extern FillMemory
 extern CopyData
 extern FarCopyData
 extern RunMapScript           ; per-frame map _Script dispatch (script engine)
+extern StepCountCheck         ; wild_encounter_check.asm — per-step counter decrement (M7.1)
+%ifdef WILD_ENCOUNTERS_LIVE
+extern NewBattle              ; wild_encounter_check.asm — wild/trainer encounter gate (M7.1, gated)
+%endif
 extern DisableLCD
 extern EnableLCD
 extern DelayFrame
@@ -64,6 +68,11 @@ extern TrainerEncounterFlow
 extern DisplayStartMenu
 extern w_map_text_table_ptr
 extern MapTextTablePointers
+; M3.3 home-rectify: faithful simulated-joypad framework
+extern AreInputsSimulated           ; src/engine/overworld/simulate_joypad.asm
+extern StartSimulatingJoypadStates  ; src/engine/overworld/simulate_joypad.asm
+; M7.4 home-rectify: faithful ExtraWarpCheck function-1/function-2 dispatch
+extern ExtraWarpCheck               ; src/engine/overworld/warp_check.asm
 %ifdef DEBUG_DUMP
 extern DebugDumpMemory
 %endif
@@ -377,15 +386,10 @@ EnterMap:
 OverworldLoop:
     call RunNPCMovementScript                    ; door-exit auto-walk (BIT_STANDING_ON_DOOR path)
     call RunMapScript                            ; per-frame map _Script (default no-op; Pallet event-gate)
-    ; Count down wIgnoreInputCounter each frame — pret: CountDownIgnoreInputBitReset (home/play_time.asm)
-    cmp byte [ebp + W_IGNORE_INPUT_COUNTER], 0
-    je .joyCountDone
-    dec byte [ebp + W_IGNORE_INPUT_COUNTER]
-    jnz .joyCountDone
-    ; counter hit 0 → clear BIT_DISABLE_JOYPAD | BIT_UNKNOWN_5_2 | BIT_UNKNOWN_5_1
-    and byte [ebp + W_STATUS_FLAGS_5], ~((1 << BIT_DISABLE_JOYPAD) | (1 << 2) | (1 << 1))
-    mov byte [ebp + H_JOY_HELD], 0
-.joyCountDone:
+    ; wIgnoreInputCounter countdown now runs faithfully via CountDownIgnoreInputBitReset
+    ; (called by TrackPlayTime inside DelayFrame, Wave-2/M2.1). The old inline block that
+    ; lived here decremented an extra time per loop (double-decrement) and only cleared
+    ; hJoyHeld; the DelayFrame path is per-frame and also clears hJoyPressed. Removed.
     call UpdateSprites                         ; advance player facing + walk animation
     call DelayFrame
 .lessDelay:                                  ; OverworldLoopLessDelay
@@ -406,17 +410,18 @@ OverworldLoop:
 .noTrainerSight:
 
     ; Simulated joypad state overrides real input (pret: AreInputsSimulated).
-    ; BIT_SCRIPTED_MOVEMENT_STATE is set by PlayerStepOutFromDoor for one idle frame.
-    ; H_JOY_HELD is used for A (not H_JOY_PRESSED): joypad_update runs twice per
-    ; OverworldLoop idle iteration (one per DelayFrame), so H_JOY_PRESSED is always
-    ; cleared by the second call before we read it. H_JOY_HELD is reliable.
+    ; BIT_SCRIPTED_MOVEMENT_STATE is armed by PlayerStepOutFromDoor (via
+    ; StartSimulatingJoypadStates). AreInputsSimulated (simulate_joypad.asm) pops the
+    ; next queued PAD_* byte into H_JOY_HELD while scripted movement is active and
+    ; leaves real input untouched otherwise; the door step's flag is then consumed at
+    ; .handleDirection below (one-step buffer). H_JOY_HELD is used for A (not
+    ; H_JOY_PRESSED): joypad_update runs twice per OverworldLoop idle iteration (one
+    ; per DelayFrame), so H_JOY_PRESSED is always cleared before we read it.
     ; Re-trigger after dialog dismiss is prevented by .waitAReleased below.
+    call AreInputsSimulated
     movzx eax, byte [ebp + H_JOY_HELD]
     test byte [ebp + W_STATUS_FLAGS_5], (1 << BIT_SCRIPTED_MOVEMENT_STATE)
-    jz .checkJoyDisable
-    movzx eax, byte [ebp + W_SIMULATED_JOYPAD_STATES_END]
-    jmp .checkPADDown                               ; flag cleared at .handleDirection after bypass
-
+    jnz .checkPADDown                               ; scripted step: skip START/A, go to D-pad
 .checkJoyDisable:
     test byte [ebp + W_STATUS_FLAGS_5], (1 << BIT_DISABLE_JOYPAD)
     jnz .noDirection                            ; input suppressed during warp-arrival window
@@ -506,8 +511,14 @@ OverworldLoop:
     ; not suppress collision-exit during the auto-walk window.
     test byte [ebp + W_MOVEMENT_FLAGS], (1 << BIT_STANDING_ON_WARP)
     jz OverworldLoop
-    cmp dl, PLAYER_DIR_DOWN
-    jne OverworldLoop
+    ; M7.4: faithful ExtraWarpCheck (pret home/overworld.asm:ExtraWarpCheck +
+    ; jp c, CheckWarpsCollision). Replaces the hardcoded "facing DOWN" test with
+    ; pret's per-map function-1 (IsPlayerFacingEdgeOfMap) / function-2
+    ; (IsWarpTileInFrontOfPlayer) dispatch. Register-safe (returns only CF); DL
+    ; is no longer consulted here. CheckWarpTile below is the port's
+    ; CheckWarpsCollision (scans W_WARP_ENTRIES by the player's current coords).
+    call ExtraWarpCheck
+    jnc OverworldLoop
     call CheckWarpTile
     jnc OverworldLoop
     jmp .warpTransition
@@ -533,6 +544,19 @@ OverworldLoop:
     jne OverworldLoop
 %ifdef DEBUG_WALKSPEED
     call WalkSpeedSample                       ; tile just completed → record ticks/tile
+%endif
+    ; --- M7.1: step count + wild-encounter gate (pret home/overworld.asm:249-268) ---
+    ; The tile step just finished. pret runs StepCountCheck here, then (after
+    ; poison/safari, deferred) NewBattle, taking the warp checks only when no battle
+    ; occurred. StepCountCheck only decrements the WRAM step counters (nothing in the
+    ; port reads wStepCounter yet), so it is safe and wired unconditionally. The live
+    ; wild-battle trigger is gated behind WILD_ENCOUNTERS_LIVE (NewBattle →
+    ; TryDoWildEncounter is CHECK-only, and the faithful post-battle re-entry isn't
+    ; built into this loop yet). See wild_encounter_check.asm + M7.1 SUMMARY follow-up.
+    call StepCountCheck
+%ifdef WILD_ENCOUNTERS_LIVE
+    call NewBattle                            ; CF=1 → a wild/forced battle occurred
+    jc OverworldLoop                          ; TODO(M7.1): faithful = .battleOccurred → EnterMap
 %endif
     ; Edge-detect: save previous BIT_STANDING_ON_WARP then clear it.
     ; Mirrors pret: res BIT_STANDING_ON_WARP first, then set it if coords match.
@@ -1639,6 +1663,13 @@ MoveTileBlockMapPointerNorth:            ; AL = wCurMapWidth
 ; NPC occupies that block (IsNPCAtTargetBlock).  CF=1 if movement is blocked.
 ; ---------------------------------------------------------------------------
 CollisionCheckOnLand:
+%ifdef OVERWORLD_LEDGES
+    ; M7.3 ledge-hop + tile-pair collisions live in src/engine/overworld/ledges.asm
+    ; (CHECK-only by default; see Makefile). Referenced only under this flag, so the
+    ; default build neither links ledges.asm nor alters land-collision behavior.
+    extern CheckForJumpingAndTilePairCollisions
+    extern TilePairCollisionsLand
+%endif
 %ifdef DEBUG_NOCLIP
     cmp byte [pad_noclip], 0
     jne .passable                 ; noclip active: always passable
@@ -1652,10 +1683,31 @@ CollisionCheckOnLand:
     ; not rebuilt). Rebuild here to apply the current sub-block offset before the tile read.
     call LoadCurrentMapView
     call GetTileInFrontOfPlayer                    ; CL = tile in front
+%ifdef OVERWORLD_LEDGES
+    ; M7.3 hook — pret home/overworld.asm:CollisionCheckOnLand (.noSpriteCollision):
+    ;   ld hl, TilePairCollisionsLand / call CheckForJumpingAndTilePairCollisions
+    ;   jr c, .collision   — an illegal tile-pair (elevation-seam) boundary blocks;
+    ; plus the top-of-function `bit BIT_LEDGE_OR_FISHING, a / jr nz .noCollision`:
+    ; once a ledge hop is armed the move is allowed (the hop carries the player).
+    ; Faithful gate: in the OVERWORLD tileset with no matching ledge tile HandleLedges
+    ; sets no state, and TilePairCollisionsLand holds only CAVERN/FOREST entries, so
+    ; the scan returns CF=0 — this block is inert and behavior is byte-identical.
+    push ebx                                       ; CheckForTilePairCollisions uses BL
+    push edx                                       ; ...and DH (tile player stands on)
+    mov esi, TilePairCollisionsLand                ; flat host ptr to the tile-pair table
+    call CheckForJumpingAndTilePairCollisions      ; may arm a ledge hop; CF=1 → seam-blocked
+    pop edx
+    pop ebx
+    jc .blocked                                    ; illegal tile-pair boundary → blocked
+    test byte [ebp + W_MOVEMENT_FLAGS], (1 << BIT_LEDGE_OR_FISHING)
+    jnz .noCollision                               ; ledge hop armed → allow the move
+    movzx ecx, byte [ebp + W_TILE_IN_FRONT_OF_PLAYER] ; restore CL (HandleLedges clobbered ECX)
+%endif
     call IsTilePassable                            ; CF = 1 if not passable
     jc .blocked                                    ; tile impassable → blocked
     call IsNPCAtTargetBlock                        ; CF = 1 if NPC is in front
     jc .blocked                                    ; NPC in the way → blocked
+.noCollision:
     pop esi
     pop ecx
     pop eax
@@ -1833,13 +1885,23 @@ LoadMapHeader:
     rep movsb                           ; copy all warp entries to WRAM
     mov eax, esi                        ; advance EAX past copied warp bytes
     
-    ; Skip signs
+    ; Signs: store the count, then copy the sign block into WRAM.
+    ; Pret ref: home/overworld.asm:LoadMapHeader (.loadSignData) + CopySignData.
+    ; Per sign (3 bytes): Y, X, textID.  Y/X -> wSignCoords (interleaved pairs),
+    ; textID -> wSignTextIDs.  When wNumSigns == 0 the copy is skipped and the
+    ; cursor advance adds 0, so a sign-less map is byte-identical to before.
+    extern CopySignData                 ; src/engine/overworld/hidden_events.asm
     mov bl, [eax]
     mov [ebp + W_NUM_SIGNS], bl
-    inc eax
-    movzx ebx, bl
-    lea ebx, [ebx + ebx * 2] ; * 3 bytes per sign
-    add eax, ebx
+    inc eax                             ; EAX -> first sign entry (flat address)
+    test bl, bl
+    jz .noSigns
+    mov esi, eax                        ; ESI = flat src of the sign block
+    call CopySignData                   ; copies wNumSigns*3 bytes; preserves EAX
+.noSigns:
+    movzx ebx, byte [ebp + W_NUM_SIGNS]
+    lea ebx, [ebx + ebx * 2]           ; * 3 bytes per sign
+    add eax, ebx                        ; advance cursor past the sign block
     
     ; Save object data pointer temp
     sub eax, ebp
@@ -1993,9 +2055,17 @@ PlayerStepOutFromDoor:
     jnc .notStandingOnDoor
     ; Door tile — set up one forced south step to walk off the arrival warp tile.
     or byte [ebp + W_MOVEMENT_FLAGS], (1 << BIT_EXITING_DOOR)
-    or byte [ebp + W_STATUS_FLAGS_5], (1 << BIT_SCRIPTED_MOVEMENT_STATE)
-    mov byte [ebp + W_SIMULATED_JOYPAD_STATES_END], PAD_DOWN
     mov byte [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], 1
+    mov byte [ebp + W_SIMULATED_JOYPAD_STATES_END], PAD_DOWN
+    xor al, al
+    mov [ebp + W_SPRITE_PLAYER_IMAGE_INDEX], al       ; pret: wSpritePlayerStateData1ImageIndex = 0
+    ; StartSimulatingJoypadStates zeroes the override mask + slot-0 movement byte 1 and
+    ; sets BIT_SCRIPTED_MOVEMENT_STATE so AreInputsSimulated feeds this one PAD_DOWN.
+    ; (pret PlayerStepOutFromDoor also sets wJoyIgnore; omitted here because the port
+    ; drains the 1-step buffer at .handleDirection rather than via AreInputsSimulated's
+    ; .doneSimulating, so a lingering wJoyIgnore would leak — TODO(home-rectify M3.3
+    ; follow-up): re-add wJoyIgnore once multi-step scripts drain via .doneSimulating.)
+    call StartSimulatingJoypadStates
     ret
 .notStandingOnDoor:
     ; Stair/ladder arrival — no auto-walk. Clear standing and exiting flags.
@@ -2012,12 +2082,44 @@ PlayerStepOutFromDoor:
 ; Pret ref: home/npc_movement.asm:RunNPCMovementScript
 ; ---------------------------------------------------------------------------
 RunNPCMovementScript:
+    ; pret: home/npc_movement.asm:RunNPCMovementScript
     test byte [ebp + W_MOVEMENT_FLAGS], (1 << BIT_STANDING_ON_DOOR)
-    jz .done
+    jz .notDoor
     and byte [ebp + W_MOVEMENT_FLAGS], ~(1 << BIT_STANDING_ON_DOOR)
     call PlayerStepOutFromDoor
+    ret
+.notDoor:
+    ; Scripted-NPC-movement dispatch half: index wNPCMovementScriptPointerTableNum
+    ; (1-based) into a table of per-map movement-script pointer tables, then call
+    ; function wNPCMovementScriptFunctionNum within it (pret: CallFunctionInTable).
+    ; Bankswitching is a no-op under flat memory. No script currently sets the table
+    ; num nonzero, so this is inert; it is gated on NPC_MOVEMENT_SCRIPTS_LINKED so the
+    ; per-map pointer tables (owned by map-script waves) don't break the link until
+    ; they exist. TODO(home-rectify M3.3 follow-up): define the macro + tables.
+    mov al, [ebp + wNPCMovementScriptPointerTableNum]
+    test al, al
+    jz .done
+%ifdef NPC_MOVEMENT_SCRIPTS_LINKED
+    dec al                                          ; table num is 1-based
+    movzx eax, al
+    mov esi, [NPCMovementScriptPointerTables + eax*4] ; ESI = flat per-map jumptable
+    mov al, [ebp + W_NPC_MOVEMENT_SCRIPT_FUNCTION_NUM]
+    call CallFunctionInTable                        ; call function AL within ESI
+%endif
 .done:
     ret
+
+%ifdef NPC_MOVEMENT_SCRIPTS_LINKED
+extern CallFunctionInTable
+extern PalletMovementScriptPointerTable
+extern PewterMuseumGuyMovementScriptPointerTable
+extern PewterGymGuyMovementScriptPointerTable
+; pret: RunNPCMovementScript.NPCMovementScriptPointerTables (flat dd in the port)
+NPCMovementScriptPointerTables:
+    dd PalletMovementScriptPointerTable
+    dd PewterMuseumGuyMovementScriptPointerTable
+    dd PewterGymGuyMovementScriptPointerTable
+%endif
 
 ; ---------------------------------------------------------------------------
 ; CheckWarpTile — scan W_WARP_ENTRIES for a player coord match.

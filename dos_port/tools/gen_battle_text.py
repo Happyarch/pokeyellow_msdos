@@ -234,7 +234,23 @@ def collect_wrappers(cm, mem, far_db):
                 if t == "text_asm":
                     body = None; break  # grammar-driven, not generatable
                 body.append(lines[j])
-                if t in ("text_end",) or t.startswith("text_far") or re.match(r'db\s+"', t):
+                if t.startswith("text_far"):
+                    # A text_far immediately followed by text_asm is a grammar-branch
+                    # stream (e.g. MonsStatsRoseText/FellText): the far part is only the
+                    # intro; the verb/PROMPT suffix is chosen at runtime. Emitting just
+                    # the intro silently truncates the message (no verb, no button wait),
+                    # so treat the whole label as non-generatable and skip it — it must
+                    # be composed in code (Tier 2). See docs/battle_audit_findings.md.
+                    k = j + 1
+                    while k < len(lines) and not lines[k].split(";", 1)[0].strip():
+                        k += 1
+                    if k < len(lines) and lines[k].split(";", 1)[0].strip() == "text_asm":
+                        sys.stderr.write(
+                            f"gen_battle_text: skipping {label} "
+                            f"(text_far + text_asm → compose in code)\n")
+                        body = None
+                    j += 1; break
+                if t == "text_end" or re.match(r'db\s+"', t):
                     j += 1; break
                 j += 1
             if body:

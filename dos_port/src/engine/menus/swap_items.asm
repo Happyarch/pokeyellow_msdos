@@ -1,18 +1,36 @@
+; ============================================================================
+; swap_items.asm — SELECT-swap for the bag/item list (HandleItemListSwapping).
+; Faithful translation of pret engine/menus/swap_items.asm.
+;
+; Wave 4 / M4.2: the generic list-menu driver this tail-calls
+; (DisplayListMenuIDLoop) is now provided by src/home/list_menu.asm, so this file
+; is no longer a dead end. The two link together via mutual tail jumps
+; (DisplayListMenuIDLoop → HandleItemListSwapping on SELECT, and back).
+;
+; Assembly-convention fix (M4.2): WRAM/constant symbols are ABSOLUTE `equ`s and
+; MUST come from %include "gb_memmap.inc" (the port convention, as bag_menu.asm
+; does) — NOT `extern`. Externing them made this file fail to *assemble*
+; ("COFF format does not support non-32-bit relocations" on `cmp al,
+; ITEMLISTMENU`, an 8-bit immediate). Only real code labels stay `extern`.
+; Symbols still missing from gb_memmap.inc / gb_constants.inc are LOCAL
+; PLACEHOLDERS below (pret-derived, identical-valued) — ROOT migrates + deletes.
+;
+; LINK status: assembles CHECK-only now. To LINK, list_menu.asm must be in the
+; same SRCS list and ROOT must assign real HRAM bytes for hSwapItemID /
+; hSwapItemQuantity (placeholders here). No live caller invokes the list menu yet.
+; ============================================================================
 ; dos_port/engine/menus/swap_items.asm
 global HandleItemListSwapping
 
-extern wListMenuID
-extern wListPointer
-extern wCurrentMenuItem
-extern wListScrollOffset
-extern wMenuItemToSwap
-extern hSwapItemID
-extern hSwapItemQuantity
-extern wListCount
-extern wMaxMenuItem
-extern DisplayListMenuIDLoop
-extern DelayFrames
-extern ITEMLISTMENU
+%include "gb_memmap.inc"
+%include "gb_constants.inc"          ; ITEMLISTMENU (Wave 4)
+
+; ── code labels (resolved at link) ──
+extern DisplayListMenuIDLoop        ; src/home/list_menu.asm (M4.2)
+extern DelayFrames                  ; src/video/frame.asm
+
+; wListMenuID / wListPointer / ITEMLISTMENU / hSwapItemID / hSwapItemQuantity now
+; live canonically in gb_memmap.inc / gb_constants.inc (Wave 4 integration).
 
 section .text
 
@@ -53,7 +71,7 @@ HandleItemListSwapping:
     add al, bl
     mov [ebp + wMenuItemToSwap], al
     
-    mov cl, 20
+    mov bl, 20                          ; DelayFrames reads BL (frame.asm:213)
     call DelayFrames
     jmp DisplayListMenuIDLoop
 
@@ -72,7 +90,7 @@ HandleItemListSwapping:
     dec al
     mov [ebp + wMenuItemToSwap], al
     
-    mov cl, 20
+    mov bl, 20                          ; DelayFrames reads BL (frame.asm:213)
     call DelayFrames
     
     push esi

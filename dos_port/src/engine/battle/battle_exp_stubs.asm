@@ -21,7 +21,7 @@ bits 32
 
 section .text
 
-global GetPartyMonName
+; GetPartyMonName is now REAL (home/pokemon.asm, Wave 5/M5.2) — no longer stubbed.
 global ModifyPikachuHappiness
 ; SaveScreenTilesToBuffer1 / LoadScreenTilesFromBuffer1 are now REAL (battle_menu.asm) —
 ; no longer stubbed (they snapshot/restore the battle screen for the EXP display too).
@@ -35,7 +35,6 @@ global DrawPlayerHUDAndHPBar
 ; stubbed here (the documented latent collision is resolved by deleting these stubs).
 ; LearnMoveFromLevelUp is now REAL (battle_menu.asm) — no longer stubbed.
 
-GetPartyMonName:
 ModifyPikachuHappiness:
 PrintEmptyString:
 CalculateModifiedStats:

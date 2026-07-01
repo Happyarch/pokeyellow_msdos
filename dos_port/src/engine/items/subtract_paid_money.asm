@@ -1,66 +1,52 @@
-; subtract_paid_money.asm — mart/vendor money math (items layer, Stage 4).
+; subtract_paid_money.asm — faithful port of engine/items/subtract_paid_money.asm
+; (pret). The whole pret file is a single routine, SubtractAmountPaidFromMoney_,
+; which debits the transaction total (hMoney) from the player's money after a BCD
+; affordability check, then redraws the MONEY text box.
 ;
-; Source: engine/items/subtract_paid_money.asm + home/inventory.asm (pret). The
-; non-UI cores of buy/sell: BCD compare + subtract the price from the player's
-; money, and BCD add the sale total to it. The original also redraws the MONEY
-; text box and plays SFX_PURCHASE — that's UI and is dropped here.
+; Faithful 1:1 translation. The GB `predef SubBCDPredef` is a bank-switch
+; indirection around SubBCD that preserves de/hl/bc; in the port that collapses to
+; a direct SubBCD call with the registers we set (matching how bcd.asm is used).
 ;
-; Money and prices are 3-byte big-endian BCD. wPlayerMoney lives at
-; W_PLAYER_MONEY; the transaction amount is staged at H_MONEY (hMoney). The BCD
-; helpers (engine/math/bcd.asm) and StringCmp (home/compare.asm) walk from the
-; pointer given: StringCmp compares MSB->LSB starting at EDX/ESI for BL bytes;
-; AddBCD/SubBCD work LSB->MSB starting at EDX(dest)/ESI(operand) for CL bytes.
+; (pret's AddAmountSoldToMoney_ lives in home/inventory.asm, NOT this file, so it is
+; not ported here — port it with the rest of home/inventory.asm.)
 ;
-; NOTE: the prior swarm draft passed the operands in EDI/CL, but StringCmp reads
-; EDX (de) and BL (c) — so the compare ran on stale registers. Fixed here, and
-; the predef wrappers (which reload args from the predef regs) are replaced with
-; direct AddBCD/SubBCD calls since we set the registers ourselves.
-;
-; Build: nasm -f coff -I include/ -I . -o subtract_paid_money.o subtract_paid_money.asm
+; Build: nasm -f coff -I include/ -I . -o /dev/null src/engine/items/subtract_paid_money.asm
 
 bits 32
 
 %include "gb_memmap.inc"
+%include "gb_constants.inc"
 
 section .text
 
 global SubtractAmountPaidFromMoney_
-global AddAmountSoldToMoney_
 
-extern StringCmp        ; EDX=de, ESI=hl, BL=len; CF set if [de] < [hl]
-extern AddBCD           ; EDX=dest LSB, ESI=operand LSB, CL=len
-extern SubBCD           ; EDX=dest LSB, ESI=operand LSB, CL=len
+extern StringCmp            ; EDX=de, ESI=hl, BL=len; flags = last MSB->LSB compare
+extern SubBCD               ; EDX=dest LSB, ESI=operand LSB, CL=len; CF=1 on borrow
+extern DisplayTextBoxID     ; home/text_script.asm (Wave 1/M1.3) — redraw money box
+
+; wTextBoxID (gb_memmap.inc) and MONEY_BOX (gb_constants.inc) are now canonical.
 
 ; ---------------------------------------------------------------------------
-; SubtractAmountPaidFromMoney_ — pay [hMoney] out of the player's money.
-; Out: CF = 0 on success (money debited), CF = 1 if the player can't afford it
-;      (money left unchanged).
+; SubtractAmountPaidFromMoney_ — subtract the amount the player paid from money.
+; OUTPUT: carry = 0 (success) or 1 (fail because there is not enough money)
 ; ---------------------------------------------------------------------------
 SubtractAmountPaidFromMoney_:
-    mov edx, W_PLAYER_MONEY          ; de = money MSB
-    mov esi, H_MONEY                 ; hl = price MSB
-    mov bl, 3
-    call StringCmp                   ; CF set if money < price
-    jc .notEnoughMoney
+    mov edx, W_PLAYER_MONEY          ; ld de, wPlayerMoney (MSB — total price compare)
+    mov esi, H_MONEY                 ; ld hl, hMoney
+    mov bl, 3                        ; ld c, 3 (length of money in bytes)
+    call StringCmp
+    jc .cannotAfford                 ; ret c
 
-    mov edx, W_PLAYER_MONEY + 2      ; de = money LSB (dest)
-    mov esi, H_MONEY + 2             ; hl = price LSB (operand)
-    mov cl, 3
-    call SubBCD                      ; money -= price
-    clc                              ; success
+    mov edx, W_PLAYER_MONEY + 2      ; ld de, wPlayerMoney + 2 (LSB — subtract)
+    mov esi, H_MONEY + 2             ; ld hl, hMoney + 2
+    mov cl, 3                        ; ld c, 3
+    call SubBCD                      ; predef SubBCDPredef — subtract price from money
+
+    mov byte [ebp + wTextBoxID], MONEY_BOX  ; ld a, MONEY_BOX / ld [wTextBoxID], a
+    call DisplayTextBoxID            ; redraw money text box
+    and al, al                       ; and a — clear carry (success)
     ret
 
-.notEnoughMoney:
-    stc
-    ret
-
-; ---------------------------------------------------------------------------
-; AddAmountSoldToMoney_ — credit [hMoney] (the sale total) to the player's money.
-; BCD overflow above 999999 saturates inside AddBCD (fills 0x99), as on the GB.
-; ---------------------------------------------------------------------------
-AddAmountSoldToMoney_:
-    mov edx, W_PLAYER_MONEY + 2      ; de = money LSB (dest)
-    mov esi, H_MONEY + 2             ; hl = sale total LSB (operand)
-    mov cl, 3
-    call AddBCD                      ; money += sale total
-    ret
+.cannotAfford:
+    ret                              ; carry still set from StringCmp

@@ -70,6 +70,8 @@ global PrintBattleText
 global ExecutePlayerMove
 global ExecutePlayerMoveDone
 global DisplayUsedMoveText
+global MonsStatsRose
+global MonsStatsFell
 global ApplyAttackToEnemyPokemon
 global CheckPlayerStatusConditions
 global CheckForDisobedience
@@ -842,23 +844,169 @@ DisplayUsedMoveText:
     ret
 
 ; ---------------------------------------------------------------------------
-; ApplyAttackToEnemyPokemon — subtract wDamage (big-endian) from the enemy mon's HP,
-; floored at 0. (pret ApplyAttackToEnemyPokemon core; substitute handling deferred.)
+; MonsStatsRose / MonsStatsFell — pret MonsStatsRoseText (effects.asm:552) /
+; MonsStatsFellText (:754): a text_far intro + a text_asm suffix branch, so the
+; generator can't emit them (it skips them). Composed in code, like DisplayUsedMoveText.
+; Prints "<USER/TARGET>'s<LINE><stat> rose!/fell!" — "greatly" for a ±2 stage — with a
+; <PROMPT> wait. wStringBuffer holds the stat name (set by the caller, PrintStatText).
+; TODO(B): live pacing/scroll of the "greatly" line is Master B's text-engine domain.
+; ---------------------------------------------------------------------------
+MonsStatsRose:
+    mov bh, 0x5A                         ; <USER>
+    call ComposeStatIntro               ; → EDI past intro, AL = attacker move effect
+    cmp al, ATTACK_DOWN1_EFFECT         ; pret :564 — effect >= ATTACK_DOWN1 → "greatly"
+    mov esi, str_greatly_rose
+    jae AppendStatSuffix
+    mov esi, str_rose
+    jmp AppendStatSuffix
+MonsStatsFell:
+    mov bh, 0x59                         ; <TARGET>
+    call ComposeStatIntro
+    mov esi, str_greatly_fell           ; pret :765-769 — BIDE_EFFECT <= effect
+    cmp al, BIDE_EFFECT                  ;                   < ATTACK_DOWN_SIDE_EFFECT
+    jb  .fellPlain                       ;                   → "greatly"
+    cmp al, ATTACK_DOWN_SIDE_EFFECT
+    jb  AppendStatSuffix
+.fellPlain:
+    mov esi, str_fell
+    ; fall through to AppendStatSuffix
+AppendStatSuffix:                        ; copy suffix [ESI] (flat, <PROMPT>-terminated) → [EDI]
+    mov al, [esi]
+    mov [edi], al
+    inc esi
+    inc edi
+    cmp al, 0x58                         ; <PROMPT> terminates + drives the ▼ wait
+    jne AppendStatSuffix
+    jmp RunBattleTextStream
+
+; ComposeStatIntro — BH = <USER>/<TARGET> byte. Writes "<TX_START><name>'s<LINE>
+; <TX_RAM wStringBuffer>" into NPC_DIALOG_BUF, leaves EDI past it, returns AL = the
+; attacker's move effect (hWhoseTurn-selected, pret effects.asm:557-562). Clobbers EAX/EDI.
+ComposeStatIntro:
+    lea edi, [ebp + NPC_DIALOG_BUF]
+    mov byte [edi], 0x00                 ; TX_START
+    mov [edi + 1], bh                    ; <USER> / <TARGET>
+    mov byte [edi + 2], 0xBD             ; "'s"
+    mov byte [edi + 3], 0x4F             ; <LINE>
+    mov byte [edi + 4], 0x01             ; TX_RAM
+    mov word [edi + 5], wStringBuffer    ; stat-name source ($CF4A, little-endian)
+    add edi, 7
+    mov al, [ebp + wPlayerMoveEffect]
+    cmp byte [ebp + hWhoseTurn], 0
+    je  .introDone
+    mov al, [ebp + wEnemyMoveEffect]
+.introDone:
+    ret
+
+section .data
+; Stat-change verb suffixes (charmap bytes), each <PROMPT>($58)-terminated. Compose
+; onto the "<mon>'s<LINE><stat>" intro. "greatly" variants lead with <SCROLL>($4C).
+str_rose:         db 0x7F,0xB1,0xAE,0xB2,0xA4,0xE7,0x58                                  ; " rose!"
+str_greatly_rose: db 0x4C,0xA6,0xB1,0xA4,0xA0,0xB3,0xAB,0xB8,0x7F,0xB1,0xAE,0xB2,0xA4,0xE7,0x58 ; <SCROLL>"greatly rose!"
+str_fell:         db 0x7F,0xA5,0xA4,0xAB,0xAB,0xE7,0x58                                  ; " fell!"
+str_greatly_fell: db 0x4C,0xA6,0xB1,0xA4,0xA0,0xB3,0xAB,0xB8,0x7F,0xA5,0xA4,0xAB,0xAB,0xE7,0x58 ; <SCROLL>"greatly fell!"
+section .text
+
+; ---------------------------------------------------------------------------
+; ApplyAttackToEnemyPokemon — faithful port of pret core.asm:4783. Dispatches the
+; fixed/special-damage effects (Super Fang, Seismic Toss/Night Shade/Sonic Boom/
+; Dragon Rage/Psywave) that skip CalculateDamage, then applies wDamage to the enemy
+; mon (substitute-redirected). ApplyDamageToEnemyPokemon (pret :4849) is the plain
+; HP-subtract entry the confusion self-hit jumps to (skips the effect dispatch).
 ; ---------------------------------------------------------------------------
 ApplyAttackToEnemyPokemon:
-    movzx eax, byte [ebp + wEnemyMonHP]
-    shl eax, 8
+    mov al, [ebp + wPlayerMoveEffect]
+    cmp al, OHKO_EFFECT
+    je  ApplyDamageToEnemyPokemon        ; OHKO damage already set by CalculateDamage
+    cmp al, SUPER_FANG_EFFECT
+    je  .superFang
+    cmp al, SPECIAL_DAMAGE_EFFECT
+    je  .specialDamage
+    mov al, [ebp + wPlayerMovePower]
+    and al, al
+    jz  ApplyAttackToEnemyPokemonDone    ; 0 base power → no attack to apply
+    jmp ApplyDamageToEnemyPokemon
+.superFang:                              ; wDamage = enemy current HP / 2 (min 1)
+    mov al, [ebp + wEnemyMonHP]
+    shr al, 1
+    mov [ebp + wDamage], al
+    mov bh, al
     mov al, [ebp + wEnemyMonHP + 1]
-    movzx ecx, byte [ebp + wDamage]
-    shl ecx, 8
-    mov cl, [ebp + wDamage + 1]
-    sub eax, ecx
-    jns .store
-    xor eax, eax
-.store:
+    rcr al, 1
+    mov [ebp + wDamage + 1], al
+    or  al, bh
+    jnz ApplyDamageToEnemyPokemon
+    mov byte [ebp + wDamage + 1], 1
+    jmp ApplyDamageToEnemyPokemon
+.specialDamage:
+    mov bh, [ebp + wBattleMonLevel]      ; Seismic Toss / Night Shade = user level
+    mov al, [ebp + wPlayerMoveNum]
+    cmp al, SEISMIC_TOSS
+    je  .storeSpecial
+    cmp al, NIGHT_SHADE
+    je  .storeSpecial
+    mov bh, SONICBOOM_DAMAGE
+    cmp al, SONICBOOM
+    je  .storeSpecial
+    mov bh, DRAGON_RAGE_DAMAGE
+    cmp al, DRAGON_RAGE
+    je  .storeSpecial
+    ; Psywave: bh = user level * 1.5; random in [1, bh). Player Psywave always
+    ; deals >= 1 (the enemy's range is [0, bh) — a Gen-1 asymmetry preserved below).
+    mov al, [ebp + wBattleMonLevel]
+    mov bh, al
+    shr al, 1
+    add al, bh
+    mov bh, al
+.psywaveLoop:
+    call BattleRandom
+    and al, al
+    jz  .psywaveLoop
+    cmp al, bh
+    jae .psywaveLoop
+    mov bh, al
+.storeSpecial:
+    mov byte [ebp + wDamage], 0
+    mov [ebp + wDamage + 1], bh
+    ; fall through
+
+ApplyDamageToEnemyPokemon:
+    mov al, [ebp + wDamage]
+    or  al, [ebp + wDamage + 1]
+    jz  ApplyAttackToEnemyPokemonDone    ; done if wDamage == 0
+    test byte [ebp + wEnemyBattleStatus2], 1 << HAS_SUBSTITUTE_UP
+    jnz AttackSubstitute                 ; substitute absorbs the hit (shared, tail)
+    ; HP -= wDamage (big-endian); save pre-attack HP → wHPBarOldHP (pret little-endian)
+    mov bl, [ebp + wDamage + 1]
+    mov al, [ebp + wEnemyMonHP + 1]
+    mov [ebp + wHPBarOldHP], al
+    sub al, bl
     mov [ebp + wEnemyMonHP + 1], al
-    shr eax, 8
+    mov bl, [ebp + wDamage]
+    mov al, [ebp + wEnemyMonHP]
+    mov [ebp + wHPBarOldHP + 1], al
+    sbb al, bl                           ; CF preserved from the sub above (movs don't touch flags)
     mov [ebp + wEnemyMonHP], al
+    jnc .animateHpBar
+    ; overkill: set wDamage = pre-attack HP, zero the HP
+    mov al, [ebp + wHPBarOldHP + 1]
+    mov [ebp + wDamage], al
+    mov al, [ebp + wHPBarOldHP]
+    mov [ebp + wDamage + 1], al
+    mov byte [ebp + wEnemyMonHP], 0
+    mov byte [ebp + wEnemyMonHP + 1], 0
+.animateHpBar:
+    mov al, [ebp + wEnemyMonMaxHP]
+    mov [ebp + wHPBarMaxHP + 1], al
+    mov al, [ebp + wEnemyMonMaxHP + 1]
+    mov [ebp + wHPBarMaxHP], al
+    mov al, [ebp + wEnemyMonHP]
+    mov [ebp + wHPBarNewHP + 1], al
+    mov al, [ebp + wEnemyMonHP + 1]
+    mov [ebp + wHPBarNewHP], al
+    ; TODO(B): pret jp DrawHUDsAndHPBars + gradual UpdateHPBar2 drain are Master B's;
+    ; wHPBar{Old,New,Max}HP are populated faithfully for it.
+ApplyAttackToEnemyPokemonDone:
     ret
 
 ; --- externs for the status-condition checks (pret core.asm:3499) ---
@@ -1072,7 +1220,9 @@ CheckPlayerStatusConditions:
     mov byte [ebp + wPlayerBideAccumulatedDamage], 0
     mov byte [ebp + wPlayerBideAccumulatedDamage + 1], 0
     mov byte [ebp + wPlayerMoveNum], BIDE
-    call SwapPlayerAndEnemyLevels
+    ; pret .UnleashEnergy (core.asm:3674-3700) does NOT swap levels here; the
+    ; port's speed/damage routines branch on hWhoseTurn instead of the swap
+    ; trick, so a swap here is never undone → permanent level corruption.
     mov esi, HandleIfPlayerMoveMissed    ; skip calc/DecrementPP/MoveHitTest
     jmp .returnToHL
 
@@ -1166,7 +1316,8 @@ HandleSelfConfusionDamage:
     call PlayMoveAnimation
     call DrawPlayerHUDAndHPBar
     mov byte [ebp + hWhoseTurn], 0
-    jmp ApplyAttackToPlayerPokemon       ; player HP -= wDamage (pret ApplyDamageToPlayerPokemon)
+    jmp ApplyDamageToPlayerPokemon       ; pret jp ApplyDamageToPlayerPokemon — skip the
+                                         ; effect dispatch (self-hit is a fixed 40-BP hit)
 
 ; ---------------------------------------------------------------------------
 ; PrintMoveIsDisabledText — faithful port of pret core.asm:3821. Clears the user's
@@ -1208,6 +1359,7 @@ SwapPlayerAndEnemyLevels:
 ; CopyToStringBuffer — pret home/copy_string.asm. Copies the '@'-terminated string
 ; at EDX (GB addr) into wStringBuffer. Used by the Rage continuation (move name).
 ; ---------------------------------------------------------------------------
+global CopyToStringBuffer            ; Wave 5/M5.3: give.asm consumes it once linked
 CopyToStringBuffer:
     mov edi, wStringBuffer
 .copy:
@@ -1221,9 +1373,16 @@ CopyToStringBuffer:
 
 ; ---------------------------------------------------------------------------
 ; CheckForDisobedience — pret core.asm (Yellow obedience for traded mons).
-; TODO(faithful): translate. Stubbed to "obeys" (no effect).
+; TODO(faithful): translate the real badge/level obedience math.
+; Stubbed to "obeys": returns ZF=0 (mon obeys, proceed with the move). The
+; caller (ExecutePlayerMove) does `jz ExecutePlayerMoveDone`, and reaches this
+; call with ZF=1 left over from the preceding CHARGING_UP `test`, so the stub
+; MUST clear ZF or every non-charging move silently no-ops the turn. Mirrors the
+; flag-contract idiom of the sibling stubs in core_stubs.asm.
 ; ---------------------------------------------------------------------------
 CheckForDisobedience:
+    mov al, 1
+    and al, al          ; ZF=0 → "obeys", proceed
     ret
 
 ; ---------------------------------------------------------------------------
@@ -1250,6 +1409,7 @@ ExecuteEnemyMove:
     mov byte [ebp + wDamageMultipliers], EFFECTIVE
     call PrintGhostText                 ; (stub: not ghost → ZF=0)
     jz  ExecuteEnemyMoveDone
+    inc byte [ebp + wAILayer2Encouragement]  ; pret core.asm:5656-5657 — read by AIMoveChoiceModification2
     call CheckEnemyStatusConditions
     jnz .enemyHasNoSpecialCondition
     jmp esi                             ; jp hl — handled; ESI = continuation
@@ -1412,21 +1572,138 @@ ExecuteEnemyMoveDone:
     mov bh, 1
     ret
 
-; ApplyAttackToPlayerPokemon — subtract wDamage from the player mon's HP, floored.
+; ApplyAttackToPlayerPokemon — faithful port of pret core.asm:4902. Mirror of the
+; enemy version with the player mon's WRAM and the enemy's move fields.
+; ApplyDamageToPlayerPokemon (pret :4968) is the plain HP-subtract entry the player
+; confusion self-hit jumps to (skips the effect dispatch).
 ApplyAttackToPlayerPokemon:
-    movzx eax, byte [ebp + wBattleMonHP]
-    shl eax, 8
+    mov al, [ebp + wEnemyMoveEffect]
+    cmp al, OHKO_EFFECT
+    je  ApplyDamageToPlayerPokemon
+    cmp al, SUPER_FANG_EFFECT
+    je  .superFang
+    cmp al, SPECIAL_DAMAGE_EFFECT
+    je  .specialDamage
+    mov al, [ebp + wEnemyMovePower]
+    and al, al
+    jz  ApplyAttackToPlayerPokemonDone   ; 0 base power → no attack to apply
+    jmp ApplyDamageToPlayerPokemon
+.superFang:                              ; wDamage = player current HP / 2 (min 1)
+    mov al, [ebp + wBattleMonHP]
+    shr al, 1
+    mov [ebp + wDamage], al
+    mov bh, al
     mov al, [ebp + wBattleMonHP + 1]
-    movzx ecx, byte [ebp + wDamage]
-    shl ecx, 8
-    mov cl, [ebp + wDamage + 1]
-    sub eax, ecx
-    jns .store
-    xor eax, eax
-.store:
+    rcr al, 1
+    mov [ebp + wDamage + 1], al
+    or  al, bh
+    jnz ApplyDamageToPlayerPokemon
+    mov byte [ebp + wDamage + 1], 1
+    jmp ApplyDamageToPlayerPokemon
+.specialDamage:
+    mov bh, [ebp + wEnemyMonLevel]       ; Seismic Toss / Night Shade = user level
+    mov al, [ebp + wEnemyMoveNum]
+    cmp al, SEISMIC_TOSS
+    je  .storeSpecial
+    cmp al, NIGHT_SHADE
+    je  .storeSpecial
+    mov bh, SONICBOOM_DAMAGE
+    cmp al, SONICBOOM
+    je  .storeSpecial
+    mov bh, DRAGON_RAGE_DAMAGE
+    cmp al, DRAGON_RAGE
+    je  .storeSpecial
+    ; Psywave: bh = user level * 1.5; random in [0, bh). GLITCH(faithful): the enemy
+    ; can deal 0 damage with Psywave (no reject-0), unlike the player's [1, bh) — see
+    ; pret core.asm:4953-4955.
+    mov al, [ebp + wEnemyMonLevel]
+    mov bh, al
+    shr al, 1
+    add al, bh
+    mov bh, al
+.psywaveLoop:
+    call BattleRandom
+    cmp al, bh
+    jae .psywaveLoop
+    mov bh, al
+.storeSpecial:
+    mov byte [ebp + wDamage], 0
+    mov [ebp + wDamage + 1], bh
+    ; fall through
+
+ApplyDamageToPlayerPokemon:
+    mov al, [ebp + wDamage]
+    or  al, [ebp + wDamage + 1]
+    jz  ApplyAttackToPlayerPokemonDone
+    test byte [ebp + wPlayerBattleStatus2], 1 << HAS_SUBSTITUTE_UP
+    jnz AttackSubstitute
+    mov bl, [ebp + wDamage + 1]
+    mov al, [ebp + wBattleMonHP + 1]
+    mov [ebp + wHPBarOldHP], al
+    sub al, bl
     mov [ebp + wBattleMonHP + 1], al
-    shr eax, 8
+    mov bl, [ebp + wDamage]
+    mov al, [ebp + wBattleMonHP]
+    mov [ebp + wHPBarOldHP + 1], al
+    sbb al, bl
     mov [ebp + wBattleMonHP], al
+    jnc .animateHpBar
+    mov al, [ebp + wHPBarOldHP + 1]
+    mov [ebp + wDamage], al
+    mov al, [ebp + wHPBarOldHP]
+    mov [ebp + wDamage + 1], al
+    mov byte [ebp + wBattleMonHP], 0
+    mov byte [ebp + wBattleMonHP + 1], 0
+.animateHpBar:
+    mov al, [ebp + wBattleMonMaxHP]
+    mov [ebp + wHPBarMaxHP + 1], al
+    mov al, [ebp + wBattleMonMaxHP + 1]
+    mov [ebp + wHPBarMaxHP], al
+    mov al, [ebp + wBattleMonHP]
+    mov [ebp + wHPBarNewHP + 1], al
+    mov al, [ebp + wBattleMonHP + 1]
+    mov [ebp + wHPBarNewHP], al
+ApplyAttackToPlayerPokemonDone:
+    ret
+
+; ---------------------------------------------------------------------------
+; AttackSubstitute — faithful port of pret core.asm:5020. Shared by both sides:
+; the target's Substitute absorbs the hit instead of the mon. Redirected here from
+; ApplyDamageTo{Enemy,Player}Pokemon when the target has HAS_SUBSTITUTE_UP set.
+; ---------------------------------------------------------------------------
+AttackSubstitute:
+    mov esi, SubstituteTookDamageText
+    call PrintText
+    mov edx, wEnemySubstituteHP          ; player turn: target = enemy
+    mov ebx, wEnemyBattleStatus2
+    cmp byte [ebp + hWhoseTurn], 0
+    je  .subApply
+    mov edx, wPlayerSubstituteHP         ; enemy turn: target = player
+    mov ebx, wPlayerBattleStatus2
+.subApply:
+    mov al, [ebp + wDamage]              ; wDamage high byte
+    and al, al
+    jnz .subBroke                        ; damage > 0xFF always breaks the substitute
+    mov al, [ebp + edx]                  ; substitute HP
+    sub al, [ebp + wDamage + 1]
+    mov [ebp + edx], al
+    jnc .subDone                         ; substitute survived (no borrow)
+.subBroke:
+    and byte [ebp + ebx], ~(1 << HAS_SUBSTITUTE_UP) & 0xFF   ; clear the substitute bit
+    mov esi, SubstituteBrokeText
+    call PrintText
+    ; TODO(anim): pret flips hWhoseTurn around callfar Func_79929 (substitute-break
+    ; anim) then flips back — a no-op here (anim deferred, Master B), so skipped.
+    ; nullify the attacker's move effect (pret core.asm:5066-5072)
+    mov esi, wPlayerMoveEffect           ; player turn
+    cmp byte [ebp + hWhoseTurn], 0
+    je  .subNullify
+    mov esi, wEnemyMoveEffect            ; enemy turn
+.subNullify:
+    mov byte [ebp + esi], 0
+    ; BUG(faithful): wDamage is NOT updated with the substitute's pre-hit HP on a
+    ; break (pret core.asm:5050-5051) — preserved verbatim.
+.subDone:
     ret
 
 ; ---------------------------------------------------------------------------
@@ -1564,7 +1841,7 @@ CheckEnemyStatusConditions:
     mov al, POUND
     call PlayMoveAnimation
     mov byte [ebp + hWhoseTurn], 1
-    call ApplyAttackToEnemyPokemon
+    call ApplyDamageToEnemyPokemon       ; skip effect dispatch (confusion self-hit)
     jmp .eMonHurtItselfOrFullyParalysed
 
 .eTriedDisabledCheck:                    ; pret 5998
@@ -1647,7 +1924,9 @@ CheckEnemyStatusConditions:
     mov byte [ebp + wEnemyBideAccumulatedDamage], 0
     mov byte [ebp + wEnemyBideAccumulatedDamage + 1], 0
     mov byte [ebp + wEnemyMoveNum], BIDE
-    call SwapPlayerAndEnemyLevels
+    ; pret's enemy Bide unleash (core.asm:6085 region) pairs its swap with the
+    ; un-swaps in HandleIfEnemyMoveMissed continuations, which the port stripped
+    ; (hWhoseTurn-based routines). A swap here would never be undone.
     mov esi, HandleIfEnemyMoveMissed
     jmp .eReturnToHL
 

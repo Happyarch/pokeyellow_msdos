@@ -34,15 +34,39 @@ extern UncompressSpriteData
 extern g_tilecache_dirty
 extern DelayFrame
 extern dmg_palette
+extern IndexToPokedex             ; flat dex table (pokemon_data.asm): [species-1] -> dex#
 global SlideBattlePicsIn
 
 global LoadMonPicToVRAM
 global LoadMonBackPicToVRAM
 global PlacePicTilemap
+
+; --- mon front-pic dispatch (M6.3, faithful port of home/pokemon.asm + home/pics.asm) ---
+global LoadFrontSpriteByMonIndex
+global LoadFlippedFrontSpriteByMonIndex
+global LoadMonFrontSprite
+global UncompressMonSprite
+
+; --- debug-harness-only stubs (DEBUG_BATTLE / debug_dump.asm); superseded by the
+;     dispatch above once the MonFrontPics table is staged — see M6.3 SUMMARY ---
 global DrawEnemyFrontPic_Stub
 global DrawPlayerBackPic_Stub
 global DrawPlayerRedBackPic_Stub
 global DrawBugCatcherPic_Stub
+
+; MonFrontPics: Tier-1 GENERATED table (dex order, 151 records of {dd flatptr, dd len})
+; pointing at the incbin'd compressed front .pic blobs. Build with -D MON_FRONT_PICS
+; once tools/gen_mon_pics.py + assets/mon_pics.inc + src/data/mon_pics.asm land and
+; src/data/mon_pics.asm is added to the link set. See M6.3 SUMMARY "data follow-up".
+%ifdef MON_FRONT_PICS
+extern MonFrontPics
+%endif
+
+; pret constants not carried in gb_constants.inc:
+;   RHYDON = internal index $01 (constants/pokemon_constants.asm)
+;   NUM_POKEMON = 151          (constants/pokedex_constants.asm)
+%define RHYDON        0x01
+%define NUM_POKEMON   151
 
 section .text
 
@@ -306,6 +330,81 @@ PlacePicTilemap:
     dec ecx
     jnz .col
     ret
+
+; ---------------------------------------------------------------------------
+; LoadFrontSpriteByMonIndex / LoadFlippedFrontSpriteByMonIndex
+; Source: home/pokemon.asm (pret/pokeyellow). Faithful internal-index -> national-
+; dex -> Rhydon-trap -> front-pic path. The flipped entry mirrors the pic in X
+; (Pokédex / status / evolution / trade / Oak intro / printer callers).
+; In:  [wCurPartySpecies] = internal species index; EDX = dest VRAM GB addr.
+; Out: 49 merged 2bpp front-pic tiles at [EDX]; [wSpriteFlipped] cleared.
+;      Invalid dex -> "Rhydon trap": [wCurPartySpecies] = RHYDON, no pic loaded
+;      (https://glitchcity.wiki/wiki/Rhydon_trap).
+; ---------------------------------------------------------------------------
+LoadFlippedFrontSpriteByMonIndex:
+    mov byte [ebp + wSpriteFlipped], 1
+    jmp LoadFrontSpriteByMonIndex.body
+LoadFrontSpriteByMonIndex:
+    mov byte [ebp + wSpriteFlipped], 0
+.body:
+    push edx                                ; preserve dest VRAM addr
+    ; dex = IndexToPokedex[wCurPartySpecies - 1]   (internal index -> national dex)
+    movzx eax, byte [ebp + wCurPartySpecies]
+    dec eax
+    movzx eax, byte [IndexToPokedex + eax]
+    and al, al
+    jz .invalidDexNumber                    ; dex #0 invalid
+    cmp al, NUM_POKEMON + 1
+    jae .invalidDexNumber                   ; dex > #151 invalid (unsigned)
+    ; valid dex (1..151)
+    dec eax                                  ; dex-1 = index into MonFrontPics
+    pop edx                                  ; restore dest VRAM addr
+    call LoadMonFrontSprite                  ; stage + decode + center/merge -> [EDX]
+    mov byte [ebp + wSpriteFlipped], 0       ; pret clears the flip flag after load
+    ret
+.invalidDexNumber:
+    ; Rhydon trap — fail-safe invalid dex numbers to RHYDON (pret .invalidDexNumber)
+    add esp, 4                               ; discard the saved dest (no pic loaded)
+    mov byte [ebp + wCurPartySpecies], RHYDON
+    ret
+
+; ---------------------------------------------------------------------------
+; LoadMonFrontSprite / UncompressMonSprite
+; Source: home/pics.asm (pret/pokeyellow): UncompressMonSprite + LoadMonFrontSprite.
+; pret reads the front-pic ROM pointer out of the loaded mon header ($b) and bank-
+; selects by species index; the port has no banks, and the mon-header sprite pointer
+; is a GB-ROM address with no meaning here, so the pic is resolved via the dex-keyed
+; MonFrontPics table (Tier-1 data) and the compressed blob is staged into GB scratch
+; because the decoder addresses its input with a 16-bit GB pointer ([ebp+wSpriteInputPtr]).
+; In:  EAX = dex-1 (0..150); EDX = dest VRAM GB addr; [wSpriteFlipped] set.
+; ---------------------------------------------------------------------------
+LoadMonFrontSprite:
+    mov [pic_dest], edx                      ; merge destination (LoadUncompressedSpriteData)
+    call UncompressMonSprite                  ; stage blob + decode chunks into buffers
+    mov al, [pic_dims]
+    jmp LoadUncompressedSpriteData            ; center each chunk + interlace -> VRAM
+
+; In: EAX = dex-1. Stage the compressed front pic into GB scratch, point the decoder
+; at it, and decode the two 1bpp chunks into sSpriteBuffer1/2 (tail-calls the decoder).
+UncompressMonSprite:
+%ifdef MON_FRONT_PICS
+    lea esi, [MonFrontPics + eax*8]          ; record: dd flatptr, dd len
+    mov ecx, [esi + 4]                        ; blob length
+    mov esi, [esi]                            ; flat ptr to the compressed .pic
+%else
+    ; DATA-PENDING STOPGAP: the generated MonFrontPics table is not staged yet.
+    ; Until tools/gen_mon_pics.py + assets/mon_pics.inc + src/data/mon_pics.asm land
+    ; (build -D MON_FRONT_PICS), every mon stages the embedded debug front pic so the
+    ; index/Rhydon-trap dispatch links and is exercisable. See M6.3 SUMMARY.
+    mov esi, embedded_pic
+    mov ecx, embedded_pic_len
+%endif
+    lea edi, [ebp + PIC_STAGE]
+    rep movsb                                 ; stage compressed stream into GB scratch
+    mov word [ebp + wSpriteInputPtr], PIC_STAGE
+    mov al, [ebp + PIC_STAGE]                 ; dims byte (hi nyb = W, lo nyb = H tiles)
+    mov [pic_dims], al
+    jmp UncompressSpriteData                   ; -> buffer1 = chunk1, buffer2 = chunk2
 
 ; ---------------------------------------------------------------------------
 ; DrawEnemyFrontPic_Stub — STAGE-1c TEST STOPGAP. Stages an embedded pic, decodes

@@ -1,3 +1,15 @@
+; ============================================================================
+; DEAD / DEFERRED — NOT IN THE BUILD (intentionally absent from dos_port/Makefile).
+;
+; Faithful pret translation of _Joypad / ReadJoypad_ / DiscardButtonPresses /
+; TrySoftReset. It is SUPERSEDED by the software HAL src/input/joypad.asm
+; (joypad_init/update/restore + pad_dpad/pad_buttons/pad_quit/pad_noclip), which
+; is what the port actually links. Symbol sets are disjoint (no collision).
+;
+; This file is unreferenced and cannot link as-is: it ends in `jmp Joypad`, and
+; `Joypad` is defined nowhere in the port. Kept only as a cross-reference to the
+; original input routine for a future faithful-input pass. See M0.5 report.
+; ============================================================================
 %include "dos_port/include/gb_memmap.inc"
 
 SECTION .text

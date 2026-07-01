@@ -101,10 +101,9 @@ DrawPlayerHUD:
     mov esi, W_TILEMAP + P_NAME
     lea eax, [ebp + wBattleMonNick]      ; PlaceString src = flat-linear
     call PlaceString
-    mov byte [ebp + W_TILEMAP + P_LV], TILE_LV
     movzx eax, byte [ebp + wBattleMonLevel]
-    mov edi, W_TILEMAP + P_LV + 1
-    call print_num2
+    mov edi, W_TILEMAP + P_LV
+    call print_level
     mov ebx, wBattleMonHP
     mov esi, wBattleMonMaxHP
     call calc_hp_pixels
@@ -130,10 +129,9 @@ DrawEnemyHUD:
     mov esi, W_TILEMAP + E_NAME          ; PlaceString: ESI=dest(GB offset), EAX=src(flat)
     lea eax, [ebp + wEnemyMonNick]
     call PlaceString
-    mov byte [ebp + W_TILEMAP + E_LV], TILE_LV
     movzx eax, byte [ebp + wEnemyMonLevel]
-    mov edi, W_TILEMAP + E_LV + 1
-    call print_num2
+    mov edi, W_TILEMAP + E_LV
+    call print_level
     mov ebx, wEnemyMonHP                 ; calc_hp_pixels: EBX=curHP addr, ESI=maxHP addr
     mov esi, wEnemyMonMaxHP
     call calc_hp_pixels                  ; → EDX = fill pixels
@@ -221,6 +219,16 @@ hp_to_pixels:
     movzx ecx, byte [ebp + esi]          ; maxHP high
     shl ecx, 8
     mov cl, [ebp + esi + 1]              ; maxHP low → ECX = maxHP
+    ; BUG(cosmetic): pret GetHPBarLength (gfx/hp_bar.asm:17-33) right-shifts BOTH
+    ; curHP*48 and maxHP by 2 (lossy ÷4) when maxHP >= 256 before an 8-bit divide,
+    ; so high-maxHP mons get a slightly imprecise bar. Preserved at levels 0/1.
+%if BUG_FIX_LEVEL < 2
+    cmp ecx, 256
+    jb .exactDiv
+    shr eax, 2
+    shr ecx, 2
+.exactDiv:
+%endif
     xor edx, edx
     div ecx                              ; EAX = curHP*48 / maxHP
     test eax, eax
@@ -317,6 +325,21 @@ print_num2:
 .ones:
     add dl, CHAR_DIG0
     mov [ebp + edi + 1], dl
+    ret
+
+; --- print_level — EDI = ":L" tile position, AL = level. Faithful to pret
+; PrintLevel (home/pokemon.asm:PrintLevel): level < 100 → ":L" + 2 digits at
+; EDI/EDI+1; level >= 100 → overwrite the ":L" tile with 3 digits at EDI.
+print_level:
+    cmp al, 100
+    jae .threeDigits
+    mov byte [ebp + edi], TILE_LV
+    inc edi
+    call print_num2
+    ret
+.threeDigits:
+    movzx eax, al                        ; 3 digits start where ":L" was
+    call print_num3
     ret
 
 ; --- print_num3 — 3-digit (hundreds, tens, ones) at [ebp+EDI]; AX = value ---

@@ -45,8 +45,8 @@ extern HideSubstituteShowMonAnim
 extern ReshowSubstituteAnim
 extern ConditionalPrintButItFailed
 extern CheckTargetSubstitute
-extern MonsStatsRoseText
-extern MonsStatsFellText
+extern MonsStatsRose                    ; core.asm — composes "<mon>'s STAT [greatly] rose!"
+extern MonsStatsFell                    ; core.asm — composes "<mon>'s STAT [greatly] fell!"
 extern NothingHappenedText
 
 section .text
@@ -215,8 +215,7 @@ UpdateStatDone:
     jnz .skipBadge
     call ApplyBadgeStatBoosts            ; call z (player turn) — reapply badge boosts
 .skipBadge:
-    mov esi, MonsStatsRoseText
-    call PrintText
+    call MonsStatsRose                   ; "<mon>'s STAT [greatly] rose!" (intro+suffix+PROMPT)
     call QuarterSpeedDueToParalysis
     jmp HalveAttackDueToBurn
 
@@ -386,8 +385,7 @@ UpdateLoweredStatDone:
     jz .skipBadge
     call ApplyBadgeStatBoosts            ; call nz (enemy used stat-down on player)
 .skipBadge:
-    mov esi, MonsStatsFellText
-    call PrintText
+    call MonsStatsFell                   ; "<mon>'s STAT [greatly] fell!" (intro+suffix+PROMPT)
     call QuarterSpeedDueToParalysis
     jmp HalveAttackDueToBurn
 

@@ -108,6 +108,12 @@ grep -rn '; PROJ' dos_port/src
 | overworld-ui (dialog)       | (0, 17) | 20×6  | center, X+10, Y+0           | 87  | 152| 160 | 200 | text.asm (PrintText) |
 | overworld-ui (START menu)   | (0, 0)  | 10×N  | anchor=top-right, X+20, Y+0 | 247 | 0  | 80  | rows*8 | start_menu.asm (.draw_full) |
 | overworld-ui (party)        | (0, ~3) | 20×N  | center, X+10                | 87  | .. | 160 | ..  | party_menu.asm |
+| overworld-ui (home YES/NO)  | (14, 7) | 6×5   | anchor=top-right, X+20, Y+0 | 279 | 56 | 48  | 96  | yes_no.asm (YesNoChoice, mode 0; = bag YES/NO) |
+| overworld-ui (WIDE YES/NO)  | (12, 7) | 8×5   | anchor=top-right, X+20, Y+0 | 263 | 56 | 64  | 96  | yes_no.asm (WideYesNoChoice) |
+| overworld-ui (HEAL/CANCEL)  | (11, 6) | 9×6   | anchor=top-right, X+20, Y+0 | 255 | 48 | 72  | 96  | yes_no.asm (YesNoChoicePokeCenter) |
+| overworld-ui (list menu)    | (4, 2)  | 16×11 | anchor=top-right, X+20, Y+0 | 199 | 16 | 128 | 104 | list_menu.asm (generic; reuses bag LIST_* anchor) |
+| overworld-ui (list quantity)| (15, 9) | 5×3   | anchor=top-right, X+20, Y+0 | 287 | 72 | 40  | 96  | list_menu.asm (DisplayChooseQuantityMenu) |
+| battle-ui (YES/NO box)      | (cc,rr) | W×H   | battle center, X+10, Y+3    | —   | —  | —   | —   | yes_no.asm (mode 1) — UNVERIFIED, no caller wired |
 | battle-ui (whole screen)    | (0, 0)  | 20×18 | center in 40×25 BG, +10col/+3row | — | — | — | — | init_battle.asm (full widescreen canvas via render_bg) |
 | battle-ui (msg box)         | (0, 12) | 20×6  | → canvas (10,15), +10col/+3row   | — | — | — | — | init_battle.asm (hand-drawn box, stride 40) |
 | battle-ui (enemy HUD)       | (1,0)/(4,1)/(2,2) | — | +10col/+3row → name(11,3) lv(15,4) hpbar(12,5); frame shelf row 6 | — | — | — | — | battle_hud.asm (DrawEnemyHUD/DrawEnemyHUDFrame) |

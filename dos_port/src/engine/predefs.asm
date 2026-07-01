@@ -1,3 +1,19 @@
+; ============================================================================
+; DEAD / DEFERRED — NOT IN THE BUILD (intentionally absent from dos_port/Makefile).
+;
+; GetPredefPointer is a faithful skeleton of pret's predef dispatcher, but the
+; backing table `PredefPointers` (pret data/predef_pointers.asm) is NOT yet
+; ported, so the references below (and the commented-out %include) are
+; UNRESOLVED. This file therefore does not link and is deliberately excluded
+; from every SRCS list.
+;
+; The only predef code the port links today is the leaf src/home/predef.asm
+; (GetPredefRegisters). There is no predef *caller* in the port yet; predef WRAM
+; slots are populated directly by callers / test harnesses.
+;
+; To revive: port data/predef_pointers.asm to a `PredefPointers` dd/db table,
+; uncomment the include, add this file to a SRCS list. See M0.5 report.
+; ============================================================================
 %include "dos_port/include/gb_memmap.inc"
 
 SECTION .text

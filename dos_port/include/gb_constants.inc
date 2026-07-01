@@ -283,6 +283,14 @@ MAX_NEUTRAL_DAMAGE      equ 999
 SONICBOOM_DAMAGE        equ 20
 DRAGON_RAGE_DAMAGE      equ 40
 
+; --- move ids consumed by ApplyAttackTo*Pokemon special-damage dispatch ---
+; (values from constants/move_constants.asm; canonical Gen-1 move indices)
+SONICBOOM               equ 0x31    ; 49
+SEISMIC_TOSS            equ 0x45    ; 69
+DRAGON_RAGE             equ 0x52    ; 82
+NIGHT_SHADE             equ 0x65    ; 101
+PSYWAVE                 equ 0x95    ; 149
+
 ; --- type effectiveness factors, scaled by 10 (TypeEffects table values) ---
 SUPER_EFFECTIVE         equ 20
 MORE_EFFECTIVE          equ 15
@@ -495,5 +503,49 @@ BATTLE_STRUCT_LENGTH    equ 0x1D       ; 29 bytes
 BIT_MONEY_SIGN          equ 5          ; prepend '¥' currency glyph (BCD)
 BIT_LEFT_ALIGN          equ 6          ; left-justify (don't pad leading positions)
 BIT_LEADING_ZEROES      equ 7          ; print leading zeroes instead of spaces
+
+; ---------------------------------------------------------------------------
+; Wave 4 (home-rectification) — menu framework constants (pret constants/
+; menu_constants.asm + list_constants.asm). Members carry identical-value local
+; placeholders; these are canonical.
+; ---------------------------------------------------------------------------
+; wListMenuID values
+PCPOKEMONLISTMENU       equ 0x00
+MOVESLISTMENU           equ 0x01
+PRICEDITEMLISTMENU      equ 0x02
+ITEMLISTMENU            equ 0x03
+; wTextBoxID
+LIST_MENU_BOX           equ 0x0D
+TWO_OPTION_MENU         equ 0x14
+; wTwoOptionMenuID variants
+YES_NO_MENU             equ 0x00
+NORTH_WEST_MENU         equ 0x01
+SOUTH_EAST_MENU         equ 0x02
+WIDE_YES_NO_MENU        equ 0x03
+NORTH_EAST_MENU         equ 0x04
+TRADE_CANCEL_MENU       equ 0x05
+HEAL_CANCEL_MENU        equ 0x06
+NO_YES_MENU             equ 0x07
+BIT_SECOND_MENU_OPTION_DEFAULT equ 7
+; wMenuExitMethod
+CHOSE_MENU_ITEM         equ 0x01
+CHOSE_FIRST_ITEM        equ 0x01
+CHOSE_SECOND_ITEM       equ 0x02
+CANCELLED_MENU          equ 0x02
+
+; ---------------------------------------------------------------------------
+; Wave 5 (home-rectification) — pokemon/item constants (pret menu_constants.asm /
+; pokemon_constants.asm).
+; ---------------------------------------------------------------------------
+MONEY_BOX               equ 0x13   ; wTextBoxID: money display box
+; wMonDataLocation move directions (menu_constants.asm)
+BOX_TO_PARTY            equ 0x00
+PARTY_TO_BOX            equ 0x01
+DAYCARE_TO_PARTY        equ 0x02
+PARTY_TO_DAYCARE        equ 0x03
+; special sprite-ID mons with no BaseStats row (pokemon_constants.asm)
+FOSSIL_KABUTOPS         equ 0xB6
+FOSSIL_AERODACTYL       equ 0xB7
+MON_GHOST               equ 0xB8
 
 %endif ; GB_CONSTANTS_INC

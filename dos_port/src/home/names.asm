@@ -198,6 +198,11 @@ GetItemName:
 ; ---------------------------------------------------------------------------
 GetMachineName:
     mov al, [ebp + wNamedObjectIndex]
+    ; FIX(faithful): save the original index on entry (pret `push af`, home/names.asm:57)
+    ; and restore it before the single ret (pret `pop af` + write-back, ~:96-97).
+    ; Without this the HM path leaves `id + NUM_HMS` in wNamedObjectIndex, corrupting
+    ; the index for any caller that re-reads it.
+    push eax                                 ; = pret push af
     cmp al, TM01
     jae .writeTM
     add al, NUM_HMS                          ; HM → reuse TM numbering
@@ -230,4 +235,9 @@ GetMachineName:
     mov [ebp + edi], al
     inc edi
     mov byte [ebp + edi], 0x50               ; '@'
+    ; FIX(faithful): restore original wNamedObjectIndex (pret `pop af` + write-back,
+    ; home/names.asm:96-97). Reached by both TM and HM paths (single exit), so the
+    ; entry push is always balanced.
+    pop eax                                  ; = pret pop af
+    mov [ebp + wNamedObjectIndex], al
     ret

@@ -72,6 +72,45 @@ def load_item_ids(path: Path) -> dict:
     return ids
 
 
+def load_move_ids(path: Path) -> dict:
+    """Map every move constant name -> numeric id from constants/move_constants.asm.
+
+    The file is a plain `const_def` / `const NAME` sequence (NO_MOVE = 0), so the
+    id is just the running counter — moves are not reindexed like species.
+    """
+    ids, val = {}, 0
+    for line in path.read_text().splitlines():
+        s = line.split(";", 1)[0].strip()
+        m = re.match(r"const_def(?:\s+(-?\d+))?$", s)
+        if m:
+            val = int(m.group(1)) if m.group(1) else 0
+            continue
+        m = re.match(r"const\s+(\w+)$", s)
+        if m:
+            ids[m.group(1)] = val
+            val += 1
+    return ids
+
+
+def load_tmhm_move_names(path: Path) -> tuple:
+    """Ordered move names behind each `add_tm`/`add_hm` in item_constants.asm.
+
+    add_tm/add_hm define `TM##_MOVE`/`HM##_MOVE EQU <MOVE>`; TechnicalMachines is
+    those move ids, all TMs (TM01..) followed by all HMs (HM01..), then -1.
+    """
+    tm, hm = [], []
+    for line in path.read_text().splitlines():
+        s = line.split(";", 1)[0].strip()
+        m = re.match(r"add_tm\s+(\w+)", s)
+        if m:
+            tm.append(m.group(1))
+            continue
+        m = re.match(r"add_hm\s+(\w+)", s)
+        if m:
+            hm.append(m.group(1))
+    return tm, hm
+
+
 def load_marts(path: Path, ids: dict) -> list:
     """Parse `script_mart ITEM, ITEM, ...` entries from data/items/marts.asm.
 
@@ -139,6 +178,14 @@ def main() -> int:
         lo = tm_nybbles[i + 1] if i + 1 < len(tm_nybbles) else 0
         tm_pricebytes.append((hi << 4) | lo)
 
+    # TechnicalMachines (data/moves/tmhm_moves.asm): the move id learned by each
+    # TM then each HM, -1 terminated (CanLearnTM / TMToMove index this list).
+    move_ids = load_move_ids(ROOT / "constants/move_constants.asm")
+    tm_moves, hm_moves = load_tmhm_move_names(ROOT / "constants/item_constants.asm")
+    tmhm_bytes = bytearray(move_ids[m] for m in tm_moves)
+    tmhm_bytes += bytearray(move_ids[m] for m in hm_moves)
+    tmhm_bytes.append(0xFF)
+
     pricebytes = bytearray()
     for p in prices:
         pricebytes += bcd3(p)
@@ -200,6 +247,14 @@ def main() -> int:
         "",
     ]
 
+    out += [
+        f"; TechnicalMachines: {len(tm_moves)} TM + {len(hm_moves)} HM move ids,",
+        "; TMs first then HMs, 0xFF-terminated (CanLearnTM / TMToMove index this).",
+        "TechnicalMachines:",
+        "    db " + ", ".join(f"0x{b:02X}" for b in tmhm_bytes),
+        "",
+    ]
+
     ASSETS.mkdir(parents=True, exist_ok=True)
     dst = ASSETS / "items.inc"
     dst.write_text("\n".join(out))
@@ -207,7 +262,8 @@ def main() -> int:
           f"ItemPrices {len(prices)} x 3 = {len(pricebytes)} bytes, "
           f"KeyItemFlags {len(keyflags)} bytes / {len(keybits)} items, "
           f"MartInventories {len(marts)} marts, "
-          f"TechnicalMachinePrices {len(tm_pricebytes)} bytes)")
+          f"TechnicalMachinePrices {len(tm_pricebytes)} bytes, "
+          f"TechnicalMachines {len(tmhm_bytes)} bytes)")
     return 0
 
 

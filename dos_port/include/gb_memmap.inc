@@ -359,6 +359,7 @@ wBattleMonSpecial      equ 0xD02A
 wBattleMonPP           equ 0xD02C   ; 4 bytes
 
 wTrainerClass          equ 0xD030
+wForcePlayerToChooseMon equ 0xD11E  ; set on failed escape; read by multi-mon switch-in (pret wram.asm:1781)
 wNumRunAttempts        equ 0xD11F   ; run-from-battle attempt count (escape-odds boost)
 wIsInBattle            equ 0xD056   ; 0 none, 1 wild, 2 trainer ($FF = lost)
 wBattleType            equ 0xD059
@@ -624,6 +625,9 @@ BIT_SINGLE_SPACED_LINES  equ 2          ; hUILayoutFlags bit (gfx_constants.asm)
 ; Joypad HRAM ($FFB1-$FFB7) — order confirmed by hram.asm + H_SCX=$FFAE anchor
 H_JOY_PRESSED            equ 0xFFB3     ; hJoyPressed — buttons just pressed this frame
 H_JOY_HELD               equ 0xFFB4     ; hJoyHeld    — buttons currently held
+H_JOY5                   equ 0xFFB5     ; hJoy5 — JoypadLowSensitivity output (Wave 3/M3.2)
+H_JOY6                   equ 0xFFB6     ; hJoy6 — low-sens flag: 0 = suppress repeat while A/B held
+H_JOY7                   equ 0xFFB7     ; hJoy7 — low-sens flag: 0 = newly-pressed only, 1 = held+delay
 
 ; Sprite-engine HRAM temporaries (PrepareOAMData / _UpdateSprites) — sym-verified.
 H_SPRITE_OFFSET2             equ 0xFF8F ; hSpriteOffset2 (current slot offset in PrepareOAMData loop)
@@ -1174,5 +1178,68 @@ VGA_FRAMEBUF    equ 0xA0000    ; linear address of VGA framebuffer (flat DS)
 
 ; Tile-blitter writes directly to a 320×200 back buffer; present() is a
 ; straight rep movsd of 16,000 dwords.  No scaling, no letterbox.
+
+; ---------------------------------------------------------------------------
+; Wave 3 (home-rectification M3.3) — simulated-joypad + scripted-NPC movement +
+; pathfinding. Addresses from pret ram/wram.asm + ram/hram.asm; the joypad HRAM
+; chain is verified consecutive with the mapped hJoyPressed=0xFFB3/hJoyHeld=0xFFB4,
+; and W_NPC_MOVEMENT_DIRECTIONS aliases the existing W_SIMULATED_JOYPAD_STATES_END
+; union base (0xCC5B). No collisions with existing symbols (checked at integration).
+; ---------------------------------------------------------------------------
+H_JOY_LAST                                       equ 0xFFB1 ; hJoyLast (also mapped locally in joypad.asm)
+H_JOY_RELEASED                                   equ 0xFFB2 ; hJoyReleased (shared: joypad.asm + simulate_joypad.asm)
+H_RLE_BYTE_VALUE                                 equ 0xFF81 ; hRLEByteValue (union base)
+H_DIVIDEND2                                      equ 0xFFE5 ; hDividend2
+H_DIVISOR2                                       equ 0xFFE6 ; hDivisor2
+H_QUOTIENT2                                      equ 0xFFE7 ; hQuotient2
+W_NPC_MOVEMENT_DIRECTIONS                        equ 0xCC5B ; wNPCMovementDirections (= W_SIMULATED_JOYPAD_STATES_END alias)
+W_UNUSED_OVERRIDE_SIMULATED_JOYPAD_STATES_INDEX  equ 0xCC86 ; wUnusedOverrideSimulatedJoypadStatesIndex
+W_OVERRIDE_SIMULATED_JOYPAD_STATES_MASK          equ 0xCC87 ; wOverrideSimulatedJoypadStatesMask
+W_RLE_BYTE_COUNT                                 equ 0xCCD2 ; wRLEByteCount
+W_NPC_NUM_SCRIPTED_STEPS                         equ 0xCF0F ; wNPCNumScriptedSteps
+W_NPC_MOVEMENT_SCRIPT_FUNCTION_NUM               equ 0xCF10 ; wNPCMovementScriptFunctionNum
+W_NPC_MOVEMENT_SCRIPT_BANK                       equ 0xCC58 ; wNPCMovementScriptBank (scripted-dispatch, macro-gated)
+BIT_SCRIPTED_NPC_MOVEMENT                        equ 0      ; wStatusFlags5 bit — MoveSprite scripted NPC walk
+
+; ---------------------------------------------------------------------------
+; Wave 4 (home-rectification) — menu framework (yes_no / list_menu / window).
+; Addresses from pret ram/wram.asm + ram/hram.asm; cross-checked against existing
+; memmap anchors at integration (all new names, no collisions). Members also carry
+; identical-value local placeholders (NASM allows same-value equ redef); these
+; canonical defs are the single source of truth.
+; ---------------------------------------------------------------------------
+wMenuWrappingEnabled          equ 0xCADC ; HandleMenuInput up/down wrap gate
+wMenuCursorLocation           equ 0xCC30 ; dw — tile addr under the menu cursor (EraseMenuCursor)
+wMenuJoypadPollCount          equ 0xCC34 ; menu input timeout countdown (0 = disabled)
+wMenuWatchMovingOutOfBounds   equ 0xCC37 ; return up/down at list edge so caller can scroll
+wListPointer                  equ 0xCF8A ; dw — source list for DisplayListMenuID
+wCurListMenuItem              equ 0xCF90 ; = wCurItem — id of highlighted list entry
+wPrintItemPrices              equ 0xCF92 ; list menu: append item price column
+wListMenuID                   equ 0xCF93 ; ITEMLISTMENU / MOVESLISTMENU / PRICED / PC-box
+wLoadedMonBoxLevel            equ 0xCFB3 ; PC-box level (list_menu PC path; confirm vs wLoadedMon)
+wLoadedMonLevel               equ 0xCFB8 ; loaded-mon level
+wIsKeyItem                    equ 0xD123 ; set by IsKeyItem_ (list menu / toss)
+wTextBoxID                    equ 0xD124 ; DisplayTextBoxID dispatcher selector
+wTwoOptionMenuID              equ 0xD12B ; YES_NO_MENU / WIDE_YES_NO / HEAL_CANCEL / ...
+wChosenMenuItem               equ 0xD12C ; menu result: chosen item index
+wMenuExitMethod               equ 0xD12D ; CHOSE_MENU_ITEM / CANCELLED_MENU
+; HRAM — swap-items scratch (root-allocated free bytes after H_DIVIDE_BCD_BUFFER 0xFFA5-A7)
+hHalveItemPrices              equ 0xFFA8 ; list_menu priced path
+hSwapItemID                   equ 0xFFA9 ; item-list SELECT swap scratch
+hSwapItemQuantity             equ 0xFFAA ; item-list SELECT swap scratch
+
+; ---------------------------------------------------------------------------
+; Wave 5 (home-rectification) — pokemon/item data (add_party_mon / add_mon /
+; pokemon / give / money). Lowercase Dex aliases onto existing W_POKEDEX_*;
+; new WRAM from pret ram/wram.asm chained off verified anchors.
+; ---------------------------------------------------------------------------
+wPokedexOwned                 equ W_POKEDEX_OWNED     ; 0xD2F6 (lowercase alias)
+wPokedexSeen                  equ W_POKEDEX_SEEN      ; 0xD309 (lowercase alias)
+wUnusedAlreadyOwnedFlag       equ 0xD152 ; pret dead store (write-only)
+wEnemyMonNicks                equ 0xD9ED ; enemy party nicknames
+wDayCareMonName               equ 0xDA48 ; day-care mon nickname
+wDayCareMonOT                 equ 0xDA53 ; day-care mon OT name
+wPlayerCoins                  equ 0xD5A4 ; Game Corner coins (BCD, dw)
+hCoins                        equ 0xFFA0 ; hCoins (dw; union w/ hMoney area)
 
 %endif ; GB_MEMMAP_INC

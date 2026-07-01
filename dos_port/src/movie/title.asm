@@ -49,6 +49,7 @@ extern GBPalNormal
 extern Init
 extern EnterMap
 extern g_tilecache_dirty
+extern JoypadLowSensitivity     ; src/input/joypad_lowsens.asm (home/joypad2.asm)
 
 ; ---------------------------------------------------------------------------
 ; Globals
@@ -441,20 +442,21 @@ ClearScreen:
     jmp Delay3    ; tail call
 
 ; ---------------------------------------------------------------------------
-; GBPalWhiteOut — fade palette to white (Phase 5 stub: set BGP=00).
+; GBPalWhiteOut — white out all palettes (BGP + both OBJ palettes).
+; Source: home/palettes.asm:GBPalWhiteOut — zeroes rBGP, rOBP0, rOBP1 (then
+; calls UpdateCGBPal_{BGP,OBP0,OBP1}; the CGB pal commit is Phase 5).
+; Zeroing OBP0/OBP1 is required so sprites white out too, not just the BG.
 ; ---------------------------------------------------------------------------
 GBPalWhiteOut:
-    mov byte [ebp + IO_BGP], 0x00
+    mov byte [ebp + IO_BGP],  0x00
+    mov byte [ebp + IO_OBP0], 0x00
+    mov byte [ebp + IO_OBP1], 0x00
     ret
 
-; ---------------------------------------------------------------------------
-; JoypadLowSensitivity — joypad read, low sensitivity debounce.
-; In the DOS port, DelayFrame already calls joypad_update which populates
-; H_JOY_HELD. Nothing more needed here.
-; Source: home/joypad.asm:JoypadLowSensitivity
-; ---------------------------------------------------------------------------
-JoypadLowSensitivity:
-    ret
+; JoypadLowSensitivity now lives in src/input/joypad_lowsens.asm (faithful
+; auto-repeat translation of home/joypad2.asm); the local stub is gone. The
+; .titleScreenLoop above already calls it then reads [hJoyHeld], matching pret
+; engine/movie/title.asm:166-167.
 
 ; ---------------------------------------------------------------------------
 ; SaveScreenTilesToBuffer1 — copy wTileMap → wTileMapBackup.

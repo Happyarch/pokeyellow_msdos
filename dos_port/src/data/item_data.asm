@@ -20,6 +20,7 @@ global KeyItemFlags
 global MartInventories
 global MartPointers
 global TechnicalMachinePrices
+global TechnicalMachines
 
 section .data
 align 4

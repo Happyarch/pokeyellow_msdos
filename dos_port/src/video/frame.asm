@@ -33,6 +33,9 @@ extern joypad_update
 extern pad_quit
 extern cleanup
 extern PrepareOAMData
+extern TrackPlayTime         ; M2.1: advance play clock + CountDownIgnoreInputBitReset (src/util/play_time.asm)
+extern UpdateMovingBgTiles   ; M2.2: BG tile-animation step (self-gates on hTileAnimations)
+extern VBlankCopyBgMap       ; M2.2: staged BG-map copy (self-gates on its row-count)
 %ifdef DEBUG_NPC_WALK
 extern DumpNpcLog       ; dump NPC walk-decision log to NPCLOG.BIN on quit
 %endif
@@ -43,6 +46,15 @@ extern DebugDumpMemory  ; dump ticks-per-tile stats to DUMP.BIN on quit
 global DelayFrame
 global DelayFrames
 global Delay3
+
+; ---------------------------------------------------------------------------
+; Symbol not yet in gb_memmap.inc. Defined %ifndef-safe with its sym-verified
+; address (see SUMMARY.md) so this file assembles standalone; when root promotes
+; it to the canonical memmap that definition wins.
+; ---------------------------------------------------------------------------
+%ifndef W_DISABLE_VBLANK_WY_UPDATE
+W_DISABLE_VBLANK_WY_UPDATE   equ 0xD09F   ; wDisableVBlankWYUpdate — nonzero = skip WY commit
+%endif
 
 section .text
 
@@ -62,8 +74,22 @@ DelayFrame:
     call commit_shadow_regs
     call commit_palette         ; map BGP/OBP0/OBP1 → DAC (raw-index render)
     call do_bg_transfer
+    ; VBlank BG-transfer phase (pret VBlank order): staged BG-map copy + moving-tile
+    ; animation. Both are M2.2 globals that self-gate internally (VBlankCopyBgMap on
+    ; its row-count, UpdateMovingBgTiles on hTileAnimations), so the unconditional
+    ; call is correct — inert until their owners arm them. Placed alongside
+    ; do_bg_transfer; does not reorder update_oam/render_bg/present.
+    call VBlankCopyBgMap
+    call UpdateMovingBgTiles
     call update_oam             ; PrepareOAMData → shadow OAM, then DMA to OAM
+    call TrackPlayTime          ; pret VBlank: play clock + CountDownIgnoreInputBitReset (post-PrepareOAMData)
     call joypad_update
+    ; hFrameCounter guarded decrement — pret VBlank: `and a / jr z / dec [hl]`.
+    ; Unblocks callers using pret's set-hFrameCounter-and-spin idiom (M2.1).
+    cmp byte [ebp + H_FRAME_COUNTER], 0
+    je .noFrameDec
+    dec byte [ebp + H_FRAME_COUNTER]
+.noFrameDec:
     ; BG: render_bg picks its own path from wCurrentTileBlockMapViewPointer —
     ; nonzero = overworld surface, zero = flat 40×25 W_TILEMAP (title / menus /
     ; battle). InitBattle zeroes that pointer (+ SCX/SCY), so the battle screen is
@@ -158,8 +184,13 @@ commit_shadow_regs:
     mov [ebp + IO_SCX], al
     mov al, [ebp + H_SCY]
     mov [ebp + IO_SCY], al
+    ; WY commit gated on wDisableVBlankWYUpdate (pret VBlank: skip rWY update when
+    ; nonzero). Default/unset (0) → commit exactly as before — byte-identical.
+    cmp byte [ebp + W_DISABLE_VBLANK_WY_UPDATE], 0
+    jne .skipWY
     mov al, [ebp + H_WY]
     mov [ebp + IO_WY], al
+.skipWY:
     pop eax
     ret
 

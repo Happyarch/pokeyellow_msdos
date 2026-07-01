@@ -66,6 +66,25 @@ PAD_START_BIT   equ 3
 JOYP_GET_DPAD   equ 0x10    ; rJOYP bit 4 low → D-pad nibble selected
 JOYP_GET_BTN    equ 0x20    ; rJOYP bit 5 low → buttons nibble selected
 
+; hJoyInput/hJoyHeld byte format (active HIGH) bit masks — identical to the
+; pret constants/hardware.inc PAD_* layout (bit 7=Down 6=Up 5=Left 4=Right,
+; 3=Start 2=Select 1=B 0=A). Used by the faithful _Joypad edge/mask layer.
+HJP_BUTTONS     equ 0x0F    ; PAD_A | PAD_B | PAD_SELECT | PAD_START
+HJP_UP          equ 0x40    ; PAD_UP  (bit 6)
+
+SOFT_RESET_FRAMES equ 16    ; pret Init sets hSoftReset = 16 (frames of combo)
+
+; hJoyLast / hJoyReleased are not yet in gb_memmap.inc; guard so this file
+; assembles standalone. Addresses from ram/hram.asm (consecutive with the
+; already-mapped hJoyPressed=0xFFB3 / hJoyHeld=0xFFB4). Root should promote
+; these to gb_memmap.inc canonically (see SUMMARY.md).
+%ifndef H_JOY_LAST
+H_JOY_LAST      equ 0xFFB1  ; hJoyLast     — previous frame's polled input
+%endif
+%ifndef H_JOY_RELEASED
+H_JOY_RELEASED  equ 0xFFB2  ; hJoyReleased — buttons released this frame
+%endif
+
 ; ---------------------------------------------------------------------------
 ; Exported symbols
 ; ---------------------------------------------------------------------------
@@ -75,6 +94,7 @@ global joypad_update
 global pad_dpad             ; byte: D-pad held state (1 = pressed)
 global pad_buttons          ; byte: button held state (1 = pressed)
 global pad_quit             ; byte: nonzero once Esc is pressed
+global pad_reset            ; byte: nonzero once the A+B+Select+Start combo fires
 %ifdef DEBUG_NOCLIP
 global pad_noclip           ; byte: 1 = noclip active (W toggles)
 %endif
@@ -89,6 +109,8 @@ orig_irq1_sel:  resw 1
 pad_dpad:       resb 1
 pad_buttons:    resb 1
 pad_quit:       resb 1
+pad_reset:      resb 1      ; set when the soft-reset combo countdown reaches 0
+soft_reset_ctr: resb 1      ; frames-of-combo countdown (pret hSoftReset)
 ext_pending:    resb 1      ; set when an E0 prefix byte was just received
 %ifdef DEBUG_NOCLIP
 pad_noclip:     resb 1      ; toggled by W key; 1 = collision disabled
@@ -117,6 +139,11 @@ joypad_init:
 
     mov ax, ds
     mov [kisr_ds], ax
+
+    ; pret Init seeds hSoftReset = 16; mirror that here (joypad_init is the
+    ; port's power-on entry). pad_reset starts clear.
+    mov byte [soft_reset_ctr], SOFT_RESET_FRAMES
+    mov byte [pad_reset], 0
 
     ; Save original protected-mode IRQ1 vector (DPMI fn 0204h)
     mov ax, 0x0204
@@ -295,6 +322,8 @@ kbd_isr:
 joypad_update:
     push eax
     push ebx
+    push ecx
+    push edx
 
     mov al, [ebp + IO_JOYP]
     or  al, 0xCF                ; start with all input lines released (1)
@@ -315,19 +344,86 @@ joypad_update:
 .no_btn:
     mov [ebp + IO_JOYP], al
 
-    ; Build hJoyHeld in GB joypad byte format (active HIGH):
-    ;   bit 7=Down  6=Up  5=Left  4=Right  (pad_dpad shifted up by 4)
-    ;   bit 3=Start 2=Select 1=B  0=A      (pad_buttons as-is, same bit order)
-    movzx eax, byte [pad_dpad]   ; bits 3=Down,2=Up,1=Left,0=Right
-    shl al, 4                    ; → bits 7=Down,6=Up,5=Left,4=Right
-    or  al, [pad_buttons]        ; merge A/B/Select/Start in low nibble
-    ; H_JOY_PRESSED = new_held & ~old_held  (buttons just pressed this frame)
-    mov bl, byte [ebp + H_JOY_HELD]
-    not bl
-    and bl, al
+    ; -----------------------------------------------------------------
+    ; Faithful pret _Joypad edge/mask layer (engine/joypad.asm:_Joypad,
+    ; DiscardButtonPresses, TrySoftReset; SoftReset in home/init.asm).
+    ;
+    ; Compose this frame's input in hJoyInput byte format (active HIGH):
+    ;   bit 7=Down 6=Up 5=Left 4=Right | 3=Start 2=Select 1=B 0=A
+    ; (pad_dpad bits 3=Down..0=Right << 4; pad_buttons already A/B/Sel/Start.)
+    ; This AL is the port's ReadJoypad_ result — pret's "b" (new input).
+    ; -----------------------------------------------------------------
+    movzx eax, byte [pad_dpad]
+    shl al, 4
+    or  al, [pad_buttons]        ; AL = b (new input, active high)
+
+    ; Soft reset combo: A+B+Select+Start held AND Up released. pret:
+    ;   and PAD_BUTTONS | PAD_UP / cp PAD_BUTTONS / jp z, TrySoftReset
+    mov bl, al
+    and bl, HJP_BUTTONS | HJP_UP
+    cmp bl, HJP_BUTTONS
+    je  .try_soft_reset
+
+    ; hJoyReleased = (hJoyLast ^ b) & hJoyLast
+    ; hJoyPressed  = (hJoyLast ^ b) & b
+    mov cl, [ebp + H_JOY_LAST]   ; e = old input
+    mov ch, cl
+    xor ch, al                   ; d = old ^ new  (changed bits)
+    mov bl, ch
+    and bl, cl                   ; released = changed & old
+    mov [ebp + H_JOY_RELEASED], bl
+    mov bl, ch
+    and bl, al                   ; pressed  = changed & new
     mov [ebp + H_JOY_PRESSED], bl
+    mov [ebp + H_JOY_LAST], al   ; hJoyLast = b
+
+    ; Global input disable (pret: wStatusFlags5 bit BIT_DISABLE_JOYPAD →
+    ; DiscardButtonPresses, which zeroes held/pressed/released).
+    mov bl, [ebp + W_STATUS_FLAGS_5]
+    test bl, 1 << BIT_DISABLE_JOYPAD
+    jnz .discard
+
+    ; hJoyHeld = hJoyLast
+    mov al, [ebp + H_JOY_LAST]
     mov [ebp + H_JOY_HELD], al
 
+    ; wJoyIgnore mask: clear ignored buttons from held & pressed (pret leaves
+    ; hJoyReleased unmasked). ret early when the mask is empty.
+    mov bl, [ebp + W_JOY_IGNORE]
+    test bl, bl
+    jz  .done
+    not bl                       ; b = ~wJoyIgnore
+    and [ebp + H_JOY_HELD], bl
+    and [ebp + H_JOY_PRESSED], bl
+    jmp .done
+
+.discard:                        ; pret DiscardButtonPresses
+    xor bl, bl
+    mov [ebp + H_JOY_HELD], bl
+    mov [ebp + H_JOY_PRESSED], bl
+    mov [ebp + H_JOY_RELEASED], bl
+    jmp .done
+
+.try_soft_reset:
+    ; pret TrySoftReset: DelayFrame; dec [hSoftReset]; jp z, SoftReset else
+    ; re-poll (jp Joypad). joypad_update already runs once per frame from the
+    ; DelayFrame pipeline, so one call == one held frame — the per-frame
+    ; DelayFrame/re-poll cadence is provided by the caller, not re-entered here.
+    ; Like pret, combo frames skip the edge layer (hJoyLast/Pressed/Released/
+    ; Held are left untouched this frame).
+    dec byte [soft_reset_ctr]
+    jnz .done
+    ; Countdown expired: request a soft reset. The port has no in-process
+    ; re-init entry wired yet (Init is called once from entry.asm and runs the
+    ; game loop), so we raise pad_reset instead of quitting — the Esc quit path
+    ; is untouched. FOLLOW-UP: have the frame loop / entry honor pad_reset by
+    ; re-entering Init (StopAllSounds → white-out → 32-frame delay → Init).
+    mov byte [pad_reset], 1
+    mov byte [soft_reset_ctr], SOFT_RESET_FRAMES  ; replenish (pret Init reseeds)
+
+.done:
+    pop edx
+    pop ecx
     pop ebx
     pop eax
     ret
