@@ -876,6 +876,9 @@ extern ConfusedNoMoreText
 extern IsConfusedText
 extern HurtItselfText
 extern MoveIsDisabledText
+extern ThrashingAboutText
+extern AttackContinuesText
+extern UnleashedEnergyText
 
 ; ---------------------------------------------------------------------------
 ; CheckPlayerStatusConditions — faithful port of pret core.asm:3499.
@@ -1022,10 +1025,91 @@ CheckPlayerStatusConditions:
     mov esi, ExecutePlayerMoveDone       ; two-turn move: recharge/can't move this turn
     jmp .returnToHL
 
-.bideCheck:                              ; pret 3652 — TODO(Stage 3): Bide/Thrash/Trapping/Rage
-    ; multi-turn lock-in forced-move execution is built in Stage 3 (re-entry labels).
-    ; Until then a mon mid-Bide/Thrash/Wrap/Rage simply acts normally this turn.
-    jmp .checkConditionsDone
+.bideCheck:                              ; pret 3652 — Bide
+    test byte [ebp + wPlayerBattleStatus1], 1 << STORING_ENERGY
+    jz .thrashingAboutCheck
+    mov byte [ebp + wPlayerMoveNum], 0
+    ; accumulate wDamage (big-endian) into wPlayerBideAccumulatedDamage (big-endian)
+    mov al, [ebp + wDamage]              ; damage hi
+    mov bh, al
+    mov al, [ebp + wDamage + 1]          ; damage lo
+    mov bl, al
+    mov al, [ebp + wPlayerBideAccumulatedDamage + 1]
+    add al, bl                           ; lo += damage lo
+    mov [ebp + wPlayerBideAccumulatedDamage + 1], al
+    mov al, [ebp + wPlayerBideAccumulatedDamage]
+    adc al, bh                           ; hi += damage hi + carry
+    mov [ebp + wPlayerBideAccumulatedDamage], al
+    mov al, [ebp + wPlayerNumAttacksLeft]
+    dec al
+    mov [ebp + wPlayerNumAttacksLeft], al
+    jz .unleashEnergy
+    mov esi, ExecutePlayerMoveDone       ; still storing → can't move this turn
+    jmp .returnToHL
+.unleashEnergy:
+    and byte [ebp + wPlayerBattleStatus1], ~(1 << STORING_ENERGY) & 0xFF
+    mov esi, UnleashedEnergyText
+    call PrintText
+    mov byte [ebp + wPlayerMovePower], 1
+    mov al, [ebp + wPlayerBideAccumulatedDamage + 1]   ; lo
+    add al, al                           ; *2 (sets CF)
+    mov bh, al
+    mov [ebp + wDamage + 1], al
+    mov al, [ebp + wPlayerBideAccumulatedDamage]       ; hi
+    rcl al, 1                            ; rl a — double hi through carry
+    mov [ebp + wDamage], al
+    or al, bh                            ; released damage == 0?
+    jnz .bideNext
+    mov byte [ebp + wMoveMissed], 1
+.bideNext:
+    mov byte [ebp + wPlayerBideAccumulatedDamage], 0
+    mov byte [ebp + wPlayerBideAccumulatedDamage + 1], 0
+    mov byte [ebp + wPlayerMoveNum], BIDE
+    call SwapPlayerAndEnemyLevels
+    mov esi, HandleIfPlayerMoveMissed    ; skip calc/DecrementPP/MoveHitTest
+    jmp .returnToHL
+
+.thrashingAboutCheck:                    ; pret 3702 — Thrash / Petal Dance
+    test byte [ebp + wPlayerBattleStatus1], 1 << THRASHING_ABOUT
+    jz .multiturnMoveCheck
+    mov byte [ebp + wPlayerMoveNum], THRASH
+    mov esi, ThrashingAboutText
+    call PrintText
+    mov al, [ebp + wPlayerNumAttacksLeft]
+    dec al
+    mov [ebp + wPlayerNumAttacksLeft], al
+    jnz .thrashContinue                  ; counter != 0 → keep thrashing
+    and byte [ebp + wPlayerBattleStatus1], ~(1 << THRASHING_ABOUT) & 0xFF
+    or  byte [ebp + wPlayerBattleStatus1], 1 << CONFUSED   ; confused when it ends
+    call BattleRandom
+    and al, 3
+    add al, 2                            ; confused for 2-5 turns
+    mov [ebp + wPlayerConfusedCounter], al
+.thrashContinue:
+    mov esi, PlayerCalcMoveDamage        ; skip DecrementPP
+    jmp .returnToHL
+
+.multiturnMoveCheck:                     ; pret 3725 — Wrap / Bind / Fire Spin / Clamp
+    test byte [ebp + wPlayerBattleStatus1], 1 << USING_TRAPPING_MOVE
+    jz .rageCheck
+    mov esi, AttackContinuesText
+    call PrintText
+    mov al, [ebp + wPlayerNumAttacksLeft]
+    dec al
+    mov [ebp + wPlayerNumAttacksLeft], al
+    mov esi, GetPlayerAnimationType      ; deal last-hit damage; skip calc/DecrementPP/MoveHitTest
+    jmp .returnToHL
+
+.rageCheck:                              ; pret 3739 — Rage
+    test byte [ebp + wPlayerBattleStatus2], 1 << USING_RAGE
+    jz .checkConditionsDone
+    mov byte [ebp + wNamedObjectIndex], RAGE
+    call GetMoveName
+    mov edx, wNameBuffer
+    call CopyToStringBuffer
+    mov byte [ebp + wPlayerMoveEffect], 0
+    mov esi, PlayerCanExecuteMove
+    jmp .returnToHL
 
 .returnToHL:
     xor al, al                           ; ZF=1, ESI = continuation → caller jmp esi
@@ -1099,6 +1183,36 @@ PrintMoveIsDisabledText:
     jmp PrintText
 
 ; ---------------------------------------------------------------------------
+; SwapPlayerAndEnemyLevels — pret core.asm:6370. Bide computes its damage from the
+; user's level, but the damage routine reads the "attacker" level; swapping puts the
+; Bide user's level where the calc expects it (and swaps back after).
+; ---------------------------------------------------------------------------
+SwapPlayerAndEnemyLevels:
+    push ebx
+    mov al, [ebp + wBattleMonLevel]
+    mov bl, al
+    mov al, [ebp + wEnemyMonLevel]
+    mov [ebp + wBattleMonLevel], al
+    mov [ebp + wEnemyMonLevel], bl
+    pop ebx
+    ret
+
+; ---------------------------------------------------------------------------
+; CopyToStringBuffer — pret home/copy_string.asm. Copies the '@'-terminated string
+; at EDX (GB addr) into wStringBuffer. Used by the Rage continuation (move name).
+; ---------------------------------------------------------------------------
+CopyToStringBuffer:
+    mov edi, wStringBuffer
+.copy:
+    mov al, [ebp + edx]
+    inc edx
+    mov [ebp + edi], al
+    inc edi
+    cmp al, 0x50                        ; '@'
+    jne .copy
+    ret
+
+; ---------------------------------------------------------------------------
 ; CheckForDisobedience — pret core.asm (Yellow obedience for traded mons).
 ; TODO(faithful): translate. Stubbed to "obeys" (no effect).
 ; ---------------------------------------------------------------------------
@@ -1112,6 +1226,12 @@ CheckForDisobedience:
 ; TODO(faithful) deepening list as ExecutePlayerMove (status/effects/multi-hit/…).
 ; Returns b in BH (0 = player mon fainted, else ExecuteEnemyMoveDone sets b=1).
 ; ---------------------------------------------------------------------------
+; Faithful port of pret engine/battle/core.asm:ExecuteEnemyMove (5639) — mirror of
+; ExecutePlayerMove with the enemy's WRAM. Re-entry labels (EnemyCanExecuteMove/
+; EnemyCalcMoveDamage/HandleIfEnemyMoveMissed/GetEnemyAnimationType/
+; EnemyCheckIfFlyOrChargeEffect/EnemyCheckIfMirrorMoveEffect) for Stage 3.
+; Enemy PP is not decremented (player-only PP, per project scope). Enemy obedience
+; is player-only, so there is no CheckForDisobedience on this side.
 ExecuteEnemyMove:
     mov byte [ebp + hWhoseTurn], 1
     mov al, [ebp + wEnemySelectedMove]
@@ -1121,54 +1241,111 @@ ExecuteEnemyMove:
     mov byte [ebp + wMonIsDisobedient], 0
     mov byte [ebp + wMoveDidntMiss], 0
     mov byte [ebp + wDamageMultipliers], EFFECTIVE
-    call CheckEnemyStatusConditions     ; pret: jr nz,.noSpecialCondition / jp hl
-    jnz .noCondition                    ; ZF=0 → enemy may move
-    jmp esi                             ; ZF=1 → handled; ESI = continuation
-.noCondition:
+    call PrintGhostText                 ; (stub: not ghost → ZF=0)
+    jz  ExecuteEnemyMoveDone
+    call CheckEnemyStatusConditions
+    jnz .enemyHasNoSpecialCondition
+    jmp esi                             ; jp hl — handled; ESI = continuation
+.enemyHasNoSpecialCondition:
     call GetCurrentMove                 ; hWhoseTurn=1 → loads wEnemyMove*
-    call DisplayUsedMoveText            ; "Enemy X used MOVE!"
-    ; (enemy PP not decremented — player-only PP, per project scope)
-    ; --- checkpoint 1: ResidualEffects1 → effect does everything, skip damage+accuracy ---
+    test byte [ebp + wEnemyBattleStatus1], 1 << CHARGING_UP
+    jnz EnemyCanExecuteChargingMove
+CheckIfEnemyNeedsToChargeUp:            ; pret 5672
+    mov al, [ebp + wEnemyMoveEffect]
+    cmp al, CHARGE_EFFECT
+    je  JumpMoveEffect
+    cmp al, FLY_EFFECT
+    je  JumpMoveEffect
+    jmp EnemyCanExecuteMove
+EnemyCanExecuteChargingMove:            ; pret 5679
+    and byte [ebp + wEnemyBattleStatus1], ~(1 << CHARGING_UP) & 0xFF
+    and byte [ebp + wEnemyBattleStatus1], ~(1 << INVULNERABLE) & 0xFF
+EnemyCanExecuteMove:                    ; pret 5692 — Rage continuation
+    call DisplayUsedMoveText            ; "Enemy X used MOVE!" (enemy PP not decremented)
     mov al, [ebp + wEnemyMoveEffect]
     mov esi, ResidualEffects1
     mov edx, 1
     call IsInArray
     jc  JumpMoveEffect
-    ; --- checkpoint 2: SpecialEffectsCont → run effect before damage, don't skip ---
     mov al, [ebp + wEnemyMoveEffect]
     mov esi, SpecialEffectsCont
     mov edx, 1
     call IsInArray
-    jnc .eCalcDamage
+    jnc EnemyCalcMoveDamage
     call JumpMoveEffect
-.eCalcDamage:
-    ; --- checkpoint 3: SetDamageEffects → skip damage CALC, go to MoveHitTest ---
+EnemyCalcMoveDamage:                    ; pret 5706 — Thrash continuation
     mov al, [ebp + wEnemyMoveEffect]
     mov esi, SetDamageEffects
     mov edx, 1
     call IsInArray
     jc  .eMoveHitTest
     call CriticalHitTest
+    call HandleCounterMove              ; (stub: not counter → ZF=0)
+    jz  HandleIfEnemyMoveMissed
     call GetDamageVarsForEnemyAttack
     call CalculateDamage
-    jz  .eStatusMove
+    jz  EnemyCheckIfFlyOrChargeEffect   ; jp z — 0 BP status move
     call AdjustDamageForMoveType
     call RandomizeDamage
 .eMoveHitTest:
     call MoveHitTest
+HandleIfEnemyMoveMissed:                ; pret 5726 — Bide continuation
     mov al, [ebp + wMoveMissed]
     and al, al
-    jnz .eAfterDamage
+    jz  GetEnemyAnimationType
+    mov al, [ebp + wEnemyMoveEffect]
+    cmp al, EXPLODE_EFFECT
+    je  PlayEnemyMoveAnimation
+    jmp EnemyCheckIfFlyOrChargeEffect
+GetEnemyAnimationType:                  ; pret 5737 — Trapping continuation / multi-hit loop
+    mov al, [ebp + wEnemyMoveEffect]
+    and al, al
+    mov al, ANIMATIONTYPE_BLINK_ENEMY_MON_SPRITE
+    jz  PlayEnemyMoveAnimation
+    mov al, ANIMATIONTYPE_SHAKE_SCREEN_HORIZONTALLY_LIGHT
+PlayEnemyMoveAnimation:
+    push eax
+    test byte [ebp + wEnemyBattleStatus2], 1 << HAS_SUBSTITUTE_UP
+    jz  .noSub
+    call HideSubstituteShowMonAnim
+.noSub:
+    pop eax
+    mov [ebp + wAnimationType], al
     mov al, [ebp + wEnemyMoveNum]
     call PlayMoveAnimation
-    call DrawHUDsAndHPBars
-    jmp .eAfterDamage
-.eStatusMove:
-    mov al, [ebp + wEnemyMoveNum]
+    call HandleExplodingAnimation
+    call DrawHUDsAndHPBars              ; pret DrawEnemyHUDAndHPBar (port: redraw both)
+    test byte [ebp + wEnemyBattleStatus2], 1 << HAS_SUBSTITUTE_UP
+    jz  EnemyCheckIfMirrorMoveEffect
+    call ReshowSubstituteAnim
+    jmp EnemyCheckIfMirrorMoveEffect
+EnemyCheckIfFlyOrChargeEffect:          ; pret 5767
+    mov bl, 30
+    call DelayFrames
+    mov al, [ebp + wEnemyMoveEffect]
+    cmp al, FLY_EFFECT
+    je  .flyChargeAnim
+    cmp al, CHARGE_EFFECT
+    je  .flyChargeAnim
+    jmp EnemyCheckIfMirrorMoveEffect
+.flyChargeAnim:
+    mov byte [ebp + wAnimationType], 0
+    mov al, STATUS_AFFECTED_ANIM
     call PlayMoveAnimation
-    call DrawHUDsAndHPBars
-.eAfterDamage:
-    ; --- checkpoint 4: ResidualEffects2 → run effect after damage, done ---
+EnemyCheckIfMirrorMoveEffect:           ; pret 5782
+    mov al, [ebp + wEnemyMoveEffect]
+    cmp al, MIRROR_MOVE_EFFECT
+    jne .metronomeCheck
+    call MirrorMoveCopyMove
+    jz  ExecuteEnemyMoveDone
+    mov byte [ebp + wMonIsDisobedient], 0
+    jmp CheckIfEnemyNeedsToChargeUp
+.metronomeCheck:
+    cmp al, METRONOME_EFFECT
+    jne .mirrorNext
+    call MetronomePickMove
+    jmp CheckIfEnemyNeedsToChargeUp
+.mirrorNext:
     mov al, [ebp + wEnemyMoveEffect]
     mov esi, ResidualEffects2
     mov edx, 1
@@ -1179,22 +1356,38 @@ ExecuteEnemyMove:
     jz  .eMoveDidNotMiss
     mov eax, AttackMissedText
     call PrintBattleText
+    mov al, [ebp + wEnemyMoveEffect]
+    cmp al, EXPLODE_EFFECT
+    je  .eNotDone
     jmp ExecuteEnemyMoveDone
 .eMoveDidNotMiss:
     call ApplyAttackToPlayerPokemon     ; player HP -= wDamage (floored)
+    call PrintCriticalOHKOText          ; (stub)
+    call DisplayEffectiveness           ; (stub)
     mov byte [ebp + wMoveDidntMiss], 1
-    ; --- checkpoint 5: AlwaysHappenSideEffects → run effect after damage, not done ---
+.eNotDone:
     mov al, [ebp + wEnemyMoveEffect]
     mov esi, AlwaysHappenSideEffects
     mov edx, 1
     call IsInArray
-    jnc .eCheckFaint
+    jnc .eSkipAlwaysHappen
     call JumpMoveEffect
-.eCheckFaint:
+.eSkipAlwaysHappen:
     mov al, [ebp + wBattleMonHP]
     or  al, [ebp + wBattleMonHP + 1]
     jz  .eTargetFainted
-    ; --- checkpoint 6: SpecialEffects catch-all → call nc JumpMoveEffect ---
+    call HandleBuildingRage
+    test byte [ebp + wEnemyBattleStatus1], 1 << ATTACKING_MULTIPLE_TIMES
+    jz  .eExecuteOtherEffects
+    mov al, [ebp + wEnemyNumAttacksLeft]
+    dec al
+    mov [ebp + wEnemyNumAttacksLeft], al
+    jnz GetEnemyAnimationType           ; multi-hit loop
+    and byte [ebp + wEnemyBattleStatus1], ~(1 << ATTACKING_MULTIPLE_TIMES) & 0xFF
+    mov esi, MultiHitText
+    call PrintText
+    mov byte [ebp + wEnemyNumHits], 0
+.eExecuteOtherEffects:
     mov al, [ebp + wEnemyMoveEffect]
     and al, al
     jz  ExecuteEnemyMoveDone
@@ -1379,10 +1572,10 @@ CheckEnemyStatusConditions:
 
 .eParalysisCheck:                        ; pret 6009
     test byte [ebp + wEnemyMonStatus], 1 << PAR
-    jz .eMultiTurnTODO
+    jz .eBideCheck
     call BattleRandom
     cmp al, (25 * 0xFF / 100)
-    jae .eMultiTurnTODO
+    jae .eBideCheck
     mov esi, FullyParalyzedText
     call PrintText
 
@@ -1403,8 +1596,90 @@ CheckEnemyStatusConditions:
     mov esi, ExecuteEnemyMoveDone
     jmp .eReturnToHL
 
-.eMultiTurnTODO:                         ; pret 6038 — TODO(Stage 3): Bide/Thrash/Trapping/Rage
-    jmp .eDone
+.eBideCheck:                             ; pret 6038 — Bide
+    test byte [ebp + wEnemyBattleStatus1], 1 << STORING_ENERGY
+    jz .eThrashingAboutCheck
+    mov byte [ebp + wEnemyMoveNum], 0
+    mov al, [ebp + wDamage]
+    mov bh, al
+    mov al, [ebp + wDamage + 1]
+    mov bl, al
+    mov al, [ebp + wEnemyBideAccumulatedDamage + 1]
+    add al, bl
+    mov [ebp + wEnemyBideAccumulatedDamage + 1], al
+    mov al, [ebp + wEnemyBideAccumulatedDamage]
+    adc al, bh
+    mov [ebp + wEnemyBideAccumulatedDamage], al
+    mov al, [ebp + wEnemyNumAttacksLeft]
+    dec al
+    mov [ebp + wEnemyNumAttacksLeft], al
+    jz .eUnleashEnergy
+    mov esi, ExecuteEnemyMoveDone
+    jmp .eReturnToHL
+.eUnleashEnergy:
+    and byte [ebp + wEnemyBattleStatus1], ~(1 << STORING_ENERGY) & 0xFF
+    mov esi, UnleashedEnergyText
+    call PrintText
+    mov byte [ebp + wEnemyMovePower], 1
+    mov al, [ebp + wEnemyBideAccumulatedDamage + 1]
+    add al, al
+    mov bh, al
+    mov [ebp + wDamage + 1], al
+    mov al, [ebp + wEnemyBideAccumulatedDamage]
+    rcl al, 1
+    mov [ebp + wDamage], al
+    or al, bh
+    jnz .eBideNext
+    mov byte [ebp + wMoveMissed], 1
+.eBideNext:
+    mov byte [ebp + wEnemyBideAccumulatedDamage], 0
+    mov byte [ebp + wEnemyBideAccumulatedDamage + 1], 0
+    mov byte [ebp + wEnemyMoveNum], BIDE
+    call SwapPlayerAndEnemyLevels
+    mov esi, HandleIfEnemyMoveMissed
+    jmp .eReturnToHL
+
+.eThrashingAboutCheck:                   ; pret 6088 — Thrash / Petal Dance
+    test byte [ebp + wEnemyBattleStatus1], 1 << THRASHING_ABOUT
+    jz .eMultiturnMoveCheck
+    mov byte [ebp + wEnemyMoveNum], THRASH
+    mov esi, ThrashingAboutText
+    call PrintText
+    mov al, [ebp + wEnemyNumAttacksLeft]
+    dec al
+    mov [ebp + wEnemyNumAttacksLeft], al
+    jnz .eThrashContinue
+    and byte [ebp + wEnemyBattleStatus1], ~(1 << THRASHING_ABOUT) & 0xFF
+    or  byte [ebp + wEnemyBattleStatus1], 1 << CONFUSED
+    call BattleRandom
+    and al, 3
+    add al, 2
+    mov [ebp + wEnemyConfusedCounter], al
+.eThrashContinue:
+    mov esi, EnemyCalcMoveDamage
+    jmp .eReturnToHL
+
+.eMultiturnMoveCheck:                    ; pret 6110 — Wrap / Bind / Fire Spin / Clamp
+    test byte [ebp + wEnemyBattleStatus1], 1 << USING_TRAPPING_MOVE
+    jz .eRageCheck
+    mov esi, AttackContinuesText
+    call PrintText
+    mov al, [ebp + wEnemyNumAttacksLeft]
+    dec al
+    mov [ebp + wEnemyNumAttacksLeft], al
+    mov esi, GetEnemyAnimationType
+    jmp .eReturnToHL
+
+.eRageCheck:                             ; pret 6122 — Rage
+    test byte [ebp + wEnemyBattleStatus2], 1 << USING_RAGE
+    jz .eDone
+    mov byte [ebp + wNamedObjectIndex], RAGE
+    call GetMoveName
+    mov edx, wNameBuffer
+    call CopyToStringBuffer
+    mov byte [ebp + wEnemyMoveEffect], 0
+    mov esi, EnemyCanExecuteMove
+    jmp .eReturnToHL
 
 .eReturnToHL:
     xor al, al                           ; ZF=1, ESI = continuation

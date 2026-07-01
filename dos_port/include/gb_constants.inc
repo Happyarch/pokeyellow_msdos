@@ -192,6 +192,8 @@ CONF_ANIM               equ 0xBF   ; line 205 (enemy confused)
 ; move ids referenced by move-effect handlers (constants/move_constants.asm)
 POUND                   equ 0x01
 RAZOR_WIND              equ 0x0D
+THRASH                  equ 0x25
+BIDE                    equ 0x75
 ROAR                    equ 0x2E
 SOLARBEAM               equ 0x4C
 SKULL_BASH              equ 0x82

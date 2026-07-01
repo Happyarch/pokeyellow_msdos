@@ -3989,3 +3989,21 @@ source. pret is the spec. Build green at BUG_FIX_LEVEL 0 and 2.
 - **Divergences:** none (faithful). Anim via the deferred PlayMoveAnimation stub.
 - Added constants (from `constants/move_constants.asm`): `POUND` $01, `STATUS_AFFECTED_ANIM`
   $A7, `SLP_PLAYER_ANIM` $BC, `SLP_ANIM` $BD, `CONF_PLAYER_ANIM` $BE, `CONF_ANIM` $BF.
+
+## Stage 2.5 + 3 — faithful dispatchers + multi-turn moves (2026-06-30)
+- **ExecutePlayerMove** (pret `core.asm:3244`) + **ExecuteEnemyMove** (`:5639`): rebuilt from
+  the simplified checkpoint flow into pret's faithful structure, exposing every re-entry
+  label (Player/Enemy: CanExecuteChargingMove, CheckIfNeedsToChargeUp, CanExecuteMove,
+  CalcMoveDamage, HandleIfMoveMissed, GetAnimationType, CheckIfFlyOrChargeEffect,
+  MirrorMoveCheck, multi-hit loop). Deferred leaves are explicit flag-faithful stub CALLs
+  (core_stubs.asm): PrintGhostText, HandleCounterMove, MirrorMoveCopyMove, MetronomePickMove,
+  PrintCriticalOHKOText, DisplayEffectiveness, HandleExplodingAnimation. HandleBuildingRage
+  is real (linked). **Divergences:** enemy PP not decremented (project scope); enemy anim
+  redraw uses DrawHUDsAndHPBars (DrawEnemyHUDAndHPBar not yet ported); leaf routines stubbed.
+- **Multi-turn lock-ins** (pret player `:3652-3750`, enemy `:6038-6133`): Bide (accumulate
+  wDamage; release 2× via SwapPlayerAndEnemyLevels → HandleIf*MoveMissed), Thrash/Petal Dance
+  (force THRASH, confuse 2-5 turns at end → *CalcMoveDamage), Wrap/Bind/Fire Spin/Clamp (force,
+  last-hit damage → Get*AnimationType), Rage (force, GetMoveName+CopyToStringBuffer → *CanExecuteMove).
+  Helpers `SwapPlayerAndEnemyLevels` (`:6370`) + `CopyToStringBuffer` (`home/copy_string.asm`) ported.
+  Added constants THRASH $25, BIDE $75, ANIMATIONTYPE_BLINK_ENEMY_MON_SPRITE/…_SHAKE_…_LIGHT.
+- **Divergences:** none beyond the leaf stubs above. Build green (BUG_FIX_LEVEL 0 and 2).
