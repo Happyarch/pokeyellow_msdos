@@ -362,6 +362,16 @@ FRONTEND_SRCS := \
     src/engine/battle/battle_menu.asm \
     src/engine/battle/core.asm \
     src/engine/battle/core_stubs.asm \
+    src/engine/battle/counter.asm \
+    src/engine/battle/mirror_move.asm \
+    src/engine/battle/metronome.asm \
+    src/engine/battle/print_critical_ohko.asm \
+    src/engine/battle/display_effectiveness.asm \
+    src/engine/battle/print_move_failure.asm \
+    src/engine/battle/ghost.asm \
+    src/engine/battle/exploding_animation.asm \
+    src/home/item_predicates.asm \
+    src/engine/items/get_bag_item_quantity.asm \
     src/engine/battle/residual_damage.asm \
     src/engine/battle/building_rage.asm \
     src/engine/battle/effects.asm \
@@ -460,7 +470,6 @@ HOME_CHECK_SRCS := \
     src/home/list_menu.asm \
     src/home/give.asm \
     src/home/money.asm \
-    src/home/item_predicates.asm \
     src/home/oam.asm \
     src/home/reset_player_sprite.asm \
     src/home/reload_tiles.asm \

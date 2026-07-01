@@ -91,54 +91,25 @@ TrainerAI:
     ret
 
 ; ===========================================================================
-; ExecutePlayerMove/ExecuteEnemyMove leaf stubs (Stage 2.5). The faithful turn-flow
-; structure CALLS these where pret does; their bodies are deferred (marked TODO),
-; matching the accepted anim-stub deferral pattern. Each preserves pret's flag/return
-; contract so the surrounding faithful control flow behaves correctly.
+; ExecutePlayerMove/ExecuteEnemyMove special-move leaves — NOW FAITHFULLY PORTED
+; (battle-swarm-A). Each is its own file under src/engine/battle/; core.asm's
+; `extern` declarations resolve to them:
+;   PrintGhostText / IsGhostBattle .......... ghost.asm
+;   HandleCounterMove ....................... counter.asm
+;   MirrorMoveCopyMove / ReloadMoveData ..... mirror_move.asm
+;   MetronomePickMove ....................... metronome.asm
+;   PrintCriticalOHKOText ................... print_critical_ohko.asm
+;   DisplayEffectiveness .................... display_effectiveness.asm
+;   PrintMoveFailureText .................... print_move_failure.asm
+;   HandleExplodingAnimation ................ exploding_animation.asm
+; The stubs that used to live here are deleted.
 ; ===========================================================================
-global PrintGhostText
-global HandleCounterMove
-global MirrorMoveCopyMove
-global MetronomePickMove
-global PrintCriticalOHKOText
-global DisplayEffectiveness
-global HandleExplodingAnimation
+global PredefShakeScreenHorizontally
 
-; PrintGhostText (pret core.asm:3452) — Pokémon Tower ghost "scared/get out" text.
-; TODO(faithful): IsGhostBattle + ghost text. Stub: not a ghost battle → ZF=0 (proceed).
-PrintGhostText:
-    mov al, 1
-    and al, al                          ; ZF=0 → not ghost, mon may act
-    ret
-
-; HandleCounterMove (pret core.asm) — Counter damage reflection.
-; TODO(faithful): translate Counter. Stub: current move is not Counter → ZF=0 (normal damage).
-HandleCounterMove:
-    mov al, 1
-    and al, al                          ; ZF=0 → proceed to normal damage calc
-    ret
-
-; MirrorMoveCopyMove (pret) — copy the last move the target used.
-; TODO(faithful): translate Mirror Move. Stub: fail → ZF=1 (pret: jp z, ExecutePlayerMoveDone).
-MirrorMoveCopyMove:
-    xor al, al                          ; ZF=1 → Mirror Move failed (done)
-    ret
-
-; MetronomePickMove (pret) — pick a random move. TODO(faithful): translate Metronome.
-; Stub: zero the acting side's move effect so the re-entry into the damage path does NOT
-; re-trigger the METRONOME_EFFECT branch (would loop). The move resolves as a plain hit.
-MetronomePickMove:
-    mov al, [ebp + hWhoseTurn]
-    and al, al
-    jnz .enemy
-    mov byte [ebp + wPlayerMoveEffect], 0
-    ret
-.enemy:
-    mov byte [ebp + wEnemyMoveEffect], 0
-    ret
-
-; Pure text/anim leaves — TODO(faithful); no-op is safe (deferred like the anim stubs).
-PrintCriticalOHKOText:            ; pret: "Critical hit!" / "One-hit KO!" text
-DisplayEffectiveness:             ; pret: "It's super effective!" etc. (callfar)
-HandleExplodingAnimation:         ; pret: Explosion/Self-Destruct screen shake
+; PredefShakeScreenHorizontally — pret predef, cosmetic screen shake used by
+; PrintMoveFailureText's Jump Kick / Hi Jump Kick crash path (B = # shakes).
+; TODO-HW: real horizontal screen shake (rWX/rSCX manipulation) — deferred like
+; the rest of the ANIMATION=OFF subanimation layer. No-op is faithful for now
+; (HP bars / faints / text are all real; only the literal shake visual is off).
+PredefShakeScreenHorizontally:
     ret
