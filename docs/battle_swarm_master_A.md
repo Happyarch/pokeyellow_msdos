@@ -34,8 +34,9 @@ real. Preserve Gen-1 bugs/glitches with `; BUG(level):` + `%if BUG_FIX_LEVEL >= 
 The seven leaf stubs live in `core_stubs.asm` (each carries a `TODO`/pret ref). `ExecuteXxxMove`
 already exposes the re-entry labels these hook into.
 
-> **Triage baseline (2026-07-01, branch `battle-triage` — merge before starting).** A single-agent
-> triage pass fixed several `core.asm` regressions this master builds on; do **not** re-touch them:
+> **Triage baseline (2026-07-01 — now on `master`, `c3325e1e`; branch off current `master`).** A
+> single-agent triage pass fixed several `core.asm` regressions this master builds on; do **not**
+> re-touch them:
 > - `CheckForDisobedience` now honors its ZF=0 "obeys" contract (was a bare `ret` that silently
 >   no-opped every non-charging player turn — that's why the live build now actually plays a turn).
 > - The Bide-unleash blocks in `CheckPlayerStatusConditions`/`CheckEnemyStatusConditions` no longer

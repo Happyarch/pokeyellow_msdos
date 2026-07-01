@@ -22,14 +22,26 @@ routines are **not linked into the live EXE** (coverage gaps, not fidelity bugs)
 Legend: **[CONFIRMED]** = aggregator re-verified against source; **[reported]** = single-auditor
 finding, well-cited, not independently re-verified. Owner = suggested Master (A = turn-loop/
 damage core; B = move-effect handlers + effect/text data; C = HUD/menu/init, encounters/exp,
-AI wiring, generators).
+AI wiring, generators). **[RESOLVED]** = fixed on `master` after this audit — do not re-do.
+
+> **Line-number currency (updated 2026-07-01):** port-side `file:line` citations were
+> captured against the pre-`c3325e1e` tree and have since drifted (`c3325e1e` alone shifted
+> `core.asm` by ~150 lines, and `battle_menu.asm` was later reduced to draw-helpers only).
+> The port citations below were **refreshed to current `HEAD`** where the anchor is an
+> unambiguous named routine; inner-line and moved-file citations are marked *(verify @HEAD)*.
+> **pret** citations are stable (read-only source). **Always locate by routine label, not by
+> line** — masters will re-shift these files anyway. **A-1 is already fixed on `master`
+> (`c3325e1e`); it is struck from Master A's workpool.**
 
 ---
 
 ## TIER 1 — CRITICAL / HIGH (real, reachable state or gameplay corruption)
 
-### A-1. `CheckForDisobedience` stub never clears ZF → every non-charging player move silently no-ops **[CONFIRMED]**
-- **File:** `dos_port/src/engine/battle/core.asm:1226` (def) / call site `:642`
+### A-1. `CheckForDisobedience` stub never clears ZF → every non-charging player move silently no-ops **[RESOLVED — c3325e1e]**
+- **RESOLVED on `master` (`c3325e1e`, 2026-07-01):** the stub now does `mov al,1 / and al,al / ret`
+  (clears ZF → "obeys"), exactly the fix below, with a comment documenting the flag contract.
+  **Struck from Master A's workpool.** Retained here for the record.
+- **File:** `dos_port/src/engine/battle/core.asm:1383` (def) / call site `:644`
 - **pret:** `engine/battle/core.asm:3270` (`call CheckForDisobedience` / `jp z, ExecutePlayerMoveDone`), real body `:4001-4178`
 - **What's wrong:** `CheckForDisobedience:` is a bare `ret`. Its only caller (`:642`) is reached
   by fall-through when `jnz PlayerCanExecuteChargingMove` (`:641`) is NOT taken — which means the
@@ -46,7 +58,12 @@ AI wiring, generators).
   leaves in `translation_log.md`. **Owner A. Severity: high (core gameplay broken in the live build).**
 
 ### A-2. `ApplyAttackTo{Enemy,Player}Pokemon` — missing Super-Fang / Special-Damage dispatch + Substitute redirect (both sides) **[CONFIRMED]**
-- **Files:** `core.asm:848` (`ApplyAttackToEnemyPokemon`), `core.asm:1416` (`ApplyAttackToPlayerPokemon`)
+- **[LIKELY RESOLVED post-audit — verify @HEAD before ticketing]:** the dispatch the audit reported
+  as *absent* is now present — `SUPER_FANG_EFFECT`/`SPECIAL_DAMAGE_EFFECT` branches at `core.asm:921-923`
+  (enemy) and `:1583-1585` (player), and the `HAS_SUBSTITUTE_UP` → `AttackSubstitute` redirect at `:978`.
+  Confirm the *values* are faithful (Seismic Toss=level, Sonic Boom=20, Dragon Rage=40, Psywave range,
+  Super Fang=½ curHP) before assigning; the finding below describes the pre-fix state.
+- **Files:** `core.asm:917` (`ApplyAttackToEnemyPokemon`), `core.asm:1579` (`ApplyAttackToPlayerPokemon`)
 - **pret:** `engine/battle/core.asm:4783-4900` (enemy target) / `:4902-5018` (player target)
 - **What's wrong:** both port routines implement only pret's *tail* (plain HP-subtract clamped at 0).
   Pret's real routine header additionally computes damage inline for:
@@ -66,9 +83,12 @@ AI wiring, generators).
 - **Fix:** port the pret routine headers (special-damage/super-fang branches + `AttackSubstitute`).
 - **Docs:** no `translation_log.md` entry for either name. **Owner A. Severity: high.**
 
-### A-3. Orphaned `SwapPlayerAndEnemyLevels` in Bide-unleash → permanent level-field corruption (both sides) **[CONFIRMED]**
-- **Files:** `core.asm:1075` (`CheckPlayerStatusConditions`, player Bide unleash), `core.asm:1650`
-  (`CheckEnemyStatusConditions`, enemy Bide unleash)
+### A-3. Orphaned `SwapPlayerAndEnemyLevels` in Bide-unleash → permanent level-field corruption (both sides) **[RESOLVED — c3325e1e]**
+- **RESOLVED on `master` (`c3325e1e`):** zero `call SwapPlayerAndEnemyLevels` sites remain in
+  `core.asm`; the player-unleash block (`CheckPlayerStatusConditions`, now `:1040`) carries a comment
+  documenting why no swap belongs there. **Struck from Master A's workpool.**
+- **Files:** `core.asm:1040` (`CheckPlayerStatusConditions`, player Bide unleash), `core.asm` enemy
+  Bide unleash in `CheckEnemyStatusConditions` (now `:1716`); `SwapPlayerAndEnemyLevels` def now `:1348`
 - **pret:** player `.UnleashEnergy` `:3674-3700` — **no swap**. The enemy path's swaps (`:5735/:5768`)
   live in `HandleIfEnemyMoveMissed` continuations that the port *correctly stripped* (its
   `CriticalHitTest`/`MoveHitTest` branch on `hWhoseTurn` instead of the memory-swap trick).
@@ -107,7 +127,7 @@ AI wiring, generators).
 ## TIER 2 — MEDIUM-HIGH (reachable edge bugs / silently-dropped Gen-1 quirk)
 
 ### C-5. `battle_hud.asm` — level-100 digit overflow + silently "fixed" Gen-1 maxHP>255 HP-bar quirk **[reported]**
-- **File:** `battle_hud.asm:305` (`print_num2`), `:209-234` (`calc_hp_pixels`/`hp_to_pixels`)
+- **File:** `battle_hud.asm:313` (`print_num2`), `:207`/`:215` (`calc_hp_pixels`/`hp_to_pixels`)
 - **pret:** `PrintLevel` `home/pokemon.asm:363` (level≥100 writes a 3rd digit); `GetHPBarLength`
   `engine/gfx/hp_bar.asm:6-45` + enemy path `core.asm:1957-2033`
 - **What's wrong:** (a) `print_num2` is hard-coded to 2 digits; at level 100 the tens digit computes
@@ -119,7 +139,8 @@ AI wiring, generators).
 - **Owner C. Severity: medium-high (both reachable, both silent, both unflagged).**
 
 ### C-6. `TryRunningFromBattle` — missing Safari/Ghost/link "always-escape" branches **[reported]**
-- **File:** `battle_menu.asm:251-253`
+- **File:** `battle_menu.asm` *(verify @HEAD — this file was reduced to draw-helpers after the audit;
+  the cited menu-behavior routine moved to `core.asm` `MoveSelectionMenu`/`DisplayBattleMenu` region)*
 - **pret:** `engine/battle/core.asm:1536-1546` (guaranteed escape for `IsGhostBattle`,
   `BATTLE_TYPE_SAFARI`, `BATTLE_TYPE_RUN`, `LINK_STATE_BATTLING` before the speed formula)
 - **What's wrong:** the port only branches on `wIsInBattle==2` (trainer). But `InitBattleVariables`
@@ -130,7 +151,9 @@ AI wiring, generators).
   tracked multi-mon deferral). **Owner C. Severity: medium-high (Safari case).**
 
 ### A-7. `wAILayer2Encouragement` never incremented in `ExecuteEnemyMove` → AI move-weighting broken **[reported]**
-- **File:** `core.asm` `ExecuteEnemyMove` (no counterpart to the increment)
+- **File:** `core.asm` `ExecuteEnemyMove` — **increment now present** at `core.asm:1412`
+  (`inc byte [ebp+wAILayer2Encouragement]`, cites pret `:5656-5657`). *Increment half RESOLVED;* the
+  consumer wiring (`AIMoveChoiceModification2`, `trainer_ai.asm:288`) remains Owner C. **Verify @HEAD.**
 - **pret:** `engine/battle/core.asm:5656-5657` (`ld hl, wAILayer2Encouragement; inc [hl]`); consumed
   by `AIMoveChoiceModification2` (`trainer_ai.asm:288`, live dispatch); reset on switch-in (pret `:925`,
   unported)
@@ -157,7 +180,8 @@ AI wiring, generators).
 - **Fix:** `mov cl,` → `mov bl,` at all 6 sites. **Owner B (battle two); flag menus/pokemon owners for the other 4. Severity: medium/low (cosmetic).**
 
 ### C-9. `LearnMoveFromLevelUp` — new move not synced into `wBattleMonMoves`/`wBattleMonPP` **[reported]**
-- **File:** `battle_menu.asm:468-478`
+- **File:** `battle_menu.asm` *(verify @HEAD — file reduced to draw-helpers after the audit; re-locate
+  the cited routine in `core.asm`)*
 - **pret:** `LearnMove` `engine/pokemon/learn_move.asm:53-63` — when the leveling mon is the active
   battle mon, also copies the new move into `wBattleMonMoves`/`wBattleMonPP` (the struct the FIGHT
   menu reads).
@@ -167,7 +191,7 @@ AI wiring, generators).
   but independent and unflagged.) **Owner C. Severity: medium.**
 
 ### A-10. `HandleEnemyMonFainted` — EXP ALL dispatch missing (unflagged) **[reported]**
-- **File:** `core.asm` `HandleEnemyMonFainted` (`:1715`)
+- **File:** `core.asm` `HandleEnemyMonFainted` (`:1994`)
 - **pret:** `engine/battle/core.asm ~808-867` — checks the bag for `EXP_ALL`; if present, halves the
   exp inputs, awards to the fought mons (`wBoostExpByExpAll=0`), then re-awards to the whole party
   (`wBoostExpByExpAll=TRUE`, all `wPartyGainExpFlags` set).
@@ -177,7 +201,7 @@ AI wiring, generators).
   link-desync bug (pret `:756-764`) under a `BUG_FIX_LEVEL` gate. **Owner A/C. Severity: medium.**
 
 ### C-11. `SwitchEnemyMon` drops pret's link-state `CF=0` guard **[reported]**
-- **File:** `trainer_ai.asm:997-998` (`stc; ret` unconditionally)
+- **File:** `trainer_ai.asm:1002` (`stc; ret` unconditionally)
 - **pret:** `engine/battle/trainer_ai.asm:618-622` (`cp LINK_STATE_BATTLING; ret z` → CF=0 in a link
   battle, else CF=1)
 - **What's wrong:** dormant via the `TrainerAI` path (link excluded upstream), but wrong for the
@@ -185,7 +209,7 @@ AI wiring, generators).
   Severity: medium (dormant until Phase-4 link).**
 
 ### C-12. `ReadTrainer` prize-money is a no-op stub **[reported]**
-- **File:** `read_trainer_party.asm:230-251` (`AddBCDPredef_stub`)
+- **File:** `read_trainer_party.asm:238-247` (`AddBCDPredef_stub`, extern at `:70`)
 - **pret:** `read_trainer_party.asm` `.FinishUp` loops `wCurEnemyLevel`× calling `AddBCDPredef` into
   `wAmountMoneyWon`.
 - **What's wrong:** stub is a pure no-op → prize money always 0. Clearly commented `; TODO-MATH`

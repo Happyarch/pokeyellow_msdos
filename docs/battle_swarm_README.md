@@ -11,11 +11,20 @@ master its own doc; run the audit first.
    first, each finding tagged with a suggested owner A/B/C). This tells you what prior runs got
    wrong AND re-scopes the master tickets. **Do this before launching A/B/C.** No edits, no
    branches — pure fan-out + one Opus aggregator.
-2. **Masters A / B / C, concurrently**, each on its own branch/worktree, consuming the audit
-   findings for their subsystem:
+   **Base is already green** (updated 2026-07-01): the audit's build-breaker **A-1**
+   (`CheckForDisobedience` ZF) and **A-3** (orphaned Bide level-swap) were both fixed on
+   `master` by the Wave-0 silent-bug sweep (`c3325e1e`), and A-2/A-7 appear implemented since —
+   see `battle_audit_findings.md` **[RESOLVED]/[LIKELY RESOLVED]** tags. So there is **no
+   base-stabilization step to run first**; branch A/B/C straight off the current green `master`.
+2. **Masters A / B / C, concurrently**, each on its own branch/worktree (**flat off `master` — do
+   NOT cascade B off A off C; the subsystems are routine-disjoint, so stacking only serializes the
+   work and creates rebase churn when `core.asm` moves**), consuming the audit findings for their
+   subsystem:
    - `docs/battle_swarm_master_A.md` — turn execution & special-move mechanics → branch `battle-swarm-A`
    - `docs/battle_swarm_master_B.md` — battle text & HUD pacing (message-overrun fix) → branch `battle-swarm-B`
    - `docs/battle_swarm_master_C.md` — lifecycle, multi-mon & sub-UIs → branch `battle-swarm-C`
+   Tickets are **issued manually** (hand-authored per-master routine assignments in the master
+   docs), not pulled from `work_queue` — that DB is not the coordination mechanism for A/B/C.
 3. **Merge.** Fast-forward/merge A, then B, then C into `master`. Non-overlapping routines
    auto-merge; resolve any true overlap by hand (rare — see the partition). Rebuild green
    (levels 0 and 2) after each merge.
