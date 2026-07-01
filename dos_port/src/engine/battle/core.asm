@@ -1009,8 +1009,15 @@ CheckPlayerStatusConditions:
 
 .monHurtItselfOrFullyParalysed:          ; pret 3630
     ; clear bide/thrashing/charging-up/trapping (already cleared for confusion damage)
+    ; BUG(cosmetic): "invulnerable for the whole battle" glitch — clearing CHARGING_UP
+    ; but NOT INVULNERABLE strands a mon that is fully-paralyzed or self-confused
+    ; mid-Fly/Dig invulnerable for the rest of the battle. pret documents this at
+    ; engine/battle/core.asm:3284-3286 (and does it here at :3634). Preserved faithfully.
     mov al, [ebp + wPlayerBattleStatus1]
     and al, ~((1 << STORING_ENERGY) | (1 << THRASHING_ABOUT) | (1 << CHARGING_UP) | (1 << USING_TRAPPING_MOVE)) & 0xFF
+%if BUG_FIX_LEVEL >= 2
+    and al, ~(1 << INVULNERABLE) & 0xFF  ; fixed: also drop invulnerability when it can't act
+%endif
     mov [ebp + wPlayerBattleStatus1], al
     mov al, [ebp + wPlayerMoveEffect]
     cmp al, FLY_EFFECT
@@ -1580,8 +1587,13 @@ CheckEnemyStatusConditions:
     call PrintText
 
 .eMonHurtItselfOrFullyParalysed:         ; pret 6018
+    ; BUG(cosmetic): "invulnerable for the whole battle" glitch (enemy side) — see the
+    ; player MonHurtItselfOrFullyParalysed note. pret ref core.asm:3284-3286 / :6022.
     mov al, [ebp + wEnemyBattleStatus1]
     and al, ~((1 << STORING_ENERGY) | (1 << THRASHING_ABOUT) | (1 << CHARGING_UP) | (1 << USING_TRAPPING_MOVE)) & 0xFF
+%if BUG_FIX_LEVEL >= 2
+    and al, ~(1 << INVULNERABLE) & 0xFF  ; fixed: also drop invulnerability when it can't act
+%endif
     mov [ebp + wEnemyBattleStatus1], al
     mov al, [ebp + wEnemyMoveEffect]
     cmp al, FLY_EFFECT
