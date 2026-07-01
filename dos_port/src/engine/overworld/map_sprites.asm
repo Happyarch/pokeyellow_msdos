@@ -50,6 +50,15 @@ global CheckTrainerSight
 global TrainerEncounterFlow
 global InitToggleableObjectFlags
 global IsToggleableHidden
+global wMapSpriteExtraData       ; M8.1: per-NPC [class,set] cache (pret wMapSpriteExtraData)
+
+; M8.1 sight->battle wiring — the trainer battle-entry these overworld routines call.
+; StartTrainerBattle seeds wCurOpponent/wTrainerClass/wTrainerNo from the engaged
+; trainer's cached class/set (and, under -D TRAINER_BATTLE_LIVE, calls InitBattle).
+extern StartTrainerBattle
+%ifdef TRAINER_BATTLE_LIVE
+extern EndTrainerBattle
+%endif
 
 ; ---------------------------------------------------------------------------
 ; Constants
@@ -74,6 +83,16 @@ w_map_text_table_ptr: resd 1                 ; flat ptr to current map's TextTab
 npc_beaten_flags:     resw 1   ; bit N-1 = NPC slot N beaten; cleared in InitMapSprites
 w_trainer_enc_slot:   resb 1   ; engaging trainer slot byte-offset (0xFF = none)
 w_player_frozen:      resb 1   ; 1 = block player input during encounter flow
+
+; wMapSpriteExtraData — port equivalent of pret wMapSpriteExtraData
+; (ram/wram.asm: "trainer class/item ID, trainer set ID", MAX_OBJECT_EVENTS*2).
+; Two bytes per NPC slot 1-15: [class, set].  For a trainer NPC, class holds the
+; OPP_* value (>= OPP_ID_OFFSET) and set holds the trainer party set index; both
+; are copied straight from the map-object binary by InitMapSprites (which used to
+; DISCARD them).  Index for slot N (1-15) = (N-1)*2.  Cleared per map load.
+; TODO(M8.2): pret's EngageMapTrainer reads this array via wSpriteIndex; the M8.1
+; inline engage in TrainerEncounterFlow reads it directly until EngageMapTrainer lands.
+wMapSpriteExtraData:  resb NPC_SLOTS_MAX * 2
 
 ; Global toggleable-object (event) flags — pret's wToggleableObjectFlags.  Bit g set
 ; (LSB-first) => toggleable object g is hidden.  Persistent across map loads; seeded
@@ -134,6 +153,14 @@ InitMapSprites:
     mov edi, npc_sprite_set
     xor al, al
     mov ecx, SPRITE_SET_SIZE * 2       ; sprite_set + vram_slots = 24 bytes
+    rep stosb
+
+    ; --- Clear cached per-NPC trainer class/set (wMapSpriteExtraData) ---
+    ; Non-trainer slots stay all-zero here (never re-written below), so NPC loading
+    ; for non-trainers is byte-identical to before this cache existed.
+    mov edi, wMapSpriteExtraData
+    xor al, al
+    mov ecx, NPC_SLOTS_MAX * 2
     rep stosb
 
     ; --- Initialize trainer encounter state (reset per map load) ---
@@ -197,7 +224,24 @@ InitMapSprites:
     test al, TRAINER_FLAG
     jz .not_trainer
     mov edi, 1                          ; is_trainer = 1
-    add esi, 2                          ; skip trainer_class + trainer_num bytes
+    ; --- M8.1: store (was: discard) trainer_class + trainer_num for this slot ---
+    ; Binary layout (gen_map_headers.py): ... text_byte, trainer_class, trainer_num.
+    ; ESI currently points at trainer_class.  Cache both in wMapSpriteExtraData so a
+    ; sighted trainer can seed the battle later.  Preserve AL (text_byte, consumed
+    ; below) and EBX (slot offset); EDX (next_vram_slot) must stay untouched.
+    push eax
+    push ebx
+    mov eax, ebx                        ; slot byte offset (0x10, 0x20, ...)
+    shr eax, 4                          ; slot number (1-15)
+    dec eax                             ; 0-based slot index
+    add eax, eax                        ; *2 -> wMapSpriteExtraData index
+    mov bl, [ebp + esi]                 ; trainer_class (OPP_* value, >= OPP_ID_OFFSET)
+    mov [wMapSpriteExtraData + eax], bl
+    mov bl, [ebp + esi + 1]             ; trainer_num / trainer party set
+    mov [wMapSpriteExtraData + eax + 1], bl
+    pop ebx
+    pop eax
+    add esi, 2                          ; advance past trainer_class + trainer_num bytes
 .not_trainer:
     test al, ITEM_FLAG
     jz .not_item
@@ -962,6 +1006,29 @@ TrainerEncounterFlow:
     call npc_dialog_wait_impl
 
 .tef_text_done:
+    ; --- M8.1 sight->battle wiring -------------------------------------------
+    ; Seed the engaged-trainer globals from this slot's cached class/set, then hand
+    ; off to StartTrainerBattle (the pret home/trainers.asm battle-entry).  This
+    ; inline read of wMapSpriteExtraData is a stopgap for pret EngageMapTrainer,
+    ; which M8.2 (trainer-header engine) will provide via wSpriteIndex.
+    ; StartTrainerBattle only SEEDS parameters by default (wCurOpponent /
+    ; wTrainerClass / wTrainerNo); the live `call InitBattle` is gated behind
+    ; -D TRAINER_BATTLE_LIVE because the port InitBattle is still wild-only
+    ; (no ReadTrainer / trainer-party / trainer-pic path yet — see SUMMARY).
+    movzx eax, byte [w_trainer_enc_slot]   ; slot byte offset (0x10-0xF0)
+    shr al, 4                              ; slot number (1-15)
+    dec al                                 ; 0-based slot index
+    movzx eax, al
+    add eax, eax                           ; *2 -> wMapSpriteExtraData index
+    mov cl, [wMapSpriteExtraData + eax]     ; trainer class (OPP_* value)
+    mov [ebp + wEngagedTrainerClass], cl
+    mov cl, [wMapSpriteExtraData + eax + 1] ; trainer set
+    mov [ebp + wEngagedTrainerSet], cl
+    call StartTrainerBattle
+%ifdef TRAINER_BATTLE_LIVE
+    call EndTrainerBattle
+%endif
+    ; -------------------------------------------------------------------------
     call hide_window                    ; count=0 (nothing drawn); parks H_WY off-screen
     and byte [ebp + W_FONT_LOADED], ~(1 << BIT_FONT_LOADED)
     call LoadNPCSpriteTiles

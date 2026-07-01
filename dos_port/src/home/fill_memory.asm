@@ -9,7 +9,8 @@
 ;
 ; x86 translation:
 ;   Register map: HL→ESI (EBP-relative dest), BC→BX (count), A→AL (fill byte)
-;   The double-loop collapses to movzx+rep stosb — same semantics, no edge cases.
+;   The double-loop collapses to movzx+rep stosb. Semantics match pret for all
+;   counts 1..65535; they DIVERGE only at count=0 — see the count=0 note below.
 ;   EDI used as scratch destination pointer (per register map: "Secondary pointer").
 ;
 ; Build: nasm -f coff -I ../../include/ -o fill_memory.o fill_memory.asm
@@ -51,7 +52,12 @@ FillMemory:
     push edi
 
     movzx   ecx, bx              ; zero-extend 16-bit BC count to full 32 bits
-                                 ; count=0 → rep stosb is a no-op (correct)
+                                 ; count=0 → ECX=0 → rep stosb no-op.
+                                 ; DIVERGENCE: pret FillMemory(BC=0) writes 256
+                                 ; bytes (B=0→inc b→1, then C=0 underflows the
+                                 ; inner loop 256×). The port writes 0. Safe: no
+                                 ; caller passes BC=0 expecting 256 (callers that
+                                 ; want 256 pass $100). Intentionally NOT emulated.
     lea     edi, [ebp + esi]     ; flat destination: EBP base + GB-space offset
     rep stosb                    ; fill ECX bytes at ES:EDI with AL
                                  ; ES = DS = flat selector under DJGPP
@@ -75,7 +81,9 @@ FillMemory:
 ; a SM83 limitation that does not exist on x86.
 ;
 ; Edge cases verified:
-;   BX=0x0000 (count=0)    → ECX=0   → rep stosb no-op (correct)
+;   BX=0x0000 (count=0)    → ECX=0   → rep stosb no-op (0 bytes)
+;     DIVERGENCE: pret writes 256 bytes here (see the count=0 note in the body).
+;     Not a "bug fix" — pret's 256 is an unused underflow artifact; 0 is safe.
 ;   BX=0x00FF (count=255)  → ECX=255 → 255 bytes written (correct)
 ;   BX=0x0100 (count=256)  → ECX=256 → 256 bytes written
 ;     (SM83: B=1, C=0 → .mulitpleof0x100 path, correct, no inc B)

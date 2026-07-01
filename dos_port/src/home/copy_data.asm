@@ -6,7 +6,12 @@
 ; FarCopyData — copy BC bytes from a:HL to DE (A = source ROM bank).
 ;
 ; The SM83 16-bit-count double-loop (can't branch on `dec bc`) collapses to
-; `rep movsb`, as in FillMemory. FarCopyData's ROM-bank switch is a flat no-op
+; `rep movsb`, as in FillMemory. Semantics match pret for all counts 1..65535;
+; they DIVERGE only at BC=0 — pret CopyData(BC=0) copies 256 bytes (B=0 falls
+; straight into .copybytes, C=0 underflows the loop 256×), the port copies 0.
+; Safe: no caller passes BC=0 expecting 256 (callers that want 256 pass $100).
+; Intentionally NOT emulated (pret's 256 is an underflow artifact, not a feature).
+; FarCopyData's ROM-bank switch is a flat no-op
 ; under our unified address space. ; TODO-HW: model ROM banking when needed.
 ;
 ; Register map: HL→ESI (src, EBP-relative), DE→EDX (dst, EBP-relative),
@@ -35,7 +40,7 @@ section .text
 CopyData:
     push edi
 
-    movzx ecx, bx
+    movzx ecx, bx                    ; count; BX=0 → 0 bytes (pret would copy 256 — see header)
     lea esi, [ebp + esi]
     movzx edi, dx
     lea edi, [ebp + edi]

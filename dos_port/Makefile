@@ -143,6 +143,7 @@ GAME_SRCS := \
     src/home/print_num.asm \
     src/home/print_bcd.asm \
     src/home/window.asm \
+    src/home/fade.asm \
     src/text/auto_textbox.asm \
     src/movie/title.asm \
     src/engine/overworld/overworld.asm \
@@ -418,6 +419,7 @@ FRONTEND_SRCS := \
     src/gfx/pics.asm \
     src/engine/battle/experience.asm \
     src/engine/battle/battle_exp_stubs.asm \
+    src/engine/battle/trainer_battle.asm \
     src/engine/flag_action.asm
 
 LINK_SRCS := $(BOOT_SRCS) $(HOME_SRCS) $(HAL_SRCS) $(GAME_SRCS) $(POKEMON_SRCS) $(ITEMS_SRCS) $(FRONTEND_SRCS)
@@ -462,6 +464,9 @@ HOME_CHECK_SRCS := \
     src/home/oam.asm \
     src/home/reset_player_sprite.asm \
     src/home/reload_tiles.asm \
+    src/home/copy2.asm \
+    src/home/vcopy.asm \
+    src/engine/overworld/pikachu.asm \
     src/engine/overworld/reload_sprites.asm \
     src/engine/overworld/player_gfx.asm \
     src/engine/overworld/overworld_text.asm \
