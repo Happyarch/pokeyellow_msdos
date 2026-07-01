@@ -17,8 +17,10 @@ PRIMARY="$PWD"
 for M in A B C; do
   WT="../pkmn-swarm-$M"
   git worktree add "$WT" "battle-swarm-$M"
-  # Seed gitignored build inputs (NOT in git): generated assets/*.inc + all .2bpp.
-  ( cd "$PRIMARY" && tar cf - dos_port/assets $(find . -name '*.2bpp') ) | ( cd "$WT" && tar xf - )
+  # Seed gitignored build inputs (NOT in git): generated assets/*.inc + the graphics
+  # binaries the build incbin's (.2bpp tiles, .pic compressed sprites, .1bpp).
+  ( cd "$PRIMARY" && tar cf - dos_port/assets \
+      $(find . \( -name '*.2bpp' -o -name '*.pic' -o -name '*.1bpp' \)) ) | ( cd "$WT" && tar xf - )
   # Keep the .inc newer than the .2bpp so `make` doesn't try to regenerate them.
   touch "$WT"/dos_port/assets/*.inc
 done
