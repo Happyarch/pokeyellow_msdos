@@ -598,6 +598,26 @@ section .text
 ;   - HandleCounterMove, multi-hit loop, Mirror Move / Metronome, Explosion handling
 ;   - PrintCriticalOHKOText, DisplayEffectiveness, HandleBuildingRage, move-failure text
 ; ---------------------------------------------------------------------------
+; --- externs for the faithful ExecutePlayerMove flow (Stage 2.5) ---
+extern PrintGhostText                  ; core_stubs.asm (stub: not ghost)
+extern HandleCounterMove               ; core_stubs.asm (stub: not counter)
+extern MirrorMoveCopyMove              ; core_stubs.asm (stub: fail)
+extern MetronomePickMove               ; core_stubs.asm (stub)
+extern PrintCriticalOHKOText           ; core_stubs.asm (stub)
+extern DisplayEffectiveness            ; core_stubs.asm (stub)
+extern HandleExplodingAnimation        ; core_stubs.asm (stub)
+extern HandleBuildingRage              ; building_rage.asm (real)
+extern HideSubstituteShowMonAnim       ; move_effect_helpers.asm (stub)
+extern ReshowSubstituteAnim            ; move_effect_helpers.asm (stub)
+extern DelayFrames                     ; frame.asm
+extern MultiHitText                    ; battle_text.inc
+
+; Faithful port of pret engine/battle/core.asm:ExecutePlayerMove (3244). Re-entry
+; labels (PlayerCanExecuteMove/PlayerCalcMoveDamage/HandleIfPlayerMoveMissed/
+; GetPlayerAnimationType/PlayerCheckIfFlyOrChargeEffect/MirrorMoveCheck) are exposed so
+; CheckPlayerStatusConditions' multi-turn continuations (Stage 3) land where pret's do.
+; Deferred leaves (Counter/MirrorMove/Metronome/crit+effectiveness text/EXPLODE anim/
+; ghost) are explicit stub CALLs (core_stubs.asm), flag-contract-faithful.
 ExecutePlayerMove:
     mov byte [ebp + hWhoseTurn], 0
     mov al, [ebp + wPlayerSelectedMove]
@@ -610,99 +630,168 @@ ExecutePlayerMove:
     mov al, [ebp + wActionResultOrTookBattleTurn]
     and al, al
     jnz ExecutePlayerMoveDone           ; already acted (item/run/switch)
-    call CheckPlayerStatusConditions    ; pret: jr nz,.noSpecialCondition / jp hl
-    jnz .noCondition                    ; ZF=0 → mon may move
-    jmp esi                             ; ZF=1 → handled; ESI = continuation (e.g. ExecutePlayerMoveDone)
-.noCondition:
-    call GetCurrentMove                 ; selected move → wPlayerMove* (+ name buffer)
-    call CheckForDisobedience           ; (stub: obedient)
-    ; (charging-up Fly/Charge check deferred — see TODO above)
-    call DisplayUsedMoveText            ; "X used MOVE!" (no wait — pret text_end)
-    mov edx, wPlayerSelectedMove        ; DE = ptr to the move id just used
-    call DecrementPP
-    ; --- checkpoint 1: ResidualEffects1 → effect does everything, skip damage+accuracy ---
+    call PrintGhostText                 ; pret 3260 (stub: not ghost → ZF=0)
+    jz  ExecutePlayerMoveDone           ; jp z — ghost can't attack
+    call CheckPlayerStatusConditions    ; pret 3262
+    jnz .playerHasNoSpecialCondition
+    jmp esi                             ; jp hl — handled; ESI = continuation
+.playerHasNoSpecialCondition:
+    call GetCurrentMove
+    test byte [ebp + wPlayerBattleStatus1], 1 << CHARGING_UP
+    jnz PlayerCanExecuteChargingMove
+    call CheckForDisobedience           ; (stub: obeys → ZF=0)
+    jz  ExecutePlayerMoveDone           ; jp z — disobeyed
+CheckIfPlayerNeedsToChargeUp:           ; pret 3273
     mov al, [ebp + wPlayerMoveEffect]
+    cmp al, CHARGE_EFFECT
+    je  JumpMoveEffect
+    cmp al, FLY_EFFECT
+    je  JumpMoveEffect
+    jmp PlayerCanExecuteMove
+PlayerCanExecuteChargingMove:           ; pret 3282
+    and byte [ebp + wPlayerBattleStatus1], ~(1 << CHARGING_UP) & 0xFF
+    and byte [ebp + wPlayerBattleStatus1], ~(1 << INVULNERABLE) & 0xFF
+PlayerCanExecuteMove:                   ; pret 3288 — Rage continuation
+    call DisplayUsedMoveText
+    mov edx, wPlayerSelectedMove
+    call DecrementPP
+    mov al, [ebp + wPlayerMoveEffect]   ; ResidualEffects1 → effect does all, skip dmg+acc
     mov esi, ResidualEffects1
     mov edx, 1
     call IsInArray
-    jc  JumpMoveEffect                  ; jp JumpMoveEffect (tail; sets b=1, returns)
-    ; --- checkpoint 2: SpecialEffectsCont → run effect before damage, don't skip ---
-    mov al, [ebp + wPlayerMoveEffect]
+    jc  JumpMoveEffect
+    mov al, [ebp + wPlayerMoveEffect]   ; SpecialEffectsCont → run effect, don't skip
     mov esi, SpecialEffectsCont
     mov edx, 1
     call IsInArray
-    jnc .pCalcDamage
+    jnc PlayerCalcMoveDamage
     call JumpMoveEffect
-.pCalcDamage:
-    ; --- checkpoint 3: SetDamageEffects → skip damage CALC, go straight to MoveHitTest ---
-    mov al, [ebp + wPlayerMoveEffect]
+PlayerCalcMoveDamage:                   ; pret 3305 — Thrash continuation
+    mov al, [ebp + wPlayerMoveEffect]   ; SetDamageEffects → skip calc, go to MoveHitTest
     mov esi, SetDamageEffects
     mov edx, 1
     call IsInArray
-    jc  .pMoveHitTest
+    jc  .moveHitTest
     call CriticalHitTest
-    ; (HandleCounterMove deferred)
+    call HandleCounterMove              ; pret 3312 (stub: not counter → ZF=0)
+    jz  HandleIfPlayerMoveMissed        ; jr z
     call GetDamageVarsForPlayerAttack
-    call CalculateDamage                ; ZF=1 → 0 BP (status move): skip MoveHitTest
-    jz  .pStatusMove
+    call CalculateDamage
+    jz  PlayerCheckIfFlyOrChargeEffect  ; jp z — 0 BP status move
     call AdjustDamageForMoveType
     call RandomizeDamage
-.pMoveHitTest:
-    call MoveHitTest                    ; sets wMoveMissed
+.moveHitTest:
+    call MoveHitTest
+HandleIfPlayerMoveMissed:               ; pret 3322 — Bide continuation
     mov al, [ebp + wMoveMissed]
     and al, al
-    jnz .pAfterDamage                   ; missed → skip anim+apply (EXPLODE special-case deferred)
-    mov al, [ebp + wPlayerMoveNum]
-    call PlayMoveAnimation              ; ANIMATION=OFF path (HP-bar update below)
-    call DrawHUDsAndHPBars
-    jmp .pAfterDamage
-.pStatusMove:
-    ; pret PlayerCheckIfFlyOrChargeEffect: 0-BP move plays its status anim, no MoveHitTest
+    jz  GetPlayerAnimationType
+    mov al, [ebp + wPlayerMoveEffect]
+    cmp al, EXPLODE_EFFECT
+    je  PlayPlayerMoveAnimation         ; EXPLODE still animates on a miss
+    jmp PlayerCheckIfFlyOrChargeEffect
+GetPlayerAnimationType:                 ; pret 3330 — Trapping continuation / multi-hit loop
+    mov al, [ebp + wPlayerMoveEffect]
+    and al, al
+    mov al, ANIMATIONTYPE_BLINK_ENEMY_MON_SPRITE          ; no-effect damage move
+    jz  PlayPlayerMoveAnimation
+    mov al, ANIMATIONTYPE_SHAKE_SCREEN_HORIZONTALLY_LIGHT  ; move has an effect
+PlayPlayerMoveAnimation:
+    push eax                            ; push af — save anim type
+    test byte [ebp + wPlayerBattleStatus2], 1 << HAS_SUBSTITUTE_UP
+    jz  .noSub
+    call HideSubstituteShowMonAnim
+.noSub:
+    pop eax                             ; pop af
+    mov [ebp + wAnimationType], al
     mov al, [ebp + wPlayerMoveNum]
     call PlayMoveAnimation
-    call DrawHUDsAndHPBars
-.pAfterDamage:
-    ; (MirrorMove / Metronome deferred)
-    ; --- checkpoint 4: ResidualEffects2 → run effect after damage, done ---
+    call HandleExplodingAnimation
+    call DrawPlayerHUDAndHPBar
+    test byte [ebp + wPlayerBattleStatus2], 1 << HAS_SUBSTITUTE_UP
+    jz  MirrorMoveCheck
+    call ReshowSubstituteAnim
+    jmp MirrorMoveCheck
+PlayerCheckIfFlyOrChargeEffect:         ; pret 3355
+    mov bl, 30
+    call DelayFrames
     mov al, [ebp + wPlayerMoveEffect]
+    cmp al, FLY_EFFECT
+    je  .flyChargeAnim
+    cmp al, CHARGE_EFFECT
+    je  .flyChargeAnim
+    jmp MirrorMoveCheck
+.flyChargeAnim:
+    mov byte [ebp + wAnimationType], 0
+    mov al, STATUS_AFFECTED_ANIM
+    call PlayMoveAnimation
+MirrorMoveCheck:                        ; pret 3369
+    mov al, [ebp + wPlayerMoveEffect]
+    cmp al, MIRROR_MOVE_EFFECT
+    jne .metronomeCheck
+    call MirrorMoveCopyMove             ; (stub: fail → ZF=1)
+    jz  ExecutePlayerMoveDone
+    mov byte [ebp + wMonIsDisobedient], 0
+    jmp CheckIfPlayerNeedsToChargeUp
+.metronomeCheck:
+    cmp al, METRONOME_EFFECT
+    jne .mirrorNext
+    call MetronomePickMove              ; (stub: clears effect to break the re-entry loop)
+    jmp CheckIfPlayerNeedsToChargeUp
+.mirrorNext:
+    mov al, [ebp + wPlayerMoveEffect]   ; ResidualEffects2 → run effect after damage, done
     mov esi, ResidualEffects2
     mov edx, 1
     call IsInArray
-    jc  JumpMoveEffect                  ; jp JumpMoveEffect (tail)
+    jc  JumpMoveEffect
     mov al, [ebp + wMoveMissed]
     and al, al
-    jz  .pMoveDidNotMiss
-    mov eax, AttackMissedText           ; PrintMoveFailureText (TODO: variants) — done if missed
+    jz  .moveDidNotMiss
+    mov eax, AttackMissedText           ; PrintMoveFailureText (TODO: DoesntAffect/miss variants)
     call PrintBattleText
-    jmp ExecutePlayerMoveDone
-.pMoveDidNotMiss:
-    call ApplyAttackToEnemyPokemon      ; enemy HP -= wDamage (floored)
-    ; (PrintCriticalOHKOText / DisplayEffectiveness deferred)
-    mov byte [ebp + wMoveDidntMiss], 1
-    ; --- checkpoint 5: AlwaysHappenSideEffects → run effect after damage, not done ---
     mov al, [ebp + wPlayerMoveEffect]
+    cmp al, EXPLODE_EFFECT
+    je  .notDone                        ; Explosion effect still runs on a miss
+    jmp ExecutePlayerMoveDone
+.moveDidNotMiss:
+    call ApplyAttackToEnemyPokemon
+    call PrintCriticalOHKOText          ; (stub)
+    call DisplayEffectiveness           ; (stub; pret callfar)
+    mov byte [ebp + wMoveDidntMiss], 1
+.notDone:
+    mov al, [ebp + wPlayerMoveEffect]   ; AlwaysHappenSideEffects → run after damage, not done
     mov esi, AlwaysHappenSideEffects
     mov edx, 1
     call IsInArray
-    jnc .pCheckFaint
+    jnc .skipAlwaysHappen
     call JumpMoveEffect
-.pCheckFaint:
+.skipAlwaysHappen:
     mov al, [ebp + wEnemyMonHP]
-    or  al, [ebp + wEnemyMonHP + 1]     ; enemy fainted?
-    jz  .pTargetFainted
-    ; (HandleBuildingRage / multi-hit loop deferred)
-    ; --- checkpoint 6: SpecialEffects catch-all → call nc JumpMoveEffect (secondary effects) ---
+    or  al, [ebp + wEnemyMonHP + 1]
+    jz  .pTargetFainted                 ; pret: ret z — enemy fainted, nothing else
+    call HandleBuildingRage
+    test byte [ebp + wPlayerBattleStatus1], 1 << ATTACKING_MULTIPLE_TIMES
+    jz  .executeOtherEffects
+    mov al, [ebp + wPlayerNumAttacksLeft]
+    dec al
+    mov [ebp + wPlayerNumAttacksLeft], al
+    jnz GetPlayerAnimationType          ; multi-hit: re-apply until 0 or faint (only 1st hit calcs)
+    and byte [ebp + wPlayerBattleStatus1], ~(1 << ATTACKING_MULTIPLE_TIMES) & 0xFF
+    mov esi, MultiHitText
+    call PrintText
+    mov byte [ebp + wPlayerNumHits], 0
+.executeOtherEffects:                   ; pret 3429 — SpecialEffects catch-all
     mov al, [ebp + wPlayerMoveEffect]
     and al, al
     jz  ExecutePlayerMoveDone           ; NO_ADDITIONAL_EFFECT
     mov esi, SpecialEffects
     mov edx, 1
     call IsInArray
-    jc  ExecutePlayerMoveDone           ; in SpecialEffects → already handled
-    call JumpMoveEffect                 ; not covered above → run the secondary effect
+    jc  ExecutePlayerMoveDone           ; in SpecialEffects → already handled (pret call nc)
+    call JumpMoveEffect
     jmp ExecutePlayerMoveDone
 .pTargetFainted:
-    xor bh, bh                          ; b = 0 → MainInBattleLoop: enemy fainted
+    xor bh, bh                          ; b = 0 → enemy fainted
     ret
 
 ExecutePlayerMoveDone:

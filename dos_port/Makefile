@@ -192,7 +192,6 @@ ITEMS_SRCS := \
 BATTLE_SRCS := \
     src/engine/battle/get_trainer_name.asm \
     src/engine/battle/misc.asm \
-    src/engine/battle/building_rage.asm \
     src/engine/battle/move_category.asm \
     src/data/wild_data.asm \
     src/engine/overworld/wild_mons.asm \
@@ -354,6 +353,7 @@ FRONTEND_SRCS := \
     src/engine/battle/core.asm \
     src/engine/battle/core_stubs.asm \
     src/engine/battle/residual_damage.asm \
+    src/engine/battle/building_rage.asm \
     src/engine/battle/effects.asm \
     src/engine/battle/stat_mod_effects.asm \
     src/engine/battle/move_effect_helpers.asm \

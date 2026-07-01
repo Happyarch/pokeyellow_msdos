@@ -182,6 +182,8 @@ XSTATITEM_DUPLICATE_ANIM equ 0xAF  ; constants/move_constants.asm line 189
 SHRINKING_SQUARE_ANIM   equ 0xB0   ; constants/move_constants.asm line 190
 SLIDE_DOWN_ANIM         equ 0xC0   ; constants/move_constants.asm line 206
 ; status-condition anim ids (CheckPlayer/EnemyStatusConditions); contiguous const_def
+ANIMATIONTYPE_BLINK_ENEMY_MON_SPRITE          equ 4   ; constants/battle_anim_constants.asm
+ANIMATIONTYPE_SHAKE_SCREEN_HORIZONTALLY_LIGHT equ 5
 STATUS_AFFECTED_ANIM    equ 0xA7   ; constants/move_constants.asm line 181
 SLP_PLAYER_ANIM         equ 0xBC   ; line 202 (player sleeping)
 SLP_ANIM                equ 0xBD   ; line 203 (enemy sleeping)
