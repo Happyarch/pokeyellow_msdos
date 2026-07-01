@@ -16,7 +16,7 @@ Battle messages cascade with no pause because the natural inter-message delays w
 3. **The menu redraws with no post-round acknowledgment.** `MainInBattleLoop` →
    `DisplayBattleMenu` fires at the top of the loop and can paint over the last message.
 
-> **Triage baseline (2026-07-01, branch `battle-triage` — merge before starting).**
+> **Triage baseline (2026-07-01 — now on `master`, `c3325e1e`; branch off current `master`).**
 > - `battle_hud.asm` numeric bugs are fixed: level ≥100 now uses a 3-digit path, and the Gen-1
 >   maxHP≥256 lossy HP-bar quirk is restored (exact division gated behind `BUG_FIX_LEVEL >= 2`).
 >   You still own the **gradual HP-drain pacing** (unchanged).

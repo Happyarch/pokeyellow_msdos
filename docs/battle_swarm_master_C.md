@@ -5,7 +5,7 @@ multi-mon (trainer) battles, and the in-battle bag/party sub-menus** — plus tr
 Yellow obedience. This subsystem **couples to the items and party layers**, so several units
 are integration-heavy (~3–4 effective workers).
 
-> **Triage baseline (2026-07-01, branch `battle-triage` — merge before starting).** Fixed in the
+> **Triage baseline (2026-07-01 — now on `master`, `c3325e1e`; branch off current `master`).** Fixed in the
 > baseline (don't re-touch): `TryRunningFromBattle` now short-circuits Safari/`BATTLE_TYPE_RUN`/link
 > to guaranteed escape and sets `wForcePlayerToChooseMon` on failure (Ghost is a `TODO` pending
 > Master-A `IsGhostBattle`); `LearnMoveFromLevelUp` syncs the new move into `wBattleMonMoves/PP`;
