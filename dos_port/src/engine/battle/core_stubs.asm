@@ -16,8 +16,10 @@ bits 32
 section .text
 
 global FormatMovesString
-global HandlePoisonBurnLeechSeed
 global TrainerAI
+; HandlePoisonBurnLeechSeed is now LIVE in residual_damage.asm (poison/burn/Leech Seed
+; end-of-round residual; pret engine/battle/core.asm:479) — its stub here was removed
+; when residual_damage.asm linked into the EXE.
 ; JumpMoveEffect is now LIVE in effects.asm (MoveEffectPointerTable dispatch) — its
 ; stub here was removed when the move-effect scaffold linked effects.asm into the EXE.
 
@@ -76,17 +78,6 @@ FormatMovesString:
     jmp .dashLoop
 .done:
     mov byte [ebp + edx], 0x50          ; '@'
-    ret
-
-; ---------------------------------------------------------------------------
-; HandlePoisonBurnLeechSeed — pret residual_damage.asm. The real routine needs the
-; deferred UpdateCurMonHPBar predef + residual-damage text. Stubbed to "target survived"
-; (ZF=0) so MainInBattleLoop's `jz Handle*MonFainted` after it is not taken.
-; (core.asm relies on ZF here; residual damage deepening is a later wave.)
-; ---------------------------------------------------------------------------
-HandlePoisonBurnLeechSeed:
-    mov al, 1
-    and al, al                          ; ZF=0 → no residual KO
     ret
 
 ; ---------------------------------------------------------------------------

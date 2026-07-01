@@ -610,10 +610,9 @@ ExecutePlayerMove:
     mov al, [ebp + wActionResultOrTookBattleTurn]
     and al, al
     jnz ExecutePlayerMoveDone           ; already acted (item/run/switch)
-    call CheckPlayerStatusConditions    ; ZF=0 → no condition (proceed); ZF=1 → can't move
-    jnz .noCondition
-    mov bh, 1                           ; (TODO: faithful handlers set b) — treat as no faint
-    ret
+    call CheckPlayerStatusConditions    ; pret: jr nz,.noSpecialCondition / jp hl
+    jnz .noCondition                    ; ZF=0 → mon may move
+    jmp esi                             ; ZF=1 → handled; ESI = continuation (e.g. ExecutePlayerMoveDone)
 .noCondition:
     call GetCurrentMove                 ; selected move → wPlayerMove* (+ name buffer)
     call CheckForDisobedience           ; (stub: obedient)
@@ -773,15 +772,242 @@ ApplyAttackToEnemyPokemon:
     mov [ebp + wEnemyMonHP], al
     ret
 
+; --- externs for the status-condition checks (pret core.asm:3499) ---
+extern PrintText                       ; move_effect_helpers.asm (ESI = flat text stream)
+extern GetMoveName                     ; home/names.asm
+extern DrawPlayerHUDAndHPBar           ; self-confusion damage redraw
+extern FastAsleepText
+extern WokeUpText
+extern IsFrozenText
+extern CantMoveText
+extern FlinchedText
+extern MustRechargeText
+extern DisabledNoMoreText
+extern ConfusedNoMoreText
+extern IsConfusedText
+extern HurtItselfText
+extern MoveIsDisabledText
+
 ; ---------------------------------------------------------------------------
-; CheckPlayerStatusConditions — pret core.asm:CheckPlayerStatusConditions (3499).
-; TODO(faithful): translate sleep/freeze/paralysis/confusion/flinch/Bide/Thrash/Rage/
-; Disable. Stubbed to "no condition" (ZF=0) so the move always executes for now.
+; CheckPlayerStatusConditions — faithful port of pret core.asm:3499.
+; Returns: ZF=1 ("handled this turn") with ESI = the continuation label the caller
+; must `jmp esi` to (pret's `ld hl, X` / `.returnToHL: xor a; ret` / `jp hl`); or
+; ZF=0 with AL=1 ("mon may move normally", pret `.checkConditionsDone`).
+; HL→ESI for the working pointers; register map A=AL, [ebp+addr] for GB memory.
+; Stage-2 scope: the can't-move chain + confusion self-hit. The multi-turn lock-ins
+; (Bide/Thrash/Trapping/Rage) fall through to .checkConditionsDone for now — TODO(Stage 3).
 ; ---------------------------------------------------------------------------
 CheckPlayerStatusConditions:
-    mov al, 1
-    and al, al                          ; ZF=0 → no special condition
+    mov esi, wBattleMonStatus            ; ld hl, wBattleMonStatus
+    mov al, [ebp + esi]
+    and al, SLP_MASK
+    jz .frozenCheck
+    ; sleeping (pret 3504) — decrement turns left (sleep is exclusive of other status)
+    dec al
+    mov [ebp + wBattleMonStatus], al
+    and al, al
+    jz .wakeUp                           ; turns hit 0 → wake
+    mov byte [ebp + wAnimationType], 0   ; fast asleep
+    mov al, SLP_PLAYER_ANIM
+    call PlayMoveAnimation
+    mov esi, FastAsleepText
+    call PrintText
+    jmp .sleepDone
+.wakeUp:
+    mov esi, WokeUpText
+    call PrintText
+.sleepDone:
+    mov byte [ebp + wPlayerUsedMove], 0
+    mov esi, ExecutePlayerMoveDone       ; can't move this turn
+    jmp .returnToHL
+
+.frozenCheck:                            ; pret 3526
+    test byte [ebp + esi], 1 << FRZ
+    jz .heldInPlaceCheck
+    mov esi, IsFrozenText
+    call PrintText
+    mov byte [ebp + wPlayerUsedMove], 0
+    mov esi, ExecutePlayerMoveDone
+    jmp .returnToHL
+
+.heldInPlaceCheck:                       ; pret 3536 — enemy using a trapping move on us
+    test byte [ebp + wEnemyBattleStatus1], 1 << USING_TRAPPING_MOVE
+    jz .flinchedCheck
+    mov esi, CantMoveText
+    call PrintText
+    mov esi, ExecutePlayerMoveDone
+    jmp .returnToHL
+
+.flinchedCheck:                          ; pret 3545
+    test byte [ebp + wPlayerBattleStatus1], 1 << FLINCHED
+    jz .hyperBeamCheck
+    and byte [ebp + wPlayerBattleStatus1], ~(1 << FLINCHED) & 0xFF   ; res FLINCHED
+    mov esi, FlinchedText
+    call PrintText
+    mov esi, ExecutePlayerMoveDone
+    jmp .returnToHL
+
+.hyperBeamCheck:                         ; pret 3555
+    test byte [ebp + wPlayerBattleStatus2], 1 << NEEDS_TO_RECHARGE
+    jz .anyMoveDisabledCheck
+    and byte [ebp + wPlayerBattleStatus2], ~(1 << NEEDS_TO_RECHARGE) & 0xFF
+    mov esi, MustRechargeText
+    call PrintText
+    mov esi, ExecutePlayerMoveDone
+    jmp .returnToHL
+
+.anyMoveDisabledCheck:                   ; pret 3565 — packed (move<<4 | turns)
+    mov al, [ebp + wPlayerDisabledMove]
+    and al, al
+    jz .confusedCheck
+    dec al
+    mov [ebp + wPlayerDisabledMove], al
+    and al, 0x0F                         ; Disable turns hit 0?
+    jnz .confusedCheck
+    mov byte [ebp + wPlayerDisabledMove], 0
+    mov byte [ebp + wPlayerDisabledMoveNumber], 0
+    mov esi, DisabledNoMoreText
+    call PrintText
+
+.confusedCheck:                          ; pret 3579
+    test byte [ebp + wPlayerBattleStatus1], 1 << CONFUSED
+    jz .triedToUseDisabledMoveCheck
+    mov esi, wPlayerConfusedCounter
+    mov al, [ebp + esi]
+    dec al
+    mov [ebp + esi], al
+    jnz .isConfused
+    and byte [ebp + wPlayerBattleStatus1], ~(1 << CONFUSED) & 0xFF   ; counter 0 → clear
+    mov esi, ConfusedNoMoreText
+    call PrintText
+    jmp .triedToUseDisabledMoveCheck
+.isConfused:
+    mov esi, IsConfusedText
+    call PrintText
+    mov byte [ebp + wAnimationType], 0
+    mov al, CONF_PLAYER_ANIM
+    call PlayMoveAnimation
+    call BattleRandom
+    cmp al, (50 * 0xFF / 100) + 1        ; 50 percent + 1 chance to hurt itself
+    jc .triedToUseDisabledMoveCheck
+    mov al, [ebp + wPlayerBattleStatus1] ; hurts itself: keep only CONFUSED, clear the rest
+    and al, 1 << CONFUSED
+    mov [ebp + wPlayerBattleStatus1], al
+    call HandleSelfConfusionDamage
+    jmp .monHurtItselfOrFullyParalysed
+
+.triedToUseDisabledMoveCheck:            ; pret 3608
+    mov al, [ebp + wPlayerDisabledMoveNumber]
+    and al, al
+    jz .paralysisCheck
+    cmp al, [ebp + wPlayerSelectedMove]
+    jne .paralysisCheck
+    call PrintMoveIsDisabledText
+    mov esi, ExecutePlayerMoveDone
+    jmp .returnToHL
+
+.paralysisCheck:                         ; pret 3620
+    test byte [ebp + wBattleMonStatus], 1 << PAR
+    jz .bideCheck
+    call BattleRandom
+    cmp al, (25 * 0xFF / 100)            ; 25 percent chance fully paralyzed
+    jae .bideCheck
+    mov esi, FullyParalyzedText
+    call PrintText
+
+.monHurtItselfOrFullyParalysed:          ; pret 3630
+    ; clear bide/thrashing/charging-up/trapping (already cleared for confusion damage)
+    mov al, [ebp + wPlayerBattleStatus1]
+    and al, ~((1 << STORING_ENERGY) | (1 << THRASHING_ABOUT) | (1 << CHARGING_UP) | (1 << USING_TRAPPING_MOVE)) & 0xFF
+    mov [ebp + wPlayerBattleStatus1], al
+    mov al, [ebp + wPlayerMoveEffect]
+    cmp al, FLY_EFFECT
+    je .flyOrChargeEffect
+    cmp al, CHARGE_EFFECT
+    jne .notFlyOrChargeEffect
+.flyOrChargeEffect:
+    mov byte [ebp + wAnimationType], 0
+    mov al, STATUS_AFFECTED_ANIM
+    call PlayMoveAnimation
+.notFlyOrChargeEffect:
+    mov esi, ExecutePlayerMoveDone       ; two-turn move: recharge/can't move this turn
+    jmp .returnToHL
+
+.bideCheck:                              ; pret 3652 — TODO(Stage 3): Bide/Thrash/Trapping/Rage
+    ; multi-turn lock-in forced-move execution is built in Stage 3 (re-entry labels).
+    ; Until then a mon mid-Bide/Thrash/Wrap/Rage simply acts normally this turn.
+    jmp .checkConditionsDone
+
+.returnToHL:
+    xor al, al                           ; ZF=1, ESI = continuation → caller jmp esi
     ret
+.checkConditionsDone:                    ; pret 3756
+    mov al, 1
+    and al, al                           ; ZF=0 → mon may move normally
+    ret
+
+; ---------------------------------------------------------------------------
+; HandleSelfConfusionDamage — faithful port of pret core.asm:3843. Typeless 40-power
+; physical hit the confused mon deals to itself: temporarily swaps the attacker's own
+; Defense into the "enemy" defense slot, runs the player-attack damage pipeline (no
+; type adjust / no randomize / always hits, no crit), restores, and applies to self.
+; ---------------------------------------------------------------------------
+HandleSelfConfusionDamage:
+    mov esi, HurtItselfText
+    call PrintText
+    ; save wEnemyMonDefense (word) and overwrite with wBattleMonDefense (the self-defender)
+    mov al, [ebp + wEnemyMonDefense]
+    mov dh, al                           ; save hi
+    mov al, [ebp + wEnemyMonDefense + 1]
+    mov dl, al                           ; save lo
+    mov al, [ebp + wBattleMonDefense]
+    mov [ebp + wEnemyMonDefense], al
+    mov al, [ebp + wBattleMonDefense + 1]
+    mov [ebp + wEnemyMonDefense + 1], al
+    push edx                             ; stash saved enemy defense (DH:DL)
+    ; save wPlayerMoveEffect, set a 40-BP typeless non-crit move
+    mov al, [ebp + wPlayerMoveEffect]
+    push eax                             ; save effect byte (AL)
+    mov byte [ebp + wPlayerMoveEffect], 0
+    mov byte [ebp + wCriticalHitOrOHKO], 0   ; self-hit can't crit
+    mov byte [ebp + wPlayerMovePower], 40    ; 40 base power
+    mov byte [ebp + wPlayerMoveType], 0      ; typeless (the byte after power; pret xor a / ld [hl])
+    call GetDamageVarsForPlayerAttack
+    call CalculateDamage                 ; no AdjustDamageForMoveType / Randomize / MoveHitTest
+    pop eax                              ; restore effect byte
+    mov [ebp + wPlayerMoveEffect], al
+    pop edx                              ; restore enemy defense (DH:DL)
+    mov al, dh
+    mov [ebp + wEnemyMonDefense], al
+    mov al, dl
+    mov [ebp + wEnemyMonDefense + 1], al
+    mov byte [ebp + wAnimationType], 0
+    mov byte [ebp + hWhoseTurn], 1       ; play self-hit anim as the "enemy" side
+    call PlayMoveAnimation
+    call DrawPlayerHUDAndHPBar
+    mov byte [ebp + hWhoseTurn], 0
+    jmp ApplyAttackToPlayerPokemon       ; player HP -= wDamage (pret ApplyDamageToPlayerPokemon)
+
+; ---------------------------------------------------------------------------
+; PrintMoveIsDisabledText — faithful port of pret core.asm:3821. Clears the user's
+; CHARGING_UP bit and prints "<MOVE> is disabled!" for the disabled move. Handles both
+; sides via hWhoseTurn (reused by the enemy status check).
+; ---------------------------------------------------------------------------
+PrintMoveIsDisabledText:
+    mov esi, wPlayerSelectedMove         ; ld hl, wPlayerSelectedMove
+    mov edx, wPlayerBattleStatus1        ; ld de, wPlayerBattleStatus1
+    mov al, [ebp + hWhoseTurn]
+    and al, al
+    jz .removeChargingUp
+    inc esi                              ; enemy: wEnemySelectedMove (= wPlayerSelectedMove+1)
+    mov edx, wEnemyBattleStatus1
+.removeChargingUp:
+    and byte [ebp + edx], ~(1 << CHARGING_UP) & 0xFF   ; res CHARGING_UP
+    mov al, [ebp + esi]
+    mov [ebp + wNamedObjectIndex], al
+    call GetMoveName
+    mov esi, MoveIsDisabledText
+    jmp PrintText
 
 ; ---------------------------------------------------------------------------
 ; CheckForDisobedience — pret core.asm (Yellow obedience for traded mons).
@@ -806,10 +1032,9 @@ ExecuteEnemyMove:
     mov byte [ebp + wMonIsDisobedient], 0
     mov byte [ebp + wMoveDidntMiss], 0
     mov byte [ebp + wDamageMultipliers], EFFECTIVE
-    call CheckEnemyStatusConditions     ; ZF=0 → no condition
-    jnz .noCondition
-    mov bh, 1
-    ret
+    call CheckEnemyStatusConditions     ; pret: jr nz,.noSpecialCondition / jp hl
+    jnz .noCondition                    ; ZF=0 → enemy may move
+    jmp esi                             ; ZF=1 → handled; ESI = continuation
 .noCondition:
     call GetCurrentMove                 ; hWhoseTurn=1 → loads wEnemyMove*
     call DisplayUsedMoveText            ; "Enemy X used MOVE!"
@@ -915,11 +1140,189 @@ ApplyAttackToPlayerPokemon:
     mov [ebp + wBattleMonHP], al
     ret
 
-; CheckEnemyStatusConditions — pret core.asm. TODO(faithful): translate (sleep/freeze/
-; etc.). Stubbed to "no condition" (ZF=0).
+; ---------------------------------------------------------------------------
+; CheckEnemyStatusConditions — faithful port of pret core.asm:5859 (mirror of
+; CheckPlayerStatusConditions with the enemy's WRAM). Same ZF/ESI contract:
+; ZF=1 + ESI=continuation → handled; ZF=0 + AL=1 → enemy may move.
+; The enemy confusion self-hit is inlined (pret 5957-5996). Multi-turn lock-ins
+; fall through to .done for now — TODO(Stage 3).
+; ---------------------------------------------------------------------------
 CheckEnemyStatusConditions:
-    mov al, 1
+    mov esi, wEnemyMonStatus
+    mov al, [ebp + esi]
+    and al, SLP_MASK
+    jz .eFrozenCheck
+    dec al                               ; sleeping — decrement turns left
+    mov [ebp + wEnemyMonStatus], al
     and al, al
+    jz .eWakeUp
+    mov esi, FastAsleepText
+    call PrintText
+    mov byte [ebp + wAnimationType], 0
+    mov al, SLP_ANIM
+    call PlayMoveAnimation
+    jmp .eSleepDone
+.eWakeUp:
+    mov esi, WokeUpText
+    call PrintText
+.eSleepDone:
+    mov byte [ebp + wEnemyUsedMove], 0
+    mov esi, ExecuteEnemyMoveDone
+    jmp .eReturnToHL
+
+.eFrozenCheck:                           ; pret 5883
+    test byte [ebp + esi], 1 << FRZ
+    jz .eTrappedCheck
+    mov esi, IsFrozenText
+    call PrintText
+    mov byte [ebp + wEnemyUsedMove], 0
+    mov esi, ExecuteEnemyMoveDone
+    jmp .eReturnToHL
+
+.eTrappedCheck:                          ; pret 5892 — player using a trapping move on us
+    test byte [ebp + wPlayerBattleStatus1], 1 << USING_TRAPPING_MOVE
+    jz .eFlinchedCheck
+    mov esi, CantMoveText
+    call PrintText
+    mov esi, ExecuteEnemyMoveDone
+    jmp .eReturnToHL
+
+.eFlinchedCheck:                         ; pret 5900
+    test byte [ebp + wEnemyBattleStatus1], 1 << FLINCHED
+    jz .eRechargeCheck
+    and byte [ebp + wEnemyBattleStatus1], ~(1 << FLINCHED) & 0xFF
+    mov esi, FlinchedText
+    call PrintText
+    mov esi, ExecuteEnemyMoveDone
+    jmp .eReturnToHL
+
+.eRechargeCheck:                         ; pret 5909
+    test byte [ebp + wEnemyBattleStatus2], 1 << NEEDS_TO_RECHARGE
+    jz .eDisabledCheck
+    and byte [ebp + wEnemyBattleStatus2], ~(1 << NEEDS_TO_RECHARGE) & 0xFF
+    mov esi, MustRechargeText
+    call PrintText
+    mov esi, ExecuteEnemyMoveDone
+    jmp .eReturnToHL
+
+.eDisabledCheck:                         ; pret 5918
+    mov al, [ebp + wEnemyDisabledMove]
+    and al, al
+    jz .eConfusedCheck
+    dec al
+    mov [ebp + wEnemyDisabledMove], al
+    and al, 0x0F
+    jnz .eConfusedCheck
+    mov byte [ebp + wEnemyDisabledMove], 0
+    mov byte [ebp + wEnemyDisabledMoveNumber], 0
+    mov esi, DisabledNoMoreText
+    call PrintText
+
+.eConfusedCheck:                         ; pret 5931
+    test byte [ebp + wEnemyBattleStatus1], 1 << CONFUSED
+    jz .eTriedDisabledCheck
+    mov esi, wEnemyConfusedCounter
+    mov al, [ebp + esi]
+    dec al
+    mov [ebp + esi], al
+    jnz .eIsConfused
+    and byte [ebp + wEnemyBattleStatus1], ~(1 << CONFUSED) & 0xFF
+    mov esi, ConfusedNoMoreText
+    call PrintText
+    jmp .eTriedDisabledCheck
+.eIsConfused:
+    mov esi, IsConfusedText
+    call PrintText
+    mov byte [ebp + wAnimationType], 0
+    mov al, CONF_ANIM
+    call PlayMoveAnimation
+    call BattleRandom
+    cmp al, 0x80                         ; pret cp $80 (= 50% + 1)
+    jc .eTriedDisabledCheck
+    ; hurts itself — keep only CONFUSED, clear the rest
+    mov al, [ebp + wEnemyBattleStatus1]
+    and al, 1 << CONFUSED
+    mov [ebp + wEnemyBattleStatus1], al
+    mov esi, HurtItselfText
+    call PrintText
+    ; swap wBattleMonDefense (save) ← wEnemyMonDefense (self-defender); 40-BP typeless self-hit
+    mov al, [ebp + wBattleMonDefense]
+    mov dh, al
+    mov al, [ebp + wBattleMonDefense + 1]
+    mov dl, al
+    mov al, [ebp + wEnemyMonDefense]
+    mov [ebp + wBattleMonDefense], al
+    mov al, [ebp + wEnemyMonDefense + 1]
+    mov [ebp + wBattleMonDefense + 1], al
+    push edx
+    mov al, [ebp + wEnemyMoveEffect]
+    push eax
+    mov byte [ebp + wEnemyMoveEffect], 0
+    mov byte [ebp + wCriticalHitOrOHKO], 0
+    mov byte [ebp + wEnemyMovePower], 40
+    mov byte [ebp + wEnemyMoveType], 0
+    call GetDamageVarsForEnemyAttack
+    call CalculateDamage
+    pop eax
+    mov [ebp + wEnemyMoveEffect], al
+    pop edx
+    mov al, dh
+    mov [ebp + wBattleMonDefense], al
+    mov al, dl
+    mov [ebp + wBattleMonDefense + 1], al
+    mov byte [ebp + wAnimationType], 0
+    mov byte [ebp + hWhoseTurn], 0
+    mov al, POUND
+    call PlayMoveAnimation
+    mov byte [ebp + hWhoseTurn], 1
+    call ApplyAttackToEnemyPokemon
+    jmp .eMonHurtItselfOrFullyParalysed
+
+.eTriedDisabledCheck:                    ; pret 5998
+    mov al, [ebp + wEnemyDisabledMoveNumber]
+    and al, al
+    jz .eParalysisCheck
+    cmp al, [ebp + wEnemySelectedMove]
+    jne .eParalysisCheck
+    call PrintMoveIsDisabledText
+    mov esi, ExecuteEnemyMoveDone
+    jmp .eReturnToHL
+
+.eParalysisCheck:                        ; pret 6009
+    test byte [ebp + wEnemyMonStatus], 1 << PAR
+    jz .eMultiTurnTODO
+    call BattleRandom
+    cmp al, (25 * 0xFF / 100)
+    jae .eMultiTurnTODO
+    mov esi, FullyParalyzedText
+    call PrintText
+
+.eMonHurtItselfOrFullyParalysed:         ; pret 6018
+    mov al, [ebp + wEnemyBattleStatus1]
+    and al, ~((1 << STORING_ENERGY) | (1 << THRASHING_ABOUT) | (1 << CHARGING_UP) | (1 << USING_TRAPPING_MOVE)) & 0xFF
+    mov [ebp + wEnemyBattleStatus1], al
+    mov al, [ebp + wEnemyMoveEffect]
+    cmp al, FLY_EFFECT
+    je .eFlyOrChargeEffect
+    cmp al, CHARGE_EFFECT
+    jne .eNotFlyOrChargeEffect
+.eFlyOrChargeEffect:
+    mov byte [ebp + wAnimationType], 0
+    mov al, STATUS_AFFECTED_ANIM
+    call PlayMoveAnimation
+.eNotFlyOrChargeEffect:
+    mov esi, ExecuteEnemyMoveDone
+    jmp .eReturnToHL
+
+.eMultiTurnTODO:                         ; pret 6038 — TODO(Stage 3): Bide/Thrash/Trapping/Rage
+    jmp .eDone
+
+.eReturnToHL:
+    xor al, al                           ; ZF=1, ESI = continuation
+    ret
+.eDone:                                  ; pret 6137
+    mov al, 1
+    and al, al                           ; ZF=0 → enemy may move
     ret
 
 ; ---------------------------------------------------------------------------

@@ -181,7 +181,14 @@ XSTATITEM_ANIM          equ 0xAE   ; constants/move_constants.asm line 188 (X At
 XSTATITEM_DUPLICATE_ANIM equ 0xAF  ; constants/move_constants.asm line 189
 SHRINKING_SQUARE_ANIM   equ 0xB0   ; constants/move_constants.asm line 190
 SLIDE_DOWN_ANIM         equ 0xC0   ; constants/move_constants.asm line 206
+; status-condition anim ids (CheckPlayer/EnemyStatusConditions); contiguous const_def
+STATUS_AFFECTED_ANIM    equ 0xA7   ; constants/move_constants.asm line 181
+SLP_PLAYER_ANIM         equ 0xBC   ; line 202 (player sleeping)
+SLP_ANIM                equ 0xBD   ; line 203 (enemy sleeping)
+CONF_PLAYER_ANIM        equ 0xBE   ; line 204 (player confused)
+CONF_ANIM               equ 0xBF   ; line 205 (enemy confused)
 ; move ids referenced by move-effect handlers (constants/move_constants.asm)
+POUND                   equ 0x01
 RAZOR_WIND              equ 0x0D
 ROAR                    equ 0x2E
 SOLARBEAM               equ 0x4C

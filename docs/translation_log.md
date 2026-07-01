@@ -3952,3 +3952,40 @@ historical notes; these are the authoritative integration entries.
   "not memory-unsafe," **not** "no gameplay effect." All such bugs are gated by
   `%if BUG_FIX_LEVEL >= 2` either way; the label only picks which `/FIXCRIT` vs
   `/FIXALL` tier turns the fix on.
+
+# Battle turn-loop: status conditions + residual damage (2026-06-30)
+
+Wiring the *consumers* of the move-effect swarm's output (the effects were write-only).
+Faithful ports from pret `engine/battle/core.asm`; each branch cites its pret line in the
+source. pret is the spec. Build green at BUG_FIX_LEVEL 0 and 2.
+
+## HandlePoisonBurnLeechSeed (residual damage) — WIRED LIVE
+- **Source:** `engine/battle/core.asm:479` (already translated in `residual_damage.asm`).
+- **Change:** moved `residual_damage.asm` BATTLE_SRCS→FRONTEND_SRCS and dropped the
+  link-only stub in `core_stubs.asm`; already called at `core.asm` MainInBattleLoop.
+- **Divergences:** none (faithful) — the UI calls (PrintText/UpdateCurMonHPBar/
+  DrawHUDsAndHPBars/DelayFrames) are live; PlayMoveAnimation is the ANIMATION=OFF stub.
+- **Glitch preservation:** the Leech Seed + Toxic-counter interaction and the Leech Seed
+  overkill-heal GLITCHes are carried faithfully (intentional Gen-1, no BUG_FIX guard).
+- **Verified:** ZF-on-faint return contract matches pret `:533-541` and the loop's
+  `jz Handle*MonFainted`.
+
+## CheckPlayerStatusConditions / CheckEnemyStatusConditions — the keystone
+- **Source:** `engine/battle/core.asm:3499` (player) + `:5859` (enemy).
+- **Translated:** `dos_port/src/engine/battle/core.asm` (replaced the two "no condition" stubs).
+- **Behavior:** sleep countdown/wake, freeze, held-in-place (foe's trapping move), flinch,
+  Hyper-Beam recharge, Disable countdown, confusion (decrement → 50% typeless self-hit),
+  disabled-move block, 25% full-paralysis, and the bide/thrash/charge/trap-clear on
+  self-hit/full-para. Multi-turn lock-ins (Bide/Thrash/Trapping/Rage) are `TODO(Stage 3)`.
+- **Continuation idiom:** pret `ld hl, X` / `.returnToHL: xor a; ret` / caller `jp hl`
+  → port sets **ESI = continuation**, returns ZF; callers (`ExecutePlayerMove`/
+  `ExecuteEnemyMove`) do `jnz .noCondition / jmp esi`.
+- **Divergences:** none (faithful); status/confusion anims route through the
+  `PlayMoveAnimation` ANIMATION=OFF stub (§2.1-style, deferred).
+
+## HandleSelfConfusionDamage (`:3843`) + PrintMoveIsDisabledText (`:3821`)
+- Typeless 40-BP self-hit via the live damage pipeline (defense-swap; player-side a
+  helper, enemy-side inlined per pret); disabled-move text clears CHARGING_UP (both sides).
+- **Divergences:** none (faithful). Anim via the deferred PlayMoveAnimation stub.
+- Added constants (from `constants/move_constants.asm`): `POUND` $01, `STATUS_AFFECTED_ANIM`
+  $A7, `SLP_PLAYER_ANIM` $BC, `SLP_ANIM` $BD, `CONF_PLAYER_ANIM` $BE, `CONF_ANIM` $BF.
