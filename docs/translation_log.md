@@ -25,7 +25,7 @@ if it took none. This is the swarm's divergence audit trail.
 
 ## home/ rectification swarm — WAVE 0 (silent-wrong bugs & build landmines)
 - **Date:** 2026-07-01
-- **Plan:** docs/current_plan_home_rectification.md, Wave 0 (M0.1–M0.5).
+- **Plan:** docs/plans/home_rectification.md, Wave 0 (M0.1–M0.5).
 - **M0.1 `Random_` PRNG double-add fix** — Source: pret `engine/math/random.asm:1-13`.
   Translated: `dos_port/src/engine/math/random.asm`. Bug tags: fixes an UNFAITHFUL
   divergence (no BUG_FIX_LEVEL guard — the reliance on the caller's leftover carry is
@@ -66,7 +66,7 @@ if it took none. This is the swarm's divergence audit trail.
 
 ## home/ rectification swarm — WAVE 1 (text engine)
 - **Date:** 2026-07-01
-- **Plan:** docs/current_plan_home_rectification.md, Wave 1 (M1.1–M1.3).
+- **Plan:** docs/plans/home_rectification.md, Wave 1 (M1.1–M1.3).
 - **M1.1 `TX_FAR` ($17) recursive far-text** — Source: pret `home/text.asm:TextCommand_FAR (~L601)`.
   Translated: `dos_port/src/text/text.asm` (`.cmd_far`). H-flag: n/a. Divergences: none (faithful).
   Notes: was `add esi,3 / jmp .next_cmd` (dropped the far text → blank box). Now reads the
@@ -110,7 +110,7 @@ if it took none. This is the swarm's divergence audit trail.
 
 ## home/ rectification swarm — WAVES 2 & 3 (frame/VBlank + input)
 - **Date:** 2026-07-01
-- **Plan:** docs/current_plan_home_rectification.md, Waves 2–3 (M2.1, M2.2, M3.1, M3.2, M3.3).
+- **Plan:** docs/plans/home_rectification.md, Waves 2–3 (M2.1, M2.2, M3.1, M3.2, M3.3).
 - **Renderer-integrity gate:** a hard constraint was injected mid-flight — ported VBlank/BG/WY
   routines must NOT assume the GB 32×32 torus geometry against the port's native-width
   44×32 `wSurroundingTiles` surface / 40×25 battle canvas. Verified by static diff
@@ -159,7 +159,7 @@ if it took none. This is the swarm's divergence audit trail.
 
 ## home/ rectification swarm — WAVE 4 (menus)
 - **Date:** 2026-07-01
-- **Plan:** docs/current_plan_home_rectification.md, Wave 4 (M4.1, M4.2, M4.3).
+- **Plan:** docs/plans/home_rectification.md, Wave 4 (M4.1, M4.2, M4.3).
 - **M4.1 YES/NO framework** — Source: pret `home/yes_no.asm`. Translated: new
   `dos_port/src/home/yes_no.asm` (CHECK-only; no live caller yet). `YesNoChoice`,
   `TwoOptionMenu`, `DisplayYesNoChoice`, `WideYesNoChoice`, `YesNoChoicePokeCenter`,
@@ -195,7 +195,7 @@ if it took none. This is the swarm's divergence audit trail.
 
 ## home/ rectification swarm — WAVE 5 (pokemon / item data correctness)
 - **Date:** 2026-07-01
-- **Plan:** docs/current_plan_home_rectification.md, Wave 5 (M5.1–M5.4).
+- **Plan:** docs/plans/home_rectification.md, Wave 5 (M5.1–M5.4).
 - **M5.1 `_AddPartyMon` completeness** — Source: pret `engine/pokemon/add_mon.asm:_AddPartyMon`.
   `dos_port/src/engine/pokemon/add_party_mon.asm`. Added: Pokédex owned/seen `FlagAction`
   (flat `IndexToPokedex`); in-battle wild-catch path (copy enemy DVs/HP/status + enemy
@@ -225,7 +225,7 @@ if it took none. This is the swarm's divergence audit trail.
 
 ## home/ rectification swarm — WAVE 6 (sprites & pics)
 - **Date:** 2026-07-01
-- **Plan:** docs/current_plan_home_rectification.md, Wave 6 (M6.1–M6.3).
+- **Plan:** docs/plans/home_rectification.md, Wave 6 (M6.1–M6.3).
 - **M6.1 OAM/sprite reloaders** — Source: pret `home/oam.asm`/`reload_sprites.asm`/
   `reset_player_sprite.asm`/`reload_tiles.asm`. New (CHECK): `oam.asm` (`WriteOAMBlock` → writes
   the shadow-OAM array `W_SHADOW_OAM`, NOT GB-OAM geometry), `reset_player_sprite.asm`
@@ -255,7 +255,7 @@ if it took none. This is the swarm's divergence audit trail.
 
 ## home/ rectification swarm — WAVE 7 (overworld gameplay systems)
 - **Date:** 2026-07-01
-- **Plan:** docs/current_plan_home_rectification.md, Wave 7 (M7.1–M7.5).
+- **Plan:** docs/plans/home_rectification.md, Wave 7 (M7.1–M7.5).
 - **Integration note:** a concurrent worker's `git checkout` reset `overworld.asm` to HEAD
   mid-wave, wiping the session's M3.3 reroute + double-decrement fix + M7.1 hook. Recovered
   from M3.3's full-file preview (verified HEAD→preview delta was exactly the M3.3 reroute,
