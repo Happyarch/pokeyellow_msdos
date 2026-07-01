@@ -140,3 +140,47 @@ or message/menu pacing (B)). Auditors must double-check the party-struct byte la
 math vs pret. Start by confirming the branch and a green baseline, then propose your fan-out before
 spawning.
 ```
+
+---
+
+## Prompt — MERGE / INTEGRATION (run after A, B, C are all done)
+
+Run this as a separate **Opus** session **from the primary clone** (`master`), once all three
+masters have finished and committed on their branches. It merges A → B → C, resolves the
+predictable overlaps, and proves green.
+
+```
+You are the Opus integrator for the battle-engine swarm. Masters A (turn/special-move), B (text &
+HUD pacing), and C (lifecycle/multi-mon/sub-UIs) have finished on branches battle-swarm-A/B/C. Merge
+their work into master, faithfully, and prove it green. Read docs/battle_swarm_README.md (partition +
+merge order), docs/battle_swarm_launch_prompts.md, and docs/battle_audit_findings.md first.
+
+Procedure:
+1. From the primary clone, ensure a clean tree on an up-to-date master. Create an integration branch
+   `battle-swarm-integration` off master (keep master clean until verified). Fetch/rebase each swarm
+   branch onto current master if they've drifted.
+2. Merge in order: `git merge battle-swarm-A`, then B, then C. Ownership is BY ROUTINE, not file, so
+   expect conflicts only where masters touched the same file in adjacent hunks — resolve by keeping
+   BOTH masters' routines; never drop one master's work to satisfy a conflict. Known overlaps:
+   - core.asm: A owns ExecuteXxxMove/CheckXxxStatusConditions turn-flow + damage; B owns
+     MainInBattleLoop pacing/text helpers; C owns HandleXxxMonFainted/switch + sub-UI hooks. A
+     conflict here means adjacent disjoint routines — take both sides.
+   - core_stubs.asm: A drops leaf stubs + repoints externs; C may drop CheckForDisobedience/TrainerAI
+     stubs. Union the removals; verify no stub is both dropped AND still referenced (link will catch).
+   - dos_port/Makefile: all three add sources to the LINK/CHECK lists — resolve as the UNION of all
+     added lines. docs/translation_log.md: all three append entries — keep ALL (concatenate).
+   - New files (distinct paths) don't conflict.
+3. After EACH merge, rebuild green before the next: `make -C dos_port SKIP_TITLE=1 DEBUG_BATTLE_LIVE=1`
+   and again with `BUG_FIX_LEVEL=2`, plus `make -C dos_port check` (all check-only srcs assemble). If a
+   merge breaks the build, fix the integration (missing extern, Makefile entry, duplicate global) — do
+   NOT re-translate; if a true semantic conflict needs a call, consult the pret source and each
+   master's translation_log entry.
+4. After all three: live-verify a full two-sided battle round (dos_port/run SKIP_TITLE=1
+   DEBUG_BATTLE_LIVE=1 or the DOSBox-X MCP) — menu, move select, damage with B's gradual HP-drain,
+   a faint→switch (C), and a special-damage/charging move (A). Confirm B's message pacing (no
+   overrun / menu race). Capture a short before/after note.
+5. Report the merged result + build/verify status. Fast-forward master to the integration branch and
+   push ONLY on my explicit say-so. Do not force-push; do not delete the swarm branches until I
+   confirm (I may want to re-run a master). Commit conflict resolutions with the Co-Authored-By:
+   Claude Opus 4.8 trailer.
+```
