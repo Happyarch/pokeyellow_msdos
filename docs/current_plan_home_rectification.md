@@ -291,27 +291,27 @@ squad because it unblocks the link for everyone; subsequent waves are packed int
 
 ### WAVE 8 — Trainer overworld engagement
 
-- [ ] **M8.1 — Sight→battle wiring.** `InitBattleEnemyParameters`: store trainer class/num
+- [x] **M8.1 — Sight→battle wiring.** `InitBattleEnemyParameters`: store trainer class/num
   in `InitMapSprites` (currently discarded), seed `wCurOpponent`/`wTrainerClass`/
   `wTrainerNo`, call `InitBattle`; `StartTrainerBattle`/`EndTrainerBattle`.
-- [ ] **M8.2 — Trainer-header engine.** `StoreTrainerHeaderPointer`, `ReadTrainerHeaderInfo`,
+- [ ] **M8.2 (DEFERRED — next session; worker hit a lea idx*3 bug in TrainerBaseMoney lookup)**  — Trainer-header engine.** `StoreTrainerHeaderPointer`, `ReadTrainerHeaderInfo`,
   `ExecuteCurMapScriptInTable` (`wCurMapScript` + override), persistent `TrainerFlagAction`
   (replace the non-persistent `npc_beaten_flags`), `GetTrainerInformation`,
   `EngageMapTrainer`, end-battle-text pointers, real `TrainerWalkUpToPlayer` + `EmotionBubble`.
 
 ### WAVE 9 — Pikachu follower
 
-- [ ] **M9.1 — Follower FSM.** State plumbing (`Func_1510`/`Func_151d`/Enable/Disable/Check),
+- [x] **M9.1 — Follower FSM.** State plumbing (`Func_1510`/`Func_151d`/Enable/Disable/Check),
   `SpawnPikachu`(+`_`), movement script (`GetPikachuMovementScriptByte`,
   `ApplyPikachuMovementData`(+`_`), `Pikachu_IsInArray`).
 
 ### WAVE 10 — VRAM/util plumbing & fades
 
-- [ ] **M10.1 — VRAM transfer family.** `CopyVideoData`, `CopyVideoDataDouble`,
+- [x] **M10.1 — VRAM transfer family.** `CopyVideoData`, `CopyVideoDataDouble`,
   `FarCopyDataDouble`, `ClearScreenArea`, `CopyScreenTileBufferToVRAM`, `GetFarByte`
   (unblocks Town Map's five TODO sites); `IsInRestOfArray`; standalone `CopyString`;
   reconcile `FillMemory`/`CopyData` count=0 semantics + fix the false header comment.
-- [ ] **M10.2 — Fades + health-bar color.** `GBFade*` family + `FadePal1..8` +
+- [x] **M10.2 — Fades + health-bar color.** `GBFade*` family + `FadePal1..8` +
   `GBFadeInc/DecCommon` (implementable now via `commit_palette` — not color-blocked);
   `LoadGBPal` (Flash dimming); `GBPalWhiteOutWithDelay3`;
   `RestoreScreenTilesAndReloadTilePatterns`; `GetHealthBarColor` (gameplay threshold).
