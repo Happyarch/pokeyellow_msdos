@@ -30,6 +30,8 @@ bits 32
 ; --- real backend already live + linked ---
 extern PrintBattleText          ; core.asm — EAX = flat battle_text stream → print + prompt
 extern DrawHUDsAndHPBars        ; battle_menu.asm / battle_hud.asm — redraw HUDs + HP bars
+extern AnimateEnemyHPBar        ; battle_hud.asm — gradual enemy HP-bar drain (ECX = old HP)
+extern AnimatePlayerHPBar       ; battle_hud.asm — gradual player HP-bar drain (ECX = old HP)
 ; DelayFrames (frame.asm) and PlayApplyingAttackAnimation (animations.asm) are already
 ; live + linked — handlers extern them directly; not redefined here.
 
@@ -206,13 +208,30 @@ PlaySound:
 ; faithful effect where cheap and a clearly-marked linking symbol otherwise.
 ; ===========================================================================
 
-; UpdateCurMonHPBar — pret core.asm: gradual, tick-by-tick HP-bar drain. Scaffold
-; stand-in: redraw the HUDs/HP bars (instant). The tick-by-tick drain animation is
-; the incremental follow-up.
-; TODO(faithful): gradual per-frame HP-bar drain (pret UpdateCurMonHPBar loop).
+; UpdateCurMonHPBar — pret engine/battle/core.asm:677 (UpdateCurMonHPBar → predef
+; UpdateHPBar2). Faithful gradual, tick-by-tick HP-bar drain. Selects the bar by
+; hWhoseTurn exactly as pret: hWhoseTurn==0 (player's turn) → the PLAYER mon's bar
+; (pret hlcoord 10,9 / wHPBarType=1, i.e. the side that also ticks the HP number);
+; else → the ENEMY mon's bar (pret hlcoord 2,2 / wHPBarType=0, no number). The old HP
+; to start the drain from is wHPBarOldHP (pret stores it little-endian; each caller —
+; residual_damage / drain_hp / heal / recoil — populates wHPBar{Old,New,Max}HP and the
+; mon-struct HP before calling, matching pret). Animate{Player,Enemy}HPBar tick from
+; ECX(old HP) to the final struct HP (== wHPBarNewHP here), redrawing on each pixel
+; change with 2 DelayFrames per pixel — pret's UpdateHPBar cadence. pret preserves bc.
 global UpdateCurMonHPBar
 UpdateCurMonHPBar:
-    jmp DrawHUDsAndHPBars               ; tail: its ret returns to our caller
+    push ebx                            ; pret UpdateCurMonHPBar: push bc / pop bc
+    movzx ecx, word [ebp + wHPBarOldHP] ; old HP (pret little-endian word) → drain start
+    mov al, [ebp + hWhoseTurn]
+    and al, al
+    jz .playerBar                       ; hWhoseTurn==0 → player's mon bar (wHPBarType=1)
+    call AnimateEnemyHPBar
+    jmp .done
+.playerBar:
+    call AnimatePlayerHPBar
+.done:
+    pop ebx
+    ret
 
 ; PlayApplyingAttackAnimation (the damage shake / mon flash) is already live in
 ; animations.asm — handlers extern it directly. (It is the renderer blit-offset/flash

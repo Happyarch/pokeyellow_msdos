@@ -24,6 +24,10 @@ global TrainerAI
 ; stub here was removed when the move-effect scaffold linked effects.asm into the EXE.
 
 extern FindMoveName              ; battle_menu.asm — AL = move id → EAX = flat name ptr
+extern PrintText                 ; move_effect_helpers.asm — ESI = flat battle_text stream → print + <PROMPT> wait
+extern CriticalHitText           ; battle_text.inc — "Critical hit!" (0x58-terminated)
+extern OHKOText                  ; battle_text.inc — "One-hit KO!" (0x58-terminated)
+extern DelayFrames               ; frame.asm — BL = frame count (per B-8: BL, not CL)
 
 ; ---------------------------------------------------------------------------
 ; FormatMovesString — faithful copy of misc.asm:FormatMovesString OUTPUT: walk wMoves,
@@ -137,8 +141,66 @@ MetronomePickMove:
     mov byte [ebp + wEnemyMoveEffect], 0
     ret
 
-; Pure text/anim leaves — TODO(faithful); no-op is safe (deferred like the anim stubs).
+; PrintCriticalOHKOText — faithful port of pret engine/battle/core.asm:3967. Prints
+; "Critical hit!" (wCriticalHitOrOHKO==1) or "One-hit KO!" (==2), each with a <PROMPT>
+; button-wait (an acknowledged beat between the used-move line and the result), then
+; clears the flag; always ends with a 20-frame settle (pret `ld c,20 / jp DelayFrames`).
+; These result beats were previously no-op'd, which is why messages ran together.
 PrintCriticalOHKOText:            ; pret: "Critical hit!" / "One-hit KO!" text
-DisplayEffectiveness:             ; pret: "It's super effective!" etc. (callfar)
-HandleExplodingAnimation:         ; pret: Explosion/Self-Destruct screen shake
+    mov al, [ebp + wCriticalHitOrOHKO]
+    and al, al
+    jz .done                          ; pret: jr z, .done — no crit / no OHKO
+    cmp al, 2
+    je .ohko
+    mov esi, CriticalHitText
+    jmp .print
+.ohko:
+    mov esi, OHKOText
+.print:
+    call PrintText                    ; prints + <PROMPT> wait (RunBattleTextStream hook)
+    mov byte [ebp + wCriticalHitOrOHKO], 0
+.done:
+    mov bl, 20                        ; pret: ld c, 20 (B-8: DelayFrames reads BL)
+    jmp DelayFrames
+
+; DisplayEffectiveness — faithful port of pret engine/battle/display_effectiveness.asm.
+; From wDamageMultipliers (low 7 bits = type-eff numerator): ==EFFECTIVE(10) → neutral,
+; no text; >10 → "It's super effective!"; <10 → "It's not very effective..." Each with a
+; <PROMPT> button-wait. pret `and $7F / cp EFFECTIVE / ret z / jr nc,super / notvery`.
+DisplayEffectiveness:
+    mov al, [ebp + wDamageMultipliers]
+    and al, 0x7F
+    cmp al, EFFECTIVE                 ; 10 = neutral
+    je .neutral                       ; pret: ret z
+    jae .super                        ; >= 10 (already ruled out ==10) → super effective
+    mov esi, NotVeryEffectiveText
+    jmp PrintText                     ; tail: pret jp PrintText
+.super:
+    mov esi, SuperEffectiveText
+    jmp PrintText
+.neutral:
     ret
+
+; HandleExplodingAnimation — pret: Explosion/Self-Destruct screen shake.
+; TODO(faithful); no-op is safe (deferred like the anim stubs).
+HandleExplodingAnimation:
+    ret
+
+; ---------------------------------------------------------------------------
+; SuperEffectiveText / NotVeryEffectiveText — pret data/text/text_2.asm:1285-1293
+; (_SuperEffectiveText / _NotVeryEffectiveText). Hand-authored here (Tier-2 code) since
+; the generator does not emit them; charmap per constants/charmap.asm (' =$E0, .=$E8,
+; !=$E7, <LINE>=$4F, <PROMPT>=$58, space=$7F, TX_START=$00). Faithful two-line +
+; <PROMPT> wait, matching the sibling battle_text.inc streams.
+; ---------------------------------------------------------------------------
+section .data
+global SuperEffectiveText
+SuperEffectiveText:
+    ; "It's super" <LINE> "effective!" <PROMPT>
+    db 0x00, 0x88,0xB3,0xE0,0xB2,0x7F,0xB2,0xB4,0xAF,0xA4,0xB1
+    db 0x4F, 0xA4,0xA5,0xA5,0xA4,0xA2,0xB3,0xA8,0xB5,0xA4,0xE7, 0x58
+global NotVeryEffectiveText
+NotVeryEffectiveText:
+    ; "It's not very" <LINE> "effective..." <PROMPT>
+    db 0x00, 0x88,0xB3,0xE0,0xB2,0x7F,0xAD,0xAE,0xB3,0x7F,0xB5,0xA4,0xB1,0xB8
+    db 0x4F, 0xA4,0xA5,0xA5,0xA4,0xA2,0xB3,0xA8,0xB5,0xA4,0xE8,0xE8,0xE8, 0x58

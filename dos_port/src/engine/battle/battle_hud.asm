@@ -72,12 +72,14 @@ anim_max_addr: resd 1          ; GB addr of the maxHP word
 anim_bar_off:  resd 1          ; W_TILEMAP offset of the bar
 anim_frac_off: resd 1          ; W_TILEMAP offset of the HP "cur" digits (0 = none)
 anim_cur_hp:   resd 1          ; the HP value currently displayed (ticks toward final)
-anim_last_px:  resb 1          ; last drawn pixel count (redraw only on change)
+anim_last_px:  resb 1          ; last-drawn pixel count (walked ±1 toward target each unit)
+anim_target_px: resb 1         ; this HP-unit tick's freshly computed pixel target
 
 section .text
 
 global DrawBattleHUDs
 global DrawEnemyHUD
+global DrawEnemyHUDAndHPBar
 global DrawPlayerHUD
 global DrawEnemyHUDFrame
 global DrawPlayerHUDFrame
@@ -85,6 +87,7 @@ global AnimateEnemyHPBar
 global AnimatePlayerHPBar
 extern PlaceString
 extern DelayFrame
+extern Delay3                          ; frame.asm — wait 3 frames (pret UpdateHPBar2 tail)
 
 ; DrawBattleHUDs draws both HUDs; the battle intro draws only the enemy HUD (the
 ; player side shows party-status pokéballs until the battle proper), so the two
@@ -139,6 +142,24 @@ DrawEnemyHUD:
     call draw_hp_bar
     call DrawEnemyHUDFrame
     ret
+
+; ---------------------------------------------------------------------------
+; DrawEnemyHUDAndHPBar — faithful enemy-ONLY HUD+HP-bar redraw (pret
+; engine/battle/core.asm:1951). Used where the port previously substituted the
+; both-bars DrawHUDsAndHPBars. The port's DrawEnemyHUD already is the faithful
+; enemy-only name+level+HP-bar+frame redraw (stride-agnostic, writing W_TILEMAP that
+; render_bg blits every frame). DIVERGENCES vs pret (all hardware/pre-existing, not
+; invented here): pret's hAutoBGTransferEnabled suspend/resume bracket is dropped —
+; it gates the GB torus-tilemap DMA (do_bg_transfer, frame.asm) which the native
+; render_bg does not use and which the overworld deliberately keeps disabled, so
+; forcing it on would run a pointless per-frame copy; pret's leading ClearScreenArea
+; of the 12×4 HUD tile area (home/copy2.asm not linked here; only needed when the
+; enemy name changes length — a multi-mon case not reachable in a wild battle);
+; CenterMonName (never ported → short names flush-left); status-condition-vs-level
+; (status_ailments.asm is an empty placeholder → always prints level); the
+; GetBattleHealthBarColor/RunPaletteCommand recolor tail (Phase-5 palette deferral).
+DrawEnemyHUDAndHPBar:
+    jmp DrawEnemyHUD                              ; name + level + HP bar + frame (enemy-only)
 
 ; ---------------------------------------------------------------------------
 ; DrawEnemyHUDFrame / DrawPlayerHUDFrame — the HUD underline "shelf" (pret
@@ -262,15 +283,31 @@ AnimatePlayerHPBar:
     mov edx, W_TILEMAP + P_HPFRAC        ; player HUD: tick the "cur" digits too
     ; fall through
 
-; AnimateHPBar — EBX=final-HP addr, ESI=maxHP addr, EDI=bar offset, ECX=old HP,
-; EDX=HP-cur-digits offset (0 = none). Internals run off the BSS copy.
+; AnimateHPBar — faithful port of pret UpdateHPBar2 (engine/gfx/hp_bar.asm:48-135).
+; EBX=final-HP addr, ESI=maxHP addr, EDI=bar offset, ECX=old HP, EDX=HP-cur-digits
+; offset (0 = none). Internals run off the BSS copy (so register clobbering by
+; DelayFrame/draw_hp_bar/print_num3 is harmless). pret cadence, both fixed here:
+;   • the HP NUMBER ticks every HP unit (player HUD), with a DelayFrame, independent
+;     of pixel-fill change (pret UpdateHPBar_PrintHPNumber, unconditional per unit);
+;   • the bar walks EVERY intermediate pixel (2 frames each), not a jump to the final
+;     pixel — matters for low-maxHP mons where one HP unit spans >1 pixel of 48
+;     (pret UpdateHPBar_AnimateHPBar). A trailing Delay3 settles the bar (pret jp Delay3);
+;   • a genuine zero-delta call (status move / miss) does nothing — no draw/delay/settle
+;     (pret's leading `call UpdateHPBar_CompareNewHPToOldHP / ret z`).
 AnimateHPBar:
     mov [anim_new_addr], ebx
     mov [anim_max_addr], esi
     mov [anim_bar_off], edi
     mov [anim_cur_hp], ecx
     mov [anim_frac_off], edx
-    mov eax, ecx                         ; pixels(old HP) → seed the "last drawn" count
+    ; zero-delta (old == new) → return with no draw/delay/settle (pret ret z)
+    mov ebx, [anim_new_addr]
+    movzx eax, byte [ebp + ebx]
+    shl eax, 8
+    mov al, [ebp + ebx + 1]
+    cmp ecx, eax
+    je .reallyDone
+    mov eax, ecx                         ; pixels(old HP) → seed the walked "last drawn" count
     call hp_to_pixels
     mov [anim_last_px], dl
 .loop:
@@ -285,27 +322,51 @@ AnimateHPBar:
     dec ecx                              ; HP decrease (damage)
     jmp .stepped
 .up:
-    inc ecx                              ; HP increase (heal) — faithful, unused now
+    inc ecx                              ; HP increase (heal)
 .stepped:
     mov [anim_cur_hp], ecx
-    mov eax, ecx
-    mov esi, [anim_max_addr]
-    call hp_to_pixels                    ; EDX = pixels for this tick
-    cmp dl, [anim_last_px]
-    je .loop                             ; same pixel count → keep ticking (no draw/delay)
-    mov [anim_last_px], dl
-    mov edi, [anim_bar_off]              ; redraw the bar (EDX = pixels)
-    call draw_hp_bar
-    mov edi, [anim_frac_off]             ; redraw the "cur" digits (player only)
+    ; ---- number: tick digits + DelayFrame every HP unit (player HUD only) ----
+    mov edi, [anim_frac_off]
     test edi, edi
-    jz .nofrac
-    movzx eax, word [anim_cur_hp]
+    jz .noNumber
+    movzx eax, cx                        ; HP < 1000 always fits 16 bits
     call print_num3
-.nofrac:
-    call DelayFrame                      ; ~2 frames per pixel step (pret cadence)
     call DelayFrame
+.noNumber:
+    ; ---- bar: walk every intermediate pixel toward this unit's target, 2 frames each ----
+    mov eax, [anim_cur_hp]               ; reload (print_num3 clobbers ECX)
+    mov esi, [anim_max_addr]
+    call hp_to_pixels                    ; EDX = pixel target for this HP tick
+    mov [anim_target_px], dl
+    mov al, [anim_last_px]
+    cmp al, dl
+    je .loop                             ; no pixel-fill change this unit
+    jb .pixInc                           ; last < target → fill up (heal)
+.pixDec:
+    dec byte [anim_last_px]
+    movzx edx, byte [anim_last_px]
+    mov edi, [anim_bar_off]
+    call draw_hp_bar
+    call DelayFrame
+    call DelayFrame
+    mov al, [anim_last_px]
+    cmp al, [anim_target_px]
+    jne .pixDec
+    jmp .loop
+.pixInc:
+    inc byte [anim_last_px]
+    movzx edx, byte [anim_last_px]
+    mov edi, [anim_bar_off]
+    call draw_hp_bar
+    call DelayFrame
+    call DelayFrame
+    mov al, [anim_last_px]
+    cmp al, [anim_target_px]
+    jne .pixInc
     jmp .loop
 .done:
+    call Delay3                          ; pret trailing settle (jp Delay3)
+.reallyDone:
     ret
 
 ; --- print_num2 — 2-digit (tens, ones) at [ebp+EDI]; AL = value (<100) ---
