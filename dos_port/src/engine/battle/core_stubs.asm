@@ -16,7 +16,9 @@ bits 32
 section .text
 
 global FormatMovesString
-global TrainerAI
+; TrainerAI is now LIVE in trainer_ai.asm (class-based move/item/switch AI; pret
+; engine/battle/trainer_ai.asm) — its stub here was removed when trainer_ai.asm
+; linked into the EXE (battle-swarm-C: SelectEnemyMove→AIEnemyTrainerChooseMoves wiring).
 ; HandlePoisonBurnLeechSeed is now LIVE in residual_damage.asm (poison/burn/Leech Seed
 ; end-of-round residual; pret engine/battle/core.asm:479) — its stub here was removed
 ; when residual_damage.asm linked into the EXE.
@@ -78,16 +80,6 @@ FormatMovesString:
     jmp .dashLoop
 .done:
     mov byte [ebp + edx], 0x50          ; '@'
-    ret
-
-; ---------------------------------------------------------------------------
-; TrainerAI — pret trainer_ai.asm. Its closure (AIGetTypeEffectiveness + the stat-mod
-; effect handlers) isn't link-ready. Stubbed to "no AI action" (CF=0) so the enemy always
-; takes its randomly-selected move (SelectEnemyMove), which is correct for wild battles
-; and an acceptable placeholder for trainers until the AI item/switch logic is wired.
-; ---------------------------------------------------------------------------
-TrainerAI:
-    clc                                 ; CF=0 → AI did not use an item/switch
     ret
 
 ; ===========================================================================

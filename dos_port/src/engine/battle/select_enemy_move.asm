@@ -30,6 +30,7 @@ section .text
 
 global SelectEnemyMove
 extern BattleRandom
+extern AIEnemyTrainerChooseMoves        ; trainer_ai.asm — score-adjust the move weights
 
 SelectEnemyMove:
     ; TODO-HW: link-battle move exchange (Phase 4 network HAL). Single-player skips
@@ -71,6 +72,15 @@ SelectEnemyMove:
     jnz .done                             ; only move is disabled → Struggle
     ; else: one usable move — fall through; the random loop re-rolls onto slot 0
 .atLeastTwoMovesAvailable:
+    ; pret core.asm:3138-3141 — wild encounters roll uniformly; trainer battles first
+    ; run the class-based AI, which RETURNS a move-candidate buffer pointer in ESI
+    ; (filtered wBuffer, non-minimum slots zeroed — or wEnemyMonMoves if no mods). It
+    ; does NOT pick wEnemySelectedMove itself; ESI carries into .chooseRandomMove below,
+    ; whose uniform roll then only lands on the AI's preferred (non-zero) slots.
+    mov al, [ebp + wIsInBattle]
+    dec al
+    jz .chooseRandomMove                  ; wild encounter → uniform random
+    call AIEnemyTrainerChooseMoves        ; trainer → weighted move choice
 .chooseRandomMove:
     push esi                              ; remember slot-0 ptr for re-rolls
     call BattleRandom
