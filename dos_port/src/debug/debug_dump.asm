@@ -77,6 +77,15 @@ extern RandomizeDamage
 extern DelayFrame
 global RunBattleTest
 %endif
+%ifdef DEBUG_LEARNMOVE
+extern PrepareNewGameDebug
+extern LoadFontTilePatterns
+extern LoadTextBoxTilePatterns
+extern InitBattle
+extern LearnMoveFromLevelUp
+extern DelayFrame
+global RunLearnMoveTest
+%endif
 
 global DebugDumpMemory
 global DumpBackbuffer
@@ -485,6 +494,66 @@ RunBattleTest:
 .hang:
     jmp .hang
 %endif
+%endif
+
+%ifdef DEBUG_LEARNMOVE
+; ---------------------------------------------------------------------------
+; RunLearnMoveTest — no-input ground truth for current_plan_pokemon_behavior
+; Stage 3: does LearnMove's PrintText(LearnedMove1Text) render a legible box
+; with the right nick/move-name substitutions in the live battle canvas? Seeds
+; a battle-mode canvas (InitBattle, no enemy scene needed) then calls the exact
+; src/engine/battle/battle_menu.asm:LearnMoveFromLevelUp entry point the real
+; post-battle level-up sequence calls, on PrepareNewGameDebug's real STARTER_
+; PIKACHU (party slot 3, level 5) — its moves come from the real WriteMonMoves
+; learnset walk (add_party_mon.asm), not hand-picked, so whichever slot is open
+; is authentic. Levels it 5->6, which pret's PikachuEvosMoves learns TAIL_WHIP
+; at (evos_moves.asm-equivalent assets/evos_moves.inc). wPlayerMonNumber is also
+; set to slot 3 so the in-battle wBattleMonMoves/PP sync branch runs too.
+; ---------------------------------------------------------------------------
+RunLearnMoveTest:
+    mov byte [ebp + 0xD162], 0      ; wPartyCount = 0
+    mov byte [ebp + 0xD163], 0xFF   ; wPartySpecies sentinel
+    mov byte [ebp + 0xD31C], 0      ; wNumBagItems = 0
+    mov byte [ebp + 0xD31D], 0xFF   ; wBagItems sentinel
+    call PrepareNewGameDebug        ; seeds party incl. slot3 = STARTER_PIKACHU L5
+
+    ; InitBattle reads wEnemyMonSpecies/Level/Nick to load the enemy pic; the
+    ; enemy itself is irrelevant here (LearnMoveFromLevelUp never reads it), so
+    ; seed a minimal PIDGEY L13 exactly like RunBattleTest above.
+    mov byte [ebp + wEnemyMonNick + 0], 0x8F  ; P
+    mov byte [ebp + wEnemyMonNick + 1], 0x88  ; I
+    mov byte [ebp + wEnemyMonNick + 2], 0x83  ; D
+    mov byte [ebp + wEnemyMonNick + 3], 0x86  ; G
+    mov byte [ebp + wEnemyMonNick + 4], 0x84  ; E
+    mov byte [ebp + wEnemyMonNick + 5], 0x98  ; Y
+    mov byte [ebp + wEnemyMonNick + 6], 0x50  ; @
+    mov byte [ebp + wEnemyMonLevel], 13
+    mov byte [ebp + wEnemyMonSpecies], 0x24   ; PIDGEY (internal index)
+
+    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    call LoadFontTilePatterns
+    call LoadTextBoxTilePatterns
+    mov byte [ebp + wIsInBattle], 1
+    call InitBattle                 ; battle-mode canvas (clears screen, no HUD/box yet)
+
+%ifdef DEBUG_LEARNMOVE_FULL
+    ; Sub-flag: fill all 4 slots so the all-slots-full (AbandonLearning) branch
+    ; runs instead. make DEBUG_LEARNMOVE=1 DEBUG_LEARNMOVE_FULL=1
+    mov byte [ebp + wPartyMon1 + 3*PARTYMON_STRUCT_LENGTH + MON_MOVES + 0], 1
+    mov byte [ebp + wPartyMon1 + 3*PARTYMON_STRUCT_LENGTH + MON_MOVES + 1], 2
+    mov byte [ebp + wPartyMon1 + 3*PARTYMON_STRUCT_LENGTH + MON_MOVES + 2], 3
+    mov byte [ebp + wPartyMon1 + 3*PARTYMON_STRUCT_LENGTH + MON_MOVES + 3], SURF
+%endif
+    mov byte [ebp + wWhichPokemon], 3
+    mov byte [ebp + wPlayerMonNumber], 3    ; == wWhichPokemon -> exercises battle-sync too
+    mov byte [ebp + wCurEnemyLevel], 6
+    mov byte [ebp + wPokedexNum], STARTER_PIKACHU
+
+    call LearnMoveFromLevelUp
+    call DelayFrame
+    call DumpBackbuffer             ; dump FRAME.BIN + exit (never returns)
+.hang:
+    jmp .hang
 %endif
 
 ; ---------------------------------------------------------------------------

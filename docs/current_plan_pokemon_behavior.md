@@ -296,19 +296,158 @@ party struct's species/stats update. This is the ground-truth test for the fix.
 - Fill the small deferred text/tileset stubs in `EvolutionAfterBattle`/
   `CancelledEvolution` against the real helpers.
 
-## Stage 3 — `learn_move.asm`: interactive teach flow (new port) — [ ]
-Faithfully translate pret `engine/pokemon/learn_move.asm` → new
-`src/engine/pokemon/learn_move.asm`:
-- `LearnMove`, `DontAbandonLearning`, `AbandonLearning`, `TryingToLearn`
-  ("1, 2 and… which move to forget?"), `PrintLearnedMove`, `OneTwoAndText`.
-- Reuse `PrintText`, `DisplayTextBoxID` (yes/no), `HandleMenuInput`,
-  `TextBoxBorder`/`PlaceString`, `FormatMovesString`, `IsMoveHM`, screen
-  save/restore buffers.
-- Keep the **battle hook**: learning mid-battle copies new move/PP into
-  `wBattleMonMoves`/`wBattleMonPP` (pret `learn_move.asm:56–74`).
-- Replace `evolution.asm`'s `LearnMove_Deferred` no-op with `extern LearnMove`.
-- **Wire `LearnMoveFromLevelUp`** into `GainExperience` (`experience.asm:497` stub →
-  real call) and the Rare Candy item path.
+## Stage 3 — `learn_move.asm`: interactive teach flow (new port) — [x] (fully linked, including the interactive forget-list flow)
+<!-- Done 2026-07-02. Landed in the pokemon-behavior worktree, branch pokemon-behavior.
+
+SCOPE CORRECTION vs. the original bullets below (found during investigation, not
+assumed): `LearnMoveFromLevelUp` was already a REAL, LINKED routine in
+battle_menu.asm (experience.asm:497's "DEFERRED stub" comment was stale) — the
+actual gap was that its inline free-slot scan `jmp .restore`d silently, with NO
+message, whenever all 4 move slots were full. That's the "silently-dropped
+level-up moves" bug this stage fixes. `evolution.asm`'s `LearnMove_Deferred` was
+only a header comment, no symbol — nothing to replace there. `RareCandyLevelUp`
+(item_effects.asm) has no caller at all yet (UseItem_ dispatch is deferred per
+current_plan_items.md) — nothing to wire on that path today.
+
+**Revision (same session)**: the first pass hand-rolled a collapsed stand-in for
+`TryingToLearn`/`AbandonLearning` (always silently "gave up") to avoid depending
+on the separate menus-port branch's `engine/menus` work. User feedback: don't
+avoid the dependency by hand-rolling around it — call the real pret functions
+under their real names (`DisplayTextBoxID`, `HandleMenuInput`, `IsMoveHM`,
+`TextBoxBorder`, `PlaceString`, `FormatMovesString`, `GetMoveName`) and let
+integration provide the missing one for real later. Investigation found that,
+in *this* worktree, every one of those is already real and linked (`HandleMenuInput`
+in `window.asm`, `IsMoveHM` in `item_predicates.asm`, `TextBoxBorder`/`PlaceString`
+in `text.asm`, `FormatMovesString` in `core_stubs.asm`, `GetMoveName` in
+`names.asm`) — `DisplayTextBoxID` (pret home/textbox.asm) is the sole exception,
+still check-only in `text_script.asm` (the actual menus-port territory).
+
+DONE:
+- `src/engine/pokemon/learn_move.asm` (linked, POKEMON_SRCS) is now a full,
+  structure-for-structure translation of pret's file: `LearnMove` →
+  `DontAbandonLearning` (find-empty-slot / write-move / write-PP-from-the-flat-
+  `Moves`-table / in-battle `wBattleMonMoves`/`wBattleMonPP` sync) → `TryingToLearn`
+  (real "delete a move?" YES/NO, then the real move-to-forget list: `HandleMenuInput`-
+  driven cursor, `IsMoveHM` rejection + retry loop, B-to-cancel) → `AbandonLearning`
+  (real "give up?" YES/NO; NO loops back to `DontAbandonLearning` to pick again) →
+  `PrintLearnedMove`. `hlcoord`/`lb bc` translate to this port's established
+  `W_TILEMAP + Y*SCREEN_WIDTH + X` / `BH,BL` idiom (matches bag_menu.asm/
+  party_menu.asm). The double-spaced-menu toggle uses this port's own
+  `menu_item_step` convention (window.asm), not a `hUILayoutFlags` bit — pret has
+  no such variable, but the port's `HandleMenuInput` already establishes this as
+  the real mechanism.
+- `src/engine/pokemon/learn_move_stubs.asm` (new, linked): a *minimal* link-time
+  stub for `DisplayTextBoxID` only — mirrors the existing
+  `src/engine/battle/core_stubs.asm` precedent for the same "faithful caller,
+  deferred backend" situation. Alternates NO/YES-give-up across calls (a fixed
+  constant would loop forever, since both prompts share the same box params and
+  only a real player normally breaks that loop). Header documents exactly when to
+  delete it: once a real, linked `DisplayTextBoxID` lands.
+- One real gap remains, and is *not* silently worked around: `OneTwoAndText` (the
+  "X forgot Y and..." message printed when a move is actually deleted) cannot be
+  generated at all — its pret source chains `text_far` → `text_pause` → `text_asm`,
+  and the `text_asm` block is literal GB machine code spliced into the text stream
+  (bank-switch, play SFX_SWAP, then continue printing at a different label). This
+  is the *same*, already-acknowledged `TX_START_ASM` limit `src/text/text.asm`'s
+  `TextCommandProcessor` documents for several other battle labels (`GainedText`,
+  `MonsStatsRoseText`, ...). `DontAbandonLearning` still does the real `GetMoveName`
+  call so `wNameBuffer` holds the right name, but the `PrintText` step is skipped
+  with a `TODO-HW`-style marker instead of calling a symbol that cannot exist.
+- `tools/gen_battle_text.py` fix (real bug, not scoped to this stage but found and
+  fixed because Stage 3 now actually executes the affected labels):
+  `collect_wrappers` stopped scanning a wrapper's body immediately after a
+  `text_far` line, silently dropping any trailing directives (`text_promptbutton`,
+  `sound_get_item_1`, the wrapper's own `text_end`). Verified against
+  `src/text/text.asm`'s own `TX_FAR` handler (`.cmd_far`/`.done`) that this is a
+  real, reachable recursive call-and-return, not dead code — so those trailing
+  bytes are genuinely part of the stream. Fixed: continue scanning past `text_far`
+  (still stopping for the pre-existing `text_far`+`text_asm` grammar-branch case);
+  added `sound_get_item_1`/`sound_level_up` (`$0B`) to the tolerated-directive map.
+  Regenerated `assets/battle_text.inc`: 128 of 129 previous labels gained a
+  strictly-additive trailing-byte fix (verified byte-for-byte prefix-preserving
+  across all of them — no existing content changed); `OneTwoAndText` now correctly
+  fails to generate (previously it silently emitted wrong/truncated bytes with no
+  warning) and is grouped with the other already-known `TX_START_ASM` skips.
+- `battle_menu.asm`'s `LearnMoveFromLevelUp`: replaced the inline free-slot-scan/
+  write/PP/sync/`ShowLearnedMoveText` block with `GetMoveName`+`CopyToStringBuffer`
+  (name → wStringBuffer, matching the port's established idiom) + `call LearnMove`,
+  keeping the learnset-scan/already-known-check and the starter-Pikachu
+  THUNDER/THUNDERBOLT mood bump. Deleted the now-dead `ShowLearnedMoveText`/
+  `learned_move_id`/`str_learned`.
+
+VERIFIED:
+- Two headless ELF i386 harnesses, 28/28 checks total, direct-memory assertions
+  (stubbing `DisplayTextBoxID`/`HandleMenuInput`/`IsMoveHM` with scripted,
+  call-order-exact response queues + call counters — real `CopyData`/`AddNTimes`
+  linked in, not stubbed):
+  - Harness 1 (13 checks): common empty-slot write, slot/PP correctness,
+    non-target slots untouched, in-battle `wBattleMonMoves`/`wBattleMonPP` sync,
+    full-slots-declined-then-given-up leaves the move array byte-for-byte
+    unchanged + returns "not learned".
+  - Harness 2 (15 checks, new — covers the paths only reachable once
+    `TryingToLearn`/`AbandonLearning` became real): accept + pick a non-HM slot
+    (correct write/PP, other slots untouched); accept + HM-move-picked → retry →
+    cancel → `AbandonLearning` give-up (`HandleMenuInput` called exactly twice,
+    `IsMoveHM` exactly once, no corruption); decline the first prompt outright
+    (list never shown, `HandleMenuInput` never called); decline → "don't give up"
+    at `AbandonLearning`'s own prompt → loops back to `DontAbandonLearning` →
+    retries → accepts → succeeds (proves the retry-loop control flow, not just
+    the terminal outcomes).
+  - **Bug found by harness 2, fixed**: `TryingToLearn`'s forget-list loop clobbered
+    `EAX` (`HandleMenuInput`'s returned key mask, needed for the `PAD_B`-cancel
+    test) with the `menu_item_step` single-spaced-restore load *before* testing
+    it — pret's equivalent (`res BIT_DOUBLE_SPACED_MENU, [hl]`) is a memory-only
+    op that never touches `A`; the x86 translation needs a different scratch
+    register (`ECX`). Symptom before the fix: an unbounded retry loop (confirmed
+    via `gdb` — `HandleMenuInput` call count climbed past its scripted queue
+    length instead of stopping at the scripted cancel, eventually reading
+    off the end of the test's response arrays and segfaulting). Fixed by
+    reordering: `push eax` (save the real key mask) *before* the `ECX`-based
+    `menu_item_step` restore, matching pret's non-clobbering register choice.
+- `nasm -f coff` both changed/new files; full `make` (clean) links; `make check`
+  still green (untouched `engine/menus` check-only files unaffected).
+- **Live, DOSBox-X, real render** (advisor-flagged gap, closed earlier this
+  session): the no-input debug gate `DEBUG_LEARNMOVE=1` (`src/debug/debug_dump.asm:
+  RunLearnMoveTest`, wired via `overworld.asm`/Makefile exactly like the existing
+  `DEBUG_BATTLE`/`DEBUG_PARTY` gates) seeds `PrepareNewGameDebug`'s real
+  STARTER_PIKACHU (party slot 3, level 5, real `WriteMonMoves`-generated moveset —
+  not hand-picked), levels it 5→6 (pret `PikachuEvosMoves` learns TAIL_WHIP there),
+  calls `LearnMoveFromLevelUp` directly in a battle-mode canvas, and dumps
+  `FRAME.BIN`. A capture taken before the generator fix below confirmed a
+  correctly bordered box reading "PIKACHU learned / TAIL WHIP!" — `PrintText
+  (LearnedMove1Text)` renders correctly in the live battle canvas with correct
+  nick (`wLearnMoveMonName`) and move-name (`wNamedObjectIndex`→`GetMoveName`)
+  substitution; that box-drawing path is unchanged by everything since, so the
+  capture still stands as evidence of the render.
+- **Regression found + fixed, then superseded by a more faithful fix (same
+  session)**: first found the deleted `ShowLearnedMoveText` ended in
+  `call WaitForAPress`, but its replacement `PrintLearnedMove` initially didn't —
+  `LearnedMove1Text`'s generated stream ended in plain TX_END (`0x50`) instead of
+  carrying pret's own trailing `text_promptbutton` ($06). Bolted on an explicit
+  `call WaitForAPress` to fix the immediate regression (message would otherwise
+  flash and vanish). Later in the same session, once `gen_battle_text.py`'s
+  `collect_wrappers` bug was fixed at the root (see DONE above — trailing
+  directives after `text_far` are real, reachable bytes, not dead code),
+  `LearnedMove1Text` regenerated with its own correct `TX_SOUND_GET_ITEM_1`/
+  `TX_PROMPT_BUTTON`/`TX_END` tail — so `PrintText`'s own `TextCommandProcessor`
+  now holds the box exactly as pret does. The bolted-on `WaitForAPress` was
+  removed as redundant/less-faithful once the real mechanism was restored.
+  **Final verification**: rebuilt both `DEBUG_LEARNMOVE=1` (common path) and
+  `DEBUG_LEARNMOVE=1 DEBUG_LEARNMOVE_FULL=1` (full-slots path) and ran each
+  headless under `timeout -s KILL 12` — both now correctly **hang** (killed by
+  the timeout, no `FRAME.BIN` produced), proving both terminal prints
+  (`LearnedMove1Text` and `DidNotLearnText`) block on a real button-wait via the
+  same in-stream mechanism, not a bolt-on.
+
+Remaining (folded into a future Stage 5/menus-port integration, not a new stage):
+promote `learn_move_stubs.asm`'s `DisplayTextBoxID` stand-in to the real
+`DisplayTextBoxID` once menus-port lands (delete the stub file, drop it from the
+Makefile); generate `OneTwoAndText` once the text engine gains `TX_START_ASM`
+support (or hand-translate its SFX+continuation as code — same boundary as the
+other already-skipped `text_asm` battle labels) and wire its `PrintText` call
+into `DontAbandonLearning`'s marked TODO spot; wire
+`RareCandyLevelUp` → `LearnMoveFromLevelUp`-equivalent once `UseItem_` dispatch
+exists (current_plan_items.md). -->
 
 ## Stage 4 — `status_screen.asm`: the summary screen — [ ]
 Translate the drawing routines (currently absent — the file holds only

@@ -183,7 +183,9 @@ POKEMON_SRCS := \
     src/engine/pokemon/status_screen.asm \
     src/engine/pokemon/knows_hm_move.asm \
     src/engine/pikachu/pikachu_status.asm \
-    src/engine/pokemon/evolution.asm
+    src/engine/pokemon/evolution.asm \
+    src/engine/pokemon/learn_move.asm \
+    src/engine/pokemon/learn_move_stubs.asm
 
 # Items layer (current_plan_items.md). Non-UI inventory/bag logic + item data.
 ITEMS_SRCS := \
@@ -347,6 +349,21 @@ NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_BATTLE
 NASMFLAGS += -D SKIP_TITLE
 GAME_SRCS += src/engine/debug/debug_party.asm
+endif
+# Level-up move-learn gate (current_plan_pokemon_behavior Stage 3): force
+# STARTER_PIKACHU (party slot 3) 5->6, call LearnMoveFromLevelUp directly (no
+# battle/input needed), render one frame, dump FRAME.BIN, exit. make DEBUG_LEARNMOVE=1
+ifdef DEBUG_LEARNMOVE
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_LEARNMOVE
+NASMFLAGS += -D SKIP_TITLE
+GAME_SRCS += src/engine/debug/debug_party.asm
+endif
+# Sub-flag of DEBUG_LEARNMOVE: fill all 4 move slots first, so the deferred
+# all-slots-full (AbandonLearning) branch renders instead of the common path.
+# make DEBUG_LEARNMOVE=1 DEBUG_LEARNMOVE_FULL=1
+ifdef DEBUG_LEARNMOVE_FULL
+NASMFLAGS += -D DEBUG_LEARNMOVE_FULL
 endif
 ifdef NEED_DEBUG_DUMP
 GAME_SRCS += src/debug/debug_dump.asm
