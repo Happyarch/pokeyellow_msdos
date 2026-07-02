@@ -11,9 +11,22 @@ import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
-KINDS = ("textbox", "window", "text", "cursor", "sprite_popup")
+KINDS = ("textbox", "window", "text", "cursor", "sprite_popup",
+         # battle kinds (current_plan_battle_ui.md B1); sprite_popup is a
+         # bordered box (menus MON_SPRITE_POPUP), NOT a pixel OAM group,
+         # hence the separate oam_row.
+         "hp_gauge", "mon_pic", "hud_frame", "oam_row")
 ANCHORS_X = ("left", "center", "right", "custom")
 ANCHORS_Y = ("top", "center", "bottom", "custom")
+
+# Kinds whose geometry is dictated by the engine, not the designer:
+# hp_gauge = "HP"+":"+6 segments+cap drawn as 9 consecutive tiles in one row
+# (battle_hud.asm draw_hp_bar); mon_pic = 7x7 tile block (pics.asm
+# PlacePicTilemap); oam_row = 6 party-status pokéball sprites in one row.
+FIXED_SIZES = {"hp_gauge": (9, 1), "mon_pic": (7, 7), "oam_row": (6, 1)}
+# hud_frame = corner + 8 underline + triangle shelf (width 10) with a $73
+# connector column above one end: h=2 enemy (1 connector), h=3 player (2).
+HUD_FRAME_W = 10
 
 
 @dataclass
@@ -53,6 +66,26 @@ class Element:
             errs.append(f"{self.id}: anchor_y=custom needs shift_y")
         if self.resizable and (self.gb_w < self.min_w or self.gb_h < self.min_h):
             errs.append(f"{self.id}: size {self.gb_w}x{self.gb_h} under min")
+        if self.kind in FIXED_SIZES:
+            fw, fh = FIXED_SIZES[self.kind]
+            if (self.gb_w, self.gb_h) != (fw, fh):
+                errs.append(f"{self.id}: {self.kind} must be {fw}x{fh}, "
+                            f"is {self.gb_w}x{self.gb_h}")
+            if self.resizable:
+                errs.append(f"{self.id}: {self.kind} is not resizable")
+        if self.kind == "hud_frame":
+            variant = "enemy" if "enemy" in self.notes else \
+                "player" if "player" in self.notes else None
+            if variant is None:
+                errs.append(f"{self.id}: hud_frame needs 'enemy' or 'player' "
+                            "in notes")
+            want_h = 2 if variant == "enemy" else 3
+            if self.gb_w != HUD_FRAME_W or (variant and self.gb_h != want_h):
+                errs.append(f"{self.id}: hud_frame({variant}) must be "
+                            f"{HUD_FRAME_W}x{want_h}, is "
+                            f"{self.gb_w}x{self.gb_h}")
+            if self.resizable:
+                errs.append(f"{self.id}: hud_frame is not resizable")
         from . import canvas as _c  # late import to avoid cycle in generator use
         p = _c.project(self)
         if p.col < 0 or p.row < 0 or p.col + self.gb_w > canvas["cols"] \

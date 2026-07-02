@@ -79,7 +79,17 @@ ends: `make -C dos_port` + `make -C dos_port check` green → verification pass
   eyeball vs FRAME.BIN render. Pure tooling, `make` untouched.
   **Unblocks current_plan_map_tool.md.**
 
-- [ ] **Session B1 — battle element kinds + editor rendering.**
+- [x] **Session B1 — battle element kinds + editor rendering.** DONE
+  2026-07-02. schema kinds hp_gauge(9x1)/mon_pic(7x7)/oam_row(6x1) via
+  FIXED_SIZES + hud_frame (w=10, h=2 enemy / 3 player, variant in notes;
+  sprite_popup kept separate — it's a bordered box, not an OAM group). NEW
+  `gfx_core/battle_tiles.py`: battle-VRAM charset (font_battle_extra 30
+  tiles at $62 + battle_hud_1/2/3 overlays at $6d/$73 + balls.png), so
+  battle previews use the exact in-battle glyphs incl. the battle box tiles.
+  render.py kind dispatch + `tile_fn` charset threading in gfx_core.surface;
+  `ui_layout/battle.py` launcher. Gates: synthetic battle sidecar renders
+  headless (visually verified); constraint rejection works; menus sidecar
+  validates; menus .inc + atlas byte-identical.
   `schema.py`: add kinds `hp_gauge` (fixed 9×1), `mon_pic` (fixed 7×7),
   `hud_frame`, `oam_row` (6×1, tile-aligned) with per-kind `validate()`
   constraints. First check whether existing `sprite_popup` semantics already
