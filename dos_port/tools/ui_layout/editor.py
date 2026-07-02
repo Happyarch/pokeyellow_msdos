@@ -11,6 +11,8 @@ Controls:
   arrows           nudge 1 tile              Shift+arrows      grow/shrink
   X / Y            cycle anchor_x/anchor_y (marks anchor confirmed)
   G                toggle GB 20x18 ghost for the selected element's anchor
+  H / Shift+H      hide selected element / unhide all (editor-only, not saved)
+  O                solo mode: show only the selected element
   W                toggle overlap warnings   B          toggle background
   Ctrl+S           save sidecar              Esc/close  quit (warns if unsaved)
 
@@ -47,6 +49,8 @@ class Editor:
         self.show_bg = bg is not None
         self.show_ghost = False
         self.show_overlap = False
+        self.hidden: set[str] = set()   # editor-only, never saved to the sidecar
+        self.solo = False               # show only the selected element
         self.sel: int | None = 0 if self.layout.elements else None
         self.dirty = False          # unsaved changes
         self.drag = None            # (mode, start_mouse, start_geom)
@@ -61,10 +65,24 @@ class Editor:
 
     # ── rendering ────────────────────────────────────────────────────────────
 
+    def visible_ids(self) -> set[str]:
+        if self.solo:
+            return ({self.layout.elements[self.sel].id}
+                    if self.sel is not None else set())
+        return {el.id for el in self.layout.elements} - self.hidden
+
+    def is_visible(self, el) -> bool:
+        return el.id in self.visible_ids()
+
     def canvas_surface(self) -> pygame.Surface:
+        vis = self.visible_ids()
+        if vis != getattr(self, "_last_vis", None):
+            self._surface_stale = True
+            self._last_vis = vis
         if self._surface_stale or self._canvas_surf is None:
             img = render.render_layout(
-                self.layout, self.bg_img if self.show_bg else None)
+                self.layout, self.bg_img if self.show_bg else None,
+                only_ids=vis)
             surf = pygame.image.fromstring(img.tobytes(), img.size, "RGB")
             self._canvas_surf = pygame.transform.scale(
                 surf, (self.cw * self.zoom, self.ch * self.zoom))
@@ -81,13 +99,14 @@ class Editor:
         self.screen.fill((24, 24, 24))
         self.screen.blit(self.canvas_surface(), (0, 0))
         if self.show_overlap:
-            rects = [(el, self.el_rect(el)) for el in self.layout.elements]
+            rects = [(el, self.el_rect(el)) for el in self.layout.elements
+                     if self.is_visible(el)]
             for i, (ea, ra) in enumerate(rects):
                 for eb, rb in rects[i + 1:]:
                     if ra.colliderect(rb):
                         pygame.draw.rect(self.screen, WARN, ra, 2)
                         pygame.draw.rect(self.screen, WARN, rb, 2)
-        if self.sel is not None:
+        if self.sel is not None and self.is_visible(self.layout.elements[self.sel]):
             el = self.layout.elements[self.sel]
             r = self.el_rect(el)
             pygame.draw.rect(self.screen, SEL, r, 2)
@@ -121,14 +140,18 @@ class Editor:
             self.screen.blit(self.font.render(s[:46], True, color), (x0 + 8, y))
             y += 16
 
-        title = self.layout.subsystem + ("  *UNSAVED*" if self.dirty else "")
+        title = self.layout.subsystem \
+            + ("  [SOLO]" if self.solo else "") \
+            + ("  *UNSAVED*" if self.dirty else "")
         line(title, (255, 255, 128) if self.dirty else (160, 255, 160))
         line("-" * 44, (90, 90, 100))
         for i, el in enumerate(self.layout.elements):
             mark = ">" if i == self.sel else " "
             conf = "" if el.anchor_source == "confirmed" else "?"
-            line(f"{mark}{el.id[:36]}{conf}",
-                 (255, 200, 120) if i == self.sel else (200, 200, 200))
+            hid = "  [hidden]" if el.id in self.hidden and not self.solo else ""
+            color = (255, 200, 120) if i == self.sel else \
+                (110, 110, 120) if not self.is_visible(el) else (200, 200, 200)
+            line(f"{mark}{el.id[:34]}{conf}{hid}", color)
         line("-" * 44, (90, 90, 100))
         if self.sel is not None:
             el = self.layout.elements[self.sel]
@@ -148,7 +171,7 @@ class Editor:
     def pick(self, pos) -> int | None:
         hit = None
         for i, el in enumerate(self.layout.elements):
-            if self.el_rect(el).collidepoint(pos):
+            if self.is_visible(el) and self.el_rect(el).collidepoint(pos):
                 hit = i  # last hit = painter's-order topmost
         return hit
 
@@ -176,7 +199,8 @@ class Editor:
                 return
             # a selected element keeps priority under the cursor, so overlapped
             # elements stay draggable after picking them from the panel/Tab
-            if self.el_rect(el).collidepoint(pos) and el.movable:
+            if self.is_visible(el) and self.el_rect(el).collidepoint(pos) \
+                    and el.movable:
                 self.drag = ("move", pos, (el.gb_x, el.gb_y, el.gb_w, el.gb_h))
                 return
         hit = self.pick(pos)
@@ -222,7 +246,8 @@ class Editor:
 
     def key(self, ev):
         if self.sel is None and ev.key not in (pygame.K_TAB, pygame.K_s,
-                                               pygame.K_b, pygame.K_w):
+                                               pygame.K_b, pygame.K_w,
+                                               pygame.K_h, pygame.K_o):
             return
         el = self.layout.elements[self.sel] if self.sel is not None else None
         mods = pygame.key.get_mods()
@@ -237,6 +262,13 @@ class Editor:
             self.show_ghost = not self.show_ghost
         elif ev.key == pygame.K_w:
             self.show_overlap = not self.show_overlap
+        elif ev.key == pygame.K_o:
+            self.solo = not self.solo
+        elif ev.key == pygame.K_h:
+            if shift:
+                self.hidden.clear()
+            elif el is not None:
+                self.hidden.symmetric_difference_update({el.id})
         elif ev.key == pygame.K_b:
             self.show_bg = not self.show_bg and self.bg_img is not None
             self._surface_stale = True
