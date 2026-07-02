@@ -186,11 +186,16 @@ ends: `make -C dos_port` + `make -C dos_port check` green → verification pass
   DEBUG_TEXTBOXID battle-menu id); menus .inc regen reviewed.
 
 - [ ] **Session B6 — the widescreen redesign (human-in-the-loop).**
-  Editor hardening: live constraint enforcement (hp_gauge/mon_pic
-  non-resizable; text single-row; dialog interior never below 18×4 — pret
-  `<LINE>` wrapping is content, not geometry; LVLUP label/value move as a
-  group); battle-preview composite over the DEBUG_BATTLE FRAME.BIN underlay.
-  **Human step: user redesigns in `tools/ui_layout/battle.py`, saves.**
+  - [x] Editor hardening DONE 2026-07-02: `inside=<ID>` containment
+    validation (dialog lines/arrow/safari text in DIALOG_BOX, action
+    text/cursors in ACTION_MENU_BOX, move text/cursor in MOVE_BOX, lvlup
+    lbl/val in LVLUP_BOX — save refuses if violated); `link=<token>`
+    group-move in the editor (lvlup pair, action group, move group);
+    hp_gauge/mon_pic/oam_row/hud_frame fixed-size (B1); DIALOG_BOX seeded
+    min 20×6 (pret `<LINE>` wrap needs the 18-wide interior). Battle
+    preview underlay = `tools/ui_layout/battle.py` (auto-loads
+    dos_port/FRAME.BIN from a `make DEBUG_BATTLE=1` run; `B` toggles).
+  - [ ] **Human step: user redesigns in `tools/ui_layout/battle.py`, saves.**
   Regen → `make` → DOSBox-X visual pass: slide-in (derived SLIDE_STEPS),
   HUDs, HP animation, action menu, move menu, dialog scroll/arrow, level-up
   box, pokéballs, EndBattleScreen restore. Set `frozen_at`; update

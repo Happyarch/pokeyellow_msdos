@@ -233,7 +233,7 @@
       "source": "core.asm BTXT_LINE1",
       "pret_ref": "home/text.asm:TextCommandProcessor",
       "anchor_source": "confirmed",
-      "notes": "box interior row 2; intro/message line 1"
+      "notes": "box interior row 2; intro/message line 1; inside=DIALOG_BOX"
     },
     {
       "id": "DIALOG_LINE2",
@@ -254,7 +254,7 @@
       "source": "core.asm BTXT_LINE2",
       "pret_ref": "home/text.asm (<LINE>)",
       "anchor_source": "confirmed",
-      "notes": "box interior row 4; message line 2"
+      "notes": "box interior row 4; message line 2; inside=DIALOG_BOX"
     },
     {
       "id": "DIALOG_ARROW",
@@ -274,7 +274,7 @@
       "source": "core.asm BTXT_ARROW / battle_menu.asm ARROW_OFF",
       "pret_ref": "home/text.asm:HandleDownArrowBlinkTiming",
       "anchor_source": "confirmed",
-      "notes": "blinking $ee down-arrow, box bottom-right interior"
+      "notes": "blinking $ee down-arrow, box bottom-right interior; inside=DIALOG_BOX"
     },
     {
       "id": "ACTION_MENU_BOX",
@@ -315,7 +315,7 @@
       "source": "battle_menu.asm TEXT_OFF",
       "pret_ref": "data/text_boxes.asm BattleMenuText",
       "anchor_source": "confirmed",
-      "notes": "double-spaced 2 lines (rows +0/+2)"
+      "notes": "double-spaced 2 lines (rows +0/+2); inside=ACTION_MENU_BOX; link=action"
     },
     {
       "id": "ACTION_CUR_L",
@@ -335,7 +335,7 @@
       "source": "core.asm CUR_COL_L/MENU_ROW",
       "pret_ref": "engine/battle/core.asm:DisplayBattleMenu",
       "anchor_source": "confirmed",
-      "notes": "FIGHT/PKMN column; cursor rows +0/+2"
+      "notes": "FIGHT/PKMN column; cursor rows +0/+2; inside=ACTION_MENU_BOX; link=action"
     },
     {
       "id": "ACTION_CUR_R",
@@ -355,7 +355,7 @@
       "source": "core.asm CUR_COL_R/MENU_ROW",
       "pret_ref": "engine/battle/core.asm:DisplayBattleMenu",
       "anchor_source": "confirmed",
-      "notes": "ITEM/RUN column"
+      "notes": "ITEM/RUN column; inside=ACTION_MENU_BOX; link=action"
     },
     {
       "id": "SAFARI_TEXT",
@@ -376,7 +376,7 @@
       "source": "text_box.asm SAFARI_BATTLE_MENU_TEMPLATE (box = DIALOG_BOX)",
       "pret_ref": "data/text_boxes.asm SAFARI_BATTLE_MENU_TEMPLATE 0,12,19,17 / text 2,14",
       "anchor_source": "confirmed",
-      "notes": "double-spaced 2 lines inside DIALOG_BOX (safari replaces the action menu with full-width labels)"
+      "notes": "double-spaced 2 lines (safari replaces the action menu with full-width labels); inside=DIALOG_BOX"
     },
     {
       "id": "MOVE_BOX",
@@ -417,7 +417,7 @@
       "source": "core.asm MOVES_TEXT",
       "pret_ref": "engine/battle/core.asm (.writemoves)",
       "anchor_source": "confirmed",
-      "notes": "single-spaced 4 move rows (preview shows row 1 only)"
+      "notes": "single-spaced 4 move rows (preview shows row 1 only); inside=MOVE_BOX; link=moves"
     },
     {
       "id": "MOVE_CURSOR",
@@ -437,7 +437,7 @@
       "source": "core.asm MOVES_CUR_COL/MOVES_ROW0",
       "pret_ref": "engine/battle/core.asm:SelectMenuItem",
       "anchor_source": "confirmed",
-      "notes": "single-spaced rows +0..+3"
+      "notes": "single-spaced rows +0..+3; inside=MOVE_BOX; link=moves"
     },
     {
       "id": "INFO_BOX",
@@ -498,7 +498,7 @@
       "source": "battle_menu.asm LVL_LBL_OFF",
       "pret_ref": "engine/battle/experience.asm (stat labels)",
       "anchor_source": "confirmed",
-      "notes": "4 labels, step 2 rows; moves as a group with LVLUP_VAL"
+      "notes": "4 labels, step 2 rows; inside=LVLUP_BOX; link=lvlup"
     },
     {
       "id": "LVLUP_VAL",
@@ -518,7 +518,7 @@
       "source": "battle_menu.asm LVL_VAL_OFF",
       "pret_ref": "engine/battle/experience.asm (stat values)",
       "anchor_source": "confirmed",
-      "notes": "4 values, step 2 rows; moves as a group with LVLUP_LBL"
+      "notes": "4 values, step 2 rows; inside=LVLUP_BOX; link=lvlup"
     },
     {
       "id": "ENEMY_PIC",

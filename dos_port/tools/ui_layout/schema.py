@@ -112,6 +112,27 @@ class Layout:
                 errs.append(f"duplicate element id {el.id}")
             seen.add(el.id)
             errs.extend(el.validate(self.canvas, self.gb_canvas))
+        # containment: an element whose notes carry "inside=<ID>" must stay
+        # within that element's projected box (e.g. dialog lines in the box)
+        import re
+        from . import canvas as _c
+        by_id = {el.id: el for el in self.elements}
+        for el in self.elements:
+            m = re.search(r"inside=(\w+)", el.notes)
+            if not m:
+                continue
+            host = by_id.get(m.group(1))
+            if host is None:
+                errs.append(f"{el.id}: inside={m.group(1)} names no element")
+                continue
+            p, hp = _c.project(el), _c.project(host)
+            # interior of a bordered host = host box minus its 1-tile frame
+            inset = 1 if host.kind in ("textbox", "window", "sprite_popup") \
+                else 0
+            if p.col < hp.col + inset or p.row < hp.row + inset \
+                    or p.col + el.gb_w > hp.col + host.gb_w - inset \
+                    or p.row + el.gb_h > hp.row + host.gb_h - inset:
+                errs.append(f"{el.id}: leaves the interior of {host.id}")
         return errs
 
     def by_id(self, eid: str) -> Element:

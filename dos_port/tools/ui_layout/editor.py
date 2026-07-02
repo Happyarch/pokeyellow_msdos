@@ -191,6 +191,16 @@ class Editor:
                 return name
         return None
 
+    def linked(self, el) -> list:
+        """Elements sharing el's `link=<token>` notes tag (group-move)."""
+        import re
+        m = re.search(r"link=(\w+)", el.notes)
+        if not m:
+            return []
+        tag = f"link={m.group(1)}"
+        return [e for e in self.layout.elements if e is not el
+                and tag in e.notes]
+
     def mouse_down(self, pos):
         if pos[0] >= self.cw * self.zoom:
             row = (pos[1] - 40) // 16  # panel element list click
@@ -201,32 +211,38 @@ class Editor:
             el = self.layout.elements[self.sel]
             mode = self._resize_mode(el, pos)
             if mode:
-                self.drag = (mode, pos, (el.gb_x, el.gb_y, el.gb_w, el.gb_h))
+                self.drag = (mode, pos, (el.gb_x, el.gb_y, el.gb_w, el.gb_h),
+                             [])
                 return
             # a selected element keeps priority under the cursor, so overlapped
             # elements stay draggable after picking them from the panel/Tab
             if self.is_visible(el) and self.el_rect(el).collidepoint(pos) \
                     and el.movable:
-                self.drag = ("move", pos, (el.gb_x, el.gb_y, el.gb_w, el.gb_h))
+                self.drag = ("move", pos, (el.gb_x, el.gb_y, el.gb_w, el.gb_h),
+                             [(e, e.gb_x, e.gb_y) for e in self.linked(el)])
                 return
         hit = self.pick(pos)
         if hit is not None:
             self.sel = hit
             el = self.layout.elements[hit]
             if el.movable:
-                self.drag = ("move", pos, (el.gb_x, el.gb_y, el.gb_w, el.gb_h))
+                self.drag = ("move", pos, (el.gb_x, el.gb_y, el.gb_w, el.gb_h),
+                             [(e, e.gb_x, e.gb_y) for e in self.linked(el)])
         else:
             self.sel = None
 
     def mouse_move(self, pos):
         if not self.drag or self.sel is None:
             return
-        mode, start, (gx, gy, gw, gh) = self.drag
+        mode, start, (gx, gy, gw, gh), links = self.drag
         dtx = round((pos[0] - start[0]) / (TILE * self.zoom))
         dty = round((pos[1] - start[1]) / (TILE * self.zoom))
         el = self.layout.elements[self.sel]
         if mode == "move":
             el.gb_x, el.gb_y = gx + dtx, gy + dty
+            for e, ex, ey in links:      # group-move linked elements
+                e.gb_x, e.gb_y = ex + dtx, ey + dty
+                self._clamp(e)
         else:
             if "l" in mode:
                 el.gb_x, el.gb_w = gx + dtx, gw - dtx
@@ -306,6 +322,10 @@ class Editor:
             elif el.movable:
                 el.gb_x += dx
                 el.gb_y += dy
+                for e in self.linked(el):    # group-move linked elements
+                    e.gb_x += dx
+                    e.gb_y += dy
+                    self._clamp(e)
             moved = True
         if moved:
             self._clamp(el)
