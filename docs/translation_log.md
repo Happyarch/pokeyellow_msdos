@@ -23,6 +23,57 @@ if it took none. This is the swarm's divergence audit trail.
 
 ---
 
+## menus-port Session 6 — swarm wave 1 (root integration)
+
+Root (integrator) session. Four Opus workers in seeded worktrees produced the
+leaf screens; root did the shared prework, gated each package (pret control-flow
+diff → tag audit → PROJ-cites-UI_* → make+check → TODO-HW contract), derived new
+WRAM against the authoritative `origin/symbols:pokeyellow.sym`, wired Makefile +
+harness, and committed each package alone.
+
+- **Root prework (shared, package B + wave):** NEW `tools/gen_badge_tiles.py`
+  (Tier-1 passthrough of `gfx/trainer_card/badges.2bpp` → `assets/badge_tiles.inc`:
+  `badge_face_tiles` / `BADGE_FACE_TILE_COUNT`=64 / `BADGE_TILE_BYTES`=16) + its
+  Makefile `assets` rule. Three new sidecar UI elements (seeded from pret GB
+  rects, standard anchors, root edit between waves): `UI_TRAINER_CARD_BADGES`
+  (B; GB(2,11) 16×6 center/top), `UI_OPTIONS` (D; full 20×18 center/top),
+  `UI_PLAYERS_PC_MENU` (F; GB(0,0) 16×10 center/top).
+- **Package B — DrawBadges** — Source: pret `engine/menus/draw_badges.asm`.
+  Translated: NEW `dos_port/src/engine/menus/draw_badges.asm`. Faithful pret
+  loop shape line-for-line: `.FaceBadgeTiles`→`wBadgeOrFaceTiles` stage, the
+  `srl`/carry `wObtainedBadges` walk with the +4 owned-badge offset, the
+  `$d8`/`$60` number/name seed, and the two-row `.DrawBadgeRow`/`.DrawBadge`
+  draw incl. the back-shift `CopyData` that reads the reserved `+1` byte.
+  Port-mechanical (not deviations, plainly commented): the `.FaceBadgeTiles`
+  `CopyData` is a flat→GB `rep movsb` (code-space source, no `[ebp+ESI]` bias);
+  the INCBIN'd sheet becomes `assets/badge_tiles.inc` + NEW `LoadBadgeTiles`
+  (copies 64 tiles to vChars2 so face 0 = VRAM tile $20 = $9200, below the box
+  tiles at $9600 and in the card-unused overworld-tileset region; sets
+  `g_tilecache_dirty`). Zero `; TODO-HW` (pure tilemap writes); one `; PROJ`
+  (harness window, cites `UI_TRAINER_CARD_BADGES_*`).
+- **WRAM (B):** gb_memmap.inc gains `wBadgeNumberTile` 0xCD3D,
+  `wBadgeNameTile` 0xCD3E, `wBadgeOrFaceTiles` 0xCD3F, `wTempObtainedBadgesBooleans`
+  0xCD49 — all verbatim from `origin/symbols:pokeyellow.sym` bank 00 (badge NEXTU
+  lane of the ram/wram.asm:772 union, so 0xCD3D aliases the S5 wSwappedMenuItem/
+  wChargeMoveNum union byte; DrawBadges writes every scratch byte before reading,
+  so the overlap is safe). `wObtainedBadges` reused as existing `W_OBTAINED_BADGES`
+  0xD355 (sym-confirmed).
+- **Makefile/harness (B):** draw_badges.asm → GAME_SRCS; `assets/badge_tiles.inc`
+  rule + `draw_badges.o` dep + `assets` aggregate; `DEBUG_DRAWBADGES` flag block
+  (harness seeds its own badges, so no debug_party); `RunDrawBadgesTest` hook in
+  overworld.asm.
+- **Gate (B):** `make` + `make check` green (draw_badges.o links dead until S9's
+  StartMenu_TrainerInfo). DEBUG_DRAWBADGES FRAME.BIN (seed wObtainedBadges=%10100101)
+  renders the 4×2 grid — owned badges show badge gfx, unowned show gym-leader
+  faces + number/name glyphs — confined to the `UI_TRAINER_CARD_BADGES` window
+  (content bbox x[104..215] y[96..135] inside wx=103/wy=88/clip=128/maxy=136).
+  **FAITHFUL EXCEPT: none.**
+- **Pre-existing finding (out of S6 scope, flagged to user):** the port's
+  `W_SIMULATED_JOYPAD_STATES_INDEX` (0xCC84) and the `wFieldMoves` family
+  (0xCC89/0xCC8D) are off by 0xB4 vs the sym (0xCD38/0xCD3D/0xCD41) — a latent
+  S2-era derivation error against a wrong anchor. Not fixed here (S2/S5 gated
+  green; needs a dedicated fix).
+
 ## menus-port Session 5 — party_menu realigned onto the generic drivers
 - **Date:** 2026-07-02
 - **Plan:** docs/current_plan_menus.md, Session 5. Bespoke

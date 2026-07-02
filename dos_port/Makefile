@@ -163,6 +163,7 @@ GAME_SRCS := \
     src/engine/menus/party_menu.asm \
     src/engine/menus/field_moves.asm \
     src/engine/menus/text_box.asm \
+    src/engine/menus/draw_badges.asm \
     src/engine/menus/display_text_id_init.asm \
     src/engine/overworld/simulate_joypad.asm \
     src/engine/overworld/overworld_stubs.asm \
@@ -331,6 +332,15 @@ NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_LISTMENU=$(DEBUG_LISTMENU)
 NASMFLAGS += -D SKIP_TITLE
 GAME_SRCS += src/engine/debug/debug_party.asm
+endif
+# Draw-badges gate (menus S6 package B): boot to overworld, seed a mixed badge
+# set, load the badge tiles, draw the 4x2 grid + window it, dump FRAME.BIN, exit.
+# The harness seeds wObtainedBadges itself, so no debug_party seed is needed.
+# make SKIP_TITLE=1 DEBUG_DRAWBADGES=1
+ifdef DEBUG_DRAWBADGES
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_DRAWBADGES
+NASMFLAGS += -D SKIP_TITLE
 endif
 # Live battle view: same setup as DEBUG_BATTLE but holds the screen (loops
 # DelayFrame) so you can visually inspect it instead of dumping+exiting. Esc quits.
@@ -638,6 +648,14 @@ assets/trainer_pics.inc: ../gfx/pics.asm ../data/trainers/pic_pointers_money.asm
                          tools/gen_trainer_pics.py
 	python3 tools/gen_trainer_pics.py
 
+# Gym-leader face + badge tiles (2bpp passthrough of gfx/trainer_card/badges.2bpp)
+# for the trainer-card status screen (draw_badges.asm, menus S6 package B).
+assets/badge_tiles.inc: ../gfx/trainer_card/badges.2bpp \
+                        ../constants/ram_constants.asm tools/gen_badge_tiles.py
+	python3 tools/gen_badge_tiles.py
+
+src/engine/menus/draw_badges.o: assets/badge_tiles.inc
+
 # Start menu checks EVENT_GOT_POKEDEX via events.inc → event_constants.inc;
 # DrawStartMenu %includes the generated menu_strings.inc labels and the
 # UI_START_MENU_* equates; start_sub_menus needs the UI_USE_TOSS_* equates.
@@ -745,7 +763,7 @@ assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_
         assets/wild_data.inc assets/map_scripts.inc assets/battle_hud_2bpp.inc \
         assets/trainer_pics.inc \
         assets/super_rod.inc assets/town_map_data.inc assets/town_map_gfx.inc \
-        assets/ui_layout_menus.inc
+        assets/ui_layout_menus.inc assets/badge_tiles.inc
 
 all: $(TARGET)
 

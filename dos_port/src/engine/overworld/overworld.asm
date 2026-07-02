@@ -104,6 +104,9 @@ extern RunTextBoxIDTest
 %ifdef DEBUG_LISTMENU
 extern RunListMenuTest
 %endif
+%ifdef DEBUG_DRAWBADGES
+extern RunDrawBadgesTest
+%endif
 %ifdef DEBUG_WALKSPEED
 extern DebugDumpMemory
 extern tick_count
@@ -368,6 +371,9 @@ EnterMap:
 %endif
 %ifdef DEBUG_LISTMENU
     call RunListMenuTest                   ; seed party+bag, drive generic list menu, dump FRAME.BIN, exits
+%endif
+%ifdef DEBUG_DRAWBADGES
+    call RunDrawBadgesTest                  ; seed badges, draw grid, window it, dump FRAME.BIN, exits
 %endif
 %ifdef DEBUG_WALKSPEED
     ; Live walk-speed instrumentation: boots normally into OverworldLoop so you can

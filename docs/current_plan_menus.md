@@ -210,7 +210,7 @@ entry + commit (root only).
 | Pkg | Screen | Status | FAITHFUL EXCEPT |
 |-----|--------|--------|-----------------|
 | A | oaks_pc + league_pc | queued | |
-| B | draw_badges / trainer card gfx | queued | |
+| B | draw_badges / trainer card gfx | integrated (S6) | none |
 | C | naming_screen | queued | |
 | D | options | queued | |
 | E | main_menu | queued | |

@@ -1281,6 +1281,21 @@ hPartyMonIndex                equ 0xFF8C ; = hTextID (ram/hram.asm union)
 hSwapTemp                     equ 0xFF95 ; byte-swap scratch (overlaps hDividend lane)
 
 ; ---------------------------------------------------------------------------
+; Menus S6 package B (draw_badges) — trainer-card badge scratch. All four sit
+; in the big NEXTU union at ram/wram.asm:772 (badge lane at :959), so they
+; alias the S5 wSwappedMenuItem / wChargeMoveNum union byte at 0xCD3D. Addresses
+; taken verbatim from the authoritative origin/symbols:pokeyellow.sym bank 00
+; (wBadgeNumberTile cd3d, wBadgeNameTile cd3e, wBadgeOrFaceTiles cd3f,
+; wTempObtainedBadgesBooleans cd49); wObtainedBadges already present as
+; W_OBTAINED_BADGES 0xD355 (sym-confirmed). DrawBadges writes every scratch byte
+; before reading it, so the union overlap is safe.
+; ---------------------------------------------------------------------------
+wBadgeNumberTile              equ 0xCD3D ; tile id of the badge number being drawn
+wBadgeNameTile                equ 0xCD3E ; first tile id of the name being drawn
+wBadgeOrFaceTiles             equ 0xCD3F ; ds NUM_BADGES+1 (+1 byte read by the back-shift)
+wTempObtainedBadgesBooleans   equ 0xCD49 ; ds NUM_BADGES (0=not obtained, 1=obtained)
+
+; ---------------------------------------------------------------------------
 ; Wave 5 (home-rectification) — pokemon/item data (add_party_mon / add_mon /
 ; pokemon / give / money). Lowercase Dex aliases onto existing W_POKEDEX_*;
 ; new WRAM from pret ram/wram.asm chained off verified anchors.
