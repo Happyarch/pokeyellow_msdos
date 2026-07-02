@@ -61,7 +61,13 @@ ends: `make -C dos_port` + `make -C dos_port check` green → verification pass
   `--atlas` render byte-identical before/after (capture baseline to
   scratchpad first); headless editor load/drag/save smoke on a scratch copy.
 
-- [ ] **Session A2 — map decode primitives in gfx_core.**
+- [x] **Session A2 — map decode primitives in gfx_core.** DONE 2026-07-02.
+  `gfx_core/tilesets.py` (2bpp/blockset load, expand_block mirrors
+  DrawTileBlock's clamp, render_map with border-ring pad) +
+  `gfx_core/pret_maps.py` (MapInfo layer reusing gen_map_headers's parsers/
+  tables verbatim; CONNECTIONS/get_connection re-exported). Gates: PALLET_TOWN
+  (10x9, overworld, 94 tiles) and OAKS_LAB (5x6, DOJO) render pixel-faithful
+  PNGs incl. border ring; build untouched (pure tooling, `make` green from A1).
   `gfx_core/tilesets.py`: `load_tileset_2bpp(stem)` (gfx/tilesets/*.2bpp,
   16 B/tile), `load_blockset(stem)` (gfx/blocksets/*.bst, 16 B = 4×4 tile
   IDs), `expand_block()`, `render_map(blk, w, h, blockset, tileset,

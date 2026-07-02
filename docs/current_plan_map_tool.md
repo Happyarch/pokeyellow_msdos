@@ -1,8 +1,8 @@
 # Current Plan: Overworld Map Tool (viewer, border authoring, block painting)
 
 A pygame map editor at `dos_port/tools/map_editor/` built on the shared
-`tools/gfx_core/` package. **Blocked on `current_plan_battle_ui.md` Session A2**
-(gfx_core map decode primitives). Primary goal: author real block content for
+`tools/gfx_core/` package. **Unblocked 2026-07-02: battle-UI plan Session A2
+(gfx_core map decode primitives — `tilesets.py`, `pret_maps.py`) is done.** Primary goal: author real block content for
 the out-of-map border regions so the two temporary clamps in
 `src/engine/overworld/overworld.asm` (DrawTileBlock block-ID clamp,
 LoadCurrentMapView address clamp — see CLAUDE.md) can be deleted. Secondary:
