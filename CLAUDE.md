@@ -481,6 +481,14 @@ commit but too specific to belong in TODO.md.
 - `docs/current_plan_items.md` — item/bag layer (sequenced after pokemon, before
   battle). Inventory bookkeeping (add/remove) + TOSS done; item USE dispatch
   (`UseItem_`/`ItemUsePtrTable`) deferred (battle/UI-coupled).
+- `docs/current_plan_battle_ui.md` — **battle-UI layout pipeline + widescreen
+  redesign** (branch `menus-port`). Shared `tools/gfx_core/` extraction, then
+  migrate all hardcoded battle coordinates into a
+  `ui_layout_battle_sidecar.json` → `assets/ui_layout_battle.inc` pipeline
+  (byte-identical first), then a human-in-the-loop widescreen redesign session.
+- `docs/current_plan_map_tool.md` — **overworld map tool** (viewer → border-ring
+  authoring → clamp retirement → block painting), built on `gfx_core`. Blocked
+  on battle-UI plan Session A2. Sequenced after battle.
 - `docs/current_plan_menus.md` — **engine/menus port + UI layout tool** (branch
   `menus-port`). 10 checkpointed sessions: pygame layout editor
   (`dos_port/tools/ui_layout/`, sidecar JSON → `gen_ui_layout.py` →
