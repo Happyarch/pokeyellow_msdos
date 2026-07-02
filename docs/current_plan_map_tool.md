@@ -37,7 +37,20 @@ checkboxes updated → commit.
 
 ## Sessions
 
-- [ ] **Session C1 — read-only map viewer.**
+- [x] **Session C1 — read-only map viewer.** DONE 2026-07-02.
+  `map_editor/view.py` composes the padded grid runtime-faithfully (border
+  fill → connection strips via get_connection, 6 rows/cols per MAP_BORDER →
+  centre blk); `map_editor/editor.py` = pygame pan/zoom viewer with
+  block/tile grids, warp/NPC markers (trainer/item color-coded), 40×25 +
+  12×9-block viewport ghost, Tab map cycling. Gates: 221 maps render with
+  zero exceptions (28 skipped: no header/blk — COPY consts etc.); Pallet
+  Town composition matches the DEBUG_TRANSITION/DEBUG_BASELINE runtime
+  FRAME.BIN block-for-block; headless viewer smoke OK.
+  **FINDING for C4:** the four offset −5 SOUTH connections (ROUTE_2→Viridian,
+  ROUTE_5→Saffron, ROUTE_6→Vermilion, ROUTE_24→Cerulean) get `src = -1` from
+  get_connection — the runtime reads 1 byte before the neighbour's blk in GB
+  memory per strip. The viewer clamps these to the border block and reports
+  them via `ComposedMap.anomalies`.
   `map_editor/editor.py <MAP_CONST>` + `view.py`: render any map via
   `gfx_core.tilesets`/`pret_maps` — real .blk center, 6-block border ring
   filled with the border block, **connection strips rendered from neighbor
