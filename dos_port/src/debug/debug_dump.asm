@@ -368,6 +368,27 @@ RunBattleTest:
     mov byte [ebp + wEnemyBattleStatus2], 0
     mov byte [ebp + wPlayerBattleStatus1], 0
     mov byte [ebp + wEnemyDisabledMove], 0
+    ; Seed the stat-stage modifiers to the neutral default (7) for BOTH battle mons.
+    ; A real battle sets these in LoadBattleMonFromParty on send-out; this harness seeds
+    ; wBattleMon*/wEnemyMon* directly, so without this the 8 mod bytes stay 0. CalcHitChance
+    ; indexes StatModifierRatios by (accuracyMod-1)*2 — with mod 0 that's (0-1)&0xFF*2 = 254,
+    ; reading ~228 bytes off the 26-byte table → garbage accuracy → moves "miss". (That
+    ; garbage sits at a fixed .data offset, so the failure flips with unrelated code-size
+    ; changes — which is why it appeared to come and go across rebuilds.)
+    mov ecx, NUM_STAT_MODS
+    mov esi, wPlayerMonAttackMod
+.seedPMods:
+    mov byte [ebp + esi], 7
+    inc esi
+    dec ecx
+    jnz .seedPMods
+    mov ecx, NUM_STAT_MODS
+    mov esi, wEnemyMonAttackMod
+.seedEMods:
+    mov byte [ebp + esi], 7
+    inc esi
+    dec ecx
+    jnz .seedEMods
     ; generate the wild enemy's moveset the real way (base moves + level-up learnset
     ; for PIDGEY $24 at its level) — replaces the old hardcoded move seed.
     call LoadWildMonMoves
