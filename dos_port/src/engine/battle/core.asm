@@ -31,29 +31,34 @@ bits 32
 %define LINK_STATE_BATTLING 4
 %endif
 
-; battle menu geometry — pret GB coords projected to our 40-wide canvas (+10col,+3row).
-; (The coord VALUES are the sanctioned draw-layer divergence; the structure is pret's.)
+; battle menu geometry — the generated battle UI layout (Tier 1,
+; assets/ui_layout_battle.inc ← ui_layout_battle_sidecar.json; edit with
+; tools/ui_layout/battle.py — never hand-edit offsets here).
+%define UI_LAYOUT_EQUATES_ONLY 1
+%include "assets/ui_layout_battle.inc"
 %define FW          40
-%define MENU_ROW    17          ; pret wTopMenuItemY $e (GB 14) + 3
-%define CUR_COL_L   19          ; left column  (GB 9 + 10)  — FIGHT / PKMN
-%define CUR_COL_R   25          ; right column (GB 15 + 10) — ITEM / RUN
+; PROJ battle: action-menu cursor cells = UI_ACTION_CUR_L / UI_ACTION_CUR_R
+%define MENU_ROW    UI_ACTION_CUR_L_ROW ; pret wTopMenuItemY $e; rows +0/+2
+%define CUR_COL_L   UI_ACTION_CUR_L_COL ; left column  — FIGHT / PKMN
+%define CUR_COL_R   UI_ACTION_CUR_R_COL ; right column — ITEM / RUN
 %define T_SPACE     0x7F
 %define T_H         0x7A        ; box ─
 %define T_BR        0x7E        ; box ┘
-; move menu (pret hlcoord 4,12 box / 6,13 text projected; audit-verified positions)
-%define MOVEBOX_OFF   (15 * FW + 14)   ; box top-left, GB(4,12) → canvas (14,15)
-%define MOVEBOX_W     14
-%define MOVEBOX_H     4
-%define MOVES_TEXT    (16 * FW + 16)   ; move list, GB(6,13) → canvas (16,16)
-%define MOVES_CUR_COL 15                ; GB 5 + 10
-%define MOVES_ROW0    16                ; GB 13 + 3
-; battle dialog box (pret MESSAGE_BOX GB(0,12) projected) + message geometry
-%define OUTER_OFF     (15 * FW + 10)    ; dialog box top-left, GB(0,12) → canvas (10,15)
-%define OUTER_W       18
-%define OUTER_H       4
-%define BTXT_LINE1    (17 * FW + 11)    ; 1st text line (1,14) → canvas (11,17)
-%define BTXT_LINE2    (19 * FW + 11)    ; 2nd text line (<LINE>) → canvas (11,19)
-%define BTXT_ARROW    (19 * FW + 28)    ; ▼ at the box bottom-right interior
+; PROJ battle: move menu = UI_MOVE_BOX / UI_MOVE_TEXT / UI_MOVE_CURSOR
+%define MOVEBOX_OFF   UI_MOVE_BOX_OFS          ; box top-left
+%define MOVEBOX_W     (UI_MOVE_BOX_GBW - 2)    ; TextBoxBorder interior w
+%define MOVEBOX_H     (UI_MOVE_BOX_GBH - 2)    ; TextBoxBorder interior h
+%define MOVES_TEXT    UI_MOVE_TEXT_OFS         ; move list (single-spaced)
+%define MOVES_CUR_COL UI_MOVE_CURSOR_COL
+%define MOVES_ROW0    UI_MOVE_CURSOR_ROW
+; PROJ battle: dialog box = UI_DIALOG_BOX, message lines = UI_DIALOG_LINE1/2,
+; blink arrow = UI_DIALOG_ARROW
+%define OUTER_OFF     UI_DIALOG_BOX_OFS        ; dialog box top-left
+%define OUTER_W       (UI_DIALOG_BOX_GBW - 2)
+%define OUTER_H       (UI_DIALOG_BOX_GBH - 2)
+%define BTXT_LINE1    UI_DIALOG_LINE1_OFS      ; 1st text line
+%define BTXT_LINE2    UI_DIALOG_LINE2_OFS      ; 2nd text line (<LINE>)
+%define BTXT_ARROW    UI_DIALOG_ARROW_OFS      ; ▼ box bottom-right interior
 %define T_DOWNARROW   0xEE              ; ▼ glyph
 %define ARROW_BLINK   20                ; frames per ▼ blink phase
 

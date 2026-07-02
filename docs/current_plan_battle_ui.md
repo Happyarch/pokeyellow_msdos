@@ -138,7 +138,10 @@ ends: `make -C dos_port` + `make -C dos_port check` green → verification pass
   Gates: `--check` idempotent; nasm round-trip harness assembles every equate;
   all seeder asserts pass; menus regen reviewed; `make check`.
 
-- [ ] **Session B3 — .asm migration half 1 (no visual change).**
+- [x] **Session B3 — .asm migration half 1 (no visual change).** DONE
+  2026-07-02 (commit dfa8906d). battle_hud/init_battle/pics/pokeballs on
+  UI_* equates; DEBUG_BATTLE FRAME.BIN byte-identical; zero `* FW +`
+  geometry literals left in migrated files; make + make check green.
   `battle_hud.asm` (names/levels/bars/fracs + HUD frame literals),
   `init_battle.asm` (DrawBattleIntroBox, COL_OFF/ROW_OFF geometry uses),
   `src/gfx/pics.asm` (slide-in cols/rows + SLIDE_STEPS → UI_ equates),
@@ -148,7 +151,16 @@ ends: `make -C dos_port` + `make -C dos_port check` green → verification pass
   identical (`cmp`); `grep -n '\* FW +'` over migrated files → zero geometry
   hits (tile-code defines stay); `make` + `make check`.
 
-- [ ] **Session B4 — .asm migration half 2.**
+- [x] **Session B4 — .asm migration half 2.** DONE 2026-07-02. core.asm
+  (dialog/message/arrow, action cursor cells, move box/text/cursor) +
+  battle_menu.asm (action box/labels, dialog + DLG_INT(n) box-relative
+  interior rows, MSG_LINE1/2, info box with IB_*-relative interior, level-up
+  box/labels/values, arrow) all cite UI_* equates. Remaining `* FW +` hits
+  are equate-relative expressions only. Gates: DEBUG_BATTLE FRAME.BIN
+  byte-identical; make + make check green. Move-menu/level-up paths (not in
+  the static scene) verified by the seeder's numeric-equality assertions —
+  every replaced expression resolves to the same integer; live input drive
+  deferred to B6's DOSBox visual pass.
   `core.asm`: BTXT_LINE1/LINE2/ARROW, MENU_ROW/CUR_COL_L/CUR_COL_R (incl.
   wTopMenuItemX/Y stores), MOVEBOX_OFF/MOVES_TEXT/MOVES_CUR_COL/MOVES_ROW0.
   `battle_menu.asm`: BOX_OFF/TEXT_OFF/OUTER_OFF/INFOBOX_OFF/LVLBOX_OFF/

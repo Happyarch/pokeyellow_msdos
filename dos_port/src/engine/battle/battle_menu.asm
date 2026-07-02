@@ -10,47 +10,58 @@
 ; GainExperience (experience.asm) calls inside its per-mon loop; (3) the move TYPE/PP box
 ; and FindMoveName helper; (4) the faithful run-odds (TryRunningFromBattle).
 ;
-; All draw coords are pret GB coords projected to our centered 40-wide W_TILEMAP with the
-; documented (+10 col, +3 row) offset — the only place the front end diverges from pret.
+; All draw coords come from the generated battle UI layout (Tier 1,
+; assets/ui_layout_battle.inc ← ui_layout_battle_sidecar.json; edit with
+; tools/ui_layout/battle.py — never hand-edit offsets here). The layout is the
+; only place the front end diverges from pret.
 ;
 ; Register map: A=AL, BC=BX, EBP = GB base; GB memory = [EBP+addr].
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
+%define UI_LAYOUT_EQUATES_ONLY 1
+%include "assets/ui_layout_battle.inc"
 
 bits 32
 
 %define FW   SCREEN_TILES_W            ; 40 — W_TILEMAP stride
 %define T_SP 0x7F
 
-; Menu box: pret BATTLE_MENU_TEMPLATE 8,12,19,17 → canvas top-left (18,15), interior
-; 10×4. Labels at GB(10,14) → canvas (20,17).
-%define BOX_OFF      (15 * FW + 18)
-%define BOX_W        10
-%define BOX_H        4
-%define TEXT_OFF     (17 * FW + 20)
-; Outer dialog box (InitBattle box): canvas (10,15), interior 18×4.
-%define OUTER_OFF    (15 * FW + 10)
-%define OUTER_W      18
-%define OUTER_H      4
+; PROJ battle: action menu box/labels = UI_ACTION_MENU_BOX / UI_ACTION_TEXT
+; (pret BATTLE_MENU_TEMPLATE 8,12,19,17; TextBoxBorder takes interior w/h).
+%define BOX_OFF      UI_ACTION_MENU_BOX_OFS
+%define BOX_W        (UI_ACTION_MENU_BOX_GBW - 2)
+%define BOX_H        (UI_ACTION_MENU_BOX_GBH - 2)
+%define TEXT_OFF     UI_ACTION_TEXT_OFS
+; PROJ battle: outer dialog box = UI_DIALOG_BOX (same box InitBattle draws).
+%define OUTER_OFF    UI_DIALOG_BOX_OFS
+%define OUTER_W      (UI_DIALOG_BOX_GBW - 2)
+%define OUTER_H      (UI_DIALOG_BOX_GBH - 2)
+; Dialog text rows, box-relative so text follows the box wherever the layout
+; puts it: DLG_INT(n) = single-spaced interior row n; the standard two
+; double-spaced message lines are the layout's own elements.
+%define DLG_INT(n)   (UI_DIALOG_BOX_OFS + (n) * FW + 1)
+; PROJ battle: message lines = UI_DIALOG_LINE1 / UI_DIALOG_LINE2
+%define MSG_LINE1    UI_DIALOG_LINE1_OFS
+%define MSG_LINE2    UI_DIALOG_LINE2_OFS
 
-; TYPE/PP info box (pret PrintMenuItem TextBoxBorder(0,8) 9×3 → faithful centered origin
-; GB(0,8) = canvas (10,11)). Offsets are pret-relative to the box origin.
-%define IB_COL        10
-%define IB_ROW        11
-%define INFOBOX_OFF   (IB_ROW * FW + IB_COL)
+; PROJ battle: TYPE/PP info box = UI_INFO_BOX (pret PrintMenuItem
+; TextBoxBorder(0,8) 9×3). Interior offsets stay box-origin-relative.
+%define IB_COL        UI_INFO_BOX_COL
+%define IB_ROW        UI_INFO_BOX_ROW
+%define INFOBOX_OFF   UI_INFO_BOX_OFS
 %define CHAR_SLASH    0xF3
 %define CHAR_DIG0     0xF6
 
-; Level-up stats box — pret PrintStatsBox.LevelUpStatsBox in the centered viewport. Box
-; GB(9,2) 9x8; the 4 stat LABELS at GB(11,3/5/7/9), VALUES at GB(15,4/6/8/10).
-%define LVLBOX_OFF   (5 * FW + 19)        ; box GB(9,2)  → canvas (19,5)
-%define LVLBOX_W     9
-%define LVLBOX_H     8
-%define LVL_LBL_OFF  (6 * FW + 21)        ; first label GB(11,3) → canvas (21,6); step 2*FW
-%define LVL_VAL_OFF  (7 * FW + 25)        ; first value GB(15,4) → canvas (25,7); step 2*FW
+; PROJ battle: level-up stats box = UI_LVLUP_BOX / UI_LVLUP_LBL / UI_LVLUP_VAL
+; (pret PrintStatsBox.LevelUpStatsBox; labels/values step 2 rows ×4).
+%define LVLBOX_OFF   UI_LVLUP_BOX_OFS
+%define LVLBOX_W     (UI_LVLUP_BOX_GBW - 2)
+%define LVLBOX_H     (UI_LVLUP_BOX_GBH - 2)
+%define LVL_LBL_OFF  UI_LVLUP_LBL_OFS
+%define LVL_VAL_OFF  UI_LVLUP_VAL_OFS
 
-; ▼ "more text" advance arrow (dialog-box bottom-right interior, canvas 28,19).
-%define ARROW_OFF          (19 * FW + 28)
+; PROJ battle: ▼ "more text" advance arrow = UI_DIALOG_ARROW
+%define ARROW_OFF          UI_DIALOG_ARROW_OFS
 %define T_DOWNARROW        0xEE
 %define ARROW_BLINK_FRAMES 20
 
@@ -332,15 +343,15 @@ TryRunningFromBattle:
     mov bh, OUTER_H
     mov bl, OUTER_W
     call TextBoxBorder
-    mov esi, W_TILEMAP + (16 * FW + 11)
+    mov esi, W_TILEMAP + DLG_INT(1)
     mov eax, str_norun1
     call PlaceString
     mov esi, ebx
-    mov esi, W_TILEMAP + (17 * FW + 11)
+    mov esi, W_TILEMAP + DLG_INT(2)
     mov eax, str_norun2
     call PlaceString
     mov esi, ebx
-    mov esi, W_TILEMAP + (18 * FW + 11)
+    mov esi, W_TILEMAP + DLG_INT(3)
     mov eax, str_norun3
     call PlaceString
     mov esi, ebx
@@ -366,7 +377,7 @@ PrintRunLine:
     mov bl, OUTER_W
     call TextBoxBorder
     pop eax
-    mov esi, W_TILEMAP + (17 * FW + 11)
+    mov esi, W_TILEMAP + MSG_LINE1
     call PlaceString
     mov esi, ebx
     call WaitForAPress
@@ -386,14 +397,14 @@ ShowGainedExpText:
     mov bh, OUTER_H
     mov bl, OUTER_W
     call TextBoxBorder
-    mov esi, W_TILEMAP + (17 * FW + 11)
+    mov esi, W_TILEMAP + MSG_LINE1
     call get_party_nick
     call PlaceString
     mov esi, ebx
     mov eax, str_gained
     call PlaceString
     mov esi, ebx
-    mov edi, W_TILEMAP + (19 * FW + 11)
+    mov edi, W_TILEMAP + MSG_LINE2
     movzx eax, byte [ebp + wExpAmountGained]
     shl eax, 8
     mov al, [ebp + wExpAmountGained + 1]
@@ -414,14 +425,14 @@ ShowGrewLevelText:
     mov bh, OUTER_H
     mov bl, OUTER_W
     call TextBoxBorder
-    mov esi, W_TILEMAP + (17 * FW + 11)
+    mov esi, W_TILEMAP + MSG_LINE1
     call get_party_nick
     call PlaceString
     mov esi, ebx
     mov eax, str_grew
     call PlaceString
     mov esi, ebx
-    mov esi, W_TILEMAP + (19 * FW + 11)
+    mov esi, W_TILEMAP + MSG_LINE2
     mov eax, str_tolevel
     call PlaceString
     mov esi, ebx
@@ -535,14 +546,14 @@ ShowLearnedMoveText:
     mov bh, OUTER_H
     mov bl, OUTER_W
     call TextBoxBorder
-    mov esi, W_TILEMAP + (17 * FW + 11)
+    mov esi, W_TILEMAP + MSG_LINE1
     call get_party_nick
     call PlaceString
     mov esi, ebx
     mov eax, str_learned
     call PlaceString
     mov esi, ebx
-    mov esi, W_TILEMAP + (19 * FW + 11)
+    mov esi, W_TILEMAP + MSG_LINE2
     movzx eax, byte [learned_move_id]
     call FindMoveName
     call PlaceString
