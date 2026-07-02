@@ -4423,3 +4423,56 @@ once the routine/data exists.
   `[ebp+ebx+wNPCMovementDirections2]` (esi==const here); (2) added canonical aliases for
   wStatusFlags3/5, hLoadedROMBank, wUpdateSpritesEnabled that the scaffold had missed.
   CHECK-only: no runtime caller until the trainer-header data generator + M8.1 wiring land.
+
+## Battle special-move leaves (battle-swarm-A — turn execution & special-move mechanics)
+- Date: 2026-07-01
+- Branch: battle-swarm-A. Sonnet worker/auditor swarm, Opus integration.
+- Sources: pret engine/battle/core.asm (HandleCounterMove :4718, MirrorMoveCopyMove :5132,
+  ReloadMoveData :5167, IncrementMovePP :5214, MetronomePickMove :5184, PrintGhostText :3452,
+  IsGhostBattle :3480, PrintMoveFailureText :3889, PrintCriticalOHKOText :3967,
+  HandleExplodingAnimation :6787) and engine/battle/display_effectiveness.asm.
+- Replaces the seven `core_stubs.asm` leaf stubs (deleted) with faithful new files under
+  src/engine/battle/; core.asm's existing `extern`s resolve to them. Builds green at
+  BUG_FIX_LEVEL 0 and 2 (SKIP_TITLE=1 DEBUG_BATTLE_LIVE=1); `make check` clean.
+- H-flag: not involved in any unit.
+
+Per-unit:
+- **counter.asm** (HandleCounterMove). Faithful; uses live `MoveHitTest`. Divergences: none.
+  Gen-1 quirk preserved (comment, no fix gate): Counter doubles whatever stale `wDamage`
+  holds (shared player/enemy/switched-out), and the link move-selection-cursor desync.
+  MovePower→type read via `[ebp+edx+1]` (wPlayer/EnemyMoveType immediately follow MovePower).
+- **mirror_move.asm** (MirrorMoveCopyMove + ReloadMoveData + IncrementMovePP; last two `global`,
+  consumed by metronome.asm). Divergences: (1) allowlist bank drop — `ld a, BANK(Moves)`
+  removed (flat model). (2) `Moves` is a FLAT program-image table, so the pret `call FarCopyData`
+  would double-bias the source through EBP (FarCopyData/CopyData do `lea esi,[ebp+esi]`); replaced
+  with an inline 6-byte flat-src→WRAM-dst copy, matching the existing get_current_move.asm precedent.
+  (3) the port's home/names.asm:GetMoveName omits pret's `ld de, wNameBuffer` tail, so ReloadMoveData
+  sets `edx = wNameBuffer` before CopyToStringBuffer (local compensation; names.asm untouched —
+  a latent gap flagged for a future names.asm fix). Added `wEnemyMon1PP equ 0xD8C0` to gb_memmap.inc.
+- **metronome.asm** (MetronomePickMove). `extern ReloadMoveData` (mirror_move.asm). Divergence:
+  allowlist subanim — `call PlayMoveAnimation(METRONOME)` kept as the faithful ANIMATION=OFF call.
+- **print_critical_ohko.asm** (PrintCriticalOHKOText). Structural port adaptation (not behavioral):
+  pret `dw`/×2 pointer table → `dd`/×4 for 32-bit flat text addresses; `DelayFrames` count in BL.
+- **display_effectiveness.asm** (DisplayEffectiveness). Divergence: SuperEffective/NotVeryEffective
+  text hand-authored inline in .data (Tier-2) — not emitted by gen_battle_text.py (its SRC_FILES
+  omits display_effectiveness.asm; that generator is Owner C). Bytes are pret-charmap faithful.
+- **print_move_failure.asm** (PrintMoveFailureText). Wired at both inline miss-sites in core.asm
+  (replaced the `AttackMissedText`/`PrintBattleText` stand-in). Divergence: allowlist predef→flat —
+  `predef PredefShakeScreenHorizontally` → `call PredefShakeScreenHorizontally` (a new no-op stub in
+  core_stubs.asm; TODO-HW real shake, consistent with ANIMATION=OFF). GLITCH preserved (comment, no
+  gate): Jump Kick/Hi Jump Kick crash recoil is always exactly 1 HP (wDamage=0 → damage/8 → min-1).
+  Added `global ApplyDamageTo{Enemy,Player}Pokemon` in core.asm (tail targets for the recoil).
+- **ghost.asm** (PrintGhostText + IsGhostBattle). Faithful instruction-for-instruction; `IsItemInBag`
+  (BH=item id, ZF=1 if absent) matches pret polarity exactly. Divergences: none. Linked its closure:
+  moved home/item_predicates.asm from check-only into the EXE and added engine/items/get_bag_item_quantity.asm.
+- **exploding_animation.asm** (HandleExplodingAnimation). Tail-jumps the port's PlayMoveAnimation
+  (ANIMATION=OFF) with MEGA_PUNCH (==ANIMATIONTYPE_SHAKE_SCREEN_HORIZONTALLY_LIGHT). Preserved pret's
+  quirk of reading wEnemyBattleStatus1 in BOTH turn branches (verbatim + comment). Divergence: anim allowlist.
+
+Verify-only (no code change; confirmed correct end-to-end):
+- **EXPLODE self-faint**: ExplodeEffect_ (move_effects/explode.asm, faithful) is dispatched via
+  AlwaysHappenSideEffects ($07) from the core `.notDone` path, so Explosion/Self-Destruct faints the
+  user on both hit and miss.
+- **Charging-move flow**: CheckIfNeedsToChargeUp → JumpMoveEffect → ChargeEffect_ ($27 CHARGE / $2B FLY)
+  on turn 1; PlayerCanExecuteChargingMove clears CHARGING_UP/INVULNERABLE on turn 2. Structurally wired
+  and untouched by these leaves (full 2-turn live playthrough still the remaining confidence gap).

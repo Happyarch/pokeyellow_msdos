@@ -446,6 +446,7 @@ wFirstMonsNotOutYet    equ 0xD11C
 wEnemyMon1HP           equ 0xD8A4
 wEnemyMon1Status       equ 0xD8A7
 wEnemyMon1Moves        equ 0xD8AB
+wEnemyMon1PP           equ 0xD8C0   ; enemy party struct base 0xD8A3 + MON_PP (0x1D); used by IncrementMovePP (mirror_move.asm)
 
 ; --- HP-bar update scratch (UpdateHPBar / used by drain_hp etc.) — sym-pinned ---
 wHPBarMaxHP            equ 0xCEE9   ; word

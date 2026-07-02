@@ -613,6 +613,7 @@ extern HideSubstituteShowMonAnim       ; move_effect_helpers.asm (stub)
 extern ReshowSubstituteAnim            ; move_effect_helpers.asm (stub)
 extern DelayFrames                     ; frame.asm
 extern MultiHitText                    ; battle_text.inc
+extern PrintMoveFailureText            ; print_move_failure.asm (real: DoesntAffect/miss/unaffected)
 
 ; Faithful port of pret engine/battle/core.asm:ExecutePlayerMove (3244). Re-entry
 ; labels (PlayerCanExecuteMove/PlayerCalcMoveDamage/HandleIfPlayerMoveMissed/
@@ -749,8 +750,7 @@ MirrorMoveCheck:                        ; pret 3369
     mov al, [ebp + wMoveMissed]
     and al, al
     jz  .moveDidNotMiss
-    mov eax, AttackMissedText           ; PrintMoveFailureText (TODO: DoesntAffect/miss variants)
-    call PrintBattleText
+    call PrintMoveFailureText           ; pret 3390 — DoesntAffect/miss/unaffected + JumpKick recoil
     mov al, [ebp + wPlayerMoveEffect]
     cmp al, EXPLODE_EFFECT
     je  .notDone                        ; Explosion effect still runs on a miss
@@ -970,6 +970,7 @@ ApplyAttackToEnemyPokemon:
     mov [ebp + wDamage + 1], bh
     ; fall through
 
+global ApplyDamageToEnemyPokemon        ; consumed by print_move_failure.asm (JumpKick recoil)
 ApplyDamageToEnemyPokemon:
     mov al, [ebp + wDamage]
     or  al, [ebp + wDamage + 1]
@@ -1521,8 +1522,7 @@ EnemyCheckIfMirrorMoveEffect:           ; pret 5782
     mov al, [ebp + wMoveMissed]
     and al, al
     jz  .eMoveDidNotMiss
-    mov eax, AttackMissedText
-    call PrintBattleText
+    call PrintMoveFailureText           ; pret 5779 — DoesntAffect/miss/unaffected + JumpKick recoil
     mov al, [ebp + wEnemyMoveEffect]
     cmp al, EXPLODE_EFFECT
     je  .eNotDone
@@ -1631,6 +1631,7 @@ ApplyAttackToPlayerPokemon:
     mov [ebp + wDamage + 1], bh
     ; fall through
 
+global ApplyDamageToPlayerPokemon       ; consumed by print_move_failure.asm (JumpKick recoil)
 ApplyDamageToPlayerPokemon:
     mov al, [ebp + wDamage]
     or  al, [ebp + wDamage + 1]
