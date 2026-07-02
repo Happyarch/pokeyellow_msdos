@@ -312,3 +312,40 @@ and the regen restored a stale-missing `PickUpPayDayMoneyText`. The shared scaff
 ANIMATION=OFF no-ops): the literal-subanimation engine, audio HAL, the real Substitute
 pic-swap, and gradual HP-bar drain — to fill in during the PPU/audio passes. Next on THIS
 plan: status conditions / residual damage / trainer AI multi-mon.
+
+## Integration live-verify findings (2026-07-01, battle-swarm-integration)
+
+Merging A/B/C + a live DEBUG_BATTLE_LIVE playthrough surfaced these. The two build-breakers
+were fixed on the branch; the rest are pre-existing deferred-display / harness gaps (NOT
+bespoke, NOT merge-caused) filed here for the post-merge fix-in-main pass.
+
+FIXED (committed on battle-swarm-integration):
+- **Faint page fault.** faint_leaves.asm `AnyEnemyPokemonAliveCheck` widened pret's 8-bit
+  `dec b` to 32-bit `dec ecx`; wEnemyPartyCount==0 (wild) → ~4e9 iterations off the GB
+  allocation → fault. Restored 8-bit `dec cl`.
+- **"Every attack misses."** DEBUG_BATTLE_LIVE harness seeded the battle mons directly and
+  never set the 8 stat-stage mods to 7 (real send-out does, in LoadBattleMonFromParty).
+  CalcHitChance then indexed StatModifierRatios at (0-1)&0xFF*2=254, off the 26-byte table →
+  garbage accuracy (which flips with .data layout, so it appeared/disappeared across rebuilds).
+  Harness now seeds all 8 mods to 7 per side.
+
+OPEN (fix in main):
+- **Battle text prints "PKMN" not the nickname.** Name insertion into battle-text streams is
+  a deferred display stub (GetPartyMonName family). Nicks are in RAM (wBattleMonNick/
+  wEnemyMonNick) but nothing copies them into the printed stream. Wire the TX_RAM/name path.
+- **Level-up display shows garbage (e.g. L18→6→3, enemy "44").** experience.asm math is FAITHFUL
+  (10-point native-validation audit in its header) but its level-up DISPLAY is a deferred
+  no-op stub (GetPartyMonName/LoadMonData/PrintStatsBox), and the harness feeds it an
+  INCONSISTENT state: wPlayerMonNumber=0 (Snorlax) while the active battle mon is a directly
+  seeded L18 Pikachu and the EXP flag is slot 3. The stat-recalc-on-levelup path then reads a
+  mismatched battle-mon/party-mon → nonsense levels. FIX PATH: (a) harness should load the
+  battle mon from a real party slot (LoadBattleMonFromParty) so battle-mon == party-mon, and
+  (b) wire the deferred level-up display. AUDIT-WORTH: re-verify load_mon_data.asm / the
+  levelup stat-recalc against pret (user flagged possible unfaithful pokemon-engine code).
+- **Harness scaffolding hacks to revert:** Pidgey seeded with 200 HP (0xC800; comment says
+  "TEMP PP-test ... REVERT to 0x2300") → normal hits look like <1/16 damage; and the low-PP
+  TEMP seed (2/1/1/1). Debug-only; revert for a representative battle.
+- **Secondary: wild faint reaches the trainer-only enemy-party scan.** HandleEnemyMonFainted's
+  `wIsInBattle; dec al; jz .ret` guard fell through at faint (wIsInBattle != 1 despite
+  init_battle.asm:88). No crash after the counter fix, but the wild-victory flow may run
+  trainer paths (TrainerBattleVictory). Needs a runtime read of wIsInBattle to pin who changes it.
