@@ -124,7 +124,8 @@ HOME_SRCS := \
     src/home/copy_data.asm \
     src/home/bankswitch.asm \
     src/home/textbox.asm \
-    src/home/yes_no.asm
+    src/home/yes_no.asm \
+    src/home/list_menu.asm
 
 HAL_SRCS := \
     src/ppu/ppu.asm \
@@ -165,7 +166,9 @@ GAME_SRCS := \
     src/engine/overworld/overworld_stubs.asm \
     src/engine/overworld/wild_encounter_check.asm \
     src/engine/overworld/warp_check.asm \
-    src/engine/overworld/hidden_events.asm
+    src/engine/overworld/hidden_events.asm \
+    src/engine/menus/swap_items.asm \
+    src/engine/link/cable_club.asm
 
 # Pokémon data/stats engine (current_plan_pokemon_engine.md). Grows per stage.
 POKEMON_SRCS := \
@@ -321,6 +324,15 @@ endif
 ifdef DEBUG_TEXTBOXID
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_TEXTBOXID=$(DEBUG_TEXTBOXID)
+NASMFLAGS += -D SKIP_TITLE
+GAME_SRCS += src/engine/debug/debug_party.asm
+endif
+# List-menu gate (menus S3): boot to overworld, seed party+bag, drive the generic
+# DisplayListMenuID driver input-free (Old-Man auto-select), dump FRAME.BIN, exit.
+# make DEBUG_LISTMENU=<mode>  (0=PC mon list, 2=priced bag, 3=item bag)
+ifdef DEBUG_LISTMENU
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_LISTMENU=$(DEBUG_LISTMENU)
 NASMFLAGS += -D SKIP_TITLE
 GAME_SRCS += src/engine/debug/debug_party.asm
 endif
@@ -482,13 +494,14 @@ POKEMON_CHECK_SRCS := \
 # (nothing calls them) or dependent on not-yet-ported deps (town-map palette/video
 # engine, DisplayTextBoxID, _AlreadyKnowsText). town_map is intentionally kept
 # dangling (not in the main loop) per its port note.
+# swap_items.asm MOVED to GAME_SRCS (menus S3): SELECT-swap links live with
+# the promoted list_menu.asm driver.
 ITEMS_CHECK_SRCS := \
     src/engine/items/subtract_paid_money.asm \
     src/engine/items/tms.asm \
     src/engine/items/tmhm.asm \
     src/engine/items/super_rod.asm \
-    src/engine/items/town_map.asm \
-    src/engine/menus/swap_items.asm
+    src/engine/items/town_map.asm
 
 # Home routines that assemble-validate but aren't linked yet. count_set_bits
 # emits an undefined external for wNumSetBits (no memmap alias / no caller yet),
@@ -496,11 +509,12 @@ ITEMS_CHECK_SRCS := \
 # (then add wNumSetBits to gb_memmap.inc and move it to HOME_SRCS).
 # yes_no.asm MOVED to HOME_SRCS (menus S2): DisplayTextBoxID_'s TWO_OPTION_MENU
 # dispatch needs DisplayTwoOptionMenu live; all its externs already resolved.
+# list_menu.asm MOVED to HOME_SRCS (menus S3): all former link-blockers resolve
+# to linked code (PrintLevel added to home/pokemon.asm); links with swap_items.
 HOME_CHECK_SRCS := \
     src/home/count_set_bits.asm \
     src/home/text_script.asm \
     src/home/predef_text.asm \
-    src/home/list_menu.asm \
     src/home/give.asm \
     src/home/money.asm \
     src/home/oam.asm \

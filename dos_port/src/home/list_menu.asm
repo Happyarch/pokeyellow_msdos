@@ -48,10 +48,11 @@
 ; are deferred and marked TODO(proj); they do not affect the overworld item path.
 ;
 ; pret citations are inline as ; pret list_menu.asm:<line/label>.
-; TODO(faithful) marks a sub-behaviour translated in structure but depending on a
-; home routine not yet ported (link-blocker; listed in SUMMARY).
+; LINKED (menus S3): all former link-blockers resolve to real linked routines
+; (ClearScreenArea/LoadGBPal/PlaceUnfilledArrowMenuCursor/IsKeyItem/PrintLevel/
+; GetPartyMonName/CopyToStringBuffer); party/box nick + box-level paths are in.
 ;
-; Build (CHECK-only): nasm -f coff -I include/ -I . -o /dev/null list_menu.asm
+; Build check: nasm -f coff -I include/ -I . -o /dev/null list_menu.asm
 ; ============================================================================
 
 %include "include/gb_memmap.inc"
@@ -63,7 +64,8 @@ global DisplayChooseQuantityMenu
 
 ; ── globals resolved elsewhere (present in the port) ─────────────────────────
 extern TextBoxBorder            ; text.asm       ESI=top-left dest, BL=int w, BH=int h
-extern PlaceString              ; text.asm       ESI=dest(HL), EDX=src(DE, EBP-rel)
+extern PlaceString              ; text.asm       ESI=dest(HL), EAX=src FLAT ptr
+                                ;                (GB-memory src: lea eax,[ebp+off])
 extern place_flat_str           ; text.asm       ESI=dest, EAX=flat '@'-term src
 extern PrintNumber              ; home/print_num.asm  ESI=dest, EDX=src, BH=flags|bytes, BL=digits
 extern PrintBCDNumber           ; home/print_bcd.asm  ESI=dest, EDX=src, BL=flags|len
@@ -73,6 +75,7 @@ extern HandleMenuInput          ; home/window.asm  Out: AL=watched keys pressed
 extern PlaceMenuCursor          ; home/window.asm
 extern text_row_stride          ; text.asm       (resd) active W_TILEMAP row stride
 extern menu_item_step           ; home/window.asm(resd) per-item cursor row step
+extern menu_redraw_cb           ; home/window.asm(resd) per-frame redraw cb (0=none)
 extern DelayFrames              ; frame.asm      BL=frame count
 extern Delay3                   ; frame.asm
 extern JoypadLowSensitivity     ; input/joypad_lowsens.asm  → H_JOY_PRESSED
@@ -83,18 +86,17 @@ extern GetMoveName              ; home/names.asm
 extern GetName                  ; home/names.asm  [wNameListIndex]/[wNameListType] → wNameBuffer
 extern GetItemPrice             ; engine/items/item_price.asm  [wCurItem] → hItemPrice
 extern LoadMonData              ; engine/pokemon/load_mon_data.asm
-extern GetPartyMonName          ; (currently a stub) name of party/box mon
+extern GetPartyMonName          ; home/pokemon.asm  AL=index, ESI=nick list base
 extern CopyToStringBuffer       ; engine/battle/core.asm  EDX=src → wStringBuffer
 extern AddBCDPredef             ; engine/math/bcd.asm
 extern DivideBCDPredef3         ; engine/math/bcd.asm
 
-; ── link-blockers: home routines not yet ported (extern; CHECK-only OK) ──────
-; (listed for root in SUMMARY — needed only to *link* a live caller)
-extern ClearScreenArea          ; home/clear_screen.asm  ESI=top-left, BH=rows, BL=cols
-extern LoadGBPal                ; home/palettes  (flat: palette load)
+; ── former link-blockers, all resolved by linked code (menus S3) ─────────────
+extern ClearScreenArea          ; home/copy2.asm  ESI=top-left, BH=rows, BL=cols
+extern LoadGBPal                ; home/fade.asm  (flat: palette load)
 extern PlaceUnfilledArrowMenuCursor ; home/window.asm  AL=item → hollow ▶
-extern IsKeyItem                ; engine/items  [wCurItem] → [wIsKeyItem]
-extern PrintLevel               ; home/print_level.asm  ESI=dest, mon level
+extern IsKeyItem                ; home/item_predicates.asm  [wCurItem] → [wIsKeyItem]
+extern PrintLevel               ; home/pokemon.asm  ESI=dest, [wLoadedMonLevel]
 
 ; SELECT-swap driver lives in swap_items.asm (mutual extern; both link together)
 extern HandleItemListSwapping
@@ -119,6 +121,8 @@ hDivideBCDQuotient          equ H_DIVIDE_BCD_QUOTIENT
 LIST_STRIDE     equ 20          ; W_TILEMAP box-relative stride (NOT port SCREEN_WIDTH=40)
 LIST_INT_W      equ 14          ; TextBoxBorder interior width  (total 16)
 LIST_INT_H      equ 9           ; TextBoxBorder interior height (total 11)
+LIST_TOTAL_W    equ LIST_INT_W + 2
+LIST_TOTAL_H    equ LIST_INT_H + 2
 LIST_WX         equ 199         ; ; PROJ overworld-ui GB(4,2) anchor=top-right X+20 Y+0
 LIST_WY         equ 16
 LIST_CLIP       equ 128
@@ -135,11 +139,16 @@ LIST_DOWN_ROW   equ 9
 
 ; quantity box geometry (DisplayChooseQuantityMenu). Overworld-ui anchor reused;
 ; priced(mart) anchor is context-specific → TODO(proj) when the mart is wired.
+; The qty box gets its OWN scratch rows + GB_TILEMAP0 region (bag_menu's
+; distinct-start-row scheme) so it never collides with the list box (rows 0-10).
 QTY_WX          equ 287         ; ; PROJ overworld-ui GB(15,9) anchor=top-right X+20 Y+0
 QTY_WY          equ 72
 QTY_CLIP        equ 40
 QTY_MAXY        equ 96
-QTY_SROW        equ 0
+QTY_SROW        equ 12          ; GB_TILEMAP0 start row (below the 11-row list box)
+QTY_SCRATCH     equ W_TILEMAP + QTY_SROW * LIST_STRIDE  ; scratch row == tilemap row
+QTY_TOTAL_W     equ 13          ; widest (priced) box; small box clipped by window
+QTY_TOTAL_H     equ 3
 
 ; charmap codes (constants/charmap.asm)
 CHAR_CURSOR     equ 0xED        ; ▶
@@ -236,6 +245,9 @@ DisplayListMenuIDLoop:
     xor al, al
     mov [ebp + hAutoBGTransferEnabled], al    ; disable transfer
     call PrintListMenuEntries
+    call list_mirror                           ; scratch box → GB_TILEMAP0 (port
+                                               ; window model; do_bg_transfer
+                                               ; targets GB_TILEMAP1, not ours)
     mov al, 1
     mov [ebp + hAutoBGTransferEnabled], al     ; enable transfer
     call Delay3
@@ -247,6 +259,7 @@ DisplayListMenuIDLoop:
     ; place ▶ at box-rel cursor and auto-advance. ; PROJ overworld-ui reused;
     ; TODO(proj): Old-Man battle really wants the battle anchor (+10col/+3row).
     mov byte [ebp + W_TILEMAP + LIST_NAME_ROW0 * LIST_STRIDE + LIST_CURSOR_COL], CHAR_CURSOR
+    call list_mirror
     mov bl, 20
     call DelayFrames
     xor al, al
@@ -256,17 +269,22 @@ DisplayListMenuIDLoop:
     mov [ebp + wMenuCursorLocation], ax
     jmp .buttonAPressed
 .notOldManBattle:
-    call LoadGBPal                             ; TODO(faithful): palette reload (flat)
+    call LoadGBPal                             ; home/fade.asm (flat palette reload)
+    ; per-frame mirror keeps HandleMenuInput's live cursor reaching the
+    ; compositor (same mechanism as yes_no.asm's yn_mirror callback)
+    mov dword [menu_redraw_cb], list_mirror
     call HandleMenuInput                       ; Out: AL = watched keys pressed
+    mov dword [menu_redraw_cb], 0
     push eax
     call PlaceMenuCursor
+    call list_mirror
     pop eax
     test al, PAD_A
     jz .checkOtherKeys
 
 .buttonAPressed:
     mov al, [ebp + wCurrentMenuItem]
-    call PlaceUnfilledArrowMenuCursor          ; TODO(faithful): hollow ▶ (home/window)
+    call PlaceUnfilledArrowMenuCursor          ; home/window.asm: hollow ▶
 
     ; pret sets wMenuExitMethod/wChosenMenuItem=$01 here but both are overwritten
     ; before being read — faithfully harmless. Kept for fidelity.
@@ -326,8 +344,16 @@ DisplayListMenuIDLoop:
     jmp .storeChosenEntry
 .pokemonList:
     ; name of the chosen party/box mon (pret .pokemonList:149)
+    ; party vs box: pret compares low([wListPointer]) against low(wPartyCount)
+    ; ("cp l" with hl=wPartyCount) to pick the nick-list base.
+    mov al, [ebp + wListPointer]               ; low byte of the list address
+    mov esi, wPartyMonNicks
+    cmp al, wPartyCount & 0xFF
+    je .getPokemonName
+    mov esi, wBoxMonNicks                      ; box pokemon names
+.getPokemonName:
     mov al, [ebp + wWhichPokemon]
-    call GetPartyMonName                       ; TODO(faithful): party/box nick (stub in port)
+    call GetPartyMonName                       ; AL=index, ESI=nick list base
 .storeChosenEntry:
     ; store chosen entry name & return (pret .storeChosenEntry:160)
     mov edx, wNameBuffer
@@ -398,7 +424,7 @@ DisplayChooseQuantityMenu:
     ; PROJ overworld-ui: GB(15,9) 5x3 --(anchor=top-right, X+20, Y+0)--> wx=287 wy=72 clip=40 max_y=96
     ; TODO(proj): PRICEDITEMLISTMENU is a Pokémart box (GB 7,9 x11) → needs the
     ; mart anchor; deferred until the mart wires this (no live caller yet).
-    mov esi, W_TILEMAP                         ; box-relative top-left in scratch
+    mov esi, QTY_SCRATCH                       ; box-relative top-left in scratch
     mov bl, 3                                  ; interior width  (quantity only)
     mov bh, 1                                  ; interior height
     mov al, [ebp + wListMenuID]
@@ -409,7 +435,7 @@ DisplayChooseQuantityMenu:
     call TextBoxBorder
     call list_add_qty_window
     ; "×01" initial label — box-rel (col 1, row 1) [quantity] / (col 1,row 1) [priced]
-    mov esi, W_TILEMAP + 1 * LIST_STRIDE + 1
+    mov esi, QTY_SCRATCH + 1 * LIST_STRIDE + 1
     mov eax, InitialQuantityText
     call place_flat_str
     xor al, al
@@ -417,6 +443,7 @@ DisplayChooseQuantityMenu:
     jmp .incrementQuantity
 
 .waitForKeyPressLoop:
+    call qty_mirror                            ; scratch → GB_TILEMAP0 qty region
     call JoypadLowSensitivity
     movzx eax, byte [ebp + hJoyPressed]        ; newly pressed
     test al, PAD_A
@@ -482,18 +509,18 @@ DisplayChooseQuantityMenu:
     mov [ebp + hMoney + 2], al
 .skipHalvingPrice:
     ; spaces between quantity and price — box-rel (col 5, row 1) (pret hlcoord 12,10)
-    mov esi, W_TILEMAP + 1 * LIST_STRIDE + 5
-    mov edx, SpacesBetweenQuantityAndPriceText
+    mov esi, QTY_SCRATCH + 1 * LIST_STRIDE + 5
+    mov eax, SpacesBetweenQuantityAndPriceText  ; flat .data label
     call PlaceString
     ; print total price — box-rel (col 2, row 1) (pret hlcoord 9,10)
-    mov esi, W_TILEMAP + 1 * LIST_STRIDE + 2
+    mov esi, QTY_SCRATCH + 1 * LIST_STRIDE + 2
     mov edx, hMoney
     mov bl, 3 | (1 << BIT_LEADING_ZEROES) | (1 << BIT_MONEY_SIGN)
     call PrintBCDNumber
     jmp .quantityPlaced          ; priced case already positioned quantity below
 .printQuantity:
     ; quantity-only: box-rel (col 2, row 1)   (pret hlcoord 17,10 → box-rel from 15,9)
-    mov esi, W_TILEMAP + 1 * LIST_STRIDE + 2
+    mov esi, QTY_SCRATCH + 1 * LIST_STRIDE + 2
 .quantityPlaced:
     ; NB: pret prints the ×NN digits at hlcoord 17,10 (qty) / after the price it
     ; also lands the digits; here both paths print the 2-digit quantity.
@@ -523,7 +550,7 @@ PrintListMenuEntries:
     mov esi, W_TILEMAP + 1 * LIST_STRIDE + 1
     mov bh, 9
     mov bl, 14
-    call ClearScreenArea                       ; TODO(faithful): home ClearScreenArea
+    call ClearScreenArea                       ; home/copy2.asm
 
     ; de = list entries base (+scroll*entrysize)
     movzx edx, word [ebp + wListPointer]
@@ -561,6 +588,13 @@ PrintListMenuEntries:
     call GetItemName                           ; [wNamedObjectIndex] → wNameBuffer
     jmp .placeNameString
 .pokemonPCMenu:
+    ; party vs box nick base: pret "cp l" with hl=wPartyCount (see .pokemonList)
+    mov al, [ebp + wListPointer]
+    mov esi, wPartyMonNicks
+    cmp al, wPartyCount & 0xFF
+    je .getMonNameIndex
+    mov esi, wBoxMonNicks                      ; box pokemon names
+.getMonNameIndex:
     ; index = wListScrollOffset + (4 - wWhichPokemon)   (pret .pokemonPCMenu:383)
     mov al, [ebp + wWhichPokemon]
     mov bl, al
@@ -569,20 +603,22 @@ PrintListMenuEntries:
     mov bl, al
     mov al, [ebp + wListScrollOffset]
     add al, bl
-    call GetPartyMonName                       ; TODO(faithful): party/box nick (stub)
+    call GetPartyMonName                       ; AL=index, ESI=nick list base
     jmp .placeNameString
 .movesMenu:
     call GetMoveName
 .placeNameString:
     mov esi, [esp]                             ; hl = name dest (peek saved esi)
-    mov edx, wNameBuffer
+    lea eax, [ebp + wNameBuffer]               ; flat ptr to the GB-memory string
     call PlaceString
 
     ; price (if wPrintItemPrices) — box-rel from name (row+1, col+5) (pret bc SW+5)
     mov al, [ebp + wPrintItemPrices]
     test al, al
     jz .skipPrintingItemPrice
-    mov al, [ebp + edx]                        ; NB pret uses [de]=entry id here
+    mov edx, [esp + 4]                         ; saved entry ptr (pret pop de before
+                                               ; the read; PlaceString clobbered EDX)
+    mov al, [ebp + edx]                        ; [de] = entry id
     mov [ebp + wCurItem], al
     call GetItemPrice
     mov esi, [esp]
@@ -596,11 +632,18 @@ PrintListMenuEntries:
     mov al, [ebp + wListMenuID]
     test al, al
     jnz .skipPrintingPokemonLevel
-    ; TODO(faithful): LoadMonData(party/box) + PrintLevel at box-rel (row+1,col+8).
-    ; Structurally: set wMonDataLocation (PLAYER_PARTY_DATA/BOX_DATA), wWhichPokemon
-    ; = scroll + (4 - wWhichPokemon), LoadMonData, copy box level if box, PrintLevel.
+    ; print Pokémon level (pret list_menu.asm:426-460)
+    mov al, [ebp + wNamedObjectIndex]
+    push eax                                   ; pret push af (restored below)
+    ; party vs box data source: pret "cp l" with hl=wPartyCount; flags-preserving
+    ; mov mirrors pret's "ld a, PLAYER_PARTY_DATA" before the branch.
+    mov al, [ebp + wListPointer]
+    cmp al, wPartyCount & 0xFF
     mov al, PLAYER_PARTY_DATA
-    mov [ebp + wMonDataLocation], al           ; (party path; box path is TODO)
+    je .monDataLocationSet
+    mov al, BOX_DATA
+.monDataLocationSet:
+    mov [ebp + wMonDataLocation], al
     mov al, [ebp + wWhichPokemon]
     mov bl, al
     mov al, 4
@@ -610,9 +653,17 @@ PrintListMenuEntries:
     add al, bl
     mov [ebp + wWhichPokemon], al
     call LoadMonData
-    mov esi, [esp]
+    mov al, [ebp + wMonDataLocation]
+    test al, al                                ; party (0) or box?
+    jz .skipCopyingLevel
+    mov al, [ebp + wLoadedMonBoxLevel]         ; copy box level over level
+    mov [ebp + wLoadedMonLevel], al
+.skipCopyingLevel:
+    mov esi, [esp + 4]                         ; saved name dest (under the push eax)
     add esi, LIST_STRIDE + (LIST_INFO_COL - LIST_NAME_COL)   ; 1 row down, +8 cols
-    call PrintLevel                            ; TODO(faithful): home PrintLevel
+    call PrintLevel
+    pop eax
+    mov [ebp + wNamedObjectIndex], al          ; pret pop af / ld [wNamedObjectIndex], a
 .skipPrintingPokemonLevel:
 
     pop esi
@@ -625,7 +676,7 @@ PrintListMenuEntries:
     jne .nextListEntry
     mov al, [ebp + wNamedObjectIndex]
     mov [ebp + wCurItem], al
-    call IsKeyItem                             ; TODO(faithful): sets [wIsKeyItem]
+    call IsKeyItem                             ; home/item_predicates.asm → [wIsKeyItem]
     mov al, [ebp + wIsKeyItem]
     test al, al                                ; unsellable?
     jnz .skipPrintingItemQuantity
@@ -724,4 +775,48 @@ list_add_qty_window:
     mov esi, GB_TILEMAP0
     mov edi, QTY_SROW
     call add_window
+    ret
+
+; ----------------------------------------------------------------------------
+; Mirror helpers — copy the staged boxes from the W_TILEMAP scratch (stride 20)
+; into their GB_TILEMAP0 regions (stride 32) so the window compositor sees
+; them. Port-model plumbing (same mechanism as bag_menu .copy_box / yes_no
+; yn_mirror); do_bg_transfer can't be used — it targets GB_TILEMAP1.
+; list_mirror doubles as the HandleMenuInput menu_redraw_cb, so it preserves
+; all registers.
+; ----------------------------------------------------------------------------
+list_mirror:
+    pushad
+    xor ebx, ebx                                ; row 0..LIST_TOTAL_H-1
+.row:
+    mov esi, ebx
+    imul esi, esi, LIST_STRIDE
+    lea esi, [ebp + esi + W_TILEMAP]
+    mov edi, ebx
+    shl edi, 5                                  ; row*32
+    lea edi, [ebp + edi + GB_TILEMAP0 + LIST_SROW * 32]
+    mov ecx, LIST_TOTAL_W
+    rep movsb
+    inc ebx
+    cmp ebx, LIST_TOTAL_H
+    jb .row
+    popad
+    ret
+
+qty_mirror:
+    pushad
+    xor ebx, ebx                                ; row 0..QTY_TOTAL_H-1
+.row:
+    mov esi, ebx
+    imul esi, esi, LIST_STRIDE
+    lea esi, [ebp + esi + QTY_SCRATCH]
+    mov edi, ebx
+    shl edi, 5
+    lea edi, [ebp + edi + GB_TILEMAP0 + QTY_SROW * 32]
+    mov ecx, QTY_TOTAL_W
+    rep movsb
+    inc ebx
+    cmp ebx, QTY_TOTAL_H
+    jb .row
+    popad
     ret

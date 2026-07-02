@@ -53,6 +53,13 @@ extern hide_window
 extern DelayFrame
 global RunTextBoxIDTest
 %endif
+%ifdef DEBUG_LISTMENU
+extern PrepareNewGameDebug
+extern LoadFontTilePatterns
+extern DisplayListMenuID
+extern DelayFrame
+global RunListMenuTest
+%endif
 %ifdef DEBUG_BATTLE
 extern PrepareNewGameDebug
 extern LoadFontTilePatterns
@@ -340,6 +347,58 @@ RunTextBoxIDTest:
     rep stosb
     mov byte [ebp + wTextBoxID], DEBUG_TEXTBOXID
     call DisplayTextBoxID           ; home wrapper → DisplayTextBoxID_
+    call DelayFrame
+    call DelayFrame
+    call DelayFrame
+    call DumpBackbuffer             ; writes FRAME.BIN + exits (never returns)
+.hang:
+    jmp .hang
+%endif
+
+%ifdef DEBUG_LISTMENU
+; ---------------------------------------------------------------------------
+; RunListMenuTest — menus S3 FRAME.BIN gate (docs/current_plan_menus.md).
+; Seeds the debug party + bag, then drives the GENERIC list-menu driver
+; (home/list_menu.asm:DisplayListMenuID) with NO input: wBattleType != 0 takes
+; the Old-Man-battle branch, which force-selects entry 0 and returns without
+; touching HandleMenuInput. Renders 3 frames, dumps FRAME.BIN, exits.
+;   make DEBUG_LISTMENU=<mode>
+;     0 = PCPOKEMONLISTMENU  (party list: nick-base select + LoadMonData +
+;         PrintLevel — the S3-completed paths)
+;     2 = PRICEDITEMLISTMENU (price column via GetItemPrice/PrintBCDNumber.
+;         NB: priced lists are 1-byte mart format; feeding it the 2-byte bag
+;         list means qty bytes render as items — deterministic render gate
+;         only, not a data-correctness gate)
+;     3 = ITEMLISTMENU       (bag list with ×NN quantities + IsKeyItem skip)
+;   (1 = MOVESLISTMENU needs a seeded wMoves list; unsupported here.)
+; Never returns. In: EBP = GB base.
+; ---------------------------------------------------------------------------
+RunListMenuTest:
+    mov byte [ebp + 0xD162], 0      ; wPartyCount = 0
+    mov byte [ebp + 0xD163], 0xFF   ; wPartySpecies sentinel
+    mov byte [ebp + 0xD31C], 0      ; wNumBagItems = 0
+    mov byte [ebp + 0xD31D], 0xFF   ; wBagItems sentinel
+    call PrepareNewGameDebug        ; party + bag + money
+    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    call LoadFontTilePatterns
+    ; input-free drive: Old Man battle type → auto-select entry 0
+    mov byte [ebp + wBattleType], 1
+    mov byte [ebp + wListMenuID], DEBUG_LISTMENU
+    mov byte [ebp + wPrintItemPrices], 0
+%if DEBUG_LISTMENU = 0
+    mov word [ebp + wListPointer], wPartyCount & 0xFFFF
+%else
+    mov word [ebp + wListPointer], wNumBagItems & 0xFFFF
+%endif
+%if DEBUG_LISTMENU = 2
+    mov byte [ebp + wPrintItemPrices], 1
+    mov byte [ebp + hHalveItemPrices], 0
+%endif
+    xor al, al
+    mov [ebp + wListScrollOffset], al
+    mov [ebp + wCurrentMenuItem], al
+    call DisplayListMenuID          ; box + entries + auto-select entry 0
+    mov byte [ebp + wBattleType], 0
     call DelayFrame
     call DelayFrame
     call DelayFrame

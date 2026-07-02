@@ -31,10 +31,16 @@ extern BaseStats
 extern IndexToPokedex
 extern SkipFixedLengthTextEntries
 extern CopyData
+extern PrintNumber
 
 global GetMonHeader
 global GetPartyMonName
 global GetPartyMonName2
+global PrintLevel
+global PrintLevelFull
+global PrintLevelCommon
+
+CHAR_LV        equ 0x6E     ; '<LV>' ":L" tile (constants/charmap.asm:67)
 
 section .text
 
@@ -106,3 +112,35 @@ GetPartyMonName:
     pop ebx
     pop esi
     ret
+
+; prints the level of a mon, with the ":L" prefix dropped at level >= 100
+; INPUT: ESI (hl) = destination tile-buffer cursor (EBP-relative),
+;        [wLoadedMonLevel] = level
+; pret ref: home/pokemon.asm:PrintLevel
+PrintLevel:
+    mov byte [ebp + esi], CHAR_LV      ; ld a, '<LV>' / ld [hli], a
+    inc esi
+    mov bl, 2                          ; c = 2 digits
+    mov al, [ebp + wLoadedMonLevel]
+    cmp al, 100
+    jc PrintLevelCommon
+    ; if level at least 100, write over the ":L" tile
+    dec esi
+    inc bl                             ; 3 digits
+    jmp PrintLevelCommon
+
+; prints the level without leaving off ":L" regardless of level
+; pret ref: home/pokemon.asm:PrintLevelFull
+PrintLevelFull:
+    mov byte [ebp + esi], CHAR_LV
+    inc esi
+    mov bl, 3                          ; c = 3 digits
+    mov al, [ebp + wLoadedMonLevel]
+    ; fall through
+
+; pret ref: home/pokemon.asm:PrintLevelCommon
+PrintLevelCommon:
+    mov [ebp + wTempByteValue], al
+    mov edx, wTempByteValue            ; de = wTempByteValue
+    mov bh, (1 << BIT_LEFT_ALIGN) | 1  ; b = LEFT_ALIGN | 1 byte
+    jmp PrintNumber

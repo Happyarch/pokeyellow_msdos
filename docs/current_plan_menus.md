@@ -82,12 +82,36 @@ entry + commit (root only).
     4-field-move box landed at (29,9)-(39,24), exactly pret's math +20/+7).
     0x14/0x15 are interactive; 0x15's template verified via 0x0E.
     `make` + `make check` green.
-- [ ] **Session 3 — Wire dead drivers live.** Promote list_menu/yes_no/
-  swap_items to LINK_SRCS; fill link-blockers (list_menu.asm header lines
-  91-98: ClearScreenArea, LoadGBPal, IsKeyItem, PrintLevel, GetPartyMonName
-  real impl, CopyToStringBuffer); add yes_no TRADE_CANCEL_MENU variant;
-  `DEBUG_LISTMENU=<mode>` harness. No live-behavior change (baseline
-  FRAME.BINs must match). Requires: S2.
+- [x] **Session 3 — Wire dead drivers live.** DONE 2026-07-02 (see
+  translation_log.md "menus-port Session 3").
+  - Link-blockers: all but PrintLevel already resolved to linked code
+    (ClearScreenArea=copy2, LoadGBPal=fade, IsKeyItem=item_predicates,
+    GetPartyMonName=home/pokemon [real], CopyToStringBuffer=battle core).
+    NEW: PrintLevel/PrintLevelFull/PrintLevelCommon in src/home/pokemon.asm.
+  - list_menu.asm faithful completions: party-vs-box nick-base select
+    (pret "cp l" low-byte trick) in .pokemonList/.pokemonPCMenu; box-level
+    copy (wLoadedMonBoxLevel→wLoadedMonLevel) + wNamedObjectIndex save/restore
+    in the level path. FIXED: PlaceString called with pret's DE convention
+    (port takes EAX=flat ptr) — names/CANCEL never rendered; priced path read
+    entry id from PlaceString-clobbered EDX (now peeks saved ptr at [esp+4]).
+  - Port-model wiring: list_mirror/qty_mirror (scratch→GB_TILEMAP0; the
+    do_bg_transfer path targets GB_TILEMAP1 so windows never saw the box);
+    menu_redraw_cb=list_mirror during HandleMenuInput (yes_no's mechanism);
+    qty box moved to its own scratch+tilemap region (QTY_SROW=12, bag_menu's
+    distinct-start-row scheme — was colliding with the list box at row 0).
+  - yes_no: TRADE_CANCEL_MENU variant added — DisplayTwoOptionMenu branches to
+    CableClub_TextBoxBorder (NEW src/engine/link/cable_club.asm, +DrawHorizontalLine;
+    $76-$7D tile gfx load deferred to S8/I1 with its callers). FIXED latent EBX
+    corruption (mov bh,[ebx+..] clobbered the descriptor ptr mid-read) — S2's
+    gate never ran the interactive 0x14 path; live check lands with S4's bag
+    realign. Added pret's pre-HandleMenuInput clears (wTwoOptionMenuID +
+    BIT_NO_TEXT_DELAY).
+  - Makefile: list_menu→HOME_SRCS, swap_items+cable_club→GAME_SRCS;
+    `DEBUG_LISTMENU=<mode>` harness (debug_dump.asm RunListMenuTest: Old-Man
+    auto-select drives the driver input-free; modes 0/2/3 verified via
+    FRAME.BIN renders — party nicks+levels, price column, ×qty+IsKeyItem skip).
+  - Gate: baseline FRAME.BINs (overworld/STARTMENU/BAGMENU) byte-identical
+    before/after; `make` + `make check` green.
 - [ ] **Session 4 — Realign start_menu + bag_menu.** `_v2` files + DEBUG flag
   A/B swap; FRAME.BIN A/B diff for must-not-change behavior; SELECT-swap goes
   live via real swap_items.asm; bag USE stays tagged stub; single revertible

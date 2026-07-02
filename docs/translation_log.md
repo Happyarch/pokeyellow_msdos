@@ -23,6 +23,60 @@ if it took none. This is the swarm's divergence audit trail.
 
 ---
 
+## menus-port Session 3 — generic list/yes-no/swap drivers wired live
+- **Date:** 2026-07-02
+- **Plan:** docs/current_plan_menus.md, Session 3.
+- **PrintLevel / PrintLevelFull / PrintLevelCommon** — Source: pret
+  `home/pokemon.asm:363-389`. Translated: `dos_port/src/home/pokemon.asm`.
+  H-flag: not involved. Bug tags: none. Divergences: none (faithful).
+  Notes: '<LV>' = tile $6E; PrintNumber flags = (1<<BIT_LEFT_ALIGN)|1 byte in
+  BH, digits in BL per the port PrintNumber convention.
+- **list_menu.asm faithful completions** (pret `home/list_menu.asm`):
+  `.pokemonList`/`.pokemonPCMenu` party-vs-box nick base — pret's `cp l`
+  low-byte compare of [wListPointer] vs wPartyCount picks
+  wPartyMonNicks/wBoxMonNicks (ESI) before GetPartyMonName; level path now
+  saves/restores wNamedObjectIndex (pret push af/pop af) and copies
+  wLoadedMonBoxLevel→wLoadedMonLevel for BOX_DATA. Divergences: none beyond
+  the existing ; PROJ window projection.
+- **list_menu call-convention fixes** (latent — file was check-only):
+  (1) PlaceString was called with pret's DE register convention; the port
+  takes EAX = FLAT source ptr (names + the quantity-menu spacer never drew).
+  (2) The priced path read the entry id from EDX after PlaceString clobbered
+  it (pret does `pop de` first) — now peeks the saved ptr at [esp+4].
+- **list_menu port-model wiring:** new `list_mirror`/`qty_mirror` copy the
+  staged boxes W_TILEMAP(stride 20)→GB_TILEMAP0(stride 32) regions —
+  do_bg_transfer targets GB_TILEMAP1 per init.asm, so the add_window
+  descriptors never saw the box; `menu_redraw_cb = list_mirror` during
+  HandleMenuInput (same mechanism as yes_no's yn_mirror); the quantity box
+  moved to its own scratch+tilemap region (QTY_SROW=12, matching bag_menu's
+  distinct-start-row scheme) — it previously collided with the list box at
+  scratch row 0.
+- **CableClub_TextBoxBorder / CableClub_DrawHorizontalLine** — Source: pret
+  `engine/link/cable_club.asm:944/974`. Translated: NEW
+  `dos_port/src/engine/link/cable_club.asm`. Divergences: row advance uses
+  [text_row_stride] (port TextBoxBorder convention) instead of hardcoded 20.
+  Notes: $76-$7D border tile gfx (TrainerInfoTextBoxTileGraphics →
+  LoadTrainerInfoTextBoxTiles) deferred to S8/I1 with its callers.
+- **yes_no.asm** — TRADE_CANCEL_MENU now branches to CableClub_TextBoxBorder
+  (pret text_box.asm:255-262). FIXED latent EBX corruption: `mov bh,[ebx+
+  TOMD_INT_H]` rewrote bits 8-15 of the descriptor pointer before the
+  int_w read and the option-string loads (geometry now staged via AX; EBX
+  pushed around the border call). S2's FRAME.BIN gate only ran non-interactive
+  ids, so the 0x14 path had never executed; first live exercise comes with
+  S4's bag realign. Also added pret's pre-HandleMenuInput clears
+  (wTwoOptionMenuID=0, res BIT_NO_TEXT_DELAY; teardown's clear kept as a
+  no-op backstop).
+- **Makefile:** list_menu.asm → HOME_SRCS; swap_items.asm → GAME_SRCS
+  (out of ITEMS_CHECK_SRCS); cable_club.asm → GAME_SRCS. New
+  `DEBUG_LISTMENU=<mode>` gate (debug_dump.asm:RunListMenuTest) drives
+  DisplayListMenuID input-free via the Old-Man-battle auto-select branch;
+  modes 0 (party nicks + :L levels), 2 (price column), 3 (bag ×qty +
+  IsKeyItem suppression) verified by FRAME.BIN render.
+- **Gate:** baseline FRAME.BINs byte-identical before/after (overworld
+  DEBUG_TRANSITION+BASELINE, DEBUG_STARTMENU, DEBUG_BAGMENU); `make` +
+  `make check` green. No live caller invokes the generic drivers yet — that
+  starts in S4.
+
 ## menus-port Session 2 — DisplayTextBoxID_ + DisplayTextIDInit
 - **Date:** 2026-07-02
 - **Plan:** docs/current_plan_menus.md, Session 2.

@@ -73,6 +73,8 @@ YN_SROW        equ 16
 
 ; -------------------------------------------------------------------------
 extern TextBoxBorder            ; ESI=top-left(EBP-rel), BL=int_w, BH=int_h
+extern CableClub_TextBoxBorder  ; engine/link/cable_club.asm — same interface;
+                                ; TRADE_CANCEL_MENU border (pret text_box.asm:257)
 extern place_flat_str           ; EAX=flat str ptr, ESI=tile-buf pos -> writes glyphs
 extern PlaceMenuCursor          ; home/window.asm — draws ▶ at wTopMenuItem{X,Y}
 extern HandleMenuInput          ; home/window.asm — vertical menu loop, AL=pressed keys
@@ -231,11 +233,23 @@ DisplayTwoOptionMenu:
 .have_frow:                                       ; ECX = first-option rel row
 
     ; --- render the border into the W_TILEMAP scratch at origin (row0,col0) -
+    ; NB: load the geometry via AX first — writing BH/BL directly from [ebx+..]
+    ; would corrupt EBX (the descriptor pointer) between the two reads (S3 fix).
     push ecx                                       ; save first-opt rel row
     mov esi, W_TILEMAP
-    mov bh, [ebx + TOMD_INT_H]                     ; BH = interior height
-    mov bl, [ebx + TOMD_INT_W]                     ; BL = interior width
+    mov ah, [ebx + TOMD_INT_H]                     ; interior height
+    mov al, [ebx + TOMD_INT_W]                     ; interior width
+    push ebx
+    mov bx, ax                                     ; BH = int_h, BL = int_w
+    ; TRADE_CANCEL_MENU uses the cable-club border (pret text_box.asm:255-262)
+    cmp byte [ebp + wTwoOptionMenuID], TRADE_CANCEL_MENU
+    jne .notTradeCancelMenu
+    call CableClub_TextBoxBorder
+    jmp .afterTextBoxBorder
+.notTradeCancelMenu:
     call TextBoxBorder
+.afterTextBoxBorder:
+    pop ebx                                        ; descriptor pointer restored
 
     ; --- option A text at rel (frow, 2), option B at (frow+1, 2) -----------
     pop ecx
@@ -265,6 +279,12 @@ DisplayTwoOptionMenu:
 
     ; --- project + append the window descriptor ----------------------------
     call yn_show_window                            ; also saves g_window_count
+
+    ; pret clears the menu id + text-delay bit before taking input
+    ; (text_box.asm:278-281: xor a / ld [wTwoOptionMenuID], a / res
+    ; BIT_NO_TEXT_DELAY). yn_teardown's clear stays as a no-op backstop.
+    mov byte [ebp + wTwoOptionMenuID], 0
+    and byte [ebp + W_STATUS_FLAGS_5], ~(1 << BIT_NO_TEXT_DELAY)
 
     ; --- run HandleMenuInput; per-frame mirror keeps the cursor projected ---
     mov dword [menu_redraw_cb], yn_mirror          ; re-mirror box each loop
