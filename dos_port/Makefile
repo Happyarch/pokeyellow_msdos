@@ -779,6 +779,16 @@ src/engine/battle/pokeballs.o src/gfx/pics.o \
 src/engine/battle/core.o src/engine/battle/battle_menu.o: \
         assets/ui_layout_battle.inc
 
+# Authored map border-ring overrides (map-tool C3): painted in
+# tools/map_editor/editor.py paint mode -> assets/map_borders/*.json ->
+# this Tier-1 .inc, consumed by overworld.asm ApplyMapBorderOverrides.
+assets/map_border_overrides.inc: $(wildcard assets/map_borders/*.json) \
+		tools/gen_map_borders.py tools/map_editor/borders.py \
+		tools/map_editor/view.py tools/gfx_core/pret_maps.py
+	python3 tools/gen_map_borders.py
+
+src/engine/overworld/overworld.o: assets/map_border_overrides.inc
+
 # Wild-encounter tables (static data, generated from data/wild/).
 assets/wild_data.inc:
 	python3 tools/gen_wild_encounters.py
@@ -815,7 +825,7 @@ assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_
         assets/trainer_pics.inc \
         assets/super_rod.inc assets/town_map_data.inc assets/town_map_gfx.inc \
         assets/ui_layout_menus.inc assets/ui_layout_battle.inc \
-        assets/badge_tiles.inc
+        assets/map_border_overrides.inc assets/badge_tiles.inc
 
 all: $(TARGET)
 

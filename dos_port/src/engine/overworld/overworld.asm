@@ -1122,6 +1122,13 @@ LoadTileBlockMap:
     dec bh
     jnz .row_loop
 
+    ; --- Border overrides (map-tool C3): hand-authored blocks for the border
+    ;     ring, painted in tools/map_editor/editor.py and generated into
+    ;     assets/map_border_overrides.inc. Applied BEFORE the connection
+    ;     strips so connections always win (the generator also rejects any
+    ;     cell inside a strip or the real map area).
+    call ApplyMapBorderOverrides
+
     ; --- Connection strips: copy each connected map's edge into the wOverworldMap
     ;     border. SwitchToMapRomBank is a no-op in the flat model. The strip src
     ;     pointers (CONN_STRIP_SRC) index into the connected maps' block data
@@ -1175,6 +1182,46 @@ LoadTileBlockMap:
     pop ebx
     pop edi
     pop esi
+    ret
+
+; ---------------------------------------------------------------------------
+; ApplyMapBorderOverrides — write the current map's authored border-ring
+; blocks into wOverworldMap (map-tool plan C3; data from
+; assets/map_border_overrides.inc, painted via tools/map_editor/editor.py).
+;
+; Record format per map: runs of `db row, col, len` + len block bytes,
+; terminated by 0xFF. row/col are padded-grid coords; dest =
+; wOverworldMap + row*(wCurMapWidth + 2*MAP_BORDER) + col.
+;
+; Called from LoadTileBlockMap between the map-data copy and the connection
+; strips (registers are dead there; clobbers EAX/EBX/ECX/EDX/ESI/EDI).
+; ---------------------------------------------------------------------------
+ApplyMapBorderOverrides:
+    movzx eax, byte [ebp + W_CUR_MAP]
+    mov esi, [MapBorderOverridePointers + eax*4]  ; flat ptr to run list
+    test esi, esi
+    jz .done
+    movzx ebx, byte [ebp + W_CUR_MAP_WIDTH]
+    add ebx, MAP_BORDER * 2                       ; EBX = padded stride
+.run:
+    movzx eax, byte [esi]                         ; row (0xFF = end)
+    cmp al, 0xFF
+    je .done
+    imul eax, ebx                                 ; row * stride
+    movzx edx, byte [esi + 1]                     ; col
+    add eax, edx
+    lea edi, [eax + W_OVERWORLD_MAP]              ; GB offset of run start
+    movzx ecx, byte [esi + 2]                     ; len
+    add esi, 3
+.copy:
+    mov al, [esi]                                 ; flat src (embedded data)
+    mov [ebp + edi], al                           ; GB dest
+    inc esi
+    inc edi
+    dec ecx
+    jnz .copy
+    jmp .run
+.done:
     ret
 
 ; ---------------------------------------------------------------------------
@@ -2516,6 +2563,8 @@ DoorTileTable:
 
 section .rodata
 
+; authored border-ring blocks (map-tool C3; see ApplyMapBorderOverrides)
+%include "assets/map_border_overrides.inc"
 %include "assets/overworld_gfx.inc"
 %include "assets/overworld_blocks.inc"
 %include "assets/pallet_town_blk.inc"

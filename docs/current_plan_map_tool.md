@@ -86,7 +86,17 @@ checkboxes updated → commit.
   Gates: JSON round-trip stable order; validator rejects out-of-ring cells;
   painted preview matches `render_map` composition.
 
-- [ ] **Session C3 — generator + runtime for border overrides.**
+- [x] **Session C3 — generator + runtime for border overrides.** DONE
+  2026-07-02. `tools/gen_map_borders.py` → `assets/map_border_overrides.inc`
+  (`MapBorderOverridePointers` dd table by map id + per-map RLE runs
+  `db row, col, len` + blocks, 0xFF-terminated; validates every cell against
+  the editable ring at generation). Runtime `ApplyMapBorderOverrides`
+  (overworld.asm) runs in LoadTileBlockMap after the map-data copy, BEFORE
+  the connection strips (connections win by construction). Makefile rule
+  (deps incl. map_borders/*.json wildcard) + assets target + overworld.o dep.
+  Gates: generator idempotent; empty-table build FRAME.BIN byte-identical;
+  63-cell sentinel stripe on Pallet's west ring visible in DOSBox FRAME.BIN;
+  sidecar removal reverts byte-identical; make + make check green.
   Generator (extend `tools/gen_map_headers.py` or new `gen_map_borders.py`) →
   `assets/map_border_overrides.inc`: per-map RLE rows `db row, col, len` +
   block bytes, plus `MapBorderOverridePointers` table parallel to
