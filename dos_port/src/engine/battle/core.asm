@@ -93,6 +93,9 @@ extern BattleRandom                    ; home/random.asm
 
 ; --- draw primitives (category-D divergence point; battle_menu.asm draw helpers) ---
 extern DrawHUDsAndHPBars               ; (DrawBattleHUDs) HUDs + HP bars
+extern AnimateEnemyHPBar               ; battle_hud.asm — gradual enemy HP-bar drain (ECX=old HP)
+extern AnimatePlayerHPBar              ; battle_hud.asm — gradual player HP-bar drain (ECX=old HP)
+extern DrawEnemyHUDAndHPBar            ; battle_hud.asm — faithful enemy-only HUD+bar redraw
 extern SaveScreenTilesToBuffer1        ; (SaveBattleScreen) snapshot clean screen
 extern LoadScreenTilesFromBuffer1      ; (RestoreBattleScreen) restore it
 extern DrawEmptyDialogBox              ; pret PrintEmptyString equiv (blank dialog box)
@@ -1005,10 +1008,12 @@ ApplyDamageToEnemyPokemon:
     mov [ebp + wHPBarNewHP + 1], al
     mov al, [ebp + wEnemyMonHP + 1]
     mov [ebp + wHPBarNewHP], al
-    ; TODO(B): pret jp DrawHUDsAndHPBars + gradual UpdateHPBar2 drain are Master B's;
-    ; wHPBar{Old,New,Max}HP are populated faithfully for it.
+    ; pret: hlcoord 2,2 / xor a / ld [wHPBarType],a / predef UpdateHPBar2 — gradual drain
+    ; of the ENEMY bar (no HP number), from wHPBarOldHP down to the new struct HP.
+    movzx ecx, word [ebp + wHPBarOldHP]     ; old HP (pret little-endian) → drain start
+    call AnimateEnemyHPBar
 ApplyAttackToEnemyPokemonDone:
-    ret
+    jmp DrawHUDsAndHPBars                    ; pret `jp DrawHUDsAndHPBars` (tail; its ret returns)
 
 ; --- externs for the status-condition checks (pret core.asm:3499) ---
 extern PrintText                       ; move_effect_helpers.asm (ESI = flat text stream)
@@ -1482,7 +1487,7 @@ PlayEnemyMoveAnimation:
     mov al, [ebp + wEnemyMoveNum]
     call PlayMoveAnimation
     call HandleExplodingAnimation
-    call DrawHUDsAndHPBars              ; pret DrawEnemyHUDAndHPBar (port: redraw both)
+    call DrawEnemyHUDAndHPBar           ; pret DrawEnemyHUDAndHPBar (enemy-only redraw)
     test byte [ebp + wEnemyBattleStatus2], 1 << HAS_SUBSTITUTE_UP
     jz  EnemyCheckIfMirrorMoveEffect
     call ReshowSubstituteAnim
@@ -1664,8 +1669,12 @@ ApplyDamageToPlayerPokemon:
     mov [ebp + wHPBarNewHP + 1], al
     mov al, [ebp + wBattleMonHP + 1]
     mov [ebp + wHPBarNewHP], al
+    ; pret: hlcoord 10,9 / ld a,1 / ld [wHPBarType],a / predef UpdateHPBar2 — gradual drain
+    ; of the PLAYER bar (ticks the HP number too), from wHPBarOldHP down to new struct HP.
+    movzx ecx, word [ebp + wHPBarOldHP]     ; old HP (pret little-endian) → drain start
+    call AnimatePlayerHPBar
 ApplyAttackToPlayerPokemonDone:
-    ret
+    jmp DrawHUDsAndHPBars                    ; pret `jp DrawHUDsAndHPBars` (tail; its ret returns)
 
 ; ---------------------------------------------------------------------------
 ; AttackSubstitute — faithful port of pret core.asm:5020. Shared by both sides:

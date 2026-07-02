@@ -4476,3 +4476,57 @@ Verify-only (no code change; confirmed correct end-to-end):
 - **Charging-move flow**: CheckIfNeedsToChargeUp → JumpMoveEffect → ChargeEffect_ ($27 CHARGE / $2B FLY)
   on turn 1; PlayerCanExecuteChargingMove clears CHARGING_UP/INVULNERABLE on turn 2. Structurally wired
   and untouched by these leaves (full 2-turn live playthrough still the remaining confidence gap).
+
+## Battle text & HUD pacing (battle-swarm B — message-overrun / HP-bar drain)
+- Source: engine/battle/core.asm (UpdateCurMonHPBar / ApplyAttackTo{Enemy,Player}Pokemon
+  drain tails / PrintCriticalOHKOText), engine/gfx/hp_bar.asm (UpdateHPBar/UpdateHPBar2
+  drain loop), engine/battle/display_effectiveness.asm, data/text/text_2.asm
+  (_SuperEffectiveText / _NotVeryEffectiveText)
+- Translated: dos_port/src/engine/battle/battle_hud.asm (AnimateHPBar, DrawEnemyHUDAndHPBar),
+  move_effect_helpers.asm (UpdateCurMonHPBar), core.asm (ApplyAttackTo* tails),
+  core_stubs.asm (PrintCriticalOHKOText, DisplayEffectiveness + the two effectiveness streams)
+- Date: 2026-07-01
+- H-flag: not involved
+- Bug tags: none new. Preserves the existing Gen-1 maxHP>=256 lossy-÷4 HP-bar quirk
+  (battle_hud.asm hp_to_pixels, BUG_FIX_LEVEL<2 gate) unchanged.
+- Divergences (allowlist / hardware): DrawEnemyHUDAndHPBar drops pret's
+  hAutoBGTransferEnabled bracket (gates the dropped GB torus-tilemap DMA the native
+  render_bg doesn't use; the overworld keeps it disabled — forcing it on would run a
+  pointless per-frame copy) and pret's leading ClearScreenArea (home/copy2.asm not linked
+  into the battle EXE; only relevant to enemy-name-length changes on a multi-mon switch,
+  unreachable in a wild battle). CenterMonName (never ported → short enemy names print
+  flush-left), status-condition-vs-level on the enemy HUD (status_ailments.asm is an empty
+  placeholder → always prints level), and the GetBattleHealthBarColor/RunPaletteCommand
+  recolor tail (Phase-5 palette deferral) remain pre-existing tracked gaps.
+- Notes: Fixes "battle messages run over each other / the menu races the last line."
+  Root cause was three stubbed inter-message pauses: (1) UpdateCurMonHPBar redrew the bar
+  instantly (jmp DrawHUDsAndHPBars); now selects the bar by hWhoseTurn and drains via the
+  gradual Animate{Player,Enemy}HPBar (reading wHPBarOldHP, populated by every caller). The
+  direct-attack path (ApplyAttackTo{Enemy,Player}Pokemon) previously fell through to a bare
+  ret; now drains its own side + jp DrawHUDsAndHPBars, matching pret. (2) AnimateHPBar was
+  made faithful to pret UpdateHPBar cadence: it now walks every intermediate pixel (2 frames
+  each) instead of jumping to the final pixel, ticks the HP number every HP unit with a
+  per-unit DelayFrame (player HUD), and adds the trailing Delay3 settle; a genuine zero-delta
+  call still no-ops. (3) PrintCriticalOHKOText and DisplayEffectiveness were no-op stubs —
+  pret shows AND button-waits on "Critical hit!"/"One-hit KO!"/"It's super effective!"/
+  "...not very effective..." as acknowledged beats between the used-move line and the next
+  mon's move; both now print via the shared PrintText (<PROMPT> wait) with pret's 20-frame
+  settle. SuperEffectiveText/NotVeryEffectiveText are hand-authored in code (Tier-2; the
+  generator does not emit them) with the exact pret charmap bytes. The <PROMPT>/BattlePromptWait
+  plumbing and the between-message text-box clear were audited and already faithful — no change.
+- FLAGGED for Master A (out of pacing lane): observed on this isolated branch that MoveHitTest
+  (core_damage.asm) makes ~all attacks miss on BOTH sides, which blocks watching the HP-drain
+  pacing end-to-end here. The accuracy compare itself is faithful (BattleRandom >= accuracy ->
+  miss); the likely root cause is the move-accuracy value scale (Gen-1 stores 100% as byte 255
+  via `percent` = *255/100; if the move data or CalcHitChance leaves it as raw percent 100,
+  random 0-255 >= 100 misses ~61%). This is Master A's damage-core lane and A is running
+  concurrently — it is likely already fixed on A's branch and will resolve on merge; branch B
+  is off pre-swarm master and simply lacks A's fixes. No pacing-side change needed.
+- INTEGRATION (battle-swarm-integration, 2026-07-01): PrintCriticalOHKOText and
+  DisplayEffectiveness were implemented identically by BOTH A (dedicated files
+  print_critical_ohko.asm / display_effectiveness.asm) and B (inline in core_stubs.asm) —
+  a duplicate-global collision. Resolved in A's favor (its file-per-leaf lane per the swarm
+  partition); B's inline copies + inline Super/NotVeryEffectiveText streams were dropped as
+  byte-identical redundant. B's genuine pacing work (HP-bar drain in battle_hud.asm /
+  UpdateCurMonHPBar in move_effect_helpers.asm / the ApplyAttackTo* drain tails in core.asm)
+  is unaffected. The <PROMPT> beats B intended are delivered by A's identical routines.
