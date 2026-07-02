@@ -11,13 +11,25 @@ battle frontend (`current_plan_battle_pret_alignment.md`); it fixes bugs those
 surfaced (garbage level-up stats, silently-dropped level-up moves).
 
 ## Session / resume guidance
-- **BRANCH: this work lives on `menus-port`** (shared with a concurrent menus /
-  `ui_layout` agent — see `docs/current_plan_menus.md`). This plan touches
-  `src/engine/pokemon/*` + shared includes; the menus agent touches
-  `dos_port/tools/ui_layout/` + `dos_port/Makefile`. Per CLAUDE.md "Commit Policy":
-  commit only your own explicit paths (`git add <files>`, never `add -A`/`commit -a`),
-  and leave the menus agent's uncommitted `ui_layout`/Makefile changes alone — ask
-  the user before touching anything you didn't author this session.
+- **WORKTREE (start here): this work moved to its own git worktree + branch on
+  2026-07-02 to avoid Makefile collisions with the concurrent menus agent.**
+  - **Start Claude in:** `.claude/worktrees/pokemon-behavior/dos_port`
+  - **Branch:** `pokemon-behavior` (based off `menus-port` HEAD `95643886`; Stage 1
+    committed as `e3dc0b1c`). The menus / `ui_layout` agent stays on `menus-port`.
+  - **Seeded artifacts:** the gitignored generated files (`dos_port/assets/*.inc`,
+    `*.2bpp/.pic/.1bpp`) are copied in and already built, so `make` works
+    immediately. If a `git checkout`/pull ever makes `make` try to *regenerate*
+    assets (and fail on a Python module), `touch` the seeded artifacts so they're
+    newer than the freshly-checked-out generator scripts.
+  - It's a real worktree: shares `.git` + the stash stack with the main checkout —
+    the CLAUDE.md multi-agent git cautions still apply.
+  - **To land:** merge `pokemon-behavior` → `menus-port` (or wherever) when ready;
+    separate branches let the Makefile merge section-by-section without clobbering
+    the menus agent's edits.
+- This plan touches `src/engine/pokemon/*` + shared includes; the menus agent
+  touches `dos_port/tools/ui_layout/` + `dos_port/Makefile` (on its own branch).
+  Per CLAUDE.md "Commit Policy": commit only your own explicit paths
+  (`git add <files>`, never `add -A`/`commit -a`).
 - **Each stage is written to be picked up cold in a fresh session.** Read this file
   + `CLAUDE.md` first. Mark stages `[x]` here as they land; archive to
   `docs/plans/pokemon_behavior.md` when fully done.
