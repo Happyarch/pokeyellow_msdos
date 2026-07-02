@@ -63,7 +63,18 @@ checkboxes updated → commit.
   Gates: side-by-side vs DOSBox FRAME.BIN for Pallet Town at spawn; all 25
   tilesets load; scripted sweep renders every map without exceptions.
 
-- [ ] **Session C2 — border-region authoring (headline feature).**
+- [x] **Session C2 — border-region authoring (headline feature).** DONE
+  2026-07-02. `map_editor/borders.py`: per-map sidecar
+  `assets/map_borders/<CONST>.json` `{"cells": [[row,col,block],...]}` in
+  padded-grid coords, stable sort, empty-save deletes the file; validator
+  rejects map-area/strip/bad-block cells. `view.py` tracks
+  `ComposedMap.strip_cells` + `editable_cells()` (ring minus strips) and
+  applies overrides in `compose_padded`. Editor paint mode (P): block
+  palette panel, left-paint/drag, right-eyedrop, F flood fill, Ctrl+Z undo
+  (op-grouped), S save (refusal-not-crash), locked cells dimmed, painted
+  cells badged; painting a cell back to its underlying value removes the
+  override. Gates: paint/lock/undo/round-trip/validator/compose-with-
+  overrides all verified headless; stable JSON round-trip.
   Data model: `dos_port/assets/map_borders/<MAP_CONST>.json` — sparse painted
   cells in padded-grid coords (col 0..w+11, row 0..h+11),
   `{"cells": [[row, col, block], ...]}`, editor-owned like the ui_layout

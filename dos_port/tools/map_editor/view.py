@@ -39,9 +39,25 @@ class ComposedMap:
     sprites: list              # gmh sprite dicts (mapy/mapx include +4)
     anomalies: list            # connection strips reading outside the
                                # neighbour's blk (candidate C4 re-tune bugs)
+    strip_cells: set           # padded-grid indices covered by connection
+                               # strips (locked: connections always win)
+
+    def editable_cells(self) -> set[int]:
+        """Paintable indices: the border ring minus connection strips."""
+        cells = set()
+        for by in range(self.rows):
+            for bx in range(self.stride):
+                in_map = (BORDER <= bx < self.stride - BORDER
+                          and BORDER <= by < self.rows - BORDER)
+                idx = by * self.stride + bx
+                if not in_map and idx not in self.strip_cells:
+                    cells.add(idx)
+        return cells
 
 
-def compose_padded(const: str) -> ComposedMap:
+def compose_padded(const: str, overrides: dict | None = None) -> ComposedMap:
+    """overrides: {(row, col): block} painted border cells (map_borders
+    sidecar); applied last, but only ever in the editable ring."""
     info = pm.map_info(const)
     if info.tileset_stem is None:
         raise ValueError(f"{const}: no header/tileset")
@@ -58,6 +74,7 @@ def compose_padded(const: str) -> ComposedMap:
     # connections) — we render the border block there and record an anomaly
     # for the C4 connection re-tune pass.
     anomalies = []
+    all_strips: set[int] = set()
     for direction, nconst, offset in pm.CONNECTIONS.get(const, []):
         ninfo = pm.map_info(nconst)
         nblk = pm.load_blk(ninfo)
@@ -76,6 +93,7 @@ def compose_padded(const: str) -> ComposedMap:
                 if d + i < 0 or d + i >= len(grid):
                     oob += 1
                     continue
+                all_strips.add(d + i)
                 if 0 <= s + i < len(nblk):
                     grid[d + i] = nblk[s + i]
                 else:
@@ -90,8 +108,15 @@ def compose_padded(const: str) -> ComposedMap:
         d = (y + BORDER) * stride + BORDER
         grid[d:d + info.w] = blk[y * info.w:(y + 1) * info.w]
 
-    return ComposedMap(info, grid, stride, rows, border_block,
-                       warps, sign_count, sprites, anomalies)
+    cm = ComposedMap(info, grid, stride, rows, border_block,
+                     warps, sign_count, sprites, anomalies, all_strips)
+    if overrides:
+        editable = cm.editable_cells()
+        for (row, col), block in overrides.items():
+            idx = row * stride + col
+            if idx in editable:
+                grid[idx] = block
+    return cm
 
 
 def render(cm: ComposedMap) -> Image.Image:
