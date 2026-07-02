@@ -1,5 +1,10 @@
 # Battle swarm — MASTER C: lifecycle, multi-mon & in-battle sub-UIs
 
+> **✅ FINISHED / ARCHIVED (2026-07-01).** Master C implemented + merged to `master`
+> (`869203f0` → `6d14f7f2`): faint/switch lifecycle, multi-mon, trainer-AI wiring,
+> Yellow obedience. Completed swarm ticket, kept for reference. Remaining open battle
+> work: `docs/current_plan_battle_pret_alignment.md`.
+
 You are an **Opus master** driving a Sonnet swarm. You own **what happens when a mon faints,
 multi-mon (trainer) battles, and the in-battle bag/party sub-menus** — plus trainer AI and
 Yellow obedience. This subsystem **couples to the items and party layers**, so several units

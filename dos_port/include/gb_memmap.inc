@@ -1247,4 +1247,12 @@ wDayCareMonOT                 equ 0xDA53 ; day-care mon OT name
 wPlayerCoins                  equ 0xD5A4 ; Game Corner coins (BCD, dw)
 hCoins                        equ 0xFFA0 ; hCoins (dw; union w/ hMoney area)
 
+; Lowercase pret-name aliases onto pre-existing UPPERCASE defs (CLAUDE.md: keep
+; pret labels for cross-referenceability). engine/pokemon label-rename pass.
+hExperience                   equ H_EXPERIENCE            ; 0xFF96 (alias of hProduct+1)
+wLoadedMonSpecies             equ W_LOADED_MON_SPECIES    ; 0xCF97
+wLoadedMonExp                 equ W_LOADED_MON_EXP        ; 0xCFA5
+wUpdateSpritesEnabled         equ W_UPDATE_SPRITES_ENABLED ; 0xCFCA
+hAutoBGTransferEnabled        equ H_AUTO_BG_TRANSFER_EN   ; 0xFFBA
+
 %endif ; GB_MEMMAP_INC

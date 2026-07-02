@@ -1,5 +1,13 @@
 # Current Plan: Pokémon Engine ↔ UI Coupling
 
+> **☠ DEAD / SUPERSEDED (2026-07-01).** Overridden by the user's current direction —
+> do **not** resume this plan. What landed (ITEM/bag + POKéMON party screens with HP
+> bars, status, animated icons) stays in the tree as reference; the remaining scope
+> (item USE dispatch, the real new-game/Oak-gift data path vs the `DEBUG_PARTY` seed)
+> is dropped here. The status/summary screen specifically now lives in the active
+> `docs/current_plan_pokemon_behavior.md` (Stage 4); other menu/UI work proceeds under
+> the user's live direction. Archived to `docs/plans/`.
+
 Couple the (built, harness-validated) data layers — `current_plan_pokemon_engine.md`
 (party structs, base stats, `CalcStats`, `_AddPartyMon`, learnset/moves) and
 `current_plan_items.md` (bag/PC `AddItemToInventory_`, `ItemNames`/`ItemPrices`) —

@@ -123,12 +123,12 @@ wPikachuEmotionModifier     equ 0xD49B
 %endif
 
 ; These two don't have lowercase aliases in gb_memmap.inc yet
-; (only W_POKEDEX_OWNED / W_POKEDEX_SEEN exist — orchestrator: add lowercase)
+; (only wPokedexOwned / wPokedexSeen exist — orchestrator: add lowercase)
 %ifndef wPokedexOwned
-wPokedexOwned               equ 0xD2F6  ; = W_POKEDEX_OWNED (sym-verified)
+wPokedexOwned               equ 0xD2F6  ; = wPokedexOwned (sym-verified)
 %endif
 %ifndef wPokedexSeen
-wPokedexSeen                equ 0xD309  ; = W_POKEDEX_SEEN  (sym-verified)
+wPokedexSeen                equ 0xD309  ; = wPokedexSeen  (sym-verified)
 %endif
 
 ; Link-state and stone/move ids — not yet in gb_constants.inc
@@ -147,9 +147,9 @@ THUNDER                     equ 57      ; move id
 
 ; Pret-name aliases for HRAM / WRAM symbols that use the H_ / W_ prefix in our
 ; includes, so the translation reads identically to the pret source.
-hTileAnimations             equ H_TILE_ANIMATIONS
-hAutoBGTransferEnabled      equ H_AUTO_BG_TRANSFER_EN
-wUpdateSpritesEnabled       equ W_UPDATE_SPRITES_ENABLED
+hTileAnimations             equ hTileAnimations
+hAutoBGTransferEnabled      equ hAutoBGTransferEnabled
+wUpdateSpritesEnabled       equ wUpdateSpritesEnabled
 
 ; ---------------------------------------------------------------------------
 ; Globals and externs

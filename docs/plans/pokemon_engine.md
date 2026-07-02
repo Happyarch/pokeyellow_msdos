@@ -1,5 +1,15 @@
 # Current Plan: Pokémon Data/Stats Engine
 
+> **☠ DEAD / SUPERSEDED (2026-07-01).** This plan's committed scope — the Pokémon
+> **data/stats layer** (party/box structs, base stats, `CalcStats`, experience/
+> leveling, `AddPartyMon`, learnset/moves, names) — is **complete, linked, and
+> native-validated**; keep this file only as reference for that work. Its
+> never-finished tail (**evolution flow, Bill's PC, level-up move learning, status
+> screen, naming**) has been migrated into the active
+> **`docs/current_plan_pokemon_behavior.md`** (faithful pret mirror of the remaining
+> `engine/pokemon/` behavior/UI). Do **not** resume this plan — pick up the behavior
+> plan instead. Archived to `docs/plans/`.
+
 The data layer beneath items and battle: party/box data structures, species base
 stats, the stat-calculation formula, experience/leveling, and Pokémon
 creation/loading. Building it now unblocks **items**, **battle**, and the

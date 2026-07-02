@@ -1,5 +1,10 @@
 # Battle-engine faithfulness AUDIT swarm (read-only, prerequisite)
 
+> **✅ FINISHED / ARCHIVED (2026-07-01).** This audit ran; its findings are in
+> `docs/battle_audit_findings.md` and drove the completed A/B/C swarm (merged to
+> `master`). Kept for reference — remaining open battle work lives in
+> `docs/current_plan_battle_pret_alignment.md`.
+
 **Purpose.** Before any new battle-engine implementation, do a **read-only** faithfulness
 sweep of *all current battle code* to (a) find where previous runs diverged from pret and
 (b) re-scope the implementation tickets. **No agent in this swarm edits code.** Output is a

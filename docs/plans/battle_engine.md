@@ -1,5 +1,13 @@
 # Current Plan: Battle Engine Backend
 
+> **✅ COMPLETE / ARCHIVED (2026-07-01).** All stages landed — the battle **backend**
+> (foundations, type data, damage pipeline, hit/accuracy, stat stages, status,
+> turn order, move-effect dispatch, trainer AI, wild-encounter gen) is done, and it
+> has since been linked and driven live by the faithful `core.asm` loop and the
+> battle swarm (Masters A/B/C, merged to `master`). Superseded as a *live* plan by
+> the swarm-integrated engine; kept for reference. Any residual battle-fidelity /
+> not-yet-linked items are tracked in `docs/battle_audit_findings.md`.
+
 The combat logic beneath the (deferred) battle UI: WRAM/constant foundations,
 the type-effectiveness data, the damage-calculation pipeline, move hit/accuracy,
 stat-stage modifiers, status conditions, turn ordering, the existing move-effect

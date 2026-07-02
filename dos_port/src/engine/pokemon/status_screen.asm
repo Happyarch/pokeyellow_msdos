@@ -28,10 +28,10 @@ CalcExpToLevelUp:
     call CalcExperience
 
     ; ld hl, wLoadedMonExp + 2
-    mov esi, W_LOADED_MON_EXP + 2
+    mov esi, wLoadedMonExp + 2
 
     ; ldh a, [hExperience + 2]
-    mov al, [ebp + H_EXPERIENCE + 2]
+    mov al, [ebp + hExperience + 2]
 
     ; sub [hl]
     sub al, [ebp + esi]
@@ -41,7 +41,7 @@ CalcExpToLevelUp:
     dec esi
 
     ; ldh a, [hExperience + 1]
-    mov al, [ebp + H_EXPERIENCE + 1]
+    mov al, [ebp + hExperience + 1]
 
     ; sbb [hl]
     sbb al, [ebp + esi]
@@ -51,7 +51,7 @@ CalcExpToLevelUp:
     dec esi
 
     ; ldh a, [hExperience]
-    mov al, [ebp + H_EXPERIENCE]
+    mov al, [ebp + hExperience]
 
     ; sbb [hl]
     sbb al, [ebp + esi]
@@ -64,7 +64,7 @@ CalcExpToLevelUp:
 
 .atMaxLevel:
     ; ld hl, wLoadedMonExp
-    mov esi, W_LOADED_MON_EXP
+    mov esi, wLoadedMonExp
 
     ; xor a
     xor al, al

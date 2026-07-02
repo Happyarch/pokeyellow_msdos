@@ -1,5 +1,12 @@
 # Battle-engine swarm — entry point
 
+> **✅ FINISHED / ARCHIVED (2026-07-01).** The battle-engine swarm ran to completion:
+> branches `battle-swarm-A/B/C` were implemented (`75d57909`/`26149758`/`869203f0`)
+> and merged to `master` (`5a3743c0`/`9a9da41d`/`6d14f7f2`), with integration
+> live-verify findings filed in `docs/battle_audit_findings.md` (`2d65f77e`). This is
+> a completed one-time orchestration artifact, kept for reference. Any remaining open
+> battle work is tracked in `docs/current_plan_battle_pret_alignment.md`, not here.
+
 Parallelizes the remaining battle-engine work across three Opus masters (each driving a
 Sonnet worker/auditor/docs sub-swarm), preceded by a read-only faithfulness audit. Hand each
 master its own doc; run the audit first.

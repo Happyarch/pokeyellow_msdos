@@ -1,5 +1,9 @@
 # Battle swarm — launch prompts (Masters A / B / C)
 
+> **✅ FINISHED / ARCHIVED (2026-07-01).** These kickoff prompts were used; the three
+> masters ran and merged to `master`. Completed one-time process artifact, kept for
+> reference alongside the other `battle_swarm_*` docs.
+
 Copy-paste kickoff prompts for the three concurrent Opus master sessions, plus the one-time
 worktree setup. Each master drives its own **Sonnet** worker/auditor/docs sub-swarm.
 Tickets are the hand-authored `docs/battle_swarm_master_{A,B,C}.md` docs — the prompts just

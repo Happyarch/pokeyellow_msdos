@@ -199,10 +199,10 @@ _AddPartyMon:
     mov bl, 1
     mov bh, 0
     call CalcStat
-    mov al, [ebp + H_MULTIPLICAND + 1]
+    mov al, [ebp + hMultiplicand + 1]
     mov [ebp + edx], al
     inc edx
-    mov al, [ebp + H_MULTIPLICAND + 2]
+    mov al, [ebp + hMultiplicand + 2]
     mov [ebp + edx], al
     inc edx                          ; de = struct+3
     xor al, al
@@ -306,13 +306,13 @@ _AddPartyMon:
     call CalcExperience
     pop edx                          ; [S3]
     inc edx
-    mov al, [ebp + H_EXPERIENCE]
+    mov al, [ebp + hExperience]
     mov [ebp + edx], al              ; exp hi (struct+14)
     inc edx
-    mov al, [ebp + H_EXPERIENCE + 1]
+    mov al, [ebp + hExperience + 1]
     mov [ebp + edx], al
     inc edx
-    mov al, [ebp + H_EXPERIENCE + 2]
+    mov al, [ebp + hExperience + 2]
     mov [ebp + edx], al              ; de = struct+16
 
     ; zero EVs (NUM_STATS*2 bytes)

@@ -1,5 +1,10 @@
 # Battle swarm — MASTER A: turn execution & special-move mechanics
 
+> **✅ FINISHED / ARCHIVED (2026-07-01).** Master A implemented + merged to `master`
+> (`75d57909` → `5a3743c0`): faithful special-move leaves (Counter/MirrorMove/
+> Metronome/Ghost/crit+effectiveness/failure text/explode). Completed swarm ticket,
+> kept for reference. Remaining open battle work: `docs/current_plan_battle_pret_alignment.md`.
+
 You are an **Opus master** driving a Sonnet worker/auditor swarm. You own the
 special-move mechanics that the faithful `ExecutePlayerMove`/`ExecuteEnemyMove` flow
 currently calls as **stubs**, plus the move-failure/crit/effectiveness text. You turn those

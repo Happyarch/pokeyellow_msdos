@@ -1,5 +1,12 @@
 # Party field-move pop-up menu + faithful cursor polish
 
+> **☠ DEAD / SUPERSEDED (2026-07-01).** Overridden by the user's current direction —
+> do **not** resume this plan. Whatever landed (the A-press field-move pop-up +
+> message box) stays in the tree as reference; the remaining stages (bag-list cursor
+> polish / blinking `▼`, the `DEBUG_BAGMENU_LIVE` interactive test) are dropped here.
+> The menu/UI work now proceeds under the user's live direction, not this ticket.
+> Archived to `docs/plans/`.
+
 Implements the A-press pop-up over the party menu (pret `FIELD_MOVE_MON_MENU` /
 `DisplayFieldMoveMonMenu`) and the shared cursor polish. Designed so the battle
 `SWITCH_STATS_CANCEL_MENU_TEMPLATE` can reuse the generic pop-up later.

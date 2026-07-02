@@ -469,36 +469,25 @@ commit but too specific to belong in TODO.md.
 - `docs/current_plan_script_engine.md` — gen-1 script system (event-gated dialog,
   per-map `_Script`/`text_asm`). In progress (Stage 6 stub conventions; Oak walk-up
   cutscene + `_Script` state machines + `DisplayTextID` special cases deferred).
-- `docs/current_plan_pokemon_engine.md` — Pokémon data/stats layer (party structs,
-  base stats, `CalcStats`, experience/leveling, `AddPartyMon`, learnset/moves,
-  TM/HM, names). Data + creation logic complete; evolution/PC/naming deferred
-  (need the battle/menu systems).
+- `docs/current_plan_pokemon_behavior.md` — faithful pret mirror of the remaining
+  `engine/pokemon/` **behavior/UI**: evolution (incl. functional `EvolveMon`),
+  level-up move learning (`learn_move.asm`), the status/summary screen, and Bill's
+  PC (final separable stage). Fixes visible bugs (garbage level-up stats, dropped
+  level-up moves) and wires into battle/START-menu callers. Supersedes the dead
+  `pokemon_engine` tail below.
+  (The Pokémon **data/stats** layer — party structs, base stats, `CalcStats`,
+  experience/leveling, `AddPartyMon`, learnset/moves, names — is **complete**; its
+  plan `docs/plans/pokemon_engine.md` is archived DEAD, superseded by the above.)
 - `docs/current_plan_items.md` — item/bag layer (sequenced after pokemon, before
   battle). Inventory bookkeeping (add/remove) + TOSS done; item USE dispatch
   (`UseItem_`/`ItemUsePtrTable`) deferred (battle/UI-coupled).
-- `docs/current_plan_battle_engine.md` — battle backend (damage pipeline, type
-  data, move category/effect data, hit/accuracy, stat stages, wild-encounter gen).
-  **Backend complete** (Wave 1, branch `wave1-battle-backend`): + trainer AI,
-  status residual, EXP math, `JumpMoveEffect` dispatch — all native-validated,
-  BATTLE_SRCS check-only. Deferred: trainer-party data generator + `AddBCDPredef`.
-- `docs/current_plan_battle_pret_alignment.md` — **CANONICAL current battle-frontend plan.**
-  The bespoke Wave-2 orchestration was torn out and replaced by a faithful translation of
-  pret `engine/battle/core.asm` (`MainInBattleLoop`, links live; `battle_menu.asm` is now
-  draw-helpers only). Live wild battle plays end-to-end (menu, move select, speed-ordered
-  turns, damage, faint, EXP/level-up, RUN). Five battle data generators added (battle_text
-  extended + trainer_parties/trainer_names/move_grammar/type_names). NEXT: deepen the
-  core.asm `TODO(faithful)` stubs (JumpMoveEffect effects, status conditions, residual,
-  trainer AI/multi-mon) — their Tier-1 data now exists. (The earlier bespoke front-end plan
-  was an unfaithful from-scratch reimplementation — scrapped and archived at
-  `docs/plans/battle_frontend.md`; only its draw helpers survived.)
-- `docs/current_plan_pokemon_ui.md` — couple the (harness-validated) pokemon/items
-  data layers to the overworld START menu. ITEM (bag) + POKéMON (party w/ HP bars,
-  status, animated icons) screens done; item USE + the real new-game/Oak-gift data
-  path (vs the `DEBUG_PARTY` seed) pending.
-- `docs/current_plan_party_popup.md` — A-press field-move pop-up over the party
-  menu + cursor polish (now backed by the shared `FieldMoveDisplayData`/`IsFieldMove`
-  from the moves layer). Pop-up + message box done; bag-list cursor polish / blinking
-  `▼` (Stage 5) and the interactive (`DEBUG_BAGMENU_LIVE`) test remain.
+- **Battle engine** — the backend plan (`battle_engine`) is **complete** and the
+  front-end alignment plan (`battle_pret_alignment`) was **superseded by the battle
+  swarm** (Masters A/B/C, archived at `docs/archive/battle_swarm_*`, merged to
+  `master`); both plans are archived under `docs/plans/`. A live wild battle plays
+  end-to-end (menu, move select, speed-ordered turns, damage, faint, EXP/level-up,
+  RUN). **Remaining battle work is tracked in the ledger `docs/battle_audit_findings.md`**
+  (open fidelity findings + not-yet-linked routines), not in a `current_plan_*` file.
 
 (NPC implementation is complete and archived at `docs/plans/npc_implementation.md`.
 The move data layer is complete and archived at `docs/plans/moves.md`.)

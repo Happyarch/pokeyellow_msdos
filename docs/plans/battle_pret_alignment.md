@@ -1,5 +1,15 @@
 # current_plan_battle_pret_alignment.md — align the battle engine with pret's tree + Tier-1 data
 
+> **☠ DEAD / SUPERSEDED (2026-07-01).** This plan's "NEXT" — deepening the `core.asm`
+> `TODO(faithful)` stubs (JumpMoveEffect effects, status conditions, residual,
+> trainer AI/multi-mon) — was executed by the **battle swarm** (Masters A/B/C,
+> archived at `docs/archive/battle_swarm_*`, merged to `master`). The Tier-1 battle-
+> text generator (Stage 2) also landed. Do **not** resume this plan. Residual cleanup
+> that was never done (Stage 1 function dedup, Stage 3 file-layout mirror, Stage 4
+> gfx generator) plus all open battle-fidelity / not-yet-linked findings now live in
+> the active ledger **`docs/battle_audit_findings.md`** — pick work up from there, not
+> here. Archived to `docs/plans/`.
+
 Status: **proposed** (2026-06-30). Triggered by review feedback that the Wave-2
 battle front end diverged from pret's project tree, reinvented functions pret
 already isolates, and hardcoded string/gfx data that should be machine-generated

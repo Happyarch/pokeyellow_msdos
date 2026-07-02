@@ -1,5 +1,10 @@
 # Battle swarm — MASTER B: battle text & HUD pacing
 
+> **✅ FINISHED / ARCHIVED (2026-07-01).** Master B implemented + merged to `master`
+> (`26149758` → `9a9da41d`): gradual HP-bar drain + result-message pacing (the
+> message-overrun fix). Completed swarm ticket, kept for reference. Remaining open
+> battle work: `docs/current_plan_battle_pret_alignment.md`.
+
 You are an **Opus master** driving a small Sonnet swarm. You own **battle message flow and
 HP-bar pacing** — the fix for the "messages run over each other / menu returns before a
 message is up" bug. This subsystem is **serial-integration-heavy**: expect ~2–3 effective

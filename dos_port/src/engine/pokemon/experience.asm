@@ -20,9 +20,9 @@ extern GrowthRateTable
 ; Calculates the level a mon should be based on its current exp.
 ; -----------------------------------------------------------------------------
 CalcLevelFromExperience:
-    ; W_LOADED_MON_SPECIES -> W_CUR_SPECIES
-    mov al, byte [ebp + W_LOADED_MON_SPECIES]
-    mov byte [ebp + W_CUR_SPECIES], al
+    ; wLoadedMonSpecies -> wCurSpecies
+    mov al, byte [ebp + wLoadedMonSpecies]
+    mov byte [ebp + wCurSpecies], al
     call GetMonHeader
     
     mov dh, 1 ; dh = level (d in GB)
@@ -31,22 +31,22 @@ CalcLevelFromExperience:
     inc dh
     call CalcExperience
     
-    ; compare exp needed for level (H_EXPERIENCE) with current exp (W_LOADED_MON_EXP)
-    ; H_EXPERIENCE is 3 bytes big-endian.
-    ; W_LOADED_MON_EXP is 3 bytes big-endian.
+    ; compare exp needed for level (hExperience) with current exp (wLoadedMonExp)
+    ; hExperience is 3 bytes big-endian.
+    ; wLoadedMonExp is 3 bytes big-endian.
     ; We can do a 24-bit compare.
     ; Wait, we can just load them into 32-bit registers!
-    movzx eax, byte [ebp + H_EXPERIENCE + 0]
+    movzx eax, byte [ebp + hExperience + 0]
     shl eax, 8
-    mov al, byte [ebp + H_EXPERIENCE + 1]
+    mov al, byte [ebp + hExperience + 1]
     shl eax, 8
-    mov al, byte [ebp + H_EXPERIENCE + 2]
+    mov al, byte [ebp + hExperience + 2]
     
-    movzx ecx, byte [ebp + W_LOADED_MON_EXP + 0]
+    movzx ecx, byte [ebp + wLoadedMonExp + 0]
     shl ecx, 8
-    mov cl, byte [ebp + W_LOADED_MON_EXP + 1]
+    mov cl, byte [ebp + wLoadedMonExp + 1]
     shl ecx, 8
-    mov cl, byte [ebp + W_LOADED_MON_EXP + 2]
+    mov cl, byte [ebp + wLoadedMonExp + 2]
     
     cmp ecx, eax
     jnc .loop ; if current exp >= needed exp, try next level
@@ -66,7 +66,7 @@ CalcLevelFromExperience:
 ; Fast divided by 0). Each `ld a,[hli]` below is `mov al,[esi]` then `inc esi`.
 ; GrowthRateTable entry: byte0=(num<<4)|den ; byte1=±n^2 coef ; byte2=n ; byte3=const.
 CalcExperience:
-    mov al, byte [ebp + W_MON_H_GROWTH_RATE]
+    mov al, byte [ebp + wMonHGrowthRate]
     shl al, 2                          ; index = growthRate * 4
     movzx ecx, al
     lea esi, [GrowthRateTable]
@@ -75,122 +75,122 @@ CalcExperience:
     ; --- cubed term: (num/den) * n^3 ---
     call CalcDSquared                  ; product = n^2 (low 3 bytes -> next multiplicand)
     mov al, dh
-    mov byte [ebp + H_MULTIPLIER], al
+    mov byte [ebp + hMultiplier], al
     call Multiply                      ; product = n^3
     mov al, byte [esi]           ; byte0
     and al, 0xF0
     shr al, 4                          ; numerator (high nibble)
-    mov byte [ebp + H_MULTIPLIER], al
+    mov byte [ebp + hMultiplier], al
     call Multiply                      ; n^3 * num
     mov al, byte [esi]           ; byte0 again (ld a,[hli])
     inc esi                            ;   then advance to byte1
     and al, 0x0F                       ; denominator (low nibble of byte0)
-    mov byte [ebp + H_DIVISOR], al
+    mov byte [ebp + hDivisor], al
     mov bh, 4
     call Divide                        ; (n^3 * num) / den
     
     ; push hQuotient 1, 2, 3
-    mov al, byte [ebp + H_QUOTIENT + 1]
+    mov al, byte [ebp + hQuotient + 1]
     push ax
-    mov al, byte [ebp + H_QUOTIENT + 2]
+    mov al, byte [ebp + hQuotient + 2]
     push ax
-    mov al, byte [ebp + H_QUOTIENT + 3]
+    mov al, byte [ebp + hQuotient + 3]
     push ax
     
     call CalcDSquared
     
     mov al, byte [esi]
     and al, 0x7F
-    mov byte [ebp + H_MULTIPLIER], al
+    mov byte [ebp + hMultiplier], al
     call Multiply
     
     ; push hProduct 1, 2, 3
-    mov al, byte [ebp + H_PRODUCT + 1]
+    mov al, byte [ebp + hProduct + 1]
     push ax
-    mov al, byte [ebp + H_PRODUCT + 2]
+    mov al, byte [ebp + hProduct + 2]
     push ax
-    mov al, byte [ebp + H_PRODUCT + 3]
+    mov al, byte [ebp + hProduct + 3]
     push ax
     
     mov al, byte [esi]           ; byte1 again (ld a,[hli]) — n^2 sign byte
     inc esi                            ;   then advance to byte2
     push ax
 
-    mov byte [ebp + H_MULTIPLICAND], 0
-    mov byte [ebp + H_MULTIPLICAND + 1], 0
+    mov byte [ebp + hMultiplicand], 0
+    mov byte [ebp + hMultiplicand + 1], 0
     mov al, dh
-    mov byte [ebp + H_MULTIPLICAND + 2], al
+    mov byte [ebp + hMultiplicand + 2], al
 
     mov al, byte [esi]           ; byte2 (linear coef, ld a,[hli])
     inc esi                            ;   then advance to byte3
-    mov byte [ebp + H_MULTIPLIER], al
+    mov byte [ebp + hMultiplier], al
     call Multiply
 
     mov bl, byte [esi]           ; byte3 (const)
-    mov al, byte [ebp + H_PRODUCT + 3]
+    mov al, byte [ebp + hProduct + 3]
     sub al, bl
-    mov byte [ebp + H_PRODUCT + 3], al
+    mov byte [ebp + hProduct + 3], al
     
     mov bl, 0
-    mov al, byte [ebp + H_PRODUCT + 2]
+    mov al, byte [ebp + hProduct + 2]
     sbb al, bl
-    mov byte [ebp + H_PRODUCT + 2], al
+    mov byte [ebp + hProduct + 2], al
     
-    mov al, byte [ebp + H_PRODUCT + 1]
+    mov al, byte [ebp + hProduct + 1]
     sbb al, bl
-    mov byte [ebp + H_PRODUCT + 1], al
+    mov byte [ebp + hProduct + 1], al
     
     pop ax
     test al, 0x80
     jnz .subtractSquaredTerm
     
     pop bx ; b = product 3
-    mov al, byte [ebp + H_EXPERIENCE + 2]
+    mov al, byte [ebp + hExperience + 2]
     add al, bl
-    mov byte [ebp + H_EXPERIENCE + 2], al
+    mov byte [ebp + hExperience + 2], al
     
     pop bx ; b = product 2
-    mov al, byte [ebp + H_EXPERIENCE + 1]
+    mov al, byte [ebp + hExperience + 1]
     adc al, bl
-    mov byte [ebp + H_EXPERIENCE + 1], al
+    mov byte [ebp + hExperience + 1], al
     
     pop bx ; b = product 1
-    mov al, byte [ebp + H_EXPERIENCE]
+    mov al, byte [ebp + hExperience]
     adc al, bl
-    mov byte [ebp + H_EXPERIENCE], al
+    mov byte [ebp + hExperience], al
     jmp .addCubedTerm
 
 .subtractSquaredTerm:
     pop bx
-    mov al, byte [ebp + H_EXPERIENCE + 2]
+    mov al, byte [ebp + hExperience + 2]
     sub al, bl
-    mov byte [ebp + H_EXPERIENCE + 2], al
+    mov byte [ebp + hExperience + 2], al
     
     pop bx
-    mov al, byte [ebp + H_EXPERIENCE + 1]
+    mov al, byte [ebp + hExperience + 1]
     sbb al, bl
-    mov byte [ebp + H_EXPERIENCE + 1], al
+    mov byte [ebp + hExperience + 1], al
     
     pop bx
-    mov al, byte [ebp + H_EXPERIENCE]
+    mov al, byte [ebp + hExperience]
     sbb al, bl
-    mov byte [ebp + H_EXPERIENCE], al
+    mov byte [ebp + hExperience], al
 
 .addCubedTerm:
     pop bx
-    mov al, byte [ebp + H_EXPERIENCE + 2]
+    mov al, byte [ebp + hExperience + 2]
     add al, bl
-    mov byte [ebp + H_EXPERIENCE + 2], al
+    mov byte [ebp + hExperience + 2], al
     
     pop bx
-    mov al, byte [ebp + H_EXPERIENCE + 1]
+    mov al, byte [ebp + hExperience + 1]
     adc al, bl
-    mov byte [ebp + H_EXPERIENCE + 1], al
+    mov byte [ebp + hExperience + 1], al
     
     pop bx
-    mov al, byte [ebp + H_EXPERIENCE]
+    mov al, byte [ebp + hExperience]
     adc al, bl
-    mov byte [ebp + H_EXPERIENCE], al
+    mov byte [ebp + hExperience], al
     ret
 
 ; -----------------------------------------------------------------------------
@@ -199,9 +199,9 @@ CalcExperience:
 ; Calculates d*d (DH * DH).
 ; -----------------------------------------------------------------------------
 CalcDSquared:
-    mov byte [ebp + H_MULTIPLICAND], 0
-    mov byte [ebp + H_MULTIPLICAND + 1], 0
+    mov byte [ebp + hMultiplicand], 0
+    mov byte [ebp + hMultiplicand + 1], 0
     mov al, dh
-    mov byte [ebp + H_MULTIPLICAND + 2], al
-    mov byte [ebp + H_MULTIPLIER], al
+    mov byte [ebp + hMultiplicand + 2], al
+    mov byte [ebp + hMultiplier], al
     jmp Multiply
