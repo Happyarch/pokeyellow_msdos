@@ -103,7 +103,17 @@ ends: `make -C dos_port` + `make -C dos_port check` green → verification pass
   Gates: synthetic battle sidecar renders headless; menus sidecar still
   validates; menus `--check` byte-identical.
 
-- [ ] **Session B2 — seed_from_battle + generator battle branch + Makefile.**
+- [x] **Session B2 — seed_from_battle + generator battle branch + Makefile.**
+  DONE 2026-07-02. 28 elements seeded, ALL 29 legacy-geometry assertions
+  pass (byte offsets, pic cols/rows, SLIDE_STEPS=18, pokéball OAM bases —
+  NB: verified OAM = screen+(8,16) via PrepareStaticOAM, so PLAYER_BALLS =
+  GB(11,10), ENEMY_BALLS = GB(3,2) marching left, engine base = right end).
+  Generator now emits UI_*_OFS (row*cols+col) for ALL subsystems (menus .inc
+  regen'd, additive), oam_row _PX_X/_PX_Y/_OAM_X/_OAM_Y, and derived
+  UI_BATTLE_SLIDE_STEPS. Makefile rule + assets target entry. Gates: regen
+  idempotent (cmp), nasm round-trip assembles all 373 equates, battle atlas
+  renders, `make` + `make check` green. (.inc files are gitignored generated
+  assets — only the sidecar JSON is committed, as with menus.)
   `ui_layout/seed_from_battle.py`: build `assets/ui_layout_battle_sidecar.json`,
   all elements `anchor=custom shift=(10,3)`, ~24 elements from the current
   %defines / ui_projection.md PROJ table: ENEMY_NAME GB(1,0), ENEMY_LV

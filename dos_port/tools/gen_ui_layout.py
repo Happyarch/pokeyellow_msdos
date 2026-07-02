@@ -56,13 +56,25 @@ def emit(lay: schema.Layout) -> str:
         if el.pret_ref:
             out.append(f"; pret ref: {el.pret_ref} ({el.source})")
         pre = f"UI_{el.id}"
+        cols = lay.canvas["cols"]
+        tile = lay.canvas.get("tile_px", 8)
         for name, val in (("GBX", el.gb_x), ("GBY", el.gb_y),
                           ("GBW", el.gb_w), ("GBH", el.gb_h),
                           ("COL", p.col), ("ROW", p.row),
                           ("X2", p.x2), ("Y2", p.y2),
                           ("WX", p.wx), ("WY", p.wy),
-                          ("CLIP", p.clip), ("MAXY", p.max_y)):
+                          ("CLIP", p.clip), ("MAXY", p.max_y),
+                          # byte offset into the canvas tilemap (row-major) —
+                          # the W_TILEMAP + OFS form battle call sites use
+                          ("OFS", p.row * cols + p.col)):
             out.append(f"{pre}_{name:<4} equ {val}")
+        if el.kind == "oam_row":
+            # screen px of the row's LEFT tile + the OAM-register form
+            # (OAM stores screen + (8,16); PrepareStaticOAM subtracts it back)
+            out.append(f"{pre}_PX_X equ {p.col * tile}")
+            out.append(f"{pre}_PX_Y equ {p.row * tile}")
+            out.append(f"{pre}_OAM_X equ {p.col * tile + 8}")
+            out.append(f"{pre}_OAM_Y equ {p.row * tile + 16}")
         if p.text_col is not None:
             out.append(f"{pre}_TX   equ {p.text_col}")
             out.append(f"{pre}_TY   equ {p.text_row}")
@@ -71,6 +83,21 @@ def emit(lay: schema.Layout) -> str:
             coord_rows.append(
                 f"    db 0x{el.pret_id:02X}, {pre}_COL, {pre}_ROW, "
                 f"{pre}_X2, {pre}_Y2  ; {el.id}")
+
+    if sub == "battle":
+        ids = {el.id for el in lay.elements}
+        if {"ENEMY_PIC", "PLAYER_PIC"} <= ids:
+            ep = cv.project(lay.by_id("ENEMY_PIC"))
+            pp = cv.project(lay.by_id("PLAYER_PIC"))
+            steps = max(lay.canvas["cols"] - ep.col,
+                        pp.col + lay.by_id("PLAYER_PIC").gb_w)
+            out += [
+                "; SlideBattlePicsIn step count, derived from the final pic",
+                "; columns: both pics start fully off-screen and land exactly",
+                "; on their layout positions at step 0.",
+                f"UI_BATTLE_SLIDE_STEPS equ {steps}",
+                "",
+            ]
 
     out += [
         "; pret data/text_boxes.asm:TextBoxCoordTable — projected. JP_* rows",
