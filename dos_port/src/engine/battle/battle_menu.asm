@@ -142,6 +142,7 @@ extern GetDamageVarsForEnemyAttack
 extern CalculateDamage
 extern AdjustDamageForMoveType
 extern RandomizeDamage
+extern IsThisPartyMonStarterPikachu  ; src/engine/pikachu/pikachu_status.asm (mood bump)
 
 ; ===========================================================================
 ; Draw primitives (the sanctioned divergence point) under pret names.
@@ -521,6 +522,23 @@ LearnMoveFromLevelUp:
 .noBattleSync:
     mov al, dl
     call ShowLearnedMoveText
+    ; Yellow: if the leveling mon is the player's starter Pikachu and the move it
+    ; just learned is THUNDER/THUNDERBOLT, bump its mood/emotion. Faithful to pret
+    ; evos_moves.asm LearnMoveFromLevelUp (.foundThunderOrThunderbolt). Only the
+    ; learned path reaches here — the "already known" / "slots full" paths jump
+    ; straight to .restore and skip this.
+    movzx eax, byte [learned_move_id]
+    cmp al, THUNDERBOLT
+    je .pikachuThunderMove
+    cmp al, THUNDER
+    jne .restore
+.pikachuThunderMove:
+    call IsThisPartyMonStarterPikachu   ; uses [wWhichPokemon]; CF set if starter
+    jnc .restore
+    mov al, 5
+    mov [ebp + wPikachuEmotionModifier], al
+    mov al, 0x85
+    mov [ebp + wPikachuMood], al
 .restore:
     mov al, [ebp + wCurPartySpecies]
     mov [ebp + wPokedexNum], al

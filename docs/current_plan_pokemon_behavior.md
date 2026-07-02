@@ -127,11 +127,38 @@ Independent, low-risk, each standalone-linkable + ELF-testable.
   exist. Split out so it links independently of the (blocked) PC UI; wire its
   daycare-script caller.
 
-## Stage 2 — Evolution decision core: fix, wire, functional EvolveMon — [~] (CODE DONE; LINK BLOCKED)
+## Stage 2 — Evolution decision core: fix, wire, functional EvolveMon — [x] (LINKED)
 
 <!-- ===================== STAGE 2 STATUS (updated 2026-07-02) =====================
-DONE this session (pokemon-behavior worktree; nasm clean, full `make` links,
-battle_text.inc regenerated):
+NOW LINKED. evolution.asm + pikachu_status.asm are in POKEMON_SRCS; full `make`
+and `make check` are green. Summary of the two work sessions:
+
+SESSION B (unblock + link):
+- Ported engine/pikachu/pikachu_status.asm faithfully to
+  src/engine/pikachu/pikachu_status.asm (5 predicates: IsStarterPikachuAliveInOurParty,
+  IsThisBoxMon/IsThisPartyMonStarterPikachu, UpdatePikachuMoodAfterBattle,
+  CheckPikachuStatusCondition). It now `%include`s gb_memmap/gb_constants (was
+  `extern` on WRAM/const symbols → non-assembling), loads pointer regs 32-bit
+  (avoids stale-high-bit bugs the draft had), and uses `ld b`=BH for the JP-name
+  counter. Fixed a SM83→x86 flag bug both name-compare loops had: `inc esi` after
+  `cmp` clobbers ZF → replaced with `lea esi,[esi+1]`. Both routines validated
+  headlessly (ELF harness, AddNTimes stubbed): IsThisPartyMon 4/4 cases,
+  IsStarterPikachuAlive 3/3 (incl. fainted + wrong-OT).
+- Resolved a duplicate-symbol collision: battle_menu.asm already ships the
+  canonical, UI-complete LearnMoveFromLevelUp (learned-move box + PP + in-battle
+  sync) that experience.asm calls. evolution.asm now `extern`s it (dropped its
+  redundant copy + the global). Added pret's starter-Pikachu THUNDER/THUNDERBOLT
+  wPikachuEmotionModifier/wPikachuMood bump to that canonical routine (it had
+  omitted it) — this also gives pikachu_status a real linked caller.
+- Added to includes: gb_constants STARTER_PIKACHU=84, NAME_LENGTH_JP=6; gb_memmap
+  wPartyMon1HP=0xD16B, wPartyMon1OTID=0xD176, wPartyMon2=0xD196, wBoxMon1=0xDA95,
+  wBoxMon2=0xDAB6 (all sym-verified vs origin/symbols).
+- Makefile: moved evolution.asm + pikachu_status.asm into POKEMON_SRCS
+  (POKEMON_CHECK_SRCS now just bills_pc.asm).
+- Deferred still: [2b] evolution palette/pic morph + audio (Phase 3 HAL); an
+  end-to-end EvolutionAfterBattle species/stats harness (fix proven by static trace).
+
+SESSION A (code) — nasm clean, full `make` links, battle_text.inc regenerated:
 - (1) STACK FIX in evolution.asm .doEvolution: added the [C] blob-cursor re-push
   BEFORE `call GetName` (port GetName clobbers ESI, unlike pret). Success-path tail
   `pop edx`([C] blob)/`pop esi`([G] party cursor) now matches pret 231-232. Verified
@@ -147,20 +174,9 @@ battle_text.inc regenerated):
   120 labels). Wired PrintText into .doEvolution + CancelledEvolution.
   gb_memmap.inc: added wEvoMonTileOffset=0xCEEB, wEvoCancelled=0xCEEC.
 
-BLOCKED — (4) wiring evolution.asm into LINK_SRCS. pikachu_status.asm (the claimed
-provider of IsThisPartyMonStarterPikachu) does NOT assemble: it uses `mov bx,
-wPartyMon2 - wPartyMon1` etc. with those as `extern` (not equ), so `nasm -f coff`
-FAILS (invalid operand type, lines 76/87/106/112/123/201). It is another session's
-incomplete WIP in NO Makefile var; per commit policy I did not touch it. So
-evolution.asm STAYS in POKEMON_CHECK_SRCS. To unblock (pikachu owner or user
-go-ahead): make pikachu_status.asm `%include` gb_memmap/gb_constants + drop those
-externs; add STARTER_PIKACHU equ 84 / NAME_LENGTH_JP equ 6 to gb_constants.inc and
-wPartyMon1HP=0xD16B/wPartyMon1OTID=0xD176/wPartyMon2=0xD196/wBoxMon1=0xDA95/
-wBoxMon2=0xDAB6 to gb_memmap.inc; add pikachu_status.asm + move evolution.asm to
-POKEMON_SRCS; ld -r closure + full make. Also deferred: the ELF harness end-to-end
-species/stats assertion (~20 externs to stub) — fix is proven by the static trace
-above until evolution links.
-The original investigation handoff (superseded except its addresses) follows.
+- (4) WIRED into LINK_SRCS (done in Session B — see above; was blocked on
+  pikachu_status.asm, now ported + linked).
+The original investigation handoff (fully superseded) follows.
 ================================================================================ -->
 
 <!-- ========================= STAGE 2 HANDOFF (2026-07-02) =========================

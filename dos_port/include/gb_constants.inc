@@ -19,6 +19,7 @@ PIC_WIDTH               equ 7       ; max pic size in tiles
 PIC_HEIGHT              equ 7
 SPRITEBUFFERSIZE        equ PIC_WIDTH * PIC_HEIGHT * TILE_1BPP_SIZE  ; 392 = 0x188
 NAME_LENGTH             equ 11      ; '@'-terminated fixed-width name field (mon names)
+NAME_LENGTH_JP          equ 6       ; JP name length (OT-name compare in pikachu_status)
 NAME_BUFFER_LENGTH      equ 20      ; wNameBuffer size (GetName dest; bounds the copy)
 MOVE_NAME_LENGTH        equ 14      ; constants/text_constants.asm (12 printed + '@' + prefix)
 PARTY_LENGTH            equ 6
@@ -82,6 +83,8 @@ MON_DEF                 equ 0x26
 MON_SPD                 equ 0x28
 MON_SPC                 equ 0x2A
 PARTYMON_STRUCT_LENGTH  equ 0x2C    ; 44
+
+STARTER_PIKACHU         equ 84      ; = PIKACHU internal index ($54); pikachu_status
 
 ; --- Moves table record (data/moves/moves.asm; gen_moves.py) ---
 MOVE_LENGTH             equ 6

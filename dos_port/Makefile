@@ -181,7 +181,9 @@ POKEMON_SRCS := \
     src/engine/pokemon/write_moves.asm \
     src/engine/pokemon/status_ailments.asm \
     src/engine/pokemon/status_screen.asm \
-    src/engine/pokemon/knows_hm_move.asm
+    src/engine/pokemon/knows_hm_move.asm \
+    src/engine/pikachu/pikachu_status.asm \
+    src/engine/pokemon/evolution.asm
 
 # Items layer (current_plan_items.md). Non-UI inventory/bag logic + item data.
 ITEMS_SRCS := \
@@ -460,13 +462,11 @@ LINK_OBJS := $(LINK_SRCS:.asm=.o)
 # Pokémon backend that assembles + is native-harness-validated but is NOT linked
 # yet. bills_pc needs a link-ready _MoveMon (the draft in add_mon.asm has a
 # duplicate AddPartyMon_WriteMovePP symbol + extern-constant errors and an
-# unresolved dependency closure). evolution depends on GetName (check-only
-# names.asm) / FlagActionPredef / pikachu — and its EvolutionAfterBattle party
-# loop has a known stack bug (see the file) to fix+validate in Wave 2; its
-# headless decision path + LearnMoveFromLevelUp are native-validated now.
+# unresolved dependency closure).
+# (evolution.asm + pikachu_status.asm are now LINKED — moved to POKEMON_SRCS,
+#  current_plan_pokemon_behavior Stage 2.)
 POKEMON_CHECK_SRCS := \
-    src/engine/pokemon/bills_pc.asm \
-    src/engine/pokemon/evolution.asm
+    src/engine/pokemon/bills_pc.asm
 
 # Item routines that assemble-validate but aren't linked yet — either unwired
 # (nothing calls them) or dependent on not-yet-ported deps (town-map palette/video

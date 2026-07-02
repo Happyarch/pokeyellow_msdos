@@ -219,6 +219,8 @@ wDayCareMonSpecies equ 0xDA5E
 wBoxCount          equ 0xDA7F
 wBoxSpecies        equ 0xDA80   ; MONS_PER_BOX+1 species + $FF sentinel
 wBoxMons           equ 0xDA95
+wBoxMon1           equ 0xDA95   ; = wBoxMons (pikachu_status alias)
+wBoxMon2           equ 0xDAB6   ; wBoxMon1 + BOXMON_STRUCT_LENGTH (33)
 wBoxMonOT          equ 0xDD29
 wBoxMonNicks       equ 0xDE05
 wBoxMonNicksEnd    equ 0xDEE1
@@ -397,8 +399,11 @@ wPartyMon1Special      equ 0xD194
 wEnemyMon1Stats        equ 0xD8C5   ; link-battle enemy party stats (GetEnemyMonStat)
 ; party-mon struct (pret wPartyMon1* = wPartyMons base $D16A; DecrementPP/GainExp)
 wPartyMon1             equ 0xD16A
+wPartyMon1HP           equ 0xD16B   ; party-mon struct HP word (pikachu_status)
 wPartyMon1Status       equ 0xD16E
+wPartyMon1OTID         equ 0xD176   ; party-mon struct OT id word (pikachu_status)
 wPartyMon1PP           equ 0xD187
+wPartyMon2             equ 0xD196   ; wPartyMon1 + PARTYMON_STRUCT_LENGTH (44)
 wPartyGainExpFlags     equ 0xD057   ; bitfield: which party mons gain exp this battle
 
 ; --- Wave-1 backend aliases (sym-pinned, origin/symbols:pokeyellow.sym) ---

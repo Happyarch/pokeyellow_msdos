@@ -69,7 +69,6 @@ global EvolutionAfterBattle
 global EvolveMon
 global RenameEvolvedMon
 global CancelledEvolution
-global LearnMoveFromLevelUp
 global GetMonLearnset_Evo       ; local corrected version (×4 dd offset + 32-bit read)
 global GetMonLearnset_Evo_BlobStart
 
@@ -95,8 +94,11 @@ extern GetPredefRegisters       ; restores ESI/EDX/EBX from wPredefHL/DE/BC
 extern LoadMonData_             ; loads party/enemy/box/daycare mon into wLoadedMon
 extern SetPartyMonTypes         ; updates mon type bytes from wPokedexNum (uses wPredefHL)
 
-; From engine/pikachu/:
-extern IsThisPartyMonStarterPikachu ; CF set if wWhichPokemon is the starter Pikachu
+; The canonical LearnMoveFromLevelUp lives (UI-complete) in engine/battle/
+; battle_menu.asm — it prints the "learned MOVE!" box, writes base PP, syncs the
+; in-battle move/PP structs, and (now) applies pret's starter-Pikachu THUNDER/
+; THUNDERBOLT mood bump. We call it here rather than shipping a second copy.
+extern LearnMoveFromLevelUp
 
 ; Text/display/input helpers (Stage 2 — evolution now shows text + allows B-cancel):
 extern PrintText                ; battle-scope text engine (ESI = flat text stream)
@@ -652,121 +654,6 @@ CancelledEvolution:
     ; DEFERRED: Evolution_ReloadTilesetTilePatterns (reload_tiles.asm is
     ; HOME_CHECK-only; not linked yet).
     jmp EvolutionAfterBattle.Evolution_PartyMonLoop
-
-; ===========================================================================
-; LearnMoveFromLevelUp
-; Scans the current mon's learnset for a move to learn at [wCurEnemyLevel].
-; If found and not already known, writes it to an empty move slot (headless path).
-; When all slots are full, calls LearnMove_Deferred (Wave 2 stub).
-; After successful learn: sets the Pikachu THUNDERBOLT/THUNDER emotion modifier
-; if applicable.
-;
-; In:  [wPokedexNum]       = pokedex number of the evolved species
-;      [wCurEnemyLevel]    = level at which evolution occurred (= current level)
-;      [wWhichPokemon]     = party index of the mon
-;      [wMonDataLocation]  = 0 (PLAYER_PARTY_DATA)
-; Pret ref: engine/pokemon/evos_moves.asm LearnMoveFromLevelUp
-; ===========================================================================
-LearnMoveFromLevelUp:
-    ; wCurPartySpecies is used by GetMonLearnset_Evo as the species index
-    ; The pret code copies wPokedexNum → wCurPartySpecies temporarily.
-    ; However, GetMonLearnset_Evo reads wCurPartySpecies (internal index).
-    ; wPokedexNum at this call point was set to wCurSpecies (internal index),
-    ; so wPokedexNum here is actually the INTERNAL species index, not dex#.
-    ; (pret comment: "ld a, [wPokedexNum] ; species" — confirms internal index usage.)
-    mov al, [ebp + wPokedexNum]
-    mov [ebp + wCurPartySpecies], al ; set species for GetMonLearnset_Evo
-    call GetMonLearnset_Evo          ; ESI → start of learnset (past evo entries)
-
-.learnSetLoop:
-    mov al, [esi]
-    inc esi
-    test al, al
-    jz .done                        ; end of learnset
-    mov bh, al                      ; bh = level at which move is learned
-    mov al, [ebp + wCurEnemyLevel]
-    cmp al, bh                      ; current level == learn level?
-    mov al, [esi]                   ; al = move id (prefetch; mov preserves flags)
-    lea esi, [esi+1]                ; advance — lea preserves the cmp ZF (inc would NOT;
-                                    ; SM83 `inc hl` doesn't touch flags, x86 `inc` does)
-    jne .learnSetLoop               ; not this level → keep scanning
-    ; Found a move to learn at the current level
-    mov dh, al                      ; dh = move id to learn
-
-    ; Find this mon's current move slots
-    mov al, [ebp + wMonDataLocation]
-    test al, al
-    jnz .next                       ; non-zero: loading from non-party data (unusual)
-    ; PLAYER_PARTY_DATA: compute address of this mon's MON_MOVES field
-    mov esi, wPartyMon1 + MON_MOVES
-    mov al, [ebp + wWhichPokemon]
-    mov bx, PARTYMON_STRUCT_LENGTH
-    call AddNTimes                  ; ESI = &partyMon[wWhichPokemon].moves
-.next:
-    ; Check if the move is already known (scan all NUM_MOVES slots)
-    push esi                        ; save slot base
-    mov bh, NUM_MOVES
-.checkCurrentMovesLoop:
-    mov al, [ebp + esi]
-    inc esi
-    cmp al, dh
-    je .donePopSi                   ; already known → done
-    dec bh
-    jnz .checkCurrentMovesLoop
-    pop esi                         ; restore slot base (bh = 0 after full scan)
-
-    ; Not already known.  Try to find an empty slot (headless path).
-    push esi
-    mov cl, NUM_MOVES
-.findEmptyLoop:
-    mov al, [ebp + esi]
-    test al, al
-    jz .writeToSlot                 ; empty slot found
-    inc esi
-    dec cl
-    jnz .findEmptyLoop
-    ; All slots full — deferred interactive path (Wave 2)
-    pop esi                         ; restore slot base
-    ; DEFERRED: LearnMove_Deferred — "Should X forget a move?" menu.
-    ; Headless stub: silently skip (move not written).
-    ; bh = 0 (from the scan loop above); the pikachu check below fires on bh != 0,
-    ; which won't happen here — correct for the headless path.
-    jmp .doneLearnMove
-
-.writeToSlot:
-    ; Write the move into the found empty slot
-    mov [ebp + esi], dh
-    pop esi                         ; restore slot base (bh still 0 from scan)
-
-.doneLearnMove:
-    ; bh == 0: move learned in empty slot (or slots full & deferred)
-    test bh, bh
-    jz .done
-    ; bh != 0 only if pret's LearnMove returned with "had to forget a move".
-    ; In the headless stub, this branch is never taken.
-    ; Pikachu emotion modifier for THUNDERBOLT/THUNDER (deferred, documented here):
-    call IsThisPartyMonStarterPikachu
-    jnc .done                       ; CF clear → not starter Pikachu
-    mov al, [ebp + wMoveNum]
-    cmp al, THUNDERBOLT
-    je .foundThunderOrThunderbolt
-    cmp al, THUNDER
-    jne .done
-.foundThunderOrThunderbolt:
-    mov al, 5
-    mov [ebp + wPikachuEmotionModifier], al
-    mov al, 0x85
-    mov [ebp + wPikachuMood], al
-    jmp .done
-
-.donePopSi:
-    pop esi
-.done:
-    ; Restore wPokedexNum from wCurPartySpecies (pret does the reverse: saves
-    ; wCurPartySpecies and restores wPokedexNum — same shared address in pret).
-    mov al, [ebp + wCurPartySpecies]
-    mov [ebp + wPokedexNum], al
-    ret
 
 ; ===========================================================================
 ; GetMonLearnset_Evo  (local — corrected version of evos_moves.asm GetMonLearnset)
