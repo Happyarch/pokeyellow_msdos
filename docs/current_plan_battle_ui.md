@@ -45,7 +45,11 @@ ends: `make -C dos_port` + `make -C dos_port check` green → verification pass
 
 ## Sessions
 
-- [ ] **Session A1 — extract `tools/gfx_core/`, menus regression-locked.**
+- [x] **Session A1 — extract `tools/gfx_core/`, menus regression-locked.**
+  DONE 2026-07-02. Gates: menus .inc regen byte-identical (git diff clean);
+  `--atlas` md5-identical before/after; assets_bridge shim import-verified;
+  headless editor drag/clamp/save round-trip OK; `decode_2bpp` cross-checked
+  against PNG slicing for all 32 font_extra tiles; `make` + `make check`.
   New package: `tiles.py` (PNG 1bpp/2bpp slicing from `assets_bridge.py`,
   `TILE=8`, `DMG_PAL`, raw `decode_2bpp()` for 16-byte GB tiles), `font.py`
   (`tile_for_code`, `encode_label`, `BOX_*`), `surface.py` (tile-grid → PIL
