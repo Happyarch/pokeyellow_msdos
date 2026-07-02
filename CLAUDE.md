@@ -149,6 +149,9 @@ docs/
 - Linker: `i386-pc-msdosdjgpp-ld` from `binutils-djgpp` package
 - Build: `nasm -f coff` → `i386-pc-msdosdjgpp-ld`
 - Entry point: `start` (not `_start`)
+- Interactive shell is **zsh**, not bash: unquoted `$var` is NOT word-split
+  (`set -- $pair` leaves it one word — use `${=var}` or pass args explicitly),
+  and `$pipestatus`/`${(f)...}` differ from bash. Write zsh-compatible commands.
 
 **Linker sections (critical, verified):** `link.ld` must explicitly map every
 input section into a *loaded* output section (`.text`/`.data`). The
