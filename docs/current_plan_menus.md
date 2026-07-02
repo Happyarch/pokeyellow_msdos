@@ -168,12 +168,19 @@ entry + commit (root only).
   LEFT_ALIGN + cursor-row fidelity fixes. `make`+`make check` green.
   Interactive pop-up/SWITCH pass deferred to the S10 sweep (no key injection).
   Requires: S4.
-- [ ] **Session 6 — Swarm wave 1**: A (oaks_pc+league_pc), B (draw_badges +
+- [x] **Session 6 — Swarm wave 1**: A (oaks_pc+league_pc), B (draw_badges +
   root writes gen_badge_tiles.py), D (options; rAUDTERM→TODO-HW),
   F (players_pc — flagship DisplayListMenuID second caller; PC boxes =
-  in-memory Gen-1-shaped stand-in). Root seeds worktrees (assets+.2bpp),
-  integrates, gates. Per-package `DEBUG_<PKG>=1` dumps: open/nav/terminal
-  states. Requires: S5.
+  in-memory Gen-1-shaped stand-in). DONE 2026-07-02 (see translation_log.md
+  "menus-port Session 6 package A/B/D/F"). Root wrote gen_badge_tiles.py + 3
+  sidecar UI_* elements (UI_TRAINER_CARD_BADGES/OPTIONS/PLAYERS_PC_MENU),
+  seeded 4 hardlink worktrees, ran the 5 gates per package, derived all new
+  WRAM against origin/symbols:pokeyellow.sym (corrected D's wOptionsCursorLocation
+  0xD029→0xCD3D and A's whole HoF cluster off the worker placeholders), and
+  committed each package alone with a headless DEBUG_<PKG> FRAME.BIN gate.
+  Also found (out of scope, flagged): port W_SIMULATED_JOYPAD_STATES_INDEX
+  0xCC84 + wFieldMoves family off by 0xB4 vs the sym — latent S2-era error,
+  left for a dedicated fix. Requires: S5.
 - [ ] **Session 7 — Swarm wave 2** + root-first `src/save/dsv_io.asm`
   (DOSV magic+version+checksum+32KB payload; DsvFileExists):
   E (main_menu; CheckForPlayerNameInSRAM→DsvFileExists; SpecialEnterMap wired
