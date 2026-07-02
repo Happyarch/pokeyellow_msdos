@@ -14,7 +14,7 @@ Controls:
   H / Shift+H      hide selected element / unhide all (editor-only, not saved)
   O                solo mode: show only the selected element
   W                toggle overlap warnings   B          toggle background
-  Ctrl+S           save sidecar              Esc/close  quit (warns if unsaved)
+  S (or Ctrl+S)    save sidecar              Esc/close  quit (warns if unsaved)
 
 What you see is what ships: the preview and gen_ui_layout.py share the same
 projection (canvas.py) and tile rasterizer (render.py).
@@ -140,10 +140,16 @@ class Editor:
             self.screen.blit(self.font.render(s[:46], True, color), (x0 + 8, y))
             y += 16
 
+        flash = pygame.time.get_ticks() - getattr(self, "saved_flash", -9999) \
+            < 2000
         title = self.layout.subsystem \
             + ("  [SOLO]" if self.solo else "") \
-            + ("  *UNSAVED*" if self.dirty else "")
+            + ("  *UNSAVED* (press S)" if self.dirty
+               else "  SAVED ✓" if flash else "")
         line(title, (255, 255, 128) if self.dirty else (160, 255, 160))
+        if getattr(self, "save_error", ""):
+            for chunk in _wrap("SAVE REFUSED: " + self.save_error, 44):
+                line(chunk, (255, 90, 90))
         line("-" * 44, (90, 90, 100))
         for i, el in enumerate(self.layout.elements):
             mark = ">" if i == self.sel else " "
@@ -237,7 +243,9 @@ class Editor:
         self._surface_stale = True
 
     def _clamp(self, el):
-        """Keep the projected box inside the canvas by adjusting gb origin."""
+        """Keep the projected box inside the canvas (size first, then origin)."""
+        el.gb_w = min(el.gb_w, self.layout.canvas["cols"])
+        el.gb_h = min(el.gb_h, self.layout.canvas["rows"])
         sx, sy = cv.shifts(el)
         el.gb_x = max(-sx, min(el.gb_x,
                                self.layout.canvas["cols"] - el.gb_w - sx))
@@ -250,14 +258,16 @@ class Editor:
                                                pygame.K_h, pygame.K_o):
             return
         el = self.layout.elements[self.sel] if self.sel is not None else None
-        mods = pygame.key.get_mods()
+        # ev.mod is the modifier state carried by the event itself; get_mods()
+        # is the polled fallback (some SDL video drivers only fill one of them)
+        mods = getattr(ev, "mod", 0) | pygame.key.get_mods()
         shift, ctrl = mods & pygame.KMOD_SHIFT, mods & pygame.KMOD_CTRL
         moved = False
         if ev.key == pygame.K_TAB:
             n = len(self.layout.elements)
             self.sel = 0 if self.sel is None else (self.sel + 1) % n
-        elif ev.key == pygame.K_s and ctrl:
-            self.save()
+        elif ev.key == pygame.K_s:
+            self.save()  # plain S or Ctrl+S — saving must never be missable
         elif ev.key == pygame.K_g:
             self.show_ghost = not self.show_ghost
         elif ev.key == pygame.K_w:
@@ -303,8 +313,16 @@ class Editor:
             self._surface_stale = True
 
     def save(self):
-        schema.save(self.layout, self.sidecar)
+        try:
+            schema.save(self.layout, self.sidecar)
+        except ValueError as e:
+            # never crash the editor on a validation miss — surface it instead
+            self.save_error = str(e)
+            print(f"SAVE REFUSED: {e}")
+            return
+        self.save_error = ""
         self.dirty = False
+        self.saved_flash = pygame.time.get_ticks()
         print(f"saved {self.sidecar}")
         print("regenerate with: python3 tools/gen_ui_layout.py "
               f"{self.layout.subsystem}")
