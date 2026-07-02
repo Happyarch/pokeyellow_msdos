@@ -127,7 +127,144 @@ Independent, low-risk, each standalone-linkable + ELF-testable.
   exist. Split out so it links independently of the (blocked) PC UI; wire its
   daycare-script caller.
 
-## Stage 2 — Evolution decision core: fix, wire, functional EvolveMon — [ ]
+## Stage 2 — Evolution decision core: fix, wire, functional EvolveMon — [~] (CODE DONE; LINK BLOCKED)
+
+<!-- ===================== STAGE 2 STATUS (updated 2026-07-02) =====================
+DONE this session (pokemon-behavior worktree; nasm clean, full `make` links,
+battle_text.inc regenerated):
+- (1) STACK FIX in evolution.asm .doEvolution: added the [C] blob-cursor re-push
+  BEFORE `call GetName` (port GetName clobbers ESI, unlike pret). Success-path tail
+  `pop edx`([C] blob)/`pop esi`([G] party cursor) now matches pret 231-232. Verified
+  by a full static push/pop trace (entry 5 pushes; [party]/[B]/[C]/[D]/[E]/[F] +
+  inner eax/ebx pairs all balance; success AND cancel paths return to `.done`).
+- (2) EvolveMon FUNCTIONAL: pret movie/evolution.asm structure — 3-reg preserve,
+  DelayFrames(80), `lb bc,1,16` 8-pass loop, LIVE Evolution_CheckForCancel
+  (DelayFrame + JoypadLowSensitivity + [ebp+H_JOY5]&PAD_B, honoring wForceEvolution)
+  and wEvoCancelled->CF. Audio = TODO-HW (Phase 3); palette flash + pic load +
+  Evolution_BackAndForthAnim morph = [2b] deferred no-op stubs.
+- (3) EVOLUTION TEXT: added "engine/pokemon/evos_moves.asm" to gen_battle_text.py
+  BATTLE_SRC, regenerated battle_text.inc (IsEvolving/Evolved/Into/StoppedEvolving;
+  120 labels). Wired PrintText into .doEvolution + CancelledEvolution.
+  gb_memmap.inc: added wEvoMonTileOffset=0xCEEB, wEvoCancelled=0xCEEC.
+
+BLOCKED — (4) wiring evolution.asm into LINK_SRCS. pikachu_status.asm (the claimed
+provider of IsThisPartyMonStarterPikachu) does NOT assemble: it uses `mov bx,
+wPartyMon2 - wPartyMon1` etc. with those as `extern` (not equ), so `nasm -f coff`
+FAILS (invalid operand type, lines 76/87/106/112/123/201). It is another session's
+incomplete WIP in NO Makefile var; per commit policy I did not touch it. So
+evolution.asm STAYS in POKEMON_CHECK_SRCS. To unblock (pikachu owner or user
+go-ahead): make pikachu_status.asm `%include` gb_memmap/gb_constants + drop those
+externs; add STARTER_PIKACHU equ 84 / NAME_LENGTH_JP equ 6 to gb_constants.inc and
+wPartyMon1HP=0xD16B/wPartyMon1OTID=0xD176/wPartyMon2=0xD196/wBoxMon1=0xDA95/
+wBoxMon2=0xDAB6 to gb_memmap.inc; add pikachu_status.asm + move evolution.asm to
+POKEMON_SRCS; ld -r closure + full make. Also deferred: the ELF harness end-to-end
+species/stats assertion (~20 externs to stub) — fix is proven by the static trace
+above until evolution links.
+The original investigation handoff (superseded except its addresses) follows.
+================================================================================ -->
+
+<!-- ========================= STAGE 2 HANDOFF (2026-07-02) =========================
+STATE: investigation complete; exactly ONE edit applied so far. All the design
+decisions and concrete facts below are verified — the next session should be able
+to finish mechanically without re-deriving anything. Work in the WORKTREE
+(.claude/worktrees/pokemon-behavior/dos_port), branch `pokemon-behavior`.
+
+WHAT'S DONE:
+- `src/engine/pokemon/evolution.asm`: added an extern block right after
+  `extern IsThisPartyMonStarterPikachu` (PrintText, GetPartyMonName,
+  CopyToStringBuffer, ClearScreenArea, ClearSprites, ClearScreen, DelayFrames,
+  DelayFrame, JoypadLowSensitivity, + the 4 text labels IsEvolvingText /
+  EvolvedText / IntoText / StoppedEvolvingText). File still assembles clean
+  (`nasm -f coff` exit 0 — unused externs are allowed), so this is a safe
+  partial state. NOTHING ELSE has been changed (no .doEvolution rewrite, no
+  EvolveMon rewrite, no CancelledEvolution text, no generator/Makefile/include
+  edits). evolution.asm is STILL in POKEMON_CHECK_SRCS.
+
+STILL TODO (4 sub-tasks; ordered by confidence):
+
+(1) STACK-BUG FIX — highest confidence, ~1 line. ROOT CAUSE: the bug is a MISSING
+    re-push of the blob cursor, NOT a bad pop. pret (evos_moves.asm) pushes the
+    blob cursor at .doEvolution start [A] (line 115), pops it after EvolveMon [A']
+    (line 140), reads the new species, then RE-PUSHES it [B] (line 150); the final
+    `pop de`(=[B] blob) / `pop hl`(=[G] species-list cursor) at pret 231-232 then
+    align. The dos_port already has the correct final sequence at evolution.asm
+    ~395-401 (`pop edx`=blob, `pop esi`=species-list, write, push esi, `mov esi,edx`)
+    — it was just never given the [B] push, so `pop edx` grabbed [G] and `pop esi`
+    ate the routine-entry saved DE. FIX = add ONE `push esi` right after reading
+    the new species (`pop esi`/read at ~257-261), while ESI still holds the blob
+    cursor. CAUTION: the port's GetName CLOBBERS ESI (unlike pret's GetName which
+    preserves HL), so the [B] push MUST go BEFORE the `call GetName`, not after it
+    (functionally identical to pret). No other change to 395-401 is needed.
+
+(2) EvolveMon FUNCTIONAL (2a) — replace the always-CF-clear stub. IMPORTANT: audio
+    does NOT exist in the port — `PlayCry`/SFX/music are Phase-3 TODO-HW boundaries
+    (see faint_switch.asm), so 2a is: port pret movie/evolution.asm EvolveMon
+    STRUCTURE with (a) reg preservation as pret, (b) audio calls as `; TODO-HW:
+    audio HAL (Phase 3)`, (c) palette + pic-load + back-and-forth morph as marked
+    `[2b]` deferred stubs, (d) a LIVE cancel loop. Port `Evolution_CheckForCancel`
+    faithfully (pret 138-156): `call DelayFrame` / `call JoypadLowSensitivity` /
+    read `[ebp+H_JOY5]` / `and al,PAD_B` / on B: honor `wForceEvolution` (can't
+    cancel when set) → set CF; else loop `dec c`. Keep the outer loop shell
+    (`lb bc,1,16`; 8 iters; inc b, dec c twice) calling Evolution_CheckForCancel;
+    make `Evolution_BackAndForthAnim` a `[2b]` no-op `ret` stub. Return CF from
+    `wEvoCancelled`. Externs needed (all resolvable): JoypadLowSensitivity (linked),
+    DelayFrame/DelayFrames (frame.asm, linked). Consts: PAD_B (=2, exists). WRAM:
+    H_JOY5 (0xFFB5, exists as H_JOY5 — JoypadLowSensitivity writes it),
+    wForceEvolution (0xCCD4, exists), wEvoCancelled (0xCEEC — MUST ADD, see #4).
+
+(3) TEXT STUBS — text data is GENERATED into assets/battle_text.inc by
+    tools/gen_battle_text.py (Tier-1 rule: don't hand-edit the .inc). The 4
+    evolution wrappers live in pret engine/pokemon/evos_moves.asm:303-317
+    (text_far → _EvolvedText/_IntoText/_StoppedEvolvingText in data/text/text_4.asm,
+    _IsEvolvingText in text_5.asm). TO ADD: append "engine/pokemon/evos_moves.asm"
+    to the generator's BATTLE_SRC list, run `make -C dos_port assets`, confirm the
+    4 `global`+label pairs land in battle_text.inc. THEN wire PrintText into
+    .doEvolution faithfully (pret 118-159): GetPartyMonName(AL=[wWhichPokemon],
+    ESI=wPartyMonNicks→EDX=wNameBuffer) + CopyToStringBuffer(EDX→wStringBuffer) +
+    `mov esi,IsEvolvingText`/`call PrintText` + `mov bl,50`/DelayFrames +
+    ClearScreenArea(ESI=W_TILEMAP, BH=12, BL=20) + ClearSprites → EvolveMon →
+    PrintText(EvolvedText) → [A'] pop/read species → GetName → [B] push (see #1) →
+    PrintText(IntoText) [`; TODO-HW: pret uses PrintText_NoCreatingTextBox +
+    PlaySoundWaitForCurrent(SFX_GET_ITEM_2)+WaitForSoundToFinish — not ported`] +
+    `mov bl,40`/DelayFrames + ClearScreen + RenameEvolvedMon → fall into the
+    existing (untouched) IndexToPokedex/data block at ~267. CancelledEvolution:
+    add `mov esi,StoppedEvolvingText`/`call PrintText` + `call ClearScreen` before
+    its `pop esi`/jmp. Signatures verified: DelayFrames takes BL (not CX);
+    ClearScreenArea ESI/BH/BL; ClearScreen/ClearSprites no args; W_TILEMAP=0xC3A0.
+    GetName's MONSTER_NAME path ignores wPredefBank (pret: "bank not used for
+    monster names") → skip setting it. LEAVE DEFERRED (not linked / nonexistent):
+    Evolution_ReloadTilesetTilePatterns (reload_tiles.asm is HOME_CHECK-only),
+    PrintText_NoCreatingTextBox, PlaySound*/PlayDefaultMusic. All other helpers
+    used are already in LINK_SRCS (GetPartyMonName=home/pokemon; CopyToStringBuffer=
+    battle/core; ClearScreenArea=home/copy2; ClearSprites=gfx/sprites;
+    ClearScreen=movie/title; DelayFrames=video/frame; PrintText=move_effect_helpers).
+
+(4) WIRE into LINK_SRCS — move evolution.asm from POKEMON_CHECK_SRCS to POKEMON_SRCS
+    AND add pikachu_status.asm to POKEMON_SRCS (it's currently in NO Makefile var;
+    it's the only unresolved extern for evolution: IsThisPartyMonStarterPikachu).
+    pikachu_status closure is tiny: only `call AddNTimes` (linked) + WRAM + 3
+    consts; VERIFIED none of its 5 globals collide with any linked file. Its
+    IsStarterPikachuAliveInOurParty has a latent negative-word-offset quirk
+    (wPartyMon1HP-wPartyMon1OTID = -11) but evolution only calls
+    IsThisPartyMonStarterPikachu (positive offsets, fine) — DON'T touch
+    pikachu_status logic; another session owns that file.
+    ADD to include/gb_memmap.inc (sym-verified vs origin/symbols:pokeyellow.sym):
+      wPartyMon1HP=0xD16B, wPartyMon1OTID=0xD176, wPartyMon2=0xD196,
+      wBoxMon1=0xDA95, wBoxMon2=0xDAB6, wEvoCancelled=0xCEEC.
+    ADD to include/gb_constants.inc: STARTER_PIKACHU equ 84 ($54 = PIKACHU internal
+      index, matches debug_party.asm's %define), NAME_LENGTH_JP equ 6.
+      (NAME_LENGTH=11, MONSTER_NAME=1, PAD_B already exist.)
+    VERIFY: `nasm -f coff` each changed file; `ld -r` closure = zero unresolved;
+    then full `make -C dos_port` (and `make -C dos_port SKIP_TITLE=1`). Commit only
+    your own paths (evolution.asm, pikachu_status wiring in Makefile, includes,
+    generator, regenerated battle_text.inc) — never `git add -A`.
+
+HEADLESS VALIDATION: the ELF trampoline harness (see Stage 1 notes / verification
+section) can drive the stack-fixed EvolutionAfterBattle party loop with PrintText/
+GetPartyMonName/etc. STUBBED, seeding a mon 1 level below its evo and asserting the
+party struct's species/stats update. This is the ground-truth test for the fix.
+================================================================================ -->
+
 - **Fix `EvolutionAfterBattle` stack bug** (`evolution.asm:473–491`): success path
   does `pop edx` (cursor, ok) then `pop esi` which wrongly eats the routine-level
   saved DE. Rewrite pret-faithfully — pop the one per-iteration species cursor,

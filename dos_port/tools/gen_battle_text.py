@@ -44,6 +44,9 @@ BATTLE_SRC = [
     "engine/battle/misc.asm",
     "engine/battle/end_of_battle.asm",
     "engine/battle/print_type.asm",
+    # Evolution message wrappers (IsEvolving/Evolved/Into/StoppedEvolving) —
+    # consumed by src/engine/pokemon/evolution.asm (current_plan_pokemon_behavior).
+    "engine/pokemon/evos_moves.asm",
 ] + sorted(
     str(p.relative_to(ROOT)) for p in (ROOT / "engine" / "battle" / "move_effects").glob("*.asm")
 ) + [

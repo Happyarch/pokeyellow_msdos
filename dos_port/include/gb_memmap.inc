@@ -414,6 +414,8 @@ wCanEvolveFlags        equ 0xCCD3
 wForceEvolution        equ 0xCCD4
 wEvoOldSpecies         equ 0xCEE9   ; (union wHPBarMaxHP scratch)
 wEvoNewSpecies         equ 0xCEEA
+wEvoMonTileOffset      equ 0xCEEB   ; [2b] palette-flash morph scratch (deferred)
+wEvoCancelled          equ 0xCEEC   ; EvolveMon sets 1 on B-cancel → CF
 wEvoStoneItemID        equ 0xD155
 ; Bill's PC (src/engine/pokemon/bills_pc.asm)
 wMoveMonType           equ 0xCF94   ; = W_MOVE_MON_TYPE (union wRemoveMonFromBox)
