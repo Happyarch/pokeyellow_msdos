@@ -75,9 +75,13 @@ def emit(lay: schema.Layout) -> str:
     out += [
         "; pret data/text_boxes.asm:TextBoxCoordTable — projected. JP_* rows",
         "; omitted (DEVIATION: JP-only templates not shipped in the EN port).",
+        "; Guarded so secondary consumers can %include just the UI_* equates",
+        "; (define UI_LAYOUT_EQUATES_ONLY first) without duplicating the table.",
+        "%ifndef UI_LAYOUT_EQUATES_ONLY",
         f"UI_TextBoxCoordTable_{sub}:",
         *coord_rows,
         "    db 0xFF  ; end",
+        "%endif",
         "",
     ]
     return "\n".join(out) + "\n"

@@ -125,6 +125,8 @@ global LoadWarpDestination
 global PlayerStepOutFromDoor
 global IgnoreInputForHalfSecond
 global LoadPlayerSpriteGraphics
+global RefreshCollisionTileMap             ; menus S4: home/start_menu.asm restores
+                                           ; the W_TILEMAP mirror around the menu
 
 ; ---------------------------------------------------------------------------
 ; Map and tileset constants

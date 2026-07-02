@@ -218,6 +218,11 @@ X_ATTACK               equ 0x41
 X_DEFEND               equ 0x42
 X_SPEED                equ 0x43
 X_SPECIAL              equ 0x44
+BICYCLE                equ 0x06   ; StartMenu_Item special-cases it (skips the USE/TOSS box)
+
+; --- wStatusFlags4/6 bits used by the START menu / bag (constants/ram_constants.asm) ---
+BIT_LINK_CONNECTED     equ 6      ; wStatusFlags4: link session active (SAVE → RESET label)
+BIT_ALWAYS_ON_BIKE     equ 5      ; wStatusFlags6: map forbids dismounting (Cycling Road)
 
 ; --- wild encounter constants (constants/pokemon_data_constants.asm) ---
 NUM_WILDMONS            equ 10

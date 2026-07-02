@@ -318,3 +318,227 @@ RecalcMonStats:
     add esi, MON_EXP + 2             ; hl -> exp LSB == stat-exp base for CalcStat
     mov bh, 1                        ; consider stat exp
     jmp CalcStats
+
+; ===========================================================================
+; TossItem_ — confirm and toss an item (menus-port Session 4).
+; pret ref: engine/items/item_effects.asm:TossItem_ (2829-2878).
+;
+; In:  ESI (hl) = inventory count addr (wNumBagItems / wNumBoxItems),
+;      [wCurItem], [wWhichPokemon], [wItemQuantity].
+; Out: CF clear if tossed, CF set if not (key item / HM / player chose No).
+;
+; DEVIATION(text): pret prints IsItOKToTossItemText / ThrewAwayItemText /
+; TooImportantToTossText via PrintText (typewriter reveal in the message box).
+; The port's PrintText_Overworld collapses the window list to the dialog alone
+; (set_single_window), which would hide the item list beneath — on the GB the
+; list survives in the BG tilemap. Until dialog printing can composite with
+; existing windows (and the far-text streams exist as GB-space assets), the
+; three dialogs are drawn whole into the message box (pret wording, ▼ +
+; A/B-wait reproducing the texts' terminal `prompt`), appended over the list —
+; visually matching the GB's list+dialog screen minus the per-letter reveal.
+; ===========================================================================
+global TossItem_
+
+extern TextBoxBorder                 ; text/text.asm — ESI=top-left, BL=int_w, BH=int_h
+extern place_flat_str                ; text/text.asm — ESI=dest, EAX=flat src
+extern DelayFrame                    ; video/frame.asm
+extern IsItemHM                      ; home/item_predicates.asm — AL → CF
+extern IsKeyItem                     ; home/item_predicates.asm — [wCurItem] → [wIsKeyItem]
+extern GetItemName                   ; home/names.asm — [wNamedObjectIndex] → wNameBuffer
+extern CopyToStringBuffer            ; engine/battle/core.asm — EDX=src → wStringBuffer
+extern RemoveItemFromInventory       ; engine/items/inventory.asm
+extern InitYesNoTextBoxParameters    ; home/yes_no.asm — YES_NO_MENU at GB(14,7)
+extern DisplayTextBoxID              ; home/textbox.asm
+extern add_window                    ; ppu/ppu.asm
+extern g_window_count                ; ppu/ppu.asm
+
+%define UI_LAYOUT_EQUATES_ONLY 1
+%include "assets/ui_layout_menus.inc"
+
+; charmap glyphs
+TI_CHAR_TERM  equ 0x50               ; '@'
+TI_CHAR_QUEST equ 0xE6               ; ?
+TI_CHAR_EXCL  equ 0xE7               ; !
+TI_CHAR_DOT   equ 0xE8               ; .
+TI_CHAR_DOWN  equ 0xEE               ; ▼
+TI_TILE_SPC   equ 0x7F
+
+section .data
+align 4
+; Toss dialog message lines — pret data/text/text_9.asm wording, GB charmap.
+ti_msg_threw:  db 0x93,0xA7,0xB1,0xA4,0xB6,0x7F,0xA0,0xB6,0xA0,0xB8, TI_CHAR_TERM              ; "Threw away"
+ti_msg_isok:   db 0x88,0xB2,0x7F,0xA8,0xB3,0x7F,0x8E,0x8A,0x7F,0xB3,0xAE,0x7F,0xB3,0xAE,0xB2,0xB2, TI_CHAR_TERM ; "Is it OK to toss"
+; "That's too impor-" / "tant to toss!" ($BD = 's ligature, $E3 = '-')
+ti_msg_imp1:   db 0x93,0xA7,0xA0,0xB3,0xBD,0x7F,0xB3,0xAE,0xAE,0x7F,0xA8,0xAC,0xAF,0xAE,0xB1,0xE3, TI_CHAR_TERM
+ti_msg_imp2:   db 0xB3,0xA0,0xAD,0xB3,0x7F,0xB3,0xAE,0x7F,0xB3,0xAE,0xB2,0xB2, TI_CHAR_EXCL, TI_CHAR_TERM
+
+section .bss
+align 4
+ti_saved_wc:   resd 1                ; g_window_count before the dialog appended
+
+section .text
+
+TossItem_:
+    push esi                            ; push hl — inventory ptr
+    mov al, [ebp + wCurItem]
+    call IsItemHM                       ; CF = is HM
+    pop esi                             ; pop hl
+    jc .tooImportantToToss
+    push esi
+    call IsKeyItem                      ; pret IsKeyItem_ — [wCurItem] → [wIsKeyItem]
+    mov al, [ebp + wIsKeyItem]
+    pop esi
+    test al, al                         ; and a
+    jnz .tooImportantToToss
+    push esi
+    mov al, [ebp + wCurItem]
+    mov [ebp + wNamedObjectIndex], al
+    call GetItemName
+    mov edx, wNameBuffer
+    call CopyToStringBuffer
+    ; "Is it OK to toss <wStringBuffer>?" (pret IsItOKToTossItemText + prompt)
+    call ti_dialog_isok
+    ; hlcoord 14,7 / lb bc,8,15 / TWO_OPTION_MENU — the port's two-option box
+    ; takes its parameters from yes_no.asm state; InitYesNoTextBoxParameters
+    ; sets exactly pret's YES_NO_MENU at GB(14,7).
+    call InitYesNoTextBoxParameters
+    mov byte [ebp + wTextBoxID], TWO_OPTION_MENU
+    call DisplayTextBoxID               ; yes/no menu (appends + drops its window)
+    mov al, [ebp + wMenuExitMethod]
+    cmp al, CHOSE_SECOND_ITEM
+    pop esi                             ; pop hl
+    jne .choseYes
+    call ti_dialog_drop                 ; port: drop the dialog window
+    stc                                 ; player chose No
+    ret
+.choseYes:
+    push esi
+    call ti_dialog_drop                 ; drop the "Is it OK" dialog window before
+                                        ; the "Threw away" dialog re-appends (same
+                                        ; box region; avoids stacking a duplicate)
+    mov al, [ebp + wWhichPokemon]       ; pret ld a,[wWhichPokemon] (worker reads it)
+    call RemoveItemFromInventory        ; ESI = inventory ptr (passes through)
+    mov al, [ebp + wCurItem]
+    mov [ebp + wNamedObjectIndex], al
+    call GetItemName
+    mov edx, wNameBuffer
+    call CopyToStringBuffer
+    ; "Threw away <wNameBuffer>." (pret ThrewAwayItemText + prompt)
+    call ti_dialog_threw
+    call ti_dialog_drop
+    pop esi                             ; pop hl
+    clc                                 ; and a — tossed
+    ret
+.tooImportantToToss:
+    push esi
+    ; "That's too impor-/tant to toss!" (pret TooImportantToTossText + prompt)
+    call ti_dialog_important
+    call ti_dialog_drop
+    pop esi
+    stc
+    ret
+
+; ---------------------------------------------------------------------------
+; Dialog plumbing (port; see DEVIATION note above). Each ti_dialog_* draws the
+; message box into the stride-20 W_TILEMAP scratch rows 12-17, mirrors it to
+; GB_TILEMAP1 rows 0-5, appends the dialog window (saving the count for
+; ti_dialog_drop), and waits out the text's terminal `prompt` (▼ + A/B).
+; ; PROJ menus: GB(0,12) 20x6 --(anchor=center/bottom, X+10, Y+7)--> wx=87
+;   wy=152 clip=160 max_y=200 [UI_MESSAGE_BOX_*]
+; ---------------------------------------------------------------------------
+ti_dialog_isok:
+    call ti_dialog_box
+    mov esi, W_TILEMAP + 14 * 20 + 1
+    mov eax, ti_msg_isok
+    call place_flat_str
+    lea eax, [ebp + wStringBuffer]      ; text_ram wStringBuffer
+    mov esi, W_TILEMAP + 16 * 20 + 1
+    call place_flat_str                 ; ESI advances past the name
+    mov byte [ebp + esi], TI_CHAR_QUEST
+    call ti_dialog_show
+    jmp ti_dialog_prompt
+
+ti_dialog_threw:
+    call ti_dialog_box
+    mov esi, W_TILEMAP + 14 * 20 + 1
+    mov eax, ti_msg_threw
+    call place_flat_str
+    lea eax, [ebp + wNameBuffer]        ; text_ram wNameBuffer
+    mov esi, W_TILEMAP + 16 * 20 + 1
+    call place_flat_str
+    mov byte [ebp + esi], TI_CHAR_DOT
+    call ti_dialog_show
+    jmp ti_dialog_prompt
+
+ti_dialog_important:
+    call ti_dialog_box
+    mov esi, W_TILEMAP + 14 * 20 + 1
+    mov eax, ti_msg_imp1
+    call place_flat_str
+    mov esi, W_TILEMAP + 16 * 20 + 1
+    mov eax, ti_msg_imp2
+    call place_flat_str
+    call ti_dialog_show
+    jmp ti_dialog_prompt
+
+; draw the empty message-box border into scratch rows 12-17 (stride 20)
+ti_dialog_box:
+    mov esi, W_TILEMAP + 12 * 20
+    mov bl, 18                          ; interior width  (total 20)
+    mov bh, 4                           ; interior height (total 6)
+    call TextBoxBorder
+    ret
+
+; mirror scratch rows 12-17 → GB_TILEMAP1 rows 0-5 (pad cols 20-31), append
+; the dialog descriptor (remembering the caller's window count).
+ti_dialog_show:
+    pushad
+    mov ecx, 6
+    lea esi, [ebp + W_TILEMAP + 12 * 20]
+    lea edi, [ebp + GB_TILEMAP1]
+.row:
+    push ecx
+    push edi
+    mov ecx, 20
+    rep movsb
+    mov al, TI_TILE_SPC
+    mov ecx, 12                         ; pad cols 20-31
+    rep stosb
+    pop edi
+    pop ecx
+    add edi, 32
+    dec ecx
+    jnz .row
+    mov eax, [g_window_count]
+    mov [ti_saved_wc], eax
+    mov eax, UI_MESSAGE_BOX_WX          ; 87 — the overworld dialog anchor
+    mov ebx, UI_MESSAGE_BOX_WY          ; 152
+    mov ecx, UI_MESSAGE_BOX_CLIP        ; 160
+    mov edx, UI_MESSAGE_BOX_MAXY        ; 200
+    mov esi, GB_TILEMAP1
+    xor edi, edi
+    call add_window
+    popad
+    ret
+
+; ▼ + wait for an A/B press cycle (the texts' terminal `prompt`), clear the ▼.
+ti_dialog_prompt:
+    mov byte [ebp + GB_TILEMAP1 + DIALOG_ARROW_TILEMAP_OFFSET], TI_CHAR_DOWN
+.release:
+    call DelayFrame
+    test byte [ebp + H_JOY_HELD], PAD_A | PAD_B
+    jnz .release
+.press:
+    call DelayFrame
+    test byte [ebp + H_JOY_HELD], PAD_A | PAD_B
+    jz .press
+    mov byte [ebp + GB_TILEMAP1 + DIALOG_ARROW_TILEMAP_OFFSET], TI_TILE_SPC
+    ret
+
+; drop the dialog window (restore the count ti_dialog_show saved)
+ti_dialog_drop:
+    push eax
+    mov eax, [ti_saved_wc]
+    mov [g_window_count], eax
+    pop eax
+    ret

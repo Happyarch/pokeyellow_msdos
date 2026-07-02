@@ -29,6 +29,7 @@ LABELS = [
     ("sm_str_pokemon", "POKéMON"),
     ("sm_str_item",    "ITEM"),
     ("sm_str_save",    "SAVE"),
+    ("sm_str_reset",   "RESET"),
     ("sm_str_option",  "OPTION"),
     ("sm_str_exit",    "EXIT"),
 ]

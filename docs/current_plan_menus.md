@@ -112,10 +112,42 @@ entry + commit (root only).
     FRAME.BIN renders — party nicks+levels, price column, ×qty+IsKeyItem skip).
   - Gate: baseline FRAME.BINs (overworld/STARTMENU/BAGMENU) byte-identical
     before/after; `make` + `make check` green.
-- [ ] **Session 4 — Realign start_menu + bag_menu.** `_v2` files + DEBUG flag
-  A/B swap; FRAME.BIN A/B diff for must-not-change behavior; SELECT-swap goes
-  live via real swap_items.asm; bag USE stays tagged stub; single revertible
-  swap commit, flag deleted same session. Requires: S3.
+- [x] **Session 4 — Realign start_menu + bag_menu.** DONE 2026-07-02 (see
+  translation_log.md "menus-port Session 4"). Direct overwrite instead of the
+  `_v2` flag dance (user call: "correct or overwrite the unfaithful bespokes");
+  still one revertible commit, gated by before/after FRAME.BIN diffs.
+  - Bespoke `start_menu.asm`/`bag_menu.asm` DELETED, replaced by faithful
+    `src/home/start_menu.asm` (DisplayStartMenu/RedisplayStartMenu/
+    CloseStartMenu), `src/engine/menus/draw_start_menu.asm` (DrawStartMenu,
+    canvas model + GB_TILEMAP1 window bridge at UI_START_MENU_*), and
+    `src/engine/menus/start_sub_menus.asm` (ItemMenuLoop + StartMenu_Item live
+    on DisplayListMenuID/DisplayTextBoxID/HandleMenuInput; Pokemon = party
+    seam for S5; Pokedex/TrainerInfo/SaveReset/Option = tagged stubs for
+    S6-S9). SELECT-swap live via swap_items.asm's HandleItemListSwapping (the
+    driver's own SELECT path); bag USE stays a tagged stub (items plan).
+  - TOSS chain faithful: IsKeyItem/IsItemHM → DisplayChooseQuantityMenu →
+    NEW home/item.asm TossItem → NEW TossItem_ (item_effects.asm) with
+    RemoveItemFromInventory wrapper + TWO_OPTION_MENU (0x14) via
+    InitYesNoTextBoxParameters/DisplayTextBoxID — first live wiring of the
+    interactive yes/no path. DEVIATION(text): the three toss dialogs are drawn
+    whole (pret wording, ▼ + A/B prompt wait) instead of PrintText typewriter
+    reveal — PrintText_Overworld collapses the window list (would hide the
+    list); revisit when engine-text streams exist as GB-space assets.
+  - Port-model guard: RedisplayStartMenu/CloseStartMenu call
+    RefreshCollisionTileMap (pret screen-buffer-restore analog) so
+    CheckSpriteAvailability's text-box tile check sees map+box only; the
+    canvas box at UI_START_MENU cols 30-39 reproduces pret's
+    NPC-hidden-under-menu behavior for free.
+  - Gates: DEBUG_BAGMENU FRAME.BIN **byte-identical** to bespoke (hook moved
+    into DisplayListMenuIDLoop; RunBagMenuTest drives StartMenu_Item);
+    DEBUG_STARTMENU menu-box region (x≥240) **pixel-identical** (262 stray px
+    outside = wandering-NPC first-tick init transient from the faithful
+    UpdateSprites call, reachable only in the harness which opens the menu
+    before OverworldLoop's first tick); overworld baseline byte-identical;
+    DEBUG_LISTMENU=3 matches the bag render; `make` + `make check` green.
+    DEBUG_BAGMENU_CONFIRM flag deleted with the bespoke. Interactive toss /
+    yes-no / SELECT-swap hand-pass: `make DEBUG_BAGMENU_LIVE=1` + `dos_port/run`
+    (formal interactive sweep stays S10). Requires: S3.
 - [ ] **Session 5 — Realign party_menu.** Same `_v2` method for
   DrawPartyMenu_/RedrawPartyMenu_ + field-move pop-up rebased onto S2's
   DisplayFieldMoveMonMenu; HP/status/icon pixel-regression gate; STATS stays

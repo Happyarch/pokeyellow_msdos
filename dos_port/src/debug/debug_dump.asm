@@ -35,7 +35,7 @@ global RunPartySeedTest
 %ifdef DEBUG_BAGMENU
 extern PrepareNewGameDebug
 extern LoadFontTilePatterns
-extern DisplayBagMenu
+extern StartMenu_Item
 global RunBagMenuTest
 %endif
 %ifdef DEBUG_PARTYMENU
@@ -269,8 +269,10 @@ RunPartySeedTest:
 %ifdef DEBUG_BAGMENU
 ; ---------------------------------------------------------------------------
 ; RunBagMenuTest — seed the party + bag, load the font, open the bag (ITEM)
-; screen over the (already set-up) overworld. DisplayBagMenu's DEBUG_BAGMENU hook
-; renders one frame and dumps FRAME.BIN. Never returns. In: EBP = GB memory base.
+; screen over the (already set-up) overworld via the faithful StartMenu_Item →
+; DisplayListMenuID path (menus S4). The DEBUG_BAGMENU hook inside
+; DisplayListMenuIDLoop (home/list_menu.asm) renders one frame with the staged
+; list + cursor and dumps FRAME.BIN. Never returns. In: EBP = GB memory base.
 ; Call from EnterMap (after the overworld is loaded) so Pallet Town backs the box.
 ; ---------------------------------------------------------------------------
 RunBagMenuTest:
@@ -279,12 +281,14 @@ RunBagMenuTest:
     mov byte [ebp + 0xD31C], 0      ; wNumBagItems = 0
     mov byte [ebp + 0xD31D], 0xFF   ; wBagItems sentinel
     call PrepareNewGameDebug        ; seed party + bag
-    ; Swap the font into vFont so the list glyphs render (DisplayBagMenu assumes it).
+    ; Swap the font into vFont so the list glyphs render (caller contract).
     or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
-    call DisplayBagMenu             ; DEBUG_BAGMENU hook: render 1 frame + dump + exit
+    mov byte [ebp + wLinkState], 0  ; not in the Cable Club
+    mov byte [ebp + wBagSavedMenuItem], 0
+    call StartMenu_Item             ; list_menu's DEBUG hook: 1 frame + dump + exit
 .hang:
-    jmp .hang                       ; unreachable (DisplayBagMenu dumps + exits)
+    jmp .hang                       ; unreachable (the list-menu hook dumps + exits)
 %endif
 
 %ifdef DEBUG_PARTYMENU

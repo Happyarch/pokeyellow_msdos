@@ -23,6 +23,97 @@ if it took none. This is the swarm's divergence audit trail.
 
 ---
 
+## menus-port Session 4 — start_menu + bag realigned onto the generic drivers
+- **Date:** 2026-07-02
+- **Plan:** docs/current_plan_menus.md, Session 4. Bespoke
+  `src/engine/menus/start_menu.asm` + `bag_menu.asm` **deleted**; faithful pret
+  mirrors replace them (direct overwrite per user direction; single revertible
+  commit gated by before/after FRAME.BIN diffs).
+- **DisplayStartMenu / RedisplayStartMenu(_DoNotDrawStartMenu) / CloseStartMenu**
+  — Source: pret `home/start_menu.asm`. Translated: NEW
+  `dos_port/src/home/start_menu.asm` (HOME_SRCS). Faithful UP/DOWN manual wrap
+  (wLastMenuItem guard, EVENT_GOT_POKEDEX counts 6/7, EraseMenuCursor),
+  wBattleAndStartSavedMenuItem save at .buttonPressed, dispatch `cp 0..5` with
+  EXIT falling through to CloseStartMenu. Divergences: SFX_START_MENU = TODO-HW;
+  PrintSafariZoneSteps = STUB(safari); SaveScreenTilesToBuffer2 not needed
+  (window-overlay model, DEVIATION-tagged: START window dropped while a
+  sub-menu is open, redrawn on return); `jp CloseTextDisplay` folded into
+  CloseStartMenu (port opens the menu from OverworldLoop, not DisplayTextID —
+  CloseTextDisplay pops DisplayTextID's saved bank); port font swap-in/out
+  (vFont time-share) kept from the bespoke preamble; CloseStartMenu calls
+  LoadTextBoxTilePatterns faithfully and restores text_row_stride=20.
+- **DrawStartMenu / PrintStartMenuItem** — Source: pret
+  `engine/menus/draw_start_menu.asm`. Translated: NEW
+  `dos_port/src/engine/menus/draw_start_menu.asm`. Canvas model: box at
+  UI_START_MENU_(COL,ROW) stride 40, items at (COL+2, ROW+2k), cursor
+  (COL+1, ROW+2); labels from generated `menu_strings.inc` (+ NEW sm_str_reset;
+  gen_menu_strings.py extended) with pret-name equ aliases; SAVE<->RESET branch
+  on wStatusFlags4 BIT_LINK_CONNECTED. wMaxMenuItem = item COUNT (pret's
+  one-past-max quirk preserved; RedisplayStartMenu's wrap handles the phantom
+  row). Port bridge: StartMenuShowWindow mirrors the canvas rect ->
+  GB_TILEMAP1 rows 0-15 + set_single_window(UI_START_MENU_WX/WY/CLIP,
+  rows*8); sm_canvas_mirror = menu_redraw_cb. gen_ui_layout.py now wraps the
+  coord table in `%ifndef UI_LAYOUT_EQUATES_ONLY` so secondary consumers can
+  include just the equates (frozen values unchanged).
+- **ItemMenuLoop / StartMenu_Item + StartMenu_* seams** — Source: pret
+  `engine/menus/start_sub_menus.asm`. Translated: NEW
+  `dos_port/src/engine/menus/start_sub_menus.asm`. The bag now runs the real
+  DisplayListMenuID(ITEMLISTMENU) over wListPointer=wNumBagItems with
+  wBagSavedMenuItem cursor memory — SELECT-swap therefore live through
+  swap_items.asm:HandleItemListSwapping. .choseItem erases the pret cursor
+  cells (box-rel (1,2/4/6/8)) + PlaceUnfilledArrowMenuCursor + list_mirror
+  (now exported). USE/TOSS box via wTextBoxID=USE_TOSS_MENU_TEMPLATE ->
+  DisplayTextBoxID (S2 canvas dispatcher) + ut_show_window canvas->window
+  bridge (GB_TILEMAP0 rows 21-25, UI_USE_TOSS_MENU_TEMPLATE_* descriptor);
+  HandleMenuInput at stride 40, cursor (TX-1, TY), step 2*40. Divergences:
+  USE = STUB(items-plan) -> ItemMenuLoop; CannotUseItemsHere/CannotGetOffHere
+  texts = STUB(text) with control flow preserved; ItemMenuLoop's
+  LoadScreenTilesFromBuffer2DisableBGTransfer/RunDefaultPaletteCommand
+  subsumed by DisplayListMenuID's window-list rebuild (TODO-HW: palettes).
+  StartMenu_Pokemon = wPartyCount guard + bespoke DisplayPartyMenu seam
+  (STUB(S5) for field-move/SWITCH/STATS routing); Pokedex/TrainerInfo/
+  SaveReset/Option = STUB(S6-S9) -> RedisplayStartMenu.
+- **TossItem / TossItem_** — Source: pret `home/item.asm` +
+  `engine/items/item_effects.asm:TossItem_`. Translated: NEW
+  `dos_port/src/home/item.asm` (wrapper; banking = TODO-HW) + TossItem_
+  appended to `src/engine/items/item_effects.asm`; NEW RemoveItemFromInventory
+  home wrapper in `inventory.asm`. Faithful chain: IsItemHM -> IsKeyItem ->
+  GetItemName/CopyToStringBuffer -> yes/no at pret (14,7) via
+  InitYesNoTextBoxParameters + wTextBoxID=TWO_OPTION_MENU + DisplayTextBoxID
+  (**first live wiring of the interactive 0x14 path**) -> CHOSE_SECOND_ITEM ->
+  scf, else RemoveItemFromInventory + "Threw away". DEVIATION(text): the three
+  dialogs (IsItOKToToss/ThrewAway/TooImportant, pret data/text/text_9.asm
+  wording incl. wStringBuffer/wNameBuffer substitution) are drawn whole into
+  the message box + appended as a window (UI_MESSAGE_BOX_* descriptor) with a
+  down-arrow A/B prompt wait — PrintText_Overworld would collapse the window
+  list and hide the item list; revisit when engine far-text streams exist as
+  GB-space assets and dialog printing can composite with live windows.
+- **Port-model sprite guard** — RedisplayStartMenu and CloseStartMenu call
+  RefreshCollisionTileMap (newly exported from overworld.asm) — the analog of
+  pret's screen-buffer save/restore: W_TILEMAP doubles as the
+  CheckSpriteAvailability text-box-tile mirror, so it is scrubbed back to map
+  tiles before the box redraw / after close. The canvas box at cols 30-39
+  lands in the mirror at exactly its on-screen tile position, reproducing
+  pret's NPC-hidden-under-menu behavior; list/dialog stride-20 scratch writes
+  still alias mirror rows 0-9 during bag sub-flows (windows occlude correctly
+  regardless — the compositor draws windows last; NPCs are frozen under
+  BIT_FONT_LOADED; self-heals at the next RedisplayStartMenu/step).
+- **Constants/includes:** gb_constants.inc + BICYCLE, BIT_LINK_CONNECTED,
+  BIT_ALWAYS_ON_BIKE.
+- **Harnesses:** DEBUG_BAGMENU hook moved into DisplayListMenuIDLoop
+  (list_menu.asm) — RunBagMenuTest now drives the faithful StartMenu_Item;
+  DEBUG_STARTMENU hook in RedisplayStartMenu; DEBUG_BAGMENU_CONFIRM deleted
+  with the bespoke (interactive confirm now reachable via DEBUG_BAGMENU_LIVE).
+- **Verification:** DEBUG_BAGMENU FRAME.BIN byte-identical to the bespoke
+  baseline; DEBUG_STARTMENU menu-box region (x>=240) pixel-identical — the 262
+  stray pixels outside are the wandering-NPC first-tick InitializeSpriteStatus
+  transient (IMAGEINDEX=$ff for one tick) surfaced by the faithful
+  UpdateSprites call, reachable only in the harness (menu opened straight from
+  EnterMap before OverworldLoop's first tick; diagnosed via a temporary
+  wSpriteStateData DUMP.BIN capture); overworld DEBUG_TRANSITION+BASELINE
+  byte-identical; DEBUG_LISTMENU=3 render matches the bag; `make` +
+  `make check` green.
+
 ## menus-port Session 3 — generic list/yes-no/swap drivers wired live
 - **Date:** 2026-07-02
 - **Plan:** docs/current_plan_menus.md, Session 3.

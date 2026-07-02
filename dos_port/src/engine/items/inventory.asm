@@ -30,6 +30,7 @@ bits 32
 global AddItemToInventory_
 global AddItemToInventory
 global RemoveItemFromInventory_
+global RemoveItemFromInventory
 
 section .text
 
@@ -127,6 +128,15 @@ AddItemToInventory_:
     pop eax                          ; [orig_qty]
     mov [ebp + wItemQuantity], al
     clc
+    ret
+
+; ---------------------------------------------------------------------------
+; RemoveItemFromInventory — home wrapper around RemoveItemFromInventory_ (pret
+; home/inventory.asm: homecall — bank shuffle only). Flat model: plain call;
+; ESI (hl) passes through untouched.
+; ---------------------------------------------------------------------------
+RemoveItemFromInventory:
+    call RemoveItemFromInventory_
     ret
 
 ; In:  ESI (hl) = inventory count addr; [wWhichPokemon] = slot index;

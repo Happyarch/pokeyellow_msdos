@@ -61,6 +61,8 @@
 global DisplayListMenuID
 global DisplayListMenuIDLoop
 global DisplayChooseQuantityMenu
+global list_mirror              ; menus S4: StartMenu_Item refreshes the list
+                                ; window after its cursor-cell edits
 
 ; ── globals resolved elsewhere (present in the port) ─────────────────────────
 extern TextBoxBorder            ; text.asm       ESI=top-left dest, BL=int w, BH=int h
@@ -270,6 +272,18 @@ DisplayListMenuIDLoop:
     jmp .buttonAPressed
 .notOldManBattle:
     call LoadGBPal                             ; home/fade.asm (flat palette reload)
+%ifdef DEBUG_BAGMENU
+    ; menus S4 gate: render the staged list (border + entries + ▶ cursor) for
+    ; one frame, dump FRAME.BIN, exit — B-side of the bespoke-vs-realigned
+    ; A/B diff (the bespoke DisplayBagMenu hook this replaces dumped the same
+    ; state). Never returns.
+    extern DumpBackbuffer
+    extern DelayFrame
+    call PlaceMenuCursor
+    call list_mirror
+    call DelayFrame
+    call DumpBackbuffer
+%endif
     ; per-frame mirror keeps HandleMenuInput's live cursor reaching the
     ; compositor (same mechanism as yes_no.asm's yn_mirror callback)
     mov dword [menu_redraw_cb], list_mirror

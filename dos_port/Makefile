@@ -125,7 +125,9 @@ HOME_SRCS := \
     src/home/bankswitch.asm \
     src/home/textbox.asm \
     src/home/yes_no.asm \
-    src/home/list_menu.asm
+    src/home/list_menu.asm \
+    src/home/start_menu.asm \
+    src/home/item.asm
 
 HAL_SRCS := \
     src/ppu/ppu.asm \
@@ -156,8 +158,8 @@ GAME_SRCS := \
     src/data/map_scripts.asm \
     src/scripts/pallet_town.asm \
     src/engine/math/random.asm \
-    src/engine/menus/start_menu.asm \
-    src/engine/menus/bag_menu.asm \
+    src/engine/menus/draw_start_menu.asm \
+    src/engine/menus/start_sub_menus.asm \
     src/engine/menus/party_menu.asm \
     src/engine/menus/field_moves.asm \
     src/engine/menus/text_box.asm \
@@ -291,14 +293,6 @@ endif
 ifdef DEBUG_BAGMENU
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_BAGMENU
-NASMFLAGS += -D SKIP_TITLE
-GAME_SRCS += src/engine/debug/debug_party.asm
-endif
-# Variant of DEBUG_BAGMENU that also overlays the toss YES/NO confirmation box
-# (static, for a visual check of the confirm menu). make DEBUG_BAGMENU_CONFIRM=1
-ifdef DEBUG_BAGMENU_CONFIRM
-NEED_DEBUG_DUMP := 1
-NASMFLAGS += -D DEBUG_BAGMENU -D DEBUG_BAGMENU_CONFIRM
 NASMFLAGS += -D SKIP_TITLE
 GAME_SRCS += src/engine/debug/debug_party.asm
 endif
@@ -642,9 +636,14 @@ assets/trainer_pics.inc: ../gfx/pics.asm ../data/trainers/pic_pointers_money.asm
                          tools/gen_trainer_pics.py
 	python3 tools/gen_trainer_pics.py
 
-# Start menu checks EVENT_GOT_POKEDEX via events.inc → event_constants.inc, and
-# %includes the generated menu_strings.inc label block.
-src/engine/menus/start_menu.o: assets/event_constants.inc assets/menu_strings.inc
+# Start menu checks EVENT_GOT_POKEDEX via events.inc → event_constants.inc;
+# DrawStartMenu %includes the generated menu_strings.inc labels and the
+# UI_START_MENU_* equates; start_sub_menus needs the UI_USE_TOSS_* equates.
+src/home/start_menu.o: assets/event_constants.inc
+src/engine/menus/draw_start_menu.o: assets/event_constants.inc \
+        assets/menu_strings.inc assets/ui_layout_menus.inc
+src/engine/menus/start_sub_menus.o: assets/ui_layout_menus.inc
+src/engine/items/item_effects.o: assets/ui_layout_menus.inc
 
 # Pokémon base stats + IndexToPokedex (static data, generated from pret source).
 assets/base_stats.inc:
