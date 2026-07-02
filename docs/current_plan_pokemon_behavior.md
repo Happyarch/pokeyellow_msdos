@@ -87,7 +87,25 @@ surfaced (garbage level-up stats, silently-dropped level-up moves).
   `cmp al, MAX_LEVEL` (imm8) → NASM COFF can't emit an 8-bit reloc. Add
   `MAX_LEVEL equ 100` to `gb_constants.inc`, drop the `extern`, add `bits 32`.
 
-## Stage 1 — Pure-logic (A) routines: port + wire — [ ]
+## Stage 1 — Pure-logic (A) routines: port + wire — [x]
+<!-- Done 2026-07-01. All three routines linked into PKMN.EXE (added to POKEMON_SRCS)
+     and validated headlessly (ELF trampoline harness, 15/15 pass: all 5 statuses +
+     healthy + PSN>SLP priority; FNT-on-faint / ailment-when-alive / blank-when-healthy;
+     KnowsHMMove found-first / not-found / found-last). Full `make` link closure holds.
+     - PrintStatusAilment: filled the empty src/engine/pokemon/status_ailments.asm
+       (was a skip-stub) with the faithful bit-test version (put_str3 mirrors pret's
+       ld_hli_a_string: ESI += 2, AL = last tile; ZF set iff no status). The shared
+       PrintStatusCondition / PrintStatusConditionNotFainted wrapper went into
+       src/home/pokemon.asm (pret home-bank placement; tail-jmp to PrintStatusAilment).
+       party_menu.asm's inline .print_status was LEFT ALONE (working screen; a concurrent
+       menus agent owns that file) — the shared routine is for the Stage 4 StatusScreen.
+       Added wLoadedMonStatus ($CF9B, sym-verified) to gb_memmap.inc as its natural input.
+     - CalcExpToLevelUp: Stage 0 already fixed the COFF/bits issue; now wired into the
+       link (status_screen.asm → POKEMON_SRCS). Its live caller is Stage 4 StatusScreen.
+     - KnowsHMMove: split out (+ HMMoveArray) into new src/engine/pokemon/knows_hm_move.asm
+       so it LINKS independently of bills_pc.asm's still-blocked _MoveMon closure (bills_pc
+       stays check-only). Daycare-script caller not wired: no port daycare script exists yet
+       (script engine WIP) — the global is ready for it. -->
 Independent, low-risk, each standalone-linkable + ELF-testable.
 - **`PrintStatusAilment`** (pret `home/pokemon.asm`) — 3-letter status abbrev via bit
   tests, no external calls. Port faithfully; extract a shared `PrintStatusCondition`

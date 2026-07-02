@@ -1259,6 +1259,7 @@ hAutoBGTransferEnabled        equ H_AUTO_BG_TRANSFER_EN   ; 0xFFBA
 ; sym-verified via origin/symbols:pokeyellow.sym; promoted from evolution.asm's
 ; in-file %ifndef self-aliases (docs/current_plan_pokemon_behavior.md Stage 0).
 wLoadedMonHP                  equ 0xCF98 ; wLoadedMon + MON_HP
+wLoadedMonStatus              equ 0xCF9B ; wLoadedMon + MON_STATUS (PrintStatusCondition input)
 wLoadedMonHPExp               equ 0xCFA8 ; wLoadedMon + MON_STAT_EXP (HP stat-exp)
 wLoadedMonMaxHP               equ 0xCFB9 ; wLoadedMon + MON_MAXHP (first computed stat)
 wLoadedMonStats               equ 0xCFB9 ; = wLoadedMonMaxHP (stats block starts at MaxHP)

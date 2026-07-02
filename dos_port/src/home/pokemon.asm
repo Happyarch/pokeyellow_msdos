@@ -31,12 +31,41 @@ extern BaseStats
 extern IndexToPokedex
 extern SkipFixedLengthTextEntries
 extern CopyData
+extern PrintStatusAilment          ; src/engine/pokemon/status_ailments.asm
 
 global GetMonHeader
 global GetPartyMonName
 global GetPartyMonName2
+global PrintStatusCondition
+global PrintStatusConditionNotFainted
 
 section .text
+
+; prints a pokemon's status condition (pret home/pokemon.asm:PrintStatusCondition)
+; If the mon's current HP is zero, prints "FNT"; otherwise defers to
+; PrintStatusAilment (PSN/BRN/FRZ/PAR/SLP or nothing).
+; INPUT:  EDX = GB offset of the status condition byte (DE); ESI = tilemap dest (HL)
+; OUTPUT: 3 tiles written at [EBP+ESI..+2]; ESI += 2; ZF set iff no text drawn.
+; The two bytes just before the status byte (status-3, status-2) are the current
+; HP word — pret steps DE back over the box-level byte to read them.
+PrintStatusCondition:
+    mov al, [ebp + edx - 2]        ; push de / dec de / dec de / ld a, [de] / ld b, a
+    or  al, [ebp + edx - 3]        ; dec de / ld a, [de] / or b  — is HP zero?
+    jnz PrintStatusConditionNotFainted
+; HP is 0 → "FNT"
+    mov al, 'F' - 'A' + 0x80
+    mov [ebp + esi], al
+    inc esi
+    mov al, 'N' - 'A' + 0x80
+    mov [ebp + esi], al
+    inc esi
+    mov al, 'T' - 'A' + 0x80
+    mov [ebp + esi], al
+    or  al, al                     ; and a (a = 'T' tile, NZ) — faithful flag state
+    ret
+
+PrintStatusConditionNotFainted:
+    jmp PrintStatusAilment         ; homejp_sf PrintStatusAilment (tail; no banks)
 
 ; copies the base-stat data of a pokemon to wMonHeader
 ; INPUT: [wCurSpecies] = internal species index
