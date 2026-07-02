@@ -44,6 +44,15 @@ extern LoadFontTilePatterns
 extern DisplayPartyMenu
 global RunPartyMenuTest
 %endif
+%ifdef DEBUG_TEXTBOXID
+extern PrepareNewGameDebug
+extern LoadFontTilePatterns
+extern DisplayTextBoxID
+extern ClearSprites
+extern hide_window
+extern DelayFrame
+global RunTextBoxIDTest
+%endif
 %ifdef DEBUG_BATTLE
 extern PrepareNewGameDebug
 extern LoadFontTilePatterns
@@ -286,6 +295,55 @@ RunPartyMenuTest:
     or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     call DisplayPartyMenu
+.hang:
+    jmp .hang
+%endif
+
+%ifdef DEBUG_TEXTBOXID
+; ---------------------------------------------------------------------------
+; RunTextBoxIDTest — menus S2 FRAME.BIN gate (docs/current_plan_menus.md).
+; Seeds the debug party (+ a field move so FIELD_MOVE_MON_MENU has content),
+; switches to the flat 40×25 canvas render mode (same sequence as InitBattle),
+; blanks the canvas, draws text box DEBUG_TEXTBOXID via the real
+; DisplayTextBoxID home wrapper, renders 3 frames, dumps FRAME.BIN, exits.
+; Never returns. In: EBP = GB base.  make DEBUG_TEXTBOXID=<id>
+; NOTE: interactive ids (0x14 TWO_OPTION_MENU, 0x15 BUY_SELL_QUIT_MENU) would
+; block in HandleMenuInput — verify 0x15's box via template 0x0E instead.
+; ---------------------------------------------------------------------------
+RunTextBoxIDTest:
+    mov byte [ebp + 0xD162], 0      ; wPartyCount = 0
+    mov byte [ebp + 0xD163], 0xFF   ; wPartySpecies sentinel
+    mov byte [ebp + 0xD31C], 0      ; wNumBagItems = 0
+    mov byte [ebp + 0xD31D], 0xFF   ; wBagItems sentinel
+    call PrepareNewGameDebug        ; party + bag + money (MONEY_BOX reads it)
+    ; give party mon 0 a field move and select it, so FIELD_MOVE_MON_MENU (0x04)
+    ; lists a real field move above STATS/SWITCH/CANCEL; inert for every other id
+    mov byte [ebp + wPartyMon1 + MON_MOVES + 1], 0x0F   ; move slot 2 = CUT
+    mov byte [ebp + wWhichPokemon], 0
+    ; font glyphs + box-border tiles into vFont
+    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    call LoadFontTilePatterns
+    ; flat-canvas render mode (mirrors InitBattle): render_bg decodes W_TILEMAP
+    ; directly at screen (0,0), no window overlay, no per-frame OAM rebuild
+    call ClearSprites
+    mov byte [ebp + W_UPDATE_SPRITES_ENABLED], 0
+    mov word [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], 0
+    mov byte [ebp + H_SCX], 0       ; zero the shadows too — commit_shadow_regs
+    mov byte [ebp + H_SCY], 0       ; copies them over IO_SCX/SCY each DelayFrame
+    mov byte [ebp + IO_SCX], 0
+    mov byte [ebp + IO_SCY], 0
+    call hide_window
+    ; blank the whole canvas to the space tile so only the box under test shows
+    lea edi, [ebp + W_TILEMAP]
+    mov al, 0x7F                    ; TILE_SPC
+    mov ecx, SCREEN_TILES_W * SCREEN_TILES_H
+    rep stosb
+    mov byte [ebp + wTextBoxID], DEBUG_TEXTBOXID
+    call DisplayTextBoxID           ; home wrapper → DisplayTextBoxID_
+    call DelayFrame
+    call DelayFrame
+    call DelayFrame
+    call DumpBackbuffer             ; writes FRAME.BIN + exits (never returns)
 .hang:
     jmp .hang
 %endif

@@ -75,9 +75,9 @@ wGymCityName           equ 0xD35D   ; VERIFY  pret wram.asm:1261 (ds GYM_CITY_LE
 %ifndef wGymLeaderName
 wGymLeaderName         equ 0xD36E   ; VERIFY  pret wram.asm:1263 (ds NAME_LENGTH)
 %endif
-%ifndef wMiscFlags
-wMiscFlags             equ 0xD72E   ; VERIFY  pret wram.asm:1046 (db)
-%endif
+; wMiscFlags is canonical in gb_memmap.inc (menus S2: 0xCD60, derived from the
+; verified anchor wActionResultOrTookBattleTurn 0xCD6A − ds 9 − 1 byte).
+; The 0xD72E that used to live here was pokered's wd72e — wrong address.
 %ifndef wEventFlags
 wEventFlags            equ 0xD5A6   ; VERIFY  pret wram.asm:2400 (flag_array NUM_EVENTS)
 %endif

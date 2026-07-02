@@ -484,6 +484,11 @@ W_SPRITE_STATE_DATA_1         equ 0xC100 ; wSpriteStateData1 (slot 0 = player)
 W_SPRITE_STATE_DATA_2         equ 0xC200 ; wSpriteStateData2
 SPRITESTATEDATA_STRUCT_SIZE   equ 0x10
 NUM_SPRITE_SLOTS              equ 16
+; pret-named aliases (constants/map_object_constants.asm / macros/wram.asm) —
+; canonical here as of menus S2; m1_3_pending_symbols.inc's copies are
+; %ifndef-guarded so both include orders stay safe.
+NUM_SPRITESTATEDATA_STRUCTS   equ NUM_SPRITE_SLOTS
+SPRITESTATEDATA1_LENGTH       equ SPRITESTATEDATA_STRUCT_SIZE
 
 ; Player slot (slot 0) field aliases — data1 ($C10x).
 ; Step vectors are signed bytes (+1/-1/0) read each frame by AdvancePlayerSprite.
@@ -1232,6 +1237,21 @@ wMenuExitMethod               equ 0xD12D ; CHOSE_MENU_ITEM / CANCELLED_MENU
 hHalveItemPrices              equ 0xFFA8 ; list_menu priced path
 hSwapItemID                   equ 0xFFA9 ; item-list SELECT swap scratch
 hSwapItemQuantity             equ 0xFFAA ; item-list SELECT swap scratch
+; ---------------------------------------------------------------------------
+; Menus S2 (text_box / display_text_id_init) — pret ram/wram.asm + ram/hram.asm.
+; Chained off verified anchors: wFieldMoves union base = W_SIMULATED_JOYPAD_STATES
+; _INDEX 0xCC84 + 4 db + ds 1; wMiscFlags counted back from
+; wActionResultOrTookBattleTurn 0xCD6A (db ×5 + ds 9 between them);
+; hFieldMoveMonMenuTopMenuItemX sits between H_UI_LAYOUT_FLAGS 0xFFFA and
+; H_PIKACHU_SPRITE_VRAM_OFFSET 0xFFFC.
+; ---------------------------------------------------------------------------
+wFieldMoves                   equ 0xCC89 ; 4 bytes — current mon's field-move name indices
+wNumFieldMoves                equ 0xCC8D ; count of entries in wFieldMoves
+wFieldMovesLeftmostXCoord     equ 0xCC8E ; GB X of leftmost field-move name (menu width)
+wLastFieldMoveID              equ 0xCC8F ; unused in pret (bookkeeping kept faithful)
+wMiscFlags                    equ 0xCD60 ; bit BIT_NO_SPRITE_UPDATES: skip UpdateSprites in DisplayTextIDInit
+BIT_NO_SPRITE_UPDATES         equ 4      ; wMiscFlags bit (constants/ram_constants.asm)
+hFieldMoveMonMenuTopMenuItemX equ 0xFFFB ; GB X of the field-move menu cursor column
 
 ; ---------------------------------------------------------------------------
 ; Wave 5 (home-rectification) — pokemon/item data (add_party_mon / add_mon /

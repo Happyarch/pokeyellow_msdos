@@ -23,6 +23,59 @@ if it took none. This is the swarm's divergence audit trail.
 
 ---
 
+## menus-port Session 2 — DisplayTextBoxID_ + DisplayTextIDInit
+- **Date:** 2026-07-02
+- **Plan:** docs/current_plan_menus.md, Session 2.
+- **`DisplayTextBoxID_` family** — Source: pret `engine/menus/text_box.asm` +
+  `data/text_boxes.asm`. Translated: `dos_port/src/engine/menus/text_box.asm`
+  (full rewrite of the old scaffold; now LINKED via GAME_SRCS). Dispatcher +
+  SearchTextBoxTable + GetTextBoxIDCoords/GetTextBoxIDText/
+  GetAddressOfScreenCoords + DisplayMoneyBox/DoBuySellQuitMenu/
+  DisplayFieldMoveMonMenu/GetMonFieldMoves. Divergences: canvas model — tables
+  hold UI_*-projected 40×25 coords from the generated `ui_layout_menus.inc`
+  (`; PROJ` tags); `text_row_stride` forced to 40 for the dispatch and restored
+  flags-safely at `.done`; function-table stride 3→5 and text+coord 9→11 (dd
+  flat ptrs); GetTextBoxIDText returns the text ptr in EAX not DE (flat ptr);
+  TWO_OPTION_MENU dispatches to yes_no.asm's `DisplayTwoOptionMenu` (ONE impl,
+  port takes box coords from yes_no state — DEVIATION tagged); JP_* rows
+  omitted (matches S1 seeder). H-flag: not involved.
+- **`DisplayTextBoxID` wrapper** — Source: pret `home/textbox.asm`. Translated:
+  new `dos_port/src/home/textbox.asm` (HOME_SRCS). `homecall_sf` collapses to a
+  plain call (flat memory); supersedes the interim def in `text_script.asm`
+  (now extern there; its line-61/89 TODOs marked RESOLVED). H-flag: not involved.
+- **`DisplayTextIDInit`** — Source: pret `engine/menus/display_text_id_init.asm`.
+  Translated: new `dos_port/src/engine/menus/display_text_id_init.asm`
+  (GAME_SRCS). Divergences: both borders draw at pret GB coords into the
+  stride-20 W_TILEMAP scratch (overworld window-composited model; dialog cell =
+  text.asm MSG_BOX_ESI, idempotent double-draw as pret); `ldh [hWY],0` is a
+  TODO-HW comment with NO write — H_WY is the port's dialog-open gate
+  (sync_dialog_window) and set_single_window owns it; `ld b,HIGH(vBGMap1)` kept
+  for register parity into the port's 3-DelayFrame CopyScreenTileBufferToVRAM.
+  pret's bit-then-res-then-branch on wMiscFlags reproduced via AH copy. Sprite
+  loops faithful: facing→orig-facing copy slot 1..15 (+0x100 = pret `inc h`),
+  stand-still `and $fc` over 16 image indices ($ff skip). H-flag: not involved.
+- **yes_no.asm promotion** — moved HOME_CHECK_SRCS→HOME_SRCS (all externs
+  resolve; `DisplayTwoOptionMenu` now global). No collisions (grep-verified).
+- **Includes** — `gb_memmap.inc`: + wFieldMoves/wNumFieldMoves/
+  wFieldMovesLeftmostXCoord/wLastFieldMoveID/wMiscFlags 0xCD60/
+  BIT_NO_SPRITE_UPDATES/hFieldMoveMonMenuTopMenuItemX (derivations noted
+  in-file; no .sym exists) + pret aliases NUM_SPRITESTATEDATA_STRUCTS/
+  SPRITESTATEDATA1_LENGTH. `gb_constants.inc`: all missing wTextBoxID ids.
+  **Fixed `m8_2_pending_symbols.inc`: its wMiscFlags 0xD72E was pokered's
+  wd72e — wrong; canonical 0xCD60 now in gb_memmap.inc** (trainer_engine.asm
+  check-only consumer inherits the fix).
+- **Verification** — new `DEBUG_TEXTBOXID=<id>` harness (Makefile flag →
+  `RunTextBoxIDTest` in debug_dump.asm, hooked in EnterMap): seeds the debug
+  party, enters flat-canvas mode (InitBattle's sequence), blanks W_TILEMAP to
+  TILE_SPC, draws the box via the real DisplayTextBoxID, dumps FRAME.BIN. All
+  14 non-interactive table ids byte-verified by a scripted border-corner pixel
+  check (coord 0x01/0x03/0x07/0x0D/0x10/0x11; text+coord 0x06/0x0B/0x1B/0x0C/
+  0x0E/0x0F; function 0x13 money box + 0x04 field-move menu, whose dynamic
+  4-field-move growth landed exactly at pret's math projected +20/+7:
+  box (29,9)-(39,24), names rows 11/13/15/17). 0x14/0x15 are interactive
+  (HandleMenuInput) — 0x15's box template verified via 0x0E. `make` +
+  `make check` green.
+
 ## home/ rectification swarm — WAVE 0 (silent-wrong bugs & build landmines)
 - **Date:** 2026-07-01
 - **Plan:** docs/plans/home_rectification.md, Wave 0 (M0.1–M0.5).

@@ -122,7 +122,9 @@ BOOT_SRCS := \
 HOME_SRCS := \
     src/home/fill_memory.asm \
     src/home/copy_data.asm \
-    src/home/bankswitch.asm
+    src/home/bankswitch.asm \
+    src/home/textbox.asm \
+    src/home/yes_no.asm
 
 HAL_SRCS := \
     src/ppu/ppu.asm \
@@ -157,6 +159,8 @@ GAME_SRCS := \
     src/engine/menus/bag_menu.asm \
     src/engine/menus/party_menu.asm \
     src/engine/menus/field_moves.asm \
+    src/engine/menus/text_box.asm \
+    src/engine/menus/display_text_id_init.asm \
     src/engine/overworld/simulate_joypad.asm \
     src/engine/overworld/overworld_stubs.asm \
     src/engine/overworld/wild_encounter_check.asm \
@@ -308,6 +312,15 @@ endif
 ifdef DEBUG_PARTYMENU
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_PARTYMENU
+NASMFLAGS += -D SKIP_TITLE
+GAME_SRCS += src/engine/debug/debug_party.asm
+endif
+# Text-box gate (menus S2): boot to overworld, switch to the flat canvas, draw
+# the DisplayTextBoxID box with the given wTextBoxID, dump FRAME.BIN, exit.
+# make DEBUG_TEXTBOXID=<id>  (id = hex/dec NASM literal, e.g. 0x01, 0x13)
+ifdef DEBUG_TEXTBOXID
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_TEXTBOXID=$(DEBUG_TEXTBOXID)
 NASMFLAGS += -D SKIP_TITLE
 GAME_SRCS += src/engine/debug/debug_party.asm
 endif
@@ -481,11 +494,12 @@ ITEMS_CHECK_SRCS := \
 # emits an undefined external for wNumSetBits (no memmap alias / no caller yet),
 # so linking it would break the build — keep it check-only until a caller lands
 # (then add wNumSetBits to gb_memmap.inc and move it to HOME_SRCS).
+# yes_no.asm MOVED to HOME_SRCS (menus S2): DisplayTextBoxID_'s TWO_OPTION_MENU
+# dispatch needs DisplayTwoOptionMenu live; all its externs already resolved.
 HOME_CHECK_SRCS := \
     src/home/count_set_bits.asm \
     src/home/text_script.asm \
     src/home/predef_text.asm \
-    src/home/yes_no.asm \
     src/home/list_menu.asm \
     src/home/give.asm \
     src/home/money.asm \
@@ -668,6 +682,11 @@ assets/field_moves.inc:
 	python3 tools/gen_field_moves.py
 
 src/engine/menus/field_moves.o: assets/field_moves.inc
+
+# DisplayTextBoxID_ tables embed the generated UI layout geometry (menus S2);
+# DisplayTextIDInit checks EVENT_GOT_POKEDEX via events.inc → event_constants.inc.
+src/engine/menus/text_box.o: assets/ui_layout_menus.inc
+src/engine/menus/display_text_id_init.o: assets/event_constants.inc
 
 # UI layout geometry — projected menu-window coordinates. The sidecar JSON is
 # hand-positioned via tools/ui_layout/editor.py (never hand-edited as text);

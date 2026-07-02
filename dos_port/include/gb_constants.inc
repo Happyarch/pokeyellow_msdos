@@ -520,9 +520,23 @@ PCPOKEMONLISTMENU       equ 0x00
 MOVESLISTMENU           equ 0x01
 PRICEDITEMLISTMENU      equ 0x02
 ITEMLISTMENU            equ 0x03
-; wTextBoxID
+; wTextBoxID (pret constants/menu_constants.asm text box IDs; JP_* templates
+; omitted — the port ships the EN tables only, matching the S1 layout seeder)
+MESSAGE_BOX                       equ 0x01
+MENU_TEMPLATE_03                  equ 0x03   ; unused in pret
+FIELD_MOVE_MON_MENU               equ 0x04
+USE_TOSS_MENU_TEMPLATE            equ 0x06
+MENU_TEMPLATE_07                  equ 0x07   ; unused in pret
+BATTLE_MENU_TEMPLATE              equ 0x0B
+SWITCH_STATS_CANCEL_MENU_TEMPLATE equ 0x0C
 LIST_MENU_BOX           equ 0x0D
+BUY_SELL_QUIT_MENU_TEMPLATE       equ 0x0E
+MONEY_BOX_TEMPLATE                equ 0x0F
+MENU_TEMPLATE_10                  equ 0x10   ; unused in pret
+MON_SPRITE_POPUP                  equ 0x11
 TWO_OPTION_MENU         equ 0x14
+BUY_SELL_QUIT_MENU                equ 0x15
+SAFARI_BATTLE_MENU_TEMPLATE       equ 0x1B
 ; wTwoOptionMenuID variants
 YES_NO_MENU             equ 0x00
 NORTH_WEST_MENU         equ 0x01

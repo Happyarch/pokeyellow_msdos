@@ -89,6 +89,11 @@ global DisplayYesNoChoice
 global WideYesNoChoice
 global YesNoChoicePokeCenter
 global InitYesNoTextBoxParameters
+global DisplayTwoOptionMenu     ; menus S2: DisplayTextBoxID_'s TWO_OPTION_MENU
+                                ; dispatch target — the ONE two-option impl.
+                                ; Port contract: box position comes from
+                                ; yn_box_col/row (set by the entry points above),
+                                ; not pret's b/c/hl register triple.
 
 ; ===========================================================================
 section .bss

@@ -58,14 +58,30 @@ entry + commit (root only).
   **Human step DONE (2026-07-01): user reviewed the layout in the editor and
   kept the seeded defaults as-is.** Editor gained hide/solo visibility
   controls + foolproof save (plain S, refusal-not-crash) as follow-ups.
-- [ ] **Session 2 — `DisplayTextBoxID_` + `DisplayTextIDInit`.** Rewrite
-  `src/engine/menus/text_box.asm` (dispatcher + 3 tables from `UI_*` equates;
-  DisplayMoneyBox, DoBuySellQuitMenu, DisplayTwoOptionMenu reconciled with
-  yes_no.asm — ONE implementation; DisplayFieldMoveMonMenu/GetMonFieldMoves);
-  port `display_text_id_init.asm` (audit overlap vs PrintText_Overworld
-  first); resolve text_script.asm externs (lines 61/89); promote to
-  LINK_SRCS; `DEBUG_TEXTBOXID=<id>` harness → FRAME.BIN per table entry.
-  Requires: S1 layout frozen (frozen_at set in sidecar).
+- [x] **Session 2 — `DisplayTextBoxID_` + `DisplayTextIDInit`.** DONE
+  2026-07-02 (see translation_log.md "menus-port Session 2" for full detail).
+  - `src/engine/menus/text_box.asm` full rewrite (canvas model: UI_*-projected
+    tables, stride-40 dispatch with flags-safe restore, function stride 3→5 /
+    text+coord 9→11, TWO_OPTION_MENU → yes_no.asm's ONE `DisplayTwoOptionMenu`,
+    DisplayMoneyBox/DoBuySellQuitMenu/DisplayFieldMoveMonMenu/GetMonFieldMoves;
+    JP_* omitted). NEW `src/home/textbox.asm` wrapper (canonical pret home);
+    text_script.asm interim def removed (externs RESOLVED, stays check-only).
+  - NEW `src/engine/menus/display_text_id_init.asm` — faithful
+    DisplayTextIDInit; borders draw at pret GB coords into the stride-20
+    scratch (dialog cell = MSG_BOX_ESI); `ldh [hWY],0` = TODO-HW with NO write
+    (H_WY is the sync_dialog_window dialog-open gate; set_single_window owns
+    it); sprite facing-save + stand-still loops faithful.
+  - Includes: wTextBoxID ids in gb_constants.inc; field-move WRAM + wMiscFlags
+    0xCD60 + pret sprite-struct aliases in gb_memmap.inc. **Fixed
+    m8_2_pending_symbols.inc's wrong wMiscFlags 0xD72E (pokered wd72e).**
+  - Makefile: text_box + display_text_id_init → GAME_SRCS; textbox + yes_no →
+    HOME_SRCS (yes_no promoted from check-only, no collisions); dep lines for
+    ui_layout_menus.inc / event_constants.inc; `DEBUG_TEXTBOXID=<id>` flag.
+  - Verified: `RunTextBoxIDTest` FRAME.BIN gate ran ALL 14 non-interactive
+    table ids green under a scripted border-corner pixel check (0x04's dynamic
+    4-field-move box landed at (29,9)-(39,24), exactly pret's math +20/+7).
+    0x14/0x15 are interactive; 0x15's template verified via 0x0E.
+    `make` + `make check` green.
 - [ ] **Session 3 — Wire dead drivers live.** Promote list_menu/yes_no/
   swap_items to LINK_SRCS; fill link-blockers (list_menu.asm header lines
   91-98: ClearScreenArea, LoadGBPal, IsKeyItem, PrintLevel, GetPartyMonName

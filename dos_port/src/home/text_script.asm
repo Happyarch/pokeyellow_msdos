@@ -46,7 +46,6 @@ global HoldTextDisplayOpen
 global CloseTextDisplay
 global DisplayPokemartDialogue
 global LoadItemList
-global DisplayTextBoxID
 global FarPrintText
 
 ; ── text printers (text/text.asm) ──
@@ -55,9 +54,8 @@ extern PrintText_NoBox                  ; pret PrintText_NoCreatingTextBox
 extern DelayFrame
 
 ; ── non-home glue: DEFERRED, resolves in later waves ──────────────────────────
-; TODO(home-rectify M1.3 follow-up): DisplayTextIDInit is farcall'd by pret to set
-;   up the text box / save regs. Non-home (engine bank-3). Resolve when the text-ID
-;   init path is ported. Wave 1/overworld.
+; RESOLVED (menus S2): DisplayTextIDInit is now a real linked routine
+; (src/engine/menus/display_text_id_init.asm).
 extern DisplayTextIDInit
 ; TODO(home-rectify M1.3 follow-up): overworld/map glue (overworld.asm, map_sprites.asm)
 extern SwitchToMapRomBank               ; ld a,[wCurMap]; bankswitch (flat = no-op wrapper)
@@ -84,9 +82,10 @@ extern TextScript_PokemonCenterPC
 extern VendingMachineMenu               ; farcall
 extern TextScript_GameCornerPrizeMenu
 extern CableClubNPC                     ; callfar
-; TODO(home-rectify M1.3 follow-up): DisplayTextBoxID_ is the box-drawing worker
-;   (pret home/textbox.asm homecall_sf). Non-home (engine). Wave 4-ish.
-extern DisplayTextBoxID_
+; RESOLVED (menus S2): the DisplayTextBoxID home wrapper now lives canonically in
+;   src/home/textbox.asm (linked), calling the real DisplayTextBoxID_
+;   (src/engine/menus/text_box.asm). The interim definition here is gone.
+extern DisplayTextBoxID
 ; TODO(home-rectify M1.3 follow-up): far-text labels below are TX_FAR streams whose
 ;   data lives in ROM banks (M1.1 TX_FAR work). Externed as flat labels; the text
 ;   data tables are not ported here.
@@ -426,15 +425,9 @@ DisplayPikachuEmotion:
     jmp CloseTextDisplay
 
 ; ─────────────────────────────────────────────────────────────────────────────
-; DisplayTextBoxID — pret home/textbox.asm. Draw a text box selected by
-; [wTextBoxID]; b,c = y,x cursor (TWO_OPTION_MENU only).
-;   pret: homecall_sf DisplayTextBoxID_ / ret   (flat memory ⇒ bank switch is a no-op)
+; DisplayTextBoxID — moved to its canonical pret home, src/home/textbox.asm
+; (menus S2). Externed above.
 ; ─────────────────────────────────────────────────────────────────────────────
-DisplayTextBoxID:
-    ; TODO-HW: homecall_sf bank/stack-frame setup collapses to a plain call under
-    ; the flat memory model. DisplayTextBoxID_ is the (non-home) box-drawing worker.
-    call DisplayTextBoxID_
-    ret
 
 ; ─────────────────────────────────────────────────────────────────────────────
 ; FarPrintText — pret home/print_num.asm:1. Print far text b:hl at (1,14).

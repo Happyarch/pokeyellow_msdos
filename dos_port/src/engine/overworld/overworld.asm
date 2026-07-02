@@ -98,6 +98,9 @@ extern RunPartyMenuTest
 %ifdef DEBUG_BATTLE
 extern RunBattleTest
 %endif
+%ifdef DEBUG_TEXTBOXID
+extern RunTextBoxIDTest
+%endif
 %ifdef DEBUG_WALKSPEED
 extern DebugDumpMemory
 extern tick_count
@@ -354,6 +357,9 @@ EnterMap:
 %endif
 %ifdef DEBUG_BATTLE
     call RunBattleTest                     ; seed party+enemy, enter battle, render one frame, dump FRAME.BIN, exits
+%endif
+%ifdef DEBUG_TEXTBOXID
+    call RunTextBoxIDTest                  ; canvas mode, draw text box id, dump FRAME.BIN, exits
 %endif
 %ifdef DEBUG_WALKSPEED
     ; Live walk-speed instrumentation: boots normally into OverworldLoop so you can
