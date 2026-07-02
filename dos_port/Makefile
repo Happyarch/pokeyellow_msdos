@@ -669,6 +669,13 @@ assets/field_moves.inc:
 
 src/engine/menus/field_moves.o: assets/field_moves.inc
 
+# UI layout geometry — projected menu-window coordinates. The sidecar JSON is
+# hand-positioned via tools/ui_layout/editor.py (never hand-edited as text);
+# the .inc is Tier-1 machine output keyed by element ID (docs/current_plan_menus.md).
+assets/ui_layout_menus.inc: assets/ui_layout_menus_sidecar.json \
+		tools/gen_ui_layout.py tools/ui_layout/canvas.py tools/ui_layout/schema.py
+	python3 tools/gen_ui_layout.py menus
+
 # Wild-encounter tables (static data, generated from data/wild/).
 assets/wild_data.inc:
 	python3 tools/gen_wild_encounters.py
@@ -703,7 +710,8 @@ assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_
         assets/effect_categories.inc \
         assets/wild_data.inc assets/map_scripts.inc assets/battle_hud_2bpp.inc \
         assets/trainer_pics.inc \
-        assets/super_rod.inc assets/town_map_data.inc assets/town_map_gfx.inc
+        assets/super_rod.inc assets/town_map_data.inc assets/town_map_gfx.inc \
+        assets/ui_layout_menus.inc
 
 all: $(TARGET)
 

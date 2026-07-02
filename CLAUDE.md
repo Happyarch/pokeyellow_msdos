@@ -481,6 +481,14 @@ commit but too specific to belong in TODO.md.
 - `docs/current_plan_items.md` — item/bag layer (sequenced after pokemon, before
   battle). Inventory bookkeeping (add/remove) + TOSS done; item USE dispatch
   (`UseItem_`/`ItemUsePtrTable`) deferred (battle/UI-coupled).
+- `docs/current_plan_menus.md` — **engine/menus port + UI layout tool** (branch
+  `menus-port`). 10 checkpointed sessions: pygame layout editor
+  (`dos_port/tools/ui_layout/`, sidecar JSON → `gen_ui_layout.py` →
+  `assets/ui_layout_menus.inc`), faithful `DisplayTextBoxID_`, wiring the dead
+  generic drivers live, realigning the bespoke start/bag/party menus onto them,
+  then a swarm of the leaf screens (PCs, pokédex, naming, options, save, link).
+  Session 1 (layout pipeline + editor) done; awaiting the human layout-freeze
+  step before Session 2.
 - **Battle engine** — the backend plan (`battle_engine`) is **complete** and the
   front-end alignment plan (`battle_pret_alignment`) was **superseded by the battle
   swarm** (Masters A/B/C, archived at `docs/archive/battle_swarm_*`, merged to

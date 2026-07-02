@@ -55,6 +55,10 @@ dos_port/assets/*
 !dos_port/assets/pokemon_logo_corner_2bpp.inc
 !dos_port/assets/pokemon_logo_tilemap.inc
 !dos_port/assets/title_copyright_2bpp.inc
+# UI layout sidecars: hand-positioned via tools/ui_layout/editor.py — the
+# source of truth the generated ui_layout_*.inc is derived from. Must stay
+# tracked; the .inc itself regenerates via `make assets`.
+!dos_port/assets/ui_layout_*_sidecar.json
 
 # DOS save files
 *.dsv
