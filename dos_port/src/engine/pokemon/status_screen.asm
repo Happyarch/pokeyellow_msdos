@@ -1,12 +1,13 @@
-%include "include/gb_memmap.inc"
+bits 32
+
+%include "gb_memmap.inc"
+%include "gb_constants.inc"
 
 SECTION .text
 
 global CalcExpToLevelUp
 
 extern CalcExperience
-extern wLoadedMonLevel
-extern MAX_LEVEL
 
 CalcExpToLevelUp:
     ; ld a, [wLoadedMonLevel]

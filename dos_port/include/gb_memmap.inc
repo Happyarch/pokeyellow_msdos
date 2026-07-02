@@ -1255,4 +1255,15 @@ wLoadedMonExp                 equ W_LOADED_MON_EXP        ; 0xCFA5
 wUpdateSpritesEnabled         equ W_UPDATE_SPRITES_ENABLED ; 0xCFCA
 hAutoBGTransferEnabled        equ H_AUTO_BG_TRANSFER_EN   ; 0xFFBA
 
+; engine/pokemon behavior layer (evolution/learn-move/status-screen). All
+; sym-verified via origin/symbols:pokeyellow.sym; promoted from evolution.asm's
+; in-file %ifndef self-aliases (docs/current_plan_pokemon_behavior.md Stage 0).
+wLoadedMonHP                  equ 0xCF98 ; wLoadedMon + MON_HP
+wLoadedMonHPExp               equ 0xCFA8 ; wLoadedMon + MON_STAT_EXP (HP stat-exp)
+wLoadedMonMaxHP               equ 0xCFB9 ; wLoadedMon + MON_MAXHP (first computed stat)
+wLoadedMonStats               equ 0xCFB9 ; = wLoadedMonMaxHP (stats block starts at MaxHP)
+wEvolutionOccurred            equ 0xD120 ; set when a mon evolved this EvolutionAfterBattle
+wPikachuMood                  equ 0xD470
+wPikachuEmotionModifier       equ 0xD49B
+
 %endif ; GB_MEMMAP_INC

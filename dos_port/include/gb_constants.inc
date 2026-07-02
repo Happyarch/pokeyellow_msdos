@@ -162,6 +162,12 @@ EVOLVE_LEVEL           equ 1
 EVOLVE_ITEM            equ 2
 EVOLVE_TRADE           equ 3
 
+; --- link/evolution ids (evolution.asm; promoted per pokemon_behavior Stage 0) ---
+LINK_STATE_TRADING     equ 0x32    ; constants/serial_constants.asm
+THUNDER_STONE          equ 0x21    ; item id (constants/item_constants.asm)
+THUNDERBOLT            equ 55      ; move id (constants/move_constants.asm)
+THUNDER                equ 57      ; move id (constants/move_constants.asm)
+
 ; --- move / battle-animation ids (constants/move_constants.asm) ---
 ABSORB                 equ 0x47    ; move #71 (Leech Seed drain anim source)
 BURN_PSN_ANIM          equ 0xBA    ; battle anim shown on burn/poison residual

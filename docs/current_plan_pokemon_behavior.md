@@ -51,7 +51,18 @@ surfaced (garbage level-up stats, silently-dropped level-up moves).
 
 ---
 
-## Stage 0 — Cleanup & symbol alignment (prereq for all) — [ ]
+## Stage 0 — Cleanup & symbol alignment (prereq for all) — [x]
+<!-- Done 2026-07-01: evos_moves.asm git rm'd (no external caller of its unique
+     Evolution_FlagAction/Func_3b079/3b0a2/3b10f; GetMonLearnset/WriteMonMoves/
+     _ShiftMoveData already provided by the wired write_moves.asm). evolution.asm's
+     %ifndef self-aliases deleted; promoted (sym-verified vs origin/symbols) into
+     gb_memmap.inc (wLoadedMonHP/HPExp/MaxHP/Stats, wEvolutionOccurred, wPikachuMood,
+     wPikachuEmotionModifier — the rest already existed) and gb_constants.inc
+     (LINK_STATE_TRADING, THUNDER_STONE, THUNDERBOLT, THUNDER; MAX_LEVEL already at 100).
+     status_screen.asm: added `bits 32`, include gb_constants.inc (MAX_LEVEL now a
+     constant, not extern → fixes the imm8 COFF reloc), dropped extern wLoadedMonLevel
+     (from gb_memmap.inc). Verified: `make check` (all sources) + clean `make` link. -->
+
 - **Retire `evos_moves.asm`.** Duplicates `write_moves.asm`'s
   `GetMonLearnset`/`WriteMonMoves`/`WriteMonMoves_ShiftMoveData` (with the
   ×2/16-bit-pointer bug the wired copy already fixed), plus `sbc al,bh` (invalid x86 →

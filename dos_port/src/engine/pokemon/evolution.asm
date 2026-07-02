@@ -34,47 +34,12 @@
 ;                           here as no-ops or straight `ret`.
 ;
 ; -----------------------------------------------------------------------
-; INTEGRATION NOTE FOR ORCHESTRATOR (read before wiring into Makefile):
-;
-;   The current dos_port/src/engine/pokemon/evos_moves.asm draft defines
-;   TryEvolvingMon, EvolutionAfterBattle, RenameEvolvedMon, CancelledEvolution,
-;   and LearnMoveFromLevelUp — duplicating the globals below.  During integration:
-;     1. Remove those five functions from evos_moves.asm, keeping only
-;        GetMonLearnset, WriteMonMoves, WriteMonMoves_ShiftMoveData,
-;        Evolution_FlagAction, and Func_3b079/Func_3b0a2/Func_3b10f.
-;     2. Fix evos_moves.asm GetMonLearnset: it reads 2 bytes from a dd table
-;        (×2 offset, 16-bit dereference).  Replace with:
-;            shl ecx, 2           ; ×4 for dd entries
-;            add esi, ecx
-;            mov esi, [esi]       ; full 32-bit flat pointer
-;        (Evolution.asm has the corrected version as GetMonLearnset_Evo.)
-;     3. CalcStats call in the old draft used EDI for the output; correct is EDX
-;        (CalcStats uses EDX internally — see move_mon.asm CalcStats).
-;
-; -----------------------------------------------------------------------
-; MISSING ALIASES (orchestrator: add to shared include files):
-;
-;   gb_memmap.inc (all sym-verified via origin/symbols:pokeyellow.sym):
-;     wLoadedMonSpecies   equ 0xCF97   ; = wLoadedMon
-;     wLoadedMonHP        equ 0xCF98
-;     wLoadedMonHPExp     equ 0xCFA8
-;     wLoadedMonLevel     equ 0xCFB8
-;     wLoadedMonMaxHP     equ 0xCFB9
-;     wLoadedMonStats     equ 0xCFB9   ; = wLoadedMonMaxHP (first stat = MaxHP)
-;     wEvolutionOccurred  equ 0xD120
-;     wMoveNum            equ 0xD0DF
-;     wPikachuMood        equ 0xD470
-;     wPikachuEmotionModifier equ 0xD49B
-;
-;   gb_constants.inc (sources: constants/serial_constants.asm,
-;                              constants/item_constants.asm,
-;                              constants/move_constants.asm):
-;     LINK_STATE_TRADING  equ 0x32
-;     THUNDER_STONE       equ 0x21     ; item id (const THUNDER_STONE in item_constants.asm)
-;     THUNDERBOLT         equ 55       ; move id (const THUNDERBOLT in move_constants.asm)
-;     THUNDER             equ 57       ; move id (const THUNDER in move_constants.asm)
-;       (Note: THUNDER the move and THUNDER_STONE the item are separate namespaces in
-;        pret; in the flat NASM namespace they are distinct symbol names — no conflict.)
+; The data utilities this file's EvolutionAfterBattle depends on
+; (WriteMonMoves / WriteMonMoves_ShiftMoveData, and the corrected
+; GetMonLearnset) live in the wired src/engine/pokemon/write_moves.asm.
+; The former standalone evos_moves.asm draft was retired in Stage 0
+; (docs/current_plan_pokemon_behavior.md); all WRAM/const aliases it declared
+; inline are now in gb_memmap.inc / gb_constants.inc.
 ;
 ; Build (from repo root):
 ;   nasm -f coff -I dos_port/include/ -I dos_port/ \
@@ -86,64 +51,9 @@ bits 32
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
 
-; ---------------------------------------------------------------------------
-; Local aliases for symbols not yet in the shared include files.
-; ORCHESTRATOR: promote these to gb_memmap.inc / gb_constants.inc before
-; integrating (addresses sym-verified; see header comment above).
-; ---------------------------------------------------------------------------
-%ifndef wLoadedMonSpecies
-wLoadedMonSpecies           equ 0xCF97  ; = wLoadedMon
-%endif
-%ifndef wLoadedMonHP
-wLoadedMonHP                equ 0xCF98
-%endif
-%ifndef wLoadedMonHPExp
-wLoadedMonHPExp             equ 0xCFA8
-%endif
-%ifndef wLoadedMonLevel
-wLoadedMonLevel             equ 0xCFB8
-%endif
-%ifndef wLoadedMonMaxHP
-wLoadedMonMaxHP             equ 0xCFB9
-%endif
-%ifndef wLoadedMonStats
-wLoadedMonStats             equ 0xCFB9  ; = wLoadedMonMaxHP (MaxHP is first stat)
-%endif
-%ifndef wEvolutionOccurred
-wEvolutionOccurred          equ 0xD120
-%endif
-%ifndef wMoveNum
-wMoveNum                    equ 0xD0DF
-%endif
-%ifndef wPikachuMood
-wPikachuMood                equ 0xD470
-%endif
-%ifndef wPikachuEmotionModifier
-wPikachuEmotionModifier     equ 0xD49B
-%endif
-
-; These two don't have lowercase aliases in gb_memmap.inc yet
-; (only wPokedexOwned / wPokedexSeen exist — orchestrator: add lowercase)
-%ifndef wPokedexOwned
-wPokedexOwned               equ 0xD2F6  ; = wPokedexOwned (sym-verified)
-%endif
-%ifndef wPokedexSeen
-wPokedexSeen                equ 0xD309  ; = wPokedexSeen  (sym-verified)
-%endif
-
-; Link-state and stone/move ids — not yet in gb_constants.inc
-%ifndef LINK_STATE_TRADING
-LINK_STATE_TRADING          equ 0x32
-%endif
-%ifndef THUNDER_STONE
-THUNDER_STONE               equ 0x21    ; item id
-%endif
-%ifndef THUNDERBOLT
-THUNDERBOLT                 equ 55      ; move id
-%endif
-%ifndef THUNDER
-THUNDER                     equ 57      ; move id
-%endif
+; All WRAM/const aliases formerly declared here as %ifndef self-aliases are now
+; in the shared includes (gb_memmap.inc / gb_constants.inc), promoted per
+; docs/current_plan_pokemon_behavior.md Stage 0.
 
 ; Pret-name aliases for HRAM / WRAM symbols that use the H_ / W_ prefix in our
 ; includes, so the translation reads identically to the pret source.
