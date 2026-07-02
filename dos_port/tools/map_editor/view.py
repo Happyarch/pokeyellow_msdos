@@ -55,9 +55,12 @@ class ComposedMap:
         return cells
 
 
-def compose_padded(const: str, overrides: dict | None = None) -> ComposedMap:
-    """overrides: {(row, col): block} painted border cells (map_borders
-    sidecar); applied last, but only ever in the editable ring."""
+def compose_padded(const: str, overrides: dict | None = None,
+                   map_overrides: dict | None = None) -> ComposedMap:
+    """overrides: {(row, col): block} painted border-ring cells (map_borders
+    sidecar, padded coords); map_overrides: {(y, x): block} real-map edits
+    (map_overrides sidecar, map-local coords, merged into <map>_blk.inc by
+    gen_all_assets.py)."""
     info = pm.map_info(const)
     if info.tileset_stem is None:
         raise ValueError(f"{const}: no header/tileset")
@@ -107,6 +110,10 @@ def compose_padded(const: str, overrides: dict | None = None) -> ComposedMap:
     for y in range(info.h):
         d = (y + BORDER) * stride + BORDER
         grid[d:d + info.w] = blk[y * info.w:(y + 1) * info.w]
+    if map_overrides:
+        for (y, x), block in map_overrides.items():
+            if 0 <= x < info.w and 0 <= y < info.h:
+                grid[(y + BORDER) * stride + (x + BORDER)] = block
 
     cm = ComposedMap(info, grid, stride, rows, border_block,
                      warps, sign_count, sprites, anomalies, all_strips)

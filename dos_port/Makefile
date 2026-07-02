@@ -587,7 +587,10 @@ ALL_OBJS := $(ALL_SRCS:.asm=.o)
 
 # Generate all tileset gfx/blocks/coll + map blk inc files.
 # Requires gfx/tilesets/*.2bpp, built by 'make' in the repo root.
-assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_blk.inc:
+# Authored map edits (assets/map_overrides/*.json, map-tool C5) are merged
+# into the emitted <map>_blk.inc files.
+assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_blk.inc: \
+		$(wildcard assets/map_overrides/*.json)
 	python3 tools/gen_all_assets.py
 
 # Generate map headers blob, dispatch tables, and extra_includes.inc.

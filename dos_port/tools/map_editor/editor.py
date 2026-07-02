@@ -37,7 +37,7 @@ from gfx_core import pret_maps as pm            # noqa: E402
 from gfx_core import tilesets as ts             # noqa: E402
 from gfx_core.surface import to_pygame          # noqa: E402
 from gfx_core.tiles import DMG_PAL, TILE        # noqa: E402
-from map_editor import borders, view            # noqa: E402
+from map_editor import borders, overrides, view  # noqa: E402
 
 MARK_WARP = (255, 60, 60)
 MARK_NPC = (60, 120, 255)
@@ -48,6 +48,7 @@ GHOST_SUR = (0, 220, 220)
 GRID_BLOCK = (0, 0, 0)
 GRID_TILE = (70, 70, 70)
 PAINTED = (255, 120, 220)
+MAP_PAINTED = (0, 220, 255)
 LOCKED_DIM = (0, 0, 0, 110)
 SEL_BLOCK = (255, 64, 64)
 PANEL_H = 22
@@ -75,9 +76,11 @@ class Viewer:
 
     def load(self, const: str):
         self.cells = borders.load(const)
+        info = pm.map_info(const)
+        self.map_cells = overrides.load(info.label) if info.label else {}
         base = view.compose_padded(const)          # pre-override
         self.base_grid = bytes(base.grid)
-        self.cm = view.compose_padded(const, self.cells)
+        self.cm = view.compose_padded(const, self.cells, self.map_cells)
         self.editable = self.cm.editable_cells()
         self.tiles = ts.load_tileset_2bpp(self.cm.info.tileset_stem)
         self.blocks = ts.load_blockset(self.cm.info.tileset_stem)
@@ -108,16 +111,30 @@ class Viewer:
             return int(by), int(bx)
         return None
 
-    def _apply(self, r, c, block) -> tuple | None:
-        """Set one cell (grid+img+cells); returns an undo record or None."""
+    def _region(self, r, c) -> tuple[dict, tuple[int, int]] | None:
+        """(target sidecar dict, its key) for a paintable cell, else None.
+        Border ring -> map_borders cells (padded coords); real map area ->
+        map_overrides cells (map-local coords); strips are locked."""
         idx = r * self.cm.stride + c
-        if idx not in self.editable or self.cm.grid[idx] == block:
+        if idx in self.editable:
+            return self.cells, (r, c)
+        b = view.BORDER
+        if b <= c < self.cm.stride - b and b <= r < self.cm.rows - b:
+            return self.map_cells, (r - b, c - b)
+        return None                          # connection strip: locked
+
+    def _apply(self, r, c, block) -> tuple | None:
+        """Set one cell (grid+img+sidecar); returns an undo record or None."""
+        idx = r * self.cm.stride + c
+        region = self._region(r, c)
+        if region is None or self.cm.grid[idx] == block:
             return None
-        rec = (r, c, self.cells.get((r, c)))
+        target, key = region
+        rec = (r, c, target is self.map_cells, target.get(key))
         if block == self.base_grid[idx]:
-            self.cells.pop((r, c), None)     # painting back = remove override
+            target.pop(key, None)            # painting back = remove override
         else:
-            self.cells[(r, c)] = block
+            target[key] = block
         self.cm.grid[idx] = block
         ts._blit_block(self.img, self.tiles, self.blocks, block, c, r,
                        DMG_PAL)
@@ -139,7 +156,7 @@ class Viewer:
             return
         r0, c0 = cell
         idx0 = r0 * self.cm.stride + c0
-        if idx0 not in self.editable:
+        if self._region(r0, c0) is None:
             return
         target = self.cm.grid[idx0]
         if target == self.current_block:
@@ -148,7 +165,7 @@ class Viewer:
         while todo:
             r, c = todo.pop()
             idx = r * self.cm.stride + c
-            if idx not in self.editable or self.cm.grid[idx] != target:
+            if self._region(r, c) is None or self.cm.grid[idx] != target:
                 continue
             rec = self._apply(r, c, self.current_block)
             if rec:
@@ -166,13 +183,16 @@ class Viewer:
     def undo(self):
         if not self.undo_stack:
             return
-        for r, c, prev in reversed(self.undo_stack.pop()):
+        b = view.BORDER
+        for r, c, is_map, prev in reversed(self.undo_stack.pop()):
             idx = r * self.cm.stride + c
+            target = self.map_cells if is_map else self.cells
+            key = (r - b, c - b) if is_map else (r, c)
             if prev is None:
-                self.cells.pop((r, c), None)
+                target.pop(key, None)
                 block = self.base_grid[idx]
             else:
-                self.cells[(r, c)] = prev
+                target[key] = prev
                 block = prev
             self.cm.grid[idx] = block
             ts._blit_block(self.img, self.tiles, self.blocks, block, c, r,
@@ -190,6 +210,9 @@ class Viewer:
     def save(self):
         try:
             borders.save(self.cm.info.const, self.cells, self.cm)
+            if self.cm.info.label:
+                overrides.save(self.cm.info.label, self.map_cells,
+                               self.cm.info, self.nblocks)
         except ValueError as e:
             self.save_error = str(e)
             print(f"SAVE REFUSED: {e}")
@@ -197,8 +220,10 @@ class Viewer:
         self.save_error = ""
         self.dirty = False
         print(f"saved {borders.path_for(self.cm.info.const)} "
-              f"({len(self.cells)} cells)")
-        print("regenerate with: make -C dos_port assets   (C3 wires this in)")
+              f"({len(self.cells)} ring cells) + "
+              f"{overrides.path_for(self.cm.info.label or '?')} "
+              f"({len(self.map_cells)} map cells)")
+        print("regenerate with: make -C dos_port assets")
 
     # ── palette panel ────────────────────────────────────────────────────────
 
@@ -237,19 +262,22 @@ class Viewer:
                              (ox + x * z, oy + y * z, w * z, h * z), width)
 
         if self.paint:
-            # dim everything that is not paintable; badge painted cells
+            # dim the locked connection strips; badge painted cells
+            # (ring = pink, real-map overrides = cyan)
             dim = pygame.Surface((ts.BLOCK_PX * z, ts.BLOCK_PX * z),
                                  pygame.SRCALPHA)
             dim.fill(LOCKED_DIM)
-            for by in range(self.cm.rows):
-                for bx in range(self.cm.stride):
-                    if by * self.cm.stride + bx not in self.editable:
-                        self.screen.blit(
-                            dim, (ox + bx * ts.BLOCK_PX * z,
-                                  oy + by * ts.BLOCK_PX * z))
+            for idx in self.cm.strip_cells:
+                bx, by = idx % self.cm.stride, idx // self.cm.stride
+                self.screen.blit(dim, (ox + bx * ts.BLOCK_PX * z,
+                                       oy + by * ts.BLOCK_PX * z))
             for (r, c) in self.cells:
                 rect_px(c * ts.BLOCK_PX, r * ts.BLOCK_PX,
                         ts.BLOCK_PX, ts.BLOCK_PX, PAINTED, 2)
+            b = view.BORDER
+            for (y, x) in self.map_cells:
+                rect_px((x + b) * ts.BLOCK_PX, (y + b) * ts.BLOCK_PX,
+                        ts.BLOCK_PX, ts.BLOCK_PX, MAP_PAINTED, 2)
 
         if self.show["blocks"]:
             for bx in range(self.cm.stride + 1):

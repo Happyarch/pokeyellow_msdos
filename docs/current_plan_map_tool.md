@@ -121,7 +121,18 @@ checkboxes updated → commit.
   Gates: FRAME.BIN edge-walk suite green with clamps deleted; MCP watch shows
   no reads outside [$E800,$F000).
 
-- [ ] **Session C5 — real-map block painting.**
+- [x] **Session C5 — real-map block painting.** DONE 2026-07-02 (executed
+  before C4, which needs the human authoring pass). `map_editor/overrides.py`:
+  `assets/map_overrides/<Pascal>.json` (map-local `[y,x,block]`, stable sort,
+  empty-save deletes); `gen_all_assets.py` merges overrides when emitting
+  `<snake>_blk.inc` (bad sidecar aborts the build; pret .blk untouched).
+  Editor `_region()` routes paint: ring → map_borders (pink badge), map area
+  → map_overrides (cyan badge), strips locked/dimmed; save writes both
+  sidecars. Makefile: blk-rule dep on `map_overrides/*.json`.
+  Gates: no-override regen byte-identical for all 226 `_blk.inc`; sentinel
+  edit at Pallet (5,5) visible in DOSBox FRAME.BIN; sidecar removal reverts
+  .inc + FRAME.BIN byte-identical; dual-region routing/undo verified
+  headless; make + make check green.
   `dos_port/assets/map_overrides/<Pascal>.json` (sparse `[[y,x,block],...]`
   in map-block coords); `tools/gen_all_assets.py` merges overrides when
   emitting `assets/<map>_blk.inc` (pret .blk untouched; regen idempotent —

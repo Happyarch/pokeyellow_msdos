@@ -86,6 +86,31 @@ def write_inc(dst: Path, label: str, data: bytes, comment: str = ""):
     print(f"  wrote {dst} ({len(data)} bytes)")
 
 
+def apply_map_overrides(pascal: str, data: bytearray) -> int:
+    """Merge assets/map_overrides/<Pascal>.json into the blk bytes (C5).
+
+    Cells are map-local [y, x, block]; dimensions come from
+    constants/map_constants.asm via gen_map_headers. Errors abort the build
+    (a bad sidecar must never silently corrupt a map)."""
+    ov = ASSETS / "map_overrides" / f"{pascal}.json"
+    if not ov.exists():
+        return 0
+    import json
+    import gen_map_headers as gmh
+    dims = {gmh.const_to_pascal(c): (w, h)
+            for c, (_i, w, h) in gmh.parse_map_constants().items()}
+    if pascal not in dims:
+        sys.exit(f"{ov}: no map_const dimensions found for {pascal}")
+    w, h = dims[pascal]
+    cells = json.loads(ov.read_text())["cells"]
+    for y, x, b in cells:
+        if not (0 <= x < w and 0 <= y < h and 0 <= b <= 0xFF):
+            sys.exit(f"{ov}: cell ({y},{x},0x{b:02X}) out of range "
+                     f"for {w}x{h}")
+        data[y * w + x] = b
+    return len(cells)
+
+
 def parse_coll_list(label_prefix: str) -> bytes:
     """Extract <label_prefix>_Coll:: coll_tiles ... from collision_tile_ids.asm."""
     want = f"{label_prefix}_Coll::"
@@ -189,18 +214,24 @@ def main():
         )
 
     # ------------------------------------------------------------------
-    # 2. Map block layouts — one inc file per .blk file
+    # 2. Map block layouts — one inc file per .blk file. Authored block
+    #    edits from assets/map_overrides/<Pascal>.json (painted in
+    #    tools/map_editor/editor.py, map-tool plan C5) are merged here so
+    #    the pret maps/*.blk stay read-only and regen is idempotent.
     # ------------------------------------------------------------------
     for blk_file in sorted(MAPS_DIR.glob("*.blk")):
         pascal = blk_file.stem        # e.g. "OaksLab"
         snake  = to_snake(pascal)     # e.g. "oaks_lab"
         label  = f"{snake}_blk"
+        data = bytearray(blk_file.read_bytes())
+        n_over = apply_map_overrides(pascal, data)
+        note = f" (+{n_over} authored override cells)" if n_over else ""
         write_inc(
             ASSETS / f"{label}.inc",
             label,
-            blk_file.read_bytes(),
-            f"{blk_file.name} block map → [EBP+INDOOR_BLK_GBADDR] (indoor) "
-            f"or fixed outdoor slot",
+            bytes(data),
+            f"{blk_file.name} block map{note} → [EBP+INDOOR_BLK_GBADDR] "
+            f"(indoor) or fixed outdoor slot",
         )
 
     # ------------------------------------------------------------------
