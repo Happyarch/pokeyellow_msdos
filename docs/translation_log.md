@@ -74,6 +74,59 @@ harness, and committed each package alone.
   S2-era derivation error against a wrong anchor. Not fixed here (S2/S5 gated
   green; needs a dedicated fix).
 
+## menus-port Session 6 package A — oaks_pc + league_pc (root integration)
+- **Date:** 2026-07-02
+- **OpenOaksPC** — Source: pret `engine/menus/oaks_pc.asm:OpenOaksPC`. Translated:
+  NEW `dos_port/src/engine/menus/oaks_pc.asm`. Faithful flow (accessed→get-rated
+  dialogs → YesNoChoice → wCurrentMenuItem `and a`/jnz skip → DisplayDexRating →
+  closed dialog → restore). DEVIATION(text): the three dialogs
+  (_AccessedOaksPCText 2 pages incl. its `para`, _GetDexRatedText which stays
+  visible under YesNoChoice, _ClosedOaksPCText + the wrapper's `text_waitbutton`)
+  drawn whole into scratch rows 12-17 + UI_MESSAGE_BOX (pret data/text/text_3.asm
+  wording verified byte-for-byte, incl. #=POKé expansion). DEVIATION:
+  SaveScreenTilesToBuffer2/LoadScreenTilesFromBuffer2 → g_window_count save/restore.
+  STUB(S8-pokedex): `predef DisplayDexRating` branch kept, call no-oped.
+- **PKMNLeaguePC / LeaguePCShowTeam / LeaguePCShowMon** — Source: pret
+  `engine/menus/league_pc.asm`. Translated: NEW
+  `dos_port/src/engine/menus/league_pc.asm`. AccessedHoFPCText drawn whole
+  (2 pages, verified wording). Live state kept verbatim: BIT_NO_TEXT_DELAY
+  set/res, wUpdateSpritesEnabled + hTileAnimations push/pop, the >capacity
+  first-team math, the team loop (LoadHallOfFameTeams/LeaguePCShowTeam CF
+  contract, wHoFTeamIndex2 walk), and the CopyData team-buffer shift + `cp $ff`
+  end + B-exit `scf`. LeaguePCShowMon full-screen front-pic + "HALL OF FAME No"
+  box + PrintNumber + `jmp Func_7033f` ported for label parity.
+  DEVIATION/STUB(S7-save): pret unconditionally enters `.loop` (relies on the
+  ActivatePC caller gating on a non-empty HoF; a 0-team entry shows a garbage
+  mon). The port adds one tagged `test bh,bh / jz .doneShowingTeams` guard so the
+  no-save 0-team state exits clean after the dialog — the brief's intended
+  behavior; dead once S7 seeds wNumHoFTeams>0. TODO-HW: RunPaletteCommand /
+  RunDefaultPaletteCommand palette-HAL no-ops (Phase 5).
+- **Forward-dep stubs** — NEW `src/engine/menus/league_pc_stubs.asm`: `ret`-only
+  LoadHallOfFameTeams (S7 save layer) + Func_7033f (HoF movie), referenced at
+  link by the dead team loop; delete each when its real routine lands
+  (overworld_stubs precedent).
+- **WRAM (A):** gb_memmap.inc gains wHallOfFame 0xCC5B, wHoFMonSpecies/
+  wHoFTeamIndex 0xCD3D, wHoFPartyMonIndex 0xCD3E, wHoFMonLevel 0xCD3F,
+  wHoFMonOrPlayer 0xCD40, wHoFTeamIndex2 0xCD41, wHoFTeamNo 0xCD42,
+  wWholeScreenPaletteMonSpecies 0xCF1C, wNumHoFTeams 0xD5A1 — all verbatim from
+  origin/symbols:pokeyellow.sym (the worker's placeholder 0xD640-block was wrong;
+  the real cluster is union-aliased into the 0xCD3D badge/field-move/swap lane
+  and the 0xCC5B wSwitchPartyMonTempBuffer union base — safe, dead until S7).
+  gb_constants.inc gains HOF_MON/HOF_TEAM/HOF_TEAM_CAPACITY (0x10/96/50) +
+  SET_PAL_POKEMON_WHOLE_SCREEN 0x0B.
+- **Makefile/harness (A):** oaks_pc + league_pc + league_pc_stubs → GAME_SRCS;
+  DEBUG_OAKSPC / DEBUG_LEAGUEPC flag blocks; RunOaksPCTest / RunLeaguePCTest hooks
+  in overworld.asm. The temporary s6a_pending_symbols.inc scaffold was stripped
+  (its symbols migrated to the canonical includes).
+- **Gate (A):** `make` + `make check` green (both files link; the HoF loop is
+  dead until S7). DEBUG_OAKSPC FRAME.BIN shows "Accessed PROF. / OAK's PC." and
+  DEBUG_LEAGUEPC shows "Accessed POKéMON / LEAGUE's site." in the UI_MESSAGE_BOX
+  dialog over Pallet Town — pret wording exact.
+  **FAITHFUL EXCEPT:** dialogs drawn-whole [DEVIATION(text)]; buffer2 save →
+  window-list [DEVIATION]; DisplayDexRating no-op [STUB S8]; HoF team loop +
+  0-team guard + ret-stubs [STUB S7]; palette no-ops [TODO-HW]; LeaguePCShowMon
+  full-screen coord math unverified until S7 wires+gates it (dead now).
+
 ## menus-port Session 5 — party_menu realigned onto the generic drivers
 - **Date:** 2026-07-02
 - **Plan:** docs/current_plan_menus.md, Session 5. Bespoke

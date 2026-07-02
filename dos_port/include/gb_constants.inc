@@ -22,6 +22,14 @@ NAME_LENGTH             equ 11      ; '@'-terminated fixed-width name field (mon
 NAME_BUFFER_LENGTH      equ 20      ; wNameBuffer size (GetName dest; bounds the copy)
 MOVE_NAME_LENGTH        equ 14      ; constants/text_constants.asm (12 printed + '@' + prefix)
 PARTY_LENGTH            equ 6
+; Hall-of-Fame record layout (pret constants/pokemon_data_constants.asm:63-65),
+; menus S6 package A (league_pc.asm).
+HOF_MON                 equ 0x10                    ; 16 bytes per recorded mon
+HOF_TEAM                equ PARTY_LENGTH * HOF_MON  ; 96 bytes per recorded team
+HOF_TEAM_CAPACITY       equ 50                      ; max HoF teams stored in SRAM
+; palette-command id (pret constants/palette_constants.asm:17) — consumed only by
+; league_pc's TODO-HW RunPaletteCommand no-op (Phase 5 palette HAL).
+SET_PAL_POKEMON_WHOLE_SCREEN equ 0x0B
 MONS_PER_BOX            equ 20
 NUM_BOXES               equ 12
 NUM_TMS                 equ 50

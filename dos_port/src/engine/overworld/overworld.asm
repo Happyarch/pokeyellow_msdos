@@ -107,6 +107,12 @@ extern RunListMenuTest
 %ifdef DEBUG_DRAWBADGES
 extern RunDrawBadgesTest
 %endif
+%ifdef DEBUG_OAKSPC
+extern RunOaksPCTest
+%endif
+%ifdef DEBUG_LEAGUEPC
+extern RunLeaguePCTest
+%endif
 %ifdef DEBUG_WALKSPEED
 extern DebugDumpMemory
 extern tick_count
@@ -374,6 +380,12 @@ EnterMap:
 %endif
 %ifdef DEBUG_DRAWBADGES
     call RunDrawBadgesTest                  ; seed badges, draw grid, window it, dump FRAME.BIN, exits
+%endif
+%ifdef DEBUG_OAKSPC
+    call RunOaksPCTest                      ; open Oak's PC, dump the dialog FRAME.BIN, exits
+%endif
+%ifdef DEBUG_LEAGUEPC
+    call RunLeaguePCTest                    ; draw HoF-PC dialog (0 teams), dump FRAME.BIN, exits
 %endif
 %ifdef DEBUG_WALKSPEED
     ; Live walk-speed instrumentation: boots normally into OverworldLoop so you can

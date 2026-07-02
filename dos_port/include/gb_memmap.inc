@@ -1296,6 +1296,26 @@ wBadgeOrFaceTiles             equ 0xCD3F ; ds NUM_BADGES+1 (+1 byte read by the 
 wTempObtainedBadgesBooleans   equ 0xCD49 ; ds NUM_BADGES (0=not obtained, 1=obtained)
 
 ; ---------------------------------------------------------------------------
+; Menus S6 package A (league_pc / oaks_pc) — Hall-of-Fame reader state. All
+; addresses verbatim from origin/symbols:pokeyellow.sym bank 00. The HoF scalars
+; sit in the ram/wram.asm:772 NEXTU union (same lane family as the badge/field-
+; move/swap scratch), so wHoFMonSpecies/wHoFTeamIndex alias 0xCD3D; wHallOfFame
+; (96 = HOF_TEAM bytes) aliases the wSwitchPartyMonTempBuffer union base 0xCC5B.
+; The whole cluster is only live once the S7 save layer feeds LoadHallOfFameTeams;
+; PKMNLeaguePC guards its team loop off while wNumHoFTeams==0, so it is dead now.
+; ---------------------------------------------------------------------------
+wHallOfFame                   equ 0xCC5B ; ds HOF_TEAM (96) — current team's mon records
+wHoFMonSpecies                equ 0xCD3D ; = wHoFTeamIndex (union byte 0)
+wHoFTeamIndex                 equ 0xCD3D
+wHoFPartyMonIndex             equ 0xCD3E
+wHoFMonLevel                  equ 0xCD3F
+wHoFMonOrPlayer               equ 0xCD40
+wHoFTeamIndex2                equ 0xCD41
+wHoFTeamNo                    equ 0xCD42
+wWholeScreenPaletteMonSpecies equ 0xCF1C ; species for SET_PAL_POKEMON_WHOLE_SCREEN
+wNumHoFTeams                  equ 0xD5A1 ; total recorded HoF teams (0 until S7)
+
+; ---------------------------------------------------------------------------
 ; Wave 5 (home-rectification) — pokemon/item data (add_party_mon / add_mon /
 ; pokemon / give / money). Lowercase Dex aliases onto existing W_POKEDEX_*;
 ; new WRAM from pret ram/wram.asm chained off verified anchors.

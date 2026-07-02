@@ -209,7 +209,7 @@ entry + commit (root only).
 
 | Pkg | Screen | Status | FAITHFUL EXCEPT |
 |-----|--------|--------|-----------------|
-| A | oaks_pc + league_pc | queued | |
+| A | oaks_pc + league_pc | integrated (S6) | dialogs drawn-whole (text); buffer2 save→window-list; DisplayDexRating STUB(S8); HoF team loop STUB(S7) w/ 0-team guard + ret-stubs; palette TODO-HW |
 | B | draw_badges / trainer card gfx | integrated (S6) | none |
 | C | naming_screen | queued | |
 | D | options | queued | |

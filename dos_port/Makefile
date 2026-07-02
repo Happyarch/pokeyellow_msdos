@@ -164,6 +164,9 @@ GAME_SRCS := \
     src/engine/menus/field_moves.asm \
     src/engine/menus/text_box.asm \
     src/engine/menus/draw_badges.asm \
+    src/engine/menus/oaks_pc.asm \
+    src/engine/menus/league_pc.asm \
+    src/engine/menus/league_pc_stubs.asm \
     src/engine/menus/display_text_id_init.asm \
     src/engine/overworld/simulate_joypad.asm \
     src/engine/overworld/overworld_stubs.asm \
@@ -340,6 +343,22 @@ endif
 ifdef DEBUG_DRAWBADGES
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_DRAWBADGES
+NASMFLAGS += -D SKIP_TITLE
+endif
+# Oak's-PC gate (menus S6 package A): boot to overworld, open OpenOaksPC; the
+# in-routine hook dumps FRAME.BIN of the "Accessed PROF. OAK's PC." dialog before
+# the first blocking wait. make SKIP_TITLE=1 DEBUG_OAKSPC=1
+ifdef DEBUG_OAKSPC
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_OAKSPC
+NASMFLAGS += -D SKIP_TITLE
+endif
+# League-PC gate (menus S6 package A): boot to overworld, draw the AccessedHoFPCText
+# dialog (wNumHoFTeams==0 -> team loop skipped), dump FRAME.BIN, exit.
+# make SKIP_TITLE=1 DEBUG_LEAGUEPC=1
+ifdef DEBUG_LEAGUEPC
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_LEAGUEPC
 NASMFLAGS += -D SKIP_TITLE
 endif
 # Live battle view: same setup as DEBUG_BATTLE but holds the screen (loops
