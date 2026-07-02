@@ -113,6 +113,9 @@ extern RunOaksPCTest
 %ifdef DEBUG_LEAGUEPC
 extern RunLeaguePCTest
 %endif
+%ifdef DEBUG_OPTIONS
+extern RunOptionsTest
+%endif
 %ifdef DEBUG_WALKSPEED
 extern DebugDumpMemory
 extern tick_count
@@ -386,6 +389,9 @@ EnterMap:
 %endif
 %ifdef DEBUG_LEAGUEPC
     call RunLeaguePCTest                    ; draw HoF-PC dialog (0 teams), dump FRAME.BIN, exits
+%endif
+%ifdef DEBUG_OPTIONS
+    call RunOptionsTest                     ; open OPTION menu, dump FRAME.BIN, exits
 %endif
 %ifdef DEBUG_WALKSPEED
     ; Live walk-speed instrumentation: boots normally into OverworldLoop so you can

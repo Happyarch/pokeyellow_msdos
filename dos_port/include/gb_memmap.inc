@@ -754,6 +754,13 @@ W_LETTER_PRINTING_DELAY      equ 0xD357 ; wLetterPrintingDelayFlags
 ; wOptions high-bit indices (pret ref: constants/ram_constants.asm BIT_BATTLE_*)
 BIT_BATTLE_SHIFT             equ 6      ; 0=SHIFT, 1=SET battle style
 BIT_BATTLE_ANIMATION         equ 7      ; 1=battle animations OFF (skip → fixed delay)
+SOUND_MASK                   equ 0x30   ; wOptions bits 4-5 = sound/earphone setting (S6 pkg D)
+
+; Menus S6 package D (options) — sym-verified (origin/symbols:pokeyellow.sym).
+; wOptionsCursorLocation is another lane of the 0xCD3D scratch union (aliases the
+; badge/HoF/field-move/swap bytes; the OPTION menu is modal, never concurrent).
+wOptionsCursorLocation       equ 0xCD3D ; highlighted OPTION row (0..7)
+wPrinterSettings             equ 0xD497 ; GB-Printer brightness value (stored, not sent)
 
 ; wLetterPrintingDelayFlags bit indices
 BIT_FAST_TEXT_DELAY          equ 0      ; 1=read speed from wOptions; 0=always 1 frame/char

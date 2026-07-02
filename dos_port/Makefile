@@ -167,6 +167,7 @@ GAME_SRCS := \
     src/engine/menus/oaks_pc.asm \
     src/engine/menus/league_pc.asm \
     src/engine/menus/league_pc_stubs.asm \
+    src/engine/menus/options.asm \
     src/engine/menus/display_text_id_init.asm \
     src/engine/overworld/simulate_joypad.asm \
     src/engine/overworld/overworld_stubs.asm \
@@ -359,6 +360,14 @@ endif
 ifdef DEBUG_LEAGUEPC
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_LEAGUEPC
+NASMFLAGS += -D SKIP_TITLE
+endif
+# Options gate (menus S6 package D): boot to overworld, open the OPTION menu via
+# InitOptionsMenu (full-screen takeover), draw the cursor, dump FRAME.BIN, exit.
+# make SKIP_TITLE=1 DEBUG_OPTIONS=1
+ifdef DEBUG_OPTIONS
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_OPTIONS
 NASMFLAGS += -D SKIP_TITLE
 endif
 # Live battle view: same setup as DEBUG_BATTLE but holds the screen (loops

@@ -74,6 +74,41 @@ harness, and committed each package alone.
   S2-era derivation error against a wrong anchor. Not fixed here (S2/S5 gated
   green; needs a dedicated fix).
 
+## menus-port Session 6 package D — options (root integration)
+- **Date:** 2026-07-02
+- **DisplayOptionMenu_ / InitOptionsMenu / OptionsControl / GetOptionPointer +
+  OptionMenuJumpTable + the six row handlers + OptionsMenu_UpdateCursorPosition**
+  — Source: pret `engine/menus/options.asm`. Translated: NEW
+  `dos_port/src/engine/menus/options.asm`. Line-for-line mirror: the own
+  JoypadLowSensitivity/3×DelayFrame loop (NOT HandleMenuInput), the `jp hl`
+  jump table (port `jmp [tbl+eax*4]`), the `sla/rl` bit-extract idioms
+  (`shl`+`rcl`), `swap a`→`rol al,4`, GetTextSpeed/GetGBPrinterBrightness
+  neighbor-delay tables, and OptionsControl's printer→cancel dummy-row skip +
+  top/bottom wrap (verified identical to pret). Charmap strings + jump table are
+  hand-authored Tier-2 code data.
+- **TODO-HW ×2:** OptionsMenu_SpeakerSettings skips pret's `xor a / ldh [rAUDTERM]`
+  (audio HAL, Phase 3) but still stores the wOptions sound bits; OptionsMenu_
+  GBPrinterBrightness stores wPrinterSettings but transmits nothing (no serial).
+  Both keep the row + value write + pret's fall-through — contract preserved.
+- **Port plumbing (not deviations):** text_row_stride=20 reset (party-menu home
+  driver precedent); the OPTION screen is a full-screen takeover shown via
+  options_mirror (stride-20 scratch rows 0-17 → GB_TILEMAP1) + OptionsShowWindow
+  (single UI_OPTIONS window + g_bg_whiteout), the hAutoBGTransferEnabled analog;
+  options_mirror is called once per loop (pret's BGMap-transfer slot) so the
+  in-place value-row redraw + ▶ reach the window. Two `; PROJ` cite UI_OPTIONS.
+- **WRAM (D):** gb_memmap.inc gains wOptionsCursorLocation 0xCD3D (**corrected
+  from the worker's 0xD029** to the sym address — another lane of the 0xCD3D
+  scratch union, modal so non-concurrent), wPrinterSettings 0xD497, and
+  SOUND_MASK 0x30. wOptions reused (existing W_OPTIONS 0xD354). OPT_*/NUM_*/
+  PRINTER_BRIGHTNESS_* kept local (options-only index enums, two-tier rule).
+- **Makefile/harness (D):** options → GAME_SRCS; DEBUG_OPTIONS gate;
+  RunOptionsTest hook in overworld.asm.
+- **Gate (D):** `make` + `make check` green. DEBUG_OPTIONS FRAME.BIN (seed
+  MID/ON/SHIFT/MONO/NORMAL) renders the full OPTION screen — border box,
+  "TEXT SPEED :MID / ANIMATION :ON / BATTLESTYLE:SHIFT / SOUND:MONO /
+  PRINT:NORMAL / CANCEL" with ▶ on TEXT SPEED — matching pret's layout exactly.
+  **FAITHFUL EXCEPT: none** (only the two TODO-HW register pokes skipped).
+
 ## menus-port Session 6 package A — oaks_pc + league_pc (root integration)
 - **Date:** 2026-07-02
 - **OpenOaksPC** — Source: pret `engine/menus/oaks_pc.asm:OpenOaksPC`. Translated:
