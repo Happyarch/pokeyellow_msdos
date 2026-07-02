@@ -133,6 +133,13 @@ if it took none. This is the swarm's divergence audit trail.
   human (no key injection); formal sweep is S10.
 - **H-flag:** not involved. **Bug tags:** GLITCH-safety div-0 clamp in
   GetHPBarLength (noted above).
+- **Live-pass follow-up (same day):** user's interactive pass (via
+  `DEBUG_BAGMENU_LIVE=1` seed) LGTM'd nav/pop-up/SWITCH; caught a few frames
+  of garbled HP bars (",CLLLLLLM") on menu exit — .exitMenu ran LoadGBPal
+  while the party windows were still listed but Restore… had already reloaded
+  box patterns over the HP-bar tiles ($62-$7F). Fixed by dropping the party
+  windows + whiteout (pret restores screen content during the whiteout via
+  LoadScreenTilesFromBuffer2; window-model analog) before LoadGBPal.
 
 ## menus-port Session 4 — start_menu + bag realigned onto the generic drivers
 - **Date:** 2026-07-02

@@ -132,15 +132,18 @@ StartMenu_Pokemon:
 .exitMenu:
     call GBPalWhiteOutWithDelay3
     call RestoreScreenTilesAndReloadTilePatterns
-    call LoadGBPal
-    ; port(window model) exit restores: the party takeover's white field goes
-    ; away with it, and the map tileset tiles the BG icons overwrote come back
-    ; (DEVIATION(icons): pret's icons live in OAM VRAM, restored inside
-    ; RestoreScreenTilesAndReloadTilePatterns via ReloadMapSpriteTilePatterns;
-    ; the box tiles the HP-bar set clobbered are restored there too, via its
-    ; LoadTextBoxTilePatterns).
+    ; port(window model) exit restores, BEFORE LoadGBPal un-whites the palette:
+    ; pret restores the screen content during the whiteout (Restore…'s
+    ; LoadScreenTilesFromBuffer2) — the window-model analog is dropping the
+    ; party windows + whiteout field here, or the stale panel renders for a
+    ; few frames with the box-tile patterns Restore… just loaded over the
+    ; HP-bar set ($62-$7F). The map tileset tiles the BG icons overwrote come
+    ; back too (DEVIATION(icons): pret's icons live in OAM VRAM, restored via
+    ; Restore…'s ReloadMapSpriteTilePatterns).
+    mov dword [g_window_count], 0       ; drop the party panel/message windows
     mov dword [g_bg_whiteout], 0
     call LoadTilesetTilePatternData
+    call LoadGBPal
     jmp RedisplayStartMenu              ; jp RedisplayStartMenu
 .chosePokemon:
     ; call SaveScreenTilesToBuffer1 — port(window model): the pop-up is its
