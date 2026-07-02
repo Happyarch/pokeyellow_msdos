@@ -4530,6 +4530,14 @@ Verify-only (no code change; confirmed correct end-to-end):
   byte-identical redundant. B's genuine pacing work (HP-bar drain in battle_hud.asm /
   UpdateCurMonHPBar in move_effect_helpers.asm / the ApplyAttackTo* drain tails in core.asm)
   is unaffected. The <PROMPT> beats B intended are delivered by A's identical routines.
+- INTEGRATION FIX (crash, live-verify): battle-swarm-C faint_leaves.asm AnyEnemyPokemonAliveCheck
+  widened pret's 8-bit loop counter (`ld b,a` / `dec b`) to 32-bit `dec ecx`. On a wild faint
+  (wEnemyPartyCount==0) `dec ecx` wraps 0→0xFFFFFFFF → ~4 billion iterations, walking ESI off the
+  ~96 KB GB allocation → page fault (register-confirmed: ebp=0x70000, esi=0x22010, cr2=0x10092010,
+  ecx=0xfffff88f, eip in AnyEnemyPokemonAliveCheck). Fixed to `dec cl` (8-bit wrap at 256, bounded
+  in GB RAM), matching pret and the sibling ChooseNextMon's `dec bl`. SECONDARY (open): a wild
+  battle should not reach this routine at all — HandleEnemyMonFainted's `wIsInBattle; dec al; jz`
+  guard fell through (wIsInBattle != 1 at faint despite init_battle.asm:88); needs a runtime read.
 
 ---
 
