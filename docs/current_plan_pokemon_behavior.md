@@ -11,6 +11,13 @@ battle frontend (`current_plan_battle_pret_alignment.md`); it fixes bugs those
 surfaced (garbage level-up stats, silently-dropped level-up moves).
 
 ## Session / resume guidance
+- **BRANCH: this work lives on `menus-port`** (shared with a concurrent menus /
+  `ui_layout` agent — see `docs/current_plan_menus.md`). This plan touches
+  `src/engine/pokemon/*` + shared includes; the menus agent touches
+  `dos_port/tools/ui_layout/` + `dos_port/Makefile`. Per CLAUDE.md "Commit Policy":
+  commit only your own explicit paths (`git add <files>`, never `add -A`/`commit -a`),
+  and leave the menus agent's uncommitted `ui_layout`/Makefile changes alone — ask
+  the user before touching anything you didn't author this session.
 - **Each stage is written to be picked up cold in a fresh session.** Read this file
   + `CLAUDE.md` first. Mark stages `[x]` here as they land; archive to
   `docs/plans/pokemon_behavior.md` when fully done.
