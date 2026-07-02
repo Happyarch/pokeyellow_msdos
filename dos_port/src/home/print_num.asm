@@ -1,6 +1,6 @@
 ; print_num.asm — PrintNumber (mirrors home/print_num.asm:PrintNumber).
 ;
-; Print the c-digit, b-byte little-endian value at DE into the tile buffer at HL.
+; Print the c-digit, b-byte BIG-endian value at DE into the tile buffer at HL.
 ; Supports 2..7 digits and 1..3 source bytes. Flags LEADING_ZEROES (bit 7) and
 ; LEFT_ALIGN (bit 6) may be set in the high bits of B. (For a 1-digit number the
 ; caller adds the value to '0' directly, as in pret.)
@@ -49,15 +49,17 @@ PrintNumber:
     movzx ecx, bl                    ; ECX = digit count (grab before BL is clobbered)
     push  ecx
 
-    ; --- read the little-endian value at [EBP+EDX] (EAX bytes) into EDI ---
+    ; --- read the BIG-endian value at [EBP+EDX] (EAX bytes) into EDI ---
+    ; pret PrintNumber stages hNumToPrint MSB-first: every multi-byte source
+    ; (wLoadedMonHP, text_decimal words, …) is big-endian. (Fixed in menus S5 —
+    ; this read was little-endian, which byte-swapped 2/3-byte values; all
+    ; pre-S5 linked callers were 1-byte, so nothing observable changed before.)
     xor   edi, edi                   ; EDI = accumulated value
-    xor   ecx, ecx                   ; ECX (cl) = current shift
 .read:
+    shl   edi, 8
     movzx ebx, byte [ebp + edx]
-    shl   ebx, cl
     or    edi, ebx
     inc   edx
-    add   cl, 8
     dec   eax
     jnz   .read
 

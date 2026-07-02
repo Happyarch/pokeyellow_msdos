@@ -542,6 +542,17 @@ MON_SPRITE_POPUP                  equ 0x11
 TWO_OPTION_MENU         equ 0x14
 BUY_SELL_QUIT_MENU                equ 0x15
 SAFARI_BATTLE_MENU_TEMPLATE       equ 0x1B
+; wPartyMenuTypeOrMessageID values (pret constants/menu_constants.asm)
+NORMAL_PARTY_MENU       equ 0x00
+USE_ITEM_PARTY_MENU     equ 0x01
+BATTLE_PARTY_MENU       equ 0x02
+TMHM_PARTY_MENU         equ 0x03
+SWAP_MONS_PARTY_MENU    equ 0x04
+EVO_STONE_PARTY_MENU    equ 0x05
+FIRST_PARTY_MENU_TEXT_ID equ 0x06  ; ids >= this select PartyMenuItemUseMessagePointers
+; hUILayoutFlags bit (pret constants/gfx_constants.asm; BIT_SINGLE_SPACED_LINES
+; already lives in gb_memmap.inc's H_UI_LAYOUT_FLAGS block)
+BIT_PARTY_MENU_HP_BAR   equ 0      ; DrawHP_: HP fraction right of the bar, not below
 ; wTwoOptionMenuID variants
 YES_NO_MENU             equ 0x00
 NORTH_WEST_MENU         equ 0x01

@@ -41,7 +41,7 @@ global RunBagMenuTest
 %ifdef DEBUG_PARTYMENU
 extern PrepareNewGameDebug
 extern LoadFontTilePatterns
-extern DisplayPartyMenu
+extern StartMenu_Pokemon
 global RunPartyMenuTest
 %endif
 %ifdef DEBUG_TEXTBOXID
@@ -305,7 +305,8 @@ RunPartyMenuTest:
     call PrepareNewGameDebug
     or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
-    call DisplayPartyMenu
+    call StartMenu_Pokemon          ; production entry: the S5 dispatcher runs
+                                    ; DisplayPartyMenu, whose hook dumps + exits
 .hang:
     jmp .hang
 %endif

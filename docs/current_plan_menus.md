@@ -148,10 +148,26 @@ entry + commit (root only).
     DEBUG_BAGMENU_CONFIRM flag deleted with the bespoke. Interactive toss /
     yes-no / SELECT-swap hand-pass: `make DEBUG_BAGMENU_LIVE=1` + `dos_port/run`
     (formal interactive sweep stays S10). Requires: S3.
-- [ ] **Session 5 — Realign party_menu.** Same `_v2` method for
-  DrawPartyMenu_/RedrawPartyMenu_ + field-move pop-up rebased onto S2's
-  DisplayFieldMoveMonMenu; HP/status/icon pixel-regression gate; STATS stays
-  stub (pokemon_behavior seam — check that plan's status first). Requires: S4.
+- [x] **Session 5 — Realign party_menu.** DONE 2026-07-02 (see
+  translation_log.md "menus-port Session 5"). Direct overwrite (S4 method):
+  bespoke party_menu.asm rewritten as the faithful pret split — home driver
+  (home/pokemon.asm DisplayPartyMenu/GoBackToPartyMenu/PartyMenuInit/
+  HandlePartyMenuInput on generic HandleMenuInput + PrintStatusCondition +
+  DrawHPBar), engine renderer (DrawPartyMenu_/RedrawPartyMenu_/
+  SetPartyMenuHPBarColor + DrawHP2 hosted pending pokemon_behavior's
+  status_screen), StartMenu_Pokemon dispatcher + SwitchPartyMon family +
+  ErasePartyMenuCursors (start_sub_menus.asm), NEW engine/gfx/hp_bar.asm +
+  live status_ailments.asm. Field-move pop-up = S2's DisplayFieldMoveMonMenu
+  via DisplayTextBoxID + fm_show_window dynamic right/bottom-anchored window
+  at UI_FIELD_MOVE_MON_MENU. Icons stay BG-tile DEVIATION (PartyMenuAnimCB);
+  messages drawn whole (S4 text DEVIATION). STATS + field effects + TMHM/
+  EVO_STONE/item-use menus = tagged stubs (pokemon_behavior / items plans).
+  Fixed latent port-wide PrintNumber little-endian read (pret is big-endian;
+  exposed by the 2-byte HP fractions). Gate: FRAME.BIN HP/status/icon/name/
+  message regions byte-identical to the bespoke baseline; only diffs = level
+  LEFT_ALIGN + cursor-row fidelity fixes. `make`+`make check` green.
+  Interactive pop-up/SWITCH pass deferred to the S10 sweep (no key injection).
+  Requires: S4.
 - [ ] **Session 6 — Swarm wave 1**: A (oaks_pc+league_pc), B (draw_badges +
   root writes gen_badge_tiles.py), D (options; rAUDTERM→TODO-HW),
   F (players_pc — flagship DisplayListMenuID second caller; PC boxes =

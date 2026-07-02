@@ -23,6 +23,117 @@ if it took none. This is the swarm's divergence audit trail.
 
 ---
 
+## menus-port Session 5 — party_menu realigned onto the generic drivers
+- **Date:** 2026-07-02
+- **Plan:** docs/current_plan_menus.md, Session 5. Bespoke
+  `src/engine/menus/party_menu.asm` (self-contained input loop, its own pop-up
+  and swap code) **rewritten** as the faithful pret split: home driver +
+  engine renderer + StartMenu_Pokemon dispatcher (direct overwrite, S4
+  precedent; gated by before/after FRAME.BIN diff).
+- **DisplayPartyMenu / GoBackToPartyMenu / PartyMenuInit /
+  HandlePartyMenuInput / DrawPartyMenu / RedrawPartyMenu** — Source: pret
+  `home/pokemon.asm:187-334`. Translated: `dos_port/src/home/pokemon.asm`
+  (appended). Faithful incl. the cross-routine hTileAnimations push/pop (the
+  swap re-entries keep it pushed, exactly pret's `jp`s), wForcePlayerToChooseMon
+  watched-keys narrowing, wPartyAndBillsPCSavedMenuItem round-trip, and the
+  CF-return contract (CF=0 chosen / CF=1 none). Runs on the generic
+  HandleMenuInput with `menu_item_step`=2 rows, stride 20, wMenuWrappingEnabled,
+  and `menu_redraw_cb`=PartyMenuAnimCB. STUB(pikachu-follow): the
+  IsThisPartyMonStarterPikachu / CheckPikachuFollowingPlayer sleeping-Pikachu
+  refusal; every mon takes the .asm_1258 path.
+- **PrintStatusCondition / DrawHPBar** — Source: pret `home/pokemon.asm:336` /
+  `home/pokemon.asm:1`. Translated: `dos_port/src/home/pokemon.asm`. Faithful
+  ("FNT" from the HP bytes at status−2/−3; the $6d/$6c bar cap from
+  wHPBarType).
+- **PrintStatusAilment** — Source: pret `engine/pokemon/status_ailments.asm`.
+  Translated: `dos_port/src/engine/pokemon/status_ailments.asm` (replaces the
+  unwired-skeleton "intentionally skipped" note; now in POKEMON_SRCS).
+- **HPBarLength / GetHPBarLength** — Source: pret `engine/gfx/hp_bar.asm`.
+  Translated: NEW `dos_port/src/engine/gfx/hp_bar.asm`. Keeps pret's observable
+  truncations (product>>2 and divisor>>2 with a byte divisor when maxHP ≥ 256)
+  in native arithmetic. GLITCH-safety: divisor 0 clamps to a full bar instead
+  of a native #DE fault (pret's byte Divide doesn't fault).
+- **DrawHP / DrawHP2 / DrawHP_** — Source: pret
+  `engine/pokemon/status_screen.asm:1-62`. Translated:
+  `dos_port/src/engine/menus/party_menu.asm` — hosted there until
+  pokemon_behavior's StatusScreen lands (that plan owns the file); pret names
+  kept, moves verbatim. hUILayoutFlags BIT_PARTY_MENU_HP_BAR steers the
+  fraction right-of-bar (+9) vs below-bar (+SCREEN_WIDTH+1). Leaves the bar
+  pixel count in DL (pret leaves it in `e`) — consumed by
+  SetPartyMenuHPBarColor.
+- **DrawPartyMenu_ / RedrawPartyMenu_ / SetPartyMenuHPBarColor** — Source: pret
+  `engine/menus/party_menu.asm`. Translated:
+  `dos_port/src/engine/menus/party_menu.asm` (full rewrite). Entry loop is
+  pret line-for-line (GetPartyMonName+PlaceString at (3,0)+2 rows,
+  wMenuItemToSwap ▷ at col 0, PrintStatusCondition +14, DrawHP2 +21 under the
+  BIT_PARTY_MENU_HP_BAR set/res pair, SetPartyMenuHPBarColor →
+  wPartyMenuHPBarColors (RunPaletteCommand = TODO-HW), PrintLevel +10,
+  hPartyMonIndex/wWhichPokemon bookkeeping, wWhichPartyMenuHPBar reset+inc,
+  SWAP_MONS_PARTY_MENU direct-to-.printMessage). STUB(items-plan):
+  TMHM/EVO_STONE "ABLE/NOT ABLE" columns (branches kept). STUB(items-plan):
+  .printItemUseMessage. DEVIATION(icons): WriteMonPartySpriteOAMByPartyIndex /
+  LoadMonPartySpriteGfxWithLCDDisabled → BG-tile 2×2 icons
+  (WritePartyMonIconTiles / LoadMonPartySpriteGfx, assets/mon_icons.inc) with
+  PartyMenuAnimCB frame-swapping VRAM, paced by wPartyMenuHPBarColors
+  (6/17/33 vblanks). DEVIATION(text): PartyMenuMessagePointers texts drawn
+  whole (S4 toss-dialog precedent), pret data/text/text_3.asm wording incl.
+  the not-yet-reachable ItemUse/Battle/UseTM lines. Port model: PartyMenuMirror
+  (scratch rows 0-17 → GB_TILEMAP1) is the hAutoBGTransferEnabled analog —
+  frame.asm's do_bg_transfer is canvas-scoped (stride 40; its 20×18 comments
+  are stale) and title.asm's ClearScreen both targets the canvas and re-arms
+  that transfer mid-draw, so the clear is a direct 360-byte FillMemory and the
+  mirror is explicit. Windows: UI_PARTY_PANEL (mon rows 0-11; max_y=12*8 —
+  message rows route to UI_MESSAGE_BOX so they aren't shown twice) +
+  UI_MESSAGE_BOX (rows 12-17); g_bg_whiteout = the full-screen takeover field.
+- **StartMenu_Pokemon (full dispatcher) / ErasePartyMenuCursors /
+  SwitchPartyMon / SwitchPartyMon_ClearGfx / SwitchPartyMon_InitVarOrSwapData**
+  — Source: pret `engine/menus/start_sub_menus.asm:9-121,303-313,678-826`.
+  Translated: `dos_port/src/engine/menus/start_sub_menus.asm`. Dispatcher
+  faithful: count guard, DisplayPartyMenu / GoBackToPartyMenu loop,
+  FIELD_MOVE_MON_MENU via DisplayTextBoxID (S2's canvas
+  DisplayFieldMoveMonMenu), the wFieldMoves menu-var walk (max item / top Y),
+  HandleMenuInput on the canvas (stride 40, cursor coords projected by the
+  same FM_ROW/COL shifts the box was drawn with), CANCEL/SWITCH/STATS/move
+  routing incl. the party<2 re-entry. Pop-up window bridge: fm_show_window
+  recovers the dynamic box rect from wFieldMoves + wFieldMovesLeftmostXCoord
+  (wNumFieldMoves is consumed by the draw) and right/bottom-anchors it at
+  UI_FIELD_MOVE_MON_MENU (W=9,H=7 lands exactly on the frozen WX/WY);
+  fm_mirror doubles as menu_redraw_cb; SaveScreenTilesToBuffer1 /
+  LoadScreenTilesFromBuffer1 collapse to window append/drop (the canvas box
+  bytes ≥360 never alias the stride-20 panel scratch). SwitchPartyMon family
+  faithful (hSwapTemp species swap, wSwitchPartyMonTempBuffer 3-way CopyData
+  of structs/OT/nicks, wSwappedMenuItem bookkeeping); ClearGfx clears the two
+  scratch rows (DEVIATION(icons): pret also parks OAM; SFX_SWAP = TODO-HW).
+  STUB(field-effects): .choseOutOfBattleMove selections re-enter the party
+  menu (UsedCut/ChooseFlyDestination/UseItem/… unported; refusal-path shape).
+  STUB(pokemon_behavior): .choseStats (plan Stage 4 still open). Exit restores:
+  g_bg_whiteout off + LoadTilesetTilePatternData (DEVIATION(icons): BG icons
+  clobber the map tileset where pret's OAM icons clobber sprite VRAM).
+- **PrintNumber endianness fix** — `dos_port/src/home/print_num.asm` read
+  multi-byte values LITTLE-endian; pret PrintNumber is BIG-endian
+  (hNumToPrint staged MSB-first). Every pre-S5 linked caller was 1-byte
+  (identical either way), so nothing observable changed before; the party
+  menu's 2-byte HP fractions exposed it (Jigglypuff 62 → $3E00 = 15872 →
+  garbage-tile "U72"). Also silently fixes any future text_decimal words.
+- **WRAM/HRAM:** gb_memmap.inc gains wSwitchPartyMonTempBuffer $CC97,
+  wPartyMenuHPBarColors $CF1E, wWhichPartyMenuHPBar $CF2C,
+  wPartyMenuTypeOrMessageID $D07C, wPartyMenuAnimMonEnabled $D09A,
+  wSwappedMenuItem $CD3D, wLoadedMonStatus $CF9B, hPartyMonIndex $FF8C,
+  hSwapTemp $FF95 — each derived+cross-checked against two verified anchors
+  (derivations in the include block comment). gb_constants.inc gains the
+  *_PARTY_MENU message ids + FIRST_PARTY_MENU_TEXT_ID + BIT_PARTY_MENU_HP_BAR.
+- **Gate:** DEBUG_PARTYMENU FRAME.BIN (harness now enters through the real
+  StartMenu_Pokemon) vs the bespoke baseline: HP bars, HP fractions, status
+  column, icons, names, message box **byte-identical**; the only diffs are the
+  two intended fidelity fixes — level digits now pret LEFT_ALIGN at col 14
+  (bespoke right-aligned in 3), and the ▶ cursor (bespoke pre-drew it on the
+  name row; pret's cursor lives on the HP rows, drawn by HandleMenuInput,
+  which the dump runs before). Overworld DEBUG_TRANSITION baseline renders
+  clean. `make` + `make check` green. Interactive pop-up/SWITCH pass needs a
+  human (no key injection); formal sweep is S10.
+- **H-flag:** not involved. **Bug tags:** GLITCH-safety div-0 clamp in
+  GetHPBarLength (noted above).
+
 ## menus-port Session 4 — start_menu + bag realigned onto the generic drivers
 - **Date:** 2026-07-02
 - **Plan:** docs/current_plan_menus.md, Session 4. Bespoke

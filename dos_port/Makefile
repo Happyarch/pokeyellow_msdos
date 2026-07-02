@@ -187,7 +187,9 @@ POKEMON_SRCS := \
     src/engine/pokemon/load_mon_data.asm \
     src/engine/pokemon/set_types.asm \
     src/engine/pokemon/remove_mon.asm \
-    src/engine/pokemon/write_moves.asm
+    src/engine/pokemon/write_moves.asm \
+    src/engine/pokemon/status_ailments.asm \
+    src/engine/gfx/hp_bar.asm
 
 # Items layer (current_plan_items.md). Non-UI inventory/bag logic + item data.
 ITEMS_SRCS := \

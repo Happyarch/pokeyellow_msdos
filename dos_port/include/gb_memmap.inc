@@ -1254,6 +1254,33 @@ BIT_NO_SPRITE_UPDATES         equ 4      ; wMiscFlags bit (constants/ram_constan
 hFieldMoveMonMenuTopMenuItemX equ 0xFFFB ; GB X of the field-move menu cursor column
 
 ; ---------------------------------------------------------------------------
+; Menus S5 (party menu realign) — pret ram/wram.asm + ram/hram.asm.
+; Chained off verified anchors:
+;   wSwitchPartyMonTempBuffer = union base 0xCC5B (= W_NPC_MOVEMENT_DIRECTIONS /
+;     wAnimationType branch heads) + `ds 60` NEXTU lane (wram.asm:546).
+;   wPartyMenuHPBarColors = wEnemyHPBarColor 0xCF1D + 1; wWhichPartyMenuHPBar =
+;     +PARTY_LENGTH +1 (wStatusScreenHPBarColor) + ds 7 (wram.asm:1230-1237).
+;   wPartyMenuTypeOrMessageID = wAnimationID 0xD07B + 1 (same db as
+;     wNamingScreenType/wTempTilesetNumTiles); cross-checked forward to
+;     W_SLOT_MACHINE_ALLOW_MATCHES_COUNTER 0xD095 = +25 (wram.asm:1530-1615).
+;   wPartyMenuAnimMonEnabled = 0xD095-union ENDU +2 (dw lane) + ds 2 +
+;     wOutwardSpiralTileMapPointer db (wram.asm:1618-1629).
+;   wSwappedMenuItem aliases the wChargeMoveNum 0xCD3D union byte (wram.asm:1016).
+;   wLoadedMonStatus = wLoadedMon 0xCF97 (= wLoadedMonHP - MON_HP) + MON_STATUS.
+;   hPartyMonIndex aliases hTextID 0xFF8C (ram/hram.asm:19-21); hSwapTemp heads
+;     the hExperience 0xFF96 union lane (ram/hram.asm:166-168).
+; ---------------------------------------------------------------------------
+wSwitchPartyMonTempBuffer     equ 0xCC97 ; 44 bytes — party-mon swap staging (union lane)
+wPartyMenuHPBarColors         equ 0xCF1E ; PARTY_LENGTH bytes — 0 green / 1 yellow / 2 red
+wWhichPartyMenuHPBar          equ 0xCF2C ; running index while RedrawPartyMenu_ colors bars
+wPartyMenuTypeOrMessageID     equ 0xD07C ; NORMAL/USE_ITEM/BATTLE/TMHM/SWAP/EVO_STONE_PARTY_MENU
+wPartyMenuAnimMonEnabled      equ 0xD09A ; nonzero ($40) while the selected mon's icon animates
+wSwappedMenuItem              equ 0xCD3D ; = wChargeMoveNum union byte; SwitchPartyMon result
+wLoadedMonStatus              equ 0xCF9B ; wLoadedMon + MON_STATUS
+hPartyMonIndex                equ 0xFF8C ; = hTextID (ram/hram.asm union)
+hSwapTemp                     equ 0xFF95 ; byte-swap scratch (overlaps hDividend lane)
+
+; ---------------------------------------------------------------------------
 ; Wave 5 (home-rectification) — pokemon/item data (add_party_mon / add_mon /
 ; pokemon / give / money). Lowercase Dex aliases onto existing W_POKEDEX_*;
 ; new WRAM from pret ram/wram.asm chained off verified anchors.
