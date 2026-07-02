@@ -74,6 +74,41 @@ harness, and committed each package alone.
   S2-era derivation error against a wrong anchor. Not fixed here (S2/S5 gated
   green; needs a dedicated fix).
 
+## menus-port Session 6 package F — players_pc (root integration)
+- **Date:** 2026-07-02
+- **PlayerPC / PlayerPCMenu / ExitPlayerPC / PlayerPCDeposit / PlayerPCWithdraw /
+  PlayerPCToss** — Source: pret `engine/menus/players_pc.asm`. Translated: NEW
+  `dos_port/src/engine/menus/players_pc.asm`. The **flagship 2nd caller of the
+  generic DisplayListMenuID** after the bag — deposit/withdraw/toss point
+  wListPointer at wNumBagItems / wNumBoxItems with ITEMLISTMENU, proving the
+  driver generalizes to the PC item box. Deposit/Withdraw/Toss/Exit verified
+  line-for-line vs pret (incl. Toss's `wCurItem`/IsItemHM fold, the `and a`
+  empty-inventory guards, AddItemToInventory CF room check, and the
+  wListScrollOffset save on exit so the bag's saved scroll doesn't desync).
+  Parent menu on TextBoxBorder(0,0,8,14) + PlaceString(PlayersPCMenuEntries) +
+  HandleMenuInput (watched A|B), wParentMenuItem cursor memory.
+- **Port model:** parent box drawn box-relative (stride-20) → GB_TILEMAP0 via
+  pc_menu_mirror (menu_redraw_cb, live ▶ cursor) + window at UI_PLAYERS_PC_MENU;
+  SaveScreenTilesToBuffer1/LoadScreenTilesFromBuffer2 → RefreshCollisionTileMap +
+  hide_window (S4 start-menu precedent, since UpdateSprites runs). 14 dialogs
+  drawn whole (DEVIATION(text), exact data/text/text_3.asm wording) into scratch
+  rows 12-17 + UI_MESSAGE_BOX; `prompt` texts get ▼+A/B wait, `done` texts show
+  under the list. TODO-HW ×4: SFX_TURN_ON/OFF_PC + SFX_WITHDRAW_DEPOSIT audio
+  no-ops. DEVIATION: explicit BIT_SINGLE_SPACED_LINES clear so <NEXT> double-
+  spaces deterministically (pret relies on the ambient overworld default). One
+  `; PROJ` cites UI_PLAYERS_PC_MENU.
+- **WRAM (F):** gb_memmap.inc gains wParentMenuItem 0xCCD3 (= wAddedToParty,
+  sym-verified), BIT_USING_GENERIC_PC 3, BIT_NO_MENU_BUTTON_SOUND 5 (wMiscFlags
+  bits). wNumBoxItems/wBoxItems (0xD539/0xD53A) reused (already present).
+- **Makefile/harness (F):** players_pc → GAME_SRCS; DEBUG_PLAYERSPC gate
+  (+ debug_party for PrepareNewGameDebug); RunPlayersPCTest hook in overworld.asm.
+- **Gate (F):** `make` + `make check` green. DEBUG_PLAYERSPC FRAME.BIN (seed
+  party+bag + 2 box items, generic PC) renders the parent menu
+  (▶WITHDRAW/DEPOSIT/TOSS ITEM / LOG OFF) **and** the "What do you want to do?"
+  message box together over Pallet Town — two simultaneous windows, faithful.
+  **FAITHFUL EXCEPT:** dialogs drawn-whole [DEVIATION(text)]; buffer save→window
+  model [DEVIATION]; SFX [TODO-HW]; explicit single-spaced-lines clear [DEVIATION].
+
 ## menus-port Session 6 package D — options (root integration)
 - **Date:** 2026-07-02
 - **DisplayOptionMenu_ / InitOptionsMenu / OptionsControl / GetOptionPointer +

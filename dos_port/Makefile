@@ -168,6 +168,7 @@ GAME_SRCS := \
     src/engine/menus/league_pc.asm \
     src/engine/menus/league_pc_stubs.asm \
     src/engine/menus/options.asm \
+    src/engine/menus/players_pc.asm \
     src/engine/menus/display_text_id_init.asm \
     src/engine/overworld/simulate_joypad.asm \
     src/engine/overworld/overworld_stubs.asm \
@@ -369,6 +370,15 @@ ifdef DEBUG_OPTIONS
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_OPTIONS
 NASMFLAGS += -D SKIP_TITLE
+endif
+# Player's-PC gate (menus S6 package F): boot to overworld, seed party+bag+box,
+# open PlayerPC as a generic PC; the parent-menu hook dumps FRAME.BIN, exits.
+# make SKIP_TITLE=1 DEBUG_PLAYERSPC=1
+ifdef DEBUG_PLAYERSPC
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_PLAYERSPC
+NASMFLAGS += -D SKIP_TITLE
+GAME_SRCS += src/engine/debug/debug_party.asm
 endif
 # Live battle view: same setup as DEBUG_BATTLE but holds the screen (loops
 # DelayFrame) so you can visually inspect it instead of dumping+exiting. Esc quits.

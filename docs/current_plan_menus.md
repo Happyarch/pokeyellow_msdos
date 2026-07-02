@@ -214,7 +214,7 @@ entry + commit (root only).
 | C | naming_screen | queued | |
 | D | options | integrated (S6) | rAUDTERM + printer writes TODO-HW (wOptions/wPrinterSettings values still stored); window-mirror port plumbing |
 | E | main_menu | queued | |
-| F | players_pc | queued | |
+| F | players_pc | integrated (S6) | dialogs drawn-whole (text); SaveScreenTilesToBuffer→window model; SFX TODO-HW; explicit BIT_SINGLE_SPACED_LINES clear |
 | G1/G2 | pokedex | queued | |
 | H | save UI | queued | |
 | I1/I2 | link_menu | queued | |

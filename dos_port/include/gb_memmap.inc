@@ -1258,6 +1258,9 @@ wFieldMovesLeftmostXCoord     equ 0xCC8E ; GB X of leftmost field-move name (men
 wLastFieldMoveID              equ 0xCC8F ; unused in pret (bookkeeping kept faithful)
 wMiscFlags                    equ 0xCD60 ; bit BIT_NO_SPRITE_UPDATES: skip UpdateSprites in DisplayTextIDInit
 BIT_NO_SPRITE_UPDATES         equ 4      ; wMiscFlags bit (constants/ram_constants.asm)
+BIT_USING_GENERIC_PC          equ 3      ; wMiscFlags bit — HoF/Bill's/generic PC hosts the menu (S6 pkg F)
+BIT_NO_MENU_BUTTON_SOUND      equ 5      ; wMiscFlags bit — suppress the menu A-press SFX
+wParentMenuItem               equ 0xCCD3 ; players_pc parent-menu selection (= wAddedToParty; sym-verified, S6 pkg F)
 hFieldMoveMonMenuTopMenuItemX equ 0xFFFB ; GB X of the field-move menu cursor column
 
 ; ---------------------------------------------------------------------------

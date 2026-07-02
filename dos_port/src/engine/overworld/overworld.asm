@@ -116,6 +116,9 @@ extern RunLeaguePCTest
 %ifdef DEBUG_OPTIONS
 extern RunOptionsTest
 %endif
+%ifdef DEBUG_PLAYERSPC
+extern RunPlayersPCTest
+%endif
 %ifdef DEBUG_WALKSPEED
 extern DebugDumpMemory
 extern tick_count
@@ -392,6 +395,9 @@ EnterMap:
 %endif
 %ifdef DEBUG_OPTIONS
     call RunOptionsTest                     ; open OPTION menu, dump FRAME.BIN, exits
+%endif
+%ifdef DEBUG_PLAYERSPC
+    call RunPlayersPCTest                   ; seed+open PlayerPC, dump parent-menu FRAME.BIN, exits
 %endif
 %ifdef DEBUG_WALKSPEED
     ; Live walk-speed instrumentation: boots normally into OverworldLoop so you can
