@@ -100,6 +100,12 @@ ELEMENTS = [
     el("ACTION_CUR_R", "cursor", 15, 14, 1, 1, min_w=1, min_h=1,
        source="core.asm CUR_COL_R/MENU_ROW", pret_ref="engine/battle/core.asm:DisplayBattleMenu",
        notes="ITEM/RUN column"),
+    el("SAFARI_TEXT", "text", 2, 14, 16, 3,
+       text_label="BALL      BAIT\nTHROW ROCK  RUN",
+       source="text_box.asm SAFARI_BATTLE_MENU_TEMPLATE (box = DIALOG_BOX)",
+       pret_ref="data/text_boxes.asm SAFARI_BATTLE_MENU_TEMPLATE 0,12,19,17 / text 2,14",
+       notes="double-spaced 2 lines inside DIALOG_BOX (safari replaces the "
+             "action menu with full-width labels)"),
     # ── move select (core.asm) ─────────────────────────────────────────────
     el("MOVE_BOX", "textbox", 4, 12, 16, 6, resizable=True,
        source="core.asm MOVEBOX_OFF/MOVEBOX_W/MOVEBOX_H",
@@ -186,6 +192,7 @@ def main() -> None:
         "LVLUP_BOX":   5 * FW + 19,     # LVLBOX_OFF
         "LVLUP_LBL":   6 * FW + 21,     # LVL_LBL_OFF
         "LVLUP_VAL":   7 * FW + 25,     # LVL_VAL_OFF
+        "SAFARI_TEXT": 17 * FW + 12,    # UI_SAFARI_BATTLE_MENU_TEMPLATE_TX/TY
     }
     bad = []
     for eid, want in legacy.items():

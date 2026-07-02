@@ -358,6 +358,27 @@
       "notes": "ITEM/RUN column"
     },
     {
+      "id": "SAFARI_TEXT",
+      "kind": "text",
+      "gb_x": 2,
+      "gb_y": 14,
+      "gb_w": 16,
+      "gb_h": 3,
+      "anchor_x": "custom",
+      "anchor_y": "custom",
+      "shift_x": 10,
+      "shift_y": 3,
+      "movable": true,
+      "resizable": false,
+      "min_w": 3,
+      "min_h": 3,
+      "text_label": "BALL      BAIT\nTHROW ROCK  RUN",
+      "source": "text_box.asm SAFARI_BATTLE_MENU_TEMPLATE (box = DIALOG_BOX)",
+      "pret_ref": "data/text_boxes.asm SAFARI_BATTLE_MENU_TEMPLATE 0,12,19,17 / text 2,14",
+      "anchor_source": "confirmed",
+      "notes": "double-spaced 2 lines inside DIALOG_BOX (safari replaces the action menu with full-width labels)"
+    },
+    {
       "id": "MOVE_BOX",
       "kind": "textbox",
       "gb_x": 4,

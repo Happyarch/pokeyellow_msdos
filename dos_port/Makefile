@@ -755,8 +755,9 @@ assets/field_moves.inc:
 src/engine/menus/field_moves.o: assets/field_moves.inc
 
 # DisplayTextBoxID_ tables embed the generated UI layout geometry (menus S2);
+# the BATTLE/SAFARI template rows come from the battle layout (battle-UI B5).
 # DisplayTextIDInit checks EVENT_GOT_POKEDEX via events.inc → event_constants.inc.
-src/engine/menus/text_box.o: assets/ui_layout_menus.inc
+src/engine/menus/text_box.o: assets/ui_layout_menus.inc assets/ui_layout_battle.inc
 src/engine/menus/display_text_id_init.o: assets/event_constants.inc
 
 # UI layout geometry — projected menu-window coordinates. The sidecar JSON is

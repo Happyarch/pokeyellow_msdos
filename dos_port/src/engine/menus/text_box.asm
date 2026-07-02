@@ -75,6 +75,11 @@ align 4
 ; UI_* equates + the generated (projected) TextBoxCoordTable. Tier-1 machine
 ; output — regenerate via `make assets`, never edit (docs/current_plan_menus.md).
 %include "assets/ui_layout_menus.inc"
+; Battle-owned geometry for the BATTLE/SAFARI menu template rows (equates
+; only — the battle layout single-sources the action-menu box; see
+; docs/current_plan_battle_ui.md B5).
+%define UI_LAYOUT_EQUATES_ONLY 1
+%include "assets/ui_layout_battle.inc"
 
 ; ---------------------------------------------------------------------------
 ; TextBoxFunctionTable — pret data/text_boxes.asm:TextBoxFunctionTable.
@@ -108,14 +113,17 @@ TextBoxTextAndCoordTable:
         UI_USE_TOSS_MENU_TEMPLATE_COL, UI_USE_TOSS_MENU_TEMPLATE_ROW, \
         UI_USE_TOSS_MENU_TEMPLATE_X2, UI_USE_TOSS_MENU_TEMPLATE_Y2, \
         UseTossText, UI_USE_TOSS_MENU_TEMPLATE_TX, UI_USE_TOSS_MENU_TEMPLATE_TY
+    ; PROJ battle: box = UI_ACTION_MENU_BOX, labels = UI_ACTION_TEXT
+    ; (battle-sidecar-owned; the menus sidecar no longer carries this row)
     text_box_text BATTLE_MENU_TEMPLATE, \
-        UI_BATTLE_MENU_TEMPLATE_COL, UI_BATTLE_MENU_TEMPLATE_ROW, \
-        UI_BATTLE_MENU_TEMPLATE_X2, UI_BATTLE_MENU_TEMPLATE_Y2, \
-        BattleMenuText, UI_BATTLE_MENU_TEMPLATE_TX, UI_BATTLE_MENU_TEMPLATE_TY
+        UI_ACTION_MENU_BOX_COL, UI_ACTION_MENU_BOX_ROW, \
+        UI_ACTION_MENU_BOX_X2, UI_ACTION_MENU_BOX_Y2, \
+        BattleMenuText, UI_ACTION_TEXT_COL, UI_ACTION_TEXT_ROW
+    ; PROJ battle: safari uses the full dialog box + UI_SAFARI_TEXT labels
     text_box_text SAFARI_BATTLE_MENU_TEMPLATE, \
-        UI_SAFARI_BATTLE_MENU_TEMPLATE_COL, UI_SAFARI_BATTLE_MENU_TEMPLATE_ROW, \
-        UI_SAFARI_BATTLE_MENU_TEMPLATE_X2, UI_SAFARI_BATTLE_MENU_TEMPLATE_Y2, \
-        SafariZoneBattleMenuText, UI_SAFARI_BATTLE_MENU_TEMPLATE_TX, UI_SAFARI_BATTLE_MENU_TEMPLATE_TY
+        UI_DIALOG_BOX_COL, UI_DIALOG_BOX_ROW, \
+        UI_DIALOG_BOX_X2, UI_DIALOG_BOX_Y2, \
+        SafariZoneBattleMenuText, UI_SAFARI_TEXT_COL, UI_SAFARI_TEXT_ROW
     text_box_text SWITCH_STATS_CANCEL_MENU_TEMPLATE, \
         UI_SWITCH_STATS_CANCEL_MENU_TEMPLATE_COL, UI_SWITCH_STATS_CANCEL_MENU_TEMPLATE_ROW, \
         UI_SWITCH_STATS_CANCEL_MENU_TEMPLATE_X2, UI_SWITCH_STATS_CANCEL_MENU_TEMPLATE_Y2, \

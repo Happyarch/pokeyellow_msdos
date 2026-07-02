@@ -169,7 +169,15 @@ ends: `make -C dos_port` + `make -C dos_port check` green → verification pass
   menu + one attack turn (or a scripted-input RunBattleTest extension if
   cheap); repo-wide `grep '\* FW +'` over battle sources → zero geometry hits.
 
-- [ ] **Session B5 — consolidate BATTLE_MENU_TEMPLATE.**
+- [x] **Session B5 — consolidate BATTLE_MENU_TEMPLATE.** DONE 2026-07-02.
+  Battle sidecar owns the geometry: text_box.asm's BATTLE row now composes
+  from UI_ACTION_MENU_BOX_* + UI_ACTION_TEXT_*, SAFARI row from
+  UI_DIALOG_BOX_* + new UI_SAFARI_TEXT (seeded GB(2,14), asserted vs the old
+  TX/TY). Menus sidecar dropped both template elements (22→20); battle
+  sidecar 29 elements / 30 assertions. Gates: DEBUG_TEXTBOXID=11 FRAME.BIN
+  byte-identical pre/post; DEBUG_BATTLE FRAME.BIN byte-identical; make +
+  make check green. (Repro note: `make clean` leaves debug_dump.o — rm it
+  when switching DEBUG_* flags.)
   Battle sidecar owns the action-menu box; menus sidecar drops
   BATTLE_MENU_TEMPLATE + SAFARI variant; `src/engine/menus/text_box.asm`
   composes those dispatch rows from `UI_ACTION_MENU_BOX_*` via
