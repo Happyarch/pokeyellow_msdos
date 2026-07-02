@@ -513,6 +513,26 @@ the environment, installs may proceed without prompting.
 
 ---
 
+## Commit Policy (multi-agent collision safety)
+
+**Only commit your own work — work authored in your current session.** Multiple
+agents/sessions frequently share this repo at once, so a blanket `git commit`
+sweeps up whatever else is staged and folds unrelated work into the wrong commit.
+
+- **Stage explicitly.** Never `git commit` relying on the index alone — always
+  `git add <the specific files you changed>` and commit those paths. Do not `git
+  add -A`/`git add .`/`git commit -a`.
+- **If the working tree or index contains changes you did not author this
+  session, ask the user before touching them.** Never commit, stash, restore, or
+  otherwise move another session's changes without explicit permission.
+- **Never rewrite a commit you did not create** (no `rebase`/`amend`/`reset` onto
+  another session's commit) — a concurrent session may be building on it. This is
+  a hard rule even when their commit accidentally captured your change; report it
+  and let the user decide.
+- When in doubt about authorship, `git status`/`git diff` first and ask.
+
+---
+
 ## Gen 2 Forward-Compatibility (a Gen 2 port is planned)
 
 Keep the Pokémon party/box data structures **byte-identical to Gen 1** — same
