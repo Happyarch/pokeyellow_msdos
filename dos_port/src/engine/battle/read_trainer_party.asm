@@ -64,10 +64,13 @@ extern TrainerDataPointers       ; flat dd pointer table, one ptr per class
 extern SpecialTrainerMoves       ; Yellow per-trainer move override table
 
 ; ---------------------------------------------------------------------------
-; Deferred predef extern — AddBCDPredef is the predef-system BCD adder.
-; TODO: port home/predef.asm + BCD add, or replace with inline BCD logic.
+; BCD money adder (engine/math/bcd.asm). pret's `predef AddBCDPredef` is a bank-
+; switch indirection around AddBCD; per the §2 item-4 allowlist (predef bank call
+; dropped → flat call) we preload ESI/EDX/CL and call AddBCD directly, exactly as
+; home/money.asm and move_effects/pay_day.asm do. AddBCD adds the source BCD number
+; at [ESI..] into the accumulator at [EDX..], walking low→high for CL bytes.
 ; ---------------------------------------------------------------------------
-extern AddBCDPredef_stub
+extern AddBCD                    ; ESI=hl src LSB, EDX=de dst LSB, CL=byte count
 
 ; ---------------------------------------------------------------------------
 ; Globals
@@ -234,17 +237,20 @@ ReadTrainer:
     mov [ebp + wAmountMoneyWon + 1], al
     mov [ebp + wAmountMoneyWon + 2], al
 
-    ; wAmountMoneyWon += wTrainerBaseMoney, repeated wCurEnemyLevel times
-    ; Pret uses `predef AddBCDPredef` which adds the 2-byte BCD at (HL) to
-    ; the 3-byte BCD accumulator.  Stubbed here pending home/predef.asm port.
-    movzx ecx, byte [ebp + wCurEnemyLevel]   ; loop count
-    test ecx, ecx
+    ; wAmountMoneyWon += wTrainerBaseMoney, repeated wCurEnemyLevel times.
+    ; pret read_trainer_party.asm .LastLoop: hl=wTrainerBaseMoney+1, c=2,
+    ; predef AddBCDPredef, looped wCurEnemyLevel (b) times. AddBCD clobbers CL/CH,
+    ; so preserve the loop count across the call (pret push bc / pop bc).
+    movzx ecx, byte [ebp + wCurEnemyLevel]   ; loop count (enemy level)
+    test cl, cl
     jz .FinishUp_done
 .lastLoop:
-    ; TODO-MATH: call AddBCDPredef (pret: adds wTrainerBaseMoney[0..1] BCD to
-    ;   wAmountMoneyWon[0..2]).  Stub is a no-op; prize money remains 0 until
-    ;   the predef system is ported (home/predef.asm).
-    call AddBCDPredef_stub
+    push ecx
+    mov esi, wTrainerBaseMoney + 1           ; hl: source LSB (2-byte BCD base money)
+    mov edx, wAmountMoneyWon + 2             ; de: dest LSB (3-byte BCD accumulator)
+    mov cl, 2                                ; c: 2 source bytes into the 3-byte total
+    call AddBCD
+    pop ecx
     dec ecx
     jnz .lastLoop
 .FinishUp_done:

@@ -4530,3 +4530,60 @@ Verify-only (no code change; confirmed correct end-to-end):
   byte-identical redundant. B's genuine pacing work (HP-bar drain in battle_hud.asm /
   UpdateCurMonHPBar in move_effect_helpers.asm / the ApplyAttackTo* drain tails in core.asm)
   is unaffected. The <PROMPT> beats B intended are delivered by A's identical routines.
+
+---
+
+## Battle swarm — SUBSYSTEM C (faint/switch lifecycle, multi-mon, AI wiring, obedience)
+- **Date:** 2026-07-01
+- **Branch:** battle-swarm-C. Opus master + Sonnet worker/auditor swarm.
+- **Build:** green at BUG_FIX_LEVEL 0 and 2 (`make SKIP_TITLE=1 DEBUG_BATTLE_LIVE=1`) + `make check`.
+
+### CheckForDisobedience — Yellow traded-mon obedience
+- Source: pret `engine/battle/core.asm:4001-4178`. Translated: `dos_port/src/engine/battle/core.asm`.
+- H-flag: not involved. Bug tags: none (faithful).
+- Divergences: none (faithful). Text via PrintBattleText (EAX ptr); HandleSelfConfusionDamage
+  is core.asm-local.
+- Notes: full badge/level ladder + RNG-consumption order preserved. **Audit-caught CRITICAL,
+  fixed:** the `.monDoesNothing` flavor-text selector loaded `mov eax,<TextLabel>` (clobbering
+  AL, which held the BattleRandom roll) before testing it — on SM83 `ld hl,imm16` leaves A
+  intact. Fixed by parking the roll in DL and testing DL. Local equs (wObtainedBadges=0xD355,
+  wPartyMon1OTID, badge bits) kept file-local (badge_boosts.asm also defines wObtainedBadges).
+
+### HandleEnemyMonFainted / HandlePlayerMonFainted — faint/switch state machines
+- Source: pret `engine/battle/core.asm:708-739` / `981-1012`. Translated: `core.asm`.
+- Divergences: ANIMATION=OFF/audio/palette leaves stubbed (§2). Player switch-in uses an
+  auto-pick-first-live-mon stand-in for the deferred interactive BattlePartyMenu.
+- Notes: AnyPartyAlive returns alive-flag in DH; double-KO player-switch sub-branch (pret
+  725-731) ported faithfully (audit finding 2). No double EXP/print — FaintEnemyPokemon owns both.
+
+### FaintEnemyPokemon (+ EXP-ALL) — enemy-faint state
+- Source: pret `engine/battle/core.asm:741-867`. Translated: `dos_port/src/engine/battle/faint_enemy.asm`.
+- Bug tags: BUG(critical) — Gen-1 half-zeroed wPlayerBideAccumulatedDamage (high byte only)
+  preserved at level 0, both bytes zeroed at BUG_FIX_LEVEL>=1.
+- Divergences: SlideDownFaintedMonPic (ANIMATION=OFF), faint SFX/victory music (audio HAL, §2).
+- Notes: trainer party-slot HP zero via AddNTimes; full EXP-ALL dispatch (halve base stats,
+  award to fought mons, re-award whole party). Auditor verified offset-7 untouched.
+
+### LoadBattleMonFromParty / AnyEnemyPokemonAliveCheck — `faint_leaves.asm`
+### LoadEnemyMonFromParty — `load_enemy_from_party.asm`
+- Source: pret `core.asm:1667-1708 / 883-900 / 1711-1762`. Divergences: none (faithful).
+- Notes: chunked CopyData with the `add hl, MON_DVS - MON_OTID` skip preserved verbatim —
+  the party struct's offset-7 (MON_CATCH_RATE / Gen-2 held item) is read-only source, never
+  written back (auditor-verified against pret struct layout).
+
+### EnemySendOut / ReplaceFaintedEnemyMon / TrainerBattleVictory — `faint_sendout.asm`
+- Source: pret `core.asm:1315-1482 / 901-927 / 929-963`.
+- Divergences: §2 — battle-"shift" switch prompt treated as SET (no prompt, no SwitchPlayerMon);
+  SlideTrainerPicOffScreen / AnimateSendingOutMon / PlayCry / DrawEnemyPokeballs (ANIMATION=OFF);
+  RunPaletteCommand (palette HAL); victory music (audio); TrainerDefeatedText not yet generated.
+  Prize money via flat AddBCD (predef bank call dropped, §2 item 4).
+- Notes: next-live-enemy-mon scan faithful; control flow correct once ReadTrainer seeds full
+  enemy party structs (DEBUG_BATTLE_TRAINER harness seeds only HP).
+
+### SelectEnemyMove → AIEnemyTrainerChooseMoves wiring; TrainerAI/ReadTrainer linked
+- Source: pret `core.asm:3138-3141`. Translated: `select_enemy_move.asm`; Makefile.
+- Divergences: none (faithful). Notes: trainer_ai.asm + read_trainer_party.asm moved from
+  check-only into the live EXE (their closures resolve); the core_stubs.asm TrainerAI stub
+  removed (superseded by the real class-based AI). AddBCDPredef_stub → real AddBCD (prize money).
+  copy2.asm/item_predicates.asm/get_bag_item_quantity.asm promoted to LINK_SRCS (faint_enemy
+  consumers landed). ESI carries the AI's move-candidate buffer into the random pick (audit-confirmed).

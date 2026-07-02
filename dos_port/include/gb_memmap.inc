@@ -366,9 +366,13 @@ wBattleType            equ 0xD059
 wDamageMultipliers     equ 0xD05A   ; bit 7 = STAB, low bits = type-eff numerator
 wCriticalHitOrOHKO     equ 0xD05D
 wMoveMissed            equ 0xD05E
+wPlayerStatsToDouble   equ 0xD05F   ; pret wBattleStatusData: always 0; cleared on send-out
+wPlayerStatsToHalve    equ 0xD060   ; always 0
 wPlayerBattleStatus1   equ 0xD061
 wPlayerBattleStatus2   equ 0xD062
 wPlayerBattleStatus3   equ 0xD063
+wEnemyStatsToDouble    equ 0xD064   ; pret: always 0; cleared on faint / send-out
+wEnemyStatsToHalve     equ 0xD065   ; always 0
 wEnemyBattleStatus1    equ 0xD066
 wEnemyBattleStatus2    equ 0xD067
 wEnemyBattleStatus3    equ 0xD068

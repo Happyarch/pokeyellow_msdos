@@ -123,6 +123,7 @@ extern BattlePartyMenu                 ; PKMN → party/switch (deferred; re-sho
 
 ; --- move-execution backend (already-faithful, in other files) ---
 extern GetCurrentMove                  ; get_current_move.asm
+extern AddNTimes                       ; home/array.asm — ESI += BX * AL (party index)
 extern CriticalHitTest                 ; core_damage.asm
 extern GetDamageVarsForPlayerAttack    ; core_damage.asm
 extern GetDamageVarsForEnemyAttack     ; core_damage.asm
@@ -143,6 +144,17 @@ extern SpecialEffects
 extern FindMoveName                    ; battle_menu.asm — move id → flat name ptr
 extern GainExperience                  ; experience.asm — EXP award + level-up display
 extern TryRunningFromBattle            ; battle_menu.asm — flee odds (CF = escaped)
+; --- faint / switch lifecycle (battle-swarm-C) ---
+extern FaintEnemyPokemon               ; faint_enemy.asm — enemy-faint state + EXP(-ALL)
+extern RemoveFaintedPlayerMon          ; faint_switch.asm — player-faint state
+extern AnyPartyAlive                   ; wild_encounter_check.asm — DH=0 if no party alive
+extern AnyEnemyPokemonAliveCheck       ; faint_leaves.asm — ZF=1 if all enemy mons fainted
+extern HandlePlayerBlackOut            ; faint_switch.asm — no usable mons → CF=1
+extern DoUseNextMonDialogue            ; faint_switch.asm — "use next mon?" (CF=ran)
+extern ChooseNextMon                   ; faint_switch.asm — forced switch-in (ZF=enemy HP0)
+extern ReplaceFaintedEnemyMon          ; faint_sendout.asm — trainer sends next mon
+extern TrainerBattleVictory            ; faint_sendout.asm — prize money + victory text
+extern EnemyRan                        ; faint_switch.asm — enemy fled (link) tail
 
 ; ---------------------------------------------------------------------------
 ; MainInBattleLoop — pret engine/battle/core.asm:MainInBattleLoop (line 289).
@@ -645,7 +657,7 @@ ExecutePlayerMove:
     call GetCurrentMove
     test byte [ebp + wPlayerBattleStatus1], 1 << CHARGING_UP
     jnz PlayerCanExecuteChargingMove
-    call CheckForDisobedience           ; (stub: obeys → ZF=0)
+    call CheckForDisobedience           ; ZF=0 uses move / ZF=1 disobeyed (turn spent)
     jz  ExecutePlayerMoveDone           ; jp z — disobeyed
 CheckIfPlayerNeedsToChargeUp:           ; pret 3273
     mov al, [ebp + wPlayerMoveEffect]
@@ -1378,17 +1390,206 @@ CopyToStringBuffer:
     ret
 
 ; ---------------------------------------------------------------------------
-; CheckForDisobedience — pret core.asm (Yellow obedience for traded mons).
-; TODO(faithful): translate the real badge/level obedience math.
-; Stubbed to "obeys": returns ZF=0 (mon obeys, proceed with the move). The
-; caller (ExecutePlayerMove) does `jz ExecutePlayerMoveDone`, and reaches this
-; call with ZF=1 left over from the preceding CHARGING_UP `test`, so the stub
-; MUST clear ZF or every non-charging move silently no-ops the turn. Mirrors the
-; flag-contract idiom of the sibling stubs in core_stubs.asm.
+; CheckForDisobedience — faithful port of pret engine/battle/core.asm:4001-4178
+; (Yellow traded-mon obedience). Traded mons (OTID != player ID) may disobey when
+; the player lacks the badge for their level: the level ceiling steps 10→30→50→70→
+; 101 with Cascade/Rainbow/Marsh/Earth badges. On disobedience the mon naps, loafs,
+; hurts itself in confusion, or uses a random other move. Returns ZF=0 = "uses a
+; move" (caller `jz ExecutePlayerMoveDone`); ZF=1 = turn is spent disobeying. Sets
+; wMonIsDisobedient. RNG-consumption order preserved exactly (behaviorally load-bearing).
 ; ---------------------------------------------------------------------------
+; Symbols pret has but the port's includes don't yet carry (traded-mon obedience).
+; Verified vs pret ram/wram.asm + constants/ram_constants.asm (badge_boosts.asm also
+; defines wObtainedBadges=0xD355 locally, so keep these file-local to avoid an include
+; double-definition). MON_OTID (0x0C) and wPartyMon1 (0xD16A) come from the includes.
+%ifndef wObtainedBadges
+wObtainedBadges     equ 0xD355
+%endif
+wPartyMon1OTID      equ (wPartyMon1 + MON_OTID)
+BIT_CASCADEBADGE    equ 1
+BIT_RAINBOWBADGE    equ 3
+BIT_MARSHBADGE      equ 5
+BIT_EARTHBADGE      equ 7
+
 CheckForDisobedience:
+    xor al, al
+    mov [ebp + wMonIsDisobedient], al
+    mov al, [ebp + wLinkState]
+    cmp al, LINK_STATE_BATTLING
+    jnz .checkIfMonIsTraded
     mov al, 1
-    and al, al          ; ZF=0 → "obeys", proceed
+    and al, al                          ; clear Z (always obeys in a link battle)
+    ret
+; compare the mon's original trainer ID with the player's ID to see if it was traded
+.checkIfMonIsTraded:
+    mov esi, wPartyMon1OTID
+    mov bx, PARTYMON_STRUCT_LENGTH
+    mov al, [ebp + wPlayerMonNumber]
+    call AddNTimes                      ; esi -> active mon's OTID
+    mov al, [ebp + wPlayerID]
+    cmp al, [ebp + esi]
+    jnz .monIsTraded
+    inc esi
+    mov al, [ebp + wPlayerID + 1]
+    cmp al, [ebp + esi]
+    jz .canUseMove                      ; OTID == player ID → not traded → obeys
+.monIsTraded:
+; what level might disobey?
+    mov esi, wObtainedBadges
+    test byte [ebp + esi], (1 << BIT_EARTHBADGE)
+    mov al, 101
+    jnz .next
+    test byte [ebp + esi], (1 << BIT_MARSHBADGE)
+    mov al, 70
+    jnz .next
+    test byte [ebp + esi], (1 << BIT_RAINBOWBADGE)
+    mov al, 50
+    jnz .next
+    test byte [ebp + esi], (1 << BIT_CASCADEBADGE)
+    mov al, 30
+    jnz .next
+    mov al, 10
+.next:
+    mov bl, al
+    mov cl, al
+    mov al, [ebp + wBattleMonLevel]
+    mov dl, al
+    add al, bl
+    mov bl, al
+    jnc .noCarry
+    mov bl, 0xFF                        ; cap b at $ff
+.noCarry:
+    mov al, cl
+    cmp al, dl
+    jnc .canUseMove
+.loop1:
+    call BattleRandom
+    rol al, 4                           ; swap a
+    cmp al, bl
+    jnc .loop1
+    cmp al, cl
+    jc .canUseMove
+.loop2:
+    call BattleRandom
+    cmp al, bl
+    jnc .loop2
+    cmp al, cl
+    jc .useRandomMove
+    mov al, dl
+    sub al, cl
+    mov bl, al
+    call BattleRandom
+    rol al, 4                           ; swap a
+    sub al, bl
+    jc .monNaps
+    cmp al, bl
+    jnc .monDoesNothing
+    mov eax, WontObeyText
+    call PrintBattleText
+    call HandleSelfConfusionDamage
+    jmp .cannotUseMove
+.monNaps:
+    call BattleRandom
+    add al, al
+    rol al, 4                           ; swap a
+    and al, SLP_MASK
+    jz .monNaps                         ; keep trying until at least 1 turn of sleep
+    mov [ebp + wBattleMonStatus], al
+    mov eax, BeganToNapText
+    jmp .printText
+.monDoesNothing:
+    call BattleRandom
+    and al, 3
+    ; pret keeps the roll in A while loading each text ptr into HL (`ld hl,imm16`
+    ; doesn't touch A). On x86 `mov eax,<label>` WOULD clobber the roll, so park it
+    ; in DL and test DL — the text selection stays RNG-driven (pret core.asm:4088-4101).
+    mov dl, al
+    mov eax, LoafingAroundText
+    test dl, dl
+    jz .printText
+    mov eax, WontObeyText
+    dec dl
+    jz .printText
+    mov eax, TurnedAwayText
+    dec dl
+    jz .printText
+    mov eax, IgnoredOrdersText
+.printText:
+    call PrintBattleText
+    jmp .cannotUseMove
+.useRandomMove:
+    mov al, [ebp + wBattleMonMoves + 1]
+    and al, al                          ; second move slot empty?
+    jz .monDoesNothing                  ; only one move → won't use a move
+    mov al, [ebp + wPlayerDisabledMoveNumber]
+    and al, al
+    jnz .monDoesNothing
+    mov al, [ebp + wPlayerSelectedMove]
+    cmp al, STRUGGLE
+    jz .monDoesNothing                  ; struggling → won't use a move
+; check if only one move has remaining PP
+    mov esi, wBattleMonPP
+    push esi
+    mov al, [ebp + esi]
+    inc esi
+    and al, PP_MASK
+    mov bl, al
+    mov al, [ebp + esi]
+    inc esi
+    and al, PP_MASK
+    add al, bl
+    mov bl, al
+    mov al, [ebp + esi]
+    inc esi
+    and al, PP_MASK
+    add al, bl
+    mov bl, al
+    mov al, [ebp + esi]
+    and al, PP_MASK
+    add al, bl
+    pop esi
+    push eax
+    movzx eax, byte [ebp + wCurrentMenuItem]
+    mov ecx, eax
+    add esi, ecx
+    mov al, [ebp + esi]
+    and al, PP_MASK
+    mov bl, al
+    pop eax
+    cmp al, bl
+    jz .monDoesNothing                  ; only the selected move has PP → won't use a move
+    mov al, 1
+    mov [ebp + wMonIsDisobedient], al
+    mov al, [ebp + wMaxMenuItem]
+    mov bl, al
+    mov al, [ebp + wCurrentMenuItem]
+    mov cl, al
+.chooseMove:
+    call BattleRandom
+    and al, 3
+    cmp al, bl
+    jnc .chooseMove                     ; random# > move count → re-roll
+    cmp al, cl
+    jz .chooseMove                      ; matches player's selection → re-roll
+    mov [ebp + wCurrentMenuItem], al
+    mov esi, wBattleMonPP
+    movzx edx, al
+    add esi, edx
+    mov al, [ebp + esi]
+    and al, al                          ; chosen move has PP?
+    jz .chooseMove                      ; no PP → re-roll
+    movzx ecx, byte [ebp + wCurrentMenuItem]
+    mov esi, wBattleMonMoves
+    add esi, ecx
+    mov al, [ebp + esi]
+    mov [ebp + wPlayerSelectedMove], al
+    call GetCurrentMove
+.canUseMove:
+    mov al, 1
+    and al, al                          ; clear Z flag → obeys / uses a move
+    ret
+.cannotUseMove:
+    xor al, al                          ; set Z flag → does not use its chosen move
     ret
 
 ; ---------------------------------------------------------------------------
@@ -1991,35 +2192,79 @@ CheckEnemyStatusConditions:
     ret
 
 ; ---------------------------------------------------------------------------
-; HandleEnemyMonFainted — pret core.asm:HandleEnemyMonFainted (708). Faithful CORE:
-; announce "Enemy <nick> fainted!" and award EXP (with the level-up display), then
-; return to MainInBattleLoop's caller (battle ends — wild victory). Returns to the
-; battle's outer caller (reached via `jp` from MainInBattleLoop).
-;
-; TODO(faithful): SlideDownFaintedMonPic + faint SFX (FaintEnemyPokemon), AnyPartyAlive
-; → HandlePlayerBlackOut, RemoveFaintedPlayerMon (double-faint), trainer multi-mon
-; (ReplaceFaintedEnemyMon / ChooseNextMon / DoUseNextMonDialogue), prize money,
-; TrainerBattleVictory, EnemyRan.
+; HandleEnemyMonFainted — faithful port of pret core.asm:708-739. FaintEnemyPokemon
+; (announce + EXP/EXP-ALL + party-slot zero) → AnyPartyAlive→blackout guard → wild:
+; battle ends (ret) → trainer: AnyEnemyPokemonAliveCheck → TrainerBattleVictory (all
+; down) or send out the next enemy mon and loop MainInBattleLoop.
 ; ---------------------------------------------------------------------------
 HandleEnemyMonFainted:
     mov byte [ebp + wInHandlePlayerMonFainted], 0
-    mov eax, EnemyMonFaintedText
-    call PrintBattleText                ; "Enemy <nick> fainted!" (prompt → ▼ + wait)
-    call GainExperience                 ; EXP + level-up display (experience.asm, wired)
-    mov byte [ebp + wBattleResult], 0   ; 0 = player won
+    call FaintEnemyPokemon              ; "Enemy <nick> fainted!" + EXP(-ALL) + slot zero
+    call AnyPartyAlive
+    test dh, dh
+    jz  HandlePlayerBlackOut            ; no live player mon → blackout
+    mov al, [ebp + wBattleMonHP]
+    or  al, [ebp + wBattleMonHP + 1]
+    jz  .skipDrawPlayerHUD
+    call DrawPlayerHUDAndHPBar          ; pret: call nz (battle mon still alive)
+.skipDrawPlayerHUD:
+    mov al, [ebp + wIsInBattle]
+    dec al
+    jz  .ret                            ; wild encounter → battle over
+    call AnyEnemyPokemonAliveCheck
+    jz  TrainerBattleVictory            ; all enemy mons fainted → win (prize money)
+    ; pret 725-731: if the player's battle mon ALSO fainted (double KO, e.g. recoil),
+    ; switch in a new player mon before replacing the enemy mon. (pret flags this call
+    ; "useless in a trainer battle" but ports it — kept faithful, not dropped.)
+    mov al, [ebp + wBattleMonHP]
+    or  al, [ebp + wBattleMonHP + 1]
+    jnz .skipReplacingBattleMon
+    call DoUseNextMonDialogue
+    jc  .ret                            ; player ran
+    call ChooseNextMon
+.skipReplacingBattleMon:
+    mov byte [ebp + wActionResultOrTookBattleTurn], 1
+    call ReplaceFaintedEnemyMon
+    jz  EnemyRan                        ; link-only: enemy chose to run
+    mov byte [ebp + wActionResultOrTookBattleTurn], 0
+    jmp MainInBattleLoop
+.ret:
     ret
 
 ; ---------------------------------------------------------------------------
-; HandlePlayerMonFainted — pret core.asm:HandlePlayerMonFainted (981). Faithful CORE:
-; announce "<nick> fainted!" and end the battle as a loss.
-; TODO(faithful): RemoveFaintedPlayerMon, AnyPartyAlive→blackout, the switch-in
-; (DoUseNextMonDialogue / ChooseNextMon) for a multi-mon party.
+; HandlePlayerMonFainted — faithful port of pret core.asm:981-1012. Remove the
+; fainted mon → AnyPartyAlive→blackout → if the enemy is also KO'd, faint it (wild:
+; end; trainer: victory or continue) → else DoUseNextMonDialogue + ChooseNextMon
+; (forced switch-in) → loop MainInBattleLoop.
 ; ---------------------------------------------------------------------------
 HandlePlayerMonFainted:
     mov byte [ebp + wInHandlePlayerMonFainted], 1
-    mov eax, PlayerMonFaintedText
-    call PrintBattleText                ; "<nick> fainted!" (prompt → ▼ + wait)
-    mov byte [ebp + wBattleResult], 1   ; 1 = player lost (multi-mon switch deferred)
+    call RemoveFaintedPlayerMon         ; clear exp flag, "<nick> fainted!", state
+    call AnyPartyAlive
+    test dh, dh
+    jz  HandlePlayerBlackOut            ; no live mon → blackout
+    mov al, [ebp + wEnemyMonHP]
+    or  al, [ebp + wEnemyMonHP + 1]
+    jnz .doUseNextMonDialogue           ; enemy still alive → just switch our mon
+    ; both mons fainted (e.g. recoil KO): resolve the enemy faint first
+    call FaintEnemyPokemon
+    mov al, [ebp + wIsInBattle]
+    dec al
+    jz  .ret                            ; wild → battle over
+    call AnyEnemyPokemonAliveCheck
+    jz  TrainerBattleVictory
+.doUseNextMonDialogue:
+    call DoUseNextMonDialogue
+    jc  .ret                            ; player ran (wild "use next mon?" → No → ran)
+    call ChooseNextMon                  ; forced switch-in; ZF=1 if enemy HP 0
+    jnz MainInBattleLoop                ; enemy still alive → resume the battle
+    ; enemy also has 0 HP → send out the next enemy mon (trainer) / end
+    mov byte [ebp + wActionResultOrTookBattleTurn], 1
+    call ReplaceFaintedEnemyMon
+    jz  EnemyRan
+    mov byte [ebp + wActionResultOrTookBattleTurn], 0
+    jmp MainInBattleLoop
+.ret:
     ret
 
 ; ---------------------------------------------------------------------------

@@ -205,9 +205,13 @@ BATTLE_SRCS := \
     src/engine/battle/move_category.asm \
     src/data/wild_data.asm \
     src/engine/overworld/wild_mons.asm \
-    src/engine/battle/wild_encounters.asm \
-    src/engine/battle/trainer_ai.asm \
-    src/engine/battle/read_trainer_party.asm
+    src/engine/battle/wild_encounters.asm
+# trainer_ai.asm + read_trainer_party.asm MOVED to FRONTEND_SRCS (battle-swarm-C): the
+# class-based enemy-move AI (AIEnemyTrainerChooseMoves) and trainer-party loader now link
+# live — their closures resolve (AIGetTypeEffectiveness/Moves/Divide/IsInArray/Random +
+# TrainerDataPointers/SpecialTrainerMoves/AddPartyMon/AddBCDPredef). wild_encounters.asm
+# stays check-only (its TryDoWildEncounter still needs unresolved overworld externs, and
+# the live overworld already triggers encounters via wild_encounter_check.asm).
 # experience.asm (GainExperience) is now LINKED (FRONTEND_SRCS, Stage 3 victory→EXP):
 # its validated EXP/stat/level math runs live; the deferred UI/display externs
 # (PrintStatsBox, the CallBattleCore targets, the per-mon text) are satisfied by
@@ -370,8 +374,6 @@ FRONTEND_SRCS := \
     src/engine/battle/print_move_failure.asm \
     src/engine/battle/ghost.asm \
     src/engine/battle/exploding_animation.asm \
-    src/home/item_predicates.asm \
-    src/engine/items/get_bag_item_quantity.asm \
     src/engine/battle/residual_damage.asm \
     src/engine/battle/building_rage.asm \
     src/engine/battle/effects.asm \
@@ -430,9 +432,26 @@ FRONTEND_SRCS := \
     src/engine/battle/experience.asm \
     src/engine/battle/battle_exp_stubs.asm \
     src/engine/battle/trainer_battle.asm \
+    src/engine/battle/trainer_ai.asm \
+    src/engine/battle/read_trainer_party.asm \
+    src/engine/battle/faint_leaves.asm \
+    src/engine/battle/faint_switch.asm \
+    src/engine/battle/faint_enemy.asm \
+    src/engine/battle/load_enemy_from_party.asm \
+    src/engine/battle/faint_sendout.asm \
     src/engine/flag_action.asm
 
-LINK_SRCS := $(BOOT_SRCS) $(HOME_SRCS) $(HAL_SRCS) $(GAME_SRCS) $(POKEMON_SRCS) $(ITEMS_SRCS) $(FRONTEND_SRCS)
+# Home/item helpers promoted to the live build now that battle faint/EXP-ALL
+# consumers (faint_enemy.asm: ClearScreenArea, IsItemInBag→GetQuantityOfItemInBag)
+# reference them. Closures resolve: copy2→DelayFrame/g_tilecache_dirty;
+# item_predicates→FlagAction/IsInArray/KeyItemFlags/GetQuantityOfItemInBag;
+# get_bag_item_quantity→GetPredefRegisters. Removed from HOME_CHECK_SRCS below.
+BATTLE_SUPPORT_SRCS := \
+    src/home/copy2.asm \
+    src/home/item_predicates.asm \
+    src/engine/items/get_bag_item_quantity.asm
+
+LINK_SRCS := $(BOOT_SRCS) $(HOME_SRCS) $(HAL_SRCS) $(GAME_SRCS) $(POKEMON_SRCS) $(ITEMS_SRCS) $(FRONTEND_SRCS) $(BATTLE_SUPPORT_SRCS)
 LINK_OBJS := $(LINK_SRCS:.asm=.o)
 
 # Pokémon backend that assembles + is native-harness-validated but is NOT linked
@@ -473,7 +492,6 @@ HOME_CHECK_SRCS := \
     src/home/oam.asm \
     src/home/reset_player_sprite.asm \
     src/home/reload_tiles.asm \
-    src/home/copy2.asm \
     src/home/vcopy.asm \
     src/engine/overworld/pikachu.asm \
     src/engine/overworld/reload_sprites.asm \
