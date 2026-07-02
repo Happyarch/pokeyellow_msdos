@@ -55,9 +55,9 @@ entry + commit (root only).
   reproduced exactly (bag wx=199, START wx=247, dialog 87/152, …); nasm
   round-trip harness assembles every equate; editor smoke-tested headless
   (drag/snap/clamp/resize/save). JP_* templates omitted (DEVIATION: JP-only).
-  **→ HUMAN STEP: run `python3 tools/ui_layout/editor.py
-  assets/ui_layout_menus_sidecar.json` (from dos_port/), position/resize
-  everything, confirm anchors (X/Y keys), Ctrl+S, then `make assets`.**
+  **Human step DONE (2026-07-01): user reviewed the layout in the editor and
+  kept the seeded defaults as-is.** Editor gained hide/solo visibility
+  controls + foolproof save (plain S, refusal-not-crash) as follow-ups.
 - [ ] **Session 2 — `DisplayTextBoxID_` + `DisplayTextIDInit`.** Rewrite
   `src/engine/menus/text_box.asm` (dispatcher + 3 tables from `UI_*` equates;
   DisplayMoneyBox, DoBuySellQuitMenu, DisplayTwoOptionMenu reconciled with
@@ -113,9 +113,9 @@ entry + commit (root only).
 
 ## Layout freeze
 
-- frozen_at: **NOT YET FROZEN** — set the commit hash in the sidecar's
-  `frozen_at` field (via editor save + manual regen) after the human
-  positioning step; root-only edits after that, only between swarm waves.
+- frozen_at: **1252ef41** (seeded defaults kept verbatim; marker recorded in
+  the sidecar's `frozen_at` field). Root-only edits from here, only between
+  swarm waves. Session 2 is unblocked.
 
 ## Package status ledger (fill during waves)
 
