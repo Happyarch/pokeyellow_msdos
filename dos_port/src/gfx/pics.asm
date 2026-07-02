@@ -21,6 +21,8 @@
 ;
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
+%define UI_LAYOUT_EQUATES_ONLY 1
+%include "assets/ui_layout_battle.inc"
 
 bits 32
 
@@ -484,7 +486,8 @@ DrawBugCatcherPic_Stub:
 ; restores to normal at the final position. The caller draws the box/HUD/pokéballs
 ; after. In: pics decoded to VRAM; EBP = GB base.
 ; ---------------------------------------------------------------------------
-%define SLIDE_STEPS     18
+; PROJ battle: step count derived from the layout pic columns (generated)
+%define SLIDE_STEPS     UI_BATTLE_SLIDE_STEPS
 %define BGP_SILHOUETTE  0xFC            ; color 0→0 (light), 1/2/3→3 (dark)
 %define BGP_NORMAL      0xE4
 
@@ -511,14 +514,15 @@ SlideBattlePicsIn:
     mov al, T_SP
     mov ecx, SCREEN_TILES_W * SCREEN_TILES_H
     rep stosb
-    mov edx, [slide_step]                   ; enemy front: col (22 + step), row 3, base $00
-    add edx, 22
-    mov ebx, 3
+    ; PROJ battle: final pic positions = UI_ENEMY_PIC / UI_PLAYER_PIC
+    mov edx, [slide_step]                   ; enemy front: col (final + step), base $00
+    add edx, UI_ENEMY_PIC_COL
+    mov ebx, UI_ENEMY_PIC_ROW
     xor esi, esi
     call PlacePicSlide
-    mov edx, 11                             ; player back: col (11 - step), row 8, base $31
+    mov edx, UI_PLAYER_PIC_COL              ; player back: col (final - step), base $31
     sub edx, [slide_step]
-    mov ebx, 8
+    mov ebx, UI_PLAYER_PIC_ROW
     mov esi, 0x31
     call PlacePicSlide
     call DelayFrame

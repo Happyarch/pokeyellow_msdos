@@ -24,6 +24,8 @@
 %include "gb_macros.inc"
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
+%define UI_LAYOUT_EQUATES_ONLY 1
+%include "assets/ui_layout_battle.inc"
 
 bits 32
 
@@ -50,19 +52,21 @@ bits 32
 %define CHAR_SLSH 0xF3             ; /
 %define T_SP      0x7F             ; blank/space
 
-; centered default layout: GB coords + (10 col, 3 row). Enemy upper-left, player
-; lower-right; the bottom dialog box (init_battle.asm) sits at rows 15-20.
-%define E_NAME    (3 * FW + 11)
-%define E_LV      (4 * FW + 14)    ; ":L" + 2 digits — pret hlcoord 4,1 → col 4+10=14
-%define E_HPBAR   (5 * FW + 12)    ; "HP" + ":" + 6 seg + cap (9 tiles)
-; Player HUD shifted up one row (to pret's +3 centering, matching the enemy) so the
-; HUD frame "shelf" gets its own row (14) instead of colliding with the HP fraction.
-%define P_NAME    (10 * FW + 20)
-%define P_LV      (11 * FW + 24)
-%define P_HPBAR   (12 * FW + 20)
-%define P_HPFRAC  (13 * FW + 21)   ; "cur/max" (3 + 1 + 3 tiles)
-; PROJ battle-ui: enemy HUD GB(1,0)/(4,1)/(2,2) --(+10col,+3row)--> canvas name(11,3) lv(14,4) hpbar(12,5)
-; PROJ battle-ui: player HUD GB(10,7)/.. --(+10col,+3row)--> canvas name(20,10) lv(24,11) hpbar(20,12) frac(21,13); HUD shelf (PlacePlayerHUDTiles) row 14
+; Layout geometry is the generated battle UI layout (Tier 1,
+; assets/ui_layout_battle.inc ← ui_layout_battle_sidecar.json; edit with
+; tools/ui_layout/battle.py — never hand-edit offsets here). Enemy upper-left,
+; player lower-right; the bottom dialog box (init_battle.asm) is UI_DIALOG_BOX_*.
+; The player HUD sits one row above pret's so the frame "shelf" gets its own
+; row instead of colliding with the HP fraction (seeded into the sidecar).
+; PROJ battle: enemy HUD = UI_ENEMY_{NAME,LV,HPBAR}_OFS
+; PROJ battle: player HUD = UI_PLAYER_{NAME,LV,HPBAR,HPFRAC}_OFS
+%define E_NAME    UI_ENEMY_NAME_OFS
+%define E_LV      UI_ENEMY_LV_OFS      ; ":L" + 2 digits
+%define E_HPBAR   UI_ENEMY_HPBAR_OFS   ; "HP" + ":" + 6 seg + cap (9 tiles)
+%define P_NAME    UI_PLAYER_NAME_OFS
+%define P_LV      UI_PLAYER_LV_OFS
+%define P_HPBAR   UI_PLAYER_HPBAR_OFS
+%define P_HPFRAC  UI_PLAYER_HPFRAC_OFS ; "cur/max" (3 + 1 + 3 tiles)
 
 section .bss
 ; AnimateHPBar loop state (kept in BSS so draw_hp_bar / print_num3 / DelayFrame
@@ -169,16 +173,19 @@ DrawEnemyHUDAndHPBar:
 ; shelf under the intro pokéball row. EBP = GB base. Clobbers EAX/EBX/ECX/ESI/EDI.
 ; ---------------------------------------------------------------------------
 DrawEnemyHUDFrame:
-    mov edi, W_TILEMAP + (5 * FW + 11)    ; $73 at canvas (11,5) = GB(1,2)+(10,3)
+    ; PROJ battle: $73 connector = UI_ENEMY_HUD_FRAME_OFS (element top-left)
+    mov edi, W_TILEMAP + UI_ENEMY_HUD_FRAME_OFS
     mov esi, 1                            ; underline marches right
     mov bh, T_ECORNER
     mov bl, T_ETRI
     jmp place_hud_frame
+; PROJ battle: the player connectors stack in the element's top-RIGHT column
+%define P_FRAME_CONN (UI_PLAYER_HUD_FRAME_OFS + UI_PLAYER_HUD_FRAME_GBW - 1)
 DrawPlayerHUDFrame:
-    ; pret DrawPlayerHUDAndHPBar writes a 2nd $73 connector at hlcoord 18,9 →
-    ; canvas (28,12), above the PlacePlayerHUDTiles $73 at (28,13).
-    mov byte [ebp + W_TILEMAP + (12 * FW + 28)], T_HUD_73
-    mov edi, W_TILEMAP + (13 * FW + 28)   ; $73 at canvas (28,13) = GB(18,10)+(10,3)
+    ; pret DrawPlayerHUDAndHPBar writes a 2nd $73 connector one row above the
+    ; PlacePlayerHUDTiles $73 (shelf row below marches left from it).
+    mov byte [ebp + W_TILEMAP + P_FRAME_CONN], T_HUD_73
+    mov edi, W_TILEMAP + P_FRAME_CONN + FW
     mov esi, -1                           ; underline marches left
     mov bh, T_PCORNER
     mov bl, T_PTRI

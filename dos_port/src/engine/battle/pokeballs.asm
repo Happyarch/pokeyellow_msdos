@@ -20,18 +20,22 @@ bits 32
 
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
+%define UI_LAYOUT_EQUATES_ONLY 1
+%include "assets/ui_layout_battle.inc"
 
 %define BALL_OK       0x00
 %define BALL_STATUS   0x01
 %define BALL_FAINTED  0x02
 %define BALL_EMPTY    0x03
 
-; player row (pret base $60,$60 + centering 80,24), balls march right (+8)
-%define PB_X   (0x60 + 80)
-%define PB_Y   (0x60 + 24)
-; enemy row (pret base $48,$20 + centering), balls march left (-8)
-%define EB_X   (0x48 + 80)
-%define EB_Y   (0x20 + 24)
+; OAM bases from the generated battle layout (the elements are the rows'
+; LEFT tiles; OAM = screen px + (8,16), see PrepareStaticOAM).
+; PROJ battle: player row = UI_PLAYER_BALLS (OAM base = left ball, marches +8)
+%define PB_X   UI_PLAYER_BALLS_OAM_X
+%define PB_Y   UI_PLAYER_BALLS_OAM_Y
+; PROJ battle: enemy row = UI_ENEMY_BALLS (OAM base = RIGHT-end ball, marches -8)
+%define EB_X   (UI_ENEMY_BALLS_OAM_X + (UI_ENEMY_BALLS_GBW - 1) * 8)
+%define EB_Y   UI_ENEMY_BALLS_OAM_Y
 
 section .data
 ball_gfx: incbin "../gfx/battle/balls.2bpp"      ; 4 tiles (ok/status/fainted/empty)

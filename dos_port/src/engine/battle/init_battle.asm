@@ -28,6 +28,8 @@
 %include "gb_macros.inc"
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
+%define UI_LAYOUT_EQUATES_ONLY 1
+%include "assets/ui_layout_battle.inc"
 
 bits 32
 
@@ -41,16 +43,14 @@ bits 32
 %define T_SP  0x7F          ; blank/space
 
 %define FW    SCREEN_TILES_W           ; 40 — canvas stride (full widescreen)
-%define COL_OFF 10                      ; (40−20)/2 — center the 20-wide GB layout
-%define ROW_OFF 3                       ; ≈(25−18)/2 — center the 18-tall GB layout
 
-; bottom dialog box (GB (0,12), interior 18×4 → total 20×6), centered:
-%define BOX_ROW   (ROW_OFF + 12)        ; 15
-%define BOX_COL   COL_OFF               ; 10
-%define BOX_INT_W 18
-%define BOX_INT_H 4
-; PROJ battle-ui: GB(0,12) 20x6 dialog box --(center, X+10col, Y+3row)--> canvas(10,15) on the 40x25 BG
-; PROJ battle-ui: GB(0,0) 20x18 default screen --(center, +10col/+3row)--> centered in 40x25 widescreen canvas
+; Bottom dialog box — geometry from the generated battle UI layout (Tier 1,
+; assets/ui_layout_battle.inc; edit via tools/ui_layout/battle.py). The old
+; +10col/+3row GB-centering now lives in the sidecar's per-element shifts.
+; PROJ battle: dialog box = UI_DIALOG_BOX_OFS, outer UI_DIALOG_BOX_GBW x GBH
+%define BOX_OFS   UI_DIALOG_BOX_OFS
+%define BOX_INT_W (UI_DIALOG_BOX_GBW - 2)
+%define BOX_INT_H (UI_DIALOG_BOX_GBH - 2)
 
 section .data
 
@@ -130,9 +130,9 @@ InitBattle:
 ; (SlideBattlePicsIn), so it draws over the already-slid mon pics. In: EBP = GB base.
 ; ---------------------------------------------------------------------------
 DrawBattleIntroBox:
-    ; --- hand-draw the bottom dialog box (stride 40) at canvas (BOX_COL,BOX_ROW) ---
+    ; --- hand-draw the bottom dialog box (stride 40) at UI_DIALOG_BOX_OFS ---
     ; top border: ┌ + ─×18 + ┐
-    lea edi, [ebp + W_TILEMAP + BOX_ROW * FW + BOX_COL]
+    lea edi, [ebp + W_TILEMAP + BOX_OFS]
     mov byte [edi], T_TL
     lea edx, [edi + 1]                        ; save interior-fill start for reuse
     inc edi
@@ -163,11 +163,11 @@ DrawBattleIntroBox:
     rep stosb                                 ; ─×18 col 1..18 (edi → col 19)
     mov byte [edi], T_BR                        ; col 19
 
-    ; --- intro text into the box interior (box rows 2 & 4 → canvas rows 17 & 19) ---
+    ; --- intro text on the dialog message lines (PROJ battle: UI_DIALOG_LINE1/2) ---
     ; line 1: "Wild " + enemy mon nick (faithful _WildMonAppearedText; nick is the
     ; $50-terminated string in wEnemyMonNick).
     mov esi, intro_line1                       ; flat .data source
-    lea edi, [ebp + W_TILEMAP + (BOX_ROW + 2) * FW + BOX_COL + 1]
+    lea edi, [ebp + W_TILEMAP + UI_DIALOG_LINE1_OFS]
     mov ecx, INTRO_LINE1_LEN
     rep movsb                                  ; "Wild "
     lea esi, [ebp + wEnemyMonNick]             ; GB WRAM nick
@@ -181,7 +181,7 @@ DrawBattleIntroBox:
     jmp .introNick
 .introNickDone:
     mov esi, intro_line2
-    lea edi, [ebp + W_TILEMAP + (BOX_ROW + 4) * FW + BOX_COL + 1]
+    lea edi, [ebp + W_TILEMAP + UI_DIALOG_LINE2_OFS]
     mov ecx, INTRO_LINE2_LEN
     rep movsb
 

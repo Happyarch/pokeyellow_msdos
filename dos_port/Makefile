@@ -773,6 +773,9 @@ assets/ui_layout_battle.inc: assets/ui_layout_battle_sidecar.json \
 		tools/gen_ui_layout.py tools/ui_layout/canvas.py tools/ui_layout/schema.py
 	python3 tools/gen_ui_layout.py battle
 
+src/engine/battle/battle_hud.o src/engine/battle/init_battle.o \
+src/engine/battle/pokeballs.o src/gfx/pics.o: assets/ui_layout_battle.inc
+
 # Wild-encounter tables (static data, generated from data/wild/).
 assets/wild_data.inc:
 	python3 tools/gen_wild_encounters.py
