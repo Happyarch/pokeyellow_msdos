@@ -3,8 +3,8 @@
 Session 7 of `docs/current_plan_menus.md`: three parallel worker packages —
 **E** (main_menu), **H** (save.asm UI + structure), **C** (naming_screen) —
 plus a **root-first** save-I/O layer (`src/save/dsv_io.asm`) that E and H build
-on. Workers run as **Opus** subagents (S6 precedent; C is logic-only and could
-be Sonnet if you want to save plan budget — root's call), one package per agent,
+on. Workers run as **Opus** subagents (S6 precedent; C is logic-only and should
+be Sonnet to save plan budget — user's call), one package per agent,
 each in its own seeded worktree.
 
 Requires: S6 landed (`a5302a80` on `menus-port`, all four wave-1 packages in).
@@ -392,3 +392,70 @@ Execution order (root-first, because E + H both depend on the save layer):
 Do not start Session 8. If a package bounces its gates twice, integrate the ones
 that pass, leave the ledger row honest, and stop for me.
 ```
+
+---
+
+## How these swarm prompts are constructed (reusable recipe)
+
+This file (and its S6 sibling / the S8 successor) all follow one template. Keep
+the shape when building the next wave's prompts — it's what makes a swarm
+integrate cleanly instead of bouncing.
+
+1. **Pick the wave's packages from the plan.** `docs/current_plan_menus.md`
+   already names them (e.g. S7 = E/H/C, S8 = G1/G2/I1/I2). One package = one pret
+   source file (or one faithful `%include`-split half of one). One worker per
+   package, one seeded worktree per worker.
+
+2. **Read the pret source(s) end-to-end first.** The brief's SCOPE list is the
+   pret label inventory of that file — every top-level routine gets named so
+   label parity is checkable mechanically. Note the flag-sensitive branches
+   (`cp`/`and` + `jr z/nz/c/nc`), the I/O boundaries (serial/APU/palette/printer/
+   SRAM), and the `text_far`/bank reads — those become the WATCH-FOR / TODO-HW /
+   DEVIATION lines.
+
+3. **Split root-vs-worker work.** Anything a worker cannot safely own goes in the
+   **Root checklist** (do-it-yourself list), never in a brief:
+   - Tier-1 **generators** + the `assets/*.inc` they emit (deterministic, pret-
+     derived; publish the emitted symbol names + byte layout as a contract).
+   - New **`UI_*` layout elements** (root edits the sidecar + `make assets`;
+     workers only *cite* `UI_*`, never bare literals).
+   - **New WRAM** addresses (derive against `origin/symbols:pokeyellow.sym` —
+     never trust a worker's guessed address; this has caught real bugs every wave).
+   - **Worktree seeding** (hardlink assets + `.2bpp/.pic/.1bpp`), **Makefile**
+     edits, **git**, and **cross-package seams** (`%include` lines, spine
+     hand-offs like SpecialEnterMap).
+
+4. **Write the shared context block once, paste it verbatim into every brief.**
+   It carries the hard-won port-model invariants (register map, W_TILEMAP triple
+   duty, PlaceString EAX-flat, PrintNumber big-endian, the ClearScreen/
+   do_bg_transfer traps, PrintText-vs-Overworld, the charmap) + the six binding
+   worker rules + the deliverable shape (pret-mirrored `.asm` + a `DEBUG_<PKG>`
+   `Run<Pkg>Test` harness + a report). Refresh only the "read these first" refs
+   and the one or two invariants that bit the previous wave (S8 promoted
+   ZF/CF-clobber to the top because its bit-scans + cup gates are compare-dense).
+
+5. **Per-package brief = TASK + [context block] + SCOPE + WATCH FOR.** SCOPE is
+   pret labels + which calls become extern/stub/TODO-HW/DEVIATION. WATCH FOR is
+   the two or three things most likely to silently break (flag polarity, a
+   contract byte, a return code the dispatcher reads).
+
+6. **State the five integration gates + the ledger.** Every wave integrates one
+   package at a time through: (1) branch-by-branch pret control-flow diff;
+   (2) tag audit (`; PROJ`/`; TODO-HW:`/`; DEVIATION:` only); (3) PROJ-cites-`UI_*`;
+   (4) `make check` + `make`; (5) TODO-HW return-contract audit. Then Makefile +
+   harness wiring + a single-package commit (explicit paths), and a filled ledger
+   row (`status` + `FAITHFUL EXCEPT`). Coupled halves (`%include` pairs) integrate
+   together.
+
+7. **End with a launch template + a root kickoff prompt.** The launch template
+   fixes model choice (Opus for rendering/flow reasoning; Sonnet for logic-only
+   packages — memory `sonnet-parallel-logic-only`) and the no-git worktree rule
+   (memory `swarm-workers-must-not-touch-git`). The root kickoff prompt is the
+   single message that boots the coordinating session: root-first prework order,
+   seed, launch, gate, ledger, "do not start the next session."
+
+Non-negotiables that keep the swarm safe (all learned the hard way): workers
+never touch git / `assets/*.inc` / the sidecar / `gb_memmap.inc` / the Makefile;
+worktrees must be asset-seeded or the build fails (memory `worktree-asset-seeding`);
+every pret deviation is flagged behind one of the three tags (memory
+`feedback-no-silent-bespoke`); root re-derives every proposed WRAM address.
