@@ -1,8 +1,11 @@
 ; dos_port/src/engine/pokemon/bills_pc.asm
-; Bill's PC: deposit / withdraw / release backend + KnowsHMMove.
+; Bill's PC: deposit / withdraw / release backend.
 ;
 ; Source: engine/pokemon/bills_pc.asm (pret/pokeyellow).
 ; PC menu (UI) is deferred; only the data-manipulation backend is translated.
+;
+; KnowsHMMove (+ HMMoveArray) has been split out to knows_hm_move.asm so it links
+; independently of this file's still-blocked _MoveMon draft closure.
 ;
 ; Register map: A=AL, B=BH, C=BL (BC=EBX), D=DH, E=DL (DE=EDX), HL=ESI.
 ; GB memory at [EBP+addr]; flat program-image tables read via [label] or [esi]
@@ -11,10 +14,6 @@
 ; Externs resolved:
 ;   _MoveMon       → dos_port/src/engine/pokemon/add_mon.asm:_MoveMon
 ;   _RemovePokemon → dos_port/src/engine/pokemon/remove_mon.asm:_RemovePokemon
-;
-; IsInArray is now the shared home global in src/home/array.asm (same faithful
-; flat-read semantics: AL=value, ESI=array, EDX=stride → CF=found, BH=index).
-; KnowsHMMove already sets EDX=1 and saves ESI/EBX around the call.
 
 bits 32
 
@@ -24,66 +23,18 @@ bits 32
 
 section .text
 
-global KnowsHMMove
 global BillsPCDepositLogic
 global BillsPCWithdrawLogic
 global BillsPCReleaseLogic
 
 extern _MoveMon
 extern _RemovePokemon
-extern IsInArray                ; src/home/array.asm (shared home global)
 
 ; wMoveMonType/wRemoveMonFromBox values (constants/pokemon_data_constants.asm).
 ; Both live at the same WRAM address (wMoveMonType = wRemoveMonFromBox = $CF94).
 ; Not in the shared .inc files; defined locally.
 %define BOX_TO_PARTY  0
 %define PARTY_TO_BOX  1
-
-; ---------------------------------------------------------------------------
-; KnowsHMMove
-; Returns whether the party mon at index [wWhichPokemon] knows any HM move.
-; Sets C flag if yes; clears C flag if no.
-; Faithful to pret, including the dead wBoxMon1Moves branch below .next.
-;
-; Inputs (WRAM): wWhichPokemon = 0-based party slot index.
-; Clobbers: EAX, ECX, EDX, ESI, EBX.
-; ---------------------------------------------------------------------------
-KnowsHMMove:
-    mov esi, W_PARTY_MON1_MOVES     ; ld hl, wPartyMon1Moves ($D172)
-    mov ecx, PARTYMON_STRUCT_LENGTH  ; ld bc, PARTYMON_STRUCT_LENGTH (44)
-    jmp .next
-    ; --- unreachable — pret-faithful dead code (mirrors the original binary) ---
-    mov esi, W_BOX_MON1_MOVES       ; ld hl, wBoxMon1Moves ($DA9D)
-    mov ecx, BOXMON_STRUCT_LENGTH   ; ld bc, BOXMON_STRUCT_LENGTH (33)
-.next:
-    ; AddNTimes equivalent: esi += wWhichPokemon * ecx (stride)
-    movzx eax, byte [ebp + wWhichPokemon]   ; ld a,[wWhichPokemon]
-    imul ecx, eax                            ; ecx = index × stride
-    add esi, ecx                             ; esi → moves[wWhichPokemon]
-
-    mov bh, NUM_MOVES               ; ld b, NUM_MOVES (4)
-.loop:
-    mov al, byte [ebp + esi]        ; ld a,[hli]  — read move id from GB mem
-    inc esi                         ; (hli post-increment)
-
-    push esi                        ; push hl  (save GB pointer)
-    push ebx                        ; push bc  (save B=move-counter, C=scratch)
-
-    lea esi, [HMMoveArray]          ; ld hl, HMMoveArray  — flat program address
-    mov edx, 1                      ; ld de, 1  (stride = 1 byte)
-    call IsInArray                  ; C set if AL found in HMMoveArray
-
-    pop ebx                         ; pop bc
-    pop esi                         ; pop hl
-
-    jc .done                        ; ret c → jump to ret-with-carry
-
-    dec bh                          ; dec b
-    jnz .loop
-
-    clc                             ; and a  (clear carry = not found)
-.done:
-    ret
 
 ; ---------------------------------------------------------------------------
 ; BillsPCDepositLogic
@@ -179,17 +130,3 @@ BillsPCReleaseLogic:
 .fail:
     stc
     ret
-
-; ---------------------------------------------------------------------------
-section .data
-
-; HM move list — searched by KnowsHMMove via IsInArray.
-; Matches data/moves/hm_moves.asm (pret); terminated by $FF (-1).
-; Move IDs from gb_constants.inc: CUT=$0F FLY=$13 SURF=$39 STRENGTH=$46 FLASH=$94
-HMMoveArray:
-    db CUT
-    db FLY
-    db SURF
-    db STRENGTH
-    db FLASH
-    db -1       ; terminator ($FF / -1); matches pret's "db -1"

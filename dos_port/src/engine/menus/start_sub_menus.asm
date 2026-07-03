@@ -104,6 +104,9 @@ extern GBPalNormal                   ; init/init.asm
 extern RunPaletteCommand             ; engine/battle/faint_switch.asm (palette stub)
 extern ReloadMapData                 ; home/reload_tiles.asm
 extern DrawStartMenu                 ; engine/menus/draw_start_menu.asm
+extern ClearSprites                  ; gfx/sprites.asm — zero shadow OAM
+extern StatusScreen                  ; engine/pokemon/status_screen.asm — page 1
+extern StatusScreen2                 ; engine/pokemon/status_screen.asm — page 2
 
 ; --- USE/TOSS box geometry (frozen layout; pret GB(13,10) 7x5, text (15,11)) ---
 ; ; PROJ menus: GB(13,10) 7x5 --(anchor=right/top, X+20, Y+0)--> wx=271 wy=80
@@ -258,12 +261,37 @@ StartMenu_Pokemon:
     call GoBackToPartyMenu
     jmp .checkIfPokemonChosen           ; jp
 .choseStats:
-    ; STUB(pokemon_behavior): predef StatusScreen / StatusScreen2 —
-    ; current_plan_pokemon_behavior.md owns the status screen and its Stage 4
-    ; wiring is still open. pret: ClearSprites / wMonDataLocation=0 /
-    ; StatusScreen / StatusScreen2 / ReloadMapData / jp StartMenu_Pokemon;
-    ; until it lands, STATS re-enters the party menu directly.
-    jmp StartMenu_Pokemon
+    ; pret start_sub_menus.asm:.choseStats — ClearSprites / wMonDataLocation=0 /
+    ; predef StatusScreen / predef StatusScreen2 / ReloadMapData / jp
+    ; StartMenu_Pokemon. wWhichPokemon was set by DisplayPartyMenu when the mon
+    ; was chosen, so StatusScreen loads the right party slot.
+    call ClearSprites                       ; call ClearSprites
+    ; PORT teardown: StatusScreen mirrors init_battle — it zeroes the overworld
+    ; camera (W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR / IO_SCX / IO_SCY) to drive its
+    ; flat 40-wide canvas, and leaves text_row_stride at 40. pret HW StatusScreen
+    ; touches none of these. ReloadMapData re-reads the view-ptr (it does not
+    ; recompute it from the player's position), so without a restore the overworld
+    ; behind the menus would snap to the map's top-left after STATS closes. Save
+    ; the camera + restore stride here (the StartMenu_TrainerInfo precedent).
+    mov ax, [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR]
+    mov [choseStats_saved_view], ax
+    mov al, [ebp + IO_SCX]
+    mov [choseStats_saved_scx], al
+    mov al, [ebp + IO_SCY]
+    mov [choseStats_saved_scy], al
+    xor al, al                              ; xor a ; PLAYER_PARTY_DATA
+    mov [ebp + wMonDataLocation], al
+    call StatusScreen                       ; predef StatusScreen (page 1)
+    call StatusScreen2                      ; predef StatusScreen2 (page 2)
+    mov dword [text_row_stride], 20         ; StatusScreen left it 40; party menu is stride-20
+    mov ax, [choseStats_saved_view]
+    mov [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], ax
+    mov al, [choseStats_saved_scx]
+    mov [ebp + IO_SCX], al
+    mov al, [choseStats_saved_scy]
+    mov [ebp + IO_SCY], al
+    call ReloadMapData                      ; call ReloadMapData
+    jmp StartMenu_Pokemon                   ; jp StartMenu_Pokemon
 
 ; ---------------------------------------------------------------------------
 ; StartMenu_TrainerInfo / StartMenu_SaveReset / StartMenu_Option — STUBs.
@@ -516,6 +544,10 @@ fm_top:       resd 1
 fm_w:         resd 1
 fm_h:         resd 1
 fm_saved_wc:  resd 1               ; g_window_count before the pop-up appended
+; .choseStats camera save/restore across the StatusScreen full-canvas takeover
+choseStats_saved_view: resw 1      ; W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR (2 bytes)
+choseStats_saved_scx:  resb 1
+choseStats_saved_scy:  resb 1
 
 section .text
 

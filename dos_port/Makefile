@@ -216,7 +216,13 @@ POKEMON_SRCS := \
     src/engine/pokemon/remove_mon.asm \
     src/engine/pokemon/write_moves.asm \
     src/engine/pokemon/status_ailments.asm \
-    src/engine/gfx/hp_bar.asm
+    src/engine/gfx/hp_bar.asm \
+    src/engine/pokemon/status_screen.asm \
+    src/engine/pokemon/get_max_pp.asm \
+    src/engine/pokemon/knows_hm_move.asm \
+    src/engine/pikachu/pikachu_status.asm \
+    src/engine/pokemon/evolution.asm \
+    src/engine/pokemon/learn_move.asm
 
 # Items layer (current_plan_items.md). Non-UI inventory/bag logic + item data.
 ITEMS_SRCS := \
@@ -502,6 +508,36 @@ NASMFLAGS += -D DEBUG_BATTLE
 NASMFLAGS += -D SKIP_TITLE
 GAME_SRCS += src/engine/debug/debug_party.asm
 endif
+# Level-up move-learn gate (current_plan_pokemon_behavior Stage 3): force
+# STARTER_PIKACHU (party slot 3) 5->6, call LearnMoveFromLevelUp directly (no
+# battle/input needed), render one frame, dump FRAME.BIN, exit. make DEBUG_LEARNMOVE=1
+ifdef DEBUG_LEARNMOVE
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_LEARNMOVE
+NASMFLAGS += -D SKIP_TITLE
+GAME_SRCS += src/engine/debug/debug_party.asm
+endif
+# Sub-flag of DEBUG_LEARNMOVE: fill all 4 move slots first, so the deferred
+# all-slots-full (AbandonLearning) branch renders instead of the common path.
+# make DEBUG_LEARNMOVE=1 DEBUG_LEARNMOVE_FULL=1
+ifdef DEBUG_LEARNMOVE_FULL
+NASMFLAGS += -D DEBUG_LEARNMOVE_FULL
+endif
+# Status-screen gate: seed the party, open the status/summary screen (page 1) for
+# STARTER_PIKACHU (party slot 3), render one frame, dump FRAME.BIN, exit.
+# make DEBUG_STATUS=1
+# Sub-flag of DEBUG_STATUS: render summary-screen page 2 (moves/PP/EXP) instead of
+# page 1. make DEBUG_STATUS=1 DEBUG_STATUS_PAGE2=1  (implies DEBUG_STATUS)
+ifdef DEBUG_STATUS_PAGE2
+DEBUG_STATUS := 1
+NASMFLAGS += -D DEBUG_STATUS_PAGE2
+endif
+ifdef DEBUG_STATUS
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_STATUS
+NASMFLAGS += -D SKIP_TITLE
+GAME_SRCS += src/engine/debug/debug_party.asm
+endif
 ifdef NEED_DEBUG_DUMP
 GAME_SRCS += src/debug/debug_dump.asm
 endif
@@ -598,6 +634,7 @@ FRONTEND_SRCS := \
     src/engine/battle/faint_enemy.asm \
     src/engine/battle/load_enemy_from_party.asm \
     src/engine/battle/faint_sendout.asm \
+    src/engine/battle/end_of_battle.asm \
     src/engine/flag_action.asm
 
 # Home/item helpers promoted to the live build now that battle faint/EXP-ALL
@@ -616,13 +653,11 @@ LINK_OBJS := $(LINK_SRCS:.asm=.o)
 # Pokémon backend that assembles + is native-harness-validated but is NOT linked
 # yet. bills_pc needs a link-ready _MoveMon (the draft in add_mon.asm has a
 # duplicate AddPartyMon_WriteMovePP symbol + extern-constant errors and an
-# unresolved dependency closure). evolution depends on GetName (check-only
-# names.asm) / FlagActionPredef / pikachu — and its EvolutionAfterBattle party
-# loop has a known stack bug (see the file) to fix+validate in Wave 2; its
-# headless decision path + LearnMoveFromLevelUp are native-validated now.
+# unresolved dependency closure).
+# (evolution.asm + pikachu_status.asm are now LINKED — moved to POKEMON_SRCS,
+#  current_plan_pokemon_behavior Stage 2.)
 POKEMON_CHECK_SRCS := \
-    src/engine/pokemon/bills_pc.asm \
-    src/engine/pokemon/evolution.asm
+    src/engine/pokemon/bills_pc.asm
 
 # Item routines that assemble-validate but aren't linked yet — either unwired
 # (nothing calls them) or dependent on not-yet-ported deps (town-map palette/video
@@ -671,7 +706,7 @@ ALL_OBJS := $(ALL_SRCS:.asm=.o)
 # Targets
 # ---------------------------------------------------------------------------
 
-.PHONY: all clean check assets
+.PHONY: all clean check assets regen
 .DEFAULT_GOAL := all
 
 # Generate all tileset gfx/blocks/coll + map blk inc files.
@@ -742,6 +777,10 @@ assets/gb_charmap.txt:
 # START-menu item labels, encoded via the unicode_converter submodule (gb_text).
 assets/menu_strings.inc: assets/gb_charmap.txt tools/gen_menu_strings.py tools/gb_text.py
 	python3 tools/gen_menu_strings.py
+
+# Status/summary-screen PlaceString labels (charmap-encoded via gb_text; two-tier rule).
+assets/status_strings.inc: assets/gb_charmap.txt tools/gen_status_strings.py tools/gb_text.py
+	python3 tools/gen_status_strings.py
 
 # Battle message command streams (pret data/text + engine/battle wrappers, text_far
 # flattened). %included by the battle core engine. Generated from the read-only spec.
@@ -815,6 +854,9 @@ src/engine/menus/pokedex.o: assets/ui_layout_menus.inc
 src/engine/menus/pokedex_entry.o: assets/ui_layout_menus.inc assets/dex_entries.inc
 src/engine/menus/link_menu.o: assets/ui_layout_menus.inc
 src/engine/menus/link_cups.o: assets/dex_entries.inc
+
+# Status screen %includes the generated status_strings.inc label block.
+src/engine/pokemon/status_screen.o: assets/status_strings.inc
 
 # Pokémon base stats + IndexToPokedex (static data, generated from pret source).
 assets/base_stats.inc:
@@ -947,6 +989,7 @@ assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_
         assets/base_stats.inc assets/growth_rates.inc \
         assets/moves.inc assets/evos_moves.inc assets/monster_names.inc \
         assets/items.inc assets/gb_charmap.txt assets/menu_strings.inc \
+        assets/status_strings.inc \
         assets/type_matchups.inc assets/move_names.inc assets/field_moves.inc \
         assets/effect_categories.inc \
         assets/wild_data.inc assets/map_scripts.inc assets/battle_hud_2bpp.inc \
@@ -956,6 +999,14 @@ assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_
         assets/map_border_overrides.inc assets/badge_tiles.inc \
         assets/trainer_card_tiles.inc \
         assets/alphabets.inc assets/dex_entries.inc
+
+# Force-regenerate every generated asset, ignoring timestamps. The asset rules
+# are timestamp-gated (an .inc newer than its generator/source is skipped), which
+# is a pain when you just want to force a clean regen. `make regen` rebuilds them
+# all unconditionally via -B, then `make` (or `make regen && make`) picks them up.
+# Use GEN_MAP_HEADERS_FLAGS=... / DEBUG_WARPS=1 here just as with `make assets`.
+regen:
+	$(MAKE) -B assets
 
 all: $(TARGET)
 

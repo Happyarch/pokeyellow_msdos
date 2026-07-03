@@ -27,6 +27,7 @@ FRZ_BIT      equ 5
 PAR_BIT      equ 6
 SLP_MASK     equ 0x07
 
+
 section .data
 ; 3-letter strings in the GB charmap ('A' = $80)
 sa_psn:  db 0x8F, 0x92, 0x8D          ; PSN

@@ -69,7 +69,6 @@ global EvolutionAfterBattle
 global EvolveMon
 global RenameEvolvedMon
 global CancelledEvolution
-global LearnMoveFromLevelUp
 global GetMonLearnset_Evo       ; local corrected version (×4 dd offset + 32-bit read)
 global GetMonLearnset_Evo_BlobStart
 
@@ -95,8 +94,30 @@ extern GetPredefRegisters       ; restores ESI/EDX/EBX from wPredefHL/DE/BC
 extern LoadMonData_             ; loads party/enemy/box/daycare mon into wLoadedMon
 extern SetPartyMonTypes         ; updates mon type bytes from wPokedexNum (uses wPredefHL)
 
-; From engine/pikachu/:
-extern IsThisPartyMonStarterPikachu ; CF set if wWhichPokemon is the starter Pikachu
+; The canonical LearnMoveFromLevelUp lives (UI-complete) in engine/battle/
+; battle_menu.asm — it prints the "learned MOVE!" box, writes base PP, syncs the
+; in-battle move/PP structs, and (now) applies pret's starter-Pikachu THUNDER/
+; THUNDERBOLT mood bump. We call it here rather than shipping a second copy.
+extern LearnMoveFromLevelUp
+
+; Text/display/input helpers (Stage 2 — evolution now shows text + allows B-cancel):
+extern PrintText                ; battle-scope text engine (ESI = flat text stream)
+extern GetPartyMonName          ; (AL=index, ESI=nick list) → wNameBuffer (EDX out)
+extern CopyToStringBuffer       ; (EDX=src '@'-terminated) → wStringBuffer
+extern ClearScreenArea          ; (ESI=tilemap dst, BH=rows, BL=width)
+extern ClearSprites             ; zero shadow OAM
+extern ClearScreen              ; blank tilemap + Delay3
+extern DelayFrames              ; (BL = frame count)
+extern DelayFrame               ; wait one frame
+extern JoypadLowSensitivity     ; refresh hJoy5 (H_JOY5) low-sensitivity input
+extern ReloadTilesetTilePatterns ; home/reload_tiles.asm — restore map tileset after evo screen
+
+; Evolution text command streams (generated into assets/battle_text.inc by
+; tools/gen_battle_text.py from engine/pokemon/evos_moves.asm wrappers):
+extern IsEvolvingText           ; "<MON> is evolving!"
+extern EvolvedText              ; "Congratulations! Your <MON> evolved into"
+extern IntoText                 ; " <SPECIES>!"
+extern StoppedEvolvingText      ; "Huh? <MON> stopped evolving!"
 
 section .text
 
@@ -244,24 +265,72 @@ EvolutionAfterBattle:
     mov al, 1
     mov [ebp + wEvolutionOccurred], al
 
-    push esi                        ; save blob cursor (species byte)
+    push esi                        ; [B] save blob cursor (species byte)
     mov al, [esi]
     mov [ebp + wEvoNewSpecies], al  ; store target species
 
-    ; DEFERRED UI: show "X is evolving!" text and animation.
-    ; EvolveMon stub below always succeeds (CF clear); real animation in Wave 2.
-    call EvolveMon
-    jc CancelledEvolution           ; if CF set: user cancelled (stub never sets CF)
+    ; "<MON> is evolving!" — build the pre-evolution nickname into wStringBuffer
+    ; (RenameEvolvedMon compares against it later), then show the intro text.
+    mov al, [ebp + wWhichPokemon]
+    mov esi, wPartyMonNicks
+    call GetPartyMonName            ; → wNameBuffer; EDX = wNameBuffer
+    call CopyToStringBuffer         ; EDX → wStringBuffer
+    mov esi, IsEvolvingText
+    call PrintText
+    mov bl, 50
+    call DelayFrames
 
-    ; Restore blob cursor and read new species
-    pop esi
+    ; Clear the message area + sprites for the animation.
+    xor al, al
+    mov [ebp + hAutoBGTransferEnabled], al
+    mov esi, W_TILEMAP
+    mov bh, 12                      ; pret lb bc, 12, 20 (B = rows, C = width)
+    mov bl, 20
+    call ClearScreenArea
+    mov al, 1
+    mov [ebp + hAutoBGTransferEnabled], al
+    mov al, 0xFF
+    mov [ebp + wUpdateSpritesEnabled], al
+    call ClearSprites
+
+    ; The evolution animation. Now functional: the B-cancel loop is LIVE; the
+    ; cries + palette-flash back-and-forth morph are [2b]/TODO-HW deferred.
+    call EvolveMon                  ; pret: callfar EvolveMon
+    jc CancelledEvolution           ; B pressed (and not forced) → cancel
+
+    mov esi, EvolvedText
+    call PrintText
+
+    ; Restore blob cursor [B]; read the new species.
+    pop esi                         ; [B] blob cursor
     mov al, [esi]
-    mov [ebp + wCurSpecies], al
+    mov [ebp + wCurSpecies], al     ; == wNameListIndex (shared addr) → new species
     mov [ebp + wLoadedMonSpecies], al
     mov [ebp + wEvoNewSpecies], al
 
-    ; DEFERRED UI: "EvolvedText" + "IntoText" + "ClearScreen"
-    ; (would call GetName for new species name here)
+    ; Fetch the new species' default name (→ wNameBuffer) for the "into <NAME>!"
+    ; line. wNameListIndex aliases wCurSpecies (just set to the new species).
+    mov al, MONSTER_NAME
+    mov [ebp + wNameListType], al
+    ; NOTE: pret sets wPredefBank = BANK(MonsterNames) here; monster names ignore
+    ; the ROM bank in the flat model, so it is not needed.
+    ; STACK FIX [C]: re-push the blob cursor here. pret pushes hl AFTER GetName
+    ; (its GetName preserves hl), but the port's GetName clobbers ESI, so push
+    ; before the call — functionally identical. This [C] is consumed by the
+    ; `pop edx` on the success path below, so the following `pop esi` correctly
+    ; takes the party-species cursor [G] instead of the routine-entry saved DE
+    ; (which was the old stack-imbalance bug).
+    push esi                        ; [C] blob cursor
+    call GetName                    ; new species name → wNameBuffer
+
+    mov esi, IntoText
+    call PrintText                  ; TODO-HW: pret uses PrintText_NoCreatingTextBox +
+                                    ; PlaySoundWaitForCurrent(SFX_GET_ITEM_2) +
+                                    ; WaitForSoundToFinish — audio HAL (Phase 3)
+    mov bl, 40
+    call DelayFrames
+    call ClearScreen
+    call RenameEvolvedMon           ; keep the nickname, else adopt the new name
 
     ; IndexToPokedex: species → dex number
     push eax
@@ -359,10 +428,19 @@ EvolutionAfterBattle:
     pop eax
     call SetPartyMonTypes
 
-    ; Mark pokedex seen/owned for the new species
+    ; Evolution_ReloadTilesetTilePatterns when not in battle (pret evos_moves.asm:
+    ; `and a` / `call z, Evolution_ReloadTilesetTilePatterns`). The helper no-ops
+    ; during a link trade, else reloads the map tileset over the evo-screen tiles.
     mov al, [ebp + wIsInBattle]
     test al, al
-    ; (DEFERRED: Evolution_ReloadTilesetTilePatterns when not in battle)
+    jnz .skipTilesetReload           ; in battle: HUD/tiles managed by battle — skip
+    mov al, [ebp + wLinkState]
+    cmp al, LINK_STATE_TRADING
+    je .skipTilesetReload             ; link trade: skip (pret `ret z`)
+    call ReloadTilesetTilePatterns    ; pret `jp ReloadTilesetTilePatterns`
+.skipTilesetReload:
+
+    ; Mark pokedex seen/owned for the new species
 
     ; IndexToPokedex again to get 0-based dex index for flag actions
     mov al, [ebp + wCurSpecies]
@@ -379,25 +457,19 @@ EvolutionAfterBattle:
     mov esi, wPokedexSeen
     call FlagActionPredef
 
-    ; Update party species list entry
-    ; BUG(Wave 2): stack imbalance on the evolution-success path. Entering here the
-    ; stack top is the per-iteration species cursor pushed at .Evolution_PartyMonLoop
-    ; (line ~240); the .doEvolution block balances back to that baseline. But this
-    ; sequence pops TWICE — `pop edx` takes the cursor (ok) and `pop esi` then
-    ; consumes the function-level saved DE (push edx at routine entry), so the
-    ; species write below uses a wrong pointer and `.done`'s register restores are
-    ; misaligned. Needs a pret-faithful single-pop rewrite (pret pops the one cursor,
-    ; writes [hl]=species, pushes it back) + end-to-end native validation once
-    ; FlagActionPredef / LoadMonData_ / CalcStats are linkable. Untriggered until then
-    ; (this routine is check-only and only runs an evolution under the Wave-2 deps).
-    ; The headless decision data path (GetMonLearnset_Evo[_BlobStart]) and
-    ; LearnMoveFromLevelUp ARE native-validated; this party-loop flow is not.
-    pop edx                         ; EDX = saved party-species list cursor
-    pop esi                         ; (see BUG above — consumes the wrong stack slot)
+    ; Update party species list entry. Stack top here is [C] (the blob cursor
+    ; re-pushed in .doEvolution before GetName), then [G] (the per-iteration
+    ; party-species cursor pushed at .Evolution_PartyMonLoop). pret's tail is
+    ; `pop de` (blob cursor) / `pop hl` (species cursor) / write [hl] / `push hl`
+    ; / `ld l,e; ld h,d` — mirrored below. (The pre-[C] version popped the species
+    ; cursor into EDX and then wrongly ate the routine-entry saved DE; adding the
+    ; [C] push realigns both pops to pret.)
+    pop edx                         ; [C] EDX = blob cursor
+    pop esi                         ; [G] ESI = party-species list cursor
     mov al, [ebp + wLoadedMonSpecies]
     mov [ebp + esi], al             ; wPartySpecies[wWhichPokemon] = new species
-    push esi                        ; re-push cursor for next iteration
-    mov esi, edx
+    push esi                        ; [G] re-push cursor for next iteration
+    mov esi, edx                    ; ESI = blob cursor (pret: ld l,e / ld h,d)
     jmp .nextEvoEntry2
 
 .nextEvoEntry1:
@@ -428,19 +500,105 @@ EvolutionAfterBattle:
     ret
 
 ; ===========================================================================
-; EvolveMon
-; DATA STUB — the UI animation + B-cancel is deferred to Wave 2.
-; In pret: engine/movie/evolution.asm EvolveMon
-;   - plays palette-flash animation between old/new species sprites
-;   - if B pressed: wEvoCancelled=1, CF set; else CF clear
-; HERE: just clear CF (always succeeds); Wave 2 wires the real animation.
+; EvolveMon  (pret engine/movie/evolution.asm EvolveMon)
+; Runs the evolution animation and returns CF = "player cancelled".
+;
+; FUNCTIONAL now: the B-cancel loop is LIVE (real JoypadLowSensitivity input,
+; honoring wForceEvolution), and wEvoCancelled → CF is faithful. Deferred:
+;   TODO-HW (audio HAL, Phase 3): StopAllMusic / SFX_TINK / PlayCry(old,new) /
+;     PlayMusic(MUSIC_SAFARI_ZONE).
+;   [2b] (software PPU / palette): EvolutionSetWholeScreenPalette flash,
+;     Evolution_LoadPic old/new (LoadFlippedFrontSpriteByMonIndex + pic swap),
+;     Evolution_ChangeMonPic / Evolution_BackAndForthAnim tile morph.
+; Because the pic-load path is deferred, this does NOT clobber wCurPartySpecies/
+; wCurSpecies, so (unlike pret) it need not save/restore them.
+; Out: CF set iff cancelled. Clobbers AL; preserves ESI/EDX/EBX.
 ; ===========================================================================
 EvolveMon:
-    ; DEFERRED: EvoAnim_Deferred — full animation (Wave 2 / engine/movie/evolution.asm)
-    ; DEFERRED: PlayCry wEvoOldSpecies
-    ; DEFERRED: PlayCry wEvoNewSpecies
-    ; DEFERRED: EvoText "X evolved into Y!"
-    clc                             ; no cancel
+    push esi
+    push edx
+    push ebx
+
+    ; TODO-HW: audio HAL (Phase 3) — StopAllMusic; PlaySound SFX_TINK; Delay3;
+    ;          PlayCry [wEvoOldSpecies]; PlayMusic MUSIC_SAFARI_ZONE.
+    ; [2b]: EvolutionSetWholeScreenPalette (old species) + Evolution_LoadPic
+    ;       old/new + vFrontPic/vBackPic swap (battle-pic + palette path).
+
+    mov bl, 80                      ; pret: ld c, 80 / call DelayFrames
+    call DelayFrames
+    ; [2b]: EvolutionSetWholeScreenPalette PAL_BLACK.
+
+    ; pret: lb bc, $1, $10 → 8 passes (c stepped 16→2, dec c twice per pass);
+    ; BH = morph "speed" fed to the (deferred) back-and-forth anim, BL = the
+    ; per-pass frame budget Evolution_CheckForCancel counts down.
+    mov bh, 1
+    mov bl, 0x10
+.animLoop:
+    push ebx
+    call Evolution_CheckForCancel
+    jc .evolutionCancelled
+    call Evolution_BackAndForthAnim ; [2b] no-op stub (tile morph)
+    pop ebx
+    inc bh
+    dec bl
+    dec bl
+    jnz .animLoop
+
+    xor al, al
+    mov [ebp + wEvoCancelled], al
+    ; [2b]: Evolution_ChangeMonPic (show the new species pic).
+    mov al, [ebp + wEvoNewSpecies]
+.done:
+    ; TODO-HW: audio HAL (Phase 3) — StopAllMusic; PlayCry AL; palette AL.
+    pop ebx
+    pop edx
+    pop esi
+    mov al, [ebp + wEvoCancelled]
+    test al, al
+    jz .noCancel
+    stc
+    ret
+.noCancel:
+    clc
+    ret
+
+.evolutionCancelled:
+    pop ebx                         ; discard the saved BC from this .animLoop pass
+    mov al, 1
+    mov [ebp + wEvoCancelled], al
+    mov al, [ebp + wEvoOldSpecies]
+    jmp .done
+
+; ---------------------------------------------------------------------------
+; Evolution_CheckForCancel (pret engine/movie/evolution.asm) — wait BL frames,
+; returning CF set if B is pressed (unless wForceEvolution blocks cancelling).
+; ---------------------------------------------------------------------------
+Evolution_CheckForCancel:
+    call DelayFrame
+    push ebx
+    call JoypadLowSensitivity
+    mov al, [ebp + H_JOY5]
+    pop ebx
+    and al, PAD_B
+    jnz .pressedB
+.notAllowedToCancel:
+    dec bl                          ; pret: dec c
+    jnz Evolution_CheckForCancel
+    clc                             ; pret: and a (CF clear)
+    ret
+.pressedB:
+    mov al, [ebp + wForceEvolution]
+    test al, al
+    jnz .notAllowedToCancel         ; forced evolution can't be cancelled
+    stc
+    ret
+
+; ---------------------------------------------------------------------------
+; Evolution_BackAndForthAnim — [2b] deferred tile-morph stub. pret morphs the
+; on-screen pic back and forth BH times (Evolution_ChangeMonPic ±$31 tile
+; offset); the software-PPU/palette morph is deferred, so this is a no-op.
+; ---------------------------------------------------------------------------
+Evolution_BackAndForthAnim:
     ret
 
 ; ===========================================================================
@@ -496,126 +654,16 @@ RenameEvolvedMon:
 ; Pret ref: engine/pokemon/evos_moves.asm CancelledEvolution
 ; ===========================================================================
 CancelledEvolution:
-    ; DEFERRED: PrintText StoppedEvolvingText
-    ; DEFERRED: ClearScreen
-    ; DEFERRED: Evolution_ReloadTilesetTilePatterns
-    pop esi                         ; discard the blob cursor pushed at .doEvolution
+    mov esi, StoppedEvolvingText    ; "Huh? <MON> stopped evolving!"
+    call PrintText
+    call ClearScreen
+    ; Reached from `jc CancelledEvolution` right after EvolveMon: the [C] blob
+    ; re-push has not happened yet, so the stack top is [B] (pushed at
+    ; .doEvolution before the intro text). Discard it, matching pret's `pop hl`.
+    pop esi                         ; [B] discard blob cursor
+    ; DEFERRED: Evolution_ReloadTilesetTilePatterns (reload_tiles.asm is
+    ; HOME_CHECK-only; not linked yet).
     jmp EvolutionAfterBattle.Evolution_PartyMonLoop
-
-; ===========================================================================
-; LearnMoveFromLevelUp
-; Scans the current mon's learnset for a move to learn at [wCurEnemyLevel].
-; If found and not already known, writes it to an empty move slot (headless path).
-; When all slots are full, calls LearnMove_Deferred (Wave 2 stub).
-; After successful learn: sets the Pikachu THUNDERBOLT/THUNDER emotion modifier
-; if applicable.
-;
-; In:  [wPokedexNum]       = pokedex number of the evolved species
-;      [wCurEnemyLevel]    = level at which evolution occurred (= current level)
-;      [wWhichPokemon]     = party index of the mon
-;      [wMonDataLocation]  = 0 (PLAYER_PARTY_DATA)
-; Pret ref: engine/pokemon/evos_moves.asm LearnMoveFromLevelUp
-; ===========================================================================
-LearnMoveFromLevelUp:
-    ; wCurPartySpecies is used by GetMonLearnset_Evo as the species index
-    ; The pret code copies wPokedexNum → wCurPartySpecies temporarily.
-    ; However, GetMonLearnset_Evo reads wCurPartySpecies (internal index).
-    ; wPokedexNum at this call point was set to wCurSpecies (internal index),
-    ; so wPokedexNum here is actually the INTERNAL species index, not dex#.
-    ; (pret comment: "ld a, [wPokedexNum] ; species" — confirms internal index usage.)
-    mov al, [ebp + wPokedexNum]
-    mov [ebp + wCurPartySpecies], al ; set species for GetMonLearnset_Evo
-    call GetMonLearnset_Evo          ; ESI → start of learnset (past evo entries)
-
-.learnSetLoop:
-    mov al, [esi]
-    inc esi
-    test al, al
-    jz .done                        ; end of learnset
-    mov bh, al                      ; bh = level at which move is learned
-    mov al, [ebp + wCurEnemyLevel]
-    cmp al, bh                      ; current level == learn level?
-    mov al, [esi]                   ; al = move id (prefetch; mov preserves flags)
-    lea esi, [esi+1]                ; advance — lea preserves the cmp ZF (inc would NOT;
-                                    ; SM83 `inc hl` doesn't touch flags, x86 `inc` does)
-    jne .learnSetLoop               ; not this level → keep scanning
-    ; Found a move to learn at the current level
-    mov dh, al                      ; dh = move id to learn
-
-    ; Find this mon's current move slots
-    mov al, [ebp + wMonDataLocation]
-    test al, al
-    jnz .next                       ; non-zero: loading from non-party data (unusual)
-    ; PLAYER_PARTY_DATA: compute address of this mon's MON_MOVES field
-    mov esi, wPartyMon1 + MON_MOVES
-    mov al, [ebp + wWhichPokemon]
-    mov bx, PARTYMON_STRUCT_LENGTH
-    call AddNTimes                  ; ESI = &partyMon[wWhichPokemon].moves
-.next:
-    ; Check if the move is already known (scan all NUM_MOVES slots)
-    push esi                        ; save slot base
-    mov bh, NUM_MOVES
-.checkCurrentMovesLoop:
-    mov al, [ebp + esi]
-    inc esi
-    cmp al, dh
-    je .donePopSi                   ; already known → done
-    dec bh
-    jnz .checkCurrentMovesLoop
-    pop esi                         ; restore slot base (bh = 0 after full scan)
-
-    ; Not already known.  Try to find an empty slot (headless path).
-    push esi
-    mov cl, NUM_MOVES
-.findEmptyLoop:
-    mov al, [ebp + esi]
-    test al, al
-    jz .writeToSlot                 ; empty slot found
-    inc esi
-    dec cl
-    jnz .findEmptyLoop
-    ; All slots full — deferred interactive path (Wave 2)
-    pop esi                         ; restore slot base
-    ; DEFERRED: LearnMove_Deferred — "Should X forget a move?" menu.
-    ; Headless stub: silently skip (move not written).
-    ; bh = 0 (from the scan loop above); the pikachu check below fires on bh != 0,
-    ; which won't happen here — correct for the headless path.
-    jmp .doneLearnMove
-
-.writeToSlot:
-    ; Write the move into the found empty slot
-    mov [ebp + esi], dh
-    pop esi                         ; restore slot base (bh still 0 from scan)
-
-.doneLearnMove:
-    ; bh == 0: move learned in empty slot (or slots full & deferred)
-    test bh, bh
-    jz .done
-    ; bh != 0 only if pret's LearnMove returned with "had to forget a move".
-    ; In the headless stub, this branch is never taken.
-    ; Pikachu emotion modifier for THUNDERBOLT/THUNDER (deferred, documented here):
-    call IsThisPartyMonStarterPikachu
-    jnc .done                       ; CF clear → not starter Pikachu
-    mov al, [ebp + wMoveNum]
-    cmp al, THUNDERBOLT
-    je .foundThunderOrThunderbolt
-    cmp al, THUNDER
-    jne .done
-.foundThunderOrThunderbolt:
-    mov al, 5
-    mov [ebp + wPikachuEmotionModifier], al
-    mov al, 0x85
-    mov [ebp + wPikachuMood], al
-    jmp .done
-
-.donePopSi:
-    pop esi
-.done:
-    ; Restore wPokedexNum from wCurPartySpecies (pret does the reverse: saves
-    ; wCurPartySpecies and restores wPokedexNum — same shared address in pret).
-    mov al, [ebp + wCurPartySpecies]
-    mov [ebp + wPokedexNum], al
-    ret
 
 ; ===========================================================================
 ; GetMonLearnset_Evo  (local — corrected version of evos_moves.asm GetMonLearnset)

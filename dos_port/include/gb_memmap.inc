@@ -221,6 +221,8 @@ wDayCareMonSpecies equ 0xDA5E
 wBoxCount          equ 0xDA7F
 wBoxSpecies        equ 0xDA80   ; MONS_PER_BOX+1 species + $FF sentinel
 wBoxMons           equ 0xDA95
+wBoxMon1           equ 0xDA95   ; = wBoxMons (pikachu_status alias)
+wBoxMon2           equ 0xDAB6   ; wBoxMon1 + BOXMON_STRUCT_LENGTH (33)
 wBoxMonOT          equ 0xDD29
 wBoxMonNicks       equ 0xDE05
 wBoxMonNicksEnd    equ 0xDEE1
@@ -369,6 +371,8 @@ wDamageMultipliers     equ 0xD05A   ; bit 7 = STAB, low bits = type-eff numerato
 wCriticalHitOrOHKO     equ 0xD05D
 wMoveMissed            equ 0xD05E
 wPlayerStatsToDouble   equ 0xD05F   ; pret wBattleStatusData: always 0; cleared on send-out
+wBattleStatusData      equ 0xD05F   ; pret alias (start of the 0x18-byte battle-status block)
+wBattleStatusDataEnd   equ 0xD077   ; end (exclusive) of wBattleStatusData; EndOfBattle clears the range
 wPlayerStatsToHalve    equ 0xD060   ; always 0
 wPlayerBattleStatus1   equ 0xD061
 wPlayerBattleStatus2   equ 0xD062
@@ -399,8 +403,11 @@ wPartyMon1Special      equ 0xD194
 wEnemyMon1Stats        equ 0xD8C5   ; link-battle enemy party stats (GetEnemyMonStat)
 ; party-mon struct (pret wPartyMon1* = wPartyMons base $D16A; DecrementPP/GainExp)
 wPartyMon1             equ 0xD16A
+wPartyMon1HP           equ 0xD16B   ; party-mon struct HP word (pikachu_status)
 wPartyMon1Status       equ 0xD16E
+wPartyMon1OTID         equ 0xD176   ; party-mon struct OT id word (pikachu_status)
 wPartyMon1PP           equ 0xD187
+wPartyMon2             equ 0xD196   ; wPartyMon1 + PARTYMON_STRUCT_LENGTH (44)
 wPartyGainExpFlags     equ 0xD057   ; bitfield: which party mons gain exp this battle
 
 ; --- Wave-1 backend aliases (sym-pinned, origin/symbols:pokeyellow.sym) ---
@@ -416,6 +423,8 @@ wCanEvolveFlags        equ 0xCCD3
 wForceEvolution        equ 0xCCD4
 wEvoOldSpecies         equ 0xCEE9   ; (union wHPBarMaxHP scratch)
 wEvoNewSpecies         equ 0xCEEA
+wEvoMonTileOffset      equ 0xCEEB   ; [2b] palette-flash morph scratch (deferred)
+wEvoCancelled          equ 0xCEEC   ; EvolveMon sets 1 on B-cancel → CF
 wEvoStoneItemID        equ 0xD155
 ; Bill's PC (src/engine/pokemon/bills_pc.asm)
 wMoveMonType           equ 0xCF94   ; = W_MOVE_MON_TYPE (union wRemoveMonFromBox)
@@ -436,6 +445,8 @@ wPlayerHPBarColor      equ 0xCF1C
 wEnemyHPBarColor       equ 0xCF1D
 wCurOpponent           equ 0xD058
 wEscapedFromBattle     equ 0xD077
+wLowHealthAlarm        equ 0xD082   ; nonzero = low-HP alarm enabled; EndOfBattle disables it
+wChannelSoundIDs       equ 0xC026   ; per-sound-channel active sound IDs (NUM_CHANNELS bytes)
 wSavedTileAnimations   equ 0xD0D3
 wMapPalOffset          equ 0xD35C
 ; trainer AI + read_trainer_party (src/engine/battle/trainer_ai.asm, read_trainer_party.asm)
@@ -933,6 +944,7 @@ W_MAP_BACKGROUND_TILE        equ 0xD3AC ; wMapBackgroundTile (border block ID fo
 W_NUMBER_OF_WARPS            equ 0xD3AD ; wNumberOfWarps
 W_WARP_ENTRIES               equ 0xD3AE ; wWarpEntries (MAX_WARP_EVENTS * 4 bytes max)
 W_DESTINATION_WARP_ID        equ 0xD42E ; wDestinationWarpID ($FF = don't update coords)
+wDestinationWarpID           equ 0xD42E ; pret alias of W_DESTINATION_WARP_ID
 wUnknownSerialFlag_d499      equ 0xD499 ; GB-Stadium-link flag; restricts Sleep counter reroll range when set (0 on real HW/this port)
 
 ; Sign/BG event data
@@ -978,6 +990,7 @@ W_WALK_BIKE_SURF_STATE       equ 0xD6FF ; wWalkBikeSurfState
 ; Status flags (game-state bitfields)
 W_STATUS_FLAGS_1             equ 0xD727 ; wStatusFlags1
 W_STATUS_FLAGS_2             equ 0xD72B ; wStatusFlags2
+wStatusFlags2                equ 0xD72B ; pret alias of W_STATUS_FLAGS_2
 W_STATUS_FLAGS_3             equ 0xD72C ; wStatusFlags3
 W_STATUS_FLAGS_4             equ 0xD72D ; wStatusFlags4
 W_STATUS_FLAGS_5             equ 0xD72F ; wStatusFlags5
@@ -1411,9 +1424,26 @@ hAutoBGTransferEnabled        equ H_AUTO_BG_TRANSFER_EN   ; 0xFFBA
 ; sym-verified via origin/symbols:pokeyellow.sym; promoted from evolution.asm's
 ; in-file %ifndef self-aliases (docs/current_plan_pokemon_behavior.md Stage 0).
 wLoadedMonHP                  equ 0xCF98 ; wLoadedMon + MON_HP
+wLoadedMonStatus              equ 0xCF9B ; wLoadedMon + MON_STATUS (PrintStatusCondition input)
 wLoadedMonHPExp               equ 0xCFA8 ; wLoadedMon + MON_STAT_EXP (HP stat-exp)
 wLoadedMonMaxHP               equ 0xCFB9 ; wLoadedMon + MON_MAXHP (first computed stat)
 wLoadedMonStats               equ 0xCFB9 ; = wLoadedMonMaxHP (stats block starts at MaxHP)
+; Status/summary screen inputs (sym-verified vs origin/symbols; Stage 4).
+wLoadedMonMoves               equ 0xCF9F ; wLoadedMon + MON_MOVES (4 move ids)
+wLoadedMonOTID                equ 0xCFA3 ; wLoadedMon + MON_OTID (2 bytes, big-endian)
+wLoadedMonAttack              equ 0xCFBB ; stats block: MaxHP,Atk,Def,Spd,Spc (2 bytes each)
+wLoadedMonDefense             equ 0xCFBD
+wLoadedMonSpeed               equ 0xCFBF
+wLoadedMonSpecial             equ 0xCFC1
+wStatusScreenHPBarColor       equ 0xCF24 ; GetHealthBarColor output (cosmetic; palette Phase 5)
+wStatusScreenCurrentPP        equ 0xCD71 ; scratch: current move PP for StatusScreen2 PrintNumber
+; GetMaxPP scratch + per-source move lists (sym-verified vs origin/symbols; Stage 4).
+wPPUpCountAndMaxPP            equ 0xCD73 ; = wMoveData + MOVE_PP + 1 (AddBonusPP work byte)
+wUsingPPUp                    equ 0xD11D ; (union wMaxPP/wPokedexNum scratch — see GetMaxPP order)
+wPartyMon1Moves              equ 0xD172 ; party mon 0 move-id list (GetSelectedMoveOffset base)
+wEnemyMon1Moves              equ 0xD8AB
+wBoxMon1Moves                equ 0xDA9D
+wDayCareMonMoves             equ 0xDA66
 wEvolutionOccurred            equ 0xD120 ; set when a mon evolved this EvolutionAfterBattle
 wPikachuMood                  equ 0xD470
 wPikachuEmotionModifier       equ 0xD49B

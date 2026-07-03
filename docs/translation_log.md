@@ -713,6 +713,33 @@ harness, and committed each package alone.
   (HandleMenuInput) — 0x15's box template verified via 0x0E. `make` +
   `make check` green.
 
+---
+
+## pokemon_behavior Stage 1 — PrintStatusAilment / PrintStatusCondition / KnowsHMMove
+- Source: pret `engine/pokemon/status_ailments.asm:PrintStatusAilment`,
+  `home/pokemon.asm:PrintStatusCondition/PrintStatusConditionNotFainted`,
+  `engine/pokemon/bills_pc.asm:KnowsHMMove` (+ HMMoveArray).
+- Translated: `dos_port/src/engine/pokemon/status_ailments.asm` (was an empty
+  skip-stub), `dos_port/src/home/pokemon.asm` (wrapper, home-bank placement),
+  new `dos_port/src/engine/pokemon/knows_hm_move.asm`.
+- Date: 2026-07-01
+- H-flag: not involved.
+- Bug tags: none (faithful), incl. KnowsHMMove's unreachable wBoxMon1Moves branch.
+- Divergences: none (faithful). `ld_hli_a_string` is emulated by a `put_str3` macro
+  that leaves ESI at the last tile (+2) and AL = last tile, exactly like the GB
+  `ld [hli]×2 + ld [hl]`; PrintStatusConditionNotFainted's `homejp_sf` becomes a
+  bank-less tail `jmp PrintStatusAilment`.
+- Notes: PrintStatusCondition steps DE back over the box-level byte to read the
+  2-byte HP word (status-3, status-2) → "FNT" when HP=0. Flag semantics preserved:
+  ZF set iff nothing drawn (healthy no-status); FNT returns NZ (AL='T' tile). Kept
+  party_menu.asm's inline `.print_status` untouched (working; owned by a concurrent
+  menus agent) — the shared routine targets the Stage 4 StatusScreen. Added
+  `wLoadedMonStatus` ($CF9B) to gb_memmap.inc. CalcExpToLevelUp (already in
+  status_screen.asm, Stage-0-fixed) wired into the link. All three added to
+  POKEMON_SRCS; validated by an ELF trampoline harness (15/15) + full `make` link.
+
+---
+
 ## home/ rectification swarm — WAVE 0 (silent-wrong bugs & build landmines)
 - **Date:** 2026-07-01
 - **Plan:** docs/plans/home_rectification.md, Wave 0 (M0.1–M0.5).

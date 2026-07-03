@@ -44,6 +44,18 @@ BATTLE_SRC = [
     "engine/battle/misc.asm",
     "engine/battle/end_of_battle.asm",
     "engine/battle/print_type.asm",
+    # Evolution message wrappers (IsEvolving/Evolved/Into/StoppedEvolving) —
+    # consumed by src/engine/pokemon/evolution.asm (current_plan_pokemon_behavior).
+    "engine/pokemon/evos_moves.asm",
+    # LearnMove wrappers (TryingToLearn/AbandonLearning/DidNotLearn/LearnedMove1) —
+    # consumed by src/engine/pokemon/learn_move.asm (current_plan_pokemon_behavior
+    # Stage 3). OneTwoAndText/PoofText chain a text_pause into a text_asm SFX+jump
+    # continuation collect_wrappers can't reconstruct (falls outside its text_far+
+    # text_asm adjacency check — see its comments), so those two labels come out
+    # truncated/unterminated; WhichMoveToForgetText/ForgotAndText/HMCantDeleteText
+    # generate cleanly. None of the five are extern'd yet — they belong to the
+    # still-deferred interactive forget-list flow (engine/menus territory).
+    "engine/pokemon/learn_move.asm",
 ] + sorted(
     str(p.relative_to(ROOT)) for p in (ROOT / "engine" / "battle" / "move_effects").glob("*.asm")
 ) + [
@@ -136,9 +148,11 @@ def parse_body(lines, cm, mem, far_db):
             out += far_db[far]
             continue
         # tolerated no-ops in our model:
-        if s in ("text_promptbutton", "text_waitbutton", "text_scroll", "text_low", "text_pause"):
+        if s in ("text_promptbutton", "text_waitbutton", "text_scroll", "text_low", "text_pause",
+                 "sound_get_item_1", "sound_level_up"):
             out.append({"text_promptbutton": 0x06, "text_waitbutton": 0x0D,
-                        "text_scroll": 0x07, "text_low": 0x05, "text_pause": 0x0A}[s]); continue
+                        "text_scroll": 0x07, "text_low": 0x05, "text_pause": 0x0A,
+                        "sound_get_item_1": 0x0B, "sound_level_up": 0x0B}[s]); continue
         if s == "text_asm":
             raise ValueError("text_asm body cannot be generated (translate as code)")
         # bare `db "..."` raw string (e.g. WhichTechniqueString)
@@ -249,7 +263,15 @@ def collect_wrappers(cm, mem, far_db):
                             f"gen_battle_text: skipping {label} "
                             f"(text_far + text_asm → compose in code)\n")
                         body = None
-                    j += 1; break
+                        j += 1; break
+                    # Otherwise text_far is NOT the end of the wrapper's own stream:
+                    # TextCommandProcessor's TX_FAR handler is a real recursive call
+                    # that RETURNS once the far text hits its own terminator (verified
+                    # against src/text/text.asm:.cmd_far / .done — pop hl; jmp .next_cmd
+                    # resumes the OUTER stream). So any directives textually after
+                    # text_far (text_promptbutton, sound_get_item_1, text_end, ...) are
+                    # real, reachable bytes — keep scanning instead of stopping here.
+                    j += 1; continue
                 if t == "text_end" or re.match(r'db\s+"', t):
                     j += 1; break
                 j += 1

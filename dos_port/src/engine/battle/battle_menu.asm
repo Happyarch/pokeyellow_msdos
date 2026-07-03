@@ -89,7 +89,6 @@ str_exppts:  db 0x7F,0x84,0x97,0x8F,0xE8,0x7F,0x8F,0xAE,0xA8,0xAD,0xB3,0xB2,0xE7
 ; level-up text (pret _GrewLevelText "<nick> grew / to level N!")
 str_grew:    db 0x7F,0xA6,0xB1,0xA4,0xB6, 0x50                                                    ; " grew"
 str_tolevel: db 0xB3,0xAE,0x7F,0xAB,0xA4,0xB5,0xA4,0xAB,0x7F, 0x50                                 ; "to level "
-str_learned: db 0x7F,0xAB,0xA4,0xA0,0xB1,0xAD,0xA4,0xA3, 0x50                                      ; " learned"
 ; level-up stats-box labels (pret PrintStatsBox.StatsText)
 str_attack:  db 0x80,0x93,0x93,0x80,0x82,0x8A, 0x50                                               ; "ATTACK"
 str_defense: db 0x83,0x84,0x85,0x84,0x8D,0x92,0x84, 0x50                                          ; "DEFENSE"
@@ -107,7 +106,6 @@ arrow_on:    resb 1
 ; Saved "clean" battle screen — SaveScreenTilesToBuffer1 / LoadScreenTilesFromBuffer1.
 screen_save: resb SCREEN_AREA
 lvl_mon_ptr: resd 1                       ; GB offset of the leveling party mon (PrintStatsBox)
-learned_move_id: resb 1                   ; move learned on level-up (ShowLearnedMoveText)
 
 section .text
 
@@ -153,6 +151,10 @@ extern GetDamageVarsForEnemyAttack
 extern CalculateDamage
 extern AdjustDamageForMoveType
 extern RandomizeDamage
+extern IsThisPartyMonStarterPikachu  ; src/engine/pikachu/pikachu_status.asm (mood bump)
+extern GetMoveName                   ; src/home/names.asm — move name -> wNameBuffer
+extern CopyToStringBuffer            ; src/engine/battle/core.asm — wNameBuffer -> wStringBuffer
+extern LearnMove                     ; src/engine/pokemon/learn_move.asm — faithful teach flow
 
 ; ===========================================================================
 ; Draw primitives (the sanctioned divergence point) under pret names.
@@ -477,91 +479,40 @@ LearnMoveFromLevelUp:
     inc edi
     dec cl
     jnz .known
-    mov edi, [lvl_mon_ptr]
-    add edi, MON_MOVES
-    xor bl, bl
-    mov cl, NUM_MOVES
-.free:
-    mov al, [ebp + edi]
-    test al, al
-    jz .learn
-    inc edi
-    inc bl
-    dec cl
-    jnz .free
-    jmp .restore
-.learn:
-    mov [ebp + edi], dl
-    movzx eax, dl
-    dec eax
-    imul eax, eax, MOVE_LENGTH
-    movzx eax, byte [Moves + eax + 5]
-    movzx ecx, bl
-    add ecx, [lvl_mon_ptr]
-    mov [ebp + ecx + MON_PP], al
-    ; pret LearnMove (learn_move.asm:56-73): if the leveling mon is the active
-    ; battle mon, mirror the new move + PP into the in-battle struct the FIGHT
-    ; menu reads — otherwise the move stays invisible until the next battle.
-    cmp byte [ebp + wIsInBattle], 0
-    je .noBattleSync
-    mov al, [ebp + wWhichPokemon]
-    cmp al, [ebp + wPlayerMonNumber]
-    jne .noBattleSync
-    mov esi, [lvl_mon_ptr]
-    add esi, MON_MOVES
-    mov edi, wBattleMonMoves
-    mov cl, NUM_MOVES
-.syncMoves:
-    mov al, [ebp + esi]
-    mov [ebp + edi], al
-    inc esi
-    inc edi
-    dec cl
-    jnz .syncMoves
-    mov esi, [lvl_mon_ptr]
-    add esi, MON_PP
-    mov edi, wBattleMonPP
-    mov cl, NUM_MOVES
-.syncPP:
-    mov al, [ebp + esi]
-    mov [ebp + edi], al
-    inc esi
-    inc edi
-    dec cl
-    jnz .syncPP
-.noBattleSync:
-    mov al, dl
-    call ShowLearnedMoveText
+    ; pret LearnMoveFromLevelUp (evos_moves.asm) delegates slot-find/write/PP/
+    ; battle-sync/display to `predef LearnMove` — the faithful teach-flow module
+    ; (src/engine/pokemon/learn_move.asm). This replaces the old inline free-slot
+    ; scan that silently dropped the move (no message at all) when all 4 slots
+    ; were already full; LearnMove's DontAbandonLearning now handles that case
+    ; too (see its header for the current deferred-UI scope).
+    mov [ebp + wMoveNum], dl
+    mov [ebp + wNamedObjectIndex], dl
+    call GetMoveName
+    mov edx, wNameBuffer
+    call CopyToStringBuffer
+    call LearnMove                      ; -> BH: 0 = not learned, 1 = learned
+    test bh, bh
+    jz .restore
+    ; Yellow: if the leveling mon is the player's starter Pikachu and the move it
+    ; just learned is THUNDER/THUNDERBOLT, bump its mood/emotion. Faithful to pret
+    ; evos_moves.asm LearnMoveFromLevelUp (.foundThunderOrThunderbolt). Only the
+    ; learned path reaches here — the "already known" / "slots full" paths jump
+    ; straight to .restore and skip this.
+    movzx eax, byte [ebp + wMoveNum]
+    cmp al, THUNDERBOLT
+    je .pikachuThunderMove
+    cmp al, THUNDER
+    jne .restore
+.pikachuThunderMove:
+    call IsThisPartyMonStarterPikachu   ; uses [wWhichPokemon]; CF set if starter
+    jnc .restore
+    mov al, 5
+    mov [ebp + wPikachuEmotionModifier], al
+    mov al, 0x85
+    mov [ebp + wPikachuMood], al
 .restore:
     mov al, [ebp + wCurPartySpecies]
     mov [ebp + wPokedexNum], al
-    ret
-
-; ShowLearnedMoveText — "<nick> learned / <move>!" (AL = move id), then wait for A.
-ShowLearnedMoveText:
-    mov [learned_move_id], al
-    or  byte [ebp + W_LETTER_PRINTING_DELAY], (1 << BIT_TEXT_DELAY)
-    mov dword [menu_item_step], 2 * FW
-    mov esi, W_TILEMAP + OUTER_OFF
-    mov bh, OUTER_H
-    mov bl, OUTER_W
-    call TextBoxBorder
-    mov esi, W_TILEMAP + MSG_LINE1
-    call get_party_nick
-    call PlaceString
-    mov esi, ebx
-    mov eax, str_learned
-    call PlaceString
-    mov esi, ebx
-    mov esi, W_TILEMAP + MSG_LINE2
-    movzx eax, byte [learned_move_id]
-    call FindMoveName
-    call PlaceString
-    mov esi, ebx
-    mov eax, str_excl
-    call PlaceString
-    mov esi, ebx
-    call WaitForAPress
     ret
 
 ; PrintStatsBox — pret PrintStatsBox.LevelUpStatsBox: box + ATTACK/DEFENSE/SPEED/SPECIAL

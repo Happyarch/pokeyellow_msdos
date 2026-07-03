@@ -19,6 +19,7 @@ PIC_WIDTH               equ 7       ; max pic size in tiles
 PIC_HEIGHT              equ 7
 SPRITEBUFFERSIZE        equ PIC_WIDTH * PIC_HEIGHT * TILE_1BPP_SIZE  ; 392 = 0x188
 NAME_LENGTH             equ 11      ; '@'-terminated fixed-width name field (mon names)
+NAME_LENGTH_JP          equ 6       ; JP name length (OT-name compare in pikachu_status)
 NAME_BUFFER_LENGTH      equ 20      ; wNameBuffer size (GetName dest; bounds the copy)
 MOVE_NAME_LENGTH        equ 14      ; constants/text_constants.asm (12 printed + '@' + prefix)
 PARTY_LENGTH            equ 6
@@ -90,6 +91,8 @@ MON_DEF                 equ 0x26
 MON_SPD                 equ 0x28
 MON_SPC                 equ 0x2A
 PARTYMON_STRUCT_LENGTH  equ 0x2C    ; 44
+
+STARTER_PIKACHU         equ 84      ; = PIKACHU internal index ($54); pikachu_status
 
 ; --- Moves table record (data/moves/moves.asm; gen_moves.py) ---
 MOVE_LENGTH             equ 6
@@ -182,7 +185,14 @@ BURN_PSN_ANIM          equ 0xBA    ; battle anim shown on burn/poison residual
 
 ; --- misc menu / event constants ---
 PIKAHAPPY_LEVELUP      equ 1       ; constants/pikachu_emotion_constants.asm
+STATUS_SCREEN_STATS_BOX equ 0      ; constants/menu_constants.asm (PrintStatsBox d=0 → status-screen box)
 LEVEL_UP_STATS_BOX     equ 1       ; constants/menu_constants.asm (STATUS_SCREEN=0)
+SET_PAL_STATUS_SCREEN  equ 0x03    ; constants/palette_constants.asm (RunPaletteCommand id)
+SET_PAL_OVERWORLD      equ 0x09    ; constants/palette_constants.asm (RunPaletteCommand id)
+BIT_NO_AUDIO_FADE_OUT  equ 1       ; constants/ram_constants.asm (wStatusFlags2 bit)
+BIT_WILD_ENCOUNTER_COOLDOWN equ 0  ; constants/ram_constants.asm (wStatusFlags2 bit)
+CHAN5                  equ 4       ; constants/audio_constants.asm (5th sound channel index)
+LEADING_ZEROES         equ 0x80    ; PrintNumber flag (1<<BIT_LEADING_ZEROES): print '0' not space
 
 ; --- battle init / type (constants/battle_constants.asm, map_constants.asm) ---
 BATTLE_TYPE_SAFARI     equ 2
