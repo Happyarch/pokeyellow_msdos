@@ -805,6 +805,17 @@ assets/alphabets.inc: ../data/text/alphabets.asm ../constants/charmap.asm \
                       ../gfx/font/ED.1bpp tools/gen_alphabets.py
 	python3 tools/gen_alphabets.py
 
+# Pokédex order + entries (menus S8, package G / I2). dex_order = internal-index
+# -> national dex number byte table; dex_entries = PokedexEntryPointers (flat dd)
+# + inlined per-mon name/height/weight/flavor blobs (text_far flavor inlined).
+assets/dex_order.inc: ../data/pokemon/dex_order.asm ../constants/pokedex_constants.asm \
+                      tools/gen_dex_order.py
+	python3 tools/gen_dex_order.py
+
+assets/dex_entries.inc: ../data/pokemon/dex_entries.asm ../data/pokemon/dex_text.asm \
+                        ../constants/charmap.asm tools/gen_dex_entries.py
+	python3 tools/gen_dex_entries.py
+
 # Field-move display data + names (generated from data/moves/{field_moves,
 # field_move_names}.asm; resolves move ids via constants/move_constants.asm).
 assets/field_moves.inc:
@@ -884,7 +895,7 @@ assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_
         assets/super_rod.inc assets/town_map_data.inc assets/town_map_gfx.inc \
         assets/ui_layout_menus.inc assets/ui_layout_battle.inc \
         assets/map_border_overrides.inc assets/badge_tiles.inc \
-        assets/alphabets.inc
+        assets/alphabets.inc assets/dex_order.inc assets/dex_entries.inc
 
 all: $(TARGET)
 
