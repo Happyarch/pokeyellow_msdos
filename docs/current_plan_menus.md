@@ -194,11 +194,22 @@ entry + commit (root only).
   window-compositor rendering (grid/content + bg-whiteout not compositing; options.asm
   is the working reference) — faithful structure verified, visual polish deferred to the
   S10 interactive pass. `make` + `make check` green. Requires: S6.
-- [ ] **Session 8 — Swarm wave 3**: G pokedex split G1 (2D scroller+side
-  menu)/G2 (entry page; spike pics.asm front-pic reuse first) + root writes
-  gen_dex_order.py/gen_dex_entries.py; I link_menu split I1 (menus/dispatch,
-  serial stubs w/ pret timeout semantics)/I2 (cup validation, fully real).
-  %include-based splits. Requires: S7.
+- [x] **Session 8 — Swarm wave 3**: G pokedex split G1 (2D scroller+side
+  menu)/G2 (entry page; spike pics.asm front-pic reuse first); I link_menu split
+  I1 (menus/dispatch, serial stubs w/ pret timeout semantics)/I2 (cup validation,
+  fully real). DONE 2026-07-03 (prework ec3606e8; G-pair abeba3e9; I-pair
+  9cfc6377). Splits landed as two linked files each (extern/global across the
+  seam), not %include, because the paired workers ran in separate worktrees.
+  **gen_dex_order.py dropped as redundant** — the port already ships PokedexOrder
+  byte-identical as the global `IndexToPokedex` table (base_stats.inc); only
+  gen_dex_entries.py was kept (PokedexEntryPointers flat dd + inlined
+  name/height/weight/flavor). Root caught 3 wrong worker WRAM addresses vs
+  origin/symbols (hDexWeight 0xFF81→0xFF8B, wPrinterPokedexEntryTextPointer
+  0xCF17→0xCAF5, wUnusedLinkMenuByte 0xCC83→0xCD37) + one missing
+  (wEnteringCableClub 0xCC47). Reconciled the I1↔I2 Colosseum*Text seam
+  (routines, not data streams). reload_tiles.asm promoted to linked SRCS
+  (ShowPokedexMenu jp ReloadMapData). S10 carry-over: pokedex pic/content
+  window-compositing (shared C/E gap) + the interactive prompt paths. Requires: S7.
 - [ ] **Session 9 — Integration spine (root only).** Faithful pc.asm
   (ActivatePC/PCMainMenu; BillsPC seam stub) + start_sub_menus.asm
   (StartMenu_* wiring all packages, SwitchPartyMon, ErasePartyMenuCursors,
@@ -228,9 +239,9 @@ entry + commit (root only).
 | D | options | integrated (S6) | rAUDTERM + printer writes TODO-HW (wOptions/wPrinterSettings values still stored); window-mirror port plumbing |
 | E | main_menu | integrated (S7) | SRAM scan→DsvFileExists (CF polarity kept); joypad HAL + palette TODO-HW; OakSpeech/DisplayTitleScreen/PrepareForSpecialWarp integration stubs (main_menu_stubs.asm); window-compositor bridge (bg-whiteout bleed-through to polish in S10) |
 | F | players_pc | integrated (S6) | dialogs drawn-whole (text); SaveScreenTilesToBuffer→window model; SFX TODO-HW; explicit BIT_SINGLE_SPACED_LINES clear |
-| G1/G2 | pokedex | queued | |
+| G1/G2 | pokedex | integrated (S8) | dropped redundant gen_dex_order (PokedexToIndex walks the existing IndexToPokedex table); LoadPokedexTilePatterns no-op (dex tileset = S10 gfx); palette/audio/area(LoadTownMap_Nest)/print(PrintPokedexEntry) TODO-HW/STUB; G2 height/wt via '@'-scan (port PrintNumber clobbers EDX); front-pic via GB_VCHARS2 battle path; **pic+content window-compositing unverified — S10 (same gap as C/E)** |
 | H | save UI | integrated (S7) | all SRAM banking→dsv_io/no-op (49 TODO-HW); messages drawn-whole (text); CheckPreviousSaveFile same-playthrough (single-slot .dsv); ChangeBox swap no-op (current-box-only WRAM, geometry unverified—Bill's PC later); LoadHallOfFameTeams real (no-op endpoint until HoF region); real LoadHallOfFameTeams replaced A's league stub |
-| I1/I2 | link_menu | queued | |
+| I1/I2 | link_menu | integrated (S8) | all serial → TODO-HW no-partner-timeout stubs (flow reaches .choseCancel); SpecialEnterMap/PrepareForSpecialWarp = S9 warp seam stub; I2 FarCopyData→flat read, Func_3b10f (evo-stage) stubbed to basic path (DEVIATION); Colosseum*Text = I1 drawn-whole print routines, I2 calls them (dropped PrintCupText); text_far→inline. DEBUG_I2 fail-path blocks on the interactive prompt wait (S10 sweep) |
 
 ## Coordination
 

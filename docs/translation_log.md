@@ -23,6 +23,71 @@ if it took none. This is the swarm's divergence audit trail.
 
 ---
 
+## menus-port Session 8 — swarm wave 3 (root integration)
+
+Ported the last two leaf screens as swarm packages G (pokedex) + I (link_menu),
+each split in two workers and integrated as **two linked files** (extern/global
+across the seam — not %include, since the paired workers ran in separate
+worktrees). Commits: prework `ec3606e8`, G-pair `abeba3e9`, I-pair `9cfc6377`.
+
+**Root prework.** `tools/gen_dex_entries.py` → `assets/dex_entries.inc`:
+`PokedexEntryPointers` as a flat `dd` table (COFF rejects pret's 16-bit `dw`
+relocations) + one inlined blob per internal index (190; 152 unique). Blob layout
+(the contract G2/I2 read against): name (charmap, `@`=$50 terminated, variable
+length), then feet(1)/inches(1)/weight(2 LE tenths-lb), then the flavor stream
+`$00 <text/next=$4e/page=$49> $5f $50` — pret's `text_far` flavor **inlined**
+(DEVIATION; the flat port can't address bank data). MissingNo flavor is empty
+(glitch data, gated on `owned`). **`gen_dex_order.py` was written then dropped**:
+its `PokedexOrder` output is byte-identical to the port's existing global
+`IndexToPokedex` table (base_stats.inc), so pokedex.asm's PokedexToIndex walks
+that instead of duplicating it. Added 5 `UI_*` elements (POKEDEX_MAIN/SIDE_MENU/
+ENTRY, LINK_MENU/CUP_MENU) from the pret GB rects.
+
+**Package G — pokedex.** G1 (list/side-menu) + G2 (entry page), linked. G2's
+front-pic reuse spike found the port split `LoadFlippedFrontSpriteByMonIndex`
+(VRAM-load only; league_pc's tilemap-placing call is dead code) — the verified
+path is the battle one (load to GB_VCHARS2, then place tile IDs), which G2 uses.
+G2 computes height/weight field addresses by scanning the blob for `@` (the port
+PrintNumber clobbers EDX, unlike pret's DE-through-PrintNumber walk). Shared
+`LoadPokedexTilePatterns` no-op stub (dex tileset = S10 gfx). `LoadTownMap_Nest`
+(AREA) and `PrintPokedexEntry` (PRNT) out-of-scope stubs returning the right `b`
+code. `reload_tiles.asm` promoted from check-only to linked SRCS
+(ShowPokedexMenu's `jp ReloadMapData`). Gate: DEBUG_G1 renders the CONTENTS list
+(144 rows, 4 DMG shades); DEBUG_G2 draws the data-page border but the front pic +
+content don't fully composite through the window — the same window-compositor gap
+already flagged for C (naming) and E (main_menu), deferred to S10.
+
+**Package I — link_menu.** I1 (menus/dispatch) + I2 (cup validation), linked.
+All serial (`Serial_*`/`hSerialConnectionStatus`/`rSC`/`CloseLinkConnection`) →
+`; TODO-HW: network HAL` stubs that return the no-partner **timeout** path so the
+flow reaches `.choseCancel`/CloseLinkConnection (never a bare ret): connection
+status = CONNECTION_NOT_ESTABLISHED, receive buffers = "no response", the
+DelayFrame counters expire. `SpecialEnterMap`/`PrepareForSpecialWarp` = the
+Session-9 warp seam (tagged stub). I2 is pure logic (the three cups + 15 result
+routines): PetitCup reads `PokedexEntryPointers` (extern from G2) for the
+height/weight gate (`FarCopyData`→flat read; the two-byte weight `sub/sbb` CF
+chain and the level `cp/jr nc/jr c` gates ported flag-for-flag); `Func_3b10f`
+(evolution-stage predicate, not yet ported) stubbed to the basic path
+(DEVIATION). **Seam reconciliation:** I1 owns the `Colosseum*Text` labels as
+drawn-whole **print routines** (`call X` prints + waits + rets, matching pret
+`ld hl,X / call PrintText`); an earlier I2 build had assumed flat data streams and
+built a `PrintCupText` helper — collapsed at integration so I2's result routines
+`call` I1's routines directly. Gate: DEBUG_I1 renders the 3-box cup screen (140
+rows). DEBUG_I2's validator logic was self-verified in-worktree (pass a=0, gated
+fail codes); its headless fail-path blocks on I1's interactive `prompt` A/B wait
+(correct pret behavior — the interactive sweep is S10).
+
+**WRAM discipline (root re-derived every proposed address vs
+`origin/symbols:pokeyellow.sym`).** Caught 3 wrong worker guesses — hDexWeight
+`0xFF81→0xFF8B`, wPrinterPokedexEntryTextPointer `0xCF17→0xCAF5`, wUnusedLinkMenuByte
+`0xCC83→0xCD37` — and one the worker wrongly reported as already-present:
+wEnteringCableClub `0xCC47` (added). Promoted the link/serial cluster to
+gb_memmap.inc (NASM `%ifndef` does not see `equ` labels, so the workers' local
+guard blocks were removed rather than relied on). wDexMaxSeenMon `0xCD3D` (union
+lane) added. I2's party-level equates were *derived*
+(`wPartyMon1Level+PARTYMON_STRUCT_LENGTH`) so left as correct file-local; `MEW`=$15
+has no gb_constants collision.
+
 ## menus-port Session 7 — swarm wave 2 (root integration)
 
 Root (integrator) session. Root-first prework: NEW `src/save/dsv_io.asm` (the
