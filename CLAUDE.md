@@ -536,14 +536,17 @@ normally (stage, `git add -A`, `git commit -a`, and amend your own commits as yo
 see fit). The one rule: don't fold changes that fall *outside your current task /
 subsystem* into your commits without checking with the user first.
 
-- **In-scope changes: just handle them.** If you're working on the menus
-  subsystem and the working tree also has other menus changes, commit them
-  together — that's the same body of work. No need to stage file-by-file.
-- **Out-of-scope changes: notify or ask.** If you're working on menus and notice
-  unrelated changes in a different area (macros, overworld, battle, build config,
-  another subsystem), don't sweep them into your commit. Mention them to the user;
-  only commit them if the user says so, or if you have a clear reason — in which
-  case flag it in the message.
+- **In-scope changes: just handle them.** Changes that belong to the same task
+  or subsystem you're working on can be committed together — that's one body of
+  work, no need to stage file-by-file. (For example only: if your task is a menus
+  change and the tree also holds other menus edits, they're the same work.)
+- **Out-of-scope changes: notify or ask.** If the tree holds changes in some area
+  unrelated to your current task, don't sweep them into your commit — mention them
+  to the user, and only commit them if the user says so or you have a clear reason
+  you flag in the message. (For example only: your task is a menus change and
+  there are also edits sitting in macros / the overworld / build config.)
+- These subsystem names are just illustrations — apply the principle (in-scope =
+  yours to commit; unrelated = notify/ask) to whatever your actual task is.
 - **Don't rewrite work that isn't yours to rewrite.** Amending/rebasing your own
   recent commits is fine; don't `rebase`/`amend`/`reset` a commit from another
   session or one you can't account for — report it and let the user decide.
