@@ -1,6 +1,13 @@
 ; print_num.asm — PrintNumber (mirrors home/print_num.asm:PrintNumber).
 ;
-; Print the c-digit, b-byte little-endian value at DE into the tile buffer at HL.
+; Print the c-digit, b-byte BIG-ENDIAN value at DE into the tile buffer at HL.
+; (pret home/print_num.asm reads the first byte at DE into the most-significant
+; slot of hNumToPrint — big-endian — which matches how GB mon data (HP, stats,
+; OTID, Exp) is stored. A prior port revision read little-endian here, which was a
+; latent divergence from pret: harmless for the only callers so far, all 1-byte —
+; item quantity, level — but wrong for any multi-byte value. Fixed to big-endian
+; when the status screen became the first multi-byte caller. See CLAUDE.md
+; "Data Endianness".)
 ; Supports 2..7 digits and 1..3 source bytes. Flags LEADING_ZEROES (bit 7) and
 ; LEFT_ALIGN (bit 6) may be set in the high bits of B. (For a 1-digit number the
 ; caller adds the value to '0' directly, as in pret.)
@@ -49,15 +56,15 @@ PrintNumber:
     movzx ecx, bl                    ; ECX = digit count (grab before BL is clobbered)
     push  ecx
 
-    ; --- read the little-endian value at [EBP+EDX] (EAX bytes) into EDI ---
+    ; --- read the BIG-ENDIAN value at [EBP+EDX] (EAX bytes) into EDI ---
+    ; First byte at DE is most-significant (pret: [de] → hNumToPrint high slot).
+    ; EDI = EDI*256 + next byte, so the first byte ends up in the high position.
     xor   edi, edi                   ; EDI = accumulated value
-    xor   ecx, ecx                   ; ECX (cl) = current shift
 .read:
+    shl   edi, 8
     movzx ebx, byte [ebp + edx]
-    shl   ebx, cl
     or    edi, ebx
     inc   edx
-    add   cl, 8
     dec   eax
     jnz   .read
 

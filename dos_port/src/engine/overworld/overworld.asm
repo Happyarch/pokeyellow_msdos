@@ -101,6 +101,9 @@ extern RunBattleTest
 %ifdef DEBUG_LEARNMOVE
 extern RunLearnMoveTest
 %endif
+%ifdef DEBUG_STATUS
+extern RunStatusScreenTest
+%endif
 %ifdef DEBUG_WALKSPEED
 extern DebugDumpMemory
 extern tick_count
@@ -360,6 +363,9 @@ EnterMap:
 %endif
 %ifdef DEBUG_LEARNMOVE
     call RunLearnMoveTest                  ; force a level-up move-learn, render one frame, dump FRAME.BIN, exits
+%endif
+%ifdef DEBUG_STATUS
+    call RunStatusScreenTest               ; open status screen page 1, render one frame, dump FRAME.BIN, exits
 %endif
 %ifdef DEBUG_WALKSPEED
     ; Live walk-speed instrumentation: boots normally into OverworldLoop so you can

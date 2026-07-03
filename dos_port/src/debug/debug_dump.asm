@@ -86,6 +86,15 @@ extern LearnMoveFromLevelUp
 extern DelayFrame
 global RunLearnMoveTest
 %endif
+%ifdef DEBUG_STATUS
+extern PrepareNewGameDebug
+extern LoadFontTilePatterns
+extern StatusScreen
+%ifdef DEBUG_STATUS_PAGE2
+extern StatusScreen2
+%endif
+global RunStatusScreenTest
+%endif
 
 global DebugDumpMemory
 global DumpBackbuffer
@@ -552,6 +561,29 @@ RunLearnMoveTest:
     call LearnMoveFromLevelUp
     call DelayFrame
     call DumpBackbuffer             ; dump FRAME.BIN + exit (never returns)
+.hang:
+    jmp .hang
+%endif
+
+%ifdef DEBUG_STATUS
+; RunStatusScreenTest — seed the party, open the status/summary screen page 1 for
+; the STARTER_PIKACHU in slot 3, and let StatusScreen's DEBUG_STATUS hook render one
+; frame + dump FRAME.BIN before its button-wait. Never returns.
+RunStatusScreenTest:
+    mov byte [ebp + 0xD162], 0      ; wPartyCount = 0
+    mov byte [ebp + 0xD163], 0xFF   ; wPartySpecies sentinel
+    mov byte [ebp + 0xD31C], 0      ; wNumBagItems = 0
+    mov byte [ebp + 0xD31D], 0xFF   ; wBagItems sentinel
+    call PrepareNewGameDebug        ; seeds party incl. slot3 = STARTER_PIKACHU L5
+
+    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    call LoadFontTilePatterns       ; font glyphs ($80+) — StatusScreen loads HP/HUD/box tiles itself
+    mov byte [ebp + wWhichPokemon], 3
+    mov byte [ebp + wMonDataLocation], 0    ; PLAYER_PARTY_DATA
+    call StatusScreen               ; page 1; dumps + exits unless DEBUG_STATUS_PAGE2 (then returns)
+%ifdef DEBUG_STATUS_PAGE2
+    call StatusScreen2              ; page 2; dumps FRAME.BIN + exits
+%endif
 .hang:
     jmp .hang
 %endif

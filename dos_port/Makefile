@@ -181,6 +181,7 @@ POKEMON_SRCS := \
     src/engine/pokemon/write_moves.asm \
     src/engine/pokemon/status_ailments.asm \
     src/engine/pokemon/status_screen.asm \
+    src/engine/pokemon/get_max_pp.asm \
     src/engine/pokemon/knows_hm_move.asm \
     src/engine/pikachu/pikachu_status.asm \
     src/engine/pokemon/evolution.asm \
@@ -364,6 +365,21 @@ endif
 # make DEBUG_LEARNMOVE=1 DEBUG_LEARNMOVE_FULL=1
 ifdef DEBUG_LEARNMOVE_FULL
 NASMFLAGS += -D DEBUG_LEARNMOVE_FULL
+endif
+# Status-screen gate: seed the party, open the status/summary screen (page 1) for
+# STARTER_PIKACHU (party slot 3), render one frame, dump FRAME.BIN, exit.
+# make DEBUG_STATUS=1
+# Sub-flag of DEBUG_STATUS: render summary-screen page 2 (moves/PP/EXP) instead of
+# page 1. make DEBUG_STATUS=1 DEBUG_STATUS_PAGE2=1  (implies DEBUG_STATUS)
+ifdef DEBUG_STATUS_PAGE2
+DEBUG_STATUS := 1
+NASMFLAGS += -D DEBUG_STATUS_PAGE2
+endif
+ifdef DEBUG_STATUS
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_STATUS
+NASMFLAGS += -D SKIP_TITLE
+GAME_SRCS += src/engine/debug/debug_party.asm
 endif
 ifdef NEED_DEBUG_DUMP
 GAME_SRCS += src/debug/debug_dump.asm
@@ -599,6 +615,10 @@ assets/gb_charmap.txt:
 assets/menu_strings.inc: assets/gb_charmap.txt tools/gen_menu_strings.py tools/gb_text.py
 	python3 tools/gen_menu_strings.py
 
+# Status/summary-screen PlaceString labels (charmap-encoded via gb_text; two-tier rule).
+assets/status_strings.inc: assets/gb_charmap.txt tools/gen_status_strings.py tools/gb_text.py
+	python3 tools/gen_status_strings.py
+
 # Battle message command streams (pret data/text + engine/battle wrappers, text_far
 # flattened). %included by the battle core engine. Generated from the read-only spec.
 assets/battle_text.inc: ../data/text/text_2.asm ../engine/battle/core.asm \
@@ -637,6 +657,9 @@ assets/trainer_pics.inc: ../gfx/pics.asm ../data/trainers/pic_pointers_money.asm
 # Start menu checks EVENT_GOT_POKEDEX via events.inc → event_constants.inc, and
 # %includes the generated menu_strings.inc label block.
 src/engine/menus/start_menu.o: assets/event_constants.inc assets/menu_strings.inc
+
+# Status screen %includes the generated status_strings.inc label block.
+src/engine/pokemon/status_screen.o: assets/status_strings.inc
 
 # Pokémon base stats + IndexToPokedex (static data, generated from pret source).
 assets/base_stats.inc:
@@ -726,6 +749,7 @@ assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_
         assets/base_stats.inc assets/growth_rates.inc \
         assets/moves.inc assets/evos_moves.inc assets/monster_names.inc \
         assets/items.inc assets/gb_charmap.txt assets/menu_strings.inc \
+        assets/status_strings.inc \
         assets/type_matchups.inc assets/move_names.inc assets/field_moves.inc \
         assets/effect_categories.inc \
         assets/wild_data.inc assets/map_scripts.inc assets/battle_hud_2bpp.inc \

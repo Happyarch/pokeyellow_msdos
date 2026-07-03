@@ -182,6 +182,52 @@ rodata label copies zeros while immediate `mov [ebp+x], imm` writes work fine.
 | — | EDI | Secondary pointer / blit destination |
 | — | ECX | Loop counter / scratch |
 
+### Preserve pret Labels
+
+**Keep the pret label names — do not rename or invent.** Every translated
+routine, jump target, and data label keeps the exact name pret uses (`StatusScreen`,
+`DrawHPBar`, `EvolutionAfterBattle`, `.nonzeroHP`, `TypesIDNoOTText`, …) so the
+port stays line-for-line cross-referenceable against the disassembly. This is a
+hard rule, not a style preference:
+
+- If the port needs a lowercase/local alias (e.g. a file-local helper the pret
+  routine inlined), keep the pret name as the primary symbol and add the alias
+  **alongside** it — never in place of it. Prefer adding aliases in the `.inc`,
+  not renaming the routine.
+- Where pret's structure splits differently in the port (e.g. a pret `predef`
+  that the port calls directly, or one pret routine realized as two because a
+  bespoke variant already exists), keep pret's names on both halves and add a
+  comment explaining the split. Don't collapse two pret labels into one new name.
+- New port-only routines (HAL boundaries, debug harnesses) get descriptive names,
+  but anything that *has* a pret counterpart uses the pret counterpart's name.
+
+### Preserve Flags (ZF/CF) — x86 ≠ SM83
+
+**Translating a conditional is not just translating the branch — it's preserving
+the flag the branch reads.** SM83 and x86 set flags on *different* instructions,
+so a faithful-looking translation can silently break a `jr z`/`jr c` by clobbering
+the flag between where it's set and where it's tested. This has bitten real
+routines (see the `lea esi,[esi+1]`-instead-of-`inc` fix in `pikachu_status.asm`).
+
+- **Identify the exact instruction that sets the flag pret's branch depends on,
+  and make sure nothing between it and the branch disturbs that flag.** Map
+  `jr z/nz` → `jz/jnz` (ZF), `jr c/nc` → `jb/jae` (CF, unsigned) — but only after
+  confirming the flag still holds at the branch.
+- **`inc`/`dec` preserve CF but modify ZF/SF/OF/AF/PF.** So an `inc de`/`dec hl`
+  that pret places between a `sub` and an `sbc` (borrow chain) is safe in x86
+  too — CF survives. But an `inc`/`dec` between a `cp`/`or`/`and` and a `jr z`
+  **destroys ZF** — pret's `inc hl` after a compare was flag-neutral on SM83 in
+  that spot only because SM83's `ld`/`inc [hl]` differ; re-check each case.
+- **`mov`, `lea`, `movzx`, `push`/`pop` do NOT touch flags** — use `lea
+  esi,[esi+1]` instead of `inc esi`, or reorder, when you must advance a pointer
+  without disturbing a live ZF/CF.
+- **`test`/`cmp`/`and`/`or`/`add`/`sub`/`shl`/`shr` all set flags** — never place
+  one of these between a flag producer and its consumer unless it *is* the
+  producer.
+- SM83 `F: N`/`H` are tracked separately (`[hf_shadow]`, lazy) — see the register
+  table above; most routines don't touch them, but DAA/CPL paths do.
+- Related: multi-byte GB values are **big-endian** — see "Data Endianness" below.
+
 ### Memory Model
 `EBP` = base of a ~96 KB DPMI allocation (64 KB GB space + 8 KB CGB VRAM bank 1
 + 160×144 back buffer). Access emulated GB memory as `[EBP + constant]` where
@@ -209,6 +255,31 @@ Other verified DPMI gotchas:
   linear memory until `setup_flat_access` was taught to normalize SS to the
   DS selector (with an ESP rebase of `ss_base - ds_base` in the same
   instruction pair). Symptom when broken: renderer reads all zeros, no crash.
+
+### Data Endianness (preserve pret byte order)
+
+**GB game data is big-endian; keep it that way.** The SM83 stores multi-byte
+game values **high byte first** (big-endian): mon HP, MaxHP, the five stats,
+OT ID, EXP, and every other multi-byte field in the party/box/`wLoadedMon`
+structs. This is load-bearing for pret cross-reference *and* for the Gen-2
+byte-identical-struct rule — **do not** re-store any GB value in x86-native
+little-endian order.
+
+- **Reading a multi-byte GB value:** treat `[EBP+addr]` as big-endian
+  (`hi = [addr]`, `lo = [addr+1]`), exactly as the pret routine does. Do not
+  assume x86 little-endian just because the host is.
+- **Home/shared routines must match pret's byte order.** `PrintNumber`
+  (`home/print_num.asm`) reads its source **big-endian** — the first byte at
+  `DE` is most-significant (pret loads it into the high slot of `hNumToPrint`).
+  A prior port revision read it little-endian; that was a latent divergence
+  (harmless only because every caller so far passed 1-byte values) and is now
+  fixed. When you translate any routine that consumes a multi-byte value,
+  verify the endianness against the pret source rather than the x86 default.
+- **Flags caveat that often rides along:** SM83 16-bit math builds values
+  hi-then-lo; when porting a borrow/carry chain (`sub`/`sbc`) that walks such a
+  value, remember `inc`/`dec` on the pointer preserve CF (unlike some other x86
+  ops), so the borrow survives the pointer step — but a `cmp`/`add`/`sub`/`test`
+  between the halves will clobber it.
 
 ### Video
 - VGA Mode 13h (320×200, 256 colors)
@@ -356,6 +427,40 @@ some entries need bespoke, hand-authored logic. Keep that logic safe from
    generator the override — ideally reading an explicit sidecar list so it's
    visible and survives regen — or (b) keep the override in code: load the
    generated value, then adjust in the routine under a `BUG_FIX_LEVEL` block.
+
+#### Text strings are DATA — generate them; never hand-encode charmap bytes
+
+**This is the single most repeated Tier-1 violation. Read it before you type a
+`db 0x…` with a charmap glyph in it.** Any human-readable string the game renders
+(menu labels, screen labels, item/move/mon names, dialog, button captions — even a
+short one like `"OK"` or `"TYPE1/"`) is **Tier-1 data** and MUST be produced by a
+Python generator that charmap-encodes it via `tools/gb_text.py` (`gb_text.encode`,
+the `unicode_converter` submodule) into an `assets/*.inc` with the `DO NOT EDIT`
+header, `%include`d by the `.asm` and wired into the Makefile `assets` target.
+
+- **DON'T** write `TypesIDNoOTText: db 0x93,0x98,0x8F,0x84,…  ; "TYPE1/"` in a
+  `.asm`. Hand-transcribed charmap hex is unreviewable, silently drifts if the
+  charmap changes, and is exactly the Tier-1 data the two-tier rule forbids in code.
+- **DO** add the label (as readable text) to a generator and `%include` the result.
+  Follow the existing pattern: `tools/gen_menu_strings.py` (START-menu labels) and
+  `tools/gen_status_strings.py` (status-screen labels) → `assets/menu_strings.inc` /
+  `assets/status_strings.inc`. Add your screen's strings to the matching generator
+  (or a new `gen_<screen>_strings.py` modeled on those), then add the `.inc` to the
+  `assets` target + the consuming `.o`'s prerequisites.
+- **Control/format tiles inside a string** that `gb_text.encode` can't map
+  (`<NEXT>` $4E, `<LINE>` $4F, `<ID>` $73, …) are inserted by the generator as
+  named raw bytes between encoded text runs — mirroring pret's `db "…"` / `next`.
+  A **single control tile written by code** (e.g. `mov byte [ebp+esi], LB_VLINE`)
+  is not a string and stays in the `.asm`.
+- **Pointer/address tables are NOT strings** — a `dw`/`dd` table of WRAM offsets or
+  routine addresses (e.g. `OTPointers`, a jump table) is code (Tier 2), hand-written
+  in the `.asm`. The rule is about *encoded glyph runs*, not every `db`/`dw`.
+- **Legacy hand-encoded strings exist** (`party_menu.asm`, `bag_menu.asm`,
+  `home/names.asm`, older battle labels) — they predate the generator pattern and
+  are a known debt, **not** a precedent. Do not add more; migrate opportunistically
+  when you touch one. Note the worktree caveat: the generator needs the
+  `unicode_converter` submodule (seed it from the primary clone); the generated
+  `.inc` is gitignored and regenerated by `make assets`.
 
 ---
 

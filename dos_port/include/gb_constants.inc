@@ -177,7 +177,11 @@ BURN_PSN_ANIM          equ 0xBA    ; battle anim shown on burn/poison residual
 
 ; --- misc menu / event constants ---
 PIKAHAPPY_LEVELUP      equ 1       ; constants/pikachu_emotion_constants.asm
+STATUS_SCREEN_STATS_BOX equ 0      ; constants/menu_constants.asm (PrintStatsBox d=0 → status-screen box)
 LEVEL_UP_STATS_BOX     equ 1       ; constants/menu_constants.asm (STATUS_SCREEN=0)
+SET_PAL_STATUS_SCREEN  equ 0x03    ; constants/palette_constants.asm (RunPaletteCommand id)
+BIT_NO_AUDIO_FADE_OUT  equ 1       ; constants/ram_constants.asm (wStatusFlags2 bit)
+LEADING_ZEROES         equ 0x80    ; PrintNumber flag (1<<BIT_LEADING_ZEROES): print '0' not space
 
 ; --- battle init / type (constants/battle_constants.asm, map_constants.asm) ---
 BATTLE_TYPE_SAFARI     equ 2

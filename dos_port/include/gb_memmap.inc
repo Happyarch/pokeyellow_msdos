@@ -1270,6 +1270,22 @@ wLoadedMonStatus              equ 0xCF9B ; wLoadedMon + MON_STATUS (PrintStatusC
 wLoadedMonHPExp               equ 0xCFA8 ; wLoadedMon + MON_STAT_EXP (HP stat-exp)
 wLoadedMonMaxHP               equ 0xCFB9 ; wLoadedMon + MON_MAXHP (first computed stat)
 wLoadedMonStats               equ 0xCFB9 ; = wLoadedMonMaxHP (stats block starts at MaxHP)
+; Status/summary screen inputs (sym-verified vs origin/symbols; Stage 4).
+wLoadedMonMoves               equ 0xCF9F ; wLoadedMon + MON_MOVES (4 move ids)
+wLoadedMonOTID                equ 0xCFA3 ; wLoadedMon + MON_OTID (2 bytes, big-endian)
+wLoadedMonAttack              equ 0xCFBB ; stats block: MaxHP,Atk,Def,Spd,Spc (2 bytes each)
+wLoadedMonDefense             equ 0xCFBD
+wLoadedMonSpeed               equ 0xCFBF
+wLoadedMonSpecial             equ 0xCFC1
+wStatusScreenHPBarColor       equ 0xCF24 ; GetHealthBarColor output (cosmetic; palette Phase 5)
+wStatusScreenCurrentPP        equ 0xCD71 ; scratch: current move PP for StatusScreen2 PrintNumber
+; GetMaxPP scratch + per-source move lists (sym-verified vs origin/symbols; Stage 4).
+wPPUpCountAndMaxPP            equ 0xCD73 ; = wMoveData + MOVE_PP + 1 (AddBonusPP work byte)
+wUsingPPUp                    equ 0xD11D ; (union wMaxPP/wPokedexNum scratch — see GetMaxPP order)
+wPartyMon1Moves              equ 0xD172 ; party mon 0 move-id list (GetSelectedMoveOffset base)
+wEnemyMon1Moves              equ 0xD8AB
+wBoxMon1Moves                equ 0xDA9D
+wDayCareMonMoves             equ 0xDA66
 wEvolutionOccurred            equ 0xD120 ; set when a mon evolved this EvolutionAfterBattle
 wPikachuMood                  equ 0xD470
 wPikachuEmotionModifier       equ 0xD49B
