@@ -218,7 +218,7 @@ entry + commit (root only).
 |-----|--------|--------|-----------------|
 | A | oaks_pc + league_pc | integrated (S6) | dialogs drawn-whole (text); buffer2 save→window-list; DisplayDexRating STUB(S8); HoF team loop STUB(S7) w/ 0-team guard + ret-stubs; palette TODO-HW |
 | B | draw_badges / trainer card gfx | integrated (S6) | none |
-| C | naming_screen | queued | |
+| C | naming_screen | integrated (S7) | PrintText split (battle vs overworld); TX_FAR→inline; JP dakuten pages omitted; party-mon icon walk-anim not ported (BG-tile stand-in); hJoyPressed→H_JOY5; rSTAT HBlank ED-tile hack→plain copy. **Render: box windows but grid content/bg-whiteout not compositing (shared bespoke-window-bridge issue with main_menu; options.asm is the working reference) — S10 polish.** |
 | D | options | integrated (S6) | rAUDTERM + printer writes TODO-HW (wOptions/wPrinterSettings values still stored); window-mirror port plumbing |
 | E | main_menu | integrated (S7) | SRAM scan→DsvFileExists (CF polarity kept); joypad HAL + palette TODO-HW; OakSpeech/DisplayTitleScreen/PrepareForSpecialWarp integration stubs (main_menu_stubs.asm); window-compositor bridge (bg-whiteout bleed-through to polish in S10) |
 | F | players_pc | integrated (S6) | dialogs drawn-whole (text); SaveScreenTilesToBuffer→window model; SFX TODO-HW; explicit BIT_SINGLE_SPACED_LINES clear |

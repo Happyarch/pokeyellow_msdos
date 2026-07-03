@@ -181,6 +181,8 @@ GAME_SRCS := \
     src/engine/menus/main_menu.asm \
     src/engine/menus/main_menu_stubs.asm \
     src/engine/menus/save.asm \
+    src/engine/menus/naming_screen.asm \
+    src/engine/overworld/reload_sprites.asm \
     src/engine/overworld/simulate_joypad.asm \
     src/engine/overworld/overworld_stubs.asm \
     src/engine/overworld/wild_encounter_check.asm \
@@ -417,6 +419,14 @@ NASMFLAGS += -D DEBUG_SAVE_ROUNDTRIP
 NASMFLAGS += -D SKIP_TITLE
 GAME_SRCS += src/engine/debug/debug_party.asm
 endif
+# Naming-screen gate (menus S7 package C): boot to overworld, open the PLAYER
+# naming screen, draw the uppercase letter grid, dump FRAME.BIN, exit.
+# make SKIP_TITLE=1 DEBUG_NAMINGSCREEN=1
+ifdef DEBUG_NAMINGSCREEN
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_NAMINGSCREEN
+NASMFLAGS += -D SKIP_TITLE
+endif
 # Live battle view: same setup as DEBUG_BATTLE but holds the screen (loops
 # DelayFrame) so you can visually inspect it instead of dumping+exiting. Esc quits.
 # make DEBUG_BATTLE_LIVE=1 (then dos_port/run).
@@ -601,12 +611,14 @@ HOME_CHECK_SRCS := \
     src/home/reload_tiles.asm \
     src/home/vcopy.asm \
     src/engine/overworld/pikachu.asm \
-    src/engine/overworld/reload_sprites.asm \
     src/engine/overworld/player_gfx.asm \
     src/engine/overworld/overworld_text.asm \
     src/engine/overworld/ledges.asm \
     src/engine/overworld/pathfinding.asm \
     src/engine/overworld/trainer_engine.asm
+# reload_sprites.asm promoted to GAME_SRCS (menus S7): naming_screen.asm calls
+# ReloadMapSpriteTilePatterns; its externs (DisableLCD/EnableLCD/InitMapSprites/
+# LoadPlayerSpriteGraphics/LoadFontTilePatterns/UpdateSprites) are all linked.
 
 # ALL_SRCS = everything that must assemble cleanly (check) and be cleaned, incl.
 # the not-yet-linked battle backend + check-only pokemon/items/home backends.
@@ -741,6 +753,7 @@ src/engine/menus/draw_start_menu.o: assets/event_constants.inc \
 src/engine/menus/start_sub_menus.o: assets/ui_layout_menus.inc
 src/engine/items/item_effects.o: assets/ui_layout_menus.inc
 src/engine/menus/main_menu.o src/engine/menus/save.o: assets/ui_layout_menus.inc
+src/engine/menus/naming_screen.o: assets/ui_layout_menus.inc assets/alphabets.inc
 
 # Pokémon base stats + IndexToPokedex (static data, generated from pret source).
 assets/base_stats.inc:

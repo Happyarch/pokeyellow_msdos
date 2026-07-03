@@ -70,6 +70,33 @@ sym-verified save/naming/options WRAM in gb_memmap.inc. Committed as prework 956
   now-redundant wDestinationMap placeholder (NASM inconsistent-equ redefinition). `make` +
   `make check` green.
 
+## menus-port Session 7 package C — naming_screen (root integration)
+- **Date:** 2026-07-03
+- **AskName / DisplayNameRaterScreen / DisplayNamingScreen + PrintAlphabet /
+  PrintNicknameAndUnderscores / PrintNamingText / CalcStringLength / LoadEDTile** —
+  Source: pret `engine/menus/naming_screen.asm`. Translated: NEW
+  `dos_port/src/engine/menus/naming_screen.asm`. Full-screen takeover at
+  UI_NAMING_SCREEN; own input loop (options.asm model) with per-frame naming_mirror.
+  Codes against the generated `assets/alphabets.inc` (UpperCaseAlphabet/LowerCaseAlphabet
+  + alphabet_ed_tile + counts, from tools/gen_alphabets.py). Worker caught + fixed a
+  real bug: keeping `.namingScreenButtonFunctions` a local dot-label (a global there
+  would have silently rebased every subsequent `.foo`).
+- **Integration:** naming_screen.asm → GAME_SRCS. Two link blockers resolved:
+  `LoadMonPartySpriteGfx` made global (party_menu.asm); `reload_sprites.asm`
+  (ReloadMapSpriteTilePatterns) promoted HOME_CHECK_SRCS → GAME_SRCS (its externs all
+  linked). No new WRAM (all naming WRAM already in gb_memmap). DEBUG_NAMINGSCREEN gate.
+- **Tags:** PROJ ×2 (cite UI_NAMING_SCREEN), TODO-HW ×1 (SFX), DEVIATION ×9 (PrintText
+  battle/overworld split; TX_FAR→inline; JP dakuten omission; party-mon icon walk-anim
+  omitted with its farcalls; hJoyPressed→H_JOY5; rSTAT HBlank ED-tile hack→plain copy;
+  window plumbing).
+- **Render (S10 follow-up):** DEBUG_NAMINGSCREEN FRAME.BIN draws the naming box window
+  but the letter-grid interior + bg-whiteout do not composite (overworld bleeds behind) —
+  the SAME bespoke full-screen window-bridge discrepancy as package E's main_menu, while
+  the S6 options.asm (identical g_bg_whiteout + own-mirror pattern) renders correctly.
+  Faithful pret structure/labels/flow verified; the window-compositor alignment (main_menu
+  + naming vs the working options/save reference) is deferred to the S10 interactive pass.
+  `make` + `make check` green.
+
 ## menus-port Session 6 — swarm wave 1 (root integration)
 
 Root (integrator) session. Four Opus workers in seeded worktrees produced the

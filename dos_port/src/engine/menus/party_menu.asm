@@ -438,6 +438,7 @@ WritePartyMonIconTiles:
 ; (frame 0) into its 4 vTileset tiles and resets the animation state.
 ; Preserves all registers.
 ; ---------------------------------------------------------------------------
+global LoadMonPartySpriteGfx            ; naming_screen.asm (menus S7 package C) externs it
 LoadMonPartySpriteGfx:
     pushad
     mov dword [pm_anim_ctr], 0

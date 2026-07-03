@@ -125,6 +125,9 @@ extern RunMainMenuTest
 %ifdef DEBUG_SAVE
 extern RunSaveTest
 %endif
+%ifdef DEBUG_NAMINGSCREEN
+extern RunNamingScreenTest
+%endif
 %ifdef DEBUG_WALKSPEED
 extern DebugDumpMemory
 extern tick_count
@@ -410,6 +413,9 @@ EnterMap:
 %endif
 %ifdef DEBUG_SAVE
     call RunSaveTest                        ; seed party, run SaveGameData, dump "saved!" FRAME.BIN, exits
+%endif
+%ifdef DEBUG_NAMINGSCREEN
+    call RunNamingScreenTest                ; open PLAYER naming screen, draw grid, dump FRAME.BIN, exits
 %endif
 %ifdef DEBUG_WALKSPEED
     ; Live walk-speed instrumentation: boots normally into OverworldLoop so you can
