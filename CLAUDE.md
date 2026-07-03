@@ -497,6 +497,14 @@ commit but too specific to belong in TODO.md.
   then a swarm of the leaf screens (PCs, pokédex, naming, options, save, link).
   Session 1 (layout pipeline + editor) done; awaiting the human layout-freeze
   step before Session 2.
+- `docs/current_plan_macros.md` — **port pret's portable RGBDS macros** to real
+  NASM `%macro`s in `dos_port/include/` (coords, event-macro family, data/gfx
+  helpers, text-command macros), "add macros only" (no call-site retrofit),
+  checkbox-tracked across chunked stages. Excludes redundant-by-design banking
+  macros, generator-owned data macros, and engine-blocked audio/gfx-anim/script
+  templates. Stage 1 (plan doc) done; coords chunk (A1) is next but hinges on the
+  context-dependent tilemap stride (global `SCREEN_WIDTH=40` vs text.asm's
+  stride-20 / runtime `text_row_stride`).
 - **Battle engine** — the backend plan (`battle_engine`) is **complete** and the
   front-end alignment plan (`battle_pret_alignment`) was **superseded by the battle
   swarm** (Masters A/B/C, archived at `docs/archive/battle_swarm_*`, merged to
