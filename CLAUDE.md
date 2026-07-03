@@ -529,23 +529,25 @@ the environment, installs may proceed without prompting.
 
 ---
 
-## Commit Policy (multi-agent collision safety)
+## Commit Policy (stay within your task's scope)
 
-**Only commit your own work — work authored in your current session.** Multiple
-agents/sessions frequently share this repo at once, so a blanket `git commit`
-sweeps up whatever else is staged and folds unrelated work into the wrong commit.
+**Commit the work for the task you're doing — not unrelated changes.** Use git
+normally (stage, `git add -A`, `git commit -a`, and amend your own commits as you
+see fit). The one rule: don't fold changes that fall *outside your current task /
+subsystem* into your commits without checking with the user first.
 
-- **Stage explicitly.** Never `git commit` relying on the index alone — always
-  `git add <the specific files you changed>` and commit those paths. Do not `git
-  add -A`/`git add .`/`git commit -a`.
-- **If the working tree or index contains changes you did not author this
-  session, ask the user before touching them.** Never commit, stash, restore, or
-  otherwise move another session's changes without explicit permission.
-- **Never rewrite a commit you did not create** (no `rebase`/`amend`/`reset` onto
-  another session's commit) — a concurrent session may be building on it. This is
-  a hard rule even when their commit accidentally captured your change; report it
-  and let the user decide.
-- When in doubt about authorship, `git status`/`git diff` first and ask.
+- **In-scope changes: just handle them.** If you're working on the menus
+  subsystem and the working tree also has other menus changes, commit them
+  together — that's the same body of work. No need to stage file-by-file.
+- **Out-of-scope changes: notify or ask.** If you're working on menus and notice
+  unrelated changes in a different area (macros, overworld, battle, build config,
+  another subsystem), don't sweep them into your commit. Mention them to the user;
+  only commit them if the user says so, or if you have a clear reason — in which
+  case flag it in the message.
+- **Don't rewrite work that isn't yours to rewrite.** Amending/rebasing your own
+  recent commits is fine; don't `rebase`/`amend`/`reset` a commit from another
+  session or one you can't account for — report it and let the user decide.
+- When unsure whether something is in scope, `git status`/`git diff` first and ask.
 
 ---
 

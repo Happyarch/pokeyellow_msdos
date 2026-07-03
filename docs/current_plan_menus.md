@@ -222,6 +222,30 @@ entry + commit (root only).
   grid). dosbox_mcp gb_read return-contract checks on 3+ screens. Update
   ui_projection.md index (cite UI_* equates), CLAUDE.md phase blurb,
   translation_log.md; `git mv docs/current_plan_menus.md docs/plans/menus.md`.
+  **Carry-over fixes (accumulated across S4–S8 — do these BEFORE the interactive
+  pass, they gate it):**
+  1. **Window-compositor gap (the big one).** Grid/content/pic does not composite
+     through the menu window on the full-takeover screens: naming_screen (C),
+     main_menu + DisplayContinueGameInfo (E), and pokedex entry page + front pic
+     (G2) all render their box/border but not the interior content. `options.asm`
+     is the one full-takeover screen that composites correctly — diff its
+     mirror + `set_single_window` + tiledata-addressing path against the broken
+     ones and fix the shared bridge. This is one root cause, not four.
+  2. **`LoadPokedexTilePatterns` (G).** Currently a no-op stub — port the real dex
+     tileset load (dex $60–$7A tiles incl. the ′/″/№ glyphs + pokéball/line tiles
+     from `gfx/pokedex/`) so the pokédex list/entry render with correct tiles,
+     not whatever occupies those slots. Needs a `gfx/pokedex` asset (gen step).
+  3. **Interactive prompt/nav paths the headless FRAME.BIN gates can't drive:**
+     pokedex list scroll + side-menu (DATA/CRY/AREA/PRNT/QUIT) dispatch (G1);
+     pokedex entry `<PAGE>` flavor-scroll wait (G2); link cup-select nav +
+     I2 result-message `prompt` waits (I1/I2, incl. the no-partner timeout →
+     `.choseCancel` reached live); naming full grid nav (C). Drive these by hand
+     via `dos_port/run` with the `DEBUG_<PKG>` builds (I2's fail-path message
+     blocks headless by design — that is the interactive `prompt`, verify it live).
+  4. **Warp seam (shared with S9).** LinkMenu's `SpecialEnterMap`/
+     `PrepareForSpecialWarp` cable-club hand-off is a tagged stub — confirm S9's
+     spine wired it (enter-cable-club actually transitions), or leave it honestly
+     stubbed with the START→SAVE-style overworld return.
 
 ## Layout freeze
 
