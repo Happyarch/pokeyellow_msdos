@@ -616,6 +616,19 @@ H_PREVIOUS_TILESET       equ 0xFF8B     ; hPreviousTileset (HRAM union with hMap
 ; 0xFF8C is a UNION of hMapWidth / hNorthSouthConnectedMapWidth
 H_MAP_WIDTH              equ 0xFF8C     ; hMapWidth (= wCurMapWidth, stored for row-copy inner loop)
 H_SERIAL_CONN_STATUS     equ 0xFFAA     ; hSerialConnectionStatus
+; Link-menu / serial exchange scratch (menus S8 package I — link_menu.asm).
+; Sym-verified vs origin/symbols:pokeyellow.sym; the 0xCC3D/0xCC42 pairs are
+; union-aliased (send/receive buffer overlaps the nybble-exchange lanes).
+wLinkMenuSelectionReceiveBuffer          equ 0xCC3D ; wram.asm:425 (dw)
+wSerialSyncAndExchangeNybbleReceiveData  equ 0xCC3D ; wram.asm:437 (db; aliases recv buf)
+wSerialExchangeNybbleReceiveData         equ 0xCC3E ; wram.asm:439 (db)
+wLinkMenuSelectionSendBuffer             equ 0xCC42 ; wram.asm:428 (dw)
+wSerialExchangeNybbleSendData            equ 0xCC42 ; wram.asm:442 (db; aliases send buf)
+wUnknownSerialCounter                    equ 0xCC47 ; wram.asm:444 (dw; aliases wEnteringCableClub)
+wEnteringCableClub                       equ 0xCC47 ; wram.asm:430 (db; sym 00:cc47)
+wUnusedLinkMenuByte                      equ 0xCD37 ; wram.asm:754 (db; was worker 0xCC83)
+hSerialSendData                          equ 0xFFAC ; hram.asm:193 (db)
+hSerialReceiveData                       equ 0xFFAD ; hram.asm:194 (db)
 H_SCX                    equ 0xFFAE     ; hSCX — shadow of rSCX
 H_SCY                    equ 0xFFAF     ; hSCY — shadow of rSCY
 H_WY                     equ 0xFFB0     ; hWY  — shadow of rWY

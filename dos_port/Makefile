@@ -185,6 +185,8 @@ GAME_SRCS := \
     src/engine/menus/naming_screen.asm \
     src/engine/menus/pokedex.asm \
     src/engine/menus/pokedex_entry.asm \
+    src/engine/menus/link_menu.asm \
+    src/engine/menus/link_cups.asm \
     src/engine/overworld/reload_sprites.asm \
     src/engine/overworld/simulate_joypad.asm \
     src/engine/overworld/overworld_stubs.asm \
@@ -785,6 +787,8 @@ src/engine/menus/main_menu.o src/engine/menus/save.o: assets/ui_layout_menus.inc
 src/engine/menus/naming_screen.o: assets/ui_layout_menus.inc assets/alphabets.inc
 src/engine/menus/pokedex.o: assets/ui_layout_menus.inc
 src/engine/menus/pokedex_entry.o: assets/ui_layout_menus.inc assets/dex_entries.inc
+src/engine/menus/link_menu.o: assets/ui_layout_menus.inc
+src/engine/menus/link_cups.o: assets/dex_entries.inc
 
 # Pokémon base stats + IndexToPokedex (static data, generated from pret source).
 assets/base_stats.inc:
