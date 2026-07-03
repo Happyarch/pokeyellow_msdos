@@ -181,13 +181,19 @@ entry + commit (root only).
   Also found (out of scope, flagged): port W_SIMULATED_JOYPAD_STATES_INDEX
   0xCC84 + wFieldMoves family off by 0xB4 vs the sym — latent S2-era error,
   left for a dedicated fix. Requires: S5.
-- [ ] **Session 7 — Swarm wave 2** + root-first `src/save/dsv_io.asm`
-  (DOSV magic+version+checksum+32KB payload; DsvFileExists):
-  E (main_menu; CheckForPlayerNameInSRAM→DsvFileExists; SpecialEnterMap wired
-  by root), H (save.asm UI+structure; SaveGameData→real minimal .dsv write;
-  ChangeBox faithful), C (naming_screen; rSTAT HBlank hack→DEVIATION plain
-  copy; root writes gen_alphabets.py). Update saveconv.py stub header.
-  Requires: S6.
+- [x] **Session 7 — Swarm wave 2** + root-first `src/save/dsv_io.asm`. DONE
+  2026-07-03 (see translation_log.md "menus-port Session 7"). Prework 95606760;
+  E+H 33833a92; C eb52ffa8. dsv_io.asm = real .dsv HAL (DOSV magic+version+16-bit
+  additive checksum + minimal-real payload = pret's Save{Main,CurrentBox,PartyAndDex}Data
+  WRAM ranges; NOT the 32KB SRAM image — version-gated for a future faithful format).
+  gen_alphabets.py + saveconv.py header done. E (main_menu; SRAM→DsvFileExists,
+  InitOptions owns wOptionsInitialized, OakSpeech/title/warp integration stubs), H
+  (save.asm; all SRAM→dsv/no-op, real LoadHallOfFameTeams replaces A's stub, ChangeBox
+  faithful but swap no-op / geometry unverified), C (naming_screen on alphabets.inc).
+  E+H committed as one wave (mutual link dep). **S10 carry-over:** main_menu + naming
+  window-compositor rendering (grid/content + bg-whiteout not compositing; options.asm
+  is the working reference) — faithful structure verified, visual polish deferred to the
+  S10 interactive pass. `make` + `make check` green. Requires: S6.
 - [ ] **Session 8 — Swarm wave 3**: G pokedex split G1 (2D scroller+side
   menu)/G2 (entry page; spike pics.asm front-pic reuse first) + root writes
   gen_dex_order.py/gen_dex_entries.py; I link_menu split I1 (menus/dispatch,
