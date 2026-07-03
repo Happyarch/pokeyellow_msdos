@@ -54,9 +54,9 @@ Currently ported: `CheckEvent`/`SetEvent`/`ResetEvent` (`include/events.inc`) an
 
 ## Chunks
 
-### Stage 1 — Seed this plan  ✅ (this file)
+### Stage 1 — Seed this plan  ✅ (done)
 - [x] Create `docs/current_plan_macros.md` (this file).
-- [ ] Add a bullet to CLAUDE.md's **"Currently active plans"** list pointing here.
+- [x] Add a bullet to CLAUDE.md's **"Currently active plans"** list pointing here.
 
 ### Stage 2 — Chunk A1: screen-tilemap coords → `dos_port/include/coords.inc`
 - [ ] `coord <reg>, x, y[, origin]` → `mov <reg>, (y)*<stride> + (x) + origin`.
