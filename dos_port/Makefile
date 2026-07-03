@@ -134,6 +134,11 @@ HAL_SRCS := \
     src/input/joypad.asm \
     src/input/joypad_lowsens.asm
 
+# Save HAL — .dsv file I/O (menus S7). DsvFileExists/DsvWriteSave/DsvReadSave;
+# the SRAM-banking seam every pret save/load routine collapses onto.
+SAVE_SRCS := \
+    src/save/dsv_io.asm
+
 # Phase 2: game-loop core
 GAME_SRCS := \
     src/init/init.asm \
@@ -520,7 +525,7 @@ BATTLE_SUPPORT_SRCS := \
     src/home/item_predicates.asm \
     src/engine/items/get_bag_item_quantity.asm
 
-LINK_SRCS := $(BOOT_SRCS) $(HOME_SRCS) $(HAL_SRCS) $(GAME_SRCS) $(POKEMON_SRCS) $(ITEMS_SRCS) $(FRONTEND_SRCS) $(BATTLE_SUPPORT_SRCS)
+LINK_SRCS := $(BOOT_SRCS) $(HOME_SRCS) $(HAL_SRCS) $(SAVE_SRCS) $(GAME_SRCS) $(POKEMON_SRCS) $(ITEMS_SRCS) $(FRONTEND_SRCS) $(BATTLE_SUPPORT_SRCS)
 LINK_OBJS := $(LINK_SRCS:.asm=.o)
 
 # Pokémon backend that assembles + is native-harness-validated but is NOT linked
@@ -750,6 +755,12 @@ assets/effect_categories.inc:
 src/data/battle_data.o: assets/type_matchups.inc assets/move_names.inc \
                         assets/effect_categories.inc
 
+# Naming-screen letter grids + <ED> toggle tile (menus S7, package C). Generated
+# from data/text/alphabets.asm + constants/charmap.asm + gfx/font/ED.1bpp.
+assets/alphabets.inc: ../data/text/alphabets.asm ../constants/charmap.asm \
+                      ../gfx/font/ED.1bpp tools/gen_alphabets.py
+	python3 tools/gen_alphabets.py
+
 # Field-move display data + names (generated from data/moves/{field_moves,
 # field_move_names}.asm; resolves move ids via constants/move_constants.asm).
 assets/field_moves.inc:
@@ -828,7 +839,8 @@ assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_
         assets/trainer_pics.inc \
         assets/super_rod.inc assets/town_map_data.inc assets/town_map_gfx.inc \
         assets/ui_layout_menus.inc assets/ui_layout_battle.inc \
-        assets/map_border_overrides.inc assets/badge_tiles.inc
+        assets/map_border_overrides.inc assets/badge_tiles.inc \
+        assets/alphabets.inc
 
 all: $(TARGET)
 

@@ -684,6 +684,43 @@ W_TITLE_SCREEN_TIMER         equ 0xCD3E ; wTitleScreenTimer
 W_PLAYER_NAME                equ 0xD157 ; wPlayerName — 11 bytes, '@'-terminated
 W_RIVAL_NAME                 equ 0xD349 ; wRivalName  — 11 bytes, '@'-terminated
 
+; ---------------------------------------------------------------------------
+; Save / options / naming WRAM (menus S7) — all sym-pinned
+; (git show origin/symbols:pokeyellow.sym, bank 00). The save-region boundary
+; symbols name the exact WRAM ranges pret's SaveMainData/SaveCurrentBoxData/
+; SavePartyAndDexData serialize; src/save/dsv_io.asm writes/reads that set.
+; ---------------------------------------------------------------------------
+wSaveFileStatus              equ 0xD087 ; 1 = no save, 2 = save present
+wOptionsInitialized          equ 0xD089 ; InitOptions gate (main_menu.asm)
+wLetterPrintingDelayFlags    equ 0xD357 ; text-speed delay flags (InitOptions)
+; save-serialized WRAM ranges (pret ram/wram.asm section boundaries)
+wMainDataStart               equ 0xD2F6 ; = wPokedexOwned (main data block)
+wMainDataEnd                 equ 0xDA7F ; = wBoxDataStart (1929 bytes)
+wSpriteDataStart             equ 0xC100 ; = wSpriteStateData1 (sprite block)
+wSpriteDataEnd               equ 0xC300 ; = wShadowOAM (512 bytes)
+wBoxDataStart                equ 0xDA7F ; current-box block
+wBoxDataEnd                  equ 0xDEE1 ; (1122 bytes)
+wPartyDataStart              equ 0xD162 ; = wPartyCount (party block)
+wPartyDataEnd                equ 0xD2F6 ; = wMainDataStart (404 bytes)
+wPokedexOwnedEnd             equ 0xD309 ; = wPokedexSeen (owned-mon bitset end)
+wPokedexSeenEnd              equ 0xD31C ; seen bitset end
+; play time (main data; PrintPlayTime, main_menu.asm)
+wPlayTimeHours               equ 0xDA40
+wPlayTimeMinutes             equ 0xDA42
+; box-change UI (save.asm ChangeBox)
+wCurrentBoxNum               equ 0xD59F ; current PC box (low 7 bits) + changed-box bit 7
+wBoxMonCounts                equ 0xCD3D ; NUM_BOXES scratch (GetMonCountsForAllBoxes)
+wPikachuHappiness            equ 0xD46F ; saved by SavePartyAndDexData tail
+; status-flag bytes (main_menu.asm / save.asm) — not previously aliased
+wStatusFlags5                equ 0xD72F ; BIT_NO_TEXT_DELAY lives here
+wStatusFlags6                equ 0xD731 ; BIT_GAME_TIMER_COUNTING, special-warp bits
+; naming screen (engine/menus/naming_screen.asm, package C)
+wNamingScreenNameLength      equ 0xCEE9
+wNamingScreenSubmitName      equ 0xCEEA
+wAlphabetCase                equ 0xCEEB
+wNamingScreenLetter          equ 0xCEED
+wNamingScreenType            equ 0xD07C ; PLAYER/RIVAL/MON/BOX select
+
 ; Tile-map save/restore buffers — relocated to echo RAM ($E000+) to avoid
 ; overlapping pret WRAM1 symbols.  All via constants; no hardcoded addresses
 ; in translated code.
