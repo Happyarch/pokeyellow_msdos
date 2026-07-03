@@ -25,8 +25,10 @@ bits 32
 section .text
 
 global PrintPredefTextID
-global SetMapTextPointer
-global RestoreMapTextPointer
+; SetMapTextPointer / RestoreMapTextPointer extracted to src/home/map_text_pointer.asm
+; (menus S7) so the SAVE flow can link them without predef_text.asm's script-engine deps.
+extern SetMapTextPointer
+extern RestoreMapTextPointer
 
 extern DisplayTextID                    ; home/text_script.asm (this member)
 
@@ -53,37 +55,8 @@ PrintPredefTextID:
     call DisplayTextID
     ; fall through to RestoreMapTextPointer
 
-; ─────────────────────────────────────────────────────────────────────────────
-; RestoreMapTextPointer — pret home/predef_text.asm:9
-; Restore wCurMapTextPtr from the saved copy in hSavedMapTextPtr.
-; ─────────────────────────────────────────────────────────────────────────────
-RestoreMapTextPointer:
-    ; ld hl, wCurMapTextPtr
-    ; ldh a,[hSavedMapTextPtr];   ld [hli],a
-    ; ldh a,[hSavedMapTextPtr+1]; ld [hl],a
-    mov al, [ebp + hSavedMapTextPtr]
-    mov [ebp + wCurMapTextPtr], al
-    mov al, [ebp + hSavedMapTextPtr + 1]
-    mov [ebp + wCurMapTextPtr + 1], al
-    ret
-
-; ─────────────────────────────────────────────────────────────────────────────
-; SetMapTextPointer — pret home/predef_text.asm:17
-; Save the current wCurMapTextPtr into hSavedMapTextPtr, then point it at HL.
-; ─────────────────────────────────────────────────────────────────────────────
-SetMapTextPointer:
-    ; ld a,[wCurMapTextPtr];   ldh [hSavedMapTextPtr],a
-    ; ld a,[wCurMapTextPtr+1]; ldh [hSavedMapTextPtr+1],a
-    mov al, [ebp + wCurMapTextPtr]
-    mov [ebp + hSavedMapTextPtr], al
-    mov al, [ebp + wCurMapTextPtr + 1]
-    mov [ebp + hSavedMapTextPtr + 1], al
-    ; ld a,l; ld [wCurMapTextPtr],a ; ld a,h; ld [wCurMapTextPtr+1],a
-    ; HL (ESI) holds a GB 16-bit address; store it little-endian.
-    mov eax, esi
-    mov [ebp + wCurMapTextPtr], al       ; low byte  (l)
-    mov [ebp + wCurMapTextPtr + 1], ah   ; high byte (h)
-    ret
+; RestoreMapTextPointer / SetMapTextPointer moved to src/home/map_text_pointer.asm
+; (menus S7). Externed above; PrintPredefTextID's call below resolves to that module.
 
 ; ── pret: INCLUDE "data/text_predef_pointers.asm" (the TextPredefs table) ──
 ;   Not embedded here (Tier-2 data, externed above). See follow-up note.

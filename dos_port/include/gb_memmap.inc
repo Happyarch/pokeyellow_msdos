@@ -720,6 +720,12 @@ wNamingScreenSubmitName      equ 0xCEEA
 wAlphabetCase                equ 0xCEEB
 wNamingScreenLetter          equ 0xCEED
 wNamingScreenType            equ 0xD07C ; PLAYER/RIVAL/MON/BOX select
+; main_menu.asm (E) / save.asm (H) — sym-verified (origin/symbols:pokeyellow.sym)
+wDefaultMap                  equ 0xD07B ; boot default map (main_menu clears it)
+wDestinationMap              equ 0xD719 ; special-warp destination (HoF continue path)
+wCableClubDestinationMap     equ 0xD72C ; SpecialEnterMap clears it (= wStatusFlags3 union)
+wNumSetBits                  equ 0xD11D ; CountSetBits result byte (shared 0xD11D scratch)
+wChangeBoxSavedMapTextPointer equ 0xCD3D ; ChangeBox saves/restores wCurMapTextPtr here
 
 ; Tile-map save/restore buffers — relocated to echo RAM ($E000+) to avoid
 ; overlapping pret WRAM1 symbols.  All via constants; no hardcoded addresses

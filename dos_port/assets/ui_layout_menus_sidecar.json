@@ -465,6 +465,42 @@
       "pret_ref": "docs/ui_projection.md",
       "anchor_source": "inferred",
       "notes": "hlcoord 11,0 TextBoxBorder lb bc,12,7 -> 9x14; box-name list, cursor wTopMenuItemX=12,Y=1"
+    },
+    {
+      "id": "SAVE_INFO",
+      "kind": "textbox",
+      "gb_x": 4,
+      "gb_y": 0,
+      "gb_w": 16,
+      "gb_h": 10,
+      "anchor_x": "center",
+      "anchor_y": "top",
+      "movable": true,
+      "resizable": true,
+      "min_w": 3,
+      "min_h": 3,
+      "source": "; PROJ main_menu.asm (PrintSaveScreenText)",
+      "pret_ref": "docs/ui_projection.md",
+      "anchor_source": "inferred",
+      "notes": "START-menu SAVE screen PLAYER/BADGES/#DEX/TIME panel; hlcoord 4,0 lb bc,8,14 -> 16x10 (top-aligned CONTINUE_INFO)"
+    },
+    {
+      "id": "CHANGE_BOX_INFO",
+      "kind": "textbox",
+      "gb_x": 0,
+      "gb_y": 0,
+      "gb_w": 11,
+      "gb_h": 4,
+      "anchor_x": "right",
+      "anchor_y": "top",
+      "movable": true,
+      "resizable": true,
+      "min_w": 3,
+      "min_h": 3,
+      "source": "; PROJ save.asm (DisplayChangeBoxMenu BOX No. indicator)",
+      "pret_ref": "docs/ui_projection.md",
+      "anchor_source": "inferred",
+      "notes": "hlcoord 0,0 lb bc,2,9 -> 11x4 indicator box; right-anchored to share the change-box screen basis with UI_CHANGE_BOX (cols 20-30, list 31-39)"
     }
   ]
 }

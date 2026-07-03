@@ -220,10 +220,10 @@ entry + commit (root only).
 | B | draw_badges / trainer card gfx | integrated (S6) | none |
 | C | naming_screen | queued | |
 | D | options | integrated (S6) | rAUDTERM + printer writes TODO-HW (wOptions/wPrinterSettings values still stored); window-mirror port plumbing |
-| E | main_menu | queued | |
+| E | main_menu | integrated (S7) | SRAM scan→DsvFileExists (CF polarity kept); joypad HAL + palette TODO-HW; OakSpeech/DisplayTitleScreen/PrepareForSpecialWarp integration stubs (main_menu_stubs.asm); window-compositor bridge (bg-whiteout bleed-through to polish in S10) |
 | F | players_pc | integrated (S6) | dialogs drawn-whole (text); SaveScreenTilesToBuffer→window model; SFX TODO-HW; explicit BIT_SINGLE_SPACED_LINES clear |
 | G1/G2 | pokedex | queued | |
-| H | save UI | queued | |
+| H | save UI | integrated (S7) | all SRAM banking→dsv_io/no-op (49 TODO-HW); messages drawn-whole (text); CheckPreviousSaveFile same-playthrough (single-slot .dsv); ChangeBox swap no-op (current-box-only WRAM, geometry unverified—Bill's PC later); LoadHallOfFameTeams real (no-op endpoint until HoF region); real LoadHallOfFameTeams replaced A's league stub |
 | I1/I2 | link_menu | queued | |
 
 ## Coordination

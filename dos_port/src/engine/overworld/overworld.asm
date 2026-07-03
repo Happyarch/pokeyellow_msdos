@@ -119,6 +119,12 @@ extern RunOptionsTest
 %ifdef DEBUG_PLAYERSPC
 extern RunPlayersPCTest
 %endif
+%ifdef DEBUG_MAINMENU
+extern RunMainMenuTest
+%endif
+%ifdef DEBUG_SAVE
+extern RunSaveTest
+%endif
 %ifdef DEBUG_WALKSPEED
 extern DebugDumpMemory
 extern tick_count
@@ -398,6 +404,12 @@ EnterMap:
 %endif
 %ifdef DEBUG_PLAYERSPC
     call RunPlayersPCTest                   ; seed+open PlayerPC, dump parent-menu FRAME.BIN, exits
+%endif
+%ifdef DEBUG_MAINMENU
+    call RunMainMenuTest                    ; seed save, draw CONTINUE menu + info panel, dump FRAME.BIN, exits
+%endif
+%ifdef DEBUG_SAVE
+    call RunSaveTest                        ; seed party, run SaveGameData, dump "saved!" FRAME.BIN, exits
 %endif
 %ifdef DEBUG_WALKSPEED
     ; Live walk-speed instrumentation: boots normally into OverworldLoop so you can

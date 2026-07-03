@@ -84,6 +84,7 @@ extern menu_item_step                ; home/window.asm
 extern menu_redraw_cb
 extern IsKeyItem                     ; home/item_predicates.asm — [wCurItem] → [wIsKeyItem]
 extern IsItemHM                      ; home/item_predicates.asm — AL=item id → CF
+extern SaveMenu                      ; engine/menus/save.asm (S7) — START→SAVE flow
 
 ; --- USE/TOSS box geometry (frozen layout; pret GB(13,10) 7x5, text (15,11)) ---
 ; ; PROJ menus: GB(13,10) 7x5 --(anchor=right/top, X+20, Y+0)--> wx=271 wy=80
@@ -237,7 +238,14 @@ StartMenu_Pokemon:
 ; ---------------------------------------------------------------------------
 StartMenu_TrainerInfo:                  ; STUB(S6/S9): trainer card (DrawTrainerInfo/DrawBadges)
     jmp RedisplayStartMenu
-StartMenu_SaveReset:                    ; STUB(S7): SaveMenu → real .dsv write (dsv_io)
+StartMenu_SaveReset:                    ; pret ref: start_sub_menus.asm:StartMenu_SaveReset
+    ; DEVIATION: pret's `ld a,[wStatusFlags4] / bit BIT_LINK_CONNECTED,a / jp nz,Init`
+    ; RESET branch (soft-reset to title on a Cable-Club link) is link-play (S8) and is
+    ; omitted — no link state exists yet, so the guard would never take. predef
+    ; SaveMenu -> call SaveMenu (S7 .dsv write).
+    call SaveMenu
+    ; pret: call LoadScreenTilesFromBuffer2 / jp HoldTextDisplayOpen — the port's
+    ; window model needs no screen-buffer restore; RedisplayStartMenu redraws.
     jmp RedisplayStartMenu
 StartMenu_Option:                       ; STUB(S6): DisplayOptionMenu package
     jmp RedisplayStartMenu

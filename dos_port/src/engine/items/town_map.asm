@@ -69,7 +69,8 @@ wOAMBaseTile                  equ TOWNMAP_WRAM_PLACEHOLDER + 0xA1
 wAnimCounter                  equ TOWNMAP_WRAM_PLACEHOLDER + 0xA2
 wTownMapSpriteBlinkingEnabled equ TOWNMAP_WRAM_PLACEHOLDER + 0xA3
 wSymmetricSpriteOAMAttributes equ TOWNMAP_WRAM_PLACEHOLDER + 0xA4
-wDestinationMap               equ TOWNMAP_WRAM_PLACEHOLDER + 0xA5
+; wDestinationMap now provided real by gb_memmap.inc (0xD719, menus S7); the old
+; TOWNMAP_WRAM_PLACEHOLDER + 0xA5 line was dropped (inconsistent equ redefinition).
 wTownVisitedFlag              equ TOWNMAP_WRAM_PLACEHOLDER + 0xA6  ; 2 bytes
 wTownMapCoords                equ TOWNMAP_WRAM_PLACEHOLDER + 0xA8  ; scratch buffer
 wFlyAnimUsingCoordList        equ TOWNMAP_WRAM_PLACEHOLDER + 0xC0

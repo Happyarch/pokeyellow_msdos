@@ -10,12 +10,8 @@ bits 32
 
 section .text
 
-; LoadHallOfFameTeams — pret engine/menus/save.asm:LoadHallOfFameTeams (reads the
-; requested HoF team from SRAM into wHallOfFame). Provided by the S7 save layer.
-; Reached only inside PKMNLeaguePC's team loop, which is dead while wNumHoFTeams==0.
-global LoadHallOfFameTeams
-LoadHallOfFameTeams:
-    ret
+; LoadHallOfFameTeams — now provided REAL by src/engine/menus/save.asm (menus S7,
+; package H). The ret-stub was deleted here so the real routine is the only global.
 
 ; Func_7033f — pret engine/movie/hall_of_fame.asm:Func_7033f (HoF mon-info box +
 ; cry, tail-jumped from LeaguePCShowMon). Provided by the HoF movie port.

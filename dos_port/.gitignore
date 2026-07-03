@@ -9,3 +9,4 @@ tools/translation.db-wal
 tools/translation.db-shm
 tools/translation.db-journal
 scratch/
+POKEMON.DSV

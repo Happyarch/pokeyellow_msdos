@@ -1,7 +1,7 @@
 ; dos_port/home/count_set_bits.asm
-global CountSetBits
+%include "gb_memmap.inc"        ; wNumSetBits (0xD11D) — promoted to gb_memmap (menus S7)
 
-extern wNumSetBits
+global CountSetBits
 
 section .text
 

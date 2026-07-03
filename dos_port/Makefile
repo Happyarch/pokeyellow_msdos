@@ -127,7 +127,10 @@ HOME_SRCS := \
     src/home/yes_no.asm \
     src/home/list_menu.asm \
     src/home/start_menu.asm \
-    src/home/item.asm
+    src/home/item.asm \
+    src/home/count_set_bits.asm \
+    src/home/reset_player_sprite.asm \
+    src/home/map_text_pointer.asm
 
 HAL_SRCS := \
     src/ppu/ppu.asm \
@@ -175,6 +178,9 @@ GAME_SRCS := \
     src/engine/menus/options.asm \
     src/engine/menus/players_pc.asm \
     src/engine/menus/display_text_id_init.asm \
+    src/engine/menus/main_menu.asm \
+    src/engine/menus/main_menu_stubs.asm \
+    src/engine/menus/save.asm \
     src/engine/overworld/simulate_joypad.asm \
     src/engine/overworld/overworld_stubs.asm \
     src/engine/overworld/wild_encounter_check.asm \
@@ -385,6 +391,32 @@ NASMFLAGS += -D DEBUG_PLAYERSPC
 NASMFLAGS += -D SKIP_TITLE
 GAME_SRCS += src/engine/debug/debug_party.asm
 endif
+# Main-menu gate (menus S7 package E): boot to overworld, seed a save (party +
+# name/badges/dex/time + DsvWriteSave), draw the CONTINUE/NEW GAME box + info
+# panel, dump FRAME.BIN, exit. make SKIP_TITLE=1 DEBUG_MAINMENU=1
+ifdef DEBUG_MAINMENU
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_MAINMENU
+NASMFLAGS += -D SKIP_TITLE
+GAME_SRCS += src/engine/debug/debug_party.asm
+endif
+# Save gate (menus S7 package H): boot to overworld, seed party+bag+badges, run
+# SaveGameData through the confirm (auto-YES), dump the "saved!" FRAME.BIN, exit.
+# DEBUG_SAVE_ROUNDTRIP dumps a DsvWriteSave->DsvFileExists marker instead.
+# make SKIP_TITLE=1 DEBUG_SAVE=1
+ifdef DEBUG_SAVE
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_SAVE
+NASMFLAGS += -D SKIP_TITLE
+GAME_SRCS += src/engine/debug/debug_party.asm
+endif
+ifdef DEBUG_SAVE_ROUNDTRIP
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_SAVE
+NASMFLAGS += -D DEBUG_SAVE_ROUNDTRIP
+NASMFLAGS += -D SKIP_TITLE
+GAME_SRCS += src/engine/debug/debug_party.asm
+endif
 # Live battle view: same setup as DEBUG_BATTLE but holds the screen (loops
 # DelayFrame) so you can visually inspect it instead of dumping+exiting. Esc quits.
 # make DEBUG_BATTLE_LIVE=1 (then dos_port/run).
@@ -561,13 +593,11 @@ ITEMS_CHECK_SRCS := \
 # list_menu.asm MOVED to HOME_SRCS (menus S3): all former link-blockers resolve
 # to linked code (PrintLevel added to home/pokemon.asm); links with swap_items.
 HOME_CHECK_SRCS := \
-    src/home/count_set_bits.asm \
     src/home/text_script.asm \
     src/home/predef_text.asm \
     src/home/give.asm \
     src/home/money.asm \
     src/home/oam.asm \
-    src/home/reset_player_sprite.asm \
     src/home/reload_tiles.asm \
     src/home/vcopy.asm \
     src/engine/overworld/pikachu.asm \
@@ -710,6 +740,7 @@ src/engine/menus/draw_start_menu.o: assets/event_constants.inc \
         assets/menu_strings.inc assets/ui_layout_menus.inc
 src/engine/menus/start_sub_menus.o: assets/ui_layout_menus.inc
 src/engine/items/item_effects.o: assets/ui_layout_menus.inc
+src/engine/menus/main_menu.o src/engine/menus/save.o: assets/ui_layout_menus.inc
 
 # Pokémon base stats + IndexToPokedex (static data, generated from pret source).
 assets/base_stats.inc:

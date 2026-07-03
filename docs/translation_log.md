@@ -23,6 +23,53 @@ if it took none. This is the swarm's divergence audit trail.
 
 ---
 
+## menus-port Session 7 — swarm wave 2 (root integration)
+
+Root (integrator) session. Root-first prework: NEW `src/save/dsv_io.asm` (the
+`.dsv` save HAL — DsvFileExists/DsvWriteSave/DsvReadSave; DOSV magic+version+16-bit
+additive checksum + "minimal real" payload = exactly the WRAM ranges pret's
+Save{Main,CurrentBox,PartyAndDex}Data serialize; self-contained DPMI INT 31h/0300h
+file I/O mirroring debug_dump.asm), NEW `tools/gen_alphabets.py` → `assets/alphabets.inc`
+(package C data), 4 sidecar UI elements (UI_MAIN_MENU/UI_CONTINUE_INFO/UI_NAMING_SCREEN/
+UI_CHANGE_BOX) + 2 added at integration (UI_SAVE_INFO, UI_CHANGE_BOX_INFO), and
+sym-verified save/naming/options WRAM in gb_memmap.inc. Committed as prework 95606760.
+
+- **Package E — main_menu** — Source: pret `engine/menus/main_menu.asm`. Translated:
+  NEW `dos_port/src/engine/menus/main_menu.asm`. Faithful line-for-line: MainMenu's
+  save-present/no-save branch + the `.skipInc` menu-item-number normalization, InitOptions
+  (writes wOptions/wLetterPrintingDelayFlags/wPrinterSettings + wOptionsInitialized —
+  D deferred it), Func_5cc1 (dead-branch comment), StartNewGame(Debug)→SpecialEnterMap,
+  DisplayContinueGameInfo/PrintSaveScreenText, PrintNumBadges/OwnedMons/PlayTime,
+  CheckForPlayerNameInSRAM. x86 flag discipline verified (`test al,al` for `and a`,
+  `test al,PAD_B` for `bit`, CF polarity via DsvFileExists). TODO-HW ×4 (palette no-op,
+  joypad→DelayFrame, SRAM→DsvFileExists). DEVIATION ×8 (window-compositor bridge:
+  MainMenuShowWindow/mirrors, g_bg_whiteout, add_window disjoint GB_TILEMAP1 bands).
+- **E integration:** gb_memmap gains wDefaultMap 0xD07B / wDestinationMap 0xD719 /
+  wCableClubDestinationMap 0xD72C / wNumSetBits 0xD11D (all sym-verified). Promoted
+  `count_set_bits.asm` (now %includes gb_memmap for wNumSetBits, dropped the extern) +
+  `reset_player_sprite.asm` to HOME_SRCS. NEW `main_menu_stubs.asm` (OakSpeech /
+  DisplayTitleScreen / PrepareForSpecialWarp integration stubs — seams not yet ported;
+  MainMenu is not the boot path yet). DEBUG_MAINMENU FRAME.BIN renders the CONTINUE/
+  NEW GAME/OPTION menu + ▶ cursor + PLAYER/BADGES/#DEX/TIME panel; the full-screen
+  bg-whiteout bleeds the overworld behind (window-compositor plumbing — S10 polish).
+- **Package H — save.asm** — Source: pret `engine/menus/save.asm`. Translated: NEW
+  `dos_port/src/engine/menus/save.asm` (full pret label parity: SaveMenu/SaveGameData/
+  Save{Main,CurrentBox,PartyAndDex}Data/CalcCheckSum, TryLoadSaveFile/Load{Main,CurrentBox,
+  PartyAndDex}Data, ChangeBox family, LoadHallOfFameTeams et al). Every SRAM byte-copy /
+  rRAMG/rBMODE/rRAMB write collapses onto DsvWriteSave/DsvReadSave/DsvFileExists or a
+  flag-preserving no-op (49 TODO-HW SRAM). CF=1 from DsvReadSave maps exactly onto pret's
+  `.badsum`/CheckSumFailed branch. Messages drawn-whole (DEVIATION(text)); SAVE yes/no on
+  the S3 driver. Wired StartMenu_SaveReset→SaveMenu (start_sub_menus.asm; link-RESET guard
+  deferred to S8 as DEVIATION). LoadHallOfFameTeams real → deleted A's league_pc_stubs.asm
+  ret-stub (kept Func_7033f). DEBUG_SAVE FRAME.BIN renders "<PLAYER> saved the game!" over
+  Pallet Town — clean.
+- **H+E link coupling:** committed as one wave (H's SaveMenu→PrintSaveScreenText lives in
+  E; E's TryLoadSaveFile lives in H — a genuine mutual link dependency). Extracted
+  SetMapTextPointer/RestoreMapTextPointer to NEW `src/home/map_text_pointer.asm` (predef_text.asm
+  externs them) so ChangeBox links without the script engine. Dropped town_map.asm's
+  now-redundant wDestinationMap placeholder (NASM inconsistent-equ redefinition). `make` +
+  `make check` green.
+
 ## menus-port Session 6 — swarm wave 1 (root integration)
 
 Root (integrator) session. Four Opus workers in seeded worktrees produced the
