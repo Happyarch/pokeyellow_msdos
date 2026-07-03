@@ -173,6 +173,9 @@ GAME_SRCS := \
     src/engine/menus/field_moves.asm \
     src/engine/menus/text_box.asm \
     src/engine/menus/draw_badges.asm \
+    src/engine/menus/trainer_card.asm \
+    src/engine/menus/pc.asm \
+    src/engine/menus/pc_stubs.asm \
     src/engine/menus/oaks_pc.asm \
     src/engine/menus/league_pc.asm \
     src/engine/menus/league_pc_stubs.asm \
@@ -363,6 +366,14 @@ endif
 ifdef DEBUG_DRAWBADGES
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_DRAWBADGES
+NASMFLAGS += -D SKIP_TITLE
+endif
+# Trainer-card gate (menus S9): boot to overworld, seed name/money/time/badges,
+# draw the full TRAINER CARD (DrawTrainerInfo + DrawBadges + pic), composite it,
+# dump FRAME.BIN, exit. make SKIP_TITLE=1 DEBUG_TRAINERCARD=1
+ifdef DEBUG_TRAINERCARD
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_TRAINERCARD
 NASMFLAGS += -D SKIP_TITLE
 endif
 # Oak's-PC gate (menus S6 package A): boot to overworld, open OpenOaksPC; the
@@ -775,6 +786,20 @@ assets/badge_tiles.inc: ../gfx/trainer_card/badges.2bpp \
 
 src/engine/menus/draw_badges.o: assets/badge_tiles.inc
 
+# Trainer-card tile graphics (box/bg/blank-names/badge-numbers/colon/circle),
+# 2bpp passthrough of gfx/trainer_card/*.2bpp + gfx/font/font_extra.2bpp, for the
+# TRAINER CARD screen (trainer_card.asm, menus S9). Faces/badges come from
+# assets/badge_tiles.inc (package B) via LoadBadgeTiles.
+assets/trainer_card_tiles.inc: ../gfx/trainer_card/trainer_info.2bpp \
+                               ../gfx/trainer_card/blank_leader_names.2bpp \
+                               ../gfx/trainer_card/badge_numbers.2bpp \
+                               ../gfx/trainer_card/circle_tile.2bpp \
+                               ../gfx/font/font_extra.2bpp \
+                               tools/gen_trainer_card_tiles.py
+	python3 tools/gen_trainer_card_tiles.py
+
+src/engine/menus/trainer_card.o: assets/trainer_card_tiles.inc assets/ui_layout_menus.inc
+
 # Start menu checks EVENT_GOT_POKEDEX via events.inc → event_constants.inc;
 # DrawStartMenu %includes the generated menu_strings.inc labels and the
 # UI_START_MENU_* equates; start_sub_menus needs the UI_USE_TOSS_* equates.
@@ -782,6 +807,7 @@ src/home/start_menu.o: assets/event_constants.inc
 src/engine/menus/draw_start_menu.o: assets/event_constants.inc \
         assets/menu_strings.inc assets/ui_layout_menus.inc
 src/engine/menus/start_sub_menus.o: assets/ui_layout_menus.inc
+src/engine/menus/pc.o: assets/ui_layout_menus.inc assets/event_constants.inc
 src/engine/items/item_effects.o: assets/ui_layout_menus.inc
 src/engine/menus/main_menu.o src/engine/menus/save.o: assets/ui_layout_menus.inc
 src/engine/menus/naming_screen.o: assets/ui_layout_menus.inc assets/alphabets.inc
@@ -928,6 +954,7 @@ assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_
         assets/super_rod.inc assets/town_map_data.inc assets/town_map_gfx.inc \
         assets/ui_layout_menus.inc assets/ui_layout_battle.inc \
         assets/map_border_overrides.inc assets/badge_tiles.inc \
+        assets/trainer_card_tiles.inc \
         assets/alphabets.inc assets/dex_entries.inc
 
 all: $(TARGET)

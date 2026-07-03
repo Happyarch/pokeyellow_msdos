@@ -107,6 +107,9 @@ extern RunListMenuTest
 %ifdef DEBUG_DRAWBADGES
 extern RunDrawBadgesTest
 %endif
+%ifdef DEBUG_TRAINERCARD
+extern RunTrainerCardTest
+%endif
 %ifdef DEBUG_OAKSPC
 extern RunOaksPCTest
 %endif
@@ -407,6 +410,9 @@ EnterMap:
 %endif
 %ifdef DEBUG_DRAWBADGES
     call RunDrawBadgesTest                  ; seed badges, draw grid, window it, dump FRAME.BIN, exits
+%endif
+%ifdef DEBUG_TRAINERCARD
+    call RunTrainerCardTest                 ; draw full trainer card, dump FRAME.BIN, exits
 %endif
 %ifdef DEBUG_OAKSPC
     call RunOaksPCTest                      ; open Oak's PC, dump the dialog FRAME.BIN, exits

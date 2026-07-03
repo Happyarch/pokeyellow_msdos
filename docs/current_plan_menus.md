@@ -210,11 +210,23 @@ entry + commit (root only).
   (routines, not data streams). reload_tiles.asm promoted to linked SRCS
   (ShowPokedexMenu jp ReloadMapData). S10 carry-over: pokedex pic/content
   window-compositing (shared C/E gap) + the interactive prompt paths. Requires: S7.
-- [ ] **Session 9 — Integration spine (root only).** Faithful pc.asm
-  (ActivatePC/PCMainMenu; BillsPC seam stub) + start_sub_menus.asm
-  (StartMenu_* wiring all packages, SwitchPartyMon, ErasePartyMenuCursors,
-  Trainer Card + package B). All Makefile promotions serialized here.
-  Requires: S6-S8 landed.
+- [x] **Session 9 — Integration spine (root only).** DONE 2026-07-03 (see
+  translation_log.md "menus-port Session 9"). Faithful `src/engine/menus/pc.asm`
+  (ActivatePC/PCMainMenu + dispatch to PlayerPC/OpenOaksPC/PKMNLeaguePC, drawn-whole
+  PC dialogs) + NEW `pc_stubs.asm` (DisplayPCMainMenu + BillsPC_ seam stubs, deleted
+  when pokemon_behavior Stage 6 lands the real bills_pc.asm UI). start_sub_menus
+  stubs wired live: StartMenu_Pokedex→ShowPokedexMenu, StartMenu_Option→
+  DisplayOptionMenu, StartMenu_TrainerInfo→NEW `trainer_card.asm`
+  (**full-faithful DrawTrainerInfo** per the user's call: Red front pic + box/
+  NAME/MONEY/TIME + ○BADGES○ + DrawBadges grid). NEW asset
+  `gen_trainer_card_tiles.py`→`trainer_card_tiles.inc`; `wPlayerMoney` (0xD346) +
+  `hItemToRemoveID/Index` added to gb_memmap. SwitchPartyMon/ErasePartyMenuCursors
+  were already live (S5). Fixed a page-fault (ECX clobber in TrainerInfo_DrawTextBox's
+  row loop vs NextTextBoxRow). Makefile: pc/pc_stubs/trainer_card→GAME_SRCS,
+  trainer_card_tiles gen rule, `DEBUG_TRAINERCARD` gate. `make`+`make check` green;
+  trainer-card FRAME.BIN verified; overworld baseline unchanged.
+  **Interactive verification (every START entry live, PC menu once DisplayPCMainMenu
+  lands) deferred to S10.** Requires: S6-S8 landed.
 - [ ] **Session 10 — Final verification + closeout.** Interactive pass
   (every START entry; bag scroll/swap/toss/USE-fails-gracefully; party
   regression; trainer card; pokedex; players-PC; save→.dsv→CONTINUE appears;
@@ -258,7 +270,7 @@ entry + commit (root only).
 | Pkg | Screen | Status | FAITHFUL EXCEPT |
 |-----|--------|--------|-----------------|
 | A | oaks_pc + league_pc | integrated (S6) | dialogs drawn-whole (text); buffer2 save→window-list; DisplayDexRating STUB(S8); HoF team loop STUB(S7) w/ 0-team guard + ret-stubs; palette TODO-HW |
-| B | draw_badges / trainer card gfx | integrated (S6) | none |
+| B | draw_badges / trainer card gfx | integrated (S6); TRAINER CARD consumer live (S9) | S9 DrawTrainerInfo full-faithful; DEVIATION(pic): Red pic placement clamped to on-screen cols (pret vChars $07→$00 compaction preserved); custom box tiles/colon/circle via trainer_card_tiles.inc; palette=TODO-HW; window/mirror compositor bridge (options.asm model) |
 | C | naming_screen | integrated (S7) | PrintText split (battle vs overworld); TX_FAR→inline; JP dakuten pages omitted; party-mon icon walk-anim not ported (BG-tile stand-in); hJoyPressed→H_JOY5; rSTAT HBlank ED-tile hack→plain copy. **Render: box windows but grid content/bg-whiteout not compositing (shared bespoke-window-bridge issue with main_menu; options.asm is the working reference) — S10 polish.** |
 | D | options | integrated (S6) | rAUDTERM + printer writes TODO-HW (wOptions/wPrinterSettings values still stored); window-mirror port plumbing |
 | E | main_menu | integrated (S7) | SRAM scan→DsvFileExists (CF polarity kept); joypad HAL + palette TODO-HW; OakSpeech/DisplayTitleScreen/PrepareForSpecialWarp integration stubs (main_menu_stubs.asm); window-compositor bridge (bg-whiteout bleed-through to polish in S10) |

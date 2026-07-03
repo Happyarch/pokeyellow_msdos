@@ -85,6 +85,25 @@ extern menu_redraw_cb
 extern IsKeyItem                     ; home/item_predicates.asm — [wCurItem] → [wIsKeyItem]
 extern IsItemHM                      ; home/item_predicates.asm — AL=item id → CF
 extern SaveMenu                      ; engine/menus/save.asm (S7) — START→SAVE flow
+; --- S9 package wirings (Pokédex / Options / Trainer Card) ---
+extern RedisplayStartMenu_DoNotDrawStartMenu ; home/start_menu.asm
+extern ShowPokedexMenu               ; engine/menus/pokedex.asm (S8, pkg G)
+extern DisplayOptionMenu             ; engine/menus/main_menu.asm (S6/S7, pkg D wrapper)
+extern DrawTrainerInfo               ; engine/menus/trainer_card.asm (S9)
+extern DrawBadges                    ; engine/menus/draw_badges.asm (S6, pkg B)
+extern trainer_card_present          ; engine/menus/trainer_card.asm (S9) — window/mirror bridge
+extern trainer_card_teardown         ; engine/menus/trainer_card.asm (S9)
+extern Delay3                        ; video/frame.asm
+extern UpdateSprites                 ; engine/overworld/movement.asm
+extern ClearScreen                   ; movie/title.asm
+extern LoadTextBoxTilePatterns       ; gfx/load_font.asm
+extern LoadFontTilePatterns          ; gfx/load_font.asm
+extern WaitForTextScrollButtonPress  ; engine/battle/battle_menu.asm — ▼-wait + A/B
+extern GBPalWhiteOut                 ; movie/title.asm
+extern GBPalNormal                   ; init/init.asm
+extern RunPaletteCommand             ; engine/battle/faint_switch.asm (palette stub)
+extern ReloadMapData                 ; home/reload_tiles.asm
+extern DrawStartMenu                 ; engine/menus/draw_start_menu.asm
 
 ; --- USE/TOSS box geometry (frozen layout; pret GB(13,10) 7x5, text (15,11)) ---
 ; ; PROJ menus: GB(13,10) 7x5 --(anchor=right/top, X+20, Y+0)--> wx=271 wy=80
@@ -97,15 +116,28 @@ UT_SROW  equ 21                      ; GB_TILEMAP0 mirror rows 21-25 (list 0-10,
                                      ; qty 12-14, yes/no 16-20 — all distinct)
 
 TILE_SPC equ 0x7F                    ; blank space tile (charmap)
+SET_PAL_TRAINER_CARD equ 0x0D        ; constants/palette_constants.asm (palette stub arg)
 
 section .text
 
 ; ---------------------------------------------------------------------------
 ; StartMenu_Pokedex — pret ref: start_sub_menus.asm:StartMenu_Pokedex.
-; STUB(S6/S8): predef ShowPokedexMenu + screen restore land with the pokédex
-; package; until then the entry is a no-op back to the menu.
+; predef ShowPokedexMenu (S8, pkg G) — the pokédex screen tail-jumps ReloadMapData
+; itself, so control returns here for the palette/redraw tail.
 ; ---------------------------------------------------------------------------
 StartMenu_Pokedex:
+    call ShowPokedexMenu                ; predef ShowPokedexMenu
+    ; call LoadScreenTilesFromBuffer2 — port(window model): the pokédex already
+    ; restored the map (its tail ReloadMapData); nothing to restore.
+    call Delay3
+    call LoadGBPal
+    call UpdateSprites
+    ; port: drop the pokédex full-takeover window + whiteout and reset the scratch
+    ; stride (ShowPokedexMenu set text_row_stride=40 and never reset it) so
+    ; RedisplayStartMenu / the overworld draw at stride 20 again.
+    mov dword [g_window_count], 0
+    mov dword [g_bg_whiteout], 0
+    mov dword [text_row_stride], 20
     jmp RedisplayStartMenu
 
 ; ---------------------------------------------------------------------------
@@ -236,8 +268,39 @@ StartMenu_Pokemon:
 ; ---------------------------------------------------------------------------
 ; StartMenu_TrainerInfo / StartMenu_SaveReset / StartMenu_Option — STUBs.
 ; ---------------------------------------------------------------------------
-StartMenu_TrainerInfo:                  ; STUB(S6/S9): trainer card (DrawTrainerInfo/DrawBadges)
-    jmp RedisplayStartMenu
+; StartMenu_TrainerInfo — pret ref: start_sub_menus.asm:StartMenu_TrainerInfo.
+; The TRAINER CARD: DrawTrainerInfo (trainer_card.asm) + DrawBadges (pkg B),
+; composited full-screen, then WaitForTextScrollButtonPress before restoring the
+; overworld + START menu.
+StartMenu_TrainerInfo:
+    call GBPalWhiteOut
+    call ClearScreen
+    call UpdateSprites
+    mov al, [ebp + hTileAnimations]
+    push eax                            ; push af
+    xor al, al
+    mov [ebp + hTileAnimations], al
+    call DrawTrainerInfo
+    call DrawBadges                     ; predef DrawBadges
+    ; ld b, SET_PAL_TRAINER_CARD / call RunPaletteCommand — TODO-HW: palette HAL
+    mov bl, SET_PAL_TRAINER_CARD
+    call RunPaletteCommand
+    call GBPalNormal
+    call trainer_card_present           ; port: composite the 20x18 card as one window
+    call WaitForTextScrollButtonPress
+    call trainer_card_teardown
+    call GBPalWhiteOut
+    call LoadFontTilePatterns
+    ; call LoadScreenTilesFromBuffer2 — port(window model): the START redraw below
+    ; rebuilds the screen; no screen-buffer restore needed.
+    call RunDefaultPaletteCommand
+    call ReloadMapData
+    call DrawStartMenu                  ; farcall DrawStartMenu
+    call LoadGBPal
+    pop eax                             ; pop af
+    mov [ebp + hTileAnimations], al
+    mov dword [text_row_stride], 20     ; DrawTrainerInfo set stride 40 → restore
+    jmp RedisplayStartMenu_DoNotDrawStartMenu
 StartMenu_SaveReset:                    ; pret ref: start_sub_menus.asm:StartMenu_SaveReset
     ; DEVIATION: pret's `ld a,[wStatusFlags4] / bit BIT_LINK_CONNECTED,a / jp nz,Init`
     ; RESET branch (soft-reset to title on a Cable-Club link) is link-play (S8) and is
@@ -247,7 +310,22 @@ StartMenu_SaveReset:                    ; pret ref: start_sub_menus.asm:StartMen
     ; pret: call LoadScreenTilesFromBuffer2 / jp HoldTextDisplayOpen — the port's
     ; window model needs no screen-buffer restore; RedisplayStartMenu redraws.
     jmp RedisplayStartMenu
-StartMenu_Option:                       ; STUB(S6): DisplayOptionMenu package
+; StartMenu_Option — pret ref: start_sub_menus.asm:StartMenu_Option.
+; The OPTION screen (DisplayOptionMenu, pkg D). DisplayOptionMenu_ owns its own
+; full-screen window + whiteout; drop them here before the START redraw.
+StartMenu_Option:
+    xor al, al
+    mov [ebp + hAutoBGTransferEnabled], al   ; ldh [hAutoBGTransferEnabled],a
+    call ClearScreen
+    call UpdateSprites
+    call DisplayOptionMenu                    ; callfar DisplayOptionMenu
+    ; call LoadScreenTilesFromBuffer2 — port(window model): RedisplayStartMenu redraws.
+    call LoadTextBoxTilePatterns
+    call UpdateSprites
+    ; port: drop the OPTION full-takeover window + whiteout (text_row_stride is
+    ; already 20 — InitOptionsMenu set it) before RedisplayStartMenu.
+    mov dword [g_window_count], 0
+    mov dword [g_bg_whiteout], 0
     jmp RedisplayStartMenu
 
 ; ---------------------------------------------------------------------------
@@ -692,4 +770,12 @@ SwitchPartyMon_InitVarOrSwapData:
     pop ebx
     pop edx                             ; pop de
     pop esi                             ; pop hl
+    ret
+
+; ---------------------------------------------------------------------------
+; RunDefaultPaletteCommand — pret ref: home/palettes.asm:RunDefaultPaletteCommand.
+; TODO-HW: palette HAL (Phase 5) — reloads the CGB default palette. No-op here;
+; kept file-local (each full-takeover screen carries its own, e.g. pokedex.asm /
+; naming_screen.asm) so StartMenu_TrainerInfo/StartMenu_Pokedex control flow links.
+RunDefaultPaletteCommand:
     ret

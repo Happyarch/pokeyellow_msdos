@@ -73,6 +73,7 @@ W_CUR_MAP              equ 0xD35D
 W_Y_COORD              equ 0xD360
 W_X_COORD              equ 0xD361
 W_PLAYER_MONEY           equ 0xD346
+wPlayerMoney             equ W_PLAYER_MONEY   ; 3-byte BCD (trainer-card money display)
 W_OBTAINED_BADGES        equ 0xD355
 W_OBTAINED_HIDDEN_ITEMS_FLAGS equ 0xD6EF
 W_TOWN_VISITED_FLAG      equ 0xD70A
@@ -643,6 +644,8 @@ hTileAnimations          equ 0xFFD7     ; lowercase pret-name alias
 H_REDRAW_ROW_COL_MODE    equ 0xFFD0     ; hRedrawRowOrColumnMode
 H_REDRAW_ROW_COL_DEST    equ 0xFFD1     ; hRedrawRowOrColumnDest
 H_UI_LAYOUT_FLAGS        equ 0xFFFA     ; hUILayoutFlags
+hItemToRemoveID          equ 0xFFDB     ; RemoveItemByID: item id to remove
+hItemToRemoveIndex       equ 0xFFDC     ; RemoveItemByID: running bag index
 
 BIT_SINGLE_SPACED_LINES  equ 2          ; hUILayoutFlags bit (gfx_constants.asm)
 

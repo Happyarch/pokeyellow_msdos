@@ -23,6 +23,67 @@ if it took none. This is the swarm's divergence audit trail.
 
 ---
 
+## menus-port Session 9 — integration spine (root only)
+
+- Date: 2026-07-03
+- Scope: wire the START-menu spine to the S6–S8 packages + a faithful generic PC
+  (ActivatePC/PCMainMenu) + a full-faithful TRAINER CARD (DrawTrainerInfo).
+
+**pc.asm** (`src/engine/menus/pc.asm`, promoted to GAME_SRCS): faithful ActivatePC
++ PCMainMenu + dispatch (`.playersPC`→PlayerPC / OaksPC→OpenOaksPC /
+PKMNLeague→PKMNLeaguePC / BillsPC→BillsPC_ / ReloadMainMenu / LogOff), keeping the
+original RemoveItemByID. wMaxMenuItem/wCurrentMenuItem dispatch and the wMiscFlags
+BIT_USING_GENERIC_PC / BIT_NO_MENU_BUTTON_SOUND set/res are byte-faithful (ZF/CF
+senses preserved: `and a`→`test`, `cp n`→`cmp`, `bit B_PAD_B,a`→`test al,PAD_B`).
+The four PC dialogs (TurnedOnPC1 / AccessedMy / AccessedBills / AccessedSomeones,
+data/text/text_3.asm) are DRAWN WHOLE into the stride-20 scratch → a GB_TILEMAP1
+window at UI_MESSAGE_BOX with ▼+A/B `prompt`/`para` waits (DEVIATION(text), the
+oaks_pc/players_pc precedent). SFX = TODO-HW (audio HAL).
+
+**pc_stubs.asm** (new): DisplayPCMainMenu + BillsPC_ SEAM stubs — pret files both
+in engine/pokemon/bills_pc.asm, which current_plan_pokemon_behavior.md Stage 6 owns
+("stub the seams, never touch its files"). Deleted when the real routines land
+(league_pc_stubs.asm / main_menu_stubs.asm convention; the duplicate global forces
+removal). DisplayPCMainMenu stub arms the menu vars (wMaxMenuItem=2 pre-Pokédex
+layout) so PCMainMenu's dispatch runs on defined state.
+
+**start_sub_menus.asm** stubs wired live:
+- StartMenu_Pokedex → ShowPokedexMenu (S8 pkg G); the dex tail-jumps ReloadMapData
+  itself, so the port tail resets the full-takeover window/whiteout + text_row_stride
+  (dex left it 40) before RedisplayStartMenu.
+- StartMenu_Option → DisplayOptionMenu (pkg D); drops the OPTION full-screen window
+  + whiteout before the START redraw (InitOptionsMenu already sets stride 20).
+- StartMenu_TrainerInfo → DrawTrainerInfo + DrawBadges, composited full-screen,
+  WaitForTextScrollButtonPress, then GBPalWhiteOut/LoadFont/ReloadMapData/DrawStartMenu/
+  hTileAnimations restore → RedisplayStartMenu_DoNotDrawStartMenu. RunPaletteCommand /
+  RunDefaultPaletteCommand = palette TODO-HW no-ops (the latter kept file-local).
+
+**trainer_card.asm** (new) — faithful DrawTrainerInfo + TrainerInfo_DrawTextBox /
+DrawHorizontalEdge / NextTextBoxRow / DrawVerticalLine (pret files these in
+start_sub_menus.asm; hosted here so start_sub_menus stays the dispatch). Red's front
+pic (PlayerPicFront = red.pic) is staged + decoded via LoadMonPicToVRAM and placed
+upper-right (DEVIATION(pic): placement clamped to the 5 on-screen columns so the
+7-wide block doesn't wrap the 20-wide scratch; pret's vChars $07→$00 compaction is
+preserved so the badge-face $20 range stays free). Trainer-card tiles
+(box/bg/blank-names/badge-numbers/colon/circle) load into VRAM at the pret vChars ids
+(vChars1 tile N ↔ tilemap id N−$80, e.g. colon id $D6, bg $D7) via the new
+`assets/trainer_card_tiles.inc` (tools/gen_trainer_card_tiles.py, Tier-1 passthrough
+of gfx/trainer_card/*.2bpp + font_extra tile 13); faces/badges reuse pkg B's
+LoadBadgeTiles. Money (PrintBCDNumber wPlayerMoney) + play time (PrintNumber
+wPlayTimeHours/Minutes + colon $D6). `wPlayerMoney` (0xD346) + `hItemToRemoveID/Index`
+(0xFFDB/DC) added to gb_memmap.inc.
+- **Bug found + fixed (register clobber):** TrainerInfo_DrawTextBox's outer row loop
+  used ECX as its counter, but the inner `call TrainerInfo_NextTextBoxRow` also uses
+  ECX (leaving it 0) → `dec ecx/jnz` wrapped to ~4e9 iterations, an OOB write →
+  page fault. pret keeps the count in C and clobbers only A in NextTextBoxRow; the
+  port now `push ecx`/`pop ecx` around the call. (Found via a headless FRAME.BIN
+  bisect: STAGE_A clean, STAGE_B faulted even with the pic disabled → the box helper.)
+- **Verified:** `make DEBUG_TRAINERCARD=1` FRAME.BIN renders the full card —
+  NAME/RED, MONEY/¥123456, TIME/ 5:30, Red's pic upper-right, ○BADGES○, the 4×2
+  face/badge grid with numbers. Overworld baseline unchanged; `make`+`make check` green.
+
+---
+
 ## menus-port Session 8 — swarm wave 3 (root integration)
 
 Ported the last two leaf screens as swarm packages G (pokedex) + I (link_menu),
