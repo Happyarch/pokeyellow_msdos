@@ -61,6 +61,7 @@ extern MainInBattleLoop          ; core.asm — faithful battle loop (replaces b
 extern SaveBattleScreen
 extern RestoreBattleScreen
 extern EndBattleScreen
+extern EndOfBattle               ; end_of_battle.asm — post-battle evolution + state reset
 extern wBattleOver
 extern WaitForAPress
 extern DrawBattlePokeballs
@@ -476,6 +477,11 @@ RunBattleTest:
     ; select, speed-ordered turns, residual damage, faint/EXP/run) and returns on a
     ; terminal outcome (win/lose/ran). Esc quits the process.
     call MainInBattleLoop
+    ; Post-battle: pret calls EndOfBattle here (via _InitBattleCommon, right after
+    ; StartBattle). On a win it clears wForceEvolution + runs EvolutionAfterBattle
+    ; (level-based post-battle evolutions) + UpdatePikachuMoodAfterBattle, then resets
+    ; the battle WRAM and whites out. See current_plan_pokemon_behavior Stage 5.
+    call EndOfBattle
     call EndBattleScreen            ; clean terminal (clears the battle screen)
 .battle_done:
     call DelayFrame                 ; hold the terminal (real exit = overworld, Stage 3)

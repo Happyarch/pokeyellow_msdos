@@ -556,11 +556,57 @@ Translate the drawing routines (currently absent — the file holds only
   **battle level-up** `PrintStatsBox` callfar (`experience.asm`) — the latter fixes
   the garbage-stats display flagged in `current_plan_battle_pret_alignment.md`.
 
-## Stage 5 — Post-battle & integration verification — [ ]
+## Stage 5 — Post-battle & integration verification — [x] (EndOfBattle wire landed + unit-tested)
+
+<!-- ===================== STAGE 5 STATUS (2026-07-03) =====================
+DONE (worktree pokemon-behavior):
+- NEW src/engine/battle/end_of_battle.asm (linked, FRONTEND_SRCS): faithful port of
+  pret engine/battle/end_of_battle.asm:EndOfBattle. On a WIN (wBattleResult==0, not a
+  link battle) it clears wForceEvolution and calls EvolutionAfterBattle (the Stage-2
+  routine — this is THE wire), then UpdatePikachuMoodAfterBattle (DH=$82); then the
+  full battle-WRAM reset block + wild-encounter-cooldown bit + GBPalWhiteOut +
+  wDestinationWarpID=$FF. Deferred boundaries marked inline: link-battle presentation
+  (no networking, Phase 4), Pay-Day BCD award (AddBCDPredef unlinked + text ungenerated
+  — branch kept structurally, never taken), WaitForSoundToFinish (audio HAL, Phase 3).
+- Since the port has no full predef dispatch (src/engine/predefs.asm is DEAD) and no
+  live overworld↔battle driver yet, "wire as the end_of_battle predef" = a direct
+  `call EvolutionAfterBattle` inside EndOfBattle (faithful to pret's `.evolution`
+  block), and `call EndOfBattle` placed right after MainInBattleLoop in the
+  DEBUG_BATTLE_LIVE harness (debug_dump.asm) — the port's only current battle-loop
+  driver, matching pret's StartBattle→EndOfBattle order in _InitBattleCommon.
+- Includes: gb_memmap += wBattleStatusData/wBattleStatusDataEnd (0xD05F/0xD077),
+  wLowHealthAlarm (0xD082), wChannelSoundIDs (0xC026), lowercase aliases
+  wDestinationWarpID/wStatusFlags2 (of the W_ overworld names) — all sym-verified.
+  gb_constants += SET_PAL_OVERWORLD (0x09), BIT_WILD_ENCOUNTER_COOLDOWN (0), CHAN5 (4).
+
+VERIFIED:
+- Headless ELF unit test (scratchpad, links the real end_of_battle.o against stubbed
+  EvolutionAfterBattle/UpdatePikachuMoodAfterBattle/GBPalWhiteOut counters), 19 checks,
+  exit 0: (1) WIN+no-payday → evolution called once, mood called with DH=$82,
+  wForceEvolution cleared BEFORE the evo call, every reset var cleared, wStatusFlags2
+  cooldown bit set, whiteout, warp=$FF; (2) LOSS (wBattleResult=1) → evolution NOT
+  called, mood NOT called, but state still fully reset (loss path leaves wForceEvolution
+  untouched, as pret); (3) WIN+non-zero Pay-Day → still falls through the deferred award
+  to .evolution (evolution called). The EvolutionAfterBattle party species/stats update
+  itself was proven in Stage 2 (static push/pop trace).
+- `make check` green; full `make` links; `make SKIP_TITLE=1 DEBUG_BATTLE_LIVE=1` links
+  (harness now calls EndOfBattle post-loop).
+
+REMAINING (not Stage-5 blockers; folded forward):
+- The full live win→EXP→level-up-learn→post-battle-evolution→status-screen chain
+  through the on-screen EvolveMon UI can't run headlessly to a DUMP because EvolveMon's
+  PrintText steps block on a button-wait (same in-stream mechanism Stage 3 relies on);
+  its pieces are individually live-verified (DEBUG_BATTLE_LIVE win+level-up, Stage 3
+  DEBUG_LEARNMOVE, Stage 4 DEBUG_STATUS). A dedicated interactive playthrough belongs
+  with the eventual real overworld↔battle wire (no such caller exists yet).
+- Bill's PC (Stage 6) remains the last separable stage.
+================================================================================ -->
 - Wire `EvolutionAfterBattle` as the `end_of_battle` predef (`wForceEvolution`
-  post-battle), per pret `engine/battle/end_of_battle.asm`.
+  post-battle), per pret `engine/battle/end_of_battle.asm`. **DONE** —
+  `src/engine/battle/end_of_battle.asm`.
 - End-to-end: win → EXP → level-up learns a move (S3) → post-battle evolution (S2) →
-  status screen reflects new species/moves/stats (S4).
+  status screen reflects new species/moves/stats (S4). Pieces individually verified;
+  the interactive full-chain playthrough awaits a live overworld↔battle driver.
 
 ## Stage 6 — Bill's PC full UI (separable; may become its own plan) — [ ]
 - Extract a **link-ready `_MoveMon`** from `add_mon.asm` (resolve the duplicate

@@ -369,6 +369,8 @@ wDamageMultipliers     equ 0xD05A   ; bit 7 = STAB, low bits = type-eff numerato
 wCriticalHitOrOHKO     equ 0xD05D
 wMoveMissed            equ 0xD05E
 wPlayerStatsToDouble   equ 0xD05F   ; pret wBattleStatusData: always 0; cleared on send-out
+wBattleStatusData      equ 0xD05F   ; pret alias (start of the 0x18-byte battle-status block)
+wBattleStatusDataEnd   equ 0xD077   ; end (exclusive) of wBattleStatusData; EndOfBattle clears the range
 wPlayerStatsToHalve    equ 0xD060   ; always 0
 wPlayerBattleStatus1   equ 0xD061
 wPlayerBattleStatus2   equ 0xD062
@@ -441,6 +443,8 @@ wPlayerHPBarColor      equ 0xCF1C
 wEnemyHPBarColor       equ 0xCF1D
 wCurOpponent           equ 0xD058
 wEscapedFromBattle     equ 0xD077
+wLowHealthAlarm        equ 0xD082   ; nonzero = low-HP alarm enabled; EndOfBattle disables it
+wChannelSoundIDs       equ 0xC026   ; per-sound-channel active sound IDs (NUM_CHANNELS bytes)
 wSavedTileAnimations   equ 0xD0D3
 wMapPalOffset          equ 0xD35C
 ; trainer AI + read_trainer_party (src/engine/battle/trainer_ai.asm, read_trainer_party.asm)
@@ -868,6 +872,7 @@ W_MAP_BACKGROUND_TILE        equ 0xD3AC ; wMapBackgroundTile (border block ID fo
 W_NUMBER_OF_WARPS            equ 0xD3AD ; wNumberOfWarps
 W_WARP_ENTRIES               equ 0xD3AE ; wWarpEntries (MAX_WARP_EVENTS * 4 bytes max)
 W_DESTINATION_WARP_ID        equ 0xD42E ; wDestinationWarpID ($FF = don't update coords)
+wDestinationWarpID           equ 0xD42E ; pret alias of W_DESTINATION_WARP_ID
 wUnknownSerialFlag_d499      equ 0xD499 ; GB-Stadium-link flag; restricts Sleep counter reroll range when set (0 on real HW/this port)
 
 ; Sign/BG event data
@@ -913,6 +918,7 @@ W_WALK_BIKE_SURF_STATE       equ 0xD6FF ; wWalkBikeSurfState
 ; Status flags (game-state bitfields)
 W_STATUS_FLAGS_1             equ 0xD727 ; wStatusFlags1
 W_STATUS_FLAGS_2             equ 0xD72B ; wStatusFlags2
+wStatusFlags2                equ 0xD72B ; pret alias of W_STATUS_FLAGS_2
 W_STATUS_FLAGS_3             equ 0xD72C ; wStatusFlags3
 W_STATUS_FLAGS_4             equ 0xD72D ; wStatusFlags4
 W_STATUS_FLAGS_5             equ 0xD72F ; wStatusFlags5
