@@ -130,7 +130,8 @@ HOME_SRCS := \
     src/home/item.asm \
     src/home/count_set_bits.asm \
     src/home/reset_player_sprite.asm \
-    src/home/map_text_pointer.asm
+    src/home/map_text_pointer.asm \
+    src/home/reload_tiles.asm
 
 HAL_SRCS := \
     src/ppu/ppu.asm \
@@ -182,6 +183,8 @@ GAME_SRCS := \
     src/engine/menus/main_menu_stubs.asm \
     src/engine/menus/save.asm \
     src/engine/menus/naming_screen.asm \
+    src/engine/menus/pokedex.asm \
+    src/engine/menus/pokedex_entry.asm \
     src/engine/overworld/reload_sprites.asm \
     src/engine/overworld/simulate_joypad.asm \
     src/engine/overworld/overworld_stubs.asm \
@@ -427,6 +430,33 @@ NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_NAMINGSCREEN
 NASMFLAGS += -D SKIP_TITLE
 endif
+# Pokédex gates (menus S8 package G). G1: seed seen/owned, draw CONTENTS list.
+# G2: open RHYDON dex data page (front pic + HT/WT). Dump FRAME.BIN, exit.
+# make SKIP_TITLE=1 DEBUG_G1=1  /  DEBUG_G2=1
+ifdef DEBUG_G1
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_G1
+NASMFLAGS += -D SKIP_TITLE
+endif
+ifdef DEBUG_G2
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_G2
+NASMFLAGS += -D SKIP_TITLE
+endif
+# Link-menu gates (menus S8 package I). I1: open the cup-select screen (serial
+# stubbed to the no-partner timeout). I2: run the cup validators (a pass + a
+# gated fail) and record result codes. Dump FRAME.BIN, exit.
+# make SKIP_TITLE=1 DEBUG_I1=1  /  DEBUG_I2=1
+ifdef DEBUG_I1
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_I1
+NASMFLAGS += -D SKIP_TITLE
+endif
+ifdef DEBUG_I2
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_I2
+NASMFLAGS += -D SKIP_TITLE
+endif
 # Live battle view: same setup as DEBUG_BATTLE but holds the screen (loops
 # DelayFrame) so you can visually inspect it instead of dumping+exiting. Esc quits.
 # make DEBUG_BATTLE_LIVE=1 (then dos_port/run).
@@ -608,7 +638,6 @@ HOME_CHECK_SRCS := \
     src/home/give.asm \
     src/home/money.asm \
     src/home/oam.asm \
-    src/home/reload_tiles.asm \
     src/home/vcopy.asm \
     src/engine/overworld/pikachu.asm \
     src/engine/overworld/player_gfx.asm \
@@ -754,6 +783,8 @@ src/engine/menus/start_sub_menus.o: assets/ui_layout_menus.inc
 src/engine/items/item_effects.o: assets/ui_layout_menus.inc
 src/engine/menus/main_menu.o src/engine/menus/save.o: assets/ui_layout_menus.inc
 src/engine/menus/naming_screen.o: assets/ui_layout_menus.inc assets/alphabets.inc
+src/engine/menus/pokedex.o: assets/ui_layout_menus.inc
+src/engine/menus/pokedex_entry.o: assets/ui_layout_menus.inc assets/dex_entries.inc
 
 # Pokémon base stats + IndexToPokedex (static data, generated from pret source).
 assets/base_stats.inc:
@@ -805,13 +836,11 @@ assets/alphabets.inc: ../data/text/alphabets.asm ../constants/charmap.asm \
                       ../gfx/font/ED.1bpp tools/gen_alphabets.py
 	python3 tools/gen_alphabets.py
 
-# Pokédex order + entries (menus S8, package G / I2). dex_order = internal-index
-# -> national dex number byte table; dex_entries = PokedexEntryPointers (flat dd)
-# + inlined per-mon name/height/weight/flavor blobs (text_far flavor inlined).
-assets/dex_order.inc: ../data/pokemon/dex_order.asm ../constants/pokedex_constants.asm \
-                      tools/gen_dex_order.py
-	python3 tools/gen_dex_order.py
-
+# Pokédex entries (menus S8, package G2 / I2). dex_entries = PokedexEntryPointers
+# (flat dd) + inlined per-mon name/height/weight/flavor blobs (text_far flavor
+# inlined). NOTE: the index->dex order table pret keeps as PokedexOrder is NOT
+# regenerated here — the port already ships that exact byte table as the global
+# `IndexToPokedex` (base_stats.inc); pokedex.asm's PokedexToIndex walks it.
 assets/dex_entries.inc: ../data/pokemon/dex_entries.asm ../data/pokemon/dex_text.asm \
                         ../constants/charmap.asm tools/gen_dex_entries.py
 	python3 tools/gen_dex_entries.py
@@ -895,7 +924,7 @@ assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_
         assets/super_rod.inc assets/town_map_data.inc assets/town_map_gfx.inc \
         assets/ui_layout_menus.inc assets/ui_layout_battle.inc \
         assets/map_border_overrides.inc assets/badge_tiles.inc \
-        assets/alphabets.inc assets/dex_order.inc assets/dex_entries.inc
+        assets/alphabets.inc assets/dex_entries.inc
 
 all: $(TARGET)
 

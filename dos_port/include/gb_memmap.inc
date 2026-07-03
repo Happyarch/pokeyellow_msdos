@@ -192,6 +192,7 @@ wMaxItemQuantity   equ 0xCF96
 wPPRestoreItem         equ 0xCD3D   ; which Ether/Elixer item is being used
 wWereAnyMonsAsleep     equ 0xCD3D   ; Poke Flute: set if a party mon woke (aliased)
 wChargeMoveNum         equ 0xCD3D   ; charge move number (aliased union lane)
+wDexMaxSeenMon         equ 0xCD3D   ; pokedex.asm: highest seen dex # (aliased union lane, S8)
 wMaxPP                 equ 0xD11D   ; max PP of the move being PP-restored
 ; Menu state these routines reset (plain WRAM writes; the rendering is elsewhere).
 wListScrollOffset      equ 0xCC36

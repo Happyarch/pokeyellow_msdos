@@ -128,6 +128,18 @@ extern RunSaveTest
 %ifdef DEBUG_NAMINGSCREEN
 extern RunNamingScreenTest
 %endif
+%ifdef DEBUG_G1
+extern RunPokedexTest
+%endif
+%ifdef DEBUG_G2
+extern RunPokedexEntryTest
+%endif
+%ifdef DEBUG_I1
+extern RunLinkMenuTest
+%endif
+%ifdef DEBUG_I2
+extern RunLinkCupsTest
+%endif
 %ifdef DEBUG_WALKSPEED
 extern DebugDumpMemory
 extern tick_count
@@ -416,6 +428,18 @@ EnterMap:
 %endif
 %ifdef DEBUG_NAMINGSCREEN
     call RunNamingScreenTest                ; open PLAYER naming screen, draw grid, dump FRAME.BIN, exits
+%endif
+%ifdef DEBUG_G1
+    call RunPokedexTest                     ; seed seen/owned, draw pokédex CONTENTS list, dump FRAME.BIN, exits
+%endif
+%ifdef DEBUG_G2
+    call RunPokedexEntryTest                ; open RHYDON dex data page (pic+HT/WT), dump FRAME.BIN, exits
+%endif
+%ifdef DEBUG_I1
+    call RunLinkMenuTest                    ; open link cup-select screen (serial stubbed), dump FRAME.BIN, exits
+%endif
+%ifdef DEBUG_I2
+    call RunLinkCupsTest                    ; run cup validators (pass+gated fail), record codes, dump, exits
 %endif
 %ifdef DEBUG_WALKSPEED
     ; Live walk-speed instrumentation: boots normally into OverworldLoop so you can
