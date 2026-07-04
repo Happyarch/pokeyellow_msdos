@@ -1,6 +1,21 @@
 #!/usr/bin/env bash
-# Launch PKMN.EXE in DOSBox-X using the repo config (dosbox-x.conf).
-# dos_port/ is mounted as C: via 'mount c .' in the config autoexec.
+# Build PKMN.EXE, package it into the isolated FAT image (PKMN.IMG), and launch
+# it in DOSBox-X. C: is that image — the host filesystem is never mounted, so the
+# game's saves and any buffer-overflow / OOB disk writes stay inside the image
+# (at any BUG_FIX_LEVEL). Any make args are passed through, e.g.:
+#   dos_port/run SKIP_TITLE=1
+#   dos_port/run BUG_FIX_LEVEL=1
 set -e
 DOSPORT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-exec dosbox-x -defaultdir "$DOSPORT" -conf "$DOSPORT/dosbox-x.conf"
+
+# Build the EXE + refresh it inside the disk image (save data in the image is
+# preserved across rebuilds; delete PKMN.IMG or `make clean-image` to reset).
+make -C "$DOSPORT" image "$@"
+
+# -defaultconf : ignore the user's system dosbox-x config, so nothing it mounts
+#                (host dirs, Z: overrides) leaks in. Our -conf still applies on
+#                top (machine/cpu settings + the imgmount-only autoexec).
+# NB: -securemode is NOT usable here — it restricts the memory/DPMI services
+#     CWSDPMI needs, so the DPMI executable won't start. Isolation instead comes
+#     from mounting ONLY the disk image (no host directory is ever mounted).
+exec dosbox-x -defaultdir "$DOSPORT" -defaultconf -conf "$DOSPORT/dosbox-x.conf"

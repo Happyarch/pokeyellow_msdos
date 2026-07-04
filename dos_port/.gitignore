@@ -1,5 +1,6 @@
 DUMP.BIN
 FRAME.BIN
+PKMN.IMG
 *.o
 *.orig
 # translation.db is tracked (synced across machines / web Claude Code).
