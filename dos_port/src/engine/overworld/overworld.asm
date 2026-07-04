@@ -307,9 +307,37 @@ EnterMap:
     ; map edge / when CheckMapConnections fires — i.e. whether the transition
     ; triggers at an appropriate point. Collision is skipped so the walk is
     ; unconditional. If a crossing fires mid-walk, we dump immediately.
+    ;
+    ; The spawn (tile 8,8 = Pallet block col 4) sits under a tree at block-row 0,
+    ; so a blind straight-north walk drove the player THROUGH the tree and off the
+    ; top edge into the OOB-clamped region (collision is skipped). Pre-walk east
+    ; onto the passable north-exit column first so the northward walk stays on
+    ; valid tiles and crosses into Route 1 legitimately.
 %ifndef DEBUG_WALK_STEPS
 %define DEBUG_WALK_STEPS 8
 %endif
+%ifndef DEBUG_WALK_EAST_STEPS
+%define DEBUG_WALK_EAST_STEPS 2
+%endif
+    mov ecx, DEBUG_WALK_EAST_STEPS
+.we_step:
+    push ecx
+    mov byte [ebp + W_SPRITE_PLAYER_Y_STEP_VECTOR], 0
+    mov byte [ebp + W_SPRITE_PLAYER_X_STEP_VECTOR], 1     ; +1 (east)
+    mov byte [ebp + W_PLAYER_DIRECTION],        PLAYER_DIR_RIGHT
+    mov byte [ebp + W_PLAYER_MOVING_DIRECTION], PLAYER_DIR_RIGHT
+    mov byte [ebp + W_SPRITE_PLAYER_FACING_DIR], SPRITE_FACING_RIGHT
+    mov byte [ebp + W_WALK_COUNTER], 8
+.we_frames:
+    call UpdateSprites
+    call AdvancePlayerSprite
+    call DelayFrame
+    cmp byte [ebp + W_WALK_COUNTER], 0
+    jne .we_frames
+    pop ecx
+    dec ecx
+    jnz .we_step
+
     mov ecx, DEBUG_WALK_STEPS
 .wn_step:
     push ecx
