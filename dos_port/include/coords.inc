@@ -9,8 +9,12 @@
 ; (W_TILEMAP), unlike the GB's 20x18. 'coord' targets W_TILEMAP with stride 40.
 ; 'bgcoord' targets GB_TILEMAP0 with stride 32.
 ;
-; bccoord/decoord shorthands map to the port's 32-bit pointer registers
-; (esi/edi), not EBX/EDX.
+; hlcoord uses ESI (HL's pointer register); decoord uses EDI (DE's secondary
+; pointer). bccoord uses EBX (full 32-bit), matching every existing
+; hand-computed bccoord call site in the port (e.g. pokedex_entry.asm) — it
+; must NOT alias ESI, since pret code routinely holds an hlcoord and a
+; bccoord live at once (e.g. feeding TextCommandProcessor's ESI=stream /
+; EBX=cursor pair).
 ; dwcoord emits a 32-bit `dd` address offset, despite the 'dw' in the name.
 ; -----------------------------------------------------------------------------
 
@@ -51,9 +55,9 @@
 
 %macro bccoord 2-3
     %if %0 >= 3
-        coord esi, %1, %2, %3
+        coord ebx, %1, %2, %3
     %else
-        coord esi, %1, %2
+        coord ebx, %1, %2
     %endif
 %endmacro
 
@@ -115,9 +119,9 @@
 
 %macro bcbgcoord 2-3
     %if %0 >= 3
-        bgcoord esi, %1, %2, %3
+        bgcoord ebx, %1, %2, %3
     %else
-        bgcoord esi, %1, %2
+        bgcoord ebx, %1, %2
     %endif
 %endmacro
 
@@ -129,7 +133,7 @@
     %endif
 %endmacro
 
-%macro owcoord 3-4
+%macro owcoord 4
     ; register, x, y, map width
     mov %1, W_OVERWORLD_MAP + ((%2) + 3) + (((%3) + 3) * ((%4) + (3 * 2)))
 %endmacro
@@ -139,7 +143,7 @@
 %endmacro
 
 %macro bcowcoord 3
-    owcoord esi, %1, %2, %3
+    owcoord ebx, %1, %2, %3
 %endmacro
 
 %macro deowcoord 3

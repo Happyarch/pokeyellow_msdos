@@ -63,11 +63,13 @@
     %endrep
 %endmacro
 
+; dname requires NAME_LENGTH (gb_constants.inc) in scope when the 1-arg form
+; is used.
 %macro dname 1-2
     %if %0 == 2
         %assign n %2
     %else
-        %assign n 10 ; NAME_LENGTH - 1 (Assuming NAME_LENGTH=11)
+        %assign n NAME_LENGTH - 1
     %endif
     %strlen len %1
     db %1

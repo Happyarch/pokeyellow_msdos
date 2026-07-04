@@ -94,8 +94,6 @@
     ; Emulates pret's CheckBothEventsSet.
     ; "returns whether both events are set in Z flag.
     ; This sets the Z flag when the event IS set."
-    ; Wait, Z flag=1 if BOTH are set.
-    ; We can check both by checking each. But it's easier to use a runtime logic that mimics the behavior.
     CheckEvent %1
     jz %%not_set
     CheckEvent %2
@@ -104,15 +102,17 @@
     cmp al, al
     jmp %%done
 %%not_set:
-    ; not both set -> ZF=0
-    test al, 0
+    ; not both set -> ZF=0. `test al,0` always yields ZF=1 (AND with 0 is
+    ; always 0) regardless of AL's value, so it can't be used here; force a
+    ; known-nonzero value into AL first instead.
+    mov al, 1
+    test al, al
 %%done:
 %endmacro
 
 %macro CheckEitherEventSet 2
     ; "returns the complement of whether either event is set in Z flag"
     ; "Z flag=0 if either is set."
-    ; Wait, the comment says: "Z flag=0 if either is set"
     CheckEvent %1
     jnz %%set
     CheckEvent %2
@@ -121,8 +121,10 @@
     cmp al, al
     jmp %%done
 %%set:
-    ; either is set -> ZF=0
-    test al, 0
+    ; either is set -> ZF=0. See CheckBothEventsSet: `test al,0` always
+    ; yields ZF=1, so force a known-nonzero value into AL first instead.
+    mov al, 1
+    test al, al
 %%done:
 %endmacro
 
