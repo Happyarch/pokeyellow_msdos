@@ -66,8 +66,10 @@ dos_port/assets/*
 # MCP debugger: clone and binary are not committed (too large)
 dos_port/tools/dosbox-x-mcp/
 
-# Claude Code session data
-.claude/
+# Claude Code session data (settings.local.json, worktrees, etc.) — but keep
+# shared project skills under version control.
+.claude/*
+!.claude/skills/
 
 # precompiled python
 *.pyc

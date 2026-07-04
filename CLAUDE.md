@@ -17,6 +17,29 @@ stays cross-referenceable against pret as documentation.
 
 ---
 
+## Skills — load detailed reference on demand
+
+Most of the deep reference that used to live inline here now lives in three
+**project skills** (`.claude/skills/`) so it only loads into context when you
+actually need it. Invoke the matching skill (via the `Skill` tool) before doing
+that kind of work:
+
+- **`asm-translation`** — translating any SM83/pret routine to x86: register map,
+  ZF/CF flag preservation, big-endian GB data, EBP memory model / DJGPP addressing,
+  video/timing/hardware-I/O/RST boundaries, 386+ instruction choices, the 7-step
+  translation workflow.
+- **`build-and-debug`** — building/running the port, asset regen, DOSBox-X config,
+  memory-dump (`DUMP.BIN`) and back-buffer (`FRAME.BIN`) debugging recipes, the
+  repo layout map, reference URLs.
+- **`project-conventions`** — stub conventions (`*_stubs.asm`), the data/code
+  two-tier rule (incl. text-string generation), `BUG_FIX_LEVEL`/`GLITCH` tags, the
+  active-plan file convention + current plans, save-file format notes.
+
+The always-apply hard rules below stay here so they're in force every session; the
+skills hold the "look it up while doing X" detail.
+
+---
+
 ## Current Phase
 
 **Phase 2: Game Loop** — See [TODO.md](TODO.md) for open items.
@@ -94,96 +117,10 @@ extension (enlarged border / bigger block grid). See TODO.md (Phase 2).
 
 ---
 
-## Repo Layout
+## Hard Rules (always in force)
 
-```
-/                          ← pret/pokeyellow SM83 source (read-only reference)
-  constants/hardware.inc   ← GB hardware register definitions (use for offsets)
-  home/                    ← core GB routines (translation source)
-  ram/wram.asm, hram.asm   ← GB memory layout definitions
-  docs/bugs_and_glitches.md  ← known bugs in the original (reference for BUG tags)
-  tools/                   ← pret's build tools (gfx.c, pkmncompress.c, etc.) — DO NOT EDIT
-dos_port/
-  include/
-    gb_memmap.inc          ← EBP-relative offsets for GB memory regions
-    gb_macros.inc          ← BUG_FIX_LEVEL macro, BUG/GLITCH comment conventions
-  boot/
-    entry.asm              ← DPMI entry, memory alloc, /FIXALL|/FIXCRIT parsing, main loop
-    video.asm              ← VGA mode 13h, test pattern, 2× blit
-    timing.asm             ← PIT 60 Hz, tick ISR, vblank sync
-  src/util/
-    fill_memory.asm        ← first translated routine (FillMemory)
-  src/ppu/
-    ppu.asm                ← software PPU: BG tile decoder + tilemap renderer
-  src/input/
-    joypad.asm             ← INT 9h keyboard ISR → GB joypad state
-  tools/
-    gen_all_assets.py      ← tileset/blockset/map .inc generator
-    gen_map_headers.py     ← map header blob + pointer table generator
-    render_frame.py        ← render FRAME.BIN back-buffer dump to PNG
-    colorize.py            ← palette tool (stub, Phase 5)
-    saveconv.py            ← GB .sav ↔ DOS .dsv converter (stub, Phase 5)
-    dosbox_mcp/            ← MCP server for live LLM-driven DOSBox-X debugging
-    dosbox-x-mcp/          ← MCP-patched DOSBox-X build (gitignored, built locally)
-  dosbox-x.conf            ← tracked DOSBox-X config (machine, cycles, autoexec)
-  Makefile
-  link.ld                  ← DJGPP linker script
-docs/
-  assembly.md              ← build flags, tools, dependencies (start here)
-  register_map.md          ← SM83 → x86 register mapping (living doc)
-  translation_log.md       ← per-routine translation notes
-  glitch_safety.md         ← glitch sandbox guidance
-  386_optimization_strategy.md ← Guide for fast and faithful 386 assembly optimizations
-  ui_projection.md         ← per-subsystem GB→port UI coordinate registry + ; PROJ tags
-  current_plan.md          ← active multi-step implementation plan (see below)
-  references/
-    README.md              ← reference link index
-    pandocs/               ← downloaded Pan Docs markdown pages
-```
-
----
-
-## Hard Conventions
-
-### Toolchain
-- Assembler: NASM, Intel syntax
-- Target: 386+, 32-bit protected mode
-- DPMI host: CWSDPMI (auto-loaded by `i386-pc-msdosdjgpp-ld` stub)
-- Linker: `i386-pc-msdosdjgpp-ld` from `binutils-djgpp` package
-- Build: `nasm -f coff` → `i386-pc-msdosdjgpp-ld`
-- Entry point: `start` (not `_start`)
-- Interactive shell is **zsh**, not bash: unquoted `$var` is NOT word-split
-  (`set -- $pair` leaves it one word — use `${=var}` or pass args explicitly),
-  and `$pipestatus`/`${(f)...}` differ from bash. Write zsh-compatible commands.
-
-**Linker sections (critical, verified):** `link.ld` must explicitly map every
-input section into a *loaded* output section (`.text`/`.data`). The
-coff-go32-exe stub loads only the `.text`/`.data`/`.bss` extents it records;
-any **orphan section** ld places elsewhere is given a VMA but its bytes never
-reach memory, so symbols in it **read back as zero at runtime with no fault**.
-This bit us hard: the overworld assets were in `section .rodata`, which had no
-output rule, so `overworld_gfx`/`overworld_blocks`/`pallet_town_blk` were all
-zero in memory → Pallet Town rendered all-white. `.rodata` is now folded into
-`.data` in `link.ld`. Rule of thumb: put embedded data in `.data` (as the font
-and title assets do), and if you ever add a new section name, add it to
-`link.ld` first. Symptom of a broken/orphan section: a `rep movsb` from a
-rodata label copies zeros while immediate `mov [ebp+x], imm` writes work fine.
-
-### Register Mapping (SM83 → x86)
-
-| SM83 | x86 | Notes |
-|------|-----|-------|
-| A | AL | Accumulator |
-| F: Z, C | EFLAGS ZF, CF | Direct |
-| F: H | `[hf_shadow]` | BSS byte; lazy — only update where DAA/CPL consume H |
-| F: N | (implicit) | Tracked via instruction choice, not a flag |
-| BC | BX | B = BH, C = BL |
-| DE | DX | D = DH, E = DL |
-| HL | ESI | Full 32-bit, used for flat addressing |
-| SP | ESP | Direct; mind calling convention |
-| — | EBP | Fixed base → emulated GB address space |
-| — | EDI | Secondary pointer / blit destination |
-| — | ECX | Loop counter / scratch |
+These stay in-context every session. Deeper detail is in the skill named at the
+end of each rule — invoke it when the rule needs its full context.
 
 ### Preserve pret Labels
 
@@ -204,466 +141,49 @@ hard rule, not a style preference:
 - New port-only routines (HAL boundaries, debug harnesses) get descriptive names,
   but anything that *has* a pret counterpart uses the pret counterpart's name.
 
-### Preserve Flags (ZF/CF) — x86 ≠ SM83
+### Data is big-endian
 
-**Translating a conditional is not just translating the branch — it's preserving
-the flag the branch reads.** SM83 and x86 set flags on *different* instructions,
-so a faithful-looking translation can silently break a `jr z`/`jr c` by clobbering
-the flag between where it's set and where it's tested. This has bitten real
-routines (see the `lea esi,[esi+1]`-instead-of-`inc` fix in `pikachu_status.asm`).
+**GB game data is big-endian — preserve pret byte order.** Multi-byte values (mon
+HP/MaxHP/stats, OT ID, EXP, every party/box/`wLoadedMon` field) are stored high
+byte first. Never re-store a GB value in x86-native little-endian order — it's
+load-bearing for pret cross-reference and the Gen-2 byte-identical rule. Full
+detail + the `PrintNumber`/borrow-chain caveats → skill **`asm-translation`**.
 
-- **Identify the exact instruction that sets the flag pret's branch depends on,
-  and make sure nothing between it and the branch disturbs that flag.** Map
-  `jr z/nz` → `jz/jnz` (ZF), `jr c/nc` → `jb/jae` (CF, unsigned) — but only after
-  confirming the flag still holds at the branch.
-- **`inc`/`dec` preserve CF but modify ZF/SF/OF/AF/PF.** So an `inc de`/`dec hl`
-  that pret places between a `sub` and an `sbc` (borrow chain) is safe in x86
-  too — CF survives. But an `inc`/`dec` between a `cp`/`or`/`and` and a `jr z`
-  **destroys ZF** — pret's `inc hl` after a compare was flag-neutral on SM83 in
-  that spot only because SM83's `ld`/`inc [hl]` differ; re-check each case.
-- **`mov`, `lea`, `movzx`, `push`/`pop` do NOT touch flags** — use `lea
-  esi,[esi+1]` instead of `inc esi`, or reorder, when you must advance a pointer
-  without disturbing a live ZF/CF.
-- **`test`/`cmp`/`and`/`or`/`add`/`sub`/`shl`/`shr` all set flags** — never place
-  one of these between a flag producer and its consumer unless it *is* the
-  producer.
-- SM83 `F: N`/`H` are tracked separately (`[hf_shadow]`, lazy) — see the register
-  table above; most routines don't touch them, but DAA/CPL paths do.
-- Related: multi-byte GB values are **big-endian** — see "Data Endianness" below.
+### Register map & flag preservation
 
-### Memory Model
-`EBP` = base of a ~96 KB DPMI allocation (64 KB GB space + 8 KB CGB VRAM bank 1
-+ 160×144 back buffer). Access emulated GB memory as `[EBP + constant]` where
-constants come from `dos_port/include/gb_memmap.inc`. All offsets derived from
-`constants/hardware.inc`.
+Translate SM83 → x86 by the fixed register map (A→AL, BC→BX, DE→DX, HL→ESI, EBP =
+GB memory base), and **preserve the exact ZF/CF a `jr z`/`jr c` reads** — x86 sets
+flags on different instructions than SM83, so an `inc`/`cmp` in the wrong spot
+silently breaks a branch. Full table, flag rules, EBP/DJGPP memory model, and
+video/timing/hardware-I/O boundaries → skill **`asm-translation`**.
 
-**DJGPP addressing (critical, verified in testing):** the DS/CS selector base
-is the program image, NOT linear 0. `setup_flat_access` (boot/entry.asm) raises
-the DS limit to 4 GB (DPMI fn 0008h — the "nearptr" model) and stores the DS
-base in `[ds_base]`. Every raw linear address must be biased by `-[ds_base]`
-before use as a DS-relative offset:
-- VGA framebuffer: use `[vga_base]` (= 0xA0000 − ds_base), never raw 0xA0000
-- DPMI fn 0501h results: linear − ds_base (done in `alloc_gb_memory`; EBP is
-  already biased)
-- PSP/real-mode addresses: segment×16 − ds_base
+### Linker sections
 
-Other verified DPMI gotchas:
-- DPMI fn 0501h takes the size in **BX:CX as 16-bit halves**, not ECX
-- A hardware ISR must load DS via `mov ds, [cs:isr_ds]` (CS base = DS base
-  under DJGPP); don't assume SS holds the flat selector on ISR entry
-- Restore the PIT divisor and original IRQ0 vector before exit (`pit_restore`)
-- **`[EBP + disp]` addressing defaults to the SS segment**, and the go32
-  loader (verified under HDPMI32) gives us an SS whose base does NOT match
-  DS — so every EBP-relative GB memory access silently read/wrote the wrong
-  linear memory until `setup_flat_access` was taught to normalize SS to the
-  DS selector (with an ESP rebase of `ss_base - ds_base` in the same
-  instruction pair). Symptom when broken: renderer reads all zeros, no crash.
+Put embedded data in `.data` (as font/title assets do); **any new section name
+must be added to `link.ld` first**, or its bytes never load and its symbols read
+back as zero at runtime with no fault (the `.rodata` all-white bug). Full
+explanation → skill **`build-and-debug`**.
 
-### Data Endianness (preserve pret byte order)
+### Stubs live in `*_stubs.asm`
 
-**GB game data is big-endian; keep it that way.** The SM83 stores multi-byte
-game values **high byte first** (big-endian): mon HP, MaxHP, the five stats,
-OT ID, EXP, and every other multi-byte field in the party/box/`wLoadedMon`
-structs. This is load-bearing for pret cross-reference *and* for the Gen-2
-byte-identical-struct rule — **do not** re-store any GB value in x86-native
-little-endian order.
+A link-time stand-in goes in the subsystem stub file `src/<area>/<area>_stubs.asm`
+under its exact pret label — never a `ret`-only body in the source-mirror file,
+never a forked name. Full rules (extern comments, retirement, no-shadow) → skill
+**`project-conventions`**.
 
-- **Reading a multi-byte GB value:** treat `[EBP+addr]` as big-endian
-  (`hi = [addr]`, `lo = [addr+1]`), exactly as the pret routine does. Do not
-  assume x86 little-endian just because the host is.
-- **Home/shared routines must match pret's byte order.** `PrintNumber`
-  (`home/print_num.asm`) reads its source **big-endian** — the first byte at
-  `DE` is most-significant (pret loads it into the high slot of `hNumToPrint`).
-  A prior port revision read it little-endian; that was a latent divergence
-  (harmless only because every caller so far passed 1-byte values) and is now
-  fixed. When you translate any routine that consumes a multi-byte value,
-  verify the endianness against the pret source rather than the x86 default.
-- **Flags caveat that often rides along:** SM83 16-bit math builds values
-  hi-then-lo; when porting a borrow/carry chain (`sub`/`sbc`) that walks such a
-  value, remember `inc`/`dec` on the pointer preserve CF (unlike some other x86
-  ops), so the borrow survives the pointer step — but a `cmp`/`add`/`sub`/`test`
-  between the halves will clobber it.
+### Text strings are DATA — never hand-encode charmap bytes
 
-### Video
-- VGA Mode 13h (320×200, 256 colors)
-- GB framebuffer: 160×144 at `[EBP + GB_BACKBUF]`
-- 2× nearest-neighbor blit to `0xA0000`, centered (28-row letterbox top/bottom)
-- Palette: 256-entry VGA (6-bit RGB via ports 0x3C8/0x3C9); layout TBD Phase 5.
-  The current 4-shade DMG-green ramp (`dmg_palette` in `boot/video.asm`) is a
-  **debug placeholder** — do not treat it as final. Phase 5 will translate the
-  original **GBC** colors into the VGA palette (Yellow is CGB-enhanced; pull
-  from the CGB palette data, not an expanded DMG ramp).
+Any human-rendered string (menu/screen labels, item/move/mon names, dialog — even
+`"OK"`) is **Tier-1 data**: produce it with a Python generator (`gb_text.encode` →
+`assets/*.inc`, `%include`d, wired into `make assets`). Never write `db 0x…`
+charmap hex in a `.asm`. This is the most-repeated violation. Two-tier rule + the
+generator pattern → skill **`project-conventions`**.
 
-### Timing
-- PIT channel 0, mode 3; divisor chosen by the Makefile `TIMING` mode (the GB is
-  not exactly 60 Hz). Default **SGB** = 61.1685 Hz (divisor 19506, the Super Game
-  Boy's ~+2.4% SNES-clock speed-up); `TIMING=DMG` = 59.7275 Hz (19977, real
-  handheld); `TIMING=PC` = 60 Hz (19886); or `TIMING_HZ=`/`TIMING_DIVISOR=` custom.
-  `timing.asm` reads `-D PIT_DIVISOR=`.
-- Frame loop: `wait_vblank → wait_pit_tick → update → render → present`
-- VBlank detection: port 0x3DA bit 3 (VSync active high)
-- No cycle-counted delay loops
+### Bug / glitch tags
 
-### Hardware I/O Boundary
-**Do not translate GB I/O register accesses directly.** These are translation
-boundaries. Emit a `; TODO-HW:` comment describing what the original code does:
-
-- `$FF40–$FF4B` (LCDC, STAT, SCX/SCY, palettes, OAM DMA) → software renderer
-- `$FF01/$FF02` (serial SB/SC) → `; TODO-HW: network HAL` (Phase 4)
-- `$FF04–$FF07` (timer) → PIT-based main loop, not translated
-- `$FF10–$FF26` (APU) → `; TODO-HW: audio HAL` (Phase 3)
-
-### RST Vectors
-`RST $00`–`$38` become regular labeled `CALL` targets, not interrupt-style dispatch.
-
-### 386+ Instructions
-Prefer: `movzx`/`movsx` for zero/sign extension, `imul reg, reg, imm` for
-tile/map index math, `lea` for flags-preserving address computation, `rep stos/movs`
-for block fills/copies.
-
----
-
-## Bug Fix Conventions
-
-Every translated routine with a known bug gets a conditional block:
-
-```nasm
-; BUG(critical): <description> — pret ref: <file>:<label>, bugs_and_glitches.md#L<N>
-%if BUG_FIX_LEVEL >= 1
-    ; fixed implementation
-%else
-    ; original behavior (possibly buggy)
-%endif
-```
-
-Levels: `1` = critical bugs only (`/FIXCRIT`), `2` = all bugs (`/FIXALL`).
-
-For intentional glitches that are user-exploitable features:
-```nasm
-; GLITCH: <name> — <brief description>
-; Safety: safe under DPMI (bounded) | unsafe on bare HW if ACE reachable
-```
-
----
-
-## Stub Conventions (all stubs live in a subsystem `*_stubs.asm`)
-
-When a routine must exist at link time but its real body is deferred, the stub
-does **not** go in the `.asm` that mirrors its pret source file — it goes in the
-**subsystem stub file**, `src/<area>/<area>_stubs.asm` (e.g.
-`overworld_stubs.asm`, `core_stubs.asm`, `pc_stubs.asm`, `main_menu_stubs.asm`,
-`battle_exp_stubs.asm`). This keeps every stand-in greppable in one place per
-subsystem, so retiring stubs later is a bounded search, not a tree-wide hunt.
-
-**Rules:**
-1. **Keep the pret label.** The stub carries the exact pret routine name (see
-   "Preserve pret Labels"); it is a `global` in the stub file and just `ret`s (or
-   returns the minimal flag/CF contract its callers read). Never fork a new name
-   for a stub.
-2. **Stub file, not the source-mirror file.** Do not leave a `ret`-only body in
-   the file that will eventually hold the real routine. Put it in the
-   `*_stubs.asm`; create that file if the subsystem has none yet.
-3. **Callers point at the stub file, not the pret origin.** An `extern`'s trailing
-   comment names **`<area>_stubs.asm`** as the current provider — not the pret
-   source the routine will eventually be translated from. That comment is the
-   discovery trail: it says "this symbol is a stub right now, and here's the file
-   to delete it from." (Optionally note the pret origin second, e.g.
-   `; core_stubs.asm — pret: home/…`.)
-4. **Each stub documents its own retirement.** Head each stub with the pret ref
-   and a `TODO(<wave/plan>):` line stating what replaces it, plus whether it is
-   ever reached in the live build (many are dead branches kept only to resolve the
-   link). Model on `overworld_stubs.asm`.
-5. **Retire, don't shadow.** When the real routine lands (moved into a *linked*
-   Makefile list, not a check-only one), **delete the stub** and repoint the
-   `extern` comments — do not leave the stub `global` shadowing the real body.
-   Two linked `global`s of one name is a link error; a stub linked while the real
-   body sits in a check-only list is the silent-shadow trap this convention exists
-   to make findable.
-
----
-
-## Build Commands
-
-Full reference: **[docs/assembly.md](docs/assembly.md)** — build flags, asset flags, output files, warp format, DOSBox-X config.
-
-Output EXE is **`dos_port/PKMN.EXE`** — DOS 8.3 name required for DOSBox-X `-c` invocation.
-
-> **Web-session agents — fresh checkout?** (Local Arch Linux already has the
-> toolchain + assets; this note is only for bare web/cloud session containers.)
-> A bare `make -C dos_port` fails with `unable to open include file
-> 'assets/..._gfx.inc'` because the generated assets and tileset `.2bpp` graphics
-> aren't committed. Bootstrap order: build **rgbds 1.0.1 from source** (not an apt
-> package) → `make` at repo root to render the `.2bpp` (its final `pokeyellow.gbc`
-> link may fail — that's fine, the graphics are made first) → `make -C dos_port
-> assets` → `make -C dos_port`. **Running** the EXE additionally needs a DPMI host
-> (CWSDPMI.EXE / HDPMI32.EXE) the repo doesn't ship. Full step-by-step:
-> [docs/assembly.md](docs/assembly.md) → "Fresh-Clone Bootstrap".
-
-```sh
-# Reference ROM (requires rgbds 1.0.1)
-make compare
-
-# DOS port (canonical; scripts below are wrappers)
-make -C dos_port
-make -C dos_port SKIP_TITLE=1          # skip title, boot straight to overworld
-make -C dos_port BUG_FIX_LEVEL=1       # 1=critical fixes, 2=all fixes
-
-# Asset regeneration (required after changing generator scripts or pret source)
-make -C dos_port assets                # strip IF DEF(_DEBUG) blocks (normal)
-make -C dos_port assets DEBUG_WARPS=1  # include debug warp entries
-# IMPORTANT: make uses timestamps — changing DEBUG_WARPS requires explicit 'make assets'
-
-# Convenience scripts (from repo root or dos_port/)
-dos_port/build                         # build (passes args to make)
-dos_port/run                           # build + launch in DOSBox-X
-
-# Single file assembly check
-nasm -f coff -o /dev/null dos_port/src/util/fill_memory.asm
-```
-
-DOSBox-X is driven by the tracked repo config **`dos_port/dosbox-x.conf`**, loaded
-automatically by `dos_port/run`. It overrides the user's system config for:
-- `machine = vgaonly` (Mode 13h plain VGA — required)
-- `cputype = 386_prefetch`
-- `cycles = fixed 23880` (386SX ~20 MHz baseline)
-- `memory io optimization 1 = false` (VGA writes broken if true)
-- `[autoexec]`: `mount c .` + launch `PKMN.EXE`
-
-**Note:** All testing and debugging must occur on **DOSBox-X**, not standard DOSBox. Standard DOSBox lacks the accuracy and debugger features required for this port.
-
-**Never hand-edit generated `assets/*.inc` files.** Fix the generator and re-run
-`make assets`. The `MapHeaderPointers` table is computed at generation time — a
-partial edit desyncs pointer addresses from blob offsets and silently corrupts
-map loads (see `docs/translation_log.md` for the 2026-06-22 postmortem).
-
-### Data vs. code: the two-tier rule (regen must never clobber anything)
-
-Many subsystems (moves, items, base stats, maps, …) can't be *fully* generated —
-some entries need bespoke, hand-authored logic. Keep that logic safe from
-`make assets` by holding a hard split between two tiers:
-
-- **Tier 1 — data, machine-owned: `assets/*.inc`.** Static tables only (move
-  power/acc/PP/type, names, field-move display rows, effect-category membership,
-  base stats, map blobs). Every such file carries a `DO NOT EDIT BY HAND —
-  generated by tools/gen_*.py` header. Each generator is a *deterministic function
-  of the read-only pret source + the constant enums*, so the output holds **zero
-  hand-authored information** — rerunning is idempotent and cannot lose anything.
-- **Tier 2 — code, human-owned: `.asm`.** All per-entry *behavior*: move-effect
-  handlers (`src/engine/battle/move_effects/*.asm`), predicates/dispatchers
-  (`move_category.asm`, `field_moves.asm`, `home/names.asm`), item effects, etc.
-
-**Hard rules:**
-1. **Generators write only `assets/*.inc`. They never emit `.asm`.** So
-   `make assets` physically cannot touch Tier 2.
-2. **`.asm` is never machine-generated.** Every move/item-specific decision,
-   `BUG`/`GLITCH` guard, and quirk lives there.
-3. The two tiers link **by id/index, never by inlining** — e.g. a future
-   `MoveEffectPointerTable` is a hand-written `dd` table in `.asm`, keyed by the
-   effect byte that comes from the generated data table. Adding bespoke logic =
-   write/point a handler in code; it does not touch the data.
-4. **If a data value must deviate from the pret source** (a fix, or a value pret
-   doesn't carry), do **not** hand-patch the `.inc`. Either (a) teach the
-   generator the override — ideally reading an explicit sidecar list so it's
-   visible and survives regen — or (b) keep the override in code: load the
-   generated value, then adjust in the routine under a `BUG_FIX_LEVEL` block.
-
-#### Text strings are DATA — generate them; never hand-encode charmap bytes
-
-**This is the single most repeated Tier-1 violation. Read it before you type a
-`db 0x…` with a charmap glyph in it.** Any human-readable string the game renders
-(menu labels, screen labels, item/move/mon names, dialog, button captions — even a
-short one like `"OK"` or `"TYPE1/"`) is **Tier-1 data** and MUST be produced by a
-Python generator that charmap-encodes it via `tools/gb_text.py` (`gb_text.encode`,
-the `unicode_converter` submodule) into an `assets/*.inc` with the `DO NOT EDIT`
-header, `%include`d by the `.asm` and wired into the Makefile `assets` target.
-
-- **DON'T** write `TypesIDNoOTText: db 0x93,0x98,0x8F,0x84,…  ; "TYPE1/"` in a
-  `.asm`. Hand-transcribed charmap hex is unreviewable, silently drifts if the
-  charmap changes, and is exactly the Tier-1 data the two-tier rule forbids in code.
-- **DO** add the label (as readable text) to a generator and `%include` the result.
-  Follow the existing pattern: `tools/gen_menu_strings.py` (START-menu labels) and
-  `tools/gen_status_strings.py` (status-screen labels) → `assets/menu_strings.inc` /
-  `assets/status_strings.inc`. Add your screen's strings to the matching generator
-  (or a new `gen_<screen>_strings.py` modeled on those), then add the `.inc` to the
-  `assets` target + the consuming `.o`'s prerequisites.
-- **Control/format tiles inside a string** that `gb_text.encode` can't map
-  (`<NEXT>` $4E, `<LINE>` $4F, `<ID>` $73, …) are inserted by the generator as
-  named raw bytes between encoded text runs — mirroring pret's `db "…"` / `next`.
-  A **single control tile written by code** (e.g. `mov byte [ebp+esi], LB_VLINE`)
-  is not a string and stays in the `.asm`.
-- **Pointer/address tables are NOT strings** — a `dw`/`dd` table of WRAM offsets or
-  routine addresses (e.g. `OTPointers`, a jump table) is code (Tier 2), hand-written
-  in the `.asm`. The rule is about *encoded glyph runs*, not every `db`/`dw`.
-- **Legacy hand-encoded strings exist** (`party_menu.asm`, `bag_menu.asm`,
-  `home/names.asm`, older battle labels) — they predate the generator pattern and
-  are a known debt, **not** a precedent. Do not add more; migrate opportunistically
-  when you touch one. Note the worktree caveat: the generator needs the
-  `unicode_converter` submodule (seed it from the primary clone); the generated
-  `.inc` is gitignored and regenerated by `make assets`.
-
----
-
-## Debugging (inspecting emulated GB memory)
-
-The screen is a software PPU render: many distinct bugs collapse to the same
-"all-white" / "all-garbage" picture, so **do not debug by staring at
-screenshots and toggling tiles** — that loop ate two sessions on the `.rodata`
-bug. Get ground truth from memory instead.
-
-### Memory dump to a host file (primary, automatable)
-
-`src/debug/debug_dump.asm` exfiltrates chosen windows of emulated GB memory to
-`DUMP.BIN` (the dos_port dir / DOSBox-X C:), with **no PPU/palette/blit
-confound** — the literal bytes at `[EBP + addr]`. It writes the file via DPMI
-"Simulate Real Mode Interrupt" (INT 31h/0300h) into a conventional DOS buffer
-(plain `int 21h` pointer args are NOT auto-translated under CWSDPMI), then
-exits. Edit the `windows:` table to pick addresses.
-
-```sh
-make clean && make SKIP_TITLE=1 DEBUG_DUMP=1
-dosbox-x -defaultdir "$PWD" -c 'mount c "'"$PWD"'"' -c c: -c PKMN.EXE -c exit
-# then hexdump DUMP.BIN on the host (9 × 64-byte windows, in table order)
-```
-
-This is how the `.rodata` bug was localized: header vars and the `rep stosb`
-border-fill were correct in the dump, but the whole `$4000`-asset window and
-`$9000` tileset were zero — pointing at the asset load, not the map logic.
-
-### DOSBox-X interactive debugger (secondary)
-
-DOSBox-X (2026.06.02, SDL1) can also be built/run with the heavy debugger
-(`Alt+Pause`; `MEMDUMPBIN <lin> <len>` writes a file). Linear address of a GB
-offset = `[ds_base] + EBP + offset`; both are runtime values, so the file-dump
-route above is usually faster than chasing them in the debugger.
-
-### Back-buffer dump to PNG (preferred over screenshots)
-
-`src/debug/debug_dump.asm:DumpBackbuffer` writes the full software-PPU back
-buffer (`GB_BACKBUF`, 320×200 = 64000 raw palette-indexed bytes) to `FRAME.BIN`,
-then exits — the **exact pixels DOSBox-X rendered**, with no compositor in the
-loop (host Wayland/XWayland screenshot tools are unreliable across displays).
-Render `FRAME.BIN` on the host with `dos_port/tools/render_frame.py FRAME.BIN out.png`
-(values 0–3 = DMG shades, 4–11 = sprite pixels), then view the PNG.
-Driven by deterministic, input-free `%ifdef` harnesses in `EnterMap`:
-`DEBUG_TRANSITION` (force a north crossing; add `DEBUG_BASELINE=1` — both via the
-Makefile — for pristine Pallet Town) and `DEBUG_WALK_NORTH` (drive the real
-movement primitives north `DEBUG_WALK_STEPS` steps, dumping at the crossing).
-Typical loop: `make clean && make SKIP_TITLE=1 DEBUG_TRANSITION=1` →
-`dosbox-x -defaultdir "$PWD" -c 'mount c "'"$PWD"'"' -c c: -c PKMN.EXE -c exit` →
-`python3 tools/render_frame.py FRAME.BIN /tmp/f.png`. This is how the
-2026-06-15 viewport diagnosis and the 2026-06-16 out-of-map clamp fix were made
-(see docs/loadmapheader_handoff.md). Prefer this to screenshots for ground truth.
-
-### Visual capture
-
-`./test_render.sh [out.png]` does a clean `SKIP_TITLE=1` build, launches
-DOSBox-X, waits, screenshots (spectacle → import fallback), and force-kills.
-Good for confirming a final render once the data is known-correct. Note: under a
-Wayland session the compositor screenshot may grab the wrong window — the
-`FRAME.BIN` route above is more reliable.
-
----
-
-## Key Reference URLs
-
-All key reference documents are also mirrored locally in `docs/references/pandocs/`.
-
-- **Pan Docs** (GB hardware): https://gbdev.io/pandocs/
-- **Ralf Brown's Interrupt List**: https://www.delorie.com/djgpp/doc/rbinter/
-- **DPMI 0.9 Spec**: https://www.phatcode.net/res/262/files/dpmi09.html
-- **DJGPP docs**: https://www.delorie.com/djgpp/doc/
-- **DJGPP FAQ (hardware/interrupts)**: https://www.delorie.com/djgpp/v2faq/faq18.html
-- **PC Game Programmer's Encyclopedia**: http://qzx.com/pc-gpe/
-- **Abrash Black Book**: https://www.phatcode.net/res/224/files/html/
-- **Awesome DOS**: https://github.com/balintkissdev/awesome-dos
-
----
-
-## Translation Workflow
-
-1. Pick a routine from `home/` or `engine/` with no `$FF__` I/O accesses.
-2. Create `dos_port/src/<mirrored path>/<filename>.asm`.
-3. Translate following the register map. Use `%include "dos_port/include/gb_memmap.inc"`.
-4. Emit `; TODO-HW:` for any I/O boundary hit.
-5. Emit `; BUG(level):` for any known bug (check `docs/bugs_and_glitches.md`).
-6. Add an entry to `docs/translation_log.md`.
-7. Verify assembly: `nasm -f coff -o /dev/null <file>`.
-
----
-
-## Active Plan Convention
-
-Active multi-step implementation plans live as a **family** of files named
-**`docs/current_plan_<topic>.md`** — one per work item, suffixed by what it's
-about. **Multiple may be active at once** (e.g. one engine in progress while
-another is paused). They sit between TODO.md (big-picture scope for the entire
-port) and individual task lists: use one for anything too large for a single
-commit but too specific to belong in TODO.md.
-
-**Workflow:**
-- At the start of each session, scan `docs/current_plan_*.md` to see every open
-  work item and pick up where we left off.
-- Mark stages `[x]` as they complete (edit the file in-repo).
-- When a plan is fully done, archive it: `git mv docs/current_plan_<topic>.md
-  docs/plans/<topic>.md` (drop the `current_plan_` prefix). The `docs/plans/`
-  subdirectory holds completed plans for reference.
-- Start a new work item by creating a new `docs/current_plan_<topic>.md`.
-
-**Currently active plans:**
-- `docs/current_plan_script_engine.md` — gen-1 script system (event-gated dialog,
-  per-map `_Script`/`text_asm`). In progress (Stage 6 stub conventions; Oak walk-up
-  cutscene + `_Script` state machines + `DisplayTextID` special cases deferred).
-- `docs/current_plan_overworld_port.md` — **full faithful port of pret
-  `engine/overworld/`** (staged swarm+solo; branch `overworld-port` cut after the
-  battle-swarm merge). **Now also owns the menu live-render defect** (VRAM
-  tile-slot management: vChars2 `$79–$7F` box tiles + vFont `$80+` font/walk
-  time-share) — see its "Cross-cutting defect" note + Stage 8 verification item,
-  and memory `menu-corruption-vram-tileslots`. Not started (Stage 0 gate pending).
-  (The Pokémon **data/stats** layer — party structs, base stats, `CalcStats`,
-  experience/leveling, `AddPartyMon`, learnset/moves, names — is **complete**; its
-  plan `docs/plans/pokemon_engine.md` is archived DEAD. The **behavior/UI** layer —
-  evolution/`EvolveMon`, `learn_move`, status-screen pages 1&2, post-battle wire —
-  is **complete and archived** at `docs/plans/pokemon_behavior.md` (2026-07-04);
-  its deferred tails — status-screen front-pic/cry/STATS-wire, Bill's PC full UI —
-  are tracked in TODO.md.)
-- `docs/current_plan_items.md` — item/bag layer (sequenced after pokemon, before
-  battle). Inventory bookkeeping (add/remove) + TOSS done; item USE dispatch
-  (`UseItem_`/`ItemUsePtrTable`) deferred (battle/UI-coupled).
-- `docs/current_plan_battle_ui.md` — **battle-UI layout pipeline + widescreen
-  redesign** (branch `menus-port`). Shared `tools/gfx_core/` extraction, then
-  migrate all hardcoded battle coordinates into a
-  `ui_layout_battle_sidecar.json` → `assets/ui_layout_battle.inc` pipeline
-  (byte-identical first), then a human-in-the-loop widescreen redesign session.
-- `docs/current_plan_map_tool.md` — **overworld map tool** (viewer → border-ring
-  authoring → clamp retirement → block painting), built on `gfx_core`. Blocked
-  on battle-UI plan Session A2. Sequenced after battle.
-- **engine/menus port + UI layout tool** — **COMPLETE & archived** at
-  `docs/plans/menus.md` (2026-07-04, branch `menus-port`). All 10 sessions landed
-  (layout pipeline/editor, faithful `DisplayTextBoxID_`, generic drivers wired,
-  start/bag/party realigned, leaf-screen swarm: PCs/pokédex/naming/options/save/
-  link). The "menu boxes corrupt live but fine in harness" issue is **not** a menu
-  bug — it's the overworld VRAM tile-slot defect (owned by `overworld_port` above).
-  Menu-input lethargy fixed in `JoypadLowSensitivity` (2026-07-04). Non-VRAM tails
-  (window-compositor gap, `LoadPokedexTilePatterns` tileset, interactive sweeps,
-  cable-club warp seam) → TODO.md.
-- `docs/current_plan_macros.md` — **port pret's portable RGBDS macros** to real
-  NASM `%macro`s in `dos_port/include/` (coords, event-macro family, data/gfx
-  helpers, text-command macros), "add macros only" (no call-site retrofit),
-  checkbox-tracked across chunked stages. Excludes redundant-by-design banking
-  macros, generator-owned data macros, and engine-blocked audio/gfx-anim/script
-  templates. Stage 1 (plan doc) done; coords chunk (A1) is next but hinges on the
-  context-dependent tilemap stride (global `SCREEN_WIDTH=40` vs text.asm's
-  stride-20 / runtime `text_row_stride`).
-- **Battle engine** — the backend plan (`battle_engine`) is **complete** and the
-  front-end alignment plan (`battle_pret_alignment`) was **superseded by the battle
-  swarm** (Masters A/B/C, archived at `docs/archive/battle_swarm_*`, merged to
-  `master`); both plans are archived under `docs/plans/`. A live wild battle plays
-  end-to-end (menu, move select, speed-ordered turns, damage, faint, EXP/level-up,
-  RUN). **Remaining battle work is tracked in the ledger `docs/battle_audit_findings.md`**
-  (open fidelity findings + not-yet-linked routines), not in a `current_plan_*` file.
-
-(NPC implementation is complete and archived at `docs/plans/npc_implementation.md`.
-The move data layer is complete and archived at `docs/plans/moves.md`.)
+Known bugs get a `; BUG(level):` + `%if BUG_FIX_LEVEL >= N` block; intentional
+exploitable glitches get a `; GLITCH:` + `; Safety:` comment. Templates and levels
+→ skill **`project-conventions`**.
 
 ---
 
@@ -681,24 +201,18 @@ the environment, installs may proceed without prompting.
 ## Commit Policy (stay within your task's scope)
 
 **Commit the work for the task you're doing — not unrelated changes.** Use git
-normally (stage, `git add -A`, `git commit -a`, and amend your own commits as you
-see fit). The one rule: don't fold changes that fall *outside your current task /
-subsystem* into your commits without checking with the user first.
+normally (stage, `git add -A`, `git commit -a`, amend your own commits). The one
+rule: don't fold changes that fall *outside your current task / subsystem* into
+your commits without checking with the user first.
 
-- **In-scope changes: just handle them.** Changes that belong to the same task
-  or subsystem you're working on can be committed together — that's one body of
-  work, no need to stage file-by-file. (For example only: if your task is a menus
-  change and the tree also holds other menus edits, they're the same work.)
-- **Out-of-scope changes: notify or ask.** If the tree holds changes in some area
-  unrelated to your current task, don't sweep them into your commit — mention them
-  to the user, and only commit them if the user says so or you have a clear reason
-  you flag in the message. (For example only: your task is a menus change and
-  there are also edits sitting in macros / the overworld / build config.)
-- These subsystem names are just illustrations — apply the principle (in-scope =
-  yours to commit; unrelated = notify/ask) to whatever your actual task is.
-- **Don't rewrite work that isn't yours to rewrite.** Amending/rebasing your own
-  recent commits is fine; don't `rebase`/`amend`/`reset` a commit from another
-  session or one you can't account for — report it and let the user decide.
+- **In-scope changes: just handle them** — changes belonging to the same task/
+  subsystem can be committed together.
+- **Out-of-scope changes: notify or ask** — if the tree holds unrelated changes,
+  don't sweep them into your commit; mention them, and only commit them if the
+  user says so or you flag a clear reason in the message.
+- **Don't rewrite work that isn't yours.** Amending/rebasing your own recent
+  commits is fine; don't `rebase`/`amend`/`reset` a commit from another session or
+  one you can't account for — report it and let the user decide.
 - When unsure whether something is in scope, `git status`/`git diff` first and ask.
 
 ---
@@ -716,9 +230,3 @@ already holding an item via it (e.g. Kadabra → `TWISTEDSPOON_GSC` $60, written
 `_AddPartyMon`). Any new code that builds/copies/converts a mon (party↔box
 deposit/withdraw, trades, save format) must carry offset 7 through verbatim.
 See `dos_port/include/gb_constants.inc` (struct members) for the load-bearing note.
-
-## Save File Notes (Phase 5 — Not Yet Implemented)
-
-- GB `.sav`: raw 32 KB SRAM dump (MBC5+RAM+BATTERY)
-- DOS `.dsv`: `DOSV` magic + version byte + 2-byte checksum + 32 KB SRAM data
-- Converter: `dos_port/tools/saveconv.py` (stub until Phase 5 when save format is stable)
