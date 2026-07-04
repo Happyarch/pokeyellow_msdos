@@ -1414,6 +1414,13 @@ wPokedexOwned                 equ W_POKEDEX_OWNED     ; 0xD2F6 (lowercase alias)
 wPokedexSeen                  equ W_POKEDEX_SEEN      ; 0xD309 (lowercase alias)
 wUnusedAlreadyOwnedFlag       equ 0xD152 ; pret dead store (write-only)
 wEnemyMonNicks                equ 0xD9ED ; enemy party nicknames
+; ClearVariablesOnEnterMap map-entry scratch (OW-1.1; sym-verified vs origin/symbols:pokeyellow.sym)
+wWhichTrade                   equ 0xCD3D ; (union w/ wDayCareStartLevel scratch region)
+wStandingOnWarpPadOrHole      equ 0xCD5B ; end of the FillMemory clear range from wWhichTrade
+wStepCounter                  equ 0xD13A
+wUnusedMapVariable            equ 0xD5A2
+wCardKeyDoorY                 equ 0xD73E
+wCardKeyDoorX                 equ 0xD73F ; = wCardKeyDoorY + 1
 wWhichDungeonWarp             equ 0xD71D ; which dungeon warp in the source map was used
 W_WHICH_DUNGEON_WARP          equ 0xD71D ; uppercase alias (IsPlayerOnDungeonWarp)
 wDayCareInUse                 equ 0xDA47 ; 1 = a mon is in the day-care (IncrementDayCareMonExp gate)

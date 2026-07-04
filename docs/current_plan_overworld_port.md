@@ -196,7 +196,9 @@ interactively with the user.
 
 ### Stage 1 — Pure-logic leaves `[~]` (SWARM wave 1 — all tickets independent)
 
-Done so far (2026-07-04): OW-1.2, OW-1.3, OW-1.4, OW-1.5, OW-1.9 (`[x]`). Remaining: 1.1, 1.6, 1.7, 1.8.
+Done so far (2026-07-04): OW-1.1, OW-1.2, OW-1.3, OW-1.4, OW-1.5, OW-1.6, OW-1.9 (`[x]`).
+Remaining: 1.7 (trainer_sight accessors → trainer_engine.asm), 1.8 (player_state getters).
+NB: OW-1.6 is check-only (HOME_CHECK_SRCS) until pathfinding.asm is promoted (OW-7.2).
 
 Common ticket boilerplate (applies to OW-1.1 … OW-1.8): translate per CLAUDE.md
 register map; `%include "dos_port/include/gb_memmap.inc"`; add missing WRAM/HRAM

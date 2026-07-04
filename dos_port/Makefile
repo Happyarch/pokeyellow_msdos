@@ -206,6 +206,7 @@ GAME_SRCS := \
     src/engine/overworld/is_player_just_outside_map.asm \
     src/engine/overworld/dungeon_warps.asm \
     src/engine/overworld/specific_script_flags.asm \
+    src/engine/overworld/clear_variables.asm \
     src/engine/overworld/wild_encounter_check.asm \
     src/engine/overworld/warp_check.asm \
     src/engine/overworld/hidden_events.asm \
@@ -705,7 +706,10 @@ HOME_CHECK_SRCS := \
     src/engine/overworld/overworld_text.asm \
     src/engine/overworld/ledges.asm \
     src/engine/overworld/pathfinding.asm \
-    src/engine/overworld/trainer_engine.asm
+    src/engine/overworld/trainer_engine.asm \
+    src/engine/overworld/npc_movement_2.asm
+# npc_movement_2.asm (OW-1.6) is check-only: its tail-jump SetSpriteMovementBytesToFF
+# lives in pathfinding.asm (also check-only). Promote to GAME_SRCS with pathfinding (OW-7.2).
 # reload_sprites.asm promoted to GAME_SRCS (menus S7): naming_screen.asm calls
 # ReloadMapSpriteTilePatterns; its externs (DisableLCD/EnableLCD/InitMapSprites/
 # LoadPlayerSpriteGraphics/LoadFontTilePatterns/UpdateSprites) are all linked.
