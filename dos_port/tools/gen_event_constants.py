@@ -83,12 +83,12 @@ def main():
     ]
     width = max(len(n) for n, _ in events)
     for name, val in events:
-        lines.append(f'{name:<{width}} equ {val}')
+        lines.append(f'%define {name:<{width}} {val}')
     lines.append('')
     lines.append('; Range markers and total (DEF ... EQU const_value in the source).')
     dwidth = max(len(n) for n, _ in defs)
     for name, val in defs:
-        lines.append(f'{name:<{dwidth}} equ {val}')
+        lines.append(f'%define {name:<{dwidth}} {val}')
     lines.append('')
 
     OUT.parent.mkdir(parents=True, exist_ok=True)

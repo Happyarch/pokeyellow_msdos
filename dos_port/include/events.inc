@@ -42,4 +42,107 @@
     mov [ebp + W_EVENT_FLAGS + EVENT_BYTE(%1)], al
 %endmacro
 
+%macro CheckAndSetEvent 1
+    mov al, [ebp + W_EVENT_FLAGS + EVENT_BYTE(%1)]
+    test al, EVENT_MASK(%1)
+    pushfd
+    or al, EVENT_MASK(%1)
+    mov [ebp + W_EVENT_FLAGS + EVENT_BYTE(%1)], al
+    popfd
+%endmacro
+
+%macro CheckAndResetEvent 1
+    mov al, [ebp + W_EVENT_FLAGS + EVENT_BYTE(%1)]
+    test al, EVENT_MASK(%1)
+    pushfd
+    and al, ~EVENT_MASK(%1) & 0xFF
+    mov [ebp + W_EVENT_FLAGS + EVENT_BYTE(%1)], al
+    popfd
+%endmacro
+
+%macro SetEvents 1-*
+    %rep %0
+        SetEvent %1
+        %rotate 1
+    %endrep
+%endmacro
+
+%macro ResetEvents 1-*
+    %rep %0
+        ResetEvent %1
+        %rotate 1
+    %endrep
+%endmacro
+
+%macro SetEventRange 2
+    %assign i %1
+    %rep (%2) - (%1) + 1
+        SetEvent i
+        %assign i i + 1
+    %endrep
+%endmacro
+
+%macro ResetEventRange 2
+    %assign i %1
+    %rep (%2) - (%1) + 1
+        ResetEvent i
+        %assign i i + 1
+    %endrep
+%endmacro
+
+%macro CheckBothEventsSet 2
+    ; Emulates pret's CheckBothEventsSet.
+    ; "returns whether both events are set in Z flag.
+    ; This sets the Z flag when the event IS set."
+    ; Wait, Z flag=1 if BOTH are set.
+    ; We can check both by checking each. But it's easier to use a runtime logic that mimics the behavior.
+    CheckEvent %1
+    jz %%not_set
+    CheckEvent %2
+    jz %%not_set
+    ; both are set -> ZF=1
+    cmp al, al
+    jmp %%done
+%%not_set:
+    ; not both set -> ZF=0
+    test al, 0
+%%done:
+%endmacro
+
+%macro CheckEitherEventSet 2
+    ; "returns the complement of whether either event is set in Z flag"
+    ; "Z flag=0 if either is set."
+    ; Wait, the comment says: "Z flag=0 if either is set"
+    CheckEvent %1
+    jnz %%set
+    CheckEvent %2
+    jnz %%set
+    ; neither is set -> ZF=1
+    cmp al, al
+    jmp %%done
+%%set:
+    ; either is set -> ZF=0
+    test al, 0
+%%done:
+%endmacro
+
+; Register-reuse variants as no-op `%define` aliases.
+%define CheckEventReuseA CheckEvent
+%define CheckEventAfterBranchReuseA CheckEvent
+%define CheckEventHL CheckEvent
+%define CheckEventReuseHL CheckEvent
+%define CheckEventForceReuseHL CheckEvent
+%define CheckEventAfterBranchReuseHL CheckEvent
+%define CheckAndSetEventA CheckAndSetEvent
+%define CheckAndResetEventA CheckAndResetEvent
+%define CheckAndSetEventReuseHL CheckAndSetEvent
+%define CheckAndResetEventReuseHL CheckAndResetEvent
+%define SetEventReuseHL SetEvent
+%define SetEventAfterBranchReuseHL SetEvent
+%define SetEventForceReuseHL SetEvent
+%define ResetEventReuseHL ResetEvent
+%define ResetEventAfterBranchReuseHL ResetEvent
+%define ResetEventForceReuseHL ResetEvent
+%define CheckEitherEventSetReuseA CheckEitherEventSet
+
 %endif ; EVENTS_INC

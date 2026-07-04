@@ -33,6 +33,7 @@ bits 32
 
 %include "gb_memmap.inc"
 %include "gb_macros.inc"
+%include "data_macros.inc"
 
 ; ---------------------------------------------------------------------------
 ; Externs (all resolved globals in the current tree)
@@ -217,10 +218,7 @@ GetHealthBarColor:
 ; ===========================================================================
 section .data
 
-; rgbds `dc` ("crumbs"): pack four 2-bit shade indices MSB-first into one byte.
-%macro dc 4
-    db (((%1) & 3) << 6) | (((%2) & 3) << 4) | (((%3) & 3) << 2) | ((%4) & 3)
-%endmacro
+; rgbds `dc` ("crumbs") provided by data_macros.inc
 
 FadePal1:  dc 3,3,3,3
            dc 3,3,3,3
