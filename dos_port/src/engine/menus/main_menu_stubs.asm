@@ -21,13 +21,10 @@ global OakSpeech
 OakSpeech:
     ret
 
-; DEVIATION: integration stub — DisplayTitleScreen (B on the main menu returns to
-; the title). The port's title module exports PrepareTitleScreen, not this seam;
-; MainMenu is not yet the boot path, so returning is safe. Delete when the title
-; screen is wired as a live main-loop state.
-global DisplayTitleScreen
-DisplayTitleScreen:
-    ret
+; DisplayTitleScreen (B on the main menu returns to the title) is now REAL — the
+; title module (src/movie/title.asm) exports its complete DisplayTitleScreen body;
+; the former ret stub here is retired. (MainMenu is still not the boot path, so this
+; seam is not yet exercised live, but it now resolves to the faithful renderer.)
 
 ; DEVIATION: integration stub — PrepareForSpecialWarp (the Hall-of-Fame CONTINUE
 ; special-warp path). wNumHoFTeams stays 0 until the HoF-movie writer, so this

@@ -1035,7 +1035,7 @@ ApplyAttackToEnemyPokemonDone:
 ; --- externs for the status-condition checks (pret core.asm:3499) ---
 extern PrintText                       ; move_effect_helpers.asm (ESI = flat text stream)
 extern GetMoveName                     ; home/names.asm
-extern DrawPlayerHUDAndHPBar           ; self-confusion damage redraw
+extern DrawPlayerHUDAndHPBar           ; self-confusion damage redraw — battle_hud.asm (alias → DrawPlayerHUD)
 extern FastAsleepText
 extern WokeUpText
 extern IsFrozenText

@@ -27,7 +27,8 @@ global ModifyPikachuHappiness
 ; no longer stubbed (they snapshot/restore the battle screen for the EXP display too).
 global PrintEmptyString
 global CalculateModifiedStats
-global DrawPlayerHUDAndHPBar
+; DrawPlayerHUDAndHPBar is now REAL (battle_hud.asm — alias → DrawPlayerHUD) —
+; no longer stubbed here (retired with the enemy-side DrawEnemyHUDAndHPBar pattern).
 ; LoadMonData is now REAL (load_mon_data.asm wrapper → LoadMonData_) — no longer stubbed;
 ; it populates wLoadedMon so GainExperience's CalcLevelFromExperience reads the right mon.
 ; ApplyBadgeStatBoosts (badge_boosts.asm) and ApplyBurnAndParalysisPenaltiesToPlayer
@@ -38,5 +39,4 @@ global DrawPlayerHUDAndHPBar
 ModifyPikachuHappiness:
 PrintEmptyString:
 CalculateModifiedStats:
-DrawPlayerHUDAndHPBar:
     ret

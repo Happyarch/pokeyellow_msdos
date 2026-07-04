@@ -110,7 +110,7 @@ extern LearnMoveFromLevelUp          ; deferred: move-learn flow
 extern CalculateModifiedStats
 extern ApplyBurnAndParalysisPenaltiesToPlayer
 extern ApplyBadgeStatBoosts
-extern DrawPlayerHUDAndHPBar
+extern DrawPlayerHUDAndHPBar         ; battle_hud.asm (alias → DrawPlayerHUD)
 
 ; ---------------------------------------------------------------------------
 ; Globals
@@ -343,11 +343,11 @@ GainExperience:
     ; GetPartyMonName, PrintText, LoadMonData all just return in Wave 1.
     mov al, [ebp + wWhichPokemon]
     mov esi, wPartyMonNicks
-    call GetPartyMonName            ; DEFERRED stub (front end reads the party nick directly)
+    call GetPartyMonName            ; REAL (home/pokemon.asm); front end also reads the party nick directly
     call ShowGainedExpText          ; front end: "<nick> gained N EXP. Points!" (+ wait)
     xor al, al
     mov [ebp + wMonDataLocation], al
-    call LoadMonData                ; DEFERRED stub (front end reads party stats directly)
+    call LoadMonData                ; REAL (load_mon_data.asm) — populates wLoadedMon
 
     pop esi                         ; POP B: ESI = party_mon + 0x0E (EXP high)
     ; CalcLevelFromExperience reads the loaded-mon scratch (W_LOADED_MON_SPECIES/EXP),
@@ -484,17 +484,17 @@ GainExperience:
     call ShowGrewLevelText          ; front end: "<nick> grew to level N!" (no wait)
     xor al, al
     mov [ebp + wMonDataLocation], al
-    call LoadMonData                ; DEFERRED stub (front end reads party stats directly)
+    call LoadMonData                ; REAL (load_mon_data.asm) — populates wLoadedMon
     ; LEVEL_UP_STATS_BOX = 1 (menu_constants.asm)
     mov dh, LEVEL_UP_STATS_BOX
     call PrintStatsBox              ; front end: level-up stats box (ATTACK/DEFENSE/SPEED/SPECIAL)
     call WaitForTextScrollButtonPress  ; front end: WaitForAPress
-    call LoadScreenTilesFromBuffer1    ; DEFERRED stub
+    call LoadScreenTilesFromBuffer1    ; REAL (battle_menu.asm)
     xor al, al
     mov [ebp + wMonDataLocation], al
     mov al, [ebp + wCurSpecies]
     mov [ebp + wPokedexNum], al
-    call LearnMoveFromLevelUp          ; DEFERRED stub
+    call LearnMoveFromLevelUp          ; REAL (battle_menu.asm → learn_move.asm LearnMove)
 
     ; Set the can-evolve flag for this mon.
     mov esi, wCanEvolveFlags

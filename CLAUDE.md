@@ -343,6 +343,42 @@ For intentional glitches that are user-exploitable features:
 
 ---
 
+## Stub Conventions (all stubs live in a subsystem `*_stubs.asm`)
+
+When a routine must exist at link time but its real body is deferred, the stub
+does **not** go in the `.asm` that mirrors its pret source file — it goes in the
+**subsystem stub file**, `src/<area>/<area>_stubs.asm` (e.g.
+`overworld_stubs.asm`, `core_stubs.asm`, `pc_stubs.asm`, `main_menu_stubs.asm`,
+`battle_exp_stubs.asm`). This keeps every stand-in greppable in one place per
+subsystem, so retiring stubs later is a bounded search, not a tree-wide hunt.
+
+**Rules:**
+1. **Keep the pret label.** The stub carries the exact pret routine name (see
+   "Preserve pret Labels"); it is a `global` in the stub file and just `ret`s (or
+   returns the minimal flag/CF contract its callers read). Never fork a new name
+   for a stub.
+2. **Stub file, not the source-mirror file.** Do not leave a `ret`-only body in
+   the file that will eventually hold the real routine. Put it in the
+   `*_stubs.asm`; create that file if the subsystem has none yet.
+3. **Callers point at the stub file, not the pret origin.** An `extern`'s trailing
+   comment names **`<area>_stubs.asm`** as the current provider — not the pret
+   source the routine will eventually be translated from. That comment is the
+   discovery trail: it says "this symbol is a stub right now, and here's the file
+   to delete it from." (Optionally note the pret origin second, e.g.
+   `; core_stubs.asm — pret: home/…`.)
+4. **Each stub documents its own retirement.** Head each stub with the pret ref
+   and a `TODO(<wave/plan>):` line stating what replaces it, plus whether it is
+   ever reached in the live build (many are dead branches kept only to resolve the
+   link). Model on `overworld_stubs.asm`.
+5. **Retire, don't shadow.** When the real routine lands (moved into a *linked*
+   Makefile list, not a check-only one), **delete the stub** and repoint the
+   `extern` comments — do not leave the stub `global` shadowing the real body.
+   Two linked `global`s of one name is a link error; a stub linked while the real
+   body sits in a check-only list is the silent-shadow trap this convention exists
+   to make findable.
+
+---
+
 ## Build Commands
 
 Full reference: **[docs/assembly.md](docs/assembly.md)** — build flags, asset flags, output files, warp format, DOSBox-X config.

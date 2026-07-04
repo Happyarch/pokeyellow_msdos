@@ -84,6 +84,7 @@ section .text
 global DrawBattleHUDs
 global DrawEnemyHUD
 global DrawEnemyHUDAndHPBar
+global DrawPlayerHUDAndHPBar
 global DrawPlayerHUD
 global DrawEnemyHUDFrame
 global DrawPlayerHUDFrame
@@ -164,6 +165,16 @@ DrawEnemyHUD:
 ; GetBattleHealthBarColor/RunPaletteCommand recolor tail (Phase-5 palette deferral).
 DrawEnemyHUDAndHPBar:
     jmp DrawEnemyHUD                              ; name + level + HP bar + frame (enemy-only)
+
+; ---------------------------------------------------------------------------
+; DrawPlayerHUDAndHPBar — faithful player-ONLY HUD+HP-bar redraw (pret
+; engine/battle/core.asm:DrawPlayerHUDAndHPBar). Retires the former bare-ret stub in
+; battle_exp_stubs.asm: the port's DrawPlayerHUD already is the faithful player-side
+; name+level+HP-bar+frame redraw into W_TILEMAP, so this is the pret-named alias
+; (same shape as DrawEnemyHUDAndHPBar above). Same Phase-5 palette / hAutoBGTransfer
+; divergences as the enemy-side alias apply.
+DrawPlayerHUDAndHPBar:
+    jmp DrawPlayerHUD                             ; name + level + HP bar + frame (player-only)
 
 ; ---------------------------------------------------------------------------
 ; DrawEnemyHUDFrame / DrawPlayerHUDFrame — the HUD underline "shelf" (pret
