@@ -218,6 +218,7 @@ wEnemyPartySpecies equ 0xD89C   ; PARTY_LENGTH+1 species + $FF sentinel
 wEnemyMons         equ 0xD8A3
 wDayCareMon        equ 0xDA5E   ; box_struct (wDayCareMonSpecies = first byte)
 wDayCareMonSpecies equ 0xDA5E
+wDayCareMonExp     equ 0xDA6C   ; wDayCareMon + MON_EXP (3-byte big-endian EXP; IncrementDayCareMonExp)
 wBoxCount          equ 0xDA7F
 wBoxSpecies        equ 0xDA80   ; MONS_PER_BOX+1 species + $FF sentinel
 wBoxMons           equ 0xDA95
@@ -1413,6 +1414,7 @@ wPokedexOwned                 equ W_POKEDEX_OWNED     ; 0xD2F6 (lowercase alias)
 wPokedexSeen                  equ W_POKEDEX_SEEN      ; 0xD309 (lowercase alias)
 wUnusedAlreadyOwnedFlag       equ 0xD152 ; pret dead store (write-only)
 wEnemyMonNicks                equ 0xD9ED ; enemy party nicknames
+wDayCareInUse                 equ 0xDA47 ; 1 = a mon is in the day-care (IncrementDayCareMonExp gate)
 wDayCareMonName               equ 0xDA48 ; day-care mon nickname
 wDayCareMonOT                 equ 0xDA53 ; day-care mon OT name
 wPlayerCoins                  equ 0xD5A4 ; Game Corner coins (BCD, dw)

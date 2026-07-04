@@ -202,6 +202,8 @@ GAME_SRCS := \
     src/engine/overworld/simulate_joypad.asm \
     src/engine/overworld/overworld_stubs.asm \
     src/audio/audio_stubs.asm \
+    src/engine/overworld/daycare_exp.asm \
+    src/engine/overworld/is_player_just_outside_map.asm \
     src/engine/overworld/wild_encounter_check.asm \
     src/engine/overworld/warp_check.asm \
     src/engine/overworld/hidden_events.asm \

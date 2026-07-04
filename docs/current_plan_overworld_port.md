@@ -194,7 +194,9 @@ interactively with the user.
   - [ ] Verify: nasm check; full build; FRAME.BIN baseline byte-identical
 - Exit: pret→port cross-reference is label-complete for consolidated files.
 
-### Stage 1 — Pure-logic leaves `[ ]` (SWARM wave 1 — all tickets independent)
+### Stage 1 — Pure-logic leaves `[~]` (SWARM wave 1 — all tickets independent)
+
+Done so far (2026-07-04): OW-1.3, OW-1.5, OW-1.9 (`[x]`). Remaining: 1.1, 1.2, 1.4, 1.6, 1.7, 1.8.
 
 Common ticket boilerplate (applies to OW-1.1 … OW-1.8): translate per CLAUDE.md
 register map; `%include "dos_port/include/gb_memmap.inc"`; add missing WRAM/HRAM
