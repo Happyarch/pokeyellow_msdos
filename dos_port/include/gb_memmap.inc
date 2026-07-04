@@ -742,6 +742,12 @@ wPikachuHappiness            equ 0xD46F ; saved by SavePartyAndDexData tail
 ; status-flag bytes (main_menu.asm / save.asm) — not previously aliased
 wStatusFlags5                equ 0xD72F ; BIT_NO_TEXT_DELAY lives here
 wStatusFlags6                equ 0xD731 ; BIT_GAME_TIMER_COUNTING, special-warp bits
+; new-game player-data init (engine/movie/oak_speech/init_player_data.asm) —
+; addresses sym-verified against origin/symbols:pokeyellow.sym (2026-07-03).
+wUnusedObtainedBadges        equ 0xD356 ; wObtainedBadges+1 (W_OBTAINED_BADGES = 0xD355)
+wGameProgressFlags           equ 0xD5EF ; event-flag bit array
+wGameProgressFlagsEnd        equ 0xD6B7 ; one past the last event flag byte
+wUnusedPlayerDataByte        equ 0xD71A ; set to $ff by InitPlayerData2
 ; naming screen (engine/menus/naming_screen.asm, package C)
 wNamingScreenNameLength      equ 0xCEE9
 wNamingScreenSubmitName      equ 0xCEEA

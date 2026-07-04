@@ -26,6 +26,7 @@ bits 32
 
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
+%include "gb_macros.inc"                 ; BUG_FIX_LEVEL
 
 global AddItemToInventory_
 global AddItemToInventory
@@ -33,6 +34,40 @@ global RemoveItemFromInventory_
 global RemoveItemFromInventory
 
 section .text
+
+%if BUG_FIX_LEVEL >= 1
+; ---------------------------------------------------------------------------
+; SanitizeInventory — GLITCH-safety: bound an inventory to its hard capacity.
+; ; GLITCH: uninitialised-inventory overrun — a bag/PC box whose count byte or
+; ;   $FF terminator is missing/corrupt (e.g. an un-seeded, DPMI-garbage WRAM
+; ;   inventory) makes the terminator-scan loops below (.notAtEnd/.addAnotherStack)
+; ;   walk off the end of the array and loop through memory.
+; ; Safety: bounded fix under BUG_FIX_LEVEL >= 1 — clamps count to the list's
+; ;   hardcoded capacity (BAG_ITEM_CAPACITY / PC_ITEM_CAPACITY) and forces a $FF
+; ;   terminator at that count, so no scan reads past the expected range. A
+; ;   well-formed list (the normal InitPlayerData2-seeded case) is unchanged: the
+; ;   clamp is a no-op and the terminator write lands on the existing $FF.
+;   docs/glitch_safety.md ("Uninitialised inventory / missing list terminator").
+; In: ESI = inventory count addr. Preserves all registers.
+; ---------------------------------------------------------------------------
+SanitizeInventory:
+    pushad
+    mov edx, PC_ITEM_CAPACITY
+    cmp esi, wNumBagItems               ; bag (vs PC box) — matches AddItemToInventory_
+    jne .haveCap
+    mov edx, BAG_ITEM_CAPACITY
+.haveCap:
+    movzx eax, byte [ebp + esi]         ; count
+    cmp eax, edx
+    jbe .countOk
+    mov eax, edx                        ; clamp count to capacity
+    mov [ebp + esi], al
+.countOk:
+    lea edi, [esi + 1 + eax*2]          ; terminator slot = base + 1 + 2*count
+    mov byte [ebp + edi], 0xFF
+    popad
+    ret
+%endif
 
 ; ---------------------------------------------------------------------------
 ; AddItemToInventory — home wrapper around AddItemToInventory_ (pret
@@ -49,6 +84,9 @@ AddItemToInventory:
 ; In:  ESI (hl) = inventory count addr; [wCurItem]; [wItemQuantity].
 ; Out: CF set on success, clear if full. wItemQuantity restored to its input.
 AddItemToInventory_:
+%if BUG_FIX_LEVEL >= 1
+    call SanitizeInventory              ; bound the terminator scan to the list capacity
+%endif
     mov al, [ebp + wItemQuantity]
     push eax                         ; [orig_qty] (restore on exit)
     push esi                         ; [inv] count addr
@@ -142,6 +180,9 @@ RemoveItemFromInventory:
 ; In:  ESI (hl) = inventory count addr; [wWhichPokemon] = slot index;
 ;      [wItemQuantity] = amount to remove. Removes the slot if it hits 0.
 RemoveItemFromInventory_:
+%if BUG_FIX_LEVEL >= 1
+    call SanitizeInventory           ; bound the compaction scan to the list capacity
+%endif
     push esi                         ; [inv]
     inc esi                          ; -> first item id
     mov al, [ebp + wWhichPokemon]

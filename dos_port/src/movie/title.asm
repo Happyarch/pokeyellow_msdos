@@ -48,6 +48,7 @@ extern Delay3
 extern GBPalNormal
 extern Init
 extern EnterMap
+extern OakSpeech                 ; main_menu_stubs.asm — new-game data init (InitPlayerData2)
 extern g_tilecache_dirty
 extern JoypadLowSensitivity     ; src/input/joypad_lowsens.asm (home/joypad2.asm)
 
@@ -379,7 +380,11 @@ DisplayTitleScreen:
     cmp al, PAD_UP | PAD_SELECT | PAD_B
     je  .doClearSaveDialogue
 
-    ; jp MainMenu → EnterMap (Phase 2: load Pallet Town directly)
+    ; jp MainMenu → EnterMap (Phase 2: load Pallet Town directly). MainMenu's
+    ; new-game path is StartNewGame → OakSpeech → SpecialEnterMap; OakSpeech's
+    ; ported prologue (InitPlayerData2) seeds the party/box/bag list terminators,
+    ; so a new game does not boot with garbage inventories (docs/glitch_safety.md).
+    call OakSpeech
     jmp EnterMap
 
 .doClearSaveDialogue:

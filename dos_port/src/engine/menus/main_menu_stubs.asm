@@ -12,13 +12,20 @@ bits 32
 
 section .text
 
-; DEVIATION: integration stub — OakSpeech (the new-game intro cutscene, which in
-; pret also runs the naming screen, package C) is not ported (script/cutscene work,
-; docs/current_plan_script_engine.md). StartNewGameDebug falls through to
-; SpecialEnterMap after this returns, so a new game boots straight to the overworld
-; (the SKIP_TITLE posture). Delete when OakSpeech lands.
+extern InitPlayerData2               ; engine/movie/oak_speech/init_player_data.asm
+
+; DEVIATION: integration stub — OakSpeech's intro cutscene + naming screen (pret,
+; package C) are not ported (script/cutscene work, docs/current_plan_script_engine.md).
+; But its FIRST real action, `predef InitPlayerData2`, IS now ported and MUST run:
+; it seeds the party/box/bag/box-item list terminators + starting money/ID. Without
+; it a new game boots with uninitialised (DPMI-garbage) inventories and every list
+; scan loops through memory (docs/glitch_safety.md). StartNewGameDebug falls through
+; to SpecialEnterMap after this returns, so a new game boots straight to the
+; overworld (the SKIP_TITLE posture). Replace the whole stub when the real OakSpeech
+; cutscene lands (keep the InitPlayerData2 call — pret keeps it there too).
 global OakSpeech
 OakSpeech:
+    call InitPlayerData2
     ret
 
 ; DisplayTitleScreen (B on the main menu returns to the title) is now REAL — the

@@ -113,6 +113,13 @@ LDFLAGS := -T link.ld
 
 TARGET  := PKMN.EXE
 
+# Isolated-run disk image (see the `image` target below).
+IMG          := PKMN.IMG
+DPMI_HOST    := CWSDPMI.EXE
+IMG_SLACK    := 5242880          # 5 MB of free space reserved for the .dsv save
+IMG_PART_SEC := 2048             # partition start sector (1 MiB-aligned)
+IMG_PART_OFF := 1048576          # = IMG_PART_SEC * 512 (byte offset for mtools)
+
 # Source files
 BOOT_SRCS := \
     boot/entry.asm \
@@ -160,6 +167,7 @@ GAME_SRCS := \
     src/home/fade.asm \
     src/text/auto_textbox.asm \
     src/movie/title.asm \
+    src/engine/movie/oak_speech/init_player_data.asm \
     src/engine/overworld/overworld.asm \
     src/engine/overworld/movement.asm \
     src/engine/overworld/map_sprites.asm \
@@ -706,7 +714,7 @@ ALL_OBJS := $(ALL_SRCS:.asm=.o)
 # Targets
 # ---------------------------------------------------------------------------
 
-.PHONY: all clean check assets regen
+.PHONY: all clean clean-image image check assets regen
 .DEFAULT_GOAL := all
 
 # Generate all tileset gfx/blocks/coll + map blk inc files.
@@ -1008,11 +1016,48 @@ assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_
 regen:
 	$(MAKE) -B assets
 
-all: $(TARGET)
+all: $(TARGET) image
 
 $(TARGET): $(LINK_OBJS) link.ld
 	$(LD) $(LDFLAGS) -Map=pkmn.map $(LINK_OBJS) -o $@
 	@echo "Built: $@"
+
+# ---------------------------------------------------------------------------
+# image — bundle PKMN.EXE + the DPMI host into a self-contained, PARTITIONED
+# FAT16 hard-disk image (PKMN.IMG) with ~5 MB of free space for the in-game .dsv
+# save. Running from the image (dos_port/run) makes DOSBox-X mount ONLY this file
+# as C:, so the host filesystem is never exposed: a buffer-overflow / OOB disk
+# write in the game (at ANY BUG_FIX_LEVEL) can corrupt only the image, not the
+# repo. (DOSBox-X's hdd imgmount needs a real MBR + partition — a bare "superfloppy"
+# FAT image fails to mount; hence sfdisk + a partition at sector $(IMG_PART_SEC).)
+#
+# Built on every `make` (fast). The image is created once at size EXE + host +
+# 5 MB; subsequent builds refresh PKMN.EXE *in place* (via mtools at the partition
+# offset $(IMG_PART_OFF)) and PRESERVE any save already written inside it. Delete
+# PKMN.IMG (or `make clean-image`) to reset.
+#
+# Needs host tools: sfdisk, mkfs.fat (dosfstools), mcopy (mtools).
+# ---------------------------------------------------------------------------
+image: $(TARGET) $(DPMI_HOST)
+	@if [ ! -f $(IMG) ]; then \
+	    exe_sz=$$(stat -c%s $(TARGET)); \
+	    dpmi_sz=$$(stat -c%s $(DPMI_HOST)); \
+	    img_sz=$$(( ($(IMG_PART_OFF) + exe_sz + dpmi_sz + $(IMG_SLACK) + 1048576 + 511) / 512 * 512 )); \
+	    rm -f $(IMG); \
+	    truncate -s $$img_sz $(IMG); \
+	    printf 'label: dos\n$(IMG_PART_SEC),,6,*\n' | sfdisk -q $(IMG) >/dev/null 2>&1; \
+	    mkfs.fat -F 16 -n PKMN --offset $(IMG_PART_SEC) $(IMG) >/dev/null; \
+	    echo "Created $(IMG) ($$((img_sz/1048576)) MB, ~5 MB free for saves)"; \
+	fi
+	@mt=$$(mktemp); \
+	 printf 'drive x: file="%s" offset=$(IMG_PART_OFF)\n' "$(CURDIR)/$(IMG)" > $$mt; \
+	 MTOOLSRC=$$mt mcopy -D o $(TARGET) x:PKMN.EXE; \
+	 MTOOLSRC=$$mt mcopy -D o $(DPMI_HOST) x:$(DPMI_HOST); \
+	 rm -f $$mt
+	@echo "Packaged $(TARGET) -> $(IMG) (isolated C: for dos_port/run)"
+
+clean-image:
+	rm -f $(IMG)
 
 %.o: %.asm
 	$(NASM) $(NASMFLAGS) -o $@ $<

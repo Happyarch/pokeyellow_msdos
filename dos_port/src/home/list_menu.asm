@@ -57,6 +57,7 @@
 
 %include "include/gb_memmap.inc"
 %include "include/gb_constants.inc"
+%include "include/gb_macros.inc"                ; BUG_FIX_LEVEL
 
 global DisplayListMenuID
 global DisplayListMenuIDLoop
@@ -200,6 +201,16 @@ DisplayListMenuID:
     ; [wListCount] = first byte of the list (number of entries)
     movzx esi, word [ebp + wListPointer]      ; hl = list address
     mov al, [ebp + esi]
+%if BUG_FIX_LEVEL >= 1
+    ; GLITCH-safety: a garbage/un-seeded list length would make the render loop
+    ; iterate through memory. Clamp to the largest valid list (PC box = 50), an
+    ; upper bound over every list type (party 6 / bag 20 / box 50), so a legit
+    ; list is never truncated. docs/glitch_safety.md.
+    cmp al, PC_ITEM_CAPACITY
+    jbe .listCountOk
+    mov al, PC_ITEM_CAPACITY
+.listCountOk:
+%endif
     mov [ebp + wListCount], al
 
     mov al, LIST_MENU_BOX

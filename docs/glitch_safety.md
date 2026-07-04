@@ -60,6 +60,29 @@ These involve unguarded writes that may exceed the intended WRAM region:
   list, which is past the end of `wItems`; the pointer may land in or near HRAM.
   Under DPMI the write lands in `[EBP + 0xFF00..0xFFFF]` (I/O shadow region) —
   harmless in most cases but could corrupt emulated HRAM.
+- **Uninitialised inventory / missing list terminator** (port-specific): every
+  inventory (bag, PC box, party, mon-box) is laid out as `db count`, then
+  `(item, qty)` pairs, then a `$FF` terminator. Several routines scan for that
+  `$FF` (`AddItemToInventory_`, `RemoveItemFromInventory_`) or trust the `count`
+  byte (`DisplayListMenuID`). If the list is never seeded, those bytes are
+  whatever the DPMI allocation happened to contain, so the scans **loop through
+  memory** looking for a terminator that may be far away (or read hundreds of
+  bytes past a 20-slot bag). This is a port-only exposure: the base game seeds
+  the terminators in `InitPlayerData2` (`InitializeEmptyList` on each list),
+  which runs as the first action of `OakSpeech` on **new-game creation**. The
+  port's title / `SKIP_TITLE` boot jumps straight to `EnterMap`, so that seeding
+  was being skipped.
+  - **Root fix (always on):** `InitPlayerData2` is ported
+    (`src/engine/movie/oak_speech/init_player_data.asm`) and now runs on the boot
+    path via the `OakSpeech` prologue (`main_menu_stubs.asm`), so the default
+    bag/box/party state always carries a `$FF` terminator.
+  - **Defensive fix (`/FIXCRIT`, `BUG_FIX_LEVEL >= 1`):** `SanitizeInventory`
+    (`inventory.asm`) clamps a list's `count` to its hardcoded capacity
+    (`BAG_ITEM_CAPACITY` = 20 / `PC_ITEM_CAPACITY` = 50) and forces a `$FF`
+    terminator at that count before any scan; `DisplayListMenuID` clamps the
+    rendered length the same way. So even a corrupt/un-seeded list can only be
+    read within its expected range — no runaway walk through memory. On a
+    well-formed list both are no-ops.
 
 ### Arbitrary Code Execution (ACE) Glitches
 

@@ -5312,3 +5312,31 @@ Verify-only (no code change; confirmed correct end-to-end):
   removed (superseded by the real class-based AI). AddBCDPredef_stub → real AddBCD (prize money).
   copy2.asm/item_predicates.asm/get_bag_item_quantity.asm promoted to LINK_SRCS (faint_enemy
   consumers landed). ESI carries the AI's move-candidate buffer into the random pick (audit-confirmed).
+
+### InitPlayerData / InitPlayerData2 / InitializeEmptyList — `engine/movie/oak_speech/init_player_data.asm`
+- Source: pret `engine/movie/oak_speech/init_player_data.asm` (faithful). New file.
+- Why: fixes a port-only critical bug — the party/box/bag/box-item list terminators were
+  never seeded. In the base game `InitPlayerData2` runs as OakSpeech's first action on
+  new-game creation; the port's `OakSpeech` was a bare `ret` stub AND the title /
+  `SKIP_TITLE` boot both `jmp EnterMap` directly, so every list started as DPMI-garbage.
+  List scans (`AddItemToInventory_`/`RemoveItemFromInventory_` terminator walk,
+  `DisplayListMenuID` count) then looped through memory. Verified via DUMP.BIN: party/bag/
+  box now boot as `00 FF`, money `00 30 00` (¥3000).
+- Wiring: `OakSpeech` stub (`main_menu_stubs.asm`) now `call InitPlayerData2`; the two boot
+  shortcuts (`init.asm` SKIP_TITLE, `title.asm` `.go_to_main_menu`) call `OakSpeech` before
+  `EnterMap`. `InitializeToggleableObjectsFlags` added as an `overworld_stubs.asm` stub
+  (real toggleable-object reset TODO). New WRAM symbols (gb_memmap.inc, sym-verified):
+  wUnusedObtainedBadges/wGameProgressFlags(End)/wUnusedPlayerDataByte. Flagged latent:
+  wPlayerCoins aliased 0xD5A4 vs sym 0xD5A3 (harmless fresh-game zero-fill; not fixed here).
+- Defensive guard (BUG_FIX_LEVEL>=1, /FIXCRIT): `SanitizeInventory` (inventory.asm) clamps a
+  list count to its capacity (BAG=20/PC=50) + forces a $FF terminator before Add/Remove scans;
+  `DisplayListMenuID` clamps the render length. Bounds any corrupt/un-seeded list to its
+  expected range. Documented in docs/glitch_safety.md.
+
+### Isolated disk-image run harness (build/tooling, not a routine)
+- `make image` (run on every `make`) bundles PKMN.EXE + CWSDPMI.EXE into a partitioned
+  FAT16 hard-disk image `PKMN.IMG` (~5 MB free for the .dsv save). `dos_port/run` +
+  `dosbox-x.conf` now `imgmount` that image as C: with `-defaultconf` (ignores the user's
+  system config) — the host filesystem is never mounted, so a buffer-overflow / OOB disk
+  write at any BUG_FIX_LEVEL is contained in the image. DOSBox-X needs a real MBR+partition
+  (superfloppy fails); `-securemode` is unusable (breaks CWSDPMI's DPMI init).

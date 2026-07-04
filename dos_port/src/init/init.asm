@@ -41,6 +41,7 @@ extern PrepareTitleScreen
 extern g_window_count        ; src/ppu/ppu.asm — unified window descriptor list count
 %ifdef SKIP_TITLE
 extern EnterMap
+extern OakSpeech             ; main_menu_stubs.asm — new-game data init (InitPlayerData2)
 %endif
 
 global Init
@@ -148,7 +149,12 @@ Init:
     mov byte [ebp + W_OPTIONS], TEXT_DELAY_MEDIUM
 
 %ifdef SKIP_TITLE
-    jmp EnterMap             ; test build: skip title screen, go straight to overworld
+    ; test build: skip the title/MainMenu, but still run OakSpeech's ported
+    ; prologue (InitPlayerData2) so the party/box/bag list terminators are seeded
+    ; before the overworld — otherwise every list scan runs off a garbage,
+    ; DPMI-uninitialised inventory (docs/glitch_safety.md).
+    call OakSpeech
+    jmp EnterMap             ; go straight to overworld
 %else
     jmp PrepareTitleScreen   ; tail call — runs title screen, never returns normally
 %endif

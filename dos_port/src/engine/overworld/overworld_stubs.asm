@@ -27,3 +27,13 @@ SpawnPikachu:
 global DoScriptedNPCMovement
 DoScriptedNPCMovement:
     ret
+
+; InitializeToggleableObjectsFlags — pret engine/overworld/toggleable_objects.asm:
+; InitializeToggleableObjectsFlags (clears the per-map missable/hidden-object show
+; flags for a new game). Tail-called by InitPlayerData2. TODO(overworld): port the
+; real toggleable-object flag reset with the hidden-object tables. Until then a new
+; game leaves those flags at their (now zero-filled by wGameProgressFlags) state;
+; harmless for the current maps. Keep the pret name so InitPlayerData2's jp resolves.
+global InitializeToggleableObjectsFlags
+InitializeToggleableObjectsFlags:
+    ret
