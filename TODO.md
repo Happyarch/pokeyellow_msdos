@@ -233,14 +233,21 @@ Prioritized task list. Check off items as they complete; add new items with phas
       player-NPC tile blocking (`IsNPCAtTargetBlock`), NPC wall-blocking via MAPY/MAPX
       tile check. Full dialog (`CheckNPCInteraction` → `PrintText`, per-character reveal,
       multi-page scroll). Walk-tile leg animation. Done; see `docs/plans/npc_implementation.md`.
-- [ ] Scripted NPC movement (MOVEMENTBYTE1 < 0xFE) — currently falls through to STAY.
-      Pret ref: `engine/overworld/auto_movement.asm`, `engine/overworld/sprite_collisions.asm:43`.
-      Add `DoScriptedNPCMovement` dispatch in `UpdateNonPlayerSprite` (movement.asm).
-- [ ] Trainer battle engine — `CheckNPCInteraction` detects `ISTRAINER` but exits without
-      battle. Needs trainer-sight check + battle-intro flow. New `dos_port/src/engine/battle/`.
-      Pret ref: `engine/overworld/trainer_sight.asm`, `engine/battle/`.
-- [ ] Translate random encounter trigger
-- [ ] Translate battle engine (UI rendering pass first)
+- [ ] **Full `engine/overworld/` faithful port** — planned in
+      `docs/current_plan_overworld_port.md` (staged swarm+solo; branch
+      `overworld-port`, Stage 0 gate pending). Absorbs the piecemeal items that
+      used to live here: **scripted NPC movement** (`DoScriptedNPCMovement`
+      dispatch, Stage 2), the two out-of-map viewport clamps' retirement, cut/
+      boulder/fly/spin/elevator/healing subsystems, and — importantly — the
+      **menu VRAM tile-slot defect** ("Cross-cutting defect" note). This is where
+      the "menus corrupt live" fix lands.
+- [x] Trainer battle engine — battle swarm merged to `master`; trainer battles play
+      (trainer_battle.asm / trainer_ai.asm / read_trainer_party.asm linked). Remaining
+      fidelity items in `docs/battle_audit_findings.md`. Overworld trainer-sight →
+      battle-intro trigger is part of the overworld port (`trainer_sight.asm`).
+- [x] Random encounter trigger — `src/engine/overworld/wild_encounter_check.asm` (linked).
+- [x] Battle engine — complete (battle swarm; live wild + trainer battles end-to-end).
+      Open items tracked in `docs/battle_audit_findings.md`, not here.
 
 ### Engine data layers (backend, complete — see docs/plans/ & docs/current_plan_*.md)
 
@@ -263,8 +270,40 @@ Prioritized task list. Check off items as they complete; add new items with phas
       wild + trainer battles. The keystone that unblocks most of the above deferrals.
 - [ ] **Wave 3 (battle-gated sweep):** item USE dispatch, real new-game/Oak-gift data
       path, Oak walk-up cutscene, per-map `_Script` machines + mart/pokecenter/PC.
+      (Partial: `InitPlayerData2`/`InitializeEmptyList` ported 2026-07-04 — new-game
+      now seeds party/box/bag/box-item `$FF` terminators + money/ID/badges via the
+      `OakSpeech` prologue on both boot paths; fixes the un-terminated-bag overflow.
+      Remaining: OakSpeech cutscene, starter gift, real Oak-gift item grant.)
 - Cross-cuts ride each wave's tail (party_popup polish → audio HAL → GBC palette);
   the save system (Phase 5) is last, after all waves.
+
+### Deferred tails from archived plans (menus, pokemon_behavior) — 2026-07-04
+
+- [ ] **Title screen faithful reimpl** (low priority) — `src/movie/title.asm` is a
+      bespoke early implementation that does not render fully correctly (boots +
+      reaches the menu, "works enough"; `SKIP_TITLE=1` bypasses it). Likely folds in
+      with the overworld tile-management rewrite (`current_plan_overworld_port.md`),
+      since it shares the VRAM tile-slot / bespoke-gfx issues. Pret ref:
+      `engine/movie/title.asm`.
+
+- [ ] **Menu live-render polish** — the "menu boxes corrupt live but fine in
+      harness" problem is the overworld VRAM tile-slot defect, owned by
+      `docs/current_plan_overworld_port.md` ("Cross-cutting defect" + Stage 8
+      verification). Not a menu-code bug. See memory `menu-corruption-vram-tileslots`.
+- [ ] **Menus S10 non-VRAM tails** (from archived `docs/plans/menus.md`): the
+      window-compositor gap on full-takeover screens (naming / main_menu /
+      pokédex-entry interior content); `LoadPokedexTilePatterns` real dex tileset
+      (currently a no-op → wrong pokédex tiles); interactive nav/prompt sweeps
+      (pokédex list scroll + side-menu, `<PAGE>` flavor wait, link cup-select +
+      no-partner timeout message, naming grid); cable-club `SpecialEnterMap`/
+      `PrepareForSpecialWarp` warp seam (confirm S9 wired it or leave honestly stubbed).
+- [ ] **Status screen (Stage 4) remainder** (from archived `docs/plans/pokemon_behavior.md`):
+      mon front-pic 7×7 tilemap-block placement on the status canvas (VRAM load
+      works); cry (audio HAL, Phase 3); wire START-menu party **STATS** entry
+      (`start_sub_menus`) → `StatusScreen`/`StatusScreen2`.
+- [ ] **Bill's PC full UI** (pokemon_behavior Stage 6, separable) — not started;
+      STATS branch reuses Stage 4's `StatusScreen`. Spin up a fresh
+      `current_plan_bills_pc.md` when picked up. (Backend box logic is Wave 1 above.)
 
 ---
 

@@ -1,4 +1,22 @@
-# Current Plan: engine/pokemon behavior/UI — faithful pret mirror
+# Current Plan: engine/pokemon behavior/UI — faithful pret mirror  — CLOSED 2026-07-04 (archived)
+
+**CLOSEOUT (2026-07-04):** The core behavior/UI shipped and is live-verified —
+Stage 0 (cleanup) [x], Stage 1 (pure-logic) [x], Stage 2 (evolution + functional
+`EvolveMon`) [x], Stage 3 (`learn_move` interactive teach) [x], Stage 4 status
+screen **pages 1 & 2** [x] (front-pic placement + cry deferred), Stage 5
+(post-battle `EndOfBattle`/`EvolutionAfterBattle` wire) [x]. The visible bugs this
+plan targeted (garbage level-up stats, dropped level-up moves) are fixed. Deferred
+tails moved to TODO.md so nothing is lost:
+- **Stage 4 remainder:** mon front-pic tilemap-block placement on the status
+  canvas (VRAM load works; the 7×7 block placement + live check remain); cry
+  (audio HAL, Phase 3); wire the START-menu party **STATS** entry
+  (`start_sub_menus`) to `StatusScreen`/`StatusScreen2` (battle level-up already
+  calls `PrintStatsBox`).
+- **Stage 6 — Bill's PC full UI:** always earmarked "separable; may become its own
+  plan." Not started; its STATS branch reuses Stage 4's `StatusScreen`. Tracked in
+  TODO.md as a future work item (spin up a fresh `current_plan_bills_pc.md` when
+  picked up).
+Archived to `docs/plans/pokemon_behavior.md`.
 
 The behavior/UI layer above the (complete) Pokémon data/stats engine: evolution,
 level-up move learning, the status/summary screen, and Bill's PC. Faithfully

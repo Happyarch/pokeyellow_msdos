@@ -28,11 +28,14 @@ Phase 2 so far: `Init`/`ClearVram`/`StopAllSounds` (`src/init/init.asm`),
 supporting home routines (`src/util/copy_data.asm`, `src/video/lcd_control.asm`,
 `src/video/frame.asm`, `src/gfx/sprites.asm`), and a text/font engine
 (`src/gfx/load_font.asm` 1bpp→2bpp expansion from `gfx/font/font.png`,
-`src/text/text.asm` PlaceString/TextBoxBorder). The title screen
-(`src/movie/title.asm`) and the overworld map loader/renderer
-(`src/engine/overworld/overworld.asm`) both render correctly in DOSBox-X: the title
-shows "Pokémon Yellow Version", and `SKIP_TITLE=1` boots straight into a fully
-drawn Pallet Town (Oak's Lab, tree border, sign) in the DMG-green palette.
+`src/text/text.asm` PlaceString/TextBoxBorder). The overworld map loader/renderer
+(`src/engine/overworld/overworld.asm`) renders correctly in DOSBox-X: `SKIP_TITLE=1`
+boots straight into a fully drawn Pallet Town (Oak's Lab, tree border, sign) in the
+DMG-green palette. The title screen (`src/movie/title.asm`) is a **bespoke early
+implementation that does NOT render fully correctly** — it boots and reaches the
+menu ("works enough") but the graphics are wrong; a known low-priority defect, its
+faithful reimpl deferred (likely rides with the overworld tile-management rewrite).
+Use `SKIP_TITLE=1` to bypass it.
 Player movement now works: `OverworldLoop` reads the joypad and walks the
 player in all four directions, scrolling the map smoothly via
 `AdvancePlayerSprite` (which now relies purely on `LoadCurrentMapView` without
@@ -610,15 +613,19 @@ commit but too specific to belong in TODO.md.
 - `docs/current_plan_script_engine.md` — gen-1 script system (event-gated dialog,
   per-map `_Script`/`text_asm`). In progress (Stage 6 stub conventions; Oak walk-up
   cutscene + `_Script` state machines + `DisplayTextID` special cases deferred).
-- `docs/current_plan_pokemon_behavior.md` — faithful pret mirror of the remaining
-  `engine/pokemon/` **behavior/UI**: evolution (incl. functional `EvolveMon`),
-  level-up move learning (`learn_move.asm`), the status/summary screen, and Bill's
-  PC (final separable stage). Fixes visible bugs (garbage level-up stats, dropped
-  level-up moves) and wires into battle/START-menu callers. Supersedes the dead
-  `pokemon_engine` tail below.
+- `docs/current_plan_overworld_port.md` — **full faithful port of pret
+  `engine/overworld/`** (staged swarm+solo; branch `overworld-port` cut after the
+  battle-swarm merge). **Now also owns the menu live-render defect** (VRAM
+  tile-slot management: vChars2 `$79–$7F` box tiles + vFont `$80+` font/walk
+  time-share) — see its "Cross-cutting defect" note + Stage 8 verification item,
+  and memory `menu-corruption-vram-tileslots`. Not started (Stage 0 gate pending).
   (The Pokémon **data/stats** layer — party structs, base stats, `CalcStats`,
   experience/leveling, `AddPartyMon`, learnset/moves, names — is **complete**; its
-  plan `docs/plans/pokemon_engine.md` is archived DEAD, superseded by the above.)
+  plan `docs/plans/pokemon_engine.md` is archived DEAD. The **behavior/UI** layer —
+  evolution/`EvolveMon`, `learn_move`, status-screen pages 1&2, post-battle wire —
+  is **complete and archived** at `docs/plans/pokemon_behavior.md` (2026-07-04);
+  its deferred tails — status-screen front-pic/cry/STATS-wire, Bill's PC full UI —
+  are tracked in TODO.md.)
 - `docs/current_plan_items.md` — item/bag layer (sequenced after pokemon, before
   battle). Inventory bookkeeping (add/remove) + TOSS done; item USE dispatch
   (`UseItem_`/`ItemUsePtrTable`) deferred (battle/UI-coupled).
@@ -630,14 +637,15 @@ commit but too specific to belong in TODO.md.
 - `docs/current_plan_map_tool.md` — **overworld map tool** (viewer → border-ring
   authoring → clamp retirement → block painting), built on `gfx_core`. Blocked
   on battle-UI plan Session A2. Sequenced after battle.
-- `docs/current_plan_menus.md` — **engine/menus port + UI layout tool** (branch
-  `menus-port`). 10 checkpointed sessions: pygame layout editor
-  (`dos_port/tools/ui_layout/`, sidecar JSON → `gen_ui_layout.py` →
-  `assets/ui_layout_menus.inc`), faithful `DisplayTextBoxID_`, wiring the dead
-  generic drivers live, realigning the bespoke start/bag/party menus onto them,
-  then a swarm of the leaf screens (PCs, pokédex, naming, options, save, link).
-  Session 1 (layout pipeline + editor) done; awaiting the human layout-freeze
-  step before Session 2.
+- **engine/menus port + UI layout tool** — **COMPLETE & archived** at
+  `docs/plans/menus.md` (2026-07-04, branch `menus-port`). All 10 sessions landed
+  (layout pipeline/editor, faithful `DisplayTextBoxID_`, generic drivers wired,
+  start/bag/party realigned, leaf-screen swarm: PCs/pokédex/naming/options/save/
+  link). The "menu boxes corrupt live but fine in harness" issue is **not** a menu
+  bug — it's the overworld VRAM tile-slot defect (owned by `overworld_port` above).
+  Menu-input lethargy fixed in `JoypadLowSensitivity` (2026-07-04). Non-VRAM tails
+  (window-compositor gap, `LoadPokedexTilePatterns` tileset, interactive sweeps,
+  cable-club warp seam) → TODO.md.
 - `docs/current_plan_macros.md` — **port pret's portable RGBDS macros** to real
   NASM `%macro`s in `dos_port/include/` (coords, event-macro family, data/gfx
   helpers, text-command macros), "add macros only" (no call-site retrofit),

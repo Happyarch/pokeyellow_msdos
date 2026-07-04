@@ -1,4 +1,20 @@
-# Current Plan: engine/menus Port + UI Layout Tool
+# Current Plan: engine/menus Port + UI Layout Tool  — CLOSED 2026-07-04 (archived)
+
+**CLOSEOUT (2026-07-04):** All ten sessions' menu ports landed. The remaining
+S10 carry-overs turned out **not** to be menu-code defects — the "every menu box
+renders corrupted live but fine in its harness" problem (grass borders, missing
+bottom rows, wrong row gaps, trashed trainer card / pokédex) root-causes to
+**shared VRAM tile-slot clobbering** (vChars2 `$79–$7F` box tiles + vFont `$80+`
+font/walk time-share), which is the early bespoke overworld's tile management.
+That is now documented + owned by `docs/current_plan_overworld_port.md`
+("Cross-cutting defect" note + Stage 8 verification item) and memory
+`menu-corruption-vram-tileslots`. The menu-input lethargy ("holding won't advance
+one") was fixed this session in `JoypadLowSensitivity` (edge recomputed at read
+time; pret's `call Joypad` equivalent). So the menu subsystem itself is done;
+the live visual polish is gated on the overworld tile-management rewrite, not on
+anything in this plan. Deferred non-VRAM tails moved to TODO.md (window-compositor
+gap on full-takeover screens, `LoadPokedexTilePatterns` real tileset, interactive
+prompt/nav sweeps, cable-club warp seam). Archived to `docs/plans/menus.md`.
 
 Port ALL of pret `engine/menus/` faithfully (realigning the live bespoke
 start/bag/party menus onto the generic drivers) + a subsystem-generic pygame
@@ -227,7 +243,13 @@ entry + commit (root only).
   trainer-card FRAME.BIN verified; overworld baseline unchanged.
   **Interactive verification (every START entry live, PC menu once DisplayPCMainMenu
   lands) deferred to S10.** Requires: S6-S8 landed.
-- [ ] **Session 10 — Final verification + closeout.** Interactive pass
+- [x] **Session 10 — Final verification + closeout.** CLOSED 2026-07-04 (see the
+  CLOSEOUT note at the top). The carry-over fixes below were reclassified: the
+  window-compositor / tile-pattern items are the overworld VRAM tile-slot defect
+  (now in `current_plan_overworld_port.md` + TODO.md), not menu-code bugs; the
+  menu-input lethargy was fixed in `JoypadLowSensitivity`. Remaining interactive
+  nav sweeps + cable-club warp seam moved to TODO.md.
+  <!-- original S10 scope (for reference):
   (every START entry; bag scroll/swap/toss/USE-fails-gracefully; party
   regression; trainer card; pokedex; players-PC; save→.dsv→CONTINUE appears;
   options persist; link cup validation + no-partner timeout; naming full
@@ -258,6 +280,7 @@ entry + commit (root only).
      `PrepareForSpecialWarp` cable-club hand-off is a tagged stub — confirm S9's
      spine wired it (enter-cable-club actually transitions), or leave it honestly
      stubbed with the START→SAVE-style overworld return.
+  --> <!-- end original S10 scope; items reclassified per the CLOSEOUT note -->
 
 ## Layout freeze
 

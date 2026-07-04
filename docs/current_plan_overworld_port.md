@@ -88,6 +88,47 @@ Line-level, routine-by-routine; sanctioned `; PROJ`/`TODO-HW` divergences exclud
 
 ---
 
+## Cross-cutting defect this reimpl must resolve — VRAM tile-slot management (2026-07-04)
+
+**Symptom (menus-port branch):** every menu that draws a `TextBoxBorder` (START,
+options, bag/items, trainer card, …) renders with corrupted borders / "grass"
+blanks / missing bottom rows in the *live* build, while each screen's `DEBUG_*`
+harness renders it perfectly. Root cause is entirely VRAM tile-slot management —
+the same early-bespoke tile handling this reimpl replaces — so it is recorded here
+rather than fixed piecemeal in the menu code.
+
+Two shared VRAM regions get clobbered and are not consistently reloaded:
+
+1. **Box/border/space tiles `$79–$7F` in vChars2 (`$9000` region).**
+   `LoadTextBoxTilePatterns` loads `$60–$7F` there, but the *same* slots are
+   overwritten by `LoadHpBarAndStatusTilePatterns` (`$62–$7F`; party menu / battle /
+   status), `LoadHudTilePatterns` (battle), and the trainer card's own tile loads —
+   see the explicit warning at `src/gfx/load_font.asm:101-106`. Whatever loaded
+   last wins, so a box drawn afterward takes its borders/spaces (`$7F` = space, so
+   row gaps too) from stale HP-bar/HUD tiles. `LoadMapData` loads box tiles at map
+   entry, so a *fresh* overworld is fine — corruption appears only after
+   entering/leaving a clobbering screen (matches the reported "grass after menus").
+2. **Font glyphs `$80–$8B` (letters A–L) in vFont `$8800`.** The port time-shares
+   vFont with player/NPC **walk tiles** (`LoadPlayerSpriteGraphics` writes exactly
+   `$80–$8B`). If walk tiles are resident when text is drawn, A–L render as sprite
+   graphics. **OW-A.2's `wFontLoaded` upper-half-only reload is the pret mechanism
+   that manages this** (`LoadStillTilePattern`/`LoadWalkingTilePattern`); porting it
+   faithfully fixes half of this defect.
+
+**Faithful fix direction:** pret keeps a fixed vChars layout with the box/font
+tiles resident (tileset ≤ `$60` tiles at `$00–$5F`; box/extra at `$60–$7F`;
+`wFontLoaded` gates the walk-tile reload so it never eats the font). Re-establish
+that layout here so menus never need to reload tiles at open time. Until this
+lands, the menu screens are only correct immediately after a `LoadTextBoxTilePatterns`
+(hence the harnesses pass) — a targeted stopgap would be to reload
+`LoadTextBoxTilePatterns` (+ `LoadFontTilePatterns` where letters are involved) at
+each menu's box-draw entry, but that is a per-call-site port deviation and should be
+avoided in favour of this reimpl. **Add a Stage A / Stage 8 verification item: after
+the tile-management rewrite, open every menu *after* visiting the party menu /
+battle and confirm box borders + blanks + letters render cleanly.**
+
+---
+
 ## Stages
 
 Mark items `[x]` as they complete. Every ticket below is prewritten; the root
@@ -245,6 +286,12 @@ adds to `GAME_SRCS` (or `OVERWORLD_CHECK_SRCS` if closure unresolved), runs
 - [ ] **Runtime regression**: full FRAME.BIN suite (baseline / north-transition /
       walk-to-edge / Oak cutscene / tree-cut) matches or improves Stage 0
       captures; `make -C dos_port check` clean.
+- [ ] **VRAM tile-slot regression** (see "Cross-cutting defect" above): after the
+      `wFontLoaded`/vChars-layout rewrite, open **every** menu (START, options,
+      bag, trainer card, party, pokédex) *after* visiting the party menu / a battle
+      and confirm box borders, `$7F` blanks, and letter glyphs A–L render cleanly —
+      i.e. the box tiles `$79–$7F` and font `$80+` are no longer clobbered. This is
+      the menus-port corruption; it must be gone before archival.
 - [ ] Archive: `git mv docs/current_plan_overworld_port.md docs/plans/overworld_port.md`.
 
 ---

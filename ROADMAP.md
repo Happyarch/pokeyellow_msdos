@@ -1,8 +1,13 @@
 # Pokémon Yellow DOS Port — Development Roadmap
 
+High-level phase view. Live status/scope lives in `CLAUDE.md` ("Current Phase" +
+"Currently active plans"), `TODO.md`, and `docs/(current_)plan_*.md`; this file is
+the coarse map. **Current focus: Phase 2 (game loop) — substantially playable;
+remaining work is the faithful `engine/overworld/` reimpl + scripting.**
+
 ---
 
-## Phase 0: Bootstrapping (current)
+## Phase 0: Bootstrapping — ✅ COMPLETE
 
 **Goal:** Prove the translation toolchain end-to-end before writing any game logic.
 
@@ -16,9 +21,15 @@ Acceptance criteria:
 
 ---
 
-## Phase 1: Core Infrastructure
+## Phase 1: Core Infrastructure — ✅ COMPLETE (save = minimal)
 
 **Goal:** The game loop runs with emulated memory, working input, and a basic renderer.
+
+**Status:** GB memory model, software PPU (BG + native-width renderer + OAM sprites +
+window compositor), and joypad all live. Save is a **minimal real `.dsv`**
+(`src/save/dsv_io.asm`, menus S7) — the full SRAM-compatible format is Phase 5.
+`BUG_FIX_LEVEL`/`/FIXCRIT`/`/FIXALL` in effect (e.g. the inventory-terminator guard,
+2026-07-04).
 
 Acceptance criteria:
 - GB memory model live: 72 KB DPMI allocation, EBP-relative access working
@@ -33,16 +44,35 @@ Acceptance criteria:
 
 ---
 
-## Phase 2: Game Loop
+## Phase 2: Game Loop — 🔨 IN PROGRESS (current)
 
 **Goal:** Main game is playable through overworld and battles.
 
 Acceptance criteria:
-- Title screen renders correctly
-- Overworld renders and scrolls; player walks around Pallet Town
-- Wild encounters trigger
-- Basic battle UI renders and accepts input
-- NPCs display dialogue
+- [~] Title screen — bespoke early implementation; boots and reaches the menu but
+      does **not** render fully correctly (a known low-priority defect; "works
+      enough"). Faithful reimpl deferred — likely folds in with the overworld
+      tile-management rewrite. See `TODO.md`.
+- [x] Overworld renders and scrolls; player walks around Pallet Town
+- [x] Wild encounters trigger (`wild_encounter_check.asm`)
+- [x] Battle UI renders and accepts input — full wild + trainer battles play
+      end-to-end (battle swarm, merged to `master`; open fidelity items in
+      `docs/battle_audit_findings.md`)
+- [x] NPCs display dialogue (`docs/plans/npc_implementation.md`)
+- [x] `engine/menus/` ported + realigned onto generic drivers
+      (`docs/plans/menus.md`, complete 2026-07-04)
+- [x] Pokémon data/stats + behavior/UI (evolution, learn-move, status screen,
+      post-battle) — `docs/plans/pokemon_engine.md`, `docs/plans/pokemon_behavior.md`
+- [x] Items/bag layer (add/remove/TOSS; USE dispatch deferred)
+- [x] New-game data init (`InitPlayerData2` — party/box/bag terminators + money/ID)
+
+**Remaining before Phase 2 closes:**
+- Faithful full `engine/overworld/` reimpl (`docs/current_plan_overworld_port.md`) —
+  scripted NPC movement, cut/boulder/fly/etc., and the **VRAM tile-slot management
+  fix** that resolves the live menu-box corruption. This is the main open item.
+- Scripting engine (`docs/current_plan_script_engine.md`): per-map `_Script`
+  machines, Oak walk-up cutscene, mart/pokécenter/PC scripts.
+- Deferred UI/menu tails and item USE dispatch (see `TODO.md`).
 
 ---
 
