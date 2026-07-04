@@ -138,8 +138,9 @@ interactively with the user.
 ### Stage 0 — Plan doc + branch gate + re-verification `[~]`
 
 - [x] Write this document to `docs/current_plan_overworld_port.md`.
-- [ ] **Gate:** battle-swarm integration merged to `master`; then
-      `git branch overworld-port master`.
+- [x] **Gate:** battle-swarm integration merged to `master` (verified: battle
+      engine + `battle_audit_findings.md` + archived `pokemon_behavior.md` on
+      master); `git branch overworld-port master` done (2026-07-04).
 - [ ] Update cross-references (deferred until the merge lands — the working tree
       must stay clean while the merge agent runs): `current_plan_script_engine.md`
       (point its deferred Oak-cutscene/scripted-movement items here), `TODO.md`
@@ -150,20 +151,31 @@ interactively with the user.
       amend the matrix, the audit table, and any ticket whose "existing symbol"
       assumptions moved (esp. `PlaySound` location, screen-buffer routines,
       `EmotionBubble` linkage).
-- [ ] Capture pre-work FRAME.BIN baselines: `DEBUG_BASELINE`, `DEBUG_TRANSITION`,
-      `DEBUG_WALK_NORTH` renders stored for later regression diffs.
+- [x] Capture pre-work FRAME.BIN baselines: `DEBUG_BASELINE`, `DEBUG_TRANSITION`,
+      `DEBUG_WALK_NORTH` renders stored (+ sha256 manifest) for regression diffs.
+      (DPMI host CWSDPMI r7 restored — it was missing from the checkout, gitignored.)
+      NB: `DEBUG_WALK_NORTH` skips collision by design — it is a render/transition
+      oracle, NOT a collision test; collision-touching tickets need MCP live-input
+      verification. The walk-north baseline was refreshed after OW-A.1 (now captures
+      the correctly-enabled flower animation).
 
-### Stage A — Fidelity rectification + pret-label restoration `[ ]`
+### Stage A — Fidelity rectification + pret-label restoration `[~]`
 
-**TICKET OW-A.1: LoadTilesetHeader rectification** `[SWARM/Sonnet]`
+**TICKET OW-A.1: LoadTilesetHeader rectification** `[SWARM/Sonnet]` `[x] DONE 2026-07-04`
 - Pret: `engine/overworld/tilesets.asm:LoadTilesetHeader` (+ `data/tilesets/tileset_headers.asm`, `DungeonTilesets`)
 - Target: `dos_port/src/engine/overworld/overworld.asm` (existing routine)
 - Checklist:
-  - [ ] Add missing tail per pret: `hPreviousTileset` compare (HRAM shadow byte in `gb_memmap.inc` if absent), `DungeonTilesets` membership check, `wDestinationWarpID` / `LoadDestinationWarpPosition` handling, and `wYBlockCoord/wXBlockCoord = wYCoord/wXCoord & 1` warp-arrival alignment
-  - [ ] Header fields currently hardcoded (`bank=1`, `grass=$FF`, `anim=0`): read real grass-tile + animation fields from the tileset header data; keep bank as `; TODO-HW` no-op with note
-  - [ ] `; PROJ`/`; DIVERGENCE` comments for any port asset-model differences
-  - [ ] Verify: nasm check; `make -C dos_port SKIP_TITLE=1` boots; FRAME.BIN baseline unchanged; walk-through-door arrival position correct via MCP `gb_read` of `wYBlockCoord/wXBlockCoord`
-- Exit: pret tail present; alignment omission fixed; translation_log entry (root).
+  - [x] Add missing tail per pret: `hPreviousTileset` compare, `DungeonTilesets` membership check (inlined, byte-verified), `wDestinationWarpID` / `LoadDestinationWarpPosition` handling (factored, pret name), and `wYBlockCoord/wXBlockCoord = wYCoord/wXCoord & 1` warp-arrival alignment
+  - [x] Header fields (`grass`, `anim`): now per-tileset from inlined `TilesetGrassTiles`/`TilesetAnimations` (byte-verified vs pret); bank kept as `; TODO-HW` no-op
+  - [x] `; PROJ`/`; DIVERGENCE` comments on asset-model + union divergences
+  - [x] Verify: nasm clean; `make SKIP_TITLE=1` boots; pristine + transition FRAME.BIN byte-identical; walk-north +240B = correct flower-anim enablement
+- **Root completion (required):** the tail regressed the render until root added the
+  pret `home/overworld.asm:1813` `hPreviousTileset` snapshot in `LoadMapHeader`
+  (worker-flagged F.1 — load-bearing). No spurious `wDestinationWarpID=$FF` sentinel
+  added (pret resets it only post-battle; the hPreviousTileset gate is the faithful
+  protector). Deferred (minor): F.2 `hMovingBGTilesCounter1` reset (needs symbol
+  migration to gb_memmap.inc).
+- Exit: pret tail present; alignment omission fixed; translation_log entry (root). ✓
 
 **TICKET OW-A.2: map_sprites.asm faithful rewrite** `[SOLO #4]`
 - Pret: `engine/overworld/map_sprites.asm` (all 15 routines) + `data/sprite_sets.asm`

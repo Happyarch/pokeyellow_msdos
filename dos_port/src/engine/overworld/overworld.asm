@@ -42,6 +42,7 @@ bits 32
 extern FillMemory
 extern CopyData
 extern FarCopyData
+extern IsInArray              ; src/home/array.asm — shared home global (LoadTilesetHeader dungeon check)
 extern RunMapScript           ; per-frame map _Script dispatch (script engine)
 extern StepCountCheck         ; wild_encounter_check.asm — per-step counter decrement (M7.1)
 %ifdef WILD_ENCOUNTERS_LIVE
@@ -1968,7 +1969,21 @@ LoadMapHeader:
     push ecx
     push esi
     push edi
-    
+
+    ; Snapshot the previous map's tileset into hPreviousTileset BEFORE the header
+    ; copy below overwrites wCurMapTileset (= wCurMapHeader first byte, 0xD366) with
+    ; the new map's tileset. LoadTilesetHeader (called at the tail of this routine)
+    ; compares the two to decide whether to run the warp-arrival block-coord
+    ; alignment: without this snapshot its "tileset unchanged" gate reads a stale
+    ; value and the alignment fires on every load, shifting the sub-block viewport.
+    ; Pret ref: home/overworld.asm:1813 (ldh [hPreviousTileset], a).
+    ; The 0xFF8B HRAM byte is a union with hMapStride/hNSConnectionStripWidth, but
+    ; those are only written later during LoadCurrentMapView / connection-strip
+    ; drawing — never between here and the LoadTilesetHeader read — so the union is
+    ; safe (same time-sharing pret relies on).
+    mov al, [ebp + W_CUR_MAP_TILESET]
+    mov [ebp + H_PREVIOUS_TILESET], al
+
     ; W_CUR_MAP_HEADER is a 10-byte buffer: tileset(1), h(1), w(1), blkptr(2), txtptr(2), scrptr(2), conn(1)
     movzx eax, byte [ebp + W_CUR_MAP]
     add eax, eax ; * 2 (MapHeaderPointers table is 2 bytes per entry)
@@ -2113,18 +2128,92 @@ LoadTilesetHeader:
     ; Mark tile cache dirty — render_bg must rebuild decoded tiles
     mov byte [g_tilecache_dirty], 1
 
-    ; Populate tileset header fields in WRAM (stub values; grass/anim tile TBD)
-    mov byte [ebp + W_TILESET_BANK], 0x01
+    ; Populate tileset header fields in WRAM.
+    ; TODO-HW: wTilesetBank is meaningless under flat memory (no ROM banking) —
+    ; left as a fixed no-op write, faithful in spirit to pret's CopyData'd bank
+    ; byte, but never consumed as a real bank switch. Pret ref: engine/overworld/
+    ; tilesets.asm (ld a,[hl] / ldh [hTileAnimations],a is the real 12th byte;
+    ; the bank byte itself is CopyData'd from Tilesets[0]).
+    mov byte [ebp + W_TILESET_BANK], 0x01  ; TODO-HW: banking no-op under flat memory
     mov word [ebp + W_TILESET_BLOCKS_PTR], OW_BLOCKS_GBADDR
     mov word [ebp + W_TILESET_GFX_PTR],   OW_GFX_GBADDR
     mov word [ebp + W_TILESET_COLLISION_PTR],  OW_COLL_GBADDR
-    mov byte [ebp + W_GRASS_TILE],   0xFF  ; no grass (overridden per-tileset later)
-    mov byte [ebp + H_TILE_ANIMATIONS], 0x00
+    ; Per-tileset grass tile + tile-animation kind — pret ref: data/tilesets/
+    ; tileset_headers.asm (`tileset` macro \5/\6 fields), inlined below as
+    ; TilesetGrassTiles/TilesetAnimations (small pret data tables, EAX still
+    ; holds the 0-24 tileset index from the movzx above).
+    mov bl, [TilesetGrassTiles + eax]
+    mov [ebp + W_GRASS_TILE], bl
+    mov bl, [TilesetAnimations + eax]
+    mov [ebp + H_TILE_ANIMATIONS], bl
 
+    ; -----------------------------------------------------------------------
+    ; Pret tail — engine/overworld/tilesets.asm lines 21-47 (previously
+    ; silently omitted; see docs/current_plan_overworld_port.md OW-A.1).
+    ; Gates the warp-arrival sub-block alignment (wYBlockCoord/wXBlockCoord =
+    ; coord & 1) behind a dungeon-tileset check and a "did the tileset change"
+    ; compare, exactly as pret does.
+    ; -----------------------------------------------------------------------
+    mov edx, 1                          ; IsInArray entry stride (1 byte/tileset id)
+    mov esi, DungeonTilesets
+    call IsInArray                      ; AL (tileset id) still set from the movzx above
+    jc .dungeon                         ; pret: jr c, .dungeon
+
+    ; pret: ld a,[wCurMapTileset] / ld b,a / ldh a,[hPreviousTileset] / cp b / jr z,.done
+    mov bl, al                           ; BL = current tileset (AL untouched by IsInArray)
+    mov al, [ebp + H_PREVIOUS_TILESET]   ; HRAM union w/ hMapStride/hNSConnectionStripWidth — read-only here
+    cmp al, bl
+    je .done                            ; tileset unchanged and not a dungeon tileset — skip realignment
+
+.dungeon:
+    cmp byte [ebp + W_DESTINATION_WARP_ID], 0xFF
+    je .done                            ; pret: ld a,[wDestinationWarpID] / cp $ff / jr z,.done
+
+    call LoadDestinationWarpPosition     ; pret: call LoadDestinationWarpPosition
+    mov al, [ebp + W_Y_COORD]            ; pret: ld a,[wYCoord] / and $1 / ld [wYBlockCoord],a
+    and al, 1
+    mov [ebp + W_Y_BLOCK_COORD], al
+    mov al, [ebp + W_X_COORD]            ; pret: ld a,[wXCoord] / and $1 / ld [wXBlockCoord],a
+    and al, 1
+    mov [ebp + W_X_BLOCK_COORD], al
+
+.done:
     pop ecx
     pop edi
     pop esi
     pop ebx
+    pop eax
+    ret
+
+; ---------------------------------------------------------------------------
+; LoadDestinationWarpPosition — load spawn Y/X from the destination map's warp
+; table entry selected by W_DESTINATION_WARP_ID.
+; Pret ref: home/overworld.asm:LoadDestinationWarpPosition
+; PROJ divergence: pret's predef version copies a 4-byte (block-view-pointer,
+; Y, X) struct from an hl-indexed ROM table straight into
+; wCurrentTileBlockMapViewPointer/wYCoord/wXCoord. The port has no parallel
+; per-map view-pointer table; it reads Y/X directly out of the already-loaded
+; W_WARP_ENTRIES (Y, X, dest_warp_id, dest_map_id per entry — see the
+; `warp_event` macro / CheckWarpTile), and leaves wCurrentTileBlockMapViewPointer
+; to LoadWarpDestination's explicit stride-math recompute, which replaces
+; pret's ROM view-pointer lookup with an equivalent runtime computation.
+; In:  W_DESTINATION_WARP_ID = 0-based warp index (destination map's table)
+; Out: W_Y_COORD, W_X_COORD set. Preserves all other registers/flags.
+; ---------------------------------------------------------------------------
+LoadDestinationWarpPosition:
+    push eax
+    push esi
+
+    movzx eax, byte [ebp + W_DESTINATION_WARP_ID]
+    shl eax, 2                          ; * 4 bytes per warp entry
+    lea esi, [ebp + W_WARP_ENTRIES]
+    add esi, eax
+    mov al, [esi]                       ; spawn Y tile
+    mov [ebp + W_Y_COORD], al
+    mov al, [esi+1]                     ; spawn X tile
+    mov [ebp + W_X_COORD], al
+
+    pop esi
     pop eax
     ret
 
@@ -2355,16 +2444,19 @@ LoadWarpDestination:
 
     ; Resolve spawn coords from the destination map's warp table.
     ; W_DESTINATION_WARP_ID is the 0-based index set by CheckWarpTile.
-    movzx eax, byte [ebp + W_DESTINATION_WARP_ID]
-    shl eax, 2                                ; * 4 bytes per entry
-    lea esi, [ebp + W_WARP_ENTRIES]
-    add esi, eax
-    mov al, [esi]                             ; spawn Y tile
-    mov [ebp + W_Y_COORD], al
+    ; Factored into the shared LoadDestinationWarpPosition (pret name; see its
+    ; definition above, right after LoadTilesetHeader) so this always-run warp
+    ; arrival resolution and LoadTilesetHeader's pret-faithful, gated tail (which
+    ; just ran a few lines up, inside the `call LoadMapHeader` above) share one
+    ; implementation rather than duplicating the W_WARP_ENTRIES read. Unlike
+    ; LoadTilesetHeader's gated call, this path always needs the spawn position —
+    ; a genuine warp transition always has a valid W_DESTINATION_WARP_ID (never
+    ; $FF) — so the & 1 block-coord alignment is redone here unconditionally.
+    call LoadDestinationWarpPosition
+    mov al, [ebp + W_Y_COORD]
     and al, 1
     mov [ebp + W_Y_BLOCK_COORD], al
-    mov al, [esi+1]                           ; spawn X tile
-    mov [ebp + W_X_COORD], al
+    mov al, [ebp + W_X_COORD]
     and al, 1
     mov [ebp + W_X_BLOCK_COORD], al
 
@@ -2620,6 +2712,85 @@ DoorTileTable:
     db 22, 0x43, 0x58, 0x1B, 0 ; FACILITY
     db 23, 0x3B, 0x1B, 0       ; PLATEAU
     db 0xFF                     ; end
+
+; Dungeon-type tilesets — pret ref: data/tilesets/dungeon_tilesets.asm
+; (DungeonTilesets). $FF-terminated, stride 1 (searched by LoadTilesetHeader
+; via the shared IsInArray, src/home/array.asm).
+; Tileset ids per constants/tileset_constants.asm: FOREST=3, MUSEUM=10, SHIP=13,
+; CAVERN=17, LOBBY=18, MANSION=19, GATE=12, LAB=20, FACILITY=22, CEMETERY=15,
+; GYM=7.
+DungeonTilesets:
+    db 3            ; FOREST
+    db 10           ; MUSEUM
+    db 13           ; SHIP
+    db 17           ; CAVERN
+    db 18           ; LOBBY
+    db 19           ; MANSION
+    db 12           ; GATE
+    db 20           ; LAB
+    db 22           ; FACILITY
+    db 15           ; CEMETERY
+    db 7            ; GYM
+    db 0xFF         ; end
+
+; Per-tileset grass tile + tile-animation kind — pret ref: data/tilesets/
+; tileset_headers.asm (the `tileset` macro's \5 grass-tile / \6 TILEANIM_*
+; fields). Indexed by W_CUR_MAP_TILESET (0-24, constants/tileset_constants.asm
+; order); read by LoadTilesetHeader. TILEANIM_NONE=0, TILEANIM_WATER=1,
+; TILEANIM_WATER_FLOWER=2 (constants/map_data_constants.asm).
+TilesetGrassTiles:
+    db 0x52 ; 0  OVERWORLD
+    db 0xFF ; 1  REDS_HOUSE_1
+    db 0xFF ; 2  MART
+    db 0x20 ; 3  FOREST
+    db 0xFF ; 4  REDS_HOUSE_2
+    db 0xFF ; 5  DOJO
+    db 0xFF ; 6  POKECENTER
+    db 0xFF ; 7  GYM
+    db 0xFF ; 8  HOUSE
+    db 0xFF ; 9  FOREST_GATE
+    db 0xFF ; 10 MUSEUM
+    db 0xFF ; 11 UNDERGROUND
+    db 0xFF ; 12 GATE
+    db 0xFF ; 13 SHIP
+    db 0xFF ; 14 SHIP_PORT
+    db 0xFF ; 15 CEMETERY
+    db 0xFF ; 16 INTERIOR
+    db 0xFF ; 17 CAVERN
+    db 0xFF ; 18 LOBBY
+    db 0xFF ; 19 MANSION
+    db 0xFF ; 20 LAB
+    db 0xFF ; 21 CLUB
+    db 0xFF ; 22 FACILITY
+    db 0x45 ; 23 PLATEAU
+    db 0xFF ; 24 BEACH_HOUSE
+
+TilesetAnimations:
+    db 2 ; 0  OVERWORLD     TILEANIM_WATER_FLOWER
+    db 0 ; 1  REDS_HOUSE_1  TILEANIM_NONE
+    db 0 ; 2  MART
+    db 1 ; 3  FOREST        TILEANIM_WATER
+    db 0 ; 4  REDS_HOUSE_2
+    db 2 ; 5  DOJO          TILEANIM_WATER_FLOWER
+    db 0 ; 6  POKECENTER
+    db 2 ; 7  GYM           TILEANIM_WATER_FLOWER
+    db 0 ; 8  HOUSE
+    db 0 ; 9  FOREST_GATE
+    db 0 ; 10 MUSEUM
+    db 0 ; 11 UNDERGROUND
+    db 0 ; 12 GATE
+    db 1 ; 13 SHIP          TILEANIM_WATER
+    db 1 ; 14 SHIP_PORT     TILEANIM_WATER
+    db 0 ; 15 CEMETERY
+    db 0 ; 16 INTERIOR
+    db 1 ; 17 CAVERN        TILEANIM_WATER
+    db 0 ; 18 LOBBY
+    db 0 ; 19 MANSION
+    db 0 ; 20 LAB
+    db 0 ; 21 CLUB
+    db 1 ; 22 FACILITY      TILEANIM_WATER
+    db 1 ; 23 PLATEAU       TILEANIM_WATER
+    db 0 ; 24 BEACH_HOUSE
 
 section .rodata
 
