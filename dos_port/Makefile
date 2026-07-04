@@ -204,6 +204,8 @@ GAME_SRCS := \
     src/audio/audio_stubs.asm \
     src/engine/overworld/daycare_exp.asm \
     src/engine/overworld/is_player_just_outside_map.asm \
+    src/engine/overworld/dungeon_warps.asm \
+    src/engine/overworld/specific_script_flags.asm \
     src/engine/overworld/wild_encounter_check.asm \
     src/engine/overworld/warp_check.asm \
     src/engine/overworld/hidden_events.asm \

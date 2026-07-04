@@ -1414,6 +1414,8 @@ wPokedexOwned                 equ W_POKEDEX_OWNED     ; 0xD2F6 (lowercase alias)
 wPokedexSeen                  equ W_POKEDEX_SEEN      ; 0xD309 (lowercase alias)
 wUnusedAlreadyOwnedFlag       equ 0xD152 ; pret dead store (write-only)
 wEnemyMonNicks                equ 0xD9ED ; enemy party nicknames
+wWhichDungeonWarp             equ 0xD71D ; which dungeon warp in the source map was used
+W_WHICH_DUNGEON_WARP          equ 0xD71D ; uppercase alias (IsPlayerOnDungeonWarp)
 wDayCareInUse                 equ 0xDA47 ; 1 = a mon is in the day-care (IncrementDayCareMonExp gate)
 wDayCareMonName               equ 0xDA48 ; day-care mon nickname
 wDayCareMonOT                 equ 0xDA53 ; day-care mon OT name
