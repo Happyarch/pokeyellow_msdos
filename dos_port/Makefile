@@ -208,6 +208,8 @@ GAME_SRCS := \
     src/engine/overworld/specific_script_flags.asm \
     src/engine/overworld/clear_variables.asm \
     src/engine/overworld/wild_encounter_check.asm \
+    src/data/wild_data.asm \
+    src/engine/overworld/wild_mons.asm \
     src/engine/overworld/warp_check.asm \
     src/engine/overworld/hidden_events.asm \
     src/engine/menus/swap_items.asm \
@@ -253,7 +255,7 @@ ITEMS_SRCS := \
 # battle loop (core.asm, FRONTEND_SRCS) needs only a curated subset of it, and that
 # subset has been MOVED to FRONTEND_SRCS (decrement_pp, animations); the deeper closures
 # here (effects + all move_effects, residual_damage, trainer_ai, misc/InitList, names,
-# read_trainer_party, wild_*) still depend on deferred predefs/UI/text and are stubbed at
+# read_trainer_party) still depend on deferred predefs/UI/text and are stubbed at
 # link time by core_stubs.asm (JumpMoveEffect / HandlePoisonBurnLeechSeed / TrainerAI /
 # FormatMovesString). Every file here still assembles (make check) and the pure-math
 # routines are native-ELF-harness validated.
@@ -261,13 +263,14 @@ BATTLE_SRCS := \
     src/engine/battle/get_trainer_name.asm \
     src/engine/battle/misc.asm \
     src/engine/battle/move_category.asm \
-    src/data/wild_data.asm \
-    src/engine/overworld/wild_mons.asm \
     src/engine/battle/wild_encounters.asm
 # trainer_ai.asm + read_trainer_party.asm MOVED to FRONTEND_SRCS (battle-swarm-C): the
 # class-based enemy-move AI (AIEnemyTrainerChooseMoves) and trainer-party loader now link
 # live — their closures resolve (AIGetTypeEffectiveness/Moves/Divide/IsInArray/Random +
-# TrainerDataPointers/SpecialTrainerMoves/AddPartyMon/AddBCDPredef). wild_encounters.asm
+# TrainerDataPointers/SpecialTrainerMoves/AddPartyMon/AddBCDPredef). wild_data.asm +
+# wild_mons.asm (LoadWildData/WildDataPointers) MOVED to GAME_SRCS (OW-A.5): they form a
+# self-contained 2-file unit (data table + inline flat→WRAM loader, no battle deps) and now
+# link live so LoadMapHeader can populate per-map wGrassMons/wWaterMons. wild_encounters.asm
 # stays check-only (its TryDoWildEncounter still needs unresolved overworld externs, and
 # the live overworld already triggers encounters via wild_encounter_check.asm).
 # experience.asm (GainExperience) is now LINKED (FRONTEND_SRCS, Stage 3 victory→EXP):

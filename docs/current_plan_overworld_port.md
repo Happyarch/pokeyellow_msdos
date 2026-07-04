@@ -356,9 +356,18 @@ root pret tree.
   session, MCP-verified.
 
 **TICKET OW-A.5: map-load faithfulness cluster** `[SWARM/Sonnet]` — DIVERGENT (overworld.asm)
-- `LoadMapHeader` (`home/overworld.asm:1798-1926`): **call `LoadWildData`** — it is a
-  fully-ported routine (`wild_mons.asm`) with ZERO call sites, so wild encounters get
-  no per-map data (highest-value single fix, S); restore the `BIT_NO_PREVIOUS_MAP`
+- **LoadWildData wiring DONE (2026-07-04):** `LoadMapHeader` now `call`s `LoadWildData`
+  at the pret-faithful point (after `LoadTilesetHeader`, = pret `:1900`). Required promoting
+  `src/data/wild_data.asm` + `src/engine/overworld/wild_mons.asm` from check-only `BATTLE_SRCS`
+  to linked `GAME_SRCS` (self-contained 2-file unit: data table + inline flat→WRAM loader, no
+  battle deps). Register-safe (LoadWildData clobbers only EAX/ECX/EDX/ESI, all restored by
+  LoadMapHeader's pops). Verified: `make check` clean; real build links (wild_*.o in map); 3
+  FRAME.BIN baselines byte-identical (LoadWildData runs during DEBUG_TRANSITION's Route1 load
+  without crashing/altering render); DUMP.BIN ground-truth — after Route1 load, wCurMap=0x0C,
+  wGrassRate=25, 10 mon pairs (3/4 PIDGEY, 2/3 RATTATA, …) + wWaterRate=0, byte-identical to
+  pret `Route1WildMons`. Remaining A.5 items below still open.
+- `LoadMapHeader` (`home/overworld.asm:1798-1926`): ~~call `LoadWildData`~~ DONE (above);
+  still open: restore the `BIT_NO_PREVIOUS_MAP`
   early-return branch; add `MarkTownVisitedAndLoadToggleableObjects` +
   `SchedulePikachuSpawnForAfterText` (or `; TODO-HW`/`; PROJ` markers); verify
   `wCurrentMapHeight2/Width2` ordering vs first use.

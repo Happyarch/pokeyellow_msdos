@@ -65,6 +65,7 @@ extern IsSurfingPikachuInParty         ; overworld_stubs.asm (TODO faithful — 
 %ifdef PLAYER_STATE_LINKED
 extern CheckForceBikeOrSurf            ; player_state.asm (check-only until OW-7.2)
 %endif
+extern LoadWildData                    ; wild_mons.asm — per-map wild data → wGrass/wWaterMons (OW-A.5)
 extern ClearSprites
 extern g_tilecache_dirty
 extern hide_window           ; src/ppu/ppu.asm — empty the window list (count=0)
@@ -2205,7 +2206,16 @@ LoadMapHeader:
     mov [ebp + W_OBJECT_DATA_PTR_TEMP], ax
     
     call LoadTilesetHeader
-    
+
+    ; Load this map's wild-encounter data (pret home/overworld.asm:LoadMapHeader:1900,
+    ; callfar LoadWildData). Populates wGrassRate/wGrassMons + wWaterRate/wWaterMons from
+    ; WildDataPointers[wCurMap] for TryDoWildEncounter. OW-A.5: previously LoadWildData had
+    ; ZERO call sites, so every map's wild slots were stale. LoadWildData clobbers only
+    ; EAX/ECX/EDX/ESI (no banking, no I/O), all of which the pops below restore, so it is
+    ; safe here. Pret's preceding SchedulePikachuSpawnForAfterText and the trailing
+    ; wCurrentMapHeight2/Width2 + MapSongBanks music setup remain deferred (A.5 follow-ups).
+    call LoadWildData
+
     pop edi
     pop esi
     pop ecx
