@@ -37,12 +37,17 @@ into the live game loop. Live-graph connections (`OverworldLoop`, `EnterMap`,
 
 | Skill | When to load |
 |---|---|
-| `register-map` | Before writing any NASM |
+| `asm-translation` | Before writing any NASM — register map, flags, 386+ instruction choices |
 | `path-map` | Before placing any file |
-| `386-checklist` | When choosing instructions |
-| `bug-check` | When BUG/GLITCH annotation needed |
+| `project-conventions` | When a BUG/GLITCH annotation or stub is needed |
 | `glitch-escalation` | When hitting a $FF__ register |
 | `commit-format` | Before committing |
+| `build-and-debug` | Repo layout, build commands, memory-dump debugging |
+
+`register-map`, `386-checklist`, and `bug-check` were retired — their content is
+now folded into `asm-translation` (register map + flags + instruction choices)
+and `project-conventions` (BUG/GLITCH conventions), which are more complete.
+Archived at `.agents/archive/skills/` if you need the old compact form.
 
 ---
 

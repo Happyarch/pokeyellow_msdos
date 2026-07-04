@@ -21,8 +21,8 @@ Read these before writing any ticket:
 | `docs/glitch_safety.md` | Safe vs. dangerous glitches under DPMI |
 
 Or load on demand:
-- `agy skill register-map` — compact SM83→x86 table
-- `agy skill bug-check` — BUG_FIX_LEVEL template
+- `agy skill asm-translation` — SM83→x86 register table, flags, instruction choices
+- `agy skill project-conventions` — BUG_FIX_LEVEL template, stub conventions
 - `agy skill glitch-escalation` — when to escalate
 
 ---

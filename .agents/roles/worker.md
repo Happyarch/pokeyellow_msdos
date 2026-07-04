@@ -11,10 +11,9 @@ Write directly to the target file if assigned exclusively, or output to a scratc
 ## Required Reading (on demand — use `agy skill`)
 
 Load these only when you need them:
-- `agy skill register-map` — SM83→x86 register table + EBP memory model
-- `agy skill bug-check` — BUG_FIX_LEVEL template and usage
+- `agy skill asm-translation` — SM83→x86 register table + EBP memory model + 386+ instruction choices
+- `agy skill project-conventions` — BUG_FIX_LEVEL template and usage
 - `agy skill glitch-escalation` — when to stop and report a $FF__ hit
-- `agy skill 386-checklist` — instruction selection checklist
 
 Full references (read if ticket is ambiguous):
 - `docs/register_map.md`, `docs/bugs_and_glitches.md`, `docs/glitch_safety.md`
