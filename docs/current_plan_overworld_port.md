@@ -264,6 +264,77 @@ root pret tree.
     baselines (BASELINE/TRANSITION/WALK_NORTH) + MCP live warp tests.
   - A.2/A.3/A.7/A.8 interleave around A.4; A.4+A.5 are the spine and land together.
 
+- **FEASIBILITY (2026-07-04):** many-session job for the full spine. A.4(a) = one focused
+  session (moderate spill risk from scaffolding couplings); A.4(b) = its own session (live
+  MCP warp verification, iterative); A.5 partly rides A.4, partly separate. Best executed in
+  FRESH context — this ticket is self-contained below so a cold session starts hot.
+
+- **Splash radius — 5 direct files:** `overworld.asm` (EnterMap rewrite + boot-setup
+  relocation), `init.asm` (SKIP_TITLE `jmp EnterMap` @ ~157 → boot wrapper), `title.asm`
+  (`.go_to_main_menu` `jmp EnterMap` @ ~388 → boot wrapper), `overworld_stubs.asm` (4 new
+  ret-stubs), `gb_memmap.inc` (4 bit constants + promote `wNumberOfNoRandomBattleStepsLeft`).
+
+- **Verified facts (no re-investigation needed):**
+  - Bit constants (pret `constants/ram_constants.asm`): `BIT_WILD_ENCOUNTER_COOLDOWN`=0
+    (already def), `BIT_FLY_WARP`=3 (already def), `BIT_CUR_MAP_LOADED_1/2`=5/6 (already def);
+    **ADD:** `BIT_NO_NPC_FACE_PLAYER`=5 (wStatusFlags3), `BIT_NO_BATTLES`=4 (wStatusFlags4),
+    `BIT_BATTLE_OVER_OR_BLACKOUT`=5 (wStatusFlags4), `BIT_DUNGEON_WARP`=4 (wStatusFlags6).
+    Confirmed NOT yet defined in port `include/`.
+  - WRAM (port Red-anchored scheme, all present unless noted): `W_STATUS_FLAGS_2`=0xD72B,
+    `_3`=0xD72C, `_4`=0xD72D, `_6`=0xD731; `W_JOY_IGNORE`=0xCCB7,
+    `W_CURRENT_MAP_SCRIPT_FLAGS`=0xD125. **PROMOTE** `wNumberOfNoRandomBattleStepsLeft`=0xD13B
+    (currently local equ in `wild_encounter_check.asm:70`, adjacent to `wStepCounter` 0xD13A;
+    delete the local after promoting).
+  - Leaves — MISSING → new `; TODO(faithful)` ret-stubs in `overworld_stubs.asm`:
+    `MapEntryAfterBattle`, `EnterMapAnim`, `ResetUsingStrengthOutOfBattleBit`,
+    `IsSurfingPikachuInParty` (all on inert fly/warp/battle-return branches at boot).
+    `CheckForceBikeOrSurf` EXISTS in check-only `player_state.asm` → faithful `call` GATED
+    behind `%ifdef PLAYER_STATE_LINKED` (off) w/ TODO (matches `WILD_ENCOUNTERS_LIVE`/
+    `NPC_MOVEMENT_SCRIPTS_LINKED` idiom); un-gate at OW-7.2 player_state promotion.
+    LINKED (call directly): `ClearVariablesOnEnterMap`, `UpdateSprites`, `LoadMapData`.
+  - Boot callers both `jmp EnterMap` (tail): `init.asm:157` (SKIP_TITLE), `title.asm:388`.
+
+- **Target structure:**
+  ```
+  EnterMapBoot:                 ; boot-only, runs ONCE; both boot callers jmp here
+      call LoadOverworldAssets / SetupPlayerSprite / [%ifdef SKIP_TITLE name-seed]
+      call text_engine_init / InitToggleableObjectFlags   ; fall into EnterMap
+  EnterMap::                    ; faithful pret home/overworld.asm:1-41
+      mov byte [ebp+W_JOY_IGNORE], PAD_BUTTONS | PAD_CTRL_PAD
+      call LoadMapData
+      [DEBUG_DUMP/WALK_NORTH/TRANSITION/DIALOG harnesses]   ; << KEEP HERE (tripwire)
+      call ClearVariablesOnEnterMap
+      ; wStatusFlags2 WILD_ENCOUNTER_COOLDOWN -> wNumberOfNoRandomBattleStepsLeft=3
+      ; wStatusFlags4 BATTLE_OVER_OR_BLACKOUT: res; z->ResetUsingStrengthOutOfBattleBit; nz->MapEntryAfterBattle
+      ; wStatusFlags6 (FLY_WARP|DUNGEON_WARP)!=0 -> EnterMapAnim;UpdateSprites;res FLY_WARP;res NO_BATTLES
+      ; IsSurfingPikachuInParty ; %ifdef PLAYER_STATE_LINKED CheckForceBikeOrSurf
+      ; wStatusFlags6 res DUNGEON_WARP ; wStatusFlags3 res NO_NPC_FACE_PLAYER
+      call UpdateSprites
+      ; wCurrentMapScriptFlags set CUR_MAP_LOADED_1|CUR_MAP_LOADED_2
+      mov byte [ebp+W_JOY_IGNORE], 0     ; fall into OverworldLoop
+  ```
+  Repoint `init.asm:157` + `title.asm:388` from `jmp EnterMap` to `jmp EnterMapBoot`.
+
+- **Tripwire (why it's safe-ish):** keep the DEBUG dump harnesses IMMEDIATELY after
+  `LoadMapData`, BEFORE the new resets. DEBUG builds dump-and-exit inside the harness, so the
+  resets never run under DEBUG → **all 3 FRAME.BIN baselines must stay byte-identical** = proof
+  the render/transition path is untouched. Resets run only in the real build.
+
+- **Step order + verification:**
+  1. Prereqs (constants + `wNumber` promote + 4 stubs): `make check` clean, zero behavior change.
+  2. Restructure: `make SKIP_TITLE=1` builds; re-capture 3 baselines → byte-identical to the
+     session sha256 manifest; then a LIVE smoke test (MCP/visual: boot + walk 4 dirs) because
+     the real build runs resets the baselines can't see.
+  3. A.4(b): MCP live warp (breakpoint EnterMap, `gb_read` status flags per warp, `dump_frame`).
+  - Baselines are scratchpad/session-ephemeral — RE-CAPTURE from HEAD at session start
+    (recipe: build-and-debug skill). WALK_NORTH valid since the east-pre-walk fix (commit 9ecae0dc).
+
+- **Open couplings / risks:** (1) `ClearVariablesOnEnterMap` at boot may zero state other init
+  code set — watch the live smoke; (2) player_state linkage gates `CheckForceBikeOrSurf`
+  (deferred OW-7.2); (3) `title.asm` is a known-broken bespoke impl — touching its EnterMap jump
+  may surface title bugs; (4) A.4(b) changes the working transition path — highest risk, own
+  session, MCP-verified.
+
 **TICKET OW-A.5: map-load faithfulness cluster** `[SWARM/Sonnet]` — DIVERGENT (overworld.asm)
 - `LoadMapHeader` (`home/overworld.asm:1798-1926`): **call `LoadWildData`** — it is a
   fully-ported routine (`wild_mons.asm`) with ZERO call sites, so wild encounters get
