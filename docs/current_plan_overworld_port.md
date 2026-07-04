@@ -226,8 +226,11 @@ their externs' home files are promoted (OW-7.2 / OW-A.3). Every worker diff root
 **Stage-1 follow-ups (deferred, tracked):**
 - **OW-1.8 `H_WARP_DESTINATION_MAP` placeholder** wrongly aliases 0xFF8B (hPreviousTileset);
   give it a distinct HRAM byte before player_state.asm links. (Inert while check-only.)
-- **OW-1.8 `SafariSteps`/`SafariBallText`** inlined text (dead code) violates the two-tier
-  text-is-data rule — move to a `gen_*` generator when `PrintSafariZoneSteps` is wired.
+- **OW-1.8 `SafariSteps`/`SafariBallText`** two-tier violation — **RESOLVED 2026-07-04**:
+  new `tools/gen_overworld_strings.py` → `assets/overworld_strings.inc` (byte-identical to
+  the prior inline), `%include`d by player_state.asm; wired into `make assets` + player_state.o.
+  This generator is the Tier-1 home for future overworld field-message strings (OW-4.x
+  Strength/Surf/boulder text).
 - **`IsPlayerStandingOnDoorTile` needs `global`** in overworld.asm (OW-A.3) — one of the two
   player_state link blockers; the other is `ForceBikeOrSurf` (promote player_gfx, OW-7.2).
 - OW-1.7 hSprite*Coord/wSavedSprite* placeholders → reconcile into gb_memmap.inc at promotion.

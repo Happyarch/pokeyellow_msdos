@@ -651,20 +651,9 @@ WarpTileIDLists:
     db 0xFF
 
 ; ---------------------------------------------------------------------------
-; TODO(root): Tier-1 data / two-tier rule note (project-conventions skill).
-; These two strings are pret ROM data (`db "…"@`, data/…): normally Tier-1 and
-; MUST be produced by a Python generator (tools/gen_*.py -> assets/*.inc), not
-; hand-encoded here. This ticket's hard rule restricts changes to ONLY this one
-; file (no new tools/gen_*.py or assets/*.inc), so — as a deliberate, flagged
-; exception — the bytes below are inlined. They were NOT hand-transcribed from
-; a charmap table: computed by running `gb_text.encode(...)` from
-; dos_port/tools/gb_text.py against the literal pret strings ("/500",
-; "BALL××" + a space), then terminator $50 appended, matching the
-; gen_menu_strings.py pattern. Promote to a gen_overworld_strings.py +
-; assets/*.inc entry when PrintSafariZoneSteps is actually wired in (dead code
-; today — see the routine's header comment).
+; SafariSteps / SafariBallText — Tier-1 text data (project-conventions: strings
+; are DATA, generated, never hand-encoded charmap bytes). Produced by
+; tools/gen_overworld_strings.py (gb_text.encode of the pret literals) into
+; assets/overworld_strings.inc, %include'd below. pret: engine/overworld/player_state.asm.
 ; ---------------------------------------------------------------------------
-SafariSteps:
-    db 0xF3, 0xFB, 0xF6, 0xF6, 0x50               ; "/500@"
-SafariBallText:
-    db 0x81, 0x80, 0x8B, 0x8B, 0xF1, 0xF1, 0x7F, 0x50  ; "BALL×× @"
+%include "assets/overworld_strings.inc"

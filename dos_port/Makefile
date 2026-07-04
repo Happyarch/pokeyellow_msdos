@@ -805,6 +805,9 @@ assets/menu_strings.inc: assets/gb_charmap.txt tools/gen_menu_strings.py tools/g
 assets/status_strings.inc: assets/gb_charmap.txt tools/gen_status_strings.py tools/gb_text.py
 	python3 tools/gen_status_strings.py
 
+assets/overworld_strings.inc: assets/gb_charmap.txt tools/gen_overworld_strings.py tools/gb_text.py
+	python3 tools/gen_overworld_strings.py
+
 # Battle message command streams (pret data/text + engine/battle wrappers, text_far
 # flattened). %included by the battle core engine. Generated from the read-only spec.
 assets/battle_text.inc: ../data/text/text_2.asm ../engine/battle/core.asm \
@@ -880,6 +883,9 @@ src/engine/menus/link_cups.o: assets/dex_entries.inc
 
 # Status screen %includes the generated status_strings.inc label block.
 src/engine/pokemon/status_screen.o: assets/status_strings.inc
+
+# player_state.asm (PrintSafariZoneSteps) %includes the generated Safari HUD strings.
+src/engine/overworld/player_state.o: assets/overworld_strings.inc
 
 # Pokémon base stats + IndexToPokedex (static data, generated from pret source).
 assets/base_stats.inc:
@@ -1012,7 +1018,7 @@ assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_
         assets/base_stats.inc assets/growth_rates.inc \
         assets/moves.inc assets/evos_moves.inc assets/monster_names.inc \
         assets/items.inc assets/gb_charmap.txt assets/menu_strings.inc \
-        assets/status_strings.inc \
+        assets/status_strings.inc assets/overworld_strings.inc \
         assets/type_matchups.inc assets/move_names.inc assets/field_moves.inc \
         assets/effect_categories.inc \
         assets/wild_data.inc assets/map_scripts.inc assets/battle_hud_2bpp.inc \
