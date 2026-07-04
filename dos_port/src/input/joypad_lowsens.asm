@@ -32,14 +32,12 @@
 ;     Referenced here only via memmap symbols, so this file assembles now and is
 ;     CHECK-clean; it becomes runtime-correct once M3.1's writers land.
 ;   * hFrameCounter must be decremented per frame in DelayFrame (sibling M2.1).
-;   * pret's JoypadLowSensitivity opens with `call Joypad` to refresh
-;     hJoyPressed/hJoyHeld from hardware. In the DOS port that refresh is done
-;     by joypad_update inside the DelayFrame pipeline, and every caller of
-;     JoypadLowSensitivity issues a DelayFrame per loop iteration, so the read
-;     state is already fresh — the explicit `call Joypad` is intentionally
-;     omitted (matches the port's existing model). If M3.1 later exports a
-;     cheap `Joypad` global, root may add `call Joypad` at the top for full
-;     faithfulness.
+;   * pret's JoypadLowSensitivity opens with `call Joypad`, which recomputes the
+;     newly-pressed EDGE at read time. The port's joypad_update runs that edge
+;     per-DelayFrame instead, which loses the edge across a caller's multi-frame
+;     dpad delay (see the routine body). This routine therefore recomputes the
+;     edge itself from the always-fresh H_JOY_HELD against a private snapshot
+;     (jls_prev) — the port equivalent of pret's `call Joypad`.
 ;
 ; Build: nasm -f coff -I include/ -o joypad_lowsens.o joypad_lowsens.asm
 
@@ -80,8 +78,26 @@ section .text
 ; Clobbers: AL, flags (mirrors pret, which only touches A/flags here).
 ; ---------------------------------------------------------------------------
 JoypadLowSensitivity:
-    ; call Joypad  — omitted; joypad state is refreshed by joypad_update in the
-    ;                DelayFrame pipeline (see header dependency note).
+    ; pret opens with `call Joypad`, which computes the newly-pressed EDGE at read
+    ; time against hJoyLast. The port instead computes that edge inside
+    ; joypad_update, which runs once per DelayFrame — but every JoypadLowSensitivity
+    ; caller (options, town map, pokedex, title) does read-then-N×DelayFrame, so a
+    ; press that lands on any but the last of those frames has its edge overwritten
+    ; to 0 before the loop's next top-of-iteration read. Symptom: "holding won't
+    ; even advance one", laggy / inconsistent taps. Fix (port equivalent of pret's
+    ; `call Joypad`): recompute the edge HERE against a JoypadLowSensitivity-private
+    ; snapshot updated ONLY on JoypadLowSensitivity calls — so it survives the
+    ; caller's DelayFrames. H_JOY_HELD is refreshed every frame by joypad_update and
+    ; is authoritative for the current held state.
+    push ebx
+    mov al, [ebp + H_JOY_HELD]      ; current held buttons (fresh each DelayFrame)
+    mov bl, [jls_prev]              ; JLS's own previous snapshot
+    mov [jls_prev], al              ; snapshot updated only here (pret: hJoyLast)
+    xor bl, al
+    and bl, al                      ; pressed = (prev ^ held) & held
+    mov [ebp + H_JOY_PRESSED], bl   ; edge that survives the caller's DelayFrames
+    pop ebx
+
     mov al, [ebp + H_JOY7]          ; ldh a, [hJoy7]   ; flag
     and al, al                      ; and a  — newly-pressed only, or held?
     mov al, [ebp + H_JOY_PRESSED]   ; ldh a, [hJoyPressed]  (mov keeps flags)
@@ -121,3 +137,12 @@ JoypadLowSensitivity:
     ; arm the ~1/12 second auto-repeat cadence
     mov byte [ebp + H_FRAME_COUNTER], 5     ; ld a, 5 / ldh [hFrameCounter], a
     ret
+
+; ---------------------------------------------------------------------------
+; JoypadLowSensitivity-private newly-pressed snapshot (pret: hJoyLast, but read
+; only by this routine so the caller's per-frame joypad_update can't consume the
+; edge between reads). Zeroed by the loader's BSS clear.
+; ---------------------------------------------------------------------------
+section .bss
+align 1
+jls_prev:   resb 1
