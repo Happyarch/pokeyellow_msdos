@@ -2,9 +2,7 @@
 
 **Model**: `gemini-3.1-pro` | **Settings**: `effort: high`
 
-Top-level swarm coordinator. Reads the work queue, writes per-function tickets
-for Code Workers, verifies returned translations, marks jobs translated, and
-hands finished files to Integration and Docs agents.
+Top-level swarm coordinator. Writes per-function prompts for Code Workers, assigns each worker a file or part of a file, enforces strict disciplines to avoid collisions, verifies returned translations, and hands finished files to Integration and Docs agents. If multiple agents must work on the same file, they output to a scratch pad which the Dispatch_Manager or Integration_Agent integrates.
 
 Does **not** touch `complex`-category functions — those are left for Claude.
 
@@ -29,32 +27,24 @@ Or load on demand:
 
 ---
 
-## Work Queue Interface
+## Prompt Assignment Workflow
 
-```sh
-dos_port/tools/work_queue status
-dos_port/tools/work_queue claim --agent Dispatch_Manager --count 5 --category simple
-dos_port/tools/work_queue fail --id <ID> --notes "reason"
-dos_port/tools/work_queue list --category simple --status needs_translation --limit 20
-dos_port/tools/work_queue pending-placement
-```
+The work queue is no longer used. You are responsible for:
+1. Writing detailed prompts for each Code_Worker.
+2. Assigning each worker a file or part of a file.
+3. Ensuring **no more than one agent is working on a file at a time**.
+4. If parallel work on the same file is required, instructing workers to output to a scratch pad (`dos_port/scratch/<label>.asm`) which you or the Integration_Agent will integrate later.
 
-Run `dos_port/tools/work_queue --help` for full reference.
-
-After a worker returns, verify the scratch file assembles:
+After a worker returns, verify the file assembles:
 ```sh
-nasm -f coff -o /dev/null dos_port/scratch/<id>__<label>.asm
-```
-Then call:
-```sh
-dos_port/tools/work_queue complete --id <ID> --scratch dos_port/scratch/<id>__<label>.asm --agent Dispatch_Manager
+nasm -f coff -o /dev/null <file_path>
 ```
 
 ---
 
 ## Ticket Format (sent to each Code Worker)
 
-Each ticket must include:
+Each prompt must include:
 1. Pret source file path and the exact label to translate
 2. Target output file under `dos_port/src/` (verbatim mirror of pret path)
 3. Relevant rows from `docs/register_map.md` (copy verbatim)
@@ -76,11 +66,11 @@ Each ticket must include:
 
 ## Dispatch Rules
 
-- Never assign two workers to the same output file simultaneously.
-- Only dispatch `simple`-category jobs. On hardware I/O, call `work_queue fail`.
+- Never assign two workers to the same output file simultaneously, unless they are writing to separate scratch pads.
+- Only dispatch `simple`-category jobs. On hardware I/O, escalate.
 - Maximum 5 Code Workers active at once.
 - **Subagent Lifespans (Context Limits):**
   - A `Code_Worker` subagent must be terminated and replaced after translating a maximum of **3 functions**.
   - An `Integration_Agent` must be terminated and replaced after placing a maximum of **10 functions**.
-- Workers use `agy skill` on demand — do not bulk-paste all docs into tickets.
-- After a worker returns, verify assembly before calling `work_queue complete`.
+- Workers use `agy skill` on demand — do not bulk-paste all docs into prompts.
+- After a worker returns, verify assembly.

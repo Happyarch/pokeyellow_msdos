@@ -16,14 +16,7 @@ placement. Does not translate or place code.
 
 ## Translation Log Entries
 
-For each function Integration Agent just placed, run:
-```sh
-dos_port/tools/work_queue translation-log-entry --id <ID>
-```
-
-This returns JSON with a ready-to-append `entry` field. Append it verbatim to
-`docs/translation_log.md`. If worker left notes blank, fill in what you can
-infer from the diff before committing.
+For each function the Integration Agent just placed, append a log entry to `docs/translation_log.md` detailing the changes. Use the Translation Notes Header from the worker's translation. If the worker left notes blank, fill in what you can infer from the diff before committing.
 
 ---
 

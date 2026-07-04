@@ -46,21 +46,20 @@ The `engine/` prefix is **never** dropped. `engine/math/` is **never** renamed t
 
 ---
 
-## Integration Checklist (per function)
+## Integration Checklist
 
-1. `dos_port/tools/work_queue pending-placement` — see what's ready.
-2. Read the manifest header in the scratch file for source origin.
+1. Check for assigned scratch pad files (`dos_port/scratch/*.asm`) that need integration.
+2. Read the translation notes header in the scratch file for source origin.
 3. Derive destination: `dos_port/src/` + pret source path (path-map rule above).
-4. Copy file to destination. Scratch remains until session end (gitignored).
-5. Add `%include` in the appropriate aggregator file.
+4. Integrate the translated code from the scratch pad into the destination file.
+5. Add `%include` in the appropriate aggregator file if creating a new file.
 6. `nasm -f coff -o /dev/null <aggregator>` — must pass.
 7. Verify build integrity by running the following sequence:
    - `make -C dos_port clean`
    - `make -C dos_port SKIP_TITLE=1`
    - `make -C dos_port clean`
    - `make -C dos_port`
-8. `dos_port/tools/work_queue place --id <ID> --output dos_port/src/<path>`
-9. Hand diff to `Docs_Commit_Agent`.
+8. Hand diff to `Docs_Commit_Agent`.
 
 ---
 
@@ -69,7 +68,6 @@ The `engine/` prefix is **never** dropped. `engine/math/` is **never** renamed t
 - **No live-graph wiring.** Do not edit any function reachable from
   `OverworldLoop`, `EnterMap`, `DelayFrame`, or their transitive callees to
   add calls to newly-placed code. Wiring is Claude Code only.
-- Do not touch `translated`-status files until `place` is called.
-- Do not modify wired files beyond adding `%include` to an aggregator.
+- Do not modify wired files beyond adding `%include` to an aggregator or integrating a scratch pad.
 - **DO NOT TOUCH THE MAKEFILE.** Under no circumstances should the agent edit `Makefile`. It may only run `make` commands to verify the build.
 - **DO NOT WRITE PYTHON SCRIPTS TO EDIT FILES.** You have tools for this.
