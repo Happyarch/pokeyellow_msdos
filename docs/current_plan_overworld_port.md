@@ -216,13 +216,25 @@ interactively with the user.
   - [ ] Verify: nasm check; full build; FRAME.BIN baseline byte-identical
 - Exit: pret→port cross-reference is label-complete for consolidated files.
 
-### Stage 1 — Pure-logic leaves `[~]` (SWARM wave 1 — all tickets independent)
+### Stage 1 — Pure-logic leaves `[x]` COMPLETE (2026-07-04, SWARM wave 1)
 
-Done so far (2026-07-04): OW-1.1, OW-1.2, OW-1.3, OW-1.4, OW-1.5, OW-1.6, OW-1.7, OW-1.9 (`[x]`).
-Remaining: 1.8 (player_state getters — coordinate-critical; projection confirmed below).
-NB: OW-1.6 + OW-1.7 are check-only (HOME_CHECK_SRCS) until pathfinding.asm/trainer_engine.asm
-are promoted (OW-7.2). OW-1.7's new hSpriteScreen*Coord/hSpriteMap*Coord HRAM + wSavedSprite*
-WRAM symbols are file-local placeholders — root reconciles into gb_memmap.inc at promotion.
+All 9 done: OW-1.1 … OW-1.9. `clear_variables`, `daycare_exp`, `is_player_just_outside_map`,
+`dungeon_warps`, `specific_script_flags`, `audio_stubs` link (GAME_SRCS); `npc_movement_2`,
+`trainer_sight` (in trainer_engine.asm), `player_state` are check-only (HOME_CHECK_SRCS) until
+their externs' home files are promoted (OW-7.2 / OW-A.3). Every worker diff root-reviewed vs pret.
+
+**Stage-1 follow-ups (deferred, tracked):**
+- **OW-1.8 `H_WARP_DESTINATION_MAP` placeholder** wrongly aliases 0xFF8B (hPreviousTileset);
+  give it a distinct HRAM byte before player_state.asm links. (Inert while check-only.)
+- **OW-1.8 `SafariSteps`/`SafariBallText`** inlined text (dead code) violates the two-tier
+  text-is-data rule — move to a `gen_*` generator when `PrintSafariZoneSteps` is wired.
+- **`IsPlayerStandingOnDoorTile` needs `global`** in overworld.asm (OW-A.3) — one of the two
+  player_state link blockers; the other is `ForceBikeOrSurf` (promote player_gfx, OW-7.2).
+- OW-1.7 hSprite*Coord/wSavedSprite* placeholders → reconcile into gb_memmap.inc at promotion.
+- **Pre-plan-port faithfulness audit** (user directive, see the standing rule above): the
+  reused pre-plan routines `ForceBikeOrSurf`, `IsPlayerStandingOnDoorTile`, warp_check's
+  `IsWarpTileInFrontOfPlayer`/`IsPlayerFacingEdgeOfMap`, and trainer_engine's M8.2 sight
+  routines must be graded bespoke-vs-faithful before their reuse is fully trusted.
 
 Common ticket boilerplate (applies to OW-1.1 … OW-1.8): translate per CLAUDE.md
 register map; `%include "dos_port/include/gb_memmap.inc"`; add missing WRAM/HRAM

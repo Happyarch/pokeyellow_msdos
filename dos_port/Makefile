@@ -707,7 +707,13 @@ HOME_CHECK_SRCS := \
     src/engine/overworld/ledges.asm \
     src/engine/overworld/pathfinding.asm \
     src/engine/overworld/trainer_engine.asm \
-    src/engine/overworld/npc_movement_2.asm
+    src/engine/overworld/npc_movement_2.asm \
+    src/engine/overworld/player_state.asm
+# player_state.asm (OW-1.8) is check-only: externs ForceBikeOrSurf (in check-only
+# player_gfx.asm) and IsPlayerStandingOnDoorTile (linked in overworld.asm but not yet
+# `global`). Promote to GAME_SRCS once both resolve (OW-A.3 adds the global; OW-7.2
+# promotes player_gfx). Also: its H_WARP_DESTINATION_MAP placeholder wrongly aliases
+# 0xFF8B (hPreviousTileset) — give it a distinct HRAM byte before linking.
 # npc_movement_2.asm (OW-1.6) is check-only: its tail-jump SetSpriteMovementBytesToFF
 # lives in pathfinding.asm (also check-only). Promote to GAME_SRCS with pathfinding (OW-7.2).
 # reload_sprites.asm promoted to GAME_SRCS (menus S7): naming_screen.asm calls
