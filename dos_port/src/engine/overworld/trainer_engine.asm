@@ -961,3 +961,203 @@ EmotionBubble:
 ; VRAM target for the emotion bubble tiles (vChars1 tile $78).
 ; TODO(M8.2 follow-up): confirm the port's vChars1 base + tile-$78 byte offset symbol.
 GB_VCHARS1_TILE78 equ 0x8000 + 0x780   ; vChars1($8000)? tile $78*16 — VERIFY vs port VRAM map
+
+; ============================================================================
+; trainer_sight accessors (pret: engine/overworld/trainer_sight.asm)
+; ============================================================================
+; OW-1.7. The sight-line logic itself (TrainerEngage, CheckSpriteCanSeePlayer,
+; CheckPlayerIsInFrontOfSprite, TrainerWalkUpToPlayer, ReadTrainerScreenPosition)
+; is already ported above (M8.2). This section adds only the 5 pure position
+; accessors: _GetSpritePosition1/2, _SetSpritePosition1/2, GetSpriteDataPointer.
+; None pre-existed in this file before this section.
+;
+; Register map: A->AL, HL->ESI, DE->EDX (asm-translation skill). Every pret body
+; here is straight-line loads/stores ending in `ret` — no branch reads a flag
+; out of any of these, so no ZF/CF preservation concern applies.
+;
+; New symbols added here (none were already available via this file's includes):
+;
+;   WRAM (confident — derived the same way this file's existing wSpriteIndex
+;   anchor was: assembled a truncated copy of ram/wram.asm (through the end of
+;   its "WRAM" SECTION, i.e. through pret line 1894) with rgbasm/rgblink and
+;   read the linked addresses. That relink reproduced wSpriteIndex at exactly
+;   0xD1FF = 0xCF13 + 0x2EC — i.e. the same "clean = link − 0x2EC" correction
+;   documented in m1_3_pending_symbols.inc for this working tree's over-budget
+;   WRAM link. Applying that identical correction to the 3 sibling bytes
+;   immediately follow wSavedSpriteScreenY at pret ram/wram.asm:1837-1840
+;   (all plain `db`, no intervening UNION) gives:
+;     wSavedSpriteScreenY  = 0xD12F  (pret ram/wram.asm:1837)
+;     wSavedSpriteScreenX  = 0xD130  (pret ram/wram.asm:1838)
+;     wSavedSpriteMapY     = 0xD131  (pret ram/wram.asm:1839)
+;     wSavedSpriteMapX     = 0xD132  (pret ram/wram.asm:1840)
+;   No collision with gb_memmap.inc or m8_2/m1_3_pending_symbols.inc (checked).
+;
+;   HRAM (new port allocation). Pret's hSpriteScreenYCoord/XCoord/MapYCoord/
+;   MapXCoord union (ram/hram.asm:367-371) sits at a pret address the port does
+;   NOT reuse — the port already remaps this exact HRAM neighborhood for other
+;   symbols (hTextID/hSpriteIndex live at the port's own 0xFF8C, not pret's
+;   0xFF82; see m1_3_pending_symbols.inc's "port REMAPS HRAM" note). So these 4
+;   bytes are a fresh port-private scratch allocation (pret's original union is
+;   likewise pure scratch — reused by unrelated systems between calls — so a
+;   new home is behaviorally equivalent, just not byte-address-identical).
+;   0xFF82-0xFF85 are the first 4 contiguous bytes free of any claim across
+;   gb_memmap.inc / m8_2_pending_symbols.inc / m1_3_pending_symbols.inc
+;   (verified by grep across dos_port/include and dos_port/src):
+;     hSpriteScreenYCoord = 0xFF82
+;     hSpriteScreenXCoord = 0xFF83
+;     hSpriteMapYCoord    = 0xFF84
+;     hSpriteMapXCoord    = 0xFF85
+;   TODO(root): fold into gb_memmap.inc when the canonical HRAM map lands;
+;   re-verify no collision once a full faithful HRAM re-layout exists.
+; ----------------------------------------------------------------------------
+%ifndef wSavedSpriteScreenY
+wSavedSpriteScreenY equ 0xD12F
+%endif
+%ifndef wSavedSpriteScreenX
+wSavedSpriteScreenX equ 0xD130
+%endif
+%ifndef wSavedSpriteMapY
+wSavedSpriteMapY    equ 0xD131
+%endif
+%ifndef wSavedSpriteMapX
+wSavedSpriteMapX    equ 0xD132
+%endif
+%ifndef hSpriteScreenYCoord
+hSpriteScreenYCoord equ 0xFF82
+%endif
+%ifndef hSpriteScreenXCoord
+hSpriteScreenXCoord equ 0xFF83
+%endif
+%ifndef hSpriteMapYCoord
+hSpriteMapYCoord    equ 0xFF84
+%endif
+%ifndef hSpriteMapXCoord
+hSpriteMapXCoord    equ 0xFF85
+%endif
+
+; Delta to hop from array1's XPIXELS[slot] to array2's MAPY[slot] (same slot).
+; pret: `ld de, wSpritePlayerStateData2MapY - wSpritePlayerStateData1XPixels`
+; — a 16-bit HL-wraparound trick specific to SM83 (wSpriteStateData2 is exactly
+; wSpriteStateData1 + 0x100, page-aligned; see pret ram/wram.asm:139-142 ASSERTs).
+; The port computes the identical byte delta as a plain positive x86 add
+; (0x100 + SPRITESTATEDATA2_MAPY - SPRITESTATEDATA1_XPIXELS = 0xFE); no
+; wraparound needed since ESI holds the full linear GB offset, not a 16-bit HL.
+; PROJ: this replaces pret's two-instruction "ld de,const / add hl,de" with a
+; single "add esi,const" (flags-neutral either way; nothing here branches on
+; the result) — a 386+ simplification, not a behavior change.
+SPRITE_XPIXELS_TO_MAPY_DELTA equ (W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPY) - (W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_XPIXELS)
+
+global _GetSpritePosition1
+global _GetSpritePosition2
+global _SetSpritePosition1
+global _SetSpritePosition2
+global GetSpriteDataPointer
+
+; ----------------------------------------------------------------------------
+; GetSpriteDataPointer — form a pointer into a sprite's wSpriteStateData1/2
+; entry from a caller-supplied member offset + [hSpriteIndex] (raw slot 0-15,
+; set by the caller just before this call — NOT pre-shifted).
+; pret: engine/overworld/trainer_sight.asm:GetSpriteDataPointer
+; In:  ESI = base (e.g. W_SPRITE_STATE_DATA_1), EDX = member offset within entry
+;      [ebp+hSpriteIndex] = raw slot (0-15)
+; Out: ESI = base + member + slot*0x10
+; ----------------------------------------------------------------------------
+GetSpriteDataPointer:
+    push edx                        ; pret: push de
+    add esi, edx                    ; pret: add hl, de   (hl = base + member)
+    mov al, [ebp + hSpriteIndex]    ; pret: ldh a, [hSpriteIndex]
+    shl al, 4                       ; pret: swap a       (slot<16 => *0x10)
+    movzx edx, al                   ; pret: ld d,0 / ld e,a
+    add esi, edx                    ; pret: add hl, de   (hl = base+member+slot*0x10)
+    pop edx                         ; pret: pop de
+    ret
+
+; ----------------------------------------------------------------------------
+; _GetSpritePosition1 — read [wSpriteIndex]'s screen Y/X + map Y/X into the
+; hSprite*Coord HRAM scratch bytes.
+; pret: engine/overworld/trainer_sight.asm:_GetSpritePosition1
+; ----------------------------------------------------------------------------
+_GetSpritePosition1:
+    mov al, [ebp + wSpriteIndex]
+    mov [ebp + hSpriteIndex], al
+    mov esi, W_SPRITE_STATE_DATA_1
+    mov edx, SPRITESTATEDATA1_YPIXELS
+    call GetSpriteDataPointer         ; ESI -> array1[slot].YPIXELS
+    mov al, [ebp + esi]               ; SPRITESTATEDATA1_YPIXELS
+    mov [ebp + hSpriteScreenYCoord], al
+    mov al, [ebp + esi + 2]           ; SPRITESTATEDATA1_XPIXELS (YPIXELS+2)
+    mov [ebp + hSpriteScreenXCoord], al
+    add esi, 2                        ; ESI -> array1[slot].XPIXELS (pret's hl there)
+    add esi, SPRITE_XPIXELS_TO_MAPY_DELTA  ; ESI -> array2[slot].MAPY (same slot)
+    mov al, [ebp + esi]               ; SPRITESTATEDATA2_MAPY
+    mov [ebp + hSpriteMapYCoord], al
+    mov al, [ebp + esi + 1]           ; SPRITESTATEDATA2_MAPX (MAPY+1)
+    mov [ebp + hSpriteMapXCoord], al
+    ret
+
+; ----------------------------------------------------------------------------
+; _GetSpritePosition2 — same as _GetSpritePosition1 but into the wSavedSprite*
+; WRAM scratch (stash a position, e.g. across a scripted-movement detour).
+; pret: engine/overworld/trainer_sight.asm:_GetSpritePosition2
+; ----------------------------------------------------------------------------
+_GetSpritePosition2:
+    mov al, [ebp + wSpriteIndex]
+    mov [ebp + hSpriteIndex], al
+    mov esi, W_SPRITE_STATE_DATA_1
+    mov edx, SPRITESTATEDATA1_YPIXELS
+    call GetSpriteDataPointer
+    mov al, [ebp + esi]               ; SPRITESTATEDATA1_YPIXELS
+    mov [ebp + wSavedSpriteScreenY], al
+    mov al, [ebp + esi + 2]           ; SPRITESTATEDATA1_XPIXELS
+    mov [ebp + wSavedSpriteScreenX], al
+    add esi, 2
+    add esi, SPRITE_XPIXELS_TO_MAPY_DELTA
+    mov al, [ebp + esi]               ; SPRITESTATEDATA2_MAPY
+    mov [ebp + wSavedSpriteMapY], al
+    mov al, [ebp + esi + 1]           ; SPRITESTATEDATA2_MAPX
+    mov [ebp + wSavedSpriteMapX], al
+    ret
+
+; ----------------------------------------------------------------------------
+; _SetSpritePosition1 — write hSprite*Coord back into [wSpriteIndex]'s entry.
+; pret: engine/overworld/trainer_sight.asm:_SetSpritePosition1
+; ----------------------------------------------------------------------------
+_SetSpritePosition1:
+    mov al, [ebp + wSpriteIndex]
+    mov [ebp + hSpriteIndex], al
+    mov esi, W_SPRITE_STATE_DATA_1
+    mov edx, SPRITESTATEDATA1_YPIXELS
+    call GetSpriteDataPointer
+    mov al, [ebp + hSpriteScreenYCoord]
+    mov [ebp + esi], al               ; SPRITESTATEDATA1_YPIXELS
+    mov al, [ebp + hSpriteScreenXCoord]
+    mov [ebp + esi + 2], al           ; SPRITESTATEDATA1_XPIXELS
+    add esi, 2
+    add esi, SPRITE_XPIXELS_TO_MAPY_DELTA
+    mov al, [ebp + hSpriteMapYCoord]
+    mov [ebp + esi], al               ; SPRITESTATEDATA2_MAPY
+    mov al, [ebp + hSpriteMapXCoord]
+    mov [ebp + esi + 1], al           ; SPRITESTATEDATA2_MAPX
+    ret
+
+; ----------------------------------------------------------------------------
+; _SetSpritePosition2 — write wSavedSprite* back into [wSpriteIndex]'s entry.
+; pret: engine/overworld/trainer_sight.asm:_SetSpritePosition2
+; ----------------------------------------------------------------------------
+_SetSpritePosition2:
+    mov al, [ebp + wSpriteIndex]
+    mov [ebp + hSpriteIndex], al
+    mov esi, W_SPRITE_STATE_DATA_1
+    mov edx, SPRITESTATEDATA1_YPIXELS
+    call GetSpriteDataPointer
+    mov al, [ebp + wSavedSpriteScreenY]
+    mov [ebp + esi], al               ; SPRITESTATEDATA1_YPIXELS
+    mov al, [ebp + wSavedSpriteScreenX]
+    mov [ebp + esi + 2], al           ; SPRITESTATEDATA1_XPIXELS
+    add esi, 2
+    add esi, SPRITE_XPIXELS_TO_MAPY_DELTA
+    mov al, [ebp + wSavedSpriteMapY]
+    mov [ebp + esi], al               ; SPRITESTATEDATA2_MAPY
+    mov al, [ebp + wSavedSpriteMapX]
+    mov [ebp + esi + 1], al           ; SPRITESTATEDATA2_MAPX
+    ret

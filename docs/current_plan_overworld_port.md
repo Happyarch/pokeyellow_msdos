@@ -86,6 +86,28 @@ Line-level, routine-by-routine; sanctioned `; PROJ`/`TODO-HW` divergences exclud
 | overworld.asm (advance_player_sprite) | REORGANIZED (sanctioned) | none | label pass only (OW-A.3) |
 | ledges, doors, wild_mons, hidden_events (port), warp_check | FAITHFUL | none/small | label pass only (OW-A.3) |
 
+### Standing rule (2026-07-04, user directive): audit EVERY pre-plan overworld port
+
+**Any overworld-engine routine ported *before* this plan is suspect until graded.**
+"Already ported weeks ago" ≠ faithful — the port has a documented habit of bespoke/
+scaffold implementations that drop pret's control flow (confirmed: `tilesets`
+`LoadTilesetHeader` dropped its whole tail → OW-A.1; `map_sprites`/`tilesets` graded
+SCAFFOLD above; `GetTileInFrontOfPlayer` is a bespoke *subset* of pret's
+`_GetTileAndCoordsInFrontOfPlayer`). So:
+
+1. **Reuse-time check.** When any new ticket reuses/cross-refs a pre-plan routine,
+   the routine's *contract AND control flow* is re-verified against pret before the
+   reuse is trusted (not just its numbers). Bespoke-but-equivalent is fine if it
+   preserves pret flow; bespoke-and-divergent gets a rectification ticket.
+2. **Systematic sweep.** The 2026-07-01 grades above were a read-only snapshot; they
+   are re-confirmed by a per-file faithfulness audit (read-only audit agents, one per
+   consolidated pre-plan file: `overworld.asm`, `movement.asm`, `trainer_engine.asm`,
+   `ledges.asm`, `warp_check.asm`, `wild_encounter_check.asm`, `map_sprites.asm`,
+   `player_gfx.asm`, `pikachu.asm`, `reload_sprites.asm`, `overworld_text.asm`),
+   grading each routine FAITHFUL / REORGANIZED-equivalent / SCAFFOLD / DIVERGENT vs
+   pret. SCAFFOLD/DIVERGENT findings become rectification tickets folded into Stage A.
+   This is Stage 8's line-level audit, pulled forward and made active.
+
 ---
 
 ## Cross-cutting defect this reimpl must resolve — VRAM tile-slot management (2026-07-04)
@@ -196,9 +218,11 @@ interactively with the user.
 
 ### Stage 1 — Pure-logic leaves `[~]` (SWARM wave 1 — all tickets independent)
 
-Done so far (2026-07-04): OW-1.1, OW-1.2, OW-1.3, OW-1.4, OW-1.5, OW-1.6, OW-1.9 (`[x]`).
-Remaining: 1.7 (trainer_sight accessors → trainer_engine.asm), 1.8 (player_state getters).
-NB: OW-1.6 is check-only (HOME_CHECK_SRCS) until pathfinding.asm is promoted (OW-7.2).
+Done so far (2026-07-04): OW-1.1, OW-1.2, OW-1.3, OW-1.4, OW-1.5, OW-1.6, OW-1.7, OW-1.9 (`[x]`).
+Remaining: 1.8 (player_state getters — coordinate-critical; projection confirmed below).
+NB: OW-1.6 + OW-1.7 are check-only (HOME_CHECK_SRCS) until pathfinding.asm/trainer_engine.asm
+are promoted (OW-7.2). OW-1.7's new hSpriteScreen*Coord/hSpriteMap*Coord HRAM + wSavedSprite*
+WRAM symbols are file-local placeholders — root reconciles into gb_memmap.inc at promotion.
 
 Common ticket boilerplate (applies to OW-1.1 … OW-1.8): translate per CLAUDE.md
 register map; `%include "dos_port/include/gb_memmap.inc"`; add missing WRAM/HRAM
