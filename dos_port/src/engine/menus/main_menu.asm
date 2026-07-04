@@ -151,7 +151,7 @@ extern LoadFontTilePatterns     ; load_font.asm
 extern UpdateSprites            ; movement.asm
 extern GBPalWhiteOutWithDelay3  ; fade.asm
 extern ResetPlayerSpriteData    ; reset_player_sprite.asm
-extern EnterMap                 ; overworld.asm
+extern EnterMapBoot             ; overworld.asm — one-time overworld boot glue → EnterMap
 extern DsvFileExists            ; save/dsv_io.asm — CF=1/AL=1 if POKEMON.DSV present
 extern DisplayOptionMenu_       ; options.asm (package D)
 
@@ -380,7 +380,10 @@ SpecialEnterMap:
     mov al, [ebp + wEnteringCableClub]
     test al, al                                 ; and a
     jnz .ret                                    ; ret nz
-    jmp EnterMap
+    ; pret: jp EnterMap. Port routes through EnterMapBoot so the one-time overworld
+    ; asset/player-sprite/text-engine glue (which the port keeps in EnterMapBoot, not
+    ; pret's new-game init) runs before this first overworld entry. OW-A.4.
+    jmp EnterMapBoot
 .ret:
     ret
 

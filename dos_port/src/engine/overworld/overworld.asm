@@ -55,6 +55,16 @@ extern LoadTextBoxTilePatterns
 extern GBPalNormal
 extern g_player_marker_on
 extern UpdateSprites
+; EnterMap reset-ladder leaves (OW-A.4): ClearVariablesOnEnterMap (clear_variables.asm,
+; linked); the rest are ret-stubs in overworld_stubs.asm until their subsystems land.
+extern ClearVariablesOnEnterMap        ; clear_variables.asm
+extern ResetUsingStrengthOutOfBattleBit ; overworld_stubs.asm (TODO OW-A.4(b)/faithful)
+extern MapEntryAfterBattle             ; overworld_stubs.asm (TODO OW-A.4(b)/faithful)
+extern EnterMapAnim                    ; overworld_stubs.asm (TODO faithful — player_animations)
+extern IsSurfingPikachuInParty         ; overworld_stubs.asm (TODO faithful — pikachu follower)
+%ifdef PLAYER_STATE_LINKED
+extern CheckForceBikeOrSurf            ; player_state.asm (check-only until OW-7.2)
+%endif
 extern ClearSprites
 extern g_tilecache_dirty
 extern hide_window           ; src/ppu/ppu.asm — empty the window list (count=0)
@@ -156,6 +166,7 @@ extern tick_count
 %endif
 
 global EnterMap
+global EnterMapBoot
 global ResetMapVariables
 global LoadScreenRelatedData
 global LoadTilesetTilePatternData
@@ -269,14 +280,22 @@ DefaultRivalName:
 
 section .text
 
+; PAD_BUTTONS | PAD_CTRL_PAD = every button ($0F | $F0 = $FF); pret's EnterMap
+; writes this to wJoyIgnore so no real input is honored during the map load.
+; (hardware.inc constants; not defined in overworld.asm's include chain, so declared
+; locally here — same idiom as ledges.asm's PAD_ALL.)
+PAD_BUTTONS  equ 0x0F   ; A|B|SELECT|START (button byte low nibble)
+PAD_CTRL_PAD equ 0xF0   ; RIGHT|LEFT|UP|DOWN (D-pad high nibble)
+
 ; ---------------------------------------------------------------------------
-; EnterMap — Phase 2 scaffold entry point.
-; Called from title.asm after A/Start pressed. Sets up Pallet Town variables,
-; copies assets to ROM window, then runs LoadMapData + OverworldLoop.
-;
-; Pret ref: home/overworld.asm:EnterMap (simplified; no fly/warp logic yet)
+; EnterMapBoot — port-only ONE-TIME overworld boot glue (runs once per game boot).
+; Both boot callers (init.asm SKIP_TITLE, title.asm, main_menu.asm SpecialEnterMap)
+; jmp here; it loads the port's embedded overworld assets / player sprite / name
+; defaults / text engine / toggleable-object flags that pret handles elsewhere in
+; its new-game init, then falls into the faithful EnterMap. It must NOT be re-entered
+; on warp/battle-return (those go through EnterMap directly).
 ; ---------------------------------------------------------------------------
-EnterMap:
+EnterMapBoot:
     call LoadOverworldAssets
     call SetupPlayerSprite
 %ifdef SKIP_TITLE
@@ -296,6 +315,23 @@ EnterMap:
     ; any CHAR_DONE-terminated dialog ran off into a bogus TX_BOX → page fault.
     call text_engine_init
     call InitToggleableObjectFlags     ; seed global event/visibility flags to defaults
+    ; fall into EnterMap
+
+; ---------------------------------------------------------------------------
+; EnterMap — faithful map (re-)entry. Pret ref: home/overworld.asm:1-41 (EnterMap).
+; Sets wJoyIgnore, loads the map, clears per-map scratch, then runs the fly/warp/
+; battle-return reset ladder before falling into OverworldLoop. Re-entered on every
+; warp/battle-return (OW-A.4(b) routes those paths back here).
+;
+; Tripwire (OW-A.4): the DEBUG dump harnesses stay IMMEDIATELY after LoadMapData,
+; BEFORE the resets. Every FRAME.BIN-baseline DEBUG build (DEBUG_BASELINE/
+; DEBUG_TRANSITION/DEBUG_WALK_NORTH) dump-and-exits inside its harness, so the resets
+; below NEVER run under those builds — the 3 baselines must stay byte-identical,
+; proving the render/transition path is untouched. Resets run only in the real build.
+; ---------------------------------------------------------------------------
+EnterMap:
+    ; ld a, PAD_BUTTONS | PAD_CTRL_PAD / ld [wJoyIgnore], a
+    mov byte [ebp + W_JOY_IGNORE], PAD_BUTTONS | PAD_CTRL_PAD
     call LoadMapData
 %ifdef DEBUG_DUMP
     call DebugDumpMemory     ; dump GB memory to DUMP.BIN, then exit (debug only)
@@ -501,6 +537,73 @@ EnterMap:
     mov dword [ebp + 0xD1EC], 0xFFFFFFFF
     mov dword [ebp + 0xD1F0], 0
 %endif
+
+    ; --- faithful EnterMap reset ladder (pret home/overworld.asm:6-41) ----------
+    ; Placed AFTER the DEBUG harnesses (tripwire): baseline DEBUG builds dump-and-exit
+    ; before reaching here, so this only runs in the real build (and live-DEBUG builds
+    ; that fall through, e.g. DEBUG_WALKSPEED / DEBUG_BAGMENU_LIVE).
+
+    ; farcall ClearVariablesOnEnterMap
+    call ClearVariablesOnEnterMap
+
+    ; ld hl, wStatusFlags2 / bit BIT_WILD_ENCOUNTER_COOLDOWN, [hl]
+    ; jr z, .skip / ld a, 3 / ld [wNumberOfNoRandomBattleStepsLeft], a
+    test byte [ebp + W_STATUS_FLAGS_2], (1 << BIT_WILD_ENCOUNTER_COOLDOWN)
+    jz .skipGivingThreeStepsOfNoRandomBattles
+    mov byte [ebp + wNumberOfNoRandomBattleStepsLeft], 3   ; minimum steps between battles
+.skipGivingThreeStepsOfNoRandomBattles:
+
+    ; ld hl, wStatusFlags4 / bit BIT_BATTLE_OVER_OR_BLACKOUT, [hl]
+    ; res BIT_BATTLE_OVER_OR_BLACKOUT, [hl]
+    ; call z, ResetUsingStrengthOutOfBattleBit / call nz, MapEntryAfterBattle
+    ; pret tests the bit, then `res`es it before the two conditional calls; in x86 the
+    ; `res` (and [mem]) would clobber the ZF the calls read, so capture the tested bit
+    ; into CL first, then res, then branch on CL.
+    test byte [ebp + W_STATUS_FLAGS_4], (1 << BIT_BATTLE_OVER_OR_BLACKOUT)
+    setnz cl                                               ; cl=1 if returning from a battle
+    and byte [ebp + W_STATUS_FLAGS_4], ~(1 << BIT_BATTLE_OVER_OR_BLACKOUT)
+    test cl, cl
+    jnz .mapEntryAfterBattle
+    call ResetUsingStrengthOutOfBattleBit                  ; z: normal (non-battle) entry
+    jmp .afterBattleReturnCheck
+.mapEntryAfterBattle:
+    call MapEntryAfterBattle                               ; nz: post-battle re-entry
+.afterBattleReturnCheck:
+
+    ; ld hl, wStatusFlags6 / ld a, [hl] / and (1<<FLY_WARP)|(1<<DUNGEON_WARP)
+    ; jr z, .didNot... / farcall EnterMapAnim / call UpdateSprites
+    ; res FLY_WARP,[wStatusFlags6] / res NO_BATTLES,[wStatusFlags4]
+    test byte [ebp + W_STATUS_FLAGS_6], (1 << BIT_FLY_WARP) | (1 << BIT_DUNGEON_WARP)
+    jz .didNotEnterUsingFlyWarpOrDungeonWarp
+    call EnterMapAnim
+    call UpdateSprites
+    and byte [ebp + W_STATUS_FLAGS_6], ~(1 << BIT_FLY_WARP)
+    and byte [ebp + W_STATUS_FLAGS_4], ~(1 << BIT_NO_BATTLES)
+.didNotEnterUsingFlyWarpOrDungeonWarp:
+
+    ; call IsSurfingPikachuInParty
+    call IsSurfingPikachuInParty
+    ; farcall CheckForceBikeOrSurf — GATED: player_state.asm is check-only (OW-1.8), so
+    ; a live call would be an unresolved extern. Un-gate at OW-7.2 player_state promotion
+    ; (same idiom as WILD_ENCOUNTERS_LIVE / NPC_MOVEMENT_SCRIPTS_LINKED).
+%ifdef PLAYER_STATE_LINKED
+    call CheckForceBikeOrSurf ; handle SF-island currents / forced cycling-road bike
+%endif
+
+    ; ld hl, wStatusFlags6 / bit BIT_DUNGEON_WARP,[hl] / res BIT_DUNGEON_WARP,[hl]
+    ; (pret's bit test result is unused here — just clear the bit)
+    and byte [ebp + W_STATUS_FLAGS_6], ~(1 << BIT_DUNGEON_WARP)
+    ; ld hl, wStatusFlags3 / res BIT_NO_NPC_FACE_PLAYER, [hl]
+    and byte [ebp + W_STATUS_FLAGS_3], ~(1 << BIT_NO_NPC_FACE_PLAYER)
+
+    ; call UpdateSprites
+    call UpdateSprites
+
+    ; ld hl, wCurrentMapScriptFlags / set CUR_MAP_LOADED_1,[hl] / set CUR_MAP_LOADED_2,[hl]
+    or byte [ebp + W_CURRENT_MAP_SCRIPT_FLAGS], (1 << BIT_CUR_MAP_LOADED_1) | (1 << BIT_CUR_MAP_LOADED_2)
+
+    ; xor a / ld [wJoyIgnore], a
+    mov byte [ebp + W_JOY_IGNORE], 0
     ; fall through to OverworldLoop
 
 ; ---------------------------------------------------------------------------

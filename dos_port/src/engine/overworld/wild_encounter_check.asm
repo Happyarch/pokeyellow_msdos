@@ -60,14 +60,13 @@ bits 32
 ; Symbols missing from gb_memmap.inc / gb_constants.inc (see SUMMARY "missing
 ; symbols"). Defined locally here because those shared files are outside this
 ; member's lane. Addresses derived from W_IGNORE_INPUT_COUNTER = 0xD139
-; (pret wIgnoreInputCounter, ram/wram.asm:1848); wStepCounter and
-; wNumberOfNoRandomBattleStepsLeft are the next two db's (ram/wram.asm:1851,1854).
-; Bit values from constants/ram_constants.asm:87,95,106. NOTE: NASM %ifndef does
-; NOT detect `equ` labels, so these cannot be %ifndef-guarded against a future
-; memmap definition — at integration, add them to gb_memmap.inc/gb_constants.inc
-; and DELETE these local defs (do not keep both, or NASM redefinition-errors).
+; (pret wIgnoreInputCounter, ram/wram.asm:1848); wStepCounter is the next db
+; (ram/wram.asm:1851). Bit values from constants/ram_constants.asm:87,95,106.
+; NOTE: NASM permits an `equ` redefinition to the *same* value, so these locals
+; coexist with any equal-valued gb_memmap.inc definition; at integration, promote
+; them and DELETE the local (a *differing* value would redefinition-error).
+; wNumberOfNoRandomBattleStepsLeft promoted to gb_memmap.inc (0xD13B) — OW-A.4.
 wStepCounter                    equ 0xD13A
-wNumberOfNoRandomBattleStepsLeft equ 0xD13B
 BIT_WILD_ENCOUNTER_COOLDOWN     equ 0        ; wStatusFlags2 bit 0
 BIT_ON_DUNGEON_WARP             equ 4        ; wStatusFlags3 bit 4
 BIT_NO_BATTLES                  equ 4        ; wStatusFlags4 bit 4

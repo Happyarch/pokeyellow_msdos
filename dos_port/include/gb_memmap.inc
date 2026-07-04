@@ -1005,6 +1005,21 @@ W_STATUS_FLAGS_6             equ 0xD731 ; wStatusFlags6
 W_STATUS_FLAGS_7             equ 0xD732 ; wStatusFlags7
 W_ELITE4_FLAGS               equ 0xD733 ; wElite4Flags
 
+; wStatusFlags bit indices (constants/ram_constants.asm) — consumed by EnterMap (OW-A.4).
+; Some of these are ALSO defined (same value) in gb_constants.inc / m1_3 / m8_2 pending-
+; symbol files; NASM permits an `equ` redefinition to the identical value, so a file
+; including both is fine. Duplicated here so overworld.asm (which includes only
+; gb_memmap.inc + gb_macros.inc) sees them. Fold the pending-symbol copies in as those
+; lanes integrate.
+BIT_WILD_ENCOUNTER_COOLDOWN  equ 0 ; wStatusFlags2 bit 0 — grants 3 no-battle steps (dup: gb_constants.inc)
+BIT_NO_NPC_FACE_PLAYER       equ 5 ; wStatusFlags3 bit 5 — suppress NPC-face-player on this entry
+BIT_NO_BATTLES               equ 4 ; wStatusFlags4 bit 4 — suppress wild battles
+BIT_BATTLE_OVER_OR_BLACKOUT  equ 5 ; wStatusFlags4 bit 5 — set on battle/blackout return
+BIT_FLY_WARP                 equ 3 ; wStatusFlags6 bit 3 — entered via Fly warp (dup: m1_3_pending_symbols.inc)
+BIT_DUNGEON_WARP             equ 4 ; wStatusFlags6 bit 4 — entered via dungeon warp
+BIT_CUR_MAP_LOADED_1         equ 5 ; wCurrentMapScriptFlags bit 5 (dup: m8_2_pending_symbols.inc)
+BIT_CUR_MAP_LOADED_2         equ 6 ; wCurrentMapScriptFlags bit 6 (dup: m8_2_pending_symbols.inc)
+
 ; Screen-area size constant (used by save/restore functions).
 SCREEN_AREA              equ SCREEN_TILES_W * SCREEN_TILES_H  ; 40 * 25 = 1000
 
@@ -1418,6 +1433,7 @@ wEnemyMonNicks                equ 0xD9ED ; enemy party nicknames
 wWhichTrade                   equ 0xCD3D ; (union w/ wDayCareStartLevel scratch region)
 wStandingOnWarpPadOrHole      equ 0xCD5B ; end of the FillMemory clear range from wWhichTrade
 wStepCounter                  equ 0xD13A
+wNumberOfNoRandomBattleStepsLeft equ 0xD13B ; EnterMap grants 3 on WILD_ENCOUNTER_COOLDOWN (promoted from wild_encounter_check.asm, OW-A.4)
 wUnusedMapVariable            equ 0xD5A2
 wCardKeyDoorY                 equ 0xD73E
 wCardKeyDoorX                 equ 0xD73F ; = wCardKeyDoorY + 1

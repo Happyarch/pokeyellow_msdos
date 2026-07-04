@@ -40,7 +40,7 @@ extern ClearSprites
 extern PrepareTitleScreen
 extern g_window_count        ; src/ppu/ppu.asm — unified window descriptor list count
 %ifdef SKIP_TITLE
-extern EnterMap
+extern EnterMapBoot          ; overworld.asm — one-time overworld boot glue → EnterMap
 extern OakSpeech             ; main_menu_stubs.asm — new-game data init (InitPlayerData2)
 %endif
 
@@ -154,7 +154,7 @@ Init:
     ; before the overworld — otherwise every list scan runs off a garbage,
     ; DPMI-uninitialised inventory (docs/glitch_safety.md).
     call OakSpeech
-    jmp EnterMap             ; go straight to overworld
+    jmp EnterMapBoot         ; go straight to overworld (boot glue → faithful EnterMap)
 %else
     jmp PrepareTitleScreen   ; tail call — runs title screen, never returns normally
 %endif

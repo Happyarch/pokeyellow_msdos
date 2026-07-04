@@ -240,6 +240,26 @@ immediately, commit `dfb4de24`): early-bringup commit `fec088bd` had short-circu
 root pret tree.
 
 **TICKET OW-A.4: EnterMap re-entry architecture** `[SOLO — judgment-heavy]` — SCAFFOLD
+- **A.4(a) DONE (2026-07-04):** faithful `EnterMap` body landed + boot restructured.
+  `overworld.asm` now splits into `EnterMapBoot` (port-only one-time asset/sprite/name/
+  text glue) → falls into faithful `EnterMap::` (line-for-line pret `home/overworld.asm:1-41`
+  reset ladder: wJoyIgnore, LoadMapData, ClearVariablesOnEnterMap, wild-cooldown 3-step
+  grant, battle-over/blackout split, fly/dungeon-warp anim block, surf/bike, dungeon-warp &
+  NPC-face clears, UpdateSprites, CUR_MAP_LOADED_1/2, clear wJoyIgnore). `CheckForceBikeOrSurf`
+  gated `%ifdef PLAYER_STATE_LINKED` (off; un-gate at OW-7.2). Prereqs landed: 4 bit constants +
+  `wNumberOfNoRandomBattleStepsLeft` promoted to `gb_memmap.inc` (local deleted from
+  `wild_encounter_check.asm`); 4 ret-stubs in `overworld_stubs.asm` (MapEntryAfterBattle,
+  EnterMapAnim, ResetUsingStrengthOutOfBattleBit, IsSurfingPikachuInParty). Boot callers
+  repointed `jmp EnterMap`→`jmp EnterMapBoot`: `init.asm`, `title.asm`, **and `main_menu.asm`
+  `SpecialEnterMap`** (the 3rd caller — MISSING from the splash-radius list below; behavior-
+  preserving since it relied on the glue formerly inside EnterMap). Verified: `make check`
+  clean; 3 FRAME.BIN baselines (BASELINE/TRANSITION/WALK_NORTH) BYTE-IDENTICAL to HEAD (tripwire
+  proves render/transition path untouched — resets don't run under baseline DEBUG builds); LIVE
+  smoke (real build, user-confirmed): Pallet Town renders correctly + player walks all 4 dirs.
+- **A.4(b) STILL PENDING (own MCP-verified SOLO session):** route `.warpTransition`/`.mapTransition`
+  (and the post-battle `.battleOccurred` tail) back through `EnterMap` so the reset ladder re-runs
+  on every warp/battle-return, as pret does (`jp EnterMap`). This changes the working transition
+  control flow — highest regression risk; guard with the re-captured baselines + MCP live warp tests.
 - Port `home/overworld.asm:1-42` `EnterMap` is a first-boot-only stand-in (port
   `overworld.asm:279-299`): silently drops `wJoyIgnore` gating,
   `ClearVariablesOnEnterMap` (now ported, OW-1.1), wild-encounter cooldown grant,

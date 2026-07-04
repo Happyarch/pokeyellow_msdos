@@ -47,7 +47,7 @@ extern DelayFrames
 extern Delay3
 extern GBPalNormal
 extern Init
-extern EnterMap
+extern EnterMapBoot              ; overworld.asm — one-time overworld boot glue → EnterMap
 extern OakSpeech                 ; main_menu_stubs.asm — new-game data init (InitPlayerData2)
 extern g_tilecache_dirty
 extern JoypadLowSensitivity     ; src/input/joypad_lowsens.asm (home/joypad2.asm)
@@ -385,7 +385,7 @@ DisplayTitleScreen:
     ; ported prologue (InitPlayerData2) seeds the party/box/bag list terminators,
     ; so a new game does not boot with garbage inventories (docs/glitch_safety.md).
     call OakSpeech
-    jmp EnterMap
+    jmp EnterMapBoot
 
 .doClearSaveDialogue:
     ; DoClearSaveDialogue — ; TODO: save clear screen (Phase 5). Reset for now.
