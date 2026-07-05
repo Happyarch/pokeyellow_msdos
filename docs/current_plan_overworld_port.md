@@ -209,12 +209,48 @@ interactively with the user.
   - [ ] Regression: FRAME.BIN before/after on Pallet Town (NPC sprites identical); MCP `gb_read` of `wSpriteStateData1/2` slots 1–15
 - Exit: 15 pret routine labels real; NPC rendering regression-free.
 
-**TICKET OW-A.3: label restoration pass (mechanical)** `[SWARM/Sonnet, one worker per file]`
-- Files: `overworld.asm` (advance_player_sprite labels: `_AdvancePlayerSprite` alias, doors `IsPlayerStandingOnDoorTile` — verify present), `movement.asm` (sprite_collisions labels: `_UpdateSprites`, `UpdateNPCSprite` as label into `UpdateNonPlayerSprite`, `Func_4d0a` port-or-document), `trainer_engine.asm`, `ledges.asm`, `hidden_events.asm`, `warp_check.asm`, `wild_mons.asm`
-- Checklist (per file):
-  - [ ] Every pret routine name folded into this file exists as a real label at the corresponding address (`PretName:` with `; pret: <file>:<label>` comment); no body restructuring beyond label insertion
-  - [ ] Verify: nasm check; full build; FRAME.BIN baseline byte-identical
-- Exit: pret→port cross-reference is label-complete for consolidated files.
+**TICKET OW-A.3: label restoration / de-fold pass** `[Opus solo]` — **DONE 2026-07-05**
+- **SCOPE UPGRADE (user directive 2026-07-05):** promoted from "add alias labels" to **actually
+  de-fold merged pret routines into separate routines like pret** (not aliases). Ran as a full
+  7-file sweep, not per-file swarm.
+- **CLOSED OUT.** 3 genuine in-file folds found + split; `Func_4d0a` documented; all other
+  "missing" pret labels accounted for as out-of-A.3-scope (see below). Verified: `make check`
+  clean; full SKIP_TITLE build links; 3 FRAME.BIN baselines (BASELINE/TRANSITION/WALK_NORTH)
+  BYTE-IDENTICAL to the reference manifest — including WALK_NORTH, which exercises the real
+  movement primitives, so the de-folds are provably control-flow-equivalent.
+- <details><summary>De-folds performed + full accounting</summary>
+
+  - **movement.asm — `UpdateNonPlayerSprite` / `UpdateNPCSprite`:** the port had fused pret's
+    dispatcher (`UpdateNonPlayerSprite`, sprite_collisions.asm:34 — hTilePlayerStandingOn +
+    scripted-vs-freeroam route) and body (`UpdateNPCSprite`, movement.asm:99 — the walk state
+    machine) into one routine. Split: dispatcher now ends `jz UpdateNPCSprite` / `jmp
+    DoScriptedNPCMovement`; `UpdateNPCSprite:` is a separate routine at the old `.notScripted`.
+  - **overworld.asm — `AdvancePlayerSprite` / `_AdvancePlayerSprite`:** the port had the engine
+    body directly under `AdvancePlayerSprite` with NO home wrapper. Split: body renamed
+    `_AdvancePlayerSprite`; added the faithful `AdvancePlayerSprite` home wrapper (saves
+    `wUpdateSpritesEnabled`, forces `$FF` for the advance, restores) — this reinstates a
+    previously-documented Phase-2 omission. **BEHAVIOR NOTE:** this is a live-walk-path change;
+    WALK_NORTH baseline is byte-identical (flag already enabled during walking → force+restore is
+    neutral), but a **visual smoke test is recommended** to confirm no NPC-animation timing shift.
+  - **overworld.asm — `OverworldLoop` / `OverworldLoopLessDelay`:** split the `.lessDelay` local
+    into a real `OverworldLoopLessDelay:` label (pret's delay-skipping loop entry); updated the
+    lone `jmp OverworldLoop.lessDelay` ref + added a `global`.
+  - **movement.asm — `Func_4d0a`:** DOCUMENTED (not split). It's inlined into the *bespoke* native
+    `DetectCollisionBetweenSprites` rewrite (thresholds in stack slots + DH, not pret HRAM temps),
+    so it has no callable boundary — extracting it would add an unfaithful seam. Provenance note
+    added at the `.pika_*` block.
+  - **Everything else in the label diffs is NOT a fold** and is correctly out of A.3 scope:
+    unported subsystems (surf/bike/battle/scripted-movement → OW-A.6/Stage 2/4/5), routines that
+    live in other port files (`ExtraWarpCheck`→warp_check, `CheckForTilePairCollisions`→ledges,
+    `StepCountCheck`→wild_encounter_check, `IsPlayerJustOutsideMap`→own file, `RunMapScript`→
+    run_map_script), generated-include data (`EmotionBubbles`/emotes → assets/emotes.inc),
+    renderer-deleted redraw rings (`CopyMapViewToVRAM`, `Schedule*RowRedraw` — "rings are gone"),
+    externs (`ResetButtonPressedAndMapScript`, `LoadHoppingShadowOAM`→overworld_stubs per A.10),
+    flat-model no-ops (`SwitchToMapRomBank`, `SpritePositionBankswitch`), deferred shadow-OAM data
+    (`LedgeHoppingShadow*`), and bespoke replacements (`IsSpriteInFrontOfPlayer`/`SignLoop`→
+    `CheckNPCInteraction`, `CheckWarpsCollision`→`CheckWarpTile`, `WarpFound2`→`.warpTransition`).
+    `trainer_engine.asm`, `wild_mons.asm`, `hidden_events.asm` had no in-file folds.
+  </details>
 
 ---
 

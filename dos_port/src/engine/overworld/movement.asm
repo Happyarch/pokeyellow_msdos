@@ -189,18 +189,14 @@ _UpdateSprites:
     ret
 
 ; ---------------------------------------------------------------------------
-; UpdateNonPlayerSprite — full NPC walk state machine.
-; Pret ref: engine/overworld/movement.asm:UpdateNPCSprite.
+; UpdateNonPlayerSprite — per-sprite dispatcher (scripted vs free-roam).
+; pret: engine/overworld/sprite_collisions.asm:UpdateNonPlayerSprite.
 ;
-; Status dispatch:
-;   0 → InitializeSpriteStatus (first-frame init)
-;   1 → CheckSpriteAvailability; if visible and player not walking: direction
-;       selection → TryWalking (WALK/STAY) or stub (scripted <WALK)
-;   2 → UpdateSpriteMovementDelay (countdown to next walk)
-;   3 → UpdateSpriteInWalkingAnimation (pixel-step animation)
-;
-; Direction constraint (wCurSpriteMovement2 in pret) is read directly from
-; SPRITESTATEDATA2_MOVEMENTBYTE2 (offset 0x1). Scripted movement is a stub.
+; Sets hTilePlayerStandingOn = (imageBaseOffset-1)<<4, then routes the slot to the
+; scripted-movement stepper (DoScriptedNPCMovement) or falls through to the free-roam
+; walk machine (UpdateNPCSprite). pret gates the scripted branch on
+; wNPCMovementScriptSpriteOffset == hCurrentSpriteOffset and tail-calls UpdateNPCSprite
+; on the unequal path; the port's divergent gate is documented at the branch below.
 ;
 ; ESI is reloaded from hCurrentSpriteOffset at entry (clobbers the loop's ESI;
 ; the loop re-derives ESI after the call — see _UpdateSprites above).
@@ -227,10 +223,28 @@ UpdateNonPlayerSprite:
     ; BIT_SCRIPTED_NPC_MOVEMENT (MoveSprite is check-only; play_time only clears bits),
     ; so this branch is never taken today.
     test byte [ebp + W_STATUS_FLAGS_5], (1 << BIT_SCRIPTED_NPC_MOVEMENT)
-    jz .notScripted
+    jz UpdateNPCSprite                   ; not scripted → free-roam machine (pret: jp UpdateNPCSprite)
     jmp DoScriptedNPCMovement            ; pret: jp DoScriptedNPCMovement (tail call)
-.notScripted:
+    ; --- end of UpdateNonPlayerSprite dispatcher ---
 
+; ---------------------------------------------------------------------------
+; UpdateNPCSprite — free-roam NPC walk state machine.
+; pret: engine/overworld/movement.asm:UpdateNPCSprite.
+;
+; Status dispatch (SPRITESTATEDATA1_MOVEMENTSTATUS):
+;   0 → InitializeSpriteStatus (first-frame init)
+;   1 → CheckSpriteAvailability; if visible and player not walking: direction
+;       selection → TryWalking (WALK/STAY) or stub (scripted <WALK)
+;   2 → UpdateSpriteMovementDelay (countdown to next walk)
+;   3 → UpdateSpriteInWalkingAnimation (pixel-step animation)
+;   4 → Func_5357 (finish-step / item-ball emerge / STAY-and-face)
+;
+; Direction constraint (wCurSpriteMovement2 in pret) is read directly from
+; SPRITESTATEDATA2_MOVEMENTBYTE2 (offset 0x1). Reached by fall-through/jmp from
+; UpdateNonPlayerSprite (pret jp's here from its .unequal path). ESI is live from
+; the dispatcher; caller pushad/popad, so all other registers are free.
+; ---------------------------------------------------------------------------
+UpdateNPCSprite:
     mov al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_MOVEMENTSTATUS]
     test al, al
     jz .initStatus                       ; status 0 → first-frame init
@@ -1262,6 +1276,13 @@ DetectCollisionBetweenSprites:
     jnc   .next_j
 
 .collision:
+    ; pret: engine/overworld/sprite_collisions.asm:Func_4d0a — INLINED (documented, not
+    ; de-folded). pret factors the slot-15 (Pikachu) collision-direction pick into a separate
+    ; Func_4d0a called at its `cp $f` test. This DetectCollisionBetweenSprites is a bespoke
+    ; native rewrite whose thresholds live in stack slots ([esp+8]=thr_i_x, [esp+4]=thr_i_y)
+    ; and DH, not pret's HRAM temps — so Func_4d0a has no callable boundary here; extracting it
+    ; would add an unfaithful call seam rather than mirror pret. The .pika_* block below IS
+    ; Func_4d0a's body.
     ; --- Pikachu special case: i==player (slot 0) AND j==pikachu (slot 15) ---
     cmp   esi, W_SPRITE_STATE_DATA_1
     jne   .standard_col

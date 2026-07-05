@@ -176,7 +176,9 @@ global LoadCurrentMapView
 ; (OW-A.5: dead `global CopyMapViewToVRAM` removed — routine obsoleted by native
 ;  render_bg; had no body, exported an undefined symbol. See its note ~L1729.)
 global OverworldLoop
+global OverworldLoopLessDelay               ; OW-A.3: de-folded from OverworldLoop.lessDelay
 global AdvancePlayerSprite
+global _AdvancePlayerSprite                 ; OW-A.3: engine body, de-folded from the home wrapper
 global IsTilePassable
 global CheckWarpTile
 global LoadWarpDestination
@@ -629,7 +631,8 @@ OverworldLoop:
     ; hJoyHeld; the DelayFrame path is per-frame and also clears hJoyPressed. Removed.
     call UpdateSprites                         ; advance player facing + walk animation
     call DelayFrame
-.lessDelay:                                  ; OverworldLoopLessDelay
+    ; --- OverworldLoop falls through into OverworldLoopLessDelay (pret) ---
+OverworldLoopLessDelay:                      ; pret: home/overworld.asm:OverworldLoopLessDelay
     call DelayFrame
 
     cmp byte [ebp + W_WALK_COUNTER], 0
@@ -905,7 +908,7 @@ OverworldLoop:
     call LoadTileBlockMap
     call LoadCurrentMapView
 
-    jmp OverworldLoop.lessDelay
+    jmp OverworldLoopLessDelay
 
 ; ---------------------------------------------------------------------------
 ; ---------------------------------------------------------------------------
@@ -1788,9 +1791,29 @@ WalkSpeedSample:
 %endif
 
 ; ---------------------------------------------------------------------------
-; AdvancePlayerSprite — faithful translation.
-; Pret ref: home/overworld.asm:AdvancePlayerSprite +
-;           engine/overworld/advance_player_sprite.asm:_AdvancePlayerSprite
+; AdvancePlayerSprite — home wrapper.
+; pret: home/overworld.asm:AdvancePlayerSprite.
+;
+; Forces wUpdateSpritesEnabled = $FF for the duration of the sprite advance (so the
+; OAM/sprite update runs while the player steps), then restores the prior value. This
+; is pret's home-bank wrapper around _AdvancePlayerSprite; OW-A.3 de-folded it back out
+; of the engine body it had been merged into (the save/restore was previously a
+; documented Phase-2 omission). Register-safe.
+; ---------------------------------------------------------------------------
+AdvancePlayerSprite:
+    push eax                                          ; keep caller EAX (wrapper clobbers AL)
+    mov al, [ebp + W_UPDATE_SPRITES_ENABLED]          ; pret: ld a,[wUpdateSpritesEnabled] / push af
+    mov byte [ebp + W_UPDATE_SPRITES_ENABLED], 0xFF   ; pret: ld a,$FF / ld [wUpdateSpritesEnabled],a
+    push eax
+    call _AdvancePlayerSprite                         ; pret: callfar _AdvancePlayerSprite
+    pop eax
+    mov [ebp + W_UPDATE_SPRITES_ENABLED], al          ; pret: pop af / ld [wUpdateSpritesEnabled],a
+    pop eax
+    ret
+
+; ---------------------------------------------------------------------------
+; _AdvancePlayerSprite — engine body.
+; pret: engine/overworld/advance_player_sprite.asm:_AdvancePlayerSprite.
 ;
 ; Runs once per advanced frame of a walk. Decrements wWalkCounter; on the first
 ; frame (counter == 7) it slides wMapViewVRAMPointer by 2 tiles, advances the
@@ -1798,13 +1821,13 @@ WalkSpeedSample:
 ; and schedules the newly exposed row/column for VBlank redraw. Every frame it
 ; scrolls the BG by 2 px (hSCX/hSCY) in the direction of motion.
 ;
-; Phase 2 omissions vs. pret: wUpdateSprites save/restore, IsSpinning, and the
+; Remaining Phase-2 omissions vs. pret (inside this body): IsSpinning and the
 ; Pikachu overworld-state flag.
 ;
 ; b (SM83) = wSpritePlayerStateData1YStepVector → kept in BL  (+1 / -1 / 0)
 ; c (SM83) = wSpritePlayerStateData1XStepVector → kept in CL  (+1 / -1 / 0)
 ; ---------------------------------------------------------------------------
-AdvancePlayerSprite:
+_AdvancePlayerSprite:
     push eax
     push ebx
     push ecx
