@@ -449,20 +449,41 @@ root pret tree.
 
 </details>
 
-**TICKET OW-A.8: overworld.asm marker/hygiene sweep** `[SWARM/Sonnet, mechanical]` — DIVERGENT (silent)
-- `CollisionCheckOnLand`: add `; TODO-HW: audio HAL` for dropped `SFX_COLLISION`;
-  restore `wSimulatedJoypadStatesIndex` no-collision bypass + `wSpritePlayerStateData1CollisionData`
-  quick-reject (needed once scripted movement lands); document that `IsNPCAtTargetBlock`
-  is a bespoke replacement for pret's `IsSpriteInFrontOfPlayer`.
-- `ResetMapVariables`: set `wMapViewVRAMPointer` as its comment claims, or fix the comment.
-- `PlayerStepOutFromDoor`: restore entry `res BIT_UNKNOWN_5_1` + the 3 simulated-joypad
-  field zeroes in `.notStandingOnDoor` (stale state leaks into `AreInputsSimulated`).
-- `GetTileInFrontOfPlayer`: confirm no caller needs the D/E target-coord side-outputs
-  (pret `_GetTileAndCoordsInFrontOfPlayer` leaves them for sign/warp callers); add or note.
-- `LoadTilesetHeader`: 3 counter-tile fields silently unported — add WRAM slot + copy or
-  an explicit deferral marker (rides tile-animation).
-- `CheckMapConnections`: add `PlayDefaultMusicFadeOutCurrent`/`SET_PAL_OVERWORLD` calls or
-  deferred markers at the crossing site.
+**TICKET OW-A.8: overworld.asm marker/hygiene sweep** `[SWARM/Sonnet, mechanical]` — **DONE 2026-07-05** (Opus solo)
+- **CLOSED OUT.** All 6 items resolved (nasm clean; full SKIP_TITLE build links; 3 FRAME.BIN
+  baselines — BASELINE/TRANSITION/WALK_NORTH — byte-identical to the reference manifest, so
+  the restored/marked logic is latent for the captured scenarios: no render regression).
+- <details><summary>Original items (all done)</summary>
+
+  - `CollisionCheckOnLand`: **DONE** — restored the `wSimulatedJoypadStatesIndex != 0` no-collision
+    bypass (provably inert today: nothing sets the index until scripted movement lands) and the
+    `wSpritePlayerStateData1CollisionData & wPlayerDirection` quick-reject (bit layouts verified
+    identical: bit0=RIGHT/bit1=LEFT/bit2=DOWN/bit3=UP — the DH[3:2]/DH[1:0] write in
+    `DetectCollisionBetweenSprites`; can only ADD a block `IsNPCAtTargetBlock` would also catch).
+    Added `; TODO-HW: audio HAL` at `.blocked` for the dropped `SFX_COLLISION`. Documented that
+    `IsNPCAtTargetBlock` is the bespoke replacement for pret's `IsSpriteInFrontOfPlayer` + the
+    dropped `res BIT_FACE_PLAYER`/`hTextID`/Pikachu-collision-counter tail.
+  - `ResetMapVariables`: **DONE** — restored `wMapViewVRAMPointer = GB_TILEMAP0` (vestigial under
+    the native renderer but kept in lockstep with the other reset sites; matches pret's inline
+    reset). Header comment now names the port equivalent.
+  - `PlayerStepOutFromDoor`: **DONE** — restored the entry `res BIT_UNKNOWN_5_1` (new
+    `BIT_UNKNOWN_5_1 equ 1` in gb_memmap.inc) and the 3 simulated-joypad field zeroes
+    (`wUnusedOverrideSimulatedJoypadStatesIndex`/`wSimulatedJoypadStatesIndex`/`wSimulatedJoypadStatesEnd`)
+    in `.notStandingOnDoor`, with the AreInputsSimulated-leak rationale.
+  - `GetTileInFrontOfPlayer`: **DONE (note)** — confirmed the ONLY port caller (CollisionCheckOnLand)
+    needs just the tile; the D/E target-coord side-outputs feed SignLoop (sign reading) + the
+    hidden-event coord scan, neither live. Added an explicit DEFERRED note (dependents self-derive
+    front coords from wYCoord/wXCoord + facing when they land).
+  - `LoadTilesetHeader`: **DONE (copy)** — added a `TilesetCounterTiles` table (3 bytes × 25
+    tilesets, from pret `tileset_headers.asm`) and a copy into the existing
+    `wTilesetTalkingOverTiles` WRAM slot. Not yet read by the bespoke CheckNPCInteraction, but
+    correct for when talking-range-over-counter lands.
+  - `CheckMapConnections`: **DONE (markers)** — the reload actually lives at
+    `OverworldLoop.mapTransition` (pret inlines it in `.loadNewMap`); added deferred markers there
+    for the dropped `PlayDefaultMusicFadeOutCurrent` (TODO-HW audio) + `RunPaletteCommand(SET_PAL_OVERWORLD)`
+    (Phase-5 palette; DMG-green today) + the Pikachu spawn set, plus a cross-reference note at
+    CheckMapConnections `.loadNewMap`.
+  </details>
 
 **TICKET OW-A.9: trainer_engine.asm ABI/faithfulness fixes** `[SWARM/Sonnet]` — **DONE 2026-07-05** (unblocks OW-7.2 promotion)
 - **CLOSED OUT.** trainer_engine.asm assembles clean. Resolved:

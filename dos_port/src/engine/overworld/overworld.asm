@@ -880,6 +880,16 @@ OverworldLoop:
     mov word [ebp + W_MAP_VIEW_VRAM_POINTER], GB_TILEMAP0
 
     call LoadMapHeader
+    ; pret home/overworld.asm:.loadNewMap runs two subsystem calls right here (after
+    ; LoadMapHeader, before InitMapSprites):
+    ;   call PlayDefaultMusicFadeOutCurrent   — TODO-HW: audio HAL (Phase 3); the new
+    ;       map's music fades in on a connection crossing. No-op today (no audio backend).
+    ;   ld b, SET_PAL_OVERWORLD / call RunPaletteCommand — palette reload for the new map.
+    ;       Deferred to Phase 5 (the port renders a fixed DMG-green palette; SET_PAL_*
+    ;       is the GBPalNormal stand-in applied by LoadMapData, not on this LoadMapHeader
+    ;       path). Add the real RunPaletteCommand(SET_PAL_OVERWORLD) here when palettes land.
+    ; pret also does the Pikachu spawn set (wPikachuOverworldStateFlags bit 4 /
+    ;   wPikachuSpawnState = 2) at .loadNewMap — deferred with the Pikachu-follow engine.
     call InitMapSprites                        ; populate NPC slots for the new map
     ; Update text table dispatch for the new map.
     movzx eax, byte [ebp + W_CUR_MAP]
@@ -1233,9 +1243,15 @@ LoadPlayerSpriteGraphics:
 ; ResetMapVariables — faithful translation.
 ; Pret ref: home/overworld.asm:ResetMapVariables
 ;
-; Sets wMapViewVRAMPointer = vBGMap0 ($9800), zeroes SCX/SCY and walk state.
+; Sets wMapViewVRAMPointer = vBGMap0 ($9800 → port GB_TILEMAP0), zeroes SCX/SCY
+; and walk state.
 ; ---------------------------------------------------------------------------
 ResetMapVariables:
+    ; pret home/overworld.asm:2024-2027 — wMapViewVRAMPointer = vBGMap0. Vestigial under
+    ; the native-width renderer (dropped/unused; the torus rings are gone), but kept in
+    ; lockstep with the other reset sites (EnterMapBoot etc. write GB_TILEMAP0) so the
+    ; pointer is never left stale, matching pret's byte-for-byte reset here.
+    mov word [ebp + W_MAP_VIEW_VRAM_POINTER], GB_TILEMAP0
     xor al, al
     mov byte [ebp + H_SCY],                       al
     mov byte [ebp + H_SCX],                       al
@@ -1986,6 +2002,25 @@ CollisionCheckOnLand:
     push eax
     push ecx
     push esi
+    ; pret home/overworld.asm:1223-1225 — no collisions while the game is scripting the
+    ; player's movement (wSimulatedJoypadStatesIndex != 0). Inert today: nothing sets the
+    ; index until scripted NPC/cutscene movement lands (Stage 2), so this always falls
+    ; through. Restored for faithfulness / to be correct once that path is live.
+    cmp byte [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], 0
+    jne .noCollision                               ; scripted movement → always passable
+    ; pret :1226-1231 — quick sprite reject. The accumulated collision-direction bits in
+    ; wSpritePlayerStateData1CollisionData (player = slot 0) use the same bit layout as
+    ; wPlayerDirection (bit0=RIGHT, bit1=LEFT, bit2=DOWN, bit3=UP — see the DH[3:2]/DH[1:0]
+    ; write in movement.asm:DetectCollisionBetweenSprites); if a set bit overlaps the
+    ; direction the player is trying to move, a sprite is already known to be there. This
+    ; can only ADD a block that the thorough IsNPCAtTargetBlock scan below would also catch
+    ; (pret itself questions why the deeper check ever misses). pret's `nop`, the
+    ; res BIT_FACE_PLAYER / hTextID / Pikachu-collision-counter tail are folded into the
+    ; bespoke IsNPCAtTargetBlock replacement below.
+    mov dl, [ebp + W_PLAYER_DIRECTION]
+    mov al, [ebp + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_COLLISIONDATA]
+    and al, dl
+    jnz .blocked                                   ; sprite already flagged in travel dir
     ; wTileMap is a sub-block viewport into wSurroundingTiles, offset by W_Y_BLOCK_COORD /
     ; W_X_BLOCK_COORD. AdvancePlayerSprite only calls LoadCurrentMapView on block-boundary
     ; crossings, so the viewport can be stale within a block (YBC/XBC changed but wTileMap
@@ -2014,6 +2049,11 @@ CollisionCheckOnLand:
 %endif
     call IsTilePassable                            ; CF = 1 if not passable
     jc .blocked                                    ; tile impassable → blocked
+    ; IsNPCAtTargetBlock is the port's BESPOKE replacement for pret's IsSpriteInFrontOfPlayer
+    ; (home/overworld.asm:1234) plus the res BIT_FACE_PLAYER / hTextID / Pikachu-collision-
+    ; counter tail (:1236-1252): a straight MAPY/MAPX block scan of slots 1–15. It does not
+    ; reproduce the sprite-facing side effect or the Pikachu-follow B-button leniency; those
+    ; ride the sprite-engine reimpl. CF=1 → an NPC occupies the target block.
     call IsNPCAtTargetBlock                        ; CF = 1 if NPC is in front
     jc .blocked                                    ; NPC in the way → blocked
 .noCollision:
@@ -2023,6 +2063,9 @@ CollisionCheckOnLand:
     clc
     ret
 .blocked:
+    ; pret home/overworld.asm:1259-1264 (.collision) plays SFX_COLLISION here (unless it's
+    ; already playing on CHAN5) before setting carry.
+    ; TODO-HW: audio HAL (Phase 3) — emit SFX_COLLISION on the blocked-move bump.
     pop esi
     pop ecx
     pop eax
@@ -2041,6 +2084,16 @@ CollisionCheckOnLand:
 ; Reads the tile the player faces from wTileMap at the fixed screen coordinate
 ; pret uses for each facing (the player is always centered). Stores it in
 ; wTileInFrontOfPlayer and returns it in CL.
+;
+; DEFERRED side-outputs: pret's _GetTileAndCoordsInFrontOfPlayer also returns the
+; TARGET tile's map coordinates in D = wYCoord±1 and E = wXCoord±1 (facing-adjusted).
+; Those are consumed by SignLoop (sign reading via IsSpriteOrSignInFrontOfPlayer,
+; home/overworld.asm:1069) and the hidden-event coord scan — neither of which is
+; live yet. The one current caller (CollisionCheckOnLand) needs only the tile, so
+; the D/E outputs are intentionally dropped. When sign/hidden-event front-coord
+; matching lands it must either derive the front coords itself from wYCoord/wXCoord
+; + facing, or this routine be extended to emit them (see the note in player_state.asm
+; that the port's dependents pre-read wTileInFrontOfPlayer and self-derive coords).
 ; ---------------------------------------------------------------------------
 GetTileInFrontOfPlayer:
     ; Pret ref: engine/overworld/player_state.asm:_GetTileAndCoordsInFrontOfPlayer
@@ -2348,6 +2401,21 @@ LoadTilesetHeader:
     mov bl, [TilesetAnimations + eax]
     mov [ebp + H_TILE_ANIMATIONS], bl
 
+    ; Per-tileset counter ("talking-over") tiles. pret copies these as bytes 7-9 of the
+    ; 12-byte tileset header (wTilesetTalkingOverTiles, 3 bytes; part of its $b-byte
+    ; CopyData in LoadTilesetHeader). Consumed by IsSpriteOrSignInFrontOfPlayer's
+    ; .counterTilesLoop to extend NPC talking range over Pokemart/Pokecenter counters.
+    ; Not yet read by the port's bespoke CheckNPCInteraction, but populated here so the
+    ; data is correct when talking-range-over-counter lands. Table inlined below;
+    ; EAX still holds the 0-24 tileset index (preserved through here for IsInArray).
+    lea edi, [eax + eax*2]                       ; EDI = tileset * 3 (row into the table)
+    mov bl, [TilesetCounterTiles + edi + 0]
+    mov [ebp + W_TILESET_TALKING_OVER_TILES + 0], bl
+    mov bl, [TilesetCounterTiles + edi + 1]
+    mov [ebp + W_TILESET_TALKING_OVER_TILES + 1], bl
+    mov bl, [TilesetCounterTiles + edi + 2]
+    mov [ebp + W_TILESET_TALKING_OVER_TILES + 2], bl
+
     ; -----------------------------------------------------------------------
     ; Pret tail — engine/overworld/tilesets.asm lines 21-47 (previously
     ; silently omitted; see docs/current_plan_overworld_port.md OW-A.1).
@@ -2492,6 +2560,9 @@ IsPlayerStandingOnDoorTile:
 ; fires the collision-exit warp). Pret ref: engine/overworld/auto_movement.asm:PlayerStepOutFromDoor
 ; ---------------------------------------------------------------------------
 PlayerStepOutFromDoor:
+    ; pret auto_movement.asm:PlayerStepOutFromDoor entry — clear BIT_UNKNOWN_5_1 in
+    ; wStatusFlags5 unconditionally (both door and non-door paths run through here).
+    and byte [ebp + W_STATUS_FLAGS_5], ~(1 << BIT_UNKNOWN_5_1)
     call IsPlayerStandingOnDoorTile
     jnc .notStandingOnDoor
     ; Door tile — set up one forced south step to walk off the arrival warp tile.
@@ -2511,6 +2582,12 @@ PlayerStepOutFromDoor:
 .notStandingOnDoor:
     ; Stair/ladder arrival — no auto-walk. Clear standing and exiting flags.
     ; pret: engine/overworld/auto_movement.asm:PlayerStepOutFromDoor:.notStandingOnDoor
+    ; Zero the simulated-joypad fields first: otherwise a stale index/queued PAD_* byte
+    ; leaks into AreInputsSimulated and would replay a phantom step on the next frame.
+    xor al, al
+    mov byte [ebp + W_UNUSED_OVERRIDE_SIMULATED_JOYPAD_STATES_INDEX], al
+    mov byte [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], al
+    mov byte [ebp + W_SIMULATED_JOYPAD_STATES_END],   al
     and byte [ebp + W_MOVEMENT_FLAGS], ~((1 << BIT_STANDING_ON_DOOR) | (1 << BIT_EXITING_DOOR))
     and byte [ebp + W_STATUS_FLAGS_5], ~(1 << BIT_SCRIPTED_MOVEMENT_STATE)
     ret
@@ -2889,7 +2966,12 @@ CheckMapConnections:
     ret
 
 .loadNewMap:
-    ; A connection was crossed. Return CF=1 to signal the caller.
+    ; A connection was crossed. pret home/overworld.asm:.loadNewMap inlines the whole
+    ; reload here — Pikachu spawn set, LoadMapHeader, PlayDefaultMusicFadeOutCurrent,
+    ; RunPaletteCommand(SET_PAL_OVERWORLD), InitMapSprites, LoadTileBlockMap, then
+    ; jp OverworldLoopLessDelay. The port instead returns CF=1 and the caller performs
+    ; that reload at OverworldLoop.mapTransition (see the deferred music/palette markers
+    ; there). Only the coordinate/block sync stays inline here.
     ; First, synchronize block coordinates with the new tile coordinates.
     mov al, [ebp + W_X_COORD]
     and al, 1
@@ -3009,6 +3091,38 @@ TilesetAnimations:
     db 1 ; 22 FACILITY      TILEANIM_WATER
     db 1 ; 23 PLATEAU       TILEANIM_WATER
     db 0 ; 24 BEACH_HOUSE
+
+; Per-tileset counter ("talking-over") tiles — pret ref: data/tilesets/
+; tileset_headers.asm (the `tileset` macro's \2 \3 \4 fields, "3 counter tiles").
+; 3 bytes per tileset ($FF = unused slot), indexed by W_CUR_MAP_TILESET * 3; copied
+; into wTilesetTalkingOverTiles by LoadTilesetHeader. These extend NPC talking range
+; over Pokemart/Pokecenter/etc. counter tiles (IsSpriteOrSignInFrontOfPlayer).
+TilesetCounterTiles:
+    db 0xFF, 0xFF, 0xFF ; 0  OVERWORLD
+    db 0xFF, 0xFF, 0xFF ; 1  REDS_HOUSE_1
+    db 0x18, 0x19, 0x1E ; 2  MART
+    db 0xFF, 0xFF, 0xFF ; 3  FOREST
+    db 0xFF, 0xFF, 0xFF ; 4  REDS_HOUSE_2
+    db 0x3A, 0xFF, 0xFF ; 5  DOJO
+    db 0x18, 0x19, 0x1E ; 6  POKECENTER
+    db 0x3A, 0xFF, 0xFF ; 7  GYM
+    db 0xFF, 0xFF, 0xFF ; 8  HOUSE
+    db 0x17, 0x32, 0xFF ; 9  FOREST_GATE
+    db 0x17, 0x32, 0xFF ; 10 MUSEUM
+    db 0xFF, 0xFF, 0xFF ; 11 UNDERGROUND
+    db 0x17, 0x32, 0xFF ; 12 GATE
+    db 0xFF, 0xFF, 0xFF ; 13 SHIP
+    db 0xFF, 0xFF, 0xFF ; 14 SHIP_PORT
+    db 0x12, 0xFF, 0xFF ; 15 CEMETERY
+    db 0xFF, 0xFF, 0xFF ; 16 INTERIOR
+    db 0xFF, 0xFF, 0xFF ; 17 CAVERN
+    db 0x15, 0x36, 0xFF ; 18 LOBBY
+    db 0xFF, 0xFF, 0xFF ; 19 MANSION
+    db 0xFF, 0xFF, 0xFF ; 20 LAB
+    db 0x07, 0x17, 0xFF ; 21 CLUB
+    db 0x12, 0xFF, 0xFF ; 22 FACILITY
+    db 0xFF, 0xFF, 0xFF ; 23 PLATEAU
+    db 0xFF, 0xFF, 0xFF ; 24 BEACH_HOUSE
 
 section .rodata
 

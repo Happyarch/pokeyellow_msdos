@@ -807,6 +807,7 @@ BIT_LEDGE_OR_FISHING         equ 6
 BIT_SPINNING                 equ 7
 
 ; Bit indices for W_STATUS_FLAGS_5 (pret: constants/ram_constants.asm)
+BIT_UNKNOWN_5_1              equ 1     ; cleared on entry to PlayerStepOutFromDoor (pret)
 BIT_DISABLE_JOYPAD           equ 5     ; input suppressed; CountDownIgnoreInputBitReset clears it
 BIT_SCRIPTED_MOVEMENT_STATE  equ 7     ; simulated joypad active (door exit / scripted walk)
 
