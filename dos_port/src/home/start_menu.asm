@@ -60,7 +60,7 @@ extern UpdateSprites                 ; engine/overworld/movement.asm
 extern DelayFrame                    ; video/frame.asm
 extern LoadFontTilePatterns          ; gfx/load_font.asm
 extern LoadTextBoxTilePatterns       ; gfx/load_font.asm
-extern LoadNPCSpriteTiles            ; engine/overworld/map_sprites.asm
+extern ReloadWalkingTilePatterns     ; engine/overworld/map_sprites.asm (P3c: was LoadNPCSpriteTiles)
 extern LoadPlayerSpriteGraphics      ; engine/overworld/overworld.asm
 extern RefreshCollisionTileMap       ; engine/overworld/overworld.asm
 extern hide_window                   ; ppu/ppu.asm
@@ -202,7 +202,7 @@ CloseStartMenu:
     call RefreshCollisionTileMap        ; scrub the box tiles out of the mirror
                                         ; (pret: LoadScreenTilesFromBuffer2 analog)
     and byte [ebp + W_FONT_LOADED], ~(1 << BIT_FONT_LOADED) & 0xFF
-    call LoadNPCSpriteTiles
+    call ReloadWalkingTilePatterns      ; reload NPC walk tiles the menu font overwrote (vFont)
     call LoadPlayerSpriteGraphics
     mov dword [text_row_stride], 20     ; restore the overworld dialog stride
     mov dword [menu_redraw_cb], 0

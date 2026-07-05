@@ -274,8 +274,33 @@ interactively with the user.
     clean; `make check` clean; real SKIP_TITLE build links; 3 FRAME.BIN baselines
     byte-identical. All real `LoadMapHeader` sites pair with `InitMapSprites`
     (`LoadMapData` / `.mapTransition` / warp→`EnterMap`→`LoadMapData`), so the real game is
-    safe; **pending user live smoke.** 3c = faithful `_InitMapSprites` + 15 routines, retire
-    bespoke; 3d/P4 = verification + menu-corruption item.
+    safe; **user live smoke passed 2026-07-05** (real build boots Pallet Town normally).
+    **3c DONE 2026-07-05** — faithful `_InitMapSprites` + the pret sprite-set routines
+    (`InitOutsideMapSprites`/`GetSplitMapSpriteSetID`/`LoadSpriteSetFromMapHeader`/
+    `CheckIfPictureIDAlreadyLoaded`/`CheckForFourTileSprite`/`LoadMapSpriteTilePatterns`/
+    `ReloadWalkingTilePatterns`/`LoadStillTilePattern`/`LoadWalkingTilePattern`/
+    `GetSpriteVRAMAddress`+`SpriteVRAMAddresses`/`ReadSpriteSheetData`/
+    `LoadMapSpritesImageBaseOffset`/`GetSpriteImageBaseOffset`) as real routines in
+    `map_sprites.asm`; the bespoke `InitMapSprites` slot-pop + `FindOrAssignVramSlot` +
+    `LoadNPCSpriteTiles` retired; `InitMapSprites` is now a home wrapper (reset + toggleable
+    gate + `_InitMapSprites`). Uses the P3a `SpriteSheetPointerTable` + `sprite_sets.inc`
+    (swapped in for `npc_sprite_data_table.inc`). `wFontLoaded` upper-half reload in place.
+    Callers repointed: interaction stack + `start_menu.asm` `LoadNPCSpriteTiles` →
+    `ReloadWalkingTilePatterns`; `text_script.asm` already used `InitMapSprites`. Home-loader
+    inlined (`CopyData`/`AddNTimes`/`FillMemory` → `rep movsb`/`imul`; `CopyVideoDataAlternate`
+    → flat copy). Two DIVERGENCEs (tagged): (1) `InitSprites` writes the port `ISTRAINER`
+    field the interaction stack reads (the retired bespoke set it; pret re-derives it);
+    (2) `DisableRegularSprites` seeds `IMAGEINDEX=0` not pret's `$ff` — `PrepareOAMData`
+    hides `$ff` and the port's partial movement engine doesn't compute a standing NPC's
+    visible index from `$ff` at load, so the faithful marker would hide every NPC (restore
+    `$ff` when `InitializeSpriteStatus`/`UpdateSpriteImage` gain the load-time facing init).
+    **Root-caused a subtle regression** (Pallet NPC vanished): faithful fixed-set VRAM assign
+    gives GIRL/FISHER imageBaseOffset 5/6 (vs bespoke 3/4) — byte-identical render (tiles land
+    at matching slots); the vanish was the `$ff` IMAGEINDEX issue above, found via a DUMP.BIN
+    slot + shadow-OAM diff (slots correct, OAM had only the player). Verified: nasm + `make
+    check` clean; real build links; **3 FRAME.BIN baselines byte-identical**. **Pending user
+    live smoke** (NPCs render + dialog + menus + the Viridian old-man coverage fix). P4/3d =
+    menu-corruption verification.
     `InitSprites`/`ZeroSpriteStateData`/`DisableRegularSprites`/`LoadSprite` → `overworld.asm`
     (wired into `LoadMapHeader:1892`), retiring the bespoke slot-pop; then `_InitMapSprites`,
     `InitOutsideMapSprites` (+`GetSplitMapSpriteSetID` Route-20 split), `LoadSpriteSetFromMapHeader`

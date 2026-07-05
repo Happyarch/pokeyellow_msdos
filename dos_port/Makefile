@@ -792,7 +792,8 @@ assets/sprite_sets.inc: tools/gen_sprite_sets.py
 # map_sprites depends on the NPC tile asset table, all-maps dialog table, the
 # toggleable-object (event) flag tables, and the event-flag constants (events.inc).
 src/engine/overworld/map_sprites.o: \
-    assets/npc_sprite_data_table.inc \
+    assets/sprite_sets.inc \
+    assets/sprite_sheet_pointers.inc \
     assets/npc_dialogs/all_dialogs.inc \
     assets/toggleable_objects.inc \
     assets/event_constants.inc

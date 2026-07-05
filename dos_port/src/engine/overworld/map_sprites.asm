@@ -1,23 +1,24 @@
-; map_sprites.asm — NPC sprite slot initialization and tile loading.
+; map_sprites.asm — faithful pret engine/overworld/map_sprites.asm (sprite tile loader)
+; plus the port's overworld NPC interaction stack.
 ;
-; Faithful translation (pret cross-reference):
-;   InitMapSprites      engine/overworld/map_sprites.asm:InitMapSprites /
-;                       InitOutsideMapSprites / LoadSpriteSetFromMapHeader
-;   LoadNPCSpriteTiles  engine/overworld/map_sprites.asm:LoadMapSpriteTilePatterns /
-;                       ReadSpriteSheetData
+; Split of responsibilities (mirrors pret's file layout — OW-A.2 P3c de-bespoke):
+;   * Slot population (PICTUREID/MAPY/MAPX/MOVEMENTBYTE1/2 + wMapSpriteData +
+;     wMapSpriteExtraData) is the home object-loader InitSprites, in overworld.asm
+;     (called from LoadMapHeader). NOT here.
+;   * This file is the sprite-set tile loader, entered via InitMapSprites (wrapper)
+;     -> _InitMapSprites (from LoadMapData / .mapTransition / post-text reload):
+;       InitOutsideMapSprites (fixed set per outdoor map, via GetSplitMapSpriteSetID)
+;       / LoadSpriteSetFromMapHeader (indoor set from the slots' picture IDs) ->
+;       LoadMapSpriteTilePatterns (SpriteSheetPointerTable -> VRAM) ->
+;       LoadMapSpritesImageBaseOffset (per-slot IMAGEBASEOFFSET = set index + 2).
+;   * wFontLoaded gates the upper-half (walk-tile) reload: LoadStillTilePattern skips
+;     the lower half while text is loaded; ReloadWalkingTilePatterns reloads only the
+;     walk tiles after a menu/dialog overwrites the shared vFont region.
 ;
-; After LoadMapHeader sets W_OBJECT_DATA_PTR_TEMP to the GB address of the
-; sprite_count byte, InitMapSprites:
-;   1. Clears NPC slots 1-15 in wSpriteStateData1/2.
-;   2. Reads the sprite_count and per-NPC 6/7/8-byte records from the map
-;      object binary emitted by gen_map_headers.py.
-;   3. Populates PICTUREID, MAPY/MAPX, MOVEMENTBYTE1/2, IMAGEBASEOFFSET,
-;      ISTRAINER, and initial MOVEMENTDELAY for each NPC slot.
-;   4. Calls LoadNPCSpriteTiles to copy 12 still tiles per unique sprite
-;      type to the appropriate VRAM slot (imageBaseOffset-1)*192 from $8000.
-;
-; LoadNPCSpriteTiles loads both still tiles (→ GB_VCHARS0 slot) and walk tiles
-; (→ GB_VFONT slot) from the full 24-tile sprite sheet for each unique NPC type.
+; Port extensions kept here (; DIVERGENCE): the toggleable-hidden object gate and the
+; overworld interaction stack (CheckNPCInteraction / IsNPCAtTargetBlock /
+; CheckTrainerSight / TrainerEncounterFlow / ShowTextStream); pret's
+; IsSpriteOrSignInFrontOfPlayer path is unported.
 ;
 ; Build: nasm -f coff -I include/ -I . -o map_sprites.o src/engine/overworld/map_sprites.asm
 
@@ -39,8 +40,23 @@ extern LoadFontTilePatterns
 extern LoadPlayerSpriteGraphics
 extern HandleDownArrowBlinkTiming
 
-global InitMapSprites
-global LoadNPCSpriteTiles
+global InitMapSprites            ; home wrapper (pret name kept); reload sprite tiles after text
+; Faithful pret engine/overworld/map_sprites.asm routines (OW-A.2 P3c de-bespoke):
+global _InitMapSprites
+global InitOutsideMapSprites
+global GetSplitMapSpriteSetID
+global LoadSpriteSetFromMapHeader
+global CheckIfPictureIDAlreadyLoaded
+global CheckForFourTileSprite
+global LoadMapSpriteTilePatterns
+global ReloadWalkingTilePatterns  ; also the post-menu/post-text walk-tile reload
+global LoadStillTilePattern
+global LoadWalkingTilePattern
+global GetSpriteVRAMAddress
+global ReadSpriteSheetData
+global LoadMapSpritesImageBaseOffset
+global GetSpriteImageBaseOffset
+global ResetMapTrainerState        ; port-ext per-map-load trainer state (called by wrapper)
 global CheckNPCInteraction
 global ShowTextStream
 global IsNPCAtTargetBlock
@@ -64,19 +80,16 @@ extern EndTrainerBattle
 ; ---------------------------------------------------------------------------
 ; Constants
 ; ---------------------------------------------------------------------------
-NPC_TILE_BYTES  equ 12 * TILE_SIZE      ; 192 bytes = 12 tiles per sprite type
 TILE_SPC        equ 0x7F               ; blank/space tile (shared with text.asm)
-NPC_SLOTS_START equ 1                   ; first NPC slot (slot 0 = player)
-NPC_SLOTS_MAX   equ 15                  ; max NPC slots
-VRAM_SLOT_START equ 3                   ; imageBaseOffset 1=player 2=Pikachu 3+=NPCs
-SPRITE_SET_SIZE equ 12                  ; max unique sprite types per map
+NPC_SLOTS_MAX   equ 15                  ; max NPC slots (sizes wMapSpriteExtraData)
 
 ; ---------------------------------------------------------------------------
 ; BSS — per-map sprite deduplication table (reset at each InitMapSprites call)
 ; ---------------------------------------------------------------------------
 section .bss
-npc_sprite_set:       resb SPRITE_SET_SIZE   ; sprite IDs in current map (0 = unused)
-npc_vram_slots:       resb SPRITE_SET_SIZE   ; imageBaseOffset for each entry
+; OW-A.2 P3c: the bespoke dedup tables (npc_sprite_set / npc_vram_slots) are retired —
+; the faithful loader uses wSpriteSet (WRAM) + the SpriteSheetPointerTable instead.
+h_vram_slot:          resb 1                 ; pret hVRAMSlot (HRAM loop temp): current VRAM tile-pattern slot
 w_map_text_table_ptr: resd 1                 ; flat ptr to current map's TextTable (set by EnterMap)
 ; TODO-GLOBAL-EVENTS: npc_beaten_flags resets per InitMapSprites (per map load).
 ; Replace with a persistent global wEventFlags bit array when the event system is
@@ -109,17 +122,39 @@ wMapSpriteData:       resb MAX_OBJECT_EVENTS * 2
 g_toggleable_flags:   resb 64
 
 ; ---------------------------------------------------------------------------
-; NPC sprite tile assets and dialog text tables (section .data so flat
-; DS-relative pointers in npc_sprite_data_table resolve correctly).
+; Sprite-set tables, sprite tile sheets, and dialog text tables (section .data so
+; the flat DS-relative pointers in SpriteSheetPointerTable resolve correctly).
 ; ---------------------------------------------------------------------------
 section .data
 
-; npc_sprite_data_table — flat dd array indexed by sprite_id (0x00-0x52).
-; Each entry is a flat pointer to the sprite's full 384-byte tile sheet
-; (tiles [0-11]=still, [12-23]=walk), or 0 if that sprite_id has no asset.
-; NPC_SPRITE_TABLE_SIZE equ is defined inside the include.
-; Generated by tools/gen_all_assets.py — do NOT edit assets/npc_sprite_data_table.inc.
-%include "assets/npc_sprite_data_table.inc"
+; OW-A.2 P3c: the faithful sprite-set machinery replaces the bespoke
+; npc_sprite_data_table (sprite_id-indexed) with pret's two-level lookup:
+;   sprite_sets.inc           — MapSpriteSets / SplitMapSpriteSets / SpriteSets
+;                               (which fixed sprite set an outdoor map uses).
+;   sprite_sheet_pointers.inc — SpriteSheetPointerTable, indexed (sprite_id-1):
+;                               dd flat_ptr, dd tilecount; %includes its own sheets.
+; Both generated by tools/gen_all_assets.py / gen_sprite_sets.py — do NOT hand-edit.
+%include "assets/sprite_sets.inc"
+%include "assets/sprite_sheet_pointers.inc"
+
+; SpriteVRAMAddresses — GB VRAM tile-pattern-slot offsets, indexed by hVRAMSlot (0-10).
+; Faithful to pret data/sprites (SpriteVRAMAddresses): slot i (i<10) = vChars0 +
+; (i+1)*12 tiles; the two 4-tile "still" slots (9,10) share the 10th 12-tile block.
+; Geometry is arithmetically identical to the port renderer: VRAM for imageBaseOffset
+; N = $8000 + (N-1)*192, and imageBaseOffset = set index + 2. Walk tiles go to the
+; same offset + $800 (= GB_VFONT region), as pret's `set 3, h`.
+SpriteVRAMAddresses:
+    dw GB_VCHARS0 + 1 * 192
+    dw GB_VCHARS0 + 2 * 192
+    dw GB_VCHARS0 + 3 * 192
+    dw GB_VCHARS0 + 4 * 192
+    dw GB_VCHARS0 + 5 * 192
+    dw GB_VCHARS0 + 6 * 192
+    dw GB_VCHARS0 + 7 * 192
+    dw GB_VCHARS0 + 8 * 192
+    dw GB_VCHARS0 + 9 * 192
+    dw GB_VCHARS0 + 10 * 192          ; 4-tile sprite slot 9
+    dw GB_VCHARS0 + 10 * 192 + 4 * 16 ; 4-tile sprite slot 10
 
 ; NPC dialog streams — per-map text tables + MapTextTablePointers dispatch.
 ; Generated by tools/gen_npc_dialogs.py — do NOT edit these files.
@@ -136,229 +171,425 @@ section .data
 section .text
 
 ; ---------------------------------------------------------------------------
-; InitMapSprites — populate NPC sprite slots from the map's object data.
-; Pret ref: engine/overworld/map_sprites.asm:InitMapSprites (outside maps path).
+; OW-A.2 P3c — faithful sprite-set tile loader (pret engine/overworld/map_sprites.asm).
 ;
-; Prerequisites: LoadMapHeader must have run; it sets W_OBJECT_DATA_PTR_TEMP to
-; the GB address of the sprite_count byte in the map_object binary.
+; The bespoke InitMapSprites (which FUSED slot-population, dynamic VRAM-slot
+; assignment via FindOrAssignVramSlot, and tile-load) is retired. Slot population
+; is now the home object-loader InitSprites (overworld.asm, from LoadMapHeader);
+; this file provides the tile-pattern loader (from LoadMapData / .mapTransition /
+; post-text reload), which mirrors pret's file split exactly.
 ;
+; pret has FIRST_INDOOR_MAP; the port's gb_memmap.inc names it FIRST_INDOOR_MAP_ID.
+%ifndef FIRST_INDOOR_MAP
+FIRST_INDOOR_MAP equ FIRST_INDOOR_MAP_ID
+%endif
+; ---------------------------------------------------------------------------
+
+; ---------------------------------------------------------------------------
+; InitMapSprites — home wrapper (pret name; extern'd by overworld.asm + text_script.asm).
+; Runs the port-extension per-map bookkeeping, then the faithful _InitMapSprites.
 ; All registers preserved (pushad/popad).
 ; ---------------------------------------------------------------------------
 InitMapSprites:
     pushad
-
-    ; --- Clear NPC slots 1-15 in wSpriteStateData1 and wSpriteStateData2 ---
-    lea edi, [ebp + W_SPRITE_STATE_DATA_1 + 0x10]  ; slot 1 onward
-    xor al, al
-    mov ecx, NPC_SLOTS_MAX * 0x10      ; 15 * 16 = 240 bytes
-    rep stosb
-    lea edi, [ebp + W_SPRITE_STATE_DATA_2 + 0x10]
-    mov ecx, NPC_SLOTS_MAX * 0x10
-    rep stosb
-
-    ; --- Clear per-call sprite deduplication table ---
-    mov edi, npc_sprite_set
-    xor al, al
-    mov ecx, SPRITE_SET_SIZE * 2       ; sprite_set + vram_slots = 24 bytes
-    rep stosb
-
-    ; --- Clear cached per-NPC trainer class/set (wMapSpriteExtraData) ---
-    ; Non-trainer slots stay all-zero here (never re-written below), so NPC loading
-    ; for non-trainers is byte-identical to before this cache existed.
-    mov edi, wMapSpriteExtraData
-    xor al, al
-    mov ecx, NPC_SLOTS_MAX * 2
-    rep stosb
-
-    ; --- Clear wMapSpriteData ([movbyte2, textid] per slot) — pret InitSprites zeroes
-    ; it (FillMemory ... $20) so unused slots never carry stale movement/text bytes.
-    mov edi, wMapSpriteData
-    mov ecx, MAX_OBJECT_EVENTS * 2
-    rep stosb
-
-    ; --- Initialize trainer encounter state (reset per map load) ---
-    mov word [npc_beaten_flags], 0
-    mov byte [w_trainer_enc_slot], 0xFF
-    mov byte [w_player_frozen], 0
-
-    ; --- Read sprite_count from W_OBJECT_DATA_PTR_TEMP ---
-    movzx esi, word [ebp + W_OBJECT_DATA_PTR_TEMP]   ; ESI = GB addr of sprite_count
-    movzx ecx, byte [ebp + esi]
-    inc esi                             ; advance past sprite_count byte
-    test ecx, ecx
-    jz .done                            ; no NPCs on this map
-
-    ; EBX = current slot byte offset within wSpriteStateData1/2 (slot N at N*0x10)
-    ; EDX = next available imageBaseOffset (starts at VRAM_SLOT_START = 3)
-    ; ESI = read pointer into GB map object binary (already past sprite_count)
-    ; ECX = NPC count remaining
-    mov ebx, 0x10                       ; start at slot 1 (0x10)
-    mov edx, VRAM_SLOT_START            ; next_vram_slot = 3
-
-.slot_loop:
-    ; Read sprite_id byte
-    movzx eax, byte [ebp + esi]
-    inc esi
-    mov [ebp + ebx + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_PICTUREID], al
-    mov byte [ebp + ebx + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_MOVEMENTSTATUS], 0
-    mov byte [ebp + ebx + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_FACINGDIRECTION], SPRITE_FACING_DOWN
-
-    ; Save sprite_id (AL) and count (ECX) — FindOrAssignVramSlot may clobber ECX
-    push eax
-    push ecx
-
-    ; Read mapy
-    movzx eax, byte [ebp + esi]
-    inc esi
-    mov [ebp + ebx + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPY], al
-
-    ; Read mapx
-    movzx eax, byte [ebp + esi]
-    inc esi
-    mov [ebp + ebx + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPX], al
-
-    ; Read mov_byte (STAY=0xFF / WALK=0xFE / scripted=<0xFE)
-    movzx eax, byte [ebp + esi]
-    inc esi
-    mov [ebp + ebx + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTBYTE1], al
-
-    ; Read dir_byte (0x00=ANY / 0x01=UP_DOWN / 0x02=LEFT_RIGHT / 0xFF=NONE).
-    ; Store movement byte 2 in wMapSpriteData[(slot-1)*2] (pret LoadSprite). ECX is free
-    ; here (its value is saved on the stack); EDX (next_vram_slot) must stay untouched.
-    movzx eax, byte [ebp + esi]
-    inc esi
-    mov ecx, ebx
-    shr ecx, 4                          ; slot number (1-15)
-    dec ecx
-    add ecx, ecx                        ; (slot-1)*2 -> wMapSpriteData index
-    mov [wMapSpriteData + ecx], al      ; movement byte 2 (dir constraint)
-
-    ; Set initial movement delay (30 frames before first walk attempt)
-    mov byte [ebp + ebx + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTDELAY], 30
-
-    ; Read text_byte; check for trainer (TRAINER_FLAG = 0x40)
-    movzx eax, byte [ebp + esi]
-    inc esi
-    xor edi, edi                        ; is_trainer = 0
-    test al, TRAINER_FLAG
-    jz .not_trainer
-    mov edi, 1                          ; is_trainer = 1
-    ; --- M8.1: store (was: discard) trainer_class + trainer_num for this slot ---
-    ; Binary layout (gen_map_headers.py): ... text_byte, trainer_class, trainer_num.
-    ; ESI currently points at trainer_class.  Cache both in wMapSpriteExtraData so a
-    ; sighted trainer can seed the battle later.  Preserve AL (text_byte, consumed
-    ; below) and EBX (slot offset); EDX (next_vram_slot) must stay untouched.
-    push eax
-    push ebx
-    mov eax, ebx                        ; slot byte offset (0x10, 0x20, ...)
-    shr eax, 4                          ; slot number (1-15)
-    dec eax                             ; 0-based slot index
-    add eax, eax                        ; *2 -> wMapSpriteExtraData index
-    mov bl, [ebp + esi]                 ; trainer_class (OPP_* value, >= OPP_ID_OFFSET)
-    mov [wMapSpriteExtraData + eax], bl
-    mov bl, [ebp + esi + 1]             ; trainer_num / trainer party set
-    mov [wMapSpriteExtraData + eax + 1], bl
-    pop ebx
-    pop eax
-    add esi, 2                          ; advance past trainer_class + trainer_num bytes
-.not_trainer:
-    test al, ITEM_FLAG
-    jz .not_item
-    inc esi                             ; skip item_id byte (items handled by text engine, Phase 3+)
-.not_item:
-    ; Store masked text_id in wMapSpriteData[(slot-1)*2 + 1] (pret LoadSprite). ECX free.
-    and al, 0x3F                        ; lower 6 bits (trainer/item flags are high bits)
-    mov ecx, ebx
-    shr ecx, 4
-    dec ecx
-    add ecx, ecx
-    mov [wMapSpriteData + ecx + 1], al  ; masked text id
-    ; Store is_trainer as a SINGLE BYTE into the port istrainer flag (SPRITESTATEDATA2 0x0A);
-    ; a dword store would spill into 0x0B..0x0D (0x0D = SPRITESTATEDATA2_PICTUREID).
-    mov eax, edi                        ; AL = is_trainer (0/1); text_byte no longer needed
-    mov [ebp + ebx + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_ISTRAINER], al
-
-    ; Assign or look up a VRAM slot for this sprite type
-    pop ecx
-    pop eax                             ; AL = sprite_id
-    push ecx                            ; save NPC count remaining
-
-    ; --- Toggleable-object default-hidden gate --------------------------------
-    ; local object id (0-based) = current slot index - 1 = (ebx >> 4) - 1.
-    ; If hidden by its toggleable flag, leave the slot inactive (no VRAM slot,
-    ; IMAGEBASEOFFSET=0, PICTUREID=0) so it never spawns — but still advance the
-    ; slot so slot/text_id alignment is preserved.
-    push eax                            ; save sprite_id
-    mov eax, ebx
-    shr eax, 4
-    dec eax                             ; AL = local object id
-    call IsToggleableHidden            ; CF=1 => hidden; preserves ebx/ecx/edx/esi
-    pop eax                            ; AL = sprite_id
-    jc .slot_hidden
-
-    call FindOrAssignVramSlot           ; In: AL=sprite_id, EDX=next_slot. Out: AL=imageBaseOffset
-    mov [ebp + ebx + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_IMAGEBASEOFFSET], al
-    jmp .slot_advance
-
-.slot_hidden:
-    mov byte [ebp + ebx + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_IMAGEBASEOFFSET], 0
-    mov byte [ebp + ebx + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_PICTUREID], 0
-
-.slot_advance:
-    pop ecx
-    add ebx, 0x10                       ; advance to next slot
-    dec ecx
-    jnz .slot_loop
-
-.slots_done:
-    call LoadNPCSpriteTiles
-
-.done:
+    ; DIVERGENCE (port ext): reset the per-map trainer/interaction state. Kept here
+    ; (not in InitSprites) so it fires on exactly the paths the bespoke reset did —
+    ; map load + .mapTransition + post-text InitMapSprites — but NOT on the interaction
+    ; stack's post-dialog reload (that path calls ReloadWalkingTilePatterns, not this).
+    call ResetMapTrainerState
+    ; DIVERGENCE (port ext): hide toggleable-hidden objects before the sprite-set /
+    ; imageBaseOffset passes read PICTUREIDs, so a hidden object never gets a VRAM slot.
+    call ApplyToggleableHiddenGate
+    call _InitMapSprites
     popad
     ret
 
-; ---------------------------------------------------------------------------
-; FindOrAssignVramSlot — VRAM deduplication for NPC sprite types.
-; Pret ref: engine/overworld/map_sprites.asm:GetSpriteImageBaseOffset (logic).
-;
-; In:  AL  = sprite_id
-;      EDX = next available imageBaseOffset (caller-owned, updated on assign)
-; Out: AL  = imageBaseOffset for this sprite_id
-;      EDX = updated (incremented if a new slot was assigned)
-; Clobbers: ESI, ECX
-; ---------------------------------------------------------------------------
-FindOrAssignVramSlot:
+; ResetMapTrainerState (port ext) — zero the per-map interaction bookkeeping.
+; Also called by InitSprites is NOT done; only the InitMapSprites wrapper calls it.
+ResetMapTrainerState:
+    mov word [npc_beaten_flags], 0
+    mov byte [w_trainer_enc_slot], 0xFF
+    mov byte [w_player_frozen], 0
+    ret
+
+; ApplyToggleableHiddenGate (port ext) — for each populated NPC slot (1-14) whose
+; toggleable object is currently hidden, zero its PICTUREID so _InitMapSprites skips
+; it. Mirrors the bespoke loader's inline gate. IsToggleableHidden clobbers AL only.
+ApplyToggleableHiddenGate:
+    push eax
     push esi
+    mov esi, 0x10                       ; slot 1
+.loop:
+    cmp esi, 0xF0                       ; stop after slot 14 (slot 15 = Pikachu)
+    jae .done
+    movzx eax, byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_PICTUREID]
+    test al, al
+    jz .next                           ; unused slot
+    mov eax, esi
+    shr eax, 4                          ; slot number (1-14)
+    dec eax                             ; local object id (0-based)
+    call IsToggleableHidden            ; CF=1 if hidden; preserves ESI
+    jnc .next
+    mov byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_PICTUREID], 0
+.next:
+    add esi, 0x10
+    jmp .loop
+.done:
+    pop esi
+    pop eax
+    ret
+
+; ---------------------------------------------------------------------------
+; _InitMapSprites — pret engine/overworld/map_sprites.asm:_InitMapSprites.
+; Outside maps are fully handled by InitOutsideMapSprites (fixed sprite set); inside
+; maps build the set from the map header's sprites, then load tiles + imageBaseOffset.
+; ---------------------------------------------------------------------------
+_InitMapSprites:
+    call InitOutsideMapSprites
+    jc .done                           ; outside map handled (CF=1)
+    call LoadSpriteSetFromMapHeader
+    call LoadMapSpriteTilePatterns
+    call LoadMapSpritesImageBaseOffset
+.done:
+    ret
+
+; ---------------------------------------------------------------------------
+; InitOutsideMapSprites — pret. For cities/routes, choose the fixed sprite set and
+; load it. Out: CF=1 if the map is a city/route (handled here), CF=0 if indoor.
+; ---------------------------------------------------------------------------
+InitOutsideMapSprites:
+    mov al, [ebp + W_CUR_MAP]
+    cmp al, FIRST_INDOOR_MAP
+    jae .inside                        ; indoor map → not handled here (CF=0)
+    call GetSplitMapSpriteSetID         ; AL = spriteSetID (input AL = wCurMap)
+    mov bl, al                          ; B = spriteSetID
+    test byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    jnz .loadSet                        ; reloading upper half after text → force reload
+    mov al, [ebp + W_SPRITE_SET_ID]
+    cmp al, bl
+    je .skipLoad                        ; sprite set unchanged → don't reload it
+.loadSet:
+    mov [ebp + W_SPRITE_SET_ID], bl
+    ; wSpriteSet = SpriteSets[spriteSetID - 1] (SPRITE_SET_LENGTH bytes).
+    ; pret: AddNTimes + CopyData; flat port equivalent is imul + rep movsb.
+    movzx eax, bl
+    dec eax
+    imul eax, eax, SPRITE_SET_LENGTH
+    lea esi, [SpriteSets + eax]
+    lea edi, [ebp + W_SPRITE_SET]
+    mov ecx, SPRITE_SET_LENGTH
+    rep movsb
+    call LoadMapSpriteTilePatterns
+.skipLoad:
+    call LoadMapSpritesImageBaseOffset
+    stc                                 ; city/route handled
+    ret
+.inside:
+    clc
+    ret
+
+; ---------------------------------------------------------------------------
+; GetSplitMapSpriteSetID — pret. In: AL = wCurMap. Out: AL = spriteSetID, resolving
+; two-set (split) maps by the player's position. Preserves nothing needed by caller.
+; ---------------------------------------------------------------------------
+GetSplitMapSpriteSetID:
+    movzx eax, al
+    mov al, [MapSpriteSets + eax]       ; sprite set id, or a split-set marker
+    cmp al, FIRST_SPLIT_SET - 1         ; single set?
+    jb .single                          ; AL < 0xF0 → single (CF=1)
+    cmp al, SPLITSET_ROUTE_20
+    je .route20                         ; Route 20 is a special-shaped split
+    ; row = SplitMapSpriteSets + ((setmarker & 0x0f) - 1) * 4
+    and al, 0x0F
+    dec al
+    add al, al
+    add al, al                          ; * 4
+    movzx eax, al
+    lea edx, [SplitMapSpriteSets + eax]
+    mov al, [edx]                       ; #1 divide direction (EAST_WEST / NORTH_SOUTH)
+    mov ah, [edx + 1]                   ; #2 dividing-line coordinate
+    cmp al, EAST_WEST
+    je .eastWest
+.northSouth:
+    mov al, [ebp + W_Y_COORD]
+    jmp .compare
+.eastWest:
+    mov al, [ebp + W_X_COORD]
+.compare:
+    cmp al, ah                          ; coord < divide → west/north side
+    jb .westNorth
+    mov al, [edx + 3]                   ; #4 east/south side sprite set
+    ret
+.westNorth:
+    mov al, [edx + 2]                   ; #3 west/north side sprite set
+    ret
+.route20:
+    mov al, [ebp + W_X_COORD]
+    cmp al, 43
+    jb .r20_pv                          ; X < 43 → PALLET_VIRIDIAN
+    cmp al, 62
+    jae .r20_fu                         ; X >= 62 → FUCHSIA
+    cmp al, 55
+    jae .r20_y8                         ; 55 <= X < 62 → split Y at 8
+    mov ah, 13                          ; 43 <= X < 55 → split Y at 13
+    jmp .r20_ycmp
+.r20_y8:
+    mov ah, 8
+.r20_ycmp:
+    mov al, [ebp + W_Y_COORD]
+    cmp al, ah
+    jb .r20_fu                          ; Y < split → FUCHSIA
+.r20_pv:
+    mov al, SPRITESET_PALLET_VIRIDIAN
+    ret
+.r20_fu:
+    mov al, SPRITESET_FUCHSIA
+    ret
+.single:
+    ret                                 ; AL already = spriteSetID
+
+; ---------------------------------------------------------------------------
+; LoadSpriteSetFromMapHeader — pret. For indoor maps: build wSpriteSet from the
+; picture IDs in the populated sprite slots (Pikachu reserved in slot 0). Each
+; slot's VRAM tile-pattern slot is its picture ID's index within wSpriteSet.
+; ---------------------------------------------------------------------------
+LoadSpriteSetFromMapHeader:
+    lea edi, [ebp + W_SPRITE_SET]
+    xor al, al
+    mov ecx, SPRITE_SET_LENGTH
+    rep stosb                           ; zero wSpriteSet
+    mov byte [ebp + W_SPRITE_SET], SPRITE_PIKACHU   ; Pikachu loaded separately (slot 0)
+    mov esi, 0x10                       ; slot 1
+    mov ebx, 14
+.loop:
+    movzx eax, byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_PICTUREID]
+    test al, al
+    jz .continue                        ; slot not used
+    mov cl, al                          ; C = picture id
+    call CheckForFourTileSprite         ; CF=1 if four-tile sprite; preserves CL/ESI/EBX
+    jnc .notFourTile
+    mov edi, W_SPRITE_SET + 9            ; four-tile picture IDs live in the last 2 entries
+    mov edx, 2
+    call CheckIfPictureIDAlreadyLoaded
+    jmp .continue
+.notFourTile:
+    mov edi, W_SPRITE_SET               ; regular picture IDs use the first 9 entries
+    mov edx, 9
+    call CheckIfPictureIDAlreadyLoaded
+.continue:
+    add esi, 0x10
+    dec ebx
+    jnz .loop
+    ret
+
+; ---------------------------------------------------------------------------
+; CheckIfPictureIDAlreadyLoaded — pret. Scan a region of wSpriteSet for picture id
+; CL; if absent, store it in the first empty entry. In: EDI = GB offset of the
+; scan start, EDX = max entries, CL = picture id. Clobbers EAX/EDX/EDI. (The pret
+; scf/carry return is vestigial — callers ignore it — so it is dropped here.)
+; ---------------------------------------------------------------------------
+CheckIfPictureIDAlreadyLoaded:
+.loop:
+    mov al, [ebp + edi]
+    test al, al
+    jz .notTaken                        ; empty entry → end of set → store here
+    cmp al, cl
+    je .done                            ; already loaded → don't duplicate
+    dec edx
+    jz .done                            ; reached end of the reserved region
+    inc edi
+    jmp .loop
+.notTaken:
+    mov [ebp + edi], cl
+.done:
+    ret
+
+; ---------------------------------------------------------------------------
+; CheckForFourTileSprite — pret. In: AL = picture id. Out: CF=1 if the sprite uses
+; 4 tiles (a Yellow "still" sprite); CF=0 for a regular sprite OR Pikachu (Pikachu
+; is loaded separately). Preserves AL/CL/ESI/EBX (cmp only).
+; ---------------------------------------------------------------------------
+CheckForFourTileSprite:
+    cmp al, SPRITE_PIKACHU
+    je .pikachu                         ; Pikachu → CF=0 (handled separately)
+    cmp al, FIRST_STILL_SPRITE
+    jae .fourTile                       ; >= FIRST_STILL_SPRITE → four-tile
+    clc                                 ; regular sprite
+    ret
+.fourTile:
+    stc
+    ret
+.pikachu:
+    clc
+    ret
+
+; ---------------------------------------------------------------------------
+; LoadMapSpriteTilePatterns — pret. Load tiles for each of the 11 wSpriteSet slots:
+; slots 0-8 load still + walking tiles; the two 4-tile slots (9,10) load still only.
+; ---------------------------------------------------------------------------
+LoadMapSpriteTilePatterns:
+    mov byte [h_vram_slot], 0
+.loop:
+    cmp byte [h_vram_slot], 9
+    jae .fourTile
+    call LoadStillTilePattern
+    call LoadWalkingTilePattern
+    jmp .cont
+.fourTile:
+    call LoadStillTilePattern
+.cont:
+    inc byte [h_vram_slot]
+    cmp byte [h_vram_slot], 11
+    jne .loop
+    ret
+
+; ---------------------------------------------------------------------------
+; ReloadWalkingTilePatterns — pret. Reload just the walking tiles for slots 0-8.
+; Also the port's post-menu / post-dialog walk-tile reload (the font/menu overwrites
+; the vFont upper half that the walk tiles share).
+; ---------------------------------------------------------------------------
+ReloadWalkingTilePatterns:
+    mov byte [h_vram_slot], 0
+.loop:
+    cmp byte [h_vram_slot], 9
+    jae .skip
+    call LoadWalkingTilePattern
+.skip:
+    inc byte [h_vram_slot]
+    cmp byte [h_vram_slot], 11
+    jne .loop
+    ret
+
+; ---------------------------------------------------------------------------
+; LoadStillTilePattern — pret. Copy the 12 (or 4) still tiles for the current
+; wSpriteSet slot into vChars0. Skipped when the font is loaded (that only clobbers
+; the upper/walk half, so the lower/still half must not be reloaded over live text).
+; ---------------------------------------------------------------------------
+LoadStillTilePattern:
+    test byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    jnz .skip                          ; font loaded → don't reload the lower half
+    call ReadSpriteSheetData            ; EDX = flat src, ECX = tile count, CF=1 if used
+    jnc .skip
+    push esi
+    push edi
     push ecx
-    mov esi, 0                          ; index into npc_sprite_set
-.scan:
-    cmp esi, SPRITE_SET_SIZE
-    jge .assign                         ; table full (shouldn't happen for ≤12 maps)
-    movzx ecx, byte [npc_sprite_set + esi]
-    test cl, cl
-    jz .assign                          ; empty slot → sprite not seen before
-    cmp cl, al
+    call GetSpriteVRAMAddress           ; EAX = VRAM tile-pattern offset
+    mov esi, edx                        ; still tiles are at src + 0
+    lea edi, [ebp + eax]
+    shl ecx, 4                          ; tiles → bytes (* TILE_SIZE)
+    rep movsb                           ; DIVERGENCE: flat copy replaces CopyVideoDataAlternate
+    mov byte [g_tilecache_dirty], 1
+    pop ecx
+    pop edi
+    pop esi
+.skip:
+    ret
+
+; ---------------------------------------------------------------------------
+; LoadWalkingTilePattern — pret. Copy the 12 walking tiles (source + $c0) for the
+; current slot into the vFont upper half (VRAM offset + $800 = pret `set 3, h`).
+; ---------------------------------------------------------------------------
+LoadWalkingTilePattern:
+    call ReadSpriteSheetData            ; EDX = flat src, ECX = tile count, CF=1 if used
+    jnc .skip
+    push esi
+    push edi
+    push ecx
+    call GetSpriteVRAMAddress           ; EAX = VRAM tile-pattern offset
+    lea esi, [edx + 0xC0]               ; walking tiles are at src + $c0
+    lea edi, [ebp + eax + 0x800]        ; + $800 → vFont upper half
+    shl ecx, 4
+    rep movsb
+    mov byte [g_tilecache_dirty], 1
+    pop ecx
+    pop edi
+    pop esi
+.skip:
+    ret
+
+; ---------------------------------------------------------------------------
+; GetSpriteVRAMAddress — pret. Out: EAX = SpriteVRAMAddresses[hVRAMSlot] (a GB VRAM
+; offset; use as [EBP + EAX]). Preserves other registers.
+; ---------------------------------------------------------------------------
+GetSpriteVRAMAddress:
+    push edx
+    movzx edx, byte [h_vram_slot]
+    movzx eax, word [SpriteVRAMAddresses + edx * 2]
+    pop edx
+    ret
+
+; ---------------------------------------------------------------------------
+; ReadSpriteSheetData — pret. Look up the sheet for the current wSpriteSet slot.
+; Out: CF=0 if the slot is unused; else CF=1, EDX = flat sheet pointer, ECX = tile
+; count. Index into SpriteSheetPointerTable is (picture id - 1) (pret `dec a`).
+; ---------------------------------------------------------------------------
+ReadSpriteSheetData:
+    movzx eax, byte [h_vram_slot]
+    movzx eax, byte [ebp + W_SPRITE_SET + eax]   ; picture id in this VRAM slot
+    test al, al
+    jz .none
+    dec eax                             ; (picture id - 1)
+    mov edx, eax
+    shl edx, 3                          ; * 8 bytes per SpriteSheetPointerTable entry
+    mov ecx, [SpriteSheetPointerTable + edx + 4] ; tile count
+    mov edx, [SpriteSheetPointerTable + edx]     ; flat sheet pointer
+    stc
+    ret
+.none:
+    clc
+    ret
+
+; ---------------------------------------------------------------------------
+; LoadMapSpritesImageBaseOffset — pret. Assign each sprite slot's IMAGEBASEOFFSET:
+; player = 1, Pikachu (slot 15) = 2, and each NPC slot = its picture id's index
+; within wSpriteSet + 2 (via GetSpriteImageBaseOffset).
+; ---------------------------------------------------------------------------
+LoadMapSpritesImageBaseOffset:
+    mov byte [ebp + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_IMAGEBASEOFFSET], 1        ; player (slot 0)
+    mov byte [ebp + 0xF0 + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_IMAGEBASEOFFSET], 2 ; Pikachu (slot 15)
+    mov esi, 0x10                       ; slot 1
+    mov ecx, 14
+.loop:
+    movzx eax, byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_PICTUREID]
+    test al, al
+    jz .skip                            ; unused slot
+    call GetSpriteImageBaseOffset       ; AL = imageBaseOffset; preserves ESI/ECX
+    mov [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_IMAGEBASEOFFSET], al
+.skip:
+    add esi, 0x10
+    dec ecx
+    jnz .loop
+    ret
+
+; ---------------------------------------------------------------------------
+; GetSpriteImageBaseOffset — pret. In: AL = picture id. Out: AL = its index within
+; wSpriteSet + 2 (imageBaseOffset), or 1 if not found. Preserves EBX/ECX/EDI/ESI.
+; ---------------------------------------------------------------------------
+GetSpriteImageBaseOffset:
+    push ebx
+    push ecx
+    push edi
+    mov cl, al                          ; C = picture id
+    mov ebx, 11                         ; B = number of wSpriteSet entries
+    mov edi, W_SPRITE_SET
+.find:
+    mov al, [ebp + edi]
+    cmp al, cl
     je .found
-    inc esi
-    jmp .scan
+    inc edi
+    dec ebx
+    jnz .find
+    mov al, 1                           ; not found → assume slot one
+    jmp .done
 .found:
-    ; Return cached imageBaseOffset for this sprite_id
-    movzx eax, byte [npc_vram_slots + esi]
+    mov al, 13
+    sub al, bl                          ; imageBaseOffset = 13 - B
+.done:
+    pop edi
     pop ecx
-    pop esi
+    pop ebx
     ret
-.assign:
-    ; New sprite type — record it and assign next_vram_slot
-    cmp esi, SPRITE_SET_SIZE
-    jge .overflow
-    mov [npc_sprite_set + esi], al
-    mov [npc_vram_slots  + esi], dl
-.overflow:
-    mov al, dl                          ; return assigned (or last valid) slot
-    inc edx                             ; next_vram_slot++
-    pop ecx
-    pop esi
-    ret
+
 
 ; ---------------------------------------------------------------------------
 ; InitToggleableObjectFlags — seed global event/visibility flags to defaults.
@@ -452,74 +683,6 @@ IsToggleableHidden:
     pop ecx
     pop ebx
     stc
-    ret
-
-; ---------------------------------------------------------------------------
-; LoadNPCSpriteTiles — copy still tiles for each unique sprite type to VRAM.
-; Pret ref: engine/overworld/map_sprites.asm:LoadMapSpriteTilePatterns /
-;            ReadSpriteSheetData.
-;
-; Iterates npc_sprite_set; for each non-zero entry, looks up the source asset
-; in NpcSpriteAssets and copies NPC_TILE_BYTES (192) bytes to:
-;   [EBP + GB_VCHARS0 + (imageBaseOffset - 1) * NPC_TILE_BYTES]
-;
-; Sets g_tilecache_dirty = 1 after any copy.
-; All registers preserved (push/pop).
-; ---------------------------------------------------------------------------
-LoadNPCSpriteTiles:
-    push eax
-    push ebx
-    push ecx
-    push esi
-    push edi
-
-    mov ebx, 0                          ; sprite_set index
-.tile_loop:
-    cmp ebx, SPRITE_SET_SIZE
-    jge .done
-    movzx eax, byte [npc_sprite_set + ebx]
-    test al, al
-    jz .done                            ; end of used entries
-
-    ; Compute VRAM destination flat address:
-    ;   edi = EBP + GB_VCHARS0 + (imageBaseOffset - 1) * NPC_TILE_BYTES
-    movzx ecx, byte [npc_vram_slots + ebx]
-    dec ecx                             ; (imageBaseOffset - 1)
-    imul ecx, NPC_TILE_BYTES            ; * 192
-    lea edi, [ebp + ecx + GB_VCHARS0]  ; flat addr in GB VRAM
-
-    ; Look up asset source for this sprite_id (AL) via flat table.
-    movzx ecx, al                        ; sprite_id as 32-bit index
-    cmp ecx, NPC_SPRITE_TABLE_SIZE       ; bounds check
-    jae .next_sprite
-    mov esi, [npc_sprite_data_table + ecx*4]  ; pointer to 384-byte tile sheet
-    test esi, esi
-    jz .next_sprite                      ; no asset for this sprite_id
-    ; Still tiles [0-11] → GB_VCHARS0 + (imageBaseOffset-1)*NPC_TILE_BYTES
-    mov ecx, NPC_TILE_BYTES
-    rep movsb
-    ; Walk tiles [12-23] → GB_VFONT + (imageBaseOffset-1)*NPC_TILE_BYTES.
-    ; These share GB_VFONT with the text font; LoadFontTilePatterns must be called
-    ; before any PrintText call, and LoadNPCSpriteTiles after, to swap correctly.
-    ; Safe for ≤6 unique NPC types per map (96 font tiles = 6 × 16-tile slots).
-    movzx ecx, byte [npc_vram_slots + ebx]
-    dec ecx
-    imul ecx, NPC_TILE_BYTES
-    lea edi, [ebp + ecx + GB_VFONT]
-    mov ecx, NPC_TILE_BYTES
-    rep movsb
-    mov byte [g_tilecache_dirty], 1
-
-.next_sprite:
-    inc ebx
-    jmp .tile_loop
-
-.done:
-    pop edi
-    pop esi
-    pop ecx
-    pop ebx
-    pop eax
     ret
 
 ; ---------------------------------------------------------------------------
@@ -757,7 +920,7 @@ CheckNPCInteraction:
     and byte [ebp + W_FONT_LOADED], ~(1 << BIT_FONT_LOADED)
 
     ; Reload NPC and player walk tiles into GB_VFONT (font was loaded for dialog).
-    call LoadNPCSpriteTiles
+    call ReloadWalkingTilePatterns      ; OW-A.2 P3c: faithful post-dialog walk-tile reload
     call LoadPlayerSpriteGraphics
 
     ; Restore the BG: rebuild wSurroundingTiles for current player position.
@@ -1063,7 +1226,7 @@ TrainerEncounterFlow:
     ; -------------------------------------------------------------------------
     call hide_window                    ; count=0 (nothing drawn); parks H_WY off-screen
     and byte [ebp + W_FONT_LOADED], ~(1 << BIT_FONT_LOADED)
-    call LoadNPCSpriteTiles
+    call ReloadWalkingTilePatterns      ; OW-A.2 P3c: faithful post-dialog walk-tile reload
     call LoadPlayerSpriteGraphics
     call LoadCurrentMapView
     call DelayFrame

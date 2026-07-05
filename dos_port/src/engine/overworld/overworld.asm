@@ -2471,6 +2471,16 @@ InitSprites:
     movzx eax, byte [ebp + esi]
     inc esi
     mov [h_load_sprite_temp2], al
+    ; DIVERGENCE (port ext): set the per-slot ISTRAINER flag (SPRITESTATEDATA2 0x0A)
+    ; that the port interaction stack (CheckNPCInteraction / CheckTrainerSight /
+    ; TrainerEncounterFlow) reads. pret has no such field — it re-derives trainer-ness
+    ; from the text-id flags at interaction time (IsSpriteOrSignInFrontOfPlayer, unported).
+    ; The bespoke InitMapSprites used to set this; it is retired in P3c, so InitSprites
+    ; (the slot populator) carries it. ZeroSpriteStateData already cleared the slot.
+    test al, TRAINER_FLAG
+    jz .not_trainer_slot
+    mov byte [ebp + edx + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_ISTRAINER], 1
+.not_trainer_slot:
     ; LoadSprite: ECX = wMapSpriteData index; ESI = read ptr (advanced past any
     ; trainer/item extra bytes on return). It preserves EBX/EDX/EDI and clobbers EAX.
     mov ecx, edi
@@ -2501,14 +2511,24 @@ ZeroSpriteStateData:
     pop eax
     ret
 
-; Disable regular sprites: SPRITESTATEDATA1_IMAGEINDEX = $ff for slots 1-14 (pret).
+; Disable regular sprites: SPRITESTATEDATA1_IMAGEINDEX for slots 1-14.
+; DIVERGENCE (port limitation): pret writes $ff here — a "hidden until initialized"
+; marker that its full sprite-movement engine (UpdateSprites → the facing-animation
+; path) replaces with a real facing index on the first overworld frame. The port's
+; PrepareOAMData treats IMAGEINDEX=$ff as off-screen (sprite_oam.asm:108), but the
+; port's PARTIAL movement engine does NOT compute a standing NPC's visible index from
+; $ff at load, so a faithful $ff would leave every NPC invisible until it happens to
+; move. The prior working render relied on IMAGEINDEX=0 (the ZeroSpriteStateData
+; clear value → facing-down anim-0). Seed that here so standing NPCs render on the
+; first frame, matching the pre-P3c behavior. Restore $ff when the movement engine
+; gains pret's load-time facing-index init (InitializeSpriteStatus + UpdateSpriteImage).
 DisableRegularSprites:
     push ecx
     push esi
     mov esi, 0x10                                       ; slot 1
     mov ecx, 14
 .loop:
-    mov byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_IMAGEINDEX], 0xff
+    mov byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_IMAGEINDEX], 0
     add esi, 0x10
     dec ecx
     jnz .loop
