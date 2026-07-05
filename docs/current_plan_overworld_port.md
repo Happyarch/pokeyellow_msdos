@@ -290,10 +290,14 @@ interactively with the user.
     inlined (`CopyData`/`AddNTimes`/`FillMemory` → `rep movsb`/`imul`; `CopyVideoDataAlternate`
     → flat copy). Two DIVERGENCEs (tagged): (1) `InitSprites` writes the port `ISTRAINER`
     field the interaction stack reads (the retired bespoke set it; pret re-derives it);
-    (2) `DisableRegularSprites` seeds `IMAGEINDEX=0` not pret's `$ff` — `PrepareOAMData`
-    hides `$ff` and the port's partial movement engine doesn't compute a standing NPC's
-    visible index from `$ff` at load, so the faithful marker would hide every NPC (restore
-    `$ff` when `InitializeSpriteStatus`/`UpdateSpriteImage` gain the load-time facing init).
+    (2) `DisableRegularSprites` seeds `IMAGEINDEX=0` not pret's `$ff`. This has **zero
+    real-game effect** — the first `UpdateSprites` frame's `InitializeSpriteStatus`
+    overwrites `IMAGEINDEX=$ff` regardless of the seed, so `0`/`$ff` are live-identical; the
+    seed only changes the STATIC pre-`UpdateSprites` DEBUG snapshot (`0` keeps NPCs visible
+    there so the baseline still exercises NPC rendering). Restoring faithful `$ff` (harness
+    `UpdateSprites` + NPC move-delay so NPCs don't wander in the snapshot) is **handed off to
+    OW-A.7** (reopened follow-up) — see its FOLLOW-UP item + the DIVERGENCE block at
+    `overworld.asm:DisableRegularSprites`.
     **Root-caused a subtle regression** (Pallet NPC vanished): faithful fixed-set VRAM assign
     gives GIRL/FISHER imageBaseOffset 5/6 (vs bespoke 3/4) — byte-identical render (tiles land
     at matching slots); the vanish was the `$ff` IMAGEINDEX issue above, found via a DUMP.BIN
@@ -571,6 +575,22 @@ root pret tree.
   5. `.randomMovement`: documented the port-only MAPY/MAPX clamp as a `DIVERGENCE` (guards
      GetTileSpriteStandsOn from OOB reads; narrower than CheckSpriteAvailability's visible zone —
      reconcile/delete when the map-data extension removes the OOB region).
+- **FOLLOW-UP (reopened 2026-07-05, handed off from OW-A.2 P3c) — NPC initial move-delay +
+  restore faithful `DisableRegularSprites=$ff`:** `.randomMovement` (movement.asm:307) makes a
+  status-1 WALK NPC attempt a walk EVERY frame with no startup delay, so a fresh NPC starts
+  moving on the second `UpdateSprites` frame after a map load (the bespoke loader masked this by
+  seeding `MOVEMENTDELAY=30`; pret uses a per-NPC random move-delay/probability the port hasn't
+  ported). Because of this, OW-A.2 P3c had to keep the PORT's `DisableRegularSprites` seeding
+  `IMAGEINDEX=0` (visible) instead of pret's `$ff` (hidden-until-init): the two are
+  **real-game-identical** (the first `UpdateSprites` frame's `InitializeSpriteStatus`
+  overwrites `IMAGEINDEX=$ff` regardless — see the DIVERGENCE block at
+  `overworld.asm:DisableRegularSprites`), but `$ff` hides NPCs in the STATIC pre-`UpdateSprites`
+  DEBUG snapshot, and restoring `$ff` cleanly requires (a) the DEBUG_TRANSITION harness to run
+  `UpdateSprites` like `EnterMap`, and (b) this move-delay port so the NPCs don't immediately
+  wander (which would make the baseline dynamic/nondeterministic). Do both here, then flip
+  `DisableRegularSprites` to `$ff`, add the harness `UpdateSprites`, and re-capture the 3
+  reference baselines (they become post-`UpdateSprites` snapshots). Zero in-game behavior change
+  is at stake — this is faithfulness + a cleaner move-delay, not a live bug.
 
 <details><summary>Original ticket items (all done)</summary>
 

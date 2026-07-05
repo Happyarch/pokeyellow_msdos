@@ -2512,16 +2512,20 @@ ZeroSpriteStateData:
     ret
 
 ; Disable regular sprites: SPRITESTATEDATA1_IMAGEINDEX for slots 1-14.
-; DIVERGENCE (port limitation): pret writes $ff here — a "hidden until initialized"
-; marker that its full sprite-movement engine (UpdateSprites → the facing-animation
-; path) replaces with a real facing index on the first overworld frame. The port's
-; PrepareOAMData treats IMAGEINDEX=$ff as off-screen (sprite_oam.asm:108), but the
-; port's PARTIAL movement engine does NOT compute a standing NPC's visible index from
-; $ff at load, so a faithful $ff would leave every NPC invisible until it happens to
-; move. The prior working render relied on IMAGEINDEX=0 (the ZeroSpriteStateData
-; clear value → facing-down anim-0). Seed that here so standing NPCs render on the
-; first frame, matching the pre-P3c behavior. Restore $ff when the movement engine
-; gains pret's load-time facing-index init (InitializeSpriteStatus + UpdateSpriteImage).
+; DIVERGENCE (harness-only; zero real-game effect): pret writes $ff here — a
+; "hidden until initialized" marker. This seed is IRRELEVANT to the running game:
+; the first UpdateSprites frame calls InitializeSpriteStatus (movement.asm:727),
+; which unconditionally overwrites IMAGEINDEX with $ff; the second frame's
+; CheckSpriteAvailability → UpdateSpriteImage then computes the real facing index.
+; So under the live game (EnterMap + OverworldLoop both run UpdateSprites) a $ff or
+; a 0 seed here behave identically. The seed ONLY changes the STATIC pre-UpdateSprites
+; DEBUG-harness snapshot (DEBUG_BASELINE etc. render without running UpdateSprites):
+; $ff hides the NPCs there, 0 (the ZeroSpriteStateData value → facing-down anim-0)
+; shows them. We keep 0 so that regression snapshot still exercises NPC rendering.
+; Restoring the faithful $ff needs the DEBUG harness to run UpdateSprites like EnterMap
+; — but on frame 2 the port's random-movement path makes a WALK NPC try to move
+; immediately (no initial move-delay), so it also needs pret's move-delay/probability
+; ported (movement-engine work, OW-A.7 territory) to keep the snapshot deterministic.
 DisableRegularSprites:
     push ecx
     push esi
