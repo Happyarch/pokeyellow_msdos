@@ -17,8 +17,8 @@
 ; tile passability + sprite-collision gating). PrepareOAMData (sprite_oam.asm)
 ; then turns the image indices into shadow-OAM entries each DelayFrame.
 ;
-; Direction constraint is read from SPRITESTATEDATA2_MOVEMENTBYTE2 (offset 0x1),
-; replacing pret's wMapSpriteData/wCurSpriteMovement2 indirection.
+; Direction constraint is read from wMapSpriteData[(slot-1)*2] (pret wMapSpriteData;
+; OW-A.2 P2 relocated it there from the bespoke SPRITESTATEDATA2 offset 0x1).
 ; Scripted NPC movement (MOVEMENTBYTE1 < WALK) is a stub — not yet implemented.
 ;
 ; Build: nasm -f coff -I include/ -I . -o movement.o src/engine/overworld/movement.asm
@@ -51,6 +51,7 @@ extern SpawnPikachu
 ; (not yet ported). Dispatched from the UpdateNonPlayerSprite shim below. Root must
 ; supply a link stub until the scripted-movement port lands.
 extern DoScriptedNPCMovement
+extern wMapSpriteData            ; map_sprites.asm — [movbyte2, textid] per slot (pret wMapSpriteData)
 
 %ifdef DEBUG_NPC_WALK
 extern npc_log
@@ -239,8 +240,8 @@ UpdateNonPlayerSprite:
 ;   3 → UpdateSpriteInWalkingAnimation (pixel-step animation)
 ;   4 → Func_5357 (finish-step / item-ball emerge / STAY-and-face)
 ;
-; Direction constraint (wCurSpriteMovement2 in pret) is read directly from
-; SPRITESTATEDATA2_MOVEMENTBYTE2 (offset 0x1). Reached by fall-through/jmp from
+; Direction constraint (wCurSpriteMovement2 in pret) is read from
+; wMapSpriteData[(slot-1)*2] (OW-A.2 P2 relocation). Reached by fall-through/jmp from
 ; UpdateNonPlayerSprite (pret jp's here from its .unequal path). ESI is live from
 ; the dispatcher; caller pushad/popad, so all other registers are free.
 ; ---------------------------------------------------------------------------
@@ -339,8 +340,13 @@ UpdateNPCSprite:
     push ebx                            ; save tile ptr (BL clobbered by Random_)
     call Random                         ; H_RANDOM_ADD updated; AL = random byte
     pop ebx                             ; restore tile ptr
-    ; AL = random value; CL = direction constraint
-    movzx ecx, byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTBYTE2]
+    ; AL = random value; CL = direction constraint from wMapSpriteData[(slot-1)*2]
+    ; (OW-A.2 P2 relocation, pret LoadSprite). EDX is free after the pop ebx above.
+    mov edx, esi
+    shr edx, 4                           ; slot number (1-15)
+    dec edx
+    add edx, edx                         ; (slot-1)*2 -> wMapSpriteData index
+    movzx ecx, byte [wMapSpriteData + edx]
 
 .determineDirection:
     ; Forced single directions: DOWN=0xD0, UP=0xD1, LEFT=0xD2, RIGHT=0xD3

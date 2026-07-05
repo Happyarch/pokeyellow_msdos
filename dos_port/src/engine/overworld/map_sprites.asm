@@ -51,6 +51,7 @@ global TrainerEncounterFlow
 global InitToggleableObjectFlags
 global IsToggleableHidden
 global wMapSpriteExtraData       ; M8.1: per-NPC [class,set] cache (pret wMapSpriteExtraData)
+global wMapSpriteData            ; OW-A.2: [movement byte 2, masked text id] per slot (pret wMapSpriteData)
 
 ; M8.1 sight->battle wiring — the trainer battle-entry these overworld routines call.
 ; StartTrainerBattle seeds wCurOpponent/wTrainerClass/wTrainerNo from the engaged
@@ -93,6 +94,12 @@ w_player_frozen:      resb 1   ; 1 = block player input during encounter flow
 ; TODO(M8.2): pret's EngageMapTrainer reads this array via wSpriteIndex; the M8.1
 ; inline engage in TrainerEncounterFlow reads it directly until EngageMapTrainer lands.
 wMapSpriteExtraData:  resb NPC_SLOTS_MAX * 2
+
+; wMapSpriteData — pret wMapSpriteData (home/overworld.asm:LoadSprite).  Two bytes per
+; slot: [movement byte 2 (dir constraint), masked text id].  Index for slot N (1-15) =
+; (N-1)*2.  OW-A.2 P2 relocated these off the pret-unused SPRITESTATEDATA2 struct bytes
+; 0x1/0x0A (where the bespoke loader had stashed them) into this faithful array.
+wMapSpriteData:       resb MAX_OBJECT_EVENTS * 2
 
 ; Global toggleable-object (event) flags — pret's wToggleableObjectFlags.  Bit g set
 ; (LSB-first) => toggleable object g is hidden.  Persistent across map loads; seeded
@@ -163,6 +170,12 @@ InitMapSprites:
     mov ecx, NPC_SLOTS_MAX * 2
     rep stosb
 
+    ; --- Clear wMapSpriteData ([movbyte2, textid] per slot) — pret InitSprites zeroes
+    ; it (FillMemory ... $20) so unused slots never carry stale movement/text bytes.
+    mov edi, wMapSpriteData
+    mov ecx, MAX_OBJECT_EVENTS * 2
+    rep stosb
+
     ; --- Initialize trainer encounter state (reset per map load) ---
     mov word [npc_beaten_flags], 0
     mov byte [w_trainer_enc_slot], 0xFF
@@ -209,10 +222,16 @@ InitMapSprites:
     inc esi
     mov [ebp + ebx + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTBYTE1], al
 
-    ; Read dir_byte (0x00=ANY / 0x01=UP_DOWN / 0x02=LEFT_RIGHT / 0xFF=NONE)
+    ; Read dir_byte (0x00=ANY / 0x01=UP_DOWN / 0x02=LEFT_RIGHT / 0xFF=NONE).
+    ; Store movement byte 2 in wMapSpriteData[(slot-1)*2] (pret LoadSprite). ECX is free
+    ; here (its value is saved on the stack); EDX (next_vram_slot) must stay untouched.
     movzx eax, byte [ebp + esi]
     inc esi
-    mov [ebp + ebx + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTBYTE2], al
+    mov ecx, ebx
+    shr ecx, 4                          ; slot number (1-15)
+    dec ecx
+    add ecx, ecx                        ; (slot-1)*2 -> wMapSpriteData index
+    mov [wMapSpriteData + ecx], al      ; movement byte 2 (dir constraint)
 
     ; Set initial movement delay (30 frames before first walk attempt)
     mov byte [ebp + ebx + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTDELAY], 30
@@ -247,12 +266,15 @@ InitMapSprites:
     jz .not_item
     inc esi                             ; skip item_id byte (items handled by text engine, Phase 3+)
 .not_item:
-    ; Store text_id = text_byte & 0x3F (lower 6 bits: trainer/item flags are high bits)
-    and al, 0x3F
-    mov [ebp + ebx + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_TEXTID], al
-    ; Store is_trainer as a SINGLE BYTE.  A 32-bit `mov [..ISTRAINER], edi` writes
-    ; bytes 0x9..0xC, and 0xA is TEXTID — so the dword store silently zeroed the
-    ; text id of every NPC (→ all NPCs showed text 0 / Oak's first-meet line).
+    ; Store masked text_id in wMapSpriteData[(slot-1)*2 + 1] (pret LoadSprite). ECX free.
+    and al, 0x3F                        ; lower 6 bits (trainer/item flags are high bits)
+    mov ecx, ebx
+    shr ecx, 4
+    dec ecx
+    add ecx, ecx
+    mov [wMapSpriteData + ecx + 1], al  ; masked text id
+    ; Store is_trainer as a SINGLE BYTE into the port istrainer flag (SPRITESTATEDATA2 0x0A);
+    ; a dword store would spill into 0x0B..0x0D (0x0D = SPRITESTATEDATA2_PICTUREID).
     mov eax, edi                        ; AL = is_trainer (0/1); text_byte no longer needed
     mov [ebp + ebx + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_ISTRAINER], al
 
@@ -680,7 +702,12 @@ CheckNPCInteraction:
     or byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_MOVEMENTSTATUS], (1 << BIT_FACE_PLAYER)
 
     ; Look up text_id → table entry: flat ptr + (byte count | SCRIPT sentinel).
-    movzx eax, byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_TEXTID]
+    ; text id lives in wMapSpriteData[(slot-1)*2 + 1] (OW-A.2 P2 relocation).
+    mov eax, esi
+    shr eax, 4                             ; slot number (1-15)
+    dec eax
+    add eax, eax                           ; (slot-1)*2 -> wMapSpriteData index
+    movzx eax, byte [wMapSpriteData + eax + 1]  ; masked text id
     lea edx, [eax * 8]                      ; 8 bytes per entry (dd ptr + dd size)
     mov ecx, [w_map_text_table_ptr]         ; flat ptr to current map's TextTable (0 if none)
     test ecx, ecx
@@ -970,7 +997,12 @@ TrainerEncounterFlow:
     or byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_MOVEMENTSTATUS], (1 << BIT_FACE_PLAYER)
 
     ; --- Look up and show pre-battle text ---
-    movzx eax, byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_TEXTID]
+    ; text id lives in wMapSpriteData[(slot-1)*2 + 1] (OW-A.2 P2 relocation).
+    mov eax, esi
+    shr eax, 4
+    dec eax
+    add eax, eax
+    movzx eax, byte [wMapSpriteData + eax + 1]  ; masked text id
     lea edx, [eax * 8]                     ; 8 bytes per entry (dd ptr + dd size)
     mov ecx, [w_map_text_table_ptr]        ; flat ptr to current map's TextTable (0 if none)
     test ecx, ecx

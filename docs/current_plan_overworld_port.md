@@ -222,6 +222,15 @@ interactively with the user.
   Faithful fix: add `wMapSpriteData`, relocate those fields, restore `0x9`=ORIGFACINGDIR,
   and update ALL readers — reaches into `movement.asm`, `pathfinding.asm`, and the port's
   own interaction routines (mandatory coupling; guarded by the 3 FRAME.BIN baselines).
+- **GLITCH-POLICY CONSTRAINT (user directive 2026-07-05):** the bespoke engine
+  *accidentally* introduced engine bugs (esp. **collision**) AND accidentally "fixed"
+  some original bugs — both are undesirable divergences under the glitch policy. The
+  faithful de-bespoke must **restore the original's exact behavior**, INCLUDING its bugs:
+  do not silently keep a bespoke collision "fix." Any intentional deviation goes under a
+  `; BUG(level):` + `%if BUG_FIX_LEVEL` guard (fixes) or a `; GLITCH:` + `; Safety:` tag
+  (preserved exploitable glitches) — never a silent bespoke change. This applies to the
+  collision-adjacent routines touched here (`IsNPCAtTargetBlock`, `CheckNPCInteraction`,
+  and, when P3 reaches them, the movement/collision seams shared with `movement.asm`).
 - **Sanctioned port extensions kept (`; DIVERGENCE`):** the toggleable-hidden gate at
   load (`IsToggleableHidden`), and the port-only interaction stack
   (`CheckNPCInteraction`/`ShowTextStream`/`IsNPCAtTargetBlock`/`CheckTrainerSight`/
@@ -232,10 +241,19 @@ interactively with the user.
     `wMapSpriteData`($20)/`hVRAM_slot` WRAM + sprite-set constants; new generator
     `data/maps/sprite_sets.asm` → `assets/sprite_sets.inc`
     (`SpriteSets`/`MapSpriteSets`/`SplitMapSpriteSets`) + generated `SpriteSheetPointerTable`.
-  - [ ] **P2 — home object-loader (`overworld.asm`):** faithful `InitSprites`/
-    `ZeroSpriteStateData`/`DisableRegularSprites`/`LoadSprite` + faithful WRAM layout;
-    wire into `LoadMapHeader`; update `movement.asm`/`pathfinding.asm`/interaction readers.
-  - [ ] **P3 — `map_sprites.asm` 15-routine faithful rewrite:** `_InitMapSprites`,
+  - [ ] **P2 — WRAM relocation (in-place):** move movement-byte-2 + masked text-id to
+    a new flat `wMapSpriteData` (pret-faithful content), `ISTRAINER` off the pret
+    `ORIGFACINGDIRECTION@0x9` collision (→ pret-unused `0xA`), update all readers
+    (`movement.asm:343`, check-only `pathfinding.asm` accessor, `map_sprites.asm`
+    interaction reads). **RE-SCOPE (2026-07-05):** the structural `InitSprites`
+    extraction was pulled into P3 — the bespoke `InitMapSprites` entangles slot-population
+    with VRAM-slot assignment (`FindOrAssignVramSlot`), so the home object-loader split
+    and the faithful `_InitMapSprites` must land together (can't half-split cleanly).
+    P2 does the WRAM layout in the still-bespoke loader so the field locations are already
+    faithful when P3 moves the writer wholesale.
+  - [ ] **P3 — home object-loader + `map_sprites.asm` 15-routine faithful rewrite (together):**
+    `InitSprites`/`ZeroSpriteStateData`/`DisableRegularSprites`/`LoadSprite` → `overworld.asm`
+    (wired into `LoadMapHeader:1892`), retiring the bespoke slot-pop; then `_InitMapSprites`,
     `InitOutsideMapSprites` (+`GetSplitMapSpriteSetID` Route-20 split), `LoadSpriteSetFromMapHeader`
     (VRAM slot = index-within-set), `CheckIfPictureIDAlreadyLoaded`, `CheckForFourTileSprite`
     (4-tile + Pikachu reserved slot), `LoadMapSpriteTilePatterns`, `ReloadWalkingTilePatterns`,

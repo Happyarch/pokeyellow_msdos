@@ -35,6 +35,8 @@ global SetSpriteMovementBytesToFF
 global GetSpriteMovementByte1Pointer
 global GetSpriteMovementByte2Pointer
 
+extern wMapSpriteData            ; map_sprites.asm — [movbyte2, textid] per slot (pret wMapSpriteData)
+
 section .text
 
 ; ---------------------------------------------------------------------------
@@ -118,7 +120,7 @@ SetSpriteMovementBytesToFF:
     call GetSpriteMovementByte1Pointer
     mov byte [ebp + esi], 0xFF                ; STAY
     call GetSpriteMovementByte2Pointer
-    mov byte [ebp + esi], 0x00                ; NONE
+    mov byte [esi], 0x00                      ; NONE (ESI = flat wMapSpriteData ptr, not EBP-relative)
     ret
 
 ; ---------------------------------------------------------------------------
@@ -137,13 +139,16 @@ GetSpriteMovementByte1Pointer:
 ; byte 2 (direction constraint).
 ; pret: home/map_objects.asm:GetSpriteMovementByte2Pointer.
 ;
-; NOTE(port): pret stores byte 2 in wMapSpriteData[(idx-1)*2]; the port keeps the
-; direction constraint in SPRITESTATEDATA2 offset 0x1 (SPRITESTATEDATA2_MOVEMENTBYTE2),
-; which is what UpdateNonPlayerSprite already reads. We return that offset to stay
-; consistent with the rest of the port's NPC engine.
-; Out: ESI = offset   Clobbers: ESI
+; pret stores byte 2 in wMapSpriteData[(slot-1)*2]; OW-A.2 P2 relocated the port's copy
+; there too (it had been stashed in SPRITESTATEDATA2 offset 0x1). Since wMapSpriteData is
+; a flat .bss array, this returns ESI = flat address (NOT an EBP-relative offset like
+; GetSpriteMovementByte1Pointer); callers write [esi], not [ebp+esi].
+; Out: ESI = flat wMapSpriteData ptr   Clobbers: ESI, flags
 ; ---------------------------------------------------------------------------
 GetSpriteMovementByte2Pointer:
-    movzx esi, byte [ebp + H_CURRENT_SPRITE_OFFSET]
-    add esi, W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTBYTE2
+    movzx esi, byte [ebp + H_CURRENT_SPRITE_OFFSET]  ; slot byte offset (slot*0x10)
+    shr esi, 4                                        ; slot number (1-15)
+    dec esi
+    add esi, esi                                      ; (slot-1)*2 -> wMapSpriteData index
+    add esi, wMapSpriteData                           ; flat address; flags dead (ret follows)
     ret

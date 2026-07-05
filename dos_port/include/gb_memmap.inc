@@ -541,12 +541,14 @@ SPRITESTATEDATA2_XDISPLACEMENT        equ 0x3   ; X displacement (init 8)
 SPRITESTATEDATA2_MAPY                 equ 0x4   ; map Y position (metatile units, origin+4)
 SPRITESTATEDATA2_MAPX                 equ 0x5   ; map X position (metatile units, origin+4)
 SPRITESTATEDATA2_WALKANIMCOUNTER      equ 0x0   ; 8-frame countdown while walking (0=standing)
-SPRITESTATEDATA2_MOVEMENTBYTE2        equ 0x1   ; dir constraint from map object (pret unnamed 0x01)
+; movement-byte-2 (dir constraint) and masked text-id relocated to wMapSpriteData
+; (pret home/overworld.asm:LoadSprite) by OW-A.2 P2 — they were at pret-unused struct
+; bytes 0x1 / 0x0A. See wMapSpriteData (map_sprites.asm) + WMSD_* indexing helper below.
 SPRITESTATEDATA2_MOVEMENTDELAY        equ 0x8   ; frames until next random walk attempt (pret 0x08)
 SPRITESTATEDATA2_MOVEMENTBYTE1        equ 0x6   ; $ff=STAY, $fe=WALK(random), <$fe=scripted
 SPRITESTATEDATA2_GRASSPRIORITY        equ 0x7   ; $80=under grass (set by CheckSpriteAvailability)
-SPRITESTATEDATA2_ISTRAINER            equ 0x9   ; 1 if trainer NPC, 0 otherwise (pret: ORIGFACINGDIR)
-SPRITESTATEDATA2_TEXTID               equ 0xA   ; text_id stored by InitMapSprites (text_byte & 0x3F)
+SPRITESTATEDATA2_ISTRAINER            equ 0xA   ; port istrainer flag (DIVERGENCE: pret has no such field);
+                                                ; OW-A.2 P2 moved it off ORIGFACINGDIRECTION@0x9 into pret-unused 0x0A
 SPRITESTATEDATA2_IMAGEBASEOFFSET      equ 0xE
 SPRITESTATEDATA2_ORIGFACINGDIRECTION  equ 0x9   ; pret ORIGFACINGDIRECTION (OW-A.2 restores; was bespoke ISTRAINER)
 SPRITESTATEDATA2_PICTUREID            equ 0xD   ; pret SPRITESTATEDATA2_PICTUREID
@@ -556,6 +558,7 @@ BIT_FACE_PLAYER                       equ 7     ; bit 7 of SPRITESTATEDATA1_MOVE
 ; --- Sprite-set constants (pret constants/sprite_set_constants.asm) -------------
 ; Consumed by the map_sprites.asm sprite-set machinery (OW-A.2) + data/maps/sprite_sets.
 SPRITE_SET_LENGTH   equ 11        ; 9 walking + 2 still sprites per set
+MAX_OBJECT_EVENTS   equ 16        ; pret constants/map_data_constants.asm (wMapSpriteData/ExtraData = *2)
 SPRITE_PIKACHU      equ 0x3D      ; pret constants/sprite_constants.asm (loaded separately in each set)
 FIRST_STILL_SPRITE  equ 0x47      ; first 4-tile "still" sprite id (SPRITE_POKE_BALL)
 EAST_WEST           equ 1
