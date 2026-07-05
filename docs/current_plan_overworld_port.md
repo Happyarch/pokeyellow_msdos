@@ -251,7 +251,15 @@ interactively with the user.
     and the faithful `_InitMapSprites` must land together (can't half-split cleanly).
     P2 does the WRAM layout in the still-bespoke loader so the field locations are already
     faithful when P3 moves the writer wholesale.
-  - [ ] **P3 — home object-loader + `map_sprites.asm` 15-routine faithful rewrite (together):**
+  - [~] **P3 — home object-loader + `map_sprites.asm` 15-routine faithful rewrite (together):**
+    Sub-steps (check-in between each): **3a DONE 2026-07-05** — full-coverage
+    `SpriteSheetPointerTable` + sprite-gfx generation (`tools/gen_all_assets.py`
+    `generate_sprite_sheet_pointers()` → `assets/sprite_sheet_pointers.inc`, all 82
+    sprite ids incl. outside-map fillers, indexed `(id-1)`, entry `dd flat_ptr, dd
+    tilecount`; self-contained, not yet linked). Verified: standalone nasm-clean; 3
+    FRAME.BIN baselines byte-identical (existing bespoke path untouched). 3b = home
+    `InitSprites` cluster + wire `LoadMapHeader`; 3c = faithful `_InitMapSprites` +
+    15 routines, retire bespoke; 3d/P4 = verification + menu-corruption item.
     `InitSprites`/`ZeroSpriteStateData`/`DisableRegularSprites`/`LoadSprite` → `overworld.asm`
     (wired into `LoadMapHeader:1892`), retiring the bespoke slot-pop; then `_InitMapSprites`,
     `InitOutsideMapSprites` (+`GetSplitMapSpriteSetID` Route-20 split), `LoadSpriteSetFromMapHeader`

@@ -26,6 +26,8 @@ GFX_TILESETS = ROOT / "gfx" / "tilesets"
 GFX_BLOCKSETS = ROOT / "gfx" / "blocksets"
 MAPS_DIR = ROOT / "maps"
 GFX_SPRITES = ROOT / "gfx" / "sprites"
+GFX_SPRITES_ASM = ROOT / "gfx" / "sprites.asm"
+SPRITE_SHEET_TABLE_SRC = ROOT / "data" / "sprites" / "sprites.asm"
 COLL_SRC = ROOT / "data" / "tilesets" / "collision_tile_ids.asm"
 SPRITE_CONSTANTS = ROOT / "constants" / "sprite_constants.asm"
 MAPS_OBJECTS_DIR = ROOT / "data" / "maps" / "objects"
@@ -172,6 +174,141 @@ def enumerate_npc_sprites() -> list:
         result.append((sid, stem, name))
     result.sort()
     return result
+
+
+def parse_sprite_label_stems() -> dict:
+    """gfx/sprites.asm → {gfx label: .2bpp stem}.
+
+    e.g. `RedSprite:: INCBIN "gfx/sprites/red.2bpp"` → {"RedSprite": "red"}.
+    Used to resolve the *shared* gfx labels in pret's SpriteSheetPointerTable
+    (SPRITE_UNUSED_RED_1/2/3 all map to RedSprite → red.2bpp), which the
+    SPRITE_* name → stem convention cannot express.
+    """
+    result = {}
+    pat = re.compile(r'^\s*(\w+)::\s*INCBIN\s*"gfx/sprites/([\w/]+)\.2bpp"')
+    for line in GFX_SPRITES_ASM.read_text().splitlines():
+        m = pat.match(line)
+        if m:
+            result[m.group(1)] = m.group(2)
+    return result
+
+
+def parse_sprite_sheet_table() -> list:
+    """pret data/sprites/sprites.asm SpriteSheetPointerTable → ordered
+    [(gfx label, tile count)], one row per sprite id in id order (SPRITE_RED
+    first). Index i corresponds to sprite id (i + 1); pret's ReadSpriteSheetData
+    does `dec a` before indexing, so sprite id 1 (RED) → table index 0.
+    """
+    rows = []
+    on = False
+    pat = re.compile(r'^\s*overworld_sprite\s+(\w+)\s*,\s*(\d+)')
+    for line in SPRITE_SHEET_TABLE_SRC.read_text().splitlines():
+        s = line.strip()
+        if s.startswith("SpriteSheetPointerTable:"):
+            on = True
+            continue
+        if on and s.startswith("assert_table_length"):
+            break
+        if on:
+            m = pat.match(line)
+            if m:
+                rows.append((m.group(1), int(m.group(2))))
+    return rows
+
+
+def generate_sprite_sheet_pointers():
+    """Generate assets/sprite_sheet_pointers.inc (OW-A.2 P3a, Tier-1 data).
+
+    Faithful port of pret data/sprites/sprites.asm SpriteSheetPointerTable, but
+    covering the FULL sprite list (all NUM_SPRITES) — including outside-map
+    fillers (SNORLAX, FOSSIL, SEEL, CHANSEY, UNUSED_GAMBLER_ASLEEP_2, …) that no
+    map object_event references, because any SpriteSet can select them. The
+    map-object-only npc_sprite_data_table.inc (used by the bespoke loader) does
+    NOT cover these; the faithful map_sprites.asm sprite-set machinery needs
+    every id 1..NUM_SPRITES resolvable.
+
+    Self-contained: %includes every referenced npc_<stem>.inc once, then defines
+    SpriteSheetPointerTable, so it can be %included alone (3c swaps it in for the
+    npc_sprite_data_table.inc include). Not linked in 3a (byte-identical).
+
+    ; DIVERGENCE (asset-model, per OW-A.1 precedent): pret's entry is
+    {dw graphics, db tilecount, db bank}; the flat 32-bit port stores
+    {dd flat_ptr, dd tilecount} (8 bytes, index (id-1)*8) and drops the bank
+    (flat model). The port npc_<stem>.inc sheets are the pret .2bpp bytes,
+    already [0-11]=still / [12-23]=walk (same layout pret loads at src+0 / src+$c0).
+    """
+    label_stems = parse_sprite_label_stems()
+    table = parse_sprite_sheet_table()
+    sprite_map = parse_sprite_constants()
+    id_to_name = {sid: name for name, sid in sprite_map.items()}
+
+    num = len(table)
+    assert num == max(sprite_map.values()), \
+        f"SpriteSheetPointerTable has {num} rows, expected NUM_SPRITES={max(sprite_map.values())}"
+
+    FULL_SHEET = 384  # 24 tiles × 16 bytes (still [0-11] + walk [12-23])
+
+    # Resolve each id → (stem, tilecount); collect the unique stems to emit once.
+    per_id = []           # (sprite_id, stem, tilecount, name)
+    stems_seen = {}       # stem -> tilecount (for the per-sheet file emission)
+    for i, (glabel, tiles) in enumerate(table):
+        sid = i + 1
+        if glabel not in label_stems:
+            sys.exit(f"ERROR: gfx label {glabel!r} (sprite id 0x{sid:02X}) has no "
+                     f"INCBIN in {GFX_SPRITES_ASM}")
+        stem = label_stems[glabel]
+        name = id_to_name.get(sid, f"SPRITE_0x{sid:02X}")
+        per_id.append((sid, stem, tiles, name))
+        stems_seen.setdefault(stem, tiles)
+
+    # Emit a per-sprite sheet .inc for every referenced stem (full coverage).
+    # Overlaps with the map-used sheets written above are byte-identical data
+    # under the same npc_<stem> label — harmless idempotent overwrite.
+    NPC_SPRITES_DIR.mkdir(parents=True, exist_ok=True)
+    missing = set()
+    for stem in sorted(stems_seen):
+        src = GFX_SPRITES / f"{stem}.2bpp"
+        if not src.exists():
+            print(f"WARNING: {src} missing — SpriteSheetPointerTable entry → dd 0",
+                  file=sys.stderr)
+            missing.add(stem)
+            continue
+        data = src.read_bytes()
+        note = ""
+        if len(data) < FULL_SHEET:
+            note = f", padded from {len(data)} bytes"
+            data = data + bytes(FULL_SHEET - len(data))
+        write_inc(
+            NPC_SPRITES_DIR / f"{stem}.inc",
+            f"npc_{stem}",
+            data,
+            f"{stem}.2bpp sprite sheet (24 tiles: [0-11]=still, [12-23]=walk{note})",
+        )
+
+    # Emit the self-contained table file.
+    lines = [
+        "; sprite_sheet_pointers.inc — generated by tools/gen_all_assets.py. DO NOT EDIT BY HAND.",
+        "; Faithful port of pret data/sprites/sprites.asm SpriteSheetPointerTable, full",
+        "; sprite coverage (OW-A.2 P3a). Indexed by (sprite_id - 1): entry = dd flat_ptr,",
+        "; dd tile_count (8 bytes). Self-contained — %includes its own sheets once.",
+        "",
+    ]
+    for stem in sorted(stems_seen):
+        if stem not in missing:
+            lines.append(f'%include "assets/npc_sprites/{stem}.inc"')
+    lines += [
+        "",
+        f"NUM_SPRITE_SHEETS equ {num}",
+        "",
+        "SpriteSheetPointerTable:",
+    ]
+    for sid, stem, tiles, name in per_id:
+        ptr = "0" if stem in missing else f"npc_{stem}"
+        lines.append(f"    dd {ptr}, {tiles}  ; 0x{sid:02X} {name} ({stem}.2bpp, {tiles} tiles)")
+    lines.append("")
+    (ASSETS / "sprite_sheet_pointers.inc").write_text("\n".join(lines) + "\n")
+    print(f"  wrote {ASSETS / 'sprite_sheet_pointers.inc'} "
+          f"({num} sprites, {len(stems_seen) - len(missing)} unique sheets)")
 
 
 def main():
@@ -321,6 +458,14 @@ def main():
     (ASSETS / "npc_sprite_data_table.inc").write_text("\n".join(table_lines) + "\n")
     print(f"  wrote {ASSETS / 'npc_sprite_data_table.inc'} "
           f"({table_size} entries, {len(used_sprites) - len(missing)} sprites)")
+
+    # ------------------------------------------------------------------
+    # 4b. Full-coverage sprite sheet pointer table (OW-A.2 P3a).
+    #     Covers all NUM_SPRITES (incl. outside-map fillers the map-object
+    #     scan above never sees) for the faithful map_sprites.asm sprite-set
+    #     machinery. Self-contained; not linked until P3c swaps the include.
+    # ------------------------------------------------------------------
+    generate_sprite_sheet_pointers()
 
     # ------------------------------------------------------------------
     # 5. Chain the dependent generators so a single run of this script
