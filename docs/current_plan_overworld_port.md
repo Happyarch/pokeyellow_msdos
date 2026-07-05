@@ -547,20 +547,29 @@ root pret tree.
 
 </details>
 
-**TICKET OW-A.10: wave-2 tagging + stub-filing hygiene** `[SWARM/Sonnet, mechanical]`
-- `warp_check.asm` `IsWarpTileInFrontOfPlayer`: convert the prose note on the omitted
-  `SS_ANNE_BOW` special case (tile `$15`→CF) into a `; DIVERGENCE:` block + `; TODO` for
-  when S.S. Anne lands; and `; PROJ`-tag (not prose) the reliance on pre-populated
-  `wTileInFrontOfPlayer`. Informational: `overworld.asm:715-720` should eventually call the
-  now-faithful `CheckIfInOutsideMap` instead of the `W_CUR_MAP < FIRST_INDOOR_MAP_ID`
-  heuristic (not identical for edge maps like Route 23/Plateau).
-- `ledges.asm` `LoadHoppingShadowOAM`: move the no-op stub OUT of the pret-mirroring `.asm`
-  into `overworld_stubs.asm` (convention: stub never in the file mirroring its own pret
-  source) with a retirement TODO; leave an `extern` in `ledges.asm`. The real impl (shadow
-  tile→vChars1 $7F, 2 shadow-OAM slots) is M, blocked on shadow-OAM slot support in
-  `PrepareOAMData`. Carry-forward note: when surf/`CollisionCheckOnWater` is ported, its
-  `CheckForJumpingAndTilePairCollisions` call must prime `wTileInFrontOfPlayer` first (the
-  port routine no longer self-derives it, unlike pret).
+**TICKET OW-A.10: wave-2 tagging + stub-filing hygiene** `[SWARM/Sonnet, mechanical]` — **DONE 2026-07-05** (Opus solo)
+- **CLOSED OUT.** Both files rectified (nasm clean on all 4 touched files; `make check` clean;
+  full SKIP_TITLE build links — `ledges.o` correctly stays check-only/out-of-link; 3 FRAME.BIN
+  baselines BYTE-IDENTICAL to the reference manifest — pure markers + a stub relocation, zero
+  live-path change).
+- <details><summary>Original items (all done)</summary>
+
+  - `warp_check.asm` `IsWarpTileInFrontOfPlayer`: **DONE** — the omitted `SS_ANNE_BOW` special
+    case is now a `; DIVERGENCE:` block (documents pret's `IsSSAnneBowWarpTileInFrontOfPlayer`
+    tile `$15`→CF bypass of the per-facing scan) + a `; TODO(SS-Anne):` for the entry-dispatch to
+    add when `MAP_SS_ANNE_BOW` lands; the pre-populated-`wTileInFrontOfPlayer` reliance is now a
+    `; PROJ:` tag (was prose) with a restore-the-`_GetTileAndCoordsInFrontOfPlayer`-prime note for
+    a future second caller. The `overworld.asm` heuristic informational note was **converted to a
+    marker at the code site** (`.warpTransition`, ~L825): `; DIVERGENCE` + `; TODO(edge-maps):`
+    switch the `W_CUR_MAP < FIRST_INDOOR_MAP_ID` test to `call CheckIfInOutsideMap` (already global
+    + faithful) for Route 23 / Plateau (PLATEAU-tileset maps above FIRST_INDOOR_MAP_ID misclassify).
+  - `ledges.asm` `LoadHoppingShadowOAM`: **DONE** — the no-op stub moved OUT of the pret-mirroring
+    `ledges.asm` into `overworld_stubs.asm` (`global` + full header + `TODO(retire)`), per the stub
+    convention; `ledges.asm` now carries an `extern LoadHoppingShadowOAM` with a retirement note.
+    Real impl (shadow tile→vChars1 $7F + 2 shadow-OAM slots) still M, blocked on `PrepareOAMData`
+    shadow-slot support. Carry-forward (surf/`CollisionCheckOnWater` must prime `wTileInFrontOfPlayer`
+    before `CheckForJumpingAndTilePairCollisions`) recorded here for OW-A.6/Stage 4.
+  </details>
 
 **Verification-needed (MCP/FRAME.BIN before treating as settled — not tickets yet):**
 - `CheckSpriteAvailability` Y/X visibility bounds (port `movement.asm:733-748`) don't

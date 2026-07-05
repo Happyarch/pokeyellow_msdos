@@ -81,3 +81,19 @@ ResetUsingStrengthOutOfBattleBit:
 global IsSurfingPikachuInParty
 IsSurfingPikachuInParty:
     ret
+
+; LoadHoppingShadowOAM — pret engine/overworld/ledges.asm:LoadHoppingShadowOAM.
+; The ledge-hop shadow sprite. pret loads shadow.1bpp to vChars1 tile $7f and two
+; OAM entries (wShadowOAMSprite36/37) with 38/39 Y=$a0. Called by HandleLedges
+; (src/engine/overworld/ledges.asm, check-only today). The port's OAM path
+; (PrepareOAMData over wSpriteStateData) models sprites differently and has no
+; dedicated shadow slots yet; the shadow is purely cosmetic and does not affect the
+; ledge-jump logic, so this is a no-op for now.
+; Filed here (not in ledges.asm) per the stub convention: a stub never lives in the
+; file that mirrors its own pret source.
+; TODO(retire): replace with the real shadow-OAM load once PrepareOAMData models
+; shadow-OAM slots (tile→vChars1 $7f + 2 shadow-OAM entries); then delete this stub
+; and restore the body in ledges.asm.
+global LoadHoppingShadowOAM
+LoadHoppingShadowOAM:
+    ret

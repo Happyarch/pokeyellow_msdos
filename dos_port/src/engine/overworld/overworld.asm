@@ -825,6 +825,12 @@ OverworldLoop:
     ; Only update W_LAST_MAP when leaving an outdoor map (mirrors pret CheckIfInOutsideMap).
     ; Indoor→indoor and indoor→outdoor transitions must NOT overwrite W_LAST_MAP or the
     ; 0xFF warp-destination resolver will return an indoor map instead of Pallet Town.
+    ; ; DIVERGENCE: this is the `W_CUR_MAP < FIRST_INDOOR_MAP_ID` heuristic, NOT pret's
+    ; tileset-based CheckIfInOutsideMap (OVERWORLD/PLATEAU → outside). The two disagree
+    ; for edge maps (e.g. Route 23 / Indigo Plateau use the PLATEAU tileset but sit above
+    ; FIRST_INDOOR_MAP_ID), so those would be misclassified here.
+    ; ; TODO(edge-maps): switch this test to `call CheckIfInOutsideMap` (warp_check.asm,
+    ; already global + faithful) when Route 23 / Plateau warping is exercised.
     mov al, [ebp + W_CUR_MAP]
     cmp al, FIRST_INDOOR_MAP_ID
     jae .skipLastMapUpdate

@@ -65,6 +65,10 @@ extern StartSimulatingJoypadStates    ; src/engine/overworld/simulate_joypad.asm
 extern PlaySound                      ; src/engine/battle/move_effect_helpers.asm (stub, linked)
 extern UpdateSprites                  ; src/engine/overworld/movement.asm (linked)
 extern Delay3                         ; src/video/frame.asm (linked)
+; LoadHoppingShadowOAM stub lives in overworld_stubs.asm (stub convention: a stub never
+; sits in the file mirroring its own pret source). Retire the stub + restore the real
+; body here once PrepareOAMData models shadow-OAM slots. See overworld_stubs.asm.
+extern LoadHoppingShadowOAM           ; src/engine/overworld/overworld_stubs.asm (ret-stub, linked)
 
 section .text
 
@@ -223,18 +227,6 @@ HandleLedges:
     mov al, SFX_LEDGE
     call PlaySound                                  ; TODO-HW(audio): stub
 .ret:
-    ret
-
-; ---------------------------------------------------------------------------
-; LoadHoppingShadowOAM — pret engine/overworld/ledges.asm:LoadHoppingShadowOAM.
-;
-; TODO-HW(gfx): the ledge-hop shadow sprite. pret loads shadow.1bpp to vChars1 tile
-; $7f and two OAM entries (wShadowOAMSprite36/37) with 38/39 Y=$a0. The port's OAM
-; path (PrepareOAMData over wSpriteStateData) models sprites differently and has no
-; dedicated shadow slots yet; the shadow is purely cosmetic and does not affect the
-; ledge-jump logic. No-op for now — wire in when the port models shadow OAM slots.
-; ---------------------------------------------------------------------------
-LoadHoppingShadowOAM:
     ret
 
 ; ---------------------------------------------------------------------------

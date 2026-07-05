@@ -168,15 +168,25 @@ IsPlayerFacingEdgeOfMap:
 ; pret: engine/overworld/player_state.asm:IsWarpTileInFrontOfPlayer
 ;
 ; Selects the per-facing warp-carpet tile list and scans it for the tile in
-; front of the player. wTileInFrontOfPlayer was populated by
-; CollisionCheckOnLand's GetTileInFrontOfPlayer call, which runs immediately
-; before ExtraWarpCheck on the collision-exit path (the only caller today) — so
-; it is guaranteed fresh here. (pret's version re-fetches it via
-; _GetTileAndCoordsInFrontOfPlayer; reading the WRAM var is equivalent at this
-; call site and avoids re-exporting the local GetTileInFrontOfPlayer.)
+; front of the player.
 ;
-; The SS_ANNE_BOW special case in pret is intentionally omitted: that map is not
-; in the port's map set yet. Add it here when SS Anne is implemented.
+; ; PROJ: this routine reads the already-populated wTileInFrontOfPlayer instead
+; of re-fetching it. pret's version opens with `call _GetTileAndCoordsInFrontOfPlayer`
+; to (re)populate wTileInFrontOfPlayer; the port relies on CollisionCheckOnLand's
+; GetTileInFrontOfPlayer call, which runs immediately before ExtraWarpCheck on the
+; collision-exit path (the only caller today), so the var is guaranteed fresh here.
+; Reading the WRAM var is equivalent at this call site and avoids re-exporting the
+; file-local GetTileInFrontOfPlayer. If a second caller is ever added that does NOT
+; pre-populate wTileInFrontOfPlayer, restore the pret _GetTileAndCoordsInFrontOfPlayer
+; prime here first.
+;
+; ; DIVERGENCE: the SS_ANNE_BOW special case is omitted. pret branches to
+; IsSSAnneBowWarpTileInFrontOfPlayer when wCurMap == SS_ANNE_BOW, which treats tile
+; $15 as the (single) warp tile → CF (any other tile → no carry), bypassing the
+; per-facing WarpTileListPointers scan entirely. SS Anne is not in the port's map
+; set yet, so the branch is unreachable and dropped.
+; ; TODO(SS-Anne): when MAP_SS_ANNE_BOW lands, add `cmp [wCurMap], SS_ANNE_BOW / je`
+; at entry dispatching to a ported IsSSAnneBowWarpTileInFrontOfPlayer (tile $15 → CF).
 ;
 ; Out: CF=1 if the faced tile is a warp-carpet tile, else CF=0.
 ; ---------------------------------------------------------------------------
