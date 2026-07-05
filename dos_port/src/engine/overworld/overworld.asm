@@ -2,7 +2,6 @@
 ;
 ; Faithful translations (pret cross-reference maintained):
 ;   ResetMapVariables          home/overworld.asm:ResetMapVariables
-;   CopyMapViewToVRAM          home/overworld.asm:CopyMapViewToVRAM
 ;   DrawTileBlock              home/overworld.asm:DrawTileBlock
 ;   LoadCurrentMapView         home/overworld.asm:LoadCurrentMapView
 ;   LoadTilesetTilePatternData home/overworld.asm:LoadTilesetTilePatternData
@@ -174,7 +173,8 @@ global LoadTilesetTilePatternData
 global LoadTileBlockMap
 global DrawTileBlock
 global LoadCurrentMapView
-global CopyMapViewToVRAM
+; (OW-A.5: dead `global CopyMapViewToVRAM` removed — routine obsoleted by native
+;  render_bg; had no body, exported an undefined symbol. See its note ~L1729.)
 global OverworldLoop
 global AdvancePlayerSprite
 global IsTilePassable
@@ -1166,16 +1166,24 @@ LoadMapData:
     lea esi, [MapTextTablePointers]
     mov esi, [esi + eax*4]
     mov [w_map_text_table_ptr], esi
-    call InitMapSprites
-    call LoadScreenRelatedData
+    call InitMapSprites                 ; pret: InitMapSprites (load sprite tile patterns)
+    ; OW-A.5: pret calls LoadScreenRelatedData ONCE (home/overworld.asm:1967) then
+    ; CopyMapViewToVRAM. The port's LoadScreenRelatedData (LoadTileBlockMap +
+    ; LoadTilesetTilePatternData + LoadCurrentMapView) is idempotent and its
+    ; LoadCurrentMapView is the native-render equivalent of pret's trailing
+    ; CopyMapViewToVRAM, so one call covers both. (Removed a redundant second call.)
     call LoadScreenRelatedData
 
     mov byte [ebp + W_UPDATE_SPRITES_ENABLED], 1
     call EnableLCD
+    ; pret: ld b, SET_PAL_OVERWORLD / call RunPaletteCommand (home/overworld.asm:1971).
+    ; GBPalNormal is the port's palette stand-in (sets the normal DMG BGP the software
+    ; PPU reads); TODO-HW: real RunPaletteCommand(SET_PAL_OVERWORLD) rides the Phase-5
+    ; palette HAL (DMG-green is debug-only until then).
     call GBPalNormal
-    call LoadPlayerSpriteGraphics       ; scaffold: player tiles → OBJ VRAM, hide OAM
-    ; RunPaletteCommand(SET_PAL_OVERWORLD) — ; TODO-HW: palette (Phase 5)
-    ; UpdateMusic / PlayDefaultMusicFadeOutCurrent — ; TODO-HW: audio (Phase 3)
+    call LoadPlayerSpriteGraphics       ; pret: LoadPlayerSpriteGraphics (:1972)
+    ; pret tail (:1973-1985): UpdateMusic6Times + PlayDefaultMusicFadeOutCurrent, gated
+    ; on !(DUNGEON_WARP|FLY_WARP) && !BIT_NO_MAP_MUSIC — TODO-HW: audio (Phase 3).
     ret
 
 ; ---------------------------------------------------------------------------
@@ -1718,13 +1726,13 @@ RefreshCollisionTileMap:
     ret
 
 ; ---------------------------------------------------------------------------
-; CopyMapViewToVRAM — faithful translation.
-; Pret ref: home/overworld.asm:CopyMapViewToVRAM / CopyMapViewToVRAM2
-;
-; Copies wTileMap (SCREEN_TILES_H×SCREEN_TILES_W = 25×40) to vBGMap0.
-; Each 40-tile row is split: first 32 tiles fill a VRAM row, remaining 8
-; wrap to columns 0-7 of the same VRAM row (handled by the tile-blitter's
-; (SCX/8+col)&31 modular addressing).
+; CopyMapViewToVRAM — DIVERGENCE (OW-A.5): obsoleted by the native-width renderer.
+; Pret ref: home/overworld.asm:CopyMapViewToVRAM / CopyMapViewToVRAM2.
+; pret copies wTileMap (25×40) to vBGMap0 each map load; the port's render_bg
+; (src/ppu/ppu.asm) instead decodes wSurroundingTiles directly to the pixel surface
+; every frame, so there is no wTileMap→VRAM copy step. This routine has NO body and
+; is never called; LoadCurrentMapView (invoked where pret calls CopyMapViewToVRAM)
+; is the faithful stand-in. The dead `global` was removed (see ~L176).
 %ifdef DEBUG_WALKSPEED
 ; ---------------------------------------------------------------------------
 ; WalkSpeedSample — called once per completed tile-step (from .moveAhead). Accrues
@@ -2605,6 +2613,23 @@ CheckWarpTile:
 ; Preconditions: W_CUR_MAP = destination map ID already set by caller;
 ;                W_DESTINATION_WARP_ID = 0-based index into that map's warp
 ;                table, used to resolve the player spawn coords.
+;
+; OW-A.5 DIVERGENCE (deferred faithfulness): this is a bespoke consolidation of
+; pret's WarpFound2 map-change tail (home/overworld.asm:455-517). The following
+; WarpFound2 pieces are intentionally NOT ported yet — each waits on its subsystem:
+;   - ROCK_TUNNEL_1F special-case: wMapPalOffset=$06 + GBFadeOutToBlack (:470-474)
+;     — TODO-HW: palette/fade (Phase 5; DMG-green is debug-only until then).
+;   - PlayMapChangeSound (:477/498/510) — TODO-HW: audio (Phase 3).
+;   - IsPlayerStandingOnWarpPadOrHole → warp-pad branch: LeaveMapAnim +
+;     set BIT_FLY_WARP (:488-495) — TODO: fly/warp-pad subsystem (rides OW-7.2 /
+;     the fly/dungeon-warp anim block already gated in EnterMap).
+;   - SetPikachuSpawnOutside/WarpPad/BackOutside (:476/503/507) — TODO: Pikachu-
+;     follower subsystem (cf. SpawnPikachu stub).
+;   - wMapPalOffset reset on the .goBackOutside path (:512) — TODO-HW: palette.
+;   - wWarpedFromWhichWarp/wWarpedFromWhichMap saves (:456-460) — not yet consumed
+;     by any ported code; restore with the map-script/back-warp resolver.
+; The wCurMap/wLastMap update + BIT_STANDING_ON_DOOR + IgnoreInputForHalfSecond +
+; jp EnterMap half of WarpFound2 lives in OverworldLoop.warpTransition (OW-A.4(b)).
 ; ---------------------------------------------------------------------------
 LoadWarpDestination:
     push eax

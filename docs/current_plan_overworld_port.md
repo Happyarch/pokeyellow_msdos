@@ -382,19 +382,24 @@ root pret tree.
   without crashing/altering render); DUMP.BIN ground-truth — after Route1 load, wCurMap=0x0C,
   wGrassRate=25, 10 mon pairs (3/4 PIDGEY, 2/3 RATTATA, …) + wWaterRate=0, byte-identical to
   pret `Route1WildMons`. Remaining A.5 items below still open.
-- `LoadMapHeader` (`home/overworld.asm:1798-1926`): ~~call `LoadWildData`~~ DONE (above);
-  still open: restore the `BIT_NO_PREVIOUS_MAP`
-  early-return branch; add `MarkTownVisitedAndLoadToggleableObjects` +
-  `SchedulePikachuSpawnForAfterText` (or `; TODO-HW`/`; PROJ` markers); verify
-  `wCurrentMapHeight2/Width2` ordering vs first use.
-- `LoadMapData` (`:1961-1988`): remove the duplicate `LoadScreenRelatedData` call +
-  stray `GBPalNormal`, or comment the intent.
-- `LoadWarpDestination` (`:449-517`): restore warp-pad/fly detection
-  (`IsPlayerStandingOnWarpPadOrHole`/`BIT_FLY_WARP`), `PlayMapChangeSound`,
-  `wMapPalOffset` reset, `ROCK_TUNNEL_1F` fade special-case, `SetPikachuSpawn*` — or
-  mark each deferred. (Prior FAITHFUL claim was too broad; it is DIVERGENT.)
-- `CopyMapViewToVRAM`: dead `global` + "faithful translation" doc block with NO body —
-  delete the declaration or mark `; DIVERGENCE: obsoleted by native render_bg`.
+- **A.5 CLOSED OUT (2026-07-05).** All items below resolved:
+- `LoadMapHeader` (`home/overworld.asm:1798-1926`): ~~call `LoadWildData`~~ DONE; DONE (wip
+  c183dd67): `res BIT_NO_PREVIOUS_MAP` + `MarkTownVisitedAndLoadToggleableObjects` +
+  `SchedulePikachuSpawnForAfterText` `; TODO(faithful)` markers added; `wCurrentMapHeight2/Width2`
+  ordering verified (port derives them in `CheckMapConnections`, its only consumer, set-before-use —
+  DIVERGENCE noted). The `BIT_NO_PREVIOUS_MAP` **early-return stays DEFERRED** (documented): it's only
+  reached post-continue-from-save, and the port's `.dsv` restore doesn't repopulate `wCurMapHeader`, so
+  skipping the header reload there would break the map. Restore with the save/continue flow (live-verify).
+- `LoadMapData` (`:1961-1988`): DONE — removed the duplicate `LoadScreenRelatedData` call (pret calls it
+  once, `:1967`; the port's copy is idempotent and its `LoadCurrentMapView` subsumes pret's trailing
+  `CopyMapViewToVRAM`); relabeled `GBPalNormal` as the `RunPaletteCommand SET_PAL_OVERWORLD` stand-in
+  and moved the music `; TODO-HW` note to pret's tail position. Baselines byte-identical.
+- `LoadWarpDestination` (`:449-517`): DONE — added a `DIVERGENCE (deferred faithfulness)` header block
+  enumerating each dropped pret `WarpFound2` piece (`ROCK_TUNNEL_1F` fade, `PlayMapChangeSound`,
+  `IsPlayerStandingOnWarpPadOrHole`→`BIT_FLY_WARP`+`LeaveMapAnim`, `SetPikachuSpawn*`,
+  `wMapPalOffset` reset, `wWarpedFromWhichWarp/Map`) with its subsystem/HW deferral reason.
+- `CopyMapViewToVRAM`: DONE — deleted the dead `global` (exported an undefined symbol) and converted the
+  bodyless "faithful translation" doc block to a `DIVERGENCE: obsoleted by native render_bg` note.
 
 **TICKET OW-A.6: OverworldLoop wild/surf gaps** `[SWARM or folds into Stage 4]` — DIVERGENT
 - On-turn wild-encounter check `NewBattle` (pret `:196-199`) dropped → turning in grass
