@@ -256,10 +256,26 @@ root pret tree.
   clean; 3 FRAME.BIN baselines (BASELINE/TRANSITION/WALK_NORTH) BYTE-IDENTICAL to HEAD (tripwire
   proves render/transition path untouched — resets don't run under baseline DEBUG builds); LIVE
   smoke (real build, user-confirmed): Pallet Town renders correctly + player walks all 4 dirs.
-- **A.4(b) STILL PENDING (own MCP-verified SOLO session):** route `.warpTransition`/`.mapTransition`
-  (and the post-battle `.battleOccurred` tail) back through `EnterMap` so the reset ladder re-runs
-  on every warp/battle-return, as pret does (`jp EnterMap`). This changes the working transition
-  control flow — highest regression risk; guard with the re-captured baselines + MCP live warp tests.
+- **A.4(b) DONE (2026-07-05):** `.warpTransition` now `jmp EnterMap` (was `jmp OverworldLoop`),
+  faithful to pret `WarpFound2.done` (`home/overworld.asm:517`, `jp EnterMap`) — so the full reset
+  ladder (wJoyIgnore gate, LoadMapData reload, ClearVariablesOnEnterMap, fly/dungeon/battle-return
+  resets, UpdateSprites, CUR_MAP_LOADED_1/2) re-runs on every warp. The port's pre-warp work
+  (wCurMap/wLastMap, LoadWarpDestination, view/scroll reset, door flags) mirrors WarpFound2's body;
+  EnterMap's LoadMapData then re-loads for the destination. Double InitMapSprites (port `.warpTransition`
+  + EnterMap→LoadMapData) is redundant-but-harmless (idempotent slot repopulate). `.battleOccurred`
+  wired to route to the now-existing spine but left dead (WILD_ENCOUNTERS_LIVE off; full tail = OW-A.6).
+  - **SCOPE CORRECTION vs ticket text (pret ground truth):** the ticket said route
+    `.warpTransition`/**`.mapTransition`** through EnterMap, but pret does NOT route connection
+    crossings through EnterMap — `CheckMapConnections` ends `jp OverworldLoopLessDelay`
+    (`home/overworld.asm:660`). The port's `.mapTransition` already exits to `OverworldLoop.lessDelay`,
+    which is faithful; rerouting it would be an UNfaithful regression. **`.mapTransition` left untouched.**
+  - **Verification:** `make check` clean; the 3 FRAME.BIN baselines (BASELINE/TRANSITION/WALK_NORTH)
+    re-captured BYTE-IDENTICAL to the pre-change manifest (render/connection path provably untouched —
+    the DEBUG harnesses don't exercise warps and dump-and-exit before the reset ladder). MCP live-warp
+    test was BLOCKED by a pre-existing dosbox-mcp code-breakpoint bug (BPLM uses raw pkmn.map VMA as
+    linear; never trips under CWSDPMI — user to fix in a separate session), so verified instead by
+    **user visual smoke on the real build: warp transition succeeds** (same MCP-deferred + live-smoke
+    posture as A.4(a)).
 - Port `home/overworld.asm:1-42` `EnterMap` is a first-boot-only stand-in (port
   `overworld.asm:279-299`): silently drops `wJoyIgnore` gating,
   `ClearVariablesOnEnterMap` (now ported, OW-1.1), wild-encounter cooldown grant,

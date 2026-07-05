@@ -793,7 +793,13 @@ OverworldLoop:
     call StepCountCheck
 %ifdef WILD_ENCOUNTERS_LIVE
     call NewBattle                            ; CF=1 → a wild/forced battle occurred
-    jc OverworldLoop                          ; TODO(M7.1): faithful = .battleOccurred → EnterMap
+    ; TODO(OW-A.6): faithful post-battle path = pret .battleOccurred (home/overworld.asm:269-296):
+    ; res BIT_TALKED_TO_TRAINER/BIT_TRAINER_BATTLE, set CUR_MAP_LOADED_1/2, clear hJoyHeld,
+    ; set BIT_BATTLE_OVER_OR_BLACKOUT, AnyPartyAlive→AllPokemonFainted, DelayFrames 10, jp EnterMap.
+    ; The EnterMap spine now EXISTS (OW-A.4), so this can route to it once WILD_ENCOUNTERS_LIVE
+    ; turns on and the blackout/faint-return pieces (HandleBlackOut/AnyPartyAlive) are wired. Until
+    ; then this path is dead (gate off); jmp keeps the loop consistent.
+    jc OverworldLoop
 %endif
     ; Edge-detect: save previous BIT_STANDING_ON_WARP then clear it.
     ; Mirrors pret: res BIT_STANDING_ON_WARP first, then set it if coords match.
@@ -845,7 +851,18 @@ OverworldLoop:
     and byte [ebp + W_MOVEMENT_FLAGS], ~(1 << BIT_EXITING_DOOR)
     or byte [ebp + W_MOVEMENT_FLAGS], (1 << BIT_STANDING_ON_DOOR)
     call IgnoreInputForHalfSecond
-    jmp OverworldLoop                          ; pret: jp EnterMap → OverworldLoop top; RunNPCMovementScript fires on first post-warp frame
+    ; OW-A.4(b): re-enter EnterMap on every warp, faithful to pret WarpFound2.done
+    ; (home/overworld.asm:517, `jp EnterMap`). The pre-work above (wCurMap/wLastMap,
+    ; LoadWarpDestination, view/scroll reset, door flags) mirrors WarpFound2's body;
+    ; EnterMap then re-runs the full reset ladder — wJoyIgnore gate, LoadMapData
+    ; (re-loads header/blocks/view/sprites for the new map), ClearVariablesOnEnterMap,
+    ; the fly/dungeon-warp & battle-return resets, UpdateSprites, CUR_MAP_LOADED_1/2 —
+    ; which the old `jmp OverworldLoop` silently skipped. The RunNPCMovementScript
+    ; PlayerStepOutFromDoor still fires on the first post-warp idle frame (BIT_STANDING_ON_DOOR
+    ; set above survives the LoadMapData reload). NOTE: the port's InitMapSprites here is
+    ; now partially redundant with LoadMapData's sprite load inside EnterMap — verified
+    ; harmless (idempotent slot repopulate), MCP live-warp confirmed.
+    jmp EnterMap
 
 .mapTransition:
     ; A connection was crossed — reload everything for the new map.
