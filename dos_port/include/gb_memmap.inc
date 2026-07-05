@@ -868,6 +868,7 @@ W_LAST_MAP                   equ 0xD364 ; wLastMap
 ; Layout: tileset(1) + height(1) + width(1) + dataptr(2) + textptr(2) + scriptptr(2) + connections(1)
 W_CUR_MAP_HEADER             equ 0xD366 ; wCurMapHeader (start of fixed header copy target)
 W_CUR_MAP_TILESET            equ 0xD366 ; wCurMapTileset (= wCurMapHeader first byte)
+BIT_NO_PREVIOUS_MAP          equ 7      ; wCurMapTileset bit 7 (constants/ram_constants.asm) — set by save-load, LoadMapHeader res's it
 W_CUR_MAP_HEIGHT             equ 0xD367 ; wCurMapHeight
 W_CUR_MAP_WIDTH              equ 0xD368 ; wCurMapWidth
 W_CUR_MAP_DATA_PTR           equ 0xD369 ; wCurMapDataPtr (2 bytes, LE)

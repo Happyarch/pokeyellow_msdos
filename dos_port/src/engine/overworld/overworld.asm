@@ -2102,19 +2102,42 @@ LoadMapHeader:
     push esi
     push edi
 
-    ; Snapshot the previous map's tileset into hPreviousTileset BEFORE the header
-    ; copy below overwrites wCurMapTileset (= wCurMapHeader first byte, 0xD366) with
-    ; the new map's tileset. LoadTilesetHeader (called at the tail of this routine)
-    ; compares the two to decide whether to run the warp-arrival block-coord
-    ; alignment: without this snapshot its "tileset unchanged" gate reads a stale
-    ; value and the alignment fires on every load, shifting the sub-block viewport.
-    ; Pret ref: home/overworld.asm:1813 (ldh [hPreviousTileset], a).
-    ; The 0xFF8B HRAM byte is a union with hMapStride/hNSConnectionStripWidth, but
-    ; those are only written later during LoadCurrentMapView / connection-strip
-    ; drawing — never between here and the LoadTilesetHeader read — so the union is
-    ; safe (same time-sharing pret relies on).
+    ; pret: farcall MarkTownVisitedAndLoadToggleableObjects (mark this town visited on
+    ; the town map + load per-map toggleable-object visibility flags).
+    ; TODO(faithful): not ported — the town-map visited-flag set and the hidden/toggleable
+    ; object show-flag load aren't implemented yet (cf. InitToggleableObjectFlags scaffold,
+    ; map_sprites.asm). Harmless for the current maps; restore with the town-map subsystem.
+
+    ; pret: ld a,[wCurMapTileset] / ld b,a / res BIT_NO_PREVIOUS_MAP,a /
+    ;       ld [wCurMapTileset],a / ldh [hPreviousTileset],a.
+    ; Snapshot the previous map's tileset into hPreviousTileset BEFORE the header copy
+    ; below overwrites wCurMapTileset (= wCurMapHeader first byte, 0xD366) with the new
+    ; map's tileset. LoadTilesetHeader (tail of this routine) compares the two to decide
+    ; whether to run the warp-arrival block-coord alignment: without this snapshot its
+    ; "tileset unchanged" gate reads a stale value and the alignment fires on every load,
+    ; shifting the sub-block viewport.
+    ; BIT_NO_PREVIOUS_MAP (bit 7) is set by the save-load path (save.asm) to mean "this
+    ; map is already loaded". pret res's it here and snapshots the CLEARED value; the
+    ; res is zero-behavior on the current paths (the header copy below already overwrites
+    ; wCurMapTileset), but keeping it faithful avoids a stale bit-7 leaking into
+    ; hPreviousTileset. The 0xFF8B HRAM byte is a union with hMapStride/
+    ; hNSConnectionStripWidth, written only later during LoadCurrentMapView / connection-
+    ; strip drawing — never between here and the LoadTilesetHeader read — so it is safe.
     mov al, [ebp + W_CUR_MAP_TILESET]
+    mov bl, al                              ; b = full tileset (incl. BIT_NO_PREVIOUS_MAP)
+    and al, ~(1 << BIT_NO_PREVIOUS_MAP)     ; res BIT_NO_PREVIOUS_MAP
+    mov [ebp + W_CUR_MAP_TILESET], al
     mov [ebp + H_PREVIOUS_TILESET], al
+    ; pret: bit BIT_NO_PREVIOUS_MAP,b / ret nz — if the map is already loaded (bit was
+    ; set), skip the whole header reload.
+    ; TODO(OW-A.5/verify): the early return is DEFERRED. All 3 FRAME.BIN baselines exercise
+    ; this routine with the bit CLEAR, so they cannot prove the bit-set path; that path is
+    ; only reached after a continue-from-save, and skipping the header reload there would
+    ; break the map if the port's .dsv restore does not repopulate wCurMapHeader (it does
+    ; not today). Restore the `ret nz` once the save/continue flow can be driven live
+    ; (MCP) and verified — same conservatism as OW-A.4(b). Faithful code:
+    ;     test bl, (1 << BIT_NO_PREVIOUS_MAP)
+    ;     jnz .noPreviousMapReturn   ; pop edi/esi/ecx/ebx/eax ; ret
 
     ; W_CUR_MAP_HEADER is a 10-byte buffer: tileset(1), h(1), w(1), blkptr(2), txtptr(2), scrptr(2), conn(1)
     movzx eax, byte [ebp + W_CUR_MAP]
@@ -2207,14 +2230,26 @@ LoadMapHeader:
     
     call LoadTilesetHeader
 
+    ; pret: (gated on !BIT_BATTLE_OVER_OR_BLACKOUT) callfar SchedulePikachuSpawnForAfterText —
+    ; queue the Pikachu-follower spawn to appear after the next text box.
+    ; TODO(faithful): not ported (Pikachu-follower subsystem absent; cf. SpawnPikachu stub).
+
     ; Load this map's wild-encounter data (pret home/overworld.asm:LoadMapHeader:1900,
     ; callfar LoadWildData). Populates wGrassRate/wGrassMons + wWaterRate/wWaterMons from
     ; WildDataPointers[wCurMap] for TryDoWildEncounter. OW-A.5: previously LoadWildData had
     ; ZERO call sites, so every map's wild slots were stale. LoadWildData clobbers only
     ; EAX/ECX/EDX/ESI (no banking, no I/O), all of which the pops below restore, so it is
-    ; safe here. Pret's preceding SchedulePikachuSpawnForAfterText and the trailing
-    ; wCurrentMapHeight2/Width2 + MapSongBanks music setup remain deferred (A.5 follow-ups).
+    ; safe here.
     call LoadWildData
+
+    ; pret next doubles wCurMapHeight/Width -> wCurrentMapHeight2/Width2 (:1902-1907).
+    ; DIVERGENCE (verified safe): the port derives those in CheckMapConnections (its ONLY
+    ; consumer), at the top of that routine (set-before-use) — every read of
+    ; W_CURRENT_MAP_HEIGHT_2/WIDTH_2 is inside CheckMapConnections, after the set — so
+    ; LoadMapHeader does not need to compute them here.
+    ; pret then loads MapSongBanks -> wMapMusicSoundID/wMapMusicROMBank (:1908-1923).
+    ; TODO-HW(audio): music selection is deferred to the audio HAL (Phase 3); wMapMusic*
+    ; are unused until then.
 
     pop edi
     pop esi
