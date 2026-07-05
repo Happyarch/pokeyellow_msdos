@@ -241,7 +241,7 @@ interactively with the user.
     `wMapSpriteData`($20)/`hVRAM_slot` WRAM + sprite-set constants; new generator
     `data/maps/sprite_sets.asm` → `assets/sprite_sets.inc`
     (`SpriteSets`/`MapSpriteSets`/`SplitMapSpriteSets`) + generated `SpriteSheetPointerTable`.
-  - [ ] **P2 — WRAM relocation (in-place):** move movement-byte-2 + masked text-id to
+  - [x] **P2 — WRAM relocation (in-place) — DONE 2026-07-05 (5a1ae792):** move movement-byte-2 + masked text-id to
     a new flat `wMapSpriteData` (pret-faithful content), `ISTRAINER` off the pret
     `ORIGFACINGDIRECTION@0x9` collision (→ pret-unused `0xA`), update all readers
     (`movement.asm:343`, check-only `pathfinding.asm` accessor, `map_sprites.asm`
