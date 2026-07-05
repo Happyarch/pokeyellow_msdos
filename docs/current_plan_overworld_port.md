@@ -257,9 +257,25 @@ interactively with the user.
     `generate_sprite_sheet_pointers()` → `assets/sprite_sheet_pointers.inc`, all 82
     sprite ids incl. outside-map fillers, indexed `(id-1)`, entry `dd flat_ptr, dd
     tilecount`; self-contained, not yet linked). Verified: standalone nasm-clean; 3
-    FRAME.BIN baselines byte-identical (existing bespoke path untouched). 3b = home
-    `InitSprites` cluster + wire `LoadMapHeader`; 3c = faithful `_InitMapSprites` +
-    15 routines, retire bespoke; 3d/P4 = verification + menu-corruption item.
+    FRAME.BIN baselines byte-identical (existing bespoke path untouched).
+    **3b DONE 2026-07-05** — faithful home object-loader (`InitSprites` /
+    `ZeroSpriteStateData` / `DisableRegularSprites` / `LoadSprite`, real routines) added
+    to `overworld.asm` and wired into `LoadMapHeader` at the pret `:1892` point (gated on
+    `BIT_BATTLE_OVER_OR_BLACKOUT`). `InitSprites` also writes `wNumSprites` (0xD4E0), which
+    the bespoke never set — a latent omission `src/home/text_script.asm` reads (faithful
+    restore, unread in baselines). The bespoke `InitMapSprites` stays the driver (its
+    clear+repopulate in `LoadMapData` overwrites `InitSprites`' output), so this is
+    redundant-but-byte-identical. **Harness fix (required):** the `DEBUG_TRANSITION`
+    harness re-calls `LoadMapHeader` standalone (:431) but had OMITTED the `InitMapSprites`
+    the real `.mapTransition` (:902/:913) pairs with it — harmless pre-3b, but post-3b that
+    left `IMAGEBASEOFFSET` cleared → an NPC vanished (root-caused via DUMP.BIN: sprite slot
+    state provably identical, divergence was the harness's un-paired re-load). Added the
+    missing `call InitMapSprites` so the harness mirrors `.mapTransition`. Verified: nasm
+    clean; `make check` clean; real SKIP_TITLE build links; 3 FRAME.BIN baselines
+    byte-identical. All real `LoadMapHeader` sites pair with `InitMapSprites`
+    (`LoadMapData` / `.mapTransition` / warp→`EnterMap`→`LoadMapData`), so the real game is
+    safe; **pending user live smoke.** 3c = faithful `_InitMapSprites` + 15 routines, retire
+    bespoke; 3d/P4 = verification + menu-corruption item.
     `InitSprites`/`ZeroSpriteStateData`/`DisableRegularSprites`/`LoadSprite` → `overworld.asm`
     (wired into `LoadMapHeader:1892`), retiring the bespoke slot-pop; then `_InitMapSprites`,
     `InitOutsideMapSprites` (+`GetSplitMapSpriteSetID` Route-20 split), `LoadSpriteSetFromMapHeader`

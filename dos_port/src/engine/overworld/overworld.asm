@@ -70,6 +70,17 @@ extern g_tilecache_dirty
 extern hide_window           ; src/ppu/ppu.asm — empty the window list (count=0)
 extern set_single_window     ; src/ppu/ppu.asm — define g_windows[] as one descriptor
 extern InitMapSprites
+; OW-A.2 P3b: the faithful home object-loader (InitSprites/LoadSprite, below) writes
+; the per-slot movement-byte-2 + masked-text-id to wMapSpriteData and trainer
+; class/num (or item) to wMapSpriteExtraData — both flat .bss globals in map_sprites.asm.
+extern wMapSpriteData
+extern wMapSpriteExtraData
+; pret wNumSprites (ram/wram.asm) — number of sprites on the current map. Read by
+; src/home/text_script.asm; not in this file's include chain, so define it here
+; (guarded; matches m1_3_pending_symbols.inc's %ifndef pattern).
+%ifndef wNumSprites
+wNumSprites equ 0xD4E0
+%endif
 extern InitToggleableObjectFlags
 extern text_engine_init
 extern CheckNPCInteraction
@@ -418,6 +429,14 @@ EnterMap:
     mov byte [ebp + H_SCX], 0
     mov word [ebp + W_MAP_VIEW_VRAM_POINTER], GB_TILEMAP0
     call LoadMapHeader
+    ; OW-A.2 P3b: LoadMapHeader now runs the faithful InitSprites (pret :1892), which
+    ; repopulates the NPC slots from the destination map's object binary but leaves
+    ; IMAGEBASEOFFSET cleared (that is InitMapSprites' job). The real .mapTransition
+    ; (:902/:913) pairs LoadMapHeader with InitMapSprites; this harness claimed to do
+    ; "the same reload .mapTransition does" but had OMITTED that InitMapSprites call —
+    ; harmless before P3b (LoadMapHeader was sprite-agnostic), required now so the
+    ; slots are tile-loaded / IMAGEBASEOFFSET-assigned like the real crossing does.
+    call InitMapSprites
     call LoadTileBlockMap
     call LoadCurrentMapView
     ; Render a few frames so GB_BACKBUF holds the post-transition image, then
@@ -2334,7 +2353,20 @@ LoadMapHeader:
     ; Save object data pointer temp
     sub eax, ebp
     mov [ebp + W_OBJECT_DATA_PTR_TEMP], ax
-    
+
+    ; pret home/overworld.asm:1888-1892 (.loadSpriteData): populate the NPC sprite
+    ; slots from the map-object binary, UNLESS returning from a battle/blackout
+    ; (that data survives a battle, so it isn't rebuilt). W_OBJECT_DATA_PTR_TEMP
+    ; (just set above) points at the sprite_count byte = pret's HL on InitSprites entry.
+    ; OW-A.2 P3b: this is the faithful home object-loader; the bespoke InitMapSprites
+    ; (still the driver until P3c) clears+repopulates the same slots afterward in
+    ; LoadMapData, so this is currently redundant-but-harmless (byte-identical).
+    mov al, [ebp + W_STATUS_FLAGS_4]
+    test al, (1 << BIT_BATTLE_OVER_OR_BLACKOUT)
+    jnz .skipInitSprites
+    call InitSprites
+.skipInitSprites:
+
     call LoadTilesetHeader
 
     ; pret: (gated on !BIT_BATTLE_OVER_OR_BLACKOUT) callfar SchedulePikachuSpawnForAfterText —
@@ -2362,6 +2394,175 @@ LoadMapHeader:
     pop esi
     pop ecx
     pop ebx
+    pop eax
+    ret
+
+; ---------------------------------------------------------------------------
+; Home object-loader (pret home/overworld.asm:2137-2274). OW-A.2 P3b.
+;
+; The faithful counterpart to (half of) the bespoke InitMapSprites: it populates
+; the NPC sprite slots (PICTUREID / MAPY / MAPX / MOVEMENTBYTE1) from the map's
+; object binary and stashes movement-byte-2 + masked text id in wMapSpriteData and
+; trainer class/num (or item id) in wMapSpriteExtraData. It does NOT load tile
+; patterns — that is InitMapSprites' job (map_sprites.asm), kept separate as in pret.
+;
+; Called from LoadMapHeader (above) at the pret :1892 point. Until P3c retires the
+; bespoke InitMapSprites, that routine clears+repopulates these same slots when
+; LoadMapData runs, so InitSprites' output is currently overwritten (redundant but
+; harmless — the byte-identical baselines confirm it).
+; ---------------------------------------------------------------------------
+; hLoadSpriteTemp1/2 (pret HRAM scratch) — carry movement-byte-2 and text-id+flags
+; from InitSprites into LoadSprite, and trainer class/num within LoadSprite.
+; Write-before-read scratch, so the initial value is irrelevant.
+section .data
+h_load_sprite_temp1: db 0    ; pret hLoadSpriteTemp1
+h_load_sprite_temp2: db 0    ; pret hLoadSpriteTemp2
+
+section .text
+global InitSprites
+global ZeroSpriteStateData
+global DisableRegularSprites
+global LoadSprite
+
+InitSprites:
+    pushad
+    ; A = [wNumSprites source] = sprite_count byte; ESI advances past it.
+    ; W_OBJECT_DATA_PTR_TEMP holds the GB offset of the sprite_count byte.
+    movzx esi, word [ebp + W_OBJECT_DATA_PTR_TEMP]   ; ESI = GB addr of sprite_count
+    movzx eax, byte [ebp + esi]
+    mov [ebp + wNumSprites], al                       ; wNumSprites = count
+    inc esi                                            ; past the count byte
+    call ZeroSpriteStateData
+    call DisableRegularSprites
+    ; zero wMapSpriteData ($20 bytes) — pret: ld hl,wMapSpriteData; ld bc,$20; FillMemory
+    mov edi, wMapSpriteData
+    xor al, al
+    mov ecx, 0x20
+    rep stosb
+    ; any sprites?
+    movzx eax, byte [ebp + wNumSprites]
+    test al, al
+    jz .done
+    mov ebx, eax                                       ; EBX = count remaining (pret B)
+    mov edx, 0x10                                       ; EDX = slot byte offset (slot 1)
+    xor edi, edi                                        ; EDI = wMapSpriteData index (pret C): 0,2,4,...
+.loadSpriteLoop:
+    ; picture id -> x#SPRITESTATEDATA1_PICTUREID
+    movzx eax, byte [ebp + esi]
+    inc esi
+    mov [ebp + edx + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_PICTUREID], al
+    ; mapy -> x#SPRITESTATEDATA2_MAPY
+    movzx eax, byte [ebp + esi]
+    inc esi
+    mov [ebp + edx + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPY], al
+    ; mapx -> x#SPRITESTATEDATA2_MAPX
+    movzx eax, byte [ebp + esi]
+    inc esi
+    mov [ebp + edx + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPX], al
+    ; movement byte 1 -> x#SPRITESTATEDATA2_MOVEMENTBYTE1
+    movzx eax, byte [ebp + esi]
+    inc esi
+    mov [ebp + edx + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTBYTE1], al
+    ; movement byte 2 -> temp1
+    movzx eax, byte [ebp + esi]
+    inc esi
+    mov [h_load_sprite_temp1], al
+    ; text id + flags -> temp2
+    movzx eax, byte [ebp + esi]
+    inc esi
+    mov [h_load_sprite_temp2], al
+    ; LoadSprite: ECX = wMapSpriteData index; ESI = read ptr (advanced past any
+    ; trainer/item extra bytes on return). It preserves EBX/EDX/EDI and clobbers EAX.
+    mov ecx, edi
+    call LoadSprite
+    ; advance to next sprite: slot offset += $10, wMapSpriteData index += 2, count--
+    add edx, 0x10
+    add edi, 2
+    dec ebx
+    jnz .loadSpriteLoop
+.done:
+    popad
+    ret
+
+; Zero sprite state data for slots 1-14 (slot 15 is Pikachu, left intact — pret).
+ZeroSpriteStateData:
+    push eax
+    push ecx
+    push edi
+    xor al, al
+    lea edi, [ebp + W_SPRITE_STATE_DATA_1 + 0x10]      ; slot 1
+    mov ecx, 14 * 0x10
+    rep stosb
+    lea edi, [ebp + W_SPRITE_STATE_DATA_2 + 0x10]
+    mov ecx, 14 * 0x10
+    rep stosb
+    pop edi
+    pop ecx
+    pop eax
+    ret
+
+; Disable regular sprites: SPRITESTATEDATA1_IMAGEINDEX = $ff for slots 1-14 (pret).
+DisableRegularSprites:
+    push ecx
+    push esi
+    mov esi, 0x10                                       ; slot 1
+    mov ecx, 14
+.loop:
+    mov byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_IMAGEINDEX], 0xff
+    add esi, 0x10
+    dec ecx
+    jnz .loop
+    pop esi
+    pop ecx
+    ret
+
+; LoadSprite (pret home/overworld.asm:2218). In: ECX = wMapSpriteData/ExtraData byte
+; index ((slot-1)*2); ESI = GB read ptr just past the text-id byte; temp1 = movement
+; byte 2, temp2 = text id + flags. Out: ESI advanced past trainer/item extra bytes.
+; Preserves EBX/ECX/EDX/EDI; clobbers EAX.
+LoadSprite:
+    push eax
+    ; wMapSpriteData[C] = movement byte 2
+    mov al, [h_load_sprite_temp1]
+    mov [wMapSpriteData + ecx], al
+    ; pret writes text id+flags to [C+1] here then immediately overwrites it with the
+    ; masked value — kept for faithfulness ("this appears pointless").
+    mov al, [h_load_sprite_temp2]
+    mov [wMapSpriteData + ecx + 1], al
+    mov al, [h_load_sprite_temp2]
+    mov [h_load_sprite_temp1], al                       ; temp1 = text id+flags (save for flag test)
+    and al, 0x3f
+    mov [wMapSpriteData + ecx + 1], al                  ; wMapSpriteData[C+1] = masked text id
+    ; branch on the raw (unmasked) text-id+flags byte
+    mov al, [h_load_sprite_temp1]
+    test al, TRAINER_FLAG
+    jnz .trainerSprite
+    test al, ITEM_FLAG
+    jnz .itemBallSprite
+    ; regular sprite: zero both wMapSpriteExtraData bytes
+    mov word [wMapSpriteExtraData + ecx], 0
+    pop eax
+    ret
+.trainerSprite:
+    movzx eax, byte [ebp + esi]                         ; trainer class
+    inc esi
+    mov [h_load_sprite_temp1], al
+    movzx eax, byte [ebp + esi]                         ; trainer number
+    inc esi
+    mov [h_load_sprite_temp2], al
+    mov al, [h_load_sprite_temp1]
+    mov [wMapSpriteExtraData + ecx], al                 ; ExtraData[C] = trainer class
+    mov al, [h_load_sprite_temp2]
+    mov [wMapSpriteExtraData + ecx + 1], al             ; ExtraData[C+1] = trainer number
+    pop eax
+    ret
+.itemBallSprite:
+    movzx eax, byte [ebp + esi]                         ; item number
+    inc esi
+    mov [h_load_sprite_temp1], al
+    mov al, [h_load_sprite_temp1]
+    mov [wMapSpriteExtraData + ecx], al                 ; ExtraData[C] = item number
+    mov byte [wMapSpriteExtraData + ecx + 1], 0         ; ExtraData[C+1] = 0
     pop eax
     ret
 
