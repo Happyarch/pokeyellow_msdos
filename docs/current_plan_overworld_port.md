@@ -912,18 +912,35 @@ does not exist" — it does, `src/home/copy2.asm`).
     unchanged.
   </details>
 
-**TICKET OW-A.12: overworld_text.asm rectification** `[SWARM/Sonnet]` — check-only
-- `DisplaySignText` is SCAFFOLD: never inspects the resolved TX stream's first byte for
-  pret `DisplayTextID`'s `TX_SCRIPT_*` ($F5-$FF) sentinels (home/text_script.asm:77-84) →
-  PC/Mart/Prize signs (the primary Gen-1 "sign" path) would render the selector byte as
-  garbage text. Wire the first-byte dispatch to the already-present `TextScript_*` routines.
-- Doc bug: header claims "all GP registers preserved" but EBX is clobbered by
-  `ShowTextStream`→`npc_dialog_wait_impl` — add `push/pop ebx` (or `pushad`/`popad`).
-- Provenance defect (also in Stage 9): file cites `home/overworld_text.asm` but holds
-  `home/map_objects.asm` routines; the 8 real `home/overworld_text.asm` labels
-  (`TextScriptEnd` etc.) are UNPORTED — `TextScriptEnd` is already extern'd by
-  trainer_engine.asm:128/785 → hard link failure on its promotion. Port the 8 labels + fix
-  the header. Flip the `M72_OVERWORLD_TEXTSCRIPTS` ifdef only after the dispatch is wired.
+**TICKET OW-A.12: overworld_text.asm rectification** `[Opus solo]` — **DONE 2026-07-05** (check-only)
+- **CLOSED OUT.** nasm clean (default AND `-D M72_OVERWORLD_TEXTSCRIPTS`); `make check` clean;
+  full SKIP_TITLE build links; 3 FRAME.BIN baselines byte-identical (check-only file, linked
+  build untouched).
+- <details><summary>Items (all done)</summary>
+
+  - **DisplaySignText first-byte dispatch:** added the pret `DisplayTextID` first-byte check —
+    if the resolved stream's first byte is a `TX_SCRIPT_*` sentinel ($F6-$FF) it is NOT printed
+    as text (fixes the garbage-glyph SCAFFOLD bug). Under `M72_OVERWORLD_TEXTSCRIPTS` the four
+    sentinels with landed handlers (PLAYERS_PC/BILLS_PC/POKECENTER_PC/PRIZE_VENDOR) tail-dispatch
+    to the `TextScript_*` routines (popad-then-jmp, stack-balanced); MART/NURSE/CABLE need the
+    still-NI `DisplayPokemartDialogue`/`DisplayPokemonCenterDialogue`/`CableClubNPC` so they're
+    recognized-and-skipped with a `; SCAFFOLD`/`TODO(M7.2)` marker. (Sentinel range corrected:
+    $F6-$FF, not the ticket's "$F5-$FF"; $F5 is `TX_SCRIPT_VENDING_MACHINE`, a valid sentinel, but
+    the floor is $F6 CABLE.) TX_SCRIPT_* defined locally with provenance (not in the include chain).
+  - **EBX preservation:** `DisplaySignText` now brackets with `pushad`/`popad` (was an explicit
+    push set omitting EBX, which `ShowTextStream`→`npc_dialog_wait_impl` clobbers); doc note fixed.
+  - **Provenance + link-critical labels:** header corrected — `DisplaySignText` is BESPOKE (mirrors
+    the port's CheckNPCInteraction dispatch / pret home/overworld.asm:IsSpriteOrSignInFrontOfPlayer
+    sign leg + home/text_script.asm:DisplayTextID), and `TextScript_*` are home/text_script.asm
+    targets (NOT home/overworld_text.asm). **Ported `TextScriptEnd` + `TextScriptEndingText`** (pret
+    home/overworld_text.asm) — resolves the trainer_engine.asm extern (`jmp TextScriptEnd` :808) that
+    would hard-fail on trainer_engine promotion. The other **6** home/overworld_text.asm labels
+    (`ExclamationText`/`GroundRoseText`/`BoulderText`/`MartSignText`/`PokeCenterSignText`/
+    `PickUpItemText`) are DEFERRED with a documented note: they are `text_far _XxxText` wrappers whose
+    Tier-1 strings aren't generated for the port yet — per the two-tier rule they must come from a
+    gen_*.py, not hand-encoded here; no live caller needs them. `M72_OVERWORLD_TEXTSCRIPTS` left OFF
+    (dispatch wired but its ultimate mart/PC-nurse handlers are still NI).
+  </details>
 
 **wild_encounter_check.asm** — routines mostly FAITHFUL (`StepCountCheck`, `AnyPartyAlive`,
 `AllPokemonFainted`); `NewBattle` is documented SCAFFOLD + one UNFLAGGED omission (pret's
