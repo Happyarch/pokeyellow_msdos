@@ -231,7 +231,7 @@ interactively with the user.
     `wUpdateSpritesEnabled`, forces `$FF` for the advance, restores) — this reinstates a
     previously-documented Phase-2 omission. **BEHAVIOR NOTE:** this is a live-walk-path change;
     WALK_NORTH baseline is byte-identical (flag already enabled during walking → force+restore is
-    neutral), but a **visual smoke test is recommended** to confirm no NPC-animation timing shift.
+    neutral). **Visual smoke test CONFIRMED OK (user, 2026-07-05)** — no NPC-animation timing shift.
   - **overworld.asm — `OverworldLoop` / `OverworldLoopLessDelay`:** split the `.lessDelay` local
     into a real `OverworldLoopLessDelay:` label (pret's delay-skipping loop entry); updated the
     lone `jmp OverworldLoop.lessDelay` ref + added a `global`.
