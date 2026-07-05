@@ -199,15 +199,56 @@ interactively with the user.
   migration to gb_memmap.inc).
 - Exit: pret tail present; alignment omission fixed; translation_log entry (root). ✓
 
-**TICKET OW-A.2: map_sprites.asm faithful rewrite** `[SOLO #4]`
-- Pret: `engine/overworld/map_sprites.asm` (all 15 routines) + `data/sprite_sets.asm`
-- Target: `dos_port/src/engine/overworld/map_sprites.asm` (rewrite in place)
-- Checklist:
-  - [ ] Restore pret structure: `_InitMapSprites`, `InitOutsideMapSprites` (fixed outside-map sprite sets + `GetSplitMapSpriteSetID` Route-20 split logic), `LoadSpriteSetFromMapHeader` (VRAM slot = index-within-sprite-set), `ReadSpriteSheetData` + `SpriteSheetPointerTable` equivalent, `CheckForFourTileSprite` (Yellow 4-tile sprites; Pikachu's reserved 2nd slot), `LoadMapSpritesImageBaseOffset`, `LoadStillTilePattern`/`LoadWalkingTilePattern` incl. the `wFontLoaded` upper-half-only reload
-  - [ ] Sprite-set data: extend `tools/gen_all_assets.py` or new generator for `data/sprite_sets.asm` → Tier-1 `assets/` inc (never hand-edit)
-  - [ ] Preserve working port extensions where sanctioned (toggleable-hidden gate at load) with `; DIVERGENCE` notes
-  - [ ] Regression: FRAME.BIN before/after on Pallet Town (NPC sprites identical); MCP `gb_read` of `wSpriteStateData1/2` slots 1–15
-- Exit: 15 pret routine labels real; NPC rendering regression-free.
+**TICKET OW-A.2: map_sprites.asm faithful rewrite** `[SOLO #4]` `[IN PROGRESS 2026-07-05]`
+- Pret: `engine/overworld/map_sprites.asm` (15 routines) + `data/maps/sprite_sets.asm`
+  + `data/sprites/sprites.asm` + **`home/overworld.asm:InitSprites`/`ZeroSpriteStateData`/
+  `DisableRegularSprites`/`LoadSprite` (:2137-2266)**.
+- Target: `dos_port/src/engine/overworld/map_sprites.asm` (rewrite) + `overworld.asm`
+  (add the home object-loader half).
+
+- **SCOPE (user directive 2026-07-05): full de-bespoke to faithful, mirror pret's
+  FILE MAPPINGS.** The current port `map_sprites.asm` is a total bespoke replacement
+  that FUSES two pret responsibilities pret keeps in separate files:
+  1. **Home object-loader** — reads the map-object binary → populates slot
+     PICTUREID/MAPY/MAPX/movement/text + trainer cache. Pret = `home/overworld.asm`
+     `InitSprites`(+`ZeroSpriteStateData`/`DisableRegularSprites`/`LoadSprite`),
+     called from `LoadMapHeader:1892`. → belongs in port `overworld.asm`.
+  2. **Tile/set loader** — the 15 pret `map_sprites.asm` routines, via the
+     `InitMapSprites` wrapper called from `LoadMapData:1966`. → stays in `map_sprites.asm`.
+- **Second bespoke layer — invented `wSpriteStateData2` fields (absorbed into A.2,
+  user-confirmed 2026-07-05):** the port put `MOVEMENTBYTE2`@`0x1`, `ISTRAINER`@`0x9`
+  (**collides with pret `ORIGFACINGDIRECTION`**), `TEXTID`@`0xA`. Pret keeps movement-byte-2
+  + masked text-id in **`wMapSpriteData`** ($20) and trainer class/num in **`wMapSpriteExtraData`**.
+  Faithful fix: add `wMapSpriteData`, relocate those fields, restore `0x9`=ORIGFACINGDIR,
+  and update ALL readers — reaches into `movement.asm`, `pathfinding.asm`, and the port's
+  own interaction routines (mandatory coupling; guarded by the 3 FRAME.BIN baselines).
+- **Sanctioned port extensions kept (`; DIVERGENCE`):** the toggleable-hidden gate at
+  load (`IsToggleableHidden`), and the port-only interaction stack
+  (`CheckNPCInteraction`/`ShowTextStream`/`IsNPCAtTargetBlock`/`CheckTrainerSight`/
+  `TrainerEncounterFlow`) — pret's `IsSpriteOrSignInFrontOfPlayer` etc. are unported.
+
+- **Phasing (reviewable sub-steps, check-in between each):**
+  - [ ] **P1 — infra + Tier-1 data (additive, byte-identical):** `wSpriteSet`(11B)/
+    `wMapSpriteData`($20)/`hVRAM_slot` WRAM + sprite-set constants; new generator
+    `data/maps/sprite_sets.asm` → `assets/sprite_sets.inc`
+    (`SpriteSets`/`MapSpriteSets`/`SplitMapSpriteSets`) + generated `SpriteSheetPointerTable`.
+  - [ ] **P2 — home object-loader (`overworld.asm`):** faithful `InitSprites`/
+    `ZeroSpriteStateData`/`DisableRegularSprites`/`LoadSprite` + faithful WRAM layout;
+    wire into `LoadMapHeader`; update `movement.asm`/`pathfinding.asm`/interaction readers.
+  - [ ] **P3 — `map_sprites.asm` 15-routine faithful rewrite:** `_InitMapSprites`,
+    `InitOutsideMapSprites` (+`GetSplitMapSpriteSetID` Route-20 split), `LoadSpriteSetFromMapHeader`
+    (VRAM slot = index-within-set), `CheckIfPictureIDAlreadyLoaded`, `CheckForFourTileSprite`
+    (4-tile + Pikachu reserved slot), `LoadMapSpriteTilePatterns`, `ReloadWalkingTilePatterns`,
+    `LoadStillTilePattern`/`LoadWalkingTilePattern` (**`wFontLoaded` upper-half reload**),
+    `GetSpriteVRAMAddress`+`SpriteVRAMAddresses`, `ReadSpriteSheetData`,
+    `LoadMapSpritesImageBaseOffset`, `GetSpriteImageBaseOffset`. `CopyVideoDataAlternate`
+    → `; DIVERGENCE` (flat copy, per OW-A.1 asset-model precedent). Retire the fused bespoke.
+  - [ ] **P4 — verification:** 3 FRAME.BIN baselines byte-identical + user smoke; the
+    menu-corruption item (open a menu after party/battle → box tiles/letters clean).
+- **Baselines captured (HEAD aa128d2c):** BASELINE `b4e48c46`, TRANSITION `747d824c`,
+  WALK_NORTH `58d005ce` (manifest in session scratchpad; BASELINE has the 2 Pallet Town NPCs).
+- Exit: 15 pret routine labels real (+ the 4 home object-loader routines); faithful WRAM
+  layout; NPC rendering regression-free.
 
 **TICKET OW-A.3: label restoration / de-fold pass** `[Opus solo]` — **DONE 2026-07-05**
 - **SCOPE UPGRADE (user directive 2026-07-05):** promoted from "add alias labels" to **actually

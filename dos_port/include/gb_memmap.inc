@@ -548,8 +548,45 @@ SPRITESTATEDATA2_GRASSPRIORITY        equ 0x7   ; $80=under grass (set by CheckS
 SPRITESTATEDATA2_ISTRAINER            equ 0x9   ; 1 if trainer NPC, 0 otherwise (pret: ORIGFACINGDIR)
 SPRITESTATEDATA2_TEXTID               equ 0xA   ; text_id stored by InitMapSprites (text_byte & 0x3F)
 SPRITESTATEDATA2_IMAGEBASEOFFSET      equ 0xE
+SPRITESTATEDATA2_ORIGFACINGDIRECTION  equ 0x9   ; pret ORIGFACINGDIRECTION (OW-A.2 restores; was bespoke ISTRAINER)
+SPRITESTATEDATA2_PICTUREID            equ 0xD   ; pret SPRITESTATEDATA2_PICTUREID
 
 BIT_FACE_PLAYER                       equ 7     ; bit 7 of SPRITESTATEDATA1_MOVEMENTSTATUS
+
+; --- Sprite-set constants (pret constants/sprite_set_constants.asm) -------------
+; Consumed by the map_sprites.asm sprite-set machinery (OW-A.2) + data/maps/sprite_sets.
+SPRITE_SET_LENGTH   equ 11        ; 9 walking + 2 still sprites per set
+SPRITE_PIKACHU      equ 0x3D      ; pret constants/sprite_constants.asm (loaded separately in each set)
+FIRST_STILL_SPRITE  equ 0x47      ; first 4-tile "still" sprite id (SPRITE_POKE_BALL)
+EAST_WEST           equ 1
+NORTH_SOUTH         equ 2
+; SpriteSets indices (values for MapSpriteSets / SplitMapSpriteSets)
+SPRITESET_PALLET_VIRIDIAN equ 0x01
+SPRITESET_PEWTER_CERULEAN equ 0x02
+SPRITESET_LAVENDER        equ 0x03
+SPRITESET_VERMILION       equ 0x04
+SPRITESET_CELADON         equ 0x05
+SPRITESET_INDIGO          equ 0x06
+SPRITESET_SAFFRON         equ 0x07
+SPRITESET_SILENCE_BRIDGE  equ 0x08
+SPRITESET_CYCLING_ROAD    equ 0x09
+SPRITESET_FUCHSIA         equ 0x0A
+NUM_SPRITE_SETS           equ 10
+; Split sprite set ids (index SplitMapSpriteSets; also values for MapSpriteSets)
+FIRST_SPLIT_SET     equ 0xF1
+SPLITSET_ROUTE_2    equ 0xF1
+SPLITSET_ROUTE_10   equ 0xF2
+SPLITSET_ROUTE_11   equ 0xF3
+SPLITSET_ROUTE_12   equ 0xF4
+SPLITSET_ROUTE_15   equ 0xF5
+SPLITSET_ROUTE_16   equ 0xF6
+SPLITSET_ROUTE_18   equ 0xF7
+SPLITSET_ROUTE_20   equ 0xF8
+SPLITSET_ROUTE_5    equ 0xF9
+SPLITSET_ROUTE_6    equ 0xFA
+SPLITSET_ROUTE_7    equ 0xFB
+SPLITSET_ROUTE_8    equ 0xFC
+NUM_SPLIT_SETS      equ 12
 
 NPC_DIALOG_BUF                        equ 0xCB00  ; scratch WRAM for NPC TX command stream (≤256 B)
 
@@ -955,6 +992,7 @@ W_WEST_CONNECTED_MAP         equ 0xD386 ; wWestConnectedMap
 W_EAST_CONNECTED_MAP         equ 0xD391 ; wEastConnectedMap
 
 ; Sprite/object data
+W_SPRITE_SET                 equ 0xD39C ; wSpriteSet (SPRITE_SET_LENGTH = 11 bytes, precedes wSpriteSetID)
 W_SPRITE_SET_ID              equ 0xD3A7 ; wSpriteSetID
 W_OBJECT_DATA_PTR_TEMP       equ 0xD3A8 ; wObjectDataPointerTemp (2 bytes)
 

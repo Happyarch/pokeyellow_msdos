@@ -778,6 +778,11 @@ assets/toggleable_objects.inc:
 assets/event_constants.inc:
 	python3 tools/gen_event_constants.py
 
+# Fixed outside-map sprite sets (pret data/maps/sprite_sets.asm) — OW-A.2 sprite-set
+# machinery in map_sprites.asm. Pure data (no gfx dep); consumed from Phase 3 onward.
+assets/sprite_sets.inc: tools/gen_sprite_sets.py
+	python3 tools/gen_sprite_sets.py
+
 # map_sprites depends on the NPC tile asset table, all-maps dialog table, the
 # toggleable-object (event) flag tables, and the event-flag constants (events.inc).
 src/engine/overworld/map_sprites.o: \
@@ -1041,7 +1046,7 @@ assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_
         assets/ui_layout_menus.inc assets/ui_layout_battle.inc \
         assets/map_border_overrides.inc assets/badge_tiles.inc \
         assets/trainer_card_tiles.inc assets/emotes.inc \
-        assets/alphabets.inc assets/dex_entries.inc
+        assets/alphabets.inc assets/dex_entries.inc assets/sprite_sets.inc
 
 # Force-regenerate every generated asset, ignoring timestamps. The asset rules
 # are timestamp-gated (an .inc newer than its generator/source is skipped), which
