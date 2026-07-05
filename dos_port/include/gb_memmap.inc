@@ -862,6 +862,16 @@ W_X_COORD                    equ 0xD361 ; wXCoord (player map X, in tiles)
 W_Y_BLOCK_COORD              equ 0xD362 ; wYBlockCoord
 W_X_BLOCK_COORD              equ 0xD363 ; wXBlockCoord
 W_D433                       equ 0xD433 ; wd433 — Pikachu collision direction (set by sprite collision engine)
+; --- Overworld-Pikachu WRAM block (OW-A.11: promoted from pikachu.asm file-local placeholders).
+; pokeyellow-real addresses, consistent with the existing Pikachu symbols here (W_D433,
+; wPikachuHappiness $D46F, wPikachuMood $D470). Absolute anchoring rides the deferred gb_memmap
+; Red-vs-Yellow decision (see memory gb_memmap-anchoring); the block is internally consistent
+; (correct relative offsets) so it moves as a unit if the layout is ever re-anchored.
+wPikachuOverworldStateFlags  equ 0xD42F ; bit1=following, bit2=moved, bit3=draw-disabled, bit5/7=hide
+wPikachuMovementScriptBank   equ 0xD449 ; ROM bank of the active Pikachu movement script
+wPikachuMovementScriptAddress equ 0xD44A ; dw: cursor into the movement script
+wSpritePikachuStateData1MovementStatus equ 0xC1F1 ; slot-15 data1+1 (wSpriteStateData1 $C100 + 15*$10 +1)
+wSpritePikachuStateData1ImageIndex     equ 0xC1F2 ; slot-15 data1+2 ($ff = off screen/hidden)
 W_LAST_MAP                   equ 0xD364 ; wLastMap
 
 ; Fixed map header (wCurMapHeader = wCurMapTileset at $D366)

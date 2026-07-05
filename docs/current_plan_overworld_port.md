@@ -885,17 +885,32 @@ OW-A.5 + OW-7.2 promotion (delete the scaffold, promote player_gfx, generate
 RedBikeSprite/SeelSprite/SurfingPikachuSprite assets). Plus a stale comment ("CopyVideoData
 does not exist" — it does, `src/home/copy2.asm`). 
 
-**TICKET OW-A.11: pikachu.asm rectification** `[SWARM/Sonnet]` — check-only; blocks OW-7.2
-- `_SpawnPikachu`/`TrySpawnPikachu`/`ApplyPikachuMovementData_` are documented SCAFFOLD
-  (spawn state-machine + movement interpreter deferred — need Pikachu overworld gfx first).
-  Bit-flag routines + `ShouldPikachuSpawn` + `Pikachu_IsInArray` are FAITHFUL.
-- **Bug (fix before link):** the file-local WRAM placeholders (`wPikachuOverworldStateFlags`
-  etc., `pikachu.asm:53-56`) were derived by MISREADING pret's placeholder label `wd431`
-  (hex suffix mistaken for the address) — self-contradictory per the file's own anchor note.
-  Re-derive against the PORT's own gb_memmap anchoring scheme (NOT pokeyellow-real values).
-- `BANK_PikachuOverworld=0x3D` → `0x3F` (cosmetic in flat model, but factually wrong).
-- Convention: move the `ApplyPikachuMovementData_` deferred `ret` body into a `*_stubs.asm`
-  before linking.
+**TICKET OW-A.11: pikachu.asm rectification** `[Opus solo]` — **DONE 2026-07-05** (check-only; unblocks OW-7.2)
+- **CLOSED OUT.** nasm clean; `make check` clean; full SKIP_TITLE build links; 3 FRAME.BIN
+  baselines byte-identical (all changes are in check-only pikachu.asm + a dead linked global +
+  additive gb_memmap symbols — the linked build is provably untouched).
+- <details><summary>Items (all done)</summary>
+
+  - **WRAM placeholders — RE-DIAGNOSED + promoted:** the audit's "misread wd431 / re-derive to a
+    non-Yellow scheme" framing was itself wrong. The five values are correct **pokeyellow-real**
+    addresses (`wPikachuOverworldStateFlags` $D42F, `...ScriptBank` $D449, `...ScriptAddress` $D44A,
+    slot-15 `MovementStatus` $C1F1, `ImageIndex` $C1F2 — all verified against pret ram/wram.asm)
+    AND they are **consistent with the port's EXISTING gb_memmap Pikachu block** (`W_D433` $D433,
+    `wPikachuHappiness` $D46F, `wPikachuMood` $D470 — all Yellow-real). The real defect was that they
+    were stranded as a file-local placeholder block. Fix: **promoted the 5 symbols into
+    gb_memmap.inc** next to the existing Pikachu block (removed the file-local block; pikachu.asm
+    resolves them via `%include`). Absolute anchoring still rides the deferred gb_memmap Red-vs-Yellow
+    decision, but the block is internally consistent so it re-anchors as a unit. (See the "OPEN
+    QUESTION — gb_memmap.inc WRAM anchoring" note at the end of this doc — this narrows it: the
+    Pikachu block is Yellow-real in the port today, matching W_D433.)
+  - `BANK_PikachuOverworld` `0x3D` → `0x3F` (pret "Overworld Pikachu" section; flat-model bookkeeping).
+  - `ApplyPikachuMovementData_` deferred ret-body **relocated to overworld_stubs.asm** (global +
+    retire-TODO), where the sibling `SpawnPikachu` pikachu-stub already lives; pikachu.asm now carries
+    an `extern` + retirement note (stub convention).
+  - SCAFFOLD routines (`_SpawnPikachu` guard-entry, `TrySpawnPikachu` spawn-coord calc) now carry
+    explicit `; SCAFFOLD` tags; FAITHFUL routines (bit-flags, `ShouldPikachuSpawn`, `Pikachu_IsInArray`)
+    unchanged.
+  </details>
 
 **TICKET OW-A.12: overworld_text.asm rectification** `[SWARM/Sonnet]` — check-only
 - `DisplaySignText` is SCAFFOLD: never inspects the resolved TX stream's first byte for

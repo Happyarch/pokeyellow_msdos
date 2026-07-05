@@ -40,28 +40,19 @@ bits 32
 %include "gb_macros.inc"
 
 ; ---------------------------------------------------------------------------
-; PROPOSED gb_memmap.inc additions (new Pikachu WRAM/sprite symbols).
-; ROOT: move these to dos_port/include/gb_memmap.inc and DELETE this block at
-; integration. They are defined here only so this file assembles standalone.
-; (NASM %ifndef cannot guard `equ` symbols — see task note — so no %ifndef here;
-; delete the block once the equs live in the shared memmap to avoid a redefine.)
-;
-;   Source addresses derived from pret ram/wram.asm (wd431==$D431 anchors the
-;   run; wd435==$D435 and wd472==$D472 cross-check the layout) and the slot-15
-;   sprite struct (wSpriteStateData1=$C100 + 15*$10 = $C1F0).
+; Pikachu WRAM/sprite symbols now live in gb_memmap.inc (OW-A.11: promoted from a
+; former file-local placeholder block that stranded them here). The values are
+; pokeyellow-real and consistent with the existing gb_memmap Pikachu block
+; (W_D433 $D433, wPikachuHappiness $D46F): wPikachuOverworldStateFlags,
+; wPikachuMovementScriptBank, wPikachuMovementScriptAddress,
+; wSpritePikachuStateData1MovementStatus, wSpritePikachuStateData1ImageIndex.
 ; ---------------------------------------------------------------------------
-wPikachuOverworldStateFlags          equ 0xD42F ; bit1=following, bit2=moved-flag,
-                                                ; bit3=drawing-disabled, bit5/bit7=hide
-wPikachuMovementScriptBank           equ 0xD449 ; ROM bank of the active movement script
-wPikachuMovementScriptAddress        equ 0xD44A ; dw: cursor into the movement script
-wSpritePikachuStateData1MovementStatus equ 0xC1F1 ; slot 15 data1+1 (0=uninit,1=ready,...)
-wSpritePikachuStateData1ImageIndex   equ 0xC1F2 ; slot 15 data1+2 ($ff = off screen/hidden)
 
 ; BANK() of the engine-bank Pikachu routines. Cosmetic under the flat model:
 ; BankswitchCommon only records the requested bank in hLoadedROMBank (no MBC),
-; so the exact numeric value is bookkeeping. pret assigns these ROMX banks
-; automatically ("Overworld Pikachu" section). Use a named constant.
-BANK_PikachuOverworld                equ 0x3D  ; placeholder; flat-model bookkeeping only
+; so the exact numeric value is bookkeeping. pret assigns the "Overworld Pikachu"
+; ROMX section bank $3F. Use a named constant.
+BANK_PikachuOverworld                equ 0x3F  ; pret "Overworld Pikachu" bank; flat-model bookkeeping only
 
 ; ---------------------------------------------------------------------------
 ; Externs
@@ -173,7 +164,7 @@ SpawnPikachu:
 ; ===========================================================================
 ; _SpawnPikachu — pret engine/pikachu/pikachu_follow.asm:SpawnPikachu_.
 ;
-; FAITHFUL GUARD ENTRY ONLY. The default/disabled path (the only one reachable
+; ; SCAFFOLD: FAITHFUL GUARD ENTRY ONLY. The default/disabled path (the only one reachable
 ; today) is complete and byte-faithful: reset the moved-flag, run TrySpawnPikachu;
 ; if it declines (carry clear, the always-taken default), return having blanked
 ; the sprite. The enabled path (WillPikachuSpawnOnTheScreen + the PointerTable_
@@ -224,7 +215,8 @@ ShouldPikachuSpawn:
 
 ; TrySpawnPikachu — pret pikachu_follow.asm:TrySpawnPikachu. If Pikachu should not
 ; spawn, blank its sprite state and return carry clear. If it should and is not yet
-; spawned, compute its spawn coords/facing (DEFERRED); then return carry set.
+; spawned, compute its spawn coords/facing (; SCAFFOLD: DEFERRED — the spawn-coord calc
+; is unreachable while the follower is disabled); then return carry set.
 TrySpawnPikachu:
     call ShouldPikachuSpawn
     jnc .dont_spawn
@@ -331,10 +323,8 @@ ApplyPikachuMovementData:
     call BankswitchCommon
     ret
 
-; ApplyPikachuMovementData_ — pret engine/pikachu/pikachu_movement.asm.
-; DEFERRED body: the movement-data interpreter (wCurPikaMovementData union, step
-; timers, sprite placement) needs the pikachu_movement subsystem + staged sprite
-; gfx. Kept as a faithful ret so the wrapper links; inert while the follower is
-; disabled. TODO(M9.1 follow-up): port the interpreter.
-ApplyPikachuMovementData_:
-    ret
+; ApplyPikachuMovementData_ (pret engine/pikachu/pikachu_movement.asm) is a DEFERRED
+; ret-stub relocated to overworld_stubs.asm (OW-A.11; stub convention — a ret-only body
+; never lives in the file mirroring its pret source). Retire it there when the movement-
+; data interpreter (wCurPikaMovementData union, step timers, sprite placement) is ported.
+extern ApplyPikachuMovementData_        ; src/engine/overworld/overworld_stubs.asm (ret-stub)

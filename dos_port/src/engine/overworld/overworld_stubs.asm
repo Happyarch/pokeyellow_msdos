@@ -18,6 +18,17 @@ global SpawnPikachu
 SpawnPikachu:
     ret
 
+; ApplyPikachuMovementData_ — pret engine/pikachu/pikachu_movement.asm:ApplyPikachuMovementData_
+; (the Pikachu movement-data interpreter: wCurPikaMovementData union, step timers, sprite
+; placement). DEFERRED — needs the pikachu_movement subsystem + staged Pikachu overworld gfx.
+; OW-A.11 relocated this ret-stub out of pikachu.asm (stub convention: a ret-only body never
+; lives in the file mirroring its pret source). Called only by pikachu.asm:ApplyPikachuMovementData
+; (check-only today), and unreachable while the follower is disabled, so inert in the live build.
+; TODO(retire M9.1): replace with the real interpreter, then delete this stub.
+global ApplyPikachuMovementData_
+ApplyPikachuMovementData_:
+    ret
+
 ; DoScriptedNPCMovement — pret engine/overworld/movement.asm:DoScriptedNPCMovement
 ; (walk-a-scripted-NPC-in-sync stepper). TODO(home-rectify follow-up): implement the
 ; stepper consuming M3.3's wNPCMovementDirections + BIT_SCRIPTED_NPC_MOVEMENT (see
