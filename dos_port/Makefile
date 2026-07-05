@@ -854,6 +854,17 @@ assets/badge_tiles.inc: ../gfx/trainer_card/badges.2bpp \
 
 src/engine/menus/draw_badges.o: assets/badge_tiles.inc
 
+# Overworld emotion-bubble tiles (2bpp passthrough of gfx/emotes/*.2bpp) for
+# EmotionBubble (engine/overworld/emotion_bubbles.asm, folded into trainer_engine.asm).
+assets/emotes.inc: ../gfx/emotes/shock.2bpp ../gfx/emotes/question.2bpp \
+                   ../gfx/emotes/happy.2bpp ../gfx/emotes/skull.2bpp \
+                   ../gfx/emotes/heart.2bpp ../gfx/emotes/bolt.2bpp \
+                   ../gfx/emotes/zzz.2bpp ../gfx/emotes/fish.2bpp \
+                   tools/gen_emotes.py
+	python3 tools/gen_emotes.py
+
+src/engine/overworld/trainer_engine.o: assets/emotes.inc
+
 # Trainer-card tile graphics (box/bg/blank-names/badge-numbers/colon/circle),
 # 2bpp passthrough of gfx/trainer_card/*.2bpp + gfx/font/font_extra.2bpp, for the
 # TRAINER CARD screen (trainer_card.asm, menus S9). Faces/badges come from
@@ -1029,7 +1040,7 @@ assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_
         assets/super_rod.inc assets/town_map_data.inc assets/town_map_gfx.inc \
         assets/ui_layout_menus.inc assets/ui_layout_battle.inc \
         assets/map_border_overrides.inc assets/badge_tiles.inc \
-        assets/trainer_card_tiles.inc \
+        assets/trainer_card_tiles.inc assets/emotes.inc \
         assets/alphabets.inc assets/dex_entries.inc
 
 # Force-regenerate every generated asset, ignoring timestamps. The asset rules

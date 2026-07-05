@@ -127,8 +127,8 @@ extern SetEnemyTrainerToStayAndFaceAnyDirection ; TODO(M8.2 follow-up): unported
 extern TextCommandProcessor     ; TODO(M8.2 follow-up): text.asm has it; verify global name
 extern TextScriptEnd            ; TODO(M8.2 follow-up): text_script, unported
 extern HideObject               ; TODO(M8.2 follow-up): hidden_events, unported
-extern CopyVideoData            ; TODO(M8.2 follow-up): M10.1 VRAM family (UNPORTED)
-extern EmotionBubbleGfx         ; TODO(M8.2 follow-up): Tier-1 gfx (gfx/emotes/*.2bpp) — NOT in port
+extern CopyVideoData            ; src/home/copy2.asm (ported): ESI=dst VRAM offset, EDX=flat src, BL=tile count
+; EmotionBubbleGfx is now defined here via %include "assets/emotes.inc" (gen_emotes.py).
 extern _TrainerNameText         ; TODO(M8.2 follow-up): Tier-1 text (data/text) — NOT in port
 extern JessieJamesPic           ; TODO(M8.2 follow-up): Tier-1 pic not in port TrainerPicPointers
 
@@ -191,6 +191,10 @@ EmotionBubblesOAMBlock:
     db 0xF9, 0
     db 0xFA, 0
     db 0xFB, 0
+
+; Overworld emotion-bubble tiles (pret gfx/emotes/*.2bpp). Defines EmotionBubbles /
+; EmotionBubbleGfx + EMOTE_TILE_BYTES/EMOTE_TILES_PER_BUBBLE/EMOTE_BUBBLE_BYTES/NUM_EMOTES.
+%include "assets/emotes.inc"
 
 ; ============================================================================
 section .text
@@ -927,21 +931,22 @@ GetTrainerName:
 ; EmotionBubble — draw an emotion bubble (e.g. "!") above a sprite for a beat.
 ; pret: engine/overworld/emotion_bubbles.asm:EmotionBubble
 ; In: wWhichEmotionBubble = which bubble, wEmotionBubbleSpriteIndex = target sprite.
-; NOTE: depends on CopyVideoData (UNPORTED, M10.1) + EmotionBubbleGfx (Tier-1 gfx not
-;       in the port). CHECK-only until those land; logic is faithful.
+; CopyVideoData is ported (copy2.asm); EmotionBubbleGfx is now generated
+; (assets/emotes.inc). The gfx load below is fully wired; the only remaining gap is
+; the WriteOAMBlock call further down (flat OAM block vs EBP-relative src — see there).
 ; ----------------------------------------------------------------------------
 EmotionBubble:
-    ; source tiles: EmotionBubbleGfx + (wWhichEmotionBubble & $f) * 16
+    ; source tiles: EmotionBubbleGfx + (wWhichEmotionBubble & $f) * EMOTE_BUBBLE_BYTES.
+    ; pret: `swap a` (*16) then four `add hl,bc` = *64 (each emote is 4 tiles = 64 bytes).
     mov al, [ebp + wWhichEmotionBubble]
     and al, 0x0f
     movzx ebx, al
-    shl ebx, 4                      ; *16 (pret: swap a => *16 for a<16)
-    lea esi, [EmotionBubbleGfx + ebx]  ; de = flat src
-    ; dest = vChars1 tile $78, 4 tiles.  TODO(M8.2 follow-up): CopyVideoData is UNPORTED.
-    mov edi, GB_VCHARS1_TILE78      ; TODO(M8.2 follow-up): verify this VRAM target symbol
-    mov bh, 4                       ; 4 tiles
-    ; bank byte (bc = BANK, 4) — meaningless flat; keep count in BH.
-    call CopyVideoData              ; TODO(M8.2 follow-up): UNPORTED (M10.1)
+    shl ebx, 6                      ; * EMOTE_BUBBLE_BYTES (64); was *16 (wrong stride)
+    ; CopyVideoData ABI (copy2.asm:62): ESI = dst VRAM offset, EDX = flat src, BL = tiles.
+    lea edx, [EmotionBubbleGfx + ebx]    ; EDX = flat source (was wrongly in ESI)
+    mov esi, GB_VCHARS1_TILE78           ; ESI = dst VRAM offset (was wrongly in EDI)
+    mov bl, EMOTE_TILES_PER_BUBBLE       ; BL = tile count 4 (was wrongly BH; BH = bank, flat no-op)
+    call CopyVideoData
     ; force sprite updates on while the bubble shows
     mov al, [ebp + wUpdateSpritesEnabled]
     push eax
@@ -973,13 +978,14 @@ EmotionBubble:
     mov al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_XPIXELS]
     add al, 8
     mov bl, al                      ; c = x+8
-    ; OW-A.9 KNOWN-BROKEN (deferred; whole routine is CHECK-only per the header NOTE —
-    ; blocked on unported CopyVideoData/EmotionBubbleGfx). Address-model mismatch here:
-    ; WriteOAMBlock (home/oam.asm:54-61) reads the tile/attr source from DX as an
+    ; SOLE REMAINING GAP (deferred): the gfx load above is now correct (EmotionBubbleGfx
+    ; generated + CopyVideoData ABI fixed), but this WriteOAMBlock call has an address-model
+    ; mismatch. WriteOAMBlock (home/oam.asm:54-61) reads the tile/attr source from DX as an
     ; EBP-RELATIVE GB offset (`movzx esi,dx / lea esi,[ebp+esi]`), but EmotionBubblesOAMBlock
-    ; is a FLAT .data label and it is loaded into ESI (which WriteOAMBlock ignores/overwrites).
-    ; Fix when unblocked: either copy EmotionBubblesOAMBlock into a WRAM scratch buffer and
-    ; pass its GB offset in EDX, or add a flat-addressing WriteOAMBlock variant. Rides OW-7.2.
+    ; is a FLAT .data label loaded into ESI (which WriteOAMBlock ignores/overwrites). Fix:
+    ; copy the 8-byte EmotionBubblesOAMBlock into a WRAM scratch and pass its GB offset in
+    ; EDX, or add a flat-addressing WriteOAMBlock variant (it is this file's only caller).
+    ; EmotionBubble is CHECK-only (no caller yet); this is harmless until it is wired live.
     mov esi, EmotionBubblesOAMBlock ; (pret de = OAM block) — see note: reg+addr-model wrong
     xor al, al
     call WriteOAMBlock
@@ -993,7 +999,10 @@ EmotionBubble:
 
 ; VRAM target for the emotion bubble tiles (vChars1 tile $78).
 ; TODO(M8.2 follow-up): confirm the port's vChars1 base + tile-$78 byte offset symbol.
-GB_VCHARS1_TILE78 equ 0x8000 + 0x780   ; vChars1($8000)? tile $78*16 — VERIFY vs port VRAM map
+; pret `vChars1 tile $78`: vChars1 = GB_VFONT ($8800), tile $78 → +$780 = $8F80.
+; That is OBJ tile $F8 ($8000 + $F8*$10), matching EmotionBubblesOAMBlock's $F8-$FB ids.
+; (Was 0x8000+0x780 = $8780 = OBJ tile $78 — wrong base; the OAM block reads tiles $F8+.)
+GB_VCHARS1_TILE78 equ GB_VFONT + 0x780
 
 ; ============================================================================
 ; trainer_sight accessors (pret: engine/overworld/trainer_sight.asm)

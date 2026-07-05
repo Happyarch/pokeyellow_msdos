@@ -481,8 +481,15 @@ root pret tree.
      `wAudioROMBank` / `wAudioSavedROMBank` writes (audio HAL, Phase 3).
   5. `GetSpritePosition1/2` + `SetSpritePosition1/2`: added the 4 non-underscored bank-wrapper
      trampolines (flat-model direct jmps to the `_` versions), globals added.
-  6. `EmotionBubble`: annotated the WriteOAMBlock address-model mismatch (block ptr must be a
-     GB offset in EDX, not a flat label in ESI) — deferred (whole routine rides OW-7.2 gfx).
+  6. `EmotionBubble`: **gfx wired + load path fixed (2026-07-05).** Added `tools/gen_emotes.py`
+     (Tier-1 2bpp passthrough of pret `gfx/emotes/*.2bpp` → `assets/emotes.inc`,
+     `EmotionBubbles`/`EmotionBubbleGfx`), `%include`d into trainer_engine.asm (extern removed),
+     Makefile rule + `trainer_engine.o` dep + assets list. Fixed the gfx-load bugs: emote stride
+     `*16`→`*64` (EMOTE_BUBBLE_BYTES; pret swap+4×add), CopyVideoData register ABI (src→EDX,
+     dst→ESI, count→BL — was all wrong), and the VRAM target `GB_VCHARS1_TILE78` `$8780`→
+     `GB_VFONT+$780` ($8F80 = OBJ tile $F8, matching the OAM block). `CopyVideoData` was already
+     ported (stale note corrected). SOLE remaining gap: the `WriteOAMBlock` address-model mismatch
+     (flat OAM block vs EBP-relative src) — deferred (EmotionBubble is check-only, no live caller).
   7. `TrainerEndBattleText`: converted the vague TODO to an explicit KNOWN-BROKEN/DEFERRED note
      (TX_ASM $08 is a no-op skip → dead `_asm` tail + parse run-on; also needs the unported
      `_TrainerNameText` Tier-1 text; two unblock paths documented).
