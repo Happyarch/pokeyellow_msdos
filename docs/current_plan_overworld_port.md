@@ -407,7 +407,29 @@ root pret tree.
 - Surfing entirely absent (`.surfing`/`CollisionCheckOnWater` `:206-226`, `DoBikeSpeedup`
   `:243`) — larger; may fold into the boulder/field-move Stage 4 work. Effort M/L.
 
-**TICKET OW-A.7: movement.asm NPC faithfulness fixes** `[SWARM/Sonnet]` — DIVERGENT
+**TICKET OW-A.7: movement.asm NPC faithfulness fixes** `[SWARM/Sonnet]` — **DONE 2026-07-05**
+- **CLOSED OUT.** All 5 items resolved (make check clean; full build links; 3 FRAME.BIN
+  baselines byte-identical — the behavioral fixes are latent for the captured scenarios,
+  which don't exercise edge-walking/item-balls/captain/sprite-collisions, so no render regression):
+  1. Status-4 dispatch: added `cmp al,4 → Func_5357` in `UpdateNonPlayerSprite` and ported
+     `Func_5357` (finish-step: pixel-advance by 2×step, dec WALKANIMCOUNTER, on expiry →
+     status 1 scripted or status 2 random w/ fresh delay + cleared step vectors). Global added.
+  2. `CanWalkOntoTile`: added pret's off-screen pixel bound (YPIXELS+4+Δ ≥ $80 / XPIXELS+Δ ≥ $90
+     → blocked) after the STAY check — was missing, so WALK/STAY NPCs had no east/south limit.
+  3. `MakeNPCFacePlayer`: added the `BIT_NO_NPC_FACE_PLAYER` (wStatusFlags3) guard (S.S. Anne
+     captain); documented the `wPlayerDirection`→`W_SPRITE_PLAYER_FACING_DIR` field substitution
+     (`; DIVERGENCE`, equivalent for a standing spoken-to player).
+  4. `DetectCollisionBetweenSprites`: narrowed the COLLISIONDATA clear from `dword` to `word`
+     (0x0C/0x0D only) — pret never resets COLLISIONBITMAP_HI/LO (0x0E/0x0F), which accumulate
+     via OR; the dword zero was wiping them each call. Fixed the backwards axis-label comments
+     (final layout DH[3:2]=Y, DH[1:0]=X per pret sprite_collisions.asm:293; `.use_ybits`/
+     `.pika_ybits` are misnomers — they select the X bits).
+  5. `.randomMovement`: documented the port-only MAPY/MAPX clamp as a `DIVERGENCE` (guards
+     GetTileSpriteStandsOn from OOB reads; narrower than CheckSpriteAvailability's visible zone —
+     reconcile/delete when the map-data extension removes the OOB region).
+
+<details><summary>Original ticket items (all done)</summary>
+
 - Status-4 dispatch silently dropped (`UpdateNonPlayerSprite`, pret `movement.asm:134-5`):
   add the `cp 4` case + port `Func_5357` (item-ball-emerge/STAY-and-face, pret
   `movement.asm:1018-1075`; uses already-ported `Func_5274`/`Random`). S. (Same
@@ -425,6 +447,8 @@ root pret tree.
   `CheckSpriteAvailability`'s edge-visible zone → an edge-visible NPC can be blocked from
   random-walking; reconcile the two bound sets or document. S.
 
+</details>
+
 **TICKET OW-A.8: overworld.asm marker/hygiene sweep** `[SWARM/Sonnet, mechanical]` — DIVERGENT (silent)
 - `CollisionCheckOnLand`: add `; TODO-HW: audio HAL` for dropped `SFX_COLLISION`;
   restore `wSimulatedJoypadStatesIndex` no-collision bypass + `wSpritePlayerStateData1CollisionData`
@@ -440,7 +464,31 @@ root pret tree.
 - `CheckMapConnections`: add `PlayDefaultMusicFadeOutCurrent`/`SET_PAL_OVERWORLD` calls or
   deferred markers at the crossing site.
 
-**TICKET OW-A.9: trainer_engine.asm ABI/faithfulness fixes** `[SWARM/Sonnet]` — DIVERGENT (blocks OW-7.2 promotion)
+**TICKET OW-A.9: trainer_engine.asm ABI/faithfulness fixes** `[SWARM/Sonnet]` — **DONE 2026-07-05** (unblocks OW-7.2 promotion)
+- **CLOSED OUT.** trainer_engine.asm assembles clean. Resolved:
+  1. **CRITICAL landmine defused:** `TrainerWalkUpToPlayer` distance sites (`:441,453,465,477`)
+     `shl al,4`→`shr al,4` — the value is a block-aligned pixel distance (multiple of $10) so
+     pret's `swap a` is a DIVIDE; the old `shl` overflowed AL→0 → dec → $FF steps → 255-byte
+     FillMemory into the 10-byte `wNPCMovementDirections2`. The slot-offset `swap` sites (423/
+     500/697/1073) correctly kept `shl` (verified — they're ×16, not ÷16).
+  2. `LoadGymLeaderAndCityName`: made pret-faithful — dst was in EDI (CopyData reads dst from
+     DX → wrote garbage) AND the entry `push esi/pop esi` restored the city src as the leader
+     src. Now `push edx / pop esi` + dst GB offset in EDX, matching pret's push de/pop hl.
+  3. `GetTrainerInformation`: 3→2 BCD-byte copy — pret's `wTrainerBaseMoney` is a 2-byte dw and
+     pret keeps only the top 2 BCD bytes (Gen-1 quirk); the 3-byte copy diverged AND overflowed
+     into wTrainerBaseMoney+2.
+  4. `PlayTrainerMusic`: named `; TODO-HW` markers for the dropped `wAudioFadeOutControl` /
+     `wAudioROMBank` / `wAudioSavedROMBank` writes (audio HAL, Phase 3).
+  5. `GetSpritePosition1/2` + `SetSpritePosition1/2`: added the 4 non-underscored bank-wrapper
+     trampolines (flat-model direct jmps to the `_` versions), globals added.
+  6. `EmotionBubble`: annotated the WriteOAMBlock address-model mismatch (block ptr must be a
+     GB offset in EDX, not a flat label in ESI) — deferred (whole routine rides OW-7.2 gfx).
+  7. `TrainerEndBattleText`: converted the vague TODO to an explicit KNOWN-BROKEN/DEFERRED note
+     (TX_ASM $08 is a no-op skip → dead `_asm` tail + parse run-on; also needs the unported
+     `_TrainerNameText` Tier-1 text; two unblock paths documented).
+
+<details><summary>Original ticket items (all done/deferred as noted)</summary>
+
 - **CRITICAL (fix before this file links):** `TrainerWalkUpToPlayer` (port `:441,453,465,477`)
   uses `shl al,4` to translate pret's `swap a`, but the value is a block-aligned pixel
   distance (always ×16) so `swap` is a **divide**-by-16 → must be `shr al,4`. As written
@@ -468,6 +516,8 @@ root pret tree.
 - Missing non-underscored `GetSpritePosition1/2`/`SetSpritePosition1/2` bank-wrappers
   (pret `trainers.asm:246-262`; called by `scripts/OaksLab.asm`) — trivial pass-throughs to
   the byte-verified `_Get/_Set*` pair. S, not urgent (Oak cutscene not yet ported).
+
+</details>
 
 **TICKET OW-A.10: wave-2 tagging + stub-filing hygiene** `[SWARM/Sonnet, mechanical]`
 - `warp_check.asm` `IsWarpTileInFrontOfPlayer`: convert the prose note on the omitted

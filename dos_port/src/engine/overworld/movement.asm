@@ -30,6 +30,7 @@ bits 32
 
 global UpdateSprites
 global MakeNPCFacePlayer
+global Func_5357
 ; Exported so the MCP debugger (pkmn.map symbol breakpoints) can break exactly at
 ; the NPC collision decision while diagnosing the walking-NPC wall-clip bug.
 global UpdateNonPlayerSprite
@@ -251,6 +252,8 @@ UpdateNonPlayerSprite:
     je .updateDelay                      ; status 2 → UpdateSpriteMovementDelay
     cmp al, 3
     je .updateWalk                       ; status 3 → UpdateSpriteInWalkingAnimation
+    cmp al, 4
+    je .status4                          ; status 4 → Func_5357 (OW-A.7: was silently dropped)
     ; status 1: ready to move
     cmp byte [ebp + W_WALK_COUNTER], 0
     jne .ret                             ; player is walking: don't start new NPC step
@@ -274,6 +277,10 @@ UpdateNonPlayerSprite:
     call UpdateSpriteInWalkingAnimation
     jmp .ret
 
+.status4:
+    call Func_5357
+    jmp .ret
+
 .facePlayer:
     call MakeNPCFacePlayer
     jmp .ret
@@ -283,6 +290,15 @@ UpdateNonPlayerSprite:
     jmp .ret
 
 .randomMovement:
+    ; DIVERGENCE (OW-A.7, port-only scaffold): pret has NO MAPY/MAPX clamp here — it
+    ; relies on CanWalkOntoTile + CheckSpriteAvailability to reject bad destinations.
+    ; This clamp guards GetTileSpriteStandsOn below from reading OOB wTileMap tiles when
+    ; an NPC is near a map edge (same root cause as the enlarged-viewport OOB scaffold in
+    ; CLAUDE.md). KNOWN TENSION: these bounds ([wYCoord-3,+6], [wXCoord-7,+10]) are
+    ; NARROWER than CheckSpriteAvailability's edge-visible zone, so an NPC that IS visible
+    ; at the screen edge can be blocked from random-walking (mild: it just idles a beat).
+    ; Reconcile with CheckSpriteAvailability's bounds — or delete this clamp entirely — once
+    ; the map-data extension removes the OOB region (then GetTileSpriteStandsOn is always safe).
     ; Movement-safe bounds: destination accesses ±2 tile rows/cols from current EBX.
     ; .moveDown: EBX+2*40 → needs row+2 ≤ 24 → MAPY ≤ wYCoord+6.
     ; .moveUp:   EBX-2*40 → needs row-2 ≥ 0  → MAPY ≥ wYCoord-3.
@@ -479,6 +495,22 @@ CanWalkOntoTile:
     inc al                              ; 0xFF+1=0 (ZF)
     jz .impassable
 
+    ; OW-A.7: off-screen pixel bound (pret movement.asm:581-590) — was silently dropped,
+    ; leaving WALK/STAY NPCs with NO east/south wander limit (they could walk off-screen
+    ; into the OOB region; the YDISPLACEMENT/XDISPLACEMENT bounds below only cap north/west).
+    ; Destination pixel must stay on-screen: YPIXELS+4+Ydelta <= $80, XPIXELS+Xdelta <= $90
+    ; (>$80/$90 also catches $FF underflow when stepping past the top/left edge).
+    ; DH = Y step delta, DL = X step delta (EDX preserved; only AL touched here).
+    mov al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_YPIXELS]
+    add al, 4                           ; pret: add $4 (Y pos is always 4px block-offset)
+    add al, dh                          ; + Y delta
+    cmp al, 0x80
+    jae .impassable                     ; pret: cp $80 / jr nc — off screen
+    mov al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_XPIXELS]
+    add al, dl                          ; + X delta
+    cmp al, 0x90
+    jae .impassable                     ; pret: cp $90 / jr nc — off screen
+
     ; Y displacement bounds — prevents unlimited north/west roaming from start position.
     ; YDISPLACEMENT starts at 8 (set in InitializeSpriteStatus).
     ; Moving north (DH=0xFF): must have YDISPLACEMENT > 0.
@@ -592,11 +624,24 @@ NotYetMoving:
 ; ---------------------------------------------------------------------------
 MakeNPCFacePlayer:
     push eax
+    ; OW-A.7: skip facing the player if BIT_NO_NPC_FACE_PLAYER is set (pret
+    ; movement.asm:365-367). Only set while rubbing the S.S. Anne captain's back;
+    ; was silently dropped. Like pret's `jr nz, NotYetMoving`, the guarded path also
+    ; skips the res BIT_FACE_PLAYER below (bit stays set), just refreshing the image.
+    test byte [ebp + W_STATUS_FLAGS_3], (1 << BIT_NO_NPC_FACE_PLAYER)
+    jnz .noFace
+    ; DIVERGENCE: pret reads wPlayerDirection (movement-dir bits) and maps via a
+    ; PLAYER_DIR_BIT_* test-chain to the inverted SPRITE_FACING_*. The port instead
+    ; reads W_SPRITE_PLAYER_FACING_DIR (already a SPRITE_FACING_* value) and XORs $04
+    ; (DOWN<->UP, LEFT<->RIGHT) — a different WRAM cell. Equivalent whenever the
+    ; player's facing == movement direction, which always holds for a standing player
+    ; being spoken to (the only caller path), so the result matches pret here.
     movzx eax, byte [ebp + W_SPRITE_PLAYER_FACING_DIR]
     xor al, 0x04                ; invert facing direction
     mov [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_FACINGDIRECTION], al
     and byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_MOVEMENTSTATUS], ~(1 << BIT_FACE_PLAYER)
-    call NotYetMoving           ; reset anim counter and update image index
+.noFace:
+    call NotYetMoving           ; pret: jr NotYetMoving (both paths converge) — refresh image
     pop eax
     ret
 
@@ -976,6 +1021,51 @@ Func_5274:
     ret
 
 ; ---------------------------------------------------------------------------
+; Func_5357 — finish an in-progress non-player sprite step (movement status 4).
+; Pret ref: engine/overworld/movement.asm:Func_5357.
+; Each frame: advance the anim counters (Func_5274), then move the sprite 2 px in
+; its current step direction (YPIXELS += 2*YSTEP, XPIXELS += 2*XSTEP) and decrement
+; the 8-frame walk-anim counter. When the counter expires, transition out of the
+; step: MOVEMENTBYTE1 < $FE (scripted) → status 1 (ready); >= $FE (WALK/STAY) →
+; status 2 (delayed) with a fresh random delay (hRandomAdd & $7F) and cleared step
+; vectors. In: hCurrentSpriteOffset = slot byte offset.
+; ---------------------------------------------------------------------------
+Func_5357:
+    call Func_5274                       ; advance intra-anim + anim-frame counters
+    movzx esi, byte [ebp + H_CURRENT_SPRITE_OFFSET]
+    ; YPIXELS += 2 * YSTEPVECTOR  (pret: a=[+3]; add a; b=a; a=[+4]; add b; [+4]=a)
+    mov al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_YSTEPVECTOR]
+    add al, al
+    add al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_YPIXELS]
+    mov [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_YPIXELS], al
+    ; XPIXELS += 2 * XSTEPVECTOR
+    mov al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_XSTEPVECTOR]
+    add al, al
+    add al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_XPIXELS]
+    mov [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_XPIXELS], al
+    ; dec WALKANIMCOUNTER (data2+0); still animating → return
+    dec byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_WALKANIMCOUNTER]
+    jnz .ret                             ; pret: ret nz
+    ; step finished — decide next status from MOVEMENTBYTE1
+    mov al, [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTBYTE1]
+    cmp al, 0xFE
+    jae .random                          ; pret: cp $fe / jr nc (>= $FE → WALK/STAY random)
+    ; scripted: ready to move again
+    mov byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_MOVEMENTSTATUS], 1
+.ret:
+    ret
+.random:
+    call Random                          ; AL = hRandomAdd (clobbers AL, BL)
+    mov al, [ebp + H_RANDOM_ADD]         ; pret: ldh a, [hRandomAdd]
+    and al, 0x7F
+    mov [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTDELAY], al
+    mov byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_MOVEMENTSTATUS], 2
+    ; clear step vectors (pret reads them into b/c then discards)
+    mov byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_YSTEPVECTOR], 0
+    mov byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_XSTEPVECTOR], 0
+    ret
+
+; ---------------------------------------------------------------------------
 ; SetSpriteCollisionValues
 ; Pret ref: engine/overworld/sprite_collisions.asm:SetSpriteCollisionValues
 ; In:  AL = step vector (0x00=standing, 0x01=moving+, 0xFF=moving-)
@@ -1043,8 +1133,12 @@ DetectCollisionBetweenSprites:
     or    al, cl
     mov   byte [ebp + esi + SPRITESTATEDATA1_XADJUSTED], al
 
-    ; Clear COLLISIONDATA and the three bytes that follow (0x0C–0x0F)
-    mov  dword [ebp + esi + SPRITESTATEDATA1_COLLISIONDATA], 0
+    ; OW-A.7: clear COLLISIONDATA (0x0C) and the unnamed 0x0D byte ONLY — pret
+    ; (sprite_collisions.asm:104-106) zeros just these two here and NEVER resets
+    ; COLLISIONBITMAP_HI/LO (0x0E/0x0F), which accumulate across calls via OR
+    ; (see the `or [hl]` at pret :304). The old `dword` zero also wiped 0x0E/0x0F
+    ; every call, discarding the accumulated per-sprite collision bitmap.
+    mov  word [ebp + esi + SPRITESTATEDATA1_COLLISIONDATA], 0
 
     xor  edx, edx           ; DL=j=0; DH=direction accumulator (reset each j)
 
@@ -1094,7 +1188,8 @@ DetectCollisionBetweenSprites:
     or    dh, ch
     shl   dh, 1
     xor   ch, 1
-    or    dh, ch               ; DH[1:0] = CF_y : !CF_y
+    or    dh, ch               ; DH[1:0] = CF_y : !CF_y here; the X block below shifts
+                               ; these Y bits up to DH[3:2] (final: DH[3:2]=Y, DH[1:0]=X)
 
     ; threshold_i_y: low nibble of i.YAdj == 0 → 7, else 9
     mov   ch, byte [ebp + esi + SPRITESTATEDATA1_YADJUSTED]
@@ -1139,7 +1234,10 @@ DetectCollisionBetweenSprites:
     or    dh, ch
     shl   dh, 1
     xor   ch, 1
-    or    dh, ch               ; DH[3:2] = CF_x : !CF_x
+    or    dh, ch               ; OW-A.7: FINAL layout DH[1:0] = CF_x:!CF_x (X axis);
+                               ; the Y bits set above were shifted up to DH[3:2] by this
+                               ; block's two `shl dh,1`. pret (sprite_collisions.asm:293):
+                               ; bits 0-1 = X axis, bits 2-3 = Y axis.
 
     mov   ch, byte [ebp + esi + SPRITESTATEDATA1_XADJUSTED]
     and   ch, 0x0F
@@ -1174,11 +1272,11 @@ DetectCollisionBetweenSprites:
     mov   al, byte [esp + 8]   ; thr_i_x
     mov   bl, byte [esp + 4]   ; thr_i_y
     cmp   bl, al               ; thr_i_y vs thr_i_x
-    jc    .pika_ybits
-    mov   bl, 0x0C             ; thr_i_y >= thr_i_x: select DH[3:2] = X direction
+    jc    .pika_ybits          ; (label misnomer: this branch selects the X bits)
+    mov   bl, 0x0C             ; thr_i_y >= thr_i_x: select DH[3:2] = Y direction
     jmp   .pika_apply
 .pika_ybits:
-    mov   bl, 0x03             ; thr_i_y < thr_i_x:  select DH[1:0] = Y direction
+    mov   bl, 0x03             ; thr_i_y < thr_i_x:  select DH[1:0] = X direction
 .pika_apply:
     mov   al, dh
     and   al, bl
@@ -1191,11 +1289,11 @@ DetectCollisionBetweenSprites:
     mov   al, byte [esp + 4]   ; thr_i_y
     mov   bl, byte [esp + 8]   ; thr_i_x
     cmp   al, bl
-    jc    .use_ybits
-    mov   bl, 0x0C             ; thr_i_y >= thr_i_x → X bits DH[3:2]
+    jc    .use_ybits           ; (label misnomer: this branch selects the X bits)
+    mov   bl, 0x0C             ; thr_i_y >= thr_i_x → Y bits DH[3:2]
     jmp   .apply_col
 .use_ybits:
-    mov   bl, 0x03             ; thr_i_y < thr_i_x  → Y bits DH[1:0]
+    mov   bl, 0x03             ; thr_i_y < thr_i_x  → X bits DH[1:0]
 .apply_col:
     mov   al, dh
     and   al, bl

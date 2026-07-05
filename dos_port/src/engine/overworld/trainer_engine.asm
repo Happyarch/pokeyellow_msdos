@@ -232,22 +232,26 @@ ExecuteCurMapScriptInTable:
 ; ----------------------------------------------------------------------------
 ; LoadGymLeaderAndCityName — copy gym city + leader names.
 ; pret: home/trainers.asm:LoadGymLeaderAndCityName
-; In: ESI = flat source (city name), then leader name follows.  (pret de=src, hl written)
-; NOTE: pret loads city from `de`, leader from `hl` (the return of the first CopyData).
-;       Port CopyData contract: verify src/dst regs at integration (TODO).
+; In (pret ABI, register-mapped): ESI (hl) = city-name source GB offset,
+;                                 EDX (de) = leader-name source GB offset.
+; CopyData is src(ESI)->dst(EDX), BX=count; dst must be a GB OFFSET in DX
+; (CopyData does movzx edi,dx / lea edi,[ebp+edi]), NOT an [ebp+..] lea.
+; OW-A.9 fix: two ABI bugs corrected — (1) dst was in EDI (CopyData ignores EDI,
+; reads dst from DX) → wrote to garbage; (2) the entry `push esi/pop esi` restored
+; the CITY src as the leader src (would copy the city name into wGymLeaderName).
+; Now push edx/pop esi, matching pret's push de / pop hl (leader src arrives in DE).
 ; ----------------------------------------------------------------------------
 LoadGymLeaderAndCityName:
-    ; --- city name: dst wGymCityName, len GYM_CITY_LENGTH ---
-    push esi                        ; save leader-name src (pret: pop hl afterwards)
-    lea edi, [ebp + wGymCityName]   ; dst (GB emulated)
+    ; --- city name: src ESI, dst wGymCityName, len GYM_CITY_LENGTH ---
+    push edx                        ; pret: push de — save leader-name src
+    mov edx, wGymCityName           ; dst GB offset (DX), pret: ld de, wGymCityName
     mov ebx, GYM_CITY_LENGTH        ; count (BX)
-    ; TODO(M8.2 follow-up): confirm CopyData(ESI=src,EDI=dst,BX=count) contract.
-    call CopyData
-    ; --- leader name: dst wGymLeaderName, len NAME_LENGTH ---
-    pop esi                         ; ESI = leader-name src
-    lea edi, [ebp + wGymLeaderName]
+    call CopyData                   ; [ebp+ESI] -> [ebp+wGymCityName]
+    ; --- leader name: src ESI = leader src, dst wGymLeaderName, len NAME_LENGTH ---
+    pop esi                         ; pret: pop hl — ESI = leader-name src
+    mov edx, wGymLeaderName         ; dst GB offset (DX)
     mov ebx, NAME_LENGTH
-    call CopyData
+    call CopyData                   ; [ebp+ESI] -> [ebp+wGymLeaderName]
     ret
 
 ; ----------------------------------------------------------------------------
@@ -438,7 +442,11 @@ TrainerWalkUpToPlayer:
     call CalcDifference             ; AL = |screenY - 0x3c|
     cmp al, 0x10
     je .retEarly                    ; already right above player
-    shl al, 4                       ; pret: swap a (a<16 => *0x10 hi nibble)
+    shr al, 4                       ; pret: swap a. Here AL is a block-aligned pixel
+                                    ; distance (multiple of $10 from CalcDifference), so
+                                    ; swap DIVIDES by 16 → block/step count. (Was shl,
+                                    ; which overflowed AL to 0 → dec → $FF steps → 255-byte
+                                    ; FillMemory into the 10-byte wNPCMovementDirections2.)
     dec al
     mov bl, al                      ; c = steps to go
     mov al, NPC_MOVEMENT_DOWN       ; 0x00
@@ -450,7 +458,7 @@ TrainerWalkUpToPlayer:
     call CalcDifference
     cmp al, 0x10
     je .retEarly
-    shl al, 4
+    shr al, 4                       ; pret: swap a = divide (block-aligned distance); see .facingDown
     dec al
     mov bl, al
     mov al, NPC_MOVEMENT_UP
@@ -462,7 +470,7 @@ TrainerWalkUpToPlayer:
     call CalcDifference
     cmp al, 0x10
     je .retEarly
-    shl al, 4
+    shr al, 4                       ; pret: swap a = divide (block-aligned distance); see .facingDown
     dec al
     mov bl, al
     mov al, NPC_MOVEMENT_RIGHT
@@ -474,7 +482,7 @@ TrainerWalkUpToPlayer:
     call CalcDifference
     cmp al, 0x10
     je .retEarly
-    shl al, 4
+    shr al, 4                       ; pret: swap a = divide (block-aligned distance); see .facingDown
     dec al
     mov bl, al
     mov al, NPC_MOVEMENT_LEFT
@@ -771,9 +779,20 @@ PrintEndBattleText:
 ; TrainerEndBattleText — text-script: trainer name, then the saved end-battle text.
 ; pret: home/trainers.asm:TrainerEndBattleText  (text_far _TrainerNameText / text_asm)
 ; Encoded as a flat text-script: $17 (TX_FAR) <dd flat ptr>, $08 (TX_ASM) marker
-; handled by a text_asm callback. Kept minimal — the exact TX_* byte encoding must
-; match text.asm's processor at integration.
-; TODO(M8.2 follow-up): confirm TX_FAR ($17) flat-ptr width + TX_ASM ($08) convention.
+; meant to run the TrainerEndBattleText_asm callback below.
+;
+; OW-A.9 KNOWN-BROKEN, DEFERRED (file is check-only; not on any live path today):
+;   1. The port's TextCommandProcessor treats $08 (TX_ASM) as a silent no-operand
+;      SKIP (text.asm:959) — it does NOT dispatch the callback. So TrainerEndBattleText_asm
+;      is DEAD, and after the skip the processor parses into the callback's machine-code
+;      bytes as if they were text opcodes (garbage run-on). Cross-cutting with the same
+;      TX_ASM gap in charge.asm.
+;   2. TX_FAR here points at _TrainerNameText, which is Tier-1 text NOT yet generated
+;      into the port (extern, unresolved as data).
+; Two unblock paths (pick when the deps land): (a) add real TX_ASM ($08) dispatch to
+; TextCommandProcessor, or (b) bypass the script — have PrintEndBattleText call the
+; trainer-name print + GetSavedEndBattleTextPointer/PrintText directly. Both need the
+; _TrainerNameText Tier-1 text generated first. Left as-is until then.
 ; ----------------------------------------------------------------------------
 TrainerEndBattleText:
     db 0x17                         ; TX_FAR
@@ -798,8 +817,13 @@ PlayTrainerMusic:
     je .retNow
     cmp byte [ebp + wGymLeaderNo], 0
     jne .retNow                     ; gym leaders keep the gym music
+    ; pret: xor a / ld [wAudioFadeOutControl], a  — TODO-HW: audio HAL (Phase 3),
+    ; dropped audio-fade state (no-op until the audio HAL exists).
     ; TODO-HW: audio HAL — StopAllMusic/PlaySound are no-op stubs.
     call StopAllMusic               ; TODO(M8.2 follow-up): audio HAL (unported)
+    ; pret: ld a, BANK(Music_MeetEvilTrainer) / ld [wAudioROMBank],a /
+    ;       ld [wAudioSavedROMBank],a  — TODO-HW: audio ROM-bank state (Phase 3),
+    ; irrelevant under the flat model until banked audio is modelled.
     mov bh, [ebp + wEngagedTrainerClass]   ; b = class to search
     mov esi, EvilTrainerList
 .evilLoop:
@@ -851,17 +875,19 @@ GetTrainerInformation:
     ; wTrainerPicPointer (flat dword) = TrainerPicPointers[idx]
     mov edi, [TrainerPicPointers + eax*4]
     mov [ebp + wTrainerPicPointer], edi
-    ; wTrainerBaseMoney = TrainerBaseMoney[idx] (bcd3 in the port).
-    ; TODO(M8.2 follow-up): reconcile money BCD width (pret copies 2 bytes into a dw;
-    ; the port table is 3-byte big-endian BCD). Copy 3 bytes here to preserve value.
-    lea esi, [eax + eax*2]                      ; idx*3
+    ; wTrainerBaseMoney (2-byte dw, pret ram/wram.asm:1400 `wTrainerBaseMoney:: dw`)
+    ; = the TOP 2 BCD bytes of this class's bcd3 base money. OW-A.9: pret
+    ; GetTrainerInformation (home/trainers2.asm) copies exactly 2 bytes — the low BCD
+    ; byte (always $00 for the shipped values, e.g. 1500 = $00 $15 $00) is DELIBERATELY
+    ; dropped (Gen-1 money-width quirk). The port previously copied all 3, which BOTH
+    ; diverged from pret's value AND overflowed the 2-byte field by 1 byte into
+    ; wTrainerBaseMoney+2 (a foreign WRAM cell). Copy 2 now, matching pret.
+    lea esi, [eax + eax*2]                      ; idx*3 (bcd3 stride into the split table)
     add esi, TrainerBaseMoney
-    mov al, [esi]
+    mov al, [esi]                               ; high BCD byte
     mov [ebp + wTrainerBaseMoney + 0], al
-    mov al, [esi + 1]
+    mov al, [esi + 1]                           ; second BCD byte (pret keeps 2, drops [esi+2])
     mov [ebp + wTrainerBaseMoney + 1], al
-    mov al, [esi + 2]
-    mov [ebp + wTrainerBaseMoney + 2], al
     call IsFightingJessieJames
     ret
 .linkBattle:
@@ -947,7 +973,14 @@ EmotionBubble:
     mov al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_XPIXELS]
     add al, 8
     mov bl, al                      ; c = x+8
-    mov esi, EmotionBubblesOAMBlock ; de = flat OAM block
+    ; OW-A.9 KNOWN-BROKEN (deferred; whole routine is CHECK-only per the header NOTE —
+    ; blocked on unported CopyVideoData/EmotionBubbleGfx). Address-model mismatch here:
+    ; WriteOAMBlock (home/oam.asm:54-61) reads the tile/attr source from DX as an
+    ; EBP-RELATIVE GB offset (`movzx esi,dx / lea esi,[ebp+esi]`), but EmotionBubblesOAMBlock
+    ; is a FLAT .data label and it is loaded into ESI (which WriteOAMBlock ignores/overwrites).
+    ; Fix when unblocked: either copy EmotionBubblesOAMBlock into a WRAM scratch buffer and
+    ; pass its GB offset in EDX, or add a flat-addressing WriteOAMBlock variant. Rides OW-7.2.
+    mov esi, EmotionBubblesOAMBlock ; (pret de = OAM block) — see note: reg+addr-model wrong
     xor al, al
     call WriteOAMBlock
     mov bl, 60
@@ -1052,6 +1085,27 @@ global _GetSpritePosition2
 global _SetSpritePosition1
 global _SetSpritePosition2
 global GetSpriteDataPointer
+global GetSpritePosition1
+global GetSpritePosition2
+global SetSpritePosition1
+global SetSpritePosition2
+
+; ----------------------------------------------------------------------------
+; Get/SetSpritePosition1/2 — pret bank-wrapper trampolines (home/trainers.asm:246-262)
+; around the byte-verified _Get/_SetSpritePosition1/2 below. pret loads the target
+; into hl then `ld b, BANK("Trainer Sight") / jp Bankswitch`; under the port's flat
+; model banking is a no-op, so each is a direct tail-jump. Called by
+; scripts/OaksLab.asm (Oak cutscene, not yet ported) — provided so the pret labels
+; resolve. OW-A.9.
+; ----------------------------------------------------------------------------
+GetSpritePosition1:
+    jmp _GetSpritePosition1
+GetSpritePosition2:
+    jmp _GetSpritePosition2
+SetSpritePosition1:
+    jmp _SetSpritePosition1
+SetSpritePosition2:
+    jmp _SetSpritePosition2
 
 ; ----------------------------------------------------------------------------
 ; GetSpriteDataPointer — form a pointer into a sprite's wSpriteStateData1/2
