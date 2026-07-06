@@ -18,6 +18,10 @@ NASMFLAGS := -f coff -I include/ -I . -O0
 BUG_FIX_LEVEL ?= 0
 NASMFLAGS += -D BUG_FIX_LEVEL=$(BUG_FIX_LEVEL)
 
+# Real per-mon front sprites: pics.asm indexes MonFrontPics (src/data/mon_pics.asm,
+# generated). Without this every mon draws the single embedded debug pic (pidgey).
+NASMFLAGS += -D MON_FRONT_PICS
+
 # ---------------------------------------------------------------------------
 # Frame-timing mode — picks the PIT channel-0 divisor (the IRQ 0 / emulated
 # vblank rate that paces the whole game). The Game Boy is NOT exactly 60 Hz, so
@@ -643,6 +647,7 @@ FRONTEND_SRCS := \
     src/engine/battle/load_enemy_moves.asm \
     src/engine/battle/pokeballs.asm \
     src/data/trainer_pics.asm \
+    src/data/mon_pics.asm \
     src/engine/battle/battle_stubs.asm \
     src/gfx/uncompress.asm \
     src/gfx/pics.asm \
@@ -863,6 +868,13 @@ assets/trainer_pics.inc: ../gfx/pics.asm ../data/trainers/pic_pointers_money.asm
                          tools/gen_trainer_pics.py
 	python3 tools/gen_trainer_pics.py
 
+# Pokémon front battle sprites (compressed .pic) + dex-ordered MonFrontPics
+# pointer/length table for LoadFrontSpriteByMonIndex.
+assets/mon_pics.inc: ../data/pokemon/base_stats.asm tools/gen_mon_pics.py
+	python3 tools/gen_mon_pics.py
+
+src/data/mon_pics.o: assets/mon_pics.inc
+
 # Gym-leader face + badge tiles (2bpp passthrough of gfx/trainer_card/badges.2bpp)
 # for the trainer-card status screen (draw_badges.asm, menus S6 package B).
 assets/badge_tiles.inc: ../gfx/trainer_card/badges.2bpp \
@@ -1065,7 +1077,8 @@ assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_
         assets/map_border_overrides.inc assets/badge_tiles.inc \
         assets/trainer_card_tiles.inc assets/emotes.inc \
         assets/alphabets.inc assets/dex_entries.inc assets/sprite_sets.inc \
-        assets/sprite_sheet_pointers.inc assets/pokedex_tiles.inc
+        assets/sprite_sheet_pointers.inc assets/pokedex_tiles.inc \
+        assets/mon_pics.inc
 
 # Force-regenerate every generated asset, ignoring timestamps. The asset rules
 # are timestamp-gated (an .inc newer than its generator/source is skipped), which
