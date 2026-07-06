@@ -215,17 +215,16 @@ ShowPokedexDataInternal:
     pop eax                              ; pop af
     mov [ebp + wPokedexNum], al
     call DrawDexEntryOnScreen            ; sets CF = "print the flavor text" (owned)
-    jnc .waitForButtonPress             ; call c, Pokedex_PrintFlavorTextAtRow11
-    call Pokedex_PrintFlavorTextAtRow11
-.waitForButtonPress:
 %ifdef DEBUG_G2
-    ; live-path FRAME.BIN gate. For an entry WITHOUT a <PAGE> break this dumps the
-    ; full composited DATA page here at the wait. RHYDON (the seeded mon) HAS a
-    ; <PAGE>, so its dump fires earlier at the page break (manual_text_scroll's
-    ; DEBUG_G2 hook) and this line is not reached — both paths capture the page.
+    ; FRAME.BIN gate: dump the composited DATA page right after the border + pic +
+    ; HT/WT are placed, BEFORE the flavor (whose <PAGE> break would otherwise block
+    ; the headless run). Captures the front-pic placement. Never returns.
     call DelayFrame
     call DumpBackbuffer
 %endif
+    jnc .waitForButtonPress             ; call c, Pokedex_PrintFlavorTextAtRow11
+    call Pokedex_PrintFlavorTextAtRow11
+.waitForButtonPress:
     ; DEVIATION(input): pret's JoypadLowSensitivity opens with `call Joypad`
     ; (a fresh hardware read each iteration), so pret's busy loop needs no
     ; DelayFrame. The port refreshes H_JOY_HELD/H_JOY_PRESSED only in
@@ -503,7 +502,13 @@ Pokedex_PrepareDexEntryForPrinting:
 ; ---------------------------------------------------------------------------
 dex_place_pic:
     pushad
-    lea edi, [ebp + HL(1, 1)]             ; dest = (1,1)
+    ; FLIPPED placement (pret CopyUncompressedPicToHL .flipped path). The pokédex
+    ; loads via LoadFlippedFrontSpriteByMonIndex (wSpriteFlipped=1): the decoder
+    ; mirrors each tile INTERNALLY (flipped decode tables + nybble swap), so the
+    ; tilemap must lay the columns RIGHT-TO-LEFT to complete the horizontal flip.
+    ; Placing them left-to-right left the columns reversed relative to the
+    ; mirrored tiles — the "body out of order on the horizontal" scramble.
+    lea edi, [ebp + HL(1, 1) + 6]         ; dest = rightmost column (7-wide pic)
     xor bl, bl                            ; running tile id ($00…)
     mov ecx, 7                            ; 7 columns
 .col:
@@ -520,7 +525,7 @@ dex_place_pic:
     mov bl, al                            ; next column continues the id sequence
     pop ecx
     pop edi
-    inc edi                               ; next column to the right
+    dec edi                               ; next column to the LEFT (flipped)
     dec ecx
     jnz .col
     popad

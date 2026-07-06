@@ -436,13 +436,6 @@ manual_text_scroll:
     ; ▼ at the pokédex page position (row 16, col 18), written straight into the
     ; window source (the full-page mirror above already ran, so it survives).
     mov byte [ebp + GB_TILEMAP1 + POKEDEX_ARROW_TILEMAP_OFFSET], CHAR_DOWN_ARROW
-%ifdef DEBUG_G2
-    ; verification hook: dump the full page at the <PAGE> break (top half + flavor
-    ; page 1 intact) — proves the fix vs. the old bottom-strip hijack. Never returns.
-    extern DumpBackbuffer
-    call DelayFrame
-    call DumpBackbuffer
-%endif
 .dfp_release:                            ; wait for A/B release (avoid sticky input)
     call DelayFrame
     test byte [ebp + H_JOY_HELD], PAD_A | PAD_B
