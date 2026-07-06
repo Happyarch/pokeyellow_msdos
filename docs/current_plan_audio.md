@@ -1,5 +1,7 @@
 # Audio Subsystem — Phase 3 Plan
 
+Worktree: `/mnt/sdb1/Code/Active Code/pokeyellow_msdos-audio` (branch `audio`).
+
 Status: **planned** (implementation not started; Phase 2 game loop still in progress).
 This document supersedes the preliminary Gemini spitball plan (see git history of this
 file for the original). Architecture decisions below were settled in a design session
