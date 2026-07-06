@@ -1100,7 +1100,24 @@ does not exist" — it does, `src/home/copy2.asm`).
     (dispatch wired but its ultimate mart/PC-nurse handlers are still NI).
   </details>
 
-**TICKET OW-A.13: menu box-draw geometry + canvas↔window compositor fix** `[SOLO — final round-off]` `[ROOT-CAUSED + PARTIALLY FIXED 2026-07-06; bag-border + pokédex tails open]`
+**TICKET OW-A.13: menu box-draw geometry + canvas↔window compositor fix** `[SOLO — final round-off]` `[FIXED 2026-07-06 — commits b8e8ecff (transfer retirement) + 51ef4852 (bag stride); LIVE SMOKE of the bag fix pending]`
+
+> **2026-07-06 (second session): bag stride bugs FIXED + A/B-verified (commit 51ef4852).**
+> (a) `DisplayListMenuID` now sets `text_row_stride=20` + `menu_item_step` at entry, BEFORE
+> `list_draw_box_border` (was ~25 lines later — arriving from the START menu at stride 40 the
+> border landed every other scratch row); (b) `PrintListMenuEntries`'s stride-40
+> `ClearScreenArea` on the stride-20 scratch replaced with the inline `list_clear_interior`
+> (pdex/link_menu precedent) — stale interior rows 2/4/6/8 + the QTY-region (rows ≥11) clobber
+> are gone. Audit of all other ClearScreenArea call sites found no further instance of the trap
+> (status_screen/evolution/faint_enemy = stride-40 canvas contexts; text_box/naming = single-row
+> or canvas). Harness upgraded into a real regression repro: `RunBagMenuTest` seeds
+> `text_row_stride=40` (the live entry state) and `DEBUG_BAGMENU_EMPTY=1` gives the
+> empty-inventory worst case. Headless FRAME.BIN A/B: unfixed code renders interleaved borders
+> with stale map bytes in the walls; fixed code renders clean boxes (empty CANCEL-only + populated).
+> **Pokédex re-verify (harness): PASS** — `DEBUG_G1`/`RunPokedexTest` renders the CONTENTS list
+> clean post-transfer-retirement (numbers/names/SEEN 12/OWN 4/side menu). Remaining dex visual
+> roughness is the documented `LoadPokedexTilePatterns` no-op stub (dex tileset $60–$7A not
+> ported — TODO.md S10 gfx). Live smoke of bag (empty + populated) + dex still pending (user).
 
 > **2026-07-06 ROOT CAUSE (verified by A/B FRAME.BIN repro):** the primary corruption family
 > (grass-after-submenu, options every-other-row/missing bottom border, pokédex garble-while-open)
