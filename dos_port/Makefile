@@ -348,6 +348,11 @@ NASMFLAGS += -D DEBUG_BAGMENU
 NASMFLAGS += -D SKIP_TITLE
 GAME_SRCS += src/engine/debug/debug_party.asm
 endif
+# Empty-inventory variant of the bag-menu gate (list = just CANCEL — the live
+# worst-case border-corruption repro). make DEBUG_BAGMENU=1 DEBUG_BAGMENU_EMPTY=1
+ifdef DEBUG_BAGMENU_EMPTY
+NASMFLAGS += -D DEBUG_BAGMENU_EMPTY
+endif
 # Live, interactive bag test: seed a full bag + money and boot to the overworld;
 # open the bag via START -> ITEM to drive the list / toss / YES-NO confirm by hand.
 # make DEBUG_BAGMENU_LIVE=1 (then dos_port/run, or build + launch DOSBox-X).

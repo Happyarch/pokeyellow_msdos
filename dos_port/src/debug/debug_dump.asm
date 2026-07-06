@@ -36,6 +36,7 @@ global RunPartySeedTest
 extern PrepareNewGameDebug
 extern LoadFontTilePatterns
 extern StartMenu_Item
+extern text_row_stride          ; text.asm — seeded to 40 to mirror the live path
 global RunBagMenuTest
 %endif
 %ifdef DEBUG_PARTYMENU
@@ -300,11 +301,23 @@ RunBagMenuTest:
     mov byte [ebp + 0xD31C], 0      ; wNumBagItems = 0
     mov byte [ebp + 0xD31D], 0xFF   ; wBagItems sentinel
     call PrepareNewGameDebug        ; seed party + bag
+%ifdef DEBUG_BAGMENU_EMPTY
+    ; Empty-inventory variant (the user's live worst-case symptom): re-zero the
+    ; bag after the seed so the list is just CANCEL. make DEBUG_BAGMENU=1
+    ; DEBUG_BAGMENU_EMPTY=1
+    mov byte [ebp + 0xD31C], 0      ; wNumBagItems = 0
+    mov byte [ebp + 0xD31D], 0xFF   ; wBagItems sentinel
+%endif
     ; Swap the font into vFont so the list glyphs render (caller contract).
     or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     mov byte [ebp + wLinkState], 0  ; not in the Cable Club
     mov byte [ebp + wBagSavedMenuItem], 0
+    ; Mirror the live START-menu entry path: the canvas stride (40) is what is
+    ; live when StartMenu_Item runs from the real START menu. The boot default
+    ; of 20 masked the border-before-stride bug in this harness — this seed
+    ; makes the harness the permanent regression repro for it.
+    mov dword [text_row_stride], 40
     call StartMenu_Item             ; list_menu's DEBUG hook: 1 frame + dump + exit
 .hang:
     jmp .hang                       ; unreachable (the list-menu hook dumps + exits)

@@ -95,7 +95,8 @@ extern AddBCDPredef             ; engine/math/bcd.asm
 extern DivideBCDPredef3         ; engine/math/bcd.asm
 
 ; ── former link-blockers, all resolved by linked code (menus S3) ─────────────
-extern ClearScreenArea          ; home/copy2.asm  ESI=top-left, BH=rows, BL=cols
+; (ClearScreenArea no longer used here: its stride-40 row advance corrupted the
+;  stride-20 list scratch — replaced by the inline list_clear_interior below.)
 extern LoadGBPal                ; home/fade.asm  (flat: palette load)
 extern PlaceUnfilledArrowMenuCursor ; home/window.asm  AL=item → hollow ▶
 extern IsKeyItem                ; home/item_predicates.asm  [wCurItem] → [wIsKeyItem]
@@ -159,6 +160,7 @@ CHAR_DOWN       equ 0xEE        ; ▼ (= CHAR_DOWN_ARROW)
 CHAR_SWAP_CUR   equ 0xEC        ; ▷
 CHAR_TIMES      equ 0xF1        ; ×
 CHAR_TERM       equ 0x50        ; '@'
+TILE_BLANK      equ 0x7F        ; ' ' (charmap blank — matches copy2.asm/pokedex.asm)
 
 ; ============================================================================
 section .data
@@ -215,6 +217,14 @@ DisplayListMenuID:
 
     mov al, LIST_MENU_BOX
     mov [ebp + wTextBoxID], al                ; pret draws via DisplayTextBoxID(LIST_MENU_BOX)
+    ; Stride MUST be 20 before ANY drawing into the list scratch: TextBoxBorder
+    ; advances rows by [text_row_stride], and arriving from the START menu the
+    ; live stride is still 40 (canvas) — drawing the border before setting it
+    ; landed every other scratch row (the live bag-border corruption; the boot
+    ; default of 20 is why the DEBUG_BAGMENU harness never showed it).
+    ; list = single-column, entries spaced 2 rows apart; stride 20 (box-relative)
+    mov dword [text_row_stride], LIST_STRIDE
+    mov dword [menu_item_step], LIST_ROW_STEP * LIST_STRIDE
     ; PROJ overworld-ui: GB(4,2) 16x11 --(anchor=top-right, X+20, Y+0)--> wx=199 wy=16 clip=128 max_y=104
     ; (bag_menu-equivalent: TextBoxBorder into W_TILEMAP + add_window; LIST_MENU_BOX
     ;  template == a 14x9-interior border at this anchor.)
@@ -242,9 +252,7 @@ DisplayListMenuID:
     mov [ebp + wTopMenuItemY], al
     mov al, LIST_CURSOR_COL                    ; = 1  (pret X=5 → box-rel 1)
     mov [ebp + wTopMenuItemX], al
-    ; list = single-column, entries spaced 2 rows apart; stride 20 (box-relative)
-    mov dword [text_row_stride], LIST_STRIDE
-    mov dword [menu_item_step], LIST_ROW_STEP * LIST_STRIDE
+    ; (stride + menu_item_step were set above, BEFORE the border draw)
 
     mov al, PAD_A | PAD_B | PAD_SELECT
     mov [ebp + wMenuWatchedKeys], al
@@ -576,11 +584,14 @@ DisplayChooseQuantityMenu:
 ; the CANCEL row, the SELECT-swap ▷ marker, and the ▼ "more below" hint.
 ; ----------------------------------------------------------------------------
 PrintListMenuEntries:
-    ; clear the list interior — box-rel (col 1, row 1), 9 rows x 14 cols (pret 5,3)
-    mov esi, W_TILEMAP + 1 * LIST_STRIDE + 1
-    mov bh, 9
-    mov bl, 14
-    call ClearScreenArea                       ; home/copy2.asm
+    ; clear the list interior — box-rel (col 1, row 1), 9 rows x 14 cols
+    ; (pret hlcoord 5,3 / lb bc,9,14 / ClearScreenArea).
+    ; DEVIATION(stride): the port ClearScreenArea advances rows by
+    ; SCREEN_WIDTH=40; this is the stride-20 list scratch, so clear inline
+    ; (pokedex.asm pdex_clear_list_area / link_menu.asm precedent). The
+    ; stride-40 call left interior rows 2/4/6/8 stale AND clobbered scratch
+    ; rows >= 11 including the QTY box region (QTY_SROW=12).
+    call list_clear_interior
 
     ; de = list entries base (+scroll*entrysize)
     movzx edx, word [ebp + wListPointer]
@@ -816,6 +827,32 @@ list_add_qty_window:
 ; list_mirror doubles as the HandleMenuInput menu_redraw_cb, so it preserves
 ; all registers.
 ; ----------------------------------------------------------------------------
+; ----------------------------------------------------------------------------
+; list_clear_interior — clear the LIST_INT_H×LIST_INT_W (9×14) list interior at
+; box-rel (1,1) on the stride-20 scratch (stands in for pret's ClearScreenArea,
+; which the port bakes to stride 40 — see the DEVIATION note at the call site).
+; Preserves every register the caller holds live.
+; ----------------------------------------------------------------------------
+list_clear_interior:
+    push eax
+    push ecx
+    push edx
+    push edi
+    lea edi, [ebp + W_TILEMAP + 1 * LIST_STRIDE + 1]
+    mov dl, LIST_INT_H                          ; 9 rows
+    mov al, TILE_BLANK
+.row:
+    mov ecx, LIST_INT_W                         ; 14 cols
+    rep stosb
+    add edi, LIST_STRIDE - LIST_INT_W           ; next row, same column
+    dec dl
+    jnz .row
+    pop edi
+    pop edx
+    pop ecx
+    pop eax
+    ret
+
 list_mirror:
     pushad
     xor ebx, ebx                                ; row 0..LIST_TOTAL_H-1
