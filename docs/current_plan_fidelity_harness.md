@@ -134,11 +134,35 @@ Decisions already made with the user:
   shutdown path.
 
 ### Session B — Lua core library, no seeding yet  *(Stage 1.1 minus `seed.lua`)*
-- [ ] `symbols.lua`, `input.lua`, `dump.lua`, `scenario.lua` skeleton.
-- [ ] Smoke scenario: boot ROM → skip intro via `input.lua` → dump
+- [x] `symbols.lua`, `input.lua`, `dump.lua`, `scenario.lua` skeleton (+ unplanned
+      `gbtext.lua`: encode tilemap assertions via pret's charmap.asm, no hand bytes).
+- [x] Smoke scenario: boot ROM → skip intro via `input.lua` → dump
       tilemap/VRAM/OAM of the title or first playable frame.
 - **Exit gate:** a `GOLDEN.BIN` + JSON sidecar for the smoke scenario exists and a
   quick Python read-back shows plausible tile IDs (nonzero, charmap-decodable text).
+
+**Session B result (2026-07-06): gate passed.** `smoke_title` boots the golden ROM,
+skips the intro, and dumps the main menu; `inspect_golden.py` decodes `▶NEW GAME` /
+`OPTION` from the tilemap (360/360 nonzero); golden byte-identical across two runs.
+What the next sessions must know:
+- **mGBA context rule (bit us immediately):** every mGBA binding — `emu:*`,
+  `console:*`, even *indexing `C.GB_KEY`* — errors "Function called from invalid
+  context" when called from a coroutine thread (`lua.c _luaGetContext` requires the
+  main `lua_State`). `scenario.lua`'s driver therefore executes yielded **thunks** on
+  the main state; bodies use `scenario.exec(fn)` / `scenario.read_range(addr, n)` and
+  the input helpers, never `emu` directly. `seed.lua` (Session C) must do all WRAM
+  writes inside one `scenario.exec` thunk.
+- **The main menu acts on START** (selects NEW GAME → Oak speech) — a blind fixed-tap
+  mash overshoots. Scenarios navigate state-aware: poll the tilemap via
+  `scenario.read_range` for expected text (`gbtext.lua` encodes it from
+  `constants/charmap.asm`; first-wins parse — the later Japanese block reuses the
+  same byte range) and stop tapping when seen. Inputs stay a pure function of
+  emulated state → still deterministic.
+- Env contract: `PKMN_SYM` (sym path, default `../pokeyellow_msdos-pret-golden/…`),
+  `PKMN_CHARMAP` (default `constants/charmap.asm` relative to cwd), `GOLDEN_DIR`
+  (output dir). Scenario scripts self-locate `lib/` via `debug.getinfo` (mGBA chunk
+  name = `@<path as invoked>`; its require shim roots at the script's own dir only).
+- OAM dumps all-zero on menu screens (no sprites on the main menu) — expected.
 
 ### Session C — WRAM seeding + first real goldens  *(rest of 1.1 + 1.2 items 1–2)*
 - [ ] `seed.lua` mirroring `PrepareNewGameDebug` (open the **port's** seed routine AND
@@ -223,16 +247,18 @@ Decisions already made with the user:
 
 ### Stage 1.1 — Core Lua library (`dos_port/tools/mgba_harness/lib/`)
 Shared by batch scenarios and the MCP bridge:
-- [ ] `symbols.lua` — parse `pokeyellow.sym` so all addresses are by pret label
+- [x] `symbols.lua` — parse `pokeyellow.sym` so all addresses are by pret label
       (`wTileMap`, `wPartyMons`, …), never hardcoded.
-- [ ] `dump.lua` — dump named regions to a `GOLDEN.BIN` (fixed layout + JSON sidecar
+- [x] `dump.lua` — dump named regions to a `GOLDEN.BIN` (fixed layout + JSON sidecar
       naming regions/sizes/scenario): `wTileMap` 20×18 (360 B), VRAM `0x8000–0x97FF`
       (6144 B), OAM `0xFE00` (160 B), plus scenario-specific WRAM windows.
-- [ ] `input.lua` — frame-stepped press/hold/release helpers.
+- [x] `input.lua` — frame-stepped press/hold/release helpers.
 - [ ] `seed.lua` — WRAM seeding mirroring the port's `PrepareNewGameDebug` (same party
       structs — big-endian fields — flags, dex, names), addresses via `symbols.lua`.
-- [ ] `scenario.lua` — runner: boot ROM → settle frames → seed → navigate via input →
+- [x] `scenario.lua` — runner: boot ROM → settle frames → seed → navigate via input →
       settle → dump → exit(0). Savestate caching as local speed-up only.
+      (+ `gbtext.lua` — charmap-encoded text assertions, parsed from pret's
+      `constants/charmap.asm`; Session B addition.)
 
 ### Stage 1.2 — Scenario scripts + committed goldens
 `dos_port/tools/mgba_harness/scenarios/<name>.lua`, goldens committed at
