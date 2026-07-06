@@ -106,6 +106,7 @@ extern LoadStatusScreenHudTilePatterns               ; load_font.asm — pret's 
 extern LoadFlippedFrontSpriteByMonIndex              ; gfx/pics.asm — ESI=tilemap coord; decode $9000 + place
 extern g_bg_whiteout                                 ; ppu/ppu.asm — full-screen BG whiteout flag
 extern WaitForTextScrollButtonPress
+extern spr_oam_valid                                 ; ppu.asm — render_sprites active-entry count
 extern Delay3
 extern text_row_stride                               ; text.asm — engine row stride
 ; page 2 (StatusScreen2)
@@ -153,24 +154,16 @@ StatusScreen:
     call GBPalWhiteOutWithDelay3
     call ClearScreen
     call UpdateSprites
-    ; Clear the live OAM ($FE00). The port fuses the shadow-OAM→$FE00 DMA into update_oam
-    ; under W_UPDATE_SPRITES_ENABLED, unlike the GB's *ungated* hDMARoutine — so the
-    ; caller's ClearSprites (which zeros only the SHADOW OAM) never propagates to $FE00
-    ; while updates are disabled. render_sprites reads $FE00 directly, and because this
-    ; flat-canvas screen clears g_bg_whiteout (below), render_sprites runs (window-compositor
-    ; menus skip it) and would composite the stale overworld player+NPC sprites. Zero $FE00
-    ; here; with updates disabled nothing repopulates it. (On the GB, ClearSprites + the
-    ; ungated DMA achieve this same clear.)
-    push edi
-    push ecx
-    push eax
-    lea edi, [ebp + GB_OAM]
-    mov ecx, W_SHADOW_OAM_SIZE
-    xor eax, eax
-    rep stosb
-    pop eax
-    pop ecx
-    pop edi
+    ; Suppress all OBJ sprites on this flat-canvas screen. render_sprites does NOT count
+    ; entries from the OAM Y bytes — it draws spr_oam_valid entries using the spr_dos_sy/sx
+    ; position tables and reads only tile/attr from $FE00 (PrepareOAMData publishes all
+    ; three). With sprite updates disabled PrepareOAMData never runs, so those tables keep
+    ; the overworld's stale count+positions; because this screen clears g_bg_whiteout
+    ; (below) render_sprites is NOT skipped and would ghost the overworld player+NPCs (all
+    ; reading whatever tile the OAM holds). Zero the published count so render_sprites skips
+    ; every entry. On return to the field PrepareOAMData republishes it (flag re-enabled),
+    ; so the overworld is unaffected.
+    mov dword [spr_oam_valid], 0
 
     ; --- PORT: flat-canvas render setup (mirror init_battle) so render_bg shows
     ; W_TILEMAP directly and PlaceString steps rows by FW (40) --------------------
