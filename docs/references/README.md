@@ -139,6 +139,16 @@ Quick reference:
 - "Ad Lib Music Synthesizer Card Programming Guide" (search phatcode.net/articles)
 - OPL2 FM synthesis: 9 voices, 4 operators per pair; write register index to port 0x388, then data to 0x389
 
+### OPL3 (Yamaha YMF262)
+- **Local register-level reference**: [`../sound/OPL3_YMF262.md`](../sound/OPL3_YMF262.md)
+  (Vladimir Arnost's Programmer's Guide + ModdingWiki detection/BLASTER sections).
+  Raw source page mirrored at
+  [`moddingwiki/OPL chip - ModdingWiki.html`](moddingwiki/)
+  (https://moddingwiki.shikadi.net/wiki/OPL_chip, fetched 2026-07-06).
+- Key: 18 2-op voices, dual register sets (base+0/1 primary, base+2/3 secondary),
+  OPL3 NEW bit at reg 105h, stereo CHA/CHB bits in C0-C8; OPL2-vs-OPL3 probe =
+  status reg AND 06h (00h ⇒ OPL3).
+
 ---
 
 ## Pokémon Yellow Glitch Reference

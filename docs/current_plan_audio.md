@@ -256,7 +256,9 @@ hand-owned `.mid` files (the `assets/map_overrides/` precedent).
 ## Task list
 
 - `[ ]` **Phase A — Engine + OPL (proves everything)**
-  - `[ ]` Pull OPL3 (YMF262) register reference into `docs/sound/`.
+  - `[x]` Pull OPL3 (YMF262) register reference into `docs/sound/` —
+        `docs/sound/OPL3_YMF262.md` (Arnost guide + ModdingWiki detection/BLASTER
+        sections; raw HTML mirrored in `docs/references/moddingwiki/`).
   - `[ ]` `tools/audio/pret_audio.py` parser lib + IR + timing evaluator.
   - `[ ]` `gen_audio_data.py` + ROM byte-compare test; `assets/audio_*.inc` wired
         into `make assets`.
