@@ -44,6 +44,19 @@ def png_to_2bpp_doubled(path):
     return data
 
 
+def onebpp_to_2bpp_doubled(path):
+    """Expand a raw .1bpp tile blob (8 bytes/tile) to 2bpp by writing each byte to
+    both bitplanes (pret CopyVideoDataDouble / FarCopyDataDouble: color 0 or 3)."""
+    raw = Path(path).read_bytes()
+    if len(raw) % TILE_H:
+        sys.exit(f"{path}: expected a multiple of {TILE_H} bytes (1bpp tiles)")
+    data = bytearray()
+    for b in raw:
+        data.append(b)   # low bitplane
+        data.append(b)   # high bitplane (doubled -> color 0/3)
+    return data
+
+
 def emit(out, label, data, comment):
     out.append(f"{label}:   {comment}")
     for i in range(0, len(data), 16):
@@ -75,9 +88,17 @@ def main():
     out.append("BATTLE_HUD_TILES23_SIZE equ $ - battle_hud_tiles23_2bpp")
     out.append("")
 
+    # PTile (pret gfx/font/P.1bpp) — the bold "P" for the status-screen "PP" label.
+    # pret loads it to vChars2 $72 via a fourth CopyVideoDataDouble in StatusScreen
+    # (NOT part of the battle LoadHudTilePatterns bundle). 1 tile.
+    ptile = onebpp_to_2bpp_doubled(ROOT / "gfx/font/P.1bpp")
+    emit(out, "ptile_2bpp", ptile, "; 1 tile -> vChars2 tile $72 (bold P for PP)")
+    out.append("PTILE_2BPP_SIZE equ $ - ptile_2bpp")
+    out.append("")
+
     DST.parent.mkdir(parents=True, exist_ok=True)
     DST.write_text("\n".join(out) + "\n")
-    print(f"wrote {DST} (tiles1 {len(t1)}B, tiles23 {len(t23)}B)")
+    print(f"wrote {DST} (tiles1 {len(t1)}B, tiles23 {len(t23)}B, ptile {len(ptile)}B)")
 
 
 if __name__ == "__main__":

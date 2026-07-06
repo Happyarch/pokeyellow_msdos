@@ -114,6 +114,9 @@ extern RunBagMenuTest
 %ifdef DEBUG_BAGMENU_LIVE
 extern PrepareNewGameDebug
 %endif
+%ifdef DEBUG_SEED_PARTY
+extern PrepareNewGameDebug
+%endif
 %ifdef DEBUG_PARTYMENU
 extern RunPartyMenuTest
 %endif
@@ -483,6 +486,17 @@ EnterMap:
     ; Live, interactive: seed a full bag + money, then fall through to the normal
     ; OverworldLoop. Open the bag via START → ITEM (the real path) to exercise the
     ; list, TOSS quantity chooser, YES/NO confirm, and the "TOO IMPORTANT!" notice.
+    mov byte [ebp + 0xD162], 0             ; wPartyCount = 0
+    mov byte [ebp + 0xD163], 0xFF          ; wPartySpecies sentinel
+    mov byte [ebp + 0xD31C], 0             ; wNumBagItems = 0
+    mov byte [ebp + 0xD31D], 0xFF          ; wBagItems sentinel
+    call PrepareNewGameDebug               ; seed party + bag + money (returns)
+%endif
+%ifdef DEBUG_SEED_PARTY
+    ; Plain playable build with a seeded party: seed a full party + bag + money,
+    ; then fall through to the normal OverworldLoop. No frame dump, no exit — reach
+    ; the stats screen the real way (START → POKéMON → a mon → STATS), so the render
+    ; runs through the faithful .choseStats path (ClearSprites etc.), not the harness.
     mov byte [ebp + 0xD162], 0             ; wPartyCount = 0
     mov byte [ebp + 0xD163], 0xFF          ; wPartySpecies sentinel
     mov byte [ebp + 0xD31C], 0             ; wNumBagItems = 0

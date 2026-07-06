@@ -102,8 +102,9 @@ extern ClearScreen
 extern UpdateSprites
 extern hide_window
 extern LoadHpBarAndStatusTilePatterns
-extern LoadHudTilePatterns
+extern LoadStatusScreenHudTilePatterns               ; load_font.asm — pret's 4-load status HUD layout
 extern LoadFlippedFrontSpriteByMonIndex              ; gfx/pics.asm — ESI=tilemap coord; decode $9000 + place
+extern g_bg_whiteout                                 ; ppu/ppu.asm — full-screen BG whiteout flag
 extern WaitForTextScrollButtonPress
 extern Delay3
 extern text_row_stride                               ; text.asm — engine row stride
@@ -140,37 +141,83 @@ StatusScreen:
 .DontRecalculate:
     or byte [ebp + W_STATUS_FLAGS_2], (1 << BIT_NO_AUDIO_FADE_OUT)   ; set BIT_NO_AUDIO_FADE_OUT
     ; TODO-HW: audio HAL (Phase 3) — ld a,$33 / ldh [rAUDVOL],a (reduce volume).
+    ; Disable sprite updates BEFORE the whiteout/clear DelayFrames. On the GB,
+    ; DelayFrame only DMAs the existing shadow OAM; the port's update_oam instead
+    ; rebuilds it via PrepareOAMData whenever W_UPDATE_SPRITES_ENABLED==1, so the
+    ; frames inside GBPalWhiteOutWithDelay3/ClearScreen would re-populate the
+    ; overworld player+NPC sprites into OAM (the caller's ClearSprites having just
+    ; emptied it) and render_sprites would composite them over the status screen.
+    ; Zeroing it here (not after the frames, as before) keeps OAM clear. pret is
+    ; immune because its DelayFrame never calls PrepareOAMData.
+    mov byte [ebp + W_UPDATE_SPRITES_ENABLED], 0
     call GBPalWhiteOutWithDelay3
     call ClearScreen
     call UpdateSprites
+    ; Clear the live OAM ($FE00). The port fuses the shadow-OAM→$FE00 DMA into update_oam
+    ; under W_UPDATE_SPRITES_ENABLED, unlike the GB's *ungated* hDMARoutine — so the
+    ; caller's ClearSprites (which zeros only the SHADOW OAM) never propagates to $FE00
+    ; while updates are disabled. render_sprites reads $FE00 directly, and because this
+    ; flat-canvas screen clears g_bg_whiteout (below), render_sprites runs (window-compositor
+    ; menus skip it) and would composite the stale overworld player+NPC sprites. Zero $FE00
+    ; here; with updates disabled nothing repopulates it. (On the GB, ClearSprites + the
+    ; ungated DMA achieve this same clear.)
+    push edi
+    push ecx
+    push eax
+    lea edi, [ebp + GB_OAM]
+    mov ecx, W_SHADOW_OAM_SIZE
+    xor eax, eax
+    rep stosb
+    pop eax
+    pop ecx
+    pop edi
 
     ; --- PORT: flat-canvas render setup (mirror init_battle) so render_bg shows
     ; W_TILEMAP directly and PlaceString steps rows by FW (40) --------------------
     mov word [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], 0
-    mov byte [ebp + IO_SCX], 0
-    mov byte [ebp + IO_SCY], 0
-    mov byte [ebp + W_UPDATE_SPRITES_ENABLED], 0
+    mov byte [ebp + H_SCX], 0                         ; zero the SHADOWS too — commit_shadow_regs
+    mov byte [ebp + H_SCY], 0                         ; copies them over IO_SCX/SCY each DelayFrame,
+    mov byte [ebp + IO_SCX], 0                        ; so the overworld scroll would otherwise be
+    mov byte [ebp + IO_SCY], 0                        ; restored and drag the flat canvas off-screen
+    ; (W_UPDATE_SPRITES_ENABLED already zeroed above, before the whiteout frames)
     mov dword [text_row_stride], FW                  ; 40 (restored to 20 by caller / battle_menu)
+    ; The party menu (our caller) sets g_bg_whiteout=1 to blank the BG behind its
+    ; window; clear it so render_bg draws the flat status canvas instead of a full
+    ; white-out (ppu.asm early-return). Battle doesn't need this — it enters from the
+    ; overworld with the flag already 0. Applies to both pages (StatusScreen2 reuses
+    ; this setup).
+    mov dword [g_bg_whiteout], 0
     call hide_window
 
-    ; --- tile patterns: HP-bar/status/":L" + HUD frame/line tiles. Replaces pret's
-    ; four CopyVideoDataDouble(BattleHudTiles1/2/3, PTile) — the port bundles the
-    ; │ ┘ ─ ← ·│ pieces into LoadHudTilePatterns ($6d-$6f,$73-$78). -----------------
+    ; --- tile patterns: HP-bar/status/":L" ($62-$7F incl. № $74 / <ID> $73), then the
+    ; HUD frame/line/P pieces. LoadStatusScreenHudTilePatterns mirrors pret's four
+    ; CopyVideoDataDouble(BattleHudTiles1/2/3, PTile) to the DISCONTIGUOUS slots
+    ; $6d-$6f / $78 / $76-$77 / $72 — deliberately NOT the battle bundle's $73-$78,
+    ; which would clobber the № / <ID> font glyphs this screen prints. --------------
     call LoadHpBarAndStatusTilePatterns
-    call LoadHudTilePatterns
-    ; TODO-HW: hTileAnimations save/disable (no software tile-animation engine yet).
+    call LoadStatusScreenHudTilePatterns
+    ; Disable BG tile animations (pret: ldh a,[hTileAnimations]/push af/xor a/
+    ; ldh [hTileAnimations],a). UpdateMovingBgTiles animates VRAM tiles $03/$14 every
+    ; DelayFrame; on this screen those slots hold the mon front pic ($9000+), so
+    ; without this the pic's own tiles cycle (the "Pikachu foot animates like water"
+    ; bug). Restored after the button-wait so it stays off while the screen shows.
+    mov al, [ebp + hTileAnimations]
+    mov [ss_saved_tileanim], al
+    mov byte [ebp + hTileAnimations], 0
 
     ; --- name / HP / status box (DrawLineBox 19,1 6×10) ---
     mov esi, scoord(19, 1)
     mov bh, 6
     mov bl, 10
     call DrawLineBox
-    ; the "№" marker: pret steps hl back 6 and writes '№' then '<DOT>'
-    ; hl left DrawLineBox at scoord(19,1)+6 rows down = the box's lower-left arrow;
-    ; -6 lands on the label cell. Reproduce via absolute coords: '№' then '<DOT>'.
-    ; pret: ld [hl],'<DOT>'; dec hl; ld [hl],'№'  (so № at N, <DOT> at N+1)
-    mov byte [ebp + scoord(19, 1) + 6*FW - 6], T_NO
-    mov byte [ebp + scoord(19, 1) + 6*FW - 5], T_DOT
+    ; the "№" marker before the pokédex number. pret: DrawLineBox leaves hl at the box's
+    ; lower-left arrow — GB(8,7); ld de,-6/add hl → GB(2,7)='<DOT>', dec hl → GB(1,7)='№'.
+    ; So № at (1,7), <DOT> at (2,7), and the number prints at (3,7) below → "№.025".
+    ; (The old scoord(19,1)+6*FW-6 form omitted DrawLineBox's horizontal traversal and
+    ; landed the marker ~12 cols too far right, at GB(13,7) — the stray "№." seen floating
+    ; near the level-up bar on page 2, which reuses this canvas.)
+    mov byte [ebp + scoord(1, 7)], T_NO
+    mov byte [ebp + scoord(2, 7)], T_DOT
 
     ; --- types / ID / OT box (DrawLineBox 19,9 8×6) + labels ---
     mov esi, scoord(19, 9)
@@ -262,6 +309,8 @@ StatusScreen:
 
 %ifdef DEBUG_STATUS
   %ifdef DEBUG_STATUS_PAGE2
+    mov al, [ss_saved_tileanim]                      ; restore anims (page-2 harness continues to StatusScreen2)
+    mov [ebp + hTileAnimations], al
     ret                                              ; page-2 harness: return so it can call StatusScreen2
   %else
     call DelayFrame                                  ; render the finished canvas
@@ -269,6 +318,8 @@ StatusScreen:
   %endif
 %endif
     call WaitForTextScrollButtonPress
+    mov al, [ss_saved_tileanim]                      ; restore BG tile animations (pret: pop af)
+    mov [ebp + hTileAnimations], al
     ret
 
 ; .GetStringPointer — pret StatusScreen.GetStringPointer.
@@ -475,6 +526,7 @@ extern TextBoxBorder
 
 section .bss
 align 4
+ss_saved_tileanim: resb 1   ; saved hTileAnimations across StatusScreen / StatusScreen2 (pret push af)
 ss2_hl: resd 1          ; StatusScreen2 .PrintPP: wLoadedMonMoves cursor
 ss2_de: resd 1          ; StatusScreen2 .PrintPP: PP-fraction coord cursor
 ss2_b:  resd 1          ; StatusScreen2 .PrintPP: move index (0..NUM_MOVES-1)
@@ -487,8 +539,14 @@ section .text
 ; canvas/tile setup is already active (called right after StatusScreen).
 ; ---------------------------------------------------------------------------
 StatusScreen2:
-    ; TODO-HW: hTileAnimations save/disable; hAutoBGTransferEnabled (render_bg
-    ; shows W_TILEMAP directly — no torus BG transfer to gate).
+    ; Disable BG tile animations (pret StatusScreen2: ldh a,[hTileAnimations]/push af/
+    ; xor a/ldh [hTileAnimations],a). Page 1 restored them on exit, so re-disable here
+    ; or the mon pic's tiles ($03/$14 at $9000+) animate on page 2 too. Restored after
+    ; the button-wait below. hAutoBGTransferEnabled: render_bg shows W_TILEMAP directly
+    ; — no torus BG transfer to gate.
+    mov al, [ebp + hTileAnimations]
+    mov [ss_saved_tileanim], al
+    mov byte [ebp + hTileAnimations], 0
     ; wMoves[0..3] := wLoadedMonMoves; wMoves[4] := 0 (FillMemory then CopyData)
     mov esi, wMoves
     xor al, al
@@ -521,7 +579,7 @@ StatusScreen2:
     mov bl, NUM_MOVES
     sub bl, cl                                        ; b (BL) = number of blank moves
     mov esi, scoord(11, 10)
-    mov al, T_BOLD_P                                  ; TODO-PIC: $72 (bold P) not loaded in VRAM yet
+    mov al, T_BOLD_P                                  ; $72 bold P (loaded by LoadStatusScreenHudTilePatterns)
     call StatusScreen_PrintPP                         ; ESI flows to the blank rows
     test bl, bl
     jz .InitPP
@@ -618,7 +676,9 @@ StatusScreen2:
     call DumpBackbuffer                              ; FRAME.BIN + exit (never returns)
 %endif
     call WaitForTextScrollButtonPress
-    ; TODO-HW: hTileAnimations restore; rAUDVOL (audio HAL, Phase 3).
+    mov al, [ss_saved_tileanim]                       ; restore BG tile animations (pret: pop af)
+    mov [ebp + hTileAnimations], al
+    ; TODO-HW: rAUDVOL (audio HAL, Phase 3).
     and byte [ebp + W_STATUS_FLAGS_2], ~(1 << BIT_NO_AUDIO_FADE_OUT) & 0xFF
     call GBPalWhiteOut
     jmp ClearScreen                                   ; tail (pret jp ClearScreen)

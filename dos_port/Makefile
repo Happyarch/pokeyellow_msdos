@@ -365,6 +365,14 @@ NASMFLAGS += -D DEBUG_BAGMENU_LIVE
 NASMFLAGS += -D SKIP_TITLE
 GAME_SRCS += src/engine/debug/debug_party.asm
 endif
+# Plain playable build with a seeded party — NO frame dump, NO SKIP_TITLE. Boots
+# the full path (title -> main menu -> NEW GAME -> overworld with a seeded party)
+# so you can reach the stats screen the real way (START -> POKéMON -> mon -> STATS).
+# make DEBUG_SEED_PARTY=1 (then dos_port/run).
+ifdef DEBUG_SEED_PARTY
+NASMFLAGS += -D DEBUG_SEED_PARTY
+GAME_SRCS += src/engine/debug/debug_party.asm
+endif
 # Party-menu gate: seed the party, open the POKéMON screen over the overworld,
 # render one frame, dump FRAME.BIN, exit. make DEBUG_PARTYMENU=1
 ifdef DEBUG_PARTYMENU
@@ -675,7 +683,11 @@ BATTLE_SUPPORT_SRCS := \
     src/engine/items/get_bag_item_quantity.asm
 
 LINK_SRCS := $(BOOT_SRCS) $(HOME_SRCS) $(HAL_SRCS) $(SAVE_SRCS) $(GAME_SRCS) $(POKEMON_SRCS) $(ITEMS_SRCS) $(FRONTEND_SRCS) $(BATTLE_SUPPORT_SRCS)
-LINK_OBJS := $(LINK_SRCS:.asm=.o)
+# Stable de-dup: several DEBUG_* gates each append debug_party.asm, so combining two
+# (e.g. DEBUG_SEED_PARTY + DEBUG_STATUS) would list its object twice → ld "multiple
+# definition". Drop duplicates while preserving first-seen order (link layout unchanged).
+uniq = $(if $1,$(firstword $1) $(call uniq,$(filter-out $(firstword $1),$1)))
+LINK_OBJS := $(call uniq,$(LINK_SRCS:.asm=.o))
 
 # Pokémon backend that assembles + is native-harness-validated but is NOT linked
 # yet. bills_pc needs a link-ready _MoveMon (the draft in add_mon.asm has a
@@ -861,7 +873,7 @@ src/data/move_grammar.o: assets/move_grammar.inc
 src/data/type_names.o: assets/type_names.inc
 
 assets/battle_hud_2bpp.inc: ../gfx/battle/battle_hud_1.png ../gfx/battle/battle_hud_2.png \
-                            ../gfx/battle/battle_hud_3.png tools/gen_battle_hud_inc.py
+                            ../gfx/battle/battle_hud_3.png ../gfx/font/P.1bpp tools/gen_battle_hud_inc.py
 	python3 tools/gen_battle_hud_inc.py
 
 assets/trainer_pics.inc: ../gfx/pics.asm ../data/trainers/pic_pointers_money.asm \

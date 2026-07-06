@@ -23,6 +23,7 @@ global LoadFontTilePatterns
 global LoadTextBoxTilePatterns
 global LoadHpBarAndStatusTilePatterns
 global LoadHudTilePatterns
+global LoadStatusScreenHudTilePatterns
 extern g_tilecache_dirty
 
 section .data
@@ -151,6 +152,58 @@ LoadHudTilePatterns:
     mov esi, battle_hud_tiles23_2bpp
     lea edi, [ebp + GB_VCHARS2 + 0x73 * TILE_SIZE]
     mov ecx, BATTLE_HUD_TILES23_SIZE / 4
+    rep movsd
+
+    pop edi
+    pop esi
+    pop ecx
+    pop eax
+    ret
+
+; ---------------------------------------------------------------------------
+; LoadStatusScreenHudTilePatterns — status/summary-screen HUD tiles.
+;
+; Faithful to pret engine/pokemon/status_screen.asm:StatusScreen, which — unlike the
+; battle LoadHudTilePatterns bundle above — issues FOUR separate CopyVideoDataDouble
+; loads to DISCONTIGUOUS vChars2 slots so it does NOT clobber the font's <ID> ($73)
+; and № ($74) glyphs that LoadHpBarAndStatusTilePatterns just placed:
+;   BattleHudTiles1 (3 tiles)      -> vChars2 $6d   (·│  :L  ← halfarrow end)
+;   BattleHudTiles2 (1 tile)       -> vChars2 $78   (│)
+;   BattleHudTiles3 (2 tiles)      -> vChars2 $76   (─ ┘)
+;   PTile           (1 tile)       -> vChars2 $72   (bold P for "PP")
+; battle_hud_tiles23_2bpp packs BattleHudTiles2 (3 tiles) + BattleHudTiles3 (3 tiles);
+; the status screen uses only tile 0 of _2 and tiles 0-1 of _3 (offset 3 tiles in).
+; Call right after LoadHpBarAndStatusTilePatterns. In: EBP = GB base. Regs preserved.
+; ---------------------------------------------------------------------------
+LoadStatusScreenHudTilePatterns:
+    mov byte [g_tilecache_dirty], 1
+    push eax
+    push ecx
+    push esi
+    push edi
+
+    ; BattleHudTiles1 -> $6d (3 tiles)
+    mov esi, battle_hud_tiles1_2bpp
+    lea edi, [ebp + GB_VCHARS2 + 0x6d * TILE_SIZE]
+    mov ecx, (3 * TILE_SIZE) / 4
+    rep movsd
+
+    ; BattleHudTiles2 tile 0 -> $78 (1 tile)
+    mov esi, battle_hud_tiles23_2bpp
+    lea edi, [ebp + GB_VCHARS2 + 0x78 * TILE_SIZE]
+    mov ecx, (1 * TILE_SIZE) / 4
+    rep movsd
+
+    ; BattleHudTiles3 tiles 0-1 -> $76 (2 tiles); _3 begins 3 tiles into _23
+    mov esi, battle_hud_tiles23_2bpp + 3 * TILE_SIZE
+    lea edi, [ebp + GB_VCHARS2 + 0x76 * TILE_SIZE]
+    mov ecx, (2 * TILE_SIZE) / 4
+    rep movsd
+
+    ; PTile -> $72 (1 tile, bold P for "PP")
+    mov esi, ptile_2bpp
+    lea edi, [ebp + GB_VCHARS2 + 0x72 * TILE_SIZE]
+    mov ecx, (1 * TILE_SIZE) / 4
     rep movsd
 
     pop edi

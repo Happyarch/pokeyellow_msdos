@@ -100,9 +100,9 @@ section .bss
 ; the DEBUG_BATTLE harness still seeds this for compatibility.
 global wBattleOver
 wBattleOver: resb 1
-; blinking-▼ text-advance arrow state (WaitForAPress)
-arrow_timer: resb 1
-arrow_on:    resb 1
+; WaitForTextScrollButtonPress: saved down-arrow blink counters (pret push af x2)
+wtsbp_saved_c1: resb 1
+wtsbp_saved_c2: resb 1
 ; Saved "clean" battle screen — SaveScreenTilesToBuffer1 / LoadScreenTilesFromBuffer1.
 screen_save: resb SCREEN_AREA
 lvl_mon_ptr: resd 1                       ; GB offset of the leveling party mon (PrintStatsBox)
@@ -140,6 +140,7 @@ extern MoveNames
 extern Moves
 extern WideTypeNames
 extern DelayFrame
+extern HandleDownArrowBlinkTiming     ; src/home/window.asm — faithful ▼ blink (COUNT1==0 guard)
 extern DrawBattleHUDs
 extern BattleRandom
 extern Multiply
@@ -230,29 +231,36 @@ BattleItemMenu:
 BattlePartyMenu:
     ret
 
-; WaitForAPress / WaitForTextScrollButtonPress — wait for A/B to advance text, blinking
-; the ▼ "more text" arrow at the dialog box's bottom-right interior cell (pret
-; WaitForTextScrollButtonPress / HandleDownArrowBlinkTiming). Erases the arrow on exit.
+; WaitForAPress / WaitForTextScrollButtonPress — wait for A/B, faithfully mirroring
+; pret home/joypad2.asm:WaitForTextScrollButtonPress. pret does NOT draw an arrow; it
+; only *blinks a pre-existing* ▼ via HandleDownArrowBlinkTiming, gated by initializing
+; hDownArrowBlinkCount1 = 0 (the canonical HandleDownArrowBlinkTiming leaves the tile
+; alone when it isn't already ▼ and COUNT1 == 0). None of this routine's callers (status
+; screen, league PC, EXP, town map) place a ▼, so none show one — matching the real game.
+; The text-box advance ▼ is a *separate* mechanism (text.asm manual_text_scroll).
+;
+; The prior port version force-drew ▼ at ARROW_OFF and blanked it to a SPACE on exit,
+; which on the status screen (ARROW_OFF = scoord(18,16)) punched a hole in the types/ID/OT
+; box's bottom border and showed a spurious blinking arrow — a bespoke divergence.
+; Save/restore the blink counters like pret's push af / push af.
 WaitForTextScrollButtonPress:
 WaitForAPress:
-    mov byte [arrow_on], 1
-    mov byte [arrow_timer], ARROW_BLINK_FRAMES
-    mov byte [ebp + W_TILEMAP + ARROW_OFF], T_DOWNARROW
+    mov al, [ebp + H_DOWN_ARROW_COUNT1]
+    mov [wtsbp_saved_c1], al
+    mov al, [ebp + H_DOWN_ARROW_COUNT2]
+    mov [wtsbp_saved_c2], al
+    mov byte [ebp + H_DOWN_ARROW_COUNT1], 0      ; pret: xor a  / ldh [hDownArrowBlinkCount1]
+    mov byte [ebp + H_DOWN_ARROW_COUNT2], 6      ; pret: ld a,6 / ldh [hDownArrowBlinkCount2]
 .wait:
-    dec byte [arrow_timer]
-    jnz .present
-    mov byte [arrow_timer], ARROW_BLINK_FRAMES
-    xor byte [arrow_on], 1
-    jz .arrowOff
-    mov byte [ebp + W_TILEMAP + ARROW_OFF], T_DOWNARROW
-    jmp .present
-.arrowOff:
-    mov byte [ebp + W_TILEMAP + ARROW_OFF], T_SP
-.present:
+    mov esi, W_TILEMAP + ARROW_OFF               ; pret: hlcoord 18,16
+    call HandleDownArrowBlinkTiming              ; blinks only a pre-existing ▼ (COUNT1==0 guard)
     call DelayFrame
     test byte [ebp + H_JOY_PRESSED], PAD_A | PAD_B
     jz .wait
-    mov byte [ebp + W_TILEMAP + ARROW_OFF], T_SP   ; erase the arrow on advance
+    mov al, [wtsbp_saved_c1]                      ; pret: pop af / ldh [hDownArrowBlinkCount1]
+    mov [ebp + H_DOWN_ARROW_COUNT1], al
+    mov al, [wtsbp_saved_c2]
+    mov [ebp + H_DOWN_ARROW_COUNT2], al
     ret
 
 ; ===========================================================================
