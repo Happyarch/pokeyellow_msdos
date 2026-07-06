@@ -66,7 +66,7 @@ extern PrintNumber               ; home/print_num.asm — EDX=src(EBP-rel), BH=f
 extern TextCommandProcessor      ; text/text.asm — ESI=stream(GB off), EBX=cursor
 extern GetMonName                ; home/names.asm — wNamedObjectIndex → wNameBuffer
 extern GetMonHeader              ; home/pokemon.asm — wCurSpecies → wMonHeader
-extern LoadFlippedFrontSpriteByMonIndex ; gfx/pics.asm — EDX=VRAM dest; decode → VRAM
+extern LoadFlippedFrontSpriteByMonIndex ; gfx/pics.asm — ESI=tilemap coord; decode $9000 + place
 ; --- palette / fade / screen / timing (Phase-5 palette work is HAL-stubbed) ---
 extern GBPalWhiteOut             ; home/fade.asm
 extern GBPalWhiteOutWithDelay3   ; home/fade.asm
@@ -342,11 +342,11 @@ DrawDexEntryOnScreen:
     call Delay3
     call GBPalNormal
     call GetMonHeader                    ; load pokemon picture location
-    ; PROJ: front pic → VRAM $9000 (GB_VCHARS2), the verified battle front-pic dest
-    ; (signed tile addressing maps tile id $00 → $9000).
-    mov edx, GB_VCHARS2
-    call LoadFlippedFrontSpriteByMonIndex ; decode → VRAM (49 tiles)
-    call dex_place_pic                    ; place the 7×7 tile ids at HL(1,1), stride 20
+    ; pret: hlcoord 1,1 / call LoadFlippedFrontSpriteByMonIndex. The loader decodes
+    ; to $9000 AND places the 7×7 block (flip-aware) using text_row_stride (= 20 here,
+    ; the dex scratch). Just set the coord — no separate placement step.
+    mov esi, HL(1, 1)
+    call LoadFlippedFrontSpriteByMonIndex
     ; ld a,[wCurPartySpecies] / call PlayCry — TODO-HW: audio HAL (Phase 3). No-op.
 
     ; --- owned gate (pret: ld a,c / and a / ret z) -----------------------------
@@ -491,45 +491,6 @@ Pokedex_PrepareDexEntryForPrinting:
 ; ===========================================================================
 ; Port plumbing (window compositor + flat→GB staging). Not pret routines.
 ; ===========================================================================
-
-; ---------------------------------------------------------------------------
-; dex_place_pic — write the 7×7 front-pic tile ids into the stride-20 scratch at
-; HL(1,1), column-major starting at tile id $00 (port of CopyUncompressedPicToHL /
-; PlacePicTilemap, re-strided from the 40-wide battle canvas to the 20-wide dex
-; scratch). Preserves all registers.
-; SPIKE NOTE: whether these tile ids composite as the mon picture in the menu
-; window depends on the window renderer's tile-data addressing mode (see report).
-; ---------------------------------------------------------------------------
-dex_place_pic:
-    pushad
-    ; FLIPPED placement (pret CopyUncompressedPicToHL .flipped path). The pokédex
-    ; loads via LoadFlippedFrontSpriteByMonIndex (wSpriteFlipped=1): the decoder
-    ; mirrors each tile INTERNALLY (flipped decode tables + nybble swap), so the
-    ; tilemap must lay the columns RIGHT-TO-LEFT to complete the horizontal flip.
-    ; Placing them left-to-right left the columns reversed relative to the
-    ; mirrored tiles — the "body out of order on the horizontal" scramble.
-    lea edi, [ebp + HL(1, 1) + 6]         ; dest = rightmost column (7-wide pic)
-    xor bl, bl                            ; running tile id ($00…)
-    mov ecx, 7                            ; 7 columns
-.col:
-    push edi
-    push ecx
-    mov ecx, 7                            ; 7 rows
-    mov al, bl
-.row:
-    mov [edi], al
-    add edi, GBSCR_W                      ; down one row (stride 20)
-    inc al
-    dec ecx
-    jnz .row
-    mov bl, al                            ; next column continues the id sequence
-    pop ecx
-    pop edi
-    dec edi                               ; next column to the LEFT (flipped)
-    dec ecx
-    jnz .col
-    popad
-    ret
 
 ; ---------------------------------------------------------------------------
 ; dex_stage_flavor — copy the flat flavor stream at [dex_flavor_ptr] into GB

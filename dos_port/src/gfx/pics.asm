@@ -37,11 +37,13 @@ extern g_tilecache_dirty
 extern DelayFrame
 extern dmg_palette
 extern IndexToPokedex             ; flat dex table (pokemon_data.asm): [species-1] -> dex#
+extern text_row_stride            ; text/text.asm — active W_TILEMAP row stride (20/40)
 global SlideBattlePicsIn
 
 global LoadMonPicToVRAM
 global LoadMonBackPicToVRAM
 global PlacePicTilemap
+global CopyUncompressedPicToHL          ; shared flip-aware 7×7 tilemap placement
 
 ; --- mon front-pic dispatch (M6.3, faithful port of home/pokemon.asm + home/pics.asm) ---
 global LoadFrontSpriteByMonIndex
@@ -336,12 +338,17 @@ PlacePicTilemap:
 ; ---------------------------------------------------------------------------
 ; LoadFrontSpriteByMonIndex / LoadFlippedFrontSpriteByMonIndex
 ; Source: home/pokemon.asm (pret/pokeyellow). Faithful internal-index -> national-
-; dex -> Rhydon-trap -> front-pic path. The flipped entry mirrors the pic in X
-; (Pokédex / status / evolution / trade / Oak intro / printer callers).
-; In:  [wCurPartySpecies] = internal species index; EDX = dest VRAM GB addr.
-; Out: 49 merged 2bpp front-pic tiles at [EDX]; [wSpriteFlipped] cleared.
-;      Invalid dex -> "Rhydon trap": [wCurPartySpecies] = RHYDON, no pic loaded
-;      (https://glitchcity.wiki/wiki/Rhydon_trap).
+; dex -> Rhydon-trap -> front-pic path, doing BOTH halves pret does: decode the pic
+; to VRAM (fixed vFrontPic = $9000) AND place the 7×7 tile block on the tilemap at
+; the caller's coord (pret tail-calls CopyUncompressedPicToHL). The flipped entry
+; mirrors the pic in X (Pokédex / status / league-PC / evolution / trade / Oak /
+; printer callers). Callers just set the tilemap coord and call — exactly like pret
+; (hlcoord X,Y / call LoadFlippedFrontSpriteByMonIndex); no separate placement step.
+; In:  [wCurPartySpecies] = internal species index; ESI = tilemap dest (GB flat
+;      offset, i.e. hlcoord/scoord — the pret HL). Stride comes from text_row_stride.
+; Out: pic decoded to $9000 AND placed 7×7 at ESI (flip-aware); [wSpriteFlipped]
+;      cleared. Invalid dex -> "Rhydon trap": [wCurPartySpecies] = RHYDON, nothing
+;      drawn (https://glitchcity.wiki/wiki/Rhydon_trap).
 ; ---------------------------------------------------------------------------
 LoadFlippedFrontSpriteByMonIndex:
     mov byte [ebp + wSpriteFlipped], 1
@@ -349,7 +356,7 @@ LoadFlippedFrontSpriteByMonIndex:
 LoadFrontSpriteByMonIndex:
     mov byte [ebp + wSpriteFlipped], 0
 .body:
-    push edx                                ; preserve dest VRAM addr
+    push esi                                ; preserve tilemap dest (pret: push hl)
     ; dex = IndexToPokedex[wCurPartySpecies - 1]   (internal index -> national dex)
     movzx eax, byte [ebp + wCurPartySpecies]
     dec eax
@@ -360,14 +367,80 @@ LoadFrontSpriteByMonIndex:
     jae .invalidDexNumber                   ; dex > #151 invalid (unsigned)
     ; valid dex (1..151)
     dec eax                                  ; dex-1 = index into MonFrontPics
-    pop edx                                  ; restore dest VRAM addr
-    call LoadMonFrontSprite                  ; stage + decode + center/merge -> [EDX]
-    mov byte [ebp + wSpriteFlipped], 0       ; pret clears the flip flag after load
+    mov edx, GB_VCHARS2                       ; VRAM dest FIXED = vFrontPic ($9000)
+    call LoadMonFrontSprite                  ; stage + decode + center/merge -> $9000
+    ; --- place the 7×7 tile block at the caller's coord (pret: pop hl / xor a /
+    ;     ldh [hStartTileID],a / call CopyUncompressedPicToHL). Stride from the
+    ;     runtime text_row_stride (20 menu scratch / 40 flat canvas) — the port's
+    ;     one divergence from pret's constant SCREEN_WIDTH. -----------------------
+    pop esi                                  ; restore tilemap dest (pret: pop hl)
+    lea edi, [ebp + esi]                     ; full pointer for the placement
+    xor al, al                               ; hStartTileID = 0
+    mov edx, [text_row_stride]
+    call CopyUncompressedPicToHL             ; flip-aware, reads [wSpriteFlipped]
+    mov byte [ebp + wSpriteFlipped], 0       ; pret clears the flip flag AFTER placement
     ret
 .invalidDexNumber:
     ; Rhydon trap — fail-safe invalid dex numbers to RHYDON (pret .invalidDexNumber)
-    add esp, 4                               ; discard the saved dest (no pic loaded)
+    add esp, 4                               ; discard the saved dest (nothing drawn)
     mov byte [ebp + wCurPartySpecies], RHYDON
+    ret
+
+; ---------------------------------------------------------------------------
+; CopyUncompressedPicToHL — port of engine/battle/init_battle.asm
+; CopyUncompressedPicToHL. Write a 7×7 block of ascending tile ids into the
+; tilemap, column-major (id runs down each column, then to the next column),
+; flip-aware: when [wSpriteFlipped] is set the columns are laid RIGHT-TO-LEFT so
+; the internally-mirrored front-pic tiles complete the horizontal flip (pret's
+; `.flipped` branch). This is the ONE shared placement pret tail-calls from
+; LoadFrontSpriteByMonIndex; the port splits VRAM-decode (LoadMonFrontSprite,
+; done separately) from this tilemap step and re-strides it per caller.
+;
+; PORT SPLIT NOTE: pret's LoadFrontSpriteByMonIndex clears [wSpriteFlipped] only
+; AFTER tail-calling this routine, so the flip flag is still live here. The port's
+; LoadF[lipped]FrontSpriteByMonIndex clears it at the end of the VRAM decode, so a
+; flipped caller must RE-ASSERT [wSpriteFlipped]=1 immediately before calling this.
+;
+; In:  EDI = dest tilemap flat address (caller has already added EBP)
+;      EDX = row stride in bytes (20 = menu scratch, 40 = battle/status canvas)
+;      AL  = start tile id (hStartTileID; 0 for front pics)
+;      [ebp + wSpriteFlipped] = 1 flipped (R→L cols) / 0 normal (L→R cols)
+; Out: 7×7 tile ids placed. Clobbers EAX, EBX, ECX, EDI. Preserves EDX, ESI.
+; ---------------------------------------------------------------------------
+CopyUncompressedPicToHL:
+    cmp byte [ebp + wSpriteFlipped], 0
+    jne .flipped
+    mov ebx, 7                               ; 7 columns, left to right
+.col:
+    push edi
+    mov ecx, 7                               ; 7 rows, top to bottom
+.row:
+    mov [edi], al
+    add edi, edx                             ; down one row
+    inc al                                   ; id ascends column-major
+    dec ecx
+    jnz .row
+    pop edi
+    inc edi                                  ; next column to the RIGHT
+    dec ebx
+    jnz .col
+    ret
+.flipped:
+    add edi, 6                               ; start at the rightmost column
+    mov ebx, 7
+.fcol:
+    push edi
+    mov ecx, 7
+.frow:
+    mov [edi], al
+    add edi, edx
+    inc al
+    dec ecx
+    jnz .frow
+    pop edi
+    dec edi                                  ; next column to the LEFT
+    dec ebx
+    jnz .fcol
     ret
 
 ; ---------------------------------------------------------------------------

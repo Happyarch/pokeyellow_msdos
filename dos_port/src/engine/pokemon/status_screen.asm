@@ -103,6 +103,7 @@ extern UpdateSprites
 extern hide_window
 extern LoadHpBarAndStatusTilePatterns
 extern LoadHudTilePatterns
+extern LoadFlippedFrontSpriteByMonIndex              ; gfx/pics.asm — ESI=tilemap coord; decode $9000 + place
 extern WaitForTextScrollButtonPress
 extern Delay3
 extern text_row_stride                               ; text.asm — engine row stride
@@ -251,9 +252,11 @@ StatusScreen:
     call Delay3
     call GBPalNormal
 
-    ; TODO-PIC: hlcoord 1,0 / LoadFlippedFrontSpriteByMonIndex — draw the mon front
-    ; pic. The port's LoadFlippedFrontSpriteByMonIndex loads VRAM only (EDX = dest);
-    ; the 7×7 tilemap-block placement outside battle still needs wiring + live check.
+    ; --- front pic (pret: hlcoord 1,0 / call LoadFlippedFrontSpriteByMonIndex) ---
+    ; The loader now decodes to $9000 AND places the 7×7 block itself (flip-aware),
+    ; using text_row_stride (= FW here, the flat status canvas). Just set the coord.
+    mov esi, scoord(1, 0)
+    call LoadFlippedFrontSpriteByMonIndex
     ; TODO-HW: cry — IsThisPartyMon/BoxMonStarterPikachu → PlayPikachuSoundClip /
     ; PlayCry (audio HAL, Phase 3).
 
