@@ -162,6 +162,7 @@ AUDIO_SRCS := \
     src/data/audio_data.asm \
     src/home/audio.asm \
     src/audio/audio_hal.asm \
+    src/audio/opl_shim.asm \
     src/audio/engine_1.asm \
     src/audio/engine_2.asm \
     src/audio/engine_3.asm \
@@ -855,6 +856,9 @@ assets/map_scripts.inc:
 src/data/map_scripts.o: assets/map_scripts.inc
 
 src/data/audio_data.o: assets/audio_rom.inc assets/cry_data.inc
+src/audio/opl_shim.o: assets/opl_patches.inc
+assets/opl_patches.inc: tools/audio/gen_opl_patches.py
+	python3 tools/audio/gen_opl_patches.py
 src/home/audio.o src/audio/engine_1.o src/audio/engine_2.o \
 src/audio/engine_3.o src/audio/engine_4.o src/audio/low_health_alarm.o \
 src/audio/play_battle_music.o src/audio/pokedex_rating_sfx.o \
@@ -1132,7 +1136,8 @@ assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_
         assets/alphabets.inc assets/dex_entries.inc assets/sprite_sets.inc \
         assets/sprite_sheet_pointers.inc assets/pokedex_tiles.inc \
         assets/mon_pics.inc \
-        assets/audio_rom.inc assets/audio_constants.inc assets/cry_data.inc
+        assets/audio_rom.inc assets/audio_constants.inc assets/cry_data.inc \
+        assets/opl_patches.inc
 
 # Force-regenerate every generated asset, ignoring timestamps. The asset rules
 # are timestamp-gated (an .inc newer than its generator/source is skipped), which

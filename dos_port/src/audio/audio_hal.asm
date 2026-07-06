@@ -27,6 +27,9 @@ extern Music_DoLowHealthAlarm     ; src/audio/low_health_alarm.asm
 extern Audio1_UpdateMusic         ; src/audio/engine_1.asm
 extern StopAllSounds              ; src/init/init.asm
 extern g_audio_engine_online      ; src/home/audio.asm
+extern opl_init                   ; src/audio/opl_shim.asm
+extern opl_pass                   ; src/audio/opl_shim.asm
+extern opl_shutdown               ; src/audio/opl_shim.asm
 
 section .text
 
@@ -36,17 +39,17 @@ audio_tick:
     call FadeOutAudio
     call Music_DoLowHealthAlarm
     call Audio1_UpdateMusic
-    ; TODO(opl_shim): APU -> FM register pass goes here (Phase A item 6).
+    call opl_pass                 ; virtual APU -> FM (no-ops if no OPL found)
 .off:
     ret
 
 audio_init:
+    call opl_init                 ; detect + reset the OPL (388h)
     mov byte [g_audio_engine_online], 1
     call StopAllSounds
     ret
 
 audio_shutdown:
-    ; Stops the engine tick. Device silencing (FM key-off, speaker off, DSP
-    ; reset) lands with the shims (Phase A items 6-7).
     mov byte [g_audio_engine_online], 0
+    call opl_shutdown             ; leave the FM chip silent
     ret

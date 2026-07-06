@@ -367,7 +367,19 @@ the two-model workflow (Gemini distills, Claude writes the skill files).
         CHAN1-3, tempo $00A0, note speeds 12, duty $80, envelopes matching
         channel volumes, NRx4 restart bits held for the shim, wave RAM loaded,
         rAUDTERM $77 from the mono panning row).
-  - `[ ]` `opl_shim` + `gen_opl_patches.py`; stereo via rAUDTERM; `/SFXOVERLAP` toggle.
+  - `[x]` `opl_shim` + `gen_opl_patches.py`; stereo via rAUDTERM —
+        `src/audio/opl_shim.asm`: per-tick APU→FM mirror on OPL voices 0-3
+        (duty→patch variants, software GB envelope/sweep/length emulation,
+        NR50 master att incl. fades, NR51→OPL3 C0 pan + TL mute, NRx4 restart
+        consumption); AdLib detect + OPL2/OPL3 probe at 388h in `opl_init`.
+        Patches/att tables are Tier-1 (`assets/opl_patches.inc`; hand-tune the
+        PATCHES dict in the generator). Verified headless via `DEBUG_AUDIO`
+        (now the audible milestone demo: BGM → menu blip duck → cry → BGM):
+        OPL3 detected, voices keyed, B0/TL values math-checked, SFX lifecycle
+        clean. **`/SFXOVERLAP` deferred**: overlap mode needs a per-class APU
+        shadow + duck bypass in the engine (SFX writes land in the same 4 APU
+        registers as music, so dedicated SFX voices need the engine to write
+        two shadows) — rides with the config/flags task or later polish.
   - `[ ]` Detection/config: `BLASTER` env parse, DSP `E1h` version, OPL2/3 probe,
         cmdline flags.
   - `[ ]` Retire audio stubs (`audio_stubs.asm` + strays); real `WaitForSoundToFinish`;

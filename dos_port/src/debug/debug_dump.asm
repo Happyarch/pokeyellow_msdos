@@ -116,7 +116,9 @@ global RunStatusScreenTest
 %ifdef DEBUG_AUDIO
 %include "assets/audio_constants.inc"
 extern PlayMusic
+extern PlaySound
 extern DelayFrame
+extern opl_dbg_snapshot
 global RunAudioTest
 %endif
 
@@ -219,8 +221,8 @@ windows:
     dd 0xC0F0    ; frequency/tempo modifiers
     dd 0xFF00    ; virtual APU: rAUD10-26 ($FF10-26) + wave RAM ($FF30-3F)
     dd 0xCFC0    ; fade block ($CFC6-C8) + wLastMusicSoundID ($CFC9)
-    dd 0xC000    ; repeat snapshot (same tick, sanity)
-    dd 0xFF00    ; repeat snapshot
+    dd 0xD1E0    ; opl_dbg_snapshot: present, opl3, voice_state[0..61]
+    dd 0xD220    ; (unused tail of the snapshot scratch)
 %elifdef DEBUG_BATTLE
 windows:
     dd 0xC468    ; W_TILEMAP row 5 (enemy HP-bar tile IDs, cols 12-20)
@@ -293,26 +295,41 @@ RunCalcStatsTest:
 
 %ifdef DEBUG_AUDIO
 ; ---------------------------------------------------------------------------
-; RunAudioTest — start Pallet Town BGM through the real gateway (PlayMusic →
-; PlaySound → Audio1_PlaySound), run 120 DelayFrame ticks (~2 s: the
-; interpreter executes tempo/volume/duty_cycle/note_type and a few dozen
-; notes across 3 music channels, writing the virtual APU each note), then
-; dump the audio RAM + virtual APU windows to DUMP.BIN. Verifies the
-; translated engine executes real bytecode inside the real binary before any
-; device shim exists. Never returns. In: EBP = GB memory base.
+; RunAudioTest — the Phase A milestone demo, driven through the real gateway
+; (PlayMusic/PlaySound → AudioN_PlaySound → per-tick Audio1_UpdateMusic →
+; opl_pass). Sequence: ~5 s of Pallet Town BGM, the A-button menu blip
+; (ducks the music, exactly as on the GB), then a Pokémon cry (3-channel
+; SFX with frequency/tempo modifiers), ~4 s more music, then dump the audio
+; RAM + virtual APU + shim state to DUMP.BIN and exit. Audible when run
+; under dos_port/run (DOSBox-X OPL emulation); byte-verifiable headless.
+; Never returns. In: EBP = GB memory base.
 ; ---------------------------------------------------------------------------
 RunAudioTest:
     mov bl, AUDIO_BANK_1                    ; c = BANK(Music_PalletTown) = $02
     mov al, MUSIC_PALLET_TOWN
     call PlayMusic
-    mov edi, 120
-.tickLoop:
+    mov edi, 300                            ; ~5 s of BGM
+    call .ticks
+    mov al, SFX_PRESS_AB                    ; menu blip over the music
+    call PlaySound
+    mov edi, 60
+    call .ticks
+    xor al, al                              ; cry modifiers: neutral pitch/length
+    mov [ebp + wFrequencyModifier], al
+    mov [ebp + wTempoModifier], al
+    mov al, SFX_CRY_00                      ; Nidoran M base cry
+    call PlaySound
+    mov edi, 240
+    call .ticks
+    call opl_dbg_snapshot                   ; shim state -> $D1E0 scratch
+    jmp DebugDumpMemory                     ; writes DUMP.BIN, exits
+.ticks:
     push edi
     call DelayFrame                         ; runs audio_tick each frame
     pop edi
     dec edi
-    jnz .tickLoop
-    jmp DebugDumpMemory                     ; writes DUMP.BIN, exits
+    jnz .ticks
+    ret
 %endif
 
 %ifdef DEBUG_PARTY
