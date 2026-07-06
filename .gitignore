@@ -60,6 +60,9 @@ dos_port/assets/*
 # tracked; the .inc itself regenerates via `make assets`.
 !dos_port/assets/ui_layout_*_sidecar.json
 
+# ARR reference docs (MIDI/SoundBlaster/MT-32 specs) — cannot be committed
+docs/sound/
+
 # DOS save files
 *.dsv
 
