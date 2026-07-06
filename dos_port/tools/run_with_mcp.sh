@@ -64,15 +64,20 @@ echo ""
 echo "Starting MCP-patched DOSBox-X..."
 echo "  Socket:  ${SOCK_PATH}"
 echo "  Binary:  ${BINARY}"
-echo "  PKMN.EXE starts paused at BIOS entry so you can set breakpoints first."
+echo "  PKMN.EXE boots and free-runs; pause it from MCP to set breakpoints."
 echo ""
-echo "From Claude Code: use get_registers(), set_breakpoint('LoadWarpDestination'),"
+echo "From Claude Code: pause_exec() once in-game, then set_breakpoint('OverworldLoop'),"
 echo "  continue_exec(), gb_read(), dump_frame() etc."
 echo ""
 
-# -break-start: pause at BIOS entry so MCP can set breakpoints before game runs.
+# No -break-start: breakpoints need the game's runtime CS/DS selectors, which
+# only exist once PKMN.EXE is loaded — the MCP flow is pause_exec() →
+# set_breakpoint() → continue_exec().  (At BIOS entry there is nothing to
+# target, and a paused emulator can't service the socket BREAK request.)
 # The socket is started from DEBUG_Init so it is ready as soon as DOSBox-X opens.
+# cd: the debugger writes MEMDUMP.BIN to its CWD; keep that next to PKMN.EXE
+# where the MCP server (DOSBOX_MCP_DIR) expects it.
+cd "$DOSPORT"
 exec "$BINARY" \
     -defaultdir "$DOSPORT" \
-    -conf "$CONF" \
-    -break-start
+    -conf "$CONF"
