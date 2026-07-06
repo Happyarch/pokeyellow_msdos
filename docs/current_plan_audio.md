@@ -27,9 +27,13 @@ Changed:
   This makes cry pitch/tempo modifiers, ducking, fades, pitch slides, and sweeps work
   for free on every shim device instead of being reimplemented per format.
 - **MT-32 is the flagship** experience (custom SysEx timbres, hand-tuned mixes);
-  GM is a secondary mapping of the same MIDI data. Aesthetic: same voice count as
-  the GB (no re-orchestration), but with reverb, depth, and instrument character.
-  SFX stay basic and get less attention.
+  GM is a secondary mapping of the same MIDI data. Baseline aesthetic: same voice
+  count as the GB (no re-orchestration), but with reverb, depth, and instrument
+  character. SFX stay basic and get less attention.
+  *Amended 2026-07-06*: an optional **additive enhancement layer** (Phase E, the
+  LLM-assisted arranger — see `docs/llm_arranger_design_notes.md`) can add tiered
+  extra channels per song on top of that baseline. The base 4 GB channels remain
+  untouchable; unenhanced songs keep the baseline aesthetic.
 - **SB floor is SB Pro**, not SB16 (OPL3 *or* dual-OPL2 stereo; 8-bit DSP is enough
   for the PCM cries). Keep FM voicing OPL2-compatible.
 - **PC speaker added** as a fallback device: SFX only (no music), plus a PWM PCM
@@ -52,7 +56,8 @@ Changed:
 | PC speaker | SFX-only + PCM cry player |
 | Tandy | SN76489 via APU shim, minimal polish |
 | SFX overlap | Runtime toggle: authentic GB ducking vs. 4 dedicated OPL3 SFX channels |
-| Phasing | A: Engine+OPL → B: MIDI/MT-32 → C: Pikachu PCM → D: Tandy + speaker SFX |
+| Music enhancement | LLM-assisted **additive** arrangement layer (tiered YAML, floor-up OPL3→MT-32); base 4 GB channels untouchable — see Phase E |
+| Phasing | A: Engine+OPL → B: MIDI/MT-32 → C: Pikachu PCM → D: Tandy + speaker SFX → E: LLM arranger (E depends only on B; C/D can interleave) |
 
 ---
 
@@ -233,6 +238,75 @@ hand-owned `.mid` files (the `assets/map_overrides/` precedent).
 | `gen_opl_patches.py` | Hand-editable FM patch table (4 duty variants, wave approximations, noise patch) → `.inc` for the shim. |
 | `gen_pika_pcm.py` | `audio/pikachu_cries/*.wav` → 8-bit unsigned resampled blobs for the DSP player + PWM duty streams for the speaker player. |
 | `audition.py` | Host-side fast loop: send generated `.mid` + SysEx to an ALSA MIDI port (standalone MUNT) for patch iteration without booting DOS. End-to-end verification then goes through DOSBox-X (MPU-401 → MUNT) driven by the existing dosbox-mcp harness. |
+| `music_analysis.py` *(Phase E)* | Deterministic pre-LLM analysis over the `pret_audio.py` IR: key estimation, chord progression, phrase boundaries, cadences, repeated motifs (orchestrate-once tagging), melodic contour, rhythmic density. |
+| `enhancements/*.yaml` *(Phase E)* | Per-song **additive** arrangement channels, tier-tagged (1 = OPL3+MT-32, 2–3 = MT-32/GM only), musical positions (measure/beat/duration — never frame deltas), explicit per-target patch fields. Hand-crafted or LLM-drafted; always human-auditioned. Never clobbered by `make assets`. |
+| `yaml_lint.py` *(Phase E)* | Structural validation of enhancement YAML before audition: notes in declared range, valid beat/measure refs, per-tick voice count within target polyphony, no unison-doubling of the base melody, patch fields present for the entry's tier. |
+
+---
+
+## Phase E — LLM music arranger (additive enhancement layer)
+
+Full design record: `docs/llm_arranger_design_notes.md` (multi-model design review,
+2026-07-06). This section records the *decisions*; the notes hold the rationale.
+
+**What it is**: an LLM acts as a music-theory assistant that drafts extra
+orchestration channels per song as **declarative YAML** — never binary MIDI, never
+bytecode, never edits to authoritative assets. Deterministic Python owns all timing,
+merging, tier filtering, and polyphony management. A human auditions every change by
+ear; there is no auto-acceptance.
+
+**Compatibility with Phases A–D (verified 2026-07-06)**: nothing already built
+changes. `pret_audio.py` is the arranger's input (its IR + timing evaluator feed
+`music_analysis.py`); `gen_audio_data.py`/`audio_rom.inc` stay byte-exact and
+authoritative for the base 4 channels; the translated engine + virtual APU still
+drives the base channels on every shim device. Enhancements are additive layers on
+top, at the tool level and at the driver level.
+
+**Tiers (designed from the floor up — §5 of the notes)**:
+
+| Tier | Designed/auditioned on | Plays on | Example |
+|------|------------------------|----------|---------|
+| 1 | OPL3 (emulation) | OPL3 + MT-32/GM | Bass reinforcement, core harmony |
+| 2 | MT-32 (MUNT) | MT-32/GM only | String pads, reverb-heavy parts |
+| 3 | MT-32 (MUNT) | MT-32/GM only | Color flourishes, choir, synth leads |
+| — | — | Tandy/speaker | Base 4 GB channels only |
+
+Tier 1 is authored against the more constrained hardware and cascades *up* to MT-32
+for free; tiers 2–3 exploit LA-synthesis capabilities with no FM equivalent and never
+cascade down. The compiler drops lowest-tier channels first when a target's polyphony
+is exceeded (whole-layer removal in v1; chord thinning deferred).
+
+**Settled decisions** (answers to the notes' §7 open questions):
+
+1. Integrated here as **Phase E** (this section + task list), not a separate doc;
+   the notes file remains the design rationale record.
+2. Phase E starts **after Phase B** — it builds on `gb_to_midi.py` and
+   `midi_to_stream.py`. Phases C/D are independent and may interleave.
+3. `music_analysis.py` lives in **`tools/audio/`** with the rest of the pipeline.
+4. **OPL3 tier-1 playback ships in Phase E** (not A): a small frame-delta stream
+   player drives the enhancement voices on spare FM channels (OPL3 has 18; the
+   shim uses 4 + 4 with `/SFXOVERLAP`, leaving ~10) alongside — not instead of —
+   the faithful APU shim. Phase A's shim is unchanged.
+5. **Explicit per-target patch fields** in the YAML: tier-1 entries carry
+   `opl_patch` + `mt32_patch` + `gm_program`; tier 2–3 entries carry MT-32/GM
+   fields only. `yaml_lint.py` enforces this. No auto-mapping table.
+
+**Method locked in from the review consensus**: musical positions
+(measure/beat/duration), never frame deltas, in anything the LLM touches;
+deterministic analysis *before* the LLM (its job is "given this harmonic structure,
+add orchestration"); repeated motifs orchestrated once and duplicated by the
+compiler; the first song's enhancement YAML is **hand-crafted by ear before any LLM
+involvement** — it proves the format end-to-end and becomes the few-shot example.
+Rejected: importance vectors, LLM confidence scores, edit-operation diffs,
+separate harmony/orchestration passes (rationale in the notes, §2–3).
+
+**Skills**: three project skills — `music-theory` (standalone, ≤500-line SKILL.md +
+references distilled from Open Music Theory, CC BY-SA), `audio-enhance-opl3`
+(tier-1 pass), `audio-enhance-mt32` (tier 2–3 pass; must read existing tier-1
+entries first). They live in `.claude/skills/` (the project's skill location; the
+notes' `.agents/skills/` path is superseded). Textbook prep: extract the ~20
+relevant Open Music Theory files, strip figures/exercises/frontmatter, distill via
+the two-model workflow (Gemini distills, Claude writes the skill files).
 
 ---
 
@@ -304,6 +378,30 @@ hand-owned `.mid` files (the `assets/map_overrides/` precedent).
   - `[ ]` Options-menu stereo bits (`wOptions` MONO/EARPHONE) → rAUDTERM emulation.
   - `[ ]` Optional: upgrade `sb_pcm` to auto-init DMA (pull 8237 doc first;
         DPMI 0100h DOS-memory buffer, 64 KB-boundary safe).
+
+- `[ ]` **Phase E — LLM music arranger** (starts after B; see the Phase E section)
+  - `[ ]` Pin the enhancement YAML schema (musical positions, tier tags, explicit
+        per-target patch fields) — everything downstream depends on it.
+  - `[ ]` `music_analysis.py` in `tools/audio/` (key, chords, phrases,
+        repeated-motif tagging, contour, density) over the `pret_audio.py` IR.
+  - `[ ]` **Hand-craft one song's enhancement YAML by ear** (e.g. Pallet Town or
+        Pokémon Center) — proves YAML → merge → compile → audition end-to-end and
+        becomes the few-shot worked example. Do this before any LLM involvement.
+  - `[ ]` `yaml_lint.py` structural validation (range, beat refs, polyphony,
+        unison-doubling, tier/patch-field consistency).
+  - `[ ]` `gb_to_midi.py`: enhancement merge + per-target tier filtering (whole-layer
+        drop when polyphony exceeded; chord thinning deferred).
+  - `[ ]` OPL enhancement stream player: tier-1 voices on spare FM channels
+        alongside the faithful shim (voice budget ~10 after shim + /SFXOVERLAP).
+  - `[ ]` Textbook prep: extract + strip the ~20 Open Music Theory files; two-model
+        distillation (Gemini distills → Claude writes skill files).
+  - `[ ]` Skills in `.claude/skills/`: `music-theory` (+ references),
+        `audio-enhance-opl3` (tier 1, few-shot example), `audio-enhance-mt32`
+        (tiers 2–3, reads tier-1 entries first).
+  - `[ ]` LLM arrangement passes per song (OPL3 tier-1 pass → audition → MT-32
+        tier-2/3 pass → audition); human ear is the quality gate throughout.
+  - **Milestone: one song with a hand-crafted tier-1 layer audible on OPL3 and
+    MT-32; then one LLM-drafted arrangement surviving lint + audition.**
 
 ## Open questions / deferred
 
