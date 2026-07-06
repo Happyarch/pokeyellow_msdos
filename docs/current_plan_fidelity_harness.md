@@ -1,5 +1,7 @@
 # Fidelity Harness — mGBA golden differential testing + anti-divergence static tooling
 
+Worktree: `/mnt/sdb1/Code/Active Code/pokeyellow_msdos-fidelity_harness` (branch `fidelity_harness`).
+
 Status: **planned 2026-07-06, not started.** Branch TBD (likely cut from `master` after
 the status-screen fixes land).
 
