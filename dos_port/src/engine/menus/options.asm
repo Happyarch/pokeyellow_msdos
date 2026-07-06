@@ -17,8 +17,8 @@
 ;   0-17 and OptionsShowWindow defines the single descriptor at UI_OPTIONS_*.
 ;   g_bg_whiteout blanks the overworld behind it (pret's OPTION screen is a
 ;   full-screen takeover). This stands in for pret's hAutoBGTransferEnabled
-;   VBlank BGMap transfer (frame.asm's do_bg_transfer is canvas-scoped/stride-40
-;   and cannot serve this stride-20 scratch — same explicit-mirror pattern as
+;   VBlank BGMap transfer (the legacy do_bg_transfer is retired; explicit
+;   mirrors are the port's only WRAM→tilemap path — same pattern as
 ;   S3 list_mirror / S5 PartyMenuMirror).
 ; - This menu redraws the ONE value row under the cursor on every left/right
 ;   press (GetOptionPointer → the row handler → PlaceString). options_mirror is

@@ -113,6 +113,12 @@ RedisplayStartMenu_DoNotDrawStartMenu:
     ; STUB(safari): farcall PrintSafariZoneSteps — Safari Zone not yet ported
     call UpdateSprites
 %ifdef DEBUG_STARTMENU
+    ; OW-A.13 repro: seed the hAutoBGTransferEnabled=1 state the bag list /
+    ; pokédex loops used to LEAK back to the START menu. Inert now that the
+    ; legacy do_bg_transfer is retired (nothing reads the byte); on the old
+    ; code the next DelayFrame repainted GB_TILEMAP1 — this menu's window
+    ; source — with skewed canvas/map bytes, rendering the box as grass.
+    mov byte [ebp + H_AUTO_BG_TRANSFER_EN], 1
     call PlaceMenuCursor                ; show ▶ at the remembered selection
     call sm_canvas_mirror
     call DelayFrame                     ; render one frame with the menu shown

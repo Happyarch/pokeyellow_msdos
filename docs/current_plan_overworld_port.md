@@ -1100,7 +1100,30 @@ does not exist" — it does, `src/home/copy2.asm`).
     (dispatch wired but its ultimate mart/PC-nurse handlers are still NI).
   </details>
 
-**TICKET OW-A.13: menu box-draw geometry + canvas↔window compositor fix** `[SOLO — final round-off]` `[OPEN, filed 2026-07-05]`
+**TICKET OW-A.13: menu box-draw geometry + canvas↔window compositor fix** `[SOLO — final round-off]` `[ROOT-CAUSED + PARTIALLY FIXED 2026-07-06; bag-border + pokédex tails open]`
+
+> **2026-07-06 ROOT CAUSE (verified by A/B FRAME.BIN repro):** the primary corruption family
+> (grass-after-submenu, options every-other-row/missing bottom border, pokédex garble-while-open)
+> was **`do_bg_transfer`** (frame.asm): its geometry had rotted (it copied `SCREEN_TILES_W`=40
+> bytes per 32-wide GB tilemap row — row pad 32−40=−8 — for `SCREEN_TILES_H`=25 rows; written for
+> the GB 20×18), and any faithful pret `hAutoBGTransferEnabled=1` write turned it on:
+> `DisplayListMenuIDLoop` (bag) and `Pokedex_PlacePokemonList` arm it and **leak it back to the
+> START menu** (no exit path cleared it), whereupon every DelayFrame re-smeared the canvas (map
+> mirror = grass) over `GB_TILEMAP1` — the START-menu/options/pokédex window SOURCE — out-fighting
+> `sm_canvas_mirror`/`options_mirror`/`pdex_mirror`. No single geometry can serve it (EN=1 arms
+> exist from stride-20 scratch screens AND 40-wide canvas screens), so it was **retired outright**;
+> explicit per-window mirrors are the port's only WRAM→tilemap path. The `hAutoBGTransferEnabled`
+> writes remain as vestigial pret-fidelity bookkeeping (nothing reads them).
+> DEBUG_STARTMENU now seeds the leaked EN=1 state as the permanent regression repro
+> (old code: menu = pure map tiles; fixed: clean menu — both captured via the headless
+> FRAME.BIN harness). **Still open, separate mechanisms:** (a) bag/list borders — 
+> `DisplayListMenuID` runs `list_draw_box_border`/`TextBoxBorder` BEFORE setting
+> `text_row_stride=20` (arriving from the START menu it is still 40 → border drawn every other
+> scratch row; boot-default 20 is why the DEBUG_BAGMENU harness looked fine), plus
+> `PrintListMenuEntries` calls the stride-40 `ClearScreenArea` on the stride-20 scratch (stale
+> interior rows + clobbers scratch rows ≥11 incl. the QTY box region — pokedex.asm:500 dodged
+> this same trap with an inline clear); (b) pokédex residuals after the transfer retirement
+> (needs live re-verify + the `LoadPokedexTilePatterns` tileset note in TODO.md).
 - **Origin:** refiled from OW-A.2 P4 after the plan's "VRAM tile-slot management" root cause
   for the live menu corruption was **DISPROVEN** (box/space tiles `$79–$7F` are byte-identical
   across `font_extra.2bpp`/`font_battle_extra.2bpp`; the corruption triggers immediately with no

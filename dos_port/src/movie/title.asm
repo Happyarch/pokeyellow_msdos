@@ -10,10 +10,12 @@
 ;      save to Buffer1.  hSCY = 64.
 ;   4. Restore Buffer2 (logo only); copy to physical tilemap at $9800 (row 0).
 ;   5. Bounce hSCY from 64 → 0 over ~32 frames (DelayFrame each step).
-;      do_bg_transfer in each DelayFrame keeps copying logo-only to $9800 so
-;      the renderer sees the correct tilemap as SCY slides.
-;   6. After bounce, restore Buffer1 (logo+pikachu); DelayFrames(36) commits
-;      it to $9800 via auto-BG transfer — Pikachu appears.
+;      (Historical: do_bg_transfer used to re-copy wTileMap → $9800 each
+;      DelayFrame; it is retired — render_bg's flat path reads wTileMap
+;      directly, so the physical-tilemap copies here are write-only noise and
+;      the H_AUTO_BG_TRANSFER_EN/DEST writes below are vestigial bookkeeping.)
+;   6. After bounce, restore Buffer1 (logo+pikachu); DelayFrames(36) —
+;      Pikachu appears (render_bg reads the restored wTileMap).
 ;   7. Place speech bubble; play PCM (stub); play music (stub).
 ;   8. Main idle loop: blink Pikachu's eyes, await A/Start → main menu.
 ;      Inactivity for ~51 s resets to Init.

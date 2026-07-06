@@ -258,11 +258,16 @@ DisplayListMenuIDLoop:
     xor al, al
     mov [ebp + hAutoBGTransferEnabled], al    ; disable transfer
     call PrintListMenuEntries
-    call list_mirror                           ; scratch box → GB_TILEMAP0 (port
-                                               ; window model; do_bg_transfer
-                                               ; targets GB_TILEMAP1, not ours)
+    call list_mirror                           ; scratch box → GB_TILEMAP0
+                                               ; (port window model)
     mov al, 1
-    mov [ebp + hAutoBGTransferEnabled], al     ; enable transfer
+    mov [ebp + hAutoBGTransferEnabled], al     ; pret fidelity only — nothing
+                                               ; reads this (do_bg_transfer is
+                                               ; retired; it used to smear the
+                                               ; canvas over GB_TILEMAP1, the
+                                               ; START-menu window source, and
+                                               ; LEAKED past ExitListMenu →
+                                               ; the grass-after-bag bug)
     call Delay3
 
     mov al, [ebp + wBattleType]
@@ -806,7 +811,8 @@ list_add_qty_window:
 ; Mirror helpers — copy the staged boxes from the W_TILEMAP scratch (stride 20)
 ; into their GB_TILEMAP0 regions (stride 32) so the window compositor sees
 ; them. Port-model plumbing (same mechanism as bag_menu .copy_box / yes_no
-; yn_mirror); do_bg_transfer can't be used — it targets GB_TILEMAP1.
+; yn_mirror); explicit mirrors are the port's ONLY WRAM→tilemap path (the
+; legacy do_bg_transfer is retired).
 ; list_mirror doubles as the HandleMenuInput menu_redraw_cb, so it preserves
 ; all registers.
 ; ----------------------------------------------------------------------------

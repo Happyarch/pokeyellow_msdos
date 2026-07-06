@@ -7,10 +7,13 @@
 ; that any call to DelayFrame (the standard "yield one frame" primitive) triggers
 ; a full render + input update, matching the original VBlank-driven timing.
 ;
-; do_bg_transfer copies the 20×18 wTileMap software buffer into the physical
-; 32-wide GB tilemap at the destination set by hAutoBGTransferDest (high byte
-; only, low byte always 0). Handles the 1 KB wrap-around boundary so callers
-; can set destinations at row 8 ($9900) or row 24 ($9B00) inside tilemap 0.
+; pret's hAutoBGTransferEnabled VBlank transfer (wTileMap → physical BG map) has
+; NO runtime analog here — see the retirement note above DelayFrame's transfer
+; phase. Screens that need their staging visible mirror it explicitly into their
+; window descriptor's GB_TILEMAP0/1 band (list_mirror / options_mirror /
+; pdex_mirror / sm_canvas_mirror / …), usually re-armed per frame via
+; menu_redraw_cb. The faithful `hAutoBGTransferEnabled` writes throughout the
+; menu code are vestigial pret-fidelity bookkeeping that nothing reads.
 ;
 ; Build: nasm -f coff -I include/ -o frame.o frame.asm
 
@@ -62,8 +65,8 @@ section .text
 ; DelayFrame — sync to 60 Hz, run full per-frame pipeline.
 ;
 ; Mirrors what the GB VBlank ISR does:
-;   commit shadow registers → auto-BG transfer → redraw exposed row/col
-;   → joypad update → BG render → blit → check host-quit
+;   commit shadow registers → staged BG copies/animations → OAM
+;   → joypad update → BG render → windows → blit → check host-quit
 ;
 ; Out: all registers preserved. May call cleanup+exit if Esc was pressed.
 ; ---------------------------------------------------------------------------
@@ -73,12 +76,26 @@ DelayFrame:
     call wait_pit_tick
     call commit_shadow_regs
     call commit_palette         ; map BGP/OBP0/OBP1 → DAC (raw-index render)
-    call do_bg_transfer
+    ; RETIRED: do_bg_transfer (pret's hAutoBGTransferEnabled VBlank auto-transfer)
+    ; ran here. It was removed as the root cause of the menu "turns to grass" /
+    ; every-other-row corruption family (OW-A.13): its geometry had rotted (it
+    ; copied SCREEN_TILES_W=40 bytes per 32-wide tilemap row — row pad 32−40=−8 —
+    ; for SCREEN_TILES_H=25 rows, both constants redefined since it was written
+    ; for the GB's 20×18), and no single geometry CAN serve it: EN=1 arms exist
+    ; from both stride-20 scratch screens (pokédex/options/naming) and 40-wide
+    ; canvas screens (main-menu CONTINUE panel, save info panel). Whenever a
+    ; faithful pret `hAutoBGTransferEnabled=1` write was live (the bag list loop
+    ; and Pokedex_PlacePokemonList also LEAK it back to the START menu), this
+    ; overwrote GB_TILEMAP1 — the START-menu/options/pokédex window SOURCE —
+    ; with skewed canvas bytes every frame, out-fighting the explicit mirrors.
+    ; render_bg's flat path reads wTileMap directly, and every window-owning
+    ; screen maintains its own mirror, so the transfer fed nothing legitimate.
+    ;
     ; VBlank BG-transfer phase (pret VBlank order): staged BG-map copy + moving-tile
     ; animation. Both are M2.2 globals that self-gate internally (VBlankCopyBgMap on
     ; its row-count, UpdateMovingBgTiles on hTileAnimations), so the unconditional
-    ; call is correct — inert until their owners arm them. Placed alongside
-    ; do_bg_transfer; does not reorder update_oam/render_bg/present.
+    ; call is correct — inert until their owners arm them.
+    ; Does not reorder update_oam/render_bg/present.
     call VBlankCopyBgMap
     call UpdateMovingBgTiles
     call update_oam             ; PrepareOAMData → shadow OAM, then DMA to OAM
@@ -195,52 +212,11 @@ commit_shadow_regs:
     ret
 
 ; ---------------------------------------------------------------------------
-; do_bg_transfer — copy wTileMap (20×18) into the physical GB tilemap.
-;
-; Uses hAutoBGTransferDest high byte as the tilemap destination (low byte = 0,
-; so the dest is always 256-byte aligned). Copies 20 bytes per screen row,
-; skips the 12-byte padding to the next 32-wide tilemap row, and wraps at
-; the 1 KB boundary so destinations like $9B00 (row 24) work correctly.
-;
-; (Stage A Note: Gated on H_AUTO_BG_TRANSFER_EN, which the overworld sets to 0.
-; Inert in the overworld now that the native renderer drops the torus, but kept
-; because text/menu code may use it later.)
-;
-; In: EBP = GB memory base. All registers preserved.
-; ---------------------------------------------------------------------------
-do_bg_transfer:
-    pushad
-    cmp byte [ebp + H_AUTO_BG_TRANSFER_EN], 0
-    je .done
-
-    ; EDI = GB tilemap destination (high byte only, low byte = 0)
-    movzx edi, byte [ebp + H_AUTO_BG_TRANSFER_DEST + 1]
-    shl edi, 8                        ; edi = GB address (e.g. $9B00)
-
-    ; EAX = flat pointer to the 1 KB tilemap boundary
-    mov eax, edi
-    and eax, 0xFC00
-    add eax, 0x400                    ; eax = GB address of end of this 1 KB tilemap
-    add eax, ebp                      ; eax = flat ptr to tilemap end
-
-    add edi, ebp                      ; edi = flat ptr to tilemap dest
-    lea esi, [ebp + W_TILEMAP]        ; esi = flat ptr to wTileMap
-
-    mov edx, SCREEN_TILES_H           ; 18 rows
-.row:
-    mov ecx, SCREEN_TILES_W           ; 20 bytes per row
-    rep movsb
-    add edi, TILEMAP_W - SCREEN_TILES_W  ; skip 12 padding bytes to next tilemap row
-    cmp edi, eax                      ; past end of 1 KB tilemap?
-    jb .no_wrap
-    sub edi, 0x400                    ; wrap back to tilemap start
-.no_wrap:
-    dec edx
-    jnz .row
-.done:
-    popad
-    ret
-
+; do_bg_transfer — DELETED (see the retirement note in DelayFrame). The window
+; compositor's explicit per-screen mirrors are the port's only WRAM→tilemap
+; path; resurrect from git history only if a screen ever genuinely needs a
+; generic transfer, and then per-descriptor (source stride + dest band owned by
+; the descriptor), never as a global W_TILEMAP-wide copy.
 ; ---------------------------------------------------------------------------
 ; DelayFrames — wait BL (C register) frames.
 ; In:  BL = frame count. Out: BL = 0. Other registers preserved.
