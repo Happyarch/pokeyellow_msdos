@@ -257,6 +257,14 @@ screenshots for ground truth.
    persists files across rebuilds — stale FRAME.BINs lie), then after the run
    `mcopy -n -i PKMN.IMG@@1048576 ::FRAME.BIN .` (1048576 = partition byte
    offset). Render: `python3 tools/render_frame.py FRAME.BIN out.png`.
+6. **⚠ Image contention:** if a live `dos_port/run` session is open (the user
+   test-driving), it holds `PKMN.IMG` mounted read-write — a concurrent
+   headless run on the same image **silently loses its FRAME.BIN** (the live
+   session's cached FAT flushes clobber it; the run "succeeds" with exit 0 and
+   no file, mimicking a crash). Verified 2026-07-06: this burned an hour on a
+   phantom-crash hunt. Run headless against a **copy**: `cp PKMN.IMG
+   $SCRATCH/pkmn_test.img`, point the scratch conf's `imgmount c` at the
+   copy's absolute path, and mcopy-extract from the copy.
 
 (The dosbox-mcp launcher below instead mounts the HOST `dos_port/` as C:, so
 there FRAME.BIN lands directly on disk — no mcopy.)
