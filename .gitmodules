@@ -1,3 +1,6 @@
 [submodule "dos_port/tools/unicode_converter"]
 	path = dos_port/tools/unicode_converter
 	url = git@github.com:Happyarch/Pokemon_Bootleg_Green_Scripts.git
+[submodule "dos_port/tools/mgba"]
+	path = dos_port/tools/mgba
+	url = https://github.com/mgba-emu/mgba.git

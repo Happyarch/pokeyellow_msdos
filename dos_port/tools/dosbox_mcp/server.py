@@ -487,6 +487,78 @@ def dump_frame(output_png: str = '/tmp/dosbox_frame.png') -> str:
 
 
 @mcp.tool()
+def quit_emulator(timeout: float = 30.0) -> str:
+    """
+    Shut DOSBox-X down cleanly with no confirmation dialog (the launch confs
+    set 'quit warning = false', so the debugger QUIT command passes
+    CheckQuit()). Works whether the game is paused or free-running: a BREAK
+    is sent first (the only request honored while running), then QUIT is
+    processed at the debugger entry. Falls back to SIGTERM if the process
+    survives. Use this instead of window-close in unattended sessions.
+    """
+    global _state, _cached_ebp, _cached_cs, _cached_ds, _cached_ds_base
+    import time
+
+    def _pids() -> list[int]:
+        # Precise pattern: 'dosbox-x' alone also matches this MCP server's
+        # own process tree (see build-and-debug skill warning).
+        out = subprocess.run(['pgrep', '-f', 'dosbox-x-mcp/dosbox-x'],
+                             capture_output=True, text=True)
+        return [int(p) for p in out.stdout.split()]
+
+    def _wait_gone(deadline: float) -> bool:
+        while time.monotonic() < deadline:
+            if not _pids():
+                return True
+            time.sleep(0.5)
+        return not _pids()
+
+    def _reset_client():
+        global _state, _cached_ebp, _cached_cs, _cached_ds, _cached_ds_base
+        _client.disconnect()
+        _state = 'unknown'
+        _cached_ebp = _cached_cs = _cached_ds = _cached_ds_base = None
+
+    if not _pids():
+        _reset_client()
+        return "DOSBox-X is not running."
+
+    deadline = time.monotonic() + max(timeout, 5.0)
+    sent_quit = False
+    try:
+        _client.connect()
+        # QUIT is only consumed at a debugger entry; BREAK forces one if the
+        # game is free-running and is harmless if it is already paused.
+        # send_raw: QUIT's shutdown throw means no reply is ever written, so
+        # normal command/response tracking would wedge on it.
+        _client.send_raw('BREAK')
+        time.sleep(0.5)
+        _client.send_raw('QUIT')
+        sent_quit = True
+    except OSError as e:
+        pass  # no socket — fall through to SIGTERM
+
+    if sent_quit and _wait_gone(deadline):
+        _reset_client()
+        return "DOSBox-X exited cleanly via debugger QUIT (no prompt)."
+
+    # SIGTERM fallback
+    pids = _pids()
+    for pid in pids:
+        try:
+            os.kill(pid, 15)
+        except ProcessLookupError:
+            pass
+    if _wait_gone(time.monotonic() + 10.0):
+        _reset_client()
+        how = "QUIT sent but unacknowledged; " if sent_quit else "no MCP socket; "
+        return f"DOSBox-X exited after SIGTERM fallback ({how}pids {pids})."
+    _reset_client()
+    return (f"ERROR: DOSBox-X (pids {_pids()}) survived QUIT and SIGTERM — "
+            "kill it manually by PID (never `pkill -f dosbox`).")
+
+
+@mcp.tool()
 def disassemble(symbol_or_addr: str, count: int = 10) -> str:
     """
     Disassemble 'count' instructions starting at a pkmn.map symbol or program

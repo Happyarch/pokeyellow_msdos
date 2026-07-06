@@ -37,6 +37,10 @@ cat > "$CONF" <<EOF
 # generated conf fell back to DOSBox-X defaults (~3000 cycles → far too slow).
 [dosbox]
 machine=vgaonly
+# No quit-confirmation dialog while a guest program runs — unattended agent
+# sessions must be able to close DOSBox-X promptlessly (CheckQuit() returns
+# true when this is false).
+quit warning=false
 
 [video]
 # Required: VGA writes are broken when this optimization is on (see CLAUDE.md).

@@ -69,6 +69,9 @@ docs/sound/
 # MCP debugger: clone and binary are not committed (too large)
 dos_port/tools/dosbox-x-mcp/
 
+# mGBA fidelity-harness build output (source is the tools/mgba submodule)
+dos_port/tools/mgba_build/
+
 # Claude Code session data (settings.local.json, worktrees, etc.) — but keep
 # shared project skills under version control.
 .claude/*

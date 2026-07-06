@@ -43,9 +43,11 @@ Decisions already made with the user:
 
 ## Key facts from exploration (2026-07-06)
 
-- Root pret tree builds `pokeyellow.gbc` + `pokeyellow.sym` from source; rgbds pin is
-  `1.0.1` (`.rgbds-version`) and the system has exactly 1.0.1. `roms.sha1` verifies the
-  ROM bit-for-bit (`make compare`). No baserom needed. `.sym` gives label→address for Lua.
+- ~~Root pret tree builds `pokeyellow.gbc` + `pokeyellow.sym` from source~~ **Correction
+  (Session A):** only a *pristine upstream* checkout builds — the branch tree fails at
+  link (see Session A result; build from `../pokeyellow_msdos-pret-golden/` @ `7caf2e09`).
+  rgbds pin is `1.0.1` (`.rgbds-version`) and the system has exactly 1.0.1. `roms.sha1`
+  verifies the ROM bit-for-bit. No baserom needed. `.sym` gives label→address for Lua.
 - Port headless pipeline exists (`make -C dos_port image DEBUG_X=1` →
   `SDL_VIDEODRIVER=dummy dosbox-x` → `mcopy -i PKMN.IMG@@1048576`), ~30 `DEBUG_*`
   scenario gates in `dos_port/src/debug/debug_dump.asm`. **But no dump captures full
@@ -72,34 +74,64 @@ Decisions already made with the user:
 ## Session plan (one autonomous session each)
 
 **Every session, before touching code:**
-- [ ] Read CLAUDE.md + this plan file top to bottom; find your session's heading.
-- [ ] Invoke the `build-and-debug` skill (headless recipe, mcopy extraction, stale-object
+- Read CLAUDE.md + this plan file top to bottom; find your session's heading.
+- Invoke the `build-and-debug` skill (headless recipe, mcopy extraction, stale-object
       gotchas); invoke `asm-translation` if the session touches `.asm`,
       `project-conventions` if it adds tools/stubs/strings.
-- [ ] `git status` — confirm you're on the right branch and note unrelated changes
+-     `git status` — confirm you're on the right branch and note unrelated changes
       (don't sweep them into your commits).
 
 **Every session, before ending:**
-- [ ] Exit gate verified **by running it**, not by reading code.
-- [ ] Work committed (one commit per session unless noted), plan checkboxes marked
+-     Exit gate verified **by running it**, not by reading code.
+-     Work committed (one commit per session unless noted), plan checkboxes marked
       `[x]`, and a 2–4 line "Session X result:" note added under the session heading
       (what landed, what surprised you, what the next session must know).
-- [ ] If the gate was NOT reached: commit nothing half-broken; write the blocker into
+-     If the gate was NOT reached: commit nothing half-broken; write the blocker into
       this file and stop.
 
 ### Session A — quit fix + mGBA vendor/build + golden ROM  *(Stage 1.0 + scope add)*
-- [ ] Apply the dosbox-x quit fix (both conf sites + `quit_emulator` MCP tool) and
+- [x] Apply the dosbox-x quit fix (both conf sites + `quit_emulator` MCP tool) and
       verify per the Verification section.
-- [ ] Add the `dos_port/tools/mgba` submodule @ 0.10.x tag; write `build_mgba.sh`;
+- [x] Add the `dos_port/tools/mgba` submodule @ 0.10.x tag; write `build_mgba.sh`;
       build with scripting enabled (Lua dep may need a **user-approved** package
       install — ask, per CLAUDE.md policy, or build vendored).
-- [ ] Verify the headless scripting entry point (hello-world Lua under
+- [x] Verify the headless scripting entry point (hello-world Lua under
       `SDL_VIDEODRIVER=dummy`, confirm memory/input/socket/file APIs exist). **If this
       fails, stop and report — the fallback choice (qt offscreen vs libmgba runner) is
       the user's.**
-- [ ] `make yellow` at root; sha1-verify vs `roms.sha1`; confirm `pokeyellow.sym` exists.
+- [x] `make yellow` at root; sha1-verify vs `roms.sha1`; confirm `pokeyellow.sym` exists.
 - **Exit gate:** headless mGBA runs a Lua script that reads a known WRAM address from
   the verified ROM and prints it; DOSBox-X closes promptless via `quit_emulator`.
+
+**Session A result (2026-07-06): all gates passed.** What the next sessions must know:
+- **The branch's root pret tree does NOT build the ROM** — port commit `101c5a9c`
+  (2026-06-16) edited pret sources (`MAP_BORDER` 3→6, `wOverworldMap` 1300→2048,
+  loop rewrites in `home/overworld.asm` + `engine/overworld/update_map.asm`),
+  overflowing WRAM0 at link. Golden ROM builds from the **pristine upstream commit
+  `7caf2e09`** in the pinned worktree `../pokeyellow_msdos-pret-golden/` (sha1 matches
+  `roms.sha1`; `pokeyellow.sym` there, 24 453 symbols). `make goldens` (Session C)
+  must use that worktree; the "root pret tree builds" key fact below was wrong for
+  this branch. The pret-tree contamination itself is a **decision-for-user** (it also
+  violates the read-only-spec hard rule).
+- **mGBA 0.10.5 has no headless scripting entry point** (SDL frontend: none; Qt:
+  GUI-menu only). Per user decision, the harness ships a custom runner
+  `tools/mgba_harness/runner.c` → built as `tools/mgba_build/mgba-lua-runner` by
+  `build_mgba.sh` (no SDL/Qt/display needed at all). Gotchas baked into it:
+  `mScriptContextLoadFile` only compiles — `engine->run()` must follow; the "frame"
+  callback is triggered manually per `runFrame` (mirrors `thread.c ADD_CALLBACK`).
+  Lua env: full `luaL_openlibs` (io/os available), socket + console verified.
+  Exit-gate run: `mgba-lua-runner -s tools/mgba_harness/hello_wram.lua <golden>.gbc`
+  → API asserts pass, `wTileMap` bytes print, `HELLO_WRAM_OK`. GB-core "MBC5 unknown
+  address" log spam is normal — filter it.
+- `build_mgba.sh` needs `-DCMAKE_POLICY_VERSION_MINIMUM=3.5` (system CMake 4 vs
+  mGBA's 3.1 minimum). Lua 5.4 + cmake were already installed — no package installs.
+- Fresh-worktree bootstrap traps hit this session: `git submodule update --init
+  dos_port/tools/unicode_converter` is required before `make assets`; `CWSDPMI.EXE`
+  and the `dosbox-x-mcp/` binary are untracked — copy/symlink from the main checkout.
+- `quit_emulator` (tools/dosbox_mcp/server.py) verified live twice: BREAK →
+  QUIT over the socket, no prompt (`quit warning=false` in both confs), SIGTERM
+  fallback in place. `send_raw()` added to socket_client.py for the reply-less
+  shutdown path.
 
 ### Session B — Lua core library, no seeding yet  *(Stage 1.1 minus `seed.lua`)*
 - [ ] `symbols.lua`, `input.lua`, `dump.lua`, `scenario.lua` skeleton.
@@ -177,16 +209,16 @@ Decisions already made with the user:
 ## Part 1 — mGBA golden harness (Lua)
 
 ### Stage 1.0 — Vendor + build + golden ROM
-- [ ] Add submodule `dos_port/tools/mgba` @ latest 0.10.x tag; build script
+- [x] Add submodule `dos_port/tools/mgba` @ latest 0.10.x tag (**0.10.5**); build script
       `dos_port/tools/build_mgba.sh` (model: `build_dosbox_mcp.sh`) — CMake with
       scripting/Lua enabled (`-DENABLE_SCRIPTING=ON`, Lua dep).
-- [ ] **Verify the headless scripting entry point before anything else**: confirm the
-      built frontend accepts `--script` (or equivalent) and runs under
-      `SDL_VIDEODRIVER=dummy`; confirm the Lua env exposes memory read/write, key
-      injection, frame callbacks, `socket`, and file I/O. This is the plan's main
-      external unknown — if the SDL frontend can't take scripts headlessly, fall back
-      to mgba-qt offscreen or a tiny custom runner linked against libmgba (decide then).
-- [ ] Build the golden ROM at repo root (`make yellow`), check against `roms.sha1`.
+- [x] **Verify the headless scripting entry point before anything else**: the unknown
+      resolved negative — no stock frontend takes scripts headlessly in 0.10.5.
+      **User chose the libmgba-runner fallback**: `tools/mgba_harness/runner.c` →
+      `tools/mgba_build/mgba-lua-runner`; Lua env verified (memory, key injection via
+      core methods, frame callbacks, `socket`, file I/O).
+- [x] Build the golden ROM ~~at repo root~~ in the pinned pristine worktree
+      `../pokeyellow_msdos-pret-golden/` (`make yellow`), checked against `roms.sha1`.
       Goldens are only ever generated from a sha1-verified ROM.
 
 ### Stage 1.1 — Core Lua library (`dos_port/tools/mgba_harness/lib/`)
@@ -326,12 +358,13 @@ convention). Today agents resolve this by grepping — or don't, which is how
 
 ## Scope add — dosbox-x-mcp unattended quit fix
 
-- [ ] Add `quit warning = false` to the `[dosbox]` section of the conf generated in
+- [x] Add `quit warning = false` to the `[dosbox]` section of the conf generated in
       `dos_port/tools/run_with_mcp.sh` (and mirror in `dos_port/dosbox-x.conf` for the
       plain `run` pipeline). `CheckQuit()` then returns true with no dialog — no C++
       patch change.
-- [ ] Add a `quit_emulator` MCP tool to `tools/dosbox_mcp/server.py` (clean shutdown
-      via the debugger socket, SIGTERM fallback) so agents never rely on window-close.
+- [x] Add a `quit_emulator` MCP tool to `tools/dosbox_mcp/server.py` (clean shutdown
+      via the debugger socket — BREAK then the debugger's existing `QUIT` command —
+      with SIGTERM fallback) so agents never rely on window-close. Verified live.
 
 ## Verification
 

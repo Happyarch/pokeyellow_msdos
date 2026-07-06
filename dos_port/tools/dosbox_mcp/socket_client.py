@@ -95,6 +95,16 @@ class DebugSocketClient:
             self._send_locked(cmd)
             self._pending = True
 
+    def send_raw(self, cmd: str) -> None:
+        """Send a command with NO response tracking — shutdown path only.
+        The QUIT command kills the emulator before a reply is written, and a
+        BREAK sent while already paused never gets one; normal pending
+        bookkeeping would wedge on either."""
+        with self._lock:
+            if self._sock is None:
+                self.connect()
+            self._send_locked(cmd)
+
     def wait_response(self, timeout: Optional[float] = None) -> str:
         """Collect the pending response (e.g. a RUN's break notification)."""
         with self._lock:
