@@ -1123,7 +1123,14 @@ does not exist" — it does, `src/home/copy2.asm`).
 > `PrintListMenuEntries` calls the stride-40 `ClearScreenArea` on the stride-20 scratch (stale
 > interior rows + clobbers scratch rows ≥11 incl. the QTY box region — pokedex.asm:500 dodged
 > this same trap with an inline clear); (b) pokédex residuals after the transfer retirement
-> (needs live re-verify + the `LoadPokedexTilePatterns` tileset note in TODO.md).
+> (needs re-verify + the `LoadPokedexTilePatterns` tileset note in TODO.md — the player never
+> has the dex in a fresh live boot, so verify via the `DEBUG_G1`/`RunPokedexTest` harness or by
+> seeding EVENT_GOT_POKEDEX).
+>
+> **2026-07-06 live smoke (user):** grass-after-submenu GONE and the OPTION screen renders fully
+> (all rows + bottom border) — (1) and (2) of the symptom list are CLOSED by the transfer
+> retirement. The bag/items box (3) is still corrupt, as predicted — its stride bugs above are
+> the open work. Pokédex untested live (no dex event in a fresh save).
 - **Origin:** refiled from OW-A.2 P4 after the plan's "VRAM tile-slot management" root cause
   for the live menu corruption was **DISPROVEN** (box/space tiles `$79–$7F` are byte-identical
   across `font_extra.2bpp`/`font_battle_extra.2bpp`; the corruption triggers immediately with no
