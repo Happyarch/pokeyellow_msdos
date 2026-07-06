@@ -404,7 +404,11 @@ the two-model workflow (Gemini distills, Claude writes the skill files).
   - **Milestone: Pallet Town BGM + menu SFX + a Pokémon cry on OPL3 in
     DOSBox-X — REACHED (state-verified headless 2026-07-06; audible via
     `dos_port/run DEBUG_AUDIO=1`: ~5 s BGM → menu blip duck → Nidoran cry →
-    BGM, then auto-exit).**
+    BGM, then auto-exit). User audition 2026-07-06: "a little harsh and
+    grating, but musically accurate" — timbre tuning deferred; when picking
+    it up, soften the first-draft patches in `gen_opl_patches.py` (lower
+    modulator levels / feedback, maybe gentler duty-variant spread), then
+    `make assets` + re-listen.**
 
 - `[ ]` **Phase B — MIDI / MT-32 flagship**
   - `[ ]` `gb_to_midi.py` + `overrides/` schema + `midi_to_stream.py`.
