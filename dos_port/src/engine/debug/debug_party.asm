@@ -100,11 +100,14 @@ PrepareNewGameDebug:
     jmp .items_loop
 
 .items_end:
-    ; Complete the Pokédex
-    mov edi, W_POKEDEX_OWNED
-    call DebugSetPokedexEntries
+    ; Pokédex: the dex flags are two per-mon bitfields (binary DIP switches).
+    ; Seed all 151 SEEN and a scattered ~half OWNED (deterministic pattern) so
+    ; the CONTENTS list shows both pokéball-marked and unmarked entries, every
+    ; DATA page is reachable, and IsPokemonBitSet gets exercised on both values.
     mov edi, W_POKEDEX_SEEN
     call DebugSetPokedexEntries
+    mov edi, W_POKEDEX_OWNED
+    call DebugSetPokedexOwnedScatter
     
     ; SetEvent EVENT_GOT_POKEDEX
     ; Event 37 is byte 4, bit 5
@@ -133,8 +136,28 @@ DebugSetPokedexEntries:
     inc edi
     dec ecx
     jnz .loop
-    
+
     mov byte [ebp + edi], (1 << (NUM_POKEMON % 8)) - 1
+    ret
+
+; -----------------------------------------------------------------------------
+; DebugSetPokedexOwnedScatter
+; Fills the dex bitfield at EDI with a deterministic scattered pattern
+; (~half the bits set) — "a random amount caught". Bits past NUM_POKEMON in
+; the tail byte are masked off, matching DebugSetPokedexEntries.
+; -----------------------------------------------------------------------------
+DebugSetPokedexOwnedScatter:
+    mov ecx, NUM_POKEMON / 8
+    mov al, 0xB5                    ; pattern seed
+.loop:
+    mov [ebp + edi], al
+    rol al, 3
+    xor al, 0x5D                    ; cheap per-byte scramble
+    inc edi
+    dec ecx
+    jnz .loop
+    and al, (1 << (NUM_POKEMON % 8)) - 1
+    mov [ebp + edi], al
     ret
 
 section .data
