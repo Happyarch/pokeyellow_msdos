@@ -12,3 +12,5 @@ tools/translation.db-journal
 scratch/
 POKEMON.DSV
 .nasmflags.stamp
+MEMDUMP.TXT
+MEMDUMP.BIN
