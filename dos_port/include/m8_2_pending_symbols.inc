@@ -179,6 +179,9 @@ OPP_RIVAL2             equ 242      ; 200+0x2A
 %ifndef OPP_RIVAL3
 OPP_RIVAL3             equ 243      ; 200+0x2B
 %endif
+%ifndef OPP_LANCE
+OPP_LANCE              equ 247      ; 200+0x2F (plays gym leader battle theme)
+%endif
 %ifndef OPP_LASS
 OPP_LASS               equ 203
 %endif
@@ -216,13 +219,8 @@ OPP_GIOVANNI           equ 229
 OPP_ROCKET             equ 230
 %endif
 
-; ---- Music ids (audio HAL deferred; values functionally inert) -------------
-%ifndef MUSIC_MEET_EVIL_TRAINER
-MUSIC_MEET_EVIL_TRAINER   equ 0x1F  ; VERIFY (nominal; PlaySound is a HAL stub)
-%endif
-%ifndef MUSIC_MEET_FEMALE_TRAINER
-MUSIC_MEET_FEMALE_TRAINER equ 0x20  ; VERIFY (nominal)
-%endif
-%ifndef MUSIC_MEET_MALE_TRAINER
-MUSIC_MEET_MALE_TRAINER   equ 0x21  ; VERIFY (nominal)
-%endif
+; ---- Music ids -------------------------------------------------------------
+; The nominal MUSIC_MEET_* placeholders that lived here were WRONG ($1f/$20/
+; $21; true ids $f5/$f8/$fb) and are retired: the generated
+; assets/audio_constants.inc is the single source of music/SFX ids now that
+; PlaySound is real (audio plan Phase A). %include it where they're needed.

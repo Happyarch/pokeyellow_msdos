@@ -737,10 +737,143 @@ H_PIKACHU_SPRITE_VRAM_OFFSET equ 0xFFFC ; hPikachuSpriteVRAMOffset (added to til
 
 ; Named WRAM symbols — all addresses verified from pokeyellow.sym.
 
-; Audio/sound (low WRAM0 — $C0EE+)
+; ---------------------------------------------------------------------------
+; Audio engine WRAM — pret "Audio RAM" section, $C000-$C0F4 (ram/wram.asm).
+; Per-channel arrays are NUM_CHANNELS(8) bytes: CHAN1-4 music, CHAN5-8 SFX.
+; Pointer pairs (command/return) are 16-bit little-endian GB pointers into
+; the audio banks (the port dereferences them through the AudioRom blob).
+; ---------------------------------------------------------------------------
+wUnusedMusicByte             equ 0xC000
+wSoundID                     equ 0xC001
+wMuteAudioAndPauseMusic      equ 0xC002 ; bit 7 = muted; 1-127 = mute+pause
+wDisableChannelOutputWhenSfxEnds equ 0xC003
+wStereoPanning               equ 0xC004
+wSavedVolume                 equ 0xC005
+wChannelCommandPointers      equ 0xC006 ; 8 x dw
+wChannelReturnAddresses      equ 0xC016 ; 8 x dw
+; wChannelSoundIDs 0xC026 defined above (overworld block)
+wChannelFlags1               equ 0xC02E ; BIT_PERFECT_PITCH..BIT_ROTATE_DUTY_CYCLE
+wChannelFlags2               equ 0xC036 ; BIT_EXECUTE_MUSIC
+wChannelDutyCycles           equ 0xC03E
+wChannelDutyCyclePatterns    equ 0xC046
+wChannelVibratoDelayCounters equ 0xC04E
+wChannelVibratoExtents       equ 0xC056
+wChannelVibratoRates         equ 0xC05E ; hi nibble reload, lo nibble counter
+wChannelFrequencyLowBytes    equ 0xC066
+wChannelVibratoDelayCounterReloadValues equ 0xC06E
+wChannelPitchSlideLengthModifiers equ 0xC076
+wChannelPitchSlideFrequencySteps  equ 0xC07E
+wChannelPitchSlideFrequencyStepsFractionalPart   equ 0xC086
+wChannelPitchSlideCurrentFrequencyFractionalPart equ 0xC08E
+wChannelPitchSlideCurrentFrequencyHighBytes      equ 0xC096
+wChannelPitchSlideCurrentFrequencyLowBytes       equ 0xC09E
+wChannelPitchSlideTargetFrequencyHighBytes       equ 0xC0A6
+wChannelPitchSlideTargetFrequencyLowBytes        equ 0xC0AE
+wChannelNoteDelayCounters    equ 0xC0B6 ; integer part (frac below)
+wChannelLoopCounters         equ 0xC0BE
+wChannelNoteSpeeds           equ 0xC0C6
+wChannelNoteDelayCountersFractionalPart equ 0xC0CE
+wChannelOctaves              equ 0xC0D6
+wChannelVolumes              equ 0xC0DE
+wMusicWaveInstrument         equ 0xC0E6
+wSfxWaveInstrument           equ 0xC0E7
+wMusicTempo                  equ 0xC0E8 ; dw, stored hi-then-lo (big-endian!)
+wSfxTempo                    equ 0xC0EA ; dw, stored hi-then-lo (big-endian!)
+wSfxHeaderPointer            equ 0xC0EC ; dw, stored hi-then-lo (big-endian!)
 W_NEW_SOUND_ID               equ 0xC0EE ; wNewSoundID
+wNewSoundID                  equ 0xC0EE ; pret alias
 W_AUDIO_ROM_BANK             equ 0xC0EF ; wAudioROMBank
+wAudioROMBank                equ 0xC0EF ; pret alias
 W_AUDIO_SAVED_ROM_BANK       equ 0xC0F0 ; wAudioSavedROMBank
+wAudioSavedROMBank           equ 0xC0F0 ; pret alias
+wFrequencyModifier           equ 0xC0F1 ; cry pitch modifier
+wTempoModifier               equ 0xC0F2 ; cry tempo modifier
+
+; Audio fade-out block ($CFC6) + map-music vars ($D35A)
+wAudioFadeOutControl         equ 0xCFC6 ; = W_AUDIO_FADE_OUT below
+wAudioFadeOutCounterReloadValue equ 0xCFC7
+wAudioFadeOutCounter         equ 0xCFC8
+wLastMusicSoundID            equ 0xCFC9
+wMapMusicSoundID             equ 0xD35A
+wMapMusicROMBank             equ 0xD35B
+wGymLeaderNo                 equ 0xD05B ; union with wLoneAttackNo (pret)
+hDexRatingNumMonsOwned       equ 0xFFDC ; HRAM (pokedex rating SFX)
+BIT_NO_AUDIO_FADE_OUT        equ 1      ; wStatusFlags2 bit 1
+
+; Virtual APU — GB sound registers, live in emulated GB memory. The
+; translated engine writes them like the SM83 did; the device shim reads
+; them once per tick (NRx4 bit 7 "restart" is consumed by the shim: the
+; engine never reads it back, so the shim clears it after processing).
+rAUD1SWEEP                   equ 0xFF10 ; NR10
+rAUD1LEN                     equ 0xFF11 ; NR11 duty/length
+rAUD1ENV                     equ 0xFF12 ; NR12 envelope
+rAUD1LOW                     equ 0xFF13 ; NR13 freq lo
+rAUD1HIGH                    equ 0xFF14 ; NR14 restart/len-enable/freq hi
+rAUD2LEN                     equ 0xFF16 ; NR21
+rAUD2ENV                     equ 0xFF17 ; NR22
+rAUD2LOW                     equ 0xFF18 ; NR23
+rAUD2HIGH                    equ 0xFF19 ; NR24
+rAUD3ENA                     equ 0xFF1A ; NR30 wave on/off (bit 7)
+rAUD3LEN                     equ 0xFF1B ; NR31
+rAUD3LEVEL                   equ 0xFF1C ; NR32
+rAUD3LOW                     equ 0xFF1D ; NR33
+rAUD3HIGH                    equ 0xFF1E ; NR34
+rAUD4LEN                     equ 0xFF20 ; NR41
+rAUD4ENV                     equ 0xFF21 ; NR42
+rAUD4POLY                    equ 0xFF22 ; NR43
+rAUD4GO                      equ 0xFF23 ; NR44
+rAUDVOL                      equ 0xFF24 ; NR50 master volume
+rAUDTERM                     equ 0xFF25 ; NR51 stereo routing
+rAUDENA                      equ 0xFF26 ; NR52 sound on/off
+_AUD3WAVERAM                 equ 0xFF30 ; $FF30-$FF3F
+AUD3WAVE_SIZE                equ 16
+AUD1RAM                      equ 0xFF10 ; per-channel register file bases
+AUD2RAM                      equ 0xFF15
+AUD3RAM                      equ 0xFF1A
+AUD4RAM                      equ 0xFF1F
+AUD1SWEEP_DOWN               equ 0x08
+AUD3ENA_OFF                  equ 0x00
+AUD3ENA_ON                   equ 0x80
+AUDENA_ON                    equ 0x80
+AUD1HIGH_LENGTH_ON           equ 0x40
+AUDTERM_ALL_1                equ 0x11   ; ch1 left|right
+AUDTERM_ALL_2                equ 0x22
+AUDTERM_ALL_3                equ 0x44
+AUDTERM_ALL_4                equ 0x88
+
+; Audio engine bit/flag constants (constants/audio_constants.asm)
+CHAN1                        equ 0
+CHAN2                        equ 1
+CHAN3                        equ 2
+CHAN4                        equ 3
+CHAN5                        equ 4
+CHAN6                        equ 5
+CHAN7                        equ 6
+CHAN8                        equ 7
+NUM_MUSIC_CHANS              equ 4
+NUM_CHANNELS                 equ 8
+REG_DUTY_SOUND_LEN           equ 1
+REG_VOLUME_ENVELOPE          equ 2
+REG_FREQUENCY_LO             equ 3
+BIT_PERFECT_PITCH            equ 0
+BIT_SOUND_CALL               equ 1
+BIT_NOISE_OR_SFX             equ 2
+BIT_VIBRATO_DIRECTION        equ 3
+BIT_PITCH_SLIDE_ON           equ 4
+BIT_PITCH_SLIDE_DECREASING   equ 5
+BIT_ROTATE_DUTY_CYCLE        equ 6
+BIT_EXECUTE_MUSIC            equ 0    ; wChannelFlags2
+BIT_MUTE_AUDIO               equ 7    ; wMuteAudioAndPauseMusic
+BIT_LOW_HEALTH_ALARM         equ 7    ; wLowHealthAlarm
+LOW_HEALTH_TIMER_MASK        equ 0x7F
+DISABLE_LOW_HEALTH_ALARM     equ 0xFF
+
+; Map ids used by CheckForNoBikingMusicMap (constants/map_constants.asm)
+MAP_ID_INDIGO_PLATEAU        equ 0x09
+MAP_ID_ROUTE_23              equ 0x22
+MAP_ID_VICTORY_ROAD_1F       equ 0x6C
+MAP_ID_VICTORY_ROAD_2F       equ 0xC2
+MAP_ID_VICTORY_ROAD_3F       equ 0xC6
 
 ; Misc WRAM ($CC–$CFC range)
 W_UNUSED_FLAG                equ 0xCC5B ; wUnusedFlag

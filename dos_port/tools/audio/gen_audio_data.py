@@ -151,9 +151,17 @@ def emit_constants(rom: AudioROM, ids: dict[str, int],
     for slot, bank in enumerate(rom.banks()):
         lines.append(f"AUDIO_BANK_{slot + 1:<17} equ 0x{bank:02X}")
     lines.append("")
-    lines.append("; vendored GB addresses of engine-referenced tables (in-blob)")
+    lines.append("; GB addresses of in-blob data referenced from engine/game code")
     for label in ("Audio1_Pitches", "Audio1_WavePointers",
-                  "SFX_Pokeflute_Ch5", "SFX_Pokeflute_Ch6", "Audio2_CryRet"):
+                  "Audio1_CryRet", "Audio2_CryRet",
+                  "Audio3_CryRet", "Audio4_CryRet",
+                  "SFX_Pokeflute_Ch5", "SFX_Pokeflute_Ch6", "SFX_Pokeflute_Ch7",
+                  "Music_MeetRival_Ch1_AlternateStart",
+                  "Music_MeetRival_Ch2_AlternateStart",
+                  "Music_MeetRival_Ch3_AlternateStart",
+                  "Music_MeetRival_Ch1_AlternateTempo",
+                  "Music_MeetRival_Ch1_AlternateStartAndTempo",
+                  "Music_Cities1_Ch1_AlternateTempo"):
         addr = rom.symtab[label]
         name = "GB_" + re.sub(r"[^A-Za-z0-9]", "_", label).upper()
         lines.append(f"{name:<28} equ 0x{addr:04X}  ; bank ${rom.sym_bank[label]:02x}")

@@ -343,11 +343,24 @@ the two-model workflow (Gemini distills, Claude writes the skill files).
         at true GB addresses), `audio_constants.inc` (positional IDs +
         boundaries + vendored table addresses), `cry_data.inc`; wired into
         `make assets`.
-  - `[ ]` Translate `home/audio.asm` gateway + engine (`Audio1_UpdateMusic`, all
+  - `[x]` Translate `home/audio.asm` gateway + engine (`Audio1_UpdateMusic`, all
         command handlers, `AudioN_PlaySound` wrappers, cry modifiers, fades,
-        low-health alarm), writing to the virtual APU block.
-  - `[ ]` Audio tick hook in `DelayFrame`; `audio_init`/`audio_shutdown` in
-        `boot/entry.asm`.
+        low-health alarm), writing to the virtual APU block — commit `52d57448`.
+        Pret's four PlaySound copies unified as `AudioCommon_PlaySound` with
+        per-engine param blocks; audio_stubs.asm + stray PlaySound stub retired;
+        the wrong nominal `MUSIC_MEET_*` placeholders replaced by the generated
+        constants. **PlaySound is gated on `g_audio_engine_online` (0) until the
+        tick hook lands — the next task must set it in `audio_init`** (without
+        the tick, a started sound never ends and `WaitForSoundToFinish` would
+        spin forever; it pumps `DelayFrame` per iteration). Not yet translated
+        (ride along with later tasks): `PlayCry`/`GetCryData` (data is in
+        `CryData` already; stub in pokedex.asm), `PlayTrainerMusic`
+        (home/trainers.asm), `StopMusic` (home/overworld.asm), real
+        `StopAllSounds` (ret-stub in init.asm).
+  - `[ ]` Audio tick hook in `DelayFrame` (order per pret home/vblank.asm:
+        `FadeOutAudio` → `Music_DoLowHealthAlarm` → `Audio1_UpdateMusic` →
+        shim pass); `audio_init` (sets `g_audio_engine_online`)/`audio_shutdown`
+        in `boot/entry.asm`.
   - `[ ]` `opl_shim` + `gen_opl_patches.py`; stereo via rAUDTERM; `/SFXOVERLAP` toggle.
   - `[ ]` Detection/config: `BLASTER` env parse, DSP `E1h` version, OPL2/3 probe,
         cmdline flags.

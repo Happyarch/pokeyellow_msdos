@@ -81,9 +81,13 @@ EMBEDDED_DATA_FILES: list[tuple[str, int, int, str | None]] = [
 ]
 
 # Loose data bytes emitted by macros inside engine code, dereferenced via
-# wChannelCommandPointers: (bank, address, bytes, label).
+# wChannelCommandPointers: (bank, address, bytes, label). Each AudioN_CryRet
+# is the lone sound_ret the cry path points the SFX wave channel at.
 EMBEDDED_BYTES: list[tuple[int, int, bytes, str]] = [
-    (0x08, 0x59CE, b"\xff", "Audio2_CryRet"),  # sound_ret
+    (0x02, 0x5961, b"\xff", "Audio1_CryRet"),
+    (0x08, 0x59CE, b"\xff", "Audio2_CryRet"),
+    (0x1F, 0x5220, b"\xff", "Audio3_CryRet"),
+    (0x20, 0x6CE7, b"\xff", "Audio4_CryRet"),
 ]
 
 # Loose vendored symbols useful to consumers (bank, address).

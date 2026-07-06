@@ -75,6 +75,7 @@ bits 32
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
 %include "m8_2_pending_symbols.inc"   ; ROOT: fold into gb_memmap/gb_constants, then delete
+%include "assets/audio_constants.inc" ; MUSIC_MEET_* ids (generated, Tier-1)
 
 ; ----------------------------------------------------------------------------
 ; Flat trainer-header struct offsets (Tier-1 layout described above)
