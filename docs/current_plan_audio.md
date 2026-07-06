@@ -380,11 +380,31 @@ the two-model workflow (Gemini distills, Claude writes the skill files).
         shadow + duck bypass in the engine (SFX writes land in the same 4 APU
         registers as music, so dedicated SFX voices need the engine to write
         two shadows) — rides with the config/flags task or later polish.
-  - `[ ]` Detection/config: `BLASTER` env parse, DSP `E1h` version, OPL2/3 probe,
-        cmdline flags.
-  - `[ ]` Retire audio stubs (`audio_stubs.asm` + strays); real `WaitForSoundToFinish`;
-        wire text-engine `TX_SOUND_*` codes.
-  - **Milestone: Pallet Town BGM + menu SFX + a Pokémon cry on OPL3 in DOSBox-X.**
+  - `[x]` Detection/config: `BLASTER` env parse (A/I/D fields →
+        `g_sb_base/irq/dma`), DSP reset + `E1h` version probe (bounded polls;
+        recorded for the Phase C PCM player), OPL2/3 probe (in `opl_init`,
+        task 6), `/NOSOUND` cmdline flag (skips probes, engine stays offline).
+        Fixed a latent DPMI bug on the way: `INT 21h AH=62h` returns a PSP
+        *selector* under a DPMI host (and the env pointer at PSP+2Ch is also a
+        selector) — new `seg_to_flat` helper (boot/entry.asm, DPMI 0006h with
+        raw-segment fallback) now used by both the env parse and the existing
+        `/FIXALL` cmdline scan, which had the same bug. Verified in DOSBox-X:
+        BLASTER=A220 I7 D1 parsed, DSP 4.05 detected, OPL3 found.
+        Device-select flags (`/MT32 /GM /SB /TANDY /SPK /SFXOVERLAP`, `/A… /I…`
+        overrides) deferred to the phases that add those devices.
+  - `[~]` Retire audio stubs — DONE for `audio_stubs.asm` (deleted; all four
+        routines are real now), the stray `PlaySound` stub, and the real
+        `WaitForSoundToFinish` (spins on CHAN5/6/8, pumps `DelayFrame`).
+        **Deferred per user**: the call-site sweep (un-eliding `TODO-HW` audio
+        calls incl. `TX_SOUND_*` text codes, map-music on `EnterMap`,
+        `PlayDefaultMusic` in the overworld loop) — it would collide with
+        master's in-flight overworld rewrite. Until then normal gameplay is
+        mostly silent by omission (a few live SFX call sites already sound);
+        the `DEBUG_AUDIO` build is the audible demo.
+  - **Milestone: Pallet Town BGM + menu SFX + a Pokémon cry on OPL3 in
+    DOSBox-X — REACHED (state-verified headless 2026-07-06; audible via
+    `dos_port/run DEBUG_AUDIO=1`: ~5 s BGM → menu blip duck → Nidoran cry →
+    BGM, then auto-exit).**
 
 - `[ ]` **Phase B — MIDI / MT-32 flagship**
   - `[ ]` `gb_to_midi.py` + `overrides/` schema + `midi_to_stream.py`.

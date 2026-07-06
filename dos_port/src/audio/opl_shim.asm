@@ -43,6 +43,12 @@ global opl_dbg_snapshot
 global g_opl_present
 global g_opl3
 
+extern g_sb_present               ; src/audio/audio_hal.asm (BLASTER/DSP probe)
+extern g_sb_base
+extern g_sb_dsp_ver
+extern g_sb_irq
+extern g_sb_dma
+
 section .text
 
 OPL_BASE      equ 0x388
@@ -701,7 +707,9 @@ voice_pan:
 ; ---------------------------------------------------------------------------
 ; opl_dbg_snapshot — copy detection flags + the first voices' software state
 ; into GB scratch at $D1E0 so the DEBUG_AUDIO DUMP.BIN can carry them.
-; Layout: +0 g_opl_present, +1 g_opl3, +2.. voice_state[0..61].
+; Layout: $D1E0 g_opl_present, +1 g_opl3, +2.. voice_state[0..61];
+;         $D220 g_sb_present, +1 g_sb_base (word), +3 dsp ver (word, maj hi),
+;         +5 g_sb_irq, +6 g_sb_dma.
 ; ---------------------------------------------------------------------------
 opl_dbg_snapshot:
     push esi
@@ -720,6 +728,18 @@ opl_dbg_snapshot:
     inc esi
     inc edi
     loop .copy
+    mov al, [g_sb_present]
+    mov [ebp + 0xD220], al
+    mov ax, [g_sb_base]
+    mov [ebp + 0xD221], al
+    mov [ebp + 0xD222], ah
+    mov ax, [g_sb_dsp_ver]
+    mov [ebp + 0xD223], al          ; minor
+    mov [ebp + 0xD224], ah          ; major
+    mov al, [g_sb_irq]
+    mov [ebp + 0xD225], al
+    mov al, [g_sb_dma]
+    mov [ebp + 0xD226], al
     pop ecx
     pop edi
     pop esi

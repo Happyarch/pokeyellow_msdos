@@ -31,6 +31,7 @@ extern joypad_init       ; src/input/joypad.asm
 extern joypad_restore    ; src/input/joypad.asm
 extern audio_init        ; src/audio/audio_hal.asm
 extern audio_shutdown    ; src/audio/audio_hal.asm
+extern g_cfg_nosound     ; src/audio/audio_hal.asm — set by /NOSOUND
 extern Init              ; src/init/init.asm — power-on init
 %ifdef DEBUG_AUDIO
 extern RunAudioTest      ; src/debug/debug_dump.asm — audio-engine gate
@@ -69,6 +70,7 @@ align 4
 ; Command-line argument tokens (matched case-sensitively as typed)
 arg_fixall:   db '/FIXALL',  0
 arg_fixcrit:  db '/FIXCRIT', 0
+arg_nosound:  db '/NOSOUND', 0
 
 ; ---------------------------------------------------------------------------
 ; Code
@@ -243,13 +245,18 @@ parse_cmdline:
     mov ah, 0x62
     int 0x21
 
-    movzx eax, bx
-    shl eax, 4
-    sub eax, [ds_base]
+    mov ax, bx
+    call seg_to_flat         ; PSP: DPMI hosts return a SELECTOR in BX
     lea esi, [eax + 0x81]
     movzx ecx, byte [eax + 0x80]
     test ecx, ecx
     jz .done
+
+    mov edi, arg_nosound
+    call find_token
+    jnz .no_nosound
+    mov byte [g_cfg_nosound], 1
+.no_nosound:
 
     mov edi, arg_fixall
     call find_token
@@ -269,6 +276,37 @@ parse_cmdline:
     pop ecx
     pop ebx
     pop eax
+    ret
+
+; ---------------------------------------------------------------------------
+; seg_to_flat — resolve AX, which is either a protected-mode SELECTOR (what a
+; DPMI host hands back for the PSP via INT 21h AH=62h, and what it plants in
+; the PSP's environment-pointer word at +2Ch) or a raw real-mode segment,
+; into a DS-relative flat pointer in EAX. Tries DPMI 0006h (get segment base)
+; first; a failed lookup means it was a plain real-mode paragraph — use <<4.
+; Preserves all other registers.
+; ---------------------------------------------------------------------------
+global seg_to_flat
+seg_to_flat:
+    push ebx
+    push ecx
+    push edx
+    mov bx, ax
+    mov ax, 0x0006           ; DPMI: get segment base address of BX
+    int 0x31
+    jc .rawSegment
+    movzx eax, cx            ; base = CX:DX
+    shl eax, 16
+    mov ax, dx
+    jmp .bias
+.rawSegment:
+    movzx eax, bx
+    shl eax, 4
+.bias:
+    sub eax, [ds_base]
+    pop edx
+    pop ecx
+    pop ebx
     ret
 
 ; ---------------------------------------------------------------------------
