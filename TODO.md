@@ -291,13 +291,17 @@ Prioritized task list. Check off items as they complete; add new items with phas
       `docs/current_plan_overworld_port.md` ("Cross-cutting defect" + Stage 8
       verification). Not a menu-code bug. See memory `menu-corruption-vram-tileslots`.
 - [ ] **Menus S10 non-VRAM tails** (from archived `docs/plans/menus.md`): the
-      window-compositor gap on full-takeover screens (naming / main_menu /
-      pokédex-entry interior content); ~~`LoadPokedexTilePatterns` real dex
-      tileset~~ (DONE 2026-07-06: `gen_pokedex_tiles.py` → faithful loader,
-      CONTENTS + DATA verified via DEBUG_G1/G2); interactive nav/prompt sweeps
-      (pokédex list scroll + side-menu, `<PAGE>` flavor wait, link cup-select +
-      no-partner timeout message, naming grid); cable-club `SpecialEnterMap`/
-      `PrepareForSpecialWarp` warp seam (confirm S9 wired it or leave honestly stubbed).
+      window-compositor gap on full-takeover screens (naming / main_menu — the
+      ~~pokédex-entry interior content~~ / ~~`<PAGE>` flavor wait~~ are DONE
+      2026-07-06: the DATA page's flavor now renders full-page via the
+      `g_dex_flavor_active` path in text.asm — was hijacked to a bottom dialog
+      strip — and the `.waitForButtonPress`/`<PAGE>` waits got their missing
+      `DelayFrame`); ~~`LoadPokedexTilePatterns` real dex tileset~~ (DONE
+      2026-07-06: `gen_pokedex_tiles.py` → faithful loader, CONTENTS + DATA
+      verified via DEBUG_G1/G2); remaining interactive nav/prompt sweeps
+      (pokédex list scroll + side-menu, link cup-select + no-partner timeout
+      message, naming grid); cable-club `SpecialEnterMap`/`PrepareForSpecialWarp`
+      warp seam (confirm S9 wired it or leave honestly stubbed).
 - [ ] **Status screen (Stage 4) remainder** (from archived `docs/plans/pokemon_behavior.md`):
       mon front-pic 7×7 tilemap-block placement on the status canvas (VRAM load
       works); cry (audio HAL, Phase 3); wire START-menu party **STATS** entry
