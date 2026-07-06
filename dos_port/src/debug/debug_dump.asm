@@ -113,6 +113,12 @@ extern StatusScreen2
 %endif
 global RunStatusScreenTest
 %endif
+%ifdef DEBUG_AUDIO
+%include "assets/audio_constants.inc"
+extern PlayMusic
+extern DelayFrame
+global RunAudioTest
+%endif
 
 global DebugDumpMemory
 global DumpBackbuffer
@@ -198,6 +204,23 @@ windows:
     dd 0xD1E0
     dd 0xD1E0
     dd 0xD1E0
+%elifdef DEBUG_AUDIO
+; Audio-engine gate: the whole engine RAM block + the virtual APU after 120
+; ticks of Pallet Town BGM. Expected (music id $BA on CHAN1-3, tempo 160):
+;   win1 $C026-2D = $BA,$BA,$BA,0,...   (wChannelSoundIDs)
+;        $C006-0B = 3 in-blob LE pointers in $4000-$7FFF (command pointers)
+;   win4 $C0C6 note speeds = 12; $C0E8/E9 wMusicTempo = $00,$A0 (big-endian)
+;   win6 $FF10-26 nonzero pulse regs; $FF24 rAUDVOL = $77; $FF25 panning
+windows:
+    dd 0xC000    ; wSoundID/panning/vol, wChannelCommandPointers, ReturnAddrs, SoundIDs, Flags1/2
+    dd 0xC040    ; duty patterns, vibrato arrays, freq low bytes, reload values
+    dd 0xC080    ; pitch-slide arrays
+    dd 0xC0B0    ; note delays, loop counters, speeds, octaves, volumes, tempos, ids, banks
+    dd 0xC0F0    ; frequency/tempo modifiers
+    dd 0xFF00    ; virtual APU: rAUD10-26 ($FF10-26) + wave RAM ($FF30-3F)
+    dd 0xCFC0    ; fade block ($CFC6-C8) + wLastMusicSoundID ($CFC9)
+    dd 0xC000    ; repeat snapshot (same tick, sanity)
+    dd 0xFF00    ; repeat snapshot
 %elifdef DEBUG_BATTLE
 windows:
     dd 0xC468    ; W_TILEMAP row 5 (enemy HP-bar tile IDs, cols 12-20)
@@ -265,6 +288,30 @@ RunCalcStatsTest:
     mov esi, 0xD1F0
     mov edx, 0xD210
     call CalcStats
+    jmp DebugDumpMemory                     ; writes DUMP.BIN, exits
+%endif
+
+%ifdef DEBUG_AUDIO
+; ---------------------------------------------------------------------------
+; RunAudioTest — start Pallet Town BGM through the real gateway (PlayMusic →
+; PlaySound → Audio1_PlaySound), run 120 DelayFrame ticks (~2 s: the
+; interpreter executes tempo/volume/duty_cycle/note_type and a few dozen
+; notes across 3 music channels, writing the virtual APU each note), then
+; dump the audio RAM + virtual APU windows to DUMP.BIN. Verifies the
+; translated engine executes real bytecode inside the real binary before any
+; device shim exists. Never returns. In: EBP = GB memory base.
+; ---------------------------------------------------------------------------
+RunAudioTest:
+    mov bl, AUDIO_BANK_1                    ; c = BANK(Music_PalletTown) = $02
+    mov al, MUSIC_PALLET_TOWN
+    call PlayMusic
+    mov edi, 120
+.tickLoop:
+    push edi
+    call DelayFrame                         ; runs audio_tick each frame
+    pop edi
+    dec edi
+    jnz .tickLoop
     jmp DebugDumpMemory                     ; writes DUMP.BIN, exits
 %endif
 

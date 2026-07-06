@@ -357,10 +357,16 @@ the two-model workflow (Gemini distills, Claude writes the skill files).
         `CryData` already; stub in pokedex.asm), `PlayTrainerMusic`
         (home/trainers.asm), `StopMusic` (home/overworld.asm), real
         `StopAllSounds` (ret-stub in init.asm).
-  - `[ ]` Audio tick hook in `DelayFrame` (order per pret home/vblank.asm:
+  - `[x]` Audio tick hook in `DelayFrame` (order per pret home/vblank.asm:
         `FadeOutAudio` → `Music_DoLowHealthAlarm` → `Audio1_UpdateMusic` →
         shim pass); `audio_init` (sets `g_audio_engine_online`)/`audio_shutdown`
-        in `boot/entry.asm`.
+        in `boot/entry.asm` — `src/audio/audio_hal.asm`; real `StopAllSounds`
+        in init.asm (pret home/init.asm body). **Engine verified live** via the
+        new `DEBUG_AUDIO` gate: 120 ticks of Pallet Town BGM through the real
+        gateway produce byte-correct engine RAM + virtual APU state (ids $BA on
+        CHAN1-3, tempo $00A0, note speeds 12, duty $80, envelopes matching
+        channel volumes, NRx4 restart bits held for the shim, wave RAM loaded,
+        rAUDTERM $77 from the mono panning row).
   - `[ ]` `opl_shim` + `gen_opl_patches.py`; stereo via rAUDTERM; `/SFXOVERLAP` toggle.
   - `[ ]` Detection/config: `BLASTER` env parse, DSP `E1h` version, OPL2/3 probe,
         cmdline flags.

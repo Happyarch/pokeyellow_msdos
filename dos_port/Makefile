@@ -161,6 +161,7 @@ SAVE_SRCS := \
 AUDIO_SRCS := \
     src/data/audio_data.asm \
     src/home/audio.asm \
+    src/audio/audio_hal.asm \
     src/audio/engine_1.asm \
     src/audio/engine_2.asm \
     src/audio/engine_3.asm \
@@ -335,6 +336,14 @@ endif
 ifdef DEBUG_NPC_WALK
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_NPC_WALK
+NASMFLAGS += -D SKIP_TITLE
+endif
+# Audio-engine gate: start Pallet Town BGM through the real gateway at boot,
+# tick the engine 120 frames, dump audio RAM + virtual APU to DUMP.BIN, exit.
+# make DEBUG_AUDIO=1
+ifdef DEBUG_AUDIO
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_AUDIO
 NASMFLAGS += -D SKIP_TITLE
 endif
 # CalcStats gate: compute known Bulbasaur stats at boot, dump DUMP.BIN, exit.
@@ -849,7 +858,8 @@ src/data/audio_data.o: assets/audio_rom.inc assets/cry_data.inc
 src/home/audio.o src/audio/engine_1.o src/audio/engine_2.o \
 src/audio/engine_3.o src/audio/engine_4.o src/audio/low_health_alarm.o \
 src/audio/play_battle_music.o src/audio/pokedex_rating_sfx.o \
-src/audio/poke_flute.o src/audio/alternate_tempo.o: assets/audio_constants.inc
+src/audio/poke_flute.o src/audio/alternate_tempo.o \
+src/init/init.o: assets/audio_constants.inc
 
 # GB character map in the unicode_converter's format (single-char → byte), for
 # the converter submodule + gb_text.py. Generated from constants/charmap.asm.

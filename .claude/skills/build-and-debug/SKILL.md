@@ -230,7 +230,11 @@ plus the menu gates: `DEBUG_STARTMENU` (seeds the leaked
 `hAutoBGTransferEnabled=1` state — the permanent OW-A.13 regression repro),
 `DEBUG_BAGMENU` (seeds `text_row_stride=40` to mirror the live START→ITEM
 entry; add `DEBUG_BAGMENU_EMPTY=1` for the empty-inventory worst case),
-`DEBUG_PARTYMENU`, `DEBUG_G1` (pokédex CONTENTS), `DEBUG_TEXTBOXID=<id>`.
+`DEBUG_PARTYMENU`, `DEBUG_G1` (pokédex CONTENTS), `DEBUG_TEXTBOXID=<id>`;
+and the audio-engine gate `DEBUG_AUDIO` (starts Pallet Town BGM via the real
+gateway at boot, ticks the engine 120 frames, dumps audio RAM + virtual APU
+windows to DUMP.BIN — expected values are commented on its `windows:` table
+in `src/debug/debug_dump.asm`).
 This is how the 2026-06-15 viewport diagnosis, the 2026-06-16 out-of-map clamp
 fix, and the 2026-07-06 OW-A.13 menu-corruption A/Bs were made. Prefer this to
 screenshots for ground truth.

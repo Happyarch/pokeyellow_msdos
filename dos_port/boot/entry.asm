@@ -29,7 +29,12 @@ extern pit_init          ; boot/timing.asm
 extern pit_restore       ; boot/timing.asm
 extern joypad_init       ; src/input/joypad.asm
 extern joypad_restore    ; src/input/joypad.asm
+extern audio_init        ; src/audio/audio_hal.asm
+extern audio_shutdown    ; src/audio/audio_hal.asm
 extern Init              ; src/init/init.asm — power-on init
+%ifdef DEBUG_AUDIO
+extern RunAudioTest      ; src/debug/debug_dump.asm — audio-engine gate
+%endif
 %ifdef DEBUG_CALCSTATS
 extern RunCalcStatsTest  ; src/debug/debug_dump.asm — Pokémon CalcStats gate
 %endif
@@ -87,6 +92,11 @@ start:
     call video_init          ; set VGA mode 13h
     call pit_init            ; reprogram PIT to ~60 Hz, install tick ISR
     call joypad_init         ; hook IRQ 1 (keyboard) → GB joypad state
+    call audio_init          ; enable the engine + GB power-on audio state
+
+%ifdef DEBUG_AUDIO
+    call RunAudioTest        ; play Pallet Town BGM 120 ticks, dump, exit (never returns)
+%endif
 
 %ifdef DEBUG_CALCSTATS
     call RunCalcStatsTest    ; compute known stats, dump DUMP.BIN, exit (never returns)
@@ -315,6 +325,7 @@ find_token:
 ; ---------------------------------------------------------------------------
 cleanup:
     push eax
+    call audio_shutdown
     call joypad_restore
     call pit_restore
     mov ax, 0x0003
