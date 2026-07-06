@@ -887,6 +887,15 @@ assets/mon_pics.inc: ../data/pokemon/base_stats.asm tools/gen_mon_pics.py
 
 src/data/mon_pics.o: assets/mon_pics.inc
 
+# Audio engine data: four GB audio-bank images (headers + music/sfx bytecode
+# at true GB addresses), positional sound-ID constants, cry-modifier table.
+# Generated from the pret audio sources; byte-exact vs the reference ROM
+# (verify with tools/audio/test_audio_data.py — needs a golden pokeyellow.gbc).
+assets/audio_rom.inc assets/audio_constants.inc assets/cry_data.inc: \
+		tools/audio/gen_audio_data.py tools/audio/pret_audio.py \
+		../audio.asm ../constants/music_constants.asm ../data/pokemon/cries.asm
+	python3 tools/audio/gen_audio_data.py
+
 # Gym-leader face + badge tiles (2bpp passthrough of gfx/trainer_card/badges.2bpp)
 # for the trainer-card status screen (draw_badges.asm, menus S6 package B).
 assets/badge_tiles.inc: ../gfx/trainer_card/badges.2bpp \
@@ -1090,7 +1099,8 @@ assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_
         assets/trainer_card_tiles.inc assets/emotes.inc \
         assets/alphabets.inc assets/dex_entries.inc assets/sprite_sets.inc \
         assets/sprite_sheet_pointers.inc assets/pokedex_tiles.inc \
-        assets/mon_pics.inc
+        assets/mon_pics.inc \
+        assets/audio_rom.inc assets/audio_constants.inc assets/cry_data.inc
 
 # Force-regenerate every generated asset, ignoring timestamps. The asset rules
 # are timestamp-gated (an .inc newer than its generator/source is skipped), which

@@ -259,9 +259,16 @@ hand-owned `.mid` files (the `assets/map_overrides/` precedent).
   - `[x]` Pull OPL3 (YMF262) register reference into `docs/sound/` —
         `docs/sound/OPL3_YMF262.md` (Arnost guide + ModdingWiki detection/BLASTER
         sections; raw HTML mirrored in `docs/references/moddingwiki/`).
-  - `[ ]` `tools/audio/pret_audio.py` parser lib + IR + timing evaluator.
-  - `[ ]` `gen_audio_data.py` + ROM byte-compare test; `assets/audio_*.inc` wired
-        into `make assets`.
+  - `[x]` `tools/audio/pret_audio.py` parser lib + IR + timing evaluator —
+        byte-exact: 45,174 bytes across banks 02/08/1F/20, 0 mismatches vs the
+        golden ROM (build a pristine merge-base worktree for it; repo root no
+        longer links as a GB ROM due to the port's WRAM enlargements).
+  - `[x]` `gen_audio_data.py` + ROM byte-compare test (`test_audio_data.py`:
+        sha1 + bank images + section extents + CryData + cross-bank SFX ID
+        parity, all green); emits `assets/audio_rom.inc` (4×16 KB bank images
+        at true GB addresses), `audio_constants.inc` (positional IDs +
+        boundaries + vendored table addresses), `cry_data.inc`; wired into
+        `make assets`.
   - `[ ]` Translate `home/audio.asm` gateway + engine (`Audio1_UpdateMusic`, all
         command handlers, `AudioN_PlaySound` wrappers, cry modifiers, fades,
         low-health alarm), writing to the virtual APU block.
