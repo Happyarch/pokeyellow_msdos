@@ -148,6 +148,17 @@ commit but too specific to belong in TODO.md.
 - Start a new work item by creating a new `docs/current_plan_<topic>.md`.
 
 **Currently active plans:**
+- `docs/current_plan_fidelity_harness.md` — **anti-pret-divergence fidelity harness**:
+  mGBA golden differential testing (vendored-submodule mGBA + Lua scenario/dump
+  library + port-side `GBSTATE.BIN` dump + tile-ID differ + mgba-mcp bridge) and
+  static tooling (per-label translation DB in `translation.db` + `label_status`,
+  `lint_pret_labels`, `faithdiff`, review-gate skill), plus the dosbox-x-mcp
+  `quit warning = false` unattended-quit fix. Planned 2026-07-06, not started.
+- `docs/current_plan_audio.md` — **audio subsystem (Phase 3)**, architecture settled
+  2026-07-05: faithful pret engine translation driving a virtual APU + per-device
+  shims (OPL3/SB Pro floor, Tandy, PC speaker), MT-32-flagship MIDI path via
+  precompiled streams, Pikachu PCM via DSP direct mode / speaker PWM. Phases A–D;
+  Phase A (engine + OPL) not started.
 - `docs/current_plan_script_engine.md` — gen-1 script system (event-gated dialog,
   per-map `_Script`/`text_asm`). In progress (Stage 6 stub conventions; Oak walk-up
   cutscene + `_Script` state machines + `DisplayTextID` special cases deferred).
