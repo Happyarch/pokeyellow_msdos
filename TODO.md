@@ -292,8 +292,9 @@ Prioritized task list. Check off items as they complete; add new items with phas
       verification). Not a menu-code bug. See memory `menu-corruption-vram-tileslots`.
 - [ ] **Menus S10 non-VRAM tails** (from archived `docs/plans/menus.md`): the
       window-compositor gap on full-takeover screens (naming / main_menu /
-      pokédex-entry interior content); `LoadPokedexTilePatterns` real dex tileset
-      (currently a no-op → wrong pokédex tiles); interactive nav/prompt sweeps
+      pokédex-entry interior content); ~~`LoadPokedexTilePatterns` real dex
+      tileset~~ (DONE 2026-07-06: `gen_pokedex_tiles.py` → faithful loader,
+      CONTENTS + DATA verified via DEBUG_G1/G2); interactive nav/prompt sweeps
       (pokédex list scroll + side-menu, `<PAGE>` flavor wait, link cup-select +
       no-partner timeout message, naming grid); cable-club `SpecialEnterMap`/
       `PrepareForSpecialWarp` warp seam (confirm S9 wired it or leave honestly stubbed).

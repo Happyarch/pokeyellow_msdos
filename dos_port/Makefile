@@ -896,6 +896,12 @@ assets/trainer_card_tiles.inc: ../gfx/trainer_card/trainer_info.2bpp \
 
 src/engine/menus/trainer_card.o: assets/trainer_card_tiles.inc assets/ui_layout_menus.inc
 
+# Pokédex interface tiles (2bpp passthrough of gfx/pokedex/pokedex.2bpp + the
+# plain pokéball tile from gfx/battle/balls.2bpp) for LoadPokedexTilePatterns.
+assets/pokedex_tiles.inc: ../gfx/pokedex/pokedex.2bpp ../gfx/battle/balls.2bpp \
+                          tools/gen_pokedex_tiles.py
+	python3 tools/gen_pokedex_tiles.py
+
 # Start menu checks EVENT_GOT_POKEDEX via events.inc → event_constants.inc;
 # DrawStartMenu %includes the generated menu_strings.inc labels and the
 # UI_START_MENU_* equates; start_sub_menus needs the UI_USE_TOSS_* equates.
@@ -907,7 +913,7 @@ src/engine/menus/pc.o: assets/ui_layout_menus.inc assets/event_constants.inc
 src/engine/items/item_effects.o: assets/ui_layout_menus.inc
 src/engine/menus/main_menu.o src/engine/menus/save.o: assets/ui_layout_menus.inc
 src/engine/menus/naming_screen.o: assets/ui_layout_menus.inc assets/alphabets.inc
-src/engine/menus/pokedex.o: assets/ui_layout_menus.inc
+src/engine/menus/pokedex.o: assets/ui_layout_menus.inc assets/pokedex_tiles.inc
 src/engine/menus/pokedex_entry.o: assets/ui_layout_menus.inc assets/dex_entries.inc
 src/engine/menus/link_menu.o: assets/ui_layout_menus.inc
 src/engine/menus/link_cups.o: assets/dex_entries.inc
@@ -1059,7 +1065,7 @@ assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_
         assets/map_border_overrides.inc assets/badge_tiles.inc \
         assets/trainer_card_tiles.inc assets/emotes.inc \
         assets/alphabets.inc assets/dex_entries.inc assets/sprite_sets.inc \
-        assets/sprite_sheet_pointers.inc
+        assets/sprite_sheet_pointers.inc assets/pokedex_tiles.inc
 
 # Force-regenerate every generated asset, ignoring timestamps. The asset rules
 # are timestamp-gated (an .inc newer than its generator/source is skipped), which

@@ -69,6 +69,8 @@ extern GBPalWhiteOutWithDelay3       ; home/fade.asm
 extern GBPalNormal                   ; init/init.asm
 extern RunPaletteCommand             ; engine/battle/faint_switch.asm — palette HAL (no-op stub)
 extern ReloadMapData                 ; home/reload_tiles.asm
+extern LoadHpBarAndStatusTilePatterns ; gfx/load_font.asm — pret loader's 1st step
+extern g_tilecache_dirty             ; ppu.asm — set after any VRAM tile write
 extern ClearScreen                   ; movie/title.asm
 extern UpdateSprites                 ; engine/overworld/movement.asm
 extern Delay3                        ; video/frame.asm — 3× DelayFrame
@@ -116,6 +118,10 @@ section .data
 ; (PokedexToIndex walks the existing global IndexToPokedex table from
 ; base_stats.inc — byte-identical to pret's PokedexOrder — so no separate
 ; dex-order table is emitted here.)
+
+; Pokédex interface tileset (PokedexTileGraphics 18 tiles + PokeballTileGraphics
+; 1 tile) — generated passthrough of gfx/pokedex/pokedex.2bpp + balls.2bpp.
+%include "assets/pokedex_tiles.inc"
 
 ; pret ref: engine/menus/pokedex.asm text tables (charmap: 'A'=$80, ' '=$7F,
 ; '@'=$50, '─'=$7A, <NEXT>=$4E). Tier-2 hand-authored charmap bytes.
@@ -707,14 +713,35 @@ pdex_clear_list_area:
     ret
 
 ; ===========================================================================
-; LoadPokedexTilePatterns — TODO-HW: gfx HAL. Loads the pokédex interface
-; tileset (box/line/pokeball + ′″ glyphs $60-$7A from gfx/pokedex/pokedex.png)
-; into VRAM. No pokédex tileset asset is ported yet (font/box tiles cover the
-; text; the special tiles render with whatever occupies $60-$7A — S10 gfx work).
-; Shared no-op stub for both G1 (ShowPokedexMenu.setUpGraphics) and G2
-; (ShowPokedexData). pret: engine/gfx/load_pokedex_tiles.asm:LoadPokedexTilePatterns.
+; LoadPokedexTilePatterns — load the pokédex interface tileset into VRAM.
+; pret: engine/gfx/load_pokedex_tiles.asm:LoadPokedexTilePatterns —
+;   1. LoadHpBarAndStatusTilePatterns (fills $62-$7F; the dex tiles then
+;      overwrite $60-$71, exactly as on the GB),
+;   2. PokedexTileGraphics (18 tiles: frame/line tiles + the ′″ height
+;      glyphs) → vChars2 tile $60,
+;   3. PokeballTileGraphics (1 tile) → vChars2 tile $72 (caught marker).
+; Shared by G1 (ShowPokedexMenu.setUpGraphics) and G2 (pokedex_entry).
+; NB: this clobbers the box tiles $79-$7E via step 1 — the dex exit path
+; (ShowPokedexMenu.exitPokedex → ReloadMapData) reloads LoadTextBoxTilePatterns
+; + the map tileset, faithfully to pret. All registers preserved.
 ; ===========================================================================
 LoadPokedexTilePatterns:
+    call LoadHpBarAndStatusTilePatterns
+    mov byte [g_tilecache_dirty], 1     ; VRAM tile data changes → rebuild cache
+    push ecx
+    push esi
+    push edi
+    mov esi, PokedexTileGraphics
+    lea edi, [ebp + GB_VCHARS2 + 0x60 * TILE_SIZE]
+    mov ecx, POKEDEX_TILE_GFX_SIZE / 4
+    rep movsd
+    mov esi, PokeballTileGraphics
+    lea edi, [ebp + GB_VCHARS2 + 0x72 * TILE_SIZE]
+    mov ecx, POKEBALL_TILE_SIZE / 4
+    rep movsd
+    pop edi
+    pop esi
+    pop ecx
     ret
 
 ; ===========================================================================
@@ -736,6 +763,10 @@ RunPokedexTest:
     mov dword [menu_item_step], 2 * GBSCR_W
     or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
+    call ClearScreen                ; blank the scratch (as ShowPokedexMenu does —
+                                    ; without it the boot-leftover map bytes show
+                                    ; in the dex margins, a harness-only artifact)
+    call LoadPokedexTilePatterns    ; real dex tileset (as ShowPokedexMenu.setUpGraphics)
     call ClearSprites
     mov byte [ebp + W_UPDATE_SPRITES_ENABLED], 0
     ; zero the owned+seen bitfields (contiguous 0xD2F6..0xD31C), then seed bits
