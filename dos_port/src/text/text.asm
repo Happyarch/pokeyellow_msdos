@@ -194,6 +194,18 @@ text_arrow_pos:   dd 0
 ; arrow in those cases). manual_text_scroll resets it to 0 before it returns.
 mts_hide_arrow:   db 0
 
+; Pokedex flavor-text mode. When nonzero, the dialog-window helpers
+; (sync_dialog_window / manual_text_scroll) mirror the FULL 20×18 pokédex page
+; (rows 0-17 → GB_TILEMAP1) and keep the page's own full-screen window, instead
+; of the dialog-box copy (rows 12-17 → window 0-5) + bottom-dialog window swap.
+; Without this the pokédex DATA page's flavor print hijacks the window into a
+; 6-row dialog box at the bottom — the "only bottom half renders" bug. The
+; pokédex flavor routine sets it around its TextCommandProcessor call.
+global g_dex_flavor_active
+g_dex_flavor_active: db 0
+; ▼ advance arrow position for the full-page pokédex window: pret ldcoord_a 18,16
+POKEDEX_ARROW_TILEMAP_OFFSET equ 16 * TILEMAP_W + 18
+
 ; ---------------------------------------------------------------------------
 ; .text
 ; ---------------------------------------------------------------------------
@@ -353,6 +365,8 @@ manual_text_scroll:
     movzx eax, byte [ebp + H_DOWN_ARROW_COUNT2]
     push eax
     pushad
+    cmp byte [g_dex_flavor_active], 0
+    jne .dex_flavor_page                    ; pokédex: full page, no window hijack
     ; Copy wTileMap rows 12-17 to GB_TILEMAP1 rows 0-5.
     ; wTileMap rows: 20 tiles wide (SCREEN_W_TILES).
     ; GB_TILEMAP1 rows: 32 tiles wide (TILEMAP_W) — pad cols 20-31 with TILE_SPC.
@@ -416,6 +430,36 @@ manual_text_scroll:
     mov byte [mts_hide_arrow], 0        ; M1.2: re-arm arrow for the next caller
     ret
 
+; --- pokédex flavor page-break (<PAGE>): full-page window, no dialog hijack ---
+.dex_flavor_page:
+    call dex_flavor_full_mirror          ; show the current full page in the window
+    ; ▼ at the pokédex page position (row 16, col 18), written straight into the
+    ; window source (the full-page mirror above already ran, so it survives).
+    mov byte [ebp + GB_TILEMAP1 + POKEDEX_ARROW_TILEMAP_OFFSET], CHAR_DOWN_ARROW
+%ifdef DEBUG_G2
+    ; verification hook: dump the full page at the <PAGE> break (top half + flavor
+    ; page 1 intact) — proves the fix vs. the old bottom-strip hijack. Never returns.
+    extern DumpBackbuffer
+    call DelayFrame
+    call DumpBackbuffer
+%endif
+.dfp_release:                            ; wait for A/B release (avoid sticky input)
+    call DelayFrame
+    test byte [ebp + H_JOY_HELD], PAD_A | PAD_B
+    jnz .dfp_release
+.dfp_press:                              ; wait for a fresh A/B press
+    call DelayFrame
+    test byte [ebp + H_JOY_HELD], PAD_A | PAD_B
+    jz .dfp_press
+    mov byte [ebp + GB_TILEMAP1 + POKEDEX_ARROW_TILEMAP_OFFSET], TILE_SPC
+    popad
+    pop eax
+    mov [ebp + H_DOWN_ARROW_COUNT2], al
+    pop eax
+    mov [ebp + H_DOWN_ARROW_COUNT1], al
+    mov byte [mts_hide_arrow], 0
+    ret
+
 ; ---------------------------------------------------------------------------
 ; scroll_text_up — scroll tile rows 14-16 up one row and clear row 16 interior.
 ;
@@ -472,6 +516,8 @@ sync_dialog_window:
     movzx eax, byte [ebp + H_WY]
     cmp al, RENDER_H
     je .skip
+    cmp byte [g_dex_flavor_active], 0
+    jne .full_page                       ; pokédex flavor: mirror the whole page
     push ecx
     push esi
     push edi
@@ -495,6 +541,45 @@ sync_dialog_window:
     pop esi
     pop ecx
 .skip:
+    pop eax
+    ret
+.full_page:
+    call dex_flavor_full_mirror
+    pop eax
+    ret
+
+; ---------------------------------------------------------------------------
+; dex_flavor_full_mirror — copy the full 20×18 stride-20 scratch (rows 0-17)
+; into GB_TILEMAP1 rows 0-17 (32-tile stride, cols 20-31 padded with TILE_SPC).
+; The pokédex DATA page's window shows GB_TILEMAP1 rows 0-17 full-screen, so this
+; is the pokédex analog of sync_dialog_window's dialog copy. All regs preserved.
+; ---------------------------------------------------------------------------
+dex_flavor_full_mirror:
+    push eax
+    push ebx
+    push ecx
+    push esi
+    push edi
+    xor ebx, ebx                         ; row 0..17
+.dffm_row:
+    mov esi, ebx
+    imul esi, esi, SCREEN_W_TILES
+    lea esi, [ebp + esi + W_TILEMAP]
+    mov edi, ebx
+    shl edi, 5                           ; ×32
+    lea edi, [ebp + edi + GB_TILEMAP1]
+    mov ecx, SCREEN_W_TILES              ; 20 visible tiles
+    rep movsb
+    mov al, TILE_SPC
+    mov ecx, TILEMAP_W - SCREEN_W_TILES  ; pad cols 20-31
+    rep stosb
+    inc ebx
+    cmp ebx, 18
+    jb .dffm_row
+    pop edi
+    pop esi
+    pop ecx
+    pop ebx
     pop eax
     ret
 

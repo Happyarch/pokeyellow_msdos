@@ -82,6 +82,7 @@ extern LoadPokedexTilePatterns   ; gfx (dex $60-$6f tileset + font) — root wir
 ; --- window compositor --------------------------------------------------------
 extern set_single_window         ; ppu/ppu.asm
 extern g_bg_whiteout             ; ppu/ppu.asm
+extern g_dex_flavor_active       ; text/text.asm — full-page window mode for flavor
 extern text_row_stride           ; text/text.asm — active W_TILEMAP row stride
 
 %ifdef DEBUG_G2
@@ -217,6 +218,22 @@ ShowPokedexDataInternal:
     jnc .waitForButtonPress             ; call c, Pokedex_PrintFlavorTextAtRow11
     call Pokedex_PrintFlavorTextAtRow11
 .waitForButtonPress:
+%ifdef DEBUG_G2
+    ; live-path FRAME.BIN gate. For an entry WITHOUT a <PAGE> break this dumps the
+    ; full composited DATA page here at the wait. RHYDON (the seeded mon) HAS a
+    ; <PAGE>, so its dump fires earlier at the page break (manual_text_scroll's
+    ; DEBUG_G2 hook) and this line is not reached — both paths capture the page.
+    call DelayFrame
+    call DumpBackbuffer
+%endif
+    ; DEVIATION(input): pret's JoypadLowSensitivity opens with `call Joypad`
+    ; (a fresh hardware read each iteration), so pret's busy loop needs no
+    ; DelayFrame. The port refreshes H_JOY_HELD/H_JOY_PRESSED only in
+    ; joypad_update, which runs once per DelayFrame — so a DelayFrame-less spin
+    ; here never sees the button (can't back out) AND freezes the software PPU
+    ; mid-flavor-reveal (only the last-presented rows show). One DelayFrame per
+    ; iteration fixes both, matching the options/town-map input loops.
+    call DelayFrame
     call JoypadLowSensitivity
     mov al, [ebp + H_JOY5]               ; ldh a,[hJoy5]
     and al, PAD_A | PAD_B
@@ -427,7 +444,13 @@ Pokedex_PrintFlavorTextAtBC:
     ; blob is flat .data, so the flavor stream is staged into GB space first.
     call dex_stage_flavor                 ; [dex_flavor_ptr] → wDexFlavorBuf; ESI=GB off
     mov byte [ebp + H_CLEAR_LETTER_PRINTING_DELAY_FLAGS], 0x02  ; ld a,%10 (clear delay)
+    ; Pokédex flavor mode: the text engine's dialog helpers (sync_dialog_window
+    ; per char, manual_text_scroll at the <PAGE> break) must mirror the full
+    ; 20×18 page and keep the pokédex window — NOT do the dialog-box copy +
+    ; bottom-window swap (which showed only the bottom 6 rows).
+    mov byte [g_dex_flavor_active], 1
     call TextCommandProcessor             ; ESI=stream, EBX=cursor
+    mov byte [g_dex_flavor_active], 0
     mov byte [ebp + H_CLEAR_LETTER_PRINTING_DELAY_FLAGS], 0     ; xor a
     call dex_mirror                       ; port: push the finished flavor to the window
     ret
@@ -582,14 +605,15 @@ RunPokedexEntryTest:
     ; font + dex tileset ($60-$6f) into VRAM
     or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
-    call LoadPokedexTilePatterns
+    call LoadPokedexTilePatterns          ; dex tileset (CONTENTS setup did this live)
     call ClearSprites
     mov byte [ebp + W_UPDATE_SPRITES_ENABLED], 0
-    call DrawDexEntryOnScreen             ; page + pic + window (CF = owned)
-    call DelayFrame
-    call DelayFrame
-    call DelayFrame
-    call DumpBackbuffer                    ; writes FRAME.BIN + exits
+    ; Drive the REAL live entry: the CONTENTS side-menu DATA choice calls
+    ; ShowPokedexDataInternal directly (pokedex.asm .choseData), NOT
+    ; ShowPokedexData. Its .waitForButtonPress self-dumps FRAME.BIN under
+    ; DEBUG_G2, so this exercises the exact path the user hits — border + pic +
+    ; HT/WT + flavor + the wait-loop present.
+    call ShowPokedexDataInternal
 .hang:
     jmp .hang
 %endif
