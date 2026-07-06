@@ -1131,7 +1131,19 @@ image: $(TARGET) $(DPMI_HOST)
 clean-image:
 	rm -f $(IMG)
 
-%.o: %.asm
+# --- Rebuild-on-flag-change guard --------------------------------------------
+# GNU make tracks each .o only against its .asm, NOT against the -D flags in
+# NASMFLAGS. Switching build configs without `make clean` (e.g. a normal build
+# then `make DEBUG_STATUS=1`, or `dos_port/run DEBUG_*=1`) therefore silently
+# reuses .o compiled with the OLD flags — an inconsistent EXE that boots the
+# wrong path or crashes ("never trust the timestamps on objects"). Stamp the
+# current NASMFLAGS into a file, rewritten only when it actually changes, and
+# make every .o depend on it so any flag change forces a full rebuild.
+NASMFLAGS_STAMP := .nasmflags.stamp
+$(file >$(NASMFLAGS_STAMP).tmp,$(NASMFLAGS))
+$(shell cmp -s $(NASMFLAGS_STAMP).tmp $(NASMFLAGS_STAMP) || cp $(NASMFLAGS_STAMP).tmp $(NASMFLAGS_STAMP); rm -f $(NASMFLAGS_STAMP).tmp)
+
+%.o: %.asm $(NASMFLAGS_STAMP)
 	$(NASM) $(NASMFLAGS) -o $@ $<
 
 # Assemble-only check (no link): useful for syntax verification
@@ -1143,4 +1155,4 @@ check:
 	@echo "All files assembled successfully."
 
 clean:
-	rm -f $(ALL_OBJS) $(TARGET)
+	rm -f $(ALL_OBJS) $(TARGET) $(NASMFLAGS_STAMP)

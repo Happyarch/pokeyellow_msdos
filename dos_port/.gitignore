@@ -11,3 +11,4 @@ tools/translation.db-shm
 tools/translation.db-journal
 scratch/
 POKEMON.DSV
+.nasmflags.stamp
