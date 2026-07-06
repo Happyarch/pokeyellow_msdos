@@ -110,14 +110,28 @@ SCAFFOLD above; `GetTileInFrontOfPlayer` is a bespoke *subset* of pret's
 
 ---
 
-## Cross-cutting defect this reimpl must resolve — VRAM tile-slot management (2026-07-04)
+## Cross-cutting defect — menu box-draw geometry + window compositor (was: "VRAM tile-slot management")
+
+> **CORRECTION (2026-07-05, OW-A.2 P4):** the VRAM tile-slot hypothesis below is
+> **DISPROVEN.** Ground-truth check: the box/border/space tiles `$79–$7F` are
+> **byte-identical** in the text-box set (`gfx/font/font_extra.2bpp`, loaded at vChars2
+> `$60`) and the HP-bar set (`gfx/font/font_battle_extra.2bpp`, loaded at `$62`), so
+> `LoadHpBarAndStatusTilePatterns` overwrites those tiles with the SAME bytes — it never
+> corrupts a border or a blank. Rendered menus confirm the borders are real border tiles
+> (not stale HP-bar glyphs), and the corruption triggers **immediately** on the first menu
+> — no battle / tile-clobber required. So this is NOT a sprite/VRAM tile-loader problem;
+> OW-A.2's `wFontLoaded` reload was never going to fix it. The real defect is **menu-engine
+> box-draw geometry** (mangled bag borders, missing options-menu bottom border) + the
+> **canvas↔window compositor** (START menu "turns to grass" after a submenu round-trip =
+> the menu window isn't re-composited, so the overworld BG shows through). Refiled as
+> **TICKET OW-A.13**. The original (incorrect) analysis is kept below for the record.
 
 **Symptom (menus-port branch):** every menu that draws a `TextBoxBorder` (START,
 options, bag/items, trainer card, …) renders with corrupted borders / "grass"
 blanks / missing bottom rows in the *live* build, while each screen's `DEBUG_*`
-harness renders it perfectly. Root cause is entirely VRAM tile-slot management —
-the same early-bespoke tile handling this reimpl replaces — so it is recorded here
-rather than fixed piecemeal in the menu code.
+harness renders it perfectly. ~~Root cause is entirely VRAM tile-slot management~~
+(**disproven — see correction above**) — the same early-bespoke tile handling this
+reimpl replaces — so it is recorded here rather than fixed piecemeal in the menu code.
 
 Two shared VRAM regions get clobbered and are not consistently reloaded:
 
@@ -199,7 +213,7 @@ interactively with the user.
   migration to gb_memmap.inc).
 - Exit: pret tail present; alignment omission fixed; translation_log entry (root). ✓
 
-**TICKET OW-A.2: map_sprites.asm faithful rewrite** `[SOLO #4]` `[IN PROGRESS 2026-07-05]`
+**TICKET OW-A.2: map_sprites.asm faithful rewrite** `[SOLO #4]` — **DONE 2026-07-05** (see Exit below)
 - Pret: `engine/overworld/map_sprites.asm` (15 routines) + `data/maps/sprite_sets.asm`
   + `data/sprites/sprites.asm` + **`home/overworld.asm:InitSprites`/`ZeroSpriteStateData`/
   `DisableRegularSprites`/`LoadSprite` (:2137-2266)**.
@@ -314,12 +328,28 @@ interactively with the user.
     `GetSpriteVRAMAddress`+`SpriteVRAMAddresses`, `ReadSpriteSheetData`,
     `LoadMapSpritesImageBaseOffset`, `GetSpriteImageBaseOffset`. `CopyVideoDataAlternate`
     → `; DIVERGENCE` (flat copy, per OW-A.1 asset-model precedent). Retire the fused bespoke.
-  - [ ] **P4 — verification:** 3 FRAME.BIN baselines byte-identical + user smoke; the
-    menu-corruption item (open a menu after party/battle → box tiles/letters clean).
+  - [x] **P4 — verification DONE 2026-07-05:** 3 FRAME.BIN baselines byte-identical
+    (BASELINE/TRANSITION/WALK_NORTH) across P3a/P3b/P3c; user live smoke passed (Pallet
+    Town + NPCs + dialog + start-menu round-trip render, all 4 walk dirs). The
+    **menu-corruption item did NOT resolve and is refiled** — investigation DISPROVED the
+    plan's VRAM tile-slot hypothesis (the box/space tiles `$79–$7F` are byte-identical in
+    the text-box set `font_extra.2bpp` and the HP-bar set `font_battle_extra.2bpp`, so
+    `LoadHpBarAndStatusTilePatterns` never actually corrupts a border/blank; the borders
+    render as real tiles). User-confirmed symptoms (grass-after-submenu, missing option-menu
+    bottom border, mangled bag borders, triggering IMMEDIATELY with no battle) are a
+    **menu-engine geometry + canvas↔window compositor** defect, a different subsystem from
+    this sprite tile loader. → **TICKET OW-A.13** (final round-off). See the corrected
+    cross-cutting note above.
 - **Baselines captured (HEAD aa128d2c):** BASELINE `b4e48c46`, TRANSITION `747d824c`,
   WALK_NORTH `58d005ce` (manifest in session scratchpad; BASELINE has the 2 Pallet Town NPCs).
-- Exit: 15 pret routine labels real (+ the 4 home object-loader routines); faithful WRAM
-  layout; NPC rendering regression-free.
+- **Exit: DONE 2026-07-05.** 15 pret map_sprites routine labels real (+ the 4 home
+  object-loader routines InitSprites/ZeroSpriteStateData/DisableRegularSprites/LoadSprite);
+  faithful sprite-set VRAM machinery + `wFontLoaded` upper-half reload; bespoke
+  InitMapSprites/FindOrAssignVramSlot/LoadNPCSpriteTiles retired; full-coverage
+  SpriteSheetPointerTable generated; NPC rendering regression-free (3 baselines
+  byte-identical + smoke). One tagged real-game-neutral divergence handed to OW-A.7
+  (`DisableRegularSprites` `$ff` seed). Commits: P1 962b4acb, P2 5a1ae792, P3a d637b09a,
+  P3b cc2a0d11, P3c d4a43413, P3c-doc 9a26d11a.
 
 **TICKET OW-A.3: label restoration / de-fold pass** `[Opus solo]` — **DONE 2026-07-05**
 - **SCOPE UPGRADE (user directive 2026-07-05):** promoted from "add alias labels" to **actually
@@ -1069,6 +1099,39 @@ does not exist" — it does, `src/home/copy2.asm`).
     gen_*.py, not hand-encoded here; no live caller needs them. `M72_OVERWORLD_TEXTSCRIPTS` left OFF
     (dispatch wired but its ultimate mart/PC-nurse handlers are still NI).
   </details>
+
+**TICKET OW-A.13: menu box-draw geometry + canvas↔window compositor fix** `[SOLO — final round-off]` `[OPEN, filed 2026-07-05]`
+- **Origin:** refiled from OW-A.2 P4 after the plan's "VRAM tile-slot management" root cause
+  for the live menu corruption was **DISPROVEN** (box/space tiles `$79–$7F` are byte-identical
+  across `font_extra.2bpp`/`font_battle_extra.2bpp`; the corruption triggers immediately with no
+  battle; borders render as real border tiles, not stale HP-bar glyphs). See the corrected
+  cross-cutting note near the top of this doc. **Technically its own subsystem (menu engine, not
+  the overworld sprite loader)** — filed here as the final item to round off the overworld
+  overhaul at the user's request (2026-07-05).
+- **User-confirmed symptoms (real build, 2026-07-05):**
+  1. **START menu "turns to grass" after entering+exiting ANY submenu** (party/bag/options/…) —
+     i.e. `RedisplayStartMenu` after a submenu round-trip: the menu window is not re-composited,
+     so the overworld BG (grass) shows through. → **canvas↔window compositor** (the submenu runs
+     the full-canvas render mode; the return to the windowed START menu doesn't restore the window
+     overlay). Suspects: `RedisplayStartMenu` (`home/start_menu.asm`) not re-showing the window
+     after the submenu's `RestoreScreenTilesAndReloadTilePatterns` / canvas mode; the
+     canvas→window bridge (`sm_canvas_mirror` / `set_single_window` / `hide_window` state).
+  2. **Options-menu bottom border missing** — box-draw geometry (height/bottom-row off by one, or
+     the bottom border row is drawn off the window clip).
+  3. **Bag/items box borders mangled** (fresh open, DEBUG_BAGMENU render confirms: item name field
+     too narrow — "MASTER BALL" truncated to "MASTER BAL" — quantity column crammed, stray tile
+     after names). Box width / column layout geometry.
+- **Explicitly out of scope (user, 2026-07-05):** the **Pokédex** is also corrupt but has a lot of
+  its own logic → tracked as a SEPARATE issue, not part of OW-A.13.
+- **NOT the cause (already ruled out this session):** VRAM tile-slot clobbering / sprite tile
+  loader / `wFontLoaded` reload (all verified correct in OW-A.2); the box/space tile data.
+- **Approach:** build per-menu DEBUG_* renders (DEBUG_STARTMENU / DEBUG_BAGMENU exist; add an
+  options render + a START→submenu→redisplay repro) as the ground-truth oracle, then fix the
+  box-geometry (bag/options) and the RedisplayStartMenu window re-composite. Menu engine files:
+  `home/start_menu.asm`, `engine/menus/*`, `home/window.asm`, `home/textbox.asm`, `text/text.asm`
+  (stride/geometry), the canvas↔window bridge in `ppu/ppu.asm` (`set_single_window`/`hide_window`).
+  Cross-ref memories: `menu-corruption-vram-tileslots` (mark superseded by this finding),
+  `menus-s4-realign-complete` (W_TILEMAP triple-duty + canvas→window bridge), `placestring-eax-flat-convention`.
 
 **wild_encounter_check.asm** — routines mostly FAITHFUL (`StepCountCheck`, `AnyPartyAlive`,
 `AllPokemonFainted`); `NewBattle` is documented SCAFFOLD + one UNFLAGGED omission (pret's
