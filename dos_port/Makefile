@@ -754,8 +754,15 @@ ALL_OBJS := $(ALL_SRCS:.asm=.o)
 # Targets
 # ---------------------------------------------------------------------------
 
-.PHONY: all clean clean-image image check assets regen
+.PHONY: all clean clean-image image check assets regen goldens
 .DEFAULT_GOAL := all
+
+# Regenerate the committed mGBA goldens (tests/goldens/) from the
+# sha1-verified ROM in the pinned pret worktree. See the fidelity plan +
+# tools/mgba_harness/make_goldens.sh for prerequisites (build_mgba.sh,
+# ../pokeyellow_msdos-pret-golden).
+goldens:
+	tools/mgba_harness/make_goldens.sh
 
 # Generate all tileset gfx/blocks/coll + map blk inc files.
 # Requires gfx/tilesets/*.2bpp, built by 'make' in the repo root.

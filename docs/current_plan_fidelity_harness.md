@@ -2,8 +2,7 @@
 
 Worktree: `/mnt/sdb1/Code/Active Code/pokeyellow_msdos-fidelity_harness` (branch `fidelity_harness`).
 
-Status: **planned 2026-07-06, not started.** Branch TBD (likely cut from `master` after
-the status-screen fixes land).
+Status: **in progress — Sessions A, B, C done (2026-07-06); next: Session D.**
 
 **Sequencing vs `current_plan_overworld_port.md` (decided with user 2026-07-06):**
 the harness spine — Sessions A–E + H — runs as one focused block **before** the
@@ -165,12 +164,52 @@ What the next sessions must know:
 - OAM dumps all-zero on menu screens (no sprites on the main menu) — expected.
 
 ### Session C — WRAM seeding + first real goldens  *(rest of 1.1 + 1.2 items 1–2)*
-- [ ] `seed.lua` mirroring `PrepareNewGameDebug` (open the **port's** seed routine AND
+- [x] `seed.lua` mirroring `PrepareNewGameDebug` (open the **port's** seed routine AND
       pret's struct layout; fields are big-endian).
-- [ ] Scenarios `status_p1`, `status_p2`, `start_menu`; commit goldens +
+- [x] Scenarios `status_p1`, `status_p2`, `start_menu`; commit goldens +
       `make goldens` target.
 - **Exit gate:** `make goldens` regenerates byte-identical goldens twice in a row
   (determinism check); status_p1 golden's tilemap decodes to the expected screen text.
+
+**Session C result (2026-07-06): gate passed.** `make -C dos_port goldens` regenerates
+all four goldens (smoke_title, start_menu, status_p1, status_p2) byte-identical across
+two consecutive runs (sha1-compared); status_p1 decodes to the full expected screen
+(PIKACHU, <LV>5, HP 19/19, №025, STATUS/OK, ATTACK 11 / DEFENSE 8 / SPEED 14 /
+SPECIAL 10, TYPE1/ELECTRIC, OT/RED, ID 00000 — hand-checked against pret's CalcStat
+formula); status_p2 shows EXP 125 + "LEVEL UP 91→L6" (game-computed from the seeded
+EXP) and moves THUNDERSHOCK 30/30, GROWL 40/40, **SURF 0/15** (the port's
+poke-after-PP quirk, reproduced by construction). What the next sessions must know:
+- **The seed spec is `lib/seed.lua` — the port must converge to it (Session D/E).**
+  The port's `PrepareNewGameDebug` gets DVs from `Random_` (add_party_mon.asm:185),
+  so its party bytes are irreproducible; seed.lua instead writes explicit structs:
+  spec DVs `$98 $76` (Atk9/Def8/Spd7/Spc6 → HP DV 10), OT name "RED", OT/player
+  id `$0000`, stats via pret CalcStat (stat exp 0) from ROM BaseStats, EXP via the
+  growth-rate polynomials, moves = species base moves with the port's pokes applied
+  AFTER PP is written (SURF slot keeps PP 0). **Session D/E port-side TODO:** make the
+  port harness deterministic to match — seed `wPlayerName`="RED@", `wPlayerID`=0, and
+  overwrite each party mon's DVs with `$98 $76` + recompute stats (or equivalent) in
+  the `DEBUG_*` path, so GBSTATE.BIN equals the golden.
+- **`DrawStartMenu` always lists POKéMON** (only POKéDEX is event-gated —
+  engine/menus/draw_start_menu.asm:36) — the start_menu golden with an empty party
+  correctly shows POKéMON/ITEM/RED/SAVE/OPTION/EXIT, box at (10,0), cursor on item 0.
+  Golden player stands at Pallet Town **(8,8) facing down** = the port boot spawn
+  (overworld.asm:1174).
+- **Differ (Session E) mask candidates found now:** Pallet's flower/water tiles
+  animate by VRAM tile-DATA swap (tilemap IDs stay put; the pattern bytes cycle with
+  frame phase) → VRAM diff needs those slots masked or phase-matched. Status screens
+  have a blinking ▼ whose phase depends on dump frame.
+- Nav gotchas baked into `lib/navigate.lua` (don't rediscover): door mats warp only
+  on a DOWN press (walking across does nothing); held directions latch one extra step
+  after release → `walk()` re-measures after an 18-frame stationary window; the party
+  menu's ▶ sits one row below the nickname row (`choose(needle, nil, 1)`); dialog
+  mashing must tap A only while ▼ is visible; the end of the Oak intro is detected by
+  probing START until the menu actually opens (wCurMap is already 38 mid-speech).
+- Bedroom route (Yellow layout): spawn (3,6); TV blocks UP at x=3, console blocks
+  x=6 on the spawn row → RIGHT 1, UP 5, RIGHT into the (7,1) stairs; 1F: DOWN 6,
+  LEFT 4 onto the (3,7) mat, DOWN to exit. House exit lands at Pallet (7,3)-ish.
+- `make -C dos_port goldens` = `tools/mgba_harness/make_goldens.sh`: sha1-gates the
+  ROM against `roms.sha1` before running; scenarios must run with cwd = repo root
+  (gbtext resolves `constants/charmap.asm` relative to cwd).
 
 ### Session D — port-side `GBSTATE.BIN`  *(Stage 1.3)*
 - [ ] `DumpGBState` in `debug_dump.asm`; wire alongside every `DumpBackbuffer` hook.
@@ -253,8 +292,11 @@ Shared by batch scenarios and the MCP bridge:
       naming regions/sizes/scenario): `wTileMap` 20×18 (360 B), VRAM `0x8000–0x97FF`
       (6144 B), OAM `0xFE00` (160 B), plus scenario-specific WRAM windows.
 - [x] `input.lua` — frame-stepped press/hold/release helpers.
-- [ ] `seed.lua` — WRAM seeding mirroring the port's `PrepareNewGameDebug` (same party
+- [x] `seed.lua` — WRAM seeding mirroring the port's `PrepareNewGameDebug` (same party
       structs — big-endian fields — flags, dex, names), addresses via `symbols.lua`.
+      (Party + player identity only so far; badges/items/dex-flag seeding lands with
+      the Session F scenarios that render them. seed.lua is the byte-level SPEC the
+      port harness must match — see Session C result.)
 - [x] `scenario.lua` — runner: boot ROM → settle frames → seed → navigate via input →
       settle → dump → exit(0). Savestate caching as local speed-up only.
       (+ `gbtext.lua` — charmap-encoded text assertions, parsed from pret's
@@ -264,11 +306,11 @@ Shared by batch scenarios and the MCP bridge:
 `dos_port/tools/mgba_harness/scenarios/<name>.lua`, goldens committed at
 `dos_port/tests/goldens/<name>.bin` + `.json`. Initial set (mirrors existing port
 `DEBUG_*` gates; motivating bugs first):
-- [ ] `status_p1`, `status_p2` (↔ `DEBUG_STATUS[_PAGE2]`)
-- [ ] `start_menu` (↔ `DEBUG_STARTMENU`)
+- [x] `status_p1`, `status_p2` (↔ `DEBUG_STATUS[_PAGE2]`)
+- [x] `start_menu` (↔ `DEBUG_STARTMENU`)
 - [ ] `overworld_pallet` baseline (↔ `DEBUG_TRANSITION`/`DEBUG_BASELINE`)
 - [ ] then: `party_menu`, `bag_menu`, `battle_menu` (↔ their `DEBUG_*` twins)
-- [ ] `make goldens` target regenerates all (requires built mGBA + sha1-verified ROM).
+- [x] `make goldens` target regenerates all (requires built mGBA + sha1-verified ROM).
 
 ### Stage 1.3 — Port-side GB-state dump (`GBSTATE.BIN`)
 - [ ] New routine `DumpGBState` in `dos_port/src/debug/debug_dump.asm` (parallel to

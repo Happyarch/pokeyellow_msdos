@@ -69,8 +69,31 @@ function scenario.read_range(addr, size)
 	return out
 end
 
+-- console:log from inside the body (console is context-bound too). Advances
+-- one frame like every yielded thunk.
+function scenario.log(msg)
+	coroutine.yield(function()
+		console:log(msg)
+	end)
+end
+
 local function fail(co, err)
 	console:error("scenario failed:\n" .. debug.traceback(co, tostring(err)))
+	-- runs on the main state, so the screen can be dumped for the postmortem
+	-- (decode: python3 -c 'print(bytes.fromhex(row))' + charmap, or eyeball
+	-- $7F=space, $80+='A'+)
+	local ok, tm = pcall(function()
+		return emu:readRange(0xC3A0, 360) -- wTileMap
+	end)
+	if ok then
+		console:error("wTileMap at failure:")
+		for r = 0, 17 do
+			local row = tm:sub(r * 20 + 1, r * 20 + 20)
+			console:error(("  %s"):format((row:gsub(".", function(c)
+				return ("%02X "):format(c:byte())
+			end))))
+		end
+	end
 	os.exit(1)
 end
 

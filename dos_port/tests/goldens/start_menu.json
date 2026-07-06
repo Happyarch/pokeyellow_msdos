@@ -1,0 +1,27 @@
+{
+  "description": "START menu over Pallet Town (8,8): no party/dex — ITEM/RED/SAVE/OPTION/EXIT",
+  "frame": 5123,
+  "regions": [
+    {
+      "file_offset": 0,
+      "gb_addr": "0xC3A0",
+      "name": "wTileMap",
+      "size": 360
+    },
+    {
+      "file_offset": 360,
+      "gb_addr": "0x8000",
+      "name": "vram_tiles",
+      "size": 6144
+    },
+    {
+      "file_offset": 6504,
+      "gb_addr": "0xFE00",
+      "name": "oam",
+      "size": 160
+    }
+  ],
+  "rom_title": "POKEMON YEL",
+  "scenario": "start_menu",
+  "total_size": 6664
+}

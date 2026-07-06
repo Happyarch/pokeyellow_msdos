@@ -19,17 +19,18 @@ local DEFAULT_CHARMAP = "constants/charmap.asm" -- right when cwd = repo root
 local Text = {}
 Text.__index = Text
 
--- ASCII string → charmap byte string; errors on any unmapped character so a
--- typo'd assertion can't silently never-match.
+-- UTF-8 string → charmap byte string (one tile per glyph: "é", "▶", "▼" are
+-- single tiles); errors on any unmapped character so a typo'd assertion can't
+-- silently never-match.
 function Text:encode(s)
 	local out = {}
-	for i = 1, #s do
-		local ch = s:sub(i, i)
+	for _, cp in utf8.codes(s) do
+		local ch = utf8.char(cp)
 		local byte = self.by_char[ch]
 		if not byte then
 			error(("gbtext: %q (in %q) has no single-tile charmap entry"):format(ch, s), 2)
 		end
-		out[i] = string.char(byte)
+		out[#out + 1] = string.char(byte)
 	end
 	return table.concat(out)
 end
@@ -43,12 +44,13 @@ function gbtext.load(path)
 	end
 	local by_char = {}
 	for line in f:lines() do
-		-- entries look like:  charmap "A", $80  — keep single-char (1-byte)
-		-- printable mappings; control/multi-char entries are not text tiles
-		local ch, byte = line:match('charmap%s+"(.)",%s+%$(%x+)')
+		-- entries look like:  charmap "A", $80  — keep single-glyph mappings
+		-- (one UTF-8 char, e.g. "é"/"▶"); control/multi-char entries like
+		-- "<PKMN>" are not single text tiles
+		local ch, byte = line:match('charmap%s+"(.-)",%s+%$(%x+)')
 		-- first-wins: the primary (Latin) block precedes the Japanese block,
 		-- which reuses the same byte range
-		if ch and not by_char[ch] then
+		if ch and utf8.len(ch) == 1 and not by_char[ch] then
 			by_char[ch] = tonumber(byte, 16)
 		end
 	end
