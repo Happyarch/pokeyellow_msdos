@@ -304,8 +304,13 @@ Prioritized task list. Check off items as they complete; add new items with phas
       warp seam (confirm S9 wired it or leave honestly stubbed).
 - [ ] **Status screen (Stage 4) remainder** (from archived `docs/plans/pokemon_behavior.md`):
       mon front-pic 7×7 tilemap-block placement on the status canvas (VRAM load
-      works); cry (audio HAL, Phase 3); wire START-menu party **STATS** entry
-      (`start_sub_menus`) → `StatusScreen`/`StatusScreen2`.
+      works; the real per-mon `MonFrontPics` data now ships — see below — so the
+      right species decodes); cry (audio HAL, Phase 3); wire START-menu party
+      **STATS** entry (`start_sub_menus`) → `StatusScreen`/`StatusScreen2`.
+      - Front-pic DATA (`-D MON_FRONT_PICS`) is DONE 2026-07-06: `gen_mon_pics.py`
+        → `assets/mon_pics.inc` + `src/data/mon_pics.asm` build the dex-ordered
+        `MonFrontPics` table (was a pidgey-only embedded stopgap). Retires the
+        pics.asm "M6.3 data follow-up" note; pokédex DATA-page pics verified.
 - [ ] **Bill's PC full UI** (pokemon_behavior Stage 6, separable) — not started;
       STATS branch reuses Stage 4's `StatusScreen`. Spin up a fresh
       `current_plan_bills_pc.md` when picked up. (Backend box logic is Wave 1 above.)

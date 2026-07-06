@@ -394,10 +394,11 @@ UncompressMonSprite:
     mov ecx, [esi + 4]                        ; blob length
     mov esi, [esi]                            ; flat ptr to the compressed .pic
 %else
-    ; DATA-PENDING STOPGAP: the generated MonFrontPics table is not staged yet.
-    ; Until tools/gen_mon_pics.py + assets/mon_pics.inc + src/data/mon_pics.asm land
-    ; (build -D MON_FRONT_PICS), every mon stages the embedded debug front pic so the
-    ; index/Rhydon-trap dispatch links and is exercisable. See M6.3 SUMMARY.
+    ; FALLBACK (build without -D MON_FRONT_PICS): stage the single embedded debug
+    ; front pic (pidgey) for EVERY mon. The real per-mon MonFrontPics table now
+    ; ships (tools/gen_mon_pics.py → assets/mon_pics.inc + src/data/mon_pics.asm),
+    ; and MON_FRONT_PICS is on by default in the Makefile — this path is only for
+    ; an explicit no-data build. See the M6.3 SUMMARY history.
     mov esi, embedded_pic
     mov ecx, embedded_pic_len
 %endif
