@@ -497,8 +497,10 @@ the two-model workflow (Gemini distills, Claude writes the skill files).
     `dos_port/run-spk DEBUG_AUDIO=1` (speaker cry, music stays on OPL);
     `SPK_ONLY=1 dos_port/run-spk DEBUG_AUDIO=1` (true speaker-only box).**
 
-- `[ ]` **Phase D — Tandy + speaker SFX + polish** — code complete + state-verified
-  headless (2026-07-07); milestone = the audible checks below, pending a listen.
+- `[x]` **Phase D — Tandy + speaker SFX + polish** — DONE (2026-07-07); code
+  state-verified headless + both new device paths user-confirmed audible
+  (run-tandy / speaker-only run-spk). Only the optional sb_pcm DMA upgrade
+  stays deferred (below).
   - `[x]` SN76489 docs in: `docs/sound/tandy_sound_reference.md` (Tandy 1000 SX
         Tech Ref extract, local-only ARR like the other sound specs; full PDF
         alongside) + `docs/references/smspower/` (SMS Power SN76489 page,
@@ -536,8 +538,9 @@ the two-model workflow (Gemini distills, Claude writes the skill files).
   - `[ ]` Optional (deferred): upgrade `sb_pcm` to auto-init DMA (pull 8237 doc
         first; DPMI 0100h DOS-memory buffer, 64 KB-boundary safe). Only
         matters if a non-blocking cry is ever wanted.
-  - **Milestone: audible checks — `dos_port/run-tandy DEBUG_AUDIO=1` (music +
-    SFX + cry on the 3-voice PSG, Pikachu on speaker PWM) and
+  - **Milestone: audible checks — user-confirmed 2026-07-07, MILESTONE
+    REACHED. Commands: `dos_port/run-tandy DEBUG_AUDIO=1` (music + SFX +
+    cry on the 3-voice PSG, Pikachu on speaker PWM) and
     `SPK_ONLY=1 dos_port/run-spk DEBUG_AUDIO=1` (menu blip + cry pulse
     audible as speaker beeps, music silent by design).**
 
