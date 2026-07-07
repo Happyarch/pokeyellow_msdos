@@ -315,8 +315,8 @@ RunCalcStatsTest:
 ; Never returns. In: EBP = GB memory base.
 ; ---------------------------------------------------------------------------
 RunAudioTest:
-    mov bl, AUDIO_BANK_1                    ; c = BANK(Music_PalletTown) = $02
-    mov al, MUSIC_PALLET_TOWN
+    mov bl, AUDIO_BANK_3                    ; c = BANK(Music_GameCorner) = $1F
+    mov al, MUSIC_GAME_CORNER
     call PlayMusic
     ; /LOOP (audition): play the music only, forever — no SFX, no dump/exit,
     ; so the whole track (and its loop) can be heard clean. DelayFrame still
