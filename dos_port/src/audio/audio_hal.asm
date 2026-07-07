@@ -23,6 +23,8 @@ global audio_init
 global audio_shutdown
 global g_cfg_nosound
 global g_cfg_shim
+global g_cfg_noenh
+global g_cfg_musicloop
 global g_shim_device
 global hal_dbg_snapshot
 global g_sb_base
@@ -151,6 +153,8 @@ blaster_name:   db "BLASTER=", 0
 
 g_cfg_nosound:  db 0              ; /NOSOUND on the command line
 g_cfg_shim:     db 0              ; forced shim: /TANDY = 2, /SPK = 3 (0 = auto)
+g_cfg_noenh:    db 0              ; /NOENH: disable the tier-1 OPL enhancement layer
+g_cfg_musicloop: db 0            ; /LOOP: DEBUG_AUDIO harness plays music only, forever
 g_shim_device:  db 0              ; active shim: 0 none, 1 OPL, 2 SN76489, 3 speaker
 g_sb_base:      dw 0              ; BLASTER A field (e.g. 0x220); 0 = absent
 g_sb_irq:       db 0              ; BLASTER I field

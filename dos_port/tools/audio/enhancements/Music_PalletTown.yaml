@@ -1,0 +1,149 @@
+# Music_PalletTown — hand-crafted tier-1 enhancement (Phase E worked example).
+#
+# The first hand-authored enhancement: proves YAML -> lint -> merge -> compile
+# -> audition end-to-end and serves as the few-shot example for the LLM passes.
+# Authored against analysis/Music_PalletTown.yaml (frame-exact) and the
+# score-analysis description, per the audio-enhance-opl3 skill.
+#
+# The track (G major, 4/4, 32 measures = a 16-measure body played twice; loop
+# body = mm17-32 == mm1-16). Its defining trait, from the score analysis: an
+# unusually HIGH register everywhere — melody near C6, and the wave "bass"
+# never drops below C4 — because the GB's tiny speaker couldn't reproduce low
+# frequencies. The three GB voices already fill C4..C6 densely, so a mid-
+# register pad has nowhere to sit (it just unison-collides with the busy inner
+# harmony). The one empty register is the entire low end BELOW C4 — exactly
+# what Masuda had to omit. OPL3/MT-32 have no such limit, so that is where the
+# whole tier-1 layer goes: the bass foundation the original couldn't have.
+#
+# Two conservative low voices (the skill's town-theme budget of 1-2), both
+# clear of the GB channels:
+#   * sub_bass — chord roots in octave 2, one sustained note per chord change.
+#                The deep foundation.
+#   * low_pad  — a smooth octave-3 tenor line on chord 3rd/5th tones, voice-led
+#                by step with long held common tones (B3/G3/E3 pedals) over the
+#                moving bass. Warm harmonic body, entirely under the GB voices.
+#
+# Both are authored once as a 16-measure pattern and instanced at m1 and m17
+# (the compiler duplicates repeated material; mm17-32 == mm1-16, so the loop
+# seam is seamless). No note crosses the loop point at m17 b1 (frame 1920),
+# which gen_enh_streams.py requires; the last note of the body releases a few
+# frames early (d1.9) because the song's final frame isn't beat-addressable.
+
+schema: 1
+song: Music_PalletTown
+
+channels:
+  - name: sub_bass
+    tier: 1
+    opl_patch: sub_bass
+    mt32_patch: 29        # MT-32 SynBass1 (round, sustaining)
+    gm_program: 39        # GM Synth Bass 1
+    pan: center
+    volume: 90
+    velocity: 100
+    events:
+      - {at: 1,  pattern: bass_body}
+      - {at: 17, pattern: bass_body}
+
+  - name: low_pad
+    tier: 1
+    opl_patch: soft_pad
+    mt32_patch: 49        # MT-32 Str Sect1 (warm string pad)
+    gm_program: 90        # GM Pad 2 (warm)
+    pan: center
+    volume: 72
+    velocity: 84
+    events:
+      - {at: 1,  pattern: pad_body}
+      - {at: 17, pattern: pad_body}
+
+  # --- Tier 2-3 (MT-32 / GM only; never OPL) --------------------------------
+  # On MT-32 the tier-1 low_pad already cascades as a warm string tenor
+  # (patch 49), so tier 2-3 must NOT add another mid pad — the GB voices pack
+  # C4..C6 and a sustained pad there just unison-collides (proven exhaustively:
+  # every reachable octave of the cadence chord tones is already occupied by a
+  # GB voice at that moment). So this track gets a single tier-3 color layer —
+  # celesta sparkle ABOVE the melody — and no tier-2 string swell: there is no
+  # clean register for one, and forcing it would mud the cadences. (A dense,
+  # high town theme; the skill's "don't over-orchestrate" applies hard here.)
+  - name: sparkle
+    tier: 3                 # color/flourish — dropped first under polyphony pressure
+    mt32_patch: 23          # MT-32 Celesta 1
+    gm_program: 9           # GM Celesta
+    pan: center
+    volume: 64
+    velocity: 80
+    events:
+      - {at: 1,  pattern: sparkle_body}
+      - {at: 17, pattern: sparkle_body}
+
+patterns:
+  # Chord roots, octave 2 (well below the GB wave bass, which floors at C4).
+  # One sustained note per chord; durations follow the analysis' half-measure
+  # harmony.
+  bass_body:
+    measures: 16
+    events:
+      - {m: 1,  b: 1, d: 4, n: E2}     # Em7  (vi7)
+      - {m: 2,  b: 1, d: 4, n: G2}     # G    (I)
+      - {m: 3,  b: 1, d: 2, n: C2}     # Cmaj7 (IV7)
+      - {m: 3,  b: 3, d: 2, n: F#2}    # F#dim (vii°)
+      - {m: 4,  b: 1, d: 2, n: E2}     # Em   (vi)
+      - {m: 4,  b: 3, d: 2, n: D2}     # D    (V)
+      - {m: 5,  b: 1, d: 2, n: E2}     # Em7
+      - {m: 5,  b: 3, d: 2, n: G2}     # Gmaj7 (I7)
+      - {m: 6,  b: 1, d: 2, n: E2}     # Em7
+      - {m: 6,  b: 3, d: 2, n: G2}     # Gmaj7
+      - {m: 7,  b: 1, d: 2, n: E2}     # Em7
+      - {m: 7,  b: 3, d: 2, n: F#2}    # F#dim
+      - {m: 8,  b: 1, d: 4, n: E2}     # Em7
+      - {m: 9,  b: 1, d: 2, n: C2}     # C    (IV)
+      - {m: 9,  b: 3, d: 2, n: D2}     # D7   (V7)
+      - {m: 10, b: 1, d: 2, n: G2}     # G    (I)
+      - {m: 10, b: 3, d: 2, n: E2}     # Em7
+      - {m: 11, b: 1, d: 2, n: C2}     # C    (IV)
+      - {m: 11, b: 3, d: 2, n: D2}     # D7   (V7)
+      - {m: 12, b: 1, d: 4, n: G2}     # G    (I)
+      - {m: 13, b: 1, d: 6, n: A2}     # Am   (ii), 3 half-measures
+      - {m: 14, b: 3, d: 2, n: C2}     # C    (IV)
+      - {m: 15, b: 1, d: 2, n: D2}     # D7   (V7)
+      - {m: 15, b: 3, d: 4, n: C2}     # Cmaj7 (IV7), 2 half-measures
+      # d1.9, not d2: the song's final frame (loop seam) isn't addressable by
+      # the beat map, so release a few frames early for a clean re-key.
+      - {m: 16, b: 3, d: 1.9, n: D2}   # D7   (V7)
+
+  # Octave-3 tenor pad: chord 3rd/5th tones, nearest-motion voice leading with
+  # long held common tones over the moving bass. Stays in C3..B3 (48..59) —
+  # below every GB channel (their harmony sits G4 and up), so no unison
+  # collisions and no mud against the octave-2 bass (intervals are 10th+).
+  pad_body:
+    measures: 16
+    events:
+      - {m: 1,  b: 1, d: 10, n: B3}    # Em7(5th)/G(3rd)/Cmaj7(7th) — B held
+      - {m: 3,  b: 3, d: 2, n: A3}     # F#dim (3rd)
+      - {m: 4,  b: 1, d: 2, n: G3}     # Em (3rd)
+      - {m: 4,  b: 3, d: 2, n: F#3}    # D (3rd)
+      - {m: 5,  b: 1, d: 10, n: G3}    # Em7/Gmaj7... — G held through mm5-7
+      - {m: 7,  b: 3, d: 2, n: A3}     # F#dim (3rd)
+      - {m: 8,  b: 1, d: 6, n: G3}     # Em7(3rd) -> C(5th) — G held
+      - {m: 9,  b: 3, d: 2, n: F#3}    # D7 (3rd)
+      - {m: 10, b: 1, d: 6, n: G3}     # G/Em7/C — G held (root/3rd/5th)
+      - {m: 11, b: 3, d: 2, n: F#3}    # D7 (3rd)
+      - {m: 12, b: 1, d: 4, n: G3}     # G (root)
+      - {m: 13, b: 1, d: 8, n: E3}     # Am(5th) -> C(3rd) — E held
+      - {m: 15, b: 1, d: 2, n: F#3}    # D7 (3rd)
+      - {m: 15, b: 3, d: 4, n: E3}     # Cmaj7 (3rd), 2 half-measures
+      - {m: 16, b: 3, d: 1.9, n: F#3}  # D7 (3rd)
+
+  # Tier 3 celesta sparkle: a few chord-tone twinkles ABOVE the melody's body
+  # (oct6, mostly clear of the F#5..G6 melody), marking phrase points. Sparse
+  # by design — nostalgia, not a music box.
+  sparkle_body:
+    measures: 16
+    events:
+      - {m: 1,  b: 1, d: 1, n: B5}     # Em7 (5th) — phrase open (melody has D6)
+      - {m: 8,  b: 1, d: 1, n: B5}     # Em7 (5th) — mid-phrase
+      - {m: 10, b: 1, d: 1, n: D6}     # G   (5th) — cadence
+      - {m: 12, b: 1, d: 1, n: D6}     # G   (5th) — cadence (melody has B5)
+      - {m: 13, b: 1, d: 1, n: E6}     # Am  (5th)
+      - {m: 15, b: 3, d: 1, n: D6}     # D7  (root) — turn back to the loop

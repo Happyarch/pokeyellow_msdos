@@ -41,6 +41,7 @@ extern OplMasterAttTable
 extern g_opl3
 extern g_opl_present
 extern g_shim_device              ; src/audio/audio_hal.asm
+extern g_cfg_noenh                ; src/audio/audio_hal.asm — /NOENH
 extern g_midi_music               ; src/audio/mpu401.asm
 
 OPL_PATCH_SIZE_E equ 11           ; keep in sync with assets/opl_patches.inc
@@ -224,6 +225,8 @@ enh_seq_start:
     ; must not inherit the previous song's
     call enh_all_off
     mov byte [enh_on], 0
+    cmp byte [g_cfg_noenh], 0
+    jne .done                     ; /NOENH: enhancement layer disabled (A/B)
     cmp byte [g_shim_device], 1
     jne .done                     ; OPL shim not the active device
     cmp byte [g_midi_music], 0

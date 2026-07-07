@@ -968,7 +968,9 @@ assets/audio_rom.inc assets/audio_constants.inc assets/cry_data.inc: \
 assets/midi/.stamp-mt32: tools/audio/gb_to_midi.py tools/audio/pret_audio.py \
 		tools/audio/gen_audio_data.py ../audio.asm \
 		../constants/music_constants.asm \
-		$(wildcard tools/audio/overrides/*.yaml)
+		tools/audio/yaml_lint.py tools/audio/music_analysis.py \
+		$(wildcard tools/audio/overrides/*.yaml) \
+		$(wildcard tools/audio/enhancements/*.yaml)
 	python3 tools/audio/gb_to_midi.py --target mt32
 	@touch $@
 

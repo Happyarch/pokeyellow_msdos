@@ -46,15 +46,41 @@ PATCHES = {
     "duty_25":  [SUS | 0x01, 0x10,  AD,  SR, 0x00, SUS | 0x01, 0x00,  AD,  SR, 0x00, 0x0A],
     "duty_50":  [SUS | 0x02, 0x14,  AD,  SR, 0x00, SUS | 0x01, 0x00,  AD,  SR, 0x00, 0x06],
     "duty_75":  [SUS | 0x01, 0x10,  AD,  SR, 0x00, SUS | 0x01, 0x00,  AD,  SR, 0x00, 0x0A],
-    # Wave channel: mellow, rounder tone (the GB wave bank is mostly used as
-    # a soft bass/counter-melody voice). Half-sine carrier takes the edge off.
-    "wave":     [SUS | 0x01, 0x18,  AD,  SR, 0x00, SUS | 0x01, 0x00,  AD,  SR, 0x01, 0x04],
+    # Wave channel: soft, rounded bass/counter-melody voice. The GB wave is
+    # harsh at the source too, but the console's tiny speaker low-passes the
+    # highs away; clean FM has nothing rolling them off, so we emulate that by
+    # stripping the patch's high-harmonic sources (user audition 2026-07-07):
+    #   - sine carrier (cE0 0x00, was half-sine 0x01) — half-sine is bright
+    #   - no feedback (C0 0x00, was 0x04 = fb 2) — feedback self-brightens the
+    #     modulator, the biggest edge; gone now
+    #   - gentler modulator (m40 0x28, was 0x18) — keeps a little FM warmth;
+    #     0x28 is the "just a hair softer" final nudge (user audition 2026-07-07)
+    # Carrier base TL 0x06 (~4.5 dB): the wave holds a flat NR32 level while the
+    # pulses decay via their envelopes, so at parity it read as too loud.
+    "wave":     [SUS | 0x01, 0x28,  AD,  SR, 0x00, SUS | 0x01, 0x06,  AD,  SR, 0x00, 0x00],
     # Noise channel: high-multiple modulator at full level with max feedback
     # produces dense inharmonic hash — the closest 2-op non-rhythm-mode noise.
     "noise":    [SUS | 0x0F, 0x00, 0xF0, 0x06, 0x00, SUS | 0x01, 0x00, 0xF0, 0x06, 0x00, 0x0E],
+    # --- Tier-1 enhancement patches (Phase E) ------------------------------
+    # Indices 6+; the APU shim only ever loads 0-5, the enh stream player
+    # (opl_enh.asm) loads these by the index gen_enh_streams.py bakes in.
+    # A timbral family deliberately *unlike* the buzzy pulse variants above:
+    # clean sines, so added voices sit under the shim's pulses, not fight them.
+    #
+    # Sub-bass reinforcement: pure carrier sine (modulator fully attenuated ->
+    # no FM sidebands), the deep low end the GB deliberately omitted (small
+    # speaker; see the Pallet Town score note). Carrier TL is the player's
+    # per-note volume slot.
+    "sub_bass": [SUS | 0x01, 0x3F,  AD,  SR, 0x00, SUS | 0x01, 0x00,  AD,  SR, 0x00, 0x00],
+    # Soft pad: sine carrier with a gentle 1:1 modulator (TL 0x18) for a hair
+    # of warmth — organ-like, not string-like (FM can't do bowed strings).
+    # Instant-attack/full-sustain like every patch here; the held note length
+    # comes from the YAML, the volume from the player. Warm, never buzzy.
+    "soft_pad": [SUS | 0x01, 0x18,  AD,  SR, 0x00, SUS | 0x01, 0x00,  AD,  SR, 0x00, 0x00],
 }
 
-PATCH_ORDER = ["duty_125", "duty_25", "duty_50", "duty_75", "wave", "noise"]
+PATCH_ORDER = ["duty_125", "duty_25", "duty_50", "duty_75", "wave", "noise",
+               "sub_bass", "soft_pad"]
 
 
 def att_units(ratio: float) -> int:

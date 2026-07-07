@@ -405,10 +405,11 @@ the two-model workflow (Gemini distills, Claude writes the skill files).
     DOSBox-X — REACHED (state-verified headless 2026-07-06; audible via
     `dos_port/run DEBUG_AUDIO=1`: ~5 s BGM → menu blip duck → Nidoran cry →
     BGM, then auto-exit). User audition 2026-07-06: "a little harsh and
-    grating, but musically accurate" — timbre tuning deferred; when picking
-    it up, soften the first-draft patches in `gen_opl_patches.py` (lower
-    modulator levels / feedback, maybe gentler duty-variant spread), then
-    `make assets` + re-listen.**
+    grating, but musically accurate". Timbre tuning since: the `wave` patch was
+    softened 2026-07-07 (sine carrier, no feedback, gentler modulator, +4.5 dB
+    base attenuation) per user audition — removes the harsh highs the GB's tiny
+    speaker low-passed away. The buzzy pulse `duty_*` variants are unchanged;
+    further softening can ride later by-ear passes.**
 
 - `[~]` **Phase B — MIDI / MT-32 flagship** — infrastructure COMPLETE
   (2026-07-07); remaining hand work is by-ear tuning via the audition loop.
@@ -562,9 +563,53 @@ the two-model workflow (Gemini distills, Claude writes the skill files).
         = B major ✓, Wild Battle = C major w/ C-minor runner-up = the PDF's
         major/minor ambiguity ✓, Pallet Town diatonic G-major progression with
         mm. 17-32 ≡ 1-16 repeat detection ✓).
-  - `[ ]` **Hand-craft one song's enhancement YAML by ear** (e.g. Pallet Town or
+  - `[x]` **Hand-craft one song's enhancement YAML by ear** (e.g. Pallet Town or
         Pokémon Center) — proves YAML → merge → compile → audition end-to-end and
         becomes the few-shot worked example. Do this before any LLM involvement.
+        **DONE 2026-07-07 — `enhancements/Music_PalletTown.yaml`, user-auditioned
+        and confirmed ("it sounds great").** The final arrangement is three added
+        channels (92 notes): the tier-1 low layer below (`sub_bass` + `low_pad`)
+        plus one tier-3 color layer above (`sparkle`, MT-32/GM only) — a celesta
+        that twinkles chord tones at phrase points, in the empty register above
+        the melody. **No tier-2 string swell**: the track is so dense and high
+        that every reachable octave of the cadence chord tones is already held by
+        a GB voice (the lint proved it), and on MT-32 the tier-1 `low_pad` already
+        cascades as a warm string tenor (patch 49) — a second mid string would
+        duplicate it or mud the cadences. A deliberately single color layer, per
+        the skill's "don't over-orchestrate a town theme." (The one viable tier-2
+        path in this crowded track would be a counter-melody woven into the
+        melody's rests, not a pad — deferred; the intimate character is right as
+        is.) **DRAFTED 2026-07-07 — `enhancements/Music_PalletTown.yaml`.** Authored
+        from the analysis + score description (not by ear;
+        that's the audition). Design call: Pallet Town's three GB voices already
+        fill C4–C6 densely (high-register track), so a mid pad only unison-
+        collides with the busy inner harmony — the lint proved it (B4 then G4
+        both hit base ch1). The one empty register is the low end **below C4**,
+        exactly what the GB speaker couldn't do; the whole tier-1 layer lives
+        there: `sub_bass` (chord roots, octave 2) + `low_pad` (octave-3 tenor on
+        3rd/5th tones, common-tone voice leading over the moving bass). Two new
+        OPL patches added to `gen_opl_patches.py` (`sub_bass` pure sine, index 6;
+        `soft_pad` gentle-modulator index 7 — shim still owns 0–5). Lint clean
+        (80 notes), both compile paths verified: OPL `enh_streams.inc` (615 B,
+        79 note-ons, peak polyphony 2 → OPL2-safe) and the MT-32/GM merge
+        (`gb_to_midi --enhance` → `music_streams.inc`, 49 streams). Full build
+        green. Fixed a Makefile wiring gap on the way: `.stamp-mt32` didn't
+        depend on `enhancements/*.yaml`, so the MT-32/GM path wouldn't rebuild
+        on an enhancement edit (OPL path already did) — now it does.
+        **Audition:** OPL `dos_port/run DEBUG_AUDIO=1`; MT-32
+        `dos_port/run-mt32 DEBUG_AUDIO=1` (or `mt32emu-qt &` +
+        `tools/audio/audition.py Music_PalletTown`). Two runtime EXE flags
+        added for auditioning (parsed in `boot/entry.asm`, forwarded by the run
+        scripts as `/`-prefixed args): **`/NOENH`** disables the tier-1 OPL
+        enhancement layer for an A/B (`enh_seq_start` gates on `g_cfg_noenh`;
+        headless-verified — enh_on 1→0), and **`/LOOP`** makes the DEBUG_AUDIO
+        harness play the music only (no menu blip / cry / Pikachu SFX) and loop
+        forever so the full track can be heard. e.g.
+        `dos_port/run DEBUG_AUDIO=1 /LOOP` (enhanced, looping),
+        `dos_port/run DEBUG_AUDIO=1 /LOOP /NOENH` (base only, looping).
+        Note `/NOENH` only affects the OPL layer; the MT-32/GM enhancement is
+        baked into `music_streams.inc` (rebuild with `gb_to_midi --no-enhance`
+        to A/B that target).
   - `[x]` `yaml_lint.py` structural validation (range, beat refs, polyphony,
         unison-doubling, tier/patch-field consistency) — done 2026-07-07
         (`ab777c91`): implements the schema README contract §1-8 and doubles as
@@ -595,7 +640,9 @@ the two-model workflow (Gemini distills, Claude writes the skill files).
         tick so the layer fades with FadeOutAudio. Debug window 9 $D258-5C
         (on/keymask/offset). State-verified headless: test Pallet Town layer →
         enh_on=1, key mask 0x0003 (the authored dyad), stream advancing.
-        AUDIBLE CHECK PENDING — rides with the hand-crafted YAML milestone.
+        AUDIBLE — the hand-crafted Pallet Town tier-1 layer (615 B, patches 6/7,
+        OPL2-safe) plays under the shim on OPL and was user-confirmed audible
+        2026-07-07 ("it sounds great"); `/NOENH` A/B strips it at runtime.
   - `[x]` Textbook prep: extract + strip the ~20 Open Music Theory files; two-model
         distillation — done 2026-07-07 (`docs/references/openmusictheory.github.io/
         open_music_theory_distilled.md`, pointed at by the music-theory skill's

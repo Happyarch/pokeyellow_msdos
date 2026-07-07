@@ -5,12 +5,23 @@
 # OPL3, exactly like a real MT-32 + Sound Blaster rig.
 #
 # Needs the MT-32 ROM pair (MT32_CONTROL.ROM / MT32_PCM.ROM). Default romdir
-# is ~/.config/scummvm; override with MT32_ROMDIR=/path. Make args pass
-# through, e.g.:  dos_port/run-mt32 DEBUG_AUDIO=1
+# is ~/.config/scummvm; override with MT32_ROMDIR=/path. Args split like
+# dos_port/run: '/...' tokens become extra PKMN.EXE flags (on top of /MT32),
+# the rest go to make, e.g.:
+#   dos_port/run-mt32 DEBUG_AUDIO=1 /LOOP   # music-only loop on MT-32
 set -e
 DOSPORT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-make -C "$DOSPORT" image "$@"
+make_args=()
+exe_args=()
+for a in "$@"; do
+    case "$a" in
+        /*) exe_args+=("$a") ;;
+        *)  make_args+=("$a") ;;
+    esac
+done
+
+make -C "$DOSPORT" image "${make_args[@]}"
 
 ROMDIR="${MT32_ROMDIR:-$HOME/.config/scummvm}"
 if [ ! -f "$ROMDIR/MT32_CONTROL.ROM" ]; then
@@ -21,7 +32,7 @@ fi
 # Base conf with /MT32 added to the game invocation, plus the MUNT section.
 CONF="$(mktemp --suffix=.conf)"
 trap 'rm -f "$CONF"' EXIT
-sed 's|^PKMN.EXE$|PKMN.EXE /MT32|' "$DOSPORT/dosbox-x.conf" > "$CONF"
+sed "s|^PKMN.EXE\$|PKMN.EXE /MT32 ${exe_args[*]}|" "$DOSPORT/dosbox-x.conf" > "$CONF"
 cat >> "$CONF" <<EOF
 
 [midi]

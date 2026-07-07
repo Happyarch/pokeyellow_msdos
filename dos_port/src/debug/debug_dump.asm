@@ -126,6 +126,7 @@ extern hal_dbg_snapshot
 extern tandy_dbg_snapshot
 extern spk_dbg_snapshot
 extern enh_dbg_snapshot
+extern g_cfg_musicloop            ; src/audio/audio_hal.asm — /LOOP
 global RunAudioTest
 %endif
 
@@ -317,6 +318,15 @@ RunAudioTest:
     mov bl, AUDIO_BANK_1                    ; c = BANK(Music_PalletTown) = $02
     mov al, MUSIC_PALLET_TOWN
     call PlayMusic
+    ; /LOOP (audition): play the music only, forever — no SFX, no dump/exit,
+    ; so the whole track (and its loop) can be heard clean. DelayFrame still
+    ; services the quit key, so the user can exit normally.
+    cmp byte [g_cfg_musicloop], 0
+    je .withSfx
+.musicOnly:
+    call DelayFrame                         ; ticks the engine + enh layer
+    jmp .musicOnly
+.withSfx:
     mov edi, 300                            ; ~5 s of BGM
     call .ticks
     mov al, SFX_PRESS_AB                    ; menu blip over the music

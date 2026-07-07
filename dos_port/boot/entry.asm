@@ -34,6 +34,8 @@ extern audio_shutdown    ; src/audio/audio_hal.asm
 extern g_cfg_nosound     ; src/audio/audio_hal.asm — set by /NOSOUND
 extern g_cfg_midi        ; src/audio/mpu401.asm — /MT32 = 1, /GM = 2
 extern g_cfg_shim        ; src/audio/audio_hal.asm — /TANDY = 2, /SPK = 3
+extern g_cfg_noenh       ; src/audio/audio_hal.asm — set by /NOENH
+extern g_cfg_musicloop   ; src/audio/audio_hal.asm — set by /LOOP
 extern Init              ; src/init/init.asm — power-on init
 %ifdef DEBUG_AUDIO
 extern RunAudioTest      ; src/debug/debug_dump.asm — audio-engine gate
@@ -77,6 +79,8 @@ arg_mt32:     db '/MT32',    0
 arg_gm:       db '/GM',      0
 arg_tandy:    db '/TANDY',   0
 arg_spk:      db '/SPK',     0
+arg_noenh:    db '/NOENH',   0
+arg_loop:     db '/LOOP',    0
 
 ; ---------------------------------------------------------------------------
 ; Code
@@ -294,6 +298,18 @@ parse_cmdline:
     jnz .no_spk
     mov byte [g_cfg_shim], 3      ; force the PC-speaker SFX shim
 .no_spk:
+
+    mov edi, arg_noenh
+    call find_token
+    jnz .no_noenh
+    mov byte [g_cfg_noenh], 1     ; disable the tier-1 OPL enhancement layer
+.no_noenh:
+
+    mov edi, arg_loop
+    call find_token
+    jnz .no_loop
+    mov byte [g_cfg_musicloop], 1 ; DEBUG_AUDIO: music-only, loop forever
+.no_loop:
 
     mov edi, arg_fixall
     call find_token
