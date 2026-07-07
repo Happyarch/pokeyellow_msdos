@@ -42,6 +42,18 @@ arrange — that's the `music-theory` and `audio-enhance-*` skills. This
 tells you *what you're working with* so those skills can be applied
 correctly.
 
+**Authority note — descriptions are theory guidance, not note data.**
+The authoritative source for the actual notes, timing, loop points, and
+channel contents is the **pret disassembly**, reached through the
+deterministic pipeline (`pret_audio.py` → `music_analysis.py` →
+`analysis/<Song>.yaml`, which is frame-exact against the engine). These
+prose descriptions exist to convey the *right theory ideas* to apply in
+an enhancement — key feel, harmonic tricks, structural intent. If a
+description disagrees with the analysis output about a concrete fact
+(a pitch, a measure count, a loop point), trust the analysis and treat
+the description's claim as commentary. Never transcribe notes from a
+description into an arrangement — read them from the analysis.
+
 ---
 
 ## What Each Description Covers
@@ -109,6 +121,7 @@ from the directory listing + each file's `#` heading if files change.
 | Battle! Gym Leader | battle_gym_leader.md | |
 | Battle! Trainer | battle_trainer.md | |
 | Battle! Wild Pokémon | battle_wild_pokemon.md | C major/minor ambiguity, ♭II Neapolitan, offset loop |
+| Celadon City | celadon_city.md | |
 | Cerulean City | cerulean_city.md | |
 | Cinnabar Island | cinnabar_island.md | High register |
 | Conclusion | conclusion.md | |

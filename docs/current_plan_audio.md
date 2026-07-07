@@ -565,10 +565,24 @@ the two-model workflow (Gemini distills, Claude writes the skill files).
   - `[ ]` **Hand-craft one song's enhancement YAML by ear** (e.g. Pallet Town or
         Pokémon Center) — proves YAML → merge → compile → audition end-to-end and
         becomes the few-shot worked example. Do this before any LLM involvement.
-  - `[ ]` `yaml_lint.py` structural validation (range, beat refs, polyphony,
-        unison-doubling, tier/patch-field consistency).
-  - `[ ]` `gb_to_midi.py`: enhancement merge + per-target tier filtering (whole-layer
-        drop when polyphony exceeded; chord thinning deferred).
+  - `[x]` `yaml_lint.py` structural validation (range, beat refs, polyphony,
+        unison-doubling, tier/patch-field consistency) — done 2026-07-07
+        (`ab777c91`): implements the schema README contract §1-8 and doubles as
+        the resolver (musical positions → frame-domain notes via the analysis
+        beat map); the merge imports it so lint and merge can't disagree.
+        Verified against a 13-error synthetic file + a clean file; the unison
+        check caught real collisions with Pallet Town's base channels.
+  - `[x]` `gb_to_midi.py`: enhancement merge + per-target tier filtering (whole-layer
+        drop when polyphony exceeded; chord thinning deferred) — done 2026-07-07:
+        auto-loads `enhancements/<Song>.yaml` (lint-gated, non-fatal fallback to
+        base-only; `--no-enhance` opt-out), adds one SMF track per channel on the
+        5 free melodic MIDI channels (0-based 4-8), MT-32 vs GM program selection
+        (custom timbres fall back to gm_program with a warning until wired),
+        whole-layer drop highest-tier-first past 5 channels. End-to-end verified:
+        test YAML → 6-track .mid (correct programs/names) → midi_to_stream
+        compiles 49 streams clean. NOTE: midi_to_stream writes the *same*
+        `assets/music_streams.inc` for either --target; the shipped inc is the
+        mt32 build (/GM strips SysEx at runtime).
   - `[ ]` OPL enhancement stream player: tier-1 voices on spare FM channels
         alongside the faithful shim (voice budget ~10 after shim + /SFXOVERLAP).
   - `[x]` Textbook prep: extract + strip the ~20 Open Music Theory files; two-model

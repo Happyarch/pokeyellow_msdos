@@ -451,7 +451,70 @@ def meta(mtype: int, payload: bytes) -> bytes:
     return bytes((0xFF, mtype)) + vlq(len(payload)) + payload
 
 
-def write_midi(path: Path, song: Song, ov: dict, target: str):
+# ---------------------------------------------------------------------------
+# Enhancement layer (Phase E) — see enhancements/README.md for the schema
+# ---------------------------------------------------------------------------
+PAN_CC = {"left": 20, "center": 64, "right": 108}
+FREE_MELODIC_CH = [4, 5, 6, 7, 8]      # 0-based; base music uses 1-3 + 9
+
+
+def load_enhancement(label: str):
+    """Lint + resolve enhancements/<label>.yaml; None if absent or invalid.
+
+    Lint errors are non-fatal for the batch: the song falls back to its
+    base-only MIDI so `make assets`-style regeneration never breaks on a
+    work-in-progress arrangement."""
+    path = Path(__file__).resolve().parent / "enhancements" / f"{label}.yaml"
+    if not path.exists():
+        return None
+    from yaml_lint import lint         # lazy: yaml_lint imports this module
+    rep, resolved, _ = lint(path)
+    if rep.errors:
+        print(f"    ENHANCE: {path.name} failed lint — layer skipped:")
+        for e in rep.errors:
+            print(f"      ERROR: {e}")
+        return None
+    for w in rep.warnings:
+        print(f"    ENHANCE warn: {w}")
+    return resolved
+
+
+def enhancement_tracks(resolved, song: Song, target: str) -> list[bytes]:
+    """One SMF track per enhancement channel on the free melodic channels.
+
+    Tier filter: stable-sorted by tier so when the added channels exceed
+    the 5 free MT-32 melodic parts, whole layers drop lowest-priority
+    (highest tier number) first — the plan's whole-layer drop, v1."""
+    chans = sorted((c for c in resolved if c.notes), key=lambda c: c.tier)
+    for c in chans[len(FREE_MELODIC_CH):]:
+        print(f"    ENHANCE: dropped {c.name!r} (tier {c.tier}) — only "
+              f"{len(FREE_MELODIC_CH)} free melodic parts")
+    tracks = []
+    for mc, c in zip(FREE_MELODIC_CH, chans):
+        prog = c.gm_program - 1
+        if target == "mt32":
+            if isinstance(c.mt32_patch, int):
+                prog = c.mt32_patch - 1
+            else:
+                print(f"    ENHANCE warn: {c.name!r} custom timbre "
+                      f"{c.mt32_patch!r} not wired into the merge yet — "
+                      "falling back to gm_program")
+        evs: list[tuple[int, int, bytes]] = [
+            (0, 1, meta(0x03, f"enh {c.name} tier{c.tier}".encode())),
+            (0, 1, bytes((0xC0 | mc, prog))),
+            (0, 1, bytes((0xB0 | mc, 7, c.volume))),
+            (0, 1, bytes((0xB0 | mc, 10, PAN_CC[c.pan]))),
+        ]
+        for n in c.notes:
+            off = min(n.frame + n.dur, song.end)
+            evs.append((n.frame, 2, bytes((0x90 | mc, n.key, n.vel))))
+            evs.append((off, 0, bytes((0x80 | mc, n.key, 64))))
+        evs.sort(key=lambda e: (e[0], e[1]))
+        tracks.append(track_chunk([(t, b) for t, _, b in evs]))
+    return tracks
+
+
+def write_midi(path: Path, song: Song, ov: dict, target: str, enhance=None):
     used = sorted({n.chan for n in song.notes})
     tracks = []
 
@@ -494,6 +557,9 @@ def write_midi(path: Path, song: Song, ov: dict, target: str):
         evs.sort(key=lambda e: (e[0], e[1]))
         tracks.append(track_chunk([(t, b) for t, _, b in evs]))
 
+    if enhance:
+        tracks += enhancement_tracks(enhance, song, target)
+
     hdr = b"MThd" + struct.pack(">IHHH", 6, 1, len(tracks), DIVISION)
     path.write_bytes(hdr + b"".join(tracks))
 
@@ -503,6 +569,8 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--target", choices=("mt32", "gm"), default="mt32")
     ap.add_argument("--songs", help="substring filter on header labels")
+    ap.add_argument("--no-enhance", action="store_true",
+                    help="ignore enhancements/<Song>.yaml layers")
     args = ap.parse_args()
 
     rom = AudioROM(ROOT)
@@ -523,7 +591,8 @@ def main():
             continue
         song = simulate_song(rom, amap, label, channels)
         ov = load_overrides(label)
-        write_midi(out_dir / f"{label}.mid", song, ov, args.target)
+        enh = None if args.no_enhance else load_enhancement(label)
+        write_midi(out_dir / f"{label}.mid", song, ov, args.target, enh)
         loop = (f"loop {song.loop_start}+{song.end - song.loop_start}f"
                 if song.loop_start is not None else f"once {song.end}f")
         print(f"  {label:<28} {len(song.notes):5d} notes  {loop}"
