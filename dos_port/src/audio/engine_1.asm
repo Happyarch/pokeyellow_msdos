@@ -49,6 +49,8 @@ extern InitSFXVariables           ; src/home/audio.asm
 extern StopAllAudio               ; src/home/audio.asm
 extern DetermineAudioFunction     ; src/home/audio.asm
 extern AudioRom                   ; src/data/audio_data.asm
+extern midi_seq_start             ; src/audio/mpu401.asm (no-op unless /MT32)
+extern midi_seq_stop              ; src/audio/mpu401.asm
 
 section .text
 
@@ -1158,6 +1160,10 @@ AudioCommon_PlaySound:
     ; fall through: ids between MAX_SFX_ID and the boundary are music
 
 .playMusic:
+    ; port: in MIDI mode the MT-32/GM stream carries the song (mpu401.asm);
+    ; the engine still initializes and runs the music for authentic
+    ; bookkeeping/fades, muted on FM by opl_shim's voice_volume.
+    call midi_seq_start
     call InitMusicVariables
     jmp .playSoundCommon
 
@@ -1218,6 +1224,7 @@ AudioCommon_PlaySound:
     jmp .sfxChannelLoop
 
 .stopAllAudio:
+    call midi_seq_stop                  ; port: silence the MIDI stream too
     call StopAllAudio
     ret
 

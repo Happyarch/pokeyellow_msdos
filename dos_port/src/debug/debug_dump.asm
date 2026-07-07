@@ -119,6 +119,7 @@ extern PlayMusic
 extern PlaySound
 extern DelayFrame
 extern opl_dbg_snapshot
+extern midi_dbg_snapshot
 global RunAudioTest
 %endif
 
@@ -222,7 +223,8 @@ windows:
     dd 0xFF00    ; virtual APU: rAUD10-26 ($FF10-26) + wave RAM ($FF30-3F)
     dd 0xCFC0    ; fade block ($CFC6-C8) + wLastMusicSoundID ($CFC9)
     dd 0xD1E0    ; opl_dbg_snapshot: present, opl3, voice_state[0..61]
-    dd 0xD220    ; (unused tail of the snapshot scratch)
+    dd 0xD220    ; SB detect (+0..6) + MIDI driver state (+7..: cfg,
+                 ; present, active, on, dw progress, scale, cc7[16])
 %elifdef DEBUG_BATTLE
 windows:
     dd 0xC468    ; W_TILEMAP row 5 (enemy HP-bar tile IDs, cols 12-20)
@@ -322,6 +324,7 @@ RunAudioTest:
     mov edi, 240
     call .ticks
     call opl_dbg_snapshot                   ; shim state -> $D1E0 scratch
+    call midi_dbg_snapshot                  ; MIDI driver state -> $D227+
     jmp DebugDumpMemory                     ; writes DUMP.BIN, exits
 .ticks:
     push edi

@@ -36,6 +36,10 @@ extern g_audio_engine_online      ; src/home/audio.asm
 extern opl_init                   ; src/audio/opl_shim.asm
 extern opl_pass                   ; src/audio/opl_shim.asm
 extern opl_shutdown               ; src/audio/opl_shim.asm
+extern mpu_detect                 ; src/audio/mpu401.asm
+extern midi_seq_tick              ; src/audio/mpu401.asm
+extern midi_seq_stop              ; src/audio/mpu401.asm
+extern g_cfg_midi                 ; src/audio/mpu401.asm — set by /MT32 or /GM
 extern ds_base                    ; boot/entry.asm — linear base of DS
 extern seg_to_flat                ; boot/entry.asm — selector/segment -> flat
 
@@ -48,6 +52,7 @@ audio_tick:
     call Music_DoLowHealthAlarm
     call Audio1_UpdateMusic
     call opl_pass                 ; virtual APU -> FM (no-ops if no OPL found)
+    call midi_seq_tick            ; MIDI music stream (no-op unless /MT32|/GM)
 .off:
     ret
 
@@ -57,6 +62,10 @@ audio_init:
     call audio_parse_blaster      ; BLASTER env -> g_sb_base/irq/dma
     call dsp_detect               ; DSP reset + E1h version (Phase C consumer)
     call opl_init                 ; detect + reset the OPL (388h)
+    cmp byte [g_cfg_midi], 0      ; /MT32 or /GM: probe the MPU-401 too
+    jz .noMidi
+    call mpu_detect               ; clears g_cfg_midi if nothing answers
+.noMidi:
     mov byte [g_audio_engine_online], 1
     call StopAllSounds
 .off:
@@ -64,6 +73,7 @@ audio_init:
 
 audio_shutdown:
     mov byte [g_audio_engine_online], 0
+    call midi_seq_stop            ; all-notes-off on the MIDI module
     call opl_shutdown             ; leave the FM chip silent
     ret
 

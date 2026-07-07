@@ -32,6 +32,7 @@ extern joypad_restore    ; src/input/joypad.asm
 extern audio_init        ; src/audio/audio_hal.asm
 extern audio_shutdown    ; src/audio/audio_hal.asm
 extern g_cfg_nosound     ; src/audio/audio_hal.asm — set by /NOSOUND
+extern g_cfg_midi        ; src/audio/mpu401.asm — /MT32 = 1, /GM = 2
 extern Init              ; src/init/init.asm — power-on init
 %ifdef DEBUG_AUDIO
 extern RunAudioTest      ; src/debug/debug_dump.asm — audio-engine gate
@@ -71,6 +72,8 @@ align 4
 arg_fixall:   db '/FIXALL',  0
 arg_fixcrit:  db '/FIXCRIT', 0
 arg_nosound:  db '/NOSOUND', 0
+arg_mt32:     db '/MT32',    0
+arg_gm:       db '/GM',      0
 
 ; ---------------------------------------------------------------------------
 ; Code
@@ -257,6 +260,22 @@ parse_cmdline:
     jnz .no_nosound
     mov byte [g_cfg_nosound], 1
 .no_nosound:
+
+    mov edi, arg_mt32
+    call find_token
+    jnz .no_mt32
+    mov byte [g_cfg_midi], 1
+.no_mt32:
+
+    ; note: /GM is a substring of nothing else we match, but /MT32 wins
+    ; if both are given (checked first, GM only fills an unset flag)
+    cmp byte [g_cfg_midi], 0
+    jnz .no_gm
+    mov edi, arg_gm
+    call find_token
+    jnz .no_gm
+    mov byte [g_cfg_midi], 2
+.no_gm:
 
     mov edi, arg_fixall
     call find_token

@@ -43,6 +43,7 @@ global opl_dbg_snapshot
 global g_opl_present
 global g_opl3
 
+extern g_midi_music               ; src/audio/mpu401.asm — MIDI mode active
 extern g_sb_present               ; src/audio/audio_hal.asm (BLASTER/DSP probe)
 extern g_sb_base
 extern g_sb_dsp_ver
@@ -653,6 +654,12 @@ voice_volume:
     mov ah, 0x11
     shl ah, cl
     test [nr51_snap], ah
+    jz .mute
+    ; MIDI mode: the MT-32/GM stream carries the music, so a GB channel
+    ; only voices on FM while an SFX owns it (wChannelSoundIDs CHAN5-8)
+    cmp byte [g_midi_music], 0
+    jz .clamp
+    cmp byte [ebp + wChannelSoundIDs + CHAN5 + ebx], 0
     jnz .clamp
 .mute:
     mov al, 63

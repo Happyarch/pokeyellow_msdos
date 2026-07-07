@@ -139,9 +139,19 @@ def build_stream(events, loop_start, end) -> tuple[bytes, int]:
             ops.append(step)
             frame += step
 
+    def is_off(msg):
+        kind = msg[0] & 0xF0
+        return kind == 0x80 or (kind == 0x90 and msg[2] == 0)
+
     for tick, msg in events:
         if tick >= end:
-            break
+            # note-offs land exactly on the end tick (gb_to_midi clamps
+            # sustains there); dropping them would leak one voice per loop
+            # pass on the MT-32, so they play right before the end op
+            if tick == end and is_off(msg):
+                wait_until(end)
+                ops += msg
+            continue
         if loop_start is not None and loop_off == 0xFFFF and tick >= loop_start:
             wait_until(loop_start)      # byte boundary exactly on the loop frame
             loop_off = len(ops)

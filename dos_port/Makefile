@@ -163,6 +163,7 @@ AUDIO_SRCS := \
     src/home/audio.asm \
     src/audio/audio_hal.asm \
     src/audio/opl_shim.asm \
+    src/audio/mpu401.asm \
     src/audio/engine_1.asm \
     src/audio/engine_2.asm \
     src/audio/engine_3.asm \
@@ -857,6 +858,7 @@ src/data/map_scripts.o: assets/map_scripts.inc
 
 src/data/audio_data.o: assets/audio_rom.inc assets/cry_data.inc
 src/audio/opl_shim.o: assets/opl_patches.inc
+src/audio/mpu401.o: assets/music_streams.inc assets/audio_constants.inc
 assets/opl_patches.inc: tools/audio/gen_opl_patches.py
 	python3 tools/audio/gen_opl_patches.py
 src/home/audio.o src/audio/engine_1.o src/audio/engine_2.o \
