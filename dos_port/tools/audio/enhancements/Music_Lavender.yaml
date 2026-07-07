@@ -1,0 +1,100 @@
+schema: 1
+song: Music_Lavender
+
+# Tier-1 pass (2026-07-07). The skill's own table says Lavender gets
+# "almost nothing — don't soften the eeriness" (0-1 voices), and the score
+# analysis warns the tonal ambiguity is the point. So: ONE voice, and it
+# adds dread instead of warmth.
+#
+# grave_seesaw — a continuous contra-octave drone seesaw: legato half
+# notes C2 (b1) -> B1 (b3), the piece's own C<->B half-step unease moved
+# into the register nothing in the GB mix occupies (floor is B3). It
+# follows the harmony nowhere: in the 20-bar excursion measures it rubs
+# against Em7/D7/Cdim exactly the way the GB's own persistent figure
+# does. Rests through the 4-bar solo-figure intro; enters at m5.
+# v1 was quarter-note throbs on the heartbeat at vol 64 — user audition
+# 2026-07-07: "kinda like a funk backtrack, too bass heavy". The funk was
+# the articulation (short hits in the drum pocket); now it drones.
+channels:
+  - name: grave_seesaw
+    tier: 1
+    opl_patch: sub_bass       # pure sine — complements, never fights, the pulses
+    mt32_patch: 30            # Syn Bass 2 (dark, round)
+    gm_program: 39            # Synth Bass 1
+    pan: center
+    volume: 48                # a floor, not a voice (v1's 64 was too present)
+    velocity: 60
+    events:
+      - {at: 5, pattern: throb}
+      - {at: 9, pattern: throb}
+      - {at: 13, pattern: throb}
+      - {at: 17, pattern: throb}
+      - {at: 21, pattern: throb}
+      - {at: 25, pattern: throb}
+      - {at: 29, pattern: throb}
+      - {at: 33, pattern: throb}
+      - {at: 37, pattern: throb}
+      - {at: 41, pattern: throb}
+      - {at: 45, pattern: throb}
+      - {at: 49, pattern: throb}
+      - {at: 53, pattern: throb}
+      - {at: 57, pattern: throb}
+      - {at: 61, pattern: throb}
+      - {at: 65, pattern: throb}
+      - {at: 69, pattern: throb}
+      - {at: 73, pattern: throb}
+      - {at: 77, pattern: throb}
+      - {at: 81, pattern: throb}
+      - {at: 85, pattern: throb}
+      - {at: 89, pattern: throb}
+      - {at: 93, pattern: throb}
+      - {at: 97, pattern: throb}
+      - {at: 101, pattern: throb}
+      - {at: 105, pattern: throb}
+      - {at: 109, pattern: throb}
+      - {at: 113, pattern: throb}
+      - {at: 117, pattern: throb}
+      - {at: 121, pattern: throb}
+      - {at: 125, pattern: throb}
+      - {at: 129, pattern: throb}
+      - {at: 133, pattern: throb}
+      - {at: 137, pattern: throb}
+      - {at: 141, pattern: throb}
+      - {at: 145, pattern: throb}
+      - {at: 149, pattern: throb}
+      - {at: 153, pattern: throb}
+      - {at: 157, pattern: throb}
+      - {at: 161, pattern: throb}
+      - {at: 165, pattern: throb}
+      - {at: 169, pattern: throb}
+      - {at: 173, pattern: throb}
+      - {at: 177, pattern: throb}
+      - {at: 181, pattern: throb}
+      - {at: 185, pattern: throb}
+      - {at: 189, pattern: throb}
+      - {at: 193, pattern: throb_last}  # final B1 shaved (song-end fence)
+
+patterns:
+  throb:
+    measures: 4
+    events:
+      - {m: 1, b: 1, d: 2, n: C2}
+      - {m: 1, b: 3, d: 2, n: B1}
+      - {m: 2, b: 1, d: 2, n: C2}
+      - {m: 2, b: 3, d: 2, n: B1}
+      - {m: 3, b: 1, d: 2, n: C2}
+      - {m: 3, b: 3, d: 2, n: B1}
+      - {m: 4, b: 1, d: 2, n: C2}
+      - {m: 4, b: 3, d: 2, n: B1}
+
+  throb_last:
+    measures: 4
+    events:
+      - {m: 1, b: 1, d: 2, n: C2}
+      - {m: 1, b: 3, d: 2, n: B1}
+      - {m: 2, b: 1, d: 2, n: C2}
+      - {m: 2, b: 3, d: 2, n: B1}
+      - {m: 3, b: 1, d: 2, n: C2}
+      - {m: 3, b: 3, d: 2, n: B1}
+      - {m: 4, b: 1, d: 2, n: C2}
+      - {m: 4, b: 3, d: 1.9, n: B1}

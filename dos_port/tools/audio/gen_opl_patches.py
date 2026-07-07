@@ -40,6 +40,12 @@ AD = 0xF0
 AD_PULSE = 0xC0
 SR = 0x07
 SUS = 0x20  # reg 0x20 bit 5: sustaining envelope (hold at sustain level)
+# Carrier Key Scale Level, reg x40 bits 6-7. Value 2 (0x80) = 1.5 dB/oct —
+# the gentle treble shelf a real GB speaker imposes; tames the piercing
+# top-octave notes (user audition 2026-07-07, Lavender C6-B6 melody:
+# "eardrum destroyers on good tweeters"). NB the OPL bit values are
+# swapped vs intuition: 1 = 3.0 dB/oct, 2 = 1.5 dB/oct (YMF262 doc).
+KSL = 0x80
 
 # name -> 11-byte patch. Pulse duty variants map the GB's 4 duty cycles onto
 # increasing FM brightness (more modulator level / feedback = buzzier).
@@ -57,10 +63,10 @@ SUS = 0x20  # reg 0x20 bit 5: sustaining envelope (hold at sustain level)
 #     goes
 PATCHES = {
     #                m20        m40   m60  m80  mE0   c20        c40   c60  c80  cE0   C0
-    "duty_125": [SUS | 0x01, 0x16, AD_PULSE, SR, 0x00, SUS | 0x01, 0x00, AD_PULSE, SR, 0x00, 0x06],
-    "duty_25":  [SUS | 0x01, 0x1A, AD_PULSE, SR, 0x00, SUS | 0x01, 0x00, AD_PULSE, SR, 0x00, 0x04],
-    "duty_50":  [SUS | 0x02, 0x1E, AD_PULSE, SR, 0x00, SUS | 0x01, 0x00, AD_PULSE, SR, 0x00, 0x02],
-    "duty_75":  [SUS | 0x01, 0x1A, AD_PULSE, SR, 0x00, SUS | 0x01, 0x00, AD_PULSE, SR, 0x00, 0x04],
+    "duty_125": [SUS | 0x01, 0x16, AD_PULSE, SR, 0x00, SUS | 0x01, KSL | 0x00, AD_PULSE, SR, 0x00, 0x06],
+    "duty_25":  [SUS | 0x01, 0x1A, AD_PULSE, SR, 0x00, SUS | 0x01, KSL | 0x00, AD_PULSE, SR, 0x00, 0x04],
+    "duty_50":  [SUS | 0x02, 0x1E, AD_PULSE, SR, 0x00, SUS | 0x01, KSL | 0x00, AD_PULSE, SR, 0x00, 0x02],
+    "duty_75":  [SUS | 0x01, 0x1A, AD_PULSE, SR, 0x00, SUS | 0x01, KSL | 0x00, AD_PULSE, SR, 0x00, 0x04],
     # Wave channel: soft, rounded bass/counter-melody voice. The GB wave is
     # harsh at the source too, but the console's tiny speaker low-passes the
     # highs away; clean FM has nothing rolling them off, so we emulate that by
