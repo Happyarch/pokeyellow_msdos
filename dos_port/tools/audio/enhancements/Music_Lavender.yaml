@@ -74,6 +74,71 @@ channels:
       - {at: 189, pattern: throb}
       - {at: 193, pattern: throb_last}  # final B1 shaved (song-end fence)
 
+  # sepulchre_organ (tier 2, MT-32/GM only — the signed-off OPL mix is
+  # untouched): light chordal backing per user request 2026-07-07. Open
+  # fifth C3+G3 (b1) -> fourth F#2+B2 (b3): the piece's own seesaw
+  # pitches as hollow organum, the B chord inverted to a fourth so the
+  # dyads move P5->P4 (no literal parallel fifths, and the rootless
+  # fourth keeps the B side unstable). Sits in the empty band between
+  # the grave_seesaw drone (C2/B1) and the GB floor (B3); ignores the
+  # 20-bar excursion harmony exactly like everything else in this file.
+  - name: sepulchre_organ
+    tier: 2
+    mt32_patch: 14            # Pipe Org 2
+    gm_program: 20            # Church Organ
+    pan: center
+    volume: 44                # a wash behind the band, not a comping part
+    velocity: 64
+    events:
+      - {at: 5, pattern: organum}
+      - {at: 9, pattern: organum}
+      - {at: 13, pattern: organum}
+      - {at: 17, pattern: organum}
+      - {at: 21, pattern: organum}
+      - {at: 25, pattern: organum}
+      - {at: 29, pattern: organum}
+      - {at: 33, pattern: organum}
+      - {at: 37, pattern: organum}
+      - {at: 41, pattern: organum}
+      - {at: 45, pattern: organum}
+      - {at: 49, pattern: organum}
+      - {at: 53, pattern: organum}
+      - {at: 57, pattern: organum}
+      - {at: 61, pattern: organum}
+      - {at: 65, pattern: organum}
+      - {at: 69, pattern: organum}
+      - {at: 73, pattern: organum}
+      - {at: 77, pattern: organum}
+      - {at: 81, pattern: organum}
+      - {at: 85, pattern: organum}
+      - {at: 89, pattern: organum}
+      - {at: 93, pattern: organum}
+      - {at: 97, pattern: organum}
+      - {at: 101, pattern: organum}
+      - {at: 105, pattern: organum}
+      - {at: 109, pattern: organum}
+      - {at: 113, pattern: organum}
+      - {at: 117, pattern: organum}
+      - {at: 121, pattern: organum}
+      - {at: 125, pattern: organum}
+      - {at: 129, pattern: organum}
+      - {at: 133, pattern: organum}
+      - {at: 137, pattern: organum}
+      - {at: 141, pattern: organum}
+      - {at: 145, pattern: organum}
+      - {at: 149, pattern: organum}
+      - {at: 153, pattern: organum}
+      - {at: 157, pattern: organum}
+      - {at: 161, pattern: organum}
+      - {at: 165, pattern: organum}
+      - {at: 169, pattern: organum}
+      - {at: 173, pattern: organum}
+      - {at: 177, pattern: organum}
+      - {at: 181, pattern: organum}
+      - {at: 185, pattern: organum}
+      - {at: 189, pattern: organum}
+      - {at: 193, pattern: organum_last}
+
 patterns:
   throb:
     measures: 4
@@ -98,3 +163,26 @@ patterns:
       - {m: 3, b: 3, d: 2, n: B1}
       - {m: 4, b: 1, d: 2, n: C2}
       - {m: 4, b: 3, d: 1.9, n: B1}
+
+  organum:
+    measures: 4
+    events:
+      - {m: 1, b: 1, d: 2, n: [C3, G3]}
+      - {m: 1, b: 3, d: 2, n: [F#2, B2]}
+      - {m: 2, b: 1, d: 2, n: [C3, G3]}
+      - {m: 2, b: 3, d: 2, n: [F#2, B2]}
+      - {m: 3, b: 1, d: 2, n: [C3, G3]}
+      - {m: 3, b: 3, d: 2, n: [F#2, B2]}
+      - {m: 4, b: 1, d: 2, n: [C3, G3]}
+      - {m: 4, b: 3, d: 2, n: [F#2, B2]}
+  organum_last:
+    measures: 4
+    events:
+      - {m: 1, b: 1, d: 2, n: [C3, G3]}
+      - {m: 1, b: 3, d: 2, n: [F#2, B2]}
+      - {m: 2, b: 1, d: 2, n: [C3, G3]}
+      - {m: 2, b: 3, d: 2, n: [F#2, B2]}
+      - {m: 3, b: 1, d: 2, n: [C3, G3]}
+      - {m: 3, b: 3, d: 2, n: [F#2, B2]}
+      - {m: 4, b: 1, d: 2, n: [C3, G3]}
+      - {m: 4, b: 3, d: 1.9, n: [F#2, B2]}

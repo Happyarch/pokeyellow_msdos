@@ -16,8 +16,12 @@ channels:
     volume: 100
     pan: 40                      # ostinato left...
   2:
-    mt32_program: "Contrabass"
-    volume: 106                  # melody carries (default 96)
+    mt32_program: "Str Sect 3"  # was Contrabass (user pick) — ch2 is the
+                                 # C6-B6 HIGH figure, 2+ octaves above a
+                                 # contrabass's home register, so it turned
+                                 # rasp; cello = same family, warm up high
+                                 # (user audition 2026-07-07)
+    volume: 100                  # melody carries; 106 enveloped the backing (user, 2026-07-07)
     pan: 88                      # ...melody right: wide, uneasy stage
   3:
     mt32_program: "Ice Rain"
