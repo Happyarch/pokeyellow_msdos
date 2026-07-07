@@ -2,7 +2,7 @@
 
 Worktree: `/mnt/sdb1/Code/Active Code/pokeyellow_msdos-fidelity_harness` (branch `fidelity_harness`).
 
-Status: **in progress — Sessions A–F done (2026-07-07); next: Session G.**
+Status: **in progress — Sessions A–G done (2026-07-07); next: Session H.**
 
 **Sequencing vs `current_plan_overworld_port.md` (decided with user 2026-07-06):**
 the harness spine — Sessions A–E + H — runs as one focused block **before** the
@@ -311,10 +311,32 @@ regenerated bit-identical. What the next sessions must know:
   verbatim). Badges/dex flags still unseeded (no scenario renders them yet).
 
 ### Session G — mgba-mcp bridge  *(Stage 1.5)*
-- [ ] `mcp_agent.lua` + `mgba_mcp/server.py` + `run_mgba_mcp.sh` (copy dosbox_mcp
+- [x] `mcp_agent.lua` + `mgba_mcp/server.py` + `run_mgba_mcp.sh` (copy dosbox_mcp
       structure).
 - **Exit gate:** from an MCP client: boot, `run_frames`, `press_buttons` to open START
   menu, `gb_read wTileMap` shows the menu tiles, `quit` exits clean.
+
+**Session G result (2026-07-07): gate passed.** A real MCP stdio client drove
+server.py end-to-end: boot → main menu → NEW GAME → preset naming → in-game START
+menu (wCurMap $26 = REDS_HOUSE_2F), EXIT/OPTION/SAVE verified via `gb_read wTileMap`,
+screenshot PNG confirmed visually, `quit` exited clean. What the next sessions must
+know:
+- **The agent gives the free-running runner debugger semantics by BLOCKING inside
+  the "frame" callback** while no time-advancing command is pending (polling its TCP
+  socket at 50 ms); `run_frames`/`press` release it for exactly N frames, reply on
+  re-pause. TCP (127.0.0.1:$MGBA_MCP_PORT, default 8765), newline-delimited JSON —
+  mGBA's Lua socket API is TCP-only (no Unix sockets).
+- **mGBA Lua socket gotchas:** `socket.bind` returns a WRAPPER (lua.c
+  `_socketLuaSource`) exposing `receive/hasdata/accept/send`; `listen()` returns
+  `(ok, err)` — err nil on success (a bare status check reads success 1 as failure);
+  timed waits must go through the raw handle `sock._s:select(ms)`; `socket.ERRORS`
+  is effectively empty — error strings are 'disconnected'/'error#N'.
+- Tools: gb_read (pret label via golden .sym, resolved agent-side), run_frames,
+  press_buttons, dump_state/load_state, screenshot, current_frame, quit.
+- run_mgba_mcp.sh sha1-gates the ROM like make_goldens.sh. Start it first, then
+  server.py (MCP stdio).
+- ⚠ shell gotcha: `pkill -f mgba-lua-runner` matches your own compound command —
+  use `pkill -x mgba-lua-runner`.
 
 ### Session H — label DB + linter  *(Stage 2.1)*
 - [ ] Scanner `update_label_db` + `labels`/`calls`/`externs` tables in `translation.db`
@@ -419,10 +441,10 @@ Shared by batch scenarios and the MCP bridge:
       wiring deferred — needs dosbox-x + mGBA builds in CI.)
 
 ### Stage 1.5 — MCP bridge (the laziness layer)
-- [ ] `mcp_agent.lua`: resident script using mGBA's Lua socket API; command loop over a
-      Unix socket (read memory by label, press buttons, run N frames, dump state,
-      save/load state, screenshot). Reuses `lib/` modules.
-- [ ] `dos_port/tools/mgba_mcp/server.py`: thin Python MCP server, structural twin of
+- [x] `mcp_agent.lua`: resident script using mGBA's Lua socket API; command loop over a
+      TCP socket (mGBA Lua sockets are TCP-only — see Session G note; read memory by
+      label, press buttons, run N frames, save/load state, screenshot). Reuses `lib/`.
+- [x] `dos_port/tools/mgba_mcp/server.py`: thin Python MCP server, structural twin of
       `tools/dosbox_mcp/server.py` (tools: `gb_read`, `press_buttons`, `run_frames`,
       `dump_state`, `load_state`, `screenshot`, `quit`). Launcher `run_mgba_mcp.sh`
       (model: `run_with_mcp.sh`).
