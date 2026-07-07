@@ -89,3 +89,6 @@ dos_port/tools/dosbox-x-mcp/
 # ARR score transcriptions
 docs/references/pokemon_score_transcriptions/
 pokemon_score_descriptions/
+
+# Generated per-song analysis (music_analysis.py output — regenerable)
+dos_port/tools/audio/analysis/

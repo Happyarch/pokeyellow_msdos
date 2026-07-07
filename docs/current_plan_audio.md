@@ -551,8 +551,17 @@ the two-model workflow (Gemini distills, Claude writes the skill files).
         duration events + `patterns:` motif instancing; beat map supplied by
         `music_analysis.py` → `analysis/<Song>.yaml`; measure 1 beat 1 = frame 0;
         events cover intro + one loop body; lint contract §1–8 written down).
-  - `[ ]` `music_analysis.py` in `tools/audio/` (key, chords, phrases,
-        repeated-motif tagging, contour, density) over the `pret_audio.py` IR.
+  - `[x]` `music_analysis.py` in `tools/audio/` (key, chords, phrases,
+        repeated-motif tagging, contour, density) over the `pret_audio.py` IR —
+        done 2026-07-07: reuses gb_to_midi's frame-exact ChanSim; emits the
+        schema's beat map (48 length-units/quarter integrated through the tempo
+        timeline) + Krumhansl-Schmuckler key + per-half-measure chord templates
+        with Roman numerals + phrase/contour + measure-level repetition map to
+        `tools/audio/analysis/<Song>.yaml` (gitignored, regenerable). All 49
+        songs analyze clean; spot-validated against the score PDF (Gym Leader
+        = B major ✓, Wild Battle = C major w/ C-minor runner-up = the PDF's
+        major/minor ambiguity ✓, Pallet Town diatonic G-major progression with
+        mm. 17-32 ≡ 1-16 repeat detection ✓).
   - `[ ]` **Hand-craft one song's enhancement YAML by ear** (e.g. Pallet Town or
         Pokémon Center) — proves YAML → merge → compile → audition end-to-end and
         becomes the few-shot worked example. Do this before any LLM involvement.
