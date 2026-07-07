@@ -149,6 +149,19 @@ Quick reference:
   OPL3 NEW bit at reg 105h, stereo CHA/CHB bits in C0-C8; OPL2-vs-OPL3 probe =
   status reg AND 06h (00h ⇒ OPL3).
 
+### Tandy 3-voice / SN76489 (76496)
+- **Local reference**: [`../sound/tandy_sound_reference.md`](../sound/tandy_sound_reference.md)
+  (port map 61h / C0h-C7h, SN76496 command-byte table, 8253 ch2 gating —
+  extracted from the Tandy 1000 SX Technical Reference Manual; full scan at
+  `../sound/Tandy_1000SX_Technical_Reference_Manual.pdf`). Like the other
+  `docs/sound/` specs these are local-only (gitignored, ARR).
+- **SN76489 register-level programming**: SMS Power! development page, mirrored at
+  [`smspower/SN76489 - Development - SMS Power!.html`](smspower/)
+  (https://www.smspower.org/Development/SN76489, fetched 2026-07-07). Same chip
+  family as the Tandy's 76496 (the SMS pairs it with a Z80 host instead); covers
+  the latch/data byte format, tone divider formula, noise LFSR details, and the
+  attenuation table.
+
 ---
 
 ## Pokémon Yellow Glitch Reference
