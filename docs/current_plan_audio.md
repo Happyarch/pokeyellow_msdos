@@ -410,14 +410,47 @@ the two-model workflow (Gemini distills, Claude writes the skill files).
     modulator levels / feedback, maybe gentler duty-variant spread), then
     `make assets` + re-listen.**
 
-- `[ ]` **Phase B — MIDI / MT-32 flagship**
-  - `[ ]` `gb_to_midi.py` + `overrides/` schema + `midi_to_stream.py`.
-  - `[ ]` `mpu401.asm`: UART-mode driver, flat-stream sequencer, CC7 fade.
-  - `[ ]` `gen_mt32_patches.py` + init-time SysEx upload (paced, checksummed).
-  - `[ ]` `audition.py` host loop; DOSBox-X + MUNT end-to-end via dosbox-mcp.
-  - `[ ]` GM mapping mode (`/GM`) from the same streams/overrides.
-  - **Milestone: hand-tuned Pallet Town + a battle theme on MUNT MT-32, patches
-    uploading clean, LCD greeting visible.**
+- `[~]` **Phase B — MIDI / MT-32 flagship** — infrastructure COMPLETE
+  (2026-07-07); remaining hand work is by-ear tuning via the audition loop.
+  - `[x]` `gb_to_midi.py` + `overrides/` schema + `midi_to_stream.py`.
+        Engine-exact simulation on pret_audio.py (ChannelTimer math, per-
+        channel loop detection with frac reset at the seam, loop rewind,
+        lcm fallback for the phasing songs — CinnabarMansion/Lavender get a
+        seam warning). 49 songs → SMF (1 tick = 1 frame, division 60) →
+        assets/music_streams.inc (~150 KB, per-bank id tables since sound
+        ids collide across banks). All streams round-trip verified: frame
+        totals, loop landing, no stuck/double notes over 3 loop passes.
+        Overrides: tools/audio/overrides/<Song>.yaml (README + PalletTown
+        example) — programs per target, CC7, pan, drum map.
+  - `[x]` `mpu401.asm`: UART-mode driver, flat-stream sequencer, CC7 fade
+        (NR50 mirror scales snooped per-channel CC7 bases, so engine fades
+        apply to MIDI). Engine keeps running music for authentic
+        bookkeeping; opl_shim mutes non-SFX voices in MIDI mode (MT-32+SB
+        combo); AudioCommon_PlaySound mirrors starts/stop-alls. /MT32 /GM
+        flags. Headless-verified both ways (state dump + no-flag regression).
+  - `[x]` `gen_mt32_patches.py` + init-time SysEx upload (paced 3 PIT
+        ticks, checksummed, 128-byte DT1 chunks, 7-bit address carry).
+        Hand-editable tools/audio/mt32/timbres.yaml: LCD text, reverb,
+        partial reserves (single message), channel table, custom-timbre
+        schema (14 common + 4×58 partial params, sparse with defaults),
+        patch/rhythm rewrites.
+  - `[x]` `audition.py` host loop (plays assets/midi/<target>/<Song>.mid to
+        an ALSA port — MUNT/fluidsynth — with the setup SysEx prepended,
+        paced, so the ear hears what boot programs); `dos_port/run-mt32`
+        (DOSBox-X built-in MUNT + /MT32). End-to-end PROVEN headless:
+        DOSBox-X log shows "MT32: LCD-Message: POKEMON YELLOW  DOS!" — the
+        full chain timbres.yaml → blob → mt32_upload → MPU-401 UART → MUNT.
+  - `[x]` GM mapping mode (`/GM`): MIDI mode minus the Roland SysEx, same
+        streams (current programs are GM-numbered for both targets). The
+        open question resolved for now: GM shares the stream set until
+        MT-32 overrides diverge (custom timbres); revisit with dual
+        per-target stream tables then.
+  - **Milestone: patches uploading clean + LCD greeting visible — DONE
+    (MUNT log). Hand-tuned Pallet Town + a battle theme = by-ear work in
+    the audition loop (overrides/*.yaml + mt32/timbres.yaml), pending a
+    listening session: `mt32emu-qt &` then
+    `tools/audio/audition.py Music_PalletTown`, or in-game via
+    `dos_port/run-mt32 DEBUG_AUDIO=1`.**
 
 - `[ ]` **Phase C — Pikachu PCM**
   - `[ ]` `gen_pika_pcm.py` (WAV → DSP blob + speaker PWM stream).
