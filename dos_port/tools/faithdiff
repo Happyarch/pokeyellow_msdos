@@ -1,0 +1,213 @@
+#!/usr/bin/env python3
+"""
+faithdiff — mechanical pret-vs-port fidelity diff for one routine
+(fidelity plan Stage 2.2).
+
+For a pret label, extracts the routine body on both sides (label → next
+top-level label) and compares the **call graph** and the **named-WRAM/HRAM
+store set**:
+
+  calls   pret call/jp/jr/predef/farcall/… targets  vs  port call/jmp targets
+  stores  pret `ld [wX], …` / `ldh [hX], …`         vs  port `mov [ebp + wX], …`
+
+Reports what the port ADDED and DROPPED relative to pret. Not a semantic
+prover — a forcing function: "port calls LoadHudTilePatterns; pret doesn't"
+falls out automatically. Known translation boundaries (TODO-HW plumbing,
+DelayFrame pipeline, ds_base biasing, port cache bookkeeping) are silenced
+via tools/faithdiff_suppress.json:
+
+  { "calls":  { "<Symbol>": "why it is expected on one side only", … },
+    "stores": { "<Symbol>": "…" } }
+
+Routine location comes from the Stage 2.1 labels table (translation.db);
+run tools/update_label_db first if the tree moved.
+
+Usage:  dos_port/tools/faithdiff <PretLabel> [more labels…] [--all-hits]
+Exit 1 if any unsuppressed added/dropped item remains.
+"""
+
+import argparse
+import json
+import os
+import re
+import sqlite3
+import sys
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+REPO_ROOT  = os.path.normpath(os.path.join(SCRIPT_DIR, '..', '..'))
+DB_PATH    = os.path.join(SCRIPT_DIR, 'translation.db')
+SUPPRESS   = os.path.join(SCRIPT_DIR, 'faithdiff_suppress.json')
+
+LABEL_RE = re.compile(r'^([A-Za-z_][A-Za-z0-9_]*):{1,2}')
+
+PRET_CALL_RE = re.compile(
+    r'^\s*(call|jp|jr)\s+(?:(?:nz|z|nc|c)\s*,\s*)?([A-Za-z_][A-Za-z0-9_]*)\s*$')
+PRET_MACRO_RE = re.compile(
+    r'^\s*(predef_jump|predef|farcall|callfar|callba|callab|homecall)'
+    r'\s+([A-Za-z_][A-Za-z0-9_]*)\s*$')
+# ld [wX], … / ld [hX], … / ldh [hX], …  (stores only: bracket operand first)
+PRET_STORE_RE = re.compile(
+    r'^\s*ldh?\s+\[\s*([whWH][A-Za-z0-9_]*)\s*\]\s*,')
+PRET_REG_INDIRECT = {'hl', 'hli', 'hld', 'bc', 'de', 'c', 'hLoadedROMBank'}
+
+PORT_CALL_RE = re.compile(
+    r'^\s*(call|jmp)\s+(?:short\s+|near\s+|dword\s+)?'
+    r'([A-Za-z_][A-Za-z0-9_]*)\s*$')
+# mov/and/or/xor/add/sub/inc/dec … [ebp + Sym]…, i.e. any RMW/store whose
+# FIRST operand is a GB-memory reference by name
+PORT_STORE_RE = re.compile(
+    r'^\s*(?:mov|and|or|xor|add|sub|inc|dec|shl|shr|rol|ror|not|neg)'
+    r'(?:\s+(?:byte|word|dword))?\s+\[\s*ebp\s*\+\s*([A-Za-z_][A-Za-z0-9_]*)')
+PORT_REGS = {'eax', 'ebx', 'ecx', 'edx', 'esi', 'edi', 'esp',
+             'ax', 'bx', 'cx', 'dx', 'si', 'di'}
+
+def strip_comment(line):
+    out, in_str = [], False
+    for ch in line:
+        if ch == '"':
+            in_str = not in_str
+        elif ch == ';' and not in_str:
+            break
+        out.append(ch)
+    return ''.join(out)
+
+def extract_body(path, label):
+    """Return the routine body lines: from `label:` to the next column-0 label."""
+    lines = open(path, encoding='utf-8', errors='replace').read().splitlines()
+    body, active = [], False
+    for raw in lines:
+        line = strip_comment(raw)
+        m = LABEL_RE.match(line)
+        if m:
+            if active and m.group(1) != label:
+                break
+            if m.group(1) == label:
+                active = True
+            line = line[m.end():]
+        if active:
+            body.append(line)
+    return body if active else None
+
+def pret_sets(body):
+    calls, stores = {}, {}
+    for line in body:
+        m = PRET_CALL_RE.match(line) or PRET_MACRO_RE.match(line)
+        if m:
+            calls.setdefault(m.group(2), []).append(m.group(1))
+        m = PRET_STORE_RE.match(line)
+        if m and m.group(1) not in PRET_REG_INDIRECT:
+            stores[m.group(1)] = stores.get(m.group(1), 0) + 1
+    return calls, stores
+
+def port_sets(body):
+    calls, stores = {}, {}
+    for line in body:
+        m = PORT_CALL_RE.match(line)
+        if m and not m.group(2).startswith('.'):
+            calls.setdefault(m.group(2), []).append(m.group(1))
+        m = PORT_STORE_RE.match(line)
+        if m and m.group(1) not in PORT_REGS:
+            stores[m.group(1)] = stores.get(m.group(1), 0) + 1
+    return calls, stores
+
+def norm_sym(s):
+    """Case-fold + strip the port's W_/H_ prefixes so wTileMap == W_TILEMAP."""
+    s = re.sub(r'^[wh]_?', '', s, flags=re.I)
+    return s.replace('_', '').lower()
+
+def diff_one(cur, label, suppress, show_all):
+    row = cur.execute("SELECT pret_file, port_file, status FROM labels "
+                      "WHERE name=? AND pret_file IS NOT NULL", (label,)).fetchone()
+    if not row:
+        print(f"faithdiff: {label}: not a pret label (labels table)")
+        return 1
+    pret_file, port_file, status = row
+    print(f"\n=== faithdiff {label} ===")
+    print(f"pret: {pret_file}   port: {port_file or '(none)'}   status: {status}")
+    if not port_file:
+        print("  no port body to diff (missing/stub)")
+        return 1
+
+    pret_body = extract_body(os.path.join(REPO_ROOT, pret_file), label)
+    port_body = extract_body(os.path.join(REPO_ROOT, port_file), label)
+    if pret_body is None or port_body is None:
+        print("  ERROR: body extraction failed "
+              f"(pret={'ok' if pret_body else 'MISSING'}, "
+              f"port={'ok' if port_body else 'MISSING'}) — rescan?")
+        return 1
+
+    pcalls, pstores = pret_sets(pret_body)
+    qcalls, qstores = port_sets(port_body)
+
+    violations = 0
+    sup_calls  = suppress.get('calls', {})
+    sup_stores = suppress.get('stores', {})
+
+    dropped = sorted(set(pcalls) - set(qcalls))
+    added   = sorted(set(qcalls) - set(pcalls))
+    common  = sorted(set(pcalls) & set(qcalls))
+    print(f"  calls: {len(pcalls)} pret / {len(qcalls)} port"
+          f" ({len(common)} matched)")
+    for name in dropped:
+        kinds = '/'.join(sorted(set(pcalls[name])))
+        if name in sup_calls:
+            if show_all:
+                print(f"    ~ dropped  {name} ({kinds})  [suppressed: {sup_calls[name]}]")
+        else:
+            print(f"    - DROPPED  {name} ({kinds})")
+            violations += 1
+    for name in added:
+        kinds = '/'.join(sorted(set(qcalls[name])))
+        if name in sup_calls:
+            if show_all:
+                print(f"    ~ added    {name} ({kinds})  [suppressed: {sup_calls[name]}]")
+        else:
+            print(f"    + ADDED    {name} ({kinds})")
+            violations += 1
+
+    pnorm = {norm_sym(s): s for s in pstores}
+    qnorm = {norm_sym(s): s for s in qstores}
+    sdrop = sorted(pnorm[k] for k in set(pnorm) - set(qnorm))
+    sadd  = sorted(qnorm[k] for k in set(qnorm) - set(pnorm))
+    print(f"  stores: {len(pstores)} pret / {len(qstores)} port"
+          f" ({len(set(pnorm) & set(qnorm))} matched by name)")
+    for name in sdrop:
+        if name in sup_stores:
+            if show_all:
+                print(f"    ~ dropped  [{name}]  [suppressed: {sup_stores[name]}]")
+        else:
+            print(f"    - DROPPED  [{name}]")
+            violations += 1
+    for name in sadd:
+        if name in sup_stores:
+            if show_all:
+                print(f"    ~ added    [{name}]  [suppressed: {sup_stores[name]}]")
+        else:
+            print(f"    + ADDED    [{name}]")
+            violations += 1
+
+    if violations == 0:
+        print("  clean (after suppressions)")
+    return 1 if violations else 0
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__,
+                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument('labels', nargs='+', metavar='PretLabel')
+    ap.add_argument('--all-hits', action='store_true',
+                    help='also show suppressed items (with their whys)')
+    args = ap.parse_args()
+
+    suppress = {}
+    if os.path.exists(SUPPRESS):
+        with open(SUPPRESS, encoding='utf-8') as fh:
+            suppress = json.load(fh)
+
+    con = sqlite3.connect(DB_PATH)
+    rc = 0
+    for label in args.labels:
+        rc |= diff_one(con.cursor(), label, suppress, args.all_hits)
+    sys.exit(rc)
+
+if __name__ == '__main__':
+    main()

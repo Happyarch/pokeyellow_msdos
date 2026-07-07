@@ -1,0 +1,104 @@
+#!/usr/bin/env python3
+"""
+label_status — "check before you call" query over the Stage 2.1 label DB
+(fidelity plan Stage 2.4).
+
+  label_status <Label> [...]      status, pret file, port file, stub file
+  label_status --callees <Label>  every call target of the pret routine
+                                  (from the `calls` table) with each target's
+                                  port status — answers "what do I extern vs
+                                  stub for this translation?"
+  label_status --callers <Label>  every PORT routine calling <Label> (calls
+                                  table, side=port) + every file externing it
+                                  with its trailing comment — the stub
+                                  retirement checklist (repoint comments,
+                                  audit callers for stub-era assumptions).
+
+Data comes from translation.db; run tools/update_label_db first if the tree
+changed. The DB is rescan-derived — never edit it by hand.
+"""
+
+import argparse
+import os
+import sqlite3
+import sys
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH    = os.path.join(SCRIPT_DIR, 'translation.db')
+
+def fmt_row(row):
+    name, pret_file, port_file, status, stub_file = row
+    out = f"{name:<36} {status:<10}"
+    if pret_file:
+        out += f" pret={pret_file}"
+    if port_file:
+        out += f" port={port_file}"
+    if stub_file:
+        out += f" stub={stub_file}"
+    return out
+
+def status_of(cur, name):
+    return cur.execute(
+        "SELECT name, pret_file, port_file, status, stub_file FROM labels "
+        "WHERE name=?", (name,)).fetchone()
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__,
+                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument('names', nargs='+', metavar='Label')
+    ap.add_argument('--callees', action='store_true',
+                    help='report the pret routine\'s call targets + statuses')
+    ap.add_argument('--callers', action='store_true',
+                    help='report port callers + externs of the label')
+    args = ap.parse_args()
+
+    con = sqlite3.connect(DB_PATH)
+    cur = con.cursor()
+    rc = 0
+
+    for name in args.names:
+        row = status_of(cur, name)
+        if row is None:
+            print(f"{name}: not in the label DB (typo? data/-owned? rescan?)")
+            rc = 1
+            continue
+        print(fmt_row(row))
+
+        if args.callees:
+            targets = cur.execute("""
+                SELECT callee, GROUP_CONCAT(DISTINCT kind) FROM calls
+                WHERE caller=? AND side='pret' GROUP BY callee
+                ORDER BY callee""", (name,)).fetchall()
+            if not targets:
+                print("  (no pret call targets recorded — leaf routine, or "
+                      "caller not scanned)")
+            for callee, kinds in targets:
+                trow = status_of(cur, callee)
+                if trow:
+                    _, _, port_file, status, stub_file = trow
+                    where = port_file or stub_file or ''
+                    print(f"  -> {callee:<32} {kinds:<12} {status:<10} {where}")
+                else:
+                    print(f"  -> {callee:<32} {kinds:<12} (not in DB — "
+                          f"macro/data label?)")
+
+        if args.callers:
+            callers = cur.execute("""
+                SELECT caller, file, line, kind FROM calls
+                WHERE callee=? AND side='port'
+                ORDER BY file, line""", (name,)).fetchall()
+            print(f"  port callers ({len(callers)}):")
+            for caller, file, line, kind in callers:
+                print(f"    {caller:<32} {kind:<5} {file}:{line}")
+            externs = cur.execute("""
+                SELECT file, line, comment FROM externs WHERE symbol=?
+                ORDER BY file, line""", (name,)).fetchall()
+            print(f"  externs ({len(externs)}):")
+            for file, line, comment in externs:
+                print(f"    {file}:{line}"
+                      + (f"  ; {comment}" if comment else "  (no comment)"))
+
+    sys.exit(rc)
+
+if __name__ == '__main__':
+    main()

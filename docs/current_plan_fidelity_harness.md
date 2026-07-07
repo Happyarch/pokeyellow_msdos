@@ -2,7 +2,7 @@
 
 Worktree: `/mnt/sdb1/Code/Active Code/pokeyellow_msdos-fidelity_harness` (branch `fidelity_harness`).
 
-Status: **in progress — Sessions A–H done (2026-07-07); next: Session I.**
+Status: **in progress — Sessions A–I done (2026-07-07); next: Session J.**
 
 **Sequencing vs `current_plan_overworld_port.md` (decided with user 2026-07-06):**
 the harness spine — Sessions A–E + H — runs as one focused block **before** the
@@ -381,8 +381,8 @@ Categorized findings:
   — worth a spot-review; deleting any entry re-fires the linter on it.
 
 ### Session I — faithdiff + label_status  *(Stages 2.2 + 2.4 CLI)*
-- [ ] `faithdiff <PretLabel>` CLI + suppression list.
-- [ ] `label_status <Label> --callees` reusing faithdiff's call-target extractor over
+- [x] `faithdiff <PretLabel>` CLI + suppression list.
+- [x] `label_status <Label> --callees` reusing faithdiff's call-target extractor over
       the Session H DB; `--callers` over the `calls`/`externs` tables.
 - **Exit gate:** `faithdiff StatusScreen` and `faithdiff PrepareOAMData` outputs
   manually spot-checked against the pret sources and pasted into the session note;
@@ -390,6 +390,33 @@ Categorized findings:
   (translated/stub/missing) against a manual grep of two of them;
   `label_status --callers` on one currently-stubbed label matches a manual grep of
   its externs.
+
+**Session I result (2026-07-07): gate passed.** `tools/faithdiff` extracts both bodies
+(label → next column-0 label; routine location from the Stage 2.1 `labels` table) and
+diffs call targets + named-WRAM/HRAM store sets (pret `ld [wX],…` vs port
+`mov [ebp+wX],…`, W_/H_ prefixes normalized). Global boundaries suppressed via
+`tools/faithdiff_suppress.json` with whys (DelayFrame/DumpBackbuffer/hide_window
+calls; H_SCX/H_SCY/IO_SCX/IO_SCY stores; banking); routine-specific divergences stay
+visible — they ARE the report. Spot-checks (verified line-by-line vs pret + port src):
+- `faithdiff PrepareOAMData` → **clean** (3/3 calls, 5/5 stores matched).
+- `faithdiff StatusScreen` → DROPPED `CopyVideoDataDouble`×4 / ADDED
+  `LoadStatusScreenHudTilePatterns` (the documented discontiguous-slot substitution),
+  DROPPED `IndexToPokedex` predef (port reads the flat table directly, :253),
+  DROPPED `PrintStatsBox` / ADDED `StatusScreen_StatsBox` (port's status-variant of
+  pret PrintStatsBox d=0; pret name lives in battle_menu.asm), DROPPED
+  `PlayCry`/`PlayPikachuSoundClip`/`IsThis{Party,Box}MonStarterPikachu` (audio +
+  PikaPic unported — known TODO-HW/PikaPic divergences), ADDED stores
+  `W_UPDATE_SPRITES_ENABLED`/`W_STATUS_FLAGS_2`/`W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR`/
+  `scoord` (documented port scaffolding in status_screen.asm:145-194). All real,
+  all previously known — the tool rediscovers them mechanically.
+- `label_status --callees StatusScreen` classifies all 27 callees; manual greps
+  confirmed `PlayCry` (missing — no def in port src) and `PrintStatusCondition`
+  (translated — src/home/pokemon.asm:322).
+- `label_status --callers DoScriptedNPCMovement` (stub) → 1 caller
+  (`UpdateNonPlayerSprite` jmp movement.asm:228) + 1 extern (movement.asm:53),
+  matching grep. Note: that extern's comment sits on the line above, so the DB's
+  trailing-comment field is empty — consistent with the stale_extern lint's
+  trailing-comment rule (stub convention rule 3 wants trailing).
 
 ### Session J — review-gate skill + wrap-up  *(Stages 2.3 + 2.4 skill wiring)*
 - [ ] `.claude/skills/faithfulness-review/` skill; one-line reference from CLAUDE.md
@@ -517,12 +544,12 @@ they may be superseded later, not in this plan).
       `src/engine/overworld/pikachu.asm`) → `relocated` status, not a violation.
 
 ### Stage 2.2 — `dos_port/tools/faithdiff <PretLabel>` (Python CLI)
-- [ ] Extract pret's routine body (label → next exported label) and its **call/store
+- [x] Extract pret's routine body (label → next exported label) and its **call/store
       graph**: `call/jp/jr/rst` targets, `predef`/`farcall`/`callfar` macro targets,
       stores to named wram/hram symbols.
-- [ ] Extract the port mirror's body the same way (`call/jmp` targets,
+- [x] Extract the port mirror's body the same way (`call/jmp` targets,
       `[ebp + W_*/H_*]` stores).
-- [ ] Report: calls/stores the port **added**, **dropped**, or **substituted** vs
+- [x] Report: calls/stores the port **added**, **dropped**, or **substituted** vs
       pret — with a suppression list for known translation boundaries (`TODO-HW`,
       `DelayFrame` plumbing, `ds_base` biasing helpers). Not a semantic prover; a
       forcing function that makes "port calls LoadHudTilePatterns; pret doesn't" fall
@@ -541,11 +568,11 @@ The "check before you call" layer: when translating a routine, every `call`/`jp`
 is stubbed (extern it, comment names the stub file), or is missing (add a stub per
 convention). Today agents resolve this by grepping — or don't, which is how
 `GetName` got silently patched.
-- [ ] `tools/label_status <Label> [...]`: query the Stage 2.1 DB — status, defining
+- [x] `tools/label_status <Label> [...]`: query the Stage 2.1 DB — status, defining
       file, stub file. With `--callees <Label>`: extract the pret routine's call
       targets (reuse faithdiff's extractor from 2.2) and report each target's status —
       one command answers "what do I extern vs stub for this translation?".
-- [ ] `label_status --callers <Label>`: every port routine calling `<Label>` (from the
+- [x] `label_status --callers <Label>`: every port routine calling `<Label>` (from the
       `calls` table) + every file `extern`ing it with its comment. This is the **stub
       retirement checklist**: repoint each extern comment, then eyeball each caller
       for stub-era assumptions (was it translated/verified while `<Label>` was a

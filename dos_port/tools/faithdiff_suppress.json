@@ -1,0 +1,21 @@
+{
+ "_comment": [
+  "faithdiff suppression list — GLOBAL translation boundaries only (symbols that",
+  "legitimately appear on one side of every routine). Routine-specific divergences",
+  "(a dropped PlayCry, a substituted helper) must stay visible: they are the report.",
+  "Each entry carries its why; --all-hits shows suppressed items."
+ ],
+ "calls": {
+  "DelayFrame": "port frame-pipeline plumbing (present/OAM-DMA per frame); pret's DelayFrame placement differs across the video boundary",
+  "DumpBackbuffer": "DEBUG_* harness dump hook, %ifdef-gated, not game logic",
+  "hide_window": "port window-compositor HAL boundary (GB hides the window via LCDC writes — TODO-HW)",
+  "Bankswitch": "GB ROM banking does not exist in the flat 32-bit port"
+ },
+ "stores": {
+  "H_SCX": "renderer scroll plumbing — pret writes rSCX via HRAM+ISR (TODO-HW boundary)",
+  "H_SCY": "renderer scroll plumbing — pret writes rSCY via HRAM+ISR (TODO-HW boundary)",
+  "IO_SCX": "software-PPU scroll register mirror (TODO-HW boundary)",
+  "IO_SCY": "software-PPU scroll register mirror (TODO-HW boundary)",
+  "hLoadedROMBank": "GB ROM banking does not exist in the port"
+ }
+}
