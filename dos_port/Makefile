@@ -932,6 +932,20 @@ assets/audio_rom.inc assets/audio_constants.inc assets/cry_data.inc: \
 		../audio.asm ../constants/music_constants.asm ../data/pokemon/cries.asm
 	python3 tools/audio/gen_audio_data.py
 
+# MIDI music streams (Phase B): engine simulation -> .mid per song (also the
+# soundtrack-export side goal) -> flat 60 Hz frame-delta streams for the
+# MPU-401 driver. Hand-tuning lives in tools/audio/overrides/*.yaml.
+# A stamp file stands in for the 49 per-song .mid outputs.
+assets/midi/.stamp-mt32: tools/audio/gb_to_midi.py tools/audio/pret_audio.py \
+		tools/audio/gen_audio_data.py ../audio.asm \
+		../constants/music_constants.asm \
+		$(wildcard tools/audio/overrides/*.yaml)
+	python3 tools/audio/gb_to_midi.py --target mt32
+	@touch $@
+
+assets/music_streams.inc: assets/midi/.stamp-mt32 tools/audio/midi_to_stream.py
+	python3 tools/audio/midi_to_stream.py --target mt32
+
 # Gym-leader face + badge tiles (2bpp passthrough of gfx/trainer_card/badges.2bpp)
 # for the trainer-card status screen (draw_badges.asm, menus S6 package B).
 assets/badge_tiles.inc: ../gfx/trainer_card/badges.2bpp \
@@ -1137,7 +1151,7 @@ assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_
         assets/sprite_sheet_pointers.inc assets/pokedex_tiles.inc \
         assets/mon_pics.inc \
         assets/audio_rom.inc assets/audio_constants.inc assets/cry_data.inc \
-        assets/opl_patches.inc
+        assets/opl_patches.inc assets/music_streams.inc
 
 # Force-regenerate every generated asset, ignoring timestamps. The asset rules
 # are timestamp-gated (an .inc newer than its generator/source is skipped), which
