@@ -2,7 +2,7 @@
 
 Worktree: `/mnt/sdb1/Code/Active Code/pokeyellow_msdos-fidelity_harness` (branch `fidelity_harness`).
 
-Status: **in progress — Sessions A–D done (2026-07-07); next: Session E.**
+Status: **in progress — Sessions A–E done (2026-07-07); next: Session F.**
 
 **Sequencing vs `current_plan_overworld_port.md` (decided with user 2026-07-06):**
 the harness spine — Sessions A–E + H — runs as one focused block **before** the
@@ -239,11 +239,41 @@ byte-identical GBSTATE.BIN across two runs. What the next sessions must know:
   first, as ever).
 
 ### Session E — differ + end-to-end proof  *(Stage 1.4)*
-- [ ] `golden_diff.py` + `make goldencheck` / `make fidelity`.
-- [ ] Proof: goldencheck green on fixed tree; revert `LoadStatusScreenHudTilePatterns`
+- [x] `golden_diff.py` + `make goldencheck` / `make fidelity`.
+- [x] Proof: goldencheck green on fixed tree; revert `LoadStatusScreenHudTilePatterns`
       locally → goldencheck red pointing at the exact VRAM slots/cells; restore.
 - **Exit gate:** the revert-proof (green → red → green) reproduced and pasted into the
   session note.
+
+**Session E result (2026-07-07): gate passed.** `make fidelity` (status_p1, status_p2,
+start_menu) green; revert-proof: widening the BattleHudTiles1 load 3→8 tiles turned
+goldencheck red with exactly `vChars2 tile $70/$71/$73/$74` named ($73=<ID>, $74=№ —
+the motivating clobber class), restore → green. Design deltas + findings the next
+sessions must know:
+- **Scenario config lives in `golden_diff.py` `SCENARIOS`** (offset/masks/projections/
+  make-flags), NOT the golden sidecar as the stage text guessed — the offset is
+  port-side knowledge the mGBA scenario can't know. `goldencheck.sh` reads the make
+  flags from it (`--flags`), so one table drives build+run+diff.
+- **FINDING (filed): starter-Pikachu status runs Yellow's PikaPic cartoon** (drawn via
+  direct BG-map writes that never touch wTileMap; cel gfx streamed over vChars0).
+  Unported → the whole 7×7 pic area + vChars0 + stale vChars2 $20-$5F are masked with
+  justifications on status_p1/p2. The static 5×5 pic pattern data at $9000-$918F IS
+  compared and matches. If PikaPic ever ports, drop `_STATUS_MASKS`.
+- **Menus over the overworld need projections**: the widescreen port re-anchors the
+  START menu at X+20 (docs/ui_projection.md registry) — differ config supports
+  per-rect `projections`. The overworld backdrop's W_TILEMAP window is the
+  **block-aligned mirror**, offset (16,10) at the (8,8) spawn (measured; NOT the
+  (10,3) flat-canvas offset status screens use), and golden rows 15-17 fall off the
+  25-row canvas (justified via `offcanvas`).
+- **OAM normalization**: entries hidden on both sides (Y==0 or Y>=160) compare equal
+  (golden parks stale tiles at Y=160; port zeroes its slots).
+- Flower ($03)/water ($14) vChars2 tile-data animation masked on start_menu by phase
+  (as Session C predicted). If a later scenario dumps at a luckier frame these may
+  match — masks only fire on mismatch.
+- Port fix that fell out: `DEBUG_STARTMENU` never seeded the player name → menu row
+  showed the build define "NINTEN"; now `SeedDeterministicPlayerIdentity` (extracted
+  from `PrepareNewGameDebug`, exported) runs in the gate. debug_party.o linked into
+  the DEBUG_STARTMENU build in the Makefile.
 
 ### Session F — remaining scenarios  *(1.2 items 3–4)*
 - [ ] `overworld_pallet`, `party_menu`, `bag_menu`, `battle_menu` goldens + port-side
@@ -345,15 +375,16 @@ Shared by batch scenarios and the MCP bridge:
       first — every present and future hook is covered with no call-site edits.)
 
 ### Stage 1.4 — Differ + make target
-- [ ] `dos_port/tools/golden_diff.py`: extract port 20×18 subwindow from the 40×25
-      canvas at a **per-scenario (col,row) offset** from the golden's JSON sidecar;
+- [x] `dos_port/tools/golden_diff.py`: extract port 20×18 subwindow from the 40×25
+      canvas at a **per-scenario (col,row) offset** (kept in the differ's `SCENARIOS`
+      table, not the sidecar — port-side knowledge; see Session E note);
       cell-by-cell tile-ID diff vs golden `wTileMap`, decoding text tiles via
       `assets/gb_charmap.txt` in the report (row/col, expected vs got, glyph). OAM diff
-      with optional coordinate normalization (port pins camera differently); VRAM diff
-      per 16-byte tile with slot numbers (would have caught the `$73/$74` clobber
-      directly). Per-scenario mask list for legitimately-divergent cells (e.g.
-      widescreen-only columns are excluded by construction of the subwindow).
-- [ ] `make -C dos_port goldencheck SCENARIO=status_p1`: build image with the matching
+      with hidden-entry normalization (Y==0/Y>=160 equal both sides); VRAM diff
+      per 16-byte tile with slot numbers (caught the `$73/$74` clobber in the
+      revert-proof directly). Per-scenario mask list + per-rect UI `projections`
+      + `offcanvas` justification for legitimately-divergent cells.
+- [x] `make -C dos_port goldencheck SCENARIO=status_p1`: build image with the matching
       `DEBUG_*` flag → headless dosbox-x run → extract `GBSTATE.BIN` → diff → nonzero
       exit + cell report on mismatch. `make fidelity` = all scenarios. (GitHub CI
       wiring deferred — needs dosbox-x + mGBA builds in CI.)

@@ -334,6 +334,7 @@ ifdef DEBUG_STARTMENU
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_STARTMENU
 NASMFLAGS += -D SKIP_TITLE
+GAME_SRCS += src/engine/debug/debug_party.asm  # SeedDeterministicPlayerIdentity ("RED" menu row)
 endif
 # Party-seed gate: run the debug new-game seed (party + bag + Pokédex) at boot,
 # dump party/bag WRAM to DUMP.BIN, exit. Verifies the pokemon/items engine runs
@@ -754,7 +755,7 @@ ALL_OBJS := $(ALL_SRCS:.asm=.o)
 # Targets
 # ---------------------------------------------------------------------------
 
-.PHONY: all clean clean-image image check assets regen goldens
+.PHONY: all clean clean-image image check assets regen goldens goldencheck fidelity
 .DEFAULT_GOAL := all
 
 # Regenerate the committed mGBA goldens (tests/goldens/) from the
@@ -763,6 +764,20 @@ ALL_OBJS := $(ALL_SRCS:.asm=.o)
 # ../pokeyellow_msdos-pret-golden).
 goldens:
 	tools/mgba_harness/make_goldens.sh
+
+# Diff the port's GB state against an mGBA golden (fidelity plan Stage 1.4):
+# build the scenario's DEBUG_* image, run it headless, extract GBSTATE.BIN,
+# cell/slot-diff vs tests/goldens/<scenario>.  make goldencheck SCENARIO=status_p1
+goldencheck:
+	tools/goldencheck.sh $(SCENARIO)
+
+# All golden scenarios (the port-vs-golden fidelity suite). Runs every
+# scenario even if one fails; nonzero exit if any failed.
+FIDELITY_SCENARIOS := status_p1 status_p2 start_menu
+fidelity:
+	@fail=0; for s in $(FIDELITY_SCENARIOS); do \
+		tools/goldencheck.sh $$s || fail=1; \
+	done; exit $$fail
 
 # Generate all tileset gfx/blocks/coll + map blk inc files.
 # Requires gfx/tilesets/*.2bpp, built by 'make' in the repo root.

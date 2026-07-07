@@ -7,6 +7,7 @@ section .text
 
 global SetDebugNewGameParty
 global PrepareNewGameDebug
+global SeedDeterministicPlayerIdentity
 extern AddPartyMon
 extern AddItemToInventory
 extern GetMonHeader                ; home/pokemon.asm — base stats -> wMonHeader
@@ -73,24 +74,10 @@ SetDebugNewGameParty:
 ; PrepareNewGameDebug
 ; -----------------------------------------------------------------------------
 PrepareNewGameDebug:
-    ; --- Deterministic player identity (fidelity harness; converge to seed.lua).
-    ; wPlayerName = "RED", '@'-padded to NAME_LEN; wPlayerID = 0. Set BEFORE the
-    ; party is built so _AddPartyMon copies "RED" into each mon's OT-name slot
-    ; (add_party_mon.asm: OT source = wPlayerName). Charmap bytes per
-    ; constants/charmap.asm — this matches the file's existing convention of
-    ; numeric species/move ids in a debug seed (not asset-pipeline text).
-    mov byte [ebp + wPlayerName + 0], 0x91   ; R
-    mov byte [ebp + wPlayerName + 1], 0x84   ; E
-    mov byte [ebp + wPlayerName + 2], 0x83   ; D
-    mov edi, wPlayerName + 3
-    mov ecx, NAME_LEN - 3
-    mov al, 0x50                             ; '@' terminator/pad
-.padName:
-    mov byte [ebp + edi], al
-    inc edi
-    dec ecx
-    jnz .padName
-    mov word [ebp + wPlayerID], 0            ; big-endian 0
+    ; Deterministic player identity FIRST — before the party is built, so
+    ; _AddPartyMon copies "RED" into each mon's OT-name slot (add_party_mon.asm:
+    ; OT source = wPlayerName).
+    call SeedDeterministicPlayerIdentity
 
     ; W_MON_DATA_LOCATION = 0
     mov byte [ebp + W_MON_DATA_LOCATION], 0
@@ -196,6 +183,30 @@ PrepareNewGameDebug:
     mov byte [ebp + W_PLAYER_MONEY + 1], 0x99
     mov byte [ebp + W_PLAYER_MONEY + 2], 0x99
     
+    ret
+
+; -----------------------------------------------------------------------------
+; SeedDeterministicPlayerIdentity — fidelity harness (converge to seed.lua):
+; wPlayerName = "RED", '@'-padded to NAME_LEN; wPlayerID = 0 (big-endian).
+; Called by PrepareNewGameDebug and directly by DEBUG_* gates that skip the
+; party seed (e.g. DEBUG_STARTMENU), so every harness screen shows the spec
+; identity instead of the build-define name. Charmap bytes per
+; constants/charmap.asm — matches this file's numeric-id debug-seed convention
+; (not asset-pipeline text).
+; -----------------------------------------------------------------------------
+SeedDeterministicPlayerIdentity:
+    mov byte [ebp + wPlayerName + 0], 0x91   ; R
+    mov byte [ebp + wPlayerName + 1], 0x84   ; E
+    mov byte [ebp + wPlayerName + 2], 0x83   ; D
+    mov edi, wPlayerName + 3
+    mov ecx, NAME_LEN - 3
+    mov al, 0x50                             ; '@' terminator/pad
+.padName:
+    mov byte [ebp + edi], al
+    inc edi
+    dec ecx
+    jnz .padName
+    mov word [ebp + wPlayerID], 0            ; big-endian 0
     ret
 
 ; -----------------------------------------------------------------------------

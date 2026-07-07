@@ -111,6 +111,9 @@ extern pad_noclip
 %ifdef DEBUG_BAGMENU
 extern RunBagMenuTest
 %endif
+%ifdef DEBUG_STARTMENU
+extern SeedDeterministicPlayerIdentity  ; engine/debug/debug_party.asm — "RED"/id 0 (seed.lua spec)
+%endif
 %ifdef DEBUG_BAGMENU_LIVE
 extern PrepareNewGameDebug
 %endif
@@ -477,6 +480,7 @@ EnterMap:
     call DumpBackbuffer                    ; writes FRAME.BIN, exits
 %endif
 %ifdef DEBUG_STARTMENU
+    call SeedDeterministicPlayerIdentity   ; menu's name row = "RED" (golden spec), not the build define
     call DisplayStartMenu                  ; draws menu, renders one frame, dumps FRAME.BIN, exits
 %endif
 %ifdef DEBUG_BAGMENU
