@@ -132,7 +132,8 @@ def emit_audio_rom(rom: AudioROM) -> str:
 
 
 def emit_constants(rom: AudioROM, ids: dict[str, int],
-                   bounds: dict[str, str]) -> str:
+                   bounds: dict[str, str],
+                   music_banks: dict[str, int]) -> str:
     lines = [HEADER.format(name="audio_constants.inc")]
     lines.append("; Positional sound IDs: id = (header_addr - $4000) / 3;")
     lines.append("; music, SFX, cries and noise instruments share the space.")
@@ -150,6 +151,12 @@ def emit_constants(rom: AudioROM, ids: dict[str, int],
     lines.append("; GB bank numbers of the four audio banks, slot order")
     for slot, bank in enumerate(rom.banks()):
         lines.append(f"AUDIO_BANK_{slot + 1:<17} equ 0x{bank:02X}")
+    lines.append("")
+    lines.append("; per-song GB audio bank (PlayMusic's bank arg; sound IDs are")
+    lines.append("; ambiguous across banks, so a song must carry its bank).")
+    lines.append("; Lets harness code resolve TRACK %+ _BANK, e.g. DEBUG_AUDIO TRACK=.")
+    for name, bank in music_banks.items():
+        lines.append(f"{name + '_BANK':<28} equ 0x{bank:02X}")
     lines.append("")
     lines.append("; GB addresses of in-blob data referenced from engine/game code")
     for label in ("Audio1_Pitches", "Audio1_WavePointers",
@@ -198,7 +205,11 @@ def main():
         raise KeyError(f"unexpected unresolvable music consts: {skipped}")
 
     (ASSETS / "audio_rom.inc").write_text(emit_audio_rom(rom))
-    (ASSETS / "audio_constants.inc").write_text(emit_constants(rom, ids, bounds))
+    music_banks = {name: rom.sym_bank[label]
+                   for name, label in consts.items()
+                   if name.startswith("MUSIC_") and label in rom.symtab}
+    (ASSETS / "audio_constants.inc").write_text(
+        emit_constants(rom, ids, bounds, music_banks))
     (ASSETS / "cry_data.inc").write_text(emit_cry_data(parse_cry_data(ids)))
     print(f"audio_rom.inc: {len(rom.banks())} banks x {BANK_SIZE} bytes; "
           f"{len(ids)} sound IDs; cry_data written")

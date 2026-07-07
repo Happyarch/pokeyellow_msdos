@@ -19,21 +19,44 @@ stays cross-referenceable against pret as documentation.
 
 ## Skills — load detailed reference on demand
 
-Most of the deep reference that used to live inline here now lives in three
-**project skills** (`.claude/skills/`) so it only loads into context when you
-actually need it. Invoke the matching skill (via the `Skill` tool) before doing
-that kind of work:
+The deep reference lives in **project skills** (`.claude/skills/`) so it only
+loads into context when needed. Invoke the matching skill (via the `Skill`
+tool) BEFORE doing that kind of work. Full index, by task:
 
+**Porting code** (the main loop — usually all four, in this order):
 - **`asm-translation`** — translating any SM83/pret routine to x86: register map,
   ZF/CF flag preservation, big-endian GB data, EBP memory model / DJGPP addressing,
   video/timing/hardware-I/O/RST boundaries, 386+ instruction choices, the 7-step
   translation workflow.
-- **`build-and-debug`** — building/running the port, asset regen, DOSBox-X config,
-  memory-dump (`DUMP.BIN`) and back-buffer (`FRAME.BIN`) debugging recipes, the
-  repo layout map, reference URLs.
 - **`project-conventions`** — stub conventions (`*_stubs.asm`), the data/code
   two-tier rule (incl. text-string generation), `BUG_FIX_LEVEL`/`GLITCH` tags, the
   active-plan file convention + current plans, save-file format notes.
+- **`build-and-debug`** — building/running the port, asset regen, DOSBox-X config,
+  memory-dump (`DUMP.BIN`) / back-buffer (`FRAME.BIN`) / GB-state (`GBSTATE.BIN`)
+  debugging recipes, the golden fidelity harness (mGBA vs DOSBox-X, `goldencheck`
+  / `make fidelity`), music auditioning (audition.py / `DEBUG_AUDIO TRACK=`),
+  the repo layout map, reference URLs.
+- **`faithfulness-review`** — the pre-commit fidelity gate for any change touching
+  a pret-labeled routine: faithdiff / lint_pret_labels / label_status / golden
+  scenarios, and the justification rules.
+
+**Music work** (arrangement pipeline — read in this order):
+- **`score-analysis`** — per-track musicological analysis; read the target
+  track's entry BEFORE any arrangement work on it.
+- **`music-theory`** — chord ID, voice leading, voicing; foundation for both
+  enhance skills, also standalone for analysis/review.
+- **`audio-enhance-opl3`** — tier-1 conservative FM channels (must sound good on
+  OPL3; cascades up to MT-32/GM). Do this tier first.
+- **`audio-enhance-mt32`** — tier 2–3 MT-32/GM channels on top of existing
+  tier 1 (never duplicating it).
+- To *listen* to any result, that's not an arranger question — it's
+  `build-and-debug` → "Auditioning music" (host-side `audition.py` for fast
+  iteration; `dos_port/run DEBUG_AUDIO=1 TRACK=<MUSIC_*> /LOOP` in-DOS).
+
+Rule of thumb: writing/reviewing x86 from pret source → `asm-translation` +
+`faithfulness-review`; touching stubs/generators/tags → `project-conventions`;
+running, hearing, or inspecting anything → `build-and-debug`; notes and chords
+→ the music set.
 
 The always-apply hard rules below stay here so they're in force every session; the
 skills hold the "look it up while doing X" detail.

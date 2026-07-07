@@ -350,10 +350,18 @@ RunCalcStatsTest:
 ; RAM + virtual APU + shim state to DUMP.BIN and exit. Audible when run
 ; under dos_port/run (DOSBox-X OPL emulation); byte-verifiable headless.
 ; Never returns. In: EBP = GB memory base.
+;
+; The auditioned song defaults to Game Corner; override from the make line
+; with TRACK=<MUSIC_* name> (any constant in assets/audio_constants.inc) —
+; the bank is resolved via the generated <name>_BANK constant, no asm edit.
 ; ---------------------------------------------------------------------------
+%ifndef DEBUG_AUDIO_TRACK
+%define DEBUG_AUDIO_TRACK MUSIC_GAME_CORNER
+%endif
+%define DEBUG_AUDIO_TRACK_BANK DEBUG_AUDIO_TRACK %+ _BANK
 RunAudioTest:
-    mov bl, AUDIO_BANK_3                    ; c = BANK(Music_GameCorner) = $1F
-    mov al, MUSIC_GAME_CORNER
+    mov bl, DEBUG_AUDIO_TRACK_BANK          ; c = BANK(song)
+    mov al, DEBUG_AUDIO_TRACK
     call PlayMusic
     ; /LOOP (audition): play the music only, forever — no SFX, no dump/exit,
     ; so the whole track (and its loop) can be heard clean. DelayFrame still

@@ -161,3 +161,12 @@ all three patch fields present.
 | [hardware_constraints.md](references/hardware_constraints.md) | OPL3 voice count, channel layout, available patches, FM synthesis characteristics | When you need to know what's technically possible |
 | examples/ | Hand-crafted worked example (when available) | Before writing your first arrangement — see what good output looks like |
 | music-theory skill | All theory references | Always read first |
+
+## Auditioning (how to actually hear it)
+
+The listen loop lives in the **build-and-debug** skill ("Auditioning music").
+Short form: host-side `tools/audio/audition.py --target gm <Song>` for fast
+iteration, then the real OPL3 shim end-to-end with
+`dos_port/run DEBUG_AUDIO=1 TRACK=<MUSIC_* constant> /LOOP`. The track is the
+`TRACK=` make variable — never edit the Makefile or debug_dump.asm to swap
+songs, and never do full DOS rebuilds just to hear a YAML tweak.

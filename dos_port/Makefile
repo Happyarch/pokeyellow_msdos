@@ -346,13 +346,18 @@ NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_NPC_WALK
 NASMFLAGS += -D SKIP_TITLE
 endif
-# Audio-engine gate: start Pallet Town BGM through the real gateway at boot,
-# tick the engine 120 frames, dump audio RAM + virtual APU to DUMP.BIN, exit.
-# make DEBUG_AUDIO=1
+# Audio-engine gate: start BGM through the real gateway at boot, tick the
+# engine, dump audio RAM + virtual APU to DUMP.BIN, exit. With the /LOOP exe
+# flag (dos_port/run DEBUG_AUDIO=1 /LOOP) it instead plays the song forever.
+# TRACK=<MUSIC_* constant> picks the song (default MUSIC_GAME_CORNER), e.g.
+#   dos_port/run DEBUG_AUDIO=1 TRACK=MUSIC_CELADON /LOOP
 ifdef DEBUG_AUDIO
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_AUDIO
 NASMFLAGS += -D SKIP_TITLE
+ifdef TRACK
+NASMFLAGS += -D DEBUG_AUDIO_TRACK=$(TRACK)
+endif
 endif
 # CalcStats gate: compute known Bulbasaur stats at boot, dump DUMP.BIN, exit.
 # make DEBUG_CALCSTATS=1
