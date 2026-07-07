@@ -34,6 +34,7 @@ import math
 import struct
 import sys
 from bisect import bisect_right
+from itertools import combinations
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -345,11 +346,31 @@ def simulate_song(rom: AudioROM, amap, label: str,
         # stream can't carry that, so it alone falls back to the longest
         # channel period and takes the phase-jump at the seam.
         if period > MAX_LOOP_FRAMES:
+            # Partial unroll (Music_CinnabarMansion): the full lcm is ~7 h —
+            # sq2's 2328f loop (the score's 21-9/16-bar "haphazard" figure)
+            # carries a prime factor 97 no other channel shares. Choose the
+            # subset of periods whose lcm fits the cap and leaves the MOST
+            # channels seamless; only the leftovers phase-jump at the seam.
+            # For Mansion: sq1/wave/noise unroll cleanly to 15552f (~4.3 min)
+            # and only the deliberately unpredictable sq2 jumps — the one
+            # channel a listener can't track anyway.
+            full = period
+            uniq = sorted(set(periods))
+            best = (sum(1 for p in periods if max(periods) % p == 0),
+                    max(periods))
+            for r in range(len(uniq), 0, -1):
+                for sub in combinations(uniq, r):
+                    lcm = math.lcm(*sub)
+                    if lcm <= MAX_LOOP_FRAMES:
+                        cand = (sum(1 for p in periods if lcm % p == 0), lcm)
+                        if cand > best:
+                            best = cand
+            period = best[1]
+            jumping = sorted({p for p in periods if period % p})
             song.warnings.append(
-                f"channel periods {sorted(set(periods))} have lcm {period}f "
-                f"> cap {MAX_LOOP_FRAMES}f; looping at max period — shorter "
-                "channels phase-jump at the seam")
-            period = max(periods)
+                f"channel periods {uniq} have lcm {full}f > cap "
+                f"{MAX_LOOP_FRAMES}f; partially unrolled to {period}f — "
+                f"period(s) {jumping} phase-jump at the seam")
         elif period != max(periods):
             song.warnings.append(
                 f"channel periods {sorted(set(periods))} differ; "

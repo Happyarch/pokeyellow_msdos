@@ -1,0 +1,24 @@
+# Music_CinnabarMansion (Pokémon Mansion) — per-song MIDI overrides.
+#
+# Yellow swaps channels vs the score transcription (like Lavender): here
+# GB ch1 is the HIGH haphazard leaping figure (C5-B6, the 21-9/16-bar
+# incommensurate loop that phase-jumps at the partial-unroll seam), ch2
+# is the 16-bar chromatic melody (D#4-B4, enters m9), ch3 the 36-bar
+# steady wave bass (B2-G#3), ch4 a 2-bar noise loop. Registers verified
+# from the generated MIDI 2026-07-07; patches chosen per register and
+# per the score analysis's "ominous ruins" read.
+channels:
+  1:
+    mt32_program: "Fantasy"      # bell-pad shimmer on the haphazard leaps —
+                                 # eerie, and its soft attack also blurs the
+                                 # once-per-4.3-min phase-jump seam further
+    volume: 92                   # busy + high; texture, not lead
+    pan: 44
+  2:
+    mt32_program: "Engl Horn"    # dark plaintive reed, at home in D#4-B4 —
+                                 # the chromatic line is the melodic basis
+    volume: 100
+    pan: 84
+  3:
+    mt32_program: "Acou Bass 1"  # defined, steady low line (B2-G#3)
+    volume: 102                  # default 110 swamps
