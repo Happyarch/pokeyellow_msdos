@@ -43,6 +43,7 @@ global mt32_upload
 global midi_seq_start
 global midi_seq_stop
 global midi_seq_tick
+global midi_all_notes_off         ; PlayPikachuSoundClip: cut held notes pre-clip
 
 extern tick_count                 ; boot/timing.asm — 60 Hz PIT tick counter
 global g_midi_music

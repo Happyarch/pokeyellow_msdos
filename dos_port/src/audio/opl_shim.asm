@@ -38,6 +38,7 @@
 
 global opl_init
 global opl_shutdown
+global opl_silence
 global opl_pass
 global opl_dbg_snapshot
 global g_opl_present
@@ -207,8 +208,14 @@ opl_init:
     popad
     ret
 
-; key off all 9 voices and pull every operator to max attenuation
+; key off all 9 voices and pull every operator to max attenuation. Safe with
+; no OPL present. Exported for PlayPikachuSoundClip: the shim's software
+; envelopes freeze during the cli PCM clip (the GB's *hardware* envelopes
+; kept decaying through its freeze), so held notes must be cut. opl_pass
+; restores TL every tick; a cut voice re-keys on its next note-on.
 opl_silence:
+    cmp byte [g_opl_present], 0
+    jz .absent
     push eax
     push ecx
     mov ah, 0xB0
@@ -227,6 +234,7 @@ opl_silence:
     loop .tl
     pop ecx
     pop eax
+.absent:
     ret
 
 ; opl_shutdown — leave the chip silent on exit. Preserves all registers.

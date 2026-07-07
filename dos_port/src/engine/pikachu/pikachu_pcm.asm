@@ -10,9 +10,15 @@
 ; the whole game for the clip too, so callers already expect it.
 ;
 ; Kept from pret: the 3-frame lead-in delay, and clearing the CHAN5-8 sound
-; IDs afterwards (SFX state is stale after the freeze; music channels 1-4
-; resume untouched, as on GB). The wave-RAM save/restore and APU register
-; dance have no analog here — the APU shim never loses its state.
+; IDs afterwards (SFX state is stale after the freeze). The wave-RAM
+; save/restore and APU register dance have no analog here — the APU shim
+; never loses its state.
+;
+; All held notes are CUT before the clip (opl_silence + midi_all_notes_off):
+; the shim's software envelopes freeze with interrupts off, so a held FM
+; voice would drone through the whole clip — on the GB the *hardware*
+; envelopes kept decaying through the freeze, so the cry stood alone there
+; too. Music channels re-key on their next note events after the clip.
 
 bits 32
 
@@ -26,6 +32,8 @@ extern g_audio_engine_online      ; src/home/audio.asm
 extern g_sb_present               ; src/audio/audio_hal.asm
 extern sb_pcm_play                ; src/audio/sb_pcm.asm
 extern spk_pcm_play               ; src/audio/spk_pcm.asm
+extern opl_silence                ; src/audio/opl_shim.asm (guarded, no-OPL safe)
+extern midi_all_notes_off         ; src/audio/mpu401.asm (guarded, no-MPU safe)
 
 section .data
 ; Tier-1 generated data: table + blob (tools/audio/gen_pika_pcm.py). Included
@@ -53,6 +61,10 @@ PlayPikachuSoundClip:
     movzx ebx, bl
     cmp ebx, NUM_PIKA_CRIES
     jae .done
+    push ebx
+    call opl_silence              ; cut held FM voices (see header)
+    call midi_all_notes_off       ; cut held MT-32/GM notes in MIDI mode
+    pop ebx
     mov esi, [PikachuCriesPointerTable + ebx*8]
     mov ecx, [PikachuCriesPointerTable + ebx*8 + 4]
     mov [pika_dbg_clip], bl

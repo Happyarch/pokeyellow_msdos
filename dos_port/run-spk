@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# dos_port/run-spk — like dos_port/run, but with Sound Blaster emulation OFF
+# so the Pikachu PCM path falls through to the PC-speaker PWM player
+# (spk_pcm.asm). By default the AdLib at 388h stays (music/SFX keep playing
+# on FM, only the cry moves to the speaker — handy for A/B against run's SB
+# direct-mode cry). SPK_ONLY=1 removes the OPL too: a true speaker-only
+# machine, silent except the PWM cry. Make args pass through, e.g.:
+#   dos_port/run-spk DEBUG_AUDIO=1
+#   SPK_ONLY=1 dos_port/run-spk DEBUG_AUDIO=1
+set -e
+DOSPORT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+make -C "$DOSPORT" image "$@"
+
+OPLMODE=opl3
+[ -n "$SPK_ONLY" ] && OPLMODE=none
+
+CONF="$(mktemp --suffix=.conf)"
+trap 'rm -f "$CONF"' EXIT
+cat "$DOSPORT/dosbox-x.conf" > "$CONF"
+cat >> "$CONF" <<EOF
+
+[sblaster]
+sbtype  = none
+oplmode = $OPLMODE
+EOF
+
+exec dosbox-x -defaultdir "$DOSPORT" -defaultconf -conf "$CONF"

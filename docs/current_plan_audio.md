@@ -475,7 +475,13 @@ the two-model workflow (Gemini distills, Claude writes the skill files).
         label; DL = clip index): 3-frame lead-in, bounds check, dispatch
         g_sb_present → sb_pcm / else spk_pcm (engine offline → silent skip),
         clears CHAN5-8 sound IDs after, like pret. Blocking cli playback is
-        authentic (GB froze too). Call sites wired: status screen (full pret
+        authentic (GB froze too). All held notes are cut before the clip
+        (opl_silence + midi_all_notes_off, both exported for this): the
+        shim's software envelopes freeze during cli, so held FM/MIDI notes
+        would drone through the clip — the GB's hardware envelopes kept
+        decaying through its freeze (user-confirmed audibly 2026-07-07).
+        Voices re-key on their next note events. Call sites wired: status
+        screen (full pret
         branch: wMonDataLocation / IsThisPartyMon+BoxMonStarterPikachu →
         clip 16 / PlayCry-TODO). bills_pc / scripts / pikachu-emotion sites
         follow when those systems land (tracked by pret cross-ref).
@@ -483,8 +489,10 @@ the two-model workflow (Gemini distills, Claude writes the skill files).
     state-verified headless 2026-07-07 (DEBUG_AUDIO harness plays PikachuCry1
     after the Phase A demo; $D240 snapshot: device=1/SB and device=2/speaker
     each played 9312/9312 samples, music resumed, CHAN5-8 cleared; DEBUG_STATUS
-    FRAME.BIN regression clean). Audible check: `dos_port/run DEBUG_AUDIO=1`
-    (SB direct mode), and with `sbtype = none` in the conf for the PWM path.**
+    FRAME.BIN regression clean). SB path user-confirmed audible 2026-07-07.
+    Audible checks: `dos_port/run DEBUG_AUDIO=1` (SB direct mode);
+    `dos_port/run-spk DEBUG_AUDIO=1` (speaker cry, music stays on OPL);
+    `SPK_ONLY=1 dos_port/run-spk DEBUG_AUDIO=1` (true speaker-only box).**
 
 - `[ ]` **Phase D — Tandy + speaker SFX + polish**
   - `[ ]` Pull SN76489 doc into `docs/sound/`; `tandy_shim`.
