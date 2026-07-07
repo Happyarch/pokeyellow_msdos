@@ -452,8 +452,10 @@ the two-model workflow (Gemini distills, Claude writes the skill files).
     `tools/audio/audition.py Music_PalletTown`, or in-game via
     `dos_port/run-mt32 DEBUG_AUDIO=1`.**
 
-- `[~]` **Phase C — Pikachu PCM** — COMPLETE for all systems that exist in the
-  port (2026-07-07); remaining call sites land with their systems.
+- `[x]` **Phase C — Pikachu PCM** — DONE (2026-07-07); both device paths
+  user-confirmed audible (SB direct mode + speaker PWM via run-spk).
+  Remaining call sites (bills_pc / scripts / pikachu-emotion) land with
+  their systems and are tracked by pret cross-ref, not by this phase.
   - `[x]` `gen_pika_pcm.py`: the pret WAVs are the raw 1-bit GB streams as
         0/255 bytes @ 22050 Hz, so the generator does what the GB's analog
         output stage did — low-pass filters (127-tap Blackman sinc, 4.5 kHz
@@ -489,7 +491,8 @@ the two-model workflow (Gemini distills, Claude writes the skill files).
     state-verified headless 2026-07-07 (DEBUG_AUDIO harness plays PikachuCry1
     after the Phase A demo; $D240 snapshot: device=1/SB and device=2/speaker
     each played 9312/9312 samples, music resumed, CHAN5-8 cleared; DEBUG_STATUS
-    FRAME.BIN regression clean). SB path user-confirmed audible 2026-07-07.
+    FRAME.BIN regression clean). Both paths user-confirmed audible
+    2026-07-07 (SB, then speaker via run-spk) — MILESTONE REACHED.
     Audible checks: `dos_port/run DEBUG_AUDIO=1` (SB direct mode);
     `dos_port/run-spk DEBUG_AUDIO=1` (speaker cry, music stays on OPL);
     `SPK_ONLY=1 dos_port/run-spk DEBUG_AUDIO=1` (true speaker-only box).**
