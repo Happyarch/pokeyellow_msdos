@@ -384,6 +384,26 @@ dos_port/run-mt32 DEBUG_AUDIO=1 TRACK=MUSIC_CELADON /LOOP  # MT-32 via MUNT
 sequence (music + SFX + cry + PCM) then dumps audio state to `DUMP.BIN` and
 exits — that's the byte-verification mode, not the listening mode.
 
+**Enhancements on/off (A/B) — the two targets differ (verified 2026-07-07):**
+- **OPL3**: the tier-1 layer is a *runtime* overlay (`opl_enh.asm` streams) —
+  the `/NOENH` exe flag disables it live: `dos_port/run DEBUG_AUDIO=1
+  TRACK=... /LOOP /NOENH`. No rebuild of assets needed.
+- **MT-32/GM**: enhancements are **baked into the MIDI stream at asset-gen
+  time** (`gb_to_midi.py` folds `enhancements/<Song>.yaml` in; `mpu401.asm`
+  never checks `/NOENH` — passing it is harmless but does nothing). The plain
+  side of an A/B needs a stream regen:
+  ```sh
+  python3 tools/audio/gb_to_midi.py --target mt32 --songs GameCorner --no-enhance
+  python3 tools/audio/midi_to_stream.py --target mt32
+  dos_port/run-mt32 DEBUG_AUDIO=1 TRACK=MUSIC_GAME_CORNER /LOOP
+  make -C dos_port assets   # afterwards: restore the enhanced streams
+  ```
+  (`mpu401.o` depends on `music_streams.inc` in the Makefile, so the rebuild
+  picks the regen up automatically.)
+- A song with no `enhancements/<Song>.yaml` (most of them, currently — only
+  GameCorner and PalletTown have tier-1 layers) sounds identical with or
+  without any of this: enhanced == plain until a YAML exists.
+
 Anti-patterns (both caused a real lost session, 2026-07-07):
 - Rebuilding PKMN.EXE / booting DOSBox-X repeatedly to hear a YAML tweak —
   use audition.py; the DOS build is for driver verification only.
