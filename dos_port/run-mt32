@@ -21,6 +21,14 @@ for a in "$@"; do
     esac
 done
 
+# Same guard as dos_port/run: a live session holds PKMN.IMG mounted rw —
+# rebuilding/double-mounting under it corrupts the run (verified 2026-07-07).
+if command -v fuser >/dev/null && fuser -s "$DOSPORT/PKMN.IMG" 2>/dev/null; then
+    echo "run-mt32: PKMN.IMG is held open by a running DOSBox-X session —" >&2
+    echo "          close it before launching another run." >&2
+    exit 1
+fi
+
 make -C "$DOSPORT" image "${make_args[@]}"
 
 ROMDIR="${MT32_ROMDIR:-$HOME/.config/scummvm}"

@@ -20,6 +20,15 @@ for a in "$@"; do
     esac
 done
 
+# A live DOSBox-X session holds PKMN.IMG mounted read-write: rebuilding the
+# image under it and double-mounting corrupts the run (verified 2026-07-07:
+# the second session fails to mount C, or silently loses writes). Refuse.
+if command -v fuser >/dev/null && fuser -s "$DOSPORT/PKMN.IMG" 2>/dev/null; then
+    echo "run: PKMN.IMG is held open by a running DOSBox-X session —" >&2
+    echo "     close it before launching another run." >&2
+    exit 1
+fi
+
 # Build the EXE + refresh it inside the disk image (save data in the image is
 # preserved across rebuilds; delete PKMN.IMG or `make clean-image` to reset).
 make -C "$DOSPORT" image "${make_args[@]}"

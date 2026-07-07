@@ -42,6 +42,7 @@ import yaml
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from pret_audio import AudioROM, ChannelTimer, Cmd, Label  # noqa: E402
 from gen_audio_data import parse_music_constants, sound_id  # noqa: E402
+from mt32_presets import resolve_program  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[3]
 MIDI_OUT = ROOT / "dos_port" / "assets" / "midi"
@@ -532,9 +533,11 @@ def write_midi(path: Path, song: Song, ov: dict, target: str, enhance=None):
         evs: list[tuple[int, int, bytes]] = []  # (tick, order, bytes)
         evs.append((0, 1, meta(0x03, f"GB ch{gc}".encode())))
         if gc != 4:
-            prog = chan_setting(ov, gc, prog_key,
-                                chan_setting(ov, gc, "program",
-                                             DEFAULT_PROGRAM[gc]))
+            prog = resolve_program(
+                chan_setting(ov, gc, prog_key,
+                             chan_setting(ov, gc, "program",
+                                          DEFAULT_PROGRAM[gc])),
+                target, f"{song.label} ch{gc} {prog_key}")
             evs.append((0, 1, bytes((0xC0 | mc, prog))))
         vol = chan_setting(ov, gc, "volume", DEFAULT_VOLUME.get(gc, 100))
         pan = chan_setting(ov, gc, "pan", 64)

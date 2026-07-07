@@ -14,15 +14,21 @@ iterates. `make assets` reads these; it never writes them.
 ```yaml
 channels:            # keyed by GB channel number (1, 2 = pulse; 3 = wave)
   1:
-    mt32_program: 80 # program change sent when --target mt32 (MT-32 default
-                     # timbre bank numbering, 0-127)
-    gm_program: 80   # program change sent when --target gm (General MIDI)
+    mt32_program: "Square Wave"
+                     # program change sent when --target mt32. Prefer a
+                     # factory-bank preset NAME (hand-editable; full list in
+                     # tools/audio/mt32_presets.py, lookup is case- and
+                     # punctuation-insensitive); a raw 0-based program
+                     # number 0-127 also works.
+    gm_program: 80   # program change sent when --target gm; GM level-1
+                     # names accepted too ("Lead 1 (square)")
     program: 80      # fallback used when the per-target key is absent
+                     # (a name here resolves against the active target)
     volume: 100      # CC7 sent at song start (0-127)
     pan: 64          # CC10 at song start (0-127); when set, the song's own
                      # stereo_panning commands are suppressed for this channel
   3:
-    mt32_program: 38
+    mt32_program: "Warm Bell"
     volume: 110
 drums:               # GB channel 4 (noise) → MIDI channel 10
   velocity: 100      # fixed note-on velocity for all drum hits
@@ -36,6 +42,12 @@ All keys are optional. Unknown top-level keys are an error (typo guard).
 Notes:
 - GB `tempo`, note lengths and loop points come from the engine simulation
   and are not overridable — the MIDI is timing-faithful by construction.
-- The MT-32 default timbre bank is NOT GM: until `gen_mt32_patches.py`
-  (custom timbres) and MUNT auditioning land, `mt32_program` values are
-  placeholders using GM numbering and will sound approximate.
+- The MT-32 factory bank is NOT GM — a GM-numbered `mt32_program` selects
+  a different (often absurd) instrument: GM 80 "Lead 1 (square)" lands on
+  factory patch "Sax 3". This is exactly why names are preferred: the YAML
+  then says what it sounds like. (Verified by ear 2026-07-07 — the default
+  80/80/38 played Celadon as two saxes + a bell.)
+- Once `timbres.yaml` uploads custom timbres, its Patch Memory rewrites
+  redefine slots and the factory names for those slots stop being true —
+  point `mt32_program` at the rewritten slot number per the timbres.yaml
+  header comment.

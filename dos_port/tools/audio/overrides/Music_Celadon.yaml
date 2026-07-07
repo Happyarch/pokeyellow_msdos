@@ -1,0 +1,30 @@
+# Music_Celadon — per-song MIDI overrides (see README.md for schema).
+#
+# Motivating bug (user audition 2026-07-07): square 2 gets lost in the mix
+# across the loop. Root cause is patch choice: the GM-numbered placeholder
+# defaults select MT-32 FACTORY patches (timbres.yaml uploads none yet), so
+# program 80 = "Sax 3" for BOTH squares (identical timbre — sq2 vanishes
+# wherever the lines cross or move in homophony, which per the score
+# analysis is most of the A section) and 38 = "Warm Bell", whose long
+# decay + hall reverb washes over the squares.
+#
+# Choices follow Masuda's own separation principle (score analysis,
+# celadon_city.md): distinct instrument family per line. Names resolve via
+# tools/audio/mt32_presets.py (MT-32 factory bank / GM level 1).
+channels:
+  1:
+    mt32_program: "Square Wave"   # keep the chip-lead character on sq1
+    pan: 44                       # sq1 slightly left / sq2 slightly right
+  2:
+    mt32_program: "Doctor Solo"   # resonant synth lead, different family
+                                  # from sq1 so the contrary-motion /
+                                  # independent line (rehearsal 2) reads
+                                  # as its own voice
+    volume: 106                   # default 96; nudge the melody line up
+    pan: 84
+  3:
+    mt32_program: "Pizzicato"     # dry pluck for the eighth-note D pedal
+                                  # and the treble crossing line; kills the
+                                  # Warm Bell decay wash masking the squares
+    volume: 60                    # user audition 2026-07-07: sit the pedal
+                                  # well under the squares
