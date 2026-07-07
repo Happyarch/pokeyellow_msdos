@@ -33,6 +33,11 @@ OUT = ROOT / "assets" / "opl_patches.inc"
 # EG constants shared by all patches: attack=15 (instant), decay=0,
 # sustain level=0 (loudest), release=7 (quick, clickless).
 AD = 0xF0
+# Eased attack for the pulse voices (user audition 2026-07-07: "let off the
+# attack some"): rate 12 = a few ms of onset ramp, declicking each key-on
+# without smearing fast 16th-note figures. Wave keeps AD (long held notes,
+# already ear-signed-off); noise keeps AD (drum hits must stay instant).
+AD_PULSE = 0xC0
 SR = 0x07
 SUS = 0x20  # reg 0x20 bit 5: sustaining envelope (hold at sustain level)
 
@@ -40,12 +45,22 @@ SUS = 0x20  # reg 0x20 bit 5: sustaining envelope (hold at sustain level)
 # increasing FM brightness (more modulator level / feedback = buzzier).
 # GB duty 75% is aurally identical to 25% (inverted waveform), so it shares
 # the 25% timbre.
+#
+# Pulse softening pass (user audition 2026-07-07, Lavender Town: "very
+# grating on almost all channels") — same reasoning as the wave fix below:
+# the GB speaker's low-pass is part of the intended sound and clean FM has
+# no equivalent, so tame the high-harmonic sources while preserving the
+# duty-cycle brightness ORDERING (125 buzziest > 25/75 > 50 roundest):
+#   - feedback halved across the pulses (6/5/3 -> 3/2/1) — feedback
+#     self-brightening was the dominant edge, as it was on the wave
+#   - modulator TL backed off ~7.5 dB (m40 +0x0A) — sidebands stay, whistle
+#     goes
 PATCHES = {
     #                m20        m40   m60  m80  mE0   c20        c40   c60  c80  cE0   C0
-    "duty_125": [SUS | 0x01, 0x0C,  AD,  SR, 0x00, SUS | 0x01, 0x00,  AD,  SR, 0x00, 0x0C],
-    "duty_25":  [SUS | 0x01, 0x10,  AD,  SR, 0x00, SUS | 0x01, 0x00,  AD,  SR, 0x00, 0x0A],
-    "duty_50":  [SUS | 0x02, 0x14,  AD,  SR, 0x00, SUS | 0x01, 0x00,  AD,  SR, 0x00, 0x06],
-    "duty_75":  [SUS | 0x01, 0x10,  AD,  SR, 0x00, SUS | 0x01, 0x00,  AD,  SR, 0x00, 0x0A],
+    "duty_125": [SUS | 0x01, 0x16, AD_PULSE, SR, 0x00, SUS | 0x01, 0x00, AD_PULSE, SR, 0x00, 0x06],
+    "duty_25":  [SUS | 0x01, 0x1A, AD_PULSE, SR, 0x00, SUS | 0x01, 0x00, AD_PULSE, SR, 0x00, 0x04],
+    "duty_50":  [SUS | 0x02, 0x1E, AD_PULSE, SR, 0x00, SUS | 0x01, 0x00, AD_PULSE, SR, 0x00, 0x02],
+    "duty_75":  [SUS | 0x01, 0x1A, AD_PULSE, SR, 0x00, SUS | 0x01, 0x00, AD_PULSE, SR, 0x00, 0x04],
     # Wave channel: soft, rounded bass/counter-melody voice. The GB wave is
     # harsh at the source too, but the console's tiny speaker low-passes the
     # highs away; clean FM has nothing rolling them off, so we emulate that by
