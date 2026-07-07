@@ -452,13 +452,39 @@ the two-model workflow (Gemini distills, Claude writes the skill files).
     `tools/audio/audition.py Music_PalletTown`, or in-game via
     `dos_port/run-mt32 DEBUG_AUDIO=1`.**
 
-- `[ ]` **Phase C — Pikachu PCM**
-  - `[ ]` `gen_pika_pcm.py` (WAV → DSP blob + speaker PWM stream).
-  - `[ ]` `sb_pcm.asm` direct-mode player (command 10h, PIT-paced).
-  - `[ ]` `spk_pcm.asm` PWM player (PIT ch2 mode 0, cli busy-wait).
-  - `[ ]` Implement `PlayPikachuSoundClip` dispatch + wire call sites (status
-        screen, scripts, pikachu-emotion system as those systems land).
-  - **Milestone: Pikachu audible on both SB and speaker-only configs.**
+- `[~]` **Phase C — Pikachu PCM** — COMPLETE for all systems that exist in the
+  port (2026-07-07); remaining call sites land with their systems.
+  - `[x]` `gen_pika_pcm.py`: the pret WAVs are the raw 1-bit GB streams as
+        0/255 bytes @ 22050 Hz, so the generator does what the GB's analog
+        output stage did — low-pass filters (127-tap Blackman sinc, 4.5 kHz
+        cutoff; 0.1% HF energy left), decimates to 11025 Hz, one shared
+        normalization gain, per-clip DC removal + 3 ms edge ramps. One
+        724 KB blob (assets/pika_pcm.bin, incbin'd) + PikachuCriesPointerTable
+        (pret name; port format dd ptr, dd samples) shared by BOTH players
+        — the speaker player derives its PWM scale at run time.
+  - `[x]` `sb_pcm.asm`: DSP direct mode (cmd $10 per sample), speaker-on/off
+        $D1/$D3 for pre-4.xx DSPs, all handshakes bounded. Pacing: PIT ch0
+        can't be touched (it's the 60 Hz tick), so the pacer *latches* it —
+        mode-3 counts decrement by 2/clock, elapsed = (prev−cur mod
+        PIT_DIVISOR)/2, accumulated 24.8 fixed point (exact average rate,
+        jitter self-corrects). Pacer exported for spk_pcm.
+  - `[x]` `spk_pcm.asm`: RealSound-style PWM — ch2 mode 0 lobyte-only, count
+        ∝ inverted sample, carrier at 2× sample rate (~22 kHz, above
+        hearing), gate restored + ch2 back to mode 3 after.
+  - `[x]` `PlayPikachuSoundClip` (src/engine/pikachu/pikachu_pcm.asm, pret
+        label; DL = clip index): 3-frame lead-in, bounds check, dispatch
+        g_sb_present → sb_pcm / else spk_pcm (engine offline → silent skip),
+        clears CHAN5-8 sound IDs after, like pret. Blocking cli playback is
+        authentic (GB froze too). Call sites wired: status screen (full pret
+        branch: wMonDataLocation / IsThisPartyMon+BoxMonStarterPikachu →
+        clip 16 / PlayCry-TODO). bills_pc / scripts / pikachu-emotion sites
+        follow when those systems land (tracked by pret cross-ref).
+  - **Milestone: Pikachu audible on both SB and speaker-only configs —
+    state-verified headless 2026-07-07 (DEBUG_AUDIO harness plays PikachuCry1
+    after the Phase A demo; $D240 snapshot: device=1/SB and device=2/speaker
+    each played 9312/9312 samples, music resumed, CHAN5-8 cleared; DEBUG_STATUS
+    FRAME.BIN regression clean). Audible check: `dos_port/run DEBUG_AUDIO=1`
+    (SB direct mode), and with `sbtype = none` in the conf for the PWM path.**
 
 - `[ ]` **Phase D — Tandy + speaker SFX + polish**
   - `[ ]` Pull SN76489 doc into `docs/sound/`; `tandy_shim`.

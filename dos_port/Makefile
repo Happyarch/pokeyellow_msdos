@@ -164,6 +164,9 @@ AUDIO_SRCS := \
     src/audio/audio_hal.asm \
     src/audio/opl_shim.asm \
     src/audio/mpu401.asm \
+    src/audio/sb_pcm.asm \
+    src/audio/spk_pcm.asm \
+    src/engine/pikachu/pikachu_pcm.asm \
     src/audio/engine_1.asm \
     src/audio/engine_2.asm \
     src/audio/engine_3.asm \
@@ -860,6 +863,13 @@ src/data/audio_data.o: assets/audio_rom.inc assets/cry_data.inc
 src/audio/opl_shim.o: assets/opl_patches.inc
 src/audio/mpu401.o: assets/music_streams.inc assets/mt32_sysex.inc \
                     assets/audio_constants.inc
+src/engine/pikachu/pikachu_pcm.o: assets/pika_pcm.inc assets/pika_pcm.bin
+
+# Pikachu voice clips (Phase C): pret's 1-bit 22 kHz streams -> low-pass-
+# filtered 8-bit PCM blob + pointer table for sb_pcm/spk_pcm.
+assets/pika_pcm.inc assets/pika_pcm.bin &: tools/audio/gen_pika_pcm.py \
+                       $(wildcard ../audio/pikachu_cries/*.wav)
+	python3 tools/audio/gen_pika_pcm.py
 
 # MT-32 setup SysEx (LCD greeting, reverb/partial reserves, custom timbres)
 # from the hand-editable tools/audio/mt32/timbres.yaml.
@@ -1160,7 +1170,8 @@ assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_
         assets/sprite_sheet_pointers.inc assets/pokedex_tiles.inc \
         assets/mon_pics.inc \
         assets/audio_rom.inc assets/audio_constants.inc assets/cry_data.inc \
-        assets/opl_patches.inc assets/music_streams.inc assets/mt32_sysex.inc
+        assets/opl_patches.inc assets/music_streams.inc assets/mt32_sysex.inc \
+        assets/pika_pcm.inc
 
 # Force-regenerate every generated asset, ignoring timestamps. The asset rules
 # are timestamp-gated (an .inc newer than its generator/source is skipped), which

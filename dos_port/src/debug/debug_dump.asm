@@ -120,6 +120,8 @@ extern PlaySound
 extern DelayFrame
 extern opl_dbg_snapshot
 extern midi_dbg_snapshot
+extern PlayPikachuSoundClip
+extern pika_dbg_snapshot
 global RunAudioTest
 %endif
 
@@ -323,8 +325,13 @@ RunAudioTest:
     call PlaySound
     mov edi, 240
     call .ticks
+    xor dl, dl                              ; PikachuCry1 — Phase C digitized PCM
+    call PlayPikachuSoundClip               ; blocks ~0.8 s (SB DSP or speaker PWM)
+    mov edi, 60                             ; a beat of music after the clip
+    call .ticks
     call opl_dbg_snapshot                   ; shim state -> $D1E0 scratch
     call midi_dbg_snapshot                  ; MIDI driver state -> $D227+
+    call pika_dbg_snapshot                  ; PCM player state -> $D240+
     jmp DebugDumpMemory                     ; writes DUMP.BIN, exits
 .ticks:
     push edi
