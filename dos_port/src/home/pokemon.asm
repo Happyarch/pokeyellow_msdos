@@ -54,6 +54,7 @@ extern PrintStatusAilment               ; src/engine/pokemon/status_ailments.asm
 %ifdef DEBUG_PARTYMENU
 extern DelayFrame
 extern DumpBackbuffer
+extern PlaceMenuCursor                  ; src/home/window.asm — ▶ at the current item
 %endif
 
 global GetMonHeader
@@ -195,8 +196,12 @@ DisplayPartyMenu:
     call PartyMenuInit
     call DrawPartyMenu
 %ifdef DEBUG_PARTYMENU
-    ; deterministic pixel gate: render one frame of the freshly drawn menu,
-    ; dump the back buffer to FRAME.BIN, exit (DumpBackbuffer never returns).
+    ; deterministic pixel gate: place the ▶ cursor exactly as the first
+    ; HandleMenuInput iteration would (the golden dumps inside that loop, so
+    ; its cursor is placed), mirror the scratch to the panel window, render
+    ; one frame, dump FRAME.BIN, exit (DumpBackbuffer never returns).
+    call PlaceMenuCursor
+    call PartyMenuMirror
     call DelayFrame
     call DumpBackbuffer
 %endif

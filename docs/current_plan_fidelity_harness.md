@@ -2,7 +2,7 @@
 
 Worktree: `/mnt/sdb1/Code/Active Code/pokeyellow_msdos-fidelity_harness` (branch `fidelity_harness`).
 
-Status: **in progress — Sessions A–E done (2026-07-07); next: Session F.**
+Status: **in progress — Sessions A–F done (2026-07-07); next: Session G.**
 
 **Sequencing vs `current_plan_overworld_port.md` (decided with user 2026-07-06):**
 the harness spine — Sessions A–E + H — runs as one focused block **before** the
@@ -276,11 +276,39 @@ sessions must know:
   the DEBUG_STARTMENU build in the Makefile.
 
 ### Session F — remaining scenarios  *(1.2 items 3–4)*
-- [ ] `overworld_pallet`, `party_menu`, `bag_menu`, `battle_menu` goldens + port-side
+- [x] `overworld_pallet`, `party_menu`, `bag_menu` goldens + port-side
       diff runs; per-scenario masks only with a written justification each.
+- [ ] `battle_menu` — **deferred, filed as a finding (below)**.
 - **Exit gate:** `make fidelity` green across all scenarios (or red entries filed as
   findings in the session note — a true divergence found here is a WIN, not a blocker;
   file it, mask it with justification, move on).
+
+**Session F result (2026-07-07): gate passed** — `make fidelity` green across all six
+scenarios (status_p1/p2, start_menu, overworld_pallet, party_menu, bag_menu). New
+goldens byte-identical across two `make goldens` runs; the four committed goldens
+regenerated bit-identical. What the next sessions must know:
+- **battle_menu DEFERRED (finding):** the port's `DEBUG_BATTLE` harness hand-seeds a
+  synthetic enemy (`PIDGEY` with temp HP 200, custom PP for the PP-depletion test —
+  values marked REVERT in debug_dump.asm) that no real encounter produces, and a
+  golden would need a deterministic *real* wild encounter (RNG-dependent species/
+  DVs) or an agreed seed spec like seed.lua's party. Needs its own convergence spec
+  (post-plan or a later session); not a differ limitation.
+- **Widescreen UI re-layouts are handled by per-rect `projections`** (measured and
+  byte-verified): party = name rows 2i→row i left panel, HP rows→right panel (+20),
+  6-row message box → 3 rows × 2 panels; bag = 2-rows-per-item → names left/qty
+  right. The overworld backdrop window is (16,10) at the (8,8) spawn everywhere.
+- **Real fixes that fell out:** DEBUG_PARTYMENU dumped before the ▶ cursor existed —
+  hook now runs PlaceMenuCursor + PartyMenuMirror pre-dump (golden dumps inside
+  HandleMenuInput where the cursor is placed).
+- **Divergence classes masked with justification** (see `SCENARIOS` in
+  golden_diff.py): stale-history VRAM (SKIP_TITLE boot leaves vChars1 tail zeroed
+  where GB has font-digit residue; stale vChars2 $00-$5F under full-redraw menus);
+  RNG NPC wander (OAM); GB hides the player sprite under centered menus while the
+  widescreen port's re-anchored boxes leave it visible; flower/water tile-data
+  animation phase; GB animated OAM party icons vs port static BG icon tiles; GB
+  keeps the START-menu box visible beside the ITEM list, port panel-redraws.
+- seed.lua gained `seed.items` (DEBUG_ITEMS = the port's DebugNewGameItemsList
+  verbatim). Badges/dex flags still unseeded (no scenario renders them yet).
 
 ### Session G — mgba-mcp bridge  *(Stage 1.5)*
 - [ ] `mcp_agent.lua` + `mgba_mcp/server.py` + `run_mgba_mcp.sh` (copy dosbox_mcp
@@ -360,8 +388,9 @@ Shared by batch scenarios and the MCP bridge:
 `DEBUG_*` gates; motivating bugs first):
 - [x] `status_p1`, `status_p2` (↔ `DEBUG_STATUS[_PAGE2]`)
 - [x] `start_menu` (↔ `DEBUG_STARTMENU`)
-- [ ] `overworld_pallet` baseline (↔ `DEBUG_TRANSITION`/`DEBUG_BASELINE`)
-- [ ] then: `party_menu`, `bag_menu`, `battle_menu` (↔ their `DEBUG_*` twins)
+- [x] `overworld_pallet` baseline (↔ `DEBUG_TRANSITION`/`DEBUG_BASELINE`)
+- [x] `party_menu`, `bag_menu` (↔ their `DEBUG_*` twins); `battle_menu` deferred
+      (Session F finding: port battle harness is synthetic-seeded, needs a spec)
 - [x] `make goldens` target regenerates all (requires built mGBA + sha1-verified ROM).
 
 ### Stage 1.3 — Port-side GB-state dump (`GBSTATE.BIN`)

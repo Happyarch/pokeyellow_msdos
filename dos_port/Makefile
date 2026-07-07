@@ -773,7 +773,7 @@ goldencheck:
 
 # All golden scenarios (the port-vs-golden fidelity suite). Runs every
 # scenario even if one fails; nonzero exit if any failed.
-FIDELITY_SCENARIOS := status_p1 status_p2 start_menu
+FIDELITY_SCENARIOS := status_p1 status_p2 start_menu overworld_pallet party_menu bag_menu
 fidelity:
 	@fail=0; for s in $(FIDELITY_SCENARIOS); do \
 		tools/goldencheck.sh $$s || fail=1; \

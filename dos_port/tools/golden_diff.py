@@ -90,6 +90,117 @@ SCENARIOS = {
         "window": (10, 3),
         "masks": _STATUS_MASKS,
     },
+    "overworld_pallet": {
+        "flags": "DEBUG_TRANSITION=1 DEBUG_BASELINE=1",
+        # Same (8,8) Pallet spawn as start_menu -> same block-aligned mirror
+        # window; golden rows 15-17 fall past the 25-row canvas.
+        "window": (16, 10),
+        "offcanvas": "block-aligned mirror window at (16,10): golden rows 15-17 map past the "
+                     "25-row canvas",
+        "masks": {
+            "vram": [
+                (256 + 0x03, "flower tile: VRAM tile-DATA animation, phase depends on dump frame"),
+                (256 + 0x14, "water tile: VRAM tile-DATA animation, phase depends on dump frame"),
+            ] + [
+                (128 + t, "stale font residue: GB's real boot (intro/Oak speech) left the font in "
+                          "vChars1 and map-entry sprite loads cover only $8800-$8F7F, so digits 2-9 "
+                          "survive at the tail; the port's SKIP_TITLE boot has zeroed VRAM. No "
+                          "displayed tile references $F8-$FF on this screen")
+                for t in range(0x78, 0x80)
+            ],
+            "oam": [
+                (i, "NPC entries: wander state is RNG-path-dependent (golden NPCs walked during "
+                    "the scenario's navigation) — positions/frames cannot converge between "
+                    "emulator runs; player entries 0-3 are compared and match")
+                for i in range(4, 40)
+            ],
+        },
+    },
+    "party_menu": {
+        "flags": "DEBUG_PARTYMENU=1",
+        # The widescreen port re-lays the party list out (measured, byte-verified):
+        # GB's two rows per mon (name / HP-bar) become one canvas row — name in
+        # the left panel (cols 0-19), HP bar in the right (cols 20-39) — and the
+        # 6-row message box re-flows into 3 rows x 2 panels.
+        "window": (0, 0),  # every golden cell is covered by a projection rect
+        "projections": (
+            [((2 * i, 0, 2 * i, 19), (0, i - 2 * i),
+              "widescreen party layout: name row 2i -> canvas row i, left panel") for i in range(6)]
+            + [((2 * i + 1, 0, 2 * i + 1, 19), (20, i - (2 * i + 1)),
+                "widescreen party layout: HP row 2i+1 -> canvas row i, right panel") for i in range(6)]
+            + [((12 + k, 0, 12 + k, 19), (20 * (k % 2), (6 + k // 2) - (12 + k)),
+                "message box re-flowed 6 rows x 1 panel -> 3 rows x 2 panels") for k in range(6)]
+        ),
+        "masks": {
+            "tilemap": [
+                ((2 * i + d, 1, 2 * i + d, 2),
+                 "party mon icons: GB draws them as animated OAM sprites (BG blank); the port "
+                 "draws static BG icon tiles in these cells (widescreen layout)")
+                for i in range(6) for d in (0, 1)
+            ],
+            "oam": [
+                (i, "party mon icons: GB renders them as animated OAM sprites; the port draws "
+                    "static BG tiles instead (widescreen layout) — no OAM to compare")
+                for i in range(40)
+            ],
+            "vram": (
+                [(s, "vChars0: golden holds the animated party-icon OAM tiles (icon compare "
+                     "masked as OAM above); port OAM is empty (icons are BG) and nothing "
+                     "compared displays from this bank") for s in range(0, 128)]
+                + [(s, "vChars2 $00-$5F: the golden screen displays no tile ID below $62 here "
+                       "(stale pre-menu data); the port keeps the live overworld tileset for "
+                       "the widescreen backdrop rows outside the golden's 20x18 screen")
+                   for s in range(256, 352)]
+            ),
+        },
+    },
+    "bag_menu": {
+        "flags": "DEBUG_BAGMENU=1",
+        # Overworld backdrop: same (8,8) spawn -> block-aligned mirror window
+        # (16,10). ITEM box: GB's 2-rows-per-item list (name row / x-qty row,
+        # box at golden rows 2-12 cols 4-19) re-flows into the widescreen
+        # port's two panels — names left (canvas rows 0-5 cols 0-15), qty
+        # right (cols 20-35). Measured/byte-verified like party_menu.
+        "window": (16, 10),
+        "projections": (
+            # left panel: top border r2, name rows r4/6/8/10, bottom border r12
+            [((r, 4, r, 19), (-4, dst - r), "widescreen bag layout: name rows -> left panel")
+             for r, dst in ((2, 0), (4, 1), (6, 2), (8, 3), (10, 4), (12, 5))]
+            # right panel: blank r3, qty rows r5/7/9, key-item blank r11
+            + [((r, 4, r, 19), (16, dst - r), "widescreen bag layout: qty rows -> right panel")
+               for r, dst in ((3, 0), (5, 1), (7, 2), (9, 3), (11, 4))]
+        ),
+        "offcanvas": "block-aligned mirror window at (16,10): golden rows 15-17 map past the "
+                     "25-row canvas; pure overworld backdrop",
+        "masks": {
+            "tilemap": [
+                ((0, 10, 1, 19),
+                 "GB keeps the START menu box visible beside the ITEM list; the widescreen "
+                 "port's panel redraw replaces it with the live overworld backdrop"),
+                ((13, 10, 13, 19),
+                 "GB keeps the START menu box visible beside the ITEM list; the widescreen "
+                 "port's panel redraw replaces it with the live overworld backdrop"),
+                ((11, 18),
+                 "MORE-list arrow: blinking, phase depends on dump frame (golden caught "
+                 "blink-off; the port draws it steady)"),
+            ],
+            "vram": [
+                (256 + 0x03, "flower tile: VRAM tile-DATA animation, phase depends on dump frame"),
+                (256 + 0x14, "water tile: VRAM tile-DATA animation, phase depends on dump frame"),
+            ] + [
+                (128 + t, "stale font residue at the vChars1 tail (see overworld_pallet mask)")
+                for t in range(0x78, 0x80)
+            ],
+            "oam": [
+                (i, "GB hides the player sprite under the centered ITEM box "
+                    "(CheckSpriteAvailability) and its remaining visible entry is one "
+                    "RNG-wandered NPC; the widescreen port re-anchors the box away from the "
+                    "player, who stays visible at the canonical (76,72) — layouts do not share "
+                    "a comparable OAM state (player-vs-golden checked in overworld_pallet)")
+                for i in range(0, 40)
+            ],
+        },
+    },
     "start_menu": {
         "flags": "DEBUG_STARTMENU=1",
         # Overworld portion: W_TILEMAP is the port's block-aligned map mirror;

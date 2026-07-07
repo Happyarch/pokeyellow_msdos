@@ -48,6 +48,28 @@ seed.DEBUG_PARTY = {
 seed.PLAYER_NAME = "RED"
 seed.PLAYER_ID = 0x0000
 
+-- The port's debug bag, verbatim from DebugNewGameItemsList
+-- (dos_port/src/engine/debug/debug_party.asm) — {item id, quantity} pairs,
+-- ids per constants/item_constants.asm.
+seed.DEBUG_ITEMS = {
+	{ 20, 1 },  -- POTION
+	{ 11, 3 },  -- ANTIDOTE
+	{ 1, 99 },  -- MASTER_BALL
+	{ 5, 1 },   -- TOWN_MAP
+	{ 6, 1 },   -- BICYCLE
+	{ 16, 99 }, -- FULL_RESTORE
+	{ 29, 99 }, -- ESCAPE_ROPE
+	{ 40, 99 }, -- RARE_CANDY
+	{ 43, 1 },  -- SECRET_KEY
+	{ 48, 1 },  -- CARD_KEY
+	{ 52, 99 }, -- FULL_HEAL
+	{ 53, 99 }, -- REVIVE
+	{ 60, 99 }, -- FRESH_WATER
+	{ 63, 1 },  -- S_S_TICKET
+	{ 74, 1 },  -- LIFT_KEY
+	{ 79, 99 }, -- PP_UP
+}
+
 -- ---------------------------------------------------------------------------
 -- ROM readers (cart0 domain: flat offset = bank*0x4000 + addr%0x4000)
 -- ---------------------------------------------------------------------------
@@ -220,6 +242,21 @@ function seed.party(sym, name_bytes, party)
 	end
 	console:log(("seed: party of %d written (spec DVs %02X %02X, OT id %04X)"):format(
 		#party, seed.DV_BYTES[1], seed.DV_BYTES[2], seed.PLAYER_ID))
+end
+
+-- Seed the bag (default: the port's debug item list): wNumBagItems, then
+-- (id,qty) pairs, then the $FF terminator — the layout AddItemToInventory_
+-- maintains.
+function seed.items(sym, items)
+	items = items or seed.DEBUG_ITEMS
+	assert(#items <= 20, "seed: bag overflow (max 20 slots)")
+	local bytes = string.char(#items)
+	for _, it in ipairs(items) do
+		bytes = bytes .. string.char(it[1], it[2])
+	end
+	bytes = bytes .. "\xFF"
+	write_bytes(sym:addr("wNumBagItems"), bytes)
+	console:log(("seed: bag of %d items written"):format(#items))
 end
 
 return seed
