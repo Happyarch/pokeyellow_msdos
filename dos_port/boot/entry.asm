@@ -33,6 +33,7 @@ extern audio_init        ; src/audio/audio_hal.asm
 extern audio_shutdown    ; src/audio/audio_hal.asm
 extern g_cfg_nosound     ; src/audio/audio_hal.asm — set by /NOSOUND
 extern g_cfg_midi        ; src/audio/mpu401.asm — /MT32 = 1, /GM = 2
+extern g_cfg_shim        ; src/audio/audio_hal.asm — /TANDY = 2, /SPK = 3
 extern Init              ; src/init/init.asm — power-on init
 %ifdef DEBUG_AUDIO
 extern RunAudioTest      ; src/debug/debug_dump.asm — audio-engine gate
@@ -74,6 +75,8 @@ arg_fixcrit:  db '/FIXCRIT', 0
 arg_nosound:  db '/NOSOUND', 0
 arg_mt32:     db '/MT32',    0
 arg_gm:       db '/GM',      0
+arg_tandy:    db '/TANDY',   0
+arg_spk:      db '/SPK',     0
 
 ; ---------------------------------------------------------------------------
 ; Code
@@ -276,6 +279,21 @@ parse_cmdline:
     jnz .no_gm
     mov byte [g_cfg_midi], 2
 .no_gm:
+
+    mov edi, arg_tandy
+    call find_token
+    jnz .no_tandy
+    mov byte [g_cfg_shim], 2      ; force the SN76489 shim
+.no_tandy:
+
+    ; /TANDY wins if both are given (checked first, /SPK only fills unset)
+    cmp byte [g_cfg_shim], 0
+    jnz .no_spk
+    mov edi, arg_spk
+    call find_token
+    jnz .no_spk
+    mov byte [g_cfg_shim], 3      ; force the PC-speaker SFX shim
+.no_spk:
 
     mov edi, arg_fixall
     call find_token

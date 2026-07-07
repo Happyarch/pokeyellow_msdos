@@ -497,12 +497,49 @@ the two-model workflow (Gemini distills, Claude writes the skill files).
     `dos_port/run-spk DEBUG_AUDIO=1` (speaker cry, music stays on OPL);
     `SPK_ONLY=1 dos_port/run-spk DEBUG_AUDIO=1` (true speaker-only box).**
 
-- `[ ]` **Phase D — Tandy + speaker SFX + polish**
-  - `[ ]` Pull SN76489 doc into `docs/sound/`; `tandy_shim`.
-  - `[ ]` `spk_shim` (SFX-only, priority-channel square wave).
-  - `[ ]` Options-menu stereo bits (`wOptions` MONO/EARPHONE) → rAUDTERM emulation.
-  - `[ ]` Optional: upgrade `sb_pcm` to auto-init DMA (pull 8237 doc first;
-        DPMI 0100h DOS-memory buffer, 64 KB-boundary safe).
+- `[ ]` **Phase D — Tandy + speaker SFX + polish** — code complete + state-verified
+  headless (2026-07-07); milestone = the audible checks below, pending a listen.
+  - `[x]` SN76489 docs in: `docs/sound/tandy_sound_reference.md` (Tandy 1000 SX
+        Tech Ref extract, local-only ARR like the other sound specs; full PDF
+        alongside) + `docs/references/smspower/` (SMS Power SN76489 page,
+        committed). `tandy_shim` (src/audio/tandy_shim.asm): near-1:1 APU pass
+        at port C0h — pulse1/2 → tones 1/2, wave → tone 3 an octave down with
+        NR32-level attenuation, noise → PSG noise (nearest of the 3 fixed
+        shift rates, GB 7-bit LFSR → periodic / 15-bit → white, LFSR reset on
+        retrigger). Same software envelope/sweep/length/NR50/NR51-mute
+        emulation as opl_shim; attenuation via generated 2 dB-step tables
+        (assets/tandy_tables.inc, gen_tandy_tables.py). The PSG is write-only
+        — no probe exists, so the /TANDY flag IS the detection.
+  - `[x]` `spk_shim` (src/audio/spk_shim.asm): SFX-only — when an SFX owns a
+        pulse channel (wChannelSoundIDs CHAN5/CHAN6), the highest-priority
+        audible one drives PIT ch2 mode 3 through the port-61h gate; envelope
+        decay-to-zero / length / sweep tracked in software so notes end and
+        pokeball arcs bend. Selected by /SPK or as the automatic fallback
+        when no OPL answers — a no-card box now blips. Shares PIT ch2 with
+        spk_pcm via spk_silence (also called pre-Pikachu-clip, with
+        tandy_silence, alongside the Phase C opl/midi cuts).
+  - `[x]` Options-menu stereo bits (`wOptions` MONO/EARPHONE) → rAUDTERM: found
+        already complete since Phase A — Audio1_ApplyMonoStereo + the
+        enable/disable mask tables are translated in engine_1.asm and
+        opl_shim's voice_pan consumes the result; the options-menu *UI* rides
+        with the menus system, not this plan. Tandy/speaker are mono devices;
+        they honor NR51's both-bits-clear rest/duck semantics only.
+  - `[x]` Device dispatch: g_shim_device in audio_hal (exactly one shim pass
+        per tick: OPL / SN76489 / speaker), /TANDY + /SPK parsed in
+        parse_cmdline (g_cfg_shim), audio_shutdown silences all three.
+        Debug: $D246 device, $D248+ tandy, $D250+ spk snapshots (window 9).
+        Headless DEBUG_AUDIO verification 2026-07-07, all three paths:
+        default → device 1, OPL keyed, clip on SB DSP 9312/9312;
+        `/TANDY` + sbtype none → device 2, PSG atts 4/1/0/15 + tone divider
+        $BF mid-music, clip on speaker PWM; no flags + no OPL → device 3
+        fallback, 7 PIT-divisor writes from the blip + cry, clip on PWM.
+  - `[ ]` Optional (deferred): upgrade `sb_pcm` to auto-init DMA (pull 8237 doc
+        first; DPMI 0100h DOS-memory buffer, 64 KB-boundary safe). Only
+        matters if a non-blocking cry is ever wanted.
+  - **Milestone: audible checks — `dos_port/run-tandy DEBUG_AUDIO=1` (music +
+    SFX + cry on the 3-voice PSG, Pikachu on speaker PWM) and
+    `SPK_ONLY=1 dos_port/run-spk DEBUG_AUDIO=1` (menu blip + cry pulse
+    audible as speaker beeps, music silent by design).**
 
 - `[ ]` **Phase E — LLM music arranger** (starts after B; see the Phase E section)
   - `[ ]` Pin the enhancement YAML schema (musical positions, tier tags, explicit

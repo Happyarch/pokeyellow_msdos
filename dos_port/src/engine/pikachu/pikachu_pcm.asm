@@ -34,6 +34,9 @@ extern sb_pcm_play                ; src/audio/sb_pcm.asm
 extern spk_pcm_play               ; src/audio/spk_pcm.asm
 extern opl_silence                ; src/audio/opl_shim.asm (guarded, no-OPL safe)
 extern midi_all_notes_off         ; src/audio/mpu401.asm (guarded, no-MPU safe)
+extern tandy_silence              ; src/audio/tandy_shim.asm (guarded)
+extern spk_silence                ; src/audio/spk_shim.asm (also frees PIT ch2
+                                  ;  for spk_pcm's mode-0 use; safe always)
 
 section .data
 ; Tier-1 generated data: table + blob (tools/audio/gen_pika_pcm.py). Included
@@ -63,6 +66,8 @@ PlayPikachuSoundClip:
     jae .done
     push ebx
     call opl_silence              ; cut held FM voices (see header)
+    call tandy_silence            ; cut held PSG voices
+    call spk_silence              ; speaker gate off + hand PIT ch2 to spk_pcm
     call midi_all_notes_off       ; cut held MT-32/GM notes in MIDI mode
     pop ebx
     mov esi, [PikachuCriesPointerTable + ebx*8]

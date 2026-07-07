@@ -163,6 +163,8 @@ AUDIO_SRCS := \
     src/home/audio.asm \
     src/audio/audio_hal.asm \
     src/audio/opl_shim.asm \
+    src/audio/tandy_shim.asm \
+    src/audio/spk_shim.asm \
     src/audio/mpu401.asm \
     src/audio/sb_pcm.asm \
     src/audio/spk_pcm.asm \
@@ -861,6 +863,8 @@ src/data/map_scripts.o: assets/map_scripts.inc
 
 src/data/audio_data.o: assets/audio_rom.inc assets/cry_data.inc
 src/audio/opl_shim.o: assets/opl_patches.inc
+
+src/audio/tandy_shim.o: assets/tandy_tables.inc
 src/audio/mpu401.o: assets/music_streams.inc assets/mt32_sysex.inc \
                     assets/audio_constants.inc
 src/engine/pikachu/pikachu_pcm.o: assets/pika_pcm.inc assets/pika_pcm.bin
@@ -878,6 +882,10 @@ assets/mt32_sysex.inc: tools/audio/gen_mt32_patches.py \
 	python3 tools/audio/gen_mt32_patches.py
 assets/opl_patches.inc: tools/audio/gen_opl_patches.py
 	python3 tools/audio/gen_opl_patches.py
+
+# SN76489 attenuation tables for the Tandy shim.
+assets/tandy_tables.inc: tools/audio/gen_tandy_tables.py
+	python3 tools/audio/gen_tandy_tables.py
 src/home/audio.o src/audio/engine_1.o src/audio/engine_2.o \
 src/audio/engine_3.o src/audio/engine_4.o src/audio/low_health_alarm.o \
 src/audio/play_battle_music.o src/audio/pokedex_rating_sfx.o \
@@ -1171,7 +1179,7 @@ assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_
         assets/mon_pics.inc \
         assets/audio_rom.inc assets/audio_constants.inc assets/cry_data.inc \
         assets/opl_patches.inc assets/music_streams.inc assets/mt32_sysex.inc \
-        assets/pika_pcm.inc
+        assets/pika_pcm.inc assets/tandy_tables.inc
 
 # Force-regenerate every generated asset, ignoring timestamps. The asset rules
 # are timestamp-gated (an .inc newer than its generator/source is skipped), which

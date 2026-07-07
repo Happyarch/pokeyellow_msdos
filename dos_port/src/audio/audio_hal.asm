@@ -22,6 +22,9 @@ global audio_tick
 global audio_init
 global audio_shutdown
 global g_cfg_nosound
+global g_cfg_shim
+global g_shim_device
+global hal_dbg_snapshot
 global g_sb_base
 global g_sb_irq
 global g_sb_dma
@@ -36,6 +39,13 @@ extern g_audio_engine_online      ; src/home/audio.asm
 extern opl_init                   ; src/audio/opl_shim.asm
 extern opl_pass                   ; src/audio/opl_shim.asm
 extern opl_shutdown               ; src/audio/opl_shim.asm
+extern g_opl_present              ; src/audio/opl_shim.asm
+extern tandy_init                 ; src/audio/tandy_shim.asm
+extern tandy_pass                 ; src/audio/tandy_shim.asm
+extern tandy_shutdown             ; src/audio/tandy_shim.asm
+extern spk_shim_init              ; src/audio/spk_shim.asm
+extern spk_pass                   ; src/audio/spk_shim.asm
+extern spk_shim_shutdown          ; src/audio/spk_shim.asm
 extern mpu_detect                 ; src/audio/mpu401.asm
 extern mt32_upload                ; src/audio/mpu401.asm
 extern midi_seq_tick              ; src/audio/mpu401.asm
@@ -52,7 +62,25 @@ audio_tick:
     call FadeOutAudio
     call Music_DoLowHealthAlarm
     call Audio1_UpdateMusic
-    call opl_pass                 ; virtual APU -> FM (no-ops if no OPL found)
+    ; exactly one device shim consumes the virtual APU (each pass is also
+    ; self-guarded, so a wrong selection no-ops instead of touching ports)
+    mov al, [g_shim_device]
+    cmp al, 1
+    je .opl
+    cmp al, 2
+    je .tandy
+    cmp al, 3
+    je .spk
+    jmp .midi
+.opl:
+    call opl_pass                 ; virtual APU -> FM
+    jmp .midi
+.tandy:
+    call tandy_pass               ; virtual APU -> SN76489
+    jmp .midi
+.spk:
+    call spk_pass                 ; virtual APU -> PC speaker (SFX only)
+.midi:
     call midi_seq_tick            ; MIDI music stream (no-op unless /MT32|/GM)
 .off:
     ret
@@ -63,6 +91,27 @@ audio_init:
     call audio_parse_blaster      ; BLASTER env -> g_sb_base/irq/dma
     call dsp_detect               ; DSP reset + E1h version (Phase C consumer)
     call opl_init                 ; detect + reset the OPL (388h)
+    ; device shim selection (exactly one active): /TANDY and /SPK force
+    ; theirs (the SN76489 is write-only — no probe is possible, the flag IS
+    ; the detection); the default is OPL when one answered, else the
+    ; speaker SFX shim so a no-card machine still blips.
+    mov al, [g_cfg_shim]
+    cmp al, 2
+    je .tandy
+    cmp al, 3
+    je .spk
+    cmp byte [g_opl_present], 0
+    jz .spk
+    mov byte [g_shim_device], 1   ; OPL
+    jmp .haveShim
+.tandy:
+    call tandy_init
+    mov byte [g_shim_device], 2
+    jmp .haveShim
+.spk:
+    call spk_shim_init
+    mov byte [g_shim_device], 3
+.haveShim:
     cmp byte [g_cfg_midi], 0      ; /MT32 or /GM: probe the MPU-401 too
     jz .noMidi
     call mpu_detect               ; clears g_cfg_midi if nothing answers
@@ -77,6 +126,17 @@ audio_shutdown:
     mov byte [g_audio_engine_online], 0
     call midi_seq_stop            ; all-notes-off on the MIDI module
     call opl_shutdown             ; leave the FM chip silent
+    call tandy_shutdown           ; leave the PSG silent (no-op if inactive)
+    call spk_shim_shutdown        ; speaker gate off (safe always)
+    ret
+
+; hal_dbg_snapshot — record the selected shim device at $D246 (DEBUG_AUDIO
+; window 9; see the shims' snapshot maps for $D248+). Clobbers EAX.
+hal_dbg_snapshot:
+    mov al, [g_shim_device]
+    mov [ebp + 0xD246], al
+    mov al, [g_cfg_shim]
+    mov [ebp + 0xD247], al
     ret
 
 section .data
@@ -84,6 +144,8 @@ section .data
 blaster_name:   db "BLASTER=", 0
 
 g_cfg_nosound:  db 0              ; /NOSOUND on the command line
+g_cfg_shim:     db 0              ; forced shim: /TANDY = 2, /SPK = 3 (0 = auto)
+g_shim_device:  db 0              ; active shim: 0 none, 1 OPL, 2 SN76489, 3 speaker
 g_sb_base:      dw 0              ; BLASTER A field (e.g. 0x220); 0 = absent
 g_sb_irq:       db 0              ; BLASTER I field
 g_sb_dma:       db 0              ; BLASTER D field

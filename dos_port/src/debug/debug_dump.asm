@@ -122,6 +122,9 @@ extern opl_dbg_snapshot
 extern midi_dbg_snapshot
 extern PlayPikachuSoundClip
 extern pika_dbg_snapshot
+extern hal_dbg_snapshot
+extern tandy_dbg_snapshot
+extern spk_dbg_snapshot
 global RunAudioTest
 %endif
 
@@ -226,7 +229,8 @@ windows:
     dd 0xCFC0    ; fade block ($CFC6-C8) + wLastMusicSoundID ($CFC9)
     dd 0xD1E0    ; opl_dbg_snapshot: present, opl3, voice_state[0..61]
     dd 0xD220    ; SB detect (+0..6) + MIDI driver state (+7..: cfg,
-                 ; present, active, on, dw progress, scale, cc7[16])
+                 ; present, active, on, dw progress, scale, cc7[16]);
+                 ; $D240 pika PCM, $D246 shim device, $D248 tandy, $D250 spk
 %elifdef DEBUG_BATTLE
 windows:
     dd 0xC468    ; W_TILEMAP row 5 (enemy HP-bar tile IDs, cols 12-20)
@@ -332,6 +336,9 @@ RunAudioTest:
     call opl_dbg_snapshot                   ; shim state -> $D1E0 scratch
     call midi_dbg_snapshot                  ; MIDI driver state -> $D227+
     call pika_dbg_snapshot                  ; PCM player state -> $D240+
+    call hal_dbg_snapshot                   ; active shim device -> $D246
+    call tandy_dbg_snapshot                 ; SN76489 shim state -> $D248+
+    call spk_dbg_snapshot                   ; speaker shim state -> $D250+
     jmp DebugDumpMemory                     ; writes DUMP.BIN, exits
 .ticks:
     push edi
