@@ -9,6 +9,21 @@ global SetDebugNewGameParty
 global PrepareNewGameDebug
 extern AddPartyMon
 extern AddItemToInventory
+extern GetMonHeader                ; home/pokemon.asm — base stats -> wMonHeader
+extern CalcStats                   ; home/move_mon.asm — recompute the 5 stats
+
+; Party-mon struct offsets (mirror gb_constants.inc). gb_constants.inc is NOT
+; %included here: it defines CUT/FLY/SURF/STRENGTH via `equ`, which collides
+; with this file's local move `%define`s. So the few offsets needed for the
+; deterministic-stat recompute are redeclared locally.
+%define MON_SPECIES_OFF 0x00
+%define MON_HP_OFF      0x01        ; word (big-endian)
+%define MON_HP_EXP_OFF  0x11        ; stat-exp base (CalcStats hl = base - 1)
+%define MON_DVS_OFF     0x1B        ; word
+%define MON_LEVEL_OFF   0x21
+%define MON_MAXHP_OFF   0x22        ; first of the 5 big-endian stat words
+%define PARTYMON_LEN    0x2C        ; 44
+%define NAME_LEN        11
 
 %define BIT_EARTHBADGE 7
 %define SURF 57
@@ -58,6 +73,25 @@ SetDebugNewGameParty:
 ; PrepareNewGameDebug
 ; -----------------------------------------------------------------------------
 PrepareNewGameDebug:
+    ; --- Deterministic player identity (fidelity harness; converge to seed.lua).
+    ; wPlayerName = "RED", '@'-padded to NAME_LEN; wPlayerID = 0. Set BEFORE the
+    ; party is built so _AddPartyMon copies "RED" into each mon's OT-name slot
+    ; (add_party_mon.asm: OT source = wPlayerName). Charmap bytes per
+    ; constants/charmap.asm — this matches the file's existing convention of
+    ; numeric species/move ids in a debug seed (not asset-pipeline text).
+    mov byte [ebp + wPlayerName + 0], 0x91   ; R
+    mov byte [ebp + wPlayerName + 1], 0x84   ; E
+    mov byte [ebp + wPlayerName + 2], 0x83   ; D
+    mov edi, wPlayerName + 3
+    mov ecx, NAME_LEN - 3
+    mov al, 0x50                             ; '@' terminator/pad
+.padName:
+    mov byte [ebp + edi], al
+    inc edi
+    dec ecx
+    jnz .padName
+    mov word [ebp + wPlayerID], 0            ; big-endian 0
+
     ; W_MON_DATA_LOCATION = 0
     mov byte [ebp + W_MON_DATA_LOCATION], 0
 
@@ -78,6 +112,45 @@ PrepareNewGameDebug:
     mov byte [ebp + W_PARTY_MON1_MOVES + 1], CUT
     mov byte [ebp + W_PARTY_MON1_MOVES + 2], SURF
     mov byte [ebp + W_PARTY_MON1_MOVES + 3], STRENGTH
+
+    ; --- Deterministic DVs + stat recompute (fidelity harness; converge to
+    ; seed.lua, the byte-level spec). _AddPartyMon rolled random DVs via
+    ; Random_; overwrite every mon with the spec DVs $98 $76 (Atk9/Def8/Spd7/
+    ; Spc6 -> HP DV 10), zero stat exp, recompute the 5 stats with the real
+    ; GetMonHeader + CalcStats (stat exp ignored), and refill HP to the new
+    ; MaxHP — so party bytes equal seed.lua's by construction.
+    movzx ecx, byte [ebp + wPartyCount]
+    test ecx, ecx
+    jz .dvDone
+    mov edi, wPartyMon1                 ; GB offset of mon 0
+.dvLoop:
+    mov byte [ebp + edi + MON_DVS_OFF], 0x98
+    mov byte [ebp + edi + MON_DVS_OFF + 1], 0x76
+    ; stat exp = 0 (10 bytes)
+    mov dword [ebp + edi + MON_HP_EXP_OFF], 0
+    mov dword [ebp + edi + MON_HP_EXP_OFF + 4], 0
+    mov word  [ebp + edi + MON_HP_EXP_OFF + 8], 0
+    ; CalcStats inputs: wCurSpecies/wCurEnemyLevel from the struct itself
+    mov al, [ebp + edi + MON_SPECIES_OFF]
+    mov [ebp + wCurSpecies], al
+    mov al, [ebp + edi + MON_LEVEL_OFF]
+    mov [ebp + wCurEnemyLevel], al
+    push ecx
+    push edi
+    call GetMonHeader                   ; base stats -> wMonHeader (regs preserved)
+    xor bh, bh                          ; b = 0: ignore stat exp
+    lea esi, [edi + MON_HP_EXP_OFF - 1] ; hl = stat-exp base - 1 (GB addr)
+    lea edx, [edi + MON_MAXHP_OFF]      ; de = dest: MaxHP..Special (5 BE words)
+    call CalcStats
+    pop edi
+    pop ecx
+    ; current HP = new MaxHP (16-bit copy keeps the big-endian byte order)
+    mov ax, [ebp + edi + MON_MAXHP_OFF]
+    mov [ebp + edi + MON_HP_OFF], ax
+    add edi, PARTYMON_LEN
+    dec ecx
+    jnz .dvLoop
+.dvDone:
 
     ; Get some debug items
     lea esi, [DebugNewGameItemsList]

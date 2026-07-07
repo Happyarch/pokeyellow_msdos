@@ -116,6 +116,7 @@ global RunStatusScreenTest
 
 global DebugDumpMemory
 global DumpBackbuffer
+global DumpGBState
 %ifdef DEBUG_NPC_WALK
 global DumpNpcLog
 global npc_log
@@ -128,6 +129,41 @@ global dbg_destTile
 WIN_SIZE     equ 0x40
 NUM_WINDOWS  equ 9
 DUMP_TOTAL   equ NUM_WINDOWS * WIN_SIZE          ; 9 * 64 = 576 bytes
+
+; GBSTATE.BIN layout (fidelity harness, Session D): fixed regions after a
+; 16-byte header, mirroring the golden dump regions (tools/mgba_harness/lib/
+; dump.lua) except the tilemap, which is the port's full 40x25 canvas — the
+; differ (golden_diff.py) extracts the 20x18 subwindow per scenario.
+;   +0x00  magic "GBST", u8 version=1, u8 scenario id, 10 reserved (0)
+;   +0x10  W_TILEMAP   0xC3A0, 1000 B (40x25, stride 40)
+;   +0x3F8 VRAM        0x8000, 6144 B (tile data 0x8000-0x97FF)
+;   +0x1BF8 OAM        0xFE00, 160 B
+GBSTATE_VERSION  equ 1
+GBSTATE_HDR_SIZE equ 16
+GBSTATE_VRAM_SIZE equ 0x1800
+GBSTATE_TOTAL    equ GBSTATE_HDR_SIZE + W_TILEMAP_SIZE + GBSTATE_VRAM_SIZE + GB_OAM_SIZE
+; scenario id tag (sanity check only — the differ selects the golden by make
+; target; ids: 0 other/unknown, 1 overworld (TRANSITION/BASELINE/WALK_NORTH),
+; 2 STARTMENU, 3 STATUS, 4 STATUS_PAGE2, 5 PARTYMENU, 6 BAGMENU, 7 BATTLE)
+%ifdef DEBUG_STATUS_PAGE2
+GBSTATE_SCENARIO equ 4
+%elifdef DEBUG_STATUS
+GBSTATE_SCENARIO equ 3
+%elifdef DEBUG_STARTMENU
+GBSTATE_SCENARIO equ 2
+%elifdef DEBUG_PARTYMENU
+GBSTATE_SCENARIO equ 5
+%elifdef DEBUG_BAGMENU
+GBSTATE_SCENARIO equ 6
+%elifdef DEBUG_BATTLE
+GBSTATE_SCENARIO equ 7
+%elifdef DEBUG_TRANSITION
+GBSTATE_SCENARIO equ 1
+%elifdef DEBUG_WALK_NORTH
+GBSTATE_SCENARIO equ 1
+%else
+GBSTATE_SCENARIO equ 0
+%endif
 
 ; DPMI real-mode call structure field offsets (DPMI 0.9 spec)
 RMCS_EBX     equ 0x10
@@ -144,6 +180,7 @@ align 4
 
 fname: db "DUMP.BIN", 0
 fbname: db "FRAME.BIN", 0
+fgbname: db "GBSTATE.BIN", 0
 %ifdef DEBUG_NPC_WALK
 fnlog: db "NPCLOG.BIN", 0
 %endif
@@ -817,13 +854,104 @@ DebugDumpMemory:
     int 0x21
 
 ; ---------------------------------------------------------------------------
+; DumpGBState — write GBSTATE.BIN (header + W_TILEMAP + VRAM + OAM; layout at
+; the GBSTATE_* equates above) so every DEBUG_* scenario emits the GB-state
+; twin of the mGBA golden (fidelity harness Stage 1.3). Unlike the other dump
+; routines this RETURNS — DumpBackbuffer calls it first, then writes FRAME.BIN
+; and exits, so every existing hook gains GBSTATE.BIN with no call-site edits.
+; In: EBP = GB memory base. Clobbers caller-saved regs; preserves EBP.
+; ---------------------------------------------------------------------------
+DumpGBState:
+    ; --- Allocate a conventional DOS buffer: 0x10 + GBSTATE_TOTAL bytes ---
+    ; 16 + 7320 = 7336 -> 459 paragraphs; round up to 0x200 (8 KB).
+    mov ax, 0x0100
+    mov bx, 0x200
+    int 0x31
+    jc .ret
+    mov [dos_seg], ax
+    mov [dos_sel], dx
+    movzx eax, ax
+    shl eax, 4
+    sub eax, [ds_base]
+    mov [dos_flat], eax
+
+    ; --- Stage filename at offset 0 ---
+    mov esi, fgbname
+    mov edi, [dos_flat]
+    mov ecx, 12                    ; "GBSTATE.BIN" + NUL
+    rep movsb
+
+    ; --- Header at offset 0x10 ---
+    mov edi, [dos_flat]
+    add edi, 0x10
+    mov dword [edi], 'GBST'        ; little-endian store -> bytes G,B,S,T
+    mov byte [edi + 4], GBSTATE_VERSION
+    mov byte [edi + 5], GBSTATE_SCENARIO
+    xor eax, eax
+    mov word [edi + 6], ax         ; reserved
+    mov dword [edi + 8], eax
+    mov dword [edi + 12], eax
+    add edi, GBSTATE_HDR_SIZE
+
+    ; --- Regions: W_TILEMAP (40x25), VRAM tile data, OAM ---
+    lea esi, [ebp + W_TILEMAP]
+    mov ecx, W_TILEMAP_SIZE
+    rep movsb
+    lea esi, [ebp + GB_VRAM0]
+    mov ecx, GBSTATE_VRAM_SIZE
+    rep movsb
+    lea esi, [ebp + GB_OAM]
+    mov ecx, GB_OAM_SIZE
+    rep movsb
+
+    ; --- Create GBSTATE.BIN ---
+    call zero_rmcs
+    mov word [rmcs + RMCS_EAX], 0x3C00
+    mov dword [rmcs + RMCS_EDX], 0
+    mov ax, [dos_seg]
+    mov [rmcs + RMCS_DS], ax
+    call sim_int21
+    test byte [rmcs + RMCS_FLAGS], 1
+    jnz .free
+    mov ax, [rmcs + RMCS_EAX]
+    mov [file_handle], ax
+
+    ; --- Write header + regions in one shot ---
+    call zero_rmcs
+    mov word [rmcs + RMCS_EAX], 0x4000
+    movzx eax, word [file_handle]
+    mov [rmcs + RMCS_EBX], eax
+    mov dword [rmcs + RMCS_ECX], GBSTATE_TOTAL
+    mov dword [rmcs + RMCS_EDX], 0x10
+    mov ax, [dos_seg]
+    mov [rmcs + RMCS_DS], ax
+    call sim_int21
+
+    ; --- Close ---
+    call zero_rmcs
+    mov word [rmcs + RMCS_EAX], 0x3E00
+    movzx eax, word [file_handle]
+    mov [rmcs + RMCS_EBX], eax
+    call sim_int21
+
+.free:
+    mov ax, 0x0101
+    mov dx, [dos_sel]
+    int 0x31
+.ret:
+    ret
+
+; ---------------------------------------------------------------------------
 ; DumpBackbuffer — write the full GB_BACKBUF (RENDER_W*RENDER_H = 64000 raw
 ; palette-indexed bytes) to FRAME.BIN, then exit. Lets the host render the exact
 ; pixels the software PPU produced under DOSBox-X (no compositor screenshot).
 ; Allocates a single 64 KB+ conventional buffer so the data goes out in one write.
+; First writes GBSTATE.BIN via DumpGBState, so every FRAME.BIN hook also emits
+; the GB-state dump the fidelity differ consumes (Stage 1.3).
 ; In: EBP = GB memory base. Never returns.
 ; ---------------------------------------------------------------------------
 DumpBackbuffer:
+    call DumpGBState               ; GBSTATE.BIN alongside every FRAME.BIN
     ; --- Allocate a conventional DOS buffer big enough for 0x10 + 64000 bytes ---
     ; 0x10 + 64000 = 64016 bytes -> 4001 paragraphs; round up to 0x1001 (4097).
     mov ax, 0x0100

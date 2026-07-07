@@ -2,7 +2,7 @@
 
 Worktree: `/mnt/sdb1/Code/Active Code/pokeyellow_msdos-fidelity_harness` (branch `fidelity_harness`).
 
-Status: **in progress — Sessions A, B, C done (2026-07-06); next: Session D.**
+Status: **in progress — Sessions A–D done (2026-07-07); next: Session E.**
 
 **Sequencing vs `current_plan_overworld_port.md` (decided with user 2026-07-06):**
 the harness spine — Sessions A–E + H — runs as one focused block **before** the
@@ -212,9 +212,31 @@ poke-after-PP quirk, reproduced by construction). What the next sessions must kn
   (gbtext resolves `constants/charmap.asm` relative to cwd).
 
 ### Session D — port-side `GBSTATE.BIN`  *(Stage 1.3)*
-- [ ] `DumpGBState` in `debug_dump.asm`; wire alongside every `DumpBackbuffer` hook.
+- [x] `DumpGBState` in `debug_dump.asm`; wire alongside every `DumpBackbuffer` hook.
 - **Exit gate:** headless `DEBUG_STATUS=1` run yields a `GBSTATE.BIN` (extracted via
   mcopy) whose tilemap region shows the status screen's text tiles.
+
+**Session D result (2026-07-07): gate passed.** `DumpGBState` writes `GBSTATE.BIN`
+(16-B header `GBST`+version+scenario-id, then `W_TILEMAP` 1000 B (40×25), VRAM
+`0x8000–0x97FF`, OAM `0xFE00` — 7320 B total) and **returns**; it's called from the
+top of `DumpBackbuffer`, so all ~25 existing FRAME.BIN hooks emit it with zero
+call-site edits. Headless `DEBUG_STATUS=1`: tilemap decodes the full status screen,
+byte-identical GBSTATE.BIN across two runs. What the next sessions must know:
+- **The Session C port-side determinism TODO is done** (was half-started uncommitted
+  work; finished here): `PrepareNewGameDebug` seeds `wPlayerName`="RED@…",
+  `wPlayerID`=0 **before** the party build, then post-build overwrites every mon's
+  DVs with spec `$98 $76`, zeroes stat exp, recomputes stats via
+  GetMonHeader+CalcStats (stat exp ignored) and sets HP=MaxHP. Verified live: OT/RED,
+  ID 00000, PIKACHU L5 HP 19/19, Atk 11/Def 8/Spd 14/Spc 10 — the golden's values.
+- **status screens' 20×18 subwindow offset is (col 10, row 3)** in the 40×25 canvas —
+  the per-scenario offset golden_diff.py needs. Non-text divergences the differ must
+  expect: mon-pic tile IDs and HP-bar tiles differ from golden tile numbering only
+  where VRAM layout differs — compare via VRAM region, not assumption.
+- Possible seed-spec residue for party-WRAM diffs (NOT tilemap-visible): pret
+  `_AddPartyMon` may write the box-level byte (struct offset 3) = level where
+  seed.lua writes 0 — check before diffing party WRAM windows in Session F.
+- Extraction recipe gains `::GBSTATE.BIN` next to `::FRAME.BIN` (mdel stale copies
+  first, as ever).
 
 ### Session E — differ + end-to-end proof  *(Stage 1.4)*
 - [ ] `golden_diff.py` + `make goldencheck` / `make fidelity`.
@@ -313,13 +335,14 @@ Shared by batch scenarios and the MCP bridge:
 - [x] `make goldens` target regenerates all (requires built mGBA + sha1-verified ROM).
 
 ### Stage 1.3 — Port-side GB-state dump (`GBSTATE.BIN`)
-- [ ] New routine `DumpGBState` in `dos_port/src/debug/debug_dump.asm` (parallel to
+- [x] New routine `DumpGBState` in `dos_port/src/debug/debug_dump.asm` (parallel to
       `DumpBackbuffer`): full `W_TILEMAP` (1000 B, 40×25), VRAM `0x8000–0x97FF`, OAM
       `0xFE00` (160 B), small header with scenario id — all `[EBP+addr]` reads like
       existing windows.
-- [ ] Call it alongside every existing `DumpBackbuffer` hook so each `DEBUG_*` scenario
+- [x] Call it alongside every existing `DumpBackbuffer` hook so each `DEBUG_*` scenario
       emits `FRAME.BIN` + `GBSTATE.BIN`. Extract via the existing `mcopy …@@1048576`
-      recipe.
+      recipe. (Done structurally: `DumpGBState` returns, and `DumpBackbuffer` calls it
+      first — every present and future hook is covered with no call-site edits.)
 
 ### Stage 1.4 — Differ + make target
 - [ ] `dos_port/tools/golden_diff.py`: extract port 20×18 subwindow from the 40×25
