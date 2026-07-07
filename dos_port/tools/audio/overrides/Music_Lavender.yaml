@@ -1,0 +1,32 @@
+# Music_Lavender — per-song MIDI overrides (see README.md for schema).
+#
+# Patch choices are the user's (2026-07-07): Echo Bell / Contrabass /
+# Ice Rain on the three GB voices in order. They fit the score analysis
+# (lavender_town.md): ch1 is the atonal C-G-B-F# ostinato (Echo Bell's
+# delay repeats deepen it without adding harmony), ch2 the slow-wide-
+# vibrato melody (Contrabass keeps it dark; the MIDI path drops GB
+# vibrato, so timbral unease has to come from the patch), ch3 the
+# grating fast-oscillation wave line (Ice Rain shimmers in its place).
+# The channels loop independently (1/20/16/half bars — an 80-measure
+# meta-cycle), so any balance must work in every overlap: keep the
+# three voices well separated in space and level.
+channels:
+  1:
+    mt32_program: "Echo Bell"
+    volume: 100
+    pan: 40                      # ostinato left...
+  2:
+    mt32_program: "Contrabass"
+    volume: 106                  # melody carries (default 96)
+    pan: 88                      # ...melody right: wide, uneasy stage
+  3:
+    mt32_program: "Ice Rain"
+    volume: 92                   # default 110 would swamp; it's texture
+                                 # (pan left unset: song panning applies)
+drums:
+  # GB ch4 is a bare heartbeat pulse (noise instrument 7, twice per loop,
+  # entering after 4 bars). Default map made it a pop kick (36); a low
+  # floor tom reads as a funeral drum on the MT-32 rhythm part.
+  velocity: 108
+  map:
+    7: 41                        # GM/MT-32 low floor tom

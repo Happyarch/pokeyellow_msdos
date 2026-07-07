@@ -49,6 +49,7 @@ MIDI_OUT = ROOT / "dos_port" / "assets" / "midi"
 OVERRIDES_DIR = Path(__file__).resolve().parent / "overrides"
 
 MAX_SIM_FRAMES = 60 * 60 * 20          # 20 min safety cap per channel
+MAX_LOOP_FRAMES = 60 * 60 * 8          # unroll nested loops up to 8 min
 DIVISION = 60                          # ticks/quarter; with 1e6 µs/quarter
 TEMPO_USEC = 1_000_000                 # → 1 tick = 1 frame = 1/60 s
 
@@ -334,20 +335,25 @@ def simulate_song(rom: AudioROM, amap, label: str,
     finite_ends = [s.frame for _, r, s in detect if r == "end"]
     if periods:
         period = math.lcm(*periods)
-        # Channels may loop with incommensurate periods (Music_CinnabarMansion
-        # phases 2328/1728/3888/216-frame loops against each other — its lcm
-        # is ~7 hours). A flat stream needs one seam; fall back to the longest
-        # channel period and let the shorter ones phase-jump there.
-        if period > 4 * max(periods):
+        # Nested-loop songs (independent per-channel loop lengths) only
+        # repeat exactly at the lcm of the channel periods — for
+        # Music_Lavender that 18240f (~5 min) 80-measure meta-cycle IS the
+        # piece, so unroll to it whenever it's stream-feasible; a shorter
+        # seam phase-jumps the ostinato/drum channels back into sync.
+        # The cap is absolute, not relative: Music_CinnabarMansion phases
+        # 2328/1728/3888/216-frame loops whose lcm is ~7 hours — a flat
+        # stream can't carry that, so it alone falls back to the longest
+        # channel period and takes the phase-jump at the seam.
+        if period > MAX_LOOP_FRAMES:
             song.warnings.append(
-                f"channel periods {sorted(set(periods))} are incommensurate "
-                f"(lcm {period}f); looping at max period — shorter channels "
-                "phase-jump at the seam")
+                f"channel periods {sorted(set(periods))} have lcm {period}f "
+                f"> cap {MAX_LOOP_FRAMES}f; looping at max period — shorter "
+                "channels phase-jump at the seam")
             period = max(periods)
         elif period != max(periods):
             song.warnings.append(
                 f"channel periods {sorted(set(periods))} differ; "
-                f"using lcm {period}")
+                f"unrolled to lcm {period}f for a seamless nested loop")
         loop_start = max(intro_ends + finite_ends)
         song.loop_start = loop_start
         song.end = loop_start + period
