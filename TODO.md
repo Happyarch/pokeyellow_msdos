@@ -277,6 +277,23 @@ Prioritized task list. Check off items as they complete; add new items with phas
 - Cross-cuts ride each wave's tail (party_popup polish → audio HAL → GBC palette);
   the save system (Phase 5) is last, after all waves.
 
+### Deferred tails from the fidelity-harness plan (archived 2026-07-07)
+
+- [ ] **`battle_menu` golden scenario** — deferred (Session F): the port's
+      `DEBUG_BATTLE` harness hand-seeds a synthetic enemy (temp PP-test values marked
+      REVERT) irreproducible by a real encounter; needs a convergence spec (seed a
+      real wild encounter both sides) before a golden can exist.
+- [ ] **CI wiring for `make fidelity`** — needs dosbox-x + mGBA builds in CI.
+- [ ] **FormatMovesString out of core_stubs.asm** — full faithful body lives in a
+      stubs file (suppressed lint debt); move to a real file or ride `misc.asm`'s
+      promotion. See `dos_port/tools/pret_label_allowlist.json` suppression whys.
+- [ ] **Relocation allowlist spot-review** — the draft allowlist blesses all 298
+      pre-existing relocation groups wholesale (Session H note); worth a user pass.
+- [ ] **Pret-tree contamination (decision-for-user, Session A)** — port commit
+      `101c5a9c` edited pret sources at the repo root (violates the read-only-spec
+      rule; root `make yellow` fails). Golden ROM builds from the pinned worktree
+      `../pokeyellow_msdos-pret-golden` @ `7caf2e09` meanwhile.
+
 ### Deferred tails from archived plans (menus, pokemon_behavior) — 2026-07-04
 
 - [ ] **Title screen faithful reimpl** (low priority) — `src/movie/title.asm` is a

@@ -2,7 +2,9 @@
 
 Worktree: `/mnt/sdb1/Code/Active Code/pokeyellow_msdos-fidelity_harness` (branch `fidelity_harness`).
 
-Status: **in progress — Sessions A–I done (2026-07-07); next: Session J.**
+Status: **COMPLETE — all Sessions A–J done (2026-07-07); archived to docs/plans/fidelity_harness.md.**
+Deferred tails tracked in TODO.md (battle_menu golden convergence spec, CI wiring,
+FormatMovesString relocation, allowlist spot-review, pret-tree contamination decision).
 
 **Sequencing vs `current_plan_overworld_port.md` (decided with user 2026-07-06):**
 the harness spine — Sessions A–E + H — runs as one focused block **before** the
@@ -419,13 +421,22 @@ visible — they ARE the report. Spot-checks (verified line-by-line vs pret + po
   trailing-comment rule (stub convention rule 3 wants trailing).
 
 ### Session J — review-gate skill + wrap-up  *(Stages 2.3 + 2.4 skill wiring)*
-- [ ] `.claude/skills/faithfulness-review/` skill; one-line reference from CLAUDE.md
+- [x] `.claude/skills/faithfulness-review/` skill; one-line reference from CLAUDE.md
       hard rules.
-- [ ] Wire `label_status --callees` + post-change `update_label_db` steps into the
+- [x] Wire `label_status --callees` + post-change `update_label_db` steps into the
       `asm-translation` and `project-conventions` skills (Stage 2.4).
-- [ ] Archive this plan per convention (`git mv` to `docs/plans/fidelity_harness.md`)
+- [x] Archive this plan per convention (`git mv` to `docs/plans/fidelity_harness.md`)
       **only if** all sessions' gates passed; else leave active with a status summary.
 - **Exit gate:** skill invocable; CLAUDE.md line present; plan archived or status noted.
+
+**Session J result (2026-07-07): gate passed; plan archived.** The
+`faithfulness-review` skill registered as invocable in-session on creation (harness
+listed it among available skills). CLAUDE.md gained the "Faithfulness review gate"
+hard rule; asm-translation's workflow grew steps 2 (`label_status --callees` before
+writing) and 9 (faithdiff + lint + rescan after); project-conventions stub rules
+gained the `--callers` retirement checklist (rule 5) and the post-change
+rescan+lint step (rule 6). All Sessions A–I gates passed by running them; deferred
+tails moved to TODO.md.
 
 ---
 
@@ -556,7 +567,7 @@ they may be superseded later, not in this plan).
       out automatically.
 
 ### Stage 2.3 — Review-gate skill
-- [ ] New project skill `.claude/skills/faithfulness-review/`: any change touching a
+- [x] New project skill `.claude/skills/faithfulness-review/`: any change touching a
       pret-labeled routine must run `faithdiff` on each touched label and justify every
       added/dropped call in the commit message; run `lint_pret_labels` before
       committing. Reference it from CLAUDE.md's hard rules (one line) and from the
@@ -577,14 +588,14 @@ convention). Today agents resolve this by grepping — or don't, which is how
       retirement checklist**: repoint each extern comment, then eyeball each caller
       for stub-era assumptions (was it translated/verified while `<Label>` was a
       `ret`-stub? does it depend on registers/flags the real body clobbers?).
-- [ ] Add the `--callers` retirement step to the stub-retirement rules in the
+- [x] Add the `--callers` retirement step to the stub-retirement rules in the
       `project-conventions` skill (rule 5 gains: "run `label_status --callers` and
       work the list").
-- [ ] Wire into the `asm-translation` skill's 7-step workflow: new step after "pick a
+- [x] Wire into the `asm-translation` skill's 7-step workflow: new step after "pick a
       routine" — run `label_status --callees <Label>`; and a final step — run
       `tools/update_label_db` after the translation/stub lands so the DB reflects it
       (rescan-derived, so skipping this is self-healing, not corrupting).
-- [ ] Same post-change rescan step added to the stub instructions in the
+- [x] Same post-change rescan step added to the stub instructions in the
       `project-conventions` skill.
 
 ## Scope add — dosbox-x-mcp unattended quit fix

@@ -179,6 +179,13 @@ Any human-rendered string (menu/screen labels, item/move/mon names, dialog — e
 charmap hex in a `.asm`. This is the most-repeated violation. Two-tier rule + the
 generator pattern → skill **`project-conventions`**.
 
+### Faithfulness review gate
+
+Any change touching a pret-labeled routine must pass the fidelity gate before
+commit: `dos_port/tools/faithdiff <Label>` (justify every unsuppressed
+added/dropped call in the commit message) and `dos_port/tools/lint_pret_labels`
+(must exit 0). Workflow + tools → skill **`faithfulness-review`**.
+
 ### Bug / glitch tags
 
 Known bugs get a `; BUG(level):` + `%if BUG_FIX_LEVEL >= N` block; intentional

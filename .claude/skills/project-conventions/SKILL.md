@@ -62,7 +62,16 @@ subsystem, so retiring stubs later is a bounded search, not a tree-wide hunt.
    `extern` comments — do not leave the stub `global` shadowing the real body.
    Two linked `global`s of one name is a link error; a stub linked while the real
    body sits in a check-only list is the silent-shadow trap this convention exists
-   to make findable.
+   to make findable. **Run `dos_port/tools/label_status --callers <Label>` and
+   work the list**: it prints every port caller + every file `extern`ing the
+   label with its comment — repoint each extern comment, and eyeball each caller
+   for stub-era assumptions (translated/verified while `<Label>` was a ret-stub?
+   depends on registers/flags the real body clobbers?).
+6. **After adding or retiring a stub, run `dos_port/tools/update_label_db`** so
+   the label DB reflects it, and `dos_port/tools/lint_pret_labels` to catch a
+   non-ret-only stub, a duplicate def, or a stale extern comment immediately
+   (the DB is rescan-derived, so a skipped rescan self-heals — but the linter
+   run is what catches the violation *before* it's committed).
 
 ## Data vs. code: the two-tier rule (regen must never clobber anything)
 
@@ -148,12 +157,13 @@ commit but too specific to belong in TODO.md.
 - Start a new work item by creating a new `docs/current_plan_<topic>.md`.
 
 **Currently active plans:**
-- `docs/current_plan_fidelity_harness.md` — **anti-pret-divergence fidelity harness**:
-  mGBA golden differential testing (vendored-submodule mGBA + Lua scenario/dump
-  library + port-side `GBSTATE.BIN` dump + tile-ID differ + mgba-mcp bridge) and
-  static tooling (per-label translation DB in `translation.db` + `label_status`,
-  `lint_pret_labels`, `faithdiff`, review-gate skill), plus the dosbox-x-mcp
-  `quit warning = false` unattended-quit fix. Planned 2026-07-06, not started.
+- **Fidelity harness — COMPLETE & archived** at `docs/plans/fidelity_harness.md`
+  (2026-07-07, branch `fidelity_harness`): mGBA golden differential testing
+  (`make fidelity` / `goldencheck`, 6 scenarios, mgba-mcp bridge) + static tooling
+  (`update_label_db` / `lint_pret_labels` / `faithdiff` / `label_status`, the
+  `faithfulness-review` skill), plus the dosbox-x unattended-quit fix. Deferred
+  tails (battle_menu golden spec, CI wiring, FormatMovesString relocation,
+  allowlist review, pret-tree contamination decision) → TODO.md.
 - `docs/current_plan_audio.md` — **audio subsystem (Phase 3)**, architecture settled
   2026-07-05: faithful pret engine translation driving a virtual APU + per-device
   shims (OPL3/SB Pro floor, Tandy, PC speaker), MT-32-flagship MIDI path via
