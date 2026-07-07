@@ -1,10 +1,20 @@
-# Music_PalletTown — worked example of the override schema (see README.md).
-# Starting point only; real values come from the MUNT audition loop.
-# NOTE: the mt32_program names spell out what the old GM-numbered
-# placeholders (80/80/38) actually select on the factory bank — two
-# identical saxes + a bell. Untuned; retune by ear (see Music_Celadon.yaml
-# for the same fix applied).
+# Music_PalletTown — per-song MIDI overrides (see README.md for schema).
+# Registers verified from the generated MIDI 2026-07-07: ch1 melody C4-G5,
+# ch2 high harmony E5-G6, ch3 inner line C4-A4 (the score-analysis "high
+# register" track — the wave 'bass' lives above middle C; the real low end
+# is the tier-1 enhancement layer). Nostalgic-warm families, one per line:
 channels:
-  1: {mt32_program: "Sax 3", gm_program: "Lead 1 (square)", volume: 100, pan: 54}  # melody
-  2: {mt32_program: "Sax 3", gm_program: "Lead 1 (square)", volume: 92, pan: 74}   # harmony
-  3: {mt32_program: "Warm Bell", gm_program: "Synth Bass 1", volume: 110}          # bass
+  1:
+    mt32_program: "Flute 1"     # gentle lyrical melody, home register
+    gm_program: "Flute"
+    volume: 100
+    pan: 54
+  2:
+    mt32_program: "Str Sect 3"  # soft section shimmer up high (proved out
+    gm_program: "String Ensemble 1"  # in this register on Lavender's ch2)
+    volume: 92
+    pan: 74
+  3:
+    mt32_program: "Harp 1"      # plucked warmth for the treble inner line
+    gm_program: "Orchestral Harp"
+    volume: 104                 # was 110 (default) — under the melody

@@ -39,8 +39,8 @@ channels:
     mt32_patch: 29        # MT-32 SynBass1 (round, sustaining)
     gm_program: 39        # GM Synth Bass 1
     pan: center
-    volume: 90
-    velocity: 100
+    volume: 54                # 90 drowned the GB voices; 60 still a hair hot (user audition 2026-07-07)
+    velocity: 76
     events:
       - {at: 1,  pattern: bass_body}
       - {at: 17, pattern: bass_body}
