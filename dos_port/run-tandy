@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# dos_port/run-tandy — like dos_port/run, but as a Tandy 1000: Sound Blaster
+# and AdLib emulation OFF, the SN76489 3-voice PSG ON, and /TANDY on the
+# game's command line (the PSG is write-only, so the flag IS the detection —
+# see src/audio/tandy_shim.asm). Music + SFX play on the PSG; the Pikachu
+# cry falls through to the PC-speaker PWM player (a real Tandy has no DSP).
+# Make args pass through, e.g.:
+#   dos_port/run-tandy DEBUG_AUDIO=1
+set -e
+DOSPORT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+make -C "$DOSPORT" image "$@"
+
+CONF="$(mktemp --suffix=.conf)"
+trap 'rm -f "$CONF"' EXIT
+sed 's|^PKMN.EXE$|PKMN.EXE /TANDY|' "$DOSPORT/dosbox-x.conf" > "$CONF"
+cat >> "$CONF" <<EOF
+
+[sblaster]
+sbtype  = none
+oplmode = none
+
+[speaker]
+tandy = on
+EOF
+
+exec dosbox-x -defaultdir "$DOSPORT" -defaultconf -conf "$CONF"

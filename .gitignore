@@ -88,3 +88,10 @@ dos_port/tools/mgba_build/
 *.sn*
 *.sa*
 *.sg1
+
+# ARR score transcriptions
+docs/references/pokemon_score_transcriptions/
+pokemon_score_descriptions/
+
+# Generated per-song analysis (music_analysis.py output — regenerable)
+dos_port/tools/audio/analysis/

@@ -23,6 +23,7 @@ bits 32
 
 %include "gb_memmap.inc"
 %include "gb_macros.inc"
+%include "assets/audio_constants.inc"  ; AUDIO_BANK_1 (generated, Tier-1)
 
 LCDC_ON_VAL      equ 0x80
 LCDC_DEFAULT_VAL equ 0xE3
@@ -34,6 +35,7 @@ WRAM0_SIZE       equ 0x1000
 VRAM_SIZE        equ 0x2000
 
 extern FillMemory
+extern StopAllMusic          ; src/home/audio.asm
 extern DisableLCD
 extern ClearBgMap
 extern ClearSprites
@@ -170,11 +172,18 @@ ClearVram:
     jmp FillMemory              ; tail-call (jp FillMemory in the original)
 
 ; ---------------------------------------------------------------------------
-; StopAllSounds — stub. WRAM scratch is zeroed by Init's WRAM clear.
-; ; TODO: audio HAL — wire StopAllMusic when Phase 3 lands.
+; StopAllSounds — pret home/init.asm. Resets the audio bank to engine 1 and
+; stops everything via StopAllMusic ($ff → PlaySound → Audio2_StopAllAudio).
 ; ---------------------------------------------------------------------------
 StopAllSounds:
-    ret
+    mov al, AUDIO_BANK_1                ; BANK("Audio Engine 1") = $02
+    mov [ebp + wAudioROMBank], al
+    mov [ebp + wAudioSavedROMBank], al
+    xor al, al
+    mov [ebp + wAudioFadeOutControl], al
+    mov [ebp + wNewSoundID], al
+    mov [ebp + wLastMusicSoundID], al
+    jmp StopAllMusic
 
 ; ---------------------------------------------------------------------------
 ; GBPalNormal — reset BGP/OBP0/OBP1 shadows to DMG normal palettes.

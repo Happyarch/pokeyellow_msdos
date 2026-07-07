@@ -29,7 +29,17 @@ extern pit_init          ; boot/timing.asm
 extern pit_restore       ; boot/timing.asm
 extern joypad_init       ; src/input/joypad.asm
 extern joypad_restore    ; src/input/joypad.asm
+extern audio_init        ; src/audio/audio_hal.asm
+extern audio_shutdown    ; src/audio/audio_hal.asm
+extern g_cfg_nosound     ; src/audio/audio_hal.asm — set by /NOSOUND
+extern g_cfg_midi        ; src/audio/mpu401.asm — /MT32 = 1, /GM = 2
+extern g_cfg_shim        ; src/audio/audio_hal.asm — /TANDY = 2, /SPK = 3
+extern g_cfg_noenh       ; src/audio/audio_hal.asm — set by /NOENH
+extern g_cfg_musicloop   ; src/audio/audio_hal.asm — set by /LOOP
 extern Init              ; src/init/init.asm — power-on init
+%ifdef DEBUG_AUDIO
+extern RunAudioTest      ; src/debug/debug_dump.asm — audio-engine gate
+%endif
 %ifdef DEBUG_CALCSTATS
 extern RunCalcStatsTest  ; src/debug/debug_dump.asm — Pokémon CalcStats gate
 %endif
@@ -64,6 +74,13 @@ align 4
 ; Command-line argument tokens (matched case-sensitively as typed)
 arg_fixall:   db '/FIXALL',  0
 arg_fixcrit:  db '/FIXCRIT', 0
+arg_nosound:  db '/NOSOUND', 0
+arg_mt32:     db '/MT32',    0
+arg_gm:       db '/GM',      0
+arg_tandy:    db '/TANDY',   0
+arg_spk:      db '/SPK',     0
+arg_noenh:    db '/NOENH',   0
+arg_loop:     db '/LOOP',    0
 
 ; ---------------------------------------------------------------------------
 ; Code
@@ -87,6 +104,11 @@ start:
     call video_init          ; set VGA mode 13h
     call pit_init            ; reprogram PIT to ~60 Hz, install tick ISR
     call joypad_init         ; hook IRQ 1 (keyboard) → GB joypad state
+    call audio_init          ; enable the engine + GB power-on audio state
+
+%ifdef DEBUG_AUDIO
+    call RunAudioTest        ; play Pallet Town BGM 120 ticks, dump, exit (never returns)
+%endif
 
 %ifdef DEBUG_CALCSTATS
     call RunCalcStatsTest    ; compute known stats, dump DUMP.BIN, exit (never returns)
@@ -233,13 +255,61 @@ parse_cmdline:
     mov ah, 0x62
     int 0x21
 
-    movzx eax, bx
-    shl eax, 4
-    sub eax, [ds_base]
+    mov ax, bx
+    call seg_to_flat         ; PSP: DPMI hosts return a SELECTOR in BX
     lea esi, [eax + 0x81]
     movzx ecx, byte [eax + 0x80]
     test ecx, ecx
     jz .done
+
+    mov edi, arg_nosound
+    call find_token
+    jnz .no_nosound
+    mov byte [g_cfg_nosound], 1
+.no_nosound:
+
+    mov edi, arg_mt32
+    call find_token
+    jnz .no_mt32
+    mov byte [g_cfg_midi], 1
+.no_mt32:
+
+    ; note: /GM is a substring of nothing else we match, but /MT32 wins
+    ; if both are given (checked first, GM only fills an unset flag)
+    cmp byte [g_cfg_midi], 0
+    jnz .no_gm
+    mov edi, arg_gm
+    call find_token
+    jnz .no_gm
+    mov byte [g_cfg_midi], 2
+.no_gm:
+
+    mov edi, arg_tandy
+    call find_token
+    jnz .no_tandy
+    mov byte [g_cfg_shim], 2      ; force the SN76489 shim
+.no_tandy:
+
+    ; /TANDY wins if both are given (checked first, /SPK only fills unset)
+    cmp byte [g_cfg_shim], 0
+    jnz .no_spk
+    mov edi, arg_spk
+    call find_token
+    jnz .no_spk
+    mov byte [g_cfg_shim], 3      ; force the PC-speaker SFX shim
+.no_spk:
+
+    mov edi, arg_noenh
+    call find_token
+    jnz .no_noenh
+    mov byte [g_cfg_noenh], 1     ; disable the tier-1 OPL enhancement layer
+.no_noenh:
+
+    mov edi, arg_loop
+    call find_token
+    jnz .no_loop
+    mov byte [g_cfg_musicloop], 1 ; DEBUG_AUDIO: music-only, loop forever
+.no_loop:
 
     mov edi, arg_fixall
     call find_token
@@ -259,6 +329,37 @@ parse_cmdline:
     pop ecx
     pop ebx
     pop eax
+    ret
+
+; ---------------------------------------------------------------------------
+; seg_to_flat — resolve AX, which is either a protected-mode SELECTOR (what a
+; DPMI host hands back for the PSP via INT 21h AH=62h, and what it plants in
+; the PSP's environment-pointer word at +2Ch) or a raw real-mode segment,
+; into a DS-relative flat pointer in EAX. Tries DPMI 0006h (get segment base)
+; first; a failed lookup means it was a plain real-mode paragraph — use <<4.
+; Preserves all other registers.
+; ---------------------------------------------------------------------------
+global seg_to_flat
+seg_to_flat:
+    push ebx
+    push ecx
+    push edx
+    mov bx, ax
+    mov ax, 0x0006           ; DPMI: get segment base address of BX
+    int 0x31
+    jc .rawSegment
+    movzx eax, cx            ; base = CX:DX
+    shl eax, 16
+    mov ax, dx
+    jmp .bias
+.rawSegment:
+    movzx eax, bx
+    shl eax, 4
+.bias:
+    sub eax, [ds_base]
+    pop edx
+    pop ecx
+    pop ebx
     ret
 
 ; ---------------------------------------------------------------------------
@@ -315,6 +416,7 @@ find_token:
 ; ---------------------------------------------------------------------------
 cleanup:
     push eax
+    call audio_shutdown
     call joypad_restore
     call pit_restore
     mov ax, 0x0003

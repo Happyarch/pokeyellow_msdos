@@ -1,0 +1,6 @@
+# Music_PalletTown — worked example of the override schema (see README.md).
+# Starting point only; real values come from the MUNT audition loop.
+channels:
+  1: {mt32_program: 80, gm_program: 80, volume: 100, pan: 54}   # melody
+  2: {mt32_program: 80, gm_program: 80, volume: 92, pan: 74}    # harmony
+  3: {mt32_program: 38, gm_program: 38, volume: 110}            # bass

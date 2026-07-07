@@ -2,15 +2,27 @@
 # Build PKMN.EXE, package it into the isolated FAT image (PKMN.IMG), and launch
 # it in DOSBox-X. C: is that image — the host filesystem is never mounted, so the
 # game's saves and any buffer-overflow / OOB disk writes stay inside the image
-# (at any BUG_FIX_LEVEL). Any make args are passed through, e.g.:
-#   dos_port/run SKIP_TITLE=1
-#   dos_port/run BUG_FIX_LEVEL=1
+# (at any BUG_FIX_LEVEL). Args are split by prefix: '/...' tokens are passed as
+# PKMN.EXE command-line flags, everything else goes to make, e.g.:
+#   dos_port/run SKIP_TITLE=1                 # make arg
+#   dos_port/run DEBUG_AUDIO=1 /LOOP /NOENH   # make arg + two EXE flags
+# EXE flags currently understood: /NOSOUND /MT32 /GM /TANDY /SPK /NOENH /LOOP
+# /FIXALL /FIXCRIT (see boot/entry.asm parse_cmdline).
 set -e
 DOSPORT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+make_args=()
+exe_args=()
+for a in "$@"; do
+    case "$a" in
+        /*) exe_args+=("$a") ;;
+        *)  make_args+=("$a") ;;
+    esac
+done
+
 # Build the EXE + refresh it inside the disk image (save data in the image is
 # preserved across rebuilds; delete PKMN.IMG or `make clean-image` to reset).
-make -C "$DOSPORT" image "$@"
+make -C "$DOSPORT" image "${make_args[@]}"
 
 # -defaultconf : ignore the user's system dosbox-x config, so nothing it mounts
 #                (host dirs, Z: overrides) leaks in. Our -conf still applies on
@@ -18,4 +30,15 @@ make -C "$DOSPORT" image "$@"
 # NB: -securemode is NOT usable here — it restricts the memory/DPMI services
 #     CWSDPMI needs, so the DPMI executable won't start. Isolation instead comes
 #     from mounting ONLY the disk image (no host directory is ever mounted).
-exec dosbox-x -defaultdir "$DOSPORT" -defaultconf -conf "$DOSPORT/dosbox-x.conf"
+CONF="$DOSPORT/dosbox-x.conf"
+if [ ${#exe_args[@]} -gt 0 ]; then
+    # Append the EXE flags to the autoexec's `PKMN.EXE` line in a throwaway
+    # copy of the conf — the tracked conf stays argument-free.
+    SCRATCH="$(mktemp --suffix=.conf)"
+    trap 'rm -f "$SCRATCH"' EXIT
+    sed "s|^PKMN.EXE\$|PKMN.EXE ${exe_args[*]}|" "$CONF" > "$SCRATCH"
+    CONF="$SCRATCH"
+    dosbox-x -defaultdir "$DOSPORT" -defaultconf -conf "$CONF"
+else
+    exec dosbox-x -defaultdir "$DOSPORT" -defaultconf -conf "$CONF"
+fi

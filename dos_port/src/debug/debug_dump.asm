@@ -113,6 +113,22 @@ extern StatusScreen2
 %endif
 global RunStatusScreenTest
 %endif
+%ifdef DEBUG_AUDIO
+%include "assets/audio_constants.inc"
+extern PlayMusic
+extern PlaySound
+extern DelayFrame
+extern opl_dbg_snapshot
+extern midi_dbg_snapshot
+extern PlayPikachuSoundClip
+extern pika_dbg_snapshot
+extern hal_dbg_snapshot
+extern tandy_dbg_snapshot
+extern spk_dbg_snapshot
+extern enh_dbg_snapshot
+extern g_cfg_musicloop            ; src/audio/audio_hal.asm — /LOOP
+global RunAudioTest
+%endif
 
 global DebugDumpMemory
 global DumpBackbuffer
@@ -235,6 +251,25 @@ windows:
     dd 0xD1E0
     dd 0xD1E0
     dd 0xD1E0
+%elifdef DEBUG_AUDIO
+; Audio-engine gate: the whole engine RAM block + the virtual APU after 120
+; ticks of Pallet Town BGM. Expected (music id $BA on CHAN1-3, tempo 160):
+;   win1 $C026-2D = $BA,$BA,$BA,0,...   (wChannelSoundIDs)
+;        $C006-0B = 3 in-blob LE pointers in $4000-$7FFF (command pointers)
+;   win4 $C0C6 note speeds = 12; $C0E8/E9 wMusicTempo = $00,$A0 (big-endian)
+;   win6 $FF10-26 nonzero pulse regs; $FF24 rAUDVOL = $77; $FF25 panning
+windows:
+    dd 0xC000    ; wSoundID/panning/vol, wChannelCommandPointers, ReturnAddrs, SoundIDs, Flags1/2
+    dd 0xC040    ; duty patterns, vibrato arrays, freq low bytes, reload values
+    dd 0xC080    ; pitch-slide arrays
+    dd 0xC0B0    ; note delays, loop counters, speeds, octaves, volumes, tempos, ids, banks
+    dd 0xC0F0    ; frequency/tempo modifiers
+    dd 0xFF00    ; virtual APU: rAUD10-26 ($FF10-26) + wave RAM ($FF30-3F)
+    dd 0xCFC0    ; fade block ($CFC6-C8) + wLastMusicSoundID ($CFC9)
+    dd 0xD1E0    ; opl_dbg_snapshot: present, opl3, voice_state[0..61]
+    dd 0xD220    ; SB detect (+0..6) + MIDI driver state (+7..: cfg,
+                 ; present, active, on, dw progress, scale, cc7[16]);
+                 ; $D240 pika PCM, $D246 shim device, $D248 tandy, $D250 spk, $D258 enh
 %elifdef DEBUG_BATTLE
 windows:
     dd 0xC468    ; W_TILEMAP row 5 (enemy HP-bar tile IDs, cols 12-20)
@@ -303,6 +338,64 @@ RunCalcStatsTest:
     mov edx, 0xD210
     call CalcStats
     jmp DebugDumpMemory                     ; writes DUMP.BIN, exits
+%endif
+
+%ifdef DEBUG_AUDIO
+; ---------------------------------------------------------------------------
+; RunAudioTest — the Phase A milestone demo, driven through the real gateway
+; (PlayMusic/PlaySound → AudioN_PlaySound → per-tick Audio1_UpdateMusic →
+; opl_pass). Sequence: ~5 s of Pallet Town BGM, the A-button menu blip
+; (ducks the music, exactly as on the GB), then a Pokémon cry (3-channel
+; SFX with frequency/tempo modifiers), ~4 s more music, then dump the audio
+; RAM + virtual APU + shim state to DUMP.BIN and exit. Audible when run
+; under dos_port/run (DOSBox-X OPL emulation); byte-verifiable headless.
+; Never returns. In: EBP = GB memory base.
+; ---------------------------------------------------------------------------
+RunAudioTest:
+    mov bl, AUDIO_BANK_3                    ; c = BANK(Music_GameCorner) = $1F
+    mov al, MUSIC_GAME_CORNER
+    call PlayMusic
+    ; /LOOP (audition): play the music only, forever — no SFX, no dump/exit,
+    ; so the whole track (and its loop) can be heard clean. DelayFrame still
+    ; services the quit key, so the user can exit normally.
+    cmp byte [g_cfg_musicloop], 0
+    je .withSfx
+.musicOnly:
+    call DelayFrame                         ; ticks the engine + enh layer
+    jmp .musicOnly
+.withSfx:
+    mov edi, 300                            ; ~5 s of BGM
+    call .ticks
+    mov al, SFX_PRESS_AB                    ; menu blip over the music
+    call PlaySound
+    mov edi, 60
+    call .ticks
+    xor al, al                              ; cry modifiers: neutral pitch/length
+    mov [ebp + wFrequencyModifier], al
+    mov [ebp + wTempoModifier], al
+    mov al, SFX_CRY_00                      ; Nidoran M base cry
+    call PlaySound
+    mov edi, 240
+    call .ticks
+    xor dl, dl                              ; PikachuCry1 — Phase C digitized PCM
+    call PlayPikachuSoundClip               ; blocks ~0.8 s (SB DSP or speaker PWM)
+    mov edi, 60                             ; a beat of music after the clip
+    call .ticks
+    call opl_dbg_snapshot                   ; shim state -> $D1E0 scratch
+    call midi_dbg_snapshot                  ; MIDI driver state -> $D227+
+    call pika_dbg_snapshot                  ; PCM player state -> $D240+
+    call hal_dbg_snapshot                   ; active shim device -> $D246
+    call tandy_dbg_snapshot                 ; SN76489 shim state -> $D248+
+    call spk_dbg_snapshot                   ; speaker shim state -> $D250+
+    call enh_dbg_snapshot                   ; OPL enh player state -> $D258+
+    jmp DebugDumpMemory                     ; writes DUMP.BIN, exits
+.ticks:
+    push edi
+    call DelayFrame                         ; runs audio_tick each frame
+    pop edi
+    dec edi
+    jnz .ticks
+    ret
 %endif
 
 %ifdef DEBUG_PARTY

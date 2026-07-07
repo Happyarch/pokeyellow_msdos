@@ -195,11 +195,10 @@ AnimationTransformMon:
     ret
 
 ; ===========================================================================
-; Audio — allowlist stub (divergence §2 item 2). ; TODO-HW: audio HAL (Phase 3).
+; Audio — PlaySound stub retired: the real routine lives in src/home/audio.asm
+; (audio plan Phase A). Callers in this file now reach the translated gateway.
 ; ===========================================================================
-global PlaySound
-PlaySound:
-    ret
+extern PlaySound
 
 ; ===========================================================================
 ; Faithful-animation hooks (ANIMATION=OFF behaviour, divergence §3). These are

@@ -1,0 +1,137 @@
+#!/usr/bin/env python3
+"""gen_opl_patches.py — generate the OPL shim's FM patch + attenuation tables.
+
+Output: assets/opl_patches.inc (Tier-1 generated data, DO NOT EDIT BY HAND).
+
+THE PATCHES DICT BELOW IS THE HAND-TUNING SURFACE (audio plan: "hand-editable
+FM patch table"). Edit it here, re-run `make assets`, audition in DOSBox-X.
+
+All patches are OPL2-compatible 2-op (waveforms 0-3 only, no 4-op), per the
+plan's SB Pro floor. Each patch is 11 bytes, the order the shim expects:
+
+    [m20, m40, m60, m80, mE0,  c20, c40, c60, c80, cE0,  C0]
+
+    x20  AM|VIB|EGT(sustain)|KSR|MULT      x60  attack<<4 | decay
+    x40  KSL<<6 | total level (0-63)       x80  sustain<<4 | release
+    xE0  waveform select (0-3 on OPL2)     C0   feedback<<1 | connection
+                                                (pan bits added at runtime)
+
+The GB envelope is emulated in software (the shim rewrites the carrier TL
+every tick from the virtual APU's NRx2 state), so every patch here uses an
+organ-style FM envelope: instant attack, full sustain, quick release — the
+audible volume shape comes from the GB data, not from OPL EG settings.
+"""
+
+from __future__ import annotations
+
+import math
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+OUT = ROOT / "assets" / "opl_patches.inc"
+
+# EG constants shared by all patches: attack=15 (instant), decay=0,
+# sustain level=0 (loudest), release=7 (quick, clickless).
+AD = 0xF0
+SR = 0x07
+SUS = 0x20  # reg 0x20 bit 5: sustaining envelope (hold at sustain level)
+
+# name -> 11-byte patch. Pulse duty variants map the GB's 4 duty cycles onto
+# increasing FM brightness (more modulator level / feedback = buzzier).
+# GB duty 75% is aurally identical to 25% (inverted waveform), so it shares
+# the 25% timbre.
+PATCHES = {
+    #                m20        m40   m60  m80  mE0   c20        c40   c60  c80  cE0   C0
+    "duty_125": [SUS | 0x01, 0x0C,  AD,  SR, 0x00, SUS | 0x01, 0x00,  AD,  SR, 0x00, 0x0C],
+    "duty_25":  [SUS | 0x01, 0x10,  AD,  SR, 0x00, SUS | 0x01, 0x00,  AD,  SR, 0x00, 0x0A],
+    "duty_50":  [SUS | 0x02, 0x14,  AD,  SR, 0x00, SUS | 0x01, 0x00,  AD,  SR, 0x00, 0x06],
+    "duty_75":  [SUS | 0x01, 0x10,  AD,  SR, 0x00, SUS | 0x01, 0x00,  AD,  SR, 0x00, 0x0A],
+    # Wave channel: soft, rounded bass/counter-melody voice. The GB wave is
+    # harsh at the source too, but the console's tiny speaker low-passes the
+    # highs away; clean FM has nothing rolling them off, so we emulate that by
+    # stripping the patch's high-harmonic sources (user audition 2026-07-07):
+    #   - sine carrier (cE0 0x00, was half-sine 0x01) — half-sine is bright
+    #   - no feedback (C0 0x00, was 0x04 = fb 2) — feedback self-brightens the
+    #     modulator, the biggest edge; gone now
+    #   - gentler modulator (m40 0x28, was 0x18) — keeps a little FM warmth;
+    #     0x28 is the "just a hair softer" final nudge (user audition 2026-07-07)
+    # Carrier base TL 0x06 (~4.5 dB): the wave holds a flat NR32 level while the
+    # pulses decay via their envelopes, so at parity it read as too loud.
+    "wave":     [SUS | 0x01, 0x28,  AD,  SR, 0x00, SUS | 0x01, 0x06,  AD,  SR, 0x00, 0x00],
+    # Noise channel: high-multiple modulator at full level with max feedback
+    # produces dense inharmonic hash — the closest 2-op non-rhythm-mode noise.
+    "noise":    [SUS | 0x0F, 0x00, 0xF0, 0x06, 0x00, SUS | 0x01, 0x00, 0xF0, 0x06, 0x00, 0x0E],
+    # --- Tier-1 enhancement patches (Phase E) ------------------------------
+    # Indices 6+; the APU shim only ever loads 0-5, the enh stream player
+    # (opl_enh.asm) loads these by the index gen_enh_streams.py bakes in.
+    # A timbral family deliberately *unlike* the buzzy pulse variants above:
+    # clean sines, so added voices sit under the shim's pulses, not fight them.
+    #
+    # Sub-bass reinforcement: pure carrier sine (modulator fully attenuated ->
+    # no FM sidebands), the deep low end the GB deliberately omitted (small
+    # speaker; see the Pallet Town score note). Carrier TL is the player's
+    # per-note volume slot.
+    "sub_bass": [SUS | 0x01, 0x3F,  AD,  SR, 0x00, SUS | 0x01, 0x00,  AD,  SR, 0x00, 0x00],
+    # Soft pad: sine carrier with a gentle 1:1 modulator (TL 0x18) for a hair
+    # of warmth — organ-like, not string-like (FM can't do bowed strings).
+    # Instant-attack/full-sustain like every patch here; the held note length
+    # comes from the YAML, the volume from the player. Warm, never buzzy.
+    "soft_pad": [SUS | 0x01, 0x18,  AD,  SR, 0x00, SUS | 0x01, 0x00,  AD,  SR, 0x00, 0x00],
+}
+
+PATCH_ORDER = ["duty_125", "duty_25", "duty_50", "duty_75", "wave", "noise",
+               "sub_bass", "soft_pad"]
+
+
+def att_units(ratio: float) -> int:
+    """dB attenuation for an amplitude ratio, in OPL 0.75 dB TL units."""
+    return min(63, round(20 * math.log10(ratio) / 0.75))
+
+
+def main():
+    lines = [
+        "; opl_patches.inc — generated by tools/audio/gen_opl_patches.py.",
+        "; DO NOT EDIT BY HAND — tune the PATCHES dict in the generator.",
+        "",
+        "; 11 bytes per patch: m20 m40 m60 m80 mE0  c20 c40 c60 c80 cE0  C0",
+        "OPL_PATCH_SIZE equ 11",
+        "OplPatches:",
+    ]
+    for i, name in enumerate(PATCH_ORDER):
+        row = ", ".join(f"0x{b:02X}" for b in PATCHES[name])
+        lines.append(f"    db {row}  ; {i}: {name}")
+
+    # GB envelope volume (0-15) -> carrier TL attenuation. 0 = force-mute
+    # (the shim special-cases it to 63 regardless, but keep the table sane).
+    vol = [63] + [att_units(15 / v) for v in range(1, 16)]
+    lines += [
+        "",
+        "; GB envelope volume 0-15 -> TL attenuation (0.75 dB units)",
+        "OplVolTable:",
+        "    db " + ", ".join(str(v) for v in vol),
+    ]
+
+    # NR50 master volume 0-7 -> attenuation (vol+1 out of 8).
+    master = [att_units(8 / (m + 1)) for m in range(8)]
+    lines += [
+        "",
+        "; NR50 master volume 0-7 -> TL attenuation",
+        "OplMasterAttTable:",
+        "    db " + ", ".join(str(v) for v in master),
+    ]
+
+    # NR32 wave output level 0-3: mute / 100% / 50% / 25%.
+    lines += [
+        "",
+        "; NR32 wave level 0-3 -> TL attenuation (0 = mute)",
+        "OplWaveLevelAtt:",
+        f"    db 63, 0, {att_units(2)}, {att_units(4)}",
+        "",
+    ]
+
+    OUT.write_text("\n".join(lines))
+    print(f"opl_patches.inc: {len(PATCH_ORDER)} patches + attenuation tables")
+
+
+if __name__ == "__main__":
+    main()

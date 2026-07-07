@@ -24,6 +24,7 @@ bits 32
 
 extern wait_vblank
 extern wait_pit_tick
+extern audio_tick            ; src/audio/audio_hal.asm — pret VBlank audio block
 extern commit_palette
 extern render_bg
 extern render_window
@@ -107,6 +108,10 @@ DelayFrame:
     je .noFrameDec
     dec byte [ebp + H_FRAME_COUNTER]
 .noFrameDec:
+    ; pret VBlank audio block (home/vblank.asm, right after the hFrameCounter
+    ; dec): FadeOutAudio → Music_DoLowHealthAlarm → Audio1_UpdateMusic →
+    ; device-shim pass. Self-gates on g_audio_engine_online.
+    call audio_tick
     ; BG: render_bg picks its own path from wCurrentTileBlockMapViewPointer —
     ; nonzero = overworld surface, zero = flat 40×25 W_TILEMAP (title / menus /
     ; battle). InitBattle zeroes that pointer (+ SCX/SCY), so the battle screen is

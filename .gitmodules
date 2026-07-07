@@ -4,3 +4,7 @@
 [submodule "dos_port/tools/mgba"]
 	path = dos_port/tools/mgba
 	url = https://github.com/mgba-emu/mgba.git
+[submodule "docs/references/openmusictheory.github.io"]
+	path = docs/references/openmusictheory.github.io
+	url = git@github.com:Happyarch/openmusictheory.github.io.git
+	branch = claude-skills-prep

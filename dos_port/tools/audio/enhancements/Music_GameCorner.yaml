@@ -1,0 +1,310 @@
+# Music_GameCorner — LLM-authored enhancement (Phase E).
+#
+# Song: The Celadon Game Corner Casino theme; B major, 4/4, 26 measures
+# (2-measure intro + 24-measure loop body; loop returns to m3 b1).
+# Key analysis from analysis/Music_GameCorner.yaml:
+#   tonic: B, mode: major, score 0.843; runner-up E major (0.766).
+#
+# Source: audio/music/gamecorner.asm — 3-channel piece (no noise):
+#   Ch1 (pulse 1): fast ornate jazz melody, GB oct 2–4, vibrato.
+#                  Real range ≈ B3–B5 (analysis confirmed).
+#   Ch2 (pulse 2): flowing inner harmony, arpeggio steps, GB oct 2–4.
+#                  Real range ≈ B2–C#4.
+#   Ch3 (wave):    constant 16th-note arpeggio (note_type 12 speed 1),
+#                  cycling root/3rd/5th chord tones in GB oct 4.
+#                  Real range ≈ C#4–B4. The "casino ticker" texture.
+#                  VERY DENSE — covers every chord tone in oct 4 each
+#                  beat via rapid arpeggio. Sustaining any oct-4 chord
+#                  tone will unison-double the wave channel.
+#
+# Register gap analysis:
+#   - Below B2: EMPTY. Nothing below B2 in any GB channel. This is the
+#     primary gap — the track floats without a true bass root because the
+#     GB speaker couldn't reproduce it. OPL3/MT-32 can.
+#   - Oct 3 (B2–B3): ch2 is active here, arpeggiated. Sustained notes
+#     can be placed carefully between ch2's chord tones but risk unison
+#     collisions; the lint validates this.
+#   - Oct 4 (C4–B4): completely saturated by the wave ticker (constant
+#     16th arpeggios) and ch2 upper range. Any sustained oct-4 note
+#     will hit a wave-ticker unison. Avoid for sustained voices.
+#   - Oct 5+ (C5–B5): the melody peaks here occasionally (up to B5).
+#     Short ornamental touches at chord extensions (9ths) are viable.
+#
+# Enhancement strategy:
+#   Tier 1 — ONE voice: sub-bass chord roots in oct 1–2.
+#     The single correct answer for this texture: give it a bass floor.
+#     The skill says "energetic" tracks warrant 3–5 voices, but this
+#     track's existing mid-register density leaves only the low end open.
+#     Over-adding into the saturated mid would muddy the glittering
+#     ticker quality that defines the track's character.
+#     => casino_bass: pure sine sub_bass, root notes octave 1–2.
+#
+#   Tier 2 — one voice: jazz electric-piano backbeat comping.
+#     MT-32 E.Piano1 can do the warm, decaying Rhodes attack that FM
+#     cannot. Short stabs (d=0.75 beats) on beats 2 and 4, chord 3rds
+#     in oct 3 — just below the wave ticker. This is the jazz swing
+#     accent the track's harmonic language implies but the GB could not
+#     render (only 3 channels, all busy). Placed in oct 3 to stay below
+#     the ticker; lint validates no unison collisions with ch2.
+#     => ep_comp: MT-32 patch 5 (E.Piano1), GM 5.
+#
+#   Tier 3 — one voice: vibraphone cadence sparkle.
+#     A few high chord-extension touches (9ths, oct 5) at structural
+#     phrase cadence points. Sparse — the vibraphone's metallic resonance
+#     evokes a real casino soundscape. Only fires at phrase boundaries
+#     where the melody momentarily rests or lands on the root, so
+#     unison-collision risk is low. Lint validates.
+#     => vibe_sparkle: MT-32 patch 12 (Vibraphone), GM 12.
+#
+# Voice-leading notes:
+#   - casino_bass root motion: F#→B (P5 down), B→C# (m2 up),
+#     C#→E (m3 up), E→B (P4 down)... standard root-position bass moves.
+#   - No parallel P5/P8 with ch2: bass in oct 1–2 is 1–2 octaves
+#     below ch2's floor (B2); the large gap guarantees no P5 parallels.
+#   - ep_comp 3rds in oct 3 move by step or common-tone within the
+#     chord. Contrary motion against the bass (bass moves down as inner
+#     moves up on many changes). Checked below per chord.
+#   - vibe_sparkle: ornamental, short. No sustained voice-leading
+#     obligations; each touch is independent.
+#
+# NOTE: Run yaml_lint.py before auditioning. The ep_comp in oct 3 and
+# the vibe_sparkle in oct 5 both need the automated unison check against
+# ch1 and ch2 to confirm no frame-exact collisions. The notes written
+# here are conservative (3rds and 9ths avoiding likely melody positions)
+# but the lint is the final arbiter.
+
+schema: 1
+song: Music_GameCorner
+
+channels:
+  # ── Tier 1 ─────────────────────────────────────────────────────────────────
+  - name: casino_bass
+    tier: 1
+    opl_patch: sub_bass          # pure sine; no FM sidebands muddying the low end
+    mt32_patch: 29               # MT-32 SynBass1 (round, sustaining — same as Pallet Town)
+    gm_program: 39               # GM Synth Bass 1
+    pan: center
+    volume: 95                   # slightly hotter than Pallet Town sub_bass (track needs it)
+    velocity: 105
+    events:
+      # Intro: mm. 1–2 (before loop start at m3).
+      # m1: F#m / F#m7 (v / v7) — sustain root F#2 for both half-measures.
+      # m2: Bmaj7 / B (I7/I) — sustain root B1.
+      - {m: 1, b: 1, d: 4, n: F#2}    # F#m / F#m7 intro chord
+      - {m: 2, b: 1, d: 4, n: B1}     # Bmaj7 / B intro chord
+      # Loop body: mm. 3–26.
+      # Phrase 1 (mm. 3–8): C#m7→E→C#m7→B7→B→bVII
+      - {m: 3, b: 1, d: 2, n: C#2}    # C#m7 (ii7)
+      - {m: 3, b: 3, d: 2, n: E2}     # E    (IV)
+      - {m: 4, b: 1, d: 4, n: C#2}    # C#m7 (ii7) — full measure
+      - {m: 5, b: 1, d: 2, n: E2}     # Emaj7 (IV7)
+      - {m: 5, b: 3, d: 2, n: C#2}    # C#m7  (ii7)
+      - {m: 6, b: 1, d: 4, n: B1}     # B7    (I7)  — full measure
+      # mm. 7–8: B → B7 → bVII(A)
+      # Bass stays B1 through m7 (I and I7 share root B).
+      # m8 b1–b2: B7 continues (bass B1).
+      # m8 b3: A (bVII) — move to A1. Contrary motion: bass down a m2, inner voices up.
+      - {m: 7, b: 1, d: 4, n: B1}     # B / B7 (I / I7)
+      - {m: 8, b: 1, d: 2, n: B1}     # B7 (I7) first half of m8
+      - {m: 8, b: 3, d: 2, n: A1}     # A  (bVII) — the jazz flat-7 move
+      # Phrase 2 (mm. 9–16): parallel to Phrase 1 but starting on B, then vi.
+      # m9: B / Bmaj7 (I). m10: G#m / G#m7 (vi).
+      - {m: 9,  b: 1, d: 2, n: B1}    # B    (I)
+      - {m: 9,  b: 3, d: 2, n: B1}    # Bmaj7 (I7) — same root
+      - {m: 10, b: 1, d: 2, n: G#1}   # G#m   (vi)
+      - {m: 10, b: 3, d: 2, n: G#1}   # G#m7  (vi7) — same root
+      # mm. 11–13 ≡ mm. 3–5 (repeated_spans per analysis):
+      - {m: 11, b: 1, d: 2, n: C#2}   # C#m7 (ii7) — same as m3 b1
+      - {m: 11, b: 3, d: 2, n: E2}    # E    (IV)  — same as m3 b3
+      - {m: 12, b: 1, d: 4, n: C#2}   # C#m7 (ii7) — same as m4
+      - {m: 13, b: 1, d: 2, n: E2}    # Emaj7 (IV7) — same as m5 b1
+      - {m: 13, b: 3, d: 2, n: C#2}   # C#m7  (ii7) — same as m5 b3
+      # mm. 14–16: ≡ mm. 6–8 in harmonic content but ending on F#m (v):
+      - {m: 14, b: 1, d: 4, n: B1}    # B7 (I7) — same as m6
+      # m15 ≡ m7 (per analysis repeated_spans):
+      - {m: 15, b: 1, d: 2, n: B1}    # B  (I)
+      - {m: 15, b: 3, d: 2, n: B1}    # B7 (I7) — same root
+      # m16 b3: F#m (v) — turnaround chord (differs from m8's bVII):
+      - {m: 16, b: 1, d: 2, n: B1}    # B7 continues first half of m16
+      - {m: 16, b: 3, d: 2, n: F#2}   # F#m (v) turnaround
+      # Phrase 3 (mm. 17–20): B7 → Emaj7/E7 → B → Emaj7
+      - {m: 17, b: 1, d: 4, n: B1}    # B7 (I7) full measure
+      - {m: 18, b: 1, d: 2, n: E2}    # Emaj7 (IV7)
+      - {m: 18, b: 3, d: 2, n: E2}    # E7    (IV7) — same root E
+      - {m: 19, b: 1, d: 4, n: B1}    # B (I) full measure
+      - {m: 20, b: 1, d: 4, n: E2}    # Emaj7 (IV7) full measure
+      # Phrase 4 (mm. 21–26): ≡ Phrase 3 + turnaround back to ii7.
+      # mm. 21–24 ≡ mm. 17–20 in harmonic content:
+      - {m: 21, b: 1, d: 4, n: B1}    # B7 (I7) full measure
+      - {m: 22, b: 1, d: 2, n: E2}    # Emaj7 (IV7)
+      - {m: 22, b: 3, d: 2, n: E2}    # E7    (IV7) — same root
+      - {m: 23, b: 1, d: 4, n: B1}    # B (I) full measure
+      - {m: 24, b: 1, d: 4, n: E2}    # Emaj7 (IV7) full measure
+      - {m: 25, b: 1, d: 4, n: B1}    # B7 (I7) full measure
+      # m26: E → C#m7 — last two chords before loop seam:
+      - {m: 26, b: 1, d: 2, n: E2}    # E    (IV)
+      # Final note: d=1.9 beats (not d=2), releasing a few frames before
+      # the loop seam at frame 2340, so it re-keys cleanly on loop-back.
+      - {m: 26, b: 3, d: 1.9, n: C#2} # C#m7 (ii7) — turnaround → m3 C#m7
+
+  # ── Tier 2 ─────────────────────────────────────────────────────────────────
+  - name: ep_comp
+    tier: 2
+    mt32_patch: 5                # MT-32 E.Piano1 (warm Rhodes-style decay attack)
+    gm_program: 5                # GM Electric Piano 1
+    pan: center
+    volume: 72                   # lighter than the bass; fills without dominating
+    velocity: 80
+    # Jazz backbeat comp: chord 3rds on beats 2 & 4, octave 3.
+    # Duration 0.75 beats — crisp stab, lets the wave ticker breathe.
+    # Oct 3 = below the wave ticker (oct 4); ch2 also active here, so
+    # lint must validate no unison collisions. Notes chosen as the chord
+    # 3rd (not root — ch2 often sustains the root; not 5th — ch2 arpeggio
+    # hits the 5th frequently). The 3rd is the chord-identifying tone most
+    # likely to be in a gap between ch2's arpeggio hits.
+    # VOICE LEADING: contrary motion against the bass as much as possible.
+    # When bass moves B1→C#2 (up), ep_comp moves E3→E3 (oblique/common tone).
+    # When bass moves C#2→E2 (up), ep_comp moves E3→G#3 (up — parallel 3rds
+    # with the bass root motion, but the large register gap means no P5 issue).
+    events:
+      # ── Intro mm. 1–2 ──────────────────────────────────────────────────────
+      # m1: F#m7 — 3rd is A3
+      - {m: 1, b: 2, d: 0.75, n: A3}  # F#m7 3rd (jazz backbeat, m1)
+      - {m: 1, b: 4, d: 0.75, n: A3}  # F#m7 3rd (beat 4)
+      # m2: B / Bmaj7 — 3rd is D#3
+      - {m: 2, b: 2, d: 0.75, n: D#3} # B(maj7) 3rd
+      - {m: 2, b: 4, d: 0.75, n: D#3} # B(maj7) 3rd
+
+      # ── Loop body mm. 3–26 ─────────────────────────────────────────────────
+      # m3 b1–b2: C#m7 — 3rd is E3. b3–b4: E — 3rd is G#3.
+      - {m: 3, b: 2, d: 0.75, n: E3}  # C#m7 3rd
+      - {m: 3, b: 4, d: 0.75, n: G#3} # E 3rd (note: ch2 may pass through G#3;
+                                        # lint will validate)
+      # m4: C#m7 all 4 beats — 3rd is E3.
+      - {m: 4, b: 2, d: 0.75, n: E3}  # C#m7 3rd
+      - {m: 4, b: 4, d: 0.75, n: E3}  # C#m7 3rd
+
+      # m5 b1–b2: Emaj7 — 3rd is G#3. b3–b4: C#m7 — 3rd is E3.
+      - {m: 5, b: 2, d: 0.75, n: G#3} # Emaj7 3rd
+      - {m: 5, b: 4, d: 0.75, n: E3}  # C#m7 3rd
+
+      # m6: B7 — 3rd is D#3.
+      - {m: 6, b: 2, d: 0.75, n: D#3} # B7 3rd
+      - {m: 6, b: 4, d: 0.75, n: D#3} # B7 3rd
+
+      # m7 b1–b2: B — 3rd D#3. b3–b4: B7 — 3rd D#3.
+      - {m: 7, b: 2, d: 0.75, n: D#3} # B 3rd
+      - {m: 7, b: 4, d: 0.75, n: D#3} # B7 3rd (same note)
+
+      # m8 b1–b2: B7 — 3rd D#3. b3–b4: A (bVII) — 3rd C#3.
+      - {m: 8, b: 2, d: 0.75, n: D#3} # B7 3rd
+      - {m: 8, b: 4, d: 0.75, n: C#3} # A 3rd (bVII jazz move — C# is a flat-7
+                                        # sub color tone; preserves the jazz quality)
+
+      # m9 b1–b2: B — 3rd D#3. b3–b4: Bmaj7 — 3rd D#3 (same root chord).
+      - {m: 9, b: 2, d: 0.75, n: D#3}
+      - {m: 9, b: 4, d: 0.75, n: D#3}
+
+      # m10 b1–b2: G#m — 3rd is B3. b3–b4: G#m7 — 3rd is B3.
+      # B3 could collide with ch2. Alternative: use 5th D#3 instead.
+      - {m: 10, b: 2, d: 0.75, n: D#3} # G#m 5th (using 5th to avoid B3 collision risk)
+      - {m: 10, b: 4, d: 0.75, n: D#3} # G#m7 5th
+
+      # mm. 11–13 ≡ mm. 3–5 (same chords, same ep_comp voicing):
+      - {m: 11, b: 2, d: 0.75, n: E3}
+      - {m: 11, b: 4, d: 0.75, n: G#3}
+      - {m: 12, b: 2, d: 0.75, n: E3}
+      - {m: 12, b: 4, d: 0.75, n: E3}
+      - {m: 13, b: 2, d: 0.75, n: G#3}
+      - {m: 13, b: 4, d: 0.75, n: E3}
+
+      # mm. 14–15 ≡ mm. 6–7:
+      - {m: 14, b: 2, d: 0.75, n: D#3}
+      - {m: 14, b: 4, d: 0.75, n: D#3}
+      - {m: 15, b: 2, d: 0.75, n: D#3}
+      - {m: 15, b: 4, d: 0.75, n: D#3}
+
+      # m16 b1–b2: B7 — 3rd D#3. b3–b4: F#m (v) — 3rd A3.
+      - {m: 16, b: 2, d: 0.75, n: D#3} # B7 3rd
+      - {m: 16, b: 4, d: 0.75, n: A3}  # F#m 3rd
+
+      # mm. 17–20: B7 → Emaj7/E7 → B → Emaj7
+      - {m: 17, b: 2, d: 0.75, n: D#3} # B7 3rd
+      - {m: 17, b: 4, d: 0.75, n: D#3} # B7 3rd
+      - {m: 18, b: 2, d: 0.75, n: G#3} # Emaj7 3rd
+      - {m: 18, b: 4, d: 0.75, n: G#3} # E7 3rd (same)
+      - {m: 19, b: 2, d: 0.75, n: D#3} # B 3rd
+      - {m: 19, b: 4, d: 0.75, n: D#3} # B 3rd
+      - {m: 20, b: 2, d: 0.75, n: G#3} # Emaj7 3rd
+      - {m: 20, b: 4, d: 0.75, n: G#3} # Emaj7 3rd
+
+      # mm. 21–24 ≡ mm. 17–20:
+      - {m: 21, b: 2, d: 0.75, n: D#3}
+      - {m: 21, b: 4, d: 0.75, n: D#3}
+      - {m: 22, b: 2, d: 0.75, n: G#3}
+      - {m: 22, b: 4, d: 0.75, n: G#3}
+      - {m: 23, b: 2, d: 0.75, n: D#3}
+      - {m: 23, b: 4, d: 0.75, n: D#3}
+      - {m: 24, b: 2, d: 0.75, n: G#3}
+      - {m: 24, b: 4, d: 0.75, n: G#3}
+
+      # m25: B7 — 3rd D#3
+      - {m: 25, b: 2, d: 0.75, n: D#3}
+      - {m: 25, b: 4, d: 0.75, n: D#3}
+
+      # m26: E b1–b2 → C#m7 b3–b4. Last beat: truncate to avoid loop-seam overlap.
+      - {m: 26, b: 2, d: 0.75, n: G#3} # E 3rd
+      - {m: 26, b: 4, d: 0.75, n: E3}  # C#m7 3rd (final stab before loop seam)
+
+  # ── Tier 3 ─────────────────────────────────────────────────────────────────
+  - name: vibe_sparkle
+    tier: 3
+    mt32_patch: 12               # MT-32 Vibraphone (metallic, jazzy resonance)
+    gm_program: 12               # GM Vibraphone
+    pan: center
+    volume: 64
+    velocity: 72
+    # Vibraphone chord-tone twinkles at structural phrase cadence points only.
+    # Placed at octave 5 (chord 9ths) to stay above the wave ticker and ch2.
+    # Short (d=0.5 beat) — a vibraphone accent, not a sustained voice.
+    # Fires only at phrase beginnings/endings where the melody momentarily
+    # rests on the tonic or rises to a phrase peak, leaving space.
+    # Key: 9th of B = C#5; 9th of C#m = D#5; 9th of E = F#5; 9th of G#m = A#5.
+    # Lint validates no collision with ch1 melody at these specific frames.
+    events:
+      # Phrase opening (m3 b1): C#m7 sounds, melody lands on C#4 area.
+      # The 9th of C#m (D#5) is one octave above D#4 melody peak — clear.
+      - {m: 3,  b: 1, d: 0.5, n: D#5} # C#m7 9th — phrase body open
+
+      # Mid-phrase cadential accent (m6 b1): B7 — the I7 chord resolution.
+      # Melody arrives at G# area. B7 9th = C#5 (one octave above C#4 area).
+      - {m: 6,  b: 1, d: 0.5, n: C#5} # B7 9th — tonic I7 arrival
+
+      # Second phrase open (m9 b1): B major — melody arrives at C#4 area.
+      - {m: 9,  b: 1, d: 0.5, n: C#5} # B 9th — second phrase entry
+
+      # G#m arrival (m10 b1): the relative-minor vi chord — jazzy color moment.
+      # G#m 9th = A#5. Melody should be around F#4 area here — clear.
+      - {m: 10, b: 1, d: 0.5, n: A#5} # G#m 9th — vi chord color accent
+
+      # ≡ m3 repeat (m11 b1): same as above, second half of loop body.
+      - {m: 11, b: 1, d: 0.5, n: D#5} # C#m7 9th (≡ m3)
+
+      # ≡ m6 repeat (m14 b1):
+      - {m: 14, b: 1, d: 0.5, n: C#5} # B7 9th (≡ m6)
+
+      # Phrase 3 open (m17 b1): B7 — new material section start.
+      - {m: 17, b: 1, d: 0.5, n: C#5} # B7 9th — phrase 3 entry
+
+      # Emaj7 arrival (m18 b1): IV7 chord, bright IV color.
+      # Emaj7 9th = F#5. Melody likely in B4–E5 range here.
+      - {m: 18, b: 1, d: 0.5, n: F#5} # Emaj7 9th
+
+      # Phrase 3 cadence (m20 b1): Emaj7 again — phrase tail.
+      - {m: 20, b: 1, d: 0.5, n: F#5} # Emaj7 9th — phrase 3 tail
+
+      # Phrase 4 open (m21 b1): ≡ m17.
+      - {m: 21, b: 1, d: 0.5, n: C#5} # B7 9th — phrase 4 entry
+
+      # Final structural cadence (m25 b1): last B7 before the loop-back turnaround.
+      - {m: 25, b: 1, d: 0.5, n: C#5} # B7 9th — pre-turnaround accent

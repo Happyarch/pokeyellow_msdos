@@ -105,6 +105,9 @@ extern LoadHpBarAndStatusTilePatterns
 extern LoadStatusScreenHudTilePatterns               ; load_font.asm — pret's 4-load status HUD layout
 extern LoadFlippedFrontSpriteByMonIndex              ; gfx/pics.asm — ESI=tilemap coord; decode $9000 + place
 extern g_bg_whiteout                                 ; ppu/ppu.asm — full-screen BG whiteout flag
+extern IsThisPartyMonStarterPikachu                  ; engine/pikachu/pikachu_status.asm (CF = starter)
+extern IsThisBoxMonStarterPikachu                    ; engine/pikachu/pikachu_status.asm
+extern PlayPikachuSoundClip                          ; engine/pikachu/pikachu_pcm.asm (DL = clip index)
 extern WaitForTextScrollButtonPress
 extern spr_oam_valid                                 ; ppu.asm — render_sprites active-entry count
 extern Delay3
@@ -297,8 +300,27 @@ StatusScreen:
     ; using text_row_stride (= FW here, the flat status canvas). Just set the coord.
     mov esi, scoord(1, 0)
     call LoadFlippedFrontSpriteByMonIndex
-    ; TODO-HW: cry — IsThisPartyMon/BoxMonStarterPikachu → PlayPikachuSoundClip /
-    ; PlayCry (audio HAL, Phase 3).
+
+    ; --- cry (pret: starter Pikachu → digitized clip, anything else → PlayCry) ---
+    mov al, [ebp + wMonDataLocation]
+    cmp al, ENEMY_PARTY_DATA
+    je .playRegularCry
+    cmp al, BOX_DATA
+    je .checkBoxData
+    call IsThisPartyMonStarterPikachu
+    jnc .playRegularCry
+    jmp .playPikachuSoundClip
+.checkBoxData:
+    call IsThisBoxMonStarterPikachu
+    jnc .playRegularCry
+.playPikachuSoundClip:
+    mov dl, 16                                       ; pret: ldpikacry e, PikachuCry17
+    call PlayPikachuSoundClip
+    jmp .continue
+.playRegularCry:
+    ; TODO-HW: pret plays [wCurPartySpecies] via PlayCry — synth-cry translation
+    ; is deferred (audio plan, Phase A leftovers).
+.continue:
 
 %ifdef DEBUG_STATUS
   %ifdef DEBUG_STATUS_PAGE2
