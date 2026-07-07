@@ -1202,6 +1202,18 @@
   "PrintText": {
    "port_file": "dos_port/src/engine/battle/move_effect_helpers.asm",
    "why": "pret home/window.asm split across port files (draft Session H)"
+  },
+  "PlaySoundWaitForCurrent": {
+   "port_file": "dos_port/src/home/audio.asm",
+   "why": "audio-branch consolidation (Phase A, merged 2026-07-07): the port's home-audio entry points live together in src/home/audio.asm with the audio HAL"
+  },
+  "WaitForSoundToFinish": {
+   "port_file": "dos_port/src/home/audio.asm",
+   "why": "audio-branch consolidation (Phase A, merged 2026-07-07): the port's home-audio entry points live together in src/home/audio.asm with the audio HAL"
+  },
+  "FadeOutAudio": {
+   "port_file": "dos_port/src/home/audio.asm",
+   "why": "audio-branch consolidation (Phase A, merged 2026-07-07): the port's home-audio entry points live together in src/home/audio.asm with the audio HAL"
   }
  },
  "suppress": [
