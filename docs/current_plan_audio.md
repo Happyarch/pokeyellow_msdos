@@ -545,8 +545,12 @@ the two-model workflow (Gemini distills, Claude writes the skill files).
     audible as speaker beeps, music silent by design).**
 
 - `[ ]` **Phase E — LLM music arranger** (starts after B; see the Phase E section)
-  - `[ ]` Pin the enhancement YAML schema (musical positions, tier tags, explicit
-        per-target patch fields) — everything downstream depends on it.
+  - `[x]` Pin the enhancement YAML schema (musical positions, tier tags, explicit
+        per-target patch fields) — pinned 2026-07-07 in
+        `dos_port/tools/audio/enhancements/README.md` (schema v1: measure/beat/
+        duration events + `patterns:` motif instancing; beat map supplied by
+        `music_analysis.py` → `analysis/<Song>.yaml`; measure 1 beat 1 = frame 0;
+        events cover intro + one loop body; lint contract §1–8 written down).
   - `[ ]` `music_analysis.py` in `tools/audio/` (key, chords, phrases,
         repeated-motif tagging, contour, density) over the `pret_audio.py` IR.
   - `[ ]` **Hand-craft one song's enhancement YAML by ear** (e.g. Pallet Town or
@@ -558,11 +562,19 @@ the two-model workflow (Gemini distills, Claude writes the skill files).
         drop when polyphony exceeded; chord thinning deferred).
   - `[ ]` OPL enhancement stream player: tier-1 voices on spare FM channels
         alongside the faithful shim (voice budget ~10 after shim + /SFXOVERLAP).
-  - `[ ]` Textbook prep: extract + strip the ~20 Open Music Theory files; two-model
-        distillation (Gemini distills → Claude writes skill files).
-  - `[ ]` Skills in `.claude/skills/`: `music-theory` (+ references),
-        `audio-enhance-opl3` (tier 1, few-shot example), `audio-enhance-mt32`
-        (tiers 2–3, reads tier-1 entries first).
+  - `[x]` Textbook prep: extract + strip the ~20 Open Music Theory files; two-model
+        distillation — done 2026-07-07 (`docs/references/openmusictheory.github.io/
+        open_music_theory_distilled.md`, pointed at by the music-theory skill's
+        textbook README).
+  - `[x]` Skills in `.claude/skills/`: `music-theory` (+ 4 references + textbook
+        pointer), `audio-enhance-opl3` (tier 1), `audio-enhance-mt32` (tiers 2–3,
+        reads tier-1 entries first), plus a fourth, `score-analysis` (per-track
+        analyses transcribed from a fan music-theory PDF for this game; the
+        descriptions dir is ARR local-only) — user-authored 2026-07-07,
+        technically audited + fixed in `e82b16bc` (MT-32 preset table rebuilt
+        from the factory list, track index regenerated from the real files,
+        channel budget matched to gb_to_midi.py). The skills' `examples/` slots
+        fill when the hand-crafted YAML lands.
   - `[ ]` LLM arrangement passes per song (OPL3 tier-1 pass → audition → MT-32
         tier-2/3 pass → audition); human ear is the quality gate throughout.
   - **Milestone: one song with a hand-crafted tier-1 layer audible on OPL3 and
