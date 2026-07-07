@@ -858,7 +858,14 @@ src/data/map_scripts.o: assets/map_scripts.inc
 
 src/data/audio_data.o: assets/audio_rom.inc assets/cry_data.inc
 src/audio/opl_shim.o: assets/opl_patches.inc
-src/audio/mpu401.o: assets/music_streams.inc assets/audio_constants.inc
+src/audio/mpu401.o: assets/music_streams.inc assets/mt32_sysex.inc \
+                    assets/audio_constants.inc
+
+# MT-32 setup SysEx (LCD greeting, reverb/partial reserves, custom timbres)
+# from the hand-editable tools/audio/mt32/timbres.yaml.
+assets/mt32_sysex.inc: tools/audio/gen_mt32_patches.py \
+                       tools/audio/mt32/timbres.yaml
+	python3 tools/audio/gen_mt32_patches.py
 assets/opl_patches.inc: tools/audio/gen_opl_patches.py
 	python3 tools/audio/gen_opl_patches.py
 src/home/audio.o src/audio/engine_1.o src/audio/engine_2.o \
@@ -1153,7 +1160,7 @@ assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_
         assets/sprite_sheet_pointers.inc assets/pokedex_tiles.inc \
         assets/mon_pics.inc \
         assets/audio_rom.inc assets/audio_constants.inc assets/cry_data.inc \
-        assets/opl_patches.inc assets/music_streams.inc
+        assets/opl_patches.inc assets/music_streams.inc assets/mt32_sysex.inc
 
 # Force-regenerate every generated asset, ignoring timestamps. The asset rules
 # are timestamp-gated (an .inc newer than its generator/source is skipped), which

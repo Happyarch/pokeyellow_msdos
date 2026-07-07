@@ -37,6 +37,7 @@ extern opl_init                   ; src/audio/opl_shim.asm
 extern opl_pass                   ; src/audio/opl_shim.asm
 extern opl_shutdown               ; src/audio/opl_shim.asm
 extern mpu_detect                 ; src/audio/mpu401.asm
+extern mt32_upload                ; src/audio/mpu401.asm
 extern midi_seq_tick              ; src/audio/mpu401.asm
 extern midi_seq_stop              ; src/audio/mpu401.asm
 extern g_cfg_midi                 ; src/audio/mpu401.asm — set by /MT32 or /GM
@@ -65,6 +66,7 @@ audio_init:
     cmp byte [g_cfg_midi], 0      ; /MT32 or /GM: probe the MPU-401 too
     jz .noMidi
     call mpu_detect               ; clears g_cfg_midi if nothing answers
+    call mt32_upload              ; setup SysEx (no-op unless /MT32 + found)
 .noMidi:
     mov byte [g_audio_engine_online], 1
     call StopAllSounds

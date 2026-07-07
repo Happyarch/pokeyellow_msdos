@@ -39,9 +39,12 @@ bits 32
 %include "assets/audio_constants.inc"
 
 global mpu_detect
+global mt32_upload
 global midi_seq_start
 global midi_seq_stop
 global midi_seq_tick
+
+extern tick_count                 ; boot/timing.asm — 60 Hz PIT tick counter
 global g_midi_music
 global g_cfg_midi
 global g_mpu_present
@@ -148,6 +151,45 @@ mpu_write_data:
     out dx, al
     clc
 .fail:
+    ret
+
+; ---------------------------------------------------------------------------
+; mt32_upload — send the generated MT-32 setup SysEx (assets/mt32_sysex.inc:
+; LCD greeting, reverb + partial reserves + channel table, custom timbres,
+; patch/rhythm rewrites) after a successful probe. /MT32 only — a GM module
+; gets no Roland DT1s. Messages are paced 3 PIT ticks (~50 ms) apart, the
+; classic MT-32 buffer-safety interval (pit_init runs before audio_init, so
+; tick_count is live). A write timeout aborts the upload but leaves MIDI
+; mode on. Preserves all registers.
+; ---------------------------------------------------------------------------
+mt32_upload:
+    cmp byte [g_cfg_midi], 1      ; MT-32 mode only
+    jne .off
+    cmp byte [g_mpu_present], 0
+    jz .off
+    pushad
+    mov esi, Mt32SysexBlob
+.msg:
+    movzx edi, word [esi]         ; message length (EDI survives
+    test edi, edi                 ;  mpu_write_data's ECX/EDX clobber)
+    jz .done
+    add esi, 2
+.byte:
+    mov al, [esi]
+    call mpu_write_data
+    jc .done                      ; interface wedged: give up quietly
+    inc esi
+    dec edi
+    jnz .byte
+    mov ebx, [tick_count]
+    add ebx, 3                    ; let the MT-32 chew on the message
+.pace:
+    cmp [tick_count], ebx
+    jb .pace
+    jmp .msg
+.done:
+    popad
+.off:
     ret
 
 ; ---------------------------------------------------------------------------
@@ -407,6 +449,9 @@ midi_used_channels: db 1, 2, 3, 9, 0xFF
 
 ; generated music streams + per-bank id → stream tables
 %include "assets/music_streams.inc"
+
+; generated MT-32 setup SysEx (length-prefixed DT1s, dw 0 terminated)
+%include "assets/mt32_sysex.inc"
 
 section .bss
 
