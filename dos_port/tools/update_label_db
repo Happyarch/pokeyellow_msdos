@@ -1,0 +1,387 @@
+#!/usr/bin/env python3
+"""
+update_label_db — per-label translation DB scanner (fidelity plan Stage 2.1).
+
+Scans the pret source (home/ + engine/; data/ is generator-owned and skipped)
+and the port (dos_port/src/**/*.asm) and rebuilds four tables in
+dos_port/tools/translation.db:
+
+    labels     one row per pret top-level label ∪ port global:
+               name, pret_file, port_file, status, stub_file, scanned_at, git_hash
+               status: translated | stub | missing | relocated | port_only
+    port_defs  every port `global`-declared definition (raw; feeds the linter):
+               name, file, line, is_stub, defined_here, instr_count, has_call
+    calls      caller → callee edges, side = pret | port, with kind
+               (call/jp/jr/jmp/jcc/predef/farcall/…)
+    externs    every port `extern` (file, symbol, trailing comment, line)
+
+THE DB IS ALWAYS DERIVED BY RESCANNING — never hand-edited, never written
+directly by agents. These four tables are dropped and rebuilt on every run;
+build_index's tables (functions / translation_log / stubs) are untouched.
+Rows are stamped with the HEAD commit hash+date (not wall clock), so two runs
+on the same tree produce an identical DB (the idempotency gate).
+
+Deliberate relocations (pret routine living at a non-mirrored port path) come
+from the sidecar dos_port/tools/pret_label_allowlist.json:
+    { "relocated_files":  { "<pret path>": {"port_file": "...", "why": "..."} },
+      "relocated_labels": { "<Label>":     {"port_file": "...", "why": "..."} },
+      "suppress": [ {"rule": "...", "key": "...", "why": "..."} ] }
+(relocated_* is consumed here → status 'relocated'; suppress is the linter's.)
+
+Usage:  dos_port/tools/update_label_db [--db PATH]
+"""
+
+import argparse
+import hashlib
+import json
+import os
+import re
+import sqlite3
+import subprocess
+import sys
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+DOS_PORT   = os.path.normpath(os.path.join(SCRIPT_DIR, '..'))
+REPO_ROOT  = os.path.normpath(os.path.join(SCRIPT_DIR, '..', '..'))
+DB_PATH    = os.path.join(SCRIPT_DIR, 'translation.db')
+ALLOWLIST  = os.path.join(SCRIPT_DIR, 'pret_label_allowlist.json')
+
+# ── shared line-level helpers ───────────────────────────────────────────────────
+
+LABEL_RE = re.compile(r'^([A-Za-z_][A-Za-z0-9_]*):{1,2}')
+
+def strip_comment(line):
+    """Remove ;-comments, respecting double-quoted strings."""
+    out = []
+    in_str = False
+    for ch in line:
+        if ch == '"':
+            in_str = not in_str
+        elif ch == ';' and not in_str:
+            break
+        out.append(ch)
+    return ''.join(out)
+
+def read_lines(path):
+    try:
+        with open(path, encoding='utf-8', errors='replace') as fh:
+            return fh.read().splitlines()
+    except OSError:
+        return []
+
+# ── pret side ───────────────────────────────────────────────────────────────────
+
+# rgbds call-like instructions/macros whose operand is a routine label.
+PRET_CALL_RE = re.compile(
+    r'^\s*(call|jp|jr)\s+(?:(?:nz|z|nc|c)\s*,\s*)?([A-Za-z_][A-Za-z0-9_]*)\s*$')
+PRET_MACRO_RE = re.compile(
+    r'^\s*(predef_jump|predef|farcall|callfar|callba|callab|homecall)'
+    r'\s+([A-Za-z_][A-Za-z0-9_]*)\s*$')
+
+def scan_pret():
+    """Yield (labels, calls): labels = {name: relpath (first wins)},
+    calls = [(caller, callee, kind, file, line)]."""
+    labels = {}
+    calls  = []
+    for top in ('home', 'engine'):
+        top_dir = os.path.join(REPO_ROOT, top)
+        for dirpath, dirnames, filenames in os.walk(top_dir):
+            dirnames.sort()
+            for fn in sorted(filenames):
+                if not fn.endswith('.asm'):
+                    continue
+                rel = os.path.relpath(os.path.join(dirpath, fn),
+                                      REPO_ROOT).replace('\\', '/')
+                cur = None
+                for ln, raw in enumerate(read_lines(os.path.join(dirpath, fn)), 1):
+                    line = strip_comment(raw)
+                    m = LABEL_RE.match(line)
+                    if m:
+                        cur = m.group(1)
+                        labels.setdefault(cur, rel)
+                        line = line[m.end():]      # code may follow "Label: ..."
+                    if cur is None:
+                        continue
+                    m = PRET_CALL_RE.match(line) or PRET_MACRO_RE.match(line)
+                    if m:
+                        calls.append((cur, m.group(2), m.group(1), rel, ln))
+    return labels, calls
+
+# ── port side ───────────────────────────────────────────────────────────────────
+
+X86_REGS = {
+    'eax', 'ebx', 'ecx', 'edx', 'esi', 'edi', 'ebp', 'esp',
+    'ax', 'bx', 'cx', 'dx', 'si', 'di', 'bp', 'sp',
+    'al', 'ah', 'bl', 'bh', 'cl', 'ch', 'dl', 'dh',
+}
+PORT_CALL_RE = re.compile(
+    r'^\s*(call|jmp|j[a-z]{1,3})\s+(?:short\s+|near\s+|dword\s+)?'
+    r'([A-Za-z_][A-Za-z0-9_]*)\s*$')
+GLOBAL_RE = re.compile(r'^\s*global\s+(.+)$')
+EXTERN_RE = re.compile(r'^\s*extern\s+([^;]+?)\s*(?:;\s*(.*))?$')
+DIRECTIVE_RE = re.compile(
+    r'^\s*(global|extern|section|segment|bits|align|cpu|default|use32'
+    r'|%\w+|db|dw|dd|dq|incbin|resb|resw|resd|times\s+\d+\s+d[bwd]\b)', re.I)
+
+def scan_port(pret_names):
+    """Scan dos_port/src/**/*.asm.
+
+    Returns (defs, calls, externs):
+      defs    = [(name, file, line, is_stub, is_global, defined_here,
+                  instr_count, has_call)]
+                one row per `global` declaration (defined_here=0 when the label
+                has no column-0 definition in the same file — include-defined),
+                plus one per non-global column-0 definition whose name matches
+                a pret label (file-local translations are translations too).
+      calls   = [(caller, callee, kind, file, line)]
+      externs = [(file, symbol, comment, line)]
+    """
+    defs, calls, externs = [], [], []
+    src_root = os.path.join(DOS_PORT, 'src')
+    for dirpath, dirnames, filenames in os.walk(src_root):
+        dirnames.sort()
+        for fn in sorted(filenames):
+            if not fn.endswith('.asm'):
+                continue
+            path = os.path.join(dirpath, fn)
+            rel  = os.path.relpath(path, REPO_ROOT).replace('\\', '/')
+            is_stub = fn.endswith('_stubs.asm')
+            lines = read_lines(path)
+
+            globals_here = {}       # name -> line of `global`
+            label_lines  = {}       # name -> line index of column-0 def
+            toplevel_at  = []       # (line_idx, name) for body slicing
+            cur = None
+            for idx, raw in enumerate(lines):
+                line = strip_comment(raw)
+                gm = GLOBAL_RE.match(line)
+                if gm:
+                    for name in gm.group(1).split(','):
+                        name = name.strip()
+                        if name:
+                            globals_here.setdefault(name, idx + 1)
+                    continue
+                em = EXTERN_RE.match(strip_comment(raw)) and EXTERN_RE.match(raw)
+                if em:
+                    comment = (em.group(2) or '').strip()
+                    for name in em.group(1).split(','):
+                        name = name.strip()
+                        if name:
+                            externs.append((rel, name, comment, idx + 1))
+                    continue
+                m = LABEL_RE.match(line)
+                if m:
+                    cur = m.group(1)
+                    label_lines.setdefault(cur, idx)
+                    toplevel_at.append((idx, cur))
+                    line = line[m.end():]
+                if cur is None:
+                    continue
+                cm = PORT_CALL_RE.match(line)
+                if cm and cm.group(2) not in X86_REGS:
+                    calls.append((cur, cm.group(2), cm.group(1), rel, idx + 1))
+
+            # body metrics for each definition we index: every global, plus
+            # non-global column-0 defs that match a pret label
+            next_label_at = {}
+            for i, (idx, name) in enumerate(toplevel_at):
+                end = toplevel_at[i + 1][0] if i + 1 < len(toplevel_at) else len(lines)
+                next_label_at[idx] = end
+
+            def body_metrics(start):
+                n_instr, has_call = 0, 0
+                for raw in lines[start:next_label_at[start]]:
+                    line = strip_comment(raw)
+                    m = LABEL_RE.match(line)
+                    if m:
+                        line = line[m.end():]
+                    line = line.strip()
+                    if not line or line.startswith('.') \
+                       or DIRECTIVE_RE.match(line):
+                        continue
+                    n_instr += 1
+                    if re.match(r'^(call|jmp)\s', line):
+                        has_call = 1
+                return n_instr, has_call
+
+            for name, gline in sorted(globals_here.items()):
+                if name in label_lines:
+                    start = label_lines[name]
+                    n_instr, has_call = body_metrics(start)
+                    defs.append((name, rel, start + 1, int(is_stub), 1, 1,
+                                 n_instr, has_call))
+                else:
+                    defs.append((name, rel, gline, int(is_stub), 1, 0,
+                                 None, None))
+            for name, start in sorted(label_lines.items()):
+                if name in globals_here or name not in pret_names:
+                    continue
+                n_instr, has_call = body_metrics(start)
+                defs.append((name, rel, start + 1, int(is_stub), 0, 1,
+                             n_instr, has_call))
+    return defs, calls, externs
+
+# ── summarize + write ───────────────────────────────────────────────────────────
+
+SCHEMA = """
+DROP TABLE IF EXISTS labels;
+DROP TABLE IF EXISTS port_defs;
+DROP TABLE IF EXISTS calls;
+DROP TABLE IF EXISTS externs;
+CREATE TABLE labels (
+    name       TEXT NOT NULL,
+    pret_file  TEXT,
+    port_file  TEXT,
+    status     TEXT NOT NULL CHECK(status IN
+               ('translated','stub','missing','relocated','port_only')),
+    stub_file  TEXT,
+    scanned_at TEXT,
+    git_hash   TEXT
+);
+CREATE INDEX idx_labels_name   ON labels(name);
+CREATE INDEX idx_labels_status ON labels(status);
+CREATE TABLE port_defs (
+    name         TEXT NOT NULL,
+    file         TEXT NOT NULL,
+    line         INTEGER,
+    is_stub      INTEGER NOT NULL,
+    is_global    INTEGER NOT NULL,
+    defined_here INTEGER NOT NULL,
+    instr_count  INTEGER,
+    has_call     INTEGER
+);
+CREATE INDEX idx_pdefs_name ON port_defs(name);
+CREATE TABLE calls (
+    caller TEXT NOT NULL,
+    callee TEXT NOT NULL,
+    kind   TEXT NOT NULL,
+    side   TEXT NOT NULL CHECK(side IN ('pret','port')),
+    file   TEXT NOT NULL,
+    line   INTEGER
+);
+CREATE INDEX idx_calls_callee ON calls(callee, side);
+CREATE INDEX idx_calls_caller ON calls(caller, side);
+CREATE TABLE externs (
+    file    TEXT NOT NULL,
+    symbol  TEXT NOT NULL,
+    comment TEXT,
+    line    INTEGER
+);
+CREATE INDEX idx_externs_symbol ON externs(symbol);
+"""
+
+def git_stamp():
+    def run(*args):
+        return subprocess.check_output(('git', '-C', REPO_ROOT) + args,
+                                       text=True).strip()
+    try:
+        h = run('rev-parse', 'HEAD')
+        t = run('show', '-s', '--format=%cI', 'HEAD')
+        return t, h
+    except Exception:
+        return None, None
+
+def mirror_path(pret_file):
+    return 'dos_port/src/' + pret_file
+
+def load_allowlist():
+    if not os.path.exists(ALLOWLIST):
+        return {}
+    with open(ALLOWLIST, encoding='utf-8') as fh:
+        return json.load(fh)
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__,
+                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument('--db', default=DB_PATH)
+    args = ap.parse_args()
+
+    allow = load_allowlist()
+    reloc_files  = {k: v['port_file'] for k, v in
+                    allow.get('relocated_files', {}).items()}
+    reloc_labels = {k: v['port_file'] for k, v in
+                    allow.get('relocated_labels', {}).items()}
+
+    pret_labels, pret_calls = scan_pret()
+    port_defs, port_calls, port_externs = scan_port(set(pret_labels))
+    scanned_at, git_hash = git_stamp()
+
+    # index port defs by name
+    by_name = {}
+    for row in port_defs:
+        by_name.setdefault(row[0], []).append(row)
+
+    label_rows = []
+    for name in sorted(pret_labels):
+        pret_file = pret_labels[name]
+        defs = by_name.get(name, [])
+        nonstub = sorted(d[1] for d in defs if not d[3])
+        stubs   = sorted(d[1] for d in defs if d[3])
+        if nonstub:
+            mirror = mirror_path(pret_file)
+            glob_nonstub = sorted(d[1] for d in defs if not d[3] and d[4])
+            if mirror in nonstub:
+                port_file = mirror
+            elif glob_nonstub:
+                port_file = glob_nonstub[0]
+            else:
+                port_file = nonstub[0]
+            status = 'translated'
+            if port_file != mirror_path(pret_file):
+                if reloc_labels.get(name) == port_file or \
+                   reloc_files.get(pret_file) == port_file:
+                    status = 'relocated'
+            label_rows.append((name, pret_file, port_file, status,
+                               stubs[0] if stubs else None,
+                               scanned_at, git_hash))
+        elif stubs:
+            label_rows.append((name, pret_file, None, 'stub', stubs[0],
+                               scanned_at, git_hash))
+        else:
+            label_rows.append((name, pret_file, None, 'missing', None,
+                               scanned_at, git_hash))
+    for name in sorted(set(by_name) - set(pret_labels)):
+        defs = by_name[name]
+        nonstub = sorted(d[1] for d in defs if not d[3])
+        stubs   = sorted(d[1] for d in defs if d[3])
+        label_rows.append((name, None,
+                           nonstub[0] if nonstub else None, 'port_only',
+                           stubs[0] if stubs else None, scanned_at, git_hash))
+
+    con = sqlite3.connect(args.db)
+    cur = con.cursor()
+    cur.executescript(SCHEMA)
+    cur.executemany("INSERT INTO labels VALUES (?,?,?,?,?,?,?)", label_rows)
+    cur.executemany("INSERT INTO port_defs VALUES (?,?,?,?,?,?,?,?)",
+                    sorted(port_defs))
+    cur.executemany("INSERT INTO calls VALUES (?,?,?,'pret',?,?)",
+                    sorted(pret_calls))
+    cur.executemany("INSERT INTO calls VALUES (?,?,?,'port',?,?)",
+                    sorted(port_calls))
+    cur.executemany("INSERT INTO externs VALUES (?,?,?,?)",
+                    sorted(port_externs))
+    con.commit()
+
+    counts = {s: n for s, n in cur.execute(
+        "SELECT status, COUNT(*) FROM labels GROUP BY status")}
+    con.close()
+
+    # Deterministic content hash over everything this scan derived — the
+    # idempotency check (two runs on the same tree must print the same hash;
+    # the sqlite *file* is never byte-stable across rewrites).
+    h = hashlib.sha256()
+    for rows in (label_rows, sorted(port_defs), sorted(pret_calls),
+                 sorted(port_calls), sorted(port_externs)):
+        for r in rows:
+            h.update(repr(r).encode())
+
+    print(f"labels: {sum(counts.values())} "
+          f"({', '.join(f'{k}={v}' for k, v in sorted(counts.items()))})")
+    print(f"port_defs: {len(port_defs)}  calls: "
+          f"{len(pret_calls)} pret + {len(port_calls)} port  "
+          f"externs: {len(port_externs)}")
+    print(f"stamp: {git_hash} @ {scanned_at}")
+    print(f"content_hash: {h.hexdigest()}")
+
+if __name__ == '__main__':
+    main()

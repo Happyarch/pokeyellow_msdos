@@ -621,13 +621,13 @@ section .text
 ;   - PrintCriticalOHKOText, DisplayEffectiveness, HandleBuildingRage, move-failure text
 ; ---------------------------------------------------------------------------
 ; --- externs for the faithful ExecutePlayerMove flow (Stage 2.5) ---
-extern PrintGhostText                  ; core_stubs.asm (stub: not ghost)
-extern HandleCounterMove               ; core_stubs.asm (stub: not counter)
-extern MirrorMoveCopyMove              ; core_stubs.asm (stub: fail)
-extern MetronomePickMove               ; core_stubs.asm (stub)
-extern PrintCriticalOHKOText           ; core_stubs.asm (stub)
-extern DisplayEffectiveness            ; core_stubs.asm (stub)
-extern HandleExplodingAnimation        ; core_stubs.asm (stub)
+extern PrintGhostText                  ; ghost.asm (real)
+extern HandleCounterMove               ; counter.asm (real)
+extern MirrorMoveCopyMove              ; mirror_move.asm (real)
+extern MetronomePickMove               ; metronome.asm (real)
+extern PrintCriticalOHKOText           ; print_critical_ohko.asm (real)
+extern DisplayEffectiveness            ; display_effectiveness.asm (real)
+extern HandleExplodingAnimation        ; exploding_animation.asm (real)
 extern HandleBuildingRage              ; building_rage.asm (real)
 extern HideSubstituteShowMonAnim       ; move_effect_helpers.asm (stub)
 extern ReshowSubstituteAnim            ; move_effect_helpers.asm (stub)

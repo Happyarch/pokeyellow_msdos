@@ -1,0 +1,143 @@
+#!/usr/bin/env python3
+"""
+lint_pret_labels — pret-label convention linter (fidelity plan Stage 2.1).
+
+Runs update_label_db (unless --no-scan), then reports violations as queries
+over the labels / port_defs / externs tables in translation.db. Exit 1 if any
+unsuppressed violation remains.
+
+Violation classes:
+  mirror        pret-named global defined neither in its path-mirrored file
+                (dos_port/src/<pret path>) nor covered by the relocation
+                allowlist — a relocated-candidate or a silently-patched label.
+  non_ret_stub  a *_stubs.asm body that isn't ret-only (calls something, or
+                grew past a minimal flag/CF contract) — the "silently patched
+                instead of stubbed" GetName class.
+  dup_def       one global defined in 2+ port files — the silent-shadow trap
+                (a stub linked while the real body sits in a check-only list).
+  stale_extern  an `extern` trailing comment naming a *_stubs.asm that no
+                longer defines the symbol (stub retired, comment not repointed
+                — stub convention rule 3/5).
+
+Suppressions live in dos_port/tools/pret_label_allowlist.json:
+  "suppress": [ {"rule": "<class>", "key": "<label | file:symbol>", "why": "…"} ]
+Relocations are not suppressions — they go in relocated_files/relocated_labels
+(consumed by update_label_db → status 'relocated').
+
+Usage:  dos_port/tools/lint_pret_labels [--no-scan] [--db PATH]
+"""
+
+import argparse
+import json
+import os
+import re
+import sqlite3
+import subprocess
+import sys
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH    = os.path.join(SCRIPT_DIR, 'translation.db')
+ALLOWLIST  = os.path.join(SCRIPT_DIR, 'pret_label_allowlist.json')
+
+# A stub body beyond this many instructions (or containing a call/jmp) is no
+# longer "ret-only + minimal flag/CF contract".
+STUB_MAX_INSTRS = 8
+
+def load_suppressions():
+    if not os.path.exists(ALLOWLIST):
+        return set()
+    with open(ALLOWLIST, encoding='utf-8') as fh:
+        allow = json.load(fh)
+    return {(s['rule'], s['key']) for s in allow.get('suppress', [])}
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__,
+                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument('--no-scan', action='store_true',
+                    help='lint the existing DB without rescanning the tree')
+    ap.add_argument('--db', default=DB_PATH)
+    args = ap.parse_args()
+
+    if not args.no_scan:
+        r = subprocess.run([sys.executable,
+                            os.path.join(SCRIPT_DIR, 'update_label_db'),
+                            '--db', args.db])
+        if r.returncode != 0:
+            sys.exit('lint_pret_labels: scan failed')
+
+    suppress = load_suppressions()
+    con = sqlite3.connect(args.db)
+    cur = con.cursor()
+    findings = []      # (rule, key, message)
+    suppressed = 0
+
+    def add(rule, key, msg):
+        nonlocal suppressed
+        if (rule, key) in suppress:
+            suppressed += 1
+        else:
+            findings.append((rule, key, msg))
+
+    # ── mirror: translated at a non-mirrored path, not allowlisted ─────────
+    for name, pret_file, port_file in cur.execute("""
+            SELECT name, pret_file, port_file FROM labels
+            WHERE status='translated'
+              AND port_file != 'dos_port/src/' || pret_file
+            ORDER BY pret_file, name"""):
+        add('mirror', name,
+            f"{name}: pret {pret_file} -> {port_file} "
+            f"(expected dos_port/src/{pret_file}; allowlist if deliberate)")
+
+    # ── non_ret_stub ────────────────────────────────────────────────────────
+    for name, file, line, n, has_call in cur.execute("""
+            SELECT name, file, line, instr_count, has_call FROM port_defs
+            WHERE is_stub=1 AND defined_here=1
+              AND (has_call=1 OR instr_count > ?)
+            ORDER BY file, line""", (STUB_MAX_INSTRS,)):
+        why = 'contains call/jmp' if has_call else f'{n} instructions'
+        add('non_ret_stub', name,
+            f"{name} ({file}:{line}): stub body isn't ret-only ({why})")
+
+    # ── dup_def: same global defined in 2+ files ────────────────────────────
+    for name, files in cur.execute("""
+            SELECT name, GROUP_CONCAT(file, '  ') FROM port_defs
+            WHERE is_global=1
+            GROUP BY name HAVING COUNT(DISTINCT file) > 1
+            ORDER BY name"""):
+        add('dup_def', name, f"{name}: defined in {files}")
+
+    # ── stale_extern: comment names a stubs file that doesn't define it ─────
+    stub_defs = {(os.path.basename(f), n) for n, f in cur.execute(
+        "SELECT name, file FROM port_defs WHERE is_stub=1")}
+    stub_files = {b for b, _ in stub_defs} | {
+        os.path.basename(f) for (f,) in cur.execute(
+            "SELECT DISTINCT file FROM port_defs WHERE is_stub=1")}
+    for file, symbol, comment, line in cur.execute(
+            "SELECT file, symbol, comment, line FROM externs "
+            "WHERE comment LIKE '%_stubs.asm%' ORDER BY file, line"):
+        m = re.search(r'([A-Za-z0-9_]+_stubs\.asm)', comment)
+        if not m:
+            continue
+        base = m.group(1)
+        if (base, symbol) not in stub_defs:
+            missing = ('file has no such stub' if base in stub_files
+                       else 'no such stub file')
+            add('stale_extern', f'{file}:{symbol}',
+                f"{file}:{line}: extern {symbol} comment points at {base} "
+                f"({missing})")
+    con.close()
+
+    by_rule = {}
+    for rule, _, msg in findings:
+        by_rule.setdefault(rule, []).append(msg)
+    for rule in ('mirror', 'non_ret_stub', 'dup_def', 'stale_extern'):
+        msgs = by_rule.get(rule, [])
+        if msgs:
+            print(f"\n== {rule} ({len(msgs)}) ==")
+            print('\n'.join('  ' + m for m in msgs))
+    print(f"\nlint_pret_labels: {len(findings)} violation(s), "
+          f"{suppressed} suppressed")
+    sys.exit(1 if findings else 0)
+
+if __name__ == '__main__':
+    main()

@@ -2,7 +2,7 @@
 
 Worktree: `/mnt/sdb1/Code/Active Code/pokeyellow_msdos-fidelity_harness` (branch `fidelity_harness`).
 
-Status: **in progress — Sessions A–G done (2026-07-07); next: Session H.**
+Status: **in progress — Sessions A–H done (2026-07-07); next: Session I.**
 
 **Sequencing vs `current_plan_overworld_port.md` (decided with user 2026-07-06):**
 the harness spine — Sessions A–E + H — runs as one focused block **before** the
@@ -339,15 +339,46 @@ know:
   use `pkill -x mgba-lua-runner`.
 
 ### Session H — label DB + linter  *(Stage 2.1)*
-- [ ] Scanner `update_label_db` + `labels`/`calls`/`externs` tables in `translation.db`
+- [x] Scanner `update_label_db` + `labels`/`calls`/`externs` tables in `translation.db`
       (additive; don't break `work_queue`); `lint_pret_labels` as queries over it;
       allowlist sidecar.
-- [ ] Run over the whole tree; triage output into: real violations (fix trivial ones),
+- [x] Run over the whole tree; triage output into: real violations (fix trivial ones),
       allowlist/`relocated` candidates, and **decisions-for-user** (do NOT auto-resolve
       judgment calls — list them).
 - **Exit gate:** linter exits 0 on the tree with the draft allowlist; rescan is
   idempotent (two runs, identical DB); session note contains the categorized findings
   list for user review.
+
+**Session H result (2026-07-07): gate passed.** `tools/update_label_db` rebuilds four
+tables in `translation.db` (`labels` 3567 rows, `port_defs` 1240, `calls` 7408 pret +
+3378 port, `externs` 1617) — dropped/recreated each scan, stamped with the HEAD
+commit hash/date (not wall clock) and printing a deterministic `content_hash`, which
+is the idempotency check (the sqlite *file* is never byte-stable; two runs print the
+same hash). `build_index`'s `functions`/`translation_log`/`stubs` tables untouched.
+`tools/lint_pret_labels` (rescans, then queries; exit 0 clean, 6 suppressed) with
+sidecar `tools/pret_label_allowlist.json`. Status split: 578 translated (mirror path),
+423 relocated (allowlisted), 21 stub, 2339 missing, 206 port-only globals.
+Design note the next session must know: port routines translated as **file-local
+(non-global) column-0 labels** count as translated — the first scan indexed only
+`global`s and mis-called 297 of them "missing"; `port_defs.is_global` records scope
+and the dup_def lint only fires on globals.
+Categorized findings:
+- **Fixed (trivial):** 7 stale extern comments in `src/engine/battle/core.asm`
+  (`PrintGhostText`/`HandleCounterMove`/`MirrorMoveCopyMove`/`MetronomePickMove`/
+  `PrintCriticalOHKOText`/`DisplayEffectiveness`/`HandleExplodingAnimation`) still
+  said `core_stubs.asm` after the battle swarm landed the real bodies — repointed.
+- **Suppressed, known-interim (whys in the allowlist):** dup_def `SpawnPikachu`
+  (linked stub vs check-only real body in `pikachu.asm`), dup_def
+  `LoadPlayerSpriteGraphics` (linked Phase-2 scaffold in `overworld.asm` vs check-only
+  faithful `player_gfx.asm`), non_ret_stub `OakSpeech` + `DisplayPCMainMenu`
+  (documented DEVIATION minimal-contract stubs).
+- **Decisions-for-user:** (1) `FormatMovesString` — a full faithful body lives in
+  `core_stubs.asm` (the "GetName class"; it deviates via `FindMoveName` because
+  `GetName` isn't link-ready and `misc.asm` is check-only) — should move to a real
+  file or ride `misc.asm`'s promotion; suppressed for the gate but it is real debt.
+  (2) The draft allowlist blesses all 298 pre-existing relocation groups wholesale
+  (56 file-level + 242 per-label, incl. `GetName` home/names2.asm → src/home/names.asm)
+  — worth a spot-review; deleting any entry re-fires the linter on it.
 
 ### Session I — faithdiff + label_status  *(Stages 2.2 + 2.4 CLI)*
 - [ ] `faithdiff <PretLabel>` CLI + suppression list.
@@ -461,14 +492,14 @@ directly by agents** — so a missed update self-heals on the next scan instead 
 lying. Extend the existing `dos_port/tools/translation.db` **additively** (new
 `labels` table + views; `build_index`/`work_queue`'s file-level tables untouched —
 they may be superseded later, not in this plan).
-- [ ] Scanner (`tools/update_label_db`, callable standalone and by the linter): index
+- [x] Scanner (`tools/update_label_db`, callable standalone and by the linter): index
       pret routine labels from root `home/` + `engine/` (top-level labels; skip
       `data/` — that's generator-owned), and every `global` in `dos_port/src/**/*.asm`
       with defining file + whether it's a `*_stubs.asm`.
-- [ ] `labels` table: label, pret source file, port file (NULL = untranslated), status
+- [x] `labels` table: label, pret source file, port file (NULL = untranslated), status
       (`translated` / `stub` / `missing` / `relocated`), stub file if any, scan
       timestamp + git hash. Committed like `translation.db` is today.
-- [ ] `calls` edge table (caller label → callee label, side = pret|port) and `externs`
+- [x] `calls` edge table (caller label → callee label, side = pret|port) and `externs`
       table (port file, symbol, trailing comment text). Both fall out of the same
       parse pass. This gives dependency-tree queries — "who calls X" — used by stub
       retirement (below) and makes the stale-extern-comment lint a plain query.
@@ -477,12 +508,12 @@ they may be superseded later, not in this plan).
       linking can't fix: repointing extern trailing comments (stub convention rule 3),
       and auditing callers translated against stub-era behavior (register/flag
       contracts, side effects the stub never produced, bespoke workarounds).
-- [ ] `lint_pret_labels`: violations as DB queries (nonzero exit): pret-named global
+- [x] `lint_pret_labels`: violations as DB queries (nonzero exit): pret-named global
       defined neither in its path-mirrored file nor a `*_stubs.asm`; stub whose body
       isn't ret-only (the "silently patched instead of stubbed" GetName class);
       duplicate definitions (silent-shadow trap); `extern` comments pointing at a stub
       file that no longer defines the symbol.
-- [ ] Sidecar allowlist for deliberate relocations (e.g. `home/pikachu.asm` →
+- [x] Sidecar allowlist for deliberate relocations (e.g. `home/pikachu.asm` →
       `src/engine/overworld/pikachu.asm`) → `relocated` status, not a violation.
 
 ### Stage 2.2 — `dos_port/tools/faithdiff <PretLabel>` (Python CLI)

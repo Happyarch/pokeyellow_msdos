@@ -1,0 +1,1239 @@
+{
+ "_comment": [
+  "Sidecar allowlist for update_label_db / lint_pret_labels (fidelity plan Stage 2.1).",
+  "relocated_files: every translated label of <pret file> deliberately lives at <port_file>.",
+  "relocated_labels: per-label relocations where one pret file split across port files.",
+  "suppress: linter suppressions [{rule, key, why}].",
+  "DRAFT (Session H 2026-07-07): entries below bless pre-existing relocations found by the",
+  "first full-tree scan; they predate the mirror rule. Flagged for user review \u2014 deleting an",
+  "entry makes the linter fire on it again."
+ ],
+ "relocated_files": {
+  "engine/battle/animations.asm": {
+   "port_file": "dos_port/src/engine/battle/move_effect_helpers.asm",
+   "why": "pre-existing relocation, all 4 translated label(s) here (draft Session H)"
+  },
+  "engine/battle/init_battle.asm": {
+   "port_file": "dos_port/src/gfx/pics.asm",
+   "why": "pre-existing relocation, all 1 translated label(s) here (draft Session H)"
+  },
+  "engine/battle/move_effects/reflect_light_screen.asm": {
+   "port_file": "dos_port/src/engine/battle/move_effect_helpers.asm",
+   "why": "pre-existing relocation, all 1 translated label(s) here (draft Session H)"
+  },
+  "engine/battle/print_type.asm": {
+   "port_file": "dos_port/src/engine/pokemon/status_screen.asm",
+   "why": "pre-existing relocation, all 1 translated label(s) here (draft Session H)"
+  },
+  "engine/battle/scale_sprites.asm": {
+   "port_file": "dos_port/src/gfx/pics.asm",
+   "why": "pre-existing relocation, all 5 translated label(s) here (draft Session H)"
+  },
+  "engine/battle/used_move_text.asm": {
+   "port_file": "dos_port/src/engine/battle/core.asm",
+   "why": "pre-existing relocation, all 1 translated label(s) here (draft Session H)"
+  },
+  "engine/gfx/load_pokedex_tiles.asm": {
+   "port_file": "dos_port/src/engine/menus/pokedex.asm",
+   "why": "pre-existing relocation, all 1 translated label(s) here (draft Session H)"
+  },
+  "engine/gfx/mon_icons.asm": {
+   "port_file": "dos_port/src/engine/menus/party_menu.asm",
+   "why": "pre-existing relocation, all 1 translated label(s) here (draft Session H)"
+  },
+  "engine/gfx/sprite_oam.asm": {
+   "port_file": "dos_port/src/gfx/sprite_oam.asm",
+   "why": "pre-existing relocation, all 3 translated label(s) here (draft Session H)"
+  },
+  "engine/link/cable_club_npc.asm": {
+   "port_file": "dos_port/src/engine/menus/link_menu.asm",
+   "why": "pre-existing relocation, all 1 translated label(s) here (draft Session H)"
+  },
+  "engine/menus/link_menu.asm": {
+   "port_file": "dos_port/src/engine/menus/link_cups.asm",
+   "why": "pre-existing relocation, all 18 translated label(s) here (draft Session H)"
+  },
+  "engine/menus/start_sub_menus.asm": {
+   "port_file": "dos_port/src/engine/menus/trainer_card.asm",
+   "why": "pre-existing relocation, all 7 translated label(s) here (draft Session H)"
+  },
+  "engine/menus/text_box.asm": {
+   "port_file": "dos_port/src/home/yes_no.asm",
+   "why": "pre-existing relocation, all 1 translated label(s) here (draft Session H)"
+  },
+  "engine/movie/evolution.asm": {
+   "port_file": "dos_port/src/engine/pokemon/evolution.asm",
+   "why": "pre-existing relocation, all 3 translated label(s) here (draft Session H)"
+  },
+  "engine/movie/title.asm": {
+   "port_file": "dos_port/src/movie/title.asm",
+   "why": "pre-existing relocation, all 5 translated label(s) here (draft Session H)"
+  },
+  "engine/movie/title_yellow.asm": {
+   "port_file": "dos_port/src/movie/title.asm",
+   "why": "pre-existing relocation, all 5 translated label(s) here (draft Session H)"
+  },
+  "engine/overworld/advance_player_sprite.asm": {
+   "port_file": "dos_port/src/engine/overworld/overworld.asm",
+   "why": "pre-existing relocation, all 5 translated label(s) here (draft Session H)"
+  },
+  "engine/overworld/auto_movement.asm": {
+   "port_file": "dos_port/src/engine/overworld/overworld.asm",
+   "why": "pre-existing relocation, all 1 translated label(s) here (draft Session H)"
+  },
+  "engine/overworld/doors.asm": {
+   "port_file": "dos_port/src/engine/overworld/overworld.asm",
+   "why": "pre-existing relocation, all 1 translated label(s) here (draft Session H)"
+  },
+  "engine/overworld/emotion_bubbles.asm": {
+   "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
+   "why": "pre-existing relocation, all 2 translated label(s) here (draft Session H)"
+  },
+  "engine/overworld/player_animations.asm": {
+   "port_file": "dos_port/src/engine/overworld/ledges.asm",
+   "why": "pre-existing relocation, all 2 translated label(s) here (draft Session H)"
+  },
+  "engine/overworld/player_state.asm": {
+   "port_file": "dos_port/src/engine/overworld/warp_check.asm",
+   "why": "pre-existing relocation, all 2 translated label(s) here (draft Session H)"
+  },
+  "engine/overworld/sprite_collisions.asm": {
+   "port_file": "dos_port/src/engine/overworld/movement.asm",
+   "why": "pre-existing relocation, all 4 translated label(s) here (draft Session H)"
+  },
+  "engine/overworld/tilesets.asm": {
+   "port_file": "dos_port/src/engine/overworld/overworld.asm",
+   "why": "pre-existing relocation, all 1 translated label(s) here (draft Session H)"
+  },
+  "engine/overworld/trainer_sight.asm": {
+   "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
+   "why": "pre-existing relocation, all 10 translated label(s) here (draft Session H)"
+  },
+  "engine/pikachu/pikachu_follow.asm": {
+   "port_file": "dos_port/src/engine/overworld/pikachu.asm",
+   "why": "pre-existing relocation, all 3 translated label(s) here (draft Session H)"
+  },
+  "engine/pokemon/bills_pc.asm": {
+   "port_file": "dos_port/src/engine/pokemon/knows_hm_move.asm",
+   "why": "pre-existing relocation, all 2 translated label(s) here (draft Session H)"
+  },
+  "home/audio.asm": {
+   "port_file": "dos_port/src/engine/battle/move_effect_helpers.asm",
+   "why": "pre-existing relocation, all 1 translated label(s) here (draft Session H)"
+  },
+  "home/clear_sprites.asm": {
+   "port_file": "dos_port/src/gfx/sprites.asm",
+   "why": "pre-existing relocation, all 2 translated label(s) here (draft Session H)"
+  },
+  "home/copy.asm": {
+   "port_file": "dos_port/src/home/copy_data.asm",
+   "why": "pre-existing relocation, all 2 translated label(s) here (draft Session H)"
+  },
+  "home/delay.asm": {
+   "port_file": "dos_port/src/video/frame.asm",
+   "why": "pre-existing relocation, all 1 translated label(s) here (draft Session H)"
+  },
+  "home/hidden_events.asm": {
+   "port_file": "dos_port/src/engine/overworld/hidden_events.asm",
+   "why": "pre-existing relocation, all 2 translated label(s) here (draft Session H)"
+  },
+  "home/init.asm": {
+   "port_file": "dos_port/src/init/init.asm",
+   "why": "pre-existing relocation, all 3 translated label(s) here (draft Session H)"
+  },
+  "home/item.asm": {
+   "port_file": "dos_port/src/home/item_predicates.asm",
+   "why": "pre-existing relocation, all 1 translated label(s) here (draft Session H)"
+  },
+  "home/item_price.asm": {
+   "port_file": "dos_port/src/engine/items/item_price.asm",
+   "why": "pre-existing relocation, all 1 translated label(s) here (draft Session H)"
+  },
+  "home/lcd.asm": {
+   "port_file": "dos_port/src/video/lcd_control.asm",
+   "why": "pre-existing relocation, all 2 translated label(s) here (draft Session H)"
+  },
+  "home/load_font.asm": {
+   "port_file": "dos_port/src/gfx/load_font.asm",
+   "why": "pre-existing relocation, all 3 translated label(s) here (draft Session H)"
+  },
+  "home/move_mon.asm": {
+   "port_file": "dos_port/src/home/copy_data.asm",
+   "why": "pre-existing relocation, all 1 translated label(s) here (draft Session H)"
+  },
+  "home/names.asm": {
+   "port_file": "dos_port/src/home/item_predicates.asm",
+   "why": "pre-existing relocation, all 3 translated label(s) here (draft Session H)"
+  },
+  "home/names2.asm": {
+   "port_file": "dos_port/src/home/names.asm",
+   "why": "pre-existing relocation, all 2 translated label(s) here (draft Session H)"
+  },
+  "home/npc_movement.asm": {
+   "port_file": "dos_port/src/engine/overworld/overworld.asm",
+   "why": "pre-existing relocation, all 1 translated label(s) here (draft Session H)"
+  },
+  "home/overworld_text.asm": {
+   "port_file": "dos_port/src/engine/overworld/overworld_text.asm",
+   "why": "pre-existing relocation, all 2 translated label(s) here (draft Session H)"
+  },
+  "home/pathfinding.asm": {
+   "port_file": "dos_port/src/engine/overworld/pathfinding.asm",
+   "why": "pre-existing relocation, all 4 translated label(s) here (draft Session H)"
+  },
+  "home/pics.asm": {
+   "port_file": "dos_port/src/gfx/pics.asm",
+   "why": "pre-existing relocation, all 6 translated label(s) here (draft Session H)"
+  },
+  "home/pikachu.asm": {
+   "port_file": "dos_port/src/engine/overworld/pikachu.asm",
+   "why": "pre-existing relocation, all 11 translated label(s) here (draft Session H)"
+  },
+  "home/play_time.asm": {
+   "port_file": "dos_port/src/util/play_time.asm",
+   "why": "pre-existing relocation, all 2 translated label(s) here (draft Session H)"
+  },
+  "home/predef_text.asm": {
+   "port_file": "dos_port/src/home/map_text_pointer.asm",
+   "why": "pre-existing relocation, all 2 translated label(s) here (draft Session H)"
+  },
+  "home/print_num.asm": {
+   "port_file": "dos_port/src/home/text_script.asm",
+   "why": "pre-existing relocation, all 1 translated label(s) here (draft Session H)"
+  },
+  "home/print_text.asm": {
+   "port_file": "dos_port/src/text/text.asm",
+   "why": "pre-existing relocation, all 1 translated label(s) here (draft Session H)"
+  },
+  "home/reload_sprites.asm": {
+   "port_file": "dos_port/src/engine/overworld/reload_sprites.asm",
+   "why": "pre-existing relocation, all 1 translated label(s) here (draft Session H)"
+  },
+  "home/serial.asm": {
+   "port_file": "dos_port/src/engine/menus/link_menu.asm",
+   "why": "pre-existing relocation, all 5 translated label(s) here (draft Session H)"
+  },
+  "home/text.asm": {
+   "port_file": "dos_port/src/text/text.asm",
+   "why": "pre-existing relocation, all 4 translated label(s) here (draft Session H)"
+  },
+  "home/trainers2.asm": {
+   "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
+   "why": "pre-existing relocation, all 3 translated label(s) here (draft Session H)"
+  },
+  "home/uncompress.asm": {
+   "port_file": "dos_port/src/gfx/uncompress.asm",
+   "why": "pre-existing relocation, all 21 translated label(s) here (draft Session H)"
+  },
+  "home/update_sprites.asm": {
+   "port_file": "dos_port/src/engine/overworld/movement.asm",
+   "why": "pre-existing relocation, all 1 translated label(s) here (draft Session H)"
+  },
+  "home/vblank.asm": {
+   "port_file": "dos_port/src/video/frame.asm",
+   "why": "pre-existing relocation, all 1 translated label(s) here (draft Session H)"
+  }
+ },
+ "relocated_labels": {
+  "AIGetTypeEffectiveness": {
+   "port_file": "dos_port/src/engine/battle/core_damage.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "AdjustDamageForMoveType": {
+   "port_file": "dos_port/src/engine/battle/core_damage.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "AnyEnemyPokemonAliveCheck": {
+   "port_file": "dos_port/src/engine/battle/faint_leaves.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "AnyPartyAlive": {
+   "port_file": "dos_port/src/engine/overworld/wild_encounter_check.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "ApplyBadgeStatBoosts": {
+   "port_file": "dos_port/src/engine/battle/badge_boosts.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "ApplyBurnAndParalysisPenalties": {
+   "port_file": "dos_port/src/engine/battle/status_penalties.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "ApplyBurnAndParalysisPenaltiesToEnemy": {
+   "port_file": "dos_port/src/engine/battle/status_penalties.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "ApplyBurnAndParalysisPenaltiesToPlayer": {
+   "port_file": "dos_port/src/engine/battle/status_penalties.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "BattleRandom": {
+   "port_file": "dos_port/src/engine/battle/core_damage.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "CalcHitChance": {
+   "port_file": "dos_port/src/engine/battle/core_damage.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "CalculateDamage": {
+   "port_file": "dos_port/src/engine/battle/core_damage.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "ChooseNextMon": {
+   "port_file": "dos_port/src/engine/battle/faint_switch.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "CriticalHitTest": {
+   "port_file": "dos_port/src/engine/battle/core_damage.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "CriticalOHKOTextPointers": {
+   "port_file": "dos_port/src/engine/battle/print_critical_ohko.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "DoUseNextMonDialogue": {
+   "port_file": "dos_port/src/engine/battle/faint_switch.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "DrawEnemyHUDAndHPBar": {
+   "port_file": "dos_port/src/engine/battle/battle_hud.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "DrawHUDsAndHPBars": {
+   "port_file": "dos_port/src/engine/battle/battle_menu.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "DrawPlayerHUDAndHPBar": {
+   "port_file": "dos_port/src/engine/battle/battle_hud.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "EnemyRan": {
+   "port_file": "dos_port/src/engine/battle/faint_switch.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "EnemySendOut": {
+   "port_file": "dos_port/src/engine/battle/faint_sendout.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "EnemySendOutFirstMon": {
+   "port_file": "dos_port/src/engine/battle/faint_sendout.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "FaintEnemyPokemon": {
+   "port_file": "dos_port/src/engine/battle/faint_enemy.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "GetCurrentMove": {
+   "port_file": "dos_port/src/engine/battle/get_current_move.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "GetDamageVarsForEnemyAttack": {
+   "port_file": "dos_port/src/engine/battle/core_damage.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "GetDamageVarsForPlayerAttack": {
+   "port_file": "dos_port/src/engine/battle/core_damage.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "GetEnemyMonStat": {
+   "port_file": "dos_port/src/engine/battle/core_damage.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "HalveAttackDueToBurn": {
+   "port_file": "dos_port/src/engine/battle/status_penalties.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "HandleBuildingRage": {
+   "port_file": "dos_port/src/engine/battle/building_rage.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "HandleCounterMove": {
+   "port_file": "dos_port/src/engine/battle/counter.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "HandleExplodingAnimation": {
+   "port_file": "dos_port/src/engine/battle/exploding_animation.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "HandlePlayerBlackOut": {
+   "port_file": "dos_port/src/engine/battle/faint_switch.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "HandlePoisonBurnLeechSeed": {
+   "port_file": "dos_port/src/engine/battle/residual_damage.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "HandlePoisonBurnLeechSeed_DecreaseOwnHP": {
+   "port_file": "dos_port/src/engine/battle/residual_damage.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "HandlePoisonBurnLeechSeed_IncreaseEnemyHP": {
+   "port_file": "dos_port/src/engine/battle/residual_damage.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "HasMonFainted": {
+   "port_file": "dos_port/src/engine/battle/faint_switch.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "IncrementMovePP": {
+   "port_file": "dos_port/src/engine/battle/mirror_move.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "IsGhostBattle": {
+   "port_file": "dos_port/src/engine/battle/ghost.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "JumpToOHKOMoveEffect": {
+   "port_file": "dos_port/src/engine/battle/core_damage.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "LoadBattleMonFromParty": {
+   "port_file": "dos_port/src/engine/battle/faint_leaves.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "LoadEnemyMonFromParty": {
+   "port_file": "dos_port/src/engine/battle/load_enemy_from_party.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "LoadHudTilePatterns": {
+   "port_file": "dos_port/src/gfx/load_font.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "MetronomePickMove": {
+   "port_file": "dos_port/src/engine/battle/metronome.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "MirrorMoveCopyMove": {
+   "port_file": "dos_port/src/engine/battle/mirror_move.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "MoveHitTest": {
+   "port_file": "dos_port/src/engine/battle/core_damage.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "PlayMoveAnimation": {
+   "port_file": "dos_port/src/engine/battle/animations.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "PrintCriticalOHKOText": {
+   "port_file": "dos_port/src/engine/battle/print_critical_ohko.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "PrintDoesntAffectText": {
+   "port_file": "dos_port/src/engine/battle/move_effect_helpers.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "PrintGhostText": {
+   "port_file": "dos_port/src/engine/battle/ghost.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "PrintMoveFailureText": {
+   "port_file": "dos_port/src/engine/battle/print_move_failure.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "QuarterSpeedDueToParalysis": {
+   "port_file": "dos_port/src/engine/battle/status_penalties.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "RandomizeDamage": {
+   "port_file": "dos_port/src/engine/battle/core_damage.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "ReloadMoveData": {
+   "port_file": "dos_port/src/engine/battle/mirror_move.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "RemoveFaintedPlayerMon": {
+   "port_file": "dos_port/src/engine/battle/faint_switch.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "ReplaceFaintedEnemyMon": {
+   "port_file": "dos_port/src/engine/battle/faint_sendout.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "SelectEnemyMove": {
+   "port_file": "dos_port/src/engine/battle/select_enemy_move.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "SendOutMon": {
+   "port_file": "dos_port/src/engine/battle/faint_switch.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "SlideDownFaintedMonPic": {
+   "port_file": "dos_port/src/engine/battle/faint_switch.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "TrainerBattleVictory": {
+   "port_file": "dos_port/src/engine/battle/faint_sendout.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "TryRunningFromBattle": {
+   "port_file": "dos_port/src/engine/battle/battle_menu.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "UpdateCurMonHPBar": {
+   "port_file": "dos_port/src/engine/battle/move_effect_helpers.asm",
+   "why": "pret engine/battle/core.asm split across port files (draft Session H)"
+  },
+  "CantLowerAnymore": {
+   "port_file": "dos_port/src/engine/battle/stat_mod_effects.asm",
+   "why": "pret engine/battle/effects.asm split across port files (draft Session H)"
+  },
+  "CantLowerAnymore_Pop": {
+   "port_file": "dos_port/src/engine/battle/stat_mod_effects.asm",
+   "why": "pret engine/battle/effects.asm split across port files (draft Session H)"
+  },
+  "CheckTargetSubstitute": {
+   "port_file": "dos_port/src/engine/battle/move_effect_helpers.asm",
+   "why": "pret engine/battle/effects.asm split across port files (draft Session H)"
+  },
+  "ClearHyperBeam": {
+   "port_file": "dos_port/src/engine/battle/move_effect_helpers.asm",
+   "why": "pret engine/battle/effects.asm split across port files (draft Session H)"
+  },
+  "ConditionalPrintButItFailed": {
+   "port_file": "dos_port/src/engine/battle/move_effect_helpers.asm",
+   "why": "pret engine/battle/effects.asm split across port files (draft Session H)"
+  },
+  "ConfusionEffectFailed": {
+   "port_file": "dos_port/src/engine/battle/move_effects/confusion.asm",
+   "why": "pret engine/battle/effects.asm split across port files (draft Session H)"
+  },
+  "ConfusionSideEffectSuccess": {
+   "port_file": "dos_port/src/engine/battle/move_effects/confusion.asm",
+   "why": "pret engine/battle/effects.asm split across port files (draft Session H)"
+  },
+  "MoveMissed": {
+   "port_file": "dos_port/src/engine/battle/stat_mod_effects.asm",
+   "why": "pret engine/battle/effects.asm split across port files (draft Session H)"
+  },
+  "PlayBattleAnimation": {
+   "port_file": "dos_port/src/engine/battle/move_effect_helpers.asm",
+   "why": "pret engine/battle/effects.asm split across port files (draft Session H)"
+  },
+  "PlayBattleAnimation2": {
+   "port_file": "dos_port/src/engine/battle/move_effect_helpers.asm",
+   "why": "pret engine/battle/effects.asm split across port files (draft Session H)"
+  },
+  "PlayCurrentMoveAnimation": {
+   "port_file": "dos_port/src/engine/battle/move_effect_helpers.asm",
+   "why": "pret engine/battle/effects.asm split across port files (draft Session H)"
+  },
+  "PlayCurrentMoveAnimation2": {
+   "port_file": "dos_port/src/engine/battle/move_effect_helpers.asm",
+   "why": "pret engine/battle/effects.asm split across port files (draft Session H)"
+  },
+  "PrintButItFailedText_": {
+   "port_file": "dos_port/src/engine/battle/move_effect_helpers.asm",
+   "why": "pret engine/battle/effects.asm split across port files (draft Session H)"
+  },
+  "PrintDidntAffectText": {
+   "port_file": "dos_port/src/engine/battle/move_effect_helpers.asm",
+   "why": "pret engine/battle/effects.asm split across port files (draft Session H)"
+  },
+  "PrintMayNotAttackText": {
+   "port_file": "dos_port/src/engine/battle/move_effect_helpers.asm",
+   "why": "pret engine/battle/effects.asm split across port files (draft Session H)"
+  },
+  "PrintNothingHappenedText": {
+   "port_file": "dos_port/src/engine/battle/stat_mod_effects.asm",
+   "why": "pret engine/battle/effects.asm split across port files (draft Session H)"
+  },
+  "PrintStatText": {
+   "port_file": "dos_port/src/engine/battle/move_effect_helpers.asm",
+   "why": "pret engine/battle/effects.asm split across port files (draft Session H)"
+  },
+  "RestoreOriginalStatModifier": {
+   "port_file": "dos_port/src/engine/battle/stat_mod_effects.asm",
+   "why": "pret engine/battle/effects.asm split across port files (draft Session H)"
+  },
+  "StatModifierDownEffect": {
+   "port_file": "dos_port/src/engine/battle/stat_mod_effects.asm",
+   "why": "pret engine/battle/effects.asm split across port files (draft Session H)"
+  },
+  "StatModifierUpEffect": {
+   "port_file": "dos_port/src/engine/battle/stat_mod_effects.asm",
+   "why": "pret engine/battle/effects.asm split across port files (draft Session H)"
+  },
+  "UpdateLoweredStat": {
+   "port_file": "dos_port/src/engine/battle/stat_mod_effects.asm",
+   "why": "pret engine/battle/effects.asm split across port files (draft Session H)"
+  },
+  "UpdateLoweredStatDone": {
+   "port_file": "dos_port/src/engine/battle/stat_mod_effects.asm",
+   "why": "pret engine/battle/effects.asm split across port files (draft Session H)"
+  },
+  "UpdateStat": {
+   "port_file": "dos_port/src/engine/battle/stat_mod_effects.asm",
+   "why": "pret engine/battle/effects.asm split across port files (draft Session H)"
+  },
+  "UpdateStatDone": {
+   "port_file": "dos_port/src/engine/battle/stat_mod_effects.asm",
+   "why": "pret engine/battle/effects.asm split across port files (draft Session H)"
+  },
+  "AddBonusPP": {
+   "port_file": "dos_port/src/engine/pokemon/get_max_pp.asm",
+   "why": "pret engine/items/item_effects.asm split across port files (draft Session H)"
+  },
+  "GetMaxPP": {
+   "port_file": "dos_port/src/engine/pokemon/get_max_pp.asm",
+   "why": "pret engine/items/item_effects.asm split across port files (draft Session H)"
+  },
+  "GetSelectedMoveOffset": {
+   "port_file": "dos_port/src/engine/pokemon/get_max_pp.asm",
+   "why": "pret engine/items/item_effects.asm split across port files (draft Session H)"
+  },
+  "GetSelectedMoveOffset2": {
+   "port_file": "dos_port/src/engine/pokemon/get_max_pp.asm",
+   "why": "pret engine/items/item_effects.asm split across port files (draft Session H)"
+  },
+  "IsKeyItem_": {
+   "port_file": "dos_port/src/home/item_predicates.asm",
+   "why": "pret engine/items/item_effects.asm split across port files (draft Session H)"
+  },
+  "DrawDexEntryOnScreen": {
+   "port_file": "dos_port/src/engine/menus/pokedex_entry.asm",
+   "why": "pret engine/menus/pokedex.asm split across port files (draft Session H)"
+  },
+  "HeightWeightText": {
+   "port_file": "dos_port/src/engine/menus/pokedex_entry.asm",
+   "why": "pret engine/menus/pokedex.asm split across port files (draft Session H)"
+  },
+  "IndexToPokedex": {
+   "port_file": "dos_port/src/data/pokemon_data.asm",
+   "why": "pret engine/menus/pokedex.asm split across port files (draft Session H)"
+  },
+  "PokeText": {
+   "port_file": "dos_port/src/engine/menus/pokedex_entry.asm",
+   "why": "pret engine/menus/pokedex.asm split across port files (draft Session H)"
+  },
+  "PokedexDataDividerLine": {
+   "port_file": "dos_port/src/engine/menus/pokedex_entry.asm",
+   "why": "pret engine/menus/pokedex.asm split across port files (draft Session H)"
+  },
+  "Pokedex_PrepareDexEntryForPrinting": {
+   "port_file": "dos_port/src/engine/menus/pokedex_entry.asm",
+   "why": "pret engine/menus/pokedex.asm split across port files (draft Session H)"
+  },
+  "Pokedex_PrintFlavorTextAtBC": {
+   "port_file": "dos_port/src/engine/menus/pokedex_entry.asm",
+   "why": "pret engine/menus/pokedex.asm split across port files (draft Session H)"
+  },
+  "Pokedex_PrintFlavorTextAtRow11": {
+   "port_file": "dos_port/src/engine/menus/pokedex_entry.asm",
+   "why": "pret engine/menus/pokedex.asm split across port files (draft Session H)"
+  },
+  "ShowPokedexData": {
+   "port_file": "dos_port/src/engine/menus/pokedex_entry.asm",
+   "why": "pret engine/menus/pokedex.asm split across port files (draft Session H)"
+  },
+  "ShowPokedexDataInternal": {
+   "port_file": "dos_port/src/engine/menus/pokedex_entry.asm",
+   "why": "pret engine/menus/pokedex.asm split across port files (draft Session H)"
+  },
+  "AddPartyMon_WriteMovePP": {
+   "port_file": "dos_port/src/engine/pokemon/write_moves.asm",
+   "why": "pret engine/pokemon/add_mon.asm split across port files (draft Session H)"
+  },
+  "LoadMovePPs": {
+   "port_file": "dos_port/src/engine/pokemon/write_moves.asm",
+   "why": "pret engine/pokemon/add_mon.asm split across port files (draft Session H)"
+  },
+  "_AddPartyMon": {
+   "port_file": "dos_port/src/engine/pokemon/add_party_mon.asm",
+   "why": "pret engine/pokemon/add_mon.asm split across port files (draft Session H)"
+  },
+  "CancelledEvolution": {
+   "port_file": "dos_port/src/engine/pokemon/evolution.asm",
+   "why": "pret engine/pokemon/evos_moves.asm split across port files (draft Session H)"
+  },
+  "EvolutionAfterBattle": {
+   "port_file": "dos_port/src/engine/pokemon/evolution.asm",
+   "why": "pret engine/pokemon/evos_moves.asm split across port files (draft Session H)"
+  },
+  "GetMonLearnset": {
+   "port_file": "dos_port/src/engine/pokemon/write_moves.asm",
+   "why": "pret engine/pokemon/evos_moves.asm split across port files (draft Session H)"
+  },
+  "LearnMoveFromLevelUp": {
+   "port_file": "dos_port/src/engine/battle/battle_menu.asm",
+   "why": "pret engine/pokemon/evos_moves.asm split across port files (draft Session H)"
+  },
+  "RenameEvolvedMon": {
+   "port_file": "dos_port/src/engine/pokemon/evolution.asm",
+   "why": "pret engine/pokemon/evos_moves.asm split across port files (draft Session H)"
+  },
+  "TryEvolvingMon": {
+   "port_file": "dos_port/src/engine/pokemon/evolution.asm",
+   "why": "pret engine/pokemon/evos_moves.asm split across port files (draft Session H)"
+  },
+  "WriteMonMoves": {
+   "port_file": "dos_port/src/engine/pokemon/write_moves.asm",
+   "why": "pret engine/pokemon/evos_moves.asm split across port files (draft Session H)"
+  },
+  "WriteMonMoves_ShiftMoveData": {
+   "port_file": "dos_port/src/engine/pokemon/write_moves.asm",
+   "why": "pret engine/pokemon/evos_moves.asm split across port files (draft Session H)"
+  },
+  "DrawHP2": {
+   "port_file": "dos_port/src/engine/menus/party_menu.asm",
+   "why": "pret engine/pokemon/status_screen.asm split across port files (draft Session H)"
+  },
+  "DrawHP_": {
+   "port_file": "dos_port/src/engine/menus/party_menu.asm",
+   "why": "pret engine/pokemon/status_screen.asm split across port files (draft Session H)"
+  },
+  "PrintStatsBox": {
+   "port_file": "dos_port/src/engine/battle/battle_menu.asm",
+   "why": "pret engine/pokemon/status_screen.asm split across port files (draft Session H)"
+  },
+  "CallFunctionInTable": {
+   "port_file": "dos_port/src/engine/overworld/run_map_script.asm",
+   "why": "pret home/array2.asm split across port files (draft Session H)"
+  },
+  "IsInArray": {
+   "port_file": "dos_port/src/home/array.asm",
+   "why": "pret home/array2.asm split across port files (draft Session H)"
+  },
+  "IsInRestOfArray": {
+   "port_file": "dos_port/src/home/vcopy.asm",
+   "why": "pret home/array2.asm split across port files (draft Session H)"
+  },
+  "Bankswitch": {
+   "port_file": "dos_port/src/engine/battle/move_effect_helpers.asm",
+   "why": "pret home/bankswitch2.asm split across port files (draft Session H)"
+  },
+  "BankswitchCommon": {
+   "port_file": "dos_port/src/home/bankswitch.asm",
+   "why": "pret home/bankswitch2.asm split across port files (draft Session H)"
+  },
+  "ClearScreen": {
+   "port_file": "dos_port/src/movie/title.asm",
+   "why": "pret home/copy2.asm split across port files (draft Session H)"
+  },
+  "FillMemory": {
+   "port_file": "dos_port/src/home/fill_memory.asm",
+   "why": "pret home/copy2.asm split across port files (draft Session H)"
+  },
+  "IsTilePassable": {
+   "port_file": "dos_port/src/engine/overworld/overworld.asm",
+   "why": "pret home/copy2.asm split across port files (draft Session H)"
+  },
+  "CopyString": {
+   "port_file": "dos_port/src/home/vcopy.asm",
+   "why": "pret home/copy_string.asm split across port files (draft Session H)"
+  },
+  "CopyToStringBuffer": {
+   "port_file": "dos_port/src/engine/battle/core.asm",
+   "why": "pret home/copy_string.asm split across port files (draft Session H)"
+  },
+  "AddAmountSoldToMoney": {
+   "port_file": "dos_port/src/home/money.asm",
+   "why": "pret home/inventory.asm split across port files (draft Session H)"
+  },
+  "AddItemToInventory": {
+   "port_file": "dos_port/src/engine/items/inventory.asm",
+   "why": "pret home/inventory.asm split across port files (draft Session H)"
+  },
+  "RemoveItemFromInventory": {
+   "port_file": "dos_port/src/engine/items/inventory.asm",
+   "why": "pret home/inventory.asm split across port files (draft Session H)"
+  },
+  "JoypadLowSensitivity": {
+   "port_file": "dos_port/src/input/joypad_lowsens.asm",
+   "why": "pret home/joypad2.asm split across port files (draft Session H)"
+  },
+  "WaitForTextScrollButtonPress": {
+   "port_file": "dos_port/src/engine/battle/battle_menu.asm",
+   "why": "pret home/joypad2.asm split across port files (draft Session H)"
+  },
+  "ArePlayerCoordsInArray": {
+   "port_file": "dos_port/src/engine/overworld/hidden_events.asm",
+   "why": "pret home/map_objects.asm split across port files (draft Session H)"
+  },
+  "BankswitchAndContinue": {
+   "port_file": "dos_port/src/engine/overworld/overworld_text.asm",
+   "why": "pret home/map_objects.asm split across port files (draft Session H)"
+  },
+  "CheckBoulderCoords": {
+   "port_file": "dos_port/src/engine/overworld/hidden_events.asm",
+   "why": "pret home/map_objects.asm split across port files (draft Session H)"
+  },
+  "CheckCoords": {
+   "port_file": "dos_port/src/engine/overworld/hidden_events.asm",
+   "why": "pret home/map_objects.asm split across port files (draft Session H)"
+  },
+  "DecodeArrowMovementRLE": {
+   "port_file": "dos_port/src/engine/overworld/simulate_joypad.asm",
+   "why": "pret home/map_objects.asm split across port files (draft Session H)"
+  },
+  "DecodeRLEList": {
+   "port_file": "dos_port/src/engine/overworld/simulate_joypad.asm",
+   "why": "pret home/map_objects.asm split across port files (draft Session H)"
+  },
+  "GetSpriteMovementByte1Pointer": {
+   "port_file": "dos_port/src/engine/overworld/pathfinding.asm",
+   "why": "pret home/map_objects.asm split across port files (draft Session H)"
+  },
+  "GetSpriteMovementByte2Pointer": {
+   "port_file": "dos_port/src/engine/overworld/pathfinding.asm",
+   "why": "pret home/map_objects.asm split across port files (draft Session H)"
+  },
+  "IsItemInBag": {
+   "port_file": "dos_port/src/home/item_predicates.asm",
+   "why": "pret home/map_objects.asm split across port files (draft Session H)"
+  },
+  "SetSpriteMovementBytesToFF": {
+   "port_file": "dos_port/src/engine/overworld/pathfinding.asm",
+   "why": "pret home/map_objects.asm split across port files (draft Session H)"
+  },
+  "StartSimulatingJoypadStates": {
+   "port_file": "dos_port/src/engine/overworld/simulate_joypad.asm",
+   "why": "pret home/map_objects.asm split across port files (draft Session H)"
+  },
+  "TextScript_BillsPC": {
+   "port_file": "dos_port/src/engine/overworld/overworld_text.asm",
+   "why": "pret home/map_objects.asm split across port files (draft Session H)"
+  },
+  "TextScript_GameCornerPrizeMenu": {
+   "port_file": "dos_port/src/engine/overworld/overworld_text.asm",
+   "why": "pret home/map_objects.asm split across port files (draft Session H)"
+  },
+  "TextScript_ItemStoragePC": {
+   "port_file": "dos_port/src/engine/overworld/overworld_text.asm",
+   "why": "pret home/map_objects.asm split across port files (draft Session H)"
+  },
+  "TextScript_PokemonCenterPC": {
+   "port_file": "dos_port/src/engine/overworld/overworld_text.asm",
+   "why": "pret home/map_objects.asm split across port files (draft Session H)"
+  },
+  "AdvancePlayerSprite": {
+   "port_file": "dos_port/src/engine/overworld/overworld.asm",
+   "why": "pret home/overworld.asm split across port files (draft Session H)"
+  },
+  "AllPokemonFainted": {
+   "port_file": "dos_port/src/engine/overworld/wild_encounter_check.asm",
+   "why": "pret home/overworld.asm split across port files (draft Session H)"
+  },
+  "AreInputsSimulated": {
+   "port_file": "dos_port/src/engine/overworld/simulate_joypad.asm",
+   "why": "pret home/overworld.asm split across port files (draft Session H)"
+  },
+  "CheckForJumpingAndTilePairCollisions": {
+   "port_file": "dos_port/src/engine/overworld/ledges.asm",
+   "why": "pret home/overworld.asm split across port files (draft Session H)"
+  },
+  "CheckForTilePairCollisions": {
+   "port_file": "dos_port/src/engine/overworld/ledges.asm",
+   "why": "pret home/overworld.asm split across port files (draft Session H)"
+  },
+  "CheckForTilePairCollisions2": {
+   "port_file": "dos_port/src/engine/overworld/ledges.asm",
+   "why": "pret home/overworld.asm split across port files (draft Session H)"
+  },
+  "CheckIfInOutsideMap": {
+   "port_file": "dos_port/src/engine/overworld/warp_check.asm",
+   "why": "pret home/overworld.asm split across port files (draft Session H)"
+  },
+  "CheckMapConnections": {
+   "port_file": "dos_port/src/engine/overworld/overworld.asm",
+   "why": "pret home/overworld.asm split across port files (draft Session H)"
+  },
+  "CollisionCheckOnLand": {
+   "port_file": "dos_port/src/engine/overworld/overworld.asm",
+   "why": "pret home/overworld.asm split across port files (draft Session H)"
+  },
+  "CopyMapConnectionHeader": {
+   "port_file": "dos_port/src/engine/overworld/overworld.asm",
+   "why": "pret home/overworld.asm split across port files (draft Session H)"
+  },
+  "CopySignData": {
+   "port_file": "dos_port/src/engine/overworld/hidden_events.asm",
+   "why": "pret home/overworld.asm split across port files (draft Session H)"
+  },
+  "DisableRegularSprites": {
+   "port_file": "dos_port/src/engine/overworld/overworld.asm",
+   "why": "pret home/overworld.asm split across port files (draft Session H)"
+  },
+  "DoBikeSpeedup": {
+   "port_file": "dos_port/src/engine/overworld/player_gfx.asm",
+   "why": "pret home/overworld.asm split across port files (draft Session H)"
+  },
+  "DrawTileBlock": {
+   "port_file": "dos_port/src/engine/overworld/overworld.asm",
+   "why": "pret home/overworld.asm split across port files (draft Session H)"
+  },
+  "EnterMap": {
+   "port_file": "dos_port/src/engine/overworld/overworld.asm",
+   "why": "pret home/overworld.asm split across port files (draft Session H)"
+  },
+  "ExtraWarpCheck": {
+   "port_file": "dos_port/src/engine/overworld/warp_check.asm",
+   "why": "pret home/overworld.asm split across port files (draft Session H)"
+  },
+  "ForceBikeOrSurf": {
+   "port_file": "dos_port/src/engine/overworld/player_gfx.asm",
+   "why": "pret home/overworld.asm split across port files (draft Session H)"
+  },
+  "GetSimulatedInput": {
+   "port_file": "dos_port/src/engine/overworld/simulate_joypad.asm",
+   "why": "pret home/overworld.asm split across port files (draft Session H)"
+  },
+  "HandleMidJump": {
+   "port_file": "dos_port/src/engine/overworld/ledges.asm",
+   "why": "pret home/overworld.asm split across port files (draft Session H)"
+  },
+  "IgnoreInputForHalfSecond": {
+   "port_file": "dos_port/src/engine/overworld/overworld.asm",
+   "why": "pret home/overworld.asm split across port files (draft Session H)"
+  },
+  "InitSprites": {
+   "port_file": "dos_port/src/engine/overworld/overworld.asm",
+   "why": "pret home/overworld.asm split across port files (draft Session H)"
+  },
+  "IsBikeRidingAllowed": {
+   "port_file": "dos_port/src/engine/overworld/player_gfx.asm",
+   "why": "pret home/overworld.asm split across port files (draft Session H)"
+  },
+  "LoadBikePlayerSpriteGraphics": {
+   "port_file": "dos_port/src/engine/overworld/player_gfx.asm",
+   "why": "pret home/overworld.asm split across port files (draft Session H)"
+  },
+  "LoadCurrentMapView": {
+   "port_file": "dos_port/src/engine/overworld/overworld.asm",
+   "why": "pret home/overworld.asm split across port files (draft Session H)"
+  },
+  "LoadDestinationWarpPosition": {
+   "port_file": "dos_port/src/engine/overworld/overworld.asm",
+   "why": "pret home/overworld.asm split across port files (draft Session H)"
+  },
+  "LoadEastWestConnectionsTileMap": {
+   "port_file": "dos_port/src/engine/overworld/overworld.asm",
+   "why": "pret home/overworld.asm split across port files (draft Session H)"
+  },
+  "LoadMapData": {
+   "port_file": "dos_port/src/engine/overworld/overworld.asm",
+   "why": "pret home/overworld.asm split across port files (draft Session H)"
+  },
+  "LoadMapHeader": {
+   "port_file": "dos_port/src/engine/overworld/overworld.asm",
+   "why": "pret home/overworld.asm split across port files (draft Session H)"
+  },
+  "LoadNorthSouthConnectionsTileMap": {
+   "port_file": "dos_port/src/engine/overworld/overworld.asm",
+   "why": "pret home/overworld.asm split across port files (draft Session H)"
+  },
+  "LoadPlayerSpriteGraphics": {
+   "port_file": "dos_port/src/engine/overworld/overworld.asm",
+   "why": "pret home/overworld.asm split across port files (draft Session H)"
+  },
+  "LoadPlayerSpriteGraphicsCommon": {
+   "port_file": "dos_port/src/engine/overworld/player_gfx.asm",
+   "why": "pret home/overworld.asm split across port files (draft Session H)"
+  },
+  "LoadScreenRelatedData": {
+   "port_file": "dos_port/src/engine/overworld/overworld.asm",
+   "why": "pret home/overworld.asm split across port files (draft Session H)"
+  },
+  "LoadSprite": {
+   "port_file": "dos_port/src/engine/overworld/overworld.asm",
+   "why": "pret home/overworld.asm split across port files (draft Session H)"
+  },
+  "LoadSurfingPlayerSpriteGraphics": {
+   "port_file": "dos_port/src/engine/overworld/player_gfx.asm",
+   "why": "pret home/overworld.asm split across port files (draft Session H)"
+  },
+  "LoadSurfingPlayerSpriteGraphics2": {
+   "port_file": "dos_port/src/engine/overworld/player_gfx.asm",
+   "why": "pret home/overworld.asm split across port files (draft Session H)"
+  },
+  "LoadTileBlockMap": {
+   "port_file": "dos_port/src/engine/overworld/overworld.asm",
+   "why": "pret home/overworld.asm split across port files (draft Session H)"
+  },
+  "LoadTilesetTilePatternData": {
+   "port_file": "dos_port/src/engine/overworld/overworld.asm",
+   "why": "pret home/overworld.asm split across port files (draft Session H)"
+  },
+  "LoadWalkingPlayerSpriteGraphics": {
+   "port_file": "dos_port/src/engine/overworld/player_gfx.asm",
+   "why": "pret home/overworld.asm split across port files (draft Session H)"
+  },
+  "NewBattle": {
+   "port_file": "dos_port/src/engine/overworld/wild_encounter_check.asm",
+   "why": "pret home/overworld.asm split across port files (draft Session H)"
+  },
+  "OverworldLoop": {
+   "port_file": "dos_port/src/engine/overworld/overworld.asm",
+   "why": "pret home/overworld.asm split across port files (draft Session H)"
+  },
+  "OverworldLoopLessDelay": {
+   "port_file": "dos_port/src/engine/overworld/overworld.asm",
+   "why": "pret home/overworld.asm split across port files (draft Session H)"
+  },
+  "ResetMapVariables": {
+   "port_file": "dos_port/src/engine/overworld/overworld.asm",
+   "why": "pret home/overworld.asm split across port files (draft Session H)"
+  },
+  "RunMapScript": {
+   "port_file": "dos_port/src/engine/overworld/run_map_script.asm",
+   "why": "pret home/overworld.asm split across port files (draft Session H)"
+  },
+  "SignLoop": {
+   "port_file": "dos_port/src/engine/overworld/hidden_events.asm",
+   "why": "pret home/overworld.asm split across port files (draft Session H)"
+  },
+  "StepCountCheck": {
+   "port_file": "dos_port/src/engine/overworld/wild_encounter_check.asm",
+   "why": "pret home/overworld.asm split across port files (draft Session H)"
+  },
+  "StopBikeSurf": {
+   "port_file": "dos_port/src/engine/overworld/player_gfx.asm",
+   "why": "pret home/overworld.asm split across port files (draft Session H)"
+  },
+  "SwitchToMapRomBank": {
+   "port_file": "dos_port/src/home/bankswitch.asm",
+   "why": "pret home/overworld.asm split across port files (draft Session H)"
+  },
+  "ZeroSpriteStateData": {
+   "port_file": "dos_port/src/engine/overworld/overworld.asm",
+   "why": "pret home/overworld.asm split across port files (draft Session H)"
+  },
+  "Delay3": {
+   "port_file": "dos_port/src/video/frame.asm",
+   "why": "pret home/palettes.asm split across port files (draft Session H)"
+  },
+  "GBPalNormal": {
+   "port_file": "dos_port/src/init/init.asm",
+   "why": "pret home/palettes.asm split across port files (draft Session H)"
+  },
+  "GBPalWhiteOut": {
+   "port_file": "dos_port/src/home/fade.asm",
+   "why": "pret home/palettes.asm split across port files (draft Session H)"
+  },
+  "GBPalWhiteOutWithDelay3": {
+   "port_file": "dos_port/src/home/fade.asm",
+   "why": "pret home/palettes.asm split across port files (draft Session H)"
+  },
+  "GetHealthBarColor": {
+   "port_file": "dos_port/src/home/fade.asm",
+   "why": "pret home/palettes.asm split across port files (draft Session H)"
+  },
+  "InitMapSprites": {
+   "port_file": "dos_port/src/engine/overworld/map_sprites.asm",
+   "why": "pret home/palettes.asm split across port files (draft Session H)"
+  },
+  "RestoreScreenTilesAndReloadTilePatterns": {
+   "port_file": "dos_port/src/home/fade.asm",
+   "why": "pret home/palettes.asm split across port files (draft Session H)"
+  },
+  "RunDefaultPaletteCommand": {
+   "port_file": "dos_port/src/engine/menus/naming_screen.asm",
+   "why": "pret home/palettes.asm split across port files (draft Session H)"
+  },
+  "RunPaletteCommand": {
+   "port_file": "dos_port/src/engine/battle/faint_switch.asm",
+   "why": "pret home/palettes.asm split across port files (draft Session H)"
+  },
+  "GetCryData": {
+   "port_file": "dos_port/src/engine/menus/pokedex.asm",
+   "why": "pret home/pokemon.asm split across port files (draft Session H)"
+  },
+  "LoadFlippedFrontSpriteByMonIndex": {
+   "port_file": "dos_port/src/gfx/pics.asm",
+   "why": "pret home/pokemon.asm split across port files (draft Session H)"
+  },
+  "LoadFrontSpriteByMonIndex": {
+   "port_file": "dos_port/src/gfx/pics.asm",
+   "why": "pret home/pokemon.asm split across port files (draft Session H)"
+  },
+  "LoadMonData": {
+   "port_file": "dos_port/src/engine/pokemon/load_mon_data.asm",
+   "why": "pret home/pokemon.asm split across port files (draft Session H)"
+  },
+  "LoadScreenTilesFromBuffer1": {
+   "port_file": "dos_port/src/engine/battle/battle_menu.asm",
+   "why": "pret home/tilemap.asm split across port files (draft Session H)"
+  },
+  "LoadScreenTilesFromBuffer2": {
+   "port_file": "dos_port/src/movie/title.asm",
+   "why": "pret home/tilemap.asm split across port files (draft Session H)"
+  },
+  "SaveScreenTilesToBuffer1": {
+   "port_file": "dos_port/src/engine/battle/battle_menu.asm",
+   "why": "pret home/tilemap.asm split across port files (draft Session H)"
+  },
+  "SaveScreenTilesToBuffer2": {
+   "port_file": "dos_port/src/movie/title.asm",
+   "why": "pret home/tilemap.asm split across port files (draft Session H)"
+  },
+  "CheckFightingMapTrainers": {
+   "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
+   "why": "pret home/trainers.asm split across port files (draft Session H)"
+  },
+  "CheckForEngagingTrainers": {
+   "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
+   "why": "pret home/trainers.asm split across port files (draft Session H)"
+  },
+  "DisplayEnemyTrainerTextAndStartBattle": {
+   "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
+   "why": "pret home/trainers.asm split across port files (draft Session H)"
+  },
+  "EndTrainerBattle": {
+   "port_file": "dos_port/src/engine/battle/trainer_battle.asm",
+   "why": "pret home/trainers.asm split across port files (draft Session H)"
+  },
+  "EngageMapTrainer": {
+   "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
+   "why": "pret home/trainers.asm split across port files (draft Session H)"
+  },
+  "ExecuteCurMapScriptInTable": {
+   "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
+   "why": "pret home/trainers.asm split across port files (draft Session H)"
+  },
+  "GetSavedEndBattleTextPointer": {
+   "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
+   "why": "pret home/trainers.asm split across port files (draft Session H)"
+  },
+  "GetSpritePosition1": {
+   "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
+   "why": "pret home/trainers.asm split across port files (draft Session H)"
+  },
+  "GetSpritePosition2": {
+   "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
+   "why": "pret home/trainers.asm split across port files (draft Session H)"
+  },
+  "InitBattleEnemyParameters": {
+   "port_file": "dos_port/src/engine/battle/trainer_battle.asm",
+   "why": "pret home/trainers.asm split across port files (draft Session H)"
+  },
+  "LoadGymLeaderAndCityName": {
+   "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
+   "why": "pret home/trainers.asm split across port files (draft Session H)"
+  },
+  "PlayTrainerMusic": {
+   "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
+   "why": "pret home/trainers.asm split across port files (draft Session H)"
+  },
+  "PrintEndBattleText": {
+   "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
+   "why": "pret home/trainers.asm split across port files (draft Session H)"
+  },
+  "ReadTrainerHeaderInfo": {
+   "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
+   "why": "pret home/trainers.asm split across port files (draft Session H)"
+  },
+  "SaveEndBattleTextPointers": {
+   "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
+   "why": "pret home/trainers.asm split across port files (draft Session H)"
+  },
+  "SetSpritePosition1": {
+   "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
+   "why": "pret home/trainers.asm split across port files (draft Session H)"
+  },
+  "SetSpritePosition2": {
+   "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
+   "why": "pret home/trainers.asm split across port files (draft Session H)"
+  },
+  "StartTrainerBattle": {
+   "port_file": "dos_port/src/engine/battle/trainer_battle.asm",
+   "why": "pret home/trainers.asm split across port files (draft Session H)"
+  },
+  "StoreTrainerHeaderPointer": {
+   "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
+   "why": "pret home/trainers.asm split across port files (draft Session H)"
+  },
+  "TalkToTrainer": {
+   "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
+   "why": "pret home/trainers.asm split across port files (draft Session H)"
+  },
+  "TrainerEndBattleText": {
+   "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
+   "why": "pret home/trainers.asm split across port files (draft Session H)"
+  },
+  "TrainerFlagAction": {
+   "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
+   "why": "pret home/trainers.asm split across port files (draft Session H)"
+  },
+  "TrainerWalkUpToPlayer_Bank0": {
+   "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
+   "why": "pret home/trainers.asm split across port files (draft Session H)"
+  },
+  "ClearBgMap": {
+   "port_file": "dos_port/src/video/lcd_control.asm",
+   "why": "pret home/vcopy.asm split across port files (draft Session H)"
+  },
+  "FillBgMap": {
+   "port_file": "dos_port/src/video/lcd_control.asm",
+   "why": "pret home/vcopy.asm split across port files (draft Session H)"
+  },
+  "FlowerTile1": {
+   "port_file": "dos_port/src/video/bg_anim.asm",
+   "why": "pret home/vcopy.asm split across port files (draft Session H)"
+  },
+  "FlowerTile2": {
+   "port_file": "dos_port/src/video/bg_anim.asm",
+   "why": "pret home/vcopy.asm split across port files (draft Session H)"
+  },
+  "FlowerTile3": {
+   "port_file": "dos_port/src/video/bg_anim.asm",
+   "why": "pret home/vcopy.asm split across port files (draft Session H)"
+  },
+  "UpdateMovingBgTiles": {
+   "port_file": "dos_port/src/video/bg_anim.asm",
+   "why": "pret home/vcopy.asm split across port files (draft Session H)"
+  },
+  "VBlankCopyBgMap": {
+   "port_file": "dos_port/src/video/bg_anim.asm",
+   "why": "pret home/vcopy.asm split across port files (draft Session H)"
+  },
+  "AutoTextBoxDrawingCommon": {
+   "port_file": "dos_port/src/text/auto_textbox.asm",
+   "why": "pret home/window.asm split across port files (draft Session H)"
+  },
+  "DisableAutoTextBoxDrawing": {
+   "port_file": "dos_port/src/text/auto_textbox.asm",
+   "why": "pret home/window.asm split across port files (draft Session H)"
+  },
+  "EnableAutoTextBoxDrawing": {
+   "port_file": "dos_port/src/text/auto_textbox.asm",
+   "why": "pret home/window.asm split across port files (draft Session H)"
+  },
+  "PrintText": {
+   "port_file": "dos_port/src/engine/battle/move_effect_helpers.asm",
+   "why": "pret home/window.asm split across port files (draft Session H)"
+  }
+ },
+ "suppress": [
+  {
+   "rule": "non_ret_stub",
+   "key": "OakSpeech",
+   "why": "documented DEVIATION integration stub: the one call (predef InitPlayerData2) is load-bearing \u2014 seeds party/bag/money on new game; cutscene itself is script-engine plan work"
+  },
+  {
+   "rule": "non_ret_stub",
+   "key": "DisplayPCMainMenu",
+   "why": "documented DEVIATION integration stub: arms menu vars (wMaxMenuItem etc.) so PCMainMenu dispatch runs on defined state \u2014 minimal contract, no box draw"
+  },
+  {
+   "rule": "non_ret_stub",
+   "key": "FormatMovesString",
+   "why": "DECISION-FOR-USER (Session H): full faithful body lives in core_stubs.asm because misc.asm is check-only and its GetName dep isn't link-ready; should move to a non-stub file or ride misc.asm's promotion"
+  },
+  {
+   "rule": "dup_def",
+   "key": "FormatMovesString",
+   "why": "known interim: core_stubs.asm body is linked; misc.asm's is check-only (BATTLE_SRCS). Resolve with the non_ret_stub decision above"
+  },
+  {
+   "rule": "dup_def",
+   "key": "SpawnPikachu",
+   "why": "known interim: overworld_stubs.asm ret-stub is linked; real body in pikachu.asm is check-only (HOME_CHECK_SRCS). Delete stub when pikachu.asm is promoted (Wave 9/M9.1)"
+  },
+  {
+   "rule": "dup_def",
+   "key": "LoadPlayerSpriteGraphics",
+   "why": "known interim: Phase-2 scaffold in overworld.asm is linked; faithful body in player_gfx.asm is check-only (HOME_CHECK_SRCS). Scaffold documented in overworld.asm; retire on player_gfx promotion"
+  }
+ ]
+}
