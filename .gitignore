@@ -85,3 +85,7 @@ dos_port/tools/dosbox-x-mcp/
 *.sn*
 *.sa*
 *.sg1
+
+# ARR score transcriptions
+docs/references/pokemon_score_transcriptions/
+pokemon_score_descriptions/
