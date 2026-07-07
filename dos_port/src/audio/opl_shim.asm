@@ -43,6 +43,13 @@ global opl_pass
 global opl_dbg_snapshot
 global g_opl_present
 global g_opl3
+; shared with the tier-1 enhancement player (src/audio/opl_enh.asm)
+global opl_write
+global opl_write_hi
+global OplPatches
+global OplSlotMod
+global OplRegGroups
+global OplMasterAttTable
 
 extern g_midi_music               ; src/audio/mpu401.asm — MIDI mode active
 extern g_sb_present               ; src/audio/audio_hal.asm (BLASTER/DSP probe)

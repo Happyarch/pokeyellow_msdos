@@ -125,6 +125,7 @@ extern pika_dbg_snapshot
 extern hal_dbg_snapshot
 extern tandy_dbg_snapshot
 extern spk_dbg_snapshot
+extern enh_dbg_snapshot
 global RunAudioTest
 %endif
 
@@ -230,7 +231,7 @@ windows:
     dd 0xD1E0    ; opl_dbg_snapshot: present, opl3, voice_state[0..61]
     dd 0xD220    ; SB detect (+0..6) + MIDI driver state (+7..: cfg,
                  ; present, active, on, dw progress, scale, cc7[16]);
-                 ; $D240 pika PCM, $D246 shim device, $D248 tandy, $D250 spk
+                 ; $D240 pika PCM, $D246 shim device, $D248 tandy, $D250 spk, $D258 enh
 %elifdef DEBUG_BATTLE
 windows:
     dd 0xC468    ; W_TILEMAP row 5 (enemy HP-bar tile IDs, cols 12-20)
@@ -339,6 +340,7 @@ RunAudioTest:
     call hal_dbg_snapshot                   ; active shim device -> $D246
     call tandy_dbg_snapshot                 ; SN76489 shim state -> $D248+
     call spk_dbg_snapshot                   ; speaker shim state -> $D250+
+    call enh_dbg_snapshot                   ; OPL enh player state -> $D258+
     jmp DebugDumpMemory                     ; writes DUMP.BIN, exits
 .ticks:
     push edi

@@ -51,6 +51,8 @@ extern DetermineAudioFunction     ; src/home/audio.asm
 extern AudioRom                   ; src/data/audio_data.asm
 extern midi_seq_start             ; src/audio/mpu401.asm (no-op unless /MT32)
 extern midi_seq_stop              ; src/audio/mpu401.asm
+extern enh_seq_start              ; src/audio/opl_enh.asm (OPL tier-1 layer)
+extern enh_seq_stop               ; src/audio/opl_enh.asm
 
 section .text
 
@@ -1164,6 +1166,7 @@ AudioCommon_PlaySound:
     ; the engine still initializes and runs the music for authentic
     ; bookkeeping/fades, muted on FM by opl_shim's voice_volume.
     call midi_seq_start
+    call enh_seq_start                  ; OPL tier-1 enhancement layer, same id
     call InitMusicVariables
     jmp .playSoundCommon
 
@@ -1225,6 +1228,7 @@ AudioCommon_PlaySound:
 
 .stopAllAudio:
     call midi_seq_stop                  ; port: silence the MIDI stream too
+    call enh_seq_stop                   ; port: and the OPL enhancement layer
     call StopAllAudio
     ret
 

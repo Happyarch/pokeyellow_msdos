@@ -583,8 +583,19 @@ the two-model workflow (Gemini distills, Claude writes the skill files).
         compiles 49 streams clean. NOTE: midi_to_stream writes the *same*
         `assets/music_streams.inc` for either --target; the shipped inc is the
         mt32 build (/GM strips SysEx at runtime).
-  - `[ ]` OPL enhancement stream player: tier-1 voices on spare FM channels
-        alongside the faithful shim (voice budget ~10 after shim + /SFXOVERLAP).
+  - `[x]` OPL enhancement stream player: tier-1 voices on spare FM channels
+        alongside the faithful shim — done 2026-07-07. `gen_enh_streams.py`
+        compiles lint-clean tier-1 layers to `assets/enh_streams.inc` (voices
+        pre-assigned to a 10-slot pool, fnum/block + carrier levels precomputed;
+        pool 0-4 = OPL voices 4-8, pool 5-9 = second array, OPL3-only, dropped
+        whole on OPL2). `src/audio/opl_enh.asm` plays them at 60 Hz from
+        audio_tick right after opl_pass, start/stop mirrored off midi_seq
+        (enh_seq_start in AudioCommon_PlaySound's music path, same (id, bank)
+        table addressing; gated on device==OPL && !MIDI). NR50 mirrored per
+        tick so the layer fades with FadeOutAudio. Debug window 9 $D258-5C
+        (on/keymask/offset). State-verified headless: test Pallet Town layer →
+        enh_on=1, key mask 0x0003 (the authored dyad), stream advancing.
+        AUDIBLE CHECK PENDING — rides with the hand-crafted YAML milestone.
   - `[x]` Textbook prep: extract + strip the ~20 Open Music Theory files; two-model
         distillation — done 2026-07-07 (`docs/references/openmusictheory.github.io/
         open_music_theory_distilled.md`, pointed at by the music-theory skill's

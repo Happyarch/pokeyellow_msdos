@@ -163,6 +163,7 @@ AUDIO_SRCS := \
     src/home/audio.asm \
     src/audio/audio_hal.asm \
     src/audio/opl_shim.asm \
+    src/audio/opl_enh.asm \
     src/audio/tandy_shim.asm \
     src/audio/spk_shim.asm \
     src/audio/mpu401.asm \
@@ -863,6 +864,7 @@ src/data/map_scripts.o: assets/map_scripts.inc
 
 src/data/audio_data.o: assets/audio_rom.inc assets/cry_data.inc
 src/audio/opl_shim.o: assets/opl_patches.inc
+src/audio/opl_enh.o: assets/enh_streams.inc assets/audio_constants.inc
 
 src/audio/tandy_shim.o: assets/tandy_tables.inc
 src/audio/mpu401.o: assets/music_streams.inc assets/mt32_sysex.inc \
@@ -972,6 +974,13 @@ assets/midi/.stamp-mt32: tools/audio/gb_to_midi.py tools/audio/pret_audio.py \
 
 assets/music_streams.inc: assets/midi/.stamp-mt32 tools/audio/midi_to_stream.py
 	python3 tools/audio/midi_to_stream.py --target mt32
+
+# Tier-1 OPL enhancement streams from the hand/LLM-authored (never
+# generated) enhancements/*.yaml, lint-gated per song.
+assets/enh_streams.inc: tools/audio/gen_enh_streams.py \
+                        tools/audio/yaml_lint.py tools/audio/music_analysis.py \
+                        $(wildcard tools/audio/enhancements/*.yaml)
+	python3 tools/audio/gen_enh_streams.py
 
 # Gym-leader face + badge tiles (2bpp passthrough of gfx/trainer_card/badges.2bpp)
 # for the trainer-card status screen (draw_badges.asm, menus S6 package B).
@@ -1179,7 +1188,7 @@ assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_
         assets/mon_pics.inc \
         assets/audio_rom.inc assets/audio_constants.inc assets/cry_data.inc \
         assets/opl_patches.inc assets/music_streams.inc assets/mt32_sysex.inc \
-        assets/pika_pcm.inc assets/tandy_tables.inc
+        assets/pika_pcm.inc assets/tandy_tables.inc assets/enh_streams.inc
 
 # Force-regenerate every generated asset, ignoring timestamps. The asset rules
 # are timestamp-gated (an .inc newer than its generator/source is skipped), which

@@ -46,6 +46,9 @@ extern tandy_shutdown             ; src/audio/tandy_shim.asm
 extern spk_shim_init              ; src/audio/spk_shim.asm
 extern spk_pass                   ; src/audio/spk_shim.asm
 extern spk_shim_shutdown          ; src/audio/spk_shim.asm
+extern enh_init                   ; src/audio/opl_enh.asm
+extern enh_seq_tick               ; src/audio/opl_enh.asm
+extern enh_seq_stop               ; src/audio/opl_enh.asm
 extern mpu_detect                 ; src/audio/mpu401.asm
 extern mt32_upload                ; src/audio/mpu401.asm
 extern midi_seq_tick              ; src/audio/mpu401.asm
@@ -74,6 +77,7 @@ audio_tick:
     jmp .midi
 .opl:
     call opl_pass                 ; virtual APU -> FM
+    call enh_seq_tick             ; tier-1 enhancement layer (Phase E)
     jmp .midi
 .tandy:
     call tandy_pass               ; virtual APU -> SN76489
@@ -91,6 +95,7 @@ audio_init:
     call audio_parse_blaster      ; BLASTER env -> g_sb_base/irq/dma
     call dsp_detect               ; DSP reset + E1h version (Phase C consumer)
     call opl_init                 ; detect + reset the OPL (388h)
+    call enh_init                 ; enhancement-player caches (no port I/O)
     ; device shim selection (exactly one active): /TANDY and /SPK force
     ; theirs (the SN76489 is write-only — no probe is possible, the flag IS
     ; the detection); the default is OPL when one answered, else the
@@ -125,6 +130,7 @@ audio_init:
 audio_shutdown:
     mov byte [g_audio_engine_online], 0
     call midi_seq_stop            ; all-notes-off on the MIDI module
+    call enh_seq_stop             ; enhancement voices off before chip reset
     call opl_shutdown             ; leave the FM chip silent
     call tandy_shutdown           ; leave the PSG silent (no-op if inactive)
     call spk_shim_shutdown        ; speaker gate off (safe always)
