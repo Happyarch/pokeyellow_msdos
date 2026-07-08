@@ -98,10 +98,34 @@ PATCHES = {
     # Instant-attack/full-sustain like every patch here; the held note length
     # comes from the YAML, the volume from the player. Warm, never buzzy.
     "soft_pad": [SUS | 0x01, 0x18,  AD,  SR, 0x00, SUS | 0x01, 0x00,  AD,  SR, 0x00, 0x00],
+    # Clean base-channel voice for songs where two duty-cycle pulse channels
+    # form a chord and the FM buzz (feedback + modulator sidebands) reads as
+    # a mistuned clash rather than a blend — Mt. Moon Cave's augmented-triad
+    # ch1/ch2 arpeggio (user audition 2026-07-07: "trying to make chords and
+    # failing" / "plucking an untuned guitar"). Pure carrier sine (modulator
+    # silent), no feedback, instant attack: closest FM equivalent of the
+    # thin, low-harmonic real GB square wave, so simultaneous dissonant
+    # chords stay in tune even when they don't stay consonant (by design —
+    # the augmented harmony IS the point). Carrier keeps the KSL treble
+    # shelf like the other base-channel voices.
+    "duty_clean": [SUS | 0x01, 0x3F, AD, SR, 0x00, SUS | 0x01, KSL | 0x00, AD, SR, 0x00, 0x00],
 }
 
 PATCH_ORDER = ["duty_125", "duty_25", "duty_50", "duty_75", "wave", "noise",
-               "sub_bass", "soft_pad"]
+               "sub_bass", "soft_pad", "duty_clean"]
+
+# Per-song OPL patch overrides for the BASE channels (tier 0). Normally a
+# base channel's FM patch is picked purely from the GB duty-cycle value
+# (NRx1 bits 7-6), shared across every song using that duty — see
+# opl_shim.asm's voice_keyon/opl_pass. Some songs need a channel-specific
+# bespoke patch instead of the shared duty_* voice without disturbing every
+# other song that shares it. Keyed by the numeric music id (see
+# assets/audio_constants.inc's MUSIC_* equ values); each row is
+# (ch1, ch2, ch3, ch4), entries either a patch name or None (no override,
+# fall back to the duty-based default).
+SONG_OPL_OVERRIDES = {
+    0xE7: ("duty_clean", "duty_clean", None, None),  # MUSIC_DUNGEON3 (Mt. Moon Cave)
+}
 
 
 def att_units(ratio: float) -> int:
@@ -149,6 +173,19 @@ def main():
         f"    db 63, 0, {att_units(2)}, {att_units(4)}",
         "",
     ]
+
+    # Per-song base-channel patch overrides: music_id, ch1, ch2, ch3, ch4
+    # (0xFF = no override -> duty-based default). Sentinel row 0xFF ends it.
+    lines += [
+        "; per-song OPL patch overrides (see SONG_OPL_OVERRIDES above)",
+        "OplSongPatches:",
+    ]
+    for music_id, chs in SONG_OPL_OVERRIDES.items():
+        row = [music_id] + [PATCH_ORDER.index(c) if c else 0xFF for c in chs]
+        lines.append("    db " + ", ".join(f"0x{b:02X}" for b in row)
+                      + f"  ; music id 0x{music_id:02X}")
+    lines.append("    db 0xFF  ; sentinel")
+    lines.append("")
 
     OUT.write_text("\n".join(lines))
     print(f"opl_patches.inc: {len(PATCH_ORDER)} patches + attenuation tables")

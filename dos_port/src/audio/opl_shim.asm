@@ -41,6 +41,7 @@ global opl_shutdown
 global opl_silence
 global opl_pass
 global opl_dbg_snapshot
+global opl_song_patch_select
 global g_opl_present
 global g_opl3
 ; shared with the tier-1 enhancement player (src/audio/opl_enh.asm)
@@ -211,6 +212,7 @@ opl_init:
     mov byte [edi + VS_LAST40], 0xFF
     add edi, VS_SIZE
     loop .vinit
+    mov dword [g_opl_ch_override], 0xFFFFFFFF
 .done:
     popad
     ret
@@ -250,6 +252,38 @@ opl_shutdown:
     jz .off
     call opl_silence
 .off:
+    ret
+
+; ---------------------------------------------------------------------------
+; opl_song_patch_select — port-only: latch this song's per-channel base-patch
+; overrides (assets/opl_patches.inc's OplSongPatches, tools/audio/
+; gen_opl_patches.py's SONG_OPL_OVERRIDES) into g_opl_ch_override, so
+; voice_keyon/opl_pass's duty-based patch pick can be overridden per song
+; without touching the shared duty_* patches other songs rely on. Called
+; from engine_1.asm's AudioCommon_PlaySound at music start with AL =
+; wSoundID. Safe with no OPL present. Preserves all registers.
+; ---------------------------------------------------------------------------
+opl_song_patch_select:
+    pushad
+    mov dl, al                          ; save the sound id
+    mov edi, g_opl_ch_override
+    mov ecx, 4
+    mov al, 0xFF
+    rep stosb                           ; default: no override on any channel
+    mov esi, OplSongPatches
+.scan:
+    lodsb
+    cmp al, 0xFF
+    je .done                            ; sentinel: no entry for this song
+    cmp al, dl
+    je .found
+    add esi, 4
+    jmp .scan
+.found:
+    mov edi, g_opl_ch_override
+    movsd
+.done:
+    popad
     ret
 
 ; ===========================================================================
@@ -315,6 +349,11 @@ opl_pass:
     jae .running
     mov al, [ebp + esi + 1]
     shr al, 6
+    mov ah, [g_opl_ch_override + ebx]   ; per-song override (0xFF = none)
+    cmp ah, 0xFF
+    je .fpatch
+    mov al, ah
+.fpatch:
     cmp al, [edi + VS_PATCH]
     je .running
     call voice_loadpatch
@@ -348,6 +387,11 @@ voice_keyon:
     mov al, [ebp + esi + 1]
     shr al, 6                   ; duty 0-3
 .have:
+    mov ah, [g_opl_ch_override + ebx]   ; per-song override (0xFF = none)
+    cmp ah, 0xFF
+    je .noOverride
+    mov al, ah
+.noOverride:
     call voice_loadpatch
     ; envelope from NRx2 (the wave channel has none — NR32 is a level)
     mov al, [ebp + esi + 2]
@@ -787,3 +831,4 @@ section .bss
 voice_state:    resb 4 * VS_SIZE
 master_att:     resb 1
 nr51_snap:      resb 1
+g_opl_ch_override: resb 4   ; per-channel patch-index override (0xFF = none)
