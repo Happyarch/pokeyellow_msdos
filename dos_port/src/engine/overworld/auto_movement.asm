@@ -92,7 +92,7 @@ PalletMovementScript_OakMoveLeft:
     mov al, [ebp + wSpriteIndex]
     shl al, 4                                  ; pret: ldh [hSpriteIndex] + MoveSprite swap
     mov [ebp + H_CURRENT_SPRITE_OFFSET], al
-    mov edi, wNPCMovementDirections2           ; de = movement stream (flat)
+    lea edi, [ebp + wNPCMovementDirections2]   ; de = movement stream (flat = ebp + WRAM offset)
     call MoveSprite
     mov byte [ebp + W_NPC_MOVEMENT_SCRIPT_FUNCTION_NUM], 1
     jmp .setMusic
