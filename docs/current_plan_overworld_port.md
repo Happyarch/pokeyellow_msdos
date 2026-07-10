@@ -971,12 +971,30 @@ adds to `GAME_SRCS` (or `OVERWORLD_CHECK_SRCS` if closure unresolved), runs
         (port-assigned scratch, pret address not load-bearing).
   - [x] Audit omissions (`Func_5357` status-4 dispatch, `MakeNPCFacePlayer` guard)
         — already fixed in OW-A.7.
-  - [ ] **REMAINING sub-step (deferred):** the `Func_5288` item-ball/STAY-and-face
-        dispatch block (`Func_5288`/`Func_531f`/`Func_5325`/`Func_532b`/`Func_5331`) +
-        `ChangeFacingDirection` + `LoadDEPlusA`. This is a **distinct status-3 dispatch
-        path** (item-ball emerge), NOT the scripted-movement chain, so it doesn't block
-        the Oak cutscene. Needs careful H-register tracing (pret leaves H=data2 across
-        `Func_5349` into `.asm_52e6`). Left as an OW-2.1 tail.
+  - [ ] **REMAINING sub-step (deferred — needs analysis, do NOT rush):** the `Func_5288`
+        item-ball/STAY-and-face dispatch block (`Func_5288`/`Func_531f`/`Func_5325`/
+        `Func_532b`/`Func_5331`) + `ChangeFacingDirection` + `LoadDEPlusA`. A **distinct
+        status-3 path** (item-ball emerge), NOT the scripted-movement chain — doesn't block
+        the Oak cutscene. Blockers found 2026-07-09:
+        1. **Port register convention:** `Func_5337` takes facing in **CH** (not the naive
+           `BC→BX` C→BL), DH=Ystep, DL=Xstep (verified vs `.moveDown`/`.moveUp`). `Func_531f`
+           family must produce (CH=facing, DH/DL=±1/0/0xFF) to match.
+        2. **⚠ Suspected pret bug — H-page asymmetry in the tails.** `.asm_52e6`/`.asm_530b`
+           call `Func_5349` (leaves H=$C2=data2), so `ld [hl],8; dec h; inc l; ld [hl],N`
+           writes `data2[offset]`=WALKANIMCOUNTER=8 then `data1[offset+1]`=MOVEMENTSTATUS=N.
+           But `.asm_52fa` calls only `Func_5337` (leaves H=$C1=data1), so the SAME sequence
+           writes `data1[offset]`=**PICTUREID**=8 then **`$C0xx[offset+1]`**=3 (below both
+           sprite pages, $C000 region). This asymmetry (data2/data1 vs data1/$C0xx) looks
+           like a latent pret bug in the "set 2" item-ball path. Faithful port must decide:
+           replicate verbatim under a `; GLITCH:`/`; BUG(level):` tag (glitch policy), which
+           requires (a) identifying what `$C000+offset+1` aliases in the port memmap and
+           (b) confirming vs a real ROM whether the write is reachable/observable. **Flagged
+           for careful analysis — not a rush-at-session-end task.** `.asm_52d2..52e1`
+           (set 3 → `.asm_530b`) are unreferenced in pret (dead) — port as-is or omit.
+        3. **Live-path wiring:** hooking `Func_5288` into the port's bespoke `UpdateNPCSprite`
+           status-1 selection (pret `.next`/`.asm_4ecb`) changes the LIVE NPC walk path
+           (every NPC/frame); no golden exercises item-ball codes, so it needs MCP/authored
+           verification, not just baselines.
 - Verification: `make check` clean; full SKIP_TITLE link OK (stub retired, no double-def);
   `goldencheck overworld_pallet` PASS (gate rebuild + inert scripted code don't regress
   Pallet NPCs); faithdiff clean modulo 2 justified parser artifacts (pret's `[hl]`-indirect
