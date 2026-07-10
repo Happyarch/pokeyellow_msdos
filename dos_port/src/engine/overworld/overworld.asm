@@ -379,7 +379,8 @@ EnterMap:
     ; Default target is the Viridian City <-> Route 22 (west) seam, the reported
     ; repro. wStatusFlags4 BIT_NO_BATTLES suppresses wild encounters through the
     ; engine's own gate (NewBattle checks it) rather than by de-wiring the call —
-    ; the battle engine currently clobbers the BG tile cache on return (W-1).
+    ; keeps the seam-crossing trace deterministic (no random battle mid-walk).
+    ; (W-1, the old battle-return tile-cache clobber, is now fixed — commit 02cf0d2f.)
 %ifndef DEBUG_SEAM_MAP
 %define DEBUG_SEAM_MAP 0x01               ; VIRIDIAN_CITY
 %endif

@@ -347,6 +347,13 @@ These are the biggest *functional* gaps but are tracked deferrals, not divergenc
   `battle_exp_stubs.asm` are `ret`-only, so a mid-battle level-up updates raw stats/HP correctly but
   doesn't recompute stage-modified stats or redraw the HP HUD until the next natural recompute.
   Documented. **Owner C.**
+- **Battle audio — wild path WIRED, trainer SFX deferred (2026-07-10, commit 02cf0d2f):** battle-start
+  BGM plays (`InitBattleVariables` restores pret's `jpfar PlayBattleMusic`), and the wild-win victory
+  jingle plays (`faint_enemy.asm` → `EndLowHealthAlarm` + `MUSIC_DEFEATED_WILD_MON` via the newly-ported
+  `PlayBattleVictoryMusic`, in `play_battle_music.asm`). STILL DEFERRED: the trainer-win faint SFX path
+  (`PlaySoundWaitForCurrent SFX_FAINT_FALL` / `PlaySound SFX_FAINT_THUD` / `WaitForSoundToFinish`) —
+  `FaintEnemyPokemon`'s trainer branch is `TODO-HW`; trainer battles aren't the live overworld path yet.
+  `EndLowHealthAlarm` omits pret's inert `wLowHealthAlarmDisabled` store (no reader in the port). **Owner C.**
 
 ---
 

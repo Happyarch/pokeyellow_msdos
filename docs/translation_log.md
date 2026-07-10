@@ -5391,3 +5391,29 @@ Verify-only (no code change; confirmed correct end-to-end):
 - **Coordinate projection ROOT-VERIFIED in code** (the ticket's critical risk): `_GetTileAndCoordsInFrontOfPlayer` reads `W_TILEMAP + (PLAYER_STANDING_ROW±2)*40 + (PLAYER_STANDING_COL±0/2)` = Down r19c24 / Up r15c24 / Left r17c22 / Right r17c26 — byte-identical to the live `GetTileInFrontOfPlayer` and = pret's `lda_coord 8,11/8,7/6,9/10,9` + the confirmed (col+16,row+8) projection. `GetTileTwoStepsInFrontOfPlayer` = ±4 tiles (r21c24/r13c24/r17c20/r17c28) = pret `8,13/8,5/4,9/12,9`+proj; map-coord `inc/dec DH/DL` by 1 and hPlayerFacing bit-set both match pret. Never uses pret's stride-20 `lda_coord` literals. The existing bespoke `GetTileInFrontOfPlayer` (tile-only subset) left untouched; the full pret-named routine added alongside.
 - **Check-only** (HOME_CHECK_SRCS): closure blockers — `ForceBikeOrSurf` lives in check-only player_gfx.asm; `IsPlayerStandingOnDoorTile` is linked (overworld.asm) but not `global`. Both must resolve to promote (OW-A.3 adds the global; OW-7.2 promotes player_gfx).
 - **Flags for root (deferred, tracked in plan doc):** (1) `H_WARP_DESTINATION_MAP` placeholder wrongly aliases 0xFF8B (hPreviousTileset — distinct byte in pret, hram.asm:12 vs :15) → give a distinct HRAM byte before linking. (2) `SafariSteps`/`SafariBallText` inlined text (via gb_text.encode, not hand-transcribed) violates the two-tier rule → generator when wired. (3) Reused pre-plan routines (ForceBikeOrSurf, IsPlayerStandingOnDoorTile) pending the faithfulness audit (user directive). Inlined tables `ForcedBikeOrSurfMaps`/`WarpTileIDPointers`+`WarpTileIDLists` (25-entry, objdump-verified offsets) faithful.
+
+### Battle-win end-to-end: crash fix, W-1 clean return, battle+victory music (2026-07-10, commit 02cf0d2f)
+Makes winning a wild battle work start-to-finish (no page fault, clean overworld return, audio).
+- **bug#3 `FaintEnemyPokemon` (faint_enemy.asm)** — the EXP_ALL tail branch was inverted (`jz`→`jnz`).
+  The port parks `IsItemInBag`'s ZF in `faint_enemy_has_exp_all` via `setz` (=1 when EXP_ALL NOT held);
+  pret's tail is `pop af / ret z` = return when that ZF was set, so the faithful test is `ret nz` (byte=1).
+  The old `jz` fell through on a normal wild win and ran a 2nd whole-party `GainExperience` that zeroed
+  `wIsInBattle` → `HandleEnemyMonFainted` took the trainer-victory path → `TrainerAI` `call edi` on
+  `wTrainerClass=0` (index −5) → page fault. Verified: `wIsInBattle` stays 1 through the tail.
+- **`evolution.asm` CopyData-EDX** — 3 sites passed dest in EDI; `CopyData` dest is EDX (=DE). Wrong dest
+  page-faulted when a winning mon evolved. Fixed to pass EDX.
+- **W-1 clean return (`init_battle.asm _InitBattleCommon`)** — the port's flat-canvas battle hack disturbs
+  two overworld render bits that the same-map post-battle `EnterMap` does NOT restore (LoadMapData never
+  derives the view ptr — overworld.asm:2278; `SeamReseatView` is DEBUG_SEAM-only). (a) `InitBattle` zeroes
+  `wCurrentTileBlockMapViewPointer`, leaving `render_bg` on its `.decode_vram` flat path → solid grass;
+  now saved in InitBattle, restored in `_InitBattleCommon` (mirrors status_screen). (b) `HideBattlePokeballs`
+  clears `LCDCF_OBJ_ON`; nothing restored it (`EnableLCD` only sets LCD-on) → `render_sprites`' OBJ gate
+  stays closed → player + all NPCs invisible; now re-OR'd in `_InitBattleCommon`. Both live-verified.
+- **Battle music (audio HAL live, destub)** — `InitBattleVariables` restores pret's `jpfar PlayBattleMusic`
+  tail (was TODO-HW) → wild/trainer/gym/final theme at battle start. `PlayBattleVictoryMusic` +
+  `EndLowHealthAlarm` ported from pret engine/battle/core.asm into `src/audio/play_battle_music.asm`
+  (co-located with PlayBattleMusic; allowlist `relocated_labels`), and the wild-win jingle wired in
+  `faint_enemy.asm` (`EndLowHealthAlarm` + `MUSIC_DEFEATED_WILD_MON`). DIVERGENCE: `EndLowHealthAlarm`
+  omits pret's inert `wLowHealthAlarmDisabled` store (no reader in the port; alarm only re-arms in-battle).
+  Deferred: trainer-faint SFX (`PlaySound`/`PlaySoundWaitForCurrent`/`WaitForSoundToFinish`) — trainer
+  battles are not the live overworld path yet. lint 0; faithdiff divergences justified in the commit.

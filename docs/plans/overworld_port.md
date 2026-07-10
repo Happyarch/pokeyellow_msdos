@@ -699,8 +699,9 @@ gate retirement landed in the "wild-live promotion" follow-up below, also 2026-0
     HP restored to MaxHP on all 6 slots, `MON_STATUS` cleared, PP restored, money
     `$012345 → $006172` BCD (halved), and no hang in `StopMusic`.
   - **Pre-existing defect EXPOSED (not caused) by this promotion — filed as
-    `docs/battle_audit_findings.md` W-1:** after a wild encounter the whole screen renders
-    as one grass tile. Three-point A/B proves it is `InitBattle` / the bespoke battle
+    `docs/battle_audit_findings.md` W-1 (RESOLVED 2026-07-10, commit 02cf0d2f — battle
+    exit must restore the view ptr + `LCDCF_OBJ_ON`):** after a wild encounter the whole
+    screen renders as one grass tile. Three-point A/B proves it is `InitBattle` / the bespoke battle
     renderer: `DISABLE_WILD=1` → clean; `SKIP_INITBATTLE=1` (encounter roll **and** the
     full `.battleOccurred` return path still live) → clean. So `OverworldLoop`'s trigger,
     `NewBattle`/`TryDoWildEncounter`, and the post-battle `EnterMap` reload are all
@@ -1470,7 +1471,8 @@ ReplaceTileBlock — these are static/derivational fixes, runtime-verify with Cu
 
 **Does NOT fix:** Viridian Forest ("can't get out", constant jutter) — that map has **no
 connections at all** (`map_header ViridianForest, VIRIDIAN_FOREST, FOREST, 0`); it is
-warp-side and tracked separately. Nor W-1 (InitBattle tile-cache clobber).
+warp-side and tracked separately. Nor W-1 (InitBattle tile-cache clobber) — that is now
+RESOLVED separately (2026-07-10, commit 02cf0d2f; battle exit restores the view ptr + OBJ bit).
 
 ---
 
