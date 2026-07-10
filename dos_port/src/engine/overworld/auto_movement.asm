@@ -47,7 +47,7 @@ extern DecodeRLEList               ; src/engine/overworld/simulate_joypad.asm
 extern StartSimulatingJoypadStates ; src/engine/overworld/simulate_joypad.asm
 extern PlayMusic                   ; src/home/audio.asm (real gateway)
 extern PewterGuys                  ; src/engine/events/pewter_guys.asm
-extern HideObject                  ; unported predef (toggleable_objects); extern until ported
+extern HideObject                  ; src/engine/overworld/toggleable_objects.asm (OW-3.2)
 
 section .text
 
