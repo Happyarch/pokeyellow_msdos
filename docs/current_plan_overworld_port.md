@@ -1355,6 +1355,99 @@ projection — the plan's most load-bearing PROJ); TODO.md umbrella item
 refreshed to current stage status. Verified: full build + link clean,
 lint_pret_labels 0, goldencheck overworld_pallet PASS.
 
+### Stage B — MAP_BORDER slack fix (E/W seam view-pointer row wrap) `[ ]`
+
+**Root cause** (confirmed 2026-07-10, `DEBUG_SEAM_LIVE` capture, 1120 frames / 11
+crossings / 77 wrapped frames). `wCurrentTileBlockMapViewPointer` is a flat 16-bit
+offset into `wOverworldMap`, so decrementing it at column 0 wraps into the previous
+row's last column (`0xE940` = row 10 col 0 → `0xE93F` = row 9 col 31). Camera jumps up
+1 row / right 31 cols; the reverse move reads as "down and left". Player stays
+screen-centered, so he *appears* to stand on an illegal tile while the tiles render
+correctly.
+
+```
+view_col = (x>>1) + MAP_BORDER - SCREEN_BLOCK_WIDTH/2
+MAP_BORDER=6, SCREEN_BLOCK_WIDTH/2  = 6  ->  horizontal slack = 0 blocks   <-- BUG
+MAP_BORDER=6, SCREEN_BLOCK_HEIGHT/2 = 4  ->  vertical   slack = 2 blocks
+```
+At `x=0` the column is exactly 0. `MoveTileBlockMapPointerWest` fires at the *start* of a
+step — before `wXCoord` wraps to 255 and before `CheckMapConnections` runs — so the column
+is −1 for all 8 frames of that step. E/W seams only (vertical has slack), which is why
+`DEBUG_WALK_NORTH` and the `overworld_pallet` golden never caught it.
+
+**Requirement:** `MAP_BORDER >= SCREEN_BLOCK_WIDTH/2 + 1` (= 7) and
+`>= SCREEN_BLOCK_HEIGHT/2 + 1` (= 5).
+
+**Scope note — this is NOT the "extend the map data" item.** `LoadTileBlockMap` fills the
+whole of `wOverworldMap` with `wMapBackgroundTile` before laying in the map body and the
+connection strips, so **the border ring is runtime-filled**: no `.blk` regeneration, no new
+authored map cells. The CLAUDE.md "extend the map data" note is a *different* goal (editable
+cells beyond the body). The two out-of-map clamps stay until that separate item lands.
+
+#### B.1 — Pick the geometry `[ ]`
+Worst-case `wOverworldMap` footprint is Route 17 / Route 23 (10×72):
+
+| option | footprint | fits 2048? |
+|---|---|---|
+| uniform `B=6` (today, buggy) | 1848 | yes |
+| **uniform `B=7`** | **2064** | no, +16 → grow buffer |
+| asymmetric `BX=7, BY=6` | 2016 | yes |
+| asymmetric `BX=7, BY=5` | 1968 | yes |
+
+**Recommend uniform `B=7` + grow `W_OVERWORLD_MAP_SIZE` `0x800`→`0x900` (2304).** `0xE800 +
+0x900 = 0xF100`, and nothing is used until `GB_OAM` at `0xFE00`, so ~3.5 KB is free. The
+asymmetric options fit the existing buffer but require correctly classifying every bare
+`MAP_BORDER` reference as row-vs-column (~14 sites); a single misclassification is a silent
+renderer bug. Uniform is mechanical and keeps one constant, matching pret's structure.
+
+#### B.2 — Sweep the pret border-3 literals `[ ]` (the real risk; do this FIRST)
+pret's overworld code hardcodes its own `MAP_BORDER=3` as bare `6` (= `2*3`) and `3`.
+Several were translated **verbatim**, so they are wrong at *any* port border and are latent
+bugs **today**, independent of this stage:
+- [ ] `engine/overworld/cut.asm:280` — `add ebx, 6 ; bc = wCurMapWidth + 6` translating
+      pret `cut.asm:185 add 6`. That `6` is `MAP_BORDER*2`; must be `MAP_BORDER * 2` (=12
+      now, 14 after B.1). `ReplaceTreeTileBlock` computes a wrong row stride today.
+- [ ] `engine/overworld/update_map.asm:82` — `add esi, 6` (`4*stride + 6` upper bound).
+- [ ] `engine/overworld/hidden_events.asm:303`, `simulate_joypad.asm:189`,
+      `special_warps.asm:222,263`, `trainer_engine.asm:347` — triage each: a struct-size 6
+      is fine, a border/stride 6 is a bug.
+- [ ] Grep the whole port for `\b(3|6|12)\b` in any expression involving `wCurMapWidth`,
+      a stride, or `wOverworldMap`, and route every one through `MAP_BORDER`.
+
+#### B.3 — Flip the constant + regenerate `[ ]`
+- [ ] `include/gb_memmap.inc`: `MAP_BORDER` 6→7; `W_OVERWORLD_MAP_SIZE` `0x800`→`0x900`.
+- [ ] `tools/gen_map_headers.py`: `BORDER` 6→7 (one constant) → regenerates connection
+      `blk`/`map`/`win`/`strip length` and `MapHeaderPointers`. Strips widen 6→7 columns/rows,
+      pulling one more column of the neighbouring map — which is exactly what the extra ring
+      column must show while scrolling across a seam.
+- [ ] `tools/read_seamlog.py`: `MAP_BORDER` 6→7.
+- [ ] `tools/gen_map_borders.py`: uses `width + 2*MAP_BORDER` — confirm it's parameterized.
+- [ ] Auto-follow (pure functions of `MAP_BORDER`/`SCREEN_BLOCK_*`, no edit needed, but
+      **verify**): `coords.inc:owcoord`, `coords.inc:event_displacement` (→ the
+      `special_warps.asm` tables), `overworld.asm:PALLET_TOWN_VIEW_PTR`,
+      `ppu.asm` (275 stride / 283 X origin / 325 Y origin), `LoadCurrentMapView`'s clamp.
+- [ ] Overflow check: max stride `50+14 = 64` still fits the 8-bit `add al, MAP_BORDER*2`
+      paths (`H_MAP_STRIDE` is a byte). Max footprint 2064 ≤ 2304. Max view ptr
+      `0xE800+2064 = 0xF010` ≤ 16-bit.
+- [ ] `make clean` (`.inc` content is not tracked by the NASMFLAGS stamp).
+
+#### B.4 — Verify `[ ]`
+- [ ] `make check`; `lint_pret_labels` 0; `make fidelity` 6/6 — `overworld_pallet` is the
+      load-bearing one: every view pointer changes, so the render must come out identical.
+- [ ] `DEBUG_SEAM=1` scripted, both directions, Viridian↔Route22: `read_seamlog.py` reports
+      **0 row wraps** (it now detects them; see the commit that added the check).
+- [ ] `DEBUG_SEAM_LIVE=1` manual: walk the seam both ways, plus a N/S seam (Pallet↔Route1)
+      to confirm no regression where slack already existed.
+- [ ] FRAME.BIN baselines (baseline / north-transition / walk-to-edge) unchanged or improved.
+- [ ] Re-check the 9 `offset(-5)` connection strips (fixed in `397766ae`) still land correctly
+      at the new border.
+
+**Does NOT fix:** Viridian Forest ("can't get out", constant jutter) — that map has **no
+connections at all** (`map_header ViridianForest, VIRIDIAN_FOREST, FOREST, 0`); it is
+warp-side and tracked separately. Nor W-1 (InitBattle tile-cache clobber).
+
+---
+
 ### Stage 8 — Final full-surface audit `[ ]` (root; gates archival)
 
 - [ ] **Coverage re-diff**: every global label in pret `engine/overworld/*.asm`
