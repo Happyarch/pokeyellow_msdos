@@ -126,10 +126,19 @@ keep that from painting garbage:
 1. **Block-ID clamp** in `DrawTileBlock`: a block ID past the embedded blockset
    is clamped to block 0.
 2. **Block-map address clamp** in `LoadCurrentMapView`: `wOverworldMap` ($E800,
-   2048 bytes) is separated from `wSurroundingTiles` ($E000, ~1728 bytes) by a
-   ~$140-byte gap. Any read outside `[wOverworldMap, wOverworldMapEnd)` yields
-   the map's border block (`wMapBackgroundTile`) instead of garbage, so the
-   out-of-map area renders as clean dummy tiles matching the in-bounds border.
+   $900 = 2304 bytes at `MAP_BORDER` 7, ending $F100) is separated from
+   `wSurroundingTiles` ($E000, 1728 bytes) by a $140-byte gap. Any read outside
+   `[wOverworldMap, wOverworldMapEnd)` yields the map's border block
+   (`wMapBackgroundTile`) instead of garbage, so the out-of-map area renders as
+   clean dummy tiles matching the in-bounds border.
+
+`MAP_BORDER` (`include/gb_memmap.inc`) is 7, not pret's 3: the port's viewport is
+12×9 blocks, and `MoveTileBlockMapPointer{West,East,…}` advances the flat view
+pointer *before* the coords wrap, so the border must exceed `SCREEN_BLOCK_WIDTH/2`.
+At border 6 it did not, and a west step at `x=0` wrapped the pointer into the
+previous block-row. Every border-derived quantity must be written in terms of
+`MAP_BORDER` / `SCREEN_BLOCK_*`, never as the literal that happens to equal it —
+pret's own source is full of such collisions (`MAP_BORDER*2 == SCREEN_BLOCK_WIDTH`).
 
 Both are stopgaps: the real fix is to **extend the map data** so those regions
 hold real blocks (no blank area), after which both clamps are dead code and

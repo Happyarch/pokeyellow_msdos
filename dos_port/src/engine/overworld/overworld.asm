@@ -249,10 +249,13 @@ PALLET_TOWN_HEIGHT          equ 9
 PALLET_TOWN_BORDER_BLOCK    equ 0x0B   ; border block from PalletTown_Object
 TILESET_BANK_FLAT           equ 0x01   ; ignored in flat model (TODO-HW: ROM banking)
 
-; wCurrentTileBlockMapViewPointer for Pallet Town: view top-left at block (6, 4) so
-; player block (10, 10) sits at view offset (4, 6) → wSurroundingTiles (16, 24).
-;   stride = PALLET_TOWN_WIDTH + 2*MAP_BORDER = 10 + 12 = 22
-;   = W_OVERWORLD_MAP + MAP_BORDER * 22 + (MAP_BORDER - 2) = W_OVERWORLD_MAP + 136
+; wCurrentTileBlockMapViewPointer for the Pallet Town spawn (wXCoord/wYCoord = 8,8;
+; see EnterMap). Same derivation LoadWarpDestination uses, specialized to that coord:
+;   stride   = PALLET_TOWN_WIDTH + 2*MAP_BORDER
+;   view_row = (8>>1) + MAP_BORDER - SCREEN_BLOCK_HEIGHT/2 = 4 + MAP_BORDER - 4 = MAP_BORDER
+;   view_col = (8>>1) + MAP_BORDER - SCREEN_BLOCK_WIDTH/2  = 4 + MAP_BORDER - 6 = MAP_BORDER - 2
+; The `MAP_BORDER` / `MAP_BORDER - 2` terms are the reduced forms of those two
+; expressions, not border literals — they track MAP_BORDER correctly.
 PALLET_TOWN_VIEW_PTR        equ W_OVERWORLD_MAP + (MAP_BORDER) * (PALLET_TOWN_WIDTH + MAP_BORDER * 2) + (MAP_BORDER - 2)
 
 ; Number of connections in the Block/Connect strips (0xFF = none — disables strip loading)
@@ -266,31 +269,13 @@ MAP_ID_ROUTE_21             equ 0x20
 CONNECTION_NORTH           equ 1 << 3   ; wCurMapConnections bits (EAST=1,WEST=2,SOUTH=4,NORTH=8)
 CONNECTION_SOUTH           equ 1 << 2
 
-; north (Route1): _blk = ROUTE1_W*(ROUTE1_H-3) = 10*15 = 150; _map = MAP_BORDER = 6;
-;   _len = min(CUR_W+3, ROUTE1_W) = 10; _y = ROUTE1_H*2-1 = 35; _x = 0;
-;   _win = (ROUTE1_W+12)*ROUTE1_H + 1 = 22*18+1 = 397
-NORTH_STRIP_SRC            equ OW_ROUTE1_BLK_GBADDR + 150
-NORTH_STRIP_DEST           equ W_OVERWORLD_MAP + 6
-NORTH_STRIP_LENGTH         equ 10
-NORTH_CONN_MAP_WIDTH       equ 10
-NORTH_Y_ALIGN              equ 35
-NORTH_X_ALIGN              equ 0
-; NOTE: DEAD CODE. The live north view pointer is the one emitted into
-; assets/map_headers.inc by tools/gen_map_headers.py (currently 0xE691 = base+273)
-; and loaded into the connection header by LoadMapHeader. This equ is no longer
-; read at runtime. Kept only as a reference value; edit gen_map_headers.py /
-; map_headers.inc to change behavior.
-NORTH_VIEW_PTR             equ W_OVERWORLD_MAP + 397   ; (conn_width+12)*(conn_height-1)+1
-
-; south (Route21): _blk = 0; _map = (CUR_W+12)*(CUR_H+6)+6 = 22*15+6 = 336;
-;   _len = min(CUR_W+3, ROUTE21_W) = 10; _y = 0; _x = 0; _win = ROUTE21_W+13 = 23
-SOUTH_STRIP_SRC            equ OW_ROUTE21_BLK_GBADDR + 0
-SOUTH_STRIP_DEST           equ W_OVERWORLD_MAP + 336
-SOUTH_STRIP_LENGTH         equ 10
-SOUTH_CONN_MAP_WIDTH       equ 10
-SOUTH_Y_ALIGN              equ 0
-SOUTH_X_ALIGN              equ 0
-SOUTH_VIEW_PTR             equ W_OVERWORLD_MAP + 23
+; The Pallet Town north(Route1)/south(Route21) strip + view-pointer equs that
+; used to live here are GONE. They were hand-computed for MAP_BORDER = 6 (e.g.
+; `NORTH_STRIP_DEST equ W_OVERWORLD_MAP + 6`, `_win = (w+12)*h + 1`) and had been
+; dead since LoadMapHeader started reading the connection headers that
+; tools/gen_map_headers.py emits into assets/map_headers.inc — which is the one
+; place that knows MAP_BORDER. Nothing referenced them; they only survived as a
+; second, silently-stale copy of the same arithmetic. Edit the generator.
 
 ROUTE1_BLK_GB_SIZE         equ 180        ; 10×18
 ROUTE21_BLK_GB_SIZE        equ 450        ; 10×45
