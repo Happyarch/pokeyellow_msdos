@@ -115,6 +115,7 @@ extern AreInputsSimulated           ; src/engine/overworld/simulate_joypad.asm
 extern StartSimulatingJoypadStates  ; src/engine/overworld/simulate_joypad.asm
 ; M7.4 home-rectify: faithful ExtraWarpCheck function-1/function-2 dispatch
 extern ExtraWarpCheck               ; src/engine/overworld/warp_check.asm
+extern IsPlayerStandingOnDoorTileOrWarpTile ; src/engine/overworld/player_state.asm
 %ifdef DEBUG_DUMP
 extern DebugDumpMemory
 %endif
@@ -1028,25 +1029,19 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
 .allFainted:
     jmp AllPokemonFainted                     ; wild_encounter_check.asm → HandleBlackOut
 .noBattleOccurred:
-    ; Edge-detect: save previous BIT_STANDING_ON_WARP then clear it.
-    ; Mirrors pret: res BIT_STANDING_ON_WARP first, then set it if coords match.
-    test byte [ebp + W_MOVEMENT_FLAGS], (1 << BIT_STANDING_ON_WARP)
-    setnz bh                                  ; BH=1 if player WAS on warp tile
+    ; pret CheckWarpsNoCollision (home/overworld.asm:360-417). The coord scan is
+    ; CheckWarpTile (the port's CheckWarpsNoCollisionLoop); for the matched entry
+    ; pret sets BIT_STANDING_ON_WARP, then fires on
+    ; IsPlayerStandingOnDoorTileOrWarpTile (CF=1 → WarpFound1) and otherwise on
+    ; ExtraWarpCheck. The `res` precedes the scan (pret does it at :267).
     and byte [ebp + W_MOVEMENT_FLAGS], ~(1 << BIT_STANDING_ON_WARP)
     call CheckWarpTile
-    jnc OverworldLoop                         ; no match → bit cleared, loop
-    ; Coord matched: always set BIT_STANDING_ON_WARP so .walkStart collision-exit works
-    ; even when the player arrives laterally (and shouldn't warp immediately).
+    jnc OverworldLoop                         ; no coord match → bit stays cleared
     or byte [ebp + W_MOVEMENT_FLAGS], (1 << BIT_STANDING_ON_WARP)
-    ; Walk-on warp only fires for north/south movement (PLAYER_DIR_UP | PLAYER_DIR_DOWN).
-    ; Lateral (EAST/WEST) approach to a multi-tile mat sets the bit (above) but doesn't
-    ; fire, matching pret's IsPlayerFacingEdgeOfMap returning false for left/right.
-    test dl, (PLAYER_DIR_DOWN | PLAYER_DIR_UP)
-    jz OverworldLoop                          ; lateral → no fire
-    ; Fire only on non-warp→warp transition (BH=0).
-    ; warp→warp (BH=1): lateral mat side step, or first step after arrival.
-    test bh, bh
-    jnz OverworldLoop                         ; warp→warp → no fire
+    call IsPlayerStandingOnDoorTileOrWarpTile ; may `res` the bit for a warp carpet
+    jc .warpTransition                        ; pret: jr c, WarpFound1
+    call ExtraWarpCheck
+    jnc OverworldLoop                         ; pret: jr nc, ...Retry2 (no other match)
 .warpTransition:
     ; BL = resolved destination map; W_DESTINATION_WARP_ID = 0-based spawn warp index
     ; Only update W_LAST_MAP when leaving an outdoor map (mirrors pret CheckIfInOutsideMap).
