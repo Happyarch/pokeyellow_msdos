@@ -85,7 +85,7 @@ extern HasMonFainted                     ; faint_switch.asm — ZF=1 → fainted
 extern FlagAction                        ; flag_action.asm — ESI=array, CL=bit, BH=action
 extern LoadBattleMonFromParty            ; faint_leaves.asm — build wBattleMon* + stat mods
 extern DrawPlayerRedBackPic_Stub         ; home/pics.asm — player trainer (Red) back pic
-extern DrawPlayerBackPic_Stub            ; home/pics.asm — INTERIM: hardcoded send-out pic
+extern LoadMonBackPic                    ; home/pics.asm — generic send-out back pic (MonBackPics)
 extern SlideBattlePicsIn                 ; home/pics.asm — silhouette slide-in
 extern SaveBattleScreen                  ; battle_menu.asm — snapshot clean screen
 extern DrawBattlePokeballs               ; pokeballs.asm — party-status ball row
@@ -233,11 +233,9 @@ _InitBattleCommon:
     call DrawBattlePokeballs                      ; party-status ball row
     call WaitForAPress
     call HideBattlePokeballs
-    ; TODO(send-out pic): DrawPlayerBackPic_Stub decodes a HARDCODED PIKACHU back pic.
-    ; The faithful path is a generic LoadMonBackPic from the player mon's wMonHBackSprite
-    ; (pret LoadMonBackPic / UncompressMonSprite); no generic port loader exists yet, so
-    ; this stays interim. Correct for the common Yellow starter case; wrong pic otherwise.
-    call DrawPlayerBackPic_Stub
+    ; send-out: decode the actual sent-out mon's back sprite (generic, MonBackPics-indexed
+    ; from wBattleMonSpecies2) → vBackPic. pret LoadMonBackPic; see home/pics.asm.
+    call LoadMonBackPic
 
     ; --- the battle itself ---
     call MainInBattleLoop                       ; menu/turns/damage/faint/EXP/run

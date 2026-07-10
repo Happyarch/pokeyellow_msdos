@@ -64,7 +64,9 @@ global DrawBugCatcherPic_Stub
 ; src/data/mon_pics.asm is added to the link set. See M6.3 SUMMARY "data follow-up".
 %ifdef MON_FRONT_PICS
 extern MonFrontPics
+extern MonBackPics                ; dex-ordered back sprites (LoadMonBackPic); same gen/gate
 %endif
+global LoadMonBackPic             ; generic player send-out back pic (retires DrawPlayerBackPic_Stub)
 
 ; pret constants not carried in gb_constants.inc:
 ;   RHYDON = internal index $01 (constants/pokemon_constants.asm)
@@ -516,6 +518,42 @@ DrawPlayerBackPic_Stub:
     mov edx, GB_VCHARS2 + 0x31 * 16        ; VRAM $9310 -> signed tile ID $31
     call LoadMonBackPicToVRAM              ; decode → VRAM only; the slide-in places it
     ret
+
+; ---------------------------------------------------------------------------
+; LoadMonBackPic — decode the SENT-OUT player mon's back sprite to vBackPic ($9310).
+; The generic replacement for DrawPlayerBackPic_Stub (which hardcoded PIKACHU).
+; pret: engine/battle/core.asm LoadMonBackPic — sets wCurPartySpecies from
+; wBattleMonSpecies2, UncompressMonSprite from the mon header's BACK-sprite pointer,
+; ScaleSpriteByTwo, InterlaceMergeSpriteBuffers → vBackPic. The port has no header
+; sprite pointer (flat model): index the generated MonBackPics table by dex-1 (the
+; same species→dex path LoadFrontSpriteByMonIndex uses for MonFrontPics), stage the
+; blob, and reuse LoadMonBackPicToVRAM (decode + 2x scale + merge). All 151 back pics
+; are 4x4 ($44), which is exactly what ScaleSpriteByTwo expects.
+; In: [wBattleMonSpecies2] = the sent-out mon's internal species index. EBP = GB base.
+; ---------------------------------------------------------------------------
+LoadMonBackPic:
+%ifdef MON_FRONT_PICS
+    mov al, [ebp + wBattleMonSpecies2]
+    mov [ebp + wCurPartySpecies], al           ; pret: ld [wCurPartySpecies], a
+    ; species → national dex − 1 (IndexToPokedex is the flat table, NOT a routine)
+    movzx eax, al
+    dec eax
+    movzx eax, byte [IndexToPokedex + eax]     ; dex number (1-based)
+    dec eax                                    ; dex−1 = MonBackPics record index
+    ; stage MonBackPics[dex−1] (record = { dd flatptr, dd len }) into GB scratch
+    lea esi, [MonBackPics + eax*8]
+    mov ecx, [esi + 4]                          ; blob length
+    mov esi, [esi]                              ; flat ptr to the compressed back .pic
+    lea edi, [ebp + PIC_STAGE]
+    rep movsb
+    mov word [ebp + wSpriteInputPtr], PIC_STAGE
+    mov byte [ebp + wSpriteFlipped], 0         ; back pic is not mirrored
+    mov edx, GB_VCHARS2 + 0x31 * 16            ; vBackPic dest (signed tile ID $31)
+    jmp LoadMonBackPicToVRAM                    ; decode → 2x scale → merge to VRAM
+%else
+    ; no MonBackPics table in a no-data build: fall back to the embedded stub pic.
+    jmp DrawPlayerBackPic_Stub
+%endif
 
 ; ---------------------------------------------------------------------------
 ; DrawPlayerRedBackPic_Stub — decode the PLAYER (Red/Yellow) back sprite to the

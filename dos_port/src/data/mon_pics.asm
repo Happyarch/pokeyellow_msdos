@@ -16,6 +16,7 @@
 bits 32
 
 global MonFrontPics
+global MonBackPics                       ; dex-ordered player send-out back sprites (LoadMonBackPic)
 
 section .data
 align 4
