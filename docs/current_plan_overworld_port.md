@@ -1400,19 +1400,37 @@ asymmetric options fit the existing buffer but require correctly classifying eve
 `MAP_BORDER` reference as row-vs-column (~14 sites); a single misclassification is a silent
 renderer bug. Uniform is mechanical and keeps one constant, matching pret's structure.
 
-#### B.2 — Sweep the pret border-3 literals `[ ]` (the real risk; do this FIRST)
+#### B.2 — Sweep the pret border-3 literals `[x]` DONE 2026-07-10
 pret's overworld code hardcodes its own `MAP_BORDER=3` as bare `6` (= `2*3`) and `3`.
 Several were translated **verbatim**, so they are wrong at *any* port border and are latent
 bugs **today**, independent of this stage:
-- [ ] `engine/overworld/cut.asm:280` — `add ebx, 6 ; bc = wCurMapWidth + 6` translating
-      pret `cut.asm:185 add 6`. That `6` is `MAP_BORDER*2`; must be `MAP_BORDER * 2` (=12
-      now, 14 after B.1). `ReplaceTreeTileBlock` computes a wrong row stride today.
-- [ ] `engine/overworld/update_map.asm:82` — `add esi, 6` (`4*stride + 6` upper bound).
-- [ ] `engine/overworld/hidden_events.asm:303`, `simulate_joypad.asm:189`,
-      `special_warps.asm:222,263`, `trainer_engine.asm:347` — triage each: a struct-size 6
-      is fine, a border/stride 6 is a bug.
-- [ ] Grep the whole port for `\b(3|6|12)\b` in any expression involving `wCurMapWidth`,
-      a stride, or `wOverworldMap`, and route every one through `MAP_BORDER`.
+**The literals were doubly ambiguous.** In pret, `MAP_BORDER*2`, `SCREEN_BLOCK_WIDTH` and
+`MAP_BORDER+1`/`SCREEN_BLOCK_HEIGHT-1` all collide numerically (`6`, `6`, `4`, `4`), so a
+verbatim copy can't be disambiguated by value — only by meaning. Two of the six sites were
+**viewport** constants, not border constants, and both were wrong at the port's 12×9 view.
+
+- [x] `engine/overworld/cut.asm:ReplaceTreeTileBlock` — TWO bugs. (a) `add ebx, 6` is pret's
+      row stride `wCurMapWidth + MAP_BORDER*2` at border 3 → now `MAP_BORDER * 2`. (b) the
+      row/col offsets `1/2/3` address the player's block **relative to the view origin**,
+      which is (2,2) for pret's 6×5 view but **(4,6)** for the port's 12×9 centred view.
+      Now `SCREEN_BLOCK_HEIGHT/2 ± 1` rows and `SCREEN_BLOCK_WIDTH/2 ± 1` cols, and the
+      pre-add is `(centre-1)` strides rather than pret's hardcoded 1. Cut was landing the
+      tree-block replacement on the wrong block.
+- [x] `engine/overworld/update_map.asm:ReplaceTileBlock` — the "above the map view" bound
+      `4*stride + 6` is the view's far corner: `4 = SCREEN_BLOCK_HEIGHT-1`,
+      `6 = SCREEN_BLOCK_WIDTH`. Now `(SCREEN_BLOCK_HEIGHT-1)*stride + SCREEN_BLOCK_WIDTH`
+      (= `8*stride + 12`). RedrawMapView was being skipped for blocks that ARE in view.
+- [x] `hidden_events.asm:303` (entry size), `simulate_joypad.asm:189` (struct: Y,X,dd),
+      `special_warps.asm:222` (`wDungeonWarpDataEntrySize`), `special_warps.asm:263`
+      (copy length), `trainer_engine.asm:347` (`ReadTrainerHeaderInfo` selector) — all
+      BENIGN, not border math. No change.
+- [x] Systematic grep: no remaining literal added to `wCurMapWidth`, to a stride, or to the
+      view pointer outside `MAP_BORDER` / `SCREEN_BLOCK_*`. Clean.
+
+Verified: `make check` clean, `lint_pret_labels` 0, `faithdiff ReplaceTreeTileBlock` clean,
+`faithdiff ReplaceTileBlock` shows only the pre-existing `ADDED RedrawMapView (jmp)` (pret
+falls through into it), `make fidelity` 6/6. Note the goldens do NOT cover Cut or
+ReplaceTileBlock — these are static/derivational fixes, runtime-verify with Cut on a tree.
 
 #### B.3 — Flip the constant + regenerate `[ ]`
 - [ ] `include/gb_memmap.inc`: `MAP_BORDER` 6→7; `W_OVERWORLD_MAP_SIZE` `0x800`→`0x900`.

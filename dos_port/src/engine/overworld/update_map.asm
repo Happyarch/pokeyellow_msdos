@@ -76,12 +76,18 @@ ReplaceTileBlock:
     call CompareHLWithBC
     jc .earlyRet                               ; ret c (block below view)
 ; if the block is above the map view in memory, return.
+; PROJECTION (viewport): pret computes the view's far corner as
+; `viewPtr + 4*stride + 6` (update_map.asm) — where 4 = SCREEN_BLOCK_HEIGHT-1 and
+; 6 = SCREEN_BLOCK_WIDTH for pret's 6x5-block view. Both happen to collide with
+; pret's border constants (MAP_BORDER+1 = 4, MAP_BORDER*2 = 6), which is why they
+; were copied verbatim; they are viewport extents, not border. The port's view is
+; 12x9 blocks, so the corner is (SCREEN_BLOCK_HEIGHT-1)*stride + SCREEN_BLOCK_WIDTH.
     push esi                                   ; save block address (pret: push hl)
     movzx esi, dl                              ; hl = e (stride)
-    shl esi, 2                                 ; hl = 4 * stride (add hl,hl twice)
-    add esi, 6                                 ; + 6 (de = $0006; add hl,de)
+    imul esi, esi, (SCREEN_BLOCK_HEIGHT - 1)   ; pret: 4 * stride (add hl,hl twice)
+    add esi, SCREEN_BLOCK_WIDTH                ; pret: + 6 (de = $0006; add hl,de)
     movzx eax, bx                              ; bc = map-view pointer
-    add esi, eax                               ; hl = 4*stride + 6 + mapViewPtr (upper bound)
+    add esi, eax                               ; hl = (SBH-1)*stride + SBW + mapViewPtr
     pop ebx                                    ; bc = block address (pret: pop bc)
     call CompareHLWithBC
     jc .earlyRet                               ; ret c (block above view)
