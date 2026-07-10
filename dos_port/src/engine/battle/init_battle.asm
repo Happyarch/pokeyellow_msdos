@@ -66,6 +66,7 @@ section .text
 
 global InitBattle
 global DrawBattleIntroBox
+global _InitBattleCommon
 extern InitBattleVariables
 extern text_row_stride                   ; text.asm — unified engine row stride
 extern ClearSprites
@@ -74,6 +75,25 @@ extern LoadHpBarAndStatusTilePatterns
 extern LoadHudTilePatterns
 extern DrawBattleHUDs
 extern DrawEnemyHUD
+
+; --- _InitBattleCommon dependencies (the real overworld→battle orchestration) ---
+extern LoadFontTilePatterns              ; home/load_font.asm
+extern LoadTextBoxTilePatterns           ; home/load_font.asm
+extern LoadEnemyMonData                  ; load_enemy_mon_data.asm — build wEnemyMon*
+extern LoadFrontSpriteByMonIndex         ; home/pics.asm — enemy front pic (generic)
+extern HasMonFainted                     ; faint_switch.asm — ZF=1 → fainted
+extern FlagAction                        ; flag_action.asm — ESI=array, CL=bit, BH=action
+extern LoadBattleMonFromParty            ; faint_leaves.asm — build wBattleMon* + stat mods
+extern DrawPlayerRedBackPic_Stub         ; home/pics.asm — player trainer (Red) back pic
+extern DrawPlayerBackPic_Stub            ; home/pics.asm — INTERIM: hardcoded send-out pic
+extern SlideBattlePicsIn                 ; home/pics.asm — silhouette slide-in
+extern SaveBattleScreen                  ; battle_menu.asm — snapshot clean screen
+extern DrawBattlePokeballs               ; pokeballs.asm — party-status ball row
+extern WaitForAPress                     ; battle_menu.asm
+extern HideBattlePokeballs               ; pokeballs.asm
+extern MainInBattleLoop                  ; core.asm — the whole battle loop
+extern EndOfBattle                       ; end_of_battle.asm — post-battle (EXP/evo/reset)
+extern EndBattleScreen                   ; battle_menu.asm — clean terminal
 
 InitBattle:
     ; The battle projects the GB viewport into the full 40-wide W_TILEMAP canvas, so
@@ -122,6 +142,111 @@ InitBattle:
     mov al, T_SP
     mov ecx, SCREEN_TILES_W * SCREEN_TILES_H  ; 40 × 25 = 1000
     rep stosb
+    ret
+
+; ---------------------------------------------------------------------------
+; _InitBattleCommon — the real overworld→battle orchestration.
+;
+; This is the routine the overworld's NewBattle path calls to actually RUN a wild
+; battle (previously it called only the InitBattle canvas scaffold, which set the
+; screen up and returned instantly — the "grass + instant return" defect).
+;
+; pret splits this across InitBattle→InitWildBattle→_InitBattleCommon→StartBattle
+; (engine/battle/{init_battle,core}.asm). The port collapses the visual half of
+; StartBattle (silhouette slide-in, intro, pokéball row, send-out) into the proven
+; DEBUG_BATTLE_LIVE sequence (debug_dump.asm) and drives the loop with
+; MainInBattleLoop; this promotes that sequence into a real routine fed by the real
+; data loaders (LoadEnemyMonData / LoadBattleMonFromParty) instead of debug seeds.
+;
+; Faithful order (pret InitWildBattle then StartBattle.playerSendOutFirstMon):
+;   InitBattle canvas → LoadEnemyMonData → enemy front pic → pick first-alive party
+;   mon → LoadBattleMonFromParty → intro (Red back pic, slide-in, box, pokéballs) →
+;   send-out pic → MainInBattleLoop → EndOfBattle → restore overworld stride.
+;
+; In: wEnemyMonSpecies2 + wCurEnemyLevel set (by TryDoWildEncounter / forced
+;     opponent). Out: CF=1 (a battle occurred), matching pret _InitBattleCommon's scf.
+; ---------------------------------------------------------------------------
+_InitBattleCommon:
+    ; --- font + text-box tiles the box/HUD need (harness-proven prerequisite) ---
+    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    call LoadFontTilePatterns
+    call LoadTextBoxTilePatterns
+
+    ; --- canvas + battle-var init (port InitBattle: InitBattleVariables, HUD tiles,
+    ;     wIsInBattle=1, stride 40, blank W_TILEMAP). Matches pret's InitBattleVariables-
+    ;     first ordering; InitBattleVariables does not touch wEnemyMon*. ---
+    call InitBattle
+
+    ; --- pret InitWildBattle: build the wild enemy mon (wIsInBattle already 1) ---
+    call LoadEnemyMonData                    ; wEnemyMon* from wEnemyMonSpecies2 + level
+
+    ; --- enemy front pic (pret: LoadMonFrontSprite→vFrontPic + CopyUncompressedPicToTilemap
+    ;     at hlcoord 12,0). Port LoadFrontSpriteByMonIndex does both halves from
+    ;     wCurPartySpecies. LoadEnemyMonData already leaves it = enemy species, but re-set
+    ;     it explicitly for clarity (it is about to be overwritten by the player scan). ---
+    mov al, [ebp + wEnemyMonSpecies2]
+    mov [ebp + wCurPartySpecies], al
+    mov esi, W_TILEMAP + 12                   ; hlcoord 12,0 (stride 40)
+    call LoadFrontSpriteByMonIndex
+
+    ; --- player send-out (pret StartBattle.playerSendOutFirstMon): first non-fainted mon ---
+    ; PROJ(port safety): pret's StartBattle runs AnyPartyAlive→HandlePlayerBlackOut before
+    ; this scan, guaranteeing a live mon; the port collapsed StartBattle away, so bound the
+    ; scan by wPartyCount and fall back to slot 0 rather than run off the party array. The
+    ; overworld can't legitimately reach here all-fainted (a faint blacks you out first).
+    mov byte [ebp + wWhichPokemon], 0
+.findFirstAliveMonLoop:
+    mov al, [ebp + wWhichPokemon]
+    cmp al, [ebp + wPartyCount]
+    jae .allFaintedFallback                    ; scanned every mon, none alive → slot 0
+    call HasMonFainted                        ; ZF=1 → fainted (reads wWhichPokemon)
+    jnz .foundFirstAliveMon                    ; pret: jr nz (not fainted → found)
+    inc byte [ebp + wWhichPokemon]
+    jmp .findFirstAliveMonLoop
+.allFaintedFallback:
+    mov byte [ebp + wWhichPokemon], 0
+.foundFirstAliveMon:
+    mov al, [ebp + wWhichPokemon]
+    mov [ebp + wPlayerMonNumber], al
+    ; wCurPartySpecies = wBattleMonSpecies2 = wPartySpecies[wPlayerMonNumber]
+    ; (pret: ld hl, wPartySpecies-1; ld c, num+1; add hl,bc → wPartySpecies + num)
+    movzx eax, byte [ebp + wWhichPokemon]
+    mov al, [ebp + wPartySpecies + eax]
+    mov [ebp + wCurPartySpecies], al
+    mov [ebp + wBattleMonSpecies2], al
+    ; flag this mon to gain EXP + as having fought the current enemy
+    mov cl, [ebp + wWhichPokemon]
+    mov bh, FLAG_SET
+    mov esi, wPartyGainExpFlags
+    call FlagAction
+    mov cl, [ebp + wWhichPokemon]
+    mov bh, FLAG_SET
+    mov esi, wPartyFoughtCurrentEnemyFlags
+    call FlagAction
+    call LoadBattleMonFromParty                ; wBattleMon* + player stat mods = $7
+
+    ; --- intro scene (proven DEBUG_BATTLE_LIVE order) ---
+    call DrawPlayerRedBackPic_Stub             ; player trainer (Red) back pic — fixed sprite
+    call SlideBattlePicsIn                      ; silhouette slide-in
+    call DrawBattleIntroBox                      ; box + "Wild <nick> appeared!" + enemy HUD
+    call SaveBattleScreen                        ; snapshot for menu re-entry
+    call DrawBattlePokeballs                      ; party-status ball row
+    call WaitForAPress
+    call HideBattlePokeballs
+    ; TODO(send-out pic): DrawPlayerBackPic_Stub decodes a HARDCODED PIKACHU back pic.
+    ; The faithful path is a generic LoadMonBackPic from the player mon's wMonHBackSprite
+    ; (pret LoadMonBackPic / UncompressMonSprite); no generic port loader exists yet, so
+    ; this stays interim. Correct for the common Yellow starter case; wrong pic otherwise.
+    call DrawPlayerBackPic_Stub
+
+    ; --- the battle itself ---
+    call MainInBattleLoop                       ; menu/turns/damage/faint/EXP/run
+    call EndOfBattle                             ; win: PayDay/evo/reset; then whiteout
+
+    ; --- restore the overworld dialog stride so the map/menus render at stride 20
+    ;     (InitBattle raised it to 40 for the widescreen canvas). ---
+    mov dword [text_row_stride], 20
+    stc                                          ; pret _InitBattleCommon: scf
     ret
 
 ; ---------------------------------------------------------------------------

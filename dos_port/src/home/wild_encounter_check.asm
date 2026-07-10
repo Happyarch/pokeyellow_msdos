@@ -76,7 +76,7 @@ global AnyPartyAlive
 global NewBattle
 global AllPokemonFainted
 extern TryDoWildEncounter                    ; engine/battle/wild_encounters.asm (LINKED)
-extern InitBattle                            ; battle-screen setup (NOT the pret gate)
+extern _InitBattleCommon                     ; init_battle.asm — full wild-battle orchestration
 extern IsPlayerCharacterBeingControlledByGame ; src/home/npc_movement.asm (real, linked — OW-A.6)
 extern RunMapScript                          ; run_map_script.asm (exists)
 extern HandleBlackOut                        ; engine/overworld/overworld.asm (pret home/overworld.asm)
@@ -153,11 +153,11 @@ NewBattle:
     mov [ebp + wCurPartySpecies], al          ; InitOpponent: wCurPartySpecies = opponent
     mov [ebp + wEnemyMonSpecies2], al
 .startBattle:
-    call InitBattle                            ; port InitBattle = battle-screen setup
-    ; The post-battle re-entry (pret .battleOccurred → AnyPartyAlive → EnterMap full
-    ; map reload) is built into OverworldLoop (overworld.asm), which is what the
-    ; CF=1 return below drives.
-    stc                                        ; scf — a battle occurred
+    call _InitBattleCommon                      ; run the real battle (data + intro + loop)
+    ; _InitBattleCommon returns CF=1 (pret _InitBattleCommon: scf). The post-battle
+    ; re-entry (pret .battleOccurred → AnyPartyAlive → EnterMap full map reload) is built
+    ; into OverworldLoop (overworld.asm), which the CF=1 return below drives.
+    stc                                        ; scf — a battle occurred (belt-and-braces)
     ret
 .noBattle:
     clc                                        ; and a — CF=0, no battle
