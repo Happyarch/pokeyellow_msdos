@@ -73,11 +73,56 @@ spawn flag), then talk to him — default build shows "Hey! Wait!", `DEBUG_OAK_E
 (needs `make clean`) shows "That was close!". Plain Girl/Fisher dialog is the
 regression check for the refactored `ShowTextStream` path.
 
-## Deferred to the next milestone
+## Next milestone — Oak intro cutscene (blockers cleared 2026-07-10; ready for a live-test session)
 
-Oak walk-up cutscene (needs ~~scripted NPC movement~~ + Pikachu battle stub); per-map
-`_Script` state machines beyond the no-op skeleton; the `DisplayTextID` special dict
-cases (start menu, mart, pokecenter, PC) — all stubbed and recorded.
+The Pallet Town Oak intro (`scripts/PalletTown.asm` — 10 `_Script` states +
+`PalletTownOakText`) is the next milestone. Both former blockers are now cleared:
+**scripted NPC movement is done** and the **battle engine runs a live overworld
+encounter** (`_InitBattleCommon`, commit `a9352307`). Dependency audit (2026-07-10):
+every predef/routine it needs is a **real ported body**, not a stub —
+`EnableAutoTextBoxDrawing`, `DisplayTextID`, `StopAllMusic`/`PlayMusic`,
+`ShowObject`/`HideObject`, `CalcPositionOfPlayerRelativeToNPC`, `FindPathToPlayer`,
+`MoveSprite`/`MoveSprite_`, `EmotionBubble`; `CheckBothEventsSet`/`SetEventReuseHL`
+macros exist; all constants/events are defined.
+
+**Why it was NOT ported blind this session (needs live DOSBox-X verification):** the
+cutscene is an atomic 10-state chain — half-porting soft-locks the town's north exit
+(`PalletTownDefaultScript` freezes the player + `wJoyIgnore` on reaching `wYCoord==0`
+with `EVENT_FOLLOWED_OAK_INTO_LAB` clear, then hands to the next state). Several
+integration points are ABI-sensitive and unverifiable without running it:
+- **`MoveSprite` sprite selector:** the port's `GetSpriteMovementByte1Pointer` reads
+  `H_CURRENT_SPRITE_OFFSET` (0xFFDA) as a **pre-multiplied byte offset** (slot×$10),
+  NOT pret's raw `hSpriteIndex` slot. pret `ldh [hSpriteIndex], PALLETTOWN_OAK / call
+  MoveSprite` must become `mov [H_CURRENT_SPRITE_OFFSET], slot*$10` (confirm whether the
+  port's `MoveSprite` does its own swap first — cross-check `trainer_engine.asm:505-511`
+  which uses `MoveSprite_`). Pathfinding uses `H_NPC_SPRITE_OFFSET` (0xFF95, a union w/
+  `hNPCPlayerYDistance`) — pret `hNPCSpriteOffset`.
+- **`DisplayTextID` dispatch:** the port routes NPC dialog through SCRIPT entries /
+  `ShowTextStream`, not pret's `hTextID`→map-`TextPointers`. Verify `call DisplayTextID`
+  with `hTextID = TEXT_PALLETTOWN_OAK` actually reaches `PalletTownOakText`.
+- **`BATTLE_TYPE_PIKACHU` special flow:** `PalletTownPikachuBattleScript` sets
+  `wCurOpponent=STARTER_PIKACHU`, `wBattleType=BATTLE_TYPE_PIKACHU`, `wCurEnemyLevel=5`,
+  then the overworld forced-opponent path fires. `_InitBattleCommon` runs the WILD flow;
+  the Pikachu starter battle (no ball/no-catch/scripted) is a battle-engine special case
+  still to handle.
+- **ABI cheatsheet (verified):** `PlayMusic` = AL music id, BL audio bank (`ld c,BANK /
+  ld a,MUSIC` → `mov bl,BANK / mov al,MUSIC`); `SetEventReuseHL`≡`SetEvent`;
+  `H_JOY_HELD`=0xFFB4, `W_JOY_IGNORE`=0xCD6B, `W_PLAYER_MOVING_DIRECTION`=0xD527,
+  `W_Y_COORD`=0xD360/`W_X_COORD`=0xD361, `PLAYER_DIR_UP`=8, `SPRITE_FACING_UP`=$04/
+  `LEFT`=$08/`RIGHT`=$0C, `TOGGLE_PALLET_TOWN_OAK`=0, `wNPCMovementDirections2`=0xCC97,
+  `W_NPC_MOVEMENT_SCRIPT_FUNCTION_NUM`=0xCF10/`_BANK`=0xCC58, `wStatusFlags5` bit
+  `BIT_SCRIPTED_NPC_MOVEMENT`=0.
+
+**Recommended execution:** port all 10 states faithfully in one pass, gate
+`PalletTownDefaultScript`'s trigger body behind `%ifdef DEBUG_OAK_INTRO` (default =
+today's free-roam, zero regression), then live-test the whole chain via the flag +
+Oak spawn; drop the gate once verified. Handle `BATTLE_TYPE_PIKACHU` as a battle-engine
+sub-task (may reuse the wild flow initially with a `; TODO(special)` for no-catch/loss).
+
+## Also deferred
+
+Per-map `_Script` state machines beyond the no-op skeleton; the `DisplayTextID` special
+dict cases (start menu, mart, pokecenter, PC) — all stubbed and recorded.
 
 **INBOUND HANDOFF (2026-07-10, from the overworld-port plan): scripted NPC movement
 is DONE and this plan now owns OW-2.5.** The overworld plan's Stage 2 landed the
