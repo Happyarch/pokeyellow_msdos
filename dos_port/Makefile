@@ -156,6 +156,14 @@ NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_SEAM -D DEBUG_SEAM_LIVE -D SKIP_TITLE
 endif
 
+# Suppress wild encounters via the game's own wStatusFlags4 BIT_NO_BATTLES gate,
+# re-set on every EnterMap. Fully normal boot otherwise (title screen intact,
+# no other DEBUG_* implied); trainer/forced battles unaffected.
+# make DEBUG_NO_WILD=1
+ifdef DEBUG_NO_WILD
+NASMFLAGS += -D DEBUG_NO_WILD
+endif
+
 # Debug noclip: press W in-game to toggle walk-through-walls (disables collision).
 # Useful for testing warps, map edges, and OOB behaviour without normal movement.
 # Does NOT imply SKIP_TITLE — works at any point in the game.
@@ -1478,7 +1486,18 @@ $(shell cmp -s $(NASMFLAGS_STAMP).tmp $(NASMFLAGS_STAMP) || cp $(NASMFLAGS_STAMP
 # objects disagreed about the memory map. That mixes two layouts in one image and
 # faults at runtime. Depend on the headers themselves; a header edit is rare enough
 # that a full rebuild is the right price.
-INC_DEPS := $(wildcard include/*.inc) assets/rom_window.inc
+#
+# assets/*.inc: a dozen .asm files `%include "assets/..."` (mon_pics, load_font,
+# pokemon_data, wild_data, map_scripts, ...). These are generated, and a
+# content change (regen from an edited generator/pret source) used to NOT rebuild
+# the consuming object — the exact stale-object class that has bitten us
+# repeatedly. Asset regen is timestamp-gated, so listing them here only forces a
+# rebuild when an asset input actually changed, not on every make. `wildcard`
+# after `make assets` catches newly-created .inc names too, since the assets
+# target runs in a separate make phase for `image`/`all`.
+INC_DEPS := $(wildcard include/*.inc) $(wildcard assets/*.inc) \
+            $(wildcard assets/npc_dialogs/*.inc) \
+            src/data/maps/special_warps.asm
 
 %.o: %.asm $(NASMFLAGS_STAMP) $(INC_DEPS)
 	$(NASM) $(NASMFLAGS) -o $@ $<

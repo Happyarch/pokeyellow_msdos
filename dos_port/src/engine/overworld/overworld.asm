@@ -421,6 +421,13 @@ EnterMap:
     mov byte [seam_reseat], 1             ; hand-seeded coords need the view ptr derived
 .seam_no_seed:
 %endif
+%ifdef DEBUG_NO_WILD
+    ; Debug: suppress wild encounters via the game's own flag (wStatusFlags4
+    ; BIT_NO_BATTLES — the same gate NewBattle already honours). Re-set on every
+    ; EnterMap so it survives StartNewGame's WRAM clear on a fully normal boot
+    ; (title screen intact). Trainer/forced battles are unaffected.
+    or byte [ebp + W_STATUS_FLAGS_4], (1 << BIT_NO_BATTLES)
+%endif
     call LoadMapData
 %ifdef DEBUG_SEAM
     cmp byte [seam_reseat], 0
