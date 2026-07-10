@@ -114,6 +114,22 @@ ifdef DEBUG_SEAM
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_SEAM -D SKIP_TITLE
 endif
+# Plain PLAYABLE build seeded at an arbitrary map/coord — no trace, no dump, A stays
+# a game button. Reuses the DEBUG_SEAM spawn seeding (EnterMap + SeamReseatView) with
+# DEBUG_SEAM_NOLOG to suppress frame.asm's per-frame SeamLogRecord hook.
+#   make run DEBUG_START_MAP=0x0D DEBUG_START_X=3 DEBUG_START_Y=45   (Route 2, below
+#   the Viridian Forest south-gate warp)
+ifdef DEBUG_START_MAP
+NASMFLAGS += -D DEBUG_SEAM -D DEBUG_SEAM_LIVE -D DEBUG_SEAM_NOLOG -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_SEAM_MAP=$(DEBUG_START_MAP)
+ifdef DEBUG_START_X
+NASMFLAGS += -D DEBUG_SEAM_X=$(DEBUG_START_X)
+endif
+ifdef DEBUG_START_Y
+NASMFLAGS += -D DEBUG_SEAM_Y=$(DEBUG_START_Y)
+endif
+NEED_DEBUG_DUMP := 1
+endif
 ifdef DEBUG_SEAM_MAP
 NASMFLAGS += -D DEBUG_SEAM_MAP=$(DEBUG_SEAM_MAP)
 endif
@@ -485,6 +501,9 @@ endif
 ifdef DEBUG_AUTOKEY
 ifdef AUTOKEY_SEAM
 NASMFLAGS += -D AUTOKEY_SEAM
+endif
+ifdef AUTOKEY_JOG_RIGHT
+NASMFLAGS += -D AUTOKEY_JOG_RIGHT
 endif
 ifdef AUTOKEY_PAD
 NASMFLAGS += -D AUTOKEY_PAD=$(AUTOKEY_PAD)
@@ -951,7 +970,7 @@ endif
 # NB: these had NO prerequisites, so once the .inc files existed the rule never fired
 # again — editing the generator or the pret map data silently shipped stale headers
 # (this hid the border-6 connection-clamp bug for a month). Keep the inputs listed.
-assets/map_headers.inc assets/extra_includes.inc assets/map_dims.inc: \
+assets/map_headers.inc assets/extra_includes.inc assets/map_dims.inc assets/rom_window.inc: \
     tools/gen_map_headers.py \
     ../constants/map_constants.asm \
     $(wildcard ../data/maps/headers/*.asm) \
@@ -1441,7 +1460,7 @@ $(shell cmp -s $(NASMFLAGS_STAMP).tmp $(NASMFLAGS_STAMP) || cp $(NASMFLAGS_STAMP
 # objects disagreed about the memory map. That mixes two layouts in one image and
 # faults at runtime. Depend on the headers themselves; a header edit is rare enough
 # that a full rebuild is the right price.
-INC_DEPS := $(wildcard include/*.inc)
+INC_DEPS := $(wildcard include/*.inc) assets/rom_window.inc
 
 %.o: %.asm $(NASMFLAGS_STAMP) $(INC_DEPS)
 	$(NASM) $(NASMFLAGS) -o $@ $<

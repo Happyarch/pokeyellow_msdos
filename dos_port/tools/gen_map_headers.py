@@ -32,53 +32,114 @@ MAP_CONSTANTS   = ROOT / "constants" / "map_constants.asm"
 MAPS_DIR        = ROOT / "maps"
 
 # ---------------------------------------------------------------------------
-# EBP-space layout constants (must match gb_memmap.inc)
+# ROM-window allocator (the single source of truth for the EBP "ROM" layout).
+#
+# The window is GB $0000-$7FFF; VRAM starts at $8000. Everything below is packed
+# contiguously and asserted to end before VRAM. It used to be a hand-maintained
+# table of magic addresses, and it had silently overflowed: the map-headers blob
+# ran $5400-$8D72, over INDOOR_BLK_GBADDR ($7600) AND 3442 bytes into VRAM. The
+# generator printed a WARNING about it on every run and nothing failed, so the
+# indoor .blk slot held header bytes -> bogus block IDs -> clamped to block 0 ->
+# tile $00, absent from every collision list -> the player was walled in on any
+# indoor-slot map (Viridian Forest). Now the layout is computed, the addresses are
+# emitted to assets/rom_window.inc, and an overflow is a hard error.
+#
+# Order matters: map-header emission needs the outdoor .blk addresses (connection
+# strip_src points into them), so the .blk pool is laid out first and the blob,
+# whose size is not known until it is emitted, goes last against the VRAM wall.
 # ---------------------------------------------------------------------------
-OW_TILESET_HDR_GBADDR  = 0x5400   # tileset header (12 bytes)
-OW_MAP_HEADERS_GBADDR  = 0x540C   # first map header in EBP blob
-INDOOR_BLK_GBADDR      = 0x7600   # shared slot for current indoor map blk
+ROM_WINDOW_BASE  = 0x0100   # leave the RST/interrupt page alone; 0 doubles as "null ptr"
+ROM_WINDOW_END   = 0x8000   # GB_VRAM0 — nothing may touch or cross this
+OW_GFX_SIZE      = 0x0600   # largest tileset 2bpp (1536 B)
+OW_BLOCKS_SIZE   = 0x0900   # largest blockset (2048 B) + slack
+OW_COLL_SIZE     = 0x0040   # passable-tile list ($FF-terminated, copied as 64 B)
+INDOOR_BLK_SIZE  = 0x0200   # largest indoor .blk is VIRIDIAN_FOREST (17x24 = 408 B)
+
 FIRST_INDOOR_MAP_ID    = 0x25     # REDS_HOUSE_1F
 
-# Outdoor maps: pre-loaded blk addresses (must match LoadOverworldAssets and gb_memmap.inc)
-OUTDOOR_BLK_ADDRS = {
-    "PALLET_TOWN":    0x4E00,
-    "VIRIDIAN_CITY":  0x1000,
-    "PEWTER_CITY":    0x1168,
-    "CERULEAN_CITY":  0x12D0,
-    "LAVENDER_TOWN":  0x1438,
-    "VERMILION_CITY": 0x1492,
-    "CELADON_CITY":   0x15FA,
-    "FUCHSIA_CITY":   0x17BC,
-    "CINNABAR_ISLAND":0x1924,
-    "SAFFRON_CITY":   0x197E,
-    "ROUTE_1":        0x5000,
-    "ROUTE_2":        0x1AE6,
-    "ROUTE_3":        0x1C4E,
-    "ROUTE_4":        0x1D89,
-    "ROUTE_5":        0x1F1E,
-    "ROUTE_6":        0x1FD2,
-    "ROUTE_7":        0x2086,
-    "ROUTE_8":        0x20E0,
-    "ROUTE_9":        0x21EE,
-    "ROUTE_10":       0x22FC,
-    "ROUTE_11":       0x2464,
-    "ROUTE_12":       0x2572,
-    "ROUTE_13":       0x278E,
-    "ROUTE_14":       0x289C,
-    "ROUTE_15":       0x29AA,
-    "ROUTE_16":       0x2AB8,
-    "ROUTE_17":       0x2B6C,
-    "ROUTE_18":       0x2E3C,
-    "ROUTE_19":       0x2F1D,
-    "ROUTE_20":       0x302B,
-    "ROUTE_21":       0x5200,
-    "ROUTE_22":       0x31ED,
-    "ROUTE_24":       0x32A1,
-    "ROUTE_25":       0x3355,
-    # Route 23 + Indigo Plateau added as outdoor, no connection strips
-    "ROUTE_23":       0x3463,   # Route23.blk (10×72 = 720 bytes); see gb_memmap.inc
-    "INDIGO_PLATEAU": 0x36F3,   # IndigoPlateau.blk (10×9 = 90 bytes)
+# Outdoor maps get a permanently-resident .blk (connection strips read across
+# them). Order is the allocation order; the addresses are computed, not written.
+OUTDOOR_BLK_MAPS = (
+    "PALLET_TOWN", "VIRIDIAN_CITY", "PEWTER_CITY", "CERULEAN_CITY",
+    "LAVENDER_TOWN", "VERMILION_CITY", "CELADON_CITY", "FUCHSIA_CITY",
+    "CINNABAR_ISLAND", "SAFFRON_CITY",
+    "ROUTE_1", "ROUTE_2", "ROUTE_3", "ROUTE_4", "ROUTE_5", "ROUTE_6",
+    "ROUTE_7", "ROUTE_8", "ROUTE_9", "ROUTE_10", "ROUTE_11", "ROUTE_12",
+    "ROUTE_13", "ROUTE_14", "ROUTE_15", "ROUTE_16", "ROUTE_17", "ROUTE_18",
+    "ROUTE_19", "ROUTE_20", "ROUTE_21", "ROUTE_22", "ROUTE_24", "ROUTE_25",
+    "ROUTE_23", "INDIGO_PLATEAU",
+)
+
+# gb_memmap.inc's historical equ names are not uniform; keep them exactly.
+_BLK_EQU_OVERRIDE = {
+    "PALLET_TOWN": "OW_PALLET_BLK_GBADDR",
+    "ROUTE_1":     "OW_ROUTE1_BLK_GBADDR",
+    "ROUTE_21":    "OW_ROUTE21_BLK_GBADDR",
 }
+
+
+def blk_equ_name(const: str) -> str:
+    return _BLK_EQU_OVERRIDE.get(const, f"OW_{const}_BLK_GBADDR")
+
+
+def _align(addr: int, n: int = 16) -> int:
+    return (addr + n - 1) & ~(n - 1)
+
+
+# Filled in by allocate_rom_window(); read by the header emitter.
+OUTDOOR_BLK_ADDRS: dict[str, int] = {}
+OW_GFX_GBADDR = OW_BLOCKS_GBADDR = OW_COLL_GBADDR = 0
+INDOOR_BLK_GBADDR = OW_TILESET_HDR_GBADDR = OW_MAP_HEADERS_GBADDR = 0
+
+
+def allocate_rom_window(map_info: dict) -> None:
+    """Lay out the ROM window. map_info: const -> (id, width, height)."""
+    global OW_GFX_GBADDR, OW_BLOCKS_GBADDR, OW_COLL_GBADDR
+    global INDOOR_BLK_GBADDR, OW_TILESET_HDR_GBADDR, OW_MAP_HEADERS_GBADDR
+
+    addr = ROM_WINDOW_BASE
+    for const in OUTDOOR_BLK_MAPS:
+        _id, w, h = map_info[const]
+        OUTDOOR_BLK_ADDRS[const] = addr
+        addr = _align(addr + w * h)
+
+    OW_GFX_GBADDR    = addr;  addr = _align(addr + OW_GFX_SIZE)
+    OW_BLOCKS_GBADDR = addr;  addr = _align(addr + OW_BLOCKS_SIZE)
+    OW_COLL_GBADDR   = addr;  addr = _align(addr + OW_COLL_SIZE)
+    INDOOR_BLK_GBADDR = addr; addr = _align(addr + INDOOR_BLK_SIZE)
+
+    OW_TILESET_HDR_GBADDR = addr
+    OW_MAP_HEADERS_GBADDR = addr + 12          # tileset header is 12 bytes
+
+
+def write_rom_window_inc(blob_end: int) -> None:
+    if blob_end > ROM_WINDOW_END:
+        sys.exit(f"ROM window overflow: map-headers blob ends 0x{blob_end:04X}, "
+                 f"past 0x{ROM_WINDOW_END:04X} (VRAM). Free space by shrinking a "
+                 f"region above, or move the blob out of GB space.")
+    L = ["; rom_window.inc — generated by tools/gen_map_headers.py. DO NOT EDIT BY HAND.",
+         "; EBP-space \"ROM window\" ($0000-$7FFF). Every address is allocated by",
+         "; allocate_rom_window(); the blob end is asserted against VRAM ($8000).",
+         "%ifndef ROM_WINDOW_INC", "%define ROM_WINDOW_INC", "",
+         f"OW_GFX_GBADDR            equ 0x{OW_GFX_GBADDR:04X}",
+         f"OW_BLOCKS_GBADDR         equ 0x{OW_BLOCKS_GBADDR:04X}",
+         f"OW_COLL_GBADDR           equ 0x{OW_COLL_GBADDR:04X}",
+         f"INDOOR_BLK_GBADDR        equ 0x{INDOOR_BLK_GBADDR:04X}",
+         f"INDOOR_BLK_SLOT_SIZE     equ 0x{INDOOR_BLK_SIZE:04X}",
+         f"OW_TILESET_HDR_GBADDR    equ 0x{OW_TILESET_HDR_GBADDR:04X}",
+         f"OW_MAP_HEADERS_GBADDR    equ 0x{OW_MAP_HEADERS_GBADDR:04X}",
+         f"FIRST_INDOOR_MAP_ID      equ 0x{FIRST_INDOOR_MAP_ID:02X}", ""]
+    for const in OUTDOOR_BLK_MAPS:
+        L.append(f"{blk_equ_name(const):28s} equ 0x{OUTDOOR_BLK_ADDRS[const]:04X}")
+    L += ["", "OW_MAP_GBADDR            equ OW_PALLET_BLK_GBADDR ; legacy alias",
+          "", f"; map-headers blob: 0x{OW_TILESET_HDR_GBADDR:04X}-0x{blob_end:04X} "
+          f"({blob_end - OW_TILESET_HDR_GBADDR} bytes); "
+          f"{ROM_WINDOW_END - blob_end} bytes free below VRAM.", "%endif"]
+    (ASSETS / "rom_window.inc").write_text("\n".join(L) + "\n")
+    print(f"Wrote {ASSETS / 'rom_window.inc'} "
+          f"(blob 0x{OW_TILESET_HDR_GBADDR:04X}-0x{blob_end:04X}, "
+          f"{ROM_WINDOW_END - blob_end} B free below VRAM)")
+
 
 # Tileset name → id (must match constants/tileset_constants.asm)
 TILESET_IDS = {
@@ -526,6 +587,7 @@ def main(debug_warps=None):
 
     # ---- Parse pret source ----
     MAP_INFO = parse_map_constants()            # const → (id, w, h)
+    allocate_rom_window(MAP_INFO)               # fills OUTDOOR_BLK_ADDRS + the OW_* addrs
     const_to_label, label_tileset = parse_all_headers()
 
     # Reverse: id → const_name
@@ -578,7 +640,7 @@ def main(debug_warps=None):
 
         tileset_name = label_tileset.get(label, "HOUSE")
         tileset_id   = TILESET_IDS.get(tileset_name, 8)   # default HOUSE
-        is_outdoor   = const in OUTDOOR_BLK_ADDRS
+        is_outdoor   = const in OUTDOOR_BLK_ADDRS   # populated by allocate_rom_window()
 
         if is_outdoor:
             blk_addr = OUTDOOR_BLK_ADDRS[const]
@@ -901,14 +963,9 @@ def main(debug_warps=None):
     out_path.write_text("\n".join(lines) + "\n")
     print(f"Wrote {out_path}")
 
-    # Sanity check: map_headers_data blob size estimate
-    blob_size = current_addr - OW_TILESET_HDR_GBADDR
-    print(f"Map headers blob size: ~{blob_size} bytes "
-          f"(0x{OW_TILESET_HDR_GBADDR:04X}–0x{current_addr:04X})")
-    if current_addr >= INDOOR_BLK_GBADDR:
-        print(f"WARNING: map headers blob (ends 0x{current_addr:04X}) "
-              f"overlaps INDOOR_BLK_GBADDR (0x{INDOOR_BLK_GBADDR:04X})!",
-              file=sys.stderr)
+    # The blob is allocated last, against the VRAM wall. write_rom_window_inc
+    # hard-errors if it crosses $8000 (this used to be a WARNING that nothing read).
+    write_rom_window_inc(current_addr)
 
     # ---- Generate extra_includes.inc ----
     # Contains %include lines for all NEW tileset inc files (non-overworld)
