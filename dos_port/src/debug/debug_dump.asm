@@ -1390,3 +1390,93 @@ DumpSeamLog:
 .exit:
     ret
 %endif
+
+%ifdef DEBUG_AUTOKEY
+; ---------------------------------------------------------------------------
+; AutoKeyDrive — scripted joypad playback (debug harness).
+;
+; Called once per rendered frame from frame.asm, immediately after joypad_update,
+; so it OVERRIDES the real keyboard state for that frame. Replays a fixed button
+; sequence from autokey_script so a keyboard-driven live path (overworld → START
+; → a submenu) can be exercised in a headless DOSBox-X run. hJoyPressed is the
+; rising edge of hJoyHeld, computed here the same way joypad_update does.
+;
+; Script entries are `dd first_frame, last_frame, held_mask` (inclusive range),
+; terminated by first_frame = -1. Frames outside every range read as "no keys".
+;
+; In: EBP = GB base. Preserves all registers.
+; ---------------------------------------------------------------------------
+%ifndef AUTOKEY_DOWNS
+%define AUTOKEY_DOWNS 1
+%endif
+%ifndef AUTOKEY_DUMP_FRAME
+%define AUTOKEY_DUMP_FRAME 200
+%endif
+global AutoKeyDrive
+AutoKeyDrive:
+    pushad
+    mov ecx, [autokey_frame]
+    inc dword [autokey_frame]
+    cmp ecx, AUTOKEY_DUMP_FRAME
+    jne .noDump
+    call DumpBackbuffer                 ; FRAME.BIN, then exits
+.noDump:
+    xor edx, edx                        ; DL = held mask for this frame
+    lea esi, [autokey_script]
+.scan:
+    mov eax, [esi]
+    cmp eax, -1
+    je .apply
+    cmp ecx, eax
+    jl .next
+    cmp ecx, [esi + 4]
+    jg .next
+    or dl, [esi + 8]
+.next:
+    add esi, 12
+    jmp .scan
+.apply:
+    mov al, [autokey_prev]
+    not al
+    and al, dl                          ; pressed = held & ~prev
+    mov [ebp + H_JOY_PRESSED], al
+    mov [ebp + H_JOY_HELD], dl
+    mov [autokey_prev], dl
+    popad
+    ret
+
+section .data
+autokey_frame: dd 0
+autokey_prev:  db 0
+align 4
+; START opens the menu; DOWN moves POKéDEX → POKéMON; A selects it.
+; The gaps are release frames (the menu code spins until the button is let go).
+autokey_script:
+%ifdef AUTOKEY_TITLE
+    ; Boot path with the title screen: pulse A through the title + main menu
+    ; (NEW GAME) + any intro text, then open START and pick a submenu.
+%assign AK_T 60
+%rep 12
+    dd  AK_T, AK_T + 5, PAD_A
+%assign AK_T AK_T + 30
+%endrep
+    dd 480, 486, PAD_START
+%assign AK_I 0
+%rep AUTOKEY_DOWNS
+    dd  510 + AK_I * 30,  516 + AK_I * 30, PAD_DOWN
+%assign AK_I AK_I + 1
+%endrep
+    dd  510 + AUTOKEY_DOWNS * 30, 516 + AUTOKEY_DOWNS * 30, PAD_A
+    dd  -1,  -1, 0
+%else
+    dd  60,  66, PAD_START
+%assign AK_I 0
+%rep AUTOKEY_DOWNS
+    dd  90 + AK_I * 30,  96 + AK_I * 30, PAD_DOWN
+%assign AK_I AK_I + 1
+%endrep
+    dd  90 + AUTOKEY_DOWNS * 30, 96 + AUTOKEY_DOWNS * 30, PAD_A
+    dd  -1,  -1, 0
+%endif
+section .text
+%endif

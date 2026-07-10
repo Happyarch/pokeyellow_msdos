@@ -42,6 +42,9 @@ extern cleanup
 extern PrepareOAMData
 extern TrackPlayTime         ; M2.1: advance play clock + CountDownIgnoreInputBitReset (src/util/play_time.asm)
 extern Random                ; src/home/random.asm — pret VBlank RNG churn (home/vblank.asm:43)
+%ifdef DEBUG_AUTOKEY
+extern AutoKeyDrive          ; src/debug/debug_dump.asm
+%endif
 extern UpdateMovingBgTiles   ; M2.2: BG tile-animation step (self-gates on hTileAnimations)
 extern VBlankCopyBgMap       ; M2.2: staged BG-map copy (self-gates on its row-count)
 %ifdef DEBUG_NPC_WALK
@@ -115,6 +118,9 @@ DelayFrame:
     ; rarely (observed: ~1 per 3 minutes of walking in grass). Restored 2026-07-10.
     call Random
     call joypad_update
+%ifdef DEBUG_AUTOKEY
+    call AutoKeyDrive                   ; scripted joypad: replay a button sequence
+%endif
 %ifdef DEBUG_SEAM_LIVE
     ; Sample the seam trace once per rendered frame, after the joypad is read so
     ; SeamLogRecord can see hJoyPressed (A = dump SEAMLOG.BIN + FRAME.BIN and exit).
