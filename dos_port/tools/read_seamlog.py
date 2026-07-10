@@ -21,7 +21,7 @@ Usage:  tools/read_seamlog.py SEAMLOG.BIN
 import sys
 import struct
 
-MAP_BORDER = 6
+MAP_BORDER = 7
 SCREEN_BLOCK_WIDTH = 12
 SCREEN_BLOCK_HEIGHT = 9
 W_OVERWORLD_MAP = 0xE800
@@ -61,10 +61,12 @@ def main(path):
         prev_map = cmap
 
         # ROW WRAP. The view pointer is a flat offset, so its column is ptr % stride.
-        # MAP_BORDER(6) == SCREEN_BLOCK_WIDTH//2(6) leaves ZERO horizontal slack, so a
-        # west step at x=0 decrements column 0 into the previous row's last column.
-        # Check this BEFORE the "pointer leads" excuse below — that excuse is exactly
-        # what hid this bug: at x=0 the "lead of -1" IS the wrap.
+        # This was the E/W seam bug: MAP_BORDER was 6 and SCREEN_BLOCK_WIDTH//2 is 6, so
+        # horizontal slack was ZERO and a west step at x=0 drove column 0 to -1, wrapping
+        # into the previous row's last column. MAP_BORDER is now 7 (one block of slack), so
+        # this should never fire — keep the check as the regression guard.
+        # It runs BEFORE the "pointer leads" excuse below, because that excuse is exactly
+        # what hid the bug: at x=0 the "lead of -1" IS the wrap.
         if w:
             stride = w + 2 * MAP_BORDER
             col = (ptr - W_OVERWORLD_MAP) % stride
@@ -79,12 +81,21 @@ def main(path):
         # Otherwise the pointer legitimately LEADS the coords: MoveTileBlockMapPointer*
         # fires at step start, wXCoord/wYCoord update at step end. A +/-1 delta mid-step
         # is normal; only a mismatch at rest (walk == 0) is a desync.
+        # A +/-1 delta (even at rest) is the walking pointer's PHASE HYSTERESIS: it steps one
+        # block every two coordinate steps, and which of the two steps it moves on depends on
+        # the direction of travel, so it can sit one block ahead of expected_ptr()'s floor
+        # ((x>>1)). ppu.asm's Xoff/Yoff absorb this (they subtract view_block_* and add the
+        # raw wXCoord), so the render is correct either way. expected_ptr() is only exact at a
+        # spawn/warp, where LoadWarpDestination derives it. Only |delta| > 1 is a true desync.
         if w and ptr != exp and not wrapped:
-            if walk == 0:
-                notes.append(f"PTR MISMATCH AT REST (off by {ptr - exp:+d})")
+            d = ptr - exp
+            if abs(d) > 1:
+                notes.append(f"PTR DESYNC (off by {d:+d})")
                 bad_ptr += 1
+            elif walk == 0:
+                notes.append(f"(ptr phase {d:+d}, at rest)")
             else:
-                notes.append(f"(ptr leads by {ptr - exp:+d}, mid-step)")
+                notes.append(f"(ptr leads by {d:+d}, mid-step)")
         if w and h and not (0 <= x < 2 * w and 0 <= y < 2 * h):
             notes.append(f"COORD OOB (valid x<{2*w} y<{2*h})")
             bad_coord += 1

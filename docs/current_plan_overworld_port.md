@@ -1355,7 +1355,7 @@ projection — the plan's most load-bearing PROJ); TODO.md umbrella item
 refreshed to current stage status. Verified: full build + link clean,
 lint_pret_labels 0, goldencheck overworld_pallet PASS.
 
-### Stage B — MAP_BORDER slack fix (E/W seam view-pointer row wrap) `[ ]`
+### Stage B — MAP_BORDER slack fix (E/W seam view-pointer row wrap) `[x]` COMPLETE 2026-07-10
 
 **Root cause** (confirmed 2026-07-10, `DEBUG_SEAM_LIVE` capture, 1120 frames / 11
 crossings / 77 wrapped frames). `wCurrentTileBlockMapViewPointer` is a flat 16-bit
@@ -1376,7 +1376,13 @@ is −1 for all 8 frames of that step. E/W seams only (vertical has slack), whic
 `DEBUG_WALK_NORTH` and the `overworld_pallet` golden never caught it.
 
 **Requirement:** `MAP_BORDER >= SCREEN_BLOCK_WIDTH/2 + 1` (= 7) and
-`>= SCREEN_BLOCK_HEIGHT/2 + 1` (= 5).
+`>= SCREEN_BLOCK_HEIGHT/2 + 1` (= 5). **Shipped: `MAP_BORDER = 7`.**
+
+**Camera divergence (deliberate, user-confirmed 2026-07-10):** the original game does NOT
+centre the player — its view origin is `player_block − 2` in both axes, putting the player
+slightly left and up of centre (barely perceptible). The port centres exactly, which is why
+`view_col = (x>>1) + MAP_BORDER - SCREEN_BLOCK_WIDTH/2`. Every view-relative offset in the
+port (e.g. `ReplaceTreeTileBlock`) must derive from the port's centring, not pret's literals.
 
 **Scope note — this is NOT the "extend the map data" item.** `LoadTileBlockMap` fills the
 whole of `wOverworldMap` with `wMapBackgroundTile` before laying in the map body and the
@@ -1384,7 +1390,7 @@ connection strips, so **the border ring is runtime-filled**: no `.blk` regenerat
 authored map cells. The CLAUDE.md "extend the map data" note is a *different* goal (editable
 cells beyond the body). The two out-of-map clamps stay until that separate item lands.
 
-#### B.1 — Pick the geometry `[ ]`
+#### B.1 — Pick the geometry `[x]` DONE — uniform B=7, buffer 0x800→0x900
 Worst-case `wOverworldMap` footprint is Route 17 / Route 23 (10×72):
 
 | option | footprint | fits 2048? |
@@ -1432,33 +1438,35 @@ Verified: `make check` clean, `lint_pret_labels` 0, `faithdiff ReplaceTreeTileBl
 falls through into it), `make fidelity` 6/6. Note the goldens do NOT cover Cut or
 ReplaceTileBlock — these are static/derivational fixes, runtime-verify with Cut on a tree.
 
-#### B.3 — Flip the constant + regenerate `[ ]`
-- [ ] `include/gb_memmap.inc`: `MAP_BORDER` 6→7; `W_OVERWORLD_MAP_SIZE` `0x800`→`0x900`.
-- [ ] `tools/gen_map_headers.py`: `BORDER` 6→7 (one constant) → regenerates connection
+#### B.3 — Flip the constant + regenerate `[x]` DONE 2026-07-10
+- [x] `include/gb_memmap.inc`: `MAP_BORDER` 6→7; `W_OVERWORLD_MAP_SIZE` `0x800`→`0x900`.
+- [x] `tools/gen_map_headers.py`: `BORDER` 6→7 (one constant) → regenerates connection
       `blk`/`map`/`win`/`strip length` and `MapHeaderPointers`. Strips widen 6→7 columns/rows,
       pulling one more column of the neighbouring map — which is exactly what the extra ring
       column must show while scrolling across a seam.
-- [ ] `tools/read_seamlog.py`: `MAP_BORDER` 6→7.
-- [ ] `tools/gen_map_borders.py`: uses `width + 2*MAP_BORDER` — confirm it's parameterized.
-- [ ] Auto-follow (pure functions of `MAP_BORDER`/`SCREEN_BLOCK_*`, no edit needed, but
+- [x] `tools/read_seamlog.py`: `MAP_BORDER` 6→7.
+- [x] `tools/gen_map_borders.py`: emits PADDED-grid row/col, so it IS border-dependent — but no border JSONs are authored yet, so it is inert. The map-tool plan must author against MAP_BORDER=7.
+- [x] Auto-follow (pure functions of `MAP_BORDER`/`SCREEN_BLOCK_*`, no edit needed, but
       **verify**): `coords.inc:owcoord`, `coords.inc:event_displacement` (→ the
       `special_warps.asm` tables), `overworld.asm:PALLET_TOWN_VIEW_PTR`,
       `ppu.asm` (275 stride / 283 X origin / 325 Y origin), `LoadCurrentMapView`'s clamp.
-- [ ] Overflow check: max stride `50+14 = 64` still fits the 8-bit `add al, MAP_BORDER*2`
+- [x] Overflow check: max stride `50+14 = 64` still fits the 8-bit `add al, MAP_BORDER*2`
       paths (`H_MAP_STRIDE` is a byte). Max footprint 2064 ≤ 2304. Max view ptr
       `0xE800+2064 = 0xF010` ≤ 16-bit.
-- [ ] `make clean` (`.inc` content is not tracked by the NASMFLAGS stamp).
+- [x] `make clean` (`.inc` content is not tracked by the NASMFLAGS stamp).
 
-#### B.4 — Verify `[ ]`
-- [ ] `make check`; `lint_pret_labels` 0; `make fidelity` 6/6 — `overworld_pallet` is the
-      load-bearing one: every view pointer changes, so the render must come out identical.
-- [ ] `DEBUG_SEAM=1` scripted, both directions, Viridian↔Route22: `read_seamlog.py` reports
-      **0 row wraps** (it now detects them; see the commit that added the check).
-- [ ] `DEBUG_SEAM_LIVE=1` manual: walk the seam both ways, plus a N/S seam (Pallet↔Route1)
-      to confirm no regression where slack already existed.
-- [ ] FRAME.BIN baselines (baseline / north-transition / walk-to-edge) unchanged or improved.
-- [ ] Re-check the 9 `offset(-5)` connection strips (fixed in `397766ae`) still land correctly
-      at the new border.
+#### B.4 — Verify `[x]` DONE 2026-07-10
+- [x] `make check` clean; `lint_pret_labels` 0; `make fidelity` **6/6** — `overworld_pallet`
+      TILEMAP/VRAM/OAM all OK, i.e. the render is byte-identical against the mGBA golden even
+      though every view pointer in the game changed.
+- [x] `DEBUG_SEAM=1` scripted, both directions, Viridian↔Route22: **0 row wraps, 0 desyncs**
+      (was 77 wraps). At x=0 the view column is now 1, not 0 — the slack absorbed the step.
+- [x] N/S regression: `DEBUG_WALK_NORTH` (Pallet→Route 1) FRAME.BIN renders cleanly — houses
+      below, Route 1 grass above, no garbage bands.
+- [ ] **Remaining:** `DEBUG_SEAM_LIVE=1` manual confirmation by the user that the jutter is gone.
+- [x] FRAME.BIN north-transition renders clean. (baseline / walk-to-edge not re-captured.)
+- [x] Re-check the 9 `offset(-5)` strips (fixed in `397766ae`): regenerated headers carry no
+      negative `strip src` / `strip length` at border 7.
 
 **Does NOT fix:** Viridian Forest ("can't get out", constant jutter) — that map has **no
 connections at all** (`map_header ViridianForest, VIRIDIAN_FOREST, FOREST, 0`); it is

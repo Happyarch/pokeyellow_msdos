@@ -436,7 +436,7 @@ def parse_object_file(label: str, debug_warps: bool = False):
 def get_connection(direction, conn_map_id, offset,
                    cur_width, cur_height, conn_width, conn_height):
     """Compute connection strip parameters (preserved from Phase 2)."""
-    BORDER = 6
+    BORDER = 7
     stride = conn_width + 2 * BORDER
 
     _src = 0

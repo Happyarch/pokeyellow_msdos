@@ -956,9 +956,11 @@ W_TILEMAP_BACKUP2            equ 0xF000 ; wTileMapBackup2 (1000 B)
 ; 48×36 = 1728 bytes; DrawTileBlock writes here before crop to wTileMap.
 W_SURROUNDING_TILES          equ 0xE000 ; wSurroundingTiles = wTileMapBackup
 
-; Overworld map block buffer (2048 bytes)
+; Overworld map block buffer (2304 bytes). Worst case is Route 17 / Route 23 (10x72):
+; (10 + 2*7) * (72 + 2*7) = 24 * 86 = 2064 bytes at MAP_BORDER=7, which overflows the old
+; 2048. Grown to 0x900; end = 0xF100, and nothing is used until GB_OAM at 0xFE00.
 W_OVERWORLD_MAP              equ 0xE800 ; wOverworldMap
-W_OVERWORLD_MAP_SIZE         equ 0x800  ; wOverworldMapEnd − wOverworldMap (2048 bytes)
+W_OVERWORLD_MAP_SIZE         equ 0x900  ; wOverworldMapEnd − wOverworldMap (2304 bytes)
 
 ; Turn-delay state (pret: wCheckFor180DegreeTurn / wPlayerLastStopDirection)
 ; W_CHECK_FOR_TURN=1 means "first direction press changes facing only; walk starts on hold".
@@ -1251,7 +1253,16 @@ SCREEN_BLOCK_WIDTH       equ 12          ; blocks visible per screen row
 SCREEN_BLOCK_HEIGHT      equ 9           ; blocks visible per screen column
 SURROUNDING_WIDTH        equ SCREEN_BLOCK_WIDTH  * BLOCK_WIDTH   ; 48 tiles wide
 SURROUNDING_HEIGHT       equ SCREEN_BLOCK_HEIGHT * BLOCK_HEIGHT  ; 36 tiles tall
-MAP_BORDER               equ 6           ; block-unit border around map in wOverworldMap
+; MAP_BORDER must satisfy BOTH:
+;     MAP_BORDER >= SCREEN_BLOCK_WIDTH  / 2 + 1   (= 7)
+;     MAP_BORDER >= SCREEN_BLOCK_HEIGHT / 2 + 1   (= 5)
+; The +1 is the slack a single step consumes: MoveTileBlockMapPointer{West,East,North,South}
+; advances the view pointer at the START of a step, before wXCoord/wYCoord wrap and before
+; CheckMapConnections runs. At 6 the horizontal slack was ZERO, so a west step at x=0 drove
+; view_col to -1; since the pointer is a FLAT offset, that wrapped into the previous row's
+; last column and the camera jumped a row (the long-standing E/W seam jutter). See
+; docs/current_plan_overworld_port.md Stage B.
+MAP_BORDER               equ 7           ; block-unit border around map in wOverworldMap
 
 ; Player movement direction bits (constants/sprite_data_constants.asm wPlayerDirection)
 PLAYER_DIR_RIGHT         equ 1
