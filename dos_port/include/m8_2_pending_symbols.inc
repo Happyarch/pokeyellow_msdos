@@ -91,7 +91,7 @@ wToggleableObjectList  equ 0xD5CD   ; VERIFY  pret wram.asm:2177 (ds 16*2+1)
 wTrainerPicPointer     equ 0xD048   ; VERIFY  pret wram.asm (dw) ** flat-adapted: 4 bytes **
 %endif
 %ifndef wNPCMovementDirections2
-wNPCMovementDirections2 equ 0xCF08  ; VERIFY  pret wram.asm (movement scratch buffer)
+wNPCMovementDirections2 equ 0xCC97  ; golden sym 00:cc97 (unions with wNPCMovementDirections)
 %endif
 
 ; ---- WRAM: UNION region (wTrainerScreen*/emotion) — VERIFY (union base unknown) --

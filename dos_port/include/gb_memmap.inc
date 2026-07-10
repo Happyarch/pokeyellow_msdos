@@ -996,7 +996,9 @@ W_WALK_BIKE_SURF_STATE_COPY  equ 0xD119 ; wWalkBikeSurfStateCopy
 
 ; Joypad/input control
 W_JOY_IGNORE                 equ 0xCCB7 ; wJoyIgnore — button mask; bits set suppress those inputs
-W_SIMULATED_JOYPAD_STATES_END equ 0xCC5B ; wSimulatedJoypadStatesEnd — PAD_* byte queued by scripts
+W_SIMULATED_JOYPAD_STATES_END equ 0xCCD3 ; wSimulatedJoypadStatesEnd — PAD_* byte queued by scripts
+                                          ; (golden sym 00:ccd3; was wrongly 0xCC5B, colliding with
+                                          ;  wNPCMovementDirections so MoveSprite zeroed step[0] — OW-2.2 fix)
 W_SIMULATED_JOYPAD_STATES_INDEX equ 0xCC84 ; wSimulatedJoypadStatesIndex — steps remaining (0=done)
 W_IGNORE_INPUT_COUNTER       equ 0xD139 ; wIgnoreInputCounter — counts down 30→0; clears BIT_DISABLE_JOYPAD
 
@@ -1489,9 +1491,10 @@ VGA_FRAMEBUF    equ 0xA0000    ; linear address of VGA framebuffer (flat DS)
 ; ---------------------------------------------------------------------------
 ; Wave 3 (home-rectification M3.3) — simulated-joypad + scripted-NPC movement +
 ; pathfinding. Addresses from pret ram/wram.asm + ram/hram.asm; the joypad HRAM
-; chain is verified consecutive with the mapped hJoyPressed=0xFFB3/hJoyHeld=0xFFB4,
-; and W_NPC_MOVEMENT_DIRECTIONS aliases the existing W_SIMULATED_JOYPAD_STATES_END
-; union base (0xCC5B). No collisions with existing symbols (checked at integration).
+; chain is verified consecutive with the mapped hJoyPressed=0xFFB3/hJoyHeld=0xFFB4.
+; wNPCMovementDirections (0xCC5B, ds 180) is the union base; wSimulatedJoypadStatesEnd
+; (0xCCD3) and wNPCMovementDirections2 (0xCC97) overlay it at fixed pret offsets
+; (used at disjoint times). No collisions with existing symbols (checked at integration).
 ; ---------------------------------------------------------------------------
 H_JOY_LAST                                       equ 0xFFB1 ; hJoyLast (also mapped locally in joypad.asm)
 H_JOY_RELEASED                                   equ 0xFFB2 ; hJoyReleased (shared: joypad.asm + simulate_joypad.asm)
@@ -1499,7 +1502,7 @@ H_RLE_BYTE_VALUE                                 equ 0xFF81 ; hRLEByteValue (uni
 H_DIVIDEND2                                      equ 0xFFE5 ; hDividend2
 H_DIVISOR2                                       equ 0xFFE6 ; hDivisor2
 H_QUOTIENT2                                      equ 0xFFE7 ; hQuotient2
-W_NPC_MOVEMENT_DIRECTIONS                        equ 0xCC5B ; wNPCMovementDirections (= W_SIMULATED_JOYPAD_STATES_END alias)
+W_NPC_MOVEMENT_DIRECTIONS                        equ 0xCC5B ; wNPCMovementDirections (union base; sim-joypad end/dirs2 overlay it)
 W_UNUSED_OVERRIDE_SIMULATED_JOYPAD_STATES_INDEX  equ 0xCC86 ; wUnusedOverrideSimulatedJoypadStatesIndex
 W_OVERRIDE_SIMULATED_JOYPAD_STATES_MASK          equ 0xCC87 ; wOverrideSimulatedJoypadStatesMask
 W_RLE_BYTE_COUNT                                 equ 0xCCD2 ; wRLEByteCount
@@ -1509,12 +1512,32 @@ W_NPC_MOVEMENT_SCRIPT_BANK                       equ 0xCC58 ; wNPCMovementScript
 BIT_SCRIPTED_NPC_MOVEMENT                        equ 0      ; wStatusFlags5 bit — MoveSprite scripted NPC walk
 ; DoScriptedNPCMovement chain (OW-2.1) — pret engine/overworld/movement.asm
 %ifndef wNPCMovementDirections2
-wNPCMovementDirections2      equ 0xCF08   ; 10-byte scripted-move direction buffer
+wNPCMovementDirections2      equ 0xCC97   ; 10-byte scripted-move direction buffer
+                                          ; (golden sym 00:cc97 — unions with wNPCMovementDirections;
+                                          ;  was wrongly 0xCF08. OW-2.2 fix)
 %endif
 wNPCMovementDirections2Index equ 0xCD37   ; = wUnusedLinkMenuByte (pret alias)
 wNPCMovementScriptSpriteOffset equ 0xCF17 ; sprite offset controlled by NPC move script
 wScriptedNPCWalkCounter      equ 0xCF18   ; 8→0 per scripted step
 BIT_INIT_SCRIPTED_MOVEMENT   equ 7        ; wStatusFlags4 bit 7 — scripted move initialised
+
+; FindPathToPlayer / CalcPositionOfPlayerRelativeToNPC (OW-2.2, pret engine/overworld/
+; pathfinding.asm). HRAM addresses from golden sym (pret ram/hram.asm union at 0xFF95).
+; hNPCMovementDirections2Index / hNPCSpriteOffset / hNPCPlayerYDistance overlay 0xFF95.
+H_NPC_MOVEMENT_DIRECTIONS2_INDEX     equ 0xFF95 ; hNPCMovementDirections2Index (union @ FF95)
+H_NPC_SPRITE_OFFSET                  equ 0xFF95 ; hNPCSpriteOffset (union @ FF95)
+H_NPC_PLAYER_Y_DISTANCE              equ 0xFF95 ; hNPCPlayerYDistance (union @ FF95)
+H_NPC_PLAYER_X_DISTANCE              equ 0xFF96 ; hNPCPlayerXDistance
+H_FIND_PATH_NUM_STEPS                equ 0xFF97 ; hFindPathNumSteps
+H_FIND_PATH_FLAGS                    equ 0xFF98 ; hFindPathFlags (BIT_PATH_FOUND_Y/X)
+H_FIND_PATH_Y_PROGRESS               equ 0xFF99 ; hFindPathYProgress
+H_FIND_PATH_X_PROGRESS               equ 0xFF9A ; hFindPathXProgress
+H_NPC_PLAYER_RELATIVE_POS_PERSPECTIVE equ 0xFF9B ; hNPCPlayerRelativePosPerspective (0=player→NPC,1=NPC→player)
+H_NPC_PLAYER_RELATIVE_POS_FLAGS      equ 0xFF9D ; hNPCPlayerRelativePosFlags (BIT_PLAYER_LOWER_Y/X)
+BIT_PATH_FOUND_Y             equ 0        ; hFindPathFlags bit 0
+BIT_PATH_FOUND_X             equ 1        ; hFindPathFlags bit 1
+BIT_PLAYER_LOWER_Y           equ 0        ; hNPCPlayerRelativePosFlags bit 0 (target north)
+BIT_PLAYER_LOWER_X           equ 1        ; hNPCPlayerRelativePosFlags bit 1 (target west)
 
 ; ---------------------------------------------------------------------------
 ; Wave 4 (home-rectification) — menu framework (yes_no / list_menu / window).
