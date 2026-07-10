@@ -38,6 +38,14 @@ global CanWalkOntoTile
 global TryWalking
 global GetTileSpriteStandsOn
 global Func_5349
+; Scripted NPC movement chain (OW-2.1)
+global DoScriptedNPCMovement
+global InitScriptedNPCMovement
+global AnimScriptedNPCMovement
+global AdvanceScriptedNPCAnimFrameCounter
+global GetSpriteScreenYPointer
+global GetSpriteScreenXPointer
+global GetSpriteScreenXYPointerCommon
 
 extern IsTilePassable
 extern Random_
@@ -47,10 +55,6 @@ extern Random_
 ; pret engine/overworld/sprite_collisions.asm:_UpdateSprites. Root must supply a link
 ; stub until Wave 9 lands (movement.asm is a LIVE/linked source).
 extern SpawnPikachu
-; Scripted-NPC per-frame stepper — pret engine/overworld/movement.asm:DoScriptedNPCMovement
-; (not yet ported). Dispatched from the UpdateNonPlayerSprite shim below. Root must
-; supply a link stub until the scripted-movement port lands.
-extern DoScriptedNPCMovement
 extern wMapSpriteData            ; map_sprites.asm — [movbyte2, textid] per slot (pret wMapSpriteData)
 
 %ifdef DEBUG_NPC_WALK
@@ -212,19 +216,17 @@ UpdateNonPlayerSprite:
     ror al, 4                            ; nibble swap: (N-1) → (N-1)*16
     mov [ebp + H_TILE_PLAYER_STANDING_ON], al
 
-    ; pret: engine/overworld/sprite_collisions.asm:_UpdateSprites.UpdateNonPlayerSprite
-    ; shim — before the free-roam walk machine, route a slot under scripted movement to
-    ; DoScriptedNPCMovement (the "walk in sync with the player" stepper), tail-called.
-    ; DIVERGENCE (see SUMMARY): pret gates on wNPCMovementScriptSpriteOffset ==
-    ; hCurrentSpriteOffset (per-slot) and DoScriptedNPCMovement itself checks
-    ; BIT_SCRIPTED_MOVEMENT_STATE + wNPCMovementDirections2. The port's M3.3
-    ; (pathfinding.asm:MoveSprite) instead arms the global BIT_SCRIPTED_NPC_MOVEMENT
-    ; flag in wStatusFlags5, so this dispatch gates on that flag.
-    ; GATED (byte-identical default): nothing in the LIVE link sets
-    ; BIT_SCRIPTED_NPC_MOVEMENT (MoveSprite is check-only; play_time only clears bits),
-    ; so this branch is never taken today.
-    test byte [ebp + W_STATUS_FLAGS_5], (1 << BIT_SCRIPTED_NPC_MOVEMENT)
-    jz UpdateNPCSprite                   ; not scripted → free-roam machine (pret: jp UpdateNPCSprite)
+    ; pret: engine/overworld/sprite_collisions.asm:UpdateNonPlayerSprite (:38-45) —
+    ; route the slot whose offset == wNPCMovementScriptSpriteOffset to the scripted
+    ; stepper DoScriptedNPCMovement; every other slot falls to the free-roam machine.
+    ; DoScriptedNPCMovement itself gates on BIT_SCRIPTED_MOVEMENT_STATE (wStatusFlags5
+    ; bit 7). OW-2.1: this REPLACES the port's bespoke global BIT_SCRIPTED_NPC_MOVEMENT
+    ; (bit-0) gate with pret's per-slot compare (the faithful model). Inert by default —
+    ; wNPCMovementScriptSpriteOffset is 0 (the player slot) so it never matches an NPC
+    ; slot (>= $10) until a script (pret MoveSprite, OW-2.2) sets it.
+    mov al, [ebp + wNPCMovementScriptSpriteOffset]
+    cmp al, byte [ebp + H_CURRENT_SPRITE_OFFSET]    ; == hCurrentSpriteOffset?
+    jne UpdateNPCSprite                  ; unequal → free-roam machine (pret: jp UpdateNPCSprite)
     jmp DoScriptedNPCMovement            ; pret: jp DoScriptedNPCMovement (tail call)
     ; --- end of UpdateNonPlayerSprite dispatcher ---
 
@@ -1017,6 +1019,127 @@ Func_4e32:
     mov al, [ebp + W_SPRITE_PLAYER_ANIM_FRAME]
     add al, [ebp + W_SPRITE_PLAYER_FACING_DIR]
     mov [ebp + W_SPRITE_PLAYER_IMAGE_INDEX], al
+    ret
+
+; ===========================================================================
+; Scripted NPC movement (OW-2.1) — pret engine/overworld/movement.asm.
+; An alternative NPC-movement method used the few times an NPC must walk in sync
+; with the player (player-follows-NPC cutscenes, e.g. Oak walking to the lab).
+; Dispatched from UpdateNonPlayerSprite when hCurrentSpriteOffset ==
+; wNPCMovementScriptSpriteOffset. Gated internally on BIT_SCRIPTED_MOVEMENT_STATE
+; so it is inert until a script (pret MoveSprite, OW-2.2) arms it.
+; ===========================================================================
+
+; DoScriptedNPCMovement — per-frame scripted stepper. In: hCurrentSpriteOffset.
+DoScriptedNPCMovement:
+    test byte [ebp + W_STATUS_FLAGS_5], (1 << BIT_SCRIPTED_MOVEMENT_STATE)
+    jz .ret                              ; pret: ret z (not in scripted movement)
+    ; init once: pret bit-tests BIT_INIT_SCRIPTED_MOVEMENT then sets it, jp z init.
+    ; Split so the set doesn't clobber the tested ZF (or would).
+    test byte [ebp + W_STATUS_FLAGS_4], (1 << BIT_INIT_SCRIPTED_MOVEMENT)
+    jnz .running                         ; already initialised
+    or byte [ebp + W_STATUS_FLAGS_4], (1 << BIT_INIT_SCRIPTED_MOVEMENT)
+    jmp InitScriptedNPCMovement          ; pret: jp z, InitScriptedNPCMovement (tail)
+.running:
+    ; a = wNPCMovementDirections2[wNPCMovementDirections2Index]
+    movzx eax, byte [ebp + wNPCMovementDirections2Index]
+    mov al, [ebp + eax + wNPCMovementDirections2]
+    cmp al, NPC_MOVEMENT_UP
+    jne .checkDown
+    call GetSpriteScreenYPointer         ; EDI = &YPIXELS
+    mov bl, SPRITE_FACING_UP             ; pret c = facing
+    mov al, -2
+    jmp .move
+.checkDown:
+    cmp al, NPC_MOVEMENT_DOWN
+    jne .checkLeft
+    call GetSpriteScreenYPointer
+    mov bl, SPRITE_FACING_DOWN
+    mov al, 2
+    jmp .move
+.checkLeft:
+    cmp al, NPC_MOVEMENT_LEFT
+    jne .checkRight
+    call GetSpriteScreenXPointer         ; EDI = &XPIXELS
+    mov bl, SPRITE_FACING_LEFT
+    mov al, -2
+    jmp .move
+.checkRight:
+    cmp al, NPC_MOVEMENT_RIGHT
+    jne .noMatch
+    call GetSpriteScreenXPointer
+    mov bl, SPRITE_FACING_RIGHT
+    mov al, 2
+    jmp .move
+.noMatch:
+    cmp al, 0xFF                         ; pret: cp $ff / ret ($ff = end of script)
+.ret:
+    ret
+.move:
+    mov bh, al                           ; pret: ld b, a (step delta)
+    add [ebp + edi], bh                  ; pixel += delta (pret: a=[hl]; add b; [hl]=a)
+    movzx esi, byte [ebp + H_CURRENT_SPRITE_OFFSET]
+    mov [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_FACINGDIRECTION], bl
+    call AnimScriptedNPCMovement
+    dec byte [ebp + wScriptedNPCWalkCounter]
+    jnz .ret                             ; pret: ret nz (mid-step)
+    mov byte [ebp + wScriptedNPCWalkCounter], 8
+    inc byte [ebp + wNPCMovementDirections2Index]
+    ret
+
+; InitScriptedNPCMovement — reset the script cursor + walk counter, prime the anim.
+InitScriptedNPCMovement:
+    mov byte [ebp + wNPCMovementDirections2Index], 0
+    mov byte [ebp + wScriptedNPCWalkCounter], 8
+    jmp AnimScriptedNPCMovement          ; pret: jp AnimScriptedNPCMovement (tail)
+
+; GetSpriteScreenYPointer / XPointer — return EDI = &wSpriteStateData1[offset+field]
+; for the Y or X screen-pixel byte. (pret returns HL.)
+GetSpriteScreenYPointer:
+    mov bh, SPRITESTATEDATA1_YPIXELS     ; pret b = field
+    jmp GetSpriteScreenXYPointerCommon
+GetSpriteScreenXPointer:
+    mov bh, SPRITESTATEDATA1_XPIXELS
+GetSpriteScreenXYPointerCommon:
+    movzx edi, byte [ebp + H_CURRENT_SPRITE_OFFSET]
+    movzx eax, bh
+    lea edi, [edi + eax + W_SPRITE_STATE_DATA_1]
+    ret
+
+; AnimScriptedNPCMovement — set IMAGEINDEX from VRAM slot + facing + anim frame.
+AnimScriptedNPCMovement:
+    movzx esi, byte [ebp + H_CURRENT_SPRITE_OFFSET]
+    mov al, [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_IMAGEBASEOFFSET]
+    dec al
+    ror al, 4                            ; (slot-1) << 4 (pret: dec a; swap a)
+    mov bh, al                           ; b = base
+    mov al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_FACINGDIRECTION]
+    cmp al, SPRITE_FACING_DOWN
+    je .anim
+    cmp al, SPRITE_FACING_UP
+    je .anim
+    cmp al, SPRITE_FACING_LEFT
+    je .anim
+    cmp al, SPRITE_FACING_RIGHT
+    je .anim
+    ret                                  ; non-cardinal facing → no anim
+.anim:
+    add al, bh                           ; facing + (slot-1)<<4
+    mov [ebp + H_SPRITE_VRAM_SLOT_AND_FACING], al
+    call AdvanceScriptedNPCAnimFrameCounter
+    movzx esi, byte [ebp + H_CURRENT_SPRITE_OFFSET]
+    mov al, [ebp + H_SPRITE_ANIM_FRAME_COUNTER]
+    add al, [ebp + H_SPRITE_VRAM_SLOT_AND_FACING]
+    mov [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_IMAGEINDEX], al
+    ret
+
+; AdvanceScriptedNPCAnimFrameCounter — tick the anim counters, publish frame index.
+AdvanceScriptedNPCAnimFrameCounter:
+    call Func_5274                       ; advance intra-anim + anim-frame counters
+    movzx esi, byte [ebp + H_CURRENT_SPRITE_OFFSET]
+    mov al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_ANIMFRAMECOUNTER]
+    and al, 0x03
+    mov [ebp + H_SPRITE_ANIM_FRAME_COUNTER], al
     ret
 
 ; ---------------------------------------------------------------------------

@@ -29,15 +29,8 @@ global ApplyPikachuMovementData_
 ApplyPikachuMovementData_:
     ret
 
-; DoScriptedNPCMovement — pret engine/overworld/movement.asm:DoScriptedNPCMovement
-; (walk-a-scripted-NPC-in-sync stepper). TODO(home-rectify follow-up): implement the
-; stepper consuming M3.3's wNPCMovementDirections + BIT_SCRIPTED_NPC_MOVEMENT (see
-; M6.2 divergence note re: bit-0 vs pret's bit-7/wNPCMovementScriptSpriteOffset split).
-; Reached only when BIT_SCRIPTED_NPC_MOVEMENT is set, whose only setter (MoveSprite)
-; is check-only, so this is never called in the live build.
-global DoScriptedNPCMovement
-DoScriptedNPCMovement:
-    ret
+; DoScriptedNPCMovement retired — real body ported into movement.asm (OW-2.1),
+; with pret's per-slot wNPCMovementScriptSpriteOffset dispatch gate.
 
 ; InitializeToggleableObjectsFlags — pret engine/overworld/toggleable_objects.asm:
 ; InitializeToggleableObjectsFlags (clears the per-map missable/hidden-object show

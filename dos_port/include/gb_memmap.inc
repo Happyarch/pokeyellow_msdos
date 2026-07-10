@@ -685,6 +685,12 @@ hSerialReceiveData                       equ 0xFFAD ; hram.asm:194 (db)
 H_SCX                    equ 0xFFAE     ; hSCX — shadow of rSCX
 H_SCY                    equ 0xFFAF     ; hSCY — shadow of rSCY
 H_WY                     equ 0xFFB0     ; hWY  — shadow of rWY
+; Scripted-NPC-anim scratch (pret hSpriteVRAMSlotAndFacing / hSpriteAnimFrameCounter).
+; Port-assigned to free hram; transient scratch within the DoScriptedNPCMovement anim
+; chain only (write+read same call), never persisted/cross-referenced — exact pret
+; hram address not load-bearing.
+H_SPRITE_VRAM_SLOT_AND_FACING equ 0xFFC0 ; hSpriteVRAMSlotAndFacing
+H_SPRITE_ANIM_FRAME_COUNTER   equ 0xFFC1 ; hSpriteAnimFrameCounter
 H_LOADED_ROM_BANK        equ 0xFFB8     ; hLoadedROMBank
 H_AUTO_BG_TRANSFER_EN    equ 0xFFBA     ; hAutoBGTransferEnabled
 H_AUTO_BG_TRANSFER_DEST  equ 0xFFBC     ; hAutoBGTransferDest (2 bytes, lo/hi)
@@ -1501,6 +1507,14 @@ W_NPC_NUM_SCRIPTED_STEPS                         equ 0xCF0F ; wNPCNumScriptedSte
 W_NPC_MOVEMENT_SCRIPT_FUNCTION_NUM               equ 0xCF10 ; wNPCMovementScriptFunctionNum
 W_NPC_MOVEMENT_SCRIPT_BANK                       equ 0xCC58 ; wNPCMovementScriptBank (scripted-dispatch, macro-gated)
 BIT_SCRIPTED_NPC_MOVEMENT                        equ 0      ; wStatusFlags5 bit — MoveSprite scripted NPC walk
+; DoScriptedNPCMovement chain (OW-2.1) — pret engine/overworld/movement.asm
+%ifndef wNPCMovementDirections2
+wNPCMovementDirections2      equ 0xCF08   ; 10-byte scripted-move direction buffer
+%endif
+wNPCMovementDirections2Index equ 0xCD37   ; = wUnusedLinkMenuByte (pret alias)
+wNPCMovementScriptSpriteOffset equ 0xCF17 ; sprite offset controlled by NPC move script
+wScriptedNPCWalkCounter      equ 0xCF18   ; 8→0 per scripted step
+BIT_INIT_SCRIPTED_MOVEMENT   equ 7        ; wStatusFlags4 bit 7 — scripted move initialised
 
 ; ---------------------------------------------------------------------------
 ; Wave 4 (home-rectification) — menu framework (yes_no / list_menu / window).

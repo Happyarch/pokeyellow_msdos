@@ -950,15 +950,39 @@ adds to `GAME_SRCS` (or `OVERWORLD_CHECK_SRCS` if closure unresolved), runs
 
 ### Stage 2 — Scripted NPC movement `[ ]` — unblocks Oak cutscene
 
-**TICKET OW-2.1: movement.asm scripted chain** `[SOLO #1]`
+**TICKET OW-2.1: movement.asm scripted chain** `[SOLO #1]` — **CORE DONE 2026-07-09**
 - Pret: `engine/overworld/movement.asm` (remaining routines)
 - Checklist:
-  - [ ] `ChangeFacingDirection`, `DoScriptedNPCMovement`, `InitScriptedNPCMovement`, `GetSpriteScreenYPointer`/`GetSpriteScreenXPointer`/`GetSpriteScreenXYPointerCommon`, `AnimScriptedNPCMovement`, `AdvanceScriptedNPCAnimFrameCounter`, `Func_5288`/`Func_531f`/`Func_5325`/`Func_532b`/`Func_5331`/`Func_5337`/`Func_5349`/`Func_5357` (keep pret Func names)
-  - [ ] Fix audit omissions: status-4 dispatch → `Func_5357` (item-ball emerge / STAY-and-face path); `MakeNPCFacePlayer` `BIT_NO_NPC_FACE_PLAYER` guard
-  - [ ] Reconcile the `BIT_SCRIPTED_NPC_MOVEMENT` bit-0 (port) vs bit-7 + `wNPCMovementScriptSpriteOffset` (pret) divergence — decide once, document in translation_log, sweep all readers
-  - [ ] Delete `overworld_stubs.asm:DoScriptedNPCMovement` ret-stub
-  - [ ] WRAM: `wNPCMovementDirections2(+Index)`, `wNPCMovementScriptFunctionIndex`, `wScriptedNPCWalkCounter`, `wNPCMovementScriptSpriteOffset`
-- Exit: scripted stepper runs under harness; stub deleted.
+  - [x] Scripted-movement core ported (the Oak-cutscene path): `DoScriptedNPCMovement`,
+        `InitScriptedNPCMovement`, `GetSpriteScreenYPointer`/`GetSpriteScreenXPointer`/
+        `GetSpriteScreenXYPointerCommon`, `AnimScriptedNPCMovement`,
+        `AdvanceScriptedNPCAnimFrameCounter` (all real globals in movement.asm).
+        `Func_5337`/`Func_5349`/`Func_5357`/`Func_5274` already existed (OW-A.7).
+  - [x] **Dispatch-gate rebuild:** replaced the port's bespoke global
+        `BIT_SCRIPTED_NPC_MOVEMENT` (bit-0) gate with pret's per-slot
+        `wNPCMovementScriptSpriteOffset == hCurrentSpriteOffset` compare
+        (`UpdateNonPlayerSprite`); `DoScriptedNPCMovement` gates internally on
+        `BIT_SCRIPTED_MOVEMENT_STATE` (wStatusFlags5 bit 7). Inert by default
+        (offset 0 = player slot, never matches an NPC). Documented in-code.
+  - [x] `overworld_stubs.asm:DoScriptedNPCMovement` ret-stub deleted.
+  - [x] WRAM/HRAM added to gb_memmap.inc: `wNPCMovementDirections2(+Index)`,
+        `wScriptedNPCWalkCounter`, `wNPCMovementScriptSpriteOffset`,
+        `BIT_INIT_SCRIPTED_MOVEMENT`, `hSpriteVRAMSlotAndFacing`/`hSpriteAnimFrameCounter`
+        (port-assigned scratch, pret address not load-bearing).
+  - [x] Audit omissions (`Func_5357` status-4 dispatch, `MakeNPCFacePlayer` guard)
+        — already fixed in OW-A.7.
+  - [ ] **REMAINING sub-step (deferred):** the `Func_5288` item-ball/STAY-and-face
+        dispatch block (`Func_5288`/`Func_531f`/`Func_5325`/`Func_532b`/`Func_5331`) +
+        `ChangeFacingDirection` + `LoadDEPlusA`. This is a **distinct status-3 dispatch
+        path** (item-ball emerge), NOT the scripted-movement chain, so it doesn't block
+        the Oak cutscene. Needs careful H-register tracing (pret leaves H=data2 across
+        `Func_5349` into `.asm_52e6`). Left as an OW-2.1 tail.
+- Verification: `make check` clean; full SKIP_TITLE link OK (stub retired, no double-def);
+  `goldencheck overworld_pallet` PASS (gate rebuild + inert scripted code don't regress
+  Pallet NPCs); faithdiff clean modulo 2 justified parser artifacts (pret's `[hl]`-indirect
+  writes to wStatusFlags4/Index not attributed; `jne` vs pret `jp UpdateNPCSprite`); lint 0.
+- Exit (core): scripted stepper linked + faithful; stub deleted; gate rebuilt. Item-ball
+  block + runtime Oak-cutscene exercise (OW-2.5) remain.
 
 **TICKET OW-2.2: pathfinding.asm engine section** `[SWARM/Sonnet]` — append clearly-headed section to port `pathfinding.asm` (which holds home/pathfinding): `FindPathToPlayer`, `CalcPositionOfPlayerRelativeToNPC`, `ConvertNPCMovementDirectionsToJoypadMasks` + masks table (pret `engine/overworld/pathfinding.asm`).
 **TICKET OW-2.3: auto_movement.asm** `[SWARM/Sonnet]` — new mirrored file: `_EndNPCMovementScript`, `PalletMovementScriptPointerTable` + all `PalletMovementScript_*`, `RLEList_ProfOakWalkToLab`/`RLEList_PlayerWalkToLab`, `PewterMuseumGuyMovementScriptPointerTable`/`PewterGymGuyMovementScriptPointerTable` + RLELists. Cross-ref `PlayerStepOutFromDoor`/`RunNPCMovementScript` already in `overworld.asm` (extern, note). Leaves: `PlayDefaultMusic`/`StopAllMusic` (OW-1.9 stubs).
