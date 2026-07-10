@@ -1266,6 +1266,10 @@
   "NPCMovementDirectionsToJoypadMasksTable": {
    "port_file": "dos_port/src/home/pathfinding.asm",
    "why": "engine/overworld/pathfinding.asm engine-side section (FindPathToPlayer et al., OW-2.2) consolidated into the home-primary port file src/home/pathfinding.asm (overworld-port plan, file-layout name-collision rule)"
+  },
+  "LoadEnemyMonData": {
+   "port_file": "dos_port/src/engine/battle/load_enemy_mon_data.asm",
+   "why": "pret engine/battle/core.asm:LoadEnemyMonData ported to its own file (sibling of load_enemy_from_party.asm; core.asm is split across many port files)"
   }
  },
  "suppress": [

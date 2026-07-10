@@ -827,6 +827,7 @@ FRONTEND_SRCS := \
     src/engine/battle/faint_switch.asm \
     src/engine/battle/faint_enemy.asm \
     src/engine/battle/load_enemy_from_party.asm \
+    src/engine/battle/load_enemy_mon_data.asm \
     src/engine/battle/faint_sendout.asm \
     src/engine/battle/end_of_battle.asm \
     src/engine/flag_action.asm
