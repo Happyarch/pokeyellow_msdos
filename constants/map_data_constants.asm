@@ -1,6 +1,6 @@
 ; width of east/west connections
 ; height of north/south connections
-DEF MAP_BORDER EQU 6
+DEF MAP_BORDER EQU 3
 
 ; connection directions
 	const_def
