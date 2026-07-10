@@ -781,6 +781,7 @@ HOME_CHECK_SRCS := \
     src/engine/overworld/toggleable_objects.asm \
     src/engine/overworld/cut.asm \
     src/engine/overworld/cut2.asm \
+    src/engine/overworld/healing_machine.asm \
     src/engine/overworld/player_animations.asm \
     src/engine/overworld/special_warps.asm \
     src/engine/overworld/player_state.asm

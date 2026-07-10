@@ -1132,7 +1132,19 @@ unported OAM-anim/palette primitives `AdjustOAMBlockXPos2`/`AdjustOAMBlockYPos2`
 (pret engine/battle/animations.asm; ABI ESI=GB OAM off, BL=count) + `UpdateCGBPal_OBP1`.
 rOBP1 flicker → `[ebp+IO_OBP1]` TODO-HW. faithdiff clean (ADDED [IO_OBP1] = rOBP1
 TODO-HW; DROPPED self-`jr` faithdiff can't parse), lint 0. Check-only.
-**TICKET OW-6.2: healing_machine.asm** — `AnimateHealingMachine` + OAM data, `FlashSprite8Times`, `CopyHealingMachineOAM`; incbin `gfx/overworld/heal_machine.2bpp`; sound leaves stubbed; `[wAudioROMBank]` guard dropped with `; DIVERGENCE` note; **bounded** waits vs sound stubs.
+**TICKET OW-6.2: healing_machine.asm** — **DONE 2026-07-10.** New mirrored file:
+`AnimateHealingMachine` + `PokeCenterFlashingMonitorAndHealBall` (incbin
+`gfx/overworld/heal_machine.2bpp`) + `PokeCenterOAMData`, `FlashSprite8Times`,
+`CopyHealingMachineOAM` (flat-src EDX cursor + GB-WRAM ESI dest, both persist/advance
+across the party loop). Audio is LIVE (StopAllMusic/PlaySound). Two DIVERGENCE notes
+per ticket: (1) the `wAudioROMBank == Audio Engine 3` guard + bank-swap around
+Music_PkmnHealed is elided (meaningless under the flat single audio engine —
+jingle played directly); (2) the two bare `jr nz` audio waits (wAudioFadeOutControl /
+wChannelSoundIDs) are bounded (the port has no VBlank audio ISR, so an unbounded
+spin would hang; engine-tick yield deferred to promotion). rOBP1 → `[ebp+IO_OBP1]`
+TODO-HW. faithdiff clean (DROPPED [wAudioROMBank] = banking divergence; ADDED
+[IO_OBP1] = rOBP1 TODO-HW; ADDED [wUpdateSpritesEnabled] = indirect `[hl]` named),
+lint 0. Check-only.
 **TICKET OW-6.3: elevator.asm** — `ShakeElevator` (`hSCY` shake → port `H_SCY` fine-scroll, native renderer honors it); `ShakeElevatorRedrawRow` → `RedrawMapView` call or documented no-op (`; PROJ`); `.musicLoop` on `wChannelSoundIDs` must be **bounded** against sound stubs (no infinite spin) — divergence note.
 **TICKET OW-6.4: spinners.asm** — `LoadSpinnerArrowTiles` (per-frame vChars0 writes from `SpinnerArrowAnimTiles` → `g_tilecache_dirty`; `; TODO-HW` re VRAM coord math), facing table + `spinner_tiles`; incbin `gfx/overworld/spinners.2bpp`.
 - Verify (root): cut animation end-to-end (full `UsedCut` visual); healing machine / elevator / spinners via MCP unit-invocation + FRAME.BIN (maps unreachable — check-only linkage acceptable where callers don't exist).
