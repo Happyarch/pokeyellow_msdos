@@ -88,6 +88,7 @@ def _align(addr: int, n: int = 16) -> int:
 
 # Filled in by allocate_rom_window(); read by the header emitter.
 OUTDOOR_BLK_ADDRS: dict[str, int] = {}
+OUTDOOR_BLK_SIZES: dict[str, int] = {}
 OW_GFX_GBADDR = OW_BLOCKS_GBADDR = OW_COLL_GBADDR = 0
 INDOOR_BLK_GBADDR = OW_TILESET_HDR_GBADDR = OW_MAP_HEADERS_GBADDR = 0
 
@@ -101,6 +102,7 @@ def allocate_rom_window(map_info: dict) -> None:
     for const in OUTDOOR_BLK_MAPS:
         _id, w, h = map_info[const]
         OUTDOOR_BLK_ADDRS[const] = addr
+        OUTDOOR_BLK_SIZES[const] = w * h
         addr = _align(addr + w * h)
 
     OW_GFX_GBADDR    = addr;  addr = _align(addr + OW_GFX_SIZE)
@@ -122,15 +124,20 @@ def write_rom_window_inc(blob_end: int) -> None:
          "; allocate_rom_window(); the blob end is asserted against VRAM ($8000).",
          "%ifndef ROM_WINDOW_INC", "%define ROM_WINDOW_INC", "",
          f"OW_GFX_GBADDR            equ 0x{OW_GFX_GBADDR:04X}",
+         f"OW_GFX_SIZE              equ 0x{OW_GFX_SIZE:04X}",
          f"OW_BLOCKS_GBADDR         equ 0x{OW_BLOCKS_GBADDR:04X}",
+         f"OW_BLOCKS_SIZE           equ 0x{OW_BLOCKS_SIZE:04X}",
          f"OW_COLL_GBADDR           equ 0x{OW_COLL_GBADDR:04X}",
+         f"OW_COLL_SIZE             equ 0x{OW_COLL_SIZE:04X}",
          f"INDOOR_BLK_GBADDR        equ 0x{INDOOR_BLK_GBADDR:04X}",
          f"INDOOR_BLK_SLOT_SIZE     equ 0x{INDOOR_BLK_SIZE:04X}",
          f"OW_TILESET_HDR_GBADDR    equ 0x{OW_TILESET_HDR_GBADDR:04X}",
          f"OW_MAP_HEADERS_GBADDR    equ 0x{OW_MAP_HEADERS_GBADDR:04X}",
+         f"ROM_WINDOW_BLOB_END      equ 0x{blob_end:04X}",
          f"FIRST_INDOOR_MAP_ID      equ 0x{FIRST_INDOOR_MAP_ID:02X}", ""]
     for const in OUTDOOR_BLK_MAPS:
         L.append(f"{blk_equ_name(const):28s} equ 0x{OUTDOOR_BLK_ADDRS[const]:04X}")
+        L.append(f"{blk_equ_name(const) + '_SIZE':28s} equ 0x{OUTDOOR_BLK_SIZES[const]:04X}")
     L += ["", "OW_MAP_GBADDR            equ OW_PALLET_BLK_GBADDR ; legacy alias",
           "", f"; map-headers blob: 0x{OW_TILESET_HDR_GBADDR:04X}-0x{blob_end:04X} "
           f"({blob_end - OW_TILESET_HDR_GBADDR} bytes); "
@@ -787,7 +794,7 @@ def main(debug_warps=None):
     lines.extend([
         "; ==========================================================================",
         "; MAP HEADER DATA BLOB",
-        "; Copied to EBP+OW_TILESET_HDR_GBADDR (0x5400) by LoadOverworldAssets.",
+        "; Copied to EBP+OW_TILESET_HDR_GBADDR (rom_window.inc) by LoadOverworldAssets.",
         "; All dw/db values are EBP-relative (GB address space) unless noted.",
         "; ==========================================================================",
         "",
@@ -805,7 +812,7 @@ def main(debug_warps=None):
     ])
 
     W_OVERWORLD_MAP = 0xE800
-    current_addr = OW_MAP_HEADERS_GBADDR   # 0x540C
+    current_addr = OW_MAP_HEADERS_GBADDR
 
     # MapHeaderPointers entries computed as we go
     map_hdr_ptrs = {}    # id → EBP addr of its header (or 0 for stubs)

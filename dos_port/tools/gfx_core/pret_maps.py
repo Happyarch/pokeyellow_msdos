@@ -25,7 +25,21 @@ CONNECTIONS = gmh.CONNECTIONS
 get_connection = gmh.get_connection
 TILESET_IDS = gmh.TILESET_IDS
 TILESET_CANONICAL = gmh.TILESET_CANONICAL
-MAP_BORDER_BLOCKS = 6                  # gb_memmap.inc MAP_BORDER (verified)
+def _parse_map_border() -> int:
+    """gb_memmap.inc MAP_BORDER is the single source of truth — parse it.
+
+    A restated literal here went stale once already (6 -> 7, 2026-07-10): the
+    border-authoring pipeline would have painted rings at offsets the runtime
+    no longer reads."""
+    import re
+    inc = ROOT / "dos_port" / "include" / "gb_memmap.inc"
+    m = re.search(r"^MAP_BORDER\s+equ\s+(\d+)", inc.read_text(), re.M)
+    if not m:
+        raise RuntimeError(f"MAP_BORDER equ not found in {inc}")
+    return int(m.group(1))
+
+
+MAP_BORDER_BLOCKS = _parse_map_border()
 
 
 @dataclass(frozen=True)

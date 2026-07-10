@@ -3,7 +3,7 @@
 compose_padded() replicates the port's wOverworldMap build (overworld.asm):
   1. fill the (w+12) x (h+12) padded block grid with the border block
   2. copy each connection strip from the neighbour's real .blk
-     (6 rows x len for N/S, len rows x 6 cols for W/E — MAP_BORDER=6),
+     (MAP_BORDER rows x len for N/S, len rows x MAP_BORDER cols for W/E),
      using the exact src/dest indices gen_map_headers.get_connection() emits
   3. copy the map's own blk into the centre
 Connections are applied before the centre copy (same net result as the
@@ -23,7 +23,7 @@ from gfx_core import pret_maps as pm          # noqa: E402
 from gfx_core import tilesets as ts           # noqa: E402
 from gfx_core.tiles import DMG_PAL, TILE      # noqa: E402
 
-BORDER = pm.MAP_BORDER_BLOCKS                 # 6 blocks each side
+BORDER = pm.MAP_BORDER_BLOCKS                 # blocks each side (parsed from gb_memmap.inc)
 BLOCK_PX = ts.BLOCK_PX                        # 32
 
 

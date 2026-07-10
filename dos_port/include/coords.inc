@@ -139,7 +139,7 @@
     ; is (mapwidth + MAP_BORDER*2) and the origin is offset by MAP_BORDER in each
     ; axis. Matches pret ReplaceTileBlock (engine/overworld/update_map.asm), which
     ; uses `add MAP_BORDER * 2` for the stride and MAP_BORDER for the border skip.
-    ; FIX(2026-07-04): was hardcoded to 3 (border=3); MAP_BORDER is 6 — the old
+    ; FIX(2026-07-04): was hardcoded to 3 (border=3); MAP_BORDER is larger — the old
     ; form landed inside the border ring, not on the target block. Unused at fix
     ; time (coords.inc not yet %included), so zero call-site impact.
     mov %1, W_OVERWORLD_MAP + ((%2) + MAP_BORDER) + (((%3) + MAP_BORDER) * ((%4) + (MAP_BORDER * 2)))
@@ -174,8 +174,8 @@
 ; Emits `dw` — the field at 0xD35E is 2 bytes and the pointer is a GB-space
 ; address; the previous `dd` emission was a latent size mismatch.
 ; FIX(2026-07-10): was pret's verbatim border-3 form (+7/+6 constants;
-; MAP_BORDER is 6), flagged "do not use until re-derived". Unused before this
-; fix; first consumer is special_warps.asm (OW-5.2).
+; MAP_BORDER was 6 then, 7 now — macro is border-generic), flagged "do not use
+; until re-derived". Unused before the fix; first consumer is special_warps.asm (OW-5.2).
 %macro event_displacement 3
     ; map width, x coord, y coord (tile units, as pret passes them)
     dw (W_OVERWORLD_MAP + (((%3) >> 1) + MAP_BORDER - SCREEN_BLOCK_HEIGHT/2) * ((%1) + MAP_BORDER * 2) + (((%2) >> 1) + MAP_BORDER - SCREEN_BLOCK_WIDTH/2))
