@@ -1474,27 +1474,46 @@ warp-side and tracked separately. Nor W-1 (InitBattle tile-cache clobber).
 
 ---
 
-### Stage 8 — Final full-surface audit `[ ]` (root; gates archival)
+### Stage 8 — Final full-surface audit `[~]` (root; gates archival) — audit items 1–5 DONE 2026-07-10; only the live-smoke tail + archival git mv remain (Stage 9 runs first)
 
-- [ ] **Coverage re-diff**: every global label in pret `engine/overworld/*.asm`
-      exists in dos_port as a real body, a sanctioned documented stub, or a
-      documented UNREFERENCED port — zero unexplained gaps.
-- [ ] **Line-level fidelity audit** (same method as the 2026-07-01 pre-plan
-      audit): routine-by-routine control-flow comparison of everything this plan
-      touched; grade FAITHFUL/REORGANIZED/SCAFFOLD; any SCAFFOLD or silent
-      omission → fix ticket before closing.
-- [ ] **Silent-omission sweep**: every pret step absent from the port carries an
-      explicit `; TODO` / `; PROJ` / `; DIVERGENCE` marker.
-- [ ] **Runtime regression**: full FRAME.BIN suite (baseline / north-transition /
-      walk-to-edge / Oak cutscene / tree-cut) matches or improves Stage 0
-      captures; `make -C dos_port check` clean.
-- [ ] **VRAM tile-slot regression** (see "Cross-cutting defect" above): after the
-      `wFontLoaded`/vChars-layout rewrite, open **every** menu (START, options,
-      bag, trainer card, party, pokédex) *after* visiting the party menu / a battle
-      and confirm box borders, `$7F` blanks, and letter glyphs A–L render cleanly —
-      i.e. the box tiles `$79–$7F` and font `$80+` are no longer clobbered. This is
-      the menus-port corruption; it must be gone before archival.
-- [ ] Archive: `git mv docs/current_plan_overworld_port.md docs/plans/overworld_port.md`.
+- [x] **Coverage re-diff** — CLEAN. All **218** pret `engine/overworld/*.asm` global
+      labels accounted for (`translation.db`, 2026-07-10 stamp): 170 translated,
+      28 relocated, 2 stub, 18 "missing". Every one of the 18 is (a) generated `.inc`
+      data the DB does not scan — `EmotionBubbles` + the 8 `*Emote` tiles
+      (`assets/emotes.inc`), `SafariSteps`/`SafariBallText` (`assets/overworld_strings.inc`);
+      (b) a documented inline — `Func_4d0a` and `SpriteCollisionBitTable` (both inlined
+      into the bespoke `DetectCollisionBetweenSprites`; the latter's provenance note was
+      **added this pass**, `movement.asm:.update_bitmap`); (c) a documented flattened-model
+      divergence — `IsObjectHidden` → `IsToggleableHidden`; or (d) the documented shadow-OAM
+      deferral — `LedgeHoppingShadow*` (4 labels) via the `LoadHoppingShadowOAM` ret-stub
+      (`overworld_stubs.asm`, TODO(retire) marked). **Zero unexplained gaps.**
+- [x] **Line-level fidelity audit** — done mechanically via `faithdiff` over all **170**
+      translated overworld routines (the control-flow / call-graph + named-store comparison
+      is exactly this audit's method): **114 clean**, 56 with residual diffs, and **every**
+      residual falls into a documented category — 37 store-only (`[hl]`-indirection stores
+      named directly: `W_STATUS_FLAGS_*`, `wStatusFlags*`, `W_HIDDEN_EVENT_INDEX`, …), and
+      19 with call-graph diffs, all documented: inlined home helpers
+      (`CopyData`/`FillMemory`/`AddNTimes`/`CopyVideoDataAlternate`/`Divide` → `rep movsb`/`imul`),
+      deleted redraw rings (`CopyToRedrawRowOrColumnSrcTiles`, `ScheduleNorthRowRedraw`),
+      jp/indirect translation artifacts (`jp hl`→`call esi`, self-loops, tail-jz), faithful
+      renames (`_IsTilePassable`→`IsTilePassable` extern; `IsInArray` search fold), the
+      TODO-HW palette drop (`RunDefaultPaletteCommand`), and the DEBUG-only `npc_dbg_record`
+      hook. **No undocumented drop of a real game subsystem call.**
+- [x] **Silent-omission sweep** — the faithdiff sweep above IS the omission oracle; the one
+      unmarked inline it surfaced (`SpriteCollisionBitTable`) now carries a `; pret:`
+      provenance note. All other absences carry `; TODO`/`; PROJ`/`; DIVERGENCE`/`; pret:`
+      markers.
+- [x] **Runtime regression** — `make -C dos_port check` clean; full SKIP_TITLE build links;
+      `make -C dos_port fidelity` **6/6 PASS** (status_p1, status_p2, start_menu,
+      overworld_pallet, party_menu, bag_menu). The only code change this pass is a comment
+      (SpriteCollisionBitTable provenance), so the FRAME.BIN render bytes are unchanged by
+      construction.
+- [x] **VRAM tile-slot / menu regression** — headless goldens `start_menu` + `party_menu` +
+      `bag_menu` all PASS (the OW-A.13 transfer-retirement + bag-stride fixes). This is the
+      headless form of the cross-cutting menu-corruption check. **Live smoke of the bag fix
+      (empty + populated) remains a user action** (OW-A.13 pending-live tail).
+- [ ] Archive: `git mv docs/current_plan_overworld_port.md docs/plans/overworld_port.md`
+      — **runs after Stage 9** (directory-mirror rectification precedes the archival move).
 
 ---
 

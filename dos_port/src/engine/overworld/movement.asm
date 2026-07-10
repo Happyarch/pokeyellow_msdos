@@ -1703,6 +1703,10 @@ DetectCollisionBetweenSprites:
 .update_bitmap:
     ; Set bit j in the 16-bit collision bitmap at [0x0E:0x0F] (MSB:LSB).
     ; Slots 0–7 → bit in LO byte (0x0F); slots 8–15 → bit in HI byte (0x0E).
+    ; pret: engine/overworld/sprite_collisions.asm:SpriteCollisionBitTable (the
+    ; 16-entry `bigdw 1 << n` LUT indexed by hCollidingSpriteOffset) — INLINED
+    ; here as `1 << (j & 7)` into the LO/HI byte, so the data label has no port
+    ; body (same bespoke-DetectCollisionBetweenSprites rewrite as Func_4d0a).
     mov   cl, dl
     and   cl, 0x07
     mov   al, 1
