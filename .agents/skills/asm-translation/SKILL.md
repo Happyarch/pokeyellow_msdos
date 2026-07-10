@@ -146,9 +146,17 @@ for block fills/copies.
 ## Translation Workflow
 
 1. Pick a routine from `home/` or `engine/` with no `$FF__` I/O accesses.
-2. Create `dos_port/src/<mirrored path>/<filename>.asm`.
-3. Translate following the register map. Use `%include "dos_port/include/gb_memmap.inc"`.
-4. Emit `; TODO-HW:` for any I/O boundary hit.
-5. Emit `; BUG(level):` for any known bug (check `docs/bugs_and_glitches.md`).
-6. Add an entry to `docs/translation_log.md`.
-7. Verify assembly: `nasm -f coff -o /dev/null <file>`.
+2. Run `dos_port/tools/label_status --callees <Label>` — it classifies every
+   call target of the pret routine (translated / relocated / stub / missing),
+   so you know up front what to `extern` (and from where) vs what needs a stub
+   per the `project-conventions` stub rules. (DB stale? `tools/update_label_db`.)
+3. Create `dos_port/src/<mirrored path>/<filename>.asm`.
+4. Translate following the register map. Use `%include "dos_port/include/gb_memmap.inc"`.
+5. Emit `; TODO-HW:` for any I/O boundary hit.
+6. Emit `; BUG(level):` for any known bug (check `docs/bugs_and_glitches.md`).
+7. Add an entry to `docs/translation_log.md`.
+8. Verify assembly: `nasm -f coff -o /dev/null <file>`.
+9. Run the fidelity gate (skill `faithfulness-review`): `tools/faithdiff <Label>`
+   + `tools/lint_pret_labels`; then `tools/update_label_db` so the label DB
+   reflects the new translation/stubs (rescan-derived — skipping is
+   self-healing, not corrupting).

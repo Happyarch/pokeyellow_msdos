@@ -1,6 +1,6 @@
 ---
 name: build-and-debug
-description: Build, run, and debug reference for the Pokémon Yellow DOS port. Invoke when building or running the port, regenerating assets, configuring/launching DOSBox-X, or debugging emulated GB memory (DUMP.BIN / FRAME.BIN dumps instead of screenshots). Also holds the repo layout map and the key reference URLs. Triggers: "build the port", "make -C dos_port", "SKIP_TITLE", "make assets", "regenerate assets", "DEBUG_DUMP / DEBUG_TRANSITION / DEBUG_WALK_NORTH", "FRAME.BIN", "render_frame.py", "DOSBox-X config", "linker section / .rodata / orphan section", "where is <file> in the repo", "Pan Docs / DPMI spec / RBIL".
+description: Build, run, and debug reference for the Pokémon Yellow DOS port. Invoke when building or running the port, regenerating assets, configuring/launching DOSBox-X, debugging emulated GB memory (DUMP.BIN / FRAME.BIN dumps instead of screenshots), running the golden fidelity harness (mGBA ground truth vs DOSBox-X port), or auditioning music (host-side audition.py vs in-DOS DEBUG_AUDIO TRACK= loop). Also holds the repo layout map and the key reference URLs. Triggers: "build the port", "make -C dos_port", "SKIP_TITLE", "make assets", "regenerate assets", "DEBUG_DUMP / DEBUG_TRANSITION / DEBUG_WALK_NORTH", "FRAME.BIN", "render_frame.py", "DOSBox-X config", "linker section / .rodata / orphan section", "goldencheck / make fidelity / make goldens", "GBSTATE.BIN", "golden scenario / mGBA harness / mgba-mcp", "audition / listen to / play <track> music", "DEBUG_AUDIO / TRACK= / audition.py / MUNT", "where is <file> in the repo", "Pan Docs / DPMI spec / RBIL".
 ---
 
 # Build & Debug Reference
@@ -40,6 +40,12 @@ dos_port/
     saveconv.py            ← GB .sav ↔ DOS .dsv converter (stub, Phase 5)
     dosbox_mcp/            ← MCP server for live LLM-driven DOSBox-X debugging
     dosbox-x-mcp/          ← MCP-patched DOSBox-X build (gitignored, built locally)
+    mgba/, mgba_build/     ← vendored mGBA submodule + Lua-runner build (build_mgba.sh)
+    mgba_harness/          ← golden-generation Lua scenarios + libs (fidelity harness)
+    mgba_mcp/              ← MCP server for the mGBA ground-truth side (run_mgba_mcp.sh)
+    goldencheck.sh         ← build + headless-run one scenario, diff vs its golden
+    golden_diff.py         ← the differ (scenario table, masks, --flags)
+  tests/goldens/           ← committed mGBA golden dumps (<scenario>.bin + .json)
   dosbox-x.conf            ← tracked DOSBox-X config (machine, cycles, autoexec)
   Makefile
   link.ld                  ← DJGPP linker script
@@ -160,12 +166,123 @@ This is how the `.rodata` bug was localized: header vars and the `rep stosb`
 border-fill were correct in the dump, but the whole `$4000`-asset window and
 `$9000` tileset were zero — pointing at the asset load, not the map logic.
 
-### DOSBox-X interactive debugger (secondary)
+### Live debugging via dosbox-mcp (breakpoints, memory, frame dumps)
 
-DOSBox-X (2026.06.02, SDL1) can also be built/run with the heavy debugger
-(`Alt+Pause`; `MEMDUMPBIN <lin> <len>` writes a file). Linear address of a GB
-offset = `[ds_base] + EBP + offset`; both are runtime values, so the file-dump
-route above is usually faster than chasing them in the debugger.
+The MCP-patched DOSBox-X (`tools/dosbox-x-mcp/`, built by
+`tools/build_dosbox_mcp.sh`) + the MCP server (`tools/dosbox_mcp/server.py`,
+auto-started by Claude Code via `.claude/settings.json`) let a session drive
+the heavy debugger live: execution breakpoints on pret symbols, GB/x86 memory
+reads, watchpoints, disassembly, and paused-frame PNG dumps. Facts below are
+post-commit `06b05bd2` — earlier notes (BPLM as a breakpoint, raw VMA
+addresses) were actively wrong and produced tools that silently "succeeded"
+while doing nothing.
+
+**Launch:** `dos_port/tools/run_with_mcp.sh` (builds PKMN.EXE with
+`SKIP_TITLE=1`, launches the patched binary with the MCP socket
+`/tmp/dosbox-mcp.sock`). It mounts the **host `dos_port/` as C:**, so harness
+`FRAME.BIN`/`DUMP.BIN` files land directly on disk there — no mcopy (unlike
+the isolated-`PKMN.IMG` headless pipeline above). It does **not** pass
+`-break-start`: the game's runtime selectors only exist once PKMN.EXE is
+loaded (at BIOS entry there is nothing to target, and a paused emulator can't
+service the socket BREAK request).
+
+**Canonical flow:**
+1. `pause_exec()` once the game is running (drives the patch's BREAK request);
+2. `set_breakpoint("OverworldLoop")` — any pkmn.map symbol or hex offset;
+3. `continue_exec()` — resumes and waits for the break;
+4. `wait_break()` — collects a break notification that outlives a RUN timeout
+   *without* tearing down the socket (a teardown wedges the C-side bridge
+   thread in `cond_wait`).
+
+Then `gb_read`/`x86_read`/`get_registers`/`dump_frame` inspect the paused
+emulator (`dump_frame` renders the back buffer to PNG). `disassemble` is
+non-destructive — it reads bytes and runs host `ndisasm`; it does NOT write
+EIP. `lookup_symbol`/`search_symbols` resolve pkmn.map names.
+
+**Semantics that bit us (the "silent success" folly):**
+- `set_breakpoint` sends `BP <cs>:<offset>` — a real execution breakpoint
+  (BKPNT_PHYSICAL). **BPLM is a memory-CHANGE watchpoint**, exposed as
+  `set_watchpoint` — set on *code* bytes it never fires (code doesn't change).
+- **Never use raw pkmn.map VMAs as linear addresses.** The CWSDPMI image runs
+  with CS/DS base `0x00400000`; every address must resolve through the game's
+  **runtime selectors** (from REGJSON/SELINFO). The MCP tools do this
+  internally; if you drop to raw `dbg_command`, resolve the base yourself.
+- **Double-quote all hex args** in raw debugger commands: the expression
+  parser resolves bare `AF`/`BP`/`DX`/`CF` as register/flag names — our DS
+  selector is literally `"AF"`, which unquoted parses as the adjust flag (0).
+
+**Failure heuristic:** a breakpoint that never fires, or reads returning all
+zeros, means one of the three items above — **not** a broken socket. Check
+them first.
+
+**⚠ NEVER `pkill -f dosbox`** — the pattern also matches
+`tools/dosbox_mcp/server.py` and kills the MCP server, permanently
+disconnecting the session's dosbox-mcp tools. Match `dosbox-x` precisely
+(e.g. `pkill -f 'dosbox-x-mcp/dosbox-x'` or by PID).
+
+### Golden fidelity harness (mGBA ground truth vs DOSBox-X port)
+
+The strongest ground truth of all: compare the port's GB state **byte-for-byte
+against the real game**. mGBA (vendored submodule, built with Lua scripting by
+`tools/build_mgba.sh`) runs the **sha1-verified golden ROM** — built in the
+pinned pristine pret worktree `../pokeyellow_msdos-pret-golden` @ `7caf2e09`,
+NOT the branch tree, whose pret sources are contaminated — through deterministic
+Lua scenarios (`tools/mgba_harness/scenarios/*.lua`: boot → seeded party →
+real-menu navigation → dump). Each scenario writes a **golden**
+(`tests/goldens/<scenario>.bin` + `.json` sidecar, committed). The port side
+builds the matching `DEBUG_*` image, runs it headless, and
+`src/debug/debug_dump.asm:DumpGBState` writes `GBSTATE.BIN`
+(16-byte header + wTileMap 40×25 + VRAM `$8000–$97FF` + OAM).
+`tools/golden_diff.py` maps the port's 20×18 GB window (plus per-scenario UI
+**projections** for the widescreen canvas, see `docs/ui_projection.md`) onto
+the golden and diffs **tilemap cells** (charmap-decoded in the report),
+**16-byte VRAM tile slots** (names a clobbered slot directly — the `$73/$74`
+HUD-clobber class), and **OAM entries**. Nonzero exit on any unmasked
+divergence.
+
+```sh
+# Check one scenario end-to-end (build DEBUG image → headless run → diff)
+make -C dos_port goldencheck SCENARIO=status_p1
+
+# Full suite: status_p1 status_p2 start_menu overworld_pallet party_menu bag_menu
+make -C dos_port fidelity
+
+# Regenerate the committed goldens (needs build_mgba.sh output + golden worktree;
+# sha1-gated against roms.sha1 — refuses an unverified ROM)
+make -C dos_port goldens
+
+# Pieces, for manual use:
+tools/golden_diff.py status_p1 --flags            # print the scenario's make vars
+tools/golden_diff.py status_p1 --gbstate PATH     # diff a dump you extracted yourself
+tools/mgba_harness/inspect_golden.py tests/goldens/status_p1.json  # eyeball a golden
+```
+
+Rules and gotchas:
+- **Masks need written justifications.** A legitimate divergence (e.g. the
+  PikaPic area on the status screens) gets a per-scenario mask entry in
+  `golden_diff.py`'s `SCENARIOS` table **with a `why` string** — never a bare
+  mask. Policy + when this is required pre-commit → skill
+  **`faithfulness-review`** (gate step 3).
+- `goldencheck.sh` already runs against a **copy** of `PKMN.IMG` in a scratch
+  dir, so it's immune to the live-session image-contention trap (below), and
+  the NASMFLAGS stamp rebuilds the `DEBUG_*` objects automatically.
+- Scenarios are deterministic (fixed seeds, state-aware navigation): two
+  consecutive `make goldens` runs must produce byte-identical `.bin` files.
+  A golden that changed without a scenario/pret change is a red flag.
+- New scenario = new Lua file in `tools/mgba_harness/scenarios/` + a
+  `SCENARIOS` entry in `golden_diff.py` + a `DEBUG_*` harness in the port that
+  reaches the same screen and calls `DumpGBState` with a new scenario id.
+
+**Live differential debugging (mgba-mcp):** `tools/run_mgba_mcp.sh` launches
+the golden ROM under the Lua runner with a resident agent
+(`mgba_harness/mcp_agent.lua`, TCP 127.0.0.1:8765); `tools/mgba_mcp/server.py`
+is the MCP stdio bridge — the structural twin of dosbox-mcp, but for **ground
+truth**. It is not auto-registered in `.claude/settings.json` (unlike
+dosbox-mcp): start the emulator side first, then the server. With both bridges
+up you can read the **same pret symbol on both sides** (mGBA golden vs
+DOSBox-X port) and bisect a divergence by label instead of guessing from
+pixels. The agent blocks the emulator between commands; `run_frames` /
+`press_buttons` advance time, everything else inspects the paused core.
 
 ### Back-buffer dump to PNG (preferred over screenshots)
 
@@ -178,12 +295,54 @@ Render `FRAME.BIN` on the host with `dos_port/tools/render_frame.py FRAME.BIN ou
 Driven by deterministic, input-free `%ifdef` harnesses in `EnterMap`:
 `DEBUG_TRANSITION` (force a north crossing; add `DEBUG_BASELINE=1` — both via the
 Makefile — for pristine Pallet Town) and `DEBUG_WALK_NORTH` (drive the real
-movement primitives north `DEBUG_WALK_STEPS` steps, dumping at the crossing).
-Typical loop: `make clean && make SKIP_TITLE=1 DEBUG_TRANSITION=1` →
-`dosbox-x -defaultdir "$PWD" -c 'mount c "'"$PWD"'"' -c c: -c PKMN.EXE -c exit` →
-`python3 tools/render_frame.py FRAME.BIN /tmp/f.png`. This is how the
-2026-06-15 viewport diagnosis and the 2026-06-16 out-of-map clamp fix were made
-(see docs/loadmapheader_handoff.md). Prefer this to screenshots for ground truth.
+movement primitives north `DEBUG_WALK_STEPS` steps, dumping at the crossing);
+plus the menu gates: `DEBUG_STARTMENU` (seeds the leaked
+`hAutoBGTransferEnabled=1` state — the permanent OW-A.13 regression repro),
+`DEBUG_BAGMENU` (seeds `text_row_stride=40` to mirror the live START→ITEM
+entry; add `DEBUG_BAGMENU_EMPTY=1` for the empty-inventory worst case),
+`DEBUG_PARTYMENU`, `DEBUG_G1` (pokédex CONTENTS), `DEBUG_TEXTBOXID=<id>`;
+and the audio-engine gate `DEBUG_AUDIO` (starts Pallet Town BGM via the real
+gateway at boot, ticks the engine 120 frames, dumps audio RAM + virtual APU
+windows to DUMP.BIN — expected values are commented on its `windows:` table
+in `src/debug/debug_dump.asm`).
+This is how the 2026-06-15 viewport diagnosis, the 2026-06-16 out-of-map clamp
+fix, and the 2026-07-06 OW-A.13 menu-corruption A/Bs were made. Prefer this to
+screenshots for ground truth.
+
+**Fully headless recipe (agent-runnable, verified 2026-07-06):**
+
+1. **Stale objects.** `-D` define changes are handled: every `.o` depends on
+   the `NASMFLAGS` stamp (`.nasmflags.stamp`), so changing `DEBUG_*`/`TRACK=`
+   flags triggers a full rebuild automatically. What is NOT tracked is
+   `%include`d file content: after `make assets` regenerates an `.inc`, the
+   `.o`s that include it are stale — `touch` the consumers (grep the
+   `%include`) or `make clean`. A stale build silently ships old data.
+2. Build the image: `make -C dos_port image DEBUG_BAGMENU=1` (etc. — the
+   harness flags set `SKIP_TITLE` themselves). `make image` packages
+   `PKMN.EXE` into the **isolated `PKMN.IMG`** (its own C:) — files the game
+   writes land inside the image, not on the host.
+3. Scratch conf: copy `dos_port/dosbox-x.conf` and append `exit` after
+   `PKMN.EXE` in `[autoexec]` (`sed 's/^PKMN.EXE$/PKMN.EXE\nexit/'`). The
+   harness exits the program → DOSBox-X exits and flushes the image. (`-c
+   "exit"` on the CLI runs too early — don't use it.)
+4. Run: `SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy timeout -s KILL 150
+   dosbox-x -defaultdir "$PWD" -defaultconf -conf <scratch.conf>` from
+   `dos_port/`. Boot-to-dump ≈ 30–60 s at cycles=23880.
+5. Extract: `mdel -i PKMN.IMG@@1048576 ::FRAME.BIN` **first** (the image
+   persists files across rebuilds — stale FRAME.BINs lie), then after the run
+   `mcopy -n -i PKMN.IMG@@1048576 ::FRAME.BIN .` (1048576 = partition byte
+   offset). Render: `python3 tools/render_frame.py FRAME.BIN out.png`.
+6. **⚠ Image contention:** if a live `dos_port/run` session is open (the user
+   test-driving), it holds `PKMN.IMG` mounted read-write — a concurrent
+   headless run on the same image **silently loses its FRAME.BIN** (the live
+   session's cached FAT flushes clobber it; the run "succeeds" with exit 0 and
+   no file, mimicking a crash). Verified 2026-07-06: this burned an hour on a
+   phantom-crash hunt. Run headless against a **copy**: `cp PKMN.IMG
+   $SCRATCH/pkmn_test.img`, point the scratch conf's `imgmount c` at the
+   copy's absolute path, and mcopy-extract from the copy.
+
+(The dosbox-mcp launcher below instead mounts the HOST `dos_port/` as C:, so
+there FRAME.BIN lands directly on disk — no mcopy.)
 
 ### Visual capture
 
@@ -192,6 +351,69 @@ DOSBox-X, waits, screenshots (spectacle → import fallback), and force-kills.
 Good for confirming a final render once the data is known-correct. Note: under a
 Wayland session the compositor screenshot may grab the wrong window — the
 `FRAME.BIN` route above is more reliable.
+
+## Auditioning music (listen to a track — do NOT tailspin into rebuilds)
+
+Two paths, fastest first. The arranger skills (`audio-enhance-opl3` /
+`audio-enhance-mt32`) own *what* to write; this section owns *how to hear it*.
+
+**1. Host-side (seconds, no DOS boot)** — `tools/audio/audition.py` plays the
+generated `assets/midi/<target>/<Song>.mid` straight to an ALSA synth:
+
+```sh
+mt32emu-qt &                                        # MUNT, for --target mt32
+tools/audio/audition.py Music_Celadon               # MT-32 (setup SysEx prepended)
+tools/audio/audition.py --target gm Music_Celadon   # fluidsynth / any GM synth
+```
+
+Edit `tools/audio/mt32/timbres.yaml` / `overrides/*.yaml` / enhancement YAMLs →
+`make assets` → re-run audition.py → listen. That's the whole loop.
+
+**2. In-DOS (end-to-end, real drivers)** — only when verifying the actual
+driver path (OPL shim, MPU-401, Tandy/speaker). The track is a make variable —
+**never edit the Makefile or debug_dump.asm to swap songs**:
+
+```sh
+dos_port/run DEBUG_AUDIO=1 TRACK=MUSIC_CELADON /LOOP   # OPL3, loops forever
+dos_port/run-mt32 DEBUG_AUDIO=1 TRACK=MUSIC_CELADON /LOOP  # MT-32 via MUNT
+```
+
+`TRACK=` takes any `MUSIC_*` constant from `assets/audio_constants.inc`
+(default `MUSIC_GAME_CORNER`); the bank resolves via the generated
+`<name>_BANK` constant. Without `/LOOP` the harness plays the Phase-A demo
+sequence (music + SFX + cry + PCM) then dumps audio state to `DUMP.BIN` and
+exits — that's the byte-verification mode, not the listening mode.
+
+**Enhancements on/off (A/B) — the two targets differ (verified 2026-07-07):**
+- **OPL3**: the tier-1 layer is a *runtime* overlay (`opl_enh.asm` streams) —
+  the `/NOENH` exe flag disables it live: `dos_port/run DEBUG_AUDIO=1
+  TRACK=... /LOOP /NOENH`. No rebuild of assets needed.
+- **MT-32/GM**: enhancements are **baked into the MIDI stream at asset-gen
+  time** (`gb_to_midi.py` folds `enhancements/<Song>.yaml` in; `mpu401.asm`
+  never checks `/NOENH` — passing it is harmless but does nothing). The plain
+  side of an A/B needs a stream regen:
+  ```sh
+  python3 tools/audio/gb_to_midi.py --target mt32 --songs GameCorner --no-enhance
+  python3 tools/audio/midi_to_stream.py --target mt32
+  dos_port/run-mt32 DEBUG_AUDIO=1 TRACK=MUSIC_GAME_CORNER /LOOP
+  make -C dos_port assets   # afterwards: restore the enhanced streams
+  ```
+  (`mpu401.o` depends on `music_streams.inc` in the Makefile, so the rebuild
+  picks the regen up automatically.)
+- A song with no `enhancements/<Song>.yaml` (most of them, currently — only
+  GameCorner and PalletTown have tier-1 layers) sounds identical with or
+  without any of this: enhanced == plain until a YAML exists.
+
+Anti-patterns (both caused a real lost session, 2026-07-07):
+- Rebuilding PKMN.EXE / booting DOSBox-X repeatedly to hear a YAML tweak —
+  use audition.py; the DOS build is for driver verification only.
+- **Root-level `make clean` / `make tidy` in this tree.** It deletes
+  pret-built intermediates (gfx `.2bpp`, etc.) that `make -C dos_port assets`
+  needs — and this branch's pret tree is contaminated and can NOT rebuild
+  them end-to-end (`make yellow` fails; see the golden-worktree note in the
+  fidelity section). `make -C dos_port clean` is safe: it removes only `.o`s,
+  `PKMN.EXE`, and the flags stamp — never assets. If root intermediates are
+  already gone, rebuild them via the pristine golden worktree.
 
 ## Key Reference URLs
 
