@@ -1164,7 +1164,7 @@ Gym_GFX incbin'd as file-local INTERIM (port loads tilesets dynamically; retire 
 unified). faithdiff clean, lint 0. Check-only. **Stage 6 COMPLETE.**
 - Verify (root): cut animation end-to-end (full `UsedCut` visual); healing machine / elevator / spinners via MCP unit-invocation + FRAME.BIN (maps unreachable — check-only linkage acceptable where callers don't exist).
 
-### Stage 7 — Completeness + link promotion + cleanup `[ ]`
+### Stage 7 — Completeness + link promotion + cleanup `[x]` COMPLETE (2026-07-10)
 
 **TICKET OW-7.1: unused_load_toggleable_object_data.asm** — **DONE 2026-07-10.**
 New mirrored file (HOME_CHECK_SRCS): `Func_f0a54` (bare ret) + `LoadToggleableObjectData`
@@ -1202,7 +1202,21 @@ promoted (menus S7). **Verified:** full build + link clean (no dup defs),
 `make check` green, lint_pret_labels 0, **full `make fidelity` suite PASS
 (all 6 scenarios)** — promotion is behavior-neutral (newly linked code is
 dead until wired; the one replaced stub was never-called).
-**OW-7.3: stub + docs sweep** `[root]` — delete every stub superseded in Stages 1–6; list surviving stubs here with owners; translation_log completeness sweep; ui_projection.md overworld rows; TODO.md checkboxes.
+**OW-7.3: stub + docs sweep** `[root]` — **DONE 2026-07-10.** Superseded stubs
+were already deleted at their tickets (DoScriptedNPCMovement OW-2.1, AnimCut
+OW-6.1, SpawnPikachu OW-7.2) — verified none remain shadowing (link is clean;
+survivor census with owners added to the "Stub inventory" section below, all
+headers refreshed to current status, incl. InitializeToggleableObjectsFlags
+re-documented as the OW-3.2 flattened-model no-op rather than a pending port).
+**Ungated `RunNPCMovementScript`'s scripted dispatch** (removed the
+NPC_MOVEMENT_SCRIPTS_LINKED %ifdef — its table providers linked at OW-7.2;
+still inert until a script sets wNPCMovementScriptPointerTableNum, verified by
+goldencheck). Docs: translation_log.md got a Stages-2–7 pointer entry (per-
+ticket notes live in this plan, per-commit justifications in git); ui_projection.md
+gained the overworld-field tile-read row (the (+16,+8) PLAYER_STANDING
+projection — the plan's most load-bearing PROJ); TODO.md umbrella item
+refreshed to current stage status. Verified: full build + link clean,
+lint_pret_labels 0, goldencheck overworld_pallet PASS.
 
 ### Stage 8 — Final full-surface audit `[ ]` (root; gates archival)
 
@@ -1252,6 +1266,26 @@ Precedent: `docs/` battle-swarm launch prompts. Per worker:
 - **Delete**: `overworld_stubs.asm:DoScriptedNPCMovement` (OW-2.1);
   `M72_HIDDEN_EVENTS_DEEP` guard (OW-3.3); `AnimCut` stub (OW-6.1);
   trainer_engine `EmotionBubbleGfx` extern-TODO (OW-7.2).
+
+**Surviving-stub census (OW-7.3 sweep, 2026-07-10 — all verified legitimate,
+headers current):**
+- `overworld_stubs.asm` (linked): `UpdateCGBPal_OBP1` (TODO-HW palette, retires
+  Phase 5); `ApplyPikachuMovementData_` (pikachu_movement subsystem, M9.1);
+  `InitializeToggleableObjectsFlags` (deliberate no-op — OW-3.2 flattened
+  g_toggleable_flags model covers it; retires only on model re-derivation);
+  `MapEntryAfterBattle` (unported home post-battle re-entry, OW-A.4(b));
+  `EnterMapAnim` (real body in check-only player_animations.asm — dup_def
+  suppressed; retires at its promotion); `ResetUsingStrengthOutOfBattleBit`
+  (unported home; boot-path behavior-equivalent); `IsSurfingPikachuInParty`
+  (unported home follower-flag scan); `LoadHoppingShadowOAM` (cosmetic ledge
+  shadow, no shadow slots in the port OAM model yet).
+- `main_menu_stubs.asm` (linked): `OakSpeech` (unported movie);
+  `PrepareForSpecialWarp` (real body in check-only special_warps.asm —
+  dup_def suppressed; retires at its promotion).
+- Deleted this sweep-cycle: `SpawnPikachu` (OW-7.2 — real body linked).
+- Also ungated at OW-7.3: `RunNPCMovementScript`'s scripted dispatch
+  (`NPC_MOVEMENT_SCRIPTS_LINKED` %ifdef removed — its providers linked at
+  OW-7.2; dispatch inert until OW-2.5 sets the table num).
 
 ## Asset dependencies
 

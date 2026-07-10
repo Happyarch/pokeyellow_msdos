@@ -42,10 +42,14 @@ ApplyPikachuMovementData_:
 
 ; InitializeToggleableObjectsFlags — pret engine/overworld/toggleable_objects.asm:
 ; InitializeToggleableObjectsFlags (clears the per-map missable/hidden-object show
-; flags for a new game). Tail-called by InitPlayerData2. TODO(overworld): port the
-; real toggleable-object flag reset with the hidden-object tables. Until then a new
-; game leaves those flags at their (now zero-filled by wGameProgressFlags) state;
-; harmless for the current maps. Keep the pret name so InitPlayerData2's jp resolves.
+; flags for a new game). Tail-called by InitPlayerData2. The port's DOCUMENTED
+; DIVERGENCE (OW-3.2): toggleable flags live in the flat `g_toggleable_flags`
+; array, seeded from toggleable_default_flags by map_sprites.asm:
+; InitToggleableObjectFlags at game start — that covers this routine's new-game
+; reset, so the pret-named entry stays a deliberate no-op landing for
+; InitPlayerData2's jp (NOT a pending port; see toggleable_objects.asm header).
+; Retires only if the toggleable subsystem is ever re-derived to pret's
+; ebp-relative wToggleableObjectFlags model.
 global InitializeToggleableObjectsFlags
 InitializeToggleableObjectsFlags:
     ret

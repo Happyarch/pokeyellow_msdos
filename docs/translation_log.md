@@ -23,6 +23,24 @@ if it took none. This is the swarm's divergence audit trail.
 
 ---
 
+## overworld-port Stages 2–7 — per-ticket notes live in the plan doc (pointer entry)
+
+- Date: 2026-07-10 (OW-7.3 completeness sweep)
+- The overworld-port plan switched to recording its per-routine translation
+  notes (divergences, golden-sym address promotions, faithdiff justifications,
+  flat-pointer reshapes) **inside each ticket body** of
+  `docs/current_plan_overworld_port.md` — Stage 1 tickets were logged here
+  (below), Stages 2–7 were not duplicated. Consult that file (archived at
+  `docs/plans/overworld_port.md` when the plan closes) for: OW-2.x scripted
+  NPC movement / pathfinding / auto_movement / pewter_guys, OW-3.x
+  update_map / toggleable_objects / hidden_events / cut, OW-4.x boulders,
+  OW-5.x player_animations / special_warps (incl. the event_displacement
+  re-derivation), OW-6.x cut2 / healing_machine / elevator / spinners, and
+  OW-7.x completeness + the 13-file link promotion. Commit messages carry the
+  per-commit faithdiff justifications (gate policy).
+
+---
+
 ## menus-port Session 9 — integration spine (root only)
 
 - Date: 2026-07-03

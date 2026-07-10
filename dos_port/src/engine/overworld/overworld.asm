@@ -2952,34 +2952,32 @@ RunNPCMovementScript:
     ; Scripted-NPC-movement dispatch half: index wNPCMovementScriptPointerTableNum
     ; (1-based) into a table of per-map movement-script pointer tables, then call
     ; function wNPCMovementScriptFunctionNum within it (pret: CallFunctionInTable).
-    ; Bankswitching is a no-op under flat memory. No script currently sets the table
-    ; num nonzero, so this is inert; it is gated on NPC_MOVEMENT_SCRIPTS_LINKED so the
-    ; per-map pointer tables (owned by map-script waves) don't break the link until
-    ; they exist. TODO(home-rectify M3.3 follow-up): define the macro + tables.
+    ; Bankswitching is a no-op under flat memory. UNGATED at OW-7.3 (2026-07-10):
+    ; the NPC_MOVEMENT_SCRIPTS_LINKED %ifdef existed only because the per-map
+    ; pointer tables (auto_movement.asm / pewter_guys chain) weren't linked; the
+    ; OW-7.2 promotion linked them. Still inert until a script sets the table
+    ; num nonzero (OW-2.5 Oak cutscene wires the first one).
     mov al, [ebp + wNPCMovementScriptPointerTableNum]
     test al, al
     jz .done
-%ifdef NPC_MOVEMENT_SCRIPTS_LINKED
     dec al                                          ; table num is 1-based
     movzx eax, al
     mov esi, [NPCMovementScriptPointerTables + eax*4] ; ESI = flat per-map jumptable
     mov al, [ebp + W_NPC_MOVEMENT_SCRIPT_FUNCTION_NUM]
     call CallFunctionInTable                        ; call function AL within ESI
-%endif
 .done:
     ret
 
-%ifdef NPC_MOVEMENT_SCRIPTS_LINKED
 extern CallFunctionInTable
 extern PalletMovementScriptPointerTable
 extern PewterMuseumGuyMovementScriptPointerTable
 extern PewterGymGuyMovementScriptPointerTable
-; pret: RunNPCMovementScript.NPCMovementScriptPointerTables (flat dd in the port)
+; pret: RunNPCMovementScript.NPCMovementScriptPointerTables (flat dd in the port;
+; read-only, lives in .text by placement — reads only, never written)
 NPCMovementScriptPointerTables:
     dd PalletMovementScriptPointerTable
     dd PewterMuseumGuyMovementScriptPointerTable
     dd PewterGymGuyMovementScriptPointerTable
-%endif
 
 ; ---------------------------------------------------------------------------
 ; CheckWarpTile — scan W_WARP_ENTRIES for a player coord match.

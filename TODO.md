@@ -233,14 +233,15 @@ Prioritized task list. Check off items as they complete; add new items with phas
       player-NPC tile blocking (`IsNPCAtTargetBlock`), NPC wall-blocking via MAPY/MAPX
       tile check. Full dialog (`CheckNPCInteraction` → `PrintText`, per-character reveal,
       multi-page scroll). Walk-tile leg animation. Done; see `docs/plans/npc_implementation.md`.
-- [ ] **Full `engine/overworld/` faithful port** — planned in
-      `docs/current_plan_overworld_port.md` (staged swarm+solo; branch
-      `overworld-port`, Stage 0 gate pending). Absorbs the piecemeal items that
-      used to live here: **scripted NPC movement** (`DoScriptedNPCMovement`
-      dispatch, Stage 2), the two out-of-map viewport clamps' retirement, cut/
-      boulder/fly/spin/elevator/healing subsystems, and — importantly — the
-      **menu VRAM tile-slot defect** ("Cross-cutting defect" note). This is where
-      the "menus corrupt live" fix lands.
+- [~] **Full `engine/overworld/` faithful port** — in progress on `master`, plan
+      `docs/current_plan_overworld_port.md`. Status 2026-07-10: Stages 1, 3, 4,
+      5, 6 complete; Stage 2 core done (remaining: OW-2.5 runtime Oak-cutscene
+      exercise + the OW-2.1 Func_5288 item-ball tail); Stage 7 done through
+      OW-7.3 (13 files link-promoted, remaining check-only blockers documented
+      in the dos_port Makefile); Stages 8 (final audit) + 9 (directory mirror)
+      remain, plus the two out-of-map viewport clamps' retirement and the
+      **menu VRAM tile-slot defect** ("Cross-cutting defect" note — where the
+      "menus corrupt live" fix lands).
 - [x] Trainer battle engine — battle swarm merged to `master`; trainer battles play
       (trainer_battle.asm / trainer_ai.asm / read_trainer_party.asm linked). Remaining
       fidelity items in `docs/battle_audit_findings.md`. Overworld trainer-sight →
