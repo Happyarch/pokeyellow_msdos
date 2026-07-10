@@ -318,9 +318,11 @@ dbg_destTile: resb 1            ; tile CL at CanWalkOntoTile entry (saved before
 %endif
 %ifdef DEBUG_SEAM
 SEAM_REC_SIZE equ 12
-SEAM_LOG_CAP  equ 8192            ; 12-byte records → 682 frames
-seam_log:     resb SEAM_LOG_CAP   ; appended by SeamLogRecord
-seam_log_n:   resd 1              ; bytes written so far
+SEAM_LOG_CAP  equ 24576           ; 12-byte records → 2048 frames (~34 s of play)
+seam_log:     resb SEAM_LOG_CAP   ; RING buffer, appended by SeamLogRecord
+seam_log_i:   resd 1              ; write cursor (byte offset, wraps at CAP)
+seam_log_n:   resd 1              ; total bytes ever written (may exceed CAP)
+seam_out_len: resd 1              ; bytes actually staged for the file
 %endif
 
 ; ---------------------------------------------------------------------------
@@ -1257,9 +1259,7 @@ zero_rmcs:
 SeamLogRecord:
     push eax
     push edi
-    mov edi, [seam_log_n]
-    cmp edi, SEAM_LOG_CAP - SEAM_REC_SIZE
-    ja .full                            ; log full — drop the sample
+    mov edi, [seam_log_i]               ; ring cursor — never "fills", oldest is overwritten
     add edi, seam_log
 
     mov al, [ebp + W_CUR_MAP]                          ; 0
@@ -1288,7 +1288,25 @@ SeamLogRecord:
     mov [edi + 11], al
 
     add dword [seam_log_n], SEAM_REC_SIZE
-.full:
+    mov eax, [seam_log_i]
+    add eax, SEAM_REC_SIZE
+    cmp eax, SEAM_LOG_CAP
+    jb .stored
+    xor eax, eax                        ; wrap
+.stored:
+    mov [seam_log_i], eax
+
+%ifdef DEBUG_SEAM_LIVE
+    ; Live mode: the player drives. Pressing A dumps the trace + the screen and quits.
+    mov al, [ebp + H_JOY_PRESSED]
+    test al, PAD_A
+    jz .done
+    pop edi
+    pop eax
+    call DumpSeamLog                    ; SEAMLOG.BIN (returns)
+    jmp DumpBackbuffer                  ; FRAME.BIN, then exits — never returns
+%endif
+.done:
     pop edi
     pop eax
     ret
@@ -1313,11 +1331,30 @@ DumpSeamLog:
     mov ecx, 12                    ; "SEAMLOG.BIN" + NUL
     rep movsb
 
-    mov esi, seam_log              ; log bytes at offset 0x10
+    ; log bytes at offset 0x10, oldest-first. If the ring never wrapped
+    ; (total < CAP) it is simply [0, total). Otherwise the oldest record is at the
+    ; write cursor, so emit [cursor, CAP) then [0, cursor).
     mov edi, [dos_flat]
     add edi, 0x10
-    mov ecx, [seam_log_n]
+    mov eax, [seam_log_n]
+    cmp eax, SEAM_LOG_CAP
+    jae .wrapped
+    mov [seam_out_len], eax
+    mov esi, seam_log
+    mov ecx, eax
     rep movsb
+    jmp .staged
+.wrapped:
+    mov dword [seam_out_len], SEAM_LOG_CAP
+    mov esi, [seam_log_i]
+    mov ecx, SEAM_LOG_CAP
+    sub ecx, esi                   ; ECX = CAP - cursor (tail chunk)
+    add esi, seam_log
+    rep movsb
+    mov esi, seam_log              ; head chunk [0, cursor)
+    mov ecx, [seam_log_i]
+    rep movsb
+.staged:
 
     call zero_rmcs                 ; INT 21h/3Ch — create
     mov word [rmcs + RMCS_EAX], 0x3C00
@@ -1334,7 +1371,7 @@ DumpSeamLog:
     mov word [rmcs + RMCS_EAX], 0x4000
     movzx eax, word [file_handle]
     mov [rmcs + RMCS_EBX], eax
-    mov ecx, [seam_log_n]
+    mov ecx, [seam_out_len]
     mov [rmcs + RMCS_ECX], ecx
     mov dword [rmcs + RMCS_EDX], 0x10
     mov ax, [dos_seg]

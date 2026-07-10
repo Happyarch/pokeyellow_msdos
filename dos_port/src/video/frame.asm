@@ -22,6 +22,9 @@ bits 32
 %include "gb_memmap.inc"
 %include "gb_macros.inc"
 
+%ifdef DEBUG_SEAM_LIVE
+extern SeamLogRecord     ; src/debug/debug_dump.asm (DEBUG_SEAM_LIVE trace)
+%endif
 extern wait_vblank
 extern wait_pit_tick
 extern audio_tick            ; src/audio/audio_hal.asm — pret VBlank audio block
@@ -112,6 +115,11 @@ DelayFrame:
     ; rarely (observed: ~1 per 3 minutes of walking in grass). Restored 2026-07-10.
     call Random
     call joypad_update
+%ifdef DEBUG_SEAM_LIVE
+    ; Sample the seam trace once per rendered frame, after the joypad is read so
+    ; SeamLogRecord can see hJoyPressed (A = dump SEAMLOG.BIN + FRAME.BIN and exit).
+    call SeamLogRecord
+%endif
     ; hFrameCounter guarded decrement — pret VBlank: `and a / jr z / dec [hl]`.
     ; Unblocks callers using pret's set-hFrameCounter-and-spin idiom (M2.1).
     cmp byte [ebp + H_FRAME_COUNTER], 0

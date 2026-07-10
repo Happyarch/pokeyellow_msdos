@@ -418,14 +418,33 @@ EnterMap:
 %define SEAM_PDIR PLAYER_DIR_LEFT
 %define SEAM_FACE SPRITE_FACING_LEFT
 %endif
+    ; ONE-SHOT: OverworldLoop re-enters EnterMap on every map transition, so the
+    ; seed must only fire on the first entry — otherwise a crossing teleports the
+    ; player straight back to the spawn and the seam can never be left.
+    cmp byte [seam_seeded], 0
+    jne .seam_no_seed
+    mov byte [seam_seeded], 1
     or byte [ebp + W_STATUS_FLAGS_4], (1 << BIT_NO_BATTLES)
     mov byte [ebp + W_CUR_MAP],  DEBUG_SEAM_MAP
     mov byte [ebp + W_X_COORD],  DEBUG_SEAM_X
     mov byte [ebp + W_Y_COORD],  DEBUG_SEAM_Y
+    mov byte [seam_reseat], 1             ; hand-seeded coords need the view ptr derived
+.seam_no_seed:
 %endif
     call LoadMapData
 %ifdef DEBUG_SEAM
+    cmp byte [seam_reseat], 0
+    je .seam_no_reseat
+    mov byte [seam_reseat], 0
     call SeamReseatView                   ; LoadMapData does not derive the view ptr
+.seam_no_reseat:
+%ifdef DEBUG_SEAM_LIVE
+    ; Live mode: no scripted walk. Fall through to the real OverworldLoop so the
+    ; player drives with the keyboard and COLLISION IS LIVE (the scripted harness
+    ; bypasses it, and its traces came back clean). frame.asm samples every frame;
+    ; pressing A writes SEAMLOG.BIN + FRAME.BIN and exits. Drive to the spot that
+    ; reproduces, then press A.
+%else
     mov ecx, DEBUG_SEAM_STEPS
 .seam_step:
     push ecx
@@ -478,7 +497,8 @@ EnterMap:
 .seam_done:
     call DumpSeamLog                      ; SEAMLOG.BIN (returns)
     call DumpBackbuffer                   ; FRAME.BIN: the final screen — then exits
-%endif
+%endif ; DEBUG_SEAM_LIVE
+%endif ; DEBUG_SEAM
 %ifdef DEBUG_DUMP
     call DebugDumpMemory     ; dump GB memory to DUMP.BIN, then exit (debug only)
 %endif
@@ -2257,6 +2277,11 @@ MoveTileBlockMapPointerNorth:            ; AL = wCurMapWidth
     ret
 
 %ifdef DEBUG_SEAM
+section .data
+seam_seeded: db 0        ; EnterMap is re-entered per map transition; seed once
+seam_reseat: db 0        ; derive the view ptr only for the hand-seeded spawn
+section .text
+
 ; ---------------------------------------------------------------------------
 ; SeamReseatView — DEBUG_SEAM only. Port-only debug helper, no pret counterpart.
 ; LoadMapData loads the header + block map but does NOT derive the view pointer

@@ -130,6 +130,16 @@ ifdef DEBUG_SEAM_DIR
 NASMFLAGS += -D DEBUG_SEAM_DIR=$(DEBUG_SEAM_DIR)
 endif
 
+# Interactive variant: seed the spawn, then hand control to the real OverworldLoop
+# (collision LIVE, keyboard driven). Every frame is sampled into a 2048-frame ring;
+# press A to write SEAMLOG.BIN + FRAME.BIN and quit. Implies DEBUG_SEAM.
+#   make run DEBUG_SEAM_LIVE=1 DEBUG_SEAM_MAP=0x21 DEBUG_SEAM_X=36 DEBUG_SEAM_Y=8
+ifdef DEBUG_SEAM_LIVE
+DEBUG_SEAM := 1
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_SEAM -D DEBUG_SEAM_LIVE -D SKIP_TITLE
+endif
+
 # Debug noclip: press W in-game to toggle walk-through-walls (disables collision).
 # Useful for testing warps, map edges, and OOB behaviour without normal movement.
 # Does NOT imply SKIP_TITLE — works at any point in the game.

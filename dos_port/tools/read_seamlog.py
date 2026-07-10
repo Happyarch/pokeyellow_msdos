@@ -60,10 +60,26 @@ def main(path):
             notes.append(f"*** CROSSED {prev_map:#04x} -> {cmap:#04x}")
         prev_map = cmap
 
-        # The pointer LEADS the coords: MoveTileBlockMapPointer* fires at the start
-        # of a step, wXCoord/wYCoord update at the end. So a +/-1 delta mid-step is
-        # normal. Only a mismatch at rest (walk == 0) is a real desync.
-        if w and ptr != exp:
+        # ROW WRAP. The view pointer is a flat offset, so its column is ptr % stride.
+        # MAP_BORDER(6) == SCREEN_BLOCK_WIDTH//2(6) leaves ZERO horizontal slack, so a
+        # west step at x=0 decrements column 0 into the previous row's last column.
+        # Check this BEFORE the "pointer leads" excuse below — that excuse is exactly
+        # what hid this bug: at x=0 the "lead of -1" IS the wrap.
+        if w:
+            stride = w + 2 * MAP_BORDER
+            col = (ptr - W_OVERWORLD_MAP) % stride
+            exp_col = (exp - W_OVERWORLD_MAP) % stride
+            if abs(ptr - exp) <= 2 and abs(col - exp_col) > 2:
+                notes.append(f"*** VIEW-PTR ROW WRAP (col {exp_col} -> {col})")
+                bad_ptr += 1
+                wrapped = True
+            else:
+                wrapped = False
+
+        # Otherwise the pointer legitimately LEADS the coords: MoveTileBlockMapPointer*
+        # fires at step start, wXCoord/wYCoord update at step end. A +/-1 delta mid-step
+        # is normal; only a mismatch at rest (walk == 0) is a desync.
+        if w and ptr != exp and not wrapped:
             if walk == 0:
                 notes.append(f"PTR MISMATCH AT REST (off by {ptr - exp:+d})")
                 bad_ptr += 1
