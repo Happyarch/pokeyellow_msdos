@@ -48,7 +48,7 @@ extern WildMonEncounterSlotChances
 extern IsPlayerStandingOnDoorTileOrWarpTile
 extern IsPlayerJustOutsideMap
 extern EnableAutoTextBoxDrawing
-extern DisplayTextID
+extern DisplayTextID                     ; src/home/home_stubs.asm (ret-stub) — pret: home/text_script.asm
 
 section .text
 

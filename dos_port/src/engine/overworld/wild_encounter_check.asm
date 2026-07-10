@@ -10,35 +10,27 @@
 ; at home/overworld.asm:289) that NewBattle's blackout decision reads.
 ;
 ; --------------------------------------------------------------------------
-; SAFETY / GATING (read before enabling the live encounter)
+; STATUS — wild encounters are LIVE (gate retired 2026-07-10)
 ; --------------------------------------------------------------------------
-; StepCountCheck and AnyPartyAlive are self-contained (they only touch WRAM) and
-; are ALWAYS compiled + LINKED. StepCountCheck is wired unconditionally into
-; OverworldLoop: it merely decrements wStepCounter / the no-random-battle cooldown
-; and nothing in the current port reads wStepCounter, so it has zero visible effect
-; on the default build — it just starts keeping the step books faithfully.
-;
-; NewBattle + AllPokemonFainted are compiled ONLY under -D WILD_ENCOUNTERS_LIVE
-; because their closure is not link-clean yet. Status after OW-A.6 (2026-07-10):
-;   * DONE — the faithful post-battle return path (pret .battleOccurred → EnterMap
-;     full map reload, AnyPartyAlive faint check, Cinnabar event) is now built into
-;     OverworldLoop under the same gate, and the on-turn NewBattle call
-;     (pret home/overworld.asm:197, turning in grass) is wired there too.
-;   * DONE — IsPlayerCharacterBeingControlledByGame is a real linked routine
+; All four routines are compiled + LINKED unconditionally. The former
+; -D WILD_ENCOUNTERS_LIVE gate (and the matching %ifdefs in overworld.asm) is
+; retired: every blocker it guarded is closed.
+;   * StepCountCheck / AnyPartyAlive — always were self-contained (WRAM only).
+;     StepCountCheck's wNumberOfNoRandomBattleStepsLeft countdown is now load-
+;     bearing: it is the post-battle 3-step encounter-free window.
+;   * NewBattle → TryDoWildEncounter — engine/battle/wild_encounters.asm is LINKED.
+;     Its two former blockers are closed: IsPlayerStandingOnDoorTileOrWarpTile
+;     (engine/overworld/player_state.asm, promoted) and DisplayTextID (a documented
+;     ret-stub in src/home/home_stubs.asm — its only call site is the repel-wore-off
+;     branch, unreachable until item USE lands; see that stub's header).
+;   * AllPokemonFainted → HandleBlackOut — HandleBlackOut + StopMusic are ported
+;     into engine/overworld/overworld.asm (the port's home/overworld.asm), backed by
+;     engine/events/black_out.asm (ResetStatusAndHalveMoneyOnBlackout) and
+;     engine/events/heal_party.asm (HealParty). PrepareForSpecialWarp is the REAL
+;     body from engine/overworld/special_warps.asm (the main_menu_stubs.asm ret-stub
+;     is deleted, not shadowed).
+;   * IsPlayerCharacterBeingControlledByGame is a real linked routine
 ;     (src/home/npc_movement.asm).
-;   * REMAINING — NewBattle calls TryDoWildEncounter, which is CHECK-only
-;     (wild_encounters.asm externs IsPlayerStandingOnDoorTileOrWarpTile → check-only
-;     player_state.asm, and DisplayTextID → check-only home/text_script.asm), so
-;     pulling NewBattle into a linked object would drag unresolved externs and
-;     break the EXE link.
-;   * REMAINING — HandleBlackOut (AllPokemonFainted's tail) is unported: it needs
-;     StopMusic + ResetStatusAndHalveMoneyOnBlackout + the real PrepareForSpecialWarp
-;     (check-only special_warps.asm; a ret-stub currently links from
-;     main_menu_stubs.asm).
-; Retirement = the "wild-live promotion": link player_state.asm + text_script.asm
-; (see Makefile HOME_CHECK_SRCS blocker notes), port HandleBlackOut, then drop this
-; gate and the matching guards in overworld.asm. Default build = StepCountCheck +
-; AnyPartyAlive only.
 ;
 ; NAMING NOTE (important divergence): pret's NewBattle does `farjp InitBattle`, and
 ; pret's InitBattle (engine/battle/init_battle.asm) is the ENCOUNTER GATE — it runs
@@ -53,10 +45,8 @@
 ; Register map: a=AL, hl=ESI, bc=BX, de=DX (d=DH); EBP = GB memory base;
 ; GB memory = [EBP + addr].
 ;
-; Build (default, LINK):  nasm -f coff -I include/ -I . -o wild_encounter_check.o \
-;                             wild_encounter_check.asm
-; Build (gated, CHECK):   nasm -f coff -I include/ -I . -D WILD_ENCOUNTERS_LIVE \
-;                             -o /dev/null wild_encounter_check.asm
+; Build (LINK):  nasm -f coff -I include/ -I . -o wild_encounter_check.o \
+;                    wild_encounter_check.asm
 
 bits 32
 
@@ -83,15 +73,13 @@ section .text
 global StepCountCheck
 global AnyPartyAlive
 
-%ifdef WILD_ENCOUNTERS_LIVE
 global NewBattle
 global AllPokemonFainted
-extern TryDoWildEncounter                    ; wild_encounters.asm (CHECK-only today)
+extern TryDoWildEncounter                    ; engine/battle/wild_encounters.asm (LINKED)
 extern InitBattle                            ; battle-screen setup (NOT the pret gate)
 extern IsPlayerCharacterBeingControlledByGame ; src/home/npc_movement.asm (real, linked — OW-A.6)
 extern RunMapScript                          ; run_map_script.asm (exists)
-extern HandleBlackOut                        ; MISSING — wild-live promotion dep (see gating header)
-%endif
+extern HandleBlackOut                        ; engine/overworld/overworld.asm (pret home/overworld.asm)
 
 ; --------------------------------------------------------------------------
 ; StepCountCheck — decrement the per-step counters (pret home/overworld.asm:298).
@@ -137,7 +125,6 @@ AnyPartyAlive:
     mov dh, al                                ; d = OR of all HP bytes
     ret
 
-%ifdef WILD_ENCOUNTERS_LIVE
 ; --------------------------------------------------------------------------
 ; NewBattle — determine whether a battle happens this step and, if so, run it.
 ; Sets CF if a battle occurred, clears CF otherwise (pret home/overworld.asm:324).
@@ -167,9 +154,9 @@ NewBattle:
     mov [ebp + wEnemyMonSpecies2], al
 .startBattle:
     call InitBattle                            ; port InitBattle = battle-screen setup
-    ; TODO(M7.1 follow-up): faithful flow returns through _InitBattleCommon and the
-    ; caller does the post-battle EnterMap (full map reload). That re-entry is not
-    ; built into OverworldLoop yet — hence the WILD_ENCOUNTERS_LIVE gate.
+    ; The post-battle re-entry (pret .battleOccurred → AnyPartyAlive → EnterMap full
+    ; map reload) is built into OverworldLoop (overworld.asm), which is what the
+    ; CF=1 return below drives.
     stc                                        ; scf — a battle occurred
     ret
 .noBattle:
@@ -184,4 +171,3 @@ AllPokemonFainted:
     mov byte [ebp + wIsInBattle], 0xFF         ; wIsInBattle = $ff (lost)
     call RunMapScript
     jmp HandleBlackOut
-%endif  ; WILD_ENCOUNTERS_LIVE

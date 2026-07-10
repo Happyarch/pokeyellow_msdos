@@ -159,7 +159,7 @@ extern DisplayOptionMenu_       ; options.asm (package D)
 extern TryLoadSaveFile          ; save.asm (package H) — predef; sets wSaveFileStatus=2
 extern OakSpeech                ; cutscene seam (root) — includes the naming screen (pkg C)
 extern DisplayTitleScreen       ; src/movie/title.asm — B on the menu returns to the title
-extern PrepareForSpecialWarp    ; overworld warp seam (root) — HoF continue path
+extern PrepareForSpecialWarp    ; engine/overworld/special_warps.asm — HoF continue path
 
 section .bss
 align 4

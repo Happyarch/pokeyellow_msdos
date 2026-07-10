@@ -131,6 +131,7 @@ BOOT_SRCS := \
     boot/timing.asm
 
 HOME_SRCS := \
+    src/home/home_stubs.asm \
     src/home/fill_memory.asm \
     src/home/copy_data.asm \
     src/home/bankswitch.asm \
@@ -256,7 +257,24 @@ GAME_SRCS := \
     src/engine/overworld/elevator.asm \
     src/engine/overworld/spinners.asm \
     src/engine/overworld/healing_machine.asm \
-    src/engine/overworld/unused_load_toggleable_object_data.asm
+    src/engine/overworld/unused_load_toggleable_object_data.asm \
+    src/engine/overworld/player_gfx.asm \
+    src/engine/overworld/player_state.asm \
+    src/engine/overworld/special_warps.asm \
+    src/engine/battle/wild_encounters.asm \
+    src/engine/events/black_out.asm \
+    src/engine/events/heal_party.asm \
+    src/home/money.asm \
+    src/engine/debug/debug_party.asm
+
+# debug_party.asm is linked UNCONDITIONALLY, matching pret: main.asm:19 INCLUDEs
+# engine/debug/debug_party.asm in every build, and PrepareNewGameDebug is a
+# "dummy except in _DEBUG" ret that PrepareForSpecialWarp always calls
+# (engine/overworld/special_warps.asm:13). It was previously appended by ~15
+# separate DEBUG_* gates; that left PrepareNewGameDebug undefined in a normal
+# build, which is what kept special_warps.asm check-only. The file assembles and
+# resolves with no DEBUG defines (verified: zero unresolved externs), and its
+# three globals are dead code unless a DEBUG_* harness calls them.
 
 # Pokémon data/stats engine (current_plan_pokemon_engine.md). Grows per stage.
 POKEMON_SRCS := \
@@ -305,20 +323,22 @@ ITEMS_SRCS := \
 BATTLE_SRCS := \
     src/engine/battle/get_trainer_name.asm \
     src/engine/battle/misc.asm \
-    src/engine/battle/move_category.asm \
-    src/engine/battle/wild_encounters.asm
+    src/engine/battle/move_category.asm
+# wild_encounters.asm MOVED to GAME_SRCS (wild-live promotion): TryDoWildEncounter
+# is the random-encounter roll NewBattle calls; its closure resolves now that
+# player_state.asm (IsPlayerStandingOnDoorTileOrWarpTile) links and DisplayTextID
+# has a documented ret-stub (src/home/home_stubs.asm).
 # trainer_ai.asm + read_trainer_party.asm MOVED to FRONTEND_SRCS (battle-swarm-C): the
 # class-based enemy-move AI (AIEnemyTrainerChooseMoves) and trainer-party loader now link
 # live — their closures resolve (AIGetTypeEffectiveness/Moves/Divide/IsInArray/Random +
 # TrainerDataPointers/SpecialTrainerMoves/AddPartyMon/AddBCDPredef). wild_data.asm +
 # wild_mons.asm (LoadWildData/WildDataPointers) MOVED to GAME_SRCS (OW-A.5): they form a
 # self-contained 2-file unit (data table + inline flat→WRAM loader, no battle deps) and now
-# link live so LoadMapHeader can populate per-map wGrassMons/wWaterMons. wild_encounters.asm
-# stays check-only: TryDoWildEncounter externs IsPlayerStandingOnDoorTileOrWarpTile
-# (check-only player_state.asm) + DisplayTextID (check-only home/text_script.asm). The
-# overworld trigger side (NewBattle/.battleOccurred/on-turn roll) is COMPLETE but
-# WILD_ENCOUNTERS_LIVE-gated (OW-A.6); linking those two files + porting HandleBlackOut
-# is the "wild-live promotion" that retires the gate (see wild_encounter_check.asm header).
+# link live so LoadMapHeader can populate per-map wGrassMons/wWaterMons.
+# WILD ENCOUNTERS ARE LIVE (2026-07-10): wild_encounters.asm is in GAME_SRCS, the
+# WILD_ENCOUNTERS_LIVE gate is retired from overworld.asm + wild_encounter_check.asm,
+# and the blackout tail (HandleBlackOut/StopMusic in overworld.asm, black_out.asm,
+# heal_party.asm) is ported. See wild_encounter_check.asm's STATUS header.
 # experience.asm (GainExperience) is now LINKED (FRONTEND_SRCS, Stage 3 victory→EXP):
 # its validated EXP/stat/level math runs live; the deferred UI/display externs
 # (PrintStatsBox, the CallBattleCore targets, the per-mon text) are satisfied by
@@ -389,7 +409,6 @@ ifdef DEBUG_STARTMENU
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_STARTMENU
 NASMFLAGS += -D SKIP_TITLE
-GAME_SRCS += src/engine/debug/debug_party.asm  # SeedDeterministicPlayerIdentity ("RED" menu row)
 endif
 # Party-seed gate: run the debug new-game seed (party + bag + Pokédex) at boot,
 # dump party/bag WRAM to DUMP.BIN, exit. Verifies the pokemon/items engine runs
@@ -398,7 +417,6 @@ ifdef DEBUG_PARTY
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_PARTY
 NASMFLAGS += -D SKIP_TITLE
-GAME_SRCS += src/engine/debug/debug_party.asm
 endif
 # Bag-menu gate: seed the bag, open the bag (ITEM) screen over the overworld,
 # render one frame, dump FRAME.BIN, exit. make DEBUG_BAGMENU=1
@@ -406,7 +424,6 @@ ifdef DEBUG_BAGMENU
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_BAGMENU
 NASMFLAGS += -D SKIP_TITLE
-GAME_SRCS += src/engine/debug/debug_party.asm
 endif
 # Empty-inventory variant of the bag-menu gate (list = just CANCEL — the live
 # worst-case border-corruption repro). make DEBUG_BAGMENU=1 DEBUG_BAGMENU_EMPTY=1
@@ -419,7 +436,6 @@ endif
 ifdef DEBUG_BAGMENU_LIVE
 NASMFLAGS += -D DEBUG_BAGMENU_LIVE
 NASMFLAGS += -D SKIP_TITLE
-GAME_SRCS += src/engine/debug/debug_party.asm
 endif
 # Plain playable build with a seeded party — NO frame dump, NO SKIP_TITLE. Boots
 # the full path (title -> main menu -> NEW GAME -> overworld with a seeded party)
@@ -427,7 +443,6 @@ endif
 # make DEBUG_SEED_PARTY=1 (then dos_port/run).
 ifdef DEBUG_SEED_PARTY
 NASMFLAGS += -D DEBUG_SEED_PARTY
-GAME_SRCS += src/engine/debug/debug_party.asm
 endif
 # Party-menu gate: seed the party, open the POKéMON screen over the overworld,
 # render one frame, dump FRAME.BIN, exit. make DEBUG_PARTYMENU=1
@@ -435,7 +450,6 @@ ifdef DEBUG_PARTYMENU
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_PARTYMENU
 NASMFLAGS += -D SKIP_TITLE
-GAME_SRCS += src/engine/debug/debug_party.asm
 endif
 # Text-box gate (menus S2): boot to overworld, switch to the flat canvas, draw
 # the DisplayTextBoxID box with the given wTextBoxID, dump FRAME.BIN, exit.
@@ -444,7 +458,6 @@ ifdef DEBUG_TEXTBOXID
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_TEXTBOXID=$(DEBUG_TEXTBOXID)
 NASMFLAGS += -D SKIP_TITLE
-GAME_SRCS += src/engine/debug/debug_party.asm
 endif
 # List-menu gate (menus S3): boot to overworld, seed party+bag, drive the generic
 # DisplayListMenuID driver input-free (Old-Man auto-select), dump FRAME.BIN, exit.
@@ -453,7 +466,6 @@ ifdef DEBUG_LISTMENU
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_LISTMENU=$(DEBUG_LISTMENU)
 NASMFLAGS += -D SKIP_TITLE
-GAME_SRCS += src/engine/debug/debug_party.asm
 endif
 # Draw-badges gate (menus S6 package B): boot to overworld, seed a mixed badge
 # set, load the badge tiles, draw the 4x2 grid + window it, dump FRAME.BIN, exit.
@@ -503,7 +515,6 @@ ifdef DEBUG_PLAYERSPC
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_PLAYERSPC
 NASMFLAGS += -D SKIP_TITLE
-GAME_SRCS += src/engine/debug/debug_party.asm
 endif
 # Main-menu gate (menus S7 package E): boot to overworld, seed a save (party +
 # name/badges/dex/time + DsvWriteSave), draw the CONTINUE/NEW GAME box + info
@@ -512,7 +523,6 @@ ifdef DEBUG_MAINMENU
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_MAINMENU
 NASMFLAGS += -D SKIP_TITLE
-GAME_SRCS += src/engine/debug/debug_party.asm
 endif
 # Save gate (menus S7 package H): boot to overworld, seed party+bag+badges, run
 # SaveGameData through the confirm (auto-YES), dump the "saved!" FRAME.BIN, exit.
@@ -522,14 +532,12 @@ ifdef DEBUG_SAVE
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_SAVE
 NASMFLAGS += -D SKIP_TITLE
-GAME_SRCS += src/engine/debug/debug_party.asm
 endif
 ifdef DEBUG_SAVE_ROUNDTRIP
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_SAVE
 NASMFLAGS += -D DEBUG_SAVE_ROUNDTRIP
 NASMFLAGS += -D SKIP_TITLE
-GAME_SRCS += src/engine/debug/debug_party.asm
 endif
 # Naming-screen gate (menus S7 package C): boot to overworld, open the PLAYER
 # naming screen, draw the uppercase letter grid, dump FRAME.BIN, exit.
@@ -596,7 +604,6 @@ ifdef DEBUG_BATTLE
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_BATTLE
 NASMFLAGS += -D SKIP_TITLE
-GAME_SRCS += src/engine/debug/debug_party.asm
 endif
 # Level-up move-learn gate (current_plan_pokemon_behavior Stage 3): force
 # STARTER_PIKACHU (party slot 3) 5->6, call LearnMoveFromLevelUp directly (no
@@ -605,7 +612,6 @@ ifdef DEBUG_LEARNMOVE
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_LEARNMOVE
 NASMFLAGS += -D SKIP_TITLE
-GAME_SRCS += src/engine/debug/debug_party.asm
 endif
 # Sub-flag of DEBUG_LEARNMOVE: fill all 4 move slots first, so the deferred
 # all-slots-full (AbandonLearning) branch renders instead of the common path.
@@ -626,7 +632,6 @@ ifdef DEBUG_STATUS
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_STATUS
 NASMFLAGS += -D SKIP_TITLE
-GAME_SRCS += src/engine/debug/debug_party.asm
 endif
 ifdef NEED_DEBUG_DUMP
 GAME_SRCS += src/debug/debug_dump.asm
@@ -779,42 +784,56 @@ HOME_CHECK_SRCS := \
     src/home/text_script.asm \
     src/home/predef_text.asm \
     src/home/give.asm \
-    src/home/money.asm \
     src/home/oam.asm \
     src/home/vcopy.asm \
-    src/engine/overworld/player_gfx.asm \
     src/engine/overworld/trainer_engine.asm \
     src/engine/overworld/push_boulder.asm \
     src/engine/overworld/dust_smoke.asm \
     src/engine/overworld/field_move_messages.asm \
     src/engine/overworld/cut.asm \
     src/engine/overworld/cut2.asm \
-    src/engine/overworld/player_animations.asm \
-    src/engine/overworld/special_warps.asm \
-    src/engine/overworld/player_state.asm
+    src/engine/overworld/player_animations.asm
 # OW-7.2 (2026-07-10) promoted 13 overworld files to GAME_SRCS (ledges,
 # pathfinding, npc_movement_2, auto_movement, overworld_text, pikachu,
 # pewter_guys, toggleable_objects, update_map, elevator, spinners,
 # healing_machine, unused_load_toggleable_object_data) — closures verified by
-# nm diff vs the linked build. Remaining check-only blockers (per-file):
-# - player_state.asm (OW-1.8): ForceBikeOrSurf (check-only player_gfx.asm);
-#   IsPlayerStandingOnDoorTile now global in overworld.asm. Also: its
-#   H_WARP_DESTINATION_MAP placeholder wrongly aliases 0xFF8B (hPreviousTileset)
-#   — give it a distinct HRAM byte before linking.
-# - player_gfx.asm: sprite gfx labels player_sprite/RedBikeSprite/SeelSprite/
-#   SurfingPikachuSprite not defined anywhere linked (gfx sheet port).
+# nm diff vs the linked build.
+#
+# Wild-live promotion (2026-07-10) promoted 3 more to GAME_SRCS:
+# - player_gfx.asm: RedBikeSprite/SeelSprite/SurfingPikachuSprite are now
+#   generated Tier-1 data (assets/*_sprite.inc, gen_all_assets.py) and included
+#   by the file itself; player_sprite is exported from overworld.asm. Its
+#   faithful LoadPlayerSpriteGraphics REPLACED the walking-only scaffold that
+#   used to live in overworld.asm (which is now retired, not shadowed).
+# - player_state.asm (OW-1.8): unblocked by player_gfx.asm's ForceBikeOrSurf.
+#   NOTE: the old note here claimed its H_WARP_DESTINATION_MAP=0xFF8B aliasing
+#   hPreviousTileset was a bug needing a distinct HRAM byte. That was WRONG:
+#   pret unions hBaseTileID/hDexWeight/hWarpDestinationMap/hOAMTile/hROMBankTemp/
+#   hPreviousTileset/hRLEByteValue at one byte (ram/hram.asm:8-19), and the
+#   golden pokeyellow.sym confirms all of them resolve to $FF8B. The alias is
+#   FAITHFUL; splitting it would have introduced a divergence.
+# - special_warps.asm: PrepareNewGameDebug now has a %ifndef DEBUG_PARTY-guarded
+#   ret-stub in special_warps.asm itself; LoadTilesetHeader is global. Its real
+#   PrepareForSpecialWarp replaced the main_menu_stubs.asm ret-stub (deleted).
+#
+# Remaining check-only blockers (per-file):
 # - cut.asm: SaveScreenTilesToBuffer2/LoadScreenTilesFromBuffer2 (check-only
 #   home/vcopy.asm), WriteOAMBlock (check-only home/oam.asm), AnimCut (cut2).
 # - cut2.asm / dust_smoke.asm: AdjustOAMBlock{X,Y}Pos(2) — unported pret
 #   engine/battle/animations.asm OAM primitives.
 # - field_move_messages.asm: PlayCry (unported cry synth).
-# - player_animations.asm: EmotionBubble (trainer_engine), LoadAnimSpriteGfx,
-#   player_sprite, StopMusic (unported home/audio routine).
-# - special_warps.asm: PrepareNewGameDebug is only linked under DEBUG_* gates
-#   (debug_party.asm), so a normal build can't resolve it; LoadTilesetHeader
-#   is global now. Needs debug_party always-linked or a DEBUG-guarded stub.
-# - trainer_engine.asm: DisplayTextID/GetTrainerName_/SaveTrainerName/
-#   _TrainerNameText/JessieJamesPic unported; WriteOAMBlock (home/oam.asm).
+# - player_animations.asm: EmotionBubble (trainer_engine), LoadAnimSpriteGfx.
+#   (StopMusic is REAL now — ported into overworld.asm by the wild-live
+#   promotion; player_sprite is exported from overworld.asm.)
+# - trainer_engine.asm: GetTrainerName_/SaveTrainerName/_TrainerNameText/
+#   JessieJamesPic unported; WriteOAMBlock (home/oam.asm). DisplayTextID is a
+#   ret-stub (home_stubs.asm), not a real body.
+# - text_script.asm: closure is 15 symbols deep — Joypad (undefined anywhere),
+#   4 Tier-1 text strings, and 8 DisplayTextID special-case dispatch targets
+#   (Bill's PC / mart / Pokémon Center / vending / cable club / Pikachu /
+#   Safari / prize menu) owned by the script-engine session. DisplayTextID is
+#   ret-stubbed in home_stubs.asm meanwhile; retiring that stub = linking this
+#   file (a duplicate-global link error will make the collision loud).
 # reload_sprites.asm promoted to GAME_SRCS (menus S7): naming_screen.asm calls
 # ReloadMapSpriteTilePatterns; its externs (DisableLCD/EnableLCD/InitMapSprites/
 # LoadPlayerSpriteGraphics/LoadFontTilePatterns/UpdateSprites) are all linked.
@@ -888,6 +907,17 @@ src/engine/overworld/overworld.o: \
 # NPC sprite sheets — all sprites used across all maps (generated by gen_all_assets.py)
 assets/npc_sprite_data_table.inc:
 	python3 tools/gen_all_assets.py
+
+# Alternate player sprite sheets (bike / surfing) — pret gfx/sprites.asm labels
+# RedBikeSprite / SeelSprite / SurfingPikachuSprite. Consumed by player_gfx.asm's
+# LoadPlayerSpriteGraphics dispatch (wild-live promotion).
+assets/red_bike_sprite.inc assets/seel_sprite.inc assets/surfing_pikachu_sprite.inc:
+	python3 tools/gen_all_assets.py
+
+src/engine/overworld/player_gfx.o: \
+    assets/red_bike_sprite.inc \
+    assets/seel_sprite.inc \
+    assets/surfing_pikachu_sprite.inc
 
 # Full-coverage sprite sheet pointer table (OW-A.2 P3a) — all NUM_SPRITES, incl.
 # outside-map fillers the map-object scan misses. Consumed by the faithful
@@ -1251,6 +1281,8 @@ assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_
         assets/map_headers.inc assets/extra_includes.inc assets/map_dims.inc \
         assets/map_songs.inc \
         assets/npc_sprite_data_table.inc assets/npc_dialogs/all_dialogs.inc \
+        assets/red_bike_sprite.inc assets/seel_sprite.inc \
+        assets/surfing_pikachu_sprite.inc \
         assets/toggleable_objects.inc assets/event_constants.inc \
         assets/base_stats.inc assets/growth_rates.inc \
         assets/moves.inc assets/evos_moves.inc assets/monster_names.inc \

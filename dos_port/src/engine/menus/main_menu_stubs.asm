@@ -33,9 +33,7 @@ OakSpeech:
 ; the former ret stub here is retired. (MainMenu is still not the boot path, so this
 ; seam is not yet exercised live, but it now resolves to the faithful renderer.)
 
-; DEVIATION: integration stub — PrepareForSpecialWarp (the Hall-of-Fame CONTINUE
-; special-warp path). wNumHoFTeams stays 0 until the HoF-movie writer, so this
-; path is unreachable in the live build; ret keeps the faithful branch linkable.
-global PrepareForSpecialWarp
-PrepareForSpecialWarp:
-    ret
+; PrepareForSpecialWarp stub RETIRED (wild-live promotion, 2026-07-10): the real
+; body now links from engine/overworld/special_warps.asm, which was unblocked by
+; linking engine/debug/debug_party.asm unconditionally (PrepareNewGameDebug).
+; HandleBlackOut calls it for real, so this is no longer a dead path.

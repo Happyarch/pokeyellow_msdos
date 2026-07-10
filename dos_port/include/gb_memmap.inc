@@ -297,6 +297,7 @@ wEnemyMonStatModsEnd   equ 0xCD36
 wNumMovesMinusOne      equ 0xCD6C
 wMoveData              equ 0xCD6D   ; 6-byte scratch move record (GetMoveData)
 wPayDayMoney           equ 0xCD6D   ; Pay Day scratch (BCD, 3 bytes; aliased scratch union)
+wNormalMaxPPList       equ 0xCD78   ; 4-byte scratch: each move's normal max PP (RestoreBonusPP)
 
 ; --- per-side current-move struct ($CFCB enemy / $CFD1 player) ---
 wEnemyMoveNum          equ 0xCFCB
@@ -1225,8 +1226,10 @@ BIT_TALKED_TO_TRAINER        equ 6 ; wStatusFlags3 bit 6 — talked to a trainer
 BIT_TRAINER_BATTLE           equ 3 ; wStatusFlags7 bit 3 — current battle is a trainer battle (OW-A.6)
 BIT_NO_BATTLES               equ 4 ; wStatusFlags4 bit 4 — suppress wild battles
 BIT_BATTLE_OVER_OR_BLACKOUT  equ 5 ; wStatusFlags4 bit 5 — set on battle/blackout return
+BIT_FLY_OR_DUNGEON_WARP      equ 2 ; wStatusFlags6 bit 2 — entered via Fly OR dungeon warp
 BIT_FLY_WARP                 equ 3 ; wStatusFlags6 bit 3 — entered via Fly warp (dup: m1_3_pending_symbols.inc)
 BIT_DUNGEON_WARP             equ 4 ; wStatusFlags6 bit 4 — entered via dungeon warp
+BIT_ESCAPE_WARP              equ 6 ; wStatusFlags6 bit 6 — Escape Rope / blackout warp
 %ifndef BIT_NO_MAP_MUSIC
 BIT_NO_MAP_MUSIC             equ 1 ; wStatusFlags7 bit 1 — suppress this map's default music
 %endif

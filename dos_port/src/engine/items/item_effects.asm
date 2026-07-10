@@ -38,6 +38,9 @@ global RareCandyLevelUp
 
 extern CalcStats        ; home/move_mon.asm (BH=consider-exp, ESI=stat-exp ptr, EDX=dest)
 extern CalcExperience   ; engine/pokemon/experience.asm (DH=level -> H_EXPERIENCE)
+extern AddNTimes        ; home/array.asm (ESI += AL*BX)
+extern LoadMovePPs      ; engine/pokemon/write_moves.asm (predef; reads wPredefHL/DE)
+extern AddBonusPP       ; engine/pokemon/get_max_pp.asm (EDX = max-PP src, ESI = PP byte)
 
 section .text
 
@@ -605,5 +608,68 @@ IsNextTileShoreOrWater:
     mov al, [ebp + W_TILE_IN_FRONT_OF_PLAYER]
     mov edx, 1                       ; ld de, 1
     call IsInArray                   ; CF=1 → tile is shore/water
+.done:
+    ret
+
+; ---------------------------------------------------------------------------
+; RestoreBonusPP — re-apply each PP-Up bonus to the PP slots of the mon at
+; [wWhichPokemon]. Pret ref: engine/items/item_effects.asm:RestoreBonusPP.
+;
+; Called per party mon by HealParty (engine/events/heal_party.asm), and by the
+; PP-Up item path once item USE lands. When [wUsingPPUp] == 1 only the move at
+; [wCurrentMenuItem] is touched (a PP Up is being applied right now); otherwise
+; every move gets its full stored PP-Up bonus re-added (the heal case).
+;
+; DIVERGENCE (predef → direct call, port-wide): pret reaches LoadMovePPs through
+; `predef`; the port has no bank/predef dispatch, so we stage wPredefHL/wPredefDE
+; (big-endian, as GetPredefRegisters reads them) and CALL LoadMovePPs directly —
+; the same idiom as engine/battle/load_enemy_moves.asm. LoadMovePPs clobbers
+; ESI/EDX/EBX via GetPredefRegisters, so ESI is saved across it exactly where
+; pret pushes hl.
+;
+; In:  [wWhichPokemon] = party index.  Clobbers AL, ECX, EDX, ESI; BH = 4 on exit.
+; ---------------------------------------------------------------------------
+global RestoreBonusPP
+RestoreBonusPP:
+    mov esi, wPartyMon1Moves                 ; ld hl, wPartyMon1Moves
+    mov bx, PARTYMON_STRUCT_LENGTH           ; ld bc, PARTYMON_STRUCT_LENGTH
+    mov al, [ebp + wWhichPokemon]
+    call AddNTimes                           ; ESI += wWhichPokemon * 44
+
+    push esi                                 ; push hl
+    ; predef LoadMovePPs: hl = this mon's move ids, de = wNormalMaxPPList - 1
+    mov ecx, esi
+    mov [ebp + wPredefHL], ch                ; big-endian: high byte first
+    mov [ebp + wPredefHL + 1], cl
+    mov ecx, wNormalMaxPPList - 1
+    mov [ebp + wPredefDE], ch
+    mov [ebp + wPredefDE + 1], cl
+    call LoadMovePPs                         ; → wNormalMaxPPList[0..3]
+    pop esi                                  ; pop hl
+
+    add esi, MON_PP - MON_MOVES              ; ld c,MON_PP-MON_MOVES / ld b,0 / add hl,bc
+    mov edx, wNormalMaxPPList                ; ld de, wNormalMaxPPList
+    xor bh, bh                               ; ld b, 0 — move counter
+.loop:
+    inc bh                                   ; inc b
+    cmp bh, 5                                ; reached the end of the moves?
+    je .done                                 ; ret z
+    mov al, [ebp + wUsingPPUp]
+    dec al                                   ; using a PP Up?
+    jnz .skipMenuItemIDCheck
+    ; applying a PP Up: only touch the move it is used on
+    mov al, [ebp + wCurrentMenuItem]
+    inc al
+    cmp al, bh
+    jne .nextMove
+.skipMenuItemIDCheck:
+    mov al, [ebp + esi]                      ; move PP byte (PP-Up bits in 7-6)
+    and al, PP_UP_MASK                       ; ZF set => no PP Ups on this move
+    jz .nextMove                             ; pret: call nz, AddBonusPP
+    call AddBonusPP                          ; EDX = normal max PP addr, ESI = PP byte
+.nextMove:
+    inc esi                                  ; inc hl
+    inc edx                                  ; inc de
+    jmp .loop
 .done:
     ret

@@ -57,10 +57,8 @@ extern DelayFrames            ; src/video/frame.asm — BL = frame count
 extern IsNextTileShoreOrWater ; src/engine/items/item_effects.asm — CF=1 shore/water ahead (OW-A.6)
 extern CheckForJumpingAndTilePairCollisions ; src/engine/overworld/ledges.asm (linked, OW-7.2)
 extern TilePairCollisionsWater              ; src/engine/overworld/ledges.asm — water seam pairs
-%ifdef WILD_ENCOUNTERS_LIVE
-extern NewBattle              ; wild_encounter_check.asm — wild/trainer encounter gate (M7.1, gated)
-extern AllPokemonFainted      ; wild_encounter_check.asm — blackout handoff (gated with NewBattle)
-%endif
+extern NewBattle              ; wild_encounter_check.asm — wild/trainer encounter gate (LIVE)
+extern AllPokemonFainted      ; wild_encounter_check.asm — blackout handoff
 extern DisableLCD
 extern EnableLCD
 extern DelayFrame
@@ -75,11 +73,19 @@ extern ResetUsingStrengthOutOfBattleBit ; overworld_stubs.asm (TODO OW-A.4(b)/fa
 extern MapEntryAfterBattle             ; overworld_stubs.asm (TODO OW-A.4(b)/faithful)
 extern EnterMapAnim                    ; overworld_stubs.asm (TODO faithful — player_animations)
 extern IsSurfingPikachuInParty         ; overworld_stubs.asm (TODO faithful — pikachu follower)
-%ifdef PLAYER_STATE_LINKED
-extern CheckForceBikeOrSurf            ; player_state.asm (check-only until OW-7.2)
-%endif
+extern CheckForceBikeOrSurf            ; player_state.asm (LINKED — wild-live promotion)
 extern LoadWildData                    ; wild_mons.asm — per-map wild data → wGrass/wWaterMons (OW-A.5)
-extern ClearSprites
+extern LoadPlayerSpriteGraphics        ; engine/overworld/player_gfx.asm (faithful pret dispatcher;
+                                       ; the walking-only scaffold that lived here is retired)
+; HandleBlackOut's closure (wild-live promotion)
+extern GBFadeOutToBlack                ; home/fade.asm
+extern StopAllMusic                    ; home/audio.asm
+extern StopAllSounds                   ; init/init.asm
+extern g_audio_engine_online           ; home/audio.asm — 0 until audio_init (StopMusic guard)
+extern BankswitchCommon                ; home/bankswitch.asm (flat: records hLoadedROMBank)
+extern ResetStatusAndHalveMoneyOnBlackout ; engine/events/black_out.asm
+extern PrepareForSpecialWarp           ; engine/overworld/special_warps.asm (real body — stub retired)
+extern SpecialEnterMap                 ; engine/overworld/special_warps.asm
 extern g_tilecache_dirty
 extern hide_window           ; src/ppu/ppu.asm — empty the window list (count=0)
 extern set_single_window     ; src/ppu/ppu.asm — define g_windows[] as one descriptor
@@ -216,8 +222,10 @@ global LoadWarpDestination
 global PlayerStepOutFromDoor
 global IgnoreInputForHalfSecond
 global IsPlayerStandingOnDoorTile          ; OW-7.2: for player_state.asm (check-only) when it promotes
-global LoadTilesetHeader                   ; OW-7.2: for special_warps.asm (check-only) when it promotes
-global LoadPlayerSpriteGraphics
+global LoadTilesetHeader                   ; OW-7.2: for special_warps.asm (now linked)
+; LoadPlayerSpriteGraphics moved to engine/overworld/player_gfx.asm (wild-live
+; promotion) — the scaffold here is retired; player_sprite is exported to it.
+global player_sprite                       ; pret RedSprite; consumed by player_gfx.asm
 global RefreshCollisionTileMap             ; menus S4: home/start_menu.asm restores
                                            ; the W_TILEMAP mirror around the menu
 
@@ -643,12 +651,9 @@ EnterMap:
 
     ; call IsSurfingPikachuInParty
     call IsSurfingPikachuInParty
-    ; farcall CheckForceBikeOrSurf — GATED: player_state.asm is check-only (OW-1.8), so
-    ; a live call would be an unresolved extern. Un-gate at OW-7.2 player_state promotion
-    ; (same idiom as WILD_ENCOUNTERS_LIVE / NPC_MOVEMENT_SCRIPTS_LINKED).
-%ifdef PLAYER_STATE_LINKED
+    ; farcall CheckForceBikeOrSurf (player_state.asm — LINKED as of the wild-live
+    ; promotion; the PLAYER_STATE_LINKED gate is retired).
     call CheckForceBikeOrSurf ; handle SF-island currents / forced cycling-road bike
-%endif
 
     ; ld hl, wStatusFlags6 / bit BIT_DUNGEON_WARP,[hl] / res BIT_DUNGEON_WARP,[hl]
     ; (pret's bit test result is unused here — just clear the bit)
@@ -801,14 +806,11 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     ; don't walk. OW-A.6 faithful turn tail: arm the Pikachu-collision grace
     ; counter, flag the in-place turn for this frame (.moveAhead clears it), and —
     ; pret :197 — roll a wild encounter on the turn itself (turning in grass can
-    ; trigger a battle; gated until TryDoWildEncounter's closure links, see
-    ; wild_encounter_check.asm).
+    ; trigger a battle).
     mov byte [ebp + wPikachuCollisionCounter], 8
     or byte [ebp + wMiscFlags], (1 << BIT_TURNING)   ; set BIT_TURNING, [hl]
-%ifdef WILD_ENCOUNTERS_LIVE
     call NewBattle                            ; CF=1 → a battle occurred on the turn
     jc .battleOccurred
-%endif
     jmp OverworldLoop                         ; turn only — no step
 
 .walkStart:
@@ -875,15 +877,11 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     ; --- M7.1/OW-A.6: step count + wild-encounter gate (pret home/overworld.asm:249-268) ---
     ; The tile step just finished. pret runs StepCountCheck here, then (after
     ; poison/safari, deferred) NewBattle, taking the warp checks only when no battle
-    ; occurred. StepCountCheck only decrements the WRAM step counters (nothing in the
-    ; port reads wStepCounter yet), so it is safe and wired unconditionally. The live
-    ; wild-battle trigger stays gated behind WILD_ENCOUNTERS_LIVE: TryDoWildEncounter's
-    ; closure is still CHECK-only (IsPlayerStandingOnDoorTileOrWarpTile → player_state,
-    ; DisplayTextID → text_script, HandleBlackOut unported) — see the Makefile
-    ; HOME_CHECK_SRCS notes. The faithful post-battle path (.battleOccurred) is now
-    ; built (OW-A.6) and rides the same gate.
+    ; occurred. StepCountCheck decrements the WRAM step counters — including
+    ; wNumberOfNoRandomBattleStepsLeft, the post-battle 3-step encounter-free window
+    ; that NewBattle's DetermineWildOpponent gate reads. Wild encounters are LIVE
+    ; (the WILD_ENCOUNTERS_LIVE gate is retired).
     call StepCountCheck
-%ifdef WILD_ENCOUNTERS_LIVE
     call NewBattle                            ; CF=1 → a wild/forced battle occurred
     jnc .noBattleOccurred                     ; pret: jp nc, CheckWarpsNoCollision
 .battleOccurred:
@@ -912,7 +910,6 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
 .allFainted:
     jmp AllPokemonFainted                     ; wild_encounter_check.asm → HandleBlackOut
 .noBattleOccurred:
-%endif
     ; Edge-detect: save previous BIT_STANDING_ON_WARP then clear it.
     ; Mirrors pret: res BIT_STANDING_ON_WARP first, then set it if coords match.
     test byte [ebp + W_MOVEMENT_FLAGS], (1 << BIT_STANDING_ON_WARP)
@@ -1329,47 +1326,76 @@ LoadMapData:
     ret
 
 ; ---------------------------------------------------------------------------
-; LoadPlayerSpriteGraphics — Phase 2 scaffold (player-only sprite VRAM load).
-; Lays out the 24-tile Red overworld sprite the way the engine indexes it:
-;   tiles 0-11  (standing/turn poses) → OBJ tiles $00-$0B at GB_VCHARS0 ($8000)
-;   tiles 12-23 (walking poses)       → OBJ tiles $80-$8B at GB_VFONT  ($8800)
-; The walking tiles share VRAM with the text font (vChars1); the GB does the
-; same and reloads sprite/font tiles when switching between map and text, which
-; is why UpdatePlayerSprite hides the player when a text box is in front of it.
-; The real engine (InitMapSprites / VRAM-slot allocation / Pikachu) comes later.
+; HandleBlackOut — the whole party fainted: fade out, kill the music, halve the
+; money / heal the party, and warp the player to their last Pokémon Center.
+; Pret ref: home/overworld.asm:737 (HandleBlackOut, bank 00 — golden 00:0762).
+; Does NOT print the "blacked out" message (its caller does).
+; Reached from AllPokemonFainted (engine/overworld/wild_encounter_check.asm).
 ; ---------------------------------------------------------------------------
-PLAYER_STANDING_TILES equ 12               ; tiles 0-11
-PLAYER_TILE_BYTES     equ PLAYER_STANDING_TILES * TILE_SIZE  ; 192 bytes
+global HandleBlackOut
+HandleBlackOut:
+    call GBFadeOutToBlack
+    mov al, 0x08                        ; ld a, $08 — fade-out control value
+    call StopMusic
+    ; ld hl, wStatusFlags4 / res BIT_BATTLE_OVER_OR_BLACKOUT, [hl]
+    and byte [ebp + W_STATUS_FLAGS_4], (~(1 << BIT_BATTLE_OVER_OR_BLACKOUT)) & 0xFF
+    mov al, 0x01                        ; ld a, BANK(PrepareForSpecialWarp) — golden 01:6042
+    call BankswitchCommon               ; flat: records hLoadedROMBank (no MBC write)
+    call ResetStatusAndHalveMoneyOnBlackout   ; callfar (flat: direct call)
+    call PrepareForSpecialWarp
+    call PlayDefaultMusicFadeOutCurrent
+    jmp SpecialEnterMap                 ; jp SpecialEnterMap (tail)
 
-LoadPlayerSpriteGraphics:
-    mov byte [g_tilecache_dirty], 1     ; VRAM tile data changes → rebuild decode cache
-    push eax
-    push ecx
-    push esi
-    push edi
+; ---------------------------------------------------------------------------
+; StopMusic — arm the audio fade-out (AL = wAudioFadeOutControl), stop the music
+; engine, wait for the fade to finish, then silence every channel.
+; Pret ref: home/overworld.asm:752 (StopMusic, golden 00:0785).
+; In: AL = fade-out control value.
+;
+; DIVERGENCE 1 (audio tick location): on the GB the VBlank ISR advances the audio
+; engine, so pret's bare `jr nz, .wait` spin sees wAudioFadeOutControl reach 0.
+; The port has no VBlank audio ISR — the tick lives in DelayFrame (→ audio_tick →
+; FadeOutAudio, which is what decrements the counter). A bare spin here would
+; hang forever, so the wait pumps DelayFrame. Same idiom and same reason as
+; home/audio.asm:WaitForSoundToFinish. (engine/overworld/healing_machine.asm
+; bounds its copy of this spin instead; pumping is the correct form.)
+;
+; DIVERGENCE 2 (engine-offline guard): the port has a state the GB does not — the
+; audio engine can be OFFLINE (`/NOSOUND`, or any build before audio_init runs;
+; audio_tick self-gates on g_audio_engine_online). Offline, FadeOutAudio never
+; runs, so nothing would ever clear the byte we just wrote and the wait above
+; would spin forever. PlaySound already carries the mirror-image scaffold — it
+; swallows requests while offline so WaitForSoundToFinish's spin exits at once —
+; but StopMusic writes wAudioFadeOutControl directly, bypassing that. So: offline,
+; skip the fade and clear the byte, preserving pret's post-condition
+; (wAudioFadeOutControl == 0 on return) for whoever brings the engine online later.
+; ---------------------------------------------------------------------------
+global StopMusic
+StopMusic:
+    mov [ebp + wAudioFadeOutControl], al    ; ld [wAudioFadeOutControl], a
+    call StopAllMusic
+    cmp byte [g_audio_engine_online], 0     ; PORT GUARD — see DIVERGENCE 2
+    jz .offline
+.wait:
+    mov al, [ebp + wAudioFadeOutControl]
+    test al, al                             ; and a — fade-out finished?
+    jz .done
+    call DelayFrame                         ; pump the audio tick (see DIVERGENCE 1)
+    jmp .wait
+.offline:
+    mov byte [ebp + wAudioFadeOutControl], 0 ; no tick will ever clear it
+.done:
+    jmp StopAllSounds                       ; jp StopAllSounds (tail)
 
-    ; --- standing tiles (0-11) → OBJ tiles $00-$0B at $8000 ---
-    mov esi, player_sprite
-    lea edi, [ebp + GB_VCHARS0]
-    mov ecx, PLAYER_TILE_BYTES
-    rep movsb
-
-    ; --- walking tiles (12-23) → OBJ tiles $80-$8B at $8800 (vChars1) ---
-    mov esi, player_sprite + PLAYER_TILE_BYTES
-    lea edi, [ebp + GB_VFONT]
-    mov ecx, PLAYER_TILE_BYTES
-    rep movsb
-
-    ; clear shadow OAM (PrepareOAMData fills it; nothing stale before then)
-    call ClearSprites
-
-    pop edi
-    pop esi
-    pop ecx
-    pop eax
-    ret
-
-    ret
+; LoadPlayerSpriteGraphics — RETIRED from this file (wild-live promotion).
+; The Phase-2 scaffold that lived here (walking-only, standing tiles → $8000 /
+; walking tiles → $8800, plus a `call ClearSprites`) is superseded by the
+; faithful pret dispatcher now linked from engine/overworld/player_gfx.asm
+; (LoadPlayerSpriteGraphics → Walking/Bike/Surfing → LoadPlayerSpriteGraphicsCommon).
+; Same VRAM layout; the scaffold's extra ClearSprites is intentionally NOT carried
+; over — pret's LoadPlayerSpriteGraphicsCommon (home/overworld.asm:1775) does not
+; clear OAM, and neither does pret's LoadMapData. `player_sprite` (pret RedSprite)
+; stays defined here and is exported for player_gfx.asm.
 
 ; ---------------------------------------------------------------------------
 ; ResetMapVariables — faithful translation.

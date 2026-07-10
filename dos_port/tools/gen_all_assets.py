@@ -384,6 +384,26 @@ def main():
         )
 
     # ------------------------------------------------------------------
+    # 3b. Alternate player sprite sheets (bike / surfing), consumed by
+    #     LoadPlayerSpriteGraphics' dispatch in engine/overworld/player_gfx.asm.
+    #     Labels are pret's (gfx/sprites.asm:35,74,87) — unlike the legacy
+    #     "player_sprite" label above, which aliases pret RedSprite.
+    # ------------------------------------------------------------------
+    for stem, label in (
+        ("red_bike",        "RedBikeSprite"),
+        ("seel",            "SeelSprite"),
+        ("surfing_pikachu", "SurfingPikachuSprite"),
+    ):
+        src = GFX_SPRITES / f"{stem}.2bpp"
+        if src.exists():
+            write_inc(
+                ASSETS / f"{stem}_sprite.inc",
+                label,
+                src.read_bytes(),
+                f"{label} overworld sprite 2bpp → [EBP+GB_VCHARS0] ($8000)",
+            )
+
+    # ------------------------------------------------------------------
     # 4. NPC sprite assets — all sprites used in any map's object_event lines.
     #
     # Per-sprite:  assets/npc_sprites/<stem>.inc  (full 24-tile sheet)

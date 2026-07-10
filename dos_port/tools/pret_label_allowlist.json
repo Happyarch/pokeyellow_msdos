@@ -887,6 +887,10 @@
    "port_file": "dos_port/src/engine/overworld/simulate_joypad.asm",
    "why": "pret home/overworld.asm split across port files (draft Session H)"
   },
+  "HandleBlackOut": {
+   "port_file": "dos_port/src/engine/overworld/overworld.asm",
+   "why": "pret home/overworld.asm split across port files; overworld.asm is the port's home/overworld.asm (wild-live promotion)"
+  },
   "HandleMidJump": {
    "port_file": "dos_port/src/engine/overworld/ledges.asm",
    "why": "pret home/overworld.asm split across port files (draft Session H)"
@@ -932,8 +936,8 @@
    "why": "pret home/overworld.asm split across port files (draft Session H)"
   },
   "LoadPlayerSpriteGraphics": {
-   "port_file": "dos_port/src/engine/overworld/overworld.asm",
-   "why": "pret home/overworld.asm split across port files (draft Session H)"
+   "port_file": "dos_port/src/engine/overworld/player_gfx.asm",
+   "why": "pret home/overworld.asm split across port files; the faithful dispatcher + its Walking/Bike/Surfing/Common family live together in player_gfx.asm (the wild-live promotion retired the walking-only scaffold that held this name in overworld.asm)"
   },
   "LoadPlayerSpriteGraphicsCommon": {
    "port_file": "dos_port/src/engine/overworld/player_gfx.asm",
@@ -998,6 +1002,10 @@
   "StopBikeSurf": {
    "port_file": "dos_port/src/engine/overworld/player_gfx.asm",
    "why": "pret home/overworld.asm split across port files (draft Session H)"
+  },
+  "StopMusic": {
+   "port_file": "dos_port/src/engine/overworld/overworld.asm",
+   "why": "pret home/overworld.asm split across port files; overworld.asm is the port's home/overworld.asm (wild-live promotion) — StopMusic sits beside its only caller HandleBlackOut"
   },
   "SwitchToMapRomBank": {
    "port_file": "dos_port/src/home/bankswitch.asm",
@@ -1260,18 +1268,13 @@
   },
   {
    "rule": "dup_def",
-   "key": "LoadPlayerSpriteGraphics",
-   "why": "known interim: Phase-2 scaffold in overworld.asm is linked; faithful body in player_gfx.asm is check-only (HOME_CHECK_SRCS). Scaffold documented in overworld.asm; retire on player_gfx promotion"
-  },
-  {
-   "rule": "dup_def",
    "key": "EnterMapAnim",
    "why": "known interim (OW-5.1): overworld_stubs.asm ret-stub is linked (EnterMap's caller); faithful body in player_animations.asm is check-only (HOME_CHECK_SRCS). Delete stub when player_animations.asm is promoted to GAME_SRCS at OW-7.2 (same pattern as SpawnPikachu)"
   },
   {
    "rule": "dup_def",
-   "key": "PrepareForSpecialWarp",
-   "why": "known interim (OW-5.2): main_menu_stubs.asm ret-stub is linked (its caller); faithful body in special_warps.asm is check-only (HOME_CHECK_SRCS). Delete stub when special_warps.asm is promoted at OW-7.2 (same pattern as EnterMapAnim). NB: LoadSpecialWarpData + warp data tables are still deferred (event_displacement/flat-pointer blocker)"
+   "key": "DisplayTextID",
+   "why": "known interim (wild-live promotion): home_stubs.asm holds a documented ret-stub that is LINKED; home/text_script.asm holds the real body but stays check-only (HOME_CHECK_SRCS) because its link closure is 15 symbols deep and 8 of them are DisplayTextID special-case dispatch targets owned by the script-engine session. The stub's only linked caller is TryDoWildEncounter's repel-wore-off branch, unreachable until item USE lands. Retire by linking text_script.asm and DELETING the stub — the duplicate global is then a loud link error, not a silent shadow."
   }
  ]
 }

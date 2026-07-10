@@ -218,6 +218,42 @@ AI wiring, generators). **[RESOLVED]** = fixed on `master` after this audit — 
 
 ---
 
+### W-1. `InitBattle` corrupts the BG tile cache — overworld renders as solid grass after a wild encounter **[CONFIRMED — runtime, 2026-07-10]**
+
+- **Symptom:** with wild encounters live, walking into Route 1 grass until an encounter fires turns the
+  whole screen into one repeated grass tile.
+- **Isolation (three-point A/B, live DOSBox-X):**
+  1. `DISABLE_WILD=1` (both `NewBattle` call sites de-wired, verified via `nm -u src/engine/overworld/overworld.o`
+     showing no `NewBattle` reference) → **corruption gone**. So it is on the encounter path.
+  2. `SKIP_INITBATTLE=1` (encounter roll + the whole faithful `.battleOccurred` return path stay live —
+     `AnyPartyAlive` → `DelayFrames 10` → `jmp EnterMap` — but `call InitBattle` is removed, verified via
+     `nm -u src/engine/overworld/wild_encounter_check.o`) → **corruption gone**.
+  3. Therefore the fault is inside **`InitBattle` / the bespoke battle-screen renderer**, NOT in
+     `OverworldLoop`'s encounter trigger, NOT in `NewBattle`/`TryDoWildEncounter`, and NOT in the
+     post-battle `EnterMap` reload. The overworld side is exonerated.
+- **Why it only surfaced now:** encounters were gated off behind `-D WILD_ENCOUNTERS_LIVE` until the
+  wild-live promotion (2026-07-10), so nothing had ever driven `InitBattle` from `OverworldLoop`. The
+  `DEBUG_BATTLE` harness enters the battle screen from a *cold* boot, which is why the golden suite
+  never caught it.
+- **Prime suspect:** `g_tilecache_dirty`. CLAUDE.md's rule is that any routine writing VRAM tile data
+  must set it, so `render_bg` re-decodes `tile_cache`. `InitBattle`'s tile loads mostly route through
+  `copy2.asm`/`pics.asm`/`load_font.asm` (all of which do set it), so the leak is more likely a direct
+  VRAM write, or state (`wSurroundingTiles` / the tileset header) left stale for the returning map.
+- **Owner: battle. Severity: HIGH — this is the default gameplay path now.** Not fixed in the wild-live
+  promotion (out of its scope: it is squarely battle-engine, and the promotion's own paths are proven
+  clean by the A/B above).
+
+### W-2. `pokeballs.asm` writes VRAM tile data without setting `g_tilecache_dirty` **[CONFIRMED — static]**
+
+- Every other VRAM-tile writer in the tree sets the flag (`pics.asm`, `load_font.asm`, `copy2.asm`,
+  `bg_anim.asm`, `title.asm`, `map_sprites.asm`, `update_map.asm`, `player_gfx.asm`, `overworld.asm`,
+  `init.asm`, and four `engine/menus/*`). `src/engine/battle/pokeballs.asm` is the sole exception.
+- Not on the W-1 repro path (no ball is thrown), so it is a *separate* latent bug: the decoded
+  `tile_cache` will hold stale tiles after the ball animation writes VRAM.
+- **Owner: battle. Severity: medium (latent).**
+
+---
+
 ## TIER 4 — COVERAGE GAPS (byte-faithful or absent code not wired into the live EXE — re-scope tickets, not fidelity bugs)
 
 These are the biggest *functional* gaps but are tracked deferrals, not divergences in translated logic:

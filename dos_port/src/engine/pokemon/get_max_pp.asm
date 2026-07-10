@@ -23,6 +23,7 @@ section .text
 global GetMaxPP
 global GetSelectedMoveOffset
 global GetSelectedMoveOffset2
+global AddBonusPP        ; also called by engine/items/item_effects.asm:RestoreBonusPP
 
 extern AddNTimes
 extern Divide

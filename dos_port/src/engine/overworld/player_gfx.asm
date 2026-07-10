@@ -96,13 +96,11 @@ extern AdvancePlayerSprite          ; src/engine/overworld/overworld.asm
 extern PlayDefaultMusic             ; src/home/audio.asm (real gateway)
 
 ; Player sprite tile data. player_sprite is the port's existing walking (Red)
-; sprite set (assets/player_sprite.inc), i.e. pret RedSprite.
+; sprite set (assets/player_sprite.inc), i.e. pret RedSprite; it is defined in
+; engine/overworld/overworld.asm and exported from there.
 extern player_sprite                ; == RedSprite (walking)
-; MISSING port assets (bike/surf) — extern'd so the file assembles; a LINK build
-; needs these generated (see SUMMARY):
-extern RedBikeSprite                ; bike
-extern SeelSprite                   ; surfing (no Pikachu following)
-extern SurfingPikachuSprite         ; surfing with Pikachu
+; RedBikeSprite / SeelSprite / SurfingPikachuSprite are generated Tier-1 data,
+; defined at the bottom of this file from assets/*_sprite.inc (gen_all_assets.py).
 
 ; ---------------------------------------------------------------------------
 ; Globals
@@ -309,3 +307,18 @@ BikeRidingTilesets:
     db SHIP_PORT
     db CAVERN
     db 0xFF                                  ; end
+
+; ---------------------------------------------------------------------------
+; Alternate player sprite sheets — pret gfx/sprites.asm:35,74,87
+; (RedBikeSprite / SeelSprite / SurfingPikachuSprite). Tier-1 generated data:
+; assets/<stem>_sprite.inc, emitted by tools/gen_all_assets.py from
+; gfx/sprites/<stem>.2bpp. Each is a 384-byte, 24-tile sheet laid out exactly
+; like player_sprite (12 standing tiles + 12 walking tiles), which is what
+; LoadPlayerSpriteGraphicsCommon's two 192-byte copies assume.
+; ---------------------------------------------------------------------------
+global RedBikeSprite
+global SeelSprite
+global SurfingPikachuSprite
+%include "assets/red_bike_sprite.inc"
+%include "assets/seel_sprite.inc"
+%include "assets/surfing_pikachu_sprite.inc"

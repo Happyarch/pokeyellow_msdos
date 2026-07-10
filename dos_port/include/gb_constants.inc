@@ -242,6 +242,14 @@ BICYCLE                equ 0x06   ; StartMenu_Item special-cases it (skips the U
 BIT_LINK_CONNECTED     equ 6      ; wStatusFlags4: link session active (SAVE → RESET label)
 BIT_ALWAYS_ON_BIKE     equ 5      ; wStatusFlags6: map forbids dismounting (Cycling Road)
 
+; --- joypad button masks (constants/hardware.inc:96-97) ---
+%ifndef PAD_CTRL_PAD
+PAD_CTRL_PAD           equ 0xF0   ; %1111_0000 — D-pad (down/up/left/right)
+%endif
+%ifndef PAD_BUTTONS
+PAD_BUTTONS            equ 0x0F   ; %0000_1111 — A/B/SELECT/START
+%endif
+
 ; --- wild encounter constants (constants/pokemon_data_constants.asm) ---
 NUM_WILDMONS            equ 10
 WILDDATA_LENGTH         equ 1 + NUM_WILDMONS * 2   ; = 21 (rate + 10×(level,species))

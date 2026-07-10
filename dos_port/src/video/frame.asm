@@ -38,6 +38,7 @@ extern pad_quit
 extern cleanup
 extern PrepareOAMData
 extern TrackPlayTime         ; M2.1: advance play clock + CountDownIgnoreInputBitReset (src/util/play_time.asm)
+extern Random                ; src/home/random.asm — pret VBlank RNG churn (home/vblank.asm:43)
 extern UpdateMovingBgTiles   ; M2.2: BG tile-animation step (self-gates on hTileAnimations)
 extern VBlankCopyBgMap       ; M2.2: staged BG-map copy (self-gates on its row-count)
 %ifdef DEBUG_NPC_WALK
@@ -101,6 +102,15 @@ DelayFrame:
     call UpdateMovingBgTiles
     call update_oam             ; PrepareOAMData → shadow OAM, then DMA to OAM
     call TrackPlayTime          ; pret VBlank: play clock + CountDownIgnoreInputBitReset (post-PrepareOAMData)
+    ; pret home/vblank.asm:43 — `call Random`, every VBlank, between TrackPlayTime
+    ; and ReadJoypad. This is the ONLY thing that churns hRandomAdd/hRandomSub for
+    ; code that reads them without calling Random itself — most importantly
+    ; TryDoWildEncounter, whose encounter roll is `hRandomAdd < wGrassRate` and
+    ; whose slot pick is `hRandomSub`. Without it those two bytes only advanced when
+    ; some NPC-wander path happened to call Random, leaving them stale and highly
+    ; correlated at the moment of the step check — wild encounters fired only very
+    ; rarely (observed: ~1 per 3 minutes of walking in grass). Restored 2026-07-10.
+    call Random
     call joypad_update
     ; hFrameCounter guarded decrement — pret VBlank: `and a / jr z / dec [hl]`.
     ; Unblocks callers using pret's set-hFrameCounter-and-spin idiom (M2.1).

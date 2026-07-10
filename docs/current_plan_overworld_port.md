@@ -215,7 +215,7 @@ interactively with the user.
       verification. The walk-north baseline was refreshed after OW-A.1 (now captures
       the correctly-enabled flower animation).
 
-### Stage A — Fidelity rectification + pret-label restoration `[x]` COMPLETE 2026-07-10 (OW-A.6 was the last open ticket; documented tails: A.1's minor `hMovingBGTilesCounter1` reset, A.5's save/continue `BIT_NO_PREVIOUS_MAP` deferral, and the OW-A.6 "wild-live promotion" follow-up)
+### Stage A — Fidelity rectification + pret-label restoration `[x]` COMPLETE 2026-07-10 (OW-A.6 was the last open ticket; its "wild-live promotion" follow-up landed 2026-07-10 — wild encounters are ON. Documented tails: A.1's minor `hMovingBGTilesCounter1` reset and A.5's save/continue `BIT_NO_PREVIOUS_MAP` deferral)
 
 **TICKET OW-A.1: LoadTilesetHeader rectification** `[SWARM/Sonnet]` `[x] DONE 2026-07-04`
 - Pret: `engine/overworld/tilesets.asm:LoadTilesetHeader` (+ `data/tilesets/tileset_headers.asm`, `DungeonTilesets`)
@@ -461,7 +461,8 @@ root pret tree.
   (wCurMap/wLastMap, LoadWarpDestination, view/scroll reset, door flags) mirrors WarpFound2's body;
   EnterMap's LoadMapData then re-loads for the destination. Double InitMapSprites (port `.warpTransition`
   + EnterMap→LoadMapData) is redundant-but-harmless (idempotent slot repopulate). `.battleOccurred`
-  wired to route to the now-existing spine but left dead (WILD_ENCOUNTERS_LIVE off; full tail = OW-A.6).
+  wired to route to the now-existing spine (dead until the wild-live promotion, 2026-07-10, which
+  retired the WILD_ENCOUNTERS_LIVE gate and made this the live post-battle path).
   - **SCOPE CORRECTION vs ticket text (pret ground truth):** the ticket said route
     `.warpTransition`/**`.mapTransition`** through EnterMap, but pret does NOT route connection
     crossings through EnterMap — `CheckMapConnections` ends `jp OverworldLoopLessDelay`
@@ -600,7 +601,7 @@ root pret tree.
   bodyless "faithful translation" doc block to a `DIVERGENCE: obsoleted by native render_bg` note.
 
 **TICKET OW-A.6: OverworldLoop wild/surf gaps** — **DONE 2026-07-10** (both items; the
-gate-flip itself is a separate follow-up, see "wild-live promotion" below).
+gate retirement landed in the "wild-live promotion" follow-up below, also 2026-07-10).
 - [x] **On-turn NewBattle** (pret `:186-199`): the turn-only branch now carries the
   faithful tail — `wPikachuCollisionCounter=8`, `set BIT_TURNING` (wMiscFlags), and the
   `call NewBattle / jc .battleOccurred` roll (gated `WILD_ENCOUNTERS_LIVE`); `.moveAhead`
@@ -636,12 +637,82 @@ gate-flip itself is a separate follow-up, see "wild-live promotion" below).
 - Symbols promoted: wPikachuSpawnState 0xD430 (player_animations local deleted),
   wPikachuCollisionCounter 0xD434, BIT_TURNING=2, BIT_TALKED_TO_TRAINER=6,
   BIT_TRAINER_BATTLE=3 → gb_memmap.inc.
-- **Follow-up: "wild-live promotion"** (turns encounters ON — separate ticket): link
-  player_state.asm (IsPlayerStandingOnDoorTileOrWarpTile) + text_script.asm
-  (DisplayTextID), port HandleBlackOut (StopMusic +
-  ResetStatusAndHalveMoneyOnBlackout + real PrepareForSpecialWarp), then link
-  wild_encounters.asm, define WILD_ENCOUNTERS_LIVE, and retire the gate. Full
-  blocker map: wild_encounter_check.asm gating header + Makefile HOME_CHECK_SRCS notes.
+- **Follow-up: "wild-live promotion"** — **DONE 2026-07-10.** Random wild encounters
+  are ON end-to-end; the `WILD_ENCOUNTERS_LIVE` gate is **retired** (not defaulted —
+  the `%ifdef`s are deleted, OW-7.3 pattern), as is `PLAYER_STATE_LINKED`.
+  - **Files promoted to GAME_SRCS (6):** `player_gfx.asm`, `player_state.asm`,
+    `special_warps.asm`, `battle/wild_encounters.asm`, `home/money.asm`, and
+    `debug/debug_party.asm` (the last now linked **unconditionally**, matching pret
+    `main.asm:19`, which is what unblocked `special_warps.asm`'s `PrepareNewGameDebug`).
+  - **New files:** `engine/events/black_out.asm`
+    (`ResetStatusAndHalveMoneyOnBlackout`), `engine/events/heal_party.asm`
+    (`HealParty`), `home/home_stubs.asm` (`DisplayTextID` ret-stub).
+    `RestoreBonusPP` ported into the path-mirrored `engine/items/item_effects.asm`;
+    `AddBonusPP` (already ported in `get_max_pp.asm`) exported.
+  - **New in overworld.asm:** `HandleBlackOut` + `StopMusic` (allowlisted relocations).
+  - **Stub retired, not shadowed:** the `PrepareForSpecialWarp` ret-stub is DELETED
+    from `main_menu_stubs.asm`; both extern comments repointed. The walking-only
+    `LoadPlayerSpriteGraphics` scaffold is DELETED from `overworld.asm` in favour of
+    player_gfx.asm's faithful dispatcher (its extra `call ClearSprites` is dropped —
+    pret's `LoadPlayerSpriteGraphicsCommon` does not clear OAM; the `overworld_pallet`
+    golden compares OAM entries 0-3 and still passes).
+  - **Assets:** `RedBikeSprite`/`SeelSprite`/`SurfingPikachuSprite` are now generated
+    Tier-1 data (`gen_all_assets.py` → `assets/{red_bike,seel,surfing_pikachu}_sprite.inc`),
+    wired into `make assets`.
+  - **Two ticket premises turned out to be wrong, and were NOT acted on:**
+    1. `player_state.asm`'s `H_WARP_DESTINATION_MAP equ 0xFF8B` was flagged as
+       "wrongly aliases hPreviousTileset". It is **correct**: pret unions
+       `hBaseTileID`/`hDexWeight`/`hWarpDestinationMap`/`hOAMTile`/`hROMBankTemp`/
+       `hPreviousTileset`/`hRLEByteValue` at one byte (`ram/hram.asm:8-19`), and the
+       golden `pokeyellow.sym` resolves **all** of them to `$FF8B`. Giving it its own
+       HRAM byte would have *introduced* a divergence. Makefile note corrected.
+    2. `text_script.asm` was to be linked. Its closure is **15 symbols deep** —
+       `Joypad` (undefined anywhere in the port), 4 Tier-1 text strings, and 8
+       `DisplayTextID` special-case dispatch targets owned by the script-engine
+       session. Per the ticket's own stop-and-ask rule, user chose the documented
+       ret-stub. Safe because `DisplayTextID`'s only linked caller is
+       `TryDoWildEncounter`'s `.lastRepelStep`, gated on `wRepelRemainingSteps != 0`,
+       which **nothing in the port ever writes** (Repel is item-USE work). The stub
+       therefore drops a message that cannot fire.
+  - **Bug found and fixed while porting:** `StopMusic`'s pret spin on
+    `wAudioFadeOutControl` would **hang forever** in the port. Two reasons: (a) the
+    port has no VBlank audio ISR — the tick lives in `DelayFrame` — so the wait pumps
+    `DelayFrame` (`WaitForSoundToFinish`'s idiom); and (b) the port has an
+    engine-OFFLINE state the GB lacks (`/NOSOUND`, or pre-`audio_init`), where
+    `FadeOutAudio` never runs and nothing would ever clear the byte `StopMusic` just
+    wrote. Guarded on `g_audio_engine_online`, preserving pret's post-condition.
+  - **Second bug found and fixed — the encounter-rarity bug (`src/video/frame.asm`).**
+    Encounters fired roughly once per *three minutes* of walking in grass. Cause: pret's
+    VBlank handler calls `Random` **every frame** (`home/vblank.asm:43`, between
+    `TrackPlayTime` and `ReadJoypad`) and the port's `DelayFrame` never did. It bumped
+    `IO_DIV` but never called `Random`, so `hRandomAdd`/`hRandomSub` only advanced when
+    some NPC-wander path happened to call `Random`. `TryDoWildEncounter` reads those two
+    bytes **directly, without calling `Random` itself** (the roll is
+    `hRandomAdd < wGrassRate`; the slot pick is `hRandomSub`), so it sampled a stale,
+    highly-correlated value. Restored the per-VBlank `call Random` at pret's exact
+    position. `make fidelity` still 6/6 (the only RNG-sensitive golden cells —
+    `overworld_pallet` OAM entries 4-11, NPC wander — are already masked as
+    RNG-path-dependent).
+  - **Runtime-verified (live, user-driven):** an encounter fires in Route 1 grass; RUN
+    returns through the faithful `.battleOccurred` → `AnyPartyAlive` → `DelayFrames 10`
+    → `EnterMap` reload. The blackout path was verified headlessly (scratch harness):
+    HP restored to MaxHP on all 6 slots, `MON_STATUS` cleared, PP restored, money
+    `$012345 → $006172` BCD (halved), and no hang in `StopMusic`.
+  - **Pre-existing defect EXPOSED (not caused) by this promotion — filed as
+    `docs/battle_audit_findings.md` W-1:** after a wild encounter the whole screen renders
+    as one grass tile. Three-point A/B proves it is `InitBattle` / the bespoke battle
+    renderer: `DISABLE_WILD=1` → clean; `SKIP_INITBATTLE=1` (encounter roll **and** the
+    full `.battleOccurred` return path still live) → clean. So `OverworldLoop`'s trigger,
+    `NewBattle`/`TryDoWildEncounter`, and the post-battle `EnterMap` reload are all
+    exonerated. It never surfaced before because encounters were gated off and
+    `DEBUG_BATTLE` enters the battle screen from a cold boot. Also filed: W-2,
+    `pokeballs.asm` writes VRAM tiles without setting `g_tilecache_dirty`.
+  - **Known hazard (faithful, left as-is):** `HealParty` with `wPartyCount == 0` runs
+    its `dec b` loop 256× (pret does too). Unreachable in a real game (you always have
+    Pikachu), but the port's `AnyPartyAlive` empty-party guard maps "no party" →
+    "all fainted" → blackout, so a no-party debug build that somehow enters a battle
+    could reach it. Bounded, not an infinite loop. Flagged rather than silently
+    de-faithfulled.
 - Verified: make check clean; default + `-D WILD_ENCOUNTERS_LIVE` variants of
   overworld.asm/wild_encounter_check.asm assemble; full build links (npc_movement.o
   in); faithdiff DoBikeSpeedup/IsNextTileShoreOrWater/IsPlayerCharacterBeingControlledByGame

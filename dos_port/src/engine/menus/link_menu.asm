@@ -85,7 +85,7 @@ extern Delay3                   ; video/frame.asm
 extern UpdateSprites            ; engine/overworld/movement.asm
 
 ; --- dispatch seam (ROOT-WIRED, Session 9 spine) ---------------------------
-extern PrepareForSpecialWarp    ; engine/menus/main_menu_stubs.asm (callfar target)
+extern PrepareForSpecialWarp    ; engine/overworld/special_warps.asm (callfar target)
 extern SpecialEnterMap          ; engine/menus/main_menu.asm       (jpfar target)
 
 ; --- SEAM to package I2 (link_cups.asm): PointerTable_f5488 targets ---------
