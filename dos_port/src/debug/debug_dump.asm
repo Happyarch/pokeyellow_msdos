@@ -139,6 +139,10 @@ global npc_log
 global npc_log_n
 global dbg_destTile
 %endif
+%ifdef DEBUG_SEAM
+global SeamLogRecord
+global DumpSeamLog
+%endif
 
 ; Each window is WIN_SIZE bytes copied from [EBP + window_offset].
 ; The host-side layout is simply these windows concatenated in table order.
@@ -199,6 +203,9 @@ fbname: db "FRAME.BIN", 0
 fgbname: db "GBSTATE.BIN", 0
 %ifdef DEBUG_NPC_WALK
 fnlog: db "NPCLOG.BIN", 0
+%endif
+%ifdef DEBUG_SEAM
+fseam: db "SEAMLOG.BIN", 0
 %endif
 
 ; GB-address start of each 64-byte dump window. Host hexdump offsets:
@@ -308,6 +315,12 @@ NPC_LOG_CAP  equ 4096            ; 12-byte records → 341 NPC walk-decisions
 npc_log:     resb NPC_LOG_CAP    ; appended by movement.asm:npc_dbg_record
 npc_log_n:   resd 1              ; bytes written so far
 dbg_destTile: resb 1            ; tile CL at CanWalkOntoTile entry (saved before clobber)
+%endif
+%ifdef DEBUG_SEAM
+SEAM_REC_SIZE equ 12
+SEAM_LOG_CAP  equ 8192            ; 12-byte records → 682 frames
+seam_log:     resb SEAM_LOG_CAP   ; appended by SeamLogRecord
+seam_log_n:   resd 1              ; bytes written so far
 %endif
 
 ; ---------------------------------------------------------------------------
@@ -1219,3 +1232,124 @@ zero_rmcs:
     pop ecx
     pop eax
     ret
+
+%ifdef DEBUG_SEAM
+; ===========================================================================
+; Seam-crossing trace harness (DEBUG_SEAM). Port-only debug code — no pret
+; counterpart. Drives the real movement primitives across a map connection and
+; records one 12-byte sample per rendered frame, so the host can see exactly
+; when CheckMapConnections fires and whether the player's coordinates, the block
+; -map view pointer, the fine scroll and the player's OAM entry stay coherent.
+;
+; Record layout (12 bytes, little-endian where noted):
+;   0  wCurMap
+;   1  wXCoord
+;   2  wYCoord
+;   3  wWalkCounter
+;   4  wCurrentTileBlockMapViewPointer low   (5 = high)
+;   6  wCurMapWidth
+;   7  wCurMapHeight
+;   8  hSCX
+;   9  hSCY
+;  10  OAM[0].Y   (player sprite; $00 => off-screen/hidden)
+;  11  OAM[0].X
+; ===========================================================================
+SeamLogRecord:
+    push eax
+    push edi
+    mov edi, [seam_log_n]
+    cmp edi, SEAM_LOG_CAP - SEAM_REC_SIZE
+    ja .full                            ; log full — drop the sample
+    add edi, seam_log
+
+    mov al, [ebp + W_CUR_MAP]                          ; 0
+    mov [edi + 0], al
+    mov al, [ebp + W_X_COORD]                          ; 1
+    mov [edi + 1], al
+    mov al, [ebp + W_Y_COORD]                          ; 2
+    mov [edi + 2], al
+    mov al, [ebp + W_WALK_COUNTER]                     ; 3
+    mov [edi + 3], al
+    mov al, [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR]  ; 4
+    mov [edi + 4], al
+    mov al, [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR + 1] ; 5
+    mov [edi + 5], al
+    mov al, [ebp + W_CUR_MAP_WIDTH]                    ; 6
+    mov [edi + 6], al
+    mov al, [ebp + W_CUR_MAP_HEIGHT]                   ; 7
+    mov [edi + 7], al
+    mov al, [ebp + H_SCX]                              ; 8
+    mov [edi + 8], al
+    mov al, [ebp + H_SCY]                              ; 9
+    mov [edi + 9], al
+    mov al, [ebp + GB_OAM + 0]                         ; 10 player OAM Y
+    mov [edi + 10], al
+    mov al, [ebp + GB_OAM + 1]                         ; 11 player OAM X
+    mov [edi + 11], al
+
+    add dword [seam_log_n], SEAM_REC_SIZE
+.full:
+    pop edi
+    pop eax
+    ret
+
+; DumpSeamLog — write seam_log to SEAMLOG.BIN and RETURN. Unlike the other dumpers
+; this does not terminate: the harness calls DumpBackbuffer afterwards, and that one
+; exits. (Ordering matters — DumpBackbuffer never returns.)
+DumpSeamLog:
+    mov ax, 0x0100
+    mov bx, 0x1001                 ; 64 KB+ real-mode buffer (log <= 8 KB)
+    int 0x31
+    jc .exit
+    mov [dos_seg], ax
+    mov [dos_sel], dx
+    movzx eax, ax
+    shl eax, 4
+    sub eax, [ds_base]
+    mov [dos_flat], eax
+
+    mov esi, fseam                 ; filename at offset 0
+    mov edi, [dos_flat]
+    mov ecx, 12                    ; "SEAMLOG.BIN" + NUL
+    rep movsb
+
+    mov esi, seam_log              ; log bytes at offset 0x10
+    mov edi, [dos_flat]
+    add edi, 0x10
+    mov ecx, [seam_log_n]
+    rep movsb
+
+    call zero_rmcs                 ; INT 21h/3Ch — create
+    mov word [rmcs + RMCS_EAX], 0x3C00
+    mov dword [rmcs + RMCS_EDX], 0
+    mov ax, [dos_seg]
+    mov [rmcs + RMCS_DS], ax
+    call sim_int21
+    test byte [rmcs + RMCS_FLAGS], 1
+    jnz .free
+    mov ax, [rmcs + RMCS_EAX]
+    mov [file_handle], ax
+
+    call zero_rmcs                 ; INT 21h/40h — write
+    mov word [rmcs + RMCS_EAX], 0x4000
+    movzx eax, word [file_handle]
+    mov [rmcs + RMCS_EBX], eax
+    mov ecx, [seam_log_n]
+    mov [rmcs + RMCS_ECX], ecx
+    mov dword [rmcs + RMCS_EDX], 0x10
+    mov ax, [dos_seg]
+    mov [rmcs + RMCS_DS], ax
+    call sim_int21
+
+    call zero_rmcs                 ; INT 21h/3Eh — close
+    mov word [rmcs + RMCS_EAX], 0x3E00
+    movzx eax, word [file_handle]
+    mov [rmcs + RMCS_EBX], eax
+    call sim_int21
+.free:
+    mov ax, 0x0101                 ; free DOS buffer
+    mov dx, [dos_sel]
+    int 0x31
+.exit:
+    ret
+%endif

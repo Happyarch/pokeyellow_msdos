@@ -105,6 +105,31 @@ ifdef DEBUG_WALK_STEPS
 NASMFLAGS += -D DEBUG_WALK_STEPS=$(DEBUG_WALK_STEPS)
 endif
 
+# Seam-crossing trace: spawn beside a map connection, walk into it with the real
+# movement primitives, sample state every frame to SEAMLOG.BIN (+ FRAME.BIN), exit.
+# Wild encounters are suppressed via wStatusFlags4 BIT_NO_BATTLES, not by de-wiring.
+# Decode with tools/read_seamlog.py. Defaults to the Viridian City <-> Route 22 seam.
+#   make image DEBUG_SEAM=1 [DEBUG_SEAM_MAP=0x01 DEBUG_SEAM_X=3 DEBUG_SEAM_Y=16 DEBUG_SEAM_STEPS=8]
+ifdef DEBUG_SEAM
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_SEAM -D SKIP_TITLE
+endif
+ifdef DEBUG_SEAM_MAP
+NASMFLAGS += -D DEBUG_SEAM_MAP=$(DEBUG_SEAM_MAP)
+endif
+ifdef DEBUG_SEAM_X
+NASMFLAGS += -D DEBUG_SEAM_X=$(DEBUG_SEAM_X)
+endif
+ifdef DEBUG_SEAM_Y
+NASMFLAGS += -D DEBUG_SEAM_Y=$(DEBUG_SEAM_Y)
+endif
+ifdef DEBUG_SEAM_STEPS
+NASMFLAGS += -D DEBUG_SEAM_STEPS=$(DEBUG_SEAM_STEPS)
+endif
+ifdef DEBUG_SEAM_DIR
+NASMFLAGS += -D DEBUG_SEAM_DIR=$(DEBUG_SEAM_DIR)
+endif
+
 # Debug noclip: press W in-game to toggle walk-through-walls (disables collision).
 # Useful for testing warps, map edges, and OOB behaviour without normal movement.
 # Does NOT imply SKIP_TITLE — works at any point in the game.

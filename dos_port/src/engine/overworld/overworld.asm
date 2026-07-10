@@ -125,6 +125,11 @@ extern DumpBackbuffer
 %elifdef DEBUG_DIALOG
 extern DumpBackbuffer
 %endif
+%ifdef DEBUG_SEAM
+extern DumpBackbuffer
+extern SeamLogRecord
+extern DumpSeamLog
+%endif
 %ifdef DEBUG_NOCLIP
 extern pad_noclip
 %endif
@@ -380,7 +385,100 @@ EnterMapBoot:
 EnterMap:
     ; ld a, PAD_BUTTONS | PAD_CTRL_PAD / ld [wJoyIgnore], a
     mov byte [ebp + W_JOY_IGNORE], PAD_BUTTONS | PAD_CTRL_PAD
+%ifdef DEBUG_SEAM
+    ; Seam-crossing trace harness: spawn on the target map next to a connection
+    ; edge, walk into it with the REAL movement primitives, and sample state every
+    ; frame into SEAMLOG.BIN. Must seed wCurMap/coords BEFORE LoadMapData reads them.
+    ;
+    ; Default target is the Viridian City <-> Route 22 (west) seam, the reported
+    ; repro. wStatusFlags4 BIT_NO_BATTLES suppresses wild encounters through the
+    ; engine's own gate (NewBattle checks it) rather than by de-wiring the call —
+    ; the battle engine currently clobbers the BG tile cache on return (W-1).
+%ifndef DEBUG_SEAM_MAP
+%define DEBUG_SEAM_MAP 0x01               ; VIRIDIAN_CITY
+%endif
+%ifndef DEBUG_SEAM_X
+%define DEBUG_SEAM_X 3                    ; 3 tiles from the west edge
+%endif
+%ifndef DEBUG_SEAM_Y
+%define DEBUG_SEAM_Y 16                   ; inside Route 22's strip (Viridian y 8..25)
+%endif
+%ifndef DEBUG_SEAM_STEPS
+%define DEBUG_SEAM_STEPS 8                ; x: 3,2,1,0,255(cross),then 3 more in Route 22
+%endif
+%ifndef DEBUG_SEAM_DIR
+%define DEBUG_SEAM_DIR 0                  ; 0 = walk west, 1 = walk east
+%endif
+%if DEBUG_SEAM_DIR
+%define SEAM_XVEC 0x01
+%define SEAM_PDIR PLAYER_DIR_RIGHT
+%define SEAM_FACE SPRITE_FACING_RIGHT
+%else
+%define SEAM_XVEC 0xFF
+%define SEAM_PDIR PLAYER_DIR_LEFT
+%define SEAM_FACE SPRITE_FACING_LEFT
+%endif
+    or byte [ebp + W_STATUS_FLAGS_4], (1 << BIT_NO_BATTLES)
+    mov byte [ebp + W_CUR_MAP],  DEBUG_SEAM_MAP
+    mov byte [ebp + W_X_COORD],  DEBUG_SEAM_X
+    mov byte [ebp + W_Y_COORD],  DEBUG_SEAM_Y
+%endif
     call LoadMapData
+%ifdef DEBUG_SEAM
+    call SeamReseatView                   ; LoadMapData does not derive the view ptr
+    mov ecx, DEBUG_SEAM_STEPS
+.seam_step:
+    push ecx
+    mov byte [ebp + W_SPRITE_PLAYER_Y_STEP_VECTOR], 0
+    mov byte [ebp + W_SPRITE_PLAYER_X_STEP_VECTOR], SEAM_XVEC
+    mov byte [ebp + W_PLAYER_DIRECTION],        SEAM_PDIR
+    mov byte [ebp + W_PLAYER_MOVING_DIRECTION], SEAM_PDIR
+    mov byte [ebp + W_SPRITE_PLAYER_FACING_DIR], SEAM_FACE
+    mov byte [ebp + W_WALK_COUNTER], 8
+.seam_frames:
+    call UpdateSprites
+    call AdvancePlayerSprite
+    pushf                                 ; CF=1 => CheckMapConnections fired
+    call DelayFrame
+    call SeamLogRecord                    ; one sample per rendered frame
+    popf
+    jc .seam_crossed
+    cmp byte [ebp + W_WALK_COUNTER], 0
+    jne .seam_frames
+    pop ecx
+    dec ecx
+    jnz .seam_step
+    jmp .seam_done                        ; never reached the edge
+
+.seam_crossed:
+    ; Mimic OverworldLoop's .mapTransition: a crossing reloads the whole map.
+    ; Keep walking afterwards so post-crossing oscillation is visible in the log.
+    pop ecx
+    call LoadMapData
+    call SeamLogRecord                    ; marker: first sample on the new map
+    mov ecx, DEBUG_SEAM_STEPS
+.seam_after:
+    push ecx
+    mov byte [ebp + W_SPRITE_PLAYER_Y_STEP_VECTOR], 0
+    mov byte [ebp + W_SPRITE_PLAYER_X_STEP_VECTOR], SEAM_XVEC
+    mov byte [ebp + W_PLAYER_DIRECTION],        SEAM_PDIR
+    mov byte [ebp + W_PLAYER_MOVING_DIRECTION], SEAM_PDIR
+    mov byte [ebp + W_SPRITE_PLAYER_FACING_DIR], SEAM_FACE
+    mov byte [ebp + W_WALK_COUNTER], 8
+.seam_after_frames:
+    call UpdateSprites
+    call AdvancePlayerSprite
+    call DelayFrame
+    call SeamLogRecord
+    cmp byte [ebp + W_WALK_COUNTER], 0
+    jne .seam_after_frames
+    pop ecx
+    dec ecx
+    jnz .seam_after
+.seam_done:
+    call DumpSeamLog                      ; SEAMLOG.BIN (returns)
+    call DumpBackbuffer                   ; FRAME.BIN: the final screen — then exits
+%endif
 %ifdef DEBUG_DUMP
     call DebugDumpMemory     ; dump GB memory to DUMP.BIN, then exit (debug only)
 %endif
@@ -2157,6 +2255,39 @@ MoveTileBlockMapPointerNorth:            ; AL = wCurMapWidth
     pop ebx
     pop eax
     ret
+
+%ifdef DEBUG_SEAM
+; ---------------------------------------------------------------------------
+; SeamReseatView — DEBUG_SEAM only. Port-only debug helper, no pret counterpart.
+; LoadMapData loads the header + block map but does NOT derive the view pointer
+; (that lives in LoadWarpDestination). A harness that spawns on an arbitrary map
+; must therefore recompute it from the seeded coordinates, using the same formula
+; LoadWarpDestination does, and re-run LoadCurrentMapView to repaint the surface.
+; ---------------------------------------------------------------------------
+SeamReseatView:
+    push eax
+    push ebx
+    push ecx
+    movzx eax, byte [ebp + W_CUR_MAP_WIDTH]
+    add eax, MAP_BORDER * 2                   ; EAX = stride
+    movzx ebx, byte [ebp + W_Y_COORD]
+    shr ebx, 1
+    add ebx, MAP_BORDER
+    sub ebx, SCREEN_BLOCK_HEIGHT / 2          ; EBX = view_row
+    movzx ecx, byte [ebp + W_X_COORD]
+    shr ecx, 1
+    add ecx, MAP_BORDER
+    sub ecx, SCREEN_BLOCK_WIDTH / 2           ; ECX = view_col
+    imul eax, ebx
+    add eax, ecx
+    add eax, W_OVERWORLD_MAP
+    mov [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], ax
+    call LoadCurrentMapView
+    pop ecx
+    pop ebx
+    pop eax
+    ret
+%endif
 
 ; ---------------------------------------------------------------------------
 ; CollisionCheckOnLand — tile passability + sprite collision check.
