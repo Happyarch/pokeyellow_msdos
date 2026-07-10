@@ -995,11 +995,14 @@ W_UNUSED_CUR_MAP_TILESET_COPY equ 0xD118 ; wUnusedCurMapTilesetCopy
 W_WALK_BIKE_SURF_STATE_COPY  equ 0xD119 ; wWalkBikeSurfStateCopy
 
 ; Joypad/input control
-W_JOY_IGNORE                 equ 0xCCB7 ; wJoyIgnore — button mask; bits set suppress those inputs
+W_JOY_IGNORE                 equ 0xCD6B ; wJoyIgnore — button mask; bits set suppress those inputs
+                                          ; (golden 00:cd6b; was wrongly 0xCCB7 — inside the 180-byte
+                                          ;  wNPCMovementDirections buffer, clobbered by scripted moves)
 W_SIMULATED_JOYPAD_STATES_END equ 0xCCD3 ; wSimulatedJoypadStatesEnd — PAD_* byte queued by scripts
                                           ; (golden sym 00:ccd3; was wrongly 0xCC5B, colliding with
                                           ;  wNPCMovementDirections so MoveSprite zeroed step[0] — OW-2.2 fix)
-W_SIMULATED_JOYPAD_STATES_INDEX equ 0xCC84 ; wSimulatedJoypadStatesIndex — steps remaining (0=done)
+W_SIMULATED_JOYPAD_STATES_INDEX equ 0xCD38 ; wSimulatedJoypadStatesIndex — steps remaining (0=done)
+                                          ; (golden 00:cd38; was wrongly 0xCC84 — inside wNPCMovementDirections)
 W_IGNORE_INPUT_COUNTER       equ 0xD139 ; wIgnoreInputCounter — counts down 30→0; clears BIT_DISABLE_JOYPAD
 
 ; Current-map script flags
@@ -1503,8 +1506,8 @@ H_DIVIDEND2                                      equ 0xFFE5 ; hDividend2
 H_DIVISOR2                                       equ 0xFFE6 ; hDivisor2
 H_QUOTIENT2                                      equ 0xFFE7 ; hQuotient2
 W_NPC_MOVEMENT_DIRECTIONS                        equ 0xCC5B ; wNPCMovementDirections (union base; sim-joypad end/dirs2 overlay it)
-W_UNUSED_OVERRIDE_SIMULATED_JOYPAD_STATES_INDEX  equ 0xCC86 ; wUnusedOverrideSimulatedJoypadStatesIndex
-W_OVERRIDE_SIMULATED_JOYPAD_STATES_MASK          equ 0xCC87 ; wOverrideSimulatedJoypadStatesMask
+W_UNUSED_OVERRIDE_SIMULATED_JOYPAD_STATES_INDEX  equ 0xCD3A ; wUnusedOverrideSimulatedJoypadStatesIndex (golden 00:cd3a; was 0xCC86)
+W_OVERRIDE_SIMULATED_JOYPAD_STATES_MASK          equ 0xCD3B ; wOverrideSimulatedJoypadStatesMask (golden 00:cd3b; was 0xCC87)
 W_RLE_BYTE_COUNT                                 equ 0xCCD2 ; wRLEByteCount
 W_NPC_NUM_SCRIPTED_STEPS                         equ 0xCF0F ; wNPCNumScriptedSteps
 W_NPC_MOVEMENT_SCRIPT_FUNCTION_NUM               equ 0xCF10 ; wNPCMovementScriptFunctionNum
@@ -1538,6 +1541,10 @@ BIT_PATH_FOUND_Y             equ 0        ; hFindPathFlags bit 0
 BIT_PATH_FOUND_X             equ 1        ; hFindPathFlags bit 1
 BIT_PLAYER_LOWER_Y           equ 0        ; hNPCPlayerRelativePosFlags bit 0 (target north)
 BIT_PLAYER_LOWER_X           equ 1        ; hNPCPlayerRelativePosFlags bit 1 (target west)
+%ifndef wWhichPewterGuy
+wWhichPewterGuy              equ 0xD12E   ; PewterGuys selector (golden 00:d12e; unions
+                                          ; wDungeonWarpDataEntrySize/wGymGateTileBlock/wWhichPrizeWindow)
+%endif
 
 ; ---------------------------------------------------------------------------
 ; Wave 4 (home-rectification) — menu framework (yes_no / list_menu / window).
@@ -1567,16 +1574,18 @@ hSwapItemID                   equ 0xFFA9 ; item-list SELECT swap scratch
 hSwapItemQuantity             equ 0xFFAA ; item-list SELECT swap scratch
 ; ---------------------------------------------------------------------------
 ; Menus S2 (text_box / display_text_id_init) — pret ram/wram.asm + ram/hram.asm.
-; Chained off verified anchors: wFieldMoves union base = W_SIMULATED_JOYPAD_STATES
-; _INDEX 0xCC84 + 4 db + ds 1; wMiscFlags counted back from
+; wFieldMoves is golden-sym verified (00:cd3d): it shares the 0xCD3D+ scratch
+; union (wTrainerSpriteOffset / slot-machine / HoF lanes — disjoint use). The
+; earlier chain off W_SIMULATED_JOYPAD_STATES_INDEX put it at 0xCC89, inside the
+; wNPCMovementDirections buffer (wrong). wMiscFlags counted back from
 ; wActionResultOrTookBattleTurn 0xCD6A (db ×5 + ds 9 between them);
 ; hFieldMoveMonMenuTopMenuItemX sits between H_UI_LAYOUT_FLAGS 0xFFFA and
 ; H_PIKACHU_SPRITE_VRAM_OFFSET 0xFFFC.
 ; ---------------------------------------------------------------------------
-wFieldMoves                   equ 0xCC89 ; 4 bytes — current mon's field-move name indices
-wNumFieldMoves                equ 0xCC8D ; count of entries in wFieldMoves
-wFieldMovesLeftmostXCoord     equ 0xCC8E ; GB X of leftmost field-move name (menu width)
-wLastFieldMoveID              equ 0xCC8F ; unused in pret (bookkeeping kept faithful)
+wFieldMoves                   equ 0xCD3D ; 4 bytes — current mon's field-move name indices (golden 00:cd3d)
+wNumFieldMoves                equ 0xCD41 ; count of entries in wFieldMoves (golden 00:cd41)
+wFieldMovesLeftmostXCoord     equ 0xCD42 ; GB X of leftmost field-move name (golden 00:cd42)
+wLastFieldMoveID              equ 0xCD43 ; unused in pret (bookkeeping kept faithful; golden 00:cd43)
 wMiscFlags                    equ 0xCD60 ; bit BIT_NO_SPRITE_UPDATES: skip UpdateSprites in DisplayTextIDInit
 BIT_NO_SPRITE_UPDATES         equ 4      ; wMiscFlags bit (constants/ram_constants.asm)
 BIT_USING_GENERIC_PC          equ 3      ; wMiscFlags bit — HoF/Bill's/generic PC hosts the menu (S6 pkg F)

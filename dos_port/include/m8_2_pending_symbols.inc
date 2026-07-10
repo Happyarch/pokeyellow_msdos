@@ -94,27 +94,31 @@ wTrainerPicPointer     equ 0xD048   ; VERIFY  pret wram.asm (dw) ** flat-adapted
 wNPCMovementDirections2 equ 0xCC97  ; golden sym 00:cc97 (unions with wNPCMovementDirections)
 %endif
 
-; ---- WRAM: UNION region (wTrainerScreen*/emotion) — VERIFY (union base unknown) --
+; ---- WRAM: UNION region (wTrainerScreen*/emotion) — golden-sym verified 2026-07-09.
+; The previous guesses (union base at 0xCD37) were uniformly 6/7 bytes low, and
+; 0xCD37-0xCD3B collided with wNPCMovementDirections2Index (0xCD37) and the
+; sim-joypad control bytes (0xCD38/3A/3B); the golden addresses below sit in the
+; shared 0xCD3D+ scratch union (slot-machine/HoF/badges/options) as pret intends.
 %ifndef wTrainerSpriteOffset
-wTrainerSpriteOffset   equ 0xCD37   ; VERIFY  pret wram.asm:942 (union byte 0)
+wTrainerSpriteOffset   equ 0xCD3D   ; golden 00:cd3d
 %endif
 %ifndef wTrainerEngageDistance
-wTrainerEngageDistance equ 0xCD38   ; VERIFY  pret wram.asm:943 (union byte 1)
+wTrainerEngageDistance equ 0xCD3E   ; golden 00:cd3e
 %endif
 %ifndef wTrainerFacingDirection
-wTrainerFacingDirection equ 0xCD39  ; VERIFY  pret wram.asm:944 (union byte 2)
+wTrainerFacingDirection equ 0xCD3F  ; golden 00:cd3f
 %endif
 %ifndef wTrainerScreenY
-wTrainerScreenY        equ 0xCD3A   ; VERIFY  pret wram.asm:945 (union byte 3)
+wTrainerScreenY        equ 0xCD40   ; golden 00:cd40
 %endif
 %ifndef wTrainerScreenX
-wTrainerScreenX        equ 0xCD3B   ; VERIFY  pret wram.asm:946 (union byte 4)
+wTrainerScreenX        equ 0xCD41   ; golden 00:cd41
 %endif
 %ifndef wEmotionBubbleSpriteIndex
-wEmotionBubbleSpriteIndex equ 0xCD48 ; VERIFY  pret wram.asm:994 (union+18)
+wEmotionBubbleSpriteIndex equ 0xCD4F ; golden 00:cd4f
 %endif
 %ifndef wWhichEmotionBubble
-wWhichEmotionBubble    equ 0xCD49   ; VERIFY  pret wram.asm:995 (union+19)
+wWhichEmotionBubble    equ 0xCD50   ; golden 00:cd50
 %endif
 
 ; ---- Constants ABSENT from gb_constants.inc --------------------------------
