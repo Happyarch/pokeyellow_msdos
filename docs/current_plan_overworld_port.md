@@ -1145,8 +1145,21 @@ spin would hang; engine-tick yield deferred to promotion). rOBP1 → `[ebp+IO_OB
 TODO-HW. faithdiff clean (DROPPED [wAudioROMBank] = banking divergence; ADDED
 [IO_OBP1] = rOBP1 TODO-HW; ADDED [wUpdateSpritesEnabled] = indirect `[hl]` named),
 lint 0. Check-only.
-**TICKET OW-6.3: elevator.asm** — `ShakeElevator` (`hSCY` shake → port `H_SCY` fine-scroll, native renderer honors it); `ShakeElevatorRedrawRow` → `RedrawMapView` call or documented no-op (`; PROJ`); `.musicLoop` on `wChannelSoundIDs` must be **bounded** against sound stubs (no infinite spin) — divergence note.
-**TICKET OW-6.4: spinners.asm** — `LoadSpinnerArrowTiles` (per-frame vChars0 writes from `SpinnerArrowAnimTiles` → `g_tilecache_dirty`; `; TODO-HW` re VRAM coord math), facing table + `spinner_tiles`; incbin `gfx/overworld/spinners.2bpp`.
+**TICKET OW-6.3: elevator.asm** — **DONE 2026-07-10.** New mirrored file:
+`ShakeElevator` (hSCY shake → `[ebp+H_SCY]` fine-scroll, native renderer honors it;
+100× jerk w/ SFX via LIVE PlayMusic, PA jingle, restore music) + `ShakeElevatorRedrawRow`
+(documented **NO-OP** tail-calling Delay3 — pret itself notes "no visible effect", and
+its wMapViewVRAMPointer/vBGMap0 torus rewrite has no native-renderer analog; DROPPED
+ScheduleNorthRowRedraw justified as the no-op). `.musicLoop` bounded (DIVERGENCE — no
+VBlank audio ISR). PlayMusic bl=bank vestigial (flat). faithdiff clean, lint 0. Check-only.
+**TICKET OW-6.4: spinners.asm** — **DONE 2026-07-10.** New mirrored file:
+`LoadSpinnerArrowTiles` + `SpinnerPlayerFacingDirections` + Facility/Gym spinner tables +
+`SpinnerArrowAnimTiles` (incbin `gfx/overworld/spinners.2bpp`). Flat-table reshape: pret
+`spinner` macro's `dw <src> tile N` → `dd` flat pointer, so entries grow 6→8 bytes (dd src,
+db count, db bank, dw dest) and the loop stride / skip-offset scale (SPINNER_ENTRY_SIZE=8).
+CopyVideoData(ESI=VRAM dest, EDX=flat src, BL=count) sets g_tilecache_dirty. Facility_GFX/
+Gym_GFX incbin'd as file-local INTERIM (port loads tilesets dynamically; retire when
+unified). faithdiff clean, lint 0. Check-only. **Stage 6 COMPLETE.**
 - Verify (root): cut animation end-to-end (full `UsedCut` visual); healing machine / elevator / spinners via MCP unit-invocation + FRAME.BIN (maps unreachable — check-only linkage acceptable where callers don't exist).
 
 ### Stage 7 — Completeness + link promotion + cleanup `[ ]`
