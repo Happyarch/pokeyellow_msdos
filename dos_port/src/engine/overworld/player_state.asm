@@ -83,6 +83,12 @@ H_WARP_DESTINATION_MAP       equ 0xFF8B ; hWarpDestinationMap (UNION w/ H_PREVIO
 %ifndef H_PLAYER_FACING
 H_PLAYER_FACING              equ 0xFFDB ; hPlayerFacing (UNION w/ hPlayerYCoord/hPlayerXCoord that follow)
 %endif
+%ifndef H_PLAYER_Y_COORD
+H_PLAYER_Y_COORD             equ 0xFFDC ; hPlayerYCoord (golden 00:ffdc; boulder-collision scratch)
+H_PLAYER_X_COORD             equ 0xFFDD ; hPlayerXCoord (golden 00:ffdd)
+%endif
+; wSprite01StateData2MapY (golden 00:c214) = sprite slot 1's data2 MapY.
+wSprite01StateData2MapY      equ W_SPRITE_STATE_DATA_2 + 0x10 + SPRITESTATEDATA2_MAPY
 
 ; --- Map constants (constants/map_constants.asm) ---------------------------
 %ifndef ROUTE_16
@@ -161,7 +167,7 @@ extern IsPlayerStandingOnDoorTile ; src/engine/overworld/overworld.asm — LINKE
 extern IsTilePassable                    ; src/engine/overworld/overworld.asm — LINKED (returns CF)
 extern CheckForTilePairCollisions2       ; src/engine/overworld/ledges.asm — CHECK-ONLY (ESI=flat table, returns CF)
 extern TilePairCollisionsLand            ; src/engine/overworld/ledges.asm — CHECK-ONLY (flat tile-pair table)
-extern CheckForBoulderCollisionWithSprites ; src/engine/overworld/push_boulder.asm — not yet ported (OW-4.2)
+; CheckForBoulderCollisionWithSprites is defined below (pret player_state.asm — same file).
 
 global IsPlayerStandingOnWarp
 global CheckForceBikeOrSurf
@@ -172,6 +178,7 @@ global GetTileAndCoordsInFrontOfPlayer
 global _GetTileAndCoordsInFrontOfPlayer
 global GetTileTwoStepsInFrontOfPlayer
 global CheckForCollisionWhenPushingBoulder
+global CheckForBoulderCollisionWithSprites
 
 section .text
 
@@ -557,6 +564,91 @@ CheckForCollisionWhenPushingBoulder:
     call CheckForBoulderCollisionWithSprites   ; AL = collision result
 .done:
     mov [ebp + wTileInFrontOfBoulderAndBoulderCollisionResult], al
+    ret
+
+; ---------------------------------------------------------------------------
+; CheckForBoulderCollisionWithSprites (OW-4.1) — return $ff if a sprite occupies
+; the tile the boulder [wBoulderSpriteIndex] would be pushed into, else 0.
+; pret: engine/overworld/player_state.asm.
+; Scans wSprite01StateData2MapY (stride 0x10, wNumSprites entries): for a
+; vertical push, match X then compare the boulder's target Y; for a horizontal
+; push, match Y then compare target X. hPlayerYCoord/XCoord hold the boulder's
+; map coords; hPlayerFacing selects the axis/direction (BIT_FACING_DOWN == 0).
+; ---------------------------------------------------------------------------
+CheckForBoulderCollisionWithSprites:
+    mov al, [ebp + wBoulderSpriteIndex]
+    dec al
+    shl al, 4                                  ; swap a — (idx-1) * 0x10
+    movzx edx, al                              ; de = sprite offset (d=0)
+    mov esi, wSprite01StateData2MapY
+    add esi, edx                               ; hl = &boulder sprite MapY
+    mov al, [ebp + esi]                        ; ld a,[hli] — boulder map Y
+    inc esi
+    mov [ebp + H_PLAYER_Y_COORD], al
+    mov al, [ebp + esi]                        ; ld a,[hl] — boulder map X
+    mov [ebp + H_PLAYER_X_COORD], al
+    mov bl, [ebp + wNumSprites]                ; c = sprite count
+    mov edx, 0xf                               ; de = 15 (MapX -> next sprite MapY)
+    mov esi, wSprite01StateData2MapY           ; reset hl to slot-1 MapY
+    mov al, [ebp + H_PLAYER_FACING]
+    and al, (1 << BIT_FACING_UP) | (1 << BIT_FACING_DOWN)
+    jz .pushingHorizontallyLoop
+.pushingVerticallyLoop:
+    inc esi                                    ; hl -> MapX
+    mov al, [ebp + H_PLAYER_X_COORD]
+    cmp al, [ebp + esi]                        ; cp [hl] — X coords match?
+    jne .nextSprite1
+    dec esi                                    ; hl -> MapY
+    mov al, [ebp + esi]                        ; ld a,[hli]
+    inc esi                                    ; hl -> MapX
+    mov bh, al                                 ; b = sprite MapY
+    mov al, [ebp + H_PLAYER_FACING]
+    ror al, 1                                  ; rrca — CF = bit0 = BIT_FACING_DOWN
+    jc .pushingDown
+    mov al, [ebp + H_PLAYER_Y_COORD]           ; pushing up
+    dec al
+    jmp .compareYCoords
+.pushingDown:
+    mov al, [ebp + H_PLAYER_Y_COORD]
+    inc al
+.compareYCoords:
+    cmp al, bh                                 ; cp b
+    je .failure
+.nextSprite1:
+    dec bl                                     ; dec c
+    jz .success
+    add esi, edx                               ; add hl, de
+    jmp .pushingVerticallyLoop
+.pushingHorizontallyLoop:
+    mov al, [ebp + esi]                        ; ld a,[hli] — sprite MapY
+    inc esi
+    mov bh, al                                 ; b = MapY
+    mov al, [ebp + H_PLAYER_Y_COORD]
+    cmp al, bh                                 ; cp b
+    jne .nextSprite2
+    mov bh, [ebp + esi]                        ; ld b,[hl] — sprite MapX
+    mov al, [ebp + H_PLAYER_FACING]
+    test al, (1 << BIT_FACING_LEFT)
+    jnz .pushingLeft
+    mov al, [ebp + H_PLAYER_X_COORD]           ; pushing right
+    inc al
+    jmp .compareXCoords
+.pushingLeft:
+    mov al, [ebp + H_PLAYER_X_COORD]
+    dec al
+.compareXCoords:
+    cmp al, bh                                 ; cp b
+    je .failure
+.nextSprite2:
+    dec bl                                     ; dec c
+    jz .success
+    add esi, edx                               ; add hl, de
+    jmp .pushingHorizontallyLoop
+.failure:
+    mov al, 0xff
+    ret
+.success:
+    xor al, al
     ret
 
 ; ===========================================================================

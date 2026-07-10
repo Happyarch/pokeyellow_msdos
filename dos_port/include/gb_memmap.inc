@@ -1044,6 +1044,12 @@ W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR equ 0xD35E ; wCurrentTileBlockMapViewPointer (
 %ifndef W_NEW_TILE_BLOCK_ID
 W_NEW_TILE_BLOCK_ID          equ 0xD09E ; wNewTileBlockID (golden 00:d09e; ReplaceTileBlock)
 %endif
+%ifndef wBoulderSpriteIndex
+wBoulderSpriteIndex          equ 0xD717 ; golden 00:d717 (boulder push subsystem)
+%endif
+%ifndef wNumSprites
+wNumSprites                  equ 0xD4E0 ; golden 00:d4e0 (also in m1_3_pending_symbols.inc)
+%endif
 W_Y_COORD                    equ 0xD360 ; wYCoord (player map Y, in tiles)
 W_X_COORD                    equ 0xD361 ; wXCoord (player map X, in tiles)
 W_Y_BLOCK_COORD              equ 0xD362 ; wYBlockCoord
