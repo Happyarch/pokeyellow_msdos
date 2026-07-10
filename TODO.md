@@ -233,15 +233,25 @@ Prioritized task list. Check off items as they complete; add new items with phas
       player-NPC tile blocking (`IsNPCAtTargetBlock`), NPC wall-blocking via MAPY/MAPX
       tile check. Full dialog (`CheckNPCInteraction` → `PrintText`, per-character reveal,
       multi-page scroll). Walk-tile leg animation. Done; see `docs/plans/npc_implementation.md`.
-- [~] **Full `engine/overworld/` faithful port** — in progress on `master`, plan
-      `docs/current_plan_overworld_port.md`. Status 2026-07-10: Stages 1, 3, 4,
-      5, 6 complete; Stage 2 core done (remaining: OW-2.5 runtime Oak-cutscene
-      exercise + the OW-2.1 Func_5288 item-ball tail); Stage 7 done through
-      OW-7.3 (13 files link-promoted, remaining check-only blockers documented
-      in the dos_port Makefile); Stages 8 (final audit) + 9 (directory mirror)
-      remain, plus the two out-of-map viewport clamps' retirement and the
-      **menu VRAM tile-slot defect** ("Cross-cutting defect" note — where the
-      "menus corrupt live" fix lands).
+- [x] **Full `engine/overworld/` faithful port** — COMPLETE & archived 2026-07-10 at
+      `docs/plans/overworld_port.md`. All stages landed (1–9 + Stage A/B); Stage 8 final
+      audit clean (218 pret globals accounted for; faithdiff over 170 translated routines,
+      all residual diffs documented; `make check`/`lint_pret_labels`/`make fidelity` 6/6),
+      Stage 9 directory-mirror done (20 files moved to their pret-mirror dir). Residual
+      follow-ups tracked below, not blockers:
+  - [ ] **OW-3.3 tail** — `gen_hidden_events.py` + full `assets/hidden_events.inc` data +
+        `hidden_object_stubs.asm` handlers + retire the `M72_HIDDEN_EVENTS_DEEP` guard
+        (engine ported; data covers zero in-scope maps today, so deferred).
+  - [ ] **OW-2.5 / OW-2.1 tails** — runtime Oak-cutscene exercise (handed to the
+        script-engine session) + the OW-2.1 `Func_5288` item-ball-emerge STAY-and-face tail.
+  - [ ] **Out-of-map viewport clamp retirement** — the two `DrawTileBlock` /
+        `LoadCurrentMapView` clamps stay until the map data is extended with real border
+        cells (separate map-tool item; CLAUDE.md "extend the map data").
+  - [ ] **Live-smoke confirmations (user)** — bag menu empty+populated (OW-A.13 fix) and
+        `DEBUG_SEAM_LIVE` jutter-gone (Stage B fix); both already headless-verified.
+  - Check-only link blockers (per-file, unported deps) documented in the dos_port
+    Makefile comment block; the **menu VRAM/compositor defect** is fixed (OW-A.13
+    transfer-retirement + bag stride), headless goldens green.
 - [x] Trainer battle engine — battle swarm merged to `master`; trainer battles play
       (trainer_battle.asm / trainer_ai.asm / read_trainer_party.asm linked). Remaining
       fidelity items in `docs/battle_audit_findings.md`. Overworld trainer-sight →

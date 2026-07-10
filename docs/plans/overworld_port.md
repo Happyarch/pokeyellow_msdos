@@ -1474,7 +1474,7 @@ warp-side and tracked separately. Nor W-1 (InitBattle tile-cache clobber).
 
 ---
 
-### Stage 8 — Final full-surface audit `[~]` (root; gates archival) — audit items 1–5 DONE 2026-07-10; only the live-smoke tail + archival git mv remain (Stage 9 runs first)
+### Stage 8 — Final full-surface audit `[x]` COMPLETE 2026-07-10 (audit items 1–5 clean; archival git mv done; user live-smoke tails migrated to TODO.md)
 
 - [x] **Coverage re-diff** — CLEAN. All **218** pret `engine/overworld/*.asm` global
       labels accounted for (`translation.db`, 2026-07-10 stamp): 170 translated,
@@ -1512,8 +1512,10 @@ warp-side and tracked separately. Nor W-1 (InitBattle tile-cache clobber).
       `bag_menu` all PASS (the OW-A.13 transfer-retirement + bag-stride fixes). This is the
       headless form of the cross-cutting menu-corruption check. **Live smoke of the bag fix
       (empty + populated) remains a user action** (OW-A.13 pending-live tail).
-- [ ] Archive: `git mv docs/current_plan_overworld_port.md docs/plans/overworld_port.md`
-      — **runs after Stage 9** (directory-mirror rectification precedes the archival move).
+- [x] Archive: `git mv docs/current_plan_overworld_port.md docs/plans/overworld_port.md`
+      — DONE 2026-07-10 (after Stage 9). TODO.md umbrella marked complete + residual tails
+      migrated there (OW-3.3 data generator, OW-2.5/OW-2.1 tails, out-of-map clamp retirement,
+      user live-smoke). **PLAN COMPLETE.**
 
 ---
 
