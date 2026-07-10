@@ -848,7 +848,7 @@ ifdef DEBUG_WARPS
 GEN_MAP_HEADERS_FLAGS += --debug-warps
 endif
 
-assets/map_headers.inc assets/extra_includes.inc:
+assets/map_headers.inc assets/extra_includes.inc assets/map_dims.inc:
 	python3 tools/gen_map_headers.py $(GEN_MAP_HEADERS_FLAGS)
 
 # Per-map (music id, ROM bank) table — pret data/maps/songs.asm (gen_map_songs.py).
@@ -1228,7 +1228,8 @@ src/engine/items/town_map.o: assets/town_map_data.inc assets/town_map_gfx.inc
 src/engine/items/tms.o: assets/items.inc
 
 assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_blk.inc \
-        assets/map_headers.inc assets/extra_includes.inc assets/map_songs.inc \
+        assets/map_headers.inc assets/extra_includes.inc assets/map_dims.inc \
+        assets/map_songs.inc \
         assets/npc_sprite_data_table.inc assets/npc_dialogs/all_dialogs.inc \
         assets/toggleable_objects.inc assets/event_constants.inc \
         assets/base_stats.inc assets/growth_rates.inc \

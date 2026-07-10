@@ -157,16 +157,28 @@
     owcoord edi, %1, %2, %3
 %endmacro
 
-; BUG(logic): border-3 stride error, same class as the owcoord fix above.
-;   This uses ((%1)+6) as the row stride, which assumes MAP_BORDER=3; the real
-;   MAP_BORDER is 6, so the faithful stride is ((%1)+MAP_BORDER*2)=((%1)+12), and
-;   the base offset (`+ 7`) is likewise border-3-derived. NOT fixed yet because
-;   the correct form must be re-derived against pret's actual hidden-event/bg-event
-;   coordinate macro when OW-3.3 (hidden_events engine side) lands — do not use
-;   this macro until then. Unused at write time (coords.inc not yet %included).
+; event_displacement — precomputed wCurrentTileBlockMapViewPointer + player
+; Y/X pair for the special-warp data tables (pret macros/coords.asm; consumed
+; by data/maps/special_warps.asm's fly_warp / special_warp_spec macros).
+; Pret emits `dw wOverworldMap + 7 + w + (w+6)*(y>>1) + (x>>1)` — a border-3,
+; GB-viewport-centered pointer. RE-DERIVED 2026-07-10 against the port's
+; runtime view-pointer recompute (overworld.asm:LoadWarpDestination):
+;   stride   = width + 2*MAP_BORDER
+;   view_row = (y>>1) + MAP_BORDER - SCREEN_BLOCK_HEIGHT/2
+;   view_col = (x>>1) + MAP_BORDER - SCREEN_BLOCK_WIDTH/2
+;   ptr      = W_OVERWORLD_MAP + view_row * stride + view_col
+; The two MUST stay in lockstep: a special warp loads this table value into
+; W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR exactly where a normal warp would have
+; computed the runtime form. Both are pure functions of MAP_BORDER /
+; SCREEN_BLOCK_*, so a future border change reassembles both correctly.
+; Emits `dw` — the field at 0xD35E is 2 bytes and the pointer is a GB-space
+; address; the previous `dd` emission was a latent size mismatch.
+; FIX(2026-07-10): was pret's verbatim border-3 form (+7/+6 constants;
+; MAP_BORDER is 6), flagged "do not use until re-derived". Unused before this
+; fix; first consumer is special_warps.asm (OW-5.2).
 %macro event_displacement 3
-    ; map width, x blocks, y blocks
-    dd (W_OVERWORLD_MAP + 7 + (%1) + ((%1) + 6) * ((%3) >> 1) + ((%2) >> 1))
+    ; map width, x coord, y coord (tile units, as pret passes them)
+    dw (W_OVERWORLD_MAP + (((%3) >> 1) + MAP_BORDER - SCREEN_BLOCK_HEIGHT/2) * ((%1) + MAP_BORDER * 2) + (((%2) >> 1) + MAP_BORDER - SCREEN_BLOCK_WIDTH/2))
     db %3, %2
 %endmacro
 
