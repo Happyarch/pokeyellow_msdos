@@ -777,6 +777,7 @@ HOME_CHECK_SRCS := \
     src/engine/events/pewter_guys.asm \
     src/engine/overworld/push_boulder.asm \
     src/engine/overworld/dust_smoke.asm \
+    src/engine/overworld/field_move_messages.asm \
     src/engine/overworld/player_state.asm
 # player_state.asm (OW-1.8) is check-only: externs ForceBikeOrSurf (in check-only
 # player_gfx.asm) and IsPlayerStandingOnDoorTile (linked in overworld.asm but not yet
@@ -945,7 +946,9 @@ assets/menu_strings.inc: assets/gb_charmap.txt tools/gen_menu_strings.py tools/g
 assets/status_strings.inc: assets/gb_charmap.txt tools/gen_status_strings.py tools/gb_text.py
 	python3 tools/gen_status_strings.py
 
-assets/overworld_strings.inc: assets/gb_charmap.txt tools/gen_overworld_strings.py tools/gb_text.py
+assets/overworld_strings.inc assets/field_move_text.inc &: assets/gb_charmap.txt \
+                            tools/gen_overworld_strings.py tools/gb_text.py \
+                            tools/gen_battle_text.py ../data/text/text_8.asm ../constants/charmap.asm
 	python3 tools/gen_overworld_strings.py
 
 # Battle message command streams (pret data/text + engine/battle wrappers, text_far
@@ -1083,6 +1086,9 @@ src/engine/pokemon/status_screen.o: assets/status_strings.inc
 # player_state.asm (PrintSafariZoneSteps) %includes the generated Safari HUD strings.
 src/engine/overworld/player_state.o: assets/overworld_strings.inc
 
+# field_move_messages.asm %includes the generated field-move FAR text streams.
+src/engine/overworld/field_move_messages.o: assets/field_move_text.inc
+
 # Pokémon base stats + IndexToPokedex (static data, generated from pret source).
 assets/base_stats.inc:
 	python3 tools/gen_base_stats.py
@@ -1214,7 +1220,7 @@ assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_
         assets/base_stats.inc assets/growth_rates.inc \
         assets/moves.inc assets/evos_moves.inc assets/monster_names.inc \
         assets/items.inc assets/gb_charmap.txt assets/menu_strings.inc \
-        assets/status_strings.inc assets/overworld_strings.inc \
+        assets/status_strings.inc assets/overworld_strings.inc assets/field_move_text.inc \
         assets/type_matchups.inc assets/move_names.inc assets/field_moves.inc \
         assets/effect_categories.inc \
         assets/wild_data.inc assets/map_scripts.inc assets/battle_hud_2bpp.inc \
