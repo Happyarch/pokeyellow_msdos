@@ -776,6 +776,7 @@ HOME_CHECK_SRCS := \
     src/engine/overworld/update_map.asm \
     src/engine/events/pewter_guys.asm \
     src/engine/overworld/push_boulder.asm \
+    src/engine/overworld/dust_smoke.asm \
     src/engine/overworld/player_state.asm
 # player_state.asm (OW-1.8) is check-only: externs ForceBikeOrSurf (in check-only
 # player_gfx.asm) and IsPlayerStandingOnDoorTile (linked in overworld.asm but not yet
