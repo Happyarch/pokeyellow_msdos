@@ -1066,9 +1066,30 @@ THEN port cut.asm. (dust_smoke's `WriteCutOrBoulderDustAnimationOAMBlock` extern
 
 ### Stage 5 — Player warp/fly/spin animations `[ ]`
 
-**TICKET OW-5.1: player_animations.asm** `[SOLO #2]`
+**TICKET OW-5.1: player_animations.asm** `[SOLO #2]` — **DONE 2026-07-10.**
+New mirrored file: `EnterMapAnim` (14/14 calls; **retires the overworld_stubs.asm
+ret-stub** — dup_def suppressed, stub stays LINKED for EnterMap's caller until
+OW-7.2 promotion, same pattern as SpawnPikachu), `_LeaveMapAnim`,
+`LeaveMapThroughHoleAnim`, `DoFlyAnimation` + 3 coord lists, `LoadBirdSpriteGraphics`
+(incbin `gfx/sprites/bird.2bpp`), `InitFacingDirectionList`, `SpinPlayerSprite`,
+`PlayerSpinInPlace`, `PlayerSpinWhileMovingUpOrDown`, `PlayerSpinWhileMovingDown`,
+`RestoreFacingDirectionAndYScreenPos`, `GetPlayerTeleportAnimFrameDelay` (`; PROJ`
+re wOnSGB/TIMING), `IsPlayerStandingOnWarpPadOrHole` + `WarpPadAndHoleData` (`; PROJ`:
+`lda_coord 8,9` → `W_TILEMAP + PLAYER_STANDING_ROW*SCREEN_TILES_W+PLAYER_STANDING_COL`,
+same anchor as player_state.asm), `FishingAnim` + `FishingRodOAM`/`RedFishingTiles`
+(fishing gfx incbin'd; `LoadAnimSpriteGfx` externed UNPORTED). Real audio LIVE
+(PlaySound/PlayDefaultMusic; StopMusic externed UNPORTED — home/overworld.asm).
+`_HandleMidJump`/`PlayerJumpingYScreenCoords` left in ledges.asm (not duplicated).
+Fishing text (`_NoNibbleText`/`_NothingHereText`/`_ItsABiteText`) generated →
+`assets/player_anim_text.inc` (gen_overworld_strings.py PLAYER_ANIM_FAR). BirdSprite +
+fishing tiles are file-local incbins (INTERIM; retire+extern at gfx port). faithdiff:
+all diffs are the 3 established justified classes — (1) indirect `ld [hli],a` /
+`set/res [hl]` stores the port names directly, (2) conditional `jr/jp nz` self-loops
+faithdiff can't parse (DoFlyAnimation, LeaveMapThroughHoleAnim), (3) two flat-source
+`CopyData`→inline `rep movsb` (InitFacingDirectionList/FishingAnim; flat ROM label
+src, map_sprites.asm:ShowTextStream precedent). lint 0 (7 suppressed). Check-only.
 - Pret: `engine/overworld/player_animations.asm`
-- Checklist:
+- Checklist (all DONE except the runtime verify below):
   - [ ] `EnterMapAnim`, `PlayerSpinWhileMovingDown`, `_LeaveMapAnim`, `LeaveMapThroughHoleAnim`, `DoFlyAnimation` + coord lists, `LoadBirdSpriteGraphics` (incbin `gfx/sprites/bird.2bpp`; loads NPC-sprite VRAM → `g_tilecache_dirty`; integrate with `src/gfx/sprites.asm` sheet layout), `InitFacingDirectionList`, `SpinPlayerSprite`, `PlayerSpinInPlace`, `PlayerSpinWhileMovingUpOrDown`, `RestoreFacingDirectionAndYScreenPos`, `GetPlayerTeleportAnimFrameDelay` (`wOnSGB` read — `; PROJ` note re Makefile TIMING modes), `IsPlayerStandingOnWarpPadOrHole` (+ tile table; writes `wStandingOnWarpPadOrHole`), `FishingAnim` (leaves: `LoadAnimSpriteGfx`/rod gfx/`EmotionBubble`/texts — stub what's missing, body faithful)
   - [ ] `_HandleMidJump` stays in ledges.asm; alias note here
   - [ ] Bounded-wait divergences for any sound-state polling vs ret-stubs

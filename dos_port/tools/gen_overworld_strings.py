@@ -61,6 +61,15 @@ CUT_FAR = [
     "_UsedCutText",
 ]
 
+# Far-text streams for engine/overworld/player_animations.asm (OW-5.1) — the
+# fishing-result messages. Own .inc for the same TU-isolation reason.
+# pret defs: data/text/text_1.asm.
+PLAYER_ANIM_FAR = [
+    "_NoNibbleText",
+    "_NothingHereText",
+    "_ItsABiteText",
+]
+
 
 def fmt_bytes(label: str, data: list) -> str:
     rows = []
@@ -101,6 +110,8 @@ def main() -> int:
          "Field-move message FAR text streams (Strength/Surf/boulder; data/text/text_8.asm)"),
         ("cut_text", CUT_FAR,
          "Cut field-move FAR text streams (data/text/text_9.asm)"),
+        ("player_anim_text", PLAYER_ANIM_FAR,
+         "Fishing-result FAR text streams (data/text/text_1.asm)"),
     ]
     for base, labels, desc in far_files:
         fout = [

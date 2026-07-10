@@ -1258,6 +1258,11 @@
    "rule": "dup_def",
    "key": "LoadPlayerSpriteGraphics",
    "why": "known interim: Phase-2 scaffold in overworld.asm is linked; faithful body in player_gfx.asm is check-only (HOME_CHECK_SRCS). Scaffold documented in overworld.asm; retire on player_gfx promotion"
+  },
+  {
+   "rule": "dup_def",
+   "key": "EnterMapAnim",
+   "why": "known interim (OW-5.1): overworld_stubs.asm ret-stub is linked (EnterMap's caller); faithful body in player_animations.asm is check-only (HOME_CHECK_SRCS). Delete stub when player_animations.asm is promoted to GAME_SRCS at OW-7.2 (same pattern as SpawnPikachu)"
   }
  ]
 }
