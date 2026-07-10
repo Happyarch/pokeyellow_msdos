@@ -35,6 +35,16 @@ AI wiring, generators). **[RESOLVED]** = fixed on `master` after this audit — 
 
 ---
 
+> **STATUS — CLOSED 2026-07-10.** Full re-triage @HEAD: every TIER 1–3 finding is now **resolved**
+> (A-1, A-3 @ `c3325e1e`; A-2, A-10, B-8, C-4, C-5, C-9 verified faithful @HEAD; A-7 increment + C-6
+> reachable Safari/RUN done), a **false positive** (W-2 — OBJ tiles, not the BG cache), or an
+> **explicitly-tracked deferral** (C-11 Phase-4 link `CF=0` guard; C-12 `ReadTrainer` prize-money
+> `TODO-MATH` stub; A-7 consumer / C-6 Ghost = the TIER-4 trainer-AI dead-code + unreachable-content
+> deferrals below). W-1's instant-return grass is fixed by wiring the overworld to `_InitBattleCommon`
+> (`a9352307`); a *completed*-battle return to a clean overworld still wants a live re-verify. A live
+> wild battle from the overworld now runs end-to-end. Remaining battle work = the TIER-4 coverage gaps
+> (trainer-AI move selection, unlinked routines) + live verification, not fidelity defects.
+
 ## TIER 1 — CRITICAL / HIGH (real, reachable state or gameplay corruption)
 
 ### A-1. `CheckForDisobedience` stub never clears ZF → every non-charging player move silently no-ops **[RESOLVED — c3325e1e]**
@@ -57,12 +67,15 @@ AI wiring, generators). **[RESOLVED]** = fixed on `master` after this audit — 
   note in `docs/current_plan_battle_pret_alignment.md` predates it. Not listed among the deferred
   leaves in `translation_log.md`. **Owner A. Severity: high (core gameplay broken in the live build).**
 
-### A-2. `ApplyAttackTo{Enemy,Player}Pokemon` — missing Super-Fang / Special-Damage dispatch + Substitute redirect (both sides) **[CONFIRMED]**
-- **[LIKELY RESOLVED post-audit — verify @HEAD before ticketing]:** the dispatch the audit reported
-  as *absent* is now present — `SUPER_FANG_EFFECT`/`SPECIAL_DAMAGE_EFFECT` branches at `core.asm:921-923`
-  (enemy) and `:1583-1585` (player), and the `HAS_SUBSTITUTE_UP` → `AttackSubstitute` redirect at `:978`.
-  Confirm the *values* are faithful (Seismic Toss=level, Sonic Boom=20, Dragon Rage=40, Psywave range,
-  Super Fang=½ curHP) before assigning; the finding below describes the pre-fix state.
+### A-2. `ApplyAttackTo{Enemy,Player}Pokemon` — missing Super-Fang / Special-Damage dispatch + Substitute redirect (both sides) **[RESOLVED — verified @HEAD 2026-07-10]**
+- **RESOLVED, values verified @HEAD:** the dispatch is present on both sides — `ApplyAttackToEnemyPokemon`
+  (`core.asm:937`) / `ApplyAttackToPlayerPokemon` (`:1790`) branch on `OHKO_EFFECT` / `SUPER_FANG_EFFECT`
+  / `SPECIAL_DAMAGE_EFFECT`, and `ApplyDamageTo{Enemy,Player}Pokemon` redirect on `HAS_SUBSTITUTE_UP` →
+  `AttackSubstitute` (`:998` / `:1687`). Values are faithful: Super Fang = 16-bit half current HP
+  (`shr`/`rcr`) floored to 1; Special Damage = Seismic Toss/Night Shade = user level, Sonic Boom =
+  `SONICBOOM_DAMAGE`, Dragon Rage = `DRAGON_RAGE_DAMAGE`, Psywave = random in the level·1.5 range with
+  the Gen-1 player≥1 / enemy≥0 asymmetry preserved. `AttackSubstitute` (`:1890`) is a real body
+  (SubstituteTookDamageText + per-turn `wEnemySubstituteHP`/`wPlayerSubstituteHP` redirect), not a stub.
 - **Files:** `core.asm:917` (`ApplyAttackToEnemyPokemon`), `core.asm:1579` (`ApplyAttackToPlayerPokemon`)
 - **pret:** `engine/battle/core.asm:4783-4900` (enemy target) / `:4902-5018` (player target)
 - **What's wrong:** both port routines implement only pret's *tail* (plain HP-subtract clamped at 0).
@@ -103,7 +116,15 @@ AI wiring, generators). **[RESOLVED]** = fixed on `master` after this audit — 
 - **Docs:** `translation_log.md:4003-4009` claims Bide is "release 2× via SwapPlayerAndEnemyLevels"
   for both sides and "Divergences: none" — inaccurate. **Owner A. Severity: high.**
 
-### C-4. `gen_battle_text.py` truncates `text_far`+`text_asm` streams → stat-stage move messages lose their verb + prompt **[CONFIRMED]**
+### C-4. `gen_battle_text.py` truncates `text_far`+`text_asm` streams → stat-stage move messages lose their verb + prompt **[RESOLVED — verified 2026-07-10]**
+- **RESOLVED via the Tier-2 hand-author route this finding recommended:** the truncated generated
+  `MonsStatsRoseText`/`FellText` labels are bypassed. `MonsStatsRose`/`MonsStatsFell` (`core.asm:874/882`,
+  called from `stat_mod_effects.asm:218/388`) compose the message in code: `ComposeStatIntro` writes
+  "`<USER/TARGET>'s<LINE><stat-name>`", then a branch on the move effect appends the correct
+  `<PROMPT>`-terminated suffix (`str_greatly_rose`/`str_rose` at `>= ATTACK_DOWN1_EFFECT`;
+  `str_greatly_fell`/`str_fell` on the `BIDE_EFFECT..ATTACK_DOWN_SIDE_EFFECT` window), then
+  `RunBattleTextStream` (which drives the ▼ prompt-wait). This is exactly pret's `text_far` +
+  `text_asm` branch (effects.asm:552-573,727-769), realized as Tier-2 code. Nothing to do.
 - **Files:** generator `dos_port/tools/gen_battle_text.py` (`collect_wrappers`); symptom in
   `dos_port/assets/battle_text.inc:269-274` (`MonsStatsRoseText`/`MonsStatsFellText`), consumed by
   `stat_mod_effects.asm:218,389`
@@ -126,7 +147,8 @@ AI wiring, generators). **[RESOLVED]** = fixed on `master` after this audit — 
 
 ## TIER 2 — MEDIUM-HIGH (reachable edge bugs / silently-dropped Gen-1 quirk)
 
-### C-5. `battle_hud.asm` — level-100 digit overflow + silently "fixed" Gen-1 maxHP>255 HP-bar quirk **[reported]**
+### C-5. `battle_hud.asm` — level-100 digit overflow + silently "fixed" Gen-1 maxHP>255 HP-bar quirk **[RESOLVED — verified 2026-07-10]**
+- **RESOLVED, both halves:** (a) `print_level` (`battle_hud.asm:412`) branches `cmp al,100 / jae .threeDigits`, which drops the ":L" prefix tile and calls `print_num3` (hundreds/tens/ones) — level 100 renders "100", not a wrapped garbage tile (faithful to pret `PrintLevel` writing the 3rd digit into the ":L" slot). (b) the Gen-1 maxHP>=256 lossy `÷4` HP-bar quirk is preserved under `%if BUG_FIX_LEVEL < 2` (`:261-270`) with a `BUG(cosmetic)` note — the silent "fix" is now gated, not silent. Original finding below.
 - **File:** `battle_hud.asm:313` (`print_num2`), `:207`/`:215` (`calc_hp_pixels`/`hp_to_pixels`)
 - **pret:** `PrintLevel` `home/pokemon.asm:363` (level≥100 writes a 3rd digit); `GetHPBarLength`
   `engine/gfx/hp_bar.asm:6-45` + enemy path `core.asm:1957-2033`
@@ -138,7 +160,8 @@ AI wiring, generators). **[RESOLVED]** = fixed on `master` after this audit — 
   the fidelity boundary this "silent fix" is a divergence (should be preserved, or `BUG_FIX_LEVEL`-gated).
 - **Owner C. Severity: medium-high (both reachable, both silent, both unflagged).**
 
-### C-6. `TryRunningFromBattle` — missing Safari/Ghost/link "always-escape" branches **[reported]**
+### C-6. `TryRunningFromBattle` — missing Safari/Ghost/link "always-escape" branches **[RESOLVED (reachable) — verified 2026-07-10]**
+- **Reachable case RESOLVED:** the guaranteed-escape branches are present (`battle_menu.asm:277-279`): `BATTLE_TYPE_SAFARI` and `BATTLE_TYPE_RUN` both `je .canEscape` before the speed formula, so a Safari-Zone RUN always succeeds. Ghost is a documented `TODO(faithful)` (`:275`, gated on unreachable Pokémon-Tower content); link is Phase-4. Original finding below.
 - **File:** `battle_menu.asm` *(verify @HEAD — this file was reduced to draw-helpers after the audit;
   the cited menu-behavior routine moved to `core.asm` `MoveSelectionMenu`/`DisplayBattleMenu` region)*
 - **pret:** `engine/battle/core.asm:1536-1546` (guaranteed escape for `IsGhostBattle`,
@@ -150,7 +173,8 @@ AI wiring, generators). **[RESOLVED]** = fixed on `master` after this audit — 
   `wForcePlayerToChooseMon=1` + re-saves screen (`:1619-1623`); the port does neither (subsumed by the
   tracked multi-mon deferral). **Owner C. Severity: medium-high (Safari case).**
 
-### A-7. `wAILayer2Encouragement` never incremented in `ExecuteEnemyMove` → AI move-weighting broken **[reported]**
+### A-7. `wAILayer2Encouragement` never incremented in `ExecuteEnemyMove` → AI move-weighting broken **[RESOLVED (increment) — verified 2026-07-10]**
+- **RESOLVED (increment):** present at `core.asm:1624` (`inc byte [ebp+wAILayer2Encouragement]`, cites pret `:5656-5657`). The consumer (`AIMoveChoiceModification2`) is part of the separately-tracked TIER-4 trainer-AI dead-code deferral (`SelectEnemyMove` never calls `AIEnemyTrainerChooseMoves`), not a divergence in translated logic. Original finding below.
 - **File:** `core.asm` `ExecuteEnemyMove` — **increment now present** at `core.asm:1412`
   (`inc byte [ebp+wAILayer2Encouragement]`, cites pret `:5656-5657`). *Increment half RESOLVED;* the
   consumer wiring (`AIMoveChoiceModification2`, `trainer_ai.asm:288`) remains Owner C. **Verify @HEAD.**
@@ -166,7 +190,10 @@ AI wiring, generators). **[RESOLVED]** = fixed on `master` after this audit — 
 
 ## TIER 3 — MEDIUM (correctness gaps, lower reachability today)
 
-### B-8. `DelayFrames` register-convention bug — `mov cl, N` instead of `mov bl, N` (systemic) **[CONFIRMED]**
+### B-8. `DelayFrames` register-convention bug — `mov cl, N` instead of `mov bl, N` (systemic) **[RESOLVED — verified 2026-07-10]**
+- **RESOLVED:** all 6 sites now load the frame count into **BL** (the 2 battle sites carry a
+  `; DelayFrames reads BL (frame.asm:213)` comment); a tree-wide `grep -B2 'call DelayFrames'` finds
+  **zero** `mov cl,` before any `DelayFrames` call. Original finding below.
 - **Battle files:** `move_effects/focus_energy.asm:31`, `move_effects/leech_seed.asm:48`
 - **Also (out of battle scope, same bug):** `engine/menus/swap_items.asm:56,75`,
   `engine/pokemon/evos_moves.asm:142,163`
@@ -179,7 +206,8 @@ AI wiring, generators). **[RESOLVED]** = fixed on `master` after this audit — 
   that was never reconciled with the BL calling convention.
 - **Fix:** `mov cl,` → `mov bl,` at all 6 sites. **Owner B (battle two); flag menus/pokemon owners for the other 4. Severity: medium/low (cosmetic).**
 
-### C-9. `LearnMoveFromLevelUp` — new move not synced into `wBattleMonMoves`/`wBattleMonPP` **[reported]**
+### C-9. `LearnMoveFromLevelUp` — new move not synced into `wBattleMonMoves`/`wBattleMonPP` **[RESOLVED — verified 2026-07-10]**
+- **RESOLVED:** the learn-move path writes both `wBattleMonMoves` (`learn_move.asm:154`) and `wBattleMonPP` (`:158`), so a mid-battle level-up move is usable that same battle. Original finding below.
 - **File:** `battle_menu.asm` *(verify @HEAD — file reduced to draw-helpers after the audit; re-locate
   the cited routine in `core.asm`)*
 - **pret:** `LearnMove` `engine/pokemon/learn_move.asm:53-63` — when the leveling mon is the active
