@@ -283,8 +283,57 @@ UpdateNPCSprite:
     jz .randomMovement                   ; STAY (0xFF+1=0) → random (always blocked)
     inc al
     jz .randomMovement                   ; WALK (0xFE+1→0xFF+1=0) → random walk
-    ; Scripted movement (MOVEMENTBYTE1 < WALK): not yet implemented — skip
+    ; Scripted movement (MOVEMENTBYTE1 < WALK): the MoveSprite-list stepper
+    ; (pret "; scripted movement", movement.asm:150-184). MOVEMENTBYTE1 is the
+    ; list index; each ready-tick consumes one byte of wNPCMovementDirections.
+    ; Used by cutscenes: Oak's Lab rival exit, SilphCo11F, Bill's House, etc.
+    ; AL = MOVEMENTBYTE1 + 2 here (the two `inc al` above), exactly pret's A.
+    dec al                               ; pret: dec a
+    mov [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTBYTE1], al ; increment movement byte 1 (data index)
+    dec al                               ; AL = original index
+    dec byte [ebp + W_NPC_NUM_SCRIPTED_STEPS] ; pret: push hl / dec [wNPCNumScriptedSteps] / pop hl
+    mov dx, W_NPC_MOVEMENT_DIRECTIONS    ; pret: ld de, wNPCMovementDirections
+    call LoadDEPlusA                     ; AL = [wNPCMovementDirections + index]
+    cmp al, NPC_CHANGE_FACING
+    je ChangeFacingDirection             ; pret: jp z (tail — ChangeFacingDirection rets to our caller)
+    cmp al, STAY
+    jne .scriptedNext
+    ; reached end of wNPCMovementDirections list (pret verbatim)
+    mov [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTBYTE1], al ; store $ff, disabling scripted movement
+    and byte [ebp + W_STATUS_FLAGS_5], ~(1 << BIT_SCRIPTED_NPC_MOVEMENT) & 0xFF ; res BIT_SCRIPTED_NPC_MOVEMENT,[hl]
+    xor al, al
+    mov [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], al
+    mov [ebp + W_UNUSED_OVERRIDE_SIMULATED_JOYPAD_STATES_INDEX], al
     jmp .ret
+.scriptedNext:                           ; pret .next
+    cmp al, WALK
+    jne .asm_4ecb
+    ; current NPC movement data is WALK ($fe). pret: "this seems buggy" —
+    ; sets the index to 1 and re-reads [wNPCMovementDirections + $fe], an
+    ; out-of-bounds read landing on wTradedEnemyMonOTID (0xCD59) garbage.
+    ; Replicated verbatim (no shipped movement list contains WALK mid-list).
+    mov byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTBYTE1], 1 ; ld [hl],$1
+    mov al, WALK
+    mov dx, W_NPC_MOVEMENT_DIRECTIONS
+    call LoadDEPlusA                     ; a = [wNPCMovementDirections + $fe] (?)
+.asm_4ecb:                               ; pret .asm_4ecb
+    push eax                             ; pret: push af
+    call Func_5288                       ; CF=1 → special code consumed
+    pop eax                              ; pret: pop bc / ld a,b (pop leaves CF intact)
+    jc .ret                              ; pret: jr nc,.determineDirection / ret
+    ; Fall into .determineDirection with pret's register state mirrored:
+    ; EBX := pret's HL = wSpriteStateData2 + off + 6 — NOT a tilemap pointer.
+    ; The .move* dest-tile read ([ebp+ebx±]) is garbage on this path exactly as
+    ; in pret; harmless because CanWalkOntoTile's scripted-movement early-allow
+    ; never consults the tile. CL := direction constraint, same source as the
+    ; random path (wMapSpriteData[(slot-1)*2] — the port's wCurSpriteMovement2).
+    lea ebx, [esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTBYTE1]
+    mov edx, esi
+    shr edx, 4                           ; slot number (1-15)
+    dec edx
+    add edx, edx                         ; (slot-1)*2 → wMapSpriteData index
+    movzx ecx, byte [wMapSpriteData + edx]
+    jmp .determineDirection
 
 .updateDelay:
     call UpdateSpriteMovementDelay
@@ -441,6 +490,9 @@ Random:
 
 ; ---------------------------------------------------------------------------
 ; Func_5337 — set FACINGDIRECTION, YSTEPVECTOR, XSTEPVECTOR for NPC slot ESI.
+; Semantic (pret label is auto-generated; keep it until pret names it):
+; "SetSpriteFacingAndStepVectors" — writes the chosen facing + per-frame step
+; deltas into the sprite's state; every walk/glide/face path funnels through it.
 ; Pret ref: engine/overworld/movement.asm:Func_5337.
 ; In: CH = facing direction, DH = Y step (-1/0/+1 as 0xFF/0x00/0x01), DL = X step.
 ; ---------------------------------------------------------------------------
@@ -452,6 +504,9 @@ Func_5337:
 
 ; ---------------------------------------------------------------------------
 ; Func_5349 — advance MAPY and MAPX by the step vectors at walk start.
+; Semantic (auto-generated pret label): "AdvanceSpriteMapCoords" — commits the
+; sprite's map-square position to the walk destination up front (the pixel
+; glide catches up over the following frames).
 ; Pret ref: engine/overworld/movement.asm:Func_5349.
 ; In: DH = Y step, DL = X step, ESI = slot byte offset.
 ; ---------------------------------------------------------------------------
@@ -461,6 +516,21 @@ Func_5349:
     mov al, dl
     add [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPX], al
     ret
+
+; ---------------------------------------------------------------------------
+; ChangeFacingDirection — zero the movement delta and fall through to TryWalking
+; (a stationary "walk" that only rewrites the facing).
+; Pret ref: engine/overworld/movement.asm:ChangeFacingDirection.
+; QUIRK (pret-faithful): the facing written comes from the STALE C register in
+; pret — undefined at this dispatch site; the port's stale CH is the same class
+; of undefined value. Unreachable from shipped data: the only NPC_CHANGE_FACING
+; byte in any movement list (OaksLab .RivalExitMovement[0]) is overwritten with
+; NPC_MOVEMENT_LEFT/RIGHT by OaksLabRivalStartsExitScript before the list runs.
+; ---------------------------------------------------------------------------
+ChangeFacingDirection:
+    xor dh, dh                          ; pret: ld de, $0
+    xor dl, dl
+    ; fall through to TryWalking
 
 ; ---------------------------------------------------------------------------
 ; TryWalking — attempt to walk the NPC one metatile in a chosen direction.
@@ -1144,6 +1214,7 @@ AdvanceScriptedNPCAnimFrameCounter:
 
 ; ---------------------------------------------------------------------------
 ; Func_5274 — advance the current sprite's walk-animation counters.
+; Semantic (auto-generated pret label): "AdvanceSpriteAnimFrameCounters".
 ; Pret ref: engine/overworld/movement.asm:Func_5274.
 ; intra-anim counter ticks 0->3 each call; every 4th tick advances the anim
 ; frame counter 0->3 (16 ticks = a full 4-frame walk cycle).
@@ -1164,7 +1235,186 @@ Func_5274:
     ret
 
 ; ---------------------------------------------------------------------------
+; LoadDEPlusA — AL = [DX + AL] (GB-address table read).
+; Pret ref: engine/overworld/movement.asm:LoadDEPlusA (`a = [de + a]`).
+; In: DX = GB base address, AL = index. Out: AL = byte. DX preserved.
+; ---------------------------------------------------------------------------
+LoadDEPlusA:
+    push edx
+    movzx eax, al
+    movzx edx, dx
+    add edx, eax
+    mov al, [ebp + edx]
+    pop edx
+    ret
+
+; ---------------------------------------------------------------------------
+; Func_5288 — special scripted-movement code handler ("nice lookup table").
+; Semantic (auto-generated pret label): "TryHandleSpecialMovementCode" — decode
+; one movement-list byte; $04-$07 = quick-step (teleport a block + status-4
+; glide, one code per direction D/U/L/R), $11-$14 = turn-and-animate-in-place
+; (same direction order). Anything else falls through to the normal walk codes.
+; Pret ref: engine/overworld/movement.asm:Func_5288.
+; Called from UpdateNPCSprite's scripted branch (.asm_4ecb) with AL = the raw
+; movement-list byte ("a is supposedly [wNPCMovementDirections + $fe]" — pret's
+; comment refers to the WALK-bug entry path; the normal path passes the list
+; byte). Two live code sets:
+;   set 1 ($04-$07): teleport the sprite one block (MAPY/MAPX updated) and glide
+;     via movement status 4 with an 8-frame anim — used by Oak's Lab rival exit
+;     ($04 ×5) and the SilphCo11F rocket sequences ($05).
+;   set 2 ($11-$14): face + step vectors, status 3, NO MAPY/MAPX update — carries
+;     pret's H-page bug (see .asm_52fa). Unreachable from shipped movement data.
+;   set 3 (.asm_52d2-.asm_52e1): UNREFERENCED in pret ("set 3? (unused)").
+; Out: CF=1 code consumed (sprite state written); CF=0 not a special code (AL=0).
+; In: ESI = slot byte offset. Clobbers EAX, CH, DH, DL.
+; ---------------------------------------------------------------------------
+Func_5288:
+    cmp al, 0x05
+    je .asm_52af
+    cmp al, 0x04
+    je .asm_52aa
+    cmp al, 0x06
+    je .asm_52b4
+    cmp al, 0x07
+    je .asm_52b9
+    cmp al, 0x11
+    je .asm_52c3
+    cmp al, 0x12
+    je .asm_52be
+    cmp al, 0x13
+    je .asm_52c8
+    cmp al, 0x14
+    je .asm_52cd
+    xor al, al                          ; pret: xor a (clears CF on both CPUs)
+    ret
+; set 1?
+.asm_52aa:
+    call Func_531f
+    jmp .asm_52e6
+.asm_52af:
+    call Func_5325
+    jmp .asm_52e6
+.asm_52b4:
+    call Func_5331
+    jmp .asm_52e6
+.asm_52b9:
+    call Func_532b
+    jmp .asm_52e6
+; set 2?
+.asm_52be:
+    call Func_531f
+    jmp .asm_52fa
+.asm_52c3:
+    call Func_5325
+    jmp .asm_52fa
+.asm_52c8:
+    call Func_5331
+    jmp .asm_52fa
+.asm_52cd:
+    call Func_532b
+    jmp .asm_52fa
+; set 3? (unused)
+; UNREFERENCED (pret: no callers — kept for completeness, exactly as pret keeps them)
+.asm_52d2:
+    call Func_531f
+    jmp .asm_530b
+.asm_52d7:
+    call Func_5325
+    jmp .asm_530b
+.asm_52dc:
+    call Func_5331
+    jmp .asm_530b
+.asm_52e1:
+    call Func_532b
+    jmp .asm_530b
+
+.asm_52e6:
+    call Func_5337
+    call Func_5349
+    ; pret: ldh a,[hCurrentSpriteOffset] / ld l,a / ld [hl],$8 / dec h / inc l /
+    ; ld [hl],$4 — H is $C2 (data2) after Func_5349, so this writes
+    ; data2[off] = WALKANIMCOUNTER = 8, then data1[off+1] = MOVEMENTSTATUS = 4.
+    mov byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_WALKANIMCOUNTER], 8
+    mov byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_MOVEMENTSTATUS], 4
+    call UpdateSpriteImage
+    stc
+    ret
+
+.asm_52fa:
+    call Func_5337
+    ; BUG(latent): pret's H-page bug, replicated byte-for-byte. This path skips
+    ; Func_5349, so pret's H is still $C1 (data1) from Func_5337 — the same
+    ; `ld [hl],$8 / dec h / inc l / ld [hl],$3` sequence that set 1 runs against
+    ; data2/data1 here writes data1[off] = PICTUREID = 8, then dec h lands on
+    ; page $C0 and writes $C000+off+1 = 3 — one byte into AUDIO ENGINE WRAM
+    ; (slot-dependent: $C011 wChannelCommandPointers+11, $C031 wChannelFlags1+3,
+    ; …). The port memmap mirrors pret's WRAM layout, so [ebp+0xC001+off] hits
+    ; the port's live audio state the same way. Reachability: no shipped movement
+    ; list contains $11-$14; only the WALK OOB-read path (see .scriptedNext) or
+    ; memory corruption can route here — latent in the original, latent here.
+    ; pret ref: movement.asm:.asm_52fa; port analysis 2026-07-10 (OW-2.1 tail).
+%if BUG_FIX_LEVEL >= 2
+    ; Fixed form: the writes set 1/set 3 perform (walk-anim counter + status),
+    ; without set 1's MAPY/MAPX teleport — i.e. what the sequence writes when H
+    ; is on the data2 page as everywhere else in this routine.
+    mov byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_WALKANIMCOUNTER], 8
+    mov byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_MOVEMENTSTATUS], 3
+%else
+    mov byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_PICTUREID], 8
+    mov byte [ebp + esi + 0xC001], 3    ; $C000 + off + 1 — audio WRAM clobber (see BUG note)
+%endif
+    call UpdateSpriteImage
+    stc
+    ret
+
+.asm_530b:
+    call Func_5337
+    call Func_5349
+    ; Same data2/data1 pair as .asm_52e6 (H=$C2 after Func_5349), status 3.
+    mov byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_WALKANIMCOUNTER], 8
+    mov byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_MOVEMENTSTATUS], 3
+    call UpdateSpriteImage
+    stc
+    ret
+
+; ---------------------------------------------------------------------------
+; Func_531f / Func_5325 / Func_532b / Func_5331 — direction parameter setters
+; for Func_5288: step vectors + facing, in the port's Func_5337 ABI
+; (CH = facing, DH = Y step, DL = X step; pret: C / D / E).
+; Semantic (auto-generated pret labels): "LoadDownMovementParams" ($531f),
+; "LoadUpMovementParams" ($5325), "LoadRightMovementParams" ($532b),
+; "LoadLeftMovementParams" ($5331).
+; Pret ref: engine/overworld/movement.asm:Func_531f..Func_5331.
+; ---------------------------------------------------------------------------
+Func_531f:
+    mov dh, 1                           ; pret: lb de, 1, 0
+    xor dl, dl
+    mov ch, SPRITE_FACING_DOWN          ; pret: ld c, SPRITE_FACING_DOWN
+    ret
+
+Func_5325:
+    mov dh, -1                          ; pret: lb de, -1, 0
+    xor dl, dl
+    mov ch, SPRITE_FACING_UP
+    ret
+
+Func_532b:
+    xor dh, dh                          ; pret: lb de, 0, 1
+    mov dl, 1
+    mov ch, SPRITE_FACING_RIGHT
+    ret
+
+Func_5331:
+    xor dh, dh                          ; pret: lb de, 0, -1
+    mov dl, -1
+    mov ch, SPRITE_FACING_LEFT
+    ret
+
+; ---------------------------------------------------------------------------
 ; Func_5357 — finish an in-progress non-player sprite step (movement status 4).
+; Semantic (auto-generated pret label): "UpdateSpriteInGlideStep" — the status-4
+; counterpart of UpdateSpriteInWalkingAnimation (status 3): 2 px/frame with an
+; 8-frame counter, i.e. the double-speed step Func_5288's quick-step codes start.
 ; Pret ref: engine/overworld/movement.asm:Func_5357.
 ; Each frame: advance the anim counters (Func_5274), then move the sprite 2 px in
 ; its current step direction (YPIXELS += 2*YSTEP, XPIXELS += 2*XSTEP) and decrement

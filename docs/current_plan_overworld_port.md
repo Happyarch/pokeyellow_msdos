@@ -971,30 +971,45 @@ adds to `GAME_SRCS` (or `OVERWORLD_CHECK_SRCS` if closure unresolved), runs
         (port-assigned scratch, pret address not load-bearing).
   - [x] Audit omissions (`Func_5357` status-4 dispatch, `MakeNPCFacePlayer` guard)
         — already fixed in OW-A.7.
-  - [ ] **REMAINING sub-step (deferred — needs analysis, do NOT rush):** the `Func_5288`
-        item-ball/STAY-and-face dispatch block (`Func_5288`/`Func_531f`/`Func_5325`/
-        `Func_532b`/`Func_5331`) + `ChangeFacingDirection` + `LoadDEPlusA`. A **distinct
-        status-3 path** (item-ball emerge), NOT the scripted-movement chain — doesn't block
-        the Oak cutscene. Blockers found 2026-07-09:
-        1. **Port register convention:** `Func_5337` takes facing in **CH** (not the naive
-           `BC→BX` C→BL), DH=Ystep, DL=Xstep (verified vs `.moveDown`/`.moveUp`). `Func_531f`
-           family must produce (CH=facing, DH/DL=±1/0/0xFF) to match.
-        2. **⚠ Suspected pret bug — H-page asymmetry in the tails.** `.asm_52e6`/`.asm_530b`
-           call `Func_5349` (leaves H=$C2=data2), so `ld [hl],8; dec h; inc l; ld [hl],N`
-           writes `data2[offset]`=WALKANIMCOUNTER=8 then `data1[offset+1]`=MOVEMENTSTATUS=N.
-           But `.asm_52fa` calls only `Func_5337` (leaves H=$C1=data1), so the SAME sequence
-           writes `data1[offset]`=**PICTUREID**=8 then **`$C0xx[offset+1]`**=3 (below both
-           sprite pages, $C000 region). This asymmetry (data2/data1 vs data1/$C0xx) looks
-           like a latent pret bug in the "set 2" item-ball path. Faithful port must decide:
-           replicate verbatim under a `; GLITCH:`/`; BUG(level):` tag (glitch policy), which
-           requires (a) identifying what `$C000+offset+1` aliases in the port memmap and
-           (b) confirming vs a real ROM whether the write is reachable/observable. **Flagged
-           for careful analysis — not a rush-at-session-end task.** `.asm_52d2..52e1`
-           (set 3 → `.asm_530b`) are unreferenced in pret (dead) — port as-is or omit.
-        3. **Live-path wiring:** hooking `Func_5288` into the port's bespoke `UpdateNPCSprite`
-           status-1 selection (pret `.next`/`.asm_4ecb`) changes the LIVE NPC walk path
-           (every NPC/frame); no golden exercises item-ball codes, so it needs MCP/authored
-           verification, not just baselines.
+  - [x] **Func_5288 tail — DONE 2026-07-10 (analysis + full port).** The 2026-07-09
+        framing was corrected by the analysis: `Func_5288` is NOT a separate item-ball
+        path — it sits **inline in the MoveSprite scripted-movement chain**
+        (`.asm_4ecb`), which the port's `UpdateNPCSprite` had skipped entirely
+        (`jmp .ret`). Ported the **whole scripted branch** (index/steps bookkeeping,
+        `LoadDEPlusA`, `NPC_CHANGE_FACING`/STAY/WALK handling incl. pret's own
+        "seems buggy" WALK OOB re-read of `[wNPCMovementDirections+$fe]` = 0xCD59
+        wTradedEnemyMonOTID garbage, replicated verbatim) + `Func_5288` +
+        `Func_531f/5325/532b/5331` + `ChangeFacingDirection` (falls through to
+        TryWalking; stale-facing quirk documented — unreachable: the only
+        NPC_CHANGE_FACING list byte is overwritten by OaksLabRivalStartsExitScript
+        before the list runs). Analysis results:
+        1. **Reachability:** set 1 ($04-$07) is MAINLINE — Oak's Lab rival exit
+           (`$04`×5) and SilphCo11F ($05 lists); required for the intro cutscene
+           (feeds OW-2.5). Set 2 ($11-$14) appears in NO shipped movement list —
+           reachable only via the WALK OOB path or corruption. Set 3 unreferenced
+           in pret; ported verbatim with `; UNREFERENCED`.
+        2. **H-page bug CONFIRMED latent, replicated byte-for-byte** under a
+           `; BUG(latent):` tag: `.asm_52fa` writes `data1[off]`=PICTUREID=8 then
+           `$C000+off+1`=3 — **audio engine WRAM** (slot-dependent:
+           wChannelCommandPointers/wChannelFlags1/…). The port memmap mirrors pret
+           WRAM, so `[ebp+0xC001+off]` hits the port's live audio state with
+           corruption parity. `BUG_FIX_LEVEL >= 2` variant writes the coherent
+           data2-walkanim=8/status=3 pair instead. Per user directive 2026-07-10:
+           pret bytes are ground truth (auto-disassembled ROM), replicate.
+        3. **ABI adaptation:** `Func_531f` family emits (CH=facing, DH/DL=steps)
+           per the port's established `Func_5337` convention; scripted fall-in to
+           `.determineDirection` mirrors pret's registers (EBX := pret's stale
+           HL = data2+off+6 — garbage tile ptr, never consulted because
+           CanWalkOntoTile's scripted early-allow; CL := wMapSpriteData constraint,
+           the port's wCurSpriteMovement2 relocation).
+        All auto-labeled `Func_*` in the chain carry `Semantic:` header comments
+        (would-be names) while keeping pret labels primary (user directive — stay
+        in sync with pret until it names them). faithdiff: 4 deltas, all
+        established classes (conditional-`je` parser artifact on ChangeFacingDirection,
+        wCurSpriteMovement2→wMapSpriteData relocation, two `[hl]`-indirect stores
+        named directly); lint 0; full `make fidelity` 6/6 PASS (normal NPCs are
+        STAY/WALK so the scripted branch is inert until a script MoveSprites —
+        runtime exercise rides with OW-2.5's rival-exit/Oak cutscene).
 - Verification: `make check` clean; full SKIP_TITLE link OK (stub retired, no double-def);
   `goldencheck overworld_pallet` PASS (gate rebuild + inert scripted code don't regress
   Pallet NPCs); faithdiff clean modulo 2 justified parser artifacts (pret's `[hl]`-indirect
@@ -1007,7 +1022,12 @@ adds to `GAME_SRCS` (or `OVERWORLD_CHECK_SRCS` if closure unresolved), runs
   - Gate: overworld_pallet goldencheck PASS (no regression from the relocation); faithdiff clean on all four labels; lint 0. Check-only until `npc_movement_2`/trainer-AI callers land (they set `hNPCSpriteOffset`/`hFindPath*`).
 **TICKET OW-2.3: auto_movement.asm** `[SWARM/Sonnet]` **— DONE 2026-07-09 (solo)**. New `src/engine/overworld/auto_movement.asm`: `_EndNPCMovementScript` + `EndNPCMovementScript` (banking-wrapper, allowlisted), the 5 `PalletMovementScript_*` (Oak walk-to-lab state machine) + `PalletMovementScriptPointerTable`, both Pewter tables + `PewterMovementScript_*`, all RLELists. `PlayerStepOutFromDoor` left in overworld.asm (not redefined). Real audio wired (`PlayMusic` al=id/bl=bank — the "PlayDefaultMusic/StopAllMusic stub" leaf is obsolete post-OW-A.14). `dw`→`dd` flat dispatch tables (match `CallFunctionInTable`/`RunNPCMovementScript` ×4). Check-only (HOME_CHECK_SRCS); `HideObject` an unported predef extern. faithdiff artifacts (indirect `res[hl]`, sprite-offset ABI, composite field) all justified; lint 0.
 
-**Stage 2 status:** OW-2.1 core / OW-2.2 / OW-2.3 / OW-2.4 all DONE. Remaining Stage 2 = **OW-2.5** (runtime Oak-cutscene exercise via MCP — needs the Pallet map script trigger + dosbox-mcp) and the deferred **OW-2.1 Func_5288 tail** (suspected pret H-page bug, flagged for evaluation).
+**Stage 2 status:** OW-2.1 (core + Func_5288 tail) / OW-2.2 / OW-2.3 / OW-2.4 all
+DONE. Remaining Stage 2 = **OW-2.5 only** (runtime Oak-cutscene exercise via MCP —
+needs the real PalletTown_Script trigger/states, currently ret-stubs in
+src/scripts/pallet_town.asm, owned jointly with script-engine Stage 6; the
+movement side is now fully in place: scripted branch + Func_5288 linked,
+RunNPCMovementScript dispatch ungated, auto_movement tables linked).
 **TICKET OW-2.4: pewter_guys.asm** `[SWARM/Sonnet]` **— DONE 2026-07-09 (solo)**. New `src/engine/events/pewter_guys.asm` (pret `engine/events/pewter_guys.asm`); flat-pointer adaptation (`dw`→`dd`, 6-byte coord stride). Check-only (HOME_CHECK_SRCS). faithdiff clean/lint 0. **Note:** the plan's "`DecodeRLEList`" hint was inaccurate — real `PewterGuys` is self-contained (0 calls), directly copying movement streams onto the sim-joypad queue.
   - **Foundation fix (separate commit):** discovered + corrected a family of guessed sim-joypad / trainer-union / field-move WRAM addresses that disagreed with the golden sym and sat *inside* the 180-byte `wNPCMovementDirections` buffer (`wSimulatedJoypadStatesIndex` 0xCC84→0xCD38, `wJoyIgnore` 0xCCB7→0xCD6B, override index/mask, `wFieldMoves*`, the whole m8_2 trainer/emotion union +6/+7). All relocate together (symbol-referenced); added `wWhichPewterGuy`=0xD12E. Gate: full `make fidelity` (6/6) PASS. This unblocks any scripted-movement/sim-joypad runtime work.
 **OW-2.5: Oak cutscene verification** `[root]` — enable `PalletTownDefaultScript` trigger (script-engine Stage 6 stubs), DOSBox-X MCP: breakpoint `DoScriptedNPCMovement`, `gb_read wNPCMovementDirections2`, `dump_frame` per step; final FRAME.BIN shows Oak + player walked to the Lab. Update `current_plan_script_engine.md` (deferral resolved).
