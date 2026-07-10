@@ -3,10 +3,16 @@
 
 Plays a generated song (assets/midi/<target>/<Song>.mid) on an ALSA MIDI
 port without booting DOS: MUNT (mt32emu-qt) for --target mt32, fluidsynth
-(or any GM synth) for --target gm. For MT-32 the current setup SysEx from
-tools/audio/mt32/timbres.yaml is prepended, paced, so what you hear matches
-what mt32_upload programs at boot — edit timbres.yaml / overrides/*.yaml,
-`make assets`, re-run, listen.
+(or any GM synth) for --target gm.
+
+Patches are program-change events inside the .mid, so timbres audition
+faithfully with no setup at all. The MT-32 setup SysEx (reverb / partial
+reserves / channel routing / master vol from tools/audio/mt32/timbres.yaml)
+is NOT sent by default: standalone mt32emu-qt mishandles a System Area write
+on its live ALSA input and shifts part routing (a fidelity feature that made
+things worse — the 2026-07-09 audition-vs-game hunt). Pass --setup to send it
+anyway; for the real boot upload, use dos_port/run-mt32, which is the faithful
+path.
 
 Typical loop:
     mt32emu-qt &                      # MUNT with an ALSA input port
@@ -91,8 +97,12 @@ def main():
                                  "(e.g. Music_PalletTown or PalletTown)")
     ap.add_argument("--target", choices=("mt32", "gm"), default="mt32")
     ap.add_argument("--port", help="ALSA port (default: auto-detect)")
-    ap.add_argument("--no-setup", action="store_true",
-                    help="skip the MT-32 setup SysEx")
+    ap.add_argument("--setup", action="store_true",
+                    help="prepend the MT-32 setup SysEx (reverb/reserves/"
+                         "routing/vol). OFF by default: standalone mt32emu-qt "
+                         "mishandles this System Area write on its live input "
+                         "and shifts part routing. Use dos_port/run-mt32 for "
+                         "the real boot upload.")
     args = ap.parse_args()
 
     mdir = MIDI_DIR / args.target
@@ -108,10 +118,11 @@ def main():
                          f"{[p.stem for p in hits] or 'nothing'}")
     mid = hits[0].read_bytes()
 
-    if args.target == "mt32" and not args.no_setup:
+    if args.target == "mt32" and args.setup:
         msgs = build_messages(yaml.safe_load(TIMBRES.read_text()) or {})
         mid = with_setup(mid, msgs)
-        print(f"prepended {len(msgs)} setup SysEx messages")
+        print(f"prepended {len(msgs)} setup SysEx messages "
+              "(--setup: expect shifted part routing on standalone MUNT)")
 
     port = args.port or pick_port(args.target)
     with tempfile.NamedTemporaryFile(suffix=".mid") as tmp:
