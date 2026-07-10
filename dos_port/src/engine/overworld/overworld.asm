@@ -2287,7 +2287,22 @@ SeamReseatView:
     add eax, ecx
     add eax, W_OVERWORLD_MAP
     mov [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], ax
+    ; wXBlockCoord/wYBlockCoord are the sub-block (odd/even coord) halves that
+    ; RefreshCollisionTileMap uses to shift the wSurroundingTiles→wTileMap crop.
+    ; The live spawn path maintains them; a hand-seeded coord must too, or the
+    ; crop is one coord off and every collision test reads the wrong tile.
+    mov al, [ebp + W_X_COORD]
+    and al, 1
+    mov [ebp + W_X_BLOCK_COORD], al
+    mov al, [ebp + W_Y_COORD]
+    and al, 1
+    mov [ebp + W_Y_BLOCK_COORD], al
     call LoadCurrentMapView
+    ; wTileMap is the collision mirror, and LoadCurrentMapView only fills
+    ; wSurroundingTiles. Without this the very first collision check reads the
+    ; PREVIOUS map's tiles (or zeros) and the player is walled in on the spawn
+    ; tile — a harness artifact that looks exactly like a map bug.
+    call RefreshCollisionTileMap
     ; Seed BIT_STANDING_ON_WARP exactly as LoadWarpDestination does, or a spawn
     ; that lands on a warp tile (every map-edge gate spawn does) can never take
     ; the collision-exit path — an artifact that would make the harness disagree
@@ -3477,11 +3492,28 @@ LoadWarpDestination:
     ; CheckWarpTile uses the W_WARP_ENTRIES now loaded for the destination map,
     ; and overwrites BL with the resolved back-destination — safe since EBX is
     ; caller-saved (pushed at the top of this routine).
+    ;
+    ; DIVERGENCE (double map load): pret's WarpFound2 does not call LoadMapHeader —
+    ; it falls into EnterMap, which loads the map exactly once. The port front-loads
+    ; LoadMapHeader here, and `.warpTransition` then `jmp EnterMap`, so LoadMapData →
+    ; LoadMapHeader → LoadTilesetHeader runs a SECOND time. LoadTilesetHeader's
+    ; faithful pret tail (engine/overworld/tilesets.asm:21-47) re-derives the spawn
+    ; coords with `call LoadDestinationWarpPosition` whenever the tileset changed and
+    ; wDestinationWarpID != $FF. CheckWarpTile below overwrites wDestinationWarpID
+    ; with the ARRIVAL tile's outbound warp id, so that second pass resolved a
+    ; different warp entry: entering Viridian Forest from the south gate (warp 3,
+    ; the bottom of the map) landed the player on warp 1 (the top) while the view
+    ; pointer — already stored above — still pointed at warp 3. Player and camera
+    ; disagreed, and the top row let him walk off the map (wYCoord 0 -> 255).
+    ; Preserve the id so the second pass re-derives the SAME coords (idempotent).
+    ; Retire this save/restore when the front-loaded LoadMapHeader goes away.
+    mov cl, [ebp + W_DESTINATION_WARP_ID]
     and byte [ebp + W_MOVEMENT_FLAGS], ~(1 << BIT_STANDING_ON_WARP)
     call CheckWarpTile
     jnc .no_spawn_warp
     or byte [ebp + W_MOVEMENT_FLAGS], (1 << BIT_STANDING_ON_WARP)
 .no_spawn_warp:
+    mov [ebp + W_DESTINATION_WARP_ID], cl
 
     ; Reset turn state: player spawns stopped, so the next press should turn
     ; first rather than immediately walking (prevents accidental exit on entry).
