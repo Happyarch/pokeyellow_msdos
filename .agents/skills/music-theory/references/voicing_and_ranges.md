@@ -111,6 +111,9 @@ If the melody is on the 3rd, your pad should be on the root or 5th.
 
 **Never double the melody in unison** — it wastes a voice, sounds thin
 rather than rich, and creates de facto parallel octaves with itself.
+(Note: percussion channels — those with `rhythm: true`, `percussion: true`, or a
+GM percussion program — are an exception and may share pitches; the linter exempts
+them automatically, no flag needed.)
 Doubling at the octave below is acceptable (bass reinforcement) but
 should be a deliberate choice, not a default.
 
@@ -149,7 +152,7 @@ For each added voice:
   □ Within the practical range for its voice type
   □ Below C3: only octaves and fifths with other low voices
   □ Adjacent to upper voices: within an octave
-  □ Not doubling the melody in unison
+  □ Not doubling the melody in unison (unless a percussion channel)
   □ Not doubling the leading tone or chord 7th
   □ Texture density matches the emotional context
   □ Open/close position is deliberate, not accidental

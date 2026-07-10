@@ -116,8 +116,12 @@ the wave channel are the most common mistake.
 
 ### 6. Validate
 `yaml_lint.py` checks: notes in range, valid beat/measure refs, per-tick
-voice count within OPL3 polyphony, no unison doubling of base melody,
-all three patch fields present.
+voice count within OPL3 polyphony, no unison doubling of base melody, all
+three patch fields present. Percussion channels (`rhythm: true`,
+`percussion: true`, or a GM percussion program — Timpani 48 / Percussive
+family 113–120) are exempt from the pitched-voice rules — unison-doubling,
+in-channel overlap, and pitch range — since drums/hits share pitches by
+nature; the OPL3 voice budget (polyphony) still counts them.
 
 ---
 

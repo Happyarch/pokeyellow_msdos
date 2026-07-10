@@ -116,8 +116,12 @@ the wave channel are the most common mistake.
 
 ### 6. Validate
 `yaml_lint.py` checks: notes in range, valid beat/measure refs, per-tick
-voice count within OPL3 polyphony, no unison doubling of base melody,
-all three patch fields present.
+voice count within OPL3 polyphony, no unison doubling of base melody, all
+three patch fields present. Percussion channels (`rhythm: true`,
+`percussion: true`, or a GM percussion program — Timpani 48 / Percussive
+family 113–120) are exempt from the pitched-voice rules — unison-doubling,
+in-channel overlap, and pitch range — since drums/hits share pitches by
+nature; the OPL3 voice budget (polyphony) still counts them.
 
 ---
 
@@ -161,3 +165,12 @@ all three patch fields present.
 | [hardware_constraints.md](references/hardware_constraints.md) | OPL3 voice count, channel layout, available patches, FM synthesis characteristics | When you need to know what's technically possible |
 | examples/ | Hand-crafted worked example (when available) | Before writing your first arrangement — see what good output looks like |
 | music-theory skill | All theory references | Always read first |
+
+## Auditioning (how to actually hear it)
+
+The listen loop lives in the **build-and-debug** skill ("Auditioning music").
+Short form: host-side `tools/audio/audition.py --target gm <Song>` for fast
+iteration, then the real OPL3 shim end-to-end with
+`dos_port/run DEBUG_AUDIO=1 TRACK=<MUSIC_* constant> /LOOP`. The track is the
+`TRACK=` make variable — never edit the Makefile or debug_dump.asm to swap
+songs, and never do full DOS rebuilds just to hear a YAML tweak.

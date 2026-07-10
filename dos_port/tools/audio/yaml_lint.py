@@ -52,6 +52,26 @@ OPL_TIER1_WARN = 6
 MT32_PARTIALS_WARN = 30          # worst-case estimate, 2 partials/note
 ADDED_PARTS_WARN = 5             # free MT-32 melodic parts
 
+# GM programs (1-based) that are inherently percussion: Timpani (48) plus the
+# whole GM "Percussive" family (113-120: tinkle bell, agogo, steel drums,
+# woodblock, taiko, melodic tom, synth drum, reverse cymbal). A channel whose
+# gm_program is in this set — or that sets `rhythm: true` (GM/MT-32 drum part
+# on MIDI ch 10) or `percussion: true` (a percussion timbre on its own melodic
+# channel) — is judged by ear, not by the pitched voice-leading rules: it may
+# share pitches with the base melody, stack simultaneous hits in one channel,
+# and ignore the melodic range. See _is_percussive().
+PERCUSSION_PATCHES = {48, 113, 114, 115, 116, 117, 118, 119, 120}
+
+
+def _is_percussive(ch: dict, gm, is_rhythm: bool) -> bool:
+    """A channel is percussive if it routes to the drum part, is explicitly
+    tagged, or names a GM percussion program. Intrinsic to the file — no
+    caller opt-in — so the asset pipeline sees the same verdict a human does."""
+    return (is_rhythm
+            or bool(ch.get("percussion", False))
+            or (isinstance(gm, int) and gm in PERCUSSION_PATCHES))
+
+
 NOTE_RE = re.compile(r"^([A-Ga-g])([#b]?)(-?\d)$")
 PC = {"C": 0, "D": 2, "E": 4, "F": 5, "G": 7, "A": 9, "B": 11}
 
@@ -85,6 +105,8 @@ class ResolvedChannel:
     gm_program: int
     pan: str
     volume: int
+    is_rhythm: bool = False
+    is_percussion: bool = False
     notes: list[ResolvedNote] = field(default_factory=list)
 
 
@@ -284,7 +306,8 @@ def lint(path: Path) -> tuple[Report, list[ResolvedChannel], dict]:
         elif opl is not None:
             rep.err(f"{ctx}: tier {tier} must not carry opl_patch")
 
-        mt32 = ch.get("mt32_patch")
+        is_rhythm = ch.get("rhythm", False)
+        mt32 = ch.get("mt32_patch", 1 if is_rhythm else None)
         if isinstance(mt32, int):
             if not 1 <= mt32 <= 128:
                 rep.err(f"{ctx}: mt32_patch {mt32} out of 1-128 (1-based)")
@@ -295,9 +318,11 @@ def lint(path: Path) -> tuple[Report, list[ResolvedChannel], dict]:
         else:
             rep.err(f"{ctx}: mt32_patch required (int 1-128 or timbre name)")
 
-        gm = ch.get("gm_program")
+        gm = ch.get("gm_program", 1 if is_rhythm else None)
         if not isinstance(gm, int) or not 1 <= gm <= 128:
             rep.err(f"{ctx}: gm_program required, int 1-128 (1-based)")
+
+        is_percussion = _is_percussive(ch, gm, is_rhythm)
 
         pan = ch.get("pan", "center")
         if pan not in PANS:
@@ -310,39 +335,65 @@ def lint(path: Path) -> tuple[Report, list[ResolvedChannel], dict]:
         if not isinstance(transpose, int):
             rep.err(f"{ctx}: transpose must be an integer")
             transpose = 0
+        if is_rhythm and transpose:
+            rep.err(f"{ctx}: rhythm channels route to the MIDI drum part where "
+                    "the note number IS the drum — transpose would silently "
+                    "remap every hit to a different drum; remove it")
+            transpose = 0
 
         notes = _resolve_events(ch.get("events"), bm, transpose, velocity,
                                 patterns, rep, ctx)
         if not notes:
             rep.warn(f"{ctx}: no notes")
 
-        # §4 overlap within the channel (chords via n-lists are the
-        # sanctioned polyphony; distinct events must not collide)
-        spans = sorted({(n.frame, n.frame + n.dur) for n in notes})
-        for (a0, a1), (b0, b1) in zip(spans, spans[1:]):
-            if b0 < a1:
-                rep.err(f"{ctx}: overlapping events at frames {a0}-{a1} "
-                        f"and {b0}-{b1}")
-                break
+        # §4 overlap within the channel. Melodic channels: chords go through
+        # n-lists, so two *distinct* events overlapping is an authoring error.
+        # Percussion stacks freely (kick + snare + hat share one channel);
+        # only a same-key overlap is flagged there, since that would
+        # retrigger/stick that one drum.
+        if is_percussion:
+            last_off: dict[int, int] = {}
+            for n in sorted(notes, key=lambda n: (n.key, n.frame)):
+                if n.frame < last_off.get(n.key, -1):
+                    rep.err(f"{ctx}: percussion key {n.key} overlaps itself "
+                            f"around frame {n.frame}")
+                    break
+                last_off[n.key] = n.frame + n.dur
+        else:
+            spans = sorted({(n.frame, n.frame + n.dur) for n in notes})
+            for (a0, a1), (b0, b1) in zip(spans, spans[1:]):
+                if b0 < a1:
+                    rep.err(f"{ctx}: overlapping events at frames {a0}-{a1} "
+                            f"and {b0}-{b1}")
+                    break
 
-        # §5 range
-        lo, hi = RANGE_TIER1 if tier == 1 else RANGE_TIER23
-        for n in notes:
-            if not lo <= n.key <= hi:
-                rep.err(f"{ctx}: note {n.key} (frame {n.frame}) outside "
-                        f"tier-{tier} range {lo}-{hi} after transpose")
-                break
+        # §5 range — a melodic constraint. Percussion note numbers are drum
+        # indices (ch-10) or hits on a percussion timbre, bounded to 0-127 by
+        # parse_note and judged by ear, so the tier pitch window doesn't apply.
+        if not is_percussion:
+            lo, hi = RANGE_TIER1 if tier == 1 else RANGE_TIER23
+            for n in notes:
+                if not lo <= n.key <= hi:
+                    rep.err(f"{ctx}: note {n.key} (frame {n.frame}) outside "
+                            f"tier-{tier} range {lo}-{hi} after transpose")
+                    break
 
         resolved.append(ResolvedChannel(name, tier, opl if tier == 1 else
-                                        None, mt32, gm, pan, volume, notes))
+                                        None, mt32, gm, pan, volume,
+                                        is_rhythm, is_percussion, notes))
 
     # base song (for §6 polyphony and §7 unison doubling)
     amap = build_addr_map(rom)
     base = simulate_song(rom, amap, label, songs[label])
     base_mel = [n for n in base.notes if n.chan != 4]
 
-    # §7 unison doubling
+    # §7 unison doubling — a pitched voice-leading rule, so it does not apply
+    # to percussion (drums/hits share pitches by nature). Exemption is keyed
+    # off the file itself (rhythm / percussion / GM percussion program) so the
+    # asset pipeline enforces exactly what a human running the linter sees.
     for ch in resolved:
+        if ch.is_percussion:
+            continue
         for n in ch.notes:
             hit = next((b for b in base_mel if b.key == n.key
                         and b.frame < n.frame + n.dur
@@ -382,9 +433,11 @@ def lint(path: Path) -> tuple[Report, list[ResolvedChannel], dict]:
     # §8 budgets
     if sum(1 for c in resolved if c.tier == 1) > 6:
         rep.warn("more than 6 tier-1 channels (skill budget is 4-6)")
-    if len(resolved) > ADDED_PARTS_WARN:
-        rep.warn(f"{len(resolved)} added channels > {ADDED_PARTS_WARN} free "
-                 "MT-32 melodic parts — the compiler will drop tiers")
+    n_melodic = sum(1 for c in resolved if not c.is_rhythm)
+    if n_melodic > ADDED_PARTS_WARN:
+        rep.warn(f"{n_melodic} melodic added channels > {ADDED_PARTS_WARN} free "
+                 "MT-32 melodic parts — the compiler will drop tiers "
+                 "(rhythm channels fold onto the drum part and don't count)")
 
     return rep, resolved, analysis
 

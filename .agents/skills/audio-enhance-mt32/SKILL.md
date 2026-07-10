@@ -60,7 +60,16 @@ mt32_patch: <MT-32 patch number or custom timbre name>
 gm_program: <GM program number>
 ```
 `yaml_lint.py` enforces: tier 2–3 entries must NOT have `opl_patch`,
-and must have both `mt32_patch` and `gm_program`.
+and must have both `mt32_patch` and `gm_program`. It also runs the same
+range, polyphony, and unison-doubling checks as tier 1. **Percussion
+channels are exempt from the pitched-voice rules** (unison-doubling,
+in-channel note overlap, and pitch range): a channel counts as percussion
+when it sets `rhythm: true` (GM/MT-32 drum part on MIDI ch 10 — the note
+number *is* the drum, so `transpose` is rejected), sets `percussion: true`
+(a percussion timbre kept on its own melodic channel, pitched and with its
+own patch), or names a GM percussion program (Timpani 48, or the Percussive
+family 113–120). This is intrinsic to the file — there is no CLI flag to
+remember, and the asset pipeline sees the same verdict you do.
 
 ---
 
@@ -167,3 +176,12 @@ other tier 2–3 voices.
 | examples/ | Hand-crafted worked example (when available) | Before writing your first arrangement |
 | music-theory skill | All theory references | Always read first |
 | audio-enhance-opl3 skill | Tier-1 constraints and approach | To understand what you're building on top of |
+
+## Auditioning (how to actually hear it)
+
+The listen loop lives in the **build-and-debug** skill ("Auditioning music").
+Short form: `mt32emu-qt &` then `tools/audio/audition.py <Song>` (prepends the
+timbres.yaml setup SysEx, so MUNT hears what mt32_upload programs at boot);
+end-to-end via `dos_port/run-mt32 DEBUG_AUDIO=1 TRACK=<MUSIC_* constant> /LOOP`.
+The track is the `TRACK=` make variable — never edit the Makefile or
+debug_dump.asm to swap songs.

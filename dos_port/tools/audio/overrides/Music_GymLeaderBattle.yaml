@@ -1,0 +1,8 @@
+channels:
+  1:
+    mt32_program: "Square Wave"
+  2:
+    mt32_program: "Square Wave"
+  3:
+    mt32_program: "Atmosphere"
+    volume: 75

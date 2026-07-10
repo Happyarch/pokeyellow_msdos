@@ -24,6 +24,29 @@ analysis, or atonal theory.
 
 ---
 
+## Terminology — track vs voice vs channel
+
+Shared convention — use these words consistently with each other and in
+comments / commit messages, since they otherwise collide:
+
+- **Track** — a whole song / piece: the thing named by a `MUSIC_*` label
+  (e.g. `Music_GymLeaderBattle`) and selected by the `TRACK=` audition knob.
+  Synonym in code and analysis output: **song**.
+- **Voice** — a single melodic line (melody, bass, an inner line, an added
+  harmony line). This is the music-theory unit: voice leading, doubling, and
+  polyphony / "voice count" all count voices.
+- **Channel** — the concrete carrier of a voice: a GB hardware channel (1–4),
+  a MIDI channel, or one entry in an enhancement YAML's `channels:` list. One
+  channel normally carries one voice; a chord written as an `n`-list packs
+  several voices onto a single channel.
+- **Part** — MT-32-only term for its eight melodic parts + rhythm part. Use it
+  only when discussing MT-32 routing, not as a synonym for voice or channel.
+
+Rule of thumb between us: **"track" = the whole song, "voice" = one line.**
+When you mean the YAML / hardware carrier, say **"channel."**
+
+---
+
 ## The Arrangement Workflow
 
 Every arrangement pass follows this sequence:
@@ -96,7 +119,9 @@ START: You're about to write or review an arrangement
 
 ### Voicing Minimums
 - Double the **root** (not the leading tone, not the 7th)
-- **Never double the GB melody in unison** — wastes a voice, creates parallel 8ves
+- **Never double the GB melody in unison** — wastes a voice, creates parallel 8ves.
+  (Exception: percussion channels — `rhythm: true`, `percussion: true`, or a GM
+  percussion program — may share pitches freely; the linter exempts them automatically.)
 - Below C3: keep intervals ≥ P5 (octaves safest); it gets muddy otherwise
 - Adjacent upper voices: stay within a P8 of each other
 

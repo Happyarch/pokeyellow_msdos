@@ -514,13 +514,24 @@ def enhancement_tracks(resolved, song: Song, target: str) -> list[bytes]:
     the 5 free MT-32 melodic parts, whole layers drop lowest-priority
     (highest tier number) first — the plan's whole-layer drop, v1."""
     chans = sorted((c for c in resolved if c.notes), key=lambda c: c.tier)
-    for c in chans[len(FREE_MELODIC_CH):]:
+    melodic_chans = [c for c in chans if not c.is_rhythm]
+    for c in melodic_chans[len(FREE_MELODIC_CH):]:
         print(f"    ENHANCE: dropped {c.name!r} (tier {c.tier}) — only "
               f"{len(FREE_MELODIC_CH)} free melodic parts")
+              
     tracks = []
-    for mc, c in zip(FREE_MELODIC_CH, chans):
+    melodic_idx = 0
+    for c in chans:
+        if c.is_rhythm:
+            mc = 9
+        else:
+            if melodic_idx >= len(FREE_MELODIC_CH):
+                continue
+            mc = FREE_MELODIC_CH[melodic_idx]
+            melodic_idx += 1
+
         prog = c.gm_program - 1
-        if target == "mt32":
+        if target == "mt32" and not c.is_rhythm:
             if isinstance(c.mt32_patch, int):
                 prog = c.mt32_patch - 1
             else:
@@ -529,10 +540,13 @@ def enhancement_tracks(resolved, song: Song, target: str) -> list[bytes]:
                       "falling back to gm_program")
         evs: list[tuple[int, int, bytes]] = [
             (0, 1, meta(0x03, f"enh {c.name} tier{c.tier}".encode())),
-            (0, 1, bytes((0xC0 | mc, prog))),
+        ]
+        if not c.is_rhythm:
+            evs.append((0, 1, bytes((0xC0 | mc, prog))))
+        evs.extend([
             (0, 1, bytes((0xB0 | mc, 7, c.volume))),
             (0, 1, bytes((0xB0 | mc, 10, PAN_CC[c.pan]))),
-        ]
+        ])
         for n in c.notes:
             off = min(n.frame + n.dur, song.end)
             evs.append((n.frame, 2, bytes((0x90 | mc, n.key, n.vel))))
