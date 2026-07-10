@@ -208,7 +208,7 @@ HOME_SRCS := \
 HAL_SRCS := \
     src/ppu/ppu.asm \
     src/input/joypad.asm \
-    src/input/joypad_lowsens.asm
+    src/home/joypad_lowsens.asm
 
 # Save HAL — .dsv file I/O (menus S7). DsvFileExists/DsvWriteSave/DsvReadSave;
 # the SRAM-banking seam every pret save/load routine collapses onto.
@@ -243,26 +243,26 @@ AUDIO_SRCS := \
 
 # Phase 2: game-loop core
 GAME_SRCS := \
-    src/init/init.asm \
+    src/home/init.asm \
     src/video/lcd_control.asm \
     src/video/frame.asm \
     src/video/bg_anim.asm \
-    src/util/play_time.asm \
-    src/gfx/sprites.asm \
-    src/gfx/sprite_oam.asm \
-    src/gfx/load_font.asm \
-    src/text/text.asm \
+    src/home/play_time.asm \
+    src/home/sprites.asm \
+    src/engine/gfx/sprite_oam.asm \
+    src/home/load_font.asm \
+    src/home/text.asm \
     src/home/print_num.asm \
     src/home/print_bcd.asm \
     src/home/window.asm \
     src/home/fade.asm \
-    src/text/auto_textbox.asm \
+    src/home/auto_textbox.asm \
     src/movie/title.asm \
     src/engine/movie/oak_speech/init_player_data.asm \
     src/engine/overworld/overworld.asm \
     src/engine/overworld/movement.asm \
     src/engine/overworld/map_sprites.asm \
-    src/engine/overworld/run_map_script.asm \
+    src/home/run_map_script.asm \
     src/data/map_scripts.asm \
     src/scripts/pallet_town.asm \
     src/engine/math/random.asm \
@@ -289,26 +289,26 @@ GAME_SRCS := \
     src/engine/menus/pokedex_entry.asm \
     src/engine/menus/link_menu.asm \
     src/engine/menus/link_cups.asm \
-    src/engine/overworld/reload_sprites.asm \
-    src/engine/overworld/simulate_joypad.asm \
+    src/home/reload_sprites.asm \
+    src/home/simulate_joypad.asm \
     src/engine/overworld/overworld_stubs.asm \
     src/engine/overworld/daycare_exp.asm \
     src/engine/overworld/is_player_just_outside_map.asm \
     src/engine/overworld/dungeon_warps.asm \
     src/engine/overworld/specific_script_flags.asm \
     src/engine/overworld/clear_variables.asm \
-    src/engine/overworld/wild_encounter_check.asm \
+    src/home/wild_encounter_check.asm \
     src/data/wild_data.asm \
     src/engine/overworld/wild_mons.asm \
     src/engine/overworld/warp_check.asm \
-    src/engine/overworld/hidden_events.asm \
+    src/home/hidden_events.asm \
     src/engine/menus/swap_items.asm \
     src/engine/link/cable_club.asm \
     src/engine/overworld/ledges.asm \
-    src/engine/overworld/pathfinding.asm \
+    src/home/pathfinding.asm \
     src/engine/overworld/npc_movement_2.asm \
     src/engine/overworld/auto_movement.asm \
-    src/engine/overworld/overworld_text.asm \
+    src/home/overworld_text.asm \
     src/engine/overworld/pikachu.asm \
     src/engine/events/pewter_guys.asm \
     src/engine/overworld/toggleable_objects.asm \
@@ -317,7 +317,7 @@ GAME_SRCS := \
     src/engine/overworld/spinners.asm \
     src/engine/overworld/healing_machine.asm \
     src/engine/overworld/unused_load_toggleable_object_data.asm \
-    src/engine/overworld/player_gfx.asm \
+    src/home/player_gfx.asm \
     src/engine/overworld/player_state.asm \
     src/engine/overworld/special_warps.asm \
     src/engine/battle/wild_encounters.asm \
@@ -354,7 +354,7 @@ POKEMON_SRCS := \
     src/engine/pokemon/status_ailments.asm \
     src/engine/gfx/hp_bar.asm \
     src/engine/pokemon/status_screen.asm \
-    src/engine/pokemon/get_max_pp.asm \
+    src/engine/items/get_max_pp.asm \
     src/engine/pokemon/knows_hm_move.asm \
     src/engine/pikachu/pikachu_status.asm \
     src/engine/pokemon/evolution.asm \
@@ -365,7 +365,7 @@ ITEMS_SRCS := \
     src/data/item_data.asm \
     src/engine/items/inventory.asm \
     src/engine/items/item_effects.asm \
-    src/engine/items/item_price.asm \
+    src/home/item_price.asm \
     src/engine/items/tm_prices.asm \
     src/home/compare.asm \
     src/engine/math/bcd.asm
@@ -816,8 +816,8 @@ FRONTEND_SRCS := \
     src/data/trainer_pics.asm \
     src/data/mon_pics.asm \
     src/engine/battle/battle_stubs.asm \
-    src/gfx/uncompress.asm \
-    src/gfx/pics.asm \
+    src/home/uncompress.asm \
+    src/home/pics.asm \
     src/engine/battle/experience.asm \
     src/engine/battle/battle_exp_stubs.asm \
     src/engine/battle/trainer_battle.asm \
@@ -1019,7 +1019,7 @@ assets/npc_sprite_data_table.inc:
 assets/red_bike_sprite.inc assets/seel_sprite.inc assets/surfing_pikachu_sprite.inc:
 	python3 tools/gen_all_assets.py
 
-src/engine/overworld/player_gfx.o: \
+src/home/player_gfx.o: \
     assets/red_bike_sprite.inc \
     assets/seel_sprite.inc \
     assets/surfing_pikachu_sprite.inc
@@ -1095,7 +1095,7 @@ src/home/audio.o src/audio/engine_1.o src/audio/engine_2.o \
 src/audio/engine_3.o src/audio/engine_4.o src/audio/low_health_alarm.o \
 src/audio/play_battle_music.o src/audio/pokedex_rating_sfx.o \
 src/audio/poke_flute.o src/audio/alternate_tempo.o \
-src/init/init.o: assets/audio_constants.inc
+src/home/init.o: assets/audio_constants.inc
 
 # GB character map in the unicode_converter's format (single-char → byte), for
 # the converter submodule + gb_text.py. Generated from constants/charmap.asm.
@@ -1345,7 +1345,7 @@ assets/ui_layout_battle.inc: assets/ui_layout_battle_sidecar.json \
 	python3 tools/gen_ui_layout.py battle
 
 src/engine/battle/battle_hud.o src/engine/battle/init_battle.o \
-src/engine/battle/pokeballs.o src/gfx/pics.o \
+src/engine/battle/pokeballs.o src/home/pics.o \
 src/engine/battle/core.o src/engine/battle/battle_menu.o: \
         assets/ui_layout_battle.inc
 

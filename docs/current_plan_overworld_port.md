@@ -1603,7 +1603,7 @@ inlined with `; pret:` provenance.
 
 ---
 
-### Stage 9 — Directory-mirror rectification `[ ]` (DEFERRED to plan end; user-confirmed 2026-07-04)
+### Stage 9 — Directory-mirror rectification `[x]` DONE 2026-07-10 (20 files moved to their pret-mirror dir; build/check/lint/fidelity all green)
 
 **Decision:** hold the port to STRICT pret directory mirroring, executed **after** all other
 overworld-port stages land (so nothing in this plan has to chase moved paths mid-flight),
@@ -1611,6 +1611,29 @@ overworld-port stages land (so nothing in this plan has to chase moved paths mid
 uses a subsystem-thematic layout instead of pret's flat `home/`; relocate the thematic
 files to mirror pret. All moves are pure `git mv` + Makefile path update — logic-risk-free;
 verify each with `nasm` clean + full build + FRAME.BIN baselines unchanged.
+
+> **EXECUTED 2026-07-10.** 20 files moved (16 group-C/D/F + the 4 per-file splits); **1
+> plan-directed move REVERTED** — `engine/pokemon/remove_mon.asm` was to move to `src/home/`
+> per the group-F hint "(home/move_mon.asm)", but pret has BOTH `home/move_mon.asm:RemovePokemon`
+> (wrapper) AND `engine/pokemon/remove_mon.asm:_RemovePokemon` (body); the port file holds
+> **`_RemovePokemon`**, so `src/engine/pokemon/remove_mon.asm` was already its correct mirror —
+> the plan hint conflated the two. Left in place.
+> **Key correction to the plan's "pure git mv + Makefile" claim:** the moves also require
+> **relocation-allowlist bookkeeping**. Mechanics used: (a) NASM resolves `%include`/`incbin`
+> relative to the make CWD (`dos_port/`) + `-I` paths, NOT the file's dir, so **no in-file path
+> edits** were needed; (b) `%.o: %.asm` pattern rule → each mover's `.o` path was swapped in the
+> Makefile SRCS lists + the two `.o` prerequisite rules (`init.o`, `pics.o`); (c) the 41
+> pre-existing `relocated_files`/`relocated_labels` `port_file` values were path-replaced
+> old→new, and **7 new `relocated_labels`** added for the engine/overworld engine-side sections
+> that were consolidated into the home-primary `hidden_events.asm`/`pathfinding.asm` (their
+> `CheckForHiddenEvent`/`FindPathToPlayer` clusters). Result: `lint_pret_labels` **0 violations**,
+> `make check` clean, `make SKIP_TITLE=1` links, `make fidelity` 6/6.
+> **Directory-mirror decision for the 4 per-file splits** (`player_gfx`, `run_map_script`,
+> `simulate_joypad`, `wild_encounter_check`): all are `home/overworld.asm`-derived splits →
+> **moved to `src/home/`** (not folded into the `overworld.asm` consolidation — folding is
+> high-risk content surgery with no fidelity payoff; standalone files stay greppable and satisfy
+> the dir-mirror invariant). `overworld.asm` itself kept as-is (sanctioned big consolidation).
+> The `overworld_text.asm` provenance-header defect was already fixed at OW-A.12 (verified).
 
 **Sanctioned exceptions that STAY (do NOT move):** `src/ppu/`, `src/video/`, `boot/` (HAL —
 software PPU / VGA, no pret analog, user-approved 2026-07-04); `*_stubs.asm` (stub
