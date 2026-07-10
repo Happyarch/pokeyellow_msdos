@@ -54,7 +54,7 @@ extern Random_
 ; _UpdateSprites dispatches slot 15 (hCurrentSpriteOffset == $f0) here, faithful to
 ; pret engine/overworld/sprite_collisions.asm:_UpdateSprites. Root must supply a link
 ; stub until Wave 9 lands (movement.asm is a LIVE/linked source).
-extern SpawnPikachu
+extern SpawnPikachu              ; pikachu.asm — real follower FSM (linked OW-7.2; was an overworld_stubs ret-stub)
 extern wMapSpriteData            ; map_sprites.asm — [movbyte2, textid] per slot (pret wMapSpriteData)
 
 %ifdef DEBUG_NPC_WALK

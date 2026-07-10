@@ -242,7 +242,20 @@ GAME_SRCS := \
     src/engine/overworld/warp_check.asm \
     src/engine/overworld/hidden_events.asm \
     src/engine/menus/swap_items.asm \
-    src/engine/link/cable_club.asm
+    src/engine/link/cable_club.asm \
+    src/engine/overworld/ledges.asm \
+    src/engine/overworld/pathfinding.asm \
+    src/engine/overworld/npc_movement_2.asm \
+    src/engine/overworld/auto_movement.asm \
+    src/engine/overworld/overworld_text.asm \
+    src/engine/overworld/pikachu.asm \
+    src/engine/events/pewter_guys.asm \
+    src/engine/overworld/toggleable_objects.asm \
+    src/engine/overworld/update_map.asm \
+    src/engine/overworld/elevator.asm \
+    src/engine/overworld/spinners.asm \
+    src/engine/overworld/healing_machine.asm \
+    src/engine/overworld/unused_load_toggleable_object_data.asm
 
 # Pokémon data/stats engine (current_plan_pokemon_engine.md). Grows per stage.
 POKEMON_SRCS := \
@@ -765,36 +778,39 @@ HOME_CHECK_SRCS := \
     src/home/money.asm \
     src/home/oam.asm \
     src/home/vcopy.asm \
-    src/engine/overworld/pikachu.asm \
     src/engine/overworld/player_gfx.asm \
-    src/engine/overworld/overworld_text.asm \
-    src/engine/overworld/ledges.asm \
-    src/engine/overworld/pathfinding.asm \
     src/engine/overworld/trainer_engine.asm \
-    src/engine/overworld/npc_movement_2.asm \
-    src/engine/overworld/auto_movement.asm \
-    src/engine/overworld/update_map.asm \
-    src/engine/events/pewter_guys.asm \
     src/engine/overworld/push_boulder.asm \
     src/engine/overworld/dust_smoke.asm \
     src/engine/overworld/field_move_messages.asm \
-    src/engine/overworld/toggleable_objects.asm \
     src/engine/overworld/cut.asm \
     src/engine/overworld/cut2.asm \
-    src/engine/overworld/healing_machine.asm \
-    src/engine/overworld/elevator.asm \
-    src/engine/overworld/spinners.asm \
-    src/engine/overworld/unused_load_toggleable_object_data.asm \
     src/engine/overworld/player_animations.asm \
     src/engine/overworld/special_warps.asm \
     src/engine/overworld/player_state.asm
-# player_state.asm (OW-1.8) is check-only: externs ForceBikeOrSurf (in check-only
-# player_gfx.asm) and IsPlayerStandingOnDoorTile (linked in overworld.asm but not yet
-# `global`). Promote to GAME_SRCS once both resolve (OW-A.3 adds the global; OW-7.2
-# promotes player_gfx). Also: its H_WARP_DESTINATION_MAP placeholder wrongly aliases
-# 0xFF8B (hPreviousTileset) — give it a distinct HRAM byte before linking.
-# npc_movement_2.asm (OW-1.6) is check-only: its tail-jump SetSpriteMovementBytesToFF
-# lives in pathfinding.asm (also check-only). Promote to GAME_SRCS with pathfinding (OW-7.2).
+# OW-7.2 (2026-07-10) promoted 13 overworld files to GAME_SRCS (ledges,
+# pathfinding, npc_movement_2, auto_movement, overworld_text, pikachu,
+# pewter_guys, toggleable_objects, update_map, elevator, spinners,
+# healing_machine, unused_load_toggleable_object_data) — closures verified by
+# nm diff vs the linked build. Remaining check-only blockers (per-file):
+# - player_state.asm (OW-1.8): ForceBikeOrSurf (check-only player_gfx.asm);
+#   IsPlayerStandingOnDoorTile now global in overworld.asm. Also: its
+#   H_WARP_DESTINATION_MAP placeholder wrongly aliases 0xFF8B (hPreviousTileset)
+#   — give it a distinct HRAM byte before linking.
+# - player_gfx.asm: sprite gfx labels player_sprite/RedBikeSprite/SeelSprite/
+#   SurfingPikachuSprite not defined anywhere linked (gfx sheet port).
+# - cut.asm: SaveScreenTilesToBuffer2/LoadScreenTilesFromBuffer2 (check-only
+#   home/vcopy.asm), WriteOAMBlock (check-only home/oam.asm), AnimCut (cut2).
+# - cut2.asm / dust_smoke.asm: AdjustOAMBlock{X,Y}Pos(2) — unported pret
+#   engine/battle/animations.asm OAM primitives.
+# - field_move_messages.asm: PlayCry (unported cry synth).
+# - player_animations.asm: EmotionBubble (trainer_engine), LoadAnimSpriteGfx,
+#   player_sprite, StopMusic (unported home/audio routine).
+# - special_warps.asm: PrepareNewGameDebug is only linked under DEBUG_* gates
+#   (debug_party.asm), so a normal build can't resolve it; LoadTilesetHeader
+#   is global now. Needs debug_party always-linked or a DEBUG-guarded stub.
+# - trainer_engine.asm: DisplayTextID/GetTrainerName_/SaveTrainerName/
+#   _TrainerNameText/JessieJamesPic unported; WriteOAMBlock (home/oam.asm).
 # reload_sprites.asm promoted to GAME_SRCS (menus S7): naming_screen.asm calls
 # ReloadMapSpriteTilePatterns; its externs (DisableLCD/EnableLCD/InitMapSprites/
 # LoadPlayerSpriteGraphics/LoadFontTilePatterns/UpdateSprites) are all linked.

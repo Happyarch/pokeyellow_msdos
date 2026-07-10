@@ -205,6 +205,8 @@ global CheckWarpTile
 global LoadWarpDestination
 global PlayerStepOutFromDoor
 global IgnoreInputForHalfSecond
+global IsPlayerStandingOnDoorTile          ; OW-7.2: for player_state.asm (check-only) when it promotes
+global LoadTilesetHeader                   ; OW-7.2: for special_warps.asm (check-only) when it promotes
 global LoadPlayerSpriteGraphics
 global RefreshCollisionTileMap             ; menus S4: home/start_menu.asm restores
                                            ; the W_TILEMAP mirror around the menu

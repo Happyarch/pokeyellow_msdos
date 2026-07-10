@@ -1173,7 +1173,35 @@ Flat-reshape: `toggleable_object_map`'s `dw ptr` → `dd` (4→6 byte entries, s
 5); flat-source copy → inline rep movsb (DROPPED CopyData justified). Builds the
 port-unused `wToggleableObjectList` (externed to golden 0xD5CD; the flat model doesn't
 read it — noted). faithdiff clean, lint 0. Check-only.
-**OW-7.2: link promotion** `[root + SWARM closure fixes]` — promote check-only overworld files to `GAME_SRCS` as closures resolve: `ledges.asm`, `trainer_engine.asm` (embed `EmotionBubbleGfx` — incbin the 8 `gfx/emotes/*.2bpp`, resolving the M8.2 extern-TODO), `pathfinding.asm`; then per-file closure audit for `pikachu.asm`, `reload_sprites.asm`, `player_gfx.asm`, `overworld_text.asm` (promote or document remaining blockers in this doc).
+**OW-7.2: link promotion** `[root + SWARM closure fixes]` — **DONE 2026-07-10.**
+Closures computed mechanically (assemble every check-only file, `nm -u` diff vs
+the linked build's global defs, transitive over co-promoted files — script
+pattern in scratchpad `ow72/`, method noted here for reruns). **13 files
+promoted to GAME_SRCS:** ledges, pathfinding, npc_movement_2, auto_movement,
+overworld_text, pikachu, pewter_guys, toggleable_objects, update_map, elevator,
+spinners, healing_machine, unused_load_toggleable_object_data. Two unlocks made
+this maximal: `global g_toggleable_flags` (map_sprites.asm → toggleable_objects
+→ HideObject → auto_movement), and a new `UpdateCGBPal_OBP1` ret-stub in
+overworld_stubs.asm (TODO-HW palette boundary, pret home/cgb_palettes.asm —
+same class as RunDefaultPaletteCommand; retires at Phase 5 palettes) →
+healing_machine. **SpawnPikachu ret-stub retired** (real follower FSM linked;
+still unreachable — slot-15 gate fires on no current map, so behavior-neutral;
+movement.asm extern repointed). Also exported `IsPlayerStandingOnDoorTile` +
+`LoadTilesetHeader` from overworld.asm (removes two future blockers).
+**Still check-only, per-file blockers documented in the Makefile comment block
+(authoritative list):** trainer_engine (DisplayTextID/GetTrainerName_/
+SaveTrainerName/_TrainerNameText/JessieJamesPic + WriteOAMBlock in check-only
+home/oam.asm; the EmotionBubbleGfx embed rides with its promotion), cut
+(vcopy/oam home promotions + AnimCut), cut2 + dust_smoke
+(AdjustOAMBlock{X,Y}Pos(2) — unported pret battle/animations.asm OAM
+primitives), field_move_messages (PlayCry), player_animations (EmotionBubble/
+LoadAnimSpriteGfx/player_sprite/StopMusic), player_gfx (sprite gfx labels),
+player_state (ForceBikeOrSurf via player_gfx), special_warps
+(PrepareNewGameDebug is DEBUG-gated-link-only). reload_sprites was already
+promoted (menus S7). **Verified:** full build + link clean (no dup defs),
+`make check` green, lint_pret_labels 0, **full `make fidelity` suite PASS
+(all 6 scenarios)** — promotion is behavior-neutral (newly linked code is
+dead until wired; the one replaced stub was never-called).
 **OW-7.3: stub + docs sweep** `[root]` — delete every stub superseded in Stages 1–6; list surviving stubs here with owners; translation_log completeness sweep; ui_projection.md overworld rows; TODO.md checkboxes.
 
 ### Stage 8 — Final full-surface audit `[ ]` (root; gates archival)

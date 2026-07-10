@@ -49,7 +49,7 @@ global GetMoveBoulderDustFunctionPointer
 global LoadSmokeTileFourTimes
 global LoadSmokeTile
 
-extern UpdateCGBPal_OBP1            ; UNPORTED (pret home/palettes.asm) — apply OBP1 → CGB palette
+extern UpdateCGBPal_OBP1            ; overworld_stubs.asm ret-stub (TODO-HW palette; pret home/cgb_palettes.asm)
 extern WriteCutOrBoulderDustAnimationOAMBlock ; src/engine/overworld/cut.asm (OW-3.4)
 extern AdjustOAMBlockYPos          ; UNPORTED (OW-3.4 cut.asm shared OAM anim primitive)
 extern AdjustOAMBlockXPos          ; UNPORTED (OW-3.4 cut.asm shared OAM anim primitive)

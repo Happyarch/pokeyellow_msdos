@@ -57,6 +57,7 @@ global ReadSpriteSheetData
 global LoadMapSpritesImageBaseOffset
 global GetSpriteImageBaseOffset
 global ResetMapTrainerState        ; port-ext per-map-load trainer state (called by wrapper)
+global g_toggleable_flags          ; flat .bss event flags — toggleable_objects.asm Show/HideObject bts/btr it (OW-7.2)
 global CheckNPCInteraction
 global ShowTextStream
 global IsNPCAtTargetBlock

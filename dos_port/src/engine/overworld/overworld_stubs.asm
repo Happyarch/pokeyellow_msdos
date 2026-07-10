@@ -10,12 +10,19 @@ bits 32
 
 section .text
 
-; SpawnPikachu — pret home/pikachu.asm:SpawnPikachu (Pikachu-follower FSM).
-; TODO(home-rectify Wave 9/M9.1): replace this stub with the real follower spawn.
-; Reached only when a sprite slot's offset == $f0 (slot 15), which no current map
-; activates, so this is never called in the live build.
-global SpawnPikachu
-SpawnPikachu:
+; SpawnPikachu stub retired (OW-7.2, 2026-07-10) — the real follower FSM in
+; pikachu.asm is now LINKED (GAME_SRCS). Still only reached when a sprite
+; slot's offset == $f0 (slot 15), which no current map activates.
+
+; UpdateCGBPal_OBP1 — pret home/cgb_palettes.asm:UpdateCGBPal_OBP1 (apply the
+; OBP1 DMG palette register to the CGB OBJ palette set). TODO-HW: the port has
+; no CGB palette engine yet (Phase 5 colorization); every OBP write is already
+; a `[ebp+IO_OBP1]` TODO-HW mirror, so this is a no-op by design today — same
+; translation boundary as RunDefaultPaletteCommand. Reached from the linked
+; healing_machine.asm flash loop (and cut/cut2/dust_smoke once those promote).
+; TODO(Phase 5 palettes): replace with the real CGB palette apply, then delete.
+global UpdateCGBPal_OBP1
+UpdateCGBPal_OBP1:
     ret
 
 ; ApplyPikachuMovementData_ — pret engine/pikachu/pikachu_movement.asm:ApplyPikachuMovementData_
@@ -23,7 +30,8 @@ SpawnPikachu:
 ; placement). DEFERRED — needs the pikachu_movement subsystem + staged Pikachu overworld gfx.
 ; OW-A.11 relocated this ret-stub out of pikachu.asm (stub convention: a ret-only body never
 ; lives in the file mirroring its pret source). Called only by pikachu.asm:ApplyPikachuMovementData
-; (check-only today), and unreachable while the follower is disabled, so inert in the live build.
+; (linked since OW-7.2), still unreachable while the follower is disabled (SpawnPikachu's
+; slot-15 gate never fires on current maps), so inert in the live build.
 ; TODO(retire M9.1): replace with the real interpreter, then delete this stub.
 global ApplyPikachuMovementData_
 ApplyPikachuMovementData_:
@@ -79,8 +87,9 @@ ResetUsingStrengthOutOfBattleBit:
 ; IsSurfingPikachuInParty — pret home/map_objects.asm:IsSurfingPikachuInParty. Sets
 ; wPikachuSpawnStateFlags BIT_PIKACHU_SPAWN_STARTER / _SURFING by scanning the party
 ; for a starter Pikachu (with Surf). Called unconditionally by EnterMap (and pret's
-; OverworldLoop), so it runs at boot, but the Pikachu-follower spawn FSM (SpawnPikachu,
-; also stubbed above) is not implemented, so the flags it would set are unused today.
+; OverworldLoop), so it runs at boot. The real SpawnPikachu FSM is linked (pikachu.asm,
+; OW-7.2) but its slot-15 gate never fires on current maps, so the flags this would
+; set remain unused today.
 ; TODO(faithful): port with the Pikachu-follower subsystem.
 global IsSurfingPikachuInParty
 IsSurfingPikachuInParty:
@@ -89,7 +98,7 @@ IsSurfingPikachuInParty:
 ; LoadHoppingShadowOAM — pret engine/overworld/ledges.asm:LoadHoppingShadowOAM.
 ; The ledge-hop shadow sprite. pret loads shadow.1bpp to vChars1 tile $7f and two
 ; OAM entries (wShadowOAMSprite36/37) with 38/39 Y=$a0. Called by HandleLedges
-; (src/engine/overworld/ledges.asm, check-only today). The port's OAM path
+; (src/engine/overworld/ledges.asm, linked since OW-7.2). The port's OAM path
 ; (PrepareOAMData over wSpriteStateData) models sprites differently and has no
 ; dedicated shadow slots yet; the shadow is purely cosmetic and does not affect the
 ; ledge-jump logic, so this is a no-op for now.
