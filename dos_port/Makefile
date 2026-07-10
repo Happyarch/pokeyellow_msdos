@@ -483,6 +483,12 @@ endif
 # button sequence (frame.asm), so a keyboard-only live path (overworld -> START ->
 # submenu) runs headless. make DEBUG_AUTOKEY=1
 ifdef DEBUG_AUTOKEY
+ifdef AUTOKEY_SEAM
+NASMFLAGS += -D AUTOKEY_SEAM
+endif
+ifdef AUTOKEY_PAD
+NASMFLAGS += -D AUTOKEY_PAD=$(AUTOKEY_PAD)
+endif
 ifdef AUTOKEY_TITLE
 NASMFLAGS += -D AUTOKEY_TITLE
 endif

@@ -2288,6 +2288,15 @@ SeamReseatView:
     add eax, W_OVERWORLD_MAP
     mov [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], ax
     call LoadCurrentMapView
+    ; Seed BIT_STANDING_ON_WARP exactly as LoadWarpDestination does, or a spawn
+    ; that lands on a warp tile (every map-edge gate spawn does) can never take
+    ; the collision-exit path — an artifact that would make the harness disagree
+    ; with the live game.
+    and byte [ebp + W_MOVEMENT_FLAGS], ~(1 << BIT_STANDING_ON_WARP)
+    call CheckWarpTile
+    jnc .noSpawnWarp
+    or byte [ebp + W_MOVEMENT_FLAGS], (1 << BIT_STANDING_ON_WARP)
+.noSpawnWarp:
     pop ecx
     pop ebx
     pop eax

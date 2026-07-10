@@ -1406,6 +1406,9 @@ DumpSeamLog:
 ;
 ; In: EBP = GB base. Preserves all registers.
 ; ---------------------------------------------------------------------------
+%ifndef AUTOKEY_PAD
+%define AUTOKEY_PAD PAD_UP
+%endif
 %ifndef AUTOKEY_DOWNS
 %define AUTOKEY_DOWNS 1
 %endif
@@ -1452,7 +1455,15 @@ align 4
 ; START opens the menu; DOWN moves POKéDEX → POKéMON; A selects it.
 ; The gaps are release frames (the menu code spins until the button is let go).
 autokey_script:
-%ifdef AUTOKEY_TITLE
+%ifdef AUTOKEY_SEAM
+    ; DEBUG_SEAM_LIVE companion: hold AUTOKEY_PAD (default PAD_UP) into the seeded
+    ; map's edge with LIVE collision, then press A so SeamLogRecord writes
+    ; SEAMLOG.BIN + FRAME.BIN. This is the harness that reproduced the Viridian
+    ; Forest "stuck at the gate spawn" bug headlessly.
+    dd  30, 110, AUTOKEY_PAD
+    dd 140, 146, PAD_A
+    dd  -1,  -1, 0
+%elifdef AUTOKEY_TITLE
     ; Boot path with the title screen: pulse A through the title + main menu
     ; (NEW GAME) + any intro text, then open START and pick a submenu.
 %assign AK_T 60
