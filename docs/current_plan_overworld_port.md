@@ -271,7 +271,7 @@ interactively with the user.
   `TrainerEncounterFlow`) — pret's `IsSpriteOrSignInFrontOfPlayer` etc. are unported.
 
 - **Phasing (reviewable sub-steps, check-in between each):**
-  - [ ] **P1 — infra + Tier-1 data (additive, byte-identical):** `wSpriteSet`(11B)/
+  - [x] **P1 — infra + Tier-1 data (delivered via the re-scoped P3a/P3c sub-steps; see Exit):** `wSpriteSet`(11B)/
     `wMapSpriteData`($20)/`hVRAM_slot` WRAM + sprite-set constants; new generator
     `data/maps/sprite_sets.asm` → `assets/sprite_sets.inc`
     (`SpriteSets`/`MapSpriteSets`/`SplitMapSpriteSets`) + generated `SpriteSheetPointerTable`.
@@ -807,7 +807,7 @@ label/stub): `ChangeFacingDirection`, `InitScriptedNPCMovement`, `AnimScriptedNP
 `Func_5288/531f/5325/532b/5331/5357`, `LoadDEPlusA`, `GetSpriteScreen{Y,X}Pointer`,
 `GetSpriteScreenXYPointerCommon`, `AdvanceScriptedNPCAnimFrameCounter`.
 
-**TICKET OW-A.14: overworld audio destub** `[SOLO — retread; user directive 2026-07-09]` `[ ]`
+**TICKET OW-A.14: overworld audio destub** `[SOLO — retread; user directive 2026-07-09]` `[x] COMPLETE 2026-07-09` (see the COMPLETE note at the end of this ticket)
 - **Why now:** the audio engine landed after most of Stage A/1 was written, so those
   tickets faithfully translated control flow but left every audio leaf as a
   `; TODO-HW: audio HAL (Phase 3)` no-op. The gateway is now real (`home/audio.asm`:
@@ -1012,7 +1012,7 @@ adds to `GAME_SRCS` (or `OVERWORLD_CHECK_SRCS` if closure unresolved), runs
   - **Foundation fix (separate commit):** discovered + corrected a family of guessed sim-joypad / trainer-union / field-move WRAM addresses that disagreed with the golden sym and sat *inside* the 180-byte `wNPCMovementDirections` buffer (`wSimulatedJoypadStatesIndex` 0xCC84→0xCD38, `wJoyIgnore` 0xCCB7→0xCD6B, override index/mask, `wFieldMoves*`, the whole m8_2 trainer/emotion union +6/+7). All relocate together (symbol-referenced); added `wWhichPewterGuy`=0xD12E. Gate: full `make fidelity` (6/6) PASS. This unblocks any scripted-movement/sim-joypad runtime work.
 **OW-2.5: Oak cutscene verification** `[root]` — enable `PalletTownDefaultScript` trigger (script-engine Stage 6 stubs), DOSBox-X MCP: breakpoint `DoScriptedNPCMovement`, `gb_read wNPCMovementDirections2`, `dump_frame` per step; final FRAME.BIN shows Oak + player walked to the Lab. Update `current_plan_script_engine.md` (deferral resolved).
 
-### Stage 3 — Map mutation `[ ]`
+### Stage 3 — Map mutation `[x]` COMPLETE (2026-07-10; OW-3.3 data-generator tail + the deferred MCP runtime verifies remain, tracked in-ticket)
 
 **TICKET OW-3.1: update_map.asm** `[SOLO #3]` **— DONE 2026-07-10 (code; MCP verify deferred)**
 - Pret: `engine/overworld/update_map.asm` → port `src/engine/overworld/update_map.asm` (check-only)
@@ -1056,7 +1056,7 @@ change touching a working feature, to be done deliberately (regressing EmotionBu
 THEN port cut.asm. (dust_smoke's `WriteCutOrBoulderDustAnimationOAMBlock` extern also resolves once this lands.)
 - Verify (root): tree-cut block swap renders cleanly under harness; Show/HideObject on Oak sprite via MCP.
 
-### Stage 4 — Boulder subsystem `[ ]` (SWARM wave)
+### Stage 4 — Boulder subsystem `[x]` COMPLETE (2026-07-10; root MCP verify deferred — bundled runtime checks, see line below OW-4.4)
 
 **TICKET OW-4.1: player_state.asm part 2** — `CheckForCollisionWhenPushingBoulder` + `CheckForBoulderCollisionWithSprites` **DONE 2026-07-10** (both into player_state.asm; the plan's grouping was correct — both are defined in pret `engine/overworld/player_state.asm`. An intermediate commit wrongly externed the second one based on a bad grep; corrected same session). faithdiff clean on both, lint 0. Check-only. Added wBoulderSpriteIndex/wNumSprites/H_PLAYER_Y/X_COORD/wSprite01StateData2MapY (golden).
 **TICKET OW-4.2: push_boulder.asm** — **DONE 2026-07-10** (`TryPushingBoulder` + the four `PushBoulder*MovementData`, `DoBoulderDustAnimation`, `ResetBoulderPushFlags`). PlaySound is LIVE (real audio) — used directly for SFX_PUSH_BOULDER/SFX_CUT, no stub. Externs the unported `IsSpriteInFrontOfPlayer` (pret home/overworld.asm — the port's bespoke IsNPCAtTargetBlock is a different ABI, NOT a drop-in; TODO port) and `AnimateBoulderDust` (OW-4.3). Sprite-selector: keeps H_SPRITE_INDEX (=hSpriteIndex slot) only for IsSpriteInFrontOfPlayer; derives H_CURRENT_SPRITE_OFFSET=slot<<4 once for GetSpriteMovementByte2Pointer/MoveSprite (verified it survives the CheckForCollisionWhenPushingBoulder predef). faithdiff clean (all diffs = documented selector convention or false-positive on jz-to-Reset / [hl]-store naming), lint 0. Check-only. Also fixed a latent flat-EDI bug in OW-2.3 auto_movement (MoveSprite fed `mov edi, wNPCMovementDirections2` instead of `lea edi,[ebp+…]`).
@@ -1090,9 +1090,9 @@ faithdiff can't parse (DoFlyAnimation, LeaveMapThroughHoleAnim), (3) two flat-so
 src, map_sprites.asm:ShowTextStream precedent). lint 0 (7 suppressed). Check-only.
 - Pret: `engine/overworld/player_animations.asm`
 - Checklist (all DONE except the runtime verify below):
-  - [ ] `EnterMapAnim`, `PlayerSpinWhileMovingDown`, `_LeaveMapAnim`, `LeaveMapThroughHoleAnim`, `DoFlyAnimation` + coord lists, `LoadBirdSpriteGraphics` (incbin `gfx/sprites/bird.2bpp`; loads NPC-sprite VRAM → `g_tilecache_dirty`; integrate with `src/gfx/sprites.asm` sheet layout), `InitFacingDirectionList`, `SpinPlayerSprite`, `PlayerSpinInPlace`, `PlayerSpinWhileMovingUpOrDown`, `RestoreFacingDirectionAndYScreenPos`, `GetPlayerTeleportAnimFrameDelay` (`wOnSGB` read — `; PROJ` note re Makefile TIMING modes), `IsPlayerStandingOnWarpPadOrHole` (+ tile table; writes `wStandingOnWarpPadOrHole`), `FishingAnim` (leaves: `LoadAnimSpriteGfx`/rod gfx/`EmotionBubble`/texts — stub what's missing, body faithful)
-  - [ ] `_HandleMidJump` stays in ledges.asm; alias note here
-  - [ ] Bounded-wait divergences for any sound-state polling vs ret-stubs
+  - [x] `EnterMapAnim`, `PlayerSpinWhileMovingDown`, `_LeaveMapAnim`, `LeaveMapThroughHoleAnim`, `DoFlyAnimation` + coord lists, `LoadBirdSpriteGraphics` (incbin `gfx/sprites/bird.2bpp`; loads NPC-sprite VRAM → `g_tilecache_dirty`; integrate with `src/gfx/sprites.asm` sheet layout), `InitFacingDirectionList`, `SpinPlayerSprite`, `PlayerSpinInPlace`, `PlayerSpinWhileMovingUpOrDown`, `RestoreFacingDirectionAndYScreenPos`, `GetPlayerTeleportAnimFrameDelay` (`wOnSGB` read — `; PROJ` note re Makefile TIMING modes), `IsPlayerStandingOnWarpPadOrHole` (+ tile table; writes `wStandingOnWarpPadOrHole`), `FishingAnim` (leaves: `LoadAnimSpriteGfx`/rod gfx/`EmotionBubble`/texts — stub what's missing, body faithful)
+  - [x] `_HandleMidJump` stays in ledges.asm; alias note here
+  - [x] Bounded-wait divergences for any sound-state polling vs ret-stubs
   - [ ] Verify: `DEBUG_TELEPORT_ANIM` harness in `EnterMap` (pattern: `DEBUG_TRANSITION`) — set `BIT_USED_FLY`/dungeon-warp state, run `EnterMapAnim`, FRAME.BIN mid-anim shows bird/spin frames; MCP breakpoints on `DoFlyAnimation`
 - Exit: fly-in / teleport / hole-fall animations render.
 
@@ -1123,7 +1123,7 @@ src, map_sprites.asm:ShowTextStream precedent). lint 0 (7 suppressed). Check-onl
   fly/dungeon trigger exists yet); spawns near map edges lean on the rendering
   clamps like normal warps (map-data extension unaffected, still TODO).
 
-### Stage 6 — Cosmetic OAM/screen animations `[ ]` (SWARM wave)
+### Stage 6 — Cosmetic OAM/screen animations `[x]` COMPLETE (2026-07-10; root verify deferred — see line below OW-6.4)
 
 **TICKET OW-6.1: cut2.asm** — **DONE 2026-07-10.** New mirrored file: `AnimCut`
 (tree-spread + grass-leaf paths), `AnimCutGrass_UpdateOAMEntries`, `AnimCutGrass_SwapOAMEntries`.
