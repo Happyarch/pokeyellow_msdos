@@ -242,6 +242,19 @@ AI wiring, generators). **[RESOLVED]** = fixed on `master` after this audit — 
 - **Owner: battle. Severity: HIGH — this is the default gameplay path now.** Not fixed in the wild-live
   promotion (out of its scope: it is squarely battle-engine, and the promotion's own paths are proven
   clean by the A/B above).
+- **UPDATE (2026-07-10, `a9352307` — basis changed, needs live re-verify):** the isolation above was run
+  when `NewBattle.startBattle` called `InitBattle` *standalone* and returned instantly — so the "battle"
+  was only InitBattle's blanked canvas (stride-40, view-ptr 0, VRAM clobbered by HUD/font loads) shown
+  for the `DelayFrames 10` before `EnterMap`. That path is gone: `NewBattle` now calls `_InitBattleCommon`,
+  which runs a full `MainInBattleLoop` (its own screen/VRAM management) and exits via `EndOfBattle` →
+  `.battleOccurred` → `EnterMap`. The return path was audited clean statically: `LoadScreenRelatedData`
+  calls `LoadTilesetTilePatternData` **unconditionally** (no pret-style same-tileset skip), which reloads
+  vTileset **and** sets `g_tilecache_dirty=1`; `LoadMapData` re-sets `W_UPDATE_SPRITES_ENABLED=1`
+  (overworld.asm:1417) + `LoadPlayerSpriteGraphics`; `SeamReseatView` restores the view ptr;
+  `_InitBattleCommon` restores `text_row_stride=20`. So every piece of state InitBattle changed is
+  provably reset on return. The original instant-return grass is therefore resolved; whether a *completed*
+  battle returns to a clean overworld is unverified (needs a seeded overworld party + input, deferred per
+  the autonomy directive). **Re-verify live before closing.**
 
 ### W-2. `pokeballs.asm` writes VRAM tile data without setting `g_tilecache_dirty` **[CONFIRMED — static]**
 
