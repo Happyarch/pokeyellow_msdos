@@ -479,6 +479,26 @@ endif
 ifdef DEBUG_SEED_PARTY
 NASMFLAGS += -D DEBUG_SEED_PARTY
 endif
+# Scripted-joypad harness: seeded party + SKIP_TITLE + AutoKeyDrive replaying a
+# button sequence (frame.asm), so a keyboard-only live path (overworld -> START ->
+# submenu) runs headless. make DEBUG_AUTOKEY=1
+ifdef DEBUG_AUTOKEY
+ifdef AUTOKEY_TITLE
+NASMFLAGS += -D AUTOKEY_TITLE
+endif
+ifdef AUTOKEY_DOWNS
+NASMFLAGS += -D AUTOKEY_DOWNS=$(AUTOKEY_DOWNS)
+endif
+ifdef AUTOKEY_DUMP_FRAME
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_AUTOKEY
+NASMFLAGS += -D DEBUG_SEED_PARTY
+ifndef AUTOKEY_TITLE
+NASMFLAGS += -D SKIP_TITLE
+endif
+endif
 # Party-menu gate: seed the party, open the POKéMON screen over the overworld,
 # render one frame, dump FRAME.BIN, exit. make DEBUG_PARTYMENU=1
 ifdef DEBUG_PARTYMENU
@@ -1409,7 +1429,15 @@ NASMFLAGS_STAMP := .nasmflags.stamp
 $(file >$(NASMFLAGS_STAMP).tmp,$(NASMFLAGS))
 $(shell cmp -s $(NASMFLAGS_STAMP).tmp $(NASMFLAGS_STAMP) || cp $(NASMFLAGS_STAMP).tmp $(NASMFLAGS_STAMP); rm -f $(NASMFLAGS_STAMP).tmp)
 
-%.o: %.asm $(NASMFLAGS_STAMP)
+# Every .asm %includes from include/ (gb_memmap.inc at minimum). The stamp above
+# only tracks the -D flags, NOT %include CONTENT — so editing e.g. MAP_BORDER or a
+# W_* address in gb_memmap.inc used to rebuild nothing, leaving a binary whose
+# objects disagreed about the memory map. That mixes two layouts in one image and
+# faults at runtime. Depend on the headers themselves; a header edit is rare enough
+# that a full rebuild is the right price.
+INC_DEPS := $(wildcard include/*.inc)
+
+%.o: %.asm $(NASMFLAGS_STAMP) $(INC_DEPS)
 	$(NASM) $(NASMFLAGS) -o $@ $<
 
 # Assemble-only check (no link): useful for syntax verification
