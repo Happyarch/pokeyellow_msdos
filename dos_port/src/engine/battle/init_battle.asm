@@ -62,6 +62,11 @@ INTRO_LINE1_LEN equ $ - intro_line1
 intro_line2: db 0xa0,0xaf,0xaf,0xa4,0xa0,0xb1,0xa4,0xa3,0xe7
 INTRO_LINE2_LEN equ $ - intro_line2
 
+; W-1 FIX (docs/battle_audit_findings.md): saved overworld view pointer across the
+; battle's flat-canvas hack. Port-only render-HAL state; see InitBattle / the
+; _InitBattleCommon tail.
+saved_ow_view_ptr: dw 0
+
 section .text
 
 global InitBattle
@@ -126,9 +131,42 @@ InitBattle:
     ; Switch render_bg to its flat-canvas (non-overworld) path: zero the overworld
     ; view pointer so it decodes W_TILEMAP directly, and zero scroll so the 40×25
     ; canvas blits at screen (0,0).
+    ; NOTE: zero the SCX/SCY SHADOWS too — DelayFrame's commit_shadow_regs copies
+    ; H_SCX/H_SCY → IO_SCX/IO_SCY every frame, so without this the stale overworld
+    ; fine-scroll is restored next frame and the whole battle canvas blits offset by
+    ; however far the player had scrolled (the "battle lands in different places"
+    ; bug). Same fix the status screen carries (status_screen.asm:174-175). The
+    ; overworld recomputes H_SCX/H_SCY from player position on return, so zeroing
+    ; here is safe. pret zeroes rSCX/rSCY analogues via the transition/ClearScreen.
+    ;
+    ; W-1 FIX: SAVE the overworld view pointer before zeroing it. Unlike hTileAnimations
+    ; (re-armed from the tileset by LoadTilesetHeader on map re-entry) and H_SCX/H_SCY
+    ; (recomputed from player position), NOTHING on the same-map post-battle return
+    ; re-derives this pointer: LoadMapData explicitly does NOT (overworld.asm:2278 — the
+    ; derivation lives in LoadWarpDestination, which the post-battle EnterMap skips because
+    ; EndOfBattle set wDestinationWarpID=$FF "don't reposition"). So render_bg would stay on
+    ; its flat-canvas path (ppu.asm:188 — zero ptr ⇒ decode W_TILEMAP directly) and paint
+    ; stale W_TILEMAP = solid grass. Restored at the _InitBattleCommon tail (same map + same
+    ; coords ⇒ the pre-battle value is still correct), mirroring status_screen.asm's view-ptr
+    ; save/restore. The debug harnesses that call InitBattle standalone never return to the
+    ; field, so the unrestored save is harmless there.
+    mov ax, [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR]
+    mov [saved_ow_view_ptr], ax
     mov word [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], 0
+    mov byte [ebp + H_SCX], 0
+    mov byte [ebp + H_SCY], 0
     mov byte [ebp + IO_SCX], 0
     mov byte [ebp + IO_SCY], 0
+    ; Disable BG tile animations for the battle. pret: DoBattleTransitionAndInit-
+    ; BattleVariables does `xor a / ldh [hTileAnimations],a` (core.asm:6359). The
+    ; port's collapsed battle init dropped it, so UpdateMovingBgTiles (frame.asm,
+    ; every DelayFrame) kept cycling the overworld water/flower tiles ($03/$14) —
+    ; but in battle those VRAM slots hold mon-pic / HUD tile data ($9000+), so the
+    ; animation painted flowers over the battle graphics. LoadTilesetHeader re-arms
+    ; it from the tileset on map re-entry, so no save/restore is needed here (same
+    ; rationale as status_screen.asm:200-202, which must save/restore only because
+    ; it returns to the very same overworld frame without a map reload).
+    mov byte [ebp + hTileAnimations], 0
     call hide_window                         ; no window overlay — battle screen is the BG
     ; Load the HP-bar / status / ":L" tiles ($62-$71) the HUD needs. Tiles $79-$7E
     ; (the dialog box border) are byte-identical in both tile sets, so this does NOT
@@ -240,6 +278,25 @@ _InitBattleCommon:
     ; --- the battle itself ---
     call MainInBattleLoop                       ; menu/turns/damage/faint/EXP/run
     call EndOfBattle                             ; win: PayDay/evo/reset; then whiteout
+
+    ; --- W-1 FIX: restore the overworld view pointer InitBattle zeroed (see InitBattle),
+    ;     so render_bg takes the overworld path again on the same-map post-battle EnterMap.
+    ;     This survives EnterMap/LoadMapData (which never writes the pointer — verified:
+    ;     ResetMapVariables et al. leave it alone); the trailing LoadCurrentMapView then
+    ;     rebuilds wSurroundingTiles for this (unchanged) view. Without it the returning
+    ;     overworld renders as one repeated tile. ---
+    mov ax, [saved_ow_view_ptr]
+    mov [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], ax
+
+    ; --- W-1 FIX (sprites): re-enable OBJ rendering. HideBattlePokeballs
+    ;     (pokeballs.asm:112, run after the intro) cleared LCDCF_OBJ_ON so the battle
+    ;     proper draws no OBJ sprites; the overworld default (LCDC_DEFAULT_VAL=$E3) has
+    ;     it set. Nothing on the return path restores it — EnableLCD (lcd_control.asm:38,
+    ;     in LoadMapData) only touches the LCD-ON bit — so render_sprites' gate
+    ;     (ppu.asm: test IO_LCDC,LCDCF_OBJ_ON / jz .done) stays closed and the player +
+    ;     every NPC vanish while the BG renders fine. Restore it here alongside the view
+    ;     ptr; EnterMap leaves IO_LCDC's OBJ bit alone, so this survives to the field. ---
+    or byte [ebp + IO_LCDC], LCDCF_OBJ_ON
 
     ; --- restore the overworld dialog stride so the map/menus render at stride 20
     ;     (InitBattle raised it to 40 for the widescreen canvas). ---

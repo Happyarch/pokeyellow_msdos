@@ -350,9 +350,9 @@ EvolutionAfterBattle:
     imul eax, BASE_DATA_SIZE
     mov esi, BaseStats
     add esi, eax                    ; ESI = &BaseStats[dex-1]
-    mov edi, wMonHeader
-    mov bx, BASE_DATA_SIZE
-    call CopyData
+    mov edx, wMonHeader             ; CopyData dest is EDX (=DE), NOT EDI — CopyData
+    mov bx, BASE_DATA_SIZE          ; overwrites EDI internally (movzx edi,dx). This was a
+    call CopyData                   ; bespoke reg-map bug: base stats went to [ebp+stale DX].
 
     mov al, [ebp + wCurSpecies]
     mov [ebp + wMonHIndex], al
@@ -408,8 +408,9 @@ EvolutionAfterBattle:
 
     ; Copy all computed wLoadedMon stats back to the party mon struct
     mov esi, wLoadedMon
-    mov bx, PARTYMON_STRUCT_LENGTH
-    call CopyData                   ; copies full party struct from wLoadedMon → party slot
+    mov edx, edi                    ; CopyData dest is EDX (=DE), NOT EDI (the "save copy for
+    mov bx, PARTYMON_STRUCT_LENGTH  ; CopyData dest later" push above targeted the wrong reg —
+    call CopyData                   ; the 44-byte struct was landing at [ebp+stale DX]).
 
     ; Update the party mon's dex number and learn moves at current level
     mov al, [ebp + wCurSpecies]
@@ -643,7 +644,8 @@ RenameEvolvedMon:
     call GetName                    ; get new name into wNameBuffer
     mov esi, wNameBuffer
     pop edi                         ; EDI = destination: nickname slot in party
-    mov bx, NAME_LENGTH
+    mov edx, edi                    ; CopyData dest is EDX (=DE), NOT EDI — the new name was
+    mov bx, NAME_LENGTH             ; being written to [ebp+stale DX] instead of the nick slot.
     call CopyData
 .return:
     ret

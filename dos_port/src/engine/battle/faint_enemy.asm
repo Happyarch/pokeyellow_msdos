@@ -47,6 +47,13 @@ wEnemyStatsToHalve  equ wEnemyBattleStatus1 - 1   ; = 0xD065
 EXP_ALL equ 0x4B
 %endif
 
+; 4. MUSIC_DEFEATED_WILD_MON — victory jingle id ($F9), from assets/audio_constants.inc
+;    (not included here to avoid pulling the whole audio table). Local guard mirrors
+;    the constants above.
+%ifndef MUSIC_DEFEATED_WILD_MON
+MUSIC_DEFEATED_WILD_MON equ 0xF9
+%endif
+
 ; 4. RemoveFaintedPlayerMon — grepped the whole dos_port/ tree; genuinely does
 ;    not exist yet (only referenced in a TODO(faithful) comment at
 ;    src/engine/battle/core.asm:2191). Sibling routine (pret core.asm, the
@@ -81,6 +88,8 @@ extern IsItemInBag                     ; src/home/item_predicates.asm — in: BH
 extern GainExperience                  ; src/engine/battle/experience.asm — no args, reads wBoostExpByExpAll/wPartyGainExpFlags
 extern SlideDownFaintedMonPic          ; NEEDS-INTEGRATION (see block above) — central ANIMATION=OFF stub, missing
 extern EnemyMonFaintedText             ; dos_port/assets/battle_text.inc (global label, battle_text stream)
+extern EndLowHealthAlarm               ; src/audio/play_battle_music.asm — clears wLowHealthAlarm + CHAN5
+extern PlayBattleVictoryMusic          ; src/audio/play_battle_music.asm — AL=music id, plays victory jingle
 
 section .bss
 ; Local scratch: pret uses `push af` / `pop af` to carry the "does the player
@@ -159,12 +168,21 @@ FaintEnemyPokemon:
     mov bl, 11                                ; c = 11 width
     call ClearScreenArea
 
-    ; --- audio: TODO-HW (Phase 3 audio HAL). pret plays SFX_FAINT_FALL/THUD for a
-    ; trainer win, or EndLowHealthAlarm + MUSIC_DEFEATED_WILD_MON for a wild win.
-    ; Skip straight to .sfxplayed (the post-sfx logic below is unconditional either
-    ; way in pret; only the sound differs). ---
-    ; TODO-HW: audio HAL (Phase 3) — SFX_FAINT_FALL/SFX_FAINT_THUD (trainer) or
-    ; EndLowHealthAlarm + MUSIC_DEFEATED_WILD_MON (wild). pret core.asm:788-806.
+    ; --- win audio (pret core.asm:786-806): a trainer win plays SFX_FAINT_FALL then
+    ;     SFX_FAINT_THUD; a wild win ends the low-health alarm and plays the victory
+    ;     jingle. The post-audio logic at .sfxplayed is common to both. ---
+    mov al, [ebp + wIsInBattle]
+    dec al
+    jz .wild_win                              ; wIsInBattle == 1 (wild) -> victory music
+    ; Trainer win: SFX_FAINT_FALL / SFX_FAINT_THUD.
+    ; TODO-HW: trainer faint SFX (wFrequencyModifier/wTempoModifier=0,
+    ; PlaySoundWaitForCurrent SFX_FAINT_FALL, wait CHAN5, PlaySound SFX_FAINT_THUD,
+    ; WaitForSoundToFinish). Trainer battles aren't the live overworld path yet.
+    jmp .sfxplayed
+.wild_win:
+    call EndLowHealthAlarm                     ; pret: call EndLowHealthAlarm
+    mov al, MUSIC_DEFEATED_WILD_MON            ; pret: ld a, MUSIC_DEFEATED_WILD_MON
+    call PlayBattleVictoryMusic                ; pret: call PlayBattleVictoryMusic
 
 .sfxplayed:
     ; --- double-faint guard (pret :808-815) ---
@@ -206,8 +224,14 @@ FaintEnemyPokemon:
     mov byte [ebp + wBoostExpByExpAll], 0
     call GainExperience                        ; callfar GainExperience
 
-    cmp byte [faint_enemy_has_exp_all], 0       ; pop af / ret z
-    jz .return                                   ; no EXP_ALL -> done
+    ; pret: `pop af / ret z` — ret if the saved IsItemInBag ZF was set (EXP_ALL
+    ; NOT in bag). faint_enemy_has_exp_all = setz(that ZF) = 1 when NOT in bag, so
+    ; the faithful test is `ret nz` here, NOT `ret z` — the byte holds the raw ZF,
+    ; not "has exp all". (Was `jz`: inverted → on a normal wild win it wrongly ran
+    ; the EXP_ALL block, a 2nd whole-party GainExperience that clobbered wIsInBattle
+    ; → TrainerAI `call edi` page fault. bug#3.)
+    cmp byte [faint_enemy_has_exp_all], 0       ; pop af / ret z (byte=1 ⇒ ZF was set ⇒ no EXP_ALL)
+    jnz .return                                  ; no EXP_ALL -> done
 
     ; --- has EXP_ALL: award to every party mon (halved share) ---
     mov byte [ebp + wBoostExpByExpAll], TRUE

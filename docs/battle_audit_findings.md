@@ -287,6 +287,20 @@ AI wiring, generators). **[RESOLVED]** = fixed on `master` after this audit — 
   provably reset on return. The original instant-return grass is therefore resolved; whether a *completed*
   battle returns to a clean overworld is unverified (needs a seeded overworld party + input, deferred per
   the autonomy directive). **Re-verify live before closing.**
+- **RESOLVED (2026-07-10, live-verified after the bug#3 page-fault fix let a battle *complete*):** the
+  static audit above was WRONG on two counts, and both surfaced live on the completed-battle return:
+  1. **Grass** — the claim "`SeamReseatView` restores the view ptr" was false: `SeamReseatView` is
+     **DEBUG_SEAM-only**, and `LoadMapData` explicitly does *not* derive `wCurrentTileBlockMapViewPointer`
+     (its own comment, overworld.asm:2278 — derivation lives in `LoadWarpDestination`, skipped on the
+     same-map post-battle `EnterMap` because `EndOfBattle` sets `wDestinationWarpID=$FF`). So `InitBattle`'s
+     zeroing of the view ptr survived the return → `render_bg` stayed on its flat-canvas `.decode_vram`
+     path (ppu.asm:188) → solid grass. **Fix:** `InitBattle` saves the view ptr; `_InitBattleCommon`
+     restores it on exit (init_battle.asm), mirroring status_screen's save/restore.
+  2. **Vanished player + NPCs** — `HideBattlePokeballs` (pokeballs.asm:112) clears `LCDCF_OBJ_ON` for the
+     battle proper; nothing restored it (`EnableLCD` only sets the LCD-on bit), so `render_sprites`' gate
+     (`test IO_LCDC,LCDCF_OBJ_ON / jz .done`) stayed closed. **Fix:** `_InitBattleCommon` re-ORs
+     `LCDCF_OBJ_ON` on exit alongside the view-ptr restore.
+  Both verified live (tileset + player + NPCs correct on return from a won wild battle). W-1 CLOSED.
 
 ### W-2. `pokeballs.asm` writes VRAM tile data without setting `g_tilecache_dirty` **[FALSE POSITIVE — 2026-07-10]**
 

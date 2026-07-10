@@ -16,6 +16,8 @@ section .text
 
 global InitBattleVariables
 
+extern PlayBattleMusic             ; src/audio/play_battle_music.asm — selects wild/trainer/gym/final theme, tail-calls PlayMusic
+
 InitBattleVariables:
     mov al, [ebp + hTileAnimations]
     mov [ebp + wSavedTileAnimations], al
@@ -58,5 +60,9 @@ InitBattleVariables:
     mov al, BATTLE_TYPE_SAFARI
     mov [ebp + wBattleType], al
 .notSafariBattle:
-    ; TODO-HW: jpfar PlayBattleMusic — audio HAL deferred (Wave-2 audio cross-cut).
-    ret
+    ; pret: jpfar PlayBattleMusic (tail call). The audio HAL is now live (overworld
+    ; music wired, OW-A.14), so this is destubbed: PlayBattleMusic stops current music,
+    ; picks wild/trainer/gym-leader/final theme from wGymLeaderNo/wCurOpponent, and
+    ; tail-calls PlayMusic. The tail jmp preserves the call contract (PlayBattleMusic's
+    ; ret returns to InitBattle after `call InitBattleVariables`).
+    jmp PlayBattleMusic
