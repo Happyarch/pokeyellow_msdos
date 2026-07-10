@@ -5,7 +5,7 @@
   "relocated_labels: per-label relocations where one pret file split across port files.",
   "suppress: linter suppressions [{rule, key, why}].",
   "DRAFT (Session H 2026-07-07): entries below bless pre-existing relocations found by the",
-  "first full-tree scan; they predate the mirror rule. Flagged for user review \u2014 deleting an",
+  "first full-tree scan; they predate the mirror rule. Flagged for user review — deleting an",
   "entry makes the linter fire on it again."
  ],
  "relocated_files": {
@@ -864,8 +864,8 @@
    "why": "pret home/overworld.asm split across port files (draft Session H)"
   },
   "DoBikeSpeedup": {
-   "port_file": "dos_port/src/engine/overworld/player_gfx.asm",
-   "why": "pret home/overworld.asm split across port files (draft Session H)"
+   "port_file": "dos_port/src/engine/overworld/overworld.asm",
+   "why": "pret home/overworld.asm split across port files; OW-A.6 moved the real body here (linked, called from OverworldLoop .moveAhead) and retired the check-only player_gfx.asm copy"
   },
   "DrawTileBlock": {
    "port_file": "dos_port/src/engine/overworld/overworld.asm",
@@ -1226,18 +1226,22 @@
   "MoveAnimationTiles1": {
    "port_file": "dos_port/src/engine/overworld/cut.asm",
    "why": "INTERIM: battle engine/battle/animations.asm not yet ported; cut.asm (OW-3.4) incbins move_anim_1.2bpp as MoveAnimationTiles1 for the grass-leaf tile (tile 6). Retire and extern from animations.asm once battle move-anim tiles are ported."
+  },
+  "CollisionCheckOnWater": {
+   "port_file": "dos_port/src/engine/overworld/overworld.asm",
+   "why": "pret home/overworld.asm split across port files (OW-A.6); lives beside CollisionCheckOnLand/OverworldLoop in the fused overworld.asm"
   }
  },
  "suppress": [
   {
    "rule": "non_ret_stub",
    "key": "OakSpeech",
-   "why": "documented DEVIATION integration stub: the one call (predef InitPlayerData2) is load-bearing \u2014 seeds party/bag/money on new game; cutscene itself is script-engine plan work"
+   "why": "documented DEVIATION integration stub: the one call (predef InitPlayerData2) is load-bearing — seeds party/bag/money on new game; cutscene itself is script-engine plan work"
   },
   {
    "rule": "non_ret_stub",
    "key": "DisplayPCMainMenu",
-   "why": "documented DEVIATION integration stub: arms menu vars (wMaxMenuItem etc.) so PCMainMenu dispatch runs on defined state \u2014 minimal contract, no box draw"
+   "why": "documented DEVIATION integration stub: arms menu vars (wMaxMenuItem etc.) so PCMainMenu dispatch runs on defined state — minimal contract, no box draw"
   },
   {
    "rule": "non_ret_stub",

@@ -8,24 +8,22 @@
 ; Return convention (as pret): ZF set (Z) ⇒ an encounter happens; ZF clear ⇒ no
 ; encounter this step. The data tables are loaded by LoadWildData (wild_mons.asm).
 ;
-; SCOPE: this is the data/RNG core. Its *consumer* — the overworld step trigger —
-; is deferred. Three overworld helpers are deferred externs (they set the GB
-; flags this routine branches on):
+; SCOPE: this is the data/RNG core. Its *consumer* — the overworld step trigger
+; (NewBattle, wild_encounter_check.asm + OverworldLoop's gated call sites,
+; complete since OW-A.6) — waits on THIS file's link closure. Two extern deps
+; still resolve only to check-only files:
 ;   IsPlayerStandingOnDoorTileOrWarpTile  → CF (carry ⇒ on a door/warp tile)
-;   IsPlayerJustOutsideMap                → ZF (zero  ⇒ just outside the map)
-;   EnableAutoTextBoxDrawing / DisplayTextID (repel-wore-off message)
-; These keep the file from linking into the EXE yet (front end deferred), but it
+;     — check-only player_state.asm (see Makefile HOME_CHECK_SRCS notes)
+;   DisplayTextID (repel-wore-off message) — check-only home/text_script.asm
+; (IsPlayerJustOutsideMap and EnableAutoTextBoxDrawing are linked.) These keep
+; the file from linking into the EXE yet ("wild-live promotion"), but it
 ; assembles (make check) and the RNG/slot/species core is native-validated with
 ; those externs stubbed.
 ;
-; ; TODO-OVERWORLD — the player's standing tile. The GB reads hlcoord(8,9): the
-; bottom-left tile of the half-block the player stands in, on a 20-wide screen
-; with the player centred. The port's wTileMap is 40 wide and the overworld
-; camera (a documented scaffold, see CLAUDE.md) pins the player at viewport
-; centre, so the true standing-tile offset is the consumer's to supply. We read
-; one fixed offset (the GB formula applied to the 40-wide map) as a placeholder;
-; it is read identically in both spots, so the grass/water decision is internally
-; consistent for validation. The overworld trigger overrides PLAYER_STANDING_TILE.
+; The player's standing tile is read at the fixed projected offset
+; PLAYER_STANDING_TILE below (OW-A.6: real projection, no longer a placeholder);
+; it is read identically in both spots, so the grass/water decision is
+; internally consistent.
 ;
 ; Register map: a=AL, b=BH, c=BL (bc=BX), hl=ESI (flat table / WRAM offset).
 ;
@@ -37,8 +35,13 @@ bits 32
 %include "gb_constants.inc"
 
 ; ; TODO-OVERWORLD: see header. GB hlcoord(8,9) → +188 on a 20-wide map; here the
-; 40-wide port map. Placeholder offset, overridden by the overworld consumer.
-PLAYER_STANDING_TILE    equ W_TILEMAP + 9 * 40 + 8
+; 40-wide port map. OW-A.6: fixed from the stride-20-formula-on-a-40-wide-map
+; placeholder to the real projection.
+; PROJ overworld-field: GB(8,9) player feet 1x1 --(+16col,+8row -> W_TILEMAP)-->
+; (PLAYER_STANDING_COL=24, PLAYER_STANDING_ROW=17) — the registry row in
+; docs/ui_projection.md ("overworld-field (tile reads)"); matches the
+; standing-tile reads in overworld.asm / player_state.asm.
+PLAYER_STANDING_TILE    equ W_TILEMAP + PLAYER_STANDING_ROW * SCREEN_TILES_W + PLAYER_STANDING_COL
 WATER_TILE_ID           equ 0x14        ; water tile in every tileset that has one
 
 extern WildMonEncounterSlotChances

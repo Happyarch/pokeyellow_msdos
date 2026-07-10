@@ -542,3 +542,68 @@ ti_dialog_drop:
     mov [g_window_count], eax
     pop eax
     ret
+
+; ===========================================================================
+; IsNextTileShoreOrWater — pret engine/items/item_effects.asm:3118 (OW-A.6).
+; CF=1 if the tile in front of the player (wTileInFrontOfPlayer, pre-read by
+; the caller via the front-tile helper) is water — or a shore tile, on the
+; tilesets that treat shore as surfable. CF=0 otherwise (incl. tilesets with
+; no water at all). Consumed by CollisionCheckOnWater (surf collision) and,
+; later, the Good Rod / Super Rod + Surf item-use checks.
+; Clobbers AL, BH, CL, ESI, EDX (IsInArray ABI: AL=value, ESI=flat table,
+; EDX=stride; CF=1 found).
+; ===========================================================================
+
+global IsNextTileShoreOrWater
+
+extern IsInArray                     ; src/home/array.asm
+
+; Tileset ids (OVERWORLD/FOREST/DOJO/GYM/SHIP/SHIP_PORT/CAVERN/FACILITY/
+; PLATEAU) come from the generated assets/map_dims.inc TILESET_IDS block.
+%include "assets/map_dims.inc"
+
+section .data
+; pret data/tilesets/water_tilesets.asm (inlined, port convention for small
+; pret data includes). ShoreTiles deliberately falls through into WaterTile —
+; the shore lists END at WaterTile's -1 terminator, exactly as in pret.
+WaterTilesets:
+    db OVERWORLD
+    db FOREST
+    db DOJO
+    db GYM
+    db SHIP
+    db SHIP_PORT
+    db CAVERN
+    db FACILITY
+    db PLATEAU
+    db -1                            ; end
+ShoreTiles:                          ; tiles that allow surfing and fishing,
+    db 0x48, 0x32                    ; depending on the tileset (see IsNextTileShoreOrWater)
+    ; fallthrough
+WaterTile:
+    db 0x14
+    db -1                            ; end
+
+section .text
+
+IsNextTileShoreOrWater:
+    mov al, [ebp + W_CUR_MAP_TILESET]
+    mov esi, WaterTilesets           ; ld hl, WaterTilesets (flat table)
+    mov edx, 1                       ; ld de, 1
+    call IsInArray                   ; does the current map allow surfing?
+    jnc .done                        ; ret nc — no water in this tileset (CF=0)
+    mov esi, WaterTile               ; ld hl, WaterTile
+    mov al, [ebp + W_CUR_MAP_TILESET]
+    cmp al, SHIP_PORT                ; Vermilion Dock: water tile only
+    je .skipShoreTiles
+    cmp al, GYM                      ; Cerulean Gym pool: water tile only
+    je .skipShoreTiles
+    cmp al, DOJO                     ; (shares the GYM tile behavior)
+    je .skipShoreTiles
+    mov esi, ShoreTiles              ; ld hl, ShoreTiles
+.skipShoreTiles:
+    mov al, [ebp + W_TILE_IN_FRONT_OF_PLAYER]
+    mov edx, 1                       ; ld de, 1
+    call IsInArray                   ; CF=1 → tile is shore/water
+.done:
+    ret

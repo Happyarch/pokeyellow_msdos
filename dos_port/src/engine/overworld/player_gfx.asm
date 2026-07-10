@@ -12,7 +12,7 @@
 ;     LoadPlayerSpriteGraphics::            (dispatcher, ~L793)
 ;     IsBikeRidingAllowed::                 (~L804)  + data/tilesets/bike_riding_tilesets.asm
 ;     StopBikeSurf:                         (~L781)
-;     DoBikeSpeedup::                       (~L339)
+;     DoBikeSpeedup::                       RETIRED → overworld.asm (OW-A.6)
 ;     ForceBikeOrSurf::                     (~L2115)
 ;     LoadWalkingPlayerSpriteGraphics::     (~L1743)
 ;     LoadSurfingPlayerSpriteGraphics2::    (~L1751)
@@ -84,12 +84,9 @@ W_PIKACHU_SPAWN_STATE_FLAGS equ 0xD471
 %ifndef W_D472
 W_D472                      equ 0xD472
 %endif
-; wNPCMovementScriptPointerTableNum — scripted-NPC-movement dispatch (deferred
-; in the port). Address UNVERIFIED against the port's chosen CFxx layout; used
-; only as a "0 == no script running" guard in DoBikeSpeedup.
-%ifndef W_NPC_MOVEMENT_SCRIPT_POINTER_TABLE_NUM
-W_NPC_MOVEMENT_SCRIPT_POINTER_TABLE_NUM equ 0xCF17
-%endif
+; (The old W_NPC_MOVEMENT_SCRIPT_POINTER_TABLE_NUM 0xCF17 placeholder is gone —
+; its only consumer, DoBikeSpeedup, was retired to overworld.asm; the golden
+; wNPCMovementScriptPointerTableNum 0xCC57 lives in gb_memmap.inc.)
 
 ; ---------------------------------------------------------------------------
 ; Externs
@@ -118,7 +115,7 @@ global LoadBikePlayerSpriteGraphics
 global LoadPlayerSpriteGraphicsCommon
 global IsBikeRidingAllowed
 global ForceBikeOrSurf
-global DoBikeSpeedup
+; DoBikeSpeedup RETIRED → overworld.asm (OW-A.6; see note at its old body site)
 global StopBikeSurf
 
 PLAYER_HALF_TILES equ 12                       ; 12 tiles per VRAM half
@@ -278,33 +275,12 @@ ForceBikeOrSurf:
     jmp PlayDefaultMusic                     ; pret: jp PlayDefaultMusic (tail call)
 
 ; ---------------------------------------------------------------------------
-; DoBikeSpeedup — bikes move twice as fast (extra AdvancePlayerSprite step).
-; Pret ref: home/overworld.asm:DoBikeSpeedup
-; No-op unless biking, not on a ledge/fishing, and no NPC movement script is
-; running. On Cycling Road (Route 17) the free step is suppressed while a
-; horizontal/up direction is held.
+; DoBikeSpeedup — RETIRED from this file (OW-A.6). The routine now links LIVE
+; in src/engine/overworld/overworld.asm (its faithful pret home/overworld.asm
+; location, called from OverworldLoop's .moveAhead), using the golden
+; wNPCMovementScriptPointerTableNum (0xCC57) instead of this file's old 0xCF17
+; placeholder guess. Nothing in this file called it.
 ; ---------------------------------------------------------------------------
-DoBikeSpeedup:
-    mov al, [ebp + W_WALK_BIKE_SURF_STATE]
-    dec al                                  ; riding a bike?
-    jnz .done                               ; ret nz
-
-    test byte [ebp + W_MOVEMENT_FLAGS], (1 << BIT_LEDGE_OR_FISHING)
-    jnz .done                               ; ret nz
-
-    cmp byte [ebp + W_NPC_MOVEMENT_SCRIPT_POINTER_TABLE_NUM], 0
-    jne .done                               ; ret nz (script running)
-
-    mov al, [ebp + W_CUR_MAP]
-    cmp al, ROUTE_17                         ; Cycling Road
-    jne .goFaster
-    mov al, [ebp + H_JOY_HELD]
-    test al, (PAD_UP | PAD_LEFT | PAD_RIGHT)
-    jnz .done                               ; ret nz
-.goFaster:
-    call AdvancePlayerSprite
-.done:
-    ret
 
 ; ---------------------------------------------------------------------------
 ; StopBikeSurf — revert to walking; restore music if leaving a dungeon warp.

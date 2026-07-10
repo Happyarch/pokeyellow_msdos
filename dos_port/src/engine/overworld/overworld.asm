@@ -38,8 +38,12 @@ bits 32
 %include "gb_memmap.inc"
 %include "gb_macros.inc"
 %include "assets/audio_constants.inc"   ; SFX_COLLISION / MUSIC_* (audio engine is live)
+%include "assets/map_dims.inc"          ; map-id + tileset-id constants (OAKS_LAB/CINNABAR_GYM/SHIP_PORT, OW-A.6)
+%include "assets/event_constants.inc"   ; EVENT_* bit indices (EVENT_2A7, OW-A.6)
+%include "events.inc"                   ; CheckEvent/SetEvent/ResetEvent over W_EVENT_FLAGS
 
 extern PlaySound                       ; src/home/audio.asm (real gateway, OW-A.14)
+extern PlayDefaultMusic                ; src/home/audio.asm — surf-dismount music restore (OW-A.6)
 extern PlayDefaultMusicFadeOutCurrent  ; src/home/audio.asm (real gateway, OW-A.14)
 extern UpdateMusic6Times               ; src/home/audio.asm (real gateway, OW-A.14)
 extern FillMemory
@@ -48,8 +52,14 @@ extern FarCopyData
 extern IsInArray              ; src/home/array.asm — shared home global (LoadTilesetHeader dungeon check)
 extern RunMapScript           ; per-frame map _Script dispatch (script engine)
 extern StepCountCheck         ; wild_encounter_check.asm — per-step counter decrement (M7.1)
+extern AnyPartyAlive          ; wild_encounter_check.asm — DH = OR of party HP (linked; OW-A.6)
+extern DelayFrames            ; src/video/frame.asm — BL = frame count
+extern IsNextTileShoreOrWater ; src/engine/items/item_effects.asm — CF=1 shore/water ahead (OW-A.6)
+extern CheckForJumpingAndTilePairCollisions ; src/engine/overworld/ledges.asm (linked, OW-7.2)
+extern TilePairCollisionsWater              ; src/engine/overworld/ledges.asm — water seam pairs
 %ifdef WILD_ENCOUNTERS_LIVE
 extern NewBattle              ; wild_encounter_check.asm — wild/trainer encounter gate (M7.1, gated)
+extern AllPokemonFainted      ; wild_encounter_check.asm — blackout handoff (gated with NewBattle)
 %endif
 extern DisableLCD
 extern EnableLCD
@@ -786,9 +796,32 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     je .walkStart                             ; already committed to walking direction
     mov byte [ebp + W_CHECK_FOR_TURN], 0     ; consume the turn-check token
     cmp dl, [ebp + W_PLAYER_LAST_STOP_DIRECTION]
-    jne OverworldLoop                         ; new direction → facing updated, no walk
+    je .walkStart                             ; same direction → walk normally
+    ; Turn-only press (pret home/overworld.asm:186-199): facing was updated above;
+    ; don't walk. OW-A.6 faithful turn tail: arm the Pikachu-collision grace
+    ; counter, flag the in-place turn for this frame (.moveAhead clears it), and —
+    ; pret :197 — roll a wild encounter on the turn itself (turning in grass can
+    ; trigger a battle; gated until TryDoWildEncounter's closure links, see
+    ; wild_encounter_check.asm).
+    mov byte [ebp + wPikachuCollisionCounter], 8
+    or byte [ebp + wMiscFlags], (1 << BIT_TURNING)   ; set BIT_TURNING, [hl]
+%ifdef WILD_ENCOUNTERS_LIVE
+    call NewBattle                            ; CF=1 → a battle occurred on the turn
+    jc .battleOccurred
+%endif
+    jmp OverworldLoop                         ; turn only — no step
 
 .walkStart:
+    ; OW-A.6 (pret .noDirectionChange, home/overworld.asm:203-226): while surfing
+    ; (wWalkBikeSurfState == 2) collision routes through CollisionCheckOnWater;
+    ; on land through CollisionCheckOnLand. Inert in today's live build — nothing
+    ; sets state 2 until Surf item-use / ForceBikeOrSurf links (player_gfx.asm).
+    cmp byte [ebp + W_WALK_BIKE_SURF_STATE], 2 ; surfing?
+    jne .collisionOnLand
+    call CollisionCheckOnWater                ; CF=1 → blocked on water
+    jc OverworldLoop                          ; pret .surfing: jp c, OverworldLoop
+    jmp .startWalk                            ; water clear → begin the step
+.collisionOnLand:
     call CollisionCheckOnLand                 ; CF=1 → blocked
     jnc .startWalk
 
@@ -825,6 +858,13 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     jmp OverworldLoop
 
 .moveAhead:
+    ; pret .moveAhead2 head (home/overworld.asm:243-248): clear the in-place-turn
+    ; flag + Pikachu-collision grace counter, then the bike double-step, then
+    ; advance. DoBikeSpeedup is live but inert (wWalkBikeSurfState is never 1
+    ; until Bicycle use / ForceBikeOrSurf links). OW-A.6.
+    and byte [ebp + wMiscFlags], ~(1 << BIT_TURNING) & 0xFF  ; res BIT_TURNING, [hl]
+    mov byte [ebp + wPikachuCollisionCounter], 0
+    call DoBikeSpeedup
     call AdvancePlayerSprite
     jc .mapTransition
     cmp byte [ebp + W_WALK_COUNTER], 0
@@ -832,24 +872,46 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
 %ifdef DEBUG_WALKSPEED
     call WalkSpeedSample                       ; tile just completed → record ticks/tile
 %endif
-    ; --- M7.1: step count + wild-encounter gate (pret home/overworld.asm:249-268) ---
+    ; --- M7.1/OW-A.6: step count + wild-encounter gate (pret home/overworld.asm:249-268) ---
     ; The tile step just finished. pret runs StepCountCheck here, then (after
     ; poison/safari, deferred) NewBattle, taking the warp checks only when no battle
     ; occurred. StepCountCheck only decrements the WRAM step counters (nothing in the
     ; port reads wStepCounter yet), so it is safe and wired unconditionally. The live
-    ; wild-battle trigger is gated behind WILD_ENCOUNTERS_LIVE (NewBattle →
-    ; TryDoWildEncounter is CHECK-only, and the faithful post-battle re-entry isn't
-    ; built into this loop yet). See wild_encounter_check.asm + M7.1 SUMMARY follow-up.
+    ; wild-battle trigger stays gated behind WILD_ENCOUNTERS_LIVE: TryDoWildEncounter's
+    ; closure is still CHECK-only (IsPlayerStandingOnDoorTileOrWarpTile → player_state,
+    ; DisplayTextID → text_script, HandleBlackOut unported) — see the Makefile
+    ; HOME_CHECK_SRCS notes. The faithful post-battle path (.battleOccurred) is now
+    ; built (OW-A.6) and rides the same gate.
     call StepCountCheck
 %ifdef WILD_ENCOUNTERS_LIVE
     call NewBattle                            ; CF=1 → a wild/forced battle occurred
-    ; TODO(OW-A.6): faithful post-battle path = pret .battleOccurred (home/overworld.asm:269-296):
-    ; res BIT_TALKED_TO_TRAINER/BIT_TRAINER_BATTLE, set CUR_MAP_LOADED_1/2, clear hJoyHeld,
-    ; set BIT_BATTLE_OVER_OR_BLACKOUT, AnyPartyAlive→AllPokemonFainted, DelayFrames 10, jp EnterMap.
-    ; The EnterMap spine now EXISTS (OW-A.4), so this can route to it once WILD_ENCOUNTERS_LIVE
-    ; turns on and the blackout/faint-return pieces (HandleBlackOut/AnyPartyAlive) are wired. Until
-    ; then this path is dead (gate off); jmp keeps the loop consistent.
-    jc OverworldLoop
+    jnc .noBattleOccurred                     ; pret: jp nc, CheckWarpsNoCollision
+.battleOccurred:
+    ; pret .battleOccurred (home/overworld.asm:269-296) — reached from the
+    ; post-step NewBattle above and the on-turn NewBattle in .handleDirection.
+    and byte [ebp + W_STATUS_FLAGS_3], ~(1 << BIT_TALKED_TO_TRAINER) & 0xFF
+    and byte [ebp + W_STATUS_FLAGS_7], ~(1 << BIT_TRAINER_BATTLE) & 0xFF
+    or  byte [ebp + W_CURRENT_MAP_SCRIPT_FLAGS], (1 << BIT_CUR_MAP_LOADED_1) | (1 << BIT_CUR_MAP_LOADED_2)
+    mov byte [ebp + H_JOY_HELD], 0            ; xor a / ldh [hJoyHeld], a
+    mov al, [ebp + W_CUR_MAP]
+    cmp al, CINNABAR_GYM
+    jne .notCinnabarGym
+    SetEvent EVENT_2A7
+.notCinnabarGym:
+    or byte [ebp + W_STATUS_FLAGS_4], (1 << BIT_BATTLE_OVER_OR_BLACKOUT)
+    mov al, [ebp + W_CUR_MAP]
+    cmp al, OAKS_LAB
+    je .noFaintCheck                          ; no blackout after losing to the rival in Oak's lab
+    call AnyPartyAlive                        ; DH = OR of every party mon's HP bytes
+    test dh, dh                               ; ld a, d / and a
+    jz .allFainted
+.noFaintCheck:
+    mov bl, 10                                ; ld c, 10 (DelayFrames: BL = frame count)
+    call DelayFrames
+    jmp EnterMap                              ; full map re-entry (reset ladder, OW-A.4)
+.allFainted:
+    jmp AllPokemonFainted                     ; wild_encounter_check.asm → HandleBlackOut
+.noBattleOccurred:
 %endif
     ; Edge-detect: save previous BIT_STANDING_ON_WARP then clear it.
     ; Mirrors pret: res BIT_STANDING_ON_WARP first, then set it if coords match.
@@ -2172,6 +2234,122 @@ CollisionCheckOnLand:
     clc
     ret
 %endif
+
+; ---------------------------------------------------------------------------
+; CollisionCheckOnWater — collision check while surfing (OW-A.6).
+; Pret ref: home/overworld.asm:1665 CollisionCheckOnWater.
+;
+; CF=1 → blocked on water; CF=0 → move allowed. The "passable land tile ahead"
+; case disembarks (.stopSurfing): clears wWalkBikeSurfState, reloads the walking
+; sprite, restores the map music, and returns CF=0 so the step onto land runs.
+; Unreachable in today's live build — nothing sets wWalkBikeSurfState=2 until
+; Surf item-use / ForceBikeOrSurf (player_gfx.asm) links.
+;
+; PORT (established divergence, same as CollisionCheckOnLand): pret's
+; `predef GetTileAndCoordsInFrontOfPlayer` is realized as LoadCurrentMapView +
+; GetTileInFrontOfPlayer (the port's simplified front-tile read; the coord
+; side-outputs are dropped — see GetTileInFrontOfPlayer's DEFERRED note).
+; Register safety mirrors CollisionCheckOnLand: EAX/ECX/ESI saved; DL is
+; (re)written with W_PLAYER_DIRECTION, the same value callers already hold.
+; ---------------------------------------------------------------------------
+CollisionCheckOnWater:
+    push eax
+    push ecx
+    push esi
+    ; pret: bit BIT_SCRIPTED_MOVEMENT_STATE → never collide under simulated input
+    test byte [ebp + W_STATUS_FLAGS_5], (1 << BIT_SCRIPTED_MOVEMENT_STATE)
+    jnz .noCollision
+    ; pret :1669-1672 — quick sprite reject in the travel direction (same
+    ; collision-direction bit layout as CollisionCheckOnLand's reject).
+    mov dl, [ebp + W_PLAYER_DIRECTION]
+    mov al, [ebp + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_COLLISIONDATA]
+    and al, dl
+    jnz .collision
+    ; pret :1673-1675 — water-seam tile pairs block (and may arm a ledge state);
+    ; same save set as CollisionCheckOnLand's land hook.
+    push ebx
+    push edx
+    mov esi, TilePairCollisionsWater               ; flat host ptr (ledges.asm)
+    call CheckForJumpingAndTilePairCollisions
+    pop edx
+    pop ebx
+    jc .collision
+    ; pret :1676 predef GetTileAndCoordsInFrontOfPlayer → port idiom (see header):
+    ; rebuild the viewport (stale within a block), then read the front tile.
+    call LoadCurrentMapView
+    call GetTileInFrontOfPlayer                    ; CL = tile → W_TILE_IN_FRONT_OF_PLAYER
+    call IsNextTileShoreOrWater                    ; CF=1 → shore/water ahead
+    jc .noCollision                                ; keep surfing
+    movzx ecx, byte [ebp + W_TILE_IN_FRONT_OF_PLAYER] ; ld a,[wTileInFrontOfPlayer] / ld c,a
+    call IsTilePassable                            ; CF=1 → not passable
+    jnc .stopSurfing                               ; passable land ahead → disembark
+.collision:
+    ; pret :1685-1690 — bump SFX unless already playing on CHAN5.
+    mov al, [ebp + wChannelSoundIDs + CHAN5]
+    cmp al, SFX_COLLISION
+    je .setCarry
+    mov al, SFX_COLLISION
+    call PlaySound
+.setCarry:
+    pop esi
+    pop ecx
+    pop eax
+    stc
+    ret
+.checkIfVermilionDockTileset:
+    ; UNREFERENCED in pret Yellow (no jump targets this label — Red-era remnant
+    ; kept for label fidelity, like Func_5288 set 3).
+    mov al, [ebp + W_CUR_MAP_TILESET]
+    cmp al, SHIP_PORT                              ; Vermilion Dock tileset?
+    jne .noCollision                               ; keep surfing if not
+    jmp .stopSurfing
+.stopSurfing:
+    ; pret :1699-1708 ("based game freak") — disembark onto the passable tile.
+    mov byte [ebp + wPikachuSpawnState], 3
+    or byte [ebp + wPikachuOverworldStateFlags], (1 << 5) ; set 5, [hl] (hide)
+    mov byte [ebp + W_WALK_BIKE_SURF_STATE], 0
+    call LoadPlayerSpriteGraphics
+    call PlayDefaultMusic
+    ; fall through — pret: jr .noCollision
+.noCollision:
+    pop esi
+    pop ecx
+    pop eax
+    clc                                            ; and a — CF=0
+    ret
+
+; ---------------------------------------------------------------------------
+; DoBikeSpeedup — bikes move twice as fast as walking (OW-A.6).
+; Pret ref: home/overworld.asm:339 DoBikeSpeedup.
+;
+; Called once per .moveAhead frame; when riding a bike it advances the player
+; sprite a second time (2 px/frame). On Cycling Road (ROUTE_17) the speedup is
+; suppressed while UP/LEFT/RIGHT is held (the forced-southward drift stays at
+; walking speed). Inert in today's live build — wWalkBikeSurfState is never 1
+; until Bicycle item-use / ForceBikeOrSurf links.
+;
+; PORT NOTE: the port's AdvancePlayerSprite returns CF=1 on a map-connection
+; crossing; this inner call's CF is discarded (pret drops it too — its crossing
+; is caught by CheckMapConnections on the wWalkCounter path). Revisit the
+; crossing-mid-speedup case when biking goes live.
+; ---------------------------------------------------------------------------
+DoBikeSpeedup:
+    mov al, [ebp + W_WALK_BIKE_SURF_STATE]
+    dec al                                         ; riding a bike? (state == 1)
+    jnz .done                                      ; ret nz
+    test byte [ebp + W_MOVEMENT_FLAGS], (1 << BIT_LEDGE_OR_FISHING)
+    jnz .done                                      ; ret nz — mid ledge-hop/fishing
+    cmp byte [ebp + wNPCMovementScriptPointerTableNum], 0
+    jne .done                                      ; ret nz — movement script active
+    mov al, [ebp + W_CUR_MAP]
+    cmp al, ROUTE_17                               ; Cycling Road
+    jne .goFaster
+    test byte [ebp + H_JOY_HELD], PAD_UP | PAD_LEFT | PAD_RIGHT
+    jnz .done                                      ; ret nz — braking on Cycling Road
+.goFaster:
+    call AdvancePlayerSprite                       ; second advance → double speed
+.done:
+    ret
 
 ; ---------------------------------------------------------------------------
 ; GetTileInFrontOfPlayer — simplified translation.

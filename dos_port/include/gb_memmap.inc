@@ -1061,6 +1061,8 @@ W_D433                       equ 0xD433 ; wd433 — Pikachu collision direction 
 ; Red-vs-Yellow decision (see memory gb_memmap-anchoring); the block is internally consistent
 ; (correct relative offsets) so it moves as a unit if the layout is ever re-anchored.
 wPikachuOverworldStateFlags  equ 0xD42F ; bit1=following, bit2=moved, bit3=draw-disabled, bit5/7=hide
+wPikachuSpawnState           equ 0xD430 ; where/how Pikachu (re)spawns next (golden 00:d430; promoted from player_animations.asm local, OW-A.6)
+wPikachuCollisionCounter     equ 0xD434 ; post-turn grace frames before Pikachu-collision reactions (golden 00:d434)
 wPikachuMovementScriptBank   equ 0xD449 ; ROM bank of the active Pikachu movement script
 wPikachuMovementScriptAddress equ 0xD44A ; dw: cursor into the movement script
 wSpritePikachuStateData1MovementStatus equ 0xC1F1 ; slot-15 data1+1 (wSpriteStateData1 $C100 + 15*$10 +1)
@@ -1219,6 +1221,8 @@ W_ELITE4_FLAGS               equ 0xD733 ; wElite4Flags
 ; lanes integrate.
 BIT_WILD_ENCOUNTER_COOLDOWN  equ 0 ; wStatusFlags2 bit 0 — grants 3 no-battle steps (dup: gb_constants.inc)
 BIT_NO_NPC_FACE_PLAYER       equ 5 ; wStatusFlags3 bit 5 — suppress NPC-face-player on this entry
+BIT_TALKED_TO_TRAINER        equ 6 ; wStatusFlags3 bit 6 — talked to a trainer this encounter (OW-A.6)
+BIT_TRAINER_BATTLE           equ 3 ; wStatusFlags7 bit 3 — current battle is a trainer battle (OW-A.6)
 BIT_NO_BATTLES               equ 4 ; wStatusFlags4 bit 4 — suppress wild battles
 BIT_BATTLE_OVER_OR_BLACKOUT  equ 5 ; wStatusFlags4 bit 5 — set on battle/blackout return
 BIT_FLY_WARP                 equ 3 ; wStatusFlags6 bit 3 — entered via Fly warp (dup: m1_3_pending_symbols.inc)
@@ -1610,6 +1614,7 @@ wFieldMovesLeftmostXCoord     equ 0xCD42 ; GB X of leftmost field-move name (gol
 wLastFieldMoveID              equ 0xCD43 ; unused in pret (bookkeeping kept faithful; golden 00:cd43)
 wMiscFlags                    equ 0xCD60 ; bit BIT_NO_SPRITE_UPDATES: skip UpdateSprites in DisplayTextIDInit
 BIT_NO_SPRITE_UPDATES         equ 4      ; wMiscFlags bit (constants/ram_constants.asm)
+BIT_TURNING                   equ 2      ; wMiscFlags bit — player is turning in place this frame (constants/ram_constants.asm)
 BIT_USING_GENERIC_PC          equ 3      ; wMiscFlags bit — HoF/Bill's/generic PC hosts the menu (S6 pkg F)
 BIT_NO_MENU_BUTTON_SOUND      equ 5      ; wMiscFlags bit — suppress the menu A-press SFX
 wParentMenuItem               equ 0xCCD3 ; players_pc parent-menu selection (= wAddedToParty; sym-verified, S6 pkg F)

@@ -285,7 +285,7 @@ interactively with the user.
     and the faithful `_InitMapSprites` must land together (can't half-split cleanly).
     P2 does the WRAM layout in the still-bespoke loader so the field locations are already
     faithful when P3 moves the writer wholesale.
-  - [~] **P3 — home object-loader + `map_sprites.asm` 15-routine faithful rewrite (together):**
+  - [x] **P3 — home object-loader + `map_sprites.asm` 15-routine faithful rewrite (together)** (3a/3b/3c all DONE 2026-07-05, see below; checkbox was stale):
     Sub-steps (check-in between each): **3a DONE 2026-07-05** — full-coverage
     `SpriteSheetPointerTable` + sprite-gfx generation (`tools/gen_all_assets.py`
     `generate_sprite_sheet_pointers()` → `assets/sprite_sheet_pointers.inc`, all 82
@@ -437,7 +437,7 @@ immediately, commit `dfb4de24`): early-bringup commit `fec088bd` had short-circu
 `and a`+`ret`; restored to faithful. Scan confirmed no other foreign edits in the
 root pret tree.
 
-**TICKET OW-A.4: EnterMap re-entry architecture** `[SOLO — judgment-heavy]` — SCAFFOLD
+**TICKET OW-A.4: EnterMap re-entry architecture** `[SOLO — judgment-heavy]` — **DONE 2026-07-05** (a+b landed; header said SCAFFOLD stale. MCP live-warp check was substituted by user visual smoke — the dosbox-mcp breakpoint bug that blocked it is since fixed)
 - **A.4(a) DONE (2026-07-04):** faithful `EnterMap` body landed + boot restructured.
   `overworld.asm` now splits into `EnterMapBoot` (port-only one-time asset/sprite/name/
   text glue) → falls into faithful `EnterMap::` (line-for-line pret `home/overworld.asm:1-41`
@@ -599,11 +599,54 @@ root pret tree.
 - `CopyMapViewToVRAM`: DONE — deleted the dead `global` (exported an undefined symbol) and converted the
   bodyless "faithful translation" doc block to a `DIVERGENCE: obsoleted by native render_bg` note.
 
-**TICKET OW-A.6: OverworldLoop wild/surf gaps** `[SWARM or folds into Stage 4]` — DIVERGENT
-- On-turn wild-encounter check `NewBattle` (pret `:196-199`) dropped → turning in grass
-  can't trigger an encounter; add it, gate behind a `WILD_ENCOUNTERS_LIVE` flag (S).
-- Surfing entirely absent (`.surfing`/`CollisionCheckOnWater` `:206-226`, `DoBikeSpeedup`
-  `:243`) — larger; may fold into the boulder/field-move Stage 4 work. Effort M/L.
+**TICKET OW-A.6: OverworldLoop wild/surf gaps** — **DONE 2026-07-10** (both items; the
+gate-flip itself is a separate follow-up, see "wild-live promotion" below).
+- [x] **On-turn NewBattle** (pret `:186-199`): the turn-only branch now carries the
+  faithful tail — `wPikachuCollisionCounter=8`, `set BIT_TURNING` (wMiscFlags), and the
+  `call NewBattle / jc .battleOccurred` roll (gated `WILD_ENCOUNTERS_LIVE`); `.moveAhead`
+  gained pret `.moveAhead2`'s head (`res BIT_TURNING`, counter clear, `DoBikeSpeedup`).
+- [x] **Faithful `.battleOccurred`** (pret `:269-296`, gated with NewBattle): res
+  BIT_TALKED_TO_TRAINER/BIT_TRAINER_BATTLE, set CUR_MAP_LOADED_1/2, clear hJoyHeld,
+  Cinnabar `SetEvent EVENT_2A7` (events.inc now included by overworld.asm), set
+  BIT_BATTLE_OVER_OR_BLACKOUT, Oak's-Lab no-blackout skip, `AnyPartyAlive` →
+  `AllPokemonFainted`, `DelayFrames 10`, `jmp EnterMap` (the OW-A.4 spine).
+- [x] **Surfing loop structure, LIVE + ungated**: `.walkStart` dispatches
+  `wWalkBikeSurfState==2` → `CollisionCheckOnWater` (full faithful body in
+  overworld.asm beside CollisionCheckOnLand: scripted bypass, sprite reject,
+  TilePairCollisionsWater seam check via the linked ledges.asm, front-tile read via
+  the port's established LoadCurrentMapView+GetTileInFrontOfPlayer idiom replacing
+  pret's GetTileAndCoordsInFrontOfPlayer predef, IsNextTileShoreOrWater,
+  IsTilePassable → `.stopSurfing` disembark incl. wPikachuSpawnState=3/hide-flag/
+  LoadPlayerSpriteGraphics/PlayDefaultMusic; the unreferenced pret
+  `.checkIfVermilionDockTileset` kept with an UNREFERENCED tag). Inert live: nothing
+  sets state 2 until Surf item-use / ForceBikeOrSurf links.
+- [x] **DoBikeSpeedup LIVE** in overworld.asm (called each `.moveAhead` frame; inert —
+  state is never 1). **Retired the check-only player_gfx.asm copy** (it used a wrong
+  0xCF17 guess for wNPCMovementScriptPointerTableNum; golden is 0xCC57), allowlist
+  repointed.
+- [x] **IsNextTileShoreOrWater LIVE** in the mirrored item_effects.asm (pret
+  `engine/items/item_effects.asm:3118`) + inlined WaterTilesets/ShoreTiles/WaterTile
+  (pret data/tilesets/water_tilesets.asm; ShoreTiles falls through into WaterTile as
+  in pret). Also serves the future Surf/rod item-use checks.
+- [x] **IsPlayerCharacterBeingControlledByGame LIVE** — real routine in the new
+  mirrored `src/home/npc_movement.asm` (HOME_SRCS).
+- [x] **wild_encounters.asm PLAYER_STANDING_TILE projection fixed**: was pret's
+  stride-20 formula applied to the 40-wide map (9,8); now the ui_projection registry's
+  (PLAYER_STANDING_ROW=17, PLAYER_STANDING_COL=24) with a `; PROJ` tag.
+- Symbols promoted: wPikachuSpawnState 0xD430 (player_animations local deleted),
+  wPikachuCollisionCounter 0xD434, BIT_TURNING=2, BIT_TALKED_TO_TRAINER=6,
+  BIT_TRAINER_BATTLE=3 → gb_memmap.inc.
+- **Follow-up: "wild-live promotion"** (turns encounters ON — separate ticket): link
+  player_state.asm (IsPlayerStandingOnDoorTileOrWarpTile) + text_script.asm
+  (DisplayTextID), port HandleBlackOut (StopMusic +
+  ResetStatusAndHalveMoneyOnBlackout + real PrepareForSpecialWarp), then link
+  wild_encounters.asm, define WILD_ENCOUNTERS_LIVE, and retire the gate. Full
+  blocker map: wild_encounter_check.asm gating header + Makefile HOME_CHECK_SRCS notes.
+- Verified: make check clean; default + `-D WILD_ENCOUNTERS_LIVE` variants of
+  overworld.asm/wild_encounter_check.asm assemble; full build links (npc_movement.o
+  in); faithdiff DoBikeSpeedup/IsNextTileShoreOrWater/IsPlayerCharacterBeingControlledByGame
+  clean, CollisionCheckOnWater 3 justified deltas (front-tile idiom ×2 + named
+  `set 5,[hl]` store); lint 0; full `make fidelity` PASS (see commit).
 
 **TICKET OW-A.7: movement.asm NPC faithfulness fixes** `[SWARM/Sonnet]` — **DONE 2026-07-05**
 - **CLOSED OUT.** All 5 items resolved (make check clean; full build links; 3 FRAME.BIN

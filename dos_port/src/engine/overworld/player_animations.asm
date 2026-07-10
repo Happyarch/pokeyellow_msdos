@@ -98,9 +98,7 @@ wPlayerSpinWhileMovingUpOrDownAnimMaxY    equ 0xCD3E
 %ifndef wPlayerSpinWhileMovingUpOrDownAnimFrameDelay
 wPlayerSpinWhileMovingUpOrDownAnimFrameDelay equ 0xCD3F
 %endif
-%ifndef wPikachuSpawnState
-wPikachuSpawnState                 equ 0xD430 ; golden 00:d430
-%endif
+; wPikachuSpawnState promoted to gb_memmap.inc (0xD430) — OW-A.6.
 %ifndef wCurMapTileset
 wCurMapTileset                     equ 0xD366 ; golden 00:d366
 %endif

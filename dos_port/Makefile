@@ -142,7 +142,8 @@ HOME_SRCS := \
     src/home/count_set_bits.asm \
     src/home/reset_player_sprite.asm \
     src/home/map_text_pointer.asm \
-    src/home/reload_tiles.asm
+    src/home/reload_tiles.asm \
+    src/home/npc_movement.asm
 
 HAL_SRCS := \
     src/ppu/ppu.asm \
@@ -313,8 +314,11 @@ BATTLE_SRCS := \
 # wild_mons.asm (LoadWildData/WildDataPointers) MOVED to GAME_SRCS (OW-A.5): they form a
 # self-contained 2-file unit (data table + inline flat→WRAM loader, no battle deps) and now
 # link live so LoadMapHeader can populate per-map wGrassMons/wWaterMons. wild_encounters.asm
-# stays check-only (its TryDoWildEncounter still needs unresolved overworld externs, and
-# the live overworld already triggers encounters via wild_encounter_check.asm).
+# stays check-only: TryDoWildEncounter externs IsPlayerStandingOnDoorTileOrWarpTile
+# (check-only player_state.asm) + DisplayTextID (check-only home/text_script.asm). The
+# overworld trigger side (NewBattle/.battleOccurred/on-turn roll) is COMPLETE but
+# WILD_ENCOUNTERS_LIVE-gated (OW-A.6); linking those two files + porting HandleBlackOut
+# is the "wild-live promotion" that retires the gate (see wild_encounter_check.asm header).
 # experience.asm (GainExperience) is now LINKED (FRONTEND_SRCS, Stage 3 victory→EXP):
 # its validated EXP/stat/level math runs live; the deferred UI/display externs
 # (PrintStatsBox, the CallBattleCore targets, the per-mon text) are satisfied by

@@ -19,19 +19,26 @@
 ; on the default build — it just starts keeping the step books faithfully.
 ;
 ; NewBattle + AllPokemonFainted are compiled ONLY under -D WILD_ENCOUNTERS_LIVE
-; because they are not safe to run live yet:
-;   * NewBattle calls TryDoWildEncounter, which is itself CHECK-only in the tree
-;     (wild_encounters.asm externs the still-deferred overworld helpers
-;     IsPlayerStandingOnDoorTileOrWarpTile / IsPlayerJustOutsideMap), so pulling
-;     NewBattle into a linked object would drag those unresolved externs and break
-;     the whole EXE link.
-;   * The faithful post-battle return path (pret .battleOccurred -> EnterMap, a full
-;     map reload) is not built into the port's OverworldLoop yet, so a live battle
-;     would leave the player stranded on return.
-;   * IsPlayerCharacterBeingControlledByGame and HandleBlackOut do not exist in the
-;     port yet (follow-up members).
-; So NewBattle is "wired but gated": OverworldLoop's `call NewBattle` is behind the
-; same WILD_ENCOUNTERS_LIVE guard. Default build = StepCountCheck only.
+; because their closure is not link-clean yet. Status after OW-A.6 (2026-07-10):
+;   * DONE — the faithful post-battle return path (pret .battleOccurred → EnterMap
+;     full map reload, AnyPartyAlive faint check, Cinnabar event) is now built into
+;     OverworldLoop under the same gate, and the on-turn NewBattle call
+;     (pret home/overworld.asm:197, turning in grass) is wired there too.
+;   * DONE — IsPlayerCharacterBeingControlledByGame is a real linked routine
+;     (src/home/npc_movement.asm).
+;   * REMAINING — NewBattle calls TryDoWildEncounter, which is CHECK-only
+;     (wild_encounters.asm externs IsPlayerStandingOnDoorTileOrWarpTile → check-only
+;     player_state.asm, and DisplayTextID → check-only home/text_script.asm), so
+;     pulling NewBattle into a linked object would drag unresolved externs and
+;     break the EXE link.
+;   * REMAINING — HandleBlackOut (AllPokemonFainted's tail) is unported: it needs
+;     StopMusic + ResetStatusAndHalveMoneyOnBlackout + the real PrepareForSpecialWarp
+;     (check-only special_warps.asm; a ret-stub currently links from
+;     main_menu_stubs.asm).
+; Retirement = the "wild-live promotion": link player_state.asm + text_script.asm
+; (see Makefile HOME_CHECK_SRCS blocker notes), port HandleBlackOut, then drop this
+; gate and the matching guards in overworld.asm. Default build = StepCountCheck +
+; AnyPartyAlive only.
 ;
 ; NAMING NOTE (important divergence): pret's NewBattle does `farjp InitBattle`, and
 ; pret's InitBattle (engine/battle/init_battle.asm) is the ENCOUNTER GATE — it runs
@@ -81,9 +88,9 @@ global NewBattle
 global AllPokemonFainted
 extern TryDoWildEncounter                    ; wild_encounters.asm (CHECK-only today)
 extern InitBattle                            ; battle-screen setup (NOT the pret gate)
-extern IsPlayerCharacterBeingControlledByGame ; MISSING — follow-up dep
+extern IsPlayerCharacterBeingControlledByGame ; src/home/npc_movement.asm (real, linked — OW-A.6)
 extern RunMapScript                          ; run_map_script.asm (exists)
-extern HandleBlackOut                        ; MISSING — follow-up dep
+extern HandleBlackOut                        ; MISSING — wild-live promotion dep (see gating header)
 %endif
 
 ; --------------------------------------------------------------------------
