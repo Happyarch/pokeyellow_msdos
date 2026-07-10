@@ -1203,6 +1203,9 @@ BIT_NO_BATTLES               equ 4 ; wStatusFlags4 bit 4 — suppress wild battl
 BIT_BATTLE_OVER_OR_BLACKOUT  equ 5 ; wStatusFlags4 bit 5 — set on battle/blackout return
 BIT_FLY_WARP                 equ 3 ; wStatusFlags6 bit 3 — entered via Fly warp (dup: m1_3_pending_symbols.inc)
 BIT_DUNGEON_WARP             equ 4 ; wStatusFlags6 bit 4 — entered via dungeon warp
+%ifndef BIT_NO_MAP_MUSIC
+BIT_NO_MAP_MUSIC             equ 1 ; wStatusFlags7 bit 1 — suppress this map's default music
+%endif
 BIT_CUR_MAP_LOADED_1         equ 5 ; wCurrentMapScriptFlags bit 5 (dup: m8_2_pending_symbols.inc)
 BIT_CUR_MAP_LOADED_2         equ 6 ; wCurrentMapScriptFlags bit 6 (dup: m8_2_pending_symbols.inc)
 

@@ -1,8 +1,8 @@
 # Current Plan: Full `engine/overworld/` Port
 
-**Status:** Stage 0 in progress (this document written 2026-07-01; branch gate pending).
-**Branch:** `overworld-port`, to be cut from `master` **after** the battle-swarm
-integration merge lands. Do not start code work before the Stage 0 gate clears.
+**Status:** Stage 0 in progress (this document written 2026-07-01).
+**Branch:** work lands directly on **`master`** — everything was folded into master
+(user-confirmed 2026-07-09); the earlier `overworld-port` branch plan was dropped.
 
 ---
 
@@ -23,13 +23,33 @@ from other plans — scripted NPC movement + the Oak walk-up cutscene from
 ### Fixed decisions
 
 - **Stub policy — faithful body, stub leaves.** Every routine's control flow is
-  translated faithfully; only terminal calls into missing subsystems (menus,
-  audio, battle UI) become named `TODO(faithful)` ret-stubs in `*_stubs.asm`
-  files. Delete stubs as real routines land.
-- **Sound stays stubbed.** `PlaySound` ret-stub exists (in
-  `src/engine/battle/move_effect_helpers.asm` pre-merge — re-verify location at
-  Stage 0). Add ret-stubs for `StopAllMusic`, `WaitForSoundToFinish`,
-  `PlayMusic`, `PlayDefaultMusic` in a new `src/audio/audio_stubs.asm`.
+  translated faithfully; only terminal calls into **still-missing** subsystems
+  (menus, battle UI) become named `TODO(faithful)` ret-stubs in `*_stubs.asm`
+  files. Delete stubs as real routines land. **Audio is no longer a stub-leaf
+  category** — see the next bullet.
+- **UPDATED 2026-07-09 — Sound is LIVE; wire real audio calls, do NOT stub.**
+  The audio engine now exists: `home/audio.asm` provides the real gateway
+  (`PlaySound`, `PlaySoundWaitForCurrent`, `PlayMusic`, `PlayDefaultMusic`,
+  `PlayDefaultMusicFadeOutCurrent`, `StopAllMusic`, `WaitForSoundToFinish`),
+  backed by the translated engine (`src/audio/engine_1..4.asm` + `audio_hal.asm`
+  + device shims). The former OW-1.9 `audio_stubs.asm` is **retired** (created
+  `5727f316`, deleted when the real engine landed `fc74a70c`; already out of the
+  Makefile — a stale `.o` may linger). **New policy:** every faithful routine
+  that pret calls an audio routine from calls the **real** routine — no
+  `; TODO-HW: audio HAL` no-op. This turns the previously-safe "sound-state
+  polling → bounded-wait divergence" seams (elevator/healing-machine/fishing)
+  back into faithful blocking waits on the real engine; drop those bounded-wait
+  `; DIVERGENCE` shims where the real `WaitForSoundToFinish` now terminates.
+  **Scope for THIS plan = the overworld surface only** (user directive
+  2026-07-09): the battle/menus/evolution `; TODO-HW: audio HAL` no-ops are NOT
+  this plan's problem. But this *does* mean **retreading already-landed overworld
+  tickets to destub their audio** — the overworld files carrying dropped-audio
+  no-ops that must be wired to the real gateway are enumerated in the new
+  **"Stage A.14 — overworld audio destub"** ticket below. Faithfulness gate
+  applies (`faithdiff` will now flag a *dropped* audio call as a real divergence,
+  not a suppressed HAL boundary), and each rewired routine re-runs its FRAME.BIN
+  baseline (audio no-ops don't change the rendered frame, so the 3 baselines must
+  stay byte-identical — that is the destub tripwire).
 - **Divergence policy.** Functional equivalence + `; PROJ` / `; TODO-HW` tags +
   `translation_log.md` entries where GB hardware died. The VRAM torus /
   `RedrawRowOrColumn` rings are **gone**: re-express VRAM-window redraws against
@@ -786,6 +806,94 @@ unstub. Confirmed already-ported (faithful): `Func_5337`, `Func_5349`. Confirmed
 label/stub): `ChangeFacingDirection`, `InitScriptedNPCMovement`, `AnimScriptedNPCMovement`,
 `Func_5288/531f/5325/532b/5331/5357`, `LoadDEPlusA`, `GetSpriteScreen{Y,X}Pointer`,
 `GetSpriteScreenXYPointerCommon`, `AdvanceScriptedNPCAnimFrameCounter`.
+
+**TICKET OW-A.14: overworld audio destub** `[SOLO — retread; user directive 2026-07-09]` `[ ]`
+- **Why now:** the audio engine landed after most of Stage A/1 was written, so those
+  tickets faithfully translated control flow but left every audio leaf as a
+  `; TODO-HW: audio HAL (Phase 3)` no-op. The gateway is now real (`home/audio.asm`:
+  `PlaySound`/`PlaySoundWaitForCurrent`/`PlayMusic`/`PlayDefaultMusic`/
+  `PlayDefaultMusicFadeOutCurrent`/`StopAllMusic`/`WaitForSoundToFinish`). This ticket
+  retreads the **overworld surface only** (battle/menus/evolution audio is out of scope)
+  and wires the dropped calls back to the real routines, faithful to pret.
+- **Verified available (2026-07-09):** SFX/MUSIC ids in `assets/audio_constants.inc`
+  (`SFX_LEDGE`=0xA2, `SFX_COLLISION`=0xB4, `SFX_GO_INSIDE`/`_OUTSIDE`, …); audio WRAM in
+  `gb_memmap.inc` (`wAudioFadeOutControl` 0xCFC6, `wAudioROMBank` 0xC0EF,
+  `wAudioSavedROMBank` 0xC0F0, `wNewSoundID` 0xC0EE, `wMapMusicSoundID`/`ROMBank`);
+  `PlayDefaultMusicFadeOutCurrent` is a real global.
+- **Sub-dependency:** `PlayMapChangeSound` (pret home/audio.asm) is **NOT yet ported**
+  (no global). The door/warp `PlayMapChangeSound` sites (`overworld.asm:2971`) need it
+  translated first (small home routine: SFX_GO_INSIDE/OUTSIDE selection) OR a scoped
+  `overworld_stubs.asm` ret-stub with a clear TODO — decide at that site.
+- **Sites (enumerated 2026-07-09):**
+  - `ledges.asm:227` — **already calls** `PlaySound SFX_LEDGE`; just stale
+    `; TODO-HW(audio): stub` comment + hand-`equ SFX_LEDGE 0xB6` (WRONG — real id is
+    0xA2 in audio_constants.inc) + stale `extern PlaySound ; …move_effect_helpers.asm
+    (stub, linked)` comment (retired file). → drop the local equ, source from
+    audio_constants, fix both extern comment and the site comment. LOW risk.
+  - `trainer_engine.asm:825-830,111,124-125` — calls to StopAllMusic/PlaySound/
+    WaitForSoundToFinish already present but the `wAudioFadeOutControl`/`wAudioROMBank`/
+    `wAudioSavedROMBank` writes in `PlayTrainerMusic` are dropped; extern comments stale
+    (point at retired stub). → restore the 3 audio-state writes faithfully; fix externs.
+  - `player_gfx.asm:277,320` — `PlayDefaultMusic` dropped (pret `jp`/`call
+    PlayDefaultMusic`). → wire the real call.
+  - `overworld.asm` — genuinely-dropped calls: `PlayDefaultMusicFadeOutCurrent` map-load
+    tail (`:931`, `:1241`, `:3242`) gated on `!(DUNGEON_WARP|FLY_WARP) && !BIT_NO_MAP_MUSIC`;
+    `SFX_COLLISION` on the blocked-move bump (`:2132`); `PlayMapChangeSound` door/warp
+    (`:2971`, needs the sub-dependency above); music-selection (`:2408`). HOT PATHS
+    (map-load / warp / collision) — judgment-heavy SOLO, per-site check-in.
+- **Verification (fidelity harness — mandatory):** audio no-ops don't change the rendered
+  frame, so the **3 FRAME.BIN baselines (BASELINE/TRANSITION/WALK_NORTH) must stay
+  byte-identical** after each destub — that's the tripwire proving control flow/render is
+  untouched. Re-capture from HEAD at session start (baselines are ephemeral). Run
+  `tools/faithdiff <Label>` on each touched pret routine (a *dropped* audio call is now a
+  real divergence, not a suppressed HAL boundary) + `tools/lint_pret_labels` (catches the
+  stale extern comments). Live audio (does it actually play) is a `DEBUG_AUDIO`/live-smoke
+  check, not a baseline check.
+- **Phasing (safest first, check-in between):**
+  - **P1 `ledges.asm` DONE 2026-07-09** — dropped the wrong hand-`equ SFX_LEDGE 0xB6`,
+    sourced the real id (0xA2) from `assets/audio_constants.inc`, fixed the stale
+    `extern PlaySound` comment (→ real `home/audio.asm` gateway) + the site comment.
+    Check-only file; nasm + `make check` clean.
+  - **P2 `player_gfx.asm` DONE 2026-07-09** — `ForceBikeOrSurf` now tail-`jmp
+    PlayDefaultMusic` (pret `jp`); `StopBikeSurf` dungeon-warp branch `call
+    PlayDefaultMusic`; `extern PlayDefaultMusic` added. Check-only; nasm clean.
+  - **P3 `trainer_engine.asm` DONE 2026-07-09** — restored the dropped
+    `wAudioFadeOutControl=0` + `wAudioROMBank`/`wAudioSavedROMBank=MUSIC_MEET_EVIL_TRAINER_BANK`
+    writes in `PlayTrainerMusic` (**load-bearing now** — the real engine selects the song
+    table by `wAudioROMBank`, `home/audio.asm:PlaySound`); fixed 3 stale externs +
+    line-778 comment. Check-only; nasm clean.
+  - **P4a `overworld.asm` SFX_COLLISION DONE 2026-07-09** — `CollisionCheckOnLand.blocked`
+    now plays `SFX_COLLISION` on the bump with pret's CHAN5 "already playing" guard, before
+    the register pops (which restore PlaySound's clobber); `stc` lands after.
+  - **P4b `overworld.asm` map-music subsystem DONE 2026-07-09** — new Tier-1 generator
+    `tools/gen_map_songs.py` → `assets/map_songs.inc` (`MapSongBanks`, 249 maps, from pret
+    `data/maps/songs.asm`; bank = `MUSIC_*_BANK`, col1↔col2 correspondence verified) wired
+    into `make assets` + `overworld.o` prereq + linked in `.rodata`. `LoadMapHeader` now
+    loads `wMapMusicSoundID`/`wMapMusicROMBank` from `MapSongBanks[wCurMap]`; `LoadMapData`
+    tail runs `UpdateMusic6Times`+`PlayDefaultMusicFadeOutCurrent` gated on
+    `!(DUNGEON_WARP|FLY_WARP) && !NO_MAP_MUSIC` (added `BIT_NO_MAP_MUSIC=1` to gb_memmap.inc);
+    the connection-crossing `.mapTransition` runs `PlayDefaultMusicFadeOutCurrent` after
+    `LoadMapHeader` (pret `.loadNewMap`, unconditional). Externs: `PlaySound`,
+    `PlayDefaultMusicFadeOutCurrent`, `UpdateMusic6Times`.
+  - **P4 VERIFICATION DONE 2026-07-09** — `make check` clean; full SKIP_TITLE link OK (new
+    externs + `MapSongBanks` resolve); **`goldencheck overworld_pallet` PASS** (TILEMAP/VRAM/OAM
+    byte-identical to mGBA ground truth — the boot map-load path runs the new music tail +
+    header load + the real audio engine, headless, without perturbing the render or hanging);
+    `faithdiff` on `CollisionCheckOnLand`/`LoadMapData`/`LoadMapHeader`/`PlayTrainerMusic`/
+    `ForceBikeOrSurf`/`StopBikeSurf` shows the audio additions **match pret** (absent from the
+    ADDED/DROPPED diff; remaining diffs are pre-existing sanctioned banking/renderer/Phase-5
+    divergences); `lint_pret_labels` 0 violations. `PlayTrainerMusic`'s `DROPPED [wNewSoundID]`
+    is the port's established PlaySound-id-in-AL ABI (PlaySound `mov bh,al` @ home/audio.asm:231),
+    same for every port PlaySound caller — not a regression.
+  - **P4c `PlayMapChangeSound` — OPEN** (door/warp go-inside/outside SFX). Needs the home
+    routine ported (`lda_coord 8,8` door-tile `$0b` detection → SFX_GO_INSIDE/OUTSIDE, else
+    SFX_GO_OUTSIDE; tail `jp GBFadeOutToBlack` = Phase-5 palette, deferred marker) + wiring
+    into the bespoke `.warpTransition`. Riskier: the `lda_coord 8,8` projection onto the
+    40-wide viewport is a known-tricky area (memory `coord-macros-logic-audit`) and warps
+    aren't in a golden scenario, so it needs live/MCP verification. Left for a focused step.
+- Exit: zero `; TODO-HW: audio HAL` no-ops in `engine/overworld/*.asm` + `player_gfx.asm`;
+  every overworld audio leaf calls the real gateway; baselines byte-identical; faithdiff
+  clean (or justified) on each touched label. **P1–P4b DONE + verified; P4c remaining.**
 
 ### Stage 1 — Pure-logic leaves `[x]` COMPLETE (2026-07-04, SWARM wave 1)
 

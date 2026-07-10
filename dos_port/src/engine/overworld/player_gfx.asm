@@ -96,6 +96,7 @@ W_NPC_MOVEMENT_SCRIPT_POINTER_TABLE_NUM equ 0xCF17
 ; ---------------------------------------------------------------------------
 extern g_tilecache_dirty            ; src/ppu/ppu.asm — arm tile-cache re-decode
 extern AdvancePlayerSprite          ; src/engine/overworld/overworld.asm
+extern PlayDefaultMusic             ; src/home/audio.asm (real gateway)
 
 ; Player sprite tile data. player_sprite is the port's existing walking (Red)
 ; sprite set (assets/player_sprite.inc), i.e. pret RedSprite.
@@ -274,8 +275,7 @@ IsBikeRidingAllowed:
 ; ---------------------------------------------------------------------------
 ForceBikeOrSurf:
     call LoadPlayerSpriteGraphics
-    ; TODO-HW: audio (Phase 3) — pret: jp PlayDefaultMusic
-    ret
+    jmp PlayDefaultMusic                     ; pret: jp PlayDefaultMusic (tail call)
 
 ; ---------------------------------------------------------------------------
 ; DoBikeSpeedup — bikes move twice as fast (extra AdvancePlayerSprite step).
@@ -317,7 +317,7 @@ StopBikeSurf:
     mov byte [ebp + W_WALK_BIKE_SURF_STATE], 0
     test byte [ebp + W_STATUS_FLAGS_6], (1 << BIT_DUNGEON_WARP)
     jz .done                                ; ret z
-    ; TODO-HW: audio (Phase 3) — pret: call PlayDefaultMusic
+    call PlayDefaultMusic                    ; pret: call PlayDefaultMusic
 .done:
     ret
 

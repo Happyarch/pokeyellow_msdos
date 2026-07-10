@@ -37,7 +37,11 @@ bits 32
 
 %include "gb_memmap.inc"
 %include "gb_macros.inc"
+%include "assets/audio_constants.inc"   ; SFX_COLLISION / MUSIC_* (audio engine is live)
 
+extern PlaySound                       ; src/home/audio.asm (real gateway, OW-A.14)
+extern PlayDefaultMusicFadeOutCurrent  ; src/home/audio.asm (real gateway, OW-A.14)
+extern UpdateMusic6Times               ; src/home/audio.asm (real gateway, OW-A.14)
 extern FillMemory
 extern CopyData
 extern FarCopyData
@@ -926,10 +930,10 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     mov word [ebp + W_MAP_VIEW_VRAM_POINTER], GB_TILEMAP0
 
     call LoadMapHeader
-    ; pret home/overworld.asm:.loadNewMap runs two subsystem calls right here (after
-    ; LoadMapHeader, before InitMapSprites):
-    ;   call PlayDefaultMusicFadeOutCurrent   — TODO-HW: audio HAL (Phase 3); the new
-    ;       map's music fades in on a connection crossing. No-op today (no audio backend).
+    ; pret home/overworld.asm:.loadNewMap (:652-654): LoadMapHeader (loads the new map's
+    ; wMapMusicSoundID via the MapSongBanks load above) then fade in that music. Real now
+    ; (OW-A.14); unconditional on a connection crossing (not a warp, so no warp gate).
+    call PlayDefaultMusicFadeOutCurrent
     ;   ld b, SET_PAL_OVERWORLD / call RunPaletteCommand — palette reload for the new map.
     ;       Deferred to Phase 5 (the port renders a fixed DMG-green palette; SET_PAL_*
     ;       is the GBPalNormal stand-in applied by LoadMapData, not on this LoadMapHeader
@@ -1238,8 +1242,16 @@ LoadMapData:
     ; palette HAL (DMG-green is debug-only until then).
     call GBPalNormal
     call LoadPlayerSpriteGraphics       ; pret: LoadPlayerSpriteGraphics (:1972)
-    ; pret tail (:1973-1985): UpdateMusic6Times + PlayDefaultMusicFadeOutCurrent, gated
-    ; on !(DUNGEON_WARP|FLY_WARP) && !BIT_NO_MAP_MUSIC — TODO-HW: audio (Phase 3).
+    ; pret tail (:1975-1985): play this map's default music unless we entered via a
+    ; dungeon/fly warp (DUNGEON_WARP|FLY_WARP) or the map suppresses it (NO_MAP_MUSIC).
+    ; Bank save/restore around it is a no-op in the flat model. Real now (OW-A.14).
+    test byte [ebp + W_STATUS_FLAGS_6], (1 << BIT_DUNGEON_WARP) | (1 << BIT_FLY_WARP)
+    jnz .noMapMusic
+    test byte [ebp + W_STATUS_FLAGS_7], (1 << BIT_NO_MAP_MUSIC)
+    jnz .noMapMusic
+    call UpdateMusic6Times
+    call PlayDefaultMusicFadeOutCurrent
+.noMapMusic:
     ret
 
 ; ---------------------------------------------------------------------------
@@ -2129,9 +2141,15 @@ CollisionCheckOnLand:
     clc
     ret
 .blocked:
-    ; pret home/overworld.asm:1259-1264 (.collision) plays SFX_COLLISION here (unless it's
-    ; already playing on CHAN5) before setting carry.
-    ; TODO-HW: audio HAL (Phase 3) — emit SFX_COLLISION on the blocked-move bump.
+    ; pret home/overworld.asm:1259-1264 (.collision): play SFX_COLLISION on the bump,
+    ; unless it's already playing on CHAN5. Done before the pops so PlaySound's clobber
+    ; of eax/ecx/esi is undone by the restores; stc lands after (pop doesn't touch CF).
+    mov al, [ebp + wChannelSoundIDs + CHAN5]        ; sound currently on CHAN5
+    cmp al, SFX_COLLISION                            ; already playing?
+    je .blockedSetCarry                              ; yes → don't retrigger
+    mov al, SFX_COLLISION
+    call PlaySound
+.blockedSetCarry:
     pop esi
     pop ecx
     pop eax
@@ -2404,9 +2422,16 @@ LoadMapHeader:
     ; consumer), at the top of that routine (set-before-use) — every read of
     ; W_CURRENT_MAP_HEIGHT_2/WIDTH_2 is inside CheckMapConnections, after the set — so
     ; LoadMapHeader does not need to compute them here.
-    ; pret then loads MapSongBanks -> wMapMusicSoundID/wMapMusicROMBank (:1908-1923).
-    ; TODO-HW(audio): music selection is deferred to the audio HAL (Phase 3); wMapMusic*
-    ; are unused until then.
+    ; pret LoadMapHeader:1908-1923: load this map's default music (id, ROM bank) from
+    ; MapSongBanks[wCurMap] into wMapMusicSoundID/wMapMusicROMBank. PlayDefaultMusic (the
+    ; LoadMapData tail + connection crossing) plays it. Real now (OW-A.14); the pops below
+    ; restore eax/esi. Flat model: MapSongBanks is a host-address label, stride 2.
+    movzx eax, byte [ebp + W_CUR_MAP]
+    lea esi, [MapSongBanks + eax*2]
+    mov al, [esi]
+    mov [ebp + wMapMusicSoundID], al            ; music 1
+    mov al, [esi + 1]
+    mov [ebp + wMapMusicROMBank], al            ; music 2
 
     pop edi
     pop esi
@@ -3242,8 +3267,9 @@ CheckMapConnections:
     ; reload here — Pikachu spawn set, LoadMapHeader, PlayDefaultMusicFadeOutCurrent,
     ; RunPaletteCommand(SET_PAL_OVERWORLD), InitMapSprites, LoadTileBlockMap, then
     ; jp OverworldLoopLessDelay. The port instead returns CF=1 and the caller performs
-    ; that reload at OverworldLoop.mapTransition (see the deferred music/palette markers
-    ; there). Only the coordinate/block sync stays inline here.
+    ; that reload at OverworldLoop.mapTransition, which now does LoadMapHeader +
+    ; PlayDefaultMusicFadeOutCurrent (OW-A.14, real); palette reload still deferred.
+    ; Only the coordinate/block sync stays inline here.
     ; First, synchronize block coordinates with the new tile coordinates.
     mov al, [ebp + W_X_COORD]
     and al, 1
@@ -3397,6 +3423,9 @@ TilesetCounterTiles:
     db 0xFF, 0xFF, 0xFF ; 24 BEACH_HOUSE
 
 section .rodata
+
+; per-map (music id, music ROM bank), indexed by map id — pret data/maps/songs.asm
+%include "assets/map_songs.inc"
 
 ; authored border-ring blocks (map-tool C3; see ApplyMapBorderOverrides)
 %include "assets/map_border_overrides.inc"

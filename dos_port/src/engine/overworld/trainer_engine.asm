@@ -108,7 +108,7 @@ extern DelayFrame               ; src/video/frame.asm
 extern DelayFrames              ; src/video/frame.asm
 extern UpdateSprites            ; src/engine/overworld/movement.asm
 extern PrintText                ; battle printer (src/engine/battle/move_effect_helpers.asm)
-extern PlaySound                ; audio HAL stub (ret)
+extern PlaySound                ; src/home/audio.asm (real gateway)
 extern GetTrainerName_          ; src/engine/battle/get_trainer_name.asm
 extern DisplayTextID            ; src/home/text_script.asm
 
@@ -121,8 +121,8 @@ extern PlayerPicFront           ; src/data/trainer_pics.asm  (== pret RedPicFron
 extern StartTrainerBattle       ; TODO(M8.2 follow-up): M8.1 owns (home/trainers.asm)
 extern InitBattleEnemyParameters; TODO(M8.2 follow-up): M8.1 owns (home/trainers.asm)
 extern ResetButtonPressedAndMapScript ; TODO(M8.2 follow-up): M8.1 (home/trainers.asm)
-extern StopAllMusic             ; TODO(M8.2 follow-up): audio HAL (unported)
-extern WaitForSoundToFinish     ; TODO(M8.2 follow-up): audio HAL (unported)
+extern StopAllMusic             ; src/home/audio.asm (real gateway)
+extern WaitForSoundToFinish     ; src/home/audio.asm (real gateway)
 extern SaveTrainerName          ; TODO(M8.2 follow-up): engine/battle/*, unported
 extern SetEnemyTrainerToStayAndFaceAnyDirection ; TODO(M8.2 follow-up): unported
 extern TextCommandProcessor     ; TODO(M8.2 follow-up): text.asm has it; verify global name
@@ -775,7 +775,7 @@ PrintEndBattleText:
     mov esi, TrainerEndBattleText   ; flat text-script
     call PrintText
     call SetEnemyTrainerToStayAndFaceAnyDirection ; TODO(M8.2 follow-up): unported
-    jmp WaitForSoundToFinish        ; TODO(M8.2 follow-up): audio HAL
+    jmp WaitForSoundToFinish        ; pret: jp WaitForSoundToFinish (real, OW-A.14)
 .noText:
     and byte [ebp + wStatusFlags3], ~(1 << BIT_PRINT_END_BATTLE_TEXT)
     ret
@@ -822,13 +822,15 @@ PlayTrainerMusic:
     je .retNow
     cmp byte [ebp + wGymLeaderNo], 0
     jne .retNow                     ; gym leaders keep the gym music
-    ; pret: xor a / ld [wAudioFadeOutControl], a  — TODO-HW: audio HAL (Phase 3),
-    ; dropped audio-fade state (no-op until the audio HAL exists).
-    ; TODO-HW: audio HAL — StopAllMusic/PlaySound are no-op stubs.
-    call StopAllMusic               ; TODO(M8.2 follow-up): audio HAL (unported)
+    xor al, al                              ; pret: xor a
+    mov [ebp + wAudioFadeOutControl], al    ;   ld [wAudioFadeOutControl], a
+    call StopAllMusic
     ; pret: ld a, BANK(Music_MeetEvilTrainer) / ld [wAudioROMBank],a /
-    ;       ld [wAudioSavedROMBank],a  — TODO-HW: audio ROM-bank state (Phase 3),
-    ; irrelevant under the flat model until banked audio is modelled.
+    ;       ld [wAudioSavedROMBank],a. The real engine selects the song table by
+    ; wAudioROMBank (home/audio.asm:PlaySound), so this IS load-bearing now (OW-A.14).
+    mov al, MUSIC_MEET_EVIL_TRAINER_BANK
+    mov [ebp + wAudioROMBank], al
+    mov [ebp + wAudioSavedROMBank], al
     mov bh, [ebp + wEngagedTrainerClass]   ; b = class to search
     mov esi, EvilTrainerList
 .evilLoop:

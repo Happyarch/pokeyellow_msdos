@@ -31,6 +31,7 @@ bits 32
 
 %include "gb_memmap.inc"
 %include "gb_macros.inc"
+%include "assets/audio_constants.inc"   ; SFX_LEDGE (real id; audio engine is live)
 
 ; --- Tileset ids (constants/tileset_constants.asm; not in gb_memmap.inc) -----
 OVERWORLD           equ 0
@@ -41,10 +42,9 @@ FOREST              equ 3
 ; this so no real input is honored while the ledge hop plays out.
 PAD_ALL             equ 0xFF
 
-; TODO-HW(audio): real id = SFX_LEDGE (constants/music_constants.asm). PlaySound is
-; a stub in this port (src/engine/battle/move_effect_helpers.asm); value not yet
-; load-bearing. Placeholder kept explicit so the audio pass can wire the true id.
-SFX_LEDGE           equ 0xB6
+; SFX_LEDGE comes from the generated assets/audio_constants.inc (real id 0xA2).
+; The audio engine is live (home/audio.asm PlaySound), so this is a real call now
+; (OW-A.14 destub 2026-07-09); the former hand-`equ 0xB6` placeholder was wrong.
 
 ; Standing tile (pret lda_coord 8,9). In the 40-wide port tilemap the player's feet
 ; are at (PLAYER_STANDING_ROW, PLAYER_STANDING_COL); same tile GetTileInFrontOfPlayer
@@ -62,7 +62,7 @@ global TilePairCollisionsWater
 global LedgeTiles
 
 extern StartSimulatingJoypadStates    ; src/engine/overworld/simulate_joypad.asm (linked)
-extern PlaySound                      ; src/engine/battle/move_effect_helpers.asm (stub, linked)
+extern PlaySound                      ; src/home/audio.asm (real gateway, linked)
 extern UpdateSprites                  ; src/engine/overworld/movement.asm (linked)
 extern Delay3                         ; src/video/frame.asm (linked)
 ; LoadHoppingShadowOAM stub lives in overworld_stubs.asm (stub convention: a stub never
@@ -225,7 +225,7 @@ HandleLedges:
     mov byte [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], 2 ; two simulated steps
     call LoadHoppingShadowOAM
     mov al, SFX_LEDGE
-    call PlaySound                                  ; TODO-HW(audio): stub
+    call PlaySound                                  ; pret: ld a,SFX_LEDGE / call PlaySound
 .ret:
     ret
 
