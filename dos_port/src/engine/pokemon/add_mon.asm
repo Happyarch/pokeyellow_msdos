@@ -93,15 +93,15 @@ _AddEnemyMonToPlayerParty:
     mov bx, NAME_LENGTH
     call CopyData
     
-    mov al, [ebp + wCurPartySpecies]
-    mov [ebp + wPokedexNum], al
-    
-    call IndexToPokedex
-    
-    mov al, [ebp + wPokedexNum]
-    dec al
+    ; pret does `predef IndexToPokedex` (species in wd11e → dex# in wd11e). In the
+    ; PORT, IndexToPokedex is a flat DATA TABLE (byte[species-1]=national dex#), NOT
+    ; a routine — index it directly. Calling it as code jumps into .data → page fault.
+    movzx eax, byte [ebp + wCurPartySpecies]
+    dec eax
+    movzx eax, byte [IndexToPokedex + eax]  ; dex number (1-based)
+    dec eax                             ; dex bit index (0-based)
     mov cl, al
-    mov bl, FLAG_SET
+    mov bh, FLAG_SET                    ; pret `ld b, FLAG_SET` (B=BH); FlagAction reads action in BH
     mov esi, wPokedexOwned
     push cx
     push bx
