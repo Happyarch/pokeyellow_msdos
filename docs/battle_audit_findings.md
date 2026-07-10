@@ -190,15 +190,19 @@ AI wiring, generators). **[RESOLVED]** = fixed on `master` after this audit — 
   the FIGHT menu until the next battle. (Currently low-reachability behind the multi-mon deferral,
   but independent and unflagged.) **Owner C. Severity: medium.**
 
-### A-10. `HandleEnemyMonFainted` — EXP ALL dispatch missing (unflagged) **[reported]**
-- **File:** `core.asm` `HandleEnemyMonFainted` (`:1994`)
-- **pret:** `engine/battle/core.asm ~808-867` — checks the bag for `EXP_ALL`; if present, halves the
-  exp inputs, awards to the fought mons (`wBoostExpByExpAll=0`), then re-awards to the whole party
-  (`wBoostExpByExpAll=TRUE`, all `wPartyGainExpFlags` set).
-- **What's wrong:** the port calls `GainExperience` once unconditionally — EXP ALL does nothing. No
-  TODO flags it (unlike the routine's other, well-documented multi-mon deferrals). Also heads-up for
-  whoever ports `FaintEnemyPokemon`: preserve the Gen-1 half-zeroed `wPlayerBideAccumulatedDamage`
-  link-desync bug (pret `:756-764`) under a `BUG_FIX_LEVEL` gate. **Owner A/C. Severity: medium.**
+### A-10. `HandleEnemyMonFainted` — EXP ALL dispatch missing (unflagged) **[RESOLVED — verified 2026-07-10]**
+- **File:** `core.asm` `HandleEnemyMonFainted` (`:2205`)
+- **pret:** `engine/battle/core.asm ~808-867` (inside `FaintEnemyPokemon`, not the caller) — checks the
+  bag for `EXP_ALL`; if present, halves the exp inputs, awards to the fought mons
+  (`wBoostExpByExpAll=0`), then re-awards to the whole party (`wBoostExpByExpAll=TRUE`, all
+  `wPartyGainExpFlags` set).
+- **RESOLVED:** the audit read the wrong routine. pret's EXP-ALL logic lives inside `FaintEnemyPokemon`
+  (core.asm:827-857), and the port ports it faithfully into `faint_enemy.asm:FaintEnemyPokemon`
+  (`:191` `IsItemInBag EXP_ALL` → halve `wEnemyMonBaseStats` NUM_STATS+2 bytes → `GainExperience` with
+  `wBoostExpByExpAll=0` → if EXP_ALL: `wBoostExpByExpAll=TRUE` + all `wPartyGainExpFlags` set →
+  second `GainExperience`). `core.asm:HandleEnemyMonFainted` (`:2205`) `call FaintEnemyPokemon` (`:2207`),
+  so the dispatch is live. The ZF-across-`call` hazard the audit worried about is handled explicitly
+  (`faint_enemy_has_exp_all` scratch byte, header note). Nothing to do.
 
 ### C-11. `SwitchEnemyMon` drops pret's link-state `CF=0` guard **[reported]**
 - **File:** `trainer_ai.asm:1002` (`stc; ret` unconditionally)
