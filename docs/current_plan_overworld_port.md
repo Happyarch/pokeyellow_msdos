@@ -1164,7 +1164,13 @@ unified). faithdiff clean, lint 0. Check-only. **Stage 6 COMPLETE.**
 
 ### Stage 7 — Completeness + link promotion + cleanup `[ ]`
 
-**TICKET OW-7.1: unused_load_toggleable_object_data.asm** `[SWARM/Sonnet]` — port check-only (`OVERWORLD_CHECK_SRCS`), `; UNREFERENCED (pret: unreferenced)` header.
+**TICKET OW-7.1: unused_load_toggleable_object_data.asm** — **DONE 2026-07-10.**
+New mirrored file (HOME_CHECK_SRCS): `Func_f0a54` (bare ret) + `LoadToggleableObjectData`
++ `.ToggleableObjectsMaps`/`.BluesHouse` data, all `; UNREFERENCED (pret: unreferenced)`.
+Flat-reshape: `toggleable_object_map`'s `dw ptr` → `dd` (4→6 byte entries, skip stride
+5); flat-source copy → inline rep movsb (DROPPED CopyData justified). Builds the
+port-unused `wToggleableObjectList` (externed to golden 0xD5CD; the flat model doesn't
+read it — noted). faithdiff clean, lint 0. Check-only.
 **OW-7.2: link promotion** `[root + SWARM closure fixes]` — promote check-only overworld files to `GAME_SRCS` as closures resolve: `ledges.asm`, `trainer_engine.asm` (embed `EmotionBubbleGfx` — incbin the 8 `gfx/emotes/*.2bpp`, resolving the M8.2 extern-TODO), `pathfinding.asm`; then per-file closure audit for `pikachu.asm`, `reload_sprites.asm`, `player_gfx.asm`, `overworld_text.asm` (promote or document remaining blockers in this doc).
 **OW-7.3: stub + docs sweep** `[root]` — delete every stub superseded in Stages 1–6; list surviving stubs here with owners; translation_log completeness sweep; ui_projection.md overworld rows; TODO.md checkboxes.
 
