@@ -256,14 +256,21 @@ AI wiring, generators). **[RESOLVED]** = fixed on `master` after this audit — 
   battle returns to a clean overworld is unverified (needs a seeded overworld party + input, deferred per
   the autonomy directive). **Re-verify live before closing.**
 
-### W-2. `pokeballs.asm` writes VRAM tile data without setting `g_tilecache_dirty` **[CONFIRMED — static]**
+### W-2. `pokeballs.asm` writes VRAM tile data without setting `g_tilecache_dirty` **[FALSE POSITIVE — 2026-07-10]**
 
 - Every other VRAM-tile writer in the tree sets the flag (`pics.asm`, `load_font.asm`, `copy2.asm`,
   `bg_anim.asm`, `title.asm`, `map_sprites.asm`, `update_map.asm`, `player_gfx.asm`, `overworld.asm`,
   `init.asm`, and four `engine/menus/*`). `src/engine/battle/pokeballs.asm` is the sole exception.
-- Not on the W-1 repro path (no ball is thrown), so it is a *separate* latent bug: the decoded
-  `tile_cache` will hold stale tiles after the ball animation writes VRAM.
-- **Owner: battle. Severity: medium (latent).**
+- **RESOLVED as a false positive:** `pokeballs.asm` writes the ball graphic into the **OBJ** tile area
+  (`GB_VCHARS0` = $8000) and draws the row as **OAM sprites** (its own header says so). `g_tilecache_dirty`
+  governs only `render_bg`'s BG `tile_cache`; `render_sprites` (`ppu.asm:493-556`) decodes OBJ tiles
+  **fresh from `GB_VCHARS0` every frame** and never consults the flag. In the battle screen the BG tileset
+  lives at vTileset ($9000, signed $80-$7F addressing) — a physically distinct region from the OBJ tiles
+  at $8000 — so the ball write cannot stale the BG cache. The flag is genuinely unneeded here. (The
+  "every other writer sets it" observation conflates BG-tile writers, which do need it, with this
+  OBJ-only writer, which does not.) Now exercised on the live battle path via `_InitBattleCommon`
+  (`DrawBattlePokeballs`) with no BG-cache implication.
+- **Owner: battle. Severity: none (not a bug).**
 
 ---
 
