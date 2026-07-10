@@ -157,6 +157,11 @@ extern ForceBikeOrSurf       ; src/engine/overworld/player_gfx.asm — CHECK-ONL
 ; root adds `global IsPlayerStandingOnDoorTile` to overworld.asm. Flagged, not
 ; fixed here (hard rule: this ticket creates ONLY this file).
 extern IsPlayerStandingOnDoorTile ; src/engine/overworld/overworld.asm — LINKED file, but NOT yet `global` there (link blocker; see CLOSURE)
+; OW-4.1 CheckForCollisionWhenPushingBoulder deps:
+extern IsTilePassable                    ; src/engine/overworld/overworld.asm — LINKED (returns CF)
+extern CheckForTilePairCollisions2       ; src/engine/overworld/ledges.asm — CHECK-ONLY (ESI=flat table, returns CF)
+extern TilePairCollisionsLand            ; src/engine/overworld/ledges.asm — CHECK-ONLY (flat tile-pair table)
+extern CheckForBoulderCollisionWithSprites ; src/engine/overworld/push_boulder.asm — not yet ported (OW-4.2)
 
 global IsPlayerStandingOnWarp
 global CheckForceBikeOrSurf
@@ -166,6 +171,7 @@ global PrintSafariZoneSteps
 global GetTileAndCoordsInFrontOfPlayer
 global _GetTileAndCoordsInFrontOfPlayer
 global GetTileTwoStepsInFrontOfPlayer
+global CheckForCollisionWhenPushingBoulder
 
 section .text
 
@@ -527,6 +533,30 @@ GetTileTwoStepsInFrontOfPlayer:
     movzx ecx, byte [ebp + esi]
     mov [ebp + wTileInFrontOfBoulderAndBoulderCollisionResult], cl
     mov [ebp + W_TILE_IN_FRONT_OF_PLAYER], cl
+    ret
+
+; ---------------------------------------------------------------------------
+; CheckForCollisionWhenPushingBoulder (OW-4.1) — decide whether the boulder two
+; steps ahead can be pushed. Result in wTileInFrontOfBoulderAndBoulderCollisionResult
+; ($ff = blocked). pret: engine/overworld/player_state.asm.
+; CheckForBoulderCollisionWithSprites lives in pret push_boulder.asm → extern
+; (ported in OW-4.2); the sprite-collision result it returns in AL is stored at .done.
+; ---------------------------------------------------------------------------
+CheckForCollisionWhenPushingBoulder:
+    call GetTileTwoStepsInFrontOfPlayer
+    call IsTilePassable
+    jc .done                                   ; not passable (AL = IsTilePassable's leftover, per pret)
+    mov esi, TilePairCollisionsLand            ; flat host ptr to the tile-pair table
+    call CheckForTilePairCollisions2
+    mov al, 0xff
+    jc .done                                   ; elevation difference between current tile and 2-ahead
+    mov al, [ebp + wTileInFrontOfBoulderAndBoulderCollisionResult]
+    cmp al, 0x15                               ; stairs tile
+    mov al, 0xff                               ; (ld doesn't disturb ZF from cmp)
+    jz .done                                   ; the tile two steps ahead is stairs
+    call CheckForBoulderCollisionWithSprites   ; AL = collision result
+.done:
+    mov [ebp + wTileInFrontOfBoulderAndBoulderCollisionResult], al
     ret
 
 ; ===========================================================================
