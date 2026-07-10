@@ -1545,6 +1545,19 @@ BIT_PLAYER_LOWER_X           equ 1        ; hNPCPlayerRelativePosFlags bit 1 (ta
 wWhichPewterGuy              equ 0xD12E   ; PewterGuys selector (golden 00:d12e; unions
                                           ; wDungeonWarpDataEntrySize/wGymGateTileBlock/wWhichPrizeWindow)
 %endif
+; auto_movement.asm (OW-2.3) — Pallet Oak-walk / Pewter guide movement scripts
+%ifndef wNumStepsToTake
+wNumStepsToTake              equ 0xCCA1   ; golden 00:cca1 (right after wNPCMovementDirections2)
+%endif
+%ifndef NO_INPUT
+NO_INPUT                     equ 0        ; constants/misc_constants.asm
+%endif
+%ifndef NPC_CHANGE_FACING
+NPC_CHANGE_FACING            equ 0xE0     ; constants/sprite_data_constants.asm
+%endif
+%ifndef TOGGLE_PALLET_TOWN_OAK
+TOGGLE_PALLET_TOWN_OAK       equ 0        ; constants/toggle_constants.asm (index 0)
+%endif
 
 ; ---------------------------------------------------------------------------
 ; Wave 4 (home-rectification) — menu framework (yes_no / list_menu / window).

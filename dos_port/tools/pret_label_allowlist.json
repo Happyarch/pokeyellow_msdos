@@ -827,6 +827,10 @@
    "port_file": "dos_port/src/engine/overworld/overworld.asm",
    "why": "pret home/overworld.asm consolidated in overworld.asm (OW-A.14 P4c), alongside EnterMap/LoadMapHeader/IsPlayerStandingOnDoorTile"
   },
+  "EndNPCMovementScript": {
+   "port_file": "dos_port/src/engine/overworld/auto_movement.asm",
+   "why": "pret home/npc_movement.asm wrapper (farjp _EndNPCMovementScript); the port has no home/npc_movement.asm mirror, so the trivial banking-elided jump is co-located with its target _EndNPCMovementScript in auto_movement.asm (OW-2.3)"
+  },
   "CheckForTilePairCollisions": {
    "port_file": "dos_port/src/engine/overworld/ledges.asm",
    "why": "pret home/overworld.asm split across port files (draft Session H)"

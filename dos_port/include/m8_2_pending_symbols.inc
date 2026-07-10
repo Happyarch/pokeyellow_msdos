@@ -82,7 +82,7 @@ wGymLeaderName         equ 0xD36E   ; VERIFY  pret wram.asm:1263 (ds NAME_LENGTH
 wEventFlags            equ 0xD5A6   ; VERIFY  pret wram.asm:2400 (flag_array NUM_EVENTS)
 %endif
 %ifndef wToggleableObjectIndex
-wToggleableObjectIndex equ 0xCC5A   ; VERIFY  pret wram.asm:470 (db)
+wToggleableObjectIndex equ 0xCC4D   ; golden 00:cc4d (was wrongly 0xCC5A, adjacent to wNPCMovementDirections)
 %endif
 %ifndef wToggleableObjectList
 wToggleableObjectList  equ 0xD5CD   ; VERIFY  pret wram.asm:2177 (ds 16*2+1)

@@ -772,6 +772,7 @@ HOME_CHECK_SRCS := \
     src/engine/overworld/pathfinding.asm \
     src/engine/overworld/trainer_engine.asm \
     src/engine/overworld/npc_movement_2.asm \
+    src/engine/overworld/auto_movement.asm \
     src/engine/events/pewter_guys.asm \
     src/engine/overworld/player_state.asm
 # player_state.asm (OW-1.8) is check-only: externs ForceBikeOrSurf (in check-only
