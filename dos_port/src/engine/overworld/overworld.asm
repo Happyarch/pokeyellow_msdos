@@ -214,6 +214,10 @@ global RefreshCollisionTileMap             ; menus S4: home/start_menu.asm resto
 ; ---------------------------------------------------------------------------
 MAP_ID_PALLET_TOWN          equ 0x00
 TILESET_OVERWORLD           equ 0x00
+; tileset ids (constants/tileset_constants.asm; not in gb_memmap.inc) — PlayMapChangeSound
+CEMETERY                    equ 15
+FACILITY                    equ 22
+OVERWORLD_DOOR_TILE         equ 0x0B   ; pret: door tile in tileset 0 (PlayMapChangeSound)
 PALLET_TOWN_WIDTH           equ 10
 PALLET_TOWN_HEIGHT          equ 9
 PALLET_TOWN_BORDER_BLOCK    equ 0x0B   ; border block from PalletTown_Object
@@ -892,6 +896,12 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     mov byte [ebp + H_SCY], 0
     mov byte [ebp + H_SCX], 0
     mov word [ebp + W_MAP_VIEW_VRAM_POINTER], GB_TILEMAP0
+    ; pret WarpFound2 plays the map-change jingle here (:477/498/510), BEFORE the
+    ; destination is loaded, so it reads the SOURCE map's tileset + door tile. Must
+    ; precede LoadWarpDestination (which calls LoadMapHeader → destination tileset/
+    ; tilemap + music). OW-A.14. Warp-pad/fly skip branch is deferred, so the single
+    ; call here matches pret's 3 non-skip branches.
+    call PlayMapChangeSound
     call LoadWarpDestination
     call InitMapSprites                        ; populate NPC slots for the new map
     ; pret: home/overworld.asm:515 (WarpFound2.indoorMaps) — clear BIT_EXITING_DOOR,
@@ -2845,6 +2855,39 @@ IsPlayerStandingOnDoorTile:
     pop esi
     pop eax
     clc
+    ret
+
+; ---------------------------------------------------------------------------
+; PlayMapChangeSound — on a warp, play the "go inside" jingle if the player
+; walked through an overworld door tile, else "go outside".
+; Pret ref: home/overworld.asm:PlayMapChangeSound (:666). Called from WarpFound2
+; (the port's .warpTransition) before EnterMap, so it reads the SOURCE map's
+; tilemap (the door the player stepped on), not the destination.
+; Preserves nothing pret doesn't (AL used); the caller has no live regs here.
+; ---------------------------------------------------------------------------
+PlayMapChangeSound:
+    mov al, [ebp + W_CUR_MAP_TILESET]
+    cmp al, FACILITY
+    je .didNotGoThroughDoor
+    cmp al, CEMETERY
+    je .didNotGoThroughDoor
+    ; pret lda_coord 8, 8 = upper-left tile of the player's block, one row above the
+    ; standing tile (lda_coord 8, 9 → port PLAYER_STANDING). Port row scaling is 1:1
+    ; (fronts are ±2 rows), so project to (PLAYER_STANDING_ROW - 1, PLAYER_STANDING_COL).
+    ; ; PROJ: this door-tile row projection + the pre-EnterMap tilemap timing are
+    ; unverified (no golden warp scenario) — the go-inside/go-outside SFX selection
+    ; needs MCP live-warp verification. Wrong projection only mis-picks the jingle.
+    movzx eax, byte [ebp + W_TILEMAP + (PLAYER_STANDING_ROW - 1) * SCREEN_TILES_W + PLAYER_STANDING_COL]
+    cmp al, OVERWORLD_DOOR_TILE                  ; pret: cp $0b (door tile in tileset 0)
+    jne .didNotGoThroughDoor
+    mov al, SFX_GO_INSIDE
+    jmp .playSound
+.didNotGoThroughDoor:
+    mov al, SFX_GO_OUTSIDE
+.playSound:
+    call PlaySound
+    ; pret tail: if wMapPalOffset != 0 ret; else jp GBFadeOutToBlack.
+    ; TODO-HW: palette/fade (Phase 5) — GBFadeOutToBlack deferred (DMG-green debug palette).
     ret
 
 ; ---------------------------------------------------------------------------

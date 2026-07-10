@@ -885,15 +885,24 @@ label/stub): `ChangeFacingDirection`, `InitScriptedNPCMovement`, `AnimScriptedNP
     divergences); `lint_pret_labels` 0 violations. `PlayTrainerMusic`'s `DROPPED [wNewSoundID]`
     is the port's established PlaySound-id-in-AL ABI (PlaySound `mov bh,al` @ home/audio.asm:231),
     same for every port PlaySound caller — not a regression.
-  - **P4c `PlayMapChangeSound` — OPEN** (door/warp go-inside/outside SFX). Needs the home
-    routine ported (`lda_coord 8,8` door-tile `$0b` detection → SFX_GO_INSIDE/OUTSIDE, else
-    SFX_GO_OUTSIDE; tail `jp GBFadeOutToBlack` = Phase-5 palette, deferred marker) + wiring
-    into the bespoke `.warpTransition`. Riskier: the `lda_coord 8,8` projection onto the
-    40-wide viewport is a known-tricky area (memory `coord-macros-logic-audit`) and warps
-    aren't in a golden scenario, so it needs live/MCP verification. Left for a focused step.
-- Exit: zero `; TODO-HW: audio HAL` no-ops in `engine/overworld/*.asm` + `player_gfx.asm`;
-  every overworld audio leaf calls the real gateway; baselines byte-identical; faithdiff
-  clean (or justified) on each touched label. **P1–P4b DONE + verified; P4c remaining.**
+  - **P4c `PlayMapChangeSound` DONE 2026-07-09** — ported the pret home routine into
+    `overworld.asm` (consolidated, allowlisted): FACILITY/CEMETERY tileset exclusion, then
+    the door-tile `$0b` check → SFX_GO_INSIDE else SFX_GO_OUTSIDE; `jp GBFadeOutToBlack` tail
+    is a deferred `; TODO-HW: palette` (Phase 5). Wired **before** `LoadWarpDestination` in
+    `.warpTransition` (which now calls `LoadMapHeader` → destination tileset/tilemap/music, so
+    the call must precede it to read the SOURCE door tile, faithful to pret WarpFound2). Added
+    local `FACILITY`/`CEMETERY`/`OVERWORLD_DOOR_TILE` constants; allowlist entry added.
+    `; PROJ`: the `lda_coord 8,8` → `(PLAYER_STANDING_ROW-1, PLAYER_STANDING_COL)` row
+    projection + pre-EnterMap tilemap timing are unverified (no golden warp scenario) — the
+    inside/outside jingle selection needs MCP live-warp verification (a wrong projection only
+    mis-picks the jingle). faithdiff clean but for the intentional `GBFadeOutToBlack` deferral;
+    `make check` clean; **goldencheck overworld_pallet PASS**; `lint_pret_labels` 0 violations.
+- **OW-A.14 COMPLETE 2026-07-09** — zero `; TODO-HW: audio HAL` no-ops remain in
+  `engine/overworld/*.asm` + `player_gfx.asm`; every overworld audio leaf calls the real
+  gateway; the map-music subsystem (`MapSongBanks` + header load + entry/connection fades) is
+  live; faithdiff clean/justified on every touched label; goldencheck PASS; lint 0. One `; PROJ`
+  follow-up: P4c door-jingle projection → MCP live-warp verification when the dosbox-mcp
+  code-breakpoint bug is fixed.
 
 ### Stage 1 — Pure-logic leaves `[x]` COMPLETE (2026-07-04, SWARM wave 1)
 

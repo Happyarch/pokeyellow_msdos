@@ -823,6 +823,10 @@
    "port_file": "dos_port/src/engine/overworld/ledges.asm",
    "why": "pret home/overworld.asm split across port files (draft Session H)"
   },
+  "PlayMapChangeSound": {
+   "port_file": "dos_port/src/engine/overworld/overworld.asm",
+   "why": "pret home/overworld.asm consolidated in overworld.asm (OW-A.14 P4c), alongside EnterMap/LoadMapHeader/IsPlayerStandingOnDoorTile"
+  },
   "CheckForTilePairCollisions": {
    "port_file": "dos_port/src/engine/overworld/ledges.asm",
    "why": "pret home/overworld.asm split across port files (draft Session H)"
