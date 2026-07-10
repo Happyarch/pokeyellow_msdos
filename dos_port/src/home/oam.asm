@@ -19,8 +19,9 @@
 ;        pret: `swap a` (a << 4) gives the low byte of the wShadowOAM slot.
 ;   BH = Y coordinate of the upper-left corner of the block  (pret b)
 ;   BL = X coordinate of the upper-left corner of the block  (pret c)
-;   DX = GB-space offset of the 4 (tile, attribute) pairs     (pret de)
+;   EDX = FLAT pointer to the 4 (tile, attribute) pairs        (pret de)
 ;        i.e. 8 source bytes: tile0,attr0, tile1,attr1, tile2,attr2, tile3,attr3.
+;        These blocks are flat image labels (.data), not GB WRAM offsets.
 ;
 ; The four entries are emitted in pret's order:
 ;   upper-left  (Y=b,   X=c)
@@ -56,9 +57,12 @@ WriteOAMBlock:
     shl   edi, 4
     lea   edi, [ebp + edi + W_SHADOW_OAM]
 
-    ; source = ebp + DE   (pret de = base address of tile/attr pairs)
-    movzx esi, dx
-    lea   esi, [ebp + esi]
+    ; source = flat pointer in EDX. pret's `de` is the ROM base address of the
+    ; tile/attr pairs; in the flat port those OAM-block tables are flat image
+    ; labels (.data), NOT GB WRAM offsets — so take EDX as a full flat pointer
+    ; rather than biasing a 16-bit offset by ebp. (.writeOneEntry already reads
+    ; the source flat via [esi].)  Callers: pass the block label in EDX.
+    mov   esi, edx
 
     ; BH = Y (pret b), BL = X (pret c)
     call .writeOneEntry             ; upper left  (Y=b,   X=c)

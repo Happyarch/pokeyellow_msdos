@@ -981,15 +981,10 @@ EmotionBubble:
     mov al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_XPIXELS]
     add al, 8
     mov bl, al                      ; c = x+8
-    ; SOLE REMAINING GAP (deferred): the gfx load above is now correct (EmotionBubbleGfx
-    ; generated + CopyVideoData ABI fixed), but this WriteOAMBlock call has an address-model
-    ; mismatch. WriteOAMBlock (home/oam.asm:54-61) reads the tile/attr source from DX as an
-    ; EBP-RELATIVE GB offset (`movzx esi,dx / lea esi,[ebp+esi]`), but EmotionBubblesOAMBlock
-    ; is a FLAT .data label loaded into ESI (which WriteOAMBlock ignores/overwrites). Fix:
-    ; copy the 8-byte EmotionBubblesOAMBlock into a WRAM scratch and pass its GB offset in
-    ; EDX, or add a flat-addressing WriteOAMBlock variant (it is this file's only caller).
-    ; EmotionBubble is CHECK-only (no caller yet); this is harmless until it is wired live.
-    mov esi, EmotionBubblesOAMBlock ; (pret de = OAM block) — see note: reg+addr-model wrong
+    ; WriteOAMBlock now takes the tile/attr source as a FLAT pointer in EDX
+    ; (home/oam.asm — the OAM-block tables are flat .data labels, not GB offsets;
+    ; the prior DX-as-GB-offset model was wrong for every caller). pret: ld de, block.
+    mov edx, EmotionBubblesOAMBlock ; de = OAM block (flat)
     xor al, al
     call WriteOAMBlock
     mov bl, 60
