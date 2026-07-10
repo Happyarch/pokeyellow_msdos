@@ -1014,13 +1014,13 @@ adds to `GAME_SRCS` (or `OVERWORLD_CHECK_SRCS` if closure unresolved), runs
 
 ### Stage 3 — Map mutation `[ ]`
 
-**TICKET OW-3.1: update_map.asm** `[SOLO #3]`
-- Pret: `engine/overworld/update_map.asm`
+**TICKET OW-3.1: update_map.asm** `[SOLO #3]` **— DONE 2026-07-10 (code; MCP verify deferred)**
+- Pret: `engine/overworld/update_map.asm` → port `src/engine/overworld/update_map.asm` (check-only)
 - Checklist:
-  - [ ] `ReplaceTileBlock` — pure `wOverworldMap` pointer math, direct translation; `CompareHLWithBC` faithful
-  - [ ] `RedrawMapView` — **re-expressed**: pret's per-row `REDRAW_ROW` VRAM staggering collapses to `LoadCurrentMapView` + `g_tilecache_dirty` (+ one frame); keep the `wIsInBattle` guard; large `; PROJ`/`; TODO-HW` header citing CLAUDE.md ("rings are gone") — this is the **canonical redraw precedent** cut/elevator/scripts will cite
-  - [ ] Verify: MCP `ReplaceTileBlock` on a visible Pallet block → `dump_frame` before/after shows clean swap, no artifacts
-- Exit: canonical redraw primitive established.
+  - [x] `ReplaceTileBlock` — faithful `wOverworldMap` pointer math + the two `CompareHLWithBC` view-bounds checks; falls through (explicit jmp) to `RedrawMapView`. `CompareHLWithBC` faithful (16-bit hi-first compare). Added `W_NEW_TILE_BLOCK_ID`=0xD09E (golden).
+  - [x] `RedrawMapView` — **re-expressed** to `LoadCurrentMapView` + `g_tilecache_dirty=1` + one `DelayFrame`, `wIsInBattle==$ff` guard kept; big PROJ header citing CLAUDE.md ("rings are gone"). **Canonical redraw precedent established.** faithdiff DROPs (`CopyToRedrawRowOrColumnSrcTiles`/`RunDefaultPaletteCommand`/`hRedraw*`/`hAutoBGTransferEnabled`/`hTileAnimations`) are that documented divergence; palette = TODO-HW.
+  - [ ] Verify (deferred): MCP `ReplaceTileBlock` on a visible Pallet block → `dump_frame` before/after (runtime — bundled with the other deferred MCP checks).
+- Exit: canonical redraw primitive established (code). lint 0.
 
 **TICKET OW-3.2: toggleable_objects.asm completion** `[SWARM/Sonnet]` — new mirrored file: `MarkTownVisitedAndLoadToggleableObjects`, `ShowObject`/`ShowObject2`, `HideObject`, `ToggleableObjectFlagAction` (pure flag ops); alias/extern the two already-ported routines in `map_sprites.asm` (`InitToggleableObjectFlags`→pret `InitializeToggleableObjectsFlags`, `IsToggleableHidden`→pret `IsObjectHidden`) — reconcile naming toward pret.
 **TICKET OW-3.3: hidden_events engine side** `[SWARM/Sonnet]` — into existing port `hidden_events.asm` (clearly-headed section): `CheckForHiddenEvent`, `CheckIfCoordsInFrontOfPlayerMatch`; retire the `M72_HIDDEN_EVENTS_DEEP` guard. Data: new `tools/gen_hidden_events.py` → Tier-1 `assets/hidden_events.inc` (coords + extern handler symbols) + Tier-2 `hidden_object_stubs.asm` (hand-written ret-stub handlers). **Timebox the generator; fallback = hand-transcribe reachable maps only.**
