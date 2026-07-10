@@ -1041,6 +1041,9 @@ TEXT_DELAY_MASK              equ 0x0F   ; bits 3-0 of wOptions hold text speed
 ; Current map identity
 W_CUR_MAP                    equ 0xD35D ; wCurMap (1 byte)
 W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR equ 0xD35E ; wCurrentTileBlockMapViewPointer (2 bytes)
+%ifndef W_NEW_TILE_BLOCK_ID
+W_NEW_TILE_BLOCK_ID          equ 0xD09E ; wNewTileBlockID (golden 00:d09e; ReplaceTileBlock)
+%endif
 W_Y_COORD                    equ 0xD360 ; wYCoord (player map Y, in tiles)
 W_X_COORD                    equ 0xD361 ; wXCoord (player map X, in tiles)
 W_Y_BLOCK_COORD              equ 0xD362 ; wYBlockCoord
