@@ -1096,7 +1096,30 @@ src, map_sprites.asm:ShowTextStream precedent). lint 0 (7 suppressed). Check-onl
   - [ ] Verify: `DEBUG_TELEPORT_ANIM` harness in `EnterMap` (pattern: `DEBUG_TRANSITION`) — set `BIT_USED_FLY`/dungeon-warp state, run `EnterMapAnim`, FRAME.BIN mid-anim shows bird/spin frames; MCP breakpoints on `DoFlyAnimation`
 - Exit: fly-in / teleport / hole-fall animations render.
 
-**TICKET OW-5.2: special_warps.asm** `[SWARM/Sonnet]` — `PrepareForSpecialWarp`, `LoadSpecialWarpData` + inlined `data/maps/special_warps.asm` (91 lines); wires into existing warp_check/doors flow.
+**TICKET OW-5.2: special_warps.asm** `[SWARM/Sonnet]` — **PARTIAL 2026-07-10: `PrepareForSpecialWarp` DONE; `LoadSpecialWarpData` + warp DATA BLOCKED (event_displacement / view-pointer model — flagged for USER evaluation).**
+- `PrepareForSpecialWarp` ported faithfully (new mirrored file; retires the
+  main_menu_stubs.asm ret-stub, dup_def suppressed → OW-7.2, like EnterMapAnim).
+  Pure flag/map-selection logic, no pointer-walk. faithdiff clean (ADDED
+  [wStatusFlags6] = pret's `res [hl]` named directly), lint 0, check-only.
+- **BLOCKED remainder — `LoadSpecialWarpData` + all warp data tables**
+  (NewGameWarp / TradeCenter*/Colosseum* / DungeonWarpList / DungeonWarpData /
+  FlyWarpDataPtr). Two entangled blockers:
+  1. The data is built by `fly_warp`/`special_warp_spec`/`fly_warp_spec` on top of
+     **`event_displacement`, which coords.inc explicitly marks "do not use … until
+     re-derived"** (unresolved border-stride bug: assumes MAP_BORDER=3, but the
+     port's wOverworldMap uses a wider border → wrong view-pointer stride).
+  2. The port **deliberately diverges** from pret's precomputed-view-pointer model
+     (overworld.asm:LoadDestinationWarpPosition recomputes wCurrentTileBlockMapViewPointer
+     at runtime instead of copying a ROM table). `LoadSpecialWarpData`'s pointer-walk
+     arithmetic (`ld a,[hli]; ld h,[hl]; ld l,a` building a 2-byte GB pointer;
+     `wDungeonWarpDataEntrySize=6`; fly/dungeon entry strides) is **inseparable from
+     the flat/GB pointer-model decision** — a verbatim transliteration yields broken
+     flat-pointer semantics, and the flat adaptation can't be finalized until the
+     event_displacement re-derivation + native-width view-pointer model land.
+  → Externed `LoadSpecialWarpData` with a full in-file deferral note; ported +
+  its data together once the OW map-data-extension / event_displacement
+  re-derivation resolves (tracked: memory `coord-macros-logic-audit`). **Candidate
+  fable-class item surfaced to the user 2026-07-10.**
 
 ### Stage 6 — Cosmetic OAM/screen animations `[ ]` (SWARM wave)
 

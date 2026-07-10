@@ -781,6 +781,7 @@ HOME_CHECK_SRCS := \
     src/engine/overworld/toggleable_objects.asm \
     src/engine/overworld/cut.asm \
     src/engine/overworld/player_animations.asm \
+    src/engine/overworld/special_warps.asm \
     src/engine/overworld/player_state.asm
 # player_state.asm (OW-1.8) is check-only: externs ForceBikeOrSurf (in check-only
 # player_gfx.asm) and IsPlayerStandingOnDoorTile (linked in overworld.asm but not yet
