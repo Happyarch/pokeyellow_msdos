@@ -18,6 +18,13 @@ Violation classes:
   stale_extern  an `extern` trailing comment naming a *_stubs.asm that no
                 longer defines the symbol (stub retired, comment not repointed
                 — stub convention rule 3/5).
+  call_into_data a port code-flow reference (call/jmp/jcc) whose target is a
+                symbol defined in a DATA section (.data/.rodata/.bss) — i.e. a
+                data table called as if it were a routine. Assembles + links
+                clean and faithdiff-matches by name, but jumps into .data at
+                runtime → executes table bytes → page fault. (This is the
+                `call IndexToPokedex` crash; IndexToPokedex is a flat table in
+                the port, not pret's predef routine.)
 
 Suppressions live in dos_port/tools/pret_label_allowlist.json:
   "suppress": [ {"rule": "<class>", "key": "<label | file:symbol>", "why": "…"} ]
@@ -106,6 +113,19 @@ def main():
             ORDER BY name"""):
         add('dup_def', name, f"{name}: defined in {files}")
 
+    # ── call_into_data: code-flow reference to a data-section symbol ────────
+    # (a data table called/jumped-to as a routine → runtime jump into .data).
+    for caller, callee, kind, file, line in cur.execute("""
+            SELECT c.caller, c.callee, c.kind, c.file, c.line
+            FROM calls c JOIN port_defs d ON d.name = c.callee
+            WHERE c.side = 'port'
+              AND d.section IN ('.data','.rodata','.rdata','.bss','.data.rel','.rel')
+            GROUP BY c.file, c.line, c.callee
+            ORDER BY c.file, c.line"""):
+        add('call_into_data', f'{file}:{line}:{callee}',
+            f"{file}:{line}: {kind} {callee} — {callee} is defined in a DATA "
+            f"section (index the table inline instead of calling it as a routine)")
+
     # ── stale_extern: comment names a stubs file that doesn't define it ─────
     stub_defs = {(os.path.basename(f), n) for n, f in cur.execute(
         "SELECT name, file FROM port_defs WHERE is_stub=1")}
@@ -130,7 +150,8 @@ def main():
     by_rule = {}
     for rule, _, msg in findings:
         by_rule.setdefault(rule, []).append(msg)
-    for rule in ('mirror', 'non_ret_stub', 'dup_def', 'stale_extern'):
+    for rule in ('mirror', 'non_ret_stub', 'dup_def', 'call_into_data',
+                 'stale_extern'):
         msgs = by_rule.get(rule, [])
         if msgs:
             print(f"\n== {rule} ({len(msgs)}) ==")

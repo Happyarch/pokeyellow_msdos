@@ -119,6 +119,12 @@ PORT_CALL_RE = re.compile(
     r'([A-Za-z_][A-Za-z0-9_]*)\s*$')
 GLOBAL_RE = re.compile(r'^\s*global\s+(.+)$')
 EXTERN_RE = re.compile(r'^\s*extern\s+([^;]+?)\s*(?:;\s*(.*))?$')
+SECTION_RE = re.compile(r'^\s*(?:section|segment)\s+([.\w$]+)', re.I)
+# section names that hold DATA (not executable code). A code-flow reference
+# (call/jmp/jcc) whose target is defined in one of these is the "call a data
+# label as a routine" bug (jumps into .data → executes table bytes → page fault;
+# e.g. `call IndexToPokedex`, which is pret's PokedexOrder *table* in the port).
+DATA_SECTIONS = {'.data', '.rodata', '.rdata', '.bss', '.data.rel', '.rel'}
 DIRECTIVE_RE = re.compile(
     r'^\s*(global|extern|section|segment|bits|align|cpu|default|use32'
     r'|%\w+|db|dw|dd|dq|incbin|resb|resw|resd|times\s+\d+\s+d[bwd]\b)', re.I)
@@ -150,10 +156,22 @@ def scan_port(pret_names):
 
             globals_here = {}       # name -> line of `global`
             label_lines  = {}       # name -> line index of column-0 def
+            label_section = {}      # name -> section (.text/.data/…) at its def
             toplevel_at  = []       # (line_idx, name) for body slicing
             cur = None
+            cur_section = '.text'   # nasm files that omit a directive default to code
+            incl_section = None     # section active at the file's %include(s): the
+                                    # home of include-defined globals (data tables
+                                    # live in assets/*.inc pulled in under .data)
             for idx, raw in enumerate(lines):
                 line = strip_comment(raw)
+                sm = SECTION_RE.match(line)
+                if sm:
+                    cur_section = sm.group(1).lower()
+                    continue
+                if re.match(r'^\s*%include\b', line):
+                    incl_section = cur_section
+                    continue
                 gm = GLOBAL_RE.match(line)
                 if gm:
                     for name in gm.group(1).split(','):
@@ -173,6 +191,7 @@ def scan_port(pret_names):
                 if m:
                     cur = m.group(1)
                     label_lines.setdefault(cur, idx)
+                    label_section.setdefault(cur, cur_section)
                     toplevel_at.append((idx, cur))
                     line = line[m.end():]
                 if cur is None:
@@ -209,16 +228,19 @@ def scan_port(pret_names):
                     start = label_lines[name]
                     n_instr, has_call = body_metrics(start)
                     defs.append((name, rel, start + 1, int(is_stub), 1, 1,
-                                 n_instr, has_call))
+                                 n_instr, has_call, label_section.get(name)))
                 else:
+                    # include-defined global (label lives in an assets/*.inc): its
+                    # real section is the one the include sits under (data tables
+                    # like IndexToPokedex/BaseStats → .data).
                     defs.append((name, rel, gline, int(is_stub), 1, 0,
-                                 None, None))
+                                 None, None, incl_section))
             for name, start in sorted(label_lines.items()):
                 if name in globals_here or name not in pret_names:
                     continue
                 n_instr, has_call = body_metrics(start)
                 defs.append((name, rel, start + 1, int(is_stub), 0, 1,
-                             n_instr, has_call))
+                             n_instr, has_call, label_section.get(name)))
     return defs, calls, externs
 
 # ── summarize + write ───────────────────────────────────────────────────────────
@@ -248,7 +270,8 @@ CREATE TABLE port_defs (
     is_global    INTEGER NOT NULL,
     defined_here INTEGER NOT NULL,
     instr_count  INTEGER,
-    has_call     INTEGER
+    has_call     INTEGER,
+    section      TEXT
 );
 CREATE INDEX idx_pdefs_name ON port_defs(name);
 CREATE TABLE calls (
@@ -352,7 +375,7 @@ def main():
     cur = con.cursor()
     cur.executescript(SCHEMA)
     cur.executemany("INSERT INTO labels VALUES (?,?,?,?,?,?,?)", label_rows)
-    cur.executemany("INSERT INTO port_defs VALUES (?,?,?,?,?,?,?,?)",
+    cur.executemany("INSERT INTO port_defs VALUES (?,?,?,?,?,?,?,?,?)",
                     sorted(port_defs))
     cur.executemany("INSERT INTO calls VALUES (?,?,?,'pret',?,?)",
                     sorted(pret_calls))
