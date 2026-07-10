@@ -1123,7 +1123,15 @@ src, map_sprites.asm:ShowTextStream precedent). lint 0 (7 suppressed). Check-onl
 
 ### Stage 6 — Cosmetic OAM/screen animations `[ ]` (SWARM wave)
 
-**TICKET OW-6.1: cut2.asm** — `AnimCut`, `AnimCutGrass_UpdateOAMEntries`/`_SwapOAMEntries` (pure shadow-OAM); delete the OW-3.4 `AnimCut` stub.
+**TICKET OW-6.1: cut2.asm** — **DONE 2026-07-10.** New mirrored file: `AnimCut`
+(tree-spread + grass-leaf paths), `AnimCutGrass_UpdateOAMEntries`, `AnimCutGrass_SwapOAMEntries`.
+All shadow-OAM/wBuffer copies are WRAM→WRAM (real CopyData used directly). **Deleted
+the OW-3.4 `AnimCut` ret-stub** cleanly (its only caller UsedCut/cut.asm is check-only
+→ no linked caller → no dup_def needed; cut.asm extern comment repointed). Externs the
+unported OAM-anim/palette primitives `AdjustOAMBlockXPos2`/`AdjustOAMBlockYPos2`
+(pret engine/battle/animations.asm; ABI ESI=GB OAM off, BL=count) + `UpdateCGBPal_OBP1`.
+rOBP1 flicker → `[ebp+IO_OBP1]` TODO-HW. faithdiff clean (ADDED [IO_OBP1] = rOBP1
+TODO-HW; DROPPED self-`jr` faithdiff can't parse), lint 0. Check-only.
 **TICKET OW-6.2: healing_machine.asm** — `AnimateHealingMachine` + OAM data, `FlashSprite8Times`, `CopyHealingMachineOAM`; incbin `gfx/overworld/heal_machine.2bpp`; sound leaves stubbed; `[wAudioROMBank]` guard dropped with `; DIVERGENCE` note; **bounded** waits vs sound stubs.
 **TICKET OW-6.3: elevator.asm** — `ShakeElevator` (`hSCY` shake → port `H_SCY` fine-scroll, native renderer honors it); `ShakeElevatorRedrawRow` → `RedrawMapView` call or documented no-op (`; PROJ`); `.musicLoop` on `wChannelSoundIDs` must be **bounded** against sound stubs (no infinite spin) — divergence note.
 **TICKET OW-6.4: spinners.asm** — `LoadSpinnerArrowTiles` (per-frame vChars0 writes from `SpinnerArrowAnimTiles` → `g_tilecache_dirty`; `; TODO-HW` re VRAM coord math), facing table + `spinner_tiles`; incbin `gfx/overworld/spinners.2bpp`.

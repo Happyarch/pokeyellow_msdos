@@ -87,7 +87,7 @@ extern LoadCurrentMapView           ; src/engine/overworld/overworld.asm
 extern SaveScreenTilesToBuffer2     ; src/movie/title.asm
 extern LoadScreenTilesFromBuffer2   ; src/movie/title.asm
 extern RedrawMapView                ; src/engine/overworld/update_map.asm (OW-3.1)
-extern AnimCut                      ; overworld_stubs.asm (ret-stub until OW-6.1)
+extern AnimCut                      ; src/engine/overworld/cut2.asm (OW-6.1)
 extern PlaySound                    ; src/home/audio.asm
 extern UpdateSprites                ; src/engine/overworld/movement.asm
 extern UpdateCGBPal_OBP1            ; UNPORTED (palette; shared w/ dust_smoke)
