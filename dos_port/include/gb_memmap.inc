@@ -945,12 +945,18 @@ wChangeBoxSavedMapTextPointer equ 0xCD3D ; ChangeBox saves/restores wCurMapTextP
 ; Tile-map save/restore buffers — relocated to echo RAM ($E000+) to avoid
 ; overlapping pret WRAM1 symbols.  All via constants; no hardcoded addresses
 ; in translated code.
-; Layout in echo RAM ($E000–$F167, all within the DPMI allocation):
+; Layout in echo RAM ($E000–$F4E7, all within the DPMI allocation):
 ;   $E000  wSurroundingTiles / wTileMapBackup   1728 B ($6C0) → $E6BF
-;   $E800  wOverworldMap                        2048 B ($800) → $EFFF
-;   $F000  wTileMapBackup2                      1000 B ($3E8) → $F3E7
+;   $E800  wOverworldMap                        2304 B ($900) → $F0FF   (MAP_BORDER=7)
+;   $F100  wTileMapBackup2                      1000 B ($3E8) → $F4E7
+; Next used symbol is GB_OAM ($FE00), so there is 2328 B of headroom above.
+; NB: LoadTileBlockMap fills W_OVERWORLD_MAP_SIZE bytes UNCONDITIONALLY, so
+; wOverworldMap's *declared* size — not the current map's footprint — is what
+; must not overlap the next buffer. Growing MAP_BORDER 6→7 pushed wOverworldMapEnd
+; from $F000 to $F100 and silently clobbered wTileMapBackup2's first 256 bytes
+; until it was moved here.
 W_TILEMAP_BACKUP             equ 0xE000 ; wTileMapBackup (= wSurroundingTiles, see below)
-W_TILEMAP_BACKUP2            equ 0xF000 ; wTileMapBackup2 (1000 B)
+W_TILEMAP_BACKUP2            equ 0xF100 ; wTileMapBackup2 (1000 B)
 
 ; Overworld surrounding-tiles buffer (alias for wTileMapBackup)
 ; 48×36 = 1728 bytes; DrawTileBlock writes here before crop to wTileMap.
