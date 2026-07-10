@@ -1222,6 +1222,10 @@
   "FadeOutAudio": {
    "port_file": "dos_port/src/home/audio.asm",
    "why": "audio-branch consolidation (Phase A, merged 2026-07-07): the port's home-audio entry points live together in src/home/audio.asm with the audio HAL"
+  },
+  "MoveAnimationTiles1": {
+   "port_file": "dos_port/src/engine/overworld/cut.asm",
+   "why": "INTERIM: battle engine/battle/animations.asm not yet ported; cut.asm (OW-3.4) incbins move_anim_1.2bpp as MoveAnimationTiles1 for the grass-leaf tile (tile 6). Retire and extern from animations.asm once battle move-anim tiles are ported."
   }
  },
  "suppress": [

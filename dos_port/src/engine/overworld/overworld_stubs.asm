@@ -101,3 +101,14 @@ IsSurfingPikachuInParty:
 global LoadHoppingShadowOAM
 LoadHoppingShadowOAM:
     ret
+
+; AnimCut — pret engine/overworld/cut2.asm:AnimCut (the cut/leaf sprite animation).
+; Called via farcall from UsedCut (src/engine/overworld/cut.asm, OW-3.4). The
+; animation is purely cosmetic (advances the 2x2 cut/tree OAM block through its
+; frames + palette flicker); the tree removal + map redraw happen in UsedCut
+; regardless. Ret-stub until OW-6.1 ports cut2.asm (AnimCut /
+; AnimCutGrass_UpdateOAMEntries / _SwapOAMEntries).
+; TODO(retire OW-6.1): delete this stub and restore the body in cut2.asm.
+global AnimCut
+AnimCut:
+    ret

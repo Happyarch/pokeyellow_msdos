@@ -50,7 +50,7 @@ global LoadSmokeTileFourTimes
 global LoadSmokeTile
 
 extern UpdateCGBPal_OBP1            ; UNPORTED (pret home/palettes.asm) — apply OBP1 → CGB palette
-extern WriteCutOrBoulderDustAnimationOAMBlock ; UNPORTED (OW-3.4 cut.asm) — pret farcall target
+extern WriteCutOrBoulderDustAnimationOAMBlock ; src/engine/overworld/cut.asm (OW-3.4)
 extern AdjustOAMBlockYPos          ; UNPORTED (OW-3.4 cut.asm shared OAM anim primitive)
 extern AdjustOAMBlockXPos          ; UNPORTED (OW-3.4 cut.asm shared OAM anim primitive)
 extern CopyVideoData               ; home/copy2.asm (In: ESI=VRAM dest, EDX=flat src, BL=count)

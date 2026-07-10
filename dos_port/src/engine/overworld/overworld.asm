@@ -3472,6 +3472,7 @@ section .rodata
 
 ; authored border-ring blocks (map-tool C3; see ApplyMapBorderOverrides)
 %include "assets/map_border_overrides.inc"
+global overworld_gfx                     ; exported for cut.asm (InitCutAnimOAM tree tiles $2d/$3d)
 %include "assets/overworld_gfx.inc"
 %include "assets/overworld_blocks.inc"
 %include "assets/pallet_town_blk.inc"
