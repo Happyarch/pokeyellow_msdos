@@ -414,6 +414,10 @@ EnterMap:
     mov byte [ebp + W_CUR_MAP],  DEBUG_SEAM_MAP
     mov byte [ebp + W_X_COORD],  DEBUG_SEAM_X
     mov byte [ebp + W_Y_COORD],  DEBUG_SEAM_Y
+    ; $FF = "not a warp arrival": LoadTilesetHeader's faithful tail otherwise
+    ; re-derives the coords from the stale wDestinationWarpID on any dungeon-
+    ; tileset map (e.g. a seeded Viridian Forest spawned at warp 0's (1,0)).
+    mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF
     mov byte [seam_reseat], 1             ; hand-seeded coords need the view ptr derived
 .seam_no_seed:
 %endif
@@ -1590,7 +1594,7 @@ LoadTileBlockMap:
     add esi, MAP_BORDER                            ; ESI = first cell of map data
 
     ; DE = wCurMapDataPtr (source: .blk data in ROM window)
-    movzx edx, word [ebp + W_CUR_MAP_DATA_PTR]    ; EDX = 0x4E00
+    movzx edx, word [ebp + W_CUR_MAP_DATA_PTR]    ; EDX = map .blk GB addr (rom_window.inc)
 
     ; B (BH) = wCurMapHeight (row count)
     movzx eax, byte [ebp + W_CUR_MAP_HEIGHT]
@@ -1804,7 +1808,7 @@ DrawTileBlock:
     push edx
 
     ; Compute tile data source: [EBP + wTilesetBlocksPtr + blockID*16]
-    movzx edx, word [ebp + W_TILESET_BLOCKS_PTR]  ; EDX = 0x4600 (DE in SM83)
+    movzx edx, word [ebp + W_TILESET_BLOCKS_PTR]  ; EDX = OW_BLOCKS_GBADDR (DE in SM83)
     movzx eax, bl                                  ; EAX = blockID (C in SM83)
     shl eax, 4                                     ; EAX = blockID * 16
     add edx, eax                                   ; EDX = pointer into blockset
@@ -3420,7 +3424,7 @@ LoadWarpDestination:
     push edi
 
     ; Indoor maps use a shared EBP slot (INDOOR_BLK_GBADDR).  Copy this map's
-    ; .blk bytes there before calling LoadMapHeader, which reads blk_ptr=0x7600
+    ; .blk bytes there before calling LoadMapHeader, which reads blk_ptr=INDOOR_BLK_GBADDR
     ; from the header and stores it in W_CUR_MAP_DATA_PTR → LoadTileBlockMap
     ; then reads the block layout from that address.
     movzx eax, byte [ebp + W_CUR_MAP]

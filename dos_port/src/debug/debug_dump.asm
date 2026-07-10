@@ -209,15 +209,17 @@ fseam: db "SEAMLOG.BIN", 0
 %endif
 
 ; GB-address start of each 64-byte dump window. Host hexdump offsets:
-;   0x000  0x4600  overworld blockset (block 0..3)         — asset copy check
-;   0x040  0x4B20  blockset entry for block 0x52           — DrawTileBlock src
-;   0x080  0x4E00  PalletTown.blk (map block IDs)          — map asset copy
-;   0x0C0  0x9000  vTileset gfx in VRAM (tile 0,1,...)     — H2: tileset load
-;   0x100  0xC718  wOverworldMap around view ptr (0xC71B)  — LoadTileBlockMap
-;   0x140  0xC508  wSurroundingTiles                       — DrawTileBlock out
-;   0x180  0xC3A0  wTileMap (final 20x18 view)             — H1: tilemap
-;   0x1C0  0xD358  map header vars (curmap/dims/dataptr)   — header setup
-;   0x200  0xD520  tileset pointers (bank/blocks/gfx)      — pointer setup
+;   0x000  overworld blockset (block 0..3)         — asset copy check
+;   0x040  blockset entry for block 0x52           — DrawTileBlock src
+;   0x080  PalletTown.blk (map block IDs)          — map asset copy
+;   0x0C0  vTileset gfx in VRAM (tile 0,1,...)     — H2: tileset load
+;   0x100  wOverworldMap start                     — LoadTileBlockMap
+;   0x140  wSurroundingTiles                       — DrawTileBlock out
+;   0x180  wTileMap (final view)                   — H1: tilemap
+;   0x1C0  map header vars (curmap/dims/dataptr)   — header setup
+;   0x200  tileset pointers (bank/blocks/gfx)      — pointer setup
+; Addresses are the equs — the ROM window is allocator-packed (rom_window.inc)
+; and moves whenever map data changes, so literals here WILL go stale.
 %ifdef DEBUG_CALCSTATS
 ; CalcStats gate: one 64-byte window over the test scratch at $D1E0 covers the
 ; scratch mon (DVs at +$1B) and both stat results (L5 at +$20, L100 at +$30).
@@ -290,15 +292,15 @@ windows:
     dd 0xD0D6
 %else
 windows:
-    dd 0x4600
-    dd 0x4B20
-    dd 0x4E00
-    dd 0x9000
-    dd 0xC718
-    dd 0xC508
-    dd 0xC3A0
-    dd 0xD358
-    dd 0xD520
+    dd OW_BLOCKS_GBADDR             ; blockset blocks 0..3
+    dd OW_BLOCKS_GBADDR + 0x52*16   ; blockset entry for block 0x52
+    dd OW_PALLET_BLK_GBADDR         ; PalletTown.blk
+    dd GB_VCHARS2                   ; vTileset gfx in VRAM
+    dd W_OVERWORLD_MAP              ; wOverworldMap start
+    dd W_SURROUNDING_TILES          ; wSurroundingTiles
+    dd W_TILEMAP                    ; wTileMap
+    dd W_CUR_MAP - 5                ; map header vars around wCurMap ($D358)
+    dd W_TILESET_BLOCKS_PTR - 0xB   ; tileset header copy block ($D520)
 %endif
 
 ; ---------------------------------------------------------------------------
@@ -1460,16 +1462,45 @@ autokey_script:
     ; map's edge with LIVE collision, then press A so SeamLogRecord writes
     ; SEAMLOG.BIN + FRAME.BIN. This is the harness that reproduced the Viridian
     ; Forest "stuck at the gate spawn" bug headlessly.
+%ifdef AUTOKEY_MENU_FIRST
+    ; open + close the START menu before the walk: reproduces a live session that
+    ; verified the menus and then went talking to NPCs (font/VRAM state cycled).
+    dd  30,  36, PAD_START
+    dd  70,  76, PAD_B
+%define AK_SHIFT 90
+%else
+%define AK_SHIFT 0
+%endif
 %ifdef AUTOKEY_JOG_RIGHT
     ; hold AUTOKEY_PAD, sidestep one tile right, resume — some warp tiles are not
     ; the tile you arrive on (Viridian Forest South Gate: (4,0) is wall, (5,0) warps)
-    dd  30, 120, AUTOKEY_PAD
-    dd 140, 155, PAD_RIGHT
-    dd 175, 400, AUTOKEY_PAD
+    dd  30 + AK_SHIFT, 120 + AK_SHIFT, AUTOKEY_PAD
+    dd 140 + AK_SHIFT, 155 + AK_SHIFT, PAD_RIGHT
+    dd 175 + AK_SHIFT, 400 + AK_SHIFT, AUTOKEY_PAD
 %else
-    dd  30, 400, AUTOKEY_PAD
+    dd  30 + AK_SHIFT, 400 + AK_SHIFT, AUTOKEY_PAD
 %endif
-    dd 430, 436, PAD_A
+    dd 430 + AK_SHIFT, 436 + AK_SHIFT, PAD_A
+    ; Extra A presses: page through / dismiss a multi-page NPC dialog reached at
+    ; the end of the walk (forest youngster repro). Harmless in the logged
+    ; variant — the first A press dumps and exits before these fire.
+    dd 490 + AK_SHIFT, 496 + AK_SHIFT, PAD_A
+    dd 550 + AK_SHIFT, 556 + AK_SHIFT, PAD_A
+    dd 610 + AK_SHIFT, 616 + AK_SHIFT, PAD_A
+    dd 670 + AK_SHIFT, 676 + AK_SHIFT, PAD_A
+    dd  -1,  -1, 0
+%elifdef AUTOKEY_TALK
+    ; NPC-dialog crash repro: with a DEBUG_START_MAP spawn placed a couple of
+    ; tiles below an NPC, walk up into it (collision stops the player adjacent,
+    ; facing up), then press A repeatedly to open and page through the dialog.
+    ; Reaching AUTOKEY_DUMP_FRAME (default 200 — override to 450 for this
+    ; script) proves the dialog survived; a crash leaves no FRAME.BIN.
+    dd  30,  90, PAD_UP
+    dd 120, 126, PAD_A
+    dd 180, 186, PAD_A
+    dd 240, 246, PAD_A
+    dd 300, 306, PAD_A
+    dd 360, 366, PAD_A
     dd  -1,  -1, 0
 %elifdef AUTOKEY_TITLE
     ; Boot path with the title screen: pulse A through the title + main menu

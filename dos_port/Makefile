@@ -505,6 +505,12 @@ endif
 ifdef AUTOKEY_JOG_RIGHT
 NASMFLAGS += -D AUTOKEY_JOG_RIGHT
 endif
+ifdef AUTOKEY_TALK
+NASMFLAGS += -D AUTOKEY_TALK
+endif
+ifdef AUTOKEY_MENU_FIRST
+NASMFLAGS += -D AUTOKEY_MENU_FIRST
+endif
 ifdef AUTOKEY_PAD
 NASMFLAGS += -D AUTOKEY_PAD=$(AUTOKEY_PAD)
 endif
@@ -519,7 +525,11 @@ NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 endif
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_AUTOKEY
+# AUTOKEY_NO_PARTY=1 skips the party seed so the autokey run matches a plain
+# DEBUG_START_MAP build (which seeds no party) byte-for-byte on game state.
+ifndef AUTOKEY_NO_PARTY
 NASMFLAGS += -D DEBUG_SEED_PARTY
+endif
 ifndef AUTOKEY_TITLE
 NASMFLAGS += -D SKIP_TITLE
 endif
@@ -1390,6 +1400,14 @@ assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_
         assets/audio_rom.inc assets/audio_constants.inc assets/cry_data.inc \
         assets/opl_patches.inc assets/music_streams.inc assets/mt32_sysex.inc \
         assets/pika_pcm.inc assets/tandy_tables.inc assets/enh_streams.inc
+	python3 tools/audit_memmap.py
+
+# Standalone memory-map blast audit (also runs at the end of `make assets`):
+# overlap/containment check of every sized region in gb_memmap.inc +
+# rom_window.inc. Run after ANY edit that moves or grows a GB-space buffer.
+.PHONY: audit_memmap
+audit_memmap:
+	python3 tools/audit_memmap.py
 
 # Force-regenerate every generated asset, ignoring timestamps. The asset rules
 # are timestamp-gated (an .inc newer than its generator/source is skipped), which
