@@ -89,7 +89,12 @@ def main(path):
         # spawn/warp, where LoadWarpDestination derives it. Only |delta| > 1 is a true desync.
         if w and ptr != exp and not wrapped:
             d = ptr - exp
-            if abs(d) > 1:
+            # A vertical step leads by a whole row (±stride), exactly as a horizontal
+            # step leads by ±1: MoveTileBlockMapPointer{North,South} fires at step
+            # start, wYCoord commits at step end. Only flag it at rest.
+            if abs(d) == stride and walk != 0:
+                notes.append(f"(ptr leads by {d:+d} = one row, mid-step)")
+            elif abs(d) > 1:
                 notes.append(f"PTR DESYNC (off by {d:+d})")
                 bad_ptr += 1
             elif walk == 0:

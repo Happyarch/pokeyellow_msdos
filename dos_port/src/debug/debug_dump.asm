@@ -1460,8 +1460,16 @@ autokey_script:
     ; map's edge with LIVE collision, then press A so SeamLogRecord writes
     ; SEAMLOG.BIN + FRAME.BIN. This is the harness that reproduced the Viridian
     ; Forest "stuck at the gate spawn" bug headlessly.
-    dd  30, 110, AUTOKEY_PAD
-    dd 140, 146, PAD_A
+%ifdef AUTOKEY_JOG_RIGHT
+    ; hold AUTOKEY_PAD, sidestep one tile right, resume — some warp tiles are not
+    ; the tile you arrive on (Viridian Forest South Gate: (4,0) is wall, (5,0) warps)
+    dd  30, 120, AUTOKEY_PAD
+    dd 140, 155, PAD_RIGHT
+    dd 175, 400, AUTOKEY_PAD
+%else
+    dd  30, 400, AUTOKEY_PAD
+%endif
+    dd 430, 436, PAD_A
     dd  -1,  -1, 0
 %elifdef AUTOKEY_TITLE
     ; Boot path with the title screen: pulse A through the title + main menu
