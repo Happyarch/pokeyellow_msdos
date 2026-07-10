@@ -75,6 +75,20 @@ regression check for the refactored `ShowTextStream` path.
 
 ## Deferred to the next milestone
 
-Oak walk-up cutscene (needs scripted NPC movement + Pikachu battle stub); per-map
+Oak walk-up cutscene (needs ~~scripted NPC movement~~ + Pikachu battle stub); per-map
 `_Script` state machines beyond the no-op skeleton; the `DisplayTextID` special dict
 cases (start menu, mart, pokecenter, PC) — all stubbed and recorded.
+
+**INBOUND HANDOFF (2026-07-10, from the overworld-port plan): scripted NPC movement
+is DONE and this plan now owns OW-2.5.** The overworld plan's Stage 2 landed the
+complete scripted-movement engine (DoScriptedNPCMovement/InitScriptedNPCMovement,
+the MoveSprite scripted chain incl. Func_5288, pathfinding, auto_movement's
+`PalletMovementScript_*` Oak walk-to-lab state machine + RLELists, ungated
+`RunNPCMovementScript` dispatch) — all linked, faithful, and inert until a script
+fires the trigger. The blocker for the Oak cutscene is now purely on THIS plan's
+side: replace the `PalletTownDefaultScript`/`PalletTown_CutsceneStub` ret-stubs
+with the real trigger + cutscene states 1–8. When that lands, run **OW-2.5's
+runtime verification** (spec in `current_plan_overworld_port.md` Stage 2):
+DOSBox-X MCP breakpoint `DoScriptedNPCMovement`, `gb_read wNPCMovementDirections2`,
+`dump_frame` per step; final FRAME.BIN shows Oak + player walked to the Lab.
+Report the result back to the overworld plan's Stage 8 runtime-regression item.

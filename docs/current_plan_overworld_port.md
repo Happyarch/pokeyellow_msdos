@@ -948,7 +948,7 @@ adds to `GAME_SRCS` (or `OVERWORLD_CHECK_SRCS` if closure unresolved), runs
 
 - Exit: 7 new files + 2 extensions linked; baseline unchanged.
 
-### Stage 2 — Scripted NPC movement `[ ]` — unblocks Oak cutscene
+### Stage 2 — Scripted NPC movement `[x]` CLOSED 2026-07-10 (movement side complete; OW-2.5 runtime verify HANDED OFF to the script-engine session — user directive 2026-07-10)
 
 **TICKET OW-2.1: movement.asm scripted chain** `[SOLO #1]` — **CORE DONE 2026-07-09**
 - Pret: `engine/overworld/movement.asm` (remaining routines)
@@ -1022,15 +1022,18 @@ adds to `GAME_SRCS` (or `OVERWORLD_CHECK_SRCS` if closure unresolved), runs
   - Gate: overworld_pallet goldencheck PASS (no regression from the relocation); faithdiff clean on all four labels; lint 0. Check-only until `npc_movement_2`/trainer-AI callers land (they set `hNPCSpriteOffset`/`hFindPath*`).
 **TICKET OW-2.3: auto_movement.asm** `[SWARM/Sonnet]` **— DONE 2026-07-09 (solo)**. New `src/engine/overworld/auto_movement.asm`: `_EndNPCMovementScript` + `EndNPCMovementScript` (banking-wrapper, allowlisted), the 5 `PalletMovementScript_*` (Oak walk-to-lab state machine) + `PalletMovementScriptPointerTable`, both Pewter tables + `PewterMovementScript_*`, all RLELists. `PlayerStepOutFromDoor` left in overworld.asm (not redefined). Real audio wired (`PlayMusic` al=id/bl=bank — the "PlayDefaultMusic/StopAllMusic stub" leaf is obsolete post-OW-A.14). `dw`→`dd` flat dispatch tables (match `CallFunctionInTable`/`RunNPCMovementScript` ×4). Check-only (HOME_CHECK_SRCS); `HideObject` an unported predef extern. faithdiff artifacts (indirect `res[hl]`, sprite-offset ABI, composite field) all justified; lint 0.
 
-**Stage 2 status:** OW-2.1 (core + Func_5288 tail) / OW-2.2 / OW-2.3 / OW-2.4 all
-DONE. Remaining Stage 2 = **OW-2.5 only** (runtime Oak-cutscene exercise via MCP —
-needs the real PalletTown_Script trigger/states, currently ret-stubs in
-src/scripts/pallet_town.asm, owned jointly with script-engine Stage 6; the
-movement side is now fully in place: scripted branch + Func_5288 linked,
-RunNPCMovementScript dispatch ungated, auto_movement tables linked).
+**Stage 2 status: CLOSED 2026-07-10.** OW-2.1 (core + Func_5288 tail) / OW-2.2 /
+OW-2.3 / OW-2.4 all DONE — the movement side is fully in place (scripted branch +
+Func_5288 linked, RunNPCMovementScript dispatch ungated, auto_movement tables
+linked). **OW-2.5 is HANDED OFF to a script-engine session (user directive
+2026-07-10):** it needs the real PalletTown_Script trigger/states (ret-stubs in
+src/scripts/pallet_town.asm, owned by script-engine Stage 6), so the Oak-cutscene
+MCP runtime exercise rides with that work — see
+`current_plan_script_engine.md`. Stage 8's runtime-regression item keeps the
+Oak-cutscene FRAME.BIN as a cross-plan dependency on that session.
 **TICKET OW-2.4: pewter_guys.asm** `[SWARM/Sonnet]` **— DONE 2026-07-09 (solo)**. New `src/engine/events/pewter_guys.asm` (pret `engine/events/pewter_guys.asm`); flat-pointer adaptation (`dw`→`dd`, 6-byte coord stride). Check-only (HOME_CHECK_SRCS). faithdiff clean/lint 0. **Note:** the plan's "`DecodeRLEList`" hint was inaccurate — real `PewterGuys` is self-contained (0 calls), directly copying movement streams onto the sim-joypad queue.
   - **Foundation fix (separate commit):** discovered + corrected a family of guessed sim-joypad / trainer-union / field-move WRAM addresses that disagreed with the golden sym and sat *inside* the 180-byte `wNPCMovementDirections` buffer (`wSimulatedJoypadStatesIndex` 0xCC84→0xCD38, `wJoyIgnore` 0xCCB7→0xCD6B, override index/mask, `wFieldMoves*`, the whole m8_2 trainer/emotion union +6/+7). All relocate together (symbol-referenced); added `wWhichPewterGuy`=0xD12E. Gate: full `make fidelity` (6/6) PASS. This unblocks any scripted-movement/sim-joypad runtime work.
-**OW-2.5: Oak cutscene verification** `[root]` — enable `PalletTownDefaultScript` trigger (script-engine Stage 6 stubs), DOSBox-X MCP: breakpoint `DoScriptedNPCMovement`, `gb_read wNPCMovementDirections2`, `dump_frame` per step; final FRAME.BIN shows Oak + player walked to the Lab. Update `current_plan_script_engine.md` (deferral resolved).
+**OW-2.5: Oak cutscene verification** `[root]` — **HANDED OFF to the script-engine session (user directive 2026-07-10; tracked in `current_plan_script_engine.md`).** Spec for that session: enable `PalletTownDefaultScript` trigger (script-engine Stage 6 stubs → real trigger/states in src/scripts/pallet_town.asm), DOSBox-X MCP: breakpoint `DoScriptedNPCMovement`, `gb_read wNPCMovementDirections2`, `dump_frame` per step; final FRAME.BIN shows Oak + player walked to the Lab. The overworld side (this plan) is complete and inert until that trigger fires; the scripted chain's first live consumer is the rival-exit `$04`×5 list through Func_5288 set 1.
 
 ### Stage 3 — Map mutation `[x]` COMPLETE (2026-07-10; OW-3.3 data-generator tail + the deferred MCP runtime verifies remain, tracked in-ticket)
 
