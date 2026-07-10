@@ -1029,7 +1029,7 @@ adds to `GAME_SRCS` (or `OVERWORLD_CHECK_SRCS` if closure unresolved), runs
 
 ### Stage 4 — Boulder subsystem `[ ]` (SWARM wave)
 
-**TICKET OW-4.1: player_state.asm part 2** — `CheckForCollisionWhenPushingBoulder` **DONE 2026-07-10** (into player_state.asm; faithdiff clean, lint 0). **Scope correction:** `CheckForBoulderCollisionWithSprites` lives in pret `push_boulder.asm`, not player_state.asm — per the path-mirror rule it moves to **OW-4.2** (externed from here for now). So OW-4.1 = just the one player_state.asm routine.
+**TICKET OW-4.1: player_state.asm part 2** — `CheckForCollisionWhenPushingBoulder` + `CheckForBoulderCollisionWithSprites` **DONE 2026-07-10** (both into player_state.asm; the plan's grouping was correct — both are defined in pret `engine/overworld/player_state.asm`. An intermediate commit wrongly externed the second one based on a bad grep; corrected same session). faithdiff clean on both, lint 0. Check-only. Added wBoulderSpriteIndex/wNumSprites/H_PLAYER_Y/X_COORD/wSprite01StateData2MapY (golden).
 **TICKET OW-4.2: push_boulder.asm** — `TryPushingBoulder` + movement tables, `DoBoulderDustAnimation`, `ResetBoulderPushFlags`. Leaves: `SFX_PUSH_BOULDER` → `PlaySound` stub; `EmotionBubble` (extern; if trainer_engine still check-only, note for OW-7.2 promotion).
 **TICKET OW-4.3: dust_smoke.asm** — `AnimateBoulderDust`, `GetMoveBoulderDustFunctionPointer` + table, `LoadSmokeTileFourTimes`/`LoadSmokeTile` (sets `g_tilecache_dirty`); incbin `gfx/overworld/smoke.2bpp` (precedent: pokeballs.asm).
 **TICKET OW-4.4: field_move_messages.asm** — `PrintStrengthText`, `IsSurfingAllowed` + texts/coords; hooks the existing party pop-up field-move layer (`FieldMoveDisplayData`).
