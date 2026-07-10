@@ -215,7 +215,7 @@ interactively with the user.
       verification. The walk-north baseline was refreshed after OW-A.1 (now captures
       the correctly-enabled flower animation).
 
-### Stage A — Fidelity rectification + pret-label restoration `[~]`
+### Stage A — Fidelity rectification + pret-label restoration `[x]` COMPLETE 2026-07-10 (OW-A.6 was the last open ticket; documented tails: A.1's minor `hMovingBGTilesCounter1` reset, A.5's save/continue `BIT_NO_PREVIOUS_MAP` deferral, and the OW-A.6 "wild-live promotion" follow-up)
 
 **TICKET OW-A.1: LoadTilesetHeader rectification** `[SWARM/Sonnet]` `[x] DONE 2026-07-04`
 - Pret: `engine/overworld/tilesets.asm:LoadTilesetHeader` (+ `data/tilesets/tileset_headers.asm`, `DungeonTilesets`)
@@ -569,7 +569,7 @@ root pret tree.
   may surface title bugs; (4) A.4(b) changes the working transition path — highest risk, own
   session, MCP-verified.
 
-**TICKET OW-A.5: map-load faithfulness cluster** `[SWARM/Sonnet]` — DIVERGENT (overworld.asm)
+**TICKET OW-A.5: map-load faithfulness cluster** `[SWARM/Sonnet]` — **CLOSED OUT 2026-07-05** (header was stale; one documented deferral: the `BIT_NO_PREVIOUS_MAP` early-return rides the save/continue flow)
 - **LoadWildData wiring DONE (2026-07-04):** `LoadMapHeader` now `call`s `LoadWildData`
   at the pret-faithful point (after `LoadTilesetHeader`, = pret `:1900`). Required promoting
   `src/data/wild_data.asm` + `src/engine/overworld/wild_mons.asm` from check-only `BATTLE_SRCS`
