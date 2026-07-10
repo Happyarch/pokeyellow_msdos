@@ -441,7 +441,15 @@ def get_connection(direction, conn_map_id, offset,
 
     _src = 0
     _tgt = offset + BORDER
-    if _tgt < 2:
+    # DIVERGENCE (border): pret's `connection` macro (macros/scripts/maps.asm) writes
+    # `IF _tgt < 2` with MAP_BORDER = 3. No connection in the game uses offset -1 or -2,
+    # so at border 3 that test is exactly equivalent to `_tgt < 0` on all real data. At
+    # the port's border 6 it is NOT: offset -5 yields _tgt = 1, which trips the clamp and
+    # produces _src = -1 — a negative source row, so _blk indexes one block-row before the
+    # connected map's data and strip_length overruns by one. Nine connections use offset -5
+    # (Route1/2/5/6/19/24). The clamp exists to stop a negative *destination* row, so the
+    # faithful generalization of pret's intent is `_tgt < 0`.
+    if _tgt < 0:
         _src = -_tgt
         _tgt = 0
 

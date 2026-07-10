@@ -887,7 +887,14 @@ ifdef DEBUG_WARPS
 GEN_MAP_HEADERS_FLAGS += --debug-warps
 endif
 
-assets/map_headers.inc assets/extra_includes.inc assets/map_dims.inc:
+# NB: these had NO prerequisites, so once the .inc files existed the rule never fired
+# again — editing the generator or the pret map data silently shipped stale headers
+# (this hid the border-6 connection-clamp bug for a month). Keep the inputs listed.
+assets/map_headers.inc assets/extra_includes.inc assets/map_dims.inc: \
+    tools/gen_map_headers.py \
+    ../constants/map_constants.asm \
+    $(wildcard ../data/maps/headers/*.asm) \
+    $(wildcard ../data/maps/objects/*.asm)
 	python3 tools/gen_map_headers.py $(GEN_MAP_HEADERS_FLAGS)
 
 # Per-map (music id, ROM bank) table — pret data/maps/songs.asm (gen_map_songs.py).
