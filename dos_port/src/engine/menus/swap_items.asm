@@ -147,6 +147,26 @@ HandleItemListSwapping:
     jmp DisplayListMenuIDLoop
 
 .swapSameItemType:
+    ; GLITCH: "Item Underflow / Dry Underflow" — `add al,bl` below is an
+    ; unclamped 8-bit add of the two stacks' quantities. If the true sum is
+    ; exactly 256 (reachable via the documented multi-step PC-box manipulation
+    ; that engineers a >=100 quantity byte, then SELECT-merges it against a
+    ; second stack), AL wraps to 0 BEFORE the `cmp al,100` check below, which
+    ; then sees 0 < 100 and takes the "just combine" path — writing a quantity
+    ; of 0 into the surviving slot instead of detecting overflow. A displayed
+    ; ×0 stack is the entry point for the item-underflow chain: TOSSing one unit
+    ; from a ×0 stack underflows the packed quantity byte 0x00 -> 0xFF (×255),
+    ; exposing memory beyond the bag's real slot count as a fake, editable item
+    ; slot — the gateway to "ws# #m#" and the item-underflow ACE chain. Gen-1
+    ; behavior, preserved verbatim (matches pret's identical 8-bit `add`/`cp
+    ; 100`). pret ref: engine/menus/swap_items.asm:HandleItemListSwapping
+    ; (.swapSameItemType), docs/references/yellow_glitches.md#item--inventory
+    ; (Item Underflow / Dry Underflow). Safety: this file is CHECK-only per its
+    ; header (DisplayListMenuIDLoop/HandleItemListSwapping are not yet wired
+    ; into any linked caller — "No live caller invokes the list menu yet"), so
+    ; this path is dormant, not reachable, in the current build. Once linked:
+    ; unsafe — ACE can escape EBP allocation via the downstream ws# #m# chain
+    ; (see docs/glitch_safety.md); test only under DOSBox or 86Box.
     inc edx
     mov al, [ebp + esi]
     mov bl, al

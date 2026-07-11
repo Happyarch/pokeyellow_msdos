@@ -63,3 +63,40 @@ instead of a severity.
 | Struggle PP Underflow | BUG(critical), ACE: Potential | critical | Yes | `src/engine/battle/decrement_pp.asm:DecrementPP` | Yes (newly tagged this pass) |
 | Hyper Beam + Freeze | BUG(critical) | critical | Yes | `src/engine/battle/core.asm` `.frozenCheck` / `.eFrozenCheck` | Yes (newly tagged this pass) |
 | Index #000 Post-Capture | BUG(critical), ACE: Potential | critical | **No** | pret's `ThrowBall`/capture-to-party path — no catch-during-battle system (`ThrowBall`/`CatchMon`) exists anywhere in `dos_port/src`; only post-battle party-add (`add_party_mon.asm`) and trade/evolution paths are ported | Pending port |
+
+### Overworld / Map (5 entries, yellow_glitches.md lines 87-91)
+
+All 5 are **pending port** — every one depends on a subsystem not yet present:
+
+| Name | Category | Ported? | Reasoning |
+|---|---|---|---|
+| Mew Glitch | GLITCH | **No** | Requires the Fly-out-of-battle field effect (no `FLY_EFFECT` field-move execution exists — `src/engine/menus/field_moves.asm` has no Fly handling, only `town_map.asm`'s menu display) combined with trainer-sight-pending-battle carryover across a map load. |
+| Trainer Escape / Trainer-Fly | GLITCH | **No** | Same missing Fly-out-of-battle mechanism; `trainer_engine.asm` (ported: `TrainerEngage`/`CheckForEngagingTrainers`/`EngageMapTrainer`) has no pending-battle-flag-survives-a-warp path to trigger this from. |
+| Glitch City | GLITCH | **No** | Requires Safari Zone + the save system's mid-session hard-reset timing window; no save system exists yet (`SaveSAVtoSRAM`/`LoadSAV` unported — see Save/SRAM category below). |
+| OobLG (Out-of-bounds map loading) | GLITCH (YES ACE) | **No** | This port's map loader is fundamentally different from pret's mechanism — maps are loaded from a fixed, embedded per-map blob table, not a generic ROM-bank `MapHeaderPointers` walk indexed by an unclamped map ID, so there is no equivalent "overflow the map index" code path to preserve or guard yet. Revisit once/if a generic indexed map-table loader lands. |
+| Fossil / Ghost MissingNo. (Yellow) | GLITCH | **No** | Requires the Cinnabar fossil-choice script + MissingNo. species/sprite handling; no `Fossil`/`MissingNo` reference anywhere in `dos_port/src`. |
+
+### Follower / Pikachu Sprite (7 entries, yellow_glitches.md lines 96-103)
+
+All 7 are **pending port**. `src/engine/overworld/pikachu.asm` + `src/engine/pikachu/pikachu_status.asm` exist but (per the batch-1 finding on `bugs_and_glitches.md`'s `AppendPikachuFollowCommandToBuffer` entry) only cover the position/animation-display subset of the follower system — the step-command buffer, happiness bookkeeping, and dance/freeze state machine these glitches depend on are not ported:
+
+| Name | Category | Ported? | Reasoning |
+|---|---|---|---|
+| Pikachu Off-Screen ACE | GLITCH (YES ACE) | **No** | Depends on `AppendPikachuFollowCommandToBuffer` (pikachu_follow.asm) — confirmed not ported (see `docs/bug_categorization.md`'s bugs_and_glitches.md table, row 3). |
+| Pikachu Off-Screen Corruption (non-ACE) | BUG(general) | **No** | Same missing buffer mechanism. |
+| Pikachu Item Happiness Glitch | BUG(general) | **No** | No happiness-update routine exists (`grep -ri happiness` across `src/` finds only unrelated EXP-happiness-bonus code in battle files and a memory-map comment in `pikachu.asm`; no item-use happiness check). |
+| Walking Pikachu Happiness Edge Cases | BUG(general) | **No** | Same — no step/walking happiness-increment logic ported. |
+| Pikachu vs. Poké Ball (link battle) | BUG(general) | **No** | Requires link-battle support (`; TODO-HW: network HAL`, Phase 4 — not started per CLAUDE.md). |
+| Pikachu Freeze (cliff + dance) | BUG(general) | **No** | Requires ledge-jump interrupt handling cross-wired with Pikachu's dance-animation state machine; no dance-state code found. |
+| Pikachu Stutter (Pokémon Tower) | BUG(general) | **No** | Requires the Pokémon Tower purified-zone flag + fainted-Pikachu follower-animation interaction; neither exists yet. |
+
+### Item / Inventory (6 entries, yellow_glitches.md lines 109-114)
+
+| Name | Category | Severity + reasoning | Ported? | Routine | Tagged? |
+|---|---|---|---|---|---|
+| Item Underflow / Dry Underflow | GLITCH (YES ACE) | GLITCH | Yes (translated, **not linked** — see Tagged? note) | `src/engine/menus/swap_items.asm:HandleItemListSwapping` (`.swapSameItemType`) | Yes (newly tagged this pass) — found the exact root cause: an unclamped 8-bit `add al,bl` before the `cmp al,100` overflow check, identical to pret's own 8-bit arithmetic. File header states `DisplayListMenuIDLoop`/`HandleItemListSwapping` have "No live caller" yet (check-only), so this path is translated but dormant, not reachable, in the current build. |
+| ws# #m# (Yellow ACE glitch item) | GLITCH (YES ACE) | GLITCH | **No** | Requires (a) the item-underflow chain to be reachable (currently dormant — see above) and (b) a generic item-use effect dispatch for out-of-range item ids; no `ItemUsePtrTable`/`UseItem_` dispatch exists (`docs/current_plan_items.md` confirms: "item USE dispatch...deferred") | Pending port |
+| Expanded Item Pack | GLITCH (YES ACE) | GLITCH | **No** (dormant, same mechanism) | Shares `swap_items.asm`'s dormant list-menu driver; `SanitizeInventory` (`inventory.asm`, `BUG_FIX_LEVEL>=1`) already clamps bag/PC count to hardcoded capacity when that code path IS exercised via `AddItemToInventory_`/`RemoveItemFromInventory_`, but this is a separate mechanism (over-capacity list access via the swap UI, not the add/remove path) | Not independently tagged — tracks the Item Underflow entry above; revisit once `HandleItemListSwapping` is linked |
+| Text Pointer Manipulation / Mart Pwner / LWA | GLITCH (YES ACE) | GLITCH | **No** | Requires the shop/mart buy screen (unterminated glitch-item name overflowing a text buffer); no `mart`/`buy`-named file exists anywhere in `dos_port/src` | Pending port |
+| LOL Glitch | GLITCH (YES ACE) | GLITCH | **No** | Same — no mart/buy screen | Pending port |
+| Item slot $FF | BUG(critical), ACE: Indirect | critical | **No** | Catalogue describes reading a pointer from position 255 of an item-effect pointer table past `wItems`; no `ItemUsePtrTable`-equivalent generic item-use dispatch exists yet (individual effect helpers in `item_effects.asm` are called directly, not through an index-256 pointer table) | Pending port |
