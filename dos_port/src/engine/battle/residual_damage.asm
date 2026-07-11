@@ -28,7 +28,15 @@
 ;   overkill". When the drained mon has less HP than 1/16 maxHP, DecreaseOwnHP
 ;   zeros that mon's HP but BX still holds the uncapped drain. IncreaseEnemyHP
 ;   heals the seeder by the uncapped amount — potentially more than was taken.
-;   Carried faithfully.
+;   Carried faithfully. Safety: safe under DPMI (bounded WRAM arithmetic, no
+;   ACE potential).
+;
+; GLITCH: toxic-counter-scales-Leech-Seed-too (the branch at .nonZeroDamage's
+;   toxic-counter check below executes even when this routine was entered from
+;   the Leech Seed path, not just Poison/Burn). This is the same underlying
+;   mechanism as the "Leech Seed + Toxic counter interaction" GLITCH above, not
+;   a distinct bug. Carried faithfully. Safety: safe under DPMI (bounded WRAM
+;   arithmetic, no ACE potential).
 ;
 ; Deferred UI externs (Wave 2 battle front-end must supply these):
 ;   PrintText           — ESI = flat pointer to text label; prints a text box.

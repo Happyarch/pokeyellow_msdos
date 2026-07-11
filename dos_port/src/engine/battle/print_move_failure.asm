@@ -72,8 +72,11 @@ PrintMoveFailureText:
     ; GLITCH: Gen-1 Jump Kick/Hi Jump Kick crash recoil is always exactly 1 HP.
     ; wDamage is 0 here (the move missed before any damage was calculated), so the
     ; intended "damage/8" recoil always collapses to the post-shift minimum of 1.
-    ; Preserved as-is (pret ref: engine/battle/core.asm:PrintMoveFailureText,
-    ; docs/bugs_and_glitches.md — Jump Kick/Hi Jump Kick fixed 1 HP crash damage).
+    ; Preserved as-is. Not separately catalogued in docs/bugs_and_glitches.md or
+    ; docs/references/yellow_glitches.md (corrected a stale backref to the former
+    ; this pass — that file has no Jump Kick entry). pret ref:
+    ; engine/battle/core.asm:PrintMoveFailureText. Safety: safe under DPMI
+    ; (bounded WRAM arithmetic, no ACE potential).
     mov esi, wDamage                    ; ld hl, wDamage
     mov al, [ebp + esi]                 ; ld a, [hli] — high byte
     inc esi
