@@ -135,7 +135,7 @@ CalcExperience:
     ; Save/SRAM-category "Experience PC Withdrawing Softlock" BUG(critical) —
     ; a level-1 Medium-Slow mon withdrawn from the PC re-runs this same
     ; underflowing calc in a context that softlocks instead of just mis-leveling
-    ; (that call site is not yet ported — see docs/bug_categorization.md).
+    ; (reachable call site: engine/pokemon/add_mon.asm:_MoveMon, tagged there).
     ; Gen-1 behavior, preserved verbatim. pret ref: engine/pokemon/experience.asm:
     ; CalcExperience, docs/references/yellow_glitches.md#battle-system
     ; (Experience Underflow -> Lv 100) and #save--sram (Experience PC

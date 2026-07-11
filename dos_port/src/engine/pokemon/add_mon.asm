@@ -297,6 +297,18 @@ _MoveMon:
     add al, 2
     mov [ebp + wMonDataLocation], al
     call LoadMonData
+    ; BUG(critical): "Experience PC Withdrawing Softlock" — this is the reachable
+    ; call site for that catalogue entry: withdrawing a level-1 Medium-Slow mon
+    ; from the PC (BillsPCWithdrawLogic -> _MoveMon, BOX_TO_PARTY) reaches
+    ; CalcLevelFromExperience here, which can hit the 24-bit underflow in
+    ; CalcExperience's linear/const-term subtraction (see the GLITCH tag there)
+    ; and report Lv 100 for a mon that should be Lv 1-2 — in the withdraw context
+    ; (rather than a battle EXP-gain context) this is documented to softlock
+    ; rather than just mis-level. Gen-1 behavior, preserved verbatim. pret ref:
+    ; engine/pokemon/add_mon.asm:_MoveMon (BOX_TO_PARTY/DAYCARE_TO_PARTY path),
+    ; engine/pokemon/experience.asm:CalcExperience,
+    ; docs/references/yellow_glitches.md#save--sram (Experience PC Withdrawing
+    ; Softlock).
     call CalcLevelFromExperience
     mov al, dh
     mov [ebp + wCurEnemyLevel], al

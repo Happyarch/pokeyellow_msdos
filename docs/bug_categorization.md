@@ -100,3 +100,29 @@ All 7 are **pending port**. `src/engine/overworld/pikachu.asm` + `src/engine/pik
 | Text Pointer Manipulation / Mart Pwner / LWA | GLITCH (YES ACE) | GLITCH | **No** | Requires the shop/mart buy screen (unterminated glitch-item name overflowing a text buffer); no `mart`/`buy`-named file exists anywhere in `dos_port/src` | Pending port |
 | LOL Glitch | GLITCH (YES ACE) | GLITCH | **No** | Same — no mart/buy screen | Pending port |
 | Item slot $FF | BUG(critical), ACE: Indirect | critical | **No** | Catalogue describes reading a pointer from position 255 of an item-effect pointer table past `wItems`; no `ItemUsePtrTable`-equivalent generic item-use dispatch exists yet (individual effect helpers in `item_effects.asm` are called directly, not through an index-256 pointer table) | Pending port |
+
+### Save / SRAM (6 entries, yellow_glitches.md lines 120-125)
+
+| Name | Category | Severity + reasoning | Ported? | Routine | Tagged? |
+|---|---|---|---|---|---|
+| SRAM Glitch / Partial Save | GLITCH (YES ACE) | GLITCH | **No** | Requires the save system's Yes/No-dialog-close timing window + a mid-write hard-reset; no `SaveSAVtoSRAM`/`LoadSAV` exists (`dos_port/src/save/dsv_io.asm` is a port-only `.dsv` file-I/O scaffold — `DsvWriteSave`/`DsvReadSave` — not the pret save routines themselves; TODO.md: "Save system...replacing SRAM" is open Phase 5 work) | Pending port |
+| Pokémon Storage Cloning | GLITCH | GLITCH | **No** | Requires save-write timing races against `BillsPCDepositLogic`/`BillsPCWithdrawLogic` (both ported, `bills_pc.asm`) — but with no save system, there is no write to race against | Pending port |
+| Save Data Carryover | GLITCH | GLITCH | **No** | Requires the new-game-start + save-file-read timing window; no save system | Pending port |
+| Hall of Fame Sprite Buffer Overflow | BUG(critical) | critical | **No** | No Hall of Fame system anywhere in `dos_port/src` (no `hall`/`hof`-named file) | Pending port |
+| Save Corruption (power-off timing) | BUG(critical), ACE: Indirect | critical | **No** | Same dependency as SRAM Glitch — no save system | Pending port |
+| Experience PC Withdrawing Softlock | BUG(critical) | critical | **Yes** | `src/engine/pokemon/add_mon.asm:_MoveMon` (BOX_TO_PARTY/DAYCARE_TO_PARTY path, the `call CalcLevelFromExperience` site) | Yes (newly tagged this pass) — found the actual reachable call site (`BillsPCWithdrawLogic` → `_MoveMon` → `CalcLevelFromExperience` → the already-tagged `CalcExperience` underflow); corrected the batch-2 `CalcExperience` cross-reference, which had guessed this call site wasn't ported yet. |
+
+### Text / Menu, Audio, Sprite / Graphics (10 entries, yellow_glitches.md lines 131-150)
+
+| Name | Category | Severity + reasoning | Ported? | Routine | Tagged? |
+|---|---|---|---|---|---|
+| Town Map Navigation Oversight | BUG(general) | cosmetic — extra button press, no state effect | Yes (faithful by construction) | `src/engine/items/town_map.asm:.pressedUp`/`.pressedDown` — a straightforward modulo cursor over `TownMapOrder`; the "Route 1 needs a double-press" quirk is a property of that Tier-1 data table's entry ordering (byte-identical to pret), not a distinct navigation-code bug | Not tagged — nothing pret-specific in the port's own code to guard; the faithful data table already reproduces it |
+| Trade Evolution Glitch Move | BUG(general) | cosmetic — Gen-I/II move-id mismatch, cosmetic only | **No** | Requires Gen I ↔ Gen II trading (Time Capsule); no `trade`-named file anywhere in `dos_port/src` | Pending port |
+| Full Box Glitch | — (fixed in Yellow) | N/A — **fixed in Yellow, do NOT emulate** | **No** | Requires the old-man catching demo + a full PC box; no such scripted sequence ported | Pending port (no tag needed even once ported — do not emulate) |
+| Nidorino Cry Mismatch | BUG(general) | cosmetic — wrong cry SFX only | **No** | Requires the title-screen/intro rival-Nidorino demo battle; `src/movie/title.asm` is explicitly a "bespoke early implementation that does NOT render fully correctly" (CLAUDE.md) with no demo battle sequence | Pending port |
+| Battle Draw Victory Fanfare | BUG(general) | cosmetic — wrong music cue only | **No** | Requires mutual-faint ("draw") detection/resolution on a Self-Destruct/Explosion KO; no such handling found in `faint_enemy.asm`/`faint_leaves.asm`/`move_effects/explode.asm` | Pending port |
+| Silent Indigo Plateau | BUG(general) | cosmetic — music stops, no state effect | **No** | Requires the scripted Elite Four rival battle + an evolution-during-battle timing interaction with the music driver; no scripted rival-battle sequence ported | Pending port |
+| Red's Transparent White Pixels | BUG(general) | cosmetic — palette/transparency quirk | **No** | Title-screen Red sprite; `src/movie/title.asm` doesn't render fully correctly yet (known low-priority defect per CLAUDE.md) — not independently verifiable until the title-screen rewrite lands | Pending port (tracked under the existing title-screen defect, not a new item) |
+| NPC Over Grass (Viridian Forest) | BUG(general) | cosmetic — visual layering only | Yes (faithful by construction) | Viridian Forest is a ported map (`map_sprites.asm:InitMapSprites` places NPCs from the embedded, Tier-1 map-object binary); the Lass's on-grass position is a property of that byte-identical data, not port-side placement logic | Not tagged — nothing pret-specific in the port's own code to guard; not independently re-verified in-game this pass |
+| Chansey Facing South (Pokémon Zoo) | BUG(general) | cosmetic — visual only | **No** | No Pokémon Zoo (Cerulean Cave-adjacent) map data found in `assets/`/`include/` yet | Pending port |
+| Trade Menu Palette Glitch | — (fixed in Yellow) | N/A — **fixed in Yellow, do NOT emulate** | **No** | Requires the trade UI; no trade system ported | Pending port (no tag needed even once ported — do not emulate) |
