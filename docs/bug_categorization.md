@@ -15,6 +15,18 @@ data, crash/hang, desync battle state, or change gameplay outcome. `cosmetic`
 critical. `GLITCH` = intentional/exploitable, tagged with a `Safety:` rating
 instead of a severity.
 
+**translation.db / allowlist hygiene (plan doc Phase A step 5):** `update_label_db`
++ `lint_pret_labels` ran after every batch this task — 0 violations throughout.
+Separately swept `dos_port/tools/pret_label_allowlist.json` (56 `relocated_files`,
+261 `relocated_labels`, 7 `suppress` entries) for staleness: every `port_file`
+reference resolves to a real file (no broken relocations), and the 7 `suppress`
+entries' "known interim" claims were spot-checked against current `Makefile`
+state (e.g. the `FormatMovesString` dup_def entry claims `misc.asm` is still
+check-only — confirmed, still excluded from `LINK_SRCS`). No new doubts to
+report; the file's own header already carries a standing
+`"DRAFT (Session H 2026-07-07)... Flagged for user review"` note predating this
+task, which this pass didn't need to add to.
+
 ---
 
 ## `docs/bugs_and_glitches.md` (4 entries)
