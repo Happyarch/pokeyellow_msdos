@@ -141,6 +141,7 @@ global text_arrow_pos
 extern pad_buttons   ; joypad.asm — button held state (bit 0=A, bit 1=B)
 extern set_single_window   ; src/ppu/ppu.asm — define g_windows[] as one descriptor
 extern g_window_count      ; src/ppu/ppu.asm — unified window list count (open flag)
+extern g_bg_whiteout       ; src/ppu/ppu.asm — set by full-takeover menus (party/dex/…)
 extern PrintNumber         ; src/home/print_num.asm — TX_NUM (text_decimal)
 extern PrintBCDNumber      ; src/home/print_bcd.asm — TX_BCD (text_bcd / money)
 
@@ -511,6 +512,14 @@ sync_dialog_window:
     je .skip
     cmp byte [g_dex_flavor_active], 0
     jne .full_page                       ; pokédex flavor: mirror the whole page
+    ; A full-takeover menu (g_bg_whiteout=1) owns GB_TILEMAP1 rows 0-5 for its own
+    ; windows (e.g. the party-menu panel). The overworld dialog's char-reveal mirror
+    ; must NOT paint the dialog rows (W_TILEMAP 12-17) over that panel. Only the
+    ; map-overlay dialog (g_bg_whiteout=0) wants this copy. Without the gate, a stray
+    ; PrintText/PrintLetterDelay during such a menu (H_WY left != RENDER_H by the
+    ; menu's own set_single_window) duplicates the menu's message box into rows 0-5.
+    cmp byte [g_bg_whiteout], 0
+    jne .skip
     push ecx
     push esi
     push edi
