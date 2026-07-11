@@ -128,9 +128,12 @@ HealEffect_:
 ; report "already at max HP" (no-op) if max HP is 255/511 points higher than current
 ; HP. pret ref: engine/battle/move_effects/heal.asm:HealEffect_ ("most significant
 ; bytes comparison is ignored / causes the move to miss if max HP is 255 or 511
-; points higher than the current HP"); docs/bugs_and_glitches.md. Preserved faithfully
-; under BUG_FIX_LEVEL<2 (pret's carry-chained cmp/sbb, MSB result discarded exactly as
-; the original); independent two-byte compare fix at BUG_FIX_LEVEL>=2.
+; points higher than the current HP"); also catalogued as "HP Recovery Failure
+; (mod 255)" in docs/references/yellow_glitches.md#battle-system ("Recovery moves
+; fail silently when HP deficit ≡ 255 (mod 256); treated as -1"). Preserved
+; faithfully under BUG_FIX_LEVEL<2 (pret's carry-chained cmp/sbb, MSB result
+; discarded exactly as the original); independent two-byte compare fix at
+; BUG_FIX_LEVEL>=2.
 %if BUG_FIX_LEVEL >= 2
     mov ah, [ebp + edi]
     cmp ah, [ebp + esi]

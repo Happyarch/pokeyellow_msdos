@@ -108,6 +108,12 @@ section .text
 ; (GetOptionPointer), redraw the cursor, wait the 3-frame dpad delay.
 ; In: EBP = GB base.
 ; ---------------------------------------------------------------------------
+; BUG(cosmetic): "Options menu code fails to clear joypad state on initialization"
+; — the first JoypadLowSensitivity read inside .optionMenuLoop below picks up
+; whatever direction was already held when the menu opened, shifting that row's
+; option left/right on the opening frame. Fix (not applied at BUG_FIX_LEVEL 0):
+; call JoypadLowSensitivity once here, before InitOptionsMenu, to clear it.
+; pret ref: engine/menus/options.asm:DisplayOptionMenu_, bugs_and_glitches.md#options-menu-code-fails-to-clear-joypad-state-on-initialization
 DisplayOptionMenu_:
     call InitOptionsMenu
 .optionMenuLoop:

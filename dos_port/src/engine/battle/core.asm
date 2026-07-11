@@ -1339,6 +1339,15 @@ HandleSelfConfusionDamage:
     call PlayMoveAnimation
     call DrawPlayerHUDAndHPBar
     mov byte [ebp + hWhoseTurn], 0
+    ; BUG(cosmetic): "Substitute + Confusion Self-Hit" — self-inflicted confusion
+    ; damage tail-jumps into the shared ApplyDamageToPlayerPokemon, which (being
+    ; also the normal opponent-damage applicator) checks wPlayerBattleStatus2's
+    ; HAS_SUBSTITUTE_UP and redirects the hit onto the confused mon's OWN
+    ; Substitute (via AttackSubstitute) instead of unconditionally hitting its
+    ; real HP the way a true self-inflicted hit should. Gen-1 behavior,
+    ; preserved verbatim. pret ref: engine/battle/core.asm:HandleSelfConfusionDamage
+    ; (jp ApplyDamageToPlayerPokemon), docs/references/yellow_glitches.md
+    ; #battle-system (Substitute + Confusion Self-Hit)
     jmp ApplyDamageToPlayerPokemon       ; pret jp ApplyDamageToPlayerPokemon — skip the
                                          ; effect dispatch (self-hit is a fixed 40-BP hit)
 

@@ -517,7 +517,14 @@ CriticalHitTest:
     mov bl, [ebp + esi]           ; c = move id
     mov al, [ebp + edx]
     test al, 1 << GETTING_PUMPED  ; focus energy?
-    jnz .focusEnergyUsed          ; (bug: focus energy halves crit instead of doubling)
+    ; BUG(critical): "Critical Hit Ratio Error" — Focus Energy (and Dire Hit)
+    ; are intended to quadruple the crit chance but a bit-shift error makes
+    ; .focusEnergyUsed shr (halve) where the intent was to skip the later shl;
+    ; combined with the normal-move shr below this quarters the crit ratio for
+    ; non-high-crit moves instead of quadrupling it. Gen-1 behavior, preserved
+    ; verbatim. pret ref: engine/battle/core.asm:CriticalHitTest,
+    ; docs/references/yellow_glitches.md#battle-system (Critical Hit Ratio Error)
+    jnz .focusEnergyUsed
     shl bh, 1                     ; base speed/2 * 2
     jnc .noFocusEnergyUsed
     mov bh, 0xFF                  ; cap at 255
@@ -653,6 +660,13 @@ AdjustDamageForMoveType:
     mov bh, al
     mov al, [ebp + hQuotient + 3]
     mov [ebp + wDamage + 1], al        ; ld [hl],a
+    ; BUG(critical): "0 Damage Glitch" — pret's own comment: "if damage is 0,
+    ; make the move miss; this only occurs if a move that would do 2 or 3
+    ; damage is 0.25x effective against the target." A real hit that rounds
+    ; to 0 damage against a dual-type resist is logged as a miss instead of a
+    ; 0-damage hit. Gen-1 behavior, preserved verbatim. pret ref: engine/battle/
+    ; core.asm:AdjustDamageForMoveType, docs/references/yellow_glitches.md
+    ; #battle-system (0 Damage Glitch)
     or al, bh                          ; damage 0?
     jnz .skipTypeImmunity
     inc al
@@ -753,6 +767,12 @@ MoveHitTest:
     mov al, [ebp + wEnemyMoveAccuracy]
     mov bh, al
 .doAccuracyCheck:
+    ; BUG(critical): "1/256 Miss Glitch" — the unsigned `jae` below misses
+    ; whenever the roll equals the accuracy threshold, so even a nominal 100%
+    ; move (accuracy capped at 255) still misses on roll=255 (1/256 chance).
+    ; Gen-1 behavior, preserved verbatim. pret ref: engine/battle/core.asm:
+    ; MoveHitTest (jr nc, .moveMissed / cp b), docs/references/yellow_glitches.md
+    ; #battle-system (1/256 Miss Glitch)
     call BattleRandom
     cmp al, bh
     jae .moveMissed

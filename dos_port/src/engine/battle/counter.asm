@@ -84,6 +84,12 @@ HandleCounterMove:
     ; cleared between turns/switches/battles. Inherent Gen-1 behavior, preserved verbatim.
     ; pret ref: engine/battle/core.asm#L4960, bugs_and_glitches.md#unexpected-counter-damage
     ; (fix listed as TBD upstream — no BUG_FIX_LEVEL gate to key off here).
+    ; Same root cause as yellow_glitches.md's "Counter Glitch" entry ("Counter
+    ; can reflect non-Normal/Fighting moves or the user's own damage"): the
+    ; type check above (Normal/Fighting) only inspects the *last-selected-move*
+    ; type field, not what actually produced the shared wDamage value being
+    ; doubled here — so a stale/mismatched wDamage from an unrelated attack can
+    ; still pass the type gate and get reflected.
     mov esi, wDamage                ; ld hl, wDamage
     mov al, [ebp + esi]             ; ld a, [hli] — high byte
     or al, [ebp + esi + 1]          ; or [hl] — or with low byte
