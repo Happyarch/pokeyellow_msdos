@@ -72,7 +72,7 @@ All 5 are **pending port** — every one depends on a subsystem not yet present:
 |---|---|---|---|
 | Mew Glitch | GLITCH | **No** | Requires the Fly-out-of-battle field effect (no `FLY_EFFECT` field-move execution exists — `src/engine/menus/field_moves.asm` has no Fly handling, only `town_map.asm`'s menu display) combined with trainer-sight-pending-battle carryover across a map load. |
 | Trainer Escape / Trainer-Fly | GLITCH | **No** | Same missing Fly-out-of-battle mechanism; `trainer_engine.asm` (ported: `TrainerEngage`/`CheckForEngagingTrainers`/`EngageMapTrainer`) has no pending-battle-flag-survives-a-warp path to trigger this from. |
-| Glitch City | GLITCH | **No** | Requires Safari Zone + the save system's mid-session hard-reset timing window; no save system exists yet (`SaveSAVtoSRAM`/`LoadSAV` unported — see Save/SRAM category below). |
+| Glitch City | GLITCH | **No** | Requires Safari Zone (not ported — no Safari Zone map/step-counter system anywhere in `dos_port/src`) combined with a mid-session hard-reset timing window against the save write. The save system itself **is** ported and live (`SaveGameData`/`TryLoadSaveFile` family, `save.asm` — corrected from a batch-2 error, see Save/SRAM category below), but Safari Zone alone still blocks this entry. |
 | OobLG (Out-of-bounds map loading) | GLITCH (YES ACE) | **No** | This port's map loader is fundamentally different from pret's mechanism — maps are loaded from a fixed, embedded per-map blob table, not a generic ROM-bank `MapHeaderPointers` walk indexed by an unclamped map ID, so there is no equivalent "overflow the map index" code path to preserve or guard yet. Revisit once/if a generic indexed map-table loader lands. |
 | Fossil / Ghost MissingNo. (Yellow) | GLITCH | **No** | Requires the Cinnabar fossil-choice script + MissingNo. species/sprite handling; no `Fossil`/`MissingNo` reference anywhere in `dos_port/src`. |
 
@@ -103,13 +103,41 @@ All 7 are **pending port**. `src/engine/overworld/pikachu.asm` + `src/engine/pik
 
 ### Save / SRAM (6 entries, yellow_glitches.md lines 120-125)
 
+**Correction (this pass):** the batch-2 pass of this table asserted "no save system
+exists" for every entry below except Experience PC Withdrawing Softlock. That was
+**wrong** — it searched for the plan doc's placeholder names (`SaveSAVtoSRAM`/
+`LoadSAV`), which are not pret's actual labels and don't exist under those names
+anywhere in pret either. The real pret labels are `SaveGameData`/`TryLoadSaveFile`
+(+ `SaveMainData`/`SaveCurrentBoxData`/`SavePartyAndDexData`,
+`LoadMainData`/`LoadCurrentBoxData`/`LoadPartyAndDexData`, `EnableSRAM`/
+`DisableSRAM`/`CalcCheckSum`, `ChangeBox`, `SaveHallOfFameTeams`/
+`LoadHallOfFameTeams`/`HallOfFame_Copy`, `CheckPreviousSaveFile`,
+`ClearAllSRAMBanks`, …), all faithfully translated and **already live** in
+`dos_port/src/engine/menus/save.asm` (header credits it to "menus-port Session 7,
+package H" — predates this bug-tagging task) and **wired into the real START→SAVE
+menu and boot-time load** via `main_menu.asm` (`extern TryLoadSaveFile` / `call
+TryLoadSaveFile`, plus `SaveMenu`). It even has its own smoke-test harness
+(`RunSaveTest`, gated `%ifdef DEBUG_SAVE` / `DEBUG_SAVE_ROUNDTRIP`). The rows below
+are re-derived against the actual code. See also this file's plan doc's "Save
+draft status" section for what this means for Phase B.
+
+**Port SRAM model (all 5 rows below hinge on this):** pret's `s*` SRAM labels have
+no port address at all — every SRAM `CopyData` slice pret does per stage
+(`SaveMainData`/`SaveCurrentBoxData`/`SavePartyAndDexData`) collapses to one call
+to `src/save/dsv_io.asm:DsvWriteSave`, which **atomically rewrites the entire
+`POKEMON.DSV` payload from current WRAM** (single `INT 21h AH=3Ch` create +
+single `AH=40h` write of the whole blob) on **every one of the 3 stage calls** —
+not just that stage's slice. `EnableSRAM`/`DisableSRAM` are flag-preserving
+no-ops (`; TODO-HW: SRAM`); `CalcCheckSum` is translated faithfully but unused by
+the collapsed path (kept for label parity / a future faithful-SRAM layout).
+
 | Name | Category | Severity + reasoning | Ported? | Routine | Tagged? |
 |---|---|---|---|---|---|
-| SRAM Glitch / Partial Save | GLITCH (YES ACE) | GLITCH | **No** | Requires the save system's Yes/No-dialog-close timing window + a mid-write hard-reset; no `SaveSAVtoSRAM`/`LoadSAV` exists (`dos_port/src/save/dsv_io.asm` is a port-only `.dsv` file-I/O scaffold — `DsvWriteSave`/`DsvReadSave` — not the pret save routines themselves; TODO.md: "Save system...replacing SRAM" is open Phase 5 work) | Pending port |
-| Pokémon Storage Cloning | GLITCH | GLITCH | **No** | Requires save-write timing races against `BillsPCDepositLogic`/`BillsPCWithdrawLogic` (both ported, `bills_pc.asm`) — but with no save system, there is no write to race against | Pending port |
-| Save Data Carryover | GLITCH | GLITCH | **No** | Requires the new-game-start + save-file-read timing window; no save system | Pending port |
-| Hall of Fame Sprite Buffer Overflow | BUG(critical) | critical | **No** | No Hall of Fame system anywhere in `dos_port/src` (no `hall`/`hof`-named file) | Pending port |
-| Save Corruption (power-off timing) | BUG(critical), ACE: Indirect | critical | **No** | Same dependency as SRAM Glitch — no save system | Pending port |
+| SRAM Glitch / Partial Save | GLITCH (YES ACE) | GLITCH | **Yes** (save path), but the **exploit precondition does not transfer** | `src/engine/menus/save.asm:SaveGameData`/`SaveMainData`/`SaveCurrentBoxData`/`SavePartyAndDexData` → `src/save/dsv_io.asm:DsvWriteSave` | **No tag** — pret's glitch needs a mid-multi-bank-write hard-reset that leaves *some* SRAM banks updated (new per-stage checksum) and others stale, so a corrupted/partial-merge state still reads back as checksum-valid. The port's design forecloses this structurally: each of the 3 stage calls is an **independent atomic full-payload rewrite** (old WRAM state or new WRAM state, never a stage-partial mix), and a write interrupted between the `AH=3Ch` create and the `AH=40h` write leaves a truncated file that `DsvReadSave`'s `"DOSV"`-magic check rejects outright (routes to `CheckSumFailed`/"file data destroyed", pret's own designed failure path) rather than silently validating. Re-introducing the race (3 truly independent partial SRAM writes) would be a **regression**, not increased fidelity — noted here rather than tagged, since there's no reachable in-port site to *guard*. |
+| Pokémon Storage Cloning | GLITCH | GLITCH | **Yes** (both halves), precondition does not transfer | `src/engine/pokemon/bills_pc.asm:BillsPCDepositLogic`/`BillsPCWithdrawLogic` + `save.asm:SaveGameData` | **No tag** — same structural argument as above: the port has no reset-mid-synchronous-call mechanism analogous to a GB hard reset firing mid-instruction while an SRAM bank write is in flight (DOSBox-X's DPMI calls run to completion or the process is killed outright; there's only one save "bank" to race, and it's atomically rewritten per point above). |
+| Save Data Carryover | GLITCH | GLITCH | Partial (`clear_save.asm`-equivalent new-game flow referenced from `src/movie/title.asm`, not deeply audited this pass) | `src/movie/title.asm` (references the clear-save concept) | **No tag** — same 2-frame hard-reset-at-new-game-start mechanism as above; no DOS-process analog to a GB reset mid-WRAM-init. Not deeply re-investigated this pass since the conclusion (mechanism doesn't transfer) is the same as the two rows above; flag for a closer look only if the title/new-game flow is revisited for its own sake. |
+| Hall of Fame Sprite Buffer Overflow | BUG(critical) | critical | **Partial** — pret-labeled routines exist but are no-ops over the specific memory this bug needs | `save.asm:SaveHallOfFameTeams`/`LoadHallOfFameTeams`/`HallOfFame_Copy` (all `; TODO-HW: SRAM` no-ops — "no port HoF SRAM region yet") | Pending port — the bug needs pret's exact SRAM bank-0 adjacency (`sSpriteBuffer0`/`1`/`2` + `$100` pad immediately followed by `sHallOfFame`, `ram/sram.asm`) *and* a glitch-Pokémon OOB sprite-decompression path that overflows the fixed 3-buffer region into it — neither the adjacency nor the OOB decompression path exist in the port (`sHallOfFame` has no port address at all). |
+| Save Corruption (power-off timing) | BUG(critical), ACE: Indirect | critical | **Yes** (save path), precondition does not transfer | Same as SRAM Glitch / Partial Save row above | **No tag** — identical mechanism/timing window to SRAM Glitch / Partial Save (this is the "if not exploited cleanly" failure-mode framing of the same underlying race), same structural non-reproducibility. |
 | Experience PC Withdrawing Softlock | BUG(critical) | critical | **Yes** | `src/engine/pokemon/add_mon.asm:_MoveMon` (BOX_TO_PARTY/DAYCARE_TO_PARTY path, the `call CalcLevelFromExperience` site) | Yes (newly tagged this pass) — found the actual reachable call site (`BillsPCWithdrawLogic` → `_MoveMon` → `CalcLevelFromExperience` → the already-tagged `CalcExperience` underflow); corrected the batch-2 `CalcExperience` cross-reference, which had guessed this call site wasn't ported yet. |
 
 ### Text / Menu, Audio, Sprite / Graphics (10 entries, yellow_glitches.md lines 131-150)

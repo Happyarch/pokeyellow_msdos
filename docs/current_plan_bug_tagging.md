@@ -164,6 +164,70 @@ status" section, appended by you) lists exactly what remains to *wire* it live
 
 ---
 
+## Save draft status (appended — Phase B superseded by prior work, not executed as scoped)
+
+Before starting Phase B, `label_status`/grep for this doc's placeholder names
+(`SaveSAVtoSRAM`/`LoadSAV`) turned up nothing — which is what led the batch-2
+Phase A pass to (wrongly) conclude no save system was ported at all, and mark
+every Save/SRAM catalogue entry "pending port" on that basis. Re-investigating
+for Phase B with the *actual* pret label names (`SaveGameData`/`TryLoadSaveFile`,
+found by reading pret's real `engine/menus/save.asm`) found that the save system
+is **not a draft** — it's a complete, faithful, already-**live** translation:
+
+- `dos_port/src/engine/menus/save.asm` (1080 lines) translates the entire pret
+  file under pret's exact label names: `TryLoadSaveFile`, `LoadMainData`/
+  `LoadCurrentBoxData`/`LoadPartyAndDexData`, `SaveGameData`/`SaveMainData`/
+  `SaveCurrentBoxData`/`SavePartyAndDexData`, `CalcCheckSum`,
+  `CalcIndividualBoxCheckSums`, `GetBoxSRAMLocation`, `CheckPreviousSaveFile`,
+  `ChangeBox` + its helpers, `SaveHallOfFameTeams`/`LoadHallOfFameTeams`/
+  `HallOfFame_Copy`, `ClearAllSRAMBanks`, `EnableSRAM`/`DisableSRAM`. Its header
+  credits it to "menus-port Session 7, package H" — a session that predates this
+  bug-tagging task entirely.
+- It is **wired into the live game**, not unwired: `main_menu.asm` does
+  `extern TryLoadSaveFile` / `call TryLoadSaveFile` (boot-time load) and calls
+  `SaveMenu` (the START→SAVE flow does `SaveGameData` for real).
+- The `.dsv` container this doc asked Phase B to invent (`WriteDSV`/`ReadDSV`)
+  already exists as `dos_port/src/save/dsv_io.asm:DsvWriteSave`/`DsvReadSave`/
+  `DsvFileExists`, built on exactly the DPMI "Simulate Real Mode Interrupt" INT
+  21h pattern this doc specified (copied from `debug_dump.asm`'s mechanism, per
+  its own header) — `"DOSV"` magic + version byte + 16-bit checksum + payload.
+- A round-trip smoke-test harness already exists too:
+  `save.asm:RunSaveTest`, gated `%ifdef DEBUG_SAVE` (seed party via
+  `PrepareNewGameDebug` → `SaveGameData` → dump `FRAME.BIN`) and
+  `%ifdef DEBUG_SAVE_ROUNDTRIP` (write → `DsvFileExists` → stash the result
+  pixel → dump `FRAME.BIN`).
+
+**Where it diverges from pret (by necessary design, documented in-file):** the
+port has no MBC5 SRAM banking hardware, so every pret `s*`-label SRAM `CopyData`
+slice collapses into one `DsvWriteSave`/`DsvReadSave` call that atomically
+serializes/restores the whole payload from/to WRAM directly — `EnableSRAM`/
+`DisableSRAM` become flag-preserving no-ops, and `CalcCheckSum` is translated
+faithfully but currently unused (dsv_io owns its own file-level checksum
+instead). Box-swap (`ChangeBox`) and Hall-of-Fame writes are `; TODO-HW: SRAM`
+no-ops (documented in-file) since neither the other-11-box banks nor the HoF SRAM
+region have a port memory address yet — real WRAM-only current-box + party/dex/
+main data round-trips for real; the box-swap/HoF SRAM extras are known,
+documented stubs, not silently broken.
+
+**What this means for Phase B:** the ask ("draft an unwired `SaveSAV`/`LoadSAV`
++ `.dsv` round-trip, do not hook into the live menu") is **superseded, not
+performed as scoped** — building a second, parallel, unwired implementation
+under the same pret label names would violate the pret-label-uniqueness /
+no-silent-shadow stub convention (two `global`s of `SaveGameData` is a link
+error) and would be a strict regression against an already-live, better-tested
+system. Instead this pass (1) corrected the Save/SRAM rows of
+`docs/bug_categorization.md` Phase A wrongly marked "pending port" (see that
+file's Save/SRAM section correction note) and (2) leaves the existing save
+system as-is. Genuinely open follow-up (not done here, out of this task's
+comment-only scope): promoting `RunSaveTest`'s `DEBUG_SAVE_ROUNDTRIP` mode from
+a file-exists smoke test to a full seeded-state round-trip `GBSTATE.BIN` diff
+(seed → `SaveGameData` → wipe WRAM → `TryLoadSaveFile` → `DumpGBState`, host-side
+compare) would be valuable but is new test-harness *code*, not a tagging task,
+and touches a file (`save.asm`) with real live callers — better suited to its
+own reviewed change than an unattended pass.
+
+---
+
 ## What NOT to do (recap)
 
 No `%if BUG_FIX_LEVEL` fix code; no live wiring of anything; no audio `.yaml`
