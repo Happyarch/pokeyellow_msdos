@@ -19,6 +19,9 @@
 ;   counter. A Badly-Poisoned + Leech-Seeded mon therefore takes
 ;   (1/16 * maxHP * counter) drain from Leech Seed, and the counter keeps
 ;   climbing each turn. Carried faithfully — no BUG_FIX_LEVEL guard.
+;   Also catalogued as "Toxic + Leech Seed Stacking" in
+;   docs/references/yellow_glitches.md#battle-system. Safety: safe under DPMI
+;   (bounded WRAM arithmetic, no ACE potential).
 ;
 ; GLITCH: Leech Seed overkill heal.
 ;   pret comment: "bc isn't updated if HP subtracted was capped to prevent

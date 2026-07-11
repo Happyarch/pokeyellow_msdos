@@ -171,6 +171,18 @@ HealEffect_:
     jz .restEffect
     mov esi, wEnemyMonStatus
 .restEffect:
+    ; BUG(critical): "Rest + Toxic Counter" — this overwrites only wBattleMon/
+    ; EnemyMonStatus (PSN/BRN/FRZ/PAR/SLP), which clears the PSN bit so residual
+    ; damage stops ticking, but BADLY_POISONED lives in the separate wBattleMon/
+    ; EnemyMonStatus3 byte (see move_effects/poison.asm's inflictPoison) and the
+    ; toxic counter (wPlayer/EnemyToxicCounter) — neither is touched here. If the
+    ; mon is poisoned again later by a non-Toxic move (which doesn't reset the
+    ; counter, only a fresh TOXIC application does), residual_damage.asm's
+    ; toxic-multiply sees the still-set BADLY_POISONED bit and resumes from the
+    ; stale, un-reset counter instead of restarting at 1. Gen-1 behavior,
+    ; preserved verbatim. pret ref: engine/battle/move_effects/heal.asm:HealEffect_
+    ; (.restEffect, `ld [hl], 2`), docs/references/yellow_glitches.md#battle-system
+    ; (Rest + Toxic Counter)
     mov al, [ebp + esi]                 ; ld a, [hl]
     and al, al
     mov byte [ebp + esi], 2             ; ld [hl], 2 — clear status, 2 turns asleep

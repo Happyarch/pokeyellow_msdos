@@ -973,6 +973,20 @@ ApplyAttackToEnemyPokemon:
     je  .storeSpecial
     ; Psywave: bh = user level * 1.5; random in [1, bh). Player Psywave always
     ; deals >= 1 (the enemy's range is [0, bh) — a Gen-1 asymmetry preserved below).
+    ; BUG(critical): "Psywave Infinite Loop" — bh = (level*3)/2 truncated to a
+    ; byte; at level 0, 1, or 171 this truncates to 0 (171*1.5 = 256.5 -> 256 mod
+    ; 256 = 0). With bh=0, BOTH exit conditions here are unreachable: `and al,al`
+    ; keeps rerolling until al!=0, then `cmp al,bh(0)` / `jae` is always taken
+    ; (any al>0 is >=0) — the loop never terminates, hanging the battle engine.
+    ; Gen-1 behavior, preserved verbatim (this port's shared `_Divide` primitive
+    ; already guards its OWN divide-by-zero case — see
+    ; engine/math/multiply_divide.asm — but that guard does not reach this
+    ; separate reroll loop, which has no divisor at all). pret ref:
+    ; engine/battle/core.asm (Psywave damage calc, player side),
+    ; docs/references/yellow_glitches.md#battle-system (Psywave Infinite Loop).
+    ; Safety: hang only (busy-loop on BattleRandom), no ACE — matches the
+    ; catalogue's "Potential" ACE flag being about separate RNG-manipulation
+    ; setups, not this loop itself.
     mov al, [ebp + wBattleMonLevel]
     mov bh, al
     shr al, 1
@@ -1085,6 +1099,20 @@ CheckPlayerStatusConditions:
     jmp .returnToHL
 
 .frozenCheck:                            ; pret 3526
+    ; BUG(critical): "Hyper Beam + Freeze" — this frozen check is tested (and, on
+    ; a hit, returns) BEFORE .hyperBeamCheck below ever runs, so a mon that gets
+    ; frozen while it still owes a Hyper Beam recharge turn never reaches the
+    ; `and ..., ~(1<<NEEDS_TO_RECHARGE)` clear at .hyperBeamCheck while frozen.
+    ; Gen-1 freeze has no auto-thaw (only a Fire-type hit via CheckDefrost cures
+    ; it — see move_effects/freeze_burn_paralyze.asm), so the stale
+    ; NEEDS_TO_RECHARGE bit survives every frozen turn; once thawed, the mon must
+    ; ALSO burn a full "must recharge" turn it would otherwise not owe, on top of
+    ; however long the freeze itself lasted — effectively "permanently unable to
+    ; act" for the freeze's duration plus one extra forced-idle turn. Gen-1
+    ; behavior (pret's own check order), preserved verbatim. pret ref:
+    ; engine/battle/core.asm (ExecutePlayerMove .frozenCheck vs .hyperBeamCheck
+    ; ordering), docs/references/yellow_glitches.md#battle-system (Hyper Beam +
+    ; Freeze).
     test byte [ebp + esi], 1 << FRZ
     jz .heldInPlaceCheck
     mov esi, IsFrozenText
@@ -1836,6 +1864,12 @@ ApplyAttackToPlayerPokemon:
     ; Psywave: bh = user level * 1.5; random in [0, bh). GLITCH(faithful): the enemy
     ; can deal 0 damage with Psywave (no reject-0), unlike the player's [1, bh) — see
     ; pret core.asm:4953-4955.
+    ; BUG(critical): "Psywave Infinite Loop" (enemy side) — same root cause as the
+    ; player-side loop above: bh truncates to 0 at level 0/1/171, and with no
+    ; reject-0 check here even `cmp al,bh(0)`/`jae` alone is unconditionally taken
+    ; (any al is >=0), hanging the battle engine. pret ref: engine/battle/core.asm
+    ; (Psywave damage calc, enemy side), docs/references/yellow_glitches.md
+    ; #battle-system (Psywave Infinite Loop). Safety: hang only, no ACE.
     mov al, [ebp + wEnemyMonLevel]
     mov bh, al
     shr al, 1
@@ -1962,6 +1996,13 @@ CheckEnemyStatusConditions:
     jmp .eReturnToHL
 
 .eFrozenCheck:                           ; pret 5883
+    ; BUG(critical): "Hyper Beam + Freeze" (enemy side) — same ordering issue as
+    ; the player-side .frozenCheck above: this returns before the enemy's
+    ; .eHyperBeamCheck can clear NEEDS_TO_RECHARGE, so the stale bit survives
+    ; every frozen turn and costs one extra forced-idle turn once thawed. pret
+    ; ref: engine/battle/core.asm (ExecuteEnemyMove .eFrozenCheck vs
+    ; .eHyperBeamCheck ordering), docs/references/yellow_glitches.md
+    ; #battle-system (Hyper Beam + Freeze).
     test byte [ebp + esi], 1 << FRZ
     jz .eTrappedCheck
     mov esi, IsFrozenText

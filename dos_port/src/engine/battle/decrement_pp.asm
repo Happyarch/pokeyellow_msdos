@@ -35,6 +35,19 @@ DecrementPP:
     mov esi, wPlayerBattleStatus1
     mov al, [ebp + esi]              ; ld a, [hli]
     inc esi
+    ; BUG(critical): "Struggle PP Underflow" — this skip-list covers Bide/Thrash/
+    ; multi-strike but deliberately does NOT include USING_TRAPPING_MOVE (Wrap/
+    ; Bind/Fire Spin/Clamp). A trapping move's continuation turns are chosen by
+    ; the forced-move early-out in SelectEnemyMove/its player-side equivalent
+    ; (select_enemy_move.asm — locked-in moves skip AnyMoveToSelect's PP-is-zero
+    ; check entirely), so if the move's PP hits 0 mid-trap, every subsequent
+    ; continuation turn still reaches `dec byte [ebp+esi]` below and underflows
+    ; the packed PP byte 0x00 -> 0xFF; PP_MASK (0x3F) then reads it back as 63.
+    ; Gen-1 behavior, preserved verbatim. pret ref: engine/battle/decrement_pp.asm:
+    ; DecrementPP, docs/references/yellow_glitches.md#battle-system (Struggle PP
+    ; Underflow — despite the catalogue name, the actual trigger is any
+    ; auto-selected/locked-in move bypassing the normal PP check, of which
+    ; trapping-move continuation is the reachable case in this port).
     test al, (1 << STORING_ENERGY) | (1 << THRASHING_ABOUT) | (1 << ATTACKING_MULTIPLE_TIMES)
     jnz .done                        ; mid multi-turn move: no PP decrement
     mov al, [ebp + esi]              ; wPlayerBattleStatus2

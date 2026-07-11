@@ -126,6 +126,21 @@ CalcExperience:
     mov byte [ebp + hMultiplier], al
     call Multiply
 
+    ; GLITCH: "Experience Underflow -> Lv 100" — for a level-1 Medium-Slow mon
+    ; the linear/const-term subtraction below can underflow this 24-bit
+    ; hProduct/hExperience accumulator, producing a huge wrapped "EXP needed
+    ; for level 2" threshold; CalcLevelFromExperience's compare loop above then
+    ; concludes the mon has already passed every level and reports Lv 100.
+    ; Functional speedrun exploit (no ACE). Same root cause underlies the
+    ; Save/SRAM-category "Experience PC Withdrawing Softlock" BUG(critical) —
+    ; a level-1 Medium-Slow mon withdrawn from the PC re-runs this same
+    ; underflowing calc in a context that softlocks instead of just mis-leveling
+    ; (that call site is not yet ported — see docs/bug_categorization.md).
+    ; Gen-1 behavior, preserved verbatim. pret ref: engine/pokemon/experience.asm:
+    ; CalcExperience, docs/references/yellow_glitches.md#battle-system
+    ; (Experience Underflow -> Lv 100) and #save--sram (Experience PC
+    ; Withdrawing Softlock). Safety: safe under DPMI (bounded WRAM arithmetic,
+    ; no ACE potential).
     mov bl, byte [esi]           ; byte3 (const)
     mov al, byte [ebp + hProduct + 3]
     sub al, bl

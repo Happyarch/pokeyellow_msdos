@@ -65,6 +65,15 @@ extern DreamWasEatenText
 ; restores something), redraw both HP bars/HUDs, then print the drain text
 ; (Dream Eater gets its own line via DREAM_EATER_EFFECT).
 ; ===========================================================================
+; BUG(cosmetic): "Substitute HP Drain Bug" — DrainHPEffect_ always heals the
+; attacker from wDamage regardless of whether that damage actually landed on
+; the target's real HP or was redirected to a Substitute (AttackSubstitute
+; still sets wDamage to the would-be hit amount). So Absorb/Mega Drain/Leech
+; Life/Dream Eater heal the attacker in full even when the target's Substitute
+; absorbed the hit and the target's own HP was untouched. Present in Western
+; Yellow (fixed in the Japanese release) — preserved verbatim here. pret ref:
+; engine/battle/move_effects/drain_hp.asm:DrainHPEffect_,
+; docs/references/yellow_glitches.md#battle-system (Substitute HP Drain Bug)
 DrainHPEffect_:
     ; --- halve wDamage (16-bit, big-endian: wDamage = high byte, +1 = low byte) ---
     mov esi, wDamage

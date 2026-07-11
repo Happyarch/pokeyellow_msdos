@@ -23,6 +23,20 @@
 ; name mechanism). The destination copy is bounded (NAME_BUFFER_LENGTH), so
 ; wNameBuffer never overflows — this is cosmetic, not memory corruption.
 ; Safety: bounded under DPMI flat alloc. Optional FIXALL guard below.
+; This is the .walk mechanism behind two docs/references/yellow_glitches.md
+; #battle-system entries reached via a glitch move index in a mon's moveset:
+; "Super Glitch" (indices A6-C3, no name entry — search overruns MoveNames) and
+; "Move 0x00" (index 0x00, the CoolTrainer♀/"--" glitch — same overrun, index 0
+; walks from before the table start). Both are cataloged BUG(critical) with
+; "Potential" ACE on real hardware (ROM-bank-dependent overrun target); in this
+; port the overrun target is adjacent linked .data/.text, not attacker-chosen
+; ROM content, and the destination write stays within NAME_BUFFER_LENGTH — no
+; ACE path exists here (downgraded to a bounded cosmetic glitch, per the Safety
+; line above). Neither glitch move entry nor index-0 "--" is reachable through
+; normal ported gameplay yet (no glitch-Pokémon catch path — see
+; docs/bug_categorization.md, Save/SRAM "Index #000 Post-Capture" — pending
+; port), so this is latent/dormant rather than live, but the shared mechanism
+; is already faithfully preserved for whenever that path lands.
 ;
 ; This file lives in the not-yet-linked battle/name tier (assembled by `make
 ; check`, validated by native harness). MoveNames/ItemNames are flat data labels;

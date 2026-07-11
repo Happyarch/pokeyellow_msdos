@@ -150,6 +150,17 @@ DontAbandonLearning:
     mov al, [ebp + wPlayerMonNumber]
     cmp al, bh
     jnz PrintLearnedMove
+    ; BUG(cosmetic): "Mimic Level-Up Glitch" — this unconditionally copies the
+    ; PARTY struct's (permanent) move array over wBattleMonMoves. Mimic only
+    ; ever overwrites the in-battle wBattleMonMoves copy of a slot, never the
+    ; party struct, so if the active mon leveled up and learned a new move
+    ; while Mimic's copied move was still active in another slot, this refresh
+    ; clobbers that slot back to the party struct's un-Mimicked contents —
+    ; Mimic's copied move reads as reset/"--" for the rest of the battle.
+    ; Yellow-specific. Gen-1 behavior, preserved verbatim. pret ref:
+    ; engine/pokemon/learn_move.asm:LearnMove (the wBattleMonMoves/PP
+    ; CopyData refresh), docs/references/yellow_glitches.md#battle-system
+    ; (Mimic Level-Up Glitch)
     mov esi, edx                      ; hl = de (move-array base)
     mov edx, wBattleMonMoves
     mov bx, NUM_MOVES
