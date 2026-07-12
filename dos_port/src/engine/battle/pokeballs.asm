@@ -56,12 +56,19 @@ global LoadPokeballGfx
 extern PrepareStaticOAM
 extern HideSprites
 extern DrawPlayerHUDFrame
+extern g_tilecache_dirty        ; src/ppu/ppu.asm — arm cache re-decode after a vChars write
 
 ; ---------------------------------------------------------------------------
-; LoadPokeballGfx — copy the 4 ball tiles to OBJ tile area $8000 (tiles $00-$03;
-; render_sprites reads raw OBJ VRAM, no BG-cache involvement). EBP = GB base.
+; LoadPokeballGfx — copy the 4 ball tiles to OBJ tile area $8000 (tiles $00-$03).
+; EBP = GB base.
+;
+; render_sprites composites from tile_cache as of the compositor-perf plan
+; (docs/plans/compositor_perf.md Stage 4b) — it no longer bit-decodes raw OBJ
+; VRAM — so this write MUST arm g_tilecache_dirty or the balls draw whatever
+; those cache slots held before.
 ; ---------------------------------------------------------------------------
 LoadPokeballGfx:
+    mov byte [g_tilecache_dirty], 1      ; VRAM tile data changes → rebuild decode cache
     mov esi, ball_gfx
     lea edi, [ebp + GB_VCHARS0]          ; $8000 → OBJ tiles $00..$03
     mov ecx, (4 * 16) / 4                ; 64 bytes
