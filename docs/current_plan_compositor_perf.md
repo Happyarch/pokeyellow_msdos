@@ -9,7 +9,7 @@ Status: **in progress** — tick stages as they land. Archive to
 - [x] Stage 3 — present dirty-row diff — measured and REJECTED (net loss; see below)
 - [x] Stage 4 — LUT decode + sprites from tile_cache
 - [ ] Stage 5 — (optional, ask user before enabling) overrun pacing
-- [ ] Stage 6 — targeted loop unrolling (measured polish)
+- [x] Stage 6 — targeted loop unrolling (measured polish)
 - [x] Ride-along: party_menu icon-bob missing `g_tilecache_dirty`
 
 ## Measured baselines (Stage 0, 2026-07-12)
@@ -276,6 +276,25 @@ optimal on 386/486, the VGA copy is ISA-bus-bound regardless, and unrolled
 copies bloat code into the 486's small 8 KB unified cache. Keep unrolls modest
 for the same cache reason — this stage is measured polish (Stage 0 numbers
 before/after), not a rewrite.
+
+**DONE (2026-07-12).** All 9 pixelcheck scenarios byte-identical. The
+`render_bg .row_copy` and window-row-gather unrolls already landed with Stages
+1–2; this stage did the two that were left:
+
+- `render_sprites`: the 8 columns are fully unrolled via a `SPR_COL col, cacheidx`
+  macro, so both the cache fetch and the clip compare fold into displacements.
+  Two things that are fixed for the *whole sprite* moved out of the pixel loop:
+  the palette base (`spr_palbase`, 4 or 8) is computed once per sprite, and the
+  **x-flip is branched once per row** into a variant that walks the cache row
+  backwards, instead of being re-tested per pixel. What stays per pixel is what
+  genuinely varies per pixel: transparency, the X clip, the BG-priority test.
+  The clip is now a single unsigned `cmp/jae` (negative X fails it too).
+- `rebuild_tile_cache`: the LUT row decode does 4 tile rows per iteration
+  (trip count is a compile-time multiple of 4; pointer steps fold into
+  displacements).
+- Measured: `render_sprites` **0.962 → 0.546** ms (ow_idle), **0.757 → 0.432**
+  (battle), 0.304 → 0.175 (party_menu) — ~43% off, and 1.275 → 0.546 (−57%)
+  against the Stage 0 baseline.
 
 ## Rides along
 

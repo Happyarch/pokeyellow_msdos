@@ -167,6 +167,7 @@ spr_sx:      resd 1        ; sprite left screen X (signed)
 spr_sy:      resd 1        ; sprite top screen Y (signed)
 spr_tileidx: resd 1        ; sprite's tile id (= its index into tile_cache)
 spr_srcrow:  resd 1        ; tile_cache address of the current 8-px decoded row
+spr_palbase: resd 1        ; 4 (OBP0) or 8 (OBP1) — fixed per sprite
 spr_attr:    resd 1        ; OAM attribute byte
 spr_row:     resd 1        ; current sprite row 0..7
 spr_rowbase: resd 1        ; GB-relative back-buffer offset of the current row
@@ -697,18 +698,25 @@ rebuild_tile_cache:
 
     mov esi, GB_VCHARS0                ; GB offset of the first tile-data byte
     mov edi, tile_cache
-    mov edx, TILE_CACHE_TILES * 8      ; total tile rows (8 per tile)
+    ; 4 tile rows per iteration (Stage 6): the trip count is a compile-time
+    ; multiple of 4, and the pointer steps fold into displacements, so the
+    ; dec/jnz overhead is paid once per 4 rows instead of once per row.
+    mov edx, (TILE_CACHE_TILES * 8) / 4
 .row_loop:
-    movzx eax, byte [ebp + esi]       ; low bitplane
-    movzx ebx, byte [ebp + esi + 1]   ; high bitplane
-    add esi, 2
-    mov ecx, [plane_lut_lo + eax*8]   ; 4 px of bit0, spread one per byte
-    or  ecx, [plane_lut_hi + ebx*8]   ; | 4 px of bit1<<1  → raw color 0-3
-    mov [edi], ecx
+%assign _r 0
+%rep 4
+    movzx eax, byte [ebp + esi + _r*2]       ; low bitplane
+    movzx ebx, byte [ebp + esi + _r*2 + 1]   ; high bitplane
+    mov ecx, [plane_lut_lo + eax*8]          ; 4 px of bit0, spread one per byte
+    or  ecx, [plane_lut_hi + ebx*8]          ; | 4 px of bit1<<1  → raw color 0-3
+    mov [edi + _r*8], ecx
     mov ecx, [plane_lut_lo + eax*8 + 4]
     or  ecx, [plane_lut_hi + ebx*8 + 4]
-    mov [edi + 4], ecx
-    add edi, 8
+    mov [edi + _r*8 + 4], ecx
+    %assign _r _r + 1
+%endrep
+    add esi, 8
+    add edi, 32
     dec edx
     jnz .row_loop
 
@@ -718,6 +726,35 @@ rebuild_tile_cache:
     mov byte [surf_force], 1
     popad
     ret
+
+; ---------------------------------------------------------------------------
+; SPR_COL col, cacheidx — one unrolled sprite column (compositor-perf Stage 6).
+;
+; In:  EBX = tile_cache row (8 raw-color bytes, leftmost pixel first)
+;      EDI = back-buffer offset (GB-relative) of this row's pixel 0
+;      EDX = screen X of the sprite's column 0 (signed; may be negative)
+;      [spr_palbase] = 4 or 8, [spr_attr] = OAM attributes, EBP = GB base
+; Both operands are assembly-time constants, so the cache fetch and the clip
+; compare fold into displacements — no per-pixel index math and no loop.
+; Clobbers EAX, ECX.
+; ---------------------------------------------------------------------------
+%macro SPR_COL 2
+    movzx eax, byte [ebx + (%2)]         ; color 0..3
+    test eax, eax
+    jz %%skip                            ; color 0 = transparent
+    lea ecx, [edx + (%1)]                ; px = sx + col
+    cmp ecx, RENDER_W                    ; unsigned: also rejects px < 0
+    jae %%skip
+    add ecx, edi                         ; back-buffer offset (GB-relative)
+    add eax, [spr_palbase]
+    test byte [spr_attr], OAM_PRIO
+    jz %%write
+    cmp byte [ebp + ecx], 0              ; behind BG: only over BG color 0
+    jne %%skip
+%%write:
+    mov [ebp + ecx], al
+%%skip:
+%endmacro
 
 ; ---------------------------------------------------------------------------
 ; render_sprites — composite the 40 OAM sprites over the back buffer.
@@ -777,6 +814,15 @@ render_sprites:
     movzx eax, byte [ebp + esi + 3]      ; attributes
     mov [spr_attr], eax
 
+    ; Palette base is fixed for the whole sprite: OBP0 → 4+color, OBP1 → 8+color.
+    ; The DAC (commit_palette) maps 4-7 / 8-11 to the OBP0/OBP1-mapped DMG shades.
+    mov ecx, 4
+    test al, OAM_PAL1
+    jz .havePal
+    mov ecx, 8
+.havePal:
+    mov [spr_palbase], ecx
+
     ; Cull sprites that fall entirely off-screen.
     mov eax, [spr_sy]
     cmp eax, RENDER_H
@@ -814,45 +860,30 @@ render_sprites:
     lea eax, [tile_cache + eax + edx * 8]
     mov [spr_srcrow], eax
 
-    xor esi, esi                         ; col = 0..7
-.colLoop:
-    ; cache index = xflip ? 7 - col : col (cache rows are stored left-to-right)
-    mov ecx, esi
+    ; The 8 columns are fully unrolled (SPR_COL), and the x-flip decision — fixed
+    ; for the whole sprite — is made once here rather than per pixel: the flipped
+    ; variant just walks the cache row backwards. What remains per pixel is only
+    ; what genuinely varies per pixel: transparency, the screen-X clip, and the
+    ; BG-priority test.
+    mov ebx, [spr_srcrow]                ; cache row (8 bytes, leftmost pixel first)
+    mov edi, [spr_rowbase]               ; back-buffer offset of this row
+    mov edx, [spr_sx]                    ; screen X of column 0 (may be negative)
     test byte [spr_attr], OAM_XFLIP
-    jz .haveBit
-    mov ecx, 7
-    sub ecx, esi
-.haveBit:
-    mov ebx, [spr_srcrow]
-    movzx eax, byte [ebx + ecx]          ; color 0..3
-    test eax, eax
-    jz .colNext                          ; color 0 = transparent
+    jnz .xflip
 
-    ; pixel = palette base + color: OBP0 → 4+color, OBP1 → 8+color. The DAC
-    ; (commit_palette) maps 4-7 / 8-11 to the OBP0/OBP1-mapped DMG shades.
-    lea ebx, [eax + 4]
-    test byte [spr_attr], OAM_PAL1
-    jz .pal0
-    lea ebx, [eax + 8]
-.pal0:
+%assign _c 0
+%rep 8
+    SPR_COL _c, _c
+    %assign _c _c + 1
+%endrep
+    jmp .rowNext
 
-    mov eax, [spr_sx]
-    add eax, esi                         ; px
-    js  .colNext
-    cmp eax, RENDER_W
-    jge .colNext
-    mov ecx, [spr_rowbase]
-    add ecx, eax                         ; back-buffer offset (GB-relative)
-    test byte [spr_attr], OAM_PRIO
-    jz .writePx
-    cmp byte [ebp + ecx], 0              ; behind BG: only over BG color 0
-    jne .colNext
-.writePx:
-    mov [ebp + ecx], bl
-.colNext:
-    inc esi
-    cmp esi, 8
-    jb .colLoop
+.xflip:
+%assign _c 0
+%rep 8
+    SPR_COL _c, 7 - _c
+    %assign _c _c + 1
+%endrep
 
 .rowNext:
     inc dword [spr_row]
