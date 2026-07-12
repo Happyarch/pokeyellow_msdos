@@ -6,7 +6,7 @@ Status: **in progress** — tick stages as they land. Archive to
 - [x] Stage 0 — DEBUG_PERF instrumentation + baselines
 - [x] Stage 1 — render_bg dirty-skip / nested loops / flat-path trim
 - [x] Stage 2 — render_window row-decode amortization
-- [ ] Stage 3 — present dirty-row diff
+- [x] Stage 3 — present dirty-row diff — measured and REJECTED (net loss; see below)
 - [ ] Stage 4 — LUT decode + sprites from tile_cache
 - [ ] Stage 5 — (optional, ask user before enabling) overrun pacing
 - [ ] Stage 6 — targeted loop unrolling (measured polish)
@@ -34,7 +34,8 @@ This ratifies the plan's ranking with no ambiguity:
   (cost #2) scaling with menu depth. Stage 2.
 - `audio_tick` averages 0.2–0.6 ms — **exonerated**, as the investigation said.
   (Its ~10 ms worst frame is a one-off song load, not per-frame cost.)
-- `present` is a flat 1.69 ms — real, but 10% of budget; Stage 3 is worth it
+- `present` is a flat 1.69 ms — real, but 10% of budget; Stage 3 looked worth it
+  (it was not — see Stage 3: the dirty-row diff measured *slower*)
   only after 1 and 2 (and matters far more on real ISA VGA than in DOSBox-X).
 - Frames cost ~31–34 ms total, i.e. **the game runs at roughly half speed** here,
   and `wait` still burns 13 ms on top: cost #7 (`wait_vblank` spinning for a
@@ -187,13 +188,33 @@ cache, so a missing flag is now a visible-corruption bug, not a latent one.
 Combined: a 200-scanline submenu goes from ~200 full-row bit-decodes to ~25
 tile-row gathers — >10× less window work; descriptor stacking becomes cheap.
 
-## Stage 3 — present: dirty-row diff (top win on real ISA VGA)
+## Stage 3 — present: dirty-row diff — IMPLEMENTED, MEASURED, **REJECTED**
 
-Keep a 64,000-B prev-frame shadow in system RAM. Per row (or 4-row band):
-`rep cmpsd` vs shadow; `rep movsd` to VGA + shadow update only for changed rows.
-Idle menu frames drop from 64,000 VGA writes to ~0–2,000 (cursor blink). RAM
-compares are cheap next to ISA VGA writes. Optional fast path: when the frame is
-known fully-changed (walk scroll active), skip the diff and blast the full copy.
+Original idea: keep a 64,000-B prev-frame shadow in system RAM; per row `repe
+cmpsd` vs shadow, and `rep movsd` to VGA + shadow only for changed rows, on the
+theory that RAM compares are cheap next to ISA VGA writes.
+
+**DONE (2026-07-12) — built it, measured it, reverted it.** It is a net *loss*
+under DOSBox-X and was NOT committed (the implementation is preserved in the
+session scratchpad as `video.stage3-rejected.asm` if anyone wants to revisit it
+on real hardware).
+
+- Correctness was fine: verified live under dosbox-x-mcp by reading the actual
+  VGA aperture (DS offset `[vga_base]` = `0xFFCA0000`) and byte-comparing it
+  against `GB_BACKBUF` after several hundred animated frames — identical on
+  every sampled scanline. (Note for the future: **`FRAME.BIN` cannot validate
+  `present`** — it dumps the back buffer, which is `present`'s *input*.)
+- Perf, all three scenarios: `present` **1.69 → 1.89 ms/frame (+0.2)**.
+  ow_idle +0.197, party_menu +0.202, battle +0.249. No scenario won.
+- Why: the diff streams 128 KB (two dword sources) to avoid writing at most
+  64 KB, and every screen we have animates enough rows (flower tiles, sprites,
+  the party-icon bob, cursor) that too few rows skip to pay for the compare.
+  Under DOSBox-X a VGA write costs roughly a RAM write, so the premise —
+  "VGA writes are the expensive part" — is simply false on our measurement
+  platform. It would only pay on a real ISA-bus 386, which we do not measure.
+
+`present` stays a flat 16,000-dword `rep movsd` (~1.7 ms, 11% of budget).
+The remaining headroom is in Stage 4, not here.
 
 ## Stage 4 — cheaper decodes + sprites from tile_cache
 
