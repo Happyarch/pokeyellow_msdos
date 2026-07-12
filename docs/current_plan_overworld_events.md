@@ -164,6 +164,14 @@ party-menu selection re-enters the menu. Port pret's
       `cut2.asm`/`dust_smoke.asm` (need `AdjustOAMBlock{X,Y}Pos` — small OAM
       primitives from pret animations.asm, port standalone),
       `field_move_messages.asm` (PlayCry → audio engine is live, wire it).
+      **Compositor note (2026-07-12):** `render_sprites` now composites from
+      `tile_cache` (`docs/plans/compositor_perf.md` Stage 4b), so the animation's
+      OBJ tile uploads must arm **`g_tilecache_dirty`** or they draw stale
+      patterns. `cut.asm` is already safe (it writes via `CopyVideoData`, which
+      arms it); any *raw* `rep movs` into vChars in the new `cut2`/`dust_smoke`
+      code must arm it explicitly — that exact omission was a live bug in
+      `LoadPokeballGfx` (fixed `33e21fd2`). `render_sprites` also positions from
+      `spr_dos_sx/sy`, not the OAM Y byte.
 - [ ] 6b. **Surf** (`UsedSurf`/`IsSurfingAllowed` — unported; water-tile
       collision + `wWalkBikeSurfState`; player_gfx surf sprites already
       generated) and **Strength** (`UsedStrength`/`PrintStrengthText` +

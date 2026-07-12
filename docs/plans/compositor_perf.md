@@ -30,10 +30,19 @@ and `tools/lint_pret_labels` exits 0. `present` is untouched (see Stage 3).
 Both the BG and the window layer now read **only** `tile_cache`. Any routine that
 writes VRAM tile patterns and fails to arm `g_tilecache_dirty` is therefore a
 visible-corruption bug (it was merely a stale-decode risk before). The party-menu
-icon bob was exactly this and is fixed; a grep found other non-arming VRAM writers
-worth auditing if corruption ever shows up: `src/engine/battle/pokeballs.asm`
-(writes GB_VCHARS0), `src/engine/items/town_map.asm`,
-`src/engine/overworld/healing_machine.asm`, `src/engine/overworld/trainer_engine.asm`.
+icon bob was exactly this and is fixed.
+
+**Audit completed 2026-07-12.** The flagged writers are resolved:
+- `src/engine/battle/pokeballs.asm` — **was a real bug** (raw `rep movsd` to
+  `GB_VCHARS0`, no flag; its comment even asserted "no BG-cache involvement").
+  Fixed in `33e21fd2`.
+- `town_map.asm`, `healing_machine.asm`, `trainer_engine.asm`, `cut.asm` — **clean**:
+  they write VRAM exclusively through `CopyVideoData` (`home/copy2.asm`), which arms
+  the flag itself.
+
+So the rule for new code is simply: **go through `CopyVideoData`, or arm
+`g_tilecache_dirty` yourself.** A raw `rep movs` into vChars that skips both is a
+visible-corruption bug — in BG, window *and* sprites.
 
 ## Measured baselines (Stage 0, 2026-07-12)
 

@@ -43,6 +43,25 @@ ends: `make -C dos_port` + `make -C dos_port check` green → verification pass
 - HP gauge = 9 consecutive tiles one row ($71,$62,6 segments $63+n/$6B,$6C);
   mon pics = 7×7 BG tile blocks (`PlacePicTilemap`); pokéballs = OAM sprites.
 
+**Cross-plan note (2026-07-12) — the compositor moved under this plan.**
+`docs/plans/compositor_perf.md` (complete) rewrote `render_bg`/`render_window`/
+`render_sprites`; `docs/current_plan_party_icons_oam.md` (not started, runs
+before items) will change how menu/flat-canvas screens own OAM. Both bear on the
+pokéball work here:
+- **Sprites composite from `tile_cache` now.** Any VRAM tile-pattern write must arm
+  `g_tilecache_dirty` or it draws stale patterns. `LoadPokeballGfx` did a raw
+  `rep movsd` and did not — fixed 2026-07-12 (`33e21fd2`). Its old comment
+  ("render_sprites reads raw OBJ VRAM, no BG-cache involvement") is now false; do
+  not reintroduce that assumption when the OAM bases move into `UI_*_PX_*`.
+- **The `g_bg_whiteout` OBJ blanket-skip is going away** (party-icons Stage 1),
+  replaced by "whoever owns the canvas owns OAM" (`spr_oam_valid`). Battle does not
+  set `g_bg_whiteout`, so battle OAM is unaffected today — but if any battle screen
+  in this plan adopts the flat-canvas/whiteout template, it must set
+  `spr_oam_valid` itself or the pokéballs vanish (and, per
+  [[flatcanvas-sprite-suppression]], overworld sprites ghost).
+- `render_sprites` positions from `spr_dos_sx/sy`, **not** the OAM Y byte — relevant
+  to the "verified OAM = screen+(8,16) via PrepareStaticOAM" equate below.
+
 ## Sessions
 
 - [x] **Session A1 — extract `tools/gfx_core/`, menus regression-locked.**
