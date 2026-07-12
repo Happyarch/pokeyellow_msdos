@@ -120,6 +120,38 @@ g_window_count: dd 0
 global g_bg_whiteout
 g_bg_whiteout: dd 0
 
+; --- 2bpp bitplane → 8bpp spread tables (compositor-perf Stage 4a) --------------
+; A GB tile row is two bitplane bytes, MSB = leftmost pixel. Spreading one byte
+; into 8 one-byte pixels is a pure function of that byte, so precompute it:
+;   plane_lut_lo[b] = the 8 bits of b, one per byte, left to right (values 0/1)
+;   plane_lut_hi[b] = the same, pre-shifted left by 1            (values 0/2)
+; A row decode is then 2 loads + 2 ORs + 2 stores per 4 pixels, replacing
+; 8 × (2 shl + 2 rcl + stosb). Assembly-time generated: no init code, no runtime
+; cost. 4 KB total, in .data (link.ld maps .data — see the section rule).
+align 4
+plane_lut_lo:
+%assign _b 0
+%rep 256
+  %assign _i 7
+  %rep 8
+    db (_b >> _i) & 1
+    %assign _i _i - 1
+  %endrep
+  %assign _b _b + 1
+%endrep
+
+align 4
+plane_lut_hi:
+%assign _b 0
+%rep 256
+  %assign _i 7
+  %rep 8
+    db ((_b >> _i) & 1) << 1
+    %assign _i _i - 1
+  %endrep
+  %assign _b _b + 1
+%endrep
+
 ; ---------------------------------------------------------------------------
 ; BSS
 ; ---------------------------------------------------------------------------
@@ -133,12 +165,11 @@ spr_oam_ptr: resd 1        ; GB-relative offset of the current OAM entry
 spr_count:   resd 1        ; OAM entries left to process
 spr_sx:      resd 1        ; sprite left screen X (signed)
 spr_sy:      resd 1        ; sprite top screen Y (signed)
-spr_tilebase: resd 1       ; GB-relative address of the sprite's tile data
+spr_tileidx: resd 1        ; sprite's tile id (= its index into tile_cache)
+spr_srcrow:  resd 1        ; tile_cache address of the current 8-px decoded row
 spr_attr:    resd 1        ; OAM attribute byte
 spr_row:     resd 1        ; current sprite row 0..7
 spr_rowbase: resd 1        ; GB-relative back-buffer offset of the current row
-spr_lo:      resb 1        ; low bitplane of the current tile row
-spr_hi:      resb 1        ; high bitplane of the current tile row
 alignb 4
 ; Shared BG/window frame constants (written once per frame)
 tiledata_mode:   resd 1    ; 1 = $8000 unsigned, 0 = $8800 signed
@@ -668,19 +699,16 @@ rebuild_tile_cache:
     mov edi, tile_cache
     mov edx, TILE_CACHE_TILES * 8      ; total tile rows (8 per tile)
 .row_loop:
-    mov bl, [ebp + esi]               ; low bitplane
-    mov bh, [ebp + esi + 1]           ; high bitplane
+    movzx eax, byte [ebp + esi]       ; low bitplane
+    movzx ebx, byte [ebp + esi + 1]   ; high bitplane
     add esi, 2
-    mov ecx, 8
-.px_loop:
-    xor eax, eax
-    shl bh, 1
-    rcl al, 1
-    shl bl, 1
-    rcl al, 1
-    stosb                             ; tile_cache[..] = raw color 0-3 (ES:[EDI])
-    dec ecx
-    jnz .px_loop
+    mov ecx, [plane_lut_lo + eax*8]   ; 4 px of bit0, spread one per byte
+    or  ecx, [plane_lut_hi + ebx*8]   ; | 4 px of bit1<<1  → raw color 0-3
+    mov [edi], ecx
+    mov ecx, [plane_lut_lo + eax*8 + 4]
+    or  ecx, [plane_lut_hi + ebx*8 + 4]
+    mov [edi + 4], ecx
+    add edi, 8
     dec edx
     jnz .row_loop
 
@@ -716,6 +744,14 @@ render_sprites:
     test byte [ebp + IO_LCDC], LCDCF_OBJ_ON
     jz .done
 
+    ; Sprite pixels come from tile_cache now (Stage 4b), so the cache must be in
+    ; sync. render_bg (which runs first) normally does this; a caller that draws
+    ; sprites without it would otherwise composite stale patterns.
+    cmp byte [g_tilecache_dirty], 0
+    je .cache_ok
+    call rebuild_tile_cache
+.cache_ok:
+
     ; No OBP unpack: sprite pixels are written as raw palette-indexed values
     ; (4 + color for OBP0, 8 + color for OBP1). commit_palette (video.asm) sets
     ; DAC entries 4-7 / 8-11 to the OBP0/OBP1-mapped DMG shades.
@@ -736,10 +772,8 @@ render_sprites:
     mov eax, [spr_dos_sx + ecx*4]        ; 32-bit DOS X set by PrepareOAMData
     add eax, [sprite_shift_x]
     mov [spr_sx], eax
-    movzx eax, byte [ebp + esi + 2]      ; tile id
-    shl eax, 4
-    add eax, GB_VCHARS0
-    mov [spr_tilebase], eax
+    movzx eax, byte [ebp + esi + 2]      ; tile id — unsigned $8000 addressing, so
+    mov [spr_tileidx], eax                ; it is also the tile_cache tile index
     movzx eax, byte [ebp + esi + 3]      ; attributes
     mov [spr_attr], eax
 
@@ -773,29 +807,24 @@ render_sprites:
     mov edx, 7
     sub edx, [spr_row]
 .noYFlip:
-    mov eax, [spr_tilebase]
-    lea eax, [eax + edx * 2]
-    mov dl, [ebp + eax]
-    mov [spr_lo], dl
-    mov dl, [ebp + eax + 1]
-    mov [spr_hi], dl
+    ; The row is already decoded in tile_cache (8 bytes of raw color, leftmost
+    ; pixel first) — no bitplane work per pixel, just a byte fetch per column.
+    mov eax, [spr_tileidx]
+    shl eax, 6                           ; tile → 64-byte cache slot
+    lea eax, [tile_cache + eax + edx * 8]
+    mov [spr_srcrow], eax
 
     xor esi, esi                         ; col = 0..7
 .colLoop:
-    ; bit index = xflip ? col : 7 - col
+    ; cache index = xflip ? 7 - col : col (cache rows are stored left-to-right)
     mov ecx, esi
     test byte [spr_attr], OAM_XFLIP
-    jnz .haveBit
+    jz .haveBit
     mov ecx, 7
     sub ecx, esi
 .haveBit:
-    movzx eax, byte [spr_lo]
-    shr eax, cl
-    and eax, 1
-    movzx ebx, byte [spr_hi]
-    shr ebx, cl
-    and ebx, 1
-    lea eax, [eax + ebx * 2]             ; color 0..3
+    mov ebx, [spr_srcrow]
+    movzx eax, byte [ebx + ecx]          ; color 0..3
     test eax, eax
     jz .colNext                          ; color 0 = transparent
 

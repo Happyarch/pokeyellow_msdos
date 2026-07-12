@@ -7,7 +7,7 @@ Status: **in progress** — tick stages as they land. Archive to
 - [x] Stage 1 — render_bg dirty-skip / nested loops / flat-path trim
 - [x] Stage 2 — render_window row-decode amortization
 - [x] Stage 3 — present dirty-row diff — measured and REJECTED (net loss; see below)
-- [ ] Stage 4 — LUT decode + sprites from tile_cache
+- [x] Stage 4 — LUT decode + sprites from tile_cache
 - [ ] Stage 5 — (optional, ask user before enabling) overrun pacing
 - [ ] Stage 6 — targeted loop unrolling (measured polish)
 - [x] Ride-along: party_menu icon-bob missing `g_tilecache_dirty`
@@ -225,6 +225,22 @@ The remaining headroom is in Stage 4, not here.
 - **4b. render_sprites:** fetch pre-decoded rows from `tile_cache` instead of
   per-pixel `shr` on the 2bpp planes; X-flip = reversed-order read; keep the
   per-pixel transparency/priority tests. Roughly halves sprite cost.
+
+**DONE (2026-07-12).** All 9 pixelcheck scenarios byte-identical.
+
+- 4a: `plane_lut_lo` / `plane_lut_hi` are generated at *assembly* time by a NASM
+  `%rep` (no init code, no generator to wire up), 4 KB in `.data`. A tile row is
+  now 2 loads + 2 ORs + 2 stores per 4 px.
+- 4b: sprite tile ids use unsigned `$8000` addressing, so the id **is** the
+  `tile_cache` index — a column is a byte fetch, not two shifts and a mask.
+  Cache index = `col` (x-flip: `7 - col`), since cache rows are stored
+  left-to-right. `render_sprites` now guards `g_tilecache_dirty` itself.
+- Measured: `render_sprites` **1.275 → 0.962** ms (ow_idle), **1.012 → 0.757**
+  (battle), 0.401 → 0.304 (party_menu) — ~25% off. The LUT's real prize is the
+  worst case: **party_menu `render_bg` worst frame 28.6 → 11.7 ms**, because the
+  icon bob correctly arms `g_tilecache_dirty` every animation frame and the full
+  `rebuild_tile_cache` it triggers is no longer a spike.
+- Work/frame now: ow_idle 37.0%, battle 32.5%, party_menu 46.1% of budget.
 
 ## Stage 5 (optional — ASK THE USER before enabling anything) — overrun pacing
 
