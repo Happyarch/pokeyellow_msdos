@@ -55,6 +55,38 @@ extern DumpNpcLog       ; dump NPC walk-decision log to NPCLOG.BIN on quit
 %ifdef DEBUG_WALKSPEED
 extern DebugDumpMemory  ; dump ticks-per-tile stats to DUMP.BIN on quit
 %endif
+%ifdef DEBUG_PERF
+extern perf_frame_begin ; src/debug/perf.asm — per-stage PIT profiler
+extern perf_mark
+extern perf_frame_end
+extern DumpPerf
+%endif
+
+; ---------------------------------------------------------------------------
+; PERF_MARK — attribute the elapsed time since the previous mark to one stage of
+; the DelayFrame pipeline. Compiles to nothing without DEBUG_PERF, so the shipped
+; frame loop is unchanged. Stage ids must match tools/read_perf.py STAGE_NAMES.
+; ---------------------------------------------------------------------------
+PERF_WAIT     equ 0    ; wait_vblank + wait_pit_tick (the pacing spin)
+PERF_COMMIT   equ 1    ; shadow regs, palette, staged BG copy, tile animation
+PERF_OAM      equ 2    ; update_oam (PrepareOAMData + shadow-OAM DMA)
+PERF_AUDIO    equ 3    ; audio_tick
+PERF_BG       equ 4    ; render_bg
+PERF_SPRITES  equ 5    ; render_sprites
+PERF_WINDOWS  equ 6    ; present_windows (all descriptors)
+PERF_PRESENT  equ 7    ; present (back buffer → VGA)
+PERF_MISC     equ 8    ; everything else (joypad, RNG, play clock, quit check)
+
+%macro PERF_MARK 1
+%ifdef DEBUG_PERF
+    pushfd
+    push eax
+    mov eax, %1
+    call perf_mark
+    pop eax
+    popfd
+%endif
+%endmacro
 
 global DelayFrame
 global DelayFrames
@@ -82,8 +114,12 @@ section .text
 ; ---------------------------------------------------------------------------
 DelayFrame:
     pushad
+%ifdef DEBUG_PERF
+    call perf_frame_begin
+%endif
     call wait_vblank
     call wait_pit_tick
+    PERF_MARK PERF_WAIT
     call commit_shadow_regs
     call commit_palette         ; map BGP/OBP0/OBP1 → DAC (raw-index render)
     ; RETIRED: do_bg_transfer (pret's hAutoBGTransferEnabled VBlank auto-transfer)
@@ -108,7 +144,9 @@ DelayFrame:
     ; Does not reorder update_oam/render_bg/present.
     call VBlankCopyBgMap
     call UpdateMovingBgTiles
+    PERF_MARK PERF_COMMIT
     call update_oam             ; PrepareOAMData → shadow OAM, then DMA to OAM
+    PERF_MARK PERF_OAM
     call TrackPlayTime          ; pret VBlank: play clock + CountDownIgnoreInputBitReset (post-PrepareOAMData)
     ; pret home/vblank.asm:43 — `call Random`, every VBlank, between TrackPlayTime
     ; and ReadJoypad. This is the ONLY thing that churns hRandomAdd/hRandomSub for
@@ -138,17 +176,21 @@ DelayFrame:
     je .noFrameDec
     dec byte [ebp + H_FRAME_COUNTER]
 .noFrameDec:
+    PERF_MARK PERF_MISC
     ; pret VBlank audio block (home/vblank.asm, right after the hFrameCounter
     ; dec): FadeOutAudio → Music_DoLowHealthAlarm → Audio1_UpdateMusic →
     ; device-shim pass. Self-gates on g_audio_engine_online.
     call audio_tick
+    PERF_MARK PERF_AUDIO
     ; BG: render_bg picks its own path from wCurrentTileBlockMapViewPointer —
     ; nonzero = overworld surface, zero = flat 40×25 W_TILEMAP (title / menus /
     ; battle). InitBattle zeroes that pointer (+ SCX/SCY), so the battle screen is
     ; just the full-canvas W_TILEMAP rendered here. (Wave-2 Stage 1a: replaced the
     ; Stage-0.5 clear_backbuffer_battle + centered-window approach.)
     call render_bg
+    PERF_MARK PERF_BG
     call render_sprites         ; composite OAM sprites over BG
+    PERF_MARK PERF_SPRITES
     ; DIVERGENCE FROM GB HARDWARE (intentional): on real DMG/CGB, OBJ sprites
     ; draw OVER the window layer, so the GB order is BG → window → sprites. We
     ; deliberately invert that here (window LAST, over sprites) because the
@@ -159,11 +201,19 @@ DelayFrame:
     ; rows that the original camera never placed under the textbox. The player
     ; sprite sits at screen center (well above WY=152), so it is never occluded.
     call present_windows        ; composite the window descriptor list OVER sprites
+    PERF_MARK PERF_WINDOWS
     call draw_player_marker     ; legacy placeholder (no-op unless explicitly enabled)
     call present
+    PERF_MARK PERF_PRESENT
+%ifdef DEBUG_PERF
+    call perf_frame_end         ; folds this frame's counts into the maxima
+%endif
     cmp byte [pad_quit], 0
     je .done
     call cleanup
+%ifdef DEBUG_PERF
+    call DumpPerf               ; writes PERF.BIN, then exits (never returns)
+%endif
 %ifdef DEBUG_NPC_WALK
     call DumpNpcLog             ; writes NPCLOG.BIN, then exits (never returns)
 %endif

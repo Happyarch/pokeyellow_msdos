@@ -738,6 +738,20 @@ ifdef NEED_DEBUG_DUMP
 GAME_SRCS += src/debug/debug_dump.asm
 endif
 
+# Compositor profiler (docs/current_plan_compositor_perf.md Stage 0): latch PIT
+# channel 0 around each DelayFrame stage, accumulate per-stage totals + worst
+# frame, write PERF.BIN. Decode with tools/read_perf.py.
+#   make DEBUG_PERF=1 SKIP_TITLE=1                 (play; Esc dumps PERF.BIN)
+#   make DEBUG_PERF=1 DEBUG_PERF_FRAMES=600 ...    (auto-dump + exit after N frames)
+# Does NOT imply SKIP_TITLE — the profiler is meant to run in any real scenario.
+ifdef DEBUG_PERF
+GAME_SRCS += src/debug/perf.asm
+NASMFLAGS += -D DEBUG_PERF
+ifdef DEBUG_PERF_FRAMES
+NASMFLAGS += -D DEBUG_PERF_FRAMES=$(DEBUG_PERF_FRAMES)
+endif
+endif
+
 # Test harness for event-gated dialog: force EVENT_GOT_POKEBALLS_FROM_OAK at map
 # load so PalletTownOakText shows its "set" branch. make SKIP_TITLE=1 DEBUG_OAK_EVENT=1
 ifdef DEBUG_OAK_EVENT

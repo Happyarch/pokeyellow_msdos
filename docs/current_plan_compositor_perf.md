@@ -1,9 +1,9 @@
 # Current Plan — Compositor Performance (get back toward 386/66)
 
-Status: **not started** — tick stages as they land. Archive to
+Status: **in progress** — tick stages as they land. Archive to
 `docs/plans/compositor_perf.md` when complete.
 
-- [ ] Stage 0 — DEBUG_PERF instrumentation + baselines
+- [x] Stage 0 — DEBUG_PERF instrumentation + baselines
 - [ ] Stage 1 — render_bg dirty-skip / nested loops / flat-path trim
 - [ ] Stage 2 — render_window row-decode amortization
 - [ ] Stage 3 — present dirty-row diff
@@ -11,6 +11,34 @@ Status: **not started** — tick stages as they land. Archive to
 - [ ] Stage 5 — (optional, ask user before enabling) overrun pacing
 - [ ] Stage 6 — targeted loop unrolling (measured polish)
 - [ ] Ride-along: party_menu icon-bob missing `g_tilecache_dirty`
+
+## Measured baselines (Stage 0, 2026-07-12)
+
+DOSBox-X `cycles=fixed 23880` (386SX ~20 MHz), TIMING=SGB → **16.348 ms/frame
+budget**. Captured with `tools/perf_capture.sh <scenario>`; ms/frame, work =
+everything except the pacing spin.
+
+| scenario | render_bg | present_windows | present | sprites | audio | WORK | verdict |
+|---|---|---|---|---|---|---|---|
+| ow_idle    | **14.97** | 0.01 | 1.69 | 1.28 | 0.20 | 18.26 (112%) | overrun |
+| ow_walk    | **15.00** | 0.01 | 1.69 | 0.84 | 0.39 | 18.04 (110%) | overrun |
+| party_menu | 5.83 | **15.24** | 1.69 | 0.40 | 0.20 | 23.42 (143%) | overrun |
+| battle     | **15.94** | 0.01 | 1.69 | 1.01 | 0.60 | 19.29 (118%) | overrun |
+
+This ratifies the plan's ranking with no ambiguity:
+
+- **`render_bg` alone is 92–98% of the entire frame budget** on every non-menu
+  screen — the full-surface re-decode (cost #1) is the whole problem. Stage 1.
+- **`present_windows` is 93% of budget in the party menu** (15.24 ms, worst
+  frame 31.8 ms) and ~0 elsewhere — precisely the per-scanline row re-decode
+  (cost #2) scaling with menu depth. Stage 2.
+- `audio_tick` averages 0.2–0.6 ms — **exonerated**, as the investigation said.
+  (Its ~10 ms worst frame is a one-off song load, not per-frame cost.)
+- `present` is a flat 1.69 ms — real, but 10% of budget; Stage 3 is worth it
+  only after 1 and 2 (and matters far more on real ISA VGA than in DOSBox-X).
+- Frames cost ~31–34 ms total, i.e. **the game runs at roughly half speed** here,
+  and `wait` still burns 13 ms on top: cost #7 (`wait_vblank` spinning for a
+  fresh 70 Hz edge on an already-late frame) is confirmed real → Stage 5.
 
 Instruction-level style rules (LEA/scaled indexing, MOVZX, 32-bit moves, cycle
 table) live in `docs/386_optimization_strategy.md` — apply them throughout;
