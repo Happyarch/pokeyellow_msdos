@@ -2,10 +2,19 @@
 """
 DOSBox-X MCP Debug Server for the Pokemon Yellow DOS Port.
 
-Exposes tools that let an LLM drive the DOSBox-X heavy debugger via a
-Unix domain socket patched into DOSBox-X.  High-level tools know about
-the GB address space (EBP + gb_offset) and translate symbol names via
-pkmn.map / gb_memmap.inc.
+Exposes tools that let an LLM drive the dosbox-x-mcp fork's heavy debugger
+via its Unix domain socket.  High-level tools know about the GB address
+space (EBP + gb_offset) and translate symbol names via pkmn.sym /
+gb_memmap.inc.
+
+Symbols come from pkmn.sym — generated at every link from PKMN.EXE's own
+COFF symbol table (tools/gen_symfile.py), so it includes every NASM local
+label. SymbolMap stats the file on each resolution and reloads when it
+changed: a mid-session rebuild can NOT leave this server resolving stale
+addresses (it raises StaleSymbolsError if the EXE is newer than the sym
+file). Symbols are also pushed into the debugger itself (SYMF) so the
+ncurses UI can use names: BP CS:OverworldLoop, SYMNEAR EIP, labeled
+disassembly.
 
 Address model (verified live 2026-07-06):
   PKMN.EXE is a DJGPP/CWSDPMI protected-mode image.  Its CS/DS descriptors
@@ -33,7 +42,9 @@ Usage (started by run_with_mcp.sh or Claude Code MCP config):
 
 Environment:
   DOSBOX_MCP_SOCKET  path to Unix socket  (default /tmp/dosbox-mcp.sock)
-  PKMN_MAP           path to pkmn.map     (default dos_port/pkmn.map)
+  PKMN_SYM           path to pkmn.sym     (default dos_port/pkmn.sym)
+  PKMN_EXE           path to PKMN.EXE     (default dos_port/PKMN.EXE;
+                     freshness cross-check for pkmn.sym)
   GB_MEMMAP_INC      path to gb_memmap.inc
   DOSBOX_MCP_DIR     directory where MEMDUMP.BIN / FRAME.BIN are written
                      (default: same dir as PKMN.EXE, typically dos_port/)
@@ -52,7 +63,7 @@ _HERE = Path(__file__).parent
 _REPO = _HERE.parent.parent.parent  # dos_port/tools/dosbox_mcp → dos_port/tools → dos_port → repo root
 
 sys.path.insert(0, str(_HERE))
-from symbol_map import SymbolMap
+from symbol_map import SymbolMap, StaleSymbolsError
 from socket_client import DebugSocketClient, ResponseTimeout, PendingResponse
 
 from mcp.server.fastmcp import FastMCP
@@ -62,7 +73,8 @@ from mcp.server.fastmcp import FastMCP
 # ---------------------------------------------------------------------------
 
 SOCK_PATH  = os.environ.get('DOSBOX_MCP_SOCKET', '/tmp/dosbox-mcp.sock')
-MAP_FILE   = os.environ.get('PKMN_MAP',    str(_REPO / 'dos_port' / 'pkmn.map'))
+SYM_FILE   = os.environ.get('PKMN_SYM',    str(_REPO / 'dos_port' / 'pkmn.sym'))
+EXE_FILE   = os.environ.get('PKMN_EXE',    str(_REPO / 'dos_port' / 'PKMN.EXE'))
 MEMMAP_INC = os.environ.get('GB_MEMMAP_INC', str(_REPO / 'dos_port' / 'include' / 'gb_memmap.inc'))
 DUMP_DIR   = os.environ.get('DOSBOX_MCP_DIR', str(_REPO / 'dos_port'))
 RENDER_PY  = str(_REPO / 'dos_port' / 'tools' / 'render_frame.py')
@@ -74,8 +86,11 @@ GB_BACKBUF_SIZE = 64000     # 320 × 200
 # Singletons / state
 # ---------------------------------------------------------------------------
 
-_syms = SymbolMap(MAP_FILE, MEMMAP_INC)
+_syms = SymbolMap(SYM_FILE, MEMMAP_INC, EXE_FILE)
 _client = DebugSocketClient(SOCK_PATH, timeout=120.0)
+
+# pkmn.sym stamp last pushed into the debugger via SYMF (None = never)
+_symf_pushed_stamp = None
 
 # Execution state as best the client can track it:
 #   'unknown' — just launched / reconnected; game may be free-running
@@ -165,6 +180,9 @@ def _game_ctx() -> Optional[str]:
                 "is not in the game's protected-mode context yet (still "
                 "booting DOS?). Let the game reach the overworld, then "
                 "pause_exec() and retry.")
+    # Paused in game context: opportunistically sync the debugger-side symbol
+    # table (no-op unless pkmn.sym changed since the last push).
+    _push_symf()
     return None
 
 
@@ -173,6 +191,48 @@ def _resolve_gb_offset(offset_or_name: str) -> Optional[int]:
             c in '0123456789abcdefABCDEF' for c in offset_or_name):
         return int(offset_or_name, 16)
     return _syms.gb_offset(offset_or_name)
+
+
+def _where_str(eip: int) -> str:
+    """'OverworldLoop+0x12' for a program VMA, or '' when unresolvable."""
+    try:
+        near = _syms.nearest(eip, code_only=True)
+    except StaleSymbolsError:
+        return ''
+    if near is None:
+        return ''
+    name, delta, _kind = near
+    return name if delta == 0 else f"{name}+0x{delta:X}"
+
+
+def _annotate_eips(out: str) -> str:
+    """Append ' (Symbol+0x..)' to every 'EIP=xxxxxxxx' line in debugger output
+    (break notifications)."""
+    def sub(m):
+        w = _where_str(int(m.group(1), 16))
+        return f"{m.group(0)} ({w})" if w else m.group(0)
+    import re
+    return re.sub(r'EIP=([0-9A-Fa-f]{8})', sub, out)
+
+
+def _push_symf() -> str:
+    """Load pkmn.sym into the debugger's own symbol table (SYMF) so the
+    ncurses UI resolves names too. Idempotent per sym-file stamp; call only
+    while paused. Returns a status string ('' on the no-op path)."""
+    global _symf_pushed_stamp
+    try:
+        stamp = os.stat(SYM_FILE)
+        stamp = (stamp.st_mtime, stamp.st_size)
+    except OSError:
+        return f"NOTE: {SYM_FILE} missing — debugger-side symbols not loaded."
+    if stamp == _symf_pushed_stamp:
+        return ''
+    out = _cmd(f'SYMF "{SYM_FILE}"', timeout=30.0)
+    if 'loaded' in out:
+        _symf_pushed_stamp = stamp
+        return out.strip()
+    # Older binary without SYMF (or load failure): report, don't fail the call
+    return f"NOTE: debugger-side SYMF failed (old dosbox-x-mcp binary?): {out.strip()}"
 
 
 def _memdump(seg_offset: int, length: int) -> bytes | str:
@@ -262,7 +322,7 @@ def wait_break(timeout: float = 300.0) -> str:
         return (f"Still running after {timeout:.0f}s — no breakpoint hit yet. "
                 "Call wait_break() again to keep waiting.")
     _state = 'paused'
-    return out
+    return _annotate_eips(out)
 
 
 @mcp.tool()
@@ -283,43 +343,86 @@ def get_registers() -> str:
 @mcp.tool()
 def lookup_symbol(name: str) -> str:
     """
-    Resolve a symbol name using pkmn.map. Code/data symbols return the
+    Resolve a symbol name using pkmn.sym (always current — regenerated at
+    every link from the EXE's own symbol table, so NASM local labels like
+    "_AdvancePlayerSprite.scroll" resolve too). Code/data symbols return the
     program (VMA) address — the value set_breakpoint/x86_read expect.
     Prefix 'gb:' looks up GB memory constants from gb_memmap.inc instead.
     Example: lookup_symbol("OverworldLoop") or lookup_symbol("gb:W_CUR_MAP")
     """
-    if name.startswith('gb:'):
-        gb_name = name[3:]
-        off = _syms.gb_offset(gb_name)
-        if off is None:
-            return f"Not found in gb_memmap.inc: {gb_name}"
-        extra = ''
-        if _cached_ebp is not None:
-            extra = f", DS offset=0x{_cached_ebp + off:08X}"
-            if _cached_ds_base is not None:
-                extra += f", linear=0x{_cached_ds_base + _cached_ebp + off:08X}"
-        return f"{gb_name}: GB offset=0x{off:04X}{extra}"
-    addr = _syms.resolve(name)
-    if addr is None:
-        matches = _syms.search(name)
-        if matches:
-            lines = [f"{n}: 0x{a:08X}" for n, a in matches[:10]]
-            return "Partial matches:\n" + "\n".join(lines)
-        return f"Symbol not found: {name}"
+    try:
+        if name.startswith('gb:'):
+            gb_name = name[3:]
+            off = _syms.gb_offset(gb_name)
+            if off is None:
+                return f"Not found in gb_memmap.inc: {gb_name}"
+            extra = ''
+            if _cached_ebp is not None:
+                extra = f", DS offset=0x{_cached_ebp + off:08X}"
+                if _cached_ds_base is not None:
+                    extra += f", linear=0x{_cached_ds_base + _cached_ebp + off:08X}"
+            return f"{gb_name}: GB offset=0x{off:04X}{extra}"
+        addr = _syms.resolve(name)
+        if addr is None:
+            matches = _syms.search(name)
+            if matches:
+                lines = [f"{n}: 0x{a:08X}" for n, a in matches[:10]]
+                return "Partial matches:\n" + "\n".join(lines)
+            return f"Symbol not found: {name}"
+    except StaleSymbolsError as e:
+        return f"ERROR: {e}"
     return f"{name}: 0x{addr:08X} (program/VMA address)"
 
 
 @mcp.tool()
 def search_symbols(pattern: str) -> str:
     """
-    Search pkmn.map symbol names by regex pattern (case-insensitive).
+    Search pkmn.sym symbol names by regex pattern (case-insensitive);
+    includes NASM local labels ("_AdvancePlayerSprite.scroll").
     Returns up to 20 matches with their program (VMA) addresses.
     Example: search_symbols("Overworld") or search_symbols("^Load")
     """
-    matches = _syms.search(pattern)[:20]
+    try:
+        matches = _syms.search(pattern)[:20]
+    except StaleSymbolsError as e:
+        return f"ERROR: {e}"
     if not matches:
         return f"No symbols match: {pattern}"
     return "\n".join(f"0x{a:08X}  {n}" for n, a in sorted(matches, key=lambda x: x[1]))
+
+
+@mcp.tool()
+def where() -> str:
+    """
+    Report where execution is paused, symbolically: the nearest code symbol
+    at or below EIP (e.g. "OverworldLoop+0x12") plus the raw EIP/CS.
+    Only valid while paused.
+    """
+    try:
+        regs = _regs()
+    except (ResponseTimeout, PendingResponse) as e:
+        return f"ERROR: {e}"
+    if 'error' in regs:
+        return f"ERROR: cannot read registers: {regs['error']}"
+    eip = int(regs['EIP'], 16)
+    w = _where_str(eip)
+    loc = w if w else "(no symbol at or below EIP — outside PKMN.EXE code?)"
+    return f"{loc}  [CS={regs['CS']} EIP=0x{eip:08X}]"
+
+
+@mcp.tool()
+def load_debugger_symbols() -> str:
+    """
+    Push pkmn.sym into the DOSBox-X debugger's own symbol table (SYMF) so the
+    ncurses UI resolves names too: BP CS:OverworldLoop, SYMNEAR EIP, labeled
+    code view. Happens automatically when tools touch a paused game; call
+    explicitly after a rebuild if you drive the ncurses UI by hand.
+    """
+    err = _game_ctx()   # also performs the push when it succeeds
+    if err:
+        return err
+    out = _push_symf()
+    return out if out else f"Debugger symbol table already current ({SYM_FILE})."
 
 
 @mcp.tool()
@@ -332,7 +435,10 @@ def set_breakpoint(symbol_or_addr: str) -> str:
     err = _game_ctx()
     if err:
         return err
-    addr = _syms.resolve(symbol_or_addr)
+    try:
+        addr = _syms.resolve(symbol_or_addr)
+    except StaleSymbolsError as e:
+        return f"ERROR: {e}"
     if addr is None:
         return f"Cannot resolve: {symbol_or_addr}"
     try:
@@ -418,7 +524,7 @@ def continue_exec(wait_for_break: bool = True, timeout: float = 300.0) -> str:
     except PendingResponse as e:
         return f"ERROR: {e}"
     _state = 'paused'
-    return out
+    return _annotate_eips(out)
 
 
 @mcp.tool()
@@ -453,7 +559,12 @@ def x86_read(addr: str, length: int) -> str:
     err = _game_ctx()
     if err:
         return err
-    vma = int(addr, 16)
+    try:
+        vma = _syms.resolve(addr)
+    except StaleSymbolsError as e:
+        return f"ERROR: {e}"
+    if vma is None:
+        return f"Cannot resolve: {addr}"
     length = min(length, 4096)
     data = _memdump(vma, length)
     if isinstance(data, str):
@@ -515,9 +626,11 @@ def quit_emulator(timeout: float = 30.0) -> str:
 
     def _reset_client():
         global _state, _cached_ebp, _cached_cs, _cached_ds, _cached_ds_base
+        global _symf_pushed_stamp
         _client.disconnect()
         _state = 'unknown'
         _cached_ebp = _cached_cs = _cached_ds = _cached_ds_base = None
+        _symf_pushed_stamp = None   # a fresh emulator has an empty SYMF table
 
     if not _pids():
         _reset_client()
@@ -561,14 +674,19 @@ def quit_emulator(timeout: float = 30.0) -> str:
 @mcp.tool()
 def disassemble(symbol_or_addr: str, count: int = 10) -> str:
     """
-    Disassemble 'count' instructions starting at a pkmn.map symbol or program
-    (VMA) hex address, using ndisasm on bytes read from emulated memory.
+    Disassemble 'count' instructions starting at a pkmn.sym symbol (incl.
+    local labels) or program (VMA) hex address, using ndisasm on bytes read
+    from emulated memory. Output is symbol-annotated: label lines mark symbol
+    boundaries and call/jmp targets get '; Symbol+0x..' comments.
     Does not disturb CPU state. Only while paused.
     """
     err = _game_ctx()
     if err:
         return err
-    addr = _syms.resolve(symbol_or_addr)
+    try:
+        addr = _syms.resolve(symbol_or_addr)
+    except StaleSymbolsError as e:
+        return f"ERROR: {e}"
     if addr is None:
         return f"Cannot resolve: {symbol_or_addr}"
     if shutil.which('ndisasm') is None:
@@ -583,8 +701,35 @@ def disassemble(symbol_or_addr: str, count: int = 10) -> str:
     )
     if result.returncode != 0:
         return f"ndisasm failed:\n{result.stderr.decode(errors='replace')}"
-    lines = result.stdout.decode(errors='replace').splitlines()
-    return '\n'.join(lines[:count])
+    lines = result.stdout.decode(errors='replace').splitlines()[:count]
+    return '\n'.join(_annotate_disasm(lines))
+
+
+def _annotate_disasm(lines: list[str]) -> list[str]:
+    """Insert 'Symbol:' boundary lines and '; Symbol[+0x..]' target comments
+    into ndisasm output ('0000ABCD  <bytes>  <insn>')."""
+    import re
+    addr_re = re.compile(r'^([0-9A-Fa-f]{8})\s')
+    # jump/call with a bare hex immediate target, e.g. 'call 0x86ac' / 'jz 0x8731'
+    tgt_re = re.compile(r'^(?:call|jmp|j[a-z]{1,2}|loop\w*)\s+(?:dword\s+)?0x([0-9A-Fa-f]+)\s*$')
+    out: list[str] = []
+    for line in lines:
+        m = addr_re.match(line)
+        if m:
+            try:
+                near = _syms.nearest(int(m.group(1), 16), code_only=True)
+            except StaleSymbolsError:
+                near = None
+            if near and near[1] == 0:
+                out.append(f"{near[0]}:")
+        insn = line.split(None, 2)
+        tm = tgt_re.match(insn[2]) if len(insn) == 3 else None
+        if tm:
+            w = _where_str(int(tm.group(1), 16))
+            if w:
+                line = f"{line}    ; {w}"
+        out.append(line)
+    return out
 
 
 if __name__ == '__main__':

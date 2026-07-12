@@ -8,3 +8,8 @@
 	path = docs/references/openmusictheory.github.io
 	url = git@github.com:Happyarch/openmusictheory.github.io.git
 	branch = claude-skills-prep
+[submodule "dos_port/tools/dosbox-x"]
+	path = dos_port/tools/dosbox-x
+	url = git@github.com:Happyarch/dosbox-x.git
+	branch = mcp-debug
+	shallow = true

@@ -13,8 +13,6 @@
 *.gbc
 *.gb
 *.patch
-# MCP debugger patch is source-controlled (exception to *.patch above)
-!dos_port/tools/dosbox-x-mcp.patch
 
 # rgbds extras
 *.map

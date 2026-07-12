@@ -19,7 +19,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 DOSPORT="$(cd "$SCRIPT_DIR/.." && pwd)"
-BINARY="${SCRIPT_DIR}/dosbox-x-mcp/dosbox-x"
+# dosbox-x-mcp: the Happyarch/dosbox-x fork (submodule tools/dosbox-x, branch
+# mcp-debug), deliberately named so it never collides with the system dosbox-x.
+BINARY="${SCRIPT_DIR}/dosbox-x-mcp/dosbox-x-mcp"
 SOCK_PATH="/tmp/dosbox-mcp.sock"
 
 if [ ! -x "$BINARY" ]; then

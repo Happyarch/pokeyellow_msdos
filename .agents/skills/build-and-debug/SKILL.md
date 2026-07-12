@@ -39,7 +39,10 @@ dos_port/
     colorize.py            ← palette tool (stub, Phase 5)
     saveconv.py            ← GB .sav ↔ DOS .dsv converter (stub, Phase 5)
     dosbox_mcp/            ← MCP server for live LLM-driven DOSBox-X debugging
-    dosbox-x-mcp/          ← MCP-patched DOSBox-X build (gitignored, built locally)
+    dosbox-x/              ← dosbox-x fork SUBMODULE (Happyarch/dosbox-x, branch
+                             mcp-debug: MCP socket bridge + SYMF symbol table)
+    dosbox-x-mcp/          ← built fork binary `dosbox-x-mcp` (gitignored)
+    gen_symfile.py         ← PKMN.EXE COFF symtab → pkmn.sym (runs at every link)
     mgba/, mgba_build/     ← vendored mGBA submodule + Lua-runner build (build_mgba.sh)
     mgba_harness/          ← golden-generation Lua scenarios + libs (fidelity harness)
     mgba_mcp/              ← MCP server for the mGBA ground-truth side (run_mgba_mcp.sh)
@@ -166,50 +169,73 @@ This is how the `.rodata` bug was localized: header vars and the `rep stosb`
 border-fill were correct in the dump, but the whole `$4000`-asset window and
 `$9000` tileset were zero — pointing at the asset load, not the map logic.
 
-### Live debugging via dosbox-mcp (breakpoints, memory, frame dumps)
+### Live debugging via dosbox-mcp (symbolic breakpoints, memory, frame dumps)
 
-The MCP-patched DOSBox-X (`tools/dosbox-x-mcp/`, built by
-`tools/build_dosbox_mcp.sh`) + the MCP server (`tools/dosbox_mcp/server.py`,
-auto-started by Claude Code via `.claude/settings.json`) let a session drive
-the heavy debugger live: execution breakpoints on pret symbols, GB/x86 memory
-reads, watchpoints, disassembly, and paused-frame PNG dumps. Facts below are
-post-commit `06b05bd2` — earlier notes (BPLM as a breakpoint, raw VMA
-addresses) were actively wrong and produced tools that silently "succeeded"
-while doing nothing.
+The **dosbox-x-mcp fork** (submodule `tools/dosbox-x` = Happyarch/dosbox-x
+branch `mcp-debug`; built by `tools/build_dosbox_mcp.sh` into the
+deliberately-renamed binary `dosbox-x-mcp` — installed to `~/.local/bin/` and
+`tools/dosbox-x-mcp/`, never colliding with the system dosbox-x) + the MCP
+server (`tools/dosbox_mcp/server.py`, auto-started by Claude Code via
+`.claude/settings.json`) let a session drive the heavy debugger live:
+symbolic execution breakpoints, GB/x86 memory reads, watchpoints,
+symbol-annotated disassembly, and paused-frame PNG dumps.
 
-**Launch:** `dos_port/tools/run_with_mcp.sh` (builds PKMN.EXE with
-`SKIP_TITLE=1`, launches the patched binary with the MCP socket
-`/tmp/dosbox-mcp.sock`). It mounts the **host `dos_port/` as C:**, so harness
-`FRAME.BIN`/`DUMP.BIN` files land directly on disk there — no mcopy (unlike
-the isolated-`PKMN.IMG` headless pipeline above). It does **not** pass
-`-break-start`: the game's runtime selectors only exist once PKMN.EXE is
-loaded (at BIOS entry there is nothing to target, and a paused emulator can't
-service the socket BREAK request).
+**Symbols are always fresh and include NASM local labels.** The link rule
+generates `pkmn.sym` from PKMN.EXE's own COFF symbol table
+(`tools/gen_symfile.py` — ~9.4k symbols, e.g. `_AdvancePlayerSprite.scroll`).
+The server stats the file on every resolution and reloads transparently, so a
+mid-session rebuild can NOT leave stale addresses (the old pkmn.map staleness
+bug class is dead); if PKMN.EXE is newer than pkmn.sym it errors loudly
+instead of resolving. Symbols are also auto-pushed into the debugger itself
+(`SYMF`) the first time a tool touches the paused game, so the **ncurses UI**
+resolves names natively: `BP CS:OverworldLoop`, `EV MySym+4`, `SYMNEAR EIP`,
+`SYMLIST <pattern>`, labeled code view, `; Symbol` on call/jmp targets.
+(One quirk: a symbol name made only of hex digits — `AddBCD` is the sole case
+— is shadowed by the hex-literal interpretation in debugger expressions;
+SYMF warns. The MCP tools resolve it fine.)
+
+**Launch:** `dos_port/tools/run_with_mcp.sh` (does NOT build — run
+`make SKIP_TITLE=1 DEBUG_SEED_PARTY=1` yourself first; launches the fork
+binary with the MCP socket `/tmp/dosbox-mcp.sock`). It mounts the **host
+`dos_port/` as C:**, so harness `FRAME.BIN`/`DUMP.BIN` files land directly on
+disk there — no mcopy (unlike the isolated-`PKMN.IMG` headless pipeline
+above). It does **not** pass `-break-start`: the game's runtime selectors
+only exist once PKMN.EXE is loaded (at BIOS entry there is nothing to target,
+and a paused emulator can't service the socket BREAK request).
 
 **Canonical flow:**
-1. `pause_exec()` once the game is running (drives the patch's BREAK request);
-2. `set_breakpoint("OverworldLoop")` — any pkmn.map symbol or hex offset;
-3. `continue_exec()` — resumes and waits for the break;
+1. `pause_exec()` once the game is running (drives the fork's BREAK request);
+2. `set_breakpoint("OverworldLoop")` — any pkmn.sym symbol (incl. local
+   labels like `PrepareOAMData.spriteLoop`) or hex offset;
+3. `continue_exec()` — resumes and waits for the break (break reports are
+   annotated: `EIP=00007B1C (OverworldLoop)`);
 4. `wait_break()` — collects a break notification that outlives a RUN timeout
    *without* tearing down the socket (a teardown wedges the C-side bridge
-   thread in `cond_wait`).
+   thread in `cond_wait`);
+5. `where()` — "which routine am I in": nearest code symbol at/below EIP.
 
 Then `gb_read`/`x86_read`/`get_registers`/`dump_frame` inspect the paused
 emulator (`dump_frame` renders the back buffer to PNG). `disassemble` is
-non-destructive — it reads bytes and runs host `ndisasm`; it does NOT write
-EIP. `lookup_symbol`/`search_symbols` resolve pkmn.map names.
+non-destructive (reads bytes, runs host `ndisasm`; does NOT write EIP) and is
+symbol-annotated: label lines at symbol boundaries, `; Symbol+0x..` on
+call/jmp targets. `lookup_symbol`/`search_symbols` resolve pkmn.sym names;
+`load_debugger_symbols()` re-pushes SYMF explicitly (only needed when driving
+the ncurses UI by hand right after a rebuild).
 
 **Semantics that bit us (the "silent success" folly):**
 - `set_breakpoint` sends `BP <cs>:<offset>` — a real execution breakpoint
   (BKPNT_PHYSICAL). **BPLM is a memory-CHANGE watchpoint**, exposed as
   `set_watchpoint` — set on *code* bytes it never fires (code doesn't change).
-- **Never use raw pkmn.map VMAs as linear addresses.** The CWSDPMI image runs
+- **Never use raw pkmn.sym VMAs as linear addresses.** The CWSDPMI image runs
   with CS/DS base `0x00400000`; every address must resolve through the game's
   **runtime selectors** (from REGJSON/SELINFO). The MCP tools do this
-  internally; if you drop to raw `dbg_command`, resolve the base yourself.
+  internally; the fork's SYMF table also resolves selectors lazily at each
+  use. If you drop to raw `dbg_command`, resolve the base yourself.
 - **Double-quote all hex args** in raw debugger commands: the expression
   parser resolves bare `AF`/`BP`/`DX`/`CF` as register/flag names — our DS
   selector is literally `"AF"`, which unquoted parses as the adjust flag (0).
+  (Symbol names are exempt: identifiers that aren't registers/flags/hex fall
+  through to the SYMF table, case-insensitively.)
 
 **Failure heuristic:** a breakpoint that never fires, or reads returning all
 zeros, means one of the three items above — **not** a broken socket. Check
@@ -217,8 +243,15 @@ them first.
 
 **⚠ NEVER `pkill -f dosbox`** — the pattern also matches
 `tools/dosbox_mcp/server.py` and kills the MCP server, permanently
-disconnecting the session's dosbox-mcp tools. Match `dosbox-x` precisely
-(e.g. `pkill -f 'dosbox-x-mcp/dosbox-x'` or by PID).
+disconnecting the session's dosbox-mcp tools. Match the fork binary precisely
+(`pkill -f dosbox-x-mcp` or by PID).
+
+**Rebuilding the debugger itself:** commit to the submodule
+(`tools/dosbox-x`, branch `mcp-debug`) and run `tools/build_dosbox_mcp.sh`
+(rsyncs the working tree to space-free `/tmp` staging — autotools can't take
+the repo path's space — builds, installs both binary copies). Push the
+submodule branch to the fork and commit the new submodule SHA in the
+superproject. Upstream bumps = rebase `mcp-debug` onto the new upstream tag.
 
 ### Golden fidelity harness (mGBA ground truth vs DOSBox-X port)
 

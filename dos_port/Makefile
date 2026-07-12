@@ -11,6 +11,9 @@
 
 NASM    := nasm
 LD      := i386-pc-msdosdjgpp-ld
+# djgpp objdump: extracts the EXE's COFF symbol table (incl. NASM local
+# labels) for pkmn.sym — the debugger/MCP symbol source of truth.
+OBJDUMP := i586-pc-msdosdjgpp-objdump
 
 NASMFLAGS := -f coff -I include/ -I . -O0
 
@@ -1430,6 +1433,7 @@ all: $(TARGET) image
 
 $(TARGET): $(LINK_OBJS) link.ld
 	$(LD) $(LDFLAGS) -Map=pkmn.map $(LINK_OBJS) -o $@
+	$(OBJDUMP) -t $@ | python3 tools/gen_symfile.py > pkmn.sym
 	@echo "Built: $@"
 
 # ---------------------------------------------------------------------------
@@ -1512,4 +1516,4 @@ check:
 	@echo "All files assembled successfully."
 
 clean:
-	rm -f $(ALL_OBJS) $(TARGET) $(NASMFLAGS_STAMP)
+	rm -f $(ALL_OBJS) $(TARGET) $(NASMFLAGS_STAMP) pkmn.sym
