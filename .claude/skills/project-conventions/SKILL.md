@@ -201,9 +201,18 @@ commit but too specific to belong in TODO.md.
   is **complete and archived** at `docs/plans/pokemon_behavior.md` (2026-07-04);
   its deferred tails — status-screen front-pic/cry/STATS-wire, Bill's PC full UI —
   are tracked in TODO.md.)
+- `docs/current_plan_party_icons_oam.md` — **retire the BG-tile party-icon hack**;
+  port pret's `engine/gfx/mon_icons.asm` (icons as OAM sprites, X-flip for free).
+  Not started, and **sequenced BEFORE the items work** (user, 2026-07-12) so items
+  doesn't build on the current shape. The hack put icons in vTileset where they
+  collided with the BG animator's reserved tiles ($03 flower / $14 water) — patched
+  with a re-base + assert (`be6500bc`), but that guards the hack rather than fixing
+  it. The blocker it was written around is gone: `render_sprites` is now a general
+  OBJ compositor, only its `g_bg_whiteout` blanket-skip is in the way.
 - `docs/current_plan_items.md` — item/bag layer (sequenced after pokemon, before
-  battle). Inventory bookkeeping (add/remove) + TOSS done; item USE dispatch
-  (`UseItem_`/`ItemUsePtrTable`) deferred (battle/UI-coupled).
+  battle; **now also after `party_icons_oam`**). Inventory bookkeeping (add/remove)
+  + TOSS done; item USE dispatch (`UseItem_`/`ItemUsePtrTable`) deferred
+  (battle/UI-coupled).
 - `docs/current_plan_battle_ui.md` — **battle-UI layout pipeline + widescreen
   redesign** (branch `menus-port`). Shared `tools/gfx_core/` extraction, then
   migrate all hardcoded battle coordinates into a
