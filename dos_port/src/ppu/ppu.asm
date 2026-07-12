@@ -114,9 +114,13 @@ global g_windows, g_window_count
 g_window_count: dd 0
 
 ; Full-screen whiteout: when nonzero, render_bg fills the whole back buffer with
-; BG color 0 (the menu's white) and render_sprites is skipped, so a window-layer
-; menu (e.g. the party screen) can sit centered on a clean white field instead of
-; over the overworld. Set on menu entry, cleared on exit.
+; BG color 0 (the menu's white), so a window-layer menu (e.g. the party screen) can
+; sit centered on a clean white field instead of over the overworld. Set on menu
+; entry, cleared on exit.
+;
+; It does NOT gate the sprite layer (it used to). OBJ visibility is spr_oam_valid's
+; job alone — see render_sprites' header for the "whoever owns the canvas owns OAM"
+; contract; the party menu draws its mon icons as OBJ on top of this white field.
 global g_bg_whiteout
 g_bg_whiteout: dd 0
 
@@ -770,14 +774,20 @@ rebuild_tile_cache:
 ; and the 10-sprites-per-scanline limit is not enforced. 8×16 OBJ size (LCDC
 ; bit 2) is not handled — Pokémon overworld/menus use 8×8.
 ;
+; OBJ are NOT suppressed on a whiteout screen. They used to be (a blanket
+; `g_bg_whiteout != 0 → skip`), back when the sprite layer was overworld-only and
+; a menu could not own OAM; the party mon icons were drawn as BG tiles precisely
+; because of that. The contract now is "whoever owns the canvas owns OAM": a
+; flat-canvas/menu screen that wants no OBJ says so by publishing spr_oam_valid = 0,
+; which ClearSprites/HideSprites (home/sprites.asm) do for it — matching the GB,
+; where a cleared shadow OAM + the unconditional VBlank DMA means nothing is drawn.
+; A screen that wants its own OBJ writes them (PrepareStaticOAM, the mon-icon
+; writers). See docs/plans/party_icons_oam.md.
+;
 ; In:  EBP = GB memory base. All registers preserved.
 ; ---------------------------------------------------------------------------
 render_sprites:
     pushad
-    ; Skip OBJ sprites during a full-screen whiteout (overworld player/NPCs must
-    ; not paint over the menu's clean white field).
-    cmp dword [g_bg_whiteout], 0
-    jne .done
     test byte [ebp + IO_LCDC], LCDCF_OBJ_ON
     jz .done
 

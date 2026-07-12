@@ -1,15 +1,38 @@
 # Current Plan — Party Mon Icons: retire the BG-tile hack, port pret's OAM path
 
-Status: **not started.** Sequenced **before the items work** (user, 2026-07-12) so
+Status: **in progress.** Sequenced **before the items work** (user, 2026-07-12) so
 items doesn't build more on the current shape.
 
-- [ ] Stage 0 — baselines + decide the sprite-gating contract
+- [x] Stage 0 — baselines + decide the sprite-gating contract
 - [ ] Stage 1 — compositor: replace the `g_bg_whiteout` OBJ blanket-skip
 - [ ] Stage 2 — port `engine/gfx/mon_icons.asm` under pret's names
 - [ ] Stage 3 — party menu: icons via OAM, delete the BG-tile path
 - [ ] Stage 4 — naming screen (the other live consumer)
 - [ ] Stage 5 — regenerate icon assets without the baked mirror
 - [ ] Stage 6 — delete the dead scaffolding + the collision assert
+
+## Session notes (fill in as stages land)
+
+**Stage 0 (done).** Baselines captured (9 pixelcheck frames + perf for
+party_menu / ow_idle / battle). Baseline `party_menu` perf: WORK 7.392 ms/frame
+(render_bg 2.079, render_sprites 0.176, present_windows 3.184).
+
+*Contract decided — "whoever owns the canvas owns OAM", enforced at the
+primitive, not per screen.* Audit result: **every** `g_bg_whiteout = 1` screen
+(trainer_card, link_menu, main_menu, options, draw_badges, pokedex,
+pokedex_entry, naming_screen; party_menu is the exception that will own OAM)
+already calls **`ClearSprites` + sets `wUpdateSpritesEnabled = 0`** on entry. So
+`PrepareOAMData` never re-runs behind them — the only thing left stale is the
+port-side pair (`spr_oam_valid`, `$FE00`), which is what would ghost.
+
+Rather than sprinkle `spr_oam_valid = 0` across 8 screens (and have the 9th new
+screen forget it), **`ClearSprites` / `HideSprites` now publish `spr_oam_valid = 0`
+themselves**. That is the GB semantics the port was missing: on hardware, clearing
+shadow OAM + the unconditional VBlank DMA means *no sprites are drawn*; in the port
+the DMA is gated on `wUpdateSpritesEnabled`, so the clear never reached the
+compositor. Any screen that then wants its own OBJ republishes through
+`PrepareOAMData` / `PrepareStaticOAM` / the mon-icon writers. `status_screen.asm`'s
+explicit zeroing stays (it must happen *after* its whiteout delay frames).
 
 ## Why
 
