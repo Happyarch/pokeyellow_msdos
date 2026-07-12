@@ -190,9 +190,12 @@ instead of resolving. Symbols are also auto-pushed into the debugger itself
 (`SYMF`) the first time a tool touches the paused game, so the **ncurses UI**
 resolves names natively: `BP CS:OverworldLoop`, `EV MySym+4`, `SYMNEAR EIP`,
 `SYMLIST <pattern>`, labeled code view, `; Symbol` on call/jmp targets.
-(One quirk: a symbol name made only of hex digits — `AddBCD` is the sole case
-— is shadowed by the hex-literal interpretation in debugger expressions;
-SYMF warns. The MCP tools resolve it fine.)
+Expression precedence: register/flag name → symbol → hex literal, so even a
+symbol spelled in pure hex digits (`AddBCD`) resolves as a symbol
+(`EV ADDBCD` → its address); double-quote a value (`EV "ADDBCD"`) to force
+the hex-literal reading, and digit-leading tokens (`7B1C`) are always hex
+(NASM names can't start with a digit). Only names colliding with a
+register/flag token stay unreachable by name — SYMF warns if any exist.
 
 **Launch:** `dos_port/tools/run_with_mcp.sh` (does NOT build — run
 `make SKIP_TITLE=1 DEBUG_SEED_PARTY=1` yourself first; launches the fork
