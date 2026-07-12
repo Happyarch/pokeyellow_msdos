@@ -1,5 +1,9 @@
 # Current Plan: Script Engine — Faithful Translation
 
+> **SUPERSEDED (2026-07-12): absorbed into `docs/current_plan_overworld_events.md`**
+> — its Stage 1 is this plan's Oak-intro milestone (ABI cheatsheet carried over);
+> kept for the completed-stage record until that plan archives.
+
 Active work item: faithfully translate gen-1's script system (per-map `_Script`
 state machines + `_TextPointers` / `text_asm` text scripts, gated on the event-flag
 system, dispatched by `DisplayTextID` / `RunMapScript`). Full plan:
