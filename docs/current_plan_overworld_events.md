@@ -213,5 +213,8 @@ battle/items-blocked.
 2. Headless FRAME.BIN scenario per feature (the DEBUG_* seed-flag harness);
    goldencheck suite stays green.
 3. Live spot-check in DOSBox-X for anything input-driven (signs, marts, PCs,
-   cutscenes) — dosbox-mcp breakpoints for state machines.
+   cutscenes) — dosbox-mcp breakpoints for state machines. Breakpoints/
+   `where()` resolve symbolically (pret labels incl. NASM local labels, e.g.
+   per-state `_Script` targets), and `pkmn.sym` auto-refreshes on rebuild —
+   no server restart needed between iterations on a multi-state script.
 4. `update_label_db` after each stub add/retire.

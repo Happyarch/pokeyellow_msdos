@@ -136,7 +136,8 @@ and the two visual subsystems (transitions, animations).
   OOB write in the multi-participant loop. Seed EXP_ALL into the bag
   (`DEBUG_SEED_*`), win a wild battle, checkpoint `wIsInBattle` (the FE_CP
   in-code checkpoint method from that memory cracked bug#3; MCP watchpoints
-  didn't). Fix or close.
+  didn't — worth a retry with the rebuilt harness's `set_watchpoint` (BPLM)
+  on `wIsInBattle` before falling back to FE_CP). Fix or close.
 - **Verify:** native ELF32 harness where applicable (Bide/counter math);
   headless battle scenarios per item; `faithdiff` each touched pret label.
 

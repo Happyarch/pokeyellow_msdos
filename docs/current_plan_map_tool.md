@@ -112,12 +112,16 @@ checkboxes updated → commit.
   (a) Analytic bound: player at tilemap center, 12×9-block wSurroundingTiles —
   worst-case buffer excursion per direction vs `get_connection()` view_start
   formulas (west margin is exactly zero — check off-by-one). (b) Empirical:
-  instrument both clamps with hit counters via the dosbox MCP (breakpoints /
-  gb_read), run DEBUG_WALK edge-walks along all four edges of several maps +
-  across every CONNECTIONS entry; record which clamp fires where. (c) Author
-  border content for all reachable outdoor maps' exposed ring cells (human
-  editor step — may spread over follow-ups; clamps stay until covered).
-  (d) Delete both clamps once counters read zero across the suite.
+  instrument both clamps with hit counters via the dosbox MCP (breakpoints on
+  the clamp sites in `DrawTileBlock`/`LoadCurrentMapView` — symbolic, incl.
+  local labels, no address hunting needed — and `gb_read`), run DEBUG_WALK
+  edge-walks along all four edges of several maps + across every CONNECTIONS
+  entry; record which clamp fires where. `set_watchpoint` (BPLM) on
+  `[wOverworldMap, wOverworldMapEnd)` is the direct tool for the (d) exit
+  condition below. (c) Author border content for all reachable outdoor maps'
+  exposed ring cells (human editor step — may spread over follow-ups; clamps
+  stay until covered). (d) Delete both clamps once counters read zero across
+  the suite.
   Gates: FRAME.BIN edge-walk suite green with clamps deleted; MCP watch shows
   no reads outside [$E800,$F000).
 

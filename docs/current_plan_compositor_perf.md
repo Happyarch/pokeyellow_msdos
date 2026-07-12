@@ -63,6 +63,34 @@ Baseline scenarios: overworld idle, walking, START menu, options/party submenu,
 wild battle — under DOSBox-X fixed cycles (386-class and 486-class settings),
 plus user spot-check on real hardware. Every later stage re-runs these.
 
+### Debugger support (dosbox-x-mcp, symbolic since 2026-07-12)
+
+PERF.BIN stays the *measurement* tool (real-hardware comparable); the MCP
+debug harness is the *inspection* tool while implementing each stage. What
+the 2026-07-12 upgrade gives this plan specifically:
+
+- **Symbolic breakpoints incl. NASM local labels** — `pkmn.sym` is generated
+  from PKMN.EXE's COFF symtab at every link and carries all ~8–9 k local
+  labels, so the exact hot spots in this plan are breakable by name:
+  `set_breakpoint("render_bg")`, `render_bg.row_copy`, `render_sprites`
+  (`.colLoop`), `decode_win_row`, `rebuild_tile_cache`, `present`. No hex
+  hunting; `where()` / annotated `disassemble` confirm which rewritten path
+  actually executes.
+- **No stale-symbol class** — `symbol_map.py` mtime-reloads `pkmn.sym` per
+  call (errors loudly if PKMN.EXE is newer), so the tight
+  rebuild→re-break iteration loop these stages need works mid-session
+  without restarting the MCP server. Breakpoints re-resolve on the new build.
+- **Watchpoints for the dirty-flag work** — `set_watchpoint` (BPLM,
+  memory-change) on `g_tilecache_dirty`, the Stage 1b tile-ID shadow, or the
+  Stage 3 prev-frame shadow catches "who armed/failed to arm the flag"
+  directly — this is the debugging shape for both the dirty-skip stages and
+  the party_menu ride-along bug.
+- Workflow reminders: build the game first (`run_with_mcp.sh` does **not**
+  build), launch via `dos_port/tools/run_with_mcp.sh`; the binary is the
+  fork-submodule build `dosbox-x-mcp` (rebuild with
+  `tools/build_dosbox_mcp.sh` if the fork moves); never `pkill -f dosbox`
+  (use `pkill -f dosbox-x-mcp`).
+
 ## Stage 1 — render_bg: stop re-decoding the world every frame (biggest win)
 
 - **1a. Nested loops:** replace the linear-index `div`-per-tile loop with

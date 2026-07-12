@@ -141,3 +141,6 @@ runtime verification** (spec in `current_plan_overworld_port.md` Stage 2):
 DOSBox-X MCP breakpoint `DoScriptedNPCMovement`, `gb_read wNPCMovementDirections2`,
 `dump_frame` per step; final FRAME.BIN shows Oak + player walked to the Lab.
 Report the result back to the overworld plan's Stage 8 runtime-regression item.
+(Debugger note: breakpoints/`where()` now resolve NASM local labels too, and
+`pkmn.sym` auto-refreshes on rebuild — no MCP server restart needed while
+iterating on the 10-state cutscene.)
