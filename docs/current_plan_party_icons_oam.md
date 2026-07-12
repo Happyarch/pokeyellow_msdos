@@ -4,9 +4,9 @@ Status: **in progress.** Sequenced **before the items work** (user, 2026-07-12) 
 items doesn't build more on the current shape.
 
 - [x] Stage 0 — baselines + decide the sprite-gating contract
-- [ ] Stage 1 — compositor: replace the `g_bg_whiteout` OBJ blanket-skip
-- [ ] Stage 2 — port `engine/gfx/mon_icons.asm` under pret's names
-- [ ] Stage 3 — party menu: icons via OAM, delete the BG-tile path
+- [x] Stage 1 — compositor: replace the `g_bg_whiteout` OBJ blanket-skip (`58d5a94a`)
+- [x] Stage 2 — port `engine/gfx/mon_icons.asm` under pret's names
+- [x] Stage 3 — party menu: icons via OAM, delete the BG-tile path
 - [ ] Stage 4 — naming screen (the other live consumer)
 - [ ] Stage 5 — regenerate icon assets without the baked mirror
 - [ ] Stage 6 — delete the dead scaffolding + the collision assert
@@ -33,6 +33,63 @@ the DMA is gated on `wUpdateSpritesEnabled`, so the clear never reached the
 compositor. Any screen that then wants its own OBJ republishes through
 `PrepareOAMData` / `PrepareStaticOAM` / the mon-icon writers. `status_screen.asm`'s
 explicit zeroing stays (it must happen *after* its whiteout delay frames).
+
+**Stage 1 (done, `58d5a94a`).** pixelcheck 9/9: 8 byte-identical; **`battle`
+differs by 438 px and it is a FIX** — the before-frame drew three ghost pokéballs
+over the FIGHT/ITEM/RUN menu (`HideBattlePokeballs` cleared shadow OAM, but the
+stale `$FE00` entries stayed *published*, and battle is not a whiteout screen so
+the old skip never covered it). `make fidelity` 6/6 PASS. Note the `party_menu`
+golden already carries 4 masks that describe the BG-icon deviation
+(tilemap 0,1..11,2 / vChars0 slots 0-127 / OAM entries 0-23) — **Stage 3 should
+retire those masks**, they are exactly what this plan fixes.
+
+**Stages 2 + 3 (done, one commit — they are inseparable: the port's own
+`LoadMonPartySpriteGfx` in party_menu.asm had to go before pret's real one could
+link).** `src/engine/gfx/mon_icons.asm` holds every pret label plus the two OAM
+writers pret keeps in `engine/items/town_map.asm` (the port's `town_map.asm` is a
+DANGLING/unlinked file, so they live with their only caller — registered in
+`tools/pret_label_allowlist.json`). Stage 5's generator rewrite rode along (raw pret
+blobs + `MonPartyData`), and most of Stage 6 too (the `PM_ICON_TILE_*` equates,
+the `%error` asserts and `PartyMenuAnimCB` are gone).
+
+Three things the plan did not anticipate, all load-bearing:
+
+1. **OBJ-vs-window z-order.** The icons were written, published and *painted over*:
+   the port composites `present_windows` **after** `render_sprites` (a documented
+   deviation — its only window is normally the bottom dialog box, which must occlude
+   NPCs the widescreen camera exposes under it). The party panel IS a window, so its
+   icons need the hardware order. New opt-in flag **`g_obj_over_window`** (ppu.asm,
+   default 0 = today's order): `ShowPartyMenuWindows` raises it, `.exitMenu` clears it
+   beside `g_bg_whiteout`. Every other scenario stays byte-identical because the flag
+   is off for them.
+2. **`update_oam` gates the DMA too**, so the menu publishes its own OAM:
+   `CommitMonPartySpriteOAM` (shadow OAM → `$FE00`, fills `spr_dos_sx/sy` through the
+   panel-anchor projection set by `SetMonPartySpriteOrigin`, sets `spr_oam_valid`).
+   It is called from `WriteMonPartySpriteOAM`'s tail and from `GetAnimationSpeed`
+   right before its `jp DelayFrame` — i.e. exactly where the GB's VBlank DMA runs.
+3. **`RestoreScreenTilesAndReloadTilePatterns` had to stop stubbing
+   `ReloadMapSpriteTilePatterns`** (`home/fade.asm`) — the icons live in vSprites now,
+   which is precisely the map-sprite tile area that call exists to restore.
+
+Verification: pixelcheck 9/9 (8 byte-identical, only `party_menu` differs — icons are
+OBJ now); `make fidelity` 6/6 PASS with the **party_menu tilemap + all-40-OAM +
+whole-vChars0 icon masks retired** — OAM now diffs entry-for-entry against the mGBA
+golden and matches, as does every vChars0 slot the icon loader writes. The one
+surviving vChars0 mask (`ICON_GAP_SLOTS`, 48 slots) is the set the loader *never*
+writes (unused ICON ids `$0B-$0D`, and each 2-pattern icon's +1/+3 gap — the
+symmetric writer only ever displays base and base+2); the golden holds zeros there,
+the port holds leftover overworld map-sprite tiles, and no OAM entry references them.
+faithdiff: the new divergences are `CommitMonPartySpriteOAM` (the DMA analog),
+`AddNTimes`/`FarCopyData`/`IndexToPokedex`-predef dropping out to flat pointer math
+and the port's flat `IndexToPokedex` table, and `LoadMonPartySpriteGfxWithLCDDisabled`
+calling the shared `LoadAnimSpriteGfx` instead of re-inlining pret's copy of the loop.
+`lint_pret_labels` 0.
+
+Perf (`party_menu`): WORK **8.419 ms** vs the 7.392 ms baseline (51.5% of the 16.348 ms
+budget) — `render_sprites` 0.176 → 1.202 ms for the 24 new OBJ. The plan predicted a
+net *win* from losing the per-bob `tile_cache` rebuild; that rebuild doesn't show in
+this harness (it dumps one static frame and never bobs), so the measured delta is the
+sprite cost alone. Comfortably inside budget; flagged, not chased.
 
 ## Why
 

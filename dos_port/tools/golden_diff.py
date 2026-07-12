@@ -79,6 +79,19 @@ _STATUS_MASKS = {
     ),
 }
 
+# vChars0 tile slots that pret's MonPartySpritePointers (data/icon_pointers.asm) never
+# writes: per animation frame (f = 0 and f = ICONOFFSET), the loader fills the icon
+# bases below, leaving the unused ICON ids ($0B-$0D) and each 2-pattern icon's +1/+3
+# tiles untouched. Used by the party_menu vram mask — see its justification there.
+ICON_GAP_SLOTS = sorted(
+    set(range(128))
+    - {f + t for f in (0, 0x40) for t in
+       list(range(0, 4)) + list(range(4, 12)) + list(range(12, 16))    # MON, BALL(+HELIX), FAIRY
+       + list(range(16, 20)) + list(range(20, 24))                     # BIRD, WATER
+       + [24, 26, 28, 30, 32, 34, 36, 38]                              # BUG, GRASS, SNAKE, QUADRUPED
+       + list(range(40, 44)) + list(range(56, 60))}                    # PIKACHU, TRADEBUBBLE
+)
+
 SCENARIOS = {
     "status_p1": {
         "flags": "DEBUG_STATUS=1",
@@ -131,22 +144,21 @@ SCENARIOS = {
             + [((12 + k, 0, 12 + k, 19), (20 * (k % 2), (6 + k // 2) - (12 + k)),
                 "message box re-flowed 6 rows x 1 panel -> 3 rows x 2 panels") for k in range(6)]
         ),
+        # The three icon masks (tilemap cells, all 40 OAM entries, and vChars0 wholesale)
+        # were retired with the BG-tile icon hack: the port now renders the icons the way
+        # the GB does, through pret's engine/gfx/mon_icons.asm, so the tilemap cells are
+        # blank, OAM is compared entry for entry, and every vChars0 slot the icon loader
+        # writes matches the golden byte-for-byte (docs/plans/party_icons_oam.md).
+        # What is left is ICON_GAP_SLOTS below.
         "masks": {
-            "tilemap": [
-                ((2 * i + d, 1, 2 * i + d, 2),
-                 "party mon icons: GB draws them as animated OAM sprites (BG blank); the port "
-                 "draws static BG icon tiles in these cells (widescreen layout)")
-                for i in range(6) for d in (0, 1)
-            ],
-            "oam": [
-                (i, "party mon icons: GB renders them as animated OAM sprites; the port draws "
-                    "static BG tiles instead (widescreen layout) — no OAM to compare")
-                for i in range(40)
-            ],
             "vram": (
-                [(s, "vChars0: golden holds the animated party-icon OAM tiles (icon compare "
-                     "masked as OAM above); port OAM is empty (icons are BG) and nothing "
-                     "compared displays from this bank") for s in range(0, 128)]
+                [(s, "vChars0 slot the icon loader never writes: an unused ICON id ($0B-$0D, "
+                     "const_skip 3) or the +1/+3 gap of a 2-pattern icon (the symmetric writer "
+                     "displays only base and base+2 — the right column is the left one X-flipped). "
+                     "No OAM entry references these; the golden holds zeros because its scenario "
+                     "never loaded map-sprite tiles into vSprites, while the port still has the "
+                     "overworld's there under the menu. Every slot the loader DOES write matches "
+                     "the golden exactly.") for s in ICON_GAP_SLOTS]
                 + [(s, "vChars2 $00-$5F: the golden screen displays no tile ID below $62 here "
                        "(stale pre-menu data); the port keeps the live overworld tileset for "
                        "the widescreen backdrop rows outside the golden's 20x18 screen")

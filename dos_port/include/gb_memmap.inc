@@ -1649,6 +1649,24 @@ wBadgeOrFaceTiles             equ 0xCD3F ; ds NUM_BADGES+1 (+1 byte read by the 
 wTempObtainedBadgesBooleans   equ 0xCD49 ; ds NUM_BADGES (0=not obtained, 1=obtained)
 
 ; ---------------------------------------------------------------------------
+; Party-mon icons (engine/gfx/mon_icons.asm + the OAM writers pret keeps in
+; engine/items/town_map.asm). All five verbatim from origin/symbols:pokeyellow.sym
+; bank 00 — see docs/plans/party_icons_oam.md.
+;
+; wMonPartySpritesSavedOAM is the frame-1 reference copy AnimatePartyMon flips back
+; to. Its 96 bytes sit on the ram/wram.asm:772 NEXTU union base (0xCC5B), i.e. they
+; alias wHallOfFame / wSwitchPartyMonTempBuffer / wNPCMovementDirections — that
+; aliasing is pret's, not the port's; those lanes are not live during the party menu.
+; wOAMBaseTile likewise aliases wStandingOnWarpPadOrHole / wGymTrashCanIndex (0xCD5B),
+; exactly the union pret declares.
+; ---------------------------------------------------------------------------
+wMonPartySpritesSavedOAM      equ 0xCC5B ; OBJ_SIZE * 4 * PARTY_LENGTH (96) — icon frame-1 copy
+wOAMBaseTile                  equ 0xCD5B ; = wStandingOnWarpPadOrHole (pret union)
+wSymmetricSpriteOAMAttributes equ 0xCD5C ; WriteSymmetricMonPartySpriteOAM's X-flip toggle
+wMonPartySpriteSpecies        equ 0xCD5D ; WriteMonPartySpriteOAMBySpecies' input (naming screen)
+wAnimCounter                  equ 0xD08A ; V-blanks elapsed in the icon's current frame
+
+; ---------------------------------------------------------------------------
 ; Menus S6 package A (league_pc / oaks_pc) — Hall-of-Fame reader state. All
 ; addresses verbatim from origin/symbols:pokeyellow.sym bank 00. The HoF scalars
 ; sit in the ram/wram.asm:772 NEXTU union (same lane family as the badge/field-

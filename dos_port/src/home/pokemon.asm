@@ -48,7 +48,6 @@ extern menu_redraw_cb
 extern text_row_stride                  ; src/text/text.asm
 extern ErasePartyMenuCursors            ; src/engine/menus/start_sub_menus.asm
 extern SwitchPartyMon
-extern PartyMenuAnimCB                  ; src/engine/menus/party_menu.asm — icon bob tick
 extern PartyMenuMirror                  ; src/engine/menus/party_menu.asm — scratch→window blit
 extern PrintStatusAilment               ; src/engine/pokemon/status_ailments.asm
 %ifdef DEBUG_PARTYMENU
@@ -257,10 +256,11 @@ PartyMenuInit:
 HandlePartyMenuInput:
     mov byte [ebp + wMenuWrappingEnabled], 1    ; ld a,1 / ld [wMenuWrappingEnabled],a
     mov byte [ebp + wPartyMenuAnimMonEnabled], 0x40 ; ld a,$40
-    ; port(menus model): pret's HandleMenuInput_ loop animates the selected
-    ; mon's icon internally; the generic driver exposes that per-frame hook as
-    ; menu_redraw_cb (PartyMenuAnimCB self-gates on wPartyMenuAnimMonEnabled).
-    mov dword [menu_redraw_cb], PartyMenuAnimCB
+    ; The icon bob itself is pret's: HandleMenuInput_'s .loop2 calls
+    ; AnimatePartyMon while wPartyMenuAnimMonEnabled is set (just above).
+    ; menu_redraw_cb only carries the port-only bit: the cursor the generic
+    ; driver just drew on the stride-20 scratch has to reach the panel window.
+    mov dword [menu_redraw_cb], PartyMenuMirror
     call HandleMenuInput                        ; call HandleMenuInput_
     mov dword [menu_redraw_cb], 0
     push eax                                    ; push af — pressed keys

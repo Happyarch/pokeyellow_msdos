@@ -21,6 +21,7 @@ bits 32
 %define CHAR_SPACE          0x7F          ; blank space tile (charmap.asm)
 
 extern DelayFrame
+extern AnimatePartyMon                 ; src/engine/gfx/mon_icons.asm — icon bob (ends in DelayFrame)
 extern text_row_stride                 ; text.asm — current W_TILEMAP row stride
 
 global HandleMenuInput
@@ -124,13 +125,23 @@ PlaceUnfilledArrowMenuCursor:
 ; ---------------------------------------------------------------------------
 HandleMenuInput:
 .loop1:
+    mov byte [ebp + wAnimCounter], 0    ; xor a / ld [wAnimCounter],a — icon-bob phase
     call PlaceMenuCursor
     mov eax, [menu_redraw_cb]           ; optional side-info redraw (e.g. TYPE/PP box)
     test eax, eax
     jz .loop2
     call eax
 .loop2:
+    ; pret home/window.asm .loop2: when this is a pokémon-selection menu, the
+    ; selected mon's icon is animated once per iteration — and AnimatePartyMon ends
+    ; in DelayFrame, so it IS this loop's frame pacing (exactly one frame either way).
+    cmp byte [ebp + wPartyMenuAnimMonEnabled], 0
+    jz .noPartyMonAnim              ; and a / jr z,.getJoypadState
+    call AnimatePartyMon            ; farcall AnimatePartyMon — shake the mini sprite
+    jmp .getJoypadState
+.noPartyMonAnim:
     call DelayFrame
+.getJoypadState:
     movzx eax, byte [ebp + H_JOY_PRESSED]
     test al, al
     jnz .keyPressed

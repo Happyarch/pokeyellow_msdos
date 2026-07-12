@@ -124,6 +124,16 @@ g_window_count: dd 0
 global g_bg_whiteout
 g_bg_whiteout: dd 0
 
+; OBJ-vs-window z-order (see the long comment at frame.asm's compositor sequence).
+; The port normally composites the window layer LAST — over the sprites — because
+; its only window is the bottom dialog box, which must occlude NPCs the widescreen
+; camera exposes under it. That is an inversion of the GB, where OBJ draw over the
+; window. A screen whose window IS the screen (the party panel, the naming screen)
+; and whose OBJ belong on top of it sets this to 1, restoring the hardware order:
+; BG → window → sprites. Cleared with g_bg_whiteout on the way out.
+global g_obj_over_window
+g_obj_over_window: dd 0
+
 ; --- 2bpp bitplane → 8bpp spread tables (compositor-perf Stage 4a) --------------
 ; A GB tile row is two bitplane bytes, MSB = leftmost pixel. Spreading one byte
 ; into 8 one-byte pixels is a pure function of that byte, so precompute it:

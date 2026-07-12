@@ -42,10 +42,7 @@ extern DelayFrames                  ; src/video/frame.asm  (In: BL = frame count
 extern Delay3                       ; src/video/frame.asm
 extern ClearSprites                 ; src/gfx/sprites.asm
 extern LoadTextBoxTilePatterns      ; src/gfx/load_font.asm
-; ReloadMapSpriteTilePatterns lives in src/engine/overworld/reload_sprites.asm,
-; but that file is currently HOME_CHECK_SRCS (check-only, NOT in LINK_SRCS), so
-; its symbol is not yet linkable. Its call in RestoreScreen is stubbed below;
-; promote it to a real `extern`/`call` once reload_sprites.asm enters LINK_SRCS.
+extern ReloadMapSpriteTilePatterns  ; src/home/reload_sprites.asm
 
 ; ---------------------------------------------------------------------------
 ; Globals
@@ -181,8 +178,10 @@ GBPalWhiteOutWithDelay3:
 RestoreScreenTilesAndReloadTilePatterns:
     call ClearSprites
     mov byte [ebp + W_UPDATE_SPRITES_ENABLED], 1  ; ld a,$1 / ld [wUpdateSpritesEnabled],a
-    ; TODO(unimplemented): call ReloadMapSpriteTilePatterns
-    ;   (src/engine/overworld/reload_sprites.asm is HOME_CHECK_SRCS, not linkable yet)
+    ; Load-bearing since the party icons became OAM: they live in vSprites
+    ; ($8000-$87FF), i.e. exactly the map-sprite tiles this reloads. Every port
+    ; caller is an overworld-context exit, so the reload is in-context here.
+    call ReloadMapSpriteTilePatterns
     ; TODO(unimplemented): call LoadScreenTilesFromBuffer2
     ;   (file-local scaffold in src/movie/title.asm; not yet a linkable global)
     call LoadTextBoxTilePatterns

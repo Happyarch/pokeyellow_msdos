@@ -21,20 +21,21 @@
 ;   and the message rows through UI_MESSAGE_BOX (the standard dialog anchor).
 ;   The overworld behind them is blanked with g_bg_whiteout (pret's party
 ;   screen is a full-screen takeover on a white field).
-; - DEVIATION(icons): pret renders mon icons as animated OAM sprites
-;   (LoadMonPartySpriteGfxWithLCDDisabled + WriteMonPartySpriteOAMByPartyIndex
-;   + the HandleMenuInput_ animation). The port draws them as BG tiles (2×2 at
-;   cols 1-2) whose VRAM contents (assets/mon_icons.inc, vTileset tiles
-;   PM_ICON_TILE_BASE+) are frame-swapped by PartyMenuAnimCB — the
-;   menu_redraw_cb hook standing in for pret's in-loop AnimatePartyMon,
-;   gated on wPartyMenuAnimMonEnabled and paced by wPartyMenuHPBarColors.
-;   The icon tile data bakes the right half as a mirror of the left (the BG
-;   layer has no per-tile X-flip); see assets/mon_icons.inc.
+; - Mon icons are pret's OAM sprites (engine/gfx/mon_icons.asm):
+;   LoadMonPartySpriteGfxWithLCDDisabled loads the tile patterns into vSprites,
+;   WriteMonPartySpriteOAMByPartyIndex writes 4 OBJ per mon, and AnimatePartyMon
+;   (called per frame from HandleMenuInput_, as pret does) runs the bob. The port's
+;   old BG-tile hack — icons parked in vTileset, frame-swapped by PartyMenuAnimCB,
+;   right column baked as a mirror — is gone; see docs/plans/party_icons_oam.md.
+;   PartyMenuMirror stays as menu_redraw_cb: it pushes the live cursor (a BG tile)
+;   to the panel window each iteration, which the icons no longer need.
 ; - DEVIATION(text): the party message is drawn whole instead of PrintText's
 ;   typewriter reveal (engine far-text streams aren't GB-space assets yet;
 ;   S4 toss-dialog precedent).
-; - VRAM restore on exit (tileset tiles clobbered by the icons, box tiles by
-;   the HP-bar set) is the caller's: see StartMenu_Pokemon .exitMenu.
+; - VRAM restore on exit is the caller's (StartMenu_Pokemon .exitMenu): the
+;   HP-bar/status set clobbers vChars2 box tiles, and the icons clobber the OBJ
+;   tiles at vSprites — which is exactly what pret's
+;   RestoreScreenTilesAndReloadTilePatterns → ReloadMapSpriteTilePatterns is for.
 ;
 ; Register map (CLAUDE.md): A=AL, BC=BX, DE=DX, HL=ESI, EBP = GB base.
 ;
@@ -53,12 +54,13 @@ bits 32
 global DrawPartyMenu_
 global RedrawPartyMenu_
 global SetPartyMenuHPBarColor
-global PartyMenuAnimCB
 global PartyMenuMirror
 global DrawHP
 global DrawHP2
 
-extern g_tilecache_dirty             ; src/ppu/ppu.asm — arm after any VRAM tile-pattern write
+extern LoadMonPartySpriteGfxWithLCDDisabled  ; engine/gfx/mon_icons.asm
+extern WriteMonPartySpriteOAMByPartyIndex    ; engine/gfx/mon_icons.asm
+extern SetMonPartySpriteOrigin               ; engine/gfx/mon_icons.asm (port: OAM→canvas projection)
 extern FillMemory                    ; home/fill_memory.asm — ESI=dest, BX=count, AL=value
 extern UpdateSprites                 ; engine/overworld/movement.asm
 extern GetPartyMonName               ; home/pokemon.asm — AL=index, ESI=base → wNameBuffer
@@ -76,6 +78,7 @@ extern GetHealthBarColor             ; home/fade.asm — DL=px, ESI=dest addr
 extern set_single_window             ; ppu/ppu.asm
 extern add_window
 extern g_bg_whiteout
+extern g_obj_over_window             ; ppu/ppu.asm — OBJ over the window layer (GB order)
 extern Delay3                        ; video/frame.asm
 extern GBPalNormal                   ; init/init.asm
 
@@ -83,42 +86,8 @@ GBSCR_W   equ 20        ; GB screen tile width (stride of the scratch)
 TILE_SPC       equ 0x7F      ; blank space tile
 CHAR_SWAP_CUR  equ 0xEC      ; ▷ (unfilled right arrow menu cursor)
 
-; Mon-icon VRAM tiles: slot i uses 4 consecutive vTileset tiles (TL,TR,BL,BR)
-; starting at PM_ICON_TILE_BASE + i*4; animation swaps the VRAM contents of
-; the selected slot (the tilemap IDs stay fixed).
-;
-; DEVIATION(icons): pret's party icons are OBJ sprites in OAM VRAM; the port
-; draws them as BG tiles parked in vTileset (see start_sub_menus.asm .exitMenu).
-; That makes the base collide-able with UpdateMovingBgTiles, which rewrites
-; vTileset tiles $03 (flower) and $14 (water) in place whenever hTileAnimations
-; is nonzero. It did collide: at base $01 the 6 slots span $01-$18, so slot 0's
-; 3rd tile WAS $03 and slot 4's 4th tile WAS $14 — and animations are live again
-; for the whole STATS/SWITCH/CANCEL pop-up (HandlePartyMenuInput restores
-; hTileAnimations before it returns "mon chosen"), so those two icons visibly
-; rippled like water and flowers. Base $15 puts all 24 tiles above both.
-PM_ICON_TILE_BASE equ 0x15
-PM_ICON_TILE_COUNT equ 6 * 4    ; 6 party slots x 4 tiles (TL,TR,BL,BR)
-
-; The icon block must clear both animated tiles, or the animator scribbles over
-; them. Static, so a future re-base can't silently reintroduce the ripple.
-%if (ANIM_FLOWER_TILE_ID >= PM_ICON_TILE_BASE) && \
-    (ANIM_FLOWER_TILE_ID <  PM_ICON_TILE_BASE + PM_ICON_TILE_COUNT)
-  %error "PM_ICON_TILE_BASE: mon-icon tiles overlap the animated flower tile"
-%endif
-%if (ANIM_WATER_TILE_ID >= PM_ICON_TILE_BASE) && \
-    (ANIM_WATER_TILE_ID <  PM_ICON_TILE_BASE + PM_ICON_TILE_COUNT)
-  %error "PM_ICON_TILE_BASE: mon-icon tiles overlap the animated water tile"
-%endif
-; ...and must stay below the HP-bar/status set ($62-$71) and box tiles ($79-$7F).
-%if PM_ICON_TILE_BASE + PM_ICON_TILE_COUNT > 0x62
-  %error "PM_ICON_TILE_BASE: mon-icon tiles run into the HP-bar/status tiles"
-%endif
-
 section .data
 align 4
-; Mon-icon tile data + internal-index → ICON_* map (tools/gen_mon_icons_inc.py).
-%include "assets/mon_icons.inc"
-
 ; --- PartyMenuMessagePointers texts (pret data/text/text_3.asm wording; GB
 ; charmap: 'A'=$80/'a'=$A0, é=$BA, ' '=$7F, '.'=$E8, '?'=$E6, '@'=$50) --------
 ; "Choose a POKéMON."
@@ -148,11 +117,6 @@ pm_msg_table:
     dd pm_msg_swap1,   pm_msg_swap2      ; SWAP_MONS_PARTY_MENU
     dd pm_msg_item1,   pm_msg_mon_q      ; EVO_STONE_PARTY_MENU (pret aliases ItemUse)
 
-section .bss
-align 4
-pm_anim_ctr:    resd 1       ; vblank counter for the selected mon's icon bob
-pm_anim_frame:  resd 1       ; 0/1 — current animation frame of the selected icon
-
 section .text
 
 ; ---------------------------------------------------------------------------
@@ -172,9 +136,13 @@ DrawPartyMenu_:
     mov al, TILE_SPC
     call FillMemory
     call UpdateSprites
-    ; farcall LoadMonPartySpriteGfxWithLCDDisabled — DEVIATION(icons): BG-tile
-    ; icon set loaded into vTileset instead of OAM sprite VRAM (see header)
-    call LoadMonPartySpriteGfx
+    ; PORT: the icons are OBJ, and this screen is a window over a whited-out canvas,
+    ; so tell mon_icons.asm where GB (0,0) lands: the panel window's anchor
+    ; (docs/ui_projection.md — canvas x = WX - 7, y = WY).
+    mov eax, UI_PARTY_PANEL_WX - 7
+    mov ebx, UI_PARTY_PANEL_WY
+    call SetMonPartySpriteOrigin
+    call LoadMonPartySpriteGfxWithLCDDisabled ; farcall LoadMonPartySpriteGfxWithLCDDisabled
     ; fall through to RedrawPartyMenu_
 
 ; ---------------------------------------------------------------------------
@@ -213,9 +181,9 @@ RedrawPartyMenu_:
     ; CheckPikachuFollowingPlayer (walking-pikachu OAM slot $ff) — the follower
     ; system is not ported; every mon takes the .regularMon path.
 .regularMon:
-    ; farcall WriteMonPartySpriteOAMByPartyIndex — DEVIATION(icons): place the
-    ; 2×2 BG icon tile IDs instead of OAM entries (see header)
-    call WritePartyMonIconTiles             ; place the appropriate pokemon icon
+    ; farcall WriteMonPartySpriteOAMByPartyIndex — place the appropriate pokemon
+    ; icon (4 OBJ at the mon's row, from [hPartyMonIndex])
+    call WriteMonPartySpriteOAMByPartyIndex
     mov al, [ebp + wWhichPokemon]
     inc al
     mov [ebp + hPartyMonIndex], al          ; ldh [hPartyMonIndex],a
@@ -417,6 +385,10 @@ DrawPartyMenuMessage:
 ; ---------------------------------------------------------------------------
 ShowPartyMenuWindows:
     mov dword [g_bg_whiteout], 1
+    ; The panel window covers the whole list, icons included — so the icon OBJ
+    ; have to composite over it, as OBJ do over the window on the GB. (The port's
+    ; default order paints the window last; see frame.asm.)
+    mov dword [g_obj_over_window], 1
     mov eax, UI_PARTY_PANEL_WX
     mov ebx, UI_PARTY_PANEL_WY
     mov ecx, UI_PARTY_PANEL_CLIP
@@ -431,83 +403,6 @@ ShowPartyMenuWindows:
     mov esi, GB_TILEMAP1
     mov edi, 12                             ; source row band 12-17
     call add_window
-    ret
-
-; ---------------------------------------------------------------------------
-; WritePartyMonIconTiles — DEVIATION(icons): stands in for pret's
-; WriteMonPartySpriteOAMByPartyIndex. Places the 2×2 icon tile IDs for party
-; slot [wWhichPokemon] at scratch cols 1-2 of its name row + HP row; the
-; VRAM contents behind those IDs are loaded by LoadMonPartySpriteGfx.
-; Preserves all registers.
-; ---------------------------------------------------------------------------
-WritePartyMonIconTiles:
-    push eax
-    push edi
-    movzx edi, byte [ebp + wWhichPokemon]
-    mov eax, edi
-    shl eax, 2
-    add eax, PM_ICON_TILE_BASE              ; AL = TL tile id for this slot
-    imul edi, edi, 2 * GBSCR_W         ; name row base (rows 0,2,4,…)
-    mov [ebp + edi + W_TILEMAP + 1], al                     ; TL
-    inc eax
-    mov [ebp + edi + W_TILEMAP + 2], al                     ; TR
-    inc eax
-    mov [ebp + edi + W_TILEMAP + GBSCR_W + 1], al      ; BL
-    inc eax
-    mov [ebp + edi + W_TILEMAP + GBSCR_W + 2], al      ; BR
-    pop edi
-    pop eax
-    ret
-
-; ---------------------------------------------------------------------------
-; LoadMonPartySpriteGfx — DEVIATION(icons): stands in for pret's
-; LoadMonPartySpriteGfxWithLCDDisabled. Loads every party slot's icon
-; (frame 0) into its 4 vTileset tiles and resets the animation state.
-; Preserves all registers.
-; ---------------------------------------------------------------------------
-global LoadMonPartySpriteGfx            ; naming_screen.asm (menus S7 package C) externs it
-LoadMonPartySpriteGfx:
-    pushad
-    mov dword [pm_anim_ctr], 0
-    mov dword [pm_anim_frame], 0
-    xor ebx, ebx                            ; slot
-.slot:
-    movzx eax, byte [ebp + wPartyCount]
-    cmp ebx, eax
-    jae .done
-    mov eax, ebx
-    xor edx, edx                            ; frame 0
-    call LoadPartyMonIconFrame
-    inc ebx
-    jmp .slot
-.done:
-    popad
-    ret
-
-; ---------------------------------------------------------------------------
-; LoadPartyMonIconFrame — copy one icon frame into a slot's vTileset tiles.
-; In: EAX = party slot (0..5), EDX = frame (0/1).
-; Clobbers EAX/ECX/EDX/ESI/EDI (EBX kept).
-; ---------------------------------------------------------------------------
-LoadPartyMonIconFrame:
-    mov byte [g_tilecache_dirty], 1         ; VRAM tile data changes → rebuild decode cache
-    push eax                                ; save slot
-    imul ecx, eax, PARTYMON_STRUCT_LENGTH
-    movzx ecx, byte [ebp + ecx + wPartyMons + MON_SPECIES] ; internal index (1-based)
-    dec ecx
-    movzx ecx, byte [mon_icon_by_index + ecx] ; ICON_* id
-    imul ecx, ecx, MON_ICON_BYTES           ; icon base in mon_icon_data
-    mov eax, edx
-    imul eax, eax, MON_ICON_FRAME_BYTES     ; + frame offset
-    add ecx, eax
-    lea esi, [mon_icon_data + ecx]          ; src = chosen frame's 4 tiles
-    pop eax                                 ; slot
-    shl eax, 2
-    add eax, PM_ICON_TILE_BASE              ; first tile id of this slot
-    shl eax, 4                              ; * TILE_SIZE → byte offset
-    lea edi, [ebp + GB_VCHARS2 + eax]       ; dest = vTileset slot
-    mov ecx, MON_ICON_FRAME_BYTES / 4
-    rep movsd
     ret
 
 ; ---------------------------------------------------------------------------
@@ -529,47 +424,5 @@ PartyMenuMirror:
     inc ebx
     cmp ebx, 18
     jb .row
-    popad
-    ret
-
-; ---------------------------------------------------------------------------
-; PartyMenuAnimCB — menu_redraw_cb hook: per-frame icon bob for the mon under
-; the cursor + the live scratch→window mirror (the cursor the generic driver
-; just drew must reach the panel window each frame).
-; Stands in for pret HandleMenuInput_'s in-loop AnimatePartyMon: gated on
-; wPartyMenuAnimMonEnabled, paced by the bar color the redraw stored in
-; wPartyMenuHPBarColors[wCurrentMenuItem].
-; DEVIATION(icons): frame periods 6/17/33 vblanks (green/yellow/red) — the
-; established port cadence approximating pret's per-color animation delays.
-; Preserves all registers.
-; ---------------------------------------------------------------------------
-PartyMenuAnimCB:
-    call PartyMenuMirror
-    pushad
-    cmp byte [ebp + wPartyMenuAnimMonEnabled], 0
-    jz .out
-    movzx eax, byte [ebp + wCurrentMenuItem]
-    movzx eax, byte [ebp + eax + wPartyMenuHPBarColors]
-    mov ecx, 6                              ; green
-    test al, al
-    jz .havePeriod
-    mov ecx, 17                             ; yellow
-    cmp al, 1
-    je .havePeriod
-    mov ecx, 33                             ; red
-.havePeriod:
-    mov eax, [pm_anim_ctr]
-    inc eax
-    cmp eax, ecx
-    jb .store
-    mov edx, [pm_anim_frame]
-    xor edx, 1                              ; toggle frame
-    mov [pm_anim_frame], edx
-    movzx eax, byte [ebp + wCurrentMenuItem]
-    call LoadPartyMonIconFrame              ; reload the selected slot's VRAM
-    xor eax, eax
-.store:
-    mov [pm_anim_ctr], eax
-.out:
     popad
     ret

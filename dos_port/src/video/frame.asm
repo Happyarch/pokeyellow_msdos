@@ -36,6 +36,7 @@ extern render_window
 extern g_windows
 extern g_window_count
 extern render_sprites
+extern g_obj_over_window        ; src/ppu/ppu.asm — OBJ-vs-window z-order (GB order when set)
 extern draw_player_marker
 extern present
 extern joypad_update
@@ -189,19 +190,32 @@ DelayFrame:
     ; Stage-0.5 clear_backbuffer_battle + centered-window approach.)
     call render_bg
     PERF_MARK PERF_BG
+    ; DIVERGENCE FROM GB HARDWARE (intentional, and now opt-out): on real DMG/CGB,
+    ; OBJ sprites draw OVER the window layer, so the GB order is BG → window →
+    ; sprites. We invert that by default (window LAST, over sprites) because the
+    ; window layer in this port is normally only the bottom dialog/menu box
+    ; (WY=152), and that box must occlude NPCs standing under it. The artifact this
+    ; guards against is port-specific: our extended 40×25 player-centered viewport
+    ; shows far more of the map than the GB's 20×18 screen, exposing NPCs in the
+    ; bottom rows that the original camera never placed under the textbox. The
+    ; player sprite sits at screen center (well above WY=152), so it is never
+    ; occluded.
+    ; A screen whose window IS the whole screen and whose OBJ belong on top of it
+    ; (the party menu's mon icons; the naming screen's) sets g_obj_over_window and
+    ; gets the hardware order back. See ppu.asm's declaration.
+    cmp dword [g_obj_over_window], 0
+    jnz .objOverWindow
     call render_sprites         ; composite OAM sprites over BG
     PERF_MARK PERF_SPRITES
-    ; DIVERGENCE FROM GB HARDWARE (intentional): on real DMG/CGB, OBJ sprites
-    ; draw OVER the window layer, so the GB order is BG → window → sprites. We
-    ; deliberately invert that here (window LAST, over sprites) because the
-    ; window layer in this port is only ever the bottom dialog/menu box (WY=152),
-    ; and that box must occlude NPCs standing under it. The artifact this guards
-    ; against is port-specific: our extended 40×25 player-centered viewport shows
-    ; far more of the map than the GB's 20×18 screen, exposing NPCs in the bottom
-    ; rows that the original camera never placed under the textbox. The player
-    ; sprite sits at screen center (well above WY=152), so it is never occluded.
     call present_windows        ; composite the window descriptor list OVER sprites
     PERF_MARK PERF_WINDOWS
+    jmp .composited
+.objOverWindow:
+    call present_windows        ; GB order: window over BG…
+    PERF_MARK PERF_WINDOWS
+    call render_sprites         ; …then OBJ over both
+    PERF_MARK PERF_SPRITES
+.composited:
     call draw_player_marker     ; legacy placeholder (no-op unless explicitly enabled)
     call present
     PERF_MARK PERF_PRESENT

@@ -1,25 +1,33 @@
 #!/usr/bin/env python3
-"""Generate dos_port/assets/mon_icons.inc — the party-menu mon icon tiles and
-the internal-index -> icon lookup, from the pret graphics + data.
+"""Generate dos_port/assets/mon_icons.inc — the party-mon icon tile patterns,
+the ICON_* enum, and MonPartyData, from the pret graphics + data.
 
-Faithful to pret engine/gfx/mon_icons.asm:
-  - Each icon is a 16x16 (2x2 tile) animated party sprite with two frames.
-  - Non-helix icons have a vertical line of symmetry: the original stores only a
-    left column (top + bottom tile) and X-flips it for the right half via OAM.
-    This port renders icons as window-layer BG tiles (which have no per-tile flip),
-    so we bake the right column here as a horizontal mirror of the left, emitting a
-    full 2x2 (TL, TR, BL, BR) per frame.
-  - Frame tile pairs come from the same sprite sheets / icon files and offsets the
-    pret MonPartySpritePointers table uses (see ICON_SRC below).
-  - Species -> icon: PokedexOrder (internal index -> national dex) composed with
-    MonPartyData (national dex -> ICON_*), producing one byte per internal index.
+Tier-1 data (project-conventions): this file is the deterministic function of
+the read-only pret sources listed below; it holds no hand-authored information.
+The code that consumes it is src/engine/gfx/mon_icons.asm (pret
+engine/gfx/mon_icons.asm), which owns MonPartySpritePointers — a pointer table,
+i.e. Tier-2 code — and reads the labels emitted here.
 
-Output (NASM, .data):
-  mon_icon_data:        11 icons x 2 frames x 4 tiles x 16 bytes, icon-major.
-                        offset(icon,frame) = icon*MON_ICON_BYTES + frame*MON_ICON_FRAME_BYTES
-  mon_icon_by_index:    one ICON_* id per internal index (1-based -> [i-1]).
+Sources:
+  constants/icon_constants.asm   → the ICON_* enum + ICONOFFSET
+  gfx/sprites/*.2bpp             → MonsterSprite / PokeBallSprite / FossilSprite /
+                                   FairySprite / BirdSprite / SeelSprite /
+                                   PikachuSprite (overworld sheets whose spare
+                                   tiles are the icon frames)
+  gfx/icons/*.2bpp               → Bug/Plant/Snake/Quadruped icon frames
+  gfx/trade/bubble.2bpp          → TradeBubbleIconGFX
+  data/pokemon/menu_icons.asm    → MonPartyData (nybble array, dex order)
 
-Requires nothing beyond the stdlib. Run from repo root:
+Layout notes carried over from pret verbatim (they are load-bearing):
+  - PokeBallSprite's header copies 8 tiles from a 4-tile file: the read runs off
+    the end of poke_ball.2bpp straight into FossilSprite, which is exactly how
+    the helix icon (ICON_HELIX, tiles 4 past the ball) gets its graphics. The two
+    blobs are therefore emitted BACK TO BACK and must stay adjacent.
+  - Icons are NOT mirrored here. The right column of every non-helix icon is the
+    left column X-flipped at draw time (OAM_XFLIP, WriteSymmetricMonPartySpriteOAM);
+    only ICON_HELIX ships all four tiles.
+
+Run from the repo root (wired into `make -C dos_port assets`):
   python3 dos_port/tools/gen_mon_icons_inc.py
 """
 import re
@@ -27,8 +35,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 DST = ROOT / "dos_port" / "assets" / "mon_icons.inc"
-
-TILE = 16  # bytes per 2bpp 8x8 tile
 
 
 def parse_consts(rel_path: str) -> dict:
@@ -54,117 +60,109 @@ def parse_consts(rel_path: str) -> dict:
     return out
 
 
-# icon name -> (2bpp file, kind, frameA_tile_offset, frameB_tile_offset)
-#   kind '4': 4-tile sprite-sheet frame; left column = tiles [off], [off+2]
-#   kind '2': 2-tile local icon frame;   left column = tiles [off], [off+1]
-ICON_SRC = {
-    "ICON_MON":       ("gfx/sprites/monster.2bpp",  "4", 12, 0),
-    "ICON_BALL":      ("gfx/sprites/poke_ball.2bpp", "4", 0, 0),
-    "ICON_HELIX":     ("gfx/sprites/monster.2bpp",  "4", 12, 0),  # no party gfx; fallback
-    "ICON_FAIRY":     ("gfx/sprites/fairy.2bpp",    "4", 12, 0),
-    "ICON_BIRD":      ("gfx/sprites/bird.2bpp",     "4", 12, 0),
-    "ICON_WATER":     ("gfx/sprites/seel.2bpp",     "4", 0, 12),
-    "ICON_BUG":       ("gfx/icons/bug.2bpp",        "2", 2, 0),
-    "ICON_GRASS":     ("gfx/icons/plant.2bpp",      "2", 2, 0),
-    "ICON_SNAKE":     ("gfx/icons/snake.2bpp",      "2", 0, 2),
-    "ICON_QUADRUPED": ("gfx/icons/quadruped.2bpp",  "2", 0, 2),
-    "ICON_PIKACHU":   ("gfx/sprites/pikachu.2bpp",  "4", 0, 12),
-}
-NUM_ICONS = 11  # ICON_MON (0) .. ICON_PIKACHU (10), contiguous
-
-_FLIP = [int(f"{b:08b}"[::-1], 2) for b in range(256)]
+def parse_iconoffset() -> int:
+    for line in (ROOT / "constants/icon_constants.asm").read_text().splitlines():
+        m = re.match(r"DEF\s+ICONOFFSET\s+EQU\s+\$([0-9a-fA-F]+)", line.strip())
+        if m:
+            return int(m.group(1), 16)
+    raise SystemExit("ICONOFFSET not found in constants/icon_constants.asm")
 
 
-def hflip_tile(t: bytes) -> bytes:
-    """Horizontally mirror a 2bpp tile (reverse the 8 bits of each plane byte)."""
-    return bytes(_FLIP[b] for b in t)
+# The blobs mon_icons.asm's MonPartySpritePointers indexes, in pret's ROM order.
+# (label, source file, byte offset, byte length) — length None = whole file.
+BLOBS = [
+    ("MonsterSprite",       "gfx/sprites/monster.2bpp",   0, None),
+    ("PokeBallSprite",      "gfx/sprites/poke_ball.2bpp", 0, None),
+    ("FossilSprite",        "gfx/sprites/fossil.2bpp",    0, None),  # ICON_HELIX (see header)
+    ("FairySprite",         "gfx/sprites/fairy.2bpp",     0, None),
+    ("BirdSprite",          "gfx/sprites/bird.2bpp",      0, None),
+    ("SeelSprite",          "gfx/sprites/seel.2bpp",      0, None),
+    ("PikachuSprite",       "gfx/sprites/pikachu.2bpp",   0, None),
+    # pret: DEF INC_FRAME_1 EQUS "0, $20" / INC_FRAME_2 EQUS "$20, $20"
+    ("BugIconFrame1",       "gfx/icons/bug.2bpp",         0x00, 0x20),
+    ("PlantIconFrame1",     "gfx/icons/plant.2bpp",       0x00, 0x20),
+    ("BugIconFrame2",       "gfx/icons/bug.2bpp",         0x20, 0x20),
+    ("PlantIconFrame2",     "gfx/icons/plant.2bpp",       0x20, 0x20),
+    ("SnakeIconFrame1",     "gfx/icons/snake.2bpp",       0x00, 0x20),
+    ("QuadrupedIconFrame1", "gfx/icons/quadruped.2bpp",   0x00, 0x20),
+    ("SnakeIconFrame2",     "gfx/icons/snake.2bpp",       0x20, 0x20),
+    ("QuadrupedIconFrame2", "gfx/icons/quadruped.2bpp",   0x20, 0x20),
+    ("TradeBubbleIconGFX",  "gfx/trade/bubble.2bpp",      0, None),
+]
 
 
-def tile(data: bytes, idx: int) -> bytes:
-    return data[idx * TILE:(idx + 1) * TILE]
+def build_mon_party_data(ICON: dict) -> list:
+    """data/pokemon/menu_icons.asm's nybble_array → the packed bytes.
 
-
-def frame_2x2(path: str, kind: str, off: int) -> bytes:
-    """Return a frame's 4 tiles TL,TR,BL,BR (right = mirror of left)."""
-    data = (ROOT / path).read_bytes()
-    top = tile(data, off)
-    bottom = tile(data, off + (2 if kind == "4" else 1))
-    return top + hflip_tile(top) + bottom + hflip_tile(bottom)
-
-
-def build_index_table(ICON: dict) -> list:
-    """internal index (0-based) -> ICON_* id."""
-    DEX = parse_consts("constants/pokedex_constants.asm")
-
-    # MonPartyData: national-dex-ordered ICON_* names (Bulbasaur first).
-    party_data = []
+    rgbds macros/asserts.asm: byte = (first_nybble << 4) | second_nybble, and a
+    trailing odd nybble is shifted into the high half. GetPartyMonSpriteID indexes
+    it by (dexnum - 1) >> 1 and takes the HIGH nybble for an odd dex number.
+    """
+    nybbles = []
     for line in (ROOT / "data/pokemon/menu_icons.asm").read_text().splitlines():
         m = re.match(r"nybble\s+(ICON_\w+)", line.split(";", 1)[0].strip())
         if m:
-            party_data.append(ICON[m.group(1)])
+            nybbles.append(ICON[m.group(1)])
+    out = []
+    for i in range(0, len(nybbles), 2):
+        hi = nybbles[i]
+        lo = nybbles[i + 1] if i + 1 < len(nybbles) else 0
+        out.append((hi << 4) | lo)
+    return out, len(nybbles)
 
-    # PokedexOrder: internal-index-ordered national dex numbers.
-    order = []
-    for line in (ROOT / "data/pokemon/dex_order.asm").read_text().splitlines():
-        s = line.split(";", 1)[0].strip()
-        m = re.match(r"db\s+(\w+)$", s)
-        if not m:
-            continue
-        tok = m.group(1)
-        dexnum = DEX.get(tok, int(tok, 0) if re.match(r"\$?\d", tok) else 0)
-        order.append(dexnum)
 
-    table = []
-    for dexnum in order:
-        if 1 <= dexnum <= len(party_data):
-            table.append(party_data[dexnum - 1])
-        else:
-            table.append(ICON["ICON_MON"])  # MissingNo / unknown -> generic
-    return table
+def emit_bytes(lines: list, data: bytes, indent: str = "    "):
+    for i in range(0, len(data), 16):
+        row = data[i:i + 16]
+        lines.append(indent + "db " + ", ".join(f"0x{b:02X}" for b in row))
 
 
 def main():
     ICON = parse_consts("constants/icon_constants.asm")
-    inv = {v: k for k, v in ICON.items()}
+    iconoffset = parse_iconoffset()
+    mon_party_data, n_nybbles = build_mon_party_data(ICON)
 
-    # Icon tile data, icon-major (0..10), 2 frames each, 4 tiles each.
-    blob = bytearray()
-    for icon_id in range(NUM_ICONS):
-        name = inv[icon_id]
-        path, kind, fa, fb = ICON_SRC[name]
-        blob += frame_2x2(path, kind, fa)
-        blob += frame_2x2(path, kind, fb)
-
-    index_table = build_index_table(ICON)
-
-    out = []
-    out.append("; mon_icons.inc — generated by dos_port/tools/gen_mon_icons_inc.py.")
-    out.append("; DO NOT EDIT BY HAND.  Party-menu mon icons (2x2, 2 frames) + index map.")
-    out.append("MON_ICON_FRAME_BYTES equ 64    ; 4 tiles * 16 bytes")
-    out.append("MON_ICON_BYTES       equ 128   ; 2 frames")
-    out.append(f"MON_ICON_COUNT       equ {NUM_ICONS}")
+    out = [
+        "; mon_icons.inc — generated by dos_port/tools/gen_mon_icons_inc.py.",
+        "; DO NOT EDIT BY HAND.  Party-mon icon tile patterns + ICON_* enum + MonPartyData.",
+        ";",
+        "; %included by src/engine/gfx/mon_icons.asm (pret engine/gfx/mon_icons.asm),",
+        "; which owns MonPartySpritePointers — the pointer table that reads these labels.",
+        "; The icons are OBJ tile patterns: the right column of every non-helix icon is",
+        "; the left column X-flipped at draw time (OAM_XFLIP), never baked here.",
+        "",
+        "; --- ICON_* enum (constants/icon_constants.asm) -----------------------------",
+    ]
+    for name, val in sorted(ICON.items(), key=lambda kv: kv[1]):
+        out.append(f"{name:<22} equ 0x{val:02X}")
+    out.append(f"{'ICONOFFSET':<22} equ 0x{iconoffset:02X}   ; tile-id delta between animation frames")
     out.append("")
-    out.append("mon_icon_data:")
-    for icon_id in range(NUM_ICONS):
-        out.append(f"  ; {inv[icon_id]} ({icon_id})")
-        base = icon_id * 128
-        for f in range(2):
-            for t in range(4):
-                o = base + f * 64 + t * 16
-                row = blob[o:o + 16]
-                out.append("    db " + ", ".join(f"0x{b:02X}" for b in row))
+    out.append("; --- icon tile patterns (2bpp) ----------------------------------------------")
+    out.append("; PokeBallSprite / FossilSprite MUST stay adjacent: the ball header copies 8")
+    out.append("; tiles from a 4-tile file, running into the fossil — that is the helix icon.")
+
+    for label, path, off, length in BLOBS:
+        data = (ROOT / path).read_bytes()
+        blob = data[off:off + length] if length is not None else data[off:]
+        assert blob, f"{path}: empty slice"
+        out.append("")
+        out.append(f"{label}:   ; {path}"
+                   + (f" +0x{off:X}, {len(blob)} bytes" if length is not None
+                      else f" ({len(blob)} bytes)"))
+        emit_bytes(out, blob)
+
     out.append("")
-    out.append(f"MON_ICON_BY_INDEX_LEN equ {len(index_table)}")
-    out.append("mon_icon_by_index:")
-    for i in range(0, len(index_table), 16):
-        chunk = index_table[i:i + 16]
-        out.append("    db " + ", ".join(str(v) for v in chunk))
+    out.append("; --- MonPartyData (data/pokemon/menu_icons.asm nybble_array) -----------------")
+    out.append(f"; {n_nybbles} nybbles, national-dex order; GetPartyMonSpriteID indexes it by")
+    out.append("; (dexnum - 1) >> 1 and takes the high nybble when the dex number is odd.")
+    out.append("MonPartyData:")
+    emit_bytes(out, bytes(mon_party_data))
     out.append("")
 
     DST.parent.mkdir(parents=True, exist_ok=True)
     DST.write_text("\n".join(out) + "\n")
-    print(f"wrote {DST}: {len(blob)} icon bytes ({NUM_ICONS} icons), "
-          f"{len(index_table)} index entries")
+    print(f"wrote {DST}: {len(BLOBS)} gfx blobs, "
+          f"{len(mon_party_data)} MonPartyData bytes ({n_nybbles} nybbles)")
 
 
 if __name__ == "__main__":

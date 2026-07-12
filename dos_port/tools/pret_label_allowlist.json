@@ -37,10 +37,6 @@
    "port_file": "dos_port/src/engine/menus/pokedex.asm",
    "why": "pre-existing relocation, all 1 translated label(s) here (draft Session H)"
   },
-  "engine/gfx/mon_icons.asm": {
-   "port_file": "dos_port/src/engine/menus/party_menu.asm",
-   "why": "pre-existing relocation, all 1 translated label(s) here (draft Session H)"
-  },
   "engine/gfx/sprite_oam.asm": {
    "port_file": "dos_port/src/engine/gfx/sprite_oam.asm",
    "why": "pre-existing relocation, all 3 translated label(s) here (draft Session H)"
@@ -1263,6 +1259,10 @@
    "port_file": "dos_port/src/engine/battle/battle_menu.asm",
    "why": "pret home/joypad2.asm split across port files (draft Session H)"
   },
+  "WriteAsymmetricMonPartySpriteOAM": {
+   "port_file": "dos_port/src/engine/gfx/mon_icons.asm",
+   "why": "pret engine/items/town_map.asm hosts these two OAM writers, but the port's town_map.asm is a dangling (unlinked) file; hosted with their only caller, engine/gfx/mon_icons.asm (party_icons_oam plan, Stage 2)"
+  },
   "WriteMonMoves": {
    "port_file": "dos_port/src/engine/pokemon/write_moves.asm",
    "why": "pret engine/pokemon/evos_moves.asm split across port files (draft Session H)"
@@ -1270,6 +1270,10 @@
   "WriteMonMoves_ShiftMoveData": {
    "port_file": "dos_port/src/engine/pokemon/write_moves.asm",
    "why": "pret engine/pokemon/evos_moves.asm split across port files (draft Session H)"
+  },
+  "WriteSymmetricMonPartySpriteOAM": {
+   "port_file": "dos_port/src/engine/gfx/mon_icons.asm",
+   "why": "pret engine/items/town_map.asm hosts these two OAM writers, but the port's town_map.asm is a dangling (unlinked) file; hosted with their only caller, engine/gfx/mon_icons.asm (party_icons_oam plan, Stage 2)"
   },
   "ZeroSpriteStateData": {
    "port_file": "dos_port/src/engine/overworld/overworld.asm",
