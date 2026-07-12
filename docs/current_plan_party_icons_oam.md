@@ -7,9 +7,9 @@ items doesn't build more on the current shape.
 - [x] Stage 1 — compositor: replace the `g_bg_whiteout` OBJ blanket-skip (`58d5a94a`)
 - [x] Stage 2 — port `engine/gfx/mon_icons.asm` under pret's names
 - [x] Stage 3 — party menu: icons via OAM, delete the BG-tile path
-- [ ] Stage 4 — naming screen (the other live consumer)
-- [ ] Stage 5 — regenerate icon assets without the baked mirror
-- [ ] Stage 6 — delete the dead scaffolding + the collision assert
+- [x] Stage 4 — naming screen (the other live consumer)
+- [x] Stage 5 — regenerate icon assets without the baked mirror
+- [x] Stage 6 — delete the dead scaffolding + the collision assert
 
 ## Session notes (fill in as stages land)
 
@@ -90,6 +90,31 @@ budget) — `render_sprites` 0.176 → 1.202 ms for the 24 new OBJ. The plan pre
 net *win* from losing the per-bob `tile_cache` rebuild; that rebuild doesn't show in
 this harness (it dumps one static frame and never bobs), so the measured delta is the
 sprite cost alone. Comfortably inside budget; flagged, not chased.
+
+**Stages 4 + 5 + 6 (done).** Naming screen: it already called `LoadMonPartySpriteGfx`
+(which now resolves to the real one), and its three remaining DEVIATION(icons) sites are
+now pret's code — `wMonPartySpriteSpecies` + `WriteMonPartySpriteOAMBySpecies` for the
+named mon's icon, `AnimatePartyMon_ForceSpeed1` in `.inputLoop` (it ends in DelayFrame,
+so it IS that loop's frame pacing — the port's own `DelayFrame` there is gone), and both
+`wAnimCounter` resets. It sets its own OAM origin (`UI_NAMING_SCREEN_WX - 7`, `_WY`).
+
+`g_obj_over_window` is now **cleared by `ClearSprites`/`HideSprites`** as well, next to
+`spr_oam_valid` — the same "enforce it at the primitive" move as Stage 0's contract: the
+z-order override dies with the OAM that needed it, so no exit path can strand the
+overworld with OBJ over its dialog box. The explicit clear in `.exitMenu` stays.
+
+Stage 5 landed with Stage 2 (generator emits pret's raw blobs + `MonPartyData`; the
+`.inc` is now rule-driven from `make assets` — it never was). Stage 6: `PM_ICON_TILE_*`,
+the two `%error` asserts and `PartyMenuAnimCB` are gone; `ANIM_FLOWER_TILE_ID` /
+`ANIM_WATER_TILE_ID` stay in `gb_memmap.inc` (no live claimant now, but they still bind
+any other screen that parks graphics in vTileset — noted in their comment); the
+DEVIATION(icons) notes in `party_menu.asm` / `start_sub_menus.asm .exitMenu` /
+`naming_screen.asm` now describe the real path.
+
+Verification after Stage 4: pixelcheck 9/9 unchanged from the Stage-3 baseline,
+`make fidelity` 6/6 PASS, `lint_pret_labels` 0. faithdiff `DisplayNamingScreen`: the only
+new ADDED call is the port's `SetMonPartySpriteOrigin`; everything else is pre-existing
+(window-model mirror/show, the HUD-tiles tail jump).
 
 ## Why
 

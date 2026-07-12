@@ -73,7 +73,11 @@ extern RunPaletteCommand               ; engine/battle/faint_switch.asm — pale
 extern LoadHpBarAndStatusTilePatterns  ; gfx/load_font.asm
 extern LoadTextBoxTilePatterns         ; gfx/load_font.asm
 extern LoadHudTilePatterns             ; gfx/load_font.asm
-extern LoadMonPartySpriteGfx           ; engine/menus/party_menu.asm — pret's farcall target (same name)
+extern LoadMonPartySpriteGfx           ; engine/gfx/mon_icons.asm — pret's farcall target (same name)
+extern WriteMonPartySpriteOAMBySpecies ; engine/gfx/mon_icons.asm
+extern AnimatePartyMon_ForceSpeed1     ; engine/gfx/mon_icons.asm — ends in DelayFrame
+extern SetMonPartySpriteOrigin         ; engine/gfx/mon_icons.asm (port: OAM→canvas projection)
+extern g_obj_over_window               ; ppu/ppu.asm — OBJ over the window layer (GB order)
 extern TextBoxBorder                   ; text/text.asm — ESI=dest, BL=int_w, BH=int_h
 extern PlaceString                     ; text/text.asm — ESI=dest, EAX=flat src
 extern AddNTimes                       ; home/array.asm — AL=n, BX=step, ESI+=n*step
@@ -288,6 +292,11 @@ DisplayNamingScreen:
     call RunPaletteCommand
     call LoadHpBarAndStatusTilePatterns
     call LoadEDTile
+    ; PORT: the icon is OBJ, and this screen is a window over a whited-out canvas —
+    ; tell mon_icons.asm where GB (0,0) lands (docs/ui_projection.md: x = WX - 7, y = WY).
+    mov eax, UI_NAMING_SCREEN_WX - 7
+    mov ebx, UI_NAMING_SCREEN_WY
+    call SetMonPartySpriteOrigin
     call LoadMonPartySpriteGfx            ; pret: farcall LoadMonPartySpriteGfx
 
     mov esi, HL(0, 4)
@@ -305,9 +314,7 @@ DisplayNamingScreen:
     mov byte [ebp + wStringBuffer], CHAR_TERMINATOR
     mov byte [ebp + wNamingScreenSubmitName], 0
     mov byte [ebp + wAlphabetCase], 0     ; pret: ld hl,wNamingScreenSubmitName / ld[hli],a x2
-    ; DEVIATION: party-mon icon animation not yet ported (wAnimCounter reset
-    ; here primes state pret's farcall AnimatePartyMon_ForceSpeed1 consumes —
-    ; see the .inputLoop note below); omitted along with that farcall.
+    mov byte [ebp + wAnimCounter], 0      ; ld [wAnimCounter],a — primes AnimatePartyMon_ForceSpeed1
 
     ; port: draw the initial frame, then show the window (options.asm InitOptionsMenu model)
     call naming_mirror
@@ -325,13 +332,16 @@ DisplayNamingScreen:
     mov dword [menu_item_step], GBSCR_W   ; single-spaced: 1 row/item (see header note)
     call PlaceMenuCursor
 .inputLoop:
-    ; DEVIATION: party-mon icon walking animation not yet ported (farcall
-    ; AnimatePartyMon_ForceSpeed1 — docs/current_plan_pokemon_behavior.md).
-    ; pret saves/restores wCurrentMenuItem around it (defensive) and relies on
-    ; its internal wait for this loop's frame pacing. The port supplies the
-    ; per-frame mirror + DelayFrame here instead.
+    ; pret saves/restores wCurrentMenuItem around the animation (which uses it as
+    ; the party slot) and relies on its internal DelayFrame for this loop's frame
+    ; pacing — so AnimatePartyMon_ForceSpeed1 IS the port's frame wait here too.
+    ; The per-frame scratch→window mirror stays (port: hAutoBGTransferEnabled analog).
     call naming_mirror
-    call DelayFrame
+    mov al, [ebp + wCurrentMenuItem]      ; ld a,[wCurrentMenuItem] / push af
+    push eax
+    call AnimatePartyMon_ForceSpeed1      ; farcall — shake the mini sprite (+ DelayFrame)
+    pop eax                               ; pop af
+    mov [ebp + wCurrentMenuItem], al      ; ld [wCurrentMenuItem],a
     call JoypadLowSensitivity
     ; DEVIATION: pret reads hJoyPressed directly here; the port convention
     ; (options.asm et al.) reads the debounced H_JOY5 post-JoypadLowSensitivity
@@ -493,7 +503,7 @@ DisplayNamingScreen:
     call ClearSprites
     call RunDefaultPaletteCommand
     call GBPalNormal
-    ; DEVIATION: wAnimCounter reset omitted (party-icon anim not ported; see above).
+    mov byte [ebp + wAnimCounter], 0      ; xor a / ld [wAnimCounter],a
     and byte [ebp + wStatusFlags5], ~(1 << BIT_NO_TEXT_DELAY) & 0xFF
     cmp byte [ebp + wIsInBattle], 0
     jz LoadTextBoxTilePatterns            ; tail jump (pret: jp z, LoadTextBoxTilePatterns)
@@ -533,6 +543,9 @@ RunDefaultPaletteCommand:
 ; ---------------------------------------------------------------------------
 naming_show_window:
     mov dword [g_bg_whiteout], 1
+    ; The window IS this screen, and the mon icon is OBJ on top of it — restore the
+    ; GB's OBJ-over-window order (see frame.asm). ClearSprites drops it on exit.
+    mov dword [g_obj_over_window], 1
     mov eax, UI_NAMING_SCREEN_WX
     mov ebx, UI_NAMING_SCREEN_WY
     mov ecx, UI_NAMING_SCREEN_CLIP
@@ -722,10 +735,10 @@ PrintNamingText:
 
     ; NAME_MON_SCREEN: species default name + "の" leftover + "NICKNAME?"
     mov al, [ebp + wCurPartySpecies]
-    ; DEVIATION: party-mon icon animation not yet ported (wMonPartySpriteSpecies
-    ; prep + farcall WriteMonPartySpriteOAMBySpecies — docs/current_plan_pokemon_behavior.md).
-    ; The species value (AL) is unaffected by the omitted farcall in pret (it's
-    ; restored via push/pop af around it), so this just carries straight through.
+    mov [ebp + wMonPartySpriteSpecies], al  ; ld [wMonPartySpriteSpecies],a
+    push eax                                ; push af
+    call WriteMonPartySpriteOAMBySpecies    ; farcall — the named mon's icon
+    pop eax                                 ; pop af
     mov [ebp + wNamedObjectIndex], al
     call GetMonName
     mov esi, HL(4, 1)

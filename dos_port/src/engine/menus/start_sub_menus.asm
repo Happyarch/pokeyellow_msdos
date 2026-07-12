@@ -175,9 +175,10 @@ StartMenu_Pokemon:
     ; LoadScreenTilesFromBuffer2) — the window-model analog is dropping the
     ; party windows + whiteout field here, or the stale panel renders for a
     ; few frames with the box-tile patterns Restore… just loaded over the
-    ; HP-bar set ($62-$7F). The map tileset tiles the BG icons overwrote come
-    ; back too (DEVIATION(icons): pret's icons live in OAM VRAM, restored via
-    ; Restore…'s ReloadMapSpriteTilePatterns).
+    ; HP-bar set ($62-$7F). The icons need no restore of their own: they are OBJ
+    ; in vSprites now (engine/gfx/mon_icons.asm), and the map sprite tiles they
+    ; overwrote are exactly what Restore…'s ReloadMapSpriteTilePatterns brings back
+    ; — same as pret. LoadTilesetTilePatternData below is for the BG tileset.
     mov dword [g_window_count], 0       ; drop the party panel/message windows
     mov dword [g_bg_whiteout], 0
     mov dword [g_obj_over_window], 0    ; back to the port's window-last order

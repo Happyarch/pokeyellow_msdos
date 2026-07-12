@@ -30,6 +30,7 @@ SCREEN_HEIGHT_PX equ 144
 OAM_Y_OFS        equ 16
 
 extern spr_oam_valid            ; ppu/ppu.asm — render_sprites' live-entry count
+extern g_obj_over_window        ; ppu/ppu.asm — OBJ-over-window z-order (party/naming icons)
 
 global ClearSprites
 global HideSprites
@@ -44,6 +45,7 @@ ClearSprites:
     push ecx
     push edi
     mov dword [spr_oam_valid], 0    ; PORT: no live OBJ until someone republishes
+    mov dword [g_obj_over_window], 0 ; …and the OBJ-over-window order dies with them
     lea edi, [ebp + W_SHADOW_OAM]
     mov ecx, W_SHADOW_OAM_SIZE
     xor eax, eax
@@ -62,6 +64,7 @@ HideSprites:
     push ecx
     push edi
     mov dword [spr_oam_valid], 0    ; PORT: parked off-screen == not drawn (see header)
+    mov dword [g_obj_over_window], 0 ; …and the OBJ-over-window order dies with them
     lea edi, [ebp + W_SHADOW_OAM]
     mov al, SCREEN_HEIGHT_PX + OAM_Y_OFS
     mov ecx, OAM_COUNT
