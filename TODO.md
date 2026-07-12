@@ -66,7 +66,12 @@ Prioritized task list. Check off items as they complete; add new items with phas
        player sprite renders camera-locked at screen center and faces the walk
        direction. REMAINING: 8×16 OBJ size, the 10-sprites-per-scanline limit,
        and true smaller-X-wins priority — currently reverse-OAM-order draw, which
-       only honors the index tiebreak.)
+       only honors the index tiebreak.
+       2026-07-12: it draws `spr_oam_valid` entries positioned from `spr_dos_sx/sy`
+       (only tile/attr come from `$FE00`), and `ClearSprites`/`HideSprites` publish
+       `spr_oam_valid = 0` + clear `g_obj_over_window` — the opt-in flag that gives a
+       screen the GB's OBJ-over-window z-order, since the port otherwise composites
+       windows last. See `docs/plans/party_icons_oam.md`.)
 - [x] Sprite engine: faithful PrepareOAMData + UpdateSprites (replaces the
       UpdatePlayerOAM scaffold) — src/gfx/sprite_oam.asm, src/engine/overworld/movement.asm.
       Player now renders via the real shadow-OAM pipeline driven by

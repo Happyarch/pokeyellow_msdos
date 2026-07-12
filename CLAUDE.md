@@ -87,8 +87,15 @@ player in all four directions, scrolling the map smoothly via
 `AdvancePlayerSprite` (which now relies purely on `LoadCurrentMapView` without
 VRAM sliding) with land collision against the embedded `Overworld_Coll` passable-tile list.
 The OAM sprite renderer (`src/ppu/ppu.asm:render_sprites`) is in: 8×8 DMG OBJ
-emulation (X/Y flip, OBP0/OBP1, color-0 transparency, BG-priority bit), reading
-`$FE00` and compositing after `render_bg`.
+emulation (X/Y flip, OBP0/OBP1, color-0 transparency, BG-priority bit). It draws
+`spr_oam_valid` entries **positioned from `spr_dos_sx/sy`** (canvas coords), taking
+only tile/attr from `$FE00` — so whoever owns the canvas owns OAM: publish through
+`PrepareOAMData` / `PrepareStaticOAM` / the mon-icon writers, or nothing is drawn
+(`ClearSprites`/`HideSprites` zero the count). Z-order: the port composites the
+**window layer last, over OBJ** — inverse of the GB, so the overworld dialog box can
+occlude NPCs the widescreen camera exposes under it. A screen whose window *is* the
+screen and whose OBJ belong on top of it (party menu, naming screen) sets
+`g_obj_over_window` to get the hardware order back; `ClearSprites` clears it again.
 
 The `UpdatePlayerOAM` scaffold has been replaced by the **faithful sprite
 engine**: `PrepareOAMData` (`src/gfx/sprite_oam.asm`) builds shadow OAM from the

@@ -203,7 +203,14 @@ a 30-frame delay; `PlayApplyingAttackAnimation` dispatch is faithfully gated on
   doc section here before coding).** The interpreter needs, from the software
   PPU: (i) a battle-OAM scratch layer `DrawFrameBlock` can write sprite tuples
   into (the existing shadow-OAM path + `spr_oam_valid` — see memory
-  `flatcanvas-sprite-suppression`; battle currently suppresses sprites), (ii)
+  `flatcanvas-sprite-suppression`; battle currently suppresses sprites).
+  **Updated 2026-07-12** (`docs/plans/party_icons_oam.md`): `ClearSprites`/`HideSprites`
+  now zero `spr_oam_valid` themselves, so anything that writes battle OAM after them
+  must *republish* — `PrepareStaticOAM` (what the pokéball row uses) is the model, and
+  `CommitMonPartySpriteOAM` in `engine/gfx/mon_icons.asm` is the worked example of a
+  screen owning its own OAM while `wUpdateSpritesEnabled = 0` gates `update_oam` off.
+  Battle draws on a flat canvas with no window, so it does **not** need
+  `g_obj_over_window`. (ii)
   per-frame `rSCX`/`rSCY`-shadow displacement for screen shake (exists:
   `H_SCX`/`H_SCY` drive `render_bg`'s blit offset), (iii) palette-flash hooks
   (BGP rewrite → the DMG-green ramp remap; keep Phase-5 CGB in mind), (iv) VRAM
