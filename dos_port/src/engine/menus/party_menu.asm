@@ -58,6 +58,7 @@ global PartyMenuMirror
 global DrawHP
 global DrawHP2
 
+extern g_tilecache_dirty             ; src/ppu/ppu.asm — arm after any VRAM tile-pattern write
 extern FillMemory                    ; home/fill_memory.asm — ESI=dest, BX=count, AL=value
 extern UpdateSprites                 ; engine/overworld/movement.asm
 extern GetPartyMonName               ; home/pokemon.asm — AL=index, ESI=base → wNameBuffer
@@ -463,6 +464,7 @@ LoadMonPartySpriteGfx:
 ; Clobbers EAX/ECX/EDX/ESI/EDI (EBX kept).
 ; ---------------------------------------------------------------------------
 LoadPartyMonIconFrame:
+    mov byte [g_tilecache_dirty], 1         ; VRAM tile data changes → rebuild decode cache
     push eax                                ; save slot
     imul ecx, eax, PARTYMON_STRUCT_LENGTH
     movzx ecx, byte [ebp + ecx + wPartyMons + MON_SPECIES] ; internal index (1-based)

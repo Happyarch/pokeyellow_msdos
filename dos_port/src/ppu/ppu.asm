@@ -100,6 +100,7 @@ align 4
 surf_force:      db 1       ; nonzero → re-decode every cell this frame
 align 4
 surf_mode_shadow: dd -1     ; tiledata_mode last decoded with (-1 = none yet)
+lut_mode_shadow:  dd -1     ; tiledata_mode id_cache_lut was built for
 surf_path_shadow: dd -1     ; 1 = overworld surface, 0 = flat wTileMap (-1 = none)
 
 ; --- Unified window-compositor descriptor list ----------------------------------
@@ -161,14 +162,18 @@ alignb 4
 surf_row_base:     resd 1            ; bg_surface offset of the row being decoded (scan paths)
 surf_row_ctr:      resd 1            ; row counter for the force paths
 id_cache_lut:      resd 256          ; tile id → tile_cache pointer (rebuilt on mode flip)
-; render_window row buffer and scanline state
-row_buf:         resb 256  ; decoded 256-px virtual window row (shade 0–3)
+; render_window row buffer and scanline state.
+; win_rowbuf8 holds ALL EIGHT pixel rows of the current window tile row (8 × 256
+; px). Every scanline of a tile row therefore costs one straight copy out of it;
+; the decode happens once per 8 scanlines, not once per scanline (Stage 2a).
+win_rowbuf8:     resb 8 * 256
+win_ntiles:      resd 1    ; tiles to decode this row = ceil(clip_w/8), capped at 32
+win_src:         resd 1    ; win_rowbuf8 + (WLY & 7)*256 — this scanline's source
 win_map_row:     resd 1    ; EBP-relative offset of current window tilemap row
-win_fine_y2:     resd 1    ; (WLY & 7) * 2
 win_line_ctr:    resd 1    ; WLY — window internal line counter (resets per descriptor)
 
 ; window descriptor storage + per-call cached fields (read once at render_window top
-; so decode_win_row / row copies may clobber ESI without losing the descriptor ptr)
+; so decode_win_row8 / row copies may clobber ESI without losing the descriptor ptr)
 alignb 4
 g_windows:       resb MAX_WINDOWS * WIN_DESC_SIZE  ; ordered painter's-order list
 win_wx:          resd 1    ; cached descriptor WIN_WX
@@ -192,16 +197,14 @@ section .text
 render_bg:
     pushad
 
-    ; Full-screen whiteout: fill the back buffer with BG color 0 and skip the map.
-    cmp dword [g_bg_whiteout], 0
-    je .no_whiteout
-    lea edi, [ebp + GB_BACKBUF]
-    mov ecx, RENDER_W * RENDER_H / 4
-    xor eax, eax
-    rep stosd
-    popad
-    ret
-.no_whiteout:
+    ; ---- tile-data sync — MUST run before the whiteout early-out ---------------
+    ; The window layer also draws out of tile_cache (Stage 2c), and a whiteout
+    ; screen (party menu) is exactly a screen that draws *only* windows. When this
+    ; block sat below the early-out, a whiteout frame never consumed
+    ; g_tilecache_dirty, so tiles loaded on entry to such a screen (e.g.
+    ; LoadHpBarAndStatusTilePatterns) never reached the cache and the window drew
+    ; the previous occupants of those slots — party-menu HP bars rendered as the
+    ; font glyphs that used to live there.
 
     ; Tile-data addressing mode (LCDC bit 4): 1 = $8000 unsigned, 0 = $8800 signed.
     ; A flip remaps every id → tile, so the id shadow no longer describes the
@@ -214,8 +217,8 @@ render_bg:
     je .mode_same
     mov [surf_mode_shadow], eax
     mov byte [surf_force], 1
-    call build_id_cache_lut         ; id → tile_cache pointer, for THIS mode
 .mode_same:
+    call ensure_id_cache_lut        ; id → tile_cache pointer, for THIS mode
 
     ; sync tile cache if needed (rebuild_tile_cache arms surf_force: the ids are
     ; unchanged but the patterns behind them are not)
@@ -223,6 +226,19 @@ render_bg:
     je .cache_ok
     call rebuild_tile_cache
 .cache_ok:
+
+    ; Full-screen whiteout: fill the back buffer with BG color 0 and skip the map.
+    ; surf_force is deliberately left armed — the surface was not decoded this
+    ; frame, so the first frame after the whiteout must rebuild it in full.
+    cmp dword [g_bg_whiteout], 0
+    je .no_whiteout
+    lea edi, [ebp + GB_BACKBUF]
+    mov ecx, RENDER_W * RENDER_H / 4
+    xor eax, eax
+    rep stosd
+    popad
+    ret
+.no_whiteout:
 
     ; ---- decode the tile ids into bg_surface (48×36 tiles = 384×288 px) -------
     ; Which source feeds the surface: view pointer nonzero = the overworld's
@@ -390,6 +406,23 @@ render_bg:
     jb .blit_row
 
     popad
+    ret
+
+; ---------------------------------------------------------------------------
+; ensure_id_cache_lut — (re)build id_cache_lut iff tiledata_mode changed.
+; Both render_bg and render_window resolve tile ids through the LUT, and either
+; may run first on a mode flip, so the guard lives here rather than in a caller.
+; In: [tiledata_mode]. All registers preserved.
+; ---------------------------------------------------------------------------
+ensure_id_cache_lut:
+    push eax
+    mov eax, [tiledata_mode]
+    cmp eax, [lut_mode_shadow]
+    je .done
+    mov [lut_mode_shadow], eax
+    call build_id_cache_lut
+.done:
+    pop eax
     ret
 
 ; ---------------------------------------------------------------------------
@@ -844,7 +877,7 @@ render_window:
     ; No BGP unpack: the window writes raw color (0-3) like the BG; the DAC
     ; (commit_palette) maps it via BGP — the window shares the BG palette.
 
-    ; Cache descriptor fields up front so decode_win_row / the row copies are free
+    ; Cache descriptor fields up front so decode_win_row8 / the row copies are free
     ; to clobber ESI without losing the descriptor pointer.
     mov eax, [esi + WIN_WX]
     mov [win_wx], eax
@@ -865,6 +898,19 @@ render_window:
     shr eax, LCDC_TILEDATA_BIT
     and eax, 1
     mov [tiledata_mode], eax
+    call ensure_id_cache_lut           ; window tiles resolve through the same LUT as the BG
+
+    ; Tiles to decode per row (Stage 2b): the copies below never read past
+    ; clip_w, so decoding the full 32-tile GB tilemap row was up to 12 tiles of
+    ; pure waste per row. ceil(clip_w/8), capped at the tilemap width.
+    mov eax, [win_clip_w]
+    add eax, 7
+    shr eax, 3
+    cmp eax, TILEMAP_W
+    jbe .have_ntiles
+    mov eax, TILEMAP_W
+.have_ntiles:
+    mov [win_ntiles], eax
 
     ; Reset WLY for this descriptor.
     mov dword [win_line_ctr], 0
@@ -881,14 +927,13 @@ render_window:
     cmp ecx, [win_max_y]
     jae .next_scanline
 
-    ; ── Decode one window tile row (32 tiles) into row_buf ──────────────────
-
-    ; fine_y2 = (WLY & 7) * 2
+    ; ── Source this scanline from the decoded tile row (Stage 2a/2c) ────────
+    ; WLY starts at 0 on the descriptor's first drawn scanline and advances one
+    ; per drawn scanline, so (WLY & 7) == 0 is exactly the first scanline of each
+    ; window tile row — decode there, and the other seven scanlines just copy.
     mov edx, [win_line_ctr]
-    mov eax, edx
-    and eax, 7
-    shl eax, 1
-    mov [win_fine_y2], eax
+    test edx, 7
+    jnz .row_decoded
 
     ; map_row = win_map_base + (WLY >> 3) * 32   (win_map_base folds in start_row)
     shr edx, 3
@@ -896,9 +941,16 @@ render_window:
     add edx, [win_map_base]
     mov [win_map_row], edx
 
-    push ecx                            ; save scanline counter — decode_win_row clobbers ECX
-    call decode_win_row                ; fill row_buf[0..255] from the 32 window tiles
-    pop ecx                            ; restore scanline counter
+    push ecx                            ; save scanline counter — the decoder clobbers ECX
+    call decode_win_row8               ; fill win_rowbuf8 with all 8 rows of this tile row
+    pop ecx
+.row_decoded:
+    ; win_src = win_rowbuf8 + (WLY & 7) * 256
+    mov eax, [win_line_ctr]
+    and eax, 7
+    shl eax, 8
+    add eax, win_rowbuf8
+    mov [win_src], eax
 
     ; ── Copy visible window pixels into the back buffer ─────────────────────
 
@@ -915,19 +967,20 @@ render_window:
     test edx, edx
     js .win_left_clip
 
-    ; wx_adj >= 0: copy row_buf[0..] → backbuf[wx_adj..RENDER_W-1].
+    ; wx_adj >= 0: copy the scanline's window pixels → backbuf[wx_adj..RENDER_W-1].
     cmp edx, RENDER_W
     jge .win_inc_ctr                   ; window entirely off the right edge
-    lea esi, [row_buf]
+    mov esi, [win_src]
     push ecx
     mov ecx, RENDER_W
     sub ecx, edx                       ; pixels to reach the right edge
     ; Clamp to SCREEN_W (160px = 20 tiles), the dialog/menu box's content width.
-    ; row_buf holds 256 decoded px (32 tiles), but only cols 0-19 carry the box;
+    ; the decoded row holds up to 256 px (32 tiles), but only cols 0-19 carry the box;
     ; cols 20-31 are TILE_SPC filler added to pad the 32-wide GB tilemap row, and
     ; must NOT be blitted — otherwise they paint blank tiles over the BG to the
     ; right of the box (the box is 160px centered in our 320px viewport, so BG is
-    ; visible past its right edge). 160 < 256, so this also stays within row_buf.
+    ; visible past its right edge). clip_w also bounds win_ntiles, so the copies
+    ; never read past what decode_win_row8 actually decoded.
     ; The descriptor's clip_w is SCREEN_W (160) for the full dialog; the start menu
     ; narrows it; the bag's sub-boxes set their own widths.
     cmp ecx, [win_clip_w]
@@ -940,9 +993,10 @@ render_window:
     jmp .win_inc_ctr
 
 .win_left_clip:
-    ; wx_adj < 0: skip the first -wx_adj pixels of row_buf, copy into backbuf[0..].
+    ; wx_adj < 0: skip the first -wx_adj pixels of the row, copy into backbuf[0..].
     neg edx                            ; EDX = number of leading columns to clip
-    lea esi, [row_buf + edx]
+    mov esi, [win_src]
+    add esi, edx
     push ecx
     mov ecx, RENDER_W
     mov eax, [win_clip_w]              ; box content width (see right-copy clamp above)
@@ -1040,51 +1094,41 @@ add_window:
     ret
 
 ; ---------------------------------------------------------------------------
-; decode_win_row — decode the 32 window tiles of the current row into row_buf
+; decode_win_row8 — gather one window tile row into win_rowbuf8 (all 8 px rows).
 ;
-; In:  [win_map_row] = GB tilemap row base address
-;      [win_fine_y2] = (WLY & 7) * 2
-;      [tiledata_mode] set by render_window preamble. Stores raw color 0-3.
+; The window's tiles live in the same $8000-$97FF region the BG does, so they are
+; ALREADY decoded in tile_cache. This just gathers them: 16 dword copies per tile,
+; no per-pixel bit extraction at all. Previously the window re-decoded a full
+; 32-tile row from the 2bpp planes with a shl/rcl pair PER PIXEL, PER SCANLINE, for
+; every open descriptor — which is why a party/options submenu cost 15 ms/frame
+; (93% of the budget) while the same code cost ~0 with no window open.
+;
+; Layout: win_rowbuf8[row*256 + col] — one 256-px scanline per row, so a scanline
+; copy is a straight run from win_rowbuf8 + (WLY & 7)*256.
+;
+; In:  [win_map_row] = GB tilemap row base, [win_ntiles] = tiles to decode,
+;      id_cache_lut built, EBP = GB memory base.
 ; Clobbers: EAX, EBX, ECX, EDX, ESI, EDI
 ; ---------------------------------------------------------------------------
-decode_win_row:
-    mov edi, row_buf
-    xor esi, esi                       ; tile column 0..31
-
-.wrow_tile:
-    mov eax, [win_map_row]
-    add eax, esi
-    movzx eax, byte [ebp + eax]       ; tile_id
-
-    cmp dword [tiledata_mode], 0
-    jne .wrow_unsigned
-    movsx eax, al
-    shl eax, 4
-    add eax, 0x9000
-    jmp .wrow_addr_ok
-.wrow_unsigned:
-    shl eax, 4
-    add eax, GB_VRAM0
-.wrow_addr_ok:
-    add eax, [win_fine_y2]
-
-    mov bl, [ebp + eax]
-    mov bh, [ebp + eax + 1]
-
-    mov ecx, 8
-.wrow_px:
-    xor eax, eax
-    shl bh, 1
-    rcl al, 1
-    shl bl, 1
-    rcl al, 1
-    stosb                              ; raw color 0-3 (DAC maps via BGP)
+decode_win_row8:
+    mov edx, [win_map_row]             ; GB address of the row's first tile id
+    mov ecx, [win_ntiles]
+    mov edi, win_rowbuf8               ; dest cursor: advances 8 px per tile
+.tile:
+    movzx eax, byte [ebp + edx]        ; tile id
+    mov esi, [id_cache_lut + eax*4]    ; → its 64-byte decoded tile in tile_cache
+%assign _r 0
+%rep 8
+    mov eax, [esi + _r * 8]
+    mov [edi + _r * 256], eax
+    mov eax, [esi + _r * 8 + 4]
+    mov [edi + _r * 256 + 4], eax
+%assign _r _r + 1
+%endrep
+    inc edx
+    add edi, 8
     dec ecx
-    jnz .wrow_px
-
-    inc esi
-    cmp esi, TILEMAP_W
-    jb .wrow_tile
+    jnz .tile
     ret
 
 ; ---------------------------------------------------------------------------

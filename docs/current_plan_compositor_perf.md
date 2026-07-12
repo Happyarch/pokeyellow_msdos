@@ -5,12 +5,12 @@ Status: **in progress** — tick stages as they land. Archive to
 
 - [x] Stage 0 — DEBUG_PERF instrumentation + baselines
 - [x] Stage 1 — render_bg dirty-skip / nested loops / flat-path trim
-- [ ] Stage 2 — render_window row-decode amortization
+- [x] Stage 2 — render_window row-decode amortization
 - [ ] Stage 3 — present dirty-row diff
 - [ ] Stage 4 — LUT decode + sprites from tile_cache
 - [ ] Stage 5 — (optional, ask user before enabling) overrun pacing
 - [ ] Stage 6 — targeted loop unrolling (measured polish)
-- [ ] Ride-along: party_menu icon-bob missing `g_tilecache_dirty`
+- [x] Ride-along: party_menu icon-bob missing `g_tilecache_dirty`
 
 ## Measured baselines (Stage 0, 2026-07-12)
 
@@ -154,6 +154,27 @@ that clobbers a caller's cursor belongs behind the callee's own save.
   second per-tile `div` and 728 dead-cell tests.
 
 ## Stage 2 — render_window: amortize the row decode (fixes menu scaling)
+
+**DONE (2026-07-12).** present_windows 15.24 → **3.18 ms** (party_menu), 3.01 ms
+(start_menu); work/frame 143% → **47%** of budget. All 9 pixelcheck scenarios
+byte-identical. 2a + 2b + 2c landed as written (`decode_win_row8` gathers all 8
+pixel rows of a tile row out of `tile_cache`; `win_ntiles = ceil(clip_w/8)`).
+
+Two coupled correctness findings, both surfaced *by* 2c and both now fixed:
+
+1. **`render_bg`'s tile-cache sync had to move above the whiteout early-out.**
+   The window now draws from `tile_cache`, and a whiteout screen (party menu) is
+   precisely a screen that draws *only* windows — so a whiteout frame never
+   consumed `g_tilecache_dirty`, tiles loaded on entry to that screen never
+   reached the cache, and the window drew whatever used to occupy those slots.
+   Symptom: party-menu HP bars rendered as the font glyphs previously at $9620.
+2. **The ride-along was the same bug's other half:** `LoadPartyMonIconFrame`
+   writes VRAM tile patterns and never armed `g_tilecache_dirty`. Latent before
+   (the window read VRAM directly); load-bearing now.
+
+Generalisation worth keeping in mind: **any VRAM tile-pattern write must arm
+`g_tilecache_dirty`** — as of Stage 2 both the BG *and* the window read only the
+cache, so a missing flag is now a visible-corruption bug, not a latent one.
 
 - **2a.** Decode a window tile row once per 8 scanlines into an 8-row (2 KB)
   buffer instead of re-decoding per scanline; the 8 covered scanlines just copy.
