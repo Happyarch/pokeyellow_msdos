@@ -207,11 +207,15 @@ a 30-frame delay; `PlayApplyingAttackAnimation` dispatch is faithfully gated on
   `H_SCX`/`H_SCY` drive `render_bg`'s blit offset), (iii) palette-flash hooks
   (BGP rewrite → the DMG-green ramp remap; keep Phase-5 CGB in mind), (iv) VRAM
   tile uploads for move-anim tilesets (`LoadMoveAnimationTiles`) — **must set
-  `g_tilecache_dirty`**. **Sequencing conflict:** the compositor-perf plan
-  (`current_plan_compositor_perf.md`) rewrites these exact files
+  `g_tilecache_dirty`**. ~~**Sequencing conflict:** the compositor-perf plan
+  (`docs/plans/compositor_perf.md`) rewrites these exact files
   (`ppu.asm` render_bg/render_sprites/present). Land perf Stages 1-4 first, or
   freeze that plan while this stage runs — do not interleave; both plans'
-  FRAME.BIN baselines invalidate each other.
+  FRAME.BIN baselines invalidate each other.~~ **Cleared 2026-07-12:** that plan
+  is complete and archived, so there is no conflict left to sequence around. It
+  did raise the stakes on the flag, though — BG *and* window now read only
+  `tile_cache`, so a move-anim tile upload that fails to arm `g_tilecache_dirty`
+  is **visible corruption**, not merely a stale decode.
 - [ ] **6b. Tier-1 data generators.** `gen_battle_anims.py` → `assets/`:
   subanimation tables, frame blocks, `AttackAnimationPointers`, move-anim
   tileset graphics (pret `data/battle_anims/*.asm` + `gfx/battle/*.png`).

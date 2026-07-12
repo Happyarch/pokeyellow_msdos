@@ -1,16 +1,39 @@
-# Current Plan — Compositor Performance (get back toward 386/66)
+# Plan (COMPLETE) — Compositor Performance (get back toward 386/66)
 
-Status: **in progress** — tick stages as they land. Archive to
-`docs/plans/compositor_perf.md` when complete.
+Status: **complete, 2026-07-12.** Archived from `docs/current_plan_compositor_perf.md`.
+
+**Outcome: the port is back to full speed.** Frames were costing 31–34 ms against
+a 16.348 ms budget (~half speed); every frame now lands inside one PIT tick, paced
+by the clock rather than by the compositor. Work per frame:
+
+| scenario | before | after | render_bg | present_windows | render_sprites |
+|---|---|---|---|---|---|
+| ow_idle    | 18.26 ms (112%) | **5.56 ms (34%)** | 14.97 → 3.00 | — | 1.28 → 0.55 |
+| battle     | 19.29 ms (118%) | **4.98 ms (30%)** | 15.94 → 2.21 | — | 1.01 → 0.43 |
+| party_menu | 23.42 ms (143%) | **7.39 ms (45%)** | 5.83 → 2.08 | 15.24 → 3.18 | 0.40 → 0.18 |
+
+Every stage was verified as a **pixel-identical** transform: all 9
+`tools/pixelcheck.sh` scenarios byte-compare identical to the pre-plan baselines,
+and `tools/lint_pret_labels` exits 0. `present` is untouched (see Stage 3).
 
 - [x] Stage 0 — DEBUG_PERF instrumentation + baselines
 - [x] Stage 1 — render_bg dirty-skip / nested loops / flat-path trim
 - [x] Stage 2 — render_window row-decode amortization
-- [x] Stage 3 — present dirty-row diff — measured and REJECTED (net loss; see below)
+- [x] Stage 3 — present dirty-row diff — measured and **REJECTED** (net loss; reverted)
 - [x] Stage 4 — LUT decode + sprites from tile_cache
-- [ ] Stage 5 — (optional, ask user before enabling) overrun pacing
+- [x] Stage 5 — overrun pacing — **DROPPED** (no overruns left to pace; user agreed)
 - [x] Stage 6 — targeted loop unrolling (measured polish)
 - [x] Ride-along: party_menu icon-bob missing `g_tilecache_dirty`
+
+## Standing invariant this plan created
+
+Both the BG and the window layer now read **only** `tile_cache`. Any routine that
+writes VRAM tile patterns and fails to arm `g_tilecache_dirty` is therefore a
+visible-corruption bug (it was merely a stale-decode risk before). The party-menu
+icon bob was exactly this and is fixed; a grep found other non-arming VRAM writers
+worth auditing if corruption ever shows up: `src/engine/battle/pokeballs.asm`
+(writes GB_VCHARS0), `src/engine/items/town_map.asm`,
+`src/engine/overworld/healing_machine.asm`, `src/engine/overworld/trainer_engine.asm`.
 
 ## Measured baselines (Stage 0, 2026-07-12)
 
@@ -251,6 +274,14 @@ The only change: skip the *additional* `wait_vblank` spin when `tick_flag` is
 already set (frame is late) — the tick wait itself is untouched, so game/music
 speed is bit-identical; the trade is possible tearing on catch-up frames only.
 Behind a Makefile flag; default off unless the user wants it.
+
+**DROPPED (2026-07-12, user agreed) — not implemented.** Its entire
+justification was overrun frames, and after Stages 1–4/6 there are none: work
+per frame is 30–45% of budget and every frame is paced by the PIT tick, not by
+the compositor. Skipping the `wait_vblank` spin would buy nothing and would risk
+tearing. If a future feature reintroduces sustained overruns, this is still the
+right lever — the constraint above (never touch the PIT ISR/divisor/`tick_flag`)
+stands.
 
 ## Stage 6 — targeted loop unrolling (polish pass, after Stages 1–4)
 

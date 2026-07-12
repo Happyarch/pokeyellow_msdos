@@ -738,7 +738,7 @@ ifdef NEED_DEBUG_DUMP
 GAME_SRCS += src/debug/debug_dump.asm
 endif
 
-# Compositor profiler (docs/current_plan_compositor_perf.md Stage 0): latch PIT
+# Compositor profiler (docs/plans/compositor_perf.md Stage 0): latch PIT
 # channel 0 around each DelayFrame stage, accumulate per-stage totals + worst
 # frame, write PERF.BIN. Decode with tools/read_perf.py.
 #   make DEBUG_PERF=1 SKIP_TITLE=1                 (play; Esc dumps PERF.BIN)

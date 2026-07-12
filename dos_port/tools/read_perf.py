@@ -10,7 +10,7 @@ Usage:
     tools/read_perf.py [PERF.BIN] [--baseline OTHER.BIN]
 
 With --baseline, prints the delta against an earlier capture (the before/after
-check every stage of docs/current_plan_compositor_perf.md must pass).
+check every stage of docs/plans/compositor_perf.md must pass).
 """
 
 import argparse

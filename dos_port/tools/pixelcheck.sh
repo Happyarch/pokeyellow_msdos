@@ -1,7 +1,7 @@
 #!/bin/sh
 # pixelcheck.sh — capture one scenario's FRAME.BIN headlessly.
 #
-# The compositor-perf plan (docs/current_plan_compositor_perf.md) requires every
+# The compositor-perf plan (docs/plans/compositor_perf.md) requires every
 # stage to be a PIXEL-IDENTICAL transform, so each stage captures these frames
 # before and after and byte-compares them:
 #

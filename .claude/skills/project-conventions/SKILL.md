@@ -164,6 +164,22 @@ commit but too specific to belong in TODO.md.
   `faithfulness-review` skill), plus the dosbox-x unattended-quit fix. Deferred
   tails (battle_menu golden spec, CI wiring, FormatMovesString relocation,
   allowlist review, pret-tree contamination decision) → TODO.md.
+- **Compositor performance — COMPLETE & archived** at
+  `docs/plans/compositor_perf.md` (2026-07-12). The port was running at ~half
+  speed (31–34 ms/frame against a 16.348 ms budget); it now lands every frame
+  inside one PIT tick (work = 30–45% of budget). `render_bg` dirty-skips against
+  a tile-id shadow, `render_window` gathers rows from `tile_cache` once per 8
+  lines, tiles decode through an assembly-time 2bpp→8bpp LUT, and sprites
+  composite from `tile_cache`. Tooling it left behind: `DEBUG_PERF` +
+  `tools/perf_capture.sh` / `read_perf.py` (per-stage PIT profiler) and
+  `tools/pixelcheck.sh` (headless FRAME.BIN pixel-identity check).
+  **Standing invariant:** BG *and* window now read only `tile_cache`, so any
+  VRAM tile-pattern write that fails to arm `g_tilecache_dirty` is **visible
+  corruption**, not just a stale decode. Two negative results are recorded there
+  so they aren't re-attempted blind: the `present` dirty-row diff measured
+  *slower* (rejected), and `wait_vblank` overrun pacing was dropped (no overruns
+  left to pace). Also: **`FRAME.BIN` cannot validate `present`** — it dumps the
+  back buffer, which is `present`'s input.
 - `docs/current_plan_audio.md` — **audio subsystem (Phase 3)**, architecture settled
   2026-07-05: faithful pret engine translation driving a virtual APU + per-device
   shims (OPL3/SB Pro floor, Tandy, PC speaker), MT-32-flagship MIDI path via

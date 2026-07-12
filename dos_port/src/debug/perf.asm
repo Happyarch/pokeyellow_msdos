@@ -1,6 +1,6 @@
 ; perf.asm — per-stage frame profiler (DEBUG_PERF builds only).
 ;
-; The compositor-perf plan (docs/current_plan_compositor_perf.md) is staged
+; The compositor-perf plan (docs/plans/compositor_perf.md) is staged
 ; "instrument first, then fix in ranked order". This is the instrument: it
 ; latches PIT channel 0 around each phase of DelayFrame and accumulates the
 ; elapsed PIT counts per stage, then writes PERF.BIN for the host to read

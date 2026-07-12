@@ -31,7 +31,7 @@ Pokémon to its authentic GBC colors** parsed from pret's hand-authored
 - End-to-end but staged: tool + generators first, then minimal runtime so colors show in DOS. First target: **mon pics + battle screen**; overworld/menus later.
 - **Core mechanism: per-VRAM-tile-ID palette byte, baked into `tile_cache` at decode time.** Cycle cost first, bandwidth second, memory is plentiful.
 - Repaint = **CGB-style multi-palette** (edited 2bpp tiles + per-tile palette grid, ~8–12 colors/asset; no 8bpp path), authored via **PNG round-trip** (export → paint in GIMP/Aseprite → import with validation).
-- Runtime consumption is designed now but **lands after/coordinated with `docs/current_plan_compositor_perf.md` Stages 1–4** (same hot loops). Tool/generator stages can land anytime.
+- Runtime consumption is designed now but **lands after/coordinated with `docs/plans/compositor_perf.md` Stages 1–4** (same hot loops). Tool/generator stages can land anytime. **Unblocked 2026-07-12:** that plan is complete and archived — but read it before touching the hot loops, since `render_bg`/`render_window`/`render_sprites` now all composite from `tile_cache` and are dirty-skipped against id shadows.
 
 ## Core design
 
