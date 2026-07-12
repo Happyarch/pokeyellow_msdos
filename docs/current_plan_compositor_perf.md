@@ -4,7 +4,7 @@ Status: **in progress** — tick stages as they land. Archive to
 `docs/plans/compositor_perf.md` when complete.
 
 - [x] Stage 0 — DEBUG_PERF instrumentation + baselines
-- [ ] Stage 1 — render_bg dirty-skip / nested loops / flat-path trim
+- [x] Stage 1 — render_bg dirty-skip / nested loops / flat-path trim
 - [ ] Stage 2 — render_window row-decode amortization
 - [ ] Stage 3 — present dirty-row diff
 - [ ] Stage 4 — LUT decode + sprites from tile_cache
@@ -120,6 +120,25 @@ the 2026-07-12 upgrade gives this plan specifically:
   (use `pkill -f dosbox-x-mcp`).
 
 ## Stage 1 — render_bg: stop re-decoding the world every frame (biggest win)
+
+**DONE (2026-07-12).** render_bg 14.97 → **3.13 ms** (ow_idle), 15.94 → **2.22 ms**
+(battle); worst frame 18.5 → **12.4 ms**. Work/frame 112% → **39%** of budget, so
+the overworld and battle no longer overrun. All 9 pixelcheck scenarios byte-identical.
+Landed as described, plus two things the plan did not call for:
+
+- **id→tile_cache LUT** (`build_id_cache_lut`, 256 dwords, rebuilt only when
+  `tiledata_mode` flips): kills the per-cell mode `cmp`/branch/sign-extend/shift.
+- The **force (full re-decode) path is a separate loop** from the scan path, with
+  linear cursors and no column arithmetic — a first cut that shared one loop made
+  the force frame *slower* than the code it replaced (30 ms worst), which the
+  Stage-0 `worst ms` column caught immediately.
+
+Landmine for the next reader: `decode_tile` uses ESI for the tile_cache pointer, so
+it **saves ESI itself**. An earlier revision made the callers responsible, the force
+paths forgot, and the loop kept walking a tile_cache pointer as its id source —
+poisoning the id shadow. Pixel-identical on scenarios that dumped late (later scan
+frames repaired the surface), blank BG on the ones that dumped early. Anything new
+that clobbers a caller's cursor belongs behind the callee's own save.
 
 - **1a. Nested loops:** replace the linear-index `div`-per-tile loop with
   row 0..35 / col 0..47 nested loops and a running dest pointer. Deletes all

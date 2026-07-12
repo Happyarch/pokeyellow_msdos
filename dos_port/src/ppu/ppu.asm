@@ -67,12 +67,40 @@ PLAYER_MARKER_INNER equ 0       ; lightest shade for the inner square
 TILE_CACHE_TILES  equ 384
 TILE_CACHE_SIZE   equ TILE_CACHE_TILES * 64
 
+; bg_surface geometry — the decoded 8bpp mirror of wSurroundingTiles.
+; NEVER spell these as the bare literals they happen to equal: SURF_W_TILES(48)
+; and TILE_HEIGHT(8) collide numerically with nothing here today, but the same
+; class of collision (MAP_BORDER*2 == SCREEN_BLOCK_WIDTH) has already bitten this
+; codebase once.
+SURF_W_TILES      equ 48                        ; wSurroundingTiles width  (tiles)
+SURF_H_TILES      equ 36                        ; wSurroundingTiles height (tiles)
+SURF_CELLS        equ SURF_W_TILES * SURF_H_TILES   ; 1728
+SURF_W            equ SURF_W_TILES * 8          ; 384 px — one surface scanline
+SURF_TILE_ROW     equ SURF_W * 8                ; 3072 B — one tile row of surface
+TILE_BLANK        equ 0x7F                      ; blank space tile (ClearScreen fill)
+
 ; ---------------------------------------------------------------------------
 ; DATA (initialized — must start "dirty" so the first frame builds the cache)
 ; ---------------------------------------------------------------------------
 section .data
 align 4
 g_tilecache_dirty: db 1     ; nonzero → render_bg rebuilds tile_cache this frame
+
+; --- bg_surface dirty-skip state (compositor-perf Stage 1b) --------------------
+; bg_surface is a pure function of (tile id per cell, tile_cache, tiledata_mode),
+; so a cell only needs re-decoding when its tile id changes. surf_shadow holds
+; last frame's ids; surf_force forces a full re-decode when the *other* two inputs
+; change — i.e. whenever the ids alone no longer determine the pixels:
+;   * tile_cache rebuilt (same ids, new patterns)  → rebuild_tile_cache arms it
+;   * tiledata_mode flipped (same ids, new tiles)  → id→cache mapping changed
+;   * source path switched (overworld ↔ flat)      → the padding cells' meaning
+;     changes (flat pads with TILE_BLANK; overworld reads real ids there)
+; Starts armed: bg_surface is BSS (zeroed), which no id shadow can describe.
+align 4
+surf_force:      db 1       ; nonzero → re-decode every cell this frame
+align 4
+surf_mode_shadow: dd -1     ; tiledata_mode last decoded with (-1 = none yet)
+surf_path_shadow: dd -1     ; 1 = overworld surface, 0 = flat wTileMap (-1 = none)
 
 ; --- Unified window-compositor descriptor list ----------------------------------
 ; g_windows[] is the ONE source of truth for what the window layer draws.
@@ -126,8 +154,13 @@ spr_dos_sx:    resd OAM_COUNT  ; signed DOS X for entry 0..OAM_COUNT-1
 spr_oam_valid: resd 1          ; count of valid entries written this frame (set by PrepareOAMData)
 
 ; bg_surface: 384×288 raw-color mirror of wSurroundingTiles.
-bg_surface:        resb 384 * 288
+bg_surface:        resb SURF_W * SURF_H_TILES * 8
 alignb 4
+surf_shadow:       resb SURF_CELLS   ; tile id each surface cell was last decoded from
+alignb 4
+surf_row_base:     resd 1            ; bg_surface offset of the row being decoded (scan paths)
+surf_row_ctr:      resd 1            ; row counter for the force paths
+id_cache_lut:      resd 256          ; tile id → tile_cache pointer (rebuilt on mode flip)
 ; render_window row buffer and scanline state
 row_buf:         resb 256  ; decoded 256-px virtual window row (shade 0–3)
 win_map_row:     resd 1    ; EBP-relative offset of current window tilemap row
@@ -170,97 +203,49 @@ render_bg:
     ret
 .no_whiteout:
 
-    ; Tile-data addressing mode (LCDC bit 4): 1 = $8000 unsigned, 0 = $8800 signed
+    ; Tile-data addressing mode (LCDC bit 4): 1 = $8000 unsigned, 0 = $8800 signed.
+    ; A flip remaps every id → tile, so the id shadow no longer describes the
+    ; surface: force a full re-decode.
     movzx eax, byte [ebp + IO_LCDC]
     shr eax, LCDC_TILEDATA_BIT
     and eax, 1
     mov [tiledata_mode], eax
+    cmp eax, [surf_mode_shadow]
+    je .mode_same
+    mov [surf_mode_shadow], eax
+    mov byte [surf_force], 1
+    call build_id_cache_lut         ; id → tile_cache pointer, for THIS mode
+.mode_same:
 
-    ; sync tile cache if needed
+    ; sync tile cache if needed (rebuild_tile_cache arms surf_force: the ids are
+    ; unchanged but the patterns behind them are not)
     cmp byte [g_tilecache_dirty], 0
     je .cache_ok
     call rebuild_tile_cache
 .cache_ok:
 
-    ; ---- decode wSurroundingTiles (48x36) into bg_surface (384x288) ----
-    xor ebx, ebx       ; EBX = tile index 0..1727 (48 * 36)
-.decode_loop:
-    movzx eax, word [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR]
+    ; ---- decode the tile ids into bg_surface (48×36 tiles = 384×288 px) -------
+    ; Which source feeds the surface: view pointer nonzero = the overworld's
+    ; wSurroundingTiles; zero = the flat 40×25 wTileMap (title / menus / battle).
+    ; A switch between them changes what the padding cells mean, so it forces too.
+    xor eax, eax
+    cmp word [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], 0
+    je .have_path
+    inc eax
+.have_path:
+    cmp eax, [surf_path_shadow]
+    je .path_same
+    mov [surf_path_shadow], eax
+    mov byte [surf_force], 1
+.path_same:
     test eax, eax
-    jz .decode_vram
-
-    mov al, [ebp + W_SURROUNDING_TILES + ebx]
-    jmp .got_tile
-
-.decode_vram:
-    ; Non-overworld path (title / menus / text). Read the 40-wide wTileMap WRAM
-    ; buffer DIRECTLY into bg_surface, mirroring the overworld branch's
-    ; native-width read of wSurroundingTiles above. The old code funnelled the
-    ; 40-wide buffer through the 32-wide GB VRAM tilemap (do_bg_transfer) and
-    ; re-read it with `and edx,31`, which wrapped surface cols 32-47 back to
-    ; cols 0-15 — duplicating the left of the screen onto the right (the title
-    ; Pikachu "mirror"). wTileMap is 40 (SCREEN_TILES_W) x 25 (SCREEN_TILES_H);
-    ; the 48x36 surface's extra cols (>=40) and rows (>=25) render as blank $7F.
-    mov eax, ebx
-    mov ecx, 48
-    xor edx, edx
-    div ecx                       ; EAX = surface row, EDX = surface col
-    cmp eax, SCREEN_TILES_H        ; row >= 25 -> off-buffer
-    jae .vram_blank
-    cmp edx, SCREEN_TILES_W        ; col >= 40 -> right padding
-    jae .vram_blank
-    imul eax, eax, SCREEN_TILES_W  ; row * 40
-    add eax, edx                   ; + col
-    mov al, [ebp + W_TILEMAP + eax]
-    jmp .got_tile
-.vram_blank:
-    mov al, 0x7F                   ; blank space tile (matches ClearScreen fill)
-
-.got_tile:
-    
-    ; get tile cache offset into ESI
-    cmp dword [tiledata_mode], 0
-    jne .uns
-    movsx eax, al
-    shl eax, 4
-    add eax, 0x9000
-    jmp .mode_ok
-.uns:
-    movzx eax, al
-    shl eax, 4
-    add eax, GB_VCHARS0
-.mode_ok:
-    sub eax, GB_VCHARS0
-    shl eax, 2
-    lea esi, [tile_cache + eax]
-
-    ; Calculate destination in bg_surface
-    ; row = EBX / 48, col = EBX % 48
-    mov eax, ebx
-    mov ecx, 48
-    xor edx, edx
-    div ecx
-    ; EAX = row, EDX = col
-    
-    ; dest offset = row * 8 * 384 + col * 8
-    imul eax, eax, 8 * 384
-    lea edi, [bg_surface + eax + edx * 8]
-    
-    ; copy 8 rows
-    mov ecx, 8
-.row_copy:
-    mov eax, [esi]
-    mov [edi], eax
-    mov eax, [esi + 4]
-    mov [edi + 4], eax
-    add esi, 8
-    add edi, 384
-    dec ecx
-    jnz .row_copy
-
-    inc ebx
-    cmp ebx, 48 * 36
-    jb .decode_loop
+    jz .flat_path
+    call decode_surface_overworld
+    jmp .decode_done
+.flat_path:
+    call decode_surface_flat
+.decode_done:
+    mov byte [surf_force], 0
 
     ; ---- blit a 320x200 window from bg_surface ----
     ; Check if we are actually in the overworld (view pointer != 0)
@@ -408,6 +393,231 @@ render_bg:
     ret
 
 ; ---------------------------------------------------------------------------
+; build_id_cache_lut — precompute id → tile_cache pointer for the current mode.
+;
+; The id→pattern mapping depends only on tiledata_mode, so resolving it per tile
+; (a memory `cmp`, a branch, a sign/zero extend and two shifts, ~15 cycles × 1728
+; cells) was pure repeated work. Do it once for all 256 ids whenever the mode
+; flips — which is also exactly when a full re-decode is forced anyway.
+;
+; tile_cache is indexed from GB_VCHARS0 ($8000) in 64-byte decoded tiles:
+;   unsigned ($8000 base): id*16 packed → id*64 decoded
+;   signed   ($9000 base): $1000 + sx(id)*16 packed → $4000 + sx(id)*64 decoded
+; In: [tiledata_mode]. All registers preserved.
+; ---------------------------------------------------------------------------
+build_id_cache_lut:
+    pushad
+    xor ecx, ecx                           ; id 0..255
+    cmp dword [tiledata_mode], 0
+    je .signed
+.unsigned_loop:
+    mov eax, ecx
+    shl eax, 6                             ; id * 64 (one decoded tile)
+    add eax, tile_cache
+    mov [id_cache_lut + ecx*4], eax
+    inc ecx
+    cmp ecx, 256
+    jb .unsigned_loop
+    popad
+    ret
+.signed:
+    movsx eax, cl                          ; sx(id): ids $80-$FF address $8800-$8FFF
+    shl eax, 6                             ; sx(id) * 64
+    add eax, tile_cache + 0x4000           ; $9000 base = ($1000 packed) × 4 decoded
+    mov [id_cache_lut + ecx*4], eax
+    inc ecx
+    cmp ecx, 256
+    jb .signed
+    popad
+    ret
+
+; ---------------------------------------------------------------------------
+; decode_tile — paint one decoded 8×8 tile into bg_surface.
+;
+; In:  AL = GB tile id, EDI = destination in bg_surface, id_cache_lut built.
+; Out: ESI and EDI preserved — every caller keeps a live cursor in one or both of
+;      them. (ESI is saved HERE, not by the callers: a caller that forgot to save
+;      it kept walking a tile_cache pointer as if it were its source cursor, which
+;      silently poisoned the id shadow. Owning the save inside the callee makes
+;      that class of bug unrepresentable.) EAX clobbered.
+;
+; The 8-row copy is fully unrolled: on a 386 a taken `jnz` costs ~7 cycles plus a
+; prefetch-queue flush, so the 8-iteration loop it replaces spent roughly a third
+; of its time on loop overhead alone. Displacements are compile-time constants, so
+; the two pointer `add`s per row vanish as well.
+; ---------------------------------------------------------------------------
+decode_tile:
+    push esi
+    movzx eax, al
+    mov esi, [id_cache_lut + eax*4]
+%assign _row 0
+%rep 8
+    mov eax, [esi + _row * 8]
+    mov [edi + _row * SURF_W], eax
+    mov eax, [esi + _row * 8 + 4]
+    mov [edi + _row * SURF_W + 4], eax
+%assign _row _row + 1
+%endrep
+    pop esi
+    ret
+
+; ---------------------------------------------------------------------------
+; decode_surface_overworld — refresh bg_surface from wSurroundingTiles (48×36).
+;
+; Dirty-skip (compositor-perf Stage 1b): a cell is re-decoded only when its tile
+; id differs from surf_shadow (or surf_force is armed). The scan is a `repe cmpsb`
+; over each 48-cell row, so an unchanged row costs ~5 cycles/cell instead of the
+; ~130 a decode costs — an idle overworld frame drops from 110 KB of surface
+; writes to a 1728-byte compare. A walk step that moves the block-map view pointer
+; rewrites wSurroundingTiles wholesale and pays the full decode on that one frame.
+;
+; The two paths are separate loops on purpose: the force path needs no compare and
+; walks all three cursors linearly (dest advances 8 px/cell, one tile row = 8 surface
+; scanlines), so it carries none of the scan path's per-cell column arithmetic.
+;
+; In: EBP = GB memory base, [surf_force] set, id_cache_lut built. Clobbers EAX-EDI.
+; ---------------------------------------------------------------------------
+decode_surface_overworld:
+    cmp byte [surf_force], 0
+    jne .force
+
+    ; --- steady state: cmpsb-scan each row, decode only the cells that changed ---
+    lea esi, [ebp + W_SURROUNDING_TILES]   ; src cursor (flat)
+    mov edi, surf_shadow                   ; id-shadow cursor
+    mov dword [surf_row_base], bg_surface
+    mov edx, SURF_H_TILES                  ; rows remaining
+.row:
+    mov ecx, SURF_W_TILES                  ; cells remaining in this row
+.scan:
+    repe cmpsb                             ; run past every cell whose id is unchanged
+    je .row_done                           ; ZF set ⇒ the whole remaining run matched
+    ; Mismatch: cmpsb has already stepped past it. New id = [esi-1], its shadow
+    ; slot = [edi-1], and the cell's column is (width-1) - ECX.
+    mov al, [esi - 1]
+    mov [edi - 1], al
+    mov ebx, SURF_W_TILES - 1
+    sub ebx, ecx
+    push edi
+    mov edi, [surf_row_base]
+    lea edi, [edi + ebx*8]
+    call decode_tile                       ; preserves ESI (the scan cursor)
+    pop edi
+    jecxz .row_done                        ; that was the row's last cell
+    jmp .scan
+.row_done:
+    add dword [surf_row_base], SURF_TILE_ROW
+    dec edx
+    jnz .row
+    ret
+
+    ; --- force: every cell, linear cursors, no compare ---
+.force:
+    lea ebx, [ebp + W_SURROUNDING_TILES]   ; src cursor  (EBX: decode_tile owns ESI)
+    mov edx, surf_shadow                   ; id-shadow cursor
+    mov edi, bg_surface                    ; dest cursor
+    mov dword [surf_row_ctr], SURF_H_TILES
+.force_row:
+    mov ecx, SURF_W_TILES
+.force_cell:
+    mov al, [ebx]
+    mov [edx], al
+    inc ebx
+    inc edx
+    call decode_tile                       ; EDI = dest, preserved
+    add edi, 8                             ; next cell = 8 px right
+    dec ecx
+    jnz .force_cell
+    ; end of tile row: step dest down 8 surface scanlines (the row's 48 cells have
+    ; already advanced it by one scanline's worth)
+    add edi, SURF_TILE_ROW - SURF_W
+    dec dword [surf_row_ctr]
+    jnz .force_row
+    ret
+
+; ---------------------------------------------------------------------------
+; decode_surface_flat — refresh bg_surface from the flat 40×25 wTileMap.
+;
+; The non-overworld path (title / menus / text / battle). wTileMap is
+; SCREEN_TILES_W × SCREEN_TILES_H; the surface's extra columns (≥40) and rows
+; (≥25) are padding and render as TILE_BLANK.
+;
+; Stage 1c: the padding is *static* — it only changes when the tile patterns or
+; the addressing mode do, i.e. exactly when surf_force is armed. So the steady
+; state scans only the 1000 live cells, not 1728, and the 728 padding cells are
+; painted once on the force frame instead of every frame.
+;
+; NOTE the read is direct from wTileMap at its native 40-wide stride. Funnelling
+; it through the 32-wide GB VRAM tilemap is what produced the title-screen
+; "Pikachu mirror" (surface cols 32-47 wrapped back onto cols 0-15); see the
+; do_bg_transfer retirement note in src/video/frame.asm.
+;
+; In: EBP = GB memory base, [surf_force] set, id_cache_lut built. Clobbers EAX-EDI.
+; ---------------------------------------------------------------------------
+decode_surface_flat:
+    cmp byte [surf_force], 0
+    jne .force
+
+    ; --- steady state: scan the live 40 cells of each of the 25 live rows ---
+    lea esi, [ebp + W_TILEMAP]
+    mov edi, surf_shadow
+    mov dword [surf_row_base], bg_surface
+    xor edx, edx                           ; row
+.row:
+    mov ecx, SCREEN_TILES_W
+.scan:
+    repe cmpsb
+    je .row_done
+    mov al, [esi - 1]
+    mov [edi - 1], al
+    mov ebx, SCREEN_TILES_W - 1
+    sub ebx, ecx
+    push edi
+    mov edi, [surf_row_base]
+    lea edi, [edi + ebx*8]
+    call decode_tile                       ; preserves ESI (the scan cursor)
+    pop edi
+    jecxz .row_done
+    jmp .scan
+.row_done:
+    add edi, SURF_W_TILES - SCREEN_TILES_W ; step the shadow past the static padding
+    add dword [surf_row_base], SURF_TILE_ROW
+    inc edx
+    cmp edx, SCREEN_TILES_H
+    jb .row
+    ret
+
+    ; --- force: every cell, live or padding, linear cursors ---
+.force:
+    lea ebx, [ebp + W_TILEMAP]             ; live-row src (EBX: decode_tile owns ESI)
+    mov edx, surf_shadow
+    mov edi, bg_surface
+    mov dword [surf_row_ctr], 0            ; row
+.force_row:
+    xor ecx, ecx                           ; column
+.force_cell:
+    mov al, TILE_BLANK
+    cmp dword [surf_row_ctr], SCREEN_TILES_H   ; row ≥ 25 → padding
+    jae .have_id
+    cmp ecx, SCREEN_TILES_W                    ; col ≥ 40 → padding
+    jae .have_id
+    mov al, [ebx + ecx]                    ; EBX = wTileMap row base (live rows only)
+.have_id:
+    mov [edx], al
+    inc edx
+    call decode_tile                       ; EDI = dest, preserved
+    add edi, 8
+    inc ecx
+    cmp ecx, SURF_W_TILES
+    jb .force_cell
+    add ebx, SCREEN_TILES_W                ; (walks past wTileMap on padding rows;
+                                           ;  never dereferenced there)
+    add edi, SURF_TILE_ROW - SURF_W
+    inc dword [surf_row_ctr]
+    cmp dword [surf_row_ctr], SURF_H_TILES
+    jb .force_row
+    ret
+
+; ---------------------------------------------------------------------------
 ; rebuild_tile_cache — decode the 384 BG/window tiles ($8000-$97FF) to 8bpp.
 ;
 ; Each 16-byte 2bpp tile becomes 64 bytes (8×8) of RAW color (0-3) in
@@ -442,6 +652,9 @@ rebuild_tile_cache:
     jnz .row_loop
 
     mov byte [g_tilecache_dirty], 0
+    ; The tile ids in surf_shadow are unchanged but the patterns they name are
+    ; not, so the id shadow no longer describes bg_surface: force a re-decode.
+    mov byte [surf_force], 1
     popad
     ret
 
