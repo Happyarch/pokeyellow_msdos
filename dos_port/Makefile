@@ -1355,7 +1355,7 @@ assets/ui_layout_menus.inc: assets/ui_layout_menus_sidecar.json \
 		tools/gen_ui_layout.py tools/ui_layout/canvas.py tools/ui_layout/schema.py
 	python3 tools/gen_ui_layout.py menus
 
-# Battle UI layout geometry (docs/current_plan_battle_ui.md). Sidecar seeded
+# Battle UI layout geometry (docs/plans/battle_ui.md). Sidecar seeded
 # from the legacy battle %defines by tools/ui_layout/seed_from_battle.py
 # (asserts byte-identical geometry); redesigned via tools/ui_layout/battle.py.
 assets/ui_layout_battle.inc: assets/ui_layout_battle_sidecar.json \

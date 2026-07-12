@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 KINDS = ("textbox", "window", "text", "cursor", "sprite_popup",
-         # battle kinds (current_plan_battle_ui.md B1); sprite_popup is a
+         # battle kinds (docs/plans/battle_ui.md B1); sprite_popup is a
          # bordered box (menus MON_SPRITE_POPUP), NOT a pixel OAM group,
          # hence the separate oam_row.
          "hp_gauge", "mon_pic", "hud_frame", "oam_row")

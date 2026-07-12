@@ -213,14 +213,17 @@ commit but too specific to belong in TODO.md.
   battle; **now also after `party_icons_oam`**). Inventory bookkeeping (add/remove)
   + TOSS done; item USE dispatch (`UseItem_`/`ItemUsePtrTable`) deferred
   (battle/UI-coupled).
-- `docs/current_plan_battle_ui.md` — **battle-UI layout pipeline + widescreen
-  redesign** (branch `menus-port`). Shared `tools/gfx_core/` extraction, then
-  migrate all hardcoded battle coordinates into a
-  `ui_layout_battle_sidecar.json` → `assets/ui_layout_battle.inc` pipeline
-  (byte-identical first), then a human-in-the-loop widescreen redesign session.
+- **Battle-UI layout pipeline — PIPELINE COMPLETE & archived** at
+  `docs/plans/battle_ui.md` (2026-07-12, branch `menus-port`). Sessions A1-B5 done:
+  `tools/gfx_core/` extracted, every hardcoded battle coordinate migrated into the
+  `ui_layout_battle_sidecar.json` -> `assets/ui_layout_battle.inc` pipeline, editor
+  hardened. **Session B6 (the human-in-the-loop widescreen redesign) is on the back
+  burner at the user's direction** -- it needs a scheduling decision, not
+  engineering. Tracked in TODO.md -> "Deferred tail from the battle-UI plan".
 - `docs/current_plan_map_tool.md` — **overworld map tool** (viewer → border-ring
-  authoring → clamp retirement → block painting), built on `gfx_core`. Blocked
-  on battle-UI plan Session A2. Sequenced after battle.
+  authoring → clamp retirement → block painting), built on `gfx_core`. Needed only
+  battle-UI Session A2 (landed 2026-07-02) — **not** blocked by that plan's
+  deferral. Sequenced after battle.
 - **engine/menus port + UI layout tool** — **COMPLETE & archived** at
   `docs/plans/menus.md` (2026-07-04, branch `menus-port`). All 10 sessions landed
   (layout pipeline/editor, faithful `DisplayTextBoxID_`, generic drivers wired,

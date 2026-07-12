@@ -305,6 +305,24 @@ Prioritized task list. Check off items as they complete; add new items with phas
       rule; root `make yellow` fails). Golden ROM builds from the pinned worktree
       `../pokeyellow_msdos-pret-golden` @ `7caf2e09` meanwhile.
 
+### Deferred tail from the battle-UI plan (archived 2026-07-12)
+
+- [ ] **Battle widescreen redesign — Session B6** (back burner, per user 2026-07-12;
+      needs a scheduling decision, not engineering). The whole layout *pipeline* is
+      done and archived at `docs/plans/battle_ui.md`: every battle coordinate now
+      lives in `ui_layout_battle_sidecar.json` → `assets/ui_layout_battle.inc`, and
+      the editor is hardened (containment validation, `link=` group-move, battle
+      preview underlay via `tools/ui_layout/battle.py`). What remains is **the human
+      step**: the user redesigns the battle screen for the 40×25 canvas in the
+      editor and saves. Then: regen → `make` → DOSBox-X visual pass (slide-in, HUDs,
+      HP animation, action/move menus, dialog scroll, level-up box, pokéballs,
+      EndBattleScreen restore), set `frozen_at`, update `docs/ui_projection.md`
+      battle rows. **No identity gate** — the visual change is the point; archive
+      before/after FRAME.BIN renders instead. Gate: `make check`.
+      NB: `render_sprites` composites from `tile_cache` and positions from
+      `spr_dos_sx/sy` now — see the cross-plan note in the archived plan before
+      moving the pokéball OAM bases.
+
 ### Deferred tails from archived plans (menus, pokemon_behavior) — 2026-07-04
 
 - [ ] **Title screen faithful reimpl** (low priority) — `src/movie/title.asm` is a

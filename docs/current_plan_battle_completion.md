@@ -21,7 +21,8 @@ and the two visual subsystems (transitions, animations).
   (`current_plan_overworld_events.md`). This plan owns the *battle-side*
   `BATTLE_TYPE_PIKACHU` behavior it needs (Stage 4a blocks that cutscene's
   final verification).
-- Battle-screen geometry/widescreen → `current_plan_battle_ui.md` (unchanged).
+- Battle-screen geometry/widescreen → `docs/plans/battle_ui.md` (archived 2026-07-12;
+  pipeline done, only the human widescreen-redesign session B6 deferred — see TODO.md).
 - Link battles → Phase 4 (out of scope; keep pret's link branches as the
   existing documented dead branches).
 

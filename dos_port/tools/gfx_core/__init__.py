@@ -2,7 +2,7 @@
 
 One rendering core, three consumers (separate entry points):
   tools/ui_layout/   menus + battle box-model editor (schema/canvas stay there)
-  tools/ui_layout/battle.py   battle-sidecar launcher (current_plan_battle_ui)
+  tools/ui_layout/battle.py   battle-sidecar launcher (docs/plans/battle_ui.md)
   tools/map_editor/  overworld map viewer/painter     (current_plan_map_tool)
 
 Modules:

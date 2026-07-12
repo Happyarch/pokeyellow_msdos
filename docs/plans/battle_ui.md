@@ -1,12 +1,32 @@
-# Current Plan: Battle UI Layout Pipeline + Widescreen Redesign
+# Plan (PIPELINE COMPLETE — B6 on the back burner): Battle UI Layout + Widescreen Redesign
 
-Extend the subsystem-generic layout tool (`dos_port/tools/ui_layout/`, built in
-menus Session 1) to the battle UI: factor a shared graphics core, migrate every
-hardcoded battle coordinate into a `ui_layout_battle_sidecar.json` →
-`gen_ui_layout.py battle` → `assets/ui_layout_battle.inc` pipeline (initially
-reproducing the current layout byte-for-byte), then let the user redesign the
-battle screen for the 40×25 widescreen canvas in the editor. Sibling plan:
-`docs/current_plan_map_tool.md` (blocked on Session A2 here).
+Status: **archived 2026-07-12, off the active list at the user's direction.**
+Sessions A1–B5 are **done**: every hardcoded battle coordinate now lives in
+`ui_layout_battle_sidecar.json` → `gen_ui_layout.py battle` →
+`assets/ui_layout_battle.inc`, `tools/gfx_core/` is factored out, and the editor is
+hardened (containment validation, `link=` group-move, battle preview underlay).
+
+**Only Session B6 remains, and it is not engineering — it is the human step:** the
+user redesigns the battle screen for the 40×25 canvas in the editor and saves.
+That needs a scheduling decision, so it moved to the back burner. Tracked in
+**TODO.md → "Deferred tail from the battle-UI plan"**; the full B6 checklist and
+its gates are below, unchanged. Pick this file back up when that session happens.
+
+**Before touching the pokéball OAM bases in B6**, read the cross-plan note below —
+the compositor moved underneath this plan (`docs/plans/compositor_perf.md`).
+
+Sibling plan `docs/current_plan_map_tool.md` needed only Session A2 here, which
+landed 2026-07-02 — it is **not** blocked by this deferral.
+
+---
+
+Original scope: extend the subsystem-generic layout tool
+(`dos_port/tools/ui_layout/`, built in menus Session 1) to the battle UI: factor a
+shared graphics core, migrate every hardcoded battle coordinate into a
+`ui_layout_battle_sidecar.json` → `gen_ui_layout.py battle` →
+`assets/ui_layout_battle.inc` pipeline (initially reproducing the current layout
+byte-for-byte), then let the user redesign the battle screen for the 40×25
+widescreen canvas in the editor.
 
 One session = one commit-sized chunk on branch `menus-port`. Every session
 ends: `make -C dos_port` + `make -C dos_port check` green → verification pass

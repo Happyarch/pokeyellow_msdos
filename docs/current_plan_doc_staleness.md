@@ -28,7 +28,7 @@ anything below.
 | `docs/translation_progress.md` | Snapshot last generated 2026-06-25 22:28 UTC — 2.5 weeks and several subsystem landings old | file header | confirmed |
 | `translation.db` `stubs` table | 2 rows total (both `PalletTownOakText`); the real stub inventory lives in inline `; STUB(...)` comments — DB does not reflect reality | sqlite query, overworld survey §6 | confirmed |
 | `docs/current_plan_bug_tagging.md` | Phase A complete per commit trail (`ac88338f` "Phase A complete", follow-ups through `d0b95c09`); plan may be archivable depending on the optional Phase-B save-draft decision | git log on `chore/bug-tagging` | high |
-| `docs/current_plan_battle_ui.md` | Not stale, but all sessions done except B6 (human-in-the-loop widescreen redesign) — near-archivable / needs a scheduling decision | checkbox grep | high |
+| ~~`docs/current_plan_battle_ui.md`~~ | **RESOLVED 2026-07-12** — archived to `docs/plans/battle_ui.md` at the user's direction; B6 (human-in-the-loop widescreen redesign) moved to the back burner and tracked in TODO.md | checkbox grep | done |
 | `dos_port/tools/pret_label_allowlist.json` | Standing header: "DRAFT (Session H 2026-07-07)… flagged for user review" — review never happened (bug-tagging pass re-verified entries resolve but didn't clear the flag) | file header; `bug_categorization.md` note | confirmed |
 
 Out of scope: agent memory files (private, self-maintained). One convention
@@ -51,9 +51,9 @@ it).
   "superseded — see X" banner at the top, annotate the specific rows, or leave
   archives frozen as historical record?
 - **Plans to archive now?** `current_plan_bug_tagging.md` (is Phase B save
-  draft still wanted?), `current_plan_battle_ui.md` (schedule B6 or archive
-  with B6 as a TODO?), `current_plan_script_engine.md` (absorb into the new
-  overworld-events plan or keep as the milestone-1 record?).
+  draft still wanted?), ~~`current_plan_battle_ui.md`~~ (**answered 2026-07-12:
+  archived with B6 as a TODO tail**), `current_plan_script_engine.md` (absorb into
+  the new overworld-events plan or keep as the milestone-1 record?).
 - **Audio plan:** tick A–E and reconcile its stage list with what actually
   merged, or replace its status block with a pointer to the arrangement
   backlog (~45 songs)?

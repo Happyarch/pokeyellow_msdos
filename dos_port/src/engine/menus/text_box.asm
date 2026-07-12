@@ -77,7 +77,7 @@ align 4
 %include "assets/ui_layout_menus.inc"
 ; Battle-owned geometry for the BATTLE/SAFARI menu template rows (equates
 ; only — the battle layout single-sources the action-menu box; see
-; docs/current_plan_battle_ui.md B5).
+; docs/plans/battle_ui.md B5).
 %define UI_LAYOUT_EQUATES_ONLY 1
 %include "assets/ui_layout_battle.inc"
 

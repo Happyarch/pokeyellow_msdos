@@ -76,8 +76,8 @@ Active multi-step implementation plans live as `docs/current_plan_<topic>.md`.
 - `docs/current_plan_script_engine.md` (gen-1 script system)
 - `docs/current_plan_overworld_port.md` (overworld port, VRAM tile-slot defect)
 - `docs/current_plan_items.md` (item/bag layer)
-- `docs/current_plan_battle_ui.md` (battle-UI layout pipeline + widescreen redesign)
 - `docs/current_plan_map_tool.md` (overworld map tool)
+- `docs/current_plan_party_icons_oam.md` (party icons -> OAM; runs BEFORE items)
 - `docs/current_plan_macros.md` (port pret's portable RGBDS macros to NASM)
 *(See `CLAUDE.md` for completed/archived plans and finer details.)*
 

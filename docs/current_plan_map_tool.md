@@ -19,7 +19,10 @@ checkboxes updated → commit.
 - Scope = border/edge extension tool PLUS some full map editing (view any map,
   paint blocks; warp/NPC editing deferred, inspect-only first).
 - Separate tool (`tools/map_editor/`), shared rendering core (`gfx_core`).
-- Sequenced after the battle-UI plan.
+- Sequenced after the battle-UI plan. **Update 2026-07-12: that plan is archived
+  (`docs/plans/battle_ui.md`) with only its human-in-the-loop redesign session on the
+  back burner — this plan needed only its Session A2 (gfx_core, landed 2026-07-02),
+  so it is NOT waiting on anything there.**
 
 ## Verified constraints
 
