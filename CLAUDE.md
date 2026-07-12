@@ -111,12 +111,15 @@ Open Phase 2 items: scripted NPC movement, trainer battle engine, random encount
 trigger, battle engine. See TODO.md.
 
 `render_bg` (`src/ppu/ppu.asm`) is a **native-width surface renderer**: it decodes
-`wSurroundingTiles` (44×32 tile IDs) into a 352×256 pixel surface using the existing
-`tile_cache` (2bpp→8bpp decoded tiles). It then blits a 320×200 window at a signed
-pixel offset `(Xoff, Yoff)` derived from the coarse block alignment and the fine
-`H_SCX`/`H_SCY` values, providing smooth per-pixel scrolling without wrap artifacts.
-The old 256×256 VRAM torus emulation and related `RedrawRowOrColumn` rings are gone.
-**Any new routine that writes VRAM tile data must set `g_tilecache_dirty`**.
+tile IDs into a 48×36-tile (384×288 px) surface using the existing `tile_cache`
+(2bpp→8bpp decoded tiles), re-decoding only the cells whose tile id changed since
+last frame. It then blits a 320×200 window at a signed pixel offset `(Xoff, Yoff)`
+derived from the coarse block alignment and the fine `H_SCX`/`H_SCY` values,
+providing smooth per-pixel scrolling without wrap artifacts. The old 256×256 VRAM
+torus emulation and related `RedrawRowOrColumn` rings are gone. The compositor is
+at full speed as of 2026-07-12 — see `docs/plans/compositor_perf.md` (archived)
+before changing any of these hot loops; it also ships the `DEBUG_PERF` profiler
+(`tools/perf_capture.sh`) and `tools/pixelcheck.sh`.
 
 **Temporary scaffold — two out-of-map clamps (`src/engine/overworld/overworld.asm`):**
 the extended 40×25-tile viewport draws a larger area than the original 20×18 and
@@ -195,6 +198,19 @@ Put embedded data in `.data` (as font/title assets do); **any new section name
 must be added to `link.ld` first**, or its bytes never load and its symbols read
 back as zero at runtime with no fault (the `.rodata` all-white bug). Full
 explanation → skill **`build-and-debug`**.
+
+### VRAM tile writes: `CopyVideoData`, or arm `g_tilecache_dirty`
+
+The compositor never reads VRAM tile patterns — it decodes them once into
+`tile_cache`, and **`render_bg`, `render_window` and `render_sprites` all draw from
+that cache**. So a routine that mutates vChars bytes without invalidating it renders
+the *previous* occupants of those slots. Route tile writes through `CopyVideoData`
+(which arms the flag itself), or set `mov byte [g_tilecache_dirty], 1` explicitly —
+a raw `rep movs` into vChars that does neither is a visible-corruption bug, and
+**OBJ/sprite tiles are not exempt** (that assumption shipped a bug twice). Also:
+vTileset tiles `$03`/`$14` are reserved for the BG animator — don't park graphics
+there. Full detail + the traps → skill **`asm-translation`** ("Writing VRAM tile
+data").
 
 ### Stubs live in `*_stubs.asm`
 

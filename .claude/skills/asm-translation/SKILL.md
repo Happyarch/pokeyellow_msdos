@@ -108,13 +108,51 @@ little-endian order.
 
 ## Video
 - VGA Mode 13h (320×200, 256 colors)
-- GB framebuffer: 160×144 at `[EBP + GB_BACKBUF]`
-- 2× nearest-neighbor blit to `0xA0000`, centered (28-row letterbox top/bottom)
+- Back buffer: **320×200 native** (64,000 B) at `[EBP + GB_BACKBUF]` — the software
+  PPU composites at the port's extended viewport size, not the GB's 160×144, and
+  `present` is a straight 1:1 `rep movsd` to `[vga_base]` (no scaling blit).
 - Palette: 256-entry VGA (6-bit RGB via ports 0x3C8/0x3C9); layout TBD Phase 5.
   The current 4-shade DMG-green ramp (`dmg_palette` in `boot/video.asm`) is a
   **debug placeholder** — do not treat it as final. Phase 5 will translate the
   original **GBC** colors into the VGA palette (Yellow is CGB-enhanced; pull
   from the CGB palette data, not an expanded DMG ramp).
+
+### Writing VRAM tile data: `CopyVideoData`, or arm `g_tilecache_dirty` yourself
+
+**A raw `rep movs` into vChars that does neither is a visible-corruption bug.**
+This is the single most repeated compositor mistake — it has shipped twice.
+
+The port does not read VRAM tile patterns while compositing. It decodes all 384
+tiles (2bpp→8bpp) once into `tile_cache`, and **`render_bg`, `render_window` *and*
+`render_sprites` all composite from that cache** (`docs/plans/compositor_perf.md`).
+So a routine that mutates vChars bytes without invalidating the cache draws
+whatever those cache slots held *before* — stale font glyphs, the previous mon's
+icon, another screen's tiles.
+
+When you translate a pret routine that writes tile data (`CopyVideoData`,
+`LoadMonPartySpriteGfx`, move-anim tilesets, emote bubbles, HUD/pic loads):
+
+- **Prefer `CopyVideoData` (`home/copy2.asm`)** — it arms `g_tilecache_dirty`
+  itself, so anything routed through it is correct by construction. Most pret VRAM
+  writes are already `CopyVideoData`/`CopyData` calls; keep them that way.
+- **A hand-rolled copy must arm it explicitly**, as its first statement:
+  ```nasm
+  extern g_tilecache_dirty            ; src/ppu/ppu.asm
+      mov byte [g_tilecache_dirty], 1 ; VRAM tile data changes → rebuild decode cache
+  ```
+- **OBJ/sprite tiles are NOT exempt.** They were, once — `render_sprites` used to
+  bit-decode raw OBJ VRAM. It no longer does. Any comment claiming "sprites read
+  raw VRAM, no cache involvement" is stale; `LoadPokeballGfx` carried exactly that
+  comment and was silently drawing stale ball tiles (`33e21fd2`).
+- **Parking graphics in vTileset?** Tiles `$03` (flower) and `$14` (water) are
+  RESERVED — `UpdateMovingBgTiles` rewrites them in place whenever
+  `hTileAnimations` is nonzero, and will scribble over anything you leave there
+  (`ANIM_FLOWER_TILE_ID` / `ANIM_WATER_TILE_ID` in `gb_memmap.inc`). This ate the
+  party-menu mon icons.
+
+Note the pixel harness will **not** catch a missing flag on its own: a scenario
+passes if some *other* load happens to arm the cache in the same frame. Reason
+about the write, don't rely on `pixelcheck.sh` alone.
 
 ## Timing
 - PIT channel 0, mode 3; divisor chosen by the Makefile `TIMING` mode (the GB is
