@@ -86,7 +86,33 @@ CHAR_SWAP_CUR  equ 0xEC      ; ▷ (unfilled right arrow menu cursor)
 ; Mon-icon VRAM tiles: slot i uses 4 consecutive vTileset tiles (TL,TR,BL,BR)
 ; starting at PM_ICON_TILE_BASE + i*4; animation swaps the VRAM contents of
 ; the selected slot (the tilemap IDs stay fixed).
-PM_ICON_TILE_BASE equ 0x01
+;
+; DEVIATION(icons): pret's party icons are OBJ sprites in OAM VRAM; the port
+; draws them as BG tiles parked in vTileset (see start_sub_menus.asm .exitMenu).
+; That makes the base collide-able with UpdateMovingBgTiles, which rewrites
+; vTileset tiles $03 (flower) and $14 (water) in place whenever hTileAnimations
+; is nonzero. It did collide: at base $01 the 6 slots span $01-$18, so slot 0's
+; 3rd tile WAS $03 and slot 4's 4th tile WAS $14 — and animations are live again
+; for the whole STATS/SWITCH/CANCEL pop-up (HandlePartyMenuInput restores
+; hTileAnimations before it returns "mon chosen"), so those two icons visibly
+; rippled like water and flowers. Base $15 puts all 24 tiles above both.
+PM_ICON_TILE_BASE equ 0x15
+PM_ICON_TILE_COUNT equ 6 * 4    ; 6 party slots x 4 tiles (TL,TR,BL,BR)
+
+; The icon block must clear both animated tiles, or the animator scribbles over
+; them. Static, so a future re-base can't silently reintroduce the ripple.
+%if (ANIM_FLOWER_TILE_ID >= PM_ICON_TILE_BASE) && \
+    (ANIM_FLOWER_TILE_ID <  PM_ICON_TILE_BASE + PM_ICON_TILE_COUNT)
+  %error "PM_ICON_TILE_BASE: mon-icon tiles overlap the animated flower tile"
+%endif
+%if (ANIM_WATER_TILE_ID >= PM_ICON_TILE_BASE) && \
+    (ANIM_WATER_TILE_ID <  PM_ICON_TILE_BASE + PM_ICON_TILE_COUNT)
+  %error "PM_ICON_TILE_BASE: mon-icon tiles overlap the animated water tile"
+%endif
+; ...and must stay below the HP-bar/status set ($62-$71) and box tiles ($79-$7F).
+%if PM_ICON_TILE_BASE + PM_ICON_TILE_COUNT > 0x62
+  %error "PM_ICON_TILE_BASE: mon-icon tiles run into the HP-bar/status tiles"
+%endif
 
 section .data
 align 4

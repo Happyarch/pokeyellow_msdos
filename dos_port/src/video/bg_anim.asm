@@ -69,8 +69,10 @@ GB_BG_ROW_TILES          equ 20        ; pret SCREEN_WIDTH  — tiles copied per
 GB_BG_STRIDE             equ 32        ; pret TILEMAP_WIDTH — dest bytes per row
 
 ; vTileset ($9000) animated pattern-tile addresses (GB_VCHARS2 = vTileset).
-WATER_TILE_ADDR          equ GB_VCHARS2 + 0x14 * TILE_SIZE   ; $9140 (tile $14)
-FLOWER_TILE_ADDR         equ GB_VCHARS2 + 0x03 * TILE_SIZE   ; $9030 (tile $03)
+; The tile IDs are shared (gb_memmap.inc) so screens that load their own graphics
+; into vTileset can assert they don't overlap what this routine rewrites.
+WATER_TILE_ADDR          equ GB_VCHARS2 + ANIM_WATER_TILE_ID * TILE_SIZE   ; $9140 (tile $14)
+FLOWER_TILE_ADDR         equ GB_VCHARS2 + ANIM_FLOWER_TILE_ID * TILE_SIZE  ; $9030 (tile $03)
 
 extern g_tilecache_dirty        ; src/ppu/ppu.asm — arm cache re-decode after vChars write
 

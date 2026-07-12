@@ -700,6 +700,15 @@ H_FRAME_COUNTER          equ 0xFFD5     ; hFrameCounter
 H_VBLANK_OCCURRED        equ 0xFFD6     ; hVBlankOccurred
 H_TILE_ANIMATIONS        equ 0xFFD7     ; hTileAnimations
 hTileAnimations          equ 0xFFD7     ; lowercase pret-name alias
+
+; The two vTileset (GB_VCHARS2) tiles UpdateMovingBgTiles rewrites in place while
+; hTileAnimations is nonzero (pret home/vcopy.asm). These IDs are RESERVED: any
+; port screen that parks its own graphics in vTileset must steer clear of them, or
+; the animator will scribble water/flower patterns over that screen's tiles
+; whenever animations are on. (This bit the party-menu mon icons — see
+; PM_ICON_TILE_BASE's assert in src/engine/menus/party_menu.asm.)
+ANIM_FLOWER_TILE_ID      equ 0x03
+ANIM_WATER_TILE_ID       equ 0x14
 H_REDRAW_ROW_COL_MODE    equ 0xFFD0     ; hRedrawRowOrColumnMode
 H_REDRAW_ROW_COL_DEST    equ 0xFFD1     ; hRedrawRowOrColumnDest
 H_UI_LAYOUT_FLAGS        equ 0xFFFA     ; hUILayoutFlags
