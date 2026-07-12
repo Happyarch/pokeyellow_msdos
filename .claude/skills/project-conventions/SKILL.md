@@ -201,16 +201,19 @@ commit but too specific to belong in TODO.md.
   is **complete and archived** at `docs/plans/pokemon_behavior.md` (2026-07-04);
   its deferred tails — status-screen front-pic/cry/STATS-wire, Bill's PC full UI —
   are tracked in TODO.md.)
-- `docs/current_plan_party_icons_oam.md` — **retire the BG-tile party-icon hack**;
-  port pret's `engine/gfx/mon_icons.asm` (icons as OAM sprites, X-flip for free).
-  Not started, and **sequenced BEFORE the items work** (user, 2026-07-12) so items
-  doesn't build on the current shape. The hack put icons in vTileset where they
-  collided with the BG animator's reserved tiles ($03 flower / $14 water) — patched
-  with a re-base + assert (`be6500bc`), but that guards the hack rather than fixing
-  it. The blocker it was written around is gone: `render_sprites` is now a general
-  OBJ compositor, only its `g_bg_whiteout` blanket-skip is in the way.
+- **Party mon icons — COMPLETE & archived** at `docs/plans/party_icons_oam.md`
+  (2026-07-12, `f8863164` + `12dfdbe2`). The BG-tile icon hack is gone: icons are OBJ
+  through pret's `engine/gfx/mon_icons.asm`, in the party menu and the naming screen.
+  Two invariants it left behind, both enforced at the primitive (`home/sprites.asm`):
+  **`ClearSprites`/`HideSprites` publish `spr_oam_valid = 0`** (the port gates the OAM
+  DMA on `wUpdateSpritesEnabled`, so a cleared shadow OAM never reached the compositor
+  — that is what would ghost overworld sprites onto a whiteout screen), **and they
+  clear `g_obj_over_window`** — the new opt-in flag that gives a screen the GB's
+  OBJ-over-window z-order (the port otherwise composites the window layer last, so the
+  overworld dialog box occludes NPCs). A screen whose window IS the screen and whose
+  OBJ sit on top of it raises it with its window; anything else leaves it alone.
 - `docs/current_plan_items.md` — item/bag layer (sequenced after pokemon, before
-  battle; **now also after `party_icons_oam`**). Inventory bookkeeping (add/remove)
+  battle; its `party_icons_oam` prerequisite is now **done**). Inventory bookkeeping (add/remove)
   + TOSS done; item USE dispatch (`UseItem_`/`ItemUsePtrTable`) deferred
   (battle/UI-coupled).
 - **Battle-UI layout pipeline — PIPELINE COMPLETE & archived** at

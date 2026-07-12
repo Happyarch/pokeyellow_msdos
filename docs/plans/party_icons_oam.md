@@ -1,7 +1,7 @@
-# Current Plan — Party Mon Icons: retire the BG-tile hack, port pret's OAM path
+# Plan (COMPLETE) — Party Mon Icons: retire the BG-tile hack, port pret's OAM path
 
-Status: **in progress.** Sequenced **before the items work** (user, 2026-07-12) so
-items doesn't build more on the current shape.
+Status: **complete, archived 2026-07-12** (`f8863164`, `12dfdbe2`). Was sequenced
+before the items work so items would not build more on the old shape.
 
 - [x] Stage 0 — baselines + decide the sprite-gating contract
 - [x] Stage 1 — compositor: replace the `g_bg_whiteout` OBJ blanket-skip (`58d5a94a`)
