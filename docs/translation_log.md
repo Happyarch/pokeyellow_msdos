@@ -5417,3 +5417,38 @@ Makes winning a wild battle work start-to-finish (no page fault, clean overworld
   omits pret's inert `wLowHealthAlarmDisabled` store (no reader in the port; alarm only re-arms in-battle).
   Deferred: trainer-faint SFX (`PlaySound`/`PlaySoundWaitForCurrent`/`WaitForSoundToFinish`) — trainer
   battles are not the live overworld path yet. lint 0; faithdiff divergences justified in the commit.
+
+### Item USE dispatch + the medicine family (items-plan Stage 5) (2026-07-12)
+First playable item value: a Potion/Antidote/Revive/vitamin/Rare Candy chosen in the bag now
+actually does something. Translated into the path-mirror `dos_port/src/engine/items/item_effects.asm`
+(alongside the Stage-3 effect cores): `UseItem_` + the flat 82-entry `ItemUsePtrTable`, `ItemUseVitamin`,
+`ItemUseMedicine` (status cure / heal / Full Restore re-entry / Softboiled drain via `Divide` / vitamins /
+Rare Candy), and the shared tails `UnusableItem`, `RemoveUsedItem`, `ItemUseNoEffect`, `ItemUseNotTime`,
+`ItemUseNotYoursToUse`, `Func_e4bf`, `ItemUseFailed`. The 28 unported families (balls, TM/HM, evo stones,
+repels, battle items, key items, rods) are ret-stubs in `src/engine/items/item_use_stubs.asm`, each with its
+retirement stage. `StartMenu_Item`'s two USE stubs are replaced by pret's real routing (`IsInArray` against
+`UsableItems_CloseMenu` / `UsableItems_PartyMenu`), and `party_menu.asm`'s `.printItemUseMessage` now
+indexes the generated `PartyMenuItemUseMessagePointers`.
+- **Text is generated, per the two-tier rule**: `tools/gen_item_text.py` (reuses `gen_battle_text.py`'s
+  encoder, retargeted at pret `engine/items/item_effects.asm` + `engine/menus/party_menu.asm`) →
+  `assets/item_text.inc`, 47 labels, each emitted as the stream plus a `{dd ptr, dd len}` `<Label>_ref`
+  pair — a consumer in another object file cannot compute `Label_end - Label` (not relocatable), and the
+  port must know a stream's length to stage it in GB space before `TextCommandProcessor` can read it.
+  `gen_items.py` additionally emits `VitaminStats` (space-padded, exactly one `'@'` per record — pret's
+  `.statNameLoop` scans for the next terminator) and the two `UsableItems_*` id arrays.
+- **`FIRST_PARTY_MENU_TEXT_ID` was wrong** (`0x06`; pret is `$F0`). Harmless while nothing ever stored a
+  message id; `ItemUseMedicine` does. Fixed, and the nine `ANTIDOTE_MSG..RARE_CANDY_MSG` ids added.
+- **`wHPBarHPDifference` is big-endian**, unlike `wHPBarOldHP`/`wHPBarNewHP` which hold the low byte at +0
+  (pret `engine/gfx/hp_bar.asm:63-66` stores d then e). Storing the difference low-byte-first printed a
+  garbage leading digit in "recovered by N!" — caught by the new harness, fixed.
+- **DEVIATIONS** (all four documented in the file header): no `predef UpdateHPBar2` animation (the port has
+  no party-menu HP-bar animator; `RedrawPartyMenu` draws the final bar and `wHPBarHPDifference` — the one
+  observable side effect that outlives the animation — is computed directly); `PrintText_Overworld`
+  collapses the window list (same deviation `TossItem_` carries); `RunDefaultPaletteCommand` is TODO-HW
+  (Phase 5); predef → direct call (`FlagAction`, `LearnMoveFromLevelUp`, `PrintStatsBox`).
+- **New harness `DEBUG_ITEMUSE`** (Makefile + `AUTOKEY_ITEMUSE` script in `debug_dump.asm`): seeds the party
+  with mon 1 at 1 HP and drives START → ITEM → POTION → USE → mon 1, then ANTIDOTE → USE → mon 1, headless.
+  `AUTOKEY_DUMP_FRAME=380` shows the heal ("recovered by 20!", 21/362), `660` the Antidote refusal, `760`
+  the bag with the qty-1 POTION consumed and the no-effect ANTIDOTE still at ×3.
+- Gate: `lint_pret_labels` 0 violations; `make fidelity` 6/6 PASS; faithdiff divergences justified in the
+  commit message.

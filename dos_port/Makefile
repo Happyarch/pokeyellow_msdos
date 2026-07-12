@@ -367,8 +367,10 @@ POKEMON_SRCS := \
 # Items layer (current_plan_items.md). Non-UI inventory/bag logic + item data.
 ITEMS_SRCS := \
     src/data/item_data.asm \
+    src/data/item_text.asm \
     src/engine/items/inventory.asm \
     src/engine/items/item_effects.asm \
+    src/engine/items/item_use_stubs.asm \
     src/home/item_price.asm \
     src/engine/items/tm_prices.asm \
     src/home/compare.asm \
@@ -499,6 +501,19 @@ endif
 ifdef DEBUG_BAGMENU_LIVE
 NASMFLAGS += -D DEBUG_BAGMENU_LIVE
 NASMFLAGS += -D SKIP_TITLE
+endif
+# Item-USE gate (items-plan Stage 5): seeded party with mon 1 knocked to 1 HP, and
+# a scripted joypad (AUTOKEY_ITEMUSE) that drives START -> ITEM -> POTION -> USE ->
+# mon 1, then ANTIDOTE -> USE -> mon 1 (which must refuse). Headless; dumps
+# FRAME.BIN at AUTOKEY_DUMP_FRAME (380 heal message / 620 refusal / 700 bag list).
+# make DEBUG_ITEMUSE=1 AUTOKEY_DUMP_FRAME=380
+ifdef DEBUG_ITEMUSE
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_ITEMUSE -D DEBUG_SEED_PARTY -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_ITEMUSE
+ifdef AUTOKEY_DUMP_FRAME
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
 endif
 # Plain playable build with a seeded party — NO frame dump, NO SKIP_TITLE. Boots
 # the full path (title -> main menu -> NEW GAME -> overworld with a seeded party)
@@ -1316,7 +1331,17 @@ assets/monster_names.inc:
 assets/items.inc:
 	python3 tools/gen_items.py
 
+# Item-use message streams (pret engine/items + engine/menus/party_menu wrappers,
+# text_far flattened — same encoder as gen_battle_text.py). Consumed by the item
+# USE dispatcher and the party menu's item-use result message.
+assets/item_text.inc: ../engine/items/item_effects.asm ../engine/menus/party_menu.asm \
+                      ../constants/charmap.asm include/gb_memmap.inc \
+                      tools/gen_battle_text.py tools/gen_item_text.py assets/battle_text.inc
+	python3 tools/gen_item_text.py
+
 src/data/item_data.o: assets/items.inc
+src/data/item_text.o: assets/item_text.inc
+src/engine/menus/party_menu.o: assets/item_text.inc
 
 src/data/pokemon_data.o: assets/base_stats.inc assets/growth_rates.inc \
                          assets/moves.inc assets/evos_moves.inc assets/monster_names.inc
@@ -1425,7 +1450,7 @@ assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_
         assets/toggleable_objects.inc assets/event_constants.inc \
         assets/base_stats.inc assets/growth_rates.inc \
         assets/moves.inc assets/evos_moves.inc assets/monster_names.inc \
-        assets/items.inc assets/gb_charmap.txt assets/menu_strings.inc \
+        assets/items.inc assets/item_text.inc assets/gb_charmap.txt assets/menu_strings.inc \
         assets/status_strings.inc assets/overworld_strings.inc assets/field_move_text.inc \
         assets/cut_text.inc assets/player_anim_text.inc \
         assets/type_matchups.inc assets/move_names.inc assets/field_moves.inc \

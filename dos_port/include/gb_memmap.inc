@@ -195,6 +195,12 @@ wWereAnyMonsAsleep     equ 0xCD3D   ; Poke Flute: set if a party mon woke (alias
 wChargeMoveNum         equ 0xCD3D   ; charge move number (aliased union lane)
 wDexMaxSeenMon         equ 0xCD3D   ; pokedex.asm: highest seen dex # (aliased union lane, S8)
 wMaxPP                 equ 0xD11D   ; max PP of the move being PP-restored
+; --- item-use dispatch state (engine/items/item_effects.asm:UseItem_) ---
+wPseudoItemID          equ 0xD151   ; nonzero = a move/field action is impersonating
+                                    ; an item (Softboiled/Dig/Surf); suppresses the
+                                    ; item consumption + menu teardown in ItemUse*
+wUsedItemOnWhichPokemon equ 0xCF06  ; party index the item was applied to (the party
+                                    ; menu's own wWhichPokemon is restored after)
 ; Menu state these routines reset (plain WRAM writes; the rendering is elsewhere).
 wListScrollOffset      equ 0xCC36
 wTopMenuItemY          equ 0xCC24   ; cursor Y of menu item id 0
@@ -406,6 +412,7 @@ wEnemyMon1Stats        equ 0xD8C5   ; link-battle enemy party stats (GetEnemyMon
 ; party-mon struct (pret wPartyMon1* = wPartyMons base $D16A; DecrementPP/GainExp)
 wPartyMon1             equ 0xD16A
 wPartyMon1HP           equ 0xD16B   ; party-mon struct HP word (pikachu_status)
+wPartyMon1MaxHP        equ 0xD18C   ; = wPartyMons + MON_MAXHP (Softboiled's 1/5 max HP)
 wPartyMon1Status       equ 0xD16E
 wPartyMon1OTID         equ 0xD176   ; party-mon struct OT id word (pikachu_status)
 wPartyMon1PP           equ 0xD187

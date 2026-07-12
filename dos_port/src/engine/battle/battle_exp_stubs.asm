@@ -27,6 +27,18 @@ global ModifyPikachuHappiness
 ; no longer stubbed (they snapshot/restore the battle screen for the EXP display too).
 global PrintEmptyString
 global CalculateModifiedStats
+; RespawnOverworldPikachu (pret engine/pikachu/pikachu_movement.asm) and
+; DoubleOrHalveSelectedStats (pret engine/battle/core.asm, a predef) are reached by
+; ItemUseMedicine (engine/items/item_use.asm): the first whenever a fainted mon is
+; revived or a mon levels up (Yellow re-places the overworld Pikachu), the second
+; when a Full Heal cures the ACTIVE battler (the in-battle stat copy must re-apply
+; the Reflect/Light Screen doubling). Both are display/battle-state refinements on
+; top of already-correct party data, so a `ret` is safe today.
+; TODO(pikachu):     RespawnOverworldPikachu — with the Yellow Pikachu-follow engine.
+; TODO(battle plan): DoubleOrHalveSelectedStats — with the in-battle ITEM menu
+;                    (until then no item can be used mid-battle, so it is unreachable).
+global RespawnOverworldPikachu
+global DoubleOrHalveSelectedStats
 ; DrawPlayerHUDAndHPBar is now REAL (battle_hud.asm — alias → DrawPlayerHUD) —
 ; no longer stubbed here (retired with the enemy-side DrawEnemyHUDAndHPBar pattern).
 ; LoadMonData is now REAL (load_mon_data.asm wrapper → LoadMonData_) — no longer stubbed;
@@ -39,4 +51,6 @@ global CalculateModifiedStats
 ModifyPikachuHappiness:
 PrintEmptyString:
 CalculateModifiedStats:
+RespawnOverworldPikachu:
+DoubleOrHalveSelectedStats:
     ret

@@ -651,6 +651,16 @@ EnterMap:
     mov byte [ebp + 0xD31D], 0xFF          ; wBagItems sentinel
     call PrepareNewGameDebug               ; seed party + bag + money (returns)
 %endif
+%ifdef DEBUG_ITEMUSE
+    ; Item-USE gate (items-plan Stage 5): the seeded party is at full HP, so knock
+    ; party mon 1 (Snorlax) down to 1 HP — that gives the seeded POTION (bag slot 1,
+    ; qty 1) a visible effect while leaving the mon status-free, so the ANTIDOTE the
+    ; scripted joypad tries next must refuse ("It won't have any effect!").
+    ; Current HP is a big-endian word: hi byte first. (gb_constants.inc is not
+    ; included here, so the struct offset is spelled out: wPartyMon1 + MON_HP.)
+    mov byte [ebp + wPartyMon1 + 0x01], 0
+    mov byte [ebp + wPartyMon1 + 0x02], 1
+%endif
 %ifdef DEBUG_PARTYMENU
     call RunPartyMenuTest                  ; seed party, open party screen, render one frame, dump FRAME.BIN, exits
 %endif

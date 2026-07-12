@@ -121,6 +121,10 @@ PC_ITEM_CAPACITY        equ 50
 
 ; --- item ids referenced by item-use effects (constants/item_constants.asm) ---
 HP_UP                   equ 0x23    ; first vitamin (PROTEIN/IRON/CARBOS/CALCIUM follow)
+PROTEIN                 equ 0x24
+IRON                    equ 0x25
+CARBOS                  equ 0x26
+CALCIUM                 equ 0x27    ; last vitamin before RARE_CANDY
 RARE_CANDY              equ 0x28
 HM01                    equ 0xC4    ; first HM; HMs $C4-$C8, TMs $C9-$FA
 TM01                    equ 0xC9    ; first TM (index into TechnicalMachinePrices)
@@ -185,6 +189,7 @@ BURN_PSN_ANIM          equ 0xBA    ; battle anim shown on burn/poison residual
 
 ; --- misc menu / event constants ---
 PIKAHAPPY_LEVELUP      equ 1       ; constants/pikachu_emotion_constants.asm
+PIKAHAPPY_USEDITEM     equ 2       ; (ItemUseMedicine: a non-vitamin item was used on a mon)
 STATUS_SCREEN_STATS_BOX equ 0      ; constants/menu_constants.asm (PrintStatsBox d=0 → status-screen box)
 LEVEL_UP_STATS_BOX     equ 1       ; constants/menu_constants.asm (STATUS_SCREEN=0)
 SET_PAL_STATUS_SCREEN  equ 0x03    ; constants/palette_constants.asm (RunPaletteCommand id)
@@ -229,6 +234,10 @@ NUM_TRAINERS           equ 47      ; trainer_constants.asm (LANCE = 0x2F)
 FULL_RESTORE           equ 0x10
 SUPER_POTION           equ 0x13
 POTION                 equ 0x14
+MAX_POTION             equ 0x11
+FRESH_WATER            equ 0x3C
+SODA_POP               equ 0x3D
+LEMONADE               equ 0x3E
 X_ACCURACY             equ 0x2E
 GUARD_SPEC             equ 0x37
 DIRE_HIT               equ 0x3A
@@ -575,7 +584,20 @@ BATTLE_PARTY_MENU       equ 0x02
 TMHM_PARTY_MENU         equ 0x03
 SWAP_MONS_PARTY_MENU    equ 0x04
 EVO_STONE_PARTY_MENU    equ 0x05
-FIRST_PARTY_MENU_TEXT_ID equ 0x06  ; ids >= this select PartyMenuItemUseMessagePointers
+; wPartyMenuTypeOrMessageID message IDs — pret `const_next $F0` (menu_constants.asm).
+; RedrawPartyMenu_ masks the id with $0F to index PartyMenuItemUseMessagePointers,
+; so the base MUST be $F0 (it was 0x06 here — off by the const_next, harmless only
+; while no message id was ever stored; ItemUseMedicine stores them).
+FIRST_PARTY_MENU_TEXT_ID equ 0xF0  ; ids >= this select PartyMenuItemUseMessagePointers
+ANTIDOTE_MSG            equ 0xF0
+BURN_HEAL_MSG           equ 0xF1
+ICE_HEAL_MSG            equ 0xF2
+AWAKENING_MSG           equ 0xF3
+PARALYZ_HEAL_MSG        equ 0xF4
+POTION_MSG              equ 0xF5
+FULL_HEAL_MSG           equ 0xF6
+REVIVE_MSG              equ 0xF7
+RARE_CANDY_MSG          equ 0xF8
 ; hUILayoutFlags bit (pret constants/gfx_constants.asm; BIT_SINGLE_SPACED_LINES
 ; already lives in gb_memmap.inc's H_UI_LAYOUT_FLAGS block)
 BIT_PARTY_MENU_HP_BAR   equ 0      ; DrawHP_: HP fraction right of the bar, not below

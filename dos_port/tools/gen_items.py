@@ -255,6 +255,50 @@ def main() -> int:
         "",
     ]
 
+    # VitaminStats (data/battle/stat_names.asm): the five stat names a vitamin can
+    # raise, as a fixed-width list of STAT_NAME_LENGTH (10) bytes each — pret's
+    # `list_start STAT_NAME_LENGTH - 1` pads every entry to 9 chars + '@', and
+    # ItemUseMedicine.statNameLoop walks it by scanning for the '@'.
+    STAT_NAME_LENGTH = 10
+    statnames = []
+    for line in (ROOT / "data/battle/stat_names.asm").read_text().splitlines():
+        m = re.match(r'\s*li\s+"((?:[^"\\]|\\.)*)"', line.split(";", 1)[0])
+        if m:
+            statnames.append(m.group(1))
+    out += [
+        f"; VitaminStats: {len(statnames)} stat names, {STAT_NAME_LENGTH} bytes each",
+        "; ('@'-terminated, space-padded to the fixed stride — pret list_start).",
+        "global VitaminStats",
+        "VitaminStats:",
+    ]
+    for nm in statnames:
+        # Exactly ONE '@' per record: .statNameLoop walks entries by scanning for
+        # the next '@', so the pad must be spaces ($7F), never more terminators.
+        rec = bytearray(encode(nm, charmap))
+        rec += b"\x7F" * (STAT_NAME_LENGTH - 1 - len(rec))
+        rec += b"\x50"
+        assert len(rec) == STAT_NAME_LENGTH, nm
+        out.append("    db " + ", ".join(f"0x{b:02X}" for b in rec) + f'    ; {nm}')
+    out.append("")
+
+    # Bag-USE routing arrays (data/items/use_overworld.asm, use_party.asm): the
+    # item ids StartMenu_Item scans with IsInArray to decide whether USE closes
+    # the START menu or opens the party menu. $FF-terminated, source order.
+    for fname, label in (("use_overworld.asm", "UsableItems_CloseMenu"),
+                         ("use_party.asm", "UsableItems_PartyMenu")):
+        ids = []
+        for line in (ROOT / "data/items" / fname).read_text().splitlines():
+            m = re.match(r"\s*db\s+([A-Z_0-9]+)\s*$", line.split(";", 1)[0])
+            if m and m.group(1) in item_ids:
+                ids.append(item_ids[m.group(1)])
+        out += [
+            f"; {label}: {len(ids)} item ids, 0xFF-terminated (IsInArray, stride 1).",
+            f"global {label}",
+            f"{label}:",
+            "    db " + ", ".join(f"0x{i:02X}" for i in ids) + ", 0xFF",
+            "",
+        ]
+
     ASSETS.mkdir(parents=True, exist_ok=True)
     dst = ASSETS / "items.inc"
     dst.write_text("\n".join(out))

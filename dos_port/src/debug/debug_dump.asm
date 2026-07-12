@@ -1518,6 +1518,29 @@ autokey_script:
 %endrep
     dd  510 + AUTOKEY_DOWNS * 30, 516 + AUTOKEY_DOWNS * 30, PAD_A
     dd  -1,  -1, 0
+%elifdef AUTOKEY_ITEMUSE
+    ; items-plan Stage 5 (DEBUG_ITEMUSE): drive the real bag USE path twice.
+    ;   START → DOWN DOWN → A          : open the START menu, pick ITEM
+    ;   A → A                          : select bag slot 1 (POTION, qty 1) → USE
+    ;   A                              : party menu → mon 1 (Snorlax, seeded to 1 HP)
+    ;   A                              : dismiss "SNORLAX recovered by N!"
+    ; then the bag is back with POTION consumed, so slot 1 is now ANTIDOTE:
+    ;   A → A → A                      : ANTIDOTE → USE → mon 1 (no status) → refusal
+    ; Pick the moment to look at with AUTOKEY_DUMP_FRAME (380 = the heal message,
+    ; 620 = the refusal, 700 = the bag list with POTION gone).
+    dd  60,  66, PAD_START
+    dd 100, 106, PAD_DOWN
+    dd 140, 146, PAD_DOWN
+    dd 180, 186, PAD_A          ; ITEM
+    dd 220, 226, PAD_A          ; POTION → USE/TOSS submenu
+    dd 260, 266, PAD_A          ; USE
+    dd 340, 346, PAD_A          ; party menu: mon 1
+    dd 420, 426, PAD_A          ; dismiss the heal message
+    dd 500, 506, PAD_A          ; ANTIDOTE → USE/TOSS submenu
+    dd 540, 546, PAD_A          ; USE
+    dd 600, 606, PAD_A          ; party menu: mon 1 (healthy → refusal)
+    dd 660, 666, PAD_A          ; dismiss the refusal
+    dd  -1,  -1, 0
 %else
     dd  60,  66, PAD_START
 %assign AK_I 0

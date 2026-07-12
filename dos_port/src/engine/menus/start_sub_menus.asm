@@ -78,6 +78,10 @@ extern PlaceUnfilledArrowMenuCursor
 extern GetItemName                   ; home/names.asm — [wNamedObjectIndex] → wNameBuffer
 extern CopyToStringBuffer            ; engine/battle/core.asm — EDX=src → wStringBuffer
 extern TossItem                      ; home/item.asm — ESI=inventory; CF=1 not tossed
+extern UseItem                       ; home/item.asm — [wCurItem] → wActionResultOrTookBattleTurn
+extern IsInArray                     ; home/array.asm — AL=value, ESI=flat table, EDX=stride; CF=1
+extern UsableItems_CloseMenu         ; data/item_data.asm (generated) — USE closes the menu
+extern UsableItems_PartyMenu         ; data/item_data.asm (generated) — USE opens the party menu
 extern add_window                    ; ppu/ppu.asm
 extern g_window_count
 extern text_row_stride               ; text/text.asm
@@ -475,19 +479,45 @@ StartMenu_Item:
     mov al, [ebp + wCurrentMenuItem]
     test al, al                         ; and a
     jnz .tossItem
-    ; --- USE ---
-    ; STUB(items-plan): item USE dispatch (wPseudoItemID, UsableItems_CloseMenu/
-    ; UsableItems_PartyMenu routing, UseItem_/ItemUsePtrTable) is
-    ; current_plan_items.md scope. Until it lands, USE takes no action and
-    ; returns to the item list (pret runs UseItem here).
+    ; --- USE --- (pret engine/menus/start_sub_menus.asm:.notBicycle "use item")
+    mov [ebp + wPseudoItemID], al       ; a must be 0 due to the jump above
+    mov al, [ebp + wCurItem]
+    cmp al, HM01
+    jae .useItem_partyMenu              ; jr nc — an HM is "taught", party menu
+    mov esi, UsableItems_CloseMenu      ; ld hl, UsableItems_CloseMenu
+    mov edx, 1                          ; ld de, 1
+    call IsInArray
+    jc .useItem_closeMenu
+    mov al, [ebp + wCurItem]
+    mov esi, UsableItems_PartyMenu      ; ld hl, UsableItems_PartyMenu
+    mov edx, 1
+    call IsInArray
+    jc .useItem_partyMenu
+    call UseItem                        ; everything else: use in place, stay in the bag
     jmp ItemMenuLoop
 .useItem_closeMenu:
-    ; STUB(items-plan): pret runs UseItem (Bicycle mount) then closes the START
-    ; menu on success. With USE stubbed the close still matches pret's
-    ; wActionResultOrTookBattleTurn==0 → ItemMenuLoop shape only when the item
-    ; "fails"; the Bicycle is unobtainable until the items plan lands, so take
-    ; the close path pret takes on success.
+    mov byte [ebp + wPseudoItemID], 0   ; xor a / ld [wPseudoItemID],a
+    call UseItem
+    mov al, [ebp + wActionResultOrTookBattleTurn]
+    test al, al
+    jz ItemMenuLoop                     ; jp z — the item refused; stay in the bag
     jmp CloseStartMenu
+.useItem_partyMenu:
+    movzx eax, byte [ebp + wUpdateSpritesEnabled]
+    push eax                            ; push af
+    call UseItem
+    mov al, [ebp + wActionResultOrTookBattleTurn]
+    cmp al, 0x02                        ; "not usable now, no menu shown"
+    jz .partyMenuNotDisplayed
+    call GBPalWhiteOutWithDelay3
+    call RestoreScreenTilesAndReloadTilePatterns
+    pop eax
+    mov [ebp + wUpdateSpritesEnabled], al
+    jmp StartMenu_Item                  ; jp StartMenu_Item — redraw the bag
+.partyMenuNotDisplayed:
+    pop eax
+    mov [ebp + wUpdateSpritesEnabled], al
+    jmp ItemMenuLoop
 .tossItem:
     call IsKeyItem                      ; [wCurItem] → [wIsKeyItem]
     mov al, [ebp + wIsKeyItem]

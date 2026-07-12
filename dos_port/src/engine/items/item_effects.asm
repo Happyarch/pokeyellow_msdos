@@ -673,3 +673,827 @@ RestoreBonusPP:
     jmp .loop
 .done:
     ret
+
+; --------------------------------------------------------------------------
+
+; === UseItem_ / ItemUsePtrTable dispatch + the medicine family (Stage 5) ===
+;
+;
+; Source: engine/items/item_effects.asm (pret/pokeyellow), lines 1-103 (UseItem_
+; + the pointer table), 898-1565 (ItemUseVitamin / ItemUseMedicine) and the
+; shared tails at 2396-2600 (UnusableItem, RemoveUsedItem, ItemUseNoEffect,
+; ItemUseNotTime, ItemUseNotYoursToUse, Func_e4bf, ItemUseFailed).
+;
+; The remaining ItemUse* families (balls, TM/HM, evo stones, repels, battle
+; items, key items, rods) are ret-stubs in item_use_stubs.asm — see
+; docs/current_plan_items.md stages 6-11.
+;
+; Register map (CLAUDE.md): a=AL, b=BH, c=BL, d=DH, e=DL, hl=ESI, de=EDX,
+; bc=EBX; GB memory at [EBP + addr]. GB data (HP, max HP, stat exp) is
+; BIG-endian and stays that way.
+;
+; ---------------------------------------------------------------------------
+; PORT DEVIATIONS (justified; each names what retires it)
+;
+; 1. DEVIATION(video) — `predef UpdateHPBar2` (the animated party-menu HP bar,
+;    twice: the Softboiled drain and the heal fill) is NOT called: the port has
+;    no party-menu HP-bar animator (engine/gfx/hp_bar.asm ports the length
+;    predef; battle_hud.asm's AnimateHPBar is battle-HUD-coordinate-bound).
+;    RedrawPartyMenu below redraws the bar at its final length, so the healed
+;    value is shown — it just doesn't sweep. The one *observable* side effect of
+;    pret's UpdateHPBar that outlives the animation is wHPBarHPDifference, which
+;    PotionText prints ("recovered by N!"), so we compute it here.
+;    Retired by: a party-menu HP-bar animator (items-plan Stage 5 tail).
+;
+; 2. DEVIATION(text/window) — pret prints through PrintText, which composites the
+;    message box over the live screen buffer. The port's PrintText_Overworld
+;    collapses the window list to the dialog alone (set_single_window), so the
+;    bag list / party panel beneath it disappears for the duration. Every caller
+;    of these refusal texts redraws its screen right after (StartMenu_Item's
+;    reload, or .done's ReloadMapData), so the end state matches; the transient
+;    does not. Same DEVIATION TossItem_ carries (item_effects.asm).
+;    Retired by: a dialog printer that composites with the existing windows.
+;
+; 3. DEVIATION(palette) — `call z, RunDefaultPaletteCommand` after GBPalWhiteOut
+;    is a TODO-HW boundary (SGB/CGB palette commands, Phase 5).
+;
+; 4. predef → direct call (port-wide, no bank/predef dispatch): FlagActionPredef
+;    becomes `call FlagAction` (same idiom as home/item_predicates.asm),
+;    LearnMoveFromLevelUp / PrintStatsBox are called directly.
+;
+; Build: nasm -f coff -I include/ -I . -o item_use.o src/engine/items/item_use.asm
+
+
+%include "assets/audio_constants.inc"
+
+global UseItem_
+global ItemUsePtrTable
+global ItemUseVitamin
+global ItemUseMedicine
+global UnusableItem
+global RemoveUsedItem
+global ItemUseNoEffect
+global ItemUseNotTime
+global ItemUseNotYoursToUse
+global ItemUseFailed
+global Func_e4bf
+
+; --- the medicine family's effect cores (items-plan Stage 3, native-validated) ---
+extern ApplyHealingItem     ; item_effects.asm — pret .addHealAmount…setCurrentHPToMaxHp
+extern ApplyVitamin         ; item_effects.asm — pret .useVitamin's stat-exp add
+extern RareCandyLevelUp     ; item_effects.asm — pret .useRareCandy's level/exp/stat math
+extern RemoveItemFromInventory ; inventory.asm
+extern VitaminStats         ; data/item_data.asm (generated) — 5 × STAT_NAME_LENGTH
+
+; --- party menu / mon data ---
+extern DisplayPartyMenu     ; home/pokemon.asm — CF=1 if no mon chosen
+extern GoBackToPartyMenu    ; home/pokemon.asm
+extern RedrawPartyMenu      ; home/pokemon.asm
+extern GetPartyMonName      ; home/pokemon.asm — AL = index, ESI = name list
+extern GetMonHeader         ; home/pokemon.asm — [wCurSpecies] → wMonHeader
+extern LoadMonData          ; engine/pokemon/load_mon_data.asm
+extern CalcStats            ; home/move_mon.asm
+extern AddNTimes            ; home/array.asm — ESI += AL*BX
+extern CopyData             ; home/copy_data.asm — ESI → EDX, BX bytes
+extern Divide               ; home/math.asm — BH = dividend bytes
+extern FlagAction           ; engine/flag_action.asm — ESI=array, CL=index, BH=action
+extern PrintStatsBox        ; engine/battle/battle_menu.asm — DH = box type
+extern LearnMoveFromLevelUp ; engine/battle/battle_menu.asm (predef)
+extern TryEvolvingMon       ; engine/pokemon/evolution.asm
+extern ModifyPikachuHappiness    ; battle_exp_stubs.asm (deferred)
+extern RespawnOverworldPikachu   ; battle_exp_stubs.asm (deferred)
+extern DoubleOrHalveSelectedStats ; battle_exp_stubs.asm (deferred)
+
+; --- screen / text / sound ---
+extern ClearScreen          ; movie/title.asm (pret home/copy2.asm)
+extern GBPalWhiteOut        ; home/fade.asm
+extern ReloadMapData        ; home/reload_tiles.asm
+extern DelayFrames          ; video/frame.asm — BL = frames
+extern WaitForTextScrollButtonPress ; engine/battle/battle_menu.asm
+extern PrintText_Overworld  ; home/text.asm — ESI = GB-space TX stream
+extern PlaySound            ; home/audio.asm — AL = sound id
+extern PlaySoundWaitForCurrent ; home/audio.asm
+
+; --- generated text streams (assets/item_text.inc, flat .data) ---
+; Each `<Label>_ref` is the generator's {dd stream, dd length} pair: iu_print_text
+; needs the byte count to stage the stream in GB space, and a cross-object
+; `Label_end - Label` is not a relocatable immediate.
+extern ItemUseNoEffectText_ref
+extern ItemUseNotTimeText_ref
+extern ItemUseNotYoursToUseText_ref
+extern DontHavePokemonText_ref
+extern VitaminStatRoseText_ref
+extern VitaminNoEffectText_ref
+
+; --- the deferred ItemUse* families (item_use_stubs.asm) ---
+extern ItemUseBall
+extern ItemUseTownMap
+extern ItemUseBicycle
+extern ItemUseSurfboard
+extern ItemUsePokedex
+extern ItemUseEvoStone
+extern ItemUseBait
+extern ItemUseRock
+extern ItemUseEscapeRope
+extern ItemUseRepel
+extern ItemUseSuperRepel
+extern ItemUseMaxRepel
+extern ItemUseXAccuracy
+extern ItemUseCardKey
+extern ItemUsePokeDoll
+extern ItemUseGuardSpec
+extern ItemUseDireHit
+extern ItemUseXStat
+extern ItemUseCoinCase
+extern ItemUseOaksParcel
+extern ItemUseItemfinder
+extern ItemUsePokeFlute
+extern ItemUseOldRod
+extern ItemUseGoodRod
+extern ItemUseSuperRod
+extern ItemUsePPUp
+extern ItemUsePPRestore
+extern ItemUseTMHM
+
+section .data
+align 4
+
+; ---------------------------------------------------------------------------
+; ItemUsePtrTable — one entry per item id (1..MAX_ELIXER). Tier-2 CODE: a
+; pointer table is hand-written in the .asm (never generated), keyed by the item
+; id the generated data tables use. pret stores `dw`; the port stores flat `dd`.
+; pret ref: engine/items/item_effects.asm:18.
+; ---------------------------------------------------------------------------
+ItemUsePtrTable:
+    dd ItemUseBall          ; MASTER_BALL
+    dd ItemUseBall          ; ULTRA_BALL
+    dd ItemUseBall          ; GREAT_BALL
+    dd ItemUseBall          ; POKE_BALL
+    dd ItemUseTownMap       ; TOWN_MAP
+    dd ItemUseBicycle       ; BICYCLE
+    dd ItemUseSurfboard     ; SURFBOARD
+    dd ItemUseBall          ; SAFARI_BALL
+    dd ItemUsePokedex       ; POKEDEX
+    dd ItemUseEvoStone      ; MOON_STONE
+    dd ItemUseMedicine      ; ANTIDOTE
+    dd ItemUseMedicine      ; BURN_HEAL
+    dd ItemUseMedicine      ; ICE_HEAL
+    dd ItemUseMedicine      ; AWAKENING
+    dd ItemUseMedicine      ; PARLYZ_HEAL
+    dd ItemUseMedicine      ; FULL_RESTORE
+    dd ItemUseMedicine      ; MAX_POTION
+    dd ItemUseMedicine      ; HYPER_POTION
+    dd ItemUseMedicine      ; SUPER_POTION
+    dd ItemUseMedicine      ; POTION
+    dd ItemUseBait          ; BOULDERBADGE
+    dd ItemUseRock          ; CASCADEBADGE
+    dd UnusableItem         ; THUNDERBADGE
+    dd UnusableItem         ; RAINBOWBADGE
+    dd UnusableItem         ; SOULBADGE
+    dd UnusableItem         ; MARSHBADGE
+    dd UnusableItem         ; VOLCANOBADGE
+    dd UnusableItem         ; EARTHBADGE
+    dd ItemUseEscapeRope    ; ESCAPE_ROPE
+    dd ItemUseRepel         ; REPEL
+    dd UnusableItem         ; OLD_AMBER
+    dd ItemUseEvoStone      ; FIRE_STONE
+    dd ItemUseEvoStone      ; THUNDER_STONE
+    dd ItemUseEvoStone      ; WATER_STONE
+    dd ItemUseVitamin       ; HP_UP
+    dd ItemUseVitamin       ; PROTEIN
+    dd ItemUseVitamin       ; IRON
+    dd ItemUseVitamin       ; CARBOS
+    dd ItemUseVitamin       ; CALCIUM
+    dd ItemUseVitamin       ; RARE_CANDY
+    dd UnusableItem         ; DOME_FOSSIL
+    dd UnusableItem         ; HELIX_FOSSIL
+    dd UnusableItem         ; SECRET_KEY
+    dd UnusableItem         ; ITEM_2C
+    dd UnusableItem         ; BIKE_VOUCHER
+    dd ItemUseXAccuracy     ; X_ACCURACY
+    dd ItemUseEvoStone      ; LEAF_STONE
+    dd ItemUseCardKey       ; CARD_KEY
+    dd UnusableItem         ; NUGGET
+    dd UnusableItem         ; ITEM_32
+    dd ItemUsePokeDoll      ; POKE_DOLL
+    dd ItemUseMedicine      ; FULL_HEAL
+    dd ItemUseMedicine      ; REVIVE
+    dd ItemUseMedicine      ; MAX_REVIVE
+    dd ItemUseGuardSpec     ; GUARD_SPEC
+    dd ItemUseSuperRepel    ; SUPER_REPEL
+    dd ItemUseMaxRepel      ; MAX_REPEL
+    dd ItemUseDireHit       ; DIRE_HIT
+    dd UnusableItem         ; COIN
+    dd ItemUseMedicine      ; FRESH_WATER
+    dd ItemUseMedicine      ; SODA_POP
+    dd ItemUseMedicine      ; LEMONADE
+    dd UnusableItem         ; S_S_TICKET
+    dd UnusableItem         ; GOLD_TEETH
+    dd ItemUseXStat         ; X_ATTACK
+    dd ItemUseXStat         ; X_DEFEND
+    dd ItemUseXStat         ; X_SPEED
+    dd ItemUseXStat         ; X_SPECIAL
+    dd ItemUseCoinCase      ; COIN_CASE
+    dd ItemUseOaksParcel    ; OAKS_PARCEL
+    dd ItemUseItemfinder    ; ITEMFINDER
+    dd UnusableItem         ; SILPH_SCOPE
+    dd ItemUsePokeFlute     ; POKE_FLUTE
+    dd UnusableItem         ; LIFT_KEY
+    dd UnusableItem         ; EXP_ALL
+    dd ItemUseOldRod        ; OLD_ROD
+    dd ItemUseGoodRod       ; GOOD_ROD
+    dd ItemUseSuperRod      ; SUPER_ROD
+    dd ItemUsePPUp          ; PP_UP
+    dd ItemUsePPRestore     ; ETHER
+    dd ItemUsePPRestore     ; MAX_ETHER
+    dd ItemUsePPRestore     ; ELIXER
+    dd ItemUsePPRestore     ; MAX_ELIXER
+ItemUsePtrTable_end:
+
+section .bss
+align 4
+iu_mon_base:  resd 1        ; the selected party mon's struct base (pret keeps this
+                            ; on the stack across the heal math; the port re-derives
+                            ; its HP/status/maxHP pointers from it instead)
+iu_softboiled_heal: resd 1  ; Softboiled's 1/5-max-HP heal amount (pret's pushed af)
+
+section .text
+
+; ===========================================================================
+; UseItem_ — pret ref: engine/items/item_effects.asm:1.
+; In:  [wCurItem]. Out: [wActionResultOrTookBattleTurn] (0 fail / 1 ok / 2 no menu).
+; ===========================================================================
+UseItem_:
+    mov byte [ebp + wActionResultOrTookBattleTurn], 1  ; initialise to success value
+    mov al, [ebp + wCurItem]
+    cmp al, HM01
+    jae ItemUseTMHM                     ; jp nc, ItemUseTMHM
+    dec al                              ; dec a
+    movzx eax, al
+    jmp [ItemUsePtrTable + eax * 4]     ; pret: add a / add hl,bc / ld a,[hli] / jp hl
+
+; ===========================================================================
+; ItemUseVitamin / ItemUseMedicine — pret ref: item_effects.asm:898 / 903.
+; ===========================================================================
+ItemUseVitamin:
+    mov al, [ebp + wIsInBattle]
+    test al, al
+    jnz ItemUseNotTime                  ; jp nz — vitamins can't be used in battle
+    ; fall through
+
+ItemUseMedicine:
+    mov al, [ebp + wPartyCount]
+    test al, al
+    jz Func_e4bf                        ; jp z — "You don't have a #MON!"
+    movzx eax, byte [ebp + wWhichPokemon]
+    push eax                            ; push af — the bag's list index
+    movzx eax, byte [ebp + wCurItem]
+    push eax                            ; push af
+    mov byte [ebp + wPartyMenuTypeOrMessageID], USE_ITEM_PARTY_MENU
+    mov byte [ebp + wUpdateSpritesEnabled], 0xFF
+    mov al, [ebp + wPseudoItemID]
+    test al, al                         ; using Softboiled?
+    jz .notUsingSoftboiled
+    call GoBackToPartyMenu
+    jmp .getPartyMonDataAddress
+.notUsingSoftboiled:
+    call DisplayPartyMenu
+.getPartyMonDataAddress:
+    jc .canceledItemUse                 ; jp c — B pressed
+
+    mov esi, wPartyMons
+    mov bx, PARTYMON_STRUCT_LENGTH
+    mov al, [ebp + wWhichPokemon]
+    call AddNTimes                      ; ESI = the chosen mon's struct base
+    mov [iu_mon_base], esi
+    mov al, [ebp + wWhichPokemon]
+    mov [ebp + wUsedItemOnWhichPokemon], al
+    mov dh, al                          ; ld d, a — party index
+    mov al, [ebp + wCurPartySpecies]
+    mov dl, al                          ; ld e, a
+    mov [ebp + wCurSpecies], al
+
+    pop eax                             ; pop af (wCurItem)
+    push eax                            ; push af
+    cmp al, CALCIUM + 1
+    jae .noHappinessBoost               ; jr nc
+    push esi
+    push edx
+    mov al, PIKAHAPPY_USEDITEM
+    call ModifyPikachuHappiness         ; farcall_ModifyPikachuHappiness
+    pop edx
+    pop esi
+.noHappinessBoost:
+    pop eax
+    mov [ebp + wCurItem], al
+    pop eax
+    mov [ebp + wWhichPokemon], al       ; restore the bag's list index
+
+    mov al, [ebp + wPseudoItemID]
+    test al, al                         ; using Softboiled?
+    jz .checkItemType
+    mov al, [ebp + wWhichPokemon]
+    cmp al, dh                          ; Softboiled on the mon that used it?
+    jz ItemUseMedicine                  ; if so, force another choice
+.checkItemType:
+    mov al, [ebp + wCurItem]
+    cmp al, REVIVE
+    jae .healHP                         ; jr nc — Revive or Max Revive
+    cmp al, FULL_HEAL
+    jz .cureStatusAilment
+    cmp al, HP_UP
+    jae .useVitamin                     ; jp nc — vitamin or Rare Candy
+    cmp al, FULL_RESTORE
+    jae .healHP                         ; jr nc — Full Restore or a potion
+    ; fall through — a status-specific healing item
+
+; --- pret .cureStatusAilment (item_effects.asm:967) ------------------------
+; ESI = struct base on entry; DH = party index, DL = species.
+; NOTE: item_effects.asm's Stage-3 CureStatusAilment core computes the same mask
+; but discards pret's message id (its `b`), which wPartyMenuTypeOrMessageID needs
+; here — so the cmp chain is inlined, exactly as pret writes it. The core stays
+; for its native test / the battle-item path.
+.cureStatusAilment:
+    add esi, MON_STATUS                 ; ld bc,MON_STATUS / add hl,bc
+    mov al, [ebp + wCurItem]
+    mov bh, ANTIDOTE_MSG                ; lb bc, ANTIDOTE_MSG, 1 << PSN
+    mov bl, 1 << PSN
+    cmp al, ANTIDOTE
+    jz .checkMonStatus
+    mov bh, BURN_HEAL_MSG
+    mov bl, 1 << BRN
+    cmp al, BURN_HEAL
+    jz .checkMonStatus
+    mov bh, ICE_HEAL_MSG
+    mov bl, 1 << FRZ
+    cmp al, ICE_HEAL
+    jz .checkMonStatus
+    mov bh, AWAKENING_MSG
+    mov bl, SLP_MASK
+    cmp al, AWAKENING
+    jz .checkMonStatus
+    mov bh, PARALYZ_HEAL_MSG
+    mov bl, 1 << PAR
+    cmp al, PARLYZ_HEAL
+    jz .checkMonStatus
+    mov bh, FULL_HEAL_MSG               ; lb bc, FULL_HEAL_MSG, $ff
+    mov bl, 0xFF
+.checkMonStatus:
+    mov al, [ebp + esi]                 ; the mon's status
+    and al, bl                          ; a status this item can cure?
+    jz .healingItemNoEffect
+    mov byte [ebp + esi], 0             ; remove it from the party data
+    mov [ebp + wPartyMenuTypeOrMessageID], bh   ; the message to show
+    mov al, [ebp + wPlayerMonNumber]
+    cmp al, dh                          ; is this mon the active battler?
+    jne .doneHealing                    ; jp nz
+    mov byte [ebp + wBattleMonStatus], 0
+    and byte [ebp + wPlayerBattleStatus3], (~(1 << BADLY_POISONED)) & 0xFF ; heal Toxic
+    ; copy the party stats into the in-battle stat data
+    mov esi, [iu_mon_base]
+    add esi, MON_STATS
+    mov edx, wBattleMonStats
+    mov bx, NUM_STATS * 2
+    call CopyData                       ; ESI → EDX (dest is EDX, not EDI)
+    call DoubleOrHalveSelectedStats     ; predef
+    mov dh, [ebp + wUsedItemOnWhichPokemon]  ; CopyData clobbered EDX
+    jmp .doneHealing
+
+; --- pret .healHP (item_effects.asm:1014) ---------------------------------
+.healHP:
+    mov esi, [iu_mon_base]
+    add esi, MON_HP                     ; inc hl — hl = current HP (high byte)
+    mov bh, [ebp + esi]                 ; ld a,[hli] / ld b,a
+    mov [ebp + wHPBarOldHP + 1], bh
+    inc esi
+    mov bl, [ebp + esi]                 ; ld a,[hl] / ld c,a
+    mov [ebp + wHPBarOldHP], bl         ; current HP at wHPBarOldHP (big-endian)
+    mov al, bl
+    or al, bh                           ; or b — is the mon fainted?
+    jnz .notFainted
+    ; fainted
+    mov al, [ebp + wCurItem]
+    cmp al, REVIVE
+    jz .updateInBattleFaintedData
+    cmp al, MAX_REVIVE
+    jz .updateInBattleFaintedData
+    jmp .healingItemNoEffect
+
+.updateInBattleFaintedData:
+    call .respawnPikachuForUsedMon      ; pret: swap wWhichPokemon / RespawnOverworldPikachu
+    mov al, [ebp + wIsInBattle]
+    test al, al
+    jz .compareCurrentHPToMaxHP
+    ; a revived mon that fought this battle re-joins the EXP split
+    mov cl, [ebp + wUsedItemOnWhichPokemon]
+    mov esi, wPartyFoughtCurrentEnemyFlags
+    mov bh, FLAG_TEST
+    call FlagAction                     ; predef FlagActionPredef → CL = the flag
+    test cl, cl
+    jz .next
+    mov cl, [ebp + wUsedItemOnWhichPokemon]
+    mov esi, wPartyGainExpFlags
+    mov bh, FLAG_SET
+    call FlagAction
+.next:
+    mov dh, [ebp + wUsedItemOnWhichPokemon]  ; FlagAction clobbered EDX
+    jmp .compareCurrentHPToMaxHP
+
+.notFainted:
+    mov al, [ebp + wCurItem]
+    cmp al, REVIVE
+    jz .healingItemNoEffect             ; jp z — a Revive on a healthy mon
+    cmp al, MAX_REVIVE
+    jz .healingItemNoEffect
+
+.compareCurrentHPToMaxHP:
+    ; BH:BL still hold the current HP (big-endian) read above.
+    mov esi, [iu_mon_base]
+    mov al, [ebp + esi + MON_MAXHP]     ; max HP high
+    cmp al, bh
+    jne .skipComparingLSB               ; no need to compare the LSBs if the MSBs differ
+    mov al, [ebp + esi + MON_MAXHP + 1] ; max HP low
+    cmp al, bl
+.skipComparingLSB:
+    jnz .notFullHP
+    ; current HP == max HP
+    mov al, [ebp + wCurItem]
+    cmp al, FULL_RESTORE
+    jne .healingItemNoEffect            ; jp nz
+    mov al, [ebp + esi + MON_STATUS]    ; does it at least have a status ailment?
+    test al, al
+    jz .healingItemNoEffect
+    mov byte [ebp + wCurItem], FULL_HEAL
+    jmp .cureStatusAilment              ; (ESI = struct base, as .cureStatusAilment wants)
+
+.notFullHP:
+    mov byte [ebp + wLowHealthAlarm], 0 ; disable the low-health alarm
+    mov byte [ebp + wChannelSoundIDs + CHAN5], 0
+    ; wHPBarMaxHP = the mon's max HP (big-endian)
+    mov al, [ebp + esi + MON_MAXHP]
+    mov [ebp + wHPBarMaxHP + 1], al
+    mov al, [ebp + esi + MON_MAXHP + 1]
+    mov [ebp + wHPBarMaxHP], al
+
+    mov al, [ebp + wPseudoItemID]
+    test al, al                         ; using Softboiled?
+    jz .notUsingSoftboiled2
+    call .softboiledDrain               ; take 1/5 max HP off the mon that used it
+    mov bl, [iu_softboiled_heal]        ; ld b,a — the heal amount
+    jmp .addHealAmount
+
+.notUsingSoftboiled2:
+    mov al, [ebp + wCurItem]
+    cmp al, SODA_POP
+    mov bl, 60                          ; Soda Pop heal amount
+    jz .addHealAmount
+    mov bl, 80                          ; Lemonade heal amount
+    jnc .addHealAmount                  ; jr nc (item > SODA_POP: LEMONADE)
+    cmp al, FRESH_WATER
+    mov bl, 50                          ; Fresh Water heal amount
+    jz .addHealAmount
+    cmp al, SUPER_POTION
+    mov bl, 200                         ; Hyper Potion heal amount
+    jc .addHealAmount                   ; item < SUPER_POTION → HYPER/MAX/FULL_RESTORE
+    mov bl, 50                          ; Super Potion heal amount
+    jz .addHealAmount
+    mov bl, 20                          ; Potion heal amount
+
+.addHealAmount:
+    ; pret .addHealAmount…setCurrentHPToMaxHp == the Stage-3 ApplyHealingItem core
+    ; (add BL, clamp to max HP / half max HP for Revive, publish wHPBarNewHP).
+    mov esi, [iu_mon_base]
+    add esi, MON_HP + 1                 ; ESI = current-HP LOW byte, the core's input
+    call ApplyHealingItem
+
+.doneHealingPartyHP:
+    ; wHPBarHPDifference = new HP - old HP. Mind the two byte orders: wHPBarOldHP /
+    ; wHPBarNewHP hold the low byte at +0 (item_effects.asm:1020 writes the high
+    ; byte to +1), but wHPBarHPDifference is BIG-endian — pret's UpdateHPBar stores
+    ; d (high) at +0 and e (low) at +1 (engine/gfx/hp_bar.asm:63-66), and that is
+    ; the order PotionText's `text_decimal wHPBarHPDifference, 2, 3` reads.
+    ; pret computes this while animating the bar; only the HP path publishes it,
+    ; exactly as in pret. See DEVIATION 1.
+    mov al, [ebp + wHPBarNewHP]
+    sub al, [ebp + wHPBarOldHP]         ; low byte first — sets the borrow
+    mov [ebp + wHPBarHPDifference + 1], al
+    mov al, [ebp + wHPBarNewHP + 1]
+    sbb al, [ebp + wHPBarOldHP + 1]     ; high byte (inc/mov above would keep CF)
+    mov [ebp + wHPBarHPDifference], al
+
+    mov esi, [iu_mon_base]
+    mov al, [ebp + wCurItem]
+    cmp al, FULL_RESTORE
+    jne .updateInBattleData
+    mov byte [ebp + esi + MON_STATUS], 0  ; Full Restore also clears the status
+
+.updateInBattleData:
+    mov dh, [ebp + wUsedItemOnWhichPokemon]  ; ApplyHealingItem clobbered EDX
+    mov al, [ebp + wPlayerMonNumber]
+    cmp al, dh                          ; is this mon the active battler?
+    jne .doneHealing
+    ; copy the party HP into the in-battle HP (big-endian, high byte first)
+    mov al, [ebp + esi + MON_HP]
+    mov [ebp + wBattleMonHP], al
+    mov al, [ebp + esi + MON_HP + 1]
+    mov [ebp + wBattleMonHP + 1], al
+    mov al, [ebp + wCurItem]
+    cmp al, FULL_RESTORE
+    jne .doneHealing
+    mov byte [ebp + wBattleMonStatus], 0
+    ; pret's .calculateHPBarCoords (hlcoord 4,-1 + d rows) feeds UpdateHPBar2,
+    ; which the port does not run — see DEVIATION 1. RedrawPartyMenu redraws the
+    ; bar from the party data instead, so no coordinate is needed.
+    jmp .doneHealing
+
+.healingItemNoEffect:
+    call ItemUseNoEffect
+    jmp .done
+
+.doneHealing:
+    mov al, [ebp + wPseudoItemID]
+    test al, al                         ; using Softboiled? (no item to remove)
+    jnz .skipRemovingItem
+    call RemoveUsedItem
+.skipRemovingItem:
+    mov al, [ebp + wCurItem]
+    cmp al, FULL_RESTORE
+    jb .playStatusAilmentCuringSound    ; jr c — a status-specific healing item
+    cmp al, FULL_HEAL
+    jz .playStatusAilmentCuringSound
+    mov al, SFX_HEAL_HP
+    call PlaySoundWaitForCurrent
+    ; predef UpdateHPBar2 (animate the bar filling) — DEVIATION 1.
+    mov byte [ebp + wHPBarType], 0x02
+    mov byte [ebp + wPartyMenuTypeOrMessageID], REVIVE_MSG
+    mov al, [ebp + wCurItem]
+    cmp al, REVIVE
+    jz .showHealingItemMessage
+    cmp al, MAX_REVIVE
+    jz .showHealingItemMessage
+    mov byte [ebp + wPartyMenuTypeOrMessageID], POTION_MSG
+    jmp .showHealingItemMessage
+
+.playStatusAilmentCuringSound:
+    mov al, SFX_HEAL_AILMENT
+    call PlaySoundWaitForCurrent
+
+.showHealingItemMessage:
+    mov byte [ebp + H_AUTO_BG_TRANSFER_EN], 0
+    call ClearScreen
+    mov byte [ebp + wUpdateSpritesEnabled], 0xFF   ; dec a → $ff
+    call RedrawPartyMenu                ; redraws the menu and prints the message
+    mov byte [ebp + H_AUTO_BG_TRANSFER_EN], 1
+    mov bl, 50                          ; ld c, 50
+    call DelayFrames
+    call WaitForTextScrollButtonPress
+    jmp .done
+
+.canceledItemUse:
+    mov byte [ebp + wActionResultOrTookBattleTurn], 0   ; item use failed
+    pop eax                             ; pop af
+    pop eax                             ; pop af
+.done:
+    mov al, [ebp + wPseudoItemID]
+    test al, al                         ; using Softboiled?
+    jnz .ret                            ; ret nz
+    call GBPalWhiteOut
+    ; call z, RunDefaultPaletteCommand — TODO-HW: SGB/CGB palette command (Phase 5)
+    mov al, [ebp + wIsInBattle]
+    test al, al
+    jnz .ret                            ; ret nz
+    jmp ReloadMapData
+.ret:
+    ret
+
+; --- pret .useVitamin (item_effects.asm:1379) ------------------------------
+.useVitamin:
+    ; ESI = struct base; [hl] = species.
+    mov al, [ebp + esi]
+    mov [ebp + wCurSpecies], al
+    mov [ebp + wPokedexNum], al
+    mov al, [ebp + esi + MON_LEVEL]
+    mov [ebp + wCurEnemyLevel], al
+    call GetMonHeader                   ; CalcStats reads wMonHeader
+    mov al, dh                          ; ld a,d — the party index
+    mov esi, wPartyMonNicks
+    call GetPartyMonName                ; → wNameBuffer (the texts' text_ram)
+    mov esi, [iu_mon_base]
+
+    mov al, [ebp + wCurItem]
+    cmp al, RARE_CANDY
+    jz .useRareCandy                    ; jp z
+
+    call ApplyVitamin                   ; +2560 stat exp, CF=0 if already capped
+    jnc .vitaminNoEffect
+    mov esi, [iu_mon_base]
+    call .recalculateStats
+
+    ; walk VitaminStats to the name of the stat this vitamin raises
+    mov esi, VitaminStats               ; flat table (not GB space)
+    mov al, [ebp + wCurItem]
+    sub al, HP_UP - 1
+    mov bl, al                          ; ld c, a
+.statNameLoop:
+    dec bl
+    jz .gotStatName
+.statNameInnerLoop:
+    mov al, [esi]                       ; scan forward past this entry's '@'
+    inc esi
+    cmp al, 0x50                        ; '@'
+    jne .statNameInnerLoop
+    jmp .statNameLoop
+
+.gotStatName:
+    ; pret: CopyData hl→wStringBuffer, STAT_NAME_LENGTH bytes. The port's CopyData
+    ; is GB→GB and VitaminStats is a FLAT .data table, so inline the flat→GB copy
+    ; (same substitution home/item_predicates.asm makes for KeyItemFlags).
+    push esi
+    lea edi, [ebp + wStringBuffer]
+    mov ecx, STAT_NAME_LENGTH
+    rep movsb
+    pop esi
+    mov al, SFX_HEAL_AILMENT
+    call PlaySound
+    mov esi, [VitaminStatRoseText_ref]
+    mov ecx, [VitaminStatRoseText_ref + 4]
+    call iu_print_text
+    jmp RemoveUsedItem                  ; jp RemoveUsedItem
+
+.vitaminNoEffect:
+    mov esi, [VitaminNoEffectText_ref]
+    mov ecx, [VitaminNoEffectText_ref + 4]
+    call iu_print_text
+    jmp GBPalWhiteOut                   ; jp GBPalWhiteOut
+
+; pret .recalculateStats — CalcStats over the mon at ESI (struct base).
+.recalculateStats:
+    mov edx, esi
+    add edx, MON_STATS                  ; de → the stats
+    add esi, MON_EXP + 2                ; hl → LSB of experience (CalcStats' base)
+    mov bh, 1                           ; consider stat exp
+    jmp CalcStats
+
+; --- pret .useRareCandy (item_effects.asm:1460) ----------------------------
+.useRareCandy:
+    ; RareCandyLevelUp does pret's level++/CalcExperience/exp write/.recalculateStats/
+    ; max-HP-gain-to-current-HP chain (Stage 3, native-validated). CF=0 at MAX_LEVEL.
+    call RareCandyLevelUp
+    jnc .vitaminNoEffect                ; can't raise the level above 100
+
+    ; pret pushes wWhichPokemon (currently the BAG list index — .noHappinessBoost
+    ; restored it) and wCurItem here, and pops both back just before RemoveUsedItem,
+    ; because the level-up UI below re-points wWhichPokemon at the party slot.
+    movzx eax, byte [ebp + wWhichPokemon]
+    push eax
+    mov byte [ebp + wPartyMenuTypeOrMessageID], RARE_CANDY_MSG
+    call RedrawPartyMenu
+    mov al, [ebp + wUsedItemOnWhichPokemon]
+    mov [ebp + wWhichPokemon], al       ; pret: pop de / ld a,d — the party index
+    ; pret: ld a,e (the species it stashed in e). wCurPartySpecies aliases wCurItem
+    ; in WRAM ($CF90) and now holds RARE_CANDY, so read the species back from
+    ; wCurSpecies, which .useVitamin wrote from the same source byte.
+    mov al, [ebp + wCurSpecies]
+    mov [ebp + wPokedexNum], al
+    mov byte [ebp + wMonDataLocation], PLAYER_PARTY_DATA
+    call LoadMonData
+    mov dh, LEVEL_UP_STATS_BOX
+    call PrintStatsBox                  ; callfar PrintStatsBox
+    call WaitForTextScrollButtonPress
+    mov byte [ebp + wMonDataLocation], PLAYER_PARTY_DATA
+    call LearnMoveFromLevelUp           ; predef
+
+    mov byte [ebp + wForceEvolution], 0
+    mov al, PIKAHAPPY_LEVELUP
+    call ModifyPikachuHappiness
+    call .respawnPikachuForUsedMon      ; leaves wWhichPokemon = the party index
+    call TryEvolvingMon                 ; callfar TryEvolvingMon — reads wWhichPokemon
+    mov byte [ebp + wUpdateSpritesEnabled], 1
+    mov byte [ebp + wCurItem], RARE_CANDY    ; pret: pop af / ld [wCurItem],a
+    pop eax
+    mov [ebp + wWhichPokemon], al       ; pret: pop af — back to the bag list index
+    jmp RemoveUsedItem                  ; jp RemoveUsedItem
+
+; --- shared helper: pret's wWhichPokemon swap around RespawnOverworldPikachu ---
+.respawnPikachuForUsedMon:
+    movzx eax, byte [ebp + wWhichPokemon]
+    push eax
+    mov al, [ebp + wUsedItemOnWhichPokemon]
+    mov [ebp + wWhichPokemon], al
+    call RespawnOverworldPikachu        ; callfar RespawnOverworldPikachu
+    pop eax
+    mov [ebp + wWhichPokemon], al
+    ret
+
+; --- Softboiled: subtract 1/5 of the user's max HP (pret item_effects.asm:1123) ---
+; The HP-bar drain animation (predef UpdateHPBar2) is not run — DEVIATION 1.
+; Out: [iu_softboiled_heal] = the amount taken (== the amount to heal with).
+;      wHPBarMaxHP/OldHP/NewHP are left as pret leaves them for the TARGET mon.
+.softboiledDrain:
+    ; save the target's HP-bar words (pret pushes the four bytes)
+    movzx eax, byte [ebp + wHPBarMaxHP]
+    push eax
+    movzx eax, byte [ebp + wHPBarMaxHP + 1]
+    push eax
+    movzx eax, byte [ebp + wHPBarOldHP]
+    push eax
+    movzx eax, byte [ebp + wHPBarOldHP + 1]
+    push eax
+
+    ; hl = the USER's max HP (wWhichPokemon is the Softboiled user here)
+    mov esi, wPartyMon1MaxHP
+    mov bx, PARTYMON_STRUCT_LENGTH
+    mov al, [ebp + wWhichPokemon]
+    call AddNTimes
+    mov al, [ebp + esi]                 ; max HP high
+    mov [ebp + wHPBarMaxHP + 1], al
+    mov [ebp + H_DIVIDEND], al
+    mov al, [ebp + esi + 1]             ; max HP low
+    mov [ebp + wHPBarMaxHP], al
+    mov [ebp + H_DIVIDEND + 1], al
+    mov byte [ebp + H_DIVISOR], 5
+    mov bh, 2                           ; ld b, 2 — dividend byte count
+    push esi
+    call Divide                         ; 1/5 of the user's max HP
+    pop esi
+
+    ; hl → the user's current HP (LSB); subtract the quotient
+    add esi, (MON_HP + 1) - (MON_MAXHP + 1)  ; ESI = current-HP LOW byte
+    mov al, [ebp + H_QUOTIENT + 3]
+    mov [iu_softboiled_heal], al        ; pret: push af (the heal amount)
+    mov bl, al
+    mov al, [ebp + esi]
+    sub al, bl
+    mov [ebp + esi], al
+    dec esi                             ; -> current-HP HIGH byte (dec preserves CF)
+    mov al, [ebp + H_QUOTIENT + 2]
+    mov bl, al
+    mov al, [ebp + esi]
+    sbb al, bl
+    mov [ebp + esi], al
+
+    ; restore the target's HP-bar words
+    pop eax
+    mov [ebp + wHPBarOldHP + 1], al
+    pop eax
+    mov [ebp + wHPBarOldHP], al
+    pop eax
+    mov [ebp + wHPBarMaxHP + 1], al
+    pop eax
+    mov [ebp + wHPBarMaxHP], al
+    ret
+
+; ===========================================================================
+; Shared tails — pret ref: engine/items/item_effects.asm:2396-2600.
+; ===========================================================================
+UnusableItem:
+    jmp ItemUseNotTime
+
+RemoveUsedItem:
+    mov esi, wNumBagItems
+    mov byte [ebp + wItemQuantity], 1   ; one item
+    jmp RemoveItemFromInventory
+
+ItemUseNoEffect:
+    mov esi, [ItemUseNoEffectText_ref]
+    mov ecx, [ItemUseNoEffectText_ref + 4]
+    jmp ItemUseFailed
+
+ItemUseNotTime:
+    mov esi, [ItemUseNotTimeText_ref]
+    mov ecx, [ItemUseNotTimeText_ref + 4]
+    jmp ItemUseFailed
+
+ItemUseNotYoursToUse:
+    mov esi, [ItemUseNotYoursToUseText_ref]
+    mov ecx, [ItemUseNotYoursToUseText_ref + 4]
+    jmp ItemUseFailed
+
+Func_e4bf:
+    mov byte [ebp + wActionResultOrTookBattleTurn], 2
+    mov esi, [DontHavePokemonText_ref]
+    mov ecx, [DontHavePokemonText_ref + 4]
+    jmp iu_print_text                   ; jp PrintText
+
+; In: ESI = flat text stream, ECX = its length (pret passes hl alone; the port
+; needs the length to stage the stream in GB space — see iu_print_text).
+ItemUseFailed:
+    mov byte [ebp + wActionResultOrTookBattleTurn], 0   ; item use failed
+    jmp iu_print_text                   ; jp PrintText
+
+; ---------------------------------------------------------------------------
+; iu_print_text — print a generated TX stream through the port's text engine.
+; The streams are flat .data (assets/item_text.inc) but TextCommandProcessor
+; reads its stream EBP-relative, so stage it in the GB-space dialog buffer first
+; — the same copy ShowTextStream (map_sprites.asm) makes for NPC dialogs.
+; In: ESI = flat stream, ECX = length (<= 256, the NPC_DIALOG_BUF window).
+; See DEVIATION 2 for the window behaviour.
+; ---------------------------------------------------------------------------
+iu_print_text:
+    pushad
+    lea edi, [ebp + NPC_DIALOG_BUF]
+    rep movsb                           ; flat → GB WRAM (both flat selectors)
+    mov esi, NPC_DIALOG_BUF             ; EBP-relative for PrintText_Overworld
+    call PrintText_Overworld
+    popad
+    ret

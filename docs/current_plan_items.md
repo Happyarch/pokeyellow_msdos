@@ -61,8 +61,18 @@ Archive to `docs/plans/items.md` when complete.
 
 ## Stages
 
-- [ ] **Stage 5 — `UseItem_`/`ItemUsePtrTable` dispatcher + context guards +
-  medicine family (first playable value).**
+- [x] **Stage 5 — `UseItem_`/`ItemUsePtrTable` dispatcher + context guards +
+  medicine family (first playable value).** DONE 2026-07-12. Landed in the
+  path-mirror file `src/engine/items/item_effects.asm` (not a separate
+  `item_use.asm` — `lint_pret_labels` requires the pret source's mirror), with
+  the unported families as ret-stubs in `src/engine/items/item_use_stubs.asm`.
+  Messages are generated (`tools/gen_item_text.py` → `assets/item_text.inc`),
+  as are `VitaminStats` / `UsableItems_CloseMenu` / `UsableItems_PartyMenu`
+  (`gen_items.py`). Verified headlessly by the new `DEBUG_ITEMUSE` autokey
+  scenario (see below). Four documented DEVIATIONs: no animated `UpdateHPBar2`
+  (the final bar is redrawn, and `wHPBarHPDifference` — what PotionText prints —
+  is computed directly), `PrintText_Overworld`'s window collapse,
+  `RunDefaultPaletteCommand` (TODO-HW Phase 5), and predef → direct call.
   - `src/engine/items/item_use.asm`: `UseItem_` (init
     `wActionResultOrTookBattleTurn=1`; `cp HM01 → jp nc ItemUseTMHM` — stub to
     Stage 7; else index `ItemUsePtrTable`). The table is a **Tier-2
@@ -88,6 +98,13 @@ Archive to `docs/plans/items.md` when complete.
     path, and export the entry the battle plan's `BattleItemMenu` will call.
   - Verify: `DEBUG_BAGMENU_LIVE` — Potion heals a damaged seeded mon, Antidote
     refuses on a healthy mon, item count decrements, key items don't consume.
+    DONE, headlessly and repeatably, via **`make DEBUG_ITEMUSE=1
+    AUTOKEY_DUMP_FRAME=<n>`** (a scripted-joypad build: seeded party with mon 1
+    knocked to 1 HP, then START → ITEM → POTION → USE → mon 1, then ANTIDOTE →
+    USE → mon 1). Frame 380 shows "SNORLAX / recovered by 20!" with the party
+    HP at 21/362; frame 660 shows "It won't have any effect." for the Antidote;
+    frame 760 shows the bag list now headed by ANTIDOTE ×3 — the qty-1 POTION
+    was consumed by `RemoveUsedItem`, the no-effect Antidote was not.
 - [ ] **Stage 6 — `ItemUseBall` (catching).** The Gen-1 catch algorithm +
   `ThrowBallAtTrainerMon` refusal + party/box add on success.
   - Pure-math core (catch-rate RNG chain, ball factors, wobble count formula)

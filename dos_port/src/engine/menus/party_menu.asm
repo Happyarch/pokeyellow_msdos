@@ -81,6 +81,11 @@ extern g_bg_whiteout
 extern g_obj_over_window             ; ppu/ppu.asm — OBJ over the window layer (GB order)
 extern Delay3                        ; video/frame.asm
 extern GBPalNormal                   ; init/init.asm
+extern TextCommandProcessor          ; home/text.asm — ESI=GB-space TX stream, EBX=cursor
+; pret PartyMenuItemUseMessagePointers — the nine item-use result texts, generated
+; into assets/item_text.inc (tools/gen_item_text.py) as {dd stream, dd length} pairs
+; (the port needs the length to stage a stream in GB space; see .printItemUseMessage).
+extern PartyMenuItemUseMessagePointers
 
 GBSCR_W   equ 20        ; GB screen tile width (stride of the scratch)
 TILE_SPC       equ 0x7F      ; blank space tile
@@ -116,6 +121,7 @@ pm_msg_table:
     dd pm_msg_tm1,     pm_msg_mon_q      ; TMHM_PARTY_MENU
     dd pm_msg_swap1,   pm_msg_swap2      ; SWAP_MONS_PARTY_MENU
     dd pm_msg_item1,   pm_msg_mon_q      ; EVO_STONE_PARTY_MENU (pret aliases ItemUse)
+
 
 section .text
 
@@ -263,9 +269,41 @@ RedrawPartyMenu_:
     call Delay3
     jmp GBPalNormal                         ; jp GBPalNormal
 .printItemUseMessage:
-    ; STUB(items-plan): PartyMenuItemUseMessagePointers (Antidote…RareCandy
-    ; result texts, GetPartyMonName into the message) land with item USE
-    ; dispatch; ids >= FIRST_PARTY_MENU_TEXT_ID are unreachable until then.
+    ; pret ref: engine/menus/party_menu.asm:.printItemUseMessage — mask the id,
+    ; index PartyMenuItemUseMessagePointers, load the used mon's nick into
+    ; wNameBuffer (the streams' text_ram), and print.
+    ;
+    ; DEVIATION(text): pret's PrintText draws the message box itself; the port
+    ; draws the border here and runs TextCommandProcessor at the box's cursor,
+    ; writing into the party menu's own stride-20 scratch (which .done then
+    ; mirrors to the window layer). The stream is copied into GB space first
+    ; because TextCommandProcessor reads its stream EBP-relative — same staging
+    ; ShowTextStream does for NPC dialogs. The caller set BIT_NO_TEXT_DELAY, so
+    ; there is no per-letter reveal to composite; and every one of these nine
+    ; texts terminates with <DONE>/text_end (never <PROMPT>), so nothing blocks
+    ; before the mirror — ItemUseMedicine does the button wait afterwards.
+    and al, 0x0F                            ; and $0F
+    movzx eax, al
+    mov ecx, [PartyMenuItemUseMessagePointers + eax * 8]      ; the stream
+    mov edx, [PartyMenuItemUseMessagePointers + eax * 8 + 4]  ; its length
+    push ecx
+    push edx
+    mov al, [ebp + wUsedItemOnWhichPokemon]
+    mov esi, wPartyMonNicks
+    call GetPartyMonName                    ; → wNameBuffer
+    pop ecx                                 ; length
+    pop esi                                 ; flat stream ptr
+    push ecx
+    lea edi, [ebp + NPC_DIALOG_BUF]
+    rep movsb                               ; flat → GB WRAM
+    pop ecx
+    mov esi, W_TILEMAP + 12 * GBSCR_W       ; the standard dialog cell (0,12)
+    mov bl, 18                              ; interior width  (total 20)
+    mov bh, 4                               ; interior height (total 6)
+    call TextBoxBorder
+    mov ebx, W_TILEMAP + 14 * GBSCR_W + 1   ; bccoord 1,14 — TCP's cursor
+    mov esi, NPC_DIALOG_BUF                  ; EBP-relative stream ptr
+    call TextCommandProcessor
     jmp .done
 
 ; ---------------------------------------------------------------------------
