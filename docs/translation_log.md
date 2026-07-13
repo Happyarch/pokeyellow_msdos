@@ -5452,3 +5452,35 @@ indexes the generated `PartyMenuItemUseMessagePointers`.
   the bag with the qty-1 POTION consumed and the no-effect ANTIDOTE still at ×3.
 - Gate: `lint_pret_labels` 0 violations; `make fidelity` 6/6 PASS; faithdiff divergences justified in the
   commit message.
+
+## 2026-07-12 — `ItemUseBall` (items plan, Stage 6)
+
+- **`ItemUseBall` / `ThrowBallAtTrainerMon` / `BoxFullCannotThrowBall` / `SendNewMonToBox`**
+  (`src/engine/items/item_effects.asm`, from pret `engine/items/item_effects.asm`). Full Gen-1 catch
+  chain: Safari-ball bookkeeping, old-man/Pikachu battle branches, the status/HP catch-rate math
+  (`Rand1`/`Rand2`, the `shr bh,1` + `rcr al,1` HP/4 chain, X in `hQuotient+3`), the shake-count
+  thresholds (10/30/70 → $20/$61/$62/$63, $10 can't-catch, $43 caught), the `LoadEnemyMonData`
+  round-trip that restores live HP + status, the pokédex flag pair, and the party-vs-box add.
+  Deviations vs pret (all forced, all commented at the site): `predef MoveAnimation` →
+  `call PlayMoveAnimation`; `predef IndexToPokedex` → a flat-table index (it is a **table** in the
+  port, never a routine); `predef FlagActionPredef` → `call FlagAction`; `RunDefaultPaletteCommand`
+  → TODO-HW (Phase 5); in-battle text via the battle `PrintText` (ESI = flat stream).
+- **`BUG(critical)` "Index #000 Post-Capture"** tagged at the dex-flag site: a species with no dex
+  number yields dex 0, whose unconditional `dec a` wraps to $FF, so `FlagAction` writes bit 255 —
+  12 bytes past the 19-byte `wPokedexOwned` bitset. Bounded under DPMI; live at `BUG_FIX_LEVEL 0`.
+- **Text engine, `src/home/text.asm`:** `<CONT>` ($55), `<_CONT>`/`<SCROLL>` and `<PARA>` hardcoded
+  the overworld dialog geometry (`W_TILEMAP + 16*SCREEN_W_TILES + 1`, stride 20) and always called
+  `manual_text_scroll`, which hijacks the window layer. In a battle (stride 40, box at a different
+  origin) that printed the continuation line at canvas (8,1) and opened the overworld dialog window
+  over the battle screen — first seen as `ItemUseBallText05`'s "…was caught!" landing outside the
+  box. `scroll_text_up` and all three repositions now derive their geometry from `[text_line2]` /
+  `[text_row_stride]` (as `<LINE>` already did), and the button-wait goes through the new
+  `text_pause`, which dispatches on `[text_prompt_hook]` (as `<PROMPT>` already did).
+- **New harness `DEBUG_ITEMBALL`** (Makefile + `debug_dump.asm`): throws a ball at `RunBattleTest`'s
+  seeded wild PIDGEY and dumps WRAM. It also fixes two harness gaps it exposed: `RunBattleTest` never
+  seeded `wEnemyMonSpecies2`/`wCurEnemyLevel` (a real encounter does), so the capture's
+  `LoadEnemyMonData` re-entry read species 0 and `GetMonLearnset` indexed `EvosMovesPointerTable[-1]`
+  → page fault; and `DEBUG_ITEMBALL` never forwarded `AUTOKEY_DUMP_FRAME`, so `AutoKeyDrive`'s own
+  frame-200 dump exited the program mid-Pokédex-entry.
+- Gate: `make check` OK; `lint_pret_labels` 0 violations; `make fidelity` 6/6 PASS; both
+  `BUG_FIX_LEVEL` 0 and 1 build; faithdiff divergences justified in the commit message.

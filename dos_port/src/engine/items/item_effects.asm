@@ -28,6 +28,8 @@ bits 32
 
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
+%include "assets/event_constants.inc"   ; EVENT_* bit indices (ItemUseBall's catch flags)
+%include "events.inc"                   ; CheckEvent over W_EVENT_FLAGS
 
 global WakeUpEntireParty
 global RestorePPAmount
@@ -786,7 +788,6 @@ extern VitaminStatRoseText_ref
 extern VitaminNoEffectText_ref
 
 ; --- the deferred ItemUse* families (item_use_stubs.asm) ---
-extern ItemUseBall
 extern ItemUseTownMap
 extern ItemUseBicycle
 extern ItemUseSurfboard
@@ -1497,3 +1498,747 @@ iu_print_text:
     call PrintText_Overworld
     popad
     ret
+
+; ---------------------------------------------------------------------------
+
+; === ItemUseBall — catching (items-plan Stage 6) ============================
+;
+; Source: engine/items/item_effects.asm:104-609 (ItemUseBall), 2569-2591
+; (ThrowBallAtTrainerMon, BoxFullCannotThrowBall) and 2932-3112 (SendNewMonToBox).
+; The Gen-1 catch algorithm is translated verbatim, including its two documented
+; quirks (the Transform→assumed-Ditto bug and the old-man/Pikachu battle's
+; player-name copy into wGrassRate, the Cinnabar Missingno. glitch's other half).
+;
+; PORT DEVIATIONS (this block; the file header's four still apply)
+; 5. predef MoveAnimation → `call PlayMoveAnimation` (animations.asm), the port's
+;    faithful ANIMATION=OFF realization: a 30-frame delay where the ball toss would
+;    play. Retired by the subanimation engine (TODO-HW, battle plan).
+; 6. predef IndexToPokedex → direct table index. IndexToPokedex is a flat .data
+;    TABLE in this port, never a routine (see home/pics.asm; calling it faults).
+; 7. predef FlagActionPredef → `call FlagAction` (ESI=array, CL=index, BH=action,
+;    result back in CL) — the port-wide no-predef-dispatch rule.
+; 8. In-battle text goes through the battle printer PrintText (=PrintBattleText,
+;    EAX/ESI = flat stream), NOT iu_print_text/PrintText_Overworld: ItemUseBall only
+;    ever runs with wIsInBattle set, and the battle box is where pret's PrintText
+;    draws here. Same split naming_screen.asm documents.
+; ---------------------------------------------------------------------------
+
+global ItemUseBall
+global ThrowBallAtTrainerMon
+global BoxFullCannotThrowBall
+global SendNewMonToBox
+
+extern PrintText              ; engine/battle/move_effect_helpers.asm — battle printer, ESI = flat stream
+extern PlayMoveAnimation      ; engine/battle/animations.asm — AL = animation id (predef MoveAnimation)
+extern IsGhostBattle          ; engine/battle/ghost.asm — ZF=1 → unidentified ghost
+extern LoadScreenTilesFromBuffer1 ; engine/battle/battle_menu.asm
+extern Delay3                 ; video/frame.asm
+extern Random                 ; home/random.asm — AL = next random byte
+extern Multiply               ; home/math.asm — hMultiplicand(3) * hMultiplier → hProduct(4)
+extern IndexToPokedex         ; data/pokemon_data.asm — FLAT TABLE: [species-1] → dex number
+extern ShowPokedexData        ; engine/menus/pokedex_entry.asm (predef)
+extern AskName                ; engine/menus/naming_screen.asm (predef; hl = nickname dest)
+extern LoadEnemyMonData       ; engine/battle/load_enemy_mon_data.asm
+extern CalcExperience         ; engine/pokemon/experience.asm — DH = level → hExperience
+extern ClearSprites           ; home/sprites.asm
+extern AddPartyMon            ; home/move_mon.asm — adds wCurPartySpecies to the party
+
+; --- generated text streams (assets/item_text.inc) ---
+extern ItemUseText00                ; "<PLAYER> used ITEM!"
+extern ItemUseBallText00            ; "It dodged the thrown ball!" / can't be caught
+extern ItemUseBallText01            ; "You missed the POKéMON!"
+extern ItemUseBallText02            ; "Darn! The POKéMON broke free!"
+extern ItemUseBallText03            ; "Aww! It appeared to be caught!"
+extern ItemUseBallText04            ; "Shoot! It was so close too!"
+extern ItemUseBallText05            ; "All right! <MON> was caught!"
+extern ItemUseBallText06            ; "New DEX data will be added..."
+extern ItemUseBallText07            ; "…was transferred to BILL's PC"
+extern ItemUseBallText08            ; "…was transferred to someone's PC"
+extern ThrowBallAtTrainerMonText1
+extern ThrowBallAtTrainerMonText2
+extern BoxFullCannotThrowBallText_ref
+
+; ---------------------------------------------------------------------------
+; ItemUseBall — pret item_effects.asm:104.
+; ---------------------------------------------------------------------------
+ItemUseBall:
+; Balls can't be used out of battle.
+    mov al, [ebp + wIsInBattle]
+    test al, al
+    jz ItemUseNotTime                   ; jp z
+
+; Balls can't catch trainers' Pokémon.
+    dec al
+    jnz ThrowBallAtTrainerMon           ; jp nz (wIsInBattle 2 = trainer)
+
+; The old-man / Pikachu tutorial battles skip the party+box full check.
+    mov al, [ebp + wBattleType]
+    cmp al, BATTLE_TYPE_OLD_MAN
+    je .canUseBall
+    cmp al, BATTLE_TYPE_PIKACHU
+    je .canUseBall
+
+    mov al, [ebp + wPartyCount]         ; is the party full?
+    cmp al, PARTY_LENGTH
+    jne .canUseBall
+    mov al, [ebp + wBoxCount]           ; is the box full too?
+    cmp al, MONS_PER_BOX
+    je BoxFullCannotThrowBall           ; jp z
+
+.canUseBall:
+    mov byte [ebp + wCapturedMonSpecies], 0
+
+    mov al, [ebp + wBattleType]
+    cmp al, BATTLE_TYPE_SAFARI
+    jne .skipSafariZoneCode
+.safariZone:
+    dec byte [ebp + wNumSafariBalls]    ; dec [hl] — remove a Safari Ball
+
+.skipSafariZoneCode:
+    ; call RunDefaultPaletteCommand — TODO-HW: palette HAL (Phase 5), no-op here.
+    ; DEVIATION 3 (file header); same treatment as pokedex_entry.asm / league_pc.asm.
+    mov byte [ebp + wPokeBallAnimData], 0x43   ; successful-capture value
+    call LoadScreenTilesFromBuffer1
+    mov esi, ItemUseText00
+    call PrintText
+
+; An unidentified ghost can never be caught.
+    call IsGhostBattle                  ; callfar
+    mov bh, 0x10                        ; can't-be-caught value (mov: keeps ZF)
+    jz .setAnimData                     ; jp z
+
+    mov al, [ebp + wBattleType]
+    cmp al, BATTLE_TYPE_OLD_MAN
+    je .oldManBattle
+    cmp al, BATTLE_TYPE_PIKACHU
+    je .oldManBattle                    ; the Pikachu battle is technically an old-man battle
+    jmp .notOldManBattle
+
+.oldManBattle:
+; GLITCH: the player's name is copied over the wild-mon data (wGrassRate) — this is
+; the write half of the Cinnabar Island Missingno. glitch. Faithful, kept.
+; Safety: bounded copy into WRAM under DPMI; no ACE reachable.
+    mov esi, wGrassRate
+    mov edx, wPlayerName
+    mov bx, NAME_LENGTH
+    call CopyData
+    mov al, [ebp + wBattleType]
+    cmp al, BATTLE_TYPE_OLD_MAN
+    jne .captured                       ; jp nz (the Pikachu battle DOES "catch")
+    mov byte [ebp + wCapturedMonSpecies], 1
+    CheckEvent EVENT_INITIAL_CATCH_TRAINING     ; clobbers AL, sets ZF
+    mov bh, 0x63                        ; 3 shakes
+    jnz .setAnimData                    ; jp nz — already trained: just shake, no catch
+    jmp .captured
+
+.notOldManBattle:
+; The ghost Marowak (Pokémon Tower 6F) can never be caught.
+    mov al, [ebp + wCurMap]
+    cmp al, POKEMON_TOWER_6F
+    jne .loop
+    mov al, [ebp + wEnemyMonSpecies2]
+    cmp al, RESTLESS_SOUL
+    mov bh, 0x10                        ; can't-be-caught value (mov: keeps ZF)
+    je .setAnimData                     ; jp z
+
+; Rand1 (BH) must land in the ball's range: Poké [0,255], Great [0,200],
+; Ultra/Safari [0,150]. Loop until it does.
+.loop:
+    call Random
+    mov bh, al                          ; ld b, a
+
+    mov al, [ebp + wCurItem]
+    cmp al, MASTER_BALL                 ; the Master Ball always succeeds
+    je .captured                        ; jp z
+    cmp al, POKE_BALL                   ; anything does for a Poké Ball
+    je .checkForAilments
+
+    cmp bh, 200                         ; pret: ld a,200 / cp b / jr c,.loop
+    ja .loop                            ; (carry there == 200 < Rand1 here)
+    mov al, [ebp + wCurItem]
+    cmp al, GREAT_BALL
+    je .checkForAilments
+
+    cmp bh, 150
+    ja .loop
+
+.checkForAilments:
+; Status (BL): none 0, Burn/Paralysis/Poison 12, Freeze/Sleep 25. Subtract it from
+; Rand1; if it underflows, the mon is caught outright.
+    mov al, [ebp + wEnemyMonStatus]
+    test al, al
+    jz .skipAilmentValueSubtraction
+    and al, (1 << FRZ) | SLP_MASK
+    mov bl, 12
+    jz .notFrozenOrAsleep
+    mov bl, 25
+.notFrozenOrAsleep:
+    mov al, bh
+    sub al, bl
+    jc .captured                        ; jp c
+    mov bh, al
+
+.skipAilmentValueSubtraction:
+    push ebx                            ; push bc — save (Rand1 - Status) in BH
+
+; MaxHP * 255
+    mov byte [ebp + H_MULTIPLICAND], 0
+    mov esi, wEnemyMonMaxHP
+    mov al, [ebp + esi]                 ; big-endian: high byte first
+    mov [ebp + H_MULTIPLICAND + 1], al
+    mov al, [ebp + esi + 1]
+    mov [ebp + H_MULTIPLICAND + 2], al
+    mov byte [ebp + H_MULTIPLIER], 255
+    call Multiply
+
+; BallFactor: 8 for a Great Ball, 12 for everything else.
+    mov al, [ebp + wCurItem]
+    cmp al, GREAT_BALL
+    mov al, 12
+    jne .skip1
+    mov al, 8
+.skip1:
+; (MaxHP * 255) / BallFactor — every division below floors.
+    mov [ebp + H_DIVISOR], al
+    mov bh, 4                           ; b = bytes in the dividend
+    call Divide
+
+; max(HP / 4, 1) — HP never exceeds 999, so the result fits in a byte.
+    mov esi, wEnemyMonHP
+    mov bh, [ebp + esi]                 ; b = HP high byte
+    mov al, [ebp + esi + 1]             ; a = HP low byte
+    shr bh, 1                           ; srl b
+    rcr al, 1                           ; rr a  (CF from the srl)
+    shr bh, 1
+    rcr al, 1
+    test al, al
+    jnz .skip2
+    inc al                              ; a quotient of 0 becomes 1
+.skip2:
+
+; W = ((MaxHP * 255) / BallFactor) / max(HP / 4, 1)
+    mov [ebp + H_DIVISOR], al
+    mov bh, 4
+    call Divide
+
+; X = min(W, 255), kept in hQuotient+3.
+    mov al, [ebp + H_QUOTIENT + 2]
+    test al, al
+    jz .skip3
+    mov byte [ebp + H_QUOTIENT + 3], 255
+
+.skip3:
+    pop ebx                             ; pop bc — BH = Rand1 - Status
+
+; Rand1 - Status > CatchRate → the ball fails.
+    mov al, [ebp + wEnemyMonActualCatchRate]
+    cmp al, bh
+    jb .failedToCapture                 ; jr c
+
+; W > 255 → caught.
+    mov al, [ebp + H_QUOTIENT + 2]
+    test al, al
+    jnz .captured
+
+    call Random                         ; Rand2
+
+; Rand2 > X → the ball fails.
+    mov bh, al
+    mov al, [ebp + H_QUOTIENT + 3]
+    cmp al, bh
+    jb .failedToCapture                 ; jr c
+
+.captured:
+    jmp .skipShakeCalculations          ; jr
+
+.failedToCapture:
+    mov al, [ebp + H_QUOTIENT + 3]
+    mov [ebp + wPokeBallCaptureCalcTemp], al   ; save X
+
+; CatchRate * 100
+    mov byte [ebp + H_MULTIPLICAND], 0
+    mov byte [ebp + H_MULTIPLICAND + 1], 0
+    mov al, [ebp + wEnemyMonActualCatchRate]
+    mov [ebp + H_MULTIPLICAND + 2], al
+    mov byte [ebp + H_MULTIPLIER], 100
+    call Multiply
+
+; BallFactor2: Poké 255, Great 200, Ultra/Safari 150.
+    mov al, [ebp + wCurItem]
+    mov bh, 255
+    cmp al, POKE_BALL
+    je .skip4
+    mov bh, 200
+    cmp al, GREAT_BALL
+    je .skip4
+    mov bh, 150
+    cmp al, ULTRA_BALL
+    je .skip4
+
+.skip4:
+; Y = (CatchRate * 100) / BallFactor2
+    mov al, bh
+    mov [ebp + H_DIVISOR], al
+    mov bh, 4
+    call Divide
+
+; Y > 255 → 3 shakes. (Unreachable in practice: max Y = (255*100)/150 = 170.)
+    mov al, [ebp + H_QUOTIENT + 2]
+    test al, al
+    mov bh, 0x63                        ; 3 shakes (mov: keeps ZF)
+    jnz .setAnimData
+
+; (X * Y) / 255
+    mov al, [ebp + wPokeBallCaptureCalcTemp]
+    mov [ebp + H_MULTIPLIER], al
+    call Multiply
+    mov byte [ebp + H_DIVISOR], 255
+    mov bh, 4
+    call Divide
+
+; Status2: none 0, Burn/Paralysis/Poison 5, Freeze/Sleep 10.
+    mov al, [ebp + wEnemyMonStatus]
+    test al, al
+    jz .skip5
+    and al, (1 << FRZ) | SLP_MASK
+    mov bh, 5
+    jz .addAilmentValue
+    mov bh, 10
+
+.addAilmentValue:
+    mov al, [ebp + H_QUOTIENT + 3]
+    add al, bh
+    mov [ebp + H_QUOTIENT + 3], al
+
+.skip5:
+; Z = ((X * Y) / 255) + Status2 decides the shake count:
+;   Z < 10 → 0 shakes (miss), < 30 → 1, < 70 → 2, else 3.
+    mov al, [ebp + H_QUOTIENT + 3]
+    cmp al, 10
+    mov bh, 0x20
+    jb .setAnimData
+    cmp al, 30
+    mov bh, 0x61
+    jb .setAnimData
+    cmp al, 70
+    mov bh, 0x62
+    jb .setAnimData
+    mov bh, 0x63
+
+.setAnimData:
+    mov al, bh
+    mov [ebp + wPokeBallAnimData], al
+
+.skipShakeCalculations:
+    mov bl, 20                          ; ld c, 20
+    call DelayFrames
+
+; The toss animation. wWhichPokemon / wCurItem are saved across it (the animation
+; engine reuses both), exactly as pret does.
+    mov byte [ebp + wAnimationID], TOSS_ANIM
+    mov byte [ebp + hWhoseTurn], 0
+    mov byte [ebp + wAnimationType], 0
+    mov byte [ebp + wDamageMultipliers], 0
+    movzx eax, byte [ebp + wWhichPokemon]
+    push eax                            ; push af
+    movzx eax, byte [ebp + wCurItem]
+    push eax                            ; push af
+    mov al, TOSS_ANIM
+    call PlayMoveAnimation              ; predef MoveAnimation (DEVIATION 5)
+    pop eax
+    mov [ebp + wCurItem], al
+    pop eax
+    mov [ebp + wWhichPokemon], al
+
+; The animation outcome picks the message. Anything else means "caught".
+    mov al, [ebp + wPokeBallAnimData]
+    cmp al, 0x10
+    mov esi, ItemUseBallText00
+    je .printMessage
+    cmp al, 0x20
+    mov esi, ItemUseBallText01
+    je .printMessage
+    cmp al, 0x61
+    mov esi, ItemUseBallText02
+    je .printMessage
+    cmp al, 0x62
+    mov esi, ItemUseBallText03
+    je .printMessage
+    cmp al, 0x63
+    mov esi, ItemUseBallText04
+    je .printMessage
+
+; --- caught: reload the mon's data, then restore its live HP + status ---
+; pret pushes HP high/low and the status byte, walks hl back down over them after
+; LoadEnemyMonData and pops them into place. The port keeps the same three values
+; (the stack juggling becomes explicit stores — same bytes, same order).
+    mov al, [ebp + wEnemyMonHP]
+    push eax                            ; HP high
+    mov al, [ebp + wEnemyMonHP + 1]
+    push eax                            ; HP low
+    mov al, [ebp + wEnemyMonStatus]
+    push eax                            ; status
+
+; BUG: a transformed mon is assumed to be a Ditto. A wild mon could have used
+; Transform via Mirror Move, but Ditto is the only wild mon that knows Transform.
+; pret ships this; keep it (no BUG_FIX_LEVEL block — the fix would need to record
+; the pre-Transform species, which the original never stores).
+    mov esi, wEnemyBattleStatus3
+    test byte [ebp + esi], 1 << TRANSFORMED
+    jz .notTransformed
+    mov byte [ebp + wEnemyMonSpecies2], DITTO
+    jmp .skip6
+
+.notTransformed:
+; Not transformed: set the bit and stash the DVs so LoadEnemyMonData below reuses
+; them instead of rolling new ones.
+    or byte [ebp + esi], 1 << TRANSFORMED
+    mov al, [ebp + wEnemyMonDVs]
+    mov [ebp + wTransformedEnemyMonOriginalDVs], al
+    mov al, [ebp + wEnemyMonDVs + 1]
+    mov [ebp + wTransformedEnemyMonOriginalDVs + 1], al
+
+.skip6:
+    movzx eax, byte [ebp + wCurPartySpecies]
+    push eax                            ; push af
+    mov al, [ebp + wEnemyMonSpecies2]
+    mov [ebp + wCurPartySpecies], al
+    mov al, [ebp + wEnemyMonLevel]
+    mov [ebp + wCurEnemyLevel], al
+    call LoadEnemyMonData               ; callfar
+    pop eax
+    mov [ebp + wCurPartySpecies], al
+
+    pop eax                             ; status
+    mov [ebp + wEnemyMonStatus], al
+    pop eax                             ; HP low
+    mov [ebp + wEnemyMonHP + 1], al
+    pop eax                             ; HP high
+    mov [ebp + wEnemyMonHP], al
+
+    mov al, [ebp + wEnemyMonSpecies]
+    mov [ebp + wCapturedMonSpecies], al
+    mov [ebp + wCurPartySpecies], al    ; NB: = wCurItem ($CF90), as in pret — the ball
+    mov [ebp + wPokedexNum], al         ; is removed by bag INDEX (wWhichPokemon), not id
+
+    mov al, [ebp + wBattleType]
+    cmp al, BATTLE_TYPE_OLD_MAN
+    je .oldManCaughtMon                 ; the tutorial battles don't hand the mon over
+    cmp al, BATTLE_TYPE_PIKACHU
+    je .oldManCaughtMon
+    mov esi, ItemUseBallText05
+    call PrintText
+
+; Add the caught mon to the Pokédex (test first — a new species shows its entry).
+    movzx eax, byte [ebp + wPokedexNum]
+    dec eax
+    movzx eax, byte [IndexToPokedex + eax]   ; predef IndexToPokedex (DEVIATION 6)
+    mov [ebp + wPokedexNum], al
+; BUG(critical): "Index #000 Post-Capture" — pret ref: engine/items/item_effects.asm
+; :ItemUseBall (.captured); docs/bug_categorization.md (Battle table). A species with
+; no pokédex number (the MISSINGNO./glitch indices) maps to dex 0 here, and the
+; unconditional `dec a` below wraps it to $FF. FlagAction then addresses bit 255 —
+; byte 31 of the 19-byte wPokedexOwned bitset — writing 12 bytes past its end, into
+; wPokedexSeen and beyond. That OOB write is the ACE vector; under DPMI it stays
+; inside the GB image (bounded, no fault), so it is left live by default.
+%if BUG_FIX_LEVEL >= 1
+    test al, al
+    jz .skipShowingPokedexData          ; dex 0 = not a real species: no flag, no entry
+%endif
+    dec al
+    mov cl, al
+    mov bh, FLAG_TEST
+    mov esi, wPokedexOwned
+    call FlagAction                     ; predef FlagActionPredef (DEVIATION 7)
+    movzx eax, cl
+    push eax                            ; push af — was it already owned?
+    mov al, [ebp + wPokedexNum]
+    dec al
+    mov cl, al
+    mov bh, FLAG_SET
+    mov esi, wPokedexOwned
+    call FlagAction
+    pop eax
+
+    test al, al                         ; already in the Pokédex?
+    jnz .skipShowingPokedexData
+
+    mov esi, ItemUseBallText06
+    call PrintText
+    call ClearSprites
+    mov al, [ebp + wEnemyMonSpecies]
+    mov [ebp + wPokedexNum], al
+    call ShowPokedexData                ; predef
+
+.skipShowingPokedexData:
+    mov byte [ebp + wPikachuEmotionModifier], 1
+    mov byte [ebp + wPikachuMood], 0x85
+    mov al, [ebp + wPartyCount]
+    cmp al, PARTY_LENGTH                ; party full?
+    je .sendToBox
+    mov byte [ebp + wMonDataLocation], 0    ; PLAYER_PARTY_DATA
+    call ClearSprites
+    mov esi, iu_ball_emptyString        ; pret .emptyString — clears the message box
+    call PrintText
+    call AddPartyMon
+    jmp .done
+
+.sendToBox:
+    call ClearSprites
+    call SendNewMonToBox
+    mov esi, ItemUseBallText07          ; "…was transferred to BILL's PC"
+    CheckEvent EVENT_MET_BILL           ; clobbers AL only; ESI survives
+    jnz .printTransferredToPCText
+    mov esi, ItemUseBallText08          ; "…someone's PC" (Bill not met yet)
+.printTransferredToPCText:
+    call PrintText
+    jmp .done
+
+.oldManCaughtMon:
+    mov esi, ItemUseBallText05
+
+.printMessage:
+    call PrintText
+    call ClearSprites
+
+.done:
+    mov al, [ebp + wBattleType]
+    test al, al                         ; the old-man battle doesn't consume a ball
+    jnz .ret                            ; ret nz
+
+; Remove one ball from the bag (by list index, wWhichPokemon — see the note above).
+    mov esi, wNumBagItems
+    inc al                              ; a was 0 → 1
+    mov [ebp + wItemQuantity], al
+    jmp RemoveItemFromInventory         ; jp
+.ret:
+    ret
+
+; ---------------------------------------------------------------------------
+; ThrowBallAtTrainerMon — pret item_effects.asm:2569. "The trainer blocked the
+; ball!" / "Don't be a thief!" — the ball is still consumed.
+; ---------------------------------------------------------------------------
+ThrowBallAtTrainerMon:
+    ; call RunDefaultPaletteCommand — TODO-HW: palette HAL (Phase 5), no-op (DEVIATION 3).
+    call LoadScreenTilesFromBuffer1     ; restore the saved screen
+    call Delay3
+    mov byte [ebp + wAnimationID], TOSS_ANIM
+    mov al, TOSS_ANIM
+    call PlayMoveAnimation              ; predef MoveAnimation (DEVIATION 5)
+    mov esi, ThrowBallAtTrainerMonText1
+    call PrintText
+    mov esi, ThrowBallAtTrainerMonText2
+    call PrintText
+    jmp RemoveUsedItem                  ; jr
+
+; ---------------------------------------------------------------------------
+; BoxFullCannotThrowBall — pret item_effects.asm:2586.
+; ---------------------------------------------------------------------------
+BoxFullCannotThrowBall:
+    mov esi, [BoxFullCannotThrowBallText_ref]
+    mov ecx, [BoxFullCannotThrowBallText_ref + 4]
+    jmp ItemUseFailed                   ; jr
+
+; ---------------------------------------------------------------------------
+; SendNewMonToBox — pret item_effects.asm:2932. Store the newly caught mon in the
+; FIRST box slot, shifting every existing box entry (species list, OT names,
+; nicknames, mon structs) down one. Then nickname it (predef AskName).
+;
+; Gen-2 rule: the box struct is copied byte-for-byte, and the Kadabra
+; TWISTEDSPOON_GSC write into MON_CATCH_RATE (offset 7) is carried verbatim.
+; ---------------------------------------------------------------------------
+SendNewMonToBox:
+    mov edx, wBoxCount
+    mov al, [ebp + edx]
+    inc al
+    mov [ebp + edx], al                 ; wBoxCount++
+
+; Shift the species list down one, inserting the new species at the front. The
+; list is $FF-terminated, so the walk ends when the byte we displaced IS the $FF.
+    mov al, [ebp + wCurPartySpecies]
+    mov [ebp + wCurSpecies], al
+    mov cl, al                          ; c = the species being inserted
+.shiftSpeciesLoop:
+    inc edx
+    mov al, [ebp + edx]                 ; b = the byte we're about to overwrite
+    mov bh, al
+    mov al, cl
+    mov cl, bh                          ; c = displaced byte (carried to the next slot)
+    mov [ebp + edx], al
+    cmp al, 0xFF                        ; cp -1 — was the byte we WROTE the sentinel?
+    jne .shiftSpeciesLoop
+
+    call GetMonHeader
+
+; Shift the OT names down one (skip if the box was empty before this mon).
+    mov esi, wBoxMonOT
+    mov bx, NAME_LENGTH
+    mov al, [ebp + wBoxCount]
+    dec al
+    jz .skipOTshift
+
+    dec al
+    call AddNTimes                      ; hl = last existing OT slot
+    push esi
+    add esi, NAME_LENGTH
+    mov edx, esi                        ; de = one slot further down (the destination)
+    pop esi
+    mov al, [ebp + wBoxCount]
+    dec al
+    mov bh, al                          ; b = number of names to move
+.shiftMonOTLoop:
+    push ebx
+    push esi
+    mov bx, NAME_LENGTH
+    call CopyData                       ; ESI → EDX, BX bytes
+    pop esi
+    mov edx, esi                        ; de = hl (the slot we just copied FROM)
+    sub esi, NAME_LENGTH                ; hl -= NAME_LENGTH (bc = -NAME_LENGTH)
+    pop ebx
+    dec bh
+    jnz .shiftMonOTLoop
+
+.skipOTshift:
+    mov esi, wPlayerName
+    mov edx, wBoxMon1OT
+    mov bx, NAME_LENGTH
+    call CopyData
+
+; Shift the nicknames down one, same shape.
+    mov al, [ebp + wBoxCount]
+    dec al
+    jz .skipNickShift
+
+    mov esi, wBoxMonNicks
+    mov bx, NAME_LENGTH
+    dec al
+    call AddNTimes
+    push esi
+    add esi, NAME_LENGTH
+    mov edx, esi
+    pop esi
+    mov al, [ebp + wBoxCount]
+    dec al
+    mov bh, al
+.shiftNickLoop:
+    push ebx
+    push esi
+    mov bx, NAME_LENGTH
+    call CopyData
+    pop esi
+    mov edx, esi
+    sub esi, NAME_LENGTH
+    pop ebx
+    dec bh
+    jnz .shiftNickLoop
+
+.skipNickShift:
+; Nickname prompt for the new box mon (predef AskName; hl = wBoxMon1Nick).
+    mov byte [ebp + wPredefHL], wBoxMon1Nick >> 8
+    mov byte [ebp + wPredefHL + 1], wBoxMon1Nick & 0xFF
+    mov byte [ebp + wNamingScreenType], NAME_MON_SCREEN
+    call AskName                        ; predef
+
+; Shift the box mon structs down one.
+    mov al, [ebp + wBoxCount]
+    dec al
+    jz .skipMonDataShift
+
+    mov esi, wBoxMons
+    mov bx, BOXMON_STRUCT_LENGTH
+    dec al
+    call AddNTimes
+    push esi
+    add esi, BOXMON_STRUCT_LENGTH
+    mov edx, esi
+    pop esi
+    mov al, [ebp + wBoxCount]
+    dec al
+    mov bh, al
+.shiftMonDataLoop:
+    push ebx
+    push esi
+    mov bx, BOXMON_STRUCT_LENGTH
+    call CopyData
+    pop esi
+    mov edx, esi
+    sub esi, BOXMON_STRUCT_LENGTH
+    pop ebx
+    dec bh
+    jnz .shiftMonDataLoop
+
+.skipMonDataShift:
+; Build the new box mon in slot 1 from the enemy mon.
+    mov al, [ebp + wEnemyMonLevel]
+    mov [ebp + wEnemyMonBoxLevel], al
+    mov esi, wEnemyMon
+    mov edx, wBoxMon1
+    mov bx, wEnemyMonDVs - wEnemyMon    ; species..PP-less head of the struct
+    call CopyData                       ; leaves EDX just past the copied bytes
+
+; OT id (big-endian word, straight from wPlayerID).
+    mov al, [ebp + wPlayerID]
+    mov [ebp + edx], al
+    inc edx
+    mov al, [ebp + wPlayerID + 1]
+    mov [ebp + edx], al
+    inc edx
+
+; EXP for the caught level (3 bytes, big-endian).
+    push edx
+    mov dh, [ebp + wCurEnemyLevel]      ; d = level
+    call CalcExperience                 ; callfar — → hExperience (3 bytes)
+    pop edx
+    mov al, [ebp + H_EXPERIENCE]
+    mov [ebp + edx], al
+    inc edx
+    mov al, [ebp + H_EXPERIENCE + 1]
+    mov [ebp + edx], al
+    inc edx
+    mov al, [ebp + H_EXPERIENCE + 2]
+    mov [ebp + edx], al
+    inc edx
+
+; Stat exp: NUM_STATS * 2 zero bytes.
+    xor al, al
+    mov bh, NUM_STATS * 2
+.statLoop:
+    mov [ebp + edx], al
+    inc edx
+    dec bh
+    jnz .statLoop
+
+; DVs, then the four move PPs.
+    mov esi, wEnemyMonDVs
+    mov al, [ebp + esi]
+    mov [ebp + edx], al
+    inc edx
+    inc esi
+    mov al, [ebp + esi]
+    mov [ebp + edx], al
+
+    mov esi, wEnemyMonPP
+    mov bh, NUM_MOVES
+.movePPLoop:
+    mov al, [ebp + esi]
+    inc esi
+    inc edx
+    mov [ebp + edx], al
+    dec bh
+    jnz .movePPLoop
+
+; Gen-2 forward-compat: a boxed Kadabra ships holding a TwistedSpoon, stored in the
+; catch-rate byte (MON_CATCH_RATE, offset 7) — the Time Capsule's held-item slot.
+    mov al, [ebp + wCurPartySpecies]
+    cmp al, KADABRA
+    jne .notKadabra
+    mov byte [ebp + wBoxMon1CatchRate], TWISTEDSPOON_GSC
+.notKadabra:
+    ret
+
+section .data
+; pret .emptyString: `db "@"` — a bare terminator, printed to blank the message box
+; before AddPartyMon. A lone control byte, not a glyph run (see the text-data rule).
+iu_ball_emptyString: db 0x50
+
+section .text

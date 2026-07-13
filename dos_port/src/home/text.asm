@@ -359,6 +359,29 @@ PrintLetterDelay:
 ; Called at CHAR_PARA, CHAR_CONT, CHAR_DONE control codes inside PlaceString.
 ; All registers preserved (blink state saved/restored around pushad/popad).
 ; ---------------------------------------------------------------------------
+; ---------------------------------------------------------------------------
+; text_pause — the "▼, wait for A/B" step of <_CONT>/<CONT>/<PARA>.
+;
+; Same dispatch <PROMPT> already uses (.handle_prompt): [text_prompt_hook] = 0 is
+; the overworld display (manual_text_scroll hijacks the window layer to show the
+; dialog rows); non-zero is the owning screen's own wait (battle: BattlePromptWait,
+; which blinks the ▼ at [text_arrow_pos] in W_TILEMAP). Calling manual_text_scroll
+; unconditionally opened the overworld dialog window on top of the battle screen.
+; All registers preserved.
+; ---------------------------------------------------------------------------
+text_pause:
+    pushad
+    mov eax, [text_prompt_hook]
+    test eax, eax
+    jz .tp_overworld
+    call eax
+    jmp .tp_done
+.tp_overworld:
+    call manual_text_scroll
+.tp_done:
+    popad
+    ret
+
 manual_text_scroll:
     ; Save existing blink state so nested/sequential dialogs don't clobber each other.
     movzx eax, byte [ebp + H_DOWN_ARROW_COUNT1]
@@ -470,28 +493,46 @@ manual_text_scroll:
 ; All registers preserved.
 ; ---------------------------------------------------------------------------
 scroll_text_up:
-    push eax
-    push ecx
+    pushad
+    ; Geometry is derived, not hardcoded: [text_line2] is the box's 2nd text line
+    ; (col 1 of it) and [text_row_stride] the tilemap row stride — the same two
+    ; knobs <LINE> uses. Hardcoding row 16 / stride 20 printed the battle's
+    ; <CONT> continuation at canvas (8,1) instead of inside the battle box.
+    mov ecx, [text_row_stride]
+    mov edx, [text_line2]                ; GB offset of (1, line2)
+    mov edi, edx
+    sub edi, ecx
+    sub edi, ecx
+    sub edi, ecx                         ; dst = line2 - 3 rows
+    mov esi, edx
+    sub esi, ecx
+    sub esi, ecx                         ; src = line2 - 2 rows
+    mov ebx, 3                           ; 3 text rows move up one row each
+.stu_row:
     push esi
     push edi
-    ; Copy rows 14,15,16 (60 bytes) up one tile row to rows 13,14,15
-    lea esi, [ebp + W_TILEMAP + 14 * SCREEN_W_TILES]
-    lea edi, [ebp + W_TILEMAP + 13 * SCREEN_W_TILES]
-    mov ecx, SCREEN_W_TILES * 3          ; 60 bytes (3 full rows)
-    rep movsb
-    ; Clear row 16 interior (cols 1-18)
-    lea edi, [ebp + W_TILEMAP + 16 * SCREEN_W_TILES + 1]
+    push ecx
+    lea esi, [ebp + esi]
+    lea edi, [ebp + edi]
+    mov ecx, MSG_BOX_WIDTH               ; 18 interior columns
+    rep movsb                            ; dst < src → forward copy is safe
+    pop ecx
+    pop edi
+    pop esi
+    add esi, ecx
+    add edi, ecx
+    dec ebx
+    jnz .stu_row
+    ; Clear the line-2 interior it just duplicated upward
+    lea edi, [ebp + edx]
     mov al, TILE_SPC
-    mov ecx, MSG_BOX_WIDTH               ; 18 columns
+    mov ecx, MSG_BOX_WIDTH
     rep stosb
     ; Sync to window layer then delay so the scroll is visible
     call sync_dialog_window
     call DelayFrame
     call DelayFrame
-    pop edi
-    pop esi
-    pop ecx
-    pop eax
+    popad
     ret
 
 ; ---------------------------------------------------------------------------
@@ -761,7 +802,7 @@ PlaceNextChar:
 .handle_cont_scroll:
     ; <_CONT> ($4B): _ContText — show the ▼, wait for A/B, THEN scroll up two lines.
     ; Pret ref: home/text.asm:_ContText (falls through into _ContTextNoPause).
-    call manual_text_scroll          ; ▼ + wait; (pret places arrow, ProtectedDelay3, ManualTextScroll)
+    call text_pause                  ; ▼ + wait; (pret places arrow, ProtectedDelay3, ManualTextScroll)
     ; fall through into the scroll
 .handle_scroll:
     ; <SCROLL> ($4C): _ContTextNoPause — scroll up two lines, cursor to (1,16), no wait.
@@ -769,37 +810,40 @@ PlaceNextChar:
     call scroll_text_up
     call scroll_text_up
     pop esi
-    mov esi, W_TILEMAP + 16 * SCREEN_W_TILES + 1
+    mov esi, [text_line2]            ; pret's (1,16) — the box's 2nd text line
     push esi
     jmp .advance
 
 .handle_para:
     ; <PARA> ($51): paragraph break — wait for input, clear text area, reposition at (1,14).
     ; Pret ref: home/text.asm:Paragraph — ManualTextScroll, ClearScreenArea 4×18 at (1,13).
-    call manual_text_scroll
-    ; Clear all 4 interior rows (rows 13-16, cols 1-18) with TILE_SPC.
-    push eax
+    call text_pause
+    ; Clear all 4 interior rows (pret's rows 13-16, cols 1-18) with TILE_SPC —
+    ; addressed off [text_line2]/[text_row_stride], as scroll_text_up is.
+    pushad
+    mov ecx, [text_row_stride]
+    mov edx, [text_line2]                ; (1, line2) = pret's (1,16)
+    mov ebx, edx
+    sub ebx, ecx
+    sub ebx, ecx
+    sub ebx, ecx                         ; (1, line2 - 3 rows) = pret's (1,13)
+    mov esi, 4                           ; 4 interior rows
+.para_row:
+    lea edi, [ebp + ebx]
     push ecx
-    push edi
     mov al, TILE_SPC
-    lea edi, [ebp + W_TILEMAP + 13 * SCREEN_W_TILES + 1]
     mov ecx, MSG_BOX_WIDTH
     rep stosb
-    lea edi, [ebp + W_TILEMAP + 14 * SCREEN_W_TILES + 1]
-    mov ecx, MSG_BOX_WIDTH
-    rep stosb
-    lea edi, [ebp + W_TILEMAP + 15 * SCREEN_W_TILES + 1]
-    mov ecx, MSG_BOX_WIDTH
-    rep stosb
-    lea edi, [ebp + W_TILEMAP + 16 * SCREEN_W_TILES + 1]
-    mov ecx, MSG_BOX_WIDTH
-    rep stosb
-    pop edi
     pop ecx
-    pop eax
+    add ebx, ecx
+    dec esi
+    jnz .para_row
+    popad
     call sync_dialog_window              ; show cleared box immediately
     pop esi
-    mov esi, W_TILEMAP + 14 * SCREEN_W_TILES + 1
+    mov esi, [text_line2]
+    sub esi, [text_row_stride]
+    sub esi, [text_row_stride]           ; pret's (1,14) — the box's 1st text line
     push esi
     jmp .advance
 
@@ -888,11 +932,11 @@ PlaceNextChar:
 
 .handle_cont:
     ; <CONT> ($55): ContText — scroll two lines, reposition at (1,16)
-    call manual_text_scroll
+    call text_pause
     call scroll_text_up
     call scroll_text_up
     pop esi
-    mov esi, W_TILEMAP + 16 * SCREEN_W_TILES + 1
+    mov esi, [text_line2]            ; pret's (1,16) — the box's 2nd text line
     push esi
     jmp .advance
 

@@ -148,11 +148,15 @@ def parse_body(lines, cm, mem, far_db):
             out += far_db[far]
             continue
         # tolerated no-ops in our model:
+        # The sound commands ($0B, $0E+) are emitted faithfully; the port's
+        # TextCommandProcessor currently skips them (TODO-HW: audio in text streams).
         if s in ("text_promptbutton", "text_waitbutton", "text_scroll", "text_low", "text_pause",
-                 "sound_get_item_1", "sound_level_up"):
+                 "sound_get_item_1", "sound_level_up",
+                 "sound_caught_mon", "sound_dex_page_added"):
             out.append({"text_promptbutton": 0x06, "text_waitbutton": 0x0D,
                         "text_scroll": 0x07, "text_low": 0x05, "text_pause": 0x0A,
-                        "sound_get_item_1": 0x0B, "sound_level_up": 0x0B}[s]); continue
+                        "sound_get_item_1": 0x0B, "sound_level_up": 0x0B,
+                        "sound_caught_mon": 0x12, "sound_dex_page_added": 0x13}[s]); continue
         if s == "text_asm":
             raise ValueError("text_asm body cannot be generated (translate as code)")
         # bare `db "..."` raw string (e.g. WhichTechniqueString)
@@ -233,7 +237,9 @@ def collect_wrappers(cm, mem, far_db):
             # Most battle stream wrappers end in "Text"; StartedSleepingEffect is the
             # lone exception (pret named Rest's "started sleeping!" stream with an
             # "Effect" suffix in engine/battle/move_effects/heal.asm).
-            m = re.match(r'([A-Z]\w*Text|StartedSleepingEffect):', lines[i].strip())
+            # Numbered wrappers count too (ItemUseBallText00..08, ItemUseText00,
+            # ThrowBallAtTrainerMonText1/2): the suffix is digits, not "Text".
+            m = re.match(r'([A-Z]\w*Text\d*|StartedSleepingEffect):', lines[i].strip())
             if not m:
                 i += 1; continue
             label = m.group(1)

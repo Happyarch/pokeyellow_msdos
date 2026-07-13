@@ -65,12 +65,12 @@ extern JoypadLowSensitivity            ; src/input/joypad_lowsens.asm (home/joyp
 TOWNMAP_WRAM_PLACEHOLDER      equ 0xDE00   ; TODO: not a real allocation
 wShadowOAMBackup              equ TOWNMAP_WRAM_PLACEHOLDER + 0x00  ; 160 bytes
 wWhichTownMapLocation         equ TOWNMAP_WRAM_PLACEHOLDER + 0xA0
-wOAMBaseTile                  equ TOWNMAP_WRAM_PLACEHOLDER + 0xA1
-wAnimCounter                  equ TOWNMAP_WRAM_PLACEHOLDER + 0xA2
 wTownMapSpriteBlinkingEnabled equ TOWNMAP_WRAM_PLACEHOLDER + 0xA3
-wSymmetricSpriteOAMAttributes equ TOWNMAP_WRAM_PLACEHOLDER + 0xA4
-; wDestinationMap now provided real by gb_memmap.inc (0xD719, menus S7); the old
-; TOWNMAP_WRAM_PLACEHOLDER + 0xA5 line was dropped (inconsistent equ redefinition).
+; wOAMBaseTile / wAnimCounter / wSymmetricSpriteOAMAttributes are now REAL
+; allocations in gb_memmap.inc (the mon-icon OAM work, engine/gfx/mon_icons.asm);
+; their placeholder equs here (+0xA1/+0xA2/+0xA4) were dropped — a second `equ`
+; with a different value is an inconsistent redefinition and broke `make check`.
+; Same story as wDestinationMap (real at 0xD719, menus S7; old +0xA5 line dropped).
 wTownVisitedFlag              equ TOWNMAP_WRAM_PLACEHOLDER + 0xA6  ; 2 bytes
 wTownMapCoords                equ TOWNMAP_WRAM_PLACEHOLDER + 0xA8  ; scratch buffer
 wFlyAnimUsingCoordList        equ TOWNMAP_WRAM_PLACEHOLDER + 0xC0

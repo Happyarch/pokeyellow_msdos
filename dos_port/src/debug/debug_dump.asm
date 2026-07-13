@@ -61,6 +61,9 @@ extern DisplayListMenuID
 extern DelayFrame
 global RunListMenuTest
 %endif
+%ifdef DEBUG_ITEMBALL
+extern UseItem                  ; home/item.asm — the pret home wrapper for UseItem_
+%endif
 %ifdef DEBUG_BATTLE
 extern PrepareNewGameDebug
 extern LoadFontTilePatterns
@@ -220,7 +223,25 @@ fseam: db "SEAMLOG.BIN", 0
 ;   0x200  tileset pointers (bank/blocks/gfx)      — pointer setup
 ; Addresses are the equs — the ROM window is allocator-packed (rom_window.inc)
 ; and moves whenever map data changes, so literals here WILL go stale.
-%ifdef DEBUG_CALCSTATS
+%ifdef DEBUG_ITEMBALL
+; ItemUseBall gate (items-plan Stage 6): the catch outcome + everything it mutates.
+;   $D11B wCapturedMonSpecies (0 = not caught), $D11D wPokeBallAnimData
+;         ($10 can't-catch / $20 miss / $61-$63 shakes / $43 caught)
+;   $D162 wPartyCount + species list — a capture makes it 6 with the new species last
+;   $D2FA party mon 6 struct — the caught mon (species, HP, level, DVs, catch rate)
+;   $D31C bag: MASTER_BALL's qty must drop 99 → 98 (and only that slot changes)
+;   $DA7F wBoxCount (must stay 0: the party had a free slot)
+windows:
+    dd 0xD11B    ; wCapturedMonSpecies / wPokeBallAnimData
+    dd 0xD162    ; wPartyCount + wPartySpecies
+    dd 0xD246    ; party mon 6 struct = wPartyMon1 + 5*44 ($D16A + 220) — the caught mon
+    dd 0xD31C    ; wNumBagItems + (id,qty) pairs
+    dd 0xDA7F    ; wBoxCount + wBoxSpecies
+    dd 0xCFE4    ; wEnemyMon (species/HP/status — LoadEnemyMonData round-trip)
+    dd 0xD2F6    ; wPokedexOwned (the caught species' bit must be set)
+    dd 0xD309    ; wPokedexSeen
+    dd 0xD11B    ; overview repeat
+%elifdef DEBUG_CALCSTATS
 ; CalcStats gate: one 64-byte window over the test scratch at $D1E0 covers the
 ; scratch mon (DVs at +$1B) and both stat results (L5 at +$20, L100 at +$30).
 windows:
@@ -636,6 +657,11 @@ RunBattleTest:
     mov word [ebp + wEnemyMonSpeed],   0x1500  ; 21
     mov word [ebp + wEnemyMonSpecial], 0x1000  ; 16
     mov byte [ebp + wEnemyMonSpecies], 0x24    ; PIDGEY (internal index) — real moveset gen
+    ; A real wild encounter sets wEnemyMonSpecies2 + wCurEnemyLevel (TryDoWildEncounter);
+    ; this harness seeds wEnemyMon* directly, so mirror them — LoadEnemyMonData keys off
+    ; wEnemyMonSpecies2, and ItemUseBall re-runs it on a capture (0 → GetMonLearnset OOB).
+    mov byte [ebp + wEnemyMonSpecies2], 0x24
+    mov byte [ebp + wCurEnemyLevel], 13
     ; Player "PIKACHU" L18, full 45-HP bar — enough to absorb several enemy turns so
     ; the battle runs long enough to watch the enemy's random move selection vary.
     mov byte [ebp + wBattleMonNick + 0], 0x8F  ; P
@@ -728,6 +754,40 @@ RunBattleTest:
     call SlideBattlePicsIn          ; faithful silhouette slide-in (darkened)
     call DrawBattleIntroBox         ; box + "Wild <nick> appeared!" + enemy HUD
     call SaveBattleScreen           ; snapshot the clean screen (restored on menu re-entry)
+%ifdef DEBUG_ITEMBALL
+    ; --- items-plan Stage 6 gate: throw a ball at the seeded wild PIDGEY. ---
+    ; The in-battle bag UI (BattleItemMenu) is still a battle-plan stub, so this
+    ; drives UseItem the way that menu eventually will: wCurItem = the ball,
+    ; wWhichPokemon = its BAG SLOT (RemoveItemFromInventory removes by index).
+    ; The seeded bag (debug_party.asm) is POTION, ANTIDOTE, MASTER_BALL, … → slot 2.
+    ; Party count is dropped to 5 so a capture takes the AddPartyMon path; the box
+    ; path (SendNewMonToBox) ends in the interactive naming screen, which a headless
+    ; run cannot answer. ITEMBALL_ID/ITEMBALL_SLOT override the ball under test.
+%ifndef ITEMBALL_ID
+%define ITEMBALL_ID 0x01                ; MASTER_BALL — always captures (deterministic)
+%endif
+%ifndef ITEMBALL_SLOT
+%define ITEMBALL_SLOT 2
+%endif
+    mov byte [ebp + wIsInBattle], 1     ; wild battle
+    mov byte [ebp + wPartyCount], 5     ; leave one party slot free
+    mov byte [ebp + wBattleType], 0     ; BATTLE_TYPE_NORMAL
+    mov byte [ebp + wWhichPokemon], ITEMBALL_SLOT
+    mov byte [ebp + wCurItem], ITEMBALL_ID
+    ; PrepareNewGameDebug does not clear the dex bitsets, so they hold uninitialised
+    ; WRAM — the "already in the pokédex?" FLAG_TEST would read a garbage 1 and skip
+    ; ShowPokedexData. Zero both bitsets so the capture takes the real new-species path
+    ; and the dump's owned bit is a meaningful check.
+    mov ecx, wPokedexSeenEnd - wPokedexOwned
+    mov esi, wPokedexOwned
+.zeroDex:
+    mov byte [ebp + esi], 0
+    inc esi
+    dec ecx
+    jnz .zeroDex
+    call UseItem
+    call DebugDumpMemory                ; DUMP.BIN (the windows: table below) + exit
+%endif
 %ifdef DEBUG_BATTLE_LIVE
     ; Intro: party-status pokéballs + "Wild <nick> appeared!", wait for A/B (blinking
     ; ▼), then the balls give way to the player HP-bar HUD (DisplayBattleMenu draws it).
@@ -1517,6 +1577,15 @@ autokey_script:
 %assign AK_I AK_I + 1
 %endrep
     dd  510 + AUTOKEY_DOWNS * 30, 516 + AUTOKEY_DOWNS * 30, PAD_A
+    dd  -1,  -1, 0
+%elifdef AUTOKEY_APRESS
+    ; DEBUG_ITEMBALL companion: nothing to navigate, just answer every <PROMPT> /
+    ; button wait the capture messages raise. A steady A pulse from frame 30 on.
+%assign AK_A 30
+%rep 40
+    dd AK_A, AK_A + 5, PAD_A
+%assign AK_A AK_A + 20
+%endrep
     dd  -1,  -1, 0
 %elifdef AUTOKEY_ITEMUSE
     ; items-plan Stage 5 (DEBUG_ITEMUSE): drive the real bag USE path twice.

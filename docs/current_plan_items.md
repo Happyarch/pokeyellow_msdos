@@ -105,8 +105,19 @@ Archive to `docs/plans/items.md` when complete.
     HP at 21/362; frame 660 shows "It won't have any effect." for the Antidote;
     frame 760 shows the bag list now headed by ANTIDOTE ×3 — the qty-1 POTION
     was consumed by `RemoveUsedItem`, the no-effect Antidote was not.
-- [ ] **Stage 6 — `ItemUseBall` (catching).** The Gen-1 catch algorithm +
+- [x] **Stage 6 — `ItemUseBall` (catching).** The Gen-1 catch algorithm +
   `ThrowBallAtTrainerMon` refusal + party/box add on success.
+  DONE. Verified headlessly with **`make DEBUG_ITEMBALL=1 [ITEMBALL_ID=…]`** (seeds
+  `wIsInBattle=1` + the wild PIDGEY of `RunBattleTest`, drops the party to 5 so the
+  capture takes the `AddPartyMon` path, and drives one throw → `DUMP.BIN`).
+  Master Ball: `wCapturedMonSpecies`=$24, party 5→6 with PIDGEY in slot 6 and its
+  catch-rate byte (**struct offset 7** — the Gen-2 held-item slot) intact at $FF,
+  Master Ball 99→98, `wBoxCount` still 0, `wPokedexOwned`/`Seen` bit 15 (dex #016)
+  set, the new-species Pokédex entry shown. Poké Ball on a full-HP L13 PIDGEY:
+  `wPokeBallAnimData`=$20 (0 shakes), `wCapturedMonSpecies`=0, party stays 5, enemy
+  HP/status restored by the `LoadEnemyMonData` round-trip, ball still consumed.
+  The "Index #000 Post-Capture" bug-ledger row is tagged `BUG(critical)` at the
+  dex-flag site (dex 0 → `dec a` → bit 255 → OOB past `wPokedexOwned`).
   - Pure-math core (catch-rate RNG chain, ball factors, wobble count formula)
     → **native ELF32 validation** against known vectors before wiring.
   - Out-of-battle guard (`ItemUseNotTime`) is testable from the bag

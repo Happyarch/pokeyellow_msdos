@@ -507,6 +507,29 @@ endif
 # mon 1, then ANTIDOTE -> USE -> mon 1 (which must refuse). Headless; dumps
 # FRAME.BIN at AUTOKEY_DUMP_FRAME (380 heal message / 620 refusal / 700 bag list).
 # make DEBUG_ITEMUSE=1 AUTOKEY_DUMP_FRAME=380
+# Ball-throw gate (items-plan Stage 6): seed a wild battle (the DEBUG_BATTLE path),
+# throw ITEMBALL_ID (default MASTER_BALL) from bag slot ITEMBALL_SLOT, dump the
+# capture WRAM to DUMP.BIN and exit. Headless; AUTOKEY answers the <PROMPT> waits in
+# the caught/dex messages. make DEBUG_ITEMBALL=1 [ITEMBALL_ID=0x04 ITEMBALL_SLOT=n]
+ifdef DEBUG_ITEMBALL
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_ITEMBALL -D DEBUG_BATTLE -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_APRESS -D DEBUG_SEED_PARTY
+ifdef ITEMBALL_ID
+NASMFLAGS += -D ITEMBALL_ID=$(ITEMBALL_ID)
+endif
+ifdef ITEMBALL_SLOT
+NASMFLAGS += -D ITEMBALL_SLOT=$(ITEMBALL_SLOT)
+endif
+# ITEMBALL_ATTACH_DELAY=1 waits ~4s before the throw, so a debugger can attach.
+ifdef ITEMBALL_ATTACH_DELAY
+NASMFLAGS += -D ITEMBALL_ATTACH_DELAY
+endif
+# AutoKeyDrive's own FRAME.BIN dump exits the program; the capture (with the new-species
+# Pokédex entry) runs past its default frame 200, so push it out of the way here.
+AUTOKEY_DUMP_FRAME ?= 999999
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
 ifdef DEBUG_ITEMUSE
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_ITEMUSE -D DEBUG_SEED_PARTY -D SKIP_TITLE

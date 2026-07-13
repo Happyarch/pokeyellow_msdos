@@ -120,6 +120,11 @@ BAG_ITEM_CAPACITY       equ 20
 PC_ITEM_CAPACITY        equ 50
 
 ; --- item ids referenced by item-use effects (constants/item_constants.asm) ---
+MASTER_BALL             equ 0x01    ; the four ball ids ItemUseBall's catch math keys on
+ULTRA_BALL              equ 0x02
+GREAT_BALL              equ 0x03
+POKE_BALL               equ 0x04
+SAFARI_BALL             equ 0x08
 HP_UP                   equ 0x23    ; first vitamin (PROTEIN/IRON/CARBOS/CALCIUM follow)
 PROTEIN                 equ 0x24
 IRON                    equ 0x25
@@ -142,6 +147,20 @@ MAX_ETHER               equ 0x51
 ; --- move PP byte fields (constants/battle_constants.asm) ---
 PP_UP_MASK              equ 0xC0    ; %11000000, PP Ups applied
 PP_MASK                 equ 0x3F    ; %00111111, remaining PP
+
+; --- battle-animation ids (constants/move_constants.asm — moves do double duty
+; as animation ids, so the anim enum continues past NUM_ATTACKS) ---
+TOSS_ANIM               equ 0xC1    ; toss Poké Ball (ItemUseBall / ThrowBallAtTrainerMon)
+
+; --- naming-screen types (constants/menu_constants.asm) ---
+NAME_PLAYER_SCREEN      equ 0
+NAME_RIVAL_SCREEN       equ 1
+NAME_MON_SCREEN         equ 2
+
+; --- the ghost Marowak (constants/pokemon_constants.asm: RESTLESS_SOUL = MAROWAK) ---
+MAROWAK                 equ 0x91    ; internal species index
+RESTLESS_SOUL           equ MAROWAK ; Pokémon Tower 6F's uncatchable ghost
+DITTO                   equ 0x4C    ; internal index (Transform → assumed Ditto)
 
 ; --- Gen-2 forward-compat: held item carried in the catch-rate byte ---
 ; The party/box mon struct's MON_CATCH_RATE byte (offset 7) is Gen 2's held-item

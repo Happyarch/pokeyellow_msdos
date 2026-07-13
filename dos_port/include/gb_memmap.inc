@@ -230,9 +230,20 @@ wBoxSpecies        equ 0xDA80   ; MONS_PER_BOX+1 species + $FF sentinel
 wBoxMons           equ 0xDA95
 wBoxMon1           equ 0xDA95   ; = wBoxMons (pikachu_status alias)
 wBoxMon2           equ 0xDAB6   ; wBoxMon1 + BOXMON_STRUCT_LENGTH (33)
+wBoxMon1CatchRate  equ 0xDA9C   ; = wBoxMon1 + MON_CATCH_RATE (Gen-2 held-item slot)
 wBoxMonOT          equ 0xDD29
+wBoxMon1OT         equ 0xDD29   ; = wBoxMonOT (first OT-name slot; SendNewMonToBox)
 wBoxMonNicks       equ 0xDE05
+wBoxMon1Nick       equ 0xDE05   ; = wBoxMonNicks (first nickname slot; SendNewMonToBox)
 wBoxMonNicksEnd    equ 0xDEE1
+wNumSafariBalls    equ 0xDA46   ; Safari Zone ball count (ItemUseBall decrements it)
+
+; --- ItemUseBall (catching) scratch, pret wram.asm ---
+wCapturedMonSpecies      equ 0xD11B ; species just caught (0 = nothing caught this throw)
+wPokeBallAnimData        equ 0xD11D ; the throw's outcome/shake code ($10/$20/$61-$63/$43)
+wPokeBallCaptureCalcTemp equ 0xD11D ; = wPokeBallAnimData (pret unions them; X is stashed
+                                    ; here only across the failed-capture shake math, which
+                                    ; writes wPokeBallAnimData afterwards — never both live)
 
 ; ===========================================================================
 ; Battle engine WRAM aliases (current_plan_battle_engine.md)
