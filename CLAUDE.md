@@ -292,3 +292,15 @@ already holding an item via it (e.g. Kadabra → `TWISTEDSPOON_GSC` $60, written
 `_AddPartyMon`). Any new code that builds/copies/converts a mon (party↔box
 deposit/withdraw, trades, save format) must carry offset 7 through verbatim.
 See `dos_port/include/gb_constants.inc` (struct members) for the load-bearing note.
+
+<!-- stigmergy:begin — managed block, do not edit; `stigmergy init` regenerates it -->
+## stigmergy
+
+This project uses **stigmergy** for memory and coordination shared across every agent working here (Claude Code and Codex alike).
+
+- **Memory lives in stigmergy, not in your own memory files.** Use `memory_search` before starting work, and record durable facts with `memory_write`. Do not keep a private memory directory for this project.
+- **Register at the start of every session**: `context_open`, then `root_register` with your host session id as `session_label`.
+- **Claim before you edit** anything another agent might touch: `claim_acquire`. Edits to a file claimed by another agent are blocked outright.
+- **When a claim blocks you**, the owner is named. Negotiate with `mailbox_send`, or work elsewhere. Never edit around a claim.
+- **Only the root session** may claim, write memory, or send mail. Subagents read and report back.
+<!-- stigmergy:end -->
