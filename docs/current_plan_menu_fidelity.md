@@ -842,7 +842,7 @@ leaf selection are correct ("looks good on the menu end"). The *exit* half did n
 the two failures are recorded as M-28 (fixed) and M-29 (open, deferred out of this row). The
 dispatch itself has not needed a change since it was written.
 
-### M-28. `.goBackToMap` never tore down the party menu's compositor state — the map came back BLANK [FIXED — row 9 part 3 follow-up]
+### M-28. `.goBackToMap` never tore down the party menu's compositor state — the map came back BLANK [FIXED — row 9 part 3 follow-up, `04c8c96f`]
 **Found live, not by the gate** (no golden opens the field-move menu; 6/6 passed throughout).
 
 `DisplayPartyMenu` raises **`g_bg_whiteout`** (`party_menu.asm:417`), the port-only compositor
