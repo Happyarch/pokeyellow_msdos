@@ -1245,7 +1245,8 @@ assets/gb_charmap.txt:
 # START-menu item labels, encoded via the unicode_converter submodule (gb_text),
 # plus the START-sub-menu FAR message streams (menu_text.inc), flattened out of
 # pret's data/text/*.asm by gen_battle_text.collect_far — hence the extra deps.
-assets/menu_strings.inc assets/menu_text.inc: assets/gb_charmap.txt tools/gen_menu_strings.py \
+assets/menu_strings.inc assets/menu_text.inc assets/trainer_card_strings.inc: \
+        assets/gb_charmap.txt tools/gen_menu_strings.py \
         tools/gb_text.py tools/gen_battle_text.py
 	python3 tools/gen_menu_strings.py
 
@@ -1396,7 +1397,8 @@ assets/trainer_card_tiles.inc: ../gfx/trainer_card/trainer_info.2bpp \
                                tools/gen_trainer_card_tiles.py
 	python3 tools/gen_trainer_card_tiles.py
 
-src/engine/menus/trainer_card.o: assets/trainer_card_tiles.inc assets/ui_layout_menus.inc
+src/engine/menus/trainer_card.o: assets/trainer_card_tiles.inc assets/trainer_card_strings.inc \
+                                 assets/ui_layout_menus.inc
 
 # Pokédex interface tiles (2bpp passthrough of gfx/pokedex/pokedex.2bpp + the
 # plain pokéball tile from gfx/battle/balls.2bpp) for LoadPokedexTilePatterns.
@@ -1597,7 +1599,7 @@ assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_
         assets/super_rod.inc assets/town_map_data.inc assets/town_map_gfx.inc \
         assets/ui_layout_menus.inc assets/ui_layout_battle.inc \
         assets/map_border_overrides.inc assets/badge_tiles.inc \
-        assets/trainer_card_tiles.inc assets/emotes.inc \
+        assets/trainer_card_tiles.inc assets/trainer_card_strings.inc assets/emotes.inc \
         assets/alphabets.inc assets/dex_entries.inc assets/sprite_sets.inc \
         assets/sprite_sheet_pointers.inc assets/pokedex_tiles.inc \
         assets/mon_pics.inc \

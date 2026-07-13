@@ -8,13 +8,23 @@ Faithful to pret engine/menus/start_sub_menus.asm:DrawTrainerInfo, which loads:
       tiles 0-7 → vChars2 tile $77  (box-drawing corners/edges)
       tile  8   → vChars1 tile $57  (box background)
   BlankLeaderNames:               INCBIN "gfx/trainer_card/blank_leader_names.2bpp"
-      → vChars2 tile $60
+      → vChars2 tile $60, `ld bc, $17 tiles` = 23 tiles
   BadgeNumbersTileGraphics:       INCBIN "gfx/trainer_card/badge_numbers.2bpp"  (8 tiles)
       → vChars1 tile $58
   the colon glyph = TextBoxGraphics (gfx/font/font_extra.2bpp) tile 13
       → vChars1 tile $56  (drawn as tilemap id $D6)
-  CircleTile:                     INCBIN "gfx/trainer_card/circle_tile.2bpp"    (1 tile)
-      → vChars2 tile $76  (the ○ in "○BADGES○")
+
+CircleTile — the ○ in "○BADGES○" — has NO load of its own, and no referencer
+anywhere in pret. It rides along on the BlankLeaderNames copy: blank_leader_names
+.2bpp is 22 tiles, DrawTrainerInfo copies 23, and gfx/trainer_card.asm places
+CircleTile IMMEDIATELY after it, so the 23rd tile read is the circle and it lands
+at vChars2 $60 + 22 = $76 — precisely the tile id TrainerInfo_BadgesText prints.
+That adjacency is load-bearing, not incidental: this file therefore emits the two
+blobs CONTIGUOUSLY (tc_circle_tile directly after tc_blank_name_tiles, nothing
+between) and exports TC_BLANK_NAME_COPY_COUNT = 23 as the count to copy, so the
+port reproduces pret's single copy instead of inventing a second one. Asserted
+below — if pret's asset sizes ever change, this fails loudly rather than silently
+loading the wrong 23rd tile.
 
 The gym-leader face + badge sheet (gfx/trainer_card/badges.2bpp) is NOT bundled
 here — it is already carried by tools/gen_badge_tiles.py (assets/badge_tiles.inc)
@@ -64,7 +74,17 @@ def main():
 
     blank_names = read_tiles(TC / "blank_leader_names.2bpp")   # → vChars2 $60
     badge_numbers = read_tiles(TC / "badge_numbers.2bpp")      # → vChars1 $58
-    circle = read_tiles(TC / "circle_tile.2bpp")               # → vChars2 $76
+    circle = read_tiles(TC / "circle_tile.2bpp")               # rides the copy above → $76
+
+    # pret's DrawTrainerInfo copies $17 tiles from BlankLeaderNames; the asset is
+    # one tile short of that, and CircleTile is what the last tile actually reads.
+    copy_count = len(blank_names) // TILE + len(circle) // TILE
+    if copy_count != 0x17:
+        raise SystemExit(
+            f"blank_leader_names + circle_tile = {copy_count} tiles, but pret's "
+            f"DrawTrainerInfo copies $17 (23). The ○ would land at the wrong VRAM "
+            f"slot — re-derive the load against engine/menus/start_sub_menus.asm."
+        )
 
     font_extra = read_tiles(FONT_EXTRA)
     off = COLON_TILE_INDEX * TILE
@@ -79,14 +99,19 @@ def main():
     out.append(f"TC_TILE_BYTES         equ {TILE}")
     out.append(f"TC_BOX_TILE_COUNT     equ {len(box_tiles)//TILE}")
     out.append(f"TC_BLANK_NAME_COUNT   equ {len(blank_names)//TILE}")
+    out.append(f"TC_BLANK_NAME_COPY_COUNT equ {copy_count}   ; pret: ld bc, $17 tiles")
     out.append(f"TC_BADGE_NUM_COUNT    equ {len(badge_numbers)//TILE}")
     out.append("")
     emit(out, "tc_box_tiles", box_tiles)
     emit(out, "tc_bg_tile", bg_tile)
+    out.append("; tc_blank_name_tiles and tc_circle_tile are CONTIGUOUS on purpose —")
+    out.append("; pret's gfx/trainer_card.asm lays CircleTile straight after")
+    out.append("; BlankLeaderNames, and DrawTrainerInfo's $17-tile copy walks off the")
+    out.append("; end of the names into it. Do not insert anything between them.")
     emit(out, "tc_blank_name_tiles", blank_names)
+    emit(out, "tc_circle_tile", circle)
     emit(out, "tc_badge_number_tiles", badge_numbers)
     emit(out, "tc_colon_tile", colon)
-    emit(out, "tc_circle_tile", circle)
 
     DST.parent.mkdir(parents=True, exist_ok=True)
     DST.write_text("\n".join(out) + "\n")
