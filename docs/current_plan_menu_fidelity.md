@@ -922,19 +922,31 @@ is its *duration*: message 1 now flashes past in `Delay3`'s 3 frames and message
 A stub that is "ret-only" per the convention can still be wrong when the contract callers rely on
 is **how long it takes**.
 
-Cries are genuinely not done — confirmed with the user, and I overclaimed the opposite once from a
-symbol-name grep before reading the body (`PlaySound`/`WaitForSoundToFinish` are real;
-**`GetCryData` is a ret-stub**). But the blocker is NOT what the stubs say:
-- `GetCryData`'s stub comment claims *"No audio HAL in this port (Phase 3)"* — **stale**; audio
-  phases A-E merged 2026-07-07.
-- The `CryData` table **already exists and is exported** (`assets/cry_data.inc`, `global CryData`,
-  3 bytes/species: base cry id, pitch mod, length mod). `audio_data.asm:7` is the accurate note:
-  *"consumed by GetCryData when the cry path lands (Task 5+)."*
+**Cries are TWO ret-stubs away, not an audio project.** I got this wrong twice in opposite
+directions in one turn — first claiming the primitives were all present (from a symbol-name grep,
+without reading the body: `GetCryData` is a `ret`), then accepting "it's an audio-driver design
+question" without checking. Then I checked. The engine side is **done**:
 
-So what is actually missing is **driver-side cry support** — how the pitch/length mods map onto the
-OPL/MT-32 back ends — a real audio-driver design question, not a menu fix. Owner: the audio
-subsystem. **Convention violation to fix while there:** `GetCryData`'s ret-stub lives in
-`engine/menus/pokedex.asm`, not in a `*_stubs.asm`.
+| piece | status |
+|---|---|
+| `CryData` (3B/species: cry id, pitch mod, tempo mod) | **exists**, generated + exported (`assets/cry_data.inc`, `global CryData`) |
+| cry support in the engine | **exists** — `engine_1.asm` has `Audio1_IsCry`, `CRY_SFX_START/END`, and consumes `wFrequencyModifier` (:881) / `wTempoModifier` (:857) |
+| `PlaySound` | **real** (gated on `g_audio_engine_online`, which `audio_init` sets — music plays) |
+| `WaitForSoundToFinish` | **real** — spins on `wChannelSoundIDs` CHAN5/6/8 |
+| `GetCryData` | **ret-stub** — pret `home/pokemon.asm:157`, ~15 instructions |
+| `PlayCry` | **ret-stub** — pret `home/pokemon.asm:140`, 14 instructions |
+
+Two direct translations, no design work. Genuinely unknown (and worth saying so): whether the
+OPL/MT-32 shims render a cry acceptably once handed one — tuning, not a blocker.
+
+**Both stubs lie about why they exist**, and both comments are now fixed:
+- `GetCryData` claimed *"No audio HAL in this port (Phase 3)"* — false since the audio phases
+  merged (2026-07-07), and it also cited the wrong pret file (`home/audio.asm`), which is what made
+  it read as an audio-subsystem deferral instead of the plain home-routine translation it is.
+- `PlayCry` claimed a bare `ret` *"costs the cry and nothing else"* — false, see the contract above.
+
+**Convention violation to fix while destubbing:** `GetCryData`'s ret-stub sits in
+`engine/menus/pokedex.asm`, a source-mirror file, not a `*_stubs.asm`.
 
 ### M-29 (superseded heading — original text follows for the record)
 STRENGTH's two messages render wrong, and the cause is one layer below this file. `PrintText`

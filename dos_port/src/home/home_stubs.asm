@@ -57,19 +57,47 @@ DisplayTextID:
 ; ---------------------------------------------------------------------------
 ; PlayCry — pret ref: home/pokemon.asm:PlayCry (AL = species).
 ;
-; The mon cry: pitch/length-shifted playback of a per-species cry sample set.
-; The audio engine is live (Phase 3), but the CRY layer on top of it is not
-; ported — status_screen.asm carries the same TODO-HW for the STATS-screen cry.
+; The mon cry. pret ref: home/pokemon.asm:140 — FOURTEEN instructions, a direct
+; translation. Do not read this stub as "cries are a big audio project": they are
+; not. Everything under PlayCry already exists in the port:
+;   CryData              assets/cry_data.inc — GENERATED and exported (`global
+;                        CryData`, src/data/audio_data.asm); 3 bytes per species
+;                        index: base cry id, pitch mod, tempo mod.
+;   the engine           src/audio/engine_1.asm already understands cries —
+;                        Audio1_IsCry, CRY_SFX_START/CRY_SFX_END, and it consumes
+;                        wFrequencyModifier (:881) and wTempoModifier (:857).
+;   PlaySound            src/home/audio.asm — real (gated on g_audio_engine_online,
+;                        which audio_init sets; music plays, so it is on).
+;   WaitForSoundToFinish src/home/audio.asm — real; spins on wChannelSoundIDs
+;                        CHAN5/6/8.
+; TWO routines are missing, and only two:
+;   GetCryData  — pret home/pokemon.asm:157. Currently a ret-stub, and one living
+;                 in the WRONG FILE (src/engine/menus/pokedex.asm, not a *_stubs.asm
+;                 — convention violation, fix it on the way past). Indexes CryData by
+;                 species-1 (3 bytes/entry) → B = cry id, wFrequencyModifier,
+;                 wTempoModifier; returns A = cry_id*3 + CRY_SFX_START (cry headers
+;                 are 3 channels each). Its BankswitchHome/Back pair is a flat no-op.
+;   PlayCry     — this stub. Zero wLowHealthAlarm around GetCryData → PlaySound →
+;                 WaitForSoundToFinish, then restore it.
+; Open question, honestly unknown: whether the OPL/MT-32 shims render a cry
+; acceptably once the virtual APU is handed one. That is tuning, not a blocker.
 ;
-; Contract: pret's PlayCry returns nothing and no caller reads flags from it.
-; Its one live caller today is the text_asm hook inside UsedStrengthText
-; (field_move_messages.asm), which does `call PlayCry / call Delay3 / jmp
-; TextScriptEnd` — so a bare ret costs the cry and nothing else: the STRENGTH
-; message still prints and still holds for its Delay3.
+; CONTRACT — THE PART A ret-ONLY STUB SILENTLY BREAKS. pret's PlayCry ends in
+; WaitForSoundToFinish: it BLOCKS for the duration of the cry. Callers depend on that
+; duration, not on any register or flag. The port's one live caller is the text_asm
+; hook inside UsedStrengthText (field_move_messages.asm) — `call PlayCry / call
+; Delay3 / jmp TextScriptEnd` — where the block is the ONLY thing holding "<MON> used
+; STRENGTH." on screen. With a bare ret, Delay3's 3 frames are all message 1 gets
+; before "<MON> can move boulders." paints over it: observed live, 2026-07-13, the
+; message reads as SKIPPED. So this stub is not free, and the earlier comment here
+; claiming it "costs the cry and nothing else" was wrong.
 ;
-; TODO(audio): retire when the cry layer lands (see docs/current_plan_audio.md).
-; This stub is what lets field_move_messages.asm LINK — it was the file's only
-; unresolved symbol, and it gated STRENGTH + SURF (menu-fidelity row 9 part 3).
+; A ret-only stub satisfies the stub convention and can still be wrong, when the
+; contract callers rely on is HOW LONG IT TAKES. Ledger: M-32.
+;
+; TODO(audio): retire together with GetCryData. This stub is what lets
+; field_move_messages.asm LINK — it was the file's only unresolved symbol, and it
+; gated STRENGTH + SURF (menu-fidelity row 9 part 3).
 ; ---------------------------------------------------------------------------
 global PlayCry
 PlayCry:

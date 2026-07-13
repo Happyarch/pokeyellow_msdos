@@ -640,9 +640,29 @@ RunDefaultPaletteCommand:
     jmp RunPaletteCommand
 
 ; ---------------------------------------------------------------------------
-; GetCryData — STUB. pret home/audio.asm:GetCryData loads the species' cry sfx
-; id/pitch/length for PlaySound. No audio HAL in this port (Phase 3).
-; TODO-HW: audio HAL — no-op preserving flow (.choseCry then PlaySound + retry).
+; GetCryData — STUB. pret ref: home/pokemon.asm:157 (NOT home/audio.asm).
+;
+; The old comment here said "No audio HAL in this port (Phase 3)". That is FALSE and
+; has been since the audio phases merged (2026-07-07): the engine is live, music
+; plays, PlaySound and WaitForSoundToFinish are real bodies, and src/audio/engine_1.asm
+; already understands cries (Audio1_IsCry, CRY_SFX_START/END, and it reads the two
+; modifier vars this routine is supposed to set). The cry data is generated and
+; exported too (assets/cry_data.inc → `global CryData`). Nothing about the HAL blocks
+; this. What blocks it is that nobody has written these ~15 instructions.
+;
+; TWO stub violations to fix while destubbing, both real:
+;   1. This is a ret-stub in a SOURCE-MIRROR file. Stubs belong in a *_stubs.asm
+;      (CLAUDE.md / project-conventions). It should never have been parked here.
+;   2. Its pret ref was wrong (home/audio.asm), which is why it reads as an
+;      audio-subsystem deferral rather than the plain home-routine translation it is.
+;
+; The real body (pret home/pokemon.asm:157): index CryData by species-1, 3 bytes per
+; entry → B = base cry id, [wFrequencyModifier] = pitch mod, [wTempoModifier] = tempo
+; mod; return A = cry_id*3 + CRY_SFX_START (cry headers are 3 channels each). The
+; BankswitchHome/BankswitchBack pair around the table read is a no-op in the flat port.
+;
+; Its only caller is PlayCry (home/home_stubs.asm), also a ret-stub — see the long
+; note there for the blocking contract a bare ret drops. Ledger: M-32.
 ; ---------------------------------------------------------------------------
 GetCryData:
     ret
