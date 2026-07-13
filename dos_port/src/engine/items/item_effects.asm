@@ -784,6 +784,7 @@ extern PlaySoundWaitForCurrent ; home/audio.asm
 ; needs the byte count to stage the stream in GB space, and a cross-object
 ; `Label_end - Label` is not a relocatable immediate.
 extern ItemUseNoEffectText_ref
+extern ThrewBaitText_ref, ThrewRockText_ref   ; assets/item_text.inc
 extern ItemUseNotTimeText_ref
 extern ItemUseNotYoursToUseText_ref
 extern DontHavePokemonText_ref
@@ -795,8 +796,6 @@ extern ItemUseBicycle
 extern ItemUseSurfboard
 extern ItemUsePokedex
 extern ItemUseEvoStone
-extern ItemUseBait
-extern ItemUseRock
 extern ItemUseEscapeRope
 extern ItemUseRepel
 extern ItemUseSuperRepel
@@ -1553,6 +1552,7 @@ extern Music_PokeFluteInBattle    ; audio/poke_flute.asm
 extern StopAllMusic               ; home/audio.asm
 extern PlayMusic                  ; home/audio.asm
 extern Random                 ; home/random.asm — AL = next random byte
+extern PlayBattleAnimation    ; engine/battle/move_effect_helpers.asm (ANIMATION=OFF hook)
 extern Multiply               ; home/math.asm — hMultiplicand(3) * hMultiplier → hProduct(4)
 extern IndexToPokedex         ; data/pokemon_data.asm — FLAT TABLE: [species-1] → dex number
 extern ShowPokedexData        ; engine/menus/pokedex_entry.asm (predef)
@@ -2779,6 +2779,74 @@ ItemUseCoinCase:
 global ItemUseOaksParcel
 ItemUseOaksParcel:
     jmp ItemUseNotYoursToUse
+
+; --------------------------------------------------------------------------- #
+; ItemUseBait / ItemUseRock — the Safari Zone's BAIT and ROCK.
+; pret ref: engine/items/item_effects.asm:ItemUseBait / ItemUseRock /
+; BaitRockCommon. (In the bag these item ids are SAFARI_BAIT / SAFARI_ROCK, which
+; double as the badge items outside the Safari Zone — see pret's own comment.)
+;
+; Bait halves the enemy's catch rate and raises the bait factor; Rock doubles the
+; catch rate (saturating) and raises the escape factor. Each zeroes the OTHER
+; factor. The added amount is a 1..5 roll — pret rejects any Random() & 7 >= 5
+; rather than taking a modulus, so the distribution is uniform; keep the loop.
+;
+; PORT: pret ends with `predef MoveAnimation`. The port realizes that whole family
+; as the ANIMATION=OFF hooks in engine/battle/move_effect_helpers.asm, where
+; PlayBattleAnimation (pret's own `ld [wAnimationID], a` wrapper around the same
+; predef) is the entry every move effect already calls. The animation engine is
+; deferred, so it is a no-op ret today — the state changes above are the effect.
+; --------------------------------------------------------------------------- #
+global ItemUseBait
+ItemUseBait:
+    mov esi, [ThrewBaitText_ref]
+    mov ecx, [ThrewBaitText_ref + 4]
+    call iu_print_text                  ; call PrintText
+    shr byte [ebp + wEnemyMonActualCatchRate], 1   ; srl [hl] — halve catch rate
+    mov al, BAIT_ANIM
+    mov esi, wSafariBaitFactor          ; ld hl, wSafariBaitFactor  (the one raised)
+    mov edx, wSafariEscapeFactor        ; ld de, wSafariEscapeFactor (the one zeroed)
+    jmp BaitRockCommon
+
+global ItemUseRock
+ItemUseRock:
+    mov esi, [ThrewRockText_ref]
+    mov ecx, [ThrewRockText_ref + 4]
+    call iu_print_text                  ; call PrintText
+    mov al, [ebp + wEnemyMonActualCatchRate]
+    add al, al                          ; double catch rate
+    jnc .noCarry
+    mov al, 0xFF                        ; saturate
+.noCarry:
+    mov [ebp + wEnemyMonActualCatchRate], al
+    mov al, ROCK_ANIM
+    mov esi, wSafariEscapeFactor        ; ld hl, wSafariEscapeFactor (the one raised)
+    mov edx, wSafariBaitFactor          ; ld de, wSafariBaitFactor   (the one zeroed)
+    ; fallthrough
+
+; In: AL = animation id, ESI = factor to raise, EDX = factor to zero.
+BaitRockCommon:
+    mov [ebp + wAnimationID], al
+    xor al, al
+    mov [ebp + wAnimationType], al
+    mov [ebp + hWhoseTurn], al
+    mov [ebp + edx], al                 ; ld [de], a — zero the other factor
+.randomLoop:                            ; loop until the roll is < 5 (uniform 1..5)
+    call Random
+    and al, 7
+    cmp al, 5
+    jae .randomLoop                     ; jr nc
+    inc al                              ; range 1..5
+    mov bh, al                          ; ld b, a
+    mov al, [ebp + esi]                 ; the factor being raised
+    add al, bh
+    jnc .noCarry
+    mov al, 0xFF                        ; saturate
+.noCarry:
+    mov [ebp + esi], al
+    call PlayBattleAnimation            ; pret: predef MoveAnimation — see the note above
+    mov bl, 70                          ; ld c, 70
+    jmp DelayFrames                     ; jp DelayFrames
 
 global ItemUseTownMap
 ItemUseTownMap:

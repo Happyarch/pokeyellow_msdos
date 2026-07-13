@@ -296,7 +296,11 @@ windows:
                  ; ItemUseNotTime (see the BUG note there).
                  ; (was wEvoStoneItemID $D155 for Stage 8 — verified)
     dd 0xCCD3    ; wCanEvolveFlags + wForceEvolution
-    dd 0xCEE9    ; wEvoOldSpecies + wEvoNewSpecies
+    dd 0xD000    ; Stage 11 (Safari): wEnemyMonActualCatchRate ($D006, +6) — drive with
+                 ; ITEMSTONE_INBATTLE=1 and ITEMSTONE_ID=SAFARI_BAIT $15 (halves it) /
+                 ; SAFARI_ROCK $16 (doubles it, saturating). The two Safari factors
+                 ; ($CCE8/$CCE9) already fall inside the $CCD3 window above, at +$15/+$16.
+                 ; (was wEvoOldSpecies/wEvoNewSpecies $CEE9 for Stage 8 — verified)
     dd 0xD0DA    ; wRepelRemainingSteps — Stage 9 (drive with ITEMSTONE_ID=REPEL
                  ; $1E / SUPER_REPEL $38 / MAX_REPEL $39; RunStoneTest dispatches
                  ; UseItem by wCurItem, so it exercises any item's handler)
@@ -1610,6 +1614,9 @@ RunStoneTest:
                                                 ; seeds these; X Attack must take it to 8
     mov byte [ebp + wPartyMon1Status], 3       ; SLP, 3 turns — so POKE_FLUTE $49 has
     mov byte [ebp + wBattleMonStatus], 3       ; something to wake (harmless to the rest)
+    mov byte [ebp + wEnemyMonActualCatchRate], 0x2A  ; Safari BAIT/ROCK operate on this
+    mov byte [ebp + wSafariBaitFactor], 0            ; (42 -> 21 on bait, 84 on rock)
+    mov byte [ebp + wSafariEscapeFactor], 0
 %endif
     call UseItem
     call DebugDumpMemory                    ; DUMP.BIN (the windows: table above) + exit

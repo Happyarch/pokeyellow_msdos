@@ -29,8 +29,6 @@ bits 32
 section .text
 
 global ItemUseSurfboard
-global ItemUseBait
-global ItemUseRock
 global ItemUseEscapeRope
 global ItemUseItemfinder
 global ItemUseOldRod
@@ -40,8 +38,6 @@ global ItemUsePPUp
 global ItemUsePPRestore
 
 ItemUseSurfboard:
-ItemUseBait:
-ItemUseRock:
 ItemUseEscapeRope:
 ItemUseItemfinder:
 ItemUseOldRod:

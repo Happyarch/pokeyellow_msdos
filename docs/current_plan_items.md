@@ -320,7 +320,30 @@ Archive to `docs/plans/items.md` when complete.
     (reading the port's own x86 opcode would be meaningless); level 2 reads the intended
     tile, which only changes the message. Verified (`ITEMSTONE_ID=0x30`): result 0,
     gate id 0, flag clear, key item not consumed.
-  - [ ] Surfboard: guard + refusal only; execution = overworld Surf.
+  - [x] Safari BAIT ($15) / ROCK ($16): `ItemUseBait` / `ItemUseRock` /
+    `BaitRockCommon`. Bait halves the enemy's catch rate and raises the bait factor;
+    Rock doubles it (saturating) and raises the escape factor; each zeroes the other
+    factor, by a uniform 1..5 roll (pret rejects `Random & 7 >= 5` rather than taking a
+    modulus — the loop is kept). Two stubs retired; `wSafariEscapeFactor`/`wSafariBaitFactor`
+    ($CCE8/$CCE9, sym-verified) and `ROCK_ANIM`/`BAIT_ANIM` allocated.
+    Verified (`ITEMSTONE_INBATTLE=1`, catch rate seeded to 42): BAIT → 21, bait factor
+    4, escape 0; ROCK → 84, escape factor 4, bait 0; both result=1.
+    One deviation: pret ends with `predef MoveAnimation`; the port calls
+    `PlayBattleAnimation` (pret's own wrapper around that predef), which is the
+    ANIMATION=OFF no-op hook every move effect already uses — the animation engine is
+    deferred, so the state changes above ARE the effect.
+    Reachable only from a Safari battle's ITEM menu (battle plan), so the UI path is
+    unexercised — same caveat as Stage 10.
+  - [ ] PP Up / PP Restore (ETHER/MAX_ETHER/ELIXER/MAX_ELIXER, PP_UP).
+    **BLOCKED — `docs/items_blockers.md` B8.** Both go through `MoveSelectionMenu` with
+    `wMoveMenuType = 2` (the relearn-style menu over the PARTY mon's moves); the port's
+    `MoveSelectionMenu` implements only the regular battle path (reads `wBattleMonMoves`,
+    gates on `wBattleMonPP`). Every other dependency is ported, including all five texts.
+    pret's Max-Ether PP-Up bug must be preserved + tagged when it lands.
+  - [ ] Surfboard. **BLOCKED — `docs/items_blockers.md` B9.** Not "guard + refusal" as
+    this plan assumed: `ItemUseSurfboard` IS the Surf execution (mount/dismount), and
+    `IsSpriteInFrontOfPlayer2` + `SurfingAttemptFailed` are missing in the port.
+    Overworld-plan work.
 - [ ] **Stage 12 — stub retirement sweep.** `item_use_stubs.asm` empty,
   `label_status --callers` on each retired stub, `update_label_db`,
   `lint_pret_labels` 0, `ITEMS_CHECK_SRCS` reduced to whatever genuinely

@@ -358,6 +358,11 @@ wEnemyMonBaseStats     equ 0xD001
 wEnemyMonActualCatchRate equ 0xD006
 wEnemyMonBaseExp       equ 0xD007
 
+; Safari Zone battle state (sym-verified vs origin/symbols:pokeyellow.sym).
+; Read by the Safari battle's flee/catch roll; written by BAIT / ROCK.
+wSafariEscapeFactor    equ 0xCCE8
+wSafariBaitFactor      equ 0xCCE9
+
 ; --- player battle-mon struct ($D013, 29-byte battle_struct) ---
 wBattleMonNick         equ 0xD008   ; NAME_LENGTH bytes
 wBattleMon             equ 0xD013

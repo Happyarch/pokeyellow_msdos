@@ -180,3 +180,51 @@ directly (ESI = flag array, CL = bit, BH = action; result in CL). This was one o
 four bugs that made the whole evolution path dead code, and it was independently
 present in `experience.asm` (documented there) and `itemfinder.asm`. If you add a
 flag test/set, use `FlagAction`.
+
+---
+
+## B8 — PP Up / PP Restore need `MoveSelectionMenu`'s type-2 (relearn) menu
+
+**What.** `ItemUsePPUp` and `ItemUsePPRestore` are one routine in pret (PP Up falls
+into PP Restore after an in-battle guard), and both reach their effect through a
+**move-selection UI**: they set `wMoveMenuType = 2` and call `MoveSelectionMenu`,
+which in pret branches to `.relearnmenu` — a box listing the *party* mon's moves
+(`wPartyMon1Moves` + `wWhichPokemon`), drawn at a different position, with the
+"WhichTechnique" prompt and WITHOUT the battle path's 0-PP / disabled checks
+(`SelectMenuItem` also branches on `wMoveMenuType`).
+
+**Why it is not written yet.** The port's `MoveSelectionMenu`
+(`src/engine/battle/core.asm`) implements **only the regular battle path** — its own
+header says the mimic/relearn menus are deferred. It reads `wBattleMonMoves` and
+gates on `wBattleMonPP`, which is exactly wrong out of battle. Translating the item
+side today would give an item that opens the battle move menu over the party screen
+and reads another mon's PP. Everything ELSE the PP items need is already ported:
+`GetMaxPP`, `GetSelectedMoveOffset`, `RestoreBonusPP`, `AddBonusPP`,
+`DisplayPartyMenu`, `GetMoveName`, `CopyToStringBuffer`, `RemoveUsedItem`, and all
+five texts (`assets/item_text.inc`).
+
+**Fix.** Port `MoveSelectionMenu`'s `.mimicmenu` / `.relearnmenu` branches and the
+`wMoveMenuType` dispatch in `SelectMenuItem` (which also owns the type-dependent
+watched-keys set and the `WhichTechniqueString` prompt). That is battle/menus work.
+`ItemUsePPUp` / `ItemUsePPRestore` are then a ~120-line faithful translation with no
+other dependency — including pret's **Max Ether/Max Elixir PP-Up bug**
+(`.fullyRestorePP` compares the raw PP byte without masking off the PP-Up count, so a
+PP-Upped move at full PP is not detected as "no effect"), which must be preserved and
+tagged.
+
+**Unblocks.** Items Stage 11's last two non-trivial handlers (ETHER $50 / MAX_ETHER
+$51 / ELIXER $52 / MAX_ELIXER $53, and PP_UP $2F).
+
+---
+
+## B9 — Surfboard needs the overworld Surf machinery
+
+`ItemUseSurfboard` is not "a guard + refusal" (as the items plan assumed) — in pret it
+**is** the Surf execution: mount (tile-pair collision check → `wWalkBikeSurfState` = 2
+→ `PlayDefaultMusic` → "got on"), and dismount (sprite-in-the-way check → passability
+→ walking graphics + Pikachu respawn state). Two of its dependencies are **missing**
+in the port: **`IsSpriteInFrontOfPlayer2`** and **`SurfingAttemptFailed`**; the rest
+(`IsNextTileShoreOrWater`, `CheckForTilePairCollisions`, `IsTilePassable`,
+`PlayDefaultMusic`, `LoadWalkingPlayerSpriteGraphics`) are in. The scripted
+forward-step (`.makePlayerMoveForward`, via `wSimulatedJoypadStatesEnd`) also wants
+the overworld plan's simulated-input path. Owned by `docs/current_plan_overworld_port.md`.
