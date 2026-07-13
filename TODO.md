@@ -362,7 +362,8 @@ Prioritized task list. Check off items as they complete; add new items with phas
 - [ ] **Status screen (Stage 4) remainder** (from archived `docs/plans/pokemon_behavior.md`):
       mon front-pic 7×7 tilemap-block placement on the status canvas (VRAM load
       works; the real per-mon `MonFrontPics` data now ships — see below — so the
-      right species decodes); cry (audio HAL, Phase 3); wire START-menu party
+      right species decodes); cry (blocked ONLY on the two cry ret-stubs — see Phase 3
+      below; NOT on an "audio HAL", which shipped 2026-07-07); wire START-menu party
       **STATS** entry (`start_sub_menus`) → `StatusScreen`/`StatusScreen2`.
       - Front-pic DATA (`-D MON_FRONT_PICS`) is DONE 2026-07-06: `gen_mon_pics.py`
         → `assets/mon_pics.inc` + `src/data/mon_pics.asm` build the dex-ordered
@@ -374,16 +375,49 @@ Prioritized task list. Check off items as they complete; add new items with phas
 
 ---
 
-## Phase 3: Audio
+## Phase 3: Audio — **IMPLEMENTED AND MERGED (2026-07-07)**
 
-- [ ] Define audio HAL interface (`dos_port/include/audio_hal.inc`)
-- [ ] Detect sound hardware at startup (SB16 > GM/MT-32 > AdLib > Tandy > speaker)
-- [ ] SB16 driver (`dos_port/src/audio/sb16.asm`)
-- [ ] General MIDI / MPU-401 driver (`dos_port/src/audio/gm.asm`)
-- [ ] Roland MT-32 driver (`dos_port/src/audio/mt32.asm`)
-- [ ] AdLib / OPL2 driver (`dos_port/src/audio/adlib.asm`)
-- [ ] Map GB APU channels (pulse 1/2, wave, noise) to sound card equivalents
-- [ ] Audio mixing / volume control
+**The checklist below used to be eight unchecked boxes, and was wrong on every one.**
+It was the pre-implementation sketch from 2026-06-14; the subsystem was then built to a
+*different* architecture (faithful pret engine + a virtual APU + per-device shims, not
+one bespoke driver per card), so nothing matched its filenames and nobody ever ticked it.
+Audio is live: music plays, `DEBUG_AUDIO TRACK=` auditions, phases A–E are on master.
+Anything claiming "no audio HAL" or "Phase 3 not started" is stale — including
+`docs/current_plan_audio.md`'s own status line until 2026-07-13.
+
+Shipped (`dos_port/src/audio/`, all linked):
+
+- [x] Audio HAL + startup device detection — `audio_hal.asm` (`audio_init` probes
+      BLASTER/DSP/OPL/MPU-401 and flips `g_audio_engine_online`; `audio_tick` runs per
+      `DelayFrame` in pret's vblank order). The interface lives in the `.asm`, not the
+      `include/audio_hal.inc` this list predicted.
+- [x] Faithful pret sound engine — `engine_1..4.asm` (resident; one interpreter for all
+      four GB banks), plus `low_health_alarm`, `play_battle_music`, `poke_flute`,
+      `pokedex_rating_sfx`, `alternate_tempo`.
+- [x] GB APU → device mapping, via a **virtual APU**: the engine writes `[ebp+rAUD*]`,
+      the shims mirror it to hardware once per tick. `opl_shim.asm` (+ `opl_enh.asm`),
+      `tandy_shim.asm`, `spk_shim.asm`.
+- [x] MPU-401 / MT-32 / General MIDI — `mpu401.asm` (precompiled MIDI streams).
+- [x] Digital audio — `sb_pcm.asm`, `spk_pcm.asm`, `engine/pikachu/pikachu_pcm.asm`.
+
+Remaining audio work:
+
+- [ ] **Mon cries — TWO ret-stubs, not a project.** `GetCryData` (pret
+      `home/pokemon.asm:157`, currently a `ret` in `engine/menus/pokedex.asm` — and in the
+      wrong file: stubs belong in a `*_stubs.asm`) and `PlayCry` (pret
+      `home/pokemon.asm:140`, a `ret` in `home/home_stubs.asm`). Everything under them
+      exists: `CryData` is generated and exported (`assets/cry_data.inc`), `engine_1.asm`
+      already understands cries (`Audio1_IsCry`, `CRY_SFX_START/END`, and it consumes
+      `wFrequencyModifier`/`wTempoModifier`), and `PlaySound`/`WaitForSoundToFinish` are
+      real bodies. Both stubs' comments claimed a false blocker ("No audio HAL (Phase 3)")
+      until 2026-07-13; see menu-fidelity ledger **M-32**.
+      *Note the contract:* pret's `PlayCry` ends in `WaitForSoundToFinish` — it **blocks**
+      for the cry's duration, and callers depend on that duration. The bare `ret` is why
+      STRENGTH's "used STRENGTH." message flashes past unread.
+      Genuinely open (tuning, not a blocker): whether the OPL/MT-32 shims render a cry
+      acceptably once handed one.
+- [ ] Per-track arrangements — ~45 songs remain (Pallet Town, Lavender, Mansion, Celadon
+      done end-to-end). See the `audio-enhance-*` / `score-analysis` skills.
 
 ### Phase 3 design direction (per user, 2026-06-14)
 

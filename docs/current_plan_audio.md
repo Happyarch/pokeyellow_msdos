@@ -2,7 +2,21 @@
 
 Worktree: `/mnt/sdb1/Code/Active Code/pokeyellow_msdos-audio` (branch `audio`).
 
-Status: **planned** (implementation not started; Phase 2 game loop still in progress).
+Status: **implemented and merged to master (2026-07-07)** — phases A–E. The engine,
+the virtual APU, and the OPL3 / MT-32+GM / Tandy / PC-speaker shims are live and
+linked; music plays in-game and `DEBUG_AUDIO TRACK=` auditions it. The task list below
+is maintained at the sub-item level; the top-level phase bullets were never re-ticked,
+so read the `[x]`s, not the phase headers.
+
+*(This line read "**planned** (implementation not started)" until 2026-07-13 — long
+after the subsystem shipped. It is the source of the false "no audio HAL / Phase 3"
+blocker that the `PlayCry`/`GetCryData` stubs then repeated. See menu-fidelity ledger
+M-32.)*
+
+Remaining: per-track arrangements (~45 songs), and **mon cries** — which are two ret-stub
+translations (`GetCryData`, `PlayCry`), not an audio-driver design problem: `CryData` is
+generated, and `engine_1.asm` already consumes `wFrequencyModifier`/`wTempoModifier` and
+knows `CRY_SFX_START/END`.
 This document supersedes the preliminary Gemini spitball plan (see git history of this
 file for the original). Architecture decisions below were settled in a design session
 on 2026-07-05 after auditing the pret audio engine, the port's existing scaffolding,
