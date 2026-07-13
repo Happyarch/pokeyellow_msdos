@@ -865,7 +865,78 @@ because **no palette value can fix a layer that is never composited**. "White sc
 least) two mechanisms in this port; matching the first one that fits and shipping it cost a live
 round-trip. Check `g_bg_whiteout` before the palette next time.
 
-### M-29. A message printed OVER the party screen has no correct projection [OPEN — not this row's file]
+### M-29. `GB_TILEMAP1` rows 0-5 are a SHARED staging buffer — the party panel and the dialog box collide there [OPEN — not this row's file]
+**Superseded my first write-up, which was wrong** (kept below, struck, because the way it was
+wrong is the point). Corrected by the user's observation: *"The party panel is being moved about.
+The textbox itself seems to be in the right place."*
+
+The dialog window is **correctly placed**. `msgbox_dialog` sources its box from `GB_TILEMAP1`
+**rows 0-5**, and `PartyMenuMirror` (`party_menu.asm:443`) mirrors the party panel into
+`GB_TILEMAP1` **rows 0-17** — the same rows. Two different screens stage into one region. So when
+`PrintText` opens the dialog window over the party menu, that window faithfully shows whatever is
+in its source rows: **the party panel**, re-framed at the dialog's position. Names, levels and HP
+bars travel together because they are literally those tilemap rows; the mon icons stay put because
+OBJ are OAM entries positioned from `spr_dos_sx/sy`, a different layer the window cannot move.
+That asymmetry is the tell, and it is only explicable as a staging collision.
+
+It is a **buffer-ownership bug, not a placement bug** — the fix is to stop the two screens sharing
+rows 0-5 (a dedicated staging region for the dialog, or a party-screen projection that stages
+elsewhere), NOT to retune coordinates. `set_single_window` also collapses `g_window_count` 2 → 1
+(measured), which is a second, separable defect on the same path.
+
+~~*Original (wrong) diagnosis: "the box lands at the overworld's placement (wx=87, wy=152) and the
+two pages overlay in an uncleared box." The box placement is fine, and the page overlay was not an
+uncleared box at all — it was M-31.*~~
+
+### M-31. `TX_START_ASM` was skipped, not dispatched — the hook's terminator went with it [FIXED — `92c2e726`]
+`TextCommandProcessor` sent `TX_START_ASM` ($08) to `.cmd_skip0` under the comment *"can't
+translate inline ASM; skip silently"*. Both halves false. pret's handler is four instructions
+(`pop hl / ld de, NextTextCommand / push de / jp hl`), and the flat port makes it **easier**: the
+stream and the code share one address space, so `jp hl` is `jmp esi`. The landing pad already
+existed and was faithful — `TextScriptEnd` is `mov esi, TextScriptEndingText / ret`, returning onto
+a lone `$50`. Only the dispatch was missing.
+
+Skipping was not harmless. `text_asm` splices **real x86 instructions into the stream**, and the
+hook ends with `jmp TextScriptEnd` — *that* `jmp` is what **terminates the message**. Skipping the
+command byte does not skip the hook: it feeds the hook's opcode bytes to the renderer as glyphs
+**and swallows the terminator**, so the processor runs off the end of the message into the bytes
+that follow. STRENGTH's *"SNORLAX used / move boulders."* was never two pages overlaid — it was
+**one page that never ended**, running into the next message in the file.
+
+**Latent because it had no caller.** `field_move_messages.asm:79` is the **only live `text_asm`
+invocation in the entire port** (every other occurrence is a comment). Linking that file in row 9
+part 3 walked the port's first-ever inline-ASM hook into an engine that had never dispatched one.
+
+**Method note, and the reason this row cost three live round-trips.** Two diagnoses were made by
+reading and both were wrong (M-28's palette-only fix; M-29's "uncleared box"). The one that was
+right came from **measurement**: dosbox-mcp read `g_bg_whiteout = 1` at `PrintStrengthText` —
+proving the box-mirror path being blamed was gated *off* and could not have drawn the text — and a
+breakpoint on `PlayCry`, the hook's first instruction, **never fired**. Prefer the debugger to a
+plausible story.
+
+### M-32. `PlayCry`/`GetCryData`: a ret-stub whose stale reason hides a real, blocking contract [OPEN — audio subsystem]
+pret's `PlayCry` (`home/pokemon.asm`) ends in **`WaitForSoundToFinish`** — it **blocks** for the
+duration of the cry, and that block is what holds *"<MON> used STRENGTH."* on screen. The port's
+ret-only stub (`home/home_stubs.asm`) keeps the label but drops the caller's real contract, which
+is its *duration*: message 1 now flashes past in `Delay3`'s 3 frames and message 2 paints over it.
+A stub that is "ret-only" per the convention can still be wrong when the contract callers rely on
+is **how long it takes**.
+
+Cries are genuinely not done — confirmed with the user, and I overclaimed the opposite once from a
+symbol-name grep before reading the body (`PlaySound`/`WaitForSoundToFinish` are real;
+**`GetCryData` is a ret-stub**). But the blocker is NOT what the stubs say:
+- `GetCryData`'s stub comment claims *"No audio HAL in this port (Phase 3)"* — **stale**; audio
+  phases A-E merged 2026-07-07.
+- The `CryData` table **already exists and is exported** (`assets/cry_data.inc`, `global CryData`,
+  3 bytes/species: base cry id, pitch mod, length mod). `audio_data.asm:7` is the accurate note:
+  *"consumed by GetCryData when the cry path lands (Task 5+)."*
+
+So what is actually missing is **driver-side cry support** — how the pitch/length mods map onto the
+OPL/MT-32 back ends — a real audio-driver design question, not a menu fix. Owner: the audio
+subsystem. **Convention violation to fix while there:** `GetCryData`'s ret-stub lives in
+`engine/menus/pokedex.asm`, not in a `*_stubs.asm`.
+
+### M-29 (superseded heading — original text follows for the record)
 STRENGTH's two messages render wrong, and the cause is one layer below this file. `PrintText`
 places its box through the projection record in **`text_msgbox`**, and `PrintStrengthText`
 (`engine/overworld/field_move_messages.asm`) points it at **`msgbox_dialog`** — which, per its own
