@@ -58,6 +58,9 @@ global RunTextBoxIDTest
 extern PrepareNewGameDebug
 extern LoadFontTilePatterns
 extern DisplayListMenuID
+%ifdef DEBUG_LISTMENU_QTY
+extern DisplayChooseQuantityMenu        ; src/home/list_menu.asm
+%endif
 extern DelayFrame
 global RunListMenuTest
 %endif
@@ -726,6 +729,20 @@ RunListMenuTest:
     mov [ebp + wCurrentMenuItem], al
     call DisplayListMenuID          ; box + entries + auto-select entry 0
     mov byte [ebp + wBattleType], 0
+%ifdef DEBUG_LISTMENU_QTY
+    ; Stage the ×NN quantity selector on top of the list — the ONLY headless route
+    ; into DisplayChooseQuantityMenu (the live priced caller, the Pokémart, still
+    ; dead-ends in a home_stubs.asm ret-stub, so its priced layout is otherwise
+    ; unobservable). The routine draws its box, the "×01" label and — for
+    ; PRICEDITEMLISTMENU — the price row, THEN parks in .waitForKeyPressLoop.
+    ; We never leave that loop: build with DEBUG_AUTOKEY=1 AUTOKEY_QUIET=1, and
+    ; AutoKeyDrive (which runs per frame from the DelayFrame inside
+    ; JoypadLowSensitivity) writes FRAME.BIN at AUTOKEY_DUMP_FRAME and exits.
+    ; A press-injecting autokey script would drive the quantity and change the
+    ; render, which is why AUTOKEY_QUIET exists.
+    mov byte [ebp + wMaxItemQuantity], 99
+    call DisplayChooseQuantityMenu      ; parks in its key-wait loop; never returns
+%endif
     call DelayFrame
     call DelayFrame
     call DelayFrame
@@ -1697,7 +1714,13 @@ align 4
 ; START opens the menu; DOWN moves POKéDEX → POKéMON; A selects it.
 ; The gaps are release frames (the menu code spins until the button is let go).
 autokey_script:
-%ifdef AUTOKEY_SEAM
+%ifdef AUTOKEY_QUIET
+    ; No presses, ever — the harness only wants AutoKeyDrive's AUTOKEY_DUMP_FRAME
+    ; timer, so a screen that parks in its own key-wait loop (e.g. DEBUG_LISTMENU_QTY's
+    ; DisplayChooseQuantityMenu) can be photographed mid-wait instead of run to a
+    ; DumpBackbuffer the routine never reaches.
+    dd  -1,  -1, 0
+%elifdef AUTOKEY_SEAM
     ; DEBUG_SEAM_LIVE companion: hold AUTOKEY_PAD (default PAD_UP) into the seeded
     ; map's edge with LIVE collision, then press A so SeamLogRecord writes
     ; SEAMLOG.BIN + FRAME.BIN. This is the harness that reproduced the Viridian

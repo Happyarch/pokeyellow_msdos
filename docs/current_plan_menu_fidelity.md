@@ -51,7 +51,7 @@ driver only relocates the divergence.
 | 1 | `src/home/window.asm` | `home/window.asm` | DONE | `da875f9a` | M-1 (`HandleMenuInput_` split + blink + AB SFX), M-2 (list ▼ coord), M-3 (`PrintText` substitution), M-4 (stale `SFX_PRESS_AB`) |
 | 2 | `src/home/textbox.asm` | `home/textbox.asm` | DONE | `d84ac907` | faithful (1 label, `DisplayTextBoxID`). No allowlist entry (already mirrored). One SANCTIONED TODO-HW(banking) deviation; header comment corrected. |
 | 3 | `src/engine/menus/text_box.asm` | `engine/menus/text_box.asm` + `data/text_boxes.asm` | DONE | `df0c652f` | M-5 (`TwoOptionMenu_{Save,Restore}ScreenTiles` missing → row 5), M-6 (stride save slot was re-entrancy-unsafe — FIXED), 8 hand-encoded strings migrated to a generator |
-| 4 | `src/home/list_menu.asm` | `home/list_menu.asm` | TODO | | DEVIATION(stride); "bespoke bag list" A/B remnants |
+| 4 | `src/home/list_menu.asm` | `home/list_menu.asm` | DONE | `8bc5d9a4` | **M-7 (qty menu HUNG the game — FIXED)**, M-8 (priced qty window clipped — needs mart anchor), M-9 (▷ swap counter never seeded — FIXED), M-2 **corrected** (my earlier finding was wrong; port's ▼ is faithful → new row 24). Priced price/qty coords swapped → FIXED; non-item tail duplicated the item tail → collapsed to pret's shared tail; 3 hand-encoded strings migrated to a generator; "no live caller" header claim was FALSE. |
 | 5 | `src/home/yes_no.asm` | `home/yes_no.asm` + `engine/menus/text_box.asm` | TODO | | allowlisted relocation — challenge |
 | 6 | `src/home/auto_textbox.asm` | `home/window.asm` (split) | TODO | | allowlisted relocation ×3 — challenge |
 | 7 | `src/home/start_menu.asm` | `home/start_menu.asm` | TODO | | |
@@ -71,6 +71,7 @@ driver only relocates the divergence.
 | 21 | `src/engine/menus/draw_badges.asm` | same | TODO | | "Port stand-in" |
 | 22 | **`MoveSelectionMenu` / `SelectMenuItem` / `SwapMovesInMenu` / `PrintMenuItem`** | `engine/battle/core.asm` | TODO | | **clears blocker B8**; unblocks Mimic + PP items. Needs row 1 settled first. |
 | 23 | **`PrintText` / `PrintText_NoCreatingTextBox`** | `home/window.asm` | DONE | `2c33f7a6` | opened by row 1 — see **M-3** (now FIXED: one printer, placement is a data record; `PrintText_Overworld`/`PrintText_NoBox` forks deleted). Verified by byte-identical `DEBUG_ITEMTM` + `DEBUG_LEARNMOVE` frames. Was: a battle-scope wrapper squatted on the label, so 9 non-battle files printed through the battle box. |
+| 24 | **`HandleMenuInput_.downArrowTile`** (▼ blink coord space) | `home/window.asm` | TODO | | opened by row 4 — see the **corrected M-2**. The blink targets pret's ABSOLUTE (18,11); every list draws box-relative into the stride-20 scratch, so the blink is inert. Row 1's file, found after row 1 closed. |
 
 Also: pret's `engine/menus/unused_input.asm` has **no port counterpart**. Confirm it is
 genuinely unreachable, then record it as intentionally-absent rather than unexplained.
@@ -126,20 +127,32 @@ at the underscore entry; add the blink call, the counter save/restore, and the g
 "dropped" is corrected in the same commit (the shake was never dropped — it was there).
 **Severity:** medium (dead cosmetic + latent state leak; no wrong gameplay observed)
 
-### M-2. The list-menu ▼ is drawn at box-relative (14,9), so the new blink can't reach it **[OPEN]**
-**File:** `dos_port/src/home/list_menu.asm:761,783` (row 4's scope — filed, not touched)
-**pret:** `home/list_menu.asm:517` — the ▼ lands at `hlcoord 18, 11`, the exact tile
-`HandleMenuInput_` blinks.
-**What's wrong:** the port's list menu renders into a **box-relative scratch** (`LIST_STRIDE 20`,
-arrow at `LIST_DOWN_ROW 9`, `LIST_DOWN_COL 14`), not at pret's screen coordinate. So M-1's
-now-faithful blink call (which targets row 11 / col 18 of the current stride, as pret does)
-lands on a different cell and is inert for the bag/PC lists — the arrow stays steady. This is
-harmless today (the blink is guarded: it only acts on a tile that already *is* a ▼, so it
-neither draws nor erases anything elsewhere), but it means the `bag_menu` golden's
-"MORE-list arrow" mask stays live until row 4 reconciles the list's coordinate model.
-**Fix:** row 4 — make the list menu's ▼ land at the pret-projected (18,11), then re-check the
-mask in `tools/golden_diff.py`.
-**Severity:** low (cosmetic)
+### M-2. The ▼ blink in `window.asm` uses ABSOLUTE GB coords against a box-relative scratch **[OPEN → needs row 24]**
+> **CORRECTED at row 4 (2026-07-13). The original text of this finding was WRONG** — it claimed
+> the port's list drew its ▼ in the wrong cell and told row 4 to move it. It does not, and row 4
+> did not move it. Recording the error because the whole point of this audit is that confident
+> prose is not evidence.
+
+**The arithmetic I failed to do the first time:** the list box's origin is GB(4,2). pret's ▼ at
+`hlcoord 18, 11` is therefore box-relative **(col 14, row 9)** — which is *exactly*
+`LIST_DOWN_COL 14` / `LIST_DOWN_ROW 9`, the cell the port already writes. **The port's ▼
+placement is FAITHFUL** (and row 4 re-derived it a second way: pret's `ld bc,-8 / add hl,bc`
+from the post-loop `hl`, which on a stride-20 line lands on the same cell).
+
+**The actual defect** is on the *other* side, in the blink: `src/home/window.asm`
+`.downArrowTile` computes its target as `[text_row_stride] * MENU_ARROW_ROW(11) + W_TILEMAP +
+MENU_ARROW_COL(18)` — pret's **absolute screen** coordinate. But every list renders
+**box-relative** into the stride-20 scratch, where (row 11, col 18) is not the arrow cell; it is
+outside the 16×11 box altogether. So the blink is inert for the bag/PC lists — the arrow just
+sits there. Harmless today (the blink only acts on a tile that already *is* a ▼, so it draws and
+erases nothing), but the mechanism is dead.
+
+**Fix:** belongs in `src/home/window.asm`, which is **row 1's** file (already DONE) — not row 4's,
+so row 4 correctly did not cross into it. Needs its own row: see **row 24**. The blink target must
+be expressed in the same coordinate space as the box that owns the arrow (box-relative when a
+menu scratch is active), after which the `bag_menu` golden's "MORE-list arrow" mask can be
+re-examined.
+**Severity:** low (cosmetic — a non-blinking arrow)
 
 ### M-3. `PrintText` is a battle-scope substitution; pret's `PrintText` is unported **[FIXED — row 23]**
 **File:** `dos_port/src/engine/battle/move_effect_helpers.asm:53` (the `PrintText` global);
@@ -345,3 +358,57 @@ correctly, since it already sits at its mirrored path.
   also `home/window.asm` labels, but their port file is `src/home/auto_textbox.asm`, which is
   **row 6's** scope and whose ledger line already reads *"allowlisted relocation ×3 —
   challenge"*. Deliberately left for that row rather than challenged twice.
+
+### M-7. `DisplayChooseQuantityMenu` hung the game and never drew its own box **[FIXED — row 4]**
+**File:** `dos_port/src/home/list_menu.asm` `.waitForKeyPressLoop`
+**pret:** `home/list_menu.asm:.waitForKeyPressLoop` — `call JoypadLowSensitivity`, no `DelayFrame`.
+**What was wrong:** pret's spin loop is correct *on the GB* for two hardware reasons: its
+`JoypadLowSensitivity` opens with `call Joypad`, which reads the pad **hardware** directly, and
+the LCD scans the tilemap **continuously**, so the box it just wrote is on screen without anyone
+asking. In the port BOTH of those are frame-driven — `joypad_update` (which computes the
+`hJoyHeld`/`hJoyPressed` edge that `JoypadLowSensitivity` reads) and the compositor's
+render+present run **inside `DelayFrame` and nowhere else**. The port translated the loop
+literally, so it span forever on a joypad state that could never change, never presenting the
+box it had just mirrored: **the ×NN quantity selector froze the game with its own window
+invisible.** Reachable live: `START → ITEM → TOSS` (`start_sub_menus.asm:529`) and all three
+`players_pc.asm` deposit/withdraw/toss paths.
+**Fix:** `call DelayFrame` in the wait loop — the same pump pret's own `HandleMenuInput_` loop
+has and that the port mirrors in `home/window.asm`. This one input loop was the outlier that
+leaned on the hardware. Tagged `DEVIATION(port-frame-pump)`.
+**Observed:** the `DEBUG_LISTMENU=2 DEBUG_LISTMENU_QTY=1` headless run hung (killed at the 200 s
+timeout, no `FRAME.BIN`) before the fix and exits cleanly with the box rendered after it. That
+harness is new in this row, and it is what turned a code-reading hunch into evidence.
+**Severity:** HIGH (game-freezing, on a live path)
+
+### M-8. The priced quantity box is drawn 11 wide but its window only exposes 5 **[OPEN]**
+**File:** `dos_port/src/home/list_menu.asm` `list_add_qty_window` / `DisplayChooseQuantityMenu`
+**What's wrong:** `PRICEDITEMLISTMENU` widens the qty box to an 11-column interior (pret's mart
+layout, box origin GB(7,9)), but `list_add_qty_window` registers the **quantity-only** projection
+(`wx=287 clip=40` — 5 tiles wide, anchored for the GB(15,9) box). So the price at box-relative
+(5,1) lands outside the window clip and cannot be seen. This is the already-known missing **mart
+anchor** (`TODO(proj)` at the routine), surfacing as a concrete symptom.
+**Consequence for row 4:** the priced coordinate fix below is verified only *in part* — the
+`×01` cell at box-rel (1,1) renders correctly and is observed in `FRAME.BIN`; the price cell at
+box-rel (5,1) is **UNVERIFIED IN PIXELS**, because no window currently exposes it. It is correct
+by derivation from pret (see the commit message), not by observation. Stating that plainly rather
+than claiming the fix works.
+**Not fixable in row 4's scope alone:** it needs the mart projection decision, and the only
+`PRICEDITEMLISTMENU` setter (`home/text_script.asm:DisplayPokemartDialogue`) still dead-ends in a
+`home_stubs.asm` ret-stub, so nothing renders it live yet either.
+**Severity:** low today (unreachable), blocking whenever the Pokémart lands.
+
+### M-9. The ▷ swap-position counter was never seeded **[FIXED — row 4]**
+**File:** `dos_port/src/home/list_menu.asm` `PrintListMenuEntries`
+**pret:** `home/list_menu.asm:340-362` — `ld a,[wListScrollOffset] / ld c,a`, then `sla c` for item
+lists; `c` stays in BC and the entry loop walks it as the 1-based ▷ swap-position counter.
+**What was wrong:** pret uses **one** register for two jobs — the scroll term of the entry-address
+math *and* the swap counter. The port did the address math in `ECX` and kept the counter in `BL`,
+and **never seeded `BL` from it**. So the `cp c` swap compare ran against whatever happened to be
+in BL, and the SELECT-swap ▷ marker landed on the wrong entry (or none) — always, not just when
+scrolled.
+**Fix:** `mov bl, cl` before the loop, with a comment naming the pret aliasing that made it easy
+to drop.
+**Not observable in the goldens:** the ▷ only draws when `wMenuItemToSwap != 0`, which no golden
+scenario and no `DEBUG_*` harness sets, so all list renders are byte-identical before and after.
+The fix is derived, not observed — flagged here rather than dressed up.
+**Severity:** medium (visible mis-marking during a bag item swap)

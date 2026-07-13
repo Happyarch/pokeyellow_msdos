@@ -653,6 +653,15 @@ ifdef DEBUG_LISTMENU
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_LISTMENU=$(DEBUG_LISTMENU)
 NASMFLAGS += -D SKIP_TITLE
+# DEBUG_LISTMENU_QTY=1 additionally stages DisplayChooseQuantityMenu on top of the
+# list (the ×NN selector; with DEBUG_LISTMENU=2 this is the ONLY way to observe the
+# priced quantity+price row — the Pokémart caller is still a stub). The routine
+# never returns, so drive the dump from AutoKeyDrive's frame timer with a script
+# that presses nothing.
+ifdef DEBUG_LISTMENU_QTY
+NASMFLAGS += -D DEBUG_LISTMENU_QTY -D DEBUG_AUTOKEY -D AUTOKEY_QUIET
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=60
+endif
 endif
 # Draw-badges gate (menus S6 package B): boot to overworld, seed a mixed badge
 # set, load the badge tiles, draw the 4x2 grid + window it, dump FRAME.BIN, exit.
@@ -1221,6 +1230,10 @@ assets/status_strings.inc: assets/gb_charmap.txt tools/gen_status_strings.py too
 assets/textbox_strings.inc: assets/gb_charmap.txt tools/gen_textbox_strings.py tools/gb_text.py
 	python3 tools/gen_textbox_strings.py
 
+# List-menu strings (pret home/list_menu.asm: CANCEL / ×01 / the qty-price spacer).
+assets/list_menu_strings.inc: assets/gb_charmap.txt tools/gen_list_menu_strings.py tools/gb_text.py
+	python3 tools/gen_list_menu_strings.py
+
 assets/overworld_strings.inc assets/field_move_text.inc assets/cut_text.inc assets/player_anim_text.inc &: \
                             assets/gb_charmap.txt tools/gen_overworld_strings.py tools/gb_text.py \
                             tools/gen_battle_text.py ../data/text/text_1.asm ../data/text/text_8.asm ../data/text/text_9.asm \
@@ -1468,6 +1481,7 @@ src/engine/menus/field_moves.o: assets/field_moves.inc
 # DisplayTextIDInit checks EVENT_GOT_POKEDEX via events.inc → event_constants.inc.
 src/engine/menus/text_box.o: assets/ui_layout_menus.inc assets/ui_layout_battle.inc \
         assets/textbox_strings.inc
+src/home/list_menu.o: assets/list_menu_strings.inc
 src/engine/menus/display_text_id_init.o: assets/event_constants.inc
 
 # UI layout geometry — projected menu-window coordinates. The sidecar JSON is
@@ -1533,6 +1547,7 @@ assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_
         assets/moves.inc assets/evos_moves.inc assets/monster_names.inc \
         assets/items.inc assets/item_text.inc assets/gb_charmap.txt assets/menu_strings.inc \
         assets/status_strings.inc assets/textbox_strings.inc \
+        assets/list_menu_strings.inc \
         assets/overworld_strings.inc assets/field_move_text.inc \
         assets/cut_text.inc assets/player_anim_text.inc \
         assets/type_matchups.inc assets/move_names.inc assets/field_moves.inc \
