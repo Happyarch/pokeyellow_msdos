@@ -70,7 +70,7 @@ driver only relocates the divergence.
 | 20 | `src/engine/menus/link_menu.asm` (1148 ln), `link_cups.asm` | `engine/menus/link_menu.asm` | TODO | | expect mostly TODO-HW/serial; allowlisted split (18 labels); split |
 | 21 | `src/engine/menus/draw_badges.asm` | same | TODO | | "Port stand-in" |
 | 22 | **`MoveSelectionMenu` / `SelectMenuItem` / `SwapMovesInMenu` / `PrintMenuItem`** | `engine/battle/core.asm` | TODO | | **clears blocker B8**; unblocks Mimic + PP items. Needs row 1 settled first. |
-| 23 | **`PrintText` / `PrintText_NoCreatingTextBox`** | `home/window.asm` | DONE | `2c33f7a6` | opened by row 1 — see **M-3** (now FIXED: one printer, placement is a data record; `PrintText_Overworld`/`PrintText_NoBox` forks deleted). Verified by byte-identical `DEBUG_ITEMTM` + `DEBUG_LEARNMOVE` frames. The pret home routine is unported; a battle-scope wrapper squats on the label and 9 non-battle files print through the battle box. **User-directed priority (2026-07-13): fix, do not defer.** Cross-cutting (~120 call sites), so it takes its own iteration rather than riding row 1. |
+| 23 | **`PrintText` / `PrintText_NoCreatingTextBox`** | `home/window.asm` | DONE | `2c33f7a6` | opened by row 1 — see **M-3** (now FIXED: one printer, placement is a data record; `PrintText_Overworld`/`PrintText_NoBox` forks deleted). Verified by byte-identical `DEBUG_ITEMTM` + `DEBUG_LEARNMOVE` frames. Was: a battle-scope wrapper squatted on the label, so 9 non-battle files printed through the battle box. |
 
 Also: pret's `engine/menus/unused_input.asm` has **no port counterpart**. Confirm it is
 genuinely unreachable, then record it as intentionally-absent rather than unexplained.
