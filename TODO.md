@@ -272,6 +272,12 @@ Prioritized task list. Check off items as they complete; add new items with phas
       (`current_plan_pokemon_engine.md`; evolution/PC/naming deferred — UI/battle-coupled.)
 - [x] **Items layer** — bag/PC inventory add/remove, item/TM data + prices, TOSS flow.
       (`current_plan_items.md`; item USE dispatch deferred — battle/UI-coupled.)
+      **Open blockers for the item-USE stages are collected in
+      [`docs/items_blockers.md`](items_blockers.md)** — Escape Rope needs the
+      overworld plan's `HandleFlyWarpOrDungeonWarp`; the bag menu never loads the
+      item name into `wStringBuffer`; `DisplayTextID` is still a ret-stub (so the
+      repel-wore-off message can't display, and `home_stubs.asm`'s "unreachable"
+      justification for it is now stale).
 - [x] **Move data layer** — names + shared `GetName`, category helper, field-move
       predicate, effect-category data, anim stub. (Archived: `docs/plans/moves.md`.)
 - [x] **Overworld UI coupling** — START menu ITEM (bag) + POKéMON (party w/ HP bars,
