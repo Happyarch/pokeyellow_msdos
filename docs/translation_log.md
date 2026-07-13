@@ -5484,3 +5484,25 @@ indexes the generated `PartyMenuItemUseMessagePointers`.
   frame-200 dump exited the program mid-Pokédex-entry.
 - Gate: `make check` OK; `lint_pret_labels` 0 violations; `make fidelity` 6/6 PASS; both
   `BUG_FIX_LEVEL` 0 and 1 build; faithdiff divergences justified in the commit message.
+
+## 2026-07-12 — `ItemUseTMHM` (items plan, Stage 7)
+
+- Translated `ItemUseTMHM` (`engine/items/item_effects.asm`) and linked the already-faithful
+  `tms.asm` (`CanLearnTM`, `TMToMove`) + `tmhm.asm` (`CheckIfMoveIsKnown`) out of
+  `ITEMS_CHECK_SRCS`. `AlreadyKnowsText` is now generated (`gen_item_text.py`), retiring the
+  placeholder stream; the `ItemUseTMHM` stub is deleted from `item_use_stubs.asm`.
+- Port deviations (all pre-existing boundaries): pret's `predef`s become direct calls (the port
+  has no predef dispatcher); `RunDefaultPaletteCommand` is a TODO-HW no-op (Phase 5); text goes
+  through `iu_print_text` + the generated `<Label>_ref` (addr, len) pairs rather than pret's
+  `PrintText`, because the port's `TextCommandProcessor` reads its stream EBP-relative.
+- Two pre-existing bugs surfaced (neither in the TM/HM code):
+  - `PrintBattleText` staged a hardcoded **80** bytes into `NPC_DIALOG_BUF`. `TryingToLearnText`
+    is 118 bytes, so `LearnMove`'s delete-a-move prompt was truncated mid-stream and
+    `TextCommandProcessor` ran past the buffer into WRAM → page fault. It now copies
+    `NPC_DIALOG_LEN` (the buffer's capacity), and `gen_battle_text.py` emits a terminator pad
+    after the last label so a copy starting there stays inside the data.
+  - `DEBUG_SEED_PARTY` seeds SNORLAX with FLY/CUT/SURF/STRENGTH — four HMs, four full slots. No
+    move is deletable, so `LearnMove` re-prompts "HM techniques can't be deleted!" forever
+    (faithful; a player presses B). `RunTMHMTest` now frees the target mon's last three slots.
+- Gate: `make check` OK; `lint_pret_labels` 0 violations; `make fidelity` 6/6 PASS; faithdiff
+  divergences justified in the commit message.

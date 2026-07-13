@@ -14,11 +14,13 @@ section .text
 global CheckIfMoveIsKnown
 
 extern AddNTimes            ; ESI += AL * BX; AL := 0  (hl += a*bc)
-extern PrintText            ; ESI = text pointer
-; _AlreadyKnowsText (the far text stream in data/text/text_9.asm) has no
-; implementation in the tree and would halt a link. Commented out; AlreadyKnowsText
-; below is a placeholder empty text until it's ported.
-; TODO(unimplemented): extern _AlreadyKnowsText
+; AlreadyKnowsText ("<MON> knows <MOVE>!") is Tier-1 generated data — pret's
+; text_far _AlreadyKnowsText (data/text/text_9.asm), flattened by tools/gen_item_text.py
+; into assets/item_text.inc. <Label>_ref is its {dd stream, dd length} pair.
+extern AlreadyKnowsText_ref     ; assets/item_text.inc
+; CheckIfMoveIsKnown only runs out of battle (ItemUseTMHM refuses in-battle use), so
+; its message goes through the item layer's overworld printer, not the battle box.
+extern iu_print_text            ; item_effects.asm — ESI = flat stream, ECX = length
 
 ; wPartyMon1Moves = wPartyMon1 ($D16A) + MON_MOVES ($08) = $D172.
 
@@ -43,11 +45,8 @@ CheckIfMoveIsKnown:
     and al, al                          ; and a — clear carry (not known)
     ret
 .alreadyKnown:
-    mov esi, AlreadyKnowsText           ; ld hl, AlreadyKnowsText
-    call PrintText
+    mov esi, [AlreadyKnowsText_ref]     ; ld hl, AlreadyKnowsText
+    mov ecx, [AlreadyKnowsText_ref + 4]
+    call iu_print_text
     stc                                 ; scf
     ret
-
-AlreadyKnowsText:
-    ; TODO(unimplemented): text_far _AlreadyKnowsText  ("<MON> knows <MOVE>!")
-    text_end

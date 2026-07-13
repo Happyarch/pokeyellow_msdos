@@ -549,7 +549,12 @@ AnyMoveToSelect:
 PrintBattleText:
     mov esi, eax                        ; flat source stream
     lea edi, [ebp + NPC_DIALOG_BUF]     ; → GB WRAM dialog buffer
-    mov ecx, 80                         ; generous fixed span (stream self-terminates)
+    ; Copy the whole buffer's worth: the stream self-terminates, but a copy shorter
+    ; than the longest label truncates it mid-stream and TextCommandProcessor then
+    ; walks off the end of the buffer into WRAM (TryingToLearnText is 118 bytes; an
+    ; 80-byte span page-faulted). gen_battle_text.py pads the .inc tail by
+    ; NPC_DIALOG_LEN so a copy from the last label stays inside the data.
+    mov ecx, NPC_DIALOG_LEN
     rep movsb
     ; fall through — run the stream now sitting in NPC_DIALOG_BUF
 ; RunBattleTextStream — print the command stream already in NPC_DIALOG_BUF in the

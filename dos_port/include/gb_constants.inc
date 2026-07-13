@@ -133,6 +133,8 @@ CALCIUM                 equ 0x27    ; last vitamin before RARE_CANDY
 RARE_CANDY              equ 0x28
 HM01                    equ 0xC4    ; first HM; HMs $C4-$C8, TMs $C9-$FA
 TM01                    equ 0xC9    ; first TM (index into TechnicalMachinePrices)
+TM_THUNDERBOLT          equ 0xE0    ; TM24 — Pikachu's mood bonus (ItemUseTMHM)
+TM_THUNDER              equ 0xE1    ; TM25 — likewise
 ANTIDOTE                equ 0x0B
 BURN_HEAL               equ 0x0C
 ICE_HEAL                equ 0x0D
@@ -209,6 +211,7 @@ BURN_PSN_ANIM          equ 0xBA    ; battle anim shown on burn/poison residual
 ; --- misc menu / event constants ---
 PIKAHAPPY_LEVELUP      equ 1       ; constants/pikachu_emotion_constants.asm
 PIKAHAPPY_USEDITEM     equ 2       ; (ItemUseMedicine: a non-vitamin item was used on a mon)
+PIKAHAPPY_USEDTMHM     equ 5       ; (ItemUseTMHM: a TM/HM was taught to a party mon)
 STATUS_SCREEN_STATS_BOX equ 0      ; constants/menu_constants.asm (PrintStatsBox d=0 → status-screen box)
 LEVEL_UP_STATS_BOX     equ 1       ; constants/menu_constants.asm (STATUS_SCREEN=0)
 SET_PAL_STATUS_SCREEN  equ 0x03    ; constants/palette_constants.asm (RunPaletteCommand id)

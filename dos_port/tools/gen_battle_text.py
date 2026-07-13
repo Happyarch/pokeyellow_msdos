@@ -311,6 +311,13 @@ def main():
     ]
     for label in sorted(wr):
         lines.append(fmt(label, wr[label]))
+    # PrintBattleText stages a stream into NPC_DIALOG_BUF with a fixed-span copy
+    # (it can't know a label's length). Pad the tail by that span so a copy that
+    # starts at the LAST label still reads inside this data, never off the end of
+    # the section. 0x50 = "@" (text terminator), so the padding is also inert if
+    # anything ever runs it.
+    lines.append("BattleText_TailPad:")
+    lines.append("    times 256 db 0x50           ; >= NPC_DIALOG_LEN (gb_memmap.inc)")
     lines.append("")
     OUT.write_text("\n".join(lines), encoding="utf-8")
     print(f"  wrote {OUT.relative_to(ROOT)} ({len(wr)} battle text labels)")

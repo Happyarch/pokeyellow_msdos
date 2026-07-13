@@ -438,6 +438,12 @@ wGainBoostedExp        equ 0xCF4C
 wTempByteValue         equ 0xD11D
 wPartyFoughtCurrentEnemyFlags equ 0xCCF5
 wLearnMoveMonName      equ 0xD035
+; UNION with wLearnMoveMonName (ram/wram.asm) — ItemUseTMHM parks the move name here
+; across DisplayPartyMenu, which overwrites wStringBuffer.
+wTempMoveNameBuffer    equ 0xD035
+; The TM/HM number under TMToMove / CanLearnTM. Unions with the D11D scratch cluster
+; (wPokedexNum / wMaxPP / wTempByteValue), exactly as pret does.
+wTempTMHM              equ 0xD11D
 ; evolution (src/engine/pokemon/evolution.asm)
 wCanEvolveFlags        equ 0xCCD3
 wForceEvolution        equ 0xCCD4
@@ -611,6 +617,7 @@ SPLITSET_ROUTE_8    equ 0xFC
 NUM_SPLIT_SETS      equ 12
 
 NPC_DIALOG_BUF                        equ 0xCB00  ; scratch WRAM for NPC TX command stream (≤256 B)
+NPC_DIALOG_LEN                        equ 256     ; its capacity — the span a staged copy may fill
 
 ; NPC movement-byte sentinel values (constants/map_object_constants.asm)
 WALK                                   equ 0xFE  ; random movement

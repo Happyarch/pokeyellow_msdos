@@ -20,9 +20,6 @@ extern GetMonHeader
 extern FlagAction               ; ESI=array, CL=bit index, BH=action; result in CL
 extern TechnicalMachines        ; assets/items.inc
 
-; TODO: migrate to gb_memmap.inc. wTempTMHM aliases the D11D scratch cluster
-; (pret unions it with wPokedexNum / wMaxPP, both already at 0xD11D here).
-%define wTempTMHM 0xD11D
 
 ; ---------------------------------------------------------------------------
 ; CanLearnTM — tests if mon [wCurPartySpecies] can learn move [wMoveNum].

@@ -36,6 +36,9 @@ OUT = ROOT / "dos_port" / "assets" / "item_text.inc"
 ITEM_SRC = [
     "engine/items/item_effects.asm",
     "engine/menus/party_menu.asm",
+    # AlreadyKnowsText ("<MON> knows <MOVE>!") — CheckIfMoveIsKnown, the ItemUseTMHM
+    # already-knows refusal (items plan, Stage 7).
+    "engine/items/tmhm.asm",
 ]
 
 # Emitted by gen_battle_text.py already — skip so the two .inc files don't

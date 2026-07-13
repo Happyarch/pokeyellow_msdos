@@ -149,6 +149,9 @@ extern PrepareNewGameDebug
 %ifdef DEBUG_PARTYMENU
 extern RunPartyMenuTest
 %endif
+%ifdef DEBUG_ITEMTM
+extern RunTMHMTest
+%endif
 %ifdef DEBUG_BATTLE
 extern RunBattleTest
 %endif
@@ -660,6 +663,9 @@ EnterMap:
     ; included here, so the struct offset is spelled out: wPartyMon1 + MON_HP.)
     mov byte [ebp + wPartyMon1 + 0x01], 0
     mov byte [ebp + wPartyMon1 + 0x02], 1
+%endif
+%ifdef DEBUG_ITEMTM
+    call RunTMHMTest                       ; items-plan Stage 7: teach a TM/HM, dump, exit
 %endif
 %ifdef DEBUG_PARTYMENU
     call RunPartyMenuTest                  ; seed party, open party screen, render one frame, dump FRAME.BIN, exits

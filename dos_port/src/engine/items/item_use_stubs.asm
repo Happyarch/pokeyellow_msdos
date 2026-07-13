@@ -11,7 +11,6 @@
 ; That is a deliberately quiet failure, not a crash; the retirement stages below
 ; replace each with the real handler.
 ;
-; TODO(items-plan Stage 7):  ItemUseTMHM
 ; TODO(items-plan Stage 8):  ItemUseEvoStone
 ; TODO(items-plan Stage 9):  ItemUseRepel / ItemUseSuperRepel / ItemUseMaxRepel /
 ;                            ItemUseEscapeRope
@@ -56,7 +55,6 @@ global ItemUseGoodRod
 global ItemUseSuperRod
 global ItemUsePPUp
 global ItemUsePPRestore
-global ItemUseTMHM
 
 ItemUseTownMap:
 ItemUseBicycle:
@@ -84,5 +82,4 @@ ItemUseGoodRod:
 ItemUseSuperRod:
 ItemUsePPUp:
 ItemUsePPRestore:
-ItemUseTMHM:
     ret

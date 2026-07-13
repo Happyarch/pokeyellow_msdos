@@ -370,6 +370,8 @@ ITEMS_SRCS := \
     src/data/item_text.asm \
     src/engine/items/inventory.asm \
     src/engine/items/item_effects.asm \
+    src/engine/items/tms.asm \
+    src/engine/items/tmhm.asm \
     src/engine/items/item_use_stubs.asm \
     src/home/item_price.asm \
     src/engine/items/tm_prices.asm \
@@ -527,6 +529,26 @@ NASMFLAGS += -D ITEMBALL_ATTACH_DELAY
 endif
 # AutoKeyDrive's own FRAME.BIN dump exits the program; the capture (with the new-species
 # Pokédex entry) runs past its default frame 200, so push it out of the way here.
+AUTOKEY_DUMP_FRAME ?= 999999
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
+# Items-plan Stage 7 gate: teach the TM/HM in ITEMTM_ID (default TM06 TOXIC) to party
+# slot ITEMTM_MON, headless, capturing the result to DUMP.BIN. AUTOKEY answers the
+# yes/no box, the party menu and the messages.
+# make DEBUG_ITEMTM=1 [ITEMTM_ID=0xC4 ITEMTM_MON=1]
+ifdef DEBUG_ITEMTM
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_ITEMTM -D DEBUG_SEED_PARTY -D SKIP_TITLE
+ifdef ITEMTM_BISECT
+NASMFLAGS += -D ITEMTM_BISECT
+endif
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_APRESS
+ifdef ITEMTM_ID
+NASMFLAGS += -D ITEMTM_ID=$(ITEMTM_ID)
+endif
+ifdef ITEMTM_MON
+NASMFLAGS += -D ITEMTM_MON=$(ITEMTM_MON)
+endif
 AUTOKEY_DUMP_FRAME ?= 999999
 NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 endif
@@ -922,8 +944,6 @@ POKEMON_CHECK_SRCS := \
 # the promoted list_menu.asm driver.
 ITEMS_CHECK_SRCS := \
     src/engine/items/subtract_paid_money.asm \
-    src/engine/items/tms.asm \
-    src/engine/items/tmhm.asm \
     src/engine/items/super_rod.asm \
     src/engine/items/town_map.asm
 
@@ -1358,6 +1378,7 @@ assets/items.inc:
 # text_far flattened — same encoder as gen_battle_text.py). Consumed by the item
 # USE dispatcher and the party menu's item-use result message.
 assets/item_text.inc: ../engine/items/item_effects.asm ../engine/menus/party_menu.asm \
+                      ../engine/items/tmhm.asm \
                       ../constants/charmap.asm include/gb_memmap.inc \
                       tools/gen_battle_text.py tools/gen_item_text.py assets/battle_text.inc
 	python3 tools/gen_item_text.py
@@ -1365,6 +1386,8 @@ assets/item_text.inc: ../engine/items/item_effects.asm ../engine/menus/party_men
 src/data/item_data.o: assets/items.inc
 src/data/item_text.o: assets/item_text.inc
 src/engine/menus/party_menu.o: assets/item_text.inc
+src/engine/items/item_effects.o: assets/item_text.inc
+src/engine/items/tmhm.o: assets/item_text.inc
 
 src/data/pokemon_data.o: assets/base_stats.inc assets/growth_rates.inc \
                          assets/moves.inc assets/evos_moves.inc assets/monster_names.inc

@@ -64,6 +64,13 @@ global RunListMenuTest
 %ifdef DEBUG_ITEMBALL
 extern UseItem                  ; home/item.asm — the pret home wrapper for UseItem_
 %endif
+%ifdef DEBUG_ITEMTM
+extern PrepareNewGameDebug
+extern LoadFontTilePatterns
+extern LoadTextBoxTilePatterns
+extern UseItem                  ; home/item.asm — the pret home wrapper for UseItem_
+global RunTMHMTest
+%endif
 %ifdef DEBUG_BATTLE
 extern PrepareNewGameDebug
 extern LoadFontTilePatterns
@@ -241,6 +248,23 @@ windows:
     dd 0xD2F6    ; wPokedexOwned (the caught species' bit must be set)
     dd 0xD309    ; wPokedexSeen
     dd 0xD11B    ; overview repeat
+%elifdef DEBUG_ITEMTM
+; Items-plan Stage 7 (DEBUG_ITEMTM) — teaching a TM/HM. Expectations:
+;   $D16A party mon 1 struct — MON_MOVES (+$08) gains the machine's move; the PP
+;         bytes (+$1D) get its base PP
+;   $D0DF wMoveNum — the move TMToMove resolved from the machine
+;   $D31C bag — a TM is consumed (count drops, slot 0 gone); an HM is NOT
+;   $CD6A wActionResultOrTookBattleTurn — 2 = the player said no / it wasn't used
+windows:
+    dd 0xD16A    ; party mon 1 struct (species, HP, moves at +$08, PP at +$1D)
+    dd 0xD31C    ; wNumBagItems + (id,qty) pairs — consumed (TM) or kept (HM)
+    dd 0xD0DF    ; wMoveNum (+ wMovesString)
+    dd 0xD11B    ; wTempTMHM / wNamedObjectIndex cluster ($D11D)
+    dd 0xD162    ; wPartyCount + wPartySpecies
+    dd 0xD2B4    ; wPartyMonNicks
+    dd 0xCD6A    ; wActionResultOrTookBattleTurn
+    dd 0xD035    ; wTempMoveNameBuffer / wLearnMoveMonName
+    dd 0xD16A    ; overview repeat
 %elifdef DEBUG_CALCSTATS
 ; CalcStats gate: one 64-byte window over the test scratch at $D1E0 covers the
 ; scratch mon (DVs at +$1B) and both stat results (L5 at +$20, L100 at +$30).
@@ -517,6 +541,54 @@ RunPartyMenuTest:
                                     ; DisplayPartyMenu, whose hook dumps + exits
 .hang:
     jmp .hang
+%endif
+
+%ifdef DEBUG_ITEMTM
+; ---------------------------------------------------------------------------
+; RunTMHMTest — items-plan Stage 7 gate. Seeds the party + bag, drops the TM/HM
+; under test into bag slot 0, and drives the real UseItem dispatcher at it. The
+; bag UI is bypassed the same way DEBUG_ITEMBALL bypasses the battle ITEM menu:
+; wCurItem = the machine, wWhichPokemon = its BAG SLOT (RemoveUsedItem removes by
+; index). AUTOKEY_APRESS answers the yes/no box, the party menu and the messages.
+; Overrides: ITEMTM_ID (the item id), ITEMTM_MON (the party slot to teach).
+; Never returns — DebugDumpMemory writes DUMP.BIN and exits.
+; In: EBP = GB memory base.
+; ---------------------------------------------------------------------------
+%ifndef ITEMTM_ID
+%define ITEMTM_ID 0xCE                  ; TM06 TOXIC — SNORLAX (party slot 0) learns it
+%endif
+%ifndef ITEMTM_MON
+%define ITEMTM_MON 0
+%endif
+RunTMHMTest:
+    mov byte [ebp + wPartyCount], 0
+    mov byte [ebp + wPartySpecies], 0xFF
+    mov byte [ebp + wNumBagItems], 0
+    mov byte [ebp + wBagItems], 0xFF
+    call PrepareNewGameDebug
+    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    call LoadFontTilePatterns
+    call LoadTextBoxTilePatterns
+    ; Bag slot 0 becomes the machine under test (qty 1), so RemoveUsedItem's
+    ; consume-vs-keep decision is visible in wNumBagItems / the first pair.
+    mov byte [ebp + wBagItems + 0], ITEMTM_ID
+    mov byte [ebp + wBagItems + 1], 1
+    mov byte [ebp + wWhichPokemon], 0       ; the BAG slot, not the party slot
+    mov byte [ebp + wCurItem], ITEMTM_ID
+    ; DEBUG_SEED_PARTY gives the target mon four moves, and for slot 0 (SNORLAX)
+    ; all four are HMs (FLY/CUT/SURF/STRENGTH) — LearnMove then correctly refuses
+    ; every one ("HM techniques can't be deleted!") and re-prompts forever, which
+    ; an A-only autokey script can never escape. Free the last three slots so this
+    ; test exercises ItemUseTMHM's real path: teach into an empty slot.
+    mov esi, wPartyMon1 + ITEMTM_MON * PARTYMON_STRUCT_LENGTH + MON_MOVES
+    mov byte [ebp + esi + 1], 0
+    mov byte [ebp + esi + 2], 0
+    mov byte [ebp + esi + 3], 0
+%ifdef ITEMTM_BISECT
+    call DebugDumpMemory
+%endif
+    call UseItem
+    call DebugDumpMemory                    ; DUMP.BIN (the windows: table below) + exit
 %endif
 
 %ifdef DEBUG_TEXTBOXID
@@ -1581,8 +1653,10 @@ autokey_script:
 %elifdef AUTOKEY_APRESS
     ; DEBUG_ITEMBALL companion: nothing to navigate, just answer every <PROMPT> /
     ; button wait the capture messages raise. A steady A pulse from frame 30 on.
+    ; Keep the train long: a flow that outlives it blocks forever on the next
+    ; prompt (the harness has no other input source) and reads as a hang.
 %assign AK_A 30
-%rep 40
+%rep 300
     dd AK_A, AK_A + 5, PAD_A
 %assign AK_A AK_A + 20
 %endrep

@@ -133,12 +133,32 @@ Archive to `docs/plans/items.md` when complete.
   - Verify: live wild battle (needs battle ITEM menu) or a `DEBUG_*` harness
     that seeds `wIsInBattle=1` + enemy data and drives one throw; goldencheck
     unaffected.
-- [ ] **Stage 7 — `ItemUseTMHM` (teaching).** Link `tms.asm` + `tmhm.asm` out
+- [x] **Stage 7 — `ItemUseTMHM` (teaching).** Link `tms.asm` + `tmhm.asm` out
   of `ITEMS_CHECK_SRCS` (`CanLearnTM`, `TMToMove`, `CheckIfMoveIsKnown` — the
   latter's `_AlreadyKnowsText` extern is commented out; generate that text
   now). "Booted up a TM/HM" + "teach X?" prompts (generated), party select,
   compatibility refusal, hand off to the complete `LearnMove` UI, consume TM /
   keep HM (`IsItemHM` exists).
+  DONE 2026-07-12. Verified headlessly (`DEBUG_ITEMTM`): TM06 → SNORLAX writes
+  TOXIC into the free move slot with base PP 10 and drops the bag 16→15; HM03
+  teaches SURF and is *not* consumed; TM02 (Razor Wind) → `CanLearnTM` = 0, so
+  the refusal branch is taken. Two bugs fell out of it, both pre-existing and
+  neither in the TM/HM code: `PrintBattleText` staged a fixed **80** bytes into
+  `NPC_DIALOG_BUF`, truncating the 118-byte `TryingToLearnText` so
+  `TextCommandProcessor` walked off the buffer (page fault) — it now copies
+  `NPC_DIALOG_LEN` and `gen_battle_text.py` pads the data tail so the last
+  label's copy stays in bounds; and `DEBUG_SEED_PARTY` gives SNORLAX four HM
+  moves (FLY/CUT/SURF/STRENGTH), which `LearnMove` correctly refuses to delete
+  forever — the harness now frees three move slots on the target mon.
+  NOT exercised live: the "no" answer to the teach prompt
+  (`wActionResultOrTookBattleTurn = 2`) — a 3-instruction path, and the autokey
+  driver only presses A.
+
+  Follow-up (own commit): `TextCommandProcessor` reads its stream EBP-relative,
+  so every flat `.data` stream must be staged into `NPC_DIALOG_BUF` first — that
+  staging is what needed a length pret never had to know. pret reads the stream
+  in place. Making TCP take a linear pointer deletes all seven staging copies
+  (and `iu_print_text`) and retires this bug class.
   - Verify: seeded bag TM teaches a compatible move, refuses an incompatible
     mon, HM not consumed.
 - [ ] **Stage 8 — `ItemUseEvoStone`.** Port `Func_d85d` (stone-applicability

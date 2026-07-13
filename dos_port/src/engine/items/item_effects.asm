@@ -739,6 +739,7 @@ global ItemUseNotTime
 global ItemUseNotYoursToUse
 global ItemUseFailed
 global Func_e4bf
+global iu_print_text                 ; port-only: the item layer's overworld text printer
 
 ; --- the medicine family's effect cores (items-plan Stage 3, native-validated) ---
 extern ApplyHealingItem     ; item_effects.asm — pret .addHealAmount…setCurrentHPToMaxHp
@@ -2242,3 +2243,159 @@ section .data
 iu_ball_emptyString: db 0x50
 
 section .text
+
+; === ItemUseTMHM — teaching a TM/HM (items-plan Stage 7) ====================
+;
+; Source: engine/items/item_effects.asm:2399-2500 (pret).
+;
+; PORT DEVIATIONS (this block; the file's earlier ones still apply)
+;  9. predef TMToMove / predef CanLearnTM / predef LearnMove and
+;     `callfar CheckIfMoveIsKnown` all become direct calls — the port has no predef
+;     dispatcher (the same boundary as DEVIATIONS 5-7).
+; 10. RunDefaultPaletteCommand on the cancel path is a TODO-HW no-op (Phase 5); it is
+;     file-local elsewhere in the port, not a global (as in ItemUseBall).
+; 11. Text goes through iu_print_text (the item layer's overworld printer), taking the
+;     generated stream + length from each <Label>_ref pair, not pret's `ld hl, Label`.
+;
+; wTempTMHM ($D11D) unions with wNamedObjectIndex exactly as in pret, so storing the
+; TM/HM number there is also what hands GetMoveName its index — do not "fix" that.
+
+extern TMToMove                   ; engine/items/tms.asm (predef TMToMove)
+extern CanLearnTM                 ; engine/items/tms.asm (predef CanLearnTM) — out: CL
+extern CheckIfMoveIsKnown         ; engine/items/tmhm.asm (callfar) — CF = already knows
+extern LearnMove                  ; engine/pokemon/learn_move.asm (predef) — out: BH
+extern GetMoveName                ; home/names.asm — [wNamedObjectIndex] → wNameBuffer
+extern IsThisPartyMonStarterPikachu ; engine/pikachu/pikachu_status.asm — CF = yes
+extern GBPalWhiteOutWithDelay3    ; home/fade.asm
+extern BootedUpTMText_ref
+extern BootedUpHMText_ref
+extern TeachMachineMoveText_ref
+extern MonCannotLearnMachineMoveText_ref
+
+global ItemUseTMHM
+ItemUseTMHM:
+    mov al, [ebp + wIsInBattle]
+    test al, al
+    jnz ItemUseNotTime                  ; jp nz — no TMs mid-battle
+    mov al, [ebp + wCurItem]
+    sub al, TM01                        ; underflows (CF) for HMs — they sit below TM01
+    pushf                               ; push af — CF is the HM flag, live across the calls
+    jnc .skipAdding
+    add al, NUM_TMS + NUM_HMS           ; HM ids come after the TM ids
+.skipAdding:
+    inc al
+    mov [ebp + wTempTMHM], al
+    call TMToMove                       ; predef TMToMove — TM/HM number → move id
+    mov al, [ebp + wTempTMHM]
+    mov [ebp + wMoveNum], al
+    call GetMoveName
+    mov edx, wNameBuffer
+    call CopyToStringBuffer
+    popf
+    mov esi, [BootedUpTMText_ref]
+    mov ecx, [BootedUpTMText_ref + 4]
+    jnc .printBootedUpMachineText       ; CF (from the popf) = it's an HM
+    mov esi, [BootedUpHMText_ref]
+    mov ecx, [BootedUpHMText_ref + 4]
+.printBootedUpMachineText:
+    call iu_print_text
+    mov esi, [TeachMachineMoveText_ref]
+    mov ecx, [TeachMachineMoveText_ref + 4]
+    call iu_print_text
+    ; hlcoord 14,7 / lb bc,8,15 / TWO_OPTION_MENU — as in TossItem_, the port's
+    ; two-option box takes its geometry from yes_no.asm state.
+    call InitYesNoTextBoxParameters
+    mov byte [ebp + wTextBoxID], TWO_OPTION_MENU
+    call DisplayTextBoxID               ; yes/no menu
+    mov al, [ebp + wCurrentMenuItem]
+    test al, al
+    jz .useMachine
+    mov byte [ebp + wActionResultOrTookBattleTurn], 2   ; item not used
+    ret
+
+.useMachine:
+    movzx eax, byte [ebp + wWhichPokemon]
+    push eax                            ; push af — the bag's list index
+    movzx eax, byte [ebp + wCurItem]
+    push eax                            ; push af
+.chooseMon:
+    ; Park the move name: DisplayPartyMenu overwrites wStringBuffer.
+    mov esi, wStringBuffer
+    mov edx, wTempMoveNameBuffer
+    mov bx, MOVE_NAME_LENGTH
+    call CopyData
+    mov byte [ebp + wUpdateSpritesEnabled], 0xFF
+    mov byte [ebp + wPartyMenuTypeOrMessageID], TMHM_PARTY_MENU
+    call DisplayPartyMenu
+    pushf                               ; push af — CF = the player backed out
+    mov esi, wTempMoveNameBuffer
+    mov edx, wStringBuffer
+    mov bx, MOVE_NAME_LENGTH
+    call CopyData
+    popf
+    jnc .checkIfAbleToLearnMove
+; the player canceled teaching the move
+    pop eax
+    pop eax
+    call GBPalWhiteOutWithDelay3
+    call ClearSprites
+    ; call RunDefaultPaletteCommand — TODO-HW: default palette set (Phase 5), no-op
+    jmp LoadScreenTilesFromBuffer1      ; jp — restore the saved screen
+
+.checkIfAbleToLearnMove:
+    call CanLearnTM                     ; predef CanLearnTM — CL = 0 if it can't
+    push ebx                            ; push bc
+    mov al, [ebp + wWhichPokemon]
+    mov esi, wPartyMonNicks
+    call GetPartyMonName
+    pop ebx                             ; pop bc
+    mov al, bl                          ; ld a, c
+    test al, al
+    jnz .checkIfAlreadyLearnedMove
+; the mon can't learn the move
+    mov al, SFX_DENIED
+    call PlaySoundWaitForCurrent
+    mov esi, [MonCannotLearnMachineMoveText_ref]
+    mov ecx, [MonCannotLearnMachineMoveText_ref + 4]
+    call iu_print_text
+    jmp .chooseMon
+
+.checkIfAlreadyLearnedMove:
+    call CheckIfMoveIsKnown             ; callfar — CF = it already knows the move
+    jc .chooseMon
+    call LearnMove                      ; predef LearnMove — BH = 1 if learned
+    mov al, [ebp + wWhichPokemon]
+    mov dh, al                          ; ld d, a — the taught mon's party index
+    pop eax
+    mov [ebp + wCurItem], al
+    pop eax
+    mov [ebp + wWhichPokemon], al       ; restore the bag's list index
+    test bh, bh                         ; ld a, b / and a
+    jz .done                            ; ret z — not learned: keep the TM
+
+    movzx eax, byte [ebp + wWhichPokemon]
+    push eax
+    mov al, dh
+    mov [ebp + wWhichPokemon], al       ; the happiness/Pikachu checks want the mon
+    mov al, PIKAHAPPY_USEDTMHM
+    call ModifyPikachuHappiness
+    call IsThisPartyMonStarterPikachu   ; CF = it's the player's own Pikachu
+    jnc .notTeachingThunderboltOrThunderToPikachu
+    mov al, [ebp + wCurItem]
+    cmp al, TM_THUNDERBOLT
+    je .teachingThunderboltOrThunderToPlayerPikachu
+    cmp al, TM_THUNDER
+    jne .notTeachingThunderboltOrThunderToPikachu
+.teachingThunderboltOrThunderToPlayerPikachu:
+    mov byte [ebp + wPikachuEmotionModifier], 5
+    mov byte [ebp + wPikachuMood], 0x85
+.notTeachingThunderboltOrThunderToPikachu:
+    pop eax
+    mov [ebp + wWhichPokemon], al
+
+    mov al, [ebp + wCurItem]
+    call IsItemHM
+    jc .done                            ; ret c — an HM is never consumed
+    jmp RemoveUsedItem                  ; jp RemoveUsedItem
+.done:
+    ret
