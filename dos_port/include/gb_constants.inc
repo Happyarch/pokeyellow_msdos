@@ -211,6 +211,7 @@ BURN_PSN_ANIM          equ 0xBA    ; battle anim shown on burn/poison residual
 ; --- misc menu / event constants ---
 PIKAHAPPY_LEVELUP      equ 1       ; constants/pikachu_emotion_constants.asm
 PIKAHAPPY_USEDITEM     equ 2       ; (ItemUseMedicine: a non-vitamin item was used on a mon)
+PIKAHAPPY_USEDXITEM    equ 3       ; (X Accuracy / X Attack&co / Dire Hit / Guard Spec)
 PIKAHAPPY_USEDTMHM     equ 5       ; (ItemUseTMHM: a TM/HM was taught to a party mon)
 STATUS_SCREEN_STATS_BOX equ 0      ; constants/menu_constants.asm (PrintStatsBox d=0 → status-screen box)
 LEVEL_UP_STATS_BOX     equ 1       ; constants/menu_constants.asm (STATUS_SCREEN=0)

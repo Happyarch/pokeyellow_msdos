@@ -13,8 +13,6 @@
 ;
 ; TODO(items-plan Stage 9):  ItemUseEscapeRope
 ;   (the Repel family landed in item_effects.asm — stubs retired)
-; TODO(items-plan Stage 10): ItemUseXAccuracy / ItemUseXStat / ItemUseDireHit /
-;                            ItemUseGuardSpec / ItemUsePokeDoll
 ; TODO(items-plan Stage 11): ItemUseBicycle / ItemUsePokeFlute / ItemUseTownMap /
 ;                            ItemUseItemfinder / ItemUseOldRod / ItemUseGoodRod /
 ;                            ItemUseSuperRod / ItemUseCardKey / ItemUseCoinCase /
@@ -35,12 +33,7 @@ global ItemUsePokedex
 global ItemUseBait
 global ItemUseRock
 global ItemUseEscapeRope
-global ItemUseXAccuracy
 global ItemUseCardKey
-global ItemUsePokeDoll
-global ItemUseGuardSpec
-global ItemUseDireHit
-global ItemUseXStat
 global ItemUseCoinCase
 global ItemUseOaksParcel
 global ItemUseItemfinder
@@ -58,12 +51,7 @@ ItemUsePokedex:
 ItemUseBait:
 ItemUseRock:
 ItemUseEscapeRope:
-ItemUseXAccuracy:
 ItemUseCardKey:
-ItemUsePokeDoll:
-ItemUseGuardSpec:
-ItemUseDireHit:
-ItemUseXStat:
 ItemUseCoinCase:
 ItemUseOaksParcel:
 ItemUseItemfinder:

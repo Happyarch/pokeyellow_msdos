@@ -231,7 +231,25 @@ Archive to `docs/plans/items.md` when complete.
   or route the wore-off text through the port's text path if that lands
   first). `ItemUseEscapeRope`: dungeon check, warp to last-heal map (blackout
   warp machinery exists in `black_out.asm`).
-- [ ] **Stage 10 — battle items.** `ItemUseXAccuracy`/`ItemUseXStat`/
+- [x] **Stage 10 — battle items.** `ItemUseXAccuracy` / `ItemUseGuardSpec` /
+  `ItemUseDireHit` / `ItemUseXStat` / `ItemUsePokeDoll` translated; five stubs
+  retired. Verified with `DEBUG_ITEMSTONE ITEMSTONE_INBATTLE=1` (seeds
+  `wIsInBattle`/`wPlayerMonNumber`/neutral stat stages, then dispatches `UseItem`
+  by `wCurItem`): X_ACCURACY $2E → `wPlayerBattleStatus2` bit 0; GUARD_SPEC $37 →
+  bit 1 (Mist); DIRE_HIT $3A → bit 2 (Focus Energy); POKE_DOLL $33 →
+  `wEscapedFromBattle`=1; X_ATTACK $41 → `wPlayerMonAttackMod` 7→8 via
+  `StatModifierUpEffect`. All five consume the item with
+  `wActionResultOrTookBattleTurn`=1; out of battle X_ATTACK is refused with
+  result=2 and the item kept. `ModifyPikachuHappiness` is still a ret-stub
+  (battle_exp_stubs.asm) — the calls are placed faithfully so its destub is a
+  one-file change. Poké Doll's Ghost-Marowak special case stays in the battle
+  engine (scripted battles), as in pret.
+
+  Caveat: the harness fakes battle state from the overworld — these items are not
+  yet reachable from a real battle's ITEM menu (battle-plan work), so the *UI*
+  path is unexercised.
+
+  Original scope: `ItemUseXAccuracy`/`ItemUseXStat`/
   `ItemUseDireHit`/`ItemUseGuardSpec`/`ItemUsePokeDoll`: `wIsInBattle` gate +
   `wPlayerBattleStatus2` bit sets / `StatModifierUpEffect` calls (all exist in
   the battle engine). Small; sequence after the battle plan's ITEM menu so

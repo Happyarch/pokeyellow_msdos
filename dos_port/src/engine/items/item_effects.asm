@@ -1535,6 +1535,7 @@ extern PlayMoveAnimation      ; engine/battle/animations.asm — AL = animation 
 extern IsGhostBattle          ; engine/battle/ghost.asm — ZF=1 → unidentified ghost
 extern LoadScreenTilesFromBuffer1 ; engine/battle/battle_menu.asm
 extern Delay3                 ; video/frame.asm
+extern StatModifierUpEffect   ; engine/battle/move_effects/stat_modifiers.asm
 extern Random                 ; home/random.asm — AL = next random byte
 extern Multiply               ; home/math.asm — hMultiplicand(3) * hMultiplier → hProduct(4)
 extern IndexToPokedex         ; data/pokemon_data.asm — FLAT TABLE: [species-1] → dex number
@@ -2572,3 +2573,124 @@ PrintItemUseTextAndRemoveItem:
     call PlaySound
     call WaitForTextScrollButtonPress
     jmp RemoveUsedItem                  ; pret: fallthrough
+
+
+; === Battle items (items-plan Stage 10) ====================================
+;
+; Source: engine/items/item_effects.asm — ItemUseXAccuracy, ItemUseGuardSpec,
+; ItemUseDireHit, ItemUseXStat, ItemUsePokeDoll.
+;
+; All five are in-battle-only. `farcall_ModifyPikachuHappiness <id>` passes the id
+; in D on the GB; the port's convention (already used by ItemUseMedicine and
+; ItemUseTMHM) is AL. ModifyPikachuHappiness is still a ret-stub
+; (battle_exp_stubs.asm) — the calls are placed faithfully so the destub is a
+; one-file change.
+; ===========================================================================
+
+global ItemUseXAccuracy
+ItemUseXAccuracy:
+    mov al, [ebp + wIsInBattle]
+    test al, al
+    jz ItemUseNotTime                   ; pret: jp z, ItemUseNotTime
+    or byte [ebp + wPlayerBattleStatus2], 1 << USING_X_ACCURACY
+    mov al, PIKAHAPPY_USEDXITEM
+    call ModifyPikachuHappiness         ; farcall_ModifyPikachuHappiness
+    jmp PrintItemUseTextAndRemoveItem
+
+global ItemUseGuardSpec
+ItemUseGuardSpec:
+    mov al, [ebp + wIsInBattle]
+    test al, al
+    jz ItemUseNotTime
+    ; pret inlines this save/set/restore of wWhichPokemon around the happiness
+    ; call; kept inline here too, so faithdiff still sees the wWhichPokemon stores.
+    mov al, [ebp + wWhichPokemon]
+    push eax                            ; push af
+    mov al, [ebp + wPlayerMonNumber]
+    mov [ebp + wWhichPokemon], al
+    mov al, PIKAHAPPY_USEDXITEM
+    call ModifyPikachuHappiness         ; farcall_ModifyPikachuHappiness
+    pop eax                             ; pop af
+    mov [ebp + wWhichPokemon], al
+    or byte [ebp + wPlayerBattleStatus2], 1 << PROTECTED_BY_MIST
+    jmp PrintItemUseTextAndRemoveItem
+
+global ItemUseDireHit
+ItemUseDireHit:
+    mov al, [ebp + wIsInBattle]
+    test al, al
+    jz ItemUseNotTime
+    ; pret inlines this save/set/restore of wWhichPokemon around the happiness
+    ; call; kept inline here too, so faithdiff still sees the wWhichPokemon stores.
+    mov al, [ebp + wWhichPokemon]
+    push eax                            ; push af
+    mov al, [ebp + wPlayerMonNumber]
+    mov [ebp + wWhichPokemon], al
+    mov al, PIKAHAPPY_USEDXITEM
+    call ModifyPikachuHappiness         ; farcall_ModifyPikachuHappiness
+    pop eax                             ; pop af
+    mov [ebp + wWhichPokemon], al
+    or byte [ebp + wPlayerBattleStatus2], 1 << GETTING_PUMPED   ; Focus Energy
+    jmp PrintItemUseTextAndRemoveItem
+
+global ItemUsePokeDoll
+ItemUsePokeDoll:
+    mov al, [ebp + wIsInBattle]
+    dec al                              ; pret: dec a — only a WILD battle (1) qualifies
+    jnz ItemUseNotTime
+    mov byte [ebp + wEscapedFromBattle], 1
+    jmp PrintItemUseTextAndRemoveItem
+    ; NOTE (pret behavior, kept): a Poke Doll thrown at the Ghost Marowak still
+    ; "works" here — the scripted-battle special case lives in the battle engine,
+    ; not in the item. Rides with the battle plan's scripted-battle work.
+
+global ItemUseXStat
+ItemUseXStat:
+    mov al, [ebp + wIsInBattle]
+    test al, al
+    jnz .inBattle
+    call ItemUseNotTime
+    mov byte [ebp + wActionResultOrTookBattleTurn], 2   ; item not used
+    ret
+
+.inBattle:
+    ; pret: hl = wPlayerMoveNum; save [wPlayerMoveNum] and [wPlayerMoveEffect],
+    ; overwrite the effect with the X item's stat-up effect, print/consume, then
+    ; run the move effect and restore both.
+    mov esi, wPlayerMoveNum
+    mov al, [ebp + esi]
+    push eax                            ; [A] save wPlayerMoveNum
+    inc esi                             ; → wPlayerMoveEffect (pret: ld a, [hli])
+    mov al, [ebp + esi]
+    push eax                            ; [B] save wPlayerMoveEffect
+    push esi                            ; [C] save hl (= &wPlayerMoveEffect)
+
+    mov al, [ebp + wCurItem]
+    sub al, X_ATTACK - ATTACK_UP1_EFFECT
+    mov [ebp + esi], al                 ; store player move effect
+    call PrintItemUseTextAndRemoveItem
+
+    mov byte [ebp + wPlayerMoveNum], XSTATITEM_ANIM
+    call LoadScreenTilesFromBuffer1     ; restore the saved screen
+    call Delay3
+    mov byte [ebp + hWhoseTurn], 0      ; player's turn
+    call StatModifierUpEffect           ; farcall — do the stat-increase move
+
+    ; pret inlines this save/set/restore of wWhichPokemon around the happiness
+    ; call; kept inline here too, so faithdiff still sees the wWhichPokemon stores.
+    mov al, [ebp + wWhichPokemon]
+    push eax                            ; push af
+    mov al, [ebp + wPlayerMonNumber]
+    mov [ebp + wWhichPokemon], al
+    mov al, PIKAHAPPY_USEDXITEM
+    call ModifyPikachuHappiness         ; farcall_ModifyPikachuHappiness
+    pop eax                             ; pop af
+    mov [ebp + wWhichPokemon], al
+
+    pop esi                             ; [C] hl
+    pop eax                             ; [B]
+    mov [ebp + esi], al                 ; restore wPlayerMoveEffect (pret: ld [hld])
+    dec esi
+    pop eax                             ; [A]
+    mov [ebp + esi], al                 ; restore wPlayerMoveNum
+    ret

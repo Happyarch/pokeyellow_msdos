@@ -281,7 +281,7 @@ windows:
 ;   $CD6A wActionResultOrTookBattleTurn — 0 = item not used (no-effect / canceled)
 ;   $D155 wEvoStoneItemID — the stone ItemUseEvoStone parked for the party menu
 windows:
-    dd 0xD16A    ; party mon 1 struct (species at +0)
+    dd 0xCD1A    ; Stage 10: wPlayerMonAttackMod (X Attack: 7 -> 8)
     dd 0xD31C    ; wNumBagItems + (id,qty) pairs
     dd 0xD162    ; wPartyCount + wPartySpecies
     dd 0xCD6A    ; wActionResultOrTookBattleTurn
@@ -291,7 +291,9 @@ windows:
     dd 0xD0DA    ; wRepelRemainingSteps — Stage 9 (drive with ITEMSTONE_ID=REPEL
                  ; $1E / SUPER_REPEL $38 / MAX_REPEL $39; RunStoneTest dispatches
                  ; UseItem by wCurItem, so it exercises any item's handler)
-    dd 0xD120    ; wEvolutionOccurred
+    dd 0xD062    ; Stage 10: wPlayerBattleStatus2 (+$15 = wEscapedFromBattle @ $D077)
+                 ; drive with ITEMSTONE_INBATTLE=1 and ITEMSTONE_ID=X_ACCURACY $2E /
+                 ; DIRE_HIT $3A / GUARD_SPEC $37 / POKE_DOLL $33 / X_ATTACK $41
 %elifdef DEBUG_CALCSTATS
 ; CalcStats gate: one 64-byte window over the test scratch at $D1E0 covers the
 ; scratch mon (DVs at +$1B) and both stat results (L5 at +$20, L100 at +$30).
@@ -1586,6 +1588,18 @@ RunStoneTest:
     mov byte [ebp + wBagItems + 1], 1
     mov byte [ebp + wWhichPokemon], 0       ; the BAG slot, not the party slot
     mov byte [ebp + wCurItem], ITEMSTONE_ID
+%ifdef ITEMSTONE_INBATTLE
+    ; Stage 10 (battle items): the five in-battle handlers gate on wIsInBattle and
+    ; act on the ACTIVE mon (wPlayerMonNumber). This seeds just enough battle state
+    ; to reach them from the overworld harness — it is NOT a real battle, so the
+    ; X-stat path's StatModifierUpEffect runs without a battle screen behind it.
+    mov byte [ebp + wIsInBattle], 1         ; wild battle
+    mov byte [ebp + wPlayerMonNumber], 0
+    mov byte [ebp + wPlayerBattleStatus2], 0
+    mov byte [ebp + wEscapedFromBattle], 0
+    mov byte [ebp + wPlayerMonAttackMod], 7     ; neutral stage — a real InitBattle
+                                                ; seeds these; X Attack must take it to 8
+%endif
     call UseItem
     call DebugDumpMemory                    ; DUMP.BIN (the windows: table above) + exit
 %endif ; DEBUG_ITEMSTONE
