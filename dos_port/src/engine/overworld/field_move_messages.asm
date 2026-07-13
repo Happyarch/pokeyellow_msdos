@@ -76,7 +76,10 @@ PrintStrengthText:
 ; text-command wrappers (Tier-2): text_far → generated far stream, text_asm cry hook.
 UsedStrengthText:
     text_far _UsedStrengthText
-    text_asm                                    ; TX_START_ASM → runtime jumps to the code below
+    text_asm                                    ; TX_START_ASM → TextCommandProcessor jumps here
+                                                ; (home/text.asm .cmd_asm). This is the port's ONLY
+                                                ; text_asm hook; the dispatch was a silent skip until
+                                                ; this file was linked and exposed it.
     mov al, [ebp + wCurPartySpecies]
     call PlayCry                                ; TODO-HW: cry synth unported (see status_screen.asm)
     call Delay3

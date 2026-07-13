@@ -1103,9 +1103,8 @@ TextCommandProcessor:
     je .cmd_prompt_btn
     cmp al, TX_SCROLL
     je .cmd_scroll
-    ; TX_START_ASM ($08): can't translate inline ASM; skip silently
     cmp al, TX_START_ASM
-    je .cmd_skip0
+    je .cmd_asm
     cmp al, TX_NUM
     je .cmd_num
     cmp al, TX_PAUSE
@@ -1328,6 +1327,30 @@ TextCommandProcessor:
     mov ebx, esi                   ; cursor := end
     pop esi                        ; restore stream ptr
     jmp .next_cmd
+
+; --- TX_START_ASM ($08 / text_asm): run the inline code spliced into the stream ---
+; Pret ref: home/text.asm:TextCommand_START_ASM —
+;   pop hl / ld de, NextTextCommand / push de / jp hl
+; ESI already points PAST the command byte, i.e. straight at the hook's code: the
+; text_asm macro splices real instructions into the stream, so the stream IS the
+; code. In the flat port that is simpler than on the GB, not harder — one address
+; space, no bank to restore — so `jmp esi` is the whole of pret's `jp hl`.
+;
+; This used to be `je .cmd_skip0` under the comment "can't translate inline ASM;
+; skip silently". Both halves were false, and skipping is not harmless: it does not
+; skip the hook, it feeds the hook's opcode bytes to the renderer as glyphs, AND it
+; swallows the `jmp TextScriptEnd` that TERMINATES the message — so the processor
+; runs on into whatever follows the stream. Live consequence (2026-07-13): STRENGTH
+; printed "<MON> used" and then ran straight into the NEXT message.
+;
+; Contract, exactly pret's: the resume point is pushed as the hook's return address,
+; so a hook that `ret`s continues the stream at whatever ESI it leaves. That is what
+; makes TextScriptEnd (overworld_text.asm: `mov esi, TextScriptEndingText / ret`)
+; end the message — it returns onto a lone $50. TextCommandProcessor's saved
+; EAX/ECX/EDX + delay flags stay on the stack below and unwind normally at .done.
+.cmd_asm:
+    push .next_cmd                  ; pret: ld de, NextTextCommand / push de
+    jmp esi                         ; pret: jp hl
 
 ; --- Operand-skip helpers ---
 .cmd_skip3:
