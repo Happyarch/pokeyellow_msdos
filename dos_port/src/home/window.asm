@@ -52,6 +52,9 @@ global PlaceMenuCursor
 global EraseMenuCursor
 global PlaceUnfilledArrowMenuCursor
 global HandleDownArrowBlinkTiming
+global EnableAutoTextBoxDrawing
+global DisableAutoTextBoxDrawing
+global AutoTextBoxDrawingCommon
 global menu_item_step
 global menu_redraw_cb
 
@@ -459,4 +462,27 @@ HandleDownArrowBlinkTiming:
 .ret:
     pop ebx
     pop eax
+    ret
+
+; ---------------------------------------------------------------------------
+; EnableAutoTextBoxDrawing / DisableAutoTextBoxDrawing / AutoTextBoxDrawingCommon
+; — pret home/window.asm (they sit right after HandleDownArrowBlinkTiming there
+; too). Enable or disable DisplayTextID's automatic text-box drawing. Both also
+; clear wDoNotWaitForButtonPressAfterDisplayingText, so the next text waits for a
+; button press (unless [wEnteringCableClub] is set).
+;
+; Map _Scripts and the wild-encounter repel message call these.
+; ---------------------------------------------------------------------------
+EnableAutoTextBoxDrawing:
+    xor al, al
+    jmp AutoTextBoxDrawingCommon        ; jr AutoTextBoxDrawingCommon
+
+DisableAutoTextBoxDrawing:
+    mov al, 1 << BIT_NO_AUTO_TEXT_BOX
+    ; fallthrough
+
+AutoTextBoxDrawingCommon:
+    mov [ebp + wAutoTextBoxDrawingControl], al
+    xor al, al
+    mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al  ; make DisplayTextID wait for button press
     ret

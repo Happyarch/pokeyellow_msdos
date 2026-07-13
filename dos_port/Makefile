@@ -260,7 +260,6 @@ GAME_SRCS := \
     src/home/print_bcd.asm \
     src/home/window.asm \
     src/home/fade.asm \
-    src/home/auto_textbox.asm \
     src/movie/title.asm \
     src/engine/movie/oak_speech/init_player_data.asm \
     src/engine/overworld/overworld.asm \

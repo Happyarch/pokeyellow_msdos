@@ -1,29 +1,30 @@
 # Menu fidelity — de-bespoking the menu system against pret
 
-> **STATUS — PAUSED 2026-07-13, at the user's direction, after row 5.** Rows 1–5 + 23 are
-> DONE (6 of 24). Work was cut over to the **text subsystem**, which this audit kept
-> colliding with (M-3 / row 23) and which is the higher-value target: the golden harness
-> structurally does not render streamed text, so text bugs pass the gate and break live.
+> **STATUS — RESUMED 2026-07-13.** Rows 1–6 + 23 are DONE (7 of 24). The text-subsystem
+> detour this audit was paused for is **complete and archived** (`docs/plans/text_engine.md`):
+> the staging model is gone, `TX_FAR` works, and there is now a `DEBUG_TEXT=1..9` oracle for
+> streamed text — which the golden harness still structurally does not render.
 >
 > **Resume by re-running the `/loop`** (one file per iteration: audit → fix → gate →
 > commit). It picks the first row below that is `TODO`/`IN-PROGRESS` and works it. Update
 > the row + append findings each iteration.
 >
-> **Where it stood.** Next row is **6** (`src/home/auto_textbox.asm`, 3 allowlisted
-> relocations to challenge). Rows 6, 7, 8 and 13 are the last SHARED DRIVERS — do those
-> before the leaf screens (9–12, 14–18, 21), because everything downstream inherits their
-> bugs. Rows 19 (`save`, 1080 ln) and 20 (`link_menu`, 1148 ln) are mostly TODO-HW
-> SRAM/serial boundaries: low bug yield per line, and they MUST be split across iterations.
-> **Row 22 is the highest-value row on the board and is sequenced last** — the battle
-> move-menu family is missing entirely; it clears blocker B8 and unblocks Mimic + PP items.
-> Consider promoting it when the loop resumes.
+> **Where it stands.** Next row is **7** (`src/home/start_menu.asm`). Rows 7, 8 and 13 are the
+> last SHARED DRIVERS — do those before the leaf screens (9–12, 14–18, 21), because everything
+> downstream inherits their bugs. Rows 19 (`save`, 1080 ln) and 20 (`link_menu`, 1148 ln) are
+> mostly TODO-HW SRAM/serial boundaries: low bug yield per line, and they MUST be split across
+> iterations. **Row 22 is the highest-value row on the board and is sequenced last** — the
+> battle move-menu family is missing entirely; it clears blocker B8 and unblocks Mimic + PP
+> items. Consider promoting it.
 >
-> **What the audit found in 6 rows** — worth knowing before trusting any menu file's header:
+> **What the audit found in 7 rows** — worth knowing before trusting any menu file's header:
 > two game-breaking bugs (M-7: the ×NN quantity selector HUNG the game and drew its box
 > invisibly; M-10: every YES/NO drew its ▶ next to the option the player was NOT selecting),
-> plus a wrong allowlist entry, a wrong finding of my own (M-2), and several false "faithful"
-> / "no live caller" header claims. The hit rate on "audited file turns out to have a real
-> bug" is 100% so far. The remaining rows are not a formality.
+> two wrong allowlist entries, a wrong finding of my own (M-2), and several false "faithful" /
+> "no live caller" / wrong-pret-file header claims. Row 6 is the first row whose *code* was
+> already faithful — the lie was the file's **placement**, blessed by 3 rubber-stamped
+> allowlist entries. The hit rate on "audited file turns out to hold a real defect" is still
+> 100%. The remaining rows are not a formality.
 
 ## Why this exists
 
@@ -73,7 +74,7 @@ driver only relocates the divergence.
 | 3 | `src/engine/menus/text_box.asm` | `engine/menus/text_box.asm` + `data/text_boxes.asm` | DONE | `df0c652f` | M-5 (`TwoOptionMenu_{Save,Restore}ScreenTiles` missing → row 5), M-6 (stride save slot was re-entrancy-unsafe — FIXED), 8 hand-encoded strings migrated to a generator |
 | 4 | `src/home/list_menu.asm` | `home/list_menu.asm` | DONE | `3c2b6097` | **M-7 (qty menu HUNG the game — FIXED)**, M-8 (priced qty window clipped — needs mart anchor), M-9 (▷ swap counter never seeded — FIXED), M-2 **corrected** (my earlier finding was wrong; port's ▼ is faithful → new row 24). Priced price/qty coords swapped → FIXED; non-item tail duplicated the item tail → collapsed to pret's shared tail; 3 hand-encoded strings migrated to a generator; "no live caller" header claim was FALSE. |
 | 5 | `src/home/yes_no.asm` | `home/yes_no.asm` + `engine/menus/text_box.asm` | DONE | `6d74aed2` | **M-10 (single-spaced + cursor on the WRONG option — FIXED)**, **M-11 (`wMenuWatchMovingOutOfBounds` never cleared — FIXED)**, M-5 RESOLVED (Save/RestoreScreenTiles absent by design → SANCTIONED). Allowlist: the boilerplate *file-level* entry was FALSE (it keyed all of `engine/menus/text_box.asm` to yes_no.asm) — deleted, re-added as a hand-justified *label-level* entry for `DisplayTwoOptionMenu` only. 9 hand-encoded strings migrated to a generator. New `DEBUG_YESNO` harness. |
-| 6 | `src/home/auto_textbox.asm` | `home/window.asm` (split) | TODO | | allowlisted relocation ×3 — challenge |
+| 6 | ~~`src/home/auto_textbox.asm`~~ → merged into `src/home/window.asm` | `home/window.asm` | DONE | `PENDING` | **Allowlist ×3 DELETED, not re-added** — the "split" had no reason; the 3 routines now live in the file that mirrors pret (relocated → translated). Bodies were already faithful. Header named the wrong pret file. M-12 (the button-press flag is write-only in the linked build). |
 | 7 | `src/home/start_menu.asm` | `home/start_menu.asm` | TODO | | |
 | 8 | `src/engine/menus/draw_start_menu.asm` | same | TODO | | |
 | 9 | `src/engine/menus/start_sub_menus.asm` | same (861 ln) | TODO | | expect 2 parts; DEVIATION(icons) |
@@ -467,6 +468,31 @@ the two-option menu ran with whatever the *previous* menu left in
 list → quantity → YES/NO, so the YES/NO inherited out-of-bounds movement watching.
 **Fix:** store the 0, as pret does.
 **Severity:** medium (latent; depends on the preceding menu)
+
+### M-12. The post-text button-press flag is **write-only in the linked build** [OPEN — row 13/17]
+**File:** flag `wDoNotWaitForButtonPressAfterDisplayingText` (set by `AutoTextBoxDrawingCommon`,
+`src/home/window.asm`; also set by `pc.asm:202` and `players_pc.asm:260`)
+**pret:** `DisplayTextID` reads it to decide whether to `HoldTextDisplayOpen` — i.e. whether the
+text closes immediately or waits for A/B.
+**What is wrong:** in the port the flag's **only reader is `src/home/text_script.asm:227`, and that
+file is not linked** (it sits in a check-only Makefile list — same finding as T-1 in
+`docs/plans/text_engine.md`, where its dead `TX_FAR` streams turned up). So every store to this
+flag is inert: the two PC screens set it precisely to *skip* the post-text wait, and nothing acts
+on it. The port's dialog wait is `npc_dialog_wait_impl` (bespoke), which never consults it.
+**Not fixed here:** out of row 6's scope — the defect is in the consumer, not the setter. The
+setter is faithful. Belongs to row 13 (`display_text_id_init.asm`) or whichever row links
+`text_script.asm` / de-bespokes the dialog wait.
+**Severity:** low-medium (a missing optimisation, not a corruption: text waits when it should
+not have to). Worth confirming against pret whether any screen *depends* on not waiting.
+
+**Row 6's own verdict:** the three routines were already instruction-for-instruction faithful.
+The whole row was a **file-placement lie**, not a code bug: `auto_textbox.asm` existed only
+because someone split 13 lines out of pret's `home/window.asm`, and 3 boilerplate allowlist
+entries then blessed the split. There was no forcing reason — the port already mirrors
+`home/window.asm`. The file is deleted, the routines moved to `src/home/window.asm` (pret's own
+position for them, right after `HandleDownArrowBlinkTiming`), and all 3 allowlist entries are
+**deleted, not re-justified**. `relocated` 390 → 387, `translated` 824 → 827.
+Its header also claimed the pret source was `home/text.asm`. It is `home/window.asm`. Corrected.
 
 ### M-5 resolution (row 5): `TwoOptionMenu_SaveScreenTiles` / `_RestoreScreenTiles`
 Filed at row 3 as "missing entirely". Verified at row 5: they are **absent by design, and now
