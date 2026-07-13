@@ -106,6 +106,27 @@ items Stage 11 wires ITEMFINDER.**
 
 ---
 
+## B6 — Poké Flute's Pewter sleeping-Pikachu branch is deferred
+
+`ItemUsePokeFlute`'s third overworld branch (PEWTER_POKECENTER: wake the Pikachu
+sleeping next to you) needs **`IsPikachuRightNextToPlayer`** and
+**`PlaySpecificPikachuEmotion`**, neither of which is ported (`label_status`:
+missing). The port's branch falls into `.noSnorlaxOrPikachuToWakeUp` — the
+no-effect message, which is what pret does on every other map — so it is inert,
+not wrong. Restore the branch when the Pikachu-emotion routines land.
+
+Related: `ModifyPikachuHappiness` is still a ret-stub (`battle_exp_stubs.asm`), and
+every item that should nudge Pikachu's mood (medicine, TM/HM, the four X items)
+already calls it faithfully. Destubbing it is a one-file change that lights all of
+them up at once.
+
+Also note the Route 12 / Route 16 flute branches now **set**
+`EVENT_FIGHT_ROUTE{12,16}_SNORLAX` correctly, but the Snorlax that *reads* that
+event is a map script owned by the overworld plan — so the flag is set and nothing
+appears yet.
+
+---
+
 ## Cross-cutting: the `FlagActionPredef` trap
 
 Not a blocker, a landmine. **Never `call FlagActionPredef` in the port** — it has no

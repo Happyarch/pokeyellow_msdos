@@ -269,9 +269,25 @@ Archive to `docs/plans/items.md` when complete.
   - [x] Pokédex ($09): → `ShowPokedexMenu` (one-line `jmp`; pret `predef_jump`). Not
     harness-verified — the dex is an interactive screen and the A-only autokey cannot
     exit it (needs B). The dex screen itself has its own coverage (`DEBUG_G1`).
-  - [ ] Poké Flute: in-battle wake (calls the linked `WakeUpEntireParty` core /
-    enemy wake) + overworld Snorlax hook (event-coupled; the Snorlax script is
-    the overworld plan's — leave the map-side TODO there).
+  - [x] Poké Flute. In-battle: wakes the whole player party (+ the enemy party in a
+    trainer battle), clears the active mons' Sleep, then plays
+    `Music_PokeFluteInBattle` and waits it out. Overworld: Route 12 / Route 16
+    coordinate + event checks that set `EVENT_FIGHT_ROUTE{12,16}_SNORLAX`; the flute
+    jingle + map-music restore is the `text_asm` tail of `PlayedFluteHadEffectText`,
+    translated as code (`iu_played_flute_had_effect`) with the generator emitting the
+    printable prefix (new `gen_battle_text.ASM_TAIL_OK` opt-in).
+    Verified (`ITEMSTONE_ID=0x49`): out of battle in Pallet Town → no-effect text, key
+    item not consumed; in battle with a seeded sleeping mon → `wPartyMon1Status`
+    3 → 0 and the "had effect" branch taken (jingle played, wait loop exited).
+    Two divergences, both recorded in `docs/items_blockers.md`:
+      - **PEWTER_POKECENTER sleeping-Pikachu branch is DEFERRED** —
+        `IsPikachuRightNextToPlayer` / `PlaySpecificPikachuEmotion` are not ported. It
+        falls into the no-effect message (what pret does on every other map).
+      - `LoadScreenTilesFromBuffer2` is not called: the port has no Buffer2 save, by
+        the same reasoning `home/start_menu.asm` already documents (menus are a window
+        overlay, so the screen underneath was never destroyed).
+    The Snorlax that reads the fight event is still a map script (overworld plan), so
+    playing the flute on the right tile sets the flag but no Snorlax appears yet.
   - [ ] Town Map: link `town_map.asm` out of `ITEMS_CHECK_SRCS` (it's coded +
     data generated; "intentionally dangling" per its port note — resolve the
     palette/video deps that kept it dangling).

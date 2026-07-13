@@ -281,8 +281,11 @@ windows:
 ;   $CD6A wActionResultOrTookBattleTurn — 0 = item not used (no-effect / canceled)
 ;   $D155 wEvoStoneItemID — the stone ItemUseEvoStone parked for the party menu
 windows:
-    dd 0xD6FF    ; Stage 11: wWalkBikeSurfState (BICYCLE $06: 0 -> 1, and the
-                 ; key item must NOT be consumed — bag count stays put)
+    dd 0xCD3D    ; Stage 11: wWereAnyMonsAsleep. CAUTION: it reads 0 by dump time —
+                 ; $CD3D is aliased scratch that the TEXT path reuses after the flute's
+                 ; branch decision. The wake itself is visible as wPartyMon1Status
+                 ; ($D16E, in the $D162 window) going 3 -> 0.
+                 ; (was wWalkBikeSurfState $D6FF for the BICYCLE check — verified)
     dd 0xD31C    ; wNumBagItems + (id,qty) pairs
     dd 0xD162    ; wPartyCount + wPartySpecies
     dd 0xCD6A    ; wActionResultOrTookBattleTurn
@@ -1600,6 +1603,8 @@ RunStoneTest:
     mov byte [ebp + wEscapedFromBattle], 0
     mov byte [ebp + wPlayerMonAttackMod], 7     ; neutral stage — a real InitBattle
                                                 ; seeds these; X Attack must take it to 8
+    mov byte [ebp + wPartyMon1Status], 3       ; SLP, 3 turns — so POKE_FLUTE $49 has
+    mov byte [ebp + wBattleMonStatus], 3       ; something to wake (harmless to the rest)
 %endif
     call UseItem
     call DebugDumpMemory                    ; DUMP.BIN (the windows: table above) + exit

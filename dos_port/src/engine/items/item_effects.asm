@@ -1546,6 +1546,12 @@ extern GotOnBicycleText_ref         ; assets/item_text.inc
 extern GotOffBicycleText_ref        ; assets/item_text.inc
 extern NoCyclingAllowedHereText_ref ; assets/item_text.inc
 extern CoinCaseNumCoinsText_ref     ; assets/item_text.inc
+extern PlayedFluteHadEffectText_ref ; assets/item_text.inc
+extern PlayedFluteNoEffectText_ref  ; assets/item_text.inc
+extern ArePlayerCoordsInArray ; home/hidden_events.asm
+extern Music_PokeFluteInBattle    ; audio/poke_flute.asm
+extern StopAllMusic               ; home/audio.asm
+extern PlayMusic                  ; home/audio.asm
 extern Random                 ; home/random.asm — AL = next random byte
 extern Multiply               ; home/math.asm — hMultiplicand(3) * hMultiplier → hProduct(4)
 extern IndexToPokedex         ; data/pokemon_data.asm — FLAT TABLE: [species-1] → dex number
@@ -2777,3 +2783,177 @@ ItemUseOaksParcel:
 global ItemUsePokedex
 ItemUsePokedex:
     jmp ShowPokedexMenu                 ; pret: predef_jump ShowPokedexMenu
+
+
+; === ItemUsePokeFlute (items-plan Stage 11) ================================
+;
+; Source: engine/items/item_effects.asm:ItemUsePokeFlute.
+;
+; DEFERRED (documented divergence): pret's third overworld branch — PEWTER_POKECENTER,
+; "wake the sleeping Pikachu next to you" — needs `IsPikachuRightNextToPlayer` and
+; `PlaySpecificPikachuEmotion`, neither of which is ported (label_status: missing).
+; That branch therefore falls into `.noSnorlaxOrPikachuToWakeUp` ("played the flute,
+; no effect"), which is what pret does for every other map anyway. Restore it when
+; the Pikachu-emotion routines land.
+;
+; The Route 12/16 branches only SET the fight event; the Snorlax that reads it is a
+; map script (overworld plan). Playing the flute on the right tile is faithful today;
+; the Snorlax will not actually appear until that script exists.
+; ===========================================================================
+
+global ItemUsePokeFlute
+ItemUsePokeFlute:
+    mov al, [ebp + wIsInBattle]
+    test al, al
+    jnz .inBattle
+
+    ; --- overworld ---
+    call ItemUseReloadOverworldData
+    mov al, [ebp + wCurMap]
+    cmp al, ROUTE_12
+    jne .notRoute12
+    CheckEvent EVENT_BEAT_ROUTE12_SNORLAX
+    jnz .noSnorlaxOrPikachuToWakeUp     ; already beaten
+    mov esi, Route12SnorlaxFluteCoords  ; flat table — ArePlayerCoordsInArray reads [esi]
+    call ArePlayerCoordsInArray
+    jnc .noSnorlaxOrPikachuToWakeUp     ; not next to Snorlax
+    call iu_played_flute_had_effect
+    SetEvent EVENT_FIGHT_ROUTE12_SNORLAX
+    ret
+
+.notRoute12:
+    cmp al, ROUTE_16
+    jne .notRoute16
+    CheckEvent EVENT_BEAT_ROUTE16_SNORLAX
+    jnz .noSnorlaxOrPikachuToWakeUp
+    mov esi, Route16SnorlaxFluteCoords
+    call ArePlayerCoordsInArray
+    jnc .noSnorlaxOrPikachuToWakeUp
+    call iu_played_flute_had_effect
+    SetEvent EVENT_FIGHT_ROUTE16_SNORLAX
+    ret
+
+.notRoute16:
+    ; DEFERRED: pret's PEWTER_POKECENTER sleeping-Pikachu branch (see header).
+    ; Falls through to the no-effect message, as pret does for any other map.
+
+.noSnorlaxOrPikachuToWakeUp:
+    mov esi, [PlayedFluteNoEffectText_ref]
+    mov ecx, [PlayedFluteNoEffectText_ref + 4]
+    jmp iu_print_text                   ; pret: jp PrintText
+
+    ; --- in battle: wake everything up ---
+.inBattle:
+    mov byte [ebp + wWereAnyMonsAsleep], 0
+    mov bl, ~SLP_MASK                   ; pret: ld b, ~SLP_MASK — bits to KEEP
+    mov esi, wPartyMon1Status
+    mov ecx, PARTY_LENGTH
+    call WakeUpEntireParty
+
+    mov al, [ebp + wIsInBattle]
+    dec al                              ; wild battle (1)?
+    jz .skipWakingUpEnemyParty
+    mov bl, ~SLP_MASK
+    mov esi, wEnemyMon1Status
+    mov ecx, PARTY_LENGTH
+    call WakeUpEntireParty              ; trainer battle: wake their party too
+.skipWakingUpEnemyParty:
+    mov bl, ~SLP_MASK
+
+    mov esi, wBattleMonStatus
+    mov al, [ebp + esi]
+    and al, bl                          ; remove Sleep from the active player mon
+    mov [ebp + esi], al
+
+    mov esi, wEnemyMonStatus
+    mov al, [ebp + esi]
+    mov cl, al                          ; c = the enemy's status BEFORE clearing
+    and al, bl
+    mov [ebp + esi], al
+    mov al, cl
+    and al, SLP_MASK                    ; was the enemy asleep?
+    jz .asm_e063
+    mov byte [ebp + wWereAnyMonsAsleep], 1
+.asm_e063:
+    ; DEVIATION: pret calls LoadScreenTilesFromBuffer2 here to restore the screen it
+    ; saved before the item menu. The port has no Buffer2 save/restore — the same
+    ; position home/start_menu.asm already takes (its header: "pret's
+    ; SaveScreenTilesToBuffer2 screen save/restore is not needed" — the port draws
+    ; menus as a WINDOW overlay, so the screen underneath was never destroyed and
+    ; there is nothing to restore). Nothing saves Buffer2, so calling a loader for it
+    ; would restore garbage.
+
+    mov al, [ebp + wWereAnyMonsAsleep]
+    test al, al
+    jnz .someWereAsleep
+    mov esi, [PlayedFluteNoEffectText_ref]
+    mov ecx, [PlayedFluteNoEffectText_ref + 4]
+    jmp iu_print_text                   ; pret: jp z, PrintText
+
+.someWereAsleep:
+    mov esi, [PlayedFluteHadEffectText_ref]
+    mov ecx, [PlayedFluteHadEffectText_ref + 4]
+    call iu_print_text
+    mov al, [ebp + wLowHealthAlarm]
+    and al, 0x80
+    jnz .skipMusic                      ; alarm is going — don't stomp it
+    call WaitForSoundToFinish
+    call Music_PokeFluteInBattle        ; farcall — the in-battle flute jingle
+.musicWaitLoop:
+    mov al, [ebp + wChannelSoundIDs + CHAN7]
+    test al, al
+    jnz .musicWaitLoop                  ; wait for the jingle to finish
+.skipMusic:
+    ret
+
+; ---------------------------------------------------------------------------
+; iu_played_flute_had_effect — print PlayedFluteHadEffectText, then run its
+; text_asm TAIL.
+;
+; pret's PlayedFluteHadEffectText is `text_far / text_promptbutton / text_asm`,
+; where the asm plays SFX_POKEFLUTE out of battle and then restores the map music.
+; The generator emits the printable prefix (gen_battle_text.ASM_TAIL_OK) and the
+; tail is translated here, as Tier-2 code — a text stream cannot carry executable
+; bytes across the flat/GB boundary.
+;
+; The in-battle caller reaches this text through its own path (which plays
+; Music_PokeFluteInBattle instead), so the `wIsInBattle` guard below is pret's, and
+; is what makes calling this from the in-battle path harmless.
+; ---------------------------------------------------------------------------
+iu_played_flute_had_effect:
+    mov esi, [PlayedFluteHadEffectText_ref]
+    mov ecx, [PlayedFluteHadEffectText_ref + 4]
+    call iu_print_text
+    mov al, [ebp + wIsInBattle]
+    test al, al
+    jnz .done                           ; in battle: the caller handles the music
+    call StopAllMusic
+    mov al, SFX_POKEFLUTE               ; pret also loads BANK(SFX_Pokeflute) into C —
+    call PlayMusic                      ; no banking in the port
+.musicWaitLoop:
+    mov al, [ebp + wChannelSoundIDs + CHAN3]
+    cmp al, SFX_POKEFLUTE
+    je .musicWaitLoop                   ; wait for the jingle to finish
+    call PlayDefaultMusic               ; back to the map music
+.done:
+    ret
+
+section .data
+; pret keeps these two coordinate tables inline in item_effects.asm (dbmapcoord
+; emits `db y, x`). Not a glyph run and not a generated table — hand-written data
+; beside its only reader, exactly as pret does. ArePlayerCoordsInArray reads them
+; through a FLAT pointer, so they live in .data, not GB space.
+global Route12SnorlaxFluteCoords
+Route12SnorlaxFluteCoords:
+    db 62,  9                           ; one space West of Snorlax
+    db 61, 10                           ; one space North of Snorlax
+    db 63, 10                           ; one space South of Snorlax
+    db 0xFF                             ; end
+
+global Route16SnorlaxFluteCoords
+Route16SnorlaxFluteCoords:
+    db 10, 27                           ; one space East of Snorlax
+    db 10, 25                           ; one space West of Snorlax
+    db 0xFF                             ; end
+
+section .text

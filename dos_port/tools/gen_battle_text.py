@@ -225,6 +225,13 @@ def collect_far(cm, mem):
 # Collect `XxxText:` wrapper labels from the battle .asm files.
 # A wrapper is either `Label:` + `text_far _Far` (+ text_end), or `Label:` + raw db.
 # ---------------------------------------------------------------------------
+# Labels whose text_asm is a trailing ACTION, not the message. The printable
+# prefix is emitted; the asm tail is translated in the consuming .asm.
+#   PlayedFluteHadEffectText — tail plays SFX_POKEFLUTE out of battle, then
+#   restores the map music (ItemUsePokeFlute, items plan Stage 11).
+ASM_TAIL_OK = {"PlayedFluteHadEffectText"}
+
+
 def collect_wrappers(cm, mem, far_db):
     out = {}
     for rel in BATTLE_SRC:
@@ -252,6 +259,14 @@ def collect_wrappers(cm, mem, far_db):
                 if re.match(r'[A-Za-z_.]\w*:', t) and not t.startswith(("text", "db", "done", "prompt")):
                     break  # next label
                 if t == "text_asm":
+                    # A text_asm TAIL (printable content first, then an asm action
+                    # like "play the flute jingle") is generatable: emit the printable
+                    # prefix and translate the tail as Tier-2 code. Opt in per label
+                    # via ASM_TAIL_OK — silence is the safe default, because for most
+                    # labels the text_asm IS the message (grammar-driven), and emitting
+                    # only the prefix would silently truncate it.
+                    if label in ASM_TAIL_OK and body:
+                        break
                     body = None; break  # grammar-driven, not generatable
                 body.append(lines[j])
                 if t.startswith("text_far"):

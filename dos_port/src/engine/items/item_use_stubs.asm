@@ -33,7 +33,6 @@ global ItemUseRock
 global ItemUseEscapeRope
 global ItemUseCardKey
 global ItemUseItemfinder
-global ItemUsePokeFlute
 global ItemUseOldRod
 global ItemUseGoodRod
 global ItemUseSuperRod
@@ -47,7 +46,6 @@ ItemUseRock:
 ItemUseEscapeRope:
 ItemUseCardKey:
 ItemUseItemfinder:
-ItemUsePokeFlute:
 ItemUseOldRod:
 ItemUseGoodRod:
 ItemUseSuperRod:
