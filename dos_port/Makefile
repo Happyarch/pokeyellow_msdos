@@ -1320,6 +1320,14 @@ assets/mon_pics.inc: ../data/pokemon/base_stats.asm tools/gen_mon_pics.py
 
 src/data/mon_pics.o: assets/mon_pics.inc
 
+# CGB palette source data + human-authored colorization deltas.  The .inc is
+# Tier-1 generated data; no runtime consumer is linked until colorization R1.
+assets/colors/palettes.inc: tools/gen_palettes.py tools/gfx_core/palettes.py \
+		tools/colors/schema.py assets/colors/palettes.json \
+		../data/sgb/sgb_palettes.asm ../data/sgb/sgb_packets.asm \
+		../data/pokemon/palettes.asm ../constants/palette_constants.asm
+	python3 tools/gen_palettes.py
+
 # Audio engine data: four GB audio-bank images (headers + music/sfx bytecode
 # at true GB addresses), positional sound-ID constants, cry-modifier table.
 # Generated from the pret audio sources; byte-exact vs the reference ROM
@@ -1608,6 +1616,7 @@ assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_
         assets/alphabets.inc assets/dex_entries.inc assets/sprite_sets.inc \
         assets/sprite_sheet_pointers.inc assets/pokedex_tiles.inc \
         assets/mon_pics.inc \
+		assets/colors/palettes.inc \
         assets/audio_rom.inc assets/audio_constants.inc assets/cry_data.inc \
         assets/opl_patches.inc assets/music_streams.inc assets/mt32_sysex.inc \
         assets/pika_pcm.inc assets/tandy_tables.inc assets/enh_streams.inc \

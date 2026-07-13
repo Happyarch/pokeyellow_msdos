@@ -57,6 +57,9 @@ dos_port/assets/*
 # source of truth the generated ui_layout_*.inc is derived from. Must stay
 # tracked; the .inc itself regenerates via `make assets`.
 !dos_port/assets/ui_layout_*_sidecar.json
+# Colorization sidecar: human-authored deltas; the generated .inc stays ignored.
+!dos_port/assets/colors/
+!dos_port/assets/colors/palettes.json
 
 # ARR reference docs (MIDI/SoundBlaster/MT-32 specs) — cannot be committed
 docs/sound/

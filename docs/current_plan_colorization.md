@@ -3,8 +3,8 @@
 Status: **not started** — tick stages as they land. Archive to
 `docs/plans/colorization.md` when complete.
 
-- [ ] Stage C0 — palette data pipeline (parsers, sidecar schema, CLI, generator, Makefile)
-- [ ] Stage C1 — automap generator (defaults for all 151 mons + battle)
+- [x] Stage C0 — palette data pipeline (parsers, sidecar schema, CLI, generator, Makefile)
+- [x] Stage C1 — automap generator (defaults for all 151 mons + battle)
 - [ ] Stage C2 — tool Mode 1: shade reassignment + preview (the 99% case)
 - [ ] Stage C3 — tool Mode 2: repaint PNG round-trip
 - [ ] Stage R1 — minimal runtime: battle shows automapped GBC colors *(after/with perf Stages 1–4)*
