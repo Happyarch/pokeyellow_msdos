@@ -1238,8 +1238,11 @@ src/home/init.o src/home/window.o: assets/audio_constants.inc
 assets/gb_charmap.txt:
 	python3 tools/gen_charmap.py
 
-# START-menu item labels, encoded via the unicode_converter submodule (gb_text).
-assets/menu_strings.inc: assets/gb_charmap.txt tools/gen_menu_strings.py tools/gb_text.py
+# START-menu item labels, encoded via the unicode_converter submodule (gb_text),
+# plus the START-sub-menu FAR message streams (menu_text.inc), flattened out of
+# pret's data/text/*.asm by gen_battle_text.collect_far — hence the extra deps.
+assets/menu_strings.inc assets/menu_text.inc: assets/gb_charmap.txt tools/gen_menu_strings.py \
+        tools/gb_text.py tools/gen_battle_text.py
 	python3 tools/gen_menu_strings.py
 
 # Status/summary-screen PlaceString labels (charmap-encoded via gb_text; two-tier rule).
@@ -1403,7 +1406,8 @@ assets/pokedex_tiles.inc: ../gfx/pokedex/pokedex.2bpp ../gfx/battle/balls.2bpp \
 src/home/start_menu.o: assets/event_constants.inc assets/audio_constants.inc
 src/engine/menus/draw_start_menu.o: assets/event_constants.inc \
         assets/menu_strings.inc assets/ui_layout_menus.inc
-src/engine/menus/start_sub_menus.o: assets/ui_layout_menus.inc assets/audio_constants.inc
+src/engine/menus/start_sub_menus.o: assets/ui_layout_menus.inc assets/audio_constants.inc \
+        assets/menu_text.inc
 src/engine/menus/pc.o: assets/ui_layout_menus.inc assets/event_constants.inc
 src/engine/items/item_effects.o: assets/ui_layout_menus.inc
 src/engine/menus/main_menu.o src/engine/menus/save.o: assets/ui_layout_menus.inc
@@ -1577,7 +1581,7 @@ assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_
         assets/base_stats.inc assets/growth_rates.inc \
         assets/moves.inc assets/evos_moves.inc assets/monster_names.inc \
         assets/items.inc assets/item_text.inc assets/gb_charmap.txt assets/menu_strings.inc \
-        assets/status_strings.inc assets/textbox_strings.inc \
+        assets/status_strings.inc assets/textbox_strings.inc assets/menu_text.inc \
         assets/list_menu_strings.inc assets/yes_no_strings.inc \
         assets/text_oracle.inc \
         assets/overworld_strings.inc assets/field_move_text.inc \

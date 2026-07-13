@@ -12,9 +12,19 @@
 ; backwards: StartMenu_Pokedex calls ShowPokedexMenu, StartMenu_TrainerInfo draws
 ; the full trainer card (DrawTrainerInfo + DrawBadges), StartMenu_SaveReset calls
 ; SaveMenu, StartMenu_Option calls DisplayOptionMenu. Read the bodies, not this
-; header. (What IS still stubbed: the field-move dispatch inside StartMenu_Pokemon —
-; see the STUB(field-effects) note at .choseOutOfBattleMove, and the two
-; link-play text messages in StartMenu_Item.)
+; header.
+;
+; The two refusal MESSAGES (CannotUseItemsHereText / CannotGetOffHereText) were
+; also carried as STUB(text) — "link play not ported", "bike riding not ported".
+; Neither was ever true of the message: the text engine takes a flat stream, the
+; streams flatten straight out of pret's data/text/text_8.asm (Tier-1, via
+; tools/gen_menu_strings.py → assets/menu_text.inc), and PrintText links. They
+; print now. A guard whose branch is kept but whose message is dropped is not a
+; stub, it is a silently wrong screen.
+;
+; What IS still deferred: the field-move dispatch inside StartMenu_Pokemon (see
+; the note at .choseOutOfBattleMove) — and it is blocked on LINKAGE, not on
+; translation.
 ;
 ; Field-move pop-up (port model): DisplayTextBoxID(FIELD_MOVE_MON_MENU) draws
 ; the box on the 40-wide canvas at the UI_FIELD_MOVE_MON_MENU anchor (S2's
@@ -42,10 +52,16 @@ bits 32
 
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
+%include "gb_text.inc"                   ; text_far / text_end + TX_* codes
 %include "assets/audio_constants.inc"    ; SFX_SWAP
 
 %define UI_LAYOUT_EQUATES_ONLY 1
 %include "assets/ui_layout_menus.inc"
+
+; The two refusal MESSAGES are Tier-1 data (tools/gen_menu_strings.py flattens
+; pret's data/text/text_8.asm); their text_far WRAPPERS are Tier-2 code, at the
+; foot of this file under pret's own label names.
+%include "assets/menu_text.inc"
 
 global StartMenu_Pokedex
 global StartMenu_Pokemon
@@ -119,6 +135,14 @@ extern CommitMonPartySpriteOAM       ; engine/gfx/mon_icons.asm — publish shad
 extern PartyMenuMirror               ; engine/menus/party_menu.asm — canvas → panel window
 extern WaitForSoundToFinish          ; home/audio.asm (pret: home/delay.asm)
 extern PlaySound                     ; home/audio.asm — sound id in AL
+extern PrintText                     ; home/window.asm — ESI = flat text stream
+extern text_msgbox                   ; home/text.asm — active message-box projection
+extern msgbox_dialog                 ; home/text.asm — the standard bottom dialog box
+extern Init                          ; home/init.asm — soft reset (the link RESET item)
+extern RunDefaultPaletteCommand      ; engine/menus/naming_screen.asm (relocated; it is
+                                     ; the REAL body — SET_PAL_DEFAULT → RunPaletteCommand.
+                                     ; This file used to define a private ret-only copy
+                                     ; that shadowed it; see the header.)
 
 ; --- USE/TOSS box geometry (frozen layout; pret GB(13,10) 7x5, text (15,11)) ---
 ; ; PROJ menus: GB(13,10) 7x5 --(anchor=right/top, X+20, Y+0)--> wx=271 wy=80
@@ -376,14 +400,28 @@ StartMenu_TrainerInfo:
     mov dword [text_row_stride], 20     ; DrawTrainerInfo set stride 40 → restore
     jmp RedisplayStartMenu_DoNotDrawStartMenu
 StartMenu_SaveReset:                    ; pret ref: start_sub_menus.asm:StartMenu_SaveReset
-    ; DEVIATION: pret's `ld a,[wStatusFlags4] / bit BIT_LINK_CONNECTED,a / jp nz,Init`
-    ; RESET branch (soft-reset to title on a Cable-Club link) is link-play (S8) and is
-    ; omitted — no link state exists yet, so the guard would never take. predef
-    ; SaveMenu -> call SaveMenu (S7 .dsv write).
-    call SaveMenu
-    ; pret: call LoadScreenTilesFromBuffer2 / jp HoldTextDisplayOpen — the port's
-    ; window model needs no screen-buffer restore; RedisplayStartMenu redraws.
-    jmp RedisplayStartMenu
+    ; The RESET half is back. It was omitted as "link-play (S8) … the guard would
+    ; never take", but DrawStartMenu reads the SAME bit to label this item RESET
+    ; instead of SAVE (draw_start_menu.asm: BIT_LINK_CONNECTED → StartMenuResetText).
+    ; So the port would draw "RESET" and then SAVE — the two halves of one feature,
+    ; split. Init is translated and linked; the branch costs three instructions and
+    ; makes the pair correct by construction whenever link state does arrive.
+    mov al, [ebp + W_STATUS_FLAGS_4]
+    test al, (1 << BIT_LINK_CONNECTED)
+    jnz Init                            ; jp nz, Init — soft reset during a link
+    call SaveMenu                       ; predef SaveMenu
+    ; DEVIATION(port-input-model): pret is `call LoadScreenTilesFromBuffer2 /
+    ; jp HoldTextDisplayOpen` — hold until A is released, then fall into
+    ; CloseTextDisplay, which CLOSES the menu and returns to the map. The port used
+    ; to `jmp RedisplayStartMenu` and leave the START menu open after saving, which
+    ; is simply the wrong screen. HoldTextDisplayOpen and CloseTextDisplay are both
+    ; translated but sit in check-only text_script.asm (they do not link — the row-9
+    ; part-3 linkage item); CloseStartMenu is the port's already-sanctioned fold of
+    ; exactly that pair — release-spin, then the folded CloseTextDisplay — so the
+    ; behaviour lands where pret's does. It spins on B/START too (the port reads
+    ; HELD, not the edge) and reloads the box tiles on the way out; both are
+    ; harmless supersets of the hold. The buffer restore is dropped (window model).
+    jmp CloseStartMenu
 ; StartMenu_Option — pret ref: start_sub_menus.asm:StartMenu_Option.
 ; The OPTION screen (DisplayOptionMenu, pkg D). DisplayOptionMenu_ owns its own
 ; full-screen window + whiteout; drop them here before the START redraw.
@@ -406,12 +444,25 @@ StartMenu_Option:
 ; ---------------------------------------------------------------------------
 ; ItemMenuLoop — pret ref: start_sub_menus.asm:ItemMenuLoop.
 ; pret: LoadScreenTilesFromBuffer2DisableBGTransfer + RunDefaultPaletteCommand,
-; then falls into StartMenu_Item. Port: the screen-buffer restore is subsumed
-; by DisplayListMenuID's full redraw (window model — the stale sub-boxes are
-; dropped when it resets the window list); the palette command is a GB CGB
-; concern (TODO-HW: palettes are Phase 5).
+; then falls into StartMenu_Item.
+;
+; LoadScreenTilesFromBuffer2DisableBGTransfer (home/tilemap.asm) does TWO things,
+; and only one of them is window-model:
+;   xor a / ldh [hAutoBGTransferEnabled], a   ← a plain state write. NOT a screen
+;                                               restore. Kept, below.
+;   wTileMapBackup2 → wTileMap (CopyData)     ← DEVIATION(window-model): the port
+;                                               has no screen buffer to restore;
+;                                               DisplayListMenuID redraws the list
+;                                               and resets the window list.
+; The old comment folded both into "subsumed by DisplayListMenuID's full redraw"
+; and dropped the store with them. DisplayListMenuID happens to clear the byte
+; itself (list_menu.asm:194), so nothing was visibly broken — but that is the
+; callee's business, not a licence for the caller to skip pret's write, and the
+; hAutoBGTransferEnabled leak is a known regression class here (OW-A.13).
 ; ---------------------------------------------------------------------------
 ItemMenuLoop:
+    mov byte [ebp + hAutoBGTransferEnabled], 0  ; LoadScreenTilesFromBuffer2DisableBGTransfer
+    call RunDefaultPaletteCommand               ; call RunDefaultPaletteCommand
     ; fall through to StartMenu_Item
 
 ; ---------------------------------------------------------------------------
@@ -422,11 +473,12 @@ ItemMenuLoop:
 ; ---------------------------------------------------------------------------
 StartMenu_Item:
     mov al, [ebp + wLinkState]
-    dec al                              ; LINK_STATE_IN_CABLE_CLUB?
+    dec al                              ; is the player in the Colosseum or Trade Centre?
     jnz .notInCableClubRoom
-    ; STUB(text): CannotUseItemsHereText — link play not ported (S8/I1); the
-    ; guard branch is kept, the message is not shown. pret prints then exits.
-    jmp .exitMenu
+    mov esi, CannotUseItemsHereText     ; ld hl, CannotUseItemsHereText
+    mov dword [text_msgbox], msgbox_dialog  ; port: the standard bottom message box
+    call PrintText
+    jmp .exitMenu                       ; jr .exitMenu
 .notInCableClubRoom:
     ; store the bag pointer in wListPointer (for DisplayListMenuID)
     mov word [ebp + wListPointer], wNumBagItems
@@ -441,10 +493,21 @@ StartMenu_Item:
     mov [ebp + wBagSavedMenuItem], al
     jnc .choseItem
 .exitMenu:
-    ; pret: LoadScreenTilesFromBuffer2 / LoadTextBoxTilePatterns / UpdateSprites
-    ; — the START menu redraw (RedisplayStartMenu → DrawStartMenu) rebuilds the
-    ; window list and box; no separate restore needed in the window model.
-    jmp RedisplayStartMenu
+    ; DEVIATION(window-model): pret's `call LoadScreenTilesFromBuffer2` is dropped —
+    ; RedisplayStartMenu → DrawStartMenu rebuilds the window list and the box, so
+    ; there is no screen buffer to restore.
+    ;
+    ; Its two NEIGHBOURS were dropped with it, which the window model does not
+    ; excuse and which was a real bug. LoadTextBoxTilePatterns reloads VRAM TILE
+    ; PATTERNS, not a tilemap: a USE that opens the party menu overwrites the box
+    ; tiles with the HP-bar set ($62-$7F) — this file's own StartMenu_Pokemon
+    ; .exitMenu comment says exactly that — so leaving the bag afterwards drew the
+    ; START box out of HP-bar patterns, and the compositor caches those tiles
+    ; (g_tilecache_dirty), so it sticks. RedisplayStartMenu does NOT reload them.
+    ; StartMenu_Option, twenty lines up in this same file, kept both calls.
+    call LoadTextBoxTilePatterns        ; call LoadTextBoxTilePatterns
+    call UpdateSprites                  ; call UpdateSprites
+    jmp RedisplayStartMenu              ; jp RedisplayStartMenu
 .choseItem:
     ; erase the list-menu cursor: pret blanks coords (5,4)/(5,6)/(5,8)/(5,10)
     ; = list-box-relative (1,2)/(1,4)/(1,6)/(1,8) in the stride-20 scratch
@@ -499,9 +562,10 @@ StartMenu_Item:
     mov al, [ebp + W_STATUS_FLAGS_6]
     test al, (1 << BIT_ALWAYS_ON_BIKE)
     jz .useItem_closeMenu
-    ; STUB(text): CannotGetOffHereText — bike riding not ported; the guard
-    ; branch is kept (pret prints, then returns to the list).
-    jmp ItemMenuLoop
+    mov esi, CannotGetOffHereText       ; ld hl, CannotGetOffHereText
+    mov dword [text_msgbox], msgbox_dialog
+    call PrintText
+    jmp ItemMenuLoop                    ; jp ItemMenuLoop
 .notBicycle:
     mov al, [ebp + wCurrentMenuItem]
     test al, al                         ; and a
@@ -561,6 +625,17 @@ StartMenu_Item:
     call TossItem
 .tossZeroItems:
     jmp ItemMenuLoop
+
+; --- the two refusal messages (pret ref: start_sub_menus.asm, same position) ---
+; Tier-2 wrappers over the Tier-1 streams in assets/menu_text.inc, keeping pret's
+; text_far indirection rather than pointing PrintText at the flat body directly.
+CannotUseItemsHereText:
+    text_far _CannotUseItemsHereText
+    text_end
+
+CannotGetOffHereText:
+    text_far _CannotGetOffHereText
+    text_end
 
 ; ---------------------------------------------------------------------------
 ; ut_show_window — append the USE/TOSS window descriptor over the list.
@@ -910,10 +985,12 @@ SwitchPartyMon_InitVarOrSwapData:
     pop esi                             ; pop hl
     ret
 
-; ---------------------------------------------------------------------------
-; RunDefaultPaletteCommand — pret ref: home/palettes.asm:RunDefaultPaletteCommand.
-; TODO-HW: palette HAL (Phase 5) — reloads the CGB default palette. No-op here;
-; kept file-local (each full-takeover screen carries its own, e.g. pokedex.asm /
-; naming_screen.asm) so StartMenu_TrainerInfo/StartMenu_Pokedex control flow links.
-RunDefaultPaletteCommand:
-    ret
+; (RunDefaultPaletteCommand used to be defined HERE, file-local and ret-only,
+; "so StartMenu_TrainerInfo/StartMenu_Pokedex control flow links". It links
+; without it: the real body is global in naming_screen.asm and does what pret
+; does — `ld b, SET_PAL_DEFAULT` then fall into RunPaletteCommand. The private
+; copy silently ate the SET_PAL_DEFAULT argument for every caller in this file.
+; Harmless only while RunPaletteCommand is itself a Phase-5 ret-stub; the moment
+; the palette engine lands, this screen would have been the one that doesn't
+; restore the default palette, for no discoverable reason. Now externed.
+; pokedex.asm still carries a third private copy — filed, out of this row's scope.)

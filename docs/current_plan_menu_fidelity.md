@@ -86,7 +86,7 @@ driver only relocates the divergence.
 | 6 | ~~`src/home/auto_textbox.asm`~~ → merged into `src/home/window.asm` | `home/window.asm` | DONE | `9b509fda` | **Allowlist ×3 DELETED, not re-added** — the "split" had no reason; the 3 routines now live in the file that mirrors pret (relocated → translated). Bodies were already faithful. Header named the wrong pret file. M-12 (the button-press flag is write-only in the linked build). |
 | 7 | `src/home/start_menu.asm` | `home/start_menu.asm` | DONE | `3c409873` | **3 dropped calls restored, all 3 hidden behind a false comment**: M-13 `PlaySound SFX_START_MENU` (stale `TODO-HW`; audio is live), M-14 `PrintSafariZoneSteps` (false `STUB(safari)`; the body is real, linked, self-guarding), M-15 `SaveScreenTilesToBuffer2` (header claimed "not needed"; it's a pure WRAM copy — only the *restore* half is window-model). 2 SANCTIONED: `Joypad` + `CloseTextDisplay`, both genuinely unlinkable. No allowlist entries (file is at its mirrored path). |
 | 8 | `src/engine/menus/draw_start_menu.asm` | same | DONE | `634dcbe6` | **First row whose x86 was faithful end to end** (both labels; flag preservation correct at all 3 CheckEvent/test → branch pairs). The defects were in the *data* and the *tooling*: M-16 (the generator encoded the RENDERED string, so pret's `#MON` — the $54 POKé text command — became 7 literal glyphs, silently bypassing the handler the port implements; **generator patched**, data now byte-identical to pret), M-17 (`StartMenuShowWindow`'s `global` + "re-arms it after sub-menus" comment — no such caller has ever existed), M-18 (`update_label_db` couldn't see `equ` aliases, so 7 present pret labels reported `missing`; **tool patched**). 1 SANCTIONED: the canvas→window bridge. No allowlist entries. |
-| 9 | `src/engine/menus/start_sub_menus.asm` | same (861 ln) | **IN-PROGRESS (part 1 of 3 done)** | `6ce2e8b6` (part 1) | **Part 1 = the party half** (`StartMenu_Pokemon`, `ErasePartyMenuCursors`, `SwitchPartyMon{,_ClearGfx,_InitVarOrSwapData}`). M-19 (the swap **left both mons' icons on screen** — the `DEVIATION(icons)` excusing the missing OAM park went stale when icons became OBJ; FIXED, incl. the `RENDER_H` projection pret's 144px park constant needs), M-20 (`SFX_SWAP` + `WaitForSoundToFinish` missing behind another stale `TODO-HW`; FIXED — and wiring it is *what makes M-19 visible*), M-21 (the field-move stub's stated reason is FALSE — the effects ARE ported, they're in check-only files; comment corrected, dispatch scoped as **part 3**). Header advertised 4 STUBs that Session 9 had already wired. **Part 2 = the bag half** (`StartMenu_Item`/`ItemMenuLoop` + the 4 seams + the 3 `missing` text labels). |
+| 9 | `src/engine/menus/start_sub_menus.asm` | same (861 ln) | **IN-PROGRESS (parts 1+2 of 3 done)** | `6ce2e8b6` (p1), `PENDING2` (p2) | **Part 1 = the party half** (`StartMenu_Pokemon`, `ErasePartyMenuCursors`, `SwitchPartyMon{,_ClearGfx,_InitVarOrSwapData}`). M-19 (the swap **left both mons' icons on screen** — the `DEVIATION(icons)` excusing the missing OAM park went stale when icons became OBJ; FIXED, incl. the `RENDER_H` projection pret's 144px park constant needs), M-20 (`SFX_SWAP` + `WaitForSoundToFinish` missing behind another stale `TODO-HW`; FIXED — and wiring it is *what makes M-19 visible*), M-21 (the field-move stub's stated reason is FALSE — the effects ARE ported, they're in check-only files; comment corrected, dispatch scoped as **part 3**). Header advertised 4 STUBs that Session 9 had already wired. **Part 2 = the bag half + the 4 seams — DONE**: M-22 (a private `ret`-only `RunDefaultPaletteCommand` **shadowing the real global body** — the stub class the conventions exist to catch; a 3rd copy sits in `pokedex.asm`, filed), M-23 (`.exitMenu` dropped `LoadTextBoxTilePatterns`+`UpdateSprites` under a window-model excuse that covers neither — the START box could render out of HP-bar tiles), M-24 (`ItemMenuLoop` dropped the `hAutoBGTransferEnabled=0` store — the OW-A.13 leak class), M-25 (both refusal messages were `STUB(text)` blaming unported *features*, while the guard branches ran and showed **nothing**; nothing blocked them — generator patched, both now print), M-26 (`StartMenu_SaveReset` dropped pret's RESET branch *while row 8's `DrawStartMenu` already draws the RESET label*, and returned to the START menu instead of the map). Only `TrainerInfo_FarCopyData` still `missing` → **row 10**. **Part 3 = the field-move dispatch** (badge gate + jump table + 5 text streams + the decision to link `cut.asm` / `field_move_messages.asm` / `text_script.asm`, which also unblocks M-26's exact tail). |
 | 10 | `src/engine/menus/trainer_card.asm` | `engine/menus/start_sub_menus.asm` | TODO | | allowlisted relocation (7 labels) — challenge |
 | 11 | `src/engine/menus/party_menu.asm` + `src/home/pokemon.asm` | `engine/menus/party_menu.asm`, `home/pokemon.asm` | TODO | | DEVIATION(text) ×3; legacy hand-encoded strings (debt) |
 | 12 | `src/engine/menus/swap_items.asm` | same | TODO | | "PLACEHOLDERS below … ROOT migrates + deletes" |
@@ -693,3 +693,97 @@ automated harness**, so a future regression here would be silent. The `DEBUG_PAR
 building when **row 11** opens `party_menu.asm`, which is where the hook has to live.
 The SFX was **heard** in the live run; it remains uncovered by any automated check (no harness
 captures audio).
+
+### M-22. A private `ret`-only `RunDefaultPaletteCommand` SHADOWED the real body [FIXED — row 9 part 2]
+`start_sub_menus.asm` defined its own file-local `RunDefaultPaletteCommand: ret`, commented
+*"kept file-local … so StartMenu_TrainerInfo/StartMenu_Pokedex control flow links."* It links
+fine without it: the **real body is `global` in `naming_screen.asm`** and does what pret does
+(`ld b, SET_PAL_DEFAULT` → fall into `RunPaletteCommand`). The private copy silently ate the
+`SET_PAL_DEFAULT` argument for every caller in this file.
+This is the **stub-shadowing-a-real-body class the conventions exist to catch**, and it is
+invisible today only because `RunPaletteCommand` is itself a Phase-5 `ret`-stub — so the bug is
+*latent*: the day the palette engine lands, the trainer card and the bag would be the two screens
+that don't restore the default palette, for no discoverable reason. Nobody would look here.
+Now externed. **`pokedex.asm` carries a THIRD private copy** — same bug, another row's file, filed
+here. The right end state is one definition; a `ret`-only stand-in belongs in a `*_stubs.asm`, not
+copy-pasted per screen. Worth a tree-wide sweep for other pret labels defined file-locally more
+than once (`grep -rn '^<PretLabel>:' src/` for anything the DB calls `relocated`).
+
+### M-23. `StartMenu_Item.exitMenu` dropped two calls the window model does not excuse [FIXED — row 9 part 2]
+pret's exit is `LoadScreenTilesFromBuffer2` / `LoadTextBoxTilePatterns` / `UpdateSprites`. The port
+dropped **all three** under one comment: *"the START menu redraw rebuilds the window list and box;
+no separate restore needed in the window model."* That sentence is true of the first call and of
+nothing else — the same over-generalisation as row 7's (one real deviation stretched to cover its
+innocent neighbours).
+`LoadTextBoxTilePatterns` reloads **VRAM tile patterns**, not a tilemap. A USE that opens the party
+menu overwrites the box tiles with the HP-bar set (`$62-$7F`) — *this file's own*
+`StartMenu_Pokemon.exitMenu` comment says exactly that, eighty lines up — so leaving the bag
+afterwards drew the START box out of HP-bar patterns, and the compositor **caches** decoded tiles,
+so it sticks until something else arms `g_tilecache_dirty`. `RedisplayStartMenu` does not reload
+them. And `StartMenu_Option`, in this same file, kept both calls — the drop was not a decision,
+it was an oversight wearing a decision's comment.
+
+### M-24. `ItemMenuLoop` dropped `hAutoBGTransferEnabled = 0` with the buffer restore [FIXED — row 9 part 2]
+`LoadScreenTilesFromBuffer2DisableBGTransfer` (`missing` in the port) does two things: it zeroes
+`hAutoBGTransferEnabled`, and it copies `wTileMapBackup2 → wTileMap`. Only the second is
+window-model. The port dropped both and said "subsumed by DisplayListMenuID's full redraw".
+`DisplayListMenuID` does happen to clear the byte itself (`list_menu.asm:194`) — but that is the
+callee's business, not a licence for the caller to skip pret's write, and **the leak of exactly
+this byte is a known regression class here** (OW-A.13, which `DEBUG_STARTMENU` still exists to
+repro). The store is back, inline, with the buffer half tagged as the deviation it actually is.
+
+### M-25. The two refusal messages were tagged `STUB(text)` — nothing was blocking them [FIXED — row 9 part 2]
+`CannotUseItemsHereText` (bag inside a Cable Club) and `CannotGetOffHereText` (BICYCLE while
+`BIT_ALWAYS_ON_BIKE`) were both `missing`, each behind a comment blaming an unported *feature*:
+*"link play not ported"*, *"bike riding not ported"*. But the **guard branches were kept** — so the
+port took the refusal path and displayed nothing, which is not a stub, it is a silently wrong
+screen. And nothing about the message was blocked: the text engine takes a flat stream, `PrintText`
+links, and `gen_battle_text.collect_far` flattens both bodies straight out of pret's
+`data/text/text_8.asm`.
+Fixed as **Tier-1 data + Tier-2 wrapper**, per the two-tier rule: `tools/gen_menu_strings.py` grew
+a FAR-stream group emitting `assets/menu_text.inc` (the generator patch the standing instruction
+calls for — it previously handled only bare glyph runs, which is why nobody could add a *message*
+to it), and the `text_far` / `text_end` wrappers live in the `.asm` under pret's own label names,
+as pret writes them. Both labels are now `translated`; `TrainerInfo_FarCopyData` is the file's only
+remaining `missing` label and it belongs to **row 10** (`trainer_card.asm`).
+
+### M-26. `StartMenu_SaveReset` dropped the RESET branch, and returned to the wrong screen [FIXED — row 9 part 2]
+Two bugs in five lines.
+* pret gates on `BIT_LINK_CONNECTED` and **soft-resets** (`jp Init`) instead of saving. The port
+  omitted it as *"link-play (S8) … the guard would never take"* — but **`DrawStartMenu` reads that
+  same bit to label the item RESET instead of SAVE** (row 8's file). So the port would draw
+  "RESET" and then save the game: one feature, implemented in one half and denied in the other.
+  `Init` is translated and linked; the branch is three instructions. Restored.
+* pret's tail is `jp HoldTextDisplayOpen` → falls into `CloseTextDisplay`, which **closes the menu
+  and returns to the map** — saving puts you back in the overworld. The port did
+  `jmp RedisplayStartMenu` and left the START menu open. That is simply the wrong screen, and it
+  was not tagged as a deviation at all. Both pret routines are translated but sit in **check-only**
+  `text_script.asm` (the row-9 part-3 linkage item); `CloseStartMenu` is the port's already-
+  sanctioned fold of exactly that pair (release-spin → folded `CloseTextDisplay`) and is what the
+  bag's own `.useItem_closeMenu` already tail-jumps. Now used here too, and tagged.
+
+### Row 9 part 2 — audited-and-faithful (recorded so the next reader need not redo it)
+* `.choseItem`'s cursor blanks. pret `ldcoord_a 5,4 / 5,6 / 5,8 / 5,10`; the port writes
+  `W_TILEMAP + {2,4,6,8}*20 + 1`. **Correct**: the port's list menu draws box-relative into the
+  stride-20 scratch, and `home/list_menu.asm` independently derives the same origin
+  (`LIST_CURSOR_COL = 1`, `LIST_NAME_ROW0 = 2`, `LIST_ROW_STEP = 2`, with the comments
+  `pret hlcoord 5,4 → box-rel (1,2)`). The two projections agree.
+* `StartMenu_Pokedex` / `StartMenu_Option` / `StartMenu_TrainerInfo`: faithful. Each drops only
+  `LoadScreenTilesFromBuffer2` (window model) — `StartMenu_TrainerInfo` adds the
+  `trainer_card_present`/`_teardown` window bridge, which is the same deviation in mirror form.
+
+### Row 9 part 2 verification note
+`make fidelity` 6/6 (regression only). What each fix is actually backed by:
+* **M-23 / M-24 / M-26** are restorations of calls/stores pret makes — the argument is pret's
+  source plus the port's own linkage, and the golden suite confirms nothing regressed. The
+  *symptom* M-23 describes (START box drawn from HP-bar tiles after a party-menu item USE) is
+  **not covered by any golden** — no scenario uses an item — so the fix is reasoned, not observed.
+* **M-25's two messages are UNREACHABLE in the port today**, which is why no harness can show them:
+  one needs a Cable Club (link play is not ported at all), the other needs `BIT_ALWAYS_ON_BIKE`
+  (forced-bike, Cycling Road). What *is* verified is that the streams are byte-identical to pret's
+  `data/text/text_8.asm` (same `collect_far` that produces the battle text), and that the
+  `text_far` wrapper + `PrintText` + `msgbox_dialog` shape is the one the **linked** battle text
+  uses on screen every level-up — `TX_FAR` is handled in `home/text.asm`'s TextCommandProcessor.
+* **faithdiff blind spot, worth knowing:** it reports `- DROPPED Init (jp)` for `StartMenu_SaveReset`
+  even though the branch is there — its port matcher only accepts `call`/`jmp`, never `jnz`/`jz`.
+  Confirmed present by disassembling `PKMN.EXE`: `test $0x40,%al / jne <Init>`. Do not "fix" it.
