@@ -127,6 +127,50 @@ appears yet.
 
 ---
 
+## B7 — the fishing rods need the `trainer_engine.asm` link closure
+
+`ItemUseOldRod` / `GoodRod` / `SuperRod` all end in `FishingAnim`
+(`engine/overworld/player_animations.asm`) — it is not just the animation, it also
+prints "Not even a nibble!" / "Looks like there's nothing here." and shakes the
+player sprite on a bite. Its two files are **translated but check-only**, and I
+measured the closure by linking them:
+
+- Moving `super_rod.asm` (`ReadSuperRodData`) into `ITEMS_SRCS` and
+  `player_animations.asm` (`FishingAnim`) into `GAME_SRCS` links with exactly **one**
+  undefined symbol: **`EmotionBubble`** (FishingAnim shows the "!" bubble on a bite).
+- `EmotionBubble` is *relocated* into `src/engine/overworld/trainer_engine.asm` and
+  is not `global` there. Adding the `global` and linking that file pulls in
+  **`SaveTrainerName`** (missing), **`JessieJamesPic`** (missing pic data),
+  **`TrainerNameText`** (missing), **`WriteOAMBlock`** (`home/oam.asm`, check-only)
+  and **`GetTrainerName_`** (translated, `get_trainer_name.asm`, not linked).
+
+So the rods are three small ports away, but all three are **trainer-engine** work,
+not item work — which is exactly what the items plan predicted ("Rod-cast … couple
+to the overworld/battle boundary — flag both plans when wiring"). Whoever links
+`trainer_engine.asm` should finish the rods in the same pass; the item side is a
+~60-line faithful translation with no other dependency (`IsNextTileShoreOrWater`,
+`Random`, `ReadSuperRodData`, `PlaySound`, `DelayFrames` are all live).
+
+**Watch out:** `wRodResponse` is `$CD3D` — the same aliased scratch byte as
+`wWereAnyMonsAsleep`. Do not dump it after the text path has run (see the Poké Flute
+note in `src/debug/debug_dump.asm`).
+
+---
+
+## Cross-cutting: `faithdiff` cannot see port-side conditional jumps
+
+Not a blocker, a gate weakness worth knowing before you read a report.
+`tools/faithdiff`'s **port** matcher is `^\s*(call|jmp)\s+…` — it does not match
+`jnz`/`jz`/`jne`/`je`. pret's matcher *does* accept `jp nz, Target`. So every
+port routine that reaches a shared tail with a conditional jump (the whole
+`… jnz ItemUseNotTime` family) reports a spurious **DROPPED ItemUseNotTime**.
+`ItemUseCoinCase`, `ItemUseCardKey` and friends all carry it. Teaching the port
+regex the `j<cc>` forms would remove a standing class of false positives — and would
+probably surface some real ones — but it re-baselines every routine's report at once,
+so it wants its own commit.
+
+---
+
 ## Cross-cutting: the `FlagActionPredef` trap
 
 Not a blocker, a landmine. **Never `call FlagActionPredef` in the port** — it has no

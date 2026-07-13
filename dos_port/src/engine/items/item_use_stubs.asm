@@ -13,11 +13,13 @@
 ;
 ; TODO(items-plan Stage 9):  ItemUseEscapeRope
 ;   (the Repel family landed in item_effects.asm — stubs retired)
-; TODO(items-plan Stage 11): ItemUseBicycle / ItemUsePokeFlute / ItemUseTownMap /
-;                            ItemUseItemfinder / ItemUseOldRod / ItemUseGoodRod /
-;                            ItemUseSuperRod / ItemUseCardKey / ItemUseCoinCase /
-;                            ItemUseOaksParcel / ItemUseSurfboard / ItemUsePokedex /
-;                            ItemUsePPUp / ItemUsePPRestore
+; TODO(items-plan Stage 11): ItemUseTownMap / ItemUseSurfboard / ItemUsePPUp /
+;                            ItemUsePPRestore
+;   (Bicycle / CoinCase / OaksParcel / Pokedex / PokeFlute / CardKey landed in
+;    item_effects.asm — stubs retired)
+; BLOCKED (docs/items_blockers.md): ItemUseItemfinder (B5: hidden-object data),
+;   ItemUseOldRod / ItemUseGoodRod / ItemUseSuperRod (B7: FishingAnim needs the
+;   trainer_engine link closure)
 ; TODO(safari, battle plan): ItemUseBait / ItemUseRock (Safari Zone throws)
 ;
 ; Build: nasm -f coff -I include/ -I . -o item_use_stubs.o src/engine/items/item_use_stubs.asm
@@ -31,7 +33,6 @@ global ItemUseSurfboard
 global ItemUseBait
 global ItemUseRock
 global ItemUseEscapeRope
-global ItemUseCardKey
 global ItemUseItemfinder
 global ItemUseOldRod
 global ItemUseGoodRod
@@ -44,7 +45,6 @@ ItemUseSurfboard:
 ItemUseBait:
 ItemUseRock:
 ItemUseEscapeRope:
-ItemUseCardKey:
 ItemUseItemfinder:
 ItemUseOldRod:
 ItemUseGoodRod:

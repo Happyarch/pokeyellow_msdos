@@ -217,6 +217,7 @@ STATUS_SCREEN_STATS_BOX equ 0      ; constants/menu_constants.asm (PrintStatsBox
 LEVEL_UP_STATS_BOX     equ 1       ; constants/menu_constants.asm (STATUS_SCREEN=0)
 SET_PAL_STATUS_SCREEN  equ 0x03    ; constants/palette_constants.asm (RunPaletteCommand id)
 SET_PAL_OVERWORLD      equ 0x09    ; constants/palette_constants.asm (RunPaletteCommand id)
+BIT_UNUSED_CARD_KEY    equ 7       ; constants/ram_constants.asm (wStatusFlags1 bit; never read)
 BIT_NO_AUDIO_FADE_OUT  equ 1       ; constants/ram_constants.asm (wStatusFlags2 bit)
 BIT_WILD_ENCOUNTER_COOLDOWN equ 0  ; constants/ram_constants.asm (wStatusFlags2 bit)
 CHAN5                  equ 4       ; constants/audio_constants.asm (5th sound channel index)

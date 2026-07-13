@@ -29,6 +29,7 @@ bits 32
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
 %include "assets/event_constants.inc"   ; EVENT_* bit indices (ItemUseBall's catch flags)
+%include "assets/map_dims.inc"           ; map ids (ItemUsePokeFlute / ItemUseCardKey)
 %include "events.inc"                   ; CheckEvent over W_EVENT_FLAGS
 
 global WakeUpEntireParty
@@ -802,7 +803,6 @@ extern ItemUseRepel
 extern ItemUseSuperRepel
 extern ItemUseMaxRepel
 extern ItemUseXAccuracy
-extern ItemUseCardKey
 extern ItemUsePokeDoll
 extern ItemUseGuardSpec
 extern ItemUseDireHit
@@ -2938,6 +2938,96 @@ iu_played_flute_had_effect:
 .done:
     ret
 
+
+; === ItemUseCardKey (items-plan Stage 11) =================================
+;
+; Source: engine/items/item_effects.asm:ItemUseCardKey.
+;
+; This handler is DEAD ON THE REAL HARDWARE, and the port reproduces that. See the
+; BUG note at the tile read below. The Silph Co. doors the three CardKeyTables
+; describe are opened by map scripts, not by this item — pret's own comment on the
+; tables reads "probably supposed to be door locations in Silph Co., but they are
+; unused", and `wUnusedCardKeyGateID` / BIT_UNUSED_CARD_KEY are, as pret says,
+; "never checked" by anything.
+; ===========================================================================
+
+extern GetTileAndCoordsInFrontOfPlayer  ; engine/overworld/player_state.asm
+                                        ;   out: DH = Y, DL = X in front of player,
+                                        ;   CL + wTileInFrontOfPlayer = the tile
+
+global ItemUseCardKey
+ItemUseCardKey:
+    mov byte [ebp + wUnusedCardKeyGateID], 0
+    call GetTileAndCoordsInFrontOfPlayer ; pret calls the predef ENTRY directly (the
+                                         ; port's entry likewise begins with
+                                         ; GetPredefRegisters, which only reloads
+                                         ; registers this routine immediately
+                                         ; overwrites — so the call is equivalent)
+
+    ; BUG(2): pret reads `[GetTileAndCoordsInFrontOfPlayer]` — the routine's own first
+    ; opcode byte — where it plainly meant `[wTileInFrontOfPlayer]`. On the GB that
+    ; byte is $CD (`call GetPredefRegisters`), which matches none of the three door
+    ; tiles below, so the compare ALWAYS falls to ItemUseNotTime and the tables are
+    ; unreachable. Reading the port's own code byte would be meaningless (x86 opcodes
+    ; differ), so level 0/1 hardcodes the byte the GB actually reads — same observable
+    ; behaviour, "OAK: this isn't the time to use that!". Level 2 reads the tile pret
+    ; meant to read; even then the only effect is a different message plus two writes
+    ; nothing ever reads, so this fix is cosmetic by construction.
+%if BUG_FIX_LEVEL >= 2
+    mov al, [ebp + W_TILE_IN_FRONT_OF_PLAYER]
+%else
+    mov al, 0xCD
+%endif
+    cmp al, 0x18
+    jne .next0
+    mov esi, CardKeyTable1
+    jmp .next1
+.next0:
+    cmp al, 0x24
+    jne .next2
+    mov esi, CardKeyTable2
+    jmp .next1
+.next2:
+    cmp al, 0x5e
+    jnz ItemUseNotTime                  ; pret: jp nz, ItemUseNotTime
+    mov esi, CardKeyTable3
+.next1:
+    mov al, [ebp + wCurMap]
+    mov bh, al                          ; pret: ld b, a
+.loop:
+    ; The tables are FLAT .data (see below) — read them with a plain [esi], not
+    ; [ebp+esi]. `lea` steps the pointer without touching the flags each `cp` sets.
+    mov al, [esi]
+    lea esi, [esi + 1]
+    cmp al, 0xFF                        ; pret: cp -1 (end of table)
+    jz ItemUseNotTime
+    cmp al, bh                          ; this map?
+    jne .nextEntry1
+    mov al, [esi]
+    lea esi, [esi + 1]
+    cmp al, dh                          ; this Y?
+    jne .nextEntry2
+    mov al, [esi]
+    lea esi, [esi + 1]
+    cmp al, dl                          ; this X?
+    jne .nextEntry3
+    mov al, [esi]
+    mov [ebp + wUnusedCardKeyGateID], al
+    jmp .done
+.nextEntry1:
+    lea esi, [esi + 1]
+.nextEntry2:
+    lea esi, [esi + 1]
+.nextEntry3:
+    lea esi, [esi + 1]
+    jmp .loop
+.done:
+    mov esi, [ItemUseText00_ref]
+    mov ecx, [ItemUseText00_ref + 4]
+    call iu_print_text                  ; pret: call PrintText
+    or byte [ebp + wStatusFlags1], 1 << BIT_UNUSED_CARD_KEY  ; never checked
+    ret
+
 section .data
 ; pret keeps these two coordinate tables inline in item_effects.asm (dbmapcoord
 ; emits `db y, x`). Not a glyph run and not a generated table — hand-written data
@@ -2954,6 +3044,46 @@ global Route16SnorlaxFluteCoords
 Route16SnorlaxFluteCoords:
     db 10, 27                           ; one space East of Snorlax
     db 10, 25                           ; one space West of Snorlax
+    db 0xFF                             ; end
+
+; pret: data/events/card_key_coords.asm, INCLUDEd inside item_effects.asm — so it
+; stays here, beside its only reader. Format: map id, Y, X, gate id. Map ids come
+; from the generated assets/map_dims.inc (Tier-1), never hand-encoded.
+; pret's own header: "probably supposed to be door locations in Silph Co., but they
+; are unused. The reason there are 3 tables is unknown." They are unreachable in the
+; real game too — see the BUG note in ItemUseCardKey.
+global CardKeyTable1
+CardKeyTable1:
+    db  SILPH_CO_2F, 0x04, 0x04, 0
+    db  SILPH_CO_2F, 0x04, 0x05, 1
+    db  SILPH_CO_4F, 0x0C, 0x04, 2
+    db  SILPH_CO_4F, 0x0C, 0x05, 3
+    db  SILPH_CO_7F, 0x06, 0x0A, 4
+    db  SILPH_CO_7F, 0x06, 0x0B, 5
+    db  SILPH_CO_9F, 0x04, 0x12, 6
+    db  SILPH_CO_9F, 0x04, 0x13, 7
+    db SILPH_CO_10F, 0x08, 0x0A, 8
+    db SILPH_CO_10F, 0x08, 0x0B, 9
+    db 0xFF                             ; end
+
+global CardKeyTable2
+CardKeyTable2:
+    db SILPH_CO_3F, 0x08, 0x09, 10
+    db SILPH_CO_3F, 0x09, 0x09, 11
+    db SILPH_CO_5F, 0x04, 0x07, 12
+    db SILPH_CO_5F, 0x05, 0x07, 13
+    db SILPH_CO_6F, 0x0C, 0x05, 14
+    db SILPH_CO_6F, 0x0D, 0x05, 15
+    db SILPH_CO_8F, 0x08, 0x07, 16
+    db SILPH_CO_8F, 0x09, 0x07, 17
+    db SILPH_CO_9F, 0x08, 0x03, 18
+    db SILPH_CO_9F, 0x09, 0x03, 19
+    db 0xFF                             ; end
+
+global CardKeyTable3
+CardKeyTable3:
+    db SILPH_CO_11F, 0x08, 0x09, 20
+    db SILPH_CO_11F, 0x09, 0x09, 21
     db 0xFF                             ; end
 
 section .text

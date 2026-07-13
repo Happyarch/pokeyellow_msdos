@@ -293,13 +293,22 @@ Archive to `docs/plans/items.md` when complete.
     palette/video deps that kept it dangling).
   - [ ] Itemfinder: add `itemfinder.asm` to the Makefile (currently orphaned —
     in no SRCS list at all), `ItemUseItemfinder` proximity check + SFX;
-    needs overworld hidden-object data (interface).
-  - [ ] Fishing rods: `ItemUseOldRod`/`GoodRod`/`SuperRod` + `FishingInit`;
-    link `super_rod.asm` (check-only, data already generated). Rod-cast
-    facing-water check + encounter start couple to the overworld/battle
-    boundary — flag both plans when wiring.
-  - [ ] Card Key / Coin Case / Oak's Parcel: thin, event-coupled; Card Key
-    door needs the overworld hidden-object/door path (interface).
+    needs overworld hidden-object data (interface). BLOCKED — `docs/items_blockers.md` B5.
+  - [ ] Fishing rods: `ItemUseOldRod`/`GoodRod`/`SuperRod` + `FishingInit`.
+    **BLOCKED — `docs/items_blockers.md` B7.** Measured: linking `super_rod.asm`
+    (`ReadSuperRodData`) + `player_animations.asm` (`FishingAnim`) leaves exactly one
+    undefined symbol, `EmotionBubble`, whose file (`trainer_engine.asm`) then wants
+    `SaveTrainerName` / `JessieJamesPic` / `TrainerNameText` / `WriteOAMBlock`. All
+    trainer-engine work; the item side is a ~60-line translation waiting on it.
+  - [x] Card Key ($30). Faithfully **dead**, as on hardware: pret reads
+    `[GetTileAndCoordsInFrontOfPlayer]` — the routine's own first opcode byte ($CD) —
+    where it meant `[wTileInFrontOfPlayer]`, so no door tile ever matches and it always
+    falls to `ItemUseNotTime`; the three `CardKeyTable`s (pret: "unused") are
+    unreachable, and `wUnusedCardKeyGateID` / `BIT_UNUSED_CARD_KEY` are, in pret's own
+    words, "never checked". Tagged `BUG(2)`: level 0/1 hardcodes the byte the GB reads
+    (reading the port's own x86 opcode would be meaningless); level 2 reads the intended
+    tile, which only changes the message. Verified (`ITEMSTONE_ID=0x30`): result 0,
+    gate id 0, flag clear, key item not consumed.
   - [ ] Surfboard: guard + refusal only; execution = overworld Surf.
 - [ ] **Stage 12 — stub retirement sweep.** `item_use_stubs.asm` empty,
   `label_status --callers` on each retired stub, `update_label_db`,

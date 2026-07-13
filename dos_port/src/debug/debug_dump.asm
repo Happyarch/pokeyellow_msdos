@@ -289,7 +289,12 @@ windows:
     dd 0xD31C    ; wNumBagItems + (id,qty) pairs
     dd 0xD162    ; wPartyCount + wPartySpecies
     dd 0xCD6A    ; wActionResultOrTookBattleTurn
-    dd 0xD155    ; wEvoStoneItemID
+    dd 0xD700    ; Stage 11: wUnusedCardKeyGateID ($D71E, +$1E) + wStatusFlags1
+                 ; ($D727, +$27, BIT_UNUSED_CARD_KEY = bit 7) — drive with
+                 ; ITEMSTONE_ID=CARD_KEY $30. Both stay 0 on real hardware: pret's
+                 ; ItemUseCardKey reads the wrong byte and always falls to
+                 ; ItemUseNotTime (see the BUG note there).
+                 ; (was wEvoStoneItemID $D155 for Stage 8 — verified)
     dd 0xCCD3    ; wCanEvolveFlags + wForceEvolution
     dd 0xCEE9    ; wEvoOldSpecies + wEvoNewSpecies
     dd 0xD0DA    ; wRepelRemainingSteps — Stage 9 (drive with ITEMSTONE_ID=REPEL

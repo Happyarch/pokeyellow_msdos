@@ -1403,7 +1403,7 @@ assets/item_text.inc: ../engine/items/item_effects.asm ../engine/menus/party_men
 src/data/item_data.o: assets/items.inc
 src/data/item_text.o: assets/item_text.inc
 src/engine/menus/party_menu.o: assets/item_text.inc
-src/engine/items/item_effects.o: assets/item_text.inc
+src/engine/items/item_effects.o: assets/item_text.inc assets/map_dims.inc
 src/engine/items/tmhm.o: assets/item_text.inc
 
 src/data/pokemon_data.o: assets/base_stats.inc assets/growth_rates.inc \

@@ -1249,8 +1249,11 @@ W_TILESET_HEADER_FULL_SIZE   equ 12     ; full tileset header entry size (11 + a
 W_WALK_BIKE_SURF_STATE       equ 0xD6FF ; wWalkBikeSurfState
 wWalkBikeSurfState           equ 0xD6FF ; = W_WALK_BIKE_SURF_STATE (pret name)
 
+wUnusedCardKeyGateID         equ 0xD71E ; ItemUseCardKey's gate id (pret: "never checked")
+
 ; Status flags (game-state bitfields)
 W_STATUS_FLAGS_1             equ 0xD727 ; wStatusFlags1
+wStatusFlags1                equ 0xD727 ; = W_STATUS_FLAGS_1 (pret name)
 W_STATUS_FLAGS_2             equ 0xD72B ; wStatusFlags2
 wStatusFlags2                equ 0xD72B ; pret alias of W_STATUS_FLAGS_2
 W_STATUS_FLAGS_3             equ 0xD72C ; wStatusFlags3
