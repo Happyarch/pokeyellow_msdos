@@ -41,7 +41,8 @@ extern GBPalWhiteOutWithDelay3          ; src/home/fade.asm
 extern ClearSprites                     ; src/gfx/sprites.asm
 extern DrawPartyMenu_                   ; src/engine/menus/party_menu.asm
 extern RedrawPartyMenu_
-extern HandleMenuInput                  ; src/home/window.asm (HandleMenuInput_ core)
+extern HandleMenuInput_                 ; src/home/window.asm — loop entry that does NOT
+                                        ; clear wPartyMenuAnimMonEnabled (pret's underscore entry)
 extern PlaceUnfilledArrowMenuCursor
 extern menu_item_step
 extern menu_redraw_cb
@@ -261,7 +262,7 @@ HandlePartyMenuInput:
     ; menu_redraw_cb only carries the port-only bit: the cursor the generic
     ; driver just drew on the stride-20 scratch has to reach the panel window.
     mov dword [menu_redraw_cb], PartyMenuMirror
-    call HandleMenuInput                        ; call HandleMenuInput_
+    call HandleMenuInput_                       ; call HandleMenuInput_
     mov dword [menu_redraw_cb], 0
     push eax                                    ; push af — pressed keys
     mov byte [ebp + wPartyMenuAnimMonEnabled], 0

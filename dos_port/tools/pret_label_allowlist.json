@@ -1037,7 +1037,7 @@
   },
   "PrintText": {
    "port_file": "dos_port/src/engine/battle/move_effect_helpers.asm",
-   "why": "pret home/window.asm split across port files (draft Session H)"
+   "why": "NOT a relocation — a SUBSTITUTION, kept only to hold the link together. The port's single PrintText global is a battle-scope wrapper (mov eax,esi; jmp PrintBattleText), whose tail RunBattleTextStream hardcodes the battle dialog geometry (text_row_stride=FW, BTXT_LINE2, BattlePromptWait). pret's home/window.asm PrintText (wTextBoxID=MESSAGE_BOX / DisplayTextBoxID / UpdateSprites / Delay3 / TextCommandProcessor at bccoord 1,14) and PrintText_NoCreatingTextBox are UNPORTED, yet 9 non-battle files call this label. See menu-fidelity finding M-3; the entry must be deleted (and the body moved to src/home/window.asm) when M-3 is fixed."
   },
   "QuarterSpeedDueToParalysis": {
    "port_file": "dos_port/src/engine/battle/status_penalties.asm",

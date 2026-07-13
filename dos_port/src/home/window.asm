@@ -10,6 +10,7 @@
 ; Build: nasm -f coff -I include/ -I . -o window.o window.asm
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
+%include "assets/audio_constants.inc"    ; SFX_PRESS_AB
 
 bits 32
 
@@ -20,11 +21,19 @@ bits 32
 %define CHAR_UNFILLED_ARROW 0xEC          ; ▷ (charmap.asm)
 %define CHAR_SPACE          0x7F          ; blank space tile (charmap.asm)
 
+; pret: hlcoord 18, 11 — "coordinates of blinking down arrow in some menus"
+; (home/window.asm HandleMenuInput_). Row/col, applied to the current
+; text_row_stride rather than the GB's fixed SCREEN_WIDTH.
+%define MENU_ARROW_ROW      11
+%define MENU_ARROW_COL      18
+
 extern DelayFrame
 extern AnimatePartyMon                 ; src/engine/gfx/mon_icons.asm — icon bob (ends in DelayFrame)
 extern text_row_stride                 ; text.asm — current W_TILEMAP row stride
+extern PlaySound                       ; src/home/audio.asm — sound id in AL
 
 global HandleMenuInput
+global HandleMenuInput_
 global PlaceMenuCursor
 global EraseMenuCursor
 global PlaceUnfilledArrowMenuCursor
@@ -113,17 +122,53 @@ PlaceUnfilledArrowMenuCursor:
     ret
 
 ; ---------------------------------------------------------------------------
-; HandleMenuInput — vertical menu input loop. Faithful to home/window.asm
-; HandleMenuInput's core: UP/DOWN within [0,wMaxMenuItem]; optional wrap
-; (wMenuWrappingEnabled) and out-of-bounds early-return (wMenuWatchMovingOutOfBounds);
-; optional joypad-poll timeout (wMenuJoypadPollCount); ends when a key in
-; wMenuWatchedKeys is pressed. Drops the GB party-mon shake and AB-press sound;
-; reads the per-frame edge-triggered H_JOY_PRESSED via DelayFrame, like the START
-; menu. All the new behaviors are GATED on their flag bytes, so with the port's
-; default (zeroed) menu state the behavior is identical to the previous version.
+; HandleMenuInput / HandleMenuInput_ — vertical menu input loop. Mirrors
+; home/window.asm: HandleMenuInput clears wPartyMenuAnimMonEnabled and falls
+; through into HandleMenuInput_, which is the loop proper (callers that want the
+; party-mon icon bob — HandlePartyMenuInput — set the flag and call the
+; underscore entry so it survives).
+;
+; Faithful: UP/DOWN within [0,wMaxMenuItem]; optional wrap (wMenuWrappingEnabled)
+; and out-of-bounds early-return (wMenuWatchMovingOutOfBounds); the joypad-poll
+; timeout (wMenuJoypadPollCount); the per-iteration AnimatePartyMon shake; the
+; blinking ▼ at (18,11); the A/B press SFX gated on wMiscFlags
+; BIT_NO_MENU_BUTTON_SOUND; the down-arrow blink counters saved/restored around
+; the loop; wMenuWrappingEnabled cleared on every exit. Ends when a key in
+; wMenuWatchedKeys is pressed.
+;
+; DEVIATION(timing): pret spins .loop2 free-running (JoypadLowSensitivity polls
+; the hardware; .loop1 ends in Delay3). The port has no busy-poll — the joypad is
+; an ISR and H_JOY_PRESSED is edge-triggered per frame — so the loop is paced by
+; one DelayFrame per iteration (AnimatePartyMon ends in DelayFrame, hence the
+; either/or) and pret's Delay3 is dropped: it would add 3 dead frames per cursor
+; move on top of the frame the port already spends, which is the menu lethargy
+; that was fixed in JoypadLowSensitivity (docs/plans/menus.md, 2026-07-04).
+; wMenuJoypadPollCount is therefore counted in frames, not poll iterations.
+;
 ; Out: AL = the watched key(s) that ended input (0 on timeout).
+; Preserves ESI (callers' menu pointers); clobbers EAX/EBX/ECX/EDX.
 ; ---------------------------------------------------------------------------
 HandleMenuInput:
+    mov byte [ebp + wPartyMenuAnimMonEnabled], 0 ; xor a / ld [wPartyMenuAnimMonEnabled],a
+HandleMenuInput_:
+    push esi
+    ; pret pushes hDownArrowBlinkCount1/2 and restores them on both exits.
+    mov al, [ebp + H_DOWN_ARROW_COUNT1]
+    mov ah, [ebp + H_DOWN_ARROW_COUNT2]
+    push eax
+    ; DEVIATION(timing): pret seeds COUNT1=0 / COUNT2=6 — with its kHz-rate
+    ; .loop2 that is "arrow visible, blink phase reset", and COUNT1=0 doubles as
+    ; HandleDownArrowBlinkTiming's "no blink active" guard so the call is inert
+    ; on menus with no ▼. The port's blink is frame-paced (ARROW_ON/OFF_FRAMES),
+    ; where a nonzero COUNT1 on an arrow-less menu would eventually *draw* a
+    ; spurious ▼. So arm the frame-paced counters only when the tile really is a
+    ; ▼, and leave COUNT1=0 (inert) otherwise — pret's net behavior, in frames.
+    call .downArrowTile                 ; ESI = ▼ tile offset
+    mov byte [ebp + H_DOWN_ARROW_COUNT1], 0
+    mov byte [ebp + H_DOWN_ARROW_COUNT2], 1
+    cmp byte [ebp + esi], CHAR_DOWN_ARROW
+    jne .loop1
+    mov byte [ebp + H_DOWN_ARROW_COUNT1], ARROW_ON_FRAMES
 .loop1:
     mov byte [ebp + wAnimCounter], 0    ; xor a / ld [wAnimCounter],a — icon-bob phase
     call PlaceMenuCursor
@@ -145,16 +190,25 @@ HandleMenuInput:
     movzx eax, byte [ebp + H_JOY_PRESSED]
     test al, al
     jnz .keyPressed
-    ; no key this frame — poll-count timeout (pret .giveUpWaiting). Faithful:
-    ; the stored count is read fresh and decremented in-register only (no
-    ; write-back), so the timeout fires only when [wMenuJoypadPollCount] == 1.
-    ; With the default 0 (0-1=0xFF, not zero) it never fires → unchanged.
+    ; no key this frame — blink the down arrow (pret: hlcoord 18,11 /
+    ; call HandleDownArrowBlinkTiming), then the poll-count timeout
+    ; (pret .giveUpWaiting). Faithful: the stored count is read fresh and
+    ; decremented in-register only (no write-back), so the timeout fires only
+    ; when [wMenuJoypadPollCount] == 1. With the default 0 (0-1=0xFF, not zero)
+    ; it never fires → the menu waits forever, as pret's does.
+    call .downArrowTile                 ; ESI = ▼ tile offset
+    call HandleDownArrowBlinkTiming
     mov al, [ebp + wMenuJoypadPollCount]
     dec al
     jz .giveUpWaiting
     jmp .loop2
 .giveUpWaiting:
-    ; timed out without a watched key: disable wrapping (pret) and return 0.
+    ; timed out without a watched key: restore the blink counters, disable
+    ; wrapping (pret) and return 0.
+    pop eax
+    mov [ebp + H_DOWN_ARROW_COUNT1], al
+    mov [ebp + H_DOWN_ARROW_COUNT2], ah
+    pop esi
     xor al, al
     mov [ebp + wMenuWrappingEnabled], al
     ret                                 ; AL = 0
@@ -210,9 +264,34 @@ HandleMenuInput:
     and al, bl
     jz .loop1                           ; no watched key → redraw cursor, keep waiting
 .returnKeys:
+    ; pret .checkIfAButtonOrBButtonPressed: A or B ends the menu with a blip,
+    ; unless the caller asked for silence (the generic-PC screens do).
+    test bl, PAD_A | PAD_B
+    jz .skipPlayingSound
+    test byte [ebp + wMiscFlags], 1 << BIT_NO_MENU_BUTTON_SOUND
+    jnz .skipPlayingSound
+    mov al, SFX_PRESS_AB
+    call PlaySound                      ; preserves EBX (home/audio.asm)
+.skipPlayingSound:
+    pop eax                             ; restore the down-arrow blink counters
+    mov [ebp + H_DOWN_ARROW_COUNT1], al
+    mov [ebp + H_DOWN_ARROW_COUNT2], ah
+    pop esi
     xor al, al
     mov [ebp + wMenuWrappingEnabled], al ; pret: disable wrapping on exit
-    mov al, bl                          ; return the pressed keys
+    mov al, bl                          ; ldh a, [hJoy5] — the pressed keys
+    ret
+
+; ---------------------------------------------------------------------------
+; .downArrowTile — ESI = EBP-relative tile offset of the blinking ▼.
+; pret: `hlcoord 18, 11`. DEVIATION(stride): the port's menu scratch tilemap has
+; a runtime row stride (20 or 40), so the row is scaled by text_row_stride
+; instead of the GB's fixed SCREEN_WIDTH. Preserves EAX/EBX/ECX/EDX.
+; ---------------------------------------------------------------------------
+.downArrowTile:
+    mov esi, [text_row_stride]
+    imul esi, MENU_ARROW_ROW
+    add esi, W_TILEMAP + MENU_ARROW_COL
     ret
 
 ; ---------------------------------------------------------------------------
@@ -224,10 +303,11 @@ HandleMenuInput:
 ; on callers zeroing COUNT1 for exactly this). The reload immediates are 60 Hz-
 ; adapted (ARROW_ON_FRAMES / ARROW_OFF_FRAMES) because the port calls this once
 ; per frame, whereas pret spins it inside JoypadLowSensitivity's busy-wait, so
-; its 0xFF/6 reloads would give a ~25 s blink here. All existing callers already
-; init COUNT1=ARROW_ON_FRAMES, COUNT2=1 (text.asm manual_text_scroll,
-; map_sprites sync_dialog_window), so the visible cadence is unchanged; the new
-; COUNT1==0 guard additionally fixes a latent spurious-arrow draw.
+; its 0xFF/6 reloads would give a ~25 s blink here. Every caller arms
+; COUNT1=ARROW_ON_FRAMES, COUNT2=1 before the first call (text.asm
+; manual_text_scroll, map_sprites sync_dialog_window, and HandleMenuInput_ —
+; which arms them only when the tile at (18,11) really is a ▼); the COUNT1==0
+; guard below is what keeps the call inert everywhere else.
 ; In: ESI = EBP-relative tile offset of the arrow. Preserves EAX, EBX.
 ; ---------------------------------------------------------------------------
 HandleDownArrowBlinkTiming:

@@ -1201,7 +1201,7 @@ src/home/audio.o src/audio/engine_1.o src/audio/engine_2.o \
 src/audio/engine_3.o src/audio/engine_4.o src/audio/low_health_alarm.o \
 src/audio/play_battle_music.o src/audio/pokedex_rating_sfx.o \
 src/audio/poke_flute.o src/audio/alternate_tempo.o \
-src/home/init.o: assets/audio_constants.inc
+src/home/init.o src/home/window.o: assets/audio_constants.inc
 
 # GB character map in the unicode_converter's format (single-char → byte), for
 # the converter submodule + gb_text.py. Generated from constants/charmap.asm.
