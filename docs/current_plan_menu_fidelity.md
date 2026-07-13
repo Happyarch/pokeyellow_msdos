@@ -1170,3 +1170,21 @@ The one claim in this file that held up. `FossilKabutopsPic` / `GhostPic` / `Fos
 in no port symbol table (`pkmn.sym`), no data blob, and no generator emits them — there is genuinely
 nothing to point `wMonHFrontSprite` at, so the guard writing 0 is correct and the `TODO-HW` stays.
 Comment updated to say it was checked, and when.
+
+### M-47. `RunPaletteCommand`'s ret-stub is in a source-mirror file, not a `*_stubs.asm` [OPEN — out of scope, not row 11's file]
+Found while restoring M-38's two dropped calls. The stub is at
+`dos_port/src/engine/battle/faint_switch.asm:59` — a bare `RunPaletteCommand: ret` sitting in the
+middle of a *translated* battle file. CLAUDE.md's stub convention is explicit that a link-time
+stand-in goes in the subsystem's `*_stubs.asm` and never in the file that will eventually hold the
+real routine, precisely so retiring it is a bounded search instead of a tree-wide hunt.
+
+**This is now live, not theoretical:** the palette/colorization work is in progress in a parallel
+session, and `RunPaletteCommand` is the routine that work has to fill in. Whoever lands the palette
+layer will grep for a stub file, not find one, and either duplicate the symbol (link error, cheap) or
+translate the real body somewhere else and leave this `ret` **shadowing** it (silent, and the exact
+class that has shipped twice — see the stub-shadow note in `project-conventions`).
+
+Fix: move it to `src/engine/battle/battle_stubs.asm` (or a `gfx_stubs.asm`, since the routine is
+`engine/gfx/palettes.asm` in pret — its mirror file does not exist in the port yet), repoint the
+extern comments in the seven callers via `tools/label_status --callers RunPaletteCommand`, and delete
+it outright the moment the palette body lands. Not row 11's file, so not touched here.
