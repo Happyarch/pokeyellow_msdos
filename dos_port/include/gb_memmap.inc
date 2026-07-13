@@ -237,6 +237,8 @@ wBoxMonNicks       equ 0xDE05
 wBoxMon1Nick       equ 0xDE05   ; = wBoxMonNicks (first nickname slot; SendNewMonToBox)
 wBoxMonNicksEnd    equ 0xDEE1
 wNumSafariBalls    equ 0xDA46   ; Safari Zone ball count (ItemUseBall decrements it)
+wSafariZoneGateCurScript equ 0xD61E ; Safari gate script index (ItemUseEscapeRope resets it
+                                    ; to SCRIPT_SAFARIZONEGATE_DEFAULT) — sym-verified
 
 ; --- ItemUseBall (catching) scratch, pret wram.asm ---
 wCapturedMonSpecies      equ 0xD11B ; species just caught (0 = nothing caught this throw)

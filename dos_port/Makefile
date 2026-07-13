@@ -296,6 +296,7 @@ GAME_SRCS := \
     src/home/reload_sprites.asm \
     src/home/simulate_joypad.asm \
     src/engine/overworld/overworld_stubs.asm \
+    src/engine/overworld/player_animations.asm \
     src/engine/overworld/daycare_exp.asm \
     src/engine/overworld/is_player_just_outside_map.asm \
     src/engine/overworld/dungeon_warps.asm \
@@ -546,6 +547,12 @@ NASMFLAGS += -D ITEMSTONE_ID=$(ITEMSTONE_ID)
 endif
 ifdef ITEMSTONE_INBATTLE
 NASMFLAGS += -D ITEMSTONE_INBATTLE
+endif
+# ITEMSTONE_CAVERN: seed wCurMapTileset = CAVERN, so ItemUseEscapeRope's
+# EscapeRopeTilesets guard passes (the harness boots into Pallet Town, whose
+# OVERWORLD tileset is not on that list). Omit it to exercise the refusal path.
+ifdef ITEMSTONE_CAVERN
+NASMFLAGS += -D ITEMSTONE_CAVERN
 endif
 ifdef ITEMSTONE_SPECIES
 NASMFLAGS += -D ITEMSTONE_SPECIES=$(ITEMSTONE_SPECIES)
@@ -983,8 +990,13 @@ HOME_CHECK_SRCS := \
     src/engine/overworld/dust_smoke.asm \
     src/engine/overworld/field_move_messages.asm \
     src/engine/overworld/cut.asm \
-    src/engine/overworld/cut2.asm \
-    src/engine/overworld/player_animations.asm
+    src/engine/overworld/cut2.asm
+# B1 (2026-07-13) promoted player_animations.asm to GAME_SRCS: its link closure was
+# already fully satisfied (nm -u resolves to translated/relocated symbols only), so
+# the file was being assembled and thrown away while the overworld_stubs.asm
+# EnterMapAnim ret-stub SHADOWED its real body. Retiring that stub gives the port the
+# real fly/dungeon arrival animation, plus _LeaveMapAnim (needed by
+# HandleFlyWarpOrDungeonWarp), DoFlyAnimation, and FishingAnim.
 # OW-7.2 (2026-07-10) promoted 13 overworld files to GAME_SRCS (ledges,
 # pathfinding, npc_movement_2, auto_movement, overworld_text, pikachu,
 # pewter_guys, toggleable_objects, update_map, elevator, spinners,

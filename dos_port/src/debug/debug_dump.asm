@@ -1618,6 +1618,18 @@ RunStoneTest:
     mov byte [ebp + wSafariBaitFactor], 0            ; (42 -> 21 on bait, 84 on rock)
     mov byte [ebp + wSafariEscapeFactor], 0
 %endif
+%ifdef ITEMSTONE_CAVERN
+    ; B1 (Escape Rope): ItemUseEscapeRope only works on the EscapeRopeTilesets
+    ; (FOREST/CEMETERY/CAVERN/FACILITY/INTERIOR). The harness boots into Pallet Town,
+    ; whose tileset is OVERWORLD ($00) — NOT on that list — so the success path is
+    ; unreachable without this seed. Drive with ITEMSTONE_ID=ESCAPE_ROPE ($1D):
+    ; wStatusFlags6 ($D731) must come back with FLY_WARP(3)|ESCAPE_WARP(6) set = $48,
+    ; and wActionResultOrTookBattleTurn ($CD6A) = 1. Setting it to 0 instead
+    ; (ITEMSTONE_CAVERN absent) exercises the .notUsable refusal.
+    ; Results land in the EXISTING windows: wStatusFlags6 is $D700+$31, wStatusFlags4
+    ; is $D700+$2D, wEscapedFromBattle is $D062+$15, and the bag is the $D31C window.
+    mov byte [ebp + wCurMapTileset], 17     ; CAVERN (assets/map_dims.inc; not %included here)
+%endif
     call UseItem
     call DebugDumpMemory                    ; DUMP.BIN (the windows: table above) + exit
 %endif ; DEBUG_ITEMSTONE

@@ -205,7 +205,15 @@ Archive to `docs/plans/items.md` when complete.
   `CopyData`, which reads its source EBP-relative; `BaseStats` is a flat `.data`
   table, so it read megabytes past the GB allocation. Copies flat→GB directly now,
   as `GetMonHeader` already does.
-- [~] **Stage 9 — Repel family DONE; Escape Rope BLOCKED.**
+- [x] **Stage 9 — Repel family DONE; Escape Rope DONE (2026-07-13, blocker B1 cleared).**
+  `ItemUseEscapeRope` is live: the missing consumer `HandleFlyWarpOrDungeonWarp` was
+  ported (it turned out `player_animations.asm` was translated-but-never-LINKED, with a
+  ret-stub shadowing its real `EnterMapAnim` — promoted to `GAME_SRCS`, stub retired).
+  Verified headlessly both ways with the new `ITEMSTONE_CAVERN=1` seed: on an escape-rope
+  tileset `wStatusFlags6` = `$48` (FLY_WARP|ESCAPE_WARP), result=1, rope consumed; in
+  Pallet Town it refuses and does NOT consume the rope. The warp EXECUTION still wants one
+  live run. Also unblocks **Dig**. See `docs/items_blockers.md` → B1.
+  (Original Stage-9 notes below.)
   `ItemUseRepel`/`SuperRepel`/`MaxRepel` → `ItemUseRepelCommon` +
   `PrintItemUseTextAndRemoveItem` are in and verified (`DEBUG_ITEMSTONE` with
   `ITEMSTONE_ID=0x1E/0x38/0x39`: `wRepelRemainingSteps` = 100/200/250, item

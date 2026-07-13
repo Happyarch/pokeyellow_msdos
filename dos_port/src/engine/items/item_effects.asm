@@ -773,6 +773,7 @@ extern ClearScreen          ; movie/title.asm (pret home/copy2.asm)
 extern GBPalWhiteOut        ; home/fade.asm
 extern ReloadMapData        ; home/reload_tiles.asm
 extern DelayFrames          ; video/frame.asm — BL = frames
+extern Func_1510            ; engine/overworld/pikachu.asm — ItemUseEscapeRope's Pikachu refresh
 extern WaitForTextScrollButtonPress ; engine/battle/battle_menu.asm
 extern ItemUseText00_ref            ; assets/item_text.inc — "<PLAYER> used <ITEM>!"
 extern PrintText_Overworld  ; home/text.asm — ESI = GB-space TX stream
@@ -2779,6 +2780,79 @@ ItemUseCoinCase:
 global ItemUseOaksParcel
 ItemUseOaksParcel:
     jmp ItemUseNotYoursToUse
+
+; --------------------------------------------------------------------------- #
+; ItemUseEscapeRope — pret engine/items/item_effects.asm:1630 (ItemUseEscapeRope).
+; Also the body of Dig (wPseudoItemID != 0 → the field move impersonates the item).
+;
+; This routine does NOT warp. It only ARMS the warp, by setting FLY_WARP+ESCAPE_WARP
+; in wStatusFlags6; the consumer is HandleFlyWarpOrDungeonWarp (home/overworld.asm,
+; ported 2026-07-13 into engine/overworld/overworld.asm), which OverworldLoopLessDelay
+; tail-jumps to on its next idle iteration. Until that consumer existed, this item was
+; a deliberate ret-stub (blocker B1, docs/items_blockers.md) — shipping it would have
+; printed the message, eaten the item, and not warped.
+;
+; Usable only out of battle, on the EscapeRopeTilesets, and not in the three maps that
+; would break their scripts (AGATHAS_ROOM / BILLS_HOUSE / POKEMON_FAN_CLUB).
+; --------------------------------------------------------------------------- #
+global ItemUseEscapeRope
+ItemUseEscapeRope:
+    mov al, [ebp + wIsInBattle]
+    test al, al
+    jnz .notUsable
+    mov al, [ebp + wCurMap]
+    cmp al, AGATHAS_ROOM
+    je  .notUsable
+    cmp al, BILLS_HOUSE
+    je  .notUsable
+    cmp al, POKEMON_FAN_CLUB
+    je  .notUsable
+    ; walk EscapeRopeTilesets looking for this map's tileset (flat .data table, so ESI
+    ; is NOT EBP-biased here — only the GB memory reads above/below are).
+    mov bh, [ebp + wCurMapTileset]      ; ld b, a
+    mov esi, EscapeRopeTilesets         ; ld hl, EscapeRopeTilesets
+.loop:
+    mov al, [esi]                       ; ld a, [hli]
+    inc esi
+    cmp al, 0xFF                        ; end of list?
+    je  .notUsable
+    cmp al, bh                          ; cp b
+    jne .loop
+    ; ld hl, wStatusFlags6 / set BIT_FLY_WARP, [hl] / set BIT_ESCAPE_WARP, [hl]
+    or  byte [ebp + W_STATUS_FLAGS_6], (1 << BIT_FLY_WARP) | (1 << BIT_ESCAPE_WARP)
+    call Func_1510                      ; Pikachu: force a sprite-state refresh
+    ; ld hl, wStatusFlags4 / res BIT_NO_BATTLES, [hl]
+    and byte [ebp + W_STATUS_FLAGS_4], (~(1 << BIT_NO_BATTLES)) & 0xFF
+    ResetEvent EVENT_IN_SAFARI_ZONE     ; pret's compile-time ResetEvent macro
+    xor al, al
+    mov [ebp + wNumSafariBalls], al
+    mov [ebp + wSafariZoneGateCurScript], al  ; SCRIPT_SAFARIZONEGATE_DEFAULT
+    inc al                              ; al = 1
+    mov [ebp + wEscapedFromBattle], al
+    mov [ebp + wActionResultOrTookBattleTurn], al   ; item used
+    mov al, [ebp + wPseudoItemID]
+    test al, al                         ; using Dig?
+    jnz .done                           ; ret nz — Dig is not a bag item, don't consume it
+    call ItemUseReloadOverworldData
+    mov bl, 30                          ; ld c, 30
+    call DelayFrames
+    jmp RemoveUsedItem                  ; jp RemoveUsedItem (tail)
+.done:
+    ret
+
+.notUsable:
+    jmp ItemUseNotTime                  ; jp ItemUseNotTime
+
+; data/tilesets/escape_rope_tilesets.asm — the tilesets Escape Rope / Dig work on.
+section .data
+EscapeRopeTilesets:
+    db FOREST
+    db CEMETERY
+    db CAVERN
+    db FACILITY
+    db INTERIOR
+    db -1                               ; end
+section .text
 
 ; --------------------------------------------------------------------------- #
 ; ItemUseBait / ItemUseRock — the Safari Zone's BAIT and ROCK.

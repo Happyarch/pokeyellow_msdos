@@ -71,13 +71,23 @@ global MapEntryAfterBattle
 MapEntryAfterBattle:
     ret
 
-; EnterMapAnim — pret engine/overworld/player_animations.asm:EnterMapAnim (fly/warp
-; arrival animation: Pikachu/player descend, door-open, etc.). Reached only when
-; wStatusFlags6 (FLY_WARP|DUNGEON_WARP) is set, never at boot. TODO(faithful): port
-; the arrival animation once the player-animation subsystem lands.
-global EnterMapAnim
-EnterMapAnim:
+; EmotionBubble — pret engine/overworld/trainer_engine.asm:EmotionBubble (draws the
+; "!" / "?" / heart bubble over a sprite, via predef). Its REAL body is already
+; translated in engine/overworld/trainer_engine.asm — that file is still check-only
+; (HOME_CHECK_SRCS), so there is no duplicate-global shadow; this stub only exists to
+; close the link now that player_animations.asm is linked (B1).
+; NOT REACHED in the live build: player_animations.asm's only call site is FishingAnim
+; (the "!" on a bite), and the fishing rods are themselves still ret-stubs (blocker B7,
+; docs/items_blockers.md). TODO(overworld-port): delete this stub when trainer_engine.asm
+; is promoted to GAME_SRCS — its real EmotionBubble then takes over with no other change.
+global EmotionBubble
+EmotionBubble:
     ret
+
+; EnterMapAnim — RETIRED (B1, 2026-07-13). The real body was already translated in
+; engine/overworld/player_animations.asm; that file was merely never LINKED (it sat in
+; HOME_CHECK_SRCS), so this ret-stub silently shadowed it. player_animations.asm is now
+; in GAME_SRCS and owns EnterMapAnim.
 
 ; ResetUsingStrengthOutOfBattleBit — pret home/overworld.asm:ResetUsingStrengthOutOfBattleBit.
 ; Clears wStatusFlags1 BIT_STRENGTH_ACTIVE. Reached on EnterMap's `call z` (the

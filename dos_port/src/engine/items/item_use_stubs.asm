@@ -11,8 +11,8 @@
 ; That is a deliberately quiet failure, not a crash; the retirement stages below
 ; replace each with the real handler.
 ;
-; TODO(items-plan Stage 9):  ItemUseEscapeRope
-;   (the Repel family landed in item_effects.asm — stubs retired)
+;   (the Repel family + ItemUseEscapeRope landed in item_effects.asm — stubs retired.
+;    Escape Rope needed HandleFlyWarpOrDungeonWarp, ported 2026-07-13 — blocker B1 cleared.)
 ; TODO(items-plan Stage 11): ItemUseSurfboard / ItemUsePPUp /
 ;                            ItemUsePPRestore
 ;   (Bicycle / CoinCase / OaksParcel / Pokedex / PokeFlute / CardKey landed in
@@ -29,7 +29,6 @@ bits 32
 section .text
 
 global ItemUseSurfboard
-global ItemUseEscapeRope
 global ItemUseItemfinder
 global ItemUseOldRod
 global ItemUseGoodRod
@@ -38,7 +37,6 @@ global ItemUsePPUp
 global ItemUsePPRestore
 
 ItemUseSurfboard:
-ItemUseEscapeRope:
 ItemUseItemfinder:
 ItemUseOldRod:
 ItemUseGoodRod:

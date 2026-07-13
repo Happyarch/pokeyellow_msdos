@@ -71,7 +71,7 @@ extern UpdateSprites
 extern ClearVariablesOnEnterMap        ; clear_variables.asm
 extern ResetUsingStrengthOutOfBattleBit ; overworld_stubs.asm (TODO OW-A.4(b)/faithful)
 extern MapEntryAfterBattle             ; overworld_stubs.asm (TODO OW-A.4(b)/faithful)
-extern EnterMapAnim                    ; overworld_stubs.asm (TODO faithful — player_animations)
+extern EnterMapAnim                    ; engine/overworld/player_animations.asm (real body; stub retired B1)
 extern IsSurfingPikachuInParty         ; overworld_stubs.asm (TODO faithful — pikachu follower)
 extern CheckForceBikeOrSurf            ; player_state.asm (LINKED — wild-live promotion)
 extern LoadWildData                    ; wild_mons.asm — per-map wild data → wGrass/wWaterMons (OW-A.5)
@@ -86,6 +86,9 @@ extern BankswitchCommon                ; home/bankswitch.asm (flat: records hLoa
 extern ResetStatusAndHalveMoneyOnBlackout ; engine/events/black_out.asm
 extern PrepareForSpecialWarp           ; engine/overworld/special_warps.asm (real body — stub retired)
 extern SpecialEnterMap                 ; engine/overworld/special_warps.asm
+extern Delay3                          ; video/frame.asm
+extern StopBikeSurf                    ; home/player_gfx.asm
+extern _LeaveMapAnim                   ; engine/overworld/player_animations.asm (LeaveMapAnim's body)
 extern g_tilecache_dirty
 extern hide_window           ; src/ppu/ppu.asm — empty the window list (count=0)
 extern set_single_window     ; src/ppu/ppu.asm — define g_windows[] as one descriptor
@@ -249,6 +252,12 @@ TILESET_OVERWORLD           equ 0x00
 ; tileset ids (constants/tileset_constants.asm; not in gb_memmap.inc) — PlayMapChangeSound
 CEMETERY                    equ 15
 FACILITY                    equ 22
+; wStatusFlags6 bit 5 (constants/ram_constants.asm). Its siblings (BIT_FLY_WARP,
+; BIT_DUNGEON_WARP, BIT_ESCAPE_WARP, …) come from gb_memmap.inc, but this one only
+; exists in gb_constants.inc, which this file does not include — and the two headers
+; must not both define it (bare `equ` redefinition is a NASM error in any file that
+; includes both). Local def, same as player_gfx.asm / special_warps.asm do for theirs.
+BIT_ALWAYS_ON_BIKE          equ 5
 OVERWORLD_DOOR_TILE         equ 0x0B   ; pret: door tile in tileset 0 (PlayMapChangeSound)
 PALLET_TOWN_WIDTH           equ 10
 PALLET_TOWN_HEIGHT          equ 9
@@ -841,6 +850,19 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     ; --- idle: clear step vectors, then sample the held D-pad ---
     mov byte [ebp + W_SPRITE_PLAYER_Y_STEP_VECTOR], 0
     mov byte [ebp + W_SPRITE_PLAYER_X_STEP_VECTOR], 0
+
+    ; A special warp was armed since the last idle iteration (Escape Rope / Dig / Fly /
+    ; a dungeon warp-pad): leave the map now, before any input is acted on.
+    ;   pret: ld a, [wStatusFlags6] / and (1 << BIT_FLY_WARP) | (1 << BIT_DUNGEON_WARP)
+    ;         jp nz, HandleFlyWarpOrDungeonWarp        (home/overworld.asm:62-64)
+    ; PLACEMENT DEVIATION: pret tests this AFTER JoypadOverworld + SafariZoneCheck + the
+    ; script-warp check; the port's loop reads the joypad further down (and has no
+    ; SafariZoneCheck/script-warp check here yet), so the test sits at the top of the
+    ; idle branch instead. Equivalent: the bits are set by an item/script on a PREVIOUS
+    ; iteration, never by this iteration's input, and we leave the map either way — so
+    ; nothing between the two positions can observe the difference.
+    test byte [ebp + W_STATUS_FLAGS_6], (1 << BIT_FLY_WARP) | (1 << BIT_DUNGEON_WARP)
+    jnz HandleFlyWarpOrDungeonWarp           ; jp nz (tail — SpecialEnterMap re-enters the loop)
 
     ; Check trainer sight lines before reading joypad (pret: CheckTrainerSightLine).
     call CheckTrainerSight
@@ -1456,6 +1478,52 @@ LoadMapData:
     call PlayDefaultMusicFadeOutCurrent
 .noMapMusic:
     ret
+
+; ---------------------------------------------------------------------------
+; HandleFlyWarpOrDungeonWarp — leave the current map by a SPECIAL warp (Fly, Dig,
+; Escape Rope, or a dungeon warp-pad/hole), rather than by stepping on a warp tile.
+; Pret ref: home/overworld.asm:761 (HandleFlyWarpOrDungeonWarp, bank 00).
+;
+; The producers (ItemUseEscapeRope / ItemUseFly / the warp-pad script) only SET the
+; wStatusFlags6 FLY_WARP / DUNGEON_WARP bits; this is the consumer that acts on them.
+; OverworldLoopLessDelay tests those bits every idle iteration and tail-jumps here.
+;
+; PrepareForSpecialWarp reads the same two bits to pick the destination (last Pokémon
+; Center for a fly/escape warp, the dungeon's paired warp for a dungeon warp), so they
+; must still be set on entry — this routine does NOT clear them. EnterMap clears them
+; on arrival (see .didNotEnterUsingFlyWarpOrDungeonWarp above), after EnterMapAnim has
+; consumed them for the arrival animation.
+;
+; PORT NOTE: `ld a, BANK(PrepareForSpecialWarp) / call BankswitchCommon` is kept (it
+; records hLoadedROMBank; no MBC write in the flat model), same as HandleBlackOut.
+; ---------------------------------------------------------------------------
+global HandleFlyWarpOrDungeonWarp
+HandleFlyWarpOrDungeonWarp:
+    call UpdateSprites
+    call Delay3
+    xor al, al
+    mov [ebp + wBattleResult], al
+    mov [ebp + wIsInBattle], al
+    mov [ebp + wMapPalOffset], al
+    ; ld hl, wStatusFlags6 / set BIT_FLY_OR_DUNGEON_WARP, [hl] / res BIT_ALWAYS_ON_BIKE, [hl]
+    or  byte [ebp + W_STATUS_FLAGS_6], (1 << BIT_FLY_OR_DUNGEON_WARP)
+    and byte [ebp + W_STATUS_FLAGS_6], (~(1 << BIT_ALWAYS_ON_BIKE)) & 0xFF
+    call LeaveMapAnim
+    call StopBikeSurf
+    mov al, 0x01                        ; ld a, BANK(PrepareForSpecialWarp)
+    call BankswitchCommon               ; flat: records hLoadedROMBank (no MBC write)
+    call PrepareForSpecialWarp
+    jmp SpecialEnterMap                 ; jp SpecialEnterMap (tail)
+
+; ---------------------------------------------------------------------------
+; LeaveMapAnim — pret home/overworld.asm:778 (`farjp _LeaveMapAnim`). The bank
+; switch is a no-op in the flat model, so the wrapper is a bare tail-jump; it is
+; kept as its own pret-named symbol rather than inlined, so callers keep matching
+; pret line-for-line.
+; ---------------------------------------------------------------------------
+global LeaveMapAnim
+LeaveMapAnim:
+    jmp _LeaveMapAnim                   ; engine/overworld/player_animations.asm
 
 ; ---------------------------------------------------------------------------
 ; HandleBlackOut — the whole party fainted: fade out, kill the music, halve the

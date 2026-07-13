@@ -5,11 +5,50 @@ the item layer** — the item-effect code is done or deliberately not written un
 the blocker clears. Written for a fresh agent: each entry says what is broken, how
 to see it, what the fix is, and what unblocks when it lands.
 
-Status as of 2026-07-12 (Stage 8 `6e487263`, Stage 9 part 1 `b05696da`).
+Status as of 2026-07-13. **B1 is RESOLVED** (see below); **B7 is largely dissolved** by
+the same change. Open: B5, B7 (reduced), B8, B9.
 
 ---
 
-## B1 — `HandleFlyWarpOrDungeonWarp` is missing (blocks `ItemUseEscapeRope`)
+## B1 — RESOLVED 2026-07-13 — `HandleFlyWarpOrDungeonWarp` ported; Escape Rope is live
+
+**What it was.** `ItemUseEscapeRope` only ARMS a warp (it sets FLY_WARP+ESCAPE_WARP in
+`wStatusFlags6`); the consumer that acts on those bits, `HandleFlyWarpOrDungeonWarp`,
+did not exist in the port, so shipping the item would have printed its message, eaten
+itself, and not warped.
+
+**What fixed it.** The root cause turned out to be a **link-shadow**, not missing code:
+`engine/overworld/player_animations.asm` was translated but sat in `HOME_CHECK_SRCS`
+(assembled, never linked), so its real `EnterMapAnim` was silently shadowed by a ret-stub
+in `overworld_stubs.asm` and its `_LeaveMapAnim` was unreachable. Its link closure was
+already satisfied except for one symbol, so:
+
+- `player_animations.asm` → `GAME_SRCS`; the `EnterMapAnim` ret-stub deleted (the port
+  now has the real fly/dungeon **arrival** animation, which it never had before).
+- `EmotionBubble` (its only unresolved symbol, reached solely from `FishingAnim`) gets a
+  documented ret-stub in `overworld_stubs.asm` until `trainer_engine.asm` links.
+- `HandleFlyWarpOrDungeonWarp` + the `LeaveMapAnim` wrapper ported into
+  `engine/overworld/overworld.asm` (the port's `home/overworld.asm`, allowlisted like
+  `HandleBlackOut`), and hooked into `OverworldLoopLessDelay`.
+- `ItemUseEscapeRope` translated in full (+ `EscapeRopeTilesets`); its stub retired.
+
+**Verified** headlessly (`DEBUG_ITEMSTONE ITEMSTONE_ID=0x1D`, new `ITEMSTONE_CAVERN=1`
+seed — the harness boots into Pallet Town, whose OVERWORLD tileset is *not* an escape-rope
+tileset, so the success path is unreachable without it):
+| case | `wStatusFlags6` | result | bag |
+|---|---|---|---|
+| Pallet Town (refusal) | `$00` | `wActionResultOrTookBattleTurn`=0 | rope NOT consumed |
+| CAVERN tileset | `$48` = FLY_WARP\|ESCAPE_WARP | =1, `wEscapedFromBattle`=1 | rope consumed |
+
+**Still unverified:** the *warp itself*. The harness dumps and exits right after `UseItem`,
+so it proves the arming, not `HandleFlyWarpOrDungeonWarp`'s execution. Needs one live run
+(use an Escape Rope in a cave → should land at the last Pokémon Center).
+
+**Also unblocks Dig** (`wPseudoItemID`), which shares this exit path and is now a call away.
+
+---
+
+## B1 (original text, for reference) — `HandleFlyWarpOrDungeonWarp` is missing
 
 **What.** `ItemUseEscapeRope` (pret `engine/items/item_effects.asm`) does not warp
 by itself. Its whole job is to set `BIT_FLY_WARP` + `BIT_ESCAPE_WARP` in
@@ -127,7 +166,22 @@ appears yet.
 
 ---
 
-## B7 — the fishing rods need the `trainer_engine.asm` link closure
+## B7 — the fishing rods — LARGELY DISSOLVED 2026-07-13 (was: needs the `trainer_engine.asm` link closure)
+
+**Update (B1's fix).** The analysis below was exactly right, and B1 acted on it:
+`player_animations.asm` is now in `GAME_SRCS`, so **`FishingAnim` is linked**, and its one
+undefined symbol `EmotionBubble` is a documented ret-stub in `overworld_stubs.asm` — so the
+rods no longer need the trainer-engine closure to LINK. What remains for the rods:
+
+1. link `super_rod.asm` (`ReadSuperRodData`) into `ITEMS_SRCS`;
+2. the ~60-line faithful item side (`ItemUseOldRod`/`GoodRod`/`SuperRod`);
+3. cosmetic residue: the "!" bubble on a bite won't draw until `trainer_engine.asm` is
+   promoted (the stub is a no-op) — everything else about FishingAnim works.
+
+That makes the rods ordinary item work now, not blocked cross-plan work. The trainer-engine
+closure below is still what's needed to delete the `EmotionBubble` stub.
+
+**Original analysis:**
 
 `ItemUseOldRod` / `GoodRod` / `SuperRod` all end in `FishingAnim`
 (`engine/overworld/player_animations.asm`) — it is not just the animation, it also
