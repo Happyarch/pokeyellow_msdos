@@ -1,9 +1,29 @@
 # Menu fidelity — de-bespoking the menu system against pret
 
-> **STATUS — OPEN, started 2026-07-13.** Driven by a `/loop` (one file per iteration:
-> audit → fix → gate → commit). This file is the loop's on-disk state: it picks the first
-> row below that is `TODO`/`IN-PROGRESS` and works it. Update the row + append findings
-> each iteration.
+> **STATUS — PAUSED 2026-07-13, at the user's direction, after row 5.** Rows 1–5 + 23 are
+> DONE (6 of 24). Work was cut over to the **text subsystem**, which this audit kept
+> colliding with (M-3 / row 23) and which is the higher-value target: the golden harness
+> structurally does not render streamed text, so text bugs pass the gate and break live.
+>
+> **Resume by re-running the `/loop`** (one file per iteration: audit → fix → gate →
+> commit). It picks the first row below that is `TODO`/`IN-PROGRESS` and works it. Update
+> the row + append findings each iteration.
+>
+> **Where it stood.** Next row is **6** (`src/home/auto_textbox.asm`, 3 allowlisted
+> relocations to challenge). Rows 6, 7, 8 and 13 are the last SHARED DRIVERS — do those
+> before the leaf screens (9–12, 14–18, 21), because everything downstream inherits their
+> bugs. Rows 19 (`save`, 1080 ln) and 20 (`link_menu`, 1148 ln) are mostly TODO-HW
+> SRAM/serial boundaries: low bug yield per line, and they MUST be split across iterations.
+> **Row 22 is the highest-value row on the board and is sequenced last** — the battle
+> move-menu family is missing entirely; it clears blocker B8 and unblocks Mimic + PP items.
+> Consider promoting it when the loop resumes.
+>
+> **What the audit found in 6 rows** — worth knowing before trusting any menu file's header:
+> two game-breaking bugs (M-7: the ×NN quantity selector HUNG the game and drew its box
+> invisibly; M-10: every YES/NO drew its ▶ next to the option the player was NOT selecting),
+> plus a wrong allowlist entry, a wrong finding of my own (M-2), and several false "faithful"
+> / "no live caller" header claims. The hit rate on "audited file turns out to have a real
+> bug" is 100% so far. The remaining rows are not a formality.
 
 ## Why this exists
 
