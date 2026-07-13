@@ -177,10 +177,34 @@ Archive to `docs/plans/items.md` when complete.
   than converting all of them at once.
   - Verify: seeded bag TM teaches a compatible move, refuses an incompatible
     mon, HM not consumed.
-- [ ] **Stage 8 — `ItemUseEvoStone`.** Port `Func_d85d` (stone-applicability
-  scan) against the port's **flat `EvosMovesPointerTable`** (inline .data
-  table — never `call` it), trigger the evolution path used by level-up
-  evolution, consume on success / "It won't have any effect." on failure.
+- [x] **Stage 8 — `ItemUseEvoStone`.** Ported with `Func_d85d` (stone-applicability
+  scan) reading the flat `EvosMovesPointerTable` blob in place (DEVIATION 12 — pret
+  `FarCopyData`s it to `wEvoDataBuffer`; the port has no bank to copy from). Stone is
+  consumed on success, "It won't have any effect." on failure. Harness
+  `DEBUG_ITEMSTONE` (`ITEMSTONE_ID` / `ITEMSTONE_SPECIES`): VULPIX + FIRE_STONE →
+  NINETALES (species + species-list + FIRE/FIRE types, bag 16→15, item-used flag 1);
+  SNORLAX + FIRE_STONE → no effect (species unchanged, stone kept, flag 0).
+
+  **Getting there fixed four real bugs in the (previously never-executed) evolution
+  path** — level-up evolution via Rare Candy was equally dead:
+  1. `TryEvolvingMon` ended in `ret` instead of falling through into
+     `EvolutionAfterBattle` (pret's two labels are contiguous), so every caller just
+     set the flag and evolved nothing.
+  2. Both flag sites called `FlagActionPredef`, whose first act is
+     `GetPredefRegisters` — it overwrote ESI/EBX from the stale `wPredefHL`/`BC`
+     slots. Now `FlagAction` directly (the convention `experience.asm` already
+     documents). The pokédex seen/owned sites had the same bug, writing flags at a
+     garbage address.
+  3. The party cursor started at `wPartySpecies`, but the loop's first act is
+     `inc` — pret starts at `wPartyCount`, so every mon was tested against the *next*
+     mon's evolution data.
+  4. `.checkItemEvo` used `inc esi` between the `wIsInBattle` test and its `jnz`,
+     clobbering ZF (pret's `ld a, [hli]` there is flag-neutral) — so every item
+     evolution was skipped. Now `lea`.
+  Plus one forced deviation: the `BaseStats → wMonHeader` copy went through
+  `CopyData`, which reads its source EBP-relative; `BaseStats` is a flat `.data`
+  table, so it read megabytes past the GB allocation. Copies flat→GB directly now,
+  as `GetMonHeader` already does.
 - [ ] **Stage 9 — Repel family + Escape Rope.** `ItemUseRepel`/`Super`/`Max`
   → `ItemUseRepelCommon` writing `wRepelRemainingSteps` (first-ever writer —
   the `wild_encounters.asm` `.lastRepelStep` branch and its `DisplayTextID`

@@ -11,7 +11,6 @@
 ; That is a deliberately quiet failure, not a crash; the retirement stages below
 ; replace each with the real handler.
 ;
-; TODO(items-plan Stage 8):  ItemUseEvoStone
 ; TODO(items-plan Stage 9):  ItemUseRepel / ItemUseSuperRepel / ItemUseMaxRepel /
 ;                            ItemUseEscapeRope
 ; TODO(items-plan Stage 10): ItemUseXAccuracy / ItemUseXStat / ItemUseDireHit /
@@ -33,7 +32,6 @@ global ItemUseTownMap
 global ItemUseBicycle
 global ItemUseSurfboard
 global ItemUsePokedex
-global ItemUseEvoStone
 global ItemUseBait
 global ItemUseRock
 global ItemUseEscapeRope
@@ -60,7 +58,6 @@ ItemUseTownMap:
 ItemUseBicycle:
 ItemUseSurfboard:
 ItemUsePokedex:
-ItemUseEvoStone:
 ItemUseBait:
 ItemUseRock:
 ItemUseEscapeRope:

@@ -152,6 +152,9 @@ extern RunPartyMenuTest
 %ifdef DEBUG_ITEMTM
 extern RunTMHMTest
 %endif
+%ifdef DEBUG_ITEMSTONE
+extern RunStoneTest
+%endif
 %ifdef DEBUG_BATTLE
 extern RunBattleTest
 %endif
@@ -665,7 +668,10 @@ EnterMap:
     mov byte [ebp + wPartyMon1 + 0x02], 1
 %endif
 %ifdef DEBUG_ITEMTM
-    call RunTMHMTest                       ; items-plan Stage 7: teach a TM/HM, dump, exit
+    call RunTMHMTest
+%endif
+%ifdef DEBUG_ITEMSTONE
+    call RunStoneTest                       ; items-plan Stage 8: use a stone, dump, exit
 %endif
 %ifdef DEBUG_PARTYMENU
     call RunPartyMenuTest                  ; seed party, open party screen, render one frame, dump FRAME.BIN, exits

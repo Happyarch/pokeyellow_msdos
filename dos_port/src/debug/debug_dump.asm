@@ -71,6 +71,13 @@ extern LoadTextBoxTilePatterns
 extern UseItem                  ; home/item.asm — the pret home wrapper for UseItem_
 global RunTMHMTest
 %endif
+%ifdef DEBUG_ITEMSTONE
+extern PrepareNewGameDebug
+extern LoadFontTilePatterns
+extern LoadTextBoxTilePatterns
+extern UseItem                  ; home/item.asm — the pret home wrapper for UseItem_
+global RunStoneTest
+%endif
 %ifdef DEBUG_BATTLE
 extern PrepareNewGameDebug
 extern LoadFontTilePatterns
@@ -265,6 +272,24 @@ windows:
     dd 0xCD6A    ; wActionResultOrTookBattleTurn
     dd 0xD035    ; wTempMoveNameBuffer / wLearnMoveMonName
     dd 0xD16A    ; overview repeat
+%elifdef DEBUG_ITEMSTONE
+; Items-plan Stage 8 (DEBUG_ITEMSTONE) — evolution stones. Expectations:
+;   $D16A party mon 1 struct — species becomes the evolved form (VULPIX $52 +
+;         FIRE_STONE -> NINETALES $53); stats are recalculated by TryEvolvingMon
+;   $D162 wPartyCount + wPartySpecies — the species list entry evolves too
+;   $D31C bag — the stone is consumed on success, KEPT when it has no effect
+;   $CD6A wActionResultOrTookBattleTurn — 0 = item not used (no-effect / canceled)
+;   $D155 wEvoStoneItemID — the stone ItemUseEvoStone parked for the party menu
+windows:
+    dd 0xD16A    ; party mon 1 struct (species at +0)
+    dd 0xD31C    ; wNumBagItems + (id,qty) pairs
+    dd 0xD162    ; wPartyCount + wPartySpecies
+    dd 0xCD6A    ; wActionResultOrTookBattleTurn
+    dd 0xD155    ; wEvoStoneItemID
+    dd 0xCCD3    ; wCanEvolveFlags + wForceEvolution
+    dd 0xCEE9    ; wEvoOldSpecies + wEvoNewSpecies
+    dd 0xCF97    ; wLoadedMon (Func_d85d's species input)
+    dd 0xD120    ; wEvolutionOccurred
 %elifdef DEBUG_CALCSTATS
 ; CalcStats gate: one 64-byte window over the test scratch at $D1E0 covers the
 ; scratch mon (DVs at +$1B) and both stat results (L5 at +$20, L100 at +$30).
@@ -1526,6 +1551,43 @@ DumpSeamLog:
 %endif
 
 %ifdef DEBUG_AUTOKEY
+; ---------------------------------------------------------------------------
+; RunTMHMTest's sibling: RunStoneTest — items-plan Stage 8 (DEBUG_ITEMSTONE).
+; Seeds party + bag, makes the target mon a stone-evolver (VULPIX), puts the
+; stone in bag slot 0, and drives the real UseItem dispatch into ItemUseEvoStone.
+; AUTOKEY_APRESS answers the party menu and every message.
+; Overrides: ITEMSTONE_ID (the stone), ITEMSTONE_SPECIES (the target mon's species
+; — set it to a non-evolver, e.g. SNORLAX $84, for the "no effect" case).
+; Never returns — DebugDumpMemory writes DUMP.BIN and exits.
+; ---------------------------------------------------------------------------
+%ifdef DEBUG_ITEMSTONE
+%ifndef ITEMSTONE_ID
+%define ITEMSTONE_ID 0x20               ; FIRE_STONE
+%endif
+%ifndef ITEMSTONE_SPECIES
+%define ITEMSTONE_SPECIES 0x52          ; VULPIX — FIRE_STONE -> NINETALES ($53)
+%endif
+RunStoneTest:
+    mov byte [ebp + wPartyCount], 0
+    mov byte [ebp + wPartySpecies], 0xFF
+    mov byte [ebp + wNumBagItems], 0
+    mov byte [ebp + wBagItems], 0xFF
+    call PrepareNewGameDebug
+    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    call LoadFontTilePatterns
+    call LoadTextBoxTilePatterns
+    ; party slot 0 becomes the mon under test (both the species list and the struct)
+    mov byte [ebp + wPartySpecies], ITEMSTONE_SPECIES
+    mov byte [ebp + wPartyMon1], ITEMSTONE_SPECIES
+    ; bag slot 0 = the stone, qty 1 → RemoveItemFromInventory's decision is visible
+    mov byte [ebp + wBagItems + 0], ITEMSTONE_ID
+    mov byte [ebp + wBagItems + 1], 1
+    mov byte [ebp + wWhichPokemon], 0       ; the BAG slot, not the party slot
+    mov byte [ebp + wCurItem], ITEMSTONE_ID
+    call UseItem
+    call DebugDumpMemory                    ; DUMP.BIN (the windows: table above) + exit
+%endif ; DEBUG_ITEMSTONE
+
 ; ---------------------------------------------------------------------------
 ; AutoKeyDrive — scripted joypad playback (debug harness).
 ;

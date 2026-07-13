@@ -2399,3 +2399,113 @@ ItemUseTMHM:
     jmp RemoveUsedItem                  ; jp RemoveUsedItem
 .done:
     ret
+
+; === ItemUseEvoStone — evolution stones (items-plan Stage 8) ================
+;
+; Source: engine/items/item_effects.asm:790-848 (ItemUseEvoStone) and 849-889
+; (Func_d85d, the stone-applicability scan).
+;
+; DEVIATION 12 (flat model): pret's Func_d85d cannot address the evo/moves blob
+; directly — it lives in another ROM bank — so it FarCopyData's the mon's 2-byte
+; pointer out of EvosMovesPointerTable into wEvoDataBuffer, dereferences that,
+; then FarCopyData's 13 bytes of the blob into the same buffer and scans the copy.
+; The port's EvosMovesPointerTable is a flat .data table of 32-bit pointers (a
+; TABLE, never callable), so the blob is directly readable: we scan it in place
+; and wEvoDataBuffer has no reason to exist. The scan itself — entry strides, the
+; EVOLVE_ITEM item-id compare, the CF contract — is byte-for-byte pret's.
+;
+; DEVIATION 13: pret's player-Pikachu refusal plays PikachuCry28 through
+; PlayPikachuSoundClip (ldpikacry / callfar). The Pikachu PCM path is Phase 3
+; audio work; the cry is a TODO-HW no-op here. Everything else on that branch —
+; GetPartyMonName, RefusingText, the emotion/mood writes, the "item not used"
+; tail — is faithful.
+
+extern EvosMovesPointerTable        ; src/data/pokemon_data.asm — flat dd TABLE (never call it)
+extern WaitForSoundToFinish         ; src/home/audio.asm
+extern RefusingText_ref             ; assets/item_text.inc
+
+global ItemUseEvoStone
+global Func_d85d
+
+ItemUseEvoStone:
+    mov al, [ebp + wIsInBattle]
+    test al, al
+    jnz ItemUseNotTime                  ; jp nz — no stones mid-battle
+    mov al, [ebp + wWhichPokemon]
+    push eax                            ; push af — the BAG slot, restored at the tail
+    mov al, [ebp + wCurItem]
+    mov [ebp + wEvoStoneItemID], al
+    push eax                            ; push af — pret pops this into B
+    mov byte [ebp + wPartyMenuTypeOrMessageID], EVO_STONE_PARTY_MENU
+    mov byte [ebp + wUpdateSpritesEnabled], 0xFF
+    call DisplayPartyMenu               ; CF = 1 → the player canceled
+    mov al, [ebp + wCurPartySpecies]
+    mov [ebp + wLoadedMon], al          ; Func_d85d reads the species from here
+    pop ebx                             ; pop bc — BL holds pret's B (the saved item id)
+    jc .canceledItemUse                 ; CF still DisplayPartyMenu's (mov/pop leave it)
+    mov [ebp + wCurPartySpecies], bl    ; ld a,b / ld [wCurPartySpecies],a (faithful: pret
+                                        ; parks the ITEM id here; the species lives in
+                                        ; wLoadedMon for the scan below)
+    call Func_d85d                      ; CF = 1 → this stone evolves this mon
+    jnc .noEffect
+    call IsThisPartyMonStarterPikachu   ; callfar — CF = it's the player's Pikachu
+    jnc .notPlayerPikachu
+    ; TODO-HW: pret plays PikachuCry28 via PlayPikachuSoundClip (Phase 3 audio).
+    mov al, [ebp + wWhichPokemon]
+    mov esi, wPartyMonNicks
+    call GetPartyMonName
+    mov esi, [RefusingText_ref]         ; ld hl, RefusingText
+    mov ecx, [RefusingText_ref + 4]
+    call iu_print_text
+    mov byte [ebp + wPikachuEmotionModifier], 0x4
+    mov byte [ebp + wPikachuMood], 0x82
+    jmp .canceledItemUse
+
+.notPlayerPikachu:
+    mov al, SFX_HEAL_AILMENT
+    call PlaySoundWaitForCurrent
+    call WaitForSoundToFinish
+    mov byte [ebp + wForceEvolution], 1     ; TRUE
+    call TryEvolvingMon                 ; callfar — evolve it
+    pop eax
+    mov [ebp + wWhichPokemon], al       ; restore the BAG slot for RemoveItemFromInventory
+    mov esi, wNumBagItems
+    mov byte [ebp + wItemQuantity], 1   ; remove 1 stone
+    jmp RemoveItemFromInventory         ; jp
+
+.noEffect:
+    call ItemUseNoEffect
+.canceledItemUse:
+    mov byte [ebp + wActionResultOrTookBattleTurn], 0    ; xor a — item not used
+    pop eax
+    ret
+
+; ---------------------------------------------------------------------------
+; Func_d85d — can [wLoadedMon] (species) evolve with [wCurItem] (the stone)?
+; Out: CF = 1 if an EVOLVE_ITEM entry for this item exists, CF = 0 otherwise.
+; Entry strides (constants/pokemon_constants.asm): EVOLVE_LEVEL/EVOLVE_TRADE are
+; 3 bytes, EVOLVE_ITEM is 4 (type, item, min_level, species); a 0 type ends the list.
+; ---------------------------------------------------------------------------
+Func_d85d:
+    movzx eax, byte [ebp + wLoadedMon]
+    dec eax                             ; dec a — table is 0-based on the internal index
+    mov esi, [EvosMovesPointerTable + eax * 4]  ; flat blob ptr (see DEVIATION 12)
+.loop:
+    mov al, [esi]                       ; ld a, [hli] — evolution type
+    test al, al
+    jz .cannotEvolveWithUsedStone       ; 0 → end of the evolution list
+    cmp al, EVOLVE_ITEM
+    je .itemEntry
+    add esi, 3                          ; EVOLVE_LEVEL / EVOLVE_TRADE stride
+    jmp .loop
+.itemEntry:
+    mov bh, [esi + 1]                   ; ld b, [hl] — the item this entry needs
+    mov al, [ebp + wCurItem]
+    add esi, 4                          ; past this 4-byte entry either way
+    cmp al, bh                          ; cp b
+    jne .loop
+    stc                                 ; scf — this stone works
+    ret
+.cannotEvolveWithUsedStone:
+    clc
+    ret

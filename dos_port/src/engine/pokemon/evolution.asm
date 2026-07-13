@@ -83,7 +83,7 @@ extern BaseStats                ; flat label: BASE_DATA_SIZE-byte structs, dex o
 extern MonsterNames             ; flat label: NAME_LENGTH-byte names, internal-index order
 
 ; From home/:
-extern FlagActionPredef
+extern FlagAction
 extern CalcStats                ; (ESI=stat-exp base-1, EDX=stat-out ptr, BH=consider-exp)
 extern AddNTimes                ; (ESI=base, AL=count, BX=stride → ESI += AL*BX)
 extern CopyData                 ; (ESI=src, EDI=dst, BX=len) — WRAM copy
@@ -135,8 +135,16 @@ TryEvolvingMon:
     mov al, [ebp + wWhichPokemon]
     mov cl, al                      ; c = party index
     mov bh, FLAG_SET
-    call FlagActionPredef
-    ret
+    ; pret: `predef FlagActionPredef`. The port has no predef dispatcher, so it
+    ; calls FlagAction directly with the registers set — FlagActionPredef's first
+    ; act is GetPredefRegisters, which would OVERWRITE ESI/EBX from the (stale)
+    ; wPredefHL/BC slots. Same convention as experience.asm's four call sites.
+    call FlagAction
+    ; NO `ret` HERE — pret's TryEvolvingMon FALLS THROUGH into EvolutionAfterBattle
+    ; (engine/pokemon/evos_moves.asm: the two labels are contiguous). It sets the
+    ; mon's wCanEvolveFlags bit and then runs the evolution loop for it. A `ret`
+    ; here made every caller (Rare Candy's level-up evo, ItemUseEvoStone) merely
+    ; mark the mon and evolve nothing.
 
 ; ===========================================================================
 ; EvolutionAfterBattle
@@ -156,7 +164,10 @@ EvolutionAfterBattle:
     push esi
     push ebx
     push edx
-    mov esi, wPartySpecies          ; HL = &wPartyCount (then inc to species list)
+    ; pret: `ld hl, wPartyCount` — the loop's first act is `inc hl`, which lands on
+    ; species[0]. Starting at wPartySpecies (= species[0]) instead made that inc land
+    ; on species[1], so every mon was tested against the NEXT mon's evolution data.
+    mov esi, wPartyCount            ; HL = &wPartyCount (the loop incs to the species list)
     push esi
 
 .Evolution_PartyMonLoop:
@@ -175,10 +186,19 @@ EvolutionAfterBattle:
     mov cl, al
     mov esi, wCanEvolveFlags
     mov bh, FLAG_TEST
-    call FlagActionPredef
+    call FlagAction                 ; pret: predef FlagActionPredef — see TryEvolvingMon
     mov al, cl
     test al, al
     jz .Evolution_PartyMonLoop      ; flag not set → skip this mon
+
+    ; Get evolution blob for this species (EvoOldSpecies is the internal index).
+    ; pret resolves the blob pointer HERE — BEFORE LoadMonData — and pushes it
+    ; across the call. Order matters: wEvoOldSpecies ($CEE9) is a union'd scratch
+    ; slot (wHPBarMaxHP), and LoadMonData_ walks it, so reading it after the call
+    ; yields garbage and the blob walk rejects every mon.
+    mov al, [ebp + wEvoOldSpecies]
+    call GetMonLearnset_Evo_BlobStart ; ESI = flat ptr to blob start (evo entries)
+    push esi                        ; [E] blob cursor, saved across LoadMonData_
 
     ; Load this mon's data into wLoadedMon (sets wLoadedMonLevel, etc.)
     mov al, [ebp + wCurPartySpecies]
@@ -188,10 +208,7 @@ EvolutionAfterBattle:
     call LoadMonData_
     pop eax
     mov [ebp + wCurPartySpecies], al ; restore wCurPartySpecies
-
-    ; Get evolution blob for this species (EvoOldSpecies is the internal index)
-    mov al, [ebp + wEvoOldSpecies]
-    call GetMonLearnset_Evo_BlobStart ; ESI = flat ptr to blob start (evo entries)
+    pop esi                         ; [E] blob cursor
 
 .evoEntryLoop:
     mov al, [esi]
@@ -248,9 +265,11 @@ EvolutionAfterBattle:
     ; EVOLVE_ITEM (4 bytes: type, item_id, min_level, species)
     ; In battle: skip entirely; outside battle: compare wCurItem to item_id
     mov al, [ebp + wIsInBattle]
-    test al, al
-    mov al, [esi]
-    inc esi                         ; al = item_id, ESI → min_level
+    test al, al                     ; ZF is live all the way to the `jnz` below —
+    mov al, [esi]                   ; pret's `ld a, [hli]` sits in the same gap and
+    lea esi, [esi + 1]              ; leaves flags alone. `inc esi` would CLOBBER ZF
+                                    ; (ESI != 0 → jnz always taken → every item evo
+                                    ; skipped), so the pointer step must be `lea`.
     jnz .nextEvoEntry1              ; if in battle, skip (skip min_level + species)
     mov bh, al                      ; bh = evolution item id
     mov al, [ebp + wCurItem]        ; = wEvoStoneItemID context (set by stone-use caller)
@@ -344,15 +363,23 @@ EvolutionAfterBattle:
     mov [ebp + wPokedexNum], al
 
     ; Copy new species base stats into wMonHeader
+    ; DEVIATION (forced): pret is `ld hl, BaseStats / ld bc, BASE_DATA_SIZE /
+    ; call AddNTimes / ld de, wMonHeader / call CopyData` — on the GB, CopyData's
+    ; source may be a ROM address. In the port BaseStats is a flat .data table and
+    ; CopyData reads its source EBP-relative ([ebp+esi]), so handing it the flat
+    ; pointer reads ~4 MB past the GB allocation. Copy flat→GB directly, exactly as
+    ; home/pokemon.asm:GetMonHeader does for the same table. Not a VRAM write, so no
+    ; g_tilecache_dirty.
     mov al, [ebp + wPokedexNum]
     dec al
     movzx eax, al
     imul eax, BASE_DATA_SIZE
-    mov esi, BaseStats
-    add esi, eax                    ; ESI = &BaseStats[dex-1]
-    mov edx, wMonHeader             ; CopyData dest is EDX (=DE), NOT EDI — CopyData
-    mov bx, BASE_DATA_SIZE          ; overwrites EDI internally (movzx edi,dx). This was a
-    call CopyData                   ; bespoke reg-map bug: base stats went to [ebp+stale DX].
+    push edi
+    lea esi, [BaseStats + eax]      ; flat (program-image) source
+    lea edi, [ebp + wMonHeader]     ; GB-memory destination
+    mov ecx, BASE_DATA_SIZE
+    rep movsb
+    pop edi
 
     mov al, [ebp + wCurSpecies]
     mov [ebp + wMonHIndex], al
@@ -453,10 +480,10 @@ EvolutionAfterBattle:
     mov bh, FLAG_SET
     mov esi, wPokedexOwned
     push ebx
-    call FlagActionPredef
+    call FlagAction                 ; pret: predef FlagActionPredef — see TryEvolvingMon
     pop ebx
     mov esi, wPokedexSeen
-    call FlagActionPredef
+    call FlagAction                 ; pret: predef FlagActionPredef — see TryEvolvingMon
 
     ; Update party species list entry. Stack top here is [C] (the blob cursor
     ; re-pushed in .doEvolution before GetName), then [G] (the per-iteration

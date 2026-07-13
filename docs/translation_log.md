@@ -5506,3 +5506,32 @@ indexes the generated `PartyMenuItemUseMessagePointers`.
     (faithful; a player presses B). `RunTMHMTest` now frees the target mon's last three slots.
 - Gate: `make check` OK; `lint_pret_labels` 0 violations; `make fidelity` 6/6 PASS; faithdiff
   divergences justified in the commit message.
+
+## 2026-07-12 — `ItemUseEvoStone` / `Func_d85d` (items plan, Stage 8)
+
+- `ItemUseEvoStone` (`src/engine/items/item_effects.asm`): party menu →
+  `Func_d85d` applicability scan → `wForceEvolution` + `TryEvolvingMon` → consume.
+  DEVIATION 12: `Func_d85d` walks the flat `EvosMovesPointerTable` blob in place
+  (pret `FarCopyData`s it into `wEvoDataBuffer`; there is no bank to copy from).
+  DEVIATION 13: the starter-Pikachu refusal path's `PlayPikachuSoundClip` is
+  TODO-HW (Phase 3 audio); the refusal text + mood/emotion writes are live.
+- The evolution path itself had never executed (level-up evolution via Rare Candy
+  was dead too). Four bugs fixed in `src/engine/pokemon/evolution.asm`:
+  `TryEvolvingMon` must FALL THROUGH into `EvolutionAfterBattle`; the flag sites
+  must call `FlagAction`, not `FlagActionPredef` (whose `GetPredefRegisters`
+  overwrites ESI/EBX from the stale predef WRAM slots — same trap
+  `experience.asm` already documents); the party cursor starts at `wPartyCount`,
+  not `wPartySpecies` (the loop incs first); and `.checkItemEvo` must step the
+  blob pointer with `lea`, not `inc` — pret's `ld a, [hli]` sits between the
+  `wIsInBattle` test and its `jr nz` and is flag-neutral, while `inc esi` clobbers
+  ZF and skipped every item evolution.
+- Forced deviation in `EvolutionAfterBattle`: the `BaseStats → wMonHeader` copy no
+  longer goes through `CopyData` (which resolves its source EBP-relative). Flat
+  `rep movsb`, matching `home/pokemon.asm:GetMonHeader`.
+- Harness: `DEBUG_ITEMSTONE` (`RunStoneTest`, `ITEMSTONE_ID`/`ITEMSTONE_SPECIES`).
+  Verified: VULPIX + FIRE_STONE → NINETALES ($53) in the struct and the species
+  list, types → FIRE/FIRE, catch-rate byte (Gen-2 held-item slot) carried through,
+  bag 16→15, `wActionResultOrTookBattleTurn`=1; SNORLAX + FIRE_STONE → no effect,
+  stone kept, flag 0.
+- Gate: `make check` OK; `lint_pret_labels` 0 violations; `make fidelity` 6/6 PASS;
+  faithdiff divergences justified in the commit message.
