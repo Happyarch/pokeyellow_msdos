@@ -49,7 +49,7 @@ driver only relocates the divergence.
 | # | port file | pret counterpart | status | commit | findings |
 |---|---|---|---|---|---|
 | 1 | `src/home/window.asm` | `home/window.asm` | DONE | `da875f9a` | M-1 (`HandleMenuInput_` split + blink + AB SFX), M-2 (list ▼ coord), M-3 (`PrintText` substitution), M-4 (stale `SFX_PRESS_AB`) |
-| 2 | `src/home/textbox.asm` | `home/textbox.asm` | DONE | `PENDING2` | faithful (1 label, `DisplayTextBoxID`). No allowlist entry (already mirrored). One SANCTIONED TODO-HW(banking) deviation; header comment corrected. |
+| 2 | `src/home/textbox.asm` | `home/textbox.asm` | DONE | `d84ac907` | faithful (1 label, `DisplayTextBoxID`). No allowlist entry (already mirrored). One SANCTIONED TODO-HW(banking) deviation; header comment corrected. |
 | 3 | `src/engine/menus/text_box.asm` | `engine/menus/text_box.asm` + `data/text_boxes.asm` | TODO | | 4× DEVIATION incl. `PlaceMenuCursor` hardcoded-row model |
 | 4 | `src/home/list_menu.asm` | `home/list_menu.asm` | TODO | | DEVIATION(stride); "bespoke bag list" A/B remnants |
 | 5 | `src/home/yes_no.asm` | `home/yes_no.asm` + `engine/menus/text_box.asm` | TODO | | allowlisted relocation — challenge |
