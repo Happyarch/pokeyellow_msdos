@@ -9,8 +9,9 @@
 > commit). It picks the first row below that is `TODO`/`IN-PROGRESS` and works it. Update
 > the row + append findings each iteration.
 >
-> **Where it stands.** Next row is **9** (`src/engine/menus/start_sub_menus.asm`, 861 ln — split
-> it across iterations). Row 13 is the last SHARED DRIVER; the rest are leaf screens. Rows 19 (`save`, 1080 ln) and 20 (`link_menu`, 1148 ln) are
+> **Where it stands.** Row **9** (`src/engine/menus/start_sub_menus.asm`, 861 ln) is IN-PROGRESS,
+> **split into 3 parts**: part 1 (the party half — DONE) / part 2 (the bag half + the four
+> sub-menu seams) / part 3 (the field-move dispatch). Row 13 is the last SHARED DRIVER; the rest are leaf screens. Rows 19 (`save`, 1080 ln) and 20 (`link_menu`, 1148 ln) are
 > mostly TODO-HW SRAM/serial boundaries: low bug yield per line, and they MUST be split across
 > iterations. **Row 22 is the highest-value row on the board and is sequenced last** — the
 > battle move-menu family is missing entirely; it clears blocker B8 and unblocks Mimic + PP
@@ -28,8 +29,11 @@
 > such row — but its **generated data** wasn't (M-16: the generator encoded the rendered string,
 > so pret's `#MON` text command became 7 literal glyphs) and neither was the **label DB** the
 > audit runs on (M-18: it couldn't see `equ` aliases, reporting 7 present labels as `missing`).
-> Audit the generators and the tooling, not just the assembly. The hit rate on "audited file
-> turns out to hold a real defect" is still 100%. The remaining rows are not a formality.
+> Audit the generators and the tooling, not just the assembly. Row 9 part 1 found the same shape
+> a third time: a `DEVIATION(icons)` comment that was true when written and **silently went false**
+> when the party icons moved from BG tiles to OBJ (M-19), so swapping two mons left both icons
+> painted over the blanked rows. The hit rate on "audited file turns out to hold a real defect"
+> is still 100%. The remaining rows are not a formality.
 
 ## Why this exists
 
@@ -82,7 +86,7 @@ driver only relocates the divergence.
 | 6 | ~~`src/home/auto_textbox.asm`~~ → merged into `src/home/window.asm` | `home/window.asm` | DONE | `9b509fda` | **Allowlist ×3 DELETED, not re-added** — the "split" had no reason; the 3 routines now live in the file that mirrors pret (relocated → translated). Bodies were already faithful. Header named the wrong pret file. M-12 (the button-press flag is write-only in the linked build). |
 | 7 | `src/home/start_menu.asm` | `home/start_menu.asm` | DONE | `3c409873` | **3 dropped calls restored, all 3 hidden behind a false comment**: M-13 `PlaySound SFX_START_MENU` (stale `TODO-HW`; audio is live), M-14 `PrintSafariZoneSteps` (false `STUB(safari)`; the body is real, linked, self-guarding), M-15 `SaveScreenTilesToBuffer2` (header claimed "not needed"; it's a pure WRAM copy — only the *restore* half is window-model). 2 SANCTIONED: `Joypad` + `CloseTextDisplay`, both genuinely unlinkable. No allowlist entries (file is at its mirrored path). |
 | 8 | `src/engine/menus/draw_start_menu.asm` | same | DONE | `634dcbe6` | **First row whose x86 was faithful end to end** (both labels; flag preservation correct at all 3 CheckEvent/test → branch pairs). The defects were in the *data* and the *tooling*: M-16 (the generator encoded the RENDERED string, so pret's `#MON` — the $54 POKé text command — became 7 literal glyphs, silently bypassing the handler the port implements; **generator patched**, data now byte-identical to pret), M-17 (`StartMenuShowWindow`'s `global` + "re-arms it after sub-menus" comment — no such caller has ever existed), M-18 (`update_label_db` couldn't see `equ` aliases, so 7 present pret labels reported `missing`; **tool patched**). 1 SANCTIONED: the canvas→window bridge. No allowlist entries. |
-| 9 | `src/engine/menus/start_sub_menus.asm` | same (861 ln) | TODO | | expect 2 parts; DEVIATION(icons) |
+| 9 | `src/engine/menus/start_sub_menus.asm` | same (861 ln) | **IN-PROGRESS (part 1 of 3 done)** | `PENDING` | **Part 1 = the party half** (`StartMenu_Pokemon`, `ErasePartyMenuCursors`, `SwitchPartyMon{,_ClearGfx,_InitVarOrSwapData}`). M-19 (the swap **left both mons' icons on screen** — the `DEVIATION(icons)` excusing the missing OAM park went stale when icons became OBJ; FIXED, incl. the `RENDER_H` projection pret's 144px park constant needs), M-20 (`SFX_SWAP` + `WaitForSoundToFinish` missing behind another stale `TODO-HW`; FIXED — and wiring it is *what makes M-19 visible*), M-21 (the field-move stub's stated reason is FALSE — the effects ARE ported, they're in check-only files; comment corrected, dispatch scoped as **part 3**). Header advertised 4 STUBs that Session 9 had already wired. **Part 2 = the bag half** (`StartMenu_Item`/`ItemMenuLoop` + the 4 seams + the 3 `missing` text labels). |
 | 10 | `src/engine/menus/trainer_card.asm` | `engine/menus/start_sub_menus.asm` | TODO | | allowlisted relocation (7 labels) — challenge |
 | 11 | `src/engine/menus/party_menu.asm` + `src/home/pokemon.asm` | `engine/menus/party_menu.asm`, `home/pokemon.asm` | TODO | | DEVIATION(text) ×3; legacy hand-encoded strings (debt) |
 | 12 | `src/engine/menus/swap_items.asm` | same | TODO | | "PLACEHOLDERS below … ROOT migrates + deletes" |
@@ -617,3 +621,70 @@ the include-defined-global path, and without touching the `cur` routine cursor (
 standalone; the lines after it belong to whatever routine preceded it). Blast radius measured
 first and it is exactly these 7: they are the only pret-named `equ` aliases in the tree.
 `missing` 2123 → 2116, `translated` 827 → 834; `lint_pret_labels` still exits 0.
+
+### M-19. Swapping party mons left BOTH mons' icons on screen [FIXED — row 9 part 1]
+`SwitchPartyMon_ClearGfx` blanked the mon's two BG rows and stopped there. pret also parks that
+mon's **4 OAM icon entries** offscreen. The port skipped it under a `DEVIATION(icons)` comment:
+*"the port's BG icons live in the rows just cleared and RedrawPartyMenu_ re-places them."*
+That was true once. It stopped being true when the party icons became **OBJ**
+(`engine/gfx/mon_icons.asm`, `docs/plans/party_icons_oam.md`): blanking BG rows no longer touches
+them, so both swapped mons' icons stayed painted over two blank rows. A stale comment outlived
+the architecture it described — and nobody re-read it when the architecture changed.
+Two things had to be got right to fix it, neither of which is a verbatim translation:
+* **The park constant is a projection.** pret parks at `SCREEN_HEIGHT_PX + OAM_Y_OFS` — "one
+  screen-height down", offscreen on a **144px** GB screen. The port's screen is `RENDER_H` = 200
+  and the party panel's origin is canvas y=0 (`UI_PARTY_PANEL_WY`), so pret's constant would put
+  the icon at canvas y=144 — **visibly relocated, not hidden**. The port needs the same idea at
+  its own screen height: `OBJ_PARK_Y = RENDER_H + OAM_Y_OFS` → `spr_dos_sy` = 200, and
+  `render_sprites` culls at `cmp sy, RENDER_H / jge` (ppu.asm:847). Exactly on the boundary.
+* **A park that is never published does nothing.** The compositor does not read shadow OAM's Y —
+  `render_sprites` draws at `spr_dos_sx/sy`, which only `CommitMonPartySpriteOAM` publishes (the
+  standing invariant from `flatcanvas-sprite-suppression`). Same for the blanked BG rows, which
+  reach the panel window only via `PartyMenuMirror`. Both are now called, so the cleared state is
+  actually on screen during the sound spin below — the frame window pret shows it in.
+
+### M-20. The swap SFX was missing behind another stale `TODO-HW` [FIXED — row 9 part 1]
+`; call WaitForSoundToFinish / ld a,SFX_SWAP / jp PlaySound — TODO-HW: audio HAL (Phase 3)`.
+Phase 3 landed: `WaitForSoundToFinish` is live in `home/audio.asm` (and it *pumps DelayFrame*, so
+it really does spin visible frames), `PlaySound` is live, `SFX_SWAP equ 0xAE` is in the generated
+audio constants. This is the **third** stale `TODO-HW: audio` found in three rows (M-13, and the
+pokédex one filed at row 16) — the audio destub swept the engine in but never revisited the call
+sites that had been commented out while waiting for it. **Worth a tree-wide sweep**: grep
+`TODO-HW.*audio` and check each against `label_status PlaySound`.
+The two findings are coupled, which is why they land together: with no `WaitForSoundToFinish`
+there was no frame in which the cleared state was ever displayed, so the missing OAM park (M-19)
+had nothing to be visible *during*. Wiring the sound is what exposes the ghost icons.
+
+### M-21. "None of the field effects are ported yet" — false, and never checked [comment FIXED, dispatch scoped — row 9 part 1]
+The field-move branch of `StartMenu_Pokemon` is stubbed (`jmp .loop`), which is fine as a
+deferral — pret's own refusal paths do exactly that, so nothing misbehaves; the move just does
+nothing. What is not fine is the stated reason: *"None of the field effects (UsedCut,
+ChooseFlyDestination, UseItem, PrintStrengthText, …) are ported yet."* `UseItem` is called by this
+very file, twenty lines away. Actual status (`tools/label_status`):
+* `UsedCut`, `IsSurfingAllowed`, `PrintStrengthText` — **translated**, but in **check-only** files
+  (`cut.asm`, `field_move_messages.asm`; Makefile `HOME_CHECK_SRCS`). They exist and do not link.
+* `CloseTextDisplay` — translated, also check-only (`text_script.asm`, established at row 7).
+  Every `.goBackToMap` path needs it, so it gates cut/surf/strength/flash/dig/teleport/fly alike.
+* `ChooseFlyDestination` — genuinely `missing`. FLY's happy path only.
+* `UseItem`, `Divide`, `AddNTimes`, `PrintText`, `GetPartyMonName`, `DelayFrames`, `Func_1510`,
+  `CheckIfInOutsideMap` — linked and callable **today**.
+So the real blocker is **linkage, not translation** — and **SOFTBOILED** (Divide + `UseItem` POTION
++ PrintText) plus the `.newBadgeRequired` / `.notHealthyEnough` refusals need nothing that is
+missing at all; they are blocked only by their text streams. Comment corrected to say all of this.
+The dispatch is now scoped as **row 9 part 3** (badge gate + jump table + 5 generated text streams
++ a decision on linking `cut.asm` / `field_move_messages.asm` / `text_script.asm` and paying their
+closure). It is deferred because it is a real implementation task, not because "it isn't ported".
+
+### Row 9 part 1 verification note
+`make fidelity` 6/6 — but that is a **regression check only**: no golden navigates a party swap,
+so `SwitchPartyMon_ClearGfx` is **not executed by any scenario**. The fix is **UNVERIFIED AT
+RUNTIME**. Its basis is a read of the primitives it depends on, each confirmed in source rather
+than assumed: the cull is `cmp spr_sy, RENDER_H / jge .nextSprite` (`ppu.asm:847`); the park lands
+at exactly `spr_dos_sy = RENDER_H` given `mps_org_y = UI_PARTY_PANEL_WY = 0`; `sprite_shift_y` is
+zeroed on every flat-canvas screen (`ppu.asm:421`, the `.not_overworld` path the party menu takes),
+so nothing shifts it back on screen; and `CommitMonPartySpriteOAM` is what turns shadow OAM into
+the `spr_dos_*` the compositor reads. Observing it would mean driving a swap headlessly, which
+needs a hook in `party_menu.asm` — another row's file. **Do it when row 11 opens that file**: a
+`DEBUG_PARTYSWAP` harness (seed party → `RedrawPartyMenu_` → `SwitchPartyMon_ClearGfx` → dump)
+is the natural companion to row 11 and would close this out.
+The SFX itself is **audible-only: UNVERIFIED** — no harness captures audio.

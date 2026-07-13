@@ -5,14 +5,16 @@
 ; bespoke bag_menu.asm); Session-5 scope is StartMenu_Pokemon (the party menu
 ; dispatcher: DisplayPartyMenu → FIELD_MOVE_MON_MENU pop-up → HandleMenuInput
 ; → CANCEL/SWITCH/STATS/field-move routing) + the SwitchPartyMon family +
-; ErasePartyMenuCursors. The remaining StartMenu_* entries are thin seams:
-;   StartMenu_Pokedex      — STUB(S6/S8: pokedex package)
-;   StartMenu_TrainerInfo  — STUB(S6: draw_badges package / S9 trainer card)
-;   StartMenu_SaveReset    — STUB(S7: save package)
-;   StartMenu_Option       — STUB(S6: options package)
-; Session 9 replaces the stubs when it wires all packages (see
-; docs/current_plan_menus.md); each stub returns to RedisplayStartMenu, which
-; is also pret's no-op-path behavior.
+; ErasePartyMenuCursors.
+;
+; The other four StartMenu_* entries are NOT stubs — the header used to list all
+; four as "STUB(S6/S7/S8)" long after Session 9 wired them, which is exactly
+; backwards: StartMenu_Pokedex calls ShowPokedexMenu, StartMenu_TrainerInfo draws
+; the full trainer card (DrawTrainerInfo + DrawBadges), StartMenu_SaveReset calls
+; SaveMenu, StartMenu_Option calls DisplayOptionMenu. Read the bodies, not this
+; header. (What IS still stubbed: the field-move dispatch inside StartMenu_Pokemon —
+; see the STUB(field-effects) note at .choseOutOfBattleMove, and the two
+; link-play text messages in StartMenu_Item.)
 ;
 ; Field-move pop-up (port model): DisplayTextBoxID(FIELD_MOVE_MON_MENU) draws
 ; the box on the 40-wide canvas at the UI_FIELD_MOVE_MON_MENU anchor (S2's
@@ -40,6 +42,7 @@ bits 32
 
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
+%include "assets/audio_constants.inc"    ; SFX_SWAP
 
 %define UI_LAYOUT_EQUATES_ONLY 1
 %include "assets/ui_layout_menus.inc"
@@ -112,6 +115,10 @@ extern DrawStartMenu                 ; engine/menus/draw_start_menu.asm
 extern ClearSprites                  ; gfx/sprites.asm — zero shadow OAM
 extern StatusScreen                  ; engine/pokemon/status_screen.asm — page 1
 extern StatusScreen2                 ; engine/pokemon/status_screen.asm — page 2
+extern CommitMonPartySpriteOAM       ; engine/gfx/mon_icons.asm — publish shadow OAM → compositor
+extern PartyMenuMirror               ; engine/menus/party_menu.asm — canvas → panel window
+extern WaitForSoundToFinish          ; home/audio.asm (pret: home/delay.asm)
+extern PlaySound                     ; home/audio.asm — sound id in AL
 
 ; --- USE/TOSS box geometry (frozen layout; pret GB(13,10) 7x5, text (15,11)) ---
 ; ; PROJ menus: GB(13,10) 7x5 --(anchor=right/top, X+20, Y+0)--> wx=271 wy=80
@@ -253,12 +260,32 @@ StartMenu_Pokemon:
     cmp al, ah
     jz .choseStats                      ; jp z
     ; chose a field move (pret .choseOutOfBattleMove):
-    ; STUB(field-effects): pret indexes wFieldMoves[wCurrentMenuItem] and
-    ; dispatches .outOfBattleMovePointers (cut/fly/surf/surf/strength/flash/
-    ; dig/teleport/softboiled) with wObtainedBadges gating + PrintText
-    ; refusals. None of the field effects (UsedCut, ChooseFlyDestination,
-    ; UseItem, PrintStrengthText, …) are ported yet — the selection re-enters
-    ; the party menu, the shape of pret's refusal paths (jp .loop).
+    ; STUB(field-effects): pret indexes wFieldMoves[wCurrentMenuItem] and dispatches
+    ; .outOfBattleMovePointers (cut/fly/surf/surf/strength/flash/dig/teleport/
+    ; softboiled) with wObtainedBadges gating + PrintText refusals. Selecting a field
+    ; move currently just re-enters the party menu — the shape of pret's refusal paths
+    ; (jp .loop), so nothing misbehaves; the move simply does nothing.
+    ;
+    ; The old comment claimed "none of the field effects … are ported yet". That is
+    ; FALSE and was never checked. Actual status (tools/label_status), 2026-07-13:
+    ;   UsedCut, IsSurfingAllowed, PrintStrengthText  translated, but in CHECK-ONLY
+    ;                                                 files (cut.asm,
+    ;                                                 field_move_messages.asm —
+    ;                                                 Makefile HOME_CHECK_SRCS): they
+    ;                                                 exist and do not link.
+    ;   CloseTextDisplay                              translated, also check-only
+    ;                                                 (text_script.asm) — every
+    ;                                                 .goBackToMap path needs it.
+    ;   ChooseFlyDestination                          genuinely missing (FLY only).
+    ;   UseItem, Divide, AddNTimes, PrintText,
+    ;   GetPartyMonName, DelayFrames, Func_1510,
+    ;   CheckIfInOutsideMap                           linked and callable TODAY.
+    ; So SOFTBOILED (Divide + UseItem POTION + PrintText) and the .newBadgeRequired /
+    ; .notHealthyEnough refusals need NOTHING that is missing — they are blocked only
+    ; by their text streams. The dispatch is deferred as its own work item (it needs
+    ; the badge gate, the jump table, 5 generated text streams, and the decision to
+    ; link cut.asm / field_move_messages.asm / text_script.asm) — see the row 9
+    ; findings in docs/current_plan_menu_fidelity.md, NOT because "it isn't ported".
     jmp .loop
 .choseSwitch:
     mov al, [ebp + wPartyCount]
@@ -715,25 +742,56 @@ SwitchPartyMon:
     call SwitchPartyMon_ClearGfx
     jmp RedrawPartyMenu_                ; jp RedrawPartyMenu_
 
-; In: AL = party slot. Clears the slot's two scratch rows.
-; DEVIATION(icons): pret also parks the slot's 4 OAM icon sprites offscreen —
-; the port's BG icons live in the rows just cleared and RedrawPartyMenu_
-; re-places them.
+; In: AL = party slot. Clears the slot's two scratch rows AND parks its 4 icon
+; OAM entries, then plays SFX_SWAP — all three, as pret does.
+;
+; The old comment here claimed the OAM park was unnecessary because "the port's
+; BG icons live in the rows just cleared". That stopped being true when the party
+; icons became OBJ (engine/gfx/mon_icons.asm): blanking the BG rows no longer
+; touches them, so both swapped mons' icons stayed on screen over two blank rows.
+; It was invisible only because the swap SFX was missing too — with no
+; WaitForSoundToFinish there was no frame in which the cleared state was shown.
+; Wiring the sound (below) is what makes the missing park visible, so both are
+; fixed together.
+;
+; ; PROJ: pret parks at SCREEN_HEIGHT_PX + OAM_Y_OFS — "one screen-height down",
+; which is off the bottom of a 144px GB screen. The port's screen is RENDER_H
+; (200) tall and the party panel's origin is canvas y=0 (UI_PARTY_PANEL_WY), so
+; the GB constant would land the icon at canvas y=144 — visibly relocated, not
+; hidden. Same idea, the port's screen height: OBJ_PARK_Y → spr_dos_sy = RENDER_H.
+OBJ_PARK_Y equ RENDER_H + OAM_Y_OFS     ; pret: SCREEN_HEIGHT_PX + OAM_Y_OFS
+OBJ_SIZE   equ OAM_ENTRY_SIZE           ; pret's name for it
 SwitchPartyMon_ClearGfx:
-    push eax                            ; push af
-    push ecx
-    push edi
-    movzx eax, al
-    imul eax, eax, 2 * 20               ; hlcoord 0,0 + AddNTimes(2*SCREEN_WIDTH)
-    lea edi, [ebp + eax + W_TILEMAP]
+    pushad                              ; (pret: push af … pop af; it clobbers hl/bc/de)
+    movzx eax, al                       ; AL = party slot
+    push eax
+    imul edi, eax, 2 * 20               ; hlcoord 0,0 + AddNTimes(2*SCREEN_WIDTH)
+    lea edi, [ebp + edi + W_TILEMAP]
     mov ecx, 2 * 20                     ; ld c,SCREEN_WIDTH*2
     mov al, TILE_SPC                    ; ld a,' '
     rep stosb                           ; .clearMonBGLoop
-    pop edi
-    pop ecx
-    ; call WaitForSoundToFinish / ld a,SFX_SWAP / jp PlaySound — TODO-HW:
-    ; audio HAL (Phase 3)
-    pop eax                             ; pop af
+    pop eax                             ; pop af — the slot again
+    ; ld hl, wShadowOAMSprite00YCoord / ld bc, OBJ_SIZE*4 / call AddNTimes
+    imul edi, eax, OBJ_SIZE * 4         ; 4 OAM entries per mon icon
+    add edi, W_SHADOW_OAM               ; wShadowOAMSprite00YCoord
+    mov ecx, 4                          ; ld de,OBJ_SIZE / ld c,e
+.clearMonOAMLoop:
+    mov byte [ebp + edi], OBJ_PARK_Y    ; ld [hl], SCREEN_HEIGHT_PX + OAM_Y_OFS
+    add edi, OBJ_SIZE                   ; add hl, de
+    dec ecx
+    jnz .clearMonOAMLoop
+    ; PORT: the compositor does not read shadow OAM's Y — render_sprites draws at
+    ; spr_dos_sx/sy, which only CommitMonPartySpriteOAM publishes. A park that is
+    ; never committed changes nothing on screen. Likewise the blanked rows reach
+    ; the panel window only through PartyMenuMirror. Both are needed for the
+    ; cleared state to be visible during the WaitForSoundToFinish spin below —
+    ; which is exactly the frame window pret shows it in.
+    call CommitMonPartySpriteOAM
+    call PartyMenuMirror
+    call WaitForSoundToFinish           ; call WaitForSoundToFinish
+    mov al, SFX_SWAP
+    call PlaySound                      ; jp PlaySound (tail in pret)
+    popad
     ret
 
 ; ---------------------------------------------------------------------------

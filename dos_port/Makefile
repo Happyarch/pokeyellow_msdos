@@ -1403,7 +1403,7 @@ assets/pokedex_tiles.inc: ../gfx/pokedex/pokedex.2bpp ../gfx/battle/balls.2bpp \
 src/home/start_menu.o: assets/event_constants.inc assets/audio_constants.inc
 src/engine/menus/draw_start_menu.o: assets/event_constants.inc \
         assets/menu_strings.inc assets/ui_layout_menus.inc
-src/engine/menus/start_sub_menus.o: assets/ui_layout_menus.inc
+src/engine/menus/start_sub_menus.o: assets/ui_layout_menus.inc assets/audio_constants.inc
 src/engine/menus/pc.o: assets/ui_layout_menus.inc assets/event_constants.inc
 src/engine/items/item_effects.o: assets/ui_layout_menus.inc
 src/engine/menus/main_menu.o src/engine/menus/save.o: assets/ui_layout_menus.inc
