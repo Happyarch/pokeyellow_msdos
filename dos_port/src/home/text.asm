@@ -7,9 +7,11 @@
 ; ─────────────────────
 ; Level 1 — TextCommandProcessor (home/text.asm:TextCommandProcessor)
 ;   Reads a stream of TX_* command bytes. Commands: TX_START writes a string,
-;   TX_BOX draws a border, TX_MOVE repositions the cursor, TX_FAR skips a
-;   rom-bank reference (flat model: no actual bank switch), TX_END terminates.
-;   Register mapping: ESI = command stream ptr (HL), EBX = cursor (BC).
+;   TX_BOX draws a border, TX_MOVE repositions the cursor, TX_FAR recursively
+;   splices another stream inline, TX_END terminates.
+;   Register mapping: ESI = command stream ptr (HL) — a FLAT LINEAR pointer, since
+;   the port's text streams live in program-image .data, outside GB space; EBX =
+;   cursor (BC), EBP-relative as on the GB. See the TextCommandProcessor header.
 ;
 ; Level 2 — PlaceString (home/text.asm:PlaceString)
 ;   Renders a '@'-terminated charmap string into the tile buffer.
@@ -1035,9 +1037,24 @@ text_engine_init:
 ; TextCommandProcessor — execute a TX_* command stream.
 ;
 ; Source: home/text.asm:TextCommandProcessor / NextTextCommand
-; In:  ESI = command stream ptr (HL, EBP-relative)
+;
+; DEVIATION(flat-pointer): the STREAM pointer is a FLAT LINEAR address, not a GB
+; offset. On the GB, text lives in addressable ROM, so pret's HL is just a GB
+; address. In the port every text stream is flat program-image .data, outside the
+; 64 KB emulated GB space — an EBP-relative HL cannot name one at all. Making the
+; stream pointer flat is what lets a caller pass a `.data` label directly (and is
+; what makes TX_FAR's 32-bit label operand work).
+;
+; Everything else keeps pret's GB-space meaning:
+;   - the CURSOR (EBX/BC) is a tilemap offset → EBP-relative;
+;   - command OPERANDS that name memory (TX_RAM/TX_NUM/TX_BCD sources, TX_MOVE/
+;     TX_BOX destinations) are genuine GB addresses → EBP-relative, as in pret.
+; A stream that lives in GB space (battle composes one in WRAM) is passed as
+; `lea esi, [ebp + addr]`.
+;
+; In:  ESI = command stream ptr (HL) — FLAT LINEAR
 ;      EBX = tile buffer cursor (BC, EBP-relative)
-; Out: ESI = past the TX_END byte
+; Out: ESI = past the TX_END byte (flat)
 ;      EBX = cursor at last position written
 ; Clobbers: EAX, ECX, EDX.
 ; ---------------------------------------------------------------------------
@@ -1058,7 +1075,7 @@ TextCommandProcessor:
     mov [ebp + W_LETTER_PRINTING_DELAY], al
 
 .next_cmd:
-    movzx eax, byte [ebp + esi]
+    movzx eax, byte [esi]           ; stream is FLAT (see header)
     inc esi                         ; ESI now points to operands / next command
 
     cmp al, TX_END                  ; $50
@@ -1112,14 +1129,14 @@ TextCommandProcessor:
 
 ; --- TX_START ($00): render '@'-terminated string at cursor ---
 .cmd_start:
-    ; ESI = source string (GB offset into the command stream), EBX = cursor
-    lea eax, [ebp + esi]   ; flat-linear source ptr for PlaceString
+    ; ESI = source string (flat ptr into the command stream), EBX = cursor
+    mov eax, esi           ; PlaceString takes a flat-linear source in EAX
     mov esi, ebx           ; ESI (HL) = cursor
     call PlaceString
-    ; After PlaceString: EBX = cursor at '@', EDX = flat-linear ptr to '@'
-    mov esi, edx
-    sub esi, ebp        ; flat ptr → GB offset (TCP reads its stream EBP-relative)
-    inc esi             ; ESI = past '@' = next command
+    ; After PlaceString: EBX = cursor at '@', EDX = flat-linear ptr to '@'.
+    ; <DONE>/<PROMPT> instead return EDX = flat ptr to the TX_END sentinel
+    ; (text_engine_init), so the same two instructions terminate the stream.
+    lea esi, [edx + 1]     ; ESI = past '@' = next command (flat)
     jmp .next_cmd
 
 ; --- TX_FAR ($17): far-bank text — faithful recursive splice. ---
@@ -1129,32 +1146,36 @@ TextCommandProcessor:
 ; on that pointer; then restores HL/bank and continues the outer stream. The far
 ; text is spliced INLINE: the recursion advances the cursor (BC/EBX) and that
 ; position is carried forward, so pret never restores the cursor here — nor do we.
-; Flat EBP model: banks are a no-op (src/home/bankswitch.asm — rROMB write elided);
-; we still keep the faithful hLoadedROMBank bookkeeping so any reader sees pret's value.
+;
+; DEVIATION(flat-pointer): the operand is ONE 32-bit FLAT pointer, not pret's
+; 3-byte addr_lo/addr_hi/bank triple — a bank:offset pair cannot name a flat
+; .data label. This is what the `text_far` macro emits (include/gb_text.inc:141,
+; `db TX_FAR / dd %1`), so the operand is 4 bytes wide and the resume point is
+; ESI+4. Banks are a no-op in the flat model (src/home/bankswitch.asm elides the
+; rROMB write); with no bank byte in the stream there is nothing to switch to, so
+; pret's push/pop af bank save-restore is dropped with it — it would save and
+; restore the same value.
+;
+; This was previously WRONG, not merely deviant: it read 3 bytes and combined them
+; into a GB offset, so it computed a garbage pointer AND desynced the outer stream
+; by one byte. It never fired because the only producers are unlinked
+; (text_script.asm is check-only; gen_battle_text.py inlines far text instead of
+; emitting the command) — see docs/current_plan_text_engine.md finding T-1.
 .cmd_far:
-    ; ESI -> operands: addr_lo, addr_hi, bank. EBX = current cursor (carried forward).
-    movzx eax, byte [ebp + esi]         ; addr_lo
-    movzx ecx, byte [ebp + esi + 1]     ; addr_hi
-    shl  ecx, 8
-    or   eax, ecx                       ; EAX = far GB offset ([addr_hi:addr_lo])
-    movzx ecx, byte [ebp + esi + 2]     ; bank byte (flat model: bookkeeping only)
-    add  esi, 3                         ; ESI = resume point in the outer stream
+    ; ESI -> operand: dd <flat target>. EBX = current cursor (carried forward).
+    mov  eax, [esi]                     ; EAX = far stream ptr (flat, 32-bit)
+    add  esi, 4                         ; ESI = resume point in the outer stream
     push esi                            ; save outer stream ptr        (pret: push hl)
-    movzx edx, byte [ebp + H_LOADED_ROM_BANK] ; save current bank      (pret: push af)
-    push edx
-    mov  [ebp + H_LOADED_ROM_BANK], cl  ; switch to far bank; rROMB write = flat no-op
     mov  esi, eax                       ; ESI (HL) = far stream ptr
     call TextCommandProcessor           ; recurse: render far text; advances EBX cursor
-    pop  edx
-    mov  [ebp + H_LOADED_ROM_BANK], dl  ; restore saved bank            (pret: pop af)
     pop  esi                            ; restore outer stream ptr      (pret: pop hl)
     jmp  .next_cmd
 
 ; --- TX_MOVE ($03): set cursor to new tile-buffer address ---
 .cmd_move:
-    movzx ebx, byte [ebp + esi]    ; lo byte of new cursor addr
+    movzx ebx, byte [esi]          ; lo byte of new cursor addr
     inc esi
-    movzx ecx, byte [ebp + esi]    ; hi byte
+    movzx ecx, byte [esi]          ; hi byte
     inc esi
     shl ecx, 8
     or  ebx, ecx                   ; EBX = new cursor (BC in SM83)
@@ -1163,15 +1184,15 @@ TextCommandProcessor:
 ; --- TX_BOX ($04): draw a text box ---
 .cmd_box:
     ; Operands: addr_lo, addr_hi, b_height, c_width
-    movzx eax, byte [ebp + esi]    ; lo of tile buf destination
+    movzx eax, byte [esi]          ; lo of tile buf destination
     inc esi
-    movzx ecx, byte [ebp + esi]    ; hi
+    movzx ecx, byte [esi]          ; hi
     inc esi
     shl ecx, 8
-    or  eax, ecx                   ; EAX = tile buf dest
-    movzx ecx, byte [ebp + esi]    ; B = height
+    or  eax, ecx                   ; EAX = tile buf dest (GB addr — EBP-relative)
+    movzx ecx, byte [esi]          ; B = height
     inc esi
-    movzx edx, byte [ebp + esi]    ; C = width
+    movzx edx, byte [esi]          ; C = width
     inc esi
     shl ecx, 8
     or  ecx, edx                   ; ECX[15:8]=height, ECX[7:0]=width = EBX for TextBoxBorder
@@ -1223,7 +1244,7 @@ TextCommandProcessor:
 ;     held. Operand: 1-byte glyph count. Pret ref: home/text.asm:TextCommand_DOTS.
 ;     Cursor is EBX (BC); it advances by the glyph count, matching pret. ---
 .cmd_dots:
-    movzx edx, byte [ebp + esi]         ; EDX = glyph count (pret d)
+    movzx edx, byte [esi]               ; EDX = glyph count (pret d)
     inc esi                             ; past the 1-byte count operand
 .dots_loop:
     mov byte [ebp + ebx], CHAR_DOTS_GLYPH   ; write '…' at the cursor
@@ -1252,9 +1273,9 @@ TextCommandProcessor:
 ; Pret ref: home/text.asm:TextCommand_RAM. Operands: addr_lo, addr_hi (little-
 ; endian WRAM pointer, e.g. wBattleMonNick). PlaceString it at the cursor.
 .cmd_ram:
-    movzx edx, byte [ebp + esi]    ; lo of RAM source addr
+    movzx edx, byte [esi]          ; lo of RAM source addr
     inc esi
-    movzx eax, byte [ebp + esi]    ; hi
+    movzx eax, byte [esi]          ; hi
     inc esi
     shl eax, 8
     or  edx, eax                   ; EDX = RAM source string addr
@@ -1269,13 +1290,13 @@ TextCommandProcessor:
 ; Pret ref: home/text.asm:TextCommand_NUM. Operands: addr_lo, addr_hi, format,
 ; where format = (byte-count << 4) | digit-count. LEFT_ALIGN is forced on.
 .cmd_num:
-    movzx edx, byte [ebp + esi]    ; lo of value addr
+    movzx edx, byte [esi]          ; lo of value addr
     inc esi
-    movzx eax, byte [ebp + esi]    ; hi
+    movzx eax, byte [esi]          ; hi
     inc esi
     shl eax, 8
-    or  edx, eax                   ; EDX (DE) = value source addr
-    movzx eax, byte [ebp + esi]    ; AL = format byte
+    or  edx, eax                   ; EDX (DE) = value source addr (GB addr)
+    movzx eax, byte [esi]          ; AL = format byte
     inc esi
     push esi                       ; save stream ptr
     mov esi, ebx                   ; ESI (HL) = cursor
@@ -1292,13 +1313,13 @@ TextCommandProcessor:
 ; --- TX_BCD ($02 / text_bcd): print a BCD number (money) ---
 ; Pret ref: home/text.asm:TextCommand_BCD. Operands: addr_lo, addr_hi, flags|len.
 .cmd_bcd:
-    movzx edx, byte [ebp + esi]    ; lo of BCD addr
+    movzx edx, byte [esi]          ; lo of BCD addr
     inc esi
-    movzx eax, byte [ebp + esi]    ; hi
+    movzx eax, byte [esi]          ; hi
     inc esi
     shl eax, 8
-    or  edx, eax                   ; EDX (DE) = BCD source addr
-    movzx eax, byte [ebp + esi]    ; AL = flags | length (C)
+    or  edx, eax                   ; EDX (DE) = BCD source addr (GB addr)
+    movzx eax, byte [esi]          ; AL = flags | length (C)
     inc esi
     push esi                       ; save stream ptr
     mov esi, ebx                   ; ESI (HL) = cursor

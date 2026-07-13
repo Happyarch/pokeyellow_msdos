@@ -115,7 +115,7 @@ extern menu_redraw_cb                  ; home/window.asm — per-item redraw cal
 ; --- text engine + move-list helpers ---
 extern TextBoxBorder                   ; text.asm (stride-aware)
 extern PlaceString                     ; text.asm (src=EAX flat-linear, end in EBX)
-extern TextCommandProcessor            ; text.asm (ESI=stream GB offset, EBX=cursor)
+extern TextCommandProcessor            ; text.asm (ESI=stream, FLAT ptr; EBX=cursor)
 extern text_msgbox                     ; text.asm — the active msgbox projection record
 extern text_arrow_pos                  ; text.asm — ▼ tile (read by BattlePromptWait;
                                        ; published by PrintText from the record)

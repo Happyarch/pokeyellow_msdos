@@ -157,7 +157,8 @@ PrintTextStaged:
 .noWindow:
     ; pret: `pop hl` — restore the stream pointer. DEVIATION(text-staging): the
     ; stream to run is the staged copy in WRAM, not the caller's flat pointer.
-    mov esi, NPC_DIALOG_BUF
+    ; TCP takes a FLAT pointer, so the GB-space staging buffer is biased by EBP.
+    lea esi, [ebp + NPC_DIALOG_BUF]
 
 ; ---------------------------------------------------------------------------
 ; PrintText_NoCreatingTextBox — pret home/window.asm. Type the stream without

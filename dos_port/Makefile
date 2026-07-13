@@ -641,6 +641,20 @@ endif
 # Text-box gate (menus S2): boot to overworld, switch to the flat canvas, draw
 # the DisplayTextBoxID box with the given wTextBoxID, dump FRAME.BIN, exit.
 # make DEBUG_TEXTBOXID=<id>  (id = hex/dec NASM literal, e.g. 0x01, 0x13)
+# Text-engine oracle (docs/current_plan_text_engine.md Stage 0): run ONE probe
+# stream through the real PrintText in the overworld dialog window, dump FRAME.BIN,
+# exit. One case per TX_* command — no golden covers streamed text, so this is the
+# only oracle the text engine has.
+#   1 plain+<LINE>  2 <PARA>  3 TX_RAM  4 TX_NUM  5 TX_BCD  6 TX_FAR  7 TX_DOTS
+# make DEBUG_TEXT=<n>       (AUTOKEY_APRESS answers the <PARA> page break)
+ifdef DEBUG_TEXT
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_TEXT=$(DEBUG_TEXT) -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_APRESS
+AUTOKEY_DUMP_FRAME ?= 999999
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
+
 ifdef DEBUG_TEXTBOXID
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_TEXTBOXID=$(DEBUG_TEXTBOXID)
@@ -1246,6 +1260,10 @@ assets/list_menu_strings.inc: assets/gb_charmap.txt tools/gen_list_menu_strings.
 assets/yes_no_strings.inc: assets/gb_charmap.txt tools/gen_yes_no_strings.py tools/gb_text.py
 	python3 tools/gen_yes_no_strings.py
 
+# Text-engine oracle probe streams (DEBUG_TEXT). See docs/current_plan_text_engine.md.
+assets/text_oracle.inc: assets/gb_charmap.txt tools/gen_text_oracle.py tools/gb_text.py
+	python3 tools/gen_text_oracle.py
+
 assets/overworld_strings.inc assets/field_move_text.inc assets/cut_text.inc assets/player_anim_text.inc &: \
                             assets/gb_charmap.txt tools/gen_overworld_strings.py tools/gb_text.py \
                             tools/gen_battle_text.py ../data/text/text_1.asm ../data/text/text_8.asm ../data/text/text_9.asm \
@@ -1495,6 +1513,7 @@ src/engine/menus/text_box.o: assets/ui_layout_menus.inc assets/ui_layout_battle.
         assets/textbox_strings.inc
 src/home/list_menu.o: assets/list_menu_strings.inc
 src/home/yes_no.o: assets/yes_no_strings.inc
+src/debug/debug_dump.o: $(if $(DEBUG_TEXT),assets/text_oracle.inc)
 src/engine/menus/display_text_id_init.o: assets/event_constants.inc
 
 # UI layout geometry — projected menu-window coordinates. The sidecar JSON is
@@ -1561,6 +1580,7 @@ assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_
         assets/items.inc assets/item_text.inc assets/gb_charmap.txt assets/menu_strings.inc \
         assets/status_strings.inc assets/textbox_strings.inc \
         assets/list_menu_strings.inc assets/yes_no_strings.inc \
+        assets/text_oracle.inc \
         assets/overworld_strings.inc assets/field_move_text.inc \
         assets/cut_text.inc assets/player_anim_text.inc \
         assets/type_matchups.inc assets/move_names.inc assets/field_moves.inc \

@@ -63,7 +63,7 @@ extern IndexToPokedex            ; NOTE: a TABLE in the port, not pret's routine
 ; --- text / numbers / names ---------------------------------------------------
 extern PlaceString               ; text/text.asm — EAX=flat src, ESI=dest
 extern PrintNumber               ; home/print_num.asm — EDX=src(EBP-rel), BH=flags|bytes, BL=digits, ESI=dest
-extern TextCommandProcessor      ; text/text.asm — ESI=stream(GB off), EBX=cursor
+extern TextCommandProcessor      ; home/text.asm — ESI=stream (FLAT ptr), EBX=cursor
 extern GetMonName                ; home/names.asm — wNamedObjectIndex → wNameBuffer
 extern GetMonHeader              ; home/pokemon.asm — wCurSpecies → wMonHeader
 extern LoadFlippedFrontSpriteByMonIndex ; gfx/pics.asm — ESI=tilemap coord; decode $9000 + place
@@ -442,6 +442,7 @@ Pokedex_PrintFlavorTextAtBC:
     ; inlines it into the entry blob. TextCommandProcessor is EBP-relative but the
     ; blob is flat .data, so the flavor stream is staged into GB space first.
     call dex_stage_flavor                 ; [dex_flavor_ptr] → wDexFlavorBuf; ESI=GB off
+    lea esi, [ebp + esi]                  ; → flat ptr (TextCommandProcessor's stream is flat)
     mov byte [ebp + H_CLEAR_LETTER_PRINTING_DELAY_FLAGS], 0x02  ; ld a,%10 (clear delay)
     ; Pokédex flavor mode: the text engine's dialog helpers (sync_dialog_window
     ; per char, manual_text_scroll at the <PAGE> break) must mirror the full

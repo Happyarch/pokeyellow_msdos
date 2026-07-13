@@ -152,6 +152,9 @@ extern PrepareNewGameDebug
 %ifdef DEBUG_PARTYMENU
 extern RunPartyMenuTest
 %endif
+%ifdef DEBUG_TEXT
+extern RunTextTest
+%endif
 %ifdef DEBUG_ITEMTM
 extern RunTMHMTest
 %endif
@@ -690,6 +693,9 @@ EnterMap:
 %endif
 %ifdef DEBUG_BATTLE
     call RunBattleTest                     ; seed party+enemy, enter battle, render one frame, dump FRAME.BIN, exits
+%endif
+%ifdef DEBUG_TEXT
+    call RunTextTest                       ; text-engine oracle: run one probe stream, dump FRAME.BIN, exits
 %endif
 %ifdef DEBUG_TEXTBOXID
     call RunTextBoxIDTest                  ; canvas mode, draw text box id, dump FRAME.BIN, exits

@@ -81,7 +81,7 @@ extern g_bg_whiteout
 extern g_obj_over_window             ; ppu/ppu.asm — OBJ over the window layer (GB order)
 extern Delay3                        ; video/frame.asm
 extern GBPalNormal                   ; init/init.asm
-extern TextCommandProcessor          ; home/text.asm — ESI=GB-space TX stream, EBX=cursor
+extern TextCommandProcessor          ; home/text.asm — ESI=FLAT TX stream ptr, EBX=cursor
 ; pret PartyMenuItemUseMessagePointers — the nine item-use result texts, generated
 ; into assets/item_text.inc (tools/gen_item_text.py) as {dd stream, dd length} pairs
 ; (the port needs the length to stage a stream in GB space; see .printItemUseMessage).
@@ -302,7 +302,7 @@ RedrawPartyMenu_:
     mov bh, 4                               ; interior height (total 6)
     call TextBoxBorder
     mov ebx, W_TILEMAP + 14 * GBSCR_W + 1   ; bccoord 1,14 — TCP's cursor
-    mov esi, NPC_DIALOG_BUF                  ; EBP-relative stream ptr
+    lea esi, [ebp + NPC_DIALOG_BUF]          ; staged stream — TCP takes a FLAT ptr
     call TextCommandProcessor
     jmp .done
 
