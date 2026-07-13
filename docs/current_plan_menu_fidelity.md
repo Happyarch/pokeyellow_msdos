@@ -1,6 +1,6 @@
 # Menu fidelity — de-bespoking the menu system against pret
 
-> **STATUS — RESUMED 2026-07-13.** Rows 1–7 + 23 are DONE (8 of 24). The text-subsystem
+> **STATUS — RESUMED 2026-07-13.** Rows 1–8 + 23 are DONE (9 of 24). The text-subsystem
 > detour this audit was paused for is **complete and archived** (`docs/plans/text_engine.md`):
 > the staging model is gone, `TX_FAR` works, and there is now a `DEBUG_TEXT=1..9` oracle for
 > streamed text — which the golden harness still structurally does not render.
@@ -9,9 +9,8 @@
 > commit). It picks the first row below that is `TODO`/`IN-PROGRESS` and works it. Update
 > the row + append findings each iteration.
 >
-> **Where it stands.** Next row is **8** (`src/engine/menus/draw_start_menu.asm`). Rows 8 and 13
-> are the last SHARED DRIVERS — do those before the leaf screens (9–12, 14–18, 21), because
-> everything downstream inherits their bugs. Rows 19 (`save`, 1080 ln) and 20 (`link_menu`, 1148 ln) are
+> **Where it stands.** Next row is **9** (`src/engine/menus/start_sub_menus.asm`, 861 ln — split
+> it across iterations). Row 13 is the last SHARED DRIVER; the rest are leaf screens. Rows 19 (`save`, 1080 ln) and 20 (`link_menu`, 1148 ln) are
 > mostly TODO-HW SRAM/serial boundaries: low bug yield per line, and they MUST be split across
 > iterations. **Row 22 is the highest-value row on the board and is sequenced last** — the
 > battle move-menu family is missing entirely; it clears blocker B8 and unblocks Mimic + PP
@@ -25,8 +24,12 @@
 > already faithful — the lie was the file's **placement**, blessed by 3 rubber-stamped
 > allowlist entries. Row 7 dropped **three** pret calls, each one hidden behind a comment
 > asserting it couldn't be made (a stale `TODO-HW`, a false `STUB`, and a "not needed" that
-> generalized one real deviation into two). The hit rate on "audited file turns out to hold a
-> real defect" is still 100%. The remaining rows are not a formality.
+> generalized one real deviation into two). Row 8's *x86* was faithful end to end — the first
+> such row — but its **generated data** wasn't (M-16: the generator encoded the rendered string,
+> so pret's `#MON` text command became 7 literal glyphs) and neither was the **label DB** the
+> audit runs on (M-18: it couldn't see `equ` aliases, reporting 7 present labels as `missing`).
+> Audit the generators and the tooling, not just the assembly. The hit rate on "audited file
+> turns out to hold a real defect" is still 100%. The remaining rows are not a formality.
 
 ## Why this exists
 
@@ -78,7 +81,7 @@ driver only relocates the divergence.
 | 5 | `src/home/yes_no.asm` | `home/yes_no.asm` + `engine/menus/text_box.asm` | DONE | `6d74aed2` | **M-10 (single-spaced + cursor on the WRONG option — FIXED)**, **M-11 (`wMenuWatchMovingOutOfBounds` never cleared — FIXED)**, M-5 RESOLVED (Save/RestoreScreenTiles absent by design → SANCTIONED). Allowlist: the boilerplate *file-level* entry was FALSE (it keyed all of `engine/menus/text_box.asm` to yes_no.asm) — deleted, re-added as a hand-justified *label-level* entry for `DisplayTwoOptionMenu` only. 9 hand-encoded strings migrated to a generator. New `DEBUG_YESNO` harness. |
 | 6 | ~~`src/home/auto_textbox.asm`~~ → merged into `src/home/window.asm` | `home/window.asm` | DONE | `9b509fda` | **Allowlist ×3 DELETED, not re-added** — the "split" had no reason; the 3 routines now live in the file that mirrors pret (relocated → translated). Bodies were already faithful. Header named the wrong pret file. M-12 (the button-press flag is write-only in the linked build). |
 | 7 | `src/home/start_menu.asm` | `home/start_menu.asm` | DONE | `3c409873` | **3 dropped calls restored, all 3 hidden behind a false comment**: M-13 `PlaySound SFX_START_MENU` (stale `TODO-HW`; audio is live), M-14 `PrintSafariZoneSteps` (false `STUB(safari)`; the body is real, linked, self-guarding), M-15 `SaveScreenTilesToBuffer2` (header claimed "not needed"; it's a pure WRAM copy — only the *restore* half is window-model). 2 SANCTIONED: `Joypad` + `CloseTextDisplay`, both genuinely unlinkable. No allowlist entries (file is at its mirrored path). |
-| 8 | `src/engine/menus/draw_start_menu.asm` | same | TODO | | |
+| 8 | `src/engine/menus/draw_start_menu.asm` | same | DONE | `PENDING` | **First row whose x86 was faithful end to end** (both labels; flag preservation correct at all 3 CheckEvent/test → branch pairs). The defects were in the *data* and the *tooling*: M-16 (the generator encoded the RENDERED string, so pret's `#MON` — the $54 POKé text command — became 7 literal glyphs, silently bypassing the handler the port implements; **generator patched**, data now byte-identical to pret), M-17 (`StartMenuShowWindow`'s `global` + "re-arms it after sub-menus" comment — no such caller has ever existed), M-18 (`update_label_db` couldn't see `equ` aliases, so 7 present pret labels reported `missing`; **tool patched**). 1 SANCTIONED: the canvas→window bridge. No allowlist entries. |
 | 9 | `src/engine/menus/start_sub_menus.asm` | same (861 ln) | TODO | | expect 2 parts; DEVIATION(icons) |
 | 10 | `src/engine/menus/trainer_card.asm` | `engine/menus/start_sub_menus.asm` | TODO | | allowlisted relocation (7 labels) — challenge |
 | 11 | `src/engine/menus/party_menu.asm` + `src/home/pokemon.asm` | `engine/menus/party_menu.asm`, `home/pokemon.asm` | TODO | | DEVIATION(text) ×3; legacy hand-encoded strings (debt) |
@@ -561,3 +564,56 @@ It proves nothing about M-15: `SaveScreenTilesToBuffer2` sits in `.buttonPressed
 so the harness never reaches it — its safety rests on inspection (a register-preserving copy into
 a dedicated buffer nothing else reads). And the SFX itself is **audible-only: UNVERIFIED** by any
 harness; no golden or dump captures audio.
+
+### M-16. The string generator encoded the *rendered* text, not pret's string [FIXED — row 8]
+pret's `StartMenuPokemonText` is `db "#MON@"`. `#` is **charmap $54 — a text COMMAND**, expanded
+to "POKé" at print time by `PlaceNextChar` (`home/text.asm`: `dict '#', PlacePOKe`), not four
+literal glyphs. `tools/gen_menu_strings.py` had `("sm_str_pokemon", "POKéMON")` — it encoded what
+the label *looks like* rather than what pret *writes*, emitting 7 literal tiles
+(`8F 8E 8A BA 8C 8E 8D`) where pret emits 4 bytes (`54 8C 8E 8D`).
+The screen output is identical, which is exactly why nobody caught it. What it actually did was
+**silently route around the $54 handler the port already implements** (`src/home/text.asm:926
+.handle_poke` → `str_poke` = `8F 8E 8A BA`), leaving that path untested by the one screen that
+should exercise it. It also broke the Tier-1 premise that a generated `.inc` is a deterministic
+function of the pret source — a generator that paraphrases its input is not regenerable from it.
+Fixed at the generator (per the user's standing instruction: *patch the applicable generator*).
+`LABELS` now carries **pret's `db` string verbatim** plus the pret label name for cross-reference;
+`gb_text.encode('#MON')` → `54 8C 8E 8D`, so all 7 labels are now byte-identical to pret's data.
+Verified: `goldencheck SCENARIO=start_menu` compares the menu-box tilemap cells against mGBA
+(the only tilemap mask is rows 15–17, pure backdrop) and passes — the $54 expansion renders the
+same 7 tiles the literal did.
+**Worth a sweep beyond this row:** every other string generator is suspect for the same class of
+paraphrase. `#` ($54), `<PKMN>` ($4A), `<PLAYER>` ($52), `<RIVAL>` ($53), `<TARGET>`/`<USER>` are
+all text commands that a generator can "helpfully" pre-expand. Filed for rows 11/14/16 and for
+the dialog generator.
+
+### M-17. `StartMenuShowWindow`: exported to nobody, with a comment naming a caller that never existed [FIXED — row 8]
+`global StartMenuShowWindow ; home/start_menu.asm re-arms it after sub-menus`. There is no such
+caller — not in `home/start_menu.asm` (read in full for row 7), not anywhere in `src/`. The
+routine's only entry is `DrawStartMenu`'s tail `jmp`, and it is correct that way: a sub-menu
+returns via `RedisplayStartMenu` → `DrawStartMenu`, which re-arms the window on its way out. The
+`global` is dead and the comment describes a design that was never built. Both removed; the
+mechanism is now stated as it actually works. (`sm_canvas_mirror`'s export IS real — but it is the
+`%ifdef DEBUG_STARTMENU` harness that uses it, not the live menu, which reaches it through
+`menu_redraw_cb`. Comment corrected to say so.)
+Also rewrote the file's garbled `UI_LAYOUT_EQUATES_ONLY` header note, which argued itself into a
+"which would collide … we therefore re-derive nothing" knot. The guard is real, generated by
+`gen_ui_layout.py`, and used by 8 other files; it exists to avoid a duplicate *table*, not a
+collision.
+
+### M-18. `update_label_db` was blind to `equ` aliases → 7 present labels reported `missing` [FIXED — row 8]
+The 7 `StartMenu*Text` labels all reported `missing` in `translation.db`. They are not missing:
+`draw_start_menu.asm` keeps the pret names as `equ` aliases onto the generated `sm_str_*` labels
+(`StartMenuPokemonText equ sm_str_pokemon`) — which is precisely what CLAUDE.md's "preserve pret
+labels" rule asks for when a generator owns the bytes. But the scanner's port-definition regex is
+`^Name:`, so an alias was invisible and the label fell through to `missing`.
+This matters beyond cosmetics: **the label DB is the evidence this audit runs on** (loop step 2 —
+"a label pret has that the port simply lacks is a finding"). A blind spot that reports present
+labels as absent manufactures false findings, and worse, would hide a genuinely absent string
+label in the noise of the 7 false ones.
+Patched `tools/update_label_db`: `EQU_ALIAS_RE` registers `Name equ Symbol` as a port definition
+(symbol aliases only — `FOO equ 12` is a constant, not a definition), with null body metrics like
+the include-defined-global path, and without touching the `cur` routine cursor (an `equ` is
+standalone; the lines after it belong to whatever routine preceded it). Blast radius measured
+first and it is exactly these 7: they are the only pret-named `equ` aliases in the tree.
+`missing` 2123 → 2116, `translated` 827 → 834; `lint_pret_labels` still exits 0.

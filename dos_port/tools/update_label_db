@@ -49,6 +49,10 @@ ALLOWLIST  = os.path.join(SCRIPT_DIR, 'pret_label_allowlist.json')
 # ── shared line-level helpers ───────────────────────────────────────────────────
 
 LABEL_RE = re.compile(r'^([A-Za-z_][A-Za-z0-9_]*):{1,2}')
+# `Name equ Other` — an alias definition. Only aliases onto a *symbol* count as
+# defining a label (`FOO equ 12` is a constant, not a relocatable definition).
+EQU_ALIAS_RE = re.compile(r'^([A-Za-z_][A-Za-z0-9_]*)\s+equ\s+([A-Za-z_][A-Za-z0-9_]*)\s*$',
+                          re.I)
 
 def strip_comment(line):
     """Remove ;-comments, respecting double-quoted strings."""
@@ -158,6 +162,7 @@ def scan_port(pret_names):
             label_lines  = {}       # name -> line index of column-0 def
             label_section = {}      # name -> section (.text/.data/…) at its def
             toplevel_at  = []       # (line_idx, name) for body slicing
+            equ_defs     = {}       # name -> (line_idx, section) for `Name equ Other`
             cur = None
             cur_section = '.text'   # nasm files that omit a directive default to code
             incl_section = None     # section active at the file's %include(s): the
@@ -186,6 +191,18 @@ def scan_port(pret_names):
                         name = name.strip()
                         if name:
                             externs.append((rel, name, comment, idx + 1))
+                    continue
+                am = EQU_ALIAS_RE.match(line)
+                if am:
+                    # `PretName equ port_label` — a pret label kept as an alias of a
+                    # generated/port symbol (draw_start_menu.asm aliases the pret
+                    # StartMenu*Text names onto the generated sm_str_* labels). This
+                    # IS a port definition of that pret label; before this it was
+                    # invisible to the scan (LABEL_RE only matches `Name:`) and the
+                    # label reported `missing` while sitting right there in the file.
+                    # Does NOT set `cur`: an equ is standalone, and the lines after it
+                    # belong to whatever routine preceded it.
+                    equ_defs.setdefault(am.group(1), (idx, cur_section))
                     continue
                 m = LABEL_RE.match(line)
                 if m:
@@ -241,6 +258,16 @@ def scan_port(pret_names):
                 n_instr, has_call = body_metrics(start)
                 defs.append((name, rel, start + 1, int(is_stub), 0, 1,
                              n_instr, has_call, label_section.get(name)))
+            # pret labels kept as `equ` aliases of a port/generated symbol. They have
+            # no body of their own (the bytes live under the aliased label), so the
+            # instr_count/has_call metrics are null — same shape as an include-defined
+            # global.
+            for name, (idx, sect) in sorted(equ_defs.items()):
+                if name in globals_here or name in label_lines \
+                   or name not in pret_names:
+                    continue
+                defs.append((name, rel, idx + 1, int(is_stub), 0, 1,
+                             None, None, sect))
     return defs, calls, externs
 
 # ── summarize + write ───────────────────────────────────────────────────────────
