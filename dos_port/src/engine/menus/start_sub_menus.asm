@@ -536,12 +536,37 @@ StartMenu_Pokemon:
 
 .goBackToMap:
     call RestoreScreenTilesAndReloadTilePatterns
+    ; DEVIATION(port-window-model): .goBackToMap is a PARTY-MENU exit — every path
+    ; that reaches it came through DisplayPartyMenu, which raises g_bg_whiteout and
+    ; owns the window list (party_menu.asm:417). pret has no such state: its party
+    ; screen is just tiles, and CloseTextDisplay's LoadCurrentMapView redraws over
+    ; them. The port composites the map only when g_bg_whiteout is clear, so without
+    ; this teardown the map never draws at all and STRENGTH/FLASH/DIG/TELEPORT/SURF
+    ; return to a BLANK screen (observed live, 2026-07-13). Identical to .exitMenu's
+    ; teardown above — same exit, different destination — incl. the tileset reload
+    ; (the party menu's HP-bar patterns sit in the BG tileset slots).
+    mov dword [g_window_count], 0       ; drop the party panel/message windows
+    mov dword [g_bg_whiteout], 0
+    mov dword [g_obj_over_window], 0    ; back to the port's window-last order
+    call LoadTilesetTilePatternData
+    ; The palette is WHITE here: every caller ran GBPalWhiteOutWithDelay3, which
+    ; zeroes BGP/OBP0/OBP1. pret un-whites inside CloseTextDisplay (`call LoadGBPal`,
+    ; right after the hWY/DelayFrame); the CloseStartMenu fold below was written for
+    ; the ORDINARY menu close — a path that never whites out — so it has none, and
+    ; neither does RestoreScreenTilesAndReloadTilePatterns (whose header comment
+    ; claims it "reasserts the default palette": false, its RunDefaultPaletteCommand
+    ; call is commented out — filed as M-29).
+    call LoadGBPal                      ; pret: CloseTextDisplay's LoadGBPal
     ; DEVIATION(port-input-model): pret is `jp CloseTextDisplay`. That routine is
     ; translated but sits in check-only text_script.asm (its closure is 15 symbols
     ; deep — see the Makefile note); CloseStartMenu is the port's already-sanctioned
     ; fold of it, and is what this file's .useItem_closeMenu and StartMenu_SaveReset
     ; already tail-jump. Same destination: drop the menu window, restore the walk
-    ; tiles, return to the map.
+    ; tiles, return to the map. Two things pret's CloseTextDisplay does that the fold
+    ; does NOT, both harmless here but worth naming: it reloads the map view
+    ; (LoadCurrentMapView — the port's view pointer is untouched by this menu), and it
+    ; SKIPS LoadPlayerSpriteGraphics when BIT_FLY_WARP is set (TELEPORT sets it), where
+    ; the fold reloads unconditionally. Retire both when text_script.asm links.
     jmp CloseStartMenu
 
 .newBadgeRequired:

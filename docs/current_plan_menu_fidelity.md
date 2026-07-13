@@ -835,4 +835,61 @@ faithdiff cannot see through an indirect jump, exactly as it cannot see `jnz Ini
 FLY/CUT/SURF/STRENGTH *and* seeds `wObtainedBadges` = all badges but EARTH (`debug_party.asm:90`),
 so every badge gate passes. **STRENGTH is reachable in four keypresses** and exercises the whole
 new path end to end: dispatch → badge gate → `PrintStrengthText` (the newly-linked file) →
-`GBPalWhiteOutWithDelay3` → `.goBackToMap` → back to the overworld. Marked UNVERIFIED until run.
+`GBPalWhiteOutWithDelay3` → `.goBackToMap` → back to the overworld.
+
+**RUN 2026-07-13 (user).** The *menu* half passed on the first try — dispatch, badge gate and
+leaf selection are correct ("looks good on the menu end"). The *exit* half did not, twice, and
+the two failures are recorded as M-28 (fixed) and M-29 (open, deferred out of this row). The
+dispatch itself has not needed a change since it was written.
+
+### M-28. `.goBackToMap` never tore down the party menu's compositor state — the map came back BLANK [FIXED — row 9 part 3 follow-up]
+**Found live, not by the gate** (no golden opens the field-move menu; 6/6 passed throughout).
+
+`DisplayPartyMenu` raises **`g_bg_whiteout`** (`party_menu.asm:417`), the port-only compositor
+flag meaning "this screen is a full takeover — do not draw the BG at all", and installs its own
+window list. `.goBackToMap` cleared none of it, so STRENGTH/FLASH/DIG/TELEPORT/successful-SURF
+all returned to the overworld with the **BG layer suppressed**: a blank screen. Its sibling exit
+`.exitMenu` — the CANCEL path ten lines above — has always done this teardown
+(`g_window_count`/`g_bg_whiteout`/`g_obj_over_window` = 0 + `LoadTilesetTilePatternData`, the
+party menu's HP-bar patterns occupying the BG tileset slots). Both are party-menu exits; only one
+knew it. `.goBackToMap` now does the same, then `LoadGBPal`.
+
+pret needs none of this: its party screen is just tiles, and `CloseTextDisplay`'s
+`LoadCurrentMapView` paints the map back over them. Tagged `DEVIATION(port-window-model)`.
+
+**A wrong first diagnosis, recorded because the failure mode is instructive.** The first fix was
+`LoadGBPal` alone — reasoning that `GBPalWhiteOutWithDelay3` zeroes BGP/OBP0/OBP1 and pret
+un-whites inside `CloseTextDisplay`, which the `CloseStartMenu` fold omits. That is *true*, and
+the `LoadGBPal` is genuinely required — but it is not sufficient, and it did nothing visible,
+because **no palette value can fix a layer that is never composited**. "White screen" has (at
+least) two mechanisms in this port; matching the first one that fits and shipping it cost a live
+round-trip. Check `g_bg_whiteout` before the palette next time.
+
+### M-29. A message printed OVER the party screen has no correct projection [OPEN — not this row's file]
+STRENGTH's two messages render wrong, and the cause is one layer below this file. `PrintText`
+places its box through the projection record in **`text_msgbox`**, and `PrintStrengthText`
+(`engine/overworld/field_move_messages.asm`) points it at **`msgbox_dialog`** — which, per its own
+definition (`home/text.asm:1373`), is the *overworld* dialog and **collapses the window list**. So
+the party panel is torn down mid-message and replaced by a box at the overworld's placement
+(wx=87, wy=152). Live symptoms, all one root: the mon names half-slide off screen, the OBJ icons
+stay, and the two pages **overlay** in an uncleared box — page 1 (`" used" / <LINE> "STRENGTH."`,
+ending `text_end`, no prompt) is still on line 1 while page 2 (`" can" / <LINE> "move boulders."`,
+`prompt`) types over line 2: *"SNORLAX used / move boulders."* with `AX` left from the longer name.
+
+The existing escape hatch does not fit: **`msgbox_centered`** (`engine/battle/core.asm:610`) is the
+*battle* dialog — battle coordinates and `BattlePromptWait`. It is merely the only projection that
+happens not to collapse the window list, which is why `learn_move`/`evolution` borrow it.
+
+**There is no projection for "a message box over a full-screen menu."** One must be authored
+(`msgbox_party`: the party screen's box coords + a `; PROJ` entry in `docs/ui_projection.md`,
+window fields zeroed so the caller's list survives), and the box-not-cleared behaviour re-checked
+against it — the uncleared interior may be a second bug hiding behind the first, and should be
+confirmed under dosbox-mcp rather than assumed. Owner: the party-menu/text row, not row 9.
+**Until then STRENGTH's message is cosmetically wrong; its dispatch, gating and map-exit are correct.**
+
+### M-30. `RestoreScreenTilesAndReloadTilePatterns`'s header comment is false
+`home/fade.asm:176` claims it "reasserts the default palette". It does not — its
+`RunDefaultPaletteCommand` call is commented out with a TODO claiming the routine is "not yet a
+linkable global", which is the same false claim M-22 already disproved (it *is* global, in
+`naming_screen.asm`). Trusting this comment is part of what sent M-28's first diagnosis wrong.
+Out-of-file (`home/fade.asm`); fix the comment and the dead TODO when that file is touched.
