@@ -27,15 +27,11 @@ bits 32
 section .text
 
 global ItemUseTownMap
-global ItemUseBicycle
 global ItemUseSurfboard
-global ItemUsePokedex
 global ItemUseBait
 global ItemUseRock
 global ItemUseEscapeRope
 global ItemUseCardKey
-global ItemUseCoinCase
-global ItemUseOaksParcel
 global ItemUseItemfinder
 global ItemUsePokeFlute
 global ItemUseOldRod
@@ -45,15 +41,11 @@ global ItemUsePPUp
 global ItemUsePPRestore
 
 ItemUseTownMap:
-ItemUseBicycle:
 ItemUseSurfboard:
-ItemUsePokedex:
 ItemUseBait:
 ItemUseRock:
 ItemUseEscapeRope:
 ItemUseCardKey:
-ItemUseCoinCase:
-ItemUseOaksParcel:
 ItemUseItemfinder:
 ItemUsePokeFlute:
 ItemUseOldRod:

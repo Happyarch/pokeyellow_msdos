@@ -257,9 +257,18 @@ Archive to `docs/plans/items.md` when complete.
   plan's scripted-battle work (note only).
 - [ ] **Stage 11 — key items + rods** (independent sub-checkboxes; do
   opportunistically):
-  - [ ] Bicycle: real mount/dismount (`wWalkBikeSurfState` toggle + walk-speed
-    plumbing; replace the `.useItem_closeMenu` stub and the "no cycling here"
-    guard text).
+  - [x] Bicycle: mount/dismount via `wWalkBikeSurfState`, with
+    `IsBikeRidingAllowed` + `NoCyclingAllowedHere` and both bicycle texts.
+    Verified (`DEBUG_ITEMSTONE ITEMSTONE_ID=0x06`, Pallet Town): state 0 → 1 and
+    the key item is NOT consumed (bag stays 16, slot 0 still BICYCLE). Also landed
+    `ItemUseReloadOverworldData` (`LoadCurrentMapView` + `UpdateSprites`), which the
+    Escape Rope / Poké Flute paths also need.
+  - [x] Coin Case ($45): prints `CoinCaseNumCoinsText` (TX_BCD from `wPlayerCoins`),
+    not consumed, `wActionResultOrTookBattleTurn`=1. Verified.
+  - [x] Oak's Parcel ($46): → `ItemUseNotYoursToUse`, result=0, not consumed. Verified.
+  - [x] Pokédex ($09): → `ShowPokedexMenu` (one-line `jmp`; pret `predef_jump`). Not
+    harness-verified — the dex is an interactive screen and the A-only autokey cannot
+    exit it (needs B). The dex screen itself has its own coverage (`DEBUG_G1`).
   - [ ] Poké Flute: in-battle wake (calls the linked `WakeUpEntireParty` core /
     enemy wake) + overworld Snorlax hook (event-coupled; the Snorlax script is
     the overworld plan's — leave the map-side TODO there).

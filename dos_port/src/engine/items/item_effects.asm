@@ -1536,6 +1536,16 @@ extern IsGhostBattle          ; engine/battle/ghost.asm — ZF=1 → unidentifie
 extern LoadScreenTilesFromBuffer1 ; engine/battle/battle_menu.asm
 extern Delay3                 ; video/frame.asm
 extern StatModifierUpEffect   ; engine/battle/move_effects/stat_modifiers.asm
+extern PlayDefaultMusic       ; home/audio.asm
+extern LoadCurrentMapView     ; engine/overworld/overworld.asm
+extern UpdateSprites          ; engine/overworld/movement.asm
+extern IsBikeRidingAllowed    ; home/player_gfx.asm
+extern ShowPokedexMenu        ; engine/menus/pokedex.asm
+extern ItemUseNotYoursToUse   ; (this file)
+extern GotOnBicycleText_ref         ; assets/item_text.inc
+extern GotOffBicycleText_ref        ; assets/item_text.inc
+extern NoCyclingAllowedHereText_ref ; assets/item_text.inc
+extern CoinCaseNumCoinsText_ref     ; assets/item_text.inc
 extern Random                 ; home/random.asm — AL = next random byte
 extern Multiply               ; home/math.asm — hMultiplicand(3) * hMultiplier → hProduct(4)
 extern IndexToPokedex         ; data/pokemon_data.asm — FLAT TABLE: [species-1] → dex number
@@ -2694,3 +2704,76 @@ ItemUseXStat:
     pop eax                             ; [A]
     mov [ebp + esi], al                 ; restore wPlayerMoveNum
     ret
+
+
+; === Key items (items-plan Stage 11) =======================================
+;
+; Source: engine/items/item_effects.asm — ItemUseBicycle, NoCyclingAllowedHere,
+; ItemUseCoinCase, ItemUseOaksParcel, ItemUsePokedex, ItemUseReloadOverworldData.
+; ===========================================================================
+
+; ItemUseReloadOverworldData — pret: `call LoadCurrentMapView / jp UpdateSprites`.
+global ItemUseReloadOverworldData
+ItemUseReloadOverworldData:
+    call LoadCurrentMapView
+    jmp UpdateSprites
+
+global ItemUseBicycle
+ItemUseBicycle:
+    mov al, [ebp + wIsInBattle]
+    test al, al
+    jnz ItemUseNotTime
+    mov al, [ebp + wWalkBikeSurfState]
+    mov [ebp + wWalkBikeSurfStateCopy], al
+    cmp al, 2                           ; surfing?
+    je ItemUseNotTime
+    dec al                              ; already bicycling?
+    jnz .tryToGetOnBike
+
+    ; get off the bike
+    call ItemUseReloadOverworldData
+    mov byte [ebp + wWalkBikeSurfState], 0   ; walking
+    mov byte [ebp + wPikachuSpawnState], 0
+    call PlayDefaultMusic               ; walking music
+    mov esi, [GotOffBicycleText_ref]
+    mov ecx, [GotOffBicycleText_ref + 4]
+    jmp iu_print_text                   ; pret: jp PrintText
+
+.tryToGetOnBike:
+    call IsBikeRidingAllowed
+    jnc NoCyclingAllowedHere            ; pret: jp nc
+    call ItemUseReloadOverworldData
+    mov byte [ebp + H_JOY_HELD], 0      ; hJoyHeld — no keys pressed
+    mov byte [ebp + wWalkBikeSurfState], 1   ; bicycling
+    call PlayDefaultMusic               ; bike music
+    ; pret drops the state back to 0 across PrintText and restores it after — the
+    ; text box must render with the WALKING player graphics, not the bike ones.
+    mov byte [ebp + wWalkBikeSurfState], 0
+    mov esi, [GotOnBicycleText_ref]
+    mov ecx, [GotOnBicycleText_ref + 4]
+    call iu_print_text                  ; pret: call PrintText
+    mov byte [ebp + wWalkBikeSurfState], 1
+    ret
+
+global NoCyclingAllowedHere
+NoCyclingAllowedHere:
+    mov esi, [NoCyclingAllowedHereText_ref]
+    mov ecx, [NoCyclingAllowedHereText_ref + 4]
+    jmp ItemUseFailed                   ; pret: jr ItemUseFailed
+
+global ItemUseCoinCase
+ItemUseCoinCase:
+    mov al, [ebp + wIsInBattle]
+    test al, al
+    jnz ItemUseNotTime
+    mov esi, [CoinCaseNumCoinsText_ref] ; TX_BCD reads wPlayerCoins
+    mov ecx, [CoinCaseNumCoinsText_ref + 4]
+    jmp iu_print_text                   ; pret: jp PrintText
+
+global ItemUseOaksParcel
+ItemUseOaksParcel:
+    jmp ItemUseNotYoursToUse
+
+global ItemUsePokedex
+ItemUsePokedex:
+    jmp ShowPokedexMenu                 ; pret: predef_jump ShowPokedexMenu

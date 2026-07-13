@@ -1038,6 +1038,7 @@ BIT_SCRIPTED_MOVEMENT_STATE  equ 7     ; simulated joypad active (door exit / sc
 ; Map-tileset copies
 W_UNUSED_CUR_MAP_TILESET_COPY equ 0xD118 ; wUnusedCurMapTilesetCopy
 W_WALK_BIKE_SURF_STATE_COPY  equ 0xD119 ; wWalkBikeSurfStateCopy
+wWalkBikeSurfStateCopy       equ 0xD119 ; = W_WALK_BIKE_SURF_STATE_COPY (pret name)
 
 ; Joypad/input control
 W_JOY_IGNORE                 equ 0xCD6B ; wJoyIgnore — button mask; bits set suppress those inputs
@@ -1246,6 +1247,7 @@ W_TILESET_HEADER_FULL_SIZE   equ 12     ; full tileset header entry size (11 + a
 
 ; Walk/bike/surf state
 W_WALK_BIKE_SURF_STATE       equ 0xD6FF ; wWalkBikeSurfState
+wWalkBikeSurfState           equ 0xD6FF ; = W_WALK_BIKE_SURF_STATE (pret name)
 
 ; Status flags (game-state bitfields)
 W_STATUS_FLAGS_1             equ 0xD727 ; wStatusFlags1

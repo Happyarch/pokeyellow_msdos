@@ -281,7 +281,8 @@ windows:
 ;   $CD6A wActionResultOrTookBattleTurn — 0 = item not used (no-effect / canceled)
 ;   $D155 wEvoStoneItemID — the stone ItemUseEvoStone parked for the party menu
 windows:
-    dd 0xCD1A    ; Stage 10: wPlayerMonAttackMod (X Attack: 7 -> 8)
+    dd 0xD6FF    ; Stage 11: wWalkBikeSurfState (BICYCLE $06: 0 -> 1, and the
+                 ; key item must NOT be consumed — bag count stays put)
     dd 0xD31C    ; wNumBagItems + (id,qty) pairs
     dd 0xD162    ; wPartyCount + wPartySpecies
     dd 0xCD6A    ; wActionResultOrTookBattleTurn
