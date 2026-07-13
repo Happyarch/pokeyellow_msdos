@@ -76,27 +76,27 @@ Validation in both editor and generator (`ui_layout/schema.py` pattern): colors 
 
 ## Stage C0 — Palette data pipeline (tool-side; can land now)
 
-- [ ] `tools/gfx_core/palettes.py`: `parse_cgb_base_palettes()` (`data/sgb/sgb_palettes.asm`, RGB 5-bit → VGA 6-bit `round(v*63/31)`), `parse_monster_palettes()`, `parse_pal_packets()`/`parse_blk_packets()`, PAL_*/SET_PAL_* enums from `constants/palette_constants.asm`. (4th `gfx_core` consumer; parser-as-module per `pret_maps.py` precedent.)
-- [ ] `tools/colors/schema.py` — sidecar dataclass + `validate()`.
-- [ ] `tools/colorize.py` — replace stub body with real CLI (`--gen`, `--edit`, `--export-png`, `--import-png`, `--verify`); keep filename (ROADMAP references it).
-- [ ] `tools/gen_palettes.py` → `assets/colors/palettes.inc`; Makefile rule (deps: sidecar + generator + gfx_core + pret sources), add to `assets` target, consuming `.o` prerequisites.
+- [x] `tools/gfx_core/palettes.py`: `parse_cgb_base_palettes()` (`data/sgb/sgb_palettes.asm`, RGB 5-bit → VGA 6-bit `round(v*63/31)`), `parse_monster_palettes()`, `parse_pal_packets()`/`parse_blk_packets()`, PAL_*/SET_PAL_* enums from `constants/palette_constants.asm`. (4th `gfx_core` consumer; parser-as-module per `pret_maps.py` precedent.)
+- [x] `tools/colors/schema.py` — sidecar dataclass + `validate()`.
+- [x] `tools/colorize.py` — replace stub body with real CLI (`--gen`, `--edit`, `--export-png`, `--import-png`, `--verify`); keep filename (ROADMAP references it).
+- [x] `tools/gen_palettes.py` → `assets/colors/palettes.inc`; Makefile rule (deps: sidecar + generator + gfx_core + pret sources), add to `assets` target, consuming `.o` prerequisites.
 
 ## Stage C1 — Automap generator (defaults for all 151 mons + battle)
 
-- [ ] Emit all four tables above from pret data (BlkPacket_Battle: msg box→slot2, enemy HP→1, player HP→0, player mon→2, enemy mon→3).
-- [ ] Idempotence check: two runs, byte-identical output.
+- [x] Emit all four tables above from pret data (BlkPacket_Battle: msg box→slot2, enemy HP→1, player HP→0, player mon→2, enemy mon→3).
+- [x] Idempotence check: two runs, byte-identical output.
 
 ## Stage C2 — Tool Mode 1: shade reassignment + preview (the 99% case)
 
-- [ ] `tools/colors/editor.py` (pygame, house style): pick species/`PAL_*`/screen slot → edit 4 RGB with live preview; mon pic decoded via `gfx_core` (`UncompressSpriteData` equivalent not needed — decode the `.pic` in Python or reuse pret's PNG sources) rendered under candidate palette.
-- [ ] **Battle-scene mock view** (mon + HP bars + message box composited with slot colors) so simultaneity reads correctly; tile-ID→slot authoring overlay writes `screen_overrides`.
-- [ ] Editor writes sidecar deltas only; `--verify` round-trips sidecar→inc→parse. Extract shared palette-aware blit into `gfx_core/surface.py` (battle_ui extraction precedent).
+- [x] `tools/colors/editor.py` (pygame, house style): pick species/`PAL_*`/screen slot → edit 4 RGB with live preview; mon pic decoded via `gfx_core` (`UncompressSpriteData` equivalent not needed — decode the `.pic` in Python or reuse pret's PNG sources) rendered under candidate palette.
+- [x] **Battle-scene mock view** (mon + HP bars + message box composited with slot colors) so simultaneity reads correctly; tile-ID→slot authoring overlay writes `screen_overrides`.
+- [x] Editor writes sidecar deltas only; `--verify` round-trips sidecar→inc→parse. Extract shared palette-aware blit into `gfx_core/surface.py` (battle_ui extraction precedent).
 
 ## Stage C3 — Tool Mode 2: repaint PNG round-trip
 
-- [ ] `--export-png`: asset at current palettes → indexed PNG.
-- [ ] `--import-png`: validate ≤4 colors/tile + ≤4 palettes/asset, auto-derive per-tile palette grid, emit override 2bpp + grid + extra palettes into sidecar.
-- [ ] Round-trip idempotence test (export→import→export byte-stable).
+- [x] `--export-png`: asset at current palettes → indexed PNG.
+- [x] `--import-png`: validate ≤4 colors/tile + ≤4 palettes/asset, auto-derive per-tile palette grid, emit override 2bpp + grid + extra palettes into sidecar.
+- [x] Round-trip idempotence test (export→import→export byte-stable).
 
 ## Stage R1 — Minimal runtime: battle shows automapped GBC colors *(after/with perf Stages 1–4)*
 
