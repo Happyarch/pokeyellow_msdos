@@ -1,6 +1,7 @@
 ; dos_port/src/items/itemfinder.asm
 
 %include "gb_macros.inc"
+%include "gb_constants.inc"      ; FLAG_TEST
 %include "gb_memmap.inc"
 
 section .text
@@ -9,7 +10,7 @@ global HiddenItemNear
 global Sub5ClampTo0
 
 extern IsInRestOfArray
-extern FlagActionPredef
+extern FlagAction
 extern HiddenItemCoords
 
 ; -----------------------------------------------------------------------------
@@ -29,11 +30,20 @@ HiddenItemNear:
     push bx
     push esi
     
-    mov edi, W_OBTAINED_HIDDEN_ITEMS_FLAGS
+    ; UNVERIFIED (no harness until Stage 11 wires ITEMFINDER; this file is not yet
+    ; linked). Three mechanical bugs fixed 2026-07-12 alongside the evolution-path
+    ; repair, all of which would have made this silently read the wrong flag:
+    ;   - the flag array went in EDI; FlagAction takes it in ESI (HL).
+    ;   - FLAG_TEST is 2, not 1 (1 is FLAG_SET — this would have SET the flag).
+    ;   - FlagActionPredef's first act is GetPredefRegisters, which reloads
+    ;     ESI/EDX/EBX from the stale wPredefHL/DE/BC slots. The port has no predef
+    ;     dispatcher: call FlagAction directly. (Same trap as experience.asm and
+    ;     evolution.asm.)
+    mov esi, W_OBTAINED_HIDDEN_ITEMS_FLAGS
     mov cl, bh
-    mov bh, 1 ; FLAG_TEST is 1
-    call FlagActionPredef
-    mov ah, cl
+    mov bh, FLAG_TEST
+    call FlagAction
+    mov ah, cl                      ; FlagAction returns the result in CL
     
     pop esi
     pop bx
