@@ -52,13 +52,16 @@ global AskName
 global DisplayNameRaterScreen
 global DisplayNamingScreen
 
+extern msgbox_centered                  ; src/engine/battle/core.asm — centered projection
+extern msgbox_dialog                    ; src/home/text.asm — overworld dialog projection
+extern text_msgbox                      ; src/home/text.asm — active msgbox projection (msgbox.inc)
 extern SaveScreenTilesToBuffer1        ; movie/title.asm
 extern LoadScreenTilesFromBuffer1      ; movie/title.asm
 extern GetPredefRegisters              ; home/predef.asm — ESI/EDX/EBX = hl/de/bc
 extern GetMonName                      ; home/names.asm — AL=wNamedObjectIndex -> wNameBuffer
 extern ClearScreenArea                 ; home/copy2.asm — ESI=dest, BH=rows, BL=cols
 extern CopyData                        ; home/copy_data.asm — ESI=src,EDX=dest,BX=count
-extern PrintText_Overworld             ; text/text.asm — overworld dialog printer
+extern PrintTextStaged             ; text/text.asm — overworld dialog printer
 extern PrintText                       ; engine/battle/move_effect_helpers.asm — battle printer, EAX=flat
 extern YesNoChoice                     ; home/yes_no.asm — the standard hlcoord(14,7) YES/NO box
 extern ReloadMapSpriteTilePatterns     ; engine/overworld/reload_sprites.asm
@@ -168,12 +171,13 @@ AskName:
 
     ; pret: `ld hl, DoYouWantToNicknameText / call PrintText`. pret's single
     ; PrintText serves both battle and overworld; the port split it into a
-    ; battle-scope PrintText and an overworld PrintText_Overworld. Select by
+    ; centered and dialog msgbox projections of the one PrintText. Select by
     ; wIsInBattle — the same signal this routine already branches on above.
     ; DEVIATION: printer selection added (text content/behavior unchanged).
     cmp byte [ebp + wIsInBattle], 0
     je .nicknamePromptOverworld
     mov eax, DoYouWantToNicknameText     ; battle PrintText copies EAX itself
+    mov dword [text_msgbox], msgbox_centered   ; centered box: keep this screen's window list
     call PrintText
     jmp .nicknamePromptDone
 .nicknamePromptOverworld:
@@ -182,7 +186,8 @@ AskName:
     mov ecx, DoYouWantToNicknameText_end - DoYouWantToNicknameText
     rep movsb
     mov esi, NPC_DIALOG_BUF
-    call PrintText_Overworld
+    mov dword [text_msgbox], msgbox_dialog     ; overworld dialog projection
+    call PrintTextStaged
 .nicknamePromptDone:
 
     ; pret: hlcoord 14,7 / lb bc,8,15 / ld a,TWO_OPTION_MENU / ld[wTextBoxID],a /

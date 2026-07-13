@@ -72,6 +72,8 @@ section .text
 global InitBattle
 global DrawBattleIntroBox
 global _InitBattleCommon
+extern text_msgbox                     ; src/home/text.asm — active msgbox projection
+extern msgbox_dialog                   ; src/home/text.asm — overworld dialog projection
 extern InitBattleVariables
 extern text_row_stride                   ; text.asm — unified engine row stride
 extern ClearSprites
@@ -299,8 +301,12 @@ _InitBattleCommon:
     or byte [ebp + IO_LCDC], LCDCF_OBJ_ON
 
     ; --- restore the overworld dialog stride so the map/menus render at stride 20
-    ;     (InitBattle raised it to 40 for the widescreen canvas). ---
+    ;     (InitBattle raised it to 40 for the widescreen canvas), and put the message
+    ;     box back on the overworld dialog projection. Every printer call site
+    ;     declares its own projection, so this is belt-and-braces — but it is also the
+    ;     one place a battle's centered box could otherwise outlive the battle. ---
     mov dword [text_row_stride], 20
+    mov dword [text_msgbox], msgbox_dialog
     stc                                          ; pret _InitBattleCommon: scf
     ret
 

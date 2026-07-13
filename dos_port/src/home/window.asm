@@ -10,6 +10,7 @@
 ; Build: nasm -f coff -I include/ -I . -o window.o window.asm
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
+%include "msgbox.inc"                    ; the message-box projection record
 %include "assets/audio_constants.inc"    ; SFX_PRESS_AB
 
 bits 32
@@ -32,8 +33,21 @@ extern AnimatePartyMon                 ; src/engine/gfx/mon_icons.asm — icon b
 extern text_row_stride                 ; text.asm — current W_TILEMAP row stride
 extern PlaySound                       ; src/home/audio.asm — sound id in AL
 
+; --- PrintText's collaborators (all in text.asm — the text engine) ---
+extern text_msgbox                     ; → the active msgbox projection record (msgbox.inc)
+extern text_line2                      ; <LINE> cursor      ] the engine's live scratch,
+extern text_arrow_pos                  ; <PROMPT> ▼ tile    ] loaded from the record
+extern text_prompt_hook                ; <PROMPT> hook      ] on every PrintText
+extern TextBoxBorder
+extern TextCommandProcessor
+extern sync_dialog_window
+extern set_single_window               ; src/ppu/ppu.asm
+
 global HandleMenuInput
 global HandleMenuInput_
+global PrintText
+global PrintTextStaged
+global PrintText_NoCreatingTextBox
 global PlaceMenuCursor
 global EraseMenuCursor
 global PlaceUnfilledArrowMenuCursor
@@ -52,6 +66,109 @@ menu_item_step: resd 1
 menu_redraw_cb: resd 1
 
 section .text
+
+; ---------------------------------------------------------------------------
+; PrintText — pret home/window.asm:PrintText. Print the text-command stream at
+; ESI in the message box.
+;
+;   pret:  push hl / ld a,MESSAGE_BOX / ld [wTextBoxID],a / call DisplayTextBoxID
+;          call UpdateSprites / call Delay3 / pop hl
+;          PrintText_NoCreatingTextBox: bccoord 1,14 / jp TextCommandProcessor
+;
+; There is ONE printer, exactly as in pret. What differs between the port's
+; screens is not behavior but PROJECTION: the GB has a single 20x18 tilemap, the
+; port has a 40x25 canvas, so each screen says *where* its message box lands by
+; pointing text_msgbox at a projection record (msgbox.inc). The overworld's
+; msgbox_dialog is a hand-tuned wide-screen placement shown through the dialog
+; window; battle's msgbox_centered is center-projected and drawn straight into the
+; canvas. Re-projecting either is a data edit — never a second PrintText.
+;
+; DEVIATION(canvas): the box geometry, the <LINE>/<PROMPT> targets and the window
+; descriptor come from the record instead of pret's fixed hlcoord/bccoord literals.
+; DEVIATION(text-staging): TextCommandProcessor walks the stream EBP-relative, but
+; the port's text streams are flat program-image data, so PrintText stages the
+; stream into NPC_DIALOG_BUF first (the port's established staging model — see
+; memory "text-stream staging is bespoke"; the pret-shape linear-pointer variant
+; was tried and reverted). Callers whose stream is ALREADY staged enter at
+; PrintTextStaged, a port-only entry pret has no need of.
+;
+; In:  ESI = flat pointer to a text-command stream.
+; Out: as TextCommandProcessor. Clobbers EAX/EBX/ECX/EDX/ESI/EDI.
+; ---------------------------------------------------------------------------
+PrintText:
+    ; Stage the flat stream into the GB-space dialog buffer. Copy the whole
+    ; buffer's worth: the stream self-terminates, but a short copy truncates it
+    ; mid-stream and TextCommandProcessor then walks off the end into WRAM. The
+    ; text generators pad their .inc tails by NPC_DIALOG_LEN so a copy from the
+    ; last label stays inside the data.
+    lea edi, [ebp + NPC_DIALOG_BUF]
+    mov ecx, NPC_DIALOG_LEN
+    rep movsb
+    ; fall through — run the stream now sitting in NPC_DIALOG_BUF
+
+; ---------------------------------------------------------------------------
+; PrintTextStaged — port-only entry: the stream is already in NPC_DIALOG_BUF
+; (code-composed streams, and callers that staged it themselves). Identical to
+; PrintText from here down. pret has no such split: its streams are addressable
+; in place.
+; ---------------------------------------------------------------------------
+PrintTextStaged:
+    mov edi, [text_msgbox]              ; the active projection record
+
+    ; Publish this projection to the text engine (pret has no equivalent: on the
+    ; GB these are fixed literals inside TextCommandProcessor). Doing it on every
+    ; PrintText is also what keeps a battle's projection from leaking into the
+    ; next overworld dialog — nothing else ever restores them.
+    mov eax, [edi + MB_STRIDE]
+    mov [text_row_stride], eax
+    mov eax, [edi + MB_LINE2]
+    mov [text_line2], eax
+    mov eax, [edi + MB_ARROW]
+    mov [text_arrow_pos], eax
+    mov eax, [edi + MB_PROMPT]
+    mov [text_prompt_hook], eax
+
+    ; Draw the box (pret: DisplayTextBoxID MESSAGE_BOX).
+    mov esi, [edi + MB_BOX_OFS]
+    mov bh, [edi + MB_BOX_H]
+    mov bl, [edi + MB_BOX_W]
+    call TextBoxBorder                  ; preserves ESI and EBX — but NOT EDI
+    mov edi, [text_msgbox]              ; TextBoxBorder walks EDI over the box rows
+
+    ; Present it. A projection with a window (the overworld dialog) shows the box
+    ; through the window layer and mirrors each character as it is typed; one
+    ; without (MB_WIN_TILEMAP == 0, the centered box) draws straight into the
+    ; canvas, leaving the caller's window list untouched — which is exactly why
+    ; the full-screen menus select it.
+    mov eax, [edi + MB_WIN_TILEMAP]
+    test eax, eax
+    jz .noWindow
+    mov esi, eax                        ; window source tilemap
+    mov eax, [edi + MB_WIN_WX]
+    mov ebx, [edi + MB_WIN_WY]
+    mov ecx, [edi + MB_WIN_CLIP]
+    mov edx, [edi + MB_WIN_MAXY]
+    push edi
+    mov edi, [edi + MB_WIN_STARTROW]
+    call set_single_window              ; count=1; mirrors wy→H_WY (dialog-open flag)
+    pop edi
+    call sync_dialog_window             ; show the empty box before the first char
+    call DelayFrame
+.noWindow:
+    ; pret: `pop hl` — restore the stream pointer. DEVIATION(text-staging): the
+    ; stream to run is the staged copy in WRAM, not the caller's flat pointer.
+    mov esi, NPC_DIALOG_BUF
+
+; ---------------------------------------------------------------------------
+; PrintText_NoCreatingTextBox — pret home/window.asm. Type the stream without
+; drawing a box. pret: `bccoord 1, 14 / jp TextCommandProcessor`; here the cursor
+; is the active projection's first text line.
+; In: ESI = staged (EBP-relative) stream pointer.
+; ---------------------------------------------------------------------------
+PrintText_NoCreatingTextBox:
+    mov edi, [text_msgbox]
+    mov ebx, [edi + MB_LINE1]           ; bccoord 1, 14
+    jmp TextCommandProcessor            ; tail call
 
 ; ---------------------------------------------------------------------------
 ; PlaceMenuCursor — draw the ▶ cursor at the current menu item, erasing the

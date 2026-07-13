@@ -49,8 +49,8 @@ global LoadItemList
 global FarPrintText
 
 ; ── text printers (text/text.asm) ──
-extern PrintText_Overworld              ; pret PrintText (window.asm) — general/overworld printer
-extern PrintText_NoBox                  ; pret PrintText_NoCreatingTextBox
+extern PrintTextStaged              ; pret PrintText (window.asm) — general/overworld printer
+extern PrintText_NoCreatingTextBox                  ; pret PrintText_NoCreatingTextBox
 extern DelayFrame
 
 ; ── non-home glue: DEFERRED, resolves in later waves ──────────────────────────
@@ -93,6 +93,8 @@ extern _PokemartGreetingText
 extern _PokemonFaintedText
 extern _PlayerBlackedOutText
 extern _RepelWoreOffText
+extern msgbox_dialog                    ; src/home/text.asm — overworld dialog projection
+extern text_msgbox                      ; src/home/text.asm — active msgbox projection (msgbox.inc)
 
 ; ─────────────────────────────────────────────────────────────────────────────
 ; DisplayTextID — display sign messages, sprite dialog, etc.
@@ -219,7 +221,8 @@ DisplayTextID:
 .notCableClub:
 
     ; call PrintText_NoCreatingTextBox   (ESI already = text stream)
-    call PrintText_NoBox
+    mov dword [text_msgbox], msgbox_dialog     ; overworld dialog projection
+    call PrintText_NoCreatingTextBox
     ; ld a,[wDoNotWaitForButtonPressAfterDisplayingText]; and a; jr nz,HoldTextDisplayOpen
     mov al, [ebp + wDoNotWaitForButtonPressAfterDisplayingText]
     test al, al
@@ -233,7 +236,7 @@ AfterDisplayingTextID:
     jnz HoldTextDisplayOpen
     ; call WaitForTextScrollButtonPress — the port's WaitForTextScrollButtonPress is
     ; folded into manual_text_scroll inside the printers; the box was already advanced
-    ; by PrintText_NoBox's TX stream. HoldTextDisplayOpen handles the A-held hold-open.
+    ; by PrintText_NoCreatingTextBox's TX stream. HoldTextDisplayOpen handles the A-held hold-open.
     ; (pret joypad2.asm:WaitForTextScrollButtonPress; see SUMMARY follow-up note.)
     ; fall through
 
@@ -298,7 +301,8 @@ CloseTextDisplay:
 DisplayPokemartDialogue:
     push esi                             ; push hl (text ptr → points at TX_SCRIPT_MART byte)
     mov esi, PokemartGreetingText        ; ld hl, PokemartGreetingText
-    call PrintText_Overworld
+    mov dword [text_msgbox], msgbox_dialog     ; overworld dialog projection
+    call PrintTextStaged
     pop esi                              ; pop hl
     inc esi                              ; inc hl — skip the TX_SCRIPT_MART byte → item list
     call LoadItemList
@@ -363,7 +367,8 @@ DisplaySafariGameOverText:
 ; ─────────────────────────────────────────────────────────────────────────────
 DisplayPokemonFaintedText:
     mov esi, PokemonFaintedText
-    call PrintText_Overworld
+    mov dword [text_msgbox], msgbox_dialog     ; overworld dialog projection
+    call PrintTextStaged
     jmp AfterDisplayingTextID
 
 PokemonFaintedText:
@@ -376,7 +381,8 @@ PokemonFaintedText:
 ; ─────────────────────────────────────────────────────────────────────────────
 DisplayPlayerBlackedOutText:
     mov esi, PlayerBlackedOutText
-    call PrintText_Overworld
+    mov dword [text_msgbox], msgbox_dialog     ; overworld dialog projection
+    call PrintTextStaged
     ; ld a,[wStatusFlags6]; res BIT_ALWAYS_ON_BIKE,a; ld [wStatusFlags6],a
     mov al, [ebp + wStatusFlags6]
     and al, ~(1 << BIT_ALWAYS_ON_BIKE) & 0xFF
@@ -409,7 +415,8 @@ PlayerBlackedOutText:
 ; ─────────────────────────────────────────────────────────────────────────────
 DisplayRepelWoreOffText:
     mov esi, RepelWoreOffText
-    call PrintText_Overworld
+    mov dword [text_msgbox], msgbox_dialog     ; overworld dialog projection
+    call PrintTextStaged
     jmp AfterDisplayingTextID
 
 RepelWoreOffText:
@@ -441,7 +448,7 @@ FarPrintText:
     push eax
     mov al, bh                           ; a = b (target bank)
     call BankswitchCommon
-    call PrintText_Overworld             ; pret PrintText (general printer)
+    call PrintTextStaged             ; pret PrintText (general printer)
     pop eax
     call BankswitchCommon
     ret

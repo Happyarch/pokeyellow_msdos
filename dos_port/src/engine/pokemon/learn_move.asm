@@ -78,6 +78,8 @@ extern TryingToLearnText
 extern AbandonLearningText
 extern WhichMoveToForgetText
 extern HMCantDeleteText
+extern msgbox_centered                  ; src/engine/battle/core.asm — centered projection
+extern text_msgbox                      ; src/home/text.asm — active msgbox projection (msgbox.inc)
 ; OneTwoAndText: NOT extern'd — see header (TX_START_ASM, cannot be generated).
 
 ; ---------------------------------------------------------------------------
@@ -178,6 +180,7 @@ DontAbandonLearning:
 ; ---------------------------------------------------------------------------
 AbandonLearning:
     mov esi, AbandonLearningText
+    mov dword [text_msgbox], msgbox_centered   ; centered box: keep this screen's window list
     call PrintText
     mov esi, W_TILEMAP + 7 * SCREEN_WIDTH + 14      ; hlcoord 14, 7
     mov bh, 8
@@ -188,6 +191,7 @@ AbandonLearning:
     test al, al
     jnz DontAbandonLearning
     mov esi, DidNotLearnText
+    mov dword [text_msgbox], msgbox_centered   ; centered box: keep this screen's window list
     call PrintText
     xor bh, bh                        ; b = 0 (not learned)
     ret
@@ -201,6 +205,7 @@ AbandonLearning:
 ; ---------------------------------------------------------------------------
 PrintLearnedMove:
     mov esi, LearnedMove1Text
+    mov dword [text_msgbox], msgbox_centered   ; centered box: keep this screen's window list
     call PrintText
     mov bh, 1                         ; b = 1 (learned)
     ret
@@ -218,6 +223,7 @@ PrintLearnedMove:
 TryingToLearn:
     push esi                              ; save caller's hl
     mov esi, TryingToLearnText
+    mov dword [text_msgbox], msgbox_centered   ; centered box: keep this screen's window list
     call PrintText
     mov esi, W_TILEMAP + 7 * SCREEN_WIDTH + 14      ; hlcoord 14, 7
     mov bh, 8
@@ -241,6 +247,7 @@ TryingToLearn:
 .loop:
     push esi
     mov esi, WhichMoveToForgetText
+    mov dword [text_msgbox], msgbox_centered   ; centered box: keep this screen's window list
     call PrintText
     mov esi, W_TILEMAP + 7 * SCREEN_WIDTH + 4        ; hlcoord 4, 7
     mov bl, 14
@@ -289,6 +296,7 @@ TryingToLearn:
     ret                                                 ; esi=freed slot ptr, al=forgotten move id, CF=0
 .hm:
     mov esi, HMCantDeleteText
+    mov dword [text_msgbox], msgbox_centered   ; centered box: keep this screen's window list
     call PrintText
     pop esi                                            ; hl restored = moveArrayBase
     jmp .loop

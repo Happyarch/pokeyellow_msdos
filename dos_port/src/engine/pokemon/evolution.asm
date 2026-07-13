@@ -118,6 +118,8 @@ extern IsEvolvingText           ; "<MON> is evolving!"
 extern EvolvedText              ; "Congratulations! Your <MON> evolved into"
 extern IntoText                 ; " <SPECIES>!"
 extern StoppedEvolvingText      ; "Huh? <MON> stopped evolving!"
+extern msgbox_centered                  ; src/engine/battle/core.asm — centered projection
+extern text_msgbox                      ; src/home/text.asm — active msgbox projection (msgbox.inc)
 
 section .text
 
@@ -295,6 +297,7 @@ EvolutionAfterBattle:
     call GetPartyMonName            ; → wNameBuffer; EDX = wNameBuffer
     call CopyToStringBuffer         ; EDX → wStringBuffer
     mov esi, IsEvolvingText
+    mov dword [text_msgbox], msgbox_centered   ; centered box: keep this screen's window list
     call PrintText
     mov bl, 50
     call DelayFrames
@@ -318,6 +321,7 @@ EvolutionAfterBattle:
     jc CancelledEvolution           ; B pressed (and not forced) → cancel
 
     mov esi, EvolvedText
+    mov dword [text_msgbox], msgbox_centered   ; centered box: keep this screen's window list
     call PrintText
 
     ; Restore blob cursor [B]; read the new species.
@@ -684,6 +688,7 @@ RenameEvolvedMon:
 ; ===========================================================================
 CancelledEvolution:
     mov esi, StoppedEvolvingText    ; "Huh? <MON> stopped evolving!"
+    mov dword [text_msgbox], msgbox_centered   ; centered box: keep this screen's window list
     call PrintText
     call ClearScreen
     ; Reached from `jc CancelledEvolution` right after EvolveMon: the [C] blob

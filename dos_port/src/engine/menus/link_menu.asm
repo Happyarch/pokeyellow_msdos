@@ -35,7 +35,7 @@
 ;    for GB memory), NOT pret's DE.  <NEXT> ($4E) double-spaces by default (as
 ;    pret's 2*SCREEN_WIDTH), which is what the two menus and the rules panel want.
 ;  * MESSAGES (Colosseum*Text): pret prints each with PrintText.  PrintText is the
-;    port's BATTLE printer and PrintText_Overworld collapses the window list — so,
+;    port's BATTLE printer and the dialog projection collapses the window list — so,
 ;    exactly as save.asm / players_pc.asm, each message is DRAWN WHOLE into the
 ;    stride-20 scratch rows 12-17, mirrored to GB_TILEMAP1, shown as a window at
 ;    UI_MESSAGE_BOX, with pret wording (data/text/text_3.asm, GB charmap) and the

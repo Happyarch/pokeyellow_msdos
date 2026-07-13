@@ -132,6 +132,8 @@ extern CopyVideoData            ; src/home/copy2.asm (ported): ESI=dst VRAM offs
 ; EmotionBubbleGfx is now defined here via %include "assets/emotes.inc" (gen_emotes.py).
 extern _TrainerNameText         ; TODO(M8.2 follow-up): Tier-1 text (data/text) — NOT in port
 extern JessieJamesPic           ; TODO(M8.2 follow-up): Tier-1 pic not in port TrainerPicPointers
+extern msgbox_dialog                    ; src/home/text.asm — overworld dialog projection
+extern text_msgbox                      ; src/home/text.asm — active msgbox projection (msgbox.inc)
 
 ; ----------------------------------------------------------------------------
 ; Globals
@@ -346,10 +348,12 @@ TalkToTrainer:
     ; already fought -> print after-battle text
     mov al, 6
     call ReadTrainerHeaderInfo      ; sel 6: ESI = after-battle text (flat)
+    mov dword [text_msgbox], msgbox_dialog     ; overworld dialog projection
     jmp PrintText
 .trainerNotYetFought:
     mov al, 4
     call ReadTrainerHeaderInfo      ; sel 4: ESI = before-battle text (flat)
+    mov dword [text_msgbox], msgbox_dialog     ; overworld dialog projection
     call PrintText
     mov al, 0x0a
     call ReadTrainerHeaderInfo      ; sel $a: EDX = end-lose text
@@ -773,6 +777,7 @@ PrintEndBattleText:
     ; TODO-HW: bank save/restore is a no-op under the flat model (kept structurally).
     call SaveTrainerName            ; TODO(M8.2 follow-up): unported
     mov esi, TrainerEndBattleText   ; flat text-script
+    mov dword [text_msgbox], msgbox_dialog     ; overworld dialog projection
     call PrintText
     call SetEnemyTrainerToStayAndFaceAnyDirection ; TODO(M8.2 follow-up): unported
     jmp WaitForSoundToFinish        ; pret: jp WaitForSoundToFinish (real, OW-A.14)

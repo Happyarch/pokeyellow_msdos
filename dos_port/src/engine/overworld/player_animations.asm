@@ -234,6 +234,8 @@ extern PrintText                  ; engine/battle/move_effect_helpers.asm (ESI=f
 extern LoadAnimSpriteGfx          ; UNPORTED (battle-animation sprite-gfx loader)
 extern EmotionBubble              ; engine/overworld/trainer_engine.asm (pret: predef)
 extern player_sprite              ; engine/overworld/player_gfx.asm — == RedSprite (flat)
+extern msgbox_dialog                    ; src/home/text.asm — overworld dialog projection
+extern text_msgbox                      ; src/home/text.asm — active msgbox projection (msgbox.inc)
 
 section .text
 
@@ -715,6 +717,7 @@ FishingAnim:
 .skipUnhidingFishingRod:
     mov esi, ItsABiteText                      ; ld hl, ItsABiteText
 .done:
+    mov dword [text_msgbox], msgbox_dialog     ; overworld dialog projection
     call PrintText
     and byte [ebp + wMovementFlags], ~(1 << BIT_LEDGE_OR_FISHING) & 0xFF ; res BIT_LEDGE_OR_FISHING,[hl]
     call LoadFontTilePatterns

@@ -335,7 +335,7 @@ RecalcMonStats:
 ;
 ; DEVIATION(text): pret prints IsItOKToTossItemText / ThrewAwayItemText /
 ; TooImportantToTossText via PrintText (typewriter reveal in the message box).
-; The port's PrintText_Overworld collapses the window list to the dialog alone
+; The port's dialog projection collapses the window list to the dialog alone
 ; (set_single_window), which would hide the item list beneath — on the GB the
 ; list survives in the BG tilemap. Until dialog printing can composite with
 ; existing windows (and the far-text streams exist as GB-space assets), the
@@ -709,7 +709,7 @@ RestoreBonusPP:
 ;    Retired by: a party-menu HP-bar animator (items-plan Stage 5 tail).
 ;
 ; 2. DEVIATION(text/window) — pret prints through PrintText, which composites the
-;    message box over the live screen buffer. The port's PrintText_Overworld
+;    message box over the live screen buffer. The port's dialog projection
 ;    collapses the window list to the dialog alone (set_single_window), so the
 ;    bag list / party panel beneath it disappears for the duration. Every caller
 ;    of these refusal texts redraws its screen right after (StartMenu_Item's
@@ -776,7 +776,7 @@ extern DelayFrames          ; video/frame.asm — BL = frames
 extern Func_1510            ; engine/overworld/pikachu.asm — ItemUseEscapeRope's Pikachu refresh
 extern WaitForTextScrollButtonPress ; engine/battle/battle_menu.asm
 extern ItemUseText00_ref            ; assets/item_text.inc — "<PLAYER> used <ITEM>!"
-extern PrintText_Overworld  ; home/text.asm — ESI = GB-space TX stream
+extern PrintTextStaged  ; home/text.asm — ESI = GB-space TX stream
 extern PlaySound            ; home/audio.asm — AL = sound id
 extern PlaySoundWaitForCurrent ; home/audio.asm
 
@@ -1495,8 +1495,9 @@ iu_print_text:
     pushad
     lea edi, [ebp + NPC_DIALOG_BUF]
     rep movsb                           ; flat → GB WRAM (both flat selectors)
-    mov esi, NPC_DIALOG_BUF             ; EBP-relative for PrintText_Overworld
-    call PrintText_Overworld
+    mov esi, NPC_DIALOG_BUF             ; already staged → PrintTextStaged
+    mov dword [text_msgbox], msgbox_dialog     ; overworld dialog projection
+    call PrintTextStaged
     popad
     ret
 
@@ -1519,7 +1520,7 @@ iu_print_text:
 ; 7. predef FlagActionPredef → `call FlagAction` (ESI=array, CL=index, BH=action,
 ;    result back in CL) — the port-wide no-predef-dispatch rule.
 ; 8. In-battle text goes through the battle printer PrintText (=PrintBattleText,
-;    EAX/ESI = flat stream), NOT iu_print_text/PrintText_Overworld: ItemUseBall only
+;    EAX/ESI = flat stream), NOT iu_print_text/PrintText: ItemUseBall only
 ;    ever runs with wIsInBattle set, and the battle box is where pret's PrintText
 ;    draws here. Same split naming_screen.asm documents.
 ; ---------------------------------------------------------------------------
@@ -1620,6 +1621,7 @@ ItemUseBall:
     mov byte [ebp + wPokeBallAnimData], 0x43   ; successful-capture value
     call LoadScreenTilesFromBuffer1
     mov esi, ItemUseText00
+    mov dword [text_msgbox], msgbox_centered   ; centered box: keep this screen's window list
     call PrintText
 
 ; An unidentified ghost can never be caught.
@@ -1947,6 +1949,7 @@ ItemUseBall:
     cmp al, BATTLE_TYPE_PIKACHU
     je .oldManCaughtMon
     mov esi, ItemUseBallText05
+    mov dword [text_msgbox], msgbox_centered   ; centered box: keep this screen's window list
     call PrintText
 
 ; Add the caught mon to the Pokédex (test first — a new species shows its entry).
@@ -1984,6 +1987,7 @@ ItemUseBall:
     jnz .skipShowingPokedexData
 
     mov esi, ItemUseBallText06
+    mov dword [text_msgbox], msgbox_centered   ; centered box: keep this screen's window list
     call PrintText
     call ClearSprites
     mov al, [ebp + wEnemyMonSpecies]
@@ -1999,6 +2003,7 @@ ItemUseBall:
     mov byte [ebp + wMonDataLocation], 0    ; PLAYER_PARTY_DATA
     call ClearSprites
     mov esi, iu_ball_emptyString        ; pret .emptyString — clears the message box
+    mov dword [text_msgbox], msgbox_centered   ; centered box: keep this screen's window list
     call PrintText
     call AddPartyMon
     jmp .done
@@ -2011,6 +2016,7 @@ ItemUseBall:
     jnz .printTransferredToPCText
     mov esi, ItemUseBallText08          ; "…someone's PC" (Bill not met yet)
 .printTransferredToPCText:
+    mov dword [text_msgbox], msgbox_centered   ; centered box: keep this screen's window list
     call PrintText
     jmp .done
 
@@ -2018,6 +2024,7 @@ ItemUseBall:
     mov esi, ItemUseBallText05
 
 .printMessage:
+    mov dword [text_msgbox], msgbox_centered   ; centered box: keep this screen's window list
     call PrintText
     call ClearSprites
 
@@ -2046,8 +2053,10 @@ ThrowBallAtTrainerMon:
     mov al, TOSS_ANIM
     call PlayMoveAnimation              ; predef MoveAnimation (DEVIATION 5)
     mov esi, ThrowBallAtTrainerMonText1
+    mov dword [text_msgbox], msgbox_centered   ; centered box: keep this screen's window list
     call PrintText
     mov esi, ThrowBallAtTrainerMonText2
+    mov dword [text_msgbox], msgbox_centered   ; centered box: keep this screen's window list
     call PrintText
     jmp RemoveUsedItem                  ; jr
 
@@ -3254,6 +3263,9 @@ section .text
 ; --------------------------------------------------------------------------- #
 global FindWildLocationsOfMon
 extern WildDataPointers, WildDataPointersEnd   ; data/wild_data.asm
+extern msgbox_centered                  ; src/engine/battle/core.asm — centered projection
+extern msgbox_dialog                    ; src/home/text.asm — overworld dialog projection
+extern text_msgbox                      ; src/home/text.asm — active msgbox projection (msgbox.inc)
 
 FindWildLocationsOfMon:
     mov edx, wBuffer                    ; ld de, wBuffer

@@ -70,7 +70,7 @@ driver only relocates the divergence.
 | 20 | `src/engine/menus/link_menu.asm` (1148 ln), `link_cups.asm` | `engine/menus/link_menu.asm` | TODO | | expect mostly TODO-HW/serial; allowlisted split (18 labels); split |
 | 21 | `src/engine/menus/draw_badges.asm` | same | TODO | | "Port stand-in" |
 | 22 | **`MoveSelectionMenu` / `SelectMenuItem` / `SwapMovesInMenu` / `PrintMenuItem`** | `engine/battle/core.asm` | TODO | | **clears blocker B8**; unblocks Mimic + PP items. Needs row 1 settled first. |
-| 23 | **`PrintText` / `PrintText_NoCreatingTextBox`** | `home/window.asm` | **NEXT** | | opened by row 1 — see **M-3**. The pret home routine is unported; a battle-scope wrapper squats on the label and 9 non-battle files print through the battle box. **User-directed priority (2026-07-13): fix, do not defer.** Cross-cutting (~120 call sites), so it takes its own iteration rather than riding row 1. |
+| 23 | **`PrintText` / `PrintText_NoCreatingTextBox`** | `home/window.asm` | DONE | `PENDING` | opened by row 1 — see **M-3** (now FIXED: one printer, placement is a data record; `PrintText_Overworld`/`PrintText_NoBox` forks deleted). Verified by byte-identical `DEBUG_ITEMTM` + `DEBUG_LEARNMOVE` frames. The pret home routine is unported; a battle-scope wrapper squats on the label and 9 non-battle files print through the battle box. **User-directed priority (2026-07-13): fix, do not defer.** Cross-cutting (~120 call sites), so it takes its own iteration rather than riding row 1. |
 
 Also: pret's `engine/menus/unused_input.asm` has **no port counterpart**. Confirm it is
 genuinely unreachable, then record it as intentionally-absent rather than unexplained.
@@ -141,7 +141,7 @@ neither draws nor erases anything elsewhere), but it means the `bag_menu` golden
 mask in `tools/golden_diff.py`.
 **Severity:** low (cosmetic)
 
-### M-3. `PrintText` is a battle-scope substitution; pret's `PrintText` is unported **[OPEN — row 23]**
+### M-3. `PrintText` is a battle-scope substitution; pret's `PrintText` is unported **[FIXED — row 23]**
 **File:** `dos_port/src/engine/battle/move_effect_helpers.asm:53` (the `PrintText` global);
 the real body lives in `dos_port/src/home/text.asm:1332` under the **forked name**
 `PrintText_Overworld`, with `PrintText_NoCreatingTextBox` forked to `PrintText_NoBox`.
@@ -170,6 +170,34 @@ Neither `text_row_stride` nor `g_bg_whiteout` is usable as that discriminator (c
 are multiplexed across screens), so this needs an explicit canvas selector — which is why it
 is its own row and not a rider on row 1.
 **Severity:** high (wrong text box on every overworld field-move / Cut / trainer message)
+
+**Resolution (row 23).** The two printers are now **one** `PrintText`; the box placement is
+**data**. A *projection record* (`include/msgbox.inc`) holds the stride, box origin/size, the
+two text-line cursors, the ▼ position, the prompt hook, and the window geometry; `text_msgbox`
+points at the active one. Two records exist — `msgbox_dialog` (`src/home/text.asm`: the
+hand-tuned overworld dialog window, stride 20, `set_single_window` at wx=87/wy=152) and
+`msgbox_centered` (`src/engine/battle/core.asm`: the center-projected box on the 40-wide flat
+canvas, no window, so a full-screen menu's window list survives). `PrintText` stages the flat
+stream into `NPC_DIALOG_BUF` and falls through to `PrintTextStaged`, which republishes the
+record and draws. `PrintBattleText`/`RunBattleTextStream` are now two-line shims that select
+`msgbox_centered` and jump into the one printer; the forked `PrintText_Overworld` /
+`PrintText_NoBox` bodies are deleted, and `PrintText` / `PrintText_NoCreatingTextBox` live at
+the mirrored path `src/home/window.asm` under their pret names.
+
+Every call site now *declares* its projection (`mov dword [text_msgbox], msgbox_…`) immediately
+before the call, which also closes a **latent leak found on the way**: only `core.asm` ever wrote
+`text_line2` / `text_arrow_pos` / `text_prompt_hook` and nothing restored them, so after any
+battle the overworld dialog's `<LINE>` and `<PROMPT>` still pointed at battle geometry.
+`PrintTextStaged` republishes all four fields on every call, so the leak cannot recur.
+
+**Verified by observation** (the golden suite covers no dialog text — 6/6 still pass, which only
+proves the covered screens are untouched): headless `DEBUG_ITEMTM` (dialog projection, via
+`iu_print_text`) and `DEBUG_LEARNMOVE` (centered projection) both render **byte-for-byte
+identical** `FRAME.BIN` to the pre-refactor build. The first capture was *not* identical, and that
+is how a real bug was caught: `TextBoxBorder` walks `EDI` over the box rows and does not restore
+it, so holding the record pointer in `EDI` across the call made `MB_WIN_TILEMAP` read back zero
+and every dialog silently took the no-window branch — the box vanished. Reloading `EDI` from
+`text_msgbox` after `TextBoxBorder` fixed it. No golden could have caught this.
 
 ### M-4. `naming_screen.asm` hardcodes a stale `SFX_PRESS_AB` **[OPEN]**
 **File:** `dos_port/src/engine/menus/naming_screen.asm:110-114` (row 15's scope — filed, not touched)
@@ -203,11 +231,10 @@ add the `.inc` to `naming_screen.o`'s Makefile prerequisites (as row 1 did for `
   `menu_item_step` stands in for pret's `hUILayoutFlags` `BIT_DOUBLE_SPACED_MENU` spacing toggle.
 
 ### Row 1 — allowlist challenge
-- **`PrintText`** (`relocated_labels`) — challenged. Deleted it; the linter fired exactly one
-  mirror violation, which is **correct**: this is not a relocation at all (see M-3). Re-added
-  with a hand-written `why` that states what it really is (a substitution held only to keep the
-  link together) and names M-3 + the condition for its deletion. The boilerplate
-  *"pret home/window.asm split across port files (draft Session H)"* is gone.
+- **`PrintText`** (`relocated_labels`) — challenged, and now **deleted outright**. It was never a
+  relocation (see M-3); row 23 moved the real body to its mirrored path `src/home/window.asm`,
+  so the entry has nothing left to excuse and the linter passes with it gone. The boilerplate
+  *"pret home/window.asm split across port files (draft Session H)"* is gone with it.
 - **`EnableAutoTextBoxDrawing` / `DisableAutoTextBoxDrawing` / `AutoTextBoxDrawingCommon`** —
   also `home/window.asm` labels, but their port file is `src/home/auto_textbox.asm`, which is
   **row 6's** scope and whose ledger line already reads *"allowlisted relocation ×3 —

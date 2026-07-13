@@ -17,7 +17,7 @@
 ; sync_dialog_window mirror W_TILEMAP rows 12-17, stride 20 — see text.asm).
 ; Both borders below therefore draw at pret's GB coords into the stride-20
 ; W_TILEMAP scratch (NOT the 40-wide canvas the DisplayTextBoxID_ tables use):
-;   * dialog border at (0,12) = MSG_BOX_ESI — the same cell PrintText_Overworld
+;   * dialog border at (0,12) = MSG_BOX_ESI — the same cell PrintText
 ;     redraws; an idempotent double-draw, exactly as pret (TextBoxBorder here,
 ;     again inside PrintText).
 ;   * start-menu border at (10,0) — redundant in pret too (DisplayStartMenu
@@ -144,7 +144,7 @@ DisplayTextIDInit:
     call CopyScreenTileBufferToVRAM     ; = 3-frame pacing (see copy2.asm)
     ; xor a / ldh [hWY],a — put the window on the screen
     ; TODO-HW: rWY write. The port's window compositor owns dialog placement —
-    ; PrintText_Overworld calls set_single_window (which mirrors wy→H_WY as the
+    ; PrintText's dialog projection calls set_single_window (which mirrors wy→H_WY as the
     ; dialog-open gate); writing H_WY=0 here would falsely open that gate with
     ; no window descriptor, so the write is intentionally NOT performed.
     ; call LoadFontTilePatterns

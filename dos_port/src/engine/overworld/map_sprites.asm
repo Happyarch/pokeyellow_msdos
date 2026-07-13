@@ -29,10 +29,12 @@ bits 32
 %include "assets/event_constants.inc"
 %include "events.inc"
 
+extern msgbox_dialog                    ; src/home/text.asm — overworld dialog projection
+extern text_msgbox                      ; src/home/text.asm — active msgbox projection (msgbox.inc)
 extern g_tilecache_dirty
 extern set_single_window     ; src/ppu/ppu.asm — define g_windows[] as one descriptor
 extern hide_window           ; src/ppu/ppu.asm — empty the window list (count=0)
-extern PrintText_Overworld
+extern PrintTextStaged
 extern DelayFrame
 extern LoadCurrentMapView
 extern MakeNPCFacePlayer
@@ -950,7 +952,8 @@ ShowTextStream:
     lea edi, [ebp + NPC_DIALOG_BUF]         ; EBP-relative WRAM dest
     rep movsb                                ; flat src ESI → WRAM (both flat selectors)
     mov esi, NPC_DIALOG_BUF                  ; EBP-relative ptr for PrintText
-    call PrintText_Overworld
+    mov dword [text_msgbox], msgbox_dialog     ; overworld dialog projection
+    call PrintTextStaged
     call npc_dialog_wait_impl
     ret
 
@@ -1198,7 +1201,8 @@ TrainerEncounterFlow:
     or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     mov esi, NPC_DIALOG_BUF
-    call PrintText_Overworld
+    mov dword [text_msgbox], msgbox_dialog     ; overworld dialog projection
+    call PrintTextStaged
     call npc_dialog_wait_impl
 
 .tef_text_done:

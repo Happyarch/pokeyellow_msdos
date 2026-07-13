@@ -25,7 +25,7 @@
 ;    wPartyDataStart..End. So the pokédex + pikachu-happiness tail pret copies
 ;    separately need no special handling here — they ride in the main-data block.
 ;  * TEXT: pret prints each message with PrintText (the battle/menu printer that
-;    keeps the current window list). The port's PrintText_Overworld collapses the
+;    keeps the current window list). The port's dialog projection collapses the
 ;    window list to the dialog alone, so — as in S4/S5/S6 — each message is DRAWN
 ;    WHOLE into the stride-20 W_TILEMAP scratch (rows 12-17), mirrored to
 ;    GB_TILEMAP1, shown as a window at UI_MESSAGE_BOX, with pret wording

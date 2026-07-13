@@ -94,6 +94,8 @@ extern UpdateCGBPal_OBP1            ; overworld_stubs.asm ret-stub (TODO-HW pale
 extern CopyVideoData                ; src/home/copy2.asm (ESI=VRAM dest, EDX=flat src, BL=count)
 extern WriteOAMBlock                ; src/home/oam.asm (AL=block, EDX=flat src, BH=Y, BL=X)
 extern overworld_gfx                ; src/engine/overworld/overworld.asm (overworld tileset gfx)
+extern msgbox_dialog                    ; src/home/text.asm — overworld dialog projection
+extern text_msgbox                      ; src/home/text.asm — active msgbox projection (msgbox.inc)
 
 section .text
 
@@ -142,6 +144,7 @@ UsedCut:
     call Delay3
     mov byte [ebp + H_WY], 0                    ; TODO-HW: hWY
     mov esi, UsedCutText
+    mov dword [text_msgbox], msgbox_dialog     ; overworld dialog projection
     call PrintText
     call LoadScreenTilesFromBuffer2
     and byte [ebp + W_STATUS_FLAGS_5], ~(1 << BIT_NO_TEXT_DELAY) ; res BIT_NO_TEXT_DELAY,[hl]

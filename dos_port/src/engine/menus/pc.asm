@@ -21,7 +21,7 @@
 ;  * SaveScreenTilesToBuffer2 / LoadScreenTilesFromBuffer2 → window-model save /
 ;    restore of g_window_count (the overworld map underneath is never touched by a
 ;    window overlay, so there is nothing to snapshot but the window list).
-;  * Dialog text: pret prints each message with PrintText. PrintText_Overworld
+;  * Dialog text: pret prints each message with PrintText. The dialog projection
 ;    collapses the window list (would hide any menu), so — as in S4-S8 — the PC
 ;    messages are DRAWN WHOLE into the stride-20 W_TILEMAP scratch (rows 12-17) +
 ;    a GB_TILEMAP1 window at UI_MESSAGE_BOX, pret wording (data/text/text_3.asm),

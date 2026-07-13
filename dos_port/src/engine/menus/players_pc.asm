@@ -20,7 +20,7 @@
 ;  * DisplayListMenuID owns the list window (GB_TILEMAP0, its own hide_window);
 ;    the deposit/withdraw/toss lists just point wListPointer at wNumBagItems /
 ;    wNumBoxItems and set ITEMLISTMENU, exactly like the bag.
-;  * Dialog text: pret prints each message with PrintText. PrintText_Overworld
+;  * Dialog text: pret prints each message with PrintText. The dialog projection
 ;    collapses the window list to the dialog alone (would hide the menu/list),
 ;    so — as in S4/S5 — the messages are DRAWN WHOLE into the stride-20 scratch
 ;    (rows 12-17) + a GB_TILEMAP1 window at UI_MESSAGE_BOX, with the pret wording

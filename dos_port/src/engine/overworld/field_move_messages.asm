@@ -57,6 +57,8 @@ extern PlayCry                      ; UNPORTED (pret home/pokemon.asm) — cry s
 extern Delay3                       ; src/video/frame.asm
 extern TextScriptEnd                ; src/engine/overworld/overworld_text.asm
 extern ArePlayerCoordsInArray       ; src/engine/overworld/hidden_events.asm
+extern msgbox_dialog                    ; src/home/text.asm — overworld dialog projection
+extern text_msgbox                      ; src/home/text.asm — active msgbox projection (msgbox.inc)
 
 section .text
 
@@ -66,6 +68,7 @@ section .text
 PrintStrengthText:
     or byte [ebp + W_STATUS_FLAGS_1], (1 << BIT_STRENGTH_ACTIVE) ; set BIT_STRENGTH_ACTIVE,[hl]
     mov esi, UsedStrengthText
+    mov dword [text_msgbox], msgbox_dialog     ; overworld dialog projection
     call PrintText
     mov esi, CanMoveBouldersText
     jmp PrintText                               ; jp PrintText (tail)
@@ -103,10 +106,12 @@ IsSurfingAllowed:
     jnc .ret                                    ; ret nc (not on the stairs tiles → surf allowed)
     and byte [ebp + W_STATUS_FLAGS_1], ~(1 << BIT_SURF_ALLOWED) ; res BIT_SURF_ALLOWED,[hl]
     mov esi, CurrentTooFastText
+    mov dword [text_msgbox], msgbox_dialog     ; overworld dialog projection
     jmp PrintText
 .forcedToRideBike:
     and byte [ebp + W_STATUS_FLAGS_1], ~(1 << BIT_SURF_ALLOWED)
     mov esi, CyclingIsFunText
+    mov dword [text_msgbox], msgbox_dialog     ; overworld dialog projection
     jmp PrintText
 .ret:
     ret

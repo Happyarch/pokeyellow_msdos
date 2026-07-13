@@ -43,16 +43,15 @@ extern ParalyzedMayNotAttackText
 
 section .text
 
-; ===========================================================================
-; PrintText — pret PrintText, battle scope. In: ESI (HL) = flat ptr to a
-; battle_text.inc command stream. Wraps PrintBattleText (which takes EAX). The
-; handlers pass `mov esi, XxxText` then call/jp here, matching pret `ld hl, XxxText
-; / jp PrintText`. Returns after the message (and any <PROMPT> wait) completes.
-; ===========================================================================
-global PrintText
-PrintText:
-    mov eax, esi
-    jmp PrintBattleText                 ; tail: its ret returns to PrintText's caller
+; PrintText is NOT defined here any more. It was a battle-scope substitution
+; squatting on the pret label (`mov eax, esi / jmp PrintBattleText`), while pret's
+; real PrintText body sat in text.asm under the forked name PrintText_Overworld —
+; so every non-battle caller of PrintText silently printed through the battle box.
+; There is now one pret PrintText (src/home/window.asm); battle selects its
+; placement through the msgbox_centered projection record (core.asm). The handlers
+; still `mov esi, XxxText` + call/jp PrintText, matching pret `ld hl, XxxText /
+; jp PrintText` — that ABI is unchanged.
+extern PrintText                        ; src/home/window.asm — pret's PrintText
 
 ; ===========================================================================
 ; PrintStatText — pret engine/battle/effects.asm:PrintStatText.

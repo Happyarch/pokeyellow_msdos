@@ -124,10 +124,9 @@ global PlaceString
 global PlaceNextChar
 global PrintLetterDelay
 global TextCommandProcessor
-global PrintText_Overworld      ; renamed from PrintText: the bare `PrintText` symbol is
-                                ; now the battle printer (move_effect_helpers.asm), matching
-                                ; pret semantics in battle context. Overworld dialog uses this.
-global PrintText_NoBox
+global text_msgbox              ; → the active msgbox projection record (msgbox.inc)
+global msgbox_dialog            ; the overworld dialog projection (this file, .data)
+global sync_dialog_window
 extern HandleDownArrowBlinkTiming   ; canonical def in home/window.asm (Wave 4/M4.3)
 global place_flat_str
 global text_row_stride
@@ -1320,42 +1319,40 @@ TextCommandProcessor:
     jmp .next_cmd
 
 ; ---------------------------------------------------------------------------
-; PrintText — display a text-command stream in the standard message box.
+; msgbox_dialog — the OVERWORLD dialog projection (msgbox.inc).
 ;
-; Source: home/window.asm:PrintText / PrintText_NoCreatingTextBox
-; Draws the MESSAGE_BOX border (interior 18×4 at tile coord (0,12)),
-; positions the cursor at (1,14), then runs TextCommandProcessor.
+; This is what used to be a second printer (`PrintText_Overworld`, a forked name
+; for pret's PrintText). It is not code: it is the placement. pret's PrintText
+; draws MESSAGE_BOX at GB (0,12) and types at (1,14) on the live tilemap; the port
+; draws that same box into the GB-shaped stride-20 scratch and shows it through
+; the dialog window, at a placement HAND-TUNED for the wider screen — not a
+; mechanical GB→canvas mapping, which is why the numbers below are not derivable
+; from the GB coords. The window stays open until CheckNPCInteraction hides it.
 ;
-; In:  ESI = text command stream (HL, EBP-relative)
-; Out: ESI = past TX_END. EBX = final cursor. EAX,ECX,EDX clobbered.
+; PROJ overworld-ui: GB(0,19) 20x6 --(dialog, X+0/centered, WX-7=80)--> wx=87 wy=152 clip=160 max_y=200
 ; ---------------------------------------------------------------------------
-PrintText_Overworld:
-    push esi            ; SM83: push hl
+section .data
+align 4
+msgbox_dialog:
+    dd 20                       ; MB_STRIDE       — GB-shaped scratch
+    dd MSG_BOX_ESI              ; MB_BOX_OFS      — (0,12)
+    dd MSG_BOX_WIDTH            ; MB_BOX_W        — 18 interior columns
+    dd MSG_BOX_HEIGHT           ; MB_BOX_H        — 4 interior rows
+    dd MSG_TEXT_EBX             ; MB_LINE1        — (1,14)
+    dd W_TILEMAP + 16 * SCREEN_W_TILES + 1  ; MB_LINE2 — <LINE> at (1,16)
+    dd 0                        ; MB_ARROW        — no ▼ of its own
+    dd 0                        ; MB_PROMPT       — caller waits (manual_text_scroll)
+    dd 87                       ; MB_WIN_WX
+    dd 152                      ; MB_WIN_WY
+    dd SCREEN_W                 ; MB_WIN_CLIP
+    dd RENDER_H                 ; MB_WIN_MAXY
+    dd GB_TILEMAP1              ; MB_WIN_TILEMAP  — shown through the dialog window
+    dd 0                        ; MB_WIN_STARTROW
 
-    ; Draw the dialogue box: TextBoxBorder at coord(0,12), 18 wide x 4 tall
-    mov esi, MSG_BOX_ESI
-    mov bh, MSG_BOX_HEIGHT
-    mov bl, MSG_BOX_WIDTH
-    call TextBoxBorder  ; preserves ESI and EBX
+; text_msgbox — the active projection. Defaults to the overworld dialog, i.e. to
+; pret's PrintText semantics: a screen that says nothing gets the message box.
+; A screen that must not have its window list collapsed (battle, and the
+; full-screen menus) points this at msgbox_centered (core.asm) instead.
+text_msgbox: dd msgbox_dialog
 
-    pop esi             ; SM83: pop hl — restore command stream ptr
-
-    ; Show the empty box now so text characters appear one-by-one as typed.
-    ; The window stays open until CheckNPCInteraction hides it (hide_window).
-    ; PROJ overworld-ui: GB(0,19) 20x6 --(dialog, X+0/centered, WX-7=80)--> wx=87 wy=152 clip=160 max_y=200
-    push esi
-    mov eax, 87
-    mov ebx, 152
-    mov ecx, SCREEN_W
-    mov edx, RENDER_H
-    mov esi, GB_TILEMAP1
-    xor edi, edi
-    call set_single_window       ; count=1; mirrors wy→H_WY (dialog-open flag), wx→IO_WX
-    pop esi
-    call sync_dialog_window
-    call DelayFrame
-
-PrintText_NoBox:
-    ; SM83: bccoord 1, 14
-    mov ebx, MSG_TEXT_EBX
-    jmp TextCommandProcessor   ; tail call
+section .text
