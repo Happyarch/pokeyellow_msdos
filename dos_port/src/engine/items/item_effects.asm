@@ -773,6 +773,7 @@ extern GBPalWhiteOut        ; home/fade.asm
 extern ReloadMapData        ; home/reload_tiles.asm
 extern DelayFrames          ; video/frame.asm — BL = frames
 extern WaitForTextScrollButtonPress ; engine/battle/battle_menu.asm
+extern ItemUseText00_ref            ; assets/item_text.inc — "<PLAYER> used <ITEM>!"
 extern PrintText_Overworld  ; home/text.asm — ESI = GB-space TX stream
 extern PlaySound            ; home/audio.asm — AL = sound id
 extern PlaySoundWaitForCurrent ; home/audio.asm
@@ -2509,3 +2510,65 @@ Func_d85d:
 .cannotEvolveWithUsedStone:
     clc
     ret
+
+
+; === ItemUseRepel family (items-plan Stage 9) ==============================
+;
+; Source: engine/items/item_effects.asm:ItemUseRepel / ItemUseSuperRepel /
+; ItemUseMaxRepel / ItemUseRepelCommon / PrintItemUseTextAndRemoveItem.
+;
+; These are the first-ever writers of wRepelRemainingSteps, which brings the
+; already-translated TryDoWildEncounter `.lastRepelStep` branch
+; (engine/battle/wild_encounters.asm) to life. That branch calls DisplayTextID,
+; which is still a ret-stub (owned by docs/current_plan_script_engine.md), so the
+; "REPEL's effect wore off." message does not display yet — the step counter and
+; the encounter suppression themselves are fully live. See home_stubs.asm.
+; ===========================================================================
+
+global ItemUseRepel
+ItemUseRepel:
+    mov bh, 100                         ; pret: ld b, 100
+    ; fallthrough (pret: ItemUseRepelCommon is the next label)
+
+global ItemUseRepelCommon
+ItemUseRepelCommon:
+    mov al, [ebp + wIsInBattle]
+    test al, al
+    jnz ItemUseNotTime                  ; pret: jp nz, ItemUseNotTime
+    mov al, bh
+    mov [ebp + wRepelRemainingSteps], al
+    jmp PrintItemUseTextAndRemoveItem
+
+global ItemUseSuperRepel
+ItemUseSuperRepel:
+    mov bh, 200                         ; pret: ld b, 200
+    jmp ItemUseRepelCommon
+
+global ItemUseMaxRepel
+ItemUseMaxRepel:
+    mov bh, 250                         ; pret: ld b, 250
+    jmp ItemUseRepelCommon
+
+; ---------------------------------------------------------------------------
+; PrintItemUseTextAndRemoveItem — "<PLAYER> used <ITEM>!", the get-item jingle,
+; a button wait, then consume the item.
+;
+; DEVIATION (structural): pret FALLS THROUGH into RemoveUsedItem (the two labels
+; are contiguous). RemoveUsedItem is already defined earlier in this file, so the
+; port tail-jumps instead — same control flow, no shared code path lost.
+;
+; NOTE: ItemUseText00 prints the item name via TX_RAM from wStringBuffer. pret's
+; item menu loads it (GetItemName + CopyToStringBuffer) before calling UseItem;
+; the port's bag menu does not do that yet, so the name reads as whatever is in
+; wStringBuffer. Tracked in the items plan (Stage 9) — a bag-menu gap, not an
+; item-effect one.
+; ---------------------------------------------------------------------------
+global PrintItemUseTextAndRemoveItem
+PrintItemUseTextAndRemoveItem:
+    mov esi, [ItemUseText00_ref]
+    mov ecx, [ItemUseText00_ref + 4]
+    call iu_print_text                  ; pret: ld hl, ItemUseText00 / call PrintText
+    mov al, SFX_HEAL_AILMENT
+    call PlaySound
+    call WaitForTextScrollButtonPress
+    jmp RemoveUsedItem                  ; pret: fallthrough

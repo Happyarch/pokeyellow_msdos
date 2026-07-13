@@ -11,8 +11,8 @@
 ; That is a deliberately quiet failure, not a crash; the retirement stages below
 ; replace each with the real handler.
 ;
-; TODO(items-plan Stage 9):  ItemUseRepel / ItemUseSuperRepel / ItemUseMaxRepel /
-;                            ItemUseEscapeRope
+; TODO(items-plan Stage 9):  ItemUseEscapeRope
+;   (the Repel family landed in item_effects.asm — stubs retired)
 ; TODO(items-plan Stage 10): ItemUseXAccuracy / ItemUseXStat / ItemUseDireHit /
 ;                            ItemUseGuardSpec / ItemUsePokeDoll
 ; TODO(items-plan Stage 11): ItemUseBicycle / ItemUsePokeFlute / ItemUseTownMap /
@@ -35,9 +35,6 @@ global ItemUsePokedex
 global ItemUseBait
 global ItemUseRock
 global ItemUseEscapeRope
-global ItemUseRepel
-global ItemUseSuperRepel
-global ItemUseMaxRepel
 global ItemUseXAccuracy
 global ItemUseCardKey
 global ItemUsePokeDoll
@@ -61,9 +58,6 @@ ItemUsePokedex:
 ItemUseBait:
 ItemUseRock:
 ItemUseEscapeRope:
-ItemUseRepel:
-ItemUseSuperRepel:
-ItemUseMaxRepel:
 ItemUseXAccuracy:
 ItemUseCardKey:
 ItemUsePokeDoll:

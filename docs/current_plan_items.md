@@ -205,7 +205,26 @@ Archive to `docs/plans/items.md` when complete.
   `CopyData`, which reads its source EBP-relative; `BaseStats` is a flat `.data`
   table, so it read megabytes past the GB allocation. Copies flat→GB directly now,
   as `GetMonHeader` already does.
-- [ ] **Stage 9 — Repel family + Escape Rope.** `ItemUseRepel`/`Super`/`Max`
+- [~] **Stage 9 — Repel family DONE; Escape Rope BLOCKED.**
+  `ItemUseRepel`/`SuperRepel`/`MaxRepel` → `ItemUseRepelCommon` +
+  `PrintItemUseTextAndRemoveItem` are in and verified (`DEBUG_ITEMSTONE` with
+  `ITEMSTONE_ID=0x1E/0x38/0x39`: `wRepelRemainingSteps` = 100/200/250, item
+  consumed each time, `wActionResultOrTookBattleTurn`=1). These are the
+  **first-ever writers of `wRepelRemainingSteps`**, so `TryDoWildEncounter`'s
+  `.lastRepelStep` branch is now live — but the branch calls `DisplayTextID`,
+  still a ret-stub owned by the script-engine plan, so the "REPEL's effect wore
+  off." message does not display. Step counting and encounter suppression work.
+  Two known gaps, both outside the item layer:
+    - the bag menu never loads the item name into `wStringBuffer`
+      (pret does `GetItemName` + `CopyToStringBuffer` before `UseItem`), so
+      `ItemUseText00`'s TX_RAM prints stale bytes for the item name;
+    - `ItemUseEscapeRope` is **blocked**: it only sets `BIT_ESCAPE_WARP`/
+      `BIT_FLY_WARP` in `wStatusFlags6`, and the consumer that acts on them —
+      `HandleFlyWarpOrDungeonWarp` — is **missing** in the port (overworld plan).
+      Translating the effect now would give an item that consumes itself and does
+      nothing. Sequence it after the overworld plan lands the special-warp handler.
+
+  Original scope: `ItemUseRepel`/`Super`/`Max`
   → `ItemUseRepelCommon` writing `wRepelRemainingSteps` (first-ever writer —
   the `wild_encounters.asm` `.lastRepelStep` branch and its `DisplayTextID`
   call go live; coordinate with the overworld plan's `DisplayTextID` destub,

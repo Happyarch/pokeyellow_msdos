@@ -288,7 +288,9 @@ windows:
     dd 0xD155    ; wEvoStoneItemID
     dd 0xCCD3    ; wCanEvolveFlags + wForceEvolution
     dd 0xCEE9    ; wEvoOldSpecies + wEvoNewSpecies
-    dd 0xCF97    ; wLoadedMon (Func_d85d's species input)
+    dd 0xD0DA    ; wRepelRemainingSteps — Stage 9 (drive with ITEMSTONE_ID=REPEL
+                 ; $1E / SUPER_REPEL $38 / MAX_REPEL $39; RunStoneTest dispatches
+                 ; UseItem by wCurItem, so it exercises any item's handler)
     dd 0xD120    ; wEvolutionOccurred
 %elifdef DEBUG_CALCSTATS
 ; CalcStats gate: one 64-byte window over the test scratch at $D1E0 covers the
