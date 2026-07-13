@@ -13,6 +13,7 @@
 bits 32
 
 global WildDataPointers
+global WildDataPointersEnd
 global WildMonEncounterSlotChances
 
 section .data

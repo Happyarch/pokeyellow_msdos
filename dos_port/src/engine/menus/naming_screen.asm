@@ -528,10 +528,14 @@ DisplayNamingScreen:
 ; ---------------------------------------------------------------------------
 ; RunDefaultPaletteCommand — pret ref: home/palettes.asm:RunDefaultPaletteCommand
 ; (a 1-line label that sets B=SET_PAL_DEFAULT and falls into RunPaletteCommand).
-; Not yet promoted to a standalone global beside RunPaletteCommand
-; (engine/battle/faint_switch.asm); kept file-local here to avoid touching that
-; file. Flag for a follow-up to hoist it there for reuse.
+; Promoted to a global (2026-07-12): ExitTownMap needs it too, which is the reuse
+; the old note here flagged. It still lives in this file rather than beside
+; RunPaletteCommand (engine/battle/faint_switch.asm) — hoisting it there is a
+; separate move. NOTE the register: pret sets `b` (= BH), this sets BL. Harmless
+; today because RunPaletteCommand is a ret-stub (Phase 5 palette engine), but it
+; must be fixed to BH when that engine lands or every caller picks the wrong palette.
 ; ---------------------------------------------------------------------------
+global RunDefaultPaletteCommand
 RunDefaultPaletteCommand:
     mov bl, SET_PAL_DEFAULT
     jmp RunPaletteCommand

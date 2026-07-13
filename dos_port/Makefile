@@ -370,6 +370,7 @@ ITEMS_SRCS := \
     src/data/item_text.asm \
     src/engine/items/inventory.asm \
     src/engine/items/item_effects.asm \
+    src/engine/items/town_map.asm \
     src/engine/items/tms.asm \
     src/engine/items/tmhm.asm \
     src/engine/items/item_use_stubs.asm \
@@ -961,8 +962,7 @@ POKEMON_CHECK_SRCS := \
 # the promoted list_menu.asm driver.
 ITEMS_CHECK_SRCS := \
     src/engine/items/subtract_paid_money.asm \
-    src/engine/items/super_rod.asm \
-    src/engine/items/town_map.asm
+    src/engine/items/super_rod.asm
 
 # Home routines that assemble-validate but aren't linked yet. count_set_bits
 # emits an undefined external for wNumSetBits (no memmap alias / no caller yet),

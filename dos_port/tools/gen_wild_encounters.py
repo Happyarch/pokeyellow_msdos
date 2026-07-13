@@ -152,6 +152,10 @@ def main():
     out.append("WildDataPointers:")
     for lbl in pointers:
         out.append(f"    dd {lbl}")
+    # End label: pret terminates the table with `dw -1` and walks it until that
+    # sentinel (FindWildLocationsOfMon). The flat dd table has no sentinel, so the
+    # port bounds the same loop with this label instead.
+    out.append("WildDataPointersEnd:")
     out.append("")
 
     # Encounter-slot cumulative chance table.

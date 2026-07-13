@@ -288,9 +288,20 @@ Archive to `docs/plans/items.md` when complete.
         overlay, so the screen underneath was never destroyed).
     The Snorlax that reads the fight event is still a map script (overworld plan), so
     playing the flute on the right tile sets the flag but no Snorlax appears yet.
-  - [ ] Town Map: link `town_map.asm` out of `ITEMS_CHECK_SRCS` (it's coded +
-    data generated; "intentionally dangling" per its port note — resolve the
-    palette/video deps that kept it dangling).
+  - [x] Town Map: `ItemUseTownMap` → `DisplayTownMap`; `town_map.asm` moved into
+    `ITEMS_SRCS` and every dangling dep resolved — `FindWildLocationsOfMon` +
+    `CheckMapForMon` ported (Nest screen), `BirdSprite` generated from
+    `gfx/sprites/bird.2bpp` (Fly screen), `RunPaletteCommand` /
+    `RunDefaultPaletteCommand` wired (ret-stubs until Phase 5).
+    Port deviations, all commented in-file: the flat-canvas entry (with a
+    save/restore of the CALLER's view pointer + scroll + stride, so returning to
+    the bag doesn't composite it over block 0), `TOWNMAP_OAM_SINK` (pret discards
+    two `ld [hli]` writes through a ROM pointer; a flat host label can't), and
+    `tm_publish_oam` (publishes shadow OAM via `PrepareStaticOAM`, and applies the
+    GB's own OBJ hide rule — Y = 0 or Y >= 160 — which the 200-row canvas otherwise
+    exposes as ghost sprites at row 144).
+    `wShadowOAMBackup` had to be RELOCATED (0xC508 → 0xF500): the port's 40×25
+    `W_TILEMAP` spans 0xC3A0–0xC787 and swallows pret's address.
   - [ ] Itemfinder: add `itemfinder.asm` to the Makefile (currently orphaned —
     in no SRCS list at all), `ItemUseItemfinder` proximity check + SFX;
     needs overworld hidden-object data (interface). BLOCKED — `docs/items_blockers.md` B5.

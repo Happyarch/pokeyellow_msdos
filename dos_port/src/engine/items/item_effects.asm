@@ -791,7 +791,6 @@ extern VitaminStatRoseText_ref
 extern VitaminNoEffectText_ref
 
 ; --- the deferred ItemUse* families (item_use_stubs.asm) ---
-extern ItemUseTownMap
 extern ItemUseBicycle
 extern ItemUseSurfboard
 extern ItemUsePokedex
@@ -1540,6 +1539,7 @@ extern PlayDefaultMusic       ; home/audio.asm
 extern LoadCurrentMapView     ; engine/overworld/overworld.asm
 extern UpdateSprites          ; engine/overworld/movement.asm
 extern IsBikeRidingAllowed    ; home/player_gfx.asm
+extern DisplayTownMap               ; engine/items/town_map.asm
 extern ShowPokedexMenu        ; engine/menus/pokedex.asm
 extern ItemUseNotYoursToUse   ; (this file)
 extern GotOnBicycleText_ref         ; assets/item_text.inc
@@ -2780,6 +2780,13 @@ global ItemUseOaksParcel
 ItemUseOaksParcel:
     jmp ItemUseNotYoursToUse
 
+global ItemUseTownMap
+ItemUseTownMap:
+    mov al, [ebp + wIsInBattle]
+    test al, al
+    jnz ItemUseNotTime
+    jmp DisplayTownMap                  ; pret: farjp DisplayTownMap
+
 global ItemUsePokedex
 ItemUsePokedex:
     jmp ShowPokedexMenu                 ; pret: predef_jump ShowPokedexMenu
@@ -3087,3 +3094,73 @@ CardKeyTable3:
     db 0xFF                             ; end
 
 section .text
+
+; --------------------------------------------------------------------------- #
+; FindWildLocationsOfMon — build the list of map ids whose wild-encounter data
+; contains wPokedexNum. Consumed by the town map's Nest screen
+; (DisplayWildLocations), which reads the list at wBuffer/wTownMapCoords.
+; pret ref: engine/items/item_effects.asm:FindWildLocationsOfMon.
+;
+; Out: wBuffer = map ids, $FF-terminated. Clobbers EAX/EBX/EDX/ESI/EDI.
+;
+; PORT: pret's WildDataPointers is a `dw` table ending in `dw -1`, and the loop's
+; end test reads that sentinel's high byte (`inc hl / ld a,[hld] / inc a / jr z`).
+; The port's table is flat 32-bit (`dd`, one entry per map, no sentinel — see
+; tools/gen_wild_encounters.py), so the same loop is bounded by WildDataPointersEnd.
+; The blobs themselves are flat .data, so ESI walks them WITHOUT the EBP bias; only
+; the output list (EDX) and wPokedexNum are GB memory.
+; --------------------------------------------------------------------------- #
+global FindWildLocationsOfMon
+extern WildDataPointers, WildDataPointersEnd   ; data/wild_data.asm
+
+FindWildLocationsOfMon:
+    mov edx, wBuffer                    ; ld de, wBuffer
+    xor bl, bl                          ; ld c, $0 — map id
+.loop:
+    movzx eax, bl
+    lea edi, [WildDataPointers + eax*4]
+    cmp edi, WildDataPointersEnd        ; pret: the `dw -1` sentinel test
+    jae .done
+    mov esi, [edi]                      ; hl = this map's wild-data blob (flat)
+    mov al, [esi]                       ; ld a, [hli] — grass rate
+    inc esi
+    test al, al                         ; and a
+    jz .noGrass
+    call CheckMapForMon                 ; call nz, CheckMapForMon (land)
+.noGrass:
+    mov al, [esi]                       ; ld a, [hli] — water rate
+    inc esi
+    test al, al                         ; and a
+    jz .noWater
+    call CheckMapForMon                 ; call nz, CheckMapForMon (water)
+.noWater:
+    inc bl                              ; inc c
+    jmp .loop
+.done:
+    mov al, 0xFF                        ; list terminator
+    mov [ebp + edx], al                 ; ld [de], a
+    ret
+
+; --------------------------------------------------------------------------- #
+; CheckMapForMon — scan one encounter table (NUM_WILDMONS × (level, species)) for
+; wPokedexNum; append the map id (BL) to the list at EDX for every match.
+; pret ref: engine/items/item_effects.asm:CheckMapForMon.
+; In: ESI = flat ptr to the rate byte's successor, BL = map id, EDX = list ptr.
+; Out: ESI = the next rate byte (pret's closing `dec hl`), EDX advanced per match.
+; --------------------------------------------------------------------------- #
+CheckMapForMon:
+    inc esi                             ; inc hl — point at the first species byte
+    mov bh, NUM_WILDMONS                ; ld b, NUM_WILDMONS
+.loop:
+    mov al, [ebp + wPokedexNum]         ; ld a, [wPokedexNum]
+    cmp al, [esi]                       ; cp [hl]
+    jne .nextEntry
+    mov al, bl                          ; ld a, c
+    mov [ebp + edx], al                 ; ld [de], a
+    inc edx                             ; inc de
+.nextEntry:
+    add esi, 2                          ; inc hl / inc hl
+    dec bh                              ; dec b
+    jnz .loop
+    dec esi                             ; dec hl
+    ret

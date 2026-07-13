@@ -13,7 +13,7 @@
 ;
 ; TODO(items-plan Stage 9):  ItemUseEscapeRope
 ;   (the Repel family landed in item_effects.asm — stubs retired)
-; TODO(items-plan Stage 11): ItemUseTownMap / ItemUseSurfboard / ItemUsePPUp /
+; TODO(items-plan Stage 11): ItemUseSurfboard / ItemUsePPUp /
 ;                            ItemUsePPRestore
 ;   (Bicycle / CoinCase / OaksParcel / Pokedex / PokeFlute / CardKey landed in
 ;    item_effects.asm — stubs retired)
@@ -28,7 +28,6 @@ bits 32
 
 section .text
 
-global ItemUseTownMap
 global ItemUseSurfboard
 global ItemUseBait
 global ItemUseRock
@@ -40,7 +39,6 @@ global ItemUseSuperRod
 global ItemUsePPUp
 global ItemUsePPRestore
 
-ItemUseTownMap:
 ItemUseSurfboard:
 ItemUseBait:
 ItemUseRock:

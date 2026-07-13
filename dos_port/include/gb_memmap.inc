@@ -647,6 +647,25 @@ NPC_MOVEMENT_RIGHT   equ 0xC0   ; hRandomAdd in [0xC0,0xFF] → go right
 ; Named WRAM symbols (subset needed by translated routines).
 ; Offsets from pokeyellow.sym (bank 00).
 W_SHADOW_OAM        equ 0xC300     ; wShadowOAM — 40 sprites × 4 bytes
+; Town map (engine/items/town_map.asm) — pret-real addresses, replacing the
+; PLACEHOLDER block that file carried while it was dangling (its 0xDE00 base
+; collided with wBoxMonNicks 0xDE05).
+; RELOCATED (port-only): pret puts wShadowOAMBackup at 0xC508. It cannot live there
+; here — the port's wTileMap is 40x25 = 1000 bytes (the GB's is 20x18 = 360), so
+; W_TILEMAP spans 0xC3A0-0xC787 and SWALLOWS 0xC508. At pret's address the town map's
+; OAM backup wrote raw sprite bytes straight into tilemap rows 9-12 (visible as a band
+; of garbage glyphs across the map). It goes in the Echo region instead, with the other
+; buffers that outgrew their pret slots (wSurroundingTiles, wOverworldMap,
+; wTileMapBackup2 — which ends at 0xF4E8).
+wShadowOAMBackup    equ 0xF500     ; 160 B (OAM_COUNT * 4), ends 0xF59F
+wTownMapSpriteBlinkingEnabled equ 0xD09A
+wTownVisitedFlag    equ 0xD70A     ; = W_TOWN_VISITED_FLAG (2 bytes)
+; The three below are aliased-scratch lanes, like every other 0xCD3D/0xCEE9 user
+; above — the town map is a modal screen, so nothing else is live while it runs.
+wWhichTownMapLocation  equ 0xCD3D
+wFlyAnimUsingCoordList equ 0xCD3D
+wFlyLocationsList      equ 0xCD3E   ; NUM_CITY_MAPS + 2
+wTownMapCoords         equ 0xCEE9
 W_SHADOW_OAM_END    equ 0xC3A0
 W_SHADOW_OAM_SIZE   equ 0xA0       ; 160 bytes
 W_TILEMAP           equ 0xC3A0     ; wTileMap — 40×25 screen tile buffer

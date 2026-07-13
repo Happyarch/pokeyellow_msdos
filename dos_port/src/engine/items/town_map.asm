@@ -5,14 +5,11 @@
 ; plus their shared helpers (LoadTownMap RLE decoder, LoadTownMapEntry, the OAM
 ; writers, cursor blinking). Translated 1:1 from the SM83 source.
 ;
-; DANGLING: not wired into the main loop or the linked build. Assembles AND links
-; cleanly (no unresolved symbols). Dependencies with no implementation in the tree
-; (palette engine, CopyVideoData*, ClearScreenArea, JoypadLowSensitivity,
-; FindWildLocationsOfMon, BirdSprite) have their `extern` + call sites commented out
-; and marked `; TODO(unimplemented):` — restore them when those routines are ported.
-; Town-map WRAM the port hasn't allocated is given PLACEHOLDER equ offsets (TODO:
-; allocate in gb_memmap.inc). The routine never executes, so the placeholders are
-; harmless until it's wired in.
+; LIVE: linked and reachable — the bag menu's TOWN_MAP item dispatches here through
+; ItemUseTownMap. Every dependency is ported; the WRAM it needs is allocated for real
+; in gb_memmap.inc (see the wShadowOAMBackup relocation note there). The remaining
+; port-specific deviations are the three marked `; PORT:` below (the flat-canvas
+; entry, the TownMapCoordsToOAMCoords write sink, and tm_publish_oam).
 ;
 ; -- CENTERING (port adaptation, per project note) --------------------------
 ; The GB town map is a 20x18 screen; the port's canvas is a 40x25 tile buffer
@@ -45,36 +42,26 @@ extern GetMonName, WaitForTextScrollButtonPress, PlaySound
 extern GBPalNormal, LoadPlayerSpriteGraphics, LoadFontTilePatterns
 extern text_row_stride          ; global dd in text.asm; default 20
 
-; ---- NOT YET PORTED — no implementation in the tree; would halt a link. -----
-; TODO: port these, then restore the `extern` + the call/reference sites below
-; (each is marked `; TODO(unimplemented):`). Left commented out so this dangling
-; file assembles AND links cleanly.
-; extern BirdSprite                    ; gfx/sprites/bird.2bpp — not generated
-; extern GBPalWhiteOut, GBPalWhiteOutWithDelay3   ; home/palettes.asm
-; extern RunPaletteCommand, RunDefaultPaletteCommand
-; extern ClearScreenArea               ; home/copy2.asm
-; extern FarCopyDataDouble, CopyVideoData, CopyVideoDataDouble
+extern GBPalWhiteOut, GBPalWhiteOutWithDelay3   ; home/fade.asm (relocated)
+extern ClearScreenArea               ; home/copy2.asm
+extern FarCopyDataDouble, CopyVideoData, CopyVideoDataDouble  ; home/copy2.asm
 extern JoypadLowSensitivity            ; src/input/joypad_lowsens.asm (home/joypad2.asm)
-; extern FindWildLocationsOfMon        ; engine/items/item_effects.asm (farcall)
+extern g_tilecache_dirty               ; ppu.asm — see the FarCopyData note in LoadTownMap
+extern g_bg_whiteout                   ; ppu.asm — full-screen BG whiteout flag
+extern spr_oam_valid                   ; ppu.asm — render_sprites active-entry count
+extern hide_window                     ; home/window.asm
+extern PrepareStaticOAM                ; engine/gfx/sprite_oam.asm — publish OBJ positions
+extern HideSprites                     ; home/sprites.asm — zero shadow OAM
+extern FindWildLocationsOfMon          ; engine/items/item_effects.asm (pret: predef)
+extern RunPaletteCommand               ; engine/battle/faint_switch.asm (relocated)
+extern RunDefaultPaletteCommand        ; engine/menus/naming_screen.asm (relocated)
 
-; ---- town-map WRAM the port hasn't allocated yet ---------------------------
-; TODO: allocate these in gb_memmap.inc (with non-colliding addresses) and drop
-; this block. These are PLACEHOLDER offsets so the file links; the base almost
-; certainly overlaps real WRAM, but the routine is dangling (never executes) so
-; it is harmless until real allocation.
-TOWNMAP_WRAM_PLACEHOLDER      equ 0xDE00   ; TODO: not a real allocation
-wShadowOAMBackup              equ TOWNMAP_WRAM_PLACEHOLDER + 0x00  ; 160 bytes
-wWhichTownMapLocation         equ TOWNMAP_WRAM_PLACEHOLDER + 0xA0
-wTownMapSpriteBlinkingEnabled equ TOWNMAP_WRAM_PLACEHOLDER + 0xA3
-; wOAMBaseTile / wAnimCounter / wSymmetricSpriteOAMAttributes are now REAL
-; allocations in gb_memmap.inc (the mon-icon OAM work, engine/gfx/mon_icons.asm);
-; their placeholder equs here (+0xA1/+0xA2/+0xA4) were dropped — a second `equ`
-; with a different value is an inconsistent redefinition and broke `make check`.
-; Same story as wDestinationMap (real at 0xD719, menus S7; old +0xA5 line dropped).
-wTownVisitedFlag              equ TOWNMAP_WRAM_PLACEHOLDER + 0xA6  ; 2 bytes
-wTownMapCoords                equ TOWNMAP_WRAM_PLACEHOLDER + 0xA8  ; scratch buffer
-wFlyAnimUsingCoordList        equ TOWNMAP_WRAM_PLACEHOLDER + 0xC0
-wFlyLocationsList             equ TOWNMAP_WRAM_PLACEHOLDER + 0xC1  ; NUM_CITY_MAPS+2
+; ---- town-map WRAM ---------------------------------------------------------
+; Now REAL allocations in gb_memmap.inc, at pret's own addresses. The old
+; PLACEHOLDER block based at 0xDE00 is gone: it overlapped wBoxMonNicks (0xDE05)
+; and would have eaten box nicknames the moment this file was linked.
+; wOAMBaseTile / wAnimCounter / wSymmetricSpriteOAMAttributes / wDestinationMap
+; are likewise real (mon-icon OAM work, menus S7).
 
 ; --------------------------------------------------------------------------- #
 ; constants (TODO: migrate the missing ones to gb_constants.inc)
@@ -105,6 +92,18 @@ H_JOY6             equ 0xFFB6
 %ifndef H_JOY7
 H_JOY7             equ 0xFFB7
 %endif
+
+; TownMapCoordsToOAMCoords does `ld [hli], a` twice. At its DisplayWildLocations
+; call site HL is a shadow-OAM pointer and those writes are load-bearing. At the
+; other TWO call sites (DisplayTownMap, DrawPlayerOrBirdSprite) HL is the map's
+; NAME pointer — i.e. a ROM address — so on the GB the writes are silently
+; discarded by the hardware. The port cannot discard them: there the pointer is a
+; flat host label, and `[ebp + esi]` would land megabytes outside the GB
+; allocation (it hung the machine). Those two sites therefore aim the routine at a
+; dead 2-byte sink, which reproduces the GB's behaviour exactly. The sink sits
+; inside the wBuffer/wTownMapCoords scratch union (0xCEE9, 30 bytes) — the town map
+; is a modal screen, so nothing else is live in it while this runs.
+TOWNMAP_OAM_SINK   equ wTownMapCoords + 8
 
 ; centering of the 20x18 GB screen inside the 40x25 W_TILEMAP
 TOWNMAP_COL_OFFSET equ 10
@@ -160,7 +159,7 @@ DisplayTownMap:
     lea edx, [TownMapCursor]            ; ld de, TownMapCursor
     mov bh, 0                           ; BANK(TownMapCursor)
     mov bl, (TownMapCursorEnd - TownMapCursor) / TILE_1BPP
-    ; TODO(unimplemented): call CopyVideoDataDouble
+    call CopyVideoDataDouble
     xor al, al
     mov [ebp + wWhichTownMapLocation], al
     pop eax                             ; pop af -> al = wCurMap
@@ -170,7 +169,7 @@ DisplayTownMap:
     mov esi, TM_COORD(0, 0)             ; hlcoord 0, 0
     mov bh, 1                           ; lb bc, 1, 20 (height 1)
     mov bl, 20                          ; (width 20)
-    ; TODO(unimplemented): call ClearScreenArea
+    call ClearScreenArea
     lea esi, [TownMapOrder]
     movzx ecx, byte [ebp + wWhichTownMapLocation]
     add esi, ecx                        ; add hl, bc
@@ -180,6 +179,9 @@ DisplayTownMap:
     call LoadTownMapEntry
     mov al, [ebp + edx]                 ; ld a, [de]
     push esi                            ; push hl (name ptr)
+    mov esi, TOWNMAP_OAM_SINK           ; PORT: pret leaves HL = the ROM name ptr here,
+                                        ; so its two [hli] writes go nowhere. See the
+                                        ; TOWNMAP_OAM_SINK note above.
     call TownMapCoordsToOAMCoords
     mov al, 4
     mov [ebp + wOAMBaseTile], al        ; ld [wOAMBaseTile], a
@@ -286,16 +288,16 @@ LoadTownMap_Fly:
     mov [ebp + H_JOY7], al              ; ldh [hJoy7], a
     call LoadPlayerSpriteGraphics
     call LoadFontTilePatterns
-    ; TODO(unimplemented): lea edx, [BirdSprite]
+    lea edx, [BirdSprite]               ; ld de, BirdSprite
     mov bh, 0                           ; ld b, BANK(BirdSprite)
     mov bl, 12                          ; ld c, 12
     mov esi, vSpritesTile(BIRD_BASE_TILE)  ; ld hl, vSprites tile BIRD_BASE_TILE
-    ; TODO(unimplemented): call CopyVideoData
+    call CopyVideoData
     lea edx, [TownMapUpArrow]           ; ld de, TownMapUpArrow
     mov esi, vChars1Tile(0x6d)          ; ld hl, vChars1 tile $6d
     mov bh, 0
     mov bl, (TownMapUpArrowEnd - TownMapUpArrow) / TILE_1BPP
-    ; TODO(unimplemented): call CopyVideoDataDouble
+    call CopyVideoDataDouble
     call BuildFlyLocationsList
     mov esi, W_UPDATE_SPRITES_ENABLED
     mov al, [ebp + esi]
@@ -318,7 +320,7 @@ LoadTownMap_Fly:
     mov esi, TM_COORD(3, 0)             ; hlcoord 3, 0
     mov bh, 1                           ; lb bc, 1, 15
     mov bl, 15
-    ; TODO(unimplemented): call ClearScreenArea
+    call ClearScreenArea
     pop esi                             ; pop hl
     mov al, [ebp + esi]                 ; ld a, [hl]
     mov bh, BIRD_BASE_TILE              ; ld b, BIRD_BASE_TILE
@@ -366,7 +368,7 @@ LoadTownMap_Fly:
     xor al, al
     mov [ebp + wTownMapSpriteBlinkingEnabled], al
     mov [ebp + H_JOY7], al              ; ldh [hJoy7], a
-    ; TODO(unimplemented): call GBPalWhiteOutWithDelay3
+    call GBPalWhiteOutWithDelay3
     pop esi                             ; pop hl (wUpdateSpritesEnabled)
     pop eax                             ; pop af
     mov [ebp + esi], al                 ; ld [hl], a
@@ -429,26 +431,87 @@ BuildFlyLocationsList:
 ; LoadTownMap — shared setup: draw the border + decompress the map + palette.
 ; --------------------------------------------------------------------------- #
 LoadTownMap:
+    ; --- PORT: save the caller's canvas context (see the flat-canvas note below).
+    ; The town map is entered from the BAG, whose list box is a window over the live
+    ; overworld BG — so the block-view pointer and the scroll registers below are the
+    ; caller's, not ours, and zeroing them without saving leaves the bag composited
+    ; over block 0 at scroll 0 when we return. Same class as the battle-exit fix (W-1).
+    mov ax, [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR]
+    mov [tm_saved_view_ptr], ax
+    mov al, [ebp + H_SCX]
+    mov [tm_saved_scx], al
+    mov al, [ebp + H_SCY]
+    mov [tm_saved_scy], al
+    mov eax, [text_row_stride]
+    mov [tm_saved_stride], eax
+    mov eax, [g_bg_whiteout]
+    mov [tm_saved_whiteout], eax
+
     ; port: draw the whole 20-wide screen centered in the 40-wide tile buffer.
     mov dword [text_row_stride], SCREEN_TILES_W
-    ; TODO(unimplemented): call GBPalWhiteOutWithDelay3
+    call GBPalWhiteOutWithDelay3
     call ClearScreen
     call UpdateSprites
+
+    ; --- PORT: flat-canvas render setup (the status_screen / init_battle template).
+    ; Without this render_bg keeps compositing the OVERWORLD from the block view
+    ; pointer and the scroll registers, and the freshly-drawn W_TILEMAP is never
+    ; shown — the first attempt at this screen rendered Pallet Town.
+    ; The SHADOWS matter as much as the registers: commit_shadow_regs copies H_SCX/SCY
+    ; over IO_SCX/SCY every DelayFrame, so a stale overworld scroll would drag the flat
+    ; canvas off-screen a frame later.
+    mov word [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], 0
+    mov byte [ebp + H_SCX], 0
+    mov byte [ebp + H_SCY], 0
+    mov byte [ebp + IO_SCX], 0
+    mov byte [ebp + IO_SCY], 0
+    mov dword [g_bg_whiteout], 0        ; the bag menu may have set it
+    ; Suppress the overworld's stale OBJ: render_sprites draws spr_oam_valid entries
+    ; from the spr_dos_sx/sy tables, NOT from the OAM Y bytes, so a screen that clears
+    ; g_bg_whiteout without this ghosts the player + NPCs onto the map.
+    ; (The town map's OWN OBJ — cursor, player/bird — are written GB-native into shadow
+    ; OAM, so they are published to those tables by tm_publish_oam, below.)
+    mov dword [spr_oam_valid], 0
+    ; ...and zero the shadow OAM itself, which pret gets for free: on entry
+    ; wUpdateSpritesEnabled is still 0 (the bag menu's value), and pret's VBlank
+    ; PrepareOAMData answers 0 with HideSprites. The port's update_oam only runs at
+    ; 1, so without this the overworld's stale OAM entries survive — and tm_publish_oam
+    ; then dutifully publishes them as ghost sprites over the map.
+    call HideSprites
+    call hide_window
+    ; BG tile animations rewrite vTileset $03/$14 every DelayFrame; the world-map tiles
+    ; live at $60+, so they are not hit — but the animator also arms the cache. Leave it.
     mov esi, TM_COORD(0, 0)             ; hlcoord 0, 0
     mov bh, 0x12                        ; lb bc, $12, $12
     mov bl, 0x12
     call TextBoxBorder
+    ; ; PROJ town_map: TextBoxBorder draws an 18x18 box, so its BOTTOM edge lands on
+    ; GB row 19 — two rows below the 18-row GB screen, i.e. OFF-SCREEN on hardware.
+    ; The port's canvas is 25 rows tall, so those two rows are visible here and read
+    ; as a stray frame under the map. Blank them: the GB shows a box with no bottom.
+    mov esi, TM_COORD(0, 18)
+    mov bh, 2                           ; rows 18-19 (GB), = canvas rows 21-22
+    mov bl, 20                          ; the box's full width
+    call ClearScreenArea
     call DisableLCD
-    lea esi, [WorldMapTileGraphics]     ; ld hl, WorldMapTileGraphics
-    mov edx, vChars2Tile(0x60)          ; ld de, vChars2 tile $60
-    mov bx, WorldMapTileGraphicsEnd - WorldMapTileGraphics
-    mov al, 0                           ; BANK(WorldMapTileGraphics)
-    call FarCopyData
+    ; DEVIATION: pret uses FarCopyData here (a plain copy — it can, because the LCD
+    ; is off). The port CANNOT: its FarCopyData forwards to CopyData, which resolves
+    ; its source EBP-relative, and WorldMapTileGraphics is a FLAT .data label — so
+    ; the copy read megabytes past the GB allocation and hung the machine. Same class
+    ; as the CopyData bug in evolution.asm. CopyVideoData is the port's flat->VRAM
+    ; primitive with the identical effect here, and it arms g_tilecache_dirty — which
+    ; a plain copy does NOT: the compositor draws tiles from tile_cache, never from
+    ; VRAM, so writing patterns without arming it renders the slots' PREVIOUS tiles.
+    mov esi, vChars2Tile(0x60)          ; ESI = dest VRAM offset  (pret: de)
+    lea edx, [WorldMapTileGraphics]     ; EDX = flat source       (pret: hl)
+    mov bh, 0                           ; BANK(WorldMapTileGraphics) — no-op, flat
+    mov bl, (WorldMapTileGraphicsEnd - WorldMapTileGraphics) / TILE_SIZE
+    call CopyVideoData
     lea esi, [MonNestIcon]              ; ld hl, MonNestIcon
     mov edx, vSpritesTile(0x04)         ; ld de, vSprites tile $04
     mov bx, MonNestIconEnd - MonNestIcon
     mov al, 0
-    ; TODO(unimplemented): call FarCopyDataDouble
+    call FarCopyDataDouble
     ; RLE decompress CompressedMap into the centered 20-wide region.
     mov esi, TM_COORD(0, 0)             ; hlcoord 0, 0
     lea edx, [CompressedMap]            ; ld de, CompressedMap (host ROM data)
@@ -479,7 +542,7 @@ LoadTownMap:
 .doneDecode:
     call EnableLCD
     mov bh, SET_PAL_TOWN_MAP            ; ld b, SET_PAL_TOWN_MAP
-    ; TODO(unimplemented): call RunPaletteCommand
+    call RunPaletteCommand              ; ret-stub until the Phase 5 palette engine
     call Delay3
     call GBPalNormal
     xor al, al
@@ -494,14 +557,30 @@ LoadTownMap:
 ExitTownMap:
     xor al, al
     mov [ebp + wTownMapSpriteBlinkingEnabled], al
-    ; TODO(unimplemented): call GBPalWhiteOut
+    call GBPalWhiteOut
     call ClearScreen
     call ClearSprites
     call LoadPlayerSpriteGraphics
     call LoadFontTilePatterns
     call UpdateSprites
-    mov dword [text_row_stride], 20     ; port: restore default GB stride
-    ret                                 ; TODO(unimplemented): jp RunDefaultPaletteCommand
+    ; --- PORT: hand the canvas back exactly as LoadTownMap found it. ClearSprites
+    ; above already republished spr_oam_valid = 0 (so our OAM does not ghost onto the
+    ; caller); these are the BG-side counterparts. Restoring the SAVED stride rather
+    ; than the GB default of 20 matters: the bag is re-entered through ItemMenuLoop,
+    ; which redraws at its own stride, but any other caller keeps the one it had.
+    mov ax, [tm_saved_view_ptr]
+    mov [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], ax
+    mov al, [tm_saved_scx]
+    mov [ebp + H_SCX], al
+    mov [ebp + IO_SCX], al
+    mov al, [tm_saved_scy]
+    mov [ebp + H_SCY], al
+    mov [ebp + IO_SCY], al
+    mov eax, [tm_saved_whiteout]
+    mov [g_bg_whiteout], eax
+    mov eax, [tm_saved_stride]
+    mov [text_row_stride], eax
+    jmp RunDefaultPaletteCommand        ; pret: jp RunDefaultPaletteCommand
 
 ; --------------------------------------------------------------------------- #
 ; DrawPlayerOrBirdSprite — a = map number, b = OAM base tile.
@@ -515,6 +594,7 @@ DrawPlayerOrBirdSprite:
     call LoadTownMapEntry
     mov al, [ebp + edx]                 ; ld a, [de]
     push esi                            ; push hl (name ptr)
+    mov esi, TOWNMAP_OAM_SINK           ; PORT: same ROM-write quirk — see above.
     call TownMapCoordsToOAMCoords
     call WritePlayerOrBirdSpriteOAM
     pop esi                             ; pop hl (name ptr)
@@ -535,7 +615,7 @@ DrawPlayerOrBirdSprite:
 ; DisplayWildLocations — nest icons for a mon's wild-encounter maps.
 ; --------------------------------------------------------------------------- #
 DisplayWildLocations:
-    ; TODO(unimplemented): call FindWildLocationsOfMon
+    call FindWildLocationsOfMon         ; predef FindWildLocationsOfMon
     call ZeroOutDuplicatesInList
     mov esi, wShadowOAM                 ; ld hl, wShadowOAM
     mov edx, wTownMapCoords             ; ld de, wTownMapCoords
@@ -786,8 +866,69 @@ TownMapSpriteBlinkingAnimation:
     mov al, 25
 .done:
     mov [ebp + wAnimCounter], al
+    call tm_publish_oam                 ; PORT: see below
     jmp DelayFrame
+
+; ---------------------------------------------------------------------------
+; tm_publish_oam — PORT-ONLY. pret writes the cursor straight into wShadowOAM and
+; lets the unconditional VBlank OAM DMA carry it to $FE00; it also parks
+; wUpdateSpritesEnabled at $FF, which in pret means "OBJ are off and already
+; hidden — leave the shadow OAM alone" (PrepareOAMData decrements A *before*
+; `cp -1`, so its HideSprites branch fires on 0, not on $FF).
+;
+; The port cannot inherit that: video/frame.asm's update_oam runs the DMA only when
+; wUpdateSpritesEnabled == 1, and render_sprites positions OBJ from the spr_dos_sx/sy
+; tables and counts spr_oam_valid — neither of which shadow OAM feeds by itself. So a
+; screen that hand-writes OAM must publish it (CLAUDE.md: "whoever owns the canvas owns
+; OAM"). That is exactly what the battle pokéballs do via PrepareStaticOAM; do the same
+; here, once per frame, since the blink animation rewrites OAM as it runs.
+; It also has to enforce the GB's own OBJ visibility rule, which the port's taller
+; canvas otherwise breaks: hardware hides an object whose Y is 0 or >= 160 (screen
+; y = Y - 16, and the GB screen is 144 rows). HideSprites parks every unused entry
+; at Y = $A0 = 160 — off-screen there, but row 144 of our 200-row canvas, i.e. two
+; visible ghost sprites under the map. Zero those entries so the OAM bias sends them
+; to (-8, -16) instead. This is local to the town map on purpose: PrepareStaticOAM's
+; other caller (the battle pokéballs) legitimately places OBJ below GB row 144 on the
+; widescreen canvas, so the rule must not be pushed down into the shared primitive.
+; ---------------------------------------------------------------------------
+tm_publish_oam:
+    pushad
+    lea esi, [ebp + W_SHADOW_OAM]
+    lea edi, [ebp + GB_OAM]
+    mov ecx, W_SHADOW_OAM_SIZE
+    rep movsb                           ; the DMA pret gets for free
+
+    lea edi, [ebp + GB_OAM]             ; apply the hardware Y-hide rule
+    mov ecx, OAM_COUNT
+.hideLoop:
+    mov al, [edi]                       ; OAM Y
+    test al, al
+    jz .hidden                          ; Y == 0   -> off the top on hardware
+    cmp al, 160
+    jb .next                            ; 0 < Y < 160 -> visible on hardware
+.hidden:
+    mov dword [edi], 0                  ; -> (-8, -16), off-canvas
+.next:
+    add edi, 4
+    dec ecx
+    jnz .hideLoop
+
+    mov ecx, OAM_COUNT
+    call PrepareStaticOAM               ; -> spr_oam_valid + spr_dos_sx/sy
+    popad
+    ret
 
 section .data
 %include "assets/town_map_data.inc"
 %include "assets/town_map_gfx.inc"
+
+; --------------------------------------------------------------------------- #
+; PORT-ONLY: the caller's canvas context, saved by LoadTownMap, restored by
+; ExitTownMap. Not GB state — these are the port's compositor inputs.
+; --------------------------------------------------------------------------- #
+section .bss
+tm_saved_view_ptr:  resw 1
+tm_saved_scx:       resb 1
+tm_saved_scy:       resb 1
+tm_saved_stride:    resd 1
+tm_saved_whiteout:  resd 1
