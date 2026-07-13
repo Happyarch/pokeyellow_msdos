@@ -48,7 +48,7 @@ driver only relocates the divergence.
 
 | # | port file | pret counterpart | status | commit | findings |
 |---|---|---|---|---|---|
-| 1 | `src/home/window.asm` | `home/window.asm` | DONE | (this commit) | M-1 (`HandleMenuInput_` split + blink + AB SFX), M-2 (list ▼ coord), M-3 (`PrintText` substitution), M-4 (stale `SFX_PRESS_AB`) |
+| 1 | `src/home/window.asm` | `home/window.asm` | DONE | `da875f9a` | M-1 (`HandleMenuInput_` split + blink + AB SFX), M-2 (list ▼ coord), M-3 (`PrintText` substitution), M-4 (stale `SFX_PRESS_AB`) |
 | 2 | `src/home/textbox.asm` | `home/textbox.asm` | TODO | | |
 | 3 | `src/engine/menus/text_box.asm` | `engine/menus/text_box.asm` + `data/text_boxes.asm` | TODO | | 4× DEVIATION incl. `PlaceMenuCursor` hardcoded-row model |
 | 4 | `src/home/list_menu.asm` | `home/list_menu.asm` | TODO | | DEVIATION(stride); "bespoke bag list" A/B remnants |
