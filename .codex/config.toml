@@ -1,0 +1,33 @@
+sandbox_mode = "workspace-write"
+approval_policy = "on-request"
+
+[sandbox_workspace_write]
+network_access = true
+
+[features.network_proxy]
+enabled = true
+
+[features.network_proxy.domains]
+"**.openai.com" = "allow"
+"**.chatgpt.com" = "allow"
+
+[mcp_servers.dosbox-mcp]
+command = "python3"
+args = ["dos_port/tools/dosbox_mcp/server.py"]
+
+[mcp_servers.dosbox-mcp.env]
+DOSBOX_MCP_SOCKET = "/tmp/dosbox-mcp.sock"
+PKMN_MAP = "dos_port/pkmn.map"
+GB_MEMMAP_INC = "dos_port/include/gb_memmap.inc"
+DOSBOX_MCP_DIR = "dos_port"
+
+# >>> stigmergy managed block — do not edit; `stigmergy init` regenerates it >>>
+[mcp_servers.stigmergy]
+command = "stigmergy"
+args = ["mcp"]
+startup_timeout_sec = 10.0
+tool_timeout_sec = 60.0
+
+[memories]
+use_memories = false
+# <<< stigmergy managed block <<<
