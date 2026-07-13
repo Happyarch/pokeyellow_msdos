@@ -11,14 +11,14 @@ RGB = tuple[int, int, int]
 
 
 def _rgb(value: object, where: str) -> RGB:
-    if not isinstance(value, list) or len(value) != 3 or any(
+    if not isinstance(value, (list, tuple)) or len(value) != 3 or any(
             not isinstance(v, int) or not 0 <= v <= 63 for v in value):
         raise ValueError(f"{where}: RGB must be three 0..63 integers")
     return tuple(value)  # type: ignore[return-value]
 
 
 def _palette(value: object, where: str) -> tuple[RGB, RGB, RGB, RGB]:
-    if not isinstance(value, list) or len(value) != 4:
+    if not isinstance(value, (list, tuple)) or len(value) != 4:
         raise ValueError(f"{where}: palette must contain four RGB colors")
     return tuple(_rgb(v, f"{where}[{i}]") for i, v in enumerate(value))  # type: ignore[return-value]
 

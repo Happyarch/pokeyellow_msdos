@@ -42,8 +42,12 @@ def main() -> None:
         sys.argv = [sys.argv[0]]
         edit()
         return
-    requested = "--export-png" if args.export_png else "--import-png"
-    raise SystemExit(f"{requested} lands in a later colorization stage; use --gen or --verify today")
+    from colors import repaint
+    sidecar = schema.load(SIDECAR)
+    if args.export_png:
+        print(repaint.export_png(args.export_png, sidecar))
+        return
+    print("imported " + repaint.import_png(args.import_png, sidecar, SIDECAR))
 
 
 if __name__ == "__main__":

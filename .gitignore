@@ -60,6 +60,9 @@ dos_port/assets/*
 # Colorization sidecar: human-authored deltas; the generated .inc stays ignored.
 !dos_port/assets/colors/
 !dos_port/assets/colors/palettes.json
+!dos_port/assets/colors/repaint/
+!dos_port/assets/colors/repaint/*.png
+!dos_port/assets/colors/repaint/*.2bpp
 
 # ARR reference docs (MIDI/SoundBlaster/MT-32 specs) — cannot be committed
 docs/sound/
