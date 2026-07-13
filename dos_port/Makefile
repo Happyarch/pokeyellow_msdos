@@ -1216,6 +1216,11 @@ assets/menu_strings.inc: assets/gb_charmap.txt tools/gen_menu_strings.py tools/g
 assets/status_strings.inc: assets/gb_charmap.txt tools/gen_status_strings.py tools/gb_text.py
 	python3 tools/gen_status_strings.py
 
+# Text-box menu strings (pret data/text_boxes.asm) — charmap-encoded via gb_text;
+# two-tier rule. <NEXT>/<PK>/<MN> are emitted as named raw bytes by the generator.
+assets/textbox_strings.inc: assets/gb_charmap.txt tools/gen_textbox_strings.py tools/gb_text.py
+	python3 tools/gen_textbox_strings.py
+
 assets/overworld_strings.inc assets/field_move_text.inc assets/cut_text.inc assets/player_anim_text.inc &: \
                             assets/gb_charmap.txt tools/gen_overworld_strings.py tools/gb_text.py \
                             tools/gen_battle_text.py ../data/text/text_1.asm ../data/text/text_8.asm ../data/text/text_9.asm \
@@ -1461,7 +1466,8 @@ src/engine/menus/field_moves.o: assets/field_moves.inc
 # DisplayTextBoxID_ tables embed the generated UI layout geometry (menus S2);
 # the BATTLE/SAFARI template rows come from the battle layout (battle-UI B5).
 # DisplayTextIDInit checks EVENT_GOT_POKEDEX via events.inc → event_constants.inc.
-src/engine/menus/text_box.o: assets/ui_layout_menus.inc assets/ui_layout_battle.inc
+src/engine/menus/text_box.o: assets/ui_layout_menus.inc assets/ui_layout_battle.inc \
+        assets/textbox_strings.inc
 src/engine/menus/display_text_id_init.o: assets/event_constants.inc
 
 # UI layout geometry — projected menu-window coordinates. The sidecar JSON is
@@ -1526,7 +1532,8 @@ assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_
         assets/base_stats.inc assets/growth_rates.inc \
         assets/moves.inc assets/evos_moves.inc assets/monster_names.inc \
         assets/items.inc assets/item_text.inc assets/gb_charmap.txt assets/menu_strings.inc \
-        assets/status_strings.inc assets/overworld_strings.inc assets/field_move_text.inc \
+        assets/status_strings.inc assets/textbox_strings.inc \
+        assets/overworld_strings.inc assets/field_move_text.inc \
         assets/cut_text.inc assets/player_anim_text.inc \
         assets/type_matchups.inc assets/move_names.inc assets/field_moves.inc \
         assets/effect_categories.inc \

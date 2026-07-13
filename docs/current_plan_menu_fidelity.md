@@ -50,7 +50,7 @@ driver only relocates the divergence.
 |---|---|---|---|---|---|
 | 1 | `src/home/window.asm` | `home/window.asm` | DONE | `da875f9a` | M-1 (`HandleMenuInput_` split + blink + AB SFX), M-2 (list ▼ coord), M-3 (`PrintText` substitution), M-4 (stale `SFX_PRESS_AB`) |
 | 2 | `src/home/textbox.asm` | `home/textbox.asm` | DONE | `d84ac907` | faithful (1 label, `DisplayTextBoxID`). No allowlist entry (already mirrored). One SANCTIONED TODO-HW(banking) deviation; header comment corrected. |
-| 3 | `src/engine/menus/text_box.asm` | `engine/menus/text_box.asm` + `data/text_boxes.asm` | TODO | | 4× DEVIATION incl. `PlaceMenuCursor` hardcoded-row model |
+| 3 | `src/engine/menus/text_box.asm` | `engine/menus/text_box.asm` + `data/text_boxes.asm` | DONE | `PENDING3` | M-5 (`TwoOptionMenu_{Save,Restore}ScreenTiles` missing → row 5), M-6 (stride save slot was re-entrancy-unsafe — FIXED), 8 hand-encoded strings migrated to a generator |
 | 4 | `src/home/list_menu.asm` | `home/list_menu.asm` | TODO | | DEVIATION(stride); "bespoke bag list" A/B remnants |
 | 5 | `src/home/yes_no.asm` | `home/yes_no.asm` + `engine/menus/text_box.asm` | TODO | | allowlisted relocation — challenge |
 | 6 | `src/home/auto_textbox.asm` | `home/window.asm` (split) | TODO | | allowlisted relocation ×3 — challenge |
@@ -208,6 +208,86 @@ stale — 0x3E is some other sound.
 **Fix:** row 15 — delete the local equ + TODO-HW, `%include "assets/audio_constants.inc"`, and
 add the `.inc` to `naming_screen.o`'s Makefile prerequisites (as row 1 did for `window.o`).
 **Severity:** medium (wrong SFX id played on every naming-screen keypress)
+
+### M-5. `TwoOptionMenu_SaveScreenTiles` / `_RestoreScreenTiles` do not exist in the port **[OPEN — row 5]**
+**File:** none — `sqlite3 translation.db` reports both `missing`, and neither name appears anywhere
+under `dos_port/src/` (checked, not assumed).
+**pret:** `engine/menus/text_box.asm:316` / `:334` (called by `DisplayTwoOptionMenu`, `:238`/`:297`/`:308`)
+**What's wrong:** pret's two-option menu **saves the 6×5 tile block it is about to cover into
+`wBuffer`, then restores it** after the choice (that is what makes a yes/no box disappear without a
+full redraw; pret even documents that wider menus don't fully restore). The port's
+`DisplayTwoOptionMenu` (relocated to `src/home/yes_no.asm` — row 5) calls neither, so nothing
+save/restores those tiles.
+**Likely benign, but UNVERIFIED:** the port draws two-option menus through the **window compositor**,
+and hiding the window should reveal the untouched canvas beneath, making the save/restore pair
+structurally unnecessary rather than merely forgotten. That is a hypothesis; nobody has confirmed it,
+and the pret-labelled routines are silently absent instead of being recorded as intentionally so.
+**Fix (row 5):** confirm the window model really does restore the covered tiles (observe a yes/no box
+opening and closing over a drawn screen), then either record the pair as intentionally-absent with a
+written why, or implement them.
+**Severity:** medium (leftover box tiles if the hypothesis is wrong)
+
+### M-6. `DisplayTextBoxID_` saved the caller's stride in a static — and it re-enters itself **[FIXED — row 3]**
+**File:** `dos_port/src/engine/menus/text_box.asm:199` (was: `tb_saved_stride: resd 1` in `.bss`)
+**pret:** n/a — the stride save is a port-only artifact of the 40-wide canvas (`text_row_stride`).
+**What's wrong:** `DisplayTextBoxID_` forced `text_row_stride = 40` for the dispatch and restored it
+from a **single static slot**. But the routine **re-enters itself**: both function-table handlers
+(`DisplayMoneyBox`, `DoBuySellQuitMenu`) call `DisplayTextBoxID`, so a nested dispatch runs inside
+the outer one. The inner call overwrote the static with the already-forced 40, and the outer restore
+then handed the caller **40 instead of its own stride** — i.e. entering the mart from the overworld
+(stride 20) left the overworld at stride 40 on the way out.
+Mostly *masked* today, which is why it survived: row 23 made `PrintText` republish `text_row_stride`
+from its projection record on every call, so overworld dialog self-heals on the next message. Any
+other stride consumer that ran first would not.
+**Fix:** the save slot is now the **stack** (`push dword [text_row_stride]` / `pop dword
+[text_row_stride]`), which is re-entrancy-safe by construction. `pop <mem>` touches neither EFLAGS
+nor AL, so the handlers' CF/AL return contract still passes through — matching pret's plain `ret`.
+The `TWO_OPTION_MENU` jump happens before the push, so it cannot unbalance the stack.
+**Severity:** medium (wrong text stride after a mart/money box, masked by the row-23 republish)
+
+### Row 3 — `src/engine/menus/text_box.asm` (audited)
+
+Nine labels, all `translated`, plus the two `missing` ones filed as **M-5**. One real bug (**M-6**,
+fixed) and one convention violation, fixed:
+
+- **Tier-1 violation fixed: 8 hand-encoded charmap strings migrated to a generator.**
+  `BuySellQuitText`, `UseTossText`, `MoneyText`, `BattleMenuText`, `SafariZoneBattleMenuText`,
+  `SwitchStatsCancelText`, `PokemonMenuEntries`, `CurrencyString` were raw `db 0x81,0x94,…` blocks.
+  They are now **generated** by `tools/gen_textbox_strings.py` → `assets/textbox_strings.inc`
+  (`%include`d, wired into `make assets` + the `text_box.o` prerequisites). `<NEXT>` ($4E) and
+  `<PK>`/`<MN>` ($E1/$E2) are control/glyph bytes `gb_text.encode` cannot map, so the generator emits
+  them as named raw bytes between encoded runs — the documented pattern. `×` and `¥` *are* encoded.
+  The generated bytes were byte-compared against the hand-written block: **identical, all 8**.
+- **SANCTIONED — DEVIATION(en-only):** the JP-only table rows (`JP_MOCHIMONO`, `JP_SAVE_MESSAGE`,
+  `JP_SPEED_OPTIONS`, `JP_AH`, `JP_POKEDEX`) and their strings are omitted from
+  `TextBoxTextAndCoordTable`. Those template IDs are unreachable in the EN game, and
+  `SearchTextBoxTable` simply never matches them. Justification is the shipped locale, not
+  convenience.
+- **SANCTIONED — PROJ menus:** table geometry is the generated `UI_*` equates (canvas-projected),
+  `GetAddressOfScreenCoords` uses the 40-wide canvas stride and an O(1) `imul` for pret's row loop
+  (same result, `D`=0 on exit as pret leaves it), and `GetTextBoxIDText` returns the text pointer in
+  **EAX** rather than DE — a 16-bit DX cannot hold a flat pointer, and EAX is `PlaceString`'s source
+  register.
+- **`DoBuySellQuitMenu`'s 2-row `menu_item_step` is CORRECT, not a bug** — I checked it because it
+  looked wrong. pret's `PlaceMenuCursor` steps **`bc = 40` (two GB rows) by default**, dropping to
+  one row only when `BIT_DOUBLE_SPACED_MENU` is set (the constant's name reads backwards); and pret's
+  `<NEXT>` likewise advances **2 rows** unless `BIT_SINGLE_SPACED_LINES` is set. So BUY/SELL/QUIT
+  really is double-spaced on hardware, and the port's `<NEXT>` implements the same default. The
+  existing `DEVIATION(framework)` tag (spacing carried in `menu_item_step` instead of
+  `hUILayoutFlags`) is accurate.
+- **Allowlist:** nothing to challenge. The only relocation out of this pret file is
+  `DisplayTwoOptionMenu` → `src/home/yes_no.asm`, which is **row 5's** scope and whose ledger line
+  already says "allowlisted relocation — challenge". Not challenged twice.
+- **faithdiff** — every line is one of the two documented blind spots or the indirect dispatch:
+  `DisplayTextBoxID_` drops `DisplayTwoOptionMenu (jp)` because the port's is a **conditional** `je`
+  (faithdiff's port matcher only accepts `call`/`jmp`); it drops `hl (jp)` and adds `eax (call)`
+  because pret's function-table dispatch is `push .done / jp hl` and the port's is `call eax / jmp
+  .done` (same control flow, and CF survives both). `DisplayMoneyBox` adds `[W_STATUS_FLAGS_5]` and
+  `DisplayFieldMoveMonMenu` adds `[wFieldMoves]` / `[wFieldMovesLeftmostXCoord]` because pret writes
+  those with `set/res n,[hl]` and `ld [hli],a`, which faithdiff's pret store-matcher does not see.
+- **Verified:** `DEBUG_TEXTBOXID=0x06` (USE/TOSS) and `=0x0C` (SWITCH/STATS/CANCEL) render
+  **byte-identical** `FRAME.BIN` to the pre-change build, and the rendered PNG shows the generated
+  strings drawing correctly. `make fidelity` 6/6 PASS.
 
 ### Row 2 — `src/home/textbox.asm` (audited, faithful)
 
