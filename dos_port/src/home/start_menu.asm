@@ -16,14 +16,28 @@
 ;    font is swapped in at open and the walk tiles restored at close (the GB
 ;    keeps both resident; this is the port's tile-pattern management, mirroring
 ;    pret's LoadTextBoxTilePatterns/CloseTextDisplay reloads).
-;  * pret's SaveScreenTilesToBuffer2 screen save/restore is not needed: the box
-;    is a non-destructive window overlay. DEVIATION: while a sub-menu (e.g. the
-;    item list) is open the START menu window is dropped rather than left
-;    visible beneath it (pret leaves the underlying box tiles on screen);
-;    RedisplayStartMenu redraws it on return, exactly as pret does.
-;  * pret's `jp CloseTextDisplay` teardown is folded into CloseStartMenu: the
-;    port opens the START menu straight from OverworldLoop (not from inside
-;    DisplayTextID, whose saved-bank stack slot CloseTextDisplay pops).
+;  * SaveScreenTilesToBuffer2 IS called, faithfully (it is a pure wTileMap →
+;    wTileMapBackup2 WRAM copy — movie/title.asm — with no compositor coupling).
+;    Only the *restore* half diverges: DEVIATION(window-compositor) — while a
+;    sub-menu is open the port drops the START window rather than leaving the box
+;    tiles on screen beneath it, so the sub-menus replace pret's
+;    LoadScreenTilesFromBuffer2 with a window drop + RedisplayStartMenu redraw
+;    (see start_sub_menus.asm). The save is therefore currently write-only here;
+;    it is kept because nothing forces it out, and dropping it would silently
+;    break the first sub-menu that does want the buffer back.
+;  * DEVIATION(port-input-model): pret's `call Joypad` has no port counterpart —
+;    Joypad is `missing` (an INT 9h ISR latches H_JOY_* and joypad_update runs
+;    inside DelayFrame, so DelayFrame *is* the poll; there is nothing synchronous
+;    to call). The release-spin is also widened from pret's hJoyPressed/A to
+;    H_JOY_HELD/A|B|START because OverworldLoop reads H_JOY_HELD, not the edge
+;    (overworld.asm:904 — H_JOY_PRESSED is always cleared by the time it looks):
+;    a still-held START would reopen the menu on the very next iteration.
+;  * DEVIATION(port-input-model): pret's `jp CloseTextDisplay` teardown is folded
+;    into CloseStartMenu. CloseTextDisplay is translated but NOT LINKED
+;    (Makefile HOME_CHECK_SRCS — text_script.asm's link closure is blocked on the
+;    same missing Joypad), and the port opens the START menu straight from
+;    OverworldLoop rather than from inside DisplayTextID, whose saved-bank stack
+;    slot CloseTextDisplay pops. Retire this fold when text_script.asm links.
 ;
 ; Input: H_JOY_PRESSED is reliable here (HandleMenuInput runs one DelayFrame →
 ; one joypad_update per iteration).
@@ -38,6 +52,7 @@ bits 32
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
 %include "assets/event_constants.inc"
+%include "assets/audio_constants.inc"    ; SFX_START_MENU
 %include "events.inc"
 
 global DisplayStartMenu
@@ -52,6 +67,9 @@ extern StartMenu_Item
 extern StartMenu_TrainerInfo
 extern StartMenu_SaveReset
 extern StartMenu_Option
+extern PlaySound                     ; home/audio.asm — sound id in AL
+extern PrintSafariZoneSteps          ; engine/overworld/player_state.asm (self-guards on wCurMap)
+extern SaveScreenTilesToBuffer2      ; movie/title.asm (pret: home/tilemap.asm)
 extern HandleMenuInput               ; home/window.asm
 extern EraseMenuCursor
 extern PlaceUnfilledArrowMenuCursor
@@ -83,7 +101,8 @@ DisplayStartMenu:
     ; ld a,[wWalkBikeSurfState] / ld [wWalkBikeSurfStateCopy],a
     mov al, [ebp + W_WALK_BIKE_SURF_STATE]
     mov [ebp + W_WALK_BIKE_SURF_STATE_COPY], al
-    ; TODO-HW: PlaySound SFX_START_MENU — audio HAL (Phase 3)
+    mov al, SFX_START_MENU
+    call PlaySound                      ; pret: ld a, SFX_START_MENU / call PlaySound
 
     ; --- port: swap the text font into vFont ($8800) ---
     ; vFont is time-shared with the walk tiles; force the player to a standing
@@ -110,7 +129,7 @@ RedisplayStartMenu:
     call RefreshCollisionTileMap
     call DrawStartMenu                  ; pret: farcall DrawStartMenu
 RedisplayStartMenu_DoNotDrawStartMenu:
-    ; STUB(safari): farcall PrintSafariZoneSteps — Safari Zone not yet ported
+    call PrintSafariZoneSteps           ; pret: farcall PrintSafariZoneSteps
     call UpdateSprites
 %ifdef DEBUG_STARTMENU
     ; OW-A.13 repro: seed the hAutoBGTransferEnabled=1 state the bag list /
@@ -169,7 +188,7 @@ RedisplayStartMenu_DoNotDrawStartMenu:
     mov al, bl
     test al, PAD_B | PAD_START          ; Start or B → close
     jnz CloseStartMenu
-    ; pret: call SaveScreenTilesToBuffer2 — not needed (window overlay; see header)
+    call SaveScreenTilesToBuffer2       ; wTileMap → wTileMapBackup2 (no live flags here)
     CheckEvent EVENT_GOT_POKEDEX
     mov al, [ebp + wCurrentMenuItem]
     jnz .displayMenuItem
@@ -193,17 +212,20 @@ RedisplayStartMenu_DoNotDrawStartMenu:
 ; CloseStartMenu — pret ref: home/start_menu.asm:CloseStartMenu.
 ; ---------------------------------------------------------------------------
 CloseStartMenu:
-    ; pret: call Joypad / ldh a,[hJoyPressed] / bit B_PAD_A,a / jr nz — spin
-    ; until the closing press is released. Port edge semantics: DelayFrame runs
-    ; one joypad_update; also wait out B/START so OverworldLoop's edge reads
-    ; don't refire (port-model; pret's Joypad re-latch differs).
+    ; DEVIATION(port-input-model): pret spins `call Joypad / bit B_PAD_A,
+    ; [hJoyPressed]` until the closing press clears. Joypad is `missing` in the
+    ; port — DelayFrame runs joypad_update, so it IS the poll — and OverworldLoop
+    ; reads H_JOY_HELD rather than the edge (overworld.asm:904), so B/START must
+    ; be waited out too or a still-held START reopens the menu immediately. See
+    ; the header.
 .closeReleaseLoop:
     call DelayFrame
     test byte [ebp + H_JOY_HELD], PAD_A | PAD_B | PAD_START
     jnz .closeReleaseLoop
     call LoadTextBoxTilePatterns
-    ; pret: jp CloseTextDisplay — folded here (see header): drop the menu
-    ; window and swap the walk tiles back into vFont.
+    ; DEVIATION(port-input-model): pret `jp CloseTextDisplay` — folded here (see
+    ; header; CloseTextDisplay is translated but unlinked): drop the menu window
+    ; and swap the walk tiles back into vFont.
     call hide_window
     call RefreshCollisionTileMap        ; scrub the box tiles out of the mirror
                                         ; (pret: LoadScreenTilesFromBuffer2 analog)

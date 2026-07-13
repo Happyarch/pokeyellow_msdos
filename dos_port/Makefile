@@ -1400,7 +1400,7 @@ assets/pokedex_tiles.inc: ../gfx/pokedex/pokedex.2bpp ../gfx/battle/balls.2bpp \
 # Start menu checks EVENT_GOT_POKEDEX via events.inc → event_constants.inc;
 # DrawStartMenu %includes the generated menu_strings.inc labels and the
 # UI_START_MENU_* equates; start_sub_menus needs the UI_USE_TOSS_* equates.
-src/home/start_menu.o: assets/event_constants.inc
+src/home/start_menu.o: assets/event_constants.inc assets/audio_constants.inc
 src/engine/menus/draw_start_menu.o: assets/event_constants.inc \
         assets/menu_strings.inc assets/ui_layout_menus.inc
 src/engine/menus/start_sub_menus.o: assets/ui_layout_menus.inc

@@ -60,6 +60,7 @@ extern JoypadLowSensitivity     ; src/input/joypad_lowsens.asm (home/joypad2.asm
 global PrepareTitleScreen
 global DisplayTitleScreen        ; MainMenu "B returns to title" seam (retires main_menu_stubs.asm stub)
 global ClearScreen
+global SaveScreenTilesToBuffer2  ; home/start_menu.asm — first *linked* caller (pret: home/tilemap.asm)
 
 ; ---------------------------------------------------------------------------
 ; Constants

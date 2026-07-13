@@ -1,6 +1,6 @@
 # Menu fidelity — de-bespoking the menu system against pret
 
-> **STATUS — RESUMED 2026-07-13.** Rows 1–6 + 23 are DONE (7 of 24). The text-subsystem
+> **STATUS — RESUMED 2026-07-13.** Rows 1–7 + 23 are DONE (8 of 24). The text-subsystem
 > detour this audit was paused for is **complete and archived** (`docs/plans/text_engine.md`):
 > the staging model is gone, `TX_FAR` works, and there is now a `DEBUG_TEXT=1..9` oracle for
 > streamed text — which the golden harness still structurally does not render.
@@ -9,22 +9,24 @@
 > commit). It picks the first row below that is `TODO`/`IN-PROGRESS` and works it. Update
 > the row + append findings each iteration.
 >
-> **Where it stands.** Next row is **7** (`src/home/start_menu.asm`). Rows 7, 8 and 13 are the
-> last SHARED DRIVERS — do those before the leaf screens (9–12, 14–18, 21), because everything
-> downstream inherits their bugs. Rows 19 (`save`, 1080 ln) and 20 (`link_menu`, 1148 ln) are
+> **Where it stands.** Next row is **8** (`src/engine/menus/draw_start_menu.asm`). Rows 8 and 13
+> are the last SHARED DRIVERS — do those before the leaf screens (9–12, 14–18, 21), because
+> everything downstream inherits their bugs. Rows 19 (`save`, 1080 ln) and 20 (`link_menu`, 1148 ln) are
 > mostly TODO-HW SRAM/serial boundaries: low bug yield per line, and they MUST be split across
 > iterations. **Row 22 is the highest-value row on the board and is sequenced last** — the
 > battle move-menu family is missing entirely; it clears blocker B8 and unblocks Mimic + PP
 > items. Consider promoting it.
 >
-> **What the audit found in 7 rows** — worth knowing before trusting any menu file's header:
+> **What the audit found in 8 rows** — worth knowing before trusting any menu file's header:
 > two game-breaking bugs (M-7: the ×NN quantity selector HUNG the game and drew its box
 > invisibly; M-10: every YES/NO drew its ▶ next to the option the player was NOT selecting),
 > two wrong allowlist entries, a wrong finding of my own (M-2), and several false "faithful" /
 > "no live caller" / wrong-pret-file header claims. Row 6 is the first row whose *code* was
 > already faithful — the lie was the file's **placement**, blessed by 3 rubber-stamped
-> allowlist entries. The hit rate on "audited file turns out to hold a real defect" is still
-> 100%. The remaining rows are not a formality.
+> allowlist entries. Row 7 dropped **three** pret calls, each one hidden behind a comment
+> asserting it couldn't be made (a stale `TODO-HW`, a false `STUB`, and a "not needed" that
+> generalized one real deviation into two). The hit rate on "audited file turns out to hold a
+> real defect" is still 100%. The remaining rows are not a formality.
 
 ## Why this exists
 
@@ -75,7 +77,7 @@ driver only relocates the divergence.
 | 4 | `src/home/list_menu.asm` | `home/list_menu.asm` | DONE | `3c2b6097` | **M-7 (qty menu HUNG the game — FIXED)**, M-8 (priced qty window clipped — needs mart anchor), M-9 (▷ swap counter never seeded — FIXED), M-2 **corrected** (my earlier finding was wrong; port's ▼ is faithful → new row 24). Priced price/qty coords swapped → FIXED; non-item tail duplicated the item tail → collapsed to pret's shared tail; 3 hand-encoded strings migrated to a generator; "no live caller" header claim was FALSE. |
 | 5 | `src/home/yes_no.asm` | `home/yes_no.asm` + `engine/menus/text_box.asm` | DONE | `6d74aed2` | **M-10 (single-spaced + cursor on the WRONG option — FIXED)**, **M-11 (`wMenuWatchMovingOutOfBounds` never cleared — FIXED)**, M-5 RESOLVED (Save/RestoreScreenTiles absent by design → SANCTIONED). Allowlist: the boilerplate *file-level* entry was FALSE (it keyed all of `engine/menus/text_box.asm` to yes_no.asm) — deleted, re-added as a hand-justified *label-level* entry for `DisplayTwoOptionMenu` only. 9 hand-encoded strings migrated to a generator. New `DEBUG_YESNO` harness. |
 | 6 | ~~`src/home/auto_textbox.asm`~~ → merged into `src/home/window.asm` | `home/window.asm` | DONE | `9b509fda` | **Allowlist ×3 DELETED, not re-added** — the "split" had no reason; the 3 routines now live in the file that mirrors pret (relocated → translated). Bodies were already faithful. Header named the wrong pret file. M-12 (the button-press flag is write-only in the linked build). |
-| 7 | `src/home/start_menu.asm` | `home/start_menu.asm` | TODO | | |
+| 7 | `src/home/start_menu.asm` | `home/start_menu.asm` | DONE | `PENDING` | **3 dropped calls restored, all 3 hidden behind a false comment**: M-13 `PlaySound SFX_START_MENU` (stale `TODO-HW`; audio is live), M-14 `PrintSafariZoneSteps` (false `STUB(safari)`; the body is real, linked, self-guarding), M-15 `SaveScreenTilesToBuffer2` (header claimed "not needed"; it's a pure WRAM copy — only the *restore* half is window-model). 2 SANCTIONED: `Joypad` + `CloseTextDisplay`, both genuinely unlinkable. No allowlist entries (file is at its mirrored path). |
 | 8 | `src/engine/menus/draw_start_menu.asm` | same | TODO | | |
 | 9 | `src/engine/menus/start_sub_menus.asm` | same (861 ln) | TODO | | expect 2 parts; DEVIATION(icons) |
 | 10 | `src/engine/menus/trainer_card.asm` | `engine/menus/start_sub_menus.asm` | TODO | | allowlisted relocation (7 labels) — challenge |
@@ -505,3 +507,57 @@ save/restore is undersized ("the bottom and right edges of the menu may remain a
 function returns"). The port cannot reproduce that residue. This is **not** a silent fix of a
 Gen-1 bug we were meant to preserve under `BUG_FIX_LEVEL` — the bug is a property of the
 save/restore mechanism, and there is no save/restore to be buggy.
+
+### M-13. START-menu SFX was silent behind a stale `TODO-HW` [FIXED — row 7]
+`DisplayStartMenu` carried `; TODO-HW: PlaySound SFX_START_MENU — audio HAL (Phase 3)`.
+Phase 3 landed: `PlaySound` is translated and linked (`src/home/audio.asm`, sound id in AL,
+self-gated on `g_audio_engine_online`), `SFX_START_MENU equ 0x8F` exists in the generated
+`assets/audio_constants.inc`, and `home/window.asm` already calls `PlaySound` the same way.
+Nothing was blocking it — the comment simply outlived its own premise, and the START menu has
+been opening in silence ever since. Wired (`mov al, SFX_START_MENU` / `call PlaySound`) and the
+comment deleted. A sibling stale comment survives at `src/engine/menus/pokedex.asm:307`
+("audio HAL stub (no-op)") — **not fixed here, out of scope; row 16 owns it.**
+
+### M-14. `PrintSafariZoneSteps` was called nowhere, behind a false `STUB(safari)` [FIXED — row 7]
+`RedisplayStartMenu_DoNotDrawStartMenu` said `; STUB(safari): farcall PrintSafariZoneSteps —
+Safari Zone not yet ported`. Every clause of that is wrong. The routine has a **full, faithful,
+linked body** (`src/engine/overworld/player_state.asm:348`; `player_state.asm` is in `GAME_SRCS`),
+and it **self-guards on `wCurMap`** (`cmp al, SAFARI_ZONE_EAST / jb .ret`; `cmp al,
+CERULEAN_CAVE_2F / jae .ret`) exactly as pret's does — so calling it outside the Safari Zone is
+inert, which is precisely why pret can call it unconditionally on every START-menu redraw. It
+was not a stub and needed no guard; the call was just missing. Wired.
+This is the *third* instance of the class the loop's EPISTEMICS rule exists for: a comment
+asserting a routine is unported while its real body sits linked in the build.
+
+### M-15. `SaveScreenTilesToBuffer2`: the header generalized one deviation into two [FIXED — row 7]
+The file header claimed pret's "SaveScreenTilesToBuffer2 screen save/restore is not needed: the
+box is a non-destructive window overlay", and the call site was commented out on that basis.
+The *restore* half is genuinely window-model — the port's sub-menus drop the START window and let
+`RedisplayStartMenu` redraw instead of pasting back a tilemap snapshot (`start_sub_menus.asm`
+comments this out in 6 places; SANCTIONED, and row 9's to own). But the **save** half is a pure
+`wTileMap → wTileMapBackup2` WRAM copy (`movie/title.asm`, `pushad` / `rep movsb` / `popad`,
+`SCREEN_AREA` = the port's full 40×25 canvas, into a correctly-sized 1000 B buffer) with no
+compositor coupling whatsoever, and it is *already used in paired form* by `cut.asm` and
+`title.asm`. Nothing forced it out. Restored.
+Two things this exposed:
+* It was **not exported.** `SaveScreenTilesToBuffer2` is defined file-locally in `title.asm`
+  with no `global`; the only other callers are behind `%ifdef M72_OVERWORLD_TEXTSCRIPTS`
+  (undefined) or in unlinked `cut.asm`, so nothing had ever link-referenced it and the missing
+  export was invisible. Row 7 is its first linked caller — hence a one-line `global` added to
+  `title.asm` (visibility only, zero behavior change; the only out-of-file edit in this commit).
+* The save is currently **write-only** in the port, since no sub-menu restores from Buffer2. It
+  is kept anyway: it is what pret does, it costs one 1000-byte copy per menu open, and removing
+  it would silently break the first sub-menu that ever wants the buffer back.
+* The routines themselves are **relocated** (pret `home/tilemap.asm` → port `movie/title.asm`).
+  That relocation is out of scope here and is **not** in the menu ledger — filing it: it deserves
+  the same allowlist challenge rows 1–6 got.
+
+### Row 7 verification note (what the green suite does and does not prove)
+`make fidelity` passes 6/6. That is real evidence for M-13 and M-14 — the `DEBUG_STARTMENU`
+harness dumps *after* `RedisplayStartMenu_DoNotDrawStartMenu`, so both new calls execute in the
+scenario and the tilemap/VRAM/OAM still come out byte-identical to the mGBA golden (i.e.
+`PrintSafariZoneSteps` really is inert off-map, and `PlaySound` disturbs no rendered state).
+It proves nothing about M-15: `SaveScreenTilesToBuffer2` sits in `.buttonPressed`, past the dump,
+so the harness never reaches it — its safety rests on inspection (a register-preserving copy into
+a dedicated buffer nothing else reads). And the SFX itself is **audible-only: UNVERIFIED** by any
+harness; no golden or dump captures audio.
