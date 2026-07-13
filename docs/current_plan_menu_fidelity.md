@@ -676,15 +676,20 @@ The dispatch is now scoped as **row 9 part 3** (badge gate + jump table + 5 gene
 closure). It is deferred because it is a real implementation task, not because "it isn't ported".
 
 ### Row 9 part 1 verification note
+**VERIFIED LIVE 2026-07-13** (user-driven swap under DOSBox-X, `SKIP_TITLE=1 DEBUG_SEED_PARTY=1`:
+START → #MON → SELECT ×2 — icons park, rows blank, SFX plays; "lgtm"). Recorded because what
+follows was written *before* that run and is the reason the fix was trusted enough to commit —
+keep it, it is the analytic basis, not a substitute for the observation.
 `make fidelity` 6/6 — but that is a **regression check only**: no golden navigates a party swap,
-so `SwitchPartyMon_ClearGfx` is **not executed by any scenario**. The fix is **UNVERIFIED AT
-RUNTIME**. Its basis is a read of the primitives it depends on, each confirmed in source rather
-than assumed: the cull is `cmp spr_sy, RENDER_H / jge .nextSprite` (`ppu.asm:847`); the park lands
+so `SwitchPartyMon_ClearGfx` is **not executed by any scenario**, and it was **unverified by the
+suite** at commit time. Its basis was a read of the primitives it depends on, each confirmed in
+source rather than assumed: the cull is `cmp spr_sy, RENDER_H / jge .nextSprite` (`ppu.asm:847`); the park lands
 at exactly `spr_dos_sy = RENDER_H` given `mps_org_y = UI_PARTY_PANEL_WY = 0`; `sprite_shift_y` is
 zeroed on every flat-canvas screen (`ppu.asm:421`, the `.not_overworld` path the party menu takes),
 so nothing shifts it back on screen; and `CommitMonPartySpriteOAM` is what turns shadow OAM into
-the `spr_dos_*` the compositor reads. Observing it would mean driving a swap headlessly, which
-needs a hook in `party_menu.asm` — another row's file. **Do it when row 11 opens that file**: a
-`DEBUG_PARTYSWAP` harness (seed party → `RedrawPartyMenu_` → `SwitchPartyMon_ClearGfx` → dump)
-is the natural companion to row 11 and would close this out.
-The SFX itself is **audible-only: UNVERIFIED** — no harness captures audio.
+the `spr_dos_*` the compositor reads. The live run confirmed all of it, but by hand — the path is still **not covered by any
+automated harness**, so a future regression here would be silent. The `DEBUG_PARTYSWAP` harness
+(seed party → `RedrawPartyMenu_` → `SwitchPartyMon_ClearGfx` → `DumpGBState`) is still worth
+building when **row 11** opens `party_menu.asm`, which is where the hook has to live.
+The SFX was **heard** in the live run; it remains uncovered by any automated check (no harness
+captures audio).
