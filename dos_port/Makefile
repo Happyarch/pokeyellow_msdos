@@ -1246,7 +1246,7 @@ assets/gb_charmap.txt:
 # plus the START-sub-menu FAR message streams (menu_text.inc), flattened out of
 # pret's data/text/*.asm by gen_battle_text.collect_far — hence the extra deps.
 assets/menu_strings.inc assets/menu_text.inc assets/trainer_card_strings.inc \
-        assets/party_menu_strings.inc: \
+        assets/party_menu_strings.inc assets/home_pokemon_strings.inc: \
         assets/gb_charmap.txt tools/gen_menu_strings.py \
         tools/gb_text.py tools/gen_battle_text.py
 	python3 tools/gen_menu_strings.py
@@ -1465,7 +1465,7 @@ assets/items.inc:
 # text_far flattened — same encoder as gen_battle_text.py). Consumed by the item
 # USE dispatcher and the party menu's item-use result message.
 assets/item_text.inc: ../engine/items/item_effects.asm ../engine/menus/party_menu.asm \
-                      ../engine/items/tmhm.asm \
+                      ../engine/items/tmhm.asm ../home/pokemon.asm \
                       ../constants/charmap.asm include/gb_memmap.inc \
                       tools/gen_battle_text.py tools/gen_item_text.py assets/battle_text.inc
 	python3 tools/gen_item_text.py
@@ -1476,6 +1476,8 @@ src/engine/menus/party_menu.o: assets/item_text.inc assets/party_menu_strings.in
                                assets/evos_moves.inc
 src/engine/items/item_effects.o: assets/item_text.inc assets/map_dims.inc
 src/engine/items/tmhm.o: assets/item_text.inc
+# PrintStatusCondition's "FNT" glyph run; PartyMenuText_12cc comes from item_text.inc.
+src/home/pokemon.o: assets/home_pokemon_strings.inc
 
 src/data/pokemon_data.o: assets/base_stats.inc assets/growth_rates.inc \
                          assets/moves.inc assets/evos_moves.inc assets/monster_names.inc
@@ -1602,7 +1604,7 @@ assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_
         assets/ui_layout_menus.inc assets/ui_layout_battle.inc \
         assets/map_border_overrides.inc assets/badge_tiles.inc \
         assets/trainer_card_tiles.inc assets/trainer_card_strings.inc \
-        assets/party_menu_strings.inc assets/emotes.inc \
+        assets/party_menu_strings.inc assets/home_pokemon_strings.inc assets/emotes.inc \
         assets/alphabets.inc assets/dex_entries.inc assets/sprite_sets.inc \
         assets/sprite_sheet_pointers.inc assets/pokedex_tiles.inc \
         assets/mon_pics.inc \

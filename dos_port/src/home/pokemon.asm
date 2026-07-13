@@ -10,10 +10,16 @@
 ; index in [wCurSpecies] into wMonHeader, then overwrites byte 0 (the dex id)
 ; with the internal index — matching the original.
 ;
-; DIVERGENCE FROM GB: the data tables (BaseStats, IndexToPokedex) live in the
-; program image as flat labels, not in EBP-relative GB memory, so we index them
-; directly and `rep movsb` into [ebp+wMonHeader] instead of going through the
-; GB CopyData/AddNTimes (which assume EBP-relative source).
+; DEVIATION(flat-data): the data tables (BaseStats, IndexToPokedex) live in the
+; program image as flat labels, not in EBP-relative GB memory, so GetMonHeader
+; indexes them directly and `rep movsb`s into [ebp+wMonHeader] instead of going
+; through GB AddNTimes/CopyData (which assume an EBP-relative source), and drops
+; pret's BankswitchCommon pair (no banks here). It also drops the `predef
+; IndexToPokedex` CALL: that predef's whole contract is wPokedexNum := dex(
+; wPokedexNum), and pret saves wPokedexNum on entry and restores it at .done — so
+; the routine's only NET effect on GB memory is the wMonHeader copy plus wMonHIndex,
+; which is exactly what the port produces. IndexToPokedex is a flat TABLE here, read
+; in place. Nothing observable is lost; verified against pret's push/pop af pair.
 ;
 ; FOSSIL/GHOST GUARD (M5.2): pret GetMonHeader special-cases the three sprite-only
 ; indices FOSSIL_KABUTOPS ($B6), FOSSIL_AERODACTYL ($B7) and MON_GHOST ($B8) —
@@ -50,7 +56,11 @@ extern text_row_stride                  ; src/text/text.asm
 extern ErasePartyMenuCursors            ; src/engine/menus/start_sub_menus.asm
 extern SwitchPartyMon
 extern PartyMenuMirror                  ; src/engine/menus/party_menu.asm — scratch→window blit
+extern PartyMenuPrintText               ; src/engine/menus/party_menu.asm — PrintText via msgbox_party
 extern PrintStatusAilment               ; src/engine/pokemon/status_ailments.asm
+extern IsThisPartyMonStarterPikachu     ; src/engine/pikachu/pikachu_status.asm
+extern CheckPikachuFollowingPlayer      ; src/engine/overworld/pikachu.asm
+extern PartyMenuText_12cc               ; assets/item_text.inc (_SleepingPikachuText1)
 %ifdef DEBUG_PARTYMENU
 extern DelayFrame
 extern DumpBackbuffer
@@ -73,6 +83,10 @@ global PrintStatusCondition
 global DrawHPBar
 
 CHAR_LV        equ 0x6E     ; '<LV>' ":L" tile (constants/charmap.asm:67)
+
+; "FNT" (PrintStatusCondition) — Tier-1 data, charmap-encoded by
+; tools/gen_menu_strings.py. Unterminated: pret writes it with ld_hli_a_string.
+%include "assets/home_pokemon_strings.inc"
 
 section .text
 
@@ -113,8 +127,10 @@ GetMonHeader:
     mov bl, 0x77                      ; size of Aerodactyl fossil sprite
 .specialID:
     mov [ebp + wMonHSpriteDim], bl    ; write sprite dimensions
-    ; TODO-HW: front-pic pointer (FossilKabutops/Ghost/FossilAerodactylPic) —
-    ; battle sprites not ported yet; write 0 so the OOB BaseStats read is skipped.
+    ; TODO-HW: front-pic pointer (FossilKabutopsPic / GhostPic / FossilAerodactylPic).
+    ; Verified 2026-07-13 (row 11): none of the three exists in the port — no symbol
+    ; in pkmn.sym, no data blob, no generator emits them — so there is nothing to point
+    ; at. 0 is written so the guard still skips the out-of-bounds BaseStats read.
     mov word [ebp + wMonHFrontSprite], 0
 
 .writeIndex:
@@ -265,13 +281,19 @@ HandlePartyMenuInput:
     call HandleMenuInput_                       ; call HandleMenuInput_
     mov dword [menu_redraw_cb], 0
     push eax                                    ; push af — pressed keys
+    test al, PAD_B                              ; bit B_PAD_B,a — was B pressed?
+    ; the three `mov`s below are pret's flag-neutral `ld`s: ZF above survives to the
+    ; `jnz` (x86 mov, like SM83 ld, does not touch flags)
     mov byte [ebp + wPartyMenuAnimMonEnabled], 0
     mov al, [ebp + wCurrentMenuItem]
     mov [ebp + wPartyAndBillsPCSavedMenuItem], al
-    ; STUB(pikachu-follow): pret checks IsThisPartyMonStarterPikachu +
-    ; CheckPikachuFollowingPlayer here (the sleeping-Pikachu refusal path,
-    ; .asm_128f). The follower system is not ported; every mon takes the
-    ; .asm_1258 path, as any non-follower mon does in pret.
+    jnz .asm_1258                               ; jr nz, .asm_1258 — B cancels, no refusal
+    mov [ebp + wWhichPokemon], al               ; ld a,[wCurrentMenuItem] / ld [wWhichPokemon],a
+    call IsThisPartyMonStarterPikachu           ; callfar — CF set iff it's OUR Pikachu
+    jnc .asm_1258
+    call CheckPikachuFollowingPlayer            ; ZF=1 iff it is NOT following us
+    jnz .asm_128f                               ; awake-and-following → refuse to pick it
+.asm_1258:
     pop eax                                     ; pop af — pressed keys
     call PlaceUnfilledArrowMenuCursor
     call PartyMenuMirror                        ; port: push the ▷ to the panel window
@@ -295,7 +317,23 @@ HandlePartyMenuInput:
     ; call BankswitchBack — flat memory: nothing to restore
     clc                                         ; and a
     ret
+.asm_128f:
+    ; The starter Pikachu is walking with us — it can't be selected from the menu.
+    ; "There isn't any response..." (_SleepingPikachuText1).
+    pop eax                                     ; pop af — drop the pressed keys
+    mov esi, PartyMenuText_12cc                 ; ld hl, PartyMenuText_12cc
+    ; DEVIATION(window-model): pret's bare `call PrintText` lands in the GB dialog
+    ; rows, which ARE this screen's message area. The port draws the party screen on
+    ; a stride-20 scratch behind two windows, so the message has to be projected —
+    ; same msgbox_party record .printItemUseMessage prints through, and the same one
+    ; that keeps manual_text_scroll from stamping the dialog over the mon-list panel
+    ; (M-29). PartyMenuPrintText selects it and restores msgbox_dialog after.
+    call PartyMenuPrintText                     ; call PrintText
+    mov byte [ebp + wMenuItemToSwap], 0         ; xor a / ld [wMenuItemToSwap],a
+    pop eax                                     ; pop af — saved hTileAnimations
+    mov [ebp + hTileAnimations], al             ; ldh [hTileAnimations],a
 .noPokemonChosen:
+    ; call BankswitchBack — flat memory: nothing to restore
     stc                                         ; scf
     ret
 .swappingPokemon:
@@ -329,12 +367,22 @@ PrintStatusCondition:
     or al, [ebp + edx]                          ; or b — is HP zero?
     pop edx                                     ; pop de
     jnz PrintStatusConditionNotFainted
-    ; fainted: "FNT"
-    mov byte [ebp + esi], 0x85                  ; F
-    mov byte [ebp + esi + 1], 0x8D              ; N
-    mov byte [ebp + esi + 2], 0x93              ; T
-    add esi, 3                                  ; ld_hli_a_string advances hl
-    clc                                         ; and a
+    ; fainted: ld_hli_a_string "FNT" (macros/code.asm:13). The macro emits
+    ; `ld [hli], a` for every char BUT the last and a plain `ld [hl], 'T'` for it —
+    ; so HL ends up advanced by 2, pointing AT the 'T', and A is left holding 'N'.
+    ; (The port used to `add esi, 3` and leave A = 'T': both were wrong.) `and a`
+    ; then returns ZF=0 (A = $8D) / CF=0.
+    mov al, [hp_str_fnt]                        ; 'F'
+    mov [ebp + esi], al
+    inc esi
+    mov al, [hp_str_fnt + 1]                    ; 'N' — stays in A
+    mov [ebp + esi], al
+    inc esi
+    push eax
+    mov al, [hp_str_fnt + 2]                    ; ld [hl], 'T' — no hl advance, no A
+    mov [ebp + esi], al
+    pop eax
+    and al, al                                  ; and a
     ret
 PrintStatusConditionNotFainted:
     jmp PrintStatusAilment                      ; homejp_sf PrintStatusAilment

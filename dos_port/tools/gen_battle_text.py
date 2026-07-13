@@ -246,7 +246,11 @@ def collect_wrappers(cm, mem, far_db):
             # "Effect" suffix in engine/battle/move_effects/heal.asm).
             # Numbered wrappers count too (ItemUseBallText00..08, ItemUseText00,
             # ThrowBallAtTrainerMonText1/2): the suffix is digits, not "Text".
-            m = re.match(r'([A-Z]\w*Text\d*|StartedSleepingEffect):', lines[i].strip())
+            # So do pret's address-suffixed ones, where the disassembler had no name
+            # for the label and used its ROM offset (PartyMenuText_12cc) — "Text" is
+            # in the middle, not at the end.
+            m = re.match(r'([A-Z]\w*Text(?:\d*|_[0-9a-f]+)|StartedSleepingEffect):',
+                         lines[i].strip())
             if not m:
                 i += 1; continue
             label = m.group(1)

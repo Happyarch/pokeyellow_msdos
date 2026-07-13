@@ -15,6 +15,7 @@ Emits, in section .data:
   * the ItemUse* guard/usage texts (ItemUseNoEffectText, ItemUseNotTimeText, …)
   * the nine party-menu item-use result texts (AntidoteText … RareCandyText),
     which RedrawPartyMenu_ selects by wPartyMenuTypeOrMessageID.
+  * PartyMenuText_12cc, the sleeping-Pikachu refusal HandlePartyMenuInput prints.
 
 Labels already emitted by gen_battle_text.py are skipped (a duplicate `global`
 is a link error). DO NOT EDIT the output by hand — re-run this generator.
@@ -39,6 +40,11 @@ ITEM_SRC = [
     # AlreadyKnowsText ("<MON> knows <MOVE>!") — CheckIfMoveIsKnown, the ItemUseTMHM
     # already-knows refusal (items plan, Stage 7).
     "engine/items/tmhm.asm",
+    # PartyMenuText_12cc (_SleepingPikachuText1, "There isn't any response...") —
+    # HandlePartyMenuInput's refusal when the selected mon is the starter Pikachu
+    # and it is following the player. pret keeps this one wrapper in home/, but it
+    # is a party-menu message like the nine above, so it is generated here.
+    "home/pokemon.asm",
 ]
 
 # Emitted by gen_battle_text.py already — skip so the two .inc files don't

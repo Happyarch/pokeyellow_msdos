@@ -59,11 +59,15 @@ global DrawPartyMenu_
 global RedrawPartyMenu_
 global SetPartyMenuHPBarColor
 global PartyMenuMirror
+global PartyMenuPrintText               ; home/pokemon.asm:HandlePartyMenuInput prints
+                                        ; PartyMenuText_12cc through this screen's msgbox
 global DrawHP
 global DrawHP2
 
 extern LoadMonPartySpriteGfxWithLCDDisabled  ; engine/gfx/mon_icons.asm
 extern WriteMonPartySpriteOAMByPartyIndex    ; engine/gfx/mon_icons.asm
+extern IsThisPartyMonStarterPikachu          ; engine/pikachu/pikachu_status.asm
+extern CheckPikachuFollowingPlayer           ; engine/overworld/pikachu.asm
 extern SetMonPartySpriteOrigin               ; engine/gfx/mon_icons.asm (port: OAM→canvas projection)
 extern FillMemory                    ; home/fill_memory.asm — ESI=dest, BX=count, AL=value
 extern UpdateSprites                 ; engine/overworld/movement.asm
@@ -246,9 +250,18 @@ RedrawPartyMenu_:
     call PlaceString                        ; print the pokemon's name
     mov al, [ebp + hPartyMonIndex]          ; ldh a,[hPartyMonIndex]
     mov [ebp + wWhichPokemon], al
-    ; STUB(pikachu-follow): IsThisPartyMonStarterPikachu +
-    ; CheckPikachuFollowingPlayer (walking-pikachu OAM slot $ff) — the follower
-    ; system is not ported; every mon takes the .regularMon path.
+    ; If this row IS our starter Pikachu and it is out walking with us, the icon is
+    ; the follower's, not a party icon: hPartyMonIndex := $ff selects that path in
+    ; WriteMonPartySpriteOAMByPartyIndex (mon_icons.asm:.saveOAM), which was already
+    ; ported and simply unreachable. (The comment here used to claim "the follower
+    ; system is not ported" — false: both routines below are translated and linked.)
+    ; Both calls clobber bc/de/hl exactly as pret's callfar does; the values live on
+    ; the stack from the top of .loop.
+    call IsThisPartyMonStarterPikachu       ; callfar — CF set iff it's OUR Pikachu
+    jnc .regularMon
+    call CheckPikachuFollowingPlayer        ; ZF=1 iff it is NOT following us
+    jz .regularMon
+    mov byte [ebp + hPartyMonIndex], 0xFF   ; ld a,$ff / ldh [hPartyMonIndex],a
 .regularMon:
     ; farcall WriteMonPartySpriteOAMByPartyIndex — place the appropriate pokemon
     ; icon (4 OBJ at the mon's row, from [hPartyMonIndex])
