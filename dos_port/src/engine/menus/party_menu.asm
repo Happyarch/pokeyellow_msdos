@@ -29,9 +29,13 @@
 ;   right column baked as a mirror — is gone; see docs/plans/party_icons_oam.md.
 ;   PartyMenuMirror stays as menu_redraw_cb: it pushes the live cursor (a BG tile)
 ;   to the panel window each iteration, which the icons no longer need.
-; - DEVIATION(text): the party message is drawn whole instead of PrintText's
-;   typewriter reveal (engine far-text streams aren't GB-space assets yet;
-;   S4 toss-dialog precedent).
+; - The party message goes through pret's PrintText, over this screen's own msgbox
+;   PROJECTION record (msgbox_party, below). Until 2026-07-13 it was drawn whole from
+;   a hand-encoded charmap copy of the six messages, under a DEVIATION(text) claiming
+;   "engine far-text streams aren't GB-space assets yet" — they had been generated and
+;   linked all along (assets/item_text.inc), and the hand copy spelled out "POKéMON"
+;   where pret writes the $54 POKé command. msgbox_party is also what ledger finding
+;   M-29 asked for: the projection for "a message box over a full-screen menu".
 ; - VRAM restore on exit is the caller's (StartMenu_Pokemon .exitMenu): the
 ;   HP-bar/status set clobbers vChars2 box tiles, and the icons clobber the OBJ
 ;   tiles at vSprites — which is exactly what pret's
@@ -65,8 +69,6 @@ extern FillMemory                    ; home/fill_memory.asm — ESI=dest, BX=cou
 extern UpdateSprites                 ; engine/overworld/movement.asm
 extern GetPartyMonName               ; home/pokemon.asm — AL=index, ESI=base → wNameBuffer
 extern PlaceString                   ; text/text.asm — ESI=dest, EAX=flat src
-extern place_flat_str                ; text/text.asm — ESI=dest, EAX=flat src (no coord return)
-extern TextBoxBorder                 ; text/text.asm — ESI=top-left, BL=int w, BH=int h
 extern PrintStatusCondition          ; home/pokemon.asm — EDX=status addr, ESI=dest
 extern DrawHPBar                     ; home/pokemon.asm — ESI=dest, DH=tiles, DL=px, BL=sliver
 extern GetHPBarLength                ; engine/gfx/hp_bar.asm — BX=hp, DX=maxhp → DL=px
@@ -80,8 +82,22 @@ extern add_window
 extern g_bg_whiteout
 extern g_obj_over_window             ; ppu/ppu.asm — OBJ over the window layer (GB order)
 extern Delay3                        ; video/frame.asm
+extern DelayFrame                    ; video/frame.asm
 extern GBPalNormal                   ; init/init.asm
-extern TextCommandProcessor          ; home/text.asm — ESI=FLAT TX stream ptr, EBX=cursor
+extern PrintText                     ; home/window.asm — ESI=FLAT TX stream ptr
+extern text_msgbox                   ; home/text.asm — → the active msgbox projection
+extern msgbox_dialog                 ; home/text.asm — the overworld default we restore
+extern text_arrow_pos                ; home/text.asm — MB_ARROW, republished by PrintText
+extern RunPaletteCommand             ; engine/battle/faint_switch.asm (palette-HAL stub)
+extern CanLearnTM                    ; engine/items/tms.asm — → CL (0 = can't learn)
+extern EvosMovesPointerTable         ; assets/evos_moves.inc — flat dd table of flat blobs
+; pret PartyMenuMessagePointers streams — pret's own text_far bodies (data/text/
+; text_3.asm), flattened into assets/item_text.inc by tools/gen_item_text.py.
+extern PartyMenuNormalText
+extern PartyMenuItemUseText
+extern PartyMenuBattleText
+extern PartyMenuUseTMText
+extern PartyMenuSwapMonText
 ; pret PartyMenuItemUseMessagePointers — the nine item-use result texts, generated
 ; into assets/item_text.inc (tools/gen_item_text.py) as {dd stream, dd length} pairs
 ; (the port needs the length to stage a stream in GB space; see .printItemUseMessage).
@@ -90,37 +106,80 @@ extern PartyMenuItemUseMessagePointers
 GBSCR_W   equ 20        ; GB screen tile width (stride of the scratch)
 TILE_SPC       equ 0x7F      ; blank space tile
 CHAR_SWAP_CUR  equ 0xEC      ; ▷ (unfilled right arrow menu cursor)
+PM_ARROW_BLINK equ 20        ; ▼ blink half-period, frames (battle ARROW_BLINK)
+
+; constants/palette_constants.asm (palette-HAL stub args, as start_sub_menus.asm does)
+SET_PAL_PARTY_MENU          equ 0x0A
+SET_PAL_PARTY_MENU_HP_BARS  equ 0xFC
 
 section .data
 align 4
-; --- PartyMenuMessagePointers texts (pret data/text/text_3.asm wording; GB
-; charmap: 'A'=$80/'a'=$A0, é=$BA, ' '=$7F, '.'=$E8, '?'=$E6, '@'=$50) --------
-; "Choose a POKéMON."
-pm_msg_normal1: db 0x82,0xA7,0xAE,0xAE,0xB2,0xA4,0x7F,0xA0,0x7F
-                db 0x8F,0x8E,0x8A,0xBA,0x8C,0x8E,0x8D,0xE8, 0x50
-; "Use item on which" / "POKéMON?"
-pm_msg_item1:   db 0x94,0xB2,0xA4,0x7F,0xA8,0xB3,0xA4,0xAC,0x7F
-                db 0xAE,0xAD,0x7F,0xB6,0xA7,0xA8,0xA2,0xA7, 0x50
-pm_msg_mon_q:   db 0x8F,0x8E,0x8A,0xBA,0x8C,0x8E,0x8D,0xE6, 0x50
-; "Bring out which" / (POKéMON?)
-pm_msg_battle1: db 0x81,0xB1,0xA8,0xAD,0xA6,0x7F,0xAE,0xB4,0xB3,0x7F
-                db 0xB6,0xA7,0xA8,0xA2,0xA7, 0x50
-; "Teach to which" / (POKéMON?)
-pm_msg_tm1:     db 0x93,0xA4,0xA0,0xA2,0xA7,0x7F,0xB3,0xAE,0x7F
-                db 0xB6,0xA7,0xA8,0xA2,0xA7, 0x50
-; "Move POKéMON" / "where?"
-pm_msg_swap1:   db 0x8C,0xAE,0xB5,0xA4,0x7F,0x8F,0x8E,0x8A,0xBA,0x8C,0x8E,0x8D, 0x50
-pm_msg_swap2:   db 0xB6,0xA7,0xA4,0xB1,0xA4,0xE6, 0x50
+; The TMHM / EVO_STONE learnability labels ("ABLE" / "NOT ABLE" — pret's four
+; local .{not,}ableTo{LearnMove,Evolve}Text) are Tier-1 DATA, generated by
+; tools/gen_menu_strings.py.
+%include "assets/party_menu_strings.inc"
 
-; line-1 / line-2 pointer pairs, indexed by wPartyMenuTypeOrMessageID
-; (pret PartyMenuMessagePointers; entry 5 repeats ItemUse, as pret)
-pm_msg_table:
-    dd pm_msg_normal1, 0                 ; NORMAL_PARTY_MENU
-    dd pm_msg_item1,   pm_msg_mon_q      ; USE_ITEM_PARTY_MENU
-    dd pm_msg_battle1, pm_msg_mon_q      ; BATTLE_PARTY_MENU
-    dd pm_msg_tm1,     pm_msg_mon_q      ; TMHM_PARTY_MENU
-    dd pm_msg_swap1,   pm_msg_swap2      ; SWAP_MONS_PARTY_MENU
-    dd pm_msg_item1,   pm_msg_mon_q      ; EVO_STONE_PARTY_MENU (pret aliases ItemUse)
+; ---------------------------------------------------------------------------
+; PartyMenuMessagePointers — pret engine/menus/party_menu.asm:237. RedrawPartyMenu_
+; indexes it with wPartyMenuTypeOrMessageID and PrintTexts the stream. A pointer
+; table is code (Tier-2), so it is hand-written here; the STREAMS it points at are
+; pret's own text_far bodies (data/text/text_3.asm), flattened into
+; assets/item_text.inc by tools/gen_item_text.py — which already scans
+; engine/menus/party_menu.asm and has been emitting these five labels, as globals,
+; since it was written.
+;
+; Until 2026-07-13 this file ignored them and carried a hand-encoded charmap `db`
+; copy of the same six messages (pm_msg_*), drawn whole by a bespoke
+; DrawPartyMenuMessage instead of PrintText, behind a DEVIATION(text) claiming
+; "engine far-text streams aren't GB-space assets yet". They were, and are. Worse,
+; the hand copy re-made M-16's mistake: it spelled "POKéMON" as seven literal
+; glyphs, where pret writes `#MON` — the $54 POKé text COMMAND — so it silently
+; bypassed the handler this port implements. The generated streams carry $54.
+PartyMenuMessagePointers:
+    dd PartyMenuNormalText          ; NORMAL_PARTY_MENU
+    dd PartyMenuItemUseText         ; USE_ITEM_PARTY_MENU
+    dd PartyMenuBattleText          ; BATTLE_PARTY_MENU
+    dd PartyMenuUseTMText           ; TMHM_PARTY_MENU
+    dd PartyMenuSwapMonText         ; SWAP_MONS_PARTY_MENU
+    dd PartyMenuItemUseText         ; EVO_STONE_PARTY_MENU (pret repeats ItemUse)
+
+; ---------------------------------------------------------------------------
+; msgbox_party — the party menu's message-box PROJECTION record (msgbox.inc).
+;
+; The screen is pret's 20×18 stride-20 scratch, shown through two windows, over a
+; whited-out canvas. Neither existing projection fits it, and that gap is what
+; ledger finding M-29 is about:
+;   * msgbox_dialog (text.asm) has MB_WIN_TILEMAP = GB_TILEMAP1 with STARTROW 0, so
+;     PrintText would set_single_window — COLLAPSING this screen's window list — and
+;     paint the dialog into GB_TILEMAP1 rows 0-5, which are the party PANEL's rows.
+;     That shared staging buffer is the bug: manual_text_scroll (text.asm:386) does
+;     the same copy unconditionally on every <PROMPT>/<PARA>, and unlike
+;     sync_dialog_window it is NOT gated on g_bg_whiteout.
+;   * msgbox_centered (core.asm) has no window (good) but is stride-40 and draws
+;     into the CANVAS — which g_bg_whiteout means we never composite. Invisible.
+;
+; So: stride-20, box in this screen's own scratch, NO window (the caller's two party
+; windows survive), and MB_PROMPT = our own wait — which is the mechanism the record
+; was built for, and which keeps <PROMPT> away from manual_text_scroll's rows 0-5.
+; PartyMenuMirror carries the finished box to the window layer, as it already does
+; for every other cell of this screen.
+; ; PROJ menus: GB(0,12) 20×6 — same cells as pret; the projection is the window.
+global msgbox_party
+msgbox_party:
+    dd GBSCR_W                              ; MB_STRIDE       — the stride-20 scratch
+    dd W_TILEMAP + 12 * GBSCR_W             ; MB_BOX_OFS      — (0,12), as pret
+    dd 18                                   ; MB_BOX_W        — 18 interior columns
+    dd 4                                    ; MB_BOX_H        — 4 interior rows
+    dd W_TILEMAP + 14 * GBSCR_W + 1         ; MB_LINE1        — pret bccoord 1,14
+    dd W_TILEMAP + 16 * GBSCR_W + 1         ; MB_LINE2        — <LINE> at (1,16)
+    dd W_TILEMAP + 16 * GBSCR_W + 18        ; MB_ARROW        — ▼ at (18,16)
+    dd PartyMenuPromptWait                  ; MB_PROMPT       — our own wait
+    dd 0                                    ; MB_WIN_WX       ] no window: the box is
+    dd 0                                    ; MB_WIN_WY       ] drawn in the scratch
+    dd 0                                    ; MB_WIN_CLIP     ] this screen already
+    dd 0                                    ; MB_WIN_MAXY     ] mirrors, so the party
+    dd 0                                    ; MB_WIN_TILEMAP  ] window list survives
+    dd 0                                    ; MB_WIN_STARTROW ]
 
 
 section .text
@@ -130,9 +189,13 @@ section .text
 ; pret ref: engine/menus/party_menu.asm:DrawPartyMenu_.
 ; ---------------------------------------------------------------------------
 DrawPartyMenu_:
-    ; xor a / ldh [hAutoBGTransferEnabled],a — port: the transfer analog is
-    ; PartyMenuMirror, which simply isn't called until .done (nothing shows
-    ; the half-drawn scratch), so pret's disable needs no state.
+    ; The port's transfer analog is PartyMenuMirror, which isn't called until .done,
+    ; so nothing here shows a half-drawn scratch — but pret's write is kept anyway
+    ; (M-24's precedent, row 9). hAutoBGTransferEnabled is currently WRITE-ONLY in the
+    ; port: do_bg_transfer was deleted (frame.asm:126, the OW-A.13 corruption family)
+    ; and no reader replaced it. Every other screen still writes it as pret does; a
+    ; screen that quietly stops is how the flag's state drifts from pret's.
+    mov byte [ebp + hAutoBGTransferEnabled], 0  ; xor a / ldh [hAutoBGTransferEnabled],a
     ; call ClearScreen — port: title.asm's ClearScreen is canvas-scoped (and
     ; re-arms the canvas auto-transfer mid-draw); the party screen is the
     ; stride-20 scratch, whose 20×18 rows are the contiguous 360 bytes at
@@ -225,15 +288,59 @@ RedrawPartyMenu_:
     call SetPartyMenuHPBarColor             ; color the HP bar (on SGB)
     pop esi                                 ; pop hl
     jmp .printLevel
+; Both learnability columns were STUB(items-plan) — "reachable only from TM/HM item
+; USE / evolution-stone USE, which current_plan_items.md owns". Reachability is not a
+; blocker, and nothing was blocking: CanLearnTM (engine/items/tms.asm) and
+; EvosMovesPointerTable (assets/evos_moves.inc) are both translated AND linked in the
+; current build. The stubs cost every TMHM/EVO_STONE party menu its whole right-hand
+; column — the one thing those two menus exist to show.
 .teachMoveMenu:
-    ; STUB(items-plan): TMHM_PARTY_MENU ("ABLE"/"NOT ABLE" via predef
-    ; CanLearnTM) is reachable only from TM/HM item USE, which
-    ; current_plan_items.md owns; the dispatch branch is kept.
+    push esi                                ; push hl
+    call CanLearnTM                         ; predef CanLearnTM → CL = 0 (can't learn)
+    pop esi                                 ; pop hl
+    mov eax, pm_str_able                    ; ld de,.ableToLearnMoveText
+    test cl, cl                             ; ld a,c / and a
+    jnz .placeMoveLearnabilityString
+    mov eax, pm_str_not_able                ; ld de,.notAbleToLearnMoveText
+.placeMoveLearnabilityString:
+    push esi                                ; push hl
+    add esi, GBSCR_W + 9                    ; ld bc,20+9 — down 1 row, right 9 cols
+    call PlaceString
+    pop esi                                 ; pop hl
     jmp .printLevel
 .evolutionStoneMenu:
-    ; STUB(items-plan): EVO_STONE_PARTY_MENU ("ABLE"/"NOT ABLE" from the mon's
-    ; EvosMoves stone entries) is reachable only from evolution-stone USE.
-    jmp .printLevel
+    ; pret copies the mon's EvosMoves blob into wEvoDataBuffer with two FarCopyData
+    ; calls (it has to: the table is in another bank). The port's EvosMovesPointerTable
+    ; is a flat dd table of flat blobs, so the entries are walked in place — same scan,
+    ; same terminator, same 3-byte / 4-byte (EVOLVE_ITEM) entry stride, no staging copy.
+    push esi                                ; push hl
+    movzx eax, byte [ebp + wLoadedMonSpecies]
+    dec eax                                 ; dec a — table is 0-based
+    mov edi, [EvosMovesPointerTable + eax * 4]
+    mov eax, pm_str_not_able                ; ld de,.notAbleToEvolveText
+.checkEvolutionsLoop:
+    mov cl, [edi]                           ; ld a,[hli] — entry type
+    test cl, cl                             ; and a — reached terminator?
+    jz .placeEvolutionStoneString           ; if so, place the "NOT ABLE" string
+    cmp cl, EVOLVE_ITEM
+    jnz .nextEvoEntry                       ; jr nz,.checkEvolutionsLoop (3-byte entry)
+    ; a stone evolution entry: [+1] = the stone it needs, and it is 4 bytes long
+    mov cl, [edi + 1]                       ; ld b,[hl]
+    add edi, 4
+    cmp [ebp + wEvoStoneItemID], cl         ; cp b — the stone the player used?
+    jnz .checkEvolutionsLoop
+    mov eax, pm_str_able                    ; ld de,.ableToEvolveText
+    jmp .placeEvolutionStoneString
+.nextEvoEntry:
+    add edi, 3
+    jmp .checkEvolutionsLoop
+.placeEvolutionStoneString:
+    pop esi                                 ; pop hl
+    push esi                                ; push hl
+    add esi, GBSCR_W + 9                    ; ld bc,20+9 — down 1 row, right 9 cols
+    call PlaceString
+    pop esi                                 ; pop hl
+    ; fall through to .printLevel (pret: jr .printLevel)
 .printLevel:
     add esi, 10                             ; move 10 columns to the right
     call PrintLevel                         ; [wLoadedMonLevel] via LoadMonData
@@ -245,8 +352,14 @@ RedrawPartyMenu_:
     inc bl                                  ; inc c
     jmp .loop
 .afterDrawingMonEntries:
-    ; ld b,SET_PAL_PARTY_MENU / call RunPaletteCommand — TODO-HW: SGB/CGB
-    ; palette command (Phase 5)
+    ; The call was dropped behind "TODO-HW: SGB/CGB palette command (Phase 5)". The
+    ; PALETTE is Phase 5; the CALL is not. RunPaletteCommand is a linked global (a
+    ; ret-only palette-HAL stub in faint_switch.asm) and six other screens — status,
+    ; naming, pokédex, league PC, battle send-out, the trainer card — all call it
+    ; today. Only this screen skipped it, so the day the HAL lands the party menu
+    ; would have been the one screen with no palette. Restored.
+    mov bl, SET_PAL_PARTY_MENU              ; ld b, SET_PAL_PARTY_MENU
+    call RunPaletteCommand
 .printMessage:
     mov al, [ebp + W_STATUS_FLAGS_5]        ; ld hl,wStatusFlags5 / ld a,[hl]
     push eax                                ; push af
@@ -254,14 +367,15 @@ RedrawPartyMenu_:
     mov al, [ebp + wPartyMenuTypeOrMessageID] ; message ID
     cmp al, FIRST_PARTY_MENU_TEXT_ID
     jae .printItemUseMessage
-    ; DEVIATION(text): pret streams PartyMenuMessagePointers[id] through
-    ; PrintText; the port draws the message whole (see header)
-    call DrawPartyMenuMessage
+    movzx eax, al                           ; add a / ld hl,PartyMenuMessagePointers
+    mov esi, [PartyMenuMessagePointers + eax * 4]   ; ld a,[hli] / ld h,[hl] / ld l,a
+    call PartyMenuPrintText                 ; call PrintText (through our projection)
 .done:
     pop eax                                 ; pop af
     mov [ebp + W_STATUS_FLAGS_5], al        ; ld [hl],a
-    ; ld a,1 / ldh [hAutoBGTransferEnabled],a — port: mirror the finished
-    ; scratch to GB_TILEMAP1 (the windows' source) in one shot
+    mov byte [ebp + hAutoBGTransferEnabled], 1  ; ld a,1 / ldh [hAutoBGTransferEnabled],a
+    ; …and do what that flag means here: mirror the finished scratch to GB_TILEMAP1
+    ; (the two windows' source) in one shot. See DrawPartyMenu_ on the dead flag.
     call PartyMenuMirror
     ; port(window model): (re)build the two party windows; a rebuilt list also
     ; drops any stale field-move pop-up window (pret's screen-buffer restore)
@@ -271,32 +385,78 @@ RedrawPartyMenu_:
 .printItemUseMessage:
     ; pret ref: engine/menus/party_menu.asm:.printItemUseMessage — mask the id,
     ; index PartyMenuItemUseMessagePointers, load the used mon's nick into
-    ; wNameBuffer (the streams' text_ram), and print.
+    ; wNameBuffer (the streams' text_ram operand), and PrintText.
     ;
-    ; DEVIATION(text): pret's PrintText draws the message box itself; the port
-    ; draws the border here and runs TextCommandProcessor at the box's cursor,
-    ; writing into the party menu's own stride-20 scratch (which .done then
-    ; mirrors to the window layer). The caller set BIT_NO_TEXT_DELAY, so there is
-    ; no per-letter reveal to composite; and every one of these nine texts
-    ; terminates with <DONE>/text_end (never <PROMPT>), so nothing blocks before
-    ; the mirror — ItemUseMedicine does the button wait afterwards.
+    ; This used to hand-draw the border and run TextCommandProcessor at the box's
+    ; cursor, under a DEVIATION(text) whose stated reason — "every one of these nine
+    ; texts terminates with <DONE>/text_end (never <PROMPT>), so nothing blocks" —
+    ; is false: RareCandyText is `text_far / sound_get_item_1 / text_promptbutton /
+    ; text_end` (pret line 297), and the generated stream ends $0B $06 $50 — a sound
+    ; command and a PROMPT. Open-coding the printer meant that prompt was never
+    ; dispatched. It goes through PrintText now, like every other message in the game.
     and al, 0x0F                            ; and $0F
     movzx eax, al
     mov ecx, [PartyMenuItemUseMessagePointers + eax * 8]      ; the stream (flat)
-    push ecx
+    push ecx                                ; push hl
     mov al, [ebp + wUsedItemOnWhichPokemon]
     mov esi, wPartyMonNicks
     call GetPartyMonName                    ; → wNameBuffer
-    pop edx                                 ; flat stream ptr (survives the box draw)
-    push edx
-    mov esi, W_TILEMAP + 12 * GBSCR_W       ; the standard dialog cell (0,12)
-    mov bl, 18                              ; interior width  (total 20)
-    mov bh, 4                               ; interior height (total 6)
-    call TextBoxBorder
-    mov ebx, W_TILEMAP + 14 * GBSCR_W + 1   ; bccoord 1,14 — TCP's cursor
-    pop esi                                 ; the flat stream — TCP walks it in place
-    call TextCommandProcessor
+    pop esi                                 ; pop hl — the stream
+    call PartyMenuPrintText
     jmp .done
+
+; ---------------------------------------------------------------------------
+; PartyMenuPrintText — pret's `call PrintText`, through this screen's projection.
+; In: ESI = flat text-command stream.
+;
+; text_msgbox is global mutable state, so the record is selected around the call
+; and restored to the overworld default afterwards: leaving it pointed here would
+; re-project the next overworld dialog into a scratch nothing is mirroring. (The
+; alternative — hold it for the screen's lifetime — would have to be un-held by the
+; screen's exit path, which lives in another file. Scoping it to the call keeps the
+; whole projection decision inside the screen that makes it.)
+; ---------------------------------------------------------------------------
+PartyMenuPrintText:
+    mov dword [text_msgbox], msgbox_party
+    call PrintText
+    mov dword [text_msgbox], msgbox_dialog
+    ret
+
+; ---------------------------------------------------------------------------
+; PartyMenuPromptWait — msgbox_party's MB_PROMPT hook: blink the ▼ at
+; [text_arrow_pos] and wait for A/B, mirroring the scratch each frame so the arrow
+; is actually on screen. Modelled on battle's BattlePromptWait (core.asm:569), which
+; exists for the same reason: the default (text_prompt_hook == 0) is
+; manual_text_scroll, and manual_text_scroll HIJACKS the window layer — it copies
+; the scratch's dialog rows into GB_TILEMAP1 rows 0-5 and forces the overworld
+; dialog's WX/WY. Those rows are this screen's mon-list panel. See M-29.
+; All registers preserved (the caller is mid-stream).
+; ---------------------------------------------------------------------------
+PartyMenuPromptWait:
+    pushad
+    mov esi, [text_arrow_pos]
+    mov byte [ebp + esi], CHAR_DOWN_ARROW
+    mov ecx, PM_ARROW_BLINK
+.wait:
+    call PartyMenuMirror                    ; the ▼ lives in the scratch; show it
+    call DelayFrame
+    test byte [ebp + H_JOY_PRESSED], PAD_A | PAD_B
+    jnz .done
+    dec ecx
+    jnz .wait
+    mov ecx, PM_ARROW_BLINK                 ; blink toggle
+    cmp byte [ebp + esi], CHAR_DOWN_ARROW
+    jne .turnOn
+    mov byte [ebp + esi], TILE_SPC
+    jmp .wait
+.turnOn:
+    mov byte [ebp + esi], CHAR_DOWN_ARROW
+    jmp .wait
+.done:
+    mov byte [ebp + esi], TILE_SPC          ; erase the ▼
+    call PartyMenuMirror
+    popad
+    ret
 
 ; ---------------------------------------------------------------------------
 ; SetPartyMenuHPBarColor — store the current bar's color for the animation
@@ -308,8 +468,8 @@ SetPartyMenuHPBarColor:
     movzx eax, byte [ebp + wWhichPartyMenuHPBar]
     lea esi, [eax + wPartyMenuHPBarColors]  ; ld hl,wPartyMenuHPBarColors / add
     call GetHealthBarColor                  ; DL=pixels → [ebp+esi] = color
-    ; ld b,SET_PAL_PARTY_MENU_HP_BARS / call RunPaletteCommand — TODO-HW:
-    ; SGB palette command (Phase 5)
+    mov bl, SET_PAL_PARTY_MENU_HP_BARS      ; ld b, SET_PAL_PARTY_MENU_HP_BARS
+    call RunPaletteCommand                  ; (palette-HAL stub — see .afterDrawingMonEntries)
     inc byte [ebp + wWhichPartyMenuHPBar]   ; ld hl,… / inc [hl]
     ret
 
@@ -374,30 +534,6 @@ DrawHP_:
     pop ebx
     pop esi                                 ; pop hl
     pop edx                                 ; pop de — DL = bar pixels
-    ret
-
-; ---------------------------------------------------------------------------
-; DrawPartyMenuMessage — message box border + PartyMenuMessagePointers[id]
-; text, drawn whole into scratch rows 12-17 (DEVIATION(text), see header).
-; The auto-transfer mirrors it to GB_TILEMAP1; UI_MESSAGE_BOX shows it.
-; ---------------------------------------------------------------------------
-DrawPartyMenuMessage:
-    mov esi, W_TILEMAP + 12 * GBSCR_W  ; standard dialog cell (0,12)
-    mov bl, 18                              ; interior width  (total 20)
-    mov bh, 4                               ; interior height (total 6)
-    call TextBoxBorder
-    movzx eax, byte [ebp + wPartyMenuTypeOrMessageID]
-    mov ecx, [pm_msg_table + eax * 8]       ; line 1
-    mov edx, [pm_msg_table + eax * 8 + 4]   ; line 2 (0 = single-line)
-    mov esi, W_TILEMAP + 14 * GBSCR_W + 1
-    mov eax, ecx
-    call place_flat_str
-    test edx, edx
-    jz .done
-    mov esi, W_TILEMAP + 16 * GBSCR_W + 1
-    mov eax, edx
-    call place_flat_str
-.done:
     ret
 
 ; ---------------------------------------------------------------------------
