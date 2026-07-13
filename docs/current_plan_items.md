@@ -159,6 +159,22 @@ Archive to `docs/plans/items.md` when complete.
   staging is what needed a length pret never had to know. pret reads the stream
   in place. Making TCP take a linear pointer deletes all seven staging copies
   (and `iu_print_text`) and retires this bug class.
+
+  **ATTEMPTED 2026-07-12 AND REVERTED — do not redo it blind.** The change was:
+  TCP's stream fetches become `[esi]`; `.cmd_start` passes `esi` straight to
+  `PlaceString` and takes back a linear `edx`; `.cmd_far` reads a 32-bit linear
+  `dd` (the port's *only* TX_FAR producers — `text_script.asm`,
+  `trainer_engine.asm` — already emit `dd`, and both generators flatten
+  `text_far` away, so no generated stream reaches `.cmd_far` at all); every
+  caller passes linear (`lea esi,[ebp+…]` for WRAM-composed streams); the five
+  pure flat→WRAM staging copies are deleted. It **assembles, lints clean, and
+  passes `make fidelity` 6/6** — but it regresses live text: the `DEBUG_ITEMTM`
+  flow reaches the party menu, then parks on an overworld dialog box rendering
+  `REDRED` (two `<PLAYER>` expansions) instead of the TM message, and never
+  returns. The goldens do not cover streamed text, so they do not catch it.
+  Root cause not found; next attempt should bisect the caller conversions one
+  file at a time against `DEBUG_ITEMTM` (which *is* a good oracle here) rather
+  than converting all of them at once.
   - Verify: seeded bag TM teaches a compatible move, refuses an incompatible
     mon, HM not consumed.
 - [ ] **Stage 8 — `ItemUseEvoStone`.** Port `Func_d85d` (stone-applicability
