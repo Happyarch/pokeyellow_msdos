@@ -86,7 +86,7 @@ driver only relocates the divergence.
 | 6 | ~~`src/home/auto_textbox.asm`~~ → merged into `src/home/window.asm` | `home/window.asm` | DONE | `9b509fda` | **Allowlist ×3 DELETED, not re-added** — the "split" had no reason; the 3 routines now live in the file that mirrors pret (relocated → translated). Bodies were already faithful. Header named the wrong pret file. M-12 (the button-press flag is write-only in the linked build). |
 | 7 | `src/home/start_menu.asm` | `home/start_menu.asm` | DONE | `3c409873` | **3 dropped calls restored, all 3 hidden behind a false comment**: M-13 `PlaySound SFX_START_MENU` (stale `TODO-HW`; audio is live), M-14 `PrintSafariZoneSteps` (false `STUB(safari)`; the body is real, linked, self-guarding), M-15 `SaveScreenTilesToBuffer2` (header claimed "not needed"; it's a pure WRAM copy — only the *restore* half is window-model). 2 SANCTIONED: `Joypad` + `CloseTextDisplay`, both genuinely unlinkable. No allowlist entries (file is at its mirrored path). |
 | 8 | `src/engine/menus/draw_start_menu.asm` | same | DONE | `634dcbe6` | **First row whose x86 was faithful end to end** (both labels; flag preservation correct at all 3 CheckEvent/test → branch pairs). The defects were in the *data* and the *tooling*: M-16 (the generator encoded the RENDERED string, so pret's `#MON` — the $54 POKé text command — became 7 literal glyphs, silently bypassing the handler the port implements; **generator patched**, data now byte-identical to pret), M-17 (`StartMenuShowWindow`'s `global` + "re-arms it after sub-menus" comment — no such caller has ever existed), M-18 (`update_label_db` couldn't see `equ` aliases, so 7 present pret labels reported `missing`; **tool patched**). 1 SANCTIONED: the canvas→window bridge. No allowlist entries. |
-| 9 | `src/engine/menus/start_sub_menus.asm` | same (861 ln) | **IN-PROGRESS (parts 1+2 of 3 done)** | `6ce2e8b6` (p1), `1b66f55a` (p2) | **Part 1 = the party half** (`StartMenu_Pokemon`, `ErasePartyMenuCursors`, `SwitchPartyMon{,_ClearGfx,_InitVarOrSwapData}`). M-19 (the swap **left both mons' icons on screen** — the `DEVIATION(icons)` excusing the missing OAM park went stale when icons became OBJ; FIXED, incl. the `RENDER_H` projection pret's 144px park constant needs), M-20 (`SFX_SWAP` + `WaitForSoundToFinish` missing behind another stale `TODO-HW`; FIXED — and wiring it is *what makes M-19 visible*), M-21 (the field-move stub's stated reason is FALSE — the effects ARE ported, they're in check-only files; comment corrected, dispatch scoped as **part 3**). Header advertised 4 STUBs that Session 9 had already wired. **Part 2 = the bag half + the 4 seams — DONE**: M-22 (a private `ret`-only `RunDefaultPaletteCommand` **shadowing the real global body** — the stub class the conventions exist to catch; a 3rd copy sits in `pokedex.asm`, filed), M-23 (`.exitMenu` dropped `LoadTextBoxTilePatterns`+`UpdateSprites` under a window-model excuse that covers neither — the START box could render out of HP-bar tiles), M-24 (`ItemMenuLoop` dropped the `hAutoBGTransferEnabled=0` store — the OW-A.13 leak class), M-25 (both refusal messages were `STUB(text)` blaming unported *features*, while the guard branches ran and showed **nothing**; nothing blocked them — generator patched, both now print), M-26 (`StartMenu_SaveReset` dropped pret's RESET branch *while row 8's `DrawStartMenu` already draws the RESET label*, and returned to the START menu instead of the map). Only `TrainerInfo_FarCopyData` still `missing` → **row 10**. **Part 3 = the field-move dispatch** (badge gate + jump table + 5 text streams + the decision to link `cut.asm` / `field_move_messages.asm` / `text_script.asm`, which also unblocks M-26's exact tail). |
+| 9 | `src/engine/menus/start_sub_menus.asm` | same (861 ln) | **DONE** | `6ce2e8b6` (p1), `1b66f55a` (p2), `PENDING3` (p3) | **Part 1 = the party half** (`StartMenu_Pokemon`, `ErasePartyMenuCursors`, `SwitchPartyMon{,_ClearGfx,_InitVarOrSwapData}`). M-19 (the swap **left both mons' icons on screen** — the `DEVIATION(icons)` excusing the missing OAM park went stale when icons became OBJ; FIXED, incl. the `RENDER_H` projection pret's 144px park constant needs), M-20 (`SFX_SWAP` + `WaitForSoundToFinish` missing behind another stale `TODO-HW`; FIXED — and wiring it is *what makes M-19 visible*), M-21 (the field-move stub's stated reason is FALSE — the effects ARE ported, they're in check-only files; comment corrected, dispatch scoped as **part 3**). Header advertised 4 STUBs that Session 9 had already wired. **Part 2 = the bag half + the 4 seams — DONE**: M-22 (a private `ret`-only `RunDefaultPaletteCommand` **shadowing the real global body** — the stub class the conventions exist to catch; a 3rd copy sits in `pokedex.asm`, filed), M-23 (`.exitMenu` dropped `LoadTextBoxTilePatterns`+`UpdateSprites` under a window-model excuse that covers neither — the START box could render out of HP-bar tiles), M-24 (`ItemMenuLoop` dropped the `hAutoBGTransferEnabled=0` store — the OW-A.13 leak class), M-25 (both refusal messages were `STUB(text)` blaming unported *features*, while the guard branches ran and showed **nothing**; nothing blocked them — generator patched, both now print), M-26 (`StartMenu_SaveReset` dropped pret's RESET branch *while row 8's `DrawStartMenu` already draws the RESET label*, and returned to the START menu instead of the map). Only `TrainerInfo_FarCopyData` still `missing` → **row 10**. **Part 3 = the field-move dispatch — DONE**: M-27. pret's real dispatch (GetPartyMonName + pointer table + badge gates + 6 generated refusal streams). STRENGTH / DIG / SOFTBOILED / FLASH / TELEPORT **work**; SURF+CUT+FLY gate correctly and stub at the leaf (`ItemUseSurfboard` ret-stub / `cut.asm` unlinked on `WriteOAMBlock` / `ChooseFlyDestination` genuinely missing). **`field_move_messages.asm` linked** — its sole blocker was `PlayCry`, now a documented ret-stub: one symbol was gating two field moves. |
 | 10 | `src/engine/menus/trainer_card.asm` | `engine/menus/start_sub_menus.asm` | TODO | | allowlisted relocation (7 labels) — challenge |
 | 11 | `src/engine/menus/party_menu.asm` + `src/home/pokemon.asm` | `engine/menus/party_menu.asm`, `home/pokemon.asm` | TODO | | DEVIATION(text) ×3; legacy hand-encoded strings (debt) |
 | 12 | `src/engine/menus/swap_items.asm` | same | TODO | | "PLACEHOLDERS below … ROOT migrates + deletes" |
@@ -787,3 +787,50 @@ Two bugs in five lines.
 * **faithdiff blind spot, worth knowing:** it reports `- DROPPED Init (jp)` for `StartMenu_SaveReset`
   even though the branch is there — its port matcher only accepts `call`/`jmp`, never `jnz`/`jz`.
   Confirmed present by disassembling `PKMN.EXE`: `test $0x40,%al / jne <Init>`. Do not "fix" it.
+
+### M-27. The field-move dispatch: implemented. The blocker was LINKAGE, and it was one symbol [FIXED — row 9 part 3]
+Row 9 part 1 established that "none of the field effects are ported yet" was false (M-21). Part 3
+acts on it. `.choseOutOfBattleMove` is now pret's real dispatch — `GetPartyMonName`, the
+`wFieldMoves[wCurrentMenuItem]` index, the pointer table, `wObtainedBadges` in AL, and all nine
+leaves with their badge gates and refusal messages. What each leaf does *today*:
+
+| leaf | state | why |
+|---|---|---|
+| **STRENGTH** | **works** | needed `field_move_messages.asm` linked (below) |
+| **SURF** | badge gate + `IsSurfingAllowed` run; the surfboard itself is inert | `ItemUseSurfboard` is a `ret`-stub (`item_use_stubs.asm`), so `UseItem` returns 0 and control takes **pret's own refusal path** (`.reloadNormalSprite`). Correct shape, no surfing. |
+| **DIG** | **works** | `ItemUseEscapeRope` is translated and linked |
+| **SOFTBOILED** | **works** | `Divide` + the maxHP/5 borrow-chain compare + `ItemUseMedicine` (POTION) |
+| **FLASH** | **works** | `wMapPalOffset = 0`, message, `.goBackToMap` |
+| **TELEPORT** | **works** | both messages, `BIT_FLY_WARP`/`BIT_ESCAPE_WARP`, `Func_1510`, `DelayFrames` |
+| **FLY** | badge gate + the indoor "can't fly here" refusal work; the destination does not | `ChooseFlyDestination` is the ONE genuinely `missing` routine in the whole dispatch (the Town Map fly-target UI). Tagged `STUB(fly-destination)`. |
+| **CUT** | badge gate works; the cut does not | `UsedCut` is **translated** — `cut.asm` just doesn't link (`WriteOAMBlock` in check-only `home/oam.asm`, plus `AnimCut`→`cut2.asm`→the unported `AdjustOAMBlock*Pos` battle-anim primitives). A linkage/OAM-primitive gap, not an unported effect. Tagged `STUB(cut-animation)`. |
+| **all badge-gated leaves** | **refuse correctly** | `.newBadgeRequired` prints the real message |
+
+**`field_move_messages.asm` is now LINKED.** The Makefile said its blocker was `PlayCry`, "unported
+cry synth" — and that was *true*, but it was one symbol gating two field moves. `PlayCry` is now a
+documented `ret`-stub in `home_stubs.asm` (its only live caller is the `text_asm` hook inside
+`UsedStrengthText`, which does `call PlayCry / call Delay3 / jmp TextScriptEnd` — so the stub costs
+the cry and nothing else: the STRENGTH message still prints and still holds). That is the whole
+price of STRENGTH + SURF. **The lesson generalises**: the check-only list is not a list of unported
+files, it is a list of files with an unresolved symbol, and the symbol is sometimes this cheap.
+Re-read those Makefile notes — several predate the audio destub, as M-20 already showed.
+Six more FAR streams generated (`gen_menu_strings.py` MENU_FAR → `assets/menu_text.inc`).
+
+**Still deferred, and now precisely:** `CloseTextDisplay` / `HoldTextDisplayOpen` (check-only
+`text_script.asm`, a 15-symbol closure incl. `Joypad` and eight `DisplayTextID` special cases —
+owned by the script-engine session, correctly out of scope here). `.goBackToMap` uses
+`CloseStartMenu`, the port's already-sanctioned fold of `CloseTextDisplay`, as M-26 does.
+
+### Row 9 part 3 verification note
+`make fidelity` 6/6 (regression only — no golden opens the field-move menu). `faithdiff
+StartMenu_Pokemon`: 24 of 31 pret calls matched, up from 17. The seven unmatched are each
+accounted for: `ChooseFlyDestination` + `LoadFontTilePatterns` (the FLY tail — `STUB`), `UsedCut`
+(`STUB`), `Save`/`LoadScreenTilesFromBuffer1` (window model → `fm_show_window`/`fm_drop_window`),
+`CloseTextDisplay` (→ `CloseStartMenu`), and **`hl (jp)`, a false positive**: that is pret's
+`jp hl` indirect dispatch, which the port does as `jmp [.outOfBattleMovePointers + ecx*4]` —
+faithdiff cannot see through an indirect jump, exactly as it cannot see `jnz Init` (M-26).
+**LIVE-TESTABLE, unlike parts 1 and 2's fixes.** `DEBUG_SEED_PARTY` seeds a Snorlax that knows
+FLY/CUT/SURF/STRENGTH *and* seeds `wObtainedBadges` = all badges but EARTH (`debug_party.asm:90`),
+so every badge gate passes. **STRENGTH is reachable in four keypresses** and exercises the whole
+new path end to end: dispatch → badge gate → `PrintStrengthText` (the newly-linked file) →
+`GBPalWhiteOutWithDelay3` → `.goBackToMap` → back to the overworld. Marked UNVERIFIED until run.

@@ -136,6 +136,14 @@ extern PartyMenuMirror               ; engine/menus/party_menu.asm — canvas �
 extern WaitForSoundToFinish          ; home/audio.asm (pret: home/delay.asm)
 extern PlaySound                     ; home/audio.asm — sound id in AL
 extern PrintText                     ; home/window.asm — ESI = flat text stream
+; --- field-move dispatch (row 9 part 3) ---
+extern GetPartyMonName               ; home/pokemon.asm — AL = index, ESI = nick list
+extern CheckIfInOutsideMap           ; engine/overworld/warp_check.asm — ZF=1 if outside
+extern IsSurfingAllowed              ; engine/overworld/field_move_messages.asm (now LINKED)
+extern PrintStrengthText              ; engine/overworld/field_move_messages.asm (now LINKED)
+extern Func_1510                     ; engine/overworld/pikachu.asm (relocated)
+extern DelayFrames                   ; video/frame.asm — BL = frame count
+extern Divide                        ; home/math.asm — hDividend/hDivisor, BH = byte count
 extern text_msgbox                   ; home/text.asm — active message-box projection
 extern msgbox_dialog                 ; home/text.asm — the standard bottom dialog box
 extern Init                          ; home/init.asm — soft reset (the link RESET item)
@@ -156,6 +164,31 @@ UT_SROW  equ 21                      ; GB_TILEMAP0 mirror rows 21-25 (list 0-10,
 
 TILE_SPC equ 0x7F                    ; blank space tile (charmap)
 SET_PAL_TRAINER_CARD equ 0x0D        ; constants/palette_constants.asm (palette stub arg)
+
+; --- field-move dispatch constants (not yet in the shared headers; the %ifndef +
+; pret-source-comment pattern used by field_move_messages.asm) ---
+%ifndef BIT_BOULDERBADGE
+BIT_BOULDERBADGE equ 0               ; wObtainedBadges bits — constants/ram_constants.asm
+BIT_CASCADEBADGE equ 1
+BIT_THUNDERBADGE equ 2
+BIT_RAINBOWBADGE equ 3
+BIT_SOULBADGE    equ 4
+%endif
+%ifndef BIT_SURF_ALLOWED
+BIT_SURF_ALLOWED equ 1               ; wStatusFlags1 bit (constants/ram_constants.asm)
+%endif
+%ifndef SURFBOARD
+SURFBOARD    equ 0x07                ; constants/item_constants.asm
+%endif
+%ifndef ESCAPE_ROPE
+ESCAPE_ROPE  equ 0x1D                ; constants/item_constants.asm
+%endif
+%ifndef wd472
+wd472        equ 0xD472              ; ram/wram.asm:wd472 — surf state (1 = board, 2 = Pikachu)
+%endif
+%ifndef BIT_UNKNOWN_4_1
+BIT_UNKNOWN_4_1 equ 1                ; wStatusFlags4 bit (constants/ram_constants.asm; the
+%endif                               ; port also carries it in m8_2_pending_symbols.inc)
 
 section .text
 
@@ -283,34 +316,242 @@ StartMenu_Pokemon:
     dec ah
     cmp al, ah
     jz .choseStats                      ; jp z
-    ; chose a field move (pret .choseOutOfBattleMove):
-    ; STUB(field-effects): pret indexes wFieldMoves[wCurrentMenuItem] and dispatches
-    ; .outOfBattleMovePointers (cut/fly/surf/surf/strength/flash/dig/teleport/
-    ; softboiled) with wObtainedBadges gating + PrintText refusals. Selecting a field
-    ; move currently just re-enters the party menu — the shape of pret's refusal paths
-    ; (jp .loop), so nothing misbehaves; the move simply does nothing.
-    ;
-    ; The old comment claimed "none of the field effects … are ported yet". That is
-    ; FALSE and was never checked. Actual status (tools/label_status), 2026-07-13:
-    ;   UsedCut, IsSurfingAllowed, PrintStrengthText  translated, but in CHECK-ONLY
-    ;                                                 files (cut.asm,
-    ;                                                 field_move_messages.asm —
-    ;                                                 Makefile HOME_CHECK_SRCS): they
-    ;                                                 exist and do not link.
-    ;   CloseTextDisplay                              translated, also check-only
-    ;                                                 (text_script.asm) — every
-    ;                                                 .goBackToMap path needs it.
-    ;   ChooseFlyDestination                          genuinely missing (FLY only).
-    ;   UseItem, Divide, AddNTimes, PrintText,
-    ;   GetPartyMonName, DelayFrames, Func_1510,
-    ;   CheckIfInOutsideMap                           linked and callable TODAY.
-    ; So SOFTBOILED (Divide + UseItem POTION + PrintText) and the .newBadgeRequired /
-    ; .notHealthyEnough refusals need NOTHING that is missing — they are blocked only
-    ; by their text streams. The dispatch is deferred as its own work item (it needs
-    ; the badge gate, the jump table, 5 generated text streams, and the decision to
-    ; link cut.asm / field_move_messages.asm / text_script.asm) — see the row 9
-    ; findings in docs/current_plan_menu_fidelity.md, NOT because "it isn't ported".
+.choseOutOfBattleMove:
+    ; AL = wCurrentMenuItem (the compare chain above left it there) = the index of
+    ; the chosen move within wFieldMoves. pret: ld c,a / ld b,0 / ld hl,wFieldMoves /
+    ; add hl,bc  →  ESI = &wFieldMoves[AL].
+    movzx esi, al
+    add esi, wFieldMoves
+    push esi                            ; push hl
+    mov al, [ebp + wWhichPokemon]
+    mov esi, wPartyMonNicks             ; ld hl, wPartyMonNicks
+    call GetPartyMonName                ; → wStringBuffer, for the messages below
+    pop esi                             ; pop hl
+    ; pret: ld a,[hl] / dec a / add a / ld c,a / ld b,0 / add hl,.outOfBattleMovePointers
+    ; / ld a,[hli] / ld h,[hl] / ld l,a  — a 16-bit pointer table. The port's is 32-bit,
+    ; so the scale is 4, not pret's 2; everything else is the same indexed indirect jump.
+    movzx ecx, byte [ebp + esi]         ; the field-move id (1-based)
+    dec ecx
+    mov al, [ebp + W_OBTAINED_BADGES]   ; ld a,[wObtainedBadges] — every leaf reads AL
+    jmp [.outOfBattleMovePointers + ecx * 4]   ; jp hl
+
+.outOfBattleMovePointers:
+    dd .cut
+    dd .fly
+    dd .surf
+    dd .surf
+    dd .strength
+    dd .flash
+    dd .dig
+    dd .teleport
+    dd .softboiled
+
+.fly:
+    test al, (1 << BIT_THUNDERBADGE)    ; bit BIT_THUNDERBADGE, a
+    jz .newBadgeRequired
+    call CheckIfInOutsideMap            ; ZF=1 → outside
+    jz .canFly
+    mov al, [ebp + wWhichPokemon]
+    mov esi, wPartyMonNicks
+    call GetPartyMonName
+    mov esi, .cannotFlyHereText
+    mov dword [text_msgbox], msgbox_dialog
+    call PrintText
     jmp .loop
+.canFly:
+    ; STUB(fly-destination): ChooseFlyDestination is the ONE genuinely `missing`
+    ; routine in this whole dispatch — the Town Map fly-target UI (pret
+    ; engine/menus/town_map.asm). Everything after it here (BIT_FLY_WARP,
+    ; Func_1510, LoadFontTilePatterns, BIT_UNKNOWN_4_1) is linked and would work;
+    ; there is simply nowhere to fly to yet. pret's own indoor refusal falls back
+    ; to .loop, so this lands on a shape the player already sees.
+    ; TODO(town-map): port ChooseFlyDestination, then restore pret's tail:
+    ;   call ChooseFlyDestination / bit BIT_FLY_WARP,[wStatusFlags6] / jr nz →
+    ;   Func_1510 + .goBackToMap, else LoadFontTilePatterns + set BIT_UNKNOWN_4_1 +
+    ;   jp StartMenu_Pokemon.
+    jmp .loop
+
+.cut:
+    test al, (1 << BIT_CASCADEBADGE)
+    jz .newBadgeRequired
+    ; STUB(cut-animation): UsedCut is TRANSLATED (src/engine/overworld/cut.asm) but
+    ; that file does not LINK — it needs WriteOAMBlock (check-only home/oam.asm) and
+    ; AnimCut (cut2.asm, whose own blocker is the unported AdjustOAMBlock*Pos battle-
+    ; animation primitives). This is a linkage/OAM-primitive gap, NOT an unported
+    ; effect. The badge gate above is real, so CUT already refuses correctly without
+    ; the CASCADEBADGE; with it, the move does nothing (pret shape: jp .loop).
+    ; TODO(oam-primitives): link home/oam.asm + cut2.asm, then:
+    ;   predef UsedCut / ld a,[wActionResultOrTookBattleTurn] / and a / jp z,.loop /
+    ;   jp CloseTextDisplay.
+    jmp .loop
+
+.surf:
+    test al, (1 << BIT_SOULBADGE)
+    jz .newBadgeRequired
+    call IsSurfingAllowed               ; farcall IsSurfingAllowed
+    ; pret: bit BIT_SURF_ALLOWED,[hl] / res BIT_SURF_ALLOWED,[hl] / jp z,.loop —
+    ; read the bit, then clear it unconditionally, then branch on the value READ.
+    mov al, [ebp + W_STATUS_FLAGS_1]
+    and byte [ebp + W_STATUS_FLAGS_1], ~(1 << BIT_SURF_ALLOWED) & 0xFF  ; res
+    test al, (1 << BIT_SURF_ALLOWED)    ; bit (on the pre-res copy)
+    jz .loop
+    mov al, [ebp + wCurPartySpecies]
+    cmp al, STARTER_PIKACHU
+    jz .surfingPikachu
+    mov al, 1
+    jmp .continue
+.surfingPikachu:
+    mov al, 2                           ; Pikachu rides on the surfboard, not in it
+.continue:
+    mov [ebp + wd472], al
+    mov al, SURFBOARD
+    mov [ebp + wCurItem], al
+    mov [ebp + wPseudoItemID], al
+    call UseItem                        ; ItemUseSurfboard — a ret-stub today
+                                        ; (item_use_stubs.asm), so this returns
+                                        ; wActionResultOrTookBattleTurn = 0 and falls
+                                        ; to .reloadNormalSprite: pret's own "the
+                                        ; surfboard was refused" path. Correct shape,
+                                        ; no surfing until that stub is retired.
+    mov al, [ebp + wActionResultOrTookBattleTurn]
+    test al, al
+    jz .reloadNormalSprite
+    call GBPalWhiteOutWithDelay3
+    jmp .goBackToMap
+.reloadNormalSprite:
+    mov byte [ebp + wd472], 0           ; xor a / ld [wd472],a
+    jmp .loop
+
+.strength:
+    test al, (1 << BIT_RAINBOWBADGE)
+    jz .newBadgeRequired
+    call PrintStrengthText              ; predef PrintStrengthText
+    call GBPalWhiteOutWithDelay3
+    jmp .goBackToMap
+
+.flash:
+    test al, (1 << BIT_BOULDERBADGE)
+    jz .newBadgeRequired
+    mov byte [ebp + wMapPalOffset], 0   ; xor a / ld [wMapPalOffset],a
+    mov esi, .flashLightsAreaText
+    mov dword [text_msgbox], msgbox_dialog
+    call PrintText
+    call GBPalWhiteOutWithDelay3
+    jmp .goBackToMap
+.flashLightsAreaText:
+    text_far _FlashLightsAreaText
+    text_end
+
+.dig:
+    ; no badge gate — DIG is an item effect (ESCAPE_ROPE), and ItemUseEscapeRope is
+    ; translated and linked, so this one runs for real.
+    mov al, ESCAPE_ROPE
+    mov [ebp + wCurItem], al
+    mov [ebp + wPseudoItemID], al
+    call UseItem
+    mov al, [ebp + wActionResultOrTookBattleTurn]
+    test al, al
+    jz .loop                            ; jp z, .loop — refused (e.g. can't leave here)
+    call GBPalWhiteOutWithDelay3
+    jmp .goBackToMap
+
+.teleport:
+    call CheckIfInOutsideMap
+    jz .canTeleport
+    mov al, [ebp + wWhichPokemon]
+    mov esi, wPartyMonNicks
+    call GetPartyMonName
+    mov esi, .cannotUseTeleportNowText
+    mov dword [text_msgbox], msgbox_dialog
+    call PrintText
+    jmp .loop
+.canTeleport:
+    mov esi, .warpToLastPokemonCenterText
+    mov dword [text_msgbox], msgbox_dialog
+    call PrintText
+    ; set BIT_FLY_WARP / set BIT_ESCAPE_WARP, [wStatusFlags6]
+    or byte [ebp + W_STATUS_FLAGS_6], (1 << BIT_FLY_WARP) | (1 << BIT_ESCAPE_WARP)
+    call Func_1510
+    ; set BIT_UNKNOWN_4_1 / res BIT_NO_BATTLES, [wStatusFlags4]
+    or byte [ebp + W_STATUS_FLAGS_4], (1 << BIT_UNKNOWN_4_1)
+    and byte [ebp + W_STATUS_FLAGS_4], ~(1 << BIT_NO_BATTLES) & 0xFF
+    mov bl, 60                          ; ld c, 60
+    call DelayFrames
+    call GBPalWhiteOutWithDelay3
+    jmp .goBackToMap
+.warpToLastPokemonCenterText:
+    text_far _WarpToLastPokemonCenterText
+    text_end
+.cannotUseTeleportNowText:
+    text_far _CannotUseTeleportNowText
+    text_end
+.cannotFlyHereText:
+    text_far _CannotFlyHereText
+    text_end
+
+.softboiled:
+    ; no badge gate. Heal the target for maxHP/5, but only if the USER's current HP
+    ; is MORE than maxHP/5 (pret compares quotient - HP and refuses on no-borrow).
+    mov esi, wPartyMon1MaxHP
+    mov al, [ebp + wWhichPokemon]
+    mov bx, PARTYMON_STRUCT_LENGTH
+    call AddNTimes                      ; ESI = &partyMon[which].MaxHP
+    mov al, [ebp + esi]                 ; ld a,[hli] — MaxHP HIGH byte (big-endian)
+    mov [ebp + hDividend], al
+    mov al, [ebp + esi + 1]             ; ld a,[hl]  — MaxHP low byte
+    mov [ebp + hDividend + 1], al
+    mov byte [ebp + hDivisor], 5
+    mov bh, 2                           ; ld b, 2 — dividend byte count
+    ; pret is at MaxHP+1 here (the hli), then `ld bc, MON_HP - MON_MAXHP / add hl,bc`
+    ; — a NEGATIVE displacement (MON_HP sits below MON_MAXHP in the struct), landing
+    ; on the HP LOW byte. Folded into one lea; it touches no flags.
+    lea esi, [esi + 1 + MON_HP - MON_MAXHP]
+    call Divide                         ; hQuotient = MaxHP / 5
+    mov bl, [ebp + esi]                 ; ld a,[hld] / ld b,a — current HP low
+    dec esi                             ; hld → HP high
+    mov al, [ebp + hQuotient + 3]       ; quotient low
+    sub al, bl                          ; sub b        → CF = borrow (mov/dec above
+                                        ;                do not disturb it afterwards)
+    mov bl, [ebp + esi]                 ; ld b,[hl] — current HP high
+    mov al, [ebp + hQuotient + 2]       ; quotient high
+    sbb al, bl                          ; sbc b
+    jnc .notHealthyEnough               ; jp nc — quotient >= HP: too weak to give
+    mov al, [ebp + wPartyAndBillsPCSavedMenuItem]
+    push eax                            ; push af — UseItem's party menu clobbers it
+    mov al, POTION
+    mov [ebp + wCurItem], al
+    mov [ebp + wPseudoItemID], al
+    call UseItem                        ; ItemUseMedicine — translated and linked
+    pop eax                             ; pop af
+    mov [ebp + wPartyAndBillsPCSavedMenuItem], al
+    jmp .loop
+.notHealthyEnough:                      ; current HP is less than 1/5 of max HP
+    mov esi, .notHealthyEnoughText
+    mov dword [text_msgbox], msgbox_dialog
+    call PrintText
+    jmp .loop
+.notHealthyEnoughText:
+    text_far _NotHealthyEnoughText
+    text_end
+
+.goBackToMap:
+    call RestoreScreenTilesAndReloadTilePatterns
+    ; DEVIATION(port-input-model): pret is `jp CloseTextDisplay`. That routine is
+    ; translated but sits in check-only text_script.asm (its closure is 15 symbols
+    ; deep — see the Makefile note); CloseStartMenu is the port's already-sanctioned
+    ; fold of it, and is what this file's .useItem_closeMenu and StartMenu_SaveReset
+    ; already tail-jump. Same destination: drop the menu window, restore the walk
+    ; tiles, return to the map.
+    jmp CloseStartMenu
+
+.newBadgeRequired:
+    mov esi, .newBadgeRequiredText
+    mov dword [text_msgbox], msgbox_dialog
+    call PrintText
+    jmp .loop
+.newBadgeRequiredText:
+    text_far _NewBadgeRequiredText
+    text_end
 .choseSwitch:
     mov al, [ebp + wPartyCount]
     cmp al, 2                           ; more than one pokemon in the party?

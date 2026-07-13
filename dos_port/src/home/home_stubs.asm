@@ -53,3 +53,24 @@ section .text
 global DisplayTextID
 DisplayTextID:
     ret
+
+; ---------------------------------------------------------------------------
+; PlayCry — pret ref: home/pokemon.asm:PlayCry (AL = species).
+;
+; The mon cry: pitch/length-shifted playback of a per-species cry sample set.
+; The audio engine is live (Phase 3), but the CRY layer on top of it is not
+; ported — status_screen.asm carries the same TODO-HW for the STATS-screen cry.
+;
+; Contract: pret's PlayCry returns nothing and no caller reads flags from it.
+; Its one live caller today is the text_asm hook inside UsedStrengthText
+; (field_move_messages.asm), which does `call PlayCry / call Delay3 / jmp
+; TextScriptEnd` — so a bare ret costs the cry and nothing else: the STRENGTH
+; message still prints and still holds for its Delay3.
+;
+; TODO(audio): retire when the cry layer lands (see docs/current_plan_audio.md).
+; This stub is what lets field_move_messages.asm LINK — it was the file's only
+; unresolved symbol, and it gated STRENGTH + SURF (menu-fidelity row 9 part 3).
+; ---------------------------------------------------------------------------
+global PlayCry
+PlayCry:
+    ret

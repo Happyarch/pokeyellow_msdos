@@ -46,8 +46,15 @@ TERMINATOR = 0x50
 # data/text/text_8.asm. The `_`-prefixed name is pret's own; the wrapper label
 # (CannotUseItemsHereText) lives in the .asm as text_far + text_end.
 MENU_FAR = [
-    "_CannotUseItemsHereText",   # StartMenu_Item, inside a Cable Club room
-    "_CannotGetOffHereText",     # the BICYCLE, while BIT_ALWAYS_ON_BIKE is set
+    "_CannotUseItemsHereText",      # StartMenu_Item, inside a Cable Club room
+    "_CannotGetOffHereText",        # the BICYCLE, while BIT_ALWAYS_ON_BIKE is set
+    # StartMenu_Pokemon's field-move dispatch (.outOfBattleMovePointers):
+    "_NewBadgeRequiredText",        # every badge-gated move, gate closed
+    "_CannotFlyHereText",           # FLY, indoors
+    "_FlashLightsAreaText",         # FLASH
+    "_WarpToLastPokemonCenterText",  # TELEPORT
+    "_CannotUseTeleportNowText",    # TELEPORT, indoors
+    "_NotHealthyEnoughText",        # SOFTBOILED, HP <= maxHP/5
 ]
 
 # (NASM label, pret's `db` string verbatim, pret label) — the strings are copied

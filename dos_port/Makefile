@@ -323,6 +323,7 @@ GAME_SRCS := \
     src/engine/overworld/unused_load_toggleable_object_data.asm \
     src/home/player_gfx.asm \
     src/engine/overworld/player_state.asm \
+    src/engine/overworld/field_move_messages.asm \
     src/engine/overworld/special_warps.asm \
     src/engine/battle/wild_encounters.asm \
     src/engine/events/black_out.asm \
@@ -1018,7 +1019,6 @@ HOME_CHECK_SRCS := \
     src/engine/overworld/trainer_engine.asm \
     src/engine/overworld/push_boulder.asm \
     src/engine/overworld/dust_smoke.asm \
-    src/engine/overworld/field_move_messages.asm \
     src/engine/overworld/cut.asm \
     src/engine/overworld/cut2.asm
 # B1 (2026-07-13) promoted player_animations.asm to GAME_SRCS: its link closure was
@@ -1055,7 +1055,11 @@ HOME_CHECK_SRCS := \
 #   home/vcopy.asm), WriteOAMBlock (check-only home/oam.asm), AnimCut (cut2).
 # - cut2.asm / dust_smoke.asm: AdjustOAMBlock{X,Y}Pos(2) — unported pret
 #   engine/battle/animations.asm OAM primitives.
-# - field_move_messages.asm: PlayCry (unported cry synth).
+# - field_move_messages.asm: LINKED as of menu-fidelity row 9 part 3. Its only
+#   unresolved symbol was PlayCry (cry synth, still unported); that is now a
+#   documented ret-stub in home_stubs.asm, which costs the STRENGTH cry and
+#   nothing else. Linking it is what makes STRENGTH and SURF reachable from
+#   the field-move menu.
 # - player_animations.asm: EmotionBubble (trainer_engine), LoadAnimSpriteGfx.
 #   (StopMusic is REAL now — ported into overworld.asm by the wild-live
 #   promotion; player_sprite is exported from overworld.asm.)
