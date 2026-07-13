@@ -49,7 +49,7 @@ driver only relocates the divergence.
 | # | port file | pret counterpart | status | commit | findings |
 |---|---|---|---|---|---|
 | 1 | `src/home/window.asm` | `home/window.asm` | DONE | `da875f9a` | M-1 (`HandleMenuInput_` split + blink + AB SFX), M-2 (list ▼ coord), M-3 (`PrintText` substitution), M-4 (stale `SFX_PRESS_AB`) |
-| 2 | `src/home/textbox.asm` | `home/textbox.asm` | TODO | | |
+| 2 | `src/home/textbox.asm` | `home/textbox.asm` | DONE | `PENDING2` | faithful (1 label, `DisplayTextBoxID`). No allowlist entry (already mirrored). One SANCTIONED TODO-HW(banking) deviation; header comment corrected. |
 | 3 | `src/engine/menus/text_box.asm` | `engine/menus/text_box.asm` + `data/text_boxes.asm` | TODO | | 4× DEVIATION incl. `PlaceMenuCursor` hardcoded-row model |
 | 4 | `src/home/list_menu.asm` | `home/list_menu.asm` | TODO | | DEVIATION(stride); "bespoke bag list" A/B remnants |
 | 5 | `src/home/yes_no.asm` | `home/yes_no.asm` + `engine/menus/text_box.asm` | TODO | | allowlisted relocation — challenge |
@@ -208,6 +208,32 @@ stale — 0x3E is some other sound.
 **Fix:** row 15 — delete the local equ + TODO-HW, `%include "assets/audio_constants.inc"`, and
 add the `.inc` to `naming_screen.o`'s Makefile prerequisites (as row 1 did for `window.o`).
 **Severity:** medium (wrong SFX id played on every naming-screen keypress)
+
+### Row 2 — `src/home/textbox.asm` (audited, faithful)
+
+One label (`DisplayTextBoxID`), 7 lines of pret, and it holds up. Verified rather than trusted:
+`DisplayTextBoxID_` is a **real linked body** at `src/engine/menus/text_box.asm` (`nm`:
+`T DisplayTextBoxID_`, and both files are in the linked `HOME_SRCS`/menus lists — not a stub, not
+a check-only shadow), and the header's claim that the interim copy in `src/home/text_script.asm`
+was retired is **true** (it is an `extern` there now). No allowlist entry exists for this label —
+correctly, since it already sits at its mirrored path.
+
+- **SANCTIONED — TODO-HW(banking).** pret is `homecall_sf DisplayTextBoxID_`; the port is a plain
+  `call`. The `_sf` suffix is load-bearing and the old header misread it: `homecall_sf` pops the
+  saved bank into **BC** rather than **AF** specifically so the *callee's* flags survive the bank
+  restore (`BankswitchCommon` is two stores + `ret`, flag-neutral). Flags — the contract callers
+  actually read (`DoBuySellQuitMenu`'s CF) — therefore pass through on both sides. But the shuffle
+  also **destroys A and BC** on exit, where the port preserves AL and BX. That divergence is
+  strictly permissive (nothing can depend on a register being clobbered) and there is no bank byte
+  to restore under flat memory. Tagged at the call site.
+- **Comment fixed (epistemics).** The header asserted *"Register/flag pass-through is total"* — true
+  of the port, but stated as if it matched pret, which it does not. Rewritten to spell out the
+  macro's actual expansion and name the A/BC divergence.
+- **faithdiff `DisplayTextBoxID`: `+ ADDED DisplayTextBoxID_ (call)`** — a **faithdiff blind spot**,
+  not a divergence: pret's call lives inside the `homecall_sf` macro body, which faithdiff's pret
+  parser does not expand, so it sees zero calls on the pret side. The port's single call is exactly
+  the call the macro makes. Left unsuppressed (a global suppression would hide real macro-hidden
+  drops elsewhere) and justified in the commit message instead.
 
 ### Row 1 — SANCTIONED deviations (tagged in `src/home/window.asm`)
 - **DEVIATION(timing)** — pret's `.loop2` free-runs (`JoypadLowSensitivity` polls the hardware;
