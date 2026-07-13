@@ -1,25 +1,29 @@
 # Menu fidelity — de-bespoking the menu system against pret
 
-> **STATUS — RESUMED 2026-07-13.** Rows 1–8 + 23 are DONE (9 of 24). The text-subsystem
-> detour this audit was paused for is **complete and archived** (`docs/plans/text_engine.md`):
-> the staging model is gone, `TX_FAR` works, and there is now a `DEBUG_TEXT=1..9` oracle for
-> streamed text — which the golden harness still structurally does not render.
+> **STATUS — 2026-07-13. Rows 1–11 + 23 are DONE: 12 of 24, exactly halfway.**
+> Next row is **12** (`swap_items.asm`). Twelve rows remain: **12–22 and 24.**
+>
+> **The row table below is the only authoritative status.** This header is prose and has
+> already gone stale once (it claimed "1–8 done (9 of 24)" and "1-9 done (10 of 24)" in the
+> same breath while row 10 was already committed). If the two ever disagree again, believe
+> the table — every DONE row carries its commit hash.
 >
 > **Resume by re-running the `/loop`** (one file per iteration: audit → fix → gate →
-> commit). It picks the first row below that is `TODO`/`IN-PROGRESS` and works it. Update
-> the row + append findings each iteration.
+> commit). It picks the first row that is `TODO`/`IN-PROGRESS` and works it. Update the row
+> + append findings each iteration.
 >
-> **Where it stands.** Rows 1-9 + 23 are DONE (10 of 24). Row 9 took three parts (party half /
-> bag half + seams / field-move dispatch) and turned up **nine** findings, M-19 through M-27.
-> Next row is **10** (`trainer_card.asm` — it owns the 7 relocated `TrainerInfo_*` labels, the one
-> `missing` label row 9 left behind (`TrainerInfo_FarCopyData`), and an allowlisted relocation to
-> challenge). Row 13 is the last SHARED DRIVER; the rest are leaf screens. Rows 19 (`save`, 1080 ln) and 20 (`link_menu`, 1148 ln) are
-> mostly TODO-HW SRAM/serial boundaries: low bug yield per line, and they MUST be split across
-> iterations. **Row 22 is the highest-value row on the board and is sequenced last** — the
-> battle move-menu family is missing entirely; it clears blocker B8 and unblocks Mimic + PP
-> items. Consider promoting it.
+> **Sequencing notes.** Row 13 is the last SHARED DRIVER; the rest are leaf screens. Rows 19
+> (`save`, 1080 ln) and 20 (`link_menu`, 1148 ln) are mostly TODO-HW SRAM/serial boundaries:
+> low bug yield per line, and they MUST be split across iterations. **Row 22 is the
+> highest-value row on the board and is sequenced last** — the battle move-menu family is
+> missing entirely; it clears blocker B8 and unblocks Mimic + PP items. Consider promoting it.
 >
-> **What the audit found in 8 rows** — worth knowing before trusting any menu file's header:
+> The text-subsystem detour this audit was paused for is **complete and archived**
+> (`docs/plans/text_engine.md`): the staging model is gone, `TX_FAR` works, and there is now a
+> `DEBUG_TEXT=1..9` oracle for streamed text — which the golden harness still structurally
+> does not render.
+>
+> **What the audit found in 11 rows** — worth knowing before trusting any menu file's header:
 > two game-breaking bugs (M-7: the ×NN quantity selector HUNG the game and drew its box
 > invisibly; M-10: every YES/NO drew its ▶ next to the option the player was NOT selecting),
 > two wrong allowlist entries, a wrong finding of my own (M-2), and several false "faithful" /
@@ -34,8 +38,14 @@
 > Audit the generators and the tooling, not just the assembly. Row 9 part 1 found the same shape
 > a third time: a `DEVIATION(icons)` comment that was true when written and **silently went false**
 > when the party icons moved from BG tiles to OBJ (M-19), so swapping two mons left both icons
-> painted over the blanked rows. The hit rate on "audited file turns out to hold a real defect"
-> is still 100%. The remaining rows are not a formality.
+> painted over the blanked rows. Rows 10–11 sharpened the dominant failure mode into a named
+> class: **the false stub / false TODO** — a comment asserting a dependency is unported when it
+> is sitting in the link. Four instances so far (M-21, M-25, M-38, M-41, M-43), plus row 10's
+> mirror image, where the ○ tile pret loads by *walking off the end of another asset's copy*
+> was reimplemented as a load pret never makes. Do not believe a `STUB(...)`/`TODO-HW` comment;
+> grep `pkmn.sym` for the symbol it names. (Row 11's M-46 is the one such claim that held up —
+> and it took a symbol-table check to establish that.) The hit rate on "audited file turns out
+> to hold a real defect" is still 100%. The remaining rows are not a formality.
 
 ## Why this exists
 
