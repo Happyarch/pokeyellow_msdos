@@ -58,6 +58,9 @@ global RunTextBoxIDTest
 extern LoadFontTilePatterns
 extern LoadTextBoxTilePatterns
 extern PrintText                 ; src/home/window.asm — the one text printer
+%if DEBUG_TEXT == 9
+extern ShowTextStream            ; engine/overworld/map_sprites.asm — the NPC dialog entry
+%endif
 extern DelayFrame
 global RunTextTest
 %endif
@@ -747,7 +750,14 @@ RunTextTest:
     ; MESSAGE_BOX itself (msgbox_dialog is the default projection), so this is the
     ; same path an NPC dialog takes.
     mov esi, [txt_oracle_cases + (DEBUG_TEXT - 1) * 4]
+%if DEBUG_TEXT == 9
+    ; Case 9 enters through the OVERWORLD NPC entry instead, so the probe covers the
+    ; map_sprites dispatch + ShowTextStream plumbing, not just the engine. It waits
+    ; for A itself (npc_dialog_wait_impl); AUTOKEY_APRESS supplies the presses.
+    call ShowTextStream
+%else
     call PrintText
+%endif
 
     call DelayFrame                      ; flush the last typed glyph to the back buffer
     call DelayFrame

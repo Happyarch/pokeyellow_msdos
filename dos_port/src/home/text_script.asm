@@ -49,7 +49,7 @@ global LoadItemList
 global FarPrintText
 
 ; ── text printers (text/text.asm) ──
-extern PrintTextStaged              ; pret PrintText (window.asm) — general/overworld printer
+extern PrintText                    ; pret PrintText (window.asm) — ESI = FLAT TX stream ptr
 extern PrintText_NoCreatingTextBox                  ; pret PrintText_NoCreatingTextBox
 extern DelayFrame
 
@@ -302,7 +302,7 @@ DisplayPokemartDialogue:
     push esi                             ; push hl (text ptr → points at TX_SCRIPT_MART byte)
     mov esi, PokemartGreetingText        ; ld hl, PokemartGreetingText
     mov dword [text_msgbox], msgbox_dialog     ; overworld dialog projection
-    call PrintTextStaged
+    call PrintText
     pop esi                              ; pop hl
     inc esi                              ; inc hl — skip the TX_SCRIPT_MART byte → item list
     call LoadItemList
@@ -368,7 +368,7 @@ DisplaySafariGameOverText:
 DisplayPokemonFaintedText:
     mov esi, PokemonFaintedText
     mov dword [text_msgbox], msgbox_dialog     ; overworld dialog projection
-    call PrintTextStaged
+    call PrintText
     jmp AfterDisplayingTextID
 
 PokemonFaintedText:
@@ -382,7 +382,7 @@ PokemonFaintedText:
 DisplayPlayerBlackedOutText:
     mov esi, PlayerBlackedOutText
     mov dword [text_msgbox], msgbox_dialog     ; overworld dialog projection
-    call PrintTextStaged
+    call PrintText
     ; ld a,[wStatusFlags6]; res BIT_ALWAYS_ON_BIKE,a; ld [wStatusFlags6],a
     mov al, [ebp + wStatusFlags6]
     and al, ~(1 << BIT_ALWAYS_ON_BIKE) & 0xFF
@@ -416,7 +416,7 @@ PlayerBlackedOutText:
 DisplayRepelWoreOffText:
     mov esi, RepelWoreOffText
     mov dword [text_msgbox], msgbox_dialog     ; overworld dialog projection
-    call PrintTextStaged
+    call PrintText
     jmp AfterDisplayingTextID
 
 RepelWoreOffText:
@@ -448,7 +448,7 @@ FarPrintText:
     push eax
     mov al, bh                           ; a = b (target bank)
     call BankswitchCommon
-    call PrintTextStaged             ; pret PrintText (general printer)
+    call PrintText             ; pret PrintText (general printer)
     pop eax
     call BankswitchCommon
     ret

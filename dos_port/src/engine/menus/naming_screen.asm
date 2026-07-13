@@ -61,8 +61,7 @@ extern GetPredefRegisters              ; home/predef.asm — ESI/EDX/EBX = hl/de
 extern GetMonName                      ; home/names.asm — AL=wNamedObjectIndex -> wNameBuffer
 extern ClearScreenArea                 ; home/copy2.asm — ESI=dest, BH=rows, BL=cols
 extern CopyData                        ; home/copy_data.asm — ESI=src,EDX=dest,BX=count
-extern PrintTextStaged             ; text/text.asm — overworld dialog printer
-extern PrintText                       ; engine/battle/move_effect_helpers.asm — battle printer, EAX=flat
+extern PrintText                   ; src/home/window.asm — the one printer; ESI = FLAT TX stream ptr
 extern YesNoChoice                     ; home/yes_no.asm — the standard hlcoord(14,7) YES/NO box
 extern ReloadMapSpriteTilePatterns     ; engine/overworld/reload_sprites.asm
 extern GBPalWhiteOutWithDelay3         ; home/fade.asm
@@ -170,25 +169,24 @@ AskName:
     call GetMonName                      ; default species name -> wNameBuffer
 
     ; pret: `ld hl, DoYouWantToNicknameText / call PrintText`. pret's single
-    ; PrintText serves both battle and overworld; the port split it into a
-    ; centered and dialog msgbox projections of the one PrintText. Select by
+    ; PrintText serves both battle and overworld; the port keeps the one PrintText
+    ; and selects which msgbox PROJECTION it draws through (centered vs dialog) by
     ; wIsInBattle — the same signal this routine already branches on above.
-    ; DEVIATION: printer selection added (text content/behavior unchanged).
+    ; DEVIATION: projection selection added (text content/behavior unchanged).
+    ;
+    ; BUG(critical) [fixed here, no guard]: the battle branch used to pass the
+    ; stream in EAX ("battle PrintText copies EAX itself" — false; there is one
+    ; PrintText and it has always read ESI), so in battle it printed whatever
+    ; GetMonName happened to leave in ESI. Not a Gen-1 bug to preserve — a port
+    ; defect, so it is simply fixed rather than tagged BUG_FIX_LEVEL.
+    mov esi, DoYouWantToNicknameText     ; flat stream — TCP walks it in place
+    mov edx, msgbox_dialog               ; overworld: the dialog window projection
     cmp byte [ebp + wIsInBattle], 0
-    je .nicknamePromptOverworld
-    mov eax, DoYouWantToNicknameText     ; battle PrintText copies EAX itself
-    mov dword [text_msgbox], msgbox_centered   ; centered box: keep this screen's window list
+    je .nicknamePromptSetBox
+    mov edx, msgbox_centered             ; battle: centered box, keeps this screen's window list
+.nicknamePromptSetBox:
+    mov [text_msgbox], edx
     call PrintText
-    jmp .nicknamePromptDone
-.nicknamePromptOverworld:
-    lea esi, [DoYouWantToNicknameText]
-    lea edi, [ebp + NPC_DIALOG_BUF]
-    mov ecx, DoYouWantToNicknameText_end - DoYouWantToNicknameText
-    rep movsb
-    mov esi, NPC_DIALOG_BUF
-    mov dword [text_msgbox], msgbox_dialog     ; overworld dialog projection
-    call PrintTextStaged
-.nicknamePromptDone:
 
     ; pret: hlcoord 14,7 / lb bc,8,15 / ld a,TWO_OPTION_MENU / ld[wTextBoxID],a /
     ; call DisplayTextBoxID — this is exactly the standard YES/NO box
@@ -229,10 +227,16 @@ AskName:
 
 DoYouWantToNicknameText:
     ; DEVIATION: pret is `text_far _DoYouWantToNicknameText` (data/text/text_3.asm,
-    ; a different ROM bank) + text_end. The port's TX_FAR operand is a GB-memory
-    ; offset (TextCommandProcessor's .cmd_far does `lea eax,[ebp+eax]`) and
-    ; cannot address flat .data content, so the far target's content is inlined
-    ; directly here — byte-identical to what pret's bank-switch splice prints.
+    ; a different ROM bank) + text_end; the far target's content is inlined here
+    ; instead — byte-identical to what pret's bank-switch splice prints.
+    ;
+    ; The comment that used to sit here said TX_FAR "cannot address flat .data
+    ; content". That was true of the broken .cmd_far and is now FALSE: TX_FAR takes
+    ; a 32-bit flat operand and works (see docs/current_plan_text_engine.md T-2).
+    ; The inline stays only because data/text/text_3.asm has no generator yet —
+    ; when one lands, this becomes a real `text_far`. The hand-encoded charmap
+    ; bytes below are the same pre-existing Tier-1 debt (they must be generated,
+    ; not hand-written) and should be migrated with it.
     ; pret ref: data/text/text_3.asm:_DoYouWantToNicknameText
     ;   text "Do you want to" / line "give a nickname" / cont "to @" /
     ;   text_ram wNameBuffer / text "?" / done

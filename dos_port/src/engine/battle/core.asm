@@ -543,19 +543,22 @@ AnyMoveToSelect:
 
 ; ---------------------------------------------------------------------------
 ; PrintBattleText — pret PrintText, battle variant. In: EAX = flat-linear ptr to a
-; battle_text.inc command stream. Copies it into the GB dialog buffer, configures
-; the battle box geometry (so <LINE>/<PROMPT> land in the battle dialog box, ▼ in
-; W_TILEMAP), draws the box, and runs the shared TextCommandProcessor (which reveals
-; the message char-by-char and self-terminates on prompt/done/text_end).
+; battle_text.inc command stream. Selects the battle box geometry (so <LINE>/<PROMPT>
+; land in the battle dialog box, ▼ in W_TILEMAP) and runs the one printer, which
+; draws the box and walks the stream in place, revealing it char-by-char and
+; self-terminating on prompt/done/text_end.
 ; ---------------------------------------------------------------------------
 PrintBattleText:
     mov esi, eax                        ; flat source stream
     mov dword [text_msgbox], msgbox_centered
-    jmp PrintText                       ; the one printer: stages, then draws per
-                                        ; the record. Tail — its ret returns to us.
+    jmp PrintText                       ; the one printer, drawing per the record.
+                                        ; Tail — its ret returns to us.
 
-; RunBattleTextStream — print the command stream already in NPC_DIALOG_BUF in the
-; battle dialog box (entry for code-composed streams, e.g. DisplayUsedMoveText).
+; RunBattleTextStream — print a stream COMPOSED IN WRAM (NPC_DIALOG_BUF) in the
+; battle dialog box. DisplayUsedMoveText and ComposeStatIntro build their streams
+; byte-by-byte at run time (splicing a nickname / a TX_RAM operand), so their stream
+; genuinely lives in GB space — this is what PrintTextStaged exists for. It is NOT
+; the retired staging workaround; do not "convert" these to PrintText.
 RunBattleTextStream:
     mov dword [text_msgbox], msgbox_centered
     jmp PrintTextStaged                 ; tail

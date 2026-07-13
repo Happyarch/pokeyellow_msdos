@@ -623,8 +623,18 @@ SPLITSET_ROUTE_7    equ 0xFB
 SPLITSET_ROUTE_8    equ 0xFC
 NUM_SPLIT_SETS      equ 12
 
-NPC_DIALOG_BUF                        equ 0xCB00  ; scratch WRAM for NPC TX command stream (≤256 B)
-NPC_DIALOG_LEN                        equ 256     ; its capacity — the span a staged copy may fill
+; Scratch WRAM for a TX command stream COMPOSED AT RUN TIME. Only the battle text
+; composers use it (core.asm: DisplayUsedMoveText, ComposeStatIntro), because they
+; splice a nickname / a TX_RAM operand together byte-by-byte and the result has to
+; live somewhere addressable. They enter the printer at PrintTextStaged.
+;
+; This is NOT the old staging buffer. Every *static* stream is flat program-image
+; data and TextCommandProcessor walks it in place; nothing copies a stream here to
+; print it any more. Copying a flat stream in was a workaround for TCP's old
+; EBP-relative stream pointer, and it silently truncated anything past 256 bytes
+; (four real dialogs rendered garbage). Don't route a flat stream through here.
+NPC_DIALOG_BUF                        equ 0xCB00  ; composed-stream scratch (≤256 B)
+NPC_DIALOG_LEN                        equ 256     ; its capacity
 
 ; NPC movement-byte sentinel values (constants/map_object_constants.asm)
 WALK                                   equ 0xFE  ; random movement

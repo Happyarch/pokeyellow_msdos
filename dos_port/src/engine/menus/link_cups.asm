@@ -59,7 +59,6 @@ extern ColosseumEvolvedText
 
 ; --- already-linked port routines ---
 extern GetMonName                      ; home/names.asm — in: wNamedObjectIndex -> wNameBuffer
-extern PrintTextStaged              ; text/text.asm — in: ESI = GB-space TX stream ptr
 
 ; PokedexEntryPointers — assets/dex_entries.inc (DO NOT %include the data file
 ; here: it is the shared contract with the G2 worker's pokedex_entry.asm,

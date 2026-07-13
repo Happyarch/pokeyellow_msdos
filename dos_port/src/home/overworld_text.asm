@@ -44,7 +44,7 @@ TX_SCRIPT_LOWEST                    equ 0xF6  ; = TX_SCRIPT_CABLE_CLUB_RECEPTION
 section .text
 
 extern w_map_text_table_ptr             ; map_sprites.asm — flat ptr to cur map TextTable
-extern ShowTextStream                   ; map_sprites.asm — copy TX stream -> buf, print, wait
+extern ShowTextStream                   ; map_sprites.asm — print flat TX stream, wait
 
 global DisplaySignText
 global TextScriptEnd
@@ -107,13 +107,10 @@ DisplaySignText:
     jmp .done
 
 .printText:
-    mov eax, [ecx + edx + 4]            ; byte count, or 0xFFFFFFFF = text_asm script
+    mov eax, [ecx + edx + 4]            ; script/stream discriminator (0xFFFFFFFF = text_asm)
     cmp eax, 0xFFFFFFFF
     je .done                            ; text_asm SCRIPT entry — handled by CheckNPCInteraction, not here
-    cmp eax, 256
-    jae .done                           ; safety bound (matches CheckNPCInteraction)
-    mov esi, edi                        ; flat src
-    mov ecx, eax                        ; byte count
+    mov esi, edi                        ; flat src — TCP walks it in place
     call ShowTextStream
 .done:
     popad

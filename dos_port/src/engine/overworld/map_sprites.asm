@@ -34,7 +34,7 @@ extern text_msgbox                      ; src/home/text.asm — active msgbox pr
 extern g_tilecache_dirty
 extern set_single_window     ; src/ppu/ppu.asm — define g_windows[] as one descriptor
 extern hide_window           ; src/ppu/ppu.asm — empty the window list (count=0)
-extern PrintTextStaged
+extern PrintText             ; src/home/window.asm — ESI = FLAT TX stream ptr
 extern DelayFrame
 extern LoadCurrentMapView
 extern MakeNPCFacePlayer
@@ -772,8 +772,10 @@ IsNPCAtTargetBlock:
 ;                         AND (MAPX - 4) == W_X_COORD + dx
 ; where (dy,dx) = (-1,0) SPRITE_FACING_UP, (+1,0) DOWN, (0,-1) LEFT, (0,+1) RIGHT.
 ;
-; Text data from PalletTownTextTable (flat .data ptr + size) is copied to
-; NPC_DIALOG_BUF in WRAM (EBP-relative). PrintText reads the TX stream from there.
+; Text data from PalletTownTextTable (flat .data ptr + size) is walked IN PLACE:
+; PrintText/TextCommandProcessor take a flat program-image stream pointer. The
+; table's size field now only discriminates a text_asm SCRIPT entry (0xFFFFFFFF)
+; from a plain stream — nothing needs the length to print.
 ;
 ; After PrintText (or on CHAR_DONE within PrintText), the window is already shown
 ; at H_WY=152 by manual_text_scroll. This function hides the window (H_WY=200),
@@ -906,12 +908,11 @@ CheckNPCInteraction:
 
     ; Dispatch: SCRIPT entry (sentinel size) → CALL the flat text_asm routine, which
     ; runs its own logic + ShowTextStream. Plain entry → display the TX stream.
+    ; The table's size field is now ONLY a script/stream discriminator: the stream is
+    ; walked in place and self-terminates, so no length is needed to print it.
     cmp ebx, 0xFFFFFFFF
     je .run_script
-    cmp ebx, 256
-    jge .dialog_done                        ; safety: never copy more than 256 bytes
     mov esi, edi                            ; flat src ptr
-    mov ecx, ebx                            ; byte count
     call ShowTextStream
     jmp .dialog_done
 .run_script:
@@ -941,19 +942,16 @@ CheckNPCInteraction:
     popad
     ret
 
-; ── ShowTextStream — copy a flat TX stream into NPC_DIALOG_BUF and display it ──
-; In: ESI = flat (program-image) ptr to a TX command stream; ECX = byte count (<256).
-; Copies to NPC_DIALOG_BUF (WRAM), runs PrintText, then waits via npc_dialog_wait_impl.
-; Assumes the font is already loaded and the player is frozen in a standing pose
-; (CheckNPCInteraction does this before dispatch; text_asm scripts rely on it too).
-; Shared by the plain-dialog path and hand-written text_asm scripts (e.g.
-; src/scripts/pallet_town.asm). Clobbers caller-saved regs.
+; ── ShowTextStream — display a flat TX stream in the overworld dialog box ──
+; In: ESI = flat (program-image) ptr to a TX command stream.
+; Runs PrintText, then waits via npc_dialog_wait_impl. Assumes the font is already
+; loaded and the player is frozen in a standing pose (CheckNPCInteraction does this
+; before dispatch; text_asm scripts rely on it too). Shared by the plain-dialog path
+; and hand-written text_asm scripts (e.g. src/scripts/pallet_town.asm).
+; Clobbers caller-saved regs.
 ShowTextStream:
-    lea edi, [ebp + NPC_DIALOG_BUF]         ; EBP-relative WRAM dest
-    rep movsb                                ; flat src ESI → WRAM (both flat selectors)
-    mov esi, NPC_DIALOG_BUF                  ; EBP-relative ptr for PrintText
-    mov dword [text_msgbox], msgbox_dialog     ; overworld dialog projection
-    call PrintTextStaged
+    mov dword [text_msgbox], msgbox_dialog   ; overworld dialog projection
+    call PrintText                           ; TCP walks the flat stream in place
     call npc_dialog_wait_impl
     ret
 
@@ -1179,16 +1177,9 @@ TrainerEncounterFlow:
     test edi, edi
     jz .tef_text_done
 
-    mov ecx, [ecx + edx + 4]              ; byte count
-    cmp ecx, 256
-    jge .tef_text_done
-
-    ; ESI (slot offset) is consumed; save it around the rep movsb.
-    push esi
-    mov esi, edi                            ; text src ptr
-    lea edi, [ebp + NPC_DIALOG_BUF]
-    rep movsb
-    pop esi                                 ; restore slot offset (not needed further, but balanced)
+    ; EDI = the flat stream, walked in place by TCP. Save it across the pose/font
+    ; setup below (LoadFontTilePatterns clobbers EDI).
+    push edi
 
     ; Force the player to a standing pose before the font overwrites the walk tiles
     ; at $8800 — see the matching note in CheckNPCInteraction (avoids the player
@@ -1200,9 +1191,9 @@ TrainerEncounterFlow:
 
     or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
-    mov esi, NPC_DIALOG_BUF
+    pop esi                                 ; the flat stream saved above
     mov dword [text_msgbox], msgbox_dialog     ; overworld dialog projection
-    call PrintTextStaged
+    call PrintText
     call npc_dialog_wait_impl
 
 .tef_text_done:

@@ -43,6 +43,54 @@ def s(text):
     return gb_text.encode(text)
 
 
+# The retired staging buffer's capacity. The long-stream probes exist to exceed it.
+STAGING_LEN = 256
+
+
+def _long_stream():
+    """A multi-page stream deliberately longer than the old 256-byte staging window.
+
+    The final page reads "TAIL OK" so truncation is unmistakable in the capture: that
+    text sits past byte 256 and cannot render unless the whole stream was walked.
+    """
+    pages = [
+        ("LONG STREAM TEST", "PAGE ONE OF NINE"),
+        ("THIS STREAM RUNS", "PAST 256 BYTES"),
+        ("THE OLD STAGING", "BUFFER CUT IT OFF"),
+        ("FOUR REAL DIALOGS", "DIED RIGHT HERE"),
+        ("BLUE IN THE", "CHAMPIONS ROOM"),
+        ("ERIKA IN CELADON", "GYM SAID NOTHING"),
+        ("OAK AT THE HALL", "OF FAME TOO"),
+        ("AND MR.FUJI IN", "THE POKEMON TOWER"),
+        ("IF YOU CAN READ", "TAIL OK"),
+    ]
+    items = []
+    for i, (line1, line2) in enumerate(pages):
+        items += [TX_START, s(line1), CHAR_LINE, s(line2)]
+        items.append(CHAR_DONE if i == len(pages) - 1 else CHAR_PARA)
+
+    n = _stream_len(items)
+    if n <= STAGING_LEN:
+        raise SystemExit(
+            f"long-stream probe is only {n} bytes — it must EXCEED the {STAGING_LEN}-byte "
+            "staging window or it tests nothing. Add a page."
+        )
+    return items
+
+
+def _stream_len(items):
+    """Byte length of a case body (ints = 1 B, glyph runs = len, dw = 2, dd = 4)."""
+    total = 0
+    for it in items:
+        if isinstance(it, tuple):
+            total += 2 if it[0] == "dw" else 4
+        elif isinstance(it, int):
+            total += 1
+        else:
+            total += len(it)
+    return total
+
+
 # Each case is a list of items: an int (raw byte), a str (encoded glyph run), or
 # a ("dw"|"dd", "symbol expr") tuple emitted as a NASM operand.
 CASES = {
@@ -99,6 +147,22 @@ CASES = {
         TX_DOTS, 3,
         TX_START, s("END"), CHAR_DONE,
     ],
+    # 8 — a stream LONGER THAN 256 BYTES, printed through PrintText.
+    #
+    # This is the truncation class. The retired staging model copied a blind
+    # NPC_DIALOG_LEN (256) bytes into a WRAM buffer and ran TCP on the copy, so a
+    # stream past that limit was cut mid-command and TCP walked off into WRAM.
+    # Four REAL dialogs are over the line and rendered NOTHING as a result (Blue in
+    # the champion's room 347 B, ERIKA 308 B, OAK's hall-of-fame speech 302 B,
+    # MR.FUJI 280 B). Nothing in the port bounded it and no golden covered it.
+    #
+    # The last page must read "TAIL OK": that word lives past byte 256, so it can
+    # only render if the whole stream was walked. Truncation shows up as a missing
+    # or corrupt final page, not as a subtle glitch.
+    "txt_oracle_long": _long_stream(),
+    # 9 — the same long stream, through the OVERWORLD NPC path (ShowTextStream ->
+    # PrintText), which is where those four dialogs actually die.
+    "txt_oracle_long_npc": _long_stream(),
 }
 
 # The order matters: RunTextTest indexes this table by DEBUG_TEXT=<n>, so the
@@ -111,6 +175,8 @@ CASE_ORDER = [
     "txt_oracle_bcd",
     "txt_oracle_far",
     "txt_oracle_dots",
+    "txt_oracle_long",
+    "txt_oracle_long_npc",
 ]
 
 

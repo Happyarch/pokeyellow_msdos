@@ -276,33 +276,25 @@ RedrawPartyMenu_:
     ; DEVIATION(text): pret's PrintText draws the message box itself; the port
     ; draws the border here and runs TextCommandProcessor at the box's cursor,
     ; writing into the party menu's own stride-20 scratch (which .done then
-    ; mirrors to the window layer). The stream is copied into GB space first
-    ; because TextCommandProcessor reads its stream EBP-relative — same staging
-    ; ShowTextStream does for NPC dialogs. The caller set BIT_NO_TEXT_DELAY, so
-    ; there is no per-letter reveal to composite; and every one of these nine
-    ; texts terminates with <DONE>/text_end (never <PROMPT>), so nothing blocks
-    ; before the mirror — ItemUseMedicine does the button wait afterwards.
+    ; mirrors to the window layer). The caller set BIT_NO_TEXT_DELAY, so there is
+    ; no per-letter reveal to composite; and every one of these nine texts
+    ; terminates with <DONE>/text_end (never <PROMPT>), so nothing blocks before
+    ; the mirror — ItemUseMedicine does the button wait afterwards.
     and al, 0x0F                            ; and $0F
     movzx eax, al
-    mov ecx, [PartyMenuItemUseMessagePointers + eax * 8]      ; the stream
-    mov edx, [PartyMenuItemUseMessagePointers + eax * 8 + 4]  ; its length
+    mov ecx, [PartyMenuItemUseMessagePointers + eax * 8]      ; the stream (flat)
     push ecx
-    push edx
     mov al, [ebp + wUsedItemOnWhichPokemon]
     mov esi, wPartyMonNicks
     call GetPartyMonName                    ; → wNameBuffer
-    pop ecx                                 ; length
-    pop esi                                 ; flat stream ptr
-    push ecx
-    lea edi, [ebp + NPC_DIALOG_BUF]
-    rep movsb                               ; flat → GB WRAM
-    pop ecx
+    pop edx                                 ; flat stream ptr (survives the box draw)
+    push edx
     mov esi, W_TILEMAP + 12 * GBSCR_W       ; the standard dialog cell (0,12)
     mov bl, 18                              ; interior width  (total 20)
     mov bh, 4                               ; interior height (total 6)
     call TextBoxBorder
     mov ebx, W_TILEMAP + 14 * GBSCR_W + 1   ; bccoord 1,14 — TCP's cursor
-    lea esi, [ebp + NPC_DIALOG_BUF]          ; staged stream — TCP takes a FLAT ptr
+    pop esi                                 ; the flat stream — TCP walks it in place
     call TextCommandProcessor
     jmp .done
 

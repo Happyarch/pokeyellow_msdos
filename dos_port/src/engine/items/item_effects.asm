@@ -776,14 +776,15 @@ extern DelayFrames          ; video/frame.asm — BL = frames
 extern Func_1510            ; engine/overworld/pikachu.asm — ItemUseEscapeRope's Pikachu refresh
 extern WaitForTextScrollButtonPress ; engine/battle/battle_menu.asm
 extern ItemUseText00_ref            ; assets/item_text.inc — "<PLAYER> used <ITEM>!"
-extern PrintTextStaged  ; home/text.asm — ESI = GB-space TX stream
+extern PrintText        ; home/window.asm — ESI = FLAT TX stream ptr
 extern PlaySound            ; home/audio.asm — AL = sound id
 extern PlaySoundWaitForCurrent ; home/audio.asm
 
 ; --- generated text streams (assets/item_text.inc, flat .data) ---
-; Each `<Label>_ref` is the generator's {dd stream, dd length} pair: iu_print_text
-; needs the byte count to stage the stream in GB space, and a cross-object
-; `Label_end - Label` is not a relocatable immediate.
+; Each `<Label>_ref` is the generator's {dd stream, dd length} pair. Only the
+; stream pointer is read now — TextCommandProcessor walks a flat stream in place
+; and it self-terminates. (The `_ref` indirection itself stays: a cross-object
+; `Label` is not a link-time immediate here, so the pointer is loaded, not `mov`d.)
 extern ItemUseNoEffectText_ref
 extern ThrewBaitText_ref, ThrewRockText_ref   ; assets/item_text.inc
 extern ItemUseNotTimeText_ref
@@ -1318,13 +1319,11 @@ ItemUseMedicine:
     mov al, SFX_HEAL_AILMENT
     call PlaySound
     mov esi, [VitaminStatRoseText_ref]
-    mov ecx, [VitaminStatRoseText_ref + 4]
     call iu_print_text
     jmp RemoveUsedItem                  ; jp RemoveUsedItem
 
 .vitaminNoEffect:
     mov esi, [VitaminNoEffectText_ref]
-    mov ecx, [VitaminNoEffectText_ref + 4]
     call iu_print_text
     jmp GBPalWhiteOut                   ; jp GBPalWhiteOut
 
@@ -1458,46 +1457,37 @@ RemoveUsedItem:
 
 ItemUseNoEffect:
     mov esi, [ItemUseNoEffectText_ref]
-    mov ecx, [ItemUseNoEffectText_ref + 4]
     jmp ItemUseFailed
 
 ItemUseNotTime:
     mov esi, [ItemUseNotTimeText_ref]
-    mov ecx, [ItemUseNotTimeText_ref + 4]
     jmp ItemUseFailed
 
 ItemUseNotYoursToUse:
     mov esi, [ItemUseNotYoursToUseText_ref]
-    mov ecx, [ItemUseNotYoursToUseText_ref + 4]
     jmp ItemUseFailed
 
 Func_e4bf:
     mov byte [ebp + wActionResultOrTookBattleTurn], 2
     mov esi, [DontHavePokemonText_ref]
-    mov ecx, [DontHavePokemonText_ref + 4]
     jmp iu_print_text                   ; jp PrintText
 
-; In: ESI = flat text stream, ECX = its length (pret passes hl alone; the port
-; needs the length to stage the stream in GB space — see iu_print_text).
+; In: ESI = flat text stream (as pret's hl).
 ItemUseFailed:
     mov byte [ebp + wActionResultOrTookBattleTurn], 0   ; item use failed
     jmp iu_print_text                   ; jp PrintText
 
 ; ---------------------------------------------------------------------------
 ; iu_print_text — print a generated TX stream through the port's text engine.
-; The streams are flat .data (assets/item_text.inc) but TextCommandProcessor
-; reads its stream EBP-relative, so stage it in the GB-space dialog buffer first
-; — the same copy ShowTextStream (map_sprites.asm) makes for NPC dialogs.
-; In: ESI = flat stream, ECX = length (<= 256, the NPC_DIALOG_BUF window).
+; The streams are flat .data (assets/item_text.inc) and TextCommandProcessor walks
+; a flat stream in place, so this just selects the projection and prints.
+; In: ESI = flat stream (self-terminating — no length needed).
 ; See DEVIATION 2 for the window behaviour.
 ; ---------------------------------------------------------------------------
 iu_print_text:
     pushad
-    lea edi, [ebp + NPC_DIALOG_BUF]
-    rep movsb                           ; flat → GB WRAM (both flat selectors)
-    mov esi, NPC_DIALOG_BUF             ; already staged → PrintTextStaged
     mov dword [text_msgbox], msgbox_dialog     ; overworld dialog projection
-    call PrintTextStaged
+    call PrintText
     popad
     ret
 
@@ -1530,7 +1520,6 @@ global ThrowBallAtTrainerMon
 global BoxFullCannotThrowBall
 global SendNewMonToBox
 
-extern PrintText              ; engine/battle/move_effect_helpers.asm — battle printer, ESI = flat stream
 extern PlayMoveAnimation      ; engine/battle/animations.asm — AL = animation id (predef MoveAnimation)
 extern IsGhostBattle          ; engine/battle/ghost.asm — ZF=1 → unidentified ghost
 extern LoadScreenTilesFromBuffer1 ; engine/battle/battle_menu.asm
@@ -2065,7 +2054,6 @@ ThrowBallAtTrainerMon:
 ; ---------------------------------------------------------------------------
 BoxFullCannotThrowBall:
     mov esi, [BoxFullCannotThrowBallText_ref]
-    mov ecx, [BoxFullCannotThrowBallText_ref + 4]
     jmp ItemUseFailed                   ; jr
 
 ; ---------------------------------------------------------------------------
@@ -2321,14 +2309,11 @@ ItemUseTMHM:
     call CopyToStringBuffer
     popf
     mov esi, [BootedUpTMText_ref]
-    mov ecx, [BootedUpTMText_ref + 4]
     jnc .printBootedUpMachineText       ; CF (from the popf) = it's an HM
     mov esi, [BootedUpHMText_ref]
-    mov ecx, [BootedUpHMText_ref + 4]
 .printBootedUpMachineText:
     call iu_print_text
     mov esi, [TeachMachineMoveText_ref]
-    mov ecx, [TeachMachineMoveText_ref + 4]
     call iu_print_text
     ; hlcoord 14,7 / lb bc,8,15 / TWO_OPTION_MENU — as in TossItem_, the port's
     ; two-option box takes its geometry from yes_no.asm state.
@@ -2384,7 +2369,6 @@ ItemUseTMHM:
     mov al, SFX_DENIED
     call PlaySoundWaitForCurrent
     mov esi, [MonCannotLearnMachineMoveText_ref]
-    mov ecx, [MonCannotLearnMachineMoveText_ref + 4]
     call iu_print_text
     jmp .chooseMon
 
@@ -2483,7 +2467,6 @@ ItemUseEvoStone:
     mov esi, wPartyMonNicks
     call GetPartyMonName
     mov esi, [RefusingText_ref]         ; ld hl, RefusingText
-    mov ecx, [RefusingText_ref + 4]
     call iu_print_text
     mov byte [ebp + wPikachuEmotionModifier], 0x4
     mov byte [ebp + wPikachuMood], 0x82
@@ -2593,7 +2576,6 @@ ItemUseMaxRepel:
 global PrintItemUseTextAndRemoveItem
 PrintItemUseTextAndRemoveItem:
     mov esi, [ItemUseText00_ref]
-    mov ecx, [ItemUseText00_ref + 4]
     call iu_print_text                  ; pret: ld hl, ItemUseText00 / call PrintText
     mov al, SFX_HEAL_AILMENT
     call PlaySound
@@ -2752,7 +2734,6 @@ ItemUseBicycle:
     mov byte [ebp + wPikachuSpawnState], 0
     call PlayDefaultMusic               ; walking music
     mov esi, [GotOffBicycleText_ref]
-    mov ecx, [GotOffBicycleText_ref + 4]
     jmp iu_print_text                   ; pret: jp PrintText
 
 .tryToGetOnBike:
@@ -2766,7 +2747,6 @@ ItemUseBicycle:
     ; text box must render with the WALKING player graphics, not the bike ones.
     mov byte [ebp + wWalkBikeSurfState], 0
     mov esi, [GotOnBicycleText_ref]
-    mov ecx, [GotOnBicycleText_ref + 4]
     call iu_print_text                  ; pret: call PrintText
     mov byte [ebp + wWalkBikeSurfState], 1
     ret
@@ -2774,7 +2754,6 @@ ItemUseBicycle:
 global NoCyclingAllowedHere
 NoCyclingAllowedHere:
     mov esi, [NoCyclingAllowedHereText_ref]
-    mov ecx, [NoCyclingAllowedHereText_ref + 4]
     jmp ItemUseFailed                   ; pret: jr ItemUseFailed
 
 global ItemUseCoinCase
@@ -2783,7 +2762,6 @@ ItemUseCoinCase:
     test al, al
     jnz ItemUseNotTime
     mov esi, [CoinCaseNumCoinsText_ref] ; TX_BCD reads wPlayerCoins
-    mov ecx, [CoinCaseNumCoinsText_ref + 4]
     jmp iu_print_text                   ; pret: jp PrintText
 
 global ItemUseOaksParcel
@@ -2883,7 +2861,6 @@ section .text
 global ItemUseBait
 ItemUseBait:
     mov esi, [ThrewBaitText_ref]
-    mov ecx, [ThrewBaitText_ref + 4]
     call iu_print_text                  ; call PrintText
     shr byte [ebp + wEnemyMonActualCatchRate], 1   ; srl [hl] — halve catch rate
     mov al, BAIT_ANIM
@@ -2894,7 +2871,6 @@ ItemUseBait:
 global ItemUseRock
 ItemUseRock:
     mov esi, [ThrewRockText_ref]
-    mov ecx, [ThrewRockText_ref + 4]
     call iu_print_text                  ; call PrintText
     mov al, [ebp + wEnemyMonActualCatchRate]
     add al, al                          ; double catch rate
@@ -2997,7 +2973,6 @@ ItemUsePokeFlute:
 
 .noSnorlaxOrPikachuToWakeUp:
     mov esi, [PlayedFluteNoEffectText_ref]
-    mov ecx, [PlayedFluteNoEffectText_ref + 4]
     jmp iu_print_text                   ; pret: jp PrintText
 
     ; --- in battle: wake everything up ---
@@ -3045,12 +3020,10 @@ ItemUsePokeFlute:
     test al, al
     jnz .someWereAsleep
     mov esi, [PlayedFluteNoEffectText_ref]
-    mov ecx, [PlayedFluteNoEffectText_ref + 4]
     jmp iu_print_text                   ; pret: jp z, PrintText
 
 .someWereAsleep:
     mov esi, [PlayedFluteHadEffectText_ref]
-    mov ecx, [PlayedFluteHadEffectText_ref + 4]
     call iu_print_text
     mov al, [ebp + wLowHealthAlarm]
     and al, 0x80
@@ -3080,7 +3053,6 @@ ItemUsePokeFlute:
 ; ---------------------------------------------------------------------------
 iu_played_flute_had_effect:
     mov esi, [PlayedFluteHadEffectText_ref]
-    mov ecx, [PlayedFluteHadEffectText_ref + 4]
     call iu_print_text
     mov al, [ebp + wIsInBattle]
     test al, al
@@ -3181,7 +3153,6 @@ ItemUseCardKey:
     jmp .loop
 .done:
     mov esi, [ItemUseText00_ref]
-    mov ecx, [ItemUseText00_ref + 4]
     call iu_print_text                  ; pret: call PrintText
     or byte [ebp + wStatusFlags1], 1 << BIT_UNUSED_CARD_KEY  ; never checked
     ret

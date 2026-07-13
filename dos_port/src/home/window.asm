@@ -85,34 +85,26 @@ section .text
 ;
 ; DEVIATION(canvas): the box geometry, the <LINE>/<PROMPT> targets and the window
 ; descriptor come from the record instead of pret's fixed hlcoord/bccoord literals.
-; DEVIATION(text-staging): TextCommandProcessor walks the stream EBP-relative, but
-; the port's text streams are flat program-image data, so PrintText stages the
-; stream into NPC_DIALOG_BUF first (the port's established staging model — see
-; memory "text-stream staging is bespoke"; the pret-shape linear-pointer variant
-; was tried and reverted). Callers whose stream is ALREADY staged enter at
-; PrintTextStaged, a port-only entry pret has no need of.
 ;
 ; In:  ESI = flat pointer to a text-command stream.
 ; Out: as TextCommandProcessor. Clobbers EAX/EBX/ECX/EDX/ESI/EDI.
-; ---------------------------------------------------------------------------
-PrintText:
-    ; Stage the flat stream into the GB-space dialog buffer. Copy the whole
-    ; buffer's worth: the stream self-terminates, but a short copy truncates it
-    ; mid-stream and TextCommandProcessor then walks off the end into WRAM. The
-    ; text generators pad their .inc tails by NPC_DIALOG_LEN so a copy from the
-    ; last label stays inside the data.
-    lea edi, [ebp + NPC_DIALOG_BUF]
-    mov ecx, NPC_DIALOG_LEN
-    rep movsb
-    ; fall through — run the stream now sitting in NPC_DIALOG_BUF
-
-; ---------------------------------------------------------------------------
-; PrintTextStaged — port-only entry: the stream is already in NPC_DIALOG_BUF
-; (code-composed streams, and callers that staged it themselves). Identical to
-; PrintText from here down. pret has no such split: its streams are addressable
-; in place.
+;
+; PrintTextStaged (below, falls through) is a port-only second entry for a stream
+; COMPOSED AT RUN TIME IN WRAM.
 ; ---------------------------------------------------------------------------
 PrintTextStaged:
+    ; Port-only entry: the stream was composed in WRAM at run time
+    ; (battle/core.asm:AppendStringBufferText splices a `TX_RAM wStringBuffer`
+    ; operand into NPC_DIALOG_BUF), so it genuinely lives in GB space and is named
+    ; EBP-relative. Every other stream is flat program-image data and enters at
+    ; PrintText directly. This is not a workaround for the engine — it is a second
+    ; entry for a second kind of stream; pret needs no such split because its
+    ; streams are all addressable in place.
+    lea esi, [ebp + NPC_DIALOG_BUF]     ; name the composed stream as a flat pointer
+    ; fall through
+
+PrintText:
+    push esi                            ; pret: push hl
     mov edi, [text_msgbox]              ; the active projection record
 
     ; Publish this projection to the text engine (pret has no equivalent: on the
@@ -155,16 +147,13 @@ PrintTextStaged:
     call sync_dialog_window             ; show the empty box before the first char
     call DelayFrame
 .noWindow:
-    ; pret: `pop hl` — restore the stream pointer. DEVIATION(text-staging): the
-    ; stream to run is the staged copy in WRAM, not the caller's flat pointer.
-    ; TCP takes a FLAT pointer, so the GB-space staging buffer is biased by EBP.
-    lea esi, [ebp + NPC_DIALOG_BUF]
+    pop esi                             ; pret: `pop hl` — restore the stream pointer
 
 ; ---------------------------------------------------------------------------
 ; PrintText_NoCreatingTextBox — pret home/window.asm. Type the stream without
 ; drawing a box. pret: `bccoord 1, 14 / jp TextCommandProcessor`; here the cursor
 ; is the active projection's first text line.
-; In: ESI = staged (EBP-relative) stream pointer.
+; In: ESI = flat pointer to a text-command stream.
 ; ---------------------------------------------------------------------------
 PrintText_NoCreatingTextBox:
     mov edi, [text_msgbox]

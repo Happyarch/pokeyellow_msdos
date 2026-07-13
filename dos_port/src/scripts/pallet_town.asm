@@ -6,7 +6,7 @@
 ; (`dd <label>, 0xFFFFFFFF`, emitted by gen_npc_dialogs' SCRIPT_OVERRIDES). The
 ; dialog dispatcher (map_sprites.asm:CheckNPCInteraction) CALLs the routine after
 ; loading the font; the routine picks a text stream and prints it via ShowTextStream
-; (copy flat stream → NPC_DIALOG_BUF, PrintText, wait for A/B), then returns.
+; (PrintText on the flat stream, then wait for A/B), then returns.
 ;
 ; In: EBP = GB memory base; font already loaded; player frozen in a standing pose.
 ; The routine may use AL/flags freely (caller preserves via pushad).
@@ -19,7 +19,7 @@ bits 32
 
 global PalletTownOakText
 global PalletTown_Script
-extern ShowTextStream            ; (ESI = flat TX stream, ECX = byte count)
+extern ShowTextStream            ; (ESI = flat TX stream — walked in place)
 extern CallFunctionInTable       ; (AL = index, ESI = flat dd jumptable)
 extern EnableAutoTextBoxDrawing
 
@@ -61,11 +61,9 @@ PalletTownOakText:
     CheckEvent EVENT_GOT_POKEBALLS_FROM_OAK   ; ZF=1 ⇒ flag clear
     jz .default
     mov esi, oak_got_text
-    mov ecx, oak_got_text_end - oak_got_text
     jmp .show
 .default:
     mov esi, oak_default_text
-    mov ecx, oak_default_text_end - oak_default_text
 .show:
     call ShowTextStream
     ret
