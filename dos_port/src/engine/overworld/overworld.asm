@@ -167,6 +167,9 @@ extern RunTextBoxIDTest
 %ifdef DEBUG_LISTMENU
 extern RunListMenuTest
 %endif
+%ifdef DEBUG_YESNO
+extern RunYesNoTest
+%endif
 %ifdef DEBUG_DRAWBADGES
 extern RunDrawBadgesTest
 %endif
@@ -693,6 +696,9 @@ EnterMap:
 %endif
 %ifdef DEBUG_LISTMENU
     call RunListMenuTest                   ; seed party+bag, drive generic list menu, dump FRAME.BIN, exits
+%endif
+%ifdef DEBUG_YESNO
+    call RunYesNoTest                      ; draw the two-option box, park in HandleMenuInput; AutoKeyDrive dumps
 %endif
 %ifdef DEBUG_DRAWBADGES
     call RunDrawBadgesTest                  ; seed badges, draw grid, window it, dump FRAME.BIN, exits

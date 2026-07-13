@@ -52,7 +52,7 @@ driver only relocates the divergence.
 | 2 | `src/home/textbox.asm` | `home/textbox.asm` | DONE | `d84ac907` | faithful (1 label, `DisplayTextBoxID`). No allowlist entry (already mirrored). One SANCTIONED TODO-HW(banking) deviation; header comment corrected. |
 | 3 | `src/engine/menus/text_box.asm` | `engine/menus/text_box.asm` + `data/text_boxes.asm` | DONE | `df0c652f` | M-5 (`TwoOptionMenu_{Save,Restore}ScreenTiles` missing → row 5), M-6 (stride save slot was re-entrancy-unsafe — FIXED), 8 hand-encoded strings migrated to a generator |
 | 4 | `src/home/list_menu.asm` | `home/list_menu.asm` | DONE | `3c2b6097` | **M-7 (qty menu HUNG the game — FIXED)**, M-8 (priced qty window clipped — needs mart anchor), M-9 (▷ swap counter never seeded — FIXED), M-2 **corrected** (my earlier finding was wrong; port's ▼ is faithful → new row 24). Priced price/qty coords swapped → FIXED; non-item tail duplicated the item tail → collapsed to pret's shared tail; 3 hand-encoded strings migrated to a generator; "no live caller" header claim was FALSE. |
-| 5 | `src/home/yes_no.asm` | `home/yes_no.asm` + `engine/menus/text_box.asm` | TODO | | allowlisted relocation — challenge |
+| 5 | `src/home/yes_no.asm` | `home/yes_no.asm` + `engine/menus/text_box.asm` | DONE | `PENDING` | **M-10 (single-spaced + cursor on the WRONG option — FIXED)**, **M-11 (`wMenuWatchMovingOutOfBounds` never cleared — FIXED)**, M-5 RESOLVED (Save/RestoreScreenTiles absent by design → SANCTIONED). Allowlist: the boilerplate *file-level* entry was FALSE (it keyed all of `engine/menus/text_box.asm` to yes_no.asm) — deleted, re-added as a hand-justified *label-level* entry for `DisplayTwoOptionMenu` only. 9 hand-encoded strings migrated to a generator. New `DEBUG_YESNO` harness. |
 | 6 | `src/home/auto_textbox.asm` | `home/window.asm` (split) | TODO | | allowlisted relocation ×3 — challenge |
 | 7 | `src/home/start_menu.asm` | `home/start_menu.asm` | TODO | | |
 | 8 | `src/engine/menus/draw_start_menu.asm` | same | TODO | | |
@@ -412,3 +412,50 @@ to drop.
 scenario and no `DEBUG_*` harness sets, so all list renders are byte-identical before and after.
 The fix is derived, not observed — flagged here rather than dressed up.
 **Severity:** medium (visible mis-marking during a bag item swap)
+
+### M-10. The two-option (YES/NO) menu was single-spaced, and the cursor pointed at the wrong option **[FIXED — row 5]**
+**File:** `dos_port/src/home/yes_no.asm` `DisplayTwoOptionMenu`
+**pret:** `engine/menus/text_box.asm:DisplayTwoOptionMenu` + `data/yes_no_menu_strings.asm`
+**What was wrong — two bugs, compounding:**
+1. **Spacing.** pret stores each menu's pair as ONE string joined by `next` ($4E), and
+   `PlaceString`'s `<NEXT>` handler (`home/text.asm:63`) advances **`2 * SCREEN_WIDTH`** unless
+   `hUILayoutFlags`' `BIT_SINGLE_SPACED_LINES` is set — and *nothing in the two-option path sets
+   it* (the only setters are `save.asm`, `learn_move.asm`, `printer2.asm`, battle `core.asm`).
+   Likewise `PlaceMenuCursor` steps `ld bc, 40` (two rows) unless `BIT_DOUBLE_SPACED_MENU` is
+   SET — a constant whose name reads backwards. So the menu is **double-spaced**. The port put
+   option B at `frow+1` and set `menu_item_step = 20`. The descriptor heights are the tell, and
+   are otherwise inexplicable: a 2-item menu gets `int_h 3` (rows 1 and 3), or `int_h 4` with
+   `blank` for HEAL_CANCEL (rows 2 and 4) — single-spaced, every box carries a stray empty row.
+2. **Cursor row.** The routine juggled the first-option row through `push`/`pop` around both
+   `place_flat_str` calls, and the final `pop` retrieved the value pushed *last* — the SECOND
+   option's row — into `wTopMenuItemY`. Its comment said `; ECX = frow (first option row)`. It
+   was not. **The ▶ was drawn one row below the first option**, i.e. next to NO while
+   `wCurrentMenuItem` still said YES: the arrow pointed at the option A would *not* pick.
+**Fix:** option B at `frow + 2`; `menu_item_step = 2 * 20`; and the row is now held in a named
+slot (`yn_frow`) read three times instead of juggled on the stack, so it cannot drift again.
+**Observed:** new `DEBUG_YESNO` harness (no golden covers this box). Before: `YES`/`NO` on
+adjacent rows, ▶ next to `NO`, blank row at the bottom. After: `▶YES` / blank / `NO`, and the
+HEAL_CANCEL variant renders blank / `▶HEAL` / blank / `CANCEL`. Both match pret's geometry.
+**Severity:** HIGH (the cursor contradicted the selection on every YES/NO in the game)
+
+### M-11. `wMenuWatchMovingOutOfBounds` was never cleared **[FIXED — row 5]**
+**File:** `dos_port/src/home/yes_no.asm` `DisplayTwoOptionMenu`
+**pret:** `engine/menus/text_box.asm` — `xor a / ld [wLastMenuItem], a / ld [wMenuWatchMovingOutOfBounds], a`
+**What was wrong:** the port cleared `wLastMenuItem` but silently dropped the second store, so
+the two-option menu ran with whatever the *previous* menu left in
+`wMenuWatchMovingOutOfBounds` — and `DisplayListMenuID` sets it to 1. Bag TOSS goes
+list → quantity → YES/NO, so the YES/NO inherited out-of-bounds movement watching.
+**Fix:** store the 0, as pret does.
+**Severity:** medium (latent; depends on the preceding menu)
+
+### M-5 resolution (row 5): `TwoOptionMenu_SaveScreenTiles` / `_RestoreScreenTiles`
+Filed at row 3 as "missing entirely". Verified at row 5: they are **absent by design, and now
+documented at `yn_teardown`** rather than merely unnoticed. pret must snapshot the tilemap cells
+its box overwrites and paste them back, because on the GB the box IS the tilemap; the port's box
+is a window descriptor composited over an untouched background, so "restore" is dropping the
+descriptor. Recorded as **SANCTIONED(window-compositor)**.
+One consequence worth stating: pret's own comment under `DisplayTwoOptionMenu` admits the
+save/restore is undersized ("the bottom and right edges of the menu may remain after the
+function returns"). The port cannot reproduce that residue. This is **not** a silent fix of a
+Gen-1 bug we were meant to preserve under `BUG_FIX_LEVEL` — the bug is a property of the
+save/restore mechanism, and there is no save/restore to be buggy.

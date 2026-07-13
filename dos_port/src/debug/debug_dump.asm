@@ -64,6 +64,13 @@ extern DisplayChooseQuantityMenu        ; src/home/list_menu.asm
 extern DelayFrame
 global RunListMenuTest
 %endif
+%ifdef DEBUG_YESNO
+global RunYesNoTest
+extern YesNoChoice               ; src/home/yes_no.asm
+extern YesNoChoicePokeCenter
+extern LoadFontTilePatterns
+extern LoadTextBoxTilePatterns
+%endif
 %ifdef DEBUG_ITEMBALL
 extern UseItem                  ; home/item.asm — the pret home wrapper for UseItem_
 %endif
@@ -681,6 +688,35 @@ RunTextBoxIDTest:
     call DelayFrame
     call DelayFrame
     call DumpBackbuffer             ; writes FRAME.BIN + exits (never returns)
+.hang:
+    jmp .hang
+%endif
+
+%ifdef DEBUG_YESNO
+; ---------------------------------------------------------------------------
+; RunYesNoTest — menu-fidelity row 5 FRAME.BIN gate.
+; Drives the two-option (YES/NO) framework — home/yes_no.asm — which no golden
+; scenario and no other harness reaches. Renders the box and parks in
+; HandleMenuInput; build with DEBUG_AUTOKEY=1 AUTOKEY_QUIET=1 (the Makefile does
+; it for you) so AutoKeyDrive photographs the box at AUTOKEY_DUMP_FRAME and exits
+; without any keypress perturbing the cursor.
+;   make DEBUG_YESNO=<n>
+;     1 = YesNoChoice          (YES_NO_MENU: box GB(14,7), 4x3 interior, no blank)
+;     2 = YesNoChoicePokeCenter (HEAL_CANCEL_MENU: GB(11,6), 7x4, BLANK first line —
+;         the only descriptor that exercises the blank-line row offset)
+; What it proves: the options must sit TWO rows apart (pret's <NEXT> advances
+; 2*SCREEN_WIDTH) with the ▶ cursor level with the FIRST option.
+; Never returns. In: EBP = GB base.
+; ---------------------------------------------------------------------------
+RunYesNoTest:
+    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    call LoadFontTilePatterns
+    call LoadTextBoxTilePatterns
+%if DEBUG_YESNO = 2
+    call YesNoChoicePokeCenter
+%else
+    call YesNoChoice
+%endif
 .hang:
     jmp .hang
 %endif

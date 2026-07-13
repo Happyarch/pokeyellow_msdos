@@ -53,10 +53,6 @@
    "port_file": "dos_port/src/engine/menus/trainer_card.asm",
    "why": "pre-existing relocation, all 7 translated label(s) here (draft Session H)"
   },
-  "engine/menus/text_box.asm": {
-   "port_file": "dos_port/src/home/yes_no.asm",
-   "why": "pre-existing relocation, all 1 translated label(s) here (draft Session H)"
-  },
   "engine/movie/evolution.asm": {
    "port_file": "dos_port/src/engine/pokemon/evolution.asm",
    "why": "pre-existing relocation, all 3 translated label(s) here (draft Session H)"
@@ -483,6 +479,10 @@
    "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
    "why": "pret home/trainers.asm split across port files (draft Session H)"
   },
+  "DisplayTwoOptionMenu": {
+   "port_file": "dos_port/src/home/yes_no.asm",
+   "why": "Deliberate, and NOT a file-level relocation (the old entry keyed the whole of pret engine/menus/text_box.asm to yes_no.asm, which was simply false: that file's other labels do live in dos_port/src/engine/menus/text_box.asm). Only this routine moves. Reason: in the port DisplayTwoOptionMenu is not a standalone routine. pret receives the box position in a register triple (b=cursor Y, c=cursor X, hl=tilemap address of the border); the port's window compositor needs GB TILE coordinates, not a tilemap address, so the position now arrives in yn_box_col/yn_box_row -- private .bss written by the home/yes_no.asm entry points -- and the box is placed and dropped through yn_show_window/yn_mirror/yn_teardown, also private to this file. Hosting the routine in its mirrored path would export three .bss cells and three helpers across a file boundary purely to satisfy the mirror rule, splitting one cohesive unit in two. Its only out-of-file caller, DisplayTextBoxID_'s TWO_OPTION_MENU dispatch, is an extern either way. Re-justified by hand at menu-fidelity row 5 (2026-07-13)."
+  },
   "DoBikeSpeedup": {
    "port_file": "dos_port/src/engine/overworld/overworld.asm",
    "why": "pret home/overworld.asm split across port files; OW-A.6 moved the real body here (linked, called from OverworldLoop .moveAhead) and retired the check-only player_gfx.asm copy"
@@ -699,6 +699,10 @@
    "port_file": "dos_port/src/engine/battle/exploding_animation.asm",
    "why": "pret engine/battle/core.asm split across port files (draft Session H)"
   },
+  "HandleFlyWarpOrDungeonWarp": {
+   "port_file": "dos_port/src/engine/overworld/overworld.asm",
+   "why": "pret home/overworld.asm split across port files; overworld.asm is the port's home/overworld.asm (same rationale as HandleBlackOut/StopBikeSurf, which sit beside it). Ported 2026-07-13 (blocker B1): it is the CONSUMER of the wStatusFlags6 FLY_WARP/DUNGEON_WARP bits that ItemUseEscapeRope/Dig/Fly set, and it lives next to its OverworldLoopLessDelay call site."
+  },
   "HandleMidJump": {
    "port_file": "dos_port/src/engine/overworld/ledges.asm",
    "why": "pret home/overworld.asm split across port files (draft Session H)"
@@ -790,6 +794,10 @@
   "LearnMoveFromLevelUp": {
    "port_file": "dos_port/src/engine/battle/battle_menu.asm",
    "why": "pret engine/pokemon/evos_moves.asm split across port files (draft Session H)"
+  },
+  "LeaveMapAnim": {
+   "port_file": "dos_port/src/engine/overworld/overworld.asm",
+   "why": "pret home/overworld.asm:778 (`farjp _LeaveMapAnim`) — a bank wrapper, kept as its own pret-named symbol so HandleFlyWarpOrDungeonWarp still matches pret line-for-line. Sits with its only caller, same split as HandleBlackOut."
   },
   "LoadBattleMonFromParty": {
    "port_file": "dos_port/src/engine/battle/faint_leaves.asm",
@@ -1278,14 +1286,6 @@
   "_AddPartyMon": {
    "port_file": "dos_port/src/engine/pokemon/add_party_mon.asm",
    "why": "pret engine/pokemon/add_mon.asm split across port files (draft Session H)"
-  },
-  "HandleFlyWarpOrDungeonWarp": {
-   "port_file": "dos_port/src/engine/overworld/overworld.asm",
-   "why": "pret home/overworld.asm split across port files; overworld.asm is the port's home/overworld.asm (same rationale as HandleBlackOut/StopBikeSurf, which sit beside it). Ported 2026-07-13 (blocker B1): it is the CONSUMER of the wStatusFlags6 FLY_WARP/DUNGEON_WARP bits that ItemUseEscapeRope/Dig/Fly set, and it lives next to its OverworldLoopLessDelay call site."
-  },
-  "LeaveMapAnim": {
-   "port_file": "dos_port/src/engine/overworld/overworld.asm",
-   "why": "pret home/overworld.asm:778 (`farjp _LeaveMapAnim`) — a bank wrapper, kept as its own pret-named symbol so HandleFlyWarpOrDungeonWarp still matches pret line-for-line. Sits with its only caller, same split as HandleBlackOut."
   }
  },
  "suppress": [

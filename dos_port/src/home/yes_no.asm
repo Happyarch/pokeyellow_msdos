@@ -1,6 +1,12 @@
 ; ===========================================================================
-; yes_no.asm — faithful YES/NO (two-option) menu framework.
-; Intended repo path: dos_port/src/home/yes_no.asm
+; yes_no.asm — the YES/NO (two-option) menu framework.
+;
+; AUDITED at menu-fidelity row 5 (2026-07-13). It was NOT "faithful", whatever the
+; old header said: the two options were rendered one row apart and the cursor was
+; placed one row below the first of them, so the ▶ sat next to the WRONG option.
+; pret is DOUBLE-spaced here (its <NEXT> advances 2*SCREEN_WIDTH and PlaceMenuCursor
+; steps 40 — see DisplayTwoOptionMenu). Both are fixed; treat the claims below as
+; audited, not as inherited assertions.
 ;
 ; Port of pret home/yes_no.asm + the TWO_OPTION_MENU path of
 ; engine/menus/text_box.asm:DisplayTwoOptionMenu, plus the
@@ -111,6 +117,7 @@ yn_tot_h:       resd 1          ; total box height (int_h + 2)
 yn_saved_wc:    resd 1          ; g_window_count on entry (restored on exit)
 yn_saved_stride:resd 1          ; text_row_stride on entry (restored on exit)
 yn_pressed:     resd 1          ; HandleMenuInput result (keys), kept across feedback
+yn_frow:        resd 1          ; first option's box-relative row (blank ? 2 : 1)
 
 ; ===========================================================================
 section .text
@@ -225,17 +232,22 @@ DisplayTwoOptionMenu:
     mov [yn_tot_h], eax                          ; total height = int_h + 2
 
     ; first-option box-relative row: blank ? 2 : 1 (pret bc = 2*20+2 / 20+2)
+    ; Kept in a named slot, NOT juggled on the stack. The push/pop dance this
+    ; replaced ended up popping the LAST value pushed (the second option's row)
+    ; into the cursor-row register, while its comment claimed it was `frow` — so
+    ; wTopMenuItemY was set one row below the first option and the ▶ sat next to
+    ; the wrong line. One slot, read three times, cannot drift like that.
     xor ecx, ecx
     mov cl, 1
     cmp byte [ebx + TOMD_BLANK], 0
     je .have_frow
     mov cl, 2
-.have_frow:                                       ; ECX = first-option rel row
+.have_frow:
+    mov [yn_frow], ecx                             ; first-option box-relative row
 
     ; --- render the border into the W_TILEMAP scratch at origin (row0,col0) -
     ; NB: load the geometry via AX first — writing BH/BL directly from [ebx+..]
     ; would corrupt EBX (the descriptor pointer) between the two reads (S3 fix).
-    push ecx                                       ; save first-opt rel row
     mov esi, W_TILEMAP
     mov ah, [ebx + TOMD_INT_H]                     ; interior height
     mov al, [ebx + TOMD_INT_W]                     ; interior width
@@ -250,32 +262,58 @@ DisplayTwoOptionMenu:
     call TextBoxBorder
 .afterTextBoxBorder:
     pop ebx                                        ; descriptor pointer restored
+    ; DEVIATION(window-compositor): pret calls UpdateSprites here to hide OBJ that
+    ; would otherwise show through the box. The port composites the window layer OVER
+    ; OBJ (inverse of the GB's z-order), so this box occludes sprites by construction;
+    ; calling UpdateSprites would only re-publish overworld OAM beneath a window that
+    ; already covers it. Same reasoning as home/list_menu.asm:DisplayListMenuID.
 
-    ; --- option A text at rel (frow, 2), option B at (frow+1, 2) -----------
-    pop ecx
-    push ecx
-    mov eax, ecx
+    ; --- option A at rel (frow, 2), option B at rel (frow + 2, 2) ----------
+    ; TWO rows apart, not one. pret stores the pair as ONE string joined by a
+    ; `next` ($4E), and PlaceString's <NEXT> handler (home/text.asm:63) advances
+    ; `2 * SCREEN_WIDTH` unless hUILayoutFlags' BIT_SINGLE_SPACED_LINES is set —
+    ; and NOTHING in the two-option path sets it (the only setters are save.asm,
+    ; learn_move.asm, printer2.asm and battle core.asm). So the two options are
+    ; DOUBLE-SPACED, with a blank interior row between them.
+    ; The descriptor heights confirm it and are otherwise unexplainable: a 2-item
+    ; menu is given int_h 3 (options on interior rows 1 and 3) — or int_h 4 with
+    ; `blank` for HEAL_CANCEL (rows 2 and 4). Single-spaced, every one of those
+    ; boxes would carry a stray empty row at the bottom.
+    ; Cross-check against pret's entry points, whose `lb bc` is the CURSOR (Y,X),
+    ; not the box: YES/NO box GB(14,7) + cursor GB(15,8) = box-rel (col 1, row 1);
+    ; PokéCenter box GB(11,6) + cursor GB(12,8) = box-rel (col 1, row 2) — which is
+    ; exactly the `blank ? 2 : 1` first-option row computed above, and the second
+    ; option sits a doubled cursor step below it.
+    mov eax, [yn_frow]
     imul eax, eax, 20
     lea esi, [eax + W_TILEMAP + 2]                 ; ESI = rel(frow,2)
     mov eax, [ebx + TOMD_OPT_A]
     call place_flat_str
-    pop ecx
-    inc ecx                                        ; frow+1
-    push ecx
-    mov eax, ecx
+    mov eax, [yn_frow]
+    add eax, 2                                     ; pret's <NEXT> = 2 rows
     imul eax, eax, 20
-    lea esi, [eax + W_TILEMAP + 2]                 ; ESI = rel(frow+1,2)
+    lea esi, [eax + W_TILEMAP + 2]                 ; ESI = rel(frow+2,2)
     mov eax, [ebx + TOMD_OPT_B]
     call place_flat_str
 
     ; --- menu-input state (pret DisplayTwoOptionMenu block) ----------------
-    pop ecx                                        ; ECX = frow (first option row)
-    mov [ebp + wTopMenuItemY], cl                  ; cursor top row (W_TILEMAP rel)
+    mov ecx, [yn_frow]
+    mov [ebp + wTopMenuItemY], cl                  ; cursor top row = FIRST option's row
     mov byte [ebp + wTopMenuItemX], 1              ; cursor col (box-rel 1)
     mov byte [ebp + wMaxMenuItem], 1
     mov byte [ebp + wMenuWatchedKeys], PAD_A | PAD_B
     mov byte [ebp + wLastMenuItem], 0
-    mov dword [menu_item_step], 20                 ; single-spaced: 1 row/item
+    ; pret: `xor a / ld [wLastMenuItem],a / ld [wMenuWatchMovingOutOfBounds],a`.
+    ; The port set wLastMenuItem but never wMenuWatchMovingOutOfBounds, so this menu
+    ; inherited whatever the PREVIOUS menu left there — and DisplayListMenuID sets it
+    ; to 1. A YES/NO opened from a list (bag TOSS: list → "TOSS HOW MANY?" → YES/NO)
+    ; therefore ran with out-of-bounds movement watching still armed.
+    mov byte [ebp + wMenuWatchMovingOutOfBounds], 0
+    ; Two rows per item — pret's PlaceMenuCursor default (home/window.asm:141 `ld bc,40`);
+    ; it only drops to one row when hUILayoutFlags' BIT_DOUBLE_SPACED_MENU is SET (the
+    ; constant name reads backwards), and nothing in this path sets it. Matches the
+    ; doubled <NEXT> row step used for the option text above.
+    mov dword [menu_item_step], 2 * 20
 
     ; --- project + append the window descriptor ----------------------------
     call yn_show_window                            ; also saves g_window_count
@@ -326,8 +364,24 @@ DisplayTwoOptionMenu:
 
 ; ---------------------------------------------------------------------------
 ; yn_teardown — restore state: drop our window descriptor + text_row_stride,
-; clear BIT_NO_TEXT_DELAY. Mirrors pret's LoadScreenTilesFromBuffer1 net effect
-; (screen returns to its pre-box state). Preserves EAX (carry decided by caller).
+; clear BIT_NO_TEXT_DELAY. Preserves EAX (carry decided by caller).
+;
+; DEVIATION(window-compositor): this is why the port has no
+; TwoOptionMenu_SaveScreenTiles / TwoOptionMenu_RestoreScreenTiles (ledger M-5 —
+; they are absent, not stubbed, and this is the reason). pret must SNAPSHOT the
+; tilemap cells the box is about to overwrite and paste them back afterwards,
+; because on the GB the box IS the tilemap. In the port the box is a window
+; descriptor composited over an untouched background, so "restore" is just dropping
+; the descriptor: nothing under it was ever modified.
+;
+; NOTE — a pret BUG this model cannot reproduce, deliberately. pret's own comment
+; (engine/menus/text_box.asm, right below DisplayTwoOptionMenu) says: "Some of the
+; wider/taller two option menus will not have the screen areas they cover be fully
+; saved/restored by the two functions below. The bottom and right edges of the menu
+; may remain after the function returns." That residue is a save/restore sizing bug;
+; with no save/restore there is no residue. This is NOT a silent "fix" of a Gen-1
+; bug we were supposed to preserve — it is unreachable in this rendering model, and
+; is recorded here so the absence is explained rather than merely unnoticed.
 ; ---------------------------------------------------------------------------
 yn_teardown:
     push eax
@@ -451,13 +505,7 @@ TwoOptionMenuDesc:
     two_option 7, 4, 1, str_heal,  str_cancel  ; 6 HEAL_CANCEL_MENU (blank 1st)
     two_option 4, 3, 0, str_no,    str_yes     ; 7 NO_YES_MENU
 
-; option strings — charmap glyphs (A=0x80 .. Z=0x99), '@' = CHAR_TERM.
-str_yes:    db 0x98,0x84,0x92, CHAR_TERM                          ; "YES"
-str_no:     db 0x8D,0x8E, CHAR_TERM                               ; "NO"
-str_north:  db 0x8D,0x8E,0x91,0x93,0x87, CHAR_TERM                ; "NORTH"
-str_west:   db 0x96,0x84,0x92,0x93, CHAR_TERM                     ; "WEST"
-str_south:  db 0x92,0x8E,0x94,0x93,0x87, CHAR_TERM                ; "SOUTH"
-str_east:   db 0x84,0x80,0x92,0x93, CHAR_TERM                     ; "EAST"
-str_trade:  db 0x93,0x91,0x80,0x83,0x84, CHAR_TERM                ; "TRADE"
-str_cancel: db 0x82,0x80,0x8D,0x82,0x84,0x8B, CHAR_TERM           ; "CANCEL"
-str_heal:   db 0x87,0x84,0x80,0x8B, CHAR_TERM                     ; "HEAL"
+; Option strings — Tier-1 DATA: generated by tools/gen_yes_no_strings.py through
+; gb_text.encode, never hand-encoded charmap hex (the bytes it emits are
+; byte-identical to the hand-written block this replaced). Regenerate: `make assets`.
+%include "assets/yes_no_strings.inc"
