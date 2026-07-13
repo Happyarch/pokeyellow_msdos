@@ -79,3 +79,13 @@ def load(path: str | Path) -> Sidecar:
     )
     sidecar.validate()
     return sidecar
+
+
+def save(sidecar: Sidecar, path: str | Path) -> None:
+    """Write stable, delta-only JSON after validating editor changes."""
+    sidecar.validate()
+    out = {"version": 1, "pal_overrides": sidecar.pal_overrides,
+           "species_overrides": sidecar.species_overrides,
+           "screen_overrides": sidecar.screen_overrides,
+           "repaint": sidecar.repaint}
+    Path(path).write_text(json.dumps(out, indent=2) + "\n")

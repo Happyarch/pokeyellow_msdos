@@ -37,7 +37,12 @@ def main() -> None:
             raise SystemExit("palettes.inc is stale; run colorize.py --gen")
         print("palette sidecar and generated table are valid")
         return
-    requested = "--edit" if args.edit else "--export-png" if args.export_png else "--import-png"
+    if args.edit:
+        from colors.editor import main as edit
+        sys.argv = [sys.argv[0]]
+        edit()
+        return
+    requested = "--export-png" if args.export_png else "--import-png"
     raise SystemExit(f"{requested} lands in a later colorization stage; use --gen or --verify today")
 
 
