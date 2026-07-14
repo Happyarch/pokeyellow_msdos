@@ -30,6 +30,11 @@ dos_port/CWSDPMI.EXE
 dos_port/CWSDPMI.SWP
 *.SWP
 
+# DOS port runtime debug dumps (rewritten by every DEBUG_* run; see the
+# build-and-debug skill). FRAME_BASELINE.BIN is a checked-in reference and
+# is deliberately NOT matched here.
+dos_port/GBSTATE.BIN
+
 # DOS port assets — generated .inc are ignored, EXCEPT the ones below that have
 # no `make` rule (checked-in generated graphics: fonts, Pikachu/logo/title pics,
 # NPC stills, mon icons). They are NOT reproducible by `make assets`, so they must
