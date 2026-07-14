@@ -51,11 +51,19 @@
 ;      act is the redraw that restores it — Func_f531b's `jp Func_f531b` retry, or
 ;      LinkMenu's .choseCancel window-stack drop.  Same trade as save.asm's dialogs.
 ;  * SERIAL IS ALL STUBS (no port serial hardware).  Every Serial_* /
-;    CloseLinkConnection / hSerial* / rSC access is ; TODO-HW: network HAL, and the
-;    stubs are tuned so the single-player (no-partner) collapse drives each menu to
-;    pret's terminal path (LinkMenu -> .choseCancel; Func_f531b -> retry / cancel)
-;    and NEVER a bare ret that skips CloseLinkConnection / the cancel dialog.  The
-;    exact return contract is documented at each stub below.
+;    CloseLinkConnection / hSerial* / rSC access is ; TODO-HW: network HAL.  The
+;    stubs themselves are pret home/serial.asm's, so they live in
+;    src/home/serial_stubs.asm — NOT here; this file is a CALLER, and a stub in a
+;    caller's mirror file is the shadow class the stub convention forbids (row 20
+;    part 2, M-112).  The no-partner return contract they are tuned to (which drives
+;    each menu to a pret terminal path rather than a bare ret) is documented in full
+;    at the top of that file.
+;  * NO LIVE CALLER (M-111): pret reaches LinkMenu from CableClubNPC
+;    (engine/link/cable_club_npc.asm), which the port has not translated — every
+;    label of that file is `missing` in translation.db.  LinkMenu and Func_f531b are
+;    therefore reachable today only from the DEBUG_I1* harness at the bottom of this
+;    file; that harness calls the real routines (it draws nothing itself), so what it
+;    photographs IS this code.
 ;
 ; Build (standalone check):
 ;   nasm -f coff -I include/ -I . -o /dev/null src/engine/menus/link_menu.asm
@@ -87,12 +95,21 @@ extern g_window_count           ; ppu/ppu.asm — active window count (window st
 extern g_bg_whiteout            ; ppu/ppu.asm — 1 = full-screen takeover (no BG behind)
 extern menu_item_step           ; home/window.asm — per-item cursor row step
 extern menu_redraw_cb           ; home/window.asm — per-frame redraw cb (0=none)
-extern PlaceMenuCursor          ; home/window.asm — draw ▶ at wTopMenuItem{X,Y}
 extern HandleMenuInput          ; home/window.asm — Out: AL = watched keys pressed
 extern DelayFrame               ; video/frame.asm
 extern DelayFrames              ; video/frame.asm — In: BL = frame count
 extern Delay3                   ; video/frame.asm
 extern UpdateSprites            ; engine/overworld/movement.asm
+extern SaveScreenTilesToBuffer1     ; engine/battle/battle_menu.asm (pret home/vcopy.asm)
+extern LoadScreenTilesFromBuffer1   ; engine/battle/battle_menu.asm (pret home/vcopy.asm)
+
+; --- serial: ; TODO-HW: network HAL — stubs in src/home/serial_stubs.asm ----
+extern Serial_ExchangeByte
+extern Serial_ExchangeLinkMenuSelection
+extern Serial_ExchangeNybble
+extern Serial_SyncAndExchangeNybble
+extern Serial_SendZeroByte
+extern CloseLinkConnection
 
 ; --- dispatch seam (ROOT-WIRED, Session 9 spine) ---------------------------
 extern PrepareForSpecialWarp    ; engine/overworld/special_warps.asm (callfar target)
@@ -224,63 +241,6 @@ PointerTable_f56ee:
 section .text
 
 ; ###########################################################################
-; # SERIAL STUBS — ; TODO-HW: network HAL (Phase 4). No port serial hardware.
-; #
-; # No-partner (single-player) return CONTRACT — tuned so each menu reaches its
-; # pret terminal path with no bare ret:
-; #   hSerialConnectionStatus := CONNECTION_NOT_ESTABLISHED ($ff) at each menu
-; #     entry (below).  $ff != USING_INTERNAL_CLOCK, so every "who clocks the
-; #     connection wins" / "start the transfer" branch takes the not-internal
-; #     path deterministically.
-; #   Serial_ExchangeByte          -> AL := $C0 (Func_f531b only): high nybble
-; #     $C0 satisfies `and $f0 / cp $c0`, low nybble 0 = "enemy present, idle,
-; #     no A/B" -> the "enemy didn't press A/B" branch, player's own selection
-; #     used.  Fixed value => the double-read `cp b` is always equal.
-; #   Serial_ExchangeLinkMenuSelection -> receive buffer[0..1] := $D0 (LinkMenu):
-; #     high nybble $D0 satisfies `and $f0 / cp $d0` (loop exits), low nybble 0 =
-; #     "enemy didn't press A/B" -> player's selection used.
-; #   Serial_ExchangeNybble        -> wSerialExchangeNybbleReceiveData := $ff
-; #     ("no response"); LinkMenu .asm_f5963's `inc a / jr z` keeps looping until
-; #     the b=$78 frame counter expires -> the .asm_f59b2 timeout -> .choseCancel.
-; #   Serial_SyncAndExchangeNybble -> wSerialSyncAndExchangeNybbleReceiveData
-; #     (== wLinkMenuSelectionReceiveBuffer, 0xCC3D) := $ff (remote "ineligible"/
-; #     no response) -> Func_f531b takes Func_f5476 (ColosseumIneligibleText) ->
-; #     asm_f547c (jp Func_f531b, retry).  Never a bare ret.
-; #   Serial_SendZeroByte / CloseLinkConnection -> no-op (flag-preserving).
-; ###########################################################################
-
-Serial_ExchangeByte:
-    ; TODO-HW: network HAL — exchange one byte with the link partner.
-    mov al, 0xC0                    ; fixed "idle partner" byte (see CONTRACT)
-    ret
-
-Serial_ExchangeLinkMenuSelection:
-    ; TODO-HW: network HAL — Serial_ExchangeByte the 2-byte send/receive buffers.
-    mov byte [ebp + wLinkMenuSelectionReceiveBuffer], 0xD0
-    mov byte [ebp + wLinkMenuSelectionReceiveBuffer + 1], 0xD0
-    ret
-
-Serial_ExchangeNybble:
-    ; TODO-HW: network HAL — exchange one nybble; leaves "no response".
-    mov byte [ebp + wSerialExchangeNybbleReceiveData], 0xFF
-    ret
-
-Serial_SyncAndExchangeNybble:
-    ; TODO-HW: network HAL — sync + nybble exchange; leaves remote "no response".
-    ; 0xCC3D is BOTH wSerialSyncAndExchangeNybbleReceiveData and (union-aliased)
-    ; wLinkMenuSelectionReceiveBuffer, which Func_f531b reads next.
-    mov byte [ebp + wSerialSyncAndExchangeNybbleReceiveData], 0xFF
-    ret
-
-Serial_SendZeroByte:
-    ; TODO-HW: network HAL — send $00; no-op stub.
-    ret
-
-CloseLinkConnection:
-    ; TODO-HW: network HAL — tear down the serial link; no-op stub.
-    ret
-
-; ###########################################################################
 ; # Colosseum*Text — pret's text_far WRAPPERS (engine/menus/link_menu.asm:571-633).
 ; # These are DATA, not routines: `ld hl, ColosseumMewText / call PrintText` is how
 ; # pret prints one, and link_cups.asm's result routines do exactly that.  The
@@ -388,9 +348,10 @@ cup_show_window:
     call set_single_window
     ret
 
-; lm_cup_setup — draw the 3 boxes + labels, init the vertical menu, show the
-; window.  (Func_f531b body up to the .asm_f5377 loop; also used by the harness.)
-lm_cup_setup:
+Func_f531b:
+    ; ld c,$14 / call DelayFrames
+    mov bl, 0x14
+    call DelayFrames
     ; ld a,$1 / ld [wBuffer],a ; xor a / ld [wUnknownSerialFlag_d499],a
     mov byte [ebp + wBuffer], 1
     mov byte [ebp + wUnknownSerialFlag_d499], 0
@@ -434,13 +395,6 @@ lm_cup_setup:
     mov dword [menu_item_step], 2 * LM_STRIDE
     mov dword [menu_redraw_cb], cup_mirror
     call cup_show_window
-    ret
-
-Func_f531b:
-    ; ld c,$14 / call DelayFrames
-    mov bl, 0x14
-    call DelayFrames
-    call lm_cup_setup
 .asm_f5377:
     call Func_f56bd                 ; redraw the rules panel for the current cup
     call HandleMenuInput            ; Out: AL = watched keys (A|B) pressed
@@ -669,15 +623,35 @@ lm_link_show_window:
     call add_window
     ret
 
-; lm_link_setup — draw the box + items, init the menu.  (LinkMenu body up to the
-; .waitForInputLoop; also used by the harness.)  ; DEVIATION(geometry): the box
-; is drawn BOX-RELATIVE (origin scratch 0,0) and shown at UI_LINK_MENU, so pret's
-; GB-absolute coords are shifted by (-5,-3): text (7,5)->(2,2), cursor (6,5)->(1,2).
-lm_link_setup:
+; ; DEVIATION(geometry): the LinkMenu box is drawn BOX-RELATIVE (origin = scratch
+; 0,0) and shown at UI_LINK_MENU, so pret's GB-absolute coords are shifted by
+; (-5,-3): text (7,5)->(2,2), cursor (6,5)->(1,2).
+LinkMenu:
+    ; TODO-HW: network HAL — no serial handshake precedes this menu in the port;
+    ; pin the connection status to "not established" so every not-internal-clock
+    ; branch is deterministic (see the serial_stubs.asm contract).
+    mov byte [ebp + H_SERIAL_CONN_STATUS], CONNECTION_NOT_ESTABLISHED
+    ; xor a / ld [wLetterPrintingDelayFlags],a
+    mov byte [ebp + wLetterPrintingDelayFlags], 0
+    ; ld hl,wStatusFlags4 / set BIT_LINK_CONNECTED,[hl]
+    or byte [ebp + W_STATUS_FLAGS_4], 1 << BIT_LINK_CONNECTED
     mov dword [text_row_stride], LM_STRIDE
+    ; ld hl,TextTerminator_f5a16 / call PrintText — an EMPTY stream: it draws the
+    ; message box and types nothing, so the dialog is open (and the screen saved
+    ; below includes it) before the menu goes up.
+    mov dword [text_msgbox], msgbox_dialog
+    mov esi, TextTerminator_f5a16
+    call PrintText
+    ; call SaveScreenTilesToBuffer1 — the real routine (battle_menu.asm holds the
+    ; port's body under pret's name); it snapshots W_TILEMAP, which is where this
+    ; menu's stride-20 scratch lives, so the save is meaningful here.
+    call SaveScreenTilesToBuffer1
+    ; ; DEVIATION(window-compositor): the SCREEN restore is the window stack, not the
+    ; tilemap — the menu is a window over the caller's windows, so LoadScreenTiles-
+    ; FromBuffer1 alone would not un-draw it.  Record the caller's window count and
+    ; drop back to it at .choseCancel.
     mov eax, [g_window_count]
-    mov [lm_link_wc], eax           ; ; DEVIATION: SaveScreenTilesToBuffer1 modeled
-                                    ; as the window-stack baseline (restored on exit)
+    mov [lm_link_wc], eax
     ; ld hl, ColosseumWhereToText / call PrintText — ends in `done`, so the box
     ; stays up as the bottom dialog while the menu box is drawn over it.
     mov dword [text_msgbox], msgbox_dialog
@@ -707,26 +681,6 @@ lm_link_setup:
     mov dword [menu_item_step], 2 * LM_STRIDE
     mov dword [menu_redraw_cb], lm_link_mirror
     call lm_link_show_window
-    ret
-
-LinkMenu:
-    ; TODO-HW: network HAL — no serial handshake precedes this menu in the port;
-    ; pin the connection status to "not established" so every not-internal-clock
-    ; branch is deterministic (see the SERIAL STUBS contract).
-    mov byte [ebp + H_SERIAL_CONN_STATUS], CONNECTION_NOT_ESTABLISHED
-    ; xor a / ld [wLetterPrintingDelayFlags],a
-    mov byte [ebp + wLetterPrintingDelayFlags], 0
-    ; ld hl,wStatusFlags4 / set BIT_LINK_CONNECTED,[hl]
-    or byte [ebp + W_STATUS_FLAGS_4], 1 << BIT_LINK_CONNECTED
-    ; ld hl,TextTerminator_f5a16 / call PrintText — an EMPTY stream: it draws the
-    ; message box and types nothing, so the dialog is open (and the screen it saves
-    ; below includes it) before the menu goes up.  Was elided as "a no-op under the
-    ; drawn-whole window model" (row 20 part 1, M-110); it is not a no-op, and with
-    ; PrintText back it is one call.
-    mov dword [text_msgbox], msgbox_dialog
-    mov esi, TextTerminator_f5a16
-    call PrintText
-    call lm_link_setup
 .waitForInputLoop:
     call HandleMenuInput            ; Out: AL = watched keys
     ; and PAD_A|PAD_B / add a / add a / ld b,a
@@ -820,8 +774,11 @@ LinkMenu:
     mov bl, bh                      ; ld c,b
 .updateCursorPosition:
     call Func_f59ec
-    ; ld ...LoadScreenTilesFromBuffer1 — ; DEVIATION: window model; the visible
-    ; restore happens via the window-stack drop at .choseCancel / dispatch.
+    ; call LoadScreenTilesFromBuffer1 — restores the W_TILEMAP snapshot taken at
+    ; entry (the real routine, battle_menu.asm).  ; DEVIATION(window-compositor):
+    ; on the GB this is also what un-draws the menu; here the menu is a WINDOW, so
+    ; the visible restore is the window-stack drop at .choseCancel.
+    call LoadScreenTilesFromBuffer1
     mov al, [ebp + wLinkMenuSelectionSendBuffer]
     and al, PAD_B << 2
     jnz .choseCancel                ; cancel if B pressed
@@ -1010,45 +967,41 @@ TextTerminator_f5a16:
     text_end
 
 ; ###########################################################################
-; # RunLinkMenuTest — %ifdef DEBUG_I1 FRAME.BIN gate (static open state).
-; # Opens the cup-select screen (Func_f531b's static draw + rules + ▶ cursor),
-; # mirrors, settles, and dumps.  The serial exchange loops need a partner (or an
-; # A/B press) to progress, so — like RunOptionsTest — the harness draws the open
-; # state rather than running HandleMenuInput (which would block without input).
+; # RunLinkMenuTest — %ifdef DEBUG_I1 FRAME.BIN gate.
+; #
+; # The harness DRAWS NOTHING of its own: it loads the font and calls the real
+; # routine, so what FRAME.BIN photographs is this file's code.  (Until row 20
+; # part 2 it called an extracted `lm_cup_setup` helper — the routine's own body,
+; # lifted out purely so the harness could reach it, which broke Func_f531b into
+; # a shape faithdiff could not follow.  The helper is gone; nothing here reshapes
+; # the routine.)
+; #
+; # Both menus park in HandleMenuInput waiting for A/B, which no headless run can
+; # press — so the build is DEBUG_AUTOKEY + AUTOKEY_QUIET (no presses, ever) and
+; # AutoKeyDrive writes FRAME.BIN from the joypad ISR at AUTOKEY_DUMP_FRAME while
+; # the menu spins, then exits.  That is exactly the open state to look at.
+; #   DEBUG_I1      -> Func_f531b, the Colosseum cup-select screen
+; #   DEBUG_I1_LINK -> LinkMenu, the TRADE CENTER/COLOSSEUM/COLOSSEUM2/CANCEL box
 ; ###########################################################################
 %ifdef DEBUG_I1
 global RunLinkMenuTest
 extern LoadFontTilePatterns         ; gfx/load_font.asm
 extern LoadTextBoxTilePatterns      ; gfx/load_font.asm
 extern ClearSprites                 ; gfx/sprites.asm
-extern DumpBackbuffer               ; debug/debug_dump.asm — writes FRAME.BIN + exits
 
 RunLinkMenuTest:
-    mov byte [ebp + H_SERIAL_CONN_STATUS], CONNECTION_NOT_ESTABLISHED
     or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     call LoadTextBoxTilePatterns
     call ClearSprites
     mov byte [ebp + W_UPDATE_SPRITES_ENABLED], 0
-    call lm_cup_setup               ; 3 boxes + labels + window
-    call Func_f56bd                 ; rules panel for cup 0
-    call PlaceMenuCursor            ; ▶ on the first cup
-    call cup_mirror
-    call DelayFrame
-    call DelayFrame
-    call DelayFrame
-%ifdef DEBUG_I1_MSG
-    ; Message variant (row 20 part 1): print one of the cup-eligibility messages the
-    ; way link_cups.asm's result routines do, on top of the cup screen.  The stream
-    ; ends in `prompt`, so PrintText parks on the ▼ wait — AUTOKEY_DUMP_FRAME snaps
-    ; the frame from the ISR while it waits, which is exactly the state to look at.
-    mov dword [text_msgbox], msgbox_dialog
-    mov esi, Colosseum3MonsText
-    call PrintText
+%ifdef DEBUG_I1_LINK
+    call LinkMenu                   ; spins in .waitForInputLoop; AUTOKEY dumps
+%else
+    mov byte [ebp + H_SERIAL_CONN_STATUS], CONNECTION_NOT_ESTABLISHED
+    call Func_f531b                 ; spins in .asm_f5377;      AUTOKEY dumps
+%endif
 .hang:
     call DelayFrame                 ; keep the frame counter running for AUTOKEY
     jmp .hang
-%endif
-    call DumpBackbuffer             ; writes FRAME.BIN + exits
-    ret
 %endif

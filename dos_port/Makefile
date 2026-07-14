@@ -194,6 +194,7 @@ BOOT_SRCS := \
 
 HOME_SRCS := \
     src/home/home_stubs.asm \
+    src/home/serial_stubs.asm \
     src/home/fill_memory.asm \
     src/home/copy_data.asm \
     src/home/bankswitch.asm \
@@ -829,29 +830,29 @@ NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_G2
 NASMFLAGS += -D SKIP_TITLE
 endif
-# Link-menu gates (menus S8 package I). I1: open the cup-select screen (serial
-# stubbed to the no-partner timeout). I2: run the cup validators (a pass + a
-# gated fail) and record result codes. Dump FRAME.BIN, exit.
-# make SKIP_TITLE=1 DEBUG_I1=1  /  DEBUG_I2=1
+# Link-menu gates (menus S8 package I). I1: run Func_f531b, the Colosseum cup-select
+# screen (serial stubbed to the no-partner collapse). I1_LINK: run LinkMenu instead.
+# I2: run the cup validators (a pass + a gated fail) and record result codes.
+#
+# Both menus park in HandleMenuInput waiting for A/B, which a headless run cannot
+# press — so I1/I1_LINK build with AUTOKEY_QUIET (no presses, ever) and AutoKeyDrive
+# writes FRAME.BIN from the joypad ISR at AUTOKEY_DUMP_FRAME (90 — late enough for
+# the boxes, labels, rules panel and ▶ cursor) and exits. The harness calls the real
+# routines; it draws nothing itself (menu-fidelity row 20 part 2).
+# make DEBUG_I1=1  /  DEBUG_I1_LINK=1  /  DEBUG_I2=1
+ifdef DEBUG_I1_LINK
+DEBUG_I1 := 1
+NASMFLAGS += -D DEBUG_I1_LINK
+endif
 ifdef DEBUG_I1
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_I1
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_QUIET -D AUTOKEY_DUMP_FRAME=90
 NASMFLAGS += -D SKIP_TITLE
 endif
 ifdef DEBUG_I2
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_I2
-NASMFLAGS += -D SKIP_TITLE
-endif
-# I1_MSG (menu-fidelity row 20 part 1): the same cup screen, then PrintText one of
-# the Colosseum eligibility messages (a `prompt` stream). PrintText parks on the ▼
-# wait, so the harness spins on DelayFrame and AUTOKEY dumps the frame from the ISR
-# at frame 90 — late enough for the box to be drawn and the two lines typed out.
-# make DEBUG_I1_MSG=1
-ifdef DEBUG_I1_MSG
-NEED_DEBUG_DUMP := 1
-NASMFLAGS += -D DEBUG_I1 -D DEBUG_I1_MSG
-NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_QUIET -D AUTOKEY_DUMP_FRAME=90
 NASMFLAGS += -D SKIP_TITLE
 endif
 # Live battle view: same setup as DEBUG_BATTLE but holds the screen (loops
