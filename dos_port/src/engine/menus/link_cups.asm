@@ -58,6 +58,9 @@ extern ColosseumWeightText
 extern ColosseumEvolvedText
 
 ; --- already-linked port routines ---
+extern PrintText                       ; home/window.asm — In: ESI = text stream
+extern text_msgbox                     ; home/text.asm — the active msgbox projection
+extern msgbox_dialog                   ; home/text.asm — the dialog projection record
 extern GetMonName                      ; home/names.asm — in: wNamedObjectIndex -> wNameBuffer
 
 ; PokedexEntryPointers — assets/dex_entries.inc (DO NOT %include the data file
@@ -80,12 +83,13 @@ wPartyMon3Level equ wPartyMon2Level + PARTYMON_STRUCT_LENGTH
 
 section .text
 
-; SEAM (I1↔I2): each Colosseum*Text is an I1-owned drawn-whole PRINT ROUTINE
-; (`call X` prints its message + rets), matching pret's `ld hl,X / call PrintText`
-; → port `call X`. The result routines below `call` them directly then set AL,
-; exactly as pret does. (An earlier I2 build assumed they were flat data streams
-; printed via a local PrintCupText helper; that was reconciled onto I1's routine
-; contract at integration.)
+; SEAM (I1↔I2): each Colosseum*Text is a pret text_far WRAPPER — DATA — defined in
+; link_menu.asm over a Tier-1 stream in assets/link_text.inc.  The result routines
+; below print one the way pret does: `ld hl, X / call PrintText` → `mov esi, X /
+; call PrintText`, with the port's one extra store (text_msgbox := msgbox_dialog)
+; naming the projection PrintText draws through.  Until row 20 part 1 (M-109) these
+; twenty pret text LABELS were redefined as print ROUTINES (`call ColosseumMewText`)
+; over a hand-encoded, hand-paged message engine in link_menu.asm.
 
 ; ===========================================================================
 ; PokeCup — pret ref: engine/menus/link_menu.asm:PokeCup.
@@ -339,62 +343,86 @@ PetitCup:
 ; link_menu.asm only needs PokeCup/PikaCup/PetitCup).
 ; ===========================================================================
 NotThreeMonsInParty:
-    call Colosseum3MonsText                 ; I1 drawn-whole print routine (sets AL after)
+    mov dword [text_msgbox], msgbox_dialog
+    mov esi, Colosseum3MonsText                 ; ld hl, Colosseum3MonsText
+    call PrintText
     mov al, 0x1
     ret
 
 MewInParty:
-    call ColosseumMewText                 ; I1 drawn-whole print routine (sets AL after)
+    mov dword [text_msgbox], msgbox_dialog
+    mov esi, ColosseumMewText                 ; ld hl, ColosseumMewText
+    call PrintText
     mov al, 0x2
     ret
 
 DuplicateSpecies:
-    call ColosseumDifferentMonsText                 ; I1 drawn-whole print routine (sets AL after)
+    mov dword [text_msgbox], msgbox_dialog
+    mov esi, ColosseumDifferentMonsText                 ; ld hl, ColosseumDifferentMonsText
+    call PrintText
     mov al, 0x3
     ret
 
 LevelAbove55:
-    call ColosseumMaxL55Text                 ; I1 drawn-whole print routine (sets AL after)
+    mov dword [text_msgbox], msgbox_dialog
+    mov esi, ColosseumMaxL55Text                 ; ld hl, ColosseumMaxL55Text
+    call PrintText
     mov al, 0x4
     ret
 
 LevelUnder50:
-    call ColosseumMinL50Text                 ; I1 drawn-whole print routine (sets AL after)
+    mov dword [text_msgbox], msgbox_dialog
+    mov esi, ColosseumMinL50Text                 ; ld hl, ColosseumMinL50Text
+    call PrintText
     mov al, 0x5
     ret
 
 CombinedLevelsGreaterThan155:
-    call ColosseumTotalL155Text                 ; I1 drawn-whole print routine (sets AL after)
+    mov dword [text_msgbox], msgbox_dialog
+    mov esi, ColosseumTotalL155Text                 ; ld hl, ColosseumTotalL155Text
+    call PrintText
     mov al, 0x6
     ret
 
 LevelAbove30:
-    call ColosseumMaxL30Text                 ; I1 drawn-whole print routine (sets AL after)
+    mov dword [text_msgbox], msgbox_dialog
+    mov esi, ColosseumMaxL30Text                 ; ld hl, ColosseumMaxL30Text
+    call PrintText
     mov al, 0x7
     ret
 
 LevelUnder25:
-    call ColosseumMinL25Text                 ; I1 drawn-whole print routine (sets AL after)
+    mov dword [text_msgbox], msgbox_dialog
+    mov esi, ColosseumMinL25Text                 ; ld hl, ColosseumMinL25Text
+    call PrintText
     mov al, 0x8
     ret
 
 CombinedLevelsAbove80:
-    call ColosseumTotalL80Text                 ; I1 drawn-whole print routine (sets AL after)
+    mov dword [text_msgbox], msgbox_dialog
+    mov esi, ColosseumTotalL80Text                 ; ld hl, ColosseumTotalL80Text
+    call PrintText
     mov al, 0x9
     ret
 
 LevelAbove20:
-    call ColosseumMaxL20Text                 ; I1 drawn-whole print routine (sets AL after)
+    mov dword [text_msgbox], msgbox_dialog
+    mov esi, ColosseumMaxL20Text                 ; ld hl, ColosseumMaxL20Text
+    call PrintText
     mov al, 0xa
     ret
 
 LevelUnder15:
-    call ColosseumMinL15Text                 ; I1 drawn-whole print routine (sets AL after)
+    mov dword [text_msgbox], msgbox_dialog
+    mov esi, ColosseumMinL15Text                 ; ld hl, ColosseumMinL15Text
+    call PrintText
     mov al, 0xb
     ret
 
 CombinedLevelsAbove50:
-    call ColosseumTotalL50Text                 ; I1 drawn-whole print routine (sets AL after)
+    mov dword [text_msgbox], msgbox_dialog
+    mov esi, ColosseumTotalL50Text                 ; ld hl, ColosseumTotalL50Text
+    call PrintText
     mov al, 0xc
     ret
 
@@ -408,7 +436,9 @@ asm_f5689:
     pop esi
     mov [ebp + wNamedObjectIndex], al   ; al = species internal index (pret: a from popped af)
     call GetMonName
-    call ColosseumHeightText                 ; I1 drawn-whole print routine (sets AL after)
+    mov dword [text_msgbox], msgbox_dialog
+    mov esi, ColosseumHeightText                 ; ld hl, ColosseumHeightText
+    call PrintText
     mov al, 0xd
     ret
 
@@ -420,7 +450,9 @@ asm_f569b:
     pop esi
     mov [ebp + wNamedObjectIndex], al
     call GetMonName
-    call ColosseumWeightText                 ; I1 drawn-whole print routine (sets AL after)
+    mov dword [text_msgbox], msgbox_dialog
+    mov esi, ColosseumWeightText                 ; ld hl, ColosseumWeightText
+    call PrintText
     mov al, 0xe
     ret
 
@@ -433,7 +465,9 @@ asm_f56ad:
     mov al, [ebp + esi]
     mov [ebp + wNamedObjectIndex], al
     call GetMonName
-    call ColosseumEvolvedText                 ; I1 drawn-whole print routine (sets AL after)
+    mov dword [text_msgbox], msgbox_dialog
+    mov esi, ColosseumEvolvedText                 ; ld hl, ColosseumEvolvedText
+    call PrintText
     mov al, 0xf
     ret
 

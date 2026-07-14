@@ -13,7 +13,8 @@
 ;   * PointerTable_f56ee (dd Text_f56f4/5728/575b)
 ; The cup-eligibility routines PokeCup/PikaCup/PetitCup + their result routines
 ; (NotThreeMonsInParty, MewInParty, LevelAbove55, ...) are package I2
-; (link_cups.asm); I2 externs the Colosseum*Text print routines FROM this file.
+; (link_cups.asm); I2 externs the Colosseum*Text text_far wrappers FROM this file
+; and prints them itself, the way pret does (ld hl, X / call PrintText).
 ;
 ; ---------------------------------------------------------------------------
 ; PORT MODEL (CLAUDE.md + translation_log "menus-port S2..S7"):
@@ -34,16 +35,21 @@
 ;  * TEXT: PlaceString wants EAX = FLAT src ptr (a .data label, or lea eax,[ebp+n]
 ;    for GB memory), NOT pret's DE.  <NEXT> ($4E) double-spaces by default (as
 ;    pret's 2*SCREEN_WIDTH), which is what the two menus and the rules panel want.
-;  * MESSAGES (Colosseum*Text): pret prints each with PrintText.  PrintText is the
-;    port's BATTLE printer and the dialog projection collapses the window list — so,
-;    exactly as save.asm / players_pc.asm, each message is DRAWN WHOLE into the
-;    stride-20 scratch rows 12-17, mirrored to GB_TILEMAP1, shown as a window at
-;    UI_MESSAGE_BOX, with pret wording (data/text/text_3.asm, GB charmap) and the
-;    terminal `prompt`/`done` reproduced (▼+A/B wait, or persist).
-;      ; DEVIATION: text_far _Colosseum*Text -> inline charmap bytes (naming_screen
-;      precedent).  The Colosseum*Text labels are GLOBAL print ROUTINES: I2 (and
-;      LinkMenu/Func_f531b) reach a message with `call ColosseumXText` — the port
-;      form of pret's `ld hl,ColosseumXText / call PrintText`.
+;  * MESSAGES (Colosseum*Text): pret's own text_far streams (data/text/text_3.asm),
+;    printed by PrintText through the msgbox_dialog projection — pret's shape,
+;    call for call (row 20 part 1, M-109).  Until then this file claimed PrintText
+;    was unusable here and reimplemented it: each message line was a hand-encoded
+;    charmap `db` run, the twenty pret text DATA labels were redefined as print
+;    ROUTINES (`call ColosseumMewText`), and a private lm_msg_* engine drew the box,
+;    typed the lines, blinked the ▼ and waited.  It is usable — save.asm / pc.asm /
+;    players_pc.asm / oaks_pc.asm / league_pc.asm / main_menu.asm all print with it,
+;    and the three name-splicing streams (_Colosseum{Height,Weight,Evolved}Text are
+;    `text_ram wNameBuffer` texts) are only expressible through it.
+;      ; DEVIATION(window-compositor): the msgbox_dialog projection presents the box
+;      with set_single_window, so a message REPLACES the screen behind it for as long
+;      as it is up (pret overlays the box on the live tilemap).  Each caller's next
+;      act is the redraw that restores it — Func_f531b's `jp Func_f531b` retry, or
+;      LinkMenu's .choseCancel window-stack drop.  Same trade as save.asm's dialogs.
 ;  * SERIAL IS ALL STUBS (no port serial hardware).  Every Serial_* /
 ;    CloseLinkConnection / hSerial* / rSC access is ; TODO-HW: network HAL, and the
 ;    stubs are tuned so the single-player (no-partner) collapse drives each menu to
@@ -60,6 +66,8 @@ bits 32
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
 %include "gb_macros.inc"
+%include "gb_text.inc"                  ; text_far / text_end
+%include "msgbox.inc"                   ; the msgbox projection record
 
 %define UI_LAYOUT_EQUATES_ONLY 1
 %include "assets/ui_layout_menus.inc"
@@ -69,7 +77,9 @@ bits 32
 ; ---------------------------------------------------------------------------
 extern TextBoxBorder            ; text/text.asm — ESI=top-left, BL=int_w, BH=int_h
 extern PlaceString              ; text/text.asm — EAX=flat src, ESI=dest (<NEXT> aware)
-extern place_flat_str           ; text/text.asm — EAX=flat '@'-term src, ESI=dest
+extern PrintText                ; home/window.asm — In: ESI = text stream
+extern text_msgbox              ; home/text.asm — the active msgbox projection
+extern msgbox_dialog            ; home/text.asm — the dialog projection record
 extern text_row_stride          ; text/text.asm — active W_TILEMAP row stride
 extern add_window               ; ppu/ppu.asm — EAX=wx EBX=wy ECX=clip EDX=maxy ESI=tm EDI=row
 extern set_single_window        ; ppu/ppu.asm — count:=1 then add (full takeover)
@@ -111,7 +121,8 @@ global Text_f575b
 global Text_f5791
 global Text_f579c
 global TradeCenterText
-; --- Colosseum*Text print routines (I2's result routines call these) -------
+global TextTerminator_f5a16
+; --- Colosseum*Text — pret's text_far WRAPPERS (data). I2 prints these. -----
 global Colosseum3MonsText
 global ColosseumMewText
 global ColosseumDifferentMonsText
@@ -168,25 +179,18 @@ USING_INTERNAL_CLOCK     equ 0x02          ; constants/serial_constants.asm
 CONNECTION_NOT_ESTABLISHED equ 0xFF        ; constants/serial_constants.asm
 
 ; --- charmap tiles (constants/charmap.asm; NOT GB-memory symbols) ----------
-CHAR_TERM   equ 0x50            ; '@'
 CHAR_SPACE  equ 0x7F            ; ' '  blank tile
 CHAR_RARROW equ 0xEC            ; '▷'  unfilled right arrow
-CHAR_DOWN   equ 0xEE            ; '▼'
 
 ; --- stride-20 scratch geometry --------------------------------------------
 LM_STRIDE   equ 20
 %define CUP(X,Y)  (W_TILEMAP + (Y) * LM_STRIDE + (X))   ; cup screen GB-absolute
 %define LMB(X,Y)  (W_TILEMAP + (Y) * LM_STRIDE + (X))   ; LinkMenu box-relative
-; drawn-whole message band: scratch rows 12-17 -> GB_TILEMAP1 rows 0-5
-LM_MSG_SROW equ 12
-LM_MSG_ROW14 equ W_TILEMAP + 14 * LM_STRIDE + 1
-LM_MSG_ROW16 equ W_TILEMAP + 16 * LM_STRIDE + 1
 
 ; ===========================================================================
 section .bss
 align 4
 lm_link_wc:  resd 1             ; g_window_count baseline at LinkMenu entry
-lm_msg_wc:   resd 1             ; g_window_count before the current message window
 
 ; ===========================================================================
 section .data
@@ -205,59 +209,16 @@ PointerTable_f56ee:
     dd Text_f5728
     dd Text_f575b
 
-; --- rules text tables (Func_f56bd PlaceString; <NEXT>=$4E double-spaced) ---
-; pret Text_f56f4/5728/575b (data/... inline).  <PKMN>=$4A (PlaceString expands).
-Text_f56f4: db 0x8B, 0x95, 0xB2, 0x7F, 0xAE, 0xA5, 0x7F, 0xF9, 0x4A, 0x9C, 0xFB, 0xF6, 0xE3, 0xFB, 0xFB, 0x4E, 0x92, 0xB4, 0xAC, 0x7F, 0xAE, 0xA5, 0x7F, 0x8B, 0x95, 0xB2, 0x9C, 0xF7, 0xFB, 0xFB, 0x7F, 0x8C, 0x80, 0x97, 0x4E, 0x8C, 0x84, 0x96, 0x7F, 0xA2, 0xA0, 0xAD, 0xBE, 0x7F, 0xA0, 0xB3, 0xB3, 0xA4, 0xAD, 0xA3, 0xE8, 0x50   ; "LVs of 3<PKMN>:50-55" / "Sum of LVs:155 MAX" / "MEW can't attend."
-Text_f5728: db 0x8B, 0x95, 0xB2, 0x7F, 0xAE, 0xA5, 0x7F, 0xF9, 0x4A, 0x9C, 0xF7, 0xFB, 0xE3, 0xF8, 0xF6, 0x4E, 0x92, 0xB4, 0xAC, 0x7F, 0xAE, 0xA5, 0x7F, 0x8B, 0x95, 0xB2, 0x9C, 0xFB, 0xF6, 0x7F, 0x8C, 0x80, 0x97, 0x4E, 0x8C, 0x84, 0x96, 0x7F, 0xA2, 0xA0, 0xAD, 0xBE, 0x7F, 0xA0, 0xB3, 0xB3, 0xA4, 0xAD, 0xA3, 0xE8, 0x50   ; "LVs of 3<PKMN>:15-20" / "Sum of LVs:50 MAX" / "MEW can't attend."
-Text_f575b: db 0xF9, 0x7F, 0x81, 0xA0, 0xB2, 0xA8, 0xA2, 0x7F, 0x4A, 0xE8, 0x8B, 0x95, 0xF8, 0xFB, 0xE3, 0xF9, 0xF6, 0x4E, 0x92, 0xB4, 0xAC, 0x7F, 0xAE, 0xA5, 0x7F, 0x8B, 0x95, 0xB2, 0x9C, 0xFE, 0xF6, 0x7F, 0x8C, 0x80, 0x97, 0x4E, 0xFC, 0x71, 0xFE, 0x73, 0x7F, 0xA0, 0xAD, 0xA3, 0x7F, 0xFA, 0xFA, 0xAB, 0xA1, 0x7F, 0x8C, 0x80, 0x97, 0x50   ; "3 Basic <PKMN>.LV25-30" / "Sum of LVs:80 MAX" / "6’8” and 44lb MAX"
-
-; --- menu text tables (PlaceString; <NEXT>=$4E double-spaced) --------------
-Text_f5791: db 0x95, 0xA8, 0xA4, 0xB6, 0x4E, 0x91, 0xB4, 0xAB, 0xA4, 0xB2, 0x50   ; "View" / "Rules"
-Text_f579c: db 0x54, 0x7F, 0x82, 0xB4, 0xAF, 0x4E, 0x8F, 0xA8, 0xAA, 0xA0, 0x7F, 0x82, 0xB4, 0xAF, 0x4E, 0x8F, 0xA4, 0xB3, 0xA8, 0xB3, 0x7F, 0x82, 0xB4, 0xAF, 0x4E, 0x82, 0x80, 0x8D, 0x82, 0x84, 0x8B, 0x50   ; "# Cup" / "Pika Cup" / "Petit Cup" / "CANCEL"
-TradeCenterText: db 0x93, 0x91, 0x80, 0x83, 0x84, 0x7F, 0x82, 0x84, 0x8D, 0x93, 0x84, 0x91, 0x4E, 0x82, 0x8E, 0x8B, 0x8E, 0x92, 0x92, 0x84, 0x94, 0x8C, 0x4E, 0x82, 0x8E, 0x8B, 0x8E, 0x92, 0x92, 0x84, 0x94, 0x8C, 0xF8, 0x4E, 0x82, 0x80, 0x8D, 0x82, 0x84, 0x8B, 0x50   ; "TRADE CENTER" / "COLOSSEUM" / "COLOSSEUM2" / "CANCEL"
-
-; --- drawn-whole message line strings (pret data/text/text_3.asm wording) ---
-lm_whereto_l1:   db 0x96, 0xA7, 0xA4, 0xB1, 0xA4, 0x7F, 0xB6, 0xAE, 0xB4, 0xAB, 0xA3, 0x7F, 0xB8, 0xAE, 0xB4, 0x50   ; "Where would you"
-lm_whereto_l2:   db 0xAB, 0xA8, 0xAA, 0xA4, 0x7F, 0xB3, 0xAE, 0x7F, 0xA6, 0xAE, 0xE6, 0x50                           ; "like to go?"
-lm_pleasewait_l1:db 0x8E, 0x8A, 0xF4, 0x7F, 0xAF, 0xAB, 0xA4, 0xA0, 0xB2, 0xA4, 0x7F, 0xB6, 0xA0, 0xA8, 0xB3, 0x50   ; "OK, please wait"
-lm_pleasewait_l2:db 0xA9, 0xB4, 0xB2, 0xB3, 0x7F, 0xA0, 0x7F, 0xAC, 0xAE, 0xAC, 0xA4, 0xAD, 0xB3, 0xE8, 0x50         ; "just a moment."
-lm_canceled_l1:  db 0x93, 0xA7, 0xA4, 0x7F, 0xAB, 0xA8, 0xAD, 0xAA, 0x7F, 0xB6, 0xA0, 0xB2, 0x50                     ; "The link was"
-lm_canceled_l2:  db 0xA2, 0xA0, 0xAD, 0xA2, 0xA4, 0xAB, 0xA4, 0xA3, 0xE8, 0x50                                       ; "canceled."
-lm_version_l1:   db 0x93, 0xA7, 0xA4, 0x7F, 0xA6, 0xA0, 0xAC, 0xA4, 0x7F, 0xB5, 0xA4, 0xB1, 0xB2, 0xA8, 0xAE, 0xAD, 0xB2, 0x50 ; "The game versions"
-lm_version_l2:   db 0xA3, 0xAE, 0xAD, 0xBE, 0x7F, 0xAC, 0xA0, 0xB3, 0xA2, 0xA7, 0xE8, 0x50                           ; "don't match."
-lm_ineligible_l1:db 0x98, 0xAE, 0xB4, 0xB1, 0x7F, 0xAE, 0xAF, 0xAF, 0xAE, 0xAD, 0xA4, 0xAD, 0xB3, 0x7F, 0xA8, 0xB2, 0x50 ; "Your opponent is"
-lm_ineligible_l2:db 0xA8, 0xAD, 0xA4, 0xAB, 0xA8, 0xA6, 0xA8, 0xA1, 0xAB, 0xA4, 0xE8, 0x50                           ; "ineligible."
-lm_3mons_l1:     db 0x98, 0xAE, 0xB4, 0x7F, 0xAD, 0xA4, 0xA4, 0xA3, 0x7F, 0xF9, 0x7F, 0x54, 0x8C, 0x8E, 0x8D, 0x50   ; "You need 3 #MON"
-lm_3mons_l2:     db 0xB3, 0xAE, 0x7F, 0xA5, 0xA8, 0xA6, 0xA7, 0xB3, 0xE7, 0x50                                       ; "to fight!"
-lm_mew_l1:       db 0x92, 0xAE, 0xB1, 0xB1, 0xB8, 0xF4, 0x7F, 0x8C, 0x84, 0x96, 0x7F, 0xA2, 0xA0, 0xAD, 0xBE, 0x50   ; "Sorry, MEW can't"
-lm_mew_l2:       db 0xA0, 0xB3, 0xB3, 0xA4, 0xAD, 0xA3, 0xE7, 0x50                                                   ; "attend!"
-lm_diffmons_l1:  db 0x98, 0xAE, 0xB4, 0xB1, 0x7F, 0x54, 0x8C, 0x8E, 0x8D, 0x7F, 0xAC, 0xB4, 0xB2, 0xB3, 0x50         ; "Your #MON must"
-lm_diffmons_l2:  db 0xA0, 0xAB, 0xAB, 0x7F, 0xA1, 0xA4, 0x7F, 0xA3, 0xA8, 0xA5, 0xA5, 0xA4, 0xB1, 0xA4, 0xAD, 0xB3, 0xE7, 0x50 ; "all be different!"
-lm_maxl55_l1:    db 0x8D, 0xAE, 0x7F, 0x54, 0x8C, 0x8E, 0x8D, 0x7F, 0xA2, 0xA0, 0xAD, 0x50                           ; "No #MON can"
-lm_maxl55_l2:    db 0xA4, 0xB7, 0xA2, 0xA4, 0xA4, 0xA3, 0x7F, 0x8B, 0xFB, 0xFB, 0xE7, 0x50                           ; "exceed L55!"
-lm_minl50_l1:    db 0x80, 0xAB, 0xAB, 0x7F, 0x54, 0x8C, 0x8E, 0x8D, 0x7F, 0xAC, 0xB4, 0xB2, 0xB3, 0x50               ; "All #MON must"
-lm_minl50_l2:    db 0xA1, 0xA4, 0x7F, 0xA0, 0xB3, 0x7F, 0xAB, 0xA4, 0xA0, 0xB2, 0xB3, 0x7F, 0x8B, 0xFB, 0xF6, 0xE7, 0x50 ; "be at least L50!"
-lm_totl155_l1:   db 0x98, 0xAE, 0xB4, 0xB1, 0x7F, 0xB3, 0xAE, 0xB3, 0xA0, 0xAB, 0x7F, 0xAB, 0xA4, 0xB5, 0xA4, 0xAB, 0xB2, 0x50 ; "Your total levels"
-lm_totl155_l2:   db 0xA4, 0xB7, 0xA2, 0xA4, 0xA4, 0xA3, 0x7F, 0xF7, 0xFB, 0xFB, 0xE7, 0x50                           ; "exceed 155!"
-lm_maxl30_l1:    db 0x8D, 0xAE, 0x7F, 0x54, 0x8C, 0x8E, 0x8D, 0x7F, 0xA2, 0xA0, 0xAD, 0x50                           ; "No #MON can"
-lm_maxl30_l2:    db 0xA4, 0xB7, 0xA2, 0xA4, 0xA4, 0xA3, 0x7F, 0x8B, 0xF9, 0xF6, 0xE7, 0x50                           ; "exceed L30!"
-lm_minl25_l1:    db 0x80, 0xAB, 0xAB, 0x7F, 0x54, 0x8C, 0x8E, 0x8D, 0x7F, 0xAC, 0xB4, 0xB2, 0xB3, 0x50               ; "All #MON must"
-lm_minl25_l2:    db 0xA1, 0xA4, 0x7F, 0xA0, 0xB3, 0x7F, 0xAB, 0xA4, 0xA0, 0xB2, 0xB3, 0x7F, 0x8B, 0xF8, 0xFB, 0xE7, 0x50 ; "be at least L25!"
-lm_totl80_l1:    db 0x98, 0xAE, 0xB4, 0xB1, 0x7F, 0xB3, 0xAE, 0xB3, 0xA0, 0xAB, 0x7F, 0xAB, 0xA4, 0xB5, 0xA4, 0xAB, 0xB2, 0x50 ; "Your total levels"
-lm_totl80_l2:    db 0xA4, 0xB7, 0xA2, 0xA4, 0xA4, 0xA3, 0x7F, 0xFE, 0xF6, 0xE7, 0x50                                 ; "exceed 80!"
-lm_maxl20_l1:    db 0x8D, 0xAE, 0x7F, 0x54, 0x8C, 0x8E, 0x8D, 0x7F, 0xA2, 0xA0, 0xAD, 0x50                           ; "No #MON can"
-lm_maxl20_l2:    db 0xA4, 0xB7, 0xA2, 0xA4, 0xA4, 0xA3, 0x7F, 0x8B, 0xF8, 0xF6, 0xE7, 0x50                           ; "exceed L20!"
-lm_minl15_l1:    db 0x80, 0xAB, 0xAB, 0x7F, 0x54, 0x8C, 0x8E, 0x8D, 0x7F, 0xAC, 0xB4, 0xB2, 0xB3, 0x50               ; "All #MON must"
-lm_minl15_l2:    db 0xA1, 0xA4, 0x7F, 0xA0, 0xB3, 0x7F, 0xAB, 0xA4, 0xA0, 0xB2, 0xB3, 0x7F, 0x8B, 0xF7, 0xFB, 0xE7, 0x50 ; "be at least L15!"
-lm_totl50_l1:    db 0x98, 0xAE, 0xB4, 0xB1, 0x7F, 0xB3, 0xAE, 0xB3, 0xA0, 0xAB, 0x7F, 0xAB, 0xA4, 0xB5, 0xA4, 0xAB, 0xB2, 0x50 ; "Your total levels"
-lm_totl50_l2:    db 0xA4, 0xB7, 0xA2, 0xA4, 0xA4, 0xA3, 0x7F, 0xFB, 0xF6, 0xE7, 0x50                                 ; "exceed 50!"
-; name-embedded (pret text_ram wNameBuffer + tail); t1 = " ..." after the name.
-lm_height_t1:    db 0x7F, 0xA8, 0xB2, 0x7F, 0xAE, 0xB5, 0xA4, 0xB1, 0x50                                             ; " is over"
-lm_height_l2:    db 0xFC, 0x71, 0xFE, 0x73, 0x7F, 0xB3, 0xA0, 0xAB, 0xAB, 0xE7, 0x50                                 ; "6’8” tall!"
-lm_weight_t1:    db 0x7F, 0xB6, 0xA4, 0xA8, 0xA6, 0xA7, 0xB2, 0x50                                                   ; " weighs"
-lm_weight_l2:    db 0xAE, 0xB5, 0xA4, 0xB1, 0x7F, 0xFA, 0xFA, 0x7F, 0xAF, 0xAE, 0xB4, 0xAD, 0xA3, 0xB2, 0xE7, 0x50   ; "over 44 pounds!"
-lm_evolved_t1:   db 0x7F, 0xA8, 0xB2, 0x7F, 0xA0, 0xAD, 0x50                                                         ; " is an"
-lm_evolved_l2:   db 0xA4, 0xB5, 0xAE, 0xAB, 0xB5, 0xA4, 0xA3, 0x7F, 0x54, 0x8C, 0x8E, 0x8D, 0xE7, 0x50               ; "evolved #MON!"
+; --- Tier-1 DATA: every rendered string of pret engine/menus/link_menu.asm ---
+; The six `db` strings pret writes inline in the code file (Text_f56f4 / Text_f5728 /
+; Text_f575b — the cup rules panels; Text_f5791 View/Rules; Text_f579c the cup list;
+; TradeCenterText) AND the twenty text_far message bodies (_Colosseum*Text,
+; data/text/text_3.asm), all generated by tools/gen_menu_strings.py.
+; Hand-encoded charmap `db` runs until row 20 part 1 (M-109); the six generated db
+; strings are byte-identical to the literals they replace, and the message streams
+; are pret's own — the three `text_ram wNameBuffer` ones (Height/Weight/Evolved)
+; could not be expressed as glyph runs at all.
+%include "assets/link_text.inc"
 
 ; ===========================================================================
 section .text
@@ -320,187 +281,76 @@ CloseLinkConnection:
     ret
 
 ; ###########################################################################
-; # drawn-whole MESSAGE helpers (Colosseum*Text; save.asm precedent)
+; # Colosseum*Text — pret's text_far WRAPPERS (engine/menus/link_menu.asm:571-633).
+; # These are DATA, not routines: `ld hl, ColosseumMewText / call PrintText` is how
+; # pret prints one, and link_cups.asm's result routines do exactly that.  The
+; # Tier-1 stream bodies live in assets/link_text.inc.
 ; ###########################################################################
+Colosseum3MonsText:
+    text_far _Colosseum3MonsText
+    text_end
 
-; lm_msg_box — empty dialog border into scratch rows 12-17 (interior 18x4).
-lm_msg_box:
-    mov dword [text_row_stride], LM_STRIDE
-    mov esi, CUP(0, LM_MSG_SROW)
-    mov bl, 18
-    mov bh, 4
-    call TextBoxBorder
-    ret
+ColosseumMewText:
+    text_far _ColosseumMewText
+    text_end
 
-; lm_msg_show — mirror scratch rows 12-17 -> GB_TILEMAP1 rows 0-5 (pad cols
-; 20-31 blank), append the message window at UI_MESSAGE_BOX; remember the count.
-lm_msg_show:
-    pushad
-    mov ecx, 6
-    lea esi, [ebp + CUP(0, LM_MSG_SROW)]
-    lea edi, [ebp + GB_TILEMAP1]
-.row:
-    push ecx
-    push edi
-    mov ecx, LM_STRIDE
-    rep movsb
-    mov al, CHAR_SPACE
-    mov ecx, 12                     ; pad cols 20-31
-    rep stosb
-    pop edi
-    pop ecx
-    add edi, 32
-    dec ecx
-    jnz .row
-    mov eax, [g_window_count]
-    mov [lm_msg_wc], eax
-    mov eax, UI_MESSAGE_BOX_WX
-    mov ebx, UI_MESSAGE_BOX_WY
-    mov ecx, UI_MESSAGE_BOX_CLIP
-    mov edx, UI_MESSAGE_BOX_MAXY
-    mov esi, GB_TILEMAP1
-    xor edi, edi
-    call add_window
-    popad
-    ret
+ColosseumDifferentMonsText:
+    text_far _ColosseumDifferentMonsText
+    text_end
 
-; lm_msg_prompt — a text's terminal `prompt`: ▼ then wait for an A/B press cycle.
-lm_msg_prompt:
-    mov byte [ebp + GB_TILEMAP1 + DIALOG_ARROW_TILEMAP_OFFSET], CHAR_DOWN
-.release:
-    call DelayFrame
-    test byte [ebp + H_JOY_HELD], PAD_A | PAD_B
-    jnz .release
-.press:
-    call DelayFrame
-    test byte [ebp + H_JOY_HELD], PAD_A | PAD_B
-    jz .press
-    mov byte [ebp + GB_TILEMAP1 + DIALOG_ARROW_TILEMAP_OFFSET], CHAR_SPACE
-    ret
+ColosseumMaxL55Text:
+    text_far _ColosseumMaxL55Text
+    text_end
 
-; lm_msg_drop — drop the message window (restore the saved count). Clobbers EAX.
-lm_msg_drop:
-    mov eax, [lm_msg_wc]
-    mov [g_window_count], eax
-    ret
+ColosseumMinL50Text:
+    text_far _ColosseumMinL50Text
+    text_end
 
-; lm_show2_prompt — EAX=l1 flat, EDX=l2 flat -> box + 2 lines + show + prompt +
-; drop. (For every `prompt`-terminated Colosseum message.)
-lm_show2_prompt:
-    push eax                        ; l1
-    push edx                        ; l2
-    call lm_msg_box
-    mov esi, LM_MSG_ROW14
-    mov eax, [esp + 4]
-    call place_flat_str
-    mov esi, LM_MSG_ROW16
-    mov eax, [esp]
-    call place_flat_str
-    add esp, 8
-    call lm_msg_show
-    call lm_msg_prompt
-    jmp lm_msg_drop
+ColosseumTotalL155Text:
+    text_far _ColosseumTotalL155Text
+    text_end
 
-; lm_show2_done — EAX=l1, EDX=l2 -> box + 2 lines + show, persist (no prompt/drop).
-; (For the `done`-terminated flow messages that stay up.)
-lm_show2_done:
-    push eax
-    push edx
-    call lm_msg_box
-    mov esi, LM_MSG_ROW14
-    mov eax, [esp + 4]
-    call place_flat_str
-    mov esi, LM_MSG_ROW16
-    mov eax, [esp]
-    call place_flat_str
-    add esp, 8
-    call lm_msg_show
-    ret
+ColosseumMaxL30Text:
+    text_far _ColosseumMaxL30Text
+    text_end
 
-; --- the Colosseum*Text print routines (pret labels; each PrintText's a message)
-; prompt-terminated (I2's eligibility results + Func_f531b flow) --------------
-Colosseum3MonsText:        mov eax, lm_3mons_l1
-                           mov edx, lm_3mons_l2
-                           jmp lm_show2_prompt
-ColosseumMewText:          mov eax, lm_mew_l1
-                           mov edx, lm_mew_l2
-                           jmp lm_show2_prompt
-ColosseumDifferentMonsText:mov eax, lm_diffmons_l1
-                           mov edx, lm_diffmons_l2
-                           jmp lm_show2_prompt
-ColosseumMaxL55Text:       mov eax, lm_maxl55_l1
-                           mov edx, lm_maxl55_l2
-                           jmp lm_show2_prompt
-ColosseumMinL50Text:       mov eax, lm_minl50_l1
-                           mov edx, lm_minl50_l2
-                           jmp lm_show2_prompt
-ColosseumTotalL155Text:    mov eax, lm_totl155_l1
-                           mov edx, lm_totl155_l2
-                           jmp lm_show2_prompt
-ColosseumMaxL30Text:       mov eax, lm_maxl30_l1
-                           mov edx, lm_maxl30_l2
-                           jmp lm_show2_prompt
-ColosseumMinL25Text:       mov eax, lm_minl25_l1
-                           mov edx, lm_minl25_l2
-                           jmp lm_show2_prompt
-ColosseumTotalL80Text:     mov eax, lm_totl80_l1
-                           mov edx, lm_totl80_l2
-                           jmp lm_show2_prompt
-ColosseumMaxL20Text:       mov eax, lm_maxl20_l1
-                           mov edx, lm_maxl20_l2
-                           jmp lm_show2_prompt
-ColosseumMinL15Text:       mov eax, lm_minl15_l1
-                           mov edx, lm_minl15_l2
-                           jmp lm_show2_prompt
-ColosseumTotalL50Text:     mov eax, lm_totl50_l1
-                           mov edx, lm_totl50_l2
-                           jmp lm_show2_prompt
-ColosseumIneligibleText:   mov eax, lm_ineligible_l1
-                           mov edx, lm_ineligible_l2
-                           jmp lm_show2_prompt
-ColosseumVersionText:      mov eax, lm_version_l1
-                           mov edx, lm_version_l2
-                           jmp lm_show2_prompt
+ColosseumMinL25Text:
+    text_far _ColosseumMinL25Text
+    text_end
 
-; name-embedded (pret text_ram wNameBuffer + tail). I2 calls GetMonName first.
+ColosseumTotalL80Text:
+    text_far _ColosseumTotalL80Text
+    text_end
+
+ColosseumMaxL20Text:
+    text_far _ColosseumMaxL20Text
+    text_end
+
+ColosseumMinL15Text:
+    text_far _ColosseumMinL15Text
+    text_end
+
+ColosseumTotalL50Text:
+    text_far _ColosseumTotalL50Text
+    text_end
+
+; The three name-splicing streams: each begins `text_ram wNameBuffer`, so the mon
+; name link_cups.asm just fetched with GetMonName is spliced in by the text engine.
 ColosseumHeightText:
-    push lm_height_l2
-    push lm_height_t1
-    jmp lm_show_name
-ColosseumWeightText:
-    push lm_weight_l2
-    push lm_weight_t1
-    jmp lm_show_name
-ColosseumEvolvedText:
-    push lm_evolved_l2
-    push lm_evolved_t1
-    jmp lm_show_name
-; In (on stack): [esp]=tail1 (after name), [esp+4]=l2.
-lm_show_name:
-    call lm_msg_box
-    lea eax, [ebp + wNameBuffer]    ; row 14: the mon name...
-    mov esi, LM_MSG_ROW14
-    call place_flat_str             ; ...ESI advances past it
-    mov eax, [esp]                  ; ...then the tail (" is over" etc.)
-    call place_flat_str
-    mov esi, LM_MSG_ROW16
-    mov eax, [esp + 4]              ; row 16: line 2
-    call place_flat_str
-    add esp, 8
-    call lm_msg_show
-    call lm_msg_prompt
-    jmp lm_msg_drop
+    text_far _ColosseumHeightText
+    text_end
 
-; done-terminated flow messages (persist until the caller drops the window stack)
-ColosseumWhereToText:      mov eax, lm_whereto_l1
-                           mov edx, lm_whereto_l2
-                           jmp lm_show2_done
-ColosseumPleaseWaitText:   mov eax, lm_pleasewait_l1
-                           mov edx, lm_pleasewait_l2
-                           jmp lm_show2_done
-ColosseumCanceledText:     mov eax, lm_canceled_l1
-                           mov edx, lm_canceled_l2
-                           jmp lm_show2_done
+ColosseumWeightText:
+    text_far _ColosseumWeightText
+    text_end
+
+ColosseumEvolvedText:
+    text_far _ColosseumEvolvedText
+    text_end
+
+ColosseumIneligibleText:
+    text_far _ColosseumIneligibleText
+    text_end
 
 ; ###########################################################################
 ; # Func_f531b — the Colosseum cup-select screen
@@ -734,7 +584,11 @@ Func_f531b:
     ret
 
 Func_f5476:
-    call ColosseumIneligibleText    ; pret: ld hl,ColosseumIneligibleText / PrintText
+    ; ld hl, ColosseumIneligibleText / call PrintText — the REMOTE player's team
+    ; failed his cup check.  The stream ends in `prompt`; asm_f547c then redraws.
+    mov dword [text_msgbox], msgbox_dialog
+    mov esi, ColosseumIneligibleText
+    call PrintText
 asm_f547c:
     jmp Func_f531b
 
@@ -748,7 +602,7 @@ asm_f547f:
 ; ###########################################################################
 Func_f56bd:
     ; xor a / ldh [hAutoBGTransferEnabled],a — window model; manual mirror below.
-    mov byte [ebp + H_AUTO_BG_TRANSFER_EN], 0
+    mov byte [ebp + hAutoBGTransferEnabled], 0
     mov dword [text_row_stride], LM_STRIDE
     ; hlcoord 1,11 / lb bc,6,18 / ClearScreenArea (interior of the rules panel)
     ; ; DEVIATION(stride): the port ClearScreenArea is baked to SCREEN_WIDTH(40);
@@ -777,7 +631,7 @@ Func_f56bd:
 .asm_f56e6:
     call cup_mirror                 ; expose the redrawn rules in the window
     call Delay3
-    mov byte [ebp + H_AUTO_BG_TRANSFER_EN], 1
+    mov byte [ebp + hAutoBGTransferEnabled], 1
     ret
 
 ; ###########################################################################
@@ -824,8 +678,11 @@ lm_link_setup:
     mov eax, [g_window_count]
     mov [lm_link_wc], eax           ; ; DEVIATION: SaveScreenTilesToBuffer1 modeled
                                     ; as the window-stack baseline (restored on exit)
-    ; ColosseumWhereToText (done — persists as the bottom dialog).
-    call ColosseumWhereToText
+    ; ld hl, ColosseumWhereToText / call PrintText — ends in `done`, so the box
+    ; stays up as the bottom dialog while the menu box is drawn over it.
+    mov dword [text_msgbox], msgbox_dialog
+    mov esi, ColosseumWhereToText
+    call PrintText
     ; hlcoord 5,3 / lb bc,8,13 -> box-relative interior 13x8 at scratch (0,0)
     mov esi, LMB(0, 0)
     mov bl, 13
@@ -861,8 +718,14 @@ LinkMenu:
     mov byte [ebp + wLetterPrintingDelayFlags], 0
     ; ld hl,wStatusFlags4 / set BIT_LINK_CONNECTED,[hl]
     or byte [ebp + W_STATUS_FLAGS_4], 1 << BIT_LINK_CONNECTED
-    ; ld hl,TextTerminator_f5a16 / call PrintText — empty text (opens the dialog
-    ; state); a no-op under the drawn-whole window model.
+    ; ld hl,TextTerminator_f5a16 / call PrintText — an EMPTY stream: it draws the
+    ; message box and types nothing, so the dialog is open (and the screen it saves
+    ; below includes it) before the menu goes up.  Was elided as "a no-op under the
+    ; drawn-whole window model" (row 20 part 1, M-110); it is not a no-op, and with
+    ; PrintText back it is one call.
+    mov dword [text_msgbox], msgbox_dialog
+    mov esi, TextTerminator_f5a16
+    call PrintText
     call lm_link_setup
 .waitForInputLoop:
     call HandleMenuInput            ; Out: AL = watched keys
@@ -975,7 +838,10 @@ LinkMenu:
     mov al, TRADE_CENTER
 .next:
     mov [ebp + wCableClubDestinationMap], al
-    call ColosseumPleaseWaitText    ; pret: ld hl,ColosseumPleaseWaitText / PrintText
+    ; ld hl, ColosseumPleaseWaitText / call PrintText (ends in `done` — stays up)
+    mov dword [text_msgbox], msgbox_dialog
+    mov esi, ColosseumPleaseWaitText
+    call PrintText
     mov bl, 50
     call DelayFrames
     ; ld hl,wStatusFlags6 / res BIT_DEBUG_MODE,[hl]
@@ -1005,7 +871,10 @@ LinkMenu:
     ; LoadScreenTilesFromBuffer1 screen restore.
     mov eax, [lm_link_wc]
     mov [g_window_count], eax
-    call ColosseumCanceledText      ; pret: ld hl,ColosseumCanceledText / PrintText
+    ; ld hl, ColosseumCanceledText / call PrintText (ends in `done` — stays up)
+    mov dword [text_msgbox], msgbox_dialog
+    mov esi, ColosseumCanceledText
+    call PrintText
     ; ld hl,wStatusFlags4 / res BIT_LINK_CONNECTED,[hl]
     and byte [ebp + W_STATUS_FLAGS_4], ~(1 << BIT_LINK_CONNECTED) & 0xFF
     ret
@@ -1078,7 +947,10 @@ LinkMenu:
     call Func_f59ec
     jmp .choseCancel
 .asm_f59cd:
-    call ColosseumVersionText       ; pret: ld hl,ColosseumVersionText / PrintText
+    ; ld hl, ColosseumVersionText / call PrintText (ends in `prompt`)
+    mov dword [text_msgbox], msgbox_dialog
+    mov esi, ColosseumVersionText
+    call PrintText
     jmp .choseCancel
 .asm_f59d6:
     ; b=' ' c=' ' d='▷' e=' ' / Func_f59ec
@@ -1115,6 +987,28 @@ Func_f59ec:
     pop ebx
     ret
 
+; --- LinkMenu's own text_far wrappers (pret ref: engine/menus/link_menu.asm:895-912,
+; same position, same order).  TextTerminator_f5a16 is pret's EMPTY stream — a bare
+; text_end, printed to open the message box with no text in it.
+ColosseumWhereToText:
+    text_far _ColosseumWhereToText
+    text_end
+
+ColosseumPleaseWaitText:
+    text_far _ColosseumPleaseWaitText
+    text_end
+
+ColosseumCanceledText:
+    text_far _ColosseumCanceledText
+    text_end
+
+ColosseumVersionText:
+    text_far _ColosseumVersionText
+    text_end
+
+TextTerminator_f5a16:
+    text_end
+
 ; ###########################################################################
 ; # RunLinkMenuTest — %ifdef DEBUG_I1 FRAME.BIN gate (static open state).
 ; # Opens the cup-select screen (Func_f531b's static draw + rules + ▶ cursor),
@@ -1143,6 +1037,18 @@ RunLinkMenuTest:
     call DelayFrame
     call DelayFrame
     call DelayFrame
+%ifdef DEBUG_I1_MSG
+    ; Message variant (row 20 part 1): print one of the cup-eligibility messages the
+    ; way link_cups.asm's result routines do, on top of the cup screen.  The stream
+    ; ends in `prompt`, so PrintText parks on the ▼ wait — AUTOKEY_DUMP_FRAME snaps
+    ; the frame from the ISR while it waits, which is exactly the state to look at.
+    mov dword [text_msgbox], msgbox_dialog
+    mov esi, Colosseum3MonsText
+    call PrintText
+.hang:
+    call DelayFrame                 ; keep the frame counter running for AUTOKEY
+    jmp .hang
+%endif
     call DumpBackbuffer             ; writes FRAME.BIN + exits
     ret
 %endif

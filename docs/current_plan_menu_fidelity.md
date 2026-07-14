@@ -116,7 +116,7 @@ driver only relocates the divergence.
 | 17 | `src/engine/menus/pc.asm`, `players_pc.asm`, `oaks_pc.asm`, `league_pc.asm` | same | **DONE** | `3b495afb` (p1: pc.asm), `00b64035` (p2: players_pc.asm), `fcdbdf42` (p3: oaks_pc.asm), `2696039f` (p4: league_pc.asm) | **p1 `pc.asm`: the file's header made three claims and all three were false.** M-79: all six `PlaySound`/`WaitForSoundToFinish` calls dropped behind a fake `TODO-HW: audio HAL` — audio is ported and live (the row-9 M-20 shape). M-80: `Save/LoadScreenTilesFromBuffer2` "replaced" by a shim that saved **`g_window_count`**, i.e. nothing; the real bodies were in `movie/title.asm` all along and the *load* half was merely never `global`. M-81: the four dialogs were a private message engine over **nine hand-encoded charmap strings** (Tier-1 violation) that could not render text COMMANDS, so `<PLAYER>`/POKé were open-coded as glyph runs — now generated (`assets/pc_text.inc`) and printed by `PrintText` with pret's four restored wrapper labels. **M-82 (filed): `ActivatePC` is UNREACHABLE** — `home/overworld_text.asm`'s PC text scripts are still `%ifdef`-guarded out under a stale "targets are NI" comment, so the whole PC subsystem is dead code in the shipped binary. New `DEBUG_PC` harness; dialog rendered and looked at. `pc_stubs.asm` (DisplayPCMainMenu / BillsPC_) verified: ret-only-plus-menu-vars, in a `*_stubs.asm`, shadowing nothing. **p2 `players_pc.asm`: the same three false claims, next door.** M-83: eight `PlaySound`/`WaitForSoundToFinish` calls and all three `Save`/`LoadScreenTiles` calls dropped behind "TODO-HW audio HAL" / "no screen to save-restore" — every one of those routines is ported, linked and live; restored. M-84: fourteen messages drawn whole from **20 hand-encoded charmap strings**, two of which (`ItemWasStored`/`WithdrewItem`) are `TX_RAM` splices a glyph run *cannot* express — now generated (`assets/players_pc_text.inc`) and printed by `PrintText` through a file-local projection (`msgbox_players_pc`, SANCTIONED: `msgbox_dialog`'s `set_single_window` would collapse the menu/list windows out from under the message). M-85: the Toss comment invented a pret refactor that never happened. Parent menu + message box rendered together and looked at (`DEBUG_PLAYERSPC`). **p3 `oaks_pc.asm`: the same three false claims, a third time.** M-86: `Save`/`LoadScreenTilesFromBuffer2` "collapsed to a window-list save/restore" that saved `g_window_count` and nothing else; both real routines were linked all along; restored. M-87: the three dialogs drawn whole from **eight hand-encoded charmap strings**, justified by "the far-text streams aren't GB-space assets yet" — false, they are ordinary `text_far` bodies; now generated (`assets/oaks_pc_text.inc`) and printed by `PrintText`, with pret's three wrapper labels restored (the hand-encoded pages had also dropped the POKé control byte). M-88: `predef DisplayDexRating` was a **comment with no call and no stub body anywhere** — YES and NO did the same thing; restored as a real call to a ret-only stub in the new `oaks_pc_stubs.asm`. New `DEBUG_OAKSPC` harness (AUTOKEY shape); "Accessed PROF. / OAK's PC." dialog rendered and looked at. **p4 `league_pc.asm`: the same debt plus two stale deferrals.** M-89: `AccessedHoFPCText` drawn whole from four hand-encoded charmap strings and `HallOfFameNoText` hand-encoded too (the page had dropped pret's POKé byte); both now generated (`assets/league_pc_text.inc`), the wrapper label restored, printed by `PrintText`. M-90: the Hall-of-Fame team loop was switched OFF by a port-invented 0-team guard "because the S7 save layer isn't here" — `LoadHallOfFameTeams` is real and linked in `save.asm`; guard deleted, loop live. M-91: **both** palette calls (`RunPaletteCommand`, `RunDefaultPaletteCommand`) were comments behind a "TODO-HW: Phase 5" that is no longer true — both routines are real and linked; restored on BH. M-92 filed (naming_screen's palette comment is stale, other file). `LeaguePCShowMon`'s full-screen layout stays UNVERIFIED (needs a HoF save + the unported HoF movie). Dialog rendered and looked at. |
 | 18 | `src/engine/menus/main_menu.asm` | same | DONE | `65bd1697` | M-93 palette call restored; M-94 3 strings → generator; M-95 Func_5cc1 PrintText restored; 4 SANCTIONED (joypad-HAL, SRAM, EnterMapBoot, compositor); `OakSpeech` stub verified |
 | 19 | `src/engine/menus/save.asm` (1080 ln) | same | **DONE** | part 1: `b05bdea8`, part 2: `c7d35568`, part 3: `7110af54` | part 1 (SAVE/LOAD flow): M-97 five drawn-whole dialogs → pret `text_far` + `PrintText`; M-98 yes/no box was pret's `TWO_OPTION_MENU` all along; M-99 stale "audio is a Phase-3 no-op" hid live SFX; M-100 filed against `home/yes_no.asm`. part 2 (CHANGE BOX): **M-101** the screen was a hand-drawn imitation missing half of itself — text hand-encoded + hand-paged, `BoxNames` split into 12 strings (which is what forced its per-row loop), **the box number never drawn**, `ChooseABoxText` never printed; **M-102** a stale "root hasn't added `UI_CHANGE_BOX_INFO`" comment left the "BOX No." box undrawn — **the equates exist**; **M-103** the info box was staged into the dialog's own scratch rows and bled its text (caught only by rendering); **M-104** filed: `ChangeBox` has **no live caller** (`bills_pc.asm` never wires it — the M-82 class); **M-105** the `%ifdef` chain had silently shadowed the `DEBUG_SAVE_ROUNDTRIP` harness. Screen rendered + looked at (list, numbered indicator, ▶ cursor). part 3 (load/save data + HoF + SRAM helpers): the x86 is **faithful** — every divergence is the one atomic-.dsv-for-SRAM collapse — but two of the no-ops were **not** the harmless parity fillers their comments claimed: **M-106** `hTileAnimations` is LIVE in the port (`player_gfx` gates on it) yet pret's save+restore of it is dropped on both sides, so **the tile-animation setting does not survive a save/load**; **M-107** `CheckPreviousSaveFile` always answers "same playthrough", so a **NEW GAME saved over an existing save silently overwrites it** with none of pret's "OLDER FILE will be erased" confirmation. Both need a `dsv_io.asm` payload/peek — **filed**. **M-108**: part 2's commit had clobbered part 1's harness dump frame (my bisect `sed` hit every `AUTOKEY_DUMP_FRAME`); fixed. `BoxSRAMPointerTable` is **correctly absent** (SRAM addresses that do not exist). Save round-trip **RUN** (`DEBUG_SAVE_ROUNDTRIP`, the harness part 2 unshadowed): marker = 1. |
-| 20 | `src/engine/menus/link_menu.asm` (1148 ln), `link_cups.asm` | `engine/menus/link_menu.asm` | TODO | | expect mostly TODO-HW/serial; allowlisted split (18 labels); split |
+| 20 | `src/engine/menus/link_menu.asm` (1148 ln), `link_cups.asm` | `engine/menus/link_menu.asm` | **IN-PROGRESS (part 1 done)** | part 1: `PENDING` | part 1 (the TEXT layer): **M-109** the twenty pret `Colosseum*Text` **data** labels had been redefined as print **routines** over a private hand-encoded message engine (28 hand-encoded `db` lines + all 6 of pret's inline strings), behind a header claiming PrintText was unusable here — it is what every other menu prints with, and the three `text_ram wNameBuffer` streams cannot be expressed as glyph runs at all; all 26 strings are now Tier-1 data (`assets/link_text.inc`, the 6 db strings byte-identical) and every call site is pret's `ld hl, X / call PrintText`. **M-110** `TextTerminator_f5a16` (pret's EMPTY stream, printed to open the box) was dropped as "a no-op" — it is not, and it is back. **M-111** filed: `LinkMenu` has **no live caller** (M-82 class). **M-112** filed: the six `Serial_*` stubs live in the mirror file, not a `*_stubs.asm`, and are not ret-only. Rendered + looked at (`DEBUG_I1` cup screen; new `DEBUG_I1_MSG` message). **part 2** = control flow, serial stubs, the three allowlist entries. |
 | 21 | `src/engine/menus/draw_badges.asm` | same | TODO | | "Port stand-in" |
 | 22 | **`MoveSelectionMenu` / `SelectMenuItem` / `SwapMovesInMenu` / `PrintMenuItem`** | `engine/battle/core.asm` | TODO | | **clears blocker B8**; unblocks Mimic + PP items. Needs row 1 settled first. |
 | 23 | **`PrintText` / `PrintText_NoCreatingTextBox`** | `home/window.asm` | DONE | `2c33f7a6` | opened by row 1 — see **M-3** (now FIXED: one printer, placement is a data record; `PrintText_Overworld`/`PrintText_NoBox` forks deleted). Verified by byte-identical `DEBUG_ITEMTM` + `DEBUG_LEARNMOVE` frames. Was: a battle-scope wrapper squatted on the label, so 9 non-battle files printed through the battle box. |
@@ -2283,3 +2283,85 @@ SRAM-collapse lines above; `LoadMainData`'s `ADDED [wCurMapTileset]` is pret's `
 **The save round-trip was RUN, not assumed**: `DEBUG_SAVE_ROUNDTRIP` (the harness part 2 unshadowed — it
 had been unreachable) → `DsvWriteSave` → `DsvFileExists` → FRAME.BIN marker byte = **1**, i.e. the file
 was written and read back as a valid "DOSV" save.
+
+---
+
+## Row 20 part 1 — `src/engine/menus/link_menu.asm` + `link_cups.asm` (the TEXT layer)
+
+Scope of this part: every rendered string and every message of pret
+`engine/menus/link_menu.asm`. The control flow (the two menu loops, the serial
+stubs, the `lm_*_setup` helper split), the **allowlist challenge** (three entries
+name these files: `engine/menus/link_menu.asm`→`link_cups.asm` 18 labels;
+`home/serial.asm`→`link_menu.asm` 5 labels; `engine/link/cable_club_npc.asm`→
+`link_menu.asm` 1 label) and the `Serial_*` stub placement are **part 2**.
+
+Verified by rendering, not by reading: `DEBUG_I1` (the cup screen — "View/Rules",
+the cup list, and the POKé-Cup rules panel, `<PKMN>` glyph and the `can't`
+ligature both correct) and the new `DEBUG_I1_MSG` (Colosseum3MonsText through
+`PrintText`: "You need 3 POKéMON / to fight!" with the ▼ prompt).
+
+### M-109 — the twenty pret text DATA labels had been redefined as print ROUTINES, over a hand-encoded message engine
+
+`Colosseum3MonsText` … `ColosseumVersionText` are `text_far` **wrappers** in pret —
+data. The port had defined each of them as a *routine* (`ColosseumMewText: mov eax,
+lm_mew_l1 / mov edx, lm_mew_l2 / jmp lm_show2_prompt`), so `link_cups.asm`'s result
+routines said `call ColosseumMewText` where pret says `ld hl, ColosseumMewText /
+call PrintText`. Behind them sat a private message engine (`lm_msg_box` /
+`lm_msg_show` / `lm_msg_prompt` / `lm_msg_drop` / `lm_show2_prompt` /
+`lm_show2_done` / `lm_show_name`) drawing a hand-drawn box, hand-placed lines, a
+hand-blinked ▼ and a hand-written A/B wait — and **every message line was a
+hand-encoded charmap `db` run** (28 of them), as were all six of pret's inline `db`
+strings. The file header justified this with "PrintText is the port's BATTLE printer
+and the dialog projection collapses the window list": the first half is false
+(save.asm, pc.asm, players_pc.asm, oaks_pc.asm, league_pc.asm and main_menu.asm all
+print with it) and the second is a *presentation* consequence, not a reason to fork
+the printer.
+
+The cost was not cosmetic. Three of these streams
+(`_Colosseum{Height,Weight,Evolved}Text`) begin `text_ram wNameBuffer` — the mon
+name is spliced by the text engine — which **no glyph run can express**; the port
+imitated it with an extra `place_flat_str` of `wNameBuffer` and a hand-cut tail
+string. `prompt` vs `done` was likewise re-implemented by hand.
+
+**FIXED**: all 20 streams + the 6 inline strings are Tier-1 data
+(`tools/gen_menu_strings.py` → `assets/link_text.inc`; the six generated `db`
+strings are byte-identical to the literals they replace). The wrappers are pret's
+(`ColosseumMewText: text_far _ColosseumMewText / text_end`) and every call site is
+pret's (`mov esi, X / call PrintText`). The private engine is deleted.
+
+- SANCTIONED, tagged at the site — `; DEVIATION(window-compositor)`: `msgbox_dialog`
+  presents the box with `set_single_window`, so a message *replaces* the screen
+  behind it while it is up (pret overlays it). Each caller's next act is the redraw
+  that restores it (Func_f531b's `jp Func_f531b` retry; LinkMenu's `.choseCancel`
+  window-stack drop). Observed in `DEBUG_I1_MSG`. Same trade as save.asm's dialogs.
+
+### M-110 — `TextTerminator_f5a16` was elided as "a no-op", and was not one
+
+LinkMenu opens with `ld hl, TextTerminator_f5a16 / call PrintText` — an **empty**
+stream (a bare `text_end`), i.e. "draw the message box, type nothing". The port
+dropped the call with the comment "empty text (opens the dialog state); a no-op
+under the drawn-whole window model", and the label was `missing` in
+`translation.db`. It is not a no-op: it is what makes the dialog box exist on the
+screen that `SaveScreenTilesToBuffer1` then saves, and what `LoadScreenTilesFromBuffer1`
+restores. **FIXED**: the label exists (`TextTerminator_f5a16: text_end`) and is
+printed, one call, as pret does.
+
+### M-111 (finding, part 2) — `LinkMenu` has no live caller in the port
+
+pret's only caller is `engine/link/cable_club_npc.asm` (`callfar LinkMenu`); no port
+file references `LinkMenu` outside `link_menu.asm` itself. Same class as M-82/M-104:
+the screen is real, reachable code with nothing wired to reach it. The allowlist
+entry `engine/link/cable_club_npc.asm → dos_port/src/engine/menus/link_menu.asm`
+claims one relocated label from that file — part 2 will establish which, and whether
+the cable-club NPC path exists at all.
+
+### M-112 (finding, part 2) — the `Serial_*` stubs live in the mirror file, not in a `*_stubs.asm`
+
+`Serial_ExchangeByte`, `Serial_ExchangeLinkMenuSelection`, `Serial_ExchangeNybble`,
+`Serial_SyncAndExchangeNybble`, `Serial_SendZeroByte` and `CloseLinkConnection` are
+pret `home/serial.asm` labels **defined inside** `src/engine/menus/link_menu.asm`
+(and allowlisted as a "pre-existing relocation … (draft Session H)"). Per the
+standing convention a link-time stand-in belongs in `src/<area>/<area>_stubs.asm`
+under its pret label — and these are not ret-only stubs: they return tuned values.
+Part 2 decides: real HAL seam vs. `serial_stubs.asm`, and re-justifies or deletes
+the allowlist entry on the merits.

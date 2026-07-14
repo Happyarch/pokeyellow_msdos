@@ -843,6 +843,17 @@ NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_I2
 NASMFLAGS += -D SKIP_TITLE
 endif
+# I1_MSG (menu-fidelity row 20 part 1): the same cup screen, then PrintText one of
+# the Colosseum eligibility messages (a `prompt` stream). PrintText parks on the ▼
+# wait, so the harness spins on DelayFrame and AUTOKEY dumps the frame from the ISR
+# at frame 90 — late enough for the box to be drawn and the two lines typed out.
+# make DEBUG_I1_MSG=1
+ifdef DEBUG_I1_MSG
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_I1 -D DEBUG_I1_MSG
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_QUIET -D AUTOKEY_DUMP_FRAME=90
+NASMFLAGS += -D SKIP_TITLE
+endif
 # Live battle view: same setup as DEBUG_BATTLE but holds the screen (loops
 # DelayFrame) so you can visually inspect it instead of dumping+exiting. Esc quits.
 # make DEBUG_BATTLE_LIVE=1 (then dos_port/run).
@@ -1498,7 +1509,7 @@ src/engine/menus/naming_screen.o: assets/ui_layout_menus.inc assets/alphabets.in
         assets/naming_strings.inc assets/audio_constants.inc
 src/engine/menus/pokedex.o: assets/ui_layout_menus.inc assets/pokedex_tiles.inc \
         assets/pokedex_strings.inc assets/dex_entries.inc
-src/engine/menus/link_menu.o: assets/ui_layout_menus.inc
+src/engine/menus/link_menu.o: assets/ui_layout_menus.inc assets/link_text.inc
 src/engine/menus/link_cups.o: assets/dex_entries.inc
 
 # Status screen %includes the generated status_strings.inc label block.
