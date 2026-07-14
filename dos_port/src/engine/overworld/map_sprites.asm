@@ -17,8 +17,11 @@
 ;
 ; Port extensions kept here (; DIVERGENCE): the toggleable-hidden object gate and the
 ; overworld interaction stack (CheckNPCInteraction / IsNPCAtTargetBlock /
-; CheckTrainerSight / TrainerEncounterFlow / ShowTextStream); pret's
-; IsSpriteOrSignInFrontOfPlayer path is unported.
+; CheckTrainerSight / TrainerEncounterFlow / ShowTextStream).
+; pret's IsSpriteOrSignInFrontOfPlayer IS ported — its SIGN branch, in
+; engine/overworld/overworld.asm — and OverworldLoop's A-press calls it before the
+; sprite scan (pret's order). What is bespoke is only its SPRITE branch: pret's
+; IsSpriteInFrontOfPlayer2 is realized here as CheckNPCInteraction.
 ;
 ; Build: nasm -f coff -I include/ -I . -o map_sprites.o src/engine/overworld/map_sprites.asm
 

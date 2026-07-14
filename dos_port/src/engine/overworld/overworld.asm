@@ -3198,7 +3198,9 @@ InitSprites:
     ; DIVERGENCE (port ext): set the per-slot ISTRAINER flag (SPRITESTATEDATA2 0x0A)
     ; that the port interaction stack (CheckNPCInteraction / CheckTrainerSight /
     ; TrainerEncounterFlow) reads. pret has no such field — it re-derives trainer-ness
-    ; from the text-id flags at interaction time (IsSpriteOrSignInFrontOfPlayer, unported).
+    ; from the text-id flags at interaction time, in the SPRITE branch of
+    ; IsSpriteOrSignInFrontOfPlayer (the branch the port realizes as CheckNPCInteraction;
+    ; the sign branch itself is ported, below).
     ; The bespoke InitMapSprites used to set this; it is retired in P3c, so InitSprites
     ; (the slot populator) carries it. ZeroSpriteStateData already cleared the slot.
     test al, TRAINER_FLAG

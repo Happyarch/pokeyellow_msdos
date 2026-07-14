@@ -95,13 +95,11 @@ CopySignData:
 ;      CF=0 otherwise.
 ; Clobbers EAX, ECX, ESI.  Preserves DX/EBX.
 ;
-; INTEGRATION (future wire — this routine has no live caller yet):
-;   the A-press interaction path (an IsSpriteOrSignInFrontOfPlayer equivalent,
-;   called from OverworldLoop before/alongside CheckNPCInteraction) should:
-;     1. skip if [W_NUM_SIGNS] == 0,
-;     2. compute the facing coords into DH/DL,
-;     3. call SignLoop; if CF=1, set up the font/freeze exactly like
-;        CheckNPCInteraction, then call DisplaySignText (overworld_text.asm).
+; CALLER (wired, fidelity Stage 1b): IsSpriteOrSignInFrontOfPlayer's sign branch
+;   (engine/overworld/overworld.asm), reached from OverworldLoop's A-press dispatch
+;   BEFORE the sprite scan (pret's order). It skips if [W_NUM_SIGNS] == 0, computes the
+;   facing coords into DH/DL, calls here, and on CF=1 hands [hTextID] to
+;   DoSignInteraction → DisplaySignText (overworld_text.asm).
 ; ---------------------------------------------------------------------------
 SignLoop:
     lea esi, [ebp + W_SIGN_COORDS]      ; hl = wSignCoords

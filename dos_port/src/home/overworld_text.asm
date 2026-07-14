@@ -24,7 +24,10 @@
 ;     hand-written TextScript_* special cases (PC / prize menu / Poke Center PC),
 ;     which are behavior, not data.
 ;
-; CHECK-ONLY: no live caller yet (the A-press sign path is wired in a later step).
+; LIVE (fidelity Stage 1b): DoSignInteraction (engine/overworld/overworld.asm) calls
+; DisplaySignText from OverworldLoop's A-press dispatch, via
+; IsSpriteOrSignInFrontOfPlayer's sign branch → SignLoop (home/hidden_events.asm).
+; Goldened by the sign_pallet scenario.
 ; Register map (SM83->x86): A->AL, HL->ESI, BC->BX, DE->DX; [ebp + SYM].
 ; ===========================================================================
 
