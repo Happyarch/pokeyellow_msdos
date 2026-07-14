@@ -112,8 +112,8 @@ extern DrawPlayerRedBackPic_Stub
 extern DrawBugCatcherPic_Stub
 extern DrawPlayerBackPic_Stub
 extern DrawBattleMenu
-extern PrintMoveInfoBox
 extern MainInBattleLoop          ; core.asm — faithful battle loop (replaces bespoke DisplayBattleMenu loop)
+extern MoveSelectionMenu         ; core.asm — the FIGHT sub-menu (DEBUG_MOVEMENU)
 extern SaveBattleScreen
 extern RestoreBattleScreen
 extern EndBattleScreen
@@ -1105,6 +1105,25 @@ RunBattleTest:
     call DumpBackbuffer
 .introhang:
     jmp .introhang
+%elifdef DEBUG_MOVEMENU
+    ; menu-fidelity row 22: render pret's MoveSelectionMenu + PrintMenuItem (the move
+    ; list, the cursor, and the TYPE/PP box) with the DEBUG_BATTLE seed party. No golden
+    ; scenario covers the FIGHT sub-menu, so this is its verification route.
+    ; MoveSelectionMenu blocks in HandleMenuInput; build with DEBUG_AUTOKEY + AUTOKEY_QUIET
+    ; (the Makefile does it) so AutoKeyDrive photographs the screen at AUTOKEY_DUMP_FRAME
+    ; from inside the menu loop and exits. wMoveMenuType selects which of the three menus:
+    ; 0 = regular battle (default), 1 = Mimic, 2 = move relearner.
+%ifndef DEBUG_MOVEMENU_TYPE
+%define DEBUG_MOVEMENU_TYPE 0
+%endif
+    mov byte [ebp + wMoveMenuType], DEBUG_MOVEMENU_TYPE
+    mov byte [ebp + wPlayerMoveListIndex], 0
+    mov byte [ebp + wMenuItemToSwap], 0
+    call DrawBattleMenu             ; the FIGHT/PKMN/ITEM/RUN box the move box joins onto
+    call MoveSelectionMenu
+.movemenuhang:
+    call DelayFrame
+    jmp .movemenuhang
 %else
     call DrawBattleMenu             ; Stage 2a: FIGHT/PKMN/ITEM/RUN menu (static)
     call DelayFrame

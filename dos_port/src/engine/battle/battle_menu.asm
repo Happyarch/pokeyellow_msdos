@@ -44,12 +44,8 @@ bits 32
 %define MSG_LINE1    UI_DIALOG_LINE1_OFS
 %define MSG_LINE2    UI_DIALOG_LINE2_OFS
 
-; PROJ battle: TYPE/PP info box = UI_INFO_BOX (pret PrintMenuItem
-; TextBoxBorder(0,8) 9×3). Interior offsets stay box-origin-relative.
-%define IB_COL        UI_INFO_BOX_COL
-%define IB_ROW        UI_INFO_BOX_ROW
-%define INFOBOX_OFF   UI_INFO_BOX_OFS
-%define CHAR_SLASH    0xF3
+; (The TYPE/PP info-box coords used to live here for PrintMoveInfoBox; row 22 moved that
+; box to pret's PrintMenuItem in core.asm, which projects pret's own hlcoords directly.)
 %define CHAR_DIG0     0xF6
 
 ; PROJ battle: level-up stats box = UI_LVLUP_BOX / UI_LVLUP_LBL / UI_LVLUP_VAL
@@ -76,7 +72,6 @@ BattleMenuText:
     db 0x91,0x94,0x8D                      ; "RUN"
     db 0x50                               ; @
 str_excl:  db 0xE7, 0x50                        ; "!"
-str_type:  db 0x93,0x98,0x8F,0x84, 0x50         ; "TYPE"
 ; run-from-battle text (pret GotAwayText / CantEscapeText / NoRunningText)
 str_gotaway: db 0x86,0xAE,0xB3,0x7F,0xA0,0xB6,0xA0,0xB8,0x7F,0xB2,0xA0,0xA5,0xA4,0xAB,0xB8,0xE7, 0x50 ; "Got away safely!"
 str_cantesc: db 0x82,0xA0,0xAD,0xE0,0xB3,0x7F,0xA4,0xB2,0xA2,0xA0,0xAF,0xA4,0xE7, 0x50              ; "Can't escape!"
@@ -112,7 +107,6 @@ section .text
 global DrawBattleMenu
 global DrawBattleMenuBox
 global DrawEmptyDialogBox
-global PrintMoveInfoBox
 global SaveBattleScreen
 global RestoreBattleScreen
 global SaveScreenTilesToBuffer1
@@ -138,7 +132,6 @@ extern menu_item_step                ; src/home/window.asm — menu cursor item 
 extern text_row_stride               ; text.asm — W_TILEMAP row stride (battle sets 40)
 extern MoveNames
 extern Moves
-extern WideTypeNames
 extern DelayFrame
 extern HandleDownArrowBlinkTiming     ; src/home/window.asm — faithful ▼ blink (COUNT1==0 guard)
 extern DrawBattleHUDs
@@ -663,62 +656,12 @@ FindMoveName:
 .done:
     ret
 
-; PrintMoveInfoBox — the TYPE/PP box for the highlighted move (pret PrintMenuItem). Drawn
-; each cursor move via the menu_redraw_cb hook. Reads wCurrentMenuItem, wBattleMonMoves/PP,
-; and the flat Moves table (type @ +3, base PP @ +5). In: EBP = GB base.
-PrintMoveInfoBox:
-    and byte [ebp + W_LETTER_PRINTING_DELAY], (~(1 << BIT_TEXT_DELAY)) & 0xFF
-    mov dword [menu_item_step], FW
-    mov esi, W_TILEMAP + INFOBOX_OFF
-    mov bh, 3
-    mov bl, 9
-    call TextBoxBorder
-    mov esi, W_TILEMAP + ((IB_ROW + 1) * FW + IB_COL + 1)
-    mov eax, str_type
-    call PlaceString
-    mov esi, ebx
-    mov byte [ebp + W_TILEMAP + ((IB_ROW + 1) * FW + IB_COL + 5)], CHAR_SLASH
-    movzx eax, byte [ebp + wCurrentMenuItem]
-    movzx eax, byte [ebp + eax + wBattleMonMoves]
-    dec eax
-    imul eax, eax, MOVE_LENGTH
-    movzx ecx, byte [Moves + eax + 3]
-    push eax
-    mov esi, W_TILEMAP + ((IB_ROW + 2) * FW + IB_COL + 2)
-    mov eax, [WideTypeNames + ecx * 4]
-    call PlaceString
-    mov esi, ebx
-    pop eax
-    movzx ecx, byte [Moves + eax + 5]
-    push ecx
-    movzx ecx, byte [ebp + wCurrentMenuItem]
-    mov al, [ebp + ecx + wBattleMonPP]
-    and al, 0x3F
-    mov edi, W_TILEMAP + ((IB_ROW + 3) * FW + IB_COL + 5)
-    call print_2d
-    mov byte [ebp + W_TILEMAP + ((IB_ROW + 3) * FW + IB_COL + 7)], CHAR_SLASH
-    pop eax
-    mov edi, W_TILEMAP + ((IB_ROW + 3) * FW + IB_COL + 8)
-    call print_2d
-    ret
-
-; print_2d — AL = value (<100) as 2 digits at [ebp+EDI] (leading space if tens=0).
-print_2d:
-    movzx eax, al
-    xor edx, edx
-    mov ecx, 10
-    div ecx
-    test al, al
-    jnz .tens
-    mov byte [ebp + edi], 0x7F
-    jmp .ones
-.tens:
-    add al, CHAR_DIG0
-    mov [ebp + edi], al
-.ones:
-    add dl, CHAR_DIG0
-    mov [ebp + edi + 1], dl
-    ret
+; (The TYPE/PP box used to be drawn here by a port-invented PrintMoveInfoBox, with a
+; hand-rolled 2-digit printer and a direct Moves-table type lookup. Menu-fidelity row 22
+; replaced it with pret's own PrintMenuItem — core.asm:3010 — which reads the max PP from
+; GetMaxPP (so PP Ups count, which PrintMoveInfoBox got wrong) and prints the type through
+; PrintMoveType. Both it and its print_2d helper are deleted; FindMoveName above stays,
+; it has other callers.)
 
 ; ===========================================================================
 ; DEBUG_BATTLE_ENEMYHIT ground-truth scaffold (NOT the live battle path).

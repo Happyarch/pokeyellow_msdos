@@ -118,7 +118,7 @@ driver only relocates the divergence.
 | 19 | `src/engine/menus/save.asm` (1080 ln) | same | **DONE** | part 1: `b05bdea8`, part 2: `c7d35568`, part 3: `7110af54` | part 1 (SAVE/LOAD flow): M-97 five drawn-whole dialogs → pret `text_far` + `PrintText`; M-98 yes/no box was pret's `TWO_OPTION_MENU` all along; M-99 stale "audio is a Phase-3 no-op" hid live SFX; M-100 filed against `home/yes_no.asm`. part 2 (CHANGE BOX): **M-101** the screen was a hand-drawn imitation missing half of itself — text hand-encoded + hand-paged, `BoxNames` split into 12 strings (which is what forced its per-row loop), **the box number never drawn**, `ChooseABoxText` never printed; **M-102** a stale "root hasn't added `UI_CHANGE_BOX_INFO`" comment left the "BOX No." box undrawn — **the equates exist**; **M-103** the info box was staged into the dialog's own scratch rows and bled its text (caught only by rendering); **M-104** filed: `ChangeBox` has **no live caller** (`bills_pc.asm` never wires it — the M-82 class); **M-105** the `%ifdef` chain had silently shadowed the `DEBUG_SAVE_ROUNDTRIP` harness. Screen rendered + looked at (list, numbered indicator, ▶ cursor). part 3 (load/save data + HoF + SRAM helpers): the x86 is **faithful** — every divergence is the one atomic-.dsv-for-SRAM collapse — but two of the no-ops were **not** the harmless parity fillers their comments claimed: **M-106** `hTileAnimations` is LIVE in the port (`player_gfx` gates on it) yet pret's save+restore of it is dropped on both sides, so **the tile-animation setting does not survive a save/load**; **M-107** `CheckPreviousSaveFile` always answers "same playthrough", so a **NEW GAME saved over an existing save silently overwrites it** with none of pret's "OLDER FILE will be erased" confirmation. Both need a `dsv_io.asm` payload/peek — **filed**. **M-108**: part 2's commit had clobbered part 1's harness dump frame (my bisect `sed` hit every `AUTOKEY_DUMP_FRAME`); fixed. `BoxSRAMPointerTable` is **correctly absent** (SRAM addresses that do not exist). Save round-trip **RUN** (`DEBUG_SAVE_ROUNDTRIP`, the harness part 2 unshadowed): marker = 1. |
 | 20 | `src/engine/menus/link_menu.asm` (1148 ln), `link_cups.asm` | `engine/menus/link_menu.asm` | **DONE** | part 1: `bea3b620`, part 2: `11064e87` | **part 2 (control flow + stubs + allowlist)**: **M-112 FIXED** — the six `Serial_*`/`CloseLinkConnection` stubs moved out of this caller's mirror file into `src/home/serial_stubs.asm` (pret `home/serial.asm`), with the no-partner return contract documented there; they shadow nothing (no `src/home/serial.asm` exists). **M-113 filed**: `ClearScreenArea` is the one text/tilemap primitive that is NOT stride-aware (hardwired to `SCREEN_WIDTH` 40 while `TextBoxBorder`/`PlaceString` honour `text_row_stride`), which is why `Func_f56bd` must clear inline. **Two port-invented helper splits deleted**: `lm_cup_setup`/`lm_link_setup` were `Func_f531b`'s and `LinkMenu`'s own bodies lifted out *purely so the DEBUG harness could reach them*, which hid ~10 pret calls per routine from faithdiff; both are inlined back and the harness now calls the real routines (AUTOKEY_QUIET photographs the menu while it spins in `HandleMenuInput`). **`SaveScreenTilesToBuffer1`/`LoadScreenTilesFromBuffer1` restored as real calls** — the "modeled as the window-stack baseline" comment was half-true: the routines exist and are linked (`battle_menu.asm`), and W_TILEMAP *is* where this menu's scratch lives; the window-count baseline stays alongside as the SANCTIONED compositor restore. **Allowlist: 2 of the 3 entries were fiction** — `engine/link/cable_club_npc.asm → link_menu.asm` ("all 1 translated label(s)") relocates NOTHING (every cable_club_npc label is `missing`), and `home/serial.asm → link_menu.asm` died with M-112; both deleted, lint still 0. The third (`link_menu.asm → link_cups.asm`, 18 labels) is real and re-added with a hand-written why. `LinkMenu` **rendered and looked at for the first time** (`DEBUG_I1_LINK`: overworld behind, menu box overlaid, "Where would you like to go?" in the dialog); cup screen re-rendered through the real `Func_f531b`. part 1 (the TEXT layer): **M-109** the twenty pret `Colosseum*Text` **data** labels had been redefined as print **routines** over a private hand-encoded message engine (28 hand-encoded `db` lines + all 6 of pret's inline strings), behind a header claiming PrintText was unusable here — it is what every other menu prints with, and the three `text_ram wNameBuffer` streams cannot be expressed as glyph runs at all; all 26 strings are now Tier-1 data (`assets/link_text.inc`, the 6 db strings byte-identical) and every call site is pret's `ld hl, X / call PrintText`. **M-110** `TextTerminator_f5a16` (pret's EMPTY stream, printed to open the box) was dropped as "a no-op" — it is not, and it is back. **M-111** filed: `LinkMenu` has **no live caller** (M-82 class). **M-112** filed: the six `Serial_*` stubs live in the mirror file, not a `*_stubs.asm`, and are not ret-only. Rendered + looked at (`DEBUG_I1` cup screen; new `DEBUG_I1_MSG` message). **part 2** = control flow, serial stubs, the three allowlist entries. |
 | 21 | `src/engine/menus/draw_badges.asm` | same | **DONE** | `c0ebb7ea` | `DrawBadges` itself reads **faithful instruction-for-instruction** (flags included: `srl b`→`shr bh,1`+`jnc`; the `and a` / flag-neutral `ld a,[wBadgeNameTile]` pair; `.PlaceTiles` leaving HL on the 2nd tile) — faithdiff clean, 2/2 calls, 2/2 stores. The ledger's "Port stand-in" note was **stale**: `DrawBadges` has a live caller (`StartMenu_TrainerInfo`, `start_sub_menus.asm:648` = pret's `predef DrawBadges`), and the DEBUG harness is no longer its only consumer; header fixed. **M-114 FIXED**: pret's data label `GymLeaderFaceAndBadgeTileGraphics` was emitted by `gen_badge_tiles.py` under the port-invented name `badge_face_tiles` — a preserve-pret-labels violation, and exactly why translation.db read the label `missing`; the generator now emits pret's name (label → `translated`, no code change to the pixels). **M-115 FIXED**: the four `%ifndef wBadge…` WRAM-equate guards were **dead** (NASM `%ifndef` cannot see `equ` symbols) and their comment ("guarded so root can promote them into gb_memmap.inc") described a promotion that had **already happened** — deleted; `gb_memmap.inc` is the single source. **2 SANCTIONED, now tagged** (both were untagged prose before): the `.FaceBadgeTiles` `call CopyData` expanded as a flat `rep movsb` — `DEVIATION(gb-memory-model)`, the table is x86 code space and `CopyData` takes a GB offset — and the port-only `LoadBadgeTiles` — `DEVIATION(port-split)`, pret loads those tiles inline in `DrawTrainerInfo` via `FarCopyData` (start_sub_menus.asm:523-527), which the port cannot use for the same reason. **Allowlist: no entries touch this file** (grep-confirmed) — step 4 was a no-op. Verified by headless `DEBUG_DRAWBADGES` render (grid draws: 4 faces + 4 badges from the `%10100101` seed) and `make fidelity` (all 6 PASS). |
-| 22 | **`MoveSelectionMenu` / `SelectMenuItem` / `SwapMovesInMenu` / `PrintMenuItem`** | `engine/battle/core.asm` | TODO | | **clears blocker B8**; unblocks Mimic + PP items. Needs row 1 settled first. |
+| 22 | **`MoveSelectionMenu` / `SelectMenuItem` / `SwapMovesInMenu` / `PrintMenuItem`** | `engine/battle/core.asm` | **DONE** | `PENDING22` | **B8 cleared.** All four now exist under pret's labels (three of them did not exist at all), plus `SelectMenuItem_CursorUp/_CursorDown` and the mirror file `src/engine/battle/print_type.asm`. Mimic + relearn menus and the SELECT move-swap are live; PP now comes from `GetMaxPP`. Verified headlessly with the new `DEBUG_MOVEMENU` harness. Findings M-116…M-119. |
 | 23 | **`PrintText` / `PrintText_NoCreatingTextBox`** | `home/window.asm` | DONE | `2c33f7a6` | opened by row 1 — see **M-3** (now FIXED: one printer, placement is a data record; `PrintText_Overworld`/`PrintText_NoBox` forks deleted). Verified by byte-identical `DEBUG_ITEMTM` + `DEBUG_LEARNMOVE` frames. Was: a battle-scope wrapper squatted on the label, so 9 non-battle files printed through the battle box. |
 | 24 | **`HandleMenuInput_.downArrowTile`** (▼ blink coord space) | `home/window.asm` | TODO | | opened by row 4 — see the **corrected M-2**. The blink targets pret's ABSOLUTE (18,11); every list draws box-relative into the stride-20 scratch, so the blink is inert. Row 1's file, found after row 1 closed. |
 
@@ -2427,3 +2427,52 @@ macros, not `equ` symbols, so the block always expanded and simply re-`equ`d the
 same four values. Deleted; `gb_memmap.inc` is the single source for GB addresses.
 Same shape as the link_menu.asm note from row 20 — a `%ifndef` around an `equ` is
 always dead code, and any comment claiming otherwise is wrong.
+
+### M-116 (row 22, FIXED) — three of pret's four move-menu labels did not exist, and the one that did was a different menu
+
+`translation.db` read `MoveSelectionMenu|translated` and `SelectMenuItem`,
+`SwapMovesInMenu`, `PrintMenuItem` all `missing`. The "translated" one was a
+bespoke reshaping: SelectMenuItem folded into its own input loop, a **0-based**
+cursor, an invented `.idxOk` clamp, `.loadmoves` unrolled as four byte moves
+instead of `CopyData`, and a port-only `menu_redraw_cb` hook standing in for the
+re-entry that pret gets for free. It had no `wMoveMenuType` dispatch, so the
+**Mimic** and **move-relearner** menus — pret's two other callers of this exact
+routine — had nowhere to land, and SELECT (move swapping) did nothing.
+
+The whole select loop is now pret's. The load-bearing detail the port had lost is
+the **1-based** menu index: `wCurrentMenuItem` = move index + 1 and
+`wMaxMenuItem` = `wNumMovesMinusOne + 2`, so items 0 and max are deliberate
+out-of-range sentinels — that is *how the wrap works*, via
+`SelectMenuItem_CursorUp`/`_CursorDown`, and it is also why `PrintMenuItem` can do
+`dec [wCurrentMenuItem]` / `inc [wCurrentMenuItem]` around its reads. A 0-based
+cursor cannot express any of that.
+
+### M-117 (row 22, FIXED) — pret's `engine/battle/print_type.asm` had no port mirror, so `PrintMenuItem` had nothing to call
+
+pret prints the highlighted move's type with `predef PrintMoveType`. The port had
+no such routine: the invented `PrintMoveInfoBox` indexed `WideTypeNames` inline.
+`src/engine/battle/print_type.asm` now exists with `PrintMoveType` / `PrintType` /
+`PrintType_`, tagged `DEVIATION(gb-memory-model)` (flat-pointer `WideTypeNames` in
+place of pret's GB `TypeNames` table) and `DEVIATION(predef)` (no predef table; the
+destination arrives in ESI, the register `GetPredefRegisters` would have restored).
+
+### M-118 (row 22, verified deferral — not a bug) — `Func_3d4f5` / `Func_3d523` / `Func_3d529` / `Func_3d536`
+
+faithdiff reports these as DROPPED from `SelectMenuItem` and `SwapMovesInMenu`.
+They are pret's `IF DEF(_DEBUG)` TestBattle move-stepper: absent from the retail
+build, so the port does not carry them and no stub is owed. The port *does* keep
+the `BIT_TEST_BATTLE` branches around them (the watched-key mask, and
+`SelectMenuItem`'s "hide the swap cursor in TestBattle" path, whose side effect of
+skipping `PrintMenuItem` is pret's own documented quirk).
+
+### M-119 (finding, other file — NOT fixed here) — `PrintMonType` should move into the mirror file
+
+The allowlist carried a **file-level** blanket relocation for
+`engine/battle/print_type.asm` → `status_screen.asm` ("pre-existing relocation …
+(draft Session H)"). Now that the real mirror exists, that entry is deleted. But
+`PrintMonType` (and `EraseType2Text`, which the port **inlined into it** and which
+therefore still reads `missing`) is still written into `status_screen.asm`, using
+that screen's own layout offsets. Relocating it to `print_type.asm` and splitting
+`EraseType2Text` back out is a separable change to `status_screen.asm` — out of
+scope for this row, so it is allowlisted **per-label** with a written why rather
+than left blanket-blessed per-file.

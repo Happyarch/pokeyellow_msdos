@@ -5,7 +5,7 @@
     "relocated_labels: per-label relocations where one pret file split across port files.",
     "suppress: linter suppressions [{rule, key, why}].",
     "DRAFT (Session H 2026-07-07): entries below bless pre-existing relocations found by the",
-    "first full-tree scan; they predate the mirror rule. Flagged for user review — deleting an",
+    "first full-tree scan; they predate the mirror rule. Flagged for user review \u2014 deleting an",
     "entry makes the linter fire on it again."
   ],
   "relocated_files": {
@@ -19,10 +19,6 @@
     },
     "engine/battle/move_effects/reflect_light_screen.asm": {
       "port_file": "dos_port/src/engine/battle/move_effect_helpers.asm",
-      "why": "pre-existing relocation, all 1 translated label(s) here (draft Session H)"
-    },
-    "engine/battle/print_type.asm": {
-      "port_file": "dos_port/src/engine/pokemon/status_screen.asm",
       "why": "pre-existing relocation, all 1 translated label(s) here (draft Session H)"
     },
     "engine/battle/scale_sprites.asm": {
@@ -43,7 +39,7 @@
     },
     "engine/menus/link_menu.asm": {
       "port_file": "dos_port/src/engine/menus/link_cups.asm",
-      "why": "The 18 labels are the COLOSSEUM cup ELIGIBILITY rules (PokeCup/PikaCup/PetitCup and their 15 verdict routines), reached only as data through PointerTable_f5488. They are a different concern from the two menus with a different dependency set: they scan the party, read the Pokedex entry pointers (link_cups.o depends on assets/dex_entries.inc) and call GetMonName, and they touch no window, tilemap or menu-driver state at all — pret bundles them with the menus only because they share a ROM bank. Reviewed on the merits 2026-07-14 (menu-fidelity row 20 part 2), NOT kept as boilerplate: no pret label is forked, renamed or duplicated across the split (link_cups.asm externs the Colosseum*Text wrappers from link_menu.asm and prints them itself, exactly as pret does), faithdiff/label_status key on labels rather than files, and the discovery trail runs both ways (each file's header names the other and the pret file). Merging back would put ~1500 lines in one file, which is the size at which this very review had to be split across two iterations."
+      "why": "The 18 labels are the COLOSSEUM cup ELIGIBILITY rules (PokeCup/PikaCup/PetitCup and their 15 verdict routines), reached only as data through PointerTable_f5488. They are a different concern from the two menus with a different dependency set: they scan the party, read the Pokedex entry pointers (link_cups.o depends on assets/dex_entries.inc) and call GetMonName, and they touch no window, tilemap or menu-driver state at all \u2014 pret bundles them with the menus only because they share a ROM bank. Reviewed on the merits 2026-07-14 (menu-fidelity row 20 part 2), NOT kept as boilerplate: no pret label is forked, renamed or duplicated across the split (link_cups.asm externs the Colosseum*Text wrappers from link_menu.asm and prints them itself, exactly as pret does), faithdiff/label_status key on labels rather than files, and the discovery trail runs both ways (each file's header names the other and the pret file). Merging back would put ~1500 lines in one file, which is the size at which this very review had to be split across two iterations."
     },
     "engine/menus/start_sub_menus.asm": {
       "port_file": "dos_port/src/engine/menus/trainer_card.asm",
@@ -765,7 +761,7 @@
     },
     "LeaveMapAnim": {
       "port_file": "dos_port/src/engine/overworld/overworld.asm",
-      "why": "pret home/overworld.asm:778 (`farjp _LeaveMapAnim`) — a bank wrapper, kept as its own pret-named symbol so HandleFlyWarpOrDungeonWarp still matches pret line-for-line. Sits with its only caller, same split as HandleBlackOut."
+      "why": "pret home/overworld.asm:778 (`farjp _LeaveMapAnim`) \u2014 a bank wrapper, kept as its own pret-named symbol so HandleFlyWarpOrDungeonWarp still matches pret line-for-line. Sits with its only caller, same split as HandleBlackOut."
     },
     "LoadBattleMonFromParty": {
       "port_file": "dos_port/src/engine/battle/faint_leaves.asm",
@@ -975,6 +971,10 @@
       "port_file": "dos_port/src/engine/battle/move_effect_helpers.asm",
       "why": "pret engine/battle/effects.asm split across port files (draft Session H)"
     },
+    "PrintMonType": {
+      "port_file": "dos_port/src/engine/pokemon/status_screen.asm",
+      "why": "Row 22 created the real mirror (dos_port/src/engine/battle/print_type.asm) and put pret's move-type half there (PrintMoveType/PrintType/PrintType_), so the old file-level blanket entry for engine/battle/print_type.asm is deleted. PrintMonType alone is still elsewhere: its port body was written INTO status_screen.asm, fused with EraseType2Text (which pret keeps as a separate label and the port therefore reports as `missing`), and it reads the status screen's own layout offsets. Relocating it is a real, separable change to status_screen.asm \u2014 see menu-fidelity finding M-119 \u2014 not a fact about this file, so it is allowlisted per-label, not per-file."
+    },
     "PrintMoveFailureText": {
       "port_file": "dos_port/src/engine/battle/print_move_failure.asm",
       "why": "pret engine/battle/core.asm split across port files (draft Session H)"
@@ -1113,7 +1113,7 @@
     },
     "StopMusic": {
       "port_file": "dos_port/src/engine/overworld/overworld.asm",
-      "why": "pret home/overworld.asm split across port files; overworld.asm is the port's home/overworld.asm (wild-live promotion) — StopMusic sits beside its only caller HandleBlackOut"
+      "why": "pret home/overworld.asm split across port files; overworld.asm is the port's home/overworld.asm (wild-live promotion) \u2014 StopMusic sits beside its only caller HandleBlackOut"
     },
     "StoreTrainerHeaderPointer": {
       "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
@@ -1232,12 +1232,12 @@
     {
       "rule": "non_ret_stub",
       "key": "OakSpeech",
-      "why": "documented DEVIATION integration stub: the one call (predef InitPlayerData2) is load-bearing — seeds party/bag/money on new game; cutscene itself is script-engine plan work"
+      "why": "documented DEVIATION integration stub: the one call (predef InitPlayerData2) is load-bearing \u2014 seeds party/bag/money on new game; cutscene itself is script-engine plan work"
     },
     {
       "rule": "non_ret_stub",
       "key": "DisplayPCMainMenu",
-      "why": "documented DEVIATION integration stub: arms menu vars (wMaxMenuItem etc.) so PCMainMenu dispatch runs on defined state — minimal contract, no box draw"
+      "why": "documented DEVIATION integration stub: arms menu vars (wMaxMenuItem etc.) so PCMainMenu dispatch runs on defined state \u2014 minimal contract, no box draw"
     },
     {
       "rule": "non_ret_stub",
@@ -1262,7 +1262,7 @@
     {
       "rule": "dup_def",
       "key": "DisplayTextID",
-      "why": "known interim (wild-live promotion): home_stubs.asm holds a documented ret-stub that is LINKED; home/text_script.asm holds the real body but stays check-only (HOME_CHECK_SRCS) because its link closure is 15 symbols deep and 8 of them are DisplayTextID special-case dispatch targets owned by the script-engine session. The stub's only linked caller is TryDoWildEncounter's repel-wore-off branch, unreachable until item USE lands. Retire by linking text_script.asm and DELETING the stub — the duplicate global is then a loud link error, not a silent shadow."
+      "why": "known interim (wild-live promotion): home_stubs.asm holds a documented ret-stub that is LINKED; home/text_script.asm holds the real body but stays check-only (HOME_CHECK_SRCS) because its link closure is 15 symbols deep and 8 of them are DisplayTextID special-case dispatch targets owned by the script-engine session. The stub's only linked caller is TryDoWildEncounter's repel-wore-off branch, unreachable until item USE lands. Retire by linking text_script.asm and DELETING the stub \u2014 the duplicate global is then a loud link error, not a silent shadow."
     }
   ]
 }

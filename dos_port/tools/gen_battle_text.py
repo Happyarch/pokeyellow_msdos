@@ -314,6 +314,21 @@ def fmt(label, data):
         rows.append("    db " + ", ".join(f"0x{b:02X}" for b in data[k:k+16]))
     return f"global {label}\n{label}:\n" + "\n".join(rows)
 
+# ---------------------------------------------------------------------------
+# PLAIN STRINGS (not text_far command streams): pret writes these as bare
+# `db "...@"` in the battle sources and PlaceString prints them directly. They
+# are still Tier-1 rendered data, so they are generated here rather than
+# hand-encoded in the .asm (CLAUDE.md: "Text strings are DATA"). Labels keep
+# pret's names.
+# ---------------------------------------------------------------------------
+# (DisabledText / TypeText — PrintMenuItem's two plain strings — already come out
+# of collect_wrappers: their labels end in "Text", so the wrapper scan picks up the
+# bare `db` form too, and the bytes it emits are identical to encode() here. Only
+# the "...String" label is invisible to that scan.)
+PLAIN = [
+    ("WhichTechniqueString", "WHICH TECHNIQUE?"),  # core.asm:2795 (Mimic menu prompt)
+]
+
 def main():
     cm  = load_charmap()
     mem = load_memmap()
@@ -330,6 +345,10 @@ def main():
     ]
     for label in sorted(wr):
         lines.append(fmt(label, wr[label]))
+    for label, text in PLAIN:
+        data = encode(text, cm) + [TX_END]
+        lines.append(f'{label}:\n    db ' + ", ".join(f"0x{b:02X}" for b in data)
+                     + f'   ; pret: db "{text}@"')
     # (A 256-byte tail pad used to sit here: PrintBattleText staged each stream into
     # NPC_DIALOG_BUF with a blind fixed-span copy, so a copy starting at the LAST
     # label would read off the end of the section without it. The text engine now

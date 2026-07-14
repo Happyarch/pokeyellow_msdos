@@ -879,6 +879,21 @@ ifdef DEBUG_BATTLE_TRAINER
 DEBUG_BATTLE := 1
 NASMFLAGS += -D DEBUG_BATTLE_TRAINER
 endif
+# Move-selection menu (menu-fidelity row 22): seed the DEBUG_BATTLE party, then run
+# pret's MoveSelectionMenu — the move list, the cursor and the TYPE/PP box (PrintMenuItem).
+# The menu blocks on input, so AUTOKEY_QUIET drives DelayFrame and photographs the screen
+# at AUTOKEY_DUMP_FRAME. No golden covers the FIGHT sub-menu; this is its render check.
+# make DEBUG_MOVEMENU=1 [DEBUG_MOVEMENU_TYPE=1|2 for the Mimic / relearn menus]
+ifdef DEBUG_MOVEMENU
+DEBUG_BATTLE := 1
+NASMFLAGS += -D DEBUG_MOVEMENU
+ifdef DEBUG_MOVEMENU_TYPE
+NASMFLAGS += -D DEBUG_MOVEMENU_TYPE=$(DEBUG_MOVEMENU_TYPE)
+endif
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_QUIET
+AUTOKEY_DUMP_FRAME ?= 30
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
 # Battle gate (Wave 2): seed party + a wild enemy, enter battle (InitBattle),
 # render one frame, dump FRAME.BIN, exit. make DEBUG_BATTLE=1
 ifdef DEBUG_BATTLE
@@ -1007,6 +1022,7 @@ FRONTEND_SRCS := \
     src/home/random.asm \
     src/engine/battle/core_damage.asm \
     src/engine/battle/get_current_move.asm \
+    src/engine/battle/print_type.asm \
     src/engine/battle/select_enemy_move.asm \
     src/engine/battle/load_enemy_moves.asm \
     src/engine/battle/pokeballs.asm \

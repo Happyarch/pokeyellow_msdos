@@ -314,6 +314,10 @@ wEnemyMonEvasionMod    equ 0xCD33
 wEnemyMonStatModsEnd   equ 0xCD36
 
 wNumMovesMinusOne      equ 0xCD6C
+wBattleMenuCurrentPP   equ 0xCD6D   ; PrintMenuItem's scratch copy of the highlighted
+                                    ; move's current PP (PrintNumber source). Aliased
+                                    ; onto the same scratch union as wMoveData below —
+                                    ; that is pret's own layout (wram.asm:1091).
 wMoveData              equ 0xCD6D   ; 6-byte scratch move record (GetMoveData)
 wPayDayMoney           equ 0xCD6D   ; Pay Day scratch (BCD, 3 bytes; aliased scratch union)
 wNormalMaxPPList       equ 0xCD78   ; 4-byte scratch: each move's normal max PP (RestoreBonusPP)

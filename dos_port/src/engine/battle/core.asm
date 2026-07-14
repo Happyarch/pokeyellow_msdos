@@ -71,6 +71,11 @@ section .text
 global MainInBattleLoop
 global DisplayBattleMenu
 global MoveSelectionMenu
+global SelectMenuItem
+global SelectMenuItem_CursorUp
+global SelectMenuItem_CursorDown
+global SwapMovesInMenu
+global PrintMenuItem
 global AnyMoveToSelect
 global PrintBattleText
 extern PrintTextStaged                 ; src/home/window.asm — PrintText, stream already staged
@@ -110,7 +115,7 @@ extern DrawBattleMenuBox               ; DisplayTextBoxID(BATTLE_MENU_TEMPLATE) 
 extern HandleMenuInput                 ; home/window.asm
 extern PlaceMenuCursor                 ; home/window.asm
 extern menu_item_step                  ; home/window.asm — cursor vertical spacing
-extern menu_redraw_cb                  ; home/window.asm — per-item redraw callback
+extern EraseMenuCursor                 ; home/window.asm
 
 ; --- text engine + move-list helpers ---
 extern TextBoxBorder                   ; text.asm (stride-aware)
@@ -120,9 +125,15 @@ extern text_msgbox                     ; text.asm — the active msgbox projecti
 extern text_arrow_pos                  ; text.asm — ▼ tile (read by BattlePromptWait;
                                        ; published by PrintText from the record)
 extern FormatMovesString               ; misc.asm — wMoves → wMovesString (+ '-' slots)
-extern PrintMoveInfoBox                ; battle_menu.asm draw helper (TYPE/PP box)
 extern DelayFrame                      ; frame.asm
 extern text_row_stride                 ; text.asm — W_TILEMAP row stride
+
+; --- PrintMenuItem's helpers (pret core.asm:3010) ---
+extern CopyData                        ; home/copy_data.asm — ESI→EDX, BX bytes
+extern PrintNumber                     ; home/print_num.asm — ESI dest, EDX src, BH flags/bytes, BL digits
+extern GetMaxPP                        ; engine/items/get_max_pp.asm — → wMaxPP (PP Ups incl.)
+extern PrintMoveType                   ; engine/battle/print_type.asm — pret predef PrintMoveType
+extern Delay3                          ; video/frame.asm
 
 ; --- deferred in-battle sub-UIs (bag / party-switch) — call faithfully, body deferred ---
 extern BattleItemMenu                  ; ITEM → bag (deferred; re-shows the menu)
@@ -405,95 +416,446 @@ DisplayBattleMenu:
     call BattlePartyMenu
     jmp DisplayBattleMenu
 
+; ===========================================================================
+; The FIGHT sub-menu: MoveSelectionMenu / SelectMenuItem / SwapMovesInMenu /
+; PrintMenuItem — pret core.asm:2567-3084, translated structure-for-structure
+; (menu-fidelity row 22).
+;
+; Until row 22 the port had ONE routine here: a bespoke MoveSelectionMenu that
+; folded a 0-based cursor loop into the draw, and three of pret's four labels did
+; not exist at all (SelectMenuItem / SwapMovesInMenu / PrintMenuItem read `missing`
+; in translation.db). That shape could not express the Mimic and move-relearn menus
+; (wMoveMenuType 1/2 — the two callers that made this a blocker), the SELECT
+; move-swap, or the disabled-move ▷ marker. It is replaced wholesale below.
+;
+; CURSOR INDEX BASE — the load-bearing detail. pret's menu item numbering here is
+; ONE-based: wCurrentMenuItem is (move index + 1) and wMaxMenuItem is
+; wNumMovesMinusOne + 2, i.e. item 0 and item max are deliberately OUT-OF-RANGE
+; sentinel slots. That is how the wrap works: UP/DOWN are watched keys, so
+; HandleMenuInput RETURNS on them, and SelectMenuItem_CursorUp/_CursorDown catch
+; the moment the cursor lands on a sentinel and wrap it to the other end.
+; SelectMenuItem then re-runs, which is also what redraws the TYPE/PP box each
+; time the cursor moves — pret needs no redraw callback, and the port's
+; menu_redraw_cb hook (its stand-in) is gone with the old loop.
+;
+; COORDS: pret hlcoords are projected onto the port's 40x25 battle canvas by the
+; battle projection (X+10, Y+3) — the same transform the generated UI_* layout
+; records use (assets/ui_layout_battle.inc; e.g. UI_MOVE_BOX = GB(4,12) -> ofs 614
+; = BCOORD(4,12)). Only the coordinate VALUES move; every write is pret's.
+; ===========================================================================
+%define BCOORD(X, Y) (W_TILEMAP + ((Y) + 3) * FW + ((X) + 10))
+%define T_UPARROW_R   0xEC              ; '▷' unfilled cursor (charmap.asm)
+%define T_SLASH       0xF3              ; '/'
+
 ; ---------------------------------------------------------------------------
-; MoveSelectionMenu — pret core.asm:MoveSelectionMenu (regular-battle path) with
-; SelectMenuItem (2682) folded into the input loop. Lists the 4 moves via
-; FormatMovesString ('-' for empty slots), runs the cursor with the live TYPE/PP
-; box, and on A commits the move (0-PP / disabled re-show the menu). Returns ZF=1
-; if a move was chosen, ZF=0 if the player backed out (B). Mimic/relearn menus, the
-; SELECT move-swap, and TestBattle/debug paths are deferred (not reachable here).
+; MoveSelectionMenu — pret core.asm:2567. Draws one of the three move menus
+; (regular battle / Mimic / relearn, per wMoveMenuType), then falls through into
+; SelectMenuItem. Out: ZF=1 if a move was selected, ZF=0 if the player backed out.
 ; ---------------------------------------------------------------------------
 MoveSelectionMenu:
-    call AnyMoveToSelect                ; ZF=1 → no usable move (Struggle forced)
-    jnz .regularmenu
-    xor al, al                          ; ZF=1: selected move = Struggle
+    mov al, [ebp + wMoveMenuType]
+    dec al
+    jz  .mimicmenu
+    dec al
+    jz  .relearnmenu
+    jmp .regularmenu
+
+; .loadmoves — In: ESI = move list (GB offset). Stages it into wMoves and formats.
+.loadmoves:
+    mov edx, wMoves                     ; ld de, wMoves
+    mov bx, NUM_MOVES                   ; ld bc, NUM_MOVES
+    call CopyData
+    call FormatMovesString              ; callfar FormatMovesString
     ret
-.regularmenu:
-    ; .loadmoves — copy the 4 battle-mon move ids to wMoves, then FormatMovesString.
-    mov al, [ebp + wBattleMonMoves + 0]
-    mov [ebp + wMoves + 0], al
-    mov al, [ebp + wBattleMonMoves + 1]
-    mov [ebp + wMoves + 1], al
-    mov al, [ebp + wBattleMonMoves + 2]
-    mov [ebp + wMoves + 2], al
-    mov al, [ebp + wBattleMonMoves + 3]
-    mov [ebp + wMoves + 3], al
-    call FormatMovesString              ; → wMovesString (+ '-' empties), sets wNumMovesMinusOne
-    ; draw the move box (+ connect it to the FIGHT box: pret hlcoord 4,12 '─' / 10,12 '┘')
-    mov esi, W_TILEMAP + MOVEBOX_OFF
-    mov bh, MOVEBOX_H
-    mov bl, MOVEBOX_W
-    call TextBoxBorder
-    mov byte [ebp + W_TILEMAP + MOVEBOX_OFF], T_H
-    mov byte [ebp + W_TILEMAP + MOVEBOX_OFF + 6], T_BR
-    ; .writemoves — single-spaced move list
+
+; .writemoves — In: ESI = dest tile offset. Prints wMovesString single-spaced.
+.writemoves:
     or  byte [ebp + H_UI_LAYOUT_FLAGS], 1 << BIT_SINGLE_SPACED_LINES
-    mov esi, W_TILEMAP + MOVES_TEXT
-    lea eax, [ebp + wMovesString]
+    lea eax, [ebp + wMovesString]       ; ld de, wMovesString (PlaceString takes a flat src)
     call PlaceString
     and byte [ebp + H_UI_LAYOUT_FLAGS], (~(1 << BIT_SINGLE_SPACED_LINES)) & 0xFF
-    ; .menuset — cursor over the listed moves (0-based, our window.asm convention).
-    mov byte [ebp + wTopMenuItemY], MOVES_ROW0
-    mov byte [ebp + wTopMenuItemX], MOVES_CUR_COL
-    mov dword [menu_item_step], FW
-    mov al, [ebp + wNumMovesMinusOne]
-    mov [ebp + wMaxMenuItem], al
-    mov al, [ebp + wPlayerMoveListIndex] ; restore remembered cursor (clamp to move count)
-    cmp al, [ebp + wNumMovesMinusOne]
-    jbe .idxOk
-    xor al, al
-.idxOk:
+    ret
+
+.regularmenu:
+    call AnyMoveToSelect                ; ZF=1 → every move is out of PP: Struggle
+    jnz .haveMoves
+    ret                                 ; pret `ret z` — returns with ZF=1 (chosen)
+.haveMoves:
+    mov esi, wBattleMonMoves
+    call .loadmoves
+    ; DEVIATION(video): pret brackets the box draw in di/ei ("out of pure
+    ; coincidence, it is possible for vblank to occur between the di and ei") to
+    ; stop the LCD from latching a half-written tilemap. The port draws into a
+    ; back buffer that render_bg only reads once per composited frame, so there is
+    ; no tearing window to close and no interrupt to mask.
+    mov esi, BCOORD(4, 12)
+    mov bh, 4                           ; lb bc, 4, 14 — b = interior height
+    mov bl, 14                          ;               c = interior width
+    call TextBoxBorder
+    mov byte [ebp + BCOORD(4, 12)], T_H  ; '─' — join the box to the FIGHT menu above
+    mov byte [ebp + BCOORD(10, 12)], T_BR ; '┘'
+    mov esi, BCOORD(6, 13)
+    call .writemoves
+    mov bh, 5                           ; ld b, $5  (cursor X)
+    mov al, 0xC                         ; ld a, $c  (cursor Y)
+    jmp .menuset
+
+.mimicmenu:
+    mov esi, wEnemyMonMoves
+    call .loadmoves
+    mov esi, BCOORD(0, 7)
+    mov bh, 4
+    mov bl, 14
+    call TextBoxBorder
+    mov esi, BCOORD(2, 8)
+    call .writemoves
+    mov bh, 1                           ; ld b, $1
+    mov al, 7                           ; ld a, $7
+    jmp .menuset
+
+.relearnmenu:
+    mov al, [ebp + wWhichPokemon]
+    mov esi, wPartyMon1Moves
+    mov bx, PARTYMON_STRUCT_LENGTH
+    call AddNTimes                      ; ESI += wWhichPokemon * struct length
+    call .loadmoves
+    mov esi, BCOORD(4, 7)
+    mov bh, 4
+    mov bl, 14
+    call TextBoxBorder
+    mov esi, BCOORD(6, 8)
+    call .writemoves
+    mov bh, 5                           ; ld b, $5
+    mov al, 7                           ; ld a, $7
+
+.menuset:
+; pret walks hl from wTopMenuItemY through the menu-state block with ld [hli],a;
+; the port stores each byte by name (same bytes, same order).
+; In: AL = pret cursor Y, BH = pret cursor X — both projected onto the canvas here.
+    add al, 3                           ; canvas row = GB row + 3
+    mov [ebp + wTopMenuItemY], al
+    add bh, 10                          ; canvas col = GB col + 10
+    mov [ebp + wTopMenuItemX], bh
+    mov al, [ebp + wMoveMenuType]
+    cmp al, 1
+    je  .selectedmoveknown              ; Mimic: AL is already 1 = first item
+    mov al, [ebp + wPlayerMoveListIndex]
+    inc al                              ; 0-based move index → 1-based menu item
+.selectedmoveknown:
     mov [ebp + wCurrentMenuItem], al
-    mov [ebp + wLastMenuItem], al
-    mov byte [ebp + wMenuWatchedKeys], PAD_A | PAD_B
-    ; SelectMenuItem loop — refresh the TYPE/PP box on each cursor move.
-    mov dword [menu_redraw_cb], PrintMoveInfoBox
+                                        ; (pret: inc hl — wTileBehindCursor untouched)
+    mov al, [ebp + wNumMovesMinusOne]
+    inc al
+    inc al                              ; max item = move count + 1 (the wrap sentinel)
+    mov [ebp + wMaxMenuItem], al
+    mov al, [ebp + wMoveMenuType]
+    dec al
+    mov bh, PAD_UP | PAD_DOWN | PAD_A
+    jz  .matchedkeyspicked              ; Mimic: no B (the move must be picked)
+    dec al
+    mov bh, PAD_UP | PAD_DOWN | PAD_A | PAD_B
+    jz  .matchedkeyspicked              ; relearn
+    mov al, [ebp + wLinkState]
+    cmp al, LINK_STATE_BATTLING
+    je  .matchedkeyspicked              ; link battle: bh unchanged (UP/DOWN/A/B)
+    ; Disable left, right, and START buttons in regular battles.
+    mov al, [ebp + wStatusFlags7]
+    test al, 1 << BIT_TEST_BATTLE
+    mov bh, (~(PAD_LEFT | PAD_RIGHT | PAD_START)) & 0xFF
+    jz  .matchedkeyspicked
+    mov bh, PAD_CTRL_PAD | PAD_BUTTONS  ; TestBattle: every key (debug move stepping)
+.matchedkeyspicked:
+    mov [ebp + wMenuWatchedKeys], bh
+    mov al, [ebp + wMoveMenuType]
+    cmp al, 1
+    je  .movelistindex1
+    mov al, [ebp + wPlayerMoveListIndex]
+    inc al
+.movelistindex1:
+    mov [ebp + wLastMenuItem], al       ; pret: ld [hl],a — the byte after wMenuWatchedKeys
+    ; fallthrough
+
+; ---------------------------------------------------------------------------
+; SelectMenuItem — pret core.asm:2682. Draws the TYPE/PP box (and the swap
+; marker), runs the cursor, and dispatches the key that ended it. Re-entered
+; from _CursorUp/_CursorDown on every cursor move, which is what refreshes the box.
+; ---------------------------------------------------------------------------
+SelectMenuItem:
+    mov al, [ebp + wMoveMenuType]
+    and al, al
+    jz  .battleselect
+    dec al
+    jnz .select                         ; relearn menu: no prompt, no info box
+    mov esi, BCOORD(1, 14)              ; Mimic: "WHICH TECHNIQUE?"
+    mov eax, WhichTechniqueString
+    call PlaceString
+    jmp .select
+.battleselect:
+    ; Hide move swap cursor in TestBattle. This causes PrintMenuItem to not run in
+    ; TestBattle. MoveSelectionMenu still draws part of its window, an issue which
+    ; did not seem to exist in the Japanese versions. (pret's comment, preserved.)
+    mov al, [ebp + wStatusFlags7]
+    test al, 1 << BIT_TEST_BATTLE
+    jnz .select
+    call PrintMenuItem
+    mov al, [ebp + wMenuItemToSwap]
+    and al, al
+    jz  .select
+    mov esi, BCOORD(5, 13)              ; mark the move already picked for swapping
+    dec al
+    mov bx, FW                          ; ld bc, SCREEN_WIDTH — one canvas row
+    call AddNTimes
+    mov byte [ebp + esi], T_UPARROW_R   ; '▷'
+.select:
+    ; DEVIATION(menu-scratch): pret sets BIT_DOUBLE_SPACED_MENU in hUILayoutFlags
+    ; around HandleMenuInput, which — see PlaceMenuCursor, where the bit SET means
+    ; bc = SCREEN_WIDTH and CLEAR means bc = 40 = two GB rows — selects a ONE-row
+    ; cursor step (the flag's name is backwards). The port's window.asm carries that
+    ; as the explicit menu_item_step scratch, so the set/res pair becomes
+    ; one-row-step / back-to-two-row-step.
+    mov dword [menu_item_step], FW
     call HandleMenuInput
-    mov dword [menu_redraw_cb], 0
-    mov dl, [ebp + wCurrentMenuItem]    ; pret writes the index on BOTH select and back
-    mov [ebp + wPlayerMoveListIndex], dl
-    test al, PAD_B
-    jnz .back
-    ; A pressed — SelectMenuItem: 0-PP / disabled checks
-    movzx eax, byte [ebp + wCurrentMenuItem]
-    mov al, [ebp + eax + wBattleMonPP]
+    mov dword [menu_item_step], 2 * FW
+    test al, PAD_UP
+    jnz SelectMenuItem_CursorUp
+    test al, PAD_DOWN
+    jnz SelectMenuItem_CursorDown
+    test al, PAD_SELECT
+    jnz SwapMovesInMenu
+    ; (pret's _DEBUG block — START/RIGHT/LEFT into Func_3d4f5/Func_3d529/Func_3d523,
+    ; the TestBattle move stepper — is compiled out in the retail build, so the port
+    ; does not carry it; those three labels are pret _DEBUG-only. See ledger M-118.)
+    test al, PAD_B                      ; bit B_PAD_B, a
+    pushfd                              ; push af — the B verdict decides the return
+    mov byte [ebp + wMenuItemToSwap], 0
+    mov al, [ebp + wCurrentMenuItem]
+    dec al                              ; 1-based menu item → 0-based move index
+    mov [ebp + wCurrentMenuItem], al
+    mov bh, al                          ; ld b, a
+    mov al, [ebp + wMoveMenuType]
+    dec al                              ; if not mimic
+    jnz .notB
+    popfd
+    ret                                 ; Mimic: caller reads the index, not the flag
+.notB:
+    dec al                              ; ZF=1 → relearn menu
+    mov al, bh                          ; (flag-neutral, as pret's `ld a,b`)
+    mov [ebp + wPlayerMoveListIndex], al
+    jnz .moveselected
+    popfd
+    ret                                 ; relearn: same, index only
+.moveselected:
+    popfd
+    jnz .backedOut                      ; pret `ret nz` — B was pressed
+    movzx ebx, byte [ebp + wCurrentMenuItem]
+    mov al, [ebp + ebx + wBattleMonPP]  ; ld hl,wBattleMonPP / add hl,bc / ld a,[hl]
     and al, PP_MASK
     jz  .noPP
-    mov al, [ebp + wPlayerDisabledMove] ; high nibble - 1 == disabled slot
-    shr al, 4
+    mov al, [ebp + wPlayerDisabledMove]
+    shr al, 4                           ; swap a / and $f — the disabled slot, 1-based
     dec al
-    movzx ecx, byte [ebp + wCurrentMenuItem]
-    cmp al, cl
+    cmp al, bl                          ; cp c
     je  .disabled
-    ; commit the chosen move
-    movzx eax, byte [ebp + wCurrentMenuItem]
-    mov al, [ebp + eax + wBattleMonMoves]
+    mov al, [ebp + wPlayerBattleStatus3]
+    test al, 1 << TRANSFORMED
+    jnz .transformedMoveSelected
+.transformedMoveSelected:               ; pointless (pret's own comment: both paths
+                                        ; land here) — Transform-copied moves are usable
+    movzx ebx, byte [ebp + wCurrentMenuItem]
+    mov al, [ebp + ebx + wBattleMonMoves]
     mov [ebp + wPlayerSelectedMove], al
-    xor al, al                          ; ZF=1 → move chosen
-    ret
-.back:
-    mov byte [ebp + wMenuItemToSwap], 0
-    or  al, PAD_B                       ; ZF=0 → backed out (B)
-    ret
-.noPP:
-    mov eax, MoveNoPPText
-    jmp .printReshow
+    xor al, al
+    ret                                 ; ZF=1 → a move was selected
+.backedOut:
+    ret                                 ; ZF=0 → the player pressed B
 .disabled:
     mov eax, MoveDisabledText
-.printReshow:
-    call PrintBattleText
+    jmp .print
+.noPP:
+    mov eax, MoveNoPPText
+.print:
+    call PrintBattleText                ; pret: call PrintText
     call LoadScreenTilesFromBuffer1
     jmp MoveSelectionMenu
+
+; ---------------------------------------------------------------------------
+; SelectMenuItem_CursorUp / _CursorDown — pret core.asm:2800 / 2810. The cursor
+; landed on one of the two out-of-range sentinel items: wrap it to the other end.
+; ---------------------------------------------------------------------------
+SelectMenuItem_CursorUp:
+    mov al, [ebp + wCurrentMenuItem]
+    and al, al
+    jnz SelectMenuItem                  ; not on the top sentinel → just redraw
+    call EraseMenuCursor
+    mov al, [ebp + wNumMovesMinusOne]
+    inc al                              ; wrap to the last move
+    mov [ebp + wCurrentMenuItem], al
+    jmp SelectMenuItem
+
+SelectMenuItem_CursorDown:
+    mov al, [ebp + wCurrentMenuItem]
+    mov bh, al                          ; ld b, a
+    mov al, [ebp + wNumMovesMinusOne]
+    inc al
+    inc al
+    cmp al, bh                          ; cp b
+    jne SelectMenuItem                  ; not on the bottom sentinel → just redraw
+    call EraseMenuCursor
+    mov byte [ebp + wCurrentMenuItem], 1 ; wrap to the first move
+    jmp SelectMenuItem
+
+; ---------------------------------------------------------------------------
+; SwapMovesInMenu — pret core.asm:2926. SELECT picks a move, SELECT again swaps
+; the two — in wBattleMonMoves/PP, in the party struct, and in the disabled-move
+; index. Re-enters MoveSelectionMenu either way.
+; ---------------------------------------------------------------------------
+SwapMovesInMenu:
+    ; (pret's _DEBUG head — TestBattle jumps to Func_3d4f5 here — is retail-absent.)
+    mov al, [ebp + wPlayerBattleStatus3]
+    test al, 1 << TRANSFORMED
+    jnz MoveSelectionMenu               ; a Transformed mon's moves are not really its own
+    mov al, [ebp + wMenuItemToSwap]
+    and al, al
+    jz  .noMenuItemSelected
+    mov esi, wBattleMonMoves
+    call .swapBytes                     ; swap moves
+    mov esi, wBattleMonPP
+    call .swapBytes                     ; swap move PP
+; update the index of the disabled move if necessary
+    mov esi, wPlayerDisabledMove        ; ld hl, wPlayerDisabledMove
+    mov al, [ebp + esi]
+    shr al, 4                           ; swap a / and $f — disabled slot (1-based)
+    mov bh, al
+    mov al, [ebp + wCurrentMenuItem]
+    cmp al, bh
+    jne .next
+    mov al, [ebp + esi]
+    and al, 0x0F                        ; keep the turn counter (low nybble)
+    mov bh, al
+    mov al, [ebp + wMenuItemToSwap]
+    shl al, 4                           ; swap a — the swapped-to slot becomes disabled
+    add al, bh
+    mov [ebp + esi], al
+    jmp .swapMovesInPartyMon
+.next:
+    mov al, [ebp + wMenuItemToSwap]
+    cmp al, bh
+    jne .swapMovesInPartyMon
+    mov al, [ebp + esi]
+    and al, 0x0F
+    mov bh, al
+    mov al, [ebp + wCurrentMenuItem]
+    shl al, 4
+    add al, bh
+    mov [ebp + esi], al
+.swapMovesInPartyMon:
+    mov esi, wPartyMon1Moves
+    mov al, [ebp + wPlayerMonNumber]
+    mov bx, PARTYMON_STRUCT_LENGTH
+    call AddNTimes
+    push esi
+    call .swapBytes                     ; swap moves
+    pop esi
+    add esi, MON_PP - MON_MOVES
+    call .swapBytes                     ; swap move PP
+    mov byte [ebp + wMenuItemToSwap], 0 ; deselect the item
+    jmp MoveSelectionMenu
+
+; .swapBytes — In: ESI = list base. Swaps the [wMenuItemToSwap-1] and
+; [wCurrentMenuItem-1] entries. (Both indices are 1-based here: SelectMenuItem's
+; dec has not run yet on this path.)
+.swapBytes:
+    push esi
+    mov al, [ebp + wMenuItemToSwap]
+    dec al
+    movzx edx, al
+    add edx, esi                        ; ld d,h / ld e,l — the first entry
+    pop esi
+    mov al, [ebp + wCurrentMenuItem]
+    dec al
+    movzx ecx, al
+    add esi, ecx                        ; the second entry
+    mov al, [ebp + edx]
+    mov bh, [ebp + esi]
+    mov [ebp + esi], al
+    mov al, bh
+    mov [ebp + edx], al
+    ret
+
+.noMenuItemSelected:
+    mov al, [ebp + wCurrentMenuItem]
+    mov [ebp + wMenuItemToSwap], al     ; select the current menu item for swapping
+    jmp MoveSelectionMenu
+
+; ---------------------------------------------------------------------------
+; PrintMenuItem — pret core.asm:3010. The TYPE / PP box for the move the cursor
+; is on: box at GB(0,8), "TYPE/" + the move's type, and curPP/maxPP. Prints
+; "Disabled!" instead if this is the disabled move.
+;
+; This replaces the port-invented PrintMoveInfoBox (battle_menu.asm), which hand-
+; rolled the type lookup, the PP digits and the box, and skipped GetMaxPP entirely
+; — so a move with a PP Up applied showed its BASE max PP. Here the max PP comes
+; from GetMaxPP, exactly as pret.
+; ---------------------------------------------------------------------------
+PrintMenuItem:
+    ; DEVIATION(video): pret disables hAutoBGTransferEnabled around the draw (and
+    ; ends in Delay3) so the partially-drawn box is never DMA'd to VRAM mid-frame.
+    ; The port composites a whole back buffer per frame — there is no incremental
+    ; BG transfer to gate, and no frame is presented mid-routine.
+    mov esi, BCOORD(0, 8)
+    mov bh, 3                           ; lb bc, 3, 9
+    mov bl, 9
+    call TextBoxBorder
+    mov al, [ebp + wPlayerDisabledMove]
+    and al, al
+    jz  .notDisabled
+    shr al, 4                           ; swap a / and $f — the disabled slot (1-based)
+    mov bh, al
+    mov al, [ebp + wCurrentMenuItem]
+    cmp al, bh
+    jne .notDisabled
+    mov esi, BCOORD(1, 10)
+    mov eax, DisabledText
+    call PlaceString
+    jmp .moveDisabled
+.notDisabled:
+    dec byte [ebp + wCurrentMenuItem]   ; ld hl,wCurrentMenuItem / dec [hl] — 0-based
+    mov byte [ebp + hWhoseTurn], 0
+    movzx ebx, byte [ebp + wCurrentMenuItem]
+    mov al, [ebp + ebx + wBattleMonMoves]
+    ; update wPlayerSelectedMove even if the move isn't actually selected (just
+    ; pointed to by the cursor) — GetCurrentMove below reads it.
+    mov [ebp + wPlayerSelectedMove], al
+    mov al, [ebp + wPlayerMonNumber]
+    mov [ebp + wWhichPokemon], al
+    mov byte [ebp + wMonDataLocation], BATTLE_MON_DATA
+    call GetMaxPP                       ; callfar GetMaxPP → wMaxPP (PP Ups included)
+    movzx ebx, byte [ebp + wCurrentMenuItem]
+    inc byte [ebp + wCurrentMenuItem]   ; ld c,[hl] / inc [hl] — back to 1-based
+    mov al, [ebp + ebx + wBattleMonPP]
+    and al, PP_MASK
+    mov [ebp + wBattleMenuCurrentPP], al
+; print TYPE/<type> and <curPP>/<maxPP>
+    mov esi, BCOORD(1, 9)
+    mov eax, TypeText
+    call PlaceString
+    mov byte [ebp + BCOORD(7, 11)], T_SLASH
+    mov byte [ebp + BCOORD(5, 9)], T_SLASH
+    mov esi, BCOORD(5, 11)
+    mov edx, wBattleMenuCurrentPP
+    mov bh, 1                           ; lb bc, 1, 2 — 1 source byte, 2 digits
+    mov bl, 2
+    call PrintNumber
+    mov esi, BCOORD(8, 11)
+    mov edx, wMaxPP
+    mov bh, 1
+    mov bl, 2
+    call PrintNumber
+    call GetCurrentMove
+    mov esi, BCOORD(2, 10)
+    call PrintMoveType                  ; predef PrintMoveType (port: direct call)
+.moveDisabled:
+    jmp Delay3                          ; pret: ld a,1 / ldh [hAutoBGTransferEnabled] / jp Delay3
 
 ; ---------------------------------------------------------------------------
 ; AnyMoveToSelect — pret core.asm:AnyMoveToSelect (2876). If every usable move is
