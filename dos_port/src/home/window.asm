@@ -23,10 +23,13 @@ bits 32
 %define CHAR_SPACE          0x7F          ; blank space tile (charmap.asm)
 
 ; pret: hlcoord 18, 11 — "coordinates of blinking down arrow in some menus"
-; (home/window.asm HandleMenuInput_). Row/col, applied to the current
-; text_row_stride rather than the GB's fixed SCREEN_WIDTH.
-%define MENU_ARROW_ROW      11
-%define MENU_ARROW_COL      18
+; (home/window.asm HandleMenuInput_). On the GB that ABSOLUTE screen cell is
+; where the list menu's "more below" ▼ lands, because the list box sits at
+; GB(4,2) and draws its arrow box-relative at (14,9): (4,2)+(14,9) = (18,11).
+; The port has no single absolute tilemap to name it in — a menu draws its box
+; into the W_TILEMAP scratch at a runtime stride and the compositor projects it —
+; so the arrow cell is PUBLISHED by the menu that owns it (menu_arrow_pos below).
+; See menu-fidelity finding M-2 (corrected) / row 24.
 
 extern DelayFrame
 extern AnimatePartyMon                 ; src/engine/gfx/mon_icons.asm — icon bob (ends in DelayFrame)
@@ -57,6 +60,7 @@ global DisableAutoTextBoxDrawing
 global AutoTextBoxDrawingCommon
 global menu_item_step
 global menu_redraw_cb
+global menu_arrow_pos
 
 section .bss
 ; Menu cursor vertical item spacing (bytes). Set by the caller: text_row_stride
@@ -67,6 +71,15 @@ menu_item_step: resd 1
 ; (re)drawn each loop so a menu can refresh side info (e.g. the move TYPE/PP box)
 ; on cursor move — mirrors pret SelectMenuItem calling PrintMenuItem each frame.
 menu_redraw_cb: resd 1
+; DEVIATION(menu-scratch): the blinking ▼'s tile offset, or 0 for "this menu has
+; no down arrow" (the default). pret names that cell as the absolute screen
+; coordinate `hlcoord 18, 11` and calls HandleDownArrowBlinkTiming on it
+; unconditionally — inert on menus whose (18,11) is not a ▼. The port cannot name
+; it absolutely: each menu draws its box box-relative into the W_TILEMAP scratch
+; at a runtime stride and the compositor projects the result, so (18,11) in scratch
+; space is not the arrow cell of any box. The menu that DRAWS the arrow therefore
+; publishes where it drew it (list_menu.asm), and 0 reproduces pret's inert case.
+menu_arrow_pos: resd 1
 
 section .text
 
@@ -241,7 +254,7 @@ PlaceUnfilledArrowMenuCursor:
 ; Faithful: UP/DOWN within [0,wMaxMenuItem]; optional wrap (wMenuWrappingEnabled)
 ; and out-of-bounds early-return (wMenuWatchMovingOutOfBounds); the joypad-poll
 ; timeout (wMenuJoypadPollCount); the per-iteration AnimatePartyMon shake; the
-; blinking ▼ at (18,11); the A/B press SFX gated on wMiscFlags
+; blinking ▼ of the menu that published one (menu_arrow_pos); the A/B press SFX gated on wMiscFlags
 ; BIT_NO_MENU_BUTTON_SOUND; the down-arrow blink counters saved/restored around
 ; the loop; wMenuWrappingEnabled cleared on every exit. Ends when a key in
 ; wMenuWatchedKeys is pressed.
@@ -271,11 +284,14 @@ HandleMenuInput_:
     ; HandleDownArrowBlinkTiming's "no blink active" guard so the call is inert
     ; on menus with no ▼. The port's blink is frame-paced (ARROW_ON/OFF_FRAMES),
     ; where a nonzero COUNT1 on an arrow-less menu would eventually *draw* a
-    ; spurious ▼. So arm the frame-paced counters only when the tile really is a
-    ; ▼, and leave COUNT1=0 (inert) otherwise — pret's net behavior, in frames.
-    call .downArrowTile                 ; ESI = ▼ tile offset
+    ; spurious ▼. So arm the frame-paced counters only when the published cell
+    ; really holds a ▼, and leave COUNT1=0 (inert) otherwise — pret's net
+    ; behavior, in frames.
     mov byte [ebp + H_DOWN_ARROW_COUNT1], 0
     mov byte [ebp + H_DOWN_ARROW_COUNT2], 1
+    mov esi, [menu_arrow_pos]           ; the owning menu's ▼ cell (0 = none)
+    test esi, esi
+    jz .loop1
     cmp byte [ebp + esi], CHAR_DOWN_ARROW
     jne .loop1
     mov byte [ebp + H_DOWN_ARROW_COUNT1], ARROW_ON_FRAMES
@@ -301,13 +317,26 @@ HandleMenuInput_:
     test al, al
     jnz .keyPressed
     ; no key this frame — blink the down arrow (pret: hlcoord 18,11 /
-    ; call HandleDownArrowBlinkTiming), then the poll-count timeout
+    ; call HandleDownArrowBlinkTiming; here: the cell the owning menu published),
+    ; then the poll-count timeout
     ; (pret .giveUpWaiting). Faithful: the stored count is read fresh and
     ; decremented in-register only (no write-back), so the timeout fires only
     ; when [wMenuJoypadPollCount] == 1. With the default 0 (0-1=0xFF, not zero)
     ; it never fires → the menu waits forever, as pret's does.
-    call .downArrowTile                 ; ESI = ▼ tile offset
+    mov esi, [menu_arrow_pos]
+    test esi, esi
+    jz .noArrow                         ; no ▼ on this menu — pret's call is inert too
     call HandleDownArrowBlinkTiming
+    ; The blink writes a scratch tile. A menu box only reaches the screen through
+    ; its mirror callback (the compositor reads the window source, not W_TILEMAP),
+    ; and that callback otherwise runs once per cursor move — so without this the
+    ; ▼ would toggle invisibly. pret needs no equivalent: its (18,11) IS the live
+    ; tilemap cell. Only menus that published an arrow pay for the extra mirror.
+    mov eax, [menu_redraw_cb]
+    test eax, eax
+    jz .noArrow
+    call eax
+.noArrow:
     mov al, [ebp + wMenuJoypadPollCount]
     dec al
     jz .giveUpWaiting
@@ -393,18 +422,6 @@ HandleMenuInput_:
     ret
 
 ; ---------------------------------------------------------------------------
-; .downArrowTile — ESI = EBP-relative tile offset of the blinking ▼.
-; pret: `hlcoord 18, 11`. DEVIATION(stride): the port's menu scratch tilemap has
-; a runtime row stride (20 or 40), so the row is scaled by text_row_stride
-; instead of the GB's fixed SCREEN_WIDTH. Preserves EAX/EBX/ECX/EDX.
-; ---------------------------------------------------------------------------
-.downArrowTile:
-    mov esi, [text_row_stride]
-    imul esi, MENU_ARROW_ROW
-    add esi, W_TILEMAP + MENU_ARROW_COL
-    ret
-
-; ---------------------------------------------------------------------------
 ; HandleDownArrowBlinkTiming — toggle a blinking ▼ at [EBP+ESI] on/off.
 ; Faithful (structure) to home/window.asm:HandleDownArrowBlinkTiming: a two-
 ; counter scheme (H_DOWN_ARROW_COUNT1 inner / H_DOWN_ARROW_COUNT2 outer) with
@@ -416,7 +433,7 @@ HandleMenuInput_:
 ; its 0xFF/6 reloads would give a ~25 s blink here. Every caller arms
 ; COUNT1=ARROW_ON_FRAMES, COUNT2=1 before the first call (text.asm
 ; manual_text_scroll, map_sprites sync_dialog_window, and HandleMenuInput_ —
-; which arms them only when the tile at (18,11) really is a ▼); the COUNT1==0
+; which arms them only when the published arrow cell really holds a ▼); the COUNT1==0
 ; guard below is what keeps the call inert everywhere else.
 ; In: ESI = EBP-relative tile offset of the arrow. Preserves EAX, EBX.
 ; ---------------------------------------------------------------------------

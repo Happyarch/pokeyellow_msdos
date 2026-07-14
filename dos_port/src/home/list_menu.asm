@@ -87,6 +87,7 @@ extern PlaceMenuCursor          ; home/window.asm
 extern text_row_stride          ; text.asm       (resd) active W_TILEMAP row stride
 extern menu_item_step           ; home/window.asm(resd) per-item cursor row step
 extern menu_redraw_cb           ; home/window.asm(resd) per-frame redraw cb (0=none)
+extern menu_arrow_pos           ; home/window.asm(resd) the blinking ▼'s tile offset (0=none)
 extern DelayFrames              ; frame.asm      BL=frame count
 extern DelayFrame               ; frame.asm      the port's frame pump — joypad edge
                                 ;                + compositor present both live here
@@ -331,7 +332,15 @@ DisplayListMenuIDLoop:
     ; per-frame mirror keeps HandleMenuInput's live cursor reaching the
     ; compositor (same mechanism as yes_no.asm's yn_mirror callback)
     mov dword [menu_redraw_cb], list_mirror
+    ; Tell HandleMenuInput where this menu's "more below" ▼ actually is. pret names
+    ; it as the absolute screen cell (18,11) because the list box sits at GB(4,2)
+    ; and its arrow at box-relative (14,9); the port's box lives box-relative in the
+    ; W_TILEMAP scratch, so it publishes the cell PrintListMenuEntries wrote. Without
+    ; this the blink targeted scratch (18,11) — a cell outside the box — and was
+    ; inert (menu-fidelity M-2 corrected / row 24).
+    mov dword [menu_arrow_pos], W_TILEMAP + LIST_DOWN_ROW * LIST_STRIDE + LIST_DOWN_COL
     call HandleMenuInput                       ; Out: AL = watched keys pressed
+    mov dword [menu_arrow_pos], 0
     mov dword [menu_redraw_cb], 0
     push eax
     call PlaceMenuCursor

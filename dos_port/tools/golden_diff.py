@@ -194,7 +194,11 @@ SCENARIOS = {
                  "port's panel redraw replaces it with the live overworld backdrop"),
                 ((11, 18),
                  "MORE-list arrow: blinking, phase depends on dump frame (golden caught "
-                 "blink-off; the port draws it steady)"),
+                 "blink-off; this harness dumps the list before HandleMenuInput arms the "
+                 "blink, so the port's arrow is still on). The old text — 'the port draws "
+                 "it steady' — was true only because the blink targeted the wrong cell; "
+                 "menu-fidelity row 24 fixed that and the arrow now blinks in the live "
+                 "bag list (observed via DEBUG_ITEMUSE AUTOKEY_DUMP_FRAME=700 vs 715)"),
             ],
             "vram": [
                 (256 + 0x03, "flower tile: VRAM tile-DATA animation, phase depends on dump frame"),

@@ -586,8 +586,12 @@ ifdef DEBUG_ITEMUSE
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_ITEMUSE -D DEBUG_SEED_PARTY -D SKIP_TITLE
 NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_ITEMUSE
+# (This used to read `-D AUTOKEY_DUMP_FRAME=160` — a hardcode, so the documented
+# "AUTOKEY_DUMP_FRAME=380 heal message / 620 refusal / 700 bag list" never worked:
+# every DEBUG_ITEMUSE run photographed frame 160 whatever you asked for. Menu-
+# fidelity row 24 needed the bag-list frame to see the ▼ blink; finding M-120.)
 ifdef AUTOKEY_DUMP_FRAME
-NASMFLAGS += -D AUTOKEY_DUMP_FRAME=160
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 endif
 endif
 # Plain playable build with a seeded party — NO frame dump, NO SKIP_TITLE. Boots

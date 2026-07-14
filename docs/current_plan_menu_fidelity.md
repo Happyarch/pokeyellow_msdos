@@ -120,7 +120,7 @@ driver only relocates the divergence.
 | 21 | `src/engine/menus/draw_badges.asm` | same | **DONE** | `c0ebb7ea` | `DrawBadges` itself reads **faithful instruction-for-instruction** (flags included: `srl b`→`shr bh,1`+`jnc`; the `and a` / flag-neutral `ld a,[wBadgeNameTile]` pair; `.PlaceTiles` leaving HL on the 2nd tile) — faithdiff clean, 2/2 calls, 2/2 stores. The ledger's "Port stand-in" note was **stale**: `DrawBadges` has a live caller (`StartMenu_TrainerInfo`, `start_sub_menus.asm:648` = pret's `predef DrawBadges`), and the DEBUG harness is no longer its only consumer; header fixed. **M-114 FIXED**: pret's data label `GymLeaderFaceAndBadgeTileGraphics` was emitted by `gen_badge_tiles.py` under the port-invented name `badge_face_tiles` — a preserve-pret-labels violation, and exactly why translation.db read the label `missing`; the generator now emits pret's name (label → `translated`, no code change to the pixels). **M-115 FIXED**: the four `%ifndef wBadge…` WRAM-equate guards were **dead** (NASM `%ifndef` cannot see `equ` symbols) and their comment ("guarded so root can promote them into gb_memmap.inc") described a promotion that had **already happened** — deleted; `gb_memmap.inc` is the single source. **2 SANCTIONED, now tagged** (both were untagged prose before): the `.FaceBadgeTiles` `call CopyData` expanded as a flat `rep movsb` — `DEVIATION(gb-memory-model)`, the table is x86 code space and `CopyData` takes a GB offset — and the port-only `LoadBadgeTiles` — `DEVIATION(port-split)`, pret loads those tiles inline in `DrawTrainerInfo` via `FarCopyData` (start_sub_menus.asm:523-527), which the port cannot use for the same reason. **Allowlist: no entries touch this file** (grep-confirmed) — step 4 was a no-op. Verified by headless `DEBUG_DRAWBADGES` render (grid draws: 4 faces + 4 badges from the `%10100101` seed) and `make fidelity` (all 6 PASS). |
 | 22 | **`MoveSelectionMenu` / `SelectMenuItem` / `SwapMovesInMenu` / `PrintMenuItem`** | `engine/battle/core.asm` | **DONE** | `f8361023` | **B8 cleared.** All four now exist under pret's labels (three of them did not exist at all), plus `SelectMenuItem_CursorUp/_CursorDown` and the mirror file `src/engine/battle/print_type.asm`. Mimic + relearn menus and the SELECT move-swap are live; PP now comes from `GetMaxPP`. Verified headlessly with the new `DEBUG_MOVEMENU` harness. Findings M-116…M-119. |
 | 23 | **`PrintText` / `PrintText_NoCreatingTextBox`** | `home/window.asm` | DONE | `2c33f7a6` | opened by row 1 — see **M-3** (now FIXED: one printer, placement is a data record; `PrintText_Overworld`/`PrintText_NoBox` forks deleted). Verified by byte-identical `DEBUG_ITEMTM` + `DEBUG_LEARNMOVE` frames. Was: a battle-scope wrapper squatted on the label, so 9 non-battle files printed through the battle box. |
-| 24 | **`HandleMenuInput_.downArrowTile`** (▼ blink coord space) | `home/window.asm` | TODO | | opened by row 4 — see the **corrected M-2**. The blink targets pret's ABSOLUTE (18,11); every list draws box-relative into the stride-20 scratch, so the blink is inert. Row 1's file, found after row 1 closed. |
+| 24 | **`HandleMenuInput_.downArrowTile`** (▼ blink coord space) | `home/window.asm` | **DONE** | `PENDING24` | M-2 RESOLVED: the blink now targets the cell the owning menu *drew* (new `menu_arrow_pos` scratch, published by `list_menu.asm`), and is mirrored to the compositor each frame, so the bag list's ▼ visibly blinks (observed: DEBUG_ITEMUSE frame 700 = on, 715 = off). Also M-120 (the `DEBUG_ITEMUSE` dump-frame knob was hardcoded). Original note: opened by row 4 — see the **corrected M-2**. The blink targets pret's ABSOLUTE (18,11); every list draws box-relative into the stride-20 scratch, so the blink is inert. Row 1's file, found after row 1 closed. |
 
 Also: pret's `engine/menus/unused_input.asm` has **no port counterpart**. Confirm it is
 genuinely unreachable, then record it as intentionally-absent rather than unexplained.
@@ -176,7 +176,7 @@ at the underscore entry; add the blink call, the counter save/restore, and the g
 "dropped" is corrected in the same commit (the shake was never dropped — it was there).
 **Severity:** medium (dead cosmetic + latent state leak; no wrong gameplay observed)
 
-### M-2. The ▼ blink in `window.asm` uses ABSOLUTE GB coords against a box-relative scratch **[OPEN → needs row 24]**
+### M-2. The ▼ blink in `window.asm` uses ABSOLUTE GB coords against a box-relative scratch **[FIXED — row 24]**
 > **CORRECTED at row 4 (2026-07-13). The original text of this finding was WRONG** — it claimed
 > the port's list drew its ▼ in the wrong cell and told row 4 to move it. It does not, and row 4
 > did not move it. Recording the error because the whole point of this audit is that confident
@@ -2476,3 +2476,40 @@ that screen's own layout offsets. Relocating it to `print_type.asm` and splittin
 `EraseType2Text` back out is a separable change to `status_screen.asm` — out of
 scope for this row, so it is allowlisted **per-label** with a written why rather
 than left blanket-blessed per-file.
+
+### M-2 — RESOLVED (row 24): the blink was aimed at a cell no box owns
+
+pret can name the blinking ▼ absolutely (`hlcoord 18, 11`) because the GB has one
+tilemap: the list box sits at GB(4,2) and draws its arrow box-relative at (14,9),
+and (4,2)+(14,9) *is* (18,11). The port has no such absolute cell — every menu
+draws its box box-relative into the `W_TILEMAP` scratch at a runtime stride and the
+compositor projects it — so `.downArrowTile`'s `stride*11 + 18` pointed at a cell
+outside the box. `HandleDownArrowBlinkTiming` only ever acts on a tile that already
+holds a ▼, so nothing was corrupted; the blink simply never happened.
+
+The fix inverts the direction of the knowledge: the menu that DRAWS the arrow
+publishes where it drew it, in a new `menu_arrow_pos` scratch dword (0 = "this menu
+has no arrow", which reproduces pret's inert call). `list_menu.asm` sets it around
+`HandleMenuInput` exactly as it already sets `menu_redraw_cb`. `.downArrowTile` is
+deleted.
+
+Second half of the bug, which the original finding did not see: even with the right
+cell, the blink writes a **scratch** tile, and a menu box only reaches the screen
+through its mirror callback — which ran once per *cursor move*, not per frame. So
+the arrow would have toggled invisibly. `HandleMenuInput_` therefore re-runs
+`menu_redraw_cb` after each blink tick, and only for menus that published an arrow.
+(pret needs no equivalent: its (18,11) is the live tilemap cell.)
+
+Observed, not assumed: `DEBUG_ITEMUSE AUTOKEY_DUMP_FRAME=700` renders the bag list
+with the ▼ present; `=715` renders the same list with the cell blank.
+
+### M-120 (row 24, FIXED in passing) — the `DEBUG_ITEMUSE` dump-frame knob was a hardcode
+
+The Makefile documents "AUTOKEY_DUMP_FRAME (380 heal message / 620 refusal / 700 bag
+list)" and then does `ifdef AUTOKEY_DUMP_FRAME / NASMFLAGS += -D AUTOKEY_DUMP_FRAME=160`
+— passing a value merely *enabled* the flag and every run photographed frame 160.
+The three documented frames had been unreachable for as long as the line existed. Fixed
+to `=$(AUTOKEY_DUMP_FRAME)`; the row-24 verification above depends on it. The same
+`=160` hardcode appears in the DEBUG_ITEMBALL / DEBUG_ITEMTM blocks, but there it is
+paired with `AUTOKEY_DUMP_FRAME ?= 999999` and those harnesses dump via their own path
+— left alone, out of scope, flagged here.
