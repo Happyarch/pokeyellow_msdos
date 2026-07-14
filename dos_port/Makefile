@@ -484,23 +484,29 @@ NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_STARTMENU
 NASMFLAGS += -D SKIP_TITLE
 endif
-# Sign-text gate (fidelity plan Stage 1b — the streamed-text golden): spawn below the
+# Sign-text gate (fidelity plan Stage 1b — the streamed-text golden): spawn beside the
 # Pallet Town sign facing it, run the real A-press dispatch
 # (IsSpriteOrSignInFrontOfPlayer -> SignLoop -> DisplaySignText -> ShowTextStream),
-# and dump FRAME.BIN + GBSTATE.BIN once the stream is printed. The hook sits in
-# ShowTextStream, just after `call PrintText` (see F-8). make DEBUG_SIGNTEXT=1
+# and dump FRAME.BIN + GBSTATE.BIN once the stream is printed and the box is waiting on
+# its ▼ (the hook is inside npc_dialog_wait_impl, map_sprites.asm). It is the port half
+# of the sign_pallet golden. make DEBUG_SIGNTEXT=1
 ifdef DEBUG_SIGNTEXT
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_SIGNTEXT
 NASMFLAGS += -D SKIP_TITLE
-# Which sign to read. Defaults to the Pallet Town town sign (bg_event 7, 9 -> read from
-# (Y=10, X=7) facing UP). Override to drive any other map's sign headlessly, e.g. the
-# Route 5 UNDERGROUND PATH sign (bg_event 17, 29):
-#   make DEBUG_SIGNTEXT=1 SIGNTEXT_MAP=0x10 SIGNTEXT_Y=30 SIGNTEXT_X=17
+# Which sign to read. Defaults to the Pallet Town town sign (bg_event 7, 9), read from
+# (Y=9, X=8) facing LEFT — the tile BELOW the sign is a flower ($03) the game will not
+# let you stand on, so the golden cannot walk there and neither should the port.
+# Override to drive any other map's sign headlessly, e.g. the Route 5 UNDERGROUND PATH
+# sign (bg_event 17, 29), read from below:
+#   make DEBUG_SIGNTEXT=1 SIGNTEXT_MAP=0x10 SIGNTEXT_Y=30 SIGNTEXT_X=17 \
+#        SIGNTEXT_DIR=SPRITE_FACING_UP
 SIGNTEXT_MAP ?= 0x00
-SIGNTEXT_Y   ?= 10
-SIGNTEXT_X   ?= 7
-NASMFLAGS += -D SIGNTEXT_MAP=$(SIGNTEXT_MAP) -D SIGNTEXT_Y=$(SIGNTEXT_Y) -D SIGNTEXT_X=$(SIGNTEXT_X)
+SIGNTEXT_Y   ?= 9
+SIGNTEXT_X   ?= 8
+SIGNTEXT_DIR ?= SPRITE_FACING_LEFT
+NASMFLAGS += -D SIGNTEXT_MAP=$(SIGNTEXT_MAP) -D SIGNTEXT_Y=$(SIGNTEXT_Y) \
+             -D SIGNTEXT_X=$(SIGNTEXT_X) -D SIGNTEXT_DIR=$(SIGNTEXT_DIR)
 # The Pallet Town sign's stream is "PALLET TOWN <line> Shades of your <cont> journey
 # await!", and <cont> ($55) is a WAITING command (it scrolls, then blocks on A/B) —
 # a headless run with no keyboard parks there forever. AUTOKEY answers it, exactly as
@@ -1217,7 +1223,8 @@ goldencheck:
 
 # All golden scenarios (the port-vs-golden fidelity suite). Runs every
 # scenario even if one fails; nonzero exit if any failed.
-FIDELITY_SCENARIOS := status_p1 status_p2 start_menu overworld_pallet party_menu bag_menu
+FIDELITY_SCENARIOS := status_p1 status_p2 start_menu overworld_pallet party_menu bag_menu \
+                      sign_pallet
 fidelity:
 	@fail=0; for s in $(FIDELITY_SCENARIOS); do \
 		tools/goldencheck.sh $$s || fail=1; \

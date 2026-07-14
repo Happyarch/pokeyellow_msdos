@@ -196,6 +196,52 @@ SCENARIOS = {
             ],
         },
     },
+    "sign_pallet": {
+        "flags": "DEBUG_SIGNTEXT=1",
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
+        # Pallet Town, player at (9,8) facing LEFT, reading `bg_event 7, 9` — the tile
+        # BELOW the sign is a flower ($03, not in Overworld_Coll), so this is the only
+        # reachable reading tile (the port's gate seeds the same coords). The odd Y
+        # puts the block-aligned mirror window two rows above overworld_pallet's.
+        "window": (16, 8),
+        "projections": [
+            # The overworld dialog is drawn into a GB-SHAPED stride-20 scratch at
+            # W_TILEMAP + 12*20 (msgbox_dialog, home/text.asm) and displayed through the
+            # dialog window from GB_TILEMAP1. Laid over the 40-wide canvas, those 6
+            # stride-20 rows re-flow into 3 canvas rows x 2 panels — the same shape
+            # party_menu/bag_menu's message box takes.
+            ((12 + k, 0, 12 + k, 19), (20 * (k % 2), (6 + k // 2) - (12 + k)),
+             "stride-20 dialog scratch re-flowed over the 40-wide canvas: "
+             "6 rows x 1 panel -> 3 rows x 2 panels")
+            for k in range(6)
+        ],
+        "masks": {
+            "tilemap": [
+                ((0, 0, 0, 19),
+                 "the stride-20 dialog scratch (W_TILEMAP+240..359) physically overlaps "
+                 "canvas rows 6-8 of the block-aligned map mirror, and at this window "
+                 "(row 8) canvas row 8 is golden row 0 — so the map mirror's top row is "
+                 "sitting under the dialog's last two rows. Invisible on screen (render_bg "
+                 "draws from the tile surface, the dialog from GB_TILEMAP1), but it IS a "
+                 "staging-buffer collision: anything that reads the mirror back while a "
+                 "dialog is open (SaveScreenTilesToBuffer) would read dialog bytes. "
+                 "Fidelity plan F-12, M-29 family"),
+            ],
+            "vram": [
+                (256 + 0x03, "flower tile: VRAM tile-DATA animation, phase depends on dump frame"),
+                (256 + 0x14, "water tile: VRAM tile-DATA animation, phase depends on dump frame"),
+            ] + [
+                (128 + t, "stale font residue at the vChars1 tail (see overworld_pallet mask)")
+                for t in range(0x78, 0x80)
+            ],
+            "oam": [
+                (i, "NPC entries: the GIRL/FISHER wander state is RNG-path-dependent "
+                    "(the golden's NPCs walked during its navigation to the sign) — it "
+                    "cannot converge between emulator runs; player entries 0-3 are compared")
+                for i in range(4, 40)
+            ],
+        },
+    },
     "party_menu": {
         "flags": "DEBUG_PARTYMENU=1",
         "wram_skip": dict(_NONBATTLE_WRAM_SKIP),

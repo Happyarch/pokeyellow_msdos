@@ -485,12 +485,18 @@ EnterMap:
     or byte [ebp + W_STATUS_FLAGS_4], (1 << BIT_NO_BATTLES)
 %endif
 %ifdef DEBUG_SIGNTEXT
-    ; Streamed-text gate (fidelity plan Stage 1b): stand on the tile directly below
-    ; the Pallet Town town sign and face it. The sign is
-    ; `bg_event 7, 9, TEXT_PALLETTOWN_SIGN` (data/maps/objects/PalletTown.asm), i.e.
-    ; X=7 Y=9, so the player reads it from (Y=10, X=7) facing UP.
-    ; Overridable (SIGNTEXT_MAP/Y/X) so any map's sign can be driven headlessly — used
-    ; to prove F-10 on Route 5, whose sign was one of the 7 that id 0 swallowed.
+    ; Streamed-text gate (fidelity plan Stage 1b): stand next to the Pallet Town town
+    ; sign and face it. The sign is `bg_event 7, 9, TEXT_PALLETTOWN_SIGN`
+    ; (data/maps/objects/PalletTown.asm), i.e. X=7 Y=9, so the tile in front of the
+    ; player must be (9,7).
+    ; THE READING TILE IS (Y=9, X=8) FACING LEFT, *not* (10,7) facing UP: the tile
+    ; below the sign is a flower ($03, absent from Overworld_Coll) and the real game
+    ; cannot stand there. Seeding coords bypasses collision, so the port happily read
+    ; the sign from a tile no player can occupy — and the mGBA golden, which has to
+    ; WALK there, could not reproduce it (it blocks stepping onto (10,7)). The gate now
+    ; stands where the game lets you stand, so both sides see the same screen.
+    ; Overridable (SIGNTEXT_MAP/Y/X/DIR) so any map's sign can be driven headlessly —
+    ; used to prove F-10 on Route 5, whose sign was one of the 7 that id 0 swallowed.
     ; Seeded BEFORE LoadMapData, which reads the coords (same rule as DEBUG_SEAM).
     mov byte [ebp + W_CUR_MAP], SIGNTEXT_MAP   ; default PALLET_TOWN
     mov byte [ebp + W_Y_COORD], SIGNTEXT_Y
@@ -702,7 +708,7 @@ EnterMap:
     ; the view pointer for a hand-seeded spawn, so do that first.
     call SeedDeterministicPlayerIdentity    ; "RED" / id 0 — the golden's identity
     call SeamReseatView                     ; view ptr + block coords + collision mirror
-    mov byte [ebp + W_SPRITE_PLAYER_FACING_DIR], SPRITE_FACING_UP
+    mov byte [ebp + W_SPRITE_PLAYER_FACING_DIR], SIGNTEXT_DIR  ; default SPRITE_FACING_LEFT
     ; Run the REAL A-press dispatch, not a bespoke "print this text" shortcut: the
     ; whole point of this scenario is that the sign's text reaches the screen through
     ; IsSpriteOrSignInFrontOfPlayer → SignLoop → DisplaySignText → ShowTextStream.
@@ -712,7 +718,7 @@ EnterMap:
     call DoSignInteraction                  ; never returns: ShowTextStream's DEBUG_SIGNTEXT
                                             ; hook dumps once the text is printed
 .signtext_nosign:
-    ; No sign resolved at (10,7) → dump anyway, with no dialog box on screen, so the
+    ; No sign in front of the player → dump anyway, with no dialog box on screen, so the
     ; golden diff FAILS LOUDLY instead of the harness silently walking into the game.
     call DumpBackbuffer
 %endif

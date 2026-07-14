@@ -122,13 +122,19 @@ not a row remap**:
     golden wTileMap (row r, col c), r in 12..17, c in 0..19
       →  port flat offset  W_TILEMAP + r*20 + c        (stride 20, NOT 40)
 
+Laid over the 40-wide canvas that flat offset lands, for `k = r - 12`, at canvas
+row `6 + k//2`, col `c + 20*(k%2)` — 6 rows × 1 panel re-flowed into 3 rows × 2 panels, the
+same shape `party_menu`/`bag_menu`'s message box takes, so `golden_diff.py` already had the
+mechanism. `sign_pallet` uses exactly that, and matches 360/360 cells. (It also means the
+dialog scratch **shares bytes with the map mirror** — F-13.)
+
 ## Coverage (execution ledger — update per stage)
 
 | # | stage | status | commit | notes |
 |---|---|---|---|---|
 | 0 | Groundwork: box-level reconcile, DebugDumpMemory→GBSTATE hook, scenario ids | DONE | | box-level was a non-issue (F-1); hook verified on DEBUG_ITEMTM; +`tools/run_headless.sh` |
 | 1a | GBSTATE v2 + WRAM regions end-to-end (existing 6 scenarios) | DONE | | v2 is SELF-DESCRIBING (design change, below); found 3 real harness bugs (F-3/F-4/F-5); fidelity 6/6 green |
-| 1b | `sign_pallet` streamed-text scenario | **PORT SIDE DONE; golden side TODO** | | the port could not read a sign AT ALL (F-6 data, F-7 code) — both fixed. Plus **F-10**, the text-id-0 collision, found during the fold-back. **NOT blocked**: F-9 was a misdiagnosis. |
+| 1b | `sign_pallet` streamed-text scenario | **DONE** | | the port could not read a sign AT ALL (F-6 data, F-7 code) — both fixed. Plus **F-10** (text-id-0 collision) and **F-12** (the gate stood on an unreachable tile), both found during the fold-back. Golden passes 360/360 tilemap cells incl. the whole dialog box; `make fidelity` 7/7. **Never was blocked**: F-9 was a misdiagnosis, F-8 does not reproduce. New OPEN findings it surfaced: **F-13** (scratch/mirror overlap), **F-14** (▼ after `done`). |
 | 1c | Item datastruct scenarios ×3 | TODO | | |
 | 2 | Battle convergence spec + battle_intro/battle_menu/move_selection + ball_catch | TODO | | |
 | 3 | Menu scenarios ×5 + stride support | TODO | | |
@@ -232,27 +238,34 @@ harness trap, **F-8**.
   `OverworldLoop`'s A-press dispatch **before** the sprite branch (pret's order).
 - **F-10 fix**: text ids are pret's **1-based** ids again; all three consumers subtract 1 at
   the lookup, as pret's `DisplayTextID` does.
-- `DEBUG_SIGNTEXT` gate (scenario id 13) — spawns below the Pallet Town sign facing it, runs
-  the real A-press dispatch, dumps FRAME.BIN + GBSTATE.BIN once the text is printed. Needs
-  `AUTOKEY_APRESS` (F-8).
+- `DEBUG_SIGNTEXT` gate (scenario id 13) — spawns **beside** the Pallet Town sign facing it
+  (`SIGNTEXT_MAP/Y/X/DIR`; the tile below the sign is unstandable — F-12), runs the real
+  A-press dispatch, dumps FRAME.BIN + GBSTATE.BIN once the text is printed and the box is
+  waiting. Needs `AUTOKEY_APRESS` (F-8).
 
-**TODO (golden side):**
+**DONE (golden side):**
 
-1. `tools/mgba_harness/scenarios/sign_pallet.lua` — seed **player only** (matching the gate),
-   walk to the sign, A, answer the `<cont>` with a second A, settle, dump standard+wram.
-2. `golden_diff.py` `SCENARIOS["sign_pallet"]` — use the **stride-20 projection** documented
-   above. It is writable **today**; F-9 does not block it.
-3. Re-test the dump point: the hook currently sits in `ShowTextStream` *before*
-   `npc_dialog_wait_impl`, because the sign path was reported to hang in the wait (F-8's
-   note). That was measured against the **staging text model master has since retired**.
-   Re-test on master; if the hang is gone, move the dump **into** the wait so the golden
-   covers the dialog box and the ▼ arrow — which is what "sign reading is live" should prove.
-4. **Strongest ground-truth check, and cheap**: add `wNumSigns` ($D4AF, 1), `wSignCoords`
-   ($D4B0, 32) and `wSignTextIDs` ($D4D0, 16) as golden regions to `overworld_pallet`. mGBA
-   reports Pallet's real values (4 signs, ids 4–7); the pre-fix port emitted all zeros. One
-   region byte-exactly regression-tests the entire sign feature *and* its numbering.
-   **Note**: no existing golden captures any text-id state, so **`make fidelity` neither
-   catches F-10 nor proves its fix** — do not report a green run as evidence.
+- `tools/mgba_harness/scenarios/sign_pallet.lua` — seeds the player only (matching the gate),
+  walks to (9,8), faces LEFT, A, answers the `<cont>` with a second A, settles, dumps
+  standard+wram. Byte-identical across two runs.
+- `golden_diff.py` `SCENARIOS["sign_pallet"]` — window **(16, 8)** (measured; the odd Y puts
+  the block-aligned mirror two rows above `overworld_pallet`'s), plus the **stride-20 dialog
+  reflow** as a projection: golden rows 12–17 → canvas rows 6–8 × 2 panels, i.e. exactly the
+  shape `party_menu`/`bag_menu`'s message box already takes. **360/360 tilemap cells agree**,
+  including every cell of the dialog box; VRAM/OAM/WRAM clean. `make fidelity` is 7/7.
+- The **F-8 hook re-test**: the hang does not reproduce. The dump now sits **inside**
+  `npc_dialog_wait_impl`, after the box is staged — so the golden covers the printed dialog,
+  which is what "sign reading is live" should prove. (Full account under F-8.)
+
+**Still open, and still worth doing** (it is the only check that regression-tests the *data*):
+
+- Add `wNumSigns` ($D4AF, 1), `wSignCoords` ($D4B0, 32) and `wSignTextIDs` ($D4D0, 16) as
+  golden regions. mGBA reports Pallet's real values (4 signs, ids 4–7); the pre-fix port
+  emitted all zeros. One region byte-exactly regression-tests the sign feature *and* its
+  numbering. **Until it lands, no golden captures any text-id state**, so a green
+  `make fidelity` is not evidence for F-10 either way — F-10's fix was proven instead by a
+  game-wide static cross-check against pret (940/943 `object_event`s, 203/203 `bg_event`s)
+  and by Route 5's sign, dead before the fix, rendering after it.
 
 ### Stage 1c — Item datastruct scenarios (M)
 
@@ -448,11 +461,22 @@ own dump never pre-empts the gate's).
 `<cont>` / `<para>` / `<prompt>` needs AUTOKEY on the port side and a matching button press on
 the mGBA side, or it will hang rather than fail.
 
-⚠ **Open sub-item.** F-8's source note also claims that entering `npc_dialog_wait_impl` from
-the sign path *hangs*, and the dump hook was placed before it to dodge that. That was measured
-against the **staging text model master has since retired**, and it is contradicted by the
-Makefile comment in its own commit. **Re-test on master** (Stage 1b item 3). If the hang is
-gone, move the hook into the wait.
+**Sub-item: "the sign path HANGS in `npc_dialog_wait_impl`" — REFUTED (`b99c0199`).** The
+source note claimed it, and put the dump hook *before* the wait to dodge it. Re-tested on
+master: **it does not hang.** `AUTOKEY_APRESS` *pulses* A (5 frames on, 15 off), so the wait's
+release-check clears; master's own `DEBUG_TEXT=9` gate already drove `ShowTextStream` →
+`npc_dialog_wait_impl` to completion. The hook now sits **inside** the wait, after the box is
+staged, so the golden covers the printed dialog.
+
+⚠ **The re-test itself nearly produced a third false comment, and the trap is worth naming.**
+The first re-run produced no dump — "F-8 CONFIRMED", obviously. It was not. A `git stash` cycle
+had left `assets/*.inc` **newer** than the `.py` generators that produce them, and `make assets`
+is mtime-gated: it regenerated nothing, so the build mixed master's 0-based `npc_dialogs` with
+the new 1-based `map_headers` and died before dumping. What exposed it was a **control run of
+the known-good hook position, which also failed** — proving the variable under test was not the
+variable that had changed. *Always run the control.* (Stale generated assets are a standing
+hazard for every claim in this plan: after any stash/rebase, run the generators directly rather
+than trusting `make assets`.)
 
 ### F-9. ~~The port's overworld dialog box has the wrong geometry AND line spacing~~ [WITHDRAWN — MISDIAGNOSIS]
 
@@ -532,7 +556,7 @@ the ROM** rather than breaking the mask.
 first one — so its three NPCs emit stub text. A generator assert now *surfaces* it rather than
 letting it stay silent.
 
-### F-11. A build can ship a stale `FRAME.BIN`, so a run that crashes before dumping reads as a PASS [OPEN — fix in Stage 4, do it early]
+### F-11. A build can ship a stale `FRAME.BIN`, so a run that crashes before dumping reads as a PASS [FIXED — fold-back, `8b018e84`]
 
 (= **M-69** in the menu-fidelity ledger; hit independently by both sessions.)
 
@@ -549,6 +573,62 @@ fresh:
 Belongs in `goldencheck.sh` **and** `run_headless.sh`. **This is a tooling hazard for every
 verification in this plan** — until it lands, no "the harness dumped and it looked right" claim
 is trustworthy.
+
+Landed in both runners, and widened while landing: the runner deletes `GBSTATE.BIN` and
+`DUMP.BIN` too, not just `FRAME.BIN`. All three are stale-able, and `goldencheck` diffs
+`GBSTATE.BIN` — the one file whose staleness would produce a *confident wrong verdict* rather
+than a missing artifact.
+
+### F-12. A gate that seeds coords bypasses collision — so the port read the sign from a tile no player can stand on [FIXED — Stage 1b]
+
+`DEBUG_SIGNTEXT` originally seeded `(Y=10, X=7)` facing UP: the tile directly *below* the Pallet
+sign (`bg_event 7, 9`). It printed the sign text perfectly. It is also **a tile the game will not
+let you occupy** — the step below the sign is a flower (tile `$03`, absent from `Overworld_Coll`,
+`data/tilesets/collision_tile_ids.asm`), so it is solid.
+
+Nothing in the port objected, because `EnterMap` writes `wYCoord`/`wXCoord` directly and the sign
+check only looks at the tile *in front of* the player. The golden is what objected: mGBA has to
+**walk** there, and the walk blocked. The reachable reading tile is **(Y=9, X=8) facing LEFT**.
+
+The lesson generalizes past this gate: **a debug gate that hand-seeds player state can park the
+game in a state the game cannot reach**, and everything downstream will look fine. Its golden is
+the only thing that will ever notice — which is an argument for goldening the gates, not for
+trusting them. The gate now takes `SIGNTEXT_DIR` alongside `SIGNTEXT_MAP/Y/X`, and defaults to
+the reachable tile; `scenarios/sign_pallet.lua` walks to the same one.
+
+### F-13. The stride-20 dialog scratch overlaps the block-aligned map mirror in `wTileMap` [OPEN — invisible today, load-bearing if anything reads the mirror back]
+
+(M-29 family: "the party panel and the dialog share a staging buffer".)
+
+The overworld dialog is drawn into a **GB-shaped stride-20 scratch** at `W_TILEMAP + 12*20`
+(`msgbox_dialog`, `src/home/text.asm`) and *displayed* from `GB_TILEMAP1` via
+`sync_dialog_window`. But `W_TILEMAP` is also the port's **40-wide block-aligned map mirror**.
+Flat bytes 240..359 — the six stride-20 dialog rows — are canvas rows 6..8 of that mirror. The
+two structures occupy the same bytes.
+
+It is invisible on screen: `render_bg` draws from the tile surface, not from the mirror, and the
+dialog is composited from `GB_TILEMAP1`. `sign_pallet` sees it exactly once, as golden row 0
+landing on canvas row 8 (masked, with this justification). But anything that **reads the mirror
+back while a dialog is open** — `SaveScreenTilesToBuffer`, a screen-restore path — reads dialog
+bytes where it expects map. Fix belongs with the mirror/staging cleanup, not here.
+
+### F-14. The port shows a ▼ where the GB shows none: `done`-terminated text has no arrow [OPEN]
+
+`npc_dialog_wait_impl` (`src/engine/overworld/map_sprites.asm`) unconditionally places
+`CHAR_DOWN_ARROW` into `GB_TILEMAP1` before waiting for A. The GB does not.
+
+pret draws the ▼ from the **text commands** — `cont`/`prompt` (the page breaks) — and
+`WaitForTextScrollButtonPress` (`home/joypad2.asm`) only *blinks* an arrow that is already there:
+its `HandleDownArrowBlinkTiming` off-branch (`home/window.asm:246`) returns immediately while
+`hDownArrowBlinkCount1` is 0, which is exactly what the function seeds. So a stream ending in
+`done` — `_PalletTownSignText` is one — parks in a box with **no arrow at all**, just waiting for
+A. Measured: 1800 frames on the golden, no ▼ anywhere in `wTileMap`.
+
+`sign_pallet` cannot catch this: the port's arrow goes to `GB_TILEMAP1`, which is not a compared
+region (the port's own `wTileMap` correctly has none — that is why the scenario passes 360/360).
+The fix is to make the arrow a property of the *text command*, as in pret, rather than of the
+wait. Do it with the `cont`/`prompt` work, and add `GB_TILEMAP1` to the compared regions so the
+golden can see the window layer at all.
 
 ## Imported open findings from the menu-fidelity audit
 
