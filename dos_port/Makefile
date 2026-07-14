@@ -713,6 +713,16 @@ NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_OAKSPC
 NASMFLAGS += -D SKIP_TITLE
 endif
+# Generic-PC gate (menu-fidelity row 17): boot to overworld, call ActivatePC. It plays
+# SFX_TURN_ON_PC and PrintTexts TurnedOnPC1Text, then blocks in the stream's `prompt`
+# wait; with no presses scripted, AutoKeyDrive photographs the open dialog and exits.
+# make SKIP_TITLE=1 DEBUG_PC=1
+ifdef DEBUG_PC
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_PC
+NASMFLAGS += -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_QUIET -D AUTOKEY_DUMP_FRAME=90
+endif
 # League-PC gate (menus S6 package A): boot to overworld, draw the AccessedHoFPCText
 # dialog (wNumHoFTeams==0 -> team loop skipped), dump FRAME.BIN, exit.
 # make SKIP_TITLE=1 DEBUG_LEAGUEPC=1
@@ -1447,7 +1457,8 @@ src/engine/menus/draw_start_menu.o: assets/event_constants.inc \
         assets/menu_strings.inc assets/ui_layout_menus.inc
 src/engine/menus/start_sub_menus.o: assets/ui_layout_menus.inc assets/audio_constants.inc \
         assets/menu_text.inc
-src/engine/menus/pc.o: assets/ui_layout_menus.inc assets/event_constants.inc
+src/engine/menus/pc.o: assets/event_constants.inc assets/audio_constants.inc \
+        assets/pc_text.inc
 src/engine/items/item_effects.o: assets/ui_layout_menus.inc
 src/engine/menus/main_menu.o src/engine/menus/save.o: assets/ui_layout_menus.inc
 src/engine/menus/naming_screen.o: assets/ui_layout_menus.inc assets/alphabets.inc \

@@ -61,6 +61,10 @@ global PrepareTitleScreen
 global DisplayTitleScreen        ; MainMenu "B returns to title" seam (retires main_menu_stubs.asm stub)
 global ClearScreen
 global SaveScreenTilesToBuffer2  ; home/start_menu.asm — first *linked* caller (pret: home/tilemap.asm)
+global LoadScreenTilesFromBuffer2 ; engine/menus/pc.asm — first *linked* caller (pret: home/tilemap.asm).
+                                  ; The body has been here all along; only the export was missing, which is
+                                  ; why pc.asm/oaks_pc.asm/players_pc.asm each "replaced" it with a window-
+                                  ; count shim (menu-fidelity row 17 / M-80).
 
 ; ---------------------------------------------------------------------------
 ; Constants

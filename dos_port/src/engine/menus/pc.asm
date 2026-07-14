@@ -1,33 +1,46 @@
-; pc.asm — the generic PC integration spine (menus-port Session 9). Faithful
-; port of pret engine/menus/pc.asm: ActivatePC (the overworld Poké-Center PC
-; script target) + PCMainMenu (the BILL's / player's / OAK's / league / LOG OFF
-; selector) + its dispatch to the per-PC screens ported in Sessions 6-8:
-;   .playersPC → PlayerPC       (package F, players_pc.asm)
-;   OaksPC     → OpenOaksPC      (package A, oaks_pc.asm)
-;   PKMNLeague → PKMNLeaguePC    (package A, league_pc.asm)
-;   BillsPC    → BillsPC_        (SEAM STUB — pokemon_behavior Stage 6 owns the
-;                                 real box UI; DisplayPCMainMenu is the same seam)
+; pc.asm — the generic PC spine. Faithful port of pret engine/menus/pc.asm:
+; ActivatePC (the Poké-Center PC script target) + PCMainMenu (the BILL's /
+; player's / OAK's / league / LOG OFF selector) + its dispatch:
+;   .playersPC → PlayerPC       (players_pc.asm)
+;   OaksPC     → OpenOaksPC     (oaks_pc.asm)
+;   PKMNLeague → PKMNLeaguePC   (league_pc.asm)
+;   BillsPC    → BillsPC_       (SEAM STUB — pokemon_behavior Stage 6 owns the
+;                                real box UI; DisplayPCMainMenu is the same seam)
+; plus RemoveItemByID, which pret files here.
 ;
 ; SEAMS (pc_stubs.asm; deleted when pokemon_behavior Stage 6 lands them):
-;   DisplayPCMainMenu — draws the PC main menu box + sets the menu vars.
+;   DisplayPCMainMenu — draws the PC main menu box + arms the menu vars.
 ;   BillsPC_          — Bill's #MON-storage box UI.
-; The menus plan out-of-scope rule ("stub the seams, never touch its files")
-; forbids porting these into bills_pc.asm here; the spine externs them so the
-; whole PCMainMenu control flow links and is exercisable today, going fully live
-; when the real routines replace the stubs (the S7 "real X replaced stub" pattern).
 ;
-; PORT MODEL (CLAUDE.md + players_pc.asm/oaks_pc.asm precedent):
+; HISTORY / CORRECTED CLAIMS (menu-fidelity row 17 part 1). The header this
+; replaces asserted three things, all of them false, and each one had cost the
+; file real code:
+;   * "PlaySound / WaitForSoundToFinish are TODO-HW: audio HAL (Phase 3)" —
+;     both are ported and live (home/audio.asm), and the port's audio engine
+;     plays SFX. All six calls (SFX_TURN_ON_PC / SFX_ENTER_PC ×4 / SFX_TURN_OFF_PC)
+;     are restored. M-79.
+;   * "SaveScreenTilesToBuffer2 / LoadScreenTilesFromBuffer2 → window-model
+;     save/restore" — both are ported (movie/title.asm), are pure wTileMap ↔
+;     wTileMapBackup2 WRAM copies, and are already called from home/start_menu.asm
+;     and overworld/cut.asm. The port's substitute (snapshot g_window_count)
+;     saved nothing at all. Restored. M-80.
+;   * The four dialogs are "drawn whole" because "the dialog projection collapses
+;     the window list" — PrintText + the msgbox_dialog projection is exactly what
+;     the other menus use, and nothing here needs a window to survive the message
+;     (the PC menu box is redrawn by DisplayPCMainMenu on every PCMainMenu pass).
+;     The drawn-whole plumbing came with NINE hand-encoded charmap strings — the
+;     Tier-1 DATA violation — and it could not render <PLAYER> ($52) or POKé ($54)
+;     as commands, so it open-coded them as literal glyph runs. All four streams
+;     now generate into assets/pc_text.inc and print through PrintText. M-81.
+;
+; PORT MODEL:
 ;  * SM83→x86: A=AL, BC=BX, DE=DX, HL=ESI, EBP = GB base; GB memory at [EBP+sym].
-;  * SaveScreenTilesToBuffer2 / LoadScreenTilesFromBuffer2 → window-model save /
-;    restore of g_window_count (the overworld map underneath is never touched by a
-;    window overlay, so there is nothing to snapshot but the window list).
-;  * Dialog text: pret prints each message with PrintText. The dialog projection
-;    collapses the window list (would hide any menu), so — as in S4-S8 — the PC
-;    messages are DRAWN WHOLE into the stride-20 W_TILEMAP scratch (rows 12-17) +
-;    a GB_TILEMAP1 window at UI_MESSAGE_BOX, pret wording (data/text/text_3.asm),
-;    with each `prompt`/`para` reproduced as a ▼ + A/B wait. DEVIATION(text).
-;  * PlaySound / WaitForSoundToFinish (SFX_TURN_ON/OFF_PC, SFX_ENTER_PC) are
-;    ; TODO-HW: audio HAL (Phase 3) — no-ops (no return-contract impact).
+;  * text_msgbox := msgbox_dialog before each PrintText — the port's one printer
+;    takes its box geometry from a projection record (msgbox.inc); pret's box is
+;    a fixed literal inside TextCommandProcessor, so it has no counterpart.
+;  * DEVIATION(window-compositor) at the LoadScreenTilesFromBuffer2 sites: the WRAM
+;    restore puts the map tiles back, but the port shows the dialog through the
+;    WINDOW layer, which no WRAM copy touches — so the window is dropped too.
 ;
 ; Build (standalone check):
 ;   nasm -f coff -I include/ -I . -o /dev/null src/engine/menus/pc.asm
@@ -36,67 +49,53 @@ bits 32
 
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
+%include "gb_text.inc"                    ; text_far / text_end + TX_* codes
 %include "assets/event_constants.inc"    ; EVENT_MET_BILL
+%include "assets/audio_constants.inc"    ; SFX_TURN_ON_PC / SFX_ENTER_PC / SFX_TURN_OFF_PC
 %include "events.inc"                     ; CheckEvent (clobbers AL, sets ZF)
-
-%define UI_LAYOUT_EQUATES_ONLY 1
-%include "assets/ui_layout_menus.inc"
 
 global ActivatePC
 global PCMainMenu
 global RemoveItemByID
+global TurnedOnPC1Text
+global AccessedBillsPCText
+global AccessedSomeonesPCText
+global AccessedMyPCText
 
 extern DisplayPCMainMenu             ; pc_stubs.asm SEAM (pokemon_behavior S6)
 extern BillsPC_                      ; pc_stubs.asm SEAM (pokemon_behavior S6)
-extern PlayerPC                      ; engine/menus/players_pc.asm (package F)
-extern OpenOaksPC                    ; engine/menus/oaks_pc.asm    (package A)
-extern PKMNLeaguePC                  ; engine/menus/league_pc.asm  (package A)
+extern PlayerPC                      ; engine/menus/players_pc.asm
+extern OpenOaksPC                    ; engine/menus/oaks_pc.asm
+extern PKMNLeaguePC                  ; engine/menus/league_pc.asm
 
 extern HandleMenuInput               ; home/window.asm — Out: AL = watched keys pressed
+extern PrintText                     ; home/window.asm — In: ESI = text stream
+extern text_msgbox                   ; home/text.asm — the active msgbox projection
+extern msgbox_dialog                 ; home/text.asm — the standard bottom dialog box
+extern PlaySound                     ; home/audio.asm — In: AL = sound id
+extern WaitForSoundToFinish          ; home/audio.asm
+extern SaveScreenTilesToBuffer2      ; movie/title.asm — wTileMap → wTileMapBackup2
+extern LoadScreenTilesFromBuffer2    ; movie/title.asm — wTileMapBackup2 → wTileMap
 extern ReloadMapData                 ; home/reload_tiles.asm
 extern UpdateSprites                 ; engine/overworld/movement.asm
 extern Delay3                        ; video/frame.asm
-extern DelayFrame                    ; video/frame.asm
-extern TextBoxBorder                 ; text/text.asm — ESI=top-left, BL=int_w, BH=int_h
-extern place_flat_str                ; text/text.asm — ESI=dest, EAX=flat '@'-term src (ESI advances)
-extern add_window                    ; ppu/ppu.asm
-extern g_window_count                ; ppu/ppu.asm
+extern hide_window                   ; ppu/ppu.asm — drop the dialog window layer
 
-; RemoveItemByID (unchanged from the original port stub; hItemToRemove* are hram
-; equs in gb_memmap.inc, not externs)
+%ifdef DEBUG_PC
+extern LoadFontTilePatterns          ; home/load_font.asm
+global RunPCTest
+%endif
+
+; RemoveItemByID (hItemToRemove* are hram equs in gb_memmap.inc, not externs)
 extern wBagItems
 extern wItemQuantity
 extern wWhichPokemon
 extern wNumBagItems
 extern RemoveItemFromInventory
 
-; charmap glyphs
-PC_TERM   equ 0x50                    ; '@' string terminator
-PC_DOWN   equ 0xEE                    ; ▼ text-prompt arrow
-PC_SPC    equ 0x7F                    ; blank tile
-PC_STRIDE equ 20                      ; drawn-whole scratch stride
-MSG_SROW  equ 12                      ; first scratch row of the message border
-
 ; ===========================================================================
-section .data
-align 4
-; pret data/text/text_3.asm wording, GB charmap ('@'-terminated). Control codes
-; are expanded to literal tiles for the drawn-whole placer (# → POKé literal
-; 0x8F,0x8E,0x8A,0xBA; <PLAYER> → the wPlayerName buffer, placed separately).
-s_turnedon:  db 0x7F,0xB3,0xB4,0xB1,0xAD,0xA4,0xA3,0x7F,0xAE,0xAD, PC_TERM                          ; " turned on"
-s_thepc:     db 0xB3,0xA7,0xA4,0x7F,0x8F,0x82,0xE8, PC_TERM                                         ; "the PC."
-s_accmypc:   db 0x80,0xA2,0xA2,0xA4,0xB2,0xB2,0xA4,0xA3,0x7F,0xAC,0xB8,0x7F,0x8F,0x82,0xE8, PC_TERM ; "Accessed my PC."
-s_accitem:   db 0x80,0xA2,0xA2,0xA4,0xB2,0xB2,0xA4,0xA3,0x7F,0x88,0xB3,0xA4,0xAC, PC_TERM           ; "Accessed Item"
-s_storesys:  db 0x92,0xB3,0xAE,0xB1,0xA0,0xA6,0xA4,0x7F,0x92,0xB8,0xB2,0xB3,0xA4,0xAC,0xE8, PC_TERM ; "Storage System."
-s_accbills:  db 0x80,0xA2,0xA2,0xA4,0xB2,0xB2,0xA4,0xA3,0x7F,0x81,0x88,0x8B,0x8B,0xBD, PC_TERM      ; "Accessed BILL's"
-s_pcdot:     db 0x8F,0x82,0xE8, PC_TERM                                                             ; "PC."
-s_accpkmn:   db 0x80,0xA2,0xA2,0xA4,0xB2,0xB2,0xA4,0xA3,0x7F,0x8F,0x8E,0x8A,0xBA,0x8C,0x8E,0x8D, PC_TERM ; "Accessed POKéMON"
-s_accsome:   db 0x80,0xA2,0xA2,0xA4,0xB2,0xB2,0xA4,0xA3,0x7F,0xB2,0xAE,0xAC,0xA4,0xAE,0xAD,0xA4,0xBD, PC_TERM ; "Accessed someone's"
-s_empty:     db PC_TERM
-
-section .bss
-align 4
-pc_saved_wc: resd 1                   ; g_window_count at the start of a message
+; Tier-1 DATA: the four message streams, generated from pret data/text/text_3.asm.
+%include "assets/pc_text.inc"
 
 ; ===========================================================================
 section .text
@@ -106,19 +105,17 @@ section .text
 ; Overworld Poké-Center PC script target. In: EBP = GB base.
 ; ---------------------------------------------------------------------------
 ActivatePC:
-    ; call SaveScreenTilesToBuffer2 — port(window model): snapshot the window
-    ; list so the turn-on dialog can be dropped without disturbing the map.
-    mov eax, [g_window_count]
-    mov [pc_saved_wc], eax
-    ; TODO-HW: PlaySound SFX_TURN_ON_PC — audio HAL (Phase 3)
-    ; ld hl, TurnedOnPC1Text / call PrintText — "<PLAYER> turned on / the PC." (prompt)
-    call PC_TurnedOnPC1Text
-    ; TODO-HW: WaitForSoundToFinish — audio HAL (Phase 3)
-    or byte [ebp + wMiscFlags], (1 << BIT_USING_GENERIC_PC)   ; set BIT_USING_GENERIC_PC
-    ; call LoadScreenTilesFromBuffer2 — port(window model): drop the turn-on
-    ; dialog window (the map underneath is untouched).
-    mov eax, [pc_saved_wc]
-    mov [g_window_count], eax
+    call SaveScreenTilesToBuffer2
+    mov al, SFX_TURN_ON_PC
+    call PlaySound
+    mov esi, TurnedOnPC1Text                  ; ld hl, TurnedOnPC1Text
+    mov dword [text_msgbox], msgbox_dialog    ; port: publish the box projection
+    call PrintText
+    call WaitForSoundToFinish
+    or byte [ebp + wMiscFlags], (1 << BIT_USING_GENERIC_PC)   ; set BIT_USING_GENERIC_PC, [hl]
+    call LoadScreenTilesFromBuffer2
+    call hide_window                          ; DEVIATION(window-compositor): the WRAM
+                                              ; restore cannot drop the dialog WINDOW.
     call Delay3
     ; fall through to PCMainMenu
 
@@ -129,10 +126,10 @@ ActivatePC:
 ; ---------------------------------------------------------------------------
 PCMainMenu:
     call DisplayPCMainMenu                    ; farcall — SEAM (draws menu, sets wMaxMenuItem)
-    or byte [ebp + wMiscFlags], (1 << BIT_NO_MENU_BUTTON_SOUND)  ; set BIT_NO_MENU_BUTTON_SOUND
+    or byte [ebp + wMiscFlags], (1 << BIT_NO_MENU_BUTTON_SOUND)  ; set BIT_NO_MENU_BUTTON_SOUND, [hl]
     call HandleMenuInput
-    test al, PAD_B                            ; bit B_PAD_B,a
-    jnz LogOff                                ; jp nz
+    test al, PAD_B                            ; bit B_PAD_B, a
+    jnz LogOff                                ; jp nz, LogOff
     mov al, [ebp + wMaxMenuItem]
     cmp al, 2
     jnz .next                                 ; jr nz — not 2 items (pre-Pokédex)
@@ -165,35 +162,44 @@ PCMainMenu:
     jz PKMNLeague                             ; jp z — 3 = league PC
     jmp LogOff                                ; otherwise (4) = LOG OFF
 .playersPC:
-    and byte [ebp + wMiscFlags], (~(1 << BIT_NO_MENU_BUTTON_SOUND)) & 0xFF  ; res BIT_NO_MENU_BUTTON_SOUND
-    or  byte [ebp + wMiscFlags], (1 << BIT_USING_GENERIC_PC)                 ; set BIT_USING_GENERIC_PC
-    ; TODO-HW: PlaySound SFX_ENTER_PC / WaitForSoundToFinish — audio HAL
-    ; ld hl, AccessedMyPCText / call PrintText — "Accessed my PC. / Item Storage" (prompt)
-    call PC_AccessedMyPCText
-    call PlayerPC                             ; farcall PlayerPC (package F)
+    and byte [ebp + wMiscFlags], (~(1 << BIT_NO_MENU_BUTTON_SOUND)) & 0xFF  ; res BIT_NO_MENU_BUTTON_SOUND, [hl]
+    or  byte [ebp + wMiscFlags], (1 << BIT_USING_GENERIC_PC)                 ; set BIT_USING_GENERIC_PC, [hl]
+    mov al, SFX_ENTER_PC
+    call PlaySound
+    call WaitForSoundToFinish
+    mov esi, AccessedMyPCText                 ; ld hl, AccessedMyPCText
+    mov dword [text_msgbox], msgbox_dialog
+    call PrintText
+    call PlayerPC                             ; farcall PlayerPC
     jmp ReloadMainMenu                        ; jr ReloadMainMenu
 
 OaksPC:
-    ; TODO-HW: PlaySound SFX_ENTER_PC / WaitForSoundToFinish — audio HAL
-    call OpenOaksPC                           ; farcall OpenOaksPC (package A)
+    mov al, SFX_ENTER_PC
+    call PlaySound
+    call WaitForSoundToFinish
+    call OpenOaksPC                           ; farcall OpenOaksPC
     jmp ReloadMainMenu                        ; jr ReloadMainMenu
 
 PKMNLeague:
-    ; TODO-HW: PlaySound SFX_ENTER_PC / WaitForSoundToFinish — audio HAL
-    call PKMNLeaguePC                         ; farcall PKMNLeaguePC (package A)
+    mov al, SFX_ENTER_PC
+    call PlaySound
+    call WaitForSoundToFinish
+    call PKMNLeaguePC                         ; farcall PKMNLeaguePC
     jmp ReloadMainMenu                        ; jr ReloadMainMenu
 
 BillsPC:
-    ; TODO-HW: PlaySound SFX_ENTER_PC / WaitForSoundToFinish — audio HAL
+    mov al, SFX_ENTER_PC
+    call PlaySound
+    call WaitForSoundToFinish
     CheckEvent EVENT_MET_BILL                 ; ZF=0 → met Bill (event SET)
-    jnz .billsPC                              ; jr nz
-    ; ld hl, AccessedSomeonesPCText — "Accessed someone's PC."
-    call PC_AccessedSomeonesPCText
-    jmp .afterText                            ; jr .printText → after the drawn-whole text
+    jnz .billsPC                              ; jr nz, .billsPC
+    mov esi, AccessedSomeonesPCText           ; ld hl, AccessedSomeonesPCText
+    jmp .printText                            ; jr .printText
 .billsPC:
-    ; ld hl, AccessedBillsPCText — "Accessed BILL's PC."
-    call PC_AccessedBillsPCText
-.afterText:
+    mov esi, AccessedBillsPCText              ; ld hl, AccessedBillsPCText
+.printText:
+    mov dword [text_msgbox], msgbox_dialog
+    call PrintText
     call BillsPC_                             ; farcall BillsPC_ — SEAM (pokemon_behavior S6)
     ; fall through to ReloadMainMenu
 
@@ -205,166 +211,53 @@ ReloadMainMenu:
     jmp PCMainMenu                            ; jp PCMainMenu
 
 LogOff:
-    ; TODO-HW: PlaySound SFX_TURN_OFF_PC / WaitForSoundToFinish — audio HAL
-    and byte [ebp + wMiscFlags], (~(1 << BIT_USING_GENERIC_PC)) & 0xFF       ; res BIT_USING_GENERIC_PC
-    and byte [ebp + wMiscFlags], (~(1 << BIT_NO_MENU_BUTTON_SOUND)) & 0xFF   ; res BIT_NO_MENU_BUTTON_SOUND
+    mov al, SFX_TURN_OFF_PC
+    call PlaySound
+    call WaitForSoundToFinish
+    and byte [ebp + wMiscFlags], (~(1 << BIT_USING_GENERIC_PC)) & 0xFF       ; res BIT_USING_GENERIC_PC, [hl]
+    and byte [ebp + wMiscFlags], (~(1 << BIT_NO_MENU_BUTTON_SOUND)) & 0xFF   ; res BIT_NO_MENU_BUTTON_SOUND, [hl]
     ret
 
-; ===========================================================================
-; Drawn-whole dialog plumbing (DEVIATION(text) — see file header; mirrors
-; oaks_pc.asm's oak_* / players_pc.asm's pc_msg_* helpers). Each message opens
-; (snapshots the window list), draws one or more pages (border + lines into the
-; stride-20 scratch rows 12-17 → GB_TILEMAP1 window at UI_MESSAGE_BOX), waits a
-; ▼ + A/B cycle per `para`/`prompt`, then closes (restores the window list).
-; ===========================================================================
+; --- the four PC dialogs (pret ref: engine/menus/pc.asm, same position) ------
+; Tier-2 wrappers over the Tier-1 streams in assets/pc_text.inc, keeping pret's
+; text_far indirection rather than pointing PrintText at the flat body directly.
+TurnedOnPC1Text:
+    text_far _TurnedOnPC1Text
+    text_end
 
-; snapshot g_window_count for this message
-pc_msg_open:
-    mov eax, [g_window_count]
-    mov [pc_saved_wc], eax
-    ret
+AccessedBillsPCText:
+    text_far _AccessedBillsPCText
+    text_end
 
-; restore the window list (drops the message window). Clobbers EAX.
-pc_msg_close:
-    mov eax, [pc_saved_wc]
-    mov [g_window_count], eax
-    ret
+AccessedSomeonesPCText:
+    text_far _AccessedSomeonesPCText
+    text_end
 
-; draw the empty message border into scratch rows 12-17 (interior 18x4, total 20x6)
-pc_msg_border:
-    mov esi, W_TILEMAP + MSG_SROW * PC_STRIDE
-    mov bl, 18
-    mov bh, 4
-    call TextBoxBorder
-    ret
+AccessedMyPCText:
+    text_far _AccessedMyPCText
+    text_end
 
-; mirror scratch rows 12-17 → GB_TILEMAP1 rows 0-5 (pad cols 20-31), then (re)show
-; exactly one message window at UI_MESSAGE_BOX (reset to pc_saved_wc so successive
-; pages replace rather than stack). Preserves nothing needed by callers.
-pc_msg_show:
-    pushad
-    mov ecx, 6
-    lea esi, [ebp + W_TILEMAP + MSG_SROW * PC_STRIDE]
-    lea edi, [ebp + GB_TILEMAP1]
-.row:
-    push ecx
-    push edi
-    mov ecx, 20
-    rep movsb
-    mov al, PC_SPC
-    mov ecx, 12                               ; pad cols 20-31
-    rep stosb
-    pop edi
-    pop ecx
-    add edi, 32
-    dec ecx
-    jnz .row
-    mov eax, [pc_saved_wc]                     ; drop any prior page's window
-    mov [g_window_count], eax
-    mov eax, UI_MESSAGE_BOX_WX
-    mov ebx, UI_MESSAGE_BOX_WY
-    mov ecx, UI_MESSAGE_BOX_CLIP
-    mov edx, UI_MESSAGE_BOX_MAXY
-    mov esi, GB_TILEMAP1
-    xor edi, edi
-    call add_window
-    popad
-    ret
-
-; draw a two-line page: EAX = line-1 flat str, EDX = line-2 flat str (s_empty for
-; a one-line page). Then show the window.
-pc_msg_page:
-    push edx
-    call pc_msg_border
-    pop edx
-    push edx
-    mov esi, W_TILEMAP + 14 * PC_STRIDE + 1
-    call place_flat_str                        ; EAX = line 1
-    pop eax
-    mov esi, W_TILEMAP + 16 * PC_STRIDE + 1
-    call place_flat_str                        ; EAX = line 2
-    call pc_msg_show
-    ret
-
-; ▼ + wait for an A/B press cycle (a text `para`/`prompt`), then clear the ▼.
-pc_prompt:
-    mov byte [ebp + GB_TILEMAP1 + DIALOG_ARROW_TILEMAP_OFFSET], PC_DOWN
-.release:
-    call DelayFrame
-    test byte [ebp + H_JOY_HELD], PAD_A | PAD_B
-    jnz .release
-.press:
-    call DelayFrame
-    test byte [ebp + H_JOY_HELD], PAD_A | PAD_B
-    jz .press
-    mov byte [ebp + GB_TILEMAP1 + DIALOG_ARROW_TILEMAP_OFFSET], PC_SPC
-    ret
-
-; --- the four PC dialogs (pret data/text/text_3.asm) ---
-
-; TurnedOnPC1Text: "<PLAYER> turned on" / "the PC." (prompt)
-PC_TurnedOnPC1Text:
-    call pc_msg_open
-    call pc_msg_border
-    lea eax, [ebp + W_PLAYER_NAME]             ; <PLAYER>
-    mov esi, W_TILEMAP + 14 * PC_STRIDE + 1
-    call place_flat_str                        ; ESI advances past the name
-    mov eax, s_turnedon
-    call place_flat_str                        ; " turned on" on the same line
-    mov esi, W_TILEMAP + 16 * PC_STRIDE + 1
-    mov eax, s_thepc
-    call place_flat_str
-    call pc_msg_show
-    call pc_prompt
-    call pc_msg_close
-    ret
-
-; AccessedMyPCText: "Accessed my PC." <para> "Accessed Item" / "Storage System." (prompt)
-PC_AccessedMyPCText:
-    call pc_msg_open
-    mov eax, s_accmypc
-    mov edx, s_empty
-    call pc_msg_page
-    call pc_prompt                             ; para page break
-    mov eax, s_accitem
-    mov edx, s_storesys
-    call pc_msg_page
-    call pc_prompt                             ; terminal prompt
-    call pc_msg_close
-    ret
-
-; AccessedBillsPCText: "Accessed BILL's" / "PC." <para> "Accessed #MON" / "Storage System." (prompt)
-PC_AccessedBillsPCText:
-    call pc_msg_open
-    mov eax, s_accbills
-    mov edx, s_pcdot
-    call pc_msg_page
-    call pc_prompt
-    mov eax, s_accpkmn
-    mov edx, s_storesys
-    call pc_msg_page
-    call pc_prompt
-    call pc_msg_close
-    ret
-
-; AccessedSomeonesPCText: "Accessed someone's" / "PC." <para> "Accessed #MON" / "Storage System." (prompt)
-PC_AccessedSomeonesPCText:
-    call pc_msg_open
-    mov eax, s_accsome
-    mov edx, s_pcdot
-    call pc_msg_page
-    call pc_prompt
-    mov eax, s_accpkmn
-    mov edx, s_storesys
-    call pc_msg_page
-    call pc_prompt
-    call pc_msg_close
-    ret
+%ifdef DEBUG_PC
+; ---------------------------------------------------------------------------
+; RunPCTest — FRAME.BIN gate for the PC spine (row 17). Nothing in the linked
+; game reaches ActivatePC yet (home/overworld_text.asm's TextScript_PokemonCenterPC
+; is still behind %ifdef M72_OVERWORLD_TEXTSCRIPTS — see the ledger finding), and
+; no golden covers this screen, so this is how the dialog gets observed at all.
+; ActivatePC prints TurnedOnPC1Text and blocks in the stream's `prompt` wait; the
+; harness runs with AUTOKEY_QUIET (no presses), so AutoKeyDrive photographs the
+; open dialog at AUTOKEY_DUMP_FRAME and exits.
+; ---------------------------------------------------------------------------
+RunPCTest:
+    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    call LoadFontTilePatterns
+    call ActivatePC
+.hang:
+    jmp .hang
+%endif
 
 ; ---------------------------------------------------------------------------
 ; RemoveItemByID — pret ref: engine/menus/pc.asm:RemoveItemByID.
 ; removes one of the specified item ID [hItemToRemoveID] from bag (if existent).
-; Unchanged from the original port stub.
 ; ---------------------------------------------------------------------------
 RemoveItemByID:
     mov esi, wBagItems

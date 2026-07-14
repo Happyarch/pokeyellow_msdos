@@ -184,6 +184,9 @@ extern RunTrainerCardTest
 %ifdef DEBUG_OAKSPC
 extern RunOaksPCTest
 %endif
+%ifdef DEBUG_PC
+extern RunPCTest
+%endif
 %ifdef DEBUG_LEAGUEPC
 extern RunLeaguePCTest
 %endif
@@ -716,6 +719,9 @@ EnterMap:
 %endif
 %ifdef DEBUG_OAKSPC
     call RunOaksPCTest                      ; open Oak's PC, dump the dialog FRAME.BIN, exits
+%endif
+%ifdef DEBUG_PC
+    call RunPCTest                          ; ActivatePC: dialog + SFX; AutoKeyDrive dumps
 %endif
 %ifdef DEBUG_LEAGUEPC
     call RunLeaguePCTest                    ; draw HoF-PC dialog (0 teams), dump FRAME.BIN, exits
