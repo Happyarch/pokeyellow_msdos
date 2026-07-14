@@ -484,6 +484,33 @@ NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_STARTMENU
 NASMFLAGS += -D SKIP_TITLE
 endif
+# Sign-text gate (fidelity plan Stage 1b — the streamed-text golden): spawn below the
+# Pallet Town sign facing it, run the real A-press dispatch
+# (IsSpriteOrSignInFrontOfPlayer -> SignLoop -> DisplaySignText -> ShowTextStream),
+# and dump FRAME.BIN + GBSTATE.BIN once the stream is printed. The hook sits in
+# ShowTextStream, just after `call PrintText` (see F-8). make DEBUG_SIGNTEXT=1
+ifdef DEBUG_SIGNTEXT
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_SIGNTEXT
+NASMFLAGS += -D SKIP_TITLE
+# Which sign to read. Defaults to the Pallet Town town sign (bg_event 7, 9 -> read from
+# (Y=10, X=7) facing UP). Override to drive any other map's sign headlessly, e.g. the
+# Route 5 UNDERGROUND PATH sign (bg_event 17, 29):
+#   make DEBUG_SIGNTEXT=1 SIGNTEXT_MAP=0x10 SIGNTEXT_Y=30 SIGNTEXT_X=17
+SIGNTEXT_MAP ?= 0x00
+SIGNTEXT_Y   ?= 10
+SIGNTEXT_X   ?= 7
+NASMFLAGS += -D SIGNTEXT_MAP=$(SIGNTEXT_MAP) -D SIGNTEXT_Y=$(SIGNTEXT_Y) -D SIGNTEXT_X=$(SIGNTEXT_X)
+# The Pallet Town sign's stream is "PALLET TOWN <line> Shades of your <cont> journey
+# await!", and <cont> ($55) is a WAITING command (it scrolls, then blocks on A/B) —
+# a headless run with no keyboard parks there forever. AUTOKEY answers it, exactly as
+# it answers the message waits in DEBUG_ITEMTM / DEBUG_ITEMBALL.
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_APRESS
+# AutoKeyDrive's own FRAME.BIN dump would exit the program at its default frame; the
+# gate dumps itself (ShowTextStream's hook), so push it out of the way.
+AUTOKEY_DUMP_FRAME ?= 999999
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
 # Party-seed gate: run the debug new-game seed (party + bag + Pokédex) at boot,
 # dump party/bag WRAM to DUMP.BIN, exit. Verifies the pokemon/items engine runs
 # inside the real binary. make DEBUG_PARTY=1

@@ -41,6 +41,9 @@ extern MakeNPCFacePlayer
 extern LoadFontTilePatterns
 extern LoadPlayerSpriteGraphics
 extern HandleDownArrowBlinkTiming
+%ifdef DEBUG_SIGNTEXT
+extern DumpBackbuffer                   ; src/debug/debug_dump.asm — FRAME.BIN + GBSTATE.BIN, then exit
+%endif
 
 global InitMapSprites            ; home wrapper (pret name kept); reload sprite tiles after text
 ; Faithful pret engine/overworld/map_sprites.asm routines (OW-A.2 P3c de-bespoke):
@@ -875,8 +878,13 @@ CheckNPCInteraction:
     shr eax, 4                             ; slot number (1-15)
     dec eax
     add eax, eax                           ; (slot-1)*2 -> wMapSpriteData index
-    movzx eax, byte [wMapSpriteData + eax + 1]  ; masked text id
-    lea edx, [eax * 8]                      ; 8 bytes per entry (dd ptr + dd size)
+    movzx eax, byte [wMapSpriteData + eax + 1]  ; masked text id (pret's 1-based id)
+    test eax, eax
+    jz .dialog_done                         ; id 0 = no text (pret's sentinel)
+    ; Text ids are pret's 1-based consts (def_text_pointers = const_def 1), and pret
+    ; subtracts one AT THE LOOKUP: home/text_script.asm's `dec a` before indexing
+    ; TextPointers. Folded into the 8-byte entry scale — same single instruction.
+    lea edx, [eax * 8 - 8]                  ; 8 bytes per entry (dd ptr + dd size)
     mov ecx, [w_map_text_table_ptr]         ; flat ptr to current map's TextTable (0 if none)
     test ecx, ecx
     jz .dialog_done                         ; null table: no text for this map
@@ -952,6 +960,16 @@ CheckNPCInteraction:
 ShowTextStream:
     mov dword [text_msgbox], msgbox_dialog   ; overworld dialog projection
     call PrintText                           ; TCP walks the flat stream in place
+%ifdef DEBUG_SIGNTEXT
+    ; Streamed-text golden (fidelity plan Stage 1b): the stream is fully printed and
+    ; the dialog box is on screen. Dump (FRAME.BIN + GBSTATE.BIN) and exit.
+    ;
+    ; This sits BEFORE npc_dialog_wait_impl, so the golden does NOT cover the box's
+    ; window-layer staging or the blinking ▼. That is a known gap, not a preference:
+    ; see F-8 in docs/plans/fidelity_expansion.md. Move the hook into the wait once
+    ; the re-test there is done.
+    call DumpBackbuffer                      ; never returns
+%endif
     call npc_dialog_wait_impl
     ret
 
@@ -1167,8 +1185,10 @@ TrainerEncounterFlow:
     shr eax, 4
     dec eax
     add eax, eax
-    movzx eax, byte [wMapSpriteData + eax + 1]  ; masked text id
-    lea edx, [eax * 8]                     ; 8 bytes per entry (dd ptr + dd size)
+    movzx eax, byte [wMapSpriteData + eax + 1]  ; masked text id (pret's 1-based id)
+    test eax, eax
+    jz .tef_text_done                      ; id 0 = no text (pret's sentinel)
+    lea edx, [eax * 8 - 8]                 ; pret's `dec a`, folded into the entry scale
     mov ecx, [w_map_text_table_ptr]        ; flat ptr to current map's TextTable (0 if none)
     test ecx, ecx
     jz .tef_text_done

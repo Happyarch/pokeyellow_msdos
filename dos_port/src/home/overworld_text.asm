@@ -70,13 +70,15 @@ global TextScriptEndingText
 ; ---------------------------------------------------------------------------
 DisplaySignText:
     pushad
-    movzx eax, byte [ebp + hTextID]
+    movzx eax, byte [ebp + hTextID]     ; pret's 1-based sign text id
     test eax, eax
-    jz .done                            ; no sign text id
+    jz .done                            ; id 0 = no sign text (pret's sentinel)
     mov ecx, [w_map_text_table_ptr]
     test ecx, ecx
     jz .done                            ; map has no text table
-    lea edx, [eax * 8]                  ; 8 bytes per text-table entry
+    ; Ids are pret's 1-based consts and pret subtracts one at the lookup
+    ; (home/text_script.asm: `dec a`). Folded into the 8-byte entry scale.
+    lea edx, [eax * 8 - 8]              ; 8 bytes per text-table entry
     mov edi, [ecx + edx]                ; flat ptr to TX stream (0 = none)
     test edi, edi
     jz .done

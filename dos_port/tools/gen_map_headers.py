@@ -4,7 +4,8 @@
 Parses:
   constants/map_constants.asm    → map name → (id, w, h)
   data/maps/headers/*.asm        → map label → (map_const, tileset_name)
-  data/maps/objects/*.asm        → map label → (border, warp_list, sign_count, sprites)
+  data/maps/objects/*.asm        → map label → (border, warp_list, signs, sprites)
+  scripts/*.asm                  → map label → text-pointer names (sign text ids)
 
 Emits:
   - Tileset dispatch tables (TilesetGfxPtrs, TilesetBlocksPtrs, TilesetCollPtrs,
@@ -30,6 +31,7 @@ MAP_HEADERS_DIR = ROOT / "data" / "maps" / "headers"
 MAP_OBJECTS_DIR = ROOT / "data" / "maps" / "objects"
 MAP_CONSTANTS   = ROOT / "constants" / "map_constants.asm"
 MAPS_DIR        = ROOT / "maps"
+SCRIPTS_DIR     = ROOT / "scripts"
 
 # ---------------------------------------------------------------------------
 # ROM-window allocator (the single source of truth for the EBP "ROM" layout).
@@ -253,6 +255,11 @@ _DIR_CONSTS = {
 }
 _TRAINER_FLAG = 0x40   # constants/map_object_constants.asm: TRAINER = 1 << BIT_TRAINER
 _ITEM_FLAG    = 0x80   # constants/map_object_constants.asm: ITEM    = 1 << BIT_ITEM
+# The text byte's low 6 bits are the text id; bits 6/7 are the flags above, so an id
+# must fit in $3F (LoadSprite recovers it with `and $3f`). The game's real maximum is
+# 25, so this is headroom, not a limit — but a silent overflow would corrupt an id
+# into the TRAINER flag, so it is checked rather than assumed.
+_TEXT_ID_MAX  = 0x3F
 
 
 def _resolve_const(name, table, context=''):
@@ -425,10 +432,48 @@ def strip_debug_blocks(text: str) -> str:
     return "".join(out)
 
 
+def text_pointer_names(label: str) -> list:
+    """scripts/<label>.asm → the map's `dw_const` text-pointer NAMES, in order.
+
+    The text id of entry k (0-based here) is pret's const **k + 1**: pret's
+    `def_text_pointers` macro is `const_def 1` (macros/scripts/maps.asm), so the first
+    `dw` in the table carries const value 1, and `DisplayTextID` subtracts one before
+    indexing (home/text_script.asm: `dec a`).
+
+    Consumed by both generators, which must agree on that numbering:
+      * here — a bg_event's text id (its name's index in this list, + 1)
+      * gen_npc_dialogs.py — <Map>TextTable row k holds text id k + 1
+
+    KNOWN GAP (pre-existing, not introduced here): a few maps open their table with
+    bare `dw` rows before a `const_def` (e.g. ViridianMart), and this parser stops at
+    the first non-`dw_const` line. Those maps' NPCs fall back to stub text. The
+    object_event cross-check below reports them rather than letting them stay silent.
+    """
+    path = SCRIPTS_DIR / f"{label}.asm"
+    if not path.exists():
+        return []
+    names, in_table = [], False
+    for line in path.read_text(encoding="utf-8").splitlines():
+        s = line.strip()
+        if s == f"{label}_TextPointers:":
+            in_table = True
+            continue
+        if not in_table:
+            continue
+        if not s or s.startswith(';') or s == 'def_text_pointers':
+            continue
+        m = re.match(r'dw_const\s+\w+\s*,\s*(\w+)', s)
+        if not m:
+            break
+        names.append(m.group(1))
+    return names
+
+
 def parse_object_file(label: str, debug_warps: bool = False):
-    """Parse objects/<label>.asm → (border_byte, warp_list, sign_count, sprites).
+    """Parse objects/<label>.asm → (border_byte, warp_list, signs, sprites).
 
     warp_list = [(y, x, dest_const, warp_id), ...]
+    signs     = list of dicts: {y, x, text_id, text_name}  (one per bg_event)
     sprites   = list of dicts:
                   {sprite_id, mapy, mapx, mov, dir,
                    is_trainer, trainer_class, trainer_num,
@@ -453,7 +498,26 @@ def parse_object_file(label: str, debug_warps: bool = False):
         x, y, dest_const, warp_id = int(wm.group(1)), int(wm.group(2)), wm.group(3), int(wm.group(4))
         warps.append((y, x, dest_const, warp_id))
 
-    sign_count = len(re.findall(r"\bbg_event\b", text))
+    # Sign (bg_event) events: bg_event X, Y, TEXT_ID  → binary record (Y, X, text_id).
+    # The text id is resolved by NAME against the map's dw_const text-pointer list, not
+    # by position: bg_events follow the object_events in that list, but nothing in the
+    # source guarantees it, and a positional guess would silently mis-address a sign.
+    # The id is pret's 1-based const (= list index + 1); see the emission site.
+    text_names = text_pointer_names(label)
+    signs = []
+    for sm in re.finditer(r"bg_event\s+(\d+),\s*(\d+),\s*(\w+)", text):
+        x, y, text_name = int(sm.group(1)), int(sm.group(2)), sm.group(3)
+        if text_name in text_names:
+            text_id = text_names.index(text_name) + 1   # pret's 1-based dw_const value
+        else:
+            # No resolvable text pointer → id 0, which is a GENUINE "no text" sentinel
+            # now that ids are 1-based (it was not when they were 0-based — see F-10).
+            # The sign is walked into and says nothing; never a garbage glyph or an
+            # out-of-bounds table index.
+            text_id = 0
+            print(f"[map_headers] {label}: bg_event text {text_name} not in "
+                  f"{label}_TextPointers — emitting id 0 (silent sign)", file=sys.stderr)
+        signs.append({'y': y, 'x': x, 'text_id': text_id, 'text_name': text_name})
 
     # NPC object events: object_event x, y, sprite, mov, dir, text [, arg7 [, arg8]]
     # Binary layout per macro:  sprite_id, y+4, x+4, mov, dir, text_byte [, extra...]
@@ -498,7 +562,7 @@ def parse_object_file(label: str, debug_warps: bool = False):
             'item_id':       item_id,
         })
 
-    return border, warps, sign_count, sprites
+    return border, warps, signs, sprites
 
 
 def get_connection(direction, conn_map_id, offset,
@@ -605,7 +669,7 @@ def main(debug_warps=None):
     const_to_id["LAST_MAP"] = 0xFF
 
     # Parse all object files keyed by label
-    label_objects = {}   # label → (border, warps, sign_count, sprites)
+    label_objects = {}   # label → (border, warps, signs, sprites)
     for f in MAP_OBJECTS_DIR.glob("*.asm"):
         label = f.stem
         result = parse_object_file(label, debug_warps=debug_warps)
@@ -657,9 +721,9 @@ def main(debug_warps=None):
         # Get object data
         obj = label_objects.get(label)
         if obj:
-            border, raw_warps, sign_count, sprites = obj
+            border, raw_warps, signs, sprites = obj
         else:
-            border, raw_warps, sign_count, sprites = 0, [], 0, []
+            border, raw_warps, signs, sprites = 0, [], [], []
         sprite_count = len(sprites)
 
         # Resolve warp dest bytes
@@ -679,7 +743,7 @@ def main(debug_warps=None):
             "is_outdoor":    is_outdoor,
             "border":        border,
             "warps":         warps_bytes,
-            "sign_count":    sign_count,
+            "signs":         signs,
             "sprite_count":  sprite_count,
             "sprites":       sprites,
         }
@@ -877,19 +941,44 @@ def main(debug_warps=None):
             hdr_lines.append(f"    db {wy}, {wx}, {dest_id_minus1}, 0x{dest_map:02X}")
             current_addr += 4
 
-        hdr_lines.append(f"    db {m['sign_count']} ; sign count")
+        # Signs: count, then one 3-byte (Y, X, text_id) record each — the layout
+        # LoadMapHeader/CopySignData copies into wSignCoords/wSignTextIDs and SignLoop
+        # searches. (These used to be `times n*3 db 0` STUBS, so every sign in the game
+        # read as Y=0 X=0 id=0 and no sign could ever be matched — F-6.)
+        signs = m["signs"]
+        hdr_lines.append(f"    db {len(signs)} ; sign count")
         current_addr += 1
-        if m["sign_count"] > 0:
-            hdr_lines.append(f"    times {m['sign_count'] * 3} db 0 ; sign stubs")
-            current_addr += m["sign_count"] * 3
+        for s in signs:
+            hdr_lines.append(f"    db {s['y']}, {s['x']}, 0x{s['text_id']:02X}"
+                             f"  ; {s['text_name']}")
+            current_addr += 3
 
         hdr_lines.append(f"    db {m['sprite_count']} ; sprite count")
         current_addr += 1
 
-        # Per-NPC binary records (6 bytes standard, 7 bytes item, 8 bytes trainer)
+        # Per-NPC binary records (6 bytes standard, 7 bytes item, 8 bytes trainer).
+        #
+        # The text byte carries pret's 1-BASED text id (slot i → id i+1), with the
+        # TRAINER/ITEM flags OR'd into bits 6/7 exactly as pret's `object_event` macro
+        # does (macros/scripts/maps.asm: `db TRAINER | \6`, where \6 is the 1-based
+        # TEXT_* const). LoadSprite recovers the id with `and $3f`.
+        #
+        # It is 1-based because pret's text ids are: `def_text_pointers` is `const_def 1`
+        # (macros/scripts/maps.asm), and DisplayTextID subtracts one AT THE LOOKUP
+        # (home/text_script.asm: `dec a` before indexing TextPointers). The port used to
+        # fold that `dec a` in here, emitting 0-based ids — which collided with the
+        # `id 0 == no text` sentinel the consumers still used, silently swallowing every
+        # text id 0 in the game. The `-1` now lives at the lookup, as it does in pret.
         for i, npc in enumerate(m.get('sprites', [])):
+            text_id = i + 1
+            if text_id > _TEXT_ID_MAX:
+                raise SystemExit(
+                    f"[map_headers] {label}: NPC slot {i} needs text id {text_id}, but the"
+                    f" text byte only has {_TEXT_ID_MAX} usable ids — bits 6/7 are the"
+                    f" TRAINER/ITEM flags (LoadSprite masks with `and $3f`)."
+                )
             if npc['is_trainer']:
-                text_byte = _TRAINER_FLAG | i
+                text_byte = _TRAINER_FLAG | text_id
                 hdr_lines.append(
                     f"    db 0x{npc['sprite_id']:02X}, 0x{npc['mapy']:02X}, 0x{npc['mapx']:02X},"
                     f" 0x{npc['mov']:02X}, 0x{npc['dir']:02X}, 0x{text_byte:02X},"
@@ -898,7 +987,7 @@ def main(debug_warps=None):
                 )
                 current_addr += 8
             elif npc['is_item']:
-                text_byte = _ITEM_FLAG | i
+                text_byte = _ITEM_FLAG | text_id
                 hdr_lines.append(
                     f"    db 0x{npc['sprite_id']:02X}, 0x{npc['mapy']:02X}, 0x{npc['mapx']:02X},"
                     f" 0x{npc['mov']:02X}, 0x{npc['dir']:02X}, 0x{text_byte:02X},"
@@ -909,7 +998,7 @@ def main(debug_warps=None):
             else:
                 hdr_lines.append(
                     f"    db 0x{npc['sprite_id']:02X}, 0x{npc['mapy']:02X}, 0x{npc['mapx']:02X},"
-                    f" 0x{npc['mov']:02X}, 0x{npc['dir']:02X}, 0x{i:02X}"
+                    f" 0x{npc['mov']:02X}, 0x{npc['dir']:02X}, 0x{text_id:02X}"
                     f"  ; slot {i+1}: npc sprite=0x{npc['sprite_id']:02X} mapy={npc['mapy']} mapx={npc['mapx']}"
                 )
                 current_addr += 6

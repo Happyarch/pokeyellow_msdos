@@ -109,6 +109,11 @@ wNumSprites equ 0xD4E0
 extern InitToggleableObjectFlags
 extern text_engine_init
 extern CheckNPCInteraction
+; Sign reading (the sign branch of IsSpriteOrSignInFrontOfPlayer, below).
+extern SignLoop                     ; src/home/hidden_events.asm — DH/DL → CF + [hTextID]
+extern DisplaySignText              ; src/home/overworld_text.asm — [hTextID] → ShowTextStream
+extern LoadFontTilePatterns         ; src/home/load_font.asm
+extern ReloadWalkingTilePatterns    ; src/engine/overworld/map_sprites.asm
 extern IsNPCAtTargetBlock
 extern CheckTrainerSight
 extern TrainerEncounterFlow
@@ -129,6 +134,8 @@ extern DumpBackbuffer
 %elifdef DEBUG_WALK_NORTH
 extern DumpBackbuffer
 %elifdef DEBUG_DIALOG
+extern DumpBackbuffer
+%elifdef DEBUG_SIGNTEXT
 extern DumpBackbuffer
 %endif
 %ifdef DEBUG_SEAM
@@ -152,8 +159,19 @@ extern RunBagMenuTest
 %ifdef DEBUG_TRANSITION
 %define NEED_SEED_IDENTITY
 %endif
+%ifdef DEBUG_SIGNTEXT
+%define NEED_SEED_IDENTITY
+%endif
 %ifdef NEED_SEED_IDENTITY
 extern SeedDeterministicPlayerIdentity  ; engine/debug/debug_party.asm — "RED"/id 0 (seed.lua spec)
+%endif
+; SeamReseatView: any harness that hand-seeds wYCoord/wXCoord must derive the view
+; pointer itself (LoadMapData doesn't — that lives in LoadWarpDestination).
+%ifdef DEBUG_SEAM
+%define NEED_SEAM_RESEAT
+%endif
+%ifdef DEBUG_SIGNTEXT
+%define NEED_SEAM_RESEAT
 %endif
 %ifdef DEBUG_BAGMENU_LIVE
 extern PrepareNewGameDebug
@@ -253,6 +271,7 @@ global OverworldLoopLessDelay               ; OW-A.3: de-folded from OverworldLo
 global AdvancePlayerSprite
 global _AdvancePlayerSprite                 ; OW-A.3: engine body, de-folded from the home wrapper
 global IsTilePassable
+global IsSpriteOrSignInFrontOfPlayer         ; sign branch (fidelity Stage 1b)
 global CheckWarpTile
 global LoadWarpDestination
 global PlayerStepOutFromDoor
@@ -465,6 +484,19 @@ EnterMap:
     ; (title screen intact). Trainer/forced battles are unaffected.
     or byte [ebp + W_STATUS_FLAGS_4], (1 << BIT_NO_BATTLES)
 %endif
+%ifdef DEBUG_SIGNTEXT
+    ; Streamed-text gate (fidelity plan Stage 1b): stand on the tile directly below
+    ; the Pallet Town town sign and face it. The sign is
+    ; `bg_event 7, 9, TEXT_PALLETTOWN_SIGN` (data/maps/objects/PalletTown.asm), i.e.
+    ; X=7 Y=9, so the player reads it from (Y=10, X=7) facing UP.
+    ; Overridable (SIGNTEXT_MAP/Y/X) so any map's sign can be driven headlessly — used
+    ; to prove F-10 on Route 5, whose sign was one of the 7 that id 0 swallowed.
+    ; Seeded BEFORE LoadMapData, which reads the coords (same rule as DEBUG_SEAM).
+    mov byte [ebp + W_CUR_MAP], SIGNTEXT_MAP   ; default PALLET_TOWN
+    mov byte [ebp + W_Y_COORD], SIGNTEXT_Y
+    mov byte [ebp + W_X_COORD], SIGNTEXT_X
+    mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF  ; "not a warp arrival" (see DEBUG_SEAM)
+%endif
     call LoadMapData
 %ifdef DEBUG_SEAM
     cmp byte [seam_reseat], 0
@@ -664,6 +696,25 @@ EnterMap:
     call DelayFrame
     call DelayFrame
     call DumpBackbuffer                    ; writes FRAME.BIN, exits
+%endif
+%ifdef DEBUG_SIGNTEXT
+    ; The coords were seeded before LoadMapData (above); LoadMapData does not derive
+    ; the view pointer for a hand-seeded spawn, so do that first.
+    call SeedDeterministicPlayerIdentity    ; "RED" / id 0 — the golden's identity
+    call SeamReseatView                     ; view ptr + block coords + collision mirror
+    mov byte [ebp + W_SPRITE_PLAYER_FACING_DIR], SPRITE_FACING_UP
+    ; Run the REAL A-press dispatch, not a bespoke "print this text" shortcut: the
+    ; whole point of this scenario is that the sign's text reaches the screen through
+    ; IsSpriteOrSignInFrontOfPlayer → SignLoop → DisplaySignText → ShowTextStream.
+    call IsSpriteOrSignInFrontOfPlayer
+    test al, al
+    jz .signtext_nosign
+    call DoSignInteraction                  ; never returns: ShowTextStream's DEBUG_SIGNTEXT
+                                            ; hook dumps once the text is printed
+.signtext_nosign:
+    ; No sign resolved at (10,7) → dump anyway, with no dialog box on screen, so the
+    ; golden diff FAILS LOUDLY instead of the harness silently walking into the game.
+    call DumpBackbuffer
 %endif
 %ifdef DEBUG_STARTMENU
     call SeedDeterministicPlayerIdentity   ; menu's name row = "RED" (golden spec), not the build define
@@ -936,9 +987,18 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     ; A-press: check for NPC or sign. EAX = H_JOY_HELD (level-triggered, reliable).
     test al, PAD_A
     jz .checkPADDown
-    call CheckNPCInteraction
+    ; Signs first, then sprites — pret's order (OverworldLoopLessDelay runs
+    ; IsSpriteOrSignInFrontOfPlayer, whose sign branch precedes its sprite scan).
+    call IsSpriteOrSignInFrontOfPlayer
+    test al, al
+    jz .checkNPC
+    call DoSignInteraction
+    jmp .interactionDone
+.checkNPC:
+    call CheckNPCInteraction                   ; the port's sprite branch (detects AND displays)
     test al, al
     jz .checkPADDown                           ; no NPC/sign found → fall to D-pad
+.interactionDone:
 
     ; Interaction handled. Wait for A to be released before restarting to prevent
     ; the next OverworldLoop iteration from re-triggering while A is still held.
@@ -2395,9 +2455,12 @@ section .data
 seam_seeded: db 0        ; EnterMap is re-entered per map transition; seed once
 seam_reseat: db 0        ; derive the view ptr only for the hand-seeded spawn
 section .text
+%endif
 
+%ifdef NEED_SEAM_RESEAT
 ; ---------------------------------------------------------------------------
-; SeamReseatView — DEBUG_SEAM only. Port-only debug helper, no pret counterpart.
+; SeamReseatView — DEBUG harnesses only (DEBUG_SEAM, DEBUG_SIGNTEXT). Port-only
+; debug helper, no pret counterpart.
 ; LoadMapData loads the header + block map but does NOT derive the view pointer
 ; (that lives in LoadWarpDestination). A harness that spawns on an arbitrary map
 ; must therefore recompute it from the seeded coordinates, using the same formula
@@ -2669,6 +2732,108 @@ DoBikeSpeedup:
 .goFaster:
     call AdvancePlayerSprite                       ; second advance → double speed
 .done:
+    ret
+
+; ---------------------------------------------------------------------------
+; IsSpriteOrSignInFrontOfPlayer — the SIGN branch.
+; Pret ref: home/overworld.asm:IsSpriteOrSignInFrontOfPlayer
+;
+; STRUCTURAL SPLIT (CLAUDE.md: "keep pret's names on both halves"). pret's routine
+; does three things:
+;   1. sign lookup via SignLoop                          <- this routine
+;   2. counter-tile talking-range extension              <- NOT IMPLEMENTED (see below)
+;   3. the sprite scan (IsSpriteInFrontOfPlayer2)        <- CheckNPCInteraction
+; In the port, (3) is CheckNPCInteraction (map_sprites.asm), which both *detects* and
+; *runs* the dialog, so it cannot be a drop-in for pret's detect-only sprite branch.
+; This routine therefore keeps pret's name for the sign branch, and the A-press
+; dispatcher calls the two halves in pret's order: signs first, then sprites.
+; (2) is deferred: wTilesetTalkingOverTiles / counter tiles only matter for marts and
+; pokécenters, neither of which is live yet — TODO when they land.
+;
+; This closes the gap the fidelity harness found: SignLoop (hidden_events.asm) and
+; DisplaySignText (overworld_text.asm) were both written and both dead — nothing
+; called them, so pressing A at any sign in the game did nothing at all.
+;
+; Faithful to pret: hTextID is zeroed first, and the front coords are wYCoord/wXCoord
+; adjusted by facing — pret's _GetTileAndCoordsInFrontOfPlayer D/E outputs, which the
+; port's GetTileInFrontOfPlayer deliberately drops (see its DEFERRED note below).
+;
+; Out: AL = 1 and [hTextID] = the sign's text id (pret's 1-based id) if a sign faces
+;      the player, else AL = 0. Clobbers EAX, ECX, EDX, ESI.
+; ---------------------------------------------------------------------------
+IsSpriteOrSignInFrontOfPlayer:
+    mov byte [ebp + hTextID], 0          ; xor a / ldh [hTextID], a
+    mov al, [ebp + W_NUM_SIGNS]
+    test al, al
+    jz .noSign                           ; pret: jr z, .extendRangeOverCounter
+
+    ; Front-tile MAP coords (pret: d = wYCoord ± 1, e = wXCoord ± 1 — raw block
+    ; coords, NOT the +4 MAPY/MAPX form). SignLoop reads them from DH/DL.
+    mov dh, [ebp + W_Y_COORD]
+    mov dl, [ebp + W_X_COORD]
+    mov al, [ebp + W_SPRITE_PLAYER_FACING_DIR]
+    cmp al, SPRITE_FACING_UP
+    je .up
+    cmp al, SPRITE_FACING_LEFT
+    je .left
+    cmp al, SPRITE_FACING_RIGHT
+    je .right
+    inc dh                               ; SPRITE_FACING_DOWN
+    jmp .lookup
+.up:
+    dec dh
+    jmp .lookup
+.left:
+    dec dl
+    jmp .lookup
+.right:
+    inc dl
+.lookup:
+    call SignLoop                        ; CF = matched; sets [hTextID]. Preserves DX.
+    jc .found
+.noSign:
+    xor eax, eax
+    ret
+.found:
+    mov eax, 1
+    ret
+
+; ---------------------------------------------------------------------------
+; DoSignInteraction — display the sign text IsSpriteOrSignInFrontOfPlayer resolved
+; into [hTextID].
+;
+; DEVIATION(port-only-glue): pret has no counterpart. pret reaches the sign text
+; through DisplayTextID, which sets up the font/player state itself. The port's
+; overworld does not use DisplayTextID on the NPC path either — CheckNPCInteraction
+; is its equivalent, and it both detects and displays — so DisplaySignText
+; (overworld_text.asm) is written to the same contract: it expects its CALLER to have
+; loaded the font and frozen the player, "exactly as CheckNPCInteraction does" (the
+; integration note in hidden_events.asm). This routine is that caller. It mirrors the
+; NPC path's framing rather than DisplayTextID's, so both overworld text paths enter
+; and leave the dialog identically. Retires if the port ever grows a real DisplayTextID.
+; ---------------------------------------------------------------------------
+DoSignInteraction:
+    pushad
+    ; Font tiles time-share vChars1 with the player/NPC walk tiles, so the walking
+    ; player must be forced to a STANDING pose before the font load or its frozen
+    ; walk-tile index renders font glyphs as the player — the same trap, and the same
+    ; fix, as CheckNPCInteraction (map_sprites.asm).
+    mov al, [ebp + W_SPRITE_PLAYER_FACING_DIR]
+    mov [ebp + W_SPRITE_PLAYER_IMAGE_INDEX], al
+    mov byte [ebp + W_SPRITE_PLAYER_ANIM_FRAME], 0
+    mov byte [ebp + W_SPRITE_PLAYER_INTRA_ANIM], 0
+
+    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)  ; freezes NPC movement too
+    call LoadFontTilePatterns
+    call DisplaySignText                 ; reads [hTextID]; runs ShowTextStream
+
+    call hide_window
+    and byte [ebp + W_FONT_LOADED], ~(1 << BIT_FONT_LOADED)
+    call ReloadWalkingTilePatterns       ; font clobbered the walk tiles — restore
+    call LoadPlayerSpriteGraphics
+    call LoadCurrentMapView              ; rebuild the BG the text box covered
+    call DelayFrame
+    popad
     ret
 
 ; ---------------------------------------------------------------------------

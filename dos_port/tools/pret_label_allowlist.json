@@ -743,6 +743,10 @@
       "port_file": "dos_port/src/home/item_predicates.asm",
       "why": "pret engine/items/item_effects.asm split across port files (draft Session H)"
     },
+    "IsSpriteOrSignInFrontOfPlayer": {
+      "port_file": "dos_port/src/engine/overworld/overworld.asm",
+      "why": "pret home/overworld.asm split across port files; overworld.asm is the port's home/overworld.asm (same rationale as EnterMap/OverworldLoop/StopMusic). It sits beside its only caller, OverworldLoop's A-press dispatch. Only the SIGN branch is translated — see the routine's header for the documented split: pret's sprite scan (IsSpriteInFrontOfPlayer2) is realized as CheckNPCInteraction, which both detects AND displays, and the counter-tile talking-range extension is unported (it needs mart/pokecenter counter tilesets). Reviewed on the merits when the sign feature was folded back from worktree-fidelity-expansion (2026-07-14), NOT auto-blessed boilerplate."
+    },
     "IsTilePassable": {
       "port_file": "dos_port/src/engine/overworld/overworld.asm",
       "why": "pret home/copy2.asm split across port files (draft Session H)"
