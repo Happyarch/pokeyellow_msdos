@@ -8,6 +8,13 @@
 ;
 ; pret ref: engine/menus/naming_screen.asm (510 lines)
 ;
+; ── REACHABILITY (checked at menu-fidelity row 15, not assumed) ─────────────
+; AskName has ONE live caller: src/engine/items/item_effects.asm:2157 (the box-mon
+; nickname prompt), and item_effects.asm is in GAME_SRCS. The *catch* path does NOT
+; reach it: src/engine/pokemon/add_party_mon.asm:98 short-circuits pret's
+; `predef AskName` and keeps the default species name (a documented STUB there).
+; DisplayNameRaterScreen has no caller yet (the Name Rater script is unported).
+;
 ; PORT MODEL (full-screen takeover, same shape as options.asm / party_menu.asm):
 ; - DisplayNamingScreen draws into the 20-wide stride-20 W_TILEMAP scratch
 ;   (hlcoord X,Y = W_TILEMAP + Y*20 + X via the local HL(x,y) macro; GBSCR_W=20)
@@ -44,6 +51,8 @@ bits 32
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
 %include "gb_macros.inc"
+%include "gb_text.inc"                  ; text_far / text_end (TX_FAR = flat dd operand)
+%include "assets/audio_constants.inc"   ; SFX_PRESS_AB and friends (generated)
 
 %define UI_LAYOUT_EQUATES_ONLY 1
 %include "assets/ui_layout_menus.inc"
@@ -62,7 +71,8 @@ extern GetMonName                      ; home/names.asm — AL=wNamedObjectIndex
 extern ClearScreenArea                 ; home/copy2.asm — ESI=dest, BH=rows, BL=cols
 extern CopyData                        ; home/copy_data.asm — ESI=src,EDX=dest,BX=count
 extern PrintText                   ; src/home/window.asm — the one printer; ESI = FLAT TX stream ptr
-extern YesNoChoice                     ; home/yes_no.asm — the standard hlcoord(14,7) YES/NO box
+extern InitYesNoTextBoxParameters      ; home/yes_no.asm — pret's own: the box's hlcoord/lb bc
+extern DisplayTextBoxID                ; home/textbox.asm — pret's own box dispatcher
 extern ReloadMapSpriteTilePatterns     ; engine/overworld/reload_sprites.asm
 extern GBPalWhiteOutWithDelay3         ; home/fade.asm
 extern RestoreScreenTilesAndReloadTilePatterns ; home/fade.asm
@@ -90,7 +100,8 @@ extern PlaceMenuCursor                 ; home/window.asm
 extern EraseMenuCursor                 ; home/window.asm
 extern menu_item_step                  ; home/window.asm — cursor per-item row step
 extern text_row_stride                 ; text/text.asm — active W_TILEMAP row stride
-extern PlaySound                       ; engine/battle/move_effect_helpers.asm — audio HAL stub
+extern PlaySound                       ; home/audio.asm — a REAL body (the audio engine is
+                                       ; live); the sound id it is handed is load-bearing
 extern set_single_window               ; ppu/ppu.asm
 extern g_bg_whiteout                   ; ppu/ppu.asm
 extern g_tilecache_dirty               ; ppu/ppu.asm — VRAM tile writes must set this
@@ -109,17 +120,17 @@ PLAYER_NAME_LENGTH     equ 8
 SET_PAL_GENERIC        equ 0x08
 SET_PAL_DEFAULT        equ 0xFF
 
-; TODO-HW(audio): real id = SFX_PRESS_AB (constants/music_constants.asm, table
-; index 62). PlaySound is a stub in this port (engine/battle/move_effect_helpers.asm);
-; value not yet load-bearing. Placeholder kept explicit (matches ledges.asm's
-; SFX_LEDGE convention) so the audio pass can wire the true id.
-SFX_PRESS_AB            equ 0x3E
+; NOTE (menu-fidelity row 15, M-57): a local `SFX_PRESS_AB equ 0x3E` used to sit here
+; under a "TODO-HW(audio): PlaySound is a stub, value not yet load-bearing" comment.
+; Every clause of that was false. PlaySound is a REAL BODY (src/home/audio.asm:217 —
+; the audio engine has been live since 2026-07-07), and the true id is 0x90, not 0x3E
+; (assets/audio_constants.inc, generated from constants/music_constants.asm). So the
+; naming screen has been playing sound 0x3E — a different SFX entirely — on every
+; letter press. Fixed by deleting the placeholder and including the generated
+; constants; the id is load-bearing and always was.
 
-; Charmap control/glyph bytes used by hand-authored strings below
-; (constants/charmap.asm).
+; Charmap control/glyph bytes referenced by the code below (constants/charmap.asm).
 CHAR_TERMINATOR equ 0x50   ; '@'
-CHAR_LINE       equ 0x4F   ; <LINE>
-CHAR_CONT       equ 0x55   ; <CONT>
 CHAR_DAKUTEN    equ 0xE5   ; 'ﾞ' (charmap.asm:364) — JP-only, unreachable in EN
 CHAR_HANDAKUTEN equ 0xE4   ; 'ﾟ' (charmap.asm:363) — JP-only, unreachable in EN
 
@@ -188,12 +199,35 @@ AskName:
     mov [text_msgbox], edx
     call PrintText
 
-    ; pret: hlcoord 14,7 / lb bc,8,15 / ld a,TWO_OPTION_MENU / ld[wTextBoxID],a /
-    ; call DisplayTextBoxID — this is exactly the standard YES/NO box
-    ; (home/yes_no.asm:InitYesNoTextBoxParameters also targets GB(14,7)); call
-    ; the port's equivalent generic entry point directly instead of duplicating
-    ; its body. Out: CF/wCurrentMenuItem — 0=YES(first), 1=NO(second).
-    call YesNoChoice
+    ; pret: hlcoord 14,7 / lb bc,8,15 / ld a,TWO_OPTION_MENU / ld [wTextBoxID],a /
+    ; call DisplayTextBoxID.  Out: CF/wCurrentMenuItem — 0=YES(first), 1=NO(second).
+    ;
+    ; This used to be a single `call YesNoChoice`, described as "exactly the standard
+    ; YES/NO box". It is NOT: pret's AskName does not call YesNoChoice, and MUST not.
+    ; pret's YesNoChoice wraps the same box in SaveScreenTilesToBuffer1 ... jp
+    ; LoadScreenTilesFromBuffer1 — and buffer 1 belongs to AskName, which saved the
+    ; pre-prompt screen into it at entry (above) and restores it after the naming
+    ; screen closes. A yes/no box that re-saved buffer 1 would snapshot the screen
+    ; WITH the nickname prompt on it, and AskName's restore would paint the prompt box
+    ; back onto the field. It happened to be harmless only because the port's
+    ; YesNoChoice currently DROPS pret's save/restore wrapper (a documented window-model
+    ; deviation in home/yes_no.asm) — i.e. this file's fidelity rested on another file's
+    ; infidelity, silently, and would have broken the day yes_no.asm was made faithful.
+    ; Fixed at menu-fidelity row 15 (M-60) by calling what pret calls.
+    ;
+    ; DEVIATION(port-primitive): InitYesNoTextBoxParameters stands in for pret's
+    ; `hlcoord 14,7 / lb bc,8,15`. It is pret's OWN routine (home/yes_no.asm) and sets
+    ; exactly those coords; the port needs the call because DisplayTextBoxID_'s
+    ; two-option path takes the box geometry from yes_no.asm's private yn_box_col/row
+    ; (.bss), not from a register triple, so there is no other supported way to express
+    ; pret's hlcoord/lb bc here. It also writes wTwoOptionMenuID = YES_NO_MENU, which
+    ; pret's AskName does not: pret INHERITS whatever the last two-option box left
+    ; (only the yes_no entry points, clear_save, slots and cable_club ever write it —
+    ; it is 0 in practice by the time AskName runs). The port is therefore deterministic
+    ; where pret is stale-state-dependent; same box either way.
+    call InitYesNoTextBoxParameters
+    mov byte [ebp + wTextBoxID], TWO_OPTION_MENU
+    call DisplayTextBoxID
 
     pop esi                              ; restore dest [S1]
     mov al, [ebp + wCurrentMenuItem]
@@ -225,34 +259,20 @@ AskName:
 .ret:
     ret
 
+; pret ref: naming_screen.asm:DoYouWantToNicknameText — `text_far` + `text_end`, and
+; that is now exactly what this is. The stream itself (data/text/text_3.asm:
+; _DoYouWantToNicknameText) is generated into assets/naming_strings.inc.
+;
+; It used to be 12 lines of hand-encoded charmap `db` bytes, under a comment claiming
+; the inline "stays only because data/text/text_3.asm has no generator yet". That was
+; false: tools/gen_battle_text.collect_far already flattened every stream in text_3.asm
+; (483 labels, this one among them) — nobody had pointed it at this label. Both halves
+; of the old comment's excuse were gone: TX_FAR takes a flat 32-bit operand and the
+; text engine splices it recursively (home/text.asm:1141). Migrated at menu-fidelity
+; row 15 (M-58); the generated bytes are identical to the hand-written ones.
 DoYouWantToNicknameText:
-    ; DEVIATION: pret is `text_far _DoYouWantToNicknameText` (data/text/text_3.asm,
-    ; a different ROM bank) + text_end; the far target's content is inlined here
-    ; instead — byte-identical to what pret's bank-switch splice prints.
-    ;
-    ; The comment that used to sit here said TX_FAR "cannot address flat .data
-    ; content". That was true of the broken .cmd_far and is now FALSE: TX_FAR takes
-    ; a 32-bit flat operand and works (see docs/current_plan_text_engine.md T-2).
-    ; The inline stays only because data/text/text_3.asm has no generator yet —
-    ; when one lands, this becomes a real `text_far`. The hand-encoded charmap
-    ; bytes below are the same pre-existing Tier-1 debt (they must be generated,
-    ; not hand-written) and should be migrated with it.
-    ; pret ref: data/text/text_3.asm:_DoYouWantToNicknameText
-    ;   text "Do you want to" / line "give a nickname" / cont "to @" /
-    ;   text_ram wNameBuffer / text "?" / done
-    db 0x00                                    ; TX_START
-    db 0x83,0xAE,0x7F,0xB8,0xAE,0xB4,0x7F,0xB6,0xA0,0xAD,0xB3,0x7F,0xB3,0xAE ; "Do you want to"
-    db CHAR_LINE
-    db 0xA6,0xA8,0xB5,0xA4,0x7F,0xA0,0x7F,0xAD,0xA8,0xA2,0xAA,0xAD,0xA0,0xAC,0xA4 ; "give a nickname"
-    db CHAR_CONT
-    db 0xB3,0xAE,0x7F                          ; "to "
-    db CHAR_TERMINATOR                         ; '@'
-    db 0x01                                    ; TX_RAM
-    dw wNameBuffer
-    db 0x00                                    ; TX_START
-    db 0xE6                                    ; "?"
-    db 0x57                                    ; <DONE> — terminates the stream, no wait
-DoYouWantToNicknameText_end:
+    text_far _DoYouWantToNicknameText
+    text_end
 
 ; ---------------------------------------------------------------------------
 ; DisplayNameRaterScreen — pret ref: naming_screen.asm:DisplayNameRaterScreen::.
@@ -622,7 +642,9 @@ LoadEDTile:
 ; verbatim, not re-derived from a separate label).
 ; ---------------------------------------------------------------------------
 PrintAlphabet:
-    mov byte [ebp + H_AUTO_BG_TRANSFER_EN], 0
+    ; pret's own name for this byte (== H_AUTO_BG_TRANSFER_EN, same address) — the
+    ; alias hid the store from faithdiff's by-name matcher (row 13 precedent).
+    mov byte [ebp + hAutoBGTransferEnabled], 0
     mov edx, LowerCaseAlphabet
     cmp byte [ebp + wAlphabetCase], 0
     jne .lowercase
@@ -647,7 +669,7 @@ PrintAlphabet:
     jnz .outerLoop
     mov eax, edx                          ; PlaceString: EAX = flat src (continuing blob)
     call PlaceString
-    mov byte [ebp + H_AUTO_BG_TRANSFER_EN], 1
+    mov byte [ebp + hAutoBGTransferEnabled], 1
     jmp Delay3
 
 ; ---------------------------------------------------------------------------
@@ -738,11 +760,23 @@ CalcStringLength:
 ; ---------------------------------------------------------------------------
 PrintNamingText:
     mov esi, HL(0, 1)
+    ; BUG(critical) [fixed here, no guard — a port defect, not a Gen-1 bug]:
+    ; this used to be `mov al,[wNamingScreenType]` / `mov eax, YourTextString` /
+    ; `test al,al`. The second instruction OVERWRITES AL with the low byte of the
+    ; string's link-time address, so the branch tested the address, not the screen
+    ; type. pret keeps the type in A and the string pointer in DE — two registers,
+    ; deliberately; the port had hoisted the pointer into EAX because PlaceString
+    ; takes its source there. The low byte was never 0, so PLAYER and RIVAL both
+    ; fell into the MON path: the player-name screen printed a garbage species name
+    ; (from an unset wNameBuffer) and asked "NICKNAME?" instead of "YOUR NAME?",
+    ; and it called WriteMonPartySpriteOAMBySpecies on a garbage species. OBSERVED
+    ; in the DEBUG_NAMINGSCREEN FRAME.BIN, then fixed. Keep the pointer in EDX
+    ; (pret's DE) and move it into EAX only at the PlaceString call site.
     mov al, [ebp + wNamingScreenType]
-    mov eax, YourTextString
+    mov edx, YourTextString               ; pret: ld de, YourTextString (DE, not A!)
     test al, al
     jz .notNickname
-    mov eax, RivalsTextString
+    mov edx, RivalsTextString             ; `mov` leaves flags alone; `dec al` sets ZF
     dec al
     jz .notNickname
 
@@ -763,21 +797,18 @@ PrintNamingText:
     mov eax, NicknameTextString
     jmp .placeString
 .notNickname:
+    mov eax, edx                          ; PlaceString: EAX = flat src (pret's DE)
     call PlaceString
     mov esi, ebx                          ; continue at the cursor PlaceString left
     mov eax, NameTextString
 .placeString:
     jmp PlaceString
 
-section .data
-YourTextString:
-    db 0x98,0x8E,0x94,0x91,0x7F,0x50                                   ; "YOUR @"
-RivalsTextString:
-    db 0x91,0x88,0x95,0x80,0x8B,0xBD,0x7F,0x50                        ; "RIVAL's @"
-NameTextString:
-    db 0x8D,0x80,0x8C,0x84,0xE6,0x50                                  ; "NAME?@"
-NicknameTextString:
-    db 0x8D,0x88,0x82,0x8A,0x8D,0x80,0x8C,0x84,0xE6,0x50               ; "NICKNAME?@"
+; YourTextString / RivalsTextString / NameTextString / NicknameTextString and the
+; _DoYouWantToNicknameText stream are Tier-1 DATA — generated into
+; assets/naming_strings.inc (which opens its own `section .data`), not hand-encoded.
+; They were hand-written charmap `db` bytes until menu-fidelity row 15 (M-58).
+%include "assets/naming_strings.inc"
 section .text
 
 ; ===========================================================================
