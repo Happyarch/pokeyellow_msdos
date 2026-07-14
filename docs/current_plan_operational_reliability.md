@@ -4,6 +4,79 @@ This plan turns fidelity evidence policy into generated interfaces and gates.
 It complements, and does not modify, the separately owned fidelity-expansion
 runtime harness.
 
+## Restart handoff (2026-07-14)
+
+**Status:** independent operational-control work is committed through
+`39692a36`. The fidelity-expansion agent (`r-c7cad7187f77`) owns and is actively
+editing the harness through its Stages 2–4. Do not request or take its claimed
+files until it archives `docs/current_plan_fidelity_expansion.md` and releases
+the claims. It expects multiple hours of work.
+
+That agent's final Stage 4 shape is authoritative for scenario tiers: it will add
+CORE/FULL suites and `goldens-verify`. The initial manifest committed here at
+`e5b2495e` describes the ten Stage-1c scenarios only and will intentionally report
+drift while battle/menu scenarios are landing. After the Stage 4 handoff, update
+the manifest to the final registry first, then generate registries from it. Do
+not restructure its live files mid-stage.
+
+**Exact next steps for a fresh session:**
+
+1. Register with stigmergy, search memory, run `root_list_active`, and read this
+   plan plus the fidelity-expansion plan/archive.
+2. Confirm the fidelity agent released `dos_port/Makefile`,
+   `dos_port/tools/golden_diff.py`, `dos_port/tools/mgba_harness/**`,
+   `dos_port/src/debug/debug_dump.asm`, and its plan file.
+3. Run the verification commands below. Expect `validate_scenarios.py` to fail
+   only if new Stage 2–4 scenarios have landed without the manifest update.
+4. Reconcile `scenario_manifest.json` with the final CORE/FULL scenario set,
+   masks, IDs, flags, Lua scripts, dump schemas, timeouts, and scenario classes.
+5. Generate Makefile lists, differ registration, and NASM scenario-ID dispatch
+   from the manifest; remove conditional-order identity. Add runtime must-hit and
+   terminal-marker validation before checking off scenario consolidation.
+6. Continue the remaining generator and debug-runtime assertion work. Treat the
+   legacy migrations as evidence-review work, never as bulk rewrites.
+
+**Completed commits in this rollout:**
+
+- `ae7357d2` — evidence policy, generated project state, initial fidelity gate.
+- `b277194e` — strict structured exception annotations and tests.
+- `f33e91bd` — structured stub/provider claim validation.
+- `32677d34` — boot scanning and conservative `start` reachability.
+- `b2cfba0c` — generated active-plan inventory.
+- `c435e588` — conservative hand-encoded rendered-text inventory.
+- `e0958c5c` — M-69 and MAP_BORDER=6 memory reconciliation recorded complete.
+- `e5b2495e` — initial ten-scenario manifest and cross-registry drift validator.
+- `39692a36` — greedy charmap/unknown-character generator contracts.
+
+**Measured migration debt (strict lint, 2026-07-14):**
+
+- 49 weak/boilerplate file-level relocation entries.
+- 39–40 stale explicit extern provider trails (the count can move as concurrent
+  fidelity work lands).
+- 6 local pret-label shadows.
+- 56 likely hand-encoded rendered charmap blobs; confirm each detector hit before
+  migration because the detector is intentionally conservative.
+- Legacy free-form `DEVIATION`, `STUB`, `BUG`, and `GLITCH` annotations remain
+  accepted temporarily and require manual evidence-backed conversion.
+
+**Verification commands:**
+
+```sh
+python3 -m unittest discover -s dos_port/tools/tests -p 'test_*.py'
+dos_port/tools/lint_pret_labels --no-scan
+dos_port/tools/lint_pret_labels --no-scan --strict-claims
+dos_port/tools/validate_scenarios.py
+dos_port/tools/project_state --no-scan Init GetTrainerName
+dos_port/tools/project_state --plans
+git diff --check
+```
+
+Last clean independent-work result: 14 tests passed; default label lint reported
+0 violations / 5 suppressions; ten Stage-1c scenarios were consistent; `Init`
+was `static-live-entry`; `GetTrainerName` was `check-only`. Strict lint is
+expected to fail on the measured migration debt. Do not call that failure a
+regression without comparing its categorized inventory.
+
 - [x] Add evidence hierarchy, precise verification terms, subsystem-retirement
   sweep, and knowledge lifecycle rules to AGENTS.md.
 - [x] Add a repository-derived per-label `tools/project_state` report that
