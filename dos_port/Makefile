@@ -1459,6 +1459,8 @@ src/engine/menus/start_sub_menus.o: assets/ui_layout_menus.inc assets/audio_cons
         assets/menu_text.inc
 src/engine/menus/pc.o: assets/event_constants.inc assets/audio_constants.inc \
         assets/pc_text.inc
+src/engine/menus/players_pc.o: assets/ui_layout_menus.inc assets/audio_constants.inc \
+        assets/players_pc_text.inc
 src/engine/items/item_effects.o: assets/ui_layout_menus.inc
 src/engine/menus/main_menu.o src/engine/menus/save.o: assets/ui_layout_menus.inc
 src/engine/menus/naming_screen.o: assets/ui_layout_menus.inc assets/alphabets.inc \
