@@ -61,9 +61,8 @@ extern ColosseumEvolvedText
 extern GetMonName                      ; home/names.asm — in: wNamedObjectIndex -> wNameBuffer
 
 ; PokedexEntryPointers — assets/dex_entries.inc (DO NOT %include the data file
-; here: it is the shared contract with the G2 worker's pokedex_entry.asm,
-; which owns the %include/embed; duplicate-including it would double-define
-; every DexEntry label at link time). `dd` flat 32-bit .data pointers, index
+; here: engine/menus/pokedex.asm owns the %include/embed; duplicate-including it
+; would double-define every DexEntry label at link time). `dd` flat 32-bit .data pointers, index
 ; = internal_species_index - 1 (dex_entries.inc header).
 extern PokedexEntryPointers
 

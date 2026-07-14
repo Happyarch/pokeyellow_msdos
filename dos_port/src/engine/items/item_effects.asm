@@ -1546,7 +1546,7 @@ extern Random                 ; home/random.asm — AL = next random byte
 extern PlayBattleAnimation    ; engine/battle/move_effect_helpers.asm (ANIMATION=OFF hook)
 extern Multiply               ; home/math.asm — hMultiplicand(3) * hMultiplier → hProduct(4)
 extern IndexToPokedex         ; data/pokemon_data.asm — FLAT TABLE: [species-1] → dex number
-extern ShowPokedexData        ; engine/menus/pokedex_entry.asm (predef)
+extern ShowPokedexData        ; engine/menus/pokedex.asm (predef)
 extern AskName                ; engine/menus/naming_screen.asm (predef; hl = nickname dest)
 extern LoadEnemyMonData       ; engine/battle/load_enemy_mon_data.asm
 extern CalcExperience         ; engine/pokemon/experience.asm — DH = level → hExperience

@@ -293,7 +293,6 @@ GAME_SRCS := \
     src/engine/menus/naming_screen.asm \
     src/engine/menus/pokedex.asm \
     src/engine/printer/printer_stubs.asm \
-    src/engine/menus/pokedex_entry.asm \
     src/engine/menus/link_menu.asm \
     src/engine/menus/link_cups.asm \
     src/home/reload_sprites.asm \
@@ -1454,8 +1453,7 @@ src/engine/menus/main_menu.o src/engine/menus/save.o: assets/ui_layout_menus.inc
 src/engine/menus/naming_screen.o: assets/ui_layout_menus.inc assets/alphabets.inc \
         assets/naming_strings.inc assets/audio_constants.inc
 src/engine/menus/pokedex.o: assets/ui_layout_menus.inc assets/pokedex_tiles.inc \
-        assets/pokedex_strings.inc
-src/engine/menus/pokedex_entry.o: assets/ui_layout_menus.inc assets/dex_entries.inc
+        assets/pokedex_strings.inc assets/dex_entries.inc
 src/engine/menus/link_menu.o: assets/ui_layout_menus.inc
 src/engine/menus/link_cups.o: assets/dex_entries.inc
 

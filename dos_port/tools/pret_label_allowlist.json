@@ -483,10 +483,6 @@
       "port_file": "dos_port/src/engine/battle/faint_switch.asm",
       "why": "pret engine/battle/core.asm split across port files (draft Session H)"
     },
-    "DrawDexEntryOnScreen": {
-      "port_file": "dos_port/src/engine/menus/pokedex_entry.asm",
-      "why": "pret engine/menus/pokedex.asm split across port files (draft Session H)"
-    },
     "DrawEnemyHUDAndHPBar": {
       "port_file": "dos_port/src/engine/battle/battle_hud.asm",
       "why": "pret engine/battle/core.asm split across port files (draft Session H)"
@@ -603,10 +599,6 @@
       "port_file": "dos_port/src/home/fade.asm",
       "why": "pret home/palettes.asm split across port files (draft Session H)"
     },
-    "GetCryData": {
-      "port_file": "dos_port/src/engine/menus/pokedex.asm",
-      "why": "pret home/pokemon.asm split across port files (draft Session H)"
-    },
     "GetCurrentMove": {
       "port_file": "dos_port/src/engine/battle/get_current_move.asm",
       "why": "pret engine/battle/core.asm split across port files (draft Session H)"
@@ -714,10 +706,6 @@
     "HasMonFainted": {
       "port_file": "dos_port/src/engine/battle/faint_switch.asm",
       "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
-    "HeightWeightText": {
-      "port_file": "dos_port/src/engine/menus/pokedex_entry.asm",
-      "why": "pret engine/menus/pokedex.asm split across port files (draft Session H)"
     },
     "IgnoreInputForHalfSecond": {
       "port_file": "dos_port/src/engine/overworld/overworld.asm",
@@ -967,26 +955,6 @@
       "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
       "why": "pret home/trainers.asm split across port files (draft Session H)"
     },
-    "PokeText": {
-      "port_file": "dos_port/src/engine/menus/pokedex_entry.asm",
-      "why": "pret engine/menus/pokedex.asm split across port files (draft Session H)"
-    },
-    "PokedexDataDividerLine": {
-      "port_file": "dos_port/src/engine/menus/pokedex_entry.asm",
-      "why": "pret engine/menus/pokedex.asm split across port files (draft Session H)"
-    },
-    "Pokedex_PrepareDexEntryForPrinting": {
-      "port_file": "dos_port/src/engine/menus/pokedex_entry.asm",
-      "why": "pret engine/menus/pokedex.asm split across port files (draft Session H)"
-    },
-    "Pokedex_PrintFlavorTextAtBC": {
-      "port_file": "dos_port/src/engine/menus/pokedex_entry.asm",
-      "why": "pret engine/menus/pokedex.asm split across port files (draft Session H)"
-    },
-    "Pokedex_PrintFlavorTextAtRow11": {
-      "port_file": "dos_port/src/engine/menus/pokedex_entry.asm",
-      "why": "pret engine/menus/pokedex.asm split across port files (draft Session H)"
-    },
     "PrintButItFailedText_": {
       "port_file": "dos_port/src/engine/battle/move_effect_helpers.asm",
       "why": "pret engine/battle/effects.asm split across port files (draft Session H)"
@@ -1118,14 +1086,6 @@
     "SetSpritePosition2": {
       "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
       "why": "pret home/trainers.asm split across port files (draft Session H)"
-    },
-    "ShowPokedexData": {
-      "port_file": "dos_port/src/engine/menus/pokedex_entry.asm",
-      "why": "pret engine/menus/pokedex.asm split across port files (draft Session H)"
-    },
-    "ShowPokedexDataInternal": {
-      "port_file": "dos_port/src/engine/menus/pokedex_entry.asm",
-      "why": "pret engine/menus/pokedex.asm split across port files (draft Session H)"
     },
     "SignLoop": {
       "port_file": "dos_port/src/home/hidden_events.asm",

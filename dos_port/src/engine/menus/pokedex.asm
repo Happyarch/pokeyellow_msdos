@@ -1,18 +1,27 @@
-; pokedex.asm — the POKéDEX menu/list half (menus S8, package G1).
+; pokedex.asm — the POKéDEX. Full port of pret engine/menus/pokedex.asm.
 ;
-; Faithful port of the MENU/LIST portion of pret engine/menus/pokedex.asm
-; (ShowPokedexMenu + HandlePokedexSideMenu + HandlePokedexListMenu +
-; Pokedex_DrawInterface + DrawPokedexVerticalLine + Pokedex_PlacePokemonList +
-; IsPokemonBitSet + DrawTileLine + PokedexToIndex, plus the text tables).
+; BOTH halves live here, as they do in pret: the menu/list screen (ShowPokedexMenu,
+; HandlePokedexSideMenu, HandlePokedexListMenu, Pokedex_DrawInterface,
+; DrawPokedexVerticalLine, Pokedex_PlacePokemonList, IsPokemonBitSet, DrawTileLine,
+; PokedexToIndex) and the DATA/entry page (ShowPokedexData, ShowPokedexDataInternal,
+; DrawDexEntryOnScreen, Pokedex_PrintFlavorTextAtRow11/AtBC,
+; Pokedex_PrepareDexEntryForPrinting, HeightWeightText, PokeText,
+; PokedexDataDividerLine).
+;
+; The entry page used to be a separate src/engine/menus/pokedex_entry.asm, held there
+; by NINE allowlist entries whose only stated reason was "pret … split across port
+; files (draft Session H)". Challenged at menu-fidelity row 16 part 2 and found to be
+; no reason at all: the split was an artifact of two parallel authoring sessions
+; (the deleted header said so — "package G2 … a separate worker/worktree … Root
+; finalizes the link at integration"), and it forced the two halves of ONE screen to
+; reach each other through an extern seam (DrawTileLine / IsPokemonBitSet /
+; PokedexToIndex / ShowPokedexDataInternal). Merged back to the mirrored path; all
+; nine entries deleted, not re-blessed. Ledger M-78.
+;
 ; NOT IndexToPokedex: pret has a ROUTINE by that name (dex# lookup), while the port
 ; gives the name to a DATA TABLE in pokemon_data.asm and has no such routine. That
 ; label squat is real but cross-file (pokemon_data.asm + home/pics.asm + the base-stats
 ; generator all depend on the table name), so it is filed as ledger M-71, not fixed here.
-;
-; The DATA-entry half (ShowPokedexData/ShowPokedexDataInternal, dex entry drawing,
-; flavour text) is package G2's pokedex_entry.asm — this file `extern`s
-; ShowPokedexDataInternal from it and `global`s the three cross-half helpers
-; (PokedexToIndex / IsPokemonBitSet / DrawTileLine) that G2 calls.
 ;
 ; Same routines, same labels, same branch structure/order as pret; divergences
 ; are tagged PROJ / TODO-HW / DEVIATION / STUB only.
@@ -36,9 +45,13 @@
 ;   are DOUBLE-spaced, so menu_item_step = 2*GBSCR_W and the menu-items text's
 ;   <NEXT> advances 2 rows (default hUILayoutFlags, BIT_SINGLE_SPACED_LINES clear).
 ;
+; - The DATA page is the same model on its own window anchor: dex_mirror blits the
+;   scratch and dex_show_window publishes it at UI_POKEDEX_ENTRY_*.
+;
 ; ; PROJ menus: box + list + side menu project onto the UI_POKEDEX_MAIN window
 ;   (GB(0,0) 20x18 --(center/top, X+10)--> wx=87 wy=0 clip=160 max_y=144
 ;   [UI_POKEDEX_MAIN_*]). Side menu sub-rect: UI_POKEDEX_SIDE_MENU_* (GB 15,8 5x9).
+;   DATA page: UI_POKEDEX_ENTRY_* (GB(0,0) 20x18, same projection).
 ;
 ; Register map (CLAUDE.md): A=AL, BC=BX (B=BH,C=BL), DE=DX (D=DH,E=DL),
 ; HL=ESI, EBP = GB memory base; GB memory is [ebp + symbol].
@@ -61,10 +74,16 @@ global HandlePokedexListMenu
 global Pokedex_DrawInterface
 global DrawPokedexVerticalLine
 global Pokedex_PlacePokemonList
-; cross-half seam (G2 calls these):
 global IsPokemonBitSet
 global DrawTileLine
 global PokedexToIndex
+; the DATA (entry) page — pret pokedex.asm:438-693:
+global ShowPokedexData
+global ShowPokedexDataInternal
+global DrawDexEntryOnScreen
+global Pokedex_PrintFlavorTextAtRow11
+global Pokedex_PrintFlavorTextAtBC
+global Pokedex_PrepareDexEntryForPrinting
 global LoadPokedexTilePatterns       ; REAL body (below), not a stub — G2 externs it
 extern IndexToPokedex                ; base_stats.inc — index->dex TABLE (== pret PokedexOrder)
 
@@ -105,15 +124,53 @@ extern PlaySound                     ; home/audio.asm — a REAL body
 extern GetCryData                    ; home_stubs.asm — STUB (M-32); pret home/pokemon.asm
 extern LoadTownMap_Nest              ; engine/items/town_map.asm — REAL body, linked (M-64)
 extern PrintPokedexEntry             ; engine/printer/printer_stubs.asm — STUB (GB printer)
-; ShowPokedexDataInternal is defined by G2 (pokedex_entry.asm); the .choseData
-; side-menu path calls it. At standalone `make check` this is an unresolved
-; extern (link is finalized by ROOT at integration — G1↔G2 seam).
-extern ShowPokedexDataInternal       ; engine/menus/pokedex_entry.asm (G2)
+; ---- externs used only by the DATA (entry) page ---------------------------
+extern TextCommandProcessor          ; home/text.asm — ESI = stream (FLAT ptr), EBX = cursor
+extern GetMonHeader                  ; home/pokemon.asm — wCurSpecies → wMonHeader
+extern LoadFlippedFrontSpriteByMonIndex ; gfx/pics.asm — ESI = tilemap coord; decode + place
+extern JoypadLowSensitivity          ; input/joypad_lowsens.asm → [hJoy5]
+extern LoadTextBoxTilePatterns       ; gfx/load_font.asm
+; PlayCry is a ret-only STUB (home_stubs.asm), NOT an absent routine and NOT an audio-HAL
+; blocker — the engine is live and CryData is generated; nobody has written its ~15
+; instructions (M-32). pret's DrawDexEntryOnScreen calls it, so the port calls it: the
+; call is what goes loud the day the stub is filled in. Dropping it was M-75.
+extern PlayCry                       ; home_stubs.asm — STUB (M-32); pret home/pokemon.asm
+extern g_dex_flavor_active           ; text/text.asm — full-page window mode for the flavor
 
 ; ---- local equates (Tier-2 UI/index enums; not gb_memmap data) -----------
 ; pret ref: constants/palette_constants.asm
 SET_PAL_GENERIC   equ 0x08
 SET_PAL_DEFAULT   equ 0xFF
+SET_PAL_POKEDEX   equ 0x04
+
+; hDexWeight — pret ram/hram.asm: a UNION member at the HRAM top (with hBaseTileID,
+; hWarpDestinationMap, hOAMTile, hROMBankTemp …). The port's 0xFF8B is the same union
+; slot (H_MAP_STRIDE / H_PREVIOUS_TILESET / hItemPrice / hWarpDestinationMap). That
+; sharing is exactly why pret save/restores the two bytes around the weight print, and
+; why the port now does too — see DrawDexEntryOnScreen.owned (M-76).
+hDexWeight        equ 0xFF8B
+; hClearLetterPrintingDelayFlags — pret ram/hram.asm (the byte before hUILayoutFlags).
+H_CLEAR_LETTER_PRINTING_DELAY_FLAGS equ 0xFFF9
+; hUILayoutFlags bit (pret constants/gfx_constants.asm) — treat <PAGE> as <NEXT>.
+BIT_PAGE_CHAR_IS_NEXT equ 3
+; wPrinterPokedexEntryTextPointer — pret ram/wram.asm (dw). Read only by the GB-Printer
+; path (Pokedex_PrepareDexEntryForPrinting); the port reaches the flavor through
+; dex_flavor_ptr instead, so nothing populates it (see the tag at that routine).
+wPrinterPokedexEntryTextPointer equ 0xCAF5
+; wDexFlavorBuf — PORT-ONLY staging buffer (DEVIATION, see Pokedex_PrintFlavorTextAtBC).
+; TextCommandProcessor reads its stream EBP-relative but the flavor lives in flat .data,
+; so the bytes are copied into GB space first. Reuses wTileMapBackup2 (W_TILEMAP_BACKUP2
+; = $F100, 1000 B) — a screen-backup scratch the per-frame BG/window renderer never reads
+; (render_bg sources wSurroundingTiles at $E000).
+wDexFlavorBuf     equ W_TILEMAP_BACKUP2
+DEX_FLAVOR_MAX    equ 300           ; copy bound (the longest entry is well under 140 B)
+
+; charmap glyphs used by the entry page (constants/charmap.asm)
+GLYPH_NO          equ 0x74          ; '№'
+GLYPH_DOT         equ 0xF2          ; '<DOT>' decimal point
+GLYPH_FEET        equ 0x60          ; '′'  (dex tileset)
+GLYPH_INCHES      equ 0x61          ; '″'  (dex tileset)
+GLYPH_ZERO        equ 0xF6          ; '0'
 
 GBSCR_W           equ 20            ; pret SCREEN_WIDTH — the stride-20 scratch
 LEADING_ZEROES    equ 0x80         ; PrintNumber BH flag (BIT_LEADING_ZEROES = 7)
@@ -145,7 +202,25 @@ section .data
 ; (CLAUDE.md), so all five (the four PlaceString labels + the routine-local
 ; .dashedLine) are now generated by tools/gen_menu_strings.py through gb_text.encode.
 ; The generated bytes are byte-identical to the literals they replace. Ledger M-70.
+; The DATA page's three blobs (HeightWeightText / PokeText / PokedexDataDividerLine)
+; were the same violation in pokedex_entry.asm and are generated into the same .inc
+; (M-77) — again byte-identical to the literals they replace.
 %include "assets/pokedex_strings.inc"
+
+; PokedexEntryPointers + the 151 entry blobs (flat .data, charmap-encoded).
+global PokedexEntryPointers          ; link_cups.asm (PetitCup) externs it
+%include "assets/dex_entries.inc"
+
+; ===========================================================================
+section .bss
+align 4
+; Port register spill for the DATA page (stands in for pret's push/pop chain across
+; the long GetMonName / GetMonHeader / pic-load span; observably identical).
+dex_entry_ptr:    resd 1     ; FLAT .data ptr to the current PokedexEntry blob
+dex_flavor_ptr:   resd 1     ; FLAT .data ptr to the flavor stream
+saved_pokedexnum: resb 1     ; internal index, saved while wPokedexNum holds the dex#
+saved_owned:      resb 1     ; owned flag (from IsPokemonBitSet)
+saved_dexweight:  resb 2     ; the two borrowed hDexWeight HRAM bytes (pret's push af ×2)
 
 ; ===========================================================================
 section .text
@@ -663,6 +738,405 @@ PokedexToIndex:
     pop ebx
     ret
 
+; ===========================================================================
+; The DATA (entry) page — pret engine/menus/pokedex.asm:438-693. Reached from the
+; side menu's DATA option (.choseData → ShowPokedexDataInternal) and, from outside
+; the pokédex, through ShowPokedexData.
+; ===========================================================================
+
+; ---------------------------------------------------------------------------
+; ShowPokedexData — pret ref: pokedex.asm:ShowPokedexData.
+; Show a dex entry from OUTSIDE the pokédex: load the dex tile patterns first,
+; then fall through to ShowPokedexDataInternal.
+; ---------------------------------------------------------------------------
+ShowPokedexData:
+    call GBPalWhiteOutWithDelay3
+    call ClearScreen
+    call UpdateSprites
+    call LoadPokedexTilePatterns         ; pret: callfar LoadPokedexTilePatterns
+    ; fall through
+
+; ---------------------------------------------------------------------------
+; ShowPokedexDataInternal — pret ref: pokedex.asm:ShowPokedexDataInternal.
+; Draw the entry page, print the flavor if the mon is owned, wait for A/B, tear down.
+; ---------------------------------------------------------------------------
+ShowPokedexDataInternal:
+    ; ld hl, wStatusFlags2 / set BIT_NO_AUDIO_FADE_OUT, [hl]
+    or byte [ebp + W_STATUS_FLAGS_2], 1 << BIT_NO_AUDIO_FADE_OUT
+    ; pret: ld a,$33 / ldh [rAUDVOL],a — duck to 3/7 volume for the cry. This was
+    ; dropped behind "TODO-HW: audio HAL (Phase 3). No APU; skipped." — FALSE, and the
+    ; same false claim row 14 killed for rAUDTERM (M-53): rAUDVOL is a live GB byte
+    ; ($FF24, gb_memmap.inc), written by engine_1/engine_2 and READ every frame by the
+    ; OPL / Tandy / MPU-401 shims to scale channel output. Nothing was blocking it. M-73.
+    mov byte [ebp + rAUDVOL], 0x33       ; ld a, $33 (3/7 volume) / ldh [rAUDVOL], a
+    movzx eax, byte [ebp + hTileAnimations]
+    push eax                             ; push af
+    xor al, al
+    mov [ebp + hTileAnimations], al
+    call GBPalWhiteOut                   ; zero all palettes
+    mov al, [ebp + wPokedexNum]
+    mov [ebp + wCurPartySpecies], al
+    push eax                             ; push af (wPokedexNum)
+    mov bh, SET_PAL_POKEDEX              ; ld b, SET_PAL_POKEDEX (BH == pret's `b`)
+    call RunPaletteCommand
+    pop eax                              ; pop af
+    mov [ebp + wPokedexNum], al
+    call DrawDexEntryOnScreen            ; CF set = mon is owned → print the flavor
+%ifdef DEBUG_G2
+    ; FRAME.BIN gate: dump the composited DATA page once the border + pic + HT/WT are
+    ; placed, BEFORE the flavor (whose <PAGE> break blocks on a button in a headless
+    ; run). DEVIATION(harness): DEBUG-only, never in a shipped build. Never returns.
+    call DelayFrame
+    call DumpBackbuffer
+%endif
+    jnc .waitForButtonPress              ; pret: call c, Pokedex_PrintFlavorTextAtRow11
+    call Pokedex_PrintFlavorTextAtRow11
+.waitForButtonPress:
+    ; DEVIATION(input): pret's JoypadLowSensitivity opens with `call Joypad` — a fresh
+    ; hardware read per iteration — so pret's spin needs no DelayFrame. The port
+    ; refreshes H_JOY_HELD/H_JOY_PRESSED only in joypad_update, which runs once per
+    ; DelayFrame, so a DelayFrame-less spin here would never see the button (no way out)
+    ; AND would freeze the software PPU mid-reveal. Same shape as the options/town-map
+    ; input loops.
+    call DelayFrame
+    call JoypadLowSensitivity
+    mov al, [ebp + H_JOY5]               ; ldh a, [hJoy5]
+    and al, PAD_A | PAD_B
+    jz .waitForButtonPress
+    pop eax                              ; pop af (hTileAnimations)
+    mov [ebp + hTileAnimations], al
+    call GBPalWhiteOut
+    call ClearScreen
+    ; The old comment here said RunDefaultPaletteCommand was "not defined in the port".
+    ; It is: a global body in engine/menus/naming_screen.asm that this very file already
+    ; calls from .exitPokedex. Restored — without it the dex exit left the pokédex
+    ; palette set (M-74).
+    call RunDefaultPaletteCommand
+    call LoadTextBoxTilePatterns
+    call GBPalNormal
+    ; ld hl, wStatusFlags2 / res BIT_NO_AUDIO_FADE_OUT, [hl]
+    and byte [ebp + W_STATUS_FLAGS_2], (~(1 << BIT_NO_AUDIO_FADE_OUT)) & 0xFF
+    mov byte [ebp + rAUDVOL], 0x77       ; ld a, $77 (max volume) / ldh [rAUDVOL], a — M-73
+    ret
+
+; ---------------------------------------------------------------------------
+; DrawDexEntryOnScreen — pret ref: pokedex.asm:DrawDexEntryOnScreen.
+; Draw the bordered page (border / divider / HT-WT labels / name / № / species +
+; the front pic). For an OWNED mon also print height + weight and stash the flavor
+; pointer. Out: CF set = owned (print the flavor); CF clear = unowned.
+; ---------------------------------------------------------------------------
+DrawDexEntryOnScreen:
+    call ClearScreen                     ; blanks W_TILEMAP
+    ; port: the entry page owns the stride-20 scratch (PlaceString's <NEXT> and the
+    ; flavor advance both step by text_row_stride). Same reset ShowPokedexMenu does.
+    mov dword [text_row_stride], GBSCR_W
+
+    ; --- border: four DrawTileLine edges (dex tileset $64/$6f/$66/$67) ----------
+    mov esi, HL(0, 0)                    ; hlcoord 0,0 — top
+    mov edx, 1                           ; ld de, 1 (horizontal)
+    mov bh, 0x64
+    mov bl, GBSCR_W                      ; lb bc, $64, SCREEN_WIDTH
+    call DrawTileLine
+    mov esi, HL(0, 17)                   ; hlcoord 0,17 — bottom
+    mov edx, 1
+    mov bh, 0x6F
+    mov bl, GBSCR_W
+    call DrawTileLine
+    mov esi, HL(0, 1)                    ; hlcoord 0,1 — left
+    mov edx, GBSCR_W                     ; ld de, 20 (vertical)
+    mov bh, 0x66
+    mov bl, 0x10                         ; lb bc, $66, $10
+    call DrawTileLine
+    mov esi, HL(19, 1)                   ; hlcoord 19,1 — right
+    mov edx, GBSCR_W
+    mov bh, 0x67
+    mov bl, 0x10
+    call DrawTileLine
+
+    ; --- corners (ldcoord_a) ---------------------------------------------------
+    mov byte [ebp + HL(0, 0)],   0x63    ; upper left
+    mov byte [ebp + HL(19, 0)],  0x65    ; upper right
+    mov byte [ebp + HL(0, 17)],  0x6C    ; lower left
+    mov byte [ebp + HL(19, 17)], 0x6E    ; lower right
+
+    ; --- divider (row 9) + HT/WT labels (row 6) --------------------------------
+    mov eax, PokedexDataDividerLine
+    mov esi, HL(0, 9)
+    call PlaceString
+    mov eax, HeightWeightText
+    mov esi, HL(9, 6)
+    call PlaceString
+
+    ; --- mon name (row 2) — GetMonName reads wNamedObjectIndex (= wPokedexNum) ---
+    call GetMonName
+    lea eax, [ebp + wNameBuffer]         ; PlaceString takes a FLAT source pointer
+    mov esi, HL(9, 2)
+    call PlaceString
+
+    ; --- entry blob: PokedexEntryPointers[wPokedexNum - 1] (flat .data) ---------
+    movzx eax, byte [ebp + wPokedexNum]
+    dec eax
+    mov eax, [PokedexEntryPointers + eax*4]
+    mov [dex_entry_ptr], eax
+
+    ; --- species classification (row 4) — EAX = flat entry ptr ------------------
+    mov esi, HL(9, 4)
+    call PlaceString                     ; entry+0 = the '@'-terminated species name
+
+    ; --- № + national dex number (row 8) ---------------------------------------
+    mov byte [ebp + HL(2, 8)], GLYPH_NO  ; ld a,'№' / ld [hli],a
+    mov byte [ebp + HL(3, 8)], GLYPH_DOT ; ld a,'<DOT>' / ld [hli],a
+    movzx eax, byte [ebp + wPokedexNum]  ; internal index
+    mov [saved_pokedexnum], al           ; pret: push af
+    dec eax
+    ; DEVIATION(flat-data): pret calls the IndexToPokedex ROUTINE; in the port that pret
+    ; name belongs to the TABLE it walks (see the file header + ledger M-71), so the
+    ; lookup is the table read the routine would have done. Cross-file rename, not fixed
+    ; here; faithdiff therefore shows IndexToPokedex as a DROPPED call.
+    movzx eax, byte [IndexToPokedex + eax]
+    mov [ebp + wPokedexNum], al          ; wPokedexNum := dex# (PrintNumber + the owned bit)
+    mov edx, wPokedexNum
+    mov bh, LEADING_ZEROES | 1           ; lb bc, LEADING_ZEROES | 1, 3
+    mov bl, 3
+    mov esi, HL(4, 8)                    ; № and <DOT> consumed cols 2,3 (pret's hli walk)
+    call PrintNumber
+
+    ; --- owned? (bit dex#-1 of wPokedexOwned) ----------------------------------
+    mov esi, wPokedexOwned               ; ld hl, wPokedexOwned
+    call IsPokemonBitSet                 ; reads wPokedexNum (= dex#) → AL/CL = owned
+    mov [saved_owned], al
+    mov al, [saved_pokedexnum]           ; pret: pop af
+    mov [ebp + wPokedexNum], al          ; restore the internal index
+    mov al, [ebp + wCurPartySpecies]
+    mov [ebp + wCurSpecies], al
+
+    ; --- front pic at (1,1) ----------------------------------------------------
+    call Delay3
+    call GBPalNormal
+    call GetMonHeader                    ; load the picture location
+    ; pret: hlcoord 1,1 / call LoadFlippedFrontSpriteByMonIndex. The port's loader
+    ; decodes to $9000 AND places the 7×7 block (flip-aware) at text_row_stride (= 20,
+    ; the dex scratch) — so just set the coord; there is no separate placement step.
+    mov esi, HL(1, 1)
+    call LoadFlippedFrontSpriteByMonIndex
+    mov al, [ebp + wCurPartySpecies]
+    call PlayCry                         ; ret-only STUB (home_stubs.asm, M-32) — see the extern
+
+    ; --- owned gate (pret: ld a,c / and a / ret z) -----------------------------
+    mov al, [saved_owned]
+    test al, al                          ; and a (clears CF)
+    jnz .owned
+    ; unowned: no height/weight/flavor. Publish the page (border/name/№/pic) as drawn.
+    call dex_show_window                 ; DEVIATION(window-list): see dex_show_window
+    clc                                  ; CF = 0 → the caller skips the flavor
+    ret
+
+.owned:
+    ; DEVIATION(flat-data): pret walks the entry's fields with DE (feet, inches, weight,
+    ; then the description pointer), relying on PrintNumber leaving DE where the next
+    ; `inc de` expects it. The port's blob is flat .data and its PrintNumber clobbers
+    ; EDX, so the field offsets are found once by scanning to the name's '@':
+    ;   feet = @+1, inches = @+2, weight_lo = @+3, weight_hi = @+4, flavor = @+5.
+    ; EDI is preserved by PrintNumber, so it carries the '@' pointer across the calls.
+    mov edi, [dex_entry_ptr]
+.scan_at:
+    cmp byte [edi], 0x50                 ; '@'
+    je .found_at
+    inc edi
+    jmp .scan_at
+.found_at:
+    ; hDexWeight ($FF8B) is a shared HRAM UNION slot, in the port exactly as in pret
+    ; (hMapStride / hPreviousTileset / hWarpDestinationMap / hItemPrice all live here;
+    ; pret unions it with hBaseTileID & co). pret saves and restores the two bytes it
+    ; borrows — the port had DROPPED that under "hDexWeight is a port-local dex scratch
+    ; with no other reader in this window", which is false: the overworld's
+    ; hPreviousTileset sits in this byte across a dex visit and is read on the way back
+    ; out (engine/overworld/overworld.asm). Restored, and hoisted above the feet/inches
+    ; staging because the port stages those here too (pret's PrintNumber reads them
+    ; straight out of ROM through DE). Ledger M-76.
+    mov al, [ebp + hDexWeight + 0]
+    mov [saved_dexweight + 0], al        ; pret: ld a,[hl] / push af
+    mov al, [ebp + hDexWeight + 1]
+    mov [saved_dexweight + 1], al        ; pret: ld a,[hl] / push af
+    ; --- feet (12,6): 1 byte / 2 digits, then '′' -------------------------------
+    movzx eax, byte [edi + 1]            ; feet (pret reads it too, and discards it)
+    mov [ebp + hDexWeight], al           ; stage into GB space for PrintNumber
+    mov edx, hDexWeight
+    mov bh, 1
+    mov bl, 2
+    mov esi, HL(12, 6)
+    call PrintNumber                     ; ESI → HL(14,6)
+    mov byte [ebp + esi], GLYPH_FEET     ; ld [hl], '′'
+    ; --- inches (15,6): LEADING_ZEROES | 1 byte / 2 digits, then '″' ------------
+    movzx eax, byte [edi + 2]            ; inches
+    mov [ebp + hDexWeight], al
+    mov edx, hDexWeight
+    mov bh, LEADING_ZEROES | 1
+    mov bl, 2
+    mov esi, HL(15, 6)
+    call PrintNumber                     ; ESI → HL(17,6)
+    mov byte [ebp + esi], GLYPH_INCHES   ; ld [hl], '″'
+    ; --- weight (11,8): staged BIG-endian into hDexWeight, 2 bytes / 5 digits ----
+    movzx eax, byte [edi + 4]            ; weight, upper byte
+    mov [ebp + hDexWeight + 0], al       ; big-endian: [0] = upper
+    movzx eax, byte [edi + 3]            ; weight, lower byte
+    mov [ebp + hDexWeight + 1], al       ; [1] = lower
+    mov edx, hDexWeight
+    mov bh, 2
+    mov bl, 5
+    mov esi, HL(11, 8)
+    call PrintNumber
+    ; --- decimal point: the weight is stored in tenths of pounds ----------------
+    ; if it is under 10, put a '0' before the point (pret's 16-bit sub/sbc compare).
+    mov al, [ebp + hDexWeight + 1]       ; ldh a, [hDexWeight + 1]
+    sub al, 10                           ; sub 10
+    mov al, [ebp + hDexWeight + 0]       ; ldh a, [hDexWeight]   (mov preserves CF)
+    sbb al, 0                            ; sbc 0
+    mov esi, HL(14, 8)                   ; hlcoord 14,8          (mov preserves CF)
+    jnc .decpt                           ; jr nc, .next (weight >= 10)
+    mov byte [ebp + esi], GLYPH_ZERO     ; ld [hl], '0'
+.decpt:
+    ; inc hl / ld a,[hli] / ld [hld],a / ld [hl],'<DOT>' — shove the tenths digit one
+    ; tile right and drop the decimal point into the gap it leaves.
+    inc esi                              ; → (15,8)
+    mov al, [ebp + esi]                  ; a = [hli]
+    inc esi                              ; → (16,8)
+    mov [ebp + esi], al                  ; ld [hld], a
+    dec esi                              ; → (15,8)
+    mov byte [ebp + esi], GLYPH_DOT      ; ld [hl], '<DOT>'
+    ; restore the borrowed HRAM union bytes (pret: pop af ×2) — M-76.
+    mov al, [saved_dexweight + 1]
+    mov [ebp + hDexWeight + 1], al
+    mov al, [saved_dexweight + 0]
+    mov [ebp + hDexWeight + 0], al
+    ; --- flavor pointer = @+5 (pret: pop hl / inc hl) ---------------------------
+    lea eax, [edi + 5]
+    mov [dex_flavor_ptr], eax
+    ; port: HT/WT is in the scratch now — publish the page. If the caller runs the
+    ; flavor (CF=1), that path re-mirrors after TextCommandProcessor.
+    call dex_show_window
+    stc                                  ; scf → CF = 1 = "print the flavor"
+    ret
+
+; ---------------------------------------------------------------------------
+; Pokedex_PrintFlavorTextAtRow11 / …AtBC — pret ref: pokedex.asm.
+; Print the flavor description through TextCommandProcessor.
+; ---------------------------------------------------------------------------
+Pokedex_PrintFlavorTextAtRow11:
+    mov ebx, HL(1, 11)                   ; bccoord 1,11 (TCP's destination cursor)
+Pokedex_PrintFlavorTextAtBC:
+    ; DEVIATION(flat-data): pret's flavor is a far-bank text run; the port's data
+    ; generator inlines it into the entry blob. TextCommandProcessor reads its stream
+    ; EBP-relative, so the flat bytes are staged into GB space first.
+    call dex_stage_flavor                ; [dex_flavor_ptr] → wDexFlavorBuf; ESI = GB off
+    lea esi, [ebp + esi]                 ; → flat ptr (TCP's stream pointer is flat)
+    mov byte [ebp + H_CLEAR_LETTER_PRINTING_DELAY_FLAGS], 0x02  ; ld a, %10
+    ; DEVIATION(window-list): pokédex flavor mode. The text engine's dialog helpers
+    ; (sync_dialog_window per char, manual_text_scroll at the <PAGE> break) must mirror
+    ; the full 20×18 page and keep the pokédex window, NOT do the dialog-box copy +
+    ; bottom-window swap (which showed only the bottom 6 rows of the entry).
+    mov byte [g_dex_flavor_active], 1
+    call TextCommandProcessor            ; ESI = stream, EBX = cursor
+    mov byte [g_dex_flavor_active], 0
+    mov byte [ebp + H_CLEAR_LETTER_PRINTING_DELAY_FLAGS], 0     ; xor a
+    call dex_mirror                      ; port: push the finished flavor to the window
+    ret
+
+; ---------------------------------------------------------------------------
+; Pokedex_PrepareDexEntryForPrinting — pret ref: pokedex.asm.
+; The GB-Printer entry layout (a 13-row box), with <PAGE> forced to act as <NEXT>.
+; Its only caller is PrintPokedexEntry, which is a ret-only STUB (the GB Printer is a
+; serial-link peripheral — TODO-HW: serial), so nothing reaches this today; it is
+; ported in full so that filling that stub in is all the printer needs.
+; ---------------------------------------------------------------------------
+Pokedex_PrepareDexEntryForPrinting:
+    mov esi, HL(0, 0)                    ; hlcoord 0,0
+    mov edx, GBSCR_W                     ; ld de, SCREEN_WIDTH (vertical)
+    mov bh, 0x66
+    mov bl, 0x0D                         ; lb bc, $66, $d
+    call DrawTileLine
+    mov esi, HL(19, 0)                   ; hlcoord 19,0
+    mov edx, GBSCR_W
+    mov bh, 0x67
+    mov bl, 0x0D
+    call DrawTileLine
+    mov esi, HL(0, 13)                   ; hlcoord 0,13
+    mov edx, 1                           ; ld de, $1 (horizontal)
+    mov bh, 0x6F
+    mov bl, GBSCR_W                      ; lb bc, $6f, SCREEN_WIDTH
+    call DrawTileLine
+    mov byte [ebp + HL(0, 13)],  0x6C    ; ldcoord_a 0,13
+    mov byte [ebp + HL(19, 13)], 0x6E    ; ldcoord_a 19,13
+    ; TODO-HW(serial): pret loads the stream pointer from wPrinterPokedexEntryTextPointer,
+    ; which only the printer path writes. In the port the flavor is flat .data reached
+    ; through dex_flavor_ptr, which DrawDexEntryOnScreen has already set for the mon on
+    ; screen — so this routine prints the same stream pret would, and the pret WRAM word
+    ; stays unpopulated until the printer itself is ported.
+    mov ebx, HL(1, 1)                    ; bccoord 1,1
+    or byte [ebp + H_UI_LAYOUT_FLAGS], 1 << BIT_PAGE_CHAR_IS_NEXT
+    call Pokedex_PrintFlavorTextAtBC
+    and byte [ebp + H_UI_LAYOUT_FLAGS], (~(1 << BIT_PAGE_CHAR_IS_NEXT)) & 0xFF
+    ret
+
+; ---------------------------------------------------------------------------
+; dex_stage_flavor — copy the flat flavor stream at [dex_flavor_ptr] into GB scratch
+; (wDexFlavorBuf), stopping after the first $50. Out: ESI = wDexFlavorBuf (GB offset).
+; Clobbers EAX/ECX/EDX/EDI. Port plumbing; not a pret routine.
+; ---------------------------------------------------------------------------
+dex_stage_flavor:
+    mov edx, [dex_flavor_ptr]            ; flat source
+    lea edi, [ebp + wDexFlavorBuf]       ; GB-space destination (flat)
+    mov ecx, DEX_FLAVOR_MAX
+.copy:
+    mov al, [edx]
+    mov [edi], al
+    inc edx
+    inc edi
+    cmp al, 0x50                         ; TX_END / '@' — the first one wins
+    je .done
+    dec ecx
+    jnz .copy
+.done:
+    mov esi, wDexFlavorBuf               ; GB offset for TCP ([ebp + esi])
+    ret
+
+; ---------------------------------------------------------------------------
+; dex_mirror / dex_show_window — the DATA page's window plumbing, the same
+; stand-in for pret's hAutoBGTransferEnabled VBlank transfer as pdex_mirror /
+; pdex_show_window, on the UI_POKEDEX_ENTRY_* anchor. Preserve all registers.
+; ; PROJ menus: window = UI_POKEDEX_ENTRY_(WX,WY,CLIP,MAXY).
+; ---------------------------------------------------------------------------
+dex_mirror:
+    pushad
+    xor ebx, ebx
+.row:
+    imul esi, ebx, GBSCR_W
+    lea esi, [ebp + esi + W_TILEMAP]
+    mov edi, ebx
+    shl edi, 5                           ; ×32 tilemap stride
+    lea edi, [ebp + edi + GB_TILEMAP1]
+    mov ecx, GBSCR_W
+    rep movsb
+    inc ebx
+    cmp ebx, UI_POKEDEX_ENTRY_GBH        ; 18 rows
+    jb .row
+    popad
+    ret
+
+dex_show_window:
+    pushad
+    call dex_mirror
+    mov dword [g_bg_whiteout], 1         ; the dex page is a full-screen takeover
+    mov eax, UI_POKEDEX_ENTRY_WX
+    mov ebx, UI_POKEDEX_ENTRY_WY
+    mov ecx, UI_POKEDEX_ENTRY_CLIP
+    mov edx, UI_POKEDEX_ENTRY_MAXY
+    mov esi, GB_TILEMAP1
+    xor edi, edi                         ; start_row = 0
+    call set_single_window
+    popad
+    ret
+
 ; RunDefaultPaletteCommand was DUPLICATED here as a second file-local copy of the
 ; body naming_screen.asm already `global`s (both just set the default palette id and
 ; tail-jump RunPaletteCommand). Two bodies for one pret label is a label-fidelity
@@ -743,7 +1217,7 @@ pdex_clear_list_area:
 ;   2. PokedexTileGraphics (18 tiles: frame/line tiles + the ′″ height
 ;      glyphs) → vChars2 tile $60,
 ;   3. PokeballTileGraphics (1 tile) → vChars2 tile $72 (caught marker).
-; Shared by G1 (ShowPokedexMenu.setUpGraphics) and G2 (pokedex_entry).
+; Used by both halves of this file (ShowPokedexMenu.setUpGraphics and ShowPokedexData).
 ; NB: this clobbers the box tiles $79-$7E via step 1 — the dex exit path
 ; (ShowPokedexMenu.exitPokedex → ReloadMapData) reloads LoadTextBoxTilePatterns
 ; + the map tileset, faithfully to pret. All registers preserved.
@@ -775,11 +1249,20 @@ LoadPokedexTilePatterns:
 ; dumps FRAME.BIN, exits. In: EBP = GB base.  make DEBUG_G1=1 (root wires flag).
 ; ===========================================================================
 %ifdef DEBUG_G1
-global RunPokedexTest
+%define DEBUG_PDEX
+%endif
+%ifdef DEBUG_G2
+%define DEBUG_PDEX
+%endif
+%ifdef DEBUG_PDEX
 extern LoadFontTilePatterns            ; gfx/load_font.asm
 extern ClearSprites                    ; gfx/sprites.asm
-extern PlaceMenuCursor                 ; home/window.asm
 extern DumpBackbuffer                  ; debug/debug_dump.asm — writes FRAME.BIN + exits
+%endif
+
+%ifdef DEBUG_G1
+global RunPokedexTest
+extern PlaceMenuCursor                 ; home/window.asm
 
 RunPokedexTest:
 %ifdef PDEX_AREA
@@ -845,3 +1328,26 @@ RunPokedexTest:
     jmp .hang
 %endif ; PDEX_AREA
 %endif ; DEBUG_G1
+
+; ===========================================================================
+; RunPokedexEntryTest — the DATA page's FRAME.BIN gate (make DEBUG_G2=1). Seeds a
+; seen+owned mon (RHYDON, internal index 1 → national dex 112), then drives the REAL
+; live path: the side menu's DATA option calls ShowPokedexDataInternal directly
+; (.choseData), whose .waitForButtonPress self-dumps FRAME.BIN under DEBUG_G2.
+; ===========================================================================
+%ifdef DEBUG_G2
+global RunPokedexEntryTest
+RunPokedexEntryTest:
+    mov byte [ebp + wPokedexNum], 1       ; RHYDON internal index (→ dex 112)
+    mov byte [ebp + wCurPartySpecies], 1
+    ; mark RHYDON (dex 112) seen + owned: bit 111 → byte 13, bit 7
+    or byte [ebp + wPokedexOwned + 13], 1 << 7
+    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    call LoadFontTilePatterns
+    call LoadPokedexTilePatterns          ; the dex tileset, as .setUpGraphics loads it
+    call ClearSprites
+    mov byte [ebp + W_UPDATE_SPRITES_ENABLED], 0
+    call ShowPokedexDataInternal
+.hangEntry:
+    jmp .hangEntry
+%endif ; DEBUG_G2
