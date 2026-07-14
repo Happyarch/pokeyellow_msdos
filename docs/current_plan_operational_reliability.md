@@ -39,6 +39,10 @@ runtime harness.
     terminal-marker validation (manifest declarations alone are not execution proof).
 - [ ] Add deterministic generator regeneration, parser-coverage, pret-byte, and
   longest-match charmap gates.
+  - [x] Add cross-generator longest-match and unknown-character regression tests
+    for the pret-derived item, move, field-move, battle-text, and alphabet encoders.
+  - [ ] Add temporary-tree regeneration, parser coverage, label identity, and
+    eligible byte-for-byte pret stream validation.
 - [ ] Add debug-only projection, scratch-owner, compositor-lifecycle, and
   re-entrancy assertions subsystem by subsystem.
 - [x] Reconcile M-69 and the MAP_BORDER=6 row-wrap stigmergy entries using repository/runtime
