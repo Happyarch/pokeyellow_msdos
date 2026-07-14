@@ -79,7 +79,7 @@ global FlashSprite8Times
 global CopyHealingMachineOAM
 
 extern CopyVideoData               ; home/copy2.asm (ESI=VRAM dest, EDX=flat src, BL=count)
-extern UpdateCGBPal_OBP1           ; overworld_stubs.asm ret-stub (TODO-HW palette; pret home/cgb_palettes.asm)
+extern UpdateCGBPal_OBP1           ; home/cgb_palettes.asm
 extern StopAllMusic                ; home/audio.asm (LIVE)
 extern PlaySound                   ; home/audio.asm (LIVE)
 extern DelayFrames                 ; video/frame.asm

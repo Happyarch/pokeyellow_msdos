@@ -80,8 +80,10 @@ extern ClearSprites
 extern hide_window
 extern LoadHpBarAndStatusTilePatterns
 extern LoadHudTilePatterns
+extern DuplicateEnemyHPBarTiles        ; battle_hud.asm — distinct palette-able enemy gauge IDs
 extern DrawBattleHUDs
 extern DrawEnemyHUD
+extern SetPal_Battle                    ; engine/gfx/palettes.asm
 
 ; --- _InitBattleCommon dependencies (the real overworld→battle orchestration) ---
 extern LoadFontTilePatterns              ; home/load_font.asm
@@ -175,6 +177,7 @@ InitBattle:
     ; clobber the box drawn below despite the load_font.asm warning.
     call LoadHpBarAndStatusTilePatterns
     call LoadHudTilePatterns                 ; HUD frame/divider tiles ($6d-$6f, $73-$78)
+    call DuplicateEnemyHPBarTiles            ; $63-$6b -> battle-local vFont clones
 
     ; --- full-screen blank: clear the whole 40×25 canvas to the space tile ---
     ; (per pret init order — blank the entire screen before drawing the layout).
@@ -264,6 +267,10 @@ _InitBattleCommon:
     mov esi, wPartyFoughtCurrentEnemyFlags
     call FlagAction
     call LoadBattleMonFromParty                ; wBattleMon* + player stat mods = $7
+
+    ; R1: species and initial HP-bar colors are now final, so bind the generated
+    ; battle tile slots before the first cache rebuild/slide frame.
+    call SetPal_Battle
 
     ; --- intro scene (proven DEBUG_BATTLE_LIVE order) ---
     call DrawPlayerRedBackPic_Stub             ; player trainer (Red) back pic — fixed sprite

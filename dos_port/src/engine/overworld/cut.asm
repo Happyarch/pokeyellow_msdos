@@ -90,7 +90,7 @@ extern RedrawMapView                ; src/engine/overworld/update_map.asm (OW-3.
 extern AnimCut                      ; src/engine/overworld/cut2.asm (OW-6.1)
 extern PlaySound                    ; src/home/audio.asm
 extern UpdateSprites                ; src/engine/overworld/movement.asm
-extern UpdateCGBPal_OBP1            ; overworld_stubs.asm ret-stub (TODO-HW palette; pret home/cgb_palettes.asm)
+extern UpdateCGBPal_OBP1            ; home/cgb_palettes.asm
 extern CopyVideoData                ; src/home/copy2.asm (ESI=VRAM dest, EDX=flat src, BL=count)
 extern WriteOAMBlock                ; src/home/oam.asm (AL=block, EDX=flat src, BH=Y, BL=X)
 extern overworld_gfx                ; src/engine/overworld/overworld.asm (overworld tileset gfx)
