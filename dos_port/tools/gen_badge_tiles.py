@@ -15,7 +15,11 @@ This is Tier-1 machine output: a deterministic passthrough of the pret .2bpp, no
 hand-authored information. Rerunning is idempotent.
 
 Output (NASM, .data):
-  badge_face_tiles:       64 tiles * 16 bytes, in sheet order.
+  GymLeaderFaceAndBadgeTileGraphics:   64 tiles * 16 bytes, in sheet order.
+      (pret's own label for this INCBIN — the port keeps it, per the
+      preserve-pret-labels rule; it used to be emitted as `badge_face_tiles`,
+      a port invention, which is why translation.db read the pret label as
+      `missing`.)
   BADGE_TILE_BYTES  equ 16          ; bytes per 2bpp 8x8 tile
   BADGE_FACE_TILE_COUNT equ 64      ; total tiles in the sheet
 
@@ -68,7 +72,9 @@ def main():
     out.append(f"BADGE_TILE_BYTES      equ {TILE}")
     out.append(f"BADGE_FACE_TILE_COUNT equ {count}")
     out.append("")
-    out.append("badge_face_tiles:")
+    out.append("; pret ref: engine/menus/draw_badges.asm:GymLeaderFaceAndBadgeTileGraphics")
+    out.append(';   INCBIN "gfx/trainer_card/badges.2bpp"')
+    out.append("GymLeaderFaceAndBadgeTileGraphics:")
     for t in range(count):
         row = data[t * TILE:(t + 1) * TILE]
         out.append("    db " + ", ".join(f"0x{b:02X}" for b in row))
