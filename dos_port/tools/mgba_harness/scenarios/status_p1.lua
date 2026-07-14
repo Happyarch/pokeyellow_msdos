@@ -32,8 +32,10 @@ scenario.run(function()
 	navigate.new_game_to_bedroom()
 
 	scenario.exec(function()
-		seed.player(sym, text:encode(seed.PLAYER_NAME))
-		seed.party(sym, text:encode(seed.PLAYER_NAME))
+		-- The port gate calls PrepareNewGameDebug, which seeds party + bag + dex +
+		-- badges + money; the WRAM regions are compared in every scenario, so the
+		-- golden must seed all of it, not just this screen's data.
+		seed.debug_new_game(sym, text:encode(seed.PLAYER_NAME))
 	end)
 
 	navigate.open_start_menu()

@@ -19,9 +19,87 @@
       "gb_addr": "0xFE00",
       "name": "oam",
       "size": 160
+    },
+    {
+      "file_offset": 6664,
+      "gb_addr": "0xD157",
+      "name": "wPlayerName",
+      "size": 11
+    },
+    {
+      "file_offset": 6675,
+      "gb_addr": "0xD162",
+      "name": "wPartyData",
+      "size": 404
+    },
+    {
+      "file_offset": 7079,
+      "gb_addr": "0xD2F6",
+      "name": "wPokedex",
+      "size": 38
+    },
+    {
+      "file_offset": 7117,
+      "gb_addr": "0xD31C",
+      "name": "wBagItems",
+      "size": 42
+    },
+    {
+      "file_offset": 7159,
+      "gb_addr": "0xD346",
+      "name": "wPlayerMoney",
+      "size": 3
+    },
+    {
+      "file_offset": 7162,
+      "gb_addr": "0xD354",
+      "name": "wOptionsBlock",
+      "size": 4
+    },
+    {
+      "file_offset": 7166,
+      "gb_addr": "0xD358",
+      "name": "wPlayerID",
+      "size": 2
+    },
+    {
+      "file_offset": 7168,
+      "gb_addr": "0xCF97",
+      "name": "wLoadedMon",
+      "size": 44
+    },
+    {
+      "file_offset": 7212,
+      "gb_addr": "0xD056",
+      "name": "wBattleFlags",
+      "size": 4
+    },
+    {
+      "file_offset": 7216,
+      "gb_addr": "0xCFD9",
+      "name": "wEnemyMonNick",
+      "size": 11
+    },
+    {
+      "file_offset": 7227,
+      "gb_addr": "0xCFE4",
+      "name": "wEnemyMon",
+      "size": 29
+    },
+    {
+      "file_offset": 7256,
+      "gb_addr": "0xD008",
+      "name": "wBattleMonNick",
+      "size": 11
+    },
+    {
+      "file_offset": 7267,
+      "gb_addr": "0xD013",
+      "name": "wBattleMon",
+      "size": 29
     }
   ],
   "rom_title": "POKEMON YEL",
   "scenario": "start_menu",
-  "total_size": 6664
+  "total_size": 7296
 }

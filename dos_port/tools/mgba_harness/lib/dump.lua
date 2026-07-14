@@ -22,15 +22,75 @@ local dump = {}
 
 assert(emu and emu.readRange, "dump: emu:readRange missing — not running under mGBA scripting?")
 
--- The three regions every golden carries (fidelity plan, Stage 1.1). The real
+-- Struct/field lengths, from pret's constants — never a magic number.
+--   party_struct  (macros/ram.asm:20) = PARTYMON_STRUCT_LENGTH ($2C)
+--   battle_struct (macros/ram.asm:39) = species, HP, box level, status, 2 types,
+--                 catch rate, moves, DVs, level, 5 stats, PP
+local NUM_MOVES, NUM_STATS = 4, 5
+local NAME_LENGTH = 11
+local BAG_ITEM_CAPACITY = 20
+local PARTYMON_STRUCT_LENGTH = 0x2C
+local BATTLEMON_STRUCT_LENGTH = 1 + 2 + 1 + 1 + 2 + 1 + NUM_MOVES + 2 + 1
+	+ 2 * NUM_STATS + NUM_MOVES -- = 29
+
+-- The video regions every golden carries (fidelity plan, Stage 1.1). The real
 -- GB wTileMap is 20×18 = 360 B at stride 20; the differ extracts the port's
 -- matching 20×18 subwindow from its 40×25 canvas using the sidecar.
-function dump.standard_regions(sym)
+function dump.video_regions(sym)
 	return {
 		{ name = "wTileMap",   addr = sym:addr("wTileMap"), size = 20 * 18 },
 		{ name = "vram_tiles", addr = 0x8000,               size = 0x1800 },
 		{ name = "oam",        addr = 0xFE00,               size = 160 },
 	}
+end
+
+-- The WRAM game-data regions (fidelity expansion, Stage 1a).
+--
+-- MIRRORED BY (join key = the name string; the differ cross-checks each region's
+-- gb_addr against the port's, so a memmap drift on either side fails loudly):
+--   dos_port/src/debug/debug_dump.asm  — `gbstate_regions` table
+--   dos_port/tools/golden_diff.py      — region policy (skips/masks/decoders)
+--
+-- Every address is resolved from pret's .sym (sym:addr errors on an unknown
+-- label) and every size is a symbol difference or a named length constant — so
+-- this tracks pret's wram.asm the way the port table tracks gb_memmap.inc.
+function dump.wram_regions(sym)
+	local owned, seen = sym:addr("wPokedexOwned"), sym:addr("wPokedexSeen")
+	return {
+		-- player / save-block game data (compared in EVERY scenario)
+		{ name = "wPlayerName", addr = sym:addr("wPlayerName"), size = NAME_LENGTH },
+		-- count + species list + $FF sentinel + 6 structs + 6 OT names + 6 nicks
+		{ name = "wPartyData",  addr = sym:addr("wPartyCount"),
+		  size = sym:addr("wPartyMonNicksEnd") - sym:addr("wPartyCount") },
+		-- owned + seen flag arrays, back to back (each NUM_POKEMON bits)
+		{ name = "wPokedex",    addr = owned, size = 2 * (seen - owned) },
+		{ name = "wBagItems",   addr = sym:addr("wNumBagItems"),
+		  size = 1 + BAG_ITEM_CAPACITY * 2 + 1 },
+		{ name = "wPlayerMoney", addr = sym:addr("wPlayerMoney"), size = 3 }, -- BCD
+		-- wOptions, wObtainedBadges, wUnusedObtainedBadges, wLetterPrintingDelayFlags
+		{ name = "wOptionsBlock", addr = sym:addr("wOptions"),
+		  size = sym:addr("wPlayerID") - sym:addr("wOptions") },
+		{ name = "wPlayerID",   addr = sym:addr("wPlayerID"), size = 2 },
+		-- battle / transient mon state (skipped per-scenario where unloaded)
+		{ name = "wLoadedMon",  addr = sym:addr("wLoadedMon"), size = PARTYMON_STRUCT_LENGTH },
+		-- wIsInBattle, wD057, wCurOpponent, wBattleType
+		{ name = "wBattleFlags", addr = sym:addr("wIsInBattle"),
+		  size = sym:addr("wBattleType") + 1 - sym:addr("wIsInBattle") },
+		{ name = "wEnemyMonNick",  addr = sym:addr("wEnemyMonNick"),  size = NAME_LENGTH },
+		{ name = "wEnemyMon",      addr = sym:addr("wEnemyMon"),      size = BATTLEMON_STRUCT_LENGTH },
+		{ name = "wBattleMonNick", addr = sym:addr("wBattleMonNick"), size = NAME_LENGTH },
+		{ name = "wBattleMon",     addr = sym:addr("wBattleMon"),     size = BATTLEMON_STRUCT_LENGTH },
+	}
+end
+
+-- Every golden's region set: video + WRAM. One edit here upgrades every scenario
+-- on the next `make goldens`.
+function dump.standard_regions(sym)
+	local regions = dump.video_regions(sym)
+	for _, r in ipairs(dump.wram_regions(sym)) do
+		regions[#regions + 1] = r
+	end
+	return regions
 end
 
 -- Minimal JSON encoder — enough for the sidecar (numbers, strings, booleans,

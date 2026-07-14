@@ -142,7 +142,17 @@ extern pad_noclip
 %ifdef DEBUG_BAGMENU
 extern RunBagMenuTest
 %endif
+; Deterministic player identity ("RED" / id 0 — the seed.lua golden spec). Needed by
+; every gate whose golden compares the wPlayerName/wPlayerID WRAM regions, not just
+; the start menu: without it wPlayerID is an RNG roll from InitPlayerData and is not
+; reproducible between runs of the port itself (fidelity plan F-5).
 %ifdef DEBUG_STARTMENU
+%define NEED_SEED_IDENTITY
+%endif
+%ifdef DEBUG_TRANSITION
+%define NEED_SEED_IDENTITY
+%endif
+%ifdef NEED_SEED_IDENTITY
 extern SeedDeterministicPlayerIdentity  ; engine/debug/debug_party.asm — "RED"/id 0 (seed.lua spec)
 %endif
 %ifdef DEBUG_BAGMENU_LIVE
@@ -598,6 +608,12 @@ EnterMap:
     mov byte [ebp + W_Y_COORD], 255
     call CheckMapConnections                  ; sets W_CUR_MAP + view ptr for Route 1
 %endif
+    ; Player identity = the golden spec ("RED" / id 0), as the DEBUG_STARTMENU gate
+    ; below already does. Without this the overworld_pallet golden compares the build
+    ; define (PLAYER_NAME, e.g. "NINTEN") against the golden's "RED", and — worse —
+    ; wPlayerID is whatever InitPlayerData rolled from the RNG, so it is not even
+    ; reproducible run to run. Only visible since the WRAM regions are compared (F-5).
+    call SeedDeterministicPlayerIdentity
     mov byte [ebp + W_WALK_COUNTER], 0
     mov byte [ebp + W_SPRITE_PLAYER_Y_STEP_VECTOR], 0
     mov byte [ebp + W_SPRITE_PLAYER_X_STEP_VECTOR], 0

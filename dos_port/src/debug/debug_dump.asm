@@ -190,21 +190,60 @@ WIN_SIZE     equ 0x40
 NUM_WINDOWS  equ 9
 DUMP_TOTAL   equ NUM_WINDOWS * WIN_SIZE          ; 9 * 64 = 576 bytes
 
-; GBSTATE.BIN layout (fidelity harness, Session D): fixed regions after a
-; 16-byte header, mirroring the golden dump regions (tools/mgba_harness/lib/
-; dump.lua) except the tilemap, which is the port's full 40x25 canvas — the
-; differ (golden_diff.py) extracts the 20x18 subwindow per scenario.
-;   +0x00  magic "GBST", u8 version=1, u8 scenario id, 10 reserved (0)
-;   +0x10  W_TILEMAP   0xC3A0, 1000 B (40x25, stride 40)
-;   +0x3F8 VRAM        0x8000, 6144 B (tile data 0x8000-0x97FF)
-;   +0x1BF8 OAM        0xFE00, 160 B
-GBSTATE_VERSION  equ 1
-GBSTATE_HDR_SIZE equ 16
-GBSTATE_VRAM_SIZE equ 0x1800
-GBSTATE_TOTAL    equ GBSTATE_HDR_SIZE + W_TILEMAP_SIZE + GBSTATE_VRAM_SIZE + GB_OAM_SIZE
+; GBSTATE.BIN layout, version 2 (fidelity harness) — SELF-DESCRIBING.
+;
+; v1 was three hardcoded regions, mirrored by hand in the Lua dumper and the
+; differ: three copies of the same address/size list, none of which knew when
+; the others drifted. WRAM is a moving target (gb_memmap.inc is edited as the
+; port grows), so v2 carries its own region directory and every address/size
+; below is SOURCED FROM A SYMBOL, never a literal:
+;
+;   +0x00  header (GBSTATE_HDR_SIZE = 16 B)
+;            +0x00  magic "GBST"
+;            +0x04  u8  version (2)
+;            +0x05  u8  scenario id (GBSTATE_SCENARIO, sanity tag)
+;            +0x06  u16 region count
+;            +0x08  u32 directory size in bytes
+;            +0x0C  u32 total file size
+;   +0x10  region directory: `count` x GBSTATE_DIRENT_SIZE (32 B) entries
+;            +0x00  char name[20]  (NUL-padded; the differ's JOIN KEY)
+;            +0x14  u32 gb_addr    (GB address the bytes came from)
+;            +0x18  u32 size
+;            +0x1C  u32 file_offset (filled in at dump time)
+;   then    region payloads, concatenated in directory order.
+;
+; The differ (tools/golden_diff.py) reads this directory instead of hardcoding
+; the layout, and cross-checks each region's gb_addr against the address the
+; golden side resolved from pret's .sym — so a memmap drift on either side
+; fails loudly instead of silently comparing the wrong bytes.
+;
+; The one region that is deliberately NOT the same shape as the golden's is
+; wTileMap: the port dumps its full 40x25 canvas (the golden is the GB's 20x18),
+; and the differ extracts the per-scenario subwindow. Same name, different size,
+; by design.
+GBSTATE_VERSION     equ 2
+GBSTATE_HDR_SIZE    equ 16
+GBSTATE_NAME_LEN    equ 20
+GBSTATE_DIRENT_SIZE equ GBSTATE_NAME_LEN + 12    ; name + gb_addr + size + file_offset
+GBSTATE_VRAM_SIZE   equ 0x1800
+
+; battle_struct (pret macros/ram.asm:39) — species, HP, box level, status, 2
+; types, catch rate, moves, DVs, level, 5 stats, PP. Derived, not a literal.
+BATTLEMON_STRUCT_LENGTH equ 1 + 2 + 1 + 1 + 2 + 1 + NUM_MOVES + 2 + 1 \
+                            + 2 * NUM_STATS + NUM_MOVES              ; = 29
 ; scenario id tag (sanity check only — the differ selects the golden by make
 ; target; ids: 0 other/unknown, 1 overworld (TRANSITION/BASELINE/WALK_NORTH),
-; 2 STARTMENU, 3 STATUS, 4 STATUS_PAGE2, 5 PARTYMENU, 6 BAGMENU, 7 BATTLE)
+; 2 STARTMENU, 3 STATUS, 4 STATUS_PAGE2, 5 PARTYMENU, 6 BAGMENU, 7 BATTLE,
+; 8 OPTIONS, 9 TRAINERCARD, 10 G1 (dex list), 11 G2 (dex entry), 12 NAMINGSCREEN,
+; 13 SIGNTEXT, 15 BATTLE_INTRO, 16 MOVEMENU (the FIGHT sub-menu), 17 ITEMTM,
+; 18 ITEMSTONE, 19 ITEMUSE, 20 ITEMBALL).
+; Id 14 is RESERVED for a battle-menu gate that does not exist yet (it lands with
+; the fidelity plan's Stage 2); every %elifdef below names a gate the Makefile
+; actually defines. Master's newer audit gates (DEBUG_TEXT, DEBUG_YESNO,
+; DEBUG_LISTMENU_QTY, ...) have no id yet and tag as 0 — ids 21+ when they get one.
+; ORDER MATTERS: a gate that IMPLIES another must be tested first — the Makefile's
+; DEBUG_ITEMBALL block adds `-D DEBUG_BATTLE`, so ITEMBALL precedes BATTLE here or
+; it would tag itself 7.
 %ifdef DEBUG_STATUS_PAGE2
 GBSTATE_SCENARIO equ 4
 %elifdef DEBUG_STATUS
@@ -215,6 +254,30 @@ GBSTATE_SCENARIO equ 2
 GBSTATE_SCENARIO equ 5
 %elifdef DEBUG_BAGMENU
 GBSTATE_SCENARIO equ 6
+%elifdef DEBUG_OPTIONS
+GBSTATE_SCENARIO equ 8
+%elifdef DEBUG_TRAINERCARD
+GBSTATE_SCENARIO equ 9
+%elifdef DEBUG_G1
+GBSTATE_SCENARIO equ 10
+%elifdef DEBUG_G2
+GBSTATE_SCENARIO equ 11
+%elifdef DEBUG_NAMINGSCREEN
+GBSTATE_SCENARIO equ 12
+%elifdef DEBUG_SIGNTEXT
+GBSTATE_SCENARIO equ 13
+%elifdef DEBUG_ITEMTM
+GBSTATE_SCENARIO equ 17
+%elifdef DEBUG_ITEMSTONE
+GBSTATE_SCENARIO equ 18
+%elifdef DEBUG_ITEMUSE
+GBSTATE_SCENARIO equ 19
+%elifdef DEBUG_ITEMBALL
+GBSTATE_SCENARIO equ 20                 ; before DEBUG_BATTLE: ITEMBALL implies it
+%elifdef DEBUG_MOVEMENU
+GBSTATE_SCENARIO equ 16
+%elifdef DEBUG_BATTLE_INTRO
+GBSTATE_SCENARIO equ 15
 %elifdef DEBUG_BATTLE
 GBSTATE_SCENARIO equ 7
 %elifdef DEBUG_TRANSITION
@@ -247,6 +310,67 @@ fpname: db "PAL.BIN", 0
 ; never hand-encoded — tools/gen_text_oracle.py.
 %include "assets/text_oracle.inc"
 %endif
+
+; ---------------------------------------------------------------------------
+; GBSTATE.BIN region directory (layout spec at the GBSTATE_* equates above).
+;
+; MIRRORED BY (join key = the name string; addresses cross-checked at diff time):
+;   tools/mgba_harness/lib/dump.lua  — dump.wram_regions(), resolving the SAME
+;                                      names from pret's .sym
+;   tools/golden_diff.py             — region policy (skips/masks/decoders)
+;
+; Every addr/size is a symbol or a symbol difference — gb_memmap.inc equates and
+; the struct-length constants — so editing the memmap moves the dump with it.
+; A region is "everything between symbol A and symbol B" wherever that is what it
+; means; otherwise it is a named length constant.
+;
+; Excluded deliberately: NPC_DIALOG_BUF (port-bespoke staging WRAM with no GB
+; counterpart — rendered text is compared as tilemap cells instead), the rival
+; name span (build-define, not spec'd by seed.lua), and the wStringBuffer union
+; (volatile multi-use scratch: its contents depend on which routine last ran).
+%assign GBSTATE_PAYLOAD 0
+%macro gbregion 3           ; %1 = name string, %2 = GB address, %3 = size
+%%name: db %1
+%if ($ - %%name) > GBSTATE_NAME_LEN
+    %error "gbregion name too long for GBSTATE_NAME_LEN"
+%endif
+    times GBSTATE_NAME_LEN - ($ - %%name) db 0
+    dd %2                   ; gb_addr
+    dd %3                   ; size
+    dd 0                    ; file_offset — filled in by DumpGBState
+%assign GBSTATE_PAYLOAD GBSTATE_PAYLOAD + (%3)
+%endmacro
+
+align 4
+gbstate_regions:
+    ; --- video state (the v1 regions; wTileMap is the port's 40x25 canvas) ---
+    gbregion "wTileMap",      W_TILEMAP,     W_TILEMAP_SIZE
+    gbregion "vram_tiles",    GB_VRAM0,      GBSTATE_VRAM_SIZE
+    gbregion "oam",           GB_OAM,        GB_OAM_SIZE
+    ; --- player / save-block game data (compared in EVERY scenario) ---
+    gbregion "wPlayerName",   wPlayerName,   NAME_LENGTH
+    ; count + species list + $FF sentinel + 6 structs + 6 OT names + 6 nicks
+    gbregion "wPartyData",    wPartyCount,   wPartyMonNicksEnd - wPartyCount
+    ; owned + seen flag arrays, back to back (each NUM_POKEMON bits)
+    gbregion "wPokedex",      wPokedexOwned, 2 * (wPokedexSeen - wPokedexOwned)
+    gbregion "wBagItems",     wNumBagItems,  1 + BAG_ITEM_CAPACITY * 2 + 1
+    gbregion "wPlayerMoney",  wPlayerMoney,  3      ; BCD
+    ; wOptions, wObtainedBadges, wUnusedObtainedBadges, wLetterPrintingDelayFlags
+    gbregion "wOptionsBlock", wOptions,      wPlayerID - wOptions
+    gbregion "wPlayerID",     wPlayerID,     2
+    ; --- battle / transient mon state (skipped per-scenario where unloaded) ---
+    gbregion "wLoadedMon",    wLoadedMon,    PARTYMON_STRUCT_LENGTH
+    ; wIsInBattle, wD057, wCurOpponent, wBattleType
+    gbregion "wBattleFlags",  wIsInBattle,   wBattleType + 1 - wIsInBattle
+    gbregion "wEnemyMonNick",  wEnemyMonNick,  NAME_LENGTH
+    gbregion "wEnemyMon",      wEnemyMon,      BATTLEMON_STRUCT_LENGTH
+    gbregion "wBattleMonNick", wBattleMonNick, NAME_LENGTH
+    gbregion "wBattleMon",     wBattleMon,     BATTLEMON_STRUCT_LENGTH
+gbstate_regions_end:
+
+GBSTATE_DIR_SIZE     equ gbstate_regions_end - gbstate_regions
+GBSTATE_REGION_COUNT equ GBSTATE_DIR_SIZE / GBSTATE_DIRENT_SIZE
+GBSTATE_TOTAL        equ GBSTATE_HDR_SIZE + GBSTATE_DIR_SIZE + GBSTATE_PAYLOAD
 %ifdef DEBUG_NPC_WALK
 fnlog: db "NPCLOG.BIN", 0
 %endif
@@ -1221,6 +1345,10 @@ RunStatusScreenTest:
 ; In: EBP = GB memory base.
 ; ---------------------------------------------------------------------------
 DebugDumpMemory:
+    call DumpGBState               ; GBSTATE.BIN alongside every DUMP.BIN, so the
+                                   ; DUMP.BIN-only gates (DEBUG_ITEM*, CALCSTATS…)
+                                   ; feed the fidelity differ too — symmetric with
+                                   ; DumpBackbuffer's call.
     ; --- 1. Gather each GB window into the staging buffer ---
     mov esi, windows
     mov edi, stage
@@ -1313,9 +1441,9 @@ DebugDumpMemory:
 ; ---------------------------------------------------------------------------
 DumpGBState:
     ; --- Allocate a conventional DOS buffer: 0x10 + GBSTATE_TOTAL bytes ---
-    ; 16 + 7320 = 7336 -> 459 paragraphs; round up to 0x200 (8 KB).
+    ; 16 + 8464 = 8480 -> 530 paragraphs; round up to 0x280 (10 KB).
     mov ax, 0x0100
-    mov bx, 0x200
+    mov bx, 0x280
     int 0x31
     jc .ret
     mov [dos_seg], ax
@@ -1331,28 +1459,42 @@ DumpGBState:
     mov ecx, 12                    ; "GBSTATE.BIN" + NUL
     rep movsb
 
-    ; --- Header at offset 0x10 ---
-    mov edi, [dos_flat]
-    add edi, 0x10
-    mov dword [edi], 'GBST'        ; little-endian store -> bytes G,B,S,T
-    mov byte [edi + 4], GBSTATE_VERSION
-    mov byte [edi + 5], GBSTATE_SCENARIO
-    xor eax, eax
-    mov word [edi + 6], ax         ; reserved
-    mov dword [edi + 8], eax
-    mov dword [edi + 12], eax
-    add edi, GBSTATE_HDR_SIZE
+    ; --- Header at offset 0x10 (= file offset 0) ---
+    mov ebx, [dos_flat]
+    add ebx, 0x10                  ; ebx = file base inside the DOS buffer
+    mov dword [ebx], 'GBST'        ; little-endian store -> bytes G,B,S,T
+    mov byte [ebx + 4], GBSTATE_VERSION
+    mov byte [ebx + 5], GBSTATE_SCENARIO
+    mov word [ebx + 6], GBSTATE_REGION_COUNT
+    mov dword [ebx + 8], GBSTATE_DIR_SIZE
+    mov dword [ebx + 12], GBSTATE_TOTAL
 
-    ; --- Regions: W_TILEMAP (40x25), VRAM tile data, OAM ---
-    lea esi, [ebp + W_TILEMAP]
-    mov ecx, W_TILEMAP_SIZE
+    ; --- Copy the region directory verbatim; EDI lands on the payload start ---
+    mov esi, gbstate_regions
+    lea edi, [ebx + GBSTATE_HDR_SIZE]
+    mov ecx, GBSTATE_DIR_SIZE
     rep movsb
-    lea esi, [ebp + GB_VRAM0]
-    mov ecx, GBSTATE_VRAM_SIZE
-    rep movsb
-    lea esi, [ebp + GB_OAM]
-    mov ecx, GB_OAM_SIZE
-    rep movsb
+
+    ; --- Walk the regions: copy each payload, back-fill its file_offset ---
+    ;   EBX = source dirent cursor    EDX = dest dirent cursor (in the buffer)
+    ;   EDI = payload write cursor    EAX = running file offset
+    mov edx, ebx
+    add edx, GBSTATE_HDR_SIZE
+    mov ebx, gbstate_regions
+    mov eax, GBSTATE_HDR_SIZE + GBSTATE_DIR_SIZE
+.region:
+    cmp ebx, gbstate_regions_end
+    jae .regions_done
+    mov [edx + GBSTATE_NAME_LEN + 8], eax     ; dirent.file_offset
+    mov esi, [ebx + GBSTATE_NAME_LEN]         ; dirent.gb_addr
+    mov ecx, [ebx + GBSTATE_NAME_LEN + 4]     ; dirent.size
+    add eax, ecx
+    lea esi, [ebp + esi]                      ; flat source = GB base + addr
+    rep movsb                                 ; -> EDI, which accumulates
+    add ebx, GBSTATE_DIRENT_SIZE
+    add edx, GBSTATE_DIRENT_SIZE
+    jmp .region
+.regions_done:
 
     ; --- Create GBSTATE.BIN ---
     call zero_rmcs

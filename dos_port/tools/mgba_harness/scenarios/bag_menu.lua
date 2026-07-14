@@ -49,8 +49,10 @@ scenario.run(function()
 	assert(y == 8 and x == 8, "bag_menu: did not reach the (8,8) spawn tile")
 
 	scenario.exec(function()
-		seed.player(sym, text:encode(seed.PLAYER_NAME))
-		seed.items(sym)
+		-- The port gate (RunBagMenuTest) calls PrepareNewGameDebug: party + bag +
+		-- dex + badges + money. Every scenario compares the full WRAM game-data
+		-- block, so seed all of it, not just the bag this screen shows.
+		seed.debug_new_game(sym, text:encode(seed.PLAYER_NAME))
 	end)
 
 	navigate.open_start_menu()

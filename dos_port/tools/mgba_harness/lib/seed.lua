@@ -22,6 +22,7 @@ local seed = {}
 
 local PARTYMON_STRUCT_LENGTH = 44
 local NAME_LENGTH = 11
+local NUM_POKEMON = 151
 local TERMINATOR = 0x50 -- "@"
 
 -- Fixed DV spec: Atk 9 / Def 8 / Spd 7 / Spc 6 (→ HP DV 10, from the LSBs).
@@ -110,6 +111,71 @@ local function move_pp(sym, move) -- Moves record: anim/effect/power/type/acc/pp
 	return rom(sym, "Moves", 6 * (move - 1) + 5, 1):byte(1)
 end
 
+-- GetMonLearnset (pret engine/pokemon/evos_moves.asm:617): index
+-- EvosMovesPointerTable by internal species id, follow the pointer, then skip the
+-- evolution data — which, exactly as pret does it, means scanning bytes until a 0
+-- (no interior byte of an evo entry is ever 0, and a single 0 terminates the list).
+-- Returns the learnset as an ordered {level, move} list (sorted by level).
+local function mon_learnset(sym, internal)
+	local entry = sym:get("EvosMovesPointerTable") or error("seed: no sym EvosMovesPointerTable")
+	local cart = assert(emu.memory.cart0, "seed: cart0 memory domain missing")
+	local ptr_bytes = cart:readRange(flat(entry) + 2 * (internal - 1), 2)
+	local ptr = ptr_bytes:byte(1) | (ptr_bytes:byte(2) << 8)
+	-- the evos/moves data lives in the same bank as its pointer table
+	local off = entry.bank * 0x4000 + (ptr - 0x4000)
+
+	local data = cart:readRange(off, 256)
+	local i = 1
+	while data:byte(i) ~= 0 do -- skip evolution data
+		i = i + 1
+		assert(i < 256, "seed: runaway evolution data — bad learnset pointer?")
+	end
+	i = i + 1 -- past the terminator; learnset = (level, move) pairs, 0-terminated
+
+	local learnset = {}
+	while data:byte(i) ~= 0 do
+		learnset[#learnset + 1] = { level = data:byte(i), move = data:byte(i + 1) }
+		i = i + 2
+		assert(i < 256, "seed: runaway learnset")
+	end
+	return learnset
+end
+
+-- WriteMonMoves (pret evos_moves.asm:498), with wLearningMovesFromDayCare = 0 —
+-- which is what _AddPartyMon sets before its `predef WriteMonMoves` (add_mon.asm:197).
+--
+-- This is THE step that makes a party mon's moves the ones it would actually know
+-- at its level: _AddPartyMon first copies the species' four base-stats moves, then
+-- WriteMonMoves walks the level-up learnset and folds in every move at or below the
+-- mon's level (skipping duplicates, filling an empty slot, else shifting slot 1 out
+-- and appending at slot 4). Seeding only the base moves — as this file used to —
+-- produces a party the real game would never produce.
+local function write_mon_moves(moves, learnset, level)
+	for _, entry in ipairs(learnset) do
+		if level < entry.level then
+			break -- learnset is sorted by level
+		end
+		local known, empty = false, nil
+		for slot = 1, 4 do
+			if moves[slot] == entry.move then
+				known = true
+				break
+			end
+			if empty == nil and moves[slot] == 0 then
+				empty = slot
+			end
+		end
+		if not known then
+			if empty then
+				moves[empty] = entry.move
+			else -- no free slot: shift moves up (deleting move 1), append at 4
+				moves[1], moves[2], moves[3], moves[4] = moves[2], moves[3], moves[4], entry.move
+			end
+		end
+	end
+	return moves
+end
+
 -- ---------------------------------------------------------------------------
 -- pret formulas
 -- ---------------------------------------------------------------------------
@@ -171,8 +237,13 @@ local function build_mon(sym, mon)
 		catch = 0x60
 	end
 
-	-- moves: species level-1 moves; PP from THESE; pokes applied after
-	local moves = { bs:byte(16, 19) }
+	-- Moves, exactly as _AddPartyMon builds them: the species' four base-stats
+	-- moves, then `predef WriteMonMoves` folds in the level-up learnset for this
+	-- level (add_mon.asm:179-199). PP is written AFTERWARDS, by
+	-- AddPartyMon_WriteMovePP (add_mon.asm:230), so it comes from the FINAL moves.
+	-- The port's `pokes` (PrepareNewGameDebug's HM overrides) are applied later
+	-- still and do NOT recompute PP — a port quirk this mirrors deliberately.
+	local moves = write_mon_moves({ bs:byte(16, 19) }, mon_learnset(sym, mon.species), mon.level)
 	local pp = {}
 	for i = 1, 4 do
 		pp[i] = moves[i] ~= 0 and move_pp(sym, moves[i]) or 0
@@ -257,6 +328,62 @@ function seed.items(sym, items)
 	bytes = bytes .. "\xFF"
 	write_bytes(sym:addr("wNumBagItems"), bytes)
 	console:log(("seed: bag of %d items written"):format(#items))
+end
+
+-- Pokédex flags, mirroring the port's DebugSetPokedexEntries (all SEEN) and
+-- DebugSetPokedexOwnedScatter (a deterministic ~half-set OWNED pattern), so both
+-- sides show the same CONTENTS list. debug_party.asm:216-245 is the spec: NUM_POKEMON/8
+-- full bytes then a tail byte masked to the leftover bits.
+function seed.pokedex(sym)
+	local full, tail_bits = NUM_POKEMON // 8, NUM_POKEMON % 8
+	local tail_mask = (1 << tail_bits) - 1
+
+	local seen = string.rep("\xFF", full) .. string.char(tail_mask)
+	write_bytes(sym:addr("wPokedexSeen"), seen)
+
+	local owned, a = "", 0xB5 -- pattern seed
+	for _ = 1, full do
+		owned = owned .. string.char(a)
+		a = ((a << 3) | (a >> 5)) & 0xFF -- rol al, 3
+		a = a ~ 0x5D                     -- xor al, 0x5D
+	end
+	owned = owned .. string.char(a & tail_mask)
+	write_bytes(sym:addr("wPokedexOwned"), owned)
+	console:log("seed: pokedex written (all seen, scattered owned)")
+end
+
+-- wPlayerMoney (3-byte BCD) — the port's "give max money" (debug_party.asm:182).
+function seed.money(sym, bcd)
+	bcd = bcd or "\x99\x99\x99"
+	assert(#bcd == 3, "seed: money is 3 BCD bytes")
+	write_bytes(sym:addr("wPlayerMoney"), bcd)
+end
+
+-- wObtainedBadges — the port grants every badge except EARTHBADGE (bit 7).
+function seed.badges(sym, badges)
+	emu:write8(sym:addr("wObtainedBadges"), badges or 0x7F)
+end
+
+-- The whole of the port's PrepareNewGameDebug (debug_party.asm:76-186) in one
+-- call: identity, party, bag, pokédex, badges, money.
+--
+-- Every port DEBUG_* gate that reaches a real screen calls PrepareNewGameDebug,
+-- so the golden must seed ALL of it — not just the parts the screen under test
+-- displays. Before the WRAM regions were compared, a scenario could get away with
+-- seeding only its own screen's data (status seeded the party but no bag, etc.);
+-- now every scenario compares the full game-data block, so any gap shows up as a
+-- divergence. Scenarios whose port gate seeds LESS (start_menu calls only
+-- SeedDeterministicPlayerIdentity) must correspondingly call only seed.player.
+--
+-- NOT mirrored, because no compared region covers them: wEventFlags
+-- (EVENT_GOT_POKEDEX), wRivalStarter, wTownVisitedFlag, wMonDataLocation.
+function seed.debug_new_game(sym, name_bytes)
+	seed.player(sym, name_bytes)
+	seed.party(sym, name_bytes)
+	seed.items(sym)
+	seed.pokedex(sym)
+	seed.badges(sym)
+	seed.money(sym)
 end
 
 return seed

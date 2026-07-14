@@ -3,18 +3,25 @@
 
 The golden (tests/goldens/<scenario>.bin + .json sidecar) is ground truth dumped
 from the sha1-verified pokeyellow ROM by tools/mgba_harness. The port dump
-(GBSTATE.BIN, written by src/debug/debug_dump.asm:DumpGBState) has a fixed
-layout: 16-byte header ("GBST", version, scenario id) + wTileMap 40x25 (1000 B,
-stride 40) + VRAM 0x8000-0x97FF (6144 B) + OAM (160 B).
+(GBSTATE.BIN, written by src/debug/debug_dump.asm:DumpGBState) is SELF-DESCRIBING
+as of v2: a 16-byte header + a region directory (name, GB address, size, file
+offset) + the payloads. Neither side hardcodes an address here — the port table is
+built from gb_memmap.inc equates, the golden's from pret's .sym, and this differ
+reads both layouts and joins them BY REGION NAME. WRAM is a moving target, so
+every shared region's GB address is cross-checked between the two sides: a memmap
+drift fails loudly instead of silently comparing the wrong bytes.
 
 Regions compared:
-  tilemap — the port's 20x18 subwindow (per-scenario (col,row) offset in
-            SCENARIOS below; the port pins the GB screen inside its 40x25
-            canvas) vs the golden's wTileMap, cell by cell, glyphs decoded via
-            assets/gb_charmap.txt in the report.
-  vram    — per 16-byte tile slot, so a clobbered slot is named directly
-            (the $73/$74 HUD-clobber class).
-  oam     — per 4-byte sprite entry.
+  wTileMap   — the port's 20x18 subwindow (per-scenario (col,row) offset in
+               SCENARIOS below; the port pins the GB screen inside its 40x25
+               canvas) vs the golden's wTileMap, cell by cell, glyphs decoded via
+               assets/gb_charmap.txt in the report.
+  vram_tiles — per 16-byte tile slot, so a clobbered slot is named directly
+               (the $73/$74 HUD-clobber class).
+  oam        — per 4-byte sprite entry.
+  WRAM       — every other region, byte for byte, reported field-aware: a bad DV
+               prints as "mon 3 DVs" and a bad slot as "bag slot 2 quantity",
+               with names/species charmap-decoded (see the FIELDS tables).
 
 Masks (per scenario, each with a written justification) suppress cells/slots
 that legitimately diverge; anything else nonzero-exits.
@@ -25,17 +32,74 @@ Usage: golden_diff.py <scenario> --gbstate PATH [--goldens DIR] [--charmap PATH]
 
 import argparse
 import json
-import re
+import struct
 import sys
 from pathlib import Path
 
 PORT_CANVAS_W, PORT_CANVAS_H = 40, 25
 GB_W, GB_H = 20, 18
 HDR_SIZE = 16
+DIRENT_SIZE = 32
+NAME_LEN = 20
+GBSTATE_VERSION = 2
 PORT_TILEMAP_SIZE = PORT_CANVAS_W * PORT_CANVAS_H
 VRAM_SIZE = 0x1800
 OAM_SIZE = 160
-PORT_TOTAL = HDR_SIZE + PORT_TILEMAP_SIZE + VRAM_SIZE + OAM_SIZE
+
+# Regions handled by the dedicated video comparators; everything else in the
+# dump is WRAM game data, compared byte-for-byte by compare_wram().
+VIDEO_REGIONS = ("wTileMap", "vram_tiles", "oam")
+
+# --- struct field maps: (offset, size, name) — used to name a diverging byte ---
+# party_struct (pret macros/ram.asm:20), 44 B. Offset 7 is the catch rate, which
+# Gen 2's Time Capsule reuses as the held item — see CLAUDE.md.
+PARTYMON_FIELDS = [
+    (0, 1, "species"), (1, 2, "HP"), (3, 1, "box level"), (4, 1, "status"),
+    (5, 1, "type1"), (6, 1, "type2"), (7, 1, "catch rate (Gen-2 held item)"),
+    (8, 1, "move 1"), (9, 1, "move 2"), (10, 1, "move 3"), (11, 1, "move 4"),
+    (12, 2, "OT ID"), (14, 3, "EXP"),
+    (17, 2, "HP stat exp"), (19, 2, "attack stat exp"), (21, 2, "defense stat exp"),
+    (23, 2, "speed stat exp"), (25, 2, "special stat exp"),
+    (27, 2, "DVs"),
+    (29, 1, "PP 1"), (30, 1, "PP 2"), (31, 1, "PP 3"), (32, 1, "PP 4"),
+    (33, 1, "level"), (34, 2, "max HP"), (36, 2, "attack"), (38, 2, "defense"),
+    (40, 2, "speed"), (42, 2, "special"),
+]
+# battle_struct (pret macros/ram.asm:39), 29 B — no EXP/stat-exp, DVs move up.
+BATTLEMON_FIELDS = [
+    (0, 1, "species"), (1, 2, "HP"), (3, 1, "party pos"), (4, 1, "status"),
+    (5, 1, "type1"), (6, 1, "type2"), (7, 1, "catch rate"),
+    (8, 1, "move 1"), (9, 1, "move 2"), (10, 1, "move 3"), (11, 1, "move 4"),
+    (12, 2, "DVs"), (14, 1, "level"),
+    (15, 2, "max HP"), (17, 2, "attack"), (19, 2, "defense"), (21, 2, "speed"),
+    (23, 2, "special"),
+    (25, 1, "PP 1"), (26, 1, "PP 2"), (27, 1, "PP 3"), (28, 1, "PP 4"),
+]
+PARTYMON_LEN = 44
+NAME_LENGTH = 11
+PARTY_LENGTH = 6
+BAG_ITEM_CAPACITY = 20
+
+# Flat byte-index -> field-name maps for the fixed-layout blocks.
+_OPTIONS_BLOCK = {0: "wOptions", 1: "wObtainedBadges", 2: "wUnusedObtainedBadges",
+                  3: "wLetterPrintingDelayFlags"}
+_BATTLE_FLAGS = {0: "wIsInBattle", 1: "wD057", 2: "wCurOpponent", 3: "wBattleType"}
+
+# Charmap, for decoding names/glyphs in the report. Set from main().
+_CHARMAP = {}
+
+# Outside a battle, the battle-mon scratch regions hold whatever the last battle
+# (or, on a fresh boot, nothing) left there — the golden's boot path and the
+# port's SKIP_TITLE path do not converge on uninitialized scratch, and the game
+# never reads it in this state. Battle scenarios drop this and compare them.
+_NONBATTLE_WRAM_SKIP = {
+    "wBattleFlags": "no battle: wIsInBattle/wCurOpponent/wBattleType are only meaningful "
+                    "inside one; battle scenarios (Stage 2) compare them",
+    "wEnemyMonNick": "no battle: enemy-mon scratch is uninitialized on both sides",
+    "wEnemyMon": "no battle: enemy-mon scratch is uninitialized on both sides",
+    "wBattleMonNick": "no battle: player-battle-mon scratch is uninitialized on both sides",
+    "wBattleMon": "no battle: player-battle-mon scratch is uninitialized on both sides",
+}
 
 # Per-scenario port config:
 #   flags  — make variables that build the matching DEBUG_* image
@@ -95,16 +159,19 @@ ICON_GAP_SLOTS = sorted(
 SCENARIOS = {
     "status_p1": {
         "flags": "DEBUG_STATUS=1",
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
         "window": (10, 3),
         "masks": _STATUS_MASKS,
     },
     "status_p2": {
         "flags": "DEBUG_STATUS=1 DEBUG_STATUS_PAGE2=1",
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
         "window": (10, 3),
         "masks": _STATUS_MASKS,
     },
     "overworld_pallet": {
         "flags": "DEBUG_TRANSITION=1 DEBUG_BASELINE=1",
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
         # Same (8,8) Pallet spawn as start_menu -> same block-aligned mirror
         # window; golden rows 15-17 fall past the 25-row canvas.
         "window": (16, 10),
@@ -131,6 +198,7 @@ SCENARIOS = {
     },
     "party_menu": {
         "flags": "DEBUG_PARTYMENU=1",
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
         # The widescreen port re-lays the party list out (measured, byte-verified):
         # GB's two rows per mon (name / HP-bar) become one canvas row — name in
         # the left panel (cols 0-19), HP bar in the right (cols 20-39) — and the
@@ -168,6 +236,7 @@ SCENARIOS = {
     },
     "bag_menu": {
         "flags": "DEBUG_BAGMENU=1",
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
         # Overworld backdrop: same (8,8) spawn -> block-aligned mirror window
         # (16,10). ITEM box: GB's 2-rows-per-item list (name row / x-qty row,
         # box at golden rows 2-12 cols 4-19) re-flows into the widescreen
@@ -219,6 +288,7 @@ SCENARIOS = {
     },
     "start_menu": {
         "flags": "DEBUG_STARTMENU=1",
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
         # Overworld portion: W_TILEMAP is the port's block-aligned map mirror;
         # at the (8,8) Pallet spawn its 20x18 GB window sits at (16,10)
         # (measured; block-grid alignment, not the pixel camera — the visible
@@ -266,32 +336,75 @@ def glyph(cmap, tid):
 
 
 def load_golden(goldens_dir, scenario):
+    """Golden regions -> {name: {"addr", "size", "data"}} (layout from the sidecar)."""
     sidecar = json.loads((goldens_dir / f"{scenario}.json").read_text())
     blob = (goldens_dir / f"{scenario}.bin").read_bytes()
     if len(blob) != sidecar["total_size"]:
         sys.exit(f"golden {scenario}.bin is {len(blob)} B, sidecar says {sidecar['total_size']}")
     regions = {}
     for r in sidecar["regions"]:
-        regions[r["name"]] = blob[r["file_offset"]:r["file_offset"] + r["size"]]
+        regions[r["name"]] = {
+            "addr": int(r["gb_addr"], 16),
+            "size": r["size"],
+            "data": blob[r["file_offset"]:r["file_offset"] + r["size"]],
+        }
     for name, size in (("wTileMap", GB_W * GB_H), ("vram_tiles", VRAM_SIZE), ("oam", OAM_SIZE)):
-        if len(regions.get(name, b"")) != size:
+        if regions.get(name, {}).get("size") != size:
             sys.exit(f"golden {scenario}: region {name} missing or wrong size")
     return sidecar, regions
 
 
 def load_gbstate(path):
+    """Port regions -> {name: {"addr", "size", "data"}} (layout from the dump itself)."""
     blob = Path(path).read_bytes()
-    if len(blob) != PORT_TOTAL:
-        sys.exit(f"{path}: {len(blob)} B, expected {PORT_TOTAL} (GBSTATE.BIN layout)")
     if blob[:4] != b"GBST":
         sys.exit(f"{path}: bad magic {blob[:4]!r}")
-    if blob[4] != 1:
-        sys.exit(f"{path}: unsupported GBSTATE version {blob[4]}")
-    off = HDR_SIZE
-    tilemap = blob[off:off + PORT_TILEMAP_SIZE]; off += PORT_TILEMAP_SIZE
-    vram = blob[off:off + VRAM_SIZE]; off += VRAM_SIZE
-    oam = blob[off:off + OAM_SIZE]
-    return {"scenario_id": blob[5], "tilemap": tilemap, "vram": vram, "oam": oam}
+    version, scenario_id, count, dir_size, total = struct.unpack_from("<BBHII", blob, 4)
+    if version != GBSTATE_VERSION:
+        sys.exit(f"{path}: GBSTATE version {version}, this differ speaks {GBSTATE_VERSION} "
+                 f"(rebuild the port image — src/debug/debug_dump.asm)")
+    if total != len(blob):
+        sys.exit(f"{path}: header says {total} B, file is {len(blob)} B")
+    if dir_size != count * DIRENT_SIZE:
+        sys.exit(f"{path}: directory size {dir_size} != {count} x {DIRENT_SIZE}")
+
+    regions = {}
+    for i in range(count):
+        raw = blob[HDR_SIZE + i * DIRENT_SIZE: HDR_SIZE + (i + 1) * DIRENT_SIZE]
+        name = raw[:NAME_LEN].rstrip(b"\0").decode("ascii")
+        addr, size, foff = struct.unpack_from("<III", raw, NAME_LEN)
+        if foff + size > len(blob):
+            sys.exit(f"{path}: region {name} runs past the end of the file")
+        regions[name] = {"addr": addr, "size": size, "data": blob[foff:foff + size]}
+    for name, size in (("wTileMap", PORT_TILEMAP_SIZE), ("vram_tiles", VRAM_SIZE),
+                       ("oam", OAM_SIZE)):
+        if regions.get(name, {}).get("size") != size:
+            sys.exit(f"{path}: region {name} missing or wrong size")
+    return {"scenario_id": scenario_id, "regions": regions}
+
+
+def check_addresses(golden, port, scenario):
+    """Both sides name their regions the same; assert they also AGREE ON THE ADDRESS.
+
+    The port table is built from gb_memmap.inc, the golden's from pret's .sym. If a
+    label moves on one side only, the bytes would still line up positionally and the
+    diff would silently compare the wrong memory. Catch it here instead.
+    """
+    bad = []
+    for name in sorted(set(golden) & set(port)):
+        if name in VIDEO_REGIONS:
+            continue  # wTileMap is deliberately a different size (canvas vs screen)
+        g, p = golden[name], port[name]
+        if g["addr"] != p["addr"] or g["size"] != p["size"]:
+            bad.append(f"  {name}: golden ${g['addr']:04X}/{g['size']}B (pret .sym) != "
+                       f"port ${p['addr']:04X}/{p['size']}B (gb_memmap.inc)")
+    if bad:
+        print(f"REGION LAYOUT MISMATCH ({scenario}) — the two sides disagree on where a region "
+              f"lives, so the bytes are not comparable:")
+        print("\n".join(bad))
+        print("Fix the address/size in dos_port/src/debug/debug_dump.asm:gbstate_regions or "
+              "tools/mgba_harness/lib/dump.lua:wram_regions, then regenerate the goldens.")
+        sys.exit(2)
 
 
 def expand_tilemap_masks(entries):
@@ -315,6 +428,188 @@ def vchars_name(slot):
     return f"vChars2 tile ${slot - 256:02X}"
 
 
+# ---------------------------------------------------------------------------
+# Field-aware WRAM reporting
+#
+# A raw "byte 137 differs" is the kind of report that gets masked instead of
+# fixed. Each decoder maps a region-relative byte offset to the field it belongs
+# to, so a divergence reads "wPartyData mon 3 DVs: want $9876 got $A3C1" — the
+# same language as pret's struct. Multi-byte fields collapse to one line (GB data
+# is big-endian; see CLAUDE.md).
+# ---------------------------------------------------------------------------
+def _struct_field(fields, off):
+    """(field_start, size, name) covering byte `off` of a mon struct, or None."""
+    for f_off, f_size, f_name in fields:
+        if f_off <= off < f_off + f_size:
+            return f_off, f_size, f_name
+    return None
+
+
+def decode_name(data):
+    """Charmap-decoded name, for the report ('@'-terminated GB string)."""
+    out = []
+    for b in data:
+        if b == 0x50:  # '@' terminator
+            break
+        out.append(_CHARMAP.get(b, "?") if len(_CHARMAP.get(b, "")) == 1 else "?")
+    return "".join(out)
+
+
+def field_partydata(off):
+    """wPartyData: count | species list | 6 party_structs | 6 OT names | 6 nicks."""
+    if off == 0:
+        return "wPartyCount", 0, 1
+    species_len = 1 + PARTY_LENGTH  # 6 species + $FF sentinel
+    if off < 1 + species_len:
+        i = off - 1
+        return (f"species list [{i}]" if i < PARTY_LENGTH else "species list terminator"), off, 1
+    base = 1 + species_len
+    structs_end = base + PARTY_LENGTH * PARTYMON_LEN
+    if off < structs_end:
+        mon, rel = divmod(off - base, PARTYMON_LEN)
+        f = _struct_field(PARTYMON_FIELDS, rel)
+        if f:
+            f_off, f_size, f_name = f
+            return f"mon {mon} {f_name}", base + mon * PARTYMON_LEN + f_off, f_size
+        return f"mon {mon} +{rel}", off, 1
+    ot_end = structs_end + PARTY_LENGTH * NAME_LENGTH
+    if off < ot_end:
+        mon = (off - structs_end) // NAME_LENGTH
+        return f"mon {mon} OT name", structs_end + mon * NAME_LENGTH, NAME_LENGTH
+    mon = (off - ot_end) // NAME_LENGTH
+    return f"mon {mon} nickname", ot_end + mon * NAME_LENGTH, NAME_LENGTH
+
+
+def field_battlemon(off):
+    f = _struct_field(BATTLEMON_FIELDS, off)
+    if f:
+        f_off, f_size, f_name = f
+        return f_name, f_off, f_size
+    return f"+{off}", off, 1
+
+
+def field_loadedmon(off):
+    f = _struct_field(PARTYMON_FIELDS, off)
+    if f:
+        f_off, f_size, f_name = f
+        return f_name, f_off, f_size
+    return f"+{off}", off, 1
+
+
+def field_bagitems(off):
+    """wBagItems: count | 20 x (id, qty) | $FF terminator."""
+    if off == 0:
+        return "wNumBagItems", 0, 1
+    i = off - 1
+    if i >= BAG_ITEM_CAPACITY * 2:
+        return "terminator", off, 1
+    slot, which = divmod(i, 2)
+    return f"slot {slot} {'item id' if which == 0 else 'quantity'}", off, 1
+
+
+def field_pokedex(off):
+    """wPokedex: owned flag array then seen flag array (bit n = dex #n+1)."""
+    half = 19  # (NUM_POKEMON + 7) // 8
+    which, byte_i = ("owned", off) if off < half else ("seen", off - half)
+    lo, hi = byte_i * 8 + 1, byte_i * 8 + 8
+    return f"{which} dex #{lo}-#{hi}", off, 1
+
+
+def field_flat(table):
+    def decode(off):
+        return table.get(off, f"+{off}"), off, 1
+    return decode
+
+
+# region name -> (byte offset) -> (field name, field start, field size)
+WRAM_DECODERS = {
+    "wPartyData": field_partydata,
+    "wLoadedMon": field_loadedmon,
+    "wEnemyMon": field_battlemon,
+    "wBattleMon": field_battlemon,
+    "wBagItems": field_bagitems,
+    "wPokedex": field_pokedex,
+    "wOptionsBlock": field_flat(_OPTIONS_BLOCK),
+    "wBattleFlags": field_flat(_BATTLE_FLAGS),
+}
+# Regions that are a single '@'-terminated name — report the decoded string.
+NAME_REGIONS = ("wPlayerName", "wEnemyMonNick", "wBattleMonNick")
+
+
+def value_str(data, start, size):
+    """Big-endian field value, hex, with the decimal for small ints."""
+    chunk = data[start:start + size]
+    v = int.from_bytes(chunk, "big")
+    if size == 1:
+        return f"${v:02X}"
+    if size <= 3:
+        return f"${v:0{size * 2}X} ({v})"
+    return chunk.hex()
+
+
+def compare_wram(golden, port, cfg, max_report):
+    """Diff every non-video region present on both sides. Returns (failures, masked)."""
+    skips = cfg.get("wram_skip", {})
+    masks = cfg.get("wram_masks", {})
+    failures, masked_hits, lines = 0, [], []
+
+    names = sorted((set(golden) | set(port)) - set(VIDEO_REGIONS))
+    for name in names:
+        if name in skips:
+            masked_hits.append(f"wram {name} (whole region): {skips[name]}")
+            continue
+        if name not in golden or name not in port:
+            side = "port" if name in port else "golden"
+            lines.append(f"  {name}: present only on the {side} side — add it to the other "
+                         f"region table, or give it a wram_skip justification")
+            continue
+
+        g, p = golden[name]["data"], port[name]["data"]
+        region_masks = masks.get(name, [])
+        decoder = WRAM_DECODERS.get(name)
+        reported = set()  # field starts already reported (multi-byte -> one line)
+
+        for off in range(len(g)):
+            if g[off] == p[off]:
+                continue
+            why = next((w for (lo, hi), w in region_masks if lo <= off <= hi), None)
+            if why:
+                masked_hits.append(f"wram {name} +{off}: {why}")
+                continue
+            if name in NAME_REGIONS:
+                if name in reported:
+                    continue
+                reported.add(name)
+                lines.append(f"  {name}: want '{decode_name(g)}' | got '{decode_name(p)}'"
+                             f"  ({g.hex()} | {p.hex()})")
+                continue
+            if decoder:
+                field, start, size = decoder(off)
+                if (name, start) in reported:
+                    continue
+                reported.add((name, start))
+                want, got = value_str(g, start, size), value_str(p, start, size)
+                extra = ""
+                if "name" in field or "nickname" in field:
+                    extra = f"  ('{decode_name(g[start:start + size])}' | "\
+                            f"'{decode_name(p[start:start + size])}')"
+                lines.append(f"  {name} {field}: want {want} | got {got}{extra}")
+            else:
+                lines.append(f"  {name} +{off}: want ${g[off]:02X} | got ${p[off]:02X}")
+
+    if lines:
+        failures = len(lines)
+        print(f"WRAM: {len(lines)} mismatched fields:")
+        for line in lines[:max_report]:
+            print(line)
+        if len(lines) > max_report:
+            print(f"  ... and {len(lines) - max_report} more")
+    else:
+        compared = len(names) - len(skips)
+        print(f"WRAM: OK ({compared} regions, {len(skips)} skipped)")
+    return failures, masked_hits
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("scenario", choices=sorted(SCENARIOS))
@@ -333,9 +628,19 @@ def main():
     if not args.gbstate:
         ap.error("--gbstate is required (path to the extracted GBSTATE.BIN)")
 
-    cmap = load_charmap(args.charmap)
-    _, golden = load_golden(Path(args.goldens), args.scenario)
-    port = load_gbstate(args.gbstate)
+    global _CHARMAP
+    cmap = _CHARMAP = load_charmap(args.charmap)
+    _, golden_regions = load_golden(Path(args.goldens), args.scenario)
+    port_state = load_gbstate(args.gbstate)
+    port_regions = port_state["regions"]
+    check_addresses(golden_regions, port_regions, args.scenario)
+
+    golden = {k: v["data"] for k, v in golden_regions.items()}
+    port = {
+        "tilemap": port_regions["wTileMap"]["data"],
+        "vram": port_regions["vram_tiles"]["data"],
+        "oam": port_regions["oam"]["data"],
+    }
 
     failures = 0
     masked_hits = []
@@ -427,6 +732,12 @@ def main():
             print(line)
     else:
         print("OAM: OK (40 entries)")
+
+    # --- wram: every non-video region, field-aware ---
+    wram_failures, wram_masked = compare_wram(
+        golden_regions, port_regions, cfg, args.max_report)
+    failures += wram_failures
+    masked_hits.extend(wram_masked)
 
     if masked_hits:
         print(f"masked (justified) divergences hit: {len(masked_hits)}")
