@@ -1,0 +1,35 @@
+# overrides/Music_FinalBattle.yaml — base-track MT-32 patch map for the
+# Champion theme (Final Battle! Rival). E minor, chromatic, tense; the piece
+# builds texture over a pedal E and traces a descending motive
+# (E-D#-D-B-A#-B) in parallel motion across all three voices.
+#
+# Three melodic GB channels; the noise channel (ch4) is deliberately empty.
+# Music that plays during *active combat* leaves ch4 free so battle SFX
+# (damage/cry bursts) can borrow it — verified: every active-battle theme
+# (Wild/Trainer/GymLeader/FinalBattle) has 0 noise notes, while town/cave
+# themes (Cinnabar Mansion, Lavender, Cities1) use noise heavily. (Encounter
+# and victory themes are a separate context — the fight isn't happening — so
+# this SFX reservation doesn't govern them.) Final Battle is active-combat
+# music, so percussion never belongs in this base track; any drums would ride
+# an enhancement rhythm voice on the separate MT-32/GM stream (as on Gym
+# Leader), leaving the GB noise channel — and the in-battle SFX — untouched.
+#
+# Cues from Music_GymLeaderBattle: dual square-wave leads + an atmospheric wave
+# bed. MT-32 only; GM keeps its square/square/synth-bass defaults, same scope
+# as the Gym Leader base override.
+channels:
+  # square 1 — the lead; states the descending motive most clearly (B3-F#5).
+  1:
+    mt32_program: "Square Wave"
+  # square 2 — higher, more active secondary voice (reaches E6); disguises the
+  # motive inside a busier line.
+  2:
+    mt32_program: "Square Wave"
+  # wave table — busiest voice (D3-G5): carries the low end and restates the
+  # melody near the loop (m.52-53). Atmosphere pads the tense harmonic bed
+  # behind the squares (as on Gym Leader), tucked a little under the leads.
+  # Audition variable — if it smears on this more active line, try
+  # "Soundtrack" (more drama) or "Str Sect 2" (battle weight).
+  3:
+    mt32_program: "Atmosphere"
+    volume: 85
