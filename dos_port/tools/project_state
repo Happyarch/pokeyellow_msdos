@@ -3,8 +3,8 @@
 
 This is an evidence report, not a status database.  It refreshes translation.db,
 derives shipping/check-only membership from the Makefile source lists, and emits
-one record per pret label.  Reachability and runtime execution are deliberately
-reported as unknown until linker-map and scenario-marker evidence exist.
+one record per pret label. Static reachability starts at the shipping `start`
+symbol; runtime execution remains unknown until scenario-marker evidence exists.
 """
 
 import argparse
@@ -68,10 +68,24 @@ def main():
     if args.labels:
         where += " AND l.name IN (%s)" % ",".join("?" * len(args.labels))
         params = args.labels
-    rows = con.execute(f"""
-        SELECT l.*, COUNT(DISTINCT c.caller) AS port_callers
-        FROM labels l LEFT JOIN calls c ON c.callee=l.name AND c.side='port'
-        {where} GROUP BY l.name ORDER BY l.name""", params).fetchall()
+    rows = con.execute(f"SELECT l.* FROM labels l {where} ORDER BY l.name", params).fetchall()
+    all_labels = con.execute("SELECT * FROM labels").fetchall()
+    providers = {r['name']: r['port_file'] or r['stub_file'] for r in all_labels}
+    calls = con.execute("SELECT caller, callee FROM calls WHERE side='port'").fetchall()
+    graph, callers = {}, {}
+    for caller, callee in calls:
+        caller_provider = providers.get(caller)
+        if caller_provider in linked:
+            callers.setdefault(callee, set()).add(caller)
+            if providers.get(callee) in linked:
+                graph.setdefault(caller, set()).add(callee)
+    reachable, pending = set(), ['start']
+    while pending:
+        node = pending.pop()
+        if node in reachable:
+            continue
+        reachable.add(node)
+        pending.extend(graph.get(node, ()))
     records = []
     for row in rows:
         provider = row["port_file"] or row["stub_file"]
@@ -89,8 +103,11 @@ def main():
         records.append({
             "label": row["name"], "pret_file": row["pret_file"],
             "provider": provider, "provider_type": provider_type,
-            "linkage": linkage, "linked_callers": row["port_callers"],
-            "reachability": "unknown", "debug_reachability": "unknown",
+            "linkage": linkage, "linked_callers": len(callers.get(row['name'], ())),
+            "reachability": ("static-live-entry" if row['name'] in reachable
+                             else "not-statically-reached" if linkage == "linked"
+                             else "not-applicable"),
+            "debug_reachability": "unknown",
             "coverage": [], "deviation": deviation,
         })
     if args.json:

@@ -134,7 +134,7 @@ DIRECTIVE_RE = re.compile(
     r'|%\w+|db|dw|dd|dq|incbin|resb|resw|resd|times\s+\d+\s+d[bwd]\b)', re.I)
 
 def scan_port(pret_names):
-    """Scan dos_port/src/**/*.asm.
+    """Scan dos_port/{boot,src}/**/*.asm.
 
     Returns (defs, calls, externs):
       defs    = [(name, file, line, is_stub, is_global, defined_here,
@@ -147,8 +147,12 @@ def scan_port(pret_names):
       externs = [(file, symbol, comment, line)]
     """
     defs, calls, externs = [], [], []
-    src_root = os.path.join(DOS_PORT, 'src')
+    # boot/ supplies the shipping entry roots needed for generated reachability;
+    # prune at the port root so vendored/tool assembly is never indexed.
+    src_root = DOS_PORT
     for dirpath, dirnames, filenames in os.walk(src_root):
+        if dirpath == src_root:
+            dirnames[:] = [d for d in dirnames if d in ('boot', 'src')]
         dirnames.sort()
         for fn in sorted(filenames):
             if not fn.endswith('.asm'):
