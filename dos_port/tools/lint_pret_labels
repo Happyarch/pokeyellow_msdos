@@ -25,6 +25,10 @@ Violation classes:
                 runtime → executes table bytes → page fault. (This is the
                 `call IndexToPokedex` crash; IndexToPokedex is a flat table in
                 the port, not pret's predef routine.)
+  local_shadow  a pret label has a non-global definition outside its selected
+                provider, making searches and static call attribution ambiguous.
+  weak_relocation a file-level relocation has boilerplate evidence or does not
+                actually cover every translated pret label in that file.
 
 Suppressions live in dos_port/tools/pret_label_allowlist.json:
   "suppress": [ {"rule": "<class>", "key": "<label | file:symbol>", "why": "…"} ]
@@ -63,6 +67,8 @@ def main():
     ap.add_argument('--no-scan', action='store_true',
                     help='lint the existing DB without rescanning the tree')
     ap.add_argument('--db', default=DB_PATH)
+    ap.add_argument('--strict-claims', action='store_true',
+                    help='enforce legacy claim/relocation migration rules')
     args = ap.parse_args()
 
     if not args.no_scan:
@@ -145,13 +151,35 @@ def main():
             add('stale_extern', f'{file}:{symbol}',
                 f"{file}:{line}: extern {symbol} comment points at {base} "
                 f"({missing})")
+
+    # ── local_shadow: another file defines the selected pret label locally ──
+    for name, selected, shadow in cur.execute("""
+            SELECT l.name, l.port_file, d.file FROM labels l JOIN port_defs d
+              ON d.name=l.name
+            WHERE l.pret_file IS NOT NULL AND d.is_global=0
+              AND l.port_file IS NOT NULL AND d.file != l.port_file
+            ORDER BY l.name, d.file"""):
+        if args.strict_claims:
+            add('local_shadow', f'{shadow}:{name}',
+                f"{name}: local pret-label shadow in {shadow}; selected provider is {selected}")
+
+    # ── weak_relocation: reject boilerplate file-level authority ────────────
+    if os.path.exists(ALLOWLIST):
+        with open(ALLOWLIST, encoding='utf-8') as fh:
+            allow = json.load(fh)
+        weak = re.compile(r'\b(pre-existing relocation|draft session|all \d+ translated)\b', re.I)
+        for pret_file, entry in allow.get('relocated_files', {}).items():
+            why = entry.get('why', '')
+            if args.strict_claims and (weak.search(why) or len(why) < 80):
+                add('weak_relocation', pret_file,
+                    f"{pret_file}: file-level relocation lacks substantive per-split evidence: {why!r}")
     con.close()
 
     by_rule = {}
     for rule, _, msg in findings:
         by_rule.setdefault(rule, []).append(msg)
     for rule in ('mirror', 'non_ret_stub', 'dup_def', 'call_into_data',
-                 'stale_extern'):
+                 'stale_extern', 'local_shadow', 'weak_relocation'):
         msgs = by_rule.get(rule, [])
         if msgs:
             print(f"\n== {rule} ({len(msgs)}) ==")

@@ -61,6 +61,29 @@ running, hearing, or inspecting anything → `build-and-debug`; notes and chords
 The always-apply hard rules below stay here so they're in force every session; the
 skills hold the "look it up while doing X" detail.
 
+## Evidence and Knowledge Policy
+
+Repository and runtime evidence outrank prose. Use this order: pret source and
+the current linked build; deterministic mGBA/DOSBox-X state; generated static
+analysis; then comments, plans, skills, commits, and memory. Unsupported negative
+claims are prohibited: `missing`, `stub`, `unported`, `check-only`, `unreachable`,
+and `no caller` must cite generated state (`dos_port/tools/project_state`) or
+runtime evidence.
+
+Verification terms are not interchangeable: `defined`, `linked`, `reachable`,
+`executed`, `golden-matched`, and `visually-observed` describe distinct evidence.
+A regression-only run must not be reported as feature execution. A clean static
+gate means only “no detected structural divergence”; run
+`dos_port/tools/fidelity_gate` for changed pret labels and add a must-hit runtime
+scenario when behavior is changed.
+
+When a capability becomes live, sweep related `TODO-HW`, `STUB`, extern,
+allowlist, plan, skill, and stigmergy claims in the same workstream. Stigmergy is
+an evidence index, not authority: durable entries need evidence and state;
+volatile status needs expiry; contradictory repository evidence updates the
+existing key. List active plans from `docs/current_plan_*.md`; do not maintain a
+second hand-written inventory.
+
 ---
 
 ## Current Phase

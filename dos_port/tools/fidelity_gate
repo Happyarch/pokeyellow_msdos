@@ -1,0 +1,81 @@
+#!/usr/bin/env python3
+"""Changed-files pret-fidelity gate with explicit evidence-level reporting."""
+
+import argparse
+import os
+import re
+import subprocess
+import sys
+import sqlite3
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.normpath(os.path.join(HERE, "..", ".."))
+
+
+def run(argv):
+    print("+", " ".join(argv))
+    return subprocess.run(argv, cwd=ROOT).returncode
+
+
+def changed_files(base):
+    out = subprocess.check_output(
+        ["git", "diff", "--name-only", "--diff-filter=ACMR", base, "--"],
+        cwd=ROOT, text=True)
+    return [p for p in out.splitlines() if p.endswith(".asm")]
+
+
+def labels_in_diff(base, files):
+    labels = set()
+    for path in files:
+        text = subprocess.check_output(
+            ["git", "diff", "--unified=0", base, "--", path], cwd=ROOT,
+            text=True, errors="replace")
+        for line in text.splitlines():
+            if line[:1] in "+-" and not line.startswith(("+++", "---")):
+                m = re.match(r"^[+-]([A-Za-z_][A-Za-z0-9_]*):{1,2}", line)
+                if m:
+                    labels.add(m.group(1))
+    return sorted(labels)
+
+
+def labels_in_files(files):
+    """Conservatively include all pret definitions in a touched port file.
+
+    This avoids the old false negative where a body-only edit had no label on a
+    zero-context diff line.  Over-selection costs extra faithdiff runs but never
+    hides a touched routine.
+    """
+    db = sqlite3.connect(os.path.join(HERE, "translation.db"))
+    labels = set()
+    for path in files:
+        labels.update(r[0] for r in db.execute(
+            "SELECT DISTINCT d.name FROM port_defs d JOIN labels l ON l.name=d.name "
+            "WHERE d.file=? AND l.pret_file IS NOT NULL", (path,)))
+    db.close()
+    return labels
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--base", default="HEAD")
+    ap.add_argument("files", nargs="*")
+    args = ap.parse_args()
+    files = args.files or changed_files(args.base)
+    rc = run([os.path.join(HERE, "lint_pret_labels")])
+    labels = sorted(set(labels_in_diff(args.base, files)) | labels_in_files(files))
+    state = subprocess.run([os.path.join(HERE, "project_state"), "--no-scan", *labels], cwd=ROOT)
+    rc |= state.returncode
+    for label in labels:
+        rc |= run([os.path.join(HERE, "faithdiff"), label])
+    print("\nEvidence level: no detected structural divergence" if rc == 0 else "\nEvidence level: structural gate FAILED")
+    print("Runtime status: NOT VERIFIED (no must-hit marker or golden scenario was run by this gate).")
+    print("Known static blind spots: register/flag contracts, conditional transfer semantics, macros/generated bodies, projection coordinates, and runtime reachability.")
+    if labels:
+        print("Commit-message review required for every faithdiff ADDED/DROPPED call above.")
+    else:
+        print("No changed pret label definitions detected in the selected diff; this is regression-only evidence.")
+    raise SystemExit(1 if rc else 0)
+
+
+if __name__ == "__main__":
+    main()
