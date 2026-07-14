@@ -1,8 +1,8 @@
 # Menu fidelity — de-bespoking the menu system against pret
 
-> **STATUS — 2026-07-13. Rows 1–13 + 23 are DONE: 14 of 24. The shared drivers are finished;
+> **STATUS — 2026-07-14. Rows 1–14 + 23 are DONE: 15 of 24. The shared drivers are finished;
 > everything left is a leaf screen.**
-> Next row is **14** (`options.asm`). Ten rows remain: **14–22 and 24.**
+> Next row is **15** (`naming_screen.asm`). Nine rows remain: **15–22 and 24.**
 >
 > **The row table below is the only authoritative status.** This header is prose and has
 > already gone stale once (it claimed "1–8 done (9 of 24)" and "1-9 done (10 of 24)" in the
@@ -110,7 +110,7 @@ driver only relocates the divergence.
 | 11 | `src/engine/menus/party_menu.asm` + `src/home/pokemon.asm` | `engine/menus/party_menu.asm`, `home/pokemon.asm` | **DONE** | `3d5ce1e3` (p1), `1e14cecf` (p2) | **Part 1 = `party_menu.asm` — DONE.** Four excuses, all four false, all four checked against the linked build rather than believed: M-38 (`RunPaletteCommand` ×2 dropped behind *"TODO-HW: SGB/CGB palette command (Phase 5)"* — the palette is Phase 5, the CALL is not; it is a linked global and six other screens call it. Restored), M-39 (**the six party messages were hand-encoded charmap `db` bytes** drawn whole by a bespoke routine, behind *"engine far-text streams aren't GB-space assets yet"* — `gen_item_text.py` **already scans `engine/menus/party_menu.asm`** and has been emitting all five streams as linked globals since it was written. The hand copy also re-made M-16's mistake: literal `POKéMON` glyphs where pret writes the `$54` POKé command. Now `PartyMenuMessagePointers` → pret's `PrintText`), M-40 (**M-29 CLOSED for this screen**: authored `msgbox_party`, the projection M-29 said had to exist. Root cause pinned: `manual_text_scroll` (text.asm:386) copies the scratch's dialog rows into `GB_TILEMAP1` rows 0-5 — the party PANEL's rows — on every `<PROMPT>`/`<PARA>`, and *unlike* `sync_dialog_window` it is **not** gated on `g_bg_whiteout`. `msgbox_party` has no window (so the party window list survives) and its own `MB_PROMPT` hook, which is the mechanism that keeps `<PROMPT>` away from that copy), M-41 (**both learnability columns were STUBs** — `.teachMoveMenu` / `.evolutionStoneMenu` — blaming *"reachable only from item USE"*. Reachability is not a blocker and nothing was blocking: `CanLearnTM` and `EvosMovesPointerTable` are both translated **and linked**. The stubs cost the TMHM and EVO_STONE menus their entire right-hand column — the one thing those menus exist to show. Implemented; the evo scan walks the flat blob in place instead of pret's two `FarCopyData` stagings), M-42 (`.printItemUseMessage`'s hand-rolled printer was excused by *"every one of these nine texts terminates with `<DONE>` (never `<PROMPT>`)"* — **`RareCandyText` is `sound_get_item_1` + `text_promptbutton`**; the generated stream ends `$0B $06 $50`. Open-coding the printer meant that prompt was never dispatched. Routed through `PrintText`). Also restored the 2 `hAutoBGTransferEnabled` stores (M-24's precedent; the flag is **write-only** in the port — `do_bg_transfer` is deleted — but a screen that quietly stops writing it is how state drifts from pret's). 2 strings migrated to a generator (`assets/party_menu_strings.inc`). SANCTIONED + tagged: `ClearScreen`→`FillMemory` (canvas-scoped), `SetMonPartySpriteOrigin` + `ShowPartyMenuWindows` + `PartyMenuMirror` (window model), the pikachu-follower STUB ×2, `InitPartyMenuBlkPacket` (genuinely `missing`, SGB), `PartyMenuPrintText` (the projection wrapper around pret's `PrintText`). **Gate: golden `party_menu` PASSes with all 360 tilemap cells matching mGBA** — the message box and its text are byte-identical to the real ROM. **Part 2 = `home/pokemon.asm` — DONE.** M-43 (the `STUB(pikachu-follow)` comment, in **both** this file and `party_menu.asm`, claimed the follower system was unported — `IsThisPartyMonStarterPikachu`, `CheckPikachuFollowingPlayer` **and** `WriteMonPartySpriteOAMByPartyIndex`'s `$ff` branch were all already linked; the fourth instance of this excuse class. Both sites destubbed — UNVERIFIED at runtime, no golden has Pikachu following), M-44 (`PrintStatusCondition`'s hand-encoded "FNT" was **also an off-by-one**: `ld_hli_a_string` advances HL by len-1 and leaves A = the *second-to-last* char, which pret's `and a` tests; the port advanced 3 and left 'T'. Migrated to `assets/home_pokemon_strings.inc` and fixed), M-45 (`GetMonHeader`'s dropped `IndexToPokedex` predef — SANCTIONED, argued from pret's own `wPokedexNum` save/restore, tagged `DEVIATION(flat-data)`), M-46 (its fossil/ghost `TODO-HW` — **verified TRUE**, the three pics exist nowhere in the port). **Two generators patched**: `gen_battle_text.collect_wrappers`' regex silently skipped pret's address-suffixed `PartyMenuText_12cc` (only `*Text`/`*Text<n>` matched), and `gen_menu_strings.py` gained the `HOME_POKEMON` glyph-run group. SANCTIONED + tagged: `PartyMenuPrintText` (window model — pret's bare `PrintText` lands in the GB dialog rows, which the port draws behind windows), the `Bankswitch*` collapses, `DisplayPartyMenu`'s `DEBUG_PARTYMENU` harness calls. Gate: `make fidelity` 6/6 PASS. |
 | 12 | `src/engine/menus/swap_items.asm` | same | **DONE** | `ad7dab3e` | **The x86 is faithful — the only label (`HandleItemListSwapping`) translates pret line-for-line, and faithdiff is clean (2/2 calls, 7/7 stores).** The lies were all in the comments: M-48 (the header declared the file **CHECK-only with "No live caller"** and its WRAM symbols "LOCAL PLACEHOLDERS below — ROOT migrates + deletes"; there are no placeholders, the file is in **GAME_SRCS**, `nm` shows `T HandleItemListSwapping`, and `list_menu.asm:435` jumps to it on SELECT — **and the `GLITCH` block's `Safety:` note inherited that false premise**, declaring the item-underflow gateway "dormant, not reachable in the current build" when it is live), M-49 (two gratuitous register-contract divergences: a pointless `mov dl,al` / `pop esi` / `mov al,dl` detour clobbering **DL**, which pret preserves, and a `push dx`/`pop dx` pair saving only the **low half** of an EDX the routine then uses as a full 32-bit flat pointer — plus leaving ESP 2-mod-4). No allowlist entry exists (file is at its mirrored path); nothing to challenge. Gate: `make fidelity` 6/6 PASS. **The swap path itself is UNVERIFIED at runtime** — no golden and no `DEBUG_*` harness presses SELECT on a list (same gap row 4 recorded for M-9); the goldens only prove no regression. |
 | 13 | `src/engine/menus/field_moves.asm`, `display_text_id_init.asm` | `engine/menus/text_box.asm`, `display_text_id_init.asm` | **DONE** | `4c97321f` | The row with "no self-declared divergence" turned out to be **two files of dead code**, both advertising themselves as live. M-50 (`field_moves.asm`'s `IsFieldMove` — a port-only second scan of pret's field-move table, with **zero callers anywhere in the tree**; commit `c0b225ac` moved the party menu onto pret's `GetMonFieldMoves` and left it orphaned, while the header went on asserting *"party_menu.asm calls IsFieldMove"*. Deleted — the port now has exactly one field-move scan and it is pret's. The generated tables stay: `GetMonFieldMoves`/`DisplayFieldMoveMonMenu` are their real consumers), M-51 (**`DisplayTextIDInit` has never run**: it is linked, but its only caller is `DisplayTextID` in `src/home/text_script.asm`, which is **HOME_CHECK_SRCS** — the `DisplayTextID` in the binary is the `home_stubs.asm` ret-stub. So a faithful translation of a routine whose rendering is UNVERIFIABLE until `text_script.asm` links. Header now says so), M-52 (the dropped `hWY` store was tagged **`TODO-HW`** — wrong twice: `H_WY` exists and is written elsewhere, and no hardware work will ever make this store correct. It is a permanent window-compositor deviation; retagged `DEVIATION(window-compositor)` with the real argument). **M-12 CONFIRMED, still OPEN** — `text_script.asm` really is unlinked, so `wDoNotWaitForButtonPressAfterDisplayingText` really is write-only; same root cause, same fix (link `text_script.asm`), and it is not this row's file. **Epistemics cut both ways here:** `home_stubs.asm`'s claim that *"the only linked caller is TryDoWildEncounter"* looked wrong (three callers grep) and **checked out** — the other two are themselves check-only. `GetMonFieldMoves`/`DisplayFieldMoveMonMenu` faithdiff clean/blind-spot-only; no allowlist entries for either file. Gate: 6/6 PASS. |
-| 14 | `src/engine/menus/options.asm` | same | TODO | | the working reference for the window model |
+| 14 | `src/engine/menus/options.asm` | same | **DONE** | `PENDING` | All 17 labels `translated`, and the **x86 really is faithful** — faithdiff clean on every handler (the flag-juggling `sla a`/`rl c` → `shl`/`rcl` translations, the `swap a` → `rol al,4`, the cursor-skip arithmetic, all correct). The defects were around it: M-53 (**the `rAUDTERM` store was dropped behind a false `TODO-HW: audio HAL — no APU register in the port`** — `rAUDTERM` is a live GB-memory byte, `$FF25`, written by `engine_1.asm`/`engine_2.asm` and **read every frame by the OPL/Tandy/PC-speaker shims** to route channel output. Nothing was blocking it. Restored — pret silences the channels while the speaker setting changes, and the port simply wasn't), M-54 (**18 hand-encoded charmap `db` strings**, the Tier-1 violation — and the file header didn't merely omit the excuse, it *asserted* one: it called them *"Tier-2 code data"*. A string the player reads is Tier-1 DATA. Migrated into `tools/gen_menu_strings.py` → `assets/options_strings.inc`; generated bytes **byte-compared against the old literals: identical, all 18**), M-55 (`InitOptionsMenu` dropped pret's `hAutoBGTransferEnabled` store — the M-24 leak class, restored; and the `BUG(cosmetic)` joypad-state tag carried **no `%if BUG_FIX_LEVEL` block**, so the convention's "preserve the bug, offer the guarded fix" contract was half-implemented. Added at level 2, using pret's own one-line fix). SANCTIONED + tagged: `options_mirror` ×2 + `OptionsShowWindow` (the window compositor stands in for pret's VBlank BGMap transfer), `text_row_stride = 20`. No allowlist entries — nothing to challenge. **VERIFIED live** (`DEBUG_OPTIONS` → `FRAME.BIN`): the screen renders **byte-identical** before/after the string migration, and the rendered PNG shows all five rows, their values, CANCEL and the ▶ cursor drawing correctly. `make fidelity` 6/6 PASS. |
 | 15 | `src/engine/menus/naming_screen.asm` | same | TODO | | DEVIATION ×6 |
 | 16 | `src/engine/menus/pokedex.asm`, then `pokedex_entry.asm` | `engine/menus/pokedex.asm` | TODO | | allowlisted split (9 labels) — challenge |
 | 17 | `src/engine/menus/pc.asm`, `players_pc.asm`, `oaks_pc.asm`, `league_pc.asm` | same | TODO | | `pc_stubs.asm`: DisplayPCMainMenu / BillsPC_ |
@@ -1303,6 +1303,82 @@ window. That is a **SANCTIONED(window-compositor)** deviation, not a to-do.
 **Fix:** retagged `; DEVIATION(window-compositor):` with the argument above written out. A `TODO-HW` that
 will never be done is a comment that lies to whoever eventually greps for the remaining hardware work.
 **Severity:** low (documentation; the code was already right)
+
+### M-53. The `rAUDTERM` silence store was dropped behind a false `TODO-HW` **[FIXED — row 14]**
+**File:** `dos_port/src/engine/menus/options.asm` `OptionsMenu_SpeakerSettings.save`
+**pret:** `engine/menus/options.asm:240-241` — `xor a / ldh [rAUDTERM], a`
+**What was wrong:** pret zeroes `rAUDTERM` (NR51, the stereo/channel routing register) at the
+instant the speaker setting changes, silencing all channel output across the switch. The port
+dropped the store under:
+> `; TODO-HW: audio HAL (Phase 3) — pret zeroes rAUDTERM ... no APU register in the port, so the`
+> `; register write is skipped.`
+Every clause is false, and the file it is false about is one `grep` away:
+- `rAUDTERM` **exists**: `gb_memmap.inc:905`, `equ 0xFF25`.
+- It is **written** by the audio engine — `src/audio/engine_1.asm:79,254,256,696,698`,
+  `src/audio/engine_2.asm:99,153` (the latter commented "no sound output").
+- It is **read every frame by the output shims** — `opl_shim.asm:313`, `tandy_shim.asm:166`,
+  `spk_shim.asm:96` — which is exactly how the port decides which channels reach the speaker.
+So the byte is not a phantom hardware register: it is live port state with live readers, and the
+one screen whose *purpose* is to change speaker routing was the one screen not writing it.
+"Phase 3" landed long ago (this is the same stale-`TODO-HW`-outliving-its-premise class as M-13
+and M-20 — now the third instance in audio alone).
+**Fix:** `xor al, al / mov [ebp + rAUDTERM], al`, at pret's position. AL is reloaded from
+`wOptions` on the next instruction, so the clobber is pret's own.
+**faithdiff note:** this now shows as `+ ADDED [rAUDTERM]`, which is the pret-side blind spot —
+pret writes it with `ldh`, and the store-matcher only sees `ld [sym], a`.
+**Severity:** medium (wrong audio behavior on a live screen; the shims keep routing on the stale
+byte across the change)
+
+### M-54. 18 hand-encoded charmap strings — excused by the header as "Tier-2 code data" **[FIXED — row 14]**
+**File:** `dos_port/src/engine/menus/options.asm` (`.data`) → `dos_port/assets/options_strings.inc`
+**pret:** `engine/menus/options.asm:AllOptionsText`, `OptionMenuCancelText`, and the six handlers'
+local `.Strings` entries (`.Fast`/`.Mid`/`.Slow`, `.On`/`.Off`, `.Shift`/`.Set`,
+`.Mono`/`.Earphone1-3`, `.Lightest`..`.Darkest`)
+**What was wrong:** every rendered string on the OPTION screen was a raw `db 0x93, 0x84, …` block —
+the Tier-1 violation CLAUDE.md calls "the most-repeated violation". What makes this instance worth
+its own finding is that the header did not merely *fail* to flag it; it **asserted the opposite**:
+> `; Jump table + strings (Tier-2 code data — hand-authored charmap bytes ...)`
+A string the player reads is Tier-1 DATA by definition. The comment invented an exemption that does
+not exist, which is why nobody re-examined it for eight rows of this audit.
+**Fix:** migrated into `tools/gen_menu_strings.py` (new `OPTIONS` group) → `assets/options_strings.inc`,
+`%include`d, wired into `make assets` and the `options.o` prerequisites. `AllOptionsText` and
+`OptionMenuCancelText` keep their pret GLOBAL names; the `opt_*` labels stand in for pret's RGBDS
+locals (the `PARTY_MENU` precedent) and the `.Strings` tables map them back. **`OptionMenuJumpTable`
+stays hand-written and is now the only thing in that section** — it holds flat CODE addresses, which
+no data generator can emit; the header says so instead of lumping it in with the strings.
+The generated bytes were **byte-compared against the old literals: identical, all 18** (and the
+trailing padding — `"MID "`, `"SET  "`, `"MONO     "` — is load-bearing, since a shorter value must
+fully overwrite the longer one it replaces in the same cells; noted in the generator so nobody
+"tidies" it).
+**Severity:** low as shipped (the bytes were right), high as precedent (an invented exemption in a
+header is how a convention dies)
+
+### M-55. `InitOptionsMenu`'s dropped `hAutoBGTransferEnabled`, and a `BUG` tag with no guard **[FIXED — row 14]**
+**File:** `dos_port/src/engine/menus/options.asm` `InitOptionsMenu` / `DisplayOptionMenu_`
+**pret:** `engine/menus/options.asm:470-471` (`ld a,$01 / ldh [hAutoBGTransferEnabled],a`) and
+`DisplayOptionMenu_` (`docs/bugs_and_glitches.md#options-menu-code-fails-to-clear-joypad-state-on-initialization`)
+**What was wrong — two small things, both convention-shaped:**
+1. `InitOptionsMenu` dropped pret's `hAutoBGTransferEnabled = 1` store, replacing it with the port's
+   explicit mirror. The mirror is right (SANCTIONED — there is no VBlank BGMap transfer to enable),
+   but the store is **write-only, not meaningless**: rows 9 and 11 already established that a screen
+   which quietly stops writing a flag pret writes is how port state drifts out of step (M-24).
+   Restored, with the mirror kept and tagged.
+2. The `BUG(cosmetic)` tag for the joypad-state bug was **comment-only** — it described pret's fix in
+   prose and then didn't implement it. The convention is `; BUG(level):` **plus** a
+   `%if BUG_FIX_LEVEL >= N` block: the bug is preserved at level 0 *and* the fix is available. Half
+   the contract was missing. Added at `BUG_FIX_LEVEL >= 2` (cosmetic — `docs/bug_categorization.md:36`
+   already classifies it so), using pret's own one-line fix (`call JoypadLowSensitivity` before
+   `InitOptionsMenu`) verbatim. The bug itself is untouched at level 0, as required.
+**Severity:** low (latent state drift; a missing fix-level block)
+
+### M-56. `docs/bug_categorization.md` still calls the item-swap driver "dormant" **[OPEN — not this row's file]**
+`docs/bug_categorization.md:111` (Expanded Item Pack) says it *"Shares `swap_items.asm`'s **dormant**
+list-menu driver"* and defers the Item Underflow entry until *"`HandleItemListSwapping` is linked"*.
+It **is** linked — row 12 established that (`T HandleItemListSwapping` in `pkmn.sym`, reached from
+`list_menu.asm`'s SELECT branch), and fixed the same false claim in `swap_items.asm`'s own header and
+`GLITCH`/`Safety` note. The doc is the last copy of that stale belief, and it is the copy a
+glitch-safety reader would consult. Not row 14's file; filed rather than swept in.
+**Severity:** low (documentation), but it is a *safety* doc making a reachability claim that is wrong.
 
 ### M-47 — resolved by another session (noted, not claimed)
 The `RunPaletteCommand` ret-stub in `src/engine/battle/faint_switch.asm` is **gone**. The parallel

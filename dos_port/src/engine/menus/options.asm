@@ -10,6 +10,13 @@
 ; JoypadLowSensitivity is already ported (src/input/joypad_lowsens.asm) and is
 ; extern'd here — the hJoy5 read model is preserved verbatim.
 ;
+; The 18 rendered strings are GENERATED (assets/options_strings.inc, from
+; tools/gen_menu_strings.py). They were hand-encoded charmap `db` bytes here until
+; menu-fidelity row 14, described by this header as "Tier-2 code data" — which was
+; the violation, not an exemption from it (CLAUDE.md: a string the player reads is
+; Tier-1 DATA). Only OptionMenuJumpTable stays hand-written: it holds flat CODE
+; addresses, which no data generator can emit.
+;
 ; PORT MODEL (window compositor, same as party_menu.asm's full-screen takeover):
 ; - The menu is drawn at pret GB coords into the 20-wide stride-20 W_TILEMAP
 ;   scratch (hlcoord X,Y = W_TILEMAP + Y*20 + X; GBSCR_W = 20). One full-screen
@@ -111,10 +118,17 @@ section .text
 ; BUG(cosmetic): "Options menu code fails to clear joypad state on initialization"
 ; — the first JoypadLowSensitivity read inside .optionMenuLoop below picks up
 ; whatever direction was already held when the menu opened, shifting that row's
-; option left/right on the opening frame. Fix (not applied at BUG_FIX_LEVEL 0):
-; call JoypadLowSensitivity once here, before InitOptionsMenu, to clear it.
-; pret ref: engine/menus/options.asm:DisplayOptionMenu_, bugs_and_glitches.md#options-menu-code-fails-to-clear-joypad-state-on-initialization
+; option left/right on the opening frame. pret's own doc calls it "(or feature!)"
+; and notes it exists in pokegold/pokecrystal too. Preserved at BUG_FIX_LEVEL 0,
+; as the convention requires; the fix below is pret's own, verbatim.
+; pret ref: engine/menus/options.asm:DisplayOptionMenu_,
+;   docs/bugs_and_glitches.md#options-menu-code-fails-to-clear-joypad-state-on-initialization
+;   ("Fix: + call JoypadLowSensitivity" immediately before InitOptionsMenu)
 DisplayOptionMenu_:
+%if BUG_FIX_LEVEL >= 2
+    call JoypadLowSensitivity                ; consume the held direction so the
+                                             ; opening frame cannot shift a row
+%endif
     call InitOptionsMenu
 .optionMenuLoop:
     call JoypadLowSensitivity
@@ -300,10 +314,15 @@ OptionsMenu_SpeakerSettings:
     mov bl, al                               ; ld c,a
     rol al, 4                                ; swap a
     mov bh, al                               ; ld b,a
-    ; TODO-HW: audio HAL (Phase 3) — pret zeroes rAUDTERM (earphone/speaker
-    ; enable) here (xor a / ldh [rAUDTERM],a); no APU register in the port, so
-    ; the register write is skipped. The wOptions sound bits are still stored
-    ; below, matching pret's no-op-on-value contract.
+    ; xor a / ldh [rAUDTERM], a — silence all channel output while the speaker
+    ; setting changes. This store was DROPPED behind a "TODO-HW: audio HAL
+    ; (Phase 3) — no APU register in the port" comment, which was false: rAUDTERM
+    ; is a live GB-memory byte here (gb_memmap.inc, $FF25), written by the audio
+    ; engine (src/audio/engine_1.asm, engine_2.asm) and READ every frame by the
+    ; output shims (opl_shim.asm, tandy_shim.asm, spk_shim.asm) to decide channel
+    ; routing. Nothing was blocking the store; restored. (M-53)
+    xor al, al
+    mov [ebp + rAUDTERM], al
     mov al, [ebp + wOptions]
     and al, ~SOUND_MASK & 0xFF
     or al, bh                                ; or b
@@ -515,8 +534,16 @@ InitOptionsMenu:
     dec ecx
     jnz .loop
     mov byte [ebp + wOptionsCursorLocation], 0
-    ; ld a,1 / ldh [hAutoBGTransferEnabled],a — port: expose the finished
-    ; scratch as the single window, then settle (pret's Delay3).
+    ; ld a,1 / ldh [hAutoBGTransferEnabled],a. The flag is WRITE-ONLY in the port
+    ; (do_bg_transfer is retired; the explicit mirror below is the WRAM→tilemap
+    ; path), but the store is pret's and is kept: a screen that quietly stops
+    ; writing a flag pret writes is how port state drifts out of step with the
+    ; disassembly. Same call made at party_menu.asm / start_sub_menus.asm (M-24).
+    mov al, 1
+    mov [ebp + hAutoBGTransferEnabled], al
+    ; DEVIATION(window-compositor): pret's VBlank BGMap transfer has no port
+    ; counterpart, so the finished scratch is published explicitly — mirror it into
+    ; GB_TILEMAP1 and register the single full-screen window — then settle (Delay3).
     call options_mirror
     call OptionsShowWindow
     call Delay3
@@ -561,9 +588,18 @@ options_mirror:
     ret
 
 ; ---------------------------------------------------------------------------
-; Jump table + strings (Tier-2 code data — hand-authored charmap bytes; GB
-; charmap 'A'=$80, ' '=$7F, ':'=$9C, '@'=$50, '1'=$F7). pret aliases these
-; labels; the jump table is a hand-written dd table per CLAUDE.md two-tier rule.
+; Jump table (Tier-2 code data: it holds flat CODE addresses, which no generator
+; can produce — this is the one table that belongs in the .asm) + the generated
+; strings.
+;
+; The 18 rendered strings below USED to be hand-authored charmap `db` bytes here,
+; under a header that called them "Tier-2 code data". They are not: a string the
+; player reads is Tier-1 DATA (CLAUDE.md, "Text strings are DATA — never
+; hand-encode charmap bytes"). They are now generated by tools/gen_menu_strings.py
+; into assets/options_strings.inc (byte-compared against the old literals:
+; identical, all 18). AllOptionsText and OptionMenuCancelText keep their pret
+; GLOBAL names; the opt_* labels stand in for pret's RGBDS locals and are mapped
+; back to them by the .Strings tables above.
 ; ---------------------------------------------------------------------------
 section .data
 align 4
@@ -578,44 +614,10 @@ OptionMenuJumpTable:
     dd OptionsMenu_Dummy
     dd OptionsMenu_Cancel
 
-; pret ref: options.asm:AllOptionsText (labels/rows split by <NEXT> $4E; the port
-; PlaceString double-spaces <NEXT> by default, landing rows 2,4,6,8,10 as pret).
-AllOptionsText:
-    db 0x93, 0x84, 0x97, 0x93, 0x7F, 0x92, 0x8F, 0x84, 0x84, 0x83, 0x7F, 0x9C   ; "TEXT SPEED :"
-    db 0x4E, 0x80, 0x8D, 0x88, 0x8C, 0x80, 0x93, 0x88, 0x8E, 0x8D, 0x7F, 0x7F, 0x9C ; "ANIMATION  :"
-    db 0x4E, 0x81, 0x80, 0x93, 0x93, 0x8B, 0x84, 0x92, 0x93, 0x98, 0x8B, 0x84, 0x9C ; "BATTLESTYLE:"
-    db 0x4E, 0x92, 0x8E, 0x94, 0x8D, 0x83, 0x9C                                    ; "SOUND:"
-    db 0x4E, 0x8F, 0x91, 0x88, 0x8D, 0x93, 0x9C, 0x50                              ; "PRINT:@"
-
-; pret ref: options.asm:OptionMenuCancelText
-OptionMenuCancelText:
-    db 0x82, 0x80, 0x8D, 0x82, 0x84, 0x8B, 0x50                                    ; "CANCEL@"
-
-; pret ref: OptionsMenu_TextSpeed.Fast/.Mid/.Slow
-opt_ts_fast: db 0x85, 0x80, 0x92, 0x93, 0x50                                       ; "FAST@"
-opt_ts_mid:  db 0x8C, 0x88, 0x83, 0x7F, 0x50                                       ; "MID @"
-opt_ts_slow: db 0x92, 0x8B, 0x8E, 0x96, 0x50                                       ; "SLOW@"
-
-; pret ref: OptionsMenu_BattleAnimations.On/.Off
-opt_ba_on:  db 0x8E, 0x8D, 0x7F, 0x50                                              ; "ON @"
-opt_ba_off: db 0x8E, 0x85, 0x85, 0x50                                              ; "OFF@"
-
-; pret ref: OptionsMenu_BattleStyle.Shift/.Set
-opt_bs_shift: db 0x92, 0x87, 0x88, 0x85, 0x93, 0x50                                ; "SHIFT@"
-opt_bs_set:   db 0x92, 0x84, 0x93, 0x7F, 0x7F, 0x50                                ; "SET  @"
-
-; pret ref: OptionsMenu_SpeakerSettings.Mono/.Earphone1/2/3
-opt_snd_mono: db 0x8C, 0x8E, 0x8D, 0x8E, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x50        ; "MONO     @"
-opt_snd_ear1: db 0x84, 0x80, 0x91, 0x8F, 0x87, 0x8E, 0x8D, 0x84, 0xF7, 0x50        ; "EARPHONE1@"
-opt_snd_ear2: db 0x84, 0x80, 0x91, 0x8F, 0x87, 0x8E, 0x8D, 0x84, 0xF8, 0x50        ; "EARPHONE2@"
-opt_snd_ear3: db 0x84, 0x80, 0x91, 0x8F, 0x87, 0x8E, 0x8D, 0x84, 0xF9, 0x50        ; "EARPHONE3@"
-
-; pret ref: OptionsMenu_GBPrinterBrightness.Lightest/.Lighter/.Normal/.Darker/.Darkest
-opt_pr_lightest: db 0x8B, 0x88, 0x86, 0x87, 0x93, 0x84, 0x92, 0x93, 0x50           ; "LIGHTEST@"
-opt_pr_lighter:  db 0x8B, 0x88, 0x86, 0x87, 0x93, 0x84, 0x91, 0x7F, 0x50           ; "LIGHTER @"
-opt_pr_normal:   db 0x8D, 0x8E, 0x91, 0x8C, 0x80, 0x8B, 0x7F, 0x7F, 0x50           ; "NORMAL  @"
-opt_pr_darker:   db 0x83, 0x80, 0x91, 0x8A, 0x84, 0x91, 0x7F, 0x7F, 0x50           ; "DARKER  @"
-opt_pr_darkest:  db 0x83, 0x80, 0x91, 0x8A, 0x84, 0x92, 0x93, 0x7F, 0x50           ; "DARKEST @"
+; AllOptionsText, OptionMenuCancelText, opt_ts_*, opt_ba_*, opt_bs_*, opt_snd_*,
+; opt_pr_* — generated (pret ref: options.asm:AllOptionsText / OptionMenuCancelText
+; and the six handlers' local .Strings entries).
+%include "assets/options_strings.inc"
 
 ; ---------------------------------------------------------------------------
 ; RunOptionsTest — menus S6 package D FRAME.BIN gate (static open state).
