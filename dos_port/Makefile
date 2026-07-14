@@ -567,10 +567,12 @@ endif
 ifdef ITEMBALL_ATTACH_DELAY
 NASMFLAGS += -D ITEMBALL_ATTACH_DELAY
 endif
-# AutoKeyDrive's own FRAME.BIN dump exits the program; the capture (with the new-species
-# Pokédex entry) runs past its default frame 200, so push it out of the way here.
+# AutoKeyDrive's own FRAME.BIN dump exits the program, and the ball capture runs long, so
+# the dump frame must stay out of its way: DEFAULT 999999 (measured — see below).
+# M-120: this was a hardcoded `-D AUTOKEY_DUMP_FRAME=160` that beat the `?=`, so an
+# AUTOKEY_DUMP_FRAME passed on the command line was silently ignored. Overridable now.
 AUTOKEY_DUMP_FRAME ?= 999999
-NASMFLAGS += -D AUTOKEY_DUMP_FRAME=160
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 endif
 # Items-plan Stage 7 gate: teach the TM/HM in ITEMTM_ID (default TM06 TOXIC) to party
 # slot ITEMTM_MON, headless, capturing the result to DUMP.BIN. AUTOKEY answers the
@@ -595,8 +597,12 @@ endif
 ifdef ITEMSTONE_SPECIES
 NASMFLAGS += -D ITEMSTONE_SPECIES=$(ITEMSTONE_SPECIES)
 endif
+# AutoKeyDrive's own FRAME.BIN dump EXITS the program, so it must stay out of the way of
+# this gate's DebugDumpMemory capture: DEFAULT 999999 (measured — at 160 this gate produced
+# no DUMP.BIN at all). M-120: was a hardcoded `=160` that beat the `?=`, so an
+# AUTOKEY_DUMP_FRAME passed on the command line was silently ignored. Overridable now.
 AUTOKEY_DUMP_FRAME ?= 999999
-NASMFLAGS += -D AUTOKEY_DUMP_FRAME=160
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 endif
 
 ifdef DEBUG_ITEMTM
@@ -612,8 +618,12 @@ endif
 ifdef ITEMTM_MON
 NASMFLAGS += -D ITEMTM_MON=$(ITEMTM_MON)
 endif
+# AutoKeyDrive's own FRAME.BIN dump EXITS the program, so it must stay out of the way of
+# this gate's DebugDumpMemory capture: DEFAULT 999999 (measured — at 160 this gate produced
+# no DUMP.BIN at all). M-120: was a hardcoded `=160` that beat the `?=`, so an
+# AUTOKEY_DUMP_FRAME passed on the command line was silently ignored. Overridable now.
 AUTOKEY_DUMP_FRAME ?= 999999
-NASMFLAGS += -D AUTOKEY_DUMP_FRAME=160
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 endif
 ifdef DEBUG_ITEMUSE
 NEED_DEBUG_DUMP := 1

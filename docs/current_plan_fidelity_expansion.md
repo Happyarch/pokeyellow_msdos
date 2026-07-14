@@ -154,7 +154,7 @@ dialog scratch **shares bytes with the map mirror** — F-13.)
 | 0 | Groundwork: box-level reconcile, DebugDumpMemory→GBSTATE hook, scenario ids | DONE | `a74c44c9` | box-level was a non-issue (F-1); hook verified on DEBUG_ITEMTM; +`tools/run_headless.sh` |
 | 1a | GBSTATE v2 + WRAM regions end-to-end (existing 6 scenarios) | DONE | `a74c44c9`, `8b018e84` | v2 is SELF-DESCRIBING (design change, below); found 3 real harness bugs (F-3/F-4/F-5); fidelity 6/6 green |
 | 1b | `sign_pallet` streamed-text scenario | **DONE** | `60990fd5`, `b99c0199`, `1c346cbb`, `189fbb59` | the port could not read a sign AT ALL (F-6 data, F-7 code) — both fixed. Plus **F-10** (text-id-0 collision) and **F-12** (the gate stood on an unreachable tile), both found during the fold-back. Golden passes 360/360 tilemap cells incl. the whole dialog box; `make fidelity` 7/7. **Never was blocked**: F-9 was a misdiagnosis, F-8 does not reproduce. New OPEN findings it surfaced: **F-13** (scratch/mirror overlap), **F-14** (▼ after `done`). |
-| 1c | Item datastruct scenarios ×3 | TODO | | |
+| 1c | Item datastruct scenarios ×3 | TODO | | **Groundwork done & unblocked**: F-15 — all three item gates were producing NO `DUMP.BIN` (the `=160` hardcode let AutoKeyDrive exit before the capture); default now 999999 and the frame is overridable. The gates capture for the first time. |
 | 2 | Battle convergence spec + battle_intro/battle_menu/move_selection + ball_catch | TODO | | |
 | 3 | Menu scenarios ×5 + stride support | TODO | | |
 | 4 | Cross-cut: tiers, goldens-verify, mask policy, skill updates | TODO | | |
@@ -652,6 +652,34 @@ The fix is to make the arrow a property of the *text command*, as in pret, rathe
 wait. Do it with the `cont`/`prompt` work, and add `GB_TILEMAP1` to the compared regions so the
 golden can see the window layer at all.
 
+### F-15. All three item gates were dumping NOTHING — the `=160` hardcode exited the program before the capture ran [FIXED — Stage 1c groundwork]
+
+M-120 said the hardcoded `-D AUTOKEY_DUMP_FRAME=160` made the gates' dump frame
+*non-overridable*. That undersold it. **The frame it was pinned to was also wrong, and the gates
+were not capturing at all.**
+
+`AutoKeyDrive`'s own `FRAME.BIN` dump **exits the program**. `DEBUG_ITEMTM` / `DEBUG_ITEMSTONE` /
+`DEBUG_ITEMBALL` are `DUMP.BIN` gates (`NEED_DEBUG_DUMP := 1`) whose capture runs long — past the
+message waits, past the evolution, past the throw. Pinned at 160, AutoKeyDrive fired **first**,
+wrote a `FRAME.BIN` and quit, and `DebugDumpMemory` never ran. Measured, `run_headless.sh` (which
+deletes stale dumps first, so a produced file is definitionally fresh):
+
+| gate | `AUTOKEY_DUMP_FRAME=160` (the old effective default) | `=999999` |
+|---|---|---|
+| `DEBUG_ITEMBALL` | `FRAME.BIN`, `GBSTATE.BIN` — **no `DUMP.BIN`** | `DUMP.BIN` (576 B) ✅ |
+| `DEBUG_ITEMTM` | `FRAME.BIN`, `GBSTATE.BIN` — **no `DUMP.BIN`** | `DUMP.BIN` (576 B) ✅ |
+| `DEBUG_ITEMSTONE` | `FRAME.BIN`, `GBSTATE.BIN` — **no `DUMP.BIN`** | `DUMP.BIN` (576 B) ✅ |
+
+`DEBUG_ITEMBALL`'s comment said this all along — *"AutoKeyDrive's own FRAME.BIN dump exits the
+program … so push it out of the way here"* — directly above a line that did the opposite. The
+comment was right and the code was wrong, which is the **inverse** of this project's usual defect
+and worth noticing: the lesson is not "distrust comments", it is **measure**. Default is now
+999999 on all three.
+
+**Consequence for Stage 1c, and it is a good one:** its three scenarios are not being added to a
+working harness — they are the first thing that will ever have *observed* these gates. Any
+"expected" value taken from a pre-fix `DUMP.BIN` is worthless, because there were none.
+
 ## Imported open findings from the menu-fidelity audit
 
 That audit closed with ~20 `M-` findings filed OPEN against files outside the rows that found
@@ -690,9 +718,9 @@ them. The ones that touch this plan:
   | 599 | `DEBUG_ITEMSTONE` | same |
   | 616 | `DEBUG_ITEMTM` | same |
 
-  (Also `DEBUG_TEXT` 697, `DEBUG_LISTMENU_QTY` 719, `DEBUG_CHANGEBOX` 835.) The `?=` is
-  **dead** — the literal `160` on the next line wins, so **`make DEBUG_ITEMTM=1
-  AUTOKEY_DUMP_FRAME=400` silently still dumps at frame 160.** Stage 1c's table says "dump
-  after the 'learned' text clears"; that is not frame 160 and **cannot be reached until this is
-  fixed.** Fix first, as line 626-627 already does it: `NASMFLAGS += -D
-  AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)`. This is Stage 1c's true first task.
+  The `?=` was **dead** — the literal `160` on the next line won, so `make DEBUG_ITEMTM=1
+  AUTOKEY_DUMP_FRAME=400` silently still dumped at frame 160. **FIXED (this commit)** — all three
+  now read `?= 999999` + `-D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)`, as `DEBUG_ITEMUSE`
+  already did. See **F-15**: the default had to change too, and the reason is worse than M-120.
+  (Still carrying the old hardcode, outside this plan's scope: `DEBUG_TEXT` 697,
+  `DEBUG_LISTMENU_QTY` 719, `DEBUG_CHANGEBOX` 835.)
