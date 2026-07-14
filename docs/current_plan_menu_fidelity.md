@@ -1487,7 +1487,7 @@ silently calls its own private clone of a pret label instead of the shared one. 
 `pokedex.asm`; filed rather than reached into. Also passed to the colorization session, since the fix
 belongs with their palette body.
 
-### M-62. Both `RunDefaultPaletteCommand` copies pass the palette id in the wrong register half **[OPEN — handed to the palette session]**
+### M-62. The palette command was passed in the wrong register half **[FIXED — `c84c76e8`]**
 Both bodies do `mov bl, SET_PAL_DEFAULT`, and `naming_screen.asm:300`'s `SET_PAL_GENERIC` call site does
 the same. pret sets **`b`** (= **BH** in the port's register map), and `RunPaletteCommand` reads `b`.
 This is harmless *only* while `RunPaletteCommand` is a ret-stub that never reads its argument — the
@@ -1496,6 +1496,39 @@ body right now, and on the day it starts reading BH, every `RunDefaultPaletteCom
 whatever is in the wrong half and picks the wrong palette. Not fixed here: changing a register contract
 underneath another session's in-flight body, without their body to test against, is how you ship the
 next silent bug. Messaged to `r-60a3083156c6` with the fix.
+
+**RESOLVED `c84c76e8`.** That session ended without taking it, so this row closed it. Reading their
+landed body changed the picture completely: `RunPaletteCommand` was not merely *reading the wrong
+half*, it was reading **either** half —
+
+    RunPaletteCommand:
+        mov al, bl
+        test al, al
+        jnz .have_command
+        mov al, bh          ; only when BL == 0
+
+— i.e. a "normalizing shim" that made the **wrong half authoritative**. Two consequences, neither of
+them theoretical:
+
+1. The sites that were **already correct** (`town_map`'s `SET_PAL_TOWN_MAP`, `pokedex_entry`'s
+   `SET_PAL_POKEDEX`, both writing BH) were **silently mis-dispatched whenever BL happened to be
+   nonzero**. The bug was live, and it punished the callers that had done the right thing.
+2. It made the path **un-fixable one site at a time**: the faithful edit (BL → BH) is precisely the
+   edit the shim breaks. This is why row 16 part 1 deliberately did *not* convert `pokedex.asm` —
+   that call was right, on the evidence available then, but the real answer was that the migration
+   must land **atomically**, which is what `c84c76e8` does: all 9 call sites → BH, then the shim
+   reads BH only. `_RunPaletteCommand` never reads BL, so pret's `c` carries nothing here.
+
+The lesson generalizes past palettes: **a compatibility shim that accepts both of two contracts does
+not remove the bug, it removes your ability to fix it** — and it hides which callers are wrong.
+
+### M-72. Two battle call sites passed NO palette command at all **[FIXED — `c84c76e8`]**
+Found while doing M-62. `faint_switch.asm:205` and `faint_sendout.asm:127` both `call
+RunPaletteCommand` where pret does `ld b, SET_PAL_BATTLE / call RunPaletteCommand` — they set `b`
+**not at all** and dispatched on whatever junk `BX` happened to hold. Harmless only while
+`RunPaletteCommand` ignored its argument; that stopped being true the moment the palette engine
+landed, and nothing would have flagged it (faithdiff sees the *call*, and the call was there).
+`SET_PAL_BATTLE` did not exist anywhere in the port — added to `gb_constants.inc`.
 
 ---
 
