@@ -35,6 +35,10 @@ dos_port/CWSDPMI.SWP
 # is deliberately NOT matched here.
 dos_port/GBSTATE.BIN
 
+# DOSBox-X screen captures (command_*.png etc.) — regenerable, and written
+# whenever a run captures a frame.
+dos_port/capture/
+
 # DOS port assets — generated .inc are ignored, EXCEPT the ones below that have
 # no `make` rule (checked-in generated graphics: fonts, Pikachu/logo/title pics,
 # NPC stills, mon icons). They are NOT reproducible by `make assets`, so they must
