@@ -2,7 +2,7 @@
 
 > **STATUS — OPEN.** Planned 2026-07-13 in the `worktree-fidelity-expansion` worktree;
 > **folded back into master 2026-07-14** and rectified against it in the same pass.
-> Stages 0 and 1a are DONE; 1b is partly done (see the ledger). Work stage-by-stage,
+> Stages 0, 1a and 1b are DONE (see the ledger); 1c/2/3/4 remain. Work stage-by-stage,
 > update the Coverage table, append findings, commit per stage.
 >
 > Skills to load before starting: `build-and-debug` + `faithfulness-review` (always),
@@ -38,9 +38,9 @@ work it describes, so it never drifts back into being a confident lie.
 
 ## Why this exists
 
-`make fidelity` covers 6 scenarios (status_p1/p2, start_menu, overworld_pallet, party_menu,
-bag_menu). Before this plan it compared only tilemap cells, VRAM tile slots, and OAM.
-Proven blind spots:
+`make fidelity` covered 6 scenarios when this plan opened (status_p1/p2, start_menu,
+overworld_pallet, party_menu, bag_menu), and compared only tilemap cells, VRAM tile slots, and
+OAM. (It is 7 now — Stage 1b added `sign_pallet` — and it compares WRAM.) Proven blind spots:
 
 - **No WRAM datastruct comparison** — party structs, `wLoadedMon`, bag, player data were
   never diffed vs mGBA (the never-done Session-F item of `docs/plans/fidelity_harness.md`).
@@ -80,8 +80,9 @@ Each is stated with where it was checked. Re-check before relying on one; line n
   `offcanvas`, `masks`, and — since Stage 1a — `wram_skip` / `wram_masks`. Exit 1 on unmasked
   divergence. `--flags` feeds `goldencheck.sh`. ✅ holds.
 - **`make goldens` / `goldencheck SCENARIO=` / `fidelity`** live in the Makefile with
-  `FIDELITY_SCENARIOS := status_p1 status_p2 start_menu overworld_pallet party_menu bag_menu`.
-  ✅ holds (the old line citations were stale and are dropped).
+  `FIDELITY_SCENARIOS := status_p1 status_p2 start_menu overworld_pallet party_menu bag_menu
+  sign_pallet` (Stage 1b appended the last one). ✅ holds (the old line citations were stale
+  and are dropped).
 - **WRAM addresses** (`include/gb_memmap.inc`, re-verified): `wPlayerName` $D157 (11);
   `wPartyCount` $D162 → `wPartyMonNicksEnd` $D2F6, one contiguous 0x194 block;
   `wPokedexOwned` $D2F6 (owned 19 + seen 19); `wNumBagItems` $D31C (1+20×2+1 = 42);
@@ -132,9 +133,9 @@ dialog scratch **shares bytes with the map mirror** — F-13.)
 
 | # | stage | status | commit | notes |
 |---|---|---|---|---|
-| 0 | Groundwork: box-level reconcile, DebugDumpMemory→GBSTATE hook, scenario ids | DONE | | box-level was a non-issue (F-1); hook verified on DEBUG_ITEMTM; +`tools/run_headless.sh` |
-| 1a | GBSTATE v2 + WRAM regions end-to-end (existing 6 scenarios) | DONE | | v2 is SELF-DESCRIBING (design change, below); found 3 real harness bugs (F-3/F-4/F-5); fidelity 6/6 green |
-| 1b | `sign_pallet` streamed-text scenario | **DONE** | | the port could not read a sign AT ALL (F-6 data, F-7 code) — both fixed. Plus **F-10** (text-id-0 collision) and **F-12** (the gate stood on an unreachable tile), both found during the fold-back. Golden passes 360/360 tilemap cells incl. the whole dialog box; `make fidelity` 7/7. **Never was blocked**: F-9 was a misdiagnosis, F-8 does not reproduce. New OPEN findings it surfaced: **F-13** (scratch/mirror overlap), **F-14** (▼ after `done`). |
+| 0 | Groundwork: box-level reconcile, DebugDumpMemory→GBSTATE hook, scenario ids | DONE | `a74c44c9` | box-level was a non-issue (F-1); hook verified on DEBUG_ITEMTM; +`tools/run_headless.sh` |
+| 1a | GBSTATE v2 + WRAM regions end-to-end (existing 6 scenarios) | DONE | `a74c44c9`, `8b018e84` | v2 is SELF-DESCRIBING (design change, below); found 3 real harness bugs (F-3/F-4/F-5); fidelity 6/6 green |
+| 1b | `sign_pallet` streamed-text scenario | **DONE** | `60990fd5`, `b99c0199`, `1c346cbb`, `189fbb59` | the port could not read a sign AT ALL (F-6 data, F-7 code) — both fixed. Plus **F-10** (text-id-0 collision) and **F-12** (the gate stood on an unreachable tile), both found during the fold-back. Golden passes 360/360 tilemap cells incl. the whole dialog box; `make fidelity` 7/7. **Never was blocked**: F-9 was a misdiagnosis, F-8 does not reproduce. New OPEN findings it surfaced: **F-13** (scratch/mirror overlap), **F-14** (▼ after `done`). |
 | 1c | Item datastruct scenarios ×3 | TODO | | |
 | 2 | Battle convergence spec + battle_intro/battle_menu/move_selection + ball_catch | TODO | | |
 | 3 | Menu scenarios ×5 + stride support | TODO | | |
@@ -200,8 +201,9 @@ and species are charmap-decoded; multi-byte big-endian fields collapse to one li
 
 #### Exit-gate evidence
 
-- `make fidelity` **6/6 PASS**, each reporting `WRAM: OK (8 regions, 5 skipped)` (the 5 skips
-  = `_NONBATTLE_WRAM_SKIP`, retired by the Stage 2 battle scenarios).
+- `make fidelity` **PASS on every scenario** (6/6 at Stage 1a; **7/7** once Stage 1b added
+  `sign_pallet`), each reporting `WRAM: OK (8 regions, 5 skipped)` (the 5 skips =
+  `_NONBATTLE_WRAM_SKIP`, retired by the Stage 2 battle scenarios).
 - `make goldens` twice → **byte-identical sha1s**.
 - `tools/lint_pret_labels` exits 0.
 - **Revert-proof** — corrupting one DV byte and one seeded bag quantity in `debug_party.asm`:
