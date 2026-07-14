@@ -445,13 +445,13 @@ extern DrawBadges                    ; engine/menus/draw_badges.asm
 extern FillMemory                    ; home/fill_memory.asm
 extern DelayFrame                    ; video/frame.asm
 extern DumpBackbuffer                ; debug/debug_dump.asm
+extern SeedDeterministicPlayerIdentity ; engine/debug/debug_party.asm — "RED"/id 0 (seed.lua spec)
 global RunTrainerCardTest
 RunTrainerCardTest:
-    ; player name "RED@"
-    mov byte [ebp + wPlayerName + 0], 0x91   ; R
-    mov byte [ebp + wPlayerName + 1], 0x84   ; E
-    mov byte [ebp + wPlayerName + 2], 0x83   ; D
-    mov byte [ebp + wPlayerName + 3], 0x50   ; @
+    ; player name "RED@" + wPlayerID = 0: the shared golden identity spec. The
+    ; old hand-poked name left wPlayerID as InitPlayerData's RNG roll (F-5
+    ; class), which the trainer_card golden's wPlayerID region would catch.
+    call SeedDeterministicPlayerIdentity
     ; money = 123456 (3-byte BCD)
     mov byte [ebp + wPlayerMoney + 0], 0x12
     mov byte [ebp + wPlayerMoney + 1], 0x34

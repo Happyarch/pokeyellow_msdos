@@ -119,6 +119,13 @@ DATASTRUCT_CLASS_WHY = (
 #            tilemap/vram/oam and needs no window
 #   flags  — make variables that build the matching DEBUG_* image
 #   window — (col,row) of the 20x18 GB screen inside the port's 40x25 canvas
+#   stride — optional; the port's W_TILEMAP row stride for this scenario
+#     (default 40, the canvas). Full-screen takeover screens (options menu,
+#     trainer card, pokédex) draw W_TILEMAP as a GB-SHAPED stride-20 scratch
+#     (the screen sets text_row_stride=20 and mirrors rows 0-17 to GB_TILEMAP1),
+#     so golden cell (r,c) lives at flat offset r*20+c, NOT r*40+c. Such
+#     scenarios use "stride": 20 with window (0,0). The stride applies to the
+#     port cell computed from window+projections: flat = row*stride + col.
 #   projections — optional list of ((row0,col0,row1,col1), (dcol,drow), why):
 #     golden cells in the inclusive rect map to port canvas
 #     (golden_col + dcol, golden_row + drow) instead of the window — the port
@@ -468,6 +475,40 @@ SCENARIOS = {
         "class": "datastruct",
         "flags": "DEBUG_BATTLE_GOLDEN=1 DEBUG_ITEMBALL=1",
         "wram_masks": dict(_BATTLE_WRAM_MASKS),
+    },
+    # --- Stage 3: full-screen takeover menus. Both port screens draw W_TILEMAP
+    # as a GB-shaped STRIDE-20 scratch (options.asm GBSCR_W / trainer_card.asm
+    # TCSCR_W) and mirror rows 0-17 to GB_TILEMAP1, so the golden maps at
+    # "stride": 20, window (0,0) — flat offset r*20+c, not the 40-wide canvas. ---
+    "options_menu": {
+        "flags": "DEBUG_OPTIONS=1",
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
+        "window": (0, 0),
+        "stride": 20,
+        # First diff (2026-07-14): 360/360 tilemap cells, OAM and WRAM clean;
+        # the ONLY divergence was the flower-anim slot. Both sides keep the
+        # outdoor tileset in vChars2 under the full-screen takeover; the two
+        # animated tiles' phase is a function of each side's own dump frame
+        # (the water slot happened to match this frame — same mask pair every
+        # overworld-backdrop scenario carries).
+        "masks": {
+            "vram": [
+                (256 + 0x03, "flower tile: VRAM tile-DATA animation, phase depends on dump frame"),
+                (256 + 0x14, "water tile: VRAM tile-DATA animation, phase depends on dump frame"),
+            ],
+        },
+    },
+    "trainer_card": {
+        "flags": "DEBUG_TRAINERCARD=1",
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
+        "window": (0, 0),
+        "stride": 20,
+        "masks": {
+            "vram": [
+                (256 + 0x03, "flower tile: VRAM tile-DATA animation, phase depends on dump frame"),
+                (256 + 0x14, "water tile: VRAM tile-DATA animation, phase depends on dump frame"),
+            ],
+        },
     },
     "start_menu": {
         "flags": "DEBUG_STARTMENU=1",
@@ -838,6 +879,7 @@ def main():
     else:
         # --- tilemap: 20x18 subwindow at (col,row), minus projected UI rects ---
         col0, row0 = cfg["window"]
+        stride = cfg.get("stride", PORT_CANVAS_W)
         tm_masks = expand_tilemap_masks(cfg.get("masks", {}).get("tilemap", []))
         projections = cfg.get("projections", [])
         offcanvas_why = cfg.get("offcanvas")
@@ -850,13 +892,14 @@ def main():
                         pc, pr = c + dcol, r + drow
                         break
                 want = golden["wTileMap"][r * GB_W + c]
-                if not (0 <= pc < PORT_CANVAS_W and 0 <= pr < PORT_CANVAS_H):
+                if not (0 <= pc < stride and pr >= 0
+                        and pr * stride + pc < PORT_TILEMAP_SIZE):
                     if offcanvas_why:
                         masked_hits.append(f"tilemap ({r:2d},{c:2d}): {offcanvas_why}")
                         continue
                     tm_lines.append(f"  ({r:2d},{c:2d}) maps off-canvas to ({pr},{pc}) — no justification")
                     continue
-                got = port["tilemap"][pr * PORT_CANVAS_W + pc]
+                got = port["tilemap"][pr * stride + pc]
                 if want == got:
                     continue
                 if (r, c) in tm_masks:
@@ -866,13 +909,14 @@ def main():
                     f"  ({r:2d},{c:2d}) want ${want:02X} {glyph(cmap, want):>4} | got ${got:02X} {glyph(cmap, got):>4}")
         if tm_lines:
             failures += len(tm_lines)
-            print(f"TILEMAP: {len(tm_lines)} mismatched cells (of {GB_W * GB_H}), window at col {col0} row {row0}:")
+            print(f"TILEMAP: {len(tm_lines)} mismatched cells (of {GB_W * GB_H}), "
+                  f"window at col {col0} row {row0}, stride {stride}:")
             for line in tm_lines[:args.max_report]:
                 print(line)
             if len(tm_lines) > args.max_report:
                 print(f"  ... and {len(tm_lines) - args.max_report} more")
         else:
-            print(f"TILEMAP: OK (360 cells, window at col {col0} row {row0})")
+            print(f"TILEMAP: OK (360 cells, window at col {col0} row {row0}, stride {stride})")
 
         # --- vram: per 16-byte tile slot ---
         vr_masks = dict(cfg.get("masks", {}).get("vram", []))

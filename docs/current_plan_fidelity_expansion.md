@@ -20,55 +20,70 @@
 > Skills to load before starting: `build-and-debug` + `faithfulness-review` (always),
 > `asm-translation` (before touching `debug_dump.asm`), `project-conventions`.
 
-## 🤝 SESSION HANDOFF (written 2026-07-14, end of the Stage-2 session)
+## 🤝 SESSION HANDOFF (written 2026-07-15, end of the Stage-3-first-half session)
 
-The session that executed Stages 1c and 2 ended here **by design** (context hygiene — the
-user asked for a fresh session for the rest). If you are that fresh session: this section is
+The Stage-3 session ended after the stage's first half **by design** (context hygiene — the
+user scoped the session to it). If you are the fresh session picking this up: this section is
 your starting state. Everything below it is still binding; read "⚠ Read this first" next,
 then the Stage 3/4 specs.
 
-**Where master stands after the Stage-2 commit:**
-- `make -C dos_port fidelity` is **14/14** green: status_p1/p2, start_menu, overworld_pallet,
+**Where master stands after the Stage-3-first-half commit (`25a15b7a`):**
+- `make -C dos_port fidelity` is **16/16** green: status_p1/p2, start_menu, overworld_pallet,
   party_menu, bag_menu, sign_pallet, item_tm_teach, item_stone_evolve, item_potion_use,
-  battle_intro, battle_menu, move_selection, ball_catch.
+  battle_intro, battle_menu, move_selection, ball_catch, **options_menu, trainer_card**.
 - All goldens are committed and regenerate byte-identically (verified ×2 this session for the
-  four battle goldens; the Route 1 encounter lands at frame 5259 every run).
-- `tools/lint_pret_labels` exits 0. `tools/update_label_db` was run after the commit.
+  two new ones). `tools/lint_pret_labels` exits 0; `tools/update_label_db` output is in the
+  commit.
 
-**What remains: Stage 3 (menu scenarios ×5 + stride-20 differ support), then Stage 4
-(tiers, `goldens-verify`, mask policy, skill updates, archive this plan).** Their specs below
-are already rectified — but re-measure anyway; the standing rule (master is truth, comments
-are not) applies to this file too.
+**What remains: Stage 3 second half — `pokedex_list` (DEBUG_G1), `pokedex_entry` (DEBUG_G2),
+`naming_screen` (DEBUG_NAMINGSCREEN); then Stage 4 (tiers, `goldens-verify`, mask policy,
+skill updates, archive this plan).** Specs are in the Stage 3/4 sections below — re-measure
+anyway; the standing rule (master is truth, comments are not) applies to this file too.
 
-**Machinery Stage 2 left you (reuse, don't rebuild):**
-- Golden side: `lib/battle.lua` (`enter_wild` = the whole boot→Route-1→forced-encounter→spec
-  enemy flow), `seed.enemy` / `seed.force_encounter` / `seed.set_event` in `lib/seed.lua`.
-- Port side: the `DEBUG_BATTLE_GOLDEN` branch of `RunBattleTest` (`debug_dump.asm`) with
-  subflag chain `_INTRO` / `_MENU` / `DEBUG_MOVEMENU` / `DEBUG_ITEMBALL`; scenario ids 14/15/16/20.
-- Differ: battle window is a uniform (10,3) with `oam_window: True`; `_BATTLE_VRAM_MASKS`
-  (intro) vs `_BATTLE_VRAM_MASKS_MENU` (post-send-out) — every mask string explains its
-  measurement; F-19's masks carry the finding id (Stage 4's mask policy is already followed
-  there).
-- Stage 3 needs the `"stride": 20` differ key (NOT yet implemented) — see its spec.
+**Machinery the first half left you (reuse, don't rebuild):**
+- Differ: the `"stride": 20` key is **implemented and revert-proofed** (see the Stage-3 notes
+  for the RED output). Full-screen takeover screens draw `W_TILEMAP` as a GB-shaped stride-20
+  scratch → entry = `"stride": 20`, `"window": (0, 0)`. **Measure each remaining screen's
+  actual draw stride from its source** — the plan table missed that options.asm is stride-20
+  too (`GBSCR_W equ 20`); check pokedex.asm / naming_screen.asm the same way before writing
+  their entries.
+- Both new scenarios reuse start_menu's walk to the (8,8) Pallet spawn before opening the
+  menu, so vChars2 holds the same outdoor tileset as the port's boot under the takeover.
+  The pokédex/naming scenarios likely want the same shape (naming_screen's port gate may
+  differ — its table row says "new game → NEW NAME"; measure).
+- Port gates that reach a real screen from the bare boot need
+  `call SeedDeterministicPlayerIdentity` (F-5 class: bare-boot `wPlayerID` is an RNG roll —
+  it bit both gates this session). Check RunPokedexTest / RunPokedexEntryTest /
+  RunNamingScreenTest for the same gap before goldening them; also mirror any gate seeds
+  into the scenario (the pokedex gate's scatter pattern already has `seed.pokedex`).
+- Single-scenario golden generation without the full `make goldens` sweep:
+  `GOLDEN_DIR=$PWD/dos_port/tests/goldens PKMN_SYM=../pokeyellow_msdos-pret-golden/pokeyellow.sym \
+   dos_port/tools/mgba_build/mgba-lua-runner -s dos_port/tools/mgba_harness/scenarios/<s>.lua \
+   ../pokeyellow_msdos-pret-golden/pokeyellow.gbc` (run from the repo root).
+- Differ-only revert-proofs without a rebuild: `tools/run_headless.sh "<FLAGS>" <outdir>`
+  once, then `tools/golden_diff.py <s> --gbstate <outdir>/GBSTATE.BIN` repeatedly.
+- `M-113` (`ClearScreenArea` hardwired to stride 40) did NOT surface in the first half
+  (neither screen calls it) — it is still open and still expected to bite a stride-20 screen
+  that clears a sub-area. The pokédex screens are the prime suspects. Fail on it, don't mask.
 
 **Session mechanics for the fresh session:**
 - **Stigmergy**: register (`context_open` + `root_register` with your host session id), then
-  re-acquire claims for what you touch (`golden_diff.py`, `mgba_harness/**`, `Makefile`,
-  `debug_dump.asm`, this file). The Stage-2 session released its claims (96–99, 107) at
-  handoff.
+  re-acquire claims for what you touch (`golden_diff.py`, `mgba_harness/**`, `Makefile`, the
+  gate source files, this file). The first-half session released its claims (120–126) at
+  handoff. The shared-memory key `fidelity-expansion-stage2-handoff` mirrors this section.
 - **Codex agent `r-1a5ca7a94daa`** (mailbox thread 13, session since ended): its
   scenario-manifest consolidation (`scenario_manifest.json` + `validate_scenarios.py`,
-  currently describing only the 10 Stage-1c scenarios — it will report drift for the battle
+  describing only the 10 Stage-1c scenarios — it will report drift for the battle + menu
   scenarios; that is expected and theirs to update) is **sequenced after Stage 4's archive**.
   When you archive this plan, send a mail to that root (or whoever holds the manifest files
   then) saying the claims are released and the scenario set is final.
 - `.codex/config.toml` shows modified in the tree — **not ours; do not commit it.**
 - Standing user directives that governed this plan's sessions: *"Don't stop until the plan is
-  done"*; per-stage task lists that start high-level and expand to subtasks on entering the
-  stage; *"Reason then do — doing without reason breaks things"*; measure divergences from
-  first diffs, never lift expected values; one commit per stage with the ledger + findings
-  updated in that same commit; revert-proof each new capability (paste the RED output in the
-  stage notes, then revert).
+  done"* (scoped per session by the user); per-stage task lists that start high-level and
+  expand to subtasks on entering the stage; *"Reason then do — doing without reason breaks
+  things"*; measure divergences from first diffs, never lift expected values; one commit per
+  stage (-half) with the ledger + findings updated in that same commit; revert-proof each new
+  capability (paste the RED output in the stage notes, then revert).
 
 ## ⚠ Read this first — why this document was rewritten
 
@@ -207,7 +222,7 @@ dialog scratch **shares bytes with the map mirror** — F-13.)
 | 1b | `sign_pallet` streamed-text scenario | **DONE** | `60990fd5`, `b99c0199`, `1c346cbb`, `189fbb59` | the port could not read a sign AT ALL (F-6 data, F-7 code) — both fixed. Plus **F-10** (text-id-0 collision) and **F-12** (the gate stood on an unreachable tile), both found during the fold-back. Golden passes 360/360 tilemap cells incl. the whole dialog box; `make fidelity` 7/7. **Never was blocked**: F-9 was a misdiagnosis, F-8 does not reproduce. New OPEN findings it surfaced: **F-13** (scratch/mirror overlap), **F-14** (▼ after `done`). |
 | 1c | Item datastruct scenarios ×3 | **DONE** | (this commit) | Differ class `datastruct` + `item_tm_teach` / `item_stone_evolve` / `item_potion_use`; `make fidelity` 10/10. First-ever observation of these gates (F-15) immediately caught a REAL port bug: **F-16** — the post-evolution stat recalc read the NEXT species' base stats (NINETALES got JIGGLYPUFF's). Fixed; golden-verified. M-8 did **not** surface (no priced list in these flows — see the stage notes). |
 | 2 | Battle convergence spec + battle_intro/battle_menu/move_selection + ball_catch | **DONE** | (this commit) | The spec battle (real loaders both sides, DVs $98 $76 overwritten, loader-derived parts asserted) converges end-to-end: `make fidelity` **14/14**. First diffs caught **four real port fidelity bugs** — **F-17** (enemy HUD drawn during the wild intro), **F-18** (dead $73 drawn over the HP-bar cap), **F-19** (enemy-gauge palette clones parked on LIVE glyphs incl. the battle ▼), **F-20** (player HP-bar cap $6C where battle uses $6D) — plus **F-21** (wLoadedMon staging + player-first HUD order omitted). Ball tiles moved to pret's OBJ ids $31–$34; ball OAM rows now zero all of $FE00 (GB DMA parity). `ball_catch` passes with **zero WRAM masks**. |
-| 3 | Menu scenarios ×5 + stride support | TODO | | |
+| 3 | Menu scenarios ×5 + stride support | **HALF DONE** | (this commit) | First half: `"stride": 20` differ key (revert-proofed: wrong stride = 310/360 RED) + `options_menu` / `trainer_card`, both green — trainer_card with **zero tilemap/vram/oam/wram masks**, options_menu with only the flower-anim slot. `make fidelity` 16/16. Both port gates gained `SeedDeterministicPlayerIdentity` (F-5 class: bare-boot wPlayerID was an RNG roll). Second half remains: pokedex_list / pokedex_entry / naming_screen. |
 | 4 | Cross-cut: tiers, goldens-verify, mask policy, skill updates | TODO | | |
 
 ---
@@ -501,6 +516,63 @@ support — see the stride-20 correction above. One mechanism serves both.)
 | pokedex_list | DEBUG_G1=1 | new `seed.pokedex(sym)` replicating the port's dex-bit pattern → START→POKéDEX→"CONTENTS" | stride 20; `wPokedex` pins the bits |
 | pokedex_entry | DEBUG_G2=1 | from the list, choose the same mon the port gate draws → wait "HT"/"WT" | pic-area mask à la `_STATUS_MASKS` |
 | naming_screen | DEBUG_NAMINGSCREEN=1 | new game → NEW NAME → grid visible → dump | match the gate's mode/page |
+
+#### Stage 3, first half — DONE (stride support + options_menu + trainer_card). Execution notes
+
+- **The plan table under-specified the stride:** it marked only trainer_card/pokédex
+  as stride-20, but `options.asm` draws its screen into the same GB-shaped stride-20
+  `W_TILEMAP` scratch (`GBSCR_W equ 20`, `options_mirror` → `GB_TILEMAP1`) — measured
+  from the source, per the standing rule. **Both** scenarios use `"stride": 20`,
+  window (0,0). The differ key is one mechanism: `flat = row*stride + col`, default
+  40; the bounds check is `col < stride` + `flat < 1000` (a stride-20 read never
+  leaves the scratch).
+- **Stride revert-proof** (differ capability, dump replayed via `run_headless` +
+  `--gbstate`): deleting trainer_card's `"stride": 20` (→ default 40) went RED —
+  `TILEMAP: 310 mismatched cells (of 360), window at col 0 row 0, stride 40 …
+  ( 1, 2) want $7F ' ' | got $8D 'N' …` — the card's rows re-read as interleaved
+  half-rows. Restored; PASS at stride 20 re-confirmed on the same dump.
+- **First diffs were almost clean, and the one hit was real and known:**
+  trainer_card matched **everything** (360/360 tilemap incl. the badge grid and
+  player pic, 384/384 VRAM slots, OAM, WRAM) with zero scenario masks;
+  options_menu's sole divergence was the vChars2 $03 flower-anim slot (phase is a
+  function of each side's dump frame — the standard mask pair, water included
+  because its match was phase luck).
+- **Both port gates gained `call SeedDeterministicPlayerIdentity`** — the F-5 class
+  again: the bare SKIP_TITLE boot leaves `wPlayerID` as InitPlayerData's RNG roll
+  (not reproducible run-to-run) and DEBUG_OPTIONS seeded no name at all. The
+  trainer-card gate's hand-poked "RED" is replaced by the shared seeder (same bytes
+  + the id).
+- **Golden side:** both scenarios reuse start_menu's walk to the (8,8) Pallet spawn
+  (vChars2 must hold the same outdoor tileset under the full-screen takeover), then
+  START→OPTION / START→name-row. New `seed.trainer_card(sym)` pokes the gate's exact
+  seeds (money BCD 123456, play time 5:30 with seconds/frames zeroed so the display
+  cannot roll during the menu nav, badges $A5); identity stays `seed.player`.
+  wOptions needed no seed on either side: the port gate's TEXT_DELAY_MEDIUM/$40 are
+  exactly pret `InitOptions`' defaults, so the golden's real new-game boot converges
+  (`wOptionsBlock` compared, not masked).
+- **Seed-corruption revert-proof** (scenario capability, full goldencheck run):
+  seeding the port's `wOptions` to 1 (FAST) instead of TEXT_DELAY_MEDIUM went RED on
+  BOTH comparators — rendered text and WRAM — then was reverted:
+
+  ```
+  TILEMAP: 4 mismatched cells (of 360), window at col 0 row 0, stride 20:
+    ( 2,14) want $8C  'M' | got $85  'F'
+    ( 2,15) want $88  'I' | got $80  'A'
+    ( 2,16) want $83  'D' | got $92  'S'
+    ( 2,17) want $7F  ' ' | got $93  'T'
+  WRAM: 1 mismatched fields:
+    wOptionsBlock wOptions: want $03 | got $01
+  FAIL options_menu: 5 unmasked divergences
+  ```
+
+- **M-113 did not surface** (`ClearScreenArea` stride-blindness): neither screen
+  calls it — options draws a full-screen TextBoxBorder, the card blanks its scratch
+  with `FillMemory`. Still open; still expected to bite a stride-20 screen that
+  *does* clear a sub-area.
+- Determinism: both goldens regenerated ×2 → byte-identical sha1s
+  (options_menu 850085a5…, trainer_card 5301bac3…).
+- **Second half remains:** pokedex_list (DEBUG_G1), pokedex_entry (DEBUG_G2),
+  naming_screen (DEBUG_NAMINGSCREEN) — specs in the table above.
 
 ⚠ **Rectified — this stage's premises were the most damaged.** The original text told the
 executor to *expect* divergences and mask them, citing the menu-fidelity plan as authority

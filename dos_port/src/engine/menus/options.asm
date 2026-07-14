@@ -632,9 +632,14 @@ global RunOptionsTest
 extern LoadFontTilePatterns          ; gfx/load_font.asm
 extern ClearSprites                  ; gfx/sprites.asm
 extern DumpBackbuffer                ; debug/debug_dump.asm — writes FRAME.BIN + exits
+extern SeedDeterministicPlayerIdentity ; engine/debug/debug_party.asm — "RED"/id 0 (seed.lua spec)
 
 section .text
 RunOptionsTest:
+    ; identity = the golden spec ("RED" / id 0): the bare boot leaves wPlayerID
+    ; as InitPlayerData's RNG roll (F-5 class — not even reproducible run to
+    ; run), and the options_menu golden compares wPlayerName/wPlayerID
+    call SeedDeterministicPlayerIdentity
     ; seed a representative options state (pret main_menu InitOptions defaults:
     ; MID text speed, animations ON, SHIFT style, MONO sound; printer NORMAL)
     mov byte [ebp + wOptions], TEXT_DELAY_MEDIUM

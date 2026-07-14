@@ -1254,7 +1254,8 @@ goldencheck:
 # scenario even if one fails; nonzero exit if any failed.
 FIDELITY_SCENARIOS := status_p1 status_p2 start_menu overworld_pallet party_menu bag_menu \
                       sign_pallet item_tm_teach item_stone_evolve item_potion_use \
-                      battle_intro battle_menu move_selection ball_catch
+                      battle_intro battle_menu move_selection ball_catch \
+                      options_menu trainer_card
 fidelity:
 	@fail=0; for s in $(FIDELITY_SCENARIOS); do \
 		tools/goldencheck.sh $$s || fail=1; \

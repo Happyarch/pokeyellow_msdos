@@ -364,6 +364,19 @@ function seed.badges(sym, badges)
 	emu:write8(sym:addr("wObtainedBadges"), badges or 0x7F)
 end
 
+-- The trainer-card gate's exact seeds (RunTrainerCardTest, engine/menus/
+-- trainer_card.asm): money BCD 123456, play time 5:30, badges %10100101
+-- (BOULDER/CASCADE/MARSH/EARTH). Identity is seed.player, called separately.
+-- Play-time seconds/frames are zeroed so the displayed 5:30 cannot roll over
+-- during the menu navigation between this seed and the dump (pret wram.asm:
+-- hours, maxed, minutes, seconds, frames — five consecutive bytes).
+function seed.trainer_card(sym)
+	seed.money(sym, "\x12\x34\x56")
+	seed.badges(sym, 0xA5)
+	write_bytes(sym:addr("wPlayTimeHours"), string.char(5, 0, 30, 0, 0))
+	console:log("seed: trainer card (money 123456, 5:30, badges $A5)")
+end
+
 -- ---------------------------------------------------------------------------
 -- Stage 2: battle convergence spec (fidelity plan)
 -- ---------------------------------------------------------------------------
