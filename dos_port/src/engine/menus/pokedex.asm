@@ -72,15 +72,12 @@ extern IndexToPokedex                ; base_stats.inc — index->dex TABLE (== p
 extern GBPalWhiteOut                 ; home/fade.asm
 extern GBPalWhiteOutWithDelay3       ; home/fade.asm
 extern GBPalNormal                   ; init/init.asm
-; NOTE (2026-07-14, menu row 16): RunPaletteCommand is a REAL, LINKED body in
-; home/palettes.asm — NOT the "no-op palette HAL stub" this file used to claim. It
-; normalizes the GB `B` register out of EITHER BL or BH (BL first; BH only when BL
-; is zero) and tail-jumps the live _RunPaletteCommand dispatcher. So this file must
-; keep passing the command in BL: writing pret's literal `ld b` → BH would let a
-; stale nonzero BL win the shim's BL-first test and select the WRONG palette.
-; Unifying on BH is ledger M-62, owned by the palette session — not this row.
-extern RunPaletteCommand             ; home/palettes.asm — REAL body (BL/BH-normalizing shim)
-extern RunDefaultPaletteCommand      ; engine/menus/naming_screen.asm — BL=SET_PAL_DEFAULT → RunPaletteCommand
+; RunPaletteCommand is a REAL, LINKED body (home/palettes.asm) — not the "no-op palette
+; HAL stub" this file once claimed. It takes the command in GB `b` == BH, as pret does
+; (M-62 resolved: the old BL-first normalizing shim is gone and every call site now
+; passes BH; see home/palettes.asm for why the half-and-half state was dangerous).
+extern RunPaletteCommand             ; home/palettes.asm — REAL body; BH = pret's `b`
+extern RunDefaultPaletteCommand      ; engine/menus/naming_screen.asm — BH=SET_PAL_DEFAULT → RunPaletteCommand
 extern ReloadMapData                 ; home/reload_tiles.asm
 extern LoadHpBarAndStatusTilePatterns ; gfx/load_font.asm — pret loader's 1st step
 extern g_tilecache_dirty             ; ppu.asm — set after any VRAM tile write
@@ -177,10 +174,9 @@ ShowPokedexMenu:
 .setUpGraphics:
     call LoadPokedexTilePatterns             ; pret: callfar LoadPokedexTilePatterns
 .loop:
-    ; pret: ld b, SET_PAL_GENERIC / call RunPaletteCommand. NOT a TODO-HW any more —
-    ; RunPaletteCommand is live (home/palettes.asm). The command goes in BL, not the
-    ; literal BH, because that body's shim tests BL first; see the extern note. M-62.
-    mov bl, SET_PAL_GENERIC                   ; ld b, SET_PAL_GENERIC (via the BL/BH shim)
+    ; pret: ld b, SET_PAL_GENERIC / call RunPaletteCommand. Not a TODO-HW — the palette
+    ; engine is live (home/palettes.asm), and BH *is* pret's `b` (M-62 resolved).
+    mov bh, SET_PAL_GENERIC                   ; ld b, SET_PAL_GENERIC
     call RunPaletteCommand
 .doPokemonListMenu:
     ; pret: ld hl,wTopMenuItemY / walk hli setting the menu fields. Direct field

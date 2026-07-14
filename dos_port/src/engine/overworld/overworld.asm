@@ -1173,7 +1173,7 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     ; wMapMusicSoundID via the MapSongBanks load above) then fade in that music. Real now
     ; (OW-A.14); unconditional on a connection crossing (not a warp, so no warp gate).
     call PlayDefaultMusicFadeOutCurrent
-    mov bl, SET_PAL_OVERWORLD
+    mov bh, SET_PAL_OVERWORLD
     call RunPaletteCommand
     ; pret also does the Pikachu spawn set (wPikachuOverworldStateFlags bit 4 /
     ;   wPikachuSpawnState = 2) at .loadNewMap — deferred with the Pikachu-follow engine.
@@ -1474,7 +1474,7 @@ LoadMapData:
     mov byte [ebp + W_UPDATE_SPRITES_ENABLED], 1
     call EnableLCD
     call GBPalNormal
-    mov bl, SET_PAL_OVERWORLD
+    mov bh, SET_PAL_OVERWORLD
     call RunPaletteCommand
     call LoadPlayerSpriteGraphics       ; pret: LoadPlayerSpriteGraphics (:1972)
     ; pret tail (:1975-1985): play this map's default music unless we entered via a

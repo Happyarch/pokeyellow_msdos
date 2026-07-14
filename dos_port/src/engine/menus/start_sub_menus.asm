@@ -647,7 +647,7 @@ StartMenu_TrainerInfo:
     call DrawTrainerInfo
     call DrawBadges                     ; predef DrawBadges
     ; ld b, SET_PAL_TRAINER_CARD / call RunPaletteCommand — TODO-HW: palette HAL
-    mov bl, SET_PAL_TRAINER_CARD
+    mov bh, SET_PAL_TRAINER_CARD
     call RunPaletteCommand
     call GBPalNormal
     call trainer_card_present           ; port: composite the 20x18 card as one window

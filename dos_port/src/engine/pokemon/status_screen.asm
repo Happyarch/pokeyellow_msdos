@@ -229,7 +229,7 @@ StatusScreen:
     call DrawHP                                      ; leaves DL = HP-bar pixel length
     mov esi, wStatusScreenHPBarColor
     call GetHealthBarColor                           ; cosmetic (palette Phase 5)
-    mov bl, SET_PAL_STATUS_SCREEN
+    mov bh, SET_PAL_STATUS_SCREEN
     call RunPaletteCommand                           ; no-op (Phase 5)
 
     ; --- status condition at (16,6), else "OK" ---

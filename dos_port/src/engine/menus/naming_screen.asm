@@ -317,7 +317,7 @@ DisplayNamingScreen:
     call GBPalWhiteOutWithDelay3
     call ClearScreen
     call UpdateSprites
-    mov bl, SET_PAL_GENERIC
+    mov bh, SET_PAL_GENERIC
     call RunPaletteCommand
     call LoadHpBarAndStatusTilePatterns
     call LoadEDTile
@@ -566,7 +566,7 @@ DisplayNamingScreen:
 ; ---------------------------------------------------------------------------
 global RunDefaultPaletteCommand
 RunDefaultPaletteCommand:
-    mov bl, SET_PAL_DEFAULT
+    mov bh, SET_PAL_DEFAULT
     jmp RunPaletteCommand
 
 ; ---------------------------------------------------------------------------

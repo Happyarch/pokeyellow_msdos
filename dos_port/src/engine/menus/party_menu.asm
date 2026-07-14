@@ -371,7 +371,7 @@ RedrawPartyMenu_:
     ; naming, pokédex, league PC, battle send-out, the trainer card — all call it
     ; today. Only this screen skipped it, so the day the HAL lands the party menu
     ; would have been the one screen with no palette. Restored.
-    mov bl, SET_PAL_PARTY_MENU              ; ld b, SET_PAL_PARTY_MENU
+    mov bh, SET_PAL_PARTY_MENU              ; ld b, SET_PAL_PARTY_MENU
     call RunPaletteCommand
 .printMessage:
     mov al, [ebp + W_STATUS_FLAGS_5]        ; ld hl,wStatusFlags5 / ld a,[hl]
@@ -481,7 +481,7 @@ SetPartyMenuHPBarColor:
     movzx eax, byte [ebp + wWhichPartyMenuHPBar]
     lea esi, [eax + wPartyMenuHPBarColors]  ; ld hl,wPartyMenuHPBarColors / add
     call GetHealthBarColor                  ; DL=pixels → [ebp+esi] = color
-    mov bl, SET_PAL_PARTY_MENU_HP_BARS      ; ld b, SET_PAL_PARTY_MENU_HP_BARS
+    mov bh, SET_PAL_PARTY_MENU_HP_BARS      ; ld b, SET_PAL_PARTY_MENU_HP_BARS
     call RunPaletteCommand                  ; (palette-HAL stub — see .afterDrawingMonEntries)
     inc byte [ebp + wWhichPartyMenuHPBar]   ; ld hl,… / inc [hl]
     ret

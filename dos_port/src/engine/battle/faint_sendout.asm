@@ -124,7 +124,10 @@ EnemySendOutFirstMon:
     ; the party-menu path + SwitchPlayerMon. Treated as SET mode (no prompt).
 .next4:
     call ClearSprites
-    call RunPaletteCommand                        ; SET_PAL_BATTLE (palette-HAL stub)
+    ; BUG(fixed): pret is `ld b, SET_PAL_BATTLE / call RunPaletteCommand`; the port set B
+    ; not at all and dispatched on junk. See faint_switch.asm. Ledger M-72.
+    mov bh, SET_PAL_BATTLE                        ; ld b, SET_PAL_BATTLE
+    call RunPaletteCommand
     ; ANIMATION=OFF: TrainerSentOutText + LoadMonFrontSprite + AnimateSendingOutMon + PlayCry.
     call DrawHUDsAndHPBars                         ; ~ DrawEnemyHUDAndHPBar
     ; pret: `ld a,[wCurrentMenuItem]; and a; ret nz` — always nz here (we never prompt

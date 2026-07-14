@@ -202,7 +202,12 @@ SendOutMon:
     mov [ebp + wPlayerDisabledMove], al
     mov [ebp + wPlayerDisabledMoveNumber], al
     mov [ebp + wPlayerMonMinimized], al
-    call RunPaletteCommand               ; SET_PAL_BATTLE (palette HAL stub)
+    ; BUG(fixed): pret is `ld b, SET_PAL_BATTLE / call RunPaletteCommand`. The port set
+    ; B NOT AT ALL and dispatched on whatever junk BX happened to hold — harmless only
+    ; while RunPaletteCommand ignored its argument, which stopped being true when the
+    ; palette engine landed. Ledger M-72.
+    mov bh, SET_PAL_BATTLE               ; ld b, SET_PAL_BATTLE
+    call RunPaletteCommand
     and byte [ebp + wEnemyBattleStatus1], (~(1 << USING_TRAPPING_MOVE)) & 0xFF
     ; ANIMATION=OFF: PlayMoveAnimation(POOF_ANIM) / AnimateSendingOutMon / Pikachu.
     ret

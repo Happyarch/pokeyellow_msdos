@@ -215,6 +215,7 @@ PIKAHAPPY_USEDXITEM    equ 3       ; (X Accuracy / X Attack&co / Dire Hit / Guar
 PIKAHAPPY_USEDTMHM     equ 5       ; (ItemUseTMHM: a TM/HM was taught to a party mon)
 STATUS_SCREEN_STATS_BOX equ 0      ; constants/menu_constants.asm (PrintStatsBox d=0 → status-screen box)
 LEVEL_UP_STATS_BOX     equ 1       ; constants/menu_constants.asm (STATUS_SCREEN=0)
+SET_PAL_BATTLE         equ 0x01    ; constants/palette_constants.asm (RunPaletteCommand id)
 SET_PAL_STATUS_SCREEN  equ 0x03    ; constants/palette_constants.asm (RunPaletteCommand id)
 SET_PAL_OVERWORLD      equ 0x09    ; constants/palette_constants.asm (RunPaletteCommand id)
 BIT_UNUSED_CARD_KEY    equ 7       ; constants/ram_constants.asm (wStatusFlags1 bit; never read)
