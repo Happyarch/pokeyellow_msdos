@@ -769,7 +769,9 @@ NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_SAVE
 NASMFLAGS += -D DEBUG_AUTOKEY
 NASMFLAGS += -D AUTOKEY_QUIET
-NASMFLAGS += -D AUTOKEY_DUMP_FRAME=160
+# 200: at 90 the dialog is caught mid-typewriter; by 200 the question is complete
+# with the TWO_OPTION_MENU YES/NO box above it (row 19 part 1's photographed frame).
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=200
 NASMFLAGS += -D SKIP_TITLE
 endif
 ifdef DEBUG_SAVE_ROUNDTRIP
@@ -788,9 +790,9 @@ NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_SAVE
 NASMFLAGS += -D DEBUG_CHANGEBOX
 NASMFLAGS += -D DEBUG_AUTOKEY
-# AUTOKEY_TALK is the pulse-A script: it pages the two text pages and picks the
-# YES/NO's default (YES); the run then parks in DisplayChangeBoxMenu's
-# HandleMenuInput, where the dump frame photographs the box list.
+# AUTOKEY_TALK is the pulse-A script (A at 120/180/240/...): the press at 120
+# resolves ChooseABoxText's <PROMPT>, and the menu is then up until the press at
+# 180 accepts it — so 160 is the frame that photographs the box list + cursor.
 NASMFLAGS += -D AUTOKEY_TALK
 NASMFLAGS += -D AUTOKEY_DUMP_FRAME=160
 NASMFLAGS += -D SKIP_TITLE

@@ -115,7 +115,7 @@ driver only relocates the divergence.
 | 16 | `src/engine/menus/pokedex.asm`, then `pokedex_entry.asm` | `engine/menus/pokedex.asm` | **DONE** | `cb247fdc` (p1), `e68b8c7f` (p2) | **p1 `pokedex.asm`: the AREA option was DEAD — `LoadTownMap_Nest` was a complete, linked, never-called body (M-64).** Also: printer path dropped 2 calls/3 stores behind a fake STUB (M-65); `GetCryData` ret-stub in a mirror file (M-66); duplicate `RunDefaultPaletteCommand` (M-67); 3 extern comments claiming stubs that are real bodies (M-68); hand-encoded strings (M-70). **Tooling: a fresh `PKMN.IMG` ships a STALE `FRAME.BIN`, so a non-dumping harness reads as a pass (M-69).** **Part 2 = the DATA (entry) page — DONE.** The whole file `pokedex_entry.asm` was a **parallel-worker artifact** (its header said so) and is **deleted**: both halves now live in `pokedex.asm` as in pret, which retires all 10 allowlist entries (M-78; the 10th, `GetCryData`, was already dead after M-66). Four dropped-behind-a-false-comment fixes: M-73 (`rAUDVOL` halving for the cry, hidden behind a fake `TODO-HW: no APU` — the shims read $FF24 every frame; same false claim still in `status_screen.asm`, filed), M-74 (`RunDefaultPaletteCommand` "not defined in the port" — it is a global this same file already calls), M-75 (`PlayCry` call dropped), M-76 (`hDexWeight` save/restore dropped although **$FF8B is a live HRAM union** holding the overworld's `hPreviousTileset`). M-77: 3 more hand-encoded strings → generator, bytes identical. RHYDON DATA page rendered and looked at. |
 | 17 | `src/engine/menus/pc.asm`, `players_pc.asm`, `oaks_pc.asm`, `league_pc.asm` | same | **DONE** | `3b495afb` (p1: pc.asm), `00b64035` (p2: players_pc.asm), `fcdbdf42` (p3: oaks_pc.asm), `2696039f` (p4: league_pc.asm) | **p1 `pc.asm`: the file's header made three claims and all three were false.** M-79: all six `PlaySound`/`WaitForSoundToFinish` calls dropped behind a fake `TODO-HW: audio HAL` — audio is ported and live (the row-9 M-20 shape). M-80: `Save/LoadScreenTilesFromBuffer2` "replaced" by a shim that saved **`g_window_count`**, i.e. nothing; the real bodies were in `movie/title.asm` all along and the *load* half was merely never `global`. M-81: the four dialogs were a private message engine over **nine hand-encoded charmap strings** (Tier-1 violation) that could not render text COMMANDS, so `<PLAYER>`/POKé were open-coded as glyph runs — now generated (`assets/pc_text.inc`) and printed by `PrintText` with pret's four restored wrapper labels. **M-82 (filed): `ActivatePC` is UNREACHABLE** — `home/overworld_text.asm`'s PC text scripts are still `%ifdef`-guarded out under a stale "targets are NI" comment, so the whole PC subsystem is dead code in the shipped binary. New `DEBUG_PC` harness; dialog rendered and looked at. `pc_stubs.asm` (DisplayPCMainMenu / BillsPC_) verified: ret-only-plus-menu-vars, in a `*_stubs.asm`, shadowing nothing. **p2 `players_pc.asm`: the same three false claims, next door.** M-83: eight `PlaySound`/`WaitForSoundToFinish` calls and all three `Save`/`LoadScreenTiles` calls dropped behind "TODO-HW audio HAL" / "no screen to save-restore" — every one of those routines is ported, linked and live; restored. M-84: fourteen messages drawn whole from **20 hand-encoded charmap strings**, two of which (`ItemWasStored`/`WithdrewItem`) are `TX_RAM` splices a glyph run *cannot* express — now generated (`assets/players_pc_text.inc`) and printed by `PrintText` through a file-local projection (`msgbox_players_pc`, SANCTIONED: `msgbox_dialog`'s `set_single_window` would collapse the menu/list windows out from under the message). M-85: the Toss comment invented a pret refactor that never happened. Parent menu + message box rendered together and looked at (`DEBUG_PLAYERSPC`). **p3 `oaks_pc.asm`: the same three false claims, a third time.** M-86: `Save`/`LoadScreenTilesFromBuffer2` "collapsed to a window-list save/restore" that saved `g_window_count` and nothing else; both real routines were linked all along; restored. M-87: the three dialogs drawn whole from **eight hand-encoded charmap strings**, justified by "the far-text streams aren't GB-space assets yet" — false, they are ordinary `text_far` bodies; now generated (`assets/oaks_pc_text.inc`) and printed by `PrintText`, with pret's three wrapper labels restored (the hand-encoded pages had also dropped the POKé control byte). M-88: `predef DisplayDexRating` was a **comment with no call and no stub body anywhere** — YES and NO did the same thing; restored as a real call to a ret-only stub in the new `oaks_pc_stubs.asm`. New `DEBUG_OAKSPC` harness (AUTOKEY shape); "Accessed PROF. / OAK's PC." dialog rendered and looked at. **p4 `league_pc.asm`: the same debt plus two stale deferrals.** M-89: `AccessedHoFPCText` drawn whole from four hand-encoded charmap strings and `HallOfFameNoText` hand-encoded too (the page had dropped pret's POKé byte); both now generated (`assets/league_pc_text.inc`), the wrapper label restored, printed by `PrintText`. M-90: the Hall-of-Fame team loop was switched OFF by a port-invented 0-team guard "because the S7 save layer isn't here" — `LoadHallOfFameTeams` is real and linked in `save.asm`; guard deleted, loop live. M-91: **both** palette calls (`RunPaletteCommand`, `RunDefaultPaletteCommand`) were comments behind a "TODO-HW: Phase 5" that is no longer true — both routines are real and linked; restored on BH. M-92 filed (naming_screen's palette comment is stale, other file). `LeaguePCShowMon`'s full-screen layout stays UNVERIFIED (needs a HoF save + the unported HoF movie). Dialog rendered and looked at. |
 | 18 | `src/engine/menus/main_menu.asm` | same | DONE | `65bd1697` | M-93 palette call restored; M-94 3 strings → generator; M-95 Func_5cc1 PrintText restored; 4 SANCTIONED (joypad-HAL, SRAM, EnterMapBoot, compositor); `OakSpeech` stub verified |
-| 19 | `src/engine/menus/save.asm` (1080 ln) | same | IN-PROGRESS (parts 1–2 done) | part 1: `b05bdea8`, part 2: `c7d35568` | part 1 (SAVE/LOAD flow): M-97 five drawn-whole dialogs → pret `text_far` + `PrintText`; M-98 yes/no box was pret's `TWO_OPTION_MENU` all along; M-99 stale "audio is a Phase-3 no-op" hid live SFX; M-100 filed against `home/yes_no.asm`. part 2 (CHANGE BOX): **M-101** the screen was a hand-drawn imitation missing half of itself — text hand-encoded + hand-paged, `BoxNames` split into 12 strings (which is what forced its per-row loop), **the box number never drawn**, `ChooseABoxText` never printed; **M-102** a stale "root hasn't added `UI_CHANGE_BOX_INFO`" comment left the "BOX No." box undrawn — **the equates exist**; **M-103** the info box was staged into the dialog's own scratch rows and bled its text (caught only by rendering); **M-104** filed: `ChangeBox` has **no live caller** (`bills_pc.asm` never wires it — the M-82 class); **M-105** the `%ifdef` chain had silently shadowed the `DEBUG_SAVE_ROUNDTRIP` harness. Screen rendered + looked at (list, numbered indicator, ▶ cursor). **Part 3 = HoF + `CheckPreviousSaveFile` + the missing `BoxSRAMPointerTable`** |
+| 19 | `src/engine/menus/save.asm` (1080 ln) | same | **DONE** | part 1: `b05bdea8`, part 2: `c7d35568`, part 3: `PENDING3` | part 1 (SAVE/LOAD flow): M-97 five drawn-whole dialogs → pret `text_far` + `PrintText`; M-98 yes/no box was pret's `TWO_OPTION_MENU` all along; M-99 stale "audio is a Phase-3 no-op" hid live SFX; M-100 filed against `home/yes_no.asm`. part 2 (CHANGE BOX): **M-101** the screen was a hand-drawn imitation missing half of itself — text hand-encoded + hand-paged, `BoxNames` split into 12 strings (which is what forced its per-row loop), **the box number never drawn**, `ChooseABoxText` never printed; **M-102** a stale "root hasn't added `UI_CHANGE_BOX_INFO`" comment left the "BOX No." box undrawn — **the equates exist**; **M-103** the info box was staged into the dialog's own scratch rows and bled its text (caught only by rendering); **M-104** filed: `ChangeBox` has **no live caller** (`bills_pc.asm` never wires it — the M-82 class); **M-105** the `%ifdef` chain had silently shadowed the `DEBUG_SAVE_ROUNDTRIP` harness. Screen rendered + looked at (list, numbered indicator, ▶ cursor). part 3 (load/save data + HoF + SRAM helpers): the x86 is **faithful** — every divergence is the one atomic-.dsv-for-SRAM collapse — but two of the no-ops were **not** the harmless parity fillers their comments claimed: **M-106** `hTileAnimations` is LIVE in the port (`player_gfx` gates on it) yet pret's save+restore of it is dropped on both sides, so **the tile-animation setting does not survive a save/load**; **M-107** `CheckPreviousSaveFile` always answers "same playthrough", so a **NEW GAME saved over an existing save silently overwrites it** with none of pret's "OLDER FILE will be erased" confirmation. Both need a `dsv_io.asm` payload/peek — **filed**. **M-108**: part 2's commit had clobbered part 1's harness dump frame (my bisect `sed` hit every `AUTOKEY_DUMP_FRAME`); fixed. `BoxSRAMPointerTable` is **correctly absent** (SRAM addresses that do not exist). Save round-trip **RUN** (`DEBUG_SAVE_ROUNDTRIP`, the harness part 2 unshadowed): marker = 1. |
 | 20 | `src/engine/menus/link_menu.asm` (1148 ln), `link_cups.asm` | `engine/menus/link_menu.asm` | TODO | | expect mostly TODO-HW/serial; allowlisted split (18 labels); split |
 | 21 | `src/engine/menus/draw_badges.asm` | same | TODO | | "Port stand-in" |
 | 22 | **`MoveSelectionMenu` / `SelectMenuItem` / `SwapMovesInMenu` / `PrintMenuItem`** | `engine/battle/core.asm` | TODO | | **clears blocker B8**; unblocks Mimic + PP items. Needs row 1 settled first. |
@@ -2212,3 +2212,74 @@ BOX..." text and its YES/NO box (frames 250/340), then the change-box screen its
 list**, the **"BOX No. 1" indicator with its number**, the dialog, and the ▶ cursor on BOX 1 from the
 real `HandleMenuInput` loop. Pokéballs render for non-empty boxes only, which on a fresh save is none —
 that branch is **UNVERIFIED** (it needs box storage; see the SRAM TODO-HW above).
+
+## Row 19 part 3 — `src/engine/menus/save.asm` (load/save data, Hall of Fame, SRAM helpers)
+
+Scope of part 3: the remaining labels — `LoadMainData`/`LoadCurrentBoxData`/`LoadPartyAndDexData`,
+`SaveMainData`/`SaveCurrentBoxData`/`SavePartyAndDexData`, `CalcCheckSum`, `CheckSumFailed`/
+`GoodCheckSum`, `TryLoadSaveFileIgnoreChecksum`, `CheckPreviousSaveFile`, the four HoF routines,
+`ClearAllSRAMBanks`, `EnableSRAM`/`DisableSRAM`, and the `missing` `BoxSRAMPointerTable`.
+
+**The x86 in this slice is faithful** — every divergence traces to one fact (the port has no SRAM; the
+save is an atomic POKEMON.DSV file), and the collapses are correct. What was wrong was, again, what the
+comments *claimed*: two of these no-ops are **not** the harmless parity fillers they were written up as.
+
+### M-106 — the tile-animation setting does not survive a save/load, and the comment called it "skip"
+pret's `SaveMainData` stores `hTileAnimations` → `sTileAnimations`, and `LoadMainData` restores it. The
+port drops **both** sides. The site said only "sTileAnimations is NOT part of the .dsv payload; skip the
+restore" — true, and it buried the consequence: **`hTileAnimations` is LIVE in the port**
+(`home/player_gfx.asm` gates the walk animation on it; `home/pokemon.asm` saves/restores it around the
+party menu). So the setting silently fails to persist. The byte is HRAM and `dsv_io.asm` serializes WRAM
+ranges only, so this cannot be fixed from `save.asm`. **Filed against `src/save/dsv_io.asm`** (add the
+byte to the payload); both sites now state the consequence.
+
+### M-107 — a NEW GAME saved over an existing save overwrites it with no confirmation
+`CheckPreviousSaveFile` always returns Z ("same playthrough"), so `SaveMenu`'s second yes/no — pret's
+"the OLDER FILE will be erased, OK?" — is **never reached**. The comment framed this as parity awaiting a
+"partial-read seam", which understates it: the case pret's check exists for is exactly NEW GAME on top of
+an existing save (`wSaveFileStatus` is still 2, the player IDs differ), and the port silently overwrites.
+Deciding it honestly needs the SAVED player ID, whose only route today is `DsvReadSave` — which loads the
+payload over the live game being saved. **Filed against `src/save/dsv_io.asm`** (a header/field peek).
+`OlderFileWillBeErasedText` and its yes/no are wired and correct, so the fix is one branch once the peek
+exists.
+
+### M-108 — the part-2 commit clobbered part 1's harness frame (found and fixed here)
+My change-box bisect script rewrote *every* `AUTOKEY_DUMP_FRAME` line in the Makefile, not just the
+change-box one, so `DEBUG_SAVE`'s documented frame (200 — the complete question + YES/NO box) went into
+`c7d35568` as 160. Restored, and both frames now carry a comment saying why that number.
+
+### Absent by design, not a gap
+- **`BoxSRAMPointerTable` (`missing`)** — a table of `sBox1..sBox6` SRAM addresses. Those addresses do
+  not exist in the port, and inventing zeros would be a fake. Its only consumer, `GetBoxSRAMLocation`,
+  is already a tagged TODO-HW no-op. Correctly absent; retired together with the SRAM box storage.
+- **`ClearAllSRAMBanks` / `SaveHallOfFameTeams` / `HallOfFame_Copy`** — SRAM no-ops that are **dead** in
+  the port: their callers are `engine/movie/oak_speech/clear_save.asm` and `engine/movie/hall_of_fame.asm`,
+  neither ported. `LoadHallOfFameTeams` *is* live (`league_pc.asm` calls it) but its loop is gated by
+  `wNumHoFTeams`, which nothing can raise above 0 until the HoF movie lands.
+- **`TryLoadSaveFileIgnoreChecksum`** — unreferenced in pret too. Faithful, 3/3 calls.
+
+### SANCTIONED (tagged at the site)
+- **Every `s*` copy + checksum in the six Load*/Save* routines → one `DsvReadSave`/`DsvWriteSave`** —
+  TODO-HW: SRAM. `dsv_io.asm` owns the payload, header and file checksum atomically, so pret's per-slice
+  `CopyData` + `CalcCheckSum` + `sMainDataCheckSum` verify have no per-slice counterpart. This is what
+  every DROPPED `CopyData`/`CalcCheckSum`/`CheckSumFailed` line in faithdiff is. Honest cost, now stated:
+  `SaveGameData` therefore writes the whole file **three times** (once per Save* routine). Harmless (the
+  last write is authoritative) and it keeps each routine independently correct for a standalone caller,
+  which is why it stays.
+- **`CalcCheckSum`** — kept, faithful, but currently **unused**: the live checksum is `dsv_io`'s 16-bit
+  file checksum. Retained for label parity and a future faithful SRAM layout.
+- **`EnableSRAM`/`DisableSRAM`** — flag-preserving `ret`s (pret's `DisableSRAM` must preserve CF:
+  `GoodCheckSum` returns through it and the caller reads `jr c`). Verified: `ret` preserves flags.
+
+### Allowlist
+Nothing to challenge (no entry names any label of pret `engine/menus/save.asm`).
+
+### Verification
+`make check` clean; `lint_pret_labels` **0 violations, 5 suppressed, exit 0**; `make fidelity` **6/6 PASS**.
+faithdiff on the whole slice: `TryLoadSaveFileIgnoreChecksum` 3/3, `SaveGameData` 3/3 + 1/1, `GoodCheckSum`
+1/1, `CalcCheckSum`/`CheckSumFailed` clean; the six Load*/Save* routines show exactly the SANCTIONED
+SRAM-collapse lines above; `LoadMainData`'s `ADDED [wCurMapTileset]` is pret's `set BIT_NO_PREVIOUS_MAP,[hl]`
+(the store-matcher blind spot) and its `DROPPED [hTileAnimations]` is M-106.
+**The save round-trip was RUN, not assumed**: `DEBUG_SAVE_ROUNDTRIP` (the harness part 2 unshadowed — it
+had been unreachable) → `DsvWriteSave` → `DsvFileExists` → FRAME.BIN marker byte = **1**, i.e. the file
+was written and read back as a valid "DOSV" save.

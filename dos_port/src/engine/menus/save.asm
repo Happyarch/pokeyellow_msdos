@@ -58,6 +58,18 @@
 ;    SaveGameData all run, but the box contents do not actually swap and the other
 ;    boxes read empty — exactly the wNumHoFTeams==0 kind of degraded-but-safe
 ;    behavior, retired when a box-storage WRAM region / faithful .dsv lands.
+;  * TWO THINGS THE .dsv PAYLOAD CANNOT CARRY (row 19 part 3), both filed against
+;    src/save/dsv_io.asm and both stated honestly at their sites rather than waved
+;    through as "SRAM parity":
+;      - hTileAnimations (M-106): HRAM, not in the WRAM payload, so pret's
+;        save+restore of it through sTileAnimations is dropped on BOTH sides. The
+;        flag is LIVE in the port, so the setting does not survive a save/load.
+;      - the saved player ID (M-107): unreachable without DsvReadSave clobbering the
+;        live game, so CheckPreviousSaveFile always answers "same playthrough" and a
+;        NEW GAME saved over an existing file overwrites it with no confirmation.
+;    The HoF routines, ClearAllSRAMBanks and the box-swap copies are also SRAM no-ops,
+;    but those are DEAD in the port (their callers — the HoF movie, clear_save.asm —
+;    are unported), so they cost nothing today.
 ;
 ; Build (standalone check):
 ;   nasm -f coff -I include/ -I . -o /dev/null src/engine/menus/save.asm
@@ -225,12 +237,10 @@ wChangeBoxSavedMapTextPointer equ 0xCD3D
 ; ===========================================================================
 section .data
 align 4
-; Tier-1 DATA: the five SAVE/LOAD text_far streams (row 19 part 1, M-97). The
-; CHANGE-BOX strings below are still hand-encoded charmap runs — row 19 part 2.
+; Tier-1 DATA: the five SAVE/LOAD text_far streams (row 19 part 1, M-97) AND the
+; four CHANGE-BOX strings — WhenYouChangeBoxText / ChooseABoxText / BoxNames /
+; BoxNoText (row 19 part 2, M-101). Nothing in this file is hand-encoded.
 %include "assets/save_text.inc"
-
-; (The CHANGE-BOX strings — WhenYouChangeBoxText / ChooseABoxText / BoxNames /
-;  BoxNoText — are Tier-1 data in assets/save_text.inc as of row 19 part 2.)
 
 ; ===========================================================================
 section .bss
@@ -301,8 +311,15 @@ LoadMainData:
     ; WRAM side-effects pret does after the copies:
     ; ld hl,wCurMapTileset / set BIT_NO_PREVIOUS_MAP,[hl]
     or byte [ebp + wCurMapTileset], 1 << 7       ; BIT_NO_PREVIOUS_MAP = 7
-    ; ld a,[sTileAnimations] / ldh [hTileAnimations],a — TODO-HW: SRAM
-    ; (sTileAnimations is NOT part of the .dsv payload; skip the restore).
+    ; ld a,[sTileAnimations] / ldh [hTileAnimations],a
+    ; ; TODO-HW: SRAM — dropped, and this one is NOT harmless (M-106): hTileAnimations
+    ; is LIVE in the port (home/player_gfx.asm gates the walk animation on it, and
+    ; home/pokemon.asm saves/restores it around the party menu). pret persists it
+    ; through sTileAnimations; the .dsv payload has no slot for it (it is HRAM, and
+    ; dsv_io.asm serializes WRAM ranges only), so SaveMainData cannot store it and
+    ; there is nothing to restore here. Net: the tile-animation setting does not
+    ; survive a save/load. Fixing it means adding the byte to the .dsv payload —
+    ; src/save/dsv_io.asm, filed as a finding, not this file's scope.
     ; and a / jp GoodCheckSum
     jmp GoodCheckSum
 
@@ -457,6 +474,9 @@ SaveMainData:
     call EnableSRAM                              ; TODO-HW: SRAM no-op
     ; TODO-HW: SRAM — wPlayerName/wMainData/wSpriteData/wBoxData -> s* slices +
     ; sMainDataCheckSum. Collapses to the atomic file write.
+    ; ALSO dropped here: pret's `ldh a,[hTileAnimations] / ld [sTileAnimations],a`.
+    ; The .dsv payload has no slot for that HRAM byte, so the setting is not
+    ; persisted (and LoadMainData has nothing to restore) — see M-106 there.
     call DsvWriteSave                            ; CF=0 ok / CF=1 fail
     call DisableSRAM                             ; TODO-HW: SRAM no-op
     ret
@@ -879,11 +899,17 @@ CalcIndividualBoxCheckSums:
 ; Z clear -> a DIFFERENT playthrough's save exists ("older file will be erased").
 ; PORT: dsv is single-slot (POKEMON.DSV) and reading the saved player ID would
 ; require loading the file — clobbering the LIVE game we are about to save. The
-; SaveMenu caller already short-circuits the no-save/new-game case via
-; wSaveFileStatus==1, so in practice the on-disk save is this same playthrough.
-; ; TODO-HW/DEVIATION(SRAM): treat a present valid file as same-playthrough
-; (Z set) — the "older file erased" second yes/no is kept for label parity but is
-; not reached until a partial-read seam / multi-slot .dsv exists.
+; SaveMenu caller short-circuits the no-save case via wSaveFileStatus==1.
+; ; TODO-HW/DEVIATION(SRAM): this ALWAYS returns Z ("same playthrough"), and the
+; consequence is real, not theoretical (M-107): the case pret's check exists for is
+; NEW GAME started on top of an existing save — there wSaveFileStatus is still 2, the
+; player IDs differ, and pret asks "the OLDER FILE will be erased, OK?" before
+; overwriting. The port asks nothing and overwrites silently. Deciding it honestly
+; needs the SAVED player ID, and the only way to reach it today is DsvReadSave, which
+; loads the payload over the LIVE game we are about to save — so the check cannot be
+; made faithful from this file. It needs a header/field peek in src/save/dsv_io.asm
+; (filed). OlderFileWillBeErasedText + its yes/no are kept wired and correct, so the
+; day that peek exists this becomes a one-line branch.
 ; Out: ZF set (SaveMenu's `jr z,.save`).
 ; ---------------------------------------------------------------------------
 CheckPreviousSaveFile:
