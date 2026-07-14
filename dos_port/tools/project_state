@@ -14,12 +14,27 @@ import re
 import sqlite3
 import subprocess
 import sys
+from pathlib import Path
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PORT = os.path.dirname(HERE)
 DB = os.path.join(HERE, "translation.db")
 MAKEFILE = os.path.join(PORT, "Makefile")
 ALLOWLIST = os.path.join(HERE, "pret_label_allowlist.json")
+ROOT = Path(PORT).parent
+
+
+def active_plans():
+    records = []
+    for path in sorted((ROOT / 'docs').glob('current_plan_*.md')):
+        text = path.read_text(encoding='utf-8', errors='replace')
+        title = next((line[2:].strip() for line in text.splitlines()
+                      if line.startswith('# ')), path.stem)
+        done = len(re.findall(r'^\s*- \[x\]', text, re.M | re.I))
+        open_items = len(re.findall(r'^\s*- \[ \]', text, re.M))
+        records.append({'path': str(path.relative_to(ROOT)), 'title': title,
+                        'completed': done, 'open': open_items})
+    return records
 
 
 def source_sets():
@@ -54,7 +69,21 @@ def main():
     ap.add_argument("labels", nargs="*")
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--no-scan", action="store_true")
+    ap.add_argument("--plans", action="store_true",
+                    help="list active plans from docs/current_plan_*.md")
     args = ap.parse_args()
+    if args.plans:
+        if args.labels:
+            ap.error('--plans does not accept labels')
+        plans = active_plans()
+        if args.json:
+            json.dump(plans, sys.stdout, indent=2)
+            print()
+        else:
+            print('plan\tcompleted\topen\ttitle')
+            for plan in plans:
+                print(f"{plan['path']}\t{plan['completed']}\t{plan['open']}\t{plan['title']}")
+        return
     if not args.no_scan:
         subprocess.run([sys.executable, os.path.join(HERE, "update_label_db")], check=True)
     linked, check = source_sets()

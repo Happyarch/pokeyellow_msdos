@@ -81,8 +81,8 @@ When a capability becomes live, sweep related `TODO-HW`, `STUB`, extern,
 allowlist, plan, skill, and stigmergy claims in the same workstream. Stigmergy is
 an evidence index, not authority: durable entries need evidence and state;
 volatile status needs expiry; contradictory repository evidence updates the
-existing key. List active plans from `docs/current_plan_*.md`; do not maintain a
-second hand-written inventory.
+existing key. Run `dos_port/tools/project_state --plans` for the generated active
+plan inventory; do not maintain a second hand-written inventory.
 
 ---
 

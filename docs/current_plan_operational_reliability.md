@@ -11,6 +11,7 @@ runtime harness.
 - [x] Extend the scanner through `boot/` and derive conservative shipping
   reachability from the `start` call graph; indirect/table-driven paths remain
   `not-statically-reached`, never asserted unreachable.
+- [x] Generate the active-plan inventory with `tools/project_state --plans`.
 - [x] Add changed-label `tools/fidelity_gate` with conservative evidence wording
   and an explicit static-blind-spot report.
 - [x] Reject local pret-label shadows and boilerplate file-level relocations in
