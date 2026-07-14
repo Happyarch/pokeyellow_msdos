@@ -19,6 +19,9 @@ runtime harness.
 - [ ] Migrate legacy weak relocations to enumerated, evidenced label entries.
 - [ ] Manually migrate legacy free-form `DEVIATION`, `STUB`, `BUG`, and `GLITCH`
   comments to the structured form, verifying each claim rather than bulk-rewriting.
+- [ ] Migrate the strict-lint inventory of likely hand-encoded rendered strings
+  into deterministic generators; the detector is conservative and each hit must
+  be confirmed before conversion.
 - [x] Add strict structured source-annotation parsing; legacy free-form comments
   remain accepted until touched. Format:
   `; DEVIATION{class=projection; pret=file:Label; behavior=...; evidence=...; lifetime=...}`.

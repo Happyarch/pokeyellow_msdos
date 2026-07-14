@@ -46,6 +46,14 @@ class StructuredAnnotationTests(unittest.TestCase):
             "behavior=return carry clear; evidence=label_status; lifetime=until wave 4}")
         self.assertEqual(parsed[2], [])
 
+    def test_hand_encoded_rendered_text(self):
+        self.assertTrue(module.looks_hand_encoded_text(
+            'StatusText: db 0x8f, 0x92, 0x8d ; "PSN"', 'StatusText'))
+
+    def test_binary_table_is_not_text(self):
+        self.assertFalse(module.looks_hand_encoded_text(
+            'DecodeTable: db 0xfe, 0xcd, 0x89, 0xba', 'DecodeTable'))
+
 
 if __name__ == "__main__":
     unittest.main()

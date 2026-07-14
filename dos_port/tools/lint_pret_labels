@@ -34,6 +34,8 @@ Violation classes:
                 annotations remain accepted until touched.
   stale_provider an explicit `src/...asm` extern-provider trail does not define
                 that symbol. Enforced by --strict-claims during legacy migration.
+  hand_encoded_text a likely rendered charmap byte run lives in assembly instead
+                of generated Tier-1 data. Enforced by --strict-claims.
 
 Suppressions live in dos_port/tools/pret_label_allowlist.json:
   "suppress": [ {"rule": "<class>", "key": "<label | file:symbol>", "why": "…"} ]
@@ -64,6 +66,9 @@ ANNOTATION_CLASSES = {
     'HAL', 'banking', 'projection', 'data-model', 'timing', 'stub', 'temporary'
 }
 ANNOTATION_FIELDS = {'class', 'pret', 'behavior', 'evidence', 'lifetime'}
+DB_RUN_RE = re.compile(r'^\s*(?:[A-Za-z_][A-Za-z0-9_]*:\s*)?db\s+([^;]+)', re.I)
+HEX_BYTE_RE = re.compile(r'(?<![A-Za-z0-9_])(?:0x|\$)([0-9A-Fa-f]{2})(?![0-9A-Fa-f])')
+TEXT_LABEL_RE = re.compile(r'(?:text|string|msg|prefix|^str_|^sa_)', re.I)
 
 
 def parse_annotation(text):
@@ -96,6 +101,19 @@ def parse_annotation(text):
     if kind == 'GLITCH' and 'safety' not in fields:
         errors.append('GLITCH requires safety')
     return kind, fields, errors
+
+
+def looks_hand_encoded_text(text, current_label=None):
+    """Conservative detector: byte run + charmap-range byte + textual evidence."""
+    m = DB_RUN_RE.match(text)
+    if not m:
+        return False
+    values = [int(x, 16) for x in HEX_BYTE_RE.findall(m.group(1))]
+    if len(values) < 2 or not any(v >= 0x7f for v in values):
+        return False
+    comment = text.split(';', 1)[1] if ';' in text else ''
+    return bool(re.search(r'"[^"\n]+"', comment) or
+                (current_label and TEXT_LABEL_RE.search(current_label)))
 
 def load_suppressions():
     if not os.path.exists(ALLOWLIST):
@@ -241,8 +259,16 @@ def main():
                 continue
             path = os.path.join(dirpath, fn)
             rel = os.path.relpath(path, os.path.join(SCRIPT_DIR, '..', '..')).replace('\\', '/')
+            current_label = None
             with open(path, encoding='utf-8', errors='replace') as fh:
                 for line_no, text in enumerate(fh, 1):
+                    lm = re.match(r'^([A-Za-z_][A-Za-z0-9_]*):', text)
+                    if lm:
+                        current_label = lm.group(1)
+                    if args.strict_claims and looks_hand_encoded_text(text, current_label):
+                        add('hand_encoded_text', f'{rel}:{line_no}',
+                            f"{rel}:{line_no}: likely rendered charmap bytes under "
+                            f"{current_label or '(no label)'}; generate assets/*.inc")
                     parsed = parse_annotation(text)
                     if not parsed:
                         # An opening brace without a complete annotation is
@@ -273,6 +299,10 @@ def main():
         if msgs:
             print(f"\n== {rule} ({len(msgs)}) ==")
             print('\n'.join('  ' + m for m in msgs))
+    msgs = by_rule.get('hand_encoded_text', [])
+    if msgs:
+        print(f"\n== hand_encoded_text ({len(msgs)}) ==")
+        print('\n'.join('  ' + m for m in msgs))
     msgs = by_rule.get('annotation', [])
     if msgs:
         print(f"\n== annotation ({len(msgs)}) ==")
