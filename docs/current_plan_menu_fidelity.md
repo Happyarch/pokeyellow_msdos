@@ -1,7 +1,8 @@
 # Menu fidelity — de-bespoking the menu system against pret
 
-> **STATUS — 2026-07-13. Rows 1–11 + 23 are DONE: 12 of 24, exactly halfway.**
-> Next row is **12** (`swap_items.asm`). Twelve rows remain: **12–22 and 24.**
+> **STATUS — 2026-07-13. Rows 1–12 + 23 are DONE: 13 of 24.**
+> Next row is **13** (`field_moves.asm` / `display_text_id_init.asm`) — the last SHARED DRIVER.
+> Eleven rows remain: **13–22 and 24.**
 >
 > **The row table below is the only authoritative status.** This header is prose and has
 > already gone stale once (it claimed "1–8 done (9 of 24)" and "1-9 done (10 of 24)" in the
@@ -44,8 +45,14 @@
 > mirror image, where the ○ tile pret loads by *walking off the end of another asset's copy*
 > was reimplemented as a load pret never makes. Do not believe a `STUB(...)`/`TODO-HW` comment;
 > grep `pkmn.sym` for the symbol it names. (Row 11's M-46 is the one such claim that held up —
-> and it took a symbol-table check to establish that.) The hit rate on "audited file turns out
-> to hold a real defect" is still 100%. The remaining rows are not a formality.
+> and it took a symbol-table check to establish that.) Row 12 is the class's mirror image, and the
+> sharpest argument for the rule: its *code* is faithful line-for-line, but its header declared the
+> file **CHECK-only with "no live caller"** while `nm` shows it in the binary and `list_menu.asm`
+> jumps to it — and the `GLITCH` tag's **`Safety:` note derived its "dormant, not reachable" verdict
+> from that header**, so an item-underflow **ACE** gateway stood documented as unreachable while
+> being live (M-48). A stale comment is not always cosmetic; here it inverted a safety assessment.
+> The hit rate on "audited file turns out to hold a real defect" is still 100%. The remaining rows
+> are not a formality.
 
 ## Why this exists
 
@@ -101,7 +108,7 @@ driver only relocates the divergence.
 | 9 | `src/engine/menus/start_sub_menus.asm` | same (861 ln) | **DONE** | `6ce2e8b6` (p1), `1b66f55a` (p2), `6e9cc7c2` (p3) | **Part 1 = the party half** (`StartMenu_Pokemon`, `ErasePartyMenuCursors`, `SwitchPartyMon{,_ClearGfx,_InitVarOrSwapData}`). M-19 (the swap **left both mons' icons on screen** — the `DEVIATION(icons)` excusing the missing OAM park went stale when icons became OBJ; FIXED, incl. the `RENDER_H` projection pret's 144px park constant needs), M-20 (`SFX_SWAP` + `WaitForSoundToFinish` missing behind another stale `TODO-HW`; FIXED — and wiring it is *what makes M-19 visible*), M-21 (the field-move stub's stated reason is FALSE — the effects ARE ported, they're in check-only files; comment corrected, dispatch scoped as **part 3**). Header advertised 4 STUBs that Session 9 had already wired. **Part 2 = the bag half + the 4 seams — DONE**: M-22 (a private `ret`-only `RunDefaultPaletteCommand` **shadowing the real global body** — the stub class the conventions exist to catch; a 3rd copy sits in `pokedex.asm`, filed), M-23 (`.exitMenu` dropped `LoadTextBoxTilePatterns`+`UpdateSprites` under a window-model excuse that covers neither — the START box could render out of HP-bar tiles), M-24 (`ItemMenuLoop` dropped the `hAutoBGTransferEnabled=0` store — the OW-A.13 leak class), M-25 (both refusal messages were `STUB(text)` blaming unported *features*, while the guard branches ran and showed **nothing**; nothing blocked them — generator patched, both now print), M-26 (`StartMenu_SaveReset` dropped pret's RESET branch *while row 8's `DrawStartMenu` already draws the RESET label*, and returned to the START menu instead of the map). Only `TrainerInfo_FarCopyData` still `missing` → **row 10**. **Part 3 = the field-move dispatch — DONE**: M-27. pret's real dispatch (GetPartyMonName + pointer table + badge gates + 6 generated refusal streams). STRENGTH / DIG / SOFTBOILED / FLASH / TELEPORT **work**; SURF+CUT+FLY gate correctly and stub at the leaf (`ItemUseSurfboard` ret-stub / `cut.asm` unlinked on `WriteOAMBlock` / `ChooseFlyDestination` genuinely missing). **`field_move_messages.asm` linked** — its sole blocker was `PlayCry`, now a documented ret-stub: one symbol was gating two field moves. |
 | 10 | `src/engine/menus/trainer_card.asm` | `engine/menus/start_sub_menus.asm` (`DrawTrainerInfo` section) | **DONE** | `3df412e0` | M-33 (**the ○ tile was an *invented* load**: pret never loads `CircleTile` — its `$17`-tile `BlankLeaderNames` copy is one tile LONGER than the asset and runs off the end into it, which is the only reason the ○ exists in VRAM at all. The port copied 22 and then wrote the circle to `$76` itself. FIXED: the generator now emits the two blobs contiguously **and asserts the 23-tile total**, and the port makes pret's single copy), M-34 (`TrainerInfo_FarCopyData` was `missing` and the 5 VRAM loads were **hand-rolled `rep movsd`** with one trailing `g_tilecache_dirty` — armed, so not a live bug, but correct-by-accident in exactly the shape that has shipped visible corruption twice; the label is **restored** and every load goes through `CopyVideoData`, which arms the cache itself), M-35 (the two PlaceString labels were **hand-encoded charmap `db` bytes** — the Tier-1 violation; migrated into `tools/gen_menu_strings.py` → `assets/trainer_card_strings.inc`, generated bytes verified byte-identical), M-36 (a **defensive `BIT_SINGLE_SPACED_LINES` clear** with no pret counterpart — every setter in pret *and* the port re-clears it, so it cannot be set on entry; dropped. Two more copies live in `pokedex.asm`/`players_pc.asm`, filed). **Allowlist CHALLENGED**: deleted → 6 mirror violations → re-added with a hand-written why (the card is one self-contained SCREEN; pret bundles it with the six `StartMenu_*` dispatchers only for ROM-bank locality; no label forked, trail runs both ways). SANCTIONED + tagged: the missing `DisplayPicCenteredOrUpperRight` predef, the `LoadBadgeTiles` split, the `CopyVideoData` tail. VERIFIED live (`DEBUG_TRAINERCARD` → `FRAME.BIN`): card renders, **both ○ render from the rider copy alone**. |
 | 11 | `src/engine/menus/party_menu.asm` + `src/home/pokemon.asm` | `engine/menus/party_menu.asm`, `home/pokemon.asm` | **DONE** | `3d5ce1e3` (p1), `1e14cecf` (p2) | **Part 1 = `party_menu.asm` — DONE.** Four excuses, all four false, all four checked against the linked build rather than believed: M-38 (`RunPaletteCommand` ×2 dropped behind *"TODO-HW: SGB/CGB palette command (Phase 5)"* — the palette is Phase 5, the CALL is not; it is a linked global and six other screens call it. Restored), M-39 (**the six party messages were hand-encoded charmap `db` bytes** drawn whole by a bespoke routine, behind *"engine far-text streams aren't GB-space assets yet"* — `gen_item_text.py` **already scans `engine/menus/party_menu.asm`** and has been emitting all five streams as linked globals since it was written. The hand copy also re-made M-16's mistake: literal `POKéMON` glyphs where pret writes the `$54` POKé command. Now `PartyMenuMessagePointers` → pret's `PrintText`), M-40 (**M-29 CLOSED for this screen**: authored `msgbox_party`, the projection M-29 said had to exist. Root cause pinned: `manual_text_scroll` (text.asm:386) copies the scratch's dialog rows into `GB_TILEMAP1` rows 0-5 — the party PANEL's rows — on every `<PROMPT>`/`<PARA>`, and *unlike* `sync_dialog_window` it is **not** gated on `g_bg_whiteout`. `msgbox_party` has no window (so the party window list survives) and its own `MB_PROMPT` hook, which is the mechanism that keeps `<PROMPT>` away from that copy), M-41 (**both learnability columns were STUBs** — `.teachMoveMenu` / `.evolutionStoneMenu` — blaming *"reachable only from item USE"*. Reachability is not a blocker and nothing was blocking: `CanLearnTM` and `EvosMovesPointerTable` are both translated **and linked**. The stubs cost the TMHM and EVO_STONE menus their entire right-hand column — the one thing those menus exist to show. Implemented; the evo scan walks the flat blob in place instead of pret's two `FarCopyData` stagings), M-42 (`.printItemUseMessage`'s hand-rolled printer was excused by *"every one of these nine texts terminates with `<DONE>` (never `<PROMPT>`)"* — **`RareCandyText` is `sound_get_item_1` + `text_promptbutton`**; the generated stream ends `$0B $06 $50`. Open-coding the printer meant that prompt was never dispatched. Routed through `PrintText`). Also restored the 2 `hAutoBGTransferEnabled` stores (M-24's precedent; the flag is **write-only** in the port — `do_bg_transfer` is deleted — but a screen that quietly stops writing it is how state drifts from pret's). 2 strings migrated to a generator (`assets/party_menu_strings.inc`). SANCTIONED + tagged: `ClearScreen`→`FillMemory` (canvas-scoped), `SetMonPartySpriteOrigin` + `ShowPartyMenuWindows` + `PartyMenuMirror` (window model), the pikachu-follower STUB ×2, `InitPartyMenuBlkPacket` (genuinely `missing`, SGB), `PartyMenuPrintText` (the projection wrapper around pret's `PrintText`). **Gate: golden `party_menu` PASSes with all 360 tilemap cells matching mGBA** — the message box and its text are byte-identical to the real ROM. **Part 2 = `home/pokemon.asm` — DONE.** M-43 (the `STUB(pikachu-follow)` comment, in **both** this file and `party_menu.asm`, claimed the follower system was unported — `IsThisPartyMonStarterPikachu`, `CheckPikachuFollowingPlayer` **and** `WriteMonPartySpriteOAMByPartyIndex`'s `$ff` branch were all already linked; the fourth instance of this excuse class. Both sites destubbed — UNVERIFIED at runtime, no golden has Pikachu following), M-44 (`PrintStatusCondition`'s hand-encoded "FNT" was **also an off-by-one**: `ld_hli_a_string` advances HL by len-1 and leaves A = the *second-to-last* char, which pret's `and a` tests; the port advanced 3 and left 'T'. Migrated to `assets/home_pokemon_strings.inc` and fixed), M-45 (`GetMonHeader`'s dropped `IndexToPokedex` predef — SANCTIONED, argued from pret's own `wPokedexNum` save/restore, tagged `DEVIATION(flat-data)`), M-46 (its fossil/ghost `TODO-HW` — **verified TRUE**, the three pics exist nowhere in the port). **Two generators patched**: `gen_battle_text.collect_wrappers`' regex silently skipped pret's address-suffixed `PartyMenuText_12cc` (only `*Text`/`*Text<n>` matched), and `gen_menu_strings.py` gained the `HOME_POKEMON` glyph-run group. SANCTIONED + tagged: `PartyMenuPrintText` (window model — pret's bare `PrintText` lands in the GB dialog rows, which the port draws behind windows), the `Bankswitch*` collapses, `DisplayPartyMenu`'s `DEBUG_PARTYMENU` harness calls. Gate: `make fidelity` 6/6 PASS. |
-| 12 | `src/engine/menus/swap_items.asm` | same | TODO | | "PLACEHOLDERS below … ROOT migrates + deletes" |
+| 12 | `src/engine/menus/swap_items.asm` | same | **DONE** | `29b01d65` | **The x86 is faithful — the only label (`HandleItemListSwapping`) translates pret line-for-line, and faithdiff is clean (2/2 calls, 7/7 stores).** The lies were all in the comments: M-48 (the header declared the file **CHECK-only with "No live caller"** and its WRAM symbols "LOCAL PLACEHOLDERS below — ROOT migrates + deletes"; there are no placeholders, the file is in **GAME_SRCS**, `nm` shows `T HandleItemListSwapping`, and `list_menu.asm:435` jumps to it on SELECT — **and the `GLITCH` block's `Safety:` note inherited that false premise**, declaring the item-underflow gateway "dormant, not reachable in the current build" when it is live), M-49 (two gratuitous register-contract divergences: a pointless `mov dl,al` / `pop esi` / `mov al,dl` detour clobbering **DL**, which pret preserves, and a `push dx`/`pop dx` pair saving only the **low half** of an EDX the routine then uses as a full 32-bit flat pointer — plus leaving ESP 2-mod-4). No allowlist entry exists (file is at its mirrored path); nothing to challenge. Gate: `make fidelity` 6/6 PASS. **The swap path itself is UNVERIFIED at runtime** — no golden and no `DEBUG_*` harness presses SELECT on a list (same gap row 4 recorded for M-9); the goldens only prove no regression. |
 | 13 | `src/engine/menus/field_moves.asm`, `display_text_id_init.asm` | `engine/menus/text_box.asm`, `display_text_id_init.asm` | TODO | | no self-declared divergence — verify by hand |
 | 14 | `src/engine/menus/options.asm` | same | TODO | | the working reference for the window model |
 | 15 | `src/engine/menus/naming_screen.asm` | same | TODO | | DEVIATION ×6 |
@@ -1188,3 +1195,53 @@ Fix: move it to `src/engine/battle/battle_stubs.asm` (or a `gfx_stubs.asm`, sinc
 `engine/gfx/palettes.asm` in pret — its mirror file does not exist in the port yet), repoint the
 extern comments in the seven callers via `tools/label_status --callers RunPaletteCommand`, and delete
 it outright the moment the palette body lands. Not row 11's file, so not touched here.
+
+### M-48. `swap_items.asm` declared itself CHECK-only and unreachable — it is in the linked binary, and so is its ACE glitch **[FIXED — row 12]**
+**File:** `dos_port/src/engine/menus/swap_items.asm` (header, and the `GLITCH:` block's `Safety:` note)
+**What was wrong:** the header made three claims, all false:
+1. *"LINK status: assembles CHECK-only now. … No live caller invokes the list menu yet."* —
+   `src/engine/menus/swap_items.asm` is in **`GAME_SRCS`** (`Makefile:309`), `pkmn.sym` carries
+   `T HandleItemListSwapping`, and its caller is linked: `src/home/list_menu.asm:435`
+   (`DisplayListMenuIDLoop.checkOtherKeys`) does `jmp HandleItemListSwapping` on SELECT. The SELECT
+   swap runs whenever the bag list menu is open. (This is the same false *"no live caller"* header
+   claim row 4 already caught in `list_menu.asm` — the two files were lying about each other.)
+2. *"Symbols still missing from gb_memmap.inc / gb_constants.inc are LOCAL PLACEHOLDERS below —
+   ROOT migrates + deletes."* — there are **no placeholders in the file**. Every symbol it uses
+   (`hSwapItemID` $FFA9, `hSwapItemQuantity` $FFAA, `wListCount`, `wMaxMenuItem`, `ITEMLISTMENU`)
+   is a canonical `equ` in `gb_memmap.inc`/`gb_constants.inc`. A comment 10 lines further down
+   already said so — the header contradicted its own file.
+3. **The dangerous one.** The `Safety:` half of the `GLITCH:` tag on `.swapSameItemType` *derived
+   itself from claim 1*: "this file is CHECK-only per its header … so this path is dormant, not
+   reachable, in the current build. Once linked: unsafe — ACE can escape EBP allocation via the
+   downstream ws# #m# chain." It is linked. The item-underflow gateway (the unclamped 8-bit
+   quantity `add`, whose 256-sum wrap writes a ×0 stack) is **live right now**, and the file's own
+   safety note was telling the next reader the opposite. The `GLITCH:` description is accurate and
+   the behavior is correctly preserved verbatim per pret — only the reachability assessment was
+   wrong, which is precisely the half a `Safety:` note exists to get right.
+**Fix:** header rewritten to state the real link status (with the `nm`/Makefile/caller evidence);
+`Safety:` rewritten to say LIVE, and to name the actual guard rail — the multi-step quantity
+manipulation needed to *set up* the 256-sum, not the absence of a link.
+**Severity:** medium (no wrong instruction shipped, but a `Safety:` note that inverts an ACE
+glitch's reachability is exactly the comment the convention exists to make trustworthy)
+
+### M-49. Two gratuitous register-contract divergences in an otherwise faithful translation **[FIXED — row 12]**
+**File:** `dos_port/src/engine/menus/swap_items.asm` `HandleItemListSwapping`
+**pret:** `engine/menus/swap_items.asm:19-20` (`ld a,[hl]` / `pop hl`) and `:50-51` (`push hl` / `push de`)
+**What was wrong:**
+1. **DL clobbered where pret preserves DE.** pret reads the selected entry's ID and restores HL with
+   a plain `ld a,[hl]` / `pop hl` — `pop` cannot disturb A. The port routed the byte through **DL**
+   (`mov dl,al` / `pop esi` / `mov al,dl`) for no reason, destroying the low half of DE on *every*
+   path including the two early `jmp DisplayListMenuIDLoop` exits, which pret leaves DE untouched
+   on. Latent, not live (the caller re-enters its loop and does not read DE across the jump), but
+   it is a silent narrowing of the register contract in the one routine whose whole job is to
+   shuffle registers around a list.
+2. **`push dx` / `pop dx` saved half of a 32-bit pointer.** The swap block mirrors pret's
+   `push hl` / `push de`, but the port immediately does `mov edx, esi` and uses **EDX as a flat
+   32-bit pointer** into the list. Pushing only `dx` restores the low 16 bits and leaves the high
+   half as whatever the routine last wrote — the save was decorative. (Harmless today only because
+   every value EDX takes is a GB address < $10000, so the high half happens to be zero; it is
+   correct-by-accident.) It also left ESP 2-mod-4 through the body.
+**Fix:** the DL detour is deleted (`mov al,[ebp+esi]` / `pop esi` / `inc al` — `pop` touches neither
+AL nor EFLAGS, so the `jz` still reads the flags `inc al` sets), and the pair is now `push edx` /
+`pop edx`. No behavioral change intended or observed; `make fidelity` 6/6 PASS.
+**Severity:** low (latent register clobber; correct-by-accident stack save)

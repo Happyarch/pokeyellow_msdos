@@ -2,22 +2,23 @@
 ; swap_items.asm — SELECT-swap for the bag/item list (HandleItemListSwapping).
 ; Faithful translation of pret engine/menus/swap_items.asm.
 ;
-; Wave 4 / M4.2: the generic list-menu driver this tail-calls
-; (DisplayListMenuIDLoop) is now provided by src/home/list_menu.asm, so this file
-; is no longer a dead end. The two link together via mutual tail jumps
+; The generic list-menu driver this tail-calls (DisplayListMenuIDLoop) lives in
+; src/home/list_menu.asm. The two link together via mutual tail jumps
 ; (DisplayListMenuIDLoop → HandleItemListSwapping on SELECT, and back).
 ;
-; Assembly-convention fix (M4.2): WRAM/constant symbols are ABSOLUTE `equ`s and
-; MUST come from %include "gb_memmap.inc" (the port convention, as bag_menu.asm
-; does) — NOT `extern`. Externing them made this file fail to *assemble*
-; ("COFF format does not support non-32-bit relocations" on `cmp al,
-; ITEMLISTMENU`, an 8-bit immediate). Only real code labels stay `extern`.
-; Symbols still missing from gb_memmap.inc / gb_constants.inc are LOCAL
-; PLACEHOLDERS below (pret-derived, identical-valued) — ROOT migrates + deletes.
+; Assembly convention: WRAM/constant symbols are ABSOLUTE `equ`s and MUST come
+; from %include "gb_memmap.inc" — NOT `extern`. Externing them made this file
+; fail to *assemble* ("COFF format does not support non-32-bit relocations" on
+; `cmp al, ITEMLISTMENU`, an 8-bit immediate). Only real code labels stay `extern`.
 ;
-; LINK status: assembles CHECK-only now. To LINK, list_menu.asm must be in the
-; same SRCS list and ROOT must assign real HRAM bytes for hSwapItemID /
-; hSwapItemQuantity (placeholders here). No live caller invokes the list menu yet.
+; LINK status: LIVE. This file is in GAME_SRCS (Makefile), `nm` shows
+; `T HandleItemListSwapping`, and its only caller — list_menu.asm's SELECT branch
+; — is linked too, so the SELECT-swap runs whenever the bag list menu is open.
+; hSwapItemID / hSwapItemQuantity are real HRAM equs in gb_memmap.inc.
+; (An earlier header claimed this file was CHECK-only with "no live caller" and
+; that the WRAM symbols below were local placeholders. Both were stale — there
+; are no placeholders in this file, and the routine is in the linked binary.
+; Corrected at menu-fidelity row 12; see M-47.)
 ; ============================================================================
 ; dos_port/engine/menus/swap_items.asm
 global HandleItemListSwapping
@@ -51,14 +52,11 @@ HandleItemListSwapping:
     movzx ecx, al
     add esi, ecx
     
-    mov al, [ebp + esi]
-    
-    mov dl, al
-    pop esi
-    mov al, dl
-    
+    mov al, [ebp + esi]                 ; a = ID of the selected entry
+    pop esi                             ; `pop` touches neither AL nor EFLAGS
+
     inc al
-    jz DisplayListMenuIDLoop
+    jz DisplayListMenuIDLoop            ; ignore attempts to swap the Cancel entry
     
     mov al, [ebp + wMenuItemToSwap]
     test al, al
@@ -93,9 +91,11 @@ HandleItemListSwapping:
     mov bl, 20                          ; DelayFrames reads BL (frame.asm:213)
     call DelayFrames
     
-    push esi
-    push dx
-    
+    push esi                            ; pret: push hl
+    push edx                            ; pret: push de  (full EDX: it is used as a
+                                        ; flat pointer below, so saving only DX
+                                        ; would leave the high half clobbered)
+
     movzx esi, word [ebp + wListPointer]
     inc esi
     
@@ -142,7 +142,7 @@ HandleItemListSwapping:
     xor al, al
     mov [ebp + wMenuItemToSwap], al
     
-    pop dx
+    pop edx
     pop esi
     jmp DisplayListMenuIDLoop
 
@@ -161,12 +161,16 @@ HandleItemListSwapping:
     ; behavior, preserved verbatim (matches pret's identical 8-bit `add`/`cp
     ; 100`). pret ref: engine/menus/swap_items.asm:HandleItemListSwapping
     ; (.swapSameItemType), docs/references/yellow_glitches.md#item--inventory
-    ; (Item Underflow / Dry Underflow). Safety: this file is CHECK-only per its
-    ; header (DisplayListMenuIDLoop/HandleItemListSwapping are not yet wired
-    ; into any linked caller — "No live caller invokes the list menu yet"), so
-    ; this path is dormant, not reachable, in the current build. Once linked:
-    ; unsafe — ACE can escape EBP allocation via the downstream ws# #m# chain
-    ; (see docs/glitch_safety.md); test only under DOSBox or 86Box.
+    ; (Item Underflow / Dry Underflow).
+    ; Safety: LIVE — this path is reachable in the current build. (The previous
+    ; Safety note claimed the file was CHECK-only with no linked caller and that
+    ; the glitch was therefore "dormant, not reachable". It inherited that from
+    ; the stale header: swap_items.asm is in GAME_SRCS and list_menu.asm's SELECT
+    ; branch jumps here. See M-47.) Reaching the underflow still requires the
+    ; multi-step quantity manipulation described above, but the guard rail is
+    ; the *setup*, not the link. Unsafe: ACE can escape the EBP allocation via
+    ; the downstream ws# #m# chain (see docs/glitch_safety.md) — exercise only
+    ; under DOSBox or 86Box, never on bare metal.
     inc edx
     mov al, [ebp + esi]
     mov bl, al
@@ -224,6 +228,6 @@ HandleItemListSwapping:
     xor al, al
     mov [ebp + wMenuItemToSwap], al
     
-    pop dx
+    pop edx
     pop esi
     jmp DisplayListMenuIDLoop
