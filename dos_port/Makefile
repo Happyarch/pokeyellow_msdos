@@ -292,6 +292,7 @@ GAME_SRCS := \
     src/engine/menus/save.asm \
     src/engine/menus/naming_screen.asm \
     src/engine/menus/pokedex.asm \
+    src/engine/printer/printer_stubs.asm \
     src/engine/menus/pokedex_entry.asm \
     src/engine/menus/link_menu.asm \
     src/engine/menus/link_cups.asm \
@@ -775,6 +776,17 @@ ifdef DEBUG_G1
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_G1
 NASMFLAGS += -D SKIP_TITLE
+# PDEX_AREA=1 makes the SAME G1 harness render the side menu's AREA option instead
+# of the CONTENTS list: it calls LoadTownMap_Nest exactly as .choseArea now does.
+# That path blocks in WaitForTextScrollButtonPress, so it needs the autokey driver
+# to photograph the screen (AutoKeyDrive dumps at AUTOKEY_DUMP_FRAME and exits).
+# make SKIP_TITLE=1 DEBUG_G1=1 PDEX_AREA=1
+# AUTOKEY_QUIET: never press anything. The nest screen parks in its own key-wait
+# (WaitForTextScrollButtonPress), so the default script's A-press would dismiss it
+# via ExitTownMap and the frame-200 photo would catch the overworld behind it.
+ifdef PDEX_AREA
+NASMFLAGS += -D PDEX_AREA -D DEBUG_AUTOKEY -D AUTOKEY_QUIET
+endif
 endif
 ifdef DEBUG_G2
 NEED_DEBUG_DUMP := 1
@@ -997,8 +1009,12 @@ POKEMON_CHECK_SRCS := \
 
 # Item routines that assemble-validate but aren't linked yet — either unwired
 # (nothing calls them) or dependent on not-yet-ported deps (town-map palette/video
-# engine, DisplayTextBoxID, _AlreadyKnowsText). town_map is intentionally kept
-# dangling (not in the main loop) per its port note.
+# engine, DisplayTextBoxID, _AlreadyKnowsText).
+# NOTE: an older comment here said town_map was "intentionally kept dangling (not
+# in the main loop)". STALE: town_map.asm is in ITEMS_SRCS, which is part of
+# LINK_SRCS, so it has been linked all along — and LoadTownMap_Nest was a complete,
+# reachable body that simply nobody called. The POKéDEX AREA option now calls it
+# (menu-fidelity row 16 / M-64).
 # swap_items.asm MOVED to GAME_SRCS (menus S3): SELECT-swap links live with
 # the promoted list_menu.asm driver.
 ITEMS_CHECK_SRCS := \
@@ -1250,7 +1266,8 @@ assets/gb_charmap.txt:
 # pret's data/text/*.asm by gen_battle_text.collect_far — hence the extra deps.
 assets/menu_strings.inc assets/menu_text.inc assets/trainer_card_strings.inc \
         assets/party_menu_strings.inc assets/home_pokemon_strings.inc \
-        assets/options_strings.inc assets/naming_strings.inc: \
+        assets/options_strings.inc assets/naming_strings.inc \
+        assets/pokedex_strings.inc: \
         assets/gb_charmap.txt tools/gen_menu_strings.py \
         tools/gb_text.py tools/gen_battle_text.py
 	python3 tools/gen_menu_strings.py
@@ -1436,7 +1453,8 @@ src/engine/items/item_effects.o: assets/ui_layout_menus.inc
 src/engine/menus/main_menu.o src/engine/menus/save.o: assets/ui_layout_menus.inc
 src/engine/menus/naming_screen.o: assets/ui_layout_menus.inc assets/alphabets.inc \
         assets/naming_strings.inc assets/audio_constants.inc
-src/engine/menus/pokedex.o: assets/ui_layout_menus.inc assets/pokedex_tiles.inc
+src/engine/menus/pokedex.o: assets/ui_layout_menus.inc assets/pokedex_tiles.inc \
+        assets/pokedex_strings.inc
 src/engine/menus/pokedex_entry.o: assets/ui_layout_menus.inc assets/dex_entries.inc
 src/engine/menus/link_menu.o: assets/ui_layout_menus.inc
 src/engine/menus/link_cups.o: assets/dex_entries.inc
@@ -1612,7 +1630,7 @@ assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_
         assets/base_stats.inc assets/growth_rates.inc \
         assets/moves.inc assets/evos_moves.inc assets/monster_names.inc \
         assets/items.inc assets/item_text.inc assets/gb_charmap.txt assets/menu_strings.inc \
-        assets/naming_strings.inc \
+        assets/naming_strings.inc assets/pokedex_strings.inc \
         assets/status_strings.inc assets/textbox_strings.inc assets/menu_text.inc \
         assets/list_menu_strings.inc assets/yes_no_strings.inc \
         assets/text_oracle.inc \

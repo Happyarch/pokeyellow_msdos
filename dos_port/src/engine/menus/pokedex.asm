@@ -3,11 +3,16 @@
 ; Faithful port of the MENU/LIST portion of pret engine/menus/pokedex.asm
 ; (ShowPokedexMenu + HandlePokedexSideMenu + HandlePokedexListMenu +
 ; Pokedex_DrawInterface + DrawPokedexVerticalLine + Pokedex_PlacePokemonList +
-; IsPokemonBitSet + DrawTileLine + PokedexToIndex + IndexToPokedex, plus the
-; text tables). The DATA-entry half (ShowPokedexData/ShowPokedexDataInternal,
-; dex entry drawing, flavour text) is package G2's pokedex_entry.asm — this file
-; `extern`s ShowPokedexDataInternal from it and `global`s the four cross-half
-; helpers (PokedexToIndex/IndexToPokedex/IsPokemonBitSet/DrawTileLine) G2 calls.
+; IsPokemonBitSet + DrawTileLine + PokedexToIndex, plus the text tables).
+; NOT IndexToPokedex: pret has a ROUTINE by that name (dex# lookup), while the port
+; gives the name to a DATA TABLE in pokemon_data.asm and has no such routine. That
+; label squat is real but cross-file (pokemon_data.asm + home/pics.asm + the base-stats
+; generator all depend on the table name), so it is filed as ledger M-71, not fixed here.
+;
+; The DATA-entry half (ShowPokedexData/ShowPokedexDataInternal, dex entry drawing,
+; flavour text) is package G2's pokedex_entry.asm — this file `extern`s
+; ShowPokedexDataInternal from it and `global`s the three cross-half helpers
+; (PokedexToIndex / IsPokemonBitSet / DrawTileLine) that G2 calls.
 ;
 ; Same routines, same labels, same branch structure/order as pret; divergences
 ; are tagged PROJ / TODO-HW / DEVIATION / STUB only.
@@ -60,14 +65,22 @@ global Pokedex_PlacePokemonList
 global IsPokemonBitSet
 global DrawTileLine
 global PokedexToIndex
-global LoadPokedexTilePatterns       ; shared no-op stub (G2 externs it)
+global LoadPokedexTilePatterns       ; REAL body (below), not a stub — G2 externs it
 extern IndexToPokedex                ; base_stats.inc — index->dex TABLE (== pret PokedexOrder)
 
 ; ---- externs -------------------------------------------------------------
 extern GBPalWhiteOut                 ; home/fade.asm
 extern GBPalWhiteOutWithDelay3       ; home/fade.asm
 extern GBPalNormal                   ; init/init.asm
-extern RunPaletteCommand             ; engine/battle/faint_switch.asm — palette HAL (no-op stub)
+; NOTE (2026-07-14, menu row 16): RunPaletteCommand is a REAL, LINKED body in
+; home/palettes.asm — NOT the "no-op palette HAL stub" this file used to claim. It
+; normalizes the GB `B` register out of EITHER BL or BH (BL first; BH only when BL
+; is zero) and tail-jumps the live _RunPaletteCommand dispatcher. So this file must
+; keep passing the command in BL: writing pret's literal `ld b` → BH would let a
+; stale nonzero BL win the shim's BL-first test and select the WRONG palette.
+; Unifying on BH is ledger M-62, owned by the palette session — not this row.
+extern RunPaletteCommand             ; home/palettes.asm — REAL body (BL/BH-normalizing shim)
+extern RunDefaultPaletteCommand      ; engine/menus/naming_screen.asm — BL=SET_PAL_DEFAULT → RunPaletteCommand
 extern ReloadMapData                 ; home/reload_tiles.asm
 extern LoadHpBarAndStatusTilePatterns ; gfx/load_font.asm — pret loader's 1st step
 extern g_tilecache_dirty             ; ppu.asm — set after any VRAM tile write
@@ -88,7 +101,13 @@ extern FlagAction                    ; engine/flag_action.asm — ESI=field, CL=
 extern GetMonName                    ; home/names.asm — [wNamedObjectIndex] → wNameBuffer
 extern set_single_window             ; ppu/ppu.asm
 extern g_bg_whiteout                 ; ppu/ppu.asm
-extern PlaySound                     ; engine/battle/move_effect_helpers.asm — audio HAL stub
+; PlaySound is a REAL body (home/audio.asm), not the "audio HAL stub" this file used
+; to claim — the audio engine is live and music plays. The POKéDEX CRY option is
+; silent only because GetCryData/PlayCry are still ret-stubs (home_stubs.asm; M-32).
+extern PlaySound                     ; home/audio.asm — a REAL body
+extern GetCryData                    ; home_stubs.asm — STUB (M-32); pret home/pokemon.asm
+extern LoadTownMap_Nest              ; engine/items/town_map.asm — REAL body, linked (M-64)
+extern PrintPokedexEntry             ; engine/printer/printer_stubs.asm — STUB (GB printer)
 ; ShowPokedexDataInternal is defined by G2 (pokedex_entry.asm); the .choseData
 ; side-menu path calls it. At standalone `make check` this is an unresolved
 ; extern (link is finalized by ROOT at integration — G1↔G2 seam).
@@ -123,24 +142,13 @@ section .data
 ; 1 tile) — generated passthrough of gfx/pokedex/pokedex.2bpp + balls.2bpp.
 %include "assets/pokedex_tiles.inc"
 
-; pret ref: engine/menus/pokedex.asm text tables (charmap: 'A'=$80, ' '=$7F,
-; '@'=$50, '─'=$7A, <NEXT>=$4E). Tier-2 hand-authored charmap bytes.
-PokedexSeenText:                      ; pret ref: PokedexSeenText  "SEEN@"
-    db 0x92, 0x84, 0x84, 0x8D, 0x50
-PokedexOwnText:                       ; pret ref: PokedexOwnText   "OWN@"
-    db 0x8E, 0x96, 0x8D, 0x50
-PokedexContentsText:                  ; pret ref: PokedexContentsText  "CONTENTS@"
-    db 0x82, 0x8E, 0x8D, 0x93, 0x84, 0x8D, 0x93, 0x92, 0x50
-PokedexMenuItemsText:                 ; pret ref: PokedexMenuItemsText
-    db 0x83, 0x80, 0x93, 0x80          ; "DATA"
-    db 0x4E                            ; <NEXT>
-    db 0x82, 0x91, 0x98                ; "CRY"
-    db 0x4E
-    db 0x80, 0x91, 0x84, 0x80          ; "AREA"
-    db 0x4E
-    db 0x8F, 0x91, 0x8D, 0x93          ; "PRNT"
-    db 0x4E
-    db 0x90, 0x94, 0x88, 0x93, 0x50    ; "QUIT@"
+; pret ref: engine/menus/pokedex.asm text tables. These were hand-encoded charmap
+; `db` bytes here until 2026-07-14, under a comment calling them "Tier-2 hand-authored
+; charmap bytes" — there is NO such exemption. A rendered string is Tier-1 DATA
+; (CLAUDE.md), so all five (the four PlaceString labels + the routine-local
+; .dashedLine) are now generated by tools/gen_menu_strings.py through gb_text.encode.
+; The generated bytes are byte-identical to the literals they replace. Ledger M-70.
+%include "assets/pokedex_strings.inc"
 
 ; ===========================================================================
 section .text
@@ -169,8 +177,10 @@ ShowPokedexMenu:
 .setUpGraphics:
     call LoadPokedexTilePatterns             ; pret: callfar LoadPokedexTilePatterns
 .loop:
-    ; TODO-HW: palette HAL — pret: ld b, SET_PAL_GENERIC / call RunPaletteCommand.
-    mov bl, SET_PAL_GENERIC                   ; port RunPaletteCommand no-op stub
+    ; pret: ld b, SET_PAL_GENERIC / call RunPaletteCommand. NOT a TODO-HW any more —
+    ; RunPaletteCommand is live (home/palettes.asm). The command goes in BL, not the
+    ; literal BH, because that body's shim tests BL first; see the extern note. M-62.
+    mov bl, SET_PAL_GENERIC                   ; ld b, SET_PAL_GENERIC (via the BL/BH shim)
     call RunPaletteCommand
 .doPokemonListMenu:
     ; pret: ld hl,wTopMenuItemY / walk hli setting the menu fields. Direct field
@@ -308,16 +318,35 @@ HandlePokedexSideMenu:
     jmp .handleMenuInput
 
 .choseArea:
-    ; STUB: pret `predef LoadTownMap_Nest` (pokémon area map) — OUT OF SCOPE for
-    ; the menus swarm (town-map subsystem). No-op; take pret's area-shown path.
+    ; M-64: this was a no-op "STUB" whose comment claimed LoadTownMap_Nest was "OUT
+    ; OF SCOPE (town-map subsystem)". FALSE — and it silently killed the AREA option.
+    ; LoadTownMap_Nest is a REAL 74-instruction body (engine/items/town_map.asm:252)
+    ; that is GLOBAL and LINKED (ITEMS_SRCS ⊂ LINK_SRCS). It was written, wired, and
+    ; then never called: the only thing missing was this one instruction.
+    ; pret does `predef LoadTownMap_Nest`; the port calls it directly (predefs carry
+    ; no bank in a flat address space, and this predef takes no register args).
+    call LoadTownMap_Nest                           ; predef LoadTownMap_Nest — display pokémon areas
     mov bh, 0                                       ; ld b, 0
     jmp .exitSideMenu
 
 .chosePrint:
-    ; STUB: pret saves hTileAnimations, sets wCurPartySpecies, callfar
-    ; PrintPokedexEntry, ClearScreen — the GB-printer path is OUT OF SCOPE. Keep
-    ; the dispatch shape and the b=3 exit code (ShowPokedexMenu's .goToSideMenu
-    ; triple-dec routes b=3 → .loop, reloading the palette + list).
+    ; The GB-printer path. pret's body is ported in full and faithfully; only the
+    ; printer routine itself is deferred — PrintPokedexEntry is a ret-only STUB in
+    ; engine/printer/printer_stubs.asm (the Game Boy Printer is a serial-link
+    ; peripheral: TODO-HW serial). Keeping the surrounding body means the screen is
+    ; cleared and redrawn exactly as on hardware-with-no-printer, and whoever ports
+    ; the printer only has to fill in the stub. Previously this whole path was a bare
+    ; `mov bh,3 / jmp`, which dropped 3 stores and 2 calls with no tag (M-65).
+    mov al, [ebp + hTileAnimations]                 ; ldh a, [hTileAnimations]
+    push eax                                        ; push af
+    mov byte [ebp + hTileAnimations], 0             ; xor a / ldh [hTileAnimations], a
+    mov al, [ebp + wPokedexNum]
+    mov [ebp + wCurPartySpecies], al
+    call PrintPokedexEntry                          ; callfar PrintPokedexEntry — STUB (TODO-HW: serial)
+    mov byte [ebp + hAutoBGTransferEnabled], 0      ; xor a / ldh [hAutoBGTransferEnabled], a
+    call ClearScreen
+    pop eax                                         ; pop af
+    mov [ebp + hTileAnimations], al                 ; ldh [hTileAnimations], a
     mov bh, 3                                       ; ld b, $3
     jmp .exitSideMenu
 
@@ -333,6 +362,9 @@ HandlePokedexListMenu:
     mov dword [menu_item_step], 2 * GBSCR_W
     mov dword [menu_redraw_cb], pdex_mirror
     call Pokedex_DrawInterface
+    ; DEVIATION(window-list): pret has no equivalent — the GB shows the BG map directly.
+    ; The port composites through a window list, so the finished stride-20 scratch has to
+    ; be published as a window once before the menu loop can mirror into it each frame.
     call pdex_show_window                            ; expose the finished scratch
 .loop:
     call Pokedex_PlacePokemonList
@@ -409,7 +441,7 @@ HandlePokedexListMenu:
 ; wDexMaxSeenMon (the highest seen pokédex number).
 ; ---------------------------------------------------------------------------
 Pokedex_DrawInterface:
-    mov byte [ebp + H_AUTO_BG_TRANSFER_EN], 0        ; xor a / ldh [hAutoBGTransferEnabled],a
+    mov byte [ebp + hAutoBGTransferEnabled], 0        ; xor a / ldh [hAutoBGTransferEnabled],a
     ; DEVIATION: clear BIT_SINGLE_SPACED_LINES so the side-menu <NEXT> advances 2
     ; rows (matches pret's default; defensive, per players_pc.asm precedent).
     and byte [ebp + H_UI_LAYOUT_FLAGS], ~(1 << BIT_SINGLE_SPACED_LINES) & 0xFF
@@ -501,7 +533,7 @@ DrawPokedexVerticalLine:
 ; and the mon name (or "----------" if unseen). Rows are 2 apart (double-spaced).
 ; ---------------------------------------------------------------------------
 Pokedex_PlacePokemonList:
-    mov byte [ebp + H_AUTO_BG_TRANSFER_EN], 0
+    mov byte [ebp + hAutoBGTransferEnabled], 0
     ; DEVIATION: pret `hlcoord 4,2 / lb bc,14,10 / call ClearScreenArea`. The
     ; port's ClearScreenArea advances rows by SCREEN_WIDTH=40; this is the
     ; stride-20 scratch, so clear inline at GBSCR_W (players_pc.asm precedent).
@@ -560,10 +592,11 @@ Pokedex_PlacePokemonList:
     mov [ebp + wPokedexNum], al                         ; ld [wPokedexNum], a
     dec dh                                              ; dec d
     jnz .printPokemonLoop
-    mov byte [ebp + H_AUTO_BG_TRANSFER_EN], 1
+    mov byte [ebp + hAutoBGTransferEnabled], 1
     jmp Delay3                                          ; call Delay3 / ret (tail)
-.dashedLine:                                            ; unseen-mon placeholder
-    db 0xE3, 0xE3, 0xE3, 0xE3, 0xE3, 0xE3, 0xE3, 0xE3, 0xE3, 0xE3, 0x50 ; "----------@"
+; .dashedLine ("----------@", the unseen-mon placeholder) is Tier-1 DATA and is now
+; generated into assets/pokedex_strings.inc, which defines it under pret's own local
+; name via NASM's Global.local form (Pokedex_PlacePokemonList.dashedLine). M-70.
 
 ; ---------------------------------------------------------------------------
 ; IsPokemonBitSet — pret ref: pokedex.asm:IsPokemonBitSet.
@@ -577,6 +610,10 @@ IsPokemonBitSet:
     dec al
     mov cl, al                                          ; ld c, a (bit index)
     mov bh, FLAG_TEST                                   ; ld b, FLAG_TEST
+    ; DEVIATION(predef): pret does `predef FlagActionPredef`; the port calls FlagAction
+    ; directly. FlagActionPredef's prologue is GetPredefRegisters, which would clobber
+    ; the very registers this call passes its arguments in. Established port pattern with
+    ; the same justification at home/item_predicates.asm:125.
     call FlagAction                                     ; → CL = result bit (ESI/EDX preserved)
     mov al, cl                                          ; ld a, c
     and al, al                                          ; and a → ZF
@@ -630,43 +667,13 @@ PokedexToIndex:
     pop ebx
     ret
 
-; ---------------------------------------------------------------------------
-; RunDefaultPaletteCommand — pret ref: home/palettes.asm:RunDefaultPaletteCommand
-; (sets B=SET_PAL_DEFAULT, falls into RunPaletteCommand). File-local (same as
-; naming_screen.asm; RunPaletteCommand is the port's no-op palette-HAL stub).
-; ---------------------------------------------------------------------------
-RunDefaultPaletteCommand:
-    mov bl, SET_PAL_DEFAULT
-    jmp RunPaletteCommand
-
-; ---------------------------------------------------------------------------
-; GetCryData — STUB. pret ref: home/pokemon.asm:157 (NOT home/audio.asm).
-;
-; The old comment here said "No audio HAL in this port (Phase 3)". That is FALSE and
-; has been since the audio phases merged (2026-07-07): the engine is live, music
-; plays, PlaySound and WaitForSoundToFinish are real bodies, and src/audio/engine_1.asm
-; already understands cries (Audio1_IsCry, CRY_SFX_START/END, and it reads the two
-; modifier vars this routine is supposed to set). The cry data is generated and
-; exported too (assets/cry_data.inc → `global CryData`). Nothing about the HAL blocks
-; this. What blocks it is that nobody has written these ~15 instructions.
-;
-; TWO stub violations to fix while destubbing, both real:
-;   1. This is a ret-stub in a SOURCE-MIRROR file. Stubs belong in a *_stubs.asm
-;      (CLAUDE.md / project-conventions). It should never have been parked here.
-;   2. Its pret ref was wrong (home/audio.asm), which is why it reads as an
-;      audio-subsystem deferral rather than the plain home-routine translation it is.
-;
-; The real body (pret home/pokemon.asm:157): index CryData by species-1, 3 bytes per
-; entry → B = base cry id, [wFrequencyModifier] = pitch mod, [wTempoModifier] = tempo
-; mod; return A = cry_id*3 + CRY_SFX_START (cry headers are 3 channels each). The
-; BankswitchHome/BankswitchBack pair around the table read is a no-op in the flat port.
-;
-; Its only caller is PlayCry (home/home_stubs.asm), also a ret-stub — see the long
-; note there for the blocking contract a bare ret drops. Ledger: M-32.
-; ---------------------------------------------------------------------------
-GetCryData:
-    ret
-
+; RunDefaultPaletteCommand was DUPLICATED here as a second file-local copy of the
+; body naming_screen.asm already `global`s (both just set the default palette id and
+; tail-jump RunPaletteCommand). Two bodies for one pret label is a label-fidelity
+; violation; the copy is deleted and the global is externed instead. Ledger M-67.
+; GetCryData was a ret-STUB parked HERE, in a source-mirror file — violation #1 of the
+; two its own comment admitted to. It is a home routine (pret home/pokemon.asm), so it
+; has moved to home_stubs.asm under its pret label, with its note. Ledger M-66/M-32.
 ; ---------------------------------------------------------------------------
 ; pdex_show_window — port plumbing: full-screen window over the whited-out
 ; overworld, sourced from GB_TILEMAP1 rows 0-17 at the UI_POKEDEX_MAIN anchor,
@@ -779,6 +786,28 @@ extern PlaceMenuCursor                 ; home/window.asm
 extern DumpBackbuffer                  ; debug/debug_dump.asm — writes FRAME.BIN + exits
 
 RunPokedexTest:
+%ifdef PDEX_AREA
+    ; ---- AREA-option gate (M-64) -----------------------------------------
+    ; Renders the side menu's AREA screen by making the ONE call .choseArea now
+    ; makes. Until 2026-07-14 that call did not exist, so LoadTownMap_Nest — a
+    ; complete, linked routine — had never executed even once. This exists so the
+    ; claim "the AREA option works again" rests on a photograph, not on a faithdiff.
+    ; Input contract as pret's side menu leaves it: wPokedexNum holds the INTERNAL
+    ; index (PokedexToIndex ran), which is also wNamedObjectIndex (same union, 0xD11D)
+    ; and is what GetMonName + DisplayWildLocations read.
+    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    call LoadFontTilePatterns
+    call ClearSprites
+    mov byte [ebp + wPokedexNum], 16                      ; dex #16 = PIDGEY (has nests)
+    call PokedexToIndex                                   ; dex# -> internal index
+    call LoadTownMap_Nest                                 ; .choseArea's call
+.hangArea:
+    ; DelayFrame (not a bare spin) so AutoKeyDrive keeps ticking even if
+    ; LoadTownMap_Nest returned early — otherwise the autokey clock stops and the
+    ; dump never fires, which reads exactly like a crash.
+    call DelayFrame
+    jmp .hangArea
+%else
     mov dword [text_row_stride], GBSCR_W
     mov dword [menu_item_step], 2 * GBSCR_W
     or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
@@ -794,7 +823,10 @@ RunPokedexTest:
     lea edi, [ebp + wPokedexOwned]
     mov ecx, wPokedexSeenEnd - wPokedexOwned
     rep stosb
-    mov byte [ebp + wPokedexSeen + 0], 0xFF               ; mons 1-8 seen
+    ; Mon 4 (CHARMANDER, bit 3) is deliberately left UNSEEN so the visible window
+    ; contains one unseen row: that is the only thing that draws .dashedLine
+    ; ("----------"), and with an all-seen seed the placeholder path renders never.
+    mov byte [ebp + wPokedexSeen + 0], 0xF7               ; mons 1-3,5-8 seen (4 UNSEEN)
     mov byte [ebp + wPokedexSeen + 1], 0x0F               ; mons 9-12 seen
     mov byte [ebp + wPokedexOwned + 0], 0x55              ; mons 1,3,5,7 owned
     ; list-menu state (as ShowPokedexMenu / .doPokemonListMenu primes it)
@@ -815,4 +847,5 @@ RunPokedexTest:
     call DumpBackbuffer                                   ; writes FRAME.BIN + exits
 .hang:
     jmp .hang
-%endif
+%endif ; PDEX_AREA
+%endif ; DEBUG_G1
