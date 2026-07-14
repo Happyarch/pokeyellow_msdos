@@ -101,7 +101,22 @@ _NONBATTLE_WRAM_SKIP = {
     "wBattleMon": "no battle: player-battle-mon scratch is uninitialized on both sides",
 }
 
+# Scenario CLASSES (fidelity plan Stage 1c). Default (no "class" key): compare
+# everything — tilemap window, VRAM tile slots, OAM, WRAM. Class "datastruct":
+# compare ONLY the WRAM regions; the three video comparators are skipped with the
+# class-level justification below (reported like a mask, so the skip is visible
+# in every run's output, never silent).
+DATASTRUCT_CLASS_WHY = (
+    "datastruct class: the dump point is a post-flow WRAM gate — the screen holds a "
+    "transient message/menu frame whose exact tilemap/vram/oam state is timing-coupled "
+    "(message scroll and blink phase at the dump frame); rendered-text fidelity is owned "
+    "by the menu/dialog scenarios. What these scenarios pin is the WRAM game data the "
+    "flow mutated."
+)
+
 # Per-scenario port config:
+#   class  — optional scenario class (see above); "datastruct" skips
+#            tilemap/vram/oam and needs no window
 #   flags  — make variables that build the matching DEBUG_* image
 #   window — (col,row) of the 20x18 GB screen inside the port's 40x25 canvas
 #   projections — optional list of ((row0,col0,row1,col1), (dcol,drow), why):
@@ -331,6 +346,28 @@ SCENARIOS = {
                 for i in range(0, 40)
             ],
         },
+    },
+    # --- Stage 1c: item datastruct scenarios (class "datastruct" — WRAM only) ---
+    # The port gates RunTMHMTest/RunStoneTest bypass the bag UI (they preset
+    # wCurItem/wWhichPokemon and call UseItem directly); the goldens drive the
+    # real START→ITEM→…→USE flow to the same post-flow WRAM state. DEBUG_ITEMUSE
+    # drives the real UI on both sides (AUTOKEY_ITEMUSE script).
+    "item_tm_teach": {
+        "class": "datastruct",
+        "flags": "DEBUG_ITEMTM=1",
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
+    },
+    "item_stone_evolve": {
+        "class": "datastruct",
+        "flags": "DEBUG_ITEMSTONE=1",
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
+    },
+    "item_potion_use": {
+        # frame 700 = the gate's AUTOKEY_ITEMUSE script done (POTION heal +
+        # ANTIDOTE refusal), bag list reopened — the WRAM state is settled there
+        "class": "datastruct",
+        "flags": "DEBUG_ITEMUSE=1 AUTOKEY_DUMP_FRAME=700",
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
     },
     "start_menu": {
         "flags": "DEBUG_STARTMENU=1",
@@ -691,93 +728,101 @@ def main():
     failures = 0
     masked_hits = []
 
-    # --- tilemap: 20x18 subwindow at (col,row), minus projected UI rects ---
-    col0, row0 = cfg["window"]
-    tm_masks = expand_tilemap_masks(cfg["masks"].get("tilemap", []))
-    projections = cfg.get("projections", [])
-    offcanvas_why = cfg.get("offcanvas")
-    tm_lines = []
-    for r in range(GB_H):
-        for c in range(GB_W):
-            pc, pr = col0 + c, row0 + r
-            for (r0, c0, r1, c1), (dcol, drow), _why in projections:
-                if r0 <= r <= r1 and c0 <= c <= c1:
-                    pc, pr = c + dcol, r + drow
-                    break
-            want = golden["wTileMap"][r * GB_W + c]
-            if not (0 <= pc < PORT_CANVAS_W and 0 <= pr < PORT_CANVAS_H):
-                if offcanvas_why:
-                    masked_hits.append(f"tilemap ({r:2d},{c:2d}): {offcanvas_why}")
+    if cfg.get("class") == "datastruct":
+        # Class-level skip: the video comparators do not run at all. Reported
+        # through the masked-divergence channel so the skip is loud in every run.
+        print("TILEMAP: SKIPPED (datastruct class)")
+        print("VRAM: SKIPPED (datastruct class)")
+        print("OAM: SKIPPED (datastruct class)")
+        masked_hits.append(f"tilemap/vram/oam (whole regions): {DATASTRUCT_CLASS_WHY}")
+    else:
+        # --- tilemap: 20x18 subwindow at (col,row), minus projected UI rects ---
+        col0, row0 = cfg["window"]
+        tm_masks = expand_tilemap_masks(cfg["masks"].get("tilemap", []))
+        projections = cfg.get("projections", [])
+        offcanvas_why = cfg.get("offcanvas")
+        tm_lines = []
+        for r in range(GB_H):
+            for c in range(GB_W):
+                pc, pr = col0 + c, row0 + r
+                for (r0, c0, r1, c1), (dcol, drow), _why in projections:
+                    if r0 <= r <= r1 and c0 <= c <= c1:
+                        pc, pr = c + dcol, r + drow
+                        break
+                want = golden["wTileMap"][r * GB_W + c]
+                if not (0 <= pc < PORT_CANVAS_W and 0 <= pr < PORT_CANVAS_H):
+                    if offcanvas_why:
+                        masked_hits.append(f"tilemap ({r:2d},{c:2d}): {offcanvas_why}")
+                        continue
+                    tm_lines.append(f"  ({r:2d},{c:2d}) maps off-canvas to ({pr},{pc}) — no justification")
                     continue
-                tm_lines.append(f"  ({r:2d},{c:2d}) maps off-canvas to ({pr},{pc}) — no justification")
-                continue
-            got = port["tilemap"][pr * PORT_CANVAS_W + pc]
+                got = port["tilemap"][pr * PORT_CANVAS_W + pc]
+                if want == got:
+                    continue
+                if (r, c) in tm_masks:
+                    masked_hits.append(f"tilemap ({r:2d},{c:2d}): {tm_masks[(r, c)]}")
+                    continue
+                tm_lines.append(
+                    f"  ({r:2d},{c:2d}) want ${want:02X} {glyph(cmap, want):>4} | got ${got:02X} {glyph(cmap, got):>4}")
+        if tm_lines:
+            failures += len(tm_lines)
+            print(f"TILEMAP: {len(tm_lines)} mismatched cells (of {GB_W * GB_H}), window at col {col0} row {row0}:")
+            for line in tm_lines[:args.max_report]:
+                print(line)
+            if len(tm_lines) > args.max_report:
+                print(f"  ... and {len(tm_lines) - args.max_report} more")
+        else:
+            print(f"TILEMAP: OK (360 cells, window at col {col0} row {row0})")
+
+        # --- vram: per 16-byte tile slot ---
+        vr_masks = dict(cfg["masks"].get("vram", []))
+        vr_lines = []
+        for slot in range(VRAM_SIZE // 16):
+            want = golden["vram_tiles"][slot * 16:(slot + 1) * 16]
+            got = port["vram"][slot * 16:(slot + 1) * 16]
             if want == got:
                 continue
-            if (r, c) in tm_masks:
-                masked_hits.append(f"tilemap ({r:2d},{c:2d}): {tm_masks[(r, c)]}")
+            if slot in vr_masks:
+                masked_hits.append(f"vram slot {slot}: {vr_masks[slot]}")
                 continue
-            tm_lines.append(
-                f"  ({r:2d},{c:2d}) want ${want:02X} {glyph(cmap, want):>4} | got ${got:02X} {glyph(cmap, got):>4}")
-    if tm_lines:
-        failures += len(tm_lines)
-        print(f"TILEMAP: {len(tm_lines)} mismatched cells (of {GB_W * GB_H}), window at col {col0} row {row0}:")
-        for line in tm_lines[:args.max_report]:
-            print(line)
-        if len(tm_lines) > args.max_report:
-            print(f"  ... and {len(tm_lines) - args.max_report} more")
-    else:
-        print(f"TILEMAP: OK (360 cells, window at col {col0} row {row0})")
+            vr_lines.append(
+                f"  slot {slot:3d} (${0x8000 + slot * 16:04X}, {vchars_name(slot)}):"
+                f" want {want.hex()} | got {got.hex()}")
+        if vr_lines:
+            failures += len(vr_lines)
+            print(f"VRAM: {len(vr_lines)} mismatched tile slots (of 384):")
+            for line in vr_lines[:args.max_report]:
+                print(line)
+            if len(vr_lines) > args.max_report:
+                print(f"  ... and {len(vr_lines) - args.max_report} more")
+        else:
+            print("VRAM: OK (384 tile slots)")
 
-    # --- vram: per 16-byte tile slot ---
-    vr_masks = dict(cfg["masks"].get("vram", []))
-    vr_lines = []
-    for slot in range(VRAM_SIZE // 16):
-        want = golden["vram_tiles"][slot * 16:(slot + 1) * 16]
-        got = port["vram"][slot * 16:(slot + 1) * 16]
-        if want == got:
-            continue
-        if slot in vr_masks:
-            masked_hits.append(f"vram slot {slot}: {vr_masks[slot]}")
-            continue
-        vr_lines.append(
-            f"  slot {slot:3d} (${0x8000 + slot * 16:04X}, {vchars_name(slot)}):"
-            f" want {want.hex()} | got {got.hex()}")
-    if vr_lines:
-        failures += len(vr_lines)
-        print(f"VRAM: {len(vr_lines)} mismatched tile slots (of 384):")
-        for line in vr_lines[:args.max_report]:
-            print(line)
-        if len(vr_lines) > args.max_report:
-            print(f"  ... and {len(vr_lines) - args.max_report} more")
-    else:
-        print("VRAM: OK (384 tile slots)")
+        # --- oam: per 4-byte sprite entry ---
+        oam_masks = dict(cfg["masks"].get("oam", []))
+        oam_lines = []
+        def oam_hidden(e):
+            return e[0] == 0 or e[0] >= 160  # sprite Y fully off the 144-line screen
 
-    # --- oam: per 4-byte sprite entry ---
-    oam_masks = dict(cfg["masks"].get("oam", []))
-    oam_lines = []
-    def oam_hidden(e):
-        return e[0] == 0 or e[0] >= 160  # sprite Y fully off the 144-line screen
-
-    for i in range(OAM_SIZE // 4):
-        want = golden["oam"][i * 4:(i + 1) * 4]
-        got = port["oam"][i * 4:(i + 1) * 4]
-        if want == got:
-            continue
-        if oam_hidden(want) and oam_hidden(got):
-            continue  # both invisible; stale X/tile/attr bytes are meaningless
-        if i in oam_masks:
-            masked_hits.append(f"oam entry {i}: {oam_masks[i]}")
-            continue
-        oam_lines.append(f"  entry {i:2d}: want Y={want[0]} X={want[1]} tile=${want[2]:02X} attr=${want[3]:02X}"
-                         f" | got Y={got[0]} X={got[1]} tile=${got[2]:02X} attr=${got[3]:02X}")
-    if oam_lines:
-        failures += len(oam_lines)
-        print(f"OAM: {len(oam_lines)} mismatched sprite entries (of 40):")
-        for line in oam_lines[:args.max_report]:
-            print(line)
-    else:
-        print("OAM: OK (40 entries)")
+        for i in range(OAM_SIZE // 4):
+            want = golden["oam"][i * 4:(i + 1) * 4]
+            got = port["oam"][i * 4:(i + 1) * 4]
+            if want == got:
+                continue
+            if oam_hidden(want) and oam_hidden(got):
+                continue  # both invisible; stale X/tile/attr bytes are meaningless
+            if i in oam_masks:
+                masked_hits.append(f"oam entry {i}: {oam_masks[i]}")
+                continue
+            oam_lines.append(f"  entry {i:2d}: want Y={want[0]} X={want[1]} tile=${want[2]:02X} attr=${want[3]:02X}"
+                             f" | got Y={got[0]} X={got[1]} tile=${got[2]:02X} attr=${got[3]:02X}")
+        if oam_lines:
+            failures += len(oam_lines)
+            print(f"OAM: {len(oam_lines)} mismatched sprite entries (of 40):")
+            for line in oam_lines[:args.max_report]:
+                print(line)
+        else:
+            print("OAM: OK (40 entries)")
 
     # --- wram: every non-video region, field-aware ---
     wram_failures, wram_masked = compare_wram(

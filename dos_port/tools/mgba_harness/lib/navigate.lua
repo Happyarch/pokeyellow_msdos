@@ -96,6 +96,19 @@ function navigate.dialog_until_text(needle, max_frames)
 	end
 end
 
+-- Tap A until `needle` leaves the screen. For boxes that wait for A — with a ▼
+-- (`prompt`) or without one (`done`-terminated text, the F-14 class: heal and
+-- evolution messages) — where a single tap can be swallowed by a still-running
+-- HP-bar/evolution animation, so the tap must retry against observed state.
+function navigate.dismiss_text(needle, max_frames)
+	local check = deadline(max_frames or 1800, "dismissing text")
+	while navigate.tilemap():find(needle, 1, true) do
+		input.tap("A", 2, 10)
+		scenario.wait(4)
+		check()
+	end
+end
+
 -- Advance dialog until the current map id equals `map_id`.
 function navigate.dialog_until_map(map_id, max_frames)
 	local check = deadline(max_frames or 7200, "advancing dialog to map " .. map_id)
@@ -130,6 +143,25 @@ function navigate.choose(needle, max_frames, cursor_delta)
 			scenario.wait(4) -- menu not fully drawn yet
 		end
 		check()
+	end
+end
+
+-- Ensure `needle` is on screen after a press that opens it, re-tapping `keys`
+-- if the press was swallowed. Unlike tap_until this polls FIRST: if the
+-- previous press (e.g. choose's A) landed and the screen is drawing, no extra
+-- press is injected — an extra press into an already-open menu would select
+-- something. The 60-frame poll round outlasts any menu draw.
+function navigate.ensure_text(keys, needle, max_frames)
+	local check = deadline(max_frames or 1800, "ensuring text")
+	while true do
+		for _ = 1, 15 do
+			if navigate.tilemap():find(needle, 1, true) then
+				return
+			end
+			scenario.wait(4)
+		end
+		check()
+		input.tap(keys, 2, 8)
 	end
 end
 

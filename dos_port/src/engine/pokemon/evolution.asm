@@ -362,8 +362,17 @@ EvolutionAfterBattle:
     mov al, [ebp + wCurSpecies]
     dec al
     movzx eax, al
-    movzx eax, byte [IndexToPokedex + eax]  ; flat dex-order lookup
-    inc al                          ; 0-based → 1-based dex num
+    movzx eax, byte [IndexToPokedex + eax]  ; flat dex-order lookup — the table
+                                    ; stores pret's 1-BASED dex number (see
+                                    ; gen_base_stats.py and every other consumer:
+                                    ; GetMonHeader/`dec eax`, the dex-flag site
+                                    ; below/`dec al`). The `inc al` that used to
+                                    ; sit here re-based it to dex+1, so the
+                                    ; BaseStats copy below read the NEXT species'
+                                    ; record — a stone evolution recalculated the
+                                    ; evolved mon's stats from the wrong base
+                                    ; stats (NINETALES got JIGGLYPUFF's; caught
+                                    ; by the item_stone_evolve golden).
     mov [ebp + wPokedexNum], al
 
     ; Copy new species base stats into wMonHeader

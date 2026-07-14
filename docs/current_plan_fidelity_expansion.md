@@ -154,7 +154,7 @@ dialog scratch **shares bytes with the map mirror** — F-13.)
 | 0 | Groundwork: box-level reconcile, DebugDumpMemory→GBSTATE hook, scenario ids | DONE | `a74c44c9` | box-level was a non-issue (F-1); hook verified on DEBUG_ITEMTM; +`tools/run_headless.sh` |
 | 1a | GBSTATE v2 + WRAM regions end-to-end (existing 6 scenarios) | DONE | `a74c44c9`, `8b018e84` | v2 is SELF-DESCRIBING (design change, below); found 3 real harness bugs (F-3/F-4/F-5); fidelity 6/6 green |
 | 1b | `sign_pallet` streamed-text scenario | **DONE** | `60990fd5`, `b99c0199`, `1c346cbb`, `189fbb59` | the port could not read a sign AT ALL (F-6 data, F-7 code) — both fixed. Plus **F-10** (text-id-0 collision) and **F-12** (the gate stood on an unreachable tile), both found during the fold-back. Golden passes 360/360 tilemap cells incl. the whole dialog box; `make fidelity` 7/7. **Never was blocked**: F-9 was a misdiagnosis, F-8 does not reproduce. New OPEN findings it surfaced: **F-13** (scratch/mirror overlap), **F-14** (▼ after `done`). |
-| 1c | Item datastruct scenarios ×3 | TODO | | **Groundwork done & unblocked**: F-15 — all three item gates were producing NO `DUMP.BIN` (the `=160` hardcode let AutoKeyDrive exit before the capture); default now 999999 and the frame is overridable. The gates capture for the first time. |
+| 1c | Item datastruct scenarios ×3 | **DONE** | (this commit) | Differ class `datastruct` + `item_tm_teach` / `item_stone_evolve` / `item_potion_use`; `make fidelity` 10/10. First-ever observation of these gates (F-15) immediately caught a REAL port bug: **F-16** — the post-evolution stat recalc read the NEXT species' base stats (NINETALES got JIGGLYPUFF's). Fixed; golden-verified. M-8 did **not** surface (no priced list in these flows — see the stage notes). |
 | 2 | Battle convergence spec + battle_intro/battle_menu/move_selection + ball_catch | TODO | | |
 | 3 | Menu scenarios ×5 + stride support | TODO | | |
 | 4 | Cross-cut: tiers, goldens-verify, mask policy, skill updates | TODO | | |
@@ -287,12 +287,64 @@ harness trap, **F-8**.
   game-wide static cross-check against pret (940/943 `object_event`s, 203/203 `bg_event`s)
   and by Route 5's sign, dead before the fix, rendering after it.
 
-### Stage 1c — Item datastruct scenarios (M)
+### Stage 1c — Item datastruct scenarios (M) — **DONE**
 
 New differ scenario **class `datastruct`**: compares only WRAM regions; tilemap/vram/oam
 skipped with a class-level why ("the dump point is a post-flow WRAM gate; transient message
 frames are timing-coupled — rendered-text fidelity is owned by the menu/dialog scenarios").
 Port gates exist and emit GBSTATE via Stage 0.
+
+**DONE (this commit).** `golden_diff.py` grew the `class` key (`"datastruct"` skips the
+three video comparators, loudly, through the masked-divergence channel — never silently);
+three scenarios landed (`scenarios/item_*.lua` + `SCENARIOS` entries + `FIDELITY_SCENARIOS`).
+Execution notes, all measured:
+
+- **The goldens run in the bedroom** (no walk to Pallet): the class compares no video, and
+  the walk would only add NPC-wander surface. The gates' map position is irrelevant to every
+  compared region.
+- **The two direct-call gates converge with the real UI flow.** RunTMHMTest/RunStoneTest
+  bypass the bag UI (`wCurItem`/`wWhichPokemon` preset, `call UseItem`); the goldens drive
+  START→ITEM→…→USE. All compared WRAM — including `wLoadedMon`, which lands on the last
+  party-menu-loaded mon (mon 5) on both sides — agrees byte-for-byte.
+- **`item_potion_use` mirrors the WHOLE AUTOKEY_ITEMUSE script** (POTION heal + ANTIDOTE
+  refusal), not just the plan table's potion leg: the refusal's second party-menu pass is
+  what the transient regions last saw. Port flags pin `AUTOKEY_DUMP_FRAME=700` (script done,
+  bag list reopened, WRAM settled).
+- **Navigation lessons that will bite Stage 2/3 too**: (1) a tap into a just-drawn list
+  menu is swallowed (joypad flush) — settle 30 frames after the menu appears, and verify
+  each submenu transition with the new poll-first `navigate.ensure_text` (re-tap only if
+  the state never appeared; a blind re-tap would double-select); (2) the TM flow's YES/NO
+  can be consumed in the same motion as the preceding ▼ tap — key on the *landing* state
+  (the party-menu prompt), not on observing "YES"; (3) "SNORLAX learned TOXIC!" parks with
+  a ▼ even though `_LearnedMove1Text` is `text_end` (the print path waits); the heal
+  message (`done`) waits with NO ▼ — `navigate.dismiss_text` retries A against observed
+  state for both shapes.
+- **M-8 did not surface**: these flows open no priced quantity box (it needs a mart /
+  `PRICEDITEMLISTMENU`, whose only setter still dead-ends in a ret-stub). Still open,
+  still unmasked, still expected to bite whoever goldens the mart.
+
+**Revert-proof (both directions).** Synthetic: corrupting RunTMHMTest's seeded TM quantity
+(1→7) went RED naming the exact fields, then was reverted:
+
+```
+WRAM: 25 mismatched fields:
+  wBagItems wNumBagItems: want $0F | got $10
+  wBagItems slot 0 item id: want $0B | got $CE
+  wBagItems slot 0 quantity: want $03 | got $06
+  ...
+FAIL item_tm_teach: 25 unmasked divergences
+```
+
+And a live one nobody staged — the class's first run against master caught **F-16**:
+
+```
+WRAM: 12 mismatched fields:
+  wPartyData mon 0 HP: want $00DE (222) | got $0122 (290)
+  wPartyData mon 0 attack: want $008D (141) | got $005B (91)
+  wPartyData mon 0 defense: want $0089 (137) | got $0031 (49)
+  ...
+FAIL item_stone_evolve: 12 unmasked divergences
+```
 
 | scenario | port flags | mGBA nav | pins |
 |---|---|---|---|
@@ -679,6 +731,28 @@ and worth noticing: the lesson is not "distrust comments", it is **measure**. De
 **Consequence for Stage 1c, and it is a good one:** its three scenarios are not being added to a
 working harness — they are the first thing that will ever have *observed* these gates. Any
 "expected" value taken from a pre-fix `DUMP.BIN` is worthless, because there were none.
+
+### F-16. Post-evolution stat recalc read the NEXT species' base stats — NINETALES got JIGGLYPUFF's [FIXED — Stage 1c]
+
+Found by `item_stone_evolve`'s **first run**, minutes after the class could see WRAM. The
+port's `TryEvolvingMon` (`src/engine/pokemon/evolution.asm`) resolved the evolved species'
+dex number as `IndexToPokedex[species-1]` and then ran `inc al` under the comment
+*"0-based → 1-based dex num"*. **The table already stores pret's 1-based dex number** —
+the generator says so (`gen_base_stats.py`), and every other consumer decrements after the
+lookup (`GetMonHeader`, the dex-flag site 100 lines below, `home/pics.asm`). So the
+`wMonHeader` copy indexed one full record past: a FIRE_STONE VULPIX→NINETALES evolution
+recalculated stats from **JIGGLYPUFF** (dex 39) base stats — measured 290/91/49/48/54 at
+L80 where the golden (real game) says 222/141/137/176/174. Types/species/catch-rate were
+right (different code paths); only the stat recalc was poisoned, so nothing on screen
+looked wrong enough to notice.
+
+Fixed by deleting the `inc al`. Golden-verified: `item_stone_evolve` PASSes, WRAM clean.
+
+Two morals, both this project's recurring ones: **the comment was confident and wrong**
+(the correct basing was documented in three other places), and **no screen render could
+have caught it** — the stats are only ever *displayed* after other code recomputes or
+copies them; only a WRAM datastruct diff against ground truth sees the poisoned bytes the
+moment they are written.
 
 ## Imported open findings from the menu-fidelity audit
 
