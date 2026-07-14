@@ -536,7 +536,7 @@ endif
 # AutoKeyDrive's own FRAME.BIN dump exits the program; the capture (with the new-species
 # Pokédex entry) runs past its default frame 200, so push it out of the way here.
 AUTOKEY_DUMP_FRAME ?= 999999
-NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=160
 endif
 # Items-plan Stage 7 gate: teach the TM/HM in ITEMTM_ID (default TM06 TOXIC) to party
 # slot ITEMTM_MON, headless, capturing the result to DUMP.BIN. AUTOKEY answers the
@@ -562,7 +562,7 @@ ifdef ITEMSTONE_SPECIES
 NASMFLAGS += -D ITEMSTONE_SPECIES=$(ITEMSTONE_SPECIES)
 endif
 AUTOKEY_DUMP_FRAME ?= 999999
-NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=160
 endif
 
 ifdef DEBUG_ITEMTM
@@ -579,14 +579,14 @@ ifdef ITEMTM_MON
 NASMFLAGS += -D ITEMTM_MON=$(ITEMTM_MON)
 endif
 AUTOKEY_DUMP_FRAME ?= 999999
-NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=160
 endif
 ifdef DEBUG_ITEMUSE
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_ITEMUSE -D DEBUG_SEED_PARTY -D SKIP_TITLE
 NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_ITEMUSE
 ifdef AUTOKEY_DUMP_FRAME
-NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=160
 endif
 endif
 # Plain playable build with a seeded party — NO frame dump, NO SKIP_TITLE. Boots
@@ -622,7 +622,7 @@ ifdef AUTOKEY_DOWNS
 NASMFLAGS += -D AUTOKEY_DOWNS=$(AUTOKEY_DOWNS)
 endif
 ifdef AUTOKEY_DUMP_FRAME
-NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=160
 endif
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_AUTOKEY
@@ -656,7 +656,7 @@ NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_TEXT=$(DEBUG_TEXT) -D SKIP_TITLE
 NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_APRESS
 AUTOKEY_DUMP_FRAME ?= 999999
-NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=160
 endif
 
 ifdef DEBUG_TEXTBOXID
@@ -678,7 +678,7 @@ NASMFLAGS += -D SKIP_TITLE
 # that presses nothing.
 ifdef DEBUG_LISTMENU_QTY
 NASMFLAGS += -D DEBUG_LISTMENU_QTY -D DEBUG_AUTOKEY -D AUTOKEY_QUIET
-NASMFLAGS += -D AUTOKEY_DUMP_FRAME=60
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=160
 endif
 endif
 # Two-option (YES/NO) gate — menu-fidelity row 5. The box has no golden and no other
@@ -769,13 +769,30 @@ NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_SAVE
 NASMFLAGS += -D DEBUG_AUTOKEY
 NASMFLAGS += -D AUTOKEY_QUIET
-NASMFLAGS += -D AUTOKEY_DUMP_FRAME=200
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=160
 NASMFLAGS += -D SKIP_TITLE
 endif
 ifdef DEBUG_SAVE_ROUNDTRIP
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_SAVE
 NASMFLAGS += -D DEBUG_SAVE_ROUNDTRIP
+NASMFLAGS += -D SKIP_TITLE
+endif
+# Change-box gate (menu-fidelity row 19 part 2): boot to overworld, run ChangeBox
+# (the two-page "When you change a #MON BOX" text -> YES -> the box list +
+# "BOX No." indicator), auto-press YES, dump FRAME.BIN, exit. Reuses the
+# DEBUG_SAVE harness hook, so it defines DEBUG_SAVE too (save.asm branches on
+# DEBUG_CHANGEBOX first).  make SKIP_TITLE=1 DEBUG_CHANGEBOX=1
+ifdef DEBUG_CHANGEBOX
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_SAVE
+NASMFLAGS += -D DEBUG_CHANGEBOX
+NASMFLAGS += -D DEBUG_AUTOKEY
+# AUTOKEY_TALK is the pulse-A script: it pages the two text pages and picks the
+# YES/NO's default (YES); the run then parks in DisplayChangeBoxMenu's
+# HandleMenuInput, where the dump frame photographs the box list.
+NASMFLAGS += -D AUTOKEY_TALK
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=160
 NASMFLAGS += -D SKIP_TITLE
 endif
 # Naming-screen gate (menus S7 package C): boot to overworld, open the PLAYER

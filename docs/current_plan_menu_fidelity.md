@@ -115,7 +115,7 @@ driver only relocates the divergence.
 | 16 | `src/engine/menus/pokedex.asm`, then `pokedex_entry.asm` | `engine/menus/pokedex.asm` | **DONE** | `cb247fdc` (p1), `e68b8c7f` (p2) | **p1 `pokedex.asm`: the AREA option was DEAD — `LoadTownMap_Nest` was a complete, linked, never-called body (M-64).** Also: printer path dropped 2 calls/3 stores behind a fake STUB (M-65); `GetCryData` ret-stub in a mirror file (M-66); duplicate `RunDefaultPaletteCommand` (M-67); 3 extern comments claiming stubs that are real bodies (M-68); hand-encoded strings (M-70). **Tooling: a fresh `PKMN.IMG` ships a STALE `FRAME.BIN`, so a non-dumping harness reads as a pass (M-69).** **Part 2 = the DATA (entry) page — DONE.** The whole file `pokedex_entry.asm` was a **parallel-worker artifact** (its header said so) and is **deleted**: both halves now live in `pokedex.asm` as in pret, which retires all 10 allowlist entries (M-78; the 10th, `GetCryData`, was already dead after M-66). Four dropped-behind-a-false-comment fixes: M-73 (`rAUDVOL` halving for the cry, hidden behind a fake `TODO-HW: no APU` — the shims read $FF24 every frame; same false claim still in `status_screen.asm`, filed), M-74 (`RunDefaultPaletteCommand` "not defined in the port" — it is a global this same file already calls), M-75 (`PlayCry` call dropped), M-76 (`hDexWeight` save/restore dropped although **$FF8B is a live HRAM union** holding the overworld's `hPreviousTileset`). M-77: 3 more hand-encoded strings → generator, bytes identical. RHYDON DATA page rendered and looked at. |
 | 17 | `src/engine/menus/pc.asm`, `players_pc.asm`, `oaks_pc.asm`, `league_pc.asm` | same | **DONE** | `3b495afb` (p1: pc.asm), `00b64035` (p2: players_pc.asm), `fcdbdf42` (p3: oaks_pc.asm), `2696039f` (p4: league_pc.asm) | **p1 `pc.asm`: the file's header made three claims and all three were false.** M-79: all six `PlaySound`/`WaitForSoundToFinish` calls dropped behind a fake `TODO-HW: audio HAL` — audio is ported and live (the row-9 M-20 shape). M-80: `Save/LoadScreenTilesFromBuffer2` "replaced" by a shim that saved **`g_window_count`**, i.e. nothing; the real bodies were in `movie/title.asm` all along and the *load* half was merely never `global`. M-81: the four dialogs were a private message engine over **nine hand-encoded charmap strings** (Tier-1 violation) that could not render text COMMANDS, so `<PLAYER>`/POKé were open-coded as glyph runs — now generated (`assets/pc_text.inc`) and printed by `PrintText` with pret's four restored wrapper labels. **M-82 (filed): `ActivatePC` is UNREACHABLE** — `home/overworld_text.asm`'s PC text scripts are still `%ifdef`-guarded out under a stale "targets are NI" comment, so the whole PC subsystem is dead code in the shipped binary. New `DEBUG_PC` harness; dialog rendered and looked at. `pc_stubs.asm` (DisplayPCMainMenu / BillsPC_) verified: ret-only-plus-menu-vars, in a `*_stubs.asm`, shadowing nothing. **p2 `players_pc.asm`: the same three false claims, next door.** M-83: eight `PlaySound`/`WaitForSoundToFinish` calls and all three `Save`/`LoadScreenTiles` calls dropped behind "TODO-HW audio HAL" / "no screen to save-restore" — every one of those routines is ported, linked and live; restored. M-84: fourteen messages drawn whole from **20 hand-encoded charmap strings**, two of which (`ItemWasStored`/`WithdrewItem`) are `TX_RAM` splices a glyph run *cannot* express — now generated (`assets/players_pc_text.inc`) and printed by `PrintText` through a file-local projection (`msgbox_players_pc`, SANCTIONED: `msgbox_dialog`'s `set_single_window` would collapse the menu/list windows out from under the message). M-85: the Toss comment invented a pret refactor that never happened. Parent menu + message box rendered together and looked at (`DEBUG_PLAYERSPC`). **p3 `oaks_pc.asm`: the same three false claims, a third time.** M-86: `Save`/`LoadScreenTilesFromBuffer2` "collapsed to a window-list save/restore" that saved `g_window_count` and nothing else; both real routines were linked all along; restored. M-87: the three dialogs drawn whole from **eight hand-encoded charmap strings**, justified by "the far-text streams aren't GB-space assets yet" — false, they are ordinary `text_far` bodies; now generated (`assets/oaks_pc_text.inc`) and printed by `PrintText`, with pret's three wrapper labels restored (the hand-encoded pages had also dropped the POKé control byte). M-88: `predef DisplayDexRating` was a **comment with no call and no stub body anywhere** — YES and NO did the same thing; restored as a real call to a ret-only stub in the new `oaks_pc_stubs.asm`. New `DEBUG_OAKSPC` harness (AUTOKEY shape); "Accessed PROF. / OAK's PC." dialog rendered and looked at. **p4 `league_pc.asm`: the same debt plus two stale deferrals.** M-89: `AccessedHoFPCText` drawn whole from four hand-encoded charmap strings and `HallOfFameNoText` hand-encoded too (the page had dropped pret's POKé byte); both now generated (`assets/league_pc_text.inc`), the wrapper label restored, printed by `PrintText`. M-90: the Hall-of-Fame team loop was switched OFF by a port-invented 0-team guard "because the S7 save layer isn't here" — `LoadHallOfFameTeams` is real and linked in `save.asm`; guard deleted, loop live. M-91: **both** palette calls (`RunPaletteCommand`, `RunDefaultPaletteCommand`) were comments behind a "TODO-HW: Phase 5" that is no longer true — both routines are real and linked; restored on BH. M-92 filed (naming_screen's palette comment is stale, other file). `LeaguePCShowMon`'s full-screen layout stays UNVERIFIED (needs a HoF save + the unported HoF movie). Dialog rendered and looked at. |
 | 18 | `src/engine/menus/main_menu.asm` | same | DONE | `65bd1697` | M-93 palette call restored; M-94 3 strings → generator; M-95 Func_5cc1 PrintText restored; 4 SANCTIONED (joypad-HAL, SRAM, EnterMapBoot, compositor); `OakSpeech` stub verified |
-| 19 | `src/engine/menus/save.asm` (1080 ln) | same | IN-PROGRESS (part 1 done) | part 1: `b05bdea8` | part 1 (SAVE/LOAD flow): M-97 five drawn-whole dialogs → pret `text_far` + `PrintText`; M-98 yes/no box was pret's `TWO_OPTION_MENU` all along; M-99 stale "audio is a Phase-3 no-op" hid live SFX; M-100 filed against `home/yes_no.asm`. **Part 2 = CHANGE BOX + HoF + SRAM helpers** (`WhenYouChangeBoxText`/`ChooseABoxText`/`BoxNames`/`BoxNoText` still hand-encoded; `BoxSRAMPointerTable` missing) |
+| 19 | `src/engine/menus/save.asm` (1080 ln) | same | IN-PROGRESS (parts 1–2 done) | part 1: `b05bdea8`, part 2: `PENDING` | part 1 (SAVE/LOAD flow): M-97 five drawn-whole dialogs → pret `text_far` + `PrintText`; M-98 yes/no box was pret's `TWO_OPTION_MENU` all along; M-99 stale "audio is a Phase-3 no-op" hid live SFX; M-100 filed against `home/yes_no.asm`. part 2 (CHANGE BOX): **M-101** the screen was a hand-drawn imitation missing half of itself — text hand-encoded + hand-paged, `BoxNames` split into 12 strings (which is what forced its per-row loop), **the box number never drawn**, `ChooseABoxText` never printed; **M-102** a stale "root hasn't added `UI_CHANGE_BOX_INFO`" comment left the "BOX No." box undrawn — **the equates exist**; **M-103** the info box was staged into the dialog's own scratch rows and bled its text (caught only by rendering); **M-104** filed: `ChangeBox` has **no live caller** (`bills_pc.asm` never wires it — the M-82 class); **M-105** the `%ifdef` chain had silently shadowed the `DEBUG_SAVE_ROUNDTRIP` harness. Screen rendered + looked at (list, numbered indicator, ▶ cursor). **Part 3 = HoF + `CheckPreviousSaveFile` + the missing `BoxSRAMPointerTable`** |
 | 20 | `src/engine/menus/link_menu.asm` (1148 ln), `link_cups.asm` | `engine/menus/link_menu.asm` | TODO | | expect mostly TODO-HW/serial; allowlisted split (18 labels); split |
 | 21 | `src/engine/menus/draw_badges.asm` | same | TODO | | "Port stand-in" |
 | 22 | **`MoveSelectionMenu` / `SelectMenuItem` / `SwapMovesInMenu` / `PrintMenuItem`** | `engine/battle/core.asm` | TODO | | **clears blocker B8**; unblocks Mimic + PP items. Needs row 1 settled first. |
@@ -2135,3 +2135,80 @@ behaviour change) so a pret call site can state its own coords, as pret's does.
 on the AUTOKEY harness) → FRAME.BIN: "Would you like to SAVE the game?" reveals character-by-character
 through `PrintText` (caught mid-reveal at frame 90, complete by frame 200) with the `TWO_OPTION_MENU`
 YES/NO box above it, cursor on YES.
+
+## Row 19 part 2 — `src/engine/menus/save.asm` (CHANGE BOX)
+
+Scope of part 2: `ChangeBox`, `DisplayChangeBoxMenu`, `CopyBoxToOrFromSRAM`, the `EmptySRAMBox*` /
+`GetMonCounts*` / `GetBoxSRAMLocation` SRAM helpers, and the four still-hand-encoded change-box
+strings. Part 3 (next iteration) takes the Hall-of-Fame routines, `CheckPreviousSaveFile`, and the
+missing `BoxSRAMPointerTable` label.
+
+### M-101 — the whole CHANGE-BOX screen was a hand-drawn imitation, and it was missing half of itself
+Four separate defects, all downstream of one decision (hand-encode the text instead of using pret's
+streams):
+- **`WhenYouChangeBoxText` was hand-encoded charmap `db` runs** drawn whole by a bespoke two-page
+  prompt loop (`sv_msg_box`/`sv_msg_show`/`sv_msg_prompt`/`sv_msg_drop`, all now deleted). pret's
+  stream carries its own `para` page break and terminal `done`; the text engine runs both. Now a
+  `text_far` wrapper over Tier-1 data in `assets/save_text.inc`, printed by `PrintText`.
+- **`BoxNames` was split into 12 separately-terminated strings**, which is the only reason the port
+  needed a per-row placement loop. pret's `BoxNames` is ONE `<NEXT>`-separated string placed with ONE
+  `PlaceString` under `BIT_SINGLE_SPACED_LINES` — and the port's `PlaceString` already honours both.
+  Generated as one string; pret's shape restored.
+- **The box NUMBER was never drawn at all.** pret computes the one- or two-digit box number and writes
+  it at `hlcoord 8,2`/`9,2`; the port's indicator box read "BOX No." with a blank where the number
+  goes. Restored (`.singleDigitBoxNum` and all).
+- **`ChooseABoxText` was never printed.** The label did not exist in the port. Restored.
+
+### M-102 — a stale comment left the "BOX No." box undrawn
+The site claimed root had not yet added the `UI_CHANGE_BOX_INFO_*` equate, and drew no info box.
+**The equates exist** (`assets/ui_layout_menus.inc`: `UI_CHANGE_BOX_INFO_WX=167 WY=0 CLIP=88
+MAXY=32`, GB(0,0) 11×4). Nothing was blocking it. Comment corrected; the box is drawn, mirrored and
+shown as a second window (`cboxi_show_window`/`cboxi_mirror`).
+
+### M-103 — the scratch band collision (found by rendering, not by reading)
+Staging the info box at scratch row 16 put it inside the rows `msgbox_dialog` uses (12..17), so the
+dialog's second text line was mirrored into the info window: the screen rendered a stray "#MON BOX."
+above "BOX No. 1". Moved to row 18 (list 0..13, dialog 12..17, info 18..21) and the site now says why.
+Neither faithdiff nor the assembler can see this class — only the frame could.
+
+### M-104 (finding, filed — NOT fixed here)
+**`ChangeBox` has no live caller.** pret reaches it from `BillsPCChangeBox` (`engine/menus/bills_pc.asm`);
+the port's `bills_pc.asm` never wires it, so the whole change-box screen is dead code in the shipped
+binary — the same class as M-82 (`ActivatePC` unreachable). Not this row's file.
+
+### M-105 (finding, fixed in passing — harness reachability)
+The file's `%ifdef` harness chain tested `DEBUG_SAVE` *before* `DEBUG_SAVE_ROUNDTRIP`, while the
+roundtrip build defines **both** — so the roundtrip harness had been silently unreachable. Reordered
+(most-specific first) with a comment saying so.
+
+### SANCTIONED (tagged at the site)
+- **`cbox_show_window` / `cboxi_show_window` / `cbox_mirror` / `cboxi_mirror`** — DEVIATION(window-
+  compositor). pret draws both boxes into the live BG tilemap; the port stages them box-relative in the
+  stride-20 scratch and shows each as a compositor window, because the 40×25 canvas has no BG cells at
+  pret's GB coordinates. Two windows, not one, because the info box and the list box are disjoint rects.
+- **`wTopMenuItemX = 1`** (pret: 12) — DEVIATION(geometry). The cursor column is box-relative to the
+  list box's scratch origin, not GB-absolute.
+- **`CopyBoxToOrFromSRAM` / `EmptySRAMBox*` / `GetMonCountsForBoxesInBank` / `GetBoxSRAMLocation`** —
+  TODO-HW: SRAM. The port has WRAM for the CURRENT box only; the other 11 boxes have no storage. The
+  copies collapse to no-ops that **preserve the live box** (pret's "mark source empty" would erase it),
+  and the other boxes' mon counts read 0. faithdiff's 5 DROPPED calls on `CopyBoxToOrFromSRAM` are
+  exactly this. Degraded-but-safe, same shape as `wNumHoFTeams == 0`; retired when box storage lands.
+
+### Allowlist
+Nothing to challenge (as part 1: no entry names any label of pret `engine/menus/save.asm`).
+
+### Verification
+`make check` clean; `update_label_db && lint_pret_labels` **0 violations, 5 suppressed, exit 0**;
+`make fidelity` **6/6 PASS** (no new masks). faithdiff: `ChangeBox` **13/13 calls**, `GetMonCountsForAllBoxes`
+/ `EmptyAllSRAMBoxes` / `GetBoxSRAMLocation` **clean**; `DisplayChangeBoxMenu` 8/8 stores with two
+blind-spot `ADDED` lines (`[H_UI_LAYOUT_FLAGS]` = pret's `set`/`res n,[hl]`; `[W_TILEMAP]` = pret's
+`ldcoord_a`) and the two SANCTIONED window calls; `ChangeBox`'s two `ADDED` stores are the same
+`set`/`res` blind spot plus pret's `ld [de],a` map-text-pointer copy. One faithdiff *artifact* fixed
+while here: the two `hAutoBGTransferEnabled` stores were written against the port constant name
+(`H_AUTO_BG_TRANSFER_EN`), which made the matcher report a DROPPED+ADDED pair; they now use the pret
+alias, as every other row's file does, and match.
+**Rendered and looked at** (`DEBUG_CHANGEBOX` → FRAME.BIN → PNG): the two-page "When you change a #MON
+BOX..." text and its YES/NO box (frames 250/340), then the change-box screen itself — the **BOX 1..BOX12
+list**, the **"BOX No. 1" indicator with its number**, the dialog, and the ▶ cursor on BOX 1 from the
+real `HandleMenuInput` loop. Pokéballs render for non-empty boxes only, which on a fresh save is none —
+that branch is **UNVERIFIED** (it needs box storage; see the SRAM TODO-HW above).

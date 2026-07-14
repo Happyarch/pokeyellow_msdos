@@ -248,14 +248,33 @@ MAIN_MENU = [
 # and drew them whole with bespoke SV_* routines (M-97). _GameSavedText splices the
 # player name with TX_RAM, which no hand-written glyph run can express — the port's
 # imitation placed wPlayerName with a second PlaceString call.
-# (The CHANGE-BOX streams _WhenYouChangeBoxText / _ChooseABoxText belong to row 19
-# part 2 and are not migrated yet.)
+# Row 19 part 2 adds the two CHANGE-BOX streams (_WhenYouChangeBoxText is a TWO-PAGE
+# text: pret's `para` is a page break the text engine executes — the port's imitation
+# hand-drove the two pages with its own prompt loop).
 SAVE_FAR = [
     "_FileDataDestroyedText",       # "The file data is / destroyed!" + prompt
     "_WouldYouLikeToSaveText",      # "Would you like to / SAVE the game?"
     "_SavingText",                  # "Saving..."
     "_GameSavedText",               # "<PLAYER> saved / the game!"  (TX_RAM name)
     "_OlderFileWillBeErasedText",   # "The older file / will be erased to / save. Okay?"
+    "_WhenYouChangeBoxText",        # "When you change a / #MON BOX, data / will be saved."
+                                    #   para "Is that okay?"   (two pages)
+    "_ChooseABoxText",              # "Choose a / <PKMN> BOX.@"  (text_end, no `done`)
+]
+
+# The two CHANGE-BOX PlaceString labels of pret engine/menus/save.asm (row 19 part 2).
+# BoxNames is ONE string: pret writes it as 12 `next`-separated names, PlaceString'd in
+# a single call with BIT_SINGLE_SPACED_LINES set, so <NEXT> steps one row per box. The
+# port had split it into 12 separately-terminated hand-encoded runs and placed them with
+# a per-row loop — the split is what forced the loop, and pret's own shape does not need
+# it (the port's PlaceString honours $4E + BIT_SINGLE_SPACED_LINES).
+SAVE_STRINGS = [
+    ("BoxNames",
+     ["BOX 1", NEXT, "BOX 2", NEXT, "BOX 3", NEXT, "BOX 4", NEXT,
+      "BOX 5", NEXT, "BOX 6", NEXT, "BOX 7", NEXT, "BOX 8", NEXT,
+      "BOX 9", NEXT, "BOX10", NEXT, "BOX11", NEXT, "BOX12", TERM]),
+    ("BoxNoText",                   # pret: db "BOX No.@"
+     ["BOX No.", TERM]),
 ]
 
 
@@ -566,9 +585,14 @@ def main() -> int:
         ]
         sout.append(f"{label}:\n" + "\n".join(rows))
     sout.append("")
+    sout.append("; --- CHANGE-BOX PlaceString labels (pret's own names + byte layout) ---")
+    for label, parts in SAVE_STRINGS:
+        b = encode_parts(parts)
+        sout.append(f"{label}: db " + ", ".join(f"0x{x:02X}" for x in b))
+    sout.append("")
     sdst = ASSETS / "save_text.inc"
     sdst.write_text("\n".join(sout))
-    print(f"wrote {sdst} ({len(SAVE_FAR)} far labels)")
+    print(f"wrote {sdst} ({len(SAVE_FAR)} far labels, {len(SAVE_STRINGS)} strings)")
 
     # --- TRAINER CARD PlaceString labels (trainer_card.asm) -------------------
     tout = [

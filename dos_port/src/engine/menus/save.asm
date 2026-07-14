@@ -44,6 +44,12 @@
 ;    (src/home/audio.asm + assets/audio_constants.inc; pc.asm plays its PC jingles
 ;    through them). The "TODO-HW: audio HAL (Phase 3), no-op" comments that used to
 ;    sit here were stale (M-99); the save jingle is restored.
+;  * CHANGE-BOX TEXT (row 19 part 2, M-101): WhenYouChangeBoxText / ChooseABoxText /
+;    BoxNames / BoxNoText are pret's own labels with pret's own bodies (Tier-1 data
+;    in assets/save_text.inc). _WhenYouChangeBoxText's `para` page break is executed
+;    by the text engine — the port used to hand-drive the two pages, hand-encode
+;    every line, split BoxNames into 12 separately-terminated strings (which is what
+;    forced its per-row placement loop), and never draw the box number at all.
 ;  * CHANGE-BOX box swap: the port has WRAM for only the CURRENT box
 ;    (wBoxDataStart..End); the other 11 boxes live in SRAM banks pret has and the
 ;    port does not. So CopyBoxToOrFromSRAM / the per-bank mon-count reads / the
@@ -52,8 +58,6 @@
 ;    SaveGameData all run, but the box contents do not actually swap and the other
 ;    boxes read empty — exactly the wNumHoFTeams==0 kind of degraded-but-safe
 ;    behavior, retired when a box-storage WRAM region / faithful .dsv lands.
-;  * PlaySoundWaitForCurrent / WaitForSoundToFinish (SFX_SAVE) are ; TODO-HW:
-;    audio HAL (Phase 3) — no-ops.
 ;
 ; Build (standalone check):
 ;   nasm -f coff -I include/ -I . -o /dev/null src/engine/menus/save.asm
@@ -96,6 +100,11 @@ global OlderFileWillBeErasedText
 global ChangeBox
 global CopyBoxToOrFromSRAM
 global DisplayChangeBoxMenu
+; --- CHANGE-BOX strings (pret labels; bodies in assets/save_text.inc) ---------
+global WhenYouChangeBoxText
+global ChooseABoxText
+global BoxNames
+global BoxNoText
 global EmptyAllSRAMBoxes
 global EmptySRAMBoxesInBank
 global EmptySRAMBox
@@ -111,8 +120,8 @@ global EnableSRAM
 global DisableSRAM
 
 ; --- window compositor / text (see players_pc.asm precedent) ---------------
-extern TextBoxBorder            ; text/text.asm — ESI=top-left, BL=int_w, BH=int_h
-extern place_flat_str           ; text/text.asm — EAX=flat '@'-term src, ESI=dest
+extern TextBoxBorder            ; home/text.asm — ESI=top-left, BL=int_w, BH=int_h
+extern PlaceString              ; home/text.asm — EAX=flat src, ESI=dest (pret de/hl)
 extern add_window               ; ppu/ppu.asm — EAX=wx EBX=wy ECX=clip EDX=max_y ESI=tm EDI=row
 extern g_window_count           ; ppu/ppu.asm
 extern text_row_stride          ; text/text.asm — active W_TILEMAP row stride
@@ -158,6 +167,9 @@ extern PrintSaveScreenText
 %ifdef DEBUG_SAVE_ROUNDTRIP
 %define SAVE_HARNESS 1
 %endif
+%ifdef DEBUG_CHANGEBOX
+%define SAVE_HARNESS 1
+%endif
 %ifdef SAVE_HARNESS
 extern PrepareNewGameDebug      ; engine/debug/debug_party.asm
 extern DumpBackbuffer           ; debug/debug_dump.asm — writes FRAME.BIN + exits
@@ -185,6 +197,25 @@ CBOX_TOT_H equ CBOX_INT_H + 2   ; 14
 CBOX_STRIDE equ 20
 CBOX_SROW  equ 0                 ; GB_TILEMAP0 mirror start row
 
+; ChangeBox "BOX No." indicator box. pret: hlcoord 0,0 / lb bc,2,9 -> interior
+; 9w x 2h (total 11x4) = UI_CHANGE_BOX_INFO GB(0,0) 11x4. Staged into its own
+; scratch band (below the list box) and mirrored to its own GB_TILEMAP0 rows, so
+; the two windows of this screen do not share a mirror region.
+CBOXI_INT_W equ 9
+CBOXI_INT_H equ 2
+CBOXI_TOT_W equ CBOXI_INT_W + 2  ; 11
+CBOXI_TOT_H equ CBOXI_INT_H + 2  ; 4
+; Scratch band: rows 0..13 are the list box and rows 12..17 are the DIALOG the
+; ChooseABoxText PrintText draws (msgbox_dialog's MB_BOX_OFS/MB_LINE2 land there),
+; so the info box must start at 18 — at 16 it overlapped the dialog and mirrored
+; the dialog's second text line into the info window (observed in FRAME.BIN).
+CBOXI_SROW  equ 18               ; scratch band start row (list 0..13, dialog 12..17)
+CBOXI_MROW  equ 16               ; GB_TILEMAP0 mirror start row
+
+; charmap digits (constants/charmap.asm: "0" = $F6 .. "9" = $FF)
+CHAR_0     equ 0xF6
+CHAR_1     equ 0xF7
+
 ; wChangeBoxSavedMapTextPointer (pret ram/wram.asm:998, union alias @ 0xCD3D).
 ; NEEDED in gb_memmap.inc — reported to root; local fallback until then.
 %ifndef wChangeBoxSavedMapTextPointer
@@ -198,41 +229,8 @@ align 4
 ; CHANGE-BOX strings below are still hand-encoded charmap runs — row 19 part 2.
 %include "assets/save_text.inc"
 
-; --- pret data/text/text_4.asm wording, GB charmap, '@'-terminated -----------
-; _WhenYouChangeBoxText page1: "When you change a" / "#MON BOX, data" / "will be saved."
-; (# = POKé, spelled P,O,K,é,M,O,N as league_pc.asm does; drawn-whole DEVIATION)
-sv_chgbox_l1: db 0x96,0xA7,0xA4,0xAD,0x7F,0xB8,0xAE,0xB4,0x7F,0xA2,0xA7,0xA0,0xAD,0xA6,0xA4,0x7F,0xA0, CHAR_TERM
-sv_chgbox_l2: db 0x8F,0x8E,0x8A,0xBA,0x8C,0x8E,0x8D,0x7F,0x81,0x8E,0x97,0xF4,0x7F,0xA3,0xA0,0xB3,0xA0, CHAR_TERM
-sv_chgbox_l3: db 0xB6,0xA8,0xAB,0xAB,0x7F,0xA1,0xA4,0x7F,0xB2,0xA0,0xB5,0xA4,0xA3,0xE8, CHAR_TERM
-; page2: "Is that okay?"
-sv_chgbox_p2: db 0x88,0xB2,0x7F,0xB3,0xA7,0xA0,0xB3,0x7F,0xAE,0xAA,0xA0,0xB8,0xE6, CHAR_TERM
-; _ChooseABoxText: "Choose a" / "<PKMN> BOX." (<PKMN> = PK/MN ligature tiles E1,E2)
-sv_choose_l1: db 0x82,0xA7,0xAE,0xAE,0xB2,0xA4,0x7F,0xA0, CHAR_TERM
-sv_choose_l2: db 0xE1,0xE2,0x7F,0x81,0x8E,0x97,0xE8, CHAR_TERM
-; BoxNoText: "BOX No.@"  (pret label kept for parity; drawn-whole so not text_far)
-BoxNoText:
-sv_boxno: db 0x81,0x8E,0x97,0x7F,0x8D,0xAE,0xE8, CHAR_TERM
-
-; BoxNames — 12 '@'-terminated single-box names, "BOX 1".."BOX12".
-; (pret splits these with `next`; here each is its own '@'-terminated string so
-; DisplayChangeBoxMenu can PlaceString one per scratch row.)
-align 4
-BoxNames:
-sv_boxnames:
-    db 0x81,0x8E,0x97,0x7F,0xF7, CHAR_TERM   ; "BOX 1"
-    db 0x81,0x8E,0x97,0x7F,0xF8, CHAR_TERM   ; "BOX 2"
-    db 0x81,0x8E,0x97,0x7F,0xF9, CHAR_TERM   ; "BOX 3"
-    db 0x81,0x8E,0x97,0x7F,0xFA, CHAR_TERM   ; "BOX 4"
-    db 0x81,0x8E,0x97,0x7F,0xFB, CHAR_TERM   ; "BOX 5"
-    db 0x81,0x8E,0x97,0x7F,0xFC, CHAR_TERM   ; "BOX 6"
-    db 0x81,0x8E,0x97,0x7F,0xFD, CHAR_TERM   ; "BOX 7"
-    db 0x81,0x8E,0x97,0x7F,0xFE, CHAR_TERM   ; "BOX 8"
-    db 0x81,0x8E,0x97,0x7F,0xFF, CHAR_TERM   ; "BOX 9"
-    db 0x81,0x8E,0x97,0xF7,0xF6, CHAR_TERM   ; "BOX10"
-    db 0x81,0x8E,0x97,0xF7,0xF7, CHAR_TERM   ; "BOX11"
-    db 0x81,0x8E,0x97,0xF7,0xF8, CHAR_TERM   ; "BOX12"
-; per-name stride into sv_boxnames (5 glyphs + terminator)
-CBOX_NAME_LEN equ 6
+; (The CHANGE-BOX strings — WhenYouChangeBoxText / ChooseABoxText / BoxNames /
+;  BoxNoText — are Tier-1 data in assets/save_text.inc as of row 19 part 2.)
 
 ; ===========================================================================
 section .bss
@@ -519,9 +517,12 @@ CalcCheckSum:
 ; ChangeBox — pret ref: engine/menus/save.asm:ChangeBox.
 ; ---------------------------------------------------------------------------
 ChangeBox:
-    mov dword [text_row_stride], MSG_STRIDE
-    ; ld hl,WhenYouChangeBoxText / call PrintText  (2-page, prompt)
-    call SV_WhenYouChangeBox
+    ; ld hl,WhenYouChangeBoxText / call PrintText — the stream carries its own
+    ; `para` page break and terminal `done`; the text engine runs both (row 19
+    ; part 2, M-101: the port used to drive the two pages by hand).
+    mov dword [text_msgbox], msgbox_dialog
+    mov esi, WhenYouChangeBoxText
+    call PrintText
     ; call YesNoChoice / ld a,[wCurrentMenuItem] / and a / ret nz
     call YesNoChoice
     mov al, [ebp + wCurrentMenuItem]
@@ -549,7 +550,12 @@ ChangeBox:
     ; bit B_PAD_B,a / ret nz
     test al, PAD_B
     jnz .cancel
-    ; ld a,SFX_SAVE / PlaySoundWaitForCurrent / WaitForSoundToFinish — TODO-HW: audio HAL
+    ; ld a,SFX_SAVE / call PlaySoundWaitForCurrent / call WaitForSoundToFinish
+    ; (M-99: the audio HAL is real — the "TODO-HW: audio (Phase 3)" that stood here
+    ;  was stale, exactly as in SaveMenu.)
+    mov al, SFX_SAVE
+    call PlaySoundWaitForCurrent
+    call WaitForSoundToFinish
     ; --- copy old box (WRAM) -> SRAM ---
     call GetBoxSRAMLocation                        ; BH=bank, ESI=SRAM ptr (0 in port)
     mov edx, esi                                   ; ld e,l / ld d,h -> DX(de)=SRAM dest
@@ -593,6 +599,16 @@ CopyBoxToOrFromSRAM:
     ; and the source-empty marking is skipped so the live current box survives.
     ret
 
+; --- the two CHANGE-BOX text streams (pret ref: engine/menus/save.asm, same
+; positions). Tier-2 wrappers over the Tier-1 bodies in assets/save_text.inc.
+WhenYouChangeBoxText:
+    text_far _WhenYouChangeBoxText
+    text_end
+
+ChooseABoxText:
+    text_far _ChooseABoxText
+    text_end
+
 ; ---------------------------------------------------------------------------
 ; DisplayChangeBoxMenu — pret ref: engine/menus/save.asm:DisplayChangeBoxMenu.
 ; Draws the "BOX No." indicator box + the 12-box name list with per-box pokéball
@@ -603,7 +619,7 @@ CopyBoxToOrFromSRAM:
 ; ---------------------------------------------------------------------------
 DisplayChangeBoxMenu:
     ; xor a / ldh [hAutoBGTransferEnabled],a — canvas auto-transfer off (window model)
-    mov byte [ebp + H_AUTO_BG_TRANSFER_EN], 0
+    mov byte [ebp + hAutoBGTransferEnabled], 0
     ; ld a,PAD_A|PAD_B / ld [wMenuWatchedKeys],a
     mov byte [ebp + wMenuWatchedKeys], PAD_A | PAD_B
     ; ld a,11 / ld [wMaxMenuItem],a  (12 boxes, 0..11)
@@ -622,41 +638,64 @@ DisplayChangeBoxMenu:
     mov [ebp + wCurrentMenuItem], al
     mov [ebp + wLastMenuItem], al
 
-    ; --- "BOX No." indicator box (pret hlcoord 0,0 lb bc,2,9) -----------------
-    ; ; PROJ menus: GB(0,0) 11x4 --> needs a dedicated UI element. Report:
-    ; UI_CHANGE_BOX_INFO — GB rect (0,0) 11 wide x 4 tall (interior 9x2), anchor
-    ; matching the top-left of the change-box screen. Root adds the equate; until
-    ; then the info box is staged into the scratch but not shown as its own window.
-    ; (Drawn into a separate scratch band so it does not collide with the list.)
-    ; hlcoord 1,2 -> "BOX No." ; the box number digit is placed at hlcoord 8/9,2.
-    ; Staged for parity; the window append is guarded on UI_CHANGE_BOX_INFO_WX.
-%ifdef UI_CHANGE_BOX_INFO_WX
-    ; (root-provided) — draw + add the info box window here.
-%endif
+    ; --- "BOX No." indicator box (pret hlcoord 0,0 / lb bc,2,9) ---------------
+    ; The UI element EXISTS (UI_CHANGE_BOX_INFO_*, assets/ui_layout_menus.inc):
+    ; GB(0,0) 11x4, interior 9x2. The comment that used to stand here claimed root
+    ; had not provided the equate yet and left the box undrawn — stale (M-102).
+    ; Staged box-relative into the scratch band at CBOXI_SROW, mirrored to
+    ; GB_TILEMAP0 row CBOXI_MROW, shown as its own window by cboxi_show_window.
+    mov esi, W_TILEMAP + CBOXI_SROW * CBOX_STRIDE
+    mov bl, CBOXI_INT_W                           ; lb bc, 2, 9 -> c = int_w = 9
+    mov bh, CBOXI_INT_H                           ;                b = int_h = 2
+    call TextBoxBorder
 
-    ; --- box-name list box (pret hlcoord 11,0 lb bc,12,7) --------------------
+    ; ld hl,ChooseABoxText / call PrintText — pret's PrintText draws MESSAGE_BOX
+    ; and prints at hlcoord 1,14, i.e. the BOTTOM dialog (NOT this info box); the
+    ; info box holds only "BOX No. <n>".
+    mov dword [text_msgbox], msgbox_dialog
+    mov esi, ChooseABoxText
+    call PrintText
+
+    ; --- box-name list box (pret hlcoord 11,0 / lb bc,12,7) -------------------
     ; TextBoxBorder into the scratch at box origin (col 0, row 0).
     mov esi, W_TILEMAP
     mov bl, CBOX_INT_W                            ; interior width 7
     mov bh, CBOX_INT_H                            ; interior height 12
     call TextBoxBorder
-    ; ChooseABoxText — pret prints it into the info region; drawn-whole for parity
-    ; (its two lines land in the info box; staged, shown when UI_CHANGE_BOX_INFO
-    ; exists). Not blocking the list.
-    ; place each BoxNames[i] at scratch (row 1+i, box-rel col 2) single-spaced.
-    mov ebx, 0                                    ; box index
-.namerow:
-    ; ESI = W_TILEMAP + (1+ebx)*20 + 2
-    lea eax, [ebx + 1]
-    imul eax, eax, CBOX_STRIDE
-    lea esi, [eax + W_TILEMAP + 2]
-    mov eax, ebx
-    imul eax, eax, CBOX_NAME_LEN
-    lea eax, [sv_boxnames + eax]                  ; &BoxNames[i]
-    call place_flat_str
-    inc ebx
-    cmp ebx, NUM_BOXES
-    jb .namerow
+
+    ; set BIT_SINGLE_SPACED_LINES / ld de,BoxNames / hlcoord 13,1 / PlaceString /
+    ; res BIT_SINGLE_SPACED_LINES. ONE PlaceString: BoxNames is a single <NEXT>-
+    ; separated string and the port's PlaceString honours $4E + the single-spaced
+    ; flag, so pret's own shape works — the 12-strings-and-a-loop the port had was
+    ; forced only by its hand-split data (M-101).
+    ; ; DEVIATION(geometry): GB col 13 is list-box col 2 (list box at GB col 11).
+    or byte [ebp + H_UI_LAYOUT_FLAGS], 1 << BIT_SINGLE_SPACED_LINES
+    mov esi, W_TILEMAP + 1 * CBOX_STRIDE + 2
+    mov eax, BoxNames
+    call PlaceString
+    and byte [ebp + H_UI_LAYOUT_FLAGS], (~(1 << BIT_SINGLE_SPACED_LINES)) & 0xFF
+
+    ; --- the box-number digits in the info box (pret hlcoord 8,2 / ldcoord_a 9,2)
+    ; The port never drew these at all — the indicator box read "BOX No." with no
+    ; number (M-101).
+    mov al, [ebp + wCurrentBoxNum]
+    and al, 0x7F                                  ; BOX_NUM_MASK
+    cmp al, 9
+    jc .singleDigitBoxNum
+    sub al, 9                                     ; sub 9
+    ; hlcoord 8, 2 / ld [hl], '1'
+    mov byte [ebp + W_TILEMAP + CBOXI_SROW * CBOX_STRIDE + 2 * CBOX_STRIDE + 8], CHAR_1
+    add al, CHAR_0                                ; add '0'
+    jmp .next
+.singleDigitBoxNum:
+    add al, CHAR_1                                ; add '1'
+.next:
+    ; ldcoord_a 9, 2
+    mov [ebp + W_TILEMAP + CBOXI_SROW * CBOX_STRIDE + 2 * CBOX_STRIDE + 9], al
+    ; hlcoord 1,2 / ld de,BoxNoText / call PlaceString
+    mov esi, W_TILEMAP + CBOXI_SROW * CBOX_STRIDE + 2 * CBOX_STRIDE + 1
+    mov eax, BoxNoText
+    call PlaceString
 
     ; --- pokéball indicators (pret hlcoord 18,1 stepping SCREEN_WIDTH) --------
     call GetMonCountsForAllBoxes                  ; fill wBoxMonCounts[0..11]
@@ -674,10 +713,11 @@ DisplayChangeBoxMenu:
     cmp ebx, NUM_BOXES
     jb .ballrow
 
-    ; --- mirror the list box -> GB_TILEMAP0 and show it at UI_CHANGE_BOX --------
+    ; --- mirror the two boxes -> GB_TILEMAP0 and show them as windows ----------
     call cbox_show_window
+    call cboxi_show_window
     ; ld a,1 / ldh [hAutoBGTransferEnabled],a
-    mov byte [ebp + H_AUTO_BG_TRANSFER_EN], 1
+    mov byte [ebp + hAutoBGTransferEnabled], 1
     ; menu cursor stepping (single-spaced list: 1 scratch row per item)
     mov dword [menu_item_step], CBOX_STRIDE
     mov dword [menu_redraw_cb], cbox_mirror
@@ -713,6 +753,40 @@ cbox_mirror:
     rep movsb
     inc ebx
     cmp ebx, CBOX_TOT_H
+    jb .row
+    popad
+    ret
+
+; --- "BOX No." info-box window plumbing ------------------------------------
+; The info box is a SECOND window on the same screen, so it needs its own mirror
+; region: GB_TILEMAP0 rows CBOXI_MROW.. (the list occupies rows 0..13).
+cboxi_show_window:
+    call cboxi_mirror
+    mov eax, UI_CHANGE_BOX_INFO_WX
+    mov ebx, UI_CHANGE_BOX_INFO_WY
+    mov ecx, UI_CHANGE_BOX_INFO_CLIP
+    mov edx, UI_CHANGE_BOX_INFO_MAXY
+    mov esi, GB_TILEMAP0
+    mov edi, CBOXI_MROW
+    call add_window
+    ret
+
+; blit the info rect (scratch rows CBOXI_SROW.., cols 0..10) -> GB_TILEMAP0 rows
+; CBOXI_MROW... Preserves all registers.
+cboxi_mirror:
+    pushad
+    xor ebx, ebx
+.row:
+    mov esi, ebx
+    imul esi, esi, CBOX_STRIDE
+    lea esi, [ebp + esi + W_TILEMAP + CBOXI_SROW * CBOX_STRIDE]
+    mov edi, ebx
+    shl edi, 5
+    lea edi, [ebp + edi + GB_TILEMAP0 + CBOXI_MROW * 32]
+    mov ecx, CBOXI_TOT_W
+    rep movsb
+    inc ebx
+    cmp ebx, CBOXI_TOT_H
     jb .row
     popad
     ret
@@ -909,115 +983,39 @@ DisableSRAM:
     ret
 
 ; ###########################################################################
-; # Port plumbing — drawn-whole messages (DEVIATION(text); players_pc precedent)
-; ###########################################################################
-
-; draw the empty message border into scratch rows 12-17 (interior 18x4)
-sv_msg_box:
-    mov esi, W_TILEMAP + MSG_SROW * MSG_STRIDE
-    mov bl, 18
-    mov bh, 4
-    call TextBoxBorder
-    ret
-
-; mirror scratch rows 12-17 -> GB_TILEMAP1 rows 0-5 (pad cols 20-31), append the
-; dialog window at UI_MESSAGE_BOX, remember g_window_count for sv_msg_drop.
-sv_msg_show:
-    pushad
-    mov ecx, 6
-    lea esi, [ebp + W_TILEMAP + MSG_SROW * MSG_STRIDE]
-    lea edi, [ebp + GB_TILEMAP1]
-.row:
-    push ecx
-    push edi
-    mov ecx, 20
-    rep movsb
-    mov al, TILE_SPC
-    mov ecx, 12                                    ; pad cols 20-31
-    rep stosb
-    pop edi
-    pop ecx
-    add edi, 32
-    dec ecx
-    jnz .row
-    mov eax, [g_window_count]
-    mov [sv_msg_wc], eax
-    mov eax, UI_MESSAGE_BOX_WX
-    mov ebx, UI_MESSAGE_BOX_WY
-    mov ecx, UI_MESSAGE_BOX_CLIP
-    mov edx, UI_MESSAGE_BOX_MAXY
-    mov esi, GB_TILEMAP1
-    xor edi, edi
-    call add_window
-    popad
-    ret
-
-; ▼ + wait for an A/B press cycle (a text's terminal `prompt`), clear the ▼.
-sv_msg_prompt:
-    mov byte [ebp + GB_TILEMAP1 + DIALOG_ARROW_TILEMAP_OFFSET], CHAR_DOWN
-.release:
-    call DelayFrame
-    test byte [ebp + H_JOY_HELD], PAD_A | PAD_B
-    jnz .release
-.press:
-    call DelayFrame
-    test byte [ebp + H_JOY_HELD], PAD_A | PAD_B
-    jz .press
-    mov byte [ebp + GB_TILEMAP1 + DIALOG_ARROW_TILEMAP_OFFSET], TILE_SPC
-    ret
-
-; drop the dialog window (restore the count sv_msg_show saved). Clobbers EAX.
-sv_msg_drop:
-    push eax
-    mov eax, [sv_msg_wc]
-    mov [g_window_count], eax
-    pop eax
-    ret
-
-; --- the CHANGE-BOX message is still drawn whole (row 19 part 2 migrates it) ---
-; WhenYouChangeBoxText (2 pages, prompt after each)
-SV_WhenYouChangeBox:
-    call sv_msg_box
-    mov esi, W_TILEMAP + 13 * MSG_STRIDE + 1
-    mov eax, sv_chgbox_l1
-    call place_flat_str
-    mov esi, W_TILEMAP + 14 * MSG_STRIDE + 1
-    mov eax, sv_chgbox_l2
-    call place_flat_str
-    mov esi, W_TILEMAP + 15 * MSG_STRIDE + 1
-    mov eax, sv_chgbox_l3
-    call place_flat_str
-    call sv_msg_show
-    call sv_msg_prompt
-    ; page 2 ("Is that okay?")
-    call sv_msg_box
-    mov esi, W_TILEMAP + 14 * MSG_STRIDE + 1
-    mov eax, sv_chgbox_p2
-    call place_flat_str
-    call sv_msg_show
-    ret
-
-; ###########################################################################
 ; # DEBUG harnesses
 ; ###########################################################################
-%ifdef DEBUG_SAVE
+%ifdef DEBUG_CHANGEBOX
 ; ---------------------------------------------------------------------------
-; RunSaveTest — row 19 FRAME.BIN gate for the SAVE flow. Seeds a new game, then
-; runs the REAL SaveMenu: the save-info panel, "Would you like to SAVE?" through
-; PrintText, and pret's TWO_OPTION_MENU YES/NO box at hlcoord 0,7. SaveMenu blocks
-; in that menu's HandleMenuInput; the harness runs with AUTOKEY_QUIET (no presses),
-; so AutoKeyDrive photographs the open question + YES/NO at AUTOKEY_DUMP_FRAME and
-; exits. (The RunPCTest/RunOaksPCTest pattern.)
-; In: EBP = GB base. Called from EnterMap after the overworld is set up.
+; RunSaveTest (CHANGE BOX mode) — row 19 part 2 FRAME.BIN gate. The port has NO
+; live ChangeBox caller yet (pret's is BillsPCChangeBox, and the port's bills_pc
+; does not wire it — see the ledger finding), so the screen is otherwise
+; unobservable. Seeds a new game and calls ChangeBox: the two-page "When you
+; change a #MON BOX..." text, the YES/NO, then DisplayChangeBoxMenu's box list +
+; "BOX No." indicator. ChangeBox blocks in HandleMenuInput; AUTOKEY drives the
+; YES and photographs the list at AUTOKEY_DUMP_FRAME.
 ; ---------------------------------------------------------------------------
 RunSaveTest:
     or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     call LoadTextBoxTilePatterns
-    call PrepareNewGameDebug                        ; seed party+bag+badges
-    call SaveMenu
+    call PrepareNewGameDebug
+    ; DisplayChangeBoxMenu, not ChangeBox: ChangeBox's tail is HandleMenuInput,
+    ; which accepts the same A press that resolved ChooseABoxText's <PROMPT> and
+    ; tears the list back down in the very next frame — the list is on screen for
+    ; one frame and can't be photographed. Calling the screen directly leaves it
+    ; up. (ChangeBox's own two-page text + YES/NO were observed with the ChangeBox
+    ; call in its place; see the ledger's row-19 part-2 verification note.)
+    call DisplayChangeBoxMenu
+    or byte [ebp + H_UI_LAYOUT_FLAGS], 1 << 1       ; BIT_DOUBLE_SPACED_MENU, as ChangeBox does
+    call HandleMenuInput                            ; the real menu loop (cursor + blink)
 .hang:
+    call DelayFrame                                 ; keep frames flowing so AUTOKEY can dump
     jmp .hang
+; NOTE the branch order: the DEBUG_SAVE_ROUNDTRIP and DEBUG_CHANGEBOX builds each
+; define DEBUG_SAVE too (they reuse the overworld's DEBUG_SAVE harness hook), so the
+; more specific modes MUST be tested first — with DEBUG_SAVE first, as this chain
+; used to be, the roundtrip harness was silently unreachable.
 %elifdef DEBUG_SAVE_ROUNDTRIP
 ; ---------------------------------------------------------------------------
 ; RunSaveTest (roundtrip mode) — write the .dsv, then prove it round-trips:
@@ -1030,6 +1028,24 @@ RunSaveTest:
     call DsvFileExists                              ; CF=1/AL=1 if present+valid
     mov [ebp + GB_BACKBUF], al                      ; marker pixel (1 = round-trip ok)
     call DumpBackbuffer
+.hang:
+    jmp .hang
+%elifdef DEBUG_SAVE
+; ---------------------------------------------------------------------------
+; RunSaveTest — row 19 part 1 FRAME.BIN gate for the SAVE flow. Seeds a new game,
+; then runs the REAL SaveMenu: the save-info panel, "Would you like to SAVE?"
+; through PrintText, and pret's TWO_OPTION_MENU YES/NO box at hlcoord 0,7.
+; SaveMenu blocks in that menu's HandleMenuInput; the harness runs with
+; AUTOKEY_QUIET (no presses), so AutoKeyDrive photographs the open question +
+; YES/NO at AUTOKEY_DUMP_FRAME and exits. (The RunPCTest/RunOaksPCTest pattern.)
+; In: EBP = GB base. Called from EnterMap after the overworld is set up.
+; ---------------------------------------------------------------------------
+RunSaveTest:
+    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    call LoadFontTilePatterns
+    call LoadTextBoxTilePatterns
+    call PrepareNewGameDebug                        ; seed party+bag+badges
+    call SaveMenu
 .hang:
     jmp .hang
 %endif
