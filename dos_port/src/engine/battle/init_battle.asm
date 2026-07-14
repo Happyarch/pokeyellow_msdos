@@ -82,7 +82,6 @@ extern LoadHpBarAndStatusTilePatterns
 extern LoadHudTilePatterns
 extern DuplicateEnemyHPBarTiles        ; battle_hud.asm — distinct palette-able enemy gauge IDs
 extern DrawBattleHUDs
-extern DrawEnemyHUD
 extern SetPal_Battle                    ; engine/gfx/palettes.asm
 
 ; --- _InitBattleCommon dependencies (the real overworld→battle orchestration) ---
@@ -378,11 +377,12 @@ DrawBattleIntroBox:
     mov ecx, INTRO_LINE2_LEN
     rep movsb
 
-    ; --- enemy HUD: a WILD mon is already "out", so it shows its HP bar during the
-    ; intro; a TRAINER (wIsInBattle==2) hasn't sent a mon out yet, so the enemy side
-    ; shows the trainer's pokéball row instead (drawn by the caller). ---
-    cmp byte [ebp + wIsInBattle], 1
-    jne .skipEnemyHUD
-    call DrawEnemyHUD
-.skipEnemyHUD:
+    ; F-17 FIX (fidelity plan Stage 2, golden-measured): the GB draws NO HUDs
+    ; during the wild intro — pret PrintBeginningBattleText is cry + pokéballs +
+    ; PrintText only, and both HUDs first appear via DisplayBattleMenu →
+    ; DrawHUDsAndHPBars. This routine used to call DrawEnemyHUD here ("a wild
+    ; mon is already out"), which was generalized from the port's own flow, not
+    ; pret — the battle_intro golden showed blank HUD rows where the port drew
+    ; the enemy name/HP bar. The call is gone; the enemy HUD now first draws
+    ; exactly where pret draws it.
     ret

@@ -132,6 +132,22 @@ extern CalculateDamage
 extern AdjustDamageForMoveType
 extern RandomizeDamage
 extern DelayFrame
+%ifdef DEBUG_BATTLE_GOLDEN
+; --- Stage 2 golden gate: the REAL loaders replace the synthetic seed ---
+extern LoadEnemyMonData          ; load_enemy_mon_data.asm — real wild loader
+extern CalcStats                 ; home/move_mon.asm — stat recompute from the spec DVs
+extern CopyData                  ; home/copy_data.asm
+extern LoadFrontSpriteByMonIndex ; home/pics.asm — real enemy front pic
+extern LoadBattleMonFromParty    ; faint_leaves.asm — real send-out loader
+extern FlagAction                ; flag_action.asm
+extern DisplayBattleMenu         ; core.asm — real menu (parks in HandleMenuInput)
+extern LoadMonBackPic            ; home/pics.asm — sent-out mon's back pic
+extern LoadScreenTilesFromBuffer1 ; battle_menu.asm
+extern DrawHUDsAndHPBars         ; battle_menu.asm
+extern DrawEmptyDialogBox        ; battle_menu.asm
+extern SaveScreenTilesToBuffer1  ; battle_menu.asm
+extern DrawBattleMenuBox         ; battle_menu.asm
+%endif
 global RunBattleTest
 %endif
 %ifdef DEBUG_LEARNMOVE
@@ -237,8 +253,8 @@ BATTLEMON_STRUCT_LENGTH equ 1 + 2 + 1 + 1 + 2 + 1 + NUM_MOVES + 2 + 1 \
 ; 8 OPTIONS, 9 TRAINERCARD, 10 G1 (dex list), 11 G2 (dex entry), 12 NAMINGSCREEN,
 ; 13 SIGNTEXT, 15 BATTLE_INTRO, 16 MOVEMENU (the FIGHT sub-menu), 17 ITEMTM,
 ; 18 ITEMSTONE, 19 ITEMUSE, 20 ITEMBALL).
-; Id 14 is RESERVED for a battle-menu gate that does not exist yet (it lands with
-; the fidelity plan's Stage 2); every %elifdef below names a gate the Makefile
+; Id 14 is the battle-menu golden gate (DEBUG_BATTLE_GOLDEN + DEBUG_BATTLE_MENU,
+; fidelity plan Stage 2); every %elifdef below names a gate the Makefile
 ; actually defines. Master's newer audit gates (DEBUG_TEXT, DEBUG_YESNO,
 ; DEBUG_LISTMENU_QTY, ...) have no id yet and tag as 0 — ids 21+ when they get one.
 ; ORDER MATTERS: a gate that IMPLIES another must be tested first — the Makefile's
@@ -278,6 +294,8 @@ GBSTATE_SCENARIO equ 20                 ; before DEBUG_BATTLE: ITEMBALL implies 
 GBSTATE_SCENARIO equ 16
 %elifdef DEBUG_BATTLE_INTRO
 GBSTATE_SCENARIO equ 15
+%elifdef DEBUG_BATTLE_MENU
+GBSTATE_SCENARIO equ 14                 ; battle menu golden (Stage 2; was reserved)
 %elifdef DEBUG_BATTLE
 GBSTATE_SCENARIO equ 7
 %elifdef DEBUG_TRANSITION
@@ -1004,6 +1022,166 @@ RunListMenuTest:
 ; Stage-0.5 gate: proves the centered battle render mode. In: EBP = GB base.
 ; ---------------------------------------------------------------------------
 RunBattleTest:
+%ifdef DEBUG_BATTLE_GOLDEN
+    ; ------------------------------------------------------------------
+    ; Fidelity-plan Stage 2 golden gate — the REAL loaders + the battle
+    ; convergence spec, twin of the mGBA scenarios (battle_intro /
+    ; battle_menu / move_selection): PrepareNewGameDebug party/bag; wild
+    ; PIDGEY L13 through the real InitBattle → LoadEnemyMonData; then
+    ; overwrite ONLY the RNG-derived parts (DVs → $98 $76, stats
+    ; recomputed by the real CalcStats, HP = MaxHP, unmodified snapshot
+    ; refreshed) — exactly what the golden side's seed.enemy does after
+    ; its real Route 1 grass encounter. Loader-derived parts (species,
+    ; types, catch rate, moves, PP) are NOT written here, so a loader
+    ; regression fails the golden diff instead of being papered over.
+    ; ------------------------------------------------------------------
+    mov byte [ebp + 0xD162], 0      ; wPartyCount = 0
+    mov byte [ebp + 0xD163], 0xFF   ; wPartySpecies sentinel
+    mov byte [ebp + 0xD31C], 0      ; wNumBagItems = 0
+    mov byte [ebp + 0xD31D], 0xFF   ; wBagItems sentinel
+    call PrepareNewGameDebug        ; the standard debug new-game seed
+    ; TryDoWildEncounter's outputs, per the spec (the golden walks Route 1
+    ; grass with wGrassMons forced to 10 x (L13, PIDGEY)):
+    mov byte [ebp + wEnemyMonSpecies2], 0x24    ; PIDGEY (internal index)
+    mov byte [ebp + wCurEnemyLevel], 13
+    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    call LoadFontTilePatterns
+    call LoadTextBoxTilePatterns
+    call InitBattle                 ; canvas + InitBattleVariables (wIsInBattle=1)
+    call LoadEnemyMonData           ; REAL loader — rolls DVs via BattleRandom
+    ; --- spec-DV overwrite + stat recompute (seed.enemy's twin) ---
+    mov byte [ebp + wEnemyMonDVs], 0x98
+    mov byte [ebp + wEnemyMonDVs + 1], 0x76
+    ; Identical registers to the loader's own CalcStats call: the level is
+    ; still in wCurEnemyLevel (CalcStat's level source), wMonHeader still
+    ; holds PIDGEY, and CalcStat reads the DVs at ESI + $0B = wEnemyMonDVs —
+    ; so this recomputes the 5 stats from the spec DVs. Golden-measured
+    ; result: MaxHP 36, Atk 19, Def 17, Spd 21, Spc 15.
+    mov edx, wEnemyMonLevel + 1     ; stat block dest (wEnemyMonMaxHP)
+    mov bh, 0                       ; no stat exp
+    mov esi, wEnemyMonHP
+    call CalcStats
+    ; HP = MaxHP (copy the big-endian word verbatim — Gen-1 byte order rule)
+    mov al, [ebp + wEnemyMonMaxHP]
+    mov [ebp + wEnemyMonHP], al
+    mov al, [ebp + wEnemyMonMaxHP + 1]
+    mov [ebp + wEnemyMonHP + 1], al
+    ; refresh the unmodified level+stats snapshot — the loader took it from
+    ; the ROLLED DVs before the overwrite
+    mov esi, wEnemyMonLevel
+    mov edx, wEnemyMonUnmodifiedLevel
+    mov ebx, 1 + NUM_STATS * 2
+    call CopyData
+    ; --- real intro scene (pret PrintBeginningBattleText order: pics, box,
+    ;     pokéballs; NO HUDs — the GB first draws them at the battle menu) ---
+    mov al, [ebp + wEnemyMonSpecies2]
+    mov [ebp + wCurPartySpecies], al
+    mov esi, W_TILEMAP + 12         ; hlcoord 12,0 (stride 40)
+    call LoadFrontSpriteByMonIndex  ; real enemy front pic (not the stub)
+    call DrawPlayerRedBackPic_Stub
+    call SlideBattlePicsIn
+    call DrawBattleIntroBox
+    call SaveBattleScreen
+    call DrawBattlePokeballs
+%ifdef DEBUG_BATTLE_INTRO
+    ; Dump at the parked "Wild PIDGEY appeared!" prompt. The ▼ poke at GB
+    ; (16,18) = canvas (19,28) replicates the text engine's parked prompt
+    ; (the port box prints instantly, promptless). wBattleMon is NOT loaded
+    ; yet — the GB loads it at send-out, after this screen (golden: zeros).
+    mov byte [ebp + W_TILEMAP + (19 * 40 + 28)], 0xEE
+    call DelayFrame
+    call DumpBackbuffer
+.goldenintrohang:
+    jmp .goldenintrohang
+%else
+    ; --- send-out (the golden pressed A on "appeared!"): the pokéballs give
+    ; way and the first alive party mon — slot 0, the whole debug party is
+    ; healthy — is loaded by the REAL LoadBattleMonFromParty; its back pic
+    ; replaces Red's. Mirrors _InitBattleCommon's scan outcome + the
+    ; pret StartBattle EXP/fought flag sets. ---
+    call HideBattlePokeballs
+    mov byte [ebp + wWhichPokemon], 0
+    mov byte [ebp + wPlayerMonNumber], 0
+    mov al, [ebp + wPartySpecies]
+    mov [ebp + wCurPartySpecies], al
+    mov [ebp + wBattleMonSpecies2], al
+    mov cl, 0
+    mov bh, FLAG_SET
+    mov esi, wPartyGainExpFlags
+    call FlagAction
+    mov cl, 0
+    mov bh, FLAG_SET
+    mov esi, wPartyFoughtCurrentEnemyFlags
+    call FlagAction
+    call LoadBattleMonFromParty
+    call LoadMonBackPic
+%ifdef DEBUG_BATTLE_MENU
+    ; The REAL battle menu: DisplayBattleMenu draws HUDs + boxes and parks in
+    ; HandleMenuInput with the ▶ on FIGHT; AUTOKEY_QUIET photographs it at
+    ; AUTOKEY_DUMP_FRAME (the Makefile adds DEBUG_AUTOKEY).
+    call DisplayBattleMenu
+.goldenmenuhang:
+    call DelayFrame
+    jmp .goldenmenuhang
+%elifdef DEBUG_MOVEMENU
+    ; The menu screen first (DisplayBattleMenu's draw half — the golden's move
+    ; list draws over the real menu screen), then the FIGHT sub-menu parks in
+    ; its own HandleMenuInput loop; AUTOKEY_QUIET photographs it.
+    call LoadScreenTilesFromBuffer1
+    call DrawHUDsAndHPBars
+    call DrawEmptyDialogBox
+    call SaveScreenTilesToBuffer1
+    call DrawBattleMenuBox
+    mov byte [ebp + wMoveMenuType], 0
+    mov byte [ebp + wPlayerMoveListIndex], 0
+    mov byte [ebp + wMenuItemToSwap], 0
+    call MoveSelectionMenu
+.goldenmovehang:
+    call DelayFrame
+    jmp .goldenmovehang
+%elifdef DEBUG_ITEMBALL
+    ; ball_catch golden gate (fidelity plan Stage 2e): throw a ball at the
+    ; convergence-spec enemy loaded above by the REAL loaders. The golden
+    ; navigated the real battle menu → ITEM → the bag list; the port's
+    ; in-battle ITEM menu (BattleItemMenu) is still a battle-plan stub, so the
+    ; selection is preset and UseItem called directly — the same bypass as the
+    ; synthetic ITEMBALL gate below, on the golden-proven battle state.
+    ; pret refs for the mirrored steps: BagWasSelected redraws the HUDs
+    ; (core.asm:2293 — stages wLoadedMon, compared WRAM); UseBagItem
+    ; (core.asm:2344) zeroes wPseudoItemID before UseItem and, post-capture,
+    ; clears wCapturedMonSpecies + sets wBattleResult=2 (core.asm:2375-2395).
+%ifndef ITEMBALL_ID
+%define ITEMBALL_ID 0x01                ; MASTER_BALL — always captures (deterministic)
+%endif
+%ifndef ITEMBALL_SLOT
+%define ITEMBALL_SLOT 2                 ; seeded bag: POTION, ANTIDOTE, MASTER_BALL, …
+%endif
+    call LoadScreenTilesFromBuffer1
+    call DrawHUDsAndHPBars
+    ; one party slot free → the capture takes the AddPartyMon path (the box
+    ; path ends in the interactive naming screen; the golden declines the
+    ; nickname prompt with B, converging on the port's species-name default)
+    mov byte [ebp + wPartyCount], 5
+    mov byte [ebp + wWhichPokemon], ITEMBALL_SLOT   ; bag INDEX (RemoveItemFromInventory)
+    mov byte [ebp + wCurItem], ITEMBALL_ID
+    mov byte [ebp + wPseudoItemID], 0
+    call UseItem
+    ; UseBagItem's post-capture tail — the golden's dump trigger polls
+    ; wBattleResult == 2 at frame granularity, and by that frame boundary the
+    ; GB has already returned up the battle loop into EndOfBattle, whose
+    ; .resetVariables zeroed wIsInBattle (measured: the one-field first diff).
+    ; Run the REAL EndOfBattle here too — result 2 skips its pay-day/evolution
+    ; leg, and nothing after .resetVariables touches compared WRAM.
+    mov byte [ebp + wCapturedMonSpecies], 0
+    mov byte [ebp + wBattleResult], 2
+    call EndOfBattle
+    call DebugDumpMemory                ; GBSTATE.BIN (id 20) + DUMP.BIN + exit
+%else
+%error DEBUG_BATTLE_GOLDEN needs DEBUG_BATTLE_INTRO, DEBUG_BATTLE_MENU, DEBUG_MOVEMENU or DEBUG_ITEMBALL
+%endif
+%endif
+
+%else ; ------- the interactive/synthetic DEBUG_BATTLE harness -------
     mov byte [ebp + 0xD162], 0      ; wPartyCount = 0
     mov byte [ebp + 0xD163], 0xFF   ; wPartySpecies sentinel
     mov byte [ebp + 0xD31C], 0      ; wNumBagItems = 0
@@ -1023,16 +1201,19 @@ RunBattleTest:
     ; QUICK-ATTACK (L12), so the wild random-move AI visibly varies turn to turn.
     ; Stats are L13-appropriate (≈base+DV at L13) so the damage trades read sensibly.
     mov byte [ebp + wEnemyMonLevel], 13
-    mov word [ebp + wEnemyMonHP], 0xC800      ; big-endian 200 (TEMP PP-test: survives move depletion
-    mov word [ebp + wEnemyMonMaxHP], 0xC800   ; so all 4 moves can hit 0 PP → Struggle. REVERT to 0x2300.)
+    ; HP/stats = the Stage 2 convergence spec (PIDGEY L13, DVs $98 $76 —
+    ; golden-measured 36/19/17/21/15), so live play matches the goldens.
+    ; (The old TEMP PP-test 200-HP seed is de-REVERTed per the plan.)
+    mov word [ebp + wEnemyMonHP], 0x2400      ; big-endian 36
+    mov word [ebp + wEnemyMonMaxHP], 0x2400   ; big-endian 36
     mov byte [ebp + wEnemyMonStatus], 0
     ; enemy stats/types for the damage calc (PIDGEY: Normal/Flying)
     mov byte [ebp + wEnemyMonType1], 0x00      ; NORMAL
     mov byte [ebp + wEnemyMonType2], 0x02      ; FLYING
-    mov word [ebp + wEnemyMonAttack],  0x1200  ; 18 (big-endian)
+    mov word [ebp + wEnemyMonAttack],  0x1300  ; 19 (big-endian)
     mov word [ebp + wEnemyMonDefense], 0x1100  ; 17
     mov word [ebp + wEnemyMonSpeed],   0x1500  ; 21
-    mov word [ebp + wEnemyMonSpecial], 0x1000  ; 16
+    mov word [ebp + wEnemyMonSpecial], 0x0F00  ; 15
     mov byte [ebp + wEnemyMonSpecies], 0x24    ; PIDGEY (internal index) — real moveset gen
     ; A real wild encounter sets wEnemyMonSpecies2 + wCurEnemyLevel (TryDoWildEncounter);
     ; this harness seeds wEnemyMon* directly, so mirror them — LoadEnemyMonData keys off
@@ -1058,11 +1239,12 @@ RunBattleTest:
     mov byte [ebp + wBattleMonMoves + 1], 0x2D  ; GROWL
     mov byte [ebp + wBattleMonMoves + 2], 0x27  ; TAIL_WHIP
     mov byte [ebp + wBattleMonMoves + 3], 0x62  ; QUICK_ATTACK
-    ; TEMP PP-test seed (low PP so 0-PP/Struggle are reachable; REVERT to 30/40/30/30):
-    mov byte [ebp + wBattleMonPP + 0], 2       ; THUNDERSHOCK — use twice to watch it hit 0
-    mov byte [ebp + wBattleMonPP + 1], 1       ; GROWL
-    mov byte [ebp + wBattleMonPP + 2], 1       ; TAIL_WHIP
-    mov byte [ebp + wBattleMonPP + 3], 1       ; QUICK_ATTACK
+    ; Full PP (the moves' real maxima; the TEMP low-PP Struggle-test seed is
+    ; de-REVERTed per the fidelity plan's Stage 2):
+    mov byte [ebp + wBattleMonPP + 0], 30      ; THUNDERSHOCK
+    mov byte [ebp + wBattleMonPP + 1], 40      ; GROWL
+    mov byte [ebp + wBattleMonPP + 2], 30      ; TAIL_WHIP
+    mov byte [ebp + wBattleMonPP + 3], 30      ; QUICK_ATTACK
     ; player stats/types for the damage calc (PIKACHU: Electric)
     mov byte [ebp + wBattleMonType1], 0x17     ; ELECTRIC
     mov byte [ebp + wBattleMonType2], 0x17
@@ -1255,6 +1437,7 @@ RunBattleTest:
 .hang:
     jmp .hang
 %endif
+%endif ; DEBUG_BATTLE_GOLDEN / synthetic split
 %endif
 
 %ifdef DEBUG_LEARNMOVE

@@ -23,10 +23,14 @@ bits 32
 %define UI_LAYOUT_EQUATES_ONLY 1
 %include "assets/ui_layout_battle.inc"
 
-%define BALL_OK       0x00
-%define BALL_STATUS   0x01
-%define BALL_FAINTED  0x02
-%define BALL_EMPTY    0x03
+; pret's OBJ tile ids (LoadPartyPokeballGfx loads at vSprites tile $31;
+; PickPokeball: $31 regular, $32 black/status, $33 crossed/fainted, $34 empty).
+; The port used to park these at tiles $00-$03 — golden-diverged in both the
+; OAM tile bytes and the vChars0 slots; pret's slots are free here too.
+%define BALL_OK       0x31
+%define BALL_STATUS   0x32
+%define BALL_FAINTED  0x33
+%define BALL_EMPTY    0x34
 
 ; OAM bases from the generated battle layout (the elements are the rows'
 ; LEFT tiles; OAM = screen px + (8,16), see PrepareStaticOAM).
@@ -59,8 +63,8 @@ extern DrawPlayerHUDFrame
 extern g_tilecache_dirty        ; src/ppu/ppu.asm — arm cache re-decode after a vChars write
 
 ; ---------------------------------------------------------------------------
-; LoadPokeballGfx — copy the 4 ball tiles to OBJ tile area $8000 (tiles $00-$03).
-; EBP = GB base.
+; LoadPokeballGfx — copy the 4 ball tiles to pret's OBJ slots $31-$34 (pret
+; LoadPartyPokeballGfx: `ld hl, vSprites tile $31`). EBP = GB base.
 ;
 ; render_sprites composites from tile_cache as of the compositor-perf plan
 ; (docs/plans/compositor_perf.md Stage 4b) — it no longer bit-decodes raw OBJ
@@ -70,7 +74,7 @@ extern g_tilecache_dirty        ; src/ppu/ppu.asm — arm cache re-decode after 
 LoadPokeballGfx:
     mov byte [g_tilecache_dirty], 1      ; VRAM tile data changes → rebuild decode cache
     mov esi, ball_gfx
-    lea edi, [ebp + GB_VCHARS0]          ; $8000 → OBJ tiles $00..$03
+    lea edi, [ebp + GB_VCHARS0 + BALL_OK * 16]  ; $8310 → OBJ tiles $31..$34
     mov ecx, (4 * 16) / 4                ; 64 bytes
     rep movsd
     ret
@@ -83,6 +87,15 @@ LoadPokeballGfx:
 DrawBattlePokeballs:
     call LoadPokeballGfx
     call DrawPlayerHUDFrame               ; the shelf the player's balls sit on
+    ; Zero the whole $FE00 OAM first: the row overwrites entries 0..5 (0..11 for
+    ; a trainer), and everything beyond must read HIDDEN — the GB's shadow OAM
+    ; beyond the row holds Y=160-parked leftovers (hidden), and the golden diff
+    ; treats hidden-on-both-sides as equal; stale visible-coordinate garbage
+    ; from the last overworld OAM DMA is not hidden.
+    lea edi, [ebp + GB_OAM]
+    xor eax, eax
+    mov ecx, 40 * 4 / 4
+    rep stosd
     ; player row → OAM entries 0..5
     mov dword [pb_oam], GB_OAM
     mov dword [pb_base], wPartyMons
@@ -116,6 +129,14 @@ DrawBattlePokeballs:
 ; ---------------------------------------------------------------------------
 HideBattlePokeballs:
     call HideSprites                      ; zero shadow OAM + publish 0 valid entries
+    ; Zero $FE00 too: DrawBattlePokeballs wrote the ball entries there directly,
+    ; and on the GB the cleared shadow OAM is DMA'd over $FE00 at the next
+    ; frame — stale visible-coordinate balls in the dump would diverge from the
+    ; golden's zeros (measured, battle_menu first-diff).
+    lea edi, [ebp + GB_OAM]
+    xor eax, eax
+    mov ecx, 40 * 4 / 4
+    rep stosd
     and byte [ebp + IO_LCDC], ~LCDCF_OBJ_ON
     ret
 

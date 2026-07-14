@@ -171,6 +171,65 @@ ICON_GAP_SLOTS = sorted(
        + list(range(40, 44)) + list(range(56, 60))}                    # PIKACHU, TRADEBUBBLE
 )
 
+# Shared VRAM masks for the Stage 2 battle scenarios (measured, battle_intro
+# first-diff 2026-07-14).
+_BATTLE_VRAM_MASKS = [
+    # Golden slots $00-$30 hold a second copy of the enemy front pic: the GB
+    # battle screen uses $8000-addressing for BG ids $00-$7F, so pret loads the
+    # pic to vFrontPic(=vSprites $8000) AND the engine's $9310 copy. The port's
+    # flat-canvas battle render maps pic ids through its own bank scheme and
+    # draws from the $9310 copy — which IS compared and matches (slots
+    # $131-$161); its $8000-$8300 holds undisplayed overworld OBJ leftovers.
+    # Render-HAL divergence: pic content fidelity is pinned by the tilemap ids
+    # + the matching $93xx slots.
+    *[(s, "pic bank placement: golden's $8000-addressing copy of the front pic; the port "
+          "draws from the matching (compared) $9310 copy — port $80xx is undisplayed "
+          "OBJ leftovers") for s in range(0x00, 0x31)],
+    # F-19: the port clones the nine enemy-gauge patterns into vFont ids
+    # $C0-$C8 for per-tile palette binding (ids the charmap never maps, so no
+    # text can reference them); the golden holds the never-referenced Japanese
+    # kana font tiles there. Retiring F-19's mechanism (per-cell palettes)
+    # deletes this mask.
+    *[(s, "F-19 enemy-gauge clone slots $C0-$C8: port palette-HAL clones vs golden's "
+          "never-referenced kana glyphs") for s in range(0xC0, 0xC9)],
+]
+
+# Post-send-out variant (battle_menu / move_selection): the GB has by now used
+# its whole $8000 bank — back pic reloaded over the ball tiles at $8310+, and
+# the send-out POOF animation + slide buffers streamed through $8400-$87FF.
+# The port's battle render never touches that bank after the intro (its BG
+# draws from the $93xx copies, which ARE compared and match; OBJ is off), so
+# the full bank is the pic/anim-bank placement divergence. The intro variant
+# above keeps $31+ compared — that is where the port's ball OBJ tiles live and
+# display.
+_BATTLE_VRAM_MASKS_MENU = [
+    *[(s, "GB battle anim/pic bank ($8000-$87FF) post-send-out: back pic + POOF/slide "
+          "anim tiles on the golden; the port draws from the matching (compared) $93xx "
+          "copies and its $80xx is undisplayed after the intro") for s in range(0x00, 0x80)],
+    *[(s, "F-19 enemy-gauge clone slots $C0-$C8: port palette-HAL clones vs golden's "
+          "never-referenced kana glyphs") for s in range(0xC0, 0xC9)],
+]
+
+# The enemy HP gauge's six segment cells carry the F-19 clone ids on the port
+# ($C0-$C8 band) where the golden has the shared $62-$6B gauge ids. GB cells
+# (row 2, cols 4-9). Retiring F-19 deletes this mask too.
+_BATTLE_TILEMAP_MASKS_MENU = [
+    ((2, 4, 2, 9), "F-19: enemy gauge segments use the port's palette-HAL clone tile ids; "
+                   "the golden uses the shared $62-$6B gauge ids"),
+]
+
+# Shared WRAM masks for the Stage 2 battle scenarios.
+_BATTLE_WRAM_MASKS = {
+    "wOptionsBlock": [
+        ((3, 3), "wLetterPrintingDelayFlags: sanctioned draw-layer divergence — the GB "
+                 "keeps BIT_TEXT_DELAY set through the battle (TextCommandProcessor "
+                 "gates the delay per message); the port's PlaceString calls "
+                 "PrintLetterDelay unconditionally, so InitBattle keeps the bit OFF "
+                 "except while a dialog message prints (init_battle.asm text-delay "
+                 "config note)"),
+    ],
+}
+
 SCENARIOS = {
     "status_p1": {
         "flags": "DEBUG_STATUS=1",
@@ -368,6 +427,47 @@ SCENARIOS = {
         "class": "datastruct",
         "flags": "DEBUG_ITEMUSE=1 AUTOKEY_DUMP_FRAME=700",
         "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
+    },
+    # --- Stage 2: battle scenarios. Window (10,3) = the uniform GB-centering of
+    # (shared wram_masks defined above SCENARIOS: _BATTLE_WRAM_MASKS)
+    # the widescreen battle canvas (docs/ui_projection.md, "Battle — GB-centered");
+    # no per-element projections. Battle WRAM IS compared (no
+    # _NONBATTLE_WRAM_SKIP): the enemy is the convergence-spec wild PIDGEY L13
+    # (DVs $98 $76, real loaders on both sides — see seed.enemy /
+    # DEBUG_BATTLE_GOLDEN). Masks are measured, per entry. ---
+    "battle_intro": {
+        "flags": "DEBUG_BATTLE_GOLDEN=1 DEBUG_BATTLE_INTRO=1",
+        "window": (10, 3),
+        "oam_window": True,  # battle canvas = fixed GB-centering; OBJ shift with it
+        "masks": {"vram": list(_BATTLE_VRAM_MASKS)},
+        "wram_masks": dict(_BATTLE_WRAM_MASKS),
+    },
+    "battle_menu": {
+        # dump frame 300: well past the intro slide-in + send-out draws — the
+        # screen is parked in HandleMenuInput long before (state, not timing)
+        "flags": "DEBUG_BATTLE_GOLDEN=1 DEBUG_BATTLE_MENU=1 AUTOKEY_DUMP_FRAME=300",
+        "window": (10, 3),
+        "oam_window": True,
+        "masks": {"vram": list(_BATTLE_VRAM_MASKS_MENU),
+                  "tilemap": list(_BATTLE_TILEMAP_MASKS_MENU)},
+        "wram_masks": dict(_BATTLE_WRAM_MASKS),
+    },
+    "move_selection": {
+        "flags": "DEBUG_BATTLE_GOLDEN=1 DEBUG_MOVEMENU=1 AUTOKEY_DUMP_FRAME=300",
+        "window": (10, 3),
+        "oam_window": True,
+        "masks": {"vram": list(_BATTLE_VRAM_MASKS_MENU),
+                  "tilemap": list(_BATTLE_TILEMAP_MASKS_MENU)},
+        "wram_masks": dict(_BATTLE_WRAM_MASKS),
+    },
+    "ball_catch": {
+        # datastruct: the catch's WRAM outcome (party append, bag decrement,
+        # dex bits, spec enemy still loaded). Both sides dump the instant
+        # UseBagItem's post-capture tail sets wBattleResult=2 (golden polls it
+        # per-frame; the port gate mirrors the tail then dumps).
+        "class": "datastruct",
+        "flags": "DEBUG_BATTLE_GOLDEN=1 DEBUG_ITEMBALL=1",
+        "wram_masks": dict(_BATTLE_WRAM_MASKS),
     },
     "start_menu": {
         "flags": "DEBUG_STARTMENU=1",
@@ -738,7 +838,7 @@ def main():
     else:
         # --- tilemap: 20x18 subwindow at (col,row), minus projected UI rects ---
         col0, row0 = cfg["window"]
-        tm_masks = expand_tilemap_masks(cfg["masks"].get("tilemap", []))
+        tm_masks = expand_tilemap_masks(cfg.get("masks", {}).get("tilemap", []))
         projections = cfg.get("projections", [])
         offcanvas_why = cfg.get("offcanvas")
         tm_lines = []
@@ -775,7 +875,7 @@ def main():
             print(f"TILEMAP: OK (360 cells, window at col {col0} row {row0})")
 
         # --- vram: per 16-byte tile slot ---
-        vr_masks = dict(cfg["masks"].get("vram", []))
+        vr_masks = dict(cfg.get("masks", {}).get("vram", []))
         vr_lines = []
         for slot in range(VRAM_SIZE // 16):
             want = golden["vram_tiles"][slot * 16:(slot + 1) * 16]
@@ -798,14 +898,29 @@ def main():
         else:
             print("VRAM: OK (384 tile slots)")
 
-        # --- oam: per 4-byte sprite entry ---
-        oam_masks = dict(cfg["masks"].get("oam", []))
+        # --- oam: per 4-byte sprite entry. Scenarios whose canvas is a FIXED
+        # pixel projection of the GB screen (battle: the uniform GB-centering)
+        # set "oam_window": True — a VISIBLE golden sprite is then compared at
+        # its position + the window's pixel offset (8*col, 8*row). Overworld
+        # scenarios must NOT set it: their tilemap window is block-grid
+        # alignment, and the visible pixel offset lives in the Xoff/Yoff blit,
+        # not in the OAM bytes. Hidden entries (Y == 0 / Y >= 160) compare
+        # unshifted (parked positions are arbitrary; the both-hidden rule
+        # absorbs them anyway). ---
+        oam_masks = dict(cfg.get("masks", {}).get("oam", []))
+        if cfg.get("oam_window"):
+            oam_dx, oam_dy = col0 * 8, row0 * 8
+        else:
+            oam_dx = oam_dy = 0
         oam_lines = []
         def oam_hidden(e):
             return e[0] == 0 or e[0] >= 160  # sprite Y fully off the 144-line screen
 
         for i in range(OAM_SIZE // 4):
             want = golden["oam"][i * 4:(i + 1) * 4]
+            if (oam_dx or oam_dy) and not oam_hidden(want):
+                want = bytes(((want[0] + oam_dy) & 0xFF, (want[1] + oam_dx) & 0xFF,
+                              want[2], want[3]))
             got = port["oam"][i * 4:(i + 1) * 4]
             if want == got:
                 continue

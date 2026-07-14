@@ -364,6 +364,89 @@ function seed.badges(sym, badges)
 	emu:write8(sym:addr("wObtainedBadges"), badges or 0x7F)
 end
 
+-- ---------------------------------------------------------------------------
+-- Stage 2: battle convergence spec (fidelity plan)
+-- ---------------------------------------------------------------------------
+
+-- Wild enemy spec: PIDGEY (internal $24), level 13, the shared DV bytes.
+seed.ENEMY = { species = 0x24, level = 13 }
+
+-- Make the next grass step encounter-deterministic in OUTCOME: wGrassRate=$FF
+-- (the encounter roll passes 255/256 — mGBA is deterministic, so whichever
+-- step triggers is the same run-to-run) and all 10 wGrassMons slots = the spec
+-- mon, so the slot roll cannot change the result.
+function seed.force_encounter(sym)
+	emu:write8(sym:addr("wGrassRate"), 0xFF)
+	write_bytes(sym:addr("wGrassMons"),
+		string.char(seed.ENEMY.level, seed.ENEMY.species):rep(10))
+	console:log("seed: forced grass encounters (10 x L13 PIDGEY, rate $FF)")
+end
+
+-- Set one wEventFlags bit (constants/event_constants.asm numbering). Event
+-- flags are NOT in any compared region (see the debug_new_game note), so this
+-- is pure navigation enablement — e.g. EVENT_FOLLOWED_OAK_INTO_LAB (0) turns
+-- off Pallet Town's scripted Oak catch-up at the Route 1 boundary.
+function seed.set_event(sym, event)
+	local addr = sym:addr("wEventFlags") + (event >> 3)
+	emu:write8(addr, emu:read8(addr) | (1 << (event & 7)))
+end
+
+-- After the REAL LoadEnemyMonData has run (battle intro on screen): ASSERT the
+-- loader-derived parts of wEnemyMon — species, level, types, catch rate, moves,
+-- PP — so a loader regression fails the scenario instead of being papered over;
+-- then overwrite ONLY the RNG-derived parts: DVs → the spec bytes, the five
+-- stats recomputed by pret's CalcStat from those DVs (stat exp 0), HP = MaxHP,
+-- and the unmodified level+stats snapshot LoadEnemyMonData took from the rolled
+-- DVs. The port's DEBUG_BATTLE_GOLDEN gate performs the same overwrite after
+-- its own real LoadEnemyMonData call, so both sides converge byte-for-byte.
+function seed.enemy(sym)
+	local function rd(label)
+		return emu:read8(sym:addr(label))
+	end
+	assert(rd("wEnemyMonSpecies") == seed.ENEMY.species,
+		("seed.enemy: loader put species %02X in wEnemyMon"):format(rd("wEnemyMonSpecies")))
+	assert(rd("wEnemyMonLevel") == seed.ENEMY.level,
+		("seed.enemy: loader put level %d in wEnemyMon"):format(rd("wEnemyMonLevel")))
+	assert(rd("wEnemyMonStatus") == 0, "seed.enemy: nonzero status on a fresh wild mon")
+
+	local dex = index_to_dex(sym, seed.ENEMY.species)
+	local bs = base_stats(sym, dex)
+	local hp_base, atk, def, spd, spc = bs:byte(2, 6)
+	assert(rd("wEnemyMonType1") == bs:byte(7) and rd("wEnemyMonType2") == bs:byte(8),
+		"seed.enemy: loader types do not match BaseStats")
+	assert(rd("wEnemyMonCatchRate") == bs:byte(9),
+		"seed.enemy: loader catch rate does not match BaseStats")
+
+	-- moves exactly as the wild path builds them: the 4 base-stats moves, then
+	-- WriteMonMoves folds in the level-up learnset; PP from the FINAL moves.
+	local moves = write_mon_moves({ bs:byte(16, 19) },
+		mon_learnset(sym, seed.ENEMY.species), seed.ENEMY.level)
+	for slot = 1, 4 do
+		local got = emu:read8(sym:addr("wEnemyMonMoves") + slot - 1)
+		assert(got == moves[slot],
+			("seed.enemy: move slot %d is %02X, learnset says %02X"):format(slot, got, moves[slot]))
+		local want_pp = moves[slot] ~= 0 and move_pp(sym, moves[slot]) or 0
+		local got_pp = emu:read8(sym:addr("wEnemyMonPP") + slot - 1)
+		assert(got_pp == want_pp,
+			("seed.enemy: PP slot %d is %d, Moves table says %d"):format(slot, got_pp, want_pp))
+	end
+
+	-- overwrite the RNG-derived parts
+	write_bytes(sym:addr("wEnemyMonDVs"), string.char(seed.DV_BYTES[1], seed.DV_BYTES[2]))
+	local max_hp = calc_stat(hp_base, DV.hp, seed.ENEMY.level, true)
+	local stats = u16be(max_hp)
+		.. u16be(calc_stat(atk, DV.atk, seed.ENEMY.level, false))
+		.. u16be(calc_stat(def, DV.def, seed.ENEMY.level, false))
+		.. u16be(calc_stat(spd, DV.spd, seed.ENEMY.level, false))
+		.. u16be(calc_stat(spc, DV.spc, seed.ENEMY.level, false))
+	write_bytes(sym:addr("wEnemyMonMaxHP"), stats)
+	write_bytes(sym:addr("wEnemyMonHP"), u16be(max_hp))
+	-- the snapshot is 1 + NUM_STATS*2 bytes copied from wEnemyMonLevel
+	write_bytes(sym:addr("wEnemyMonUnmodifiedLevel"), string.char(seed.ENEMY.level) .. stats)
+	console:log(("seed: enemy DVs %02X %02X, stats %d/%d HP recomputed"):format(
+		seed.DV_BYTES[1], seed.DV_BYTES[2], max_hp, max_hp))
+end
+
 -- The whole of the port's PrepareNewGameDebug (debug_party.asm:76-186) in one
 -- call: identity, party, bag, pokédex, badges, money.
 --

@@ -36,7 +36,13 @@ bits 32
 %define HPB_LEFT  0x62             ; ":" + gauge left edge
 %define HPB_EMPTY 0x63             ; empty gauge segment; $63+n = n-pixel partial
 %define HPB_FULL  0x6b             ; full (8px) gauge segment
-%define HPB_END   0x6c             ; gauge right cap
+; Right cap = pret DrawHPBar's [wHPBarType] switch: the player battle bar is
+; ALWAYS drawn with type 1 (DrawHP / core.asm:5015 / core.asm:687 player turn)
+; → cap $6D; the enemy bar ALWAYS with type 0 (core.asm:2034/4897/686) → $6C.
+; The port's player/enemy helper split maps 1:1 onto that, so the cap is
+; per-helper instead of a WRAM flag. (F-20, battle_menu golden: (18,9) $6D.)
+%define HPB_END_PLAYER 0x6d        ; gauge right cap, wHPBarType 1 (battle player)
+%define HPB_END_ENEMY  0x6c       ; gauge right cap, wHPBarType 0 (enemy)
 ; Battle-local clones of $63-$6b. These English glyph slots are not used by
 ; the battle UI, so the two HP bars can own distinct physical tile IDs.
 %define TILE_LV   0x6e             ; ":L" level prefix
@@ -69,6 +75,8 @@ bits 32
 %define P_LV      UI_PLAYER_LV_OFS
 %define P_HPBAR   UI_PLAYER_HPBAR_OFS
 %define P_HPFRAC  UI_PLAYER_HPFRAC_OFS ; "cur/max" (3 + 1 + 3 tiles)
+; PROJ battle: the player connectors stack in the element's top-RIGHT column
+%define P_FRAME_CONN (UI_PLAYER_HUD_FRAME_OFS + UI_PLAYER_HUD_FRAME_GBW - 1)
 
 section .bss
 ; AnimateHPBar loop state (kept in BSS so draw_hp_bar / print_num3 / DelayFrame
@@ -99,6 +107,7 @@ extern Delay3                          ; frame.asm — wait 3 frames (pret Updat
 extern g_tilecache_dirty                ; ppu.asm — cloned VRAM patterns need re-decode
 extern GetHealthBarColor                ; fade.asm — pixel length -> green/yellow/red id
 extern SetPal_Battle                    ; palettes.asm — consume both live HP-color ids
+extern CopyData                         ; home/copy_data.asm — wLoadedMon staging
 
 ; DrawBattleHUDs draws both HUDs; the battle intro draws only the enemy HUD (the
 ; player side shows party-status pokéballs until the battle proper), so the two
@@ -108,14 +117,37 @@ DrawBattleHUDs:
     ; PrintLetterDelay — so make sure the per-letter delay is OFF here (BIT_TEXT_DELAY is
     ; set only while a dialog MESSAGE prints). Otherwise the mon names would type out.
     and byte [ebp + W_LETTER_PRINTING_DELAY], (~(1 << BIT_TEXT_DELAY)) & 0xFF
-    call DrawEnemyHUD
+    ; pret DrawHUDsAndHPBars order: PLAYER first, then ENEMY (core.asm:1886).
+    ; Load-bearing since the wLoadedMon staging landed: both HUDs write
+    ; wLoadedMonLevel, and the surviving value must be the ENEMY's (measured in
+    ; the battle_menu golden: wLoadedMon = battle mon, level byte = enemy's).
     call DrawPlayerHUD
+    call DrawEnemyHUD
     ; Both bars have now refreshed their color IDs; publish their independent
     ; palette slots together (the enemy uses cloned gauge tile IDs).
     call SetPal_Battle
     ret
 DrawPlayerHUD:
     ; ===== player HUD (lower-right) =====
+    ; pret DrawPlayerHUDAndHPBar draws the frame FIRST: PlacePlayerHUDTiles +
+    ; the (18,9) $73 connector, which DrawHP later OVERWRITES with the HP bar's
+    ; right cap $6D — pret's second $73 is dead the moment the bar draws. The
+    ; port used to draw the frame/connector last, leaving $73 where the golden
+    ; shows $6D (F-18). Frame first, bar last, like pret.
+    call DrawPlayerHUDFrame
+    mov byte [ebp + W_TILEMAP + P_FRAME_CONN], T_HUD_73
+    ; pret stages the battle mon in wLoadedMon — species..DVs then level..PP
+    ; (core.asm:1903-1910); PrintLevel/DrawHP read it there, and it is
+    ; battle-visible WRAM the goldens compare. The enemy HUD (drawn after,
+    ; pret order) then overwrites wLoadedMonLevel with the enemy's level.
+    mov esi, wBattleMonSpecies
+    mov edx, wLoadedMon
+    mov ebx, wBattleMonDVs - wBattleMonSpecies
+    call CopyData
+    mov esi, wBattleMonLevel
+    mov edx, wLoadedMonLevel
+    mov ebx, wBattleMonPP - wBattleMonLevel
+    call CopyData
     mov esi, W_TILEMAP + P_NAME
     lea eax, [ebp + wBattleMonNick]      ; PlaceString src = flat-linear
     call PlaceString
@@ -141,7 +173,6 @@ DrawPlayerHUD:
     mov al, [ebp + wBattleMonMaxHP + 1]
     mov edi, W_TILEMAP + P_HPFRAC + 4
     call print_num3
-    call DrawPlayerHUDFrame               ; the shelf persists into the battle proper
     ret
 
 DrawEnemyHUD:
@@ -150,6 +181,9 @@ DrawEnemyHUD:
     lea eax, [ebp + wEnemyMonNick]
     call PlaceString
     movzx eax, byte [ebp + wEnemyMonLevel]
+    ; pret DrawEnemyHUDAndHPBar stages the level in wLoadedMonLevel before
+    ; PrintLevel (core.asm:1969-1970) — battle-visible WRAM the goldens compare.
+    mov [ebp + wLoadedMonLevel], al
     mov edi, W_TILEMAP + E_LV
     call print_level
     mov ebx, wEnemyMonHP                 ; calc_hp_pixels: EBX=curHP addr, ESI=maxHP addr
@@ -204,12 +238,12 @@ DrawEnemyHUDFrame:
     mov bh, T_ECORNER
     mov bl, T_ETRI
     jmp place_hud_frame
-; PROJ battle: the player connectors stack in the element's top-RIGHT column
-%define P_FRAME_CONN (UI_PLAYER_HUD_FRAME_OFS + UI_PLAYER_HUD_FRAME_GBW - 1)
+; (P_FRAME_CONN defined with the other P_* equates at the top of the file —
+; DrawPlayerHUD uses it too, and %defines must precede first use.)
 DrawPlayerHUDFrame:
-    ; pret DrawPlayerHUDAndHPBar writes a 2nd $73 connector one row above the
-    ; PlacePlayerHUDTiles $73 (shelf row below marches left from it).
-    mov byte [ebp + W_TILEMAP + P_FRAME_CONN], T_HUD_73
+    ; pret PlacePlayerHUDTiles: ONE $73 connector + the shelf row below. The
+    ; element rect's top row is the UPPER connector row (DrawPlayerHUD's, F-18),
+    ; so this frame's $73 sits one row down at +FW.
     mov edi, W_TILEMAP + P_FRAME_CONN + FW
     mov esi, -1                           ; underline marches left
     mov bh, T_PCORNER
@@ -236,7 +270,7 @@ place_hud_frame:
 draw_hp_bar:
     mov byte [ebp + edi], HPB_HP
     mov byte [ebp + edi + 1], HPB_LEFT
-    mov byte [ebp + edi + 8], HPB_END
+    mov byte [ebp + edi + 8], HPB_END_PLAYER
     add edi, 2                           ; first of 6 gauge segments
     mov ecx, 6
 .seg:
@@ -260,7 +294,7 @@ draw_hp_bar:
 draw_enemy_hp_bar:
     mov byte [ebp + edi], HPB_HP
     mov byte [ebp + edi + 1], HPB_LEFT
-    mov byte [ebp + edi + 8], HPB_END
+    mov byte [ebp + edi + 8], HPB_END_ENEMY
     add edi, 2
     mov ecx, 6
 .seg:
@@ -545,4 +579,10 @@ print_num3:
 section .data
 ; $63+$n (n=0..8): empty, partial 1..7, full.  These IDs are deliberately
 ; noncontiguous so no live English battle glyph is overwritten.
-enemy_hp_tile_ids: db 0xe9, 0xea, 0xeb, 0xec, 0xee, 0xef, 0xf0, 0xf1, 0xf4
+; F-19 FIX (fidelity plan Stage 2): these ids used to be $E9,$EA,$EB,$EC,$EE,
+; $EF,$F0,$F1,$F4 — claimed "unused English glyph slots", but only $E9-$EB are
+; unused (charmap.asm): $EC=▷, $EE=▼(!), $EF=♂, $F0=¥, $F1=×, $F4=comma. The
+; clones clobbered the battle dialog's ▼ prompt glyph (and ×/¥/▷ wherever they
+; appear in battle text). Ids $C0-$DF have NO charmap mapping at all — no text
+; can ever reference them — so the nine clones live there now.
+enemy_hp_tile_ids: db 0xc0, 0xc1, 0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7, 0xc8

@@ -2,8 +2,9 @@
 
 > **STATUS — OPEN.** Planned 2026-07-13 in the `worktree-fidelity-expansion` worktree;
 > **folded back into master 2026-07-14** and rectified against it in the same pass.
-> Stages 0, 1a and 1b are DONE (see the ledger); 1c/2/3/4 remain. Work stage-by-stage,
-> update the Coverage table, append findings, commit per stage.
+> Stages 0, 1a, 1b, 1c and **2** are DONE (see the ledger); **3/4 remain — see the
+> SESSION HANDOFF section immediately below.** Work stage-by-stage, update the Coverage
+> table, append findings, commit per stage.
 >
 > **Filed as `docs/current_plan_fidelity_expansion.md`** — the active-plan path. The
 > fold-back (`9dc7fed2`) wrote it into `docs/plans/` instead, the *completed*-plan directory,
@@ -18,6 +19,56 @@
 >
 > Skills to load before starting: `build-and-debug` + `faithfulness-review` (always),
 > `asm-translation` (before touching `debug_dump.asm`), `project-conventions`.
+
+## 🤝 SESSION HANDOFF (written 2026-07-14, end of the Stage-2 session)
+
+The session that executed Stages 1c and 2 ended here **by design** (context hygiene — the
+user asked for a fresh session for the rest). If you are that fresh session: this section is
+your starting state. Everything below it is still binding; read "⚠ Read this first" next,
+then the Stage 3/4 specs.
+
+**Where master stands after the Stage-2 commit:**
+- `make -C dos_port fidelity` is **14/14** green: status_p1/p2, start_menu, overworld_pallet,
+  party_menu, bag_menu, sign_pallet, item_tm_teach, item_stone_evolve, item_potion_use,
+  battle_intro, battle_menu, move_selection, ball_catch.
+- All goldens are committed and regenerate byte-identically (verified ×2 this session for the
+  four battle goldens; the Route 1 encounter lands at frame 5259 every run).
+- `tools/lint_pret_labels` exits 0. `tools/update_label_db` was run after the commit.
+
+**What remains: Stage 3 (menu scenarios ×5 + stride-20 differ support), then Stage 4
+(tiers, `goldens-verify`, mask policy, skill updates, archive this plan).** Their specs below
+are already rectified — but re-measure anyway; the standing rule (master is truth, comments
+are not) applies to this file too.
+
+**Machinery Stage 2 left you (reuse, don't rebuild):**
+- Golden side: `lib/battle.lua` (`enter_wild` = the whole boot→Route-1→forced-encounter→spec
+  enemy flow), `seed.enemy` / `seed.force_encounter` / `seed.set_event` in `lib/seed.lua`.
+- Port side: the `DEBUG_BATTLE_GOLDEN` branch of `RunBattleTest` (`debug_dump.asm`) with
+  subflag chain `_INTRO` / `_MENU` / `DEBUG_MOVEMENU` / `DEBUG_ITEMBALL`; scenario ids 14/15/16/20.
+- Differ: battle window is a uniform (10,3) with `oam_window: True`; `_BATTLE_VRAM_MASKS`
+  (intro) vs `_BATTLE_VRAM_MASKS_MENU` (post-send-out) — every mask string explains its
+  measurement; F-19's masks carry the finding id (Stage 4's mask policy is already followed
+  there).
+- Stage 3 needs the `"stride": 20` differ key (NOT yet implemented) — see its spec.
+
+**Session mechanics for the fresh session:**
+- **Stigmergy**: register (`context_open` + `root_register` with your host session id), then
+  re-acquire claims for what you touch (`golden_diff.py`, `mgba_harness/**`, `Makefile`,
+  `debug_dump.asm`, this file). The Stage-2 session released its claims (96–99, 107) at
+  handoff.
+- **Codex agent `r-1a5ca7a94daa`** (mailbox thread 13, session since ended): its
+  scenario-manifest consolidation (`scenario_manifest.json` + `validate_scenarios.py`,
+  currently describing only the 10 Stage-1c scenarios — it will report drift for the battle
+  scenarios; that is expected and theirs to update) is **sequenced after Stage 4's archive**.
+  When you archive this plan, send a mail to that root (or whoever holds the manifest files
+  then) saying the claims are released and the scenario set is final.
+- `.codex/config.toml` shows modified in the tree — **not ours; do not commit it.**
+- Standing user directives that governed this plan's sessions: *"Don't stop until the plan is
+  done"*; per-stage task lists that start high-level and expand to subtasks on entering the
+  stage; *"Reason then do — doing without reason breaks things"*; measure divergences from
+  first diffs, never lift expected values; one commit per stage with the ledger + findings
+  updated in that same commit; revert-proof each new capability (paste the RED output in the
+  stage notes, then revert).
 
 ## ⚠ Read this first — why this document was rewritten
 
@@ -155,7 +206,7 @@ dialog scratch **shares bytes with the map mirror** — F-13.)
 | 1a | GBSTATE v2 + WRAM regions end-to-end (existing 6 scenarios) | DONE | `a74c44c9`, `8b018e84` | v2 is SELF-DESCRIBING (design change, below); found 3 real harness bugs (F-3/F-4/F-5); fidelity 6/6 green |
 | 1b | `sign_pallet` streamed-text scenario | **DONE** | `60990fd5`, `b99c0199`, `1c346cbb`, `189fbb59` | the port could not read a sign AT ALL (F-6 data, F-7 code) — both fixed. Plus **F-10** (text-id-0 collision) and **F-12** (the gate stood on an unreachable tile), both found during the fold-back. Golden passes 360/360 tilemap cells incl. the whole dialog box; `make fidelity` 7/7. **Never was blocked**: F-9 was a misdiagnosis, F-8 does not reproduce. New OPEN findings it surfaced: **F-13** (scratch/mirror overlap), **F-14** (▼ after `done`). |
 | 1c | Item datastruct scenarios ×3 | **DONE** | (this commit) | Differ class `datastruct` + `item_tm_teach` / `item_stone_evolve` / `item_potion_use`; `make fidelity` 10/10. First-ever observation of these gates (F-15) immediately caught a REAL port bug: **F-16** — the post-evolution stat recalc read the NEXT species' base stats (NINETALES got JIGGLYPUFF's). Fixed; golden-verified. M-8 did **not** surface (no priced list in these flows — see the stage notes). |
-| 2 | Battle convergence spec + battle_intro/battle_menu/move_selection + ball_catch | TODO | | |
+| 2 | Battle convergence spec + battle_intro/battle_menu/move_selection + ball_catch | **DONE** | (this commit) | The spec battle (real loaders both sides, DVs $98 $76 overwritten, loader-derived parts asserted) converges end-to-end: `make fidelity` **14/14**. First diffs caught **four real port fidelity bugs** — **F-17** (enemy HUD drawn during the wild intro), **F-18** (dead $73 drawn over the HP-bar cap), **F-19** (enemy-gauge palette clones parked on LIVE glyphs incl. the battle ▼), **F-20** (player HP-bar cap $6C where battle uses $6D) — plus **F-21** (wLoadedMon staging + player-first HUD order omitted). Ball tiles moved to pret's OBJ ids $31–$34; ball OAM rows now zero all of $FE00 (GB DMA parity). `ball_catch` passes with **zero WRAM masks**. |
 | 3 | Menu scenarios ×5 + stride support | TODO | | |
 | 4 | Cross-cut: tiers, goldens-verify, mask policy, skill updates | TODO | | |
 
@@ -387,6 +438,54 @@ it, do not mask it.**
 gate `_MOVESEL` behind that row" is **stale — row 22 has landed.** The FIGHT sub-menu was a
 bespoke loop in which three of pret's four labels did not exist; it now has pret's structure
 and its load-bearing **1-based cursor**. The gate is `DEBUG_MOVEMENU`.
+
+#### Stage 2 — DONE. How it actually converged (execution notes)
+
+**Golden side.** `lib/battle.lua:enter_wild` is the shared flow: boot → seeded new game →
+bedroom → walk to Route 1 (`EVENT_FOLLOWED_OAK_INTO_LAB` seeded first, or Yellow's Oak
+catch-up cutscene fires at Pallet's `wYCoord==0`) → **seed at Route 1, not in the bedroom**
+(seeding before the walk broke the very first step) → forced grass encounter (deterministic:
+**frame 5259 every run**) → `wait_for_text("appeared")` → `seed.enemy` (asserts the
+loader-derived parts, overwrites DVs → $98 $76, recomputes stats, HP=MaxHP). `battle_menu` /
+`move_selection` continue with A → menu; `ball_catch` continues menu → ITEM → MASTER BALL →
+catch flow (the "caught!" message holds a `<cont>` scroll-wait — the ▼-answering
+`dialog_until_text` drives it), declines the nickname prompt with a retried **B** (the port's
+AddPartyMon keeps the species-name default — its documented AskName stub), then **polls
+`wBattleResult == 2` per frame** (UseBagItem's post-capture tail) and dumps that frame.
+
+**Port side.** `RunBattleTest`'s `DEBUG_BATTLE_GOLDEN` branch (debug_dump.asm): the REAL
+`InitBattle` → `LoadEnemyMonData`, then the spec-DV overwrite + `CalcStats` recompute (same
+registers as the loader's own call), then the real intro (front pic, slide-in, intro box,
+pokéballs — **no HUDs**: the GB first draws them at the battle menu). Subflags: `_INTRO`
+dumps at the parked "appeared!" (▼ poked at GB (16,18)); `_MENU`/`DEBUG_MOVEMENU` run the
+send-out (real `LoadBattleMonFromParty`) then the real `DisplayBattleMenu` /
+`MoveSelectionMenu` and photograph at `AUTOKEY_DUMP_FRAME=300`; `DEBUG_ITEMBALL` presets
+`wCurItem`/`wWhichPokemon` (the in-battle ITEM menu is still a stub), calls the real
+`UseItem`, mirrors UseBagItem's post-capture tail, runs the real **`EndOfBattle`** (measured:
+the golden's dump frame already has `.resetVariables` done — `wIsInBattle==0` was the
+one-field first diff), and dumps. Combined flags compose in the Makefile:
+`DEBUG_BATTLE_GOLDEN=1 DEBUG_ITEMBALL=1`.
+
+**Masks (all measured, none lifted from expectations):** intro masks VRAM slots $00–$30
+(golden's $8000-copy of the front pic; the port draws from the compared $9310 copy) +
+$C0–$C8 (F-19 clone slots); menu/movesel mask the whole $8000 bank post-send-out (back pic +
+POOF/slide anim streamed through it; measured golden slot 0x131 == port 0x131) + the F-19
+slots + 6 tilemap cells (2,4)-(2,9) (gauge clone ids). One WRAM byte masked:
+`wLetterPrintingDelayFlags` (sanctioned draw-layer divergence). `ball_catch` (datastruct)
+passes with **zero WRAM masks**.
+
+**RED proofs (the differ catches regressions through the masks):**
+- battle_menu, organic (F-20): `TILEMAP: 1 mismatched cells (of 360) … ( 9,18) want $6D got
+  $6C … FAIL battle_menu: 1 unmasked divergences` — a single-cell real bug surfaced with all
+  masks live.
+- ball_catch, organic (EndOfBattle timing): `WRAM: 1 mismatched fields: wBattleFlags
+  wIsInBattle: want $00 | got $01 … FAIL ball_catch` — a single WRAM field through the
+  datastruct class skips.
+- battle_intro, synthetic: corrupting the ▼ poke ($EE→$00) → `FAIL battle_intro: 1 unmasked
+  divergences`; reverted.
+
+**Determinism:** all four goldens regenerated a second time → byte-identical
+(`cmp` on .bin: battle_intro, battle_menu, move_selection, ball_catch).
 
 ### Stage 3 — Menu scenarios (L)
 
@@ -753,6 +852,52 @@ Two morals, both this project's recurring ones: **the comment was confident and 
 have caught it** — the stats are only ever *displayed* after other code recomputes or
 copies them; only a WRAM datastruct diff against ground truth sees the poisoned bytes the
 moment they are written.
+
+### F-17. The port drew the enemy HUD during the wild-battle intro — the GB draws NO HUDs there [FIXED — Stage 2]
+
+`DrawBattleIntroBox` (`src/engine/battle/init_battle.asm`) called `DrawEnemyHUD` as part of
+the intro. pret's intro is `PrintBeginningBattleText` — cry + `DrawAllPokeballs` +
+"Wild X appeared!" — and **both HUDs are first drawn by `DisplayBattleMenu` →
+`DrawHUDsAndHPBars`** (core.asm:1886). The golden's intro rows 0–3 are blank; the port's
+held a full enemy name/level/HP bar. Fixed by deleting the call (the battle_intro golden is
+the regression guard).
+
+### F-18. The player HUD's $73 connector was drawn AFTER the HP bar — pret draws it before, and the bar cap overwrites it [FIXED — Stage 2]
+
+pret `DrawPlayerHUDAndHPBar` places the (18,9) `$73` right after `PlacePlayerHUDTiles`, then
+`predef DrawHP` **overwrites it with the bar's right cap $6D** — the second `$73` is dead
+the moment the bar draws. The port drew frame + connector last, leaving `$73` where the
+golden shows `$6D`. Fixed: frame first, bar last, like pret (`battle_hud.asm:DrawPlayerHUD`).
+
+### F-19. The enemy-gauge palette clones were parked on LIVE glyphs — including the battle ▼ [FIXED — Stage 2]
+
+The colorization work clones the nine gauge patterns ($63–$6B) into vFont slots so the enemy
+bar can bind its own palette. The slots picked ($EC/$EE/$EF/$F0/$F1/$F4) were **live charmap
+glyphs** — $EE is the ▼ prompt itself, so every battle dialog's arrow rendered as a gauge
+segment. Moved to **$C0–$C8**: the charmap maps NOTHING in $C0–$DF, so no text can reference
+them (`battle_hud.asm:enemy_hp_tile_ids` + `gen_palettes.py`, kept in sync by comment).
+Masks carrying the F-19 id: the $C0–$C8 vram mask (all battle scenarios) and the
+(2,4)-(2,9) tilemap mask (menu/movesel). Retiring the per-cell-palette mechanism deletes
+this finding's masks.
+
+### F-20. The player HP bar's right cap was $6C (Pokémon-menu variant) — battle always uses $6D [FIXED — Stage 2]
+
+pret `DrawHPBar` picks the cap from `[wHPBarType]`: the player battle bar is **always type 1**
+(`DrawHP`, core.asm:5015, core.asm:687) → cap `$6D`; the enemy bar **always type 0**
+(core.asm:2034/4897/686) → `$6C`. The port's shared `HPB_END equ 0x6C` was the menu/enemy
+value for both. The port's helper split (player/enemy) maps 1:1 onto pret's type split, so
+the cap is now per-helper (`HPB_END_PLAYER $6D` / `HPB_END_ENEMY $6C`). Found as the last
+single cell of the battle_menu first diff — `( 9,18) want $6D got $6C`.
+
+### F-21. The HUDs never staged wLoadedMon, and drew enemy-first [FIXED — Stage 2]
+
+pret's `DrawPlayerHUDAndHPBar` copies the battle mon into `wLoadedMon` (species..DVs, then
+level..PP — core.asm:1903-1910) and `DrawEnemyHUDAndHPBar` then overwrites `wLoadedMonLevel`
+with the **enemy's** level (core.asm:1969-1970); `DrawHUDsAndHPBars` draws **player first**
+(core.asm:1886), so the surviving level byte is the enemy's. The port staged nothing and drew
+enemy-first. Invisible on screen; the battle_menu golden's `wLoadedMon` region caught all 14
+bytes. Both the staging and the order are now pret's (`battle_hud.asm`), with the
+order-is-load-bearing note at the call site.
 
 ## Imported open findings from the menu-fidelity audit
 

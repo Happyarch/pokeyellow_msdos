@@ -104,10 +104,14 @@ def emit() -> str:
     battle_tile_pal[256:305] = [3] * 49      # enemy front pic
     battle_tile_pal[305:354] = [2] * 49      # player back pic
     # $62..$7f currently share player/enemy HP patterns. R1 clones the nine
-    # gauge patterns ($63..$6b) into battle-only unused vFont glyph slots;
-    # physical cache index for a signed tile id is 256 + signed(id).
+    # gauge patterns ($63..$6b) into battle-only vFont glyph slots; physical
+    # cache index for a signed tile id is 256 + signed(id). F-19: the slots are
+    # $C0-$C8 — the charmap maps NOTHING in $C0-$DF, so no text can reference
+    # them (the previous picks $EC/$EE/$EF/$F0/$F1/$F4 were live glyphs and
+    # clobbered the battle dialog's ▼ prompt). Keep in sync with
+    # battle_hud.asm:enemy_hp_tile_ids.
     battle_tile_pal[354:384] = [0] * 30
-    for tile_id in (0xE9, 0xEA, 0xEB, 0xEC, 0xEE, 0xEF, 0xF0, 0xF1, 0xF4):
+    for tile_id in (0xC0, 0xC1, 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7, 0xC8):
         battle_tile_pal[tile_id] = 1
     # The non-battle SetPal_* commands consume their corresponding SGB packet's
     # four palette ids.  The renderer's current tile ownership supplies the

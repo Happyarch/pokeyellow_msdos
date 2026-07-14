@@ -902,6 +902,25 @@ NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_I2
 NASMFLAGS += -D SKIP_TITLE
 endif
+# Battle golden gate (fidelity plan Stage 2): the REAL loaders (InitBattle →
+# LoadEnemyMonData → LoadBattleMonFromParty) + the convergence-spec DV overwrite
+# replace DEBUG_BATTLE's synthetic seed. Combine with DEBUG_BATTLE_INTRO /
+# DEBUG_BATTLE_MENU / DEBUG_MOVEMENU to pick the dump point (the goldens are
+# battle_intro / battle_menu / move_selection).
+ifdef DEBUG_BATTLE_GOLDEN
+DEBUG_BATTLE := 1
+NASMFLAGS += -D DEBUG_BATTLE_GOLDEN
+endif
+# Battle-menu photograph (golden battle_menu): the real DisplayBattleMenu draws
+# HUDs + boxes + the ▶ cursor and parks in HandleMenuInput; AUTOKEY_QUIET
+# photographs it at AUTOKEY_DUMP_FRAME.
+ifdef DEBUG_BATTLE_MENU
+DEBUG_BATTLE := 1
+NASMFLAGS += -D DEBUG_BATTLE_MENU
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_QUIET
+AUTOKEY_DUMP_FRAME ?= 30
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
 # Live battle view: same setup as DEBUG_BATTLE but holds the screen (loops
 # DelayFrame) so you can visually inspect it instead of dumping+exiting. Esc quits.
 # make DEBUG_BATTLE_LIVE=1 (then dos_port/run).
@@ -1234,7 +1253,8 @@ goldencheck:
 # All golden scenarios (the port-vs-golden fidelity suite). Runs every
 # scenario even if one fails; nonzero exit if any failed.
 FIDELITY_SCENARIOS := status_p1 status_p2 start_menu overworld_pallet party_menu bag_menu \
-                      sign_pallet item_tm_teach item_stone_evolve item_potion_use
+                      sign_pallet item_tm_teach item_stone_evolve item_potion_use \
+                      battle_intro battle_menu move_selection ball_catch
 fidelity:
 	@fail=0; for s in $(FIDELITY_SCENARIOS); do \
 		tools/goldencheck.sh $$s || fail=1; \
