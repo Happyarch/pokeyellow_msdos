@@ -1,58 +1,56 @@
 # Menu fidelity — de-bespoking the menu system against pret
 
-> **STATUS — 2026-07-14. Rows 1–14 + 23 are DONE: 15 of 24. The shared drivers are finished;
-> everything left is a leaf screen.**
-> Next row is **15** (`naming_screen.asm`). Nine rows remain: **15–22 and 24.**
->
-> **The row table below is the only authoritative status.** This header is prose and has
-> already gone stale once (it claimed "1–8 done (9 of 24)" and "1-9 done (10 of 24)" in the
-> same breath while row 10 was already committed). If the two ever disagree again, believe
-> the table — every DONE row carries its commit hash.
->
-> **Resume by re-running the `/loop`** (one file per iteration: audit → fix → gate →
-> commit). It picks the first row that is `TODO`/`IN-PROGRESS` and works it. Update the row
-> + append findings each iteration.
->
-> **Sequencing notes.** Row 13 is the last SHARED DRIVER; the rest are leaf screens. Rows 19
-> (`save`, 1080 ln) and 20 (`link_menu`, 1148 ln) are mostly TODO-HW SRAM/serial boundaries:
-> low bug yield per line, and they MUST be split across iterations. **Row 22 is the
-> highest-value row on the board and is sequenced last** — the battle move-menu family is
-> missing entirely; it clears blocker B8 and unblocks Mimic + PP items. Consider promoting it.
->
-> The text-subsystem detour this audit was paused for is **complete and archived**
-> (`docs/plans/text_engine.md`): the staging model is gone, `TX_FAR` works, and there is now a
-> `DEBUG_TEXT=1..9` oracle for streamed text — which the golden harness still structurally
-> does not render.
->
-> **What the audit found in 11 rows** — worth knowing before trusting any menu file's header:
-> two game-breaking bugs (M-7: the ×NN quantity selector HUNG the game and drew its box
-> invisibly; M-10: every YES/NO drew its ▶ next to the option the player was NOT selecting),
-> two wrong allowlist entries, a wrong finding of my own (M-2), and several false "faithful" /
-> "no live caller" / wrong-pret-file header claims. Row 6 is the first row whose *code* was
-> already faithful — the lie was the file's **placement**, blessed by 3 rubber-stamped
-> allowlist entries. Row 7 dropped **three** pret calls, each one hidden behind a comment
-> asserting it couldn't be made (a stale `TODO-HW`, a false `STUB`, and a "not needed" that
-> generalized one real deviation into two). Row 8's *x86* was faithful end to end — the first
-> such row — but its **generated data** wasn't (M-16: the generator encoded the rendered string,
-> so pret's `#MON` text command became 7 literal glyphs) and neither was the **label DB** the
-> audit runs on (M-18: it couldn't see `equ` aliases, reporting 7 present labels as `missing`).
-> Audit the generators and the tooling, not just the assembly. Row 9 part 1 found the same shape
-> a third time: a `DEVIATION(icons)` comment that was true when written and **silently went false**
-> when the party icons moved from BG tiles to OBJ (M-19), so swapping two mons left both icons
-> painted over the blanked rows. Rows 10–11 sharpened the dominant failure mode into a named
-> class: **the false stub / false TODO** — a comment asserting a dependency is unported when it
-> is sitting in the link. Four instances so far (M-21, M-25, M-38, M-41, M-43), plus row 10's
-> mirror image, where the ○ tile pret loads by *walking off the end of another asset's copy*
-> was reimplemented as a load pret never makes. Do not believe a `STUB(...)`/`TODO-HW` comment;
-> grep `pkmn.sym` for the symbol it names. (Row 11's M-46 is the one such claim that held up —
-> and it took a symbol-table check to establish that.) Row 12 is the class's mirror image, and the
-> sharpest argument for the rule: its *code* is faithful line-for-line, but its header declared the
-> file **CHECK-only with "no live caller"** while `nm` shows it in the binary and `list_menu.asm`
-> jumps to it — and the `GLITCH` tag's **`Safety:` note derived its "dormant, not reachable" verdict
-> from that header**, so an item-underflow **ACE** gateway stood documented as unreachable while
-> being live (M-48). A stale comment is not always cosmetic; here it inverted a safety assessment.
-> The hit rate on "audited file turns out to hold a real defect" is still 100%. The remaining rows
-> are not a formality.
+> **CLOSED — 2026-07-14. All 24 rows are DONE.** Archived to `docs/plans/menu_fidelity.md`.
+> The row table below is the record; every row carries its commit hash. What the pass found
+> and what it left behind is summarized here.
+
+## Closing summary
+
+Twenty-four files, one per iteration: the shared menu drivers (rows 1–14, 23) and then every
+leaf screen that rides them (15–22, 24). The premise of the exercise held up better than the
+codebase did — **the recurring defect was not bad assembly, it was a confident comment.**
+
+Three kinds of lie, in descending frequency:
+
+1. **The false stub / false TODO.** A comment asserts a dependency is unported, so the call
+   was dropped — and the body exists, is linked, and works. Row 7 alone restored three
+   dropped calls that were each hidden behind one of these (`PlaySound SFX_START_MENU` behind
+   a stale `TODO-HW` when audio had been live for months; `PrintSafariZoneSteps` behind a
+   false `STUB(safari)` over a real self-guarding body; `SaveScreenTilesToBuffer2` behind a
+   header claiming "not needed" when only the *restore* half is window-model). Rule earned:
+   **never believe a `STUB`/`TODO-HW` comment — check `nm` and the Makefile's source lists.**
+2. **The bespoke reshaping labelled as a translation.** Code that carries pret's label but
+   not pret's structure. Row 22 was the extreme case: the battle move menu had a hand-written
+   `MoveSelectionMenu` and three of pret's four labels simply did not exist, taking the
+   load-bearing **1-based cursor** with them. Row 16 found a menu option that was dead code
+   calling nothing.
+3. **The coordinate-space error that hides as a no-op.** The port's menus draw box-relative
+   into a scratch at a runtime stride; pret writes absolute tilemap cells. Where a translation
+   copied pret's absolute `hlcoord` verbatim, the write landed on a cell no box owns and
+   nothing visibly broke — so it survived review. Row 24 (the blinking ▼, inert on every menu
+   since it was written) is the pure specimen; M-62's palette-register mismatch is the same
+   shape in a different space.
+
+**Sanctioned deviations are now tagged at their sites, not assumed.** The port-only primitives
+the menus must route through — the window-list compositor, the `menu_redraw_cb` /
+`menu_item_step` / `text_row_stride` / `place_flat_str` / `PartyMenuMirror` menu-loop scratch,
+the 40×25 canvas, and now `menu_arrow_pos` — each carry a `; DEVIATION(<class>):` with a real
+reason. The allowlist was challenged entry by entry: the auto-blessed "pre-existing relocation
+(draft Session H)" boilerplate is gone; what remains is hand-justified.
+
+**Left open on purpose.** ~20 `### M-` findings are filed OPEN against files outside the rows
+that found them, and they are the natural next backlog. The ones with teeth: **M-29** (the
+party panel and the dialog box share a staging buffer and collide), **M-32** (`PlayCry`'s
+ret-stub hides a real blocking contract), **M-82** (`ActivatePC` is unreachable from the
+game), **M-8** (the priced quantity box is drawn wider than its window exposes), **M-69** (a
+build can ship a stale `FRAME.BIN`, so a harness that fails to dump reads as a *pass* — a
+tooling hazard for every future verification), and **M-59** (the text encoder has no
+longest-match pass, so apostrophe ligatures encode wrong; row 15 worked around it).
+
+**Not a gap:** pret's `engine/menus/unused_input.asm` has no port counterpart, and should not.
+Every label in it (`HandleMenuInputDuplicate`, `HandleMenuInputPokemonSelectionDuplicate`,
+`PlaceMenuCursorDuplicate`) is annotated `; unreferenced` in pret itself — dead bytes the
+original linker assembled and the game never calls. Absent by design.
 
 ## Why this exists
 
