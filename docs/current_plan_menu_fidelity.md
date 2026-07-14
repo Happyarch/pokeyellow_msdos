@@ -114,7 +114,7 @@ driver only relocates the divergence.
 | 15 | `src/engine/menus/naming_screen.asm` | same | **DONE** | `848b6593` | Five findings, one of them the worst bug this audit has hit. **M-63: `PrintNamingText` clobbered the screen-type in AL** (`mov al,[wNamingScreenType]` immediately followed by `mov eax, YourTextString`, destroying it with the low byte of an address) — so PLAYER and RIVAL both fell into the MON path and the **player-name screen printed a garbage species name and asked "NICKNAME?" instead of "YOUR NAME?"**. faithdiff was **clean** on that routine throughout: it is a register defect, the one class the tools cannot see. Caught only by rendering the screen. M-57 (**wrong SFX id, `0x3E` vs the real `0x90`** — played on every letter press, kept alive by a `TODO-HW` claiming `PlaySound` is a stub when it is a real body in `home/audio.asm`; closes **M-4**), M-58 (**5 hand-encoded strings**, one carrying a false "no generator exists" excuse — `collect_far` already flattened `text_3.asm`; all five generated, **bytes identical**, and `DoYouWantToNicknameText` restored to pret's real `text_far`+`text_end` shape), M-59 (**`gb_text.encode` has no longest-match pass** — `"RIVAL's "` is the first apostrophe in any generator input and would have encoded `'s` as two glyphs instead of the `$BD` ligature; worked around, encoder gap still open), M-60 (**`AskName` called `YesNoChoice`, which pret's `AskName` must not** — `YesNoChoice` wraps the box in a buffer-1 save/restore and **buffer 1 belongs to `AskName`**; it was harmless only because the port's `YesNoChoice` *drops* that wrapper, i.e. this file's fidelity rested on another file's infidelity and would break the day `yes_no.asm` is fixed. Now calls `DisplayTextBoxID` as pret does: **10/10 calls, 4/4 stores**). SANCTIONED + tagged: `InitYesNoTextBoxParameters` (pret's own routine, the only supported way to pass the box geometry the port's two-option path reads from `.bss`), `naming_mirror`/`naming_show_window`/`SetMonPartySpriteOrigin` (window compositor + PROJ), the JP-only dakuten branch (verified unreachable: the EN grid in `data/text/alphabets.asm` emits no `ﾞ`/`ﾟ`). Filed elsewhere: **M-61/M-62** (`RunDefaultPaletteCommand` defined twice, and both copies pass the palette id in **BL where pret uses B/BH** — a live hazard for the in-flight palette body; handed to that session). **VERIFIED live** (`DEBUG_NAMINGSCREEN` → `FRAME.BIN` → PNG): before the fix the screen rendered `F STONE`/`NICKNAME?`; after, **"YOUR NAME?"** with the grid, box, cursor and underscore row correct. `make fidelity` 6/6 PASS. |
 | 16 | `src/engine/menus/pokedex.asm`, then `pokedex_entry.asm` | `engine/menus/pokedex.asm` | **DONE** | `cb247fdc` (p1), `e68b8c7f` (p2) | **p1 `pokedex.asm`: the AREA option was DEAD — `LoadTownMap_Nest` was a complete, linked, never-called body (M-64).** Also: printer path dropped 2 calls/3 stores behind a fake STUB (M-65); `GetCryData` ret-stub in a mirror file (M-66); duplicate `RunDefaultPaletteCommand` (M-67); 3 extern comments claiming stubs that are real bodies (M-68); hand-encoded strings (M-70). **Tooling: a fresh `PKMN.IMG` ships a STALE `FRAME.BIN`, so a non-dumping harness reads as a pass (M-69).** **Part 2 = the DATA (entry) page — DONE.** The whole file `pokedex_entry.asm` was a **parallel-worker artifact** (its header said so) and is **deleted**: both halves now live in `pokedex.asm` as in pret, which retires all 10 allowlist entries (M-78; the 10th, `GetCryData`, was already dead after M-66). Four dropped-behind-a-false-comment fixes: M-73 (`rAUDVOL` halving for the cry, hidden behind a fake `TODO-HW: no APU` — the shims read $FF24 every frame; same false claim still in `status_screen.asm`, filed), M-74 (`RunDefaultPaletteCommand` "not defined in the port" — it is a global this same file already calls), M-75 (`PlayCry` call dropped), M-76 (`hDexWeight` save/restore dropped although **$FF8B is a live HRAM union** holding the overworld's `hPreviousTileset`). M-77: 3 more hand-encoded strings → generator, bytes identical. RHYDON DATA page rendered and looked at. |
 | 17 | `src/engine/menus/pc.asm`, `players_pc.asm`, `oaks_pc.asm`, `league_pc.asm` | same | **DONE** | `3b495afb` (p1: pc.asm), `00b64035` (p2: players_pc.asm), `fcdbdf42` (p3: oaks_pc.asm), `2696039f` (p4: league_pc.asm) | **p1 `pc.asm`: the file's header made three claims and all three were false.** M-79: all six `PlaySound`/`WaitForSoundToFinish` calls dropped behind a fake `TODO-HW: audio HAL` — audio is ported and live (the row-9 M-20 shape). M-80: `Save/LoadScreenTilesFromBuffer2` "replaced" by a shim that saved **`g_window_count`**, i.e. nothing; the real bodies were in `movie/title.asm` all along and the *load* half was merely never `global`. M-81: the four dialogs were a private message engine over **nine hand-encoded charmap strings** (Tier-1 violation) that could not render text COMMANDS, so `<PLAYER>`/POKé were open-coded as glyph runs — now generated (`assets/pc_text.inc`) and printed by `PrintText` with pret's four restored wrapper labels. **M-82 (filed): `ActivatePC` is UNREACHABLE** — `home/overworld_text.asm`'s PC text scripts are still `%ifdef`-guarded out under a stale "targets are NI" comment, so the whole PC subsystem is dead code in the shipped binary. New `DEBUG_PC` harness; dialog rendered and looked at. `pc_stubs.asm` (DisplayPCMainMenu / BillsPC_) verified: ret-only-plus-menu-vars, in a `*_stubs.asm`, shadowing nothing. **p2 `players_pc.asm`: the same three false claims, next door.** M-83: eight `PlaySound`/`WaitForSoundToFinish` calls and all three `Save`/`LoadScreenTiles` calls dropped behind "TODO-HW audio HAL" / "no screen to save-restore" — every one of those routines is ported, linked and live; restored. M-84: fourteen messages drawn whole from **20 hand-encoded charmap strings**, two of which (`ItemWasStored`/`WithdrewItem`) are `TX_RAM` splices a glyph run *cannot* express — now generated (`assets/players_pc_text.inc`) and printed by `PrintText` through a file-local projection (`msgbox_players_pc`, SANCTIONED: `msgbox_dialog`'s `set_single_window` would collapse the menu/list windows out from under the message). M-85: the Toss comment invented a pret refactor that never happened. Parent menu + message box rendered together and looked at (`DEBUG_PLAYERSPC`). **p3 `oaks_pc.asm`: the same three false claims, a third time.** M-86: `Save`/`LoadScreenTilesFromBuffer2` "collapsed to a window-list save/restore" that saved `g_window_count` and nothing else; both real routines were linked all along; restored. M-87: the three dialogs drawn whole from **eight hand-encoded charmap strings**, justified by "the far-text streams aren't GB-space assets yet" — false, they are ordinary `text_far` bodies; now generated (`assets/oaks_pc_text.inc`) and printed by `PrintText`, with pret's three wrapper labels restored (the hand-encoded pages had also dropped the POKé control byte). M-88: `predef DisplayDexRating` was a **comment with no call and no stub body anywhere** — YES and NO did the same thing; restored as a real call to a ret-only stub in the new `oaks_pc_stubs.asm`. New `DEBUG_OAKSPC` harness (AUTOKEY shape); "Accessed PROF. / OAK's PC." dialog rendered and looked at. **p4 `league_pc.asm`: the same debt plus two stale deferrals.** M-89: `AccessedHoFPCText` drawn whole from four hand-encoded charmap strings and `HallOfFameNoText` hand-encoded too (the page had dropped pret's POKé byte); both now generated (`assets/league_pc_text.inc`), the wrapper label restored, printed by `PrintText`. M-90: the Hall-of-Fame team loop was switched OFF by a port-invented 0-team guard "because the S7 save layer isn't here" — `LoadHallOfFameTeams` is real and linked in `save.asm`; guard deleted, loop live. M-91: **both** palette calls (`RunPaletteCommand`, `RunDefaultPaletteCommand`) were comments behind a "TODO-HW: Phase 5" that is no longer true — both routines are real and linked; restored on BH. M-92 filed (naming_screen's palette comment is stale, other file). `LeaguePCShowMon`'s full-screen layout stays UNVERIFIED (needs a HoF save + the unported HoF movie). Dialog rendered and looked at. |
-| 18 | `src/engine/menus/main_menu.asm` | same | TODO | | DEVIATION ×8; `OakSpeech` stub |
+| 18 | `src/engine/menus/main_menu.asm` | same | DONE | (pending) | M-93 palette call restored; M-94 3 strings → generator; M-95 Func_5cc1 PrintText restored; 4 SANCTIONED (joypad-HAL, SRAM, EnterMapBoot, compositor); `OakSpeech` stub verified |
 | 19 | `src/engine/menus/save.asm` (1080 ln) | same | TODO | | expect mostly TODO-HW/SRAM sanctioned; split |
 | 20 | `src/engine/menus/link_menu.asm` (1148 ln), `link_cups.asm` | `engine/menus/link_menu.asm` | TODO | | expect mostly TODO-HW/serial; allowlisted split (18 labels); split |
 | 21 | `src/engine/menus/draw_badges.asm` | same | TODO | | "Port stand-in" |
@@ -1981,3 +1981,84 @@ is pret's own `farjp`, which the pret call matcher does not emit), the two text 
 over Pallet Town, the dialog reads **"Accessed POKéMON / LEAGUE's site."** with the ▼ prompt arrow —
 the `text_far` stream, its line break, its POKé expansion and its page-break prompt all through the real
 text engine. The Hall-of-Fame team screens past it stay UNVERIFIED (see SANCTIONED above).
+
+---
+
+## Row 18 — `src/engine/menus/main_menu.asm` (DONE)
+
+pret `engine/menus/main_menu.asm` (302 ln) vs the port (687 ln), both read in full. 13 code labels +
+4 string labels. Every code label was already `translated`; the two `missing` ones were **the two the
+port had deleted behind a false comment** (`NotEnoughMemoryText`, and pret's `Joypad`).
+
+### M-93 (FIXED). `MainMenu` dropped `call RunDefaultPaletteCommand` behind a false TODO-HW
+The comment read *"TODO-HW: palette HAL (Phase 5) — the port palette is a placeholder, so this is a
+render no-op"*. Same falsehood as M-91, in a second file: `RunDefaultPaletteCommand` is real
+(`naming_screen.asm`), and it lands in `home/palettes.asm:RunPaletteCommand` →
+`engine/gfx/palettes.asm:_RunPaletteCommand`, the live staged CGB runtime. The call is restored
+verbatim, between `ClearScreen` and `LoadTextBoxTilePatterns` where pret puts it.
+
+### M-94 (FIXED). Three hand-encoded charmap strings — Tier-1 violation
+`ContinueText`, `NewGameText` and `SaveScreenInfoText` were `db 0x82, 0x8E, …` byte runs in a
+`section .data` block of the `.asm`. They are now generated by `tools/gen_menu_strings.py` into
+`assets/main_menu_text.inc` (`MAIN_MENU` / `MAIN_MENU_FAR`) and `%include`d; the generated bytes were
+byte-compared against the old literals and are identical. The generator preserves pret's load-bearing
+layout: `ContinueText` ends in `<NEXT>` with **no terminator** and falls through into `NewGameText`, so
+one `PlaceString` prints CONTINUE / NEW GAME / OPTION — the two labels must stay adjacent, which the
+emitter and a comment in both files now state.
+
+### M-95 (FIXED). `Func_5cc1`'s `PrintText` deleted, justified by "no port far-text infra"
+The port had `; ld hl, NotEnoughMemoryText / call PrintText   (unreachable)` — a comment where a call
+belongs — and the file header claimed `NotEnoughMemoryText` was *"a bank-far text stream with no port
+far-text infra"*. False: `text_far` + `PrintText` is exactly how `pc.asm` / `players_pc.asm` /
+`oaks_pc.asm` / `league_pc.asm` print, and this row's own generator emits the stream. The branch is
+dead in pret too (`ld a,$6d / cp $80 / ret c` always returns), but *dead* is not *absent*: the call and
+the `NotEnoughMemoryText: text_far _NotEnoughMemoryText / text_end` wrapper are restored, the far body
+comes from pret `data/text/text_3.asm:430`, and `NotEnoughMemoryText` is now `translated` in the DB
+instead of `missing`.
+
+### M-96 (accepted debt, noted). `RunMainMenuTest` seeds the player name as raw charmap bytes
+The `DEBUG_MAINMENU` harness writes `wPlayerName` as `0x91,0x84,0x83,0x50` ("RED@"). Strictly a
+hand-encoded glyph run, but it is a debug-only WRAM *fixture* (no `db` string, never linked into a
+release build), so it is left as-is rather than routed through the generator. Recorded so it is not
+mistaken for precedent.
+
+### SANCTIONED (tagged at the site)
+- **`call DelayFrame` in place of pret's `call Joypad`** (`.inputLoop`) — DEVIATION(joypad-HAL). The
+  port has no `Joypad` routine **by design**, and this was verified rather than assumed: an INT 9h
+  keyboard ISR latches the pad, and the whole of pret's `_Joypad` edge/mask layer (hJoyLast/Pressed/
+  Released/Held, `wJoyIgnore`, `BIT_DISABLE_JOYPAD`, the soft-reset combo) is reimplemented inside
+  `src/input/joypad.asm:joypad_update`, which `DelayFrame` runs once per frame. So `DelayFrame` **is**
+  the poll, and the `H_JOY_*` bytes it refreshes are the ones pret reads back. (`src/engine/joypad.asm`
+  holds a faithful `_Joypad` translation that is deliberately *not* in the build; its own header says
+  so, and the Makefile confirms it.) The three `hJoy*` clears above the call are kept verbatim.
+- **`CheckForPlayerNameInSRAM` → `call DsvFileExists`** — TODO-HW: SRAM. The port has no cart SRAM;
+  the routine's entire observable contract is CF (`scf` = a save exists), and `DsvFileExists` returns
+  CF=1 when `POKEMON.DSV` is present, so `MainMenu`'s `jr nc` reads exactly what pret's does.
+- **`SpecialEnterMap`'s `jmp EnterMapBoot`** (pret: `jp EnterMap`) — the port keeps the one-time
+  overworld asset/player-sprite/text-engine glue in `EnterMapBoot`, which tail-jumps `EnterMap`.
+- **`MainMenuShowWindow` / `DisplayContinueGameInfoShowWindow` / `g_bg_whiteout` stores** —
+  DEVIATION(window-compositor): the boxes are drawn on the 40-wide canvas and published as window
+  descriptors; pret relies on the LCD showing the drawn BG map directly.
+- **`OakSpeech` (STUB, `main_menu_stubs.asm`)** — verified: no real `OakSpeech` body exists anywhere in
+  the tree (grep + DB + nm), so it shadows nothing. It is not ret-only *by intent* — it calls the real
+  `InitPlayerData2`, which is pret's own first action inside `OakSpeech` and seeds the party/box/bag
+  terminators a new game cannot boot without; the stub's header states this and the deletion condition.
+
+### Allowlist
+**Nothing to challenge**: `pret_label_allowlist.json` has no entry naming any label of
+`engine/menus/main_menu.asm` (whole file scanned for the code labels, the string labels and `Joypad`).
+
+### Verification
+`make check` clean; build+link clean; `update_label_db && lint_pret_labels` **0 violations, 5
+suppressed, exit 0**; `make fidelity` **6/6 PASS** (no new masks). faithdiff: `Func_5cc1`,
+`NotEnoughMemoryText`, `InitOptions`, `StartNewGameDebug`, `PrintSaveScreenText`, `PrintNumBadges`,
+`PrintNumOwnedMons`, `PrintPlayTime`, `DisplayOptionMenu` all clean; `MainMenu` 19/20 pret calls matched
+(the 20th is the sanctioned `Joypad`→`DelayFrame`; the extra port call is `MainMenuShowWindow`), and all
+five `ADDED` stores are the documented pret-store-matcher blind spot (pret writes them with
+`set`/`res n,[hl]` or `ld [hli],a`); `SpecialEnterMap` / `StartNewGame` / `DisplayContinueGameInfo` /
+`CheckForPlayerNameInSRAM` residue is exactly the four SANCTIONED items above. The three string labels
+report "body extraction failed (port=MISSING)" — expected: their bodies live in the generated `.inc`,
+the `global` keeps them `translated` (the `PlayersPCMenuEntries` / `HallOfFameNoText` pattern).
+**Rendered and looked at** — `DEBUG_MAINMENU` (`RunMainMenuTest`) → FRAME.BIN: the ▶CONTINUE / NEW GAME
+/ OPTION box and the panel reading **PLAYER RED · BADGES 5 · POKéDEX 80 · TIME 5:30**, i.e. the
+generated strings (including the `#`→POKé command byte) render exactly as the hand-encoded ones did.

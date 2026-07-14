@@ -8,8 +8,15 @@
 ; STRUCTURE + FLOW mirror pret EXACTLY (same labels, same branch order, same call
 ; order). The only divergences are the three tagged classes:
 ;   ; PROJ      — GB→canvas geometry (cites a UI_* equate from ui_layout_menus.inc)
-;   ; TODO-HW:  — a Game-Boy I/O boundary with no port hardware
-;   ; DEVIATION — a port-model plumbing note (window compositor / text stride)
+;   ; TODO-HW:  — a Game-Boy I/O boundary with no port hardware (here: SRAM only)
+;   ; DEVIATION — a port-model plumbing note (window compositor / text stride /
+;                 the joypad HAL)
+;
+; Menu-fidelity row 18 fixed three claims in this file that were simply untrue:
+; the dropped RunDefaultPaletteCommand call ("the port palette is a placeholder" —
+; it is not, palettes.asm:_RunPaletteCommand is live; M-93), the three hand-encoded
+; charmap strings (Tier-1 violation; now generated, M-94) and Func_5cc1's deleted
+; PrintText ("no port far-text infra" — there is; M-95).
 ;
 ; PORT MODEL (window compositor; same as draw_start_menu.asm / options.asm):
 ; - The CONTINUE/NEW GAME box and the PLAYER/BADGES/#DEX/TIME info panel are drawn
@@ -38,6 +45,7 @@ bits 32
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
 %include "gb_macros.inc"
+%include "gb_text.inc"                  ; text_far / text_end
 
 %define UI_LAYOUT_EQUATES_ONLY 1
 %include "assets/ui_layout_menus.inc"
@@ -91,10 +99,9 @@ wCableClubDestinationMap equ 0xD72C     ; sym 00:d72c (= wStatusFlags3 union lan
 wEnteringCableClub      equ 0xCC47      ; sym 00:cc47 (pret ram/wram.asm:430)
 %endif
 
-; charmap control codes (constants/charmap.asm; text.asm keeps its own copies).
-%ifndef CHAR_NEXT
-CHAR_NEXT               equ 0x4E        ; <NEXT> — next line
-%endif
+; charmap control code (constants/charmap.asm) — used only by the DEBUG_MAINMENU
+; harness's player-name seed; the rendered strings themselves are Tier-1 DATA in
+; assets/main_menu_text.inc.
 %ifndef CHAR_TERMINATOR
 CHAR_TERMINATOR         equ 0x50        ; '@' — string terminator
 %endif
@@ -129,6 +136,10 @@ global PrintNumOwnedMons
 global PrintPlayTime
 global DisplayOptionMenu
 global CheckForPlayerNameInSRAM
+global NotEnoughMemoryText
+global ContinueText                     ; body in assets/main_menu_text.inc
+global NewGameText                      ;   (the `global` is what keeps the label
+global SaveScreenInfoText               ;    tracked in tools/translation.db)
 
 ; --- ported infra (text / numbers / menu driver / compositor / frame / boot) ---
 extern TextBoxBorder            ; text.asm — ESI=top-left, BL=int_w, BH=int_h
@@ -137,6 +148,10 @@ extern text_row_stride          ; text.asm — active W_TILEMAP row stride
 extern PrintNumber              ; print_num.asm — EDX=src, BH=flags|bytes, BL=digits, ESI=dest
 extern CountSetBits             ; count_set_bits.asm — ESI=base, BH=len → [wNumSetBits]
 extern HandleMenuInput          ; window.asm — vertical menu loop; AL=key that ended it
+extern PrintText                ; window.asm — In: ESI = text stream
+extern text_msgbox              ; text.asm — the active msgbox projection
+extern msgbox_dialog            ; text.asm — the standard bottom dialog box
+extern RunDefaultPaletteCommand ; naming_screen.asm — RunPaletteCommand(SET_PAL_DEFAULT)
 extern PlaceMenuCursor          ; window.asm — draw ▶ at the current item
 extern menu_item_step           ; window.asm — cursor per-item row step
 extern menu_redraw_cb           ; window.asm — per-frame redraw callback
@@ -192,8 +207,7 @@ MainMenu:
     ; ld hl, wStatusFlags4 / res BIT_LINK_CONNECTED, [hl]
     and byte [ebp + W_STATUS_FLAGS_4], ~(1 << BIT_LINK_CONNECTED) & 0xFF
     call ClearScreen
-    ; TODO-HW: palette HAL (Phase 5) — RunDefaultPaletteCommand loads the default
-    ; CGB/DMG palette; the port palette is a placeholder, so this is a render no-op.
+    call RunDefaultPaletteCommand               ; pret: call RunDefaultPaletteCommand
     call LoadTextBoxTilePatterns
     call LoadFontTilePatterns
     ; ld hl, wStatusFlags5 / set BIT_NO_TEXT_DELAY, [hl]
@@ -279,9 +293,16 @@ MainMenu:
     or byte [ebp + W_CURRENT_MAP_SCRIPT_FLAGS], (1 << BIT_CUR_MAP_LOADED_1)
 .inputLoop:
     ; xor a / ldh [hJoyPressed],a / ldh [hJoyReleased],a / ldh [hJoyHeld],a / call Joypad
-    ; TODO-HW: joypad HAL — the port has no `Joypad` routine; hJoyHeld is refreshed
-    ; by the keyboard ISR through DelayFrame (joypad_update). The three clears are
-    ; kept; `call Joypad` becomes `call DelayFrame` (one poll frame, then read).
+    ; DEVIATION(joypad-HAL): pret's `Joypad` (home/joypad.asm → _Joypad) polls rJOYP
+    ; and computes the pressed/released/held edges on demand. The port has no such
+    ; routine BY DESIGN: an INT 9h keyboard ISR latches the pad state, and the whole
+    ; of _Joypad's edge/mask layer (hJoyLast/Pressed/Released/Held, wJoyIgnore,
+    ; BIT_DISABLE_JOYPAD, the soft-reset combo) lives in joypad_update
+    ; (src/input/joypad.asm), which the DelayFrame pipeline runs once per frame. So
+    ; `call DelayFrame` IS the poll here (the start_menu.asm / list_menu.asm
+    ; precedent), and the H_JOY_* bytes it refreshes are the same ones pret reads.
+    ; The three clears are kept verbatim. (The faithful engine/joypad.asm translation
+    ; exists as a cross-reference but is deliberately not in the build.)
     mov byte [ebp + H_JOY_PRESSED], 0
     mov byte [ebp + H_JOY_RELEASED], 0
     mov byte [ebp + H_JOY_HELD], 0
@@ -328,17 +349,28 @@ InitOptions:
 
 ; ===========================================================================
 ; Func_5cc1 — pret ref: main_menu.asm:Func_5cc1 (unused; the `ret c` is always
-; taken because $6d < $80, so the NotEnoughMemoryText PrintText branch is dead
-; code). Ported faithfully; the dead branch is a comment (NotEnoughMemoryText is
-; a bank-far text stream with no port far-text infra, and is never reached).
+; taken because $6d < $80, so the NotEnoughMemoryText PrintText branch is dead code
+; in the original too). Ported IN FULL, dead branch included: until menu-fidelity
+; row 18 the port replaced the PrintText call with a comment claiming
+; "NotEnoughMemoryText is a bank-far text stream with no port far-text infra" —
+; false (text_far + PrintText is exactly how pc.asm/oaks_pc.asm print). See M-95.
 ; ===========================================================================
 Func_5cc1:
     mov al, 0x6D
     cmp al, 0x80
     jc .done                                    ; ret c — always executed
-    ; ld hl, NotEnoughMemoryText / call PrintText   (unreachable)
+    ; DEVIATION(window-compositor): PrintText needs the box projection published.
+    mov dword [text_msgbox], msgbox_dialog
+    mov esi, NotEnoughMemoryText                ; ld hl, NotEnoughMemoryText
+    call PrintText
 .done:
     ret
+
+; pret ref: main_menu.asm:NotEnoughMemoryText — Tier-2 wrapper over the Tier-1
+; stream in assets/main_menu_text.inc, keeping pret's text_far indirection.
+NotEnoughMemoryText:
+    text_far _NotEnoughMemoryText
+    text_end
 
 ; ===========================================================================
 ; StartNewGame — pret ref: main_menu.asm:StartNewGame.
@@ -588,34 +620,12 @@ dcgi_mirror:
     ret
 
 ; ===========================================================================
-; Strings (Tier-2 code data — hand-authored GB charmap; 'A'=$80, ' '=$7F,
-; '#'=$54 → "POKé", '@'=$50, <NEXT>=$4E). pret aliases these labels.
+; Tier-1 DATA: ContinueText / NewGameText / SaveScreenInfoText (pret's own labels,
+; same order — ContinueText has no terminator and falls through into NewGameText)
+; and the _NotEnoughMemoryText far stream. Generated by tools/gen_menu_strings.py;
+; hand-encoded charmap `db` bytes here until menu-fidelity row 18 (M-94).
 ; ===========================================================================
-section .data
-align 4
-
-; pret ref: main_menu.asm:ContinueText / NewGameText (NewGameText follows so the
-; save-present PlaceString of ContinueText falls through into it, exactly as pret).
-ContinueText:
-    db 0x82, 0x8E, 0x8D, 0x93, 0x88, 0x8D, 0x94, 0x84    ; "CONTINUE"
-    db CHAR_NEXT                                          ; next ""
-    ; fallthrough
-NewGameText:
-    db 0x8D, 0x84, 0x96, 0x7F, 0x86, 0x80, 0x8C, 0x84    ; "NEW GAME"
-    db CHAR_NEXT, 0x8E, 0x8F, 0x93, 0x88, 0x8E, 0x8D      ; next "OPTION"
-    db CHAR_TERMINATOR                                    ; '@'
-
-; pret ref: main_menu.asm:SaveScreenInfoText
-;   "PLAYER" next "BADGES    " next "#DEX    " next "TIME@"
-SaveScreenInfoText:
-    db 0x8F, 0x8B, 0x80, 0x98, 0x84, 0x91                            ; "PLAYER"
-    db CHAR_NEXT
-    db 0x81, 0x80, 0x83, 0x86, 0x84, 0x92, 0x7F, 0x7F, 0x7F, 0x7F    ; "BADGES    "
-    db CHAR_NEXT
-    db 0x54, 0x83, 0x84, 0x97, 0x7F, 0x7F, 0x7F, 0x7F                ; "#DEX    "
-    db CHAR_NEXT
-    db 0x93, 0x88, 0x8C, 0x84                                        ; "TIME"
-    db CHAR_TERMINATOR                                               ; '@'
+%include "assets/main_menu_text.inc"
 
 ; ===========================================================================
 ; RunMainMenuTest — menus S7 package E FRAME.BIN gate (static open state).
