@@ -726,13 +726,15 @@ NASMFLAGS += -D DEBUG_PC
 NASMFLAGS += -D SKIP_TITLE
 NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_QUIET -D AUTOKEY_DUMP_FRAME=90
 endif
-# League-PC gate (menus S6 package A): boot to overworld, draw the AccessedHoFPCText
-# dialog (wNumHoFTeams==0 -> team loop skipped), dump FRAME.BIN, exit.
-# make SKIP_TITLE=1 DEBUG_LEAGUEPC=1
+# League-PC gate (menu-fidelity row 17 part 4): boot to overworld, call PKMNLeaguePC.
+# It PrintTexts AccessedHoFPCText and blocks in the stream's page-break prompt; with
+# no presses scripted, AutoKeyDrive photographs the open "Accessed #MON / LEAGUE's
+# site." dialog and exits. make SKIP_TITLE=1 DEBUG_LEAGUEPC=1
 ifdef DEBUG_LEAGUEPC
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_LEAGUEPC
 NASMFLAGS += -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_QUIET -D AUTOKEY_DUMP_FRAME=90
 endif
 # Options gate (menus S6 package D): boot to overworld, open the OPTION menu via
 # InitOptionsMenu (full-screen takeover), draw the cursor, dump FRAME.BIN, exit.
@@ -1465,6 +1467,7 @@ src/engine/menus/pc.o: assets/event_constants.inc assets/audio_constants.inc \
 src/engine/menus/players_pc.o: assets/ui_layout_menus.inc assets/audio_constants.inc \
         assets/players_pc_text.inc
 src/engine/menus/oaks_pc.o: assets/oaks_pc_text.inc
+src/engine/menus/league_pc.o: assets/league_pc_text.inc
 src/engine/items/item_effects.o: assets/ui_layout_menus.inc
 src/engine/menus/main_menu.o src/engine/menus/save.o: assets/ui_layout_menus.inc
 src/engine/menus/naming_screen.o: assets/ui_layout_menus.inc assets/alphabets.inc \
