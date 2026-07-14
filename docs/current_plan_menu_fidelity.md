@@ -115,7 +115,7 @@ driver only relocates the divergence.
 | 16 | `src/engine/menus/pokedex.asm`, then `pokedex_entry.asm` | `engine/menus/pokedex.asm` | **DONE** | `cb247fdc` (p1), `e68b8c7f` (p2) | **p1 `pokedex.asm`: the AREA option was DEAD — `LoadTownMap_Nest` was a complete, linked, never-called body (M-64).** Also: printer path dropped 2 calls/3 stores behind a fake STUB (M-65); `GetCryData` ret-stub in a mirror file (M-66); duplicate `RunDefaultPaletteCommand` (M-67); 3 extern comments claiming stubs that are real bodies (M-68); hand-encoded strings (M-70). **Tooling: a fresh `PKMN.IMG` ships a STALE `FRAME.BIN`, so a non-dumping harness reads as a pass (M-69).** **Part 2 = the DATA (entry) page — DONE.** The whole file `pokedex_entry.asm` was a **parallel-worker artifact** (its header said so) and is **deleted**: both halves now live in `pokedex.asm` as in pret, which retires all 10 allowlist entries (M-78; the 10th, `GetCryData`, was already dead after M-66). Four dropped-behind-a-false-comment fixes: M-73 (`rAUDVOL` halving for the cry, hidden behind a fake `TODO-HW: no APU` — the shims read $FF24 every frame; same false claim still in `status_screen.asm`, filed), M-74 (`RunDefaultPaletteCommand` "not defined in the port" — it is a global this same file already calls), M-75 (`PlayCry` call dropped), M-76 (`hDexWeight` save/restore dropped although **$FF8B is a live HRAM union** holding the overworld's `hPreviousTileset`). M-77: 3 more hand-encoded strings → generator, bytes identical. RHYDON DATA page rendered and looked at. |
 | 17 | `src/engine/menus/pc.asm`, `players_pc.asm`, `oaks_pc.asm`, `league_pc.asm` | same | **DONE** | `3b495afb` (p1: pc.asm), `00b64035` (p2: players_pc.asm), `fcdbdf42` (p3: oaks_pc.asm), `2696039f` (p4: league_pc.asm) | **p1 `pc.asm`: the file's header made three claims and all three were false.** M-79: all six `PlaySound`/`WaitForSoundToFinish` calls dropped behind a fake `TODO-HW: audio HAL` — audio is ported and live (the row-9 M-20 shape). M-80: `Save/LoadScreenTilesFromBuffer2` "replaced" by a shim that saved **`g_window_count`**, i.e. nothing; the real bodies were in `movie/title.asm` all along and the *load* half was merely never `global`. M-81: the four dialogs were a private message engine over **nine hand-encoded charmap strings** (Tier-1 violation) that could not render text COMMANDS, so `<PLAYER>`/POKé were open-coded as glyph runs — now generated (`assets/pc_text.inc`) and printed by `PrintText` with pret's four restored wrapper labels. **M-82 (filed): `ActivatePC` is UNREACHABLE** — `home/overworld_text.asm`'s PC text scripts are still `%ifdef`-guarded out under a stale "targets are NI" comment, so the whole PC subsystem is dead code in the shipped binary. New `DEBUG_PC` harness; dialog rendered and looked at. `pc_stubs.asm` (DisplayPCMainMenu / BillsPC_) verified: ret-only-plus-menu-vars, in a `*_stubs.asm`, shadowing nothing. **p2 `players_pc.asm`: the same three false claims, next door.** M-83: eight `PlaySound`/`WaitForSoundToFinish` calls and all three `Save`/`LoadScreenTiles` calls dropped behind "TODO-HW audio HAL" / "no screen to save-restore" — every one of those routines is ported, linked and live; restored. M-84: fourteen messages drawn whole from **20 hand-encoded charmap strings**, two of which (`ItemWasStored`/`WithdrewItem`) are `TX_RAM` splices a glyph run *cannot* express — now generated (`assets/players_pc_text.inc`) and printed by `PrintText` through a file-local projection (`msgbox_players_pc`, SANCTIONED: `msgbox_dialog`'s `set_single_window` would collapse the menu/list windows out from under the message). M-85: the Toss comment invented a pret refactor that never happened. Parent menu + message box rendered together and looked at (`DEBUG_PLAYERSPC`). **p3 `oaks_pc.asm`: the same three false claims, a third time.** M-86: `Save`/`LoadScreenTilesFromBuffer2` "collapsed to a window-list save/restore" that saved `g_window_count` and nothing else; both real routines were linked all along; restored. M-87: the three dialogs drawn whole from **eight hand-encoded charmap strings**, justified by "the far-text streams aren't GB-space assets yet" — false, they are ordinary `text_far` bodies; now generated (`assets/oaks_pc_text.inc`) and printed by `PrintText`, with pret's three wrapper labels restored (the hand-encoded pages had also dropped the POKé control byte). M-88: `predef DisplayDexRating` was a **comment with no call and no stub body anywhere** — YES and NO did the same thing; restored as a real call to a ret-only stub in the new `oaks_pc_stubs.asm`. New `DEBUG_OAKSPC` harness (AUTOKEY shape); "Accessed PROF. / OAK's PC." dialog rendered and looked at. **p4 `league_pc.asm`: the same debt plus two stale deferrals.** M-89: `AccessedHoFPCText` drawn whole from four hand-encoded charmap strings and `HallOfFameNoText` hand-encoded too (the page had dropped pret's POKé byte); both now generated (`assets/league_pc_text.inc`), the wrapper label restored, printed by `PrintText`. M-90: the Hall-of-Fame team loop was switched OFF by a port-invented 0-team guard "because the S7 save layer isn't here" — `LoadHallOfFameTeams` is real and linked in `save.asm`; guard deleted, loop live. M-91: **both** palette calls (`RunPaletteCommand`, `RunDefaultPaletteCommand`) were comments behind a "TODO-HW: Phase 5" that is no longer true — both routines are real and linked; restored on BH. M-92 filed (naming_screen's palette comment is stale, other file). `LeaguePCShowMon`'s full-screen layout stays UNVERIFIED (needs a HoF save + the unported HoF movie). Dialog rendered and looked at. |
 | 18 | `src/engine/menus/main_menu.asm` | same | DONE | `65bd1697` | M-93 palette call restored; M-94 3 strings → generator; M-95 Func_5cc1 PrintText restored; 4 SANCTIONED (joypad-HAL, SRAM, EnterMapBoot, compositor); `OakSpeech` stub verified |
-| 19 | `src/engine/menus/save.asm` (1080 ln) | same | TODO | | expect mostly TODO-HW/SRAM sanctioned; split |
+| 19 | `src/engine/menus/save.asm` (1080 ln) | same | IN-PROGRESS (part 1 done) | part 1: `<pending>` | part 1 (SAVE/LOAD flow): M-97 five drawn-whole dialogs → pret `text_far` + `PrintText`; M-98 yes/no box was pret's `TWO_OPTION_MENU` all along; M-99 stale "audio is a Phase-3 no-op" hid live SFX; M-100 filed against `home/yes_no.asm`. **Part 2 = CHANGE BOX + HoF + SRAM helpers** (`WhenYouChangeBoxText`/`ChooseABoxText`/`BoxNames`/`BoxNoText` still hand-encoded; `BoxSRAMPointerTable` missing) |
 | 20 | `src/engine/menus/link_menu.asm` (1148 ln), `link_cups.asm` | `engine/menus/link_menu.asm` | TODO | | expect mostly TODO-HW/serial; allowlisted split (18 labels); split |
 | 21 | `src/engine/menus/draw_badges.asm` | same | TODO | | "Port stand-in" |
 | 22 | **`MoveSelectionMenu` / `SelectMenuItem` / `SwapMovesInMenu` / `PrintMenuItem`** | `engine/battle/core.asm` | TODO | | **clears blocker B8**; unblocks Mimic + PP items. Needs row 1 settled first. |
@@ -2062,3 +2062,76 @@ the `global` keeps them `translated` (the `PlayersPCMenuEntries` / `HallOfFameNo
 **Rendered and looked at** — `DEBUG_MAINMENU` (`RunMainMenuTest`) → FRAME.BIN: the ▶CONTINUE / NEW GAME
 / OPTION box and the panel reading **PLAYER RED · BADGES 5 · POKéDEX 80 · TIME 5:30**, i.e. the
 generated strings (including the `#`→POKé command byte) render exactly as the hand-encoded ones did.
+
+---
+
+## Row 19 part 1 — `src/engine/menus/save.asm` (SAVE / LOAD flow)
+
+Scope of part 1: `TryLoadSaveFile`, `SaveMenu`, `SaveTheGame_YesOrNo`, `SaveGameData` and the five
+save-flow dialog streams. Part 2 (next iteration) takes CHANGE BOX, the Hall-of-Fame routines and the
+SRAM helpers, plus the four still-hand-encoded strings and the missing `BoxSRAMPointerTable`.
+
+The file's header made three confident claims about what the port *cannot* do. All three were false —
+the same "drawn-whole imitation" class rows 17 deleted from the PC screens.
+
+### M-97 (FIXED). The five save dialogs were drawn whole, with hand-encoded charmap bytes
+`SV_WouldYouLikeToSave` / `SV_Saving` / `SV_GameSaved` / `SV_OlderFileErased` / `SV_FileDataDestroyed`
+hand-built a box and blitted `db 0x…` glyph runs from `section .data`, bypassing the text engine
+entirely. The header justified this by asserting that `PrintText` was unusable here because "the port's
+dialog projection collapses the window list to the dialog alone". Untrue: `main_menu.asm` (row 18) and
+every PC screen (row 17) print through `PrintText` with `[text_msgbox] = msgbox_dialog` from exactly
+this context. Replaced with pret's own five `text_far` streams — Tier-1 bodies generated into
+`assets/save_text.inc` (`SAVE_FAR` in `tools/gen_menu_strings.py`, collected from pret
+`data/text/text_4.asm`), Tier-2 wrappers in the `.asm` — printed by `PrintText`. The observable result
+is now pret's typewriter reveal, not an instant blit. `DelayFrames` (which already existed) replaced
+the open-coded `sv_delay` loop. Header claim fixed in the same commit.
+
+### M-98 (FIXED). The YES/NO box was moved off pret's `hlcoord 0, 7`
+pret's `SaveTheGame_YesOrNo` is six instructions: `PrintText`, `hlcoord 0,7`, `lb bc, 8,1`,
+`wTextBoxID = TWO_OPTION_MENU`, `DisplayTextBoxID`, read `wCurrentMenuItem`. The port instead ran the
+bespoke S3 driver's own top-right anchor, with a comment claiming that was forced. It is not — the
+`TWO_OPTION_MENU` dispatch is live and `learn_move.asm` already calls it exactly as pret does. Rewritten
+to pret's sequence. **Observed** (`DEBUG_SAVE` → FRAME.BIN): the box now sits above the dialog at pret's
+row 7 instead of pinned to canvas row 0, cursor defaulting to YES.
+
+### M-99 (FIXED — stale comment). "TODO-HW: audio HAL (Phase 3) — no-op" over live audio
+The header claimed the save jingle was a deferred no-op. The code beneath it called
+`PlaySoundWaitForCurrent` / `WaitForSoundToFinish` with `SFX_SAVE` — both real, both in
+`src/home/audio.asm`, and `SFX_SAVE` (`$B6`) is a real id in `assets/audio_constants.inc`. The audio HAL
+has been live since the PC screens shipped; only the comment was stuck in Phase 2. Comment corrected;
+the calls were already right.
+
+### M-100 (finding, filed against `src/home/yes_no.asm` — NOT fixed here)
+The port's `DisplayTwoOptionMenu` takes the box top-left from `yn_box_col`/`yn_box_row` rather than
+pret's `HL`, and offers exactly two projection anchors (`yn_proj_mode`: overworld `X+20`, battle
+`X+10/Y+3`). The overworld anchor is a *right*-anchor rule, tuned for the three fixed-coord helpers
+(`InitYesNoTextBoxParameters` 14,7 / `YesNoChoicePokeCenter` 11,6 / `WideYesNoChoice` 12,7), all of
+which sit on the right of the GB screen. Save's box is the one *left*-anchored two-option box in the
+game (`hlcoord 0, 7`), and under the `+20` rule it lands mid-canvas instead of at the canvas's left
+edge. Faithful placement needs a left-anchor mode in `home/yes_no.asm` — that file is not this row's
+scope. Also noted: those three coords were the *only* box positions the port could express, because
+`yn_box_col`/`row`/`proj_mode` were not exported; part 1 adds the three `global` declarations (no
+behaviour change) so a pret call site can state its own coords, as pret's does.
+
+### SANCTIONED (tagged at the site)
+- **`SaveTheGame_YesOrNo`'s `yn_box_col`/`yn_box_row`/`yn_proj_mode` stores in place of pret's
+  `hlcoord 0,7` / `lb bc, 8,1`** — DEVIATION(window-compositor). The two-option box is a compositor
+  *window*, not tiles drawn into the visible BG map, so its position must reach the compositor as GB
+  coordinates it can project; `HL`/`BC` are dead on that path. The values stored **are** pret's (column
+  0, row 7, overworld anchor) — see M-100 for the anchor-rule caveat.
+
+### Allowlist
+**Nothing to challenge**: `pret_label_allowlist.json` has no entry naming any label of pret
+`engine/menus/save.asm`. (The four `Save*` entries in it — `SaveScreenTilesToBuffer1/2`,
+`SaveEndBattleTextPointers`, `GetSavedEndBattleTextPointer` — belong to `home/tilemap.asm` and
+`home/trainers.asm`; name collision only.)
+
+### Verification
+`make check` clean; `update_label_db && lint_pret_labels` **0 violations, 5 suppressed, exit 0**;
+`make fidelity` **6/6 PASS** (no new masks). faithdiff: `SaveMenu` (8/8 calls), `SaveTheGame_YesOrNo`,
+`SaveGameData`, and the five text labels all **clean**; `TryLoadSaveFile` matches 8/8 calls with one
+`ADDED [wStatusFlags5]` store, which is the documented pret-store-matcher blind spot (pret writes it as
+`set`/`res BIT_NO_TEXT_DELAY, [hl]`). **Rendered and looked at** — `DEBUG_SAVE` (`RunSaveTest`, rebuilt
+on the AUTOKEY harness) → FRAME.BIN: "Would you like to SAVE the game?" reveals character-by-character
+through `PrintText` (caught mid-reveal at frame 90, complete by frame 200) with the `TWO_OPTION_MENU`
+YES/NO box above it, cursor on YES.

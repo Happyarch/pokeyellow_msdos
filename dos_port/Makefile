@@ -767,6 +767,9 @@ endif
 ifdef DEBUG_SAVE
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_SAVE
+NASMFLAGS += -D DEBUG_AUTOKEY
+NASMFLAGS += -D AUTOKEY_QUIET
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=200
 NASMFLAGS += -D SKIP_TITLE
 endif
 ifdef DEBUG_SAVE_ROUNDTRIP
@@ -1469,6 +1472,7 @@ src/engine/menus/players_pc.o: assets/ui_layout_menus.inc assets/audio_constants
 src/engine/menus/oaks_pc.o: assets/oaks_pc_text.inc
 src/engine/menus/league_pc.o: assets/league_pc_text.inc
 src/engine/menus/main_menu.o: assets/main_menu_text.inc
+src/engine/menus/save.o: assets/save_text.inc assets/audio_constants.inc
 src/engine/items/item_effects.o: assets/ui_layout_menus.inc
 src/engine/menus/main_menu.o src/engine/menus/save.o: assets/ui_layout_menus.inc
 src/engine/menus/naming_screen.o: assets/ui_layout_menus.inc assets/alphabets.inc \

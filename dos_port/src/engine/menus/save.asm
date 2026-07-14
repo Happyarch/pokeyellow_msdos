@@ -24,19 +24,26 @@
 ;    both inside 0xD2F6..0xDA7F) + wSpriteDataStart..End + wBoxDataStart..End +
 ;    wPartyDataStart..End. So the pokédex + pikachu-happiness tail pret copies
 ;    separately need no special handling here — they ride in the main-data block.
-;  * TEXT: pret prints each message with PrintText (the battle/menu printer that
-;    keeps the current window list). The port's dialog projection collapses the
-;    window list to the dialog alone, so — as in S4/S5/S6 — each message is DRAWN
-;    WHOLE into the stride-20 W_TILEMAP scratch (rows 12-17), mirrored to
-;    GB_TILEMAP1, shown as a window at UI_MESSAGE_BOX, with pret wording
-;    (data/text/text_4.asm, GB charmap) and the terminal `prompt` reproduced as a
-;    ▼ + A/B wait.  DEVIATION(text) — same precedent as players_pc.asm.
-;  * The "Would you like to SAVE?" yes/no uses the S3 two-option driver
-;    (home/yes_no.asm) via InitYesNoTextBoxParameters + DisplayYesNoChoice;
-;    wCurrentMenuItem holds the result (0=Yes,1=No). ; DEVIATION(geometry): pret
-;    positions the box at hlcoord 0,7 directly; the driver owns the projected
-;    (top-right) placement, so the save yes/no lands at the standard UI YES/NO
-;    anchor. Carry contract preserved (CF=0/AL=0 -> Yes).
+;  * TEXT (row 19 part 1, M-97): the SAVE/LOAD messages are pret's own text_far
+;    streams (Tier-1 data in assets/save_text.inc, generated from data/text/
+;    text_4.asm) printed by PrintText through the msgbox_dialog projection — the
+;    `line`/`cont` breaks, the terminal `prompt` and _GameSavedText's TX_RAM
+;    player-name splice are executed by the text engine. Until row 19 this file
+;    hand-encoded every LINE as a charmap `db` run and drew them whole with bespoke
+;    SV_* routines, claiming "the port's dialog projection collapses the window list
+;    to the dialog alone" — false: PrintText is what pc.asm/players_pc.asm/
+;    oaks_pc.asm/league_pc.asm all use, and the drawn-whole imitation is what those
+;    rows deleted.
+;  * The "Would you like to SAVE?" yes/no is pret's own TWO_OPTION_MENU box:
+;    wTextBoxID = TWO_OPTION_MENU + DisplayTextBoxID, at pret's own hlcoord 0,7 /
+;    lb bc,8,1 (the learn_move.asm precedent). wCurrentMenuItem holds the result
+;    (0=Yes,1=No). The former InitYesNoTextBoxParameters/DisplayYesNoChoice
+;    substitution moved the box to the standard top-right YES/NO anchor — a
+;    geometry change pret does not make (M-98).
+;  * SFX_SAVE / PlaySoundWaitForCurrent / WaitForSoundToFinish are REAL in the port
+;    (src/home/audio.asm + assets/audio_constants.inc; pc.asm plays its PC jingles
+;    through them). The "TODO-HW: audio HAL (Phase 3), no-op" comments that used to
+;    sit here were stale (M-99); the save jingle is restored.
 ;  * CHANGE-BOX box swap: the port has WRAM for only the CURRENT box
 ;    (wBoxDataStart..End); the other 11 boxes live in SRAM banks pret has and the
 ;    port does not. So CopyBoxToOrFromSRAM / the per-bank mon-count reads / the
@@ -56,6 +63,8 @@ bits 32
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
 %include "gb_macros.inc"
+%include "gb_text.inc"                  ; text_far / text_end
+%include "assets/audio_constants.inc"   ; SFX_SAVE
 
 %define UI_LAYOUT_EQUATES_ONLY 1
 %include "assets/ui_layout_menus.inc"
@@ -77,6 +86,12 @@ global CalcCheckSum
 global CalcIndividualBoxCheckSums
 global GetBoxSRAMLocation
 global CheckPreviousSaveFile
+; --- SAVE/LOAD message streams (pret labels; bodies in assets/save_text.inc) ---
+global FileDataDestroyedText
+global WouldYouLikeToSaveText
+global SavingText
+global GameSavedText
+global OlderFileWillBeErasedText
 ; --- CHANGE BOX ------------------------------------------------------------
 global ChangeBox
 global CopyBoxToOrFromSRAM
@@ -105,6 +120,13 @@ extern menu_item_step           ; home/window.asm — per-item cursor row step
 extern menu_redraw_cb           ; home/window.asm — per-frame redraw cb (0=none)
 extern HandleMenuInput          ; home/window.asm — Out: AL = watched keys pressed
 extern DelayFrame               ; video/frame.asm
+extern DelayFrames              ; video/frame.asm — BL = frame count (pret's ld c,n)
+extern PrintText                ; home/window.asm — In: ESI = text stream
+extern text_msgbox              ; home/text.asm — the active msgbox projection
+extern msgbox_dialog            ; home/text.asm — the standard bottom dialog box
+extern DisplayTextBoxID         ; home/textbox.asm — [wTextBoxID] box (TWO_OPTION_MENU)
+extern PlaySoundWaitForCurrent  ; home/audio.asm — In: AL = sound id
+extern WaitForSoundToFinish     ; home/audio.asm
 ; --- generic engine seams ---------------------------------------------------
 ; (pret's CopyData / AddNTimes SRAM copies collapse to no-ops here — see the
 ;  TODO-HW: SRAM sites — so neither is externed.)
@@ -115,9 +137,10 @@ extern ClearScreen              ; movie/title.asm
 extern LoadFontTilePatterns     ; gfx/load_font.asm
 extern LoadTextBoxTilePatterns  ; gfx/load_font.asm
 ; --- the S3 YES/NO driver (home/yes_no.asm) --------------------------------
-extern InitYesNoTextBoxParameters
-extern DisplayYesNoChoice
-extern YesNoChoice
+extern YesNoChoice              ; home/yes_no.asm — ChangeBox's confirm
+extern yn_box_col               ; home/yes_no.asm — two-option box top-left, GB X
+extern yn_box_row               ; home/yes_no.asm — two-option box top-left, GB Y
+extern yn_proj_mode             ; home/yes_no.asm — 0 = overworld anchor
 ; --- the .dsv HAL (src/save/dsv_io.asm) ------------------------------------
 extern DsvWriteSave             ; CF=0 ok / CF=1 fail
 extern DsvReadSave              ; CF=0 ok / CF=1 absent/bad
@@ -171,22 +194,11 @@ wChangeBoxSavedMapTextPointer equ 0xCD3D
 ; ===========================================================================
 section .data
 align 4
+; Tier-1 DATA: the five SAVE/LOAD text_far streams (row 19 part 1, M-97). The
+; CHANGE-BOX strings below are still hand-encoded charmap runs — row 19 part 2.
+%include "assets/save_text.inc"
+
 ; --- pret data/text/text_4.asm wording, GB charmap, '@'-terminated -----------
-; _WouldYouLikeToSaveText: "Would you like to" / "SAVE the game?"
-sv_would_l1: db 0x96,0xAE,0xB4,0xAB,0xA3,0x7F,0xB8,0xAE,0xB4,0x7F,0xAB,0xA8,0xAA,0xA4,0x7F,0xB3,0xAE, CHAR_TERM
-sv_would_l2: db 0x92,0x80,0x95,0x84,0x7F,0xB3,0xA7,0xA4,0x7F,0xA6,0xA0,0xAC,0xA4,0xE6, CHAR_TERM
-; _SavingText: "Saving..."
-sv_saving_l1: db 0x92,0xA0,0xB5,0xA8,0xAD,0xA6,0xE8,0xE8,0xE8, CHAR_TERM
-; _GameSavedText: "<PLAYER> saved" / "the game!"  (player name placed at runtime)
-sv_saved_tail: db 0x7F,0xB2,0xA0,0xB5,0xA4,0xA3, CHAR_TERM               ; " saved"
-sv_saved_l2:   db 0xB3,0xA7,0xA4,0x7F,0xA6,0xA0,0xAC,0xA4,0xE7, CHAR_TERM ; "the game!"
-; _OlderFileWillBeErasedText: "The older file" / "will be erased to" / "save. Okay?"
-sv_older_l1: db 0x93,0xA7,0xA4,0x7F,0xAE,0xAB,0xA3,0xA4,0xB1,0x7F,0xA5,0xA8,0xAB,0xA4, CHAR_TERM
-sv_older_l2: db 0xB6,0xA8,0xAB,0xAB,0x7F,0xA1,0xA4,0x7F,0xA4,0xB1,0xA0,0xB2,0xA4,0xA3,0x7F,0xB3,0xAE, CHAR_TERM
-sv_older_l3: db 0xB2,0xA0,0xB5,0xA4,0xE8,0x7F,0x8E,0xAA,0xA0,0xB8,0xE6, CHAR_TERM
-; _FileDataDestroyedText: "The file data is" / "destroyed!"
-sv_destroyed_l1: db 0x93,0xA7,0xA4,0x7F,0xA5,0xA8,0xAB,0xA4,0x7F,0xA3,0xA0,0xB3,0xA0,0x7F,0xA8,0xB2, CHAR_TERM
-sv_destroyed_l2: db 0xA3,0xA4,0xB2,0xB3,0xB1,0xAE,0xB8,0xA4,0xA3,0xE7, CHAR_TERM
 ; _WhenYouChangeBoxText page1: "When you change a" / "#MON BOX, data" / "will be saved."
 ; (# = POKé, spelled P,O,K,é,M,O,N as league_pc.asm does; drawn-whole DEVIATION)
 sv_chgbox_l1: db 0x96,0xA7,0xA4,0xAD,0x7F,0xB8,0xAE,0xB4,0x7F,0xA2,0xA7,0xA0,0xAD,0xA6,0xA4,0x7F,0xA0, CHAR_TERM
@@ -244,7 +256,6 @@ TryLoadSaveFile:
     call ClearScreen
     call LoadFontTilePatterns
     call LoadTextBoxTilePatterns
-    mov dword [text_row_stride], MSG_STRIDE      ; drawn-whole messages stage stride-20
     call LoadMainData
     jc .badsum
     call LoadCurrentBoxData
@@ -256,19 +267,23 @@ TryLoadSaveFile:
 .badsum:
     ; ld hl,wStatusFlags5 / set BIT_NO_TEXT_DELAY,[hl]
     or byte [ebp + wStatusFlags5], 1 << BIT_NO_TEXT_DELAY
-    call SV_FileDataDestroyed                    ; PrintText FileDataDestroyedText (whole, prompt)
-    ; ld c,100 / call DelayFrames
-    mov ecx, 100
-.delay:
-    call DelayFrame
-    dec ecx
-    jnz .delay
+    mov dword [text_msgbox], msgbox_dialog       ; port: publish the box projection
+    mov esi, FileDataDestroyedText               ; ld hl, FileDataDestroyedText
+    call PrintText                               ; stream ends in `prompt`
+    mov bl, 100                                  ; ld c, 100
+    call DelayFrames
     ; res BIT_NO_TEXT_DELAY,[hl]
     and byte [ebp + wStatusFlags5], (~(1 << BIT_NO_TEXT_DELAY)) & 0xFF
     mov al, 1                                    ; bad checksum
 .done:
     mov [ebp + wSaveFileStatus], al
     ret
+
+; pret ref: engine/menus/save.asm:FileDataDestroyedText — Tier-2 wrapper over the
+; Tier-1 stream in assets/save_text.inc.
+FileDataDestroyedText:
+    text_far _FileDataDestroyedText
+    text_end
 
 ; ---------------------------------------------------------------------------
 ; LoadMainData — pret ref: engine/menus/save.asm:LoadMainData.
@@ -348,69 +363,88 @@ TryLoadSaveFileIgnoreChecksum:
 ; "older file erased" second yes/no, SaveGameData, "SAVING..."/"saved!" messages.
 ; ---------------------------------------------------------------------------
 SaveMenu:
-    mov dword [text_row_stride], MSG_STRIDE
     ; farcall PrintSaveScreenText (package E)
     call PrintSaveScreenText
-    ; ld c,10 / call DelayFrames
-    mov ecx, 10
-    call sv_delay
-    ; ld hl,WouldYouLikeToSaveText / call SaveTheGame_YesOrNo
-    mov eax, SV_WouldYouLikeToSave
+    mov bl, 10                                   ; ld c, 10
+    call DelayFrames
+    mov esi, WouldYouLikeToSaveText              ; ld hl, WouldYouLikeToSaveText
     call SaveTheGame_YesOrNo
     test al, al                                  ; and a  (0=Yes,1=No)
     jnz .no                                      ; ret nz
-    mov ecx, 10
-    call sv_delay
+    mov bl, 10
+    call DelayFrames
     ; ld a,[wSaveFileStatus] / cp 1 / jr z,.save
     mov al, [ebp + wSaveFileStatus]
     cmp al, 1
     jz .save
     call CheckPreviousSaveFile
     jz .save
-    ; ld hl,OlderFileWillBeErasedText / call SaveTheGame_YesOrNo
-    mov eax, SV_OlderFileErased
+    mov esi, OlderFileWillBeErasedText           ; ld hl, OlderFileWillBeErasedText
     call SaveTheGame_YesOrNo
     test al, al
     jnz .no                                      ; ret nz
 .save:
     call SaveGameData
-    ; ld hl,SavingText / call PrintText
-    call SV_Saving
-    ; ld c,128 / call DelayFrames
-    mov ecx, 128
-    call sv_delay
-    call sv_msg_drop                             ; drop "SAVING..." before "saved!"
-    ; ld hl,GameSavedText / call PrintText
-    call SV_GameSaved
-    ; ld c,10 / call DelayFrames
-    mov ecx, 10
-    call sv_delay
-    ; ld a,SFX_SAVE / call PlaySoundWaitForCurrent / call WaitForSoundToFinish —
-    ; TODO-HW: audio HAL (Phase 3), no-op.
-    ; ld c,30 / call DelayFrames
-    mov ecx, 30
-    call sv_delay
-    call sv_msg_drop
+    mov dword [text_msgbox], msgbox_dialog
+    mov esi, SavingText                          ; ld hl, SavingText
+    call PrintText                               ; ends in `done` — the box stays up
+    mov bl, 128                                  ; ld c, 128
+    call DelayFrames
+    mov dword [text_msgbox], msgbox_dialog
+    mov esi, GameSavedText                       ; ld hl, GameSavedText
+    call PrintText                               ; TX_RAM splices in wPlayerName
+    mov bl, 10                                   ; ld c, 10
+    call DelayFrames
+    mov al, SFX_SAVE                             ; ld a, SFX_SAVE
+    call PlaySoundWaitForCurrent
+    call WaitForSoundToFinish
+    mov bl, 30                                   ; ld c, 30
+    call DelayFrames
     ret
 .no:
     ret
 
 ; ---------------------------------------------------------------------------
 ; SaveTheGame_YesOrNo — pret ref: engine/menus/save.asm:SaveTheGame_YesOrNo.
-; In: EAX = drawn-whole message routine (port: pret's hl=text ptr for PrintText).
-; Out: AL = wCurrentMenuItem (0=Yes,1=No).
+; In: ESI = text stream (pret's hl). Out: AL = wCurrentMenuItem (0=Yes,1=No).
 ; pret: PrintText / hlcoord 0,7 / lb bc,8,1 / wTextBoxID=TWO_OPTION_MENU /
-; DisplayTextBoxID / ld a,[wCurrentMenuItem].
+; DisplayTextBoxID / ld a,[wCurrentMenuItem] — reproduced call for call (the
+; learn_move.asm:AbandonLearning precedent for the TWO_OPTION_MENU box).
 ; ---------------------------------------------------------------------------
 SaveTheGame_YesOrNo:
-    call eax                                     ; draw the question whole (persists)
-    ; ; PROJ/DEVIATION(geometry): pret hlcoord 0,7 lb bc,8,1 -> the S3 YES/NO
-    ; driver's standard top-right anchor (InitYesNoTextBoxParameters GB(14,7)).
-    call InitYesNoTextBoxParameters
-    call DisplayYesNoChoice                      ; CF/wCurrentMenuItem = choice
-    call sv_msg_drop                             ; drop the question window
+    mov dword [text_msgbox], msgbox_dialog       ; port: publish the box projection
+    call PrintText                               ; the question ends in `done`
+    ; hlcoord 0, 7 / lb bc, 8, 1.
+    ; DEVIATION(window-compositor): the port's DisplayTwoOptionMenu (home/yes_no.asm)
+    ; draws the box as a compositor window, so it takes the top-left from
+    ; yn_box_col/row (GB coords, projected) instead of pret's HL, and derives the
+    ; cursor from the box rather than from B/C — the HL/BC triple is dead here.
+    ; These are pret's coords: GB column 0, row 7, overworld anchor.
+    mov dword [yn_box_col], 0
+    mov dword [yn_box_row], 7
+    mov dword [yn_proj_mode], 0
+    mov byte [ebp + wTextBoxID], TWO_OPTION_MENU
+    call DisplayTextBoxID
     mov al, [ebp + wCurrentMenuItem]
     ret
+
+; --- the four SAVE-flow dialogs (pret ref: engine/menus/save.asm, same position).
+; Tier-2 wrappers over the Tier-1 streams in assets/save_text.inc.
+WouldYouLikeToSaveText:
+    text_far _WouldYouLikeToSaveText
+    text_end
+
+SavingText:
+    text_far _SavingText
+    text_end
+
+GameSavedText:
+    text_far _GameSavedText
+    text_end
+
+OlderFileWillBeErasedText:
+    text_far _OlderFileWillBeErasedText
+    text_end
 
 ; ---------------------------------------------------------------------------
 ; SaveMainData / SaveCurrentBoxData / SavePartyAndDexData — pret ref:
@@ -878,16 +912,6 @@ DisableSRAM:
 ; # Port plumbing — drawn-whole messages (DEVIATION(text); players_pc precedent)
 ; ###########################################################################
 
-; sv_delay — DelayFrames(ECX). (DelayFrame may clobber ECX -> save/restore.)
-sv_delay:
-.loop:
-    push ecx
-    call DelayFrame
-    pop ecx
-    dec ecx
-    jnz .loop
-    ret
-
 ; draw the empty message border into scratch rows 12-17 (interior 18x4)
 sv_msg_box:
     mov esi, W_TILEMAP + MSG_SROW * MSG_STRIDE
@@ -950,70 +974,7 @@ sv_msg_drop:
     pop eax
     ret
 
-; --- specific message drawers (pret text_4.asm wording) --------------------
-; WouldYouLikeToSaveText (done — persists; the yes/no box follows)
-SV_WouldYouLikeToSave:
-    call sv_msg_box
-    mov esi, W_TILEMAP + 14 * MSG_STRIDE + 1
-    mov eax, sv_would_l1
-    call place_flat_str
-    mov esi, W_TILEMAP + 16 * MSG_STRIDE + 1
-    mov eax, sv_would_l2
-    call place_flat_str
-    call sv_msg_show
-    ret
-
-; SavingText (done — persists)
-SV_Saving:
-    call sv_msg_box
-    mov esi, W_TILEMAP + 14 * MSG_STRIDE + 1
-    mov eax, sv_saving_l1
-    call place_flat_str
-    call sv_msg_show
-    ret
-
-; GameSavedText (done — "<PLAYER> saved" / "the game!")
-SV_GameSaved:
-    call sv_msg_box
-    lea eax, [ebp + W_PLAYER_NAME]
-    mov esi, W_TILEMAP + 14 * MSG_STRIDE + 1
-    call place_flat_str                            ; name; ESI advances past it
-    mov eax, sv_saved_tail
-    call place_flat_str
-    mov esi, W_TILEMAP + 16 * MSG_STRIDE + 1
-    mov eax, sv_saved_l2
-    call place_flat_str
-    call sv_msg_show
-    ret
-
-; OlderFileWillBeErasedText (done — 3 lines; the yes/no box follows)
-SV_OlderFileErased:
-    call sv_msg_box
-    mov esi, W_TILEMAP + 13 * MSG_STRIDE + 1
-    mov eax, sv_older_l1
-    call place_flat_str
-    mov esi, W_TILEMAP + 14 * MSG_STRIDE + 1
-    mov eax, sv_older_l2
-    call place_flat_str
-    mov esi, W_TILEMAP + 15 * MSG_STRIDE + 1
-    mov eax, sv_older_l3
-    call place_flat_str
-    call sv_msg_show
-    ret
-
-; FileDataDestroyedText (prompt — ▼ + A/B wait, then drop)
-SV_FileDataDestroyed:
-    call sv_msg_box
-    mov esi, W_TILEMAP + 14 * MSG_STRIDE + 1
-    mov eax, sv_destroyed_l1
-    call place_flat_str
-    mov esi, W_TILEMAP + 16 * MSG_STRIDE + 1
-    mov eax, sv_destroyed_l2
-    call place_flat_str
-    call sv_msg_show
-    call sv_msg_prompt
-    jmp sv_msg_drop
-
+; --- the CHANGE-BOX message is still drawn whole (row 19 part 2 migrates it) ---
 ; WhenYouChangeBoxText (2 pages, prompt after each)
 SV_WhenYouChangeBox:
     call sv_msg_box
@@ -1041,26 +1002,20 @@ SV_WhenYouChangeBox:
 ; ###########################################################################
 %ifdef DEBUG_SAVE
 ; ---------------------------------------------------------------------------
-; RunSaveTest — package-H FRAME.BIN gate. Seed a new game, write the .dsv via
-; SaveGameData, draw the "SAVING..." + "<PLAYER> saved the game!" messages, dump
-; FRAME.BIN. Never returns. In: EBP = GB base. Call from EnterMap after overworld.
+; RunSaveTest — row 19 FRAME.BIN gate for the SAVE flow. Seeds a new game, then
+; runs the REAL SaveMenu: the save-info panel, "Would you like to SAVE?" through
+; PrintText, and pret's TWO_OPTION_MENU YES/NO box at hlcoord 0,7. SaveMenu blocks
+; in that menu's HandleMenuInput; the harness runs with AUTOKEY_QUIET (no presses),
+; so AutoKeyDrive photographs the open question + YES/NO at AUTOKEY_DUMP_FRAME and
+; exits. (The RunPCTest/RunOaksPCTest pattern.)
+; In: EBP = GB base. Called from EnterMap after the overworld is set up.
 ; ---------------------------------------------------------------------------
 RunSaveTest:
     or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     call LoadTextBoxTilePatterns
     call PrepareNewGameDebug                        ; seed party+bag+badges
-    mov dword [text_row_stride], MSG_STRIDE
-    call SaveGameData                               ; writes POKEMON.DSV
-    call SV_Saving
-    call DelayFrame
-    call DelayFrame
-    call sv_msg_drop
-    call SV_GameSaved
-    call DelayFrame
-    call DelayFrame
-    call DelayFrame
-    call DumpBackbuffer                             ; writes FRAME.BIN + exits
+    call SaveMenu
 .hang:
     jmp .hang
 %elifdef DEBUG_SAVE_ROUNDTRIP

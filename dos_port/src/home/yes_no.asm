@@ -97,6 +97,13 @@ global DisplayYesNoChoice
 global WideYesNoChoice
 global YesNoChoicePokeCenter
 global InitYesNoTextBoxParameters
+; Box placement is the port's stand-in for pret's `hlcoord X, Y` at the call
+; site, so a caller that supplies its own coords (engine/menus/save.asm's
+; SaveTheGame_YesOrNo: hlcoord 0, 7) must be able to write them. The entry
+; points above cover only the three fixed-coord boxes pret has helpers for.
+global yn_box_col
+global yn_box_row
+global yn_proj_mode
 global DisplayTwoOptionMenu     ; menus S2: DisplayTextBoxID_'s TWO_OPTION_MENU
                                 ; dispatch target — the ONE two-option impl.
                                 ; Port contract: box position comes from
