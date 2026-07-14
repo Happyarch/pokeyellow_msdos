@@ -30,6 +30,13 @@ make image $FLAGS >"$SCRATCH/build.log" 2>&1 || {
     tail -20 "$SCRATCH/build.log"; echo "run_headless: build failed" >&2; exit 2; }
 
 cp PKMN.IMG "$SCRATCH/pkmn.img"
+# F-11: PKMN.IMG can carry a dump file baked in from an EARLIER build. A run that
+# crashes before dumping would leave that stale file in the image, mcopy would pull it
+# out, and the capture would read as a clean success — a silently passing test of
+# nothing. Delete them first, so any file found below is definitionally fresh.
+for f in GBSTATE.BIN DUMP.BIN FRAME.BIN; do
+    mdel -i "$SCRATCH/pkmn.img@@1048576" "::$f" 2>/dev/null || true
+done
 sed "s|^imgmount c PKMN.IMG|imgmount c $SCRATCH/pkmn.img|; s|^PKMN.EXE\$|PKMN.EXE\nexit|" \
     dosbox-x.conf >"$SCRATCH/run.conf"
 

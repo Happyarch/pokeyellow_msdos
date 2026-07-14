@@ -24,6 +24,12 @@ make image $FLAGS >"$SCRATCH/build.log" 2>&1 || {
     tail -20 "$SCRATCH/build.log"; echo "goldencheck: build failed"; exit 2; }
 
 cp PKMN.IMG "$SCRATCH/pkmn.img"
+# F-11: a stale GBSTATE.BIN baked into PKMN.IMG from an earlier build would be mcopy'd
+# out by a run that crashed before dumping, and the scenario would diff the OLD state —
+# reporting a pass (or a bogus failure) for a run that produced nothing. Delete first.
+for f in GBSTATE.BIN DUMP.BIN FRAME.BIN; do
+    mdel -i "$SCRATCH/pkmn.img@@1048576" "::$f" 2>/dev/null || true
+done
 sed "s|^imgmount c PKMN.IMG|imgmount c $SCRATCH/pkmn.img|; s|^PKMN.EXE\$|PKMN.EXE\nexit|" \
     dosbox-x.conf >"$SCRATCH/run.conf"
 
