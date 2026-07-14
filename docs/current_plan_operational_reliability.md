@@ -36,7 +36,7 @@ runtime harness.
   longest-match charmap gates.
 - [ ] Add debug-only projection, scratch-owner, compositor-lifecycle, and
   re-entrancy assertions subsystem by subsystem.
-- [ ] Reconcile M-69 and MAP_BORDER-era stigmergy entries using repository/runtime
+- [x] Reconcile M-69 and the MAP_BORDER=6 row-wrap stigmergy entries using repository/runtime
   evidence, retaining resolved historical lessons without stale active status.
 
 Acceptance for this initial slice: project state is generated from the scanner
