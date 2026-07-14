@@ -27,8 +27,7 @@ extern tick_count        ; timing.asm — incremented at ~60 Hz by the PIT ISR
 global video_init
 global present           ; copy 320×200 back buffer → VGA framebuffer
 global draw_tick_band    ; visible PIT tick indicator (top screen band)
-global commit_palette    ; map BGP/OBP0/OBP1 → DAC entries 0-11 (raw-index render)
-global dmg_palette       ; 4-shade DMG ramp (RGB 6-bit); SlideBattlePicsIn blacks shade 3
+global commit_palette    ; map CGB-style slot palettes + DMG regs → DAC 0-63
 
 ; ---------------------------------------------------------------------------
 ; BSS
@@ -36,6 +35,9 @@ global dmg_palette       ; 4-shade DMG ramp (RGB 6-bit); SlideBattlePicsIn black
 section .bss
 align 4
 vga_base:   resd 1       ; DS-relative address of the VGA framebuffer
+pal_bgp_shadow: resb 1
+pal_obp0_shadow: resb 1
+pal_obp1_shadow: resb 1
 
 ; ---------------------------------------------------------------------------
 ; Data
@@ -69,20 +71,9 @@ test_palette:
 ; Note: port 0x3C9 write order is R, G, B — so ramp 0 is actually red.
 ; Cosmetic only; this palette exists just to verify the DAC.
 
-; DMG shade palette: entries 0–3, written after the ramps so the BG
-; renderer's shade indices (0 = lightest … 3 = darkest) look like a real
-; Game Boy. 6-bit RGB. Full 256-entry game palette layout is Phase 5.
-dmg_palette:
-    db 38, 47,  3       ; shade 0 — lightest  (#9bbc0f DMG green, 6-bit)
-    db 34, 43,  3       ; shade 1 — light     (#8bac0f)
-    db 12, 24, 12       ; shade 2 — dark      (#306230)
-    db  3, 14,  3       ; shade 3 — darkest   (#0f380f)
-
-; Last BGP/OBP0/OBP1 committed to the DAC. Init to 0xFF so the first
-; commit_palette call always reprograms (no valid GB palette reads as 0xFFFFFF).
-align 4
-pal_shadow:
-    db 0xFF, 0xFF, 0xFF
+extern g_pal_dirty
+extern bg_slot_pal, obj_slot_pal
+extern pal_rgb_table
 
 ; ---------------------------------------------------------------------------
 ; Code
@@ -121,18 +112,6 @@ video_init:
     lodsb
     out dx, al
     loop .pal_loop
-
-    ; Overwrite entries 0–3 with the DMG shade palette (BG renderer output)
-    mov dx, 0x3C8
-    xor al, al
-    out dx, al
-    mov dx, 0x3C9
-    mov esi, dmg_palette
-    mov ecx, 4 * 3
-.dmg_loop:
-    lodsb
-    out dx, al
-    loop .dmg_loop
 
     call draw_test_pattern
 
@@ -198,73 +177,95 @@ draw_tick_band:
     ret
 
 ; ---------------------------------------------------------------------------
-; commit_palette — map GB BGP/OBP0/OBP1 → VGA DAC entries 0-11.
+; commit_palette — map CGB-style slots + GB DMG palette registers to DAC 0-63.
 ;
 ; The PPU renderer writes RAW GB color indices into the back buffer:
-;   BG/window color 0-3 → DAC 0-3
-;   OBP0 sprite color   → DAC 4-7
-;   OBP1 sprite color   → DAC 8-11
-; This routine programs those 12 DAC entries from dmg_palette using the current
-; GB palette registers, so a BGP/OBP fade/flash is just a DAC reprogram — no
-; tile re-decode. DAC entry (base + c) = dmg_palette[(reg >> 2c) & 3].
-;
-; Skipped when BGP/OBP0/OBP1 are unchanged since the last commit (pal_shadow).
-; Called once per frame from DelayFrame (after wait_vblank). IO_BGP/OBP0/OBP1
-; are three consecutive GB registers ($FF47-$FF49).
+; BG cache bytes are slot*4+color, OBJ pixels are 32+slot*4+color.  Each DAC
+; entry chooses a color from its PAL_* RGB quad via BGP (BG) or OBP0/OBP1 (OBJ),
+; keeping fades as a pure register/DAC update.  g_pal_dirty is armed whenever a
+; palette command swaps a slot; register changes are detected by the frame's
+; ordinary call through this routine.
 ;
 ; In: EBP = GB memory base. All registers preserved.
 ; ---------------------------------------------------------------------------
 commit_palette:
     pushad
-
-    ; Skip if the three palette registers are unchanged.
+    cmp byte [g_pal_dirty], 0
+    jne .commit
     mov al, [ebp + IO_BGP]
-    cmp al, [pal_shadow]
-    jne .reprogram
+    cmp al, [pal_bgp_shadow]
+    jne .commit
     mov al, [ebp + IO_OBP0]
-    cmp al, [pal_shadow + 1]
-    jne .reprogram
+    cmp al, [pal_obp0_shadow]
+    jne .commit
     mov al, [ebp + IO_OBP1]
-    cmp al, [pal_shadow + 2]
-    je .done
-
-.reprogram:
-    mov al, [ebp + IO_BGP]
-    mov [pal_shadow], al
-    mov al, [ebp + IO_OBP0]
-    mov [pal_shadow + 1], al
-    mov al, [ebp + IO_OBP1]
-    mov [pal_shadow + 2], al
-
-    ; DAC write index = 0 (auto-increments after each RGB triple).
+    cmp al, [pal_obp1_shadow]
+    jne .commit
+    jmp .done
+.commit:
     mov dx, 0x3C8
     xor al, al
     out dx, al
-    mov dx, 0x3C9                  ; DAC data port
-
-    lea esi, [ebp + IO_BGP]        ; 3 consecutive regs: BGP, OBP0, OBP1
-    mov ebx, 3                     ; palette register count
-.reg_loop:
-    movzx ebp, byte [esi]          ; reg value (EBP free — saved by pushad)
-    inc esi
-    mov ecx, 4                     ; 4 colors per palette
-.color_loop:
-    mov eax, ebp
-    and eax, 3                     ; shade index 0-3 for this color
-    lea edi, [dmg_palette + eax*2]
-    add edi, eax                   ; edi = dmg_palette + 3*shade
-    mov al, [edi]                  ; R
+    mov dx, 0x3C9
+    xor ebx, ebx                    ; BG slot 0..7
+.bg_slot:
+    movzx esi, byte [bg_slot_pal + ebx]
+    imul esi, 12
+    add esi, pal_rgb_table
+    movzx edi, byte [ebp + IO_BGP]
+    mov ecx, 4
+.bg_color:
+    mov eax, edi
+    and eax, 3
+    lea eax, [eax + eax*2]
+    add eax, esi
+    mov al, [eax]
     out dx, al
-    mov al, [edi + 1]              ; G
+    mov al, [eax + 1]
     out dx, al
-    mov al, [edi + 2]              ; B
+    mov al, [eax + 2]
     out dx, al
-    shr ebp, 2
+    shr edi, 2
     dec ecx
-    jnz .color_loop
-    dec ebx
-    jnz .reg_loop
-
+    jnz .bg_color
+    inc ebx
+    cmp ebx, 8
+    jb .bg_slot
+    xor ebx, ebx                    ; OBJ slot 0..7
+.obj_slot:
+    movzx esi, byte [obj_slot_pal + ebx]
+    imul esi, 12
+    add esi, pal_rgb_table
+    mov edi, [ebp + IO_OBP0]
+    test ebx, 1
+    jz .obj_reg
+    mov edi, [ebp + IO_OBP1]
+.obj_reg:
+    mov ecx, 4
+.obj_color:
+    mov eax, edi
+    and eax, 3
+    lea eax, [eax + eax*2]
+    add eax, esi
+    mov al, [eax]                  ; R
+    out dx, al
+    mov al, [eax + 1]              ; G
+    out dx, al
+    mov al, [eax + 2]              ; B
+    out dx, al
+    shr edi, 2
+    dec ecx
+    jnz .obj_color
+    inc ebx
+    cmp ebx, 8
+    jb .obj_slot
+    mov al, [ebp + IO_BGP]
+    mov [pal_bgp_shadow], al
+    mov al, [ebp + IO_OBP0]
+    mov [pal_obp0_shadow], al
+    mov al, [ebp + IO_OBP1]
+    mov [pal_obp1_shadow], al
+    mov byte [g_pal_dirty], 0
 .done:
     popad
     ret

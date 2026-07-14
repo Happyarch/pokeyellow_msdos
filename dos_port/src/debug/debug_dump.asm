@@ -23,6 +23,8 @@ bits 32
 %include "gb_constants.inc"
 
 extern ds_base
+extern pal_rgb_table, bg_slot_pal, obj_slot_pal
+extern tile_pal
 %ifdef DEBUG_CALCSTATS
 extern GetMonHeader
 extern CalcStats
@@ -170,6 +172,7 @@ global RunAudioTest
 global DebugDumpMemory
 global DumpBackbuffer
 global DumpGBState
+global DumpPalette
 %ifdef DEBUG_NPC_WALK
 global DumpNpcLog
 global npc_log
@@ -238,6 +241,7 @@ align 4
 fname: db "DUMP.BIN", 0
 fbname: db "FRAME.BIN", 0
 fgbname: db "GBSTATE.BIN", 0
+fpname: db "PAL.BIN", 0
 %ifdef DEBUG_TEXT
 ; The text-engine oracle's probe streams (RunTextTest). Tier-1 data: generated,
 ; never hand-encoded — tools/gen_text_oracle.py.
@@ -424,6 +428,13 @@ dos_sel:     resw 1              ; PM selector of DOS buffer (unused; freed via 
 dos_flat:    resd 1              ; DS-relative (flat) offset of DOS buffer
 file_handle: resw 1
 stage:       resb DUMP_TOTAL     ; concatenated window bytes, staged here first
+; PAL.BIN: 16-byte header, 64×RGB6 DAC entries, 384 tile slots, 8 BG + 8 OBJ ids.
+PAL_HDR_SIZE    equ 16
+PAL_DAC_SIZE    equ 64 * 3
+PAL_TILEPAL_SIZE equ 384
+PAL_TOTAL       equ PAL_HDR_SIZE + PAL_DAC_SIZE + PAL_TILEPAL_SIZE + 8 + 8
+pal_stage:      resb PAL_TOTAL
+pal_reg_tmp:    resd 1
 %ifdef DEBUG_NPC_WALK
 NPC_LOG_CAP  equ 4096            ; 12-byte records → 341 NPC walk-decisions
 npc_log:     resb NPC_LOG_CAP    ; appended by movement.asm:npc_dbg_record
@@ -1372,6 +1383,7 @@ DumpGBState:
 ; ---------------------------------------------------------------------------
 DumpBackbuffer:
     call DumpGBState               ; GBSTATE.BIN alongside every FRAME.BIN
+    call DumpPalette               ; PAL.BIN keeps host frame rendering lockstep
     ; --- Allocate a conventional DOS buffer big enough for 0x10 + 64000 bytes ---
     ; 0x10 + 64000 = 64016 bytes -> 4001 paragraphs; round up to 0x1001 (4097).
     mov ax, 0x0100
@@ -1435,6 +1447,140 @@ DumpBackbuffer:
 .exit:
     mov ax, 0x4C00
     int 0x21
+
+; ---------------------------------------------------------------------------
+; DumpPalette — write PAL.BIN alongside FRAME.BIN.  The file is a stable host
+; debug contract: "PAL0", u8 version=1, 11 reserved, then 64 RGB6 DAC triples,
+; tile_pal[384], bg_slot_pal[8], obj_slot_pal[8].  DAC triples are recomputed
+; from the exact live slot tables and BGP/OBP mirrors, matching commit_palette.
+; ---------------------------------------------------------------------------
+DumpPalette:
+    pushad
+    mov byte [pal_stage + 0], 'P'
+    mov byte [pal_stage + 1], 'A'
+    mov byte [pal_stage + 2], 'L'
+    mov byte [pal_stage + 3], '0'
+    mov byte [pal_stage + 4], 1
+    mov dword [pal_stage + 5], 0
+    mov dword [pal_stage + 9], 0
+    mov dword [pal_stage + 13], 0
+    mov edi, pal_stage + PAL_HDR_SIZE
+    xor ebx, ebx
+.bg_slot:
+    movzx esi, byte [bg_slot_pal + ebx]
+    imul esi, 12
+    add esi, pal_rgb_table
+    movzx eax, byte [ebp + IO_BGP]
+    mov [pal_reg_tmp], eax
+    mov ecx, 4
+.bg_color:
+    mov eax, [pal_reg_tmp]
+    mov edx, eax
+    and edx, 3
+    lea edx, [edx + edx*2]
+    add edx, esi
+    mov al, [edx]
+    stosb
+    mov al, [edx + 1]
+    stosb
+    mov al, [edx + 2]
+    stosb
+    shr dword [pal_reg_tmp], 2
+    dec ecx
+    jnz .bg_color
+    inc ebx
+    cmp ebx, 8
+    jb .bg_slot
+    xor ebx, ebx
+.obj_slot:
+    movzx esi, byte [obj_slot_pal + ebx]
+    imul esi, 12
+    add esi, pal_rgb_table
+    movzx eax, byte [ebp + IO_OBP0]
+    test ebx, 1
+    jz .obj_reg
+    movzx eax, byte [ebp + IO_OBP1]
+.obj_reg:
+    mov [pal_reg_tmp], eax
+    mov ecx, 4
+.obj_color:
+    mov eax, [pal_reg_tmp]
+    mov edx, eax
+    and edx, 3
+    lea edx, [edx + edx*2]
+    add edx, esi
+    mov al, [edx]
+    stosb
+    mov al, [edx + 1]
+    stosb
+    mov al, [edx + 2]
+    stosb
+    shr dword [pal_reg_tmp], 2
+    dec ecx
+    jnz .obj_color
+    inc ebx
+    cmp ebx, 8
+    jb .obj_slot
+    mov esi, tile_pal
+    mov ecx, PAL_TILEPAL_SIZE
+    rep movsb
+    mov esi, bg_slot_pal
+    mov ecx, 8
+    rep movsb
+    mov esi, obj_slot_pal
+    mov ecx, 8
+    rep movsb
+
+    ; Stage filename + PAL.BIN payload in one conventional-memory buffer.
+    mov ax, 0x0100
+    mov bx, 0x100
+    int 0x31
+    jc .done
+    mov [dos_seg], ax
+    mov [dos_sel], dx
+    movzx eax, ax
+    shl eax, 4
+    sub eax, [ds_base]
+    mov [dos_flat], eax
+    mov esi, fpname
+    mov edi, [dos_flat]
+    mov ecx, 8
+    rep movsb
+    mov esi, pal_stage
+    mov edi, [dos_flat]
+    add edi, 0x10
+    mov ecx, PAL_TOTAL
+    rep movsb
+    call zero_rmcs
+    mov word [rmcs + RMCS_EAX], 0x3c00
+    mov ax, [dos_seg]
+    mov [rmcs + RMCS_DS], ax
+    call sim_int21
+    test byte [rmcs + RMCS_FLAGS], 1
+    jnz .free
+    mov ax, [rmcs + RMCS_EAX]
+    mov [file_handle], ax
+    call zero_rmcs
+    mov word [rmcs + RMCS_EAX], 0x4000
+    movzx eax, word [file_handle]
+    mov [rmcs + RMCS_EBX], eax
+    mov dword [rmcs + RMCS_ECX], PAL_TOTAL
+    mov dword [rmcs + RMCS_EDX], 0x10
+    mov ax, [dos_seg]
+    mov [rmcs + RMCS_DS], ax
+    call sim_int21
+    call zero_rmcs
+    mov word [rmcs + RMCS_EAX], 0x3e00
+    movzx eax, word [file_handle]
+    mov [rmcs + RMCS_EBX], eax
+    call sim_int21
+.free:
+    mov ax, 0x0101
+    mov dx, [dos_sel]
+    int 0x31
+.done:
+    popad
+    ret
 
 %ifdef DEBUG_NPC_WALK
 ; ---------------------------------------------------------------------------

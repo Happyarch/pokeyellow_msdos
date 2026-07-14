@@ -35,9 +35,11 @@ bits 32
 extern UncompressSpriteData
 extern g_tilecache_dirty
 extern DelayFrame
-extern dmg_palette
+extern SetPal_BattleBlack
+extern SetPal_Battle
 extern IndexToPokedex             ; flat dex table (pokemon_data.asm): [species-1] -> dex#
 extern text_row_stride            ; text/text.asm — active W_TILEMAP row stride (20/40)
+extern repaint_front_table, tile_pal, bg_slot_pal, g_pal_dirty
 global SlideBattlePicsIn
 
 global LoadMonPicToVRAM
@@ -50,6 +52,7 @@ global LoadFrontSpriteByMonIndex
 global LoadFlippedFrontSpriteByMonIndex
 global LoadMonFrontSprite
 global UncompressMonSprite
+global RefreshMonFrontRepaintPalette
 
 ; --- debug-harness-only stubs (DEBUG_BATTLE / debug_dump.asm); superseded by the
 ;     dispatch above once the MonFrontPics table is staged — see M6.3 SUMMARY ---
@@ -457,9 +460,164 @@ CopyUncompressedPicToHL:
 ; ---------------------------------------------------------------------------
 LoadMonFrontSprite:
     mov [pic_dest], edx                      ; merge destination (LoadUncompressedSpriteData)
+    mov [pic_repaint_index], eax             ; dex-1, preserved across the decoder
     call UncompressMonSprite                  ; stage blob + decode chunks into buffers
     mov al, [pic_dims]
-    jmp LoadUncompressedSpriteData            ; center each chunk + interlace -> VRAM
+    call LoadUncompressedSpriteData           ; center each chunk + interlace -> VRAM
+    call ApplyMonFrontRepaint                 ; R2: normal decode remains intact if no record
+    ret
+
+; ---------------------------------------------------------------------------
+; ApplyMonFrontRepaint — optionally replace a decoded 7x7 front picture with
+; the sidecar-authored 2bpp repaint.  The editor stores PNG tiles row-major;
+; battle VRAM / CopyUncompressedPicToHL use column-major tile ids, so transpose
+; both pixel tiles and their per-tile palette grid while copying.  Repaint
+; palettes occupy free BG slots 4..7; normal pictures have a zero table entry
+; and therefore retain the byte-exact UncompressSpriteData result.
+; ---------------------------------------------------------------------------
+ApplyMonFrontRepaint:
+    push ebx
+    mov byte [repaint_active], 0
+    mov eax, [pic_repaint_index]
+    mov esi, [repaint_front_table + eax*4]
+    test esi, esi
+    jz .done
+    mov eax, [esi]                           ; record: 2bpp source, row-major grid
+    mov [repaint_blob], eax
+    mov eax, [esi + 4]
+    mov [repaint_grid], eax
+    movzx ecx, byte [esi + 8]                ; 1..4 generated palette ids
+    lea edx, [esi + ecx + 9]
+    mov al, [edx]
+    mov [repaint_width], al
+    mov al, [edx + 1]
+    mov [repaint_height], al
+    mov al, 8
+    sub al, [repaint_width]
+    shr al, 1
+    mov [repaint_x_offset], al
+    mov al, 7
+    sub al, [repaint_height]
+    mov [repaint_y_offset], al
+    lea esi, [esi + 9]
+    mov edi, bg_slot_pal + 4
+    rep movsb
+    mov byte [repaint_active], 1
+
+    mov byte [repaint_x], 0
+.column:
+    mov byte [repaint_y], 0
+.row:
+    ; source tile = row*width+column (PNG order), destination is centered
+    ; column-major tile storage in the 7x7 vFrontPic canvas.
+    movzx eax, byte [repaint_y]
+    movzx edx, byte [repaint_width]
+    imul eax, edx
+    movzx edx, byte [repaint_x]
+    add eax, edx
+    shl eax, 4
+    mov esi, [repaint_blob]
+    add esi, eax
+    movzx eax, byte [repaint_x]
+    add al, [repaint_x_offset]
+    imul eax, eax, 7
+    movzx edx, byte [repaint_y]
+    add dl, [repaint_y_offset]
+    add eax, edx
+    shl eax, 4
+    mov edi, [pic_dest]
+    add edi, ebp
+    add edi, eax
+    mov ecx, 4
+    rep movsd
+
+    ; The physical cache index is ($9000-$8000)/16 + destination tile id.
+    movzx eax, byte [repaint_y]
+    movzx edx, byte [repaint_width]
+    imul eax, edx
+    movzx edx, byte [repaint_x]
+    add eax, edx
+    mov esi, [repaint_grid]
+    mov bl, [esi + eax]
+    add bl, 4                               ; local repaint palette -> BG slot 4..7
+    movzx edx, byte [repaint_x]
+    add dl, [repaint_x_offset]
+    imul edx, edx, 7
+    movzx eax, byte [repaint_y]
+    add al, [repaint_y_offset]
+    add edx, eax
+    mov eax, [pic_dest]
+    sub eax, GB_VRAM0
+    shr eax, 4
+    add eax, edx
+    mov [tile_pal + eax], bl
+
+    inc byte [repaint_y]
+    mov al, [repaint_y]
+    cmp al, [repaint_height]
+    jb .row
+    inc byte [repaint_x]
+    mov al, [repaint_x]
+    cmp al, [repaint_width]
+    jb .column
+    mov byte [g_tilecache_dirty], 1
+    mov byte [g_pal_dirty], 1
+.done:
+    pop ebx
+    ret
+
+; Reapply just the front-picture palette metadata after SetPal_Battle copies its
+; 384-byte baseline.  HP-bar animation calls that setter too, so this deliberately
+; does not touch VRAM; the 2bpp repaint was already blitted by ApplyMonFrontRepaint.
+RefreshMonFrontRepaintPalette:
+    pushad
+    cmp byte [repaint_active], 0
+    je .restore
+    mov eax, [pic_repaint_index]
+    mov esi, [repaint_front_table + eax*4]
+    test esi, esi
+    jz .restore
+    movzx ecx, byte [esi + 8]
+    lea esi, [esi + 9]
+    mov edi, bg_slot_pal + 4
+    rep movsb
+    ; Grid begins at the record's second pointer.  Convert row-major PNG cells
+    ; to the column-major vFrontPic tile ids ($9000 = cache tile 256).
+    mov esi, [repaint_front_table + eax*4]
+    mov esi, [esi + 4]
+    mov byte [repaint_x], 0
+.column:
+    mov byte [repaint_y], 0
+.row:
+    movzx eax, byte [repaint_y]
+    movzx edx, byte [repaint_width]
+    imul eax, edx
+    movzx edx, byte [repaint_x]
+    add eax, edx
+    mov bl, [esi + eax]
+    add bl, 4
+    movzx edx, byte [repaint_x]
+    add dl, [repaint_x_offset]
+    imul edx, edx, 7
+    movzx eax, byte [repaint_y]
+    add al, [repaint_y_offset]
+    add edx, eax
+    mov eax, [pic_dest]
+    sub eax, GB_VRAM0
+    shr eax, 4
+    add eax, edx
+    mov [tile_pal + eax], bl
+    inc byte [repaint_y]
+    mov al, [repaint_y]
+    cmp al, [repaint_height]
+    jb .row
+    inc byte [repaint_x]
+    mov al, [repaint_x]
+    cmp al, [repaint_width]
+    jb .column
+.restore:
+    popad
+    ret
 
 ; In: EAX = dex-1. Stage the compressed front pic into GB scratch, point the decoder
 ; at it, and decode the two 1bpp chunks into sSpriteBuffer1/2 (tail-calls the decoder).
@@ -604,22 +762,9 @@ DrawBugCatcherPic_Stub:
 %define BGP_NORMAL      0xE4
 
 SlideBattlePicsIn:
-    ; TODO(palette): the faithful silhouette is pret's CGB SET_PAL_BATTLE_BLACK (the
-    ; whole CGB palette → black), which belongs to the Phase-5 GBC palette work. For
-    ; now, force the darkest DMG shade to true black during the slide so every non-
-    ; transparent pic pixel (BGP maps colors 1-3 → shade 3) renders as a black
-    ; silhouette instead of the dark-green shade-3. Not game-accurate; acceptable stopgap.
-    mov al, [dmg_palette + 9]                ; save shade-3 RGB (3 bytes)
-    mov [slide_pal_save + 0], al
-    mov al, [dmg_palette + 10]
-    mov [slide_pal_save + 1], al
-    mov al, [dmg_palette + 11]
-    mov [slide_pal_save + 2], al
-    mov byte [dmg_palette + 9], 0            ; shade 3 → black (R,G,B = 0)
-    mov byte [dmg_palette + 10], 0
-    mov byte [dmg_palette + 11], 0
+    ; pret's SET_PAL_BATTLE_BLACK swaps all active CGB slots to PAL_BLACK.
+    call SetPal_BattleBlack
     mov byte [ebp + IO_BGP], BGP_SILHOUETTE
-    mov byte [g_tilecache_dirty], 1
     mov dword [slide_step], SLIDE_STEPS
 .loop:
     lea edi, [ebp + W_TILEMAP]              ; clear the canvas each frame
@@ -641,14 +786,8 @@ SlideBattlePicsIn:
     call DelayFrame
     dec dword [slide_step]
     jns .loop
-    mov al, [slide_pal_save + 0]            ; restore shade-3 RGB
-    mov [dmg_palette + 9], al
-    mov al, [slide_pal_save + 1]
-    mov [dmg_palette + 10], al
-    mov al, [slide_pal_save + 2]
-    mov [dmg_palette + 11], al
+    call SetPal_Battle
     mov byte [ebp + IO_BGP], BGP_NORMAL     ; un-darken at the final position
-    mov byte [g_tilecache_dirty], 1
     ret
 
 ; PlacePicSlide — place a 7x7 pic block clipped to the canvas. ESI=base tile id,
@@ -716,4 +855,13 @@ hSpriteOffset:  resb 1                 ; centering offset, bytes
 hSpriteScaleCtr: resb 1                ; ScaleLastSpriteColumnByTwo inner counter
 pic_dims:       resb 1
 slide_step:     resd 1                 ; SlideBattlePicsIn step counter
-slide_pal_save: resb 3                 ; saved dmg_palette shade-3 RGB during the slide
+pic_repaint_index: resd 1              ; dex-1, for the generated front-repaint table
+repaint_blob:   resd 1
+repaint_grid:   resd 1
+repaint_x:      resb 1
+repaint_y:      resb 1
+repaint_width:  resb 1
+repaint_height: resb 1
+repaint_x_offset: resb 1
+repaint_y_offset: resb 1
+repaint_active: resb 1

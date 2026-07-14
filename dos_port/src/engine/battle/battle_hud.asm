@@ -37,6 +37,8 @@ bits 32
 %define HPB_EMPTY 0x63             ; empty gauge segment; $63+n = n-pixel partial
 %define HPB_FULL  0x6b             ; full (8px) gauge segment
 %define HPB_END   0x6c             ; gauge right cap
+; Battle-local clones of $63-$6b. These English glyph slots are not used by
+; the battle UI, so the two HP bars can own distinct physical tile IDs.
 %define TILE_LV   0x6e             ; ":L" level prefix
 ; HUD frame ("shelf"/divider) tiles — now loaded by LoadHudTilePatterns (the real
 ; BattleHudTiles, not the font_extra "ID No." placeholders): pret PlaceHUDTiles uses
@@ -78,6 +80,7 @@ anim_frac_off: resd 1          ; W_TILEMAP offset of the HP "cur" digits (0 = no
 anim_cur_hp:   resd 1          ; the HP value currently displayed (ticks toward final)
 anim_last_px:  resb 1          ; last-drawn pixel count (walked ±1 toward target each unit)
 anim_target_px: resb 1         ; this HP-unit tick's freshly computed pixel target
+anim_enemy:     resb 1         ; nonzero -> use cloned enemy HP gauge tiles
 
 section .text
 
@@ -93,6 +96,9 @@ global AnimatePlayerHPBar
 extern PlaceString
 extern DelayFrame
 extern Delay3                          ; frame.asm — wait 3 frames (pret UpdateHPBar2 tail)
+extern g_tilecache_dirty                ; ppu.asm — cloned VRAM patterns need re-decode
+extern GetHealthBarColor                ; fade.asm — pixel length -> green/yellow/red id
+extern SetPal_Battle                    ; palettes.asm — consume both live HP-color ids
 
 ; DrawBattleHUDs draws both HUDs; the battle intro draws only the enemy HUD (the
 ; player side shows party-status pokéballs until the battle proper), so the two
@@ -103,7 +109,11 @@ DrawBattleHUDs:
     ; set only while a dialog MESSAGE prints). Otherwise the mon names would type out.
     and byte [ebp + W_LETTER_PRINTING_DELAY], (~(1 << BIT_TEXT_DELAY)) & 0xFF
     call DrawEnemyHUD
-    ; fall through to DrawPlayerHUD
+    call DrawPlayerHUD
+    ; Both bars have now refreshed their color IDs; publish their independent
+    ; palette slots together (the enemy uses cloned gauge tile IDs).
+    call SetPal_Battle
+    ret
 DrawPlayerHUD:
     ; ===== player HUD (lower-right) =====
     mov esi, W_TILEMAP + P_NAME
@@ -115,6 +125,8 @@ DrawPlayerHUD:
     mov ebx, wBattleMonHP
     mov esi, wBattleMonMaxHP
     call calc_hp_pixels
+    mov esi, wPlayerHPBarColor
+    call GetHealthBarColor
     mov edi, W_TILEMAP + P_HPBAR
     call draw_hp_bar
     ; player HP fraction: cur / max
@@ -143,8 +155,10 @@ DrawEnemyHUD:
     mov ebx, wEnemyMonHP                 ; calc_hp_pixels: EBX=curHP addr, ESI=maxHP addr
     mov esi, wEnemyMonMaxHP
     call calc_hp_pixels                  ; → EDX = fill pixels
+    mov esi, wEnemyHPBarColor
+    call GetHealthBarColor
     mov edi, W_TILEMAP + E_HPBAR
-    call draw_hp_bar
+    call draw_enemy_hp_bar
     call DrawEnemyHUDFrame
     ret
 
@@ -241,6 +255,59 @@ draw_hp_bar:
     jnz .seg
     ret
 
+; draw_enemy_hp_bar — same geometry, but its 9 gauge patterns come from the
+; battle-local copies made by DuplicateEnemyHPBarTiles.
+draw_enemy_hp_bar:
+    mov byte [ebp + edi], HPB_HP
+    mov byte [ebp + edi + 1], HPB_LEFT
+    mov byte [ebp + edi + 8], HPB_END
+    add edi, 2
+    mov ecx, 6
+.seg:
+    cmp edx, 8
+    jb .partial
+    mov al, [enemy_hp_tile_ids + 8]
+    mov [ebp + edi], al
+    sub edx, 8
+    jmp .next
+.partial:
+    mov al, [enemy_hp_tile_ids + edx]
+    mov [ebp + edi], al
+    xor edx, edx
+.next:
+    inc edi
+    dec ecx
+    jnz .seg
+    ret
+
+; Copy $63-$6b (empty, partial 1..7, full) to unused English glyph slots.
+; Called after the source HP/HUD patterns are loaded; all registers preserved.
+global DuplicateEnemyHPBarTiles
+DuplicateEnemyHPBarTiles:
+    pushad
+    mov esi, GB_VCHARS2 + HPB_EMPTY * TILE_SIZE
+    xor ecx, ecx
+.copy:
+    movzx eax, byte [enemy_hp_tile_ids + ecx]
+    sub eax, 0x80
+    shl eax, 4
+    lea edi, [ebp + GB_VFONT + eax]
+    mov eax, [ebp + esi]
+    mov [edi], eax
+    mov eax, [ebp + esi + 4]
+    mov [edi + 4], eax
+    mov eax, [ebp + esi + 8]
+    mov [edi + 8], eax
+    mov eax, [ebp + esi + 12]
+    mov [edi + 12], eax
+    add esi, TILE_SIZE
+    inc ecx
+    cmp ecx, 9
+    jb .copy
+    mov byte [g_tilecache_dirty], 1
+    popad
+    ret
+
 ; --- calc_hp_pixels — EBX=curHP addr, ESI=maxHP addr (big-endian words) ---
 ; → EDX = curHP*48/maxHP (≥1 if alive, 0 if fainted). Clobbers EAX/ECX.
 calc_hp_pixels:
@@ -293,12 +360,14 @@ AnimateEnemyHPBar:
     mov esi, wEnemyMonMaxHP
     mov edi, W_TILEMAP + E_HPBAR
     xor edx, edx                         ; enemy HUD: no HP number
+    mov byte [anim_enemy], 1
     jmp AnimateHPBar
 AnimatePlayerHPBar:
     mov ebx, wBattleMonHP
     mov esi, wBattleMonMaxHP
     mov edi, W_TILEMAP + P_HPBAR
     mov edx, W_TILEMAP + P_HPFRAC        ; player HUD: tick the "cur" digits too
+    mov byte [anim_enemy], 0
     ; fall through
 
 ; AnimateHPBar — faithful port of pret UpdateHPBar2 (engine/gfx/hp_bar.asm:48-135).
@@ -364,7 +433,7 @@ AnimateHPBar:
     dec byte [anim_last_px]
     movzx edx, byte [anim_last_px]
     mov edi, [anim_bar_off]
-    call draw_hp_bar
+    call draw_animated_hp_bar
     call DelayFrame
     call DelayFrame
     mov al, [anim_last_px]
@@ -375,7 +444,7 @@ AnimateHPBar:
     inc byte [anim_last_px]
     movzx edx, byte [anim_last_px]
     mov edi, [anim_bar_off]
-    call draw_hp_bar
+    call draw_animated_hp_bar
     call DelayFrame
     call DelayFrame
     mov al, [anim_last_px]
@@ -383,9 +452,29 @@ AnimateHPBar:
     jne .pixInc
     jmp .loop
 .done:
+    ; Match pret's UpdateHPBar tail: color follows the final fill length, not
+    ; just the initial HUD draw.  The duplicate enemy gauge tiles make the two
+    ; slots independent even while the bars animate in opposite directions.
+    mov eax, [anim_cur_hp]
+    mov esi, [anim_max_addr]
+    call hp_to_pixels
+    cmp byte [anim_enemy], 0
+    je .playerColor
+    mov esi, wEnemyHPBarColor
+    jmp .setColor
+.playerColor:
+    mov esi, wPlayerHPBarColor
+.setColor:
+    call GetHealthBarColor
+    call SetPal_Battle
     call Delay3                          ; pret trailing settle (jp Delay3)
 .reallyDone:
     ret
+
+draw_animated_hp_bar:
+    cmp byte [anim_enemy], 0
+    je draw_hp_bar
+    jmp draw_enemy_hp_bar
 
 ; --- print_num2 — 2-digit (tens, ones) at [ebp+EDI]; AL = value (<100) ---
 ; Leading space if tens == 0. Clobbers EAX/ECX/EDX.
@@ -452,3 +541,8 @@ print_num3:
     add cl, CHAR_DIG0
     mov [ebp + edi + 2], cl
     ret
+
+section .data
+; $63+$n (n=0..8): empty, partial 1..7, full.  These IDs are deliberately
+; noncontiguous so no live English battle glyph is overwritten.
+enemy_hp_tile_ids: db 0xe9, 0xea, 0xeb, 0xec, 0xee, 0xef, 0xf0, 0xf1, 0xf4

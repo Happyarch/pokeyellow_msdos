@@ -254,11 +254,14 @@ GAME_SRCS := \
     src/home/sprites.asm \
     src/engine/gfx/sprite_oam.asm \
     src/engine/gfx/mon_icons.asm \
+    src/engine/gfx/palettes.asm \
     src/home/load_font.asm \
     src/home/text.asm \
     src/home/print_num.asm \
     src/home/print_bcd.asm \
     src/home/window.asm \
+    src/home/palettes.asm \
+    src/home/cgb_palettes.asm \
     src/home/fade.asm \
     src/movie/title.asm \
     src/engine/movie/oak_speech/init_player_data.asm \
@@ -1323,11 +1326,15 @@ src/data/mon_pics.o: assets/mon_pics.inc
 
 # CGB palette source data + human-authored colorization deltas.  The .inc is
 # Tier-1 generated data; no runtime consumer is linked until colorization R1.
+REPAINT_2BPP := $(wildcard assets/colors/repaint/*.2bpp)
 assets/colors/palettes.inc: tools/gen_palettes.py tools/gfx_core/palettes.py \
 		tools/colors/schema.py assets/colors/palettes.json \
+		$(REPAINT_2BPP) \
 		../data/sgb/sgb_palettes.asm ../data/sgb/sgb_packets.asm \
 		../data/pokemon/palettes.asm ../constants/palette_constants.asm
 	python3 tools/gen_palettes.py
+
+src/home/palettes.o: assets/colors/palettes.inc $(REPAINT_2BPP)
 
 # Audio engine data: four GB audio-bank images (headers + music/sfx bytecode
 # at true GB addresses), positional sound-ID constants, cry-modifier table.

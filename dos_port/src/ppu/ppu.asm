@@ -46,6 +46,7 @@ global render_sprites
 global draw_player_marker
 global g_player_marker_on
 global g_tilecache_dirty
+global tile_pal
 
 ; Player placeholder marker — the player sprite is always at the fixed screen
 ; center (pret keeps the camera locked on the player and scrolls the BG). Until
@@ -172,6 +173,12 @@ plane_lut_hi:
 section .bss
 align 4
 tile_cache:  resb TILE_CACHE_SIZE  ; 384 × 64 = 24 KB of decoded raw-color tile rows
+; CGB BG palette slot per physical $8000-based tile.  The cache rebuild bakes
+; (slot << 2) into each decoded pixel, leaving render_bg's row copy untouched.
+tile_pal:    resb TILE_CACHE_TILES
+alignb 4
+rebuild_tile_index: resd 1
+rebuild_rows_left:  resd 1
 alignb 4
 g_player_marker_on: resb 1 ; nonzero → draw_player_marker paints the placeholder
 alignb 4
@@ -712,27 +719,36 @@ rebuild_tile_cache:
 
     mov esi, GB_VCHARS0                ; GB offset of the first tile-data byte
     mov edi, tile_cache
-    ; 4 tile rows per iteration (Stage 6): the trip count is a compile-time
-    ; multiple of 4, and the pointer steps fold into displacements, so the
-    ; dec/jnz overhead is paid once per 4 rows instead of once per row.
-    mov edx, (TILE_CACHE_TILES * 8) / 4
+    mov dword [rebuild_tile_index], 0
+.tile_loop:
+    mov eax, [rebuild_tile_index]
+    movzx edx, byte [tile_pal + eax]
+    shl edx, 2                         ; palette slot's 2-bit band
+    mov eax, edx
+    shl eax, 8
+    or edx, eax
+    mov eax, edx
+    shl eax, 16
+    or edx, eax                        ; EDX = slot<<2 replicated in 4 bytes
+    mov dword [rebuild_rows_left], 8
 .row_loop:
-%assign _r 0
-%rep 4
-    movzx eax, byte [ebp + esi + _r*2]       ; low bitplane
-    movzx ebx, byte [ebp + esi + _r*2 + 1]   ; high bitplane
-    mov ecx, [plane_lut_lo + eax*8]          ; 4 px of bit0, spread one per byte
-    or  ecx, [plane_lut_hi + ebx*8]          ; | 4 px of bit1<<1  → raw color 0-3
-    mov [edi + _r*8], ecx
+    movzx eax, byte [ebp + esi]        ; low bitplane
+    movzx ebx, byte [ebp + esi + 1]    ; high bitplane
+    mov ecx, [plane_lut_lo + eax*8]
+    or  ecx, [plane_lut_hi + ebx*8]
+    or  ecx, edx
+    mov [edi], ecx
     mov ecx, [plane_lut_lo + eax*8 + 4]
     or  ecx, [plane_lut_hi + ebx*8 + 4]
-    mov [edi + _r*8 + 4], ecx
-    %assign _r _r + 1
-%endrep
-    add esi, 8
-    add edi, 32
-    dec edx
+    or  ecx, edx
+    mov [edi + 4], ecx
+    add esi, 2
+    add edi, 8
+    dec dword [rebuild_rows_left]
     jnz .row_loop
+    inc dword [rebuild_tile_index]
+    cmp dword [rebuild_tile_index], TILE_CACHE_TILES
+    jb .tile_loop
 
     mov byte [g_tilecache_dirty], 0
     ; The tile ids in surf_shadow are unchanged but the patterns they name are
@@ -763,8 +779,8 @@ rebuild_tile_cache:
     add eax, [spr_palbase]
     test byte [spr_attr], OAM_PRIO
     jz %%write
-    cmp byte [ebp + ecx], 0              ; behind BG: only over BG color 0
-    jne %%skip
+    test byte [ebp + ecx], 3             ; behind BG: only over color 0 of any slot
+    jnz %%skip
 %%write:
     mov [ebp + ecx], al
 %%skip:
@@ -834,13 +850,17 @@ render_sprites:
     movzx eax, byte [ebp + esi + 3]      ; attributes
     mov [spr_attr], eax
 
-    ; Palette base is fixed for the whole sprite: OBP0 → 4+color, OBP1 → 8+color.
-    ; The DAC (commit_palette) maps 4-7 / 8-11 to the OBP0/OBP1-mapped DMG shades.
-    mov ecx, 4
+    ; Palette base: OBJ slots occupy DAC bands 32..63.  PrepareOAMData retains
+    ; the CGB high-palette marker, yielding all four currently representable slots.
+    mov ecx, 32
     test al, OAM_PAL1
     jz .havePal
-    mov ecx, 8
+    add ecx, 4
 .havePal:
+    test al, OAM_HIGH_PALS
+    jz .palReady
+    add ecx, 8
+.palReady:
     mov [spr_palbase], ecx
 
     ; Cull sprites that fall entirely off-screen.

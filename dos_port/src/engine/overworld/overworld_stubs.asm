@@ -14,17 +14,6 @@ section .text
 ; pikachu.asm is now LINKED (GAME_SRCS). Still only reached when a sprite
 ; slot's offset == $f0 (slot 15), which no current map activates.
 
-; UpdateCGBPal_OBP1 — pret home/cgb_palettes.asm:UpdateCGBPal_OBP1 (apply the
-; OBP1 DMG palette register to the CGB OBJ palette set). TODO-HW: the port has
-; no CGB palette engine yet (Phase 5 colorization); every OBP write is already
-; a `[ebp+IO_OBP1]` TODO-HW mirror, so this is a no-op by design today — same
-; translation boundary as RunDefaultPaletteCommand. Reached from the linked
-; healing_machine.asm flash loop (and cut/cut2/dust_smoke once those promote).
-; TODO(Phase 5 palettes): replace with the real CGB palette apply, then delete.
-global UpdateCGBPal_OBP1
-UpdateCGBPal_OBP1:
-    ret
-
 ; ApplyPikachuMovementData_ — pret engine/pikachu/pikachu_movement.asm:ApplyPikachuMovementData_
 ; (the Pikachu movement-data interpreter: wCurPikaMovementData union, step timers, sprite
 ; placement). DEFERRED — needs the pikachu_movement subsystem + staged Pikachu overworld gfx.

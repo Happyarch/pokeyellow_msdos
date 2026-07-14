@@ -32,7 +32,6 @@ global HandlePlayerBlackOut
 global EnemyRan
 ; --- ANIMATION=OFF / palette-HAL stubs (consumed by the enemy-faint file too) ---
 global SlideDownFaintedMonPic
-global RunPaletteCommand
 
 ; --- externs ---
 extern FlagAction                       ; flag_action.asm — ESI=array base, CL=index, BH=action
@@ -56,8 +55,8 @@ extern WildRanText                      ; battle_text.inc
 ; deferred to Phase 5 (GBC palette translation). No-op keeps the DMG placebo palette.
 ; ===========================================================================
 SlideDownFaintedMonPic:
-RunPaletteCommand:
     ret
+extern RunPaletteCommand             ; home/palettes.asm
 
 ; ===========================================================================
 ; HasMonFainted — pret core.asm:HasMonFainted. Tests whether the mon at

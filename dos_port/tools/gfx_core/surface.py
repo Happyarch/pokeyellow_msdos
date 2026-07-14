@@ -5,15 +5,24 @@ launcher and the map editor draw with the exact same rasterizer.
 """
 from __future__ import annotations
 
+from pathlib import Path
+
 from PIL import Image
 
 from . import font as ft
 from .tiles import DMG_PAL, TILE, Tile
 
 # FRAME.BIN sprite-debug colors (values 4-11), same as tools/render_frame.py.
-FRAME_EXTRA = {4: (255, 0, 0), 5: (255, 128, 0), 6: (255, 255, 0),
-               7: (0, 255, 0), 8: (0, 255, 255), 9: (0, 128, 255),
-               10: (128, 0, 255), 11: (255, 0, 255)}
+FRAME_EXTRA = {i: (255, 0, 255) for i in range(4, 64)}
+
+
+def load_pal_bin(path: Path) -> dict[int, tuple[int, int, int]]:
+    """Read debug_dump.asm's PAL0 v1 live-DAC snapshot."""
+    data = path.read_bytes()
+    if len(data) < 208 or data[:4] != b"PAL0" or data[4] != 1:
+        raise ValueError(f"{path}: not a PAL0 v1 palette dump")
+    return {i: tuple(round(c * 255 / 63) for c in data[16 + i * 3:19 + i * 3])
+            for i in range(64)}
 
 
 def blit_gb_tile(img: Image.Image, tile: Tile, col: int, row: int,
@@ -66,12 +75,14 @@ def draw_label(img: Image.Image, s: str, col: int, row: int,
         r += 2
 
 
-def load_frame_bin(path: str) -> Image.Image:
-    """320x200 palette-indexed FRAME.BIN -> RGB image (render_frame.py palette)."""
-    data = open(path, "rb").read()
+def load_frame_bin(path: str, pal_path: str | None = None) -> Image.Image:
+    """320x200 FRAME.BIN -> RGB, using its sibling PAL.BIN when available."""
+    frame_path = Path(path)
+    data = frame_path.read_bytes()
     img = Image.new("RGB", (320, 200))
     px = img.load()
-    pal = {i: c for i, c in enumerate(DMG_PAL)} | FRAME_EXTRA
+    candidate = Path(pal_path) if pal_path else frame_path.with_name("PAL.BIN")
+    pal = load_pal_bin(candidate) if candidate.exists() else {i: c for i, c in enumerate(DMG_PAL)} | FRAME_EXTRA
     for y in range(200):
         for x in range(320):
             i = y * 320 + x

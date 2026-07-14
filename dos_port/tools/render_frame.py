@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Render FRAME.BIN (320x200 palette-indexed back buffer) to a PNG.
 
-Values 0-3 = DMG shades (green ramp), 4-11 = sprite/extra colors.
-Usage: render_frame.py FRAME.BIN out.png
+With PAL.BIN (optional third argument, or beside FRAME.BIN), values 0-63 use
+the exact live VGA DAC state.  Without it a conspicuous debug palette is used.
+Usage: render_frame.py FRAME.BIN out.png [PAL.BIN]
 """
 import sys
+from pathlib import Path
 from PIL import Image
 
 W, H = 320, 200
@@ -26,15 +28,31 @@ PAL = {
     11: (255, 0, 255),
 }
 
+
+def load_pal(path: Path) -> dict[int, tuple[int, int, int]]:
+    """Read the PAL0 v1 debug contract emitted by debug_dump.asm."""
+    data = path.read_bytes()
+    if len(data) < 16 + 64 * 3 or data[:4] != b"PAL0" or data[4] != 1:
+        raise ValueError(f"{path}: not a PAL0 v1 palette dump")
+    rgb6 = data[16:16 + 64 * 3]
+    return {i: tuple(round(component * 255 / 63)
+                      for component in rgb6[i * 3:i * 3 + 3])
+            for i in range(64)}
+
 def main():
-    data = open(sys.argv[1], "rb").read()
+    if len(sys.argv) not in (3, 4):
+        raise SystemExit(__doc__)
+    frame_path = Path(sys.argv[1])
+    data = frame_path.read_bytes()
+    pal_path = Path(sys.argv[3]) if len(sys.argv) == 4 else frame_path.with_name("PAL.BIN")
+    pal = load_pal(pal_path) if pal_path.exists() else PAL
     img = Image.new("RGB", (W, H))
     px = img.load()
     for y in range(H):
         for x in range(W):
             i = y * W + x
             v = data[i] if i < len(data) else 0
-            px[x, y] = PAL.get(v, (255, 0, 255))
+            px[x, y] = pal.get(v, (255, 0, 255))
     img.save(sys.argv[2])
     print(f"Wrote {sys.argv[2]} ({len(data)} bytes in)")
 

@@ -64,6 +64,7 @@ extern EnableLCD
 extern DelayFrame
 extern LoadTextBoxTilePatterns
 extern GBPalNormal
+extern RunPaletteCommand
 extern g_player_marker_on
 extern UpdateSprites
 ; EnterMap reset-ladder leaves (OW-A.4): ClearVariablesOnEnterMap (clear_variables.asm,
@@ -93,6 +94,7 @@ extern g_tilecache_dirty
 extern hide_window           ; src/ppu/ppu.asm — empty the window list (count=0)
 extern set_single_window     ; src/ppu/ppu.asm — define g_windows[] as one descriptor
 extern InitMapSprites
+%define SET_PAL_OVERWORLD 9
 ; OW-A.2 P3b: the faithful home object-loader (InitSprites/LoadSprite, below) writes
 ; the per-slot movement-byte-2 + masked-text-id to wMapSpriteData and trainer
 ; class/num (or item) to wMapSpriteExtraData — both flat .bss globals in map_sprites.asm.
@@ -1171,10 +1173,8 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     ; wMapMusicSoundID via the MapSongBanks load above) then fade in that music. Real now
     ; (OW-A.14); unconditional on a connection crossing (not a warp, so no warp gate).
     call PlayDefaultMusicFadeOutCurrent
-    ;   ld b, SET_PAL_OVERWORLD / call RunPaletteCommand — palette reload for the new map.
-    ;       Deferred to Phase 5 (the port renders a fixed DMG-green palette; SET_PAL_*
-    ;       is the GBPalNormal stand-in applied by LoadMapData, not on this LoadMapHeader
-    ;       path). Add the real RunPaletteCommand(SET_PAL_OVERWORLD) here when palettes land.
+    mov bl, SET_PAL_OVERWORLD
+    call RunPaletteCommand
     ; pret also does the Pikachu spawn set (wPikachuOverworldStateFlags bit 4 /
     ;   wPikachuSpawnState = 2) at .loadNewMap — deferred with the Pikachu-follow engine.
     call InitMapSprites                        ; populate NPC slots for the new map
@@ -1473,11 +1473,9 @@ LoadMapData:
 
     mov byte [ebp + W_UPDATE_SPRITES_ENABLED], 1
     call EnableLCD
-    ; pret: ld b, SET_PAL_OVERWORLD / call RunPaletteCommand (home/overworld.asm:1971).
-    ; GBPalNormal is the port's palette stand-in (sets the normal DMG BGP the software
-    ; PPU reads); TODO-HW: real RunPaletteCommand(SET_PAL_OVERWORLD) rides the Phase-5
-    ; palette HAL (DMG-green is debug-only until then).
     call GBPalNormal
+    mov bl, SET_PAL_OVERWORLD
+    call RunPaletteCommand
     call LoadPlayerSpriteGraphics       ; pret: LoadPlayerSpriteGraphics (:1972)
     ; pret tail (:1975-1985): play this map's default music unless we entered via a
     ; dungeon/fly warp (DUNGEON_WARP|FLY_WARP) or the map suppresses it (NO_MAP_MUSIC).

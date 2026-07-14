@@ -43,6 +43,9 @@ extern Delay3                       ; src/video/frame.asm
 extern ClearSprites                 ; src/gfx/sprites.asm
 extern LoadTextBoxTilePatterns      ; src/gfx/load_font.asm
 extern ReloadMapSpriteTilePatterns  ; src/home/reload_sprites.asm
+extern UpdateCGBPal_BGP             ; palettes.asm
+extern UpdateCGBPal_OBP0             ; palettes.asm
+extern UpdateCGBPal_OBP1             ; palettes.asm
 
 ; ---------------------------------------------------------------------------
 ; Globals
@@ -87,7 +90,9 @@ LoadGBPal:
     inc edi
     mov al, [edi]                         ; ld a,[hli] -> rOBP1
     mov [ebp + IO_OBP1], al
-    ; TODO-HW: UpdateCGBPal_{BGP,OBP0,OBP1} — CGB RGB commit (Phase 5)
+    call UpdateCGBPal_BGP
+    call UpdateCGBPal_OBP0
+    call UpdateCGBPal_OBP1
     ret
 
 ; ===========================================================================
@@ -116,7 +121,9 @@ GBFadeIncCommon:
     mov al, [edi]                         ; ld a,[hli] -> rOBP1
     mov [ebp + IO_OBP1], al
     inc edi
-    ; TODO-HW: UpdateCGBPal_{BGP,OBP0,OBP1} — CGB RGB commit (Phase 5)
+    call UpdateCGBPal_BGP
+    call UpdateCGBPal_OBP0
+    call UpdateCGBPal_OBP1
     mov bl, 8                             ; ld c, 8
     call DelayFrames                      ; (preserves EDI/BH; clobbers BL)
     dec bh                                ; dec b
@@ -143,7 +150,9 @@ GBFadeDecCommon:
     mov al, [edi]                         ; ld a,[hld] -> rBGP
     mov [ebp + IO_BGP], al
     dec edi
-    ; TODO-HW: UpdateCGBPal_{BGP,OBP0,OBP1} — CGB RGB commit (Phase 5)
+    call UpdateCGBPal_BGP
+    call UpdateCGBPal_OBP0
+    call UpdateCGBPal_OBP1
     mov bl, 8                             ; ld c, 8
     call DelayFrames
     dec bh                                ; dec b
@@ -162,7 +171,9 @@ GBPalWhiteOut:
     mov byte [ebp + IO_BGP],  0x00        ; xor a / ldh [rBGP],  a
     mov byte [ebp + IO_OBP0], 0x00        ;         ldh [rOBP0], a
     mov byte [ebp + IO_OBP1], 0x00        ;         ldh [rOBP1], a
-    ; TODO-HW: UpdateCGBPal_{BGP,OBP0,OBP1} — CGB RGB commit (Phase 5)
+    call UpdateCGBPal_BGP
+    call UpdateCGBPal_OBP0
+    call UpdateCGBPal_OBP1
     ret
 
 GBPalWhiteOutWithDelay3:
