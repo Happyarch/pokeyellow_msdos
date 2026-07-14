@@ -42,10 +42,15 @@ reason. The allowlist was challenged entry by entry: the auto-blessed "pre-exist
 that found them, and they are the natural next backlog. The ones with teeth: **M-29** (the
 party panel and the dialog box share a staging buffer and collide), **M-32** (`PlayCry`'s
 ret-stub hides a real blocking contract), **M-82** (`ActivatePC` is unreachable from the
-game), **M-8** (the priced quantity box is drawn wider than its window exposes), **M-69** (a
-build can ship a stale `FRAME.BIN`, so a harness that fails to dump reads as a *pass* — a
-tooling hazard for every future verification), and **M-59** (the text encoder has no
-longest-match pass, so apostrophe ligatures encode wrong; row 15 worked around it).
+game), **M-8** (the priced quantity box is drawn wider than its window exposes), ~~**M-69**~~
+(a build can ship a stale `FRAME.BIN`, so a harness that fails to dump reads as a *pass* — a
+tooling hazard for every future verification; **since FIXED** in `8b018e84` by the
+fidelity-expansion plan, which hit it independently as its F-11), and **M-59** (the text encoder
+has no longest-match pass, so apostrophe ligatures encode wrong; row 15 worked around it).
+
+**Where this backlog is being worked:** `docs/current_plan_fidelity_expansion.md` imports the
+findings that touch the golden harness (M-8, M-29, M-32, M-59, M-82, plus M-113 and M-120) and
+carries them as blast-radius notes on its open stages.
 
 **Not a gap:** pret's `engine/menus/unused_input.asm` has no port counterpart, and should not.
 Every label in it (`HandleMenuInputDuplicate`, `HandleMenuInputPokemonSelectionDuplicate`,
@@ -1584,7 +1589,14 @@ The file-local clone in `pokedex.asm` is gone; the file now externs the `global`
 - `PlaySound` — *"audio HAL stub"*. Real body (`home/audio.asm`). Same false claim row 15 killed.
 - `LoadPokedexTilePatterns` — *"shared no-op stub"*. Its real body is **20 lines below the comment.**
 
-### M-69. **A freshly built `PKMN.IMG` ships a STALE `FRAME.BIN`** — a harness that fails to dump reads as a pass **[OPEN — tooling]**
+### M-69. **A freshly built `PKMN.IMG` ships a STALE `FRAME.BIN`** — a harness that fails to dump reads as a pass **[FIXED — `8b018e84`, by the fidelity-expansion plan]**
+
+> **Closed after this ledger shut.** Hit independently by the fidelity-expansion session (its
+> **F-11**) and fixed there: both runners now delete the stale dumps from the scratch image
+> before the run — `goldencheck.sh:31` and `run_headless.sh:38`. Widened while landing:
+> `GBSTATE.BIN` and `DUMP.BIN` go too, not just `FRAME.BIN` — `goldencheck` *diffs* `GBSTATE.BIN`,
+> so its staleness would produce a confident **wrong verdict** rather than a missing artifact.
+> The original finding follows.
 While verifying M-64 I pulled `FRAME.BIN` from the image and got a **battle screen with a magenta
 palette** — another session's frame, dated hours earlier. `make image` packages the previous run's
 `FRAME.BIN`/`GBSTATE.BIN`/`PAL.BIN` artifacts into the image, so when a harness crashes, hangs, or

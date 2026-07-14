@@ -5,6 +5,17 @@
 > Stages 0, 1a and 1b are DONE (see the ledger); 1c/2/3/4 remain. Work stage-by-stage,
 > update the Coverage table, append findings, commit per stage.
 >
+> **Filed as `docs/current_plan_fidelity_expansion.md`** — the active-plan path. The
+> fold-back (`9dc7fed2`) wrote it into `docs/plans/` instead, the *completed*-plan directory,
+> where an open plan is invisible to the start-of-session `docs/current_plan_*.md` scan.
+> Restored 2026-07-14. Archive it (`git mv` into `docs/plans/`) only when Stage 4 closes.
+>
+> **To be clear about what the fold-back got right:** it hand-copied a *rectified* plan instead
+> of running `git merge`, **deliberately and correctly**. A merge would have restored this
+> branch's pre-audit text over master's corrections — undoing what the menu-fidelity audit had
+> just landed, which is exactly the hazard the "Read this first" section below is about. The
+> rectify-don't-merge call was right. Only the destination directory was wrong.
+>
 > Skills to load before starting: `build-and-debug` + `faithfulness-review` (always),
 > `asm-translation` (before touching `debug_dump.asm`), `project-conventions`.
 
@@ -52,7 +63,14 @@ OAM. (It is 7 now — Stage 1b added `sign_pallet` — and it compares WRAM.) Pr
   list-menu modes, textbox ids, learn-move, all item-use flows.
 - **Battle goldens deferred** pending a convergence spec — the port's `DEBUG_BATTLE` seeds
   `REVERT`-tagged synthetic enemy values no real encounter reproduces.
-- The bag_menu golden **masked** a real bug (missing ▼ blink) instead of failing it.
+- The bag_menu golden **masked** a real bug (missing ▼ blink) instead of failing it. **Both
+  halves are now resolved** — verify before re-filing this: the bug was fixed by menu-audit row
+  24 (`9bea1c15`, which gave the blink a cell a box actually owns), and the mask at
+  `golden_diff.py` cell (11,18) was **re-measured, not left lying**: its why-string now records a
+  genuine *blink-phase* difference (the golden caught blink-off; the port's harness dumps the
+  list before `HandleMenuInput` arms the blink, so its arrow is still on). What remains for
+  Stage 4 is narrower and real: that mask is **timing-coupled**, and the honest fix is to pin
+  the dump frame on both sides so the phase is deterministic — not to keep a live cell masked.
 
 Scope decisions (user, 2026-07-13): wave 1 = streamed text + WRAM datastructs; battle via a
 **synthetic-enemy seed spec** (wave 2); remaining menus wave 3; port-side scripted-input
@@ -355,7 +373,9 @@ so a PC golden needs its DEBUG gate, not an in-game route.
   `goldens-verify` target (regen into a temp dir, diff vs committed = drift check).
 - **Mask policy**: a mask owned by an open finding carries the finding id in its why-string;
   retiring a finding requires deleting its masks (grep-able).
-- **M-69 hardening (do this early — it invalidates every other verification).** See F-11.
+- ~~**M-69 hardening (do this early — it invalidates every other verification).**~~ **DONE in
+  the fold-back** (`8b018e84`): both runners now `mdel` the stale dumps
+  (`goldencheck.sh:31`, `run_headless.sh:38`). See F-11.
 - **Skill updates**: `faithfulness-review` step 3 — replace the hardcoded screen list with a
   subsystem→required-scenarios table (party/bag/dex/add_mon/item_effects → **datastruct
   scenarios even if the change renders nothing**; text printers / NPC dialog → sign_pallet).
@@ -637,13 +657,42 @@ golden can see the window layer at all.
 That audit closed with ~20 `M-` findings filed OPEN against files outside the rows that found
 them. The ones that touch this plan:
 
-- **M-69** — stale `FRAME.BIN` → a failed dump reads as a pass. Adopted above as **F-11**.
+- ~~**M-69**~~ — stale `FRAME.BIN` → a failed dump reads as a pass. Adopted as **F-11** and
+  **FIXED** (`8b018e84`); both runners delete the stale dumps. The menu ledger still tags it
+  `[OPEN — tooling]` — it is not. Do not re-file it.
 - **M-8** — the priced quantity box is drawn wider than its window exposes. Stage 1c's blast
-  radius.
+  radius. Note it is **unreachable today** (the only `PRICEDITEMLISTMENU` setter dead-ends in a
+  ret-stub), so it may not surface until the Pokémart lands; **fail on it, don't mask it.**
 - **M-29** — the party panel and the dialog box share a staging buffer and collide. Any
-  scenario that shows both.
+  scenario that shows both. (Row 11 closed it *for the party screen* via the `msgbox_party`
+  projection; the shared-buffer root cause is what remains — and it is the same root cause as
+  **F-13**.)
 - **M-59** — the text encoder has no longest-match pass, so apostrophe ligatures encode wrong.
-  Affects any golden whose expected text contains one.
-- **M-32** — `PlayCry`'s ret-stub hides a real blocking contract. Relevant to battle-intro
-  timing (Stage 2).
-- **M-82** — `ActivatePC` is unreachable from the game; a PC golden needs its DEBUG gate.
+  Row 15 **worked around** the one live instance with a raw `APOS_S = 0xBD` byte; **the encoder
+  gap itself is open**, so any *new* generated string containing `'s`/`'d`/`'l`/`'t`/`'v`/`'r`/
+  `'m` is silently mis-encoded — including one written for a golden's expected text.
+- **M-32** — `PlayCry`'s ret-stub hides a real blocking contract (pret's `PlayCry` ends in
+  `WaitForSoundToFinish`). Relevant to battle-intro timing (Stage 2). Per the menu ledger this
+  is **two direct translations, not an audio project** — everything it needs is already linked.
+- **M-82** — `ActivatePC` is unreachable from the game (guarded out behind a stale
+  `%ifdef M72_OVERWORLD_TEXTSCRIPTS`); a PC golden needs its DEBUG gate, not an in-game route.
+- **M-113** — `ClearScreenArea` is **not stride-aware**: hardwired to `SCREEN_WIDTH` (40) while
+  `TextBoxBorder`/`PlaceString`/the cursor all honour `text_row_stride`. **Stage 3's blast
+  radius** — it is exactly the stride-20 screens (trainer card, pokédex) that cannot call it.
+- **M-120** — `AUTOKEY_DUMP_FRAME` was a hardcoded `=160` that a passed value only *enabled*,
+  never overrode. Row 24 fixed its own gate and flagged the rest. **Verified against master
+  2026-07-14 — the hardcode is still live in all three of Stage 1c's gates, plus Stage 2's
+  `ball_catch`:**
+
+  | Makefile line | gate | effect |
+  |---|---|---|
+  | 573 | `DEBUG_ITEMBALL` | `AUTOKEY_DUMP_FRAME ?= 999999` … then `-D AUTOKEY_DUMP_FRAME=160` |
+  | 599 | `DEBUG_ITEMSTONE` | same |
+  | 616 | `DEBUG_ITEMTM` | same |
+
+  (Also `DEBUG_TEXT` 697, `DEBUG_LISTMENU_QTY` 719, `DEBUG_CHANGEBOX` 835.) The `?=` is
+  **dead** — the literal `160` on the next line wins, so **`make DEBUG_ITEMTM=1
+  AUTOKEY_DUMP_FRAME=400` silently still dumps at frame 160.** Stage 1c's table says "dump
+  after the 'learned' text clears"; that is not frame 160 and **cannot be reached until this is
+  fixed.** Fix first, as line 626-627 already does it: `NASMFLAGS += -D
+  AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)`. This is Stage 1c's true first task.

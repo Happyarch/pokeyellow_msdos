@@ -157,6 +157,24 @@ commit but too specific to belong in TODO.md.
 - Start a new work item by creating a new `docs/current_plan_<topic>.md`.
 
 **Currently active plans:**
+- `docs/current_plan_fidelity_expansion.md` — **fidelity-harness expansion** (WRAM datastructs,
+  streamed text, battle, more menus). Stages **0/1a/1b DONE**: GBSTATE v2 is self-describing and
+  the goldens now diff **WRAM datastructs** (16 regions) against mGBA, and `sign_pallet` is the
+  first streamed-text scenario — `make fidelity` is **7/7**. Getting there found that no sign in
+  the game could be read at all (the generator stubbed every `bg_event`; the caller was never
+  ported; text id 0 meant both "first pointer" and "no text", eating 7 signs). **Open: 1c** (item
+  datastruct scenarios), **2** (battle convergence spec + battle goldens), **3** (menu scenarios
+  + stride-20 differ support), **4** (tiers, `goldens-verify`, mask policy, skill updates).
+  Open findings: **F-13** (the stride-20 dialog scratch overlaps the map mirror in `wTileMap`),
+  **F-14** (the port draws a ▼ on `done`-terminated text; the GB draws none).
+  ⚠ **It was mis-filed into `docs/plans/` by its fold-back commit while still open** — restored
+  here. `docs/plans/` is for *completed* plans only; an open plan there is invisible to the
+  start-of-session scan.
+- **Menu fidelity — COMPLETE & archived** at `docs/plans/menu_fidelity.md` (2026-07-14). All 24
+  rows de-bespoked against pret. Its lesson, worth carrying: **the recurring defect was not bad
+  assembly, it was a confident comment** — false `STUB`/`TODO-HW` claims hiding calls that were
+  droppable only in the comment's imagination. It left ~20 `M-` findings OPEN as a backlog; the
+  harness-facing ones are imported by the fidelity-expansion plan above.
 - **Fidelity harness — COMPLETE & archived** at `docs/plans/fidelity_harness.md`
   (2026-07-07, branch `fidelity_harness`): mGBA golden differential testing
   (`make fidelity` / `goldencheck`, 6 scenarios, mgba-mcp bridge) + static tooling
