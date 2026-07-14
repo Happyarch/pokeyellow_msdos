@@ -1,0 +1,296 @@
+{
+  "schema_version": 1,
+  "scenarios": [
+    {
+      "name": "status_p1",
+      "id": 3,
+      "tier": "core",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_STATUS=1",
+      "port_entry_gate": "DEBUG_STATUS",
+      "navigation_script": "tools/mgba_harness/scenarios/status_p1.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "RunStatusScreenTest"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "deterministic screen/navigation state"
+    },
+    {
+      "name": "status_p2",
+      "id": 4,
+      "tier": "core",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_STATUS=1 DEBUG_STATUS_PAGE2=1",
+      "port_entry_gate": "DEBUG_STATUS_PAGE2",
+      "navigation_script": "tools/mgba_harness/scenarios/status_p2.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "RunStatusScreenTest"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "deterministic screen/navigation state"
+    },
+    {
+      "name": "start_menu",
+      "id": 2,
+      "tier": "core",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_STARTMENU=1",
+      "port_entry_gate": "DEBUG_STARTMENU",
+      "navigation_script": "tools/mgba_harness/scenarios/start_menu.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "DEBUG_STARTMENU"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "deterministic screen/navigation state"
+    },
+    {
+      "name": "overworld_pallet",
+      "id": 1,
+      "tier": "core",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_TRANSITION=1 DEBUG_BASELINE=1",
+      "port_entry_gate": "DEBUG_TRANSITION",
+      "navigation_script": "tools/mgba_harness/scenarios/overworld_pallet.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "DEBUG_TRANSITION"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "deterministic screen/navigation state"
+    },
+    {
+      "name": "party_menu",
+      "id": 5,
+      "tier": "core",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_PARTYMENU=1",
+      "port_entry_gate": "DEBUG_PARTYMENU",
+      "navigation_script": "tools/mgba_harness/scenarios/party_menu.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "RunPartyMenuTest"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "deterministic screen/navigation state"
+    },
+    {
+      "name": "bag_menu",
+      "id": 6,
+      "tier": "core",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_BAGMENU=1",
+      "port_entry_gate": "DEBUG_BAGMENU",
+      "navigation_script": "tools/mgba_harness/scenarios/bag_menu.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "RunBagMenuTest"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "deterministic screen/navigation state"
+    },
+    {
+      "name": "sign_pallet",
+      "id": 13,
+      "tier": "core",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_SIGNTEXT=1",
+      "port_entry_gate": "DEBUG_SIGNTEXT",
+      "navigation_script": "tools/mgba_harness/scenarios/sign_pallet.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "DEBUG_SIGNTEXT"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "deterministic screen/navigation state"
+    },
+    {
+      "name": "item_tm_teach",
+      "id": 17,
+      "tier": "core",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_ITEMTM=1",
+      "port_entry_gate": "DEBUG_ITEMTM",
+      "navigation_script": "tools/mgba_harness/scenarios/item_tm_teach.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "RunTMHMTest"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "synthetic-port-gate plus real-navigation golden; state verification, not UI verification"
+    },
+    {
+      "name": "item_stone_evolve",
+      "id": 18,
+      "tier": "core",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_ITEMSTONE=1",
+      "port_entry_gate": "DEBUG_ITEMSTONE",
+      "navigation_script": "tools/mgba_harness/scenarios/item_stone_evolve.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "RunStoneTest"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "synthetic-port-gate plus real-navigation golden; state verification, not UI verification"
+    },
+    {
+      "name": "item_potion_use",
+      "id": 19,
+      "tier": "core",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_ITEMUSE=1 AUTOKEY_DUMP_FRAME=700",
+      "port_entry_gate": "DEBUG_ITEMUSE",
+      "navigation_script": "tools/mgba_harness/scenarios/item_potion_use.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "DEBUG_ITEMUSE"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "synthetic-port-gate plus real-navigation golden; state verification, not UI verification"
+    }
+  ]
+}

@@ -32,6 +32,11 @@ runtime harness.
 - [ ] Migrate the stale provider-comment backlog reported by `--strict-claims`.
 - [ ] After fidelity Stage 1c releases its files, consolidate scenario metadata,
   IDs, flags, Lua registration, must-hit markers, and artifact identity checks.
+  - [x] Add the initial unified manifest and a drift validator covering unique
+    names/IDs, build flags/classes, Makefile order, port gate IDs, Lua scripts,
+    committed artifacts, and golden sidecar identity.
+  - [ ] Generate the registries from the manifest and add runtime must-hit and
+    terminal-marker validation (manifest declarations alone are not execution proof).
 - [ ] Add deterministic generator regeneration, parser-coverage, pret-byte, and
   longest-match charmap gates.
 - [ ] Add debug-only projection, scratch-owner, compositor-lifecycle, and
