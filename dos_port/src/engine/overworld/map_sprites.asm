@@ -960,16 +960,6 @@ CheckNPCInteraction:
 ShowTextStream:
     mov dword [text_msgbox], msgbox_dialog   ; overworld dialog projection
     call PrintText                           ; TCP walks the flat stream in place
-%ifdef DEBUG_SIGNTEXT
-    ; Streamed-text golden (fidelity plan Stage 1b): the stream is fully printed and
-    ; the dialog box is on screen. Dump (FRAME.BIN + GBSTATE.BIN) and exit.
-    ;
-    ; This sits BEFORE npc_dialog_wait_impl, so the golden does NOT cover the box's
-    ; window-layer staging or the blinking ▼. That is a known gap, not a preference:
-    ; see F-8 in docs/plans/fidelity_expansion.md. Move the hook into the wait once
-    ; the re-test there is done.
-    call DumpBackbuffer                      ; never returns
-%endif
     call npc_dialog_wait_impl
     ret
 
@@ -1015,6 +1005,12 @@ npc_dialog_wait_impl:
     mov byte [ebp + H_DOWN_ARROW_COUNT2], 1
     mov esi, GB_TILEMAP1 + DIALOG_ARROW_TILEMAP_OFFSET
     mov byte [ebp + esi], CHAR_DOWN_ARROW
+%ifdef DEBUG_SIGNTEXT
+    ; Streamed-text golden: the stream is printed, the box is staged into the window
+    ; layer and the ▼ is placed — the exact state the golden must compare.
+    call DelayFrame                         ; let the compositor draw it
+    call DumpBackbuffer                     ; FRAME.BIN + GBSTATE.BIN, then exits
+%endif
     ; Release: wait until A/B not held.
 .sdw_release:
     call DelayFrame
