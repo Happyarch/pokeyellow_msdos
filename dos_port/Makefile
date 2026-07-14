@@ -282,6 +282,7 @@ GAME_SRCS := \
     src/engine/menus/pc.asm \
     src/engine/menus/pc_stubs.asm \
     src/engine/menus/oaks_pc.asm \
+    src/engine/menus/oaks_pc_stubs.asm \
     src/engine/menus/league_pc.asm \
     src/engine/menus/league_pc_stubs.asm \
     src/engine/menus/options.asm \
@@ -705,13 +706,15 @@ NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_TRAINERCARD
 NASMFLAGS += -D SKIP_TITLE
 endif
-# Oak's-PC gate (menus S6 package A): boot to overworld, open OpenOaksPC; the
-# in-routine hook dumps FRAME.BIN of the "Accessed PROF. OAK's PC." dialog before
-# the first blocking wait. make SKIP_TITLE=1 DEBUG_OAKSPC=1
+# Oak's-PC gate (menu-fidelity row 17 part 3): boot to overworld, call OpenOaksPC.
+# It PrintTexts AccessedOaksPCText and blocks in the stream's page-break prompt;
+# with no presses scripted, AutoKeyDrive photographs the open "Accessed PROF. /
+# OAK's PC." dialog and exits. make SKIP_TITLE=1 DEBUG_OAKSPC=1
 ifdef DEBUG_OAKSPC
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_OAKSPC
 NASMFLAGS += -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_QUIET -D AUTOKEY_DUMP_FRAME=90
 endif
 # Generic-PC gate (menu-fidelity row 17): boot to overworld, call ActivatePC. It plays
 # SFX_TURN_ON_PC and PrintTexts TurnedOnPC1Text, then blocks in the stream's `prompt`
@@ -1461,6 +1464,7 @@ src/engine/menus/pc.o: assets/event_constants.inc assets/audio_constants.inc \
         assets/pc_text.inc
 src/engine/menus/players_pc.o: assets/ui_layout_menus.inc assets/audio_constants.inc \
         assets/players_pc_text.inc
+src/engine/menus/oaks_pc.o: assets/oaks_pc_text.inc
 src/engine/items/item_effects.o: assets/ui_layout_menus.inc
 src/engine/menus/main_menu.o src/engine/menus/save.o: assets/ui_layout_menus.inc
 src/engine/menus/naming_screen.o: assets/ui_layout_menus.inc assets/alphabets.inc \
