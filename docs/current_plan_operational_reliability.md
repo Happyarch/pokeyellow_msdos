@@ -19,7 +19,10 @@ runtime harness.
   remain accepted until touched. Format:
   `; DEVIATION{class=projection; pret=file:Label; behavior=...; evidence=...; lifetime=...}`.
   `STUB`, `BUG`, and `GLITCH` use the same fields; glitches also require `safety`.
-- [ ] Extend stale provider-comment checks beyond the existing stub-file trail.
+- [x] Extend strict claim linting to explicit `src/...asm` extern-provider trails;
+  structured `STUB` annotations must name a label and fail if generated state
+  reports a real implementation.
+- [ ] Migrate the stale provider-comment backlog reported by `--strict-claims`.
 - [ ] After fidelity Stage 1c releases its files, consolidate scenario metadata,
   IDs, flags, Lua registration, must-hit markers, and artifact identity checks.
 - [ ] Add deterministic generator regeneration, parser-coverage, pret-byte, and

@@ -32,6 +32,8 @@ Violation classes:
   annotation    a structured exception annotation is malformed, uses an unknown
                 class, or omits evidence/retirement metadata. Legacy free-form
                 annotations remain accepted until touched.
+  stale_provider an explicit `src/...asm` extern-provider trail does not define
+                that symbol. Enforced by --strict-claims during legacy migration.
 
 Suppressions live in dos_port/tools/pret_label_allowlist.json:
   "suppress": [ {"rule": "<class>", "key": "<label | file:symbol>", "why": "…"} ]
@@ -89,6 +91,8 @@ def parse_annotation(text):
         errors.append(f"unknown class {fields.get('class')!r}")
     if kind == 'STUB' and fields.get('class') not in {'stub', 'temporary'}:
         errors.append('STUB class must be stub or temporary')
+    if kind == 'STUB' and 'label' not in fields:
+        errors.append('STUB requires label')
     if kind == 'GLITCH' and 'safety' not in fields:
         errors.append('GLITCH requires safety')
     return kind, fields, errors
@@ -191,6 +195,21 @@ def main():
                 f"{file}:{line}: extern {symbol} comment points at {base} "
                 f"({missing})")
 
+    # Explicit source-provider comments are machine-checkable. Boot providers
+    # are excluded until update_label_db scans boot/ definitions too.
+    all_defs = {(file, name) for name, file in cur.execute(
+                "SELECT name, file FROM port_defs")}
+    for file, symbol, comment, line in cur.execute(
+            "SELECT file, symbol, comment, line FROM externs "
+            "WHERE comment LIKE '%src/%.asm%' ORDER BY file, line"):
+        m = re.search(r'((?:src)/[A-Za-z0-9_./-]+\.asm)', comment)
+        if not m:
+            continue
+        provider = 'dos_port/' + m.group(1)
+        if args.strict_claims and (provider, symbol) not in all_defs:
+            add('stale_provider', f'{file}:{symbol}',
+                f"{file}:{line}: extern {symbol} names {provider}, which does not define it")
+
     # ── local_shadow: another file defines the selected pret label locally ──
     for name, selected, shadow in cur.execute("""
             SELECT l.name, l.port_file, d.file FROM labels l JOIN port_defs d
@@ -233,6 +252,13 @@ def main():
                                 f"{rel}:{line_no}: unterminated structured annotation")
                         continue
                     kind, fields, errors = parsed
+                    if kind == 'STUB' and fields.get('label'):
+                        status = cur.execute(
+                            "SELECT status FROM labels WHERE name=?",
+                            (fields['label'],)).fetchone()
+                        if status and status[0] != 'stub':
+                            errors.append(
+                                f"STUB label {fields['label']} has generated status {status[0]}")
                     for error in errors:
                         add('annotation', f'{rel}:{line_no}:{error}',
                             f"{rel}:{line_no}: malformed {kind}: {error}")
@@ -242,7 +268,7 @@ def main():
     for rule, _, msg in findings:
         by_rule.setdefault(rule, []).append(msg)
     for rule in ('mirror', 'non_ret_stub', 'dup_def', 'call_into_data',
-                 'stale_extern', 'local_shadow', 'weak_relocation'):
+                 'stale_extern', 'stale_provider', 'local_shadow', 'weak_relocation'):
         msgs = by_rule.get(rule, [])
         if msgs:
             print(f"\n== {rule} ({len(msgs)}) ==")

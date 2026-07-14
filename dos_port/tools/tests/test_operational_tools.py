@@ -38,6 +38,13 @@ class StructuredAnnotationTests(unittest.TestCase):
             "; STUB{class=HAL; pret=home/foo.asm:Foo; behavior=no-op; "
             "evidence=label_status; lifetime=until provider lands}")
         self.assertIn("STUB class must be stub or temporary", parsed[2])
+        self.assertIn("STUB requires label", parsed[2])
+
+    def test_complete_stub_names_label(self):
+        parsed = module.parse_annotation(
+            "; STUB{class=stub; label=DeferredRoutine; pret=home/foo.asm:DeferredRoutine; "
+            "behavior=return carry clear; evidence=label_status; lifetime=until wave 4}")
+        self.assertEqual(parsed[2], [])
 
 
 if __name__ == "__main__":
