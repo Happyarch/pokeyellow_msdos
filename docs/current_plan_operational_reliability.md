@@ -13,7 +13,13 @@ runtime harness.
 - [x] Reject local pret-label shadows and boilerplate file-level relocations in
   `lint_pret_labels --strict-claims`; default lint remains usable during migration.
 - [ ] Migrate legacy weak relocations to enumerated, evidenced label entries.
-- [ ] Add structured source-annotation parsing and stale provider-comment checks.
+- [ ] Manually migrate legacy free-form `DEVIATION`, `STUB`, `BUG`, and `GLITCH`
+  comments to the structured form, verifying each claim rather than bulk-rewriting.
+- [x] Add strict structured source-annotation parsing; legacy free-form comments
+  remain accepted until touched. Format:
+  `; DEVIATION{class=projection; pret=file:Label; behavior=...; evidence=...; lifetime=...}`.
+  `STUB`, `BUG`, and `GLITCH` use the same fields; glitches also require `safety`.
+- [ ] Extend stale provider-comment checks beyond the existing stub-file trail.
 - [ ] After fidelity Stage 1c releases its files, consolidate scenario metadata,
   IDs, flags, Lua registration, must-hit markers, and artifact identity checks.
 - [ ] Add deterministic generator regeneration, parser-coverage, pret-byte, and

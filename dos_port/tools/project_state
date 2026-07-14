@@ -19,6 +19,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 PORT = os.path.dirname(HERE)
 DB = os.path.join(HERE, "translation.db")
 MAKEFILE = os.path.join(PORT, "Makefile")
+ALLOWLIST = os.path.join(HERE, "pret_label_allowlist.json")
 
 
 def source_sets():
@@ -57,6 +58,10 @@ def main():
     if not args.no_scan:
         subprocess.run([sys.executable, os.path.join(HERE, "update_label_db")], check=True)
     linked, check = source_sets()
+    with open(ALLOWLIST, encoding="utf-8") as fh:
+        allow = json.load(fh)
+    relocated_files = allow.get("relocated_files", {})
+    relocated_labels = allow.get("relocated_labels", {})
     con = sqlite3.connect(DB)
     con.row_factory = sqlite3.Row
     where, params = "WHERE l.pret_file IS NOT NULL", []
@@ -78,12 +83,15 @@ def main():
         else:
             provider_type = "relocated" if row["status"] == "relocated" else "implementation"
             linkage = "linked" if provider in linked else "check-only" if provider in check else "unlisted"
+        deviation = None
+        if row["status"] == "relocated":
+            deviation = relocated_labels.get(row["name"]) or relocated_files.get(row["pret_file"])
         records.append({
             "label": row["name"], "pret_file": row["pret_file"],
             "provider": provider, "provider_type": provider_type,
             "linkage": linkage, "linked_callers": row["port_callers"],
             "reachability": "unknown", "debug_reachability": "unknown",
-            "coverage": [], "deviation": row["status"] == "relocated",
+            "coverage": [], "deviation": deviation,
         })
     if args.json:
         json.dump(records, sys.stdout, indent=2)

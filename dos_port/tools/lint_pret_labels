@@ -29,6 +29,9 @@ Violation classes:
                 provider, making searches and static call attribution ambiguous.
   weak_relocation a file-level relocation has boilerplate evidence or does not
                 actually cover every translated pret label in that file.
+  annotation    a structured exception annotation is malformed, uses an unknown
+                class, or omits evidence/retirement metadata. Legacy free-form
+                annotations remain accepted until touched.
 
 Suppressions live in dos_port/tools/pret_label_allowlist.json:
   "suppress": [ {"rule": "<class>", "key": "<label | file:symbol>", "why": "…"} ]
@@ -53,6 +56,42 @@ ALLOWLIST  = os.path.join(SCRIPT_DIR, 'pret_label_allowlist.json')
 # A stub body beyond this many instructions (or containing a call/jmp) is no
 # longer "ret-only + minimal flag/CF contract".
 STUB_MAX_INSTRS = 8
+ANNOTATION_RE = re.compile(r';\s*(DEVIATION|STUB|BUG|GLITCH)\{([^}]*)\}')
+ANNOTATION_KINDS = {'DEVIATION', 'STUB', 'BUG', 'GLITCH'}
+ANNOTATION_CLASSES = {
+    'HAL', 'banking', 'projection', 'data-model', 'timing', 'stub', 'temporary'
+}
+ANNOTATION_FIELDS = {'class', 'pret', 'behavior', 'evidence', 'lifetime'}
+
+
+def parse_annotation(text):
+    """Return (kind, fields, errors) for one structured annotation."""
+    m = ANNOTATION_RE.search(text)
+    if not m:
+        return None
+    kind, body = m.group(1), m.group(2)
+    fields, errors = {}, []
+    for part in body.split(';'):
+        if '=' not in part:
+            errors.append(f"field lacks '=': {part.strip()!r}")
+            continue
+        key, value = (x.strip() for x in part.split('=', 1))
+        if not key or not value:
+            errors.append(f"empty key/value: {part.strip()!r}")
+        elif key in fields:
+            errors.append(f"duplicate field {key!r}")
+        else:
+            fields[key] = value
+    missing = sorted(ANNOTATION_FIELDS - fields.keys())
+    if missing:
+        errors.append('missing ' + ', '.join(missing))
+    if fields.get('class') not in ANNOTATION_CLASSES:
+        errors.append(f"unknown class {fields.get('class')!r}")
+    if kind == 'STUB' and fields.get('class') not in {'stub', 'temporary'}:
+        errors.append('STUB class must be stub or temporary')
+    if kind == 'GLITCH' and 'safety' not in fields:
+        errors.append('GLITCH requires safety')
+    return kind, fields, errors
 
 def load_suppressions():
     if not os.path.exists(ALLOWLIST):
@@ -173,6 +212,30 @@ def main():
             if args.strict_claims and (weak.search(why) or len(why) < 80):
                 add('weak_relocation', pret_file,
                     f"{pret_file}: file-level relocation lacks substantive per-split evidence: {why!r}")
+
+    # ── structured annotations: strict when present, legacy accepted ────────
+    src_root = os.path.normpath(os.path.join(SCRIPT_DIR, '..', 'src'))
+    for dirpath, dirnames, filenames in os.walk(src_root):
+        dirnames.sort()
+        for fn in sorted(filenames):
+            if not fn.endswith('.asm'):
+                continue
+            path = os.path.join(dirpath, fn)
+            rel = os.path.relpath(path, os.path.join(SCRIPT_DIR, '..', '..')).replace('\\', '/')
+            with open(path, encoding='utf-8', errors='replace') as fh:
+                for line_no, text in enumerate(fh, 1):
+                    parsed = parse_annotation(text)
+                    if not parsed:
+                        # An opening brace without a complete annotation is
+                        # always malformed; do not let a typo fall back to legacy.
+                        if re.search(r';\s*(?:DEVIATION|STUB|BUG|GLITCH)\{', text):
+                            add('annotation', f'{rel}:{line_no}',
+                                f"{rel}:{line_no}: unterminated structured annotation")
+                        continue
+                    kind, fields, errors = parsed
+                    for error in errors:
+                        add('annotation', f'{rel}:{line_no}:{error}',
+                            f"{rel}:{line_no}: malformed {kind}: {error}")
     con.close()
 
     by_rule = {}
@@ -184,6 +247,10 @@ def main():
         if msgs:
             print(f"\n== {rule} ({len(msgs)}) ==")
             print('\n'.join('  ' + m for m in msgs))
+    msgs = by_rule.get('annotation', [])
+    if msgs:
+        print(f"\n== annotation ({len(msgs)}) ==")
+        print('\n'.join('  ' + m for m in msgs))
     print(f"\nlint_pret_labels: {len(findings)} violation(s), "
           f"{suppressed} suppressed")
     sys.exit(1 if findings else 0)
