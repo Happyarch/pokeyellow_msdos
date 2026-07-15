@@ -4,6 +4,47 @@ This plan turns fidelity evidence policy into generated interfaces and gates.
 It complements, and does not modify, the separately owned fidelity-expansion
 runtime harness.
 
+## Restart handoff (2026-07-15, after `9dc5b771`)
+
+Completed in this continuation:
+
+- `e5aa8f96` reconciled all 19 final fidelity scenarios and made the differ
+  reject a mismatched runtime scenario ID.
+- `4ea3fcbd` made CORE/FULL Make lists and NASM scenario dispatch derive from
+  the manifest; GBSTATE v2 now carries a required terminal marker in scenario
+  tag bit 7. `goldencheck SCENARIO=status_p1` passed end to end.
+- `5800f4c0` added temporary-tree deterministic regeneration, source-row/parser
+  coverage, unique-label identity, and an independent pret byte-stream check.
+  The tool suite now has 20 passing tests.
+- `39c6b3ee` migrated all 40 stale extern-provider trails using
+  `project_state`-selected providers.
+- `87b8750d` removed all six local pret-label shadows by retaining private
+  projected variants under port-only names. A full `make -C dos_port` linked.
+- `9dc5b771` replaced 49 weak file-level relocation claims with 147 explicit
+  scanner-evidenced per-label entries; one obsolete `home/audio.asm` claim was
+  deleted because no selected label still used its old provider.
+
+Current measured gate state: default lint is clean (5 suppressions); strict
+lint has no `stale_provider`, `local_shadow`, or `weak_relocation` category. Its
+remaining reported inventory is 56 conservative `hand_encoded_text` candidates.
+
+Exact next sequence:
+
+1. Audit the 56 rendered-text candidates one label at a time. Confirm that each
+   byte run is human-rendered text rather than control/layout data, then move
+   confirmed strings into subsystem generators and generated `assets/*.inc`.
+   Preserve pret labels in the generated include and add regeneration tests.
+2. Search legacy free-form `DEVIATION`, `STUB`, `BUG`, and `GLITCH` comments
+   separately; strict lint intentionally accepts them during migration and
+   therefore does not enumerate the backlog. Validate every claim against
+   `project_state`, pret, and runtime evidence before converting it.
+3. Add debug-only projection, scratch-owner, compositor-lifecycle, and
+   re-entrancy assertions subsystem by subsystem. Do not infer ownership from
+   comments; start from actual buffer writers/readers and debug entry paths.
+4. Run the full verification block, update counts below, archive this plan only
+   when every checkbox is closed, and commit each independently reviewable
+   migration slice.
+
 ## Restart handoff (2026-07-14)
 
 **Superseded 2026-07-15:** fidelity expansion is complete and archived at
@@ -66,12 +107,11 @@ not restructure its live files mid-stage.
 - `e5b2495e` — initial ten-scenario manifest and cross-registry drift validator.
 - `39692a36` — greedy charmap/unknown-character generator contracts.
 
-**Measured migration debt (strict lint, 2026-07-14):**
+**Measured migration debt (updated 2026-07-15):**
 
-- 49 weak/boilerplate file-level relocation entries.
-- 39–40 stale explicit extern provider trails (the count can move as concurrent
-  fidelity work lands).
-- 6 local pret-label shadows.
+- 0 weak/boilerplate file-level relocation entries (147 per-label records now).
+- 0 stale explicit extern provider trails.
+- 0 local pret-label shadows.
 - 56 likely hand-encoded rendered charmap blobs; confirm each detector hit before
   migration because the detector is intentionally conservative.
 - Legacy free-form `DEVIATION`, `STUB`, `BUG`, and `GLITCH` annotations remain
