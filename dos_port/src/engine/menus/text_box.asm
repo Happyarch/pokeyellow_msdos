@@ -98,7 +98,8 @@ TextBoxFunctionTable:
 ; TextBoxTextAndCoordTable — pret data/text_boxes.asm:TextBoxTextAndCoordTable.
 ; Geometry = UI_* equates (projected canvas coords, incl. text TX/TY); text
 ; pointer widens to dd flat (stride 9 → 11).
-; DEVIATION: JP_* rows omitted (JP-only templates not shipped in the EN port —
+; DEVIATION{class=data-model; pret=data/text_boxes.asm:TextBoxTextAndCoordTable; behavior=omit JP-only text-box template rows from the English port table; evidence=pret JP row definitions plus English-only generated layout policy; lifetime=permanent English-data boundary}
+; JP_* rows are omitted (JP-only templates not shipped in the EN port —
 ; same policy as the S1 layout seeder).
 ; ---------------------------------------------------------------------------
 %macro text_box_text 8                  ; id, x1, y1, x2, y2, text, tx, ty
@@ -144,7 +145,8 @@ TextBoxTextAndCoordTable:
 ; tools/gen_textbox_strings.py through gb_text.encode, never hand-encoded
 ; charmap hex (the bytes it emits are byte-identical to the hand-written block
 ; this replaced). Regenerate via `make assets`.
-; DEVIATION(en-only): the JP-only strings are omitted, with the JP table rows.
+; DEVIATION{class=data-model; pret=engine/menus/text_box.asm:TextBoxTextAndCoordTable; behavior=omit JP-only rendered strings together with their absent table rows; evidence=pret Japanese string set plus generated English textbox_strings.inc contract; lifetime=permanent English-data boundary}
+; The JP-only strings are omitted with the JP table rows.
 ; ---------------------------------------------------------------------------
 %include "assets/textbox_strings.inc"
 
@@ -365,7 +367,8 @@ DoBuySellQuitMenu:
     mov [ebp + wCurrentMenuItem], al
     mov [ebp + wLastMenuItem], al
     mov [ebp + wMenuWatchMovingOutOfBounds], al
-    ; DEVIATION(framework): pret's PlaceMenuCursor hardcodes the 2-row item
+    ; DEVIATION{class=data-model; pret=engine/menus/text_box.asm:DisplayTextBoxID_; behavior=set the generic menu framework's item-step explicitly to the pret two-row spacing; evidence=pret PlaceMenuCursor hardcoded spacing plus port menu_item_step framework contract; lifetime=permanent generic-menu adaptation}
+    ; pret's PlaceMenuCursor hardcodes the 2-row item
     ; spacing; the port's carries it in menu_item_step (stride is the canvas 40).
     mov dword [menu_item_step], 2 * SCREEN_TILES_W
     ; ld a,[wStatusFlags5] / res BIT_NO_TEXT_DELAY,a / ld [wStatusFlags5],a

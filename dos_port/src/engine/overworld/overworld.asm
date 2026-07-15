@@ -2158,7 +2158,7 @@ LoadCurrentMapView:
 ; The window into it is offset by the player's sub-block coords (xBlock/yBlock):
 ; each is 0 or 1, shifting the 40×25 window by 0 or 2 tiles.
 ;
-; BUG FIX (walking-NPC wall-clip): the sub-block coords change every step, but the
+; FIXED(walking-NPC wall-clip): the sub-block coords change every step, but the
 ; full rebuild (LoadCurrentMapView) only ran on block crossings (every 2 steps),
 ; so between crossings wTileMap lagged the player's actual position by up to a
 ; tile — NPC collision then tested the wrong cell and walked into rendered walls
@@ -2808,7 +2808,8 @@ IsSpriteOrSignInFrontOfPlayer:
 ; DoSignInteraction — display the sign text IsSpriteOrSignInFrontOfPlayer resolved
 ; into [hTextID].
 ;
-; DEVIATION(port-only-glue): pret has no counterpart. pret reaches the sign text
+; DEVIATION{class=temporary; pret=home/overworld.asm:IsSpriteOrSignInFrontOfPlayer; behavior=port-only DoSignInteraction supplies font and player-state framing before DisplaySignText; evidence=pret dispatch continues through DisplayTextID while project_state reports DisplayTextID check-only; lifetime=until a linked DisplayTextID owns the sign path}
+; pret has no counterpart for this glue. pret reaches the sign text
 ; through DisplayTextID, which sets up the font/player state itself. The port's
 ; overworld does not use DisplayTextID on the NPC path either — CheckNPCInteraction
 ; is its equivalent, and it both detects and displays — so DisplaySignText

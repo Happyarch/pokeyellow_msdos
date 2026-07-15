@@ -538,7 +538,8 @@ StartMenu_Pokemon:
 
 .goBackToMap:
     call RestoreScreenTilesAndReloadTilePatterns
-    ; DEVIATION(port-window-model): .goBackToMap is a PARTY-MENU exit — every path
+    ; DEVIATION{class=projection; pret=engine/menus/start_sub_menus.asm:StartMenu_Pokemon; behavior=tear down party-menu windows and whiteout before returning field-move flows to the map; evidence=pret CloseTextDisplay redraw path plus live port blank-screen reproduction when compositor state remains; lifetime=permanent window-compositor boundary}
+    ; .goBackToMap is a PARTY-MENU exit — every path
     ; that reaches it came through DisplayPartyMenu, which raises g_bg_whiteout and
     ; owns the window list (party_menu.asm:417). pret has no such state: its party
     ; screen is just tiles, and CloseTextDisplay's LoadCurrentMapView redraws over
@@ -559,7 +560,8 @@ StartMenu_Pokemon:
     ; claims it "reasserts the default palette": false, its RunDefaultPaletteCommand
     ; call is commented out — filed as M-29).
     call LoadGBPal                      ; pret: CloseTextDisplay's LoadGBPal
-    ; DEVIATION(port-input-model): pret is `jp CloseTextDisplay`. That routine is
+    ; DEVIATION{class=temporary; pret=engine/menus/start_sub_menus.asm:StartMenu_Pokemon; behavior=tail-jump to linked CloseStartMenu instead of check-only CloseTextDisplay; evidence=project_state reports CloseTextDisplay check-only and port fold restores equivalent menu/input state; lifetime=until text_script.asm closure links}
+    ; pret is `jp CloseTextDisplay`. That routine is
     ; translated but sits in check-only text_script.asm (its closure is 15 symbols
     ; deep — see the Makefile note); CloseStartMenu is the port's already-sanctioned
     ; fold of it, and is what this file's .useItem_closeMenu and StartMenu_SaveReset
@@ -678,7 +680,8 @@ StartMenu_SaveReset:                    ; pret ref: start_sub_menus.asm:StartMen
     test al, (1 << BIT_LINK_CONNECTED)
     jnz Init                            ; jp nz, Init — soft reset during a link
     call SaveMenu                       ; predef SaveMenu
-    ; DEVIATION(port-input-model): pret is `call LoadScreenTilesFromBuffer2 /
+    ; DEVIATION{class=temporary; pret=engine/menus/start_sub_menus.asm:StartMenu_SaveReset; behavior=use linked CloseStartMenu instead of check-only HoldTextDisplayOpen and CloseTextDisplay after saving; evidence=project_state reports both text-script routines check-only and port fold closes to the same map destination; lifetime=until text_script.asm closure links}
+    ; pret is `call LoadScreenTilesFromBuffer2 /
     ; jp HoldTextDisplayOpen` — hold until A is released, then fall into
     ; CloseTextDisplay, which CLOSES the menu and returns to the map. The port used
     ; to `jmp RedisplayStartMenu` and leave the START menu open after saving, which
@@ -761,7 +764,8 @@ StartMenu_Item:
     mov [ebp + wBagSavedMenuItem], al
     jnc .choseItem
 .exitMenu:
-    ; DEVIATION(window-model): pret's `call LoadScreenTilesFromBuffer2` is dropped —
+    ; DEVIATION{class=projection; pret=engine/menus/start_sub_menus.asm:StartMenu_Item; behavior=redraw the START window list instead of restoring Buffer2 after leaving the bag; evidence=pret Buffer2 restore plus port RedisplayStartMenu window rebuild; lifetime=permanent window-compositor boundary}
+    ; pret's `call LoadScreenTilesFromBuffer2` is dropped —
     ; RedisplayStartMenu → DrawStartMenu rebuilds the window list and the box, so
     ; there is no screen buffer to restore.
     ;

@@ -297,7 +297,8 @@ _MoveMon:
     add al, 2
     mov [ebp + wMonDataLocation], al
     call LoadMonData
-    ; BUG(critical): "Experience PC Withdrawing Softlock" — this is the reachable
+    ; BUG{class=data-model; pret=engine/pokemon/add_mon.asm:_MoveMon; behavior=withdrawing a low-level Medium-Slow mon can inherit CalcExperience underflow as level 100 and softlock; evidence=pret BOX_TO_PARTY CalcLevelFromExperience call plus docs/bug_categorization.md Experience PC Withdrawing Softlock entry; lifetime=permanent Gen-1 behavior unless the experience underflow is fixed}
+    ; "Experience PC Withdrawing Softlock" — this is the reachable
     ; call site for that catalogue entry: withdrawing a level-1 Medium-Slow mon
     ; from the PC (BillsPCWithdrawLogic -> _MoveMon, BOX_TO_PARTY) reaches
     ; CalcLevelFromExperience here, which can hit the 24-bit underflow in

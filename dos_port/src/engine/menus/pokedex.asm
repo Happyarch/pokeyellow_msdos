@@ -515,7 +515,8 @@ HandlePokedexListMenu:
 ; ---------------------------------------------------------------------------
 Pokedex_DrawInterface:
     mov byte [ebp + hAutoBGTransferEnabled], 0        ; xor a / ldh [hAutoBGTransferEnabled],a
-    ; DEVIATION: clear BIT_SINGLE_SPACED_LINES so the side-menu <NEXT> advances 2
+    ; DEVIATION{class=data-model; pret=engine/menus/pokedex.asm:Pokedex_DrawInterface; behavior=clear inherited single-spacing state so side-menu NEXT advances two rows; evidence=pret ambient layout default plus port canvas screens mutating H_UI_LAYOUT_FLAGS; lifetime=until text layout state is scoped per screen}
+    ; Clear BIT_SINGLE_SPACED_LINES so the side-menu <NEXT> advances 2
     ; rows (matches pret's default; defensive, per players_pc.asm precedent).
     and byte [ebp + H_UI_LAYOUT_FLAGS], ~(1 << BIT_SINGLE_SPACED_LINES) & 0xFF
     ; horizontal line under the counts: 5×'─' at (15,6)
@@ -607,7 +608,8 @@ DrawPokedexVerticalLine:
 ; ---------------------------------------------------------------------------
 Pokedex_PlacePokemonList:
     mov byte [ebp + hAutoBGTransferEnabled], 0
-    ; DEVIATION: pret `hlcoord 4,2 / lb bc,14,10 / call ClearScreenArea`. The
+    ; DEVIATION{class=projection; pret=engine/menus/pokedex.asm:Pokedex_PlacePokemonList; behavior=clear the stride-20 list scratch with a local helper instead of stride-40 ClearScreenArea; evidence=pret list-area ClearScreenArea call plus port GBSCR_W scratch contract; lifetime=until ClearScreenArea accepts an explicit stride}
+    ; pret `hlcoord 4,2 / lb bc,14,10 / call ClearScreenArea`. The
     ; port's ClearScreenArea advances rows by SCREEN_WIDTH=40; this is the
     ; stride-20 scratch, so clear inline at GBSCR_W (players_pc.asm precedent).
     call pdex_clear_list_area
@@ -683,7 +685,8 @@ IsPokemonBitSet:
     dec al
     mov cl, al                                          ; ld c, a (bit index)
     mov bh, FLAG_TEST                                   ; ld b, FLAG_TEST
-    ; DEVIATION(predef): pret does `predef FlagActionPredef`; the port calls FlagAction
+    ; DEVIATION{class=banking; pret=engine/menus/pokedex.asm:IsPokemonBitSet; behavior=call FlagAction directly instead of the predef wrapper; evidence=pret predef FlagActionPredef plus port direct-register calling convention where GetPredefRegisters would clobber arguments; lifetime=permanent flat-code calling boundary}
+    ; pret does `predef FlagActionPredef`; the port calls FlagAction
     ; directly. FlagActionPredef's prologue is GetPredefRegisters, which would clobber
     ; the very registers this call passes its arguments in. Established port pattern with
     ; the same justification at home/item_predicates.asm:125.
@@ -715,7 +718,8 @@ DrawTileLine:
 ; Convert the pokédex number at [wPokedexNum] to an internal index (walks
 ; the index->dex table until a matching dex number is found; the 1-based
 ; position is the index). In/Out via [wPokedexNum]. Preserves BX/ESI.
-; DEVIATION: pret walks PokedexOrder; the port already ships that exact table
+; DEVIATION{class=data-model; pret=engine/menus/pokedex.asm:PokedexToIndex; behavior=walk the byte-identical IndexToPokedex table instead of duplicating PokedexOrder; evidence=pret PokedexOrder scan plus generated base_stats.inc table identity; lifetime=permanent generated-data deduplication}
+; pret walks PokedexOrder; the port already ships that exact table
 ; (byte-identical) as the global `IndexToPokedex` (base_stats.inc), so we walk
 ; it instead of duplicating the data. pret's IndexToPokedex ROUTINE (the reverse
 ; lookup) is unused here — the port's callers index the table directly
@@ -793,7 +797,8 @@ ShowPokedexDataInternal:
     jnc .waitForButtonPress              ; pret: call c, Pokedex_PrintFlavorTextAtRow11
     call Pokedex_PrintFlavorTextAtRow11
 .waitForButtonPress:
-    ; DEVIATION(input): pret's JoypadLowSensitivity opens with `call Joypad` — a fresh
+    ; DEVIATION{class=HAL; pret=engine/menus/pokedex.asm:ShowPokedexDataInternal; behavior=advance a frame before JoypadLowSensitivity so the keyboard-backed joypad state and software PPU progress; evidence=pret direct Joypad polling loop plus port joypad_update DelayFrame ownership; lifetime=permanent input and software-video HAL boundary}
+    ; pret's JoypadLowSensitivity opens with `call Joypad` — a fresh
     ; hardware read per iteration — so pret's spin needs no DelayFrame. The port
     ; refreshes H_JOY_HELD/H_JOY_PRESSED only in joypad_update, which runs once per
     ; DelayFrame, so a DelayFrame-less spin here would never see the button (no way out)
@@ -890,7 +895,8 @@ DrawDexEntryOnScreen:
     movzx eax, byte [ebp + wPokedexNum]  ; internal index
     mov [saved_pokedexnum], al           ; pret: push af
     dec eax
-    ; DEVIATION(flat-data): pret calls the IndexToPokedex ROUTINE; in the port that pret
+    ; DEVIATION{class=data-model; pret=engine/menus/pokedex.asm:DrawDexEntryOnScreen; behavior=read IndexToPokedex table data directly instead of calling the reverse-lookup routine; evidence=pret IndexToPokedex call plus port generated table ownership documented by M-71; lifetime=until the routine and table names are represented separately}
+    ; pret calls the IndexToPokedex ROUTINE; in the port that pret
     ; name belongs to the TABLE it walks (see the file header + ledger M-71), so the
     ; lookup is the table read the routine would have done. Cross-file rename, not fixed
     ; here; faithdiff therefore shows IndexToPokedex as a DROPPED call.
@@ -928,12 +934,14 @@ DrawDexEntryOnScreen:
     test al, al                          ; and a (clears CF)
     jnz .owned
     ; unowned: no height/weight/flavor. Publish the page (border/name/№/pic) as drawn.
-    call dex_show_window                 ; DEVIATION(window-list): see dex_show_window
+    ; DEVIATION{class=projection; pret=engine/menus/pokedex.asm:DrawDexEntryOnScreen; behavior=publish the partially drawn unowned dex page before returning; evidence=pret page is already visible in BG tilemap while port requires dex_show_window descriptor publication; lifetime=permanent window-compositor boundary}
+    call dex_show_window
     clc                                  ; CF = 0 → the caller skips the flavor
     ret
 
 .owned:
-    ; DEVIATION(flat-data): pret walks the entry's fields with DE (feet, inches, weight,
+    ; DEVIATION{class=data-model; pret=engine/menus/pokedex.asm:DrawDexEntryOnScreen; behavior=scan the flat entry blob once and retain field offsets across PrintNumber; evidence=pret DE field walk plus port PrintNumber EDX clobber and flat generated entry layout; lifetime=permanent flat-data calling boundary}
+    ; pret walks the entry's fields with DE (feet, inches, weight,
     ; then the description pointer), relying on PrintNumber leaving DE where the next
     ; `inc de` expects it. The port's blob is flat .data and its PrintNumber clobbers
     ; EDX, so the field offsets are found once by scanning to the name's '@':
@@ -1026,13 +1034,15 @@ DrawDexEntryOnScreen:
 Pokedex_PrintFlavorTextAtRow11:
     mov ebx, HL(1, 11)                   ; bccoord 1,11 (TCP's destination cursor)
 Pokedex_PrintFlavorTextAtBC:
-    ; DEVIATION(flat-data): pret's flavor is a far-bank text run; the port's data
+    ; DEVIATION{class=data-model; pret=engine/menus/pokedex.asm:Pokedex_PrintFlavorTextAtBC; behavior=stage the generator-inlined flat flavor stream into GB memory before TextCommandProcessor; evidence=pret far-bank flavor pointer plus port flat entry blob and GB-offset text processor contract; lifetime=permanent flat-data boundary}
+    ; pret's flavor is a far-bank text run; the port's data
     ; generator inlines it into the entry blob. TextCommandProcessor reads its stream
     ; EBP-relative, so the flat bytes are staged into GB space first.
     call dex_stage_flavor                ; [dex_flavor_ptr] → wDexFlavorBuf; ESI = GB off
     lea esi, [ebp + esi]                 ; → flat ptr (TCP's stream pointer is flat)
     mov byte [ebp + H_CLEAR_LETTER_PRINTING_DELAY_FLAGS], 0x02  ; ld a, %10
-    ; DEVIATION(window-list): pokédex flavor mode. The text engine's dialog helpers
+    ; DEVIATION{class=projection; pret=engine/menus/pokedex.asm:Pokedex_PrintFlavorTextAtBC; behavior=keep full-page pokedex projection active during flavor text and page scrolling; evidence=pret writes into the visible dex BG page while port dialog helpers otherwise replace it with a bottom window; lifetime=permanent window-compositor boundary}
+    ; Pokédex flavor mode: the text engine's dialog helpers
     ; (sync_dialog_window per char, manual_text_scroll at the <PAGE> break) must mirror
     ; the full 20×18 page and keep the pokédex window, NOT do the dialog-box copy +
     ; bottom-window swap (which showed only the bottom 6 rows of the entry).

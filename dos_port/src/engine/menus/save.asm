@@ -430,7 +430,8 @@ SaveTheGame_YesOrNo:
     mov dword [text_msgbox], msgbox_dialog       ; port: publish the box projection
     call PrintText                               ; the question ends in `done`
     ; hlcoord 0, 7 / lb bc, 8, 1.
-    ; DEVIATION(window-compositor): the port's DisplayTwoOptionMenu (home/yes_no.asm)
+    ; DEVIATION{class=projection; pret=engine/menus/save.asm:SaveTheGame_YesOrNo; behavior=pass projected yes-no box geometry through yn_box state instead of the pret HL/BC triple; evidence=pret SaveTheGame_YesOrNo hlcoord/lb setup plus port DisplayTwoOptionMenu private geometry contract; lifetime=until DisplayTwoOptionMenu accepts explicit geometry}
+    ; The port's DisplayTwoOptionMenu (home/yes_no.asm)
     ; draws the box as a compositor window, so it takes the top-left from
     ; yn_box_col/row (GB coords, projected) instead of pret's HL, and derives the
     ; cursor from the box rather than from B/C — the HL/BC triple is dead here.
@@ -509,7 +510,9 @@ SaveGameData:
 ; ---------------------------------------------------------------------------
 ; CalcCheckSum — pret ref: engine/menus/save.asm:CalcCheckSum.
 ; 8-bit additive fold, complemented. In: ESI=GB offset (HL), CX=length (BC).
-; Out: AL. ; DEVIATION: the file-level checksum is dsv_io's (16-bit additive over
+; Out: AL.
+; DEVIATION{class=data-model; pret=engine/menus/save.asm:CalcCheckSum; behavior=retain the Gen-1 checksum routine only for label parity while DSV I/O uses a 16-bit payload checksum; evidence=project_state reports CalcCheckSum linked with zero callers and dsv_io owns the live file checksum; lifetime=until a faithful SRAM-layout compatibility path uses CalcCheckSum}
+; The file-level checksum is dsv_io's (16-bit additive over
 ; the payload); CalcCheckSum is kept for label parity / a future faithful-SRAM
 ; layout and is currently unused by the collapsed save/load paths.
 ; ---------------------------------------------------------------------------
@@ -647,7 +650,8 @@ DisplayChangeBoxMenu:
     ; ld a,1 / ld [wTopMenuItemY],a
     mov byte [ebp + wTopMenuItemY], 1
     ; ld a,12 / ld [wTopMenuItemX],a  -> box col 11 + 1 = box-rel col 1
-    ; ; DEVIATION(geometry): box-relative scratch (list box at scratch col 0), so
+    ; DEVIATION{class=projection; pret=engine/menus/save.asm:DisplayChangeBoxMenu; behavior=store cursor X relative to the projected list-box scratch rather than GB-absolute column 12; evidence=pret wTopMenuItemX store plus port UI_CHANGE_BOX projected box origin; lifetime=permanent widescreen projection}
+    ; Box-relative scratch (list box at scratch col 0), so
     ; the cursor X is box-rel 1, not GB-absolute 12.
     mov byte [ebp + wTopMenuItemX], 1
     ; xor a / ld [wMenuWatchMovingOutOfBounds],a
@@ -688,7 +692,8 @@ DisplayChangeBoxMenu:
     ; separated string and the port's PlaceString honours $4E + the single-spaced
     ; flag, so pret's own shape works — the 12-strings-and-a-loop the port had was
     ; forced only by its hand-split data (M-101).
-    ; ; DEVIATION(geometry): GB col 13 is list-box col 2 (list box at GB col 11).
+    ; DEVIATION{class=projection; pret=engine/menus/save.asm:DisplayChangeBoxMenu; behavior=place BoxNames at projected list-box-relative column 2 instead of GB-absolute column 13; evidence=pret hlcoord 13 placement plus port UI_CHANGE_BOX scratch origin; lifetime=permanent widescreen projection}
+    ; GB col 13 is list-box col 2 (list box at GB col 11).
     or byte [ebp + H_UI_LAYOUT_FLAGS], 1 << BIT_SINGLE_SPACED_LINES
     mov esi, W_TILEMAP + 1 * CBOX_STRIDE + 2
     mov eax, BoxNames

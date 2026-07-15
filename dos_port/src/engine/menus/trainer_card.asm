@@ -118,7 +118,8 @@ DrawTrainerInfo:
     mov dword [text_row_stride], TCSCR_W        ; port: this screen owns the stride-20 scratch
     ; ld de, RedPicFront / lb bc, BANK, $01 / predef DisplayPicCenteredOrUpperRight
     ; — display Red's front pic upper-right (c=$01).
-    ; DEVIATION(missing-predef): DisplayPicCenteredOrUpperRight is not translated
+    ; DEVIATION{class=temporary; pret=engine/menus/start_sub_menus.asm:DrawTrainerInfo; behavior=use the caller-specific TrainerInfo_DisplayPlayerPic helper instead of missing DisplayPicCenteredOrUpperRight; evidence=project_state reports DisplayPicCenteredOrUpperRight missing; lifetime=until the shared picture predef is ported}
+    ; DisplayPicCenteredOrUpperRight is not translated
     ; (label DB: missing). TrainerInfo_DisplayPlayerPic below does the c=$01 half of it
     ; for this one caller — see its header for the pic path and the column clamp. Retire
     ; it when the predef lands: this call becomes the predef with de/bc as pret sets them.
@@ -166,7 +167,8 @@ DrawTrainerInfo:
     mov bx, TC_BLANK_NAME_COPY_COUNT
     call TrainerInfo_FarCopyData
     ; GymLeaderFaceAndBadgeTileGraphics → vChars2 $20.
-    ; DEVIATION(port-split): pret loads the 8*8 face/badge tiles inline here with a plain
+    ; DEVIATION{class=banking; pret=engine/menus/start_sub_menus.asm:DrawTrainerInfo; behavior=call shared LoadBadgeTiles instead of duplicating pret's inline FarCopyData load; evidence=pret inline face-badge copy plus linked draw_badges.asm shared owner; lifetime=permanent flat-data helper split}
+    ; pret loads the 8*8 face/badge tiles inline here with a plain
     ; `call FarCopyData`. The port's badge package owns that exact load as LoadBadgeTiles
     ; (draw_badges.asm) — the same tiles to the same address — because DrawBadges needs it
     ; too and would otherwise duplicate it. Same bytes, one owner.
@@ -258,7 +260,8 @@ DrawTrainerInfo:
 ;      EDX = source FLAT pointer          (pret hl)
 ;      BX  = tile count                   (pret bc, in BYTES)
 ;
-; DEVIATION(port-primitive): the tail is CopyVideoData, not FarCopyData. Two
+; DEVIATION{class=HAL; pret=engine/menus/start_sub_menus.asm:DrawTrainerInfo; behavior=route flat trainer-card tile assets through CopyVideoData instead of banked FarCopyData; evidence=pret FarCopyData tile writes plus port tile-cache invalidation contract; lifetime=permanent flat-memory and software-video boundary}
+; The tail is CopyVideoData, not FarCopyData. Two
 ; reasons, both structural rather than cosmetic:
 ;   * the bank byte pret sets here is a NO-OP under the flat model (the tile
 ;     assets are flat .data labels), so the routine's entire pret payload is gone

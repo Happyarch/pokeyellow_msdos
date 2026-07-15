@@ -147,7 +147,8 @@ HandleItemListSwapping:
     jmp DisplayListMenuIDLoop
 
 .swapSameItemType:
-    ; GLITCH: "Item Underflow / Dry Underflow" — `add al,bl` below is an
+    ; GLITCH{class=data-model; pret=engine/menus/swap_items.asm:HandleItemListSwapping; behavior=8-bit quantity merge can wrap an exact sum of 256 to a zero-count stack and open the item-underflow chain; evidence=pret .swapSameItemType add/cp sequence plus docs/references/yellow_glitches.md item-inventory section; lifetime=permanent Gen-1 behavior; safety=live ACE-capable chain can escape the EBP allocation, emulator only and never bare metal}
+    ; "Item Underflow / Dry Underflow" — `add al,bl` below is an
     ; unclamped 8-bit add of the two stacks' quantities. If the true sum is
     ; exactly 256 (reachable via the documented multi-step PC-box manipulation
     ; that engineers a >=100 quantity byte, then SELECT-merges it against a

@@ -4,6 +4,48 @@ This plan turns fidelity evidence policy into generated interfaces and gates.
 It complements, and does not modify, the separately owned fidelity-expansion
 runtime harness.
 
+## Restart handoff (2026-07-15, fifth annotation slice complete)
+
+The fifth bounded legacy-annotation slice is complete after `956daf03`:
+
+- Audited exactly the first 29 entries of the regenerated 59-entry strict
+  remainder, from `menus/pokedex.asm:518` through
+  `pokemon/add_mon.asm:300`. The next entry, the evolution flat-table note
+  (currently `pokemon/evolution.asm:379`), was not touched.
+- Converted 28 live projection, HAL, data-model, banking, temporary-seam,
+  original-game bug, or glitch claims to structured annotations while retaining
+  their detailed prose. Evidence was checked against matching pret flow,
+  generated `project_state`, and local bug/glitch references.
+- Corrected one stale marker: the walking-NPC wall-clip note describes an
+  already-landed port fix and is now a historical `FIXED` note rather than a
+  live BUG claim.
+- The Item Underflow / Dry Underflow glitch retains explicit safety metadata:
+  its live ACE-capable chain can escape the EBP allocation and must only be
+  exercised under an emulator, never bare metal.
+- Strict claim lint now reports exactly **30** remaining `legacy_annotation`
+  entries and no other strict category. Default lint is clean with five
+  existing suppressions.
+
+Verification for this comment/metadata-only slice:
+
+- **26** operational tool tests pass.
+- Default `lint_pret_labels`: 0 violations / 5 suppressions.
+- Strict lint: the measured 30-entry legacy remainder only.
+- `validate_scenarios.py`: 19 scenarios consistent.
+- Relevant `project_state` checks distinguish missing/check-only dependencies
+  from linked routines; direct pret and bug/glitch-reference inspection
+  validates the retained behavior and safety claims.
+- `faithdiff` was run for every affected pret label. Clean routines remained
+  clean; reported differences are pre-existing executable divergences now
+  described by the retained prose/structured metadata. `DoSignInteraction` is
+  port-only glue and therefore has no pret label to diff. No executable byte,
+  call graph, or WRAM store changed here.
+- `project_state --plans` and `git diff --check` pass. Runtime goldens were not
+  rerun because only comments and this handoff changed.
+
+If directed to continue, regenerate the strict inventory and take a fresh
+bounded slice beginning at `pokemon/evolution.asm:379`.
+
 ## Restart handoff (2026-07-15, fourth annotation slice complete)
 
 The fourth bounded legacy-annotation slice is complete after `2ea42200`:

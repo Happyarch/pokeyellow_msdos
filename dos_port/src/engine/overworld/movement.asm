@@ -1342,7 +1342,8 @@ Func_5288:
 
 .asm_52fa:
     call Func_5337
-    ; BUG(latent): pret's H-page bug, replicated byte-for-byte. This path skips
+    ; BUG{class=data-model; pret=engine/overworld/movement.asm:Func_5288; behavior=the $11-$14 movement path decrements H from data1 into audio WRAM and writes value 3; evidence=pret .asm_52fa H-page sequence plus matching port GB-memory offsets; lifetime=permanent latent Gen-1 behavior}
+    ; pret's latent H-page bug is replicated byte-for-byte. This path skips
     ; Func_5349, so pret's H is still $C1 (data1) from Func_5337 — the same
     ; `ld [hl],$8 / dec h / inc l / ld [hl],$3` sequence that set 1 runs against
     ; data2/data1 here writes data1[off] = PICTUREID = 8, then dec h lands on
