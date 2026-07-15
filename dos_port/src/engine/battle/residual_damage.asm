@@ -12,7 +12,8 @@
 ;   Leech Seed — drain the seeded mon by 1/16 maxHP, heal the opposing mon by
 ;     the same amount (capped at maxHP).
 ;
-; GLITCH: Leech Seed + Toxic counter interaction.
+; GLITCH{class=data-model; pret=engine/battle/core.asm:HandlePoisonBurnLeechSeed; behavior=Leech Seed damage increments and scales with Toxic's shared counter; evidence=pret source comment plus docs/references/yellow_glitches.md Toxic and Leech Seed Stacking; lifetime=permanent Gen-1 behavior; safety=bounded WRAM arithmetic with no ACE potential under DPMI}
+; Leech Seed + Toxic counter interaction.
 ;   pret comment: "note that the toxic ticks are considered even if the damage
 ;   is not poison (hence the Leech Seed glitch)". DecreaseOwnHP is called once
 ;   for Poison/Burn and once for Leech Seed; each call increments the toxic
@@ -23,7 +24,8 @@
 ;   docs/references/yellow_glitches.md#battle-system. Safety: safe under DPMI
 ;   (bounded WRAM arithmetic, no ACE potential).
 ;
-; GLITCH: Leech Seed overkill heal.
+; GLITCH{class=data-model; pret=engine/battle/core.asm:HandlePoisonBurnLeechSeed_IncreaseEnemyHP; behavior=Leech Seed heals by the uncapped drain amount when the target has less HP than the nominal drain; evidence=pret source comment and unchanged BX flow; lifetime=permanent Gen-1 behavior; safety=bounded WRAM arithmetic with no ACE potential under DPMI}
+; Leech Seed overkill heal.
 ;   pret comment: "bc isn't updated if HP subtracted was capped to prevent
 ;   overkill". When the drained mon has less HP than 1/16 maxHP, DecreaseOwnHP
 ;   zeros that mon's HP but BX still holds the uncapped drain. IncreaseEnemyHP
@@ -31,7 +33,8 @@
 ;   Carried faithfully. Safety: safe under DPMI (bounded WRAM arithmetic, no
 ;   ACE potential).
 ;
-; GLITCH: toxic-counter-scales-Leech-Seed-too (the branch at .nonZeroDamage's
+; GLITCH{class=data-model; pret=engine/battle/core.asm:HandlePoisonBurnLeechSeed_DecreaseOwnHP; behavior=the shared Toxic multiplier branch also runs for Leech Seed damage; evidence=pret source DecreaseOwnHP branch and comment; lifetime=permanent Gen-1 behavior; safety=bounded WRAM arithmetic with no ACE potential under DPMI}
+; toxic-counter-scales-Leech-Seed-too (the branch at .nonZeroDamage's
 ;   toxic-counter check below executes even when this routine was entered from
 ;   the Leech Seed path, not just Poison/Burn). This is the same underlying
 ;   mechanism as the "Leech Seed + Toxic counter interaction" GLITCH above, not
@@ -164,10 +167,12 @@ HandlePoisonBurnLeechSeed:
     pop esi                         ; restore HP pointer
 
     ; Drain the seeded mon (BX = drain amount on return).
-    ; GLITCH: if the mon is also Badly Poisoned, the toxic counter is incremented
+    ; GLITCH{class=data-model; pret=engine/battle/core.asm:HandlePoisonBurnLeechSeed; behavior=the Leech Seed call increments Toxic's counter a second time in the same turn; evidence=pret call flow into DecreaseOwnHP; lifetime=permanent Gen-1 behavior; safety=bounded WRAM arithmetic with no ACE potential under DPMI}
+    ; If the mon is also Badly Poisoned, the toxic counter is incremented
     ; here too, scaling the drain by the (now twice-bumped) counter.
     call HandlePoisonBurnLeechSeed_DecreaseOwnHP
-    ; GLITCH (overkill heal): BX may exceed actual HP taken if HP was < 1/16 maxHP.
+    ; GLITCH{class=data-model; pret=engine/battle/core.asm:HandlePoisonBurnLeechSeed_IncreaseEnemyHP; behavior=BX can exceed actual HP taken and over-heal the seeder; evidence=pret uncapped BC handoff between decrease and increase helpers; lifetime=permanent Gen-1 behavior; safety=bounded WRAM arithmetic with no ACE potential under DPMI}
+    ; Overkill heal: BX may exceed actual HP taken if HP was < 1/16 maxHP.
     call HandlePoisonBurnLeechSeed_IncreaseEnemyHP  ; heals seeder by BX
 
     push esi
@@ -242,7 +247,8 @@ HandlePoisonBurnLeechSeed_DecreaseOwnHP:
     ; ── Toxic counter check and multiply ────────────────────────────────────
     ; pret selects the BADLY_POISONED flag from wPlayer/EnemyBattleStatus3
     ; and the toxic counter from wPlayer/EnemyToxicCounter based on hWhoseTurn.
-    ; GLITCH: this branch executes even when called from the Leech Seed path,
+    ; GLITCH{class=data-model; pret=engine/battle/core.asm:HandlePoisonBurnLeechSeed_DecreaseOwnHP; behavior=Toxic multiplication executes for Leech Seed as well as poison and burn; evidence=pret shared helper branch; lifetime=permanent Gen-1 behavior; safety=bounded WRAM arithmetic with no ACE potential under DPMI}
+    ; This branch executes even when called from the Leech Seed path,
     ; causing the toxic counter to scale Leech Seed drain too.
     mov esi, wPlayerBattleStatus3
     mov edx, wPlayerToxicCounter

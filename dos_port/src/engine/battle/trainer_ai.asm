@@ -101,7 +101,8 @@ section .text
 ; Applies trainer-class modifier functions, then filters to the minimum-weight
 ; moves. Returns ESI = wBuffer (filtered) or ESI = wEnemyMonMoves (no mods).
 ;
-; BUG-faithful: the undo loop at .loopUndoPartialIteration writes one byte
+; BUG{class=data-model; pret=engine/battle/trainer_ai.asm:AIEnemyTrainerChooseMoves; behavior=the partial-iteration undo loop can write one byte before wBuffer; evidence=pret source loop pointer order; lifetime=permanent Gen-1 behavior}
+; The undo loop at .loopUndoPartialIteration writes one byte
 ; past the start of wBuffer (= wBuffer-1 = $CEE8) when the first slot is the
 ; minimum. This is faithful to pret; the byte is harmless scratch WRAM.
 ;
@@ -177,7 +178,8 @@ AIEnemyTrainerChooseMoves:
 .minimumEntriesFound:
     movzx eax, bl           ; a = c (remaining count)
 .loopUndoPartialIteration:
-    ; BUG-faithful: writes to [esi] then dec esi, potentially esi=wBuffer-1
+    ; BUG{class=data-model; pret=engine/battle/trainer_ai.asm:AIEnemyTrainerChooseMoves; behavior=write-before-decrement reaches wBuffer minus one when the first slot is minimal; evidence=pret source loop instruction order; lifetime=permanent Gen-1 behavior}
+    ; Writes to [esi] then dec esi, potentially esi=wBuffer-1
     inc byte [ebp + esi]
     dec esi
     inc al
@@ -233,7 +235,8 @@ AIMoveChoiceModificationFunctionPointers:
 ; Discourages status-ailment moves (power=0, effect in StatusAilmentMoveEffects)
 ; when the player's mon already has a status (+$05 to buffer slot).
 ;
-; BUG-faithful: the function returns early (on the first `ret z`) if the
+; BUG{class=data-model; pret=engine/battle/trainer_ai.asm:AIMoveChoiceModification1; behavior=no player status returns from the whole modifier instead of only skipping status-move discouragement; evidence=pret source first ret z control flow; lifetime=permanent Gen-1 behavior}
+; The function returns early (on the first `ret z`) if the
 ; player has no status, rather than only skipping the discourage step.
 ; Pret ref: engine/battle/trainer_ai.asm:AIMoveChoiceModification1
 ; ===========================================================================
@@ -652,7 +655,8 @@ CooltrainerMAI:
     ret
 
 CooltrainerFAI:
-    ; BUG: the intended `ret nc` after `cp 25 percent + 1` is commented out
+    ; BUG{class=data-model; pret=engine/battle/trainer_ai.asm:CooltrainerFAI; behavior=the intended 25 percent bail-out never occurs because ret nc is absent; evidence=pret source commented-out ret nc; lifetime=permanent Gen-1 behavior}
+    ; The intended `ret nc` after `cp 25 percent + 1` is commented out
     ; in pret, so the 25% bail never fires. Faithful translation: we do NOT
     ; add `jnc .done` after the cmp.
     cmp al, PERCENT_25

@@ -79,7 +79,8 @@ PoisonEffect_:
     ; main POISON_EFFECT (PoisonPowder etc.): apply the accuracy test.
     push esi
     push edx
-    ; BUG(cosmetic): Gen-1 1/256 miss — MoveHitTest can roll a miss on a 100%-accuracy
+    ; BUG{class=data-model; pret=engine/battle/core.asm:MoveHitTest; behavior=the poison handler inherits the 1-in-256 miss for nominally perfect accuracy; evidence=pret MoveHitTest plus docs/references/yellow_glitches.md 1 in 256 Miss Glitch; lifetime=permanent Gen-1 behavior}
+    ; Gen-1 1/256 miss — MoveHitTest can roll a miss on a 100%-accuracy
     ; move (the inherited <256/256 hit-chance bug). Preserved here; the fix, if any,
     ; lives in MoveHitTest under BUG_FIX_LEVEL, not in this handler.
     ; pret ref: engine/battle/core.asm:MoveHitTest, bugs_and_glitches (1/256 miss).

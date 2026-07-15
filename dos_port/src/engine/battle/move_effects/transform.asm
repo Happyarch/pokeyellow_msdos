@@ -83,7 +83,8 @@ TransformEffect_:
     mov ebx, wEnemyBattleStatus3        ; ld bc, wEnemyBattleStatus3 (user's status3 ->
                                          ; TRANSFORMED bit target)
 
-; BUG(cosmetic) #1 — pret ref: engine/battle/move_effects/transform.asm:TransformEffect_
+; BUG{class=data-model; pret=engine/battle/move_effects/transform.asm:TransformEffect_; behavior=enemy-turn invulnerability testing reads hWhoseTurn after A was clobbered instead of a battle-status byte; evidence=pret source load and overwrite order; lifetime=permanent Gen-1 behavior at compatibility level below 2}
+; Bug #1 — pret ref: engine/battle/move_effects/transform.asm:TransformEffect_
 ; ("bug: on enemy's turn, a is overloaded with hWhoseTurn, before the check for
 ; INVULNERABLE"). pret loads [wEnemyBattleStatus1] into A, then *immediately*
 ; clobbers A with [hWhoseTurn] before the INVULNERABLE bit test ever reads it —
@@ -119,7 +120,8 @@ TransformEffect_:
                                          ; under BOTH BUG_FIX_LEVEL builds rather than
                                          ; depending on bug #1's now-divergent AL content.
 
-; BUG(cosmetic) #2 — pret ref: engine/battle/move_effects/transform.asm:TransformEffect_
+; BUG{class=data-model; pret=engine/battle/move_effects/transform.asm:TransformEffect_; behavior=player-turn Transform checks the user's status rather than the target's invulnerability; evidence=pret source wrong-side wPlayerBattleStatus1 read; lifetime=permanent Gen-1 behavior at compatibility level below 2}
+; Bug #2 — pret ref: engine/battle/move_effects/transform.asm:TransformEffect_
 ; ("bug: this should be target's BattleStatus1 (i.e. wEnemyBattleStatus1)"). On the
 ; player's turn the target is the enemy, so the INVULNERABLE check should read the
 ; enemy's (target's) status1; pret instead reads the player's own (the user's)

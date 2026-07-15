@@ -4,6 +4,48 @@ This plan turns fidelity evidence policy into generated interfaces and gates.
 It complements, and does not modify, the separately owned fidelity-expansion
 runtime harness.
 
+## Restart handoff (2026-07-15, second annotation slice complete)
+
+The user authorized exactly 29 additional annotations after `8af72220`; that
+bounded slice is complete:
+
+- Audited exactly the first 29 entries of the regenerated 146-entry strict
+  remainder, from `battle/residual_damage.asm:15` through
+  `items/item_effects.asm:1889`. The next entry, the critical post-capture BUG
+  in `item_effects.asm` (now line 1949), was not touched.
+- Converted 28 live original-game bugs/glitches, safety boundaries, or
+  intentional DOS deviations to structured annotations while retaining their
+  detailed prose. Evidence was checked against the matching pret control/data
+  flow, generated `project_state`, and local bug/glitch references where
+  available.
+- Deleted one stale exception marker rather than preserving it:
+  `item_effects.asm`'s `DEVIATION 3 (file header)` referenced a header entry
+  that does not exist. The adjacent palette-HAL explanation remains as ordinary
+  prose.
+- Strict claim lint now reports exactly **117** remaining
+  `legacy_annotation` entries and no other strict category. Default lint is
+  clean with five existing suppressions.
+
+Verification for this comment/metadata-only slice:
+
+- **26** operational tool tests pass.
+- Default `lint_pret_labels --no-scan`: 0 violations / 5 suppressions.
+- Strict lint: the measured 117-entry legacy remainder only.
+- `validate_scenarios.py`: 19 scenarios consistent.
+- Relevant `project_state` checks distinguish linked outer routines, linked
+  extracted `_` move-effect bodies, the intentionally stubbed ItemUsePPRestore
+  wrapper, and port-only helper code.
+- `faithdiff` was run for all affected linked pret labels. Clean routines
+  remained clean; reported differences are pre-existing executable
+  divergences. No executable byte, call graph, or WRAM store changed here.
+- `project_state --plans` and `git diff --check` pass. Runtime goldens were not
+  rerun because only comments and this handoff changed.
+
+Stop here: the user's authorization was exactly 29 more. If directed to
+continue, regenerate the strict inventory and use the newly requested bound.
+The current first 29 of the remainder run from `item_effects.asm:1949` through
+`menus/main_menu.asm:12`.
+
 ## Restart handoff (2026-07-15, first annotation slice complete)
 
 The first bounded legacy-annotation review is complete on top of `152cbf36`:

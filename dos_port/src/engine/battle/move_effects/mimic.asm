@@ -135,7 +135,8 @@ MimicEffect_:
 .mimicMissed:
     jmp PrintButItFailedText_
 
-; GLITCH: player-chooses-vs-AI-random Mimic asymmetry — pret ref:
+; GLITCH{class=data-model; pret=engine/battle/effects.asm:MimicEffect; behavior=the human chooses a copied move while enemy AI and link players receive a random move; evidence=pret choose-menu and BattleRandom branches; lifetime=permanent Gen-1 behavior; safety=pure bounded battle selection with no OOB or ACE hazard}
+; Player-chooses-vs-AI-random Mimic asymmetry — pret ref:
 ; engine/battle/effects.asm:MimicEffect (.letPlayerChooseMove vs .getRandomMove).
 ; In a normal (non-link) battle the HUMAN player is shown a move-selection menu and
 ; freely CHOOSES which of the target's moves to copy; the enemy AI (and the player in

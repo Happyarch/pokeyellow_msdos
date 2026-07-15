@@ -38,7 +38,8 @@ section .text
 %if BUG_FIX_LEVEL >= 1
 ; ---------------------------------------------------------------------------
 ; SanitizeInventory — GLITCH-safety: bound an inventory to its hard capacity.
-; ; GLITCH: uninitialised-inventory overrun — a bag/PC box whose count byte or
+; GLITCH{class=data-model; pret=home/inventory.asm:AddItemToInventory; behavior=corrupt count or missing terminator can drive inventory scans beyond the fixed list; evidence=pret terminator scan plus docs/glitch_safety.md uninitialised inventory entry; lifetime=guarded at BUG_FIX_LEVEL at least 1; safety=SanitizeInventory clamps count and writes a terminator before scanning}
+; ; Uninitialised-inventory overrun — a bag/PC box whose count byte or
 ; ;   $FF terminator is missing/corrupt (e.g. an un-seeded, DPMI-garbage WRAM
 ; ;   inventory) makes the terminator-scan loops below (.notAtEnd/.addAnotherStack)
 ; ;   walk off the end of the array and loop through memory.

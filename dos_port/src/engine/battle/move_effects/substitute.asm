@@ -108,7 +108,8 @@ SubstituteEffect_:
                                          ; high byte assumed 0, per the comment above)
     pop ebx                             ; pop bc — restore the status2 pointer
 
-; BUG(cosmetic): pret only branches on the borrow (carry) from the maxHP/4
+; BUG{class=data-model; pret=engine/battle/move_effects/substitute.asm:SubstituteEffect_; behavior=current HP exactly equal to one quarter max HP permits Substitute and leaves the user at zero HP; evidence=pret subtraction carry-only branch and source comment; lifetime=permanent Gen-1 behavior at compatibility level below 2}
+; Pret only branches on the borrow (carry) from the maxHP/4
 ; subtraction. A user whose current HP exactly equals maxHP/4 subtracts to exactly
 ; 0 with NO carry, so it falls through to the "user has 0 or more HP" path below:
 ; HAS_SUBSTITUTE_UP gets set and the substitute goes up while the user is left at

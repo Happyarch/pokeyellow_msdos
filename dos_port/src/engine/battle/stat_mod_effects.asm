@@ -210,7 +210,8 @@ UpdateStatDone:
     call Bankswitch
 .skipReshowBank:
 .applyBadgeBoostsAndStatusPenalties:
-    ; BUG(critical): "Badge Stat Boost Glitch" — ApplyBadgeStatBoosts is
+    ; BUG{class=data-model; pret=engine/battle/core.asm:StatModifierUpEffect; behavior=each stat-stage change reapplies badge boosts to already-boosted current stats; evidence=pret call to ApplyBadgeStatBoosts plus docs/references/yellow_glitches.md Badge Stat Boost Glitch; lifetime=permanent Gen-1 behavior}
+    ; "Badge Stat Boost Glitch" — ApplyBadgeStatBoosts is
     ; reapplied on EVERY stat-stage change (not just once on stat load), and it
     ; boosts the already-boosted current value again rather than the base
     ; stat, so repeated stat-up moves compound the 1.125x badge boost each

@@ -65,7 +65,8 @@ extern DreamWasEatenText
 ; restores something), redraw both HP bars/HUDs, then print the drain text
 ; (Dream Eater gets its own line via DREAM_EATER_EFFECT).
 ; ===========================================================================
-; BUG(cosmetic): "Substitute HP Drain Bug" — DrainHPEffect_ always heals the
+; BUG{class=data-model; pret=engine/battle/move_effects/drain_hp.asm:DrainHPEffect_; behavior=draining moves heal from wDamage even when a Substitute absorbed the hit; evidence=pret source plus docs/references/yellow_glitches.md Substitute HP Drain Bug; lifetime=permanent Western Yellow behavior}
+; "Substitute HP Drain Bug" — DrainHPEffect_ always heals the
 ; attacker from wDamage regardless of whether that damage actually landed on
 ; the target's real HP or was redirected to a Substitute (AttackSubstitute
 ; still sets wDamage to the would-be hit amount). So Absorb/Mega Drain/Leech

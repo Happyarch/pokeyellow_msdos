@@ -53,7 +53,8 @@ GetHPBarLength:
     shr ecx, 2                          ; srl d / rr e ×2
     and ecx, 0xFF                       ; ld a,e / ldh [hDivisor],a — byte divisor
 .maxHPSmaller256:
-    ; GLITCH-safety: pret's byte Divide with divisor 0 spins its subtract loop
+    ; DEVIATION{class=data-model; pret=engine/gfx/hp_bar.asm:GetHPBarLength; behavior=zero max HP clamps to a full bar instead of executing native DIV by zero; evidence=pret byte Divide behavior versus x86 DIV fault semantics; lifetime=permanent native safety boundary}
+    ; Pret's byte Divide with divisor 0 spins its subtract loop
     ; harmlessly; a native DIV would fault under DPMI. Max HP 0 is unreachable
     ; from real mon data — clamp to a full bar instead of crashing.
     test ecx, ecx

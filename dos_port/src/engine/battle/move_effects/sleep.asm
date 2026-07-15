@@ -60,7 +60,8 @@ SleepEffect_:
     and cl, 1 << NEEDS_TO_RECHARGE      ; bit NEEDS_TO_RECHARGE,a — does the target need to recharge?
     and al, ~(1 << NEEDS_TO_RECHARGE) & 0xFF   ; res NEEDS_TO_RECHARGE,a — target no longer needs to recharge
     mov [ebp + ebx], al                 ; ld [bc],a (write back unconditionally)
-    ; BUG(cosmetic): Hyper Beam recharge bypasses ALL hit-tests for status moves —
+    ; BUG{class=data-model; pret=engine/battle/effects.asm:SleepEffect; behavior=a target owing Hyper Beam recharge is put to sleep without status or accuracy checks; evidence=pret recharge short-circuit and source comment; lifetime=permanent Gen-1 behavior at compatibility level below 2}
+    ; Hyper Beam recharge bypasses ALL hit-tests for status moves —
     ; a target that needed to recharge this turn is unconditionally put to sleep,
     ; skipping the already-asleep/already-statused check AND the accuracy test
     ; (MoveHitTest). pret's own comment flags this ("if the target had to recharge,

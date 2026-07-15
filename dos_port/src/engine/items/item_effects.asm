@@ -104,7 +104,8 @@ RestorePPAmount:
     ret
 
 .fullyRestorePP:
-    ; BUG (faithful): upper two PP-Up bits not masked here (pret intentional).
+    ; BUG{class=data-model; pret=engine/items/item_effects.asm:ItemUsePPRestore; behavior=Max Ether and Max Elixer no-effect detection compares PP-Up bits as PP; evidence=pret .fullyRestorePP source comment and unmasked compare; lifetime=permanent Gen-1 behavior}
+    ; The upper two PP-Up bits are not masked here (pret behavior).
     mov al, [ebp + esi]
     cmp al, bl
     jz .ret
@@ -333,7 +334,8 @@ RecalcMonStats:
 ;      [wCurItem], [wWhichPokemon], [wItemQuantity].
 ; Out: CF clear if tossed, CF set if not (key item / HM / player chose No).
 ;
-; DEVIATION(text): pret prints IsItOKToTossItemText / ThrewAwayItemText /
+; DEVIATION{class=projection; pret=engine/items/item_effects.asm:TossItem_; behavior=toss prompts draw whole into the existing list projection rather than using streamed PrintText; evidence=pret TossItem_ text calls plus port window-compositor ownership; lifetime=until dialog printing composes with existing windows and far-text streams}
+; Pret prints IsItOKToTossItemText / ThrewAwayItemText /
 ; TooImportantToTossText via PrintText (typewriter reveal in the message box).
 ; The port's dialog projection collapses the window list to the dialog alone
 ; (set_single_window), which would hide the item list beneath — on the GB the
@@ -1602,7 +1604,7 @@ ItemUseBall:
 
 .skipSafariZoneCode:
     ; call RunDefaultPaletteCommand — TODO-HW: palette HAL (Phase 5), no-op here.
-    ; DEVIATION 3 (file header); same treatment as pokedex_entry.asm / league_pc.asm.
+    ; Same palette-HAL treatment as pokedex_entry.asm and league_pc.asm.
     mov byte [ebp + wPokeBallAnimData], 0x43   ; successful-capture value
     call LoadScreenTilesFromBuffer1
     mov esi, ItemUseText00
@@ -1622,7 +1624,8 @@ ItemUseBall:
     jmp .notOldManBattle
 
 .oldManBattle:
-; GLITCH: the player's name is copied over the wild-mon data (wGrassRate) — this is
+; GLITCH{class=data-model; pret=engine/items/item_effects.asm:ItemUseBall; behavior=the old-man tutorial copies the player name over encounter data at wGrassRate; evidence=pret oldManBattle CopyData plus Missingno encounter mechanics; lifetime=permanent Gen-1 behavior; safety=bounded NAME_LENGTH copy within emulated WRAM with no direct ACE}
+; The player's name is copied over the wild-mon data (wGrassRate) — this is
 ; the write half of the Cinnabar Island Missingno. glitch. Faithful, kept.
 ; Safety: bounded copy into WRAM under DPMI; no ACE reachable.
     mov esi, wGrassRate
@@ -1886,7 +1889,8 @@ ItemUseBall:
     mov al, [ebp + wEnemyMonStatus]
     push eax                            ; status
 
-; BUG: a transformed mon is assumed to be a Ditto. A wild mon could have used
+; BUG{class=data-model; pret=engine/items/item_effects.asm:ItemUseBall; behavior=a captured transformed wild mon is restored as Ditto regardless of its original species; evidence=pret .captured TRANSFORMED branch and DITTO store; lifetime=permanent Gen-1 behavior}
+; A transformed mon is assumed to be a Ditto. A wild mon could have used
 ; Transform via Mirror Move, but Ditto is the only wild mon that knows Transform.
 ; pret ships this; keep it (no BUG_FIX_LEVEL block — the fix would need to record
 ; the pre-Transform species, which the original never stores).

@@ -124,7 +124,8 @@ HealEffect_:
 .healEffect:
     mov bh, al                          ; ld b, a — move num (kept live until the cp REST)
 
-; BUG(cosmetic): most significant bytes comparison is ignored — causes the move to
+; BUG{class=data-model; pret=engine/battle/move_effects/heal.asm:HealEffect_; behavior=recovery fails when the HP deficit is congruent to 255 modulo 256 because the high-byte comparison is discarded; evidence=pret source comment plus docs/references/yellow_glitches.md HP Recovery Failure; lifetime=permanent Gen-1 behavior at compatibility level below 2}
+; The most significant bytes comparison is ignored — causes the move to
 ; report "already at max HP" (no-op) if max HP is 255/511 points higher than current
 ; HP. pret ref: engine/battle/move_effects/heal.asm:HealEffect_ ("most significant
 ; bytes comparison is ignored / causes the move to miss if max HP is 255 or 511
@@ -171,7 +172,8 @@ HealEffect_:
     jz .restEffect
     mov esi, wEnemyMonStatus
 .restEffect:
-    ; BUG(critical): "Rest + Toxic Counter" — this overwrites only wBattleMon/
+    ; BUG{class=data-model; pret=engine/battle/move_effects/heal.asm:HealEffect_; behavior=Rest clears poison status but leaves BADLY_POISONED and the Toxic counter stale; evidence=pret status writes plus docs/references/yellow_glitches.md Rest and Toxic Counter; lifetime=permanent Gen-1 behavior}
+    ; "Rest + Toxic Counter" — this overwrites only wBattleMon/
     ; EnemyMonStatus (PSN/BRN/FRZ/PAR/SLP), which clears the PSN bit so residual
     ; damage stops ticking, but BADLY_POISONED lives in the separate wBattleMon/
     ; EnemyMonStatus3 byte (see move_effects/poison.asm's inflictPoison) and the

@@ -198,7 +198,8 @@ FreezeBurnParalyzeEffect_:
     mov esi, BurnedText
     jmp PrintText
 .freeze2:
-    ; BUG(cosmetic): hyper beam recharge is reset for the player's side (.freeze1
+    ; BUG{class=data-model; pret=engine/battle/effects.asm:FreezeBurnParalyzeEffect; behavior=freezing the player side does not clear Hyper Beam recharge while freezing the enemy side does; evidence=pret .freeze1 and .freeze2 asymmetry plus source comment; lifetime=permanent Gen-1 behavior at compatibility level below 2}
+    ; Hyper Beam recharge is reset for the player's side (.freeze1
     ; above calls ClearHyperBeam) but NOT here — pret's own source comment flags
     ; the asymmetry verbatim ("hyper beam bits aren't reset for opponent's side").
     ; A player mon that needed to recharge from Hyper Beam and then gets frozen by

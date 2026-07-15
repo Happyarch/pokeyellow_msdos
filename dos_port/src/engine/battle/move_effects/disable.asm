@@ -91,7 +91,8 @@ DisableEffect_:
     mov al, [ebp + wLinkState]
     cmp al, LINK_STATE_BATTLING
     pop esi                              ; esi = wEnemyMonMoves (move-list base)
-    ; BUG(cosmetic): in a non-Link Battle, pret skips the PP check entirely when the
+    ; BUG{class=data-model; pret=engine/battle/effects.asm:DisableEffect; behavior=player Disable can select an enemy move slot already at zero PP outside link battles; evidence=pret player-turn non-link branch and source comment; lifetime=permanent Gen-1 behavior at compatibility level below 2}
+    ; In a non-Link Battle, pret skips the PP check entirely when the
     ; player targets the enemy with Disable ("non-link battle enemies have unlimited
     ; PP so the previous checks aren't needed" — pret's own comment). This means the
     ; randomly-picked move slot can already be at 0 PP; the disable still "locks" it,
