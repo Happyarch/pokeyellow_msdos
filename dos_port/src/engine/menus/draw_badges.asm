@@ -90,7 +90,8 @@ section .text
 ; $20 = face 0. Any VRAM tile-data write must arm g_tilecache_dirty (CLAUDE.md).
 ; In: EBP = GB base. All registers preserved.
 ;
-; DEVIATION(port-split): pret has no such routine — DrawTrainerInfo loads these
+; DEVIATION{class=banking; pret=engine/menus/start_sub_menus.asm:DrawTrainerInfo; behavior=extract the inline face-and-badge graphics load into port-only LoadBadgeTiles; evidence=pret DrawTrainerInfo FarCopyData sequence and linked port call from trainer_card.asm; lifetime=permanent flat-data helper split}
+; pret has no such routine — DrawTrainerInfo loads these
 ; tiles inline (engine/menus/start_sub_menus.asm:523-527, `ld hl,
 ; GymLeaderFaceAndBadgeTileGraphics / ld de,vChars2 tile $20 / ld bc,... /
 ; call FarCopyData`). The port cannot use FarCopyData for it: the sheet lives in
@@ -124,7 +125,8 @@ DrawBadges:
 ; Tile ids for face/badge graphics.
 ;   ld de, wBadgeOrFaceTiles / ld hl, .FaceBadgeTiles / ld bc, NUM_BADGES
 ;   call CopyData
-; DEVIATION(gb-memory-model): pret's source operand is a ROM table, i.e. a GB
+; DEVIATION{class=data-model; pret=engine/menus/draw_badges.asm:DrawBadges; behavior=copy FaceBadgeTiles from flat data into GB memory inline instead of calling GB-offset CopyData; evidence=pret DrawBadges CopyData operands and port flat .data table; lifetime=permanent flat-memory boundary}
+; pret's source operand is a ROM table, i.e. a GB
 ; address, so its copy goes through CopyData; the port's .FaceBadgeTiles lives in
 ; x86 code space (.data), which CopyData cannot address (it takes ESI as a GB
 ; offset). Expanded as the equivalent flat→GB rep movsb of the same NUM_BADGES

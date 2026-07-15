@@ -1946,7 +1946,8 @@ ItemUseBall:
     dec eax
     movzx eax, byte [IndexToPokedex + eax]   ; predef IndexToPokedex (DEVIATION 6)
     mov [ebp + wPokedexNum], al
-; BUG(critical): "Index #000 Post-Capture" — pret ref: engine/items/item_effects.asm
+; BUG{class=data-model; pret=engine/items/item_effects.asm:ItemUseBall; behavior=dex-number zero wraps to bit 255 and writes beyond wPokedexOwned after capture; evidence=pret .captured unconditional dec plus FlagAction bit addressing and docs/bug_categorization.md Battle table; lifetime=permanent Gen-1 behavior unless BUG_FIX_LEVEL >= 1}
+; "Index #000 Post-Capture" — pret ref: engine/items/item_effects.asm
 ; :ItemUseBall (.captured); docs/bug_categorization.md (Battle table). A species with
 ; no pokédex number (the MISSINGNO./glitch indices) maps to dex 0 here, and the
 ; unconditional `dec a` below wraps it to $FF. FlagAction then addresses bit 255 —
@@ -2417,7 +2418,8 @@ ItemUseTMHM:
 ; Source: engine/items/item_effects.asm:790-848 (ItemUseEvoStone) and 849-889
 ; (Func_d85d, the stone-applicability scan).
 ;
-; DEVIATION 12 (flat model): pret's Func_d85d cannot address the evo/moves blob
+; DEVIATION{class=data-model; pret=engine/items/item_effects.asm:Func_d85d; behavior=scan flat EvosMovesPointerTable data directly instead of bank-copying it through wEvoDataBuffer; evidence=pret Func_d85d FarCopyData flow and port generated flat dd table; lifetime=permanent flat-memory boundary}
+; pret's Func_d85d cannot address the evo/moves blob
 ; directly — it lives in another ROM bank — so it FarCopyData's the mon's 2-byte
 ; pointer out of EvosMovesPointerTable into wEvoDataBuffer, dereferences that,
 ; then FarCopyData's 13 bytes of the blob into the same buffer and scans the copy.
@@ -2426,7 +2428,8 @@ ItemUseTMHM:
 ; and wEvoDataBuffer has no reason to exist. The scan itself — entry strides, the
 ; EVOLVE_ITEM item-id compare, the CF contract — is byte-for-byte pret's.
 ;
-; DEVIATION 13: pret's player-Pikachu refusal plays PikachuCry28 through
+; DEVIATION{class=HAL; pret=engine/items/item_effects.asm:ItemUseEvoStone; behavior=player Pikachu's evolution refusal omits PikachuCry28 playback; evidence=pret .pikachu branch calls PlayPikachuSoundClip while the port PCM path remains deferred Phase 3 hardware work; lifetime=until Pikachu PCM playback is live}
+; pret's player-Pikachu refusal plays PikachuCry28 through
 ; PlayPikachuSoundClip (ldpikacry / callfar). The Pikachu PCM path is Phase 3
 ; audio work; the cry is a TODO-HW no-op here. Everything else on that branch —
 ; GetPartyMonName, RefusingText, the emotion/mood writes, the "item not used"
@@ -2563,7 +2566,8 @@ ItemUseMaxRepel:
 ; PrintItemUseTextAndRemoveItem — "<PLAYER> used <ITEM>!", the get-item jingle,
 ; a button wait, then consume the item.
 ;
-; DEVIATION (structural): pret FALLS THROUGH into RemoveUsedItem (the two labels
+; DEVIATION{class=banking; pret=engine/items/item_effects.asm:PrintItemUseTextAndRemoveItem; behavior=tail-jump to the separately placed RemoveUsedItem body instead of source-order fallthrough; evidence=pret contiguous PrintItemUseTextAndRemoveItem and RemoveUsedItem labels plus identical port jump target; lifetime=permanent source-layout adaptation}
+; pret FALLS THROUGH into RemoveUsedItem (the two labels
 ; are contiguous). RemoveUsedItem is already defined earlier in this file, so the
 ; port tail-jumps instead — same control flow, no shared code path lost.
 ;
@@ -3008,7 +3012,8 @@ ItemUsePokeFlute:
     jz .asm_e063
     mov byte [ebp + wWereAnyMonsAsleep], 1
 .asm_e063:
-    ; DEVIATION: pret calls LoadScreenTilesFromBuffer2 here to restore the screen it
+    ; DEVIATION{class=projection; pret=engine/items/item_effects.asm:ItemUsePokeFlute; behavior=omit LoadScreenTilesFromBuffer2 because the window overlay preserves the underlying screen; evidence=pret post-flute restore call and port window-compositor ownership with no Buffer2 producer; lifetime=permanent window-compositor boundary}
+    ; pret calls LoadScreenTilesFromBuffer2 here to restore the screen it
     ; saved before the item menu. The port has no Buffer2 save/restore — the same
     ; position home/start_menu.asm already takes (its header: "pret's
     ; SaveScreenTilesToBuffer2 screen save/restore is not needed" — the port draws
@@ -3073,8 +3078,8 @@ iu_played_flute_had_effect:
 ;
 ; Source: engine/items/item_effects.asm:ItemUseCardKey.
 ;
-; This handler is DEAD ON THE REAL HARDWARE, and the port reproduces that. See the
-; BUG note at the tile read below. The Silph Co. doors the three CardKeyTables
+; This handler is dead on the real hardware, and the port reproduces that. See the
+; structured bug annotation at the tile read below. The Silph Co. doors the three CardKeyTables
 ; describe are opened by map scripts, not by this item — pret's own comment on the
 ; tables reads "probably supposed to be door locations in Silph Co., but they are
 ; unused", and `wUnusedCardKeyGateID` / BIT_UNUSED_CARD_KEY are, as pret says,
@@ -3094,7 +3099,8 @@ ItemUseCardKey:
                                          ; registers this routine immediately
                                          ; overwrites — so the call is equivalent)
 
-    ; BUG(2): pret reads `[GetTileAndCoordsInFrontOfPlayer]` — the routine's own first
+    ; BUG{class=data-model; pret=engine/items/item_effects.asm:ItemUseCardKey; behavior=reads the first opcode of GetTileAndCoordsInFrontOfPlayer instead of wTileInFrontOfPlayer so every door comparison fails; evidence=pret absolute operand plus source opcode $CD and unused CardKeyTables references; lifetime=permanent Gen-1 behavior unless BUG_FIX_LEVEL >= 2}
+    ; pret reads `[GetTileAndCoordsInFrontOfPlayer]` — the routine's own first
     ; opcode byte — where it plainly meant `[wTileInFrontOfPlayer]`. On the GB that
     ; byte is $CD (`call GetPredefRegisters`), which matches none of the three door
     ; tiles below, so the compare ALWAYS falls to ItemUseNotTime and the tables are

@@ -238,7 +238,8 @@ PetitCup:
     ; --- per-mon evolution-stage check (x3) ---
     ; pret: `ld a,[hl] / ld [wCurPartySpecies],a / push hl / callfar Func_3b10f
     ; / pop hl / jp c, asm_f56ad` for mon1, mon2, mon3 in turn.
-    ; DEVIATION: Func_3b10f (engine/pokemon/evos_moves.asm — "does some species
+    ; DEVIATION{class=temporary; pret=engine/menus/link_menu.asm:PetitCup; behavior=treat all three party species as basic forms instead of calling Func_3b10f; evidence=pret PetitCup callfar sequence and project_state reports Func_3b10f missing; lifetime=until Func_3b10f is ported and wired}
+    ; Func_3b10f (engine/pokemon/evos_moves.asm — "does some species
     ; evolve into wCurPartySpecies") is not yet ported (pokemon_behavior plan).
     ; Stubbed to the "basic form" result (CF clear -> jc NOT taken) for every
     ; mon. TODO once ported: extern Func_3b10f, preserve esi across the call
@@ -247,17 +248,17 @@ PetitCup:
     dec esi                             ; esi -> mon1 address
     mov al, [ebp + esi]
     mov [ebp + wCurPartySpecies], al
-    clc                                 ; DEVIATION: Func_3b10f stub (basic path)
+    clc                                 ; structured temporary deviation above: basic path
     jc asm_f56ad
     inc esi                             ; esi -> mon2 address
     mov al, [ebp + esi]
     mov [ebp + wCurPartySpecies], al
-    clc                                 ; DEVIATION: Func_3b10f stub (basic path)
+    clc                                 ; structured temporary deviation above: basic path
     jc asm_f56ad
     inc esi                             ; esi -> mon3 address
     mov al, [ebp + esi]
     mov [ebp + wCurPartySpecies], al
-    clc                                 ; DEVIATION: Func_3b10f stub (basic path)
+    clc                                 ; structured temporary deviation above: basic path
     jc asm_f56ad
     dec esi
     dec esi                             ; esi -> mon1 address (wPartySpecies)
@@ -270,7 +271,8 @@ PetitCup:
     push esi
     push ebx
     push eax
-    ; DEVIATION: FarCopyData bank read -> flat read. pret does two FarCopyData
+    ; DEVIATION{class=data-model; pret=engine/menus/link_menu.asm:PetitCup; behavior=read each flat PokedexEntryPointers dd directly instead of two banked FarCopyData operations; evidence=pret PetitCup pointer and entry copies plus generated dex_entries.inc flat-pointer contract; lifetime=permanent flat-memory boundary}
+    ; FarCopyData bank read -> flat read. pret does two FarCopyData
     ; calls (fetch the far pointer, then 20 bytes of the entry) because
     ; PokedexEntryPointers is bank-switched `dw` data on hardware; the port's
     ; PokedexEntryPointers is already a flat `dd` pointer (dex_entries.inc

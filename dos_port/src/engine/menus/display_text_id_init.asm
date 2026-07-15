@@ -160,7 +160,8 @@ DisplayTextIDInit:
                                         ; kept for register-contract parity
     call CopyScreenTileBufferToVRAM     ; = 3-frame pacing (see copy2.asm)
     ; xor a / ldh [hWY],a — pret: put the window on the screen
-    ; DEVIATION(window-compositor): pret's store is DROPPED, and permanently — this
+    ; DEVIATION{class=projection; pret=engine/menus/display_text_id_init.asm:DisplayTextIDInit; behavior=omit pret's hWY zero store because PrintText publishes the dialog descriptor and mirrors its WY; evidence=pret final hWY store plus port set_single_window ownership of H_WY; lifetime=permanent window-compositor boundary}
+    ; pret's store is DROPPED, and permanently — this
     ; is not a deferral, so it is not a TODO-HW (it carried that tag until row 13,
     ; which was wrong twice over: H_WY exists and is written elsewhere, and no future
     ; hardware work will make this store correct). On the GB, rWY=0 is what makes the

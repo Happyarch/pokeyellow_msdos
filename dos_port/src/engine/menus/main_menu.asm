@@ -9,7 +9,7 @@
 ; order). The only divergences are the three tagged classes:
 ;   ; PROJ      — GB→canvas geometry (cites a UI_* equate from ui_layout_menus.inc)
 ;   ; TODO-HW:  — a Game-Boy I/O boundary with no port hardware (here: SRAM only)
-;   ; DEVIATION — a port-model plumbing note (window compositor / text stride /
+;   ; structured exception annotation — a port-model plumbing note (window compositor / text stride /
 ;                 the joypad HAL)
 ;
 ; Menu-fidelity row 18 fixed three claims in this file that were simply untrue:

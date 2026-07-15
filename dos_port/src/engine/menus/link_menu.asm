@@ -45,7 +45,8 @@
 ;    players_pc.asm / oaks_pc.asm / league_pc.asm / main_menu.asm all print with it,
 ;    and the three name-splicing streams (_Colosseum{Height,Weight,Evolved}Text are
 ;    `text_ram wNameBuffer` texts) are only expressible through it.
-;      ; DEVIATION(window-compositor): the msgbox_dialog projection presents the box
+;      ; DEVIATION{class=projection; pret=engine/menus/link_menu.asm:LinkMenu; behavior=message dialogs temporarily replace rather than overlay the underlying link screen; evidence=pret PrintText calls preserve BG tilemap while port msgbox_dialog uses set_single_window; lifetime=until dialog projection composes with existing windows}
+;      ; The msgbox_dialog projection presents the box
 ;      with set_single_window, so a message REPLACES the screen behind it for as long
 ;      as it is up (pret overlays the box on the live tilemap).  Each caller's next
 ;      act is the redraw that restores it — Func_f531b's `jp Func_f531b` retry, or
@@ -559,7 +560,8 @@ Func_f56bd:
     mov byte [ebp + hAutoBGTransferEnabled], 0
     mov dword [text_row_stride], LM_STRIDE
     ; hlcoord 1,11 / lb bc,6,18 / ClearScreenArea (interior of the rules panel)
-    ; ; DEVIATION(stride): the port ClearScreenArea is baked to SCREEN_WIDTH(40);
+    ; DEVIATION{class=projection; pret=engine/menus/link_menu.asm:Func_f56bd; behavior=clear the stride-20 cup-rules scratch inline instead of calling the stride-40 ClearScreenArea; evidence=pret Func_f56bd hlcoord and ClearScreenArea call plus port LM_STRIDE scratch contract; lifetime=until ClearScreenArea accepts an explicit stride}
+    ; The port ClearScreenArea is baked to SCREEN_WIDTH(40);
     ; this scratch is stride-20, so clear inline (6 rows x 18 cols from (1,11)).
     xor ebx, ebx
 .clr_row:
@@ -623,7 +625,8 @@ lm_link_show_window:
     call add_window
     ret
 
-; ; DEVIATION(geometry): the LinkMenu box is drawn BOX-RELATIVE (origin = scratch
+; DEVIATION{class=projection; pret=engine/menus/link_menu.asm:LinkMenu; behavior=draw the LinkMenu box and cursor relative to its projected window origin; evidence=pret absolute hlcoord positions and port UI_LINK_MENU descriptor geometry; lifetime=permanent widescreen projection}
+; The LinkMenu box is drawn BOX-RELATIVE (origin = scratch
 ; 0,0) and shown at UI_LINK_MENU, so pret's GB-absolute coords are shifted by
 ; (-5,-3): text (7,5)->(2,2), cursor (6,5)->(1,2).
 LinkMenu:
@@ -646,7 +649,8 @@ LinkMenu:
     ; port's body under pret's name); it snapshots W_TILEMAP, which is where this
     ; menu's stride-20 scratch lives, so the save is meaningful here.
     call SaveScreenTilesToBuffer1
-    ; ; DEVIATION(window-compositor): the SCREEN restore is the window stack, not the
+    ; DEVIATION{class=projection; pret=engine/menus/link_menu.asm:LinkMenu; behavior=restore the caller by dropping the projected window stack rather than relying only on Buffer1 tilemap restore; evidence=pret SaveScreenTilesToBuffer1 and LoadScreenTilesFromBuffer1 pairing plus port lm_link_wc ownership; lifetime=permanent window-compositor boundary}
+    ; The SCREEN restore is the window stack, not the
     ; tilemap — the menu is a window over the caller's windows, so LoadScreenTiles-
     ; FromBuffer1 alone would not un-draw it.  Record the caller's window count and
     ; drop back to it at .choseCancel.
@@ -775,7 +779,7 @@ LinkMenu:
 .updateCursorPosition:
     call Func_f59ec
     ; call LoadScreenTilesFromBuffer1 — restores the W_TILEMAP snapshot taken at
-    ; entry (the real routine, battle_menu.asm).  ; DEVIATION(window-compositor):
+    ; entry (the real routine, battle_menu.asm). The structured window-compositor
     ; on the GB this is also what un-draws the menu; here the menu is a WINDOW, so
     ; the visible restore is the window-stack drop at .choseCancel.
     call LoadScreenTilesFromBuffer1
@@ -806,7 +810,8 @@ LinkMenu:
     mov al, [ebp + wDefaultMap]
     mov [ebp + wDestinationMap], al
     ; callfar PrepareForSpecialWarp — ROOT-WIRED (Session 9 spine).
-    call PrepareForSpecialWarp      ; ; DEVIATION: warp seam = Session 9
+    ; DEVIATION{class=banking; pret=engine/menus/link_menu.asm:LinkMenu; behavior=call the linked PrepareForSpecialWarp directly across the former bank seam; evidence=pret callfar PrepareForSpecialWarp and project_state linked provider; lifetime=permanent flat-code boundary}
+    call PrepareForSpecialWarp
     mov bl, 20
     call DelayFrames
     xor al, al
@@ -816,7 +821,8 @@ LinkMenu:
     mov [ebp + wLinkState], al
     mov [ebp + wEnteringCableClub], al
     ; jpfar SpecialEnterMap — ROOT-WIRED (Session 9 spine).
-    jmp SpecialEnterMap             ; ; DEVIATION: warp seam = Session 9
+    ; DEVIATION{class=banking; pret=engine/menus/link_menu.asm:LinkMenu; behavior=jump directly to linked SpecialEnterMap across the former bank seam; evidence=pret jpfar SpecialEnterMap and project_state linked provider; lifetime=permanent flat-code boundary}
+    jmp SpecialEnterMap
 .choseCancel:
     xor al, al
     mov [ebp + wMenuJoypadPollCount], al
@@ -824,7 +830,8 @@ LinkMenu:
     ; callfar CloseLinkConnection
     call CloseLinkConnection        ; TODO-HW: network HAL
     ; drop the whole LinkMenu window stack back to the entry baseline, then show
-    ; the "link canceled" dialog. ; DEVIATION: window-stack restore for the pret
+    ; the "link canceled" dialog. The structured projection deviation above covers
+    ; this window-stack restore for the pret
     ; LoadScreenTilesFromBuffer1 screen restore.
     mov eax, [lm_link_wc]
     mov [g_window_count], eax

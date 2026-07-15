@@ -494,7 +494,8 @@ LoadTownMap:
     mov bl, 20                          ; the box's full width
     call ClearScreenArea
     call DisableLCD
-    ; DEVIATION: pret uses FarCopyData here (a plain copy — it can, because the LCD
+    ; DEVIATION{class=HAL; pret=engine/items/town_map.asm:LoadTownMap; behavior=copy flat WorldMapTileGraphics through CopyVideoData instead of banked FarCopyData; evidence=pret LoadTownMap copy plus port flat data address and tile-cache invalidation contract; lifetime=permanent flat-memory and software-video boundary}
+    ; pret uses FarCopyData here (a plain copy — it can, because the LCD
     ; is off). The port CANNOT: its FarCopyData forwards to CopyData, which resolves
     ; its source EBP-relative, and WorldMapTileGraphics is a FLAT .data label — so
     ; the copy read megabytes past the GB allocation and hung the machine. Same class

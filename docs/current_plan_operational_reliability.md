@@ -4,6 +4,45 @@ This plan turns fidelity evidence policy into generated interfaces and gates.
 It complements, and does not modify, the separately owned fidelity-expansion
 runtime harness.
 
+## Restart handoff (2026-07-15, third annotation slice complete)
+
+The next bounded slice after `2765e48a` is complete:
+
+- Audited exactly the first 29 entries of the regenerated 117-entry strict
+  remainder, from `items/item_effects.asm:1949` through
+  `menus/main_menu.asm:12`. The next entry, the canvas-stride deviation in
+  `main_menu.asm` (now line 216), was not touched.
+- Converted 27 live original-game bugs, hardware/data-model boundaries,
+  projection adaptations, or temporary missing-dependency seams to structured
+  annotations while retaining their detailed prose. Evidence was checked
+  against matching pret control/data flow and generated `project_state`.
+- Removed two stale exception markers rather than preserving them: the
+  `ItemUseCardKey` header's uppercase `BUG note` merely pointed to the real bug
+  annotation below, and `main_menu.asm`'s uppercase `DEVIATION` legend merely
+  described comment vocabulary. Neither was itself an exception claim.
+- Strict claim lint now reports exactly **88** remaining `legacy_annotation`
+  entries and no other strict category. Default lint is clean with five
+  existing suppressions.
+
+Verification for this comment/metadata-only slice:
+
+- **26** operational tool tests pass.
+- Default `lint_pret_labels`: 0 violations / 5 suppressions.
+- Strict lint: the measured 88-entry legacy remainder only.
+- `validate_scenarios.py`: 19 scenarios consistent.
+- Relevant `project_state` checks distinguish linked providers and the missing
+  `Func_3b10f` dependency; direct pret inspection validates the retained
+  control/data-flow claims.
+- `faithdiff` was run for every affected pret label. `DrawBadges` remained
+  clean; reported differences elsewhere are pre-existing executable
+  divergences now described by the retained prose/structured metadata. No
+  executable byte, call graph, or WRAM store changed here.
+- `project_state --plans` and `git diff --check` pass. Runtime goldens were not
+  rerun because only comments and this handoff changed.
+
+If directed to continue, regenerate the strict inventory and take a fresh
+bounded slice beginning at `menus/main_menu.asm:216`.
+
 ## Restart handoff (2026-07-15, second annotation slice complete)
 
 The user authorized exactly 29 additional annotations after `8af72220`; that

@@ -22,10 +22,12 @@
 ;   - "RunPaletteCommand is already a HAL stub in faint_switch.asm": it is not in
 ;     faint_switch.asm at all, and it is not a stub.
 ;
-; DEVIATION(window-compositor): the dialog is an entry in the port's window list,
+; DEVIATION{class=projection; pret=engine/menus/league_pc.asm:PKMNLeaguePC; behavior=explicitly hide the dialog window after ClearScreen because clearing wTileMap does not remove compositor descriptors; evidence=pret PKMNLeaguePC exit ClearScreen flow plus port hide_window call; lifetime=permanent window-compositor boundary}
+; The dialog is an entry in the port's window list,
 ; which pret's ClearScreen (a wTileMap wipe) cannot drop — hence hide_window on the
 ; exit path. Same reason, same shape as pc.asm:ActivatePC / oaks_pc.asm.
-; DEVIATION(canvas): LeaguePCShowMon lays its full screen out in the stride-20
+; DEVIATION{class=projection; pret=engine/menus/league_pc.asm:LeaguePCShowMon; behavior=build the Hall of Fame mon screen only in stride-20 scratch without publishing a visible window; evidence=port LeaguePCShowMon writers and project_state linked provider with Func_7033f still seam-stubbed; lifetime=until the Hall of Fame screen projection is implemented and runtime-verified}
+; LeaguePCShowMon lays its full screen out in the stride-20
 ; W_TILEMAP scratch (hlcoord X,Y = W_TILEMAP + Y*20 + X) and publishes no window —
 ; UNVERIFIED, and stated as such in the ledger: reaching it needs a save with a
 ; recorded Hall of Fame plus the HoF movie routine Func_7033f (still a stub).
@@ -130,7 +132,7 @@ PKMNLeaguePC:
     and byte [ebp + W_STATUS_FLAGS_5], (~(1 << BIT_NO_TEXT_DELAY)) & 0xFF
     call GBPalWhiteOutWithDelay3
     call ClearScreen
-    call hide_window                        ; DEVIATION(window-compositor): ClearScreen
+    call hide_window                        ; structured projection deviation above: ClearScreen
                                             ; wipes wTileMap, not the window LIST.
     call RunDefaultPaletteCommand
     jmp GBPalNormal                         ; jp GBPalNormal
@@ -171,7 +173,8 @@ LeaguePCShowTeam:
 ; LeaguePCShowMon — pret ref: engine/menus/league_pc.asm:LeaguePCShowMon.
 ; Full-screen display of the first mon in wHallOfFame: front pic + "HALL OF FAME
 ; No" box, then Func_7033f (mon-info box + cry — still a SEAM stub).
-; DEVIATION(canvas): the layout is built in the stride-20 scratch and no window is
+; The structured projection deviation in the file header applies: the layout is
+; built in the stride-20 scratch and no window is
 ; published, so this screen is UNVERIFIED (see the header).
 ; ---------------------------------------------------------------------------
 LeaguePCShowMon:
