@@ -56,11 +56,7 @@ section .data
 
 ; Intro text (faithful _WildMonAppearedText = "Wild <nick>" / "appeared!").
 ; Line 1 is the "Wild " prefix; the enemy mon's nick is appended at draw time.
-intro_line1: db 0x96,0xa8,0xab,0xa3,0x7f         ; "Wild "
-INTRO_LINE1_LEN equ $ - intro_line1
-; "appeared!"     (a p p e a r e d !)
-intro_line2: db 0xa0,0xaf,0xaf,0xa4,0xa0,0xb1,0xa4,0xa3,0xe7
-INTRO_LINE2_LEN equ $ - intro_line2
+%include "assets/battle_intro_runtime_strings.inc"
 
 ; W-1 FIX (docs/battle_audit_findings.md): saved overworld view pointer across the
 ; battle's flat-canvas hack. Port-only render-HAL state; see InitBattle / the

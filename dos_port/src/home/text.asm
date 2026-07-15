@@ -154,24 +154,7 @@ extern PrintBCDNumber      ; src/home/print_bcd.asm — TX_BCD (text_bcd / money
 section .data
 align 4
 
-; "POKe" for the '#' charmap code ($54)
-str_poke:   db 0x8F,0x8E,0x8A,0xBA, CHAR_TERMINATOR  ; P O K e(accent)
-; "PC"
-str_pc:     db 0x8F,0x82, CHAR_TERMINATOR              ; P C
-; "TM"
-str_tm:     db 0x93,0x8C, CHAR_TERMINATOR              ; T M
-; "TRAINER"
-str_trainer: db 0x93,0x91,0x80,0x88,0x8D,0x84,0x91, CHAR_TERMINATOR
-; "ROCKET"
-str_rocket: db 0x91,0x8E,0x82,0x8A,0x84,0x93, CHAR_TERMINATOR
-; "......" (two ellipsis glyphs, charmap $75)
-str_dots6:  db 0x75,0x75, CHAR_TERMINATOR
-; "<PK><MN>" (charmap $E1, $E2)
-str_pkmn:   db 0xE1,0xE2, CHAR_TERMINATOR
-; "." for <DEXEND>
-str_dot:    db 0xE8, CHAR_TERMINATOR
-; "Enemy " (for TARGET/USER fallback context)
-str_enemy:  db 0x84,0xAD,0xA4,0xAC,0xB8,0x7F, CHAR_TERMINATOR
+%include "assets/home_text_runtime_strings.inc"
 
 ; One-byte sentinel used by CHAR_DONE to signal TX_END to TextCommandProcessor
 done_sentinel: db TX_END

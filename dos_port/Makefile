@@ -1506,6 +1506,26 @@ assets/battle_text.inc: ../data/text/text_2.asm ../engine/battle/core.asm \
                         ../constants/charmap.asm include/gb_memmap.inc tools/gen_battle_text.py
 	python3 tools/gen_battle_text.py
 
+RUNTIME_STRING_ASSETS := assets/battle_menu_runtime_strings.inc \
+	assets/battle_core_runtime_strings.inc assets/effectiveness_runtime_strings.inc \
+	assets/battle_intro_runtime_strings.inc assets/stat_mod_runtime_strings.inc \
+	assets/item_runtime_strings.inc assets/status_ailment_runtime_strings.inc \
+	assets/home_names_runtime_strings.inc assets/home_text_runtime_strings.inc \
+	assets/pallet_runtime_strings.inc
+$(RUNTIME_STRING_ASSETS) &: assets/gb_charmap.txt tools/gen_runtime_strings.py \
+		tools/gen_battle_text.py ../constants/charmap.asm
+	python3 tools/gen_runtime_strings.py
+src/engine/battle/battle_menu.o: assets/battle_menu_runtime_strings.inc
+src/engine/battle/core.o: assets/battle_core_runtime_strings.inc
+src/engine/battle/display_effectiveness.o: assets/effectiveness_runtime_strings.inc
+src/engine/battle/init_battle.o: assets/battle_intro_runtime_strings.inc
+src/engine/battle/move_effect_helpers.o: assets/stat_mod_runtime_strings.inc
+src/engine/items/item_effects.o: assets/item_runtime_strings.inc
+src/engine/pokemon/status_ailments.o: assets/status_ailment_runtime_strings.inc
+src/home/names.o: assets/home_names_runtime_strings.inc
+src/home/text.o: assets/home_text_runtime_strings.inc
+src/scripts/pallet_town.o: assets/pallet_runtime_strings.inc
+
 # Trainer rosters + class names (consumed by read_trainer_party.asm / GetName).
 assets/trainer_parties.inc: ../data/trainers/parties.asm ../data/trainers/special_moves.asm \
                             ../constants/trainer_constants.asm tools/gen_trainer_parties.py
@@ -1841,6 +1861,7 @@ assets: assets/scenario_registry.inc \
         assets/items.inc assets/item_text.inc assets/gb_charmap.txt assets/menu_strings.inc \
         assets/naming_strings.inc assets/pokedex_strings.inc \
         assets/status_strings.inc assets/textbox_strings.inc assets/menu_text.inc \
+		$(RUNTIME_STRING_ASSETS) \
         assets/list_menu_strings.inc assets/yes_no_strings.inc \
         assets/text_oracle.inc \
         assets/overworld_strings.inc assets/field_move_text.inc \

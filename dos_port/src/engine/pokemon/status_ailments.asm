@@ -30,11 +30,7 @@ SLP_MASK     equ 0x07
 
 section .data
 ; 3-letter strings in the GB charmap ('A' = $80)
-sa_psn:  db 0x8F, 0x92, 0x8D          ; PSN
-sa_brn:  db 0x81, 0x91, 0x8D          ; BRN
-sa_frz:  db 0x85, 0x91, 0x99          ; FRZ
-sa_par:  db 0x8F, 0x80, 0x91          ; PAR
-sa_slp:  db 0x92, 0x8B, 0x8F          ; SLP
+%include "assets/status_ailment_runtime_strings.inc"
 
 section .text
 

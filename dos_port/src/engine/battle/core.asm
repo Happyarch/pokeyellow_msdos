@@ -987,8 +987,7 @@ msgbox_centered:
 
 ; " used " — code-composed move-use grammar (pret used_move_text.asm is text_asm,
 ; i.e. code, so composing the fixed grammar in code is faithful). Charmap bytes.
-str_used_grammar: db 0x4F,0xB4,0xB2,0xA4,0xA3,0x7F, 0x50   ; <LINE>"used " — pret _ActorNameText\n_UsedMove1Text (name on line 1, "used MOVE!" on line 2)
-str_miss_text:    db 0x00,0x80,0xB3,0xB3,0xA0,0xA2,0xA8,0x7F,0xA6,0xAE,0xB3,0x7F,0xAD,0xAE,0x7F,0xB6,0xA0,0xB8,0xE7,0x50,0x50 ; "Attack got no way!" placeholder — TODO use AttackMissedText
+%include "assets/battle_core_runtime_strings.inc"
 section .text
 
 ; ---------------------------------------------------------------------------
@@ -1306,13 +1305,6 @@ ComposeStatIntro:
 .introDone:
     ret
 
-section .data
-; Stat-change verb suffixes (charmap bytes), each <PROMPT>($58)-terminated. Compose
-; onto the "<mon>'s<LINE><stat>" intro. "greatly" variants lead with <SCROLL>($4C).
-str_rose:         db 0x7F,0xB1,0xAE,0xB2,0xA4,0xE7,0x58                                  ; " rose!"
-str_greatly_rose: db 0x4C,0xA6,0xB1,0xA4,0xA0,0xB3,0xAB,0xB8,0x7F,0xB1,0xAE,0xB2,0xA4,0xE7,0x58 ; <SCROLL>"greatly rose!"
-str_fell:         db 0x7F,0xA5,0xA4,0xAB,0xAB,0xE7,0x58                                  ; " fell!"
-str_greatly_fell: db 0x4C,0xA6,0xB1,0xA4,0xA0,0xB3,0xAB,0xB8,0x7F,0xA5,0xA4,0xAB,0xAB,0xE7,0x58 ; <SCROLL>"greatly fell!"
 section .text
 
 ; ---------------------------------------------------------------------------

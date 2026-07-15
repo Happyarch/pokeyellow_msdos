@@ -85,8 +85,7 @@ NamePointers:
 UnusedBadgeNames:
     db 0x50
 
-TechnicalPrefix:  db 0x93, 0x8C    ; "TM"
-HiddenPrefix:     db 0x87, 0x8C    ; "HM"
+%include "assets/home_names_runtime_strings.inc"
 
 section .text
 
