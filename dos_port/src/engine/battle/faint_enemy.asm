@@ -128,7 +128,8 @@ FaintEnemyPokemon:
     and byte [ebp + wPlayerBattleStatus1], (~(1 << ATTACKING_MULTIPLE_TIMES)) & 0xFF
                                            ; res ATTACKING_MULTIPLE_TIMES, [hl]
 
-    ; BUG(critical): Gen-1 zeroes only the high byte of wPlayerBideAccumulatedDamage
+    ; BUG{class=data-model; pret=engine/battle/core.asm:FaintEnemyPokemon; behavior=only the high byte of accumulated Bide damage is cleared at compatibility level 0; evidence=pret source FaintEnemyPokemon plus docs/bugs_and_glitches.md Bide link-desync entry; lifetime=permanent Gen-1 behavior at compatibility level 0}
+    ; Gen-1 zeroes only the high byte of wPlayerBideAccumulatedDamage
     ; (link desync) — pret core.asm:756-766, docs/bugs_and_glitches.md. Preserved by default.
     ; Endianness confirmed against pret core.asm:3662-3681 (adds to "+1" first with
     ; `add c`, then to the base "+0" with `adc b` after `ld hl,...+1`/`ld a,[hld]`):

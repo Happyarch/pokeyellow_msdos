@@ -124,7 +124,7 @@ EnemySendOutFirstMon:
     ; the party-menu path + SwitchPlayerMon. Treated as SET mode (no prompt).
 .next4:
     call ClearSprites
-    ; BUG(fixed): pret is `ld b, SET_PAL_BATTLE / call RunPaletteCommand`; the port set B
+    ; FIXED: pret is `ld b, SET_PAL_BATTLE / call RunPaletteCommand`; the port set B
     ; not at all and dispatched on junk. See faint_switch.asm. Ledger M-72.
     mov bh, SET_PAL_BATTLE                        ; ld b, SET_PAL_BATTLE
     call RunPaletteCommand

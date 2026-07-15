@@ -35,7 +35,8 @@ DecrementPP:
     mov esi, wPlayerBattleStatus1
     mov al, [ebp + esi]              ; ld a, [hli]
     inc esi
-    ; BUG(critical): "Struggle PP Underflow" — this skip-list covers Bide/Thrash/
+    ; BUG{class=data-model; pret=engine/battle/decrement_pp.asm:DecrementPP; behavior=Struggle is not excluded from PP decrement and can underflow the selected move slot; evidence=pret source DecrementPP plus docs/references/yellow_glitches.md battle-system Struggle PP Underflow; lifetime=permanent Gen-1 behavior}
+    ; "Struggle PP Underflow" — this skip-list covers Bide/Thrash/
     ; multi-strike but deliberately does NOT include USING_TRAPPING_MOVE (Wrap/
     ; Bind/Fire Spin/Clamp). A trapping move's continuation turns are chosen by
     ; the forced-move early-out in SelectEnemyMove/its player-side equivalent

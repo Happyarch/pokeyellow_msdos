@@ -78,7 +78,8 @@ HandleCounterMove:
     xor al, al
     ret
 .counterableType:
-    ; BUG(cosmetic): "Unexpected Counter damage" — Counter simply doubles wDamage, which
+    ; BUG{class=data-model; pret=engine/battle/move_effects/counter.asm:HandleCounterMove; behavior=Counter doubles stale wDamage without proving the immediately previous hit was counterable; evidence=pret source HandleCounterMove plus docs/references/yellow_glitches.md battle-system Unexpected Counter damage; lifetime=permanent Gen-1 behavior}
+    ; "Unexpected Counter damage" — Counter simply doubles wDamage, which
     ; holds the last damage value dealt by *anyone* (player, opponent, a since-switched-out
     ; opponent, or even another link-battle player) because wDamage is shared and never
     ; cleared between turns/switches/battles. Inherent Gen-1 behavior, preserved verbatim.

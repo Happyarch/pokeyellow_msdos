@@ -195,7 +195,7 @@ GainExperience:
     inc edi
     jmp .nextBaseStat
 .maxStatExp:
-    ; BUG-FREE: a = 0 from inc overflow; dec a → 0xFF (wraps, as in SM83 `dec a`)
+    ; NOTE: a = 0 from inc overflow; dec a → 0xFF (wraps, as in SM83 `dec a`)
     dec al                          ; al = 0xFF
     mov [ebp + edi], al             ; high byte = 0xFF
     inc edi
@@ -492,7 +492,8 @@ GainExperience:
     call LoadScreenTilesFromBuffer1    ; REAL (battle_menu.asm)
     xor al, al
     mov [ebp + wMonDataLocation], al
-    ; BUG(cosmetic): "Level-Up Learnset Skipping" — this level-up block (and the
+    ; BUG{class=data-model; pret=engine/battle/experience.asm:GainExperience; behavior=a multi-level EXP gain offers only the final level's move and skips intermediate learnset entries; evidence=pret source GainExperience plus docs/references/yellow_glitches.md battle-system Level-Up Learnset Skipping; lifetime=permanent Gen-1 behavior}
+    ; "Level-Up Learnset Skipping" — this level-up block (and the
     ; LearnMoveFromLevelUp call below) runs exactly ONCE per mon per EXP gain,
     ; using only the just-computed final level (DH from CalcLevelFromExperience
     ; above), even though a single big EXP gain can jump several levels at once
@@ -567,7 +568,8 @@ GainExperience:
 ; and base EXP by the number of gaining mons (integer division).
 ; pret ref: engine/battle/experience.asm:DivideExpDataByNumMonsGainingExp
 ; ---------------------------------------------------------------------------
-; BUG(cosmetic): "Exp. All Dilution" — base stats/EXP are divided by the total
+; BUG{class=data-model; pret=engine/battle/experience.asm:DivideExpDataByNumMonsGainingExp; behavior=each additional Exp. All holder increases the divisor and dilutes every recipient's share; evidence=pret source DivideExpDataByNumMonsGainingExp plus docs/references/yellow_glitches.md battle-system Exp All Dilution; lifetime=permanent Gen-1 behavior}
+; "Exp. All Dilution" — base stats/EXP are divided by the total
 ; count of mons gaining EXP this battle (set bits in wPartyGainExpFlags), which
 ; grows by 1 for every party mon additionally holding an Exp. All, not just for
 ; the mon that actually fought. So each extra Exp. All in the party further

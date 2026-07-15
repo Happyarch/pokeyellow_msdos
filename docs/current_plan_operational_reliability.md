@@ -4,6 +4,46 @@ This plan turns fidelity evidence policy into generated interfaces and gates.
 It complements, and does not modify, the separately owned fidelity-expansion
 runtime harness.
 
+## Restart handoff (2026-07-15, first annotation slice complete)
+
+The first bounded legacy-annotation review is complete on top of `152cbf36`:
+
+- Audited exactly the first 30 strict-inventory entries, from
+  `dos_port/src/audio/engine_1.asm:1038` through both deviations at the top of
+  `dos_port/src/engine/battle/print_type.asm`. Entry 31,
+  `battle/residual_damage.asm:15`, was not touched.
+- Converted 26 live original-game bugs/glitches or intentional DOS deviations
+  to structured annotations while retaining their detailed prose. Evidence was
+  checked against the matching pret routine and, where applicable, the local
+  bug/glitch catalog or the generated `project_state` provider report.
+- Four stale exception markers were corrected instead of preserved:
+  `experience.asm`'s `BUG-FREE` explanation is a note, while the already-fixed
+  integration defects in `faint_leaves.asm`, `faint_sendout.asm`, and
+  `faint_switch.asm` are historical `FIXED` notes rather than live BUG claims.
+- Strict claim lint now reports exactly **146** remaining
+  `legacy_annotation` entries and no other strict category. Default lint is
+  clean with five existing suppressions.
+
+Verification for this comment/metadata-only slice:
+
+- **26** operational tool tests pass.
+- Default `lint_pret_labels --no-scan`: 0 violations / 5 suppressions.
+- Strict lint: the measured 146-entry legacy remainder only.
+- `validate_scenarios.py`: 19 scenarios consistent.
+- Relevant `project_state` checks confirm linked providers for the reviewed
+  battle labels; direct pret inspection confirms the file-local audio label.
+- `faithdiff` was run for every affected pret routine. Clean routines remained
+  clean; reported differences are pre-existing executable divergences now
+  described by the retained prose/structured metadata. No executable byte,
+  call graph, or WRAM store changed in this slice.
+- `project_state --plans` and `git diff --check` pass. Runtime goldens were not
+  rerun because only comments and this handoff changed.
+
+Do not start the next slice without user direction. If directed to continue,
+regenerate the strict inventory and audit exactly its first 30 entries (the
+current expected range is `battle/residual_damage.asm:15` through
+`items/item_effects.asm:1945`), then leave another bounded handoff and commit.
+
 ## Restart handoff (2026-07-15, after `6c0ea79c`)
 
 This is the authoritative next-session handoff; the older assertion checkpoint

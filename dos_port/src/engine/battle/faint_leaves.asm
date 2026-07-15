@@ -70,7 +70,7 @@ AnyEnemyPokemonAliveCheck:
     or al, [ebp + esi]                         ; or [hl]
     dec esi                                    ; dec hl
     add esi, PARTYMON_STRUCT_LENGTH            ; add hl, de (de was a compile-time constant)
-    ; BUG(fixed at integration): pret's counter is the 8-bit B (`dec b`), so a 0 count
+    ; FIXED at integration: pret's counter is the 8-bit B (`dec b`), so a 0 count
     ; (a wild battle: wEnemyPartyCount==0) wraps at 256 and stays inside GB RAM — benign.
     ; This was widened to 32-bit `dec ecx`, so count 0 → ~4 billion iterations, walking
     ; ESI off the ~96 KB allocation → page fault. Restore pret's 8-bit wrap with `dec cl`

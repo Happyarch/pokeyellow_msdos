@@ -1035,7 +1035,8 @@ Audio1_InitPitchSlideVars:
     mov al, [ebp + wChannelPitchSlideTargetFrequencyLowBytes + edi]
     sub al, dl
     mov dl, al
-    ; BUG: pret borrows from the CURRENT frequency's high byte instead of
+    ; BUG{class=data-model; pret=audio/engine_1.asm:Audio1_InitPitchSlideVars; behavior=ascending pitch-slide span borrows from the current high byte and can be $200 too large; evidence=pret source Audio1_InitPitchSlideVars byte arithmetic; lifetime=permanent Gen-1 behavior}
+    ; pret borrows from the CURRENT frequency's high byte instead of
     ; the target's, so the span is $200 too large when cur.lo > target.lo.
     ; Faithfully reproduced — the audible quirk is part of the original.
     mov al, dh

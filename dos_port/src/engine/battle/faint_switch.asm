@@ -202,7 +202,7 @@ SendOutMon:
     mov [ebp + wPlayerDisabledMove], al
     mov [ebp + wPlayerDisabledMoveNumber], al
     mov [ebp + wPlayerMonMinimized], al
-    ; BUG(fixed): pret is `ld b, SET_PAL_BATTLE / call RunPaletteCommand`. The port set
+    ; FIXED: pret is `ld b, SET_PAL_BATTLE / call RunPaletteCommand`. The port set
     ; B NOT AT ALL and dispatched on whatever junk BX happened to hold — harmless only
     ; while RunPaletteCommand ignored its argument, which stopped being true when the
     ; palette engine landed. Ledger M-72.

@@ -359,7 +359,8 @@ hp_to_pixels:
     movzx ecx, byte [ebp + esi]          ; maxHP high
     shl ecx, 8
     mov cl, [ebp + esi + 1]              ; maxHP low → ECX = maxHP
-    ; BUG(cosmetic): pret GetHPBarLength (gfx/hp_bar.asm:17-33) right-shifts BOTH
+    ; BUG{class=data-model; pret=engine/gfx/hp_bar.asm:GetHPBarLength; behavior=max HP at least 256 uses pret's lossy quarter-scale division at BUG_FIX_LEVEL below 2; evidence=pret source GetHPBarLength plus guarded x86 implementation; lifetime=permanent at compatibility levels 0 and 1}
+    ; pret GetHPBarLength (gfx/hp_bar.asm:17-33) right-shifts BOTH
     ; curHP*48 and maxHP by 2 (lossy ÷4) when maxHP >= 256 before an 8-bit divide,
     ; so high-maxHP mons get a slightly imprecise bar. Preserved at levels 0/1.
 %if BUG_FIX_LEVEL < 2

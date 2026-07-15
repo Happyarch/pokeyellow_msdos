@@ -483,7 +483,8 @@ MoveSelectionMenu:
 .haveMoves:
     mov esi, wBattleMonMoves
     call .loadmoves
-    ; DEVIATION(video): pret brackets the box draw in di/ei ("out of pure
+    ; DEVIATION{class=HAL; pret=engine/battle/core.asm:MoveSelectionMenu; behavior=DI and EI around the move-list box are omitted because the port composites an atomic software back buffer; evidence=pret source MoveSelectionMenu plus src/ppu software compositor; lifetime=permanent DOS video HAL}
+    ; pret brackets the box draw in di/ei ("out of pure
     ; coincidence, it is possible for vblank to occur between the di and ei") to
     ; stop the LCD from latching a half-written tilemap. The port draws into a
     ; back buffer that render_bg only reads once per composited frame, so there is
@@ -607,7 +608,8 @@ SelectMenuItem:
     call AddNTimes
     mov byte [ebp + esi], T_UPARROW_R   ; '▷'
 .select:
-    ; DEVIATION(menu-scratch): pret sets BIT_DOUBLE_SPACED_MENU in hUILayoutFlags
+    ; DEVIATION{class=data-model; pret=engine/battle/core.asm:MoveSelectionMenu; behavior=pret's inverted double-spacing flag is represented by explicit menu_item_step scratch; evidence=pret MoveSelectionMenu and PlaceMenuCursor plus port window.asm; lifetime=permanent DOS menu data model}
+    ; pret sets BIT_DOUBLE_SPACED_MENU in hUILayoutFlags
     ; around HandleMenuInput, which — see PlaceMenuCursor, where the bit SET means
     ; bc = SCREEN_WIDTH and CLEAR means bc = 40 = two GB rows — selects a ONE-row
     ; cursor step (the flag's name is backwards). The port's window.asm carries that
@@ -798,7 +800,8 @@ SwapMovesInMenu:
 ; from GetMaxPP, exactly as pret.
 ; ---------------------------------------------------------------------------
 PrintMenuItem:
-    ; DEVIATION(video): pret disables hAutoBGTransferEnabled around the draw (and
+    ; DEVIATION{class=HAL; pret=engine/battle/core.asm:PrintMenuItem; behavior=auto-BG-transfer gating and Delay3 are omitted because no partial tilemap transfer or presentation occurs inside the routine; evidence=pret source PrintMenuItem plus src/ppu software compositor; lifetime=permanent DOS video HAL}
+    ; pret disables hAutoBGTransferEnabled around the draw (and
     ; ends in Delay3) so the partially-drawn box is never DMA'd to VRAM mid-frame.
     ; The port composites a whole back buffer per frame — there is no incremental
     ; BG transfer to gate, and no frame is presented mid-routine.
@@ -1353,7 +1356,8 @@ ApplyAttackToEnemyPokemon:
     je  .storeSpecial
     ; Psywave: bh = user level * 1.5; random in [1, bh). Player Psywave always
     ; deals >= 1 (the enemy's range is [0, bh) — a Gen-1 asymmetry preserved below).
-    ; BUG(critical): "Psywave Infinite Loop" — bh = (level*3)/2 truncated to a
+    ; BUG{class=data-model; pret=engine/battle/core.asm:ExecutePlayerMove; behavior=Psywave reroll never terminates when the byte-truncated upper bound is zero; evidence=pret source ExecutePlayerMove plus docs/references/yellow_glitches.md battle-system Psywave Infinite Loop; lifetime=permanent Gen-1 behavior}
+    ; "Psywave Infinite Loop" — bh = (level*3)/2 truncated to a
     ; byte; at level 0, 1, or 171 this truncates to 0 (171*1.5 = 256.5 -> 256 mod
     ; 256 = 0). With bh=0, BOTH exit conditions here are unreachable: `and al,al`
     ; keeps rerolling until al!=0, then `cmp al,bh(0)` / `jae` is always taken
@@ -1479,7 +1483,8 @@ CheckPlayerStatusConditions:
     jmp .returnToHL
 
 .frozenCheck:                            ; pret 3526
-    ; BUG(critical): "Hyper Beam + Freeze" — this frozen check is tested (and, on
+    ; BUG{class=data-model; pret=engine/battle/core.asm:ExecutePlayerMove; behavior=freeze bypasses recharge-bit clearing and leaves an extra recharge turn after thaw; evidence=pret check order plus docs/references/yellow_glitches.md battle-system Hyper Beam and Freeze; lifetime=permanent Gen-1 behavior}
+    ; "Hyper Beam + Freeze" — this frozen check is tested (and, on
     ; a hit, returns) BEFORE .hyperBeamCheck below ever runs, so a mon that gets
     ; frozen while it still owes a Hyper Beam recharge turn never reaches the
     ; `and ..., ~(1<<NEEDS_TO_RECHARGE)` clear at .hyperBeamCheck while frozen.
@@ -1588,7 +1593,8 @@ CheckPlayerStatusConditions:
 
 .monHurtItselfOrFullyParalysed:          ; pret 3630
     ; clear bide/thrashing/charging-up/trapping (already cleared for confusion damage)
-    ; BUG(cosmetic): "invulnerable for the whole battle" glitch — clearing CHARGING_UP
+    ; BUG{class=data-model; pret=engine/battle/core.asm:ExecutePlayerMove; behavior=full paralysis or confusion self-hit clears charging without clearing invulnerability; evidence=pret source ExecutePlayerMove status-bit mask; lifetime=permanent Gen-1 behavior at compatibility level below 2}
+    ; "invulnerable for the whole battle" glitch — clearing CHARGING_UP
     ; but NOT INVULNERABLE strands a mon that is fully-paralyzed or self-confused
     ; mid-Fly/Dig invulnerable for the rest of the battle. pret documents this at
     ; engine/battle/core.asm:3284-3286 (and does it here at :3634). Preserved faithfully.
@@ -1747,7 +1753,8 @@ HandleSelfConfusionDamage:
     call PlayMoveAnimation
     call DrawPlayerHUDAndHPBar
     mov byte [ebp + hWhoseTurn], 0
-    ; BUG(cosmetic): "Substitute + Confusion Self-Hit" — self-inflicted confusion
+    ; BUG{class=data-model; pret=engine/battle/core.asm:HandleSelfConfusionDamage; behavior=confusion self-hit is redirected to the user's own Substitute; evidence=pret tail jump plus docs/references/yellow_glitches.md battle-system Substitute and Confusion Self-Hit; lifetime=permanent Gen-1 behavior}
+    ; "Substitute + Confusion Self-Hit" — self-inflicted confusion
     ; damage tail-jumps into the shared ApplyDamageToPlayerPokemon, which (being
     ; also the normal opponent-damage applicator) checks wPlayerBattleStatus2's
     ; HAS_SUBSTITUTE_UP and redirects the hit onto the confused mon's OWN
@@ -2244,7 +2251,8 @@ ApplyAttackToPlayerPokemon:
     ; Psywave: bh = user level * 1.5; random in [0, bh). GLITCH(faithful): the enemy
     ; can deal 0 damage with Psywave (no reject-0), unlike the player's [1, bh) — see
     ; pret core.asm:4953-4955.
-    ; BUG(critical): "Psywave Infinite Loop" (enemy side) — same root cause as the
+    ; BUG{class=data-model; pret=engine/battle/core.asm:ExecuteEnemyMove; behavior=enemy Psywave reroll never terminates when the byte-truncated upper bound is zero; evidence=pret source ExecuteEnemyMove plus docs/references/yellow_glitches.md battle-system Psywave Infinite Loop; lifetime=permanent Gen-1 behavior}
+    ; "Psywave Infinite Loop" (enemy side) — same root cause as the
     ; player-side loop above: bh truncates to 0 at level 0/1/171, and with no
     ; reject-0 check here even `cmp al,bh(0)`/`jae` alone is unconditionally taken
     ; (any al is >=0), hanging the battle engine. pret ref: engine/battle/core.asm
@@ -2340,7 +2348,8 @@ AttackSubstitute:
     mov esi, wEnemyMoveEffect            ; enemy turn
 .subNullify:
     mov byte [ebp + esi], 0
-    ; BUG(faithful): wDamage is NOT updated with the substitute's pre-hit HP on a
+    ; BUG{class=data-model; pret=engine/battle/core.asm:AttackSubstitute; behavior=substitute overflow damage uses stale wDamage rather than the substitute's pre-hit HP; evidence=pret source AttackSubstitute damage flow; lifetime=permanent Gen-1 behavior}
+    ; wDamage is NOT updated with the substitute's pre-hit HP on a
     ; break (pret core.asm:5050-5051) — preserved verbatim.
 .subDone:
     ret
@@ -2376,7 +2385,8 @@ CheckEnemyStatusConditions:
     jmp .eReturnToHL
 
 .eFrozenCheck:                           ; pret 5883
-    ; BUG(critical): "Hyper Beam + Freeze" (enemy side) — same ordering issue as
+    ; BUG{class=data-model; pret=engine/battle/core.asm:ExecuteEnemyMove; behavior=enemy freeze bypasses recharge-bit clearing and leaves an extra recharge turn after thaw; evidence=pret check order plus docs/references/yellow_glitches.md battle-system Hyper Beam and Freeze; lifetime=permanent Gen-1 behavior}
+    ; "Hyper Beam + Freeze" (enemy side) — same ordering issue as
     ; the player-side .frozenCheck above: this returns before the enemy's
     ; .eHyperBeamCheck can clear NEEDS_TO_RECHARGE, so the stale bit survives
     ; every frozen turn and costs one extra forced-idle turn once thawed. pret
@@ -2510,7 +2520,8 @@ CheckEnemyStatusConditions:
     call PrintText
 
 .eMonHurtItselfOrFullyParalysed:         ; pret 6018
-    ; BUG(cosmetic): "invulnerable for the whole battle" glitch (enemy side) — see the
+    ; BUG{class=data-model; pret=engine/battle/core.asm:ExecuteEnemyMove; behavior=enemy full paralysis or confusion self-hit clears charging without clearing invulnerability; evidence=pret source ExecuteEnemyMove status-bit mask; lifetime=permanent Gen-1 behavior at compatibility level below 2}
+    ; "invulnerable for the whole battle" glitch (enemy side) — see the
     ; player MonHurtItselfOrFullyParalysed note. pret ref core.asm:3284-3286 / :6022.
     mov al, [ebp + wEnemyBattleStatus1]
     and al, ~((1 << STORING_ENERGY) | (1 << THRASHING_ABOUT) | (1 << CHARGING_UP) | (1 << USING_TRAPPING_MOVE)) & 0xFF

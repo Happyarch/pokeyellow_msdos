@@ -517,7 +517,8 @@ CriticalHitTest:
     mov bl, [ebp + esi]           ; c = move id
     mov al, [ebp + edx]
     test al, 1 << GETTING_PUMPED  ; focus energy?
-    ; BUG(critical): "Critical Hit Ratio Error" — Focus Energy (and Dire Hit)
+    ; BUG{class=data-model; pret=engine/battle/core.asm:CriticalHitTest; behavior=Focus Energy and Dire Hit quarter the critical-hit threshold instead of quadrupling it; evidence=pret source CriticalHitTest plus docs/references/yellow_glitches.md battle-system Critical Hit Ratio Error; lifetime=permanent Gen-1 behavior}
+    ; "Critical Hit Ratio Error" — Focus Energy (and Dire Hit)
     ; are intended to quadruple the crit chance but a bit-shift error makes
     ; .focusEnergyUsed shr (halve) where the intent was to skip the later shl;
     ; combined with the normal-move shr below this quarters the crit ratio for
@@ -660,7 +661,8 @@ AdjustDamageForMoveType:
     mov bh, al
     mov al, [ebp + hQuotient + 3]
     mov [ebp + wDamage + 1], al        ; ld [hl],a
-    ; BUG(critical): "0 Damage Glitch" — pret's own comment: "if damage is 0,
+    ; BUG{class=data-model; pret=engine/battle/core.asm:CalculateDamage; behavior=damage can remain zero after truncation instead of being raised to the minimum one; evidence=pret source CalculateDamage zero-damage branch plus docs/references/yellow_glitches.md battle-system 0 Damage Glitch; lifetime=permanent Gen-1 behavior}
+    ; "0 Damage Glitch" — pret's own comment: "if damage is 0,
     ; make the move miss; this only occurs if a move that would do 2 or 3
     ; damage is 0.25x effective against the target." A real hit that rounds
     ; to 0 damage against a dual-type resist is logged as a miss instead of a
@@ -767,7 +769,8 @@ MoveHitTest:
     mov al, [ebp + wEnemyMoveAccuracy]
     mov bh, al
 .doAccuracyCheck:
-    ; BUG(critical): "1/256 Miss Glitch" — the unsigned `jae` below misses
+    ; BUG{class=data-model; pret=engine/battle/core.asm:MoveHitTest; behavior=an accuracy threshold of 255 still misses when BattleRandom returns 255; evidence=pret source MoveHitTest plus docs/references/yellow_glitches.md battle-system 1 in 256 Miss Glitch; lifetime=permanent Gen-1 behavior}
+    ; "1/256 Miss Glitch" — the unsigned `jae` below misses
     ; whenever the roll equals the accuracy threshold, so even a nominal 100%
     ; move (accuracy capped at 255) still misses on roll=255 (1/256 chance).
     ; Gen-1 behavior, preserved verbatim. pret ref: engine/battle/core.asm:
@@ -907,7 +910,8 @@ RandomizeDamage:
 ; player mon, stored in wTypeEffectiveness (scaled by 10). Does NOT handle dual-
 ; type stacking (4x / cancel). Used by trainer AI move selection.
 ;
-; BUG (faithful, original): initializes wTypeEffectiveness to $10 (16) rather
+; BUG{class=data-model; pret=engine/battle/core.asm:AIGetTypeEffectiveness; behavior=wTypeEffectiveness initializes to hexadecimal $10 rather than decimal 10; evidence=pret source AIGetTypeEffectiveness immediate value; lifetime=permanent Gen-1 behavior}
+; The original initializes wTypeEffectiveness to $10 (16) rather
 ; than EFFECTIVE (10). Preserved at BUG_FIX_LEVEL 0; pret ref core.asm:5371.
 ; ===========================================================================
 global AIGetTypeEffectiveness
@@ -919,7 +923,7 @@ AIGetTypeEffectiveness:
     mov bh, [ebp + esi]              ; b = player type 1
     inc esi
     mov bl, [ebp + esi]              ; c = player type 2
-    mov byte [ebp + wTypeEffectiveness], 0x10   ; BUG(faithful): should be 10
+    mov byte [ebp + wTypeEffectiveness], 0x10   ; faithful original; should be decimal 10
     mov esi, TypeEffects             ; flat table -> [esi]
 .loop:
     mov al, [esi]

@@ -9,13 +9,15 @@
 ; This file is the move-type half, under pret's labels; PrintMonType stays where
 ; it is (see the note below and menu-fidelity finding M-117).
 ;
-; DEVIATION(gb-memory-model): pret's TypeNames is a GB table of GB pointers, walked
+; DEVIATION{class=data-model; pret=engine/battle/print_type.asm:PrintType; behavior=TypeNames uses flat 32-bit pointers instead of bank-local GB pointers; evidence=pret TypeNames indexing plus src/data/type_names.asm WideTypeNames; lifetime=permanent DOS memory model}
+; pret's TypeNames is a GB table of GB pointers, walked
 ; with `add a / add hl,de / ld a,[hli]`; the port's equivalent is WideTypeNames
 ; (src/data/type_names.asm — the same table, one flat 32-bit pointer per entry, in
 ; type-id order including pret's NORMAL-aliased $09-$13 gap), because PlaceString
 ; takes a flat source pointer. Same table, same index, wider element.
 ;
-; DEVIATION(predef): pret reaches PrintMoveType through `predef PrintMoveType`,
+; DEVIATION{class=banking; pret=engine/battle/print_type.asm:PrintMoveType; behavior=callers invoke PrintMoveType directly with ESI instead of using the banked predef dispatcher; evidence=pret predef call sites plus project_state:PrintMoveType linked provider; lifetime=permanent flat DOS build}
+; pret reaches PrintMoveType through `predef PrintMoveType`,
 ; whose GetPredefRegisters hands the routine HL from the caller. The port has no
 ; predef table (no banks to switch), so callers `call PrintMoveType` directly with
 ; the destination already in ESI — the register the predef would have restored.
