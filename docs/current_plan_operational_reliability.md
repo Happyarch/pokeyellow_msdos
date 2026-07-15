@@ -4,6 +4,34 @@ This plan turns fidelity evidence policy into generated interfaces and gates.
 It complements, and does not modify, the separately owned fidelity-expansion
 runtime harness.
 
+## Restart handoff (2026-07-15, after `0828a941`)
+
+Completed in this continuation:
+
+- `92886cd6` audited all 56 strict-lint text candidates as rendered strings and
+  moved them into deterministic generated includes. Strict lint is now clean,
+  all 20 tool tests pass, and the full DOS build links.
+- `0828a941` audited every legacy `STUB` claim. `GetCryData` is the one genuine
+  linked stub and now has a generated-state-backed structured annotation;
+  missing/check-only Pallet/CUT/FLY paths are structured temporary deviations.
+  The last claim was stale: `AskName` is linked, so `_AddPartyMon` now restores
+  pret's call. The `ball_catch` golden passes with the port gate declining the
+  live nickname prompt, matching mGBA.
+
+Exact next sequence:
+
+1. Audit the remaining free-form `DEVIATION` claims, grouped by subsystem.
+   Validate each against pret plus `project_state` or a matching golden before
+   structuring it; delete or fix stale claims instead of preserving them.
+2. Audit `BUG` and `GLITCH` claims against pret and the bug/glitch references.
+   Keep Gen-1 behavior distinct from already-fixed port defects; glitches need
+   explicit safety evidence.
+3. Add the four debug-only assertion families from actual writer/reader
+   ownership: projection bounds, scratch owner, compositor lifecycle, then
+   re-entrancy. Add focused negative tests for every assertion family.
+4. Run the full verification block and fidelity tiers, update measured counts,
+   then archive this plan only when the two remaining checkboxes close.
+
 ## Restart handoff (2026-07-15, after `9dc5b771`)
 
 Completed in this continuation:
@@ -112,10 +140,10 @@ not restructure its live files mid-stage.
 - 0 weak/boilerplate file-level relocation entries (147 per-label records now).
 - 0 stale explicit extern provider trails.
 - 0 local pret-label shadows.
-- 56 likely hand-encoded rendered charmap blobs; confirm each detector hit before
-  migration because the detector is intentionally conservative.
-- Legacy free-form `DEVIATION`, `STUB`, `BUG`, and `GLITCH` annotations remain
-  accepted temporarily and require manual evidence-backed conversion.
+- 0 likely hand-encoded rendered charmap blobs.
+- 0 unaudited `STUB` claims. Legacy free-form `DEVIATION`, `BUG`, and `GLITCH`
+  annotations remain accepted temporarily and require manual evidence-backed
+  conversion.
 
 **Verification commands:**
 
@@ -150,7 +178,7 @@ regression without comparing its categorized inventory.
 - [x] Migrate legacy weak relocations to enumerated, evidenced label entries.
 - [ ] Manually migrate legacy free-form `DEVIATION`, `STUB`, `BUG`, and `GLITCH`
   comments to the structured form, verifying each claim rather than bulk-rewriting.
-- [ ] Migrate the strict-lint inventory of likely hand-encoded rendered strings
+- [x] Migrate the strict-lint inventory of likely hand-encoded rendered strings
   into deterministic generators; the detector is conservative and each hit must
   be confirmed before conversion.
 - [x] Add strict structured source-annotation parsing; legacy free-form comments
