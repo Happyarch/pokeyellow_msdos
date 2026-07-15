@@ -4,6 +4,51 @@ This plan turns fidelity evidence policy into generated interfaces and gates.
 It complements, and does not modify, the separately owned fidelity-expansion
 runtime harness.
 
+## Restart handoff (2026-07-15, after `6c0ea79c`)
+
+This is the authoritative next-session handoff; the older assertion checkpoint
+below is retained as history and its commands are superseded.
+
+Completed in `6c0ea79c`:
+
+- All four debug-only assertion families have focused static negative-boundary
+  tests. The tool suite is now **26 passing tests**.
+- `status_p1`, `item_tm_teach`, and `ball_catch` golden-match with
+  `DEBUG_ASSERTIONS=1`; the full **12-scenario core fidelity tier passes** with
+  all four families enabled.
+- Two harness regressions exposed during verification were fixed without
+  weakening production behavior: deterministic party seeding bypasses the live
+  nickname prompt while still copying default species nicknames, and the shared
+  autokey train uses B only for `DEBUG_ITEMBALL` (A for affirmative item flows).
+- The assertion checkbox below is complete. Default label lint is clean with
+  five existing suppressions, and `validate_scenarios.py` reports 19 consistent
+  scenarios.
+
+The remaining work is deliberately multi-session. Budget at least **six review
+sessions** for the **176** legacy annotations; context quality is more important
+than clearing the inventory quickly. Each session must retain the detailed prose
+and validate truth against pret plus `project_state`, bug/glitch references, or a
+matching golden before adding structured metadata. Delete or fix stale claims.
+
+### Exact next-session contract: first 30 annotations
+
+1. Register/search memory, read this plan in full, and regenerate the stable
+   inventory with `lint_pret_labels --no-scan --strict-claims`.
+2. Audit **exactly the first 30 `legacy_annotation` entries in that output**
+   (current ordered slice: `audio/engine_1.asm:1038` through the two
+   `battle/print_type.asm` deviations). Do not spill into entry 31. This keeps
+   the review bounded and leaves an expected **146** entries if none are deleted
+   or expanded by a truth fix.
+3. Run the tool tests, default lint, strict lint, relevant `project_state` /
+   pret checks, and `git diff --check`. Strict lint may remain red only for the
+   measured remainder; compare its categorized count rather than calling it a
+   regression.
+4. Update this handoff with the exact reviewed range, evidence, remaining count,
+   and verification results. Commit the 30-annotation slice independently.
+5. After committing, ask the user whether to continue with the next bounded
+   slice or stop and leave a fresh handoff. Do not begin annotation 31 without
+   that direction.
+
 ## Restart handoff (2026-07-15, assertion-infrastructure checkpoint)
 
 Assertion continuation completed later on 2026-07-15:
