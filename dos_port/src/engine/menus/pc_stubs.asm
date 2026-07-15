@@ -15,7 +15,8 @@ bits 32
 
 section .text
 
-; DEVIATION: integration stub — DisplayPCMainMenu (pret engine/pokemon/bills_pc.asm)
+; STUB{class=stub; label=DisplayPCMainMenu; pret=engine/pokemon/bills_pc.asm:DisplayPCMainMenu; behavior=initialize only the pre-Pokedex menu variables without drawing the PC main-menu box; evidence=project_state:DisplayPCMainMenu reports linked stub; lifetime=until the Bill's PC UI is ported}
+; DisplayPCMainMenu (pret engine/pokemon/bills_pc.asm)
 ; draws the BILL's/player's/OAK's/league/LOG-OFF box (event-gated, TextBoxBorder +
 ; PlaceString) and arms the menu vars. The real routine is pokemon_behavior Stage 6.
 ; The stub does NOT draw the box (that is the pokemon_behavior work), but it arms
@@ -36,7 +37,8 @@ DisplayPCMainMenu:
     mov byte [ebp + hAutoBGTransferEnabled], 1
     ret
 
-; DEVIATION: integration stub — BillsPC_ (pret engine/pokemon/bills_pc.asm) is
+; STUB{class=stub; label=BillsPC_; pret=engine/pokemon/bills_pc.asm:BillsPC_; behavior=return immediately instead of running the storage-box UI; evidence=project_state:BillsPC_ reports linked ret stub; lifetime=until the Bill's PC UI is ported}
+; BillsPC_ (pret engine/pokemon/bills_pc.asm) is
 ; Bill's #MON-storage box UI (deposit/withdraw/release — the backend logic already
 ; lives in bills_pc.asm as BillsPC{Deposit,Withdraw,Release}Logic; only the UI is
 ; deferred). pokemon_behavior Stage 6 owns it. pc.asm prints the "Accessed …"

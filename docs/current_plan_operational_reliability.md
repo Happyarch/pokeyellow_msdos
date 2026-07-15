@@ -4,6 +4,46 @@ This plan turns fidelity evidence policy into generated interfaces and gates.
 It complements, and does not modify, the separately owned fidelity-expansion
 runtime harness.
 
+## Restart handoff (2026-07-15, fourth annotation slice complete)
+
+The fourth bounded legacy-annotation slice is complete after `2ea42200`:
+
+- Audited exactly the first 29 entries of the regenerated 88-entry strict
+  remainder, from `menus/main_menu.asm:216` through
+  `menus/pokedex.asm:437`. The next entry, the pokédex side-menu spacing note
+  (now line 518), was not touched.
+- Converted 25 live projection, HAL, data-model, timing, or temporary-stub
+  claims to structured annotations while retaining their detailed prose.
+  Evidence was checked against matching pret flow and generated
+  `project_state`; `OakSpeech`, `DisplayPCMainMenu`, and `BillsPC_` are confirmed
+  linked stubs and now use structured `STUB` records.
+- Corrected four stale markers rather than preserving them: two already-fixed
+  naming-screen port defects are historical `FIXED` notes, the SAVE info screen
+  now has its generated `UI_SAVE_INFO` projection, and OaksPC's call-site marker
+  merely duplicated the file-level structured projection claim.
+- Strict claim lint now reports exactly **59** remaining `legacy_annotation`
+  entries and no other strict category. Default lint is clean with five
+  existing suppressions.
+
+Verification for this comment/metadata-only slice:
+
+- **26** operational tool tests pass.
+- Default `lint_pret_labels`: 0 violations / 5 suppressions.
+- Strict lint: the measured 59-entry legacy remainder only.
+- `validate_scenarios.py`: 19 scenarios consistent.
+- Relevant `project_state` checks confirm linked implementations and the three
+  linked stubs named above; direct pret inspection validates the retained
+  menu/input/projection claims.
+- `faithdiff` was run for every affected pret label. Clean routines remained
+  clean; reported differences are pre-existing executable divergences now
+  described by the retained prose/structured metadata. No executable byte,
+  call graph, or WRAM store changed here.
+- `project_state --plans` and `git diff --check` pass. Runtime goldens were not
+  rerun because only comments and this handoff changed.
+
+If directed to continue, regenerate the strict inventory and take a fresh
+bounded slice beginning at `menus/pokedex.asm:518`.
+
 ## Restart handoff (2026-07-15, third annotation slice complete)
 
 The next bounded slice after `2765e48a` is complete:

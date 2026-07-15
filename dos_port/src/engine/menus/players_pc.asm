@@ -206,12 +206,14 @@ PlayerPCMenu:
     mov [ebp + wCurrentMenuItem], al
     or byte [ebp + wMiscFlags], (1 << BIT_NO_MENU_BUTTON_SOUND)
     call LoadScreenTilesFromBuffer2
-    ; DEVIATION(window-compositor): the WRAM restore puts wTileMap back, but what is
+    ; DEVIATION{class=projection; pret=engine/menus/players_pc.asm:PlayerPCMenu; behavior=hide projected windows after Buffer2 restores wTileMap; evidence=pret PlayerPCMenu restore flow plus port window-list ownership; lifetime=permanent window-compositor boundary}
+    ; The WRAM restore puts wTileMap back, but what is
     ; on screen here are WINDOWS, which no WRAM copy touches — drop them.
     call hide_window
     mov dword [ppc_msg_up], 0            ; …so the message window must be re-appended
     mov dword [text_row_stride], PPC_STRIDE
-    ; DEVIATION(canvas): rebuild the wTileMap map mirror — see the file header.
+    ; DEVIATION{class=projection; pret=engine/menus/players_pc.asm:PlayerPCMenu; behavior=rebuild the canvas-backed wTileMap collision mirror after restoring the menu scratch; evidence=port UpdateSprites consumes the map mirror while pret uses the native tilemap directly; lifetime=until sprite collision no longer depends on the canvas mirror}
+    ; Rebuild the wTileMap map mirror — see the file header.
     call RefreshCollisionTileMap
     ; hlcoord 0,0 / lb bc,8,14 / TextBoxBorder — box-relative into the scratch
     mov esi, W_TILEMAP
@@ -220,7 +222,8 @@ PlayerPCMenu:
     call TextBoxBorder
     call UpdateSprites
     ; hlcoord 2,2 / PlaceString PlayersPCMenuEntries (double-spaced <NEXT>)
-    ; DEVIATION(canvas): clear BIT_SINGLE_SPACED_LINES so <NEXT> advances 2 rows.
+    ; DEVIATION{class=data-model; pret=engine/menus/players_pc.asm:PlayerPCMenu; behavior=clear inherited single-spacing state so NEXT advances two rows as pret assumes; evidence=pret ambient text-layout default plus port canvas screens mutating H_UI_LAYOUT_FLAGS; lifetime=until text layout state is scoped per screen}
+    ; Clear BIT_SINGLE_SPACED_LINES so <NEXT> advances 2 rows.
     ; pret relies on the ambient overworld default; the port's canvas screens set
     ; the bit, and a menu that inherits it draws all four entries on one row.
     and byte [ebp + H_UI_LAYOUT_FLAGS], (~(1 << BIT_SINGLE_SPACED_LINES)) & 0xFF
@@ -282,7 +285,8 @@ ExitPlayerPC:
 .next:
     and byte [ebp + wMiscFlags], (~(1 << BIT_NO_MENU_BUTTON_SOUND)) & 0xFF
     call LoadScreenTilesFromBuffer2
-    ; DEVIATION(window-compositor) + DEVIATION(canvas), as in PlayerPCMenu: the WRAM
+    ; DEVIATION{class=projection; pret=engine/menus/players_pc.asm:PlayerPC; behavior=hide projected windows and rebuild the canvas map mirror after Buffer2 restore; evidence=pret PlayerPC restore tail plus port window-list and UpdateSprites mirror ownership; lifetime=permanent window-compositor boundary while collision reads the mirror}
+    ; As in PlayerPCMenu, the WRAM
     ; restore can neither drop this screen's windows nor rebuild the canvas-backed
     ; map mirror that UpdateSprites reads.
     call hide_window

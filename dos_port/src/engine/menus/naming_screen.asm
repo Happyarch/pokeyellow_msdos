@@ -183,9 +183,10 @@ AskName:
     ; PrintText serves both battle and overworld; the port keeps the one PrintText
     ; and selects which msgbox PROJECTION it draws through (centered vs dialog) by
     ; wIsInBattle — the same signal this routine already branches on above.
-    ; DEVIATION: projection selection added (text content/behavior unchanged).
+    ; DEVIATION{class=projection; pret=engine/menus/naming_screen.asm:AskName; behavior=select battle-centered or overworld dialog projection before the shared PrintText call; evidence=pret AskName uses one PrintText path while port wIsInBattle selects the descriptor only; lifetime=permanent window-compositor boundary}
+    ; Projection selection is added; text content and behavior are unchanged.
     ;
-    ; BUG(critical) [fixed here, no guard]: the battle branch used to pass the
+    ; FIXED(critical): the battle branch used to pass the
     ; stream in EAX ("battle PrintText copies EAX itself" — false; there is one
     ; PrintText and it has always read ESI), so in battle it printed whatever
     ; GetMonName happened to leave in ESI. Not a Gen-1 bug to preserve — a port
@@ -215,7 +216,8 @@ AskName:
     ; infidelity, silently, and would have broken the day yes_no.asm was made faithful.
     ; Fixed at menu-fidelity row 15 (M-60) by calling what pret calls.
     ;
-    ; DEVIATION(port-primitive): InitYesNoTextBoxParameters stands in for pret's
+    ; DEVIATION{class=data-model; pret=engine/menus/naming_screen.asm:AskName; behavior=initialize the yes-no module's private geometry and deterministic menu ID before DisplayTextBoxID_; evidence=pret AskName supplies hlcoord and bc directly while the port primitive owns yn_box state; lifetime=until DisplayTextBoxID_ accepts explicit geometry without private module state}
+    ; InitYesNoTextBoxParameters stands in for pret's
     ; `hlcoord 14,7 / lb bc,8,15`. It is pret's OWN routine (home/yes_no.asm) and sets
     ; exactly those coords; the port needs the call because DisplayTextBoxID_'s
     ; two-option path takes the box geometry from yes_no.asm's private yn_box_col/row
@@ -379,7 +381,8 @@ DisplayNamingScreen:
     pop eax                               ; pop af
     mov [ebp + wCurrentMenuItem], al      ; ld [wCurrentMenuItem],a
     call JoypadLowSensitivity
-    ; DEVIATION: pret reads hJoyPressed directly here; the port convention
+    ; DEVIATION{class=HAL; pret=engine/menus/naming_screen.asm:NamingScreen; behavior=read debounced H_JOY5 after JoypadLowSensitivity instead of hJoyPressed; evidence=pret input loop reads hJoyPressed while port JoypadLowSensitivity publishes H_JOY5; lifetime=permanent input HAL boundary}
+    ; pret reads hJoyPressed directly here; the port convention
     ; (options.asm et al.) reads the debounced H_JOY5 post-JoypadLowSensitivity
     ; — behaviorally identical under the assumed default (mode 1: newly-pressed
     ; passthrough), which is what every other menu in this port already assumes.
@@ -451,7 +454,8 @@ DisplayNamingScreen:
     jb .addLetter
     ret
 .dakutensAndHandakutens:
-    ; DEVIATION: JP-only (dakuten/hiragana pages not shipped in EN port — S1
+    ; DEVIATION{class=temporary; pret=engine/menus/naming_screen.asm:NamingScreen; behavior=skip DakutensAndHandakutens substitution because the English alphabet cannot emit dakuten tiles; evidence=pret kana substitution call plus generated English alphabets.inc character set; lifetime=permanent for the English-only data set}
+    ; JP-only dakuten/hiragana pages are not shipped in the EN port (S1
     ; precedent). pret calls DakutensAndHandakutens (data/text/dakutens.asm) to
     ; substitute the voiced-kana variant; the EN alphabet grid (assets/alphabets.inc)
     ; never emits CHAR_DAKUTEN/CHAR_HANDAKUTEN, so this branch is unreachable —
@@ -619,7 +623,8 @@ naming_mirror:
 
 ; ---------------------------------------------------------------------------
 ; LoadEDTile — pret ref: naming_screen.asm:LoadEDTile.
-; DEVIATION: pret copies ED_Tile to VRAM during HBlank (rSTAT %10 poll) because
+; DEVIATION{class=HAL; pret=engine/menus/naming_screen.asm:LoadEDTile; behavior=copy the generated ED tile directly and dirty the software tile cache instead of racing HBlank; evidence=pret LoadEDTile rSTAT loop and port software-video tile-cache contract; lifetime=permanent software-video boundary}
+; pret copies ED_Tile to VRAM during HBlank (rSTAT %10 poll) because
 ; the bank for ED_Tile was defined incorrectly as bank0 and GameFreak worked
 ; around it by racing the PPU instead of fixing the bank (see pret's own comment
 ; at LoadEDTile). The port has no bank/timing constraint, so this is a plain
@@ -767,7 +772,7 @@ CalcStringLength:
 ; ---------------------------------------------------------------------------
 PrintNamingText:
     mov esi, HL(0, 1)
-    ; BUG(critical) [fixed here, no guard — a port defect, not a Gen-1 bug]:
+    ; FIXED(critical port defect):
     ; this used to be `mov al,[wNamingScreenType]` / `mov eax, YourTextString` /
     ; `test al,al`. The second instruction OVERWRITES AL with the low byte of the
     ; string's link-time address, so the branch tested the address, not the screen

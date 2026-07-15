@@ -434,7 +434,8 @@ HandlePokedexListMenu:
     mov dword [menu_item_step], 2 * GBSCR_W
     mov dword [menu_redraw_cb], pdex_mirror
     call Pokedex_DrawInterface
-    ; DEVIATION(window-list): pret has no equivalent — the GB shows the BG map directly.
+    ; DEVIATION{class=projection; pret=engine/menus/pokedex.asm:PokedexMenu; behavior=publish the completed stride-20 pokedex scratch as a compositor window before the menu loop; evidence=pret displays the BG map directly while port rendering consumes window descriptors; lifetime=permanent window-compositor boundary}
+    ; pret has no equivalent — the GB shows the BG map directly.
     ; The port composites through a window list, so the finished stride-20 scratch has to
     ; be published as a window once before the menu loop can mirror into it each frame.
     call pdex_show_window                            ; expose the finished scratch

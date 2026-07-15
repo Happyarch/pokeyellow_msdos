@@ -115,7 +115,8 @@ section .text
 ; (GetOptionPointer), redraw the cursor, wait the 3-frame dpad delay.
 ; In: EBP = GB base.
 ; ---------------------------------------------------------------------------
-; BUG(cosmetic): "Options menu code fails to clear joypad state on initialization"
+; BUG{class=timing; pret=engine/menus/options.asm:DisplayOptionMenu_; behavior=held direction can edit the opening option because joypad state is not cleared before initialization; evidence=pret source bug note and docs/bugs_and_glitches.md options-menu entry; lifetime=permanent Gen-1 behavior unless BUG_FIX_LEVEL >= 2}
+; "Options menu code fails to clear joypad state on initialization"
 ; — the first JoypadLowSensitivity read inside .optionMenuLoop below picks up
 ; whatever direction was already held when the menu opened, shifting that row's
 ; option left/right on the opening frame. pret's own doc calls it "(or feature!)"
@@ -541,7 +542,8 @@ InitOptionsMenu:
     ; disassembly. Same call made at party_menu.asm / start_sub_menus.asm (M-24).
     mov al, 1
     mov [ebp + hAutoBGTransferEnabled], al
-    ; DEVIATION(window-compositor): pret's VBlank BGMap transfer has no port
+    ; DEVIATION{class=projection; pret=engine/menus/options.asm:InitOptionsMenu; behavior=mirror the completed scratch and publish a full-screen window instead of relying on VBlank BGMap transfer; evidence=pret InitOptionsMenu transfer enable plus port options_mirror and OptionsShowWindow calls; lifetime=permanent window-compositor boundary}
+    ; pret's VBlank BGMap transfer has no port
     ; counterpart, so the finished scratch is published explicitly — mirror it into
     ; GB_TILEMAP1 and register the single full-screen window — then settle (Delay3).
     call options_mirror

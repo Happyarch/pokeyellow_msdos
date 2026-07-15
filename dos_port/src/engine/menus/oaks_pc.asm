@@ -15,7 +15,8 @@
 ; aren't GB-space assets yet" — untrue: they are exactly as printable as
 ; pc.asm's. See ledger M-87.)
 ;
-; DEVIATION(window-compositor): pret's LoadScreenTilesFromBuffer2 restores wTileMap
+; DEVIATION{class=projection; pret=engine/menus/oaks_pc.asm:OaksPC; behavior=hide the dialog descriptor after LoadScreenTilesFromBuffer2 restores wTileMap; evidence=pret OaksPC restore tail plus port window-list ownership; lifetime=permanent window-compositor boundary}
+; pret's LoadScreenTilesFromBuffer2 restores wTileMap
 ; and the GB's single hardware window follows; the port's dialogs are entries in a
 ; window-descriptor list that a WRAM restore cannot drop, so the restore is followed
 ; by hide_window (the pc.asm:ActivatePC precedent, same reason).
@@ -80,7 +81,7 @@ OpenOaksPC:
     mov esi, ClosedOaksPCText                 ; ld hl, ClosedOaksPCText
     call PrintText
     call LoadScreenTilesFromBuffer2           ; jp LoadScreenTilesFromBuffer2
-    call hide_window                          ; DEVIATION(window-compositor): the WRAM
+    call hide_window                          ; structured projection deviation above: the WRAM
                                               ; restore cannot drop the dialog WINDOW.
     ret
 

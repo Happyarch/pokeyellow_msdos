@@ -14,7 +14,8 @@ section .text
 
 extern InitPlayerData2               ; engine/movie/oak_speech/init_player_data.asm
 
-; DEVIATION: integration stub — OakSpeech's intro cutscene + naming screen (pret,
+; STUB{class=stub; label=OakSpeech; pret=engine/movie/oak_speech/oak_speech.asm:OakSpeech; behavior=run only InitPlayerData2 then return instead of presenting the intro cutscene and naming flow; evidence=project_state:OakSpeech reports linked stub with three callers; lifetime=until the script/cutscene OakSpeech implementation lands}
+; OakSpeech's intro cutscene + naming screen (pret,
 ; package C) are not ported (script/cutscene work, docs/current_plan_script_engine.md).
 ; But its FIRST real action, `predef InitPlayerData2`, IS now ported and MUST run:
 ; it seeds the party/box/bag/box-item list terminators + starting money/ID. Without

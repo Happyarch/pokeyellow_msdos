@@ -114,7 +114,8 @@ ActivatePC:
     call WaitForSoundToFinish
     or byte [ebp + wMiscFlags], (1 << BIT_USING_GENERIC_PC)   ; set BIT_USING_GENERIC_PC, [hl]
     call LoadScreenTilesFromBuffer2
-    call hide_window                          ; DEVIATION(window-compositor): the WRAM
+    ; DEVIATION{class=projection; pret=engine/menus/pc.asm:ActivatePC; behavior=hide the dialog descriptor after Buffer2 restores wTileMap; evidence=pret ActivatePC restore flow plus port window-list ownership; lifetime=permanent window-compositor boundary}
+    call hide_window                          ; the WRAM
                                               ; restore cannot drop the dialog WINDOW.
     call Delay3
     ; fall through to PCMainMenu

@@ -213,7 +213,8 @@ MainMenu:
     ; ld hl, wStatusFlags5 / set BIT_NO_TEXT_DELAY, [hl]
     or byte [ebp + W_STATUS_FLAGS_5], (1 << BIT_NO_TEXT_DELAY)
 
-    ; DEVIATION: the box + items run on the 40-wide canvas (stride 40; items are
+    ; DEVIATION{class=projection; pret=main_menu.asm:MainMenu; behavior=draw the menu box and double-spaced entries on the stride-40 canvas; evidence=pret MainMenu hlcoord layout plus port text_row_stride and menu_item_step values; lifetime=permanent widescreen projection}
+    ; The box + items run on the 40-wide canvas (stride 40; items are
     ; double-spaced, matching pret's 6-row-box=3-items / 4-row-box=2-items geometry).
     mov dword [text_row_stride], SCREEN_TILES_W
     mov dword [menu_item_step], 2 * SCREEN_TILES_W
@@ -256,7 +257,8 @@ MainMenu:
     mov byte [ebp + wMenuWatchedKeys], PAD_A | PAD_B | PAD_START
     mov al, [ebp + wSaveFileStatus]
     mov [ebp + wMaxMenuItem], al
-    ; DEVIATION: bridge the canvas box to a window (g_bg_whiteout blank bg + the
+    ; DEVIATION{class=projection; pret=main_menu.asm:MainMenu; behavior=publish the completed menu scratch through a compositor window and redraw callback; evidence=pret relies on the visible BG map while port rendering consumes window descriptors; lifetime=permanent window-compositor boundary}
+    ; Bridge the canvas box to a window (g_bg_whiteout blank bg + the
     ; single descriptor + the per-frame mirror as menu_redraw_cb). Stands in for
     ; pret relying on the LCD showing the drawn BG map directly.
     call MainMenuShowWindow
@@ -293,7 +295,8 @@ MainMenu:
     or byte [ebp + W_CURRENT_MAP_SCRIPT_FLAGS], (1 << BIT_CUR_MAP_LOADED_1)
 .inputLoop:
     ; xor a / ldh [hJoyPressed],a / ldh [hJoyReleased],a / ldh [hJoyHeld],a / call Joypad
-    ; DEVIATION(joypad-HAL): pret's `Joypad` (home/joypad.asm → _Joypad) polls rJOYP
+    ; DEVIATION{class=HAL; pret=main_menu.asm:MainMenu; behavior=use DelayFrame's keyboard joypad update instead of directly polling rJOYP through Joypad; evidence=pret .inputLoop Joypad call plus port INT 9h and joypad_update frame pipeline; lifetime=permanent input HAL boundary}
+    ; pret's `Joypad` (home/joypad.asm → _Joypad) polls rJOYP
     ; and computes the pressed/released/held edges on demand. The port has no such
     ; routine BY DESIGN: an INT 9h keyboard ISR latches the pad state, and the whole
     ; of _Joypad's edge/mask layer (hJoyLast/Pressed/Released/Held, wJoyIgnore,
@@ -359,7 +362,8 @@ Func_5cc1:
     mov al, 0x6D
     cmp al, 0x80
     jc .done                                    ; ret c — always executed
-    ; DEVIATION(window-compositor): PrintText needs the box projection published.
+    ; DEVIATION{class=projection; pret=main_menu.asm:Func_5cc1; behavior=select the dialog projection before PrintText; evidence=pret Func_5cc1 PrintText call plus port text_msgbox descriptor contract; lifetime=permanent window-compositor boundary}
+    ; PrintText needs the box projection published.
     mov dword [text_msgbox], msgbox_dialog
     mov esi, NotEnoughMemoryText                ; ld hl, NotEnoughMemoryText
     call PrintText
@@ -382,7 +386,8 @@ StartNewGame:
     and byte [ebp + wStatusFlags6], ~(1 << BIT_DEBUG_MODE) & 0xFF
     ; fallthrough
 StartNewGameDebug:
-    ; DEVIATION: clear the window-model whiteout so the OakSpeech cutscene / new
+    ; DEVIATION{class=projection; pret=main_menu.asm:StartNewGameDebug; behavior=clear the menu compositor whiteout before OakSpeech and overworld entry; evidence=pret has no compositor state while the port MainMenu owns g_bg_whiteout; lifetime=permanent window-compositor boundary}
+    ; Clear the window-model whiteout so the OakSpeech cutscene / new
     ; overworld render on a clean BG (pret has no compositor concept).
     mov dword [g_bg_whiteout], 0
     call OakSpeech                              ; includes the naming screen (pkg C)
@@ -397,7 +402,8 @@ StartNewGameDebug:
 ; special-warp paths.
 ; ===========================================================================
 SpecialEnterMap:
-    ; DEVIATION: drop the menu whiteout before entering the overworld.
+    ; DEVIATION{class=projection; pret=main_menu.asm:SpecialEnterMap; behavior=drop the menu compositor whiteout before entering the overworld; evidence=pret SpecialEnterMap transitions directly from hardware BG state while port menus set g_bg_whiteout; lifetime=permanent window-compositor boundary}
+    ; Drop the menu whiteout before entering the overworld.
     mov dword [g_bg_whiteout], 0
     mov byte [ebp + H_JOY_PRESSED], 0           ; xor a / ldh [hJoyPressed],a
     mov byte [ebp + H_JOY_HELD], 0              ; ldh [hJoyHeld],a
@@ -425,7 +431,8 @@ SpecialEnterMap:
 ; ; PROJ menus: box + fields project onto UI_CONTINUE_INFO_* (GB(4,7) 16x10).
 ; ===========================================================================
 DisplayContinueGameInfo:
-    ; DEVIATION: the info panel runs on the 40-wide canvas.
+    ; DEVIATION{class=projection; pret=main_menu.asm:DisplayContinueGameInfo; behavior=draw the continue-info panel on the stride-40 canvas; evidence=pret DisplayContinueGameInfo hlcoord layout plus port UI_CONTINUE_INFO projection; lifetime=permanent widescreen projection}
+    ; The info panel runs on the 40-wide canvas.
     mov dword [text_row_stride], SCREEN_TILES_W
     mov byte [ebp + hAutoBGTransferEnabled], 0  ; xor a / ldh [hAutoBGTransferEnabled],a
     mov esi, CI(4, 7)                           ; hlcoord 4,7
@@ -444,7 +451,8 @@ DisplayContinueGameInfo:
     mov esi, CI(13, 15)                         ; hlcoord 13,15
     call PrintPlayTime
     mov byte [ebp + hAutoBGTransferEnabled], 1  ; ld a,1 / ldh [hAutoBGTransferEnabled],a
-    ; DEVIATION: expose the finished panel as a window (add over the menu box).
+    ; DEVIATION{class=projection; pret=main_menu.asm:DisplayContinueGameInfo; behavior=publish the finished continue-info panel as a compositor window over the main menu; evidence=pret panel remains visible in BG tilemap while port compositor requires an explicit descriptor; lifetime=permanent window-compositor boundary}
+    ; Expose the finished panel as a window (add over the menu box).
     call DisplayContinueGameInfoShowWindow
     mov bl, 30                                  ; ld c,30
     jmp DelayFrames                             ; jp DelayFrames (tail)
@@ -453,8 +461,8 @@ DisplayContinueGameInfo:
 ; PrintSaveScreenText — pret ref: main_menu.asm:PrintSaveScreenText.
 ; The START-menu SAVE screen's identical PLAYER/BADGES/#DEX/TIME panel, at the top
 ; of the screen (hlcoord 4,0). Called by engine/menus/save.asm (package H).
-; DEVIATION: this panel's window plumbing + a dedicated UI element are owned by
-;   package H (the SAVE screen). The DRAW is ported here faithfully into the
+; FIXED: this panel's window plumbing and dedicated UI_SAVE_INFO element now
+; exist in the SAVE screen pipeline. The draw is ported here faithfully into the
 ;   canvas via the CI() projection (its ROW-GBY offset is 0, so the top-of-screen
 ;   box reuses the same center-anchored basis). See report: needs UI_SAVE_INFO.
 ; ; PROJ menus: fields project via the UI_CONTINUE_INFO_* center anchor.
