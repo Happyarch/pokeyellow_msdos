@@ -12,6 +12,8 @@ extern AddPartyMon
 extern AddItemToInventory
 extern GetMonHeader                ; home/pokemon.asm — base stats -> wMonHeader
 extern CalcStats                   ; home/move_mon.asm — recompute the 5 stats
+extern GetMonName                  ; home/names.asm — species default -> wNameBuffer
+extern CopyData                    ; home/copy_data.asm
 
 ; Party-mon struct offsets (mirror gb_constants.inc). gb_constants.inc is NOT
 ; %included here: it defines CUT/FLY/SURF/STRENGTH via `equ`, which collides
@@ -48,6 +50,12 @@ extern CalcStats                   ; home/move_mon.asm — recompute the 5 stats
 ; SetDebugNewGameParty
 ; -----------------------------------------------------------------------------
 SetDebugNewGameParty:
+    ; AddPartyMon selects player storage from the low nibble, but only the
+    ; whole-zero player value opens AskName.  The deterministic harness owns
+    ; the nicknames it seeds and has no interactive naming input, so publish a
+    ; nonzero player-path marker while constructing the party, then restore the
+    ; shipping value before returning.
+    mov byte [ebp + W_MON_DATA_LOCATION], 0x10
     lea esi, [DebugNewGameParty]
 
 .loop:
@@ -62,12 +70,27 @@ SetDebugNewGameParty:
     mov byte [ebp + W_CUR_ENEMY_LEVEL], al
     inc esi
     
-    push esi ; Save ESI across AddPartyMon
+    push esi ; Save ESI across AddPartyMon + deterministic nickname copy
     call AddPartyMon
+
+    ; The interactive AskName path normally copies the species default when the
+    ; player declines.  This non-interactive harness performs that deterministic
+    ; final step directly so its party bytes still match the golden seed.
+    mov al, [ebp + W_CUR_PARTY_SPECIES]
+    mov [ebp + wNamedObjectIndex], al
+    call GetMonName
+    movzx eax, byte [ebp + wPartyCount]
+    dec eax
+    imul eax, NAME_LEN
+    lea edx, [eax + wPartyMonNicks]
+    mov esi, wNameBuffer
+    mov bx, NAME_LEN
+    call CopyData
     pop esi
     
     jmp .loop
 .done:
+    mov byte [ebp + W_MON_DATA_LOCATION], 0
     ret
 
 ; -----------------------------------------------------------------------------

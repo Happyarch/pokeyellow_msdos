@@ -2392,14 +2392,18 @@ autokey_script:
     dd  510 + AUTOKEY_DOWNS * 30, 516 + AUTOKEY_DOWNS * 30, PAD_A
     dd  -1,  -1, 0
 %elifdef AUTOKEY_APRESS
-    ; DEBUG_ITEMBALL companion: nothing to navigate, just answer every <PROMPT> /
-    ; button wait the capture messages raise. Use B so the now-live AskName prompt
-    ; deterministically declines the nickname, matching the golden scenario.
+    ; Nothing to navigate: answer every <PROMPT> / button wait the flow raises.
+    ; DEBUG_ITEMBALL alone uses B so the live AskName prompt deterministically
+    ; declines the nickname; TM/stone/sign flows require affirmative A presses.
     ; Keep the train long: a flow that outlives it blocks forever on the next
     ; prompt (the harness has no other input source) and reads as a hang.
 %assign AK_A 30
 %rep 300
+%ifdef DEBUG_ITEMBALL
     dd AK_A, AK_A + 5, PAD_B
+%else
+    dd AK_A, AK_A + 5, PAD_A
+%endif
 %assign AK_A AK_A + 20
 %endrep
     dd  -1,  -1, 0

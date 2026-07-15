@@ -13,6 +13,10 @@ module = importlib.util.module_from_spec(spec)
 loader.exec_module(module)
 
 
+def source(relative):
+    return (ROOT / relative).read_text(encoding="utf-8")
+
+
 class StructuredAnnotationTests(unittest.TestCase):
     def test_complete_deviation(self):
         parsed = module.parse_annotation(
@@ -59,6 +63,50 @@ class StructuredAnnotationTests(unittest.TestCase):
     def test_binary_table_is_not_text(self):
         self.assertFalse(module.looks_hand_encoded_text(
             'DecodeTable: db 0xfe, 0xcd, 0x89, 0xba', 'DecodeTable'))
+
+
+class DebugAssertionContractTests(unittest.TestCase):
+    def test_projection_rejects_full_window_list_before_append(self):
+        ppu = source("dos_port/src/ppu/ppu.asm")
+        block = ppu.split("add_window:", 1)[1].split("push ebp", 1)[0]
+        self.assertIn("%ifdef DEBUG_ASSERT_PROJECTION", block)
+        self.assertRegex(block, r"cmp dword \[g_window_count\], MAX_WINDOWS\s+jae \.assert_projection")
+        self.assertIn("int3", block)
+
+    def test_scratch_rejects_every_stride_except_20_or_canvas_width(self):
+        text = source("dos_port/src/home/text.asm")
+        for label in ("TextBoxBorder:", "PlaceString:"):
+            block = text.split(label, 1)[1].split("%endif", 1)[0]
+            self.assertIn("%ifdef DEBUG_ASSERT_SCRATCH", block)
+            self.assertIn("cmp dword [text_row_stride], 20", block)
+            self.assertIn("cmp dword [text_row_stride], SCREEN_WIDTH", block)
+            self.assertRegex(block, r"jne \.assert_bad_stride")
+            self.assertIn("int3", block)
+
+    def test_lifecycle_rejects_count_overflow_and_non_boolean_state(self):
+        ppu = source("dos_port/src/ppu/ppu.asm")
+        block = ppu.split("render_window:", 1)[1].split("%endif", 1)[0]
+        self.assertIn("%ifdef DEBUG_ASSERT_LIFECYCLE", block)
+        self.assertRegex(block, r"cmp dword \[g_window_count\], MAX_WINDOWS\s+ja \.assert_lifecycle")
+        for flag in ("g_obj_over_window", "g_bg_whiteout"):
+            self.assertRegex(block, rf"cmp dword \[{flag}\], 1\s+ja \.assert_lifecycle")
+        self.assertIn("int3", block)
+
+    def test_reentrancy_rejects_nested_owner_and_releases_depth(self):
+        window = source("dos_port/src/home/window.asm")
+        block = window.split("PrintText:", 1)[1].split("PrintText_NoCreatingTextBox:", 1)[0]
+        self.assertIn("cmp byte [print_text_depth], 0", block)
+        self.assertIn("jne .assert_reentrant", block)
+        self.assertIn("inc byte [print_text_depth]", block)
+        self.assertIn("int3", block)
+        release = window.split("PrintText_NoCreatingTextBox:", 1)[1].split("PlaceMenuCursor", 1)[0]
+        self.assertIn("dec byte [print_text_depth]", release)
+
+    def test_assertion_umbrella_selects_all_families(self):
+        makefile = source("dos_port/Makefile")
+        umbrella = makefile.split("ifdef DEBUG_ASSERTIONS", 1)[1].split("endif", 1)[0]
+        for family in ("PROJECTION", "SCRATCH", "LIFECYCLE", "REENTRANCY"):
+            self.assertIn(f"DEBUG_ASSERT_{family} := 1", umbrella)
 
 
 if __name__ == "__main__":

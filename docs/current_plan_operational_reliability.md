@@ -6,6 +6,20 @@ runtime harness.
 
 ## Restart handoff (2026-07-15, assertion-infrastructure checkpoint)
 
+Assertion continuation completed later on 2026-07-15:
+
+- `status_p1` initially failed even without assertions. The cause was harness
+  drift after `0828a941`: `PrepareNewGameDebug` reached the newly live AskName
+  prompt with no input. The deterministic party builder now uses AddPartyMon's
+  nonzero player-path marker while seeding, copies default species nicknames,
+  and restores `wMonDataLocation = 0` before returning.
+- The shared `AUTOKEY_APRESS` script had also been changed globally to B for
+  `ball_catch`, breaking the affirmative TM flow. B is now scoped to
+  `DEBUG_ITEMBALL`; all other users retain A.
+- Focused static negative-boundary tests cover all four assertion families.
+  `status_p1`, `item_tm_teach`, and `ball_catch` golden-match with assertions;
+  the full 12-scenario core tier passes with `DEBUG_ASSERTIONS=1`.
+
 Worktree checkpoint for the next session:
 
 - Strict claim lint now enumerates the previously silent backlog as
@@ -241,7 +255,7 @@ regression without comparing its categorized inventory.
     for the pret-derived item, move, field-move, battle-text, and alphabet encoders.
   - [x] Add temporary-tree regeneration, parser coverage, label identity, and
     eligible byte-for-byte pret stream validation.
-- [ ] Add debug-only projection, scratch-owner, compositor-lifecycle, and
+- [x] Add debug-only projection, scratch-owner, compositor-lifecycle, and
   re-entrancy assertions subsystem by subsystem.
 - [x] Reconcile M-69 and the MAP_BORDER=6 row-wrap stigmergy entries using repository/runtime
   evidence, retaining resolved historical lessons without stale active status.
