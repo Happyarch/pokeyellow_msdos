@@ -538,6 +538,13 @@ NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_APRESS
 AUTOKEY_DUMP_FRAME ?= 999999
 NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 endif
+# Oak intro state gate: seed Pallet's north-exit trigger, execute the Pallet
+# state-machine/battle-seed boundary deterministically, and dump GBSTATE+FRAME.
+ifdef DEBUG_OAK_INTRO
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_OAK_INTRO
+NASMFLAGS += -D SKIP_TITLE
+endif
 # Party-seed gate: run the debug new-game seed (party + bag + Pokédex) at boot,
 # dump party/bag WRAM to DUMP.BIN, exit. Verifies the pokemon/items engine runs
 # inside the real binary. make DEBUG_PARTY=1

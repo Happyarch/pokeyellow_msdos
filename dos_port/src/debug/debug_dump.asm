@@ -184,6 +184,15 @@ extern enh_dbg_snapshot
 extern g_cfg_musicloop            ; src/audio/audio_hal.asm — /LOOP
 global RunAudioTest
 %endif
+%ifdef DEBUG_OAK_INTRO
+extern PalletTownDefaultScript
+extern PalletTownPikachuBattleScript
+extern PalletTownOakNotSafeComeWithMeScript
+extern RunNPCMovementScript
+extern UpdateSprites
+extern DelayFrame
+global RunOakIntroTest
+%endif
 
 global DebugDumpMemory
 global DumpBackbuffer
@@ -325,6 +334,46 @@ RMCS_DS      equ 0x24
 RMCS_SIZE    equ 0x32
 
 ; ---------------------------------------------------------------------------
+section .data
+align 4
+
+%ifdef DEBUG_OAK_INTRO
+section .text
+
+; ---------------------------------------------------------------------------
+; RunOakIntroTest — deterministic Oak-intro state gate.
+;
+; This is a state/boundary golden, not a live choreography recorder:
+; - hits PalletTownDefaultScript's north-exit trigger,
+; - hits PalletTownPikachuBattleScript's Pikachu battle seed,
+; - hits PalletTownOakNotSafeComeWithMeScript's movement-script arm,
+; - hits RunNPCMovementScript so the Pallet movement table consumer runs once,
+; then dumps the rendered Pallet scene + GBSTATE terminal marker.
+;
+; The text-bearing states intentionally stay out of this gate while DisplayTextID
+; is still a linked stand-in; Stage 2 owns that service closure.
+; ---------------------------------------------------------------------------
+RunOakIntroTest:
+    mov byte [ebp + W_Y_COORD], 0
+    mov byte [ebp + W_X_COORD], 10
+    mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF
+
+    ; Let the default state observe the north exit and arm Oak's first state.
+    call PalletTownDefaultScript
+
+    ; Seed the battle boundary exactly as pret's Pikachu-battle state does.
+    call PalletTownPikachuBattleScript
+
+    ; Arm the player-follows-Oak movement table, then dispatch its first consumer.
+    call PalletTownOakNotSafeComeWithMeScript
+    call RunNPCMovementScript
+
+    ; Publish one sprite update before dumping the scene.
+    call UpdateSprites
+    call DelayFrame
+    jmp DumpBackbuffer
+%endif
+
 section .data
 align 4
 

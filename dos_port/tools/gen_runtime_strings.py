@@ -73,6 +73,8 @@ FILES = {
     "pallet_runtime_strings.inc": [
         ("oak_got_text", [[0x00], "OAK: That was", [0x4F], "close!", [0x57, 0x50]]),
         ("oak_default_text", [[0x00], "OAK: Hey! Wait!", [0x4F], "Don't go out!", [0x57, 0x50]]),
+        ("oak_whew_text", [[0x00], "OAK: Whew!", [0x4F], "That was close!", [0x57, 0x50]]),
+        ("oak_come_with_me_text", [[0x00], "OAK: It's unsafe!", [0x4F], "Come with me!", [0x57, 0x50]]),
     ],
 }
 
@@ -87,7 +89,7 @@ def main():
                 lines.append("INTRO_LINE1_LEN equ $ - intro_line1")
             elif label == "intro_line2":
                 lines.append("INTRO_LINE2_LEN equ $ - intro_line2")
-            elif label in ("oak_got_text", "oak_default_text"):
+            elif label.startswith("oak_"):
                 lines.append(f"{label}_end:")
         (ASSETS / name).write_text("\n".join(lines) + "\n", encoding="utf-8")
 

@@ -1,9 +1,10 @@
 # Current Plan: Overworld Events — story scripts and interaction services
 
-Status: **the script/event foundation and sign milestone are complete.** The
-remaining work is the Oak intro, the real `DisplayTextID` service closure,
-hidden interactions and pickups, the unfinished field-move tails, the per-map
-story rollout, and the final stub/claim sweep. Archive this file to
+Status: **the script/event foundation, sign milestone, and Pallet Oak-intro
+state-machine code are complete.** The remaining work is the real
+`DisplayTextID` service closure, active Oak-intro golden coverage, hidden
+interactions and pickups, the unfinished field-move tails, the per-map story
+rollout, and the final stub/claim sweep. Archive this file to
 `docs/plans/overworld_events.md` when those stages are complete.
 
 This status was refreshed 2026-07-15 against the linked build,
@@ -41,7 +42,7 @@ remain in git history instead of being maintained here.
       per-map no-op dispatch are linked.
 - [x] Pallet Town has the first linked `_Script`/`text_asm` skeleton and is the
       only map registered with a non-default script. Its Oak cutscene states
-      remain no-op tails and are Stage 1 below.
+      0–8 now have Stage 1 code; state 9 remains the no-op tail.
 - [x] Scripted NPC movement, pathfinding, `MoveSprite`, simulated joypad support,
       and the per-map movement-script table are linked. They are infrastructure,
       not evidence that a story cutscene has executed.
@@ -57,27 +58,64 @@ remain in git history instead of being maintained here.
 
 ## Stage 1 — Oak intro and Pallet state machine
 
-- [ ] Replace `PalletTownDefaultScript` and the shared
+- [x] Replace `PalletTownDefaultScript` and the shared
       `PalletTown_CutsceneStub` with pret's states 0–8, keeping state 9 as the
       real no-op. Wire the north-exit trigger, Oak approach, player/Oak scripted
       movement, dialog, Lab transition, Pikachu battle seed, and post-battle
       state advancement.
-- [ ] Preserve the port's movement ABI: sprite selectors use the verified
+- [x] Preserve the port's movement ABI: sprite selectors use the verified
       pre-multiplied slot offset where the linked helpers expect it, and
       multi-step paths drain through the linked simulated-input machinery.
       Reconcile `PlayerStepOutFromDoor`'s deferred `wJoyIgnore` store in this
       workstream rather than leaving two scripted-input ownership models.
-- [ ] Keep the cross-plan boundary explicit: the script seeds
+- [x] Keep the cross-plan boundary explicit: the script seeds
       `wCurOpponent`, `wBattleType`, and `wCurEnemyLevel`; battle-completion
       Stage 4a supplies faithful `BATTLE_TYPE_PIKACHU` behavior, while Stage 1
       supplies battle exit/result semantics. Do not report the cutscene complete
       while that handoff still degrades to a plain wild battle.
 - [ ] Add a deterministic Oak-intro scenario whose must-hit list names the
       Pallet state(s) and scripted movement consumer, and whose terminal state
-      compares event/script variables plus the rendered scene. Use live DOSBox-X
-      only for continuous choreography not captured by the dump.
+      compares event/script variables plus the rendered scene. Stage 1 preserved
+      a disabled scaffold as `tools/mgba_harness/scenarios/oak_intro.lua.disabled`
+      and a `disabled_scenarios` manifest entry, but the active golden is still
+      open because the generated mGBA WRAM state was not valid evidence. Use
+      live DOSBox-X only for continuous choreography not captured by the dump.
 
 ## Stage 2 — `DisplayTextID` and overworld service dialogs
+
+### Stage 1 handoff for Stage 2 — 2026-07-15
+
+Stage 1 replaced Pallet's shared cutscene stub with real state labels 0–8 in
+`dos_port/src/scripts/pallet_town.asm`; `PalletTownNoopScript` remains state 9.
+The script now handles the north-exit trigger, Oak appearance/approach,
+scripted movement setup/drain, Daisy object toggles, and Pikachu battle seeding
+through `wBattleType = BATTLE_TYPE_PIKACHU`, `wCurOpponent = STARTER_PIKACHU`,
+and `wCurEnemyLevel = 5`. Battle-completion still owns the faithful special
+Pikachu battle behavior and battle exit/result semantics; do not claim the full
+cutscene as complete until that cross-plan handoff is closed.
+
+Text remains the critical Stage 2 dependency. `DisplayTextID` is still
+check-only while the linked default-build provider is the `home_stubs.asm`
+stand-in, so Stage 1 used a Pallet-local `DisplayPalletTownTextID` shim plus
+generated runtime strings for the Oak lines. Replace that shim with the real
+`DisplayTextID` closure when Stage 2 lands the text-script service. Also note
+that `ShowTextStream` currently waits for A/B even when
+`wDoNotWaitForButtonPressAfterDisplayingText` is set, so Oak's first
+"Hey! Wait!" line is functionally shown but does not yet match pret's
+auto-advance timing.
+
+`PlayerStepOutFromDoor` now stores the pret-style `wJoyIgnore` mask before
+arming the simulated one-step PAD_DOWN sequence and relies on
+`AreInputsSimulated.doneSimulating` to clear it. Preserve that ownership model if
+Stage 2 touches text/input waits.
+
+The Oak intro test hook is deliberately retained but not registered as active
+golden evidence. `DEBUG_OAK_INTRO` still builds and calls `RunOakIntroTest`, and
+the attempted mGBA scenario is preserved as
+`tools/mgba_harness/scenarios/oak_intro.lua.disabled` with a disabled manifest
+entry. Re-enable it only after the title/new-game route and GBSTATE projection
+produce a valid committed golden; `goldens-verify` executes every active
+`*.lua` scenario.
 
 `project_state DisplayTextID` reports the translated implementation check-only;
 `label_status --callers DisplayTextID` reports the linked stand-in in

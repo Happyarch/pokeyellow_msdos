@@ -374,5 +374,38 @@
       "comparison": {"regions": ["tilemap", "vram", "oam", "wram"], "projection": "golden_diff.SCENARIOS", "masks": "golden_diff.SCENARIOS"},
       "verification": "deterministic screen/navigation state"
     }
+  ],
+  "disabled_scenarios": [
+    {
+      "name": "oak_intro",
+      "disabled_reason": "Scaffold preserved from Stage 1. Do not register until title/new-game seeding and mGBA WRAM projection produce a valid golden.",
+      "id": 21,
+      "tier": "core",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_OAK_INTRO=1",
+      "port_entry_gate": "DEBUG_OAK_INTRO",
+      "navigation_script": "tools/mgba_harness/scenarios/oak_intro.lua.disabled",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "PalletTownDefaultScript",
+        "PalletTownPikachuBattleScript",
+        "PalletTownOakNotSafeComeWithMeScript",
+        "RunNPCMovementScript"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "Pallet north-exit Oak intro script state, Pikachu battle seed, and scripted movement consumer"
+    }
   ]
 }

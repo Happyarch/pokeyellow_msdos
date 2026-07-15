@@ -42,6 +42,8 @@ bits 32
 %include "assets/event_constants.inc"   ; EVENT_* bit indices (EVENT_2A7, OW-A.6)
 %include "events.inc"                   ; CheckEvent/SetEvent/ResetEvent over W_EVENT_FLAGS
 
+global RunNPCMovementScript
+
 extern PlaySound                       ; src/home/audio.asm (real gateway, OW-A.14)
 extern PlayDefaultMusic                ; src/home/audio.asm — surf-dismount music restore (OW-A.6)
 extern PlayDefaultMusicFadeOutCurrent  ; src/home/audio.asm (real gateway, OW-A.14)
@@ -138,6 +140,9 @@ extern DumpBackbuffer
 %elifdef DEBUG_SIGNTEXT
 extern DumpBackbuffer
 %endif
+%ifdef DEBUG_OAK_INTRO
+extern RunOakIntroTest
+%endif
 %ifdef DEBUG_SEAM
 extern DumpBackbuffer
 extern SeamLogRecord
@@ -162,6 +167,9 @@ extern RunBagMenuTest
 %ifdef DEBUG_SIGNTEXT
 %define NEED_SEED_IDENTITY
 %endif
+%ifdef DEBUG_OAK_INTRO
+%define NEED_SEED_IDENTITY
+%endif
 %ifdef NEED_SEED_IDENTITY
 extern SeedDeterministicPlayerIdentity  ; engine/debug/debug_party.asm — "RED"/id 0 (seed.lua spec)
 %endif
@@ -171,6 +179,9 @@ extern SeedDeterministicPlayerIdentity  ; engine/debug/debug_party.asm — "RED"
 %define NEED_SEAM_RESEAT
 %endif
 %ifdef DEBUG_SIGNTEXT
+%define NEED_SEAM_RESEAT
+%endif
+%ifdef DEBUG_OAK_INTRO
 %define NEED_SEAM_RESEAT
 %endif
 %ifdef DEBUG_BAGMENU_LIVE
@@ -503,6 +514,14 @@ EnterMap:
     mov byte [ebp + W_X_COORD], SIGNTEXT_X
     mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF  ; "not a warp arrival" (see DEBUG_SEAM)
 %endif
+%ifdef DEBUG_OAK_INTRO
+    ; Oak-intro state gate: start on the Pallet north-exit tile that triggers
+    ; PalletTownDefaultScript, then let RunOakIntroTest drive the stage boundary.
+    mov byte [ebp + W_CUR_MAP], 0x00          ; PALLET_TOWN
+    mov byte [ebp + W_Y_COORD], 0
+    mov byte [ebp + W_X_COORD], 10
+    mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF
+%endif
     call LoadMapData
 %ifdef DEBUG_SEAM
     cmp byte [seam_reseat], 0
@@ -571,6 +590,10 @@ EnterMap:
     call DumpBackbuffer                   ; FRAME.BIN: the final screen — then exits
 %endif ; DEBUG_SEAM_LIVE
 %endif ; DEBUG_SEAM
+%ifdef DEBUG_OAK_INTRO
+    call SeamReseatView
+    call RunOakIntroTest                      ; dumps GBSTATE+FRAME and exits
+%endif
 %ifdef DEBUG_DUMP
     call DebugDumpMemory     ; dump GB memory to DUMP.BIN, then exit (debug only)
 %endif
@@ -3580,6 +3603,7 @@ PlayerStepOutFromDoor:
     call IsPlayerStandingOnDoorTile
     jnc .notStandingOnDoor
     ; Door tile — set up one forced south step to walk off the arrival warp tile.
+    mov byte [ebp + W_JOY_IGNORE], PAD_SELECT | PAD_START | PAD_CTRL_PAD
     or byte [ebp + W_MOVEMENT_FLAGS], (1 << BIT_EXITING_DOOR)
     mov byte [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], 1
     mov byte [ebp + W_SIMULATED_JOYPAD_STATES_END], PAD_DOWN
@@ -3587,10 +3611,9 @@ PlayerStepOutFromDoor:
     mov [ebp + W_SPRITE_PLAYER_IMAGE_INDEX], al       ; pret: wSpritePlayerStateData1ImageIndex = 0
     ; StartSimulatingJoypadStates zeroes the override mask + slot-0 movement byte 1 and
     ; sets BIT_SCRIPTED_MOVEMENT_STATE so AreInputsSimulated feeds this one PAD_DOWN.
-    ; (pret PlayerStepOutFromDoor also sets wJoyIgnore; omitted here because the port
-    ; drains the 1-step buffer at .handleDirection rather than via AreInputsSimulated's
-    ; .doneSimulating, so a lingering wJoyIgnore would leak — TODO(home-rectify M3.3
-    ; follow-up): re-add wJoyIgnore once multi-step scripts drain via .doneSimulating.)
+    ; wJoyIgnore now matches pret and is cleared by AreInputsSimulated.doneSimulating
+    ; after the one-step queue drains, sharing the same ownership model as the
+    ; multi-step Pallet/Pewter scripted-input machinery.
     call StartSimulatingJoypadStates
     ret
 .notStandingOnDoor:
