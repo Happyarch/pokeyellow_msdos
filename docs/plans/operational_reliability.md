@@ -4,6 +4,27 @@ This plan turns fidelity evidence policy into generated interfaces and gates.
 It complements, and does not modify, the separately owned fidelity-expansion
 runtime harness.
 
+## Completion (2026-07-15)
+
+Operational reliability rollout is complete and ready to archive:
+
+- All **176** legacy free-form `DEVIATION`, `STUB`, `BUG`, and `GLITCH`
+  annotations were manually reviewed in six bounded slices. Live claims retain
+  detailed prose plus structured pret/evidence/lifetime metadata; stale,
+  duplicate, and already-fixed claims were corrected instead of preserved.
+- Final strict and default label lint both report **0 violations / 5 existing
+  suppressions**. There is no remaining legacy-annotation category or other
+  measured migration debt.
+- The final slice audited all 30 entries from `pokemon/evolution.asm:379`
+  through `save/dsv_io.asm:31`: 28 substantive claims were structured, two
+  redundant/non-claim markers were removed, and stale `DisplayTextID`
+  reachability prose was corrected against generated `label_status` evidence.
+- **26** operational tool tests pass; `validate_scenarios.py` reports all 19
+  scenarios consistent; `project_state --plans` and `git diff --check` pass.
+- `make -C dos_port fidelity-full` passes all **19** active scenarios. No
+  executable byte, call graph, or WRAM store changed during the annotation
+  slices; the full suite is final acceptance evidence for the completed rollout.
+
 ## Restart handoff (2026-07-15, fifth annotation slice complete)
 
 The fifth bounded legacy-annotation slice is complete after `956daf03`:
@@ -442,9 +463,7 @@ not restructure its live files mid-stage.
 - 0 stale explicit extern provider trails.
 - 0 local pret-label shadows.
 - 0 likely hand-encoded rendered charmap blobs.
-- 0 unaudited `STUB` claims. Legacy free-form `DEVIATION`, `BUG`, and `GLITCH`
-  annotations remain accepted temporarily and require manual evidence-backed
-  conversion.
+- 0 unaudited legacy `DEVIATION`, `STUB`, `BUG`, or `GLITCH` claims.
 
 **Verification commands:**
 
@@ -477,7 +496,7 @@ regression without comparing its categorized inventory.
 - [x] Reject local pret-label shadows and boilerplate file-level relocations in
   `lint_pret_labels --strict-claims`; default lint remains usable during migration.
 - [x] Migrate legacy weak relocations to enumerated, evidenced label entries.
-- [ ] Manually migrate legacy free-form `DEVIATION`, `STUB`, `BUG`, and `GLITCH`
+- [x] Manually migrate legacy free-form `DEVIATION`, `STUB`, `BUG`, and `GLITCH`
   comments to the structured form, verifying each claim rather than bulk-rewriting.
 - [x] Migrate the strict-lint inventory of likely hand-encoded rendered strings
   into deterministic generators; the detector is conservative and each hit must
