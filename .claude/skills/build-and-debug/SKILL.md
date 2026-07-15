@@ -267,21 +267,41 @@ Lua scenarios (`tools/mgba_harness/scenarios/*.lua`: boot → seeded party →
 real-menu navigation → dump). Each scenario writes a **golden**
 (`tests/goldens/<scenario>.bin` + `.json` sidecar, committed). The port side
 builds the matching `DEBUG_*` image, runs it headless, and
-`src/debug/debug_dump.asm:DumpGBState` writes `GBSTATE.BIN`
-(16-byte header + wTileMap 40×25 + VRAM `$8000–$97FF` + OAM).
+`src/debug/debug_dump.asm:DumpGBState` writes `GBSTATE.BIN`.
+
+`GBSTATE.BIN` is self-describing **v2**: a 16-byte `"GBST"` header (version,
+scenario id, region count, directory size, total size), then a region directory
+(name, GB address, size, file offset), then payloads. The port table is built
+from `include/gb_memmap.inc`; the golden side resolves pret symbols. The differ
+joins regions by name and cross-checks shared WRAM addresses/sizes, so memory-map
+drift fails loudly instead of silently comparing the wrong bytes.
+
 `tools/golden_diff.py` maps the port's 20×18 GB window (plus per-scenario UI
 **projections** for the widescreen canvas, see `docs/ui_projection.md`) onto
 the golden and diffs **tilemap cells** (charmap-decoded in the report),
 **16-byte VRAM tile slots** (names a clobbered slot directly — the `$73/$74`
-HUD-clobber class), and **OAM entries**. Nonzero exit on any unmasked
-divergence.
+HUD-clobber class), **OAM entries**, and WRAM datastruct regions. WRAM reports
+are field-aware (`wPartyData mon 3 DVs`, `wBagItems slot 2 quantity`, etc.) so a
+bad game-data byte is actionable. Scenario class `"datastruct"` compares only
+WRAM and loudly skips tilemap/VRAM/OAM with a class-level justification; use it
+for post-flow game-data checks such as item effects or captures where transient
+render state is not the evidence.
 
 ```sh
 # Check one scenario end-to-end (build DEBUG image → headless run → diff)
 make -C dos_port goldencheck SCENARIO=status_p1
 
-# Full suite: status_p1 status_p2 start_menu overworld_pallet party_menu bag_menu
+# Core pre-commit tier: representative status/start/overworld/party/bag/text/
+# datastruct/battle/menu coverage (currently 12 scenarios)
 make -C dos_port fidelity
+
+# Full active suite (currently 19 scenarios): core plus long-tail status,
+# item, battle, and menu/dex scenarios
+make -C dos_port fidelity-full
+
+# Regenerate every Lua golden into a temp dir and diff against committed
+# tests/goldens/*.bin + *.json, including legacy scenarios such as smoke_title
+make -C dos_port goldens-verify
 
 # Regenerate the committed goldens (needs build_mgba.sh output + golden worktree;
 # sha1-gated against roms.sha1 — refuses an unverified ROM)
@@ -297,14 +317,18 @@ Rules and gotchas:
 - **Masks need written justifications.** A legitimate divergence (e.g. the
   PikaPic area on the status screens) gets a per-scenario mask entry in
   `golden_diff.py`'s `SCENARIOS` table **with a `why` string** — never a bare
-  mask. Policy + when this is required pre-commit → skill
-  **`faithfulness-review`** (gate step 3).
+  mask. If an OPEN finding owns the divergence, include the finding id in the
+  why-string so retiring the finding also deletes its masks. Policy + when this
+  is required pre-commit → skill **`faithfulness-review`** (gate step 3).
 - `goldencheck.sh` already runs against a **copy** of `PKMN.IMG` in a scratch
   dir, so it's immune to the live-session image-contention trap (below), and
   the NASMFLAGS stamp rebuilds the `DEBUG_*` objects automatically.
 - Scenarios are deterministic (fixed seeds, state-aware navigation): two
   consecutive `make goldens` runs must produce byte-identical `.bin` files.
   A golden that changed without a scenario/pret change is a red flag.
+- `make -C dos_port goldens-verify` is the drift check for committed goldens:
+  it regenerates all Lua scenarios into a temp directory using the same pinned
+  ROM/symbols and fails on any `.bin` or `.json` difference.
 - New scenario = new Lua file in `tools/mgba_harness/scenarios/` + a
   `SCENARIOS` entry in `golden_diff.py` + a `DEBUG_*` harness in the port that
   reaches the same screen and calls `DumpGBState` with a new scenario id.
