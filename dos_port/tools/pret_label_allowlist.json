@@ -9,34 +9,6 @@
     "entry makes the linter fire on it again."
   ],
   "relocated_files": {
-    "engine/battle/animations.asm": {
-      "port_file": "dos_port/src/engine/battle/move_effect_helpers.asm",
-      "why": "pre-existing relocation, all 4 translated label(s) here (draft Session H)"
-    },
-    "engine/battle/init_battle.asm": {
-      "port_file": "dos_port/src/home/pics.asm",
-      "why": "pre-existing relocation, all 1 translated label(s) here (draft Session H)"
-    },
-    "engine/battle/move_effects/reflect_light_screen.asm": {
-      "port_file": "dos_port/src/engine/battle/move_effect_helpers.asm",
-      "why": "pre-existing relocation, all 1 translated label(s) here (draft Session H)"
-    },
-    "engine/battle/scale_sprites.asm": {
-      "port_file": "dos_port/src/home/pics.asm",
-      "why": "pre-existing relocation, all 5 translated label(s) here (draft Session H)"
-    },
-    "engine/battle/used_move_text.asm": {
-      "port_file": "dos_port/src/engine/battle/core.asm",
-      "why": "pre-existing relocation, all 1 translated label(s) here (draft Session H)"
-    },
-    "engine/gfx/load_pokedex_tiles.asm": {
-      "port_file": "dos_port/src/engine/menus/pokedex.asm",
-      "why": "pre-existing relocation, all 1 translated label(s) here (draft Session H)"
-    },
-    "engine/gfx/sprite_oam.asm": {
-      "port_file": "dos_port/src/engine/gfx/sprite_oam.asm",
-      "why": "pre-existing relocation, all 3 translated label(s) here (draft Session H)"
-    },
     "engine/menus/link_menu.asm": {
       "port_file": "dos_port/src/engine/menus/link_cups.asm",
       "why": "The 18 labels are the COLOSSEUM cup ELIGIBILITY rules (PokeCup/PikaCup/PetitCup and their 15 verdict routines), reached only as data through PointerTable_f5488. They are a different concern from the two menus with a different dependency set: they scan the party, read the Pokedex entry pointers (link_cups.o depends on assets/dex_entries.inc) and call GetMonName, and they touch no window, tilemap or menu-driver state at all \u2014 pret bundles them with the menus only because they share a ROM bank. Reviewed on the merits 2026-07-14 (menu-fidelity row 20 part 2), NOT kept as boilerplate: no pret label is forked, renamed or duplicated across the split (link_cups.asm externs the Colosseum*Text wrappers from link_menu.asm and prints them itself, exactly as pret does), faithdiff/label_status key on labels rather than files, and the discovery trail runs both ways (each file's header names the other and the pret file). Merging back would put ~1500 lines in one file, which is the size at which this very review had to be split across two iterations."
@@ -44,174 +16,6 @@
     "engine/menus/start_sub_menus.asm": {
       "port_file": "dos_port/src/engine/menus/trainer_card.asm",
       "why": "DrawTrainerInfo + its 5 TrainerInfo_* helpers are one self-contained SCREEN (VRAM tile loads, Red's front pic, box drawing, present/teardown); pret bundles them into start_sub_menus.asm only because they share a ROM bank with the six unrelated StartMenu_* dispatchers, which the flat port has no reason to reproduce. Reviewed on the merits 2026-07-13 (menu-fidelity row 10), NOT kept as boilerplate: no pret label is forked, renamed or duplicated across the split, faithdiff/label_status key on labels rather than files, and the discovery trail runs both ways (start_sub_menus.asm:116-119 externs name trainer_card.asm; trainer_card.asm's header names pret's file). Merging back would push the dispatch file past 1700 lines for zero cross-reference gain."
-    },
-    "engine/movie/evolution.asm": {
-      "port_file": "dos_port/src/engine/pokemon/evolution.asm",
-      "why": "pre-existing relocation, all 3 translated label(s) here (draft Session H)"
-    },
-    "engine/movie/title.asm": {
-      "port_file": "dos_port/src/movie/title.asm",
-      "why": "pre-existing relocation, all 5 translated label(s) here (draft Session H)"
-    },
-    "engine/movie/title_yellow.asm": {
-      "port_file": "dos_port/src/movie/title.asm",
-      "why": "pre-existing relocation, all 5 translated label(s) here (draft Session H)"
-    },
-    "engine/overworld/advance_player_sprite.asm": {
-      "port_file": "dos_port/src/engine/overworld/overworld.asm",
-      "why": "pre-existing relocation, all 5 translated label(s) here (draft Session H)"
-    },
-    "engine/overworld/auto_movement.asm": {
-      "port_file": "dos_port/src/engine/overworld/overworld.asm",
-      "why": "pre-existing relocation, all 1 translated label(s) here (draft Session H)"
-    },
-    "engine/overworld/doors.asm": {
-      "port_file": "dos_port/src/engine/overworld/overworld.asm",
-      "why": "pre-existing relocation, all 1 translated label(s) here (draft Session H)"
-    },
-    "engine/overworld/emotion_bubbles.asm": {
-      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
-      "why": "pre-existing relocation, all 2 translated label(s) here (draft Session H)"
-    },
-    "engine/overworld/player_animations.asm": {
-      "port_file": "dos_port/src/engine/overworld/ledges.asm",
-      "why": "pre-existing relocation, all 2 translated label(s) here (draft Session H)"
-    },
-    "engine/overworld/player_state.asm": {
-      "port_file": "dos_port/src/engine/overworld/warp_check.asm",
-      "why": "pre-existing relocation, all 2 translated label(s) here (draft Session H)"
-    },
-    "engine/overworld/sprite_collisions.asm": {
-      "port_file": "dos_port/src/engine/overworld/movement.asm",
-      "why": "pre-existing relocation, all 4 translated label(s) here (draft Session H)"
-    },
-    "engine/overworld/tilesets.asm": {
-      "port_file": "dos_port/src/engine/overworld/overworld.asm",
-      "why": "pre-existing relocation, all 1 translated label(s) here (draft Session H)"
-    },
-    "engine/overworld/trainer_sight.asm": {
-      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
-      "why": "pre-existing relocation, all 10 translated label(s) here (draft Session H)"
-    },
-    "engine/pikachu/pikachu_follow.asm": {
-      "port_file": "dos_port/src/engine/overworld/pikachu.asm",
-      "why": "pre-existing relocation, all 3 translated label(s) here (draft Session H)"
-    },
-    "engine/pokemon/bills_pc.asm": {
-      "port_file": "dos_port/src/engine/pokemon/knows_hm_move.asm",
-      "why": "pre-existing relocation, all 2 translated label(s) here (draft Session H)"
-    },
-    "home/audio.asm": {
-      "port_file": "dos_port/src/engine/battle/move_effect_helpers.asm",
-      "why": "pre-existing relocation, all 1 translated label(s) here (draft Session H)"
-    },
-    "home/clear_sprites.asm": {
-      "port_file": "dos_port/src/home/sprites.asm",
-      "why": "pre-existing relocation, all 2 translated label(s) here (draft Session H)"
-    },
-    "home/copy.asm": {
-      "port_file": "dos_port/src/home/copy_data.asm",
-      "why": "pre-existing relocation, all 2 translated label(s) here (draft Session H)"
-    },
-    "home/delay.asm": {
-      "port_file": "dos_port/src/video/frame.asm",
-      "why": "pre-existing relocation, all 1 translated label(s) here (draft Session H)"
-    },
-    "home/hidden_events.asm": {
-      "port_file": "dos_port/src/home/hidden_events.asm",
-      "why": "pre-existing relocation, all 2 translated label(s) here (draft Session H)"
-    },
-    "home/init.asm": {
-      "port_file": "dos_port/src/home/init.asm",
-      "why": "pre-existing relocation, all 3 translated label(s) here (draft Session H)"
-    },
-    "home/item.asm": {
-      "port_file": "dos_port/src/home/item_predicates.asm",
-      "why": "pre-existing relocation, all 1 translated label(s) here (draft Session H)"
-    },
-    "home/item_price.asm": {
-      "port_file": "dos_port/src/home/item_price.asm",
-      "why": "pre-existing relocation, all 1 translated label(s) here (draft Session H)"
-    },
-    "home/lcd.asm": {
-      "port_file": "dos_port/src/video/lcd_control.asm",
-      "why": "pre-existing relocation, all 2 translated label(s) here (draft Session H)"
-    },
-    "home/load_font.asm": {
-      "port_file": "dos_port/src/home/load_font.asm",
-      "why": "pre-existing relocation, all 3 translated label(s) here (draft Session H)"
-    },
-    "home/move_mon.asm": {
-      "port_file": "dos_port/src/home/copy_data.asm",
-      "why": "pre-existing relocation, all 1 translated label(s) here (draft Session H)"
-    },
-    "home/names.asm": {
-      "port_file": "dos_port/src/home/item_predicates.asm",
-      "why": "pre-existing relocation, all 3 translated label(s) here (draft Session H)"
-    },
-    "home/names2.asm": {
-      "port_file": "dos_port/src/home/names.asm",
-      "why": "pre-existing relocation, all 2 translated label(s) here (draft Session H)"
-    },
-    "home/npc_movement.asm": {
-      "port_file": "dos_port/src/engine/overworld/overworld.asm",
-      "why": "pre-existing relocation, all 1 translated label(s) here (draft Session H)"
-    },
-    "home/overworld_text.asm": {
-      "port_file": "dos_port/src/home/overworld_text.asm",
-      "why": "pre-existing relocation, all 2 translated label(s) here (draft Session H)"
-    },
-    "home/pathfinding.asm": {
-      "port_file": "dos_port/src/home/pathfinding.asm",
-      "why": "pre-existing relocation, all 4 translated label(s) here (draft Session H)"
-    },
-    "home/pics.asm": {
-      "port_file": "dos_port/src/home/pics.asm",
-      "why": "pre-existing relocation, all 6 translated label(s) here (draft Session H)"
-    },
-    "home/pikachu.asm": {
-      "port_file": "dos_port/src/engine/overworld/pikachu.asm",
-      "why": "pre-existing relocation, all 11 translated label(s) here (draft Session H)"
-    },
-    "home/play_time.asm": {
-      "port_file": "dos_port/src/home/play_time.asm",
-      "why": "pre-existing relocation, all 2 translated label(s) here (draft Session H)"
-    },
-    "home/predef_text.asm": {
-      "port_file": "dos_port/src/home/map_text_pointer.asm",
-      "why": "pre-existing relocation, all 2 translated label(s) here (draft Session H)"
-    },
-    "home/print_num.asm": {
-      "port_file": "dos_port/src/home/text_script.asm",
-      "why": "pre-existing relocation, all 1 translated label(s) here (draft Session H)"
-    },
-    "home/print_text.asm": {
-      "port_file": "dos_port/src/home/text.asm",
-      "why": "pre-existing relocation, all 1 translated label(s) here (draft Session H)"
-    },
-    "home/reload_sprites.asm": {
-      "port_file": "dos_port/src/home/reload_sprites.asm",
-      "why": "pre-existing relocation, all 1 translated label(s) here (draft Session H)"
-    },
-    "home/text.asm": {
-      "port_file": "dos_port/src/home/text.asm",
-      "why": "pre-existing relocation, all 4 translated label(s) here (draft Session H)"
-    },
-    "home/trainers2.asm": {
-      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
-      "why": "pre-existing relocation, all 3 translated label(s) here (draft Session H)"
-    },
-    "home/uncompress.asm": {
-      "port_file": "dos_port/src/home/uncompress.asm",
-      "why": "pre-existing relocation, all 21 translated label(s) here (draft Session H)"
-    },
-    "home/update_sprites.asm": {
-      "port_file": "dos_port/src/engine/overworld/movement.asm",
-      "why": "pre-existing relocation, all 1 translated label(s) here (draft Session H)"
-    },
-    "home/vblank.asm": {
-      "port_file": "dos_port/src/video/frame.asm",
-      "why": "pre-existing relocation, all 1 translated label(s) here (draft Session H)"
     }
   },
   "relocated_labels": {
@@ -745,7 +549,7 @@
     },
     "IsSpriteOrSignInFrontOfPlayer": {
       "port_file": "dos_port/src/engine/overworld/overworld.asm",
-      "why": "pret home/overworld.asm split across port files; overworld.asm is the port's home/overworld.asm (same rationale as EnterMap/OverworldLoop/StopMusic). It sits beside its only caller, OverworldLoop's A-press dispatch. Only the SIGN branch is translated — see the routine's header for the documented split: pret's sprite scan (IsSpriteInFrontOfPlayer2) is realized as CheckNPCInteraction, which both detects AND displays, and the counter-tile talking-range extension is unported (it needs mart/pokecenter counter tilesets). Reviewed on the merits when the sign feature was folded back from worktree-fidelity-expansion (2026-07-14), NOT auto-blessed boilerplate."
+      "why": "pret home/overworld.asm split across port files; overworld.asm is the port's home/overworld.asm (same rationale as EnterMap/OverworldLoop/StopMusic). It sits beside its only caller, OverworldLoop's A-press dispatch. Only the SIGN branch is translated \u2014 see the routine's header for the documented split: pret's sprite scan (IsSpriteInFrontOfPlayer2) is realized as CheckNPCInteraction, which both detects AND displays, and the counter-tile talking-range extension is unported (it needs mart/pokecenter counter tilesets). Reviewed on the merits when the sign feature was folded back from worktree-fidelity-expansion (2026-07-14), NOT auto-blessed boilerplate."
     },
     "IsTilePassable": {
       "port_file": "dos_port/src/engine/overworld/overworld.asm",
@@ -1230,6 +1034,594 @@
     "_AddPartyMon": {
       "port_file": "dos_port/src/engine/pokemon/add_party_mon.asm",
       "why": "pret engine/pokemon/add_mon.asm split across port files (draft Session H)"
+    },
+    "AnimationSubstitute": {
+      "port_file": "dos_port/src/engine/battle/move_effect_helpers.asm",
+      "why": "Scanner-reviewed 2026-07-15: AnimationSubstitute from pret engine/battle/animations.asm has its selected single non-stub definition at dos_port/src/engine/battle/move_effect_helpers.asm; preserve this per-label split."
+    },
+    "AnimationTransformMon": {
+      "port_file": "dos_port/src/engine/battle/move_effect_helpers.asm",
+      "why": "Scanner-reviewed 2026-07-15: AnimationTransformMon from pret engine/battle/animations.asm has its selected single non-stub definition at dos_port/src/engine/battle/move_effect_helpers.asm; preserve this per-label split."
+    },
+    "HideSubstituteShowMonAnim": {
+      "port_file": "dos_port/src/engine/battle/move_effect_helpers.asm",
+      "why": "Scanner-reviewed 2026-07-15: HideSubstituteShowMonAnim from pret engine/battle/animations.asm has its selected single non-stub definition at dos_port/src/engine/battle/move_effect_helpers.asm; preserve this per-label split."
+    },
+    "ReshowSubstituteAnim": {
+      "port_file": "dos_port/src/engine/battle/move_effect_helpers.asm",
+      "why": "Scanner-reviewed 2026-07-15: ReshowSubstituteAnim from pret engine/battle/animations.asm has its selected single non-stub definition at dos_port/src/engine/battle/move_effect_helpers.asm; preserve this per-label split."
+    },
+    "CopyUncompressedPicToHL": {
+      "port_file": "dos_port/src/home/pics.asm",
+      "why": "Scanner-reviewed 2026-07-15: CopyUncompressedPicToHL from pret engine/battle/init_battle.asm has its selected single non-stub definition at dos_port/src/home/pics.asm; preserve this per-label split."
+    },
+    "LoadMonBackPic": {
+      "port_file": "dos_port/src/home/pics.asm",
+      "why": "Scanner-reviewed 2026-07-15: LoadMonBackPic from pret engine/battle/init_battle.asm has its selected single non-stub definition at dos_port/src/home/pics.asm; preserve this per-label split."
+    },
+    "EffectCallBattleCore": {
+      "port_file": "dos_port/src/engine/battle/move_effect_helpers.asm",
+      "why": "Scanner-reviewed 2026-07-15: EffectCallBattleCore from pret engine/battle/move_effects/reflect_light_screen.asm has its selected single non-stub definition at dos_port/src/engine/battle/move_effect_helpers.asm; preserve this per-label split."
+    },
+    "DuplicateBitsTable": {
+      "port_file": "dos_port/src/home/pics.asm",
+      "why": "Scanner-reviewed 2026-07-15: DuplicateBitsTable from pret engine/battle/scale_sprites.asm has its selected single non-stub definition at dos_port/src/home/pics.asm; preserve this per-label split."
+    },
+    "ScaleFirstThreeSpriteColumnsByTwo": {
+      "port_file": "dos_port/src/home/pics.asm",
+      "why": "Scanner-reviewed 2026-07-15: ScaleFirstThreeSpriteColumnsByTwo from pret engine/battle/scale_sprites.asm has its selected single non-stub definition at dos_port/src/home/pics.asm; preserve this per-label split."
+    },
+    "ScaleLastSpriteColumnByTwo": {
+      "port_file": "dos_port/src/home/pics.asm",
+      "why": "Scanner-reviewed 2026-07-15: ScaleLastSpriteColumnByTwo from pret engine/battle/scale_sprites.asm has its selected single non-stub definition at dos_port/src/home/pics.asm; preserve this per-label split."
+    },
+    "ScalePixelsByTwo": {
+      "port_file": "dos_port/src/home/pics.asm",
+      "why": "Scanner-reviewed 2026-07-15: ScalePixelsByTwo from pret engine/battle/scale_sprites.asm has its selected single non-stub definition at dos_port/src/home/pics.asm; preserve this per-label split."
+    },
+    "ScaleSpriteByTwo": {
+      "port_file": "dos_port/src/home/pics.asm",
+      "why": "Scanner-reviewed 2026-07-15: ScaleSpriteByTwo from pret engine/battle/scale_sprites.asm has its selected single non-stub definition at dos_port/src/home/pics.asm; preserve this per-label split."
+    },
+    "DisplayUsedMoveText": {
+      "port_file": "dos_port/src/engine/battle/core.asm",
+      "why": "Scanner-reviewed 2026-07-15: DisplayUsedMoveText from pret engine/battle/used_move_text.asm has its selected single non-stub definition at dos_port/src/engine/battle/core.asm; preserve this per-label split."
+    },
+    "LoadPokedexTilePatterns": {
+      "port_file": "dos_port/src/engine/menus/pokedex.asm",
+      "why": "Scanner-reviewed 2026-07-15: LoadPokedexTilePatterns from pret engine/gfx/load_pokedex_tiles.asm has its selected single non-stub definition at dos_port/src/engine/menus/pokedex.asm; preserve this per-label split."
+    },
+    "Func_4a7b": {
+      "port_file": "dos_port/src/engine/gfx/sprite_oam.asm",
+      "why": "Scanner-reviewed 2026-07-15: Func_4a7b from pret engine/gfx/sprite_oam.asm has its selected single non-stub definition at dos_port/src/engine/gfx/sprite_oam.asm; preserve this per-label split."
+    },
+    "GetSpriteScreenXY": {
+      "port_file": "dos_port/src/engine/gfx/sprite_oam.asm",
+      "why": "Scanner-reviewed 2026-07-15: GetSpriteScreenXY from pret engine/gfx/sprite_oam.asm has its selected single non-stub definition at dos_port/src/engine/gfx/sprite_oam.asm; preserve this per-label split."
+    },
+    "PrepareOAMData": {
+      "port_file": "dos_port/src/engine/gfx/sprite_oam.asm",
+      "why": "Scanner-reviewed 2026-07-15: PrepareOAMData from pret engine/gfx/sprite_oam.asm has its selected single non-stub definition at dos_port/src/engine/gfx/sprite_oam.asm; preserve this per-label split."
+    },
+    "Evolution_BackAndForthAnim": {
+      "port_file": "dos_port/src/engine/pokemon/evolution.asm",
+      "why": "Scanner-reviewed 2026-07-15: Evolution_BackAndForthAnim from pret engine/movie/evolution.asm has its selected single non-stub definition at dos_port/src/engine/pokemon/evolution.asm; preserve this per-label split."
+    },
+    "Evolution_CheckForCancel": {
+      "port_file": "dos_port/src/engine/pokemon/evolution.asm",
+      "why": "Scanner-reviewed 2026-07-15: Evolution_CheckForCancel from pret engine/movie/evolution.asm has its selected single non-stub definition at dos_port/src/engine/pokemon/evolution.asm; preserve this per-label split."
+    },
+    "EvolveMon": {
+      "port_file": "dos_port/src/engine/pokemon/evolution.asm",
+      "why": "Scanner-reviewed 2026-07-15: EvolveMon from pret engine/movie/evolution.asm has its selected single non-stub definition at dos_port/src/engine/pokemon/evolution.asm; preserve this per-label split."
+    },
+    "DisplayTitleScreen": {
+      "port_file": "dos_port/src/movie/title.asm",
+      "why": "Scanner-reviewed 2026-07-15: DisplayTitleScreen from pret engine/movie/title.asm has its selected single non-stub definition at dos_port/src/movie/title.asm; preserve this per-label split."
+    },
+    "DoTitleScreenFunction": {
+      "port_file": "dos_port/src/movie/title.asm",
+      "why": "Scanner-reviewed 2026-07-15: DoTitleScreenFunction from pret engine/movie/title.asm has its selected single non-stub definition at dos_port/src/movie/title.asm; preserve this per-label split."
+    },
+    "IncrementResetCounter": {
+      "port_file": "dos_port/src/movie/title.asm",
+      "why": "Scanner-reviewed 2026-07-15: IncrementResetCounter from pret engine/movie/title.asm has its selected single non-stub definition at dos_port/src/movie/title.asm; preserve this per-label split."
+    },
+    "PrepareTitleScreen": {
+      "port_file": "dos_port/src/movie/title.asm",
+      "why": "Scanner-reviewed 2026-07-15: PrepareTitleScreen from pret engine/movie/title.asm has its selected single non-stub definition at dos_port/src/movie/title.asm; preserve this per-label split."
+    },
+    "TitleScreenCopyTileMapToVRAM": {
+      "port_file": "dos_port/src/movie/title.asm",
+      "why": "Scanner-reviewed 2026-07-15: TitleScreenCopyTileMapToVRAM from pret engine/movie/title.asm has its selected single non-stub definition at dos_port/src/movie/title.asm; preserve this per-label split."
+    },
+    "LoadYellowTitleScreenGFX": {
+      "port_file": "dos_port/src/movie/title.asm",
+      "why": "Scanner-reviewed 2026-07-15: LoadYellowTitleScreenGFX from pret engine/movie/title_yellow.asm has its selected single non-stub definition at dos_port/src/movie/title.asm; preserve this per-label split."
+    },
+    "TitleScreenPikachuEyesOAMData": {
+      "port_file": "dos_port/src/movie/title.asm",
+      "why": "Scanner-reviewed 2026-07-15: TitleScreenPikachuEyesOAMData from pret engine/movie/title_yellow.asm has its selected single non-stub definition at dos_port/src/movie/title.asm; preserve this per-label split."
+    },
+    "TitleScreen_PlacePikaSpeechBubble": {
+      "port_file": "dos_port/src/movie/title.asm",
+      "why": "Scanner-reviewed 2026-07-15: TitleScreen_PlacePikaSpeechBubble from pret engine/movie/title_yellow.asm has its selected single non-stub definition at dos_port/src/movie/title.asm; preserve this per-label split."
+    },
+    "TitleScreen_PlacePikachu": {
+      "port_file": "dos_port/src/movie/title.asm",
+      "why": "Scanner-reviewed 2026-07-15: TitleScreen_PlacePikachu from pret engine/movie/title_yellow.asm has its selected single non-stub definition at dos_port/src/movie/title.asm; preserve this per-label split."
+    },
+    "TitleScreen_PlacePokemonLogo": {
+      "port_file": "dos_port/src/movie/title.asm",
+      "why": "Scanner-reviewed 2026-07-15: TitleScreen_PlacePokemonLogo from pret engine/movie/title_yellow.asm has its selected single non-stub definition at dos_port/src/movie/title.asm; preserve this per-label split."
+    },
+    "MoveTileBlockMapPointerEast": {
+      "port_file": "dos_port/src/engine/overworld/overworld.asm",
+      "why": "Scanner-reviewed 2026-07-15: MoveTileBlockMapPointerEast from pret engine/overworld/advance_player_sprite.asm has its selected single non-stub definition at dos_port/src/engine/overworld/overworld.asm; preserve this per-label split."
+    },
+    "MoveTileBlockMapPointerNorth": {
+      "port_file": "dos_port/src/engine/overworld/overworld.asm",
+      "why": "Scanner-reviewed 2026-07-15: MoveTileBlockMapPointerNorth from pret engine/overworld/advance_player_sprite.asm has its selected single non-stub definition at dos_port/src/engine/overworld/overworld.asm; preserve this per-label split."
+    },
+    "MoveTileBlockMapPointerSouth": {
+      "port_file": "dos_port/src/engine/overworld/overworld.asm",
+      "why": "Scanner-reviewed 2026-07-15: MoveTileBlockMapPointerSouth from pret engine/overworld/advance_player_sprite.asm has its selected single non-stub definition at dos_port/src/engine/overworld/overworld.asm; preserve this per-label split."
+    },
+    "MoveTileBlockMapPointerWest": {
+      "port_file": "dos_port/src/engine/overworld/overworld.asm",
+      "why": "Scanner-reviewed 2026-07-15: MoveTileBlockMapPointerWest from pret engine/overworld/advance_player_sprite.asm has its selected single non-stub definition at dos_port/src/engine/overworld/overworld.asm; preserve this per-label split."
+    },
+    "_AdvancePlayerSprite": {
+      "port_file": "dos_port/src/engine/overworld/overworld.asm",
+      "why": "Scanner-reviewed 2026-07-15: _AdvancePlayerSprite from pret engine/overworld/advance_player_sprite.asm has its selected single non-stub definition at dos_port/src/engine/overworld/overworld.asm; preserve this per-label split."
+    },
+    "PlayerStepOutFromDoor": {
+      "port_file": "dos_port/src/engine/overworld/overworld.asm",
+      "why": "Scanner-reviewed 2026-07-15: PlayerStepOutFromDoor from pret engine/overworld/auto_movement.asm has its selected single non-stub definition at dos_port/src/engine/overworld/overworld.asm; preserve this per-label split."
+    },
+    "IsPlayerStandingOnDoorTile": {
+      "port_file": "dos_port/src/engine/overworld/overworld.asm",
+      "why": "Scanner-reviewed 2026-07-15: IsPlayerStandingOnDoorTile from pret engine/overworld/doors.asm has its selected single non-stub definition at dos_port/src/engine/overworld/overworld.asm; preserve this per-label split."
+    },
+    "EmotionBubble": {
+      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
+      "why": "Scanner-reviewed 2026-07-15: EmotionBubble from pret engine/overworld/emotion_bubbles.asm has its selected single non-stub definition at dos_port/src/engine/overworld/trainer_engine.asm; preserve this per-label split."
+    },
+    "EmotionBubblesOAMBlock": {
+      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
+      "why": "Scanner-reviewed 2026-07-15: EmotionBubblesOAMBlock from pret engine/overworld/emotion_bubbles.asm has its selected single non-stub definition at dos_port/src/engine/overworld/trainer_engine.asm; preserve this per-label split."
+    },
+    "PlayerJumpingYScreenCoords": {
+      "port_file": "dos_port/src/engine/overworld/ledges.asm",
+      "why": "Scanner-reviewed 2026-07-15: PlayerJumpingYScreenCoords from pret engine/overworld/player_animations.asm has its selected single non-stub definition at dos_port/src/engine/overworld/ledges.asm; preserve this per-label split."
+    },
+    "_HandleMidJump": {
+      "port_file": "dos_port/src/engine/overworld/ledges.asm",
+      "why": "Scanner-reviewed 2026-07-15: _HandleMidJump from pret engine/overworld/player_animations.asm has its selected single non-stub definition at dos_port/src/engine/overworld/ledges.asm; preserve this per-label split."
+    },
+    "IsPlayerFacingEdgeOfMap": {
+      "port_file": "dos_port/src/engine/overworld/warp_check.asm",
+      "why": "Scanner-reviewed 2026-07-15: IsPlayerFacingEdgeOfMap from pret engine/overworld/player_state.asm has its selected single non-stub definition at dos_port/src/engine/overworld/warp_check.asm; preserve this per-label split."
+    },
+    "IsWarpTileInFrontOfPlayer": {
+      "port_file": "dos_port/src/engine/overworld/warp_check.asm",
+      "why": "Scanner-reviewed 2026-07-15: IsWarpTileInFrontOfPlayer from pret engine/overworld/player_state.asm has its selected single non-stub definition at dos_port/src/engine/overworld/warp_check.asm; preserve this per-label split."
+    },
+    "DetectCollisionBetweenSprites": {
+      "port_file": "dos_port/src/engine/overworld/movement.asm",
+      "why": "Scanner-reviewed 2026-07-15: DetectCollisionBetweenSprites from pret engine/overworld/sprite_collisions.asm has its selected single non-stub definition at dos_port/src/engine/overworld/movement.asm; preserve this per-label split."
+    },
+    "SetSpriteCollisionValues": {
+      "port_file": "dos_port/src/engine/overworld/movement.asm",
+      "why": "Scanner-reviewed 2026-07-15: SetSpriteCollisionValues from pret engine/overworld/sprite_collisions.asm has its selected single non-stub definition at dos_port/src/engine/overworld/movement.asm; preserve this per-label split."
+    },
+    "UpdateNonPlayerSprite": {
+      "port_file": "dos_port/src/engine/overworld/movement.asm",
+      "why": "Scanner-reviewed 2026-07-15: UpdateNonPlayerSprite from pret engine/overworld/sprite_collisions.asm has its selected single non-stub definition at dos_port/src/engine/overworld/movement.asm; preserve this per-label split."
+    },
+    "_UpdateSprites": {
+      "port_file": "dos_port/src/engine/overworld/movement.asm",
+      "why": "Scanner-reviewed 2026-07-15: _UpdateSprites from pret engine/overworld/sprite_collisions.asm has its selected single non-stub definition at dos_port/src/engine/overworld/movement.asm; preserve this per-label split."
+    },
+    "LoadTilesetHeader": {
+      "port_file": "dos_port/src/engine/overworld/overworld.asm",
+      "why": "Scanner-reviewed 2026-07-15: LoadTilesetHeader from pret engine/overworld/tilesets.asm has its selected single non-stub definition at dos_port/src/engine/overworld/overworld.asm; preserve this per-label split."
+    },
+    "CheckPlayerIsInFrontOfSprite": {
+      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
+      "why": "Scanner-reviewed 2026-07-15: CheckPlayerIsInFrontOfSprite from pret engine/overworld/trainer_sight.asm has its selected single non-stub definition at dos_port/src/engine/overworld/trainer_engine.asm; preserve this per-label split."
+    },
+    "CheckSpriteCanSeePlayer": {
+      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
+      "why": "Scanner-reviewed 2026-07-15: CheckSpriteCanSeePlayer from pret engine/overworld/trainer_sight.asm has its selected single non-stub definition at dos_port/src/engine/overworld/trainer_engine.asm; preserve this per-label split."
+    },
+    "GetSpriteDataPointer": {
+      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
+      "why": "Scanner-reviewed 2026-07-15: GetSpriteDataPointer from pret engine/overworld/trainer_sight.asm has its selected single non-stub definition at dos_port/src/engine/overworld/trainer_engine.asm; preserve this per-label split."
+    },
+    "ReadTrainerScreenPosition": {
+      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
+      "why": "Scanner-reviewed 2026-07-15: ReadTrainerScreenPosition from pret engine/overworld/trainer_sight.asm has its selected single non-stub definition at dos_port/src/engine/overworld/trainer_engine.asm; preserve this per-label split."
+    },
+    "TrainerEngage": {
+      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
+      "why": "Scanner-reviewed 2026-07-15: TrainerEngage from pret engine/overworld/trainer_sight.asm has its selected single non-stub definition at dos_port/src/engine/overworld/trainer_engine.asm; preserve this per-label split."
+    },
+    "TrainerWalkUpToPlayer": {
+      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
+      "why": "Scanner-reviewed 2026-07-15: TrainerWalkUpToPlayer from pret engine/overworld/trainer_sight.asm has its selected single non-stub definition at dos_port/src/engine/overworld/trainer_engine.asm; preserve this per-label split."
+    },
+    "_GetSpritePosition1": {
+      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
+      "why": "Scanner-reviewed 2026-07-15: _GetSpritePosition1 from pret engine/overworld/trainer_sight.asm has its selected single non-stub definition at dos_port/src/engine/overworld/trainer_engine.asm; preserve this per-label split."
+    },
+    "_GetSpritePosition2": {
+      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
+      "why": "Scanner-reviewed 2026-07-15: _GetSpritePosition2 from pret engine/overworld/trainer_sight.asm has its selected single non-stub definition at dos_port/src/engine/overworld/trainer_engine.asm; preserve this per-label split."
+    },
+    "_SetSpritePosition1": {
+      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
+      "why": "Scanner-reviewed 2026-07-15: _SetSpritePosition1 from pret engine/overworld/trainer_sight.asm has its selected single non-stub definition at dos_port/src/engine/overworld/trainer_engine.asm; preserve this per-label split."
+    },
+    "_SetSpritePosition2": {
+      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
+      "why": "Scanner-reviewed 2026-07-15: _SetSpritePosition2 from pret engine/overworld/trainer_sight.asm has its selected single non-stub definition at dos_port/src/engine/overworld/trainer_engine.asm; preserve this per-label split."
+    },
+    "ResetPikachuOverworldStateFlag2": {
+      "port_file": "dos_port/src/engine/overworld/pikachu.asm",
+      "why": "Scanner-reviewed 2026-07-15: ResetPikachuOverworldStateFlag2 from pret engine/pikachu/pikachu_follow.asm has its selected single non-stub definition at dos_port/src/engine/overworld/pikachu.asm; preserve this per-label split."
+    },
+    "ShouldPikachuSpawn": {
+      "port_file": "dos_port/src/engine/overworld/pikachu.asm",
+      "why": "Scanner-reviewed 2026-07-15: ShouldPikachuSpawn from pret engine/pikachu/pikachu_follow.asm has its selected single non-stub definition at dos_port/src/engine/overworld/pikachu.asm; preserve this per-label split."
+    },
+    "TrySpawnPikachu": {
+      "port_file": "dos_port/src/engine/overworld/pikachu.asm",
+      "why": "Scanner-reviewed 2026-07-15: TrySpawnPikachu from pret engine/pikachu/pikachu_follow.asm has its selected single non-stub definition at dos_port/src/engine/overworld/pikachu.asm; preserve this per-label split."
+    },
+    "HMMoveArray": {
+      "port_file": "dos_port/src/engine/pokemon/knows_hm_move.asm",
+      "why": "Scanner-reviewed 2026-07-15: HMMoveArray from pret engine/pokemon/bills_pc.asm has its selected single non-stub definition at dos_port/src/engine/pokemon/knows_hm_move.asm; preserve this per-label split."
+    },
+    "KnowsHMMove": {
+      "port_file": "dos_port/src/engine/pokemon/knows_hm_move.asm",
+      "why": "Scanner-reviewed 2026-07-15: KnowsHMMove from pret engine/pokemon/bills_pc.asm has its selected single non-stub definition at dos_port/src/engine/pokemon/knows_hm_move.asm; preserve this per-label split."
+    },
+    "ClearSprites": {
+      "port_file": "dos_port/src/home/sprites.asm",
+      "why": "Scanner-reviewed 2026-07-15: ClearSprites from pret home/clear_sprites.asm has its selected single non-stub definition at dos_port/src/home/sprites.asm; preserve this per-label split."
+    },
+    "HideSprites": {
+      "port_file": "dos_port/src/home/sprites.asm",
+      "why": "Scanner-reviewed 2026-07-15: HideSprites from pret home/clear_sprites.asm has its selected single non-stub definition at dos_port/src/home/sprites.asm; preserve this per-label split."
+    },
+    "CopyData": {
+      "port_file": "dos_port/src/home/copy_data.asm",
+      "why": "Scanner-reviewed 2026-07-15: CopyData from pret home/copy.asm has its selected single non-stub definition at dos_port/src/home/copy_data.asm; preserve this per-label split."
+    },
+    "FarCopyData": {
+      "port_file": "dos_port/src/home/copy_data.asm",
+      "why": "Scanner-reviewed 2026-07-15: FarCopyData from pret home/copy.asm has its selected single non-stub definition at dos_port/src/home/copy_data.asm; preserve this per-label split."
+    },
+    "DelayFrames": {
+      "port_file": "dos_port/src/video/frame.asm",
+      "why": "Scanner-reviewed 2026-07-15: DelayFrames from pret home/delay.asm has its selected single non-stub definition at dos_port/src/video/frame.asm; preserve this per-label split."
+    },
+    "CheckForHiddenEventOrBookshelfOrCardKeyDoor": {
+      "port_file": "dos_port/src/home/hidden_events.asm",
+      "why": "Scanner-reviewed 2026-07-15: CheckForHiddenEventOrBookshelfOrCardKeyDoor from pret home/hidden_events.asm has its selected single non-stub definition at dos_port/src/home/hidden_events.asm; preserve this per-label split."
+    },
+    "UpdateCinnabarGymGateTileBlocks": {
+      "port_file": "dos_port/src/home/hidden_events.asm",
+      "why": "Scanner-reviewed 2026-07-15: UpdateCinnabarGymGateTileBlocks from pret home/hidden_events.asm has its selected single non-stub definition at dos_port/src/home/hidden_events.asm; preserve this per-label split."
+    },
+    "ClearVram": {
+      "port_file": "dos_port/src/home/init.asm",
+      "why": "Scanner-reviewed 2026-07-15: ClearVram from pret home/init.asm has its selected single non-stub definition at dos_port/src/home/init.asm; preserve this per-label split."
+    },
+    "Init": {
+      "port_file": "dos_port/src/home/init.asm",
+      "why": "Scanner-reviewed 2026-07-15: Init from pret home/init.asm has its selected single non-stub definition at dos_port/src/home/init.asm; preserve this per-label split."
+    },
+    "StopAllSounds": {
+      "port_file": "dos_port/src/home/init.asm",
+      "why": "Scanner-reviewed 2026-07-15: StopAllSounds from pret home/init.asm has its selected single non-stub definition at dos_port/src/home/init.asm; preserve this per-label split."
+    },
+    "IsKeyItem": {
+      "port_file": "dos_port/src/home/item_predicates.asm",
+      "why": "Scanner-reviewed 2026-07-15: IsKeyItem from pret home/item.asm has its selected single non-stub definition at dos_port/src/home/item_predicates.asm; preserve this per-label split."
+    },
+    "GetItemPrice": {
+      "port_file": "dos_port/src/home/item_price.asm",
+      "why": "Scanner-reviewed 2026-07-15: GetItemPrice from pret home/item_price.asm has its selected single non-stub definition at dos_port/src/home/item_price.asm; preserve this per-label split."
+    },
+    "DisableLCD": {
+      "port_file": "dos_port/src/video/lcd_control.asm",
+      "why": "Scanner-reviewed 2026-07-15: DisableLCD from pret home/lcd.asm has its selected single non-stub definition at dos_port/src/video/lcd_control.asm; preserve this per-label split."
+    },
+    "EnableLCD": {
+      "port_file": "dos_port/src/video/lcd_control.asm",
+      "why": "Scanner-reviewed 2026-07-15: EnableLCD from pret home/lcd.asm has its selected single non-stub definition at dos_port/src/video/lcd_control.asm; preserve this per-label split."
+    },
+    "LoadFontTilePatterns": {
+      "port_file": "dos_port/src/home/load_font.asm",
+      "why": "Scanner-reviewed 2026-07-15: LoadFontTilePatterns from pret home/load_font.asm has its selected single non-stub definition at dos_port/src/home/load_font.asm; preserve this per-label split."
+    },
+    "LoadHpBarAndStatusTilePatterns": {
+      "port_file": "dos_port/src/home/load_font.asm",
+      "why": "Scanner-reviewed 2026-07-15: LoadHpBarAndStatusTilePatterns from pret home/load_font.asm has its selected single non-stub definition at dos_port/src/home/load_font.asm; preserve this per-label split."
+    },
+    "LoadTextBoxTilePatterns": {
+      "port_file": "dos_port/src/home/load_font.asm",
+      "why": "Scanner-reviewed 2026-07-15: LoadTextBoxTilePatterns from pret home/load_font.asm has its selected single non-stub definition at dos_port/src/home/load_font.asm; preserve this per-label split."
+    },
+    "CopyDataUntil": {
+      "port_file": "dos_port/src/home/copy_data.asm",
+      "why": "Scanner-reviewed 2026-07-15: CopyDataUntil from pret home/move_mon.asm has its selected single non-stub definition at dos_port/src/home/copy_data.asm; preserve this per-label split."
+    },
+    "HMMoves": {
+      "port_file": "dos_port/src/home/item_predicates.asm",
+      "why": "Scanner-reviewed 2026-07-15: HMMoves from pret home/names.asm has its selected single non-stub definition at dos_port/src/home/item_predicates.asm; preserve this per-label split."
+    },
+    "IsItemHM": {
+      "port_file": "dos_port/src/home/item_predicates.asm",
+      "why": "Scanner-reviewed 2026-07-15: IsItemHM from pret home/names.asm has its selected single non-stub definition at dos_port/src/home/item_predicates.asm; preserve this per-label split."
+    },
+    "IsMoveHM": {
+      "port_file": "dos_port/src/home/item_predicates.asm",
+      "why": "Scanner-reviewed 2026-07-15: IsMoveHM from pret home/names.asm has its selected single non-stub definition at dos_port/src/home/item_predicates.asm; preserve this per-label split."
+    },
+    "GetName": {
+      "port_file": "dos_port/src/home/names.asm",
+      "why": "Scanner-reviewed 2026-07-15: GetName from pret home/names2.asm has its selected single non-stub definition at dos_port/src/home/names.asm; preserve this per-label split."
+    },
+    "NamePointers": {
+      "port_file": "dos_port/src/home/names.asm",
+      "why": "Scanner-reviewed 2026-07-15: NamePointers from pret home/names2.asm has its selected single non-stub definition at dos_port/src/home/names.asm; preserve this per-label split."
+    },
+    "RunNPCMovementScript": {
+      "port_file": "dos_port/src/engine/overworld/overworld.asm",
+      "why": "Scanner-reviewed 2026-07-15: RunNPCMovementScript from pret home/npc_movement.asm has its selected single non-stub definition at dos_port/src/engine/overworld/overworld.asm; preserve this per-label split."
+    },
+    "TextScriptEnd": {
+      "port_file": "dos_port/src/home/overworld_text.asm",
+      "why": "Scanner-reviewed 2026-07-15: TextScriptEnd from pret home/overworld_text.asm has its selected single non-stub definition at dos_port/src/home/overworld_text.asm; preserve this per-label split."
+    },
+    "TextScriptEndingText": {
+      "port_file": "dos_port/src/home/overworld_text.asm",
+      "why": "Scanner-reviewed 2026-07-15: TextScriptEndingText from pret home/overworld_text.asm has its selected single non-stub definition at dos_port/src/home/overworld_text.asm; preserve this per-label split."
+    },
+    "CalcDifference": {
+      "port_file": "dos_port/src/home/pathfinding.asm",
+      "why": "Scanner-reviewed 2026-07-15: CalcDifference from pret home/pathfinding.asm has its selected single non-stub definition at dos_port/src/home/pathfinding.asm; preserve this per-label split."
+    },
+    "DivideBytes": {
+      "port_file": "dos_port/src/home/pathfinding.asm",
+      "why": "Scanner-reviewed 2026-07-15: DivideBytes from pret home/pathfinding.asm has its selected single non-stub definition at dos_port/src/home/pathfinding.asm; preserve this per-label split."
+    },
+    "MoveSprite": {
+      "port_file": "dos_port/src/home/pathfinding.asm",
+      "why": "Scanner-reviewed 2026-07-15: MoveSprite from pret home/pathfinding.asm has its selected single non-stub definition at dos_port/src/home/pathfinding.asm; preserve this per-label split."
+    },
+    "MoveSprite_": {
+      "port_file": "dos_port/src/home/pathfinding.asm",
+      "why": "Scanner-reviewed 2026-07-15: MoveSprite_ from pret home/pathfinding.asm has its selected single non-stub definition at dos_port/src/home/pathfinding.asm; preserve this per-label split."
+    },
+    "AlignSpriteDataCentered": {
+      "port_file": "dos_port/src/home/pics.asm",
+      "why": "Scanner-reviewed 2026-07-15: AlignSpriteDataCentered from pret home/pics.asm has its selected single non-stub definition at dos_port/src/home/pics.asm; preserve this per-label split."
+    },
+    "InterlaceMergeSpriteBuffers": {
+      "port_file": "dos_port/src/home/pics.asm",
+      "why": "Scanner-reviewed 2026-07-15: InterlaceMergeSpriteBuffers from pret home/pics.asm has its selected single non-stub definition at dos_port/src/home/pics.asm; preserve this per-label split."
+    },
+    "LoadMonFrontSprite": {
+      "port_file": "dos_port/src/home/pics.asm",
+      "why": "Scanner-reviewed 2026-07-15: LoadMonFrontSprite from pret home/pics.asm has its selected single non-stub definition at dos_port/src/home/pics.asm; preserve this per-label split."
+    },
+    "LoadUncompressedSpriteData": {
+      "port_file": "dos_port/src/home/pics.asm",
+      "why": "Scanner-reviewed 2026-07-15: LoadUncompressedSpriteData from pret home/pics.asm has its selected single non-stub definition at dos_port/src/home/pics.asm; preserve this per-label split."
+    },
+    "UncompressMonSprite": {
+      "port_file": "dos_port/src/home/pics.asm",
+      "why": "Scanner-reviewed 2026-07-15: UncompressMonSprite from pret home/pics.asm has its selected single non-stub definition at dos_port/src/home/pics.asm; preserve this per-label split."
+    },
+    "ZeroSpriteBuffer": {
+      "port_file": "dos_port/src/home/pics.asm",
+      "why": "Scanner-reviewed 2026-07-15: ZeroSpriteBuffer from pret home/pics.asm has its selected single non-stub definition at dos_port/src/home/pics.asm; preserve this per-label split."
+    },
+    "ApplyPikachuMovementData": {
+      "port_file": "dos_port/src/engine/overworld/pikachu.asm",
+      "why": "Scanner-reviewed 2026-07-15: ApplyPikachuMovementData from pret home/pikachu.asm has its selected single non-stub definition at dos_port/src/engine/overworld/pikachu.asm; preserve this per-label split."
+    },
+    "CheckPikachuFollowingPlayer": {
+      "port_file": "dos_port/src/engine/overworld/pikachu.asm",
+      "why": "Scanner-reviewed 2026-07-15: CheckPikachuFollowingPlayer from pret home/pikachu.asm has its selected single non-stub definition at dos_port/src/engine/overworld/pikachu.asm; preserve this per-label split."
+    },
+    "DisablePikachuFollowingPlayer": {
+      "port_file": "dos_port/src/engine/overworld/pikachu.asm",
+      "why": "Scanner-reviewed 2026-07-15: DisablePikachuFollowingPlayer from pret home/pikachu.asm has its selected single non-stub definition at dos_port/src/engine/overworld/pikachu.asm; preserve this per-label split."
+    },
+    "DisablePikachuOverworldSpriteDrawing": {
+      "port_file": "dos_port/src/engine/overworld/pikachu.asm",
+      "why": "Scanner-reviewed 2026-07-15: DisablePikachuOverworldSpriteDrawing from pret home/pikachu.asm has its selected single non-stub definition at dos_port/src/engine/overworld/pikachu.asm; preserve this per-label split."
+    },
+    "EnablePikachuFollowingPlayer": {
+      "port_file": "dos_port/src/engine/overworld/pikachu.asm",
+      "why": "Scanner-reviewed 2026-07-15: EnablePikachuFollowingPlayer from pret home/pikachu.asm has its selected single non-stub definition at dos_port/src/engine/overworld/pikachu.asm; preserve this per-label split."
+    },
+    "EnablePikachuOverworldSpriteDrawing": {
+      "port_file": "dos_port/src/engine/overworld/pikachu.asm",
+      "why": "Scanner-reviewed 2026-07-15: EnablePikachuOverworldSpriteDrawing from pret home/pikachu.asm has its selected single non-stub definition at dos_port/src/engine/overworld/pikachu.asm; preserve this per-label split."
+    },
+    "Func_1510": {
+      "port_file": "dos_port/src/engine/overworld/pikachu.asm",
+      "why": "Scanner-reviewed 2026-07-15: Func_1510 from pret home/pikachu.asm has its selected single non-stub definition at dos_port/src/engine/overworld/pikachu.asm; preserve this per-label split."
+    },
+    "Func_151d": {
+      "port_file": "dos_port/src/engine/overworld/pikachu.asm",
+      "why": "Scanner-reviewed 2026-07-15: Func_151d from pret home/pikachu.asm has its selected single non-stub definition at dos_port/src/engine/overworld/pikachu.asm; preserve this per-label split."
+    },
+    "GetPikachuMovementScriptByte": {
+      "port_file": "dos_port/src/engine/overworld/pikachu.asm",
+      "why": "Scanner-reviewed 2026-07-15: GetPikachuMovementScriptByte from pret home/pikachu.asm has its selected single non-stub definition at dos_port/src/engine/overworld/pikachu.asm; preserve this per-label split."
+    },
+    "Pikachu_IsInArray": {
+      "port_file": "dos_port/src/engine/overworld/pikachu.asm",
+      "why": "Scanner-reviewed 2026-07-15: Pikachu_IsInArray from pret home/pikachu.asm has its selected single non-stub definition at dos_port/src/engine/overworld/pikachu.asm; preserve this per-label split."
+    },
+    "SpawnPikachu": {
+      "port_file": "dos_port/src/engine/overworld/pikachu.asm",
+      "why": "Scanner-reviewed 2026-07-15: SpawnPikachu from pret home/pikachu.asm has its selected single non-stub definition at dos_port/src/engine/overworld/pikachu.asm; preserve this per-label split."
+    },
+    "CountDownIgnoreInputBitReset": {
+      "port_file": "dos_port/src/home/play_time.asm",
+      "why": "Scanner-reviewed 2026-07-15: CountDownIgnoreInputBitReset from pret home/play_time.asm has its selected single non-stub definition at dos_port/src/home/play_time.asm; preserve this per-label split."
+    },
+    "TrackPlayTime": {
+      "port_file": "dos_port/src/home/play_time.asm",
+      "why": "Scanner-reviewed 2026-07-15: TrackPlayTime from pret home/play_time.asm has its selected single non-stub definition at dos_port/src/home/play_time.asm; preserve this per-label split."
+    },
+    "RestoreMapTextPointer": {
+      "port_file": "dos_port/src/home/map_text_pointer.asm",
+      "why": "Scanner-reviewed 2026-07-15: RestoreMapTextPointer from pret home/predef_text.asm has its selected single non-stub definition at dos_port/src/home/map_text_pointer.asm; preserve this per-label split."
+    },
+    "SetMapTextPointer": {
+      "port_file": "dos_port/src/home/map_text_pointer.asm",
+      "why": "Scanner-reviewed 2026-07-15: SetMapTextPointer from pret home/predef_text.asm has its selected single non-stub definition at dos_port/src/home/map_text_pointer.asm; preserve this per-label split."
+    },
+    "FarPrintText": {
+      "port_file": "dos_port/src/home/text_script.asm",
+      "why": "Scanner-reviewed 2026-07-15: FarPrintText from pret home/print_num.asm has its selected single non-stub definition at dos_port/src/home/text_script.asm; preserve this per-label split."
+    },
+    "PrintLetterDelay": {
+      "port_file": "dos_port/src/home/text.asm",
+      "why": "Scanner-reviewed 2026-07-15: PrintLetterDelay from pret home/print_text.asm has its selected single non-stub definition at dos_port/src/home/text.asm; preserve this per-label split."
+    },
+    "ReloadMapSpriteTilePatterns": {
+      "port_file": "dos_port/src/home/reload_sprites.asm",
+      "why": "Scanner-reviewed 2026-07-15: ReloadMapSpriteTilePatterns from pret home/reload_sprites.asm has its selected single non-stub definition at dos_port/src/home/reload_sprites.asm; preserve this per-label split."
+    },
+    "PlaceNextChar": {
+      "port_file": "dos_port/src/home/text.asm",
+      "why": "Scanner-reviewed 2026-07-15: PlaceNextChar from pret home/text.asm has its selected single non-stub definition at dos_port/src/home/text.asm; preserve this per-label split."
+    },
+    "PlaceString": {
+      "port_file": "dos_port/src/home/text.asm",
+      "why": "Scanner-reviewed 2026-07-15: PlaceString from pret home/text.asm has its selected single non-stub definition at dos_port/src/home/text.asm; preserve this per-label split."
+    },
+    "TextBoxBorder": {
+      "port_file": "dos_port/src/home/text.asm",
+      "why": "Scanner-reviewed 2026-07-15: TextBoxBorder from pret home/text.asm has its selected single non-stub definition at dos_port/src/home/text.asm; preserve this per-label split."
+    },
+    "TextCommandProcessor": {
+      "port_file": "dos_port/src/home/text.asm",
+      "why": "Scanner-reviewed 2026-07-15: TextCommandProcessor from pret home/text.asm has its selected single non-stub definition at dos_port/src/home/text.asm; preserve this per-label split."
+    },
+    "GetTrainerInformation": {
+      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
+      "why": "Scanner-reviewed 2026-07-15: GetTrainerInformation from pret home/trainers2.asm has its selected single non-stub definition at dos_port/src/engine/overworld/trainer_engine.asm; preserve this per-label split."
+    },
+    "GetTrainerName": {
+      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
+      "why": "Scanner-reviewed 2026-07-15: GetTrainerName from pret home/trainers2.asm has its selected single non-stub definition at dos_port/src/engine/overworld/trainer_engine.asm; preserve this per-label split."
+    },
+    "IsFightingJessieJames": {
+      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
+      "why": "Scanner-reviewed 2026-07-15: IsFightingJessieJames from pret home/trainers2.asm has its selected single non-stub definition at dos_port/src/engine/overworld/trainer_engine.asm; preserve this per-label split."
+    },
+    "DecodeNybble0Table": {
+      "port_file": "dos_port/src/home/uncompress.asm",
+      "why": "Scanner-reviewed 2026-07-15: DecodeNybble0Table from pret home/uncompress.asm has its selected single non-stub definition at dos_port/src/home/uncompress.asm; preserve this per-label split."
+    },
+    "DecodeNybble0TableFlipped": {
+      "port_file": "dos_port/src/home/uncompress.asm",
+      "why": "Scanner-reviewed 2026-07-15: DecodeNybble0TableFlipped from pret home/uncompress.asm has its selected single non-stub definition at dos_port/src/home/uncompress.asm; preserve this per-label split."
+    },
+    "DecodeNybble1Table": {
+      "port_file": "dos_port/src/home/uncompress.asm",
+      "why": "Scanner-reviewed 2026-07-15: DecodeNybble1Table from pret home/uncompress.asm has its selected single non-stub definition at dos_port/src/home/uncompress.asm; preserve this per-label split."
+    },
+    "DecodeNybble1TableFlipped": {
+      "port_file": "dos_port/src/home/uncompress.asm",
+      "why": "Scanner-reviewed 2026-07-15: DecodeNybble1TableFlipped from pret home/uncompress.asm has its selected single non-stub definition at dos_port/src/home/uncompress.asm; preserve this per-label split."
+    },
+    "DifferentialDecodeNybble": {
+      "port_file": "dos_port/src/home/uncompress.asm",
+      "why": "Scanner-reviewed 2026-07-15: DifferentialDecodeNybble from pret home/uncompress.asm has its selected single non-stub definition at dos_port/src/home/uncompress.asm; preserve this per-label split."
+    },
+    "LengthEncodingOffsetList": {
+      "port_file": "dos_port/src/home/uncompress.asm",
+      "why": "Scanner-reviewed 2026-07-15: LengthEncodingOffsetList from pret home/uncompress.asm has its selected single non-stub definition at dos_port/src/home/uncompress.asm; preserve this per-label split."
+    },
+    "MoveToNextBufferPosition": {
+      "port_file": "dos_port/src/home/uncompress.asm",
+      "why": "Scanner-reviewed 2026-07-15: MoveToNextBufferPosition from pret home/uncompress.asm has its selected single non-stub definition at dos_port/src/home/uncompress.asm; preserve this per-label split."
+    },
+    "NybbleReverseTable": {
+      "port_file": "dos_port/src/home/uncompress.asm",
+      "why": "Scanner-reviewed 2026-07-15: NybbleReverseTable from pret home/uncompress.asm has its selected single non-stub definition at dos_port/src/home/uncompress.asm; preserve this per-label split."
+    },
+    "ReadNextInputBit": {
+      "port_file": "dos_port/src/home/uncompress.asm",
+      "why": "Scanner-reviewed 2026-07-15: ReadNextInputBit from pret home/uncompress.asm has its selected single non-stub definition at dos_port/src/home/uncompress.asm; preserve this per-label split."
+    },
+    "ReadNextInputByte": {
+      "port_file": "dos_port/src/home/uncompress.asm",
+      "why": "Scanner-reviewed 2026-07-15: ReadNextInputByte from pret home/uncompress.asm has its selected single non-stub definition at dos_port/src/home/uncompress.asm; preserve this per-label split."
+    },
+    "ResetSpriteBufferPointers": {
+      "port_file": "dos_port/src/home/uncompress.asm",
+      "why": "Scanner-reviewed 2026-07-15: ResetSpriteBufferPointers from pret home/uncompress.asm has its selected single non-stub definition at dos_port/src/home/uncompress.asm; preserve this per-label split."
+    },
+    "ReverseNybble": {
+      "port_file": "dos_port/src/home/uncompress.asm",
+      "why": "Scanner-reviewed 2026-07-15: ReverseNybble from pret home/uncompress.asm has its selected single non-stub definition at dos_port/src/home/uncompress.asm; preserve this per-label split."
+    },
+    "SpriteDifferentialDecode": {
+      "port_file": "dos_port/src/home/uncompress.asm",
+      "why": "Scanner-reviewed 2026-07-15: SpriteDifferentialDecode from pret home/uncompress.asm has its selected single non-stub definition at dos_port/src/home/uncompress.asm; preserve this per-label split."
+    },
+    "StoreSpriteOutputPointer": {
+      "port_file": "dos_port/src/home/uncompress.asm",
+      "why": "Scanner-reviewed 2026-07-15: StoreSpriteOutputPointer from pret home/uncompress.asm has its selected single non-stub definition at dos_port/src/home/uncompress.asm; preserve this per-label split."
+    },
+    "UncompressSpriteData": {
+      "port_file": "dos_port/src/home/uncompress.asm",
+      "why": "Scanner-reviewed 2026-07-15: UncompressSpriteData from pret home/uncompress.asm has its selected single non-stub definition at dos_port/src/home/uncompress.asm; preserve this per-label split."
+    },
+    "UncompressSpriteDataLoop": {
+      "port_file": "dos_port/src/home/uncompress.asm",
+      "why": "Scanner-reviewed 2026-07-15: UncompressSpriteDataLoop from pret home/uncompress.asm has its selected single non-stub definition at dos_port/src/home/uncompress.asm; preserve this per-label split."
+    },
+    "UnpackSprite": {
+      "port_file": "dos_port/src/home/uncompress.asm",
+      "why": "Scanner-reviewed 2026-07-15: UnpackSprite from pret home/uncompress.asm has its selected single non-stub definition at dos_port/src/home/uncompress.asm; preserve this per-label split."
+    },
+    "UnpackSpriteMode2": {
+      "port_file": "dos_port/src/home/uncompress.asm",
+      "why": "Scanner-reviewed 2026-07-15: UnpackSpriteMode2 from pret home/uncompress.asm has its selected single non-stub definition at dos_port/src/home/uncompress.asm; preserve this per-label split."
+    },
+    "WriteSpriteBitsToBuffer": {
+      "port_file": "dos_port/src/home/uncompress.asm",
+      "why": "Scanner-reviewed 2026-07-15: WriteSpriteBitsToBuffer from pret home/uncompress.asm has its selected single non-stub definition at dos_port/src/home/uncompress.asm; preserve this per-label split."
+    },
+    "XorSpriteChunks": {
+      "port_file": "dos_port/src/home/uncompress.asm",
+      "why": "Scanner-reviewed 2026-07-15: XorSpriteChunks from pret home/uncompress.asm has its selected single non-stub definition at dos_port/src/home/uncompress.asm; preserve this per-label split."
+    },
+    "_UncompressSpriteData": {
+      "port_file": "dos_port/src/home/uncompress.asm",
+      "why": "Scanner-reviewed 2026-07-15: _UncompressSpriteData from pret home/uncompress.asm has its selected single non-stub definition at dos_port/src/home/uncompress.asm; preserve this per-label split."
+    },
+    "UpdateSprites": {
+      "port_file": "dos_port/src/engine/overworld/movement.asm",
+      "why": "Scanner-reviewed 2026-07-15: UpdateSprites from pret home/update_sprites.asm has its selected single non-stub definition at dos_port/src/engine/overworld/movement.asm; preserve this per-label split."
+    },
+    "DelayFrame": {
+      "port_file": "dos_port/src/video/frame.asm",
+      "why": "Scanner-reviewed 2026-07-15: DelayFrame from pret home/vblank.asm has its selected single non-stub definition at dos_port/src/video/frame.asm; preserve this per-label split."
     }
   },
   "suppress": [

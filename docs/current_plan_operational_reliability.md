@@ -107,7 +107,7 @@ regression without comparing its categorized inventory.
   and an explicit static-blind-spot report.
 - [x] Reject local pret-label shadows and boilerplate file-level relocations in
   `lint_pret_labels --strict-claims`; default lint remains usable during migration.
-- [ ] Migrate legacy weak relocations to enumerated, evidenced label entries.
+- [x] Migrate legacy weak relocations to enumerated, evidenced label entries.
 - [ ] Manually migrate legacy free-form `DEVIATION`, `STUB`, `BUG`, and `GLITCH`
   comments to the structured form, verifying each claim rather than bulk-rewriting.
 - [ ] Migrate the strict-lint inventory of likely hand-encoded rendered strings
