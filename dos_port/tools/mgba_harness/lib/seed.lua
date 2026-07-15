@@ -352,6 +352,35 @@ function seed.pokedex(sym)
 	console:log("seed: pokedex written (all seen, scattered owned)")
 end
 
+-- The pokedex_list gate's exact dex bits (RunPokedexTest, engine/menus/
+-- pokedex.asm): the WHOLE owned+seen block zeroed, then seen bytes $F7/$0F
+-- (mons 1-12 seen EXCEPT mon 4 CHARMANDER — the one unseen row in the visible
+-- window is the only thing that draws the "----------" placeholder) and owned
+-- byte $55 (mons 1,3,5,7). NOT seed.pokedex (the debug_new_game "all seen,
+-- scattered owned" pattern) — this golden pins the gate's own bits, and
+-- wPokedex is a compared region.
+function seed.pokedex_list(sym)
+	local owned = sym:addr("wPokedexOwned")
+	local seen = sym:addr("wPokedexSeen")
+	write_bytes(owned, string.rep("\x00", sym:addr("wPokedexSeenEnd") - owned))
+	emu:write8(seen, 0xF7)
+	emu:write8(seen + 1, 0x0F)
+	emu:write8(owned, 0x55)
+	console:log("seed: pokedex_list bits (seen $F7/$0F, owned $55)")
+end
+
+-- The pokedex_entry gate's exact dex bits (RunPokedexEntryTest): ONLY RHYDON
+-- (dex 112 → bit 111 → byte 13 bit 7) seen + owned. The seen bit is what lets
+-- the real CONTENTS list open the mon's side menu on this side.
+function seed.pokedex_entry(sym)
+	local owned = sym:addr("wPokedexOwned")
+	local seen = sym:addr("wPokedexSeen")
+	write_bytes(owned, string.rep("\x00", sym:addr("wPokedexSeenEnd") - owned))
+	emu:write8(seen + 13, 1 << 7)
+	emu:write8(owned + 13, 1 << 7)
+	console:log("seed: pokedex_entry bits (RHYDON dex 112 seen+owned)")
+end
+
 -- wPlayerMoney (3-byte BCD) — the port's "give max money" (debug_party.asm:182).
 function seed.money(sym, bcd)
 	bcd = bcd or "\x99\x99\x99"

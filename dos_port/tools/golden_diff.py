@@ -510,6 +510,55 @@ SCENARIOS = {
             ],
         },
     },
+    "pokedex_list": {
+        "flags": "DEBUG_G1=1",
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
+        "window": (0, 0),
+        "stride": 20,
+        "masks": {
+            "vram": [
+                (256 + 0x03, "flower tile: VRAM tile-DATA animation, phase depends on dump frame"),
+                (256 + 0x14, "water tile: VRAM tile-DATA animation, phase depends on dump frame"),
+            ],
+        },
+    },
+    "pokedex_entry": {
+        "flags": "DEBUG_G2=1",
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
+        "window": (0, 0),
+        "stride": 20,
+        "masks": {
+            "vram": [
+                (256 + 0x03, "flower tile: VRAM tile-DATA animation, phase depends on dump frame"),
+                (256 + 0x14, "water tile: VRAM tile-DATA animation, phase depends on dump frame"),
+            ],
+        },
+    },
+    "naming_screen": {
+        "flags": "DEBUG_NAMINGSCREEN=1",
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
+        "window": (0, 0),
+        "stride": 20,
+        # The two sides reach the same screen by different routes — the golden
+        # inside the intro (NEW GAME → NEW NAME; the real screen only exists
+        # there), the port gate from its overworld boot — so slots the screen
+        # itself does not load hold different stale data by construction.
+        # Everything the screen DOES load is compared and matches: the party-
+        # sprite icon gfx (both sides run LoadMonPartySpriteGfx), the border/
+        # HP-bar/ED tiles ($16x), and the font. Measured first diff 2026-07-15:
+        # the diverging vChars0 slots were EXACTLY the ICON_GAP_SLOTS set.
+        "masks": {
+            "vram": (
+                [(s, "vChars0 icon GAP slots (never written by the mon-icon loader): "
+                     "port holds boot overworld OBJ leftovers, golden fresh-boot zeros; "
+                     "OAM is hidden on both sides") for s in ICON_GAP_SLOTS]
+                + [(s, "vChars2 $01-$5F undisplayed stale data: golden holds Oak-speech "
+                       "remnants (intro route), port the boot overworld tileset; the "
+                       "naming screen's displayed ids are $60+ (borders/ED) and $80+ "
+                       "(font), all compared") for s in range(256 + 0x01, 256 + 0x60)]
+            ),
+        },
+    },
     "start_menu": {
         "flags": "DEBUG_STARTMENU=1",
         "wram_skip": dict(_NONBATTLE_WRAM_SKIP),

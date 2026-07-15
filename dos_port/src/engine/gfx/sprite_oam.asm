@@ -83,9 +83,16 @@ PrepareOAMData:
     mov al, [ebp + W_UPDATE_SPRITES_ENABLED]
     cmp al, 1
     je .updateEnabled
-    cmp al, 0xFF                         ; cp -1 / ret nz
-    jne .ret
-    mov [ebp + W_UPDATE_SPRITES_ENABLED], al    ; stays $ff
+    ; pret: `dec a / jr z,.updateEnabled / cp -1 / ret nz / ld [wUpdateSpritesEnabled],a
+    ; / jp HideSprites` — after the dec, `cp -1` is true when the value WAS 0, and the
+    ; $FF (= the decremented a) is stored back. So 0 means "hide all sprites once, then
+    ; park at $FF"; $FF means "already hidden/frozen, do nothing". The old port code
+    ; compared the RAW value against $FF — the exact inversion — so a menu writing 0
+    ; froze stale OAM instead of hiding it (caught by the pokedex_list golden, whose
+    ; GB-side OAM is all Y=160).
+    test al, al
+    jnz .ret                             ; $FF (or anything but 0/1): frozen, no-op
+    mov byte [ebp + W_UPDATE_SPRITES_ENABLED], 0xFF
     call HideSprites
     jmp .ret
 

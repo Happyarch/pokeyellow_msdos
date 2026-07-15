@@ -875,6 +875,17 @@ endif
 ifdef DEBUG_G2
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_G2
+# The entry page prints its flavor atomically (the dex leaves the letter delay
+# off) and parks at the <PAGE> ▼ — the only state the real game pauses in, and
+# what the pokedex_entry golden captures. AUTOKEY_QUIET: never press anything
+# (an A would advance to flavor page 2); AutoKeyDrive photographs the parked
+# page at AUTOKEY_DUMP_FRAME and exits (PDEX_AREA / DEBUG_I1 pattern).
+# `?=` + passthrough, not a hardcode — the M-120 lesson.
+# 215, not 200: the parked ▼ blinks 30 ON / 8 OFF (gb_memmap.inc ARROW_*_FRAMES)
+# and the golden dumps with it ON (just drawn); frame 200 landed in an OFF
+# window (measured: the one-cell (16,18) first diff), 215 sits mid-ON.
+AUTOKEY_DUMP_FRAME ?= 215
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_QUIET -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 NASMFLAGS += -D SKIP_TITLE
 endif
 # Link-menu gates (menus S8 package I). I1: run Func_f531b, the Colosseum cup-select
@@ -1255,7 +1266,7 @@ goldencheck:
 FIDELITY_SCENARIOS := status_p1 status_p2 start_menu overworld_pallet party_menu bag_menu \
                       sign_pallet item_tm_teach item_stone_evolve item_potion_use \
                       battle_intro battle_menu move_selection ball_catch \
-                      options_menu trainer_card
+                      options_menu trainer_card pokedex_list pokedex_entry naming_screen
 fidelity:
 	@fail=0; for s in $(FIDELITY_SCENARIOS); do \
 		tools/goldencheck.sh $$s || fail=1; \

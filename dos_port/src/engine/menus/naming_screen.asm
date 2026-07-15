@@ -358,7 +358,14 @@ DisplayNamingScreen:
     jnz .submitNickname
     call PrintNicknameAndUnderscores
 .dPadReturnPoint:
-    mov dword [menu_item_step], GBSCR_W   ; single-spaced: 1 row/item (see header note)
+    ; DOUBLE-spaced: pret's PlaceMenuCursor default is `ld bc, 40` = 2 rows/item
+    ; (home/window.asm:139; the single-spaced 20 needs BIT_DOUBLE_SPACED_MENU in
+    ; hUILayoutFlags, which nothing on the naming path sets). The old GBSCR_W here
+    ; ("single-spaced: 1 row/item") was a confident wrong comment: it parked the ▶
+    ; on the grid box's TOP BORDER (row 4) instead of the A row (row 5) and made
+    ; every row below drift further off the letters — caught by the naming_screen
+    ; golden, which shows pret's cursor at (1,5).
+    mov dword [menu_item_step], 2 * GBSCR_W
     call PlaceMenuCursor
 .inputLoop:
     ; pret saves/restores wCurrentMenuItem around the animation (which uses it as
@@ -823,15 +830,34 @@ section .text
 global RunNamingScreenTest
 extern LoadFontTilePatterns            ; gfx/load_font.asm
 extern DumpBackbuffer                  ; debug/debug_dump.asm — writes FRAME.BIN + exits
+extern SeedDeterministicPlayerIdentity ; engine/debug/debug_party.asm — "RED"/id 0 (seed.lua spec)
 
 section .text
 RunNamingScreenTest:
+    ; identity = the golden spec ("RED" / id 0): the bare boot leaves wPlayerID
+    ; as InitPlayerData's RNG roll (F-5 class), and the naming_screen golden
+    ; compares wPlayerName/wPlayerID (the golden pokes the same spec before its
+    ; dump — at the real NEW NAME screen the name is not chosen yet)
+    call SeedDeterministicPlayerIdentity
     mov dword [text_row_stride], GBSCR_W
 
     ; font glyphs into vFont/vChars2
     or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
+
+    ; mirror the real DisplayNamingScreen's draw sequence (this gate used to
+    ; skip the clear + loaders it performs, so the dump showed boot-leftover
+    ; map bytes around the box — a harness-only artifact, RunPokedexTest
+    ; precedent — and left VRAM banks the real screen loads unloaded):
+    ;   ClearScreen / LoadHpBarAndStatusTilePatterns / LoadEDTile /
+    ;   SetMonPartySpriteOrigin + LoadMonPartySpriteGfx  (naming_screen.asm:318-329)
+    call ClearScreen
+    call LoadHpBarAndStatusTilePatterns
     call LoadEDTile
+    mov eax, UI_NAMING_SCREEN_WX - 7
+    mov ebx, UI_NAMING_SCREEN_WY
+    call SetMonPartySpriteOrigin
+    call LoadMonPartySpriteGfx
 
     ; no stray OAM over the full-screen menu
     call ClearSprites
@@ -857,7 +883,7 @@ RunNamingScreenTest:
 
     call PrintAlphabet
     call PrintNicknameAndUnderscores
-    mov dword [menu_item_step], GBSCR_W
+    mov dword [menu_item_step], 2 * GBSCR_W  ; pret default 2 rows/item (.dPadReturnPoint note)
     call PlaceMenuCursor
 
     call naming_mirror

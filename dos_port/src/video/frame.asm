@@ -276,8 +276,18 @@ present_windows:
 ; sprite updates. In: EBP = GB memory base. All registers preserved.
 ; ---------------------------------------------------------------------------
 update_oam:
+    ; pret runs PrepareOAMData every VBlank and lets IT interpret the flag:
+    ; 1 = rebuild shadow OAM, 0 = HideSprites once then park at $FF, $FF = no-op.
+    ; The old `!= 1 → done` gate made the 0→hide protocol unreachable, so a menu
+    ; takeover writing 0 froze whatever OAM the overworld last published (see
+    ; PrepareOAMData's protocol note). $FF still skips the DMA: shadow already
+    ; mirrors OAM there, and the port's direct-OAM screens (title, party-menu
+    ; icons, ball rows) rely on not being re-copied over.
     cmp byte [ebp + W_UPDATE_SPRITES_ENABLED], 1
+    je .run
+    cmp byte [ebp + W_UPDATE_SPRITES_ENABLED], 0
     jne .done
+.run:
     call PrepareOAMData
     pushad
     lea esi, [ebp + W_SHADOW_OAM]

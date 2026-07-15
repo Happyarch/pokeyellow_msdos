@@ -2,9 +2,9 @@
 
 > **STATUS — OPEN.** Planned 2026-07-13 in the `worktree-fidelity-expansion` worktree;
 > **folded back into master 2026-07-14** and rectified against it in the same pass.
-> Stages 0, 1a, 1b, 1c and **2** are DONE (see the ledger); **3/4 remain — see the
-> SESSION HANDOFF section immediately below.** Work stage-by-stage, update the Coverage
-> table, append findings, commit per stage.
+> Stages 0, 1a, 1b, 1c, **2 and 3** are DONE (see the ledger); **only Stage 4 remains —
+> see the SESSION HANDOFF section immediately below.** Work stage-by-stage, update the
+> Coverage table, append findings, commit per stage.
 >
 > **Filed as `docs/current_plan_fidelity_expansion.md`** — the active-plan path. The
 > fold-back (`9dc7fed2`) wrote it into `docs/plans/` instead, the *completed*-plan directory,
@@ -20,57 +20,56 @@
 > Skills to load before starting: `build-and-debug` + `faithfulness-review` (always),
 > `asm-translation` (before touching `debug_dump.asm`), `project-conventions`.
 
-## 🤝 SESSION HANDOFF (written 2026-07-15, end of the Stage-3-first-half session)
+## 🤝 SESSION HANDOFF (written 2026-07-15, end of the Stage-3-second-half session)
 
-The Stage-3 session ended after the stage's first half **by design** (context hygiene — the
-user scoped the session to it). If you are the fresh session picking this up: this section is
-your starting state. Everything below it is still binding; read "⚠ Read this first" next,
-then the Stage 3/4 specs.
+If you are the fresh session picking this up: this section is your starting state.
+Everything below it is still binding; read "⚠ Read this first" next, then the Stage 4 spec.
 
-**Where master stands after the Stage-3-first-half commit (`25a15b7a`):**
-- `make -C dos_port fidelity` is **16/16** green: status_p1/p2, start_menu, overworld_pallet,
+**Where master stands after the Stage-3-second-half commit:**
+- `make -C dos_port fidelity` is **19/19** green: status_p1/p2, start_menu, overworld_pallet,
   party_menu, bag_menu, sign_pallet, item_tm_teach, item_stone_evolve, item_potion_use,
-  battle_intro, battle_menu, move_selection, ball_catch, **options_menu, trainer_card**.
+  battle_intro, battle_menu, move_selection, ball_catch, options_menu, trainer_card,
+  **pokedex_list, pokedex_entry, naming_screen**.
 - All goldens are committed and regenerate byte-identically (verified ×2 this session for the
-  two new ones). `tools/lint_pret_labels` exits 0; `tools/update_label_db` output is in the
+  three new ones). `tools/lint_pret_labels` exits 0; `tools/update_label_db` output is in the
   commit.
+- The second half fixed three real port bugs its first diffs surfaced — **F-22** (the
+  wUpdateSpritesEnabled=0 hide-sprites protocol, mistranslated AND unreachable), **F-23**
+  (dex `<PAGE>` ▼ absent from the compared scratch), **F-24** (naming cursor step
+  single-spaced under a confident wrong comment) — see the findings; the F-22 fix touches
+  `frame.asm:update_oam` + `sprite_oam.asm:PrepareOAMData` and the whole suite was re-run
+  green on top of it.
 
-**What remains: Stage 3 second half — `pokedex_list` (DEBUG_G1), `pokedex_entry` (DEBUG_G2),
-`naming_screen` (DEBUG_NAMINGSCREEN); then Stage 4 (tiers, `goldens-verify`, mask policy,
-skill updates, archive this plan).** Specs are in the Stage 3/4 sections below — re-measure
-anyway; the standing rule (master is truth, comments are not) applies to this file too.
+**What remains: Stage 4 only** (tiers, `goldens-verify`, mask policy, skill updates, then
+archive this plan). Spec in the Stage 4 section below — re-measure anyway; the standing rule
+(master is truth, comments are not) applies to this file too. Stage-4 notes from this session:
+- The bag_menu (11,18) blink-phase mask (see "Why this exists") is still the timing-coupled
+  mask Stage 4 should retire by pinning the dump frame on both sides. `pokedex_entry` shows
+  the pattern to copy: its port dump frame is pinned to the ▼'s ON phase
+  (`AUTOKEY_DUMP_FRAME ?= 215`, Makefile comment explains the 30-ON/8-OFF math) and the
+  golden dumps at the frame the page text appears — zero masks needed.
+- The naming_screen masks (ICON_GAP_SLOTS + vChars2 $01-$5F) are route-difference masks with
+  measured whys, not finding-owned masks — the mask policy should classify them as such.
 
-**Machinery the first half left you (reuse, don't rebuild):**
-- Differ: the `"stride": 20` key is **implemented and revert-proofed** (see the Stage-3 notes
-  for the RED output). Full-screen takeover screens draw `W_TILEMAP` as a GB-shaped stride-20
-  scratch → entry = `"stride": 20`, `"window": (0, 0)`. **Measure each remaining screen's
-  actual draw stride from its source** — the plan table missed that options.asm is stride-20
-  too (`GBSCR_W equ 20`); check pokedex.asm / naming_screen.asm the same way before writing
-  their entries.
-- Both new scenarios reuse start_menu's walk to the (8,8) Pallet spawn before opening the
-  menu, so vChars2 holds the same outdoor tileset as the port's boot under the takeover.
-  The pokédex/naming scenarios likely want the same shape (naming_screen's port gate may
-  differ — its table row says "new game → NEW NAME"; measure).
-- Port gates that reach a real screen from the bare boot need
-  `call SeedDeterministicPlayerIdentity` (F-5 class: bare-boot `wPlayerID` is an RNG roll —
-  it bit both gates this session). Check RunPokedexTest / RunPokedexEntryTest /
-  RunNamingScreenTest for the same gap before goldening them; also mirror any gate seeds
-  into the scenario (the pokedex gate's scatter pattern already has `seed.pokedex`).
+**Machinery available (reuse, don't rebuild):**
 - Single-scenario golden generation without the full `make goldens` sweep:
   `GOLDEN_DIR=$PWD/dos_port/tests/goldens PKMN_SYM=../pokeyellow_msdos-pret-golden/pokeyellow.sym \
    dos_port/tools/mgba_build/mgba-lua-runner -s dos_port/tools/mgba_harness/scenarios/<s>.lua \
-   ../pokeyellow_msdos-pret-golden/pokeyellow.gbc` (run from the repo root).
+   ../pokeyellow_msdos-pret-golden/pokeyellow.gbc` (run from the repo root). For a
+  determinism re-check, point `GOLDEN_DIR` at a scratch dir and `sha1sum` against the
+  committed golden.
 - Differ-only revert-proofs without a rebuild: `tools/run_headless.sh "<FLAGS>" <outdir>`
-  once, then `tools/golden_diff.py <s> --gbstate <outdir>/GBSTATE.BIN` repeatedly.
-- `M-113` (`ClearScreenArea` hardwired to stride 40) did NOT surface in the first half
-  (neither screen calls it) — it is still open and still expected to bite a stride-20 screen
-  that clears a sub-area. The pokédex screens are the prime suspects. Fail on it, don't mask.
+  once, then `python3 tools/golden_diff.py <s> --gbstate <outdir>/GBSTATE.BIN` repeatedly.
+- `M-113` (`ClearScreenArea` hardwired to stride 40) STILL did not surface — the second
+  half's stride-20 screens dodge it with inline clears (deliberate, pre-existing) and the
+  naming gate's one call is single-row. Still open; fail on it, don't mask, whenever a
+  stride-20 screen clears a multi-row sub-area through it.
 
 **Session mechanics for the fresh session:**
 - **Stigmergy**: register (`context_open` + `root_register` with your host session id), then
   re-acquire claims for what you touch (`golden_diff.py`, `mgba_harness/**`, `Makefile`, the
-  gate source files, this file). The first-half session released its claims (120–126) at
-  handoff. The shared-memory key `fidelity-expansion-stage2-handoff` mirrors this section.
+  skill files, this file). The second-half session released its claims (127–131) at handoff.
+  The shared-memory key `fidelity-expansion-stage2-handoff` mirrors this section.
 - **Codex agent `r-1a5ca7a94daa`** (mailbox thread 13, session since ended): its
   scenario-manifest consolidation (`scenario_manifest.json` + `validate_scenarios.py`,
   describing only the 10 Stage-1c scenarios — it will report drift for the battle + menu
@@ -222,7 +221,7 @@ dialog scratch **shares bytes with the map mirror** — F-13.)
 | 1b | `sign_pallet` streamed-text scenario | **DONE** | `60990fd5`, `b99c0199`, `1c346cbb`, `189fbb59` | the port could not read a sign AT ALL (F-6 data, F-7 code) — both fixed. Plus **F-10** (text-id-0 collision) and **F-12** (the gate stood on an unreachable tile), both found during the fold-back. Golden passes 360/360 tilemap cells incl. the whole dialog box; `make fidelity` 7/7. **Never was blocked**: F-9 was a misdiagnosis, F-8 does not reproduce. New OPEN findings it surfaced: **F-13** (scratch/mirror overlap), **F-14** (▼ after `done`). |
 | 1c | Item datastruct scenarios ×3 | **DONE** | (this commit) | Differ class `datastruct` + `item_tm_teach` / `item_stone_evolve` / `item_potion_use`; `make fidelity` 10/10. First-ever observation of these gates (F-15) immediately caught a REAL port bug: **F-16** — the post-evolution stat recalc read the NEXT species' base stats (NINETALES got JIGGLYPUFF's). Fixed; golden-verified. M-8 did **not** surface (no priced list in these flows — see the stage notes). |
 | 2 | Battle convergence spec + battle_intro/battle_menu/move_selection + ball_catch | **DONE** | (this commit) | The spec battle (real loaders both sides, DVs $98 $76 overwritten, loader-derived parts asserted) converges end-to-end: `make fidelity` **14/14**. First diffs caught **four real port fidelity bugs** — **F-17** (enemy HUD drawn during the wild intro), **F-18** (dead $73 drawn over the HP-bar cap), **F-19** (enemy-gauge palette clones parked on LIVE glyphs incl. the battle ▼), **F-20** (player HP-bar cap $6C where battle uses $6D) — plus **F-21** (wLoadedMon staging + player-first HUD order omitted). Ball tiles moved to pret's OBJ ids $31–$34; ball OAM rows now zero all of $FE00 (GB DMA parity). `ball_catch` passes with **zero WRAM masks**. |
-| 3 | Menu scenarios ×5 + stride support | **HALF DONE** | (this commit) | First half: `"stride": 20` differ key (revert-proofed: wrong stride = 310/360 RED) + `options_menu` / `trainer_card`, both green — trainer_card with **zero tilemap/vram/oam/wram masks**, options_menu with only the flower-anim slot. `make fidelity` 16/16. Both port gates gained `SeedDeterministicPlayerIdentity` (F-5 class: bare-boot wPlayerID was an RNG roll). Second half remains: pokedex_list / pokedex_entry / naming_screen. |
+| 3 | Menu scenarios ×5 + stride support | **DONE** | `daf8164c` (first half), (this commit) | First half: `"stride": 20` differ key (revert-proofed: wrong stride = 310/360 RED) + `options_menu` / `trainer_card`, both green — trainer_card with **zero tilemap/vram/oam/wram masks**, options_menu with only the flower-anim slot. Both port gates gained `SeedDeterministicPlayerIdentity` (F-5 class: bare-boot wPlayerID was an RNG roll). Second half: `pokedex_list` / `pokedex_entry` / `naming_screen`, all green — `make fidelity` **19/19**. First diffs caught **three real port bugs**: **F-22** (the wUpdateSpritesEnabled=0 "hide sprites" protocol was mistranslated AND unreachable — menu takeovers froze stale OAM), **F-23** (the dex `<PAGE>` ▼ lived only in the window mirror, never in the compared wTileMap scratch, and never blinked), **F-24** (naming-screen cursor step was single-spaced under a confident wrong comment — the ▶ sat on the box border). Plus the G2 gate seeded owned-but-not-SEEN (its comment lied; the golden's real list navigation is what caught it) and its old dump point photographed a state the GB never pauses in. |
 | 4 | Cross-cut: tiers, goldens-verify, mask policy, skill updates | TODO | | |
 
 ---
@@ -571,8 +570,86 @@ support — see the stride-20 correction above. One mechanism serves both.)
   *does* clear a sub-area.
 - Determinism: both goldens regenerated ×2 → byte-identical sha1s
   (options_menu 850085a5…, trainer_card 5301bac3…).
-- **Second half remains:** pokedex_list (DEBUG_G1), pokedex_entry (DEBUG_G2),
-  naming_screen (DEBUG_NAMINGSCREEN) — specs in the table above.
+
+#### Stage 3, second half — DONE (pokedex_list + pokedex_entry + naming_screen). Execution notes
+
+- **All three screens are stride-20** (measured per the standing rule:
+  `RunPokedexTest` / `ShowPokedexDataInternal` / `RunNamingScreenTest` all set
+  `text_row_stride = GBSCR_W`) — differ entries `"stride": 20`, window (0,0).
+- **All three port gates gained `SeedDeterministicPlayerIdentity`** (the F-5
+  class the handoff predicted). The G2 gate also gained RHYDON's **SEEN** bit —
+  its comment said "seen + owned" while the code set owned only, and the golden
+  is what caught the lie: pret's CONTENTS list refuses to open an unseen mon's
+  side menu, so the mGBA scenario could not reach the page at all.
+- **`seed.pokedex` was the WRONG pattern for these goldens** — it is the
+  debug_new_game "all seen, scattered owned" spec. Two new gate-exact helpers:
+  `seed.pokedex_list` (zeroed dex, seen $F7/$0F, owned $55 — Charmander
+  deliberately unseen for the dashed-row path) and `seed.pokedex_entry` (only
+  RHYDON dex-112 seen+owned). `wPokedex` is compared, so the bits must match
+  the gate byte-for-byte.
+- **pokedex_list golden nav**: the (8,8) Pallet walk (vChars2 rationale as
+  options_menu) + `seed.set_event(EVENT_GOT_POKEDEX=37)` (navigation enablement
+  only — wEventFlags is not compared; the START menu hides POKéDEX without it)
+  → START→POKéDEX→"CONTENTS". First diff: **tilemap/VRAM/WRAM clean**; the only
+  divergence was OAM — which unmasked **F-22** (below). After that fix:
+  360/360, zero scenario masks beyond the standard flower/water pair.
+- **pokedex_entry: the plan table's dump point did not exist.** The dex prints
+  its flavor ATOMICALLY (letter delay off in the dex) — there is no
+  "HT/WT drawn, flavor not yet started" frame; the GB's only stable state is
+  page 1 fully printed, parked at the `<PAGE>` ▼. The old gate dump
+  (pre-flavor, right after DrawDexEntryOnScreen) photographed a state the real
+  game never pauses in. Gate reworked to the PDEX_AREA/DEBUG_I1 pattern: real
+  flavor print → park in the `<PAGE>` wait → `AUTOKEY_QUIET` +
+  `AUTOKEY_DUMP_FRAME ?= 215` (M-120-safe `?=`; 215 lands mid-ON of the ▼'s
+  30-ON/8-OFF blink — measured, frame 200 was in an OFF window). Golden:
+  scroll the 112-row list with held DOWN (RHYDON is the last row — cannot
+  overshoot), A, `ensure_text("A","HT")` (the side menu's "DATA" text is
+  always on screen, so a second `choose` could mis-scroll if the first A was
+  swallowed; ensure_text polls first), `wait_for_text("265")`, dump. Passes
+  with **zero scenario masks beyond flower/water** — the front pic, HT/WT and
+  the whole flavor page are compared (the plan's "pic-area mask à la
+  _STATUS_MASKS" premise was stale: both sides draw the same static pic).
+  Fixing the compared ▼ unmasked **F-23** (below).
+- **naming_screen golden** runs the intro route (NEW GAME → Oak speech → NEW
+  NAME — the real screen only exists there; no Pallet walk possible) and pokes
+  `seed.player` right before the dump (the name is not chosen yet at that
+  screen; the gate seeds the same spec). The gate now mirrors the real
+  `DisplayNamingScreen` draw sequence (ClearScreen + LoadHpBarAndStatusTilePatterns
+  + LoadEDTile + SetMonPartySpriteOrigin/LoadMonPartySpriteGfx) — it used to
+  skip the clear and loaders, showing boot-leftover map bytes around the box
+  (harness-only artifact, RunPokedexTest precedent). First diff caught
+  **F-24** (below) plus the expected route-difference VRAM leftovers, masked
+  as measured: the diverging vChars0 slots were EXACTLY the party_menu
+  `ICON_GAP_SLOTS` set (loader-untouched gaps: port = boot OBJ leftovers,
+  golden = fresh-boot zeros; OAM hidden both sides), plus vChars2 $01-$5F
+  (golden Oak-speech remnants vs port outdoor tileset; every displayed id —
+  $16x borders/ED, $18x+ font, icon gfx — is compared and matches).
+- **M-113 did not surface here either**: the dex page clear and the `<PAGE>`
+  clear are inline stride-20 loops (deliberate ClearScreenArea dodges, already
+  in master); the naming gate's only ClearScreenArea call is 1-row (stride
+  never applies). Still open for any stride-20 screen that clears a multi-row
+  sub-area through it.
+- **Seed-corruption revert-proof** (scenario capability, full goldencheck run):
+  flipping one bit of the port gate's owned byte ($55 → $57, marking mon 2
+  owned) went RED on all three comparators — the rendered ball glyph on mon 2's
+  list row, the OWN count digit, and the exact WRAM field by name — then was
+  reverted:
+
+  ```
+  TILEMAP: 2 mismatched cells (of 360), window at col 0 row 0, stride 20:
+    ( 5, 3) want $7F  ' ' | got $72  '“'
+    ( 5,18) want $FA  '4' | got $FB  '5'
+  WRAM: 1 mismatched fields:
+    wPokedex owned dex #1-#8: want $55 | got $57
+  FAIL pokedex_list: 3 unmasked divergences
+  ```
+
+- **F-22's revert-proof is its own first diff**: reverting the update_oam /
+  PrepareOAMData fix reproduces `OAM: 12 mismatched sprite entries (of 40)`
+  (golden all Y=160, port holding the frozen overworld player + NPC entries)
+  on pokedex_list verbatim.
+- Determinism: all three goldens regenerated ×2 → byte-identical sha1s
+  (pokedex_list 7bc095dc…, pokedex_entry 8fc40132…, naming_screen 23416b07…).
 
 ⚠ **Rectified — this stage's premises were the most damaged.** The original text told the
 executor to *expect* divergences and mask them, citing the menu-fidelity plan as authority
@@ -970,6 +1047,56 @@ with the **enemy's** level (core.asm:1969-1970); `DrawHUDsAndHPBars` draws **pla
 enemy-first. Invisible on screen; the battle_menu golden's `wLoadedMon` region caught all 14
 bytes. Both the staging and the order are now pret's (`battle_hud.asm`), with the
 order-is-load-bearing note at the call site.
+
+### F-22. The `wUpdateSpritesEnabled = 0` "hide sprites" protocol was mistranslated AND unreachable — menu takeovers froze stale OAM [FIXED — Stage 3 second half]
+
+pret runs `PrepareOAMData` every VBlank and lets IT interpret the flag: 1 =
+rebuild shadow OAM; **0 = HideSprites once, then park at $FF**; $FF = no-op
+(`engine/gfx/sprite_oam.asm:7-14` — after the `dec a`, `cp -1` is true when the
+value WAS 0, and the decremented $FF is stored back). The port broke this twice
+over: `frame.asm:update_oam` gated the whole pipeline on `== 1`, so
+`PrepareOAMData`'s protocol was dead code in the frame loop — and the port's
+`PrepareOAMData` compared the RAW value against $FF, the exact inversion. Net
+effect: every screen that wrote 0 (the pokédex, the naming screen, pret's own
+party-menu path…) froze whatever OAM the overworld last published, instead of
+hiding it. The port's party-menu icons and Stage 2's ball rows had been working
+around it with direct `$FE00` writes — those still work under the fix ($FF
+still skips the DMA).
+
+Caught by `pokedex_list`'s first diff: golden OAM all Y=160 (hidden), port
+holding 12 visible stale entries (the RED output is the OAM-protocol
+revert-proof — reverting the fix reproduces it verbatim). Fixed faithfully:
+`update_oam` now runs `PrepareOAMData` for values 1 AND 0 (then DMAs), and the
+inner branch hides on 0 → parks at $FF, as pret. options/trainer_card kept
+passing (their goldens' OAM is hidden/zero and the differ treats Y==0 and
+Y>=160 as equal); the full 19-scenario suite is green with the fix in.
+
+### F-23. The dex `<PAGE>` ▼ lived only in the window mirror — pret puts it IN wTileMap and blinks it there [FIXED — Stage 3 second half]
+
+(F-14's class, second instance.) pret `PageChar` writes `'▼'` with
+`ldcoord_a 18,16` into **wTileMap itself**, and `ManualTextScroll` →
+`WaitForTextScrollButtonPress` blinks that same cell. The port's
+`.dex_flavor_page` poked the arrow straight into `GB_TILEMAP1` and never
+blinked it — the screen showed a ▼ while the compared scratch byte read `' '`
+(the `pokedex_entry` golden's single-cell first diff). Fixed: `.handle_page`
+writes the ▼ into the stride-20 scratch at (18,16) before the wait (pret's own
+order), the wait blinks the scratch cell via `HandleDownArrowBlinkTiming` and
+re-mirrors that one cell into the window each frame, and the page clear that
+follows erases it exactly as pret's `ClearScreenArea` does.
+
+### F-24. The naming screen's cursor step was single-spaced under a confident wrong comment — the ▶ sat on the box border [FIXED — Stage 3 second half]
+
+pret `PlaceMenuCursor`'s default item step is `ld bc, 40` = **2 rows per item**
+(`home/window.asm:139`; single-spacing requires `BIT_DOUBLE_SPACED_MENU` in
+`hUILayoutFlags`, which nothing on the naming path sets). The port's
+`DisplayNamingScreen` set `menu_item_step = GBSCR_W` — annotated
+*"single-spaced: 1 row/item (see header note)"* — so the ▶ for the A row drew
+at (1,4), the grid box's TOP BORDER, instead of pret's (1,5), and every row
+below drifted further off the letters (`.pressedA` reads the tile right of the
+cursor, so typing from the drifted rows would pick border/blank tiles). The
+naming_screen golden's 2-cell first diff caught it; the earlier FRAME.BIN
+sign-offs had not — the misplaced ▶ reads as cosmetic noise in a PNG. Fixed at
+both sites (the live `.dPadReturnPoint` and the gate).
 
 ## Imported open findings from the menu-fidelity audit
 

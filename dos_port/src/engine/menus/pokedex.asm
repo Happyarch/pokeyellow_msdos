@@ -782,13 +782,12 @@ ShowPokedexDataInternal:
     pop eax                              ; pop af
     mov [ebp + wPokedexNum], al
     call DrawDexEntryOnScreen            ; CF set = mon is owned → print the flavor
-%ifdef DEBUG_G2
-    ; FRAME.BIN gate: dump the composited DATA page once the border + pic + HT/WT are
-    ; placed, BEFORE the flavor (whose <PAGE> break blocks on a button in a headless
-    ; run). DEVIATION(harness): DEBUG-only, never in a shipped build. Never returns.
-    call DelayFrame
-    call DumpBackbuffer
-%endif
+    ; DEBUG_G2's dump no longer happens here: the old pre-flavor hook photographed
+    ; a state the GB never pauses in (the real game prints the flavor ATOMICALLY —
+    ; the dex leaves the letter delay off — and parks at the <PAGE> ▼). The gate
+    ; now lets the real flavor print and park in its <PAGE> wait, and AutoKeyDrive
+    ; (AUTOKEY_QUIET, no presses) writes FRAME.BIN+GBSTATE.BIN at AUTOKEY_DUMP_FRAME
+    ; and exits — the PDEX_AREA / DEBUG_I1 pattern.
     jnc .waitForButtonPress              ; pret: call c, Pokedex_PrintFlavorTextAtRow11
     call Pokedex_PrintFlavorTextAtRow11
 .waitForButtonPress:
@@ -1258,6 +1257,7 @@ LoadPokedexTilePatterns:
 extern LoadFontTilePatterns            ; gfx/load_font.asm
 extern ClearSprites                    ; gfx/sprites.asm
 extern DumpBackbuffer                  ; debug/debug_dump.asm — writes FRAME.BIN + exits
+extern SeedDeterministicPlayerIdentity ; engine/debug/debug_party.asm — "RED"/id 0 (seed.lua spec)
 %endif
 
 %ifdef DEBUG_G1
@@ -1287,6 +1287,10 @@ RunPokedexTest:
     call DelayFrame
     jmp .hangArea
 %else
+    ; identity = the golden spec ("RED" / id 0): the bare boot leaves wPlayerID
+    ; as InitPlayerData's RNG roll (F-5 class — not even reproducible run to
+    ; run), and the pokedex_list golden compares wPlayerName/wPlayerID
+    call SeedDeterministicPlayerIdentity
     mov dword [text_row_stride], GBSCR_W
     mov dword [menu_item_step], 2 * GBSCR_W
     or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
@@ -1338,9 +1342,16 @@ RunPokedexTest:
 %ifdef DEBUG_G2
 global RunPokedexEntryTest
 RunPokedexEntryTest:
+    ; identity = the golden spec (F-5 class, same rationale as RunPokedexTest)
+    call SeedDeterministicPlayerIdentity
     mov byte [ebp + wPokedexNum], 1       ; RHYDON internal index (→ dex 112)
     mov byte [ebp + wCurPartySpecies], 1
-    ; mark RHYDON (dex 112) seen + owned: bit 111 → byte 13, bit 7
+    ; mark RHYDON (dex 112) seen + owned: bit 111 → byte 13, bit 7. The SEEN bit
+    ; is load-bearing for the golden: pret's CONTENTS list only opens a mon's
+    ; side menu if it is seen, so the mGBA scenario cannot reach this page
+    ; without it (the comment used to say "seen + owned" while the code set
+    ; owned only — the golden is what caught the lie).
+    or byte [ebp + wPokedexSeen  + 13], 1 << 7
     or byte [ebp + wPokedexOwned + 13], 1 << 7
     or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
@@ -1349,5 +1360,9 @@ RunPokedexEntryTest:
     mov byte [ebp + W_UPDATE_SPRITES_ENABLED], 0
     call ShowPokedexDataInternal
 .hangEntry:
+    ; DelayFrame (not a bare spin) so AutoKeyDrive keeps ticking even if
+    ; ShowPokedexDataInternal returns early — otherwise the autokey clock stops
+    ; and the dump never fires, which reads exactly like a crash (PDEX_AREA note).
+    call DelayFrame
     jmp .hangEntry
 %endif ; DEBUG_G2

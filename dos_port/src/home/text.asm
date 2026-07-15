@@ -207,6 +207,12 @@ global g_dex_flavor_active
 g_dex_flavor_active: db 0
 ; ▼ advance arrow position for the full-page pokédex window: pret ldcoord_a 18,16
 POKEDEX_ARROW_TILEMAP_OFFSET equ 16 * TILEMAP_W + 18
+; …and the same (18,16) in the stride-20 W_TILEMAP scratch — where pret's
+; PageChar actually writes it (`ld a,'▼' / ldcoord_a 18,16` into wTileMap) and
+; WaitForTextScrollButtonPress blinks it. The port used to place the arrow ONLY
+; in the GB_TILEMAP1 window copy, so the compared scratch byte read ' ' while
+; the screen showed a ▼ — caught by the pokedex_entry golden (F-14 class).
+POKEDEX_ARROW_SCRATCH_OFFSET equ W_TILEMAP + 16 * SCREEN_W_TILES + 18
 
 ; ---------------------------------------------------------------------------
 ; .text
@@ -457,18 +463,28 @@ manual_text_scroll:
 
 ; --- pokédex flavor page-break (<PAGE>): full-page window, no dialog hijack ---
 .dex_flavor_page:
+    ; The ▼ is already in the W_TILEMAP scratch at (18,16) — .handle_page wrote
+    ; it there as pret's PageChar does — so the full-page mirror carries it into
+    ; the window. The wait then BLINKS the scratch cell (pret: ManualTextScroll →
+    ; WaitForTextScrollButtonPress blinking hlcoord 18,16 of wTileMap) and
+    ; re-mirrors that one cell so the display blinks too.
     call dex_flavor_full_mirror          ; show the current full page in the window
-    ; ▼ at the pokédex page position (row 16, col 18), written straight into the
-    ; window source (the full-page mirror above already ran, so it survives).
-    mov byte [ebp + GB_TILEMAP1 + POKEDEX_ARROW_TILEMAP_OFFSET], CHAR_DOWN_ARROW
+    mov byte [ebp + H_DOWN_ARROW_COUNT1], ARROW_ON_FRAMES
+    mov byte [ebp + H_DOWN_ARROW_COUNT2], 1
 .dfp_release:                            ; wait for A/B release (avoid sticky input)
     call DelayFrame
     test byte [ebp + H_JOY_HELD], PAD_A | PAD_B
     jnz .dfp_release
 .dfp_press:                              ; wait for a fresh A/B press
     call DelayFrame
+    mov esi, POKEDEX_ARROW_SCRATCH_OFFSET
+    call HandleDownArrowBlinkTiming      ; blink the compared scratch byte…
+    mov al, [ebp + POKEDEX_ARROW_SCRATCH_OFFSET]
+    mov [ebp + GB_TILEMAP1 + POKEDEX_ARROW_TILEMAP_OFFSET], al  ; …and show it
     test byte [ebp + H_JOY_HELD], PAD_A | PAD_B
     jz .dfp_press
+    ; the scratch cell is cleared by .handle_page's 7×18 page clear right after
+    ; this returns (pret: PageChar's ClearScreenArea does the same)
     mov byte [ebp + GB_TILEMAP1 + POKEDEX_ARROW_TILEMAP_OFFSET], TILE_SPC
     popad
     pop eax
@@ -755,6 +771,10 @@ PlaceNextChar:
     mov al, CHAR_NEXT
     jmp .not_term                    ; process as <NEXT> (pret: jp PlaceNextChar.NotTerminator)
 .page_full:
+    ; pret PageChar: `ld a,'▼' / ldcoord_a 18,16` — into wTileMap itself, BEFORE
+    ; the wait; the window mirror below then carries it. (The port used to poke
+    ; the arrow only into GB_TILEMAP1 — see POKEDEX_ARROW_SCRATCH_OFFSET.)
+    mov byte [ebp + POKEDEX_ARROW_SCRATCH_OFFSET], CHAR_DOWN_ARROW
     call manual_text_scroll          ; ▼ + wait (pret: ProtectedDelay3 + ManualTextScroll)
     ; ClearScreenArea b=7 rows, c=18 cols at hlcoord(1,10). EDX is the live source
     ; ptr (DE) — preserve it; use it as the row counter only inside this block.
