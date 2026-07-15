@@ -16,20 +16,21 @@ before acting; this document is a handoff, not authority.
 **Generated state:** `project_state ItemUseItemfinder HiddenItemNear` reports a
 linked `ItemUseItemfinder` stub and an unlisted `HiddenItemNear` implementation
 with no callers. `itemfinder.asm` references `HiddenItemCoords`, for which the
-port has no provider. Overworld-events Stage 4 likewise records the missing
+port has no provider. Overworld-events Stage 3 likewise records the missing
 generated hidden-object table and A-press dispatch.
 
-**Owner split:** `docs/current_plan_overworld_events.md` Stage 4 owns
-`gen_hidden_events.py`/`assets/hidden_events.inc`, hidden-event dispatch, and
-promoting `itemfinder.asm`. The items plan owns `ItemUseItemfinder` once that
-interface exists.
+**Owner split:** `docs/current_plan_overworld_events.md` Stage 3 owns
+`gen_hidden_events.py`/`assets/hidden_events.inc`, including the
+`HiddenItemCoords` interface, plus hidden-event A-press dispatch. The items plan
+owns promoting `itemfinder.asm`, its `HiddenItemNear` helper, and
+`ItemUseItemfinder` once that data interface exists.
 
 **Unblocked when:** generated coordinates are linked, `HiddenItemNear` has a
 real caller, and the handler can distinguish nearby unobtained items from
 nothing nearby without mutating the found flag. Acceptance needs must-hit
 coverage for `ItemUseItemfinder` and `HiddenItemNear`, including both outcomes.
 
-### Surfboard — two pret dependencies are absent
+### Surfboard — item and overworld dependencies are split
 
 **Generated state:** `project_state` reports `ItemUseSurfboard` as a linked
 stub and reports `IsSpriteInFrontOfPlayer2` and `SurfingAttemptFailed` missing.
@@ -38,14 +39,18 @@ It reports `IsSurfingAllowed`, `IsNextTileShoreOrWater`,
 `LoadWalkingPlayerSpriteGraphics` implemented/relocated and linked. The
 simulated-input machinery also exists in `src/home/simulate_joypad.asm`.
 
-**Owner split:** overworld-events owns the sprite/front-tile interaction and
-movement integration; the items plan owns the pret `ItemUseSurfboard` mount,
-dismount, failure, music, graphics, and forced-step flow.
+**Owner split:** overworld-events owns the pret
+`IsSpriteInFrontOfPlayer2` query and normal-loop consumption of the simulated
+forward step. The items plan owns pret's `ItemUseSurfboard` and
+`SurfingAttemptFailed`, including mount, dismount, failure text, music,
+graphics, state writes, and arming the forced step.
 
-**Unblocked when:** the two missing labels have faithful providers and the
-simulated forward step is reachable from the normal overworld loop. Acceptance
-must hit mount, dismount, and failure paths and observe the resulting
-`wWalkBikeSurfState`, graphics, collision, and movement behavior.
+**Unblocked when:** `IsSpriteInFrontOfPlayer2` has a faithful provider and the
+simulated forward step is consumed by the normal overworld loop; the items
+workstream can land `SurfingAttemptFailed` alongside the handler. Joint
+acceptance must hit mount, dismount, and failure paths, and must observe the
+resulting `wWalkBikeSurfState`, graphics, collision, and forced movement rather
+than stopping after the item code arms state.
 
 ## Blocks end-to-end reachability or fidelity
 
@@ -90,8 +95,9 @@ The existing `battle_menu` golden does not exercise this sub-flow.
 - **Pikachu happiness:** `ModifyPikachuHappiness` is a linked stub with seven
   callers. Medicine, TM/HM, and X-item call sites are already placed; retiring
   the one stub activates them together.
-- **Snorlax encounters:** Poké Flute sets the Route 12/16 fight events, but the
-  map scripts that consume them belong to overworld-events.
+- **Snorlax encounters:** Poké Flute owns setting the Route 12/16 fight events;
+  overworld-events owns the map-script consumers that turn those events into
+  encounters.
 - **Fishing bubble:** `FishingAnim` is linked and makes rods implementable now.
   Its `EmotionBubble` call resolves to a linked stand-in while the translated
   trainer-engine body remains check-only, so a bite omits only the cosmetic

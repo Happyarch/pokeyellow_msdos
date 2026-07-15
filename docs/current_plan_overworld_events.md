@@ -25,9 +25,11 @@ remain in git history instead of being maintained here.
 - For changed pret code, run `dos_port/tools/fidelity_gate --base <base>`.
   A clean result means only "no detected structural divergence"; each behavior
   change also needs a must-hit runtime scenario proving that path executed.
-- `docs/current_plan_items.md` owns `ItemUse*` bodies, including Surfboard and
-  Itemfinder USE. This plan owns their overworld data, interaction, and movement
-  interfaces. `docs/current_plan_battle_completion.md` owns trainer-battle
+- `docs/current_plan_items.md` owns `ItemUse*` bodies and item-subsystem helpers,
+  including `ItemUseSurfboard`, `SurfingAttemptFailed`, `ItemUseItemfinder`, and
+  `HiddenItemNear`. This plan owns map/event data and dispatch,
+  `IsSpriteInFrontOfPlayer2`, movement consumers, and story-script consumers.
+  `docs/current_plan_battle_completion.md` owns trainer-battle
   activation and `BATTLE_TYPE_PIKACHU` behavior; map scripts seed battle state
   and hand off.
 
@@ -112,10 +114,10 @@ because static scanning can see its definitions.
       `assets/hidden_events.inc`, keep per-object handlers in Tier-2 code, resolve
       the deep tier's real callees, remove the guard, and wire
       `CheckForHiddenEventOrBookshelfOrCardKeyDoor` in pret interaction order.
-- [ ] Promote `itemfinder.asm` once its generated `HiddenItemCoords` interface
-      exists. The items plan then retires `ItemUseItemfinder`; acceptance must
-      hit both nearby-unobtained and nothing-nearby outcomes without consuming
-      or setting the hidden-item flag during a test.
+- [ ] Publish the generated `HiddenItemCoords` interface for the items plan.
+      That plan promotes `itemfinder.asm` and retires `ItemUseItemfinder`;
+      acceptance must hit both nearby-unobtained and nothing-nearby outcomes
+      without consuming or setting the hidden-item flag during a test.
 - [ ] Port `PickUpItem`, promote the check-only `GiveItem` provider, generate
       pickup text, hide the object, update inventory and event state, and route
       `PickUpItemText` through the live text-script path. Verify successful and
@@ -130,17 +132,21 @@ because static scanning can see its definitions.
 - [ ] **Fly:** port `ChooseFlyDestination` on the linked Town Map foundation,
       restore the existing warp tail, and verify destination selection through
       arrival rather than stopping after flag arming.
-- [ ] **Surf:** supply the overworld-facing dependencies named in the items
-      plan, then let its `ItemUseSurfboard` body own mount/dismount. Verify
-      party-menu selection, forced movement, graphics, collision, music, and
-      `wWalkBikeSurfState` in both directions.
+- [ ] **Surf:** supply `IsSpriteInFrontOfPlayer2` and prove that the normal
+      overworld loop consumes the simulated forward step. The items plan owns
+      `ItemUseSurfboard`, `SurfingAttemptFailed`, mount/dismount, and arming that
+      step. Joint acceptance verifies party-menu selection, forced movement,
+      graphics, collision, music, and `wWalkBikeSurfState` in both directions.
 - [ ] **Strength/boulders:** promote `TryPushingBoulder` and
       `DoBoulderDustAnimation`, wire the map-script/collision consumer, and test
       a permitted push plus a blocked push. The linked `PrintStrengthText` only
       arms the state; it is not proof that a boulder moved.
 - [ ] Retain the already-linked Flash, Dig, Teleport, and Softboiled paths, but
       add must-hit coverage when their observable behavior is first claimed.
-      A generic menu or overworld regression run is not execution evidence.
+      For Dig and the item-owned Escape Rope handler, this plan owns the
+      `HandleFlyWarpOrDungeonWarp`/arrival consumer and the end-to-end warp
+      scenario. A generic menu or overworld regression run is not execution
+      evidence.
 
 ## Stage 5 — story-ordered map rollout
 
@@ -155,6 +161,9 @@ because static scanning can see its definitions.
       Victory Road, and Indigo. Each batch registers its map scripts and
       `text_asm` overrides, generates all text/data, and ends with a deterministic
       state scenario plus a live traversal of the story leg.
+- [ ] In the Route 12/16 batches, consume the fight events written by the
+      item-owned Poké Flute handler and hand off to battle-completion for the
+      Snorlax encounter. Do not duplicate the flute effect in map scripts.
 
 ## Stage 6 — retirement and archival
 

@@ -22,10 +22,11 @@ resolved blockers remain in git history rather than being maintained here.
   Its clean result means only "no detected structural divergence"; every
   behavior change also needs a runtime scenario whose must-hit list proves the
   changed path executed.
-- Keep cross-plan ownership intact: overworld hidden events and Surf support
-  belong to `docs/current_plan_overworld_events.md`; the in-battle bag belongs
-  to `docs/current_plan_battle_completion.md`. This plan owns `UseItem_`, the
-  item dispatch table, and every `ItemUse*` body.
+- Keep cross-plan ownership intact: this plan owns `UseItem_`, the item dispatch
+  table, every `ItemUse*` body, and item-subsystem helpers such as
+  `HiddenItemNear`. Overworld-events owns map/event data and dispatch,
+  sprite/front-tile queries, movement consumers, and story scripts. The
+  in-battle bag belongs to `docs/current_plan_battle_completion.md`.
 
 ## Completed capability
 
@@ -48,9 +49,10 @@ resolved blockers remain in git history rather than being maintained here.
 
 - [ ] **Itemfinder.** `ItemUseItemfinder` is a linked ret-stub and
       `HiddenItemNear` is implemented but unlisted. The generated hidden-object
-      coordinate/data layer does not yet exist. Overworld-events Stage 4 owns
-      that data and A-press wiring; once it lands, link `itemfinder.asm`, port
-      the USE handler and verify both "near" and "nothing" outcomes. See
+      coordinate/data layer does not yet exist. Overworld-events Stage 3 owns
+      `HiddenItemCoords` and hidden-object A-press dispatch; once that data
+      contract lands, this plan links `itemfinder.asm`, ports the USE handler,
+      and verifies both "near" and "nothing" outcomes. See
       `docs/items_blockers.md` → Itemfinder.
 
 - [ ] **Fishing rods.** This is ready item-layer work, not an external blocker:
@@ -73,9 +75,11 @@ resolved blockers remain in git history rather than being maintained here.
       state reports `IsSpriteInFrontOfPlayer2` and `SurfingAttemptFailed`
       missing, while `IsSurfingAllowed`, shore/water detection, tile-pair
       collision, passability, walking graphics, and simulated joypad support
-      are present. Land the two overworld-facing dependencies, port mount and
-      dismount faithfully, and verify both directions through the real
-      movement loop. See `docs/items_blockers.md` → Surfboard.
+      are present. Overworld-events supplies `IsSpriteInFrontOfPlayer2` and the
+      normal-loop forced-step contract; this plan ports `SurfingAttemptFailed`
+      with `ItemUseSurfboard`, including mount and dismount. Verify both
+      directions through the real movement loop. See `docs/items_blockers.md`
+      → Surfboard.
 
 - [ ] **Stage 12 — stub and claim retirement.** Empty
       `src/engine/items/item_use_stubs.asm`; run `label_status --callers` for
@@ -97,7 +101,8 @@ some completed effects from being fully reachable or faithful end to end:
   dispatcher until battle-completion Stage 2c lands.
 - Poké Flute's Pewter sleeping-Pikachu branch lacks
   `IsPikachuRightNextToPlayer` and `PlaySpecificPikachuEmotion`; the Route
-  12/16 Snorlax flags still need their map scripts. `ModifyPikachuHappiness`
+  12/16 Snorlax flags still need their overworld-owned map-script consumers.
+  `ModifyPikachuHappiness`
   is also a linked stub, so all already-placed item happiness calls remain
   inert. These are owner-plan tails, not reasons to reopen the completed item
   handlers.
