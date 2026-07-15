@@ -201,7 +201,7 @@ PrepareTitleScreen:
 ; Source: engine/movie/title.asm:DisplayTitleScreen
 ; ---------------------------------------------------------------------------
 DisplayTitleScreen:
-    call GBPalWhiteOut
+    call Title_GBPalWhiteOut
 
     ; Initialise HRAM display state
     mov byte [ebp + H_AUTO_BG_TRANSFER_EN], 1
@@ -279,7 +279,7 @@ DisplayTitleScreen:
     call TitleScreenCopyTileMapToVRAM
 
     ; Save logo+pikachu tilemap to Buffer1
-    call SaveScreenTilesToBuffer1
+    call Title_SaveScreenTilesToBuffer1
 
     ; Set SCY=64 (viewport 8 tile rows down; logo slides in from below)
     mov byte [ebp + H_SCY], 0x40
@@ -323,7 +323,7 @@ DisplayTitleScreen:
 
 .finishedBouncing:
     ; Restore logo+pikachu and let auto-BG-transfer commit it to $9800
-    call LoadScreenTilesFromBuffer1
+    call Title_LoadScreenTilesFromBuffer1
     mov bl, 36
     call DelayFrames                  ; 36 frames → Pikachu appears
 
@@ -460,7 +460,7 @@ ClearScreen:
 ; calls UpdateCGBPal_{BGP,OBP0,OBP1}; the CGB pal commit is Phase 5).
 ; Zeroing OBP0/OBP1 is required so sprites white out too, not just the BG.
 ; ---------------------------------------------------------------------------
-GBPalWhiteOut:
+Title_GBPalWhiteOut:
     mov byte [ebp + IO_BGP],  0x00
     mov byte [ebp + IO_OBP0], 0x00
     mov byte [ebp + IO_OBP1], 0x00
@@ -475,7 +475,7 @@ GBPalWhiteOut:
 ; SaveScreenTilesToBuffer1 — copy wTileMap → wTileMapBackup.
 ; Source: home/tilemap.asm:SaveScreenTilesToBuffer1
 ; ---------------------------------------------------------------------------
-SaveScreenTilesToBuffer1:
+Title_SaveScreenTilesToBuffer1:
     pushad
     lea esi, [ebp + W_TILEMAP]
     lea edi, [ebp + W_TILEMAP_BACKUP]
@@ -502,7 +502,7 @@ SaveScreenTilesToBuffer2:
 ; re-enable auto-BG.
 ; Source: home/tilemap.asm:LoadScreenTilesFromBuffer1
 ; ---------------------------------------------------------------------------
-LoadScreenTilesFromBuffer1:
+Title_LoadScreenTilesFromBuffer1:
     pushad
     mov byte [ebp + H_AUTO_BG_TRANSFER_EN], 0
     lea esi, [ebp + W_TILEMAP_BACKUP]

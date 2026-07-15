@@ -389,7 +389,7 @@ UpdateNPCSprite:
     ; Random_ clobbers AL, BL. Push EBX around Random call.
     call GetTileSpriteStandsOn          ; EBX = wTileMap offset of lower-left tile under NPC
     push ebx                            ; save tile ptr (BL clobbered by Random_)
-    call Random                         ; H_RANDOM_ADD updated; AL = random byte
+    call Movement_Random                ; H_RANDOM_ADD updated; AL = random byte
     pop ebx                             ; restore tile ptr
     ; AL = random value; CL = direction constraint from wMapSpriteData[(slot-1)*2]
     ; (OW-A.2 P2 relocation, pret LoadSprite). EDX is free after the pop ebx above.
@@ -483,7 +483,7 @@ UpdateNPCSprite:
 ; Pret ref: home/random.asm (calls Random_ from engine/math/random.asm).
 ; AL = H_RANDOM_ADD after update. Clobbers AL, BL.
 ; ---------------------------------------------------------------------------
-Random:
+Movement_Random:
     call Random_
     mov al, [ebp + H_RANDOM_ADD]
     ret
@@ -664,7 +664,7 @@ CanWalkOntoTile:
     mov byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_MOVEMENTSTATUS], 2
     mov byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_YSTEPVECTOR], 0
     mov byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_XSTEPVECTOR], 0
-    call Random                         ; AL = H_RANDOM_ADD (clobbers AL, BL)
+    call Movement_Random                ; AL = H_RANDOM_ADD (clobbers AL, BL)
     and al, 0x7F                        ; random 0–127 frames
     mov [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTDELAY], al
     stc
@@ -776,7 +776,7 @@ UpdateSpriteInWalkingAnimation:
     ret
 
 .initNextCounter:
-    call Random                         ; AL = H_RANDOM_ADD
+    call Movement_Random                ; AL = H_RANDOM_ADD
     and al, 0x7F                        ; random 0–127 frames
     mov [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTDELAY], al
     mov byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_MOVEMENTSTATUS], 2
@@ -1448,7 +1448,7 @@ Func_5357:
 .ret:
     ret
 .random:
-    call Random                          ; AL = hRandomAdd (clobbers AL, BL)
+    call Movement_Random                 ; AL = hRandomAdd (clobbers AL, BL)
     mov al, [ebp + H_RANDOM_ADD]         ; pret: ldh a, [hRandomAdd]
     and al, 0x7F
     mov [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTDELAY], al

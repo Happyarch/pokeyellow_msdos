@@ -326,7 +326,7 @@ _AddPartyMon:
     inc edx
     inc edx                          ; de = struct+0x1C
     pop esi                          ; [S2] moves ptr (MON_MOVES base) = WritePP source
-    call AddPartyMon_WriteMovePP     ; fill PP from the Moves table; de = struct+0x20
+    call AddPartyMon_WriteMovePP_PartyBuilder ; local flat-table variant
 
     ; level
     inc edx
@@ -366,14 +366,15 @@ _AddPartyMon:
     dec al
     ret
 
-; AddPartyMon_WriteMovePP — write each move slot's base PP into the PP region.
+; AddPartyMon_WriteMovePP_PartyBuilder — port-local flat-table variant of the
+; pret AddPartyMon_WriteMovePP provider in write_moves.asm.
 ; Source: engine/pokemon/add_mon.asm:AddPartyMon_WriteMovePP.
 ; In: ESI (hl) = MON_MOVES base (move ids, WRAM); EDX (de) = MON_PP - 1 (WRAM).
 ; DIVERGENCE: read the PP byte straight from the flat Moves table (like
 ; GetMonHeader) instead of FarCopyData-ing the record to wMoveData.
 ; NOTE (Wave-5 M5.2): a duplicate lives in add_mon.asm; leave this file-local
 ; copy intact — M5.2 resolves the duplication.
-AddPartyMon_WriteMovePP:
+AddPartyMon_WriteMovePP_PartyBuilder:
     mov bh, NUM_MOVES
 .pploop:
     mov al, [ebp + esi]              ; ld a,[hli] — move id from slot

@@ -247,7 +247,7 @@ StatusScreen:
 
     ; --- level at (14,2) ---
     mov esi, scoord(14, 2)
-    call PrintLevel
+    call StatusScreen_PrintLevel
 
     ; --- pokédex number at (3,7): wPokedexNum = IndexToPokedex[wMonHIndex] ---
     mov al, [ebp + wMonHIndex]
@@ -454,7 +454,7 @@ DrawHP:
 ; PrintLevel — pret home/pokemon.asm PrintLevel: ":L" + 2 digits (<100), or 3
 ; digits overwriting ":L" (>=100). In: ESI = dest canvas offset.
 ; ---------------------------------------------------------------------------
-PrintLevel:
+StatusScreen_PrintLevel:
     mov byte [ebp + esi], T_LV                       ; ':L'
     inc esi
     mov bl, 2                                         ; digit count
@@ -657,7 +657,7 @@ StatusScreen2:
 .Level100:
     mov byte [ebp + scoord(14, 6)], T_TO              ; "to"
     mov esi, scoord(16, 6)                            ; hl += 2
-    call PrintLevel
+    call StatusScreen_PrintLevel
     pop eax
     mov [ebp + wLoadedMonLevel], al                   ; restore real level
     mov esi, scoord(12, 4)                            ; current EXP (3 bytes, big-endian)
