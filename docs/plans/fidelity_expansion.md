@@ -1,15 +1,13 @@
 # Fidelity-harness expansion — WRAM datastructs, streamed text, battle, more menus
 
-> **STATUS — OPEN.** Planned 2026-07-13 in the `worktree-fidelity-expansion` worktree;
+> **STATUS — DONE.** Planned 2026-07-13 in the `worktree-fidelity-expansion` worktree;
 > **folded back into master 2026-07-14** and rectified against it in the same pass.
-> Stages 0, 1a, 1b, 1c, **2 and 3** are DONE (see the ledger); **only Stage 4 remains —
-> see the SESSION HANDOFF section immediately below.** Work stage-by-stage, update the
-> Coverage table, append findings, commit per stage.
+> Stages 0, 1a, 1b, 1c, **2, 3, and 4** are DONE (see the ledger).
 >
-> **Filed as `docs/current_plan_fidelity_expansion.md`** — the active-plan path. The
+> **Archived as `docs/plans/fidelity_expansion.md`** after Stage 4 closed. The
 > fold-back (`9dc7fed2`) wrote it into `docs/plans/` instead, the *completed*-plan directory,
 > where an open plan is invisible to the start-of-session `docs/current_plan_*.md` scan.
-> Restored 2026-07-14. Archive it (`git mv` into `docs/plans/`) only when Stage 4 closes.
+> Restored 2026-07-14; archived only after Stage 4 closed.
 >
 > **To be clear about what the fold-back got right:** it hand-copied a *rectified* plan instead
 > of running `git merge`, **deliberately and correctly**. A merge would have restored this
@@ -20,11 +18,12 @@
 > Skills to load before starting: `build-and-debug` + `faithfulness-review` (always),
 > `asm-translation` (before touching `debug_dump.asm`), `project-conventions`.
 
-## 🤝 SESSION HANDOFF (written 2026-07-15, for the Stage-4-CLOSER session)
+## Historical Session Handoff (written 2026-07-15, executed by `23a246b2`)
 
-If you are the fresh session picking this up: this is the current starting state.
-Everything below it is still binding; read "⚠ Read this first" next, then the Stage 4 spec and
-the Stage 4 first-half notes.
+This handoff has been completed; it is retained here as audit history for the Stage 4 closer.
+
+At the time of the Stage 4 closer, this was the starting state. The closer read "⚠ Read this
+first", then the Stage 4 spec and first-half notes before executing the handoff.
 
 **Where master stands now (`b53b8a9a`, pushed 2026-07-15):**
 - Stages 0–3 are DONE. Stage 4 first half is DONE in `5bb8a36e`.
@@ -229,7 +228,7 @@ dialog scratch **shares bytes with the map mirror** — F-13.)
 | 1c | Item datastruct scenarios ×3 | **DONE** | (this commit) | Differ class `datastruct` + `item_tm_teach` / `item_stone_evolve` / `item_potion_use`; `make fidelity` 10/10. First-ever observation of these gates (F-15) immediately caught a REAL port bug: **F-16** — the post-evolution stat recalc read the NEXT species' base stats (NINETALES got JIGGLYPUFF's). Fixed; golden-verified. M-8 did **not** surface (no priced list in these flows — see the stage notes). |
 | 2 | Battle convergence spec + battle_intro/battle_menu/move_selection + ball_catch | **DONE** | (this commit) | The spec battle (real loaders both sides, DVs $98 $76 overwritten, loader-derived parts asserted) converges end-to-end: `make fidelity` **14/14**. First diffs caught **four real port fidelity bugs** — **F-17** (enemy HUD drawn during the wild intro), **F-18** (dead $73 drawn over the HP-bar cap), **F-19** (enemy-gauge palette clones parked on LIVE glyphs incl. the battle ▼), **F-20** (player HP-bar cap $6C where battle uses $6D) — plus **F-21** (wLoadedMon staging + player-first HUD order omitted). Ball tiles moved to pret's OBJ ids $31–$34; ball OAM rows now zero all of $FE00 (GB DMA parity). `ball_catch` passes with **zero WRAM masks**. |
 | 3 | Menu scenarios ×5 + stride support | **DONE** | `daf8164c` (first half), (this commit) | First half: `"stride": 20` differ key (revert-proofed: wrong stride = 310/360 RED) + `options_menu` / `trainer_card`, both green — trainer_card with **zero tilemap/vram/oam/wram masks**, options_menu with only the flower-anim slot. Both port gates gained `SeedDeterministicPlayerIdentity` (F-5 class: bare-boot wPlayerID was an RNG roll). Second half: `pokedex_list` / `pokedex_entry` / `naming_screen`, all green — `make fidelity` **19/19**. First diffs caught **three real port bugs**: **F-22** (the wUpdateSpritesEnabled=0 "hide sprites" protocol was mistranslated AND unreachable — menu takeovers froze stale OAM), **F-23** (the dex `<PAGE>` ▼ lived only in the window mirror, never in the compared wTileMap scratch, and never blinked), **F-24** (naming-screen cursor step was single-spaced under a confident wrong comment — the ▶ sat on the box border). Plus the G2 gate seeded owned-but-not-SEEN (its comment lied; the golden's real list navigation is what caught it) and its old dump point photographed a state the GB never pauses in. |
-| 4 | Cross-cut: tiers, goldens-verify, mask policy, skill updates | **IN PROGRESS** | (this commit — first half) | First half/tooling done: Makefile core/full tiers, `goldens-verify` drift target, mask-policy note, and the `bag_menu` blink-phase mask retired by moving the port dump into the real `HandleMenuInput` blink loop (`BAGMENU_DUMP_FRAME=45`). Second half remains: skill updates, plan archive, scenario-manifest-owner mail. |
+| 4 | Cross-cut: tiers, goldens-verify, mask policy, skill updates | **DONE** | `5bb8a36e`, `23a246b2` | First half/tooling done: Makefile core/full tiers, `goldens-verify` drift target, mask-policy note, and the `bag_menu` blink-phase mask retired by moving the port dump into the real `HandleMenuInput` blink loop (`BAGMENU_DUMP_FRAME=45`). Closer updated `faithfulness-review` / `build-and-debug` with GBSTATE v2, datastruct, tier, `goldens-verify`, and subsystem→scenario guidance; then archived this plan. |
 
 ---
 
@@ -778,6 +777,28 @@ dropped `ExitListMenu`, added `list_mirror`, and added stores to `[W_TILEMAP]`,
 `[wListScrollOffset]`, `[wStatusFlags5]`. This commit's assembly change is `%ifdef
 DEBUG_BAGMENU` only and does not add normal-path calls/stores; the existing divergences are the
 widescreen list mirror / layout-state boundary already justified by the menu projection work.
+
+#### Stage 4, second half — DONE (skill updates and archive)
+
+Closer commit `23a246b2` updated the project skills:
+
+- `faithfulness-review`: gate step 3 now selects golden coverage by observable surface and
+  subsystem, not the old hardcoded status/start/party/bag/overworld list. It calls out WRAM
+  datastruct scenarios for party/bag/dex/add-mon/item-effect mutations even when nothing
+  renders, `sign_pallet` for text/NPC dialog paths, and battle/menu scenarios for battle UI.
+- `build-and-debug`: the golden harness section now documents GBSTATE v2, WRAM/datastruct
+  comparison, the `datastruct` scenario class, `fidelity` vs `fidelity-full`, and
+  `goldens-verify`.
+
+Verification run for the closer:
+
+```
+grep/read updated skill text for accuracy
+make -C dos_port fidelity       # core tier PASS
+make -C dos_port fidelity-full  # all 19 active fidelity scenarios PASS
+make -C dos_port goldens-verify # all Lua goldens incl. smoke_title PASS
+dos_port/tools/lint_pret_labels # 0 violations
+```
 
 ## Verification (every stage ends green)
 
