@@ -26,7 +26,9 @@ resolved blockers remain in git history rather than being maintained here.
   table, every `ItemUse*` body, and item-subsystem helpers such as
   `HiddenItemNear`. Overworld-events owns map/event data and dispatch,
   sprite/front-tile queries, movement consumers, and story scripts. The
-  in-battle bag belongs to `docs/current_plan_battle_completion.md`.
+  in-battle bag, turn consumption, and item-result battle consumers belong to
+  `docs/current_plan_battle_completion.md` Stage 2c. Battle-owned stat and
+  happiness helpers used by item effects are closed in its Stage 3d.
 
 ## Completed capability
 
@@ -97,15 +99,21 @@ some completed effects from being fully reachable or faithful end to end:
   "REPEL's effect wore off" message cannot display until overworld-events
   Stage 2 links the real dispatcher.
 - `BattleItemMenu` is a linked ret-only helper. Balls and battle-item effects
-  have direct state coverage, but the live battle ITEM button cannot reach the
-  dispatcher until battle-completion Stage 2c lands.
+  have direct state coverage, but `ball_catch` enters through `UseItem` and
+  bypasses that menu. The live battle ITEM button cannot reach the dispatcher
+  until battle-completion Stage 2c lands; that stage owns menu/cancel/turn
+  semantics rather than duplicating any item handler.
 - Poké Flute's Pewter sleeping-Pikachu branch lacks
   `IsPikachuRightNextToPlayer` and `PlaySpecificPikachuEmotion`; the Route
   12/16 Snorlax flags still need their overworld-owned map-script consumers.
-  `ModifyPikachuHappiness`
-  is also a linked stub, so all already-placed item happiness calls remain
-  inert. These are owner-plan tails, not reasons to reopen the completed item
-  handlers.
+  `ModifyPikachuHappiness` is also a linked stub, so all already-placed item
+  happiness calls remain inert until battle-completion Stage 3d supplies its
+  pret-owned interface. These are owner-plan tails, not reasons to reopen the
+  completed item handlers.
+- Safari BAIT/ROCK and ball effects are complete item-owned providers. The
+  Safari action menu, turn/flee loop, and result consumption belong to
+  battle-completion Stage 4d; Safari map/step/story reachability belongs to
+  overworld-events.
 
 ## Fidelity and acceptance
 

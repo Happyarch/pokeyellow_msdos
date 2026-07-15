@@ -29,9 +29,10 @@ remain in git history instead of being maintained here.
   including `ItemUseSurfboard`, `SurfingAttemptFailed`, `ItemUseItemfinder`, and
   `HiddenItemNear`. This plan owns map/event data and dispatch,
   `IsSpriteInFrontOfPlayer2`, movement consumers, and story-script consumers.
-  `docs/current_plan_battle_completion.md` owns trainer-battle
-  activation and `BATTLE_TYPE_PIKACHU` behavior; map scripts seed battle state
-  and hand off.
+  `docs/current_plan_battle_completion.md` Stage 1 owns trainer-battle
+  activation/exit and victory-dependent beaten flags; Stage 4 owns special
+  battle-type behavior. Map scripts seed battle state, hand off, and consume
+  results without duplicating battle logic.
 
 ## Completed foundation
 
@@ -68,9 +69,9 @@ remain in git history instead of being maintained here.
       workstream rather than leaving two scripted-input ownership models.
 - [ ] Keep the cross-plan boundary explicit: the script seeds
       `wCurOpponent`, `wBattleType`, and `wCurEnemyLevel`; battle-completion
-      supplies faithful `BATTLE_TYPE_PIKACHU` behavior and trainer/battle exit.
-      Do not report the cutscene complete while that handoff still degrades to a
-      plain wild battle.
+      Stage 4a supplies faithful `BATTLE_TYPE_PIKACHU` behavior, while Stage 1
+      supplies battle exit/result semantics. Do not report the cutscene complete
+      while that handoff still degrades to a plain wild battle.
 - [ ] Add a deterministic Oak-intro scenario whose must-hit list names the
       Pallet state(s) and scripted movement consumer, and whose terminal state
       compares event/script variables plus the rendered scene. Use live DOSBox-X
@@ -154,7 +155,8 @@ because static scanning can see its definitions.
       and Mart, and Oak's Parcel round trip.
 - [ ] **Forest/Pewter:** Viridian Forest, Pewter City/Gym, Route 2, gates, and
       museum/gym scripted movement. Requires trainer battles to be live without
-      `TRAINER_BATTLE_LIVE` and to set beaten flags only after victory.
+      `TRAINER_BATTLE_LIVE` and to set beaten flags only after victory
+      (battle-completion Stage 1).
 - [ ] **Mt. Moon/Cerulean:** Mt. Moon, Cerulean, Nugget Bridge, and Bill.
 - [ ] Continue in story order through Vermilion/S.S. Anne, Rock
       Tunnel/Lavender, Celadon, Fuchsia/Safari, Saffron/Silph, Cinnabar,
@@ -164,6 +166,10 @@ because static scanning can see its definitions.
 - [ ] In the Route 12/16 batches, consume the fight events written by the
       item-owned Poké Flute handler and hand off to battle-completion for the
       Snorlax encounter. Do not duplicate the flute effect in map scripts.
+- [ ] Viridian's catching tutorial, Pokémon Tower's Ghost Marowak, and Safari
+      story batches seed/consume their map state here, while battle-completion
+      Stages 4b–4d own the corresponding battle behavior. Each side needs its own
+      must-hit evidence before the combined story leg is called complete.
 
 ## Stage 6 — retirement and archival
 

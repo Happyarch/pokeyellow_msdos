@@ -1,274 +1,254 @@
-# Current Plan: Battle Engine Completion (trainer battles, sub-menus, special types, transitions, animations)
+# Current Plan: Battle Engine Completion
 
-Status: **not started** — tick stages as they land. Archive to
-`docs/plans/battle_completion.md` when complete.
+Status: **the wild-battle backend and the first battle fidelity surfaces are
+live; trainer entry, the PKMN/ITEM subflows, special battle types, transitions,
+and animations remain open.** Archive this file to
+`docs/plans/battle_completion.md` only after Stage 7 closes.
 
-Successor to the archived battle plans (`docs/plans/battle_engine.md`,
-`battle_pret_alignment.md`) and the closed audit ledger
-(`docs/archive/battle_audit_findings.md`). Basis: the 2026-07-12 engine-gap
-survey. The battle **backend is done and linked** — core turn loop, damage
-pipeline, all 32 move-effect handlers (dispatch table 1:1 with pret), trainer-AI
-move scoring, residual damage/status penalties/badge boosts, EXP/level-up/
-evolution/learn-move, enemy send-out on faint, blackout, run prevention. What
-remains is reachability wiring, interactive sub-flows, special battle types,
-and the two visual subsystems (transitions, animations).
+This status was refreshed 2026-07-15 against pret, the default linked build,
+`dos_port/tools/project_state`, `label_status`, the 19-scenario fidelity
+manifest, and the operational evidence policy in `AGENTS.md`. The archived
+`docs/archive/battle_audit_findings.md` predates that procedure and is historical
+only: its claims are not current evidence. Superseded execution narratives and
+resolved blockers remain in git history instead of being maintained here.
 
-**Interfaces with sibling plans (do not implement here):**
-- `UseItem_`/`ItemUsePtrTable`/`ItemUseBall` internals → **items plan**
-  (`current_plan_item_use.md`). This plan owns only `BattleItemMenu` (the menu +
-  battle-context routing into that dispatcher). Stage 2b is blocked on it.
-- Oak-intro cutscene script + trainer-sight overworld side → **overworld plan**
-  (`current_plan_overworld_events.md`). This plan owns the *battle-side*
-  `BATTLE_TYPE_PIKACHU` behavior it needs (Stage 4a blocks that cutscene's
-  final verification).
-- Battle-screen geometry/widescreen → `docs/plans/battle_ui.md` (archived 2026-07-12;
-  pipeline done, only the human widescreen-redesign session B6 deferred — see TODO.md).
-- Link battles → Phase 4 (out of scope; keep pret's link branches as the
-  existing documented dead branches).
+## Standing rules and ownership
 
-## Stage 1 — trainer battles live (small, highest value: mostly de-gating + one init branch)
+- Preserve pret labels, big-endian GB data, register mapping, and exact ZF/CF
+  contracts. Human-rendered text and static battle data are generated Tier-1
+  assets; battle behavior, dispatchers, and HAL boundaries remain hand-written
+  Tier-2 code.
+- Before calling anything missing, stubbed, check-only, unreachable, or
+  callerless, rerun `dos_port/tools/project_state` and use
+  `label_status --callers/--callees`. Inspect Makefile linkage and `%ifdef`
+  guards directly; a definition visible to static scanning may be absent from
+  the default build.
+- For changed pret code, run `dos_port/tools/fidelity_gate --base <base>`. A
+  clean result means only "no detected structural divergence"; each behavior
+  change also needs a deterministic scenario whose must-hit list proves the
+  changed path executed.
+- `docs/current_plan_items.md` owns `UseItem_`, `ItemUsePtrTable`, every
+  `ItemUse*` body, and item-subsystem helpers. This plan owns `BattleItemMenu`,
+  battle-context routing, turn consumption, switches, and battle-loop consumers.
+- `docs/current_plan_overworld_events.md` owns map/event data and dispatch,
+  story scripts, battle-state seeding, and overworld result consumers. This plan
+  owns trainer-battle activation/exit semantics and special battle-type behavior.
+- Link battles remain Phase 4. Preserve pret's link branches and explicit
+  structured stand-ins, but do not make link transport part of this plan.
 
-- [ ] **1a. `InitBattleCommon` trainer branch.** The port's `_InitBattleCommon`
-  (`src/engine/battle/init_battle.asm:207`) is wild-only. Port pret's branch
-  (pret `engine/battle/init_battle.asm:25-58`): `wEnemyMonSpecies2 - OPP_ID_OFFSET`
-  carry test → wild vs trainer; trainer path = `ld [wTrainerClass]` +
-  `GetTrainerInformation` + `ReadTrainer` + `_LoadTrainerPic` (front-pic slot,
-  pret `:143`, `CopyUncompressedPicToTilemap` at coord 12,0 — reuse the
-  consolidated `LoadFrontSpriteByMonIndex`/`CopyUncompressedPicToHL` machinery,
-  see memory `sprite-flipped-placement`), `wEnemyMonPartyPos=$FF`, `wAICount=$FF`,
-  `wIsInBattle=2`, and the `wLoneAttackNo` → `ModifyPikachuHappiness
-  PIKAHAPPY_GYMLEADER` tail (stub today — see Stage 3d). Keep pret's label split
-  (`InitBattleCommon`/`InitWildBattle`/`_InitBattleCommon`) with a comment where
-  the port collapses it. `ReadTrainer` + `read_trainer_party.asm` are already
-  real and linked; `GetTrainerInformation` needs a port (grep first — the name
-  is referenced in `trainer_battle.asm` comments only). **Note:** pret calls
-  `DoBattleTransitionAndInitBattleVariables` here; until Stage 5 lands, keep the
-  port's current fixed-transition init and leave a `; TODO(stage5)` at the pret
-  call site.
-- [ ] **1b. De-gate `TRAINER_BATTLE_LIVE`.** The gate (`trainer_battle.asm:50,103`,
-  `map_sprites.asm:77,1224`) is never defined in the Makefile, so trainers
-  currently talk, get flagged **beaten without fighting** (default-build defect),
-  and no battle starts. Once 1a works under the flag (via the existing
-  `DEBUG_BATTLE_TRAINER` harness, Makefile:695), define it by default, then
-  delete the `%ifdef`s outright (retire the gate, don't leave dead arms). Also
-  resolve the `TODO(M8.2)` in `StartTrainerBattle`: pret `inc [wCurMapScript]`
-  so the map script advances to `EndTrainerBattle` — coordinate the
-  `wCurMapScript` alias with the overworld plan's script work.
-- [ ] **1c. Beaten-flag ordering fix.** Move the "mark trainer beaten" write
-  (`map_sprites.asm:TrainerEncounterFlow`) to the post-victory path (pret sets
-  it via `EndTrainerBattle` after the battle resolves), so losing/escaping a
-  trainer doesn't permanently disarm them.
-- [ ] **1d. Trainer end-of-battle.** Verify the loss path (blackout via the
-  generic `AnyPartyAlive` → `HandleBlackOut` in `overworld.asm:1019-1027` —
-  statically audited as trainer-generic, never exercised) and the win path:
-  prize money is **already real** (`read_trainer_party.asm` computes
-  `wAmountMoneyWon` via flat `AddBCD`; `TrainerBattleVictory`
-  (`faint_sendout.asm:156-169`) awards it — the audit's C-12 "no-op stub" note
-  is stale). Missing: **class-specific `TrainerDefeatedText`** — a Tier-1
-  generator task (extend `gen_battle_text.py` or a sibling `gen_trainer_text.py`
-  parsing pret's per-class end-battle text; remember the C-4 lesson: carry
-  `text_far`+`text_asm` continuations, don't truncate). Also the trainer-win
-  faint SFX + `PlayBattleVictoryMusic` trainer branch (`TODO-HW` in
-  `faint_enemy.asm` — audio engine is live per memory `overworld-audio-destub`,
-  so wire real calls, not no-ops).
-- [ ] **1e. AI execution halves** (`trainer_ai.asm`): `SwitchEnemyMon` (`:995`)
-  updates party HP/status but never sends the new mon out — wire it to the real
-  `EnemySendOut` (`faint_sendout.asm`) + withdrawal text; destub the
-  `AIUseX*`/`AIRecoverHP`/`AICureStatus` UI leaves (item-use text + effect
-  application; the decision logic is already live).
-- **Verify:** `DEBUG_BATTLE_TRAINER` end-to-end win/lose headless (FRAME.BIN);
-  live DOSBox-X walk into a Route-1-reachable trainer sightline → battle →
-  victory → money/beaten-flag → re-talk shows end-battle text, no re-fight;
-  lose → blackout to Pokécenter, trainer still armed. `faithdiff` per routine,
-  `lint_pret_labels` exit 0. Build with `DEBUG_SEED_PARTY=1`.
+## Proven baseline
 
-## Stage 2 — in-battle sub-menus (the two dead battle-menu buttons)
+- [x] The default build links the wild-entry, normal turn, damage/status/effect,
+      faint/EXP, run, blackout, and overworld-return providers. The current
+      scenario manifest does not execute an end-to-end battle win and return, so
+      this is structural baseline rather than current runtime proof.
+- [x] The battle fidelity expansion converged the wild intro, action menu, move
+      selection, and ball-capture state against mGBA. It fixed the concrete
+      F-17 through F-21 intro/HUD defects; the remaining F-19-owned clone masks
+      are tracked separately in Stage 6e.
+- [x] `UseItem_`, `ItemUsePtrTable`, medicine, balls, battle items, Poké Doll,
+      and Safari BAIT/ROCK effects are translated. Their direct item scenarios do
+      not make the live battle ITEM button functional.
+- [x] Trainer party loading, trainer AI decision/scoring code, enemy send-out,
+      prize-money arithmetic, victory, blackout, and the overworld trainer
+      service spine have translated providers. Several are not on an executed
+      default-build trainer route yet; linkage is not execution evidence.
 
-- [ ] **2a. `BattlePartyMenu` (PKMN — voluntary switch).** Real body for the
-  `ret` stub (`battle_menu.asm:227-232`): pret's PKMN path = party menu in
-  `BATTLE_PARTY_MENU` mode → confirm → withdraw text → `SendOutMon` + HUD
-  redraw + enemy gets a free move. Reuse the linked overworld `DisplayPartyMenu`
-  with the battle menu-type byte (do NOT fork a battle copy — pret
-  distinguishes by `wPartyMenuTypeOrMessageID`).
-- [ ] **2b. Forced-switch flow.** `DoUseNextMonDialogue`
-  (`faint_switch.asm:121-131`) auto-answers Yes → real Yes/No box (the generic
-  two-option menu from the bag work exists — `start_sub_menus.asm .opt2_menu`);
-  `ChooseNextMon` (`:141-180`) auto-picks the first live mon → interactive
-  `BATTLE_PARTY_MENU` **with CANCEL disallowed** (the documented reason the
-  overworld menu wasn't reused; the menu-type byte governs this).
-- [ ] **2c. `BattleItemMenu` (ITEM).** Wire the `ret` stub to the items plan's
-  `UseItem_` dispatcher: bag list in battle context, selection → `UseItem_`,
-  consume turn on success per pret. **Blocked on items plan Stage 1-2**; land
-  the menu shell + a `; STUB(items-plan)` routing note earlier if useful for
-  testing. Catching then works end-to-end via the items plan's `ItemUseBall`
-  (which needs `wIsInBattle`/this menu as its entry).
-- **Verify:** mid-battle switch (voluntary + on-faint) headless with a 2-mon
-  `DEBUG_SEED_PARTY`; FIGHT menu reflects switched mon's moves; item use in
-  battle once dispatcher lands (potion heals, turn consumed).
+## Stage 1 — make trainer battles live
 
-## Stage 3 — backend leaves + stub retirement (independent, parallelizable)
+Current evidence: `_InitBattleCommon` is linked and called by the wild-encounter
+path; its body is wild-only. `GetTrainerInformation` is a relocated check-only
+implementation with no port callers, while `ReadTrainer` is linked with no port
+callers. `StartTrainerBattle` is linked, but its `InitBattle` call and the paired
+`EndTrainerBattle` call remain behind `TRAINER_BATTLE_LIVE`. The default
+`TrainerEncounterFlow` marks its local beaten bit after the guarded handoff.
 
-- [ ] **3a. `CheckNumAttacksLeft` destub** (`core.asm:2340`, a live-called `ret`
-  — call sites `:290,:316`): multi-turn counters (Bide/Thrash/Wrap) currently
-  never expire. Faithful translation; preserve + tag the **Trapping Sleep
-  Glitch** (`GLITCH` + `Safety:`, bug-ledger row).
-- [ ] **3b. Bide accumulation half.** Only Bide's setup half is ported
-  (`move_effects/bide.asm`); the damage-accumulation/unleash path lives in the
-  status-condition checks — verify what `CheckPlayerStatusConditions`/
-  `CheckEnemyStatusConditions` actually have (the audit's A-3 fix touched this
-  region) and port the missing accumulation/release, preserving the **Bide vs
-  Fly/Dig** bug (ledger row, tag it).
-- [ ] **3c. Pay Day payout** (`end_of_battle.asm:56-66` dead branch): flat
-  `AddBCD` call (pattern: `faint_sendout.asm:161-167`) + generate
-  `PickUpPayDayMoneyText`; also make the Pay Day move effect actually
-  accumulate `wTotalPayDayMoney` (its `TODO-HW`).
-- [ ] **3d. `battle_exp_stubs.asm` cleanup:** real `CalculateModifiedStats`
-  (in-battle stat-stage recompute after level-up/vitamin — pret
-  `engine/battle/core.asm`), real `ModifyPikachuHappiness` (coordinate with the
-  wider Pikachu-follower gap — a minimal faithful happiness delta is fine here),
-  `PrintEmptyString` (trivial). **Ride-along:** rewrite the file's stale header
-  prose (the "LATENT COLLISION" paragraph describes already-retired stubs).
-- [ ] **3e. Mutual-faint draw fanfare** (bug-ledger row "Battle Draw Victory
-  Fanfare"): port the draw detection on Self-Destruct/Explosion KO with the
-  Gen-1 wrong-music-cue bug preserved + tagged.
-- [ ] **3f. EXP_ALL investigation** (memory `battle-win-crash-not-in-gainexp`
-  OPEN tail): bug#3's polarity fix is in, but the *genuine* EXP_ALL whole-party
-  `GainExperience` pass zeroed `wIsInBattle` in the original repro — suspect an
-  OOB write in the multi-participant loop. Seed EXP_ALL into the bag
-  (`DEBUG_SEED_*`), win a wild battle, checkpoint `wIsInBattle` (the FE_CP
-  in-code checkpoint method from that memory cracked bug#3; MCP watchpoints
-  didn't — worth a retry with the rebuilt harness's `set_watchpoint` (BPLM)
-  on `wIsInBattle` before falling back to FE_CP). Fix or close.
-- **Verify:** native ELF32 harness where applicable (Bide/counter math);
-  headless battle scenarios per item; `faithdiff` each touched pret label.
+- [ ] **1a. Trainer initialization.** Restore pret's wild/trainer split under
+      `InitBattleCommon`/`InitWildBattle`/`_InitBattleCommon`; promote and call
+      `GetTrainerInformation`, call `ReadTrainer`, load the trainer picture and
+      first party mon, initialize trainer AI/battle state, and preserve the
+      scripted-battle inputs. Keep any temporary fixed transition explicitly
+      tied to Stage 5.
+- [ ] **1b. Retire `TRAINER_BATTLE_LIVE`.** Exercise the trainer route under the
+      guard, then remove the guard rather than leaving two build behaviors.
+      Reconcile `StartTrainerBattle`/`EndTrainerBattle` and `wCurMapScript` with
+      the overworld plan's script state machine.
+- [ ] **1c. Victory-dependent trainer flags.** Move beaten/event writes to the
+      verified post-victory result path. A loss, blackout, or aborted battle must
+      leave the trainer armed; victory must advance the script, persist the flag,
+      and expose the correct post-battle text.
+- [ ] **1d. Trainer presentation and exit.** Generate class-specific end-battle
+      streams without truncating `text_far`/`text_asm` continuations; restore
+      trainer victory music, faint/send-out cries, waits, and screen restoration
+      from pret. Resolve `PlayCry` by its real blocking contract rather than an
+      audio-no-op assumption.
+- [ ] **1e. AI execution leaves.** Complete `SwitchEnemyMon` through withdrawal,
+      `EnemySendOut`, and its return flags; complete AI item text/effect/HP-bar
+      paths without duplicating item-owned player handlers.
+- [ ] Add deterministic trainer win and loss scenarios. Must-hit lists must name
+      trainer initialization, party loading, battle entry, result handling, and
+      the flag/script consumer. Compare party/enemy state, money, event/script
+      state, and the rendered battle/exit surfaces; use a live sightline walk only
+      for continuous choreography.
+
+## Stage 2 — complete the PKMN and ITEM battle subflows
+
+Current evidence: `BattlePartyMenu` and `BattleItemMenu` are linked port-only
+ret-only helpers, each called from `DisplayBattleMenu`. The items dispatcher and
+effects they need are already translated. `DoUseNextMonDialogue` and
+`ChooseNextMon` are linked partial implementations called from faint handling;
+their current bodies auto-answer and auto-select.
+
+- [ ] **2a. Voluntary switch.** Implement `BattlePartyMenu` with pret's
+      `BATTLE_PARTY_MENU` mode, selection/cancel rules, withdrawal/send-out HUD
+      work, party↔battle-mon synchronization, and the enemy's free turn.
+- [ ] **2b. Forced switch.** Replace the automatic Yes and first-live-mon paths
+      in `DoUseNextMonDialogue`/`ChooseNextMon` with the faithful Yes/No and party
+      menus, including wild-run behavior and the no-cancel forced selection.
+- [ ] **2c. In-battle bag.** Implement `BattleItemMenu` over the existing bag and
+      `UseItem_` dispatcher. Preserve success/failure result codes, consumption,
+      cancel behavior, and whether the enemy receives a turn. Do not fork item
+      effects into battle code.
+- [ ] Add separate must-hit scenarios for voluntary switch, forced switch, a
+      successful medicine/battle-item use, a failed item, and ball capture entered
+      through `BattleItemMenu`. The existing `party_menu`, `battle_menu`, and
+      `ball_catch` scenarios do not prove these routes.
+
+## Stage 3 — close backend and stub-era leaves
+
+Re-derive each routine from pret at implementation time; do not carry the old
+audit's finding status forward. Current generated/source evidence establishes the
+provider shapes below, not their runtime behavior.
+
+- [ ] **3a. Multi-turn state.** Replace the linked ret-only
+      `CheckNumAttacksLeft` body and verify the complete Bide/Thrash/trapping
+      counter, accumulation, release, and cleanup flow on both turns. Preserve
+      original-game quirks only when pret or the current bug reference supports
+      them, with the required `BUG`/`GLITCH` tags.
+- [ ] **3b. Pay Day and end-of-battle money.** Verify and complete both the move's
+      accumulator and the payout/text path using big-endian/BCD conventions.
+- [ ] **3c. Battle draw and simultaneous-faint behavior.** Reconstruct the
+      Self-Destruct/Explosion result and music selection from pret, then add a
+      must-hit scenario for the mutual-faint terminal state.
+- [ ] **3d. Empty `battle_exp_stubs.asm`.** Implement and retire the battle-owned
+      providers `PrintEmptyString`, `CalculateModifiedStats`, and
+      `DoubleOrHalveSelectedStats`; implement `ModifyPikachuHappiness` at its
+      pret-owned interface so the existing battle/item callers stop being inert.
+      Transfer `RespawnOverworldPikachu` explicitly to the overworld/Pikachu
+      owner if it is not completed here. Run `label_status --callers` and repair
+      every stub-era extern/provider comment and assumption.
+- [ ] **3e. EXP ALL.** Establish a deterministic whole-party EXP scenario before
+      deciding whether any defect remains. Compare participants, EXP, levels,
+      stats, moves, and `wIsInBattle`; do not preserve the old audit/repro claim
+      without a current failing execution.
 
 ## Stage 4 — special battle types
 
-- [ ] **4a. `BATTLE_TYPE_PIKACHU` (starter battle).** Constant exists
-  (`gb_constants.inc:313`), referenced nowhere. Audit every pret branch on it
-  (`init_battle_variables`, battle menu, ball-throw refusal, loss handling) and
-  implement so the overworld plan's Oak cutscene can fire
-  `wCurOpponent=STARTER_PIKACHU, wBattleType=BATTLE_TYPE_PIKACHU, level 5` (its
-  documented ABI). **This item unblocks the Oak-intro milestone — do early in
-  this stage.**
-- [ ] **4b. `BATTLE_TYPE_OLD_MAN`** (catching-tutorial battle): pret branches in
-  the battle menu (player name → OLD MAN, no FIGHT) + the scripted throw. Needs
-  the Viridian old-man script (overworld plan) to be reachable; battle-side can
-  land first behind the debug harness.
-- [ ] **4c. Ghost Marowak.** `IsGhostBattle` is already real (`ghost.asm`) and
-  the RUN check has its `TODO(faithful)` slot (`battle_menu.asm:275`). Port the
-  wild-side ghost init (pret `InitWildBattle` `.isGhost`: GHOST pic/name swap)
-  + unidentified-ghost move refusal, and the Poké-Doll early-exit **with its
-  bug-ledger `BUG` tag** (skips the encounter permanently). Reachability
-  (Pokémon Tower, Silph Scope event) is overworld-plan content; battle side
-  lands behind a harness.
-- [ ] **4d. Safari battle mechanics.** `BATTLE_TYPE_SAFARI` is set (map-range,
-  `init_battle_variables.asm:54-61`) and RUN always escapes, but nothing else
-  exists: BAIT/ROCK menu replacing FIGHT/ITEM, `wSafariBaitFactor`/
-  `wSafariEscapeFactor` (WRAM aliases needed — `transform.asm:38` notes the
-  addresses), angry/eating text, per-turn flee roll, catch handoff to
-  `ItemUseBall`'s Safari branch (items plan owns the ball math; this plan owns
-  the menu + turn loop divergence). Low urgency until the Safari Zone maps/step
-  counter exist (overworld/content side) — keep last in this stage.
-- **Verify:** each type behind a `DEBUG_BATTLE_*` seed; FRAME.BIN for menu
-  variants; the Pikachu battle plays as part of the Oak cutscene live test.
+- [ ] **4a. `BATTLE_TYPE_PIKACHU`.** Audit every pret branch and implement the
+      starter-battle menu, ball refusal, initialization, loss/result, and
+      happiness behavior. Overworld-events Stage 1 seeds `wCurOpponent`,
+      `wBattleType`, and `wCurEnemyLevel`; its Oak milestone is incomplete until
+      a must-hit battle scenario proves this handoff does not degrade to a plain
+      wild battle.
+- [ ] **4b. `BATTLE_TYPE_OLD_MAN`.** Implement the tutorial identity/menu and
+      scripted throw behavior behind a deterministic battle scenario. The
+      Viridian script and story reachability belong to overworld-events Stage 5.
+- [ ] **4c. Ghost Marowak.** Starting from the linked `IsGhostBattle`, implement
+      ghost initialization/identity, unidentified-ghost move refusal, escape
+      rules, and the item-owned Poké Doll result consumer. Pokémon Tower/Silph
+      Scope event reachability remains overworld-owned.
+- [ ] **4d. Safari.** Implement the BAIT/ROCK/ball/run menu and the Safari turn/flee
+      divergence using the already-translated item-owned `ItemUseBait`,
+      `ItemUseRock`, and `ItemUseBall` effects. Safari maps, steps, and story
+      entry/exit remain overworld-owned.
+- [ ] Add one must-hit scenario per battle type, comparing the relevant menu,
+      WRAM state, item/event result, and exit. Add live traversal only when its
+      owning overworld story batch lands.
 
-## Stage 5 — battle transitions (pret `engine/battle/battle_transitions.asm`, 757 lines)
+## Stage 5 — battle transitions
 
-- [ ] Port `GetBattleTransitionID_WhichDungeonMap` /
-  `GetBattleTransitionID_CompareLevels` / `_IsDungeonMap` + the
-  `BattleTransitions` jump table + the 4 transition implementations (spiral/
-  shrink × flash/no-flash). These animate via `rSCX`/`rSCY`/palette writes —
-  map onto the port's shadow-scroll + present pipeline (`H_SCX`/`H_SCY`,
-  `IO_SCX/SCY` shadows; remember memory `battle-init-carryover-reset`: the
-  flat-canvas entry zeros these — transitions run *before* that reset).
-  Tag the ledger row **"Battle transitions fail to account for scripted
-  battles"** (`GetBattleTransitionID_CompareLevels` reads stale
-  `wPartyMon1HP`-adjacent WRAM in scripted battles) as `BUG(critical)` when
-  ported. Replace the current single fixed transition in `_InitBattleCommon`
-  (Stage 1a's `TODO(stage5)`).
-- **Verify:** FRAME.BIN sequence dumps per transition ID; goldencheck scenarios
-  still pass; wild + trainer + dungeon-map variants.
+- [ ] Port `GetBattleTransitionID_WhichDungeonMap`,
+      `GetBattleTransitionID_CompareLevels`, `_IsDungeonMap`, the
+      `BattleTransitions` table, and the four spiral/shrink flash variants under
+      their pret labels. Map scroll/palette effects to the existing shadow
+      registers and presentation pipeline, then replace the fixed transition.
+- [ ] Preserve and tag the documented scripted-battle transition bug from
+      `docs/bugs_and_glitches.md` under the configured `BUG_FIX_LEVEL` policy.
+- [ ] Add deterministic frame/state checkpoints for each selected transition and
+      must-hit its selector plus animation body. Cover wild, trainer, dungeon,
+      and scripted inputs; a final `FRAME.BIN` alone is regression evidence, not
+      proof that the transition executed.
 
-## Stage 6 — battle animations (the long pole; design-gated, do last)
+## Stage 6 — battle animations and battle-mask closure
 
-Current state: `animations.asm` (85 lines) = pret's ANIMATION=OFF branch only —
-a 30-frame delay; `PlayApplyingAttackAnimation` dispatch is faithfully gated on
-`wAnimationType` but the backend never sets it and the shake/blink bodies are
-`TODO-HW` (`animations.asm:46-47,78-82`; `PredefShakeScreenHorizontally` stub in
-`core_stubs.asm:107`). pret's engine is 2858 lines + Tier-1 data
-(`data/battle_anims/`: subanimations, frame blocks, animation ids).
+Current evidence: `PlayApplyingAttackAnimation` is linked, but the existing
+ANIMATION=OFF path is the implemented behavior; `PredefShakeScreenHorizontally`
+is a linked stub. The battle goldens intentionally mask animation/picture-bank
+route differences. `golden_diff.py` also carries finding-owned F-19 masks for
+enemy-gauge clone tile ids and VRAM slots.
 
-- [ ] **6a. HAL hook design (gate for everything below — write a short design
-  doc section here before coding).** The interpreter needs, from the software
-  PPU: (i) a battle-OAM scratch layer `DrawFrameBlock` can write sprite tuples
-  into (the existing shadow-OAM path + `spr_oam_valid` — see memory
-  `flatcanvas-sprite-suppression`; battle currently suppresses sprites).
-  **Updated 2026-07-12** (`docs/plans/party_icons_oam.md`): `ClearSprites`/`HideSprites`
-  now zero `spr_oam_valid` themselves, so anything that writes battle OAM after them
-  must *republish* — `PrepareStaticOAM` (what the pokéball row uses) is the model, and
-  `CommitMonPartySpriteOAM` in `engine/gfx/mon_icons.asm` is the worked example of a
-  screen owning its own OAM while `wUpdateSpritesEnabled = 0` gates `update_oam` off.
-  Battle draws on a flat canvas with no window, so it does **not** need
-  `g_obj_over_window`. (ii)
-  per-frame `rSCX`/`rSCY`-shadow displacement for screen shake (exists:
-  `H_SCX`/`H_SCY` drive `render_bg`'s blit offset), (iii) palette-flash hooks
-  (BGP rewrite → the DMG-green ramp remap; keep Phase-5 CGB in mind), (iv) VRAM
-  tile uploads for move-anim tilesets (`LoadMoveAnimationTiles`) — **must set
-  `g_tilecache_dirty`**. ~~**Sequencing conflict:** the compositor-perf plan
-  (`docs/plans/compositor_perf.md`) rewrites these exact files
-  (`ppu.asm` render_bg/render_sprites/present). Land perf Stages 1-4 first, or
-  freeze that plan while this stage runs — do not interleave; both plans'
-  FRAME.BIN baselines invalidate each other.~~ **Cleared 2026-07-12:** that plan
-  is complete and archived, so there is no conflict left to sequence around. It
-  did raise the stakes on the flag, though — BG *and* window now read only
-  `tile_cache`, so a move-anim tile upload that fails to arm `g_tilecache_dirty`
-  is **visible corruption**, not merely a stale decode.
-- [ ] **6b. Tier-1 data generators.** `gen_battle_anims.py` → `assets/`:
-  subanimation tables, frame blocks, `AttackAnimationPointers`, move-anim
-  tileset graphics (pret `data/battle_anims/*.asm` + `gfx/battle/*.png`).
-  Two-tier rule: tables generated; the interpreter + special-effect handlers
-  are hand-written Tier-2.
-- [ ] **6c. Core interpreter:** `PlayAnimation` → `LoadSubanimation` /
-  `GetSubanimationTransform1/2` / `PlaySubanimation` / `DrawFrameBlock` /
-  `AnimationCleanOAM`, with `DoSpecialEffectByAnimationId` dispatch (ball toss/
-  shake/poof/rock slide/explode/blizzard/growl flags first — the ones battle
-  reaches; the trade/slot-machine effects are out of scope until those systems
-  exist).
-- [ ] **6d. `AnimationTypePointerTable` + shake/blink:** `ShakeScreenVertically`
-  / `ShakeScreenHorizontally*` / `BlinkEnemyMonSprite`; make the backend set
-  `wAnimationType` per pret (core.asm sets 1-3 around the damage application);
-  retire `PredefShakeScreenHorizontally` stub. Screen-flash/palette commands
-  (`AnimationFlashScreen*`, `SetAnimationPalette`) via the 6a palette hook.
-- [ ] **6e. Options wiring:** honor `wOptions` BIT_BATTLE_ANIMATION properly
-  (the current file documents why it can't yet — once ON path exists, restore
-  pret's exact gate; the options menu already writes the bit).
-- **Verify:** per-move FRAME.BIN sequences vs mGBA golden captures for a
-  sample set (tackle, gust, thunderbolt, ball toss); ANIMATION=OFF still
-  byte-identical to today's delay path; perf spot-check on 486-class cycles
-  (animations must not blow the frame budget the perf plan just recovered).
+- [ ] **6a. HAL design.** Document the battle-owned static OAM publication,
+      scroll/shake, palette-flash, and VRAM-upload interfaces before translating
+      the interpreter. Any move-animation tile upload must use `CopyVideoData` or
+      arm `g_tilecache_dirty`.
+- [ ] **6b. Tier-1 animation data.** Generate subanimations, frame blocks,
+      pointer/id tables, and move-animation graphics from pret. Keep interpreter
+      and special-effect handlers hand-written Tier-2 code.
+- [ ] **6c. Interpreter.** Port `PlayAnimation`, subanimation loading/transforms,
+      frame-block drawing, OAM cleanup, and the battle-reachable special effects
+      under their pret labels.
+- [ ] **6d. Shake, blink, flash, and options.** Port the animation-type dispatch,
+      shake/blink/palette commands, backend `wAnimationType` setup, and exact
+      `BIT_BATTLE_ANIMATION` option gate; retire the shake stub. Preserve the
+      current ANIMATION=OFF behavior as the option-off route, not as the engine.
+- [ ] **6e. Retire F-19.** Remove the enemy-gauge clone-id divergence, restore
+      canonical gauge tile identities, and delete every F-19-owned tilemap/VRAM
+      mask. Do not close the finding while its masks remain.
+- [ ] Add must-hit animation scenarios for representative physical, elemental,
+      ball, shake/blink, and option-off paths. Compare ordered checkpoints rather
+      than only the terminal screen; keep every remaining mask measured and
+      justified.
 
-## Files (primary)
+## Stage 7 — retirement and archival
 
-- `src/engine/battle/init_battle.asm`, `trainer_battle.asm`,
-  `read_trainer_party.asm`, `faint_sendout.asm`, `trainer_ai.asm` — Stage 1
-- `src/engine/battle/battle_menu.asm`, `faint_switch.asm` — Stage 2
-- `src/engine/battle/core.asm`, `move_effects/bide.asm`, `end_of_battle.asm`,
-  `battle_exp_stubs.asm` (retire) — Stage 3
-- `src/engine/battle/init_battle_variables.asm`, `ghost.asm`, new
-  `safari.asm` — Stage 4
-- new `src/engine/battle/battle_transitions.asm` — Stage 5
-- `src/engine/battle/animations.asm` (rewrite), new `tools/gen_battle_anims.py`,
-  `src/ppu/ppu.asm` hooks — Stage 6
-- `map_sprites.asm` (gate + beaten-flag), `Makefile` (gate retirement,
-  generator wiring)
+- [ ] Remove temporary guards and stand-ins whose real providers landed. Run
+      `label_status --callers` for each retired stub, update the label DB, run
+      default/strict label lint and `fidelity_gate`, and sweep related `STUB`,
+      `TODO-HW`, extern-provider, allowlist, plan, skill, and stigmergy claims.
+- [ ] Run targeted scenarios, the core tier, `fidelity-full`, and
+      `goldens-verify` when scenario/golden artifacts changed. Close or transfer
+      every battle-owned mask/finding with explicit evidence.
+- [ ] Archive only when `project_state --plans` reports no open checklist items
+      here and the default game can enter, play, and exit all in-scope battle
+      types through their owning live routes.
 
-## Conventions checklist (every stage)
+## Fidelity and acceptance
 
-pret labels preserved; stubs only in `*_stubs.asm` and retired via
-`label_status --callers`; text via generators (never hand-encoded charmap);
-`BUG`/`GLITCH` + `Safety:` tags for newly-reachable ledger rows (Trapping
-Sleep, Bide vs Fly/Dig, Ghost-Marowak Poké Doll, scripted-battle transition,
-Index #000 rides with items-plan catching); `faithdiff <Label>` +
-`lint_pret_labels` + `update_label_db` before each commit; translation_log
-entries per routine.
+The current manifest provides this battle-facing baseline:
+
+| Scenario | Tier / class | Must-hit evidence | What it proves |
+|---|---|---|---|
+| `battle_intro` | full / default | `RunBattleTest` | deterministic synthetic wild intro/HUD state |
+| `battle_menu` | core / default | `RunBattleTest`, `DisplayBattleMenu` | the normal action-menu surface, not PKMN/ITEM execution |
+| `move_selection` | full / default | `RunBattleTest`, `MoveSelectionMenu` | the regular FIGHT move menu, not item type-2 or switching |
+| `ball_catch` | full / datastruct | `RunBattleTest`, `UseItem` | capture WRAM outcome while bypassing `BattleItemMenu` |
+
+These scenarios do not prove trainer initialization, voluntary/forced switching,
+the live in-battle bag, special battle types, transitions, animations, or normal
+overworld result consumption.
+
+For each remaining capability:
+
+1. Establish current providers/callers with `project_state` and `label_status`,
+   then inspect guards and indirect tables directly.
+2. Run `fidelity_gate --base <base>` and review every ADDED/DROPPED call; record
+   required justifications in the commit message.
+3. Add or extend a deterministic scenario whose must-hit labels identify the
+   changed dispatcher/state and downstream behavior. Compare WRAM and rendered
+   surfaces according to what changed.
+4. Run targeted `goldencheck`, the core tier, and `fidelity-full` for long-tail
+   battle surfaces. Run `goldens-verify` whenever scenario or committed golden
+   artifacts change.
+5. Use live DOSBox-X only for continuous sightlines, choreography, and complete
+   cross-system traversal that a deterministic dump cannot represent, and report
+   that evidence as visually observed rather than golden-matched.

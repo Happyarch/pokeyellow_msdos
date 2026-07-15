@@ -1,5 +1,15 @@
 # Battle-Engine Faithfulness Audit — Findings Report
 
+> **Historical pre-operational artifact.** This report was archived in July
+> 2026 and predates the repository's current evidence and operational procedure.
+> Its findings, reachability claims, line references, and closure statuses are
+> not current project state and must not be cited as authority. Re-establish any
+> candidate finding from pret, the current linked build, generated
+> `dos_port/tools/project_state`/`label_status` evidence, and a must-hit runtime
+> scenario. Current remaining work lives in
+> `docs/current_plan_battle_completion.md`; this file is preserved unchanged
+> below as history.
+
 **Date:** 2026-07-01
 **Method:** Read-only 11-auditor swarm (Sonnet), Opus aggregation. Every port `.asm`
 routine compared line-by-line to its same-named pret label; every generator compared
