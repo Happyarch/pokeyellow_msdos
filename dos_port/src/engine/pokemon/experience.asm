@@ -126,7 +126,8 @@ CalcExperience:
     mov byte [ebp + hMultiplier], al
     call Multiply
 
-    ; GLITCH: "Experience Underflow -> Lv 100" — for a level-1 Medium-Slow mon
+    ; GLITCH{class=data-model; pret=engine/pokemon/experience.asm:CalcExperience; behavior=level-1 Medium-Slow subtraction underflows the 24-bit accumulator and can report level 100; evidence=pret CalcExperience subtraction chain plus docs/bug_categorization.md Experience Underflow entry; lifetime=permanent Gen-1 behavior; safety=functional exploit only, bounded emulated arithmetic with no ACE}
+    ; "Experience Underflow -> Lv 100" — for a level-1 Medium-Slow mon
     ; the linear/const-term subtraction below can underflow this 24-bit
     ; hProduct/hExperience accumulator, producing a huge wrapped "EXP needed
     ; for level 2" threshold; CalcLevelFromExperience's compare loop above then

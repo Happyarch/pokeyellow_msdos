@@ -10,7 +10,8 @@
 ; index in [wCurSpecies] into wMonHeader, then overwrites byte 0 (the dex id)
 ; with the internal index — matching the original.
 ;
-; DEVIATION(flat-data): the data tables (BaseStats, IndexToPokedex) live in the
+; DEVIATION{class=data-model; pret=home/pokemon.asm:GetMonHeader; behavior=index flat BaseStats directly and copy into wMonHeader while eliding bank switches and the net-neutral IndexToPokedex predef; evidence=pret GetMonHeader push/pop wPokedexNum flow plus port flat generated tables; lifetime=permanent flat-data and banking boundary}
+; The data tables (BaseStats, IndexToPokedex) live in the
 ; program image as flat labels, not in EBP-relative GB memory, so GetMonHeader
 ; indexes them directly and `rep movsb`s into [ebp+wMonHeader] instead of going
 ; through GB AddNTimes/CopyData (which assume an EBP-relative source), and drops
@@ -322,7 +323,8 @@ HandlePartyMenuInput:
     ; "There isn't any response..." (_SleepingPikachuText1).
     pop eax                                     ; pop af — drop the pressed keys
     mov esi, PartyMenuText_12cc                 ; ld hl, PartyMenuText_12cc
-    ; DEVIATION(window-model): pret's bare `call PrintText` lands in the GB dialog
+    ; DEVIATION{class=projection; pret=home/pokemon.asm:HandlePartyMenuInput; behavior=route the sleeping-Pikachu text through the party message-box projection; evidence=pret bare PrintText call plus port party screen stride-20 window ownership; lifetime=permanent window-compositor boundary}
+    ; pret's bare `call PrintText` lands in the GB dialog
     ; rows, which ARE this screen's message area. The port draws the party screen on
     ; a stride-20 scratch behind two windows, so the message has to be projected —
     ; same msgbox_party record .printItemUseMessage prints through, and the same one

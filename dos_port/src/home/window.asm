@@ -71,7 +71,8 @@ menu_item_step: resd 1
 ; (re)drawn each loop so a menu can refresh side info (e.g. the move TYPE/PP box)
 ; on cursor move — mirrors pret SelectMenuItem calling PrintMenuItem each frame.
 menu_redraw_cb: resd 1
-; DEVIATION(menu-scratch): the blinking ▼'s tile offset, or 0 for "this menu has
+; DEVIATION{class=projection; pret=home/menu.asm:HandleMenuInput; behavior=menus publish the scratch-relative down-arrow cell instead of using pret's fixed absolute coordinate; evidence=pret hlcoord 18,11 blink target plus port runtime-stride projected menu scratch; lifetime=permanent window-compositor boundary}
+; The blinking ▼'s tile offset, or 0 for "this menu has
 ; no down arrow" (the default). pret names that cell as the absolute screen
 ; coordinate `hlcoord 18, 11` and calls HandleDownArrowBlinkTiming on it
 ; unconditionally — inert on menus whose (18,11) is not a ▼. The port cannot name
@@ -102,7 +103,8 @@ section .text
 ; window; battle's msgbox_centered is center-projected and drawn straight into the
 ; canvas. Re-projecting either is a data edit — never a second PrintText.
 ;
-; DEVIATION(canvas): the box geometry, the <LINE>/<PROMPT> targets and the window
+; DEVIATION{class=projection; pret=home/text.asm:PrintText; behavior=take dialog geometry, control targets, and descriptor from a projection record instead of fixed coordinates; evidence=pret fixed hlcoord/bccoord text box plus port widescreen dialog records; lifetime=permanent widescreen projection}
+; The box geometry, the <LINE>/<PROMPT> targets and the window
 ; descriptor come from the record instead of pret's fixed hlcoord/bccoord literals.
 ;
 ; In:  ESI = flat pointer to a text-command stream.
@@ -284,7 +286,8 @@ PlaceUnfilledArrowMenuCursor:
 ; the loop; wMenuWrappingEnabled cleared on every exit. Ends when a key in
 ; wMenuWatchedKeys is pressed.
 ;
-; DEVIATION(timing): pret spins .loop2 free-running (JoypadLowSensitivity polls
+; DEVIATION{class=timing; pret=home/menu.asm:HandleMenuInput; behavior=pace each input-loop iteration by one frame and omit pret's extra Delay3 after cursor movement; evidence=pret busy polling and Delay3 plus port frame-driven joypad and prior menu-lethargy measurements; lifetime=permanent input timing adaptation}
+; pret spins .loop2 free-running (JoypadLowSensitivity polls
 ; the hardware; .loop1 ends in Delay3). The port has no busy-poll — the joypad is
 ; an ISR and H_JOY_PRESSED is edge-triggered per frame — so the loop is paced by
 ; one DelayFrame per iteration (AnimatePartyMon ends in DelayFrame, hence the
@@ -304,7 +307,8 @@ HandleMenuInput_:
     mov al, [ebp + H_DOWN_ARROW_COUNT1]
     mov ah, [ebp + H_DOWN_ARROW_COUNT2]
     push eax
-    ; DEVIATION(timing): pret seeds COUNT1=0 / COUNT2=6 — with its kHz-rate
+    ; DEVIATION{class=timing; pret=home/menu.asm:HandleMenuInput; behavior=arm frame-paced down-arrow counters only when a published arrow cell exists; evidence=pret free-running counter seed and inert COUNT1 zero guard plus port frame-based blink cadence; lifetime=permanent input timing adaptation}
+    ; pret seeds COUNT1=0 / COUNT2=6 — with its kHz-rate
     ; .loop2 that is "arrow visible, blink phase reset", and COUNT1=0 doubles as
     ; HandleDownArrowBlinkTiming's "no blink active" guard so the call is inert
     ; on menus with no ▼. The port's blink is frame-paced (ARROW_ON/OFF_FRAMES),

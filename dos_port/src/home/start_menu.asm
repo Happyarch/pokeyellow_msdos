@@ -212,7 +212,8 @@ RedisplayStartMenu_DoNotDrawStartMenu:
 ; CloseStartMenu — pret ref: home/start_menu.asm:CloseStartMenu.
 ; ---------------------------------------------------------------------------
 CloseStartMenu:
-    ; DEVIATION(port-input-model): pret spins `call Joypad / bit B_PAD_A,
+    ; DEVIATION{class=HAL; pret=home/start_menu.asm:CloseStartMenu; behavior=wait through DelayFrame for A, B, and START release instead of directly polling Joypad for A release; evidence=pret CloseStartMenu loop plus port frame-driven joypad state and held-key overworld input; lifetime=permanent input HAL boundary}
+    ; pret spins `call Joypad / bit B_PAD_A,
     ; [hJoyPressed]` until the closing press clears. Joypad is `missing` in the
     ; port — DelayFrame runs joypad_update, so it IS the poll — and OverworldLoop
     ; reads H_JOY_HELD rather than the edge (overworld.asm:904), so B/START must
@@ -223,7 +224,8 @@ CloseStartMenu:
     test byte [ebp + H_JOY_HELD], PAD_A | PAD_B | PAD_START
     jnz .closeReleaseLoop
     call LoadTextBoxTilePatterns
-    ; DEVIATION(port-input-model): pret `jp CloseTextDisplay` — folded here (see
+    ; DEVIATION{class=temporary; pret=home/start_menu.asm:CloseStartMenu; behavior=inline the linked window/tile restoration instead of jumping to check-only CloseTextDisplay; evidence=project_state reports CloseTextDisplay check-only and port cleanup restores menu-owned resources; lifetime=until text_script.asm closure links}
+    ; pret `jp CloseTextDisplay` — folded here (see
     ; header; CloseTextDisplay is translated but unlinked): drop the menu window
     ; and swap the walk tiles back into vFont.
     call hide_window

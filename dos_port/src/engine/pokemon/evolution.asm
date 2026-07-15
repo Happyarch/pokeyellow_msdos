@@ -376,7 +376,8 @@ EvolutionAfterBattle:
     mov [ebp + wPokedexNum], al
 
     ; Copy new species base stats into wMonHeader
-    ; DEVIATION (forced): pret is `ld hl, BaseStats / ld bc, BASE_DATA_SIZE /
+    ; DEVIATION{class=data-model; pret=engine/pokemon/evolution.asm:EvolveMon; behavior=copy BaseStats directly from flat data into wMonHeader instead of using GB-offset AddNTimes and CopyData; evidence=pret EvolveMon base-stat copy plus port flat BaseStats address and CopyData EBP-relative contract; lifetime=permanent flat-data boundary}
+    ; pret is `ld hl, BaseStats / ld bc, BASE_DATA_SIZE /
     ; call AddNTimes / ld de, wMonHeader / call CopyData` — on the GB, CopyData's
     ; source may be a ROM address. In the port BaseStats is a flat .data table and
     ; CopyData reads its source EBP-relative ([ebp+esi]), so handing it the flat

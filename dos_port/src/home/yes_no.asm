@@ -269,7 +269,8 @@ DisplayTwoOptionMenu:
     call TextBoxBorder
 .afterTextBoxBorder:
     pop ebx                                        ; descriptor pointer restored
-    ; DEVIATION(window-compositor): pret calls UpdateSprites here to hide OBJ that
+    ; DEVIATION{class=projection; pret=home/yes_no.asm:DisplayTwoOptionMenu; behavior=omit UpdateSprites because the port's window layer already occludes OBJ; evidence=pret sprite-hide call plus port window-over-OBJ compositor order; lifetime=permanent compositor z-order boundary}
+    ; pret calls UpdateSprites here to hide OBJ that
     ; would otherwise show through the box. The port composites the window layer OVER
     ; OBJ (inverse of the GB's z-order), so this box occludes sprites by construction;
     ; calling UpdateSprites would only re-publish overworld OAM beneath a window that
@@ -373,7 +374,8 @@ DisplayTwoOptionMenu:
 ; yn_teardown — restore state: drop our window descriptor + text_row_stride,
 ; clear BIT_NO_TEXT_DELAY. Preserves EAX (carry decided by caller).
 ;
-; DEVIATION(window-compositor): this is why the port has no
+; DEVIATION{class=projection; pret=home/yes_no.asm:DisplayTwoOptionMenu; behavior=restore a two-option menu by dropping its descriptor instead of snapshotting and replacing tilemap cells; evidence=pret TwoOptionMenu save/restore helpers plus port untouched-background window composition; lifetime=permanent window-compositor boundary}
+; This is why the port has no
 ; TwoOptionMenu_SaveScreenTiles / TwoOptionMenu_RestoreScreenTiles (ledger M-5 —
 ; they are absent, not stubbed, and this is the reason). pret must SNAPSHOT the
 ; tilemap cells the box is about to overwrite and paste them back afterwards,

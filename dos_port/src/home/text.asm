@@ -1065,7 +1065,8 @@ text_engine_init:
 ;
 ; Source: home/text.asm:TextCommandProcessor / NextTextCommand
 ;
-; DEVIATION(flat-pointer): the STREAM pointer is a FLAT LINEAR address, not a GB
+; DEVIATION{class=data-model; pret=home/text.asm:TextCommandProcessor; behavior=carry text-command stream position as a flat program-image pointer while keeping cursor and memory operands GB-relative; evidence=pret ROM-address HL stream plus port generated .data stream storage; lifetime=permanent flat-data boundary}
+; The STREAM pointer is a FLAT LINEAR address, not a GB
 ; offset. On the GB, text lives in addressable ROM, so pret's HL is just a GB
 ; address. In the port every text stream is flat program-image .data, outside the
 ; 64 KB emulated GB space — an EBP-relative HL cannot name one at all. Making the
@@ -1173,7 +1174,8 @@ TextCommandProcessor:
 ; text is spliced INLINE: the recursion advances the cursor (BC/EBX) and that
 ; position is carried forward, so pret never restores the cursor here — nor do we.
 ;
-; DEVIATION(flat-pointer): the operand is ONE 32-bit FLAT pointer, not pret's
+; DEVIATION{class=banking; pret=home/text.asm:TextCommandProcessor; behavior=decode TX_FAR as one 32-bit flat pointer instead of address-low, address-high, and bank bytes; evidence=pret TextCommandProcessor TX_FAR banked operand plus port text_far macro dd encoding; lifetime=permanent flat-code and banking boundary}
+; The operand is ONE 32-bit FLAT pointer, not pret's
 ; 3-byte addr_lo/addr_hi/bank triple — a bank:offset pair cannot name a flat
 ; .data label. This is what the `text_far` macro emits (include/gb_text.inc:141,
 ; `db TX_FAR / dd %1`), so the operand is 4 bytes wide and the resume point is

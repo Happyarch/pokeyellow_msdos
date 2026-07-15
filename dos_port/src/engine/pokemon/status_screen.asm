@@ -396,7 +396,8 @@ DrawHP:
     movzx ecx, byte [ebp + wLoadedMonMaxHP]          ; hi
     shl ecx, 8
     mov cl, [ebp + wLoadedMonMaxHP + 1]              ; lo → ECX = maxHP
-    ; BUG(cosmetic): pret GetHPBarLength ÷4's both curHP*48 and maxHP when maxHP>=256
+    ; BUG{class=data-model; pret=engine/pokemon/status_screen.asm:DrawHP_; behavior=divide both HP-bar operands by four when max HP exceeds 255, losing precision; evidence=pret GetHPBarLength high-byte path plus matching status-screen implementation; lifetime=permanent Gen-1 behavior unless BUG_FIX_LEVEL >= 2}
+    ; pret GetHPBarLength divides both curHP*48 and maxHP by 4 when maxHP>=256
     ; before an 8-bit divide (lossy). Preserved to match pret (see battle_hud.asm).
 %if BUG_FIX_LEVEL < 2
     cmp ecx, 256

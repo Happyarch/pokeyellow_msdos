@@ -28,7 +28,9 @@
 ; + contents there, and reflect INT 21h AH=3Ch/3Dh/3Fh/40h/3Eh into real mode
 ; with the buffer's real-mode segment in DS. dsv_io keeps its own copy of that
 ; dance because debug_dump.asm is a debug-only translation unit while this file
-; links in every build. ; DEVIATION: self-contained DPMI file I/O (not shared with
+; links in every build.
+; DEVIATION{class=HAL; pret=engine/menus/save.asm:SaveGameData; behavior=use self-contained DPMI DOS file I/O for production DSV persistence instead of cartridge SRAM access; evidence=pret SRAM save path plus port DsvReadSave and DsvWriteSave INT 21h reflection; lifetime=permanent DOS storage HAL boundary}
+; Self-contained DPMI file I/O is not shared with
 ; the debug-only debug_dump.asm) so the production save path never depends on a
 ; debug object.
 ;

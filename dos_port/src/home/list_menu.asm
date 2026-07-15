@@ -215,7 +215,7 @@ DisplayListMenuID:
     movzx esi, word [ebp + wListPointer]      ; hl = list address
     mov al, [ebp + esi]
 %if BUG_FIX_LEVEL >= 1
-    ; GLITCH-safety: a garbage/un-seeded list length would make the render loop
+    ; Safety guard: a garbage/un-seeded list length would make the render loop
     ; iterate through memory. Clamp to the largest valid list (PC box = 50), an
     ; upper bound over every list type (party 6 / bag 20 / box 50), so a legit
     ; list is never truncated. docs/glitch_safety.md.
@@ -237,7 +237,8 @@ DisplayListMenuID:
     mov dword [text_row_stride], LIST_STRIDE
     mov dword [menu_item_step], LIST_ROW_STEP * LIST_STRIDE
     ; PROJ overworld-ui: GB(4,2) 16x11 --(anchor=top-right, X+20, Y+0)--> wx=199 wy=16 clip=128 max_y=104
-    ; DEVIATION(window-compositor): pret draws the box with `call DisplayTextBoxID`
+    ; DEVIATION{class=projection; pret=home/list_menu.asm:DisplayListMenuIDLoop; behavior=draw the list box into stride-20 scratch and publish a projected window instead of calling DisplayTextBoxID on the live tilemap; evidence=pret LIST_MENU_BOX call plus port list_draw_box_border window contract; lifetime=permanent window-compositor boundary}
+    ; pret draws the box with `call DisplayTextBoxID`
     ; (LIST_MENU_BOX), which renders straight into the live GB tilemap at absolute
     ; GB(4,2). This driver instead renders the SAME border into the stride-20
     ; W_TILEMAP scratch and registers a window descriptor for it, because the port's
@@ -248,7 +249,8 @@ DisplayListMenuID:
     ; LIST_MENU_BOX template (14x9 interior) expressed at that anchor.
     call list_draw_box_border
 
-    ; DEVIATION(window-compositor): pret's two `call UpdateSprites` here exist to
+    ; DEVIATION{class=projection; pret=home/list_menu.asm:DisplayListMenuIDLoop; behavior=omit two UpdateSprites calls because the port window layer already occludes OBJ; evidence=pret sprite-hide calls plus port window-over-OBJ compositor order; lifetime=permanent compositor z-order boundary}
+    ; pret's two `call UpdateSprites` here exist to
     ; hide OBJ that would otherwise show through the text box (pret's own comment
     ; calls the second one "useless"). The port composites the window layer OVER
     ; OBJ (inverse of GB z-order — see CLAUDE.md), so the list window occludes
@@ -498,12 +500,14 @@ DisplayChooseQuantityMenu:
     mov bl, 11                                 ; priced: wider box
 .drawTextBox:
     call TextBoxBorder
-    ; DEVIATION(window-compositor): the qty box is a SECOND window stacked on the
+    ; DEVIATION{class=projection; pret=home/list_menu.asm:DisplayChooseQuantityMenu; behavior=publish the quantity box as a second window stacked over the list; evidence=pret draws both boxes into one tilemap while port list_add_qty_window owns the second descriptor; lifetime=permanent window-compositor boundary}
+    ; The qty box is a SECOND window stacked on the
     ; list's, so it needs its own descriptor. pret has no equivalent — on the GB
     ; both boxes are just cells in the one tilemap.
     call list_add_qty_window
     ; "×01" initial label — box-rel (col 1, row 1), same in both layouts.
-    ; DEVIATION(flat-strings): pret `ld de, InitialQuantityText / call PlaceString`
+    ; DEVIATION{class=data-model; pret=home/list_menu.asm:DisplayChooseQuantityMenu; behavior=place generated InitialQuantityText through a flat-pointer helper instead of a GB-address DE operand; evidence=pret PlaceString call plus generated list_menu_strings.inc flat data; lifetime=permanent flat-data boundary}
+    ; pret `ld de, InitialQuantityText / call PlaceString`
     ; reads the string through the GB address space; the port's generated strings are
     ; flat .data (assets/list_menu_strings.inc), so they go through place_flat_str,
     ; which is PlaceString over a flat pointer. Same glyphs, same dest, same ESI
@@ -517,7 +521,8 @@ DisplayChooseQuantityMenu:
 
 .waitForKeyPressLoop:
     call qty_mirror                            ; scratch → GB_TILEMAP0 qty region
-    ; DEVIATION(port-frame-pump): pret's wait loop has NO DelayFrame, and must not —
+    ; DEVIATION{class=HAL; pret=home/list_menu.asm:DisplayChooseQuantityMenu; behavior=pump DelayFrame in the quantity wait loop so keyboard joypad edges and compositor presentation advance; evidence=pret direct Joypad polling plus port joypad_update and render ownership in DelayFrame; lifetime=permanent input and software-video HAL boundary}
+    ; pret's wait loop has NO DelayFrame, and must not —
     ; on the GB, JoypadLowSensitivity opens with `call Joypad`, which reads the pad
     ; hardware directly, and the LCD scans the tilemap continuously, so a tight spin
     ; is both responsive and visible.
@@ -642,7 +647,8 @@ DisplayChooseQuantityMenu:
 PrintListMenuEntries:
     ; clear the list interior — box-rel (col 1, row 1), 9 rows x 14 cols
     ; (pret hlcoord 5,3 / lb bc,9,14 / ClearScreenArea).
-    ; DEVIATION(stride): the port ClearScreenArea advances rows by
+    ; DEVIATION{class=projection; pret=home/list_menu.asm:PrintListMenuEntries; behavior=clear the stride-20 list interior inline instead of using stride-40 ClearScreenArea; evidence=pret ClearScreenArea call plus port list scratch stride contract; lifetime=until ClearScreenArea accepts an explicit stride}
+    ; The port ClearScreenArea advances rows by
     ; SCREEN_WIDTH=40; this is the stride-20 list scratch, so clear inline
     ; (pokedex.asm pdex_clear_list_area / link_menu.asm precedent). The
     ; stride-40 call left interior rows 2/4/6/8 stale AND clobbered scratch
@@ -841,7 +847,8 @@ PrintListMenuEntries:
 
 .printCancelMenuItem:
     ; "CANCEL" at the current running dest (esi)     (pret:520)
-    ; DEVIATION(flat-strings): see the InitialQuantityText note in
+    ; DEVIATION{class=data-model; pret=home/list_menu.asm:PrintListMenuEntries; behavior=place generated CANCEL text through the flat-pointer helper instead of GB-address PlaceString; evidence=pret tail-jump to PlaceString plus generated ListMenuCancelText flat data; lifetime=permanent flat-data boundary}
+    ; See the InitialQuantityText note in
     ; DisplayChooseQuantityMenu — generated strings live in flat .data, so PlaceString
     ; becomes place_flat_str. pret tail-calls (`jp PlaceString`); the port calls and
     ; rets, which is the same thing (PlaceString returns to this frame's caller either
@@ -880,7 +887,8 @@ list_add_qty_window:
     ret
 
 ; ----------------------------------------------------------------------------
-; DEVIATION(window-compositor) — list_mirror / qty_mirror have no pret counterpart
+; DEVIATION{class=projection; pret=home/list_menu.asm:DisplayListMenuIDLoop; behavior=mirror staged list and quantity scratches into compositor tilemaps through port-only helpers; evidence=pret boxes are live tilemap cells while port window descriptors consume GB_TILEMAP0; lifetime=permanent window-compositor boundary}
+; list_mirror / qty_mirror have no pret counterpart
 ; and are the reason faithdiff reports them as ADDED calls in DisplayListMenuIDLoop
 ; and DisplayChooseQuantityMenu.
 ; Mirror helpers — copy the staged boxes from the W_TILEMAP scratch (stride 20)

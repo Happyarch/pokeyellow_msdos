@@ -14,11 +14,13 @@
 ; MoveNames) are read flat; wNameBuffer is WRAM, so the copy is an inline
 ; flat→WRAM loop (CopyData would EBP-bias the source — see get_current_move.asm).
 ;
-; BUG (faithful, range-guarded): pret's `cp HM01` test applies to ALL name types,
+; BUG{class=data-model; pret=home/names.asm:GetName; behavior=HM01 threshold redirects every name type, not only items, to machine-name formatting; evidence=pret GetName unconditional cp HM01 before type dispatch; lifetime=permanent latent Gen-1 behavior}
+; pret's `cp HM01` test applies to ALL name types,
 ; not just items — any id >= HM01 fetches a TM/HM name. Harmless in normal play
 ; (NUM_ATTACKS and the mon indexes are all < HM01). Preserved.
 ;
-; GLITCH (name-overflow): an out-of-range index walks the SOURCE past the table
+; GLITCH{class=data-model; pret=home/names.asm:GetName; behavior=out-of-range name indices walk beyond the source table until a terminator and produce glitch names; evidence=pret AddNTimes and terminator scan plus yellow_glitches.md Super Glitch and Move 0x00 entries; lifetime=permanent Gen-1 behavior; safety=destination is bounded to NAME_BUFFER_LENGTH in the port, cosmetic only with no port memory write overflow}
+; An out-of-range index walks the SOURCE past the table
 ; through adjacent program/WRAM bytes until a 0x50 → garbage names (the glitch-
 ; name mechanism). The destination copy is bounded (NAME_BUFFER_LENGTH), so
 ; wNameBuffer never overflows — this is cosmetic, not memory corruption.
@@ -97,7 +99,7 @@ GetName:
     mov al, [ebp + wNameListIndex]
     mov [ebp + wNamedObjectIndex], al
 
-    ; BUG(faithful): the HM01 test applies to all name types.
+    ; The structured HM01 bug annotation in the file header applies to all name types.
     cmp al, HM01
     jae GetMachineName
 
