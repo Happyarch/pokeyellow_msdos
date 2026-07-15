@@ -120,7 +120,7 @@ regression without comparing its categorized inventory.
 - [x] Extend strict claim linting to explicit `src/...asm` extern-provider trails;
   structured `STUB` annotations must name a label and fail if generated state
   reports a real implementation.
-- [ ] Migrate the stale provider-comment backlog reported by `--strict-claims`.
+- [x] Migrate the stale provider-comment backlog reported by `--strict-claims`.
 - [x] After fidelity Stage 1c releases its files, consolidate scenario metadata,
   IDs, flags, Lua registration, must-hit markers, and artifact identity checks.
   - [x] Add the initial unified manifest and a drift validator covering unique

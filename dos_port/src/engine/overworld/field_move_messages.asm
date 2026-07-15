@@ -51,12 +51,12 @@ global SeafoamIslandsB4FStairsCoords
 global CurrentTooFastText
 global CyclingIsFunText
 
-extern PrintText                    ; src/text/text.asm
+extern PrintText                    ; src/home/window.asm
 extern PlayCry                      ; UNPORTED (pret home/pokemon.asm) — cry synth deferred
                                     ; (status_screen.asm plays the regular cry as TODO-HW).
 extern Delay3                       ; src/video/frame.asm
-extern TextScriptEnd                ; src/engine/overworld/overworld_text.asm
-extern ArePlayerCoordsInArray       ; src/engine/overworld/hidden_events.asm
+extern TextScriptEnd                ; src/home/overworld_text.asm
+extern ArePlayerCoordsInArray       ; src/home/hidden_events.asm
 extern msgbox_dialog                    ; src/home/text.asm — overworld dialog projection
 extern text_msgbox                      ; src/home/text.asm — active msgbox projection (msgbox.inc)
 

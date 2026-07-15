@@ -40,8 +40,8 @@ bits 32
 ; ---------------------------------------------------------------------------
 extern DelayFrames                  ; src/video/frame.asm  (In: BL = frame count)
 extern Delay3                       ; src/video/frame.asm
-extern ClearSprites                 ; src/gfx/sprites.asm
-extern LoadTextBoxTilePatterns      ; src/gfx/load_font.asm
+extern ClearSprites                 ; src/home/sprites.asm
+extern LoadTextBoxTilePatterns      ; src/home/load_font.asm
 extern ReloadMapSpriteTilePatterns  ; src/home/reload_sprites.asm
 extern UpdateCGBPal_BGP             ; palettes.asm
 extern UpdateCGBPal_OBP0             ; palettes.asm

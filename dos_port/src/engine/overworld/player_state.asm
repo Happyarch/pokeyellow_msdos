@@ -139,10 +139,10 @@ TILE_SPC equ 0x7F   ; space
 ; ---------------------------------------------------------------------------
 extern GetPredefRegisters   ; src/home/predef.asm — linked (POKEMON_SRCS)
 extern IsInArray            ; src/home/array.asm — linked (POKEMON_SRCS)
-extern TextBoxBorder        ; src/text/text.asm — linked (GAME_SRCS)
-extern PlaceString          ; src/text/text.asm — linked (GAME_SRCS)
+extern TextBoxBorder        ; src/home/text.asm — linked (GAME_SRCS)
+extern PlaceString          ; src/home/text.asm — linked (GAME_SRCS)
 extern PrintNumber          ; src/home/print_num.asm — linked (GAME_SRCS)
-extern text_row_stride      ; src/text/text.asm — linked (GAME_SRCS); active
+extern text_row_stride      ; src/home/text.asm — linked (GAME_SRCS); active
                              ; W_TILEMAP row stride (20 overworld default / 40
                              ; when a caller writes W_TILEMAP directly)
 
@@ -154,7 +154,7 @@ extern text_row_stride      ; src/text/text.asm — linked (GAME_SRCS); active
 ; player_gfx.asm (or at least ForceBikeOrSurf) is promoted to GAME_SRCS. Until
 ; then, this file must also be treated as check-only (or CheckForceBikeOrSurf
 ; carved out) — see the CLOSURE REPORT in the task write-up.
-extern ForceBikeOrSurf       ; src/engine/overworld/player_gfx.asm — CHECK-ONLY (HOME_CHECK_SRCS)
+extern ForceBikeOrSurf       ; src/home/player_gfx.asm
 
 ; CLOSURE: IsPlayerStandingOnDoorTile is defined in src/engine/overworld/
 ; overworld.asm (a LINKED file, GAME_SRCS) but is NOT declared `global` there

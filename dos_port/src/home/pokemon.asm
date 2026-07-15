@@ -42,9 +42,9 @@ extern SkipFixedLengthTextEntries
 extern CopyData
 extern PrintNumber
 ; --- party-menu home driver (menus S5) ---
-extern LoadHpBarAndStatusTilePatterns   ; src/gfx/load_font.asm
+extern LoadHpBarAndStatusTilePatterns   ; src/home/load_font.asm
 extern GBPalWhiteOutWithDelay3          ; src/home/fade.asm
-extern ClearSprites                     ; src/gfx/sprites.asm
+extern ClearSprites                     ; src/home/sprites.asm
 extern DrawPartyMenu_                   ; src/engine/menus/party_menu.asm
 extern RedrawPartyMenu_
 extern HandleMenuInput_                 ; src/home/window.asm — loop entry that does NOT
@@ -52,7 +52,7 @@ extern HandleMenuInput_                 ; src/home/window.asm — loop entry tha
 extern PlaceUnfilledArrowMenuCursor
 extern menu_item_step
 extern menu_redraw_cb
-extern text_row_stride                  ; src/text/text.asm
+extern text_row_stride                  ; src/home/text.asm
 extern ErasePartyMenuCursors            ; src/engine/menus/start_sub_menus.asm
 extern SwitchPartyMon
 extern PartyMenuMirror                  ; src/engine/menus/party_menu.asm — scratch→window blit

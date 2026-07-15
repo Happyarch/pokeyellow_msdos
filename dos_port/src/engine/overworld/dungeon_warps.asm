@@ -73,7 +73,7 @@ BIT_DUNGEON_WARP      equ 4
 section .text
 
 global IsPlayerOnDungeonWarp
-extern ArePlayerCoordsInArray            ; src/engine/overworld/hidden_events.asm
+extern ArePlayerCoordsInArray            ; src/home/hidden_events.asm
 
 ; ---------------------------------------------------------------------------
 ; IsPlayerOnDungeonWarp -- test whether the player is on (or already flagged

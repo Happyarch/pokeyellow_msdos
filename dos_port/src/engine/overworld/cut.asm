@@ -76,10 +76,10 @@ global WriteCutOrBoulderDustAnimationOAMBlock
 global GetCutOrBoulderDustAnimationOffsets
 global ReplaceTreeTileBlock
 
-extern PrintText                    ; src/text/text.asm
+extern PrintText                    ; src/home/window.asm
 extern GetPartyMonName              ; src/home/pokemon.asm (AL=index, ESI=nick list)
 extern GBPalWhiteOutWithDelay3      ; src/home/fade.asm
-extern ClearSprites                 ; src/gfx/sprites.asm
+extern ClearSprites                 ; src/home/sprites.asm
 extern RestoreScreenTilesAndReloadTilePatterns ; src/home/fade.asm
 extern Delay3                       ; src/video/frame.asm
 extern LoadGBPal                    ; src/home/fade.asm

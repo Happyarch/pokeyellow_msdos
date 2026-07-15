@@ -43,7 +43,7 @@ extern joypad_update
 extern pad_quit
 extern cleanup
 extern PrepareOAMData
-extern TrackPlayTime         ; M2.1: advance play clock + CountDownIgnoreInputBitReset (src/util/play_time.asm)
+extern TrackPlayTime         ; M2.1: advance play clock + CountDownIgnoreInputBitReset (src/home/play_time.asm)
 extern Random                ; src/home/random.asm — pret VBlank RNG churn (home/vblank.asm:43)
 %ifdef DEBUG_AUTOKEY
 extern AutoKeyDrive          ; src/debug/debug_dump.asm

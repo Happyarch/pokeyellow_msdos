@@ -65,7 +65,7 @@ OPP_RIVAL3               equ 0xF3
 %include "gb_memmap.inc"
 
 global SetEnemyTrainerToStayAndFaceAnyDirection
-extern SetSpriteMovementBytesToFF ; src/engine/overworld/pathfinding.asm (check-only)
+extern SetSpriteMovementBytesToFF ; src/home/pathfinding.asm
 
 section .data
 

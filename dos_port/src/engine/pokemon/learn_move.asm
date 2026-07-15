@@ -59,16 +59,16 @@ extern LoadScreenTilesFromBuffer1   ; src/engine/battle/battle_menu.asm
 extern GetPartyMonName              ; src/home/pokemon.asm
 extern CopyData                     ; src/home/copy_data.asm
 extern AddNTimes                    ; src/home/array.asm
-extern PrintText                    ; src/engine/battle/move_effect_helpers.asm
+extern PrintText                    ; src/home/window.asm
 extern Moves                        ; src/data/pokemon_data.asm — flat move-record table
 
 extern GetMoveName                  ; src/home/names.asm — [wNamedObjectIndex] -> wNameBuffer
 extern IsMoveHM                     ; src/home/item_predicates.asm — AL=move id -> CF
-extern TextBoxBorder                ; src/text/text.asm — ESI=top-left, BL=width, BH=height
-extern PlaceString                  ; src/text/text.asm — EAX=flat src, ESI=dest
+extern TextBoxBorder                ; src/home/text.asm — ESI=top-left, BL=width, BH=height
+extern PlaceString                  ; src/home/text.asm — EAX=flat src, ESI=dest
 extern FormatMovesString            ; src/engine/battle/core_stubs.asm — wMoves -> wMovesString
 extern HandleMenuInput              ; src/home/window.asm — AL = watched key(s) that ended input
-extern text_row_stride              ; src/text/text.asm — current W_TILEMAP row stride
+extern text_row_stride              ; src/home/text.asm — current W_TILEMAP row stride
 extern menu_item_step               ; src/home/window.asm — HandleMenuInput cursor row step
 extern DisplayTextBoxID             ; pret home/textbox.asm (linked, menus-port)
 

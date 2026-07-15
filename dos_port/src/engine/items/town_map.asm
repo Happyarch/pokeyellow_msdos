@@ -45,7 +45,7 @@ extern text_row_stride          ; global dd in text.asm; default 20
 extern GBPalWhiteOut, GBPalWhiteOutWithDelay3   ; home/fade.asm (relocated)
 extern ClearScreenArea               ; home/copy2.asm
 extern FarCopyDataDouble, CopyVideoData, CopyVideoDataDouble  ; home/copy2.asm
-extern JoypadLowSensitivity            ; src/input/joypad_lowsens.asm (home/joypad2.asm)
+extern JoypadLowSensitivity            ; src/home/joypad_lowsens.asm (home/joypad2.asm)
 extern g_tilecache_dirty               ; ppu.asm — see the FarCopyData note in LoadTownMap
 extern g_bg_whiteout                   ; ppu.asm — full-screen BG whiteout flag
 extern spr_oam_valid                   ; ppu.asm — render_sprites active-entry count

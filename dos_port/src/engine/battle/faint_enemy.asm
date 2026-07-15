@@ -80,7 +80,7 @@ extern ReadPlayerMonCurHPAndStatus     ; src/engine/battle/core.asm (stub today,
 extern AddNTimes                       ; src/home/array.asm — ESI=base,BX=stride,AL=count -> ESI advances
 extern ClearScreenArea                 ; src/home/copy2.asm — ESI=W_TILEMAP dest, BH=rows, BL=width
 extern RemoveFaintedPlayerMon          ; NEEDS-INTEGRATION (see block above) — sibling file, missing
-extern AnyPartyAlive                   ; src/engine/overworld/wild_encounter_check.asm — out: DH = OR of all party HP bytes (nz => someone alive)
+extern AnyPartyAlive                   ; src/home/wild_encounter_check.asm — out: DH = OR of all party HP bytes (nz => someone alive)
 extern PrintBattleText                 ; src/engine/battle/core.asm — in: EAX = flat ptr to battle_text.inc stream
 extern PrintEmptyString                ; src/engine/battle/battle_exp_stubs.asm (currently a bare ret stub)
 extern SaveScreenTilesToBuffer1        ; src/engine/battle/battle_menu.asm — no args, snapshots screen

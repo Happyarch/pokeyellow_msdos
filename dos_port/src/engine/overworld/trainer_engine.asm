@@ -94,20 +94,20 @@ TH_SIZE        equ 22
 ; ----------------------------------------------------------------------------
 ; --- home globals already ported (link targets exist) ---
 extern FlagAction               ; src/engine/flag_action.asm (persistent flag array)
-extern CallFunctionInTable      ; src/engine/overworld/run_map_script.asm
+extern CallFunctionInTable      ; src/home/run_map_script.asm
 extern CopyData                 ; src/home/copy_data.asm
 extern AddNTimes                ; src/home/array.asm
 extern IsInArray                ; src/home/array.asm
 extern BankswitchHome           ; src/home/bankswitch.asm (no-op flat)
 extern BankswitchBack           ; src/home/bankswitch.asm (no-op flat)
-extern CalcDifference           ; src/engine/overworld/pathfinding.asm
-extern MoveSprite_              ; src/engine/overworld/pathfinding.asm
+extern CalcDifference           ; src/home/pathfinding.asm
+extern MoveSprite_              ; src/home/pathfinding.asm
 extern FillMemory               ; src/home/fill_memory.asm  (ESI unchanged on return!)
 extern WriteOAMBlock            ; src/home/oam.asm
 extern DelayFrame               ; src/video/frame.asm
 extern DelayFrames              ; src/video/frame.asm
 extern UpdateSprites            ; src/engine/overworld/movement.asm
-extern PrintText                ; battle printer (src/engine/battle/move_effect_helpers.asm)
+extern PrintText                ; src/home/window.asm
 extern PlaySound                ; src/home/audio.asm (real gateway)
 extern GetTrainerName_          ; src/engine/battle/get_trainer_name.asm
 extern DisplayTextID            ; src/home/home_stubs.asm (ret-stub) — pret: home/text_script.asm

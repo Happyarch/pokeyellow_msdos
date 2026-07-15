@@ -52,7 +52,7 @@ extern Init
 extern EnterMapBoot              ; overworld.asm — one-time overworld boot glue → EnterMap
 extern OakSpeech                 ; main_menu_stubs.asm — new-game data init (InitPlayerData2)
 extern g_tilecache_dirty
-extern JoypadLowSensitivity     ; src/input/joypad_lowsens.asm (home/joypad2.asm)
+extern JoypadLowSensitivity     ; src/home/joypad_lowsens.asm (home/joypad2.asm)
 
 ; ---------------------------------------------------------------------------
 ; Globals

@@ -36,7 +36,7 @@ global g_sb_dsp_ver
 extern FadeOutAudio               ; src/home/audio.asm
 extern Music_DoLowHealthAlarm     ; src/audio/low_health_alarm.asm
 extern Audio1_UpdateMusic         ; src/audio/engine_1.asm
-extern StopAllSounds              ; src/init/init.asm
+extern StopAllSounds              ; src/home/init.asm
 extern g_audio_engine_online      ; src/home/audio.asm
 extern opl_init                   ; src/audio/opl_shim.asm
 extern opl_pass                   ; src/audio/opl_shim.asm

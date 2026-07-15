@@ -36,7 +36,7 @@ extern g_cfg_midi        ; src/audio/mpu401.asm — /MT32 = 1, /GM = 2
 extern g_cfg_shim        ; src/audio/audio_hal.asm — /TANDY = 2, /SPK = 3
 extern g_cfg_noenh       ; src/audio/audio_hal.asm — set by /NOENH
 extern g_cfg_musicloop   ; src/audio/audio_hal.asm — set by /LOOP
-extern Init              ; src/init/init.asm — power-on init
+extern Init              ; src/home/init.asm — power-on init
 %ifdef DEBUG_AUDIO
 extern RunAudioTest      ; src/debug/debug_dump.asm — audio-engine gate
 %endif
@@ -423,4 +423,3 @@ cleanup:
     int 0x10
     pop eax
     ret
-
