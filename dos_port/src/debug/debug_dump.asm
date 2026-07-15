@@ -2393,12 +2393,13 @@ autokey_script:
     dd  -1,  -1, 0
 %elifdef AUTOKEY_APRESS
     ; DEBUG_ITEMBALL companion: nothing to navigate, just answer every <PROMPT> /
-    ; button wait the capture messages raise. A steady A pulse from frame 30 on.
+    ; button wait the capture messages raise. Use B so the now-live AskName prompt
+    ; deterministically declines the nickname, matching the golden scenario.
     ; Keep the train long: a flow that outlives it blocks forever on the next
     ; prompt (the harness has no other input source) and reads as a hang.
 %assign AK_A 30
 %rep 300
-    dd AK_A, AK_A + 5, PAD_A
+    dd AK_A, AK_A + 5, PAD_B
 %assign AK_A AK_A + 20
 %endrep
     dd  -1,  -1, 0

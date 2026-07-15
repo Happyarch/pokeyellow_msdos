@@ -359,7 +359,8 @@ StartMenu_Pokemon:
     call PrintText
     jmp .loop
 .canFly:
-    ; STUB(fly-destination): ChooseFlyDestination is the ONE genuinely `missing`
+    ; DEVIATION{class=temporary; pret=engine/menus/start_sub_menus.asm:StartMenu_Pokemon; behavior=FLY returns to the party loop because ChooseFlyDestination is absent; evidence=project_state:ChooseFlyDestination reports missing; lifetime=until town-map fly-target UI lands}
+    ; ChooseFlyDestination is the ONE genuinely `missing`
     ; routine in this whole dispatch — the Town Map fly-target UI (pret
     ; engine/menus/town_map.asm). Everything after it here (BIT_FLY_WARP,
     ; Func_1510, LoadFontTilePatterns, BIT_UNKNOWN_4_1) is linked and would work;
@@ -374,7 +375,8 @@ StartMenu_Pokemon:
 .cut:
     test al, (1 << BIT_CASCADEBADGE)
     jz .newBadgeRequired
-    ; STUB(cut-animation): UsedCut is TRANSLATED (src/engine/overworld/cut.asm) but
+    ; DEVIATION{class=temporary; pret=engine/menus/start_sub_menus.asm:StartMenu_Pokemon; behavior=CUT returns to the party loop without animation or field effect; evidence=project_state:UsedCut reports check-only provider; lifetime=until OAM animation primitives make UsedCut linkable}
+    ; UsedCut is TRANSLATED (src/engine/overworld/cut.asm) but
     ; that file does not LINK — it needs WriteOAMBlock (check-only home/oam.asm) and
     ; AnimCut (cut2.asm, whose own blocker is the unported AdjustOAMBlock*Pos battle-
     ; animation primitives). This is a linkage/OAM-primitive gap, NOT an unported

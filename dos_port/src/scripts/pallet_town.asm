@@ -82,12 +82,14 @@ PalletTown_Script:
 ; reaching the north exit, then kicks off the Oak intro cutscene (StopAllMusic /
 ; PlayMusic / advance to SCRIPT_PALLETTOWN_OAK_HEY_WAIT). That whole trigger +
 ; cutscene is deferred (needs music + scripted NPC movement), so this is a no-op
-; for now; the player can move freely. ; STUB(misc): Oak intro trigger.
+; for now; the player can move freely.
+; DEVIATION{class=temporary; pret=scripts/PalletTown.asm:PalletTownDefaultScript; behavior=Oak north-exit trigger returns without starting the cutscene; evidence=project_state:PalletTownDefaultScript plus pret source; lifetime=until current_plan_overworld_events Oak walk-up stage}
 PalletTownDefaultScript:
     ret
 
 ; States 1–8: the Oak walk-up / Pikachu-battle cutscene. Deferred to the movement +
-; battle milestone. ; STUB(battle,misc): Oak cutscene + Pikachu battle.
+; battle milestone.
+; DEVIATION{class=temporary; pret=scripts/PalletTown.asm:PalletTown_ScriptPointers; behavior=Oak cutscene states share a no-op tail; evidence=project_state:PalletTownNoopScript plus pret source; lifetime=until current_plan_overworld_events Oak walk-up stage}
 PalletTown_CutsceneStub:
 ; State 9 (NOOP) and any unimplemented state fall here.
 PalletTownNoopScript:

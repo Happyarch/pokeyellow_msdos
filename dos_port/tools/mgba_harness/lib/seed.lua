@@ -291,8 +291,7 @@ function seed.player(sym, name_bytes)
 end
 
 -- Seed the full party (default: the port's debug party). OT names = player
--- name, nicknames = species names from ROM ("kept default name" outcome,
--- matching the port's AskName stub).
+-- name, nicknames = species names from ROM (the default-name outcome).
 function seed.party(sym, name_bytes, party)
 	party = party or seed.DEBUG_PARTY
 	assert(#party <= 6, "seed: party too large")

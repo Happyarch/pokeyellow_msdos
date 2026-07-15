@@ -384,7 +384,8 @@ HandlePokedexSideMenu:
 
 .choseCry:
     mov al, [ebp + wPokedexNum]
-    call GetCryData                                 ; STUB (audio HAL)
+    ; STUB{class=stub; label=GetCryData; pret=home/audio.asm:GetCryData; behavior=returns without preparing cry parameters; evidence=project_state:GetCryData reports linked stub; lifetime=until audio Phase A cry gateway}
+    call GetCryData
     call PlaySound                                  ; audio HAL stub (no-op)
     jmp .handleMenuInput
 

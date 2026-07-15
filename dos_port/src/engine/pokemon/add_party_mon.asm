@@ -4,7 +4,7 @@
 ;
 ; Adds a new mon to the PLAYER's party (wMonDataLocation low nibble = 0) or the
 ; ENEMY's party (low nibble != 0). If the whole value is 0 the player may name
-; the mon (naming UI deferred → the species-name default is kept). Writes the
+; the mon through AskName. Writes the
 ; party-list entry + the 44-byte party_struct (species, DVs, current HP, box
 ; level/status, types, level-up moves, OT, experience, level, stats). Returns CF
 ; set on success, CF clear if the party is full.
@@ -18,10 +18,7 @@
 ;  - Real OT-ID = wPlayerID (pret L201–206), no longer 0.
 ;  - MON_CATCH_RATE (struct offset 7) preserved verbatim (Gen-2 held-item slot).
 ;
-; DIVERGENCE (deferred UI, unchanged from before):
-;  - Naming screen: pret runs `predef AskName`; here the species-name default is
-;    written (the "kept default name" outcome). Gated on wMonDataLocation == 0,
-;    matching pret's `and a; jr nz, .skipNaming`.
+; DIVERGENCES:
 ;  - IndexToPokedex is the port's flat internal→dex table, read directly (as in
 ;    evolution.asm / evos_moves.asm) instead of pret's in-place predef.
 ;  - AddPartyMon_WriteMovePP reads the base PP straight from the flat Moves table
@@ -51,6 +48,7 @@ extern Moves
 extern MonsterNames
 extern IndexToPokedex               ; flat table: byte[species-1] = national dex#
 extern FlagAction                   ; esi=flag array, cl=bit index, bh=action
+extern AskName                      ; engine/menus/naming_screen.asm — pret predef target
 
 global _AddPartyMon
 
@@ -94,12 +92,7 @@ _AddPartyMon:
     mov bx, NAME_LENGTH
     call CopyData
 
-    ; nickname default = species name (MonsterNames[species-1]).
-    ; STUB (naming UI deferred): pret runs `predef AskName` only when
-    ; wMonDataLocation == 0 (the whole value). We emulate the "kept the default
-    ; name" outcome; for the enemy/non-naming path pret leaves the nick as-is, so
-    ; gate this on the full-zero check. MonsterNames is a flat program-image
-    ; table (entries NAME_LENGTH-1 = 10 bytes, '@'-padded), read directly.
+    ; pret: only the whole-zero player path runs predef AskName.
     mov al, [ebp + wMonDataLocation]
     test al, al
     jnz .skipNaming
@@ -107,20 +100,12 @@ _AddPartyMon:
     mov al, [ebp + wPartyCount]      ; player path ⇒ count var is wPartyCount
     dec al
     call SkipFixedLengthTextEntries          ; esi = &nick[count-1] (WRAM)
-    mov edx, esi                             ; de = nick dest (WRAM)
-    movzx eax, byte [ebp + wCurPartySpecies]
-    dec eax
-    imul eax, eax, NAME_LENGTH - 1
-    lea esi, [MonsterNames + eax]            ; flat source
-    mov ecx, NAME_LENGTH - 1
-.nickCopy:
-    mov al, [esi]                            ; flat read
-    inc esi
-    mov [ebp + edx], al                      ; WRAM write
-    inc edx
-    dec ecx
-    jnz .nickCopy
-    mov byte [ebp + edx], 0x50               ; 11th byte '@' terminator
+    mov eax, esi
+    mov byte [ebp + wPredefHL + 1], al
+    shr eax, 8
+    mov byte [ebp + wPredefHL], al           ; GB predef register is big-endian
+    mov byte [ebp + wNamingScreenType], NAME_MON_SCREEN
+    call AskName
 .skipNaming:
 
     ; hl = wPartyMons / wEnemyMons + (count-1)*PARTYMON_STRUCT_LENGTH

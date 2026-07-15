@@ -4,9 +4,7 @@
 -- only). The convergence-spec wild PIDGEY L13 battle (battle.enter_wild), then
 -- the REAL battle menu → ITEM → MASTER BALL (seeded bag slot 2, qty 99):
 -- catch flow ("caught!" → dex text → dex entry screen → nickname prompt),
--- declining the nickname with B — the port's AddPartyMon keeps the default
--- species name (documented AskName stub), so declining is the converging
--- answer.
+-- declining the nickname with B, matching the port gate's live AskName path.
 --
 -- Party count is dropped to 5 before the throw (mirroring the gate) so the
 -- capture takes the AddPartyMon path — the box path ends in the interactive
