@@ -46,6 +46,12 @@ class StructuredAnnotationTests(unittest.TestCase):
             "behavior=return carry clear; evidence=label_status; lifetime=until wave 4}")
         self.assertEqual(parsed[2], [])
 
+    def test_legacy_annotation_is_distinct_from_structured(self):
+        self.assertEqual(module.legacy_annotation_kind("; BUG(cosmetic): old form"), "BUG")
+        self.assertIsNone(module.legacy_annotation_kind(
+            "; BUG{class=temporary; pret=home/foo.asm:Foo; behavior=x; "
+            "evidence=golden:y; lifetime=until z}"))
+
     def test_hand_encoded_rendered_text(self):
         self.assertTrue(module.looks_hand_encoded_text(
             'StatusText: db 0x8f, 0x92, 0x8d ; "PSN"', 'StatusText'))

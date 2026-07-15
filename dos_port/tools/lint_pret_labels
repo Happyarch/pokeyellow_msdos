@@ -31,7 +31,7 @@ Violation classes:
                 actually cover every translated pret label in that file.
   annotation    a structured exception annotation is malformed, uses an unknown
                 class, or omits evidence/retirement metadata. Legacy free-form
-                annotations remain accepted until touched.
+                annotations are enumerated by --strict-claims during migration.
   stale_provider an explicit `src/...asm` extern-provider trail does not define
                 that symbol. Enforced by --strict-claims during legacy migration.
   hand_encoded_text a likely rendered charmap byte run lives in assembly instead
@@ -61,6 +61,7 @@ ALLOWLIST  = os.path.join(SCRIPT_DIR, 'pret_label_allowlist.json')
 # longer "ret-only + minimal flag/CF contract".
 STUB_MAX_INSTRS = 8
 ANNOTATION_RE = re.compile(r';\s*(DEVIATION|STUB|BUG|GLITCH)\{([^}]*)\}')
+LEGACY_ANNOTATION_RE = re.compile(r';\s*(?:;\s*)?(DEVIATION|STUB|BUG|GLITCH)(?!\{)\b')
 ANNOTATION_KINDS = {'DEVIATION', 'STUB', 'BUG', 'GLITCH'}
 ANNOTATION_CLASSES = {
     'HAL', 'banking', 'projection', 'data-model', 'timing', 'stub', 'temporary'
@@ -101,6 +102,14 @@ def parse_annotation(text):
     if kind == 'GLITCH' and 'safety' not in fields:
         errors.append('GLITCH requires safety')
     return kind, fields, errors
+
+
+def legacy_annotation_kind(text):
+    """Return a free-form claim kind, excluding complete structured claims."""
+    if ANNOTATION_RE.search(text):
+        return None
+    match = LEGACY_ANNOTATION_RE.search(text)
+    return match.group(1) if match else None
 
 
 def looks_hand_encoded_text(text, current_label=None):
@@ -276,6 +285,10 @@ def main():
                         if re.search(r';\s*(?:DEVIATION|STUB|BUG|GLITCH)\{', text):
                             add('annotation', f'{rel}:{line_no}',
                                 f"{rel}:{line_no}: unterminated structured annotation")
+                        elif args.strict_claims and legacy_annotation_kind(text):
+                            kind = legacy_annotation_kind(text)
+                            add('legacy_annotation', f'{rel}:{line_no}',
+                                f"{rel}:{line_no}: free-form {kind} claim requires evidence-backed migration")
                         continue
                     kind, fields, errors = parsed
                     if kind == 'STUB' and fields.get('label'):
@@ -306,6 +319,10 @@ def main():
     msgs = by_rule.get('annotation', [])
     if msgs:
         print(f"\n== annotation ({len(msgs)}) ==")
+        print('\n'.join('  ' + m for m in msgs))
+    msgs = by_rule.get('legacy_annotation', [])
+    if msgs:
+        print(f"\n== legacy_annotation ({len(msgs)}) ==")
         print('\n'.join('  ' + m for m in msgs))
     print(f"\nlint_pret_labels: {len(findings)} violation(s), "
           f"{suppressed} suppressed")

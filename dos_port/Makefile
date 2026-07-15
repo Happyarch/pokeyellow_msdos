@@ -77,6 +77,27 @@ RIVAL_NAME  ?= SONY
 NASMFLAGS += -D PLAYER_NAME="'$(PLAYER_NAME)'"
 NASMFLAGS += -D RIVAL_NAME="'$(RIVAL_NAME)'"
 
+# Debug-only ownership/lifecycle contracts. Assertions trap with INT3 and are
+# absent from production objects. make DEBUG_ASSERTIONS=1
+ifdef DEBUG_ASSERTIONS
+DEBUG_ASSERT_PROJECTION := 1
+DEBUG_ASSERT_SCRATCH := 1
+DEBUG_ASSERT_LIFECYCLE := 1
+DEBUG_ASSERT_REENTRANCY := 1
+endif
+ifdef DEBUG_ASSERT_PROJECTION
+NASMFLAGS += -D DEBUG_ASSERT_PROJECTION
+endif
+ifdef DEBUG_ASSERT_SCRATCH
+NASMFLAGS += -D DEBUG_ASSERT_SCRATCH
+endif
+ifdef DEBUG_ASSERT_LIFECYCLE
+NASMFLAGS += -D DEBUG_ASSERT_LIFECYCLE
+endif
+ifdef DEBUG_ASSERT_REENTRANCY
+NASMFLAGS += -D DEBUG_ASSERT_REENTRANCY
+endif
+
 # Debug flag: dump GB memory windows to DUMP.BIN then exit. make DEBUG_DUMP=1
 # (implies SKIP_TITLE path reaching the overworld). See src/debug/debug_dump.asm.
 ifdef DEBUG_DUMP

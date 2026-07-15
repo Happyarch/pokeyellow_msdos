@@ -4,6 +4,45 @@ This plan turns fidelity evidence policy into generated interfaces and gates.
 It complements, and does not modify, the separately owned fidelity-expansion
 runtime harness.
 
+## Restart handoff (2026-07-15, assertion-infrastructure checkpoint)
+
+Worktree checkpoint for the next session:
+
+- Strict claim lint now enumerates the previously silent backlog as
+  `legacy_annotation`: **176** free-form claims. A parser regression test was
+  added; the tool suite is now **21 passing tests**. Strict lint is intentionally
+  red until the evidence-reviewed migration reaches zero.
+- `DEBUG_ASSERTIONS=1` now expands to four independently selectable NASM flags:
+  `DEBUG_ASSERT_PROJECTION`, `DEBUG_ASSERT_SCRATCH`,
+  `DEBUG_ASSERT_LIFECYCLE`, and `DEBUG_ASSERT_REENTRANCY`.
+- Current debug-only contracts compile and link across the full DOS build:
+  window-list capacity at `add_window`; text scratch stride 20/40 at
+  `TextBoxBorder` and `PlaceString`; compositor count/boolean lifecycle at
+  `render_window`; and non-reentrant ownership of PrintText's global projection
+  state. Production objects contain none of this code.
+- Runtime evidence with all four flags: `start_menu` and `overworld_pallet`
+  golden-matched. `status_p1` trapped before its dump. Binary isolation showed
+  the first projection checks also trapped; WX/WY non-negativity was invalid
+  because slide transitions use signed origins. Those origin/descriptor checks
+  were removed, leaving the indisputable capacity contract. The relaxed build
+  compiles, but `status_p1` has **not yet been rerun** after the relaxation.
+  The core fidelity run was interrupted during `party_menu` to make this handoff.
+
+Exact next commands and sequence:
+
+1. Run `make -C dos_port goldencheck SCENARIO=status_p1 DEBUG_ASSERTIONS=1`.
+   If it still traps, isolate with scratch+reentrancy versus lifecycle; do not
+   reintroduce unsigned WX/WY bounds.
+2. Once status passes, run `make -C dos_port fidelity DEBUG_ASSERTIONS=1`, then
+   add focused negative/static tests for each assertion family before checking
+   off the assertion item.
+3. Commit the assertion slice independently. Then use the new
+   `legacy_annotation (176)` strict inventory to migrate claims subsystem by
+   subsystem; retain the existing detailed prose, but validate truth against
+   pret/project_state/goldens before adding structured metadata.
+4. Only after strict lint is fully clean, run the full verification block and
+   `fidelity-full`, update counts, and archive the plan.
+
 ## Restart handoff (2026-07-15, after `0828a941`)
 
 Completed in this continuation:

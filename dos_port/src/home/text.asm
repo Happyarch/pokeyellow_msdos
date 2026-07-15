@@ -237,6 +237,18 @@ place_flat_str:
 ;      EDI clobbered.
 ; ---------------------------------------------------------------------------
 TextBoxBorder:
+%ifdef DEBUG_ASSERT_SCRATCH
+    cmp dword [text_row_stride], 20
+    je .assert_stride_ok
+    cmp dword [text_row_stride], SCREEN_WIDTH
+    jne .assert_bad_stride
+.assert_stride_ok:
+    jmp .assert_stride_done
+.assert_bad_stride:
+    int3                                ; scratch owner published an invalid stride
+    jmp .assert_bad_stride
+.assert_stride_done:
+%endif
     push esi
     push ebx
 
@@ -642,6 +654,18 @@ dex_flavor_full_mirror:
 ;      EAX clobbered
 ; ---------------------------------------------------------------------------
 PlaceString:
+%ifdef DEBUG_ASSERT_SCRATCH
+    cmp dword [text_row_stride], 20
+    je .assert_stride_ok
+    cmp dword [text_row_stride], SCREEN_WIDTH
+    jne .assert_bad_stride
+.assert_stride_ok:
+    jmp .assert_stride_done
+.assert_bad_stride:
+    int3                                ; PlaceString cannot safely walk this scratch
+    jmp .assert_bad_stride
+.assert_stride_done:
+%endif
     mov edx, eax                ; EAX (flat src) → EDX (internal walking pointer)
     push esi                    ; SM83: push hl (save line start)
 

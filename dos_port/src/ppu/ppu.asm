@@ -973,6 +973,19 @@ render_sprites:
 ; ---------------------------------------------------------------------------
 render_window:
     pushad
+%ifdef DEBUG_ASSERT_LIFECYCLE
+    cmp dword [g_window_count], MAX_WINDOWS
+    ja .assert_lifecycle
+    cmp dword [g_obj_over_window], 1
+    ja .assert_lifecycle
+    cmp dword [g_bg_whiteout], 1
+    ja .assert_lifecycle
+    jmp .assert_lifecycle_ok
+.assert_lifecycle:
+    int3                                ; malformed compositor descriptor/state
+    jmp .assert_lifecycle
+.assert_lifecycle_ok:
+%endif
 
     ; No BGP unpack: the window writes raw color (0-3) like the BG; the DAC
     ; (commit_palette) maps it via BGP — the window shares the BG palette.
@@ -1180,6 +1193,15 @@ hide_window:
 ; ---------------------------------------------------------------------------
 global add_window
 add_window:
+%ifdef DEBUG_ASSERT_PROJECTION
+    cmp dword [g_window_count], MAX_WINDOWS
+    jae .assert_projection
+    jmp .assert_projection_ok
+.assert_projection:
+    int3                                ; append overflow or invalid projection
+    jmp .assert_projection
+.assert_projection_ok:
+%endif
     push ebp
     mov ebp, [g_window_count]
     imul ebp, ebp, WIN_DESC_SIZE

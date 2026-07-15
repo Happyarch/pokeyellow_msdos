@@ -80,6 +80,9 @@ menu_redraw_cb: resd 1
 ; space is not the arrow cell of any box. The menu that DRAWS the arrow therefore
 ; publishes where it drew it (list_menu.asm), and 0 reproduces pret's inert case.
 menu_arrow_pos: resd 1
+%ifdef DEBUG_ASSERT_REENTRANCY
+print_text_depth: resb 1
+%endif
 
 section .text
 
@@ -120,6 +123,11 @@ PrintTextStaged:
     ; fall through
 
 PrintText:
+%ifdef DEBUG_ASSERT_REENTRANCY
+    cmp byte [print_text_depth], 0
+    jne .assert_reentrant
+    inc byte [print_text_depth]
+%endif
     push esi                            ; pret: push hl
     mov edi, [text_msgbox]              ; the active projection record
 
@@ -164,6 +172,13 @@ PrintText:
     call DelayFrame
 .noWindow:
     pop esi                             ; pret: `pop hl` — restore the stream pointer
+%ifdef DEBUG_ASSERT_REENTRANCY
+    jmp .projection_ready
+.assert_reentrant:
+    int3                                ; PrintText owns global projection state
+    jmp .assert_reentrant
+.projection_ready:
+%endif
 
 ; ---------------------------------------------------------------------------
 ; PrintText_NoCreatingTextBox — pret home/window.asm. Type the stream without
@@ -174,7 +189,17 @@ PrintText:
 PrintText_NoCreatingTextBox:
     mov edi, [text_msgbox]
     mov ebx, [edi + MB_LINE1]           ; bccoord 1, 14
+%ifdef DEBUG_ASSERT_REENTRANCY
+    cmp byte [print_text_depth], 0
+    je .direct_no_owner
+    call TextCommandProcessor
+    dec byte [print_text_depth]
+    ret
+.direct_no_owner:
+    jmp TextCommandProcessor
+%else
     jmp TextCommandProcessor            ; tail call
+%endif
 
 ; ---------------------------------------------------------------------------
 ; PlaceMenuCursor — draw the ▶ cursor at the current menu item, erasing the
