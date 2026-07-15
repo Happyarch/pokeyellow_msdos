@@ -1,228 +1,194 @@
-# Current Plan — Overworld Events (per-map scripts + interaction dispatch)
+# Current Plan: Overworld Events — story scripts and interaction services
 
-Status: **not started** — tick stages as they land. Archive to
-`docs/plans/overworld_events.md` when complete.
+Status: **the script/event foundation and sign milestone are complete.** The
+remaining work is the Oak intro, the real `DisplayTextID` service closure,
+hidden interactions and pickups, the unfinished field-move tails, the per-map
+story rollout, and the final stub/claim sweep. Archive this file to
+`docs/plans/overworld_events.md` when those stages are complete.
 
-Absorbs and supersedes `docs/current_plan_script_engine.md` (its Stages 1–6 —
-event flags, ShowTextStream, RunMapScript dispatch, Pallet skeleton — are DONE
-and carried forward here; its "Next milestone" Oak-intro spec is this plan's
-Stage 1). Ground truth for the gap list: the 2026-07-12 code survey (Makefile
-linked-vs-check state + stub files), NOT TODO.md.
+This status was refreshed 2026-07-15 against the linked build,
+`dos_port/tools/project_state`, the 19-scenario fidelity manifest, and the
+operational evidence policy in `AGENTS.md`. Superseded execution narratives
+remain in git history instead of being maintained here.
 
-## Scope boundaries (interfaces to the sibling plans)
+## Standing rules and ownership
 
-- **Items plan** (`current_plan_items.md`) owns `UseItem_`/`ItemUsePtrTable` and
-  every `ItemUse*` handler. Nothing here forks its own item-use dispatch: the
-  mart SELL path and field-item pickups call inventory/money routines directly
-  (already linked); Itemfinder/rods/bicycle USE entry points are items-plan
-  work even though their overworld halves land here.
-- **Battle plan** (`current_plan_battle_completion.md`) owns
-  `BATTLE_TYPE_PIKACHU` behavior, trainer-battle de-gating
-  (`TRAINER_BATTLE_LIVE` — note the default build currently marks trainers
-  beaten *without fighting*, see that plan), and Safari battle mechanics. Our
-  scripts only seed `wCurOpponent`/`wBattleType`/`wCurEnemyLevel` and hand off.
-- Tracking: `dos_port/tools/work_queue` claims/wire/verify +
-  `stub add --kind <…>` for deferrals, per the script-engine plan's workflow.
-  Every pret-labeled routine passes `faithdiff` + `lint_pret_labels` before
-  commit. All human-readable text is Tier-1 generated (`gen_npc_dialogs.py`
-  SCRIPT_OVERRIDES / sibling `gen_*.py` → `assets/*.inc`) — never hand-encoded
-  charmap bytes.
+- Preserve pret labels and control/data flow. Human-rendered dialog is generated
+  Tier-1 data (`gen_npc_dialogs.py` or the appropriate sibling generator);
+  `_Script` state machines, `text_asm` tails, dispatch tables, and handlers are
+  hand-written Tier-2 code.
+- Before asserting that a dependency is missing, stubbed, check-only,
+  unreachable, or callerless, rerun `dos_port/tools/project_state` and use
+  `label_status --callers/--callees` when provider splits matter. Inspect `%ifdef`
+  guards directly: static scanning can see a definition that the default build
+  excludes.
+- For changed pret code, run `dos_port/tools/fidelity_gate --base <base>`.
+  A clean result means only "no detected structural divergence"; each behavior
+  change also needs a must-hit runtime scenario proving that path executed.
+- `docs/current_plan_items.md` owns `ItemUse*` bodies, including Surfboard and
+  Itemfinder USE. This plan owns their overworld data, interaction, and movement
+  interfaces. `docs/current_plan_battle_completion.md` owns trainer-battle
+  activation and `BATTLE_TYPE_PIKACHU` behavior; map scripts seed battle state
+  and hand off.
 
-## Stage 1 — Oak intro cutscene (reference milestone; validates the pattern)
+## Completed foundation
 
-Port all 10 `PalletTown.asm` `_Script` states + `PalletTownOakText` in one
-pass, replacing the `ret`-stubs `PalletTownDefaultScript`
-(`src/scripts/pallet_town.asm:95`) and `PalletTown_CutsceneStub` (`:100`,
-backing 8 pointer-table slots). Dependencies verified real 2026-07-10:
-scripted-NPC-movement engine (`DoScriptedNPCMovement`, `MoveSprite`/
-`MoveSprite_`, pathfinding, `PalletMovementScript_*` + RLELists in
-auto_movement), `_InitBattleCommon`, `EnableAutoTextBoxDrawing`,
-`StopAllMusic`/`PlayMusic`, `ShowObject`/`HideObject`,
-`CalcPositionOfPlayerRelativeToNPC`, `FindPathToPlayer`, `EmotionBubble`,
-`CheckBothEventsSet`/`SetEventReuseHL`.
+- [x] Event flags, generated event constants, generated map text tables,
+      `ShowTextStream`, `RunMapScript`, `CallFunctionInTable`, and the default
+      per-map no-op dispatch are linked.
+- [x] Pallet Town has the first linked `_Script`/`text_asm` skeleton and is the
+      only map registered with a non-default script. Its Oak cutscene states
+      remain no-op tails and are Stage 1 below.
+- [x] Scripted NPC movement, pathfinding, `MoveSprite`, simulated joypad support,
+      and the per-map movement-script table are linked. They are infrastructure,
+      not evidence that a story cutscene has executed.
+- [x] Sign interaction is live through the A-press path:
+      `IsSpriteOrSignInFrontOfPlayer` → `SignLoop` → `DoSignInteraction` →
+      `DisplaySignText`. The `sign_pallet` scenario golden-matches this path.
+- [x] The party-menu field-move dispatcher, badge gates, and linked paths for
+      Strength, Flash, Dig, Teleport, and Softboiled are present. Cut, Fly,
+      Surfboard, and boulder movement remain open below.
+- [x] `player_animations.asm`, `LoadAnimSpriteGfx`, screen-buffer helpers, Town
+      Map, `PlayerPC`, and `ActivatePC` are linked. Do not reuse the old
+      check-only/linkage claims for them.
 
-**Integration risks (from the absorbed plan — verify live, don't trust blind):**
-- `MoveSprite` selector: the port's `GetSpriteMovementByte1Pointer` reads
-  `H_CURRENT_SPRITE_OFFSET` (0xFFDA) as a **pre-multiplied byte offset**
-  (slot×$10), not pret's raw `hSpriteIndex` slot → write `slot*$10`; confirm
-  whether the port's `MoveSprite` swaps first (cross-check
-  `trainer_engine.asm:505-511` `MoveSprite_`). Pathfinding uses
-  `H_NPC_SPRITE_OFFSET` (0xFF95, unions `hNPCPlayerYDistance`).
-- Dialog dispatch: the port routes NPC dialog through TextTable SCRIPT entries
-  / `ShowTextStream`, not pret `hTextID`→TextPointers — verify the cutscene's
-  `DisplayTextID` uses reach `PalletTownOakText`.
-- `BATTLE_TYPE_PIKACHU`: seed `wCurOpponent=STARTER_PIKACHU`,
-  `wBattleType=BATTLE_TYPE_PIKACHU`, `wCurEnemyLevel=5`; the forced-opponent
-  overworld path fires the battle. Until the battle plan lands the special
-  type, it runs as a plain wild flow — record with
-  `work_queue stub add --kind battle` (already recorded on fn 4398).
-- ABI cheatsheet (verified): `PlayMusic` AL=music id, BL=audio bank;
-  `SetEventReuseHL`≡`SetEvent`; `H_JOY_HELD`=0xFFB4, `W_JOY_IGNORE`=0xCD6B,
-  `W_PLAYER_MOVING_DIRECTION`=0xD527, `W_Y_COORD`=0xD360/`W_X_COORD`=0xD361,
-  `PLAYER_DIR_UP`=8, `SPRITE_FACING_UP`=$04/`LEFT`=$08/`RIGHT`=$0C,
-  `TOGGLE_PALLET_TOWN_OAK`=0, `wNPCMovementDirections2`=0xCC97,
-  `W_NPC_MOVEMENT_SCRIPT_FUNCTION_NUM`=0xCF10/`_BANK`=0xCC58,
-  `wStatusFlags5` bit `BIT_SCRIPTED_NPC_MOVEMENT`=0.
+## Stage 1 — Oak intro and Pallet state machine
 
-Execution: gate the `PalletTownDefaultScript` trigger body behind
-`%ifdef DEBUG_OAK_INTRO` (default build = today's free-roam, zero regression);
-live-test the whole chain via the flag + Oak spawn; drop the gate once
-verified.
+- [ ] Replace `PalletTownDefaultScript` and the shared
+      `PalletTown_CutsceneStub` with pret's states 0–8, keeping state 9 as the
+      real no-op. Wire the north-exit trigger, Oak approach, player/Oak scripted
+      movement, dialog, Lab transition, Pikachu battle seed, and post-battle
+      state advancement.
+- [ ] Preserve the port's movement ABI: sprite selectors use the verified
+      pre-multiplied slot offset where the linked helpers expect it, and
+      multi-step paths drain through the linked simulated-input machinery.
+      Reconcile `PlayerStepOutFromDoor`'s deferred `wJoyIgnore` store in this
+      workstream rather than leaving two scripted-input ownership models.
+- [ ] Keep the cross-plan boundary explicit: the script seeds
+      `wCurOpponent`, `wBattleType`, and `wCurEnemyLevel`; battle-completion
+      supplies faithful `BATTLE_TYPE_PIKACHU` behavior and trainer/battle exit.
+      Do not report the cutscene complete while that handoff still degrades to a
+      plain wild battle.
+- [ ] Add a deterministic Oak-intro scenario whose must-hit list names the
+      Pallet state(s) and scripted movement consumer, and whose terminal state
+      compares event/script variables plus the rendered scene. Use live DOSBox-X
+      only for continuous choreography not captured by the dump.
 
-- [ ] 1a. Port states 0–8 + `PalletTownPikachuBattleScript` seed; assemble +
-      link; `DEBUG_OAK_INTRO` gate on the trigger.
-- [ ] 1b. Live verify (dosbox-mcp): breakpoint `DoScriptedNPCMovement`,
-      `gb_read wNPCMovementDirections2`, `dump_frame` per step; final
-      FRAME.BIN shows Oak + player walked to the Lab; event flags advance
-      `EVENT_FOLLOWED_OAK_INTO_LAB`. Report to the overworld-port plan's
-      Stage 8 runtime-regression item (OW-2.5 spec).
-- [ ] 1c. Drop the debug gate; `faithdiff` each pret-labeled state;
-      translation-log entries.
+## Stage 2 — `DisplayTextID` and overworld service dialogs
 
-## Stage 2 — DisplayTextID special cases (marts / Centers / PCs)
+`project_state DisplayTextID` reports the translated implementation check-only;
+`label_status --callers DisplayTextID` reports the linked stand-in in
+`home_stubs.asm`. `DisplayTextIDInit` is linked, but the full closure is not:
+`Joypad`, mart, nurse, vending, cable, Safari, Pikachu, prize-service handlers,
+and four far-text streams still lack default-build providers.
 
-Promote `src/home/text_script.asm` (faithful body, currently
-`HOME_CHECK_SRCS`) to linked and **delete** the `home_stubs.asm:54`
-`DisplayTextID` ret-stub (dup-global link error makes the collision loud —
-Makefile:930 note). Closure per Makefile:930-935: `Joypad` (bind to the port's
-ISR-backed joypad wrapper), 4 Tier-1 far-text labels (generator), and 8
-dispatch targets, staged:
+- [ ] Reconcile the port's flat map-text table with pret's `wCurMapTextPtr`
+      lookup, bind the ISR-backed joypad interface, generate the missing far
+      text, link `text_script.asm`, and retire the stand-in plus all stale extern
+      provider trails.
+- [ ] Port `DisplayPokemartDialogue_` and the buy/sell transaction loops using
+      the linked item data, price helpers, inventory routines, and BCD money
+      math. Add a mart scenario that must hit the service dispatcher and both a
+      successful and refusal transaction path.
+- [ ] Port `DisplayPokemonCenterDialogue_`, the nurse heal flow, and the
+      Pokémon Center PC shell. Verify party healing and the rendered dialog,
+      not merely entry into the menu.
+- [ ] Enable the guarded PC script dispatch only after checking current targets:
+      `PlayerPC` and `ActivatePC` are linked, `BillsPC_` is a linked stub, and
+      `CeladonPrizeMenu` is missing. Retire `M72_OVERWORLD_TEXTSCRIPTS`; keep
+      genuinely unavailable services as structured subsystem stubs rather than
+      preserving the blanket guard.
+- [ ] Add vending, prize, Safari, Pikachu, and cable tails in their owning
+      order. Cable-club behavior remains Phase 4; its structured stand-in must
+      state that lifetime explicitly.
 
-- [ ] 2a. Link prep: `Joypad` shim + far-text generation; reconcile the file's
-      ADDRESSING MODEL CAVEAT (map text tables vs the port's SCRIPT-entry
-      dialog path) — decide and document whether `DisplayTextID` becomes the
-      real NPC path or stays special-cases-only alongside
-      `CheckNPCInteraction`.
-- [ ] 2b. **Mart**: port `DisplayPokemartDialogue_` (buy/sell loops). Already
-      in place: `DoBuySellQuitMenu` chrome (`text_box.asm:380`), generated
-      `MartInventories`/`MartPointers`/prices (`assets/items.inc`),
-      `GetItemPrice`, BCD money math. Link
-      `src/engine/items/subtract_paid_money.asm` (ITEMS_CHECK_SRCS) and
-      resolve the `PRICEDITEMLISTMENU` mart anchor TODO
-      (`home/list_menu.asm:463`). Buy path ends at `AddItemToInventory_`;
-      sell at `RemoveItemFromInventory_` + `AddAmountSoldToMoney_`.
-- [ ] 2c. **Pokémon Center**: `DisplayPokemonCenterDialogue_` (nurse heal —
-      `HealParty` exists via blackout path) + `TextScript_PokemonCenterPC`.
-- [ ] 2d. **PCs**: `TextScript_ItemStoragePC` / `TextScript_BillsPC` (Bill's
-      PC logic `bills_pc.asm` is ported; this is the dialog/dispatch shell).
-- [ ] 2e. **Vending machines** (`VendingMachineMenu`) + tails: stub
-      `TextScript_GameCornerPrizeMenu`, `CableClubNPC` (Phase 4),
-      `PrintSafariGameOverText`, `TalkToPikachu` in a `*_stubs.asm` with
-      `work_queue stub add` records; retire `overworld_text.asm`'s
-      `M72_OVERWORLD_TEXTSCRIPTS` guard once the linked dispatch subsumes it.
+## Stage 3 — hidden interactions and ground items
 
-## Stage 3 — Signs
+The sign half of `hidden_events.asm` is live. The deeper hidden-event/bookshelf
+half remains under `M72_HIDDEN_EVENTS_DEEP`; do not describe it as linked merely
+because static scanning can see its definitions.
 
-`SignLoop`/`CopySignData` are linked and correct (`home/hidden_events.asm:32`,
-sign data populated by `overworld.asm:2766`) with **zero callers**. Wire the
-A-press path per the routine's own INTEGRATION note (`hidden_events.asm:98-104`):
-in `OverworldLoop` alongside `CheckNPCInteraction` — skip if `W_NUM_SIGNS`==0,
-facing coords → DH/DL, `call SignLoop`, CF=1 → font/freeze setup →
-`DisplaySignText` (`overworld_text.asm:54`). Sign text = Tier-1 via the dialog
-generator.
+- [ ] Generate hidden-event map/coordinate/argument data from pret into
+      `assets/hidden_events.inc`, keep per-object handlers in Tier-2 code, resolve
+      the deep tier's real callees, remove the guard, and wire
+      `CheckForHiddenEventOrBookshelfOrCardKeyDoor` in pret interaction order.
+- [ ] Promote `itemfinder.asm` once its generated `HiddenItemCoords` interface
+      exists. The items plan then retires `ItemUseItemfinder`; acceptance must
+      hit both nearby-unobtained and nothing-nearby outcomes without consuming
+      or setting the hidden-item flag during a test.
+- [ ] Port `PickUpItem`, promote the check-only `GiveItem` provider, generate
+      pickup text, hide the object, update inventory and event state, and route
+      `PickUpItemText` through the live text-script path. Verify successful and
+      bag-full pickup outcomes on a real map object.
 
-- [ ] 3a. A-press wire + one map's sign text end-to-end (Pallet's sign already
-      renders via NPC path — regression-check it).
-- [ ] 3b. Headless FRAME.BIN scenario: walk to a sign, press A, dump.
+## Stage 4 — remaining field-move and boulder tails
 
-## Stage 4 — Hidden objects & bookshelves
+- [ ] **Cut:** promote `WriteOAMBlock`, port the missing
+      `AdjustOAMBlock{X,Y}Pos` primitives, link `AnimCut`/`UsedCut`, and replace
+      the party-menu no-op tail. All OBJ tile writes must invalidate
+      `tile_cache` through `CopyVideoData` or `g_tilecache_dirty`.
+- [ ] **Fly:** port `ChooseFlyDestination` on the linked Town Map foundation,
+      restore the existing warp tail, and verify destination selection through
+      arrival rather than stopping after flag arming.
+- [ ] **Surf:** supply the overworld-facing dependencies named in the items
+      plan, then let its `ItemUseSurfboard` body own mount/dismount. Verify
+      party-menu selection, forced movement, graphics, collision, music, and
+      `wWalkBikeSurfState` in both directions.
+- [ ] **Strength/boulders:** promote `TryPushingBoulder` and
+      `DoBoulderDustAnimation`, wire the map-script/collision consumer, and test
+      a permitted push plus a blocked push. The linked `PrintStrengthText` only
+      arms the state; it is not proof that a boulder moved.
+- [ ] Retain the already-linked Flash, Dig, Teleport, and Softboiled paths, but
+      add must-hit coverage when their observable behavior is first claimed.
+      A generic menu or overworld regression run is not execution evidence.
 
-Code exists behind `M72_HIDDEN_EVENTS_DEEP` (`hidden_events.asm:181-418`,
-never defined in the Makefile). Missing: the data table + generator.
+## Stage 5 — story-ordered map rollout
 
-- [ ] 4a. `tools/gen_hidden_events.py` → `assets/hidden_events.inc`
-      (`HiddenObjectMaps`/pointers from pret `data/events/hidden_objects.asm`),
-      two-tier: coordinates/ids generated; per-object *handlers* are Tier-2
-      code labels.
-- [ ] 4b. Define the guard → retire it (promote the block to default
-      assembly); wire `CheckForHiddenEventOrBookshelfOrCardKeyDoor` into the
-      A-press path (ordering vs signs/NPCs per pret).
-- [ ] 4c. Add `src/engine/items/itemfinder.asm` to the Makefile (currently
-      orphaned — in no SRCS list); the USE entry point stays items-plan.
-
-## Stage 5 — Item balls on the ground
-
-- [ ] 5a. Port `PickUpItem` (pret `engine/events/pick_up_item.asm`) — ball
-      sprite hide (`HideObject` exists), `GiveItem`, "found ITEM!" text
-      (generated), event flag set.
-- [ ] 5b. Link `src/home/give.asm` (HOME_CHECK_SRCS): export
-      `CopyToStringBuffer`; `_GivePokemon` may stay stubbed (record it) —
-      `GiveItem` is the needed half.
-- [ ] 5c. Wire `PickUpItemText` (`overworld_text.asm:160` deferral) into the
-      TextTable SCRIPT-entry path; verify on Viridian Forest's items live.
-
-## Stage 6 — Field-move execution
-
-The single chokepoint: `start_sub_menus.asm:248` `STUB(field-effects)` — the
-party-menu selection re-enters the menu. Port pret's
-`.choseOutOfBattleMove`/`.outOfBattleMovePointers` dispatch with
-`wObtainedBadges` gating + refusal texts (generated).
-
-- [ ] 6a. Dispatch + **Cut** first (already coded+linked, just unreachable):
-      promote its blockers per Makefile:919-927 — `home/vcopy.asm`
-      (SaveScreenTilesToBuffer2/Load…2), `home/oam.asm` (WriteOAMBlock),
-      `cut2.asm`/`dust_smoke.asm` (need `AdjustOAMBlock{X,Y}Pos` — small OAM
-      primitives from pret animations.asm, port standalone),
-      `field_move_messages.asm` (PlayCry → audio engine is live, wire it).
-      **Compositor note (2026-07-12):** `render_sprites` now composites from
-      `tile_cache` (`docs/plans/compositor_perf.md` Stage 4b), so the animation's
-      OBJ tile uploads must arm **`g_tilecache_dirty`** or they draw stale
-      patterns. `cut.asm` is already safe (it writes via `CopyVideoData`, which
-      arms it); any *raw* `rep movs` into vChars in the new `cut2`/`dust_smoke`
-      code must arm it explicitly — that exact omission was a live bug in
-      `LoadPokeballGfx` (fixed `33e21fd2`). `render_sprites` also positions from
-      `spr_dos_sx/sy`, not the OAM Y byte.
-- [ ] 6b. **Surf** (`UsedSurf`/`IsSurfingAllowed` — unported; water-tile
-      collision + `wWalkBikeSurfState`; player_gfx surf sprites already
-      generated) and **Strength** (`UsedStrength`/`PrintStrengthText` +
-      boulder gating; `push_boulder.asm` is the generic mechanic, check-only;
-      `run_map_script.asm:12` defers `TryPushingBoulder`/
-      `DoBoulderDustAnimation` — un-defer here).
-- [ ] 6c. **Fly** (`ChooseFlyDestination` — town_map.asm is check-only,
-      "intentionally dangling"; link it), **Flash**, **Dig/Teleport**
-      (share `SwitchAndTeleportEffect_`'s warp machinery), **Softboiled**.
-      Stub what's blocked, record each.
-- [ ] 6d. `player_animations.asm` promotion (EmotionBubble/LoadAnimSpriteGfx
-      blockers) rides with whichever of 6a–6c first needs it.
-
-## Stage 7 — Per-map script rollout (batched, story order)
-
-Pattern per map: pret `scripts/<Map>.asm` → `src/scripts/<map>.asm`
-(`_Script` state machine + `text_asm` handlers), register in
-`gen_map_scripts.py` + `gen_npc_dialogs.py` SCRIPT_OVERRIDES, text via the
-generator, `work_queue` claim→wire→verify, stub-record anything
-battle/items-blocked.
-
-- [ ] 7a. Batch 1 — Pallet story tail: Oak's Lab (starter/rival flow),
-      Route 1, Viridian City + Mart (Oak's Parcel round-trip).
-- [ ] 7b. Batch 2 — Viridian Forest, Pewter City + Gym (first badge;
-      needs trainer battles live from the battle plan), Route 2/gates.
-- [ ] 7c. Batch 3 — Mt. Moon → Cerulean (Nugget Bridge, Bill).
-- [ ] 7d. Batch 4+ — continue in story order (Vermilion/S.S. Anne, Rock
+- [ ] **Pallet/Viridian:** Oak's Lab starter/rival flow, Route 1, Viridian City
+      and Mart, and Oak's Parcel round trip.
+- [ ] **Forest/Pewter:** Viridian Forest, Pewter City/Gym, Route 2, gates, and
+      museum/gym scripted movement. Requires trainer battles to be live without
+      `TRAINER_BATTLE_LIVE` and to set beaten flags only after victory.
+- [ ] **Mt. Moon/Cerulean:** Mt. Moon, Cerulean, Nugget Bridge, and Bill.
+- [ ] Continue in story order through Vermilion/S.S. Anne, Rock
       Tunnel/Lavender, Celadon, Fuchsia/Safari, Saffron/Silph, Cinnabar,
-      Victory Road, Indigo). Re-batch as reality dictates; each batch is its
-      own commit series with a live-walkthrough verification of that leg.
+      Victory Road, and Indigo. Each batch registers its map scripts and
+      `text_asm` overrides, generates all text/data, and ends with a deterministic
+      state scenario plus a live traversal of the story leg.
 
-## Ride-alongs
+## Stage 6 — retirement and archival
 
-- [ ] `PlayerStepOutFromDoor` omits pret's `wJoyIgnore` set
-      (`overworld.asm:3294-3297` TODO home-rectify M3.3) — re-add once
-      multi-step simulated-joypad scripts drain via `.doneSimulating`
-      (Stage 1's cutscene work touches exactly this machinery).
-- [ ] Cross-ref (battle plan): trainers currently get flagged beaten without
-      fighting (`map_sprites.asm` TRAINER_BATTLE_LIVE gate) — Stage 7b's gym
-      batch depends on that fix.
+- [ ] Remove temporary guards and stand-ins whose real providers landed; run
+      `label_status --callers` for every retired stub; update the label DB; run
+      default and strict label lint plus `fidelity_gate`; and sweep related
+      `STUB`, `TODO`, extern-provider, allowlist, plan, skill, and stigmergy
+      claims. Archive this plan only after the generated plan inventory reports
+      no open items here.
 
-## Verification (every stage)
+## Fidelity and acceptance
 
-1. `make -C dos_port` + `make -C dos_port check` green; `lint_pret_labels`
-   exit 0; `faithdiff` per pret-labeled routine (justify divergences in the
-   commit message).
-2. Headless FRAME.BIN scenario per feature (the DEBUG_* seed-flag harness);
-   goldencheck suite stays green.
-3. Live spot-check in DOSBox-X for anything input-driven (signs, marts, PCs,
-   cutscenes) — dosbox-mcp breakpoints for state machines. Breakpoints/
-   `where()` resolve symbolically (pret labels incl. NASM local labels, e.g.
-   per-state `_Script` targets), and `pkmn.sym` auto-refreshes on rebuild —
-   no server restart needed between iterations on a multi-state script.
-4. `update_label_db` after each stub add/retire.
+The current manifest supplies two overworld-facing core scenarios:
+
+| Scenario | Must-hit evidence | What it proves |
+|---|---|---|
+| `overworld_pallet` | `LoadCurrentMapView`, `DumpBackbuffer` | deterministic Pallet map/render state |
+| `sign_pallet` | `DisplaySignText` | streamed sign dialog, tile/VRAM/OAM/WRAM projection |
+
+Neither scenario proves Oak's cutscene, service menus, hidden events, pickups,
+field moves, trainer/story scripts, or later maps.
+
+For each remaining capability:
+
+1. Establish current providers/callers with `project_state` and `label_status`,
+   then inspect conditional guards and indirect tables directly.
+2. Run `fidelity_gate` for the changed files and review every reported
+   ADDED/DROPPED call; record required justifications in the commit message.
+3. Add or extend a deterministic scenario whose must-hit markers identify the
+   changed dispatcher/state and the downstream behavior being claimed. Compare
+   WRAM and rendered surfaces according to what changed.
+4. Run targeted `goldencheck`, the core tier, and `fidelity-full` when the
+   affected surface is long-tail. Run `goldens-verify` whenever scenario or
+   committed golden artifacts change.
+5. Use live DOSBox-X for continuous choreography, movement, warps, and story
+   traversal that cannot be represented by one terminal dump, and report it as
+   visually observed rather than golden-matched.
