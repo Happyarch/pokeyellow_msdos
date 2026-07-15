@@ -319,15 +319,10 @@ DisplayListMenuIDLoop:
 .notOldManBattle:
     call LoadGBPal                             ; home/fade.asm (flat palette reload)
 %ifdef DEBUG_BAGMENU
-    ; menus S4 gate: render the staged list (border + entries + ▶ cursor) for
-    ; one frame, dump FRAME.BIN, exit — B-side of the bespoke-vs-realigned
-    ; A/B diff (the bespoke DisplayBagMenu hook this replaces dumped the same
-    ; state). Never returns.
-    extern DumpBackbuffer
-    call PlaceMenuCursor
-    call list_mirror
-    call DelayFrame
-    call DumpBackbuffer
+    ; Fidelity Stage 4 gate: fall through into the real HandleMenuInput loop
+    ; below, and let AutoKeyDrive photograph a deterministic blink phase. The
+    ; previous hook dumped here, before HandleMenuInput armed the MORE-list ▼
+    ; blink, so the golden's blink-OFF frame required a timing mask.
 %endif
     ; per-frame mirror keeps HandleMenuInput's live cursor reaching the
     ; compositor (same mechanism as yes_no.asm's yn_mirror callback)

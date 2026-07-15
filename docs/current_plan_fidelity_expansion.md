@@ -246,7 +246,7 @@ dialog scratch **shares bytes with the map mirror** — F-13.)
 | 1c | Item datastruct scenarios ×3 | **DONE** | (this commit) | Differ class `datastruct` + `item_tm_teach` / `item_stone_evolve` / `item_potion_use`; `make fidelity` 10/10. First-ever observation of these gates (F-15) immediately caught a REAL port bug: **F-16** — the post-evolution stat recalc read the NEXT species' base stats (NINETALES got JIGGLYPUFF's). Fixed; golden-verified. M-8 did **not** surface (no priced list in these flows — see the stage notes). |
 | 2 | Battle convergence spec + battle_intro/battle_menu/move_selection + ball_catch | **DONE** | (this commit) | The spec battle (real loaders both sides, DVs $98 $76 overwritten, loader-derived parts asserted) converges end-to-end: `make fidelity` **14/14**. First diffs caught **four real port fidelity bugs** — **F-17** (enemy HUD drawn during the wild intro), **F-18** (dead $73 drawn over the HP-bar cap), **F-19** (enemy-gauge palette clones parked on LIVE glyphs incl. the battle ▼), **F-20** (player HP-bar cap $6C where battle uses $6D) — plus **F-21** (wLoadedMon staging + player-first HUD order omitted). Ball tiles moved to pret's OBJ ids $31–$34; ball OAM rows now zero all of $FE00 (GB DMA parity). `ball_catch` passes with **zero WRAM masks**. |
 | 3 | Menu scenarios ×5 + stride support | **DONE** | `daf8164c` (first half), (this commit) | First half: `"stride": 20` differ key (revert-proofed: wrong stride = 310/360 RED) + `options_menu` / `trainer_card`, both green — trainer_card with **zero tilemap/vram/oam/wram masks**, options_menu with only the flower-anim slot. Both port gates gained `SeedDeterministicPlayerIdentity` (F-5 class: bare-boot wPlayerID was an RNG roll). Second half: `pokedex_list` / `pokedex_entry` / `naming_screen`, all green — `make fidelity` **19/19**. First diffs caught **three real port bugs**: **F-22** (the wUpdateSpritesEnabled=0 "hide sprites" protocol was mistranslated AND unreachable — menu takeovers froze stale OAM), **F-23** (the dex `<PAGE>` ▼ lived only in the window mirror, never in the compared wTileMap scratch, and never blinked), **F-24** (naming-screen cursor step was single-spaced under a confident wrong comment — the ▶ sat on the box border). Plus the G2 gate seeded owned-but-not-SEEN (its comment lied; the golden's real list navigation is what caught it) and its old dump point photographed a state the GB never pauses in. |
-| 4 | Cross-cut: tiers, goldens-verify, mask policy, skill updates | TODO | | |
+| 4 | Cross-cut: tiers, goldens-verify, mask policy, skill updates | **IN PROGRESS** | (this commit — first half) | First half/tooling done: Makefile core/full tiers, `goldens-verify` drift target, mask-policy note, and the `bag_menu` blink-phase mask retired by moving the port dump into the real `HandleMenuInput` blink loop (`BAGMENU_DUMP_FRAME=45`). Second half remains: skill updates, plan archive, scenario-manifest-owner mail. |
 
 ---
 
@@ -705,6 +705,96 @@ so a PC golden needs its DEBUG gate, not an in-game route.
   scenarios even if the change renders nothing**; text printers / NPC dialog → sign_pallet).
   `build-and-debug` — GBSTATE v2 layout, the datastruct class, tiers.
 - No new linker sections expected; if one appears, `link.ld` first (hard rule).
+
+#### Stage 4, first half — DONE (tooling: tiers, drift check, mask policy, bag blink)
+
+**Makefile tiers.** Re-derived from measured `goldencheck` wall-clock on 2026-07-15, not from
+the stale "6 + options + trainer" note. Measured one-run times:
+
+```
+status_p1 20.6s, status_p2 13.7s, start_menu 11.7s, overworld_pallet 12.2s,
+party_menu 12.1s, bag_menu 12.8s, sign_pallet 14.1s, item_tm_teach 15.7s,
+item_stone_evolve 18.8s, item_potion_use 23.6s, battle_intro 12.3s,
+battle_menu 16.7s, move_selection 16.8s, ball_catch 14.5s, options_menu 11.7s,
+trainer_card 11.5s, pokedex_list 11.5s, pokedex_entry 15.3s, naming_screen 11.6s.
+```
+
+The new default `fidelity` core is:
+
+```
+status_p1 start_menu overworld_pallet party_menu bag_menu sign_pallet item_tm_teach
+battle_menu options_menu trainer_card pokedex_list naming_screen
+```
+
+Rationale for the split: keep one representative from each fidelity surface (status, start,
+overworld, party, bag, streamed text, datastruct item mutation, battle HUD/menu, options,
+trainer card, pokédex list, naming) while pushing redundant/long-tail coverage to
+`fidelity-full`: status page 2, the other item flows, battle intro/move/catch tails, and
+`pokedex_entry`. Measured in this worktree, core is about 2m50s and full about 4m45s.
+`goldencheck SCENARIO=<name>` still works for every scenario independent of tier.
+
+**`goldens-verify`.** New target regenerates every Lua scenario golden into a temp directory
+using the pinned pristine pret worktree (`../pokeyellow_msdos-pret-golden`) and sha1-gated ROM,
+then diffs both `.bin` and `.json` against `dos_port/tests/goldens/`. It follows the same
+scenario glob as `make goldens`, so the legacy `smoke_title` golden is checked too instead of
+silently skipped. The known mGBA `MBC5 unknown address` noise is filtered like
+`make_goldens.sh`; scenario logs and failures remain visible.
+
+GREEN proof after implementation:
+
+```
+make -C dos_port goldens-verify
+...
+make: Leaving directory '/mnt/sdb1/Code/Active Code/pokeyellow_msdos/dos_port'
+```
+
+RED proof (temporary byte flip at `dos_port/tests/goldens/status_p1.bin` offset 32, then
+restored immediately):
+
+```
+goldens-verify: drift in status_p1.bin
+  33 201 200
+make: *** [Makefile:1265: goldens-verify] Error 1
+```
+
+**Mask policy.** `tools/golden_diff.py` now states the rule at the top: masks owned by OPEN
+findings carry the finding id in their why-string. Current finding-owned masks are F-13
+(`sign_pallet` dialog scratch/map mirror overlap) and F-19 (battle enemy-gauge clone ids and
+VRAM slots). Route-difference masks — status PikaPic, naming `ICON_GAP_SLOTS`/vChars2 route
+leftovers, and flower/water animation phase masks — remain justified but are not finding-owned.
+Also corrected the `sign_pallet` overlap mask text from F-12 to F-13.
+
+**`bag_menu` blink-phase mask retired.** The old DEBUG hook in `DisplayListMenuIDLoop` dumped
+before `HandleMenuInput` armed the MORE-list ▼ blink, so the port arrow was statically ON while
+the golden had caught an OFF frame. The hook now falls through to the real input loop, and the
+Makefile drives quiet AutoKey with `BAGMENU_DUMP_FRAME ?= 45`. That lands on the same OFF phase
+as the committed golden; no golden regeneration was needed.
+
+Proof:
+
+```
+make -C dos_port goldencheck SCENARIO=bag_menu
+TILEMAP: OK (360 cells, window at col 16 row 10, stride 40)
+VRAM: OK (384 tile slots)
+OAM: OK (40 entries)
+WRAM: OK (8 regions, 5 skipped)
+PASS bag_menu
+```
+
+Full verification for the first-half commit:
+
+```
+make -C dos_port fidelity        # core tier, PASS
+make -C dos_port fidelity-full   # all 19 active fidelity scenarios, PASS
+make -C dos_port goldens-verify  # all Lua goldens incl. smoke_title, PASS
+dos_port/tools/lint_pret_labels  # 0 violations
+```
+
+`faithdiff DisplayListMenuIDLoop` still reports the pre-existing port-layout divergences:
+dropped `ExitListMenu`, added `list_mirror`, and added stores to `[W_TILEMAP]`,
+`[wListScrollOffset]`, `[wStatusFlags5]`. This commit's assembly change is `%ifdef
+DEBUG_BAGMENU` only and does not add normal-path calls/stores; the existing divergences are the
+widescreen list mirror / layout-state boundary already justified by the menu projection work.
 
 ## Verification (every stage ends green)
 

@@ -24,7 +24,14 @@ Regions compared:
                with names/species charmap-decoded (see the FIELDS tables).
 
 Masks (per scenario, each with a written justification) suppress cells/slots
-that legitimately diverge; anything else nonzero-exits.
+that legitimately diverge; anything else nonzero-exits. Policy: a mask owned by
+an OPEN finding must carry the finding id in its why-string, so retiring the
+finding greps to every mask that must be deleted. Current finding-owned masks:
+F-13 (sign_pallet dialog-scratch/map-mirror overlap) and F-19 (battle
+enemy-gauge clone tile ids/VRAM slots). Route-difference masks are not
+finding-owned: e.g. status PikaPic, naming_screen ICON_GAP_SLOTS/vChars2 route
+leftovers, and flower/water animation phase masks. They still need written
+why-strings, but no finding id unless an OPEN finding owns the divergence.
 
 Usage: golden_diff.py <scenario> --gbstate PATH [--goldens DIR] [--charmap PATH]
        golden_diff.py <scenario> --flags     (print the port make flags and exit)
@@ -306,7 +313,7 @@ SCENARIOS = {
                  "draws from the tile surface, the dialog from GB_TILEMAP1), but it IS a "
                  "staging-buffer collision: anything that reads the mirror back while a "
                  "dialog is open (SaveScreenTilesToBuffer) would read dialog bytes. "
-                 "Fidelity plan F-12, M-29 family"),
+                 "Fidelity plan F-13, M-29 family"),
             ],
             "vram": [
                 (256 + 0x03, "flower tile: VRAM tile-DATA animation, phase depends on dump frame"),
@@ -388,13 +395,6 @@ SCENARIOS = {
                 ((13, 10, 13, 19),
                  "GB keeps the START menu box visible beside the ITEM list; the widescreen "
                  "port's panel redraw replaces it with the live overworld backdrop"),
-                ((11, 18),
-                 "MORE-list arrow: blinking, phase depends on dump frame (golden caught "
-                 "blink-off; this harness dumps the list before HandleMenuInput arms the "
-                 "blink, so the port's arrow is still on). The old text — 'the port draws "
-                 "it steady' — was true only because the blink targeted the wrong cell; "
-                 "menu-fidelity row 24 fixed that and the arrow now blinks in the live "
-                 "bag list (observed via DEBUG_ITEMUSE AUTOKEY_DUMP_FRAME=700 vs 715)"),
             ],
             "vram": [
                 (256 + 0x03, "flower tile: VRAM tile-DATA animation, phase depends on dump frame"),

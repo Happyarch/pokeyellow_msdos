@@ -526,11 +526,14 @@ NASMFLAGS += -D DEBUG_PARTY
 NASMFLAGS += -D SKIP_TITLE
 endif
 # Bag-menu gate: seed the bag, open the bag (ITEM) screen over the overworld,
-# render one frame, dump FRAME.BIN, exit. make DEBUG_BAGMENU=1
+# park in the real HandleMenuInput loop, and let AutoKeyDrive dump a pinned
+# MORE-arrow blink phase. make DEBUG_BAGMENU=1 [BAGMENU_DUMP_FRAME=n]
 ifdef DEBUG_BAGMENU
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_BAGMENU
 NASMFLAGS += -D SKIP_TITLE
+BAGMENU_DUMP_FRAME ?= 45
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_QUIET -D AUTOKEY_DUMP_FRAME=$(BAGMENU_DUMP_FRAME)
 endif
 # Empty-inventory variant of the bag-menu gate (list = just CANCEL — the live
 # worst-case border-corruption repro). make DEBUG_BAGMENU=1 DEBUG_BAGMENU_EMPTY=1
@@ -1245,7 +1248,7 @@ ALL_OBJS := $(ALL_SRCS:.asm=.o)
 # Targets
 # ---------------------------------------------------------------------------
 
-.PHONY: all clean clean-image image check assets regen goldens goldencheck fidelity
+.PHONY: all clean clean-image image check assets regen goldens goldens-verify goldencheck fidelity fidelity-full
 .DEFAULT_GOAL := all
 
 # Regenerate the committed mGBA goldens (tests/goldens/) from the
@@ -1255,20 +1258,79 @@ ALL_OBJS := $(ALL_SRCS:.asm=.o)
 goldens:
 	tools/mgba_harness/make_goldens.sh
 
+# Regenerate every committed mGBA golden into a scratch directory and compare it
+# against tests/goldens/. This is the drift check: it proves the checked-in
+# goldens are exactly reproducible from the pinned pristine pret worktree.
+goldens-verify:
+	@set -eu; \
+	repo_root=$$(cd .. && pwd); \
+	pret_dir="$${PRET_GOLDEN_DIR:-$$(dirname "$$repo_root")/pokeyellow_msdos-pret-golden}"; \
+	rom="$$pret_dir/pokeyellow.gbc"; \
+	sym="$$pret_dir/pokeyellow.sym"; \
+	runner="$$repo_root/dos_port/tools/mgba_build/mgba-lua-runner"; \
+	out_dir=$$(mktemp -d "$${TMPDIR:-/tmp}/goldens-verify.XXXXXX"); \
+	trap 'rm -rf "$$out_dir"' EXIT; \
+	for f in "$$rom" "$$sym" "$$runner"; do \
+		if [ ! -e "$$f" ]; then echo "goldens-verify: missing $$f" >&2; exit 2; fi; \
+	done; \
+	if [ ! -x "$$runner" ]; then echo "goldens-verify: $$runner is not executable" >&2; exit 2; fi; \
+	want_sha1=$$(awk '/pokeyellow.gbc/ { print $$1 }' "$$repo_root/roms.sha1"); \
+	have_sha1=$$(sha1sum "$$rom" | awk '{ print $$1 }'); \
+	if [ "$$want_sha1" != "$$have_sha1" ]; then \
+		echo "goldens-verify: $$rom sha1 $$have_sha1 != roms.sha1 $$want_sha1" >&2; exit 2; \
+	fi; \
+	status=0; \
+	cd "$$repo_root"; \
+	for scenario in dos_port/tools/mgba_harness/scenarios/*.lua; do \
+		name=$$(basename "$$scenario" .lua); \
+		echo "=== goldens-verify: $$name"; \
+		log="$$out_dir/$$name.log"; \
+		if GOLDEN_DIR="$$out_dir" PKMN_SYM="$$sym" "$$runner" -s "$$scenario" "$$rom" >"$$log" 2>&1; then \
+			sed '/MBC5 unknown address/d' "$$log"; \
+		else \
+			sed '/MBC5 unknown address/d' "$$log"; \
+			echo "goldens-verify: scenario $$name failed" >&2; status=1; continue; \
+		fi; \
+		for ext in bin json; do \
+			committed="dos_port/tests/goldens/$$name.$$ext"; \
+			regenerated="$$out_dir/$$name.$$ext"; \
+			if [ ! -f "$$committed" ]; then echo "goldens-verify: missing committed $$name.$$ext" >&2; status=1; continue; fi; \
+			if [ ! -f "$$regenerated" ]; then echo "goldens-verify: scenario $$name did not write $$name.$$ext" >&2; status=1; continue; fi; \
+			if ! cmp -s "$$committed" "$$regenerated"; then \
+				echo "goldens-verify: drift in $$name.$$ext" >&2; \
+				if [ "$$ext" = json ]; then diff -u "$$committed" "$$regenerated" || true; \
+				else cmp -l "$$committed" "$$regenerated" | sed -n '1,16p' || true; fi; \
+				status=1; \
+			fi; \
+		done; \
+	done; \
+	exit $$status
+
 # Diff the port's GB state against an mGBA golden (fidelity plan Stage 1.4):
 # build the scenario's DEBUG_* image, run it headless, extract GBSTATE.BIN,
 # cell/slot-diff vs tests/goldens/<scenario>.  make goldencheck SCENARIO=status_p1
 goldencheck:
 	tools/goldencheck.sh $(SCENARIO)
 
-# All golden scenarios (the port-vs-golden fidelity suite). Runs every
-# scenario even if one fails; nonzero exit if any failed.
-FIDELITY_SCENARIOS := status_p1 status_p2 start_menu overworld_pallet party_menu bag_menu \
-                      sign_pallet item_tm_teach item_stone_evolve item_potion_use \
-                      battle_intro battle_menu move_selection ball_catch \
-                      options_menu trainer_card pokedex_list pokedex_entry naming_screen
+# Fast pre-commit tier: one representative from each fidelity surface, excluding
+# slower/redundant exhaustive tails. Measured 2026-07-15 in this worktree:
+# core ~2m50s, full ~4m45s.
+FIDELITY_SCENARIOS_CORE := status_p1 start_menu overworld_pallet party_menu bag_menu \
+                           sign_pallet item_tm_teach battle_menu \
+                           options_menu trainer_card pokedex_list naming_screen
+FIDELITY_SCENARIOS_FULL := status_p1 status_p2 start_menu overworld_pallet party_menu bag_menu \
+                           sign_pallet item_tm_teach item_stone_evolve item_potion_use \
+                           battle_intro battle_menu move_selection ball_catch \
+                           options_menu trainer_card pokedex_list pokedex_entry naming_screen
+FIDELITY_SCENARIOS ?= $(FIDELITY_SCENARIOS_CORE)
+
 fidelity:
-	@fail=0; for s in $(FIDELITY_SCENARIOS); do \
+	@fail=0; for s in $(FIDELITY_SCENARIOS_CORE); do \
+		tools/goldencheck.sh $$s || fail=1; \
+	done; exit $$fail
+
+fidelity-full:
+	@fail=0; for s in $(FIDELITY_SCENARIOS_FULL); do \
 		tools/goldencheck.sh $$s || fail=1; \
 	done; exit $$fail
 
