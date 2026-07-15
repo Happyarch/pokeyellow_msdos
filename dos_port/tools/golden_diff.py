@@ -49,6 +49,7 @@ HDR_SIZE = 16
 DIRENT_SIZE = 32
 NAME_LEN = 20
 GBSTATE_VERSION = 2
+SCENARIO_MANIFEST = Path(__file__).with_name("scenario_manifest.json")
 PORT_TILEMAP_SIZE = PORT_CANVAS_W * PORT_CANVAS_H
 VRAM_SIZE = 0x1800
 OAM_SIZE = 160
@@ -905,6 +906,12 @@ def main():
     cmap = _CHARMAP = load_charmap(args.charmap)
     _, golden_regions = load_golden(Path(args.goldens), args.scenario)
     port_state = load_gbstate(args.gbstate)
+    manifest = {item["name"]: item for item in
+                json.loads(SCENARIO_MANIFEST.read_text(encoding="utf-8"))["scenarios"]}
+    expected_id = manifest[args.scenario]["id"]
+    if port_state["scenario_id"] != expected_id:
+        sys.exit(f"{args.gbstate}: scenario id {port_state['scenario_id']} does not match "
+                 f"{args.scenario} ({expected_id}); dump is not proof this gate completed")
     port_regions = port_state["regions"]
     check_addresses(golden_regions, port_regions, args.scenario)
 

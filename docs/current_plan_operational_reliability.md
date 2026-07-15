@@ -6,6 +6,23 @@ runtime harness.
 
 ## Restart handoff (2026-07-14)
 
+**Superseded 2026-07-15:** fidelity expansion is complete and archived at
+`docs/plans/fidelity_expansion.md` (`cb5e8e60`). No fidelity-agent ownership or
+sequencing restriction below remains active.
+
+The final 19-scenario registry has now been reconciled into
+`scenario_manifest.json`: CORE/FULL membership and order, flags, classes, IDs,
+Lua scripts, committed artifacts, sidecar identity, and defined must-hit labels
+are validated. `golden_diff.py` also rejects a runtime `GBSTATE.BIN` whose
+scenario ID does not match the requested scenario, so a dump from the wrong gate
+cannot pass as completion evidence. Verification after that reconciliation: 14
+tool tests pass and `validate_scenarios.py` reports 19 consistent scenarios.
+
+Scenario consolidation is still open because Makefile lists and NASM ID
+dispatch remain hand-maintained. Generate those registries from the manifest,
+then add a runtime completion marker distinct from the scenario identity tag
+before checking off the item.
+
 **Status:** independent operational-control work is committed through
 `39692a36`. The fidelity-expansion agent (`r-c7cad7187f77`) owns and is actively
 editing the harness through its Stages 2–4. Do not request or take its claimed

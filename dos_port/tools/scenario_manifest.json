@@ -34,7 +34,7 @@
     {
       "name": "status_p2",
       "id": 4,
-      "tier": "core",
+      "tier": "full",
       "scenario_class": "default",
       "build_flags": "DEBUG_STATUS=1 DEBUG_STATUS_PAGE2=1",
       "port_entry_gate": "DEBUG_STATUS_PAGE2",
@@ -77,7 +77,7 @@
         "terminal_marker": "complete"
       },
       "must_hit": [
-        "DEBUG_STARTMENU"
+        "DisplayStartMenu"
       ],
       "comparison": {
         "regions": [
@@ -107,7 +107,8 @@
         "terminal_marker": "complete"
       },
       "must_hit": [
-        "DEBUG_TRANSITION"
+        "LoadCurrentMapView",
+        "DumpBackbuffer"
       ],
       "comparison": {
         "regions": [
@@ -197,7 +198,7 @@
         "terminal_marker": "complete"
       },
       "must_hit": [
-        "DEBUG_SIGNTEXT"
+        "DisplaySignText"
       ],
       "comparison": {
         "regions": [
@@ -241,7 +242,7 @@
     {
       "name": "item_stone_evolve",
       "id": 18,
-      "tier": "core",
+      "tier": "full",
       "scenario_class": "datastruct",
       "build_flags": "DEBUG_ITEMSTONE=1",
       "port_entry_gate": "DEBUG_ITEMSTONE",
@@ -268,7 +269,7 @@
     {
       "name": "item_potion_use",
       "id": 19,
-      "tier": "core",
+      "tier": "full",
       "scenario_class": "datastruct",
       "build_flags": "DEBUG_ITEMUSE=1 AUTOKEY_DUMP_FRAME=700",
       "port_entry_gate": "DEBUG_ITEMUSE",
@@ -281,7 +282,7 @@
         "terminal_marker": "complete"
       },
       "must_hit": [
-        "DEBUG_ITEMUSE"
+        "UseItem"
       ],
       "comparison": {
         "regions": [
@@ -291,6 +292,87 @@
         "masks": "golden_diff.SCENARIOS"
       },
       "verification": "synthetic-port-gate plus real-navigation golden; state verification, not UI verification"
+    },
+    {
+      "name": "battle_intro", "id": 15, "tier": "full", "scenario_class": "default",
+      "build_flags": "DEBUG_BATTLE_GOLDEN=1 DEBUG_BATTLE_INTRO=1", "port_entry_gate": "DEBUG_BATTLE_INTRO",
+      "navigation_script": "tools/mgba_harness/scenarios/battle_intro.lua",
+      "dump": {"type": "GBSTATE", "schema_version": 2, "artifact": "GBSTATE.BIN", "timeout_seconds": 150, "terminal_marker": "complete"},
+      "must_hit": ["RunBattleTest"],
+      "comparison": {"regions": ["tilemap", "vram", "oam", "wram"], "projection": "golden_diff.SCENARIOS", "masks": "golden_diff.SCENARIOS"},
+      "verification": "deterministic synthetic-enemy convergence state"
+    },
+    {
+      "name": "battle_menu", "id": 14, "tier": "core", "scenario_class": "default",
+      "build_flags": "DEBUG_BATTLE_GOLDEN=1 DEBUG_BATTLE_MENU=1 AUTOKEY_DUMP_FRAME=300", "port_entry_gate": "DEBUG_BATTLE_MENU",
+      "navigation_script": "tools/mgba_harness/scenarios/battle_menu.lua",
+      "dump": {"type": "GBSTATE", "schema_version": 2, "artifact": "GBSTATE.BIN", "timeout_seconds": 150, "terminal_marker": "complete"},
+      "must_hit": ["RunBattleTest", "DisplayBattleMenu"],
+      "comparison": {"regions": ["tilemap", "vram", "oam", "wram"], "projection": "golden_diff.SCENARIOS", "masks": "golden_diff.SCENARIOS"},
+      "verification": "deterministic synthetic-enemy convergence state"
+    },
+    {
+      "name": "move_selection", "id": 16, "tier": "full", "scenario_class": "default",
+      "build_flags": "DEBUG_BATTLE_GOLDEN=1 DEBUG_MOVEMENU=1 AUTOKEY_DUMP_FRAME=300", "port_entry_gate": "DEBUG_MOVEMENU",
+      "navigation_script": "tools/mgba_harness/scenarios/move_selection.lua",
+      "dump": {"type": "GBSTATE", "schema_version": 2, "artifact": "GBSTATE.BIN", "timeout_seconds": 150, "terminal_marker": "complete"},
+      "must_hit": ["RunBattleTest", "MoveSelectionMenu"],
+      "comparison": {"regions": ["tilemap", "vram", "oam", "wram"], "projection": "golden_diff.SCENARIOS", "masks": "golden_diff.SCENARIOS"},
+      "verification": "deterministic synthetic-enemy convergence state"
+    },
+    {
+      "name": "ball_catch", "id": 20, "tier": "full", "scenario_class": "datastruct",
+      "build_flags": "DEBUG_BATTLE_GOLDEN=1 DEBUG_ITEMBALL=1", "port_entry_gate": "DEBUG_ITEMBALL",
+      "navigation_script": "tools/mgba_harness/scenarios/ball_catch.lua",
+      "dump": {"type": "GBSTATE", "schema_version": 2, "artifact": "GBSTATE.BIN", "timeout_seconds": 150, "terminal_marker": "complete"},
+      "must_hit": ["RunBattleTest", "UseItem"],
+      "comparison": {"regions": ["wram"], "projection": "golden_diff.SCENARIOS", "masks": "golden_diff.SCENARIOS"},
+      "verification": "synthetic-port-gate plus real-navigation golden; state verification, not UI verification"
+    },
+    {
+      "name": "options_menu", "id": 8, "tier": "core", "scenario_class": "default",
+      "build_flags": "DEBUG_OPTIONS=1", "port_entry_gate": "DEBUG_OPTIONS",
+      "navigation_script": "tools/mgba_harness/scenarios/options_menu.lua",
+      "dump": {"type": "GBSTATE", "schema_version": 2, "artifact": "GBSTATE.BIN", "timeout_seconds": 150, "terminal_marker": "complete"},
+      "must_hit": ["RunOptionsTest"],
+      "comparison": {"regions": ["tilemap", "vram", "oam", "wram"], "projection": "golden_diff.SCENARIOS", "masks": "golden_diff.SCENARIOS"},
+      "verification": "deterministic screen/navigation state"
+    },
+    {
+      "name": "trainer_card", "id": 9, "tier": "core", "scenario_class": "default",
+      "build_flags": "DEBUG_TRAINERCARD=1", "port_entry_gate": "DEBUG_TRAINERCARD",
+      "navigation_script": "tools/mgba_harness/scenarios/trainer_card.lua",
+      "dump": {"type": "GBSTATE", "schema_version": 2, "artifact": "GBSTATE.BIN", "timeout_seconds": 150, "terminal_marker": "complete"},
+      "must_hit": ["RunTrainerCardTest"],
+      "comparison": {"regions": ["tilemap", "vram", "oam", "wram"], "projection": "golden_diff.SCENARIOS", "masks": "golden_diff.SCENARIOS"},
+      "verification": "deterministic screen/navigation state"
+    },
+    {
+      "name": "pokedex_list", "id": 10, "tier": "core", "scenario_class": "default",
+      "build_flags": "DEBUG_G1=1", "port_entry_gate": "DEBUG_G1",
+      "navigation_script": "tools/mgba_harness/scenarios/pokedex_list.lua",
+      "dump": {"type": "GBSTATE", "schema_version": 2, "artifact": "GBSTATE.BIN", "timeout_seconds": 150, "terminal_marker": "complete"},
+      "must_hit": ["RunPokedexTest"],
+      "comparison": {"regions": ["tilemap", "vram", "oam", "wram"], "projection": "golden_diff.SCENARIOS", "masks": "golden_diff.SCENARIOS"},
+      "verification": "deterministic screen/navigation state"
+    },
+    {
+      "name": "pokedex_entry", "id": 11, "tier": "full", "scenario_class": "default",
+      "build_flags": "DEBUG_G2=1", "port_entry_gate": "DEBUG_G2",
+      "navigation_script": "tools/mgba_harness/scenarios/pokedex_entry.lua",
+      "dump": {"type": "GBSTATE", "schema_version": 2, "artifact": "GBSTATE.BIN", "timeout_seconds": 150, "terminal_marker": "complete"},
+      "must_hit": ["RunPokedexEntryTest"],
+      "comparison": {"regions": ["tilemap", "vram", "oam", "wram"], "projection": "golden_diff.SCENARIOS", "masks": "golden_diff.SCENARIOS"},
+      "verification": "deterministic screen/navigation state"
+    },
+    {
+      "name": "naming_screen", "id": 12, "tier": "core", "scenario_class": "default",
+      "build_flags": "DEBUG_NAMINGSCREEN=1", "port_entry_gate": "DEBUG_NAMINGSCREEN",
+      "navigation_script": "tools/mgba_harness/scenarios/naming_screen.lua",
+      "dump": {"type": "GBSTATE", "schema_version": 2, "artifact": "GBSTATE.BIN", "timeout_seconds": 150, "terminal_marker": "complete"},
+      "must_hit": ["RunNamingScreenTest"],
+      "comparison": {"regions": ["tilemap", "vram", "oam", "wram"], "projection": "golden_diff.SCENARIOS", "masks": "golden_diff.SCENARIOS"},
+      "verification": "deterministic screen/navigation state"
     }
   ]
 }

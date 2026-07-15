@@ -58,12 +58,12 @@ def golden_registry():
     return result
 
 
-def makefile_scenarios():
+def makefile_scenarios(variable):
     lines = (PORT / 'Makefile').read_text(encoding='utf-8').splitlines()
     words, collecting = [], False
     for line in lines:
         if not collecting:
-            m = re.match(r'^FIDELITY_SCENARIOS\s*:?=\s*(.*)$', line)
+            m = re.match(rf'^{re.escape(variable)}\s*:?=\s*(.*)$', line)
             if not m:
                 continue
             tail, collecting = m.group(1), True
@@ -88,9 +88,13 @@ def validate():
     registry = golden_registry()
     if set(manifest) != set(registry):
         errors.append(f"golden registry names differ: manifest-only={sorted(set(manifest)-set(registry))}, golden-only={sorted(set(registry)-set(manifest))}")
-    make_names = makefile_scenarios()
-    if list(manifest) != make_names:
-        errors.append(f"Makefile scenario order differs: manifest={list(manifest)}, make={make_names}")
+    for tier, variable in (("core", "FIDELITY_SCENARIOS_CORE"),
+                           ("full", "FIDELITY_SCENARIOS_FULL")):
+        expected = [x["name"] for x in scenarios
+                    if tier == "full" or x["tier"] == "core"]
+        make_names = makefile_scenarios(variable)
+        if expected != make_names:
+            errors.append(f"{variable} order differs: manifest={expected}, make={make_names}")
     ids = debug_ids()
     for name, item in manifest.items():
         cfg = registry.get(name, {})
@@ -109,6 +113,11 @@ def validate():
         sidecar = PORT / 'tests' / 'goldens' / f'{name}.json'
         if sidecar.is_file() and json.loads(sidecar.read_text()).get('scenario') != name:
             errors.append(f"{name}: sidecar scenario identity mismatch")
+        sources = '\n'.join(path.read_text(encoding='utf-8', errors='replace')
+                            for path in (PORT / 'src').rglob('*.asm'))
+        for label in item['must_hit']:
+            if not re.search(rf'(?m)^{re.escape(label)}:', sources):
+                errors.append(f"{name}: must_hit label {label} is not defined")
     return errors
 
 
