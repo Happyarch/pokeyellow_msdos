@@ -633,7 +633,9 @@ def load_gbstate(path):
     blob = Path(path).read_bytes()
     if blob[:4] != b"GBST":
         sys.exit(f"{path}: bad magic {blob[:4]!r}")
-    version, scenario_id, count, dir_size, total = struct.unpack_from("<BBHII", blob, 4)
+    version, scenario_tag, count, dir_size, total = struct.unpack_from("<BBHII", blob, 4)
+    completed = bool(scenario_tag & 0x80)
+    scenario_id = scenario_tag & 0x7f
     if version != GBSTATE_VERSION:
         sys.exit(f"{path}: GBSTATE version {version}, this differ speaks {GBSTATE_VERSION} "
                  f"(rebuild the port image — src/debug/debug_dump.asm)")
@@ -654,7 +656,7 @@ def load_gbstate(path):
                        ("oam", OAM_SIZE)):
         if regions.get(name, {}).get("size") != size:
             sys.exit(f"{path}: region {name} missing or wrong size")
-    return {"scenario_id": scenario_id, "regions": regions}
+    return {"scenario_id": scenario_id, "completed": completed, "regions": regions}
 
 
 def check_addresses(golden, port, scenario):
@@ -906,6 +908,9 @@ def main():
     cmap = _CHARMAP = load_charmap(args.charmap)
     _, golden_regions = load_golden(Path(args.goldens), args.scenario)
     port_state = load_gbstate(args.gbstate)
+    if not port_state["completed"]:
+        sys.exit(f"{args.gbstate}: terminal completion marker is absent; "
+                 "artifact is not execution proof")
     manifest = {item["name"]: item for item in
                 json.loads(SCENARIO_MANIFEST.read_text(encoding="utf-8"))["scenarios"]}
     expected_id = manifest[args.scenario]["id"]

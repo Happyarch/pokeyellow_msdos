@@ -217,7 +217,7 @@ DUMP_TOTAL   equ NUM_WINDOWS * WIN_SIZE          ; 9 * 64 = 576 bytes
 ;   +0x00  header (GBSTATE_HDR_SIZE = 16 B)
 ;            +0x00  magic "GBST"
 ;            +0x04  u8  version (2)
-;            +0x05  u8  scenario id (GBSTATE_SCENARIO, sanity tag)
+;            +0x05  u8  bit 7 = terminal dump reached; bits 0-6 = scenario id
 ;            +0x06  u16 region count
 ;            +0x08  u32 directory size in bytes
 ;            +0x0C  u32 total file size
@@ -247,7 +247,15 @@ GBSTATE_VRAM_SIZE   equ 0x1800
 ; types, catch rate, moves, DVs, level, 5 stats, PP. Derived, not a literal.
 BATTLEMON_STRUCT_LENGTH equ 1 + 2 + 1 + 1 + 2 + 1 + NUM_MOVES + 2 + 1 \
                             + 2 * NUM_STATS + NUM_MOVES              ; = 29
-; scenario id tag (sanity check only — the differ selects the golden by make
+; Scenario ids are generated from tools/scenario_manifest.json. The remaining
+; fallbacks are non-golden debug gates retained by the generated include.
+%include "assets/scenario_registry.inc"
+%if GBSTATE_SCENARIO > 0x7f
+    %error "GBSTATE scenario ids must leave bit 7 available for completion"
+%endif
+%define GBSTATE_TERMINAL (0x80 | GBSTATE_SCENARIO)
+%if 0
+; Historical hand-written dispatch retained in git history. The differ selects the golden by make
 ; target; ids: 0 other/unknown, 1 overworld (TRANSITION/BASELINE/WALK_NORTH),
 ; 2 STARTMENU, 3 STATUS, 4 STATUS_PAGE2, 5 PARTYMENU, 6 BAGMENU, 7 BATTLE,
 ; 8 OPTIONS, 9 TRAINERCARD, 10 G1 (dex list), 11 G2 (dex entry), 12 NAMINGSCREEN,
@@ -304,6 +312,7 @@ GBSTATE_SCENARIO equ 1
 GBSTATE_SCENARIO equ 1
 %else
 GBSTATE_SCENARIO equ 0
+%endif
 %endif
 
 ; DPMI real-mode call structure field offsets (DPMI 0.9 spec)
@@ -1647,7 +1656,7 @@ DumpGBState:
     add ebx, 0x10                  ; ebx = file base inside the DOS buffer
     mov dword [ebx], 'GBST'        ; little-endian store -> bytes G,B,S,T
     mov byte [ebx + 4], GBSTATE_VERSION
-    mov byte [ebx + 5], GBSTATE_SCENARIO
+    mov byte [ebx + 5], GBSTATE_TERMINAL
     mov word [ebx + 6], GBSTATE_REGION_COUNT
     mov dword [ebx + 8], GBSTATE_DIR_SIZE
     mov dword [ebx + 12], GBSTATE_TOTAL

@@ -25,6 +25,10 @@ class ScenarioManifestTests(unittest.TestCase):
             if item['scenario_class'] == 'datastruct':
                 self.assertIn('not UI verification', item['verification'])
 
+    def test_terminal_marker_is_required_by_differ(self):
+        text = (ROOT / 'dos_port/tools/golden_diff.py').read_text()
+        self.assertIn('if not port_state["completed"]:', text)
+
 
 if __name__ == '__main__':
     unittest.main()

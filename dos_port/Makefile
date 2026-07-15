@@ -1315,13 +1315,8 @@ goldencheck:
 # Fast pre-commit tier: one representative from each fidelity surface, excluding
 # slower/redundant exhaustive tails. Measured 2026-07-15 in this worktree:
 # core ~2m50s, full ~4m45s.
-FIDELITY_SCENARIOS_CORE := status_p1 start_menu overworld_pallet party_menu bag_menu \
-                           sign_pallet item_tm_teach battle_menu \
-                           options_menu trainer_card pokedex_list naming_screen
-FIDELITY_SCENARIOS_FULL := status_p1 status_p2 start_menu overworld_pallet party_menu bag_menu \
-                           sign_pallet item_tm_teach item_stone_evolve item_potion_use \
-                           battle_intro battle_menu move_selection ball_catch \
-                           options_menu trainer_card pokedex_list pokedex_entry naming_screen
+FIDELITY_SCENARIOS_CORE := $(shell python3 tools/gen_scenario_registry.py --names core)
+FIDELITY_SCENARIOS_FULL := $(shell python3 tools/gen_scenario_registry.py --names full)
 FIDELITY_SCENARIOS ?= $(FIDELITY_SCENARIOS_CORE)
 
 fidelity:
@@ -1778,6 +1773,7 @@ src/engine/menus/text_box.o: assets/ui_layout_menus.inc assets/ui_layout_battle.
 src/home/list_menu.o: assets/list_menu_strings.inc
 src/home/yes_no.o: assets/yes_no_strings.inc
 src/debug/debug_dump.o: $(if $(DEBUG_TEXT),assets/text_oracle.inc)
+src/debug/debug_dump.o: assets/scenario_registry.inc
 src/engine/menus/display_text_id_init.o: assets/event_constants.inc
 
 # UI layout geometry — projected menu-window coordinates. The sidecar JSON is
@@ -1832,7 +1828,8 @@ src/engine/items/town_map.o: assets/town_map_data.inc assets/town_map_gfx.inc
 # CanLearnTM/TMToMove index TechnicalMachines (added to items.inc by gen_items.py).
 src/engine/items/tms.o: assets/items.inc
 
-assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_blk.inc \
+assets: assets/scenario_registry.inc \
+        assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_blk.inc \
         assets/map_headers.inc assets/extra_includes.inc assets/map_dims.inc \
         assets/map_songs.inc \
         assets/npc_sprite_data_table.inc assets/npc_dialogs/all_dialogs.inc \
@@ -1867,6 +1864,9 @@ assets: assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_
         assets/pika_pcm.inc assets/tandy_tables.inc assets/enh_streams.inc \
         assets/mon_icons.inc
 	python3 tools/audit_memmap.py
+
+assets/scenario_registry.inc: tools/scenario_manifest.json tools/gen_scenario_registry.py
+	python3 tools/gen_scenario_registry.py
 
 # Standalone memory-map blast audit (also runs at the end of `make assets`):
 # overlap/containment check of every sized region in gb_memmap.inc +

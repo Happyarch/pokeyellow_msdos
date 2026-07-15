@@ -10,6 +10,7 @@ from pathlib import Path
 PORT = Path(__file__).resolve().parents[1]
 ROOT = PORT.parent
 MANIFEST = PORT / 'tools' / 'scenario_manifest.json'
+REGISTRY = PORT / 'assets' / 'scenario_registry.inc'
 
 
 def load_manifest(path=MANIFEST):
@@ -76,7 +77,7 @@ def makefile_scenarios(variable):
 
 
 def debug_ids():
-    text = (PORT / 'src' / 'debug' / 'debug_dump.asm').read_text(encoding='utf-8')
+    text = REGISTRY.read_text(encoding='utf-8')
     pairs = re.findall(r'%(?:ifn?def|elifdef)\s+(DEBUG_[A-Z0-9_]+)\s*\nGBSTATE_SCENARIO\s+equ\s+(\d+)', text)
     return {gate: int(value) for gate, value in pairs}
 
@@ -88,13 +89,22 @@ def validate():
     registry = golden_registry()
     if set(manifest) != set(registry):
         errors.append(f"golden registry names differ: manifest-only={sorted(set(manifest)-set(registry))}, golden-only={sorted(set(registry)-set(manifest))}")
+    makefile = (PORT / 'Makefile').read_text(encoding='utf-8')
     for tier, variable in (("core", "FIDELITY_SCENARIOS_CORE"),
                            ("full", "FIDELITY_SCENARIOS_FULL")):
         expected = [x["name"] for x in scenarios
                     if tier == "full" or x["tier"] == "core"]
-        make_names = makefile_scenarios(variable)
-        if expected != make_names:
-            errors.append(f"{variable} order differs: manifest={expected}, make={make_names}")
+        command = (f'{variable} := $(shell python3 tools/gen_scenario_registry.py '
+                   f'--names {tier})')
+        if command not in makefile:
+            errors.append(f"Makefile does not derive {variable} from the manifest")
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        'gen_scenario_registry', PORT / 'tools' / 'gen_scenario_registry.py')
+    generator = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(generator)
+    if not REGISTRY.is_file() or REGISTRY.read_text(encoding='ascii') != generator.render_nasm():
+        errors.append('assets/scenario_registry.inc is stale')
     ids = debug_ids()
     for name, item in manifest.items():
         cfg = registry.get(name, {})

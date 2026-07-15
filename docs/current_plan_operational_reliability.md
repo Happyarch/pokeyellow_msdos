@@ -18,10 +18,11 @@ scenario ID does not match the requested scenario, so a dump from the wrong gate
 cannot pass as completion evidence. Verification after that reconciliation: 14
 tool tests pass and `validate_scenarios.py` reports 19 consistent scenarios.
 
-Scenario consolidation is still open because Makefile lists and NASM ID
-dispatch remain hand-maintained. Generate those registries from the manifest,
-then add a runtime completion marker distinct from the scenario identity tag
-before checking off the item.
+Scenario consolidation closed in the next tooling slice: Make derives CORE/FULL
+names from the manifest, NASM consumes generated `assets/scenario_registry.inc`,
+and GBSTATE v2 uses bit 7 of the scenario tag as a terminal-dump marker. The
+differ requires both that marker and the expected low-seven-bit scenario ID.
+`goldencheck SCENARIO=status_p1` passed end to end with those checks active.
 
 **Status:** independent operational-control work is committed through
 `39692a36`. The fidelity-expansion agent (`r-c7cad7187f77`) owns and is actively
@@ -120,12 +121,12 @@ regression without comparing its categorized inventory.
   structured `STUB` annotations must name a label and fail if generated state
   reports a real implementation.
 - [ ] Migrate the stale provider-comment backlog reported by `--strict-claims`.
-- [ ] After fidelity Stage 1c releases its files, consolidate scenario metadata,
+- [x] After fidelity Stage 1c releases its files, consolidate scenario metadata,
   IDs, flags, Lua registration, must-hit markers, and artifact identity checks.
   - [x] Add the initial unified manifest and a drift validator covering unique
     names/IDs, build flags/classes, Makefile order, port gate IDs, Lua scripts,
     committed artifacts, and golden sidecar identity.
-  - [ ] Generate the registries from the manifest and add runtime must-hit and
+  - [x] Generate the registries from the manifest and add runtime must-hit and
     terminal-marker validation (manifest declarations alone are not execution proof).
 - [ ] Add deterministic generator regeneration, parser-coverage, pret-byte, and
   longest-match charmap gates.
