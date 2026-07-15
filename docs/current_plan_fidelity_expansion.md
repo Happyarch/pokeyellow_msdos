@@ -20,62 +20,86 @@
 > Skills to load before starting: `build-and-debug` + `faithfulness-review` (always),
 > `asm-translation` (before touching `debug_dump.asm`), `project-conventions`.
 
-## 🤝 SESSION HANDOFF (written 2026-07-15, end of the Stage-3-second-half session)
+## 🤝 SESSION HANDOFF (written 2026-07-15, for the Stage-4-FIRST-HALF session)
 
 If you are the fresh session picking this up: this section is your starting state.
 Everything below it is still binding; read "⚠ Read this first" next, then the Stage 4 spec.
 
-**Where master stands after the Stage-3-second-half commit:**
-- `make -C dos_port fidelity` is **19/19** green: status_p1/p2, start_menu, overworld_pallet,
-  party_menu, bag_menu, sign_pallet, item_tm_teach, item_stone_evolve, item_potion_use,
-  battle_intro, battle_menu, move_selection, ball_catch, options_menu, trainer_card,
-  **pokedex_list, pokedex_entry, naming_screen**.
-- All goldens are committed and regenerate byte-identically (verified ×2 this session for the
-  three new ones). `tools/lint_pret_labels` exits 0; `tools/update_label_db` output is in the
-  commit.
-- The second half fixed three real port bugs its first diffs surfaced — **F-22** (the
-  wUpdateSpritesEnabled=0 hide-sprites protocol, mistranslated AND unreachable), **F-23**
-  (dex `<PAGE>` ▼ absent from the compared scratch), **F-24** (naming cursor step
-  single-spaced under a confident wrong comment) — see the findings; the F-22 fix touches
-  `frame.asm:update_oam` + `sprite_oam.asm:PrepareOAMData` and the whole suite was re-run
-  green on top of it.
+**Where master stands after the Stage-3 close (`5f52018b`):**
+- Stages 0–3 are ALL DONE. `make -C dos_port fidelity` is **19/19** green: status_p1/p2,
+  start_menu, overworld_pallet, party_menu, bag_menu, sign_pallet, item_tm_teach,
+  item_stone_evolve, item_potion_use, battle_intro, battle_menu, move_selection, ball_catch,
+  options_menu, trainer_card, pokedex_list, pokedex_entry, naming_screen.
+- All 19 goldens are committed and regenerate byte-identically. `tools/lint_pret_labels`
+  exits 0; `tools/update_label_db` is current as of `5f52018b`.
+- Stage 3's second half fixed three real port bugs (F-22/F-23/F-24 — read them; F-22
+  touched the global frame pipeline `frame.asm:update_oam` + `sprite_oam.asm:PrepareOAMData`
+  and the whole suite was re-run green on top).
 
-**What remains: Stage 4 only** (tiers, `goldens-verify`, mask policy, skill updates, then
-archive this plan). Spec in the Stage 4 section below — re-measure anyway; the standing rule
-(master is truth, comments are not) applies to this file too. Stage-4 notes from this session:
-- The bag_menu (11,18) blink-phase mask (see "Why this exists") is still the timing-coupled
-  mask Stage 4 should retire by pinning the dump frame on both sides. `pokedex_entry` shows
-  the pattern to copy: its port dump frame is pinned to the ▼'s ON phase
-  (`AUTOKEY_DUMP_FRAME ?= 215`, Makefile comment explains the 30-ON/8-OFF math) and the
-  golden dumps at the frame the page text appears — zero masks needed.
-- The naming_screen masks (ICON_GAP_SLOTS + vChars2 $01-$5F) are route-difference masks with
-  measured whys, not finding-owned masks — the mask policy should classify them as such.
+**Your scope: the FIRST HALF of Stage 4 — the tooling work, ending in one commit:**
+
+1. **Makefile tiers**: `FIDELITY_SCENARIOS_CORE` / `FIDELITY_SCENARIOS_FULL`; `fidelity`
+   runs core, new `fidelity-full` runs all 19. The spec's core list ("the 6 + options_menu
+   + trainer_card") was written when only 8 scenarios existed — re-derive it: the intent is
+   a fast pre-commit tier vs an exhaustive one, so measure per-scenario wall-clock (each
+   goldencheck is a build + headless DOSBox-X boot; the battle scenarios and pokedex_entry
+   are the slow ones) and propose the split in the commit message. Keep `goldencheck
+   SCENARIO=` working for every scenario regardless of tier.
+2. **`goldens-verify` target**: regenerate every golden into a temp dir and diff against
+   the committed ones — the drift check. Needs the mGBA runner + the pristine golden
+   worktree (`../pokeyellow_msdos-pret-golden` @ `7caf2e09`, sha1-gated); the single-scenario
+   command below is the building block. Revert-proof it: doctor one committed golden byte →
+   `goldens-verify` must go RED naming the scenario; paste the RED output in the stage
+   notes, then restore.
+3. **Mask policy**: every mask owned by an OPEN finding carries the finding id in its
+   why-string, so retiring a finding greps to its masks. Today's finding-owned masks, all in
+   `tools/golden_diff.py`: the F-19 pair (battle vram $C0–$C8 + battle_menu/move_selection
+   tilemap (2,4)-(2,9) — ids already in the strings; verify grep-ability), and the F-13
+   sign_pallet row-0 mask. Route-difference masks (naming_screen's ICON_GAP_SLOTS +
+   vChars2 $01–$5F; the status-screen PikaPic set; the flower/water anim pair) are NOT
+   finding-owned — classify them as such in the policy note you add to golden_diff.py's
+   header.
+4. **Retire the bag_menu (11,18) blink-phase mask** — the one timing-coupled mask left.
+   Measured state (do not trust, re-measure): the golden caught blink-OFF; the port's
+   DEBUG_BAGMENU gate dumps before HandleMenuInput arms the blink, so its arrow is
+   statically ON. The honest fix is to pin the dump frame so the phase is deterministic on
+   both sides — `pokedex_entry` is the pattern to copy: its port dump is
+   `AUTOKEY_DUMP_FRAME ?= 215`, pinned mid-phase of the ▼'s 30-ON/8-OFF cycle (the Makefile
+   comment has the math), and it passes with zero masks. Expect to regenerate no golden:
+   move the PORT's dump frame to match the golden's phase, not the reverse. Delete the mask
+   in the same change; goldencheck bag_menu green is the proof.
+
+**Explicitly NOT yours (second half):** the skill updates (`faithfulness-review` step 3's
+subsystem→required-scenarios table; `build-and-debug`'s GBSTATE-v2/datastruct/tiers
+section), archiving this plan (`git mv` into `docs/plans/`), and the mail to the
+scenario-manifest owner (see mechanics below). Archive must come last — leave it to the
+closer.
 
 **Machinery available (reuse, don't rebuild):**
 - Single-scenario golden generation without the full `make goldens` sweep:
   `GOLDEN_DIR=$PWD/dos_port/tests/goldens PKMN_SYM=../pokeyellow_msdos-pret-golden/pokeyellow.sym \
    dos_port/tools/mgba_build/mgba-lua-runner -s dos_port/tools/mgba_harness/scenarios/<s>.lua \
-   ../pokeyellow_msdos-pret-golden/pokeyellow.gbc` (run from the repo root). For a
-  determinism re-check, point `GOLDEN_DIR` at a scratch dir and `sha1sum` against the
-  committed golden.
-- Differ-only revert-proofs without a rebuild: `tools/run_headless.sh "<FLAGS>" <outdir>`
-  once, then `python3 tools/golden_diff.py <s> --gbstate <outdir>/GBSTATE.BIN` repeatedly.
-- `M-113` (`ClearScreenArea` hardwired to stride 40) STILL did not surface — the second
-  half's stride-20 screens dodge it with inline clears (deliberate, pre-existing) and the
-  naming gate's one call is single-row. Still open; fail on it, don't mask, whenever a
-  stride-20 screen clears a multi-row sub-area through it.
+   ../pokeyellow_msdos-pret-golden/pokeyellow.gbc` (run from the repo root). Point
+  `GOLDEN_DIR` at a scratch dir and `sha1sum` against the committed golden for a
+  drift/determinism check — that loop, wrapped, IS most of `goldens-verify`.
+- Differ-only iteration without a rebuild: `tools/run_headless.sh "<FLAGS>" <outdir>` once,
+  then `python3 tools/golden_diff.py <s> --gbstate <outdir>/GBSTATE.BIN` repeatedly (useful
+  while tuning the bag_menu dump frame).
+- `M-113` (`ClearScreenArea` hardwired to stride 40) has now survived every Stage-3 screen
+  without surfacing (they dodge it with inline stride-20 clears; the naming gate's one call
+  is single-row). Still open; fail on it, don't mask, whenever a stride-20 screen clears a
+  multi-row sub-area through it.
 
-**Session mechanics for the fresh session:**
+**Session mechanics:**
 - **Stigmergy**: register (`context_open` + `root_register` with your host session id), then
-  re-acquire claims for what you touch (`golden_diff.py`, `mgba_harness/**`, `Makefile`, the
-  skill files, this file). The second-half session released its claims (127–131) at handoff.
-  The shared-memory key `fidelity-expansion-stage2-handoff` mirrors this section.
+  acquire claims for what you touch (`Makefile`, `golden_diff.py`, the bag gate's source,
+  this file). The Stage-3 session released its claims at handoff. The shared-memory key
+  `fidelity-expansion-stage2-handoff` mirrors this section — update it when you hand off.
 - **Codex agent `r-1a5ca7a94daa`** (mailbox thread 13, session since ended): its
   scenario-manifest consolidation (`scenario_manifest.json` + `validate_scenarios.py`,
   describing only the 10 Stage-1c scenarios — it will report drift for the battle + menu
-  scenarios; that is expected and theirs to update) is **sequenced after Stage 4's archive**.
-  When you archive this plan, send a mail to that root (or whoever holds the manifest files
-  then) saying the claims are released and the scenario set is final.
+  scenarios; expected, and theirs to update) is **sequenced after Stage 4's archive**. Not
+  your concern this session beyond not breaking it; the closer sends the mail.
 - `.codex/config.toml` shows modified in the tree — **not ours; do not commit it.**
 - Standing user directives that governed this plan's sessions: *"Don't stop until the plan is
   done"* (scoped per session by the user); per-stage task lists that start high-level and
