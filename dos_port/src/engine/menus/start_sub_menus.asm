@@ -22,9 +22,12 @@
 ; print now. A guard whose branch is kept but whose message is dropped is not a
 ; stub, it is a silently wrong screen.
 ;
-; What IS still deferred: the field-move dispatch inside StartMenu_Pokemon (see
-; the note at .choseOutOfBattleMove) — and it is blocked on LINKAGE, not on
-; translation.
+; What IS still deferred inside StartMenu_Pokemon's field-move dispatch: FLY only
+; (.canFly — ChooseFlyDestination is genuinely `missing`; the Town Map fly-target
+; UI). CUT was deferred on linkage and is now wired (overworld-events Stage 4):
+; .cut calls UsedCut for real. SURF reaches UseItem, whose ItemUseSurfboard is a
+; ret-stub owned by docs/current_plan_items.md, so it lands on pret's own refusal
+; path rather than a port no-op.
 ;
 ; Field-move pop-up (port model): DisplayTextBoxID(FIELD_MOVE_MON_MENU) draws
 ; the box on the 40-wide canvas at the UI_FIELD_MOVE_MON_MENU anchor (S2's
@@ -141,6 +144,7 @@ extern GetPartyMonName               ; home/pokemon.asm — AL = index, ESI = ni
 extern CheckIfInOutsideMap           ; engine/overworld/warp_check.asm — ZF=1 if outside
 extern IsSurfingAllowed              ; engine/overworld/field_move_messages.asm (now LINKED)
 extern PrintStrengthText              ; engine/overworld/field_move_messages.asm (now LINKED)
+extern UsedCut                        ; engine/overworld/cut.asm — predef UsedCut (.cut)
 extern Func_1510                     ; engine/overworld/pikachu.asm (relocated)
 extern DelayFrames                   ; video/frame.asm — BL = frame count
 extern Divide                        ; home/math.asm — hDividend/hDivisor, BH = byte count
@@ -375,17 +379,21 @@ StartMenu_Pokemon:
 .cut:
     test al, (1 << BIT_CASCADEBADGE)
     jz .newBadgeRequired
-    ; DEVIATION{class=temporary; pret=engine/menus/start_sub_menus.asm:StartMenu_Pokemon; behavior=CUT returns to the party loop without animation or field effect; evidence=project_state:UsedCut reports check-only provider; lifetime=until OAM animation primitives make UsedCut linkable}
-    ; UsedCut is TRANSLATED (src/engine/overworld/cut.asm) but
-    ; that file does not LINK — it needs WriteOAMBlock (check-only home/oam.asm) and
-    ; AnimCut (cut2.asm, whose own blocker is the unported AdjustOAMBlock*Pos battle-
-    ; animation primitives). This is a linkage/OAM-primitive gap, NOT an unported
-    ; effect. The badge gate above is real, so CUT already refuses correctly without
-    ; the CASCADEBADGE; with it, the move does nothing (pret shape: jp .loop).
-    ; TODO(oam-primitives): link home/oam.asm + cut2.asm, then:
-    ;   predef UsedCut / ld a,[wActionResultOrTookBattleTurn] / and a / jp z,.loop /
-    ;   jp CloseTextDisplay.
-    jmp .loop
+    call UsedCut                        ; predef UsedCut
+    mov al, [ebp + wActionResultOrTookBattleTurn]
+    test al, al
+    ; jp z, .loop — nothing to cut. UsedCut's .nothingToCut path prints its refusal
+    ; and returns WITHOUT running any of its teardown (that all sits below .canCut),
+    ; so the party screen is still up and .loop simply resumes it. Only the success
+    ; path below has left the menu for the map.
+    jz .loop
+    ; DEVIATION{class=projection; pret=engine/menus/start_sub_menus.asm:StartMenu_Pokemon; behavior=tail-jump to CloseStartMenu instead of pret's CloseTextDisplay; evidence=CloseTextDisplay is linked but ends in the pop of the bank DisplayTextID pushed, and the port enters the START menu from OverworldLoop under its own pushad rather than from inside DisplayTextID, so that pop would unbalance the frame (see home/start_menu.asm header); lifetime=permanent start-menu entry-model boundary}
+    ; Same fold, and for the same reason, as .goBackToMap's tail below —
+    ; NOT the stale "CloseTextDisplay is check-only" one: that routine links now
+    ; (Stage 2, home/text_script.asm). The stack model is why, and it is permanent.
+    ; UsedCut has already redrawn the map and run UpdateSprites (its RedrawMapView
+    ; tail), which is the part of CloseTextDisplay the fold drops.
+    jmp CloseStartMenu                  ; jp CloseTextDisplay
 
 .surf:
     test al, (1 << BIT_SOULBADGE)
@@ -560,17 +568,23 @@ StartMenu_Pokemon:
     ; claims it "reasserts the default palette": false, its RunDefaultPaletteCommand
     ; call is commented out — filed as M-29).
     call LoadGBPal                      ; pret: CloseTextDisplay's LoadGBPal
-    ; DEVIATION{class=temporary; pret=engine/menus/start_sub_menus.asm:StartMenu_Pokemon; behavior=tail-jump to linked CloseStartMenu instead of check-only CloseTextDisplay; evidence=project_state reports CloseTextDisplay check-only and port fold restores equivalent menu/input state; lifetime=until text_script.asm closure links}
-    ; pret is `jp CloseTextDisplay`. That routine is
-    ; translated but sits in check-only text_script.asm (its closure is 15 symbols
-    ; deep — see the Makefile note); CloseStartMenu is the port's already-sanctioned
-    ; fold of it, and is what this file's .useItem_closeMenu and StartMenu_SaveReset
-    ; already tail-jump. Same destination: drop the menu window, restore the walk
-    ; tiles, return to the map. Two things pret's CloseTextDisplay does that the fold
-    ; does NOT, both harmless here but worth naming: it reloads the map view
-    ; (LoadCurrentMapView — the port's view pointer is untouched by this menu), and it
-    ; SKIPS LoadPlayerSpriteGraphics when BIT_FLY_WARP is set (TELEPORT sets it), where
-    ; the fold reloads unconditionally. Retire both when text_script.asm links.
+    ; DEVIATION{class=projection; pret=engine/menus/start_sub_menus.asm:StartMenu_Pokemon; behavior=tail-jump to CloseStartMenu instead of pret's CloseTextDisplay; evidence=CloseTextDisplay is linked but ends in the pop of the bank DisplayTextID pushed at entry, and the port enters the START menu from OverworldLoop under its own pushad rather than from inside DisplayTextID, so that pop would unbalance the frame (see home/start_menu.asm header); lifetime=permanent start-menu entry-model boundary}
+    ; pret is `jp CloseTextDisplay`. This fold was ORIGINALLY justified by
+    ; "text_script.asm is check-only" with lifetime "until its closure links". That
+    ; closure LANDED (overworld-events Stage 2) and the justification did not survive
+    ; it — but the fold must stay, for a reason that is permanent rather than
+    ; temporary. pret runs its whole START menu inside DisplayTextID's frame (that
+    ; routine's `dict TEXT_START_MENU, DisplayStartMenu` — home/text_script.asm:1),
+    ; which pushed hLoadedROMBank; CloseTextDisplay's closing `pop af` is that push's
+    ; partner. The port opens the menu straight from OverworldLoop under a pushad/popad
+    ; pair (home/start_menu.asm:11), so there is no such slot: jumping to
+    ; CloseTextDisplay here would eat a pushad register and return through it.
+    ; CloseStartMenu is the port's sanctioned fold and is what .useItem_closeMenu and
+    ; StartMenu_SaveReset already tail-jump. Two things pret's CloseTextDisplay does
+    ; that the fold does NOT, both harmless here but worth naming: it reloads the map
+    ; view (LoadCurrentMapView — the port's view pointer is untouched by this menu),
+    ; and it SKIPS LoadPlayerSpriteGraphics when BIT_FLY_WARP is set (TELEPORT sets
+    ; it), where the fold reloads unconditionally.
     jmp CloseStartMenu
 
 .newBadgeRequired:

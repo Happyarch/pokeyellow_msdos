@@ -3,10 +3,11 @@
 Status: **the script/event foundation, sign milestone, Pallet Oak-intro
 state-machine code, core `DisplayTextID` dispatcher, all of Stage 3 (hidden
 interactions, hidden-item coords, ground-item pickup), and Stage 4's
-Strength/boulder tail are complete.** The remaining work is active Oak-intro golden
-coverage, the real overworld service dialog bodies, the Cut/Fly/Surf field-move
-tails, the per-map story rollout, and the final stub/claim sweep. Archive this file
-to `docs/plans/overworld_events.md` when those stages are complete.
+Strength/boulder and Cut tails are complete.** The remaining work is active
+Oak-intro golden coverage, the real overworld service dialog bodies, the Fly/Surf
+field-move tails, the per-map story rollout, and the final stub/claim sweep.
+Archive this file to `docs/plans/overworld_events.md` when those stages are
+complete.
 
 This status was refreshed 2026-07-16 against the linked build,
 `dos_port/tools/project_state`, the 19-scenario fidelity manifest, and the
@@ -293,18 +294,19 @@ uses them (Stage 5 for PickUpItem; an items-plan scenario for itemfinder).
 **Boulder/Strength is DONE (2026-07-16) — see the boulder-bullet handoff below.** It
 also landed the shared OAM-animation substrate (`AdjustOAMBlock{X,Y}Pos(2)`,
 `WriteOAMBlock`, `cut.asm`/`cut2.asm` linked), which the Cut bullet's first three
-sub-items depended on; Cut is now the party-menu tail only. Remaining: **Cut tail,
-Fly, Surf**, plus must-hit coverage for the already-linked Flash/Dig/Teleport/
-Softboiled paths.
+sub-items depended on. **Cut is DONE too (2026-07-16) — the party-menu tail is wired;
+see the Cut-bullet handoff.** Remaining: **Fly, Surf**, plus must-hit coverage for the
+already-linked Flash/Dig/Teleport/Softboiled paths — and the Stage 5 scenarios that
+owe the boulder and cut cutscenes their first actual execution.
 
-- [ ] **Cut:** ~~promote `WriteOAMBlock`, port the missing
+- [x] **Cut:** ~~promote `WriteOAMBlock`, port the missing
       `AdjustOAMBlock{X,Y}Pos` primitives, link `AnimCut`/`UsedCut`~~ (all DONE by
       the boulder bullet — the dust animation shares that OAM substrate; see the
-      Stage 4 boulder handoff), and replace the party-menu no-op tail. All OBJ tile
-      writes must invalidate `tile_cache` through `CopyVideoData` or
-      `g_tilecache_dirty`. **Remaining: the party-menu tail only.** `UsedCut`/`AnimCut`
-      are linked but not statically reached; a must-hit scenario for the cut animation
-      and the tree-tile replacement is still owed when that tail lands.
+      Stage 4 boulder handoff), ~~and replace the party-menu no-op tail~~ (DONE —
+      see the Cut handoff below). All OBJ tile writes must invalidate `tile_cache`
+      through `CopyVideoData` or `g_tilecache_dirty`.
+      **Wired, NOT executed: the cut-animation / tree-tile-replacement must-hit is
+      NOT met and cannot be met in the current build state — see the handoff.**
 - [ ] **Fly:** port `ChooseFlyDestination` on the linked Town Map foundation,
       restore the existing warp tail, and verify destination selection through
       arrival rather than stopping after flag arming.
@@ -387,14 +389,97 @@ primitives the dust shares, so `UsedCut`/`AnimCut` are now linked but still unre
 that bullet still owns replacing the party-menu no-op tail. Its "port the missing
 `AdjustOAMBlock{X,Y}Pos` primitives" and "promote `WriteOAMBlock`" sub-items are done.
 
+### Stage 4 Cut-bullet handoff — 2026-07-16
+
+**What landed.** `StartMenu_Pokemon.cut` (`src/engine/menus/start_sub_menus.asm`) is
+pret's real tail: `call UsedCut` → `wActionResultOrTookBattleTurn` → `jz .loop` /
+`jmp CloseStartMenu`. `UsedCut` went from **0 callers to 1**, and it left
+`StartMenu_Pokemon`'s faithdiff DROPPED set. Three sub-items beyond the literal tail:
+
+1. **`jp CloseTextDisplay` → `jmp CloseStartMenu` is PERMANENT, not a linkage stopgap.**
+   Do not "fix" this later. pret runs its whole START menu inside `DisplayTextID`'s
+   frame (`dict TEXT_START_MENU, DisplayStartMenu`), which pushed `hLoadedROMBank`;
+   `CloseTextDisplay`'s closing `pop af` is that push's partner. The port opens the
+   menu straight from `OverworldLoop` under its own `pushad`/`popad`
+   (`home/start_menu.asm:11`), so jumping there would eat a pushad register and
+   return through it. The neighbouring `.goBackToMap` DEVIATION claimed
+   `evidence=CloseTextDisplay check-only` / `lifetime=until text_script.asm links` —
+   **that lifetime was reached in Stage 2 and the claim was stale**; both are
+   rewritten to the permanent stack-model reason. `home/start_menu.asm:35-38` had
+   already found this independently; the two now agree.
+2. **Party-menu compositor teardown, projected into `UsedCut` (`cut.asm`, `.canCut`).**
+   pret's `UsedCut` leaves the party screen for the map at exactly that point
+   (`GBPalWhiteOutWithDelay3` / `RestoreScreenTilesAndReloadTilePatterns` /
+   `LoadGBPal` / `LoadCurrentMapView`) — and *only* on `.canCut`; `.nothingToCut`
+   prints on the party screen and returns, which is why pret's zero result resumes
+   `.loop`. On the GB that teardown is complete; in the port `DisplayPartyMenu` also
+   raised `g_bg_whiteout` + the window list, and the BG composites only when
+   `g_bg_whiteout` is clear, so the whole cutscene would have run behind a whited
+   screen under stale party windows. The same omission at `.goBackToMap` returned
+   STRENGTH/FLASH/DIG/TELEPORT to a blank screen when observed live 2026-07-13.
+   Placement mirrors `.exitMenu`/`.goBackToMap` verbatim (after `Restore…`, before
+   `LoadGBPal`), incl. `LoadTilesetTilePatternData` (the party HP-bar patterns sit in
+   the BG tileset slots and `Restore…` reloads only map SPRITE tiles). `UsedCut` has
+   exactly one caller in pret too (`start_sub_menus.asm:158`), so this strands nobody.
+   **This block is UNVERIFIED** — reasoned from a documented port invariant, not
+   observed. It is the first thing the Stage 5 must-hit should confirm or correct.
+3. **`.nothingToCut` now sets `text_msgbox = msgbox_dialog`** before its `jmp
+   PrintText`, like every sibling refusal that prints on this screen
+   (`.newBadgeRequired`, `.cannotFlyHereText`, `.notHealthyEnoughText`). Without it
+   `PrintText` inherits whatever the last owner left. Latent-in-a-never-linked-file,
+   exactly the class as the boulder bullet's `dust_smoke.asm` `CL`/`BL` bug.
+
+**TOOLING TRAP — `project_state` reachability is a FALSE NEGATIVE for this whole
+subtree. Do not cite it as evidence here.** `UsedCut` still reports
+`not-statically-reached` after gaining a real caller — but so do `OverworldLoop`,
+`DisplayTextID`, `DisplayStartMenu`, and `StartMenu_Pokemon`, every one of which is
+provably live (the `overworld_pallet` golden executes `OverworldLoop` each run; the
+party menu's other field moves were observed running live 2026-07-13). The metric's
+roots simply do not reach the overworld/menu subtree, so `not-statically-reached`
+there means nothing at all. **`callers` is the field that actually moved (0 → 1).**
+This matters retroactively: the boulder handoff cited `PrintStrengthText` = "linked
+but not-statically-reached" as evidence that nothing arms `BIT_STRENGTH_ACTIVE`.
+That inference leaned on this metric and is not supported by it — its *conclusion*
+still stands, but on the separate ground that no reachable map carries a boulder.
+This is a FOURTH shape of the faithdiff/label-DB gap, after
+relocation / decomposition / inlining: the routine is genuinely called, and the tool
+reports it unreached because the root set never gets there.
+
+**Evidence — what is and is not proven.** `make -C dos_port` clean;
+`update_label_db`; `lint_pret_labels` **0 violations** (6 suppressed, unchanged — no
+new allowlist entry needed); `faithdiff UsedCut` **16/16 pret calls matched**, sole
+ADDED = the documented `LoadTilesetTilePatternData` projection (the ADDED
+`[W_STATUS_FLAGS_5]` store is the known match-stores-by-name blind spot — pret's
+`set BIT_NO_TEXT_DELAY,[hl]`; the `g_*` compositor writes are port-only globals, not
+GB stores, so faithdiff correctly ignores them); `faithdiff StartMenu_Pokemon`
+25/31 matched with every DROPPED/ADDED either documented here or owned by the open
+Fly bullet (`ChooseFlyDestination`, `LoadFontTilePatterns`) or a known blind spot
+(`jp hl` → flat table); `goldencheck overworld_pallet` + `sign_pallet` both **PASS**.
+**The bullet's must-hit (cut animation + tree-tile replacement) is NOT met.** Every
+line added is behind the `CASCADEBADGE` gate plus a mon knowing CUT, so a normal
+build's behavior is unchanged — which is what the goldens confirm, and is the honest
+ceiling on this session's evidence.
+
+**Cheapest next evidence step (found this session, not yet built).** `DEBUG_PARTY=1`
+(`src/engine/debug/debug_party.asm:113`) grants `wObtainedBadges = ~(1 <<
+BIT_EARTHBADGE)` — **CASCADEBADGE included** — and gives Snorlax (party slot 0) all
+four HM moves incl. CUT. So the **refusal path is executable today**: a `DEBUG_CUT`
+harness modelled on `RunTMHMTest`/`RunPartyMenuTest` (`src/debug/debug_dump.asm`) —
+`PrepareNewGameDebug` → `LoadFontTilePatterns` → `StartMenu_Pokemon`, with
+`AutoKeyDrive` selecting Snorlax → CUT — would execute `UsedCut` for real in Pallet,
+take `.nothingToCut` (Pallet has no `$3d` tree), and prove the tail dispatches, the
+refusal prints, and the zero-result `.loop` return does not unbalance the pushad
+frame. It cannot prove sub-item 2 above (the teardown is on `.canCut`) or the
+animation/tile swap — **those need a map with a cut tree, i.e. Stage 5 (Viridian).**
+
 ### Handoff to the next Stage 4 session — 2026-07-16
 
-**Start here.** The boulder bullet is closed; three bullets remain (Cut tail, Fly, Surf)
-plus the Flash/Dig/Teleport/Softboiled must-hit coverage. **Cut is the cheapest next
-step** — its two hard sub-items (the `AdjustOAMBlock{X,Y}Pos` primitives, `WriteOAMBlock`)
-already landed, and `cut.asm`/`cut2.asm` link, so what is left is genuinely just the
-party-menu tail plus a must-hit. Do not re-derive the OAM substrate; read
-`src/engine/battle/animations.asm` first.
+**Start here.** Boulder and Cut are closed; **two bullets remain (Fly, Surf)** plus the
+Flash/Dig/Teleport/Softboiled must-hit coverage. Read the Cut handoff above before
+either: its `CloseTextDisplay` finding and the reachability trap both apply directly.
+Do not re-derive the OAM substrate; read `src/engine/battle/animations.asm` first.
+`ChooseFlyDestination` is the one genuinely `missing` routine in the whole field-move
+dispatch — everything after it in `.canFly` is linked.
 
 **Register contract you must not get wrong.** `AdjustOAMBlock{X,Y}Pos(2)` take **BL** =
 pret's `c` (entry count) — the project map is BC→BX. `dust_smoke.asm` shipped `CL` and
@@ -416,9 +501,13 @@ same class will recur:**
    redirect its provider pick.
 
 **Owed must-hits, tracked so they are not silently dropped:** permitted push / blocked
-push (this bullet, → Stage 5 Seafoam/Victory Road); cut animation + tree-tile replacement
-(Cut bullet); Stage 3's pickup success/bag-full and itemfinder near/nothing. None are
-reachable in the current build state; all are honest deferrals, not claimed coverage.
+push (boulder bullet, → Stage 5 Seafoam/Victory Road); cut animation + tree-tile
+replacement (Cut bullet, → Stage 5 Viridian — plus the unverified party-menu teardown
+projection inside `UsedCut`, which that scenario must confirm or correct); Stage 3's
+pickup success/bag-full and itemfinder near/nothing. None are reachable in the current
+build state; all are honest deferrals, not claimed coverage. The one piece of *executable*
+evidence identified but not yet built is the `DEBUG_CUT` refusal-path harness (see the
+Cut handoff).
 - [ ] Retain the already-linked Flash, Dig, Teleport, and Softboiled paths, but
       add must-hit coverage when their observable behavior is first claimed.
       For Dig and the item-owned Escape Rope handler, this plan owns the

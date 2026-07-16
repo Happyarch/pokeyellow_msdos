@@ -1260,9 +1260,12 @@ HOME_CHECK_SRCS := \
 # Remaining check-only blockers (per-file):
 # - cut.asm / cut2.asm / dust_smoke.asm: LINKED as of overworld-events Stage 4 —
 #   all four former blockers are resolved (see the HOME_CHECK_SRCS note below).
-#   NOTE cut.asm is linked for its OAM-animation primitives, which the boulder dust
-#   shares; the Stage 4 CUT bullet still owns wiring UsedCut to the party-menu tail,
-#   so UsedCut/AnimCut are linked but not yet reachable from the field-move menu.
+#   NOTE cut.asm first linked for its OAM-animation primitives, which the boulder
+#   dust shares. StartMenu_Pokemon.cut now CALLS UsedCut for real (Stage 4 CUT
+#   bullet), so UsedCut/AnimCut are reachable from the field-move menu. Still owed:
+#   the cutscene has never EXECUTED — no reachable map has a cut tree and
+#   CASCADEBADGE is unobtainable outside DEBUG_PARTY, so the animation +
+#   tree-tile-replacement must-hit lands with the first reachable Cut map (Stage 5).
 # - field_move_messages.asm: LINKED as of menu-fidelity row 9 part 3. Its only
 #   unresolved symbol was PlayCry (cry synth, still unported); that is now a
 #   documented ret-stub in home_stubs.asm, which costs the STRENGTH cry and

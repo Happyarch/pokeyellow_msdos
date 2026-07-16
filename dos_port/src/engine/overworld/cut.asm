@@ -13,10 +13,23 @@
 ; take flat source pointers (EDX); GetCutOrBoulderDustAnimationOffsets returns the
 ; block Y/X in BH/BL.
 ;
-; Leaves: AnimCut is a farcall to a ret-stub (overworld_stubs.asm) until OW-6.1
-; ports cut2.asm; UpdateCGBPal_OBP1 is externed (unported palette, shared with
-; dust_smoke). The FAR text streams (_NothingToCutText/_UsedCutText) are Tier-1
-; generated (assets/cut_text.inc via gen_overworld_strings.py).
+; Leaves: UpdateCGBPal_OBP1 is externed (unported palette, shared with dust_smoke).
+; The FAR text streams (_NothingToCutText/_UsedCutText) are Tier-1 generated
+; (assets/cut_text.inc via gen_overworld_strings.py). AnimCut is NO LONGER a
+; ret-stub — cut2.asm landed (OW-6.1) and links.
+;
+; Reachability: UsedCut is CALLED from StartMenu_Pokemon.cut (overworld-events
+; Stage 4) — a live subtree (the party menu's other field moves were observed
+; running from it 2026-07-13). It has never EXECUTED: no reachable map in the
+; current build has a cut tree ($3d/$50) and CASCADEBADGE is unobtainable, so the
+; cutscene's must-hit (animation + tree-tile replacement) lands with the first
+; reachable Cut map in Stage 5.
+;
+; Do NOT read `project_state UsedCut` reachability as evidence either way: it says
+; `not-statically-reached`, but so do OverworldLoop, DisplayTextID and
+; DisplayStartMenu, which are all provably live (overworld_pallet golden). The
+; metric's roots do not reach the overworld/menu subtree at all — `callers` is the
+; field that moved here (0 -> 1). See the plan's Stage 4 Cut handoff.
 ;
 ; Build (check): nasm -f coff -I include/ -I . -o /dev/null \
 ;                     src/engine/overworld/cut.asm
@@ -96,6 +109,11 @@ extern WriteOAMBlock                ; src/home/oam.asm (AL=block, EDX=flat src, 
 extern overworld_gfx                ; src/engine/overworld/overworld.asm (overworld tileset gfx)
 extern msgbox_dialog                    ; src/home/text.asm — overworld dialog projection
 extern text_msgbox                      ; src/home/text.asm — active msgbox projection (msgbox.inc)
+; --- party-menu compositor teardown (see the projection at .canCut) ---
+extern g_window_count                   ; src/ppu/ppu.asm
+extern g_bg_whiteout                    ; src/ppu/ppu.asm
+extern g_obj_over_window                ; src/ppu/ppu.asm — OBJ-over-window z-order
+extern LoadTilesetTilePatternData       ; src/engine/overworld/overworld.asm — BG tileset reload
 
 section .text
 
@@ -122,6 +140,12 @@ UsedCut:
     je .canCut
 .nothingToCut:
     mov esi, .NothingToCutText
+    ; This refusal prints on the PARTY screen, not the map: nothing above ran any
+    ; teardown, and StartMenu_Pokemon.cut resumes the menu on the zero result. So it
+    ; needs the same projection its sibling party-menu refusals set before PrintText
+    ; (.newBadgeRequired / .cannotFlyHereText / .notHealthyEnoughText); without it
+    ; PrintText inherits whatever the last owner left in text_msgbox.
+    mov dword [text_msgbox], msgbox_dialog     ; overworld dialog projection
     jmp PrintText                              ; jp PrintText (tail)
 .NothingToCutText:
     text_far _NothingToCutText
@@ -136,6 +160,29 @@ UsedCut:
     call GBPalWhiteOutWithDelay3
     call ClearSprites
     call RestoreScreenTilesAndReloadTilePatterns
+    ; DEVIATION{class=projection; pret=engine/overworld/cut.asm:UsedCut; behavior=drop the caller's party-menu window list and whiteout field and reload the BG tileset before the map is redrawn; evidence=pret tears the party screen down right here via GBPalWhiteOutWithDelay3 plus RestoreScreenTilesAndReloadTilePatterns plus LoadCurrentMapView while the port composites the BG only when g_bg_whiteout is clear, and the identical omission at StartMenu_Pokemon.goBackToMap returned STRENGTH and FLASH and DIG and TELEPORT to a blank screen when observed live 2026-07-13; lifetime=until the Stage 5 cut-tree must-hit observes this cutscene and confirms or corrects the placement}
+    ; UNVERIFIED — reasoned from a port invariant, not observed. No reachable map in
+    ; the current build has a cut tree and CASCADEBADGE is unobtainable, so this
+    ; cutscene cannot be executed yet (overworld-events Stage 4, Cut bullet).
+    ;
+    ; pret's UsedCut leaves the party screen for the map HERE, and only on this
+    ; .canCut path — everything above is still standing on the menu. On the GB the
+    ; party screen is just tiles, so Restore… + LoadCurrentMapView is the whole
+    ; teardown. The port's party menu additionally owns compositor state that
+    ; DisplayPartyMenu raised (party_menu.asm:417) and that only its exits clear, so
+    ; without this the BG never composites and the cut text/animation/tile swap below
+    ; would all run behind a whited screen under the stale party windows.
+    ; Placement mirrors StartMenu_Pokemon's .exitMenu/.goBackToMap verbatim: after
+    ; Restore…, before LoadGBPal un-whites. LoadTilesetTilePatternData is for the BG
+    ; tileset — the party menu's HP-bar patterns occupy those slots, and Restore…
+    ; does not reload them (only the map SPRITE tiles).
+    ;
+    ; UsedCut's caller is the party menu and nothing else (pret's only `predef
+    ; UsedCut` is start_sub_menus.asm:158), so this cannot strand another caller.
+    mov dword [g_window_count], 0              ; drop the party panel/message windows
+    mov dword [g_bg_whiteout], 0
+    mov dword [g_obj_over_window], 0           ; back to the port's window-last order
+    call LoadTilesetTilePatternData
     mov byte [ebp + H_WY], SCREEN_HEIGHT_PX    ; TODO-HW: hWY shadow (commit_shadow_regs -> rWY)
     call Delay3
     call LoadGBPal
