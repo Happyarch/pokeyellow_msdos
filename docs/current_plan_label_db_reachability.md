@@ -500,11 +500,17 @@ some same-size-but-different (nondeterministic SQLite page layout). This change
 adds/removes edges and regenerates it. Commit the regen with the tool change;
 expect noise. *(Out of scope, but worth flagging: recurring merge hazard.)*
 
-**Concurrency:** `.claude/worktrees/fidelity-expansion/` holds a copy of
+**Concurrency:** ~~`.claude/worktrees/fidelity-expansion/` holds a copy of
 `update_label_db` on branch `worktree-fidelity-expansion` (`cd975d65`) that is
-**behind** main (lacks `EQU_ALIAS_RE` + `boot/` scanning). No live agent, no
-claims held. If that branch ever merges it could revert this work — check
-before landing.
+**behind** main… If that branch ever merges it could revert this work — check
+before landing.~~ **Checked at landing (round 7): NOT a hazard, this warning was
+itself an overclaim.** The branch is 4 commits ahead of merge-base `e7dc3f6b`
+and **never modified `update_label_db` or `project_state`** since that base, so
+a merge takes master's version — git resolves it, there is no conflict to
+mis-resolve. The alarming "769-line diff" is `git diff master branch` showing
+the branch is merely *old*, which is not what a merge does. (Fifth instance of
+the pattern this review exists to catch: a claim that reads as measurement but
+was inference. `git merge-base` answers it in one command.)
 
 ## Verification
 
