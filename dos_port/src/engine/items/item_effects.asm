@@ -739,6 +739,7 @@ global ItemUseNotYoursToUse
 global ItemUseFailed
 global Func_e4bf
 global iu_print_text                 ; port-only: the item layer's overworld text printer
+global ItemUseItemfinder             ; Stage 3 bullet 2 (was item_use_stubs.asm ret-stub)
 
 ; --- the medicine family's effect cores (items-plan Stage 3, native-validated) ---
 extern ApplyHealingItem     ; item_effects.asm — pret .addHealAmount…setCurrentHPToMaxHp
@@ -790,6 +791,11 @@ extern ItemUseNotYoursToUseText_ref
 extern DontHavePokemonText_ref
 extern VitaminStatRoseText_ref
 extern VitaminNoEffectText_ref
+extern ItemfinderFoundItemText_ref      ; assets/item_text.inc
+extern ItemfinderFoundNothingText_ref   ; assets/item_text.inc
+
+; --- itemfinder near-check (src/engine/items/itemfinder.asm, Stage 3 bullet 2) ---
+extern HiddenItemNear       ; CF set if an unobtained hidden item is nearby
 
 ; --- the deferred ItemUse* families (item_use_stubs.asm) ---
 extern ItemUseBicycle
@@ -807,7 +813,6 @@ extern ItemUseDireHit
 extern ItemUseXStat
 extern ItemUseCoinCase
 extern ItemUseOaksParcel
-extern ItemUseItemfinder
 extern ItemUsePokeFlute
 extern ItemUseOldRod
 extern ItemUseGoodRod
@@ -1488,6 +1493,41 @@ iu_print_text:
     call PrintText
     popad
     ret
+
+; ---------------------------------------------------------------------------
+; ItemUseItemfinder — pret engine/items/item_effects.asm:ItemUseItemfinder.
+; If not in battle, reloads the overworld view and asks HiddenItemNear whether an
+; unobtained hidden item is within range of the player. On a hit it plays the
+; found jingle (SFX_HEALING_MACHINE + SFX_PURCHASE, four times) and prints
+; ItemfinderFoundItemText; otherwise prints ItemfinderFoundNothingText.
+;
+; PORT DEVIATIONS:
+;  * pret `farcall HiddenItemNear` → flat `call HiddenItemNear` (no banks). CF is
+;    the only output and `mov esi, [..._ref]` between the call and the branch does
+;    not disturb it (as pret's `ld hl, ...` does not disturb its `jr nc`).
+;  * pret `jp PrintText` tail → the item layer's `iu_print_text` wrapper (selects
+;    the overworld dialog projection, then PrintText), matching every other
+;    overworld ItemUse* text tail in this file.
+; ---------------------------------------------------------------------------
+ItemUseItemfinder:
+    mov al, [ebp + wIsInBattle]
+    and al, al
+    jnz ItemUseNotTime                      ; jp nz — can't use in battle
+    call ItemUseReloadOverworldData
+    call HiddenItemNear                     ; farcall — CF set if item nearby
+    mov esi, [ItemfinderFoundNothingText_ref]
+    jnc .printText                          ; if no hidden items
+    mov cl, 4                               ; ld c, 4
+.loop:
+    mov al, SFX_HEALING_MACHINE
+    call PlaySoundWaitForCurrent
+    mov al, SFX_PURCHASE
+    call PlaySoundWaitForCurrent
+    dec cl
+    jnz .loop
+    mov esi, [ItemfinderFoundItemText_ref]
+.printText:
+    jmp iu_print_text                       ; jp PrintText (overworld projection)
 
 ; ---------------------------------------------------------------------------
 

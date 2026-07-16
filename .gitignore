@@ -37,6 +37,10 @@ dos_port/CWSDPMI.SWP
 # build-and-debug skill). FRAME_BASELINE.BIN is a checked-in reference and
 # is deliberately NOT matched here.
 dos_port/GBSTATE.BIN
+# PAL.BIN is FRAME.BIN's palette companion (tools/render_frame.py reads it from
+# beside FRAME.BIN to colorize a dump). Same class as FRAME/DUMP/GBSTATE — it was
+# simply missed here, and showed up untracked after the colorization runtime landed.
+dos_port/PAL.BIN
 
 # DOSBox-X screen captures (command_*.png etc.) — regenerable, and written
 # whenever a run captures a frame.

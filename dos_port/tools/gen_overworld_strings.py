@@ -20,6 +20,8 @@ Two outputs:
     the parser we reuse gen_battle_text's authoritative pret-text parser
     (collect_far scans data/text/text_*.asm) and emit just the labels we want,
     with text_far indirection flattened for the flat model.
+  * text_script_text.inc   — far text streams consumed by
+    src/home/text_script.asm's text_far wrappers.
 
 Run from repo root or dos_port/.
 """
@@ -70,6 +72,15 @@ PLAYER_ANIM_FAR = [
     "_ItsABiteText",
 ]
 
+# Far-text streams for home/text_script.asm's special text IDs and mart greeting.
+# pret defs: data/text/text_7.asm.
+TEXT_SCRIPT_FAR = [
+    "_PokemartGreetingText",
+    "_PokemonFaintedText",
+    "_PlayerBlackedOutText",
+    "_RepelWoreOffText",
+]
+
 
 def fmt_bytes(label: str, data: list) -> str:
     rows = []
@@ -112,6 +123,8 @@ def main() -> int:
          "Cut field-move FAR text streams (data/text/text_9.asm)"),
         ("player_anim_text", PLAYER_ANIM_FAR,
          "Fishing-result FAR text streams (data/text/text_1.asm)"),
+        ("text_script_text", TEXT_SCRIPT_FAR,
+         "DisplayTextID FAR text streams (data/text/text_7.asm)"),
     ]
     for base, labels, desc in far_files:
         fout = [

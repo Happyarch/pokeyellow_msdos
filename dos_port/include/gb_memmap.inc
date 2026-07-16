@@ -525,6 +525,15 @@ hEnemySpeed            equ 0xFF8D   ; 2 bytes — enemy speed scratch (TryRunnin
 hRandomAdd             equ 0xFFD3   ; PRNG output byte 1 (wild encounter rate compare)
 hRandomSub             equ 0xFFD4   ; PRNG output byte 2 (wild encounter slot select)
 hTextID                equ 0xFF8C   ; DisplayTextID input
+hSpriteIndex           equ hTextID  ; ASSERT hSpriteIndex == hTextID (same HRAM slot)
+hItemPrice             equ 0xFF8B
+hLoadedROMBank         equ 0xFFB8
+hFrameCounter          equ 0xFFD5
+hAutoBGTransferEnabled equ 0xFFBA
+hWY                    equ 0xFFB0
+hJoyHeld               equ 0xFFB4
+hItemAlreadyFound      equ 0xFFEB   ; CheckForHiddenEventOrBookshelfOrCardKeyDoor result: 0 = handled, $ff = fall through
+hToggleableObjectIndex equ 0xFFDB   ; PickUpItem scratch (pret hram union; == hInteractedWithBookshelf slot)
 
 ; Sprite state data — 16 slots × $10 bytes each, two parallel arrays.
 ; wSpriteStateData1 ($C100) and wSpriteStateData2 ($C200) — sym-verified.
@@ -534,10 +543,13 @@ W_SPRITE_STATE_DATA_1         equ 0xC100 ; wSpriteStateData1 (slot 0 = player)
 W_SPRITE_STATE_DATA_2         equ 0xC200 ; wSpriteStateData2
 SPRITESTATEDATA_STRUCT_SIZE   equ 0x10
 NUM_SPRITE_SLOTS              equ 16
+wSprite01StateData1           equ 0xC110 ; golden 00:c110 — slot 1 (first non-player sprite)
+wSprite01StateData2OrigFacingDirection equ 0xC219 ; wSprite01StateData2 + SPRITESTATEDATA2_ORIGFACINGDIRECTION
 ; pret-named aliases (constants/map_object_constants.asm / macros/wram.asm) —
 ; canonical here as of menus S2; m1_3_pending_symbols.inc's copies are
 ; %ifndef-guarded so both include orders stay safe.
 NUM_SPRITESTATEDATA_STRUCTS   equ NUM_SPRITE_SLOTS
+PIKACHU_SPRITE_INDEX          equ NUM_SPRITESTATEDATA_STRUCTS - 1 ; = 15 (pret map_object_constants.asm)
 SPRITESTATEDATA1_LENGTH       equ SPRITESTATEDATA_STRUCT_SIZE
 
 ; Player slot (slot 0) field aliases — data1 ($C10x).
@@ -815,6 +827,12 @@ H_DIVIDE_BCD_QUOTIENT    equ 0xFFA2
 H_DIVIDE_BCD_BUFFER      equ 0xFFA5
 H_RANDOM_ADD             equ 0xFFD3
 H_RANDOM_SUB             equ 0xFFD4
+; hSpriteIndex is a sprite SLOT number (1-based); hCurrentSpriteOffset is slot<<4.
+; The port's sprite helpers (GetSpriteMovementByte2Pointer / MoveSprite) select on
+; the latter, while pret threads the former — see push_boulder.asm's header note.
+; Canonical here as of overworld-events Stage 4; the hidden_events.asm /
+; push_boulder.asm copies are %ifndef-guarded so both include orders stay safe.
+H_SPRITE_INDEX               equ 0xFF8C ; hSpriteIndex (golden 00:ff8c)
 H_CURRENT_SPRITE_OFFSET      equ 0xFFDA ; hCurrentSpriteOffset (_UpdateSprites loop index)
 H_PIKACHU_SPRITE_VRAM_OFFSET equ 0xFFFC ; hPikachuSpriteVRAMOffset (added to tile id $80+; 0 for now)
 
@@ -1053,6 +1071,7 @@ W_PLAYER_LAST_STOP_DIRECTION equ 0xCFAE ; wPlayerLastStopDirection (dir held whe
 
 ; Walk/sprite state
 W_FONT_LOADED                equ 0xCFC3 ; wFontLoaded (bit BIT_FONT_LOADED set while text font is in VRAM)
+wFontLoaded                  equ W_FONT_LOADED
 W_WALK_COUNTER               equ 0xCFC4 ; wWalkCounter
 W_TILE_IN_FRONT_OF_PLAYER    equ 0xCFC5 ; wTileInFrontOfPlayer (collision check result)
 W_AUDIO_FADE_OUT             equ 0xCFC6 ; wAudioFadeOutControl
@@ -1136,6 +1155,10 @@ wBoulderSpriteIndex          equ 0xD717 ; golden 00:d717 (boulder push subsystem
 %ifndef wNumSprites
 wNumSprites                  equ 0xD4E0 ; golden 00:d4e0 (also in m1_3_pending_symbols.inc)
 %endif
+wTextPredefFlag              equ 0xCF11 ; BIT_TEXT_PREDEF gates PrintPredefTextID text table
+wSpriteIndex                 equ 0xCF13 ; DisplayTextID stores hTextID/hSpriteIndex here
+wItemList                    equ 0xCF7A ; mart item-list scratch
+wItemListPointer             equ 0xD127 ; big-endian pointer to current mart item list
 W_Y_COORD                    equ 0xD360 ; wYCoord (player map Y, in tiles)
 W_X_COORD                    equ 0xD361 ; wXCoord (player map X, in tiles)
 W_Y_BLOCK_COORD              equ 0xD362 ; wYBlockCoord
@@ -1149,6 +1172,9 @@ W_D433                       equ 0xD433 ; wd433 — Pikachu collision direction 
 wPikachuOverworldStateFlags  equ 0xD42F ; bit1=following, bit2=moved, bit3=draw-disabled, bit5/7=hide
 wPikachuSpawnState           equ 0xD430 ; where/how Pikachu (re)spawns next (golden 00:d430; promoted from player_animations.asm local, OW-A.6)
 wPikachuCollisionCounter     equ 0xD434 ; post-turn grace frames before Pikachu-collision reactions (golden 00:d434)
+wd435                        equ 0xD435 ; golden 00:d435; unnamed in pret. Set to $ff by
+                                        ; IsSpriteInFrontOfPlayer when the sprite faced is Pikachu.
+
 wPikachuMovementScriptBank   equ 0xD449 ; ROM bank of the active Pikachu movement script
 wPikachuMovementScriptAddress equ 0xD44A ; dw: cursor into the movement script
 wSpritePikachuStateData1MovementStatus equ 0xC1F1 ; slot-15 data1+1 (wSpriteStateData1 $C100 + 15*$10 +1)
@@ -1165,6 +1191,7 @@ W_CUR_MAP_HEIGHT             equ 0xD367 ; wCurMapHeight
 W_CUR_MAP_WIDTH              equ 0xD368 ; wCurMapWidth
 W_CUR_MAP_DATA_PTR           equ 0xD369 ; wCurMapDataPtr (2 bytes, LE)
 W_CUR_MAP_TEXT_PTR           equ 0xD36B ; wCurMapTextPtr (2 bytes, LE)
+wCurMapTextPtr               equ W_CUR_MAP_TEXT_PTR
 W_CUR_MAP_SCRIPT_PTR         equ 0xD36D ; wCurMapScriptPtr (2 bytes, LE)
 W_CUR_MAP_CONNECTIONS        equ 0xD36F ; wCurMapConnections (NORTH|SOUTH|WEST|EAST bits)
 W_CUR_MAP_HEADER_END         equ 0xD370 ; wCurMapHeaderEnd (byte after connections)
@@ -1671,7 +1698,12 @@ wNumFieldMoves                equ 0xCD41 ; count of entries in wFieldMoves (gold
 wFieldMovesLeftmostXCoord     equ 0xCD42 ; GB X of leftmost field-move name (golden 00:cd42)
 wLastFieldMoveID              equ 0xCD43 ; unused in pret (bookkeeping kept faithful; golden 00:cd43)
 wMiscFlags                    equ 0xCD60 ; bit BIT_NO_SPRITE_UPDATES: skip UpdateSprites in DisplayTextIDInit
+; wMiscFlags bits (constants/ram_constants.asm:9-15). The boulder bits are canonical
+; here as of overworld-events Stage 4; push_boulder.asm's copies are %ifndef-guarded.
+BIT_BOULDER_DUST              equ 1      ; boulder dust animation is running
 BIT_NO_SPRITE_UPDATES         equ 4      ; wMiscFlags bit (constants/ram_constants.asm)
+BIT_TRIED_PUSH_BOULDER        equ 6      ; player has tried pushing once (needs twice)
+BIT_PUSHED_BOULDER            equ 7      ; a boulder was pushed this frame
 BIT_TURNING                   equ 2      ; wMiscFlags bit — player is turning in place this frame (constants/ram_constants.asm)
 BIT_USING_GENERIC_PC          equ 3      ; wMiscFlags bit — HoF/Bill's/generic PC hosts the menu (S6 pkg F)
 BIT_NO_MENU_BUTTON_SOUND      equ 5      ; wMiscFlags bit — suppress the menu A-press SFX

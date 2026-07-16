@@ -9,26 +9,65 @@ Deep reference for the port's conventions. The one-line hard rules (stubs live i
 `*_stubs.asm`; text strings are generated, never hand-encoded; bug/glitch tagging)
 are summarized in `CLAUDE.md`; the full conventions are here.
 
-## Bug Fix Conventions
+## Structured annotations (BUG / GLITCH / DEVIATION / STUB)
 
-Every translated routine with a known bug gets a conditional block:
+**These are machine-parsed, not prose.** `tools/lint_pret_labels` strictly parses
+them (`ANNOTATION_RE`); a malformed annotation, an unknown `class`, or a missing
+field is a **violation that fails the gate**. This is the mechanism that makes a
+divergence's "why" queryable by tooling instead of stranded in a commit message.
 
 ```nasm
-; BUG(critical): <description> — pret ref: <file>:<label>, bugs_and_glitches.md#L<N>
-%if BUG_FIX_LEVEL >= 1
+; DEVIATION{class=<class>; pret=<file>:<Label>; behavior=<what differs>; evidence=<why that is the truth>; lifetime=<what retires it>}
+```
+
+**Kinds — exactly four: `DEVIATION`, `BUG`, `GLITCH`, `STUB`.**
+Do **not** invent a kind. An unrecognized one (`RELOCATION{…}`, `NOTE{…}`) does not
+parse, so the linter treats it as an ordinary comment: it looks rigorous and proves
+nothing. If what you have is a pure *file* relocation with a faithful body, that is
+**not** an annotation — register it in `tools/pret_label_allowlist.json`
+(`relocated_labels`, plus a `suppress` entry if it also trips `dup_def`).
+
+**Required fields — all four kinds:** `class`, `pret`, `behavior`, `evidence`,
+`lifetime`. Plus:
+- `GLITCH` also requires `safety` (e.g. `safety=safe under DPMI (bounded)` /
+  `unsafe on bare HW if ACE reachable`).
+- `STUB` also requires `label`, and its `class` must be `stub` or `temporary`.
+
+**`class` must be one of:** `HAL`, `banking`, `projection`, `data-model`, `timing`,
+`stub`, `temporary`. Nothing else parses.
+
+**Syntax trap:** the parser splits the body on `;`, so **no `;` or `}` inside any
+field value** — use commas. Keep the annotation on one line.
+
+### Bugs: annotation + fix block
+
+A known bug pairs the annotation with a conditional block. Levels: `1` = critical
+only (`/FIXCRIT`), `2` = all (`/FIXALL`); the Makefile passes `-D BUG_FIX_LEVEL=$(BUG_FIX_LEVEL)`
+(default 0), so bare `nasm` runs without `-D BUG_FIX_LEVEL=` will fail on the `%if`.
+
+```nasm
+; BUG{class=data-model; pret=home/names.asm:GetName; behavior=HM01 threshold redirects every name type, not only items, to machine-name formatting; evidence=pret GetName unconditional cp HM01 before type dispatch; lifetime=permanent latent Gen-1 behavior}
+%if BUG_FIX_LEVEL >= 2
     ; fixed implementation
 %else
-    ; original behavior (possibly buggy)
+    ; original (buggy) behavior
 %endif
 ```
 
-Levels: `1` = critical bugs only (`/FIXCRIT`), `2` = all bugs (`/FIXALL`).
+### The legacy free-form format is dead — do not resurrect it
 
-For intentional glitches that are user-exploitable features:
-```nasm
-; GLITCH: <name> — <brief description>
-; Safety: safe under DPMI (bounded) | unsafe on bare HW if ACE reachable
-```
+`lint_pret_labels` still *accepts* free-form `; BUG(critical): …` / `; GLITCH:` +
+`; Safety:` comments (legacy acceptance carried over from the migration), and
+`--strict-claims` flags each one as `legacy_annotation` ("requires evidence-backed
+migration").
+
+**The migration is complete: `--strict-claims` reports zero `legacy_annotation`
+violations tree-wide.** Every real annotation is structured (95 `DEVIATION{}`,
+44 `BUG{}`, 13 `GLITCH{}`, 11 `STUB{}`). The handful of `BUG(critical)`-looking
+strings that survive are *prose references inside comment text* ("cataloged
+BUG(critical) with…", "see the two BUG(cosmetic) blocks below") — not annotations,
+and not a precedent. Writing a free-form one now is a regression that
+`--strict-claims` will report.
 
 ## Stub Conventions (all stubs live in a subsystem `*_stubs.asm`)
 

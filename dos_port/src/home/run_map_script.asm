@@ -9,10 +9,26 @@
 ; (gen_map_scripts.py), defaulting to DefaultMapScript (a no-op) for maps without a
 ; ported script — mirroring WildDataPointers / EvosMovesPointerTable.
 ;
-; Deferred (this is the skeleton; cutscenes land with the movement + battle milestone):
-;   - TryPushingBoulder + DoBoulderDustAnimation — no Strength/boulder system yet.
-;   - RunNPCMovementScript — scripted NPC movement; the port already calls it at the
-;     top of OverworldLoop, so RunMapScript does not duplicate it.
+; DECOMPOSITION CLOSED (overworld-events Stage 4, boulder bullet). This file was
+; previously a SKELETON: only the _Script dispatch, with pret's boulder step dropped
+; and RunNPCMovementScript hoisted up into OverworldLoop. Both are now back inside
+; RunMapScript, in pret's order, so this routine is structurally faithful again:
+;   TryPushingBoulder → [dust] → RunNPCMovementScript → the map's _Script.
+; That ordering is load-bearing, not cosmetic: pret pushes the boulder BEFORE NPC
+; movement runs. It also fixes a silent divergence in the port's OTHER caller —
+; AllPokemonFainted (home/wild_encounter_check.asm) calls RunMapScript exactly as
+; pret does (home/overworld.asm:319), so under the skeleton it was quietly getting
+; only the _Script dispatch and none of the steps pret gives it.
+;
+; Remaining sanctioned deviations (see docs/plans/current_plan_script_engine.md and
+; stigmergy memory `faithdiff-no-call-relocation-model`):
+;   - No JoypadOverworld. pret reaches RunMapScript from JoypadOverworld
+;     (home/overworld.asm:1583); the port calls it directly from OverworldLoop, so
+;     faithdiff still reports JoypadOverworld `missing` + these calls ADDED on
+;     OverworldLoop. That half of the decomposition is still open.
+;   - The _Script dispatch is a flat MapScriptPointers table indexed by wCurMap
+;     (gen_map_scripts.py) rather than pret's wCurMapScriptPtr / `jp hl`, mirroring
+;     WildDataPointers / EvosMovesPointerTable.
 ;   - SwitchToMapRomBank — ; TODO-HW: no-op under the flat address model.
 ;
 ; Register map: a=AL, hl=ESI, ecx scratch.
@@ -25,6 +41,9 @@ bits 32
 
 extern MapScriptPointers
 extern EnableAutoTextBoxDrawing
+extern TryPushingBoulder            ; src/engine/overworld/push_boulder.asm
+extern DoBoulderDustAnimation       ; src/engine/overworld/push_boulder.asm
+extern RunNPCMovementScript         ; src/engine/overworld/overworld.asm
 
 section .text
 
@@ -33,6 +52,22 @@ global DefaultMapScript
 global CallFunctionInTable
 
 RunMapScript:
+    ; pret: push hl / push de / push bc around the boulder step, restored before
+    ; RunNPCMovementScript. TryPushingBoulder and the dust animation clobber freely.
+    push esi
+    push edx
+    push ebx
+    call TryPushingBoulder                   ; pret: farcall (banking elided)
+    mov al, [ebp + wMiscFlags]
+    test al, (1 << BIT_BOULDER_DUST)
+    jz .afterBoulderEffect                   ; jr z — no push happened this frame
+    call DoBoulderDustAnimation              ; pret: farcall (banking elided)
+.afterBoulderEffect:
+    pop ebx
+    pop edx
+    pop esi
+    call RunNPCMovementScript                ; pret home/overworld.asm:1725
+    ; TODO-HW: SwitchToMapRomBank — no-op under the flat address model.
     movzx ecx, byte [ebp + wCurMap]
     call dword [MapScriptPointers + ecx*4]   ; run this map's _Script (flat ptr)
     ret

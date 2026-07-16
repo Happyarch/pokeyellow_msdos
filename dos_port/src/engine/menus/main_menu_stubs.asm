@@ -38,3 +38,30 @@ OakSpeech:
 ; body now links from engine/overworld/special_warps.asm, which was unblocked by
 ; linking engine/debug/debug_party.asm unconditionally (PrepareNewGameDebug).
 ; HandleBlackOut calls it for real, so this is no longer a dead path.
+
+; STUB{class=stub; label=DisplayPokemartDialogue_; pret=engine/menus/pokemart.asm:DisplayPokemartDialogue_; behavior=return immediately after DisplayTextID loads the mart item list instead of running buy/sell/service dialogs; evidence=overworld-events Stage 2 keeps mart transaction loops open; lifetime=until Stage 2 ports DisplayPokemartDialogue_ and the buy/sell loops}
+; The home-layer DisplayPokemartDialogue wrapper is linked now so normal
+; DisplayTextID text can run; the transaction UI remains a separate Stage 2 task.
+global DisplayPokemartDialogue_
+DisplayPokemartDialogue_:
+    ret
+
+; STUB{class=stub; label=DisplayPokemonCenterDialogue_; pret=engine/menus/pokemon_center.asm:DisplayPokemonCenterDialogue_; behavior=return immediately instead of running nurse heal flow and Pokemon Center PC shell; evidence=overworld-events Stage 2 keeps nurse verification open; lifetime=until Stage 2 ports the nurse heal flow}
+global DisplayPokemonCenterDialogue_
+DisplayPokemonCenterDialogue_:
+    ret
+
+; STUB{class=stub; label=VendingMachineMenu; pret=engine/menus/vending_machine.asm:VendingMachineMenu; behavior=return immediately instead of opening the vending-machine menu; evidence=overworld-events Stage 2 leaves vending tails open; lifetime=until vending service tail lands}
+global VendingMachineMenu
+VendingMachineMenu:
+    ret
+
+; STUB{class=stub; label=CeladonPrizeMenu; pret=engine/menus/game_corner_prizes.asm:CeladonPrizeMenu; behavior=return immediately instead of opening the Game Corner prize menu; evidence=overworld-events Stage 2 records CeladonPrizeMenu as missing; lifetime=until prize-service tail lands}
+global CeladonPrizeMenu
+CeladonPrizeMenu:
+    ret
+
+; STUB{class=stub; label=CableClubNPC; pret=engine/menus/cable_club.asm:CableClubNPC; behavior=return immediately instead of opening cable-club flow; evidence=overworld-events Stage 2 says cable-club behavior remains Phase 4; lifetime=until Phase 4 cable/link behavior lands}
+global CableClubNPC
+CableClubNPC:
+    ret

@@ -10,15 +10,12 @@
 ;
 ; SCOPE: this is the data/RNG core. Its *consumer* — the overworld step trigger
 ; (NewBattle, wild_encounter_check.asm + OverworldLoop's gated call sites,
-; complete since OW-A.6) — waits on THIS file's link closure. Two extern deps
-; still resolve only to check-only files:
+; complete since OW-A.6) — owns live encounter activation. DisplayTextID is now
+; linked for the repel-wore-off branch; encounter execution evidence still needs
+; a must-hit scenario for that path.
 ;   IsPlayerStandingOnDoorTileOrWarpTile  → CF (carry ⇒ on a door/warp tile)
 ;     — check-only player_state.asm (see Makefile HOME_CHECK_SRCS notes)
-;   DisplayTextID (repel-wore-off message) — check-only home/text_script.asm
-; (IsPlayerJustOutsideMap and EnableAutoTextBoxDrawing are linked.) These keep
-; the file from linking into the EXE yet ("wild-live promotion"), but it
-; assembles (make check) and the RNG/slot/species core is native-validated with
-; those externs stubbed.
+; (IsPlayerJustOutsideMap and EnableAutoTextBoxDrawing are linked.)
 ;
 ; The player's standing tile is read at the fixed projected offset
 ; PLAYER_STANDING_TILE below (OW-A.6: real projection, no longer a placeholder);
@@ -48,7 +45,7 @@ extern WildMonEncounterSlotChances
 extern IsPlayerStandingOnDoorTileOrWarpTile
 extern IsPlayerJustOutsideMap
 extern EnableAutoTextBoxDrawing
-extern DisplayTextID                     ; src/home/home_stubs.asm (ret-stub) — pret: home/text_script.asm
+extern DisplayTextID                     ; src/home/text_script.asm — pret: home/text_script.asm
 
 section .text
 

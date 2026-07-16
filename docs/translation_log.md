@@ -3712,7 +3712,12 @@ by `src/data/map_scripts.asm`.
 home/overworld.asm:RunMapScript: runs the current map's `_Script` each overworld
 frame via `MapScriptPointers[wCurMap]`. Boulder push / dust animation,
 `RunNPCMovementScript` (already called at the top of OverworldLoop), and
-`SwitchToMapRomBank` are deferred (no-op, see header). `CallFunctionInTable` is the
+`SwitchToMapRomBank` are deferred (no-op, see header).
+**[SUPERSEDED 2026-07-16 — see the Stage 4 boulder entry at the end of this log.**
+The boulder step and `RunNPCMovementScript` now run INSIDE `RunMapScript` in pret's
+order, and `OverworldLoop` no longer calls the latter. The path above is also wrong:
+the file is at `src/home/run_map_script.asm`. Only `SwitchToMapRomBank` is still
+deferred.\] `CallFunctionInTable` is the
 flat-`dd` port of home/scripting.asm:CallFunctionInTable (16-bit table → flat dd,
 index ×4) that every map `_Script` uses to dispatch on its current-script index.
 Wired into `OverworldLoop` (one `call RunMapScript` after `RunNPCMovementScript`).
@@ -5535,3 +5540,79 @@ indexes the generated `PartyMenuItemUseMessagePointers`.
   stone kept, flag 0.
 - Gate: `make check` OK; `lint_pret_labels` 0 violations; `make fidelity` 6/6 PASS;
   faithdiff divergences justified in the commit message.
+
+## 2026-07-16 — boulder push + dust, `IsSpriteInFrontOfPlayer`, `AdjustOAMBlock{X,Y}Pos` (overworld-events plan, Stage 4 boulder bullet)
+
+Linked the Strength boulder push and its dust animation: `push_boulder.asm`,
+`dust_smoke.asm`, `cut.asm`, `cut2.asm` moved `HOME_CHECK_SRCS` → `GAME_SRCS`, and
+`home/oam.asm` → `HOME_SRCS`. The four routines below were the blockers; all of the
+`.asm` bodies for the boulder itself already existed and had simply never linked.
+
+`IsSpriteInFrontOfPlayer` / `IsSpriteInFrontOfPlayer2`
+(`src/engine/overworld/overworld.asm`) — faithful translation of
+home/overworld.asm:1084-1175. pret's two labels are one routine with two entries
+(the first presets `d` = $10, the normal talking range; the second expects the caller
+to have set the long $20 counter-tile range) — both kept. Placed beside
+`IsSpriteOrSignInFrontOfPlayer`, the sign branch of the same pret routine, and
+allowlisted as a mirror relocation. **Structural split:** the port already has
+`IsNPCAtTargetBlock` (`map_sprites.asm`), a bespoke MAPY/MAPX *block* scan used by
+`CollisionCheckOnLand`; it is not a drop-in (block coords vs faced-pixel coords, no
+`BIT_FACE_PLAYER` side effect, no `hSpriteIndex` hand-off), so both realizations keep
+pret names. `CollisionCheckOnLand` was deliberately NOT rewired — out of scope, and it
+would change live collision. pret reuses `d` (range → loop counter) and that reuse is
+preserved. The `ldh a,[hSpriteIndex]` re-read pret itself calls "possible useless" is
+elided (AL already holds it). Consumer: `TryPushingBoulder`. `...2` is linked with no
+caller yet — its consumers (`ItemUseSurfboard`, the counter-tile branch) are open.
+
+`AdjustOAMBlockXPos{,2}` / `AdjustOAMBlockYPos{,2}` (`src/engine/battle/animations.asm`)
+— faithful translation of engine/battle/animations.asm:1381-1426, placed in their pret
+home file because cut *and* boulder dust share them. **Register contract: BL = pret's
+`c` (entry count)**, per the project map (BC→BX); `cut2.asm` already passed BL, while
+`dust_smoke.asm` passed CL — a latent bug that had never linked, fixed there so there is
+one contract. Non-`2` entries take the pointer in EDX (pret `de`); `...2` entries expect
+ESI. Deviation (strictly less clobber): pret's `ld de, OBJ_SIZE` destroys DE for the
+`add hl,de` stride; the port adds the literal to ESI and leaves EDX intact. The Y variant
+carries pret's own bug as a structured `BUG{class=data-model}` — `dec hl` from the Y byte
+lands on the *previous* OAM entry's attribute (the X variant's identical idiom is correct
+because it starts at X, offset 1), so it writes 160 there as collateral; fixed only at
+`BUG_FIX_LEVEL >= 2`.
+
+`DiscardButtonPresses` (`src/input/joypad.asm`) — extracted, not newly written. It was
+already live, **inlined** into `joypad_update`'s edge layer as the local label
+`.discard`; `DoBoulderDustAnimation` needed it callable. Now a real global that the ISR
+calls (clobbering AL is safe — `.done` pops EAX), relying on pret's AL=0 return to zero
+`wJoyIgnore`. It lives in the live input HAL, not its pret mirror `src/engine/joypad.asm`
+— that file is DEAD (in no SRCS list, and unlinkable: it ends in `jmp Joypad`, undefined
+in the port) and is the relic of the rejected faithful-input model. The port-input-model
+DEVIATION (pret's `call Joypad` has no counterpart; the ISR polls from the DelayFrame
+pipeline) is unchanged. **Tooling trap:** `project_state` reported this label as
+`unlisted, provider=src/engine/joypad.asm` — a confident wrong provider pointing at the
+dead file, which reads as "unported". It still does, even after the `relocated_labels`
+entry: the provider picker does not consult the allowlist (TODO.md + stigmergy
+`label-db-wrong-provider-on-inlined-routines`).
+
+`RunMapScript` (`src/home/run_map_script.asm`) — **decomposition closed.** It had been a
+skeleton (only the `_Script` dispatch), with the boulder step dropped and
+`RunNPCMovementScript` hoisted into `OverworldLoop` — i.e. running in the reverse of
+pret's order. It now runs pret's full per-frame chain internally, matching
+home/overworld.asm:1712: `TryPushingBoulder` → \[`wMiscFlags` `BIT_BOULDER_DUST` →
+`DoBoulderDustAnimation`\] → `RunNPCMovementScript` → `_Script`, with pret's
+push hl/de/bc around the boulder step. `OverworldLoop` no longer calls
+`RunNPCMovementScript` itself (it would run twice). This also fixed a silent divergence
+in the port's other caller, `AllPokemonFainted` (home/overworld.asm:319), which pret
+gives the whole chain but the skeleton gave only the dispatch. Still deferred:
+`SwitchToMapRomBank` (TODO-HW, flat addressing) and the absence of `JoypadOverworld`.
+Supersedes the Script-engine Stage 5 entry above (which also mislocated this file at
+`src/engine/overworld/run_map_script.asm`).
+
+- Gate: `make -C dos_port` clean (5 promoted objects link); `lint_pret_labels` 0
+  violations / 6 suppressed; `faithdiff` on every touched label shows only documented
+  classes. Two faithdiff blind spots confirmed — it does not count conditional jumps
+  (`ResetBoulderPushFlags` reads DROPPED though `jz`/`jne`/`jnz` reach it) and it matches
+  stores by name (pret's `set BIT_x,[hl]` surfaces as an ADDED named store).
+  `goldencheck overworld_pallet` + `sign_pallet` PASS — `overworld_pallet` is the
+  load-bearing one, proving the rebuilt per-frame chain did not regress.
+- **No must-hit for the push itself.** `project_state PrintStrengthText` = linked but
+  `not-statically-reached` (nothing arms `BIT_STRENGTH_ACTIVE`) and no reachable map has
+  a boulder, so `TryPushingBoulder` returns at its first `test` every frame. Linked and
+  executing per-frame ≠ executed. Permitted/blocked push land with Stage 5.

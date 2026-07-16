@@ -11,24 +11,23 @@ before acting; this document is a handoff, not authority.
 
 ## Blocks remaining item implementation
 
-### Itemfinder — hidden-object data and dispatch are not live
+### Itemfinder — RESOLVED 2026-07-16 (except runtime evidence)
 
-**Generated state:** `project_state ItemUseItemfinder HiddenItemNear` reports a
-linked `ItemUseItemfinder` stub and an unlisted `HiddenItemNear` implementation
-with no callers. `itemfinder.asm` references `HiddenItemCoords`, for which the
-port has no provider. Overworld-events Stage 3 likewise records the missing
-generated hidden-object table and A-press dispatch.
+Cleared by a cross-cut from `docs/current_plan_overworld_events.md` Stage 3:
+`HiddenItemCoords` is generated (`tools/gen_hidden_item_coords.py` →
+`assets/hidden_item_coords.inc`, linked via `src/data/hidden_events_data.asm`);
+`src/engine/items/itemfinder.asm` (`HiddenItemNear`/`Sub5ClampTo0`) is linked
+(`ITEMS_SRCS`); `IsInRestOfArray` was promoted with `vcopy.asm` into `HOME_SRCS`;
+and `ItemUseItemfinder` is a real body in `item_effects.asm` (no longer the
+`item_use_stubs.asm` ret-stub), calling `HiddenItemNear` and the already-generated
+`ItemfinderFound{Item,Nothing}Text`. Build clean; `lint_pret_labels` 0;
+`faithdiff` shows only the documented predef→`FlagAction` and
+`jp PrintText`→`iu_print_text` deviations.
 
-**Owner split:** `docs/current_plan_overworld_events.md` Stage 3 owns
-`gen_hidden_events.py`/`assets/hidden_events.inc`, including the
-`HiddenItemCoords` interface, plus hidden-event A-press dispatch. The items plan
-owns promoting `itemfinder.asm`, its `HiddenItemNear` helper, and
-`ItemUseItemfinder` once that data interface exists.
-
-**Unblocked when:** generated coordinates are linked, `HiddenItemNear` has a
-real caller, and the handler can distinguish nearby unobtained items from
-nothing nearby without mutating the found flag. Acceptance needs must-hit
-coverage for `ItemUseItemfinder` and `HiddenItemNear`, including both outcomes.
+**Remaining tail (not a build blocker):** the must-hit runtime scenario for both
+outcomes ("near"/"nothing", without mutating the obtained-item flag during a test)
+still owes evidence — ITEMFINDER is not obtainable in the current build, so it
+lands with the first reachable hidden-item map.
 
 ### Surfboard — item and overworld dependencies are split
 
@@ -54,17 +53,16 @@ than stopping after the item code arms state.
 
 ## Blocks end-to-end reachability or fidelity
 
-### Repel expiry text — `DisplayTextID` still resolves to a stand-in
+### Repel expiry text — scenario coverage still open
 
 **Generated state:** `project_state DisplayTextID` reports the translated body
-check-only; `label_status --callers DisplayTextID` reports the linked provider
-in `home_stubs.asm` and the `TryDoWildEncounter` caller. The stand-in returns
-without displaying `_RepelWoreOffText`.
+linked from `src/home/text_script.asm`; `label_status --callers DisplayTextID`
+reports the `TryDoWildEncounter` caller.
 
 **Current behavior:** Repel counters decrement and suppress encounters, but the
-last-step message is absent. Do not special-case the text in
-`wild_encounters.asm`; overworld-events Stage 2 owns linking the real
-`DisplayTextID` closure and retiring the stub.
+last-step message still needs a must-hit runtime scenario. Do not special-case
+the text in `wild_encounters.asm`; overworld-events Stage 2 owns the shared
+`DisplayTextID` service path and its coverage.
 
 **Acceptance:** a must-hit runtime scenario must execute
 `TryDoWildEncounter`'s last-Repel branch and the real `DisplayTextID`, then

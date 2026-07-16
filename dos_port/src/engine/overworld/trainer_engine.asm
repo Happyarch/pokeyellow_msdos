@@ -110,7 +110,7 @@ extern UpdateSprites            ; src/engine/overworld/movement.asm
 extern PrintText                ; src/home/window.asm
 extern PlaySound                ; src/home/audio.asm (real gateway)
 extern GetTrainerName_          ; src/engine/battle/get_trainer_name.asm
-extern DisplayTextID            ; src/home/home_stubs.asm (ret-stub) — pret: home/text_script.asm
+extern DisplayTextID            ; src/home/text_script.asm — pret: home/text_script.asm
 
 ; --- Tier-1 asset data (generated; already in the port tree) ---
 extern TrainerPicPointers       ; src/data/trainer_pics.asm  (flat dd, index=class-1)

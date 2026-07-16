@@ -1,16 +1,26 @@
 # Current Plan: Overworld Events — story scripts and interaction services
 
-Status: **the script/event foundation, sign milestone, and Pallet Oak-intro
-state-machine code are complete.** The remaining work is the real
-`DisplayTextID` service closure, active Oak-intro golden coverage, hidden
-interactions and pickups, the unfinished field-move tails, the per-map story
-rollout, and the final stub/claim sweep. Archive this file to
-`docs/plans/overworld_events.md` when those stages are complete.
+Status: **the script/event foundation, sign milestone, Pallet Oak-intro
+state-machine code, core `DisplayTextID` dispatcher, all of Stage 3 (hidden
+interactions, hidden-item coords, ground-item pickup), and Stage 4's
+Strength/boulder tail are complete.** The remaining work is active Oak-intro golden
+coverage, the real overworld service dialog bodies, the Cut/Fly/Surf field-move
+tails, the per-map story rollout, and the final stub/claim sweep. Archive this file
+to `docs/plans/overworld_events.md` when those stages are complete.
 
-This status was refreshed 2026-07-15 against the linked build,
+This status was refreshed 2026-07-16 against the linked build,
 `dos_port/tools/project_state`, the 19-scenario fidelity manifest, and the
-operational evidence policy in `AGENTS.md`. Superseded execution narratives
-remain in git history instead of being maintained here.
+operational evidence policy (now in **both** `CLAUDE.md` and `AGENTS.md` — it had
+been AGENTS-only since 2026-07-14, so Claude Code sessions never saw it; see
+stigmergy `claude-md-agents-md-are-separate-files-that-drift`). Superseded execution
+narratives remain in git history instead of being maintained here.
+
+**Evidence caveat carried forward:** several Stage 3/4 bullets are `[x]` with their
+must-hit runtime scenarios openly deferred, because nothing in the current build
+state can reach them (no item ball, no ITEMFINDER, no Strength, no boulder map).
+`[x]` here means *linked and structurally verified*, not *executed* — each such
+bullet names what still owes evidence and when it lands. Do not upgrade those to
+"working" without the scenario.
 
 ## Standing rules and ownership
 
@@ -94,12 +104,13 @@ and `wCurEnemyLevel = 5`. Battle-completion still owns the faithful special
 Pikachu battle behavior and battle exit/result semantics; do not claim the full
 cutscene as complete until that cross-plan handoff is closed.
 
-Text remains the critical Stage 2 dependency. `DisplayTextID` is still
-check-only while the linked default-build provider is the `home_stubs.asm`
-stand-in, so Stage 1 used a Pallet-local `DisplayPalletTownTextID` shim plus
-generated runtime strings for the Oak lines. Replace that shim with the real
-`DisplayTextID` closure when Stage 2 lands the text-script service. Also note
-that `ShowTextStream` currently waits for A/B even when
+Text remains a critical Stage 2 dependency for the remaining service menus, but
+the core `DisplayTextID` dispatcher now links in the default build from
+`dos_port/src/home/text_script.asm`; the old `home_stubs.asm` stand-in is
+retired. The Stage 1 Pallet-local `DisplayPalletTownTextID` shim is gone; the
+Oak text-bearing states now call the shared dispatcher and the generated Pallet
+text table includes the script-only `TEXT_PALLETTOWN_OAK_COME_WITH_ME` row. Also
+note that `ShowTextStream` currently waits for A/B even when
 `wDoNotWaitForButtonPressAfterDisplayingText` is set, so Oak's first
 "Hey! Wait!" line is functionally shown but does not yet match pret's
 auto-advance timing.
@@ -117,13 +128,48 @@ entry. Re-enable it only after the title/new-game route and GBSTATE projection
 produce a valid committed golden; `goldens-verify` executes every active
 `*.lua` scenario.
 
-`project_state DisplayTextID` reports the translated implementation check-only;
-`label_status --callers DisplayTextID` reports the linked stand-in in
-`home_stubs.asm`. `DisplayTextIDInit` is linked, but the full closure is not:
-`Joypad`, mart, nurse, vending, cable, Safari, Pikachu, prize-service handlers,
-and four far-text streams still lack default-build providers.
+`project_state DisplayTextID` reports the translated implementation linked, and
+`label_status --callers DisplayTextID` reports the real `text_script.asm`
+provider. `DisplayTextIDInit`, flat map-text table lookup, the ISR-backed
+wait/hold path, and the four far-text streams are linked. The Stage 2 service
+tails are not done: mart, nurse, vending, cable, Safari, Pikachu, and
+prize-service handlers resolve through structured owning-subsystem stubs until
+the bullets below replace them with real providers.
 
-- [ ] Reconcile the port's flat map-text table with pret's `wCurMapTextPtr`
+### Stage 2 handoff for service-tail work — 2026-07-15
+
+The shared text dispatcher is no longer the blocker. `DisplayTextID` links from
+`dos_port/src/home/text_script.asm`; `home_stubs.asm` no longer provides a
+ret-only shadow, and `pret_label_allowlist.json` no longer needs a duplicate-def
+allowance for it. The ordinary map-text branch reads the generated flat
+`w_map_text_table_ptr` rows, while the `TEXT_PREDEF` branch still uses
+`wCurMapTextPtr` so `PrintPredefTextID` keeps the pret pointer-table path.
+
+Pallet's local text shim is retired. `PalletTownOakHeyWaitScript`,
+`PalletTownOakGreetsPlayerScript`, and `PalletTownAfterPikachuBattleScript` call
+the shared dispatcher directly. `gen_npc_dialogs.py` now emits rows through the
+highest referenced text id, so script-only ids such as
+`TEXT_PALLETTOWN_OAK_COME_WITH_ME` are generated data, not hand-maintained table
+entries.
+
+The old blanket `M72_OVERWORLD_TEXTSCRIPTS` guard is gone. `TextScript_*` PC and
+prize dispatch now assembles unconditionally; genuinely unfinished services are
+explicit stubs in their owning subsystem: `DisplayPokemartDialogue_`,
+`DisplayPokemonCenterDialogue_`, `VendingMachineMenu`, `CeladonPrizeMenu`, and
+`CableClubNPC` in `src/engine/menus/main_menu_stubs.asm`, plus `TalkToPikachu`
+and `PrintSafariGameOverText` in `src/engine/overworld/overworld_stubs.asm`.
+
+Verification from the Stage 2 closure: `make -C dos_port`, `make -C dos_port
+assets`, `dos_port/tools/update_label_db`, `dos_port/tools/lint_pret_labels`,
+`dos_port/tools/project_state DisplayTextID`, `dos_port/tools/label_status
+--callers DisplayTextID`, `make -C dos_port goldencheck
+SCENARIO=overworld_pallet`, and `make -C dos_port goldencheck
+SCENARIO=sign_pallet` all passed. The broad `fidelity_gate --base HEAD` is still
+not useful in the dirty tree because it includes unrelated pre-existing
+overworld/menu diffs; run focused `faithdiff` for any service label you change
+and add a must-hit runtime scenario for the behavior.
+
+- [x] Reconcile the port's flat map-text table with pret's `wCurMapTextPtr`
       lookup, bind the ISR-backed joypad interface, generate the missing far
       text, link `text_script.asm`, and retire the stand-in plus all stale extern
       provider trails.
@@ -134,52 +180,245 @@ and four far-text streams still lack default-build providers.
 - [ ] Port `DisplayPokemonCenterDialogue_`, the nurse heal flow, and the
       Pokémon Center PC shell. Verify party healing and the rendered dialog,
       not merely entry into the menu.
-- [ ] Enable the guarded PC script dispatch only after checking current targets:
+- [x] Enable the guarded PC script dispatch only after checking current targets:
       `PlayerPC` and `ActivatePC` are linked, `BillsPC_` is a linked stub, and
-      `CeladonPrizeMenu` is missing. Retire `M72_OVERWORLD_TEXTSCRIPTS`; keep
-      genuinely unavailable services as structured subsystem stubs rather than
-      preserving the blanket guard.
-- [ ] Add vending, prize, Safari, Pikachu, and cable tails in their owning
-      order. Cable-club behavior remains Phase 4; its structured stand-in must
-      state that lifetime explicitly.
+      `CeladonPrizeMenu` now has a structured menu stub. `M72_OVERWORLD_TEXTSCRIPTS`
+      is retired; genuinely unavailable services are structured subsystem stubs
+      rather than hidden behind the blanket guard.
+- [x] Replace the remaining blanket service guards / sentinel-byte fallbacks
+      with structured owning-subsystem stubs for vending, prize, Safari,
+      Pikachu, and cable. Cable-club behavior remains Phase 4, and its stand-in
+      states that lifetime explicitly.
+- [ ] Port vending, prize, Safari, Pikachu, and cable tails in their owning
+      order, replacing those structured stubs with real providers and adding
+      must-hit runtime scenarios for each observable behavior.
 
 ## Stage 3 — hidden interactions and ground items
 
-The sign half of `hidden_events.asm` is live. The deeper hidden-event/bookshelf
-half remains under `M72_HIDDEN_EVENTS_DEEP`; do not describe it as linked merely
-because static scanning can see its definitions.
+The sign half of `hidden_events.asm` was already live. As of Stage 3 bullet 1 the
+deep hidden-event/bookshelf tier is now **linked** (the `M72_HIDDEN_EVENTS_DEEP`
+guard is gone) and wired into the A-press path in pret order.
 
-- [ ] Generate hidden-event map/coordinate/argument data from pret into
+### Stage 3 bullet-1 handoff — 2026-07-16
+
+`tools/gen_hidden_events.py` generates `assets/hidden_events.inc`
+(`src/data/hidden_events_data.asm`) from `data/events/hidden_events.asm`: the flat
+`HiddenEventMaps` dispatch table (81 maps; pret's `db map / dw ptr` becomes
+`db map / dd ptr`, so `CheckForHiddenEvent` now uses `IsInArray` stride **5**, not
+the old placeholder 3) and every `HiddenEventsFor_<map>` list (213 entries;
+`db y / db x / db arg / db 0 / dd handler`). Args (item ids, facings, `COIN+n`,
+slot/quiz constants, predef text ids) are resolved to numeric bytes from pret's
+constant files.
+
+The 35 distinct per-object handlers are Tier-2 ret-stubs in
+`src/engine/overworld/hidden_object_stubs.asm` (each documents which subsystem/map
+retires it). `PrintBookshelfText`'s stub is functional — it sets
+`hInteractedWithBookshelf = $ff` ("no bookshelf") so the sprite/sign scan still
+runs; a plain `ret` there would silently suppress NPC/sign interaction.
+`JumpToAddress` (`jp hl` → `jmp esi`) is real in `src/home/bankswitch.asm`;
+`GetTileAndCoordsInFrontOfPlayer` was already linked.
+`CheckForHiddenEventOrBookshelfOrCardKeyDoor` is called **first** on A-press
+(overworld.asm), returning to `OverworldLoop` when `hItemAlreadyFound == 0` and
+falling through to the sign/NPC scan otherwise.
+
+Verification: `make -C dos_port`, `goldencheck overworld_pallet` + `sign_pallet`
+(both PASS — `sign_pallet` proves the new dispatch falls through to the sign path
+without regression), `lint_pret_labels` (0 violations; `JumpToAddress` relocation
+and `StartSlotMachine` dup_def added to the allowlist with retirement notes),
+`faithdiff` on `CheckForHiddenEvent`/`CheckForHiddenEventOrBookshelfOrCardKeyDoor`/
+`JumpToAddress`/`OverworldLoop` (all clean or register-map/pre-existing). No
+reachable map has a hidden event in the current build state (OAKS_LAB etc. gate
+behind the Oak cutscene / later story), so a hidden-event-specific must-hit
+scenario lands with the first reachable hidden-event map in Stage 5. The two open
+bullets below (HiddenItemCoords / itemfinder; PickUpItem — a **separate** visible
+item-ball system) are unaffected.
+
+- [x] Generate hidden-event map/coordinate/argument data from pret into
       `assets/hidden_events.inc`, keep per-object handlers in Tier-2 code, resolve
       the deep tier's real callees, remove the guard, and wire
       `CheckForHiddenEventOrBookshelfOrCardKeyDoor` in pret interaction order.
-- [ ] Publish the generated `HiddenItemCoords` interface for the items plan.
+- [x] Publish the generated `HiddenItemCoords` interface for the items plan.
       That plan promotes `itemfinder.asm` and retires `ItemUseItemfinder`;
       acceptance must hit both nearby-unobtained and nothing-nearby outcomes
       without consuming or setting the hidden-item flag during a test.
-- [ ] Port `PickUpItem`, promote the check-only `GiveItem` provider, generate
+- [x] Port `PickUpItem`, promote the check-only `GiveItem` provider, generate
       pickup text, hide the object, update inventory and event state, and route
       `PickUpItemText` through the live text-script path. Verify successful and
       bag-full pickup outcomes on a real map object.
 
+### Stage 3 bullet-2/3 handoff — 2026-07-16
+
+**Bullet 2 (HiddenItemCoords + itemfinder cross-cut):** `tools/gen_hidden_item_coords.py`
+generates `assets/hidden_item_coords.inc` (`HiddenItemCoords`, 55 rows, `db map,y,x`
++ `db -1`; pret's `hidden_item` macro swaps the source x,y so the stored order is
+map,y,x — HiddenItemNear reads d=y, e=x). It is `%include`d by
+`src/data/hidden_events_data.asm` and reuses `gen_hidden_events.parse_map_ids`.
+The itemfinder half is a **cross-cut into `docs/current_plan_items.md`** (recorded
+there): `src/engine/items/itemfinder.asm` (`HiddenItemNear`/`Sub5ClampTo0`) is now
+linked (`ITEMS_SRCS`); `IsInRestOfArray` was promoted with `vcopy.asm` from
+`HOME_CHECK_SRCS` to `HOME_SRCS`; and `ItemUseItemfinder` moved from the
+`item_use_stubs.asm` ret-stub to a real body in `item_effects.asm`
+(`farcall HiddenItemNear` → flat `call`; `jp PrintText` → the `iu_print_text`
+overworld-projection tail; texts `ItemfinderFound{Item,Nothing}Text` already
+generated in `item_text.inc`).
+
+**Bullet 3 (PickUpItem):** `src/engine/events/pick_up_item.asm` ports `PickUpItem`
+(predef `HideObject` → direct `call`; `predef PickUpItem`-in-`PickUpItemText` →
+direct `call` — no predef dispatcher in the port). `PickUpItemText` is live in
+`overworld_text.asm` (`call PickUpItem` / `jmp TextScriptEnd`, matching pret's
+`predef PickUpItem / jp TextScriptEnd`; the text_asm dispatch discards the tail
+stream). `hToggleableObjectIndex` (== `hInteractedWithBookshelf`, $FFDB) added to
+`gb_memmap.inc`. `home/give.asm` promoted intact to `HOME_SRCS`
+(`CopyToStringBuffer` was already `global`); its dead-but-referenced `GivePokemon`
+resolves through a new `_GivePokemon` ret-stub
+(`src/engine/events/give_pokemon_stubs.asm`). Pickup text
+(`FoundItemText`/`NoMoreRoomForItemText`) is generated by `tools/gen_pickup_text.py`
+→ `assets/pickup_text.inc` (wrapped by `src/data/pickup_text.asm`). The pret
+`sound_get_item_1` jingle rides past the far text's TX_END and, like every other
+port text-stream sound, is not played (documented TODO-HW).
+
+Verification: `make -C dos_port` clean (all six new/promoted `.o` link);
+`lint_pret_labels` 0 violations (5 suppressed); `goldencheck overworld_pallet` +
+`sign_pallet` PASS (`sign_pallet` proves the shared DisplayTextID/text_asm path
+still dispatches after the `overworld_text.asm` edit); `faithdiff` on `PickUpItem`,
+`PickUpItemText`, `GiveItem` clean, and on `ItemUseItemfinder` / `HiddenItemNear`
+only the documented predef→`FlagAction` and `jp PrintText`→`iu_print_text`
+deviations. **No runtime must-hit yet:** no reachable map in the current build has
+an item ball, and ITEMFINDER is not obtainable, so both must-hit scenarios (pickup
+success/bag-full; itemfinder near/nothing) land with the first reachable map that
+uses them (Stage 5 for PickUpItem; an items-plan scenario for itemfinder).
+
 ## Stage 4 — remaining field-move and boulder tails
 
-- [ ] **Cut:** promote `WriteOAMBlock`, port the missing
-      `AdjustOAMBlock{X,Y}Pos` primitives, link `AnimCut`/`UsedCut`, and replace
-      the party-menu no-op tail. All OBJ tile writes must invalidate
-      `tile_cache` through `CopyVideoData` or `g_tilecache_dirty`.
+**Boulder/Strength is DONE (2026-07-16) — see the boulder-bullet handoff below.** It
+also landed the shared OAM-animation substrate (`AdjustOAMBlock{X,Y}Pos(2)`,
+`WriteOAMBlock`, `cut.asm`/`cut2.asm` linked), which the Cut bullet's first three
+sub-items depended on; Cut is now the party-menu tail only. Remaining: **Cut tail,
+Fly, Surf**, plus must-hit coverage for the already-linked Flash/Dig/Teleport/
+Softboiled paths.
+
+- [ ] **Cut:** ~~promote `WriteOAMBlock`, port the missing
+      `AdjustOAMBlock{X,Y}Pos` primitives, link `AnimCut`/`UsedCut`~~ (all DONE by
+      the boulder bullet — the dust animation shares that OAM substrate; see the
+      Stage 4 boulder handoff), and replace the party-menu no-op tail. All OBJ tile
+      writes must invalidate `tile_cache` through `CopyVideoData` or
+      `g_tilecache_dirty`. **Remaining: the party-menu tail only.** `UsedCut`/`AnimCut`
+      are linked but not statically reached; a must-hit scenario for the cut animation
+      and the tree-tile replacement is still owed when that tail lands.
 - [ ] **Fly:** port `ChooseFlyDestination` on the linked Town Map foundation,
       restore the existing warp tail, and verify destination selection through
       arrival rather than stopping after flag arming.
-- [ ] **Surf:** supply `IsSpriteInFrontOfPlayer2` and prove that the normal
-      overworld loop consumes the simulated forward step. The items plan owns
-      `ItemUseSurfboard`, `SurfingAttemptFailed`, mount/dismount, and arming that
-      step. Joint acceptance verifies party-menu selection, forced movement,
-      graphics, collision, music, and `wWalkBikeSurfState` in both directions.
-- [ ] **Strength/boulders:** promote `TryPushingBoulder` and
+- [ ] **Surf:** ~~supply `IsSpriteInFrontOfPlayer2`~~ (DONE — the boulder bullet ported
+      it as the long-range entry point of `IsSpriteInFrontOfPlayer`, in
+      `src/engine/overworld/overworld.asm`; it is `linked` but has no caller yet.
+      pret's consumer is `ItemUseSurfboard` at `engine/items/item_effects.asm:725`,
+      which sets `d` = the long talking range before calling it — under the port's
+      register map that is **DH**, and the count/pointer contract is on the routine's
+      header) and prove that the normal overworld loop consumes the simulated forward
+      step. The items plan owns `ItemUseSurfboard`, `SurfingAttemptFailed`,
+      mount/dismount, and arming that step. Joint acceptance verifies party-menu
+      selection, forced movement, graphics, collision, music, and
+      `wWalkBikeSurfState` in both directions.
+- [x] **Strength/boulders:** promote `TryPushingBoulder` and
       `DoBoulderDustAnimation`, wire the map-script/collision consumer, and test
       a permitted push plus a blocked push. The linked `PrintStrengthText` only
       arms the state; it is not proof that a boulder moved.
+      **Linked and wired; the push/blocked-push must-hit is NOT met — see the
+      Stage 4 boulder handoff below for exactly what is and is not proven.**
+
+### Stage 4 boulder-bullet handoff — 2026-07-16
+
+**What landed.** `push_boulder.asm` + `dust_smoke.asm` + `cut.asm` + `cut2.asm` moved
+`HOME_CHECK_SRCS` → `GAME_SRCS`, and `home/oam.asm` → `HOME_SRCS`. Four blockers were
+resolved to get there:
+1. `IsSpriteInFrontOfPlayer` (+ the `IsSpriteInFrontOfPlayer2` entry point) was
+   `missing`; ported into `src/engine/overworld/overworld.asm` beside
+   `IsSpriteOrSignInFrontOfPlayer`, the sign branch of the same pret routine.
+2. `AdjustOAMBlock{X,Y}Pos(2)` were `missing`; ported into their pret home
+   `src/engine/battle/animations.asm` (shared by cut + boulder dust). The Y variant
+   carries pret's `BUG{}` — it writes 160 to the PREVIOUS OAM entry's attribute.
+3. `DiscardButtonPresses` — see the tooling trap below.
+4. `WriteOAMBlock` (check-only) promoted; the Makefile note claiming
+   `SaveScreenTilesToBuffer2`/`LoadScreenTilesFromBuffer2` blocked `cut.asm` was
+   **stale** (Stage 3's `vcopy.asm` promotion already linked them).
+
+**Decomposition closed (cross-cut into `docs/plans/current_plan_script_engine.md`,
+recorded there).** `RunMapScript` was a skeleton; it now runs pret's full per-frame
+chain internally — `TryPushingBoulder` → \[dust\] → `RunNPCMovementScript` →
+`_Script` (`home/overworld.asm:1712`) — and `OverworldLoop` no longer calls
+`RunNPCMovementScript` itself. `faithdiff RunMapScript` now matches 3/3 calls, and
+`OverworldLoop`'s ADDED set dropped from 3 to 2. This also fixed a silent divergence
+in `AllPokemonFainted`, which pret gives the whole chain but the skeleton gave only
+the dispatch. Still open: no `JoypadOverworld` (faithdiff `missing` + ADDED on
+`OverworldLoop`), and `SwitchToMapRomBank` (TODO-HW).
+
+**Tooling trap worth carrying (stigmergy `label-db-wrong-provider-on-inlined-routines`).**
+`project_state DiscardButtonPresses` reported `unlisted, provider=src/engine/joypad.asm`
+— a **confident wrong provider** pointing at a DEAD file (in no SRCS list, unlinkable:
+it ends in `jmp Joypad`, undefined in the port). The routine was in fact live all along,
+INLINED into the ISR edge layer as the local label `.discard` in `src/input/joypad.asm`.
+"unlisted" read as "unported". It was extracted into a real global there (one
+realization; the port-input-model DEVIATION is unchanged). This is a THIRD shape of the
+faithdiff gap, distinct from relocation/decomposition: the call site never moved and the
+routine was not split — it stopped existing as a callable symbol while its body lived on
+inside a differently-named host.
+
+**Evidence — what is and is not proven.** `make -C dos_port` links all five promoted
+objects; `lint_pret_labels` 0 violations (6 suppressed; the `IsSpriteInFrontOfPlayer{,2}`
+mirror + `DiscardButtonPresses` relocation/dup_def are allowlisted with retirement
+notes); `faithdiff` on every touched label shows only documented classes (TODO-HW
+banking, `jp hl`→flat-table dispatch, the slot<<4 selector convention, and two known
+faithdiff blind spots: it does not count conditional jumps, so `ResetBoulderPushFlags`
+reads DROPPED though `jz`/`jne`/`jnz` reach it, and it matches stores by name, so pret's
+`set BIT_x, [hl]` surfaces as an ADDED named store). `goldencheck overworld_pallet` +
+`sign_pallet` both PASS — `overworld_pallet` is the load-bearing one here, proving the
+rebuilt `OverworldLoop`/`RunMapScript` per-frame chain did not regress.
+**NO must-hit for the push itself, and the bullet's "permitted push plus blocked push"
+acceptance is therefore NOT satisfied.** Evidence for why it cannot be today:
+`project_state PrintStrengthText` = linked but **not-statically-reached** (nothing can
+arm `BIT_STRENGTH_ACTIVE`), and no reachable map carries a boulder object, so
+`TryPushingBoulder` returns at its first `test` every frame. The code is **linked and
+executing per-frame**, not **executed** in the push sense. Both must-hits land with the
+first reachable Strength/boulder map (Stage 5 — Seafoam/Victory Road), exactly as the
+Stage 3 pickup/itemfinder must-hits were deferred.
+
+**Left for the Stage 4 Cut bullet.** `cut.asm`/`cut2.asm` are linked for the OAM
+primitives the dust shares, so `UsedCut`/`AnimCut` are now linked but still unreachable —
+that bullet still owns replacing the party-menu no-op tail. Its "port the missing
+`AdjustOAMBlock{X,Y}Pos` primitives" and "promote `WriteOAMBlock`" sub-items are done.
+
+### Handoff to the next Stage 4 session — 2026-07-16
+
+**Start here.** The boulder bullet is closed; three bullets remain (Cut tail, Fly, Surf)
+plus the Flash/Dig/Teleport/Softboiled must-hit coverage. **Cut is the cheapest next
+step** — its two hard sub-items (the `AdjustOAMBlock{X,Y}Pos` primitives, `WriteOAMBlock`)
+already landed, and `cut.asm`/`cut2.asm` link, so what is left is genuinely just the
+party-menu tail plus a must-hit. Do not re-derive the OAM substrate; read
+`src/engine/battle/animations.asm` first.
+
+**Register contract you must not get wrong.** `AdjustOAMBlock{X,Y}Pos(2)` take **BL** =
+pret's `c` (entry count) — the project map is BC→BX. `dust_smoke.asm` shipped `CL` and
+was a latent bug precisely because it had never linked; `cut2.asm` already had it right.
+The non-`2` entries take the pointer in **EDX** (pret `de`) and copy it to ESI; the `...2`
+entries expect **ESI** already loaded.
+
+**Do not trust these three claims — they were stale/wrong and are now corrected, but the
+same class will recur:**
+1. The Makefile's "remaining check-only blockers" prose (it claimed
+   `SaveScreenTilesToBuffer2`/`LoadScreenTilesFromBuffer2` blocked `cut.asm`; Stage 3's
+   `vcopy.asm` promotion had already linked them).
+2. `docs/plans/current_plan_script_engine.md` located `RunMapScript` at
+   `src/engine/overworld/run_map_script.asm`; it is at `src/home/run_map_script.asm`.
+3. `project_state DiscardButtonPresses` still names a DEAD file as provider (see the
+   tooling trap above). **Rerun `project_state` per this plan's standing rules, but when
+   a provider looks wrong, check the file's own header and the Makefile lists before
+   believing it** — the DB cannot see inlined bodies, and `relocated_labels` does not
+   redirect its provider pick.
+
+**Owed must-hits, tracked so they are not silently dropped:** permitted push / blocked
+push (this bullet, → Stage 5 Seafoam/Victory Road); cut animation + tree-tile replacement
+(Cut bullet); Stage 3's pickup success/bag-full and itemfinder near/nothing. None are
+reachable in the current build state; all are honest deferrals, not claimed coverage.
 - [ ] Retain the already-linked Flash, Dig, Teleport, and Softboiled paths, but
       add must-hit coverage when their observable behavior is first claimed.
       For Dig and the item-owned Escape Rope handler, this plan owns the

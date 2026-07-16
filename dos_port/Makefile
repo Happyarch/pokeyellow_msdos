@@ -219,6 +219,7 @@ HOME_SRCS := \
     src/home/fill_memory.asm \
     src/home/copy_data.asm \
     src/home/bankswitch.asm \
+    src/home/text_script.asm \
     src/home/textbox.asm \
     src/home/yes_no.asm \
     src/home/list_menu.asm \
@@ -228,7 +229,10 @@ HOME_SRCS := \
     src/home/reset_player_sprite.asm \
     src/home/map_text_pointer.asm \
     src/home/reload_tiles.asm \
-    src/home/npc_movement.asm
+    src/home/npc_movement.asm \
+    src/home/vcopy.asm \
+    src/home/give.asm \
+    src/home/oam.asm
 
 HAL_SRCS := \
     src/ppu/ppu.asm \
@@ -332,6 +336,8 @@ GAME_SRCS := \
     src/engine/overworld/wild_mons.asm \
     src/engine/overworld/warp_check.asm \
     src/home/hidden_events.asm \
+    src/data/hidden_events_data.asm \
+    src/engine/overworld/hidden_object_stubs.asm \
     src/engine/menus/swap_items.asm \
     src/engine/link/cable_club.asm \
     src/engine/overworld/ledges.asm \
@@ -354,7 +360,14 @@ GAME_SRCS := \
     src/engine/battle/wild_encounters.asm \
     src/engine/events/black_out.asm \
     src/engine/events/heal_party.asm \
+    src/engine/events/pick_up_item.asm \
+    src/engine/events/give_pokemon_stubs.asm \
+    src/data/pickup_text.asm \
     src/home/money.asm \
+    src/engine/overworld/push_boulder.asm \
+    src/engine/overworld/dust_smoke.asm \
+    src/engine/overworld/cut.asm \
+    src/engine/overworld/cut2.asm \
     src/engine/debug/debug_party.asm
 
 # debug_party.asm is linked UNCONDITIONALLY, matching pret: main.asm:19 INCLUDEs
@@ -397,6 +410,7 @@ ITEMS_SRCS := \
     src/data/item_text.asm \
     src/engine/items/inventory.asm \
     src/engine/items/item_effects.asm \
+    src/engine/items/itemfinder.asm \
     src/engine/items/town_map.asm \
     src/engine/items/tms.asm \
     src/engine/items/tmhm.asm \
@@ -1201,17 +1215,19 @@ ITEMS_CHECK_SRCS := \
 # dispatch needs DisplayTwoOptionMenu live; all its externs already resolved.
 # list_menu.asm MOVED to HOME_SRCS (menus S3): all former link-blockers resolve
 # to linked code (PrintLevel added to home/pokemon.asm); links with swap_items.
+# oam.asm MOVED to HOME_SRCS (overworld-events Stage 4): WriteOAMBlock is needed by
+# cut.asm, promoted below. Its own closure was already satisfied.
+# push_boulder/dust_smoke/cut/cut2 MOVED to GAME_SRCS (overworld-events Stage 4,
+# boulder bullet): the boulder push + its dust animation are live. What unblocked
+# them: AdjustOAMBlock{X,Y}Pos(2) ported into their pret home
+# src/engine/battle/animations.asm, IsSpriteInFrontOfPlayer ported into
+# overworld.asm, DiscardButtonPresses extracted into src/input/joypad.asm, and
+# WriteOAMBlock + SaveScreenTilesToBuffer2/LoadScreenTilesFromBuffer2 now linked
+# (the latter pair via the vcopy.asm promotion in Stage 3 — the old note claiming
+# they blocked cut.asm was stale).
 HOME_CHECK_SRCS := \
-    src/home/text_script.asm \
     src/home/predef_text.asm \
-    src/home/give.asm \
-    src/home/oam.asm \
-    src/home/vcopy.asm \
-    src/engine/overworld/trainer_engine.asm \
-    src/engine/overworld/push_boulder.asm \
-    src/engine/overworld/dust_smoke.asm \
-    src/engine/overworld/cut.asm \
-    src/engine/overworld/cut2.asm
+    src/engine/overworld/trainer_engine.asm
 # B1 (2026-07-13) promoted player_animations.asm to GAME_SRCS: its link closure was
 # already fully satisfied (nm -u resolves to translated/relocated symbols only), so
 # the file was being assembled and thrown away while the overworld_stubs.asm
@@ -1242,10 +1258,11 @@ HOME_CHECK_SRCS := \
 #   PrepareForSpecialWarp replaced the main_menu_stubs.asm ret-stub (deleted).
 #
 # Remaining check-only blockers (per-file):
-# - cut.asm: SaveScreenTilesToBuffer2/LoadScreenTilesFromBuffer2 (check-only
-#   home/vcopy.asm), WriteOAMBlock (check-only home/oam.asm), AnimCut (cut2).
-# - cut2.asm / dust_smoke.asm: AdjustOAMBlock{X,Y}Pos(2) — unported pret
-#   engine/battle/animations.asm OAM primitives.
+# - cut.asm / cut2.asm / dust_smoke.asm: LINKED as of overworld-events Stage 4 —
+#   all four former blockers are resolved (see the HOME_CHECK_SRCS note below).
+#   NOTE cut.asm is linked for its OAM-animation primitives, which the boulder dust
+#   shares; the Stage 4 CUT bullet still owns wiring UsedCut to the party-menu tail,
+#   so UsedCut/AnimCut are linked but not yet reachable from the field-move menu.
 # - field_move_messages.asm: LINKED as of menu-fidelity row 9 part 3. Its only
 #   unresolved symbol was PlayCry (cry synth, still unported); that is now a
 #   documented ret-stub in home_stubs.asm, which costs the STRENGTH cry and
@@ -1255,14 +1272,14 @@ HOME_CHECK_SRCS := \
 #   (StopMusic is REAL now — ported into overworld.asm by the wild-live
 #   promotion; player_sprite is exported from overworld.asm.)
 # - trainer_engine.asm: GetTrainerName_/SaveTrainerName/_TrainerNameText/
-#   JessieJamesPic unported; WriteOAMBlock (home/oam.asm). DisplayTextID is a
-#   ret-stub (home_stubs.asm), not a real body.
-# - text_script.asm: closure is 15 symbols deep — Joypad (undefined anywhere),
-#   4 Tier-1 text strings, and 8 DisplayTextID special-case dispatch targets
-#   (Bill's PC / mart / Pokémon Center / vending / cable club / Pikachu /
-#   Safari / prize menu) owned by the script-engine session. DisplayTextID is
-#   ret-stubbed in home_stubs.asm meanwhile; retiring that stub = linking this
-#   file (a duplicate-global link error will make the collision loud).
+#   JessieJamesPic unported; WriteOAMBlock (home/oam.asm). DisplayTextID is now
+#   the linked home/text_script.asm dispatcher.
+# - text_script.asm promoted to HOME_SRCS (overworld-events Stage 2): the real
+#   DisplayTextID dispatcher links, uses the flat map text table for ordinary
+#   map text, and owns the generated text_script_text.inc far streams. The
+#   remaining mart / Pokémon Center / vending / cable club / Pikachu / Safari /
+#   prize-service bodies are structured subsystem stubs until their service
+#   bullets land.
 # reload_sprites.asm promoted to GAME_SRCS (menus S7): naming_screen.asm calls
 # ReloadMapSpriteTilePatterns; its externs (DisableLCD/EnableLCD/InitMapSprites/
 # LoadPlayerSpriteGraphics/LoadFontTilePatterns/UpdateSprites) are all linked.
@@ -1452,6 +1469,22 @@ assets/map_scripts.inc:
 	python3 tools/gen_map_scripts.py
 
 src/data/map_scripts.o: assets/map_scripts.inc
+
+# Hidden-event data (generated from data/events/hidden_events.asm).
+assets/hidden_events.inc:
+	python3 tools/gen_hidden_events.py
+
+# HiddenItemCoords data (generated from data/events/hidden_item_coords.asm) —
+# overworld-events Stage 3 bullet 2, consumed by the items plan's itemfinder.
+assets/hidden_item_coords.inc:
+	python3 tools/gen_hidden_item_coords.py
+
+# PickUpItem message streams (generated from engine/events/pick_up_item.asm).
+assets/pickup_text.inc: assets/item_text.inc assets/battle_text.inc
+	python3 tools/gen_pickup_text.py
+
+src/data/hidden_events_data.o: assets/hidden_events.inc assets/hidden_item_coords.inc
+src/data/pickup_text.o: assets/pickup_text.inc
 
 src/data/audio_data.o: assets/audio_rom.inc assets/cry_data.inc
 src/audio/opl_shim.o: assets/opl_patches.inc
@@ -1896,7 +1929,9 @@ assets: assets/scenario_registry.inc \
         assets/cut_text.inc assets/player_anim_text.inc \
         assets/type_matchups.inc assets/move_names.inc assets/field_moves.inc \
         assets/effect_categories.inc \
-        assets/wild_data.inc assets/map_scripts.inc assets/battle_hud_2bpp.inc \
+        assets/wild_data.inc assets/map_scripts.inc assets/hidden_events.inc \
+        assets/hidden_item_coords.inc assets/pickup_text.inc \
+        assets/battle_hud_2bpp.inc \
         assets/trainer_pics.inc \
         assets/super_rod.inc assets/town_map_data.inc assets/town_map_gfx.inc \
         assets/ui_layout_menus.inc assets/ui_layout_battle.inc \
@@ -1956,17 +1991,22 @@ $(TARGET): $(LINK_OBJS) link.ld
 # Needs host tools: sfdisk, mkfs.fat (dosfstools), mcopy (mtools).
 # ---------------------------------------------------------------------------
 image: $(TARGET) $(DPMI_HOST)
-	@if [ ! -f $(IMG) ]; then \
-	    exe_sz=$$(stat -c%s $(TARGET)); \
-	    dpmi_sz=$$(stat -c%s $(DPMI_HOST)); \
-	    img_sz=$$(( ($(IMG_PART_OFF) + exe_sz + dpmi_sz + $(IMG_SLACK) + 1048576 + 511) / 512 * 512 )); \
+	@exe_sz=$$(stat -c%s $(TARGET)); \
+	 dpmi_sz=$$(stat -c%s $(DPMI_HOST)); \
+	 img_sz=$$(( ($(IMG_PART_OFF) + exe_sz + dpmi_sz + $(IMG_SLACK) + 1048576 + 511) / 512 * 512 )); \
+	 if [ -f $(IMG) ] && [ $$(stat -c%s $(IMG)) -lt $$img_sz ]; then \
+	    echo "Recreating $(IMG): $(TARGET) outgrew the existing image"; \
+	    rm -f $(IMG); \
+	 fi; \
+	 if [ ! -f $(IMG) ]; then \
 	    rm -f $(IMG); \
 	    truncate -s $$img_sz $(IMG); \
 	    printf 'label: dos\n$(IMG_PART_SEC),,6,*\n' | sfdisk -q $(IMG) >/dev/null 2>&1; \
 	    mkfs.fat -F 16 -n PKMN --offset $(IMG_PART_SEC) $(IMG) >/dev/null; \
 	    echo "Created $(IMG) ($$((img_sz/1048576)) MB, ~5 MB free for saves)"; \
 	fi
-	@mt=$$(mktemp); \
+	@set -e; \
+	 mt=$$(mktemp); \
 	 printf 'drive x: file="%s" offset=$(IMG_PART_OFF)\n' "$(CURDIR)/$(IMG)" > $$mt; \
 	 MTOOLSRC=$$mt mcopy -D o $(TARGET) x:PKMN.EXE; \
 	 MTOOLSRC=$$mt mcopy -D o $(DPMI_HOST) x:$(DPMI_HOST); \

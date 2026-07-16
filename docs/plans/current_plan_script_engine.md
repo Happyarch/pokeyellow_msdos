@@ -48,9 +48,22 @@ Code via targeted claims and the `wired`/`verified` transitions:
       (249 = NUM_MAPS flat `dd`, indexed by `wCurMap`, default `DefaultMapScript`,
       `SCRIPT_OVERRIDES` registry → `PALLET_TOWN`), exposed by `src/data/map_scripts.asm`.
       `RunMapScript` + `DefaultMapScript` + `CallFunctionInTable` (flat-`dd` jumptable
-      dispatch) in `src/engine/overworld/run_map_script.asm`; **wired into `OverworldLoop`**
-      (runs every frame, right after `RunNPCMovementScript`). Boulder push / dust /
-      `SwitchToMapRomBank` are deferred no-ops (see header `; TODO` notes). A faithful
+      dispatch) in `src/home/run_map_script.asm`; **wired into `OverworldLoop`**.
+      **SUPERSEDED 2026-07-16 — cross-cut from `docs/current_plan_overworld_events.md`
+      Stage 4 (boulder bullet); see that plan's Stage 4 handoff.** This stage left
+      `RunMapScript` a SKELETON (only the `_Script` dispatch): the boulder push/dust were
+      deferred no-ops and `RunNPCMovementScript` was hoisted up into `OverworldLoop`, so
+      the two ran in the reverse of pret's order. Overworld-events Stage 4 CLOSED that
+      decomposition — `TryPushingBoulder` → \[dust\] → `RunNPCMovementScript` → `_Script`
+      now all run inside `RunMapScript`, in pret's order (`home/overworld.asm:1712`), and
+      `OverworldLoop` no longer calls `RunNPCMovementScript` itself. That also fixed a
+      silent divergence in the port's OTHER `RunMapScript` caller, `AllPokemonFainted`,
+      which pret gives the full chain (`home/overworld.asm:319`) but the skeleton gave
+      only the dispatch. STILL DEFERRED from this stage: `SwitchToMapRomBank` (TODO-HW,
+      no-op under flat addressing) and the absence of `JoypadOverworld` (pret reaches
+      `RunMapScript` through it; the port calls it directly from `OverworldLoop`, so
+      faithdiff still shows `JoypadOverworld` `missing` + ADDED calls on `OverworldLoop`).
+      A faithful
       `PalletTown_Script` skeleton (`src/scripts/pallet_town.asm`) does the
       `EVENT_GOT_POKEBALLS_FROM_OAK` → `EVENT_PALLET_AFTER_GETTING_POKEBALLS` event-gate,
       then `CallFunctionInTable` on `wPalletTownCurScript`. `EnableAutoTextBoxDrawing` /

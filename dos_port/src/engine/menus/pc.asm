@@ -240,10 +240,9 @@ AccessedMyPCText:
 
 %ifdef DEBUG_PC
 ; ---------------------------------------------------------------------------
-; RunPCTest — FRAME.BIN gate for the PC spine (row 17). Nothing in the linked
-; game reaches ActivatePC yet (home/overworld_text.asm's TextScript_PokemonCenterPC
-; is still behind %ifdef M72_OVERWORLD_TEXTSCRIPTS — see the ledger finding), and
-; no golden covers this screen, so this is how the dialog gets observed at all.
+; RunPCTest — FRAME.BIN gate for the PC spine (row 17). The linked text-script
+; dispatcher can now reach ActivatePC through TextScript_PokemonCenterPC, but no
+; active golden covers this screen yet, so this is how the dialog gets observed.
 ; ActivatePC prints TurnedOnPC1Text and blocks in the stream's `prompt` wait; the
 ; harness runs with AUTOKEY_QUIET (no presses), so AutoKeyDrive photographs the
 ; open dialog at AUTOKEY_DUMP_FRAME and exits.

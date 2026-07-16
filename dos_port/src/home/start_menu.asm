@@ -33,11 +33,9 @@
 ;    (overworld.asm:904 — H_JOY_PRESSED is always cleared by the time it looks):
 ;    a still-held START would reopen the menu on the very next iteration.
 ;  * DEVIATION(port-input-model): pret's `jp CloseTextDisplay` teardown is folded
-;    into CloseStartMenu. CloseTextDisplay is translated but NOT LINKED
-;    (Makefile HOME_CHECK_SRCS — text_script.asm's link closure is blocked on the
-;    same missing Joypad), and the port opens the START menu straight from
-;    OverworldLoop rather than from inside DisplayTextID, whose saved-bank stack
-;    slot CloseTextDisplay pops. Retire this fold when text_script.asm links.
+;    into CloseStartMenu. CloseTextDisplay is linked now, but the port opens the
+;    START menu straight from OverworldLoop rather than from inside DisplayTextID,
+;    whose saved-bank stack slot CloseTextDisplay pops.
 ;
 ; Input: H_JOY_PRESSED is reliable here (HandleMenuInput runs one DelayFrame →
 ; one joypad_update per iteration).

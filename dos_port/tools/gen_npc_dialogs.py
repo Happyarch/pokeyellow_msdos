@@ -311,13 +311,13 @@ def generate_map(map_id: int, const: str, label: str, charmap: list,
 
     # The table is indexed by text id - 1 (ids are pret's 1-based consts; the consumers
     # subtract one at the lookup, as pret's DisplayTextID does). A map's ids come from
-    # TWO sources: the object_event slots (id == slot index + 1) and the bg_event signs
-    # (id resolved by name in gen_map_headers.text_pointer_names — always past the object
-    # slots). Emit through the highest id either can produce, so a sign's id addresses a
-    # real row instead of running off the end (before this, the table stopped at
-    # npc_count and every sign indexed past it).
+    # three sources: object_event slots (id == slot index + 1), bg_event signs (id
+    # resolved by name in gen_map_headers.text_pointer_names), and script-only
+    # dw_const entries (e.g. PalletTownOakComeWithMe) that map scripts feed to
+    # DisplayTextID even though no object/sign owns that id. Emit through the highest
+    # id any of those can produce, so every legitimate text ID addresses a real row.
     max_sign_id = max((s['text_id'] for s in signs), default=0)   # 1-based
-    npc_count_eff = max(npc_count, max_sign_id)
+    npc_count_eff = max(npc_count, max_sign_id, len(pointers))
 
     # Lazy-load text db for this map
     text_db = {}

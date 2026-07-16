@@ -19,6 +19,10 @@
     }
   },
   "relocated_labels": {
+    "JumpToAddress": {
+      "port_file": "dos_port/src/home/bankswitch.asm",
+      "why": "pret home/bankswitch2.asm is merged into the port's home/bankswitch.asm (BankswitchCommon lives there too, documented from home/bankswitch2.asm). JumpToAddress (jp hl trampoline) is tiny and only used alongside BankswitchCommon by the hidden-event dispatch, so it lives with it (overworld-events Stage 3)"
+    },
     "AIGetTypeEffectiveness": {
       "port_file": "dos_port/src/engine/battle/core_damage.asm",
       "why": "pret engine/battle/core.asm split across port files (draft Session H)"
@@ -1622,6 +1626,18 @@
     "DelayFrame": {
       "port_file": "dos_port/src/video/frame.asm",
       "why": "Scanner-reviewed 2026-07-15: DelayFrame from pret home/vblank.asm has its selected single non-stub definition at dos_port/src/video/frame.asm; preserve this per-label split."
+    },
+    "IsSpriteInFrontOfPlayer": {
+      "port_file": "dos_port/src/engine/overworld/overworld.asm",
+      "why": "pret home/overworld.asm splits across port files. These two entry points are the detect-only sprite scan, deliberately co-located with IsSpriteOrSignInFrontOfPlayer (the sign branch of the SAME pret routine, already at this port path) so pret's interaction chain stays readable in one place. The port ALSO has a second, bespoke realization of pret's sprite scan for collision, IsNPCAtTargetBlock (map_sprites.asm), which is not a drop-in (block/map coords vs faced-pixel coords, no BIT_FACE_PLAYER or hSpriteIndex hand-off) - see the STRUCTURAL SPLIT note on IsSpriteInFrontOfPlayer. Ported overworld-events Stage 4 for TryPushingBoulder. Permanent unless home/overworld.asm is ever mirrored wholesale."
+    },
+    "IsSpriteInFrontOfPlayer2": {
+      "port_file": "dos_port/src/engine/overworld/overworld.asm",
+      "why": "pret home/overworld.asm splits across port files. These two entry points are the detect-only sprite scan, deliberately co-located with IsSpriteOrSignInFrontOfPlayer (the sign branch of the SAME pret routine, already at this port path) so pret's interaction chain stays readable in one place. The port ALSO has a second, bespoke realization of pret's sprite scan for collision, IsNPCAtTargetBlock (map_sprites.asm), which is not a drop-in (block/map coords vs faced-pixel coords, no BIT_FACE_PLAYER or hSpriteIndex hand-off) - see the STRUCTURAL SPLIT note on IsSpriteInFrontOfPlayer. Ported overworld-events Stage 4 for TryPushingBoulder. Permanent unless home/overworld.asm is ever mirrored wholesale."
+    },
+    "DiscardButtonPresses": {
+      "port_file": "dos_port/src/input/joypad.asm",
+      "why": "pret engine/joypad.asm is the REJECTED faithful-input model and is DEAD (in no Makefile SRCS list, and unlinkable: it ends in `jmp Joypad`, which the port never defines). The port's live input model is the src/input/joypad.asm HAL, which polls from the DelayFrame pipeline - the documented port-input-model DEVIATION (pret's `call Joypad` has no port counterpart). DiscardButtonPresses is model-neutral (it just zeroes hJoyHeld/hJoyPressed/hJoyReleased) and was ALREADY live here, inlined as the local label `.discard`; overworld-events Stage 4 extracted it into a real global because DoBoulderDustAnimation calls it. Permanent while the port-input-model deviation stands."
     }
   },
   "suppress": [
@@ -1657,8 +1673,13 @@
     },
     {
       "rule": "dup_def",
-      "key": "DisplayTextID",
-      "why": "known interim (wild-live promotion): home_stubs.asm holds a documented ret-stub that is LINKED; home/text_script.asm holds the real body but stays check-only (HOME_CHECK_SRCS) because its link closure is 15 symbols deep and 8 of them are DisplayTextID special-case dispatch targets owned by the script-engine session. The stub's only linked caller is TryDoWildEncounter's repel-wore-off branch, unreachable until item USE lands. Retire by linking text_script.asm and DELETING the stub \u2014 the duplicate global is then a loud link error, not a silent shadow."
+      "key": "StartSlotMachine",
+      "why": "known interim (overworld-events Stage 3): hidden_object_stubs.asm ret-stub is linked (a HiddenEventMaps handler for Game Corner slot tiles); the real body in engine/slots/game_corner_slots.asm is unlisted (in no Makefile SRCS list). Delete the stub when game_corner_slots.asm is promoted to a linked list (Stage 5 Celadon)"
+    },
+    {
+      "rule": "dup_def",
+      "key": "DiscardButtonPresses",
+      "why": "NOT the silent-shadow trap this rule targets: only ONE definition is linked. src/input/joypad.asm (HAL_SRCS) holds the live body; src/engine/joypad.asm is DEAD - in no SRCS list at all (not even a check-only one), so it is never assembled and cannot shadow anything. It is retained solely as a cross-reference to pret's original input routine (_Joypad/ReadJoypad_/TrySoftReset) for a future faithful-input pass, and its header says so. Retire this entry by deleting engine/joypad.asm, or by dropping its DiscardButtonPresses copy, if that reference is ever cashed in or abandoned (overworld-events Stage 4)."
     }
   ]
 }

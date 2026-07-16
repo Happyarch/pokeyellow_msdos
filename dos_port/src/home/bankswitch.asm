@@ -79,6 +79,17 @@ SwitchToMapRomBank:
     call BankswitchCommon                        ; record AL in hLoadedROMBank (flat no-op MBC)
     ret
 
+; ---------------------------------------------------------------------------
+; JumpToAddress — pret home/bankswitch2.asm:JumpToAddress. Trivial trampoline
+; used after BankswitchCommon-ing into a routine's bank so a `call JumpToAddress`
+; tail-jumps to it (pret `jp hl`; the target's own `ret` returns to the caller of
+; JumpToAddress). Register map: HL -> ESI (handler flat pointer). BankswitchCommon
+; preserves ESI, so ESI still holds the handler here.
+; ---------------------------------------------------------------------------
+global JumpToAddress
+JumpToAddress:
+    jmp esi
+
 section .bss
 
 ; pret wBankswitchHomeSavedROMBank (ram/wram.asm). Host-side scratch under the

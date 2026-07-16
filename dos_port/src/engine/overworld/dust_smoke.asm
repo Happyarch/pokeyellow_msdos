@@ -16,9 +16,10 @@
 ; accordingly. The pret `jp hl` manual-call trampoline becomes an indirect
 ; `call esi` (push return / jump-to-func / func rets back).
 ;
-; Check-only until the OAM-animation subsystem lands: externs the unported
-; UpdateCGBPal_OBP1 (palette), WriteCutOrBoulderDustAnimationOAMBlock and
-; AdjustOAMBlock{Y,X}Pos (shared with cut — OW-3.4).
+; LINKED as of overworld-events Stage 4 (boulder bullet). Its former blockers are
+; resolved: AdjustOAMBlock{Y,X}Pos are ported into their pret home file
+; src/engine/battle/animations.asm, and WriteCutOrBoulderDustAnimationOAMBlock comes
+; from cut.asm, promoted alongside this file. UpdateCGBPal_OBP1 was already linked.
 ;
 ; Build (check): nasm -f coff -I include/ -I . -o /dev/null \
 ;                     src/engine/overworld/dust_smoke.asm
@@ -51,8 +52,10 @@ global LoadSmokeTile
 
 extern UpdateCGBPal_OBP1            ; home/cgb_palettes.asm
 extern WriteCutOrBoulderDustAnimationOAMBlock ; src/engine/overworld/cut.asm (OW-3.4)
-extern AdjustOAMBlockYPos          ; UNPORTED (OW-3.4 cut.asm shared OAM anim primitive)
-extern AdjustOAMBlockXPos          ; UNPORTED (OW-3.4 cut.asm shared OAM anim primitive)
+; Reached indirectly via MoveBoulderDustFunctionPointerTable, not by name.
+; In: EDX = OAM entry ptr, BL = entry count, wCoordAdjustmentAmount = delta.
+extern AdjustOAMBlockYPos          ; src/engine/battle/animations.asm (pret home file)
+extern AdjustOAMBlockXPos          ; src/engine/battle/animations.asm (pret home file)
 extern CopyVideoData               ; home/copy2.asm (In: ESI=VRAM dest, EDX=flat src, BL=count)
 extern Delay3                      ; video/frame.asm
 extern LoadPlayerSpriteGraphics    ; engine/overworld/player_gfx.asm
@@ -75,7 +78,10 @@ AnimateBoulderDust:
 .loop:
     push ecx                                    ; save step counter (pret: push bc)
     call GetMoveBoulderDustFunctionPointer      ; ESI = adjust func, EDX = OAM sprite ptr
-    mov cl, 4                                    ; c = OAM entries to adjust (arg to the func)
+    ; BL (not CL) is pret's `c` under the project register map (BC→BX), and BL is the
+    ; contract AdjustOAMBlock{X,Y}Pos publishes (cut2.asm passes BL too). This file
+    ; passed CL while it was check-only, so the mismatch never linked or ran.
+    mov bl, 4                                    ; c = OAM entries to adjust (arg to the func)
     call esi                                     ; pret: ld bc,.ret / push bc / jp hl (manual call)
     mov al, [ebp + IO_OBP1]                     ; TODO-HW: rOBP1
     xor al, 0x64                                ; %01100100 (palette flicker)

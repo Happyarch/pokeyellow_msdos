@@ -33,6 +33,7 @@ global PalletTownPlayerFollowsOakScript
 global PalletTownDaisyScript
 global PalletTownNoopScript
 extern ShowTextStream            ; (ESI = flat TX stream — walked in place)
+extern DisplayTextID             ; src/home/text_script.asm
 extern CallFunctionInTable       ; (AL = index, ESI = flat dd jumptable)
 extern EnableAutoTextBoxDrawing
 extern StopAllMusic              ; src/home/audio.asm
@@ -106,20 +107,6 @@ PalletTownOakText:
     call ShowTextStream
     ret
 
-PalletTownOakComeWithMe:
-    mov esi, oak_come_with_me_text
-    jmp ShowTextStream
-
-; Temporary Pallet-local text dispatcher. Stage 2 owns the real DisplayTextID
-; service closure; until then the Oak cutscene must not call the linked ret-stub.
-DisplayPalletTownTextID:
-    mov al, [ebp + hTextID]
-    cmp al, TEXT_PALLETTOWN_OAK
-    je PalletTownOakText
-    cmp al, TEXT_PALLETTOWN_OAK_COME_WITH_ME
-    je PalletTownOakComeWithMe
-    ret
-
 ; ---------------------------------------------------------------------------
 ; PalletTown_Script — the map's per-frame _Script (RunMapScript dispatches here
 ; via MapScriptPointers[PALLET_TOWN]). Faithful skeleton of scripts/PalletTown.asm:
@@ -163,7 +150,7 @@ PalletTownOakHeyWaitScript:
     mov byte [ebp + W_JOY_IGNORE], PAD_SELECT | PAD_START | PAD_CTRL_PAD
     mov byte [ebp + wOakWalkedToPlayer], 0
     mov byte [ebp + hTextID], TEXT_PALLETTOWN_OAK
-    call DisplayPalletTownTextID
+    call DisplayTextID
     mov byte [ebp + W_JOY_IGNORE], PAD_BUTTONS | PAD_CTRL_PAD
     mov byte [ebp + wSprite01StateData2MapY], 8
     mov byte [ebp + wSprite01StateData2MapX], 14
@@ -196,7 +183,7 @@ PalletTownOakGreetsPlayerScript:
     mov byte [ebp + wSprite01StateData1MovementStatus], 2
     mov byte [ebp + wSprite01StateData1FacingDirection], SPRITE_FACING_UP
     mov byte [ebp + hTextID], TEXT_PALLETTOWN_OAK
-    call DisplayPalletTownTextID
+    call DisplayTextID
     mov byte [ebp + W_JOY_IGNORE], PAD_BUTTONS | PAD_CTRL_PAD
     mov byte [ebp + wSprite01StateData1MovementStatus], 2
     CheckEvent EVENT_PLAYER_AT_RIGHT_EXIT_TO_PALLET_TOWN
@@ -221,11 +208,11 @@ PalletTownPikachuBattleScript:
 PalletTownAfterPikachuBattleScript:
     mov byte [ebp + wOakWalkedToPlayer], 2
     mov byte [ebp + hTextID], TEXT_PALLETTOWN_OAK
-    call DisplayPalletTownTextID
+    call DisplayTextID
     mov byte [ebp + wSprite01StateData1MovementStatus], 2
     mov byte [ebp + wSprite01StateData1FacingDirection], SPRITE_FACING_UP
     mov byte [ebp + hTextID], TEXT_PALLETTOWN_OAK_COME_WITH_ME
-    call DisplayPalletTownTextID
+    call DisplayTextID
     mov byte [ebp + W_JOY_IGNORE], PAD_BUTTONS | PAD_CTRL_PAD
     mov byte [ebp + wPalletTownCurScript], SCRIPT_PALLETTOWN_OAK_NOT_SAFE
     ret

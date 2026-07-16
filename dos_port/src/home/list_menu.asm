@@ -489,7 +489,7 @@ DisplayChooseQuantityMenu:
     ; TODO(proj): PRICEDITEMLISTMENU is a Pokémart box (GB 7,9 x11) → needs the
     ; mart anchor. Deferred, and genuinely unreachable today — the only setter of
     ; PRICEDITEMLISTMENU is home/text_script.asm:DisplayPokemartDialogue, whose
-    ; DisplayPokemartDialogue_ is still a ret-stub in home/home_stubs.asm. So the
+    ; DisplayPokemartDialogue_ is still a ret-stub in engine/menus/main_menu_stubs.asm. So the
     ; priced branch below is reasoned from pret, NOT observed at runtime.
     mov esi, QTY_SCRATCH                       ; box-relative top-left in scratch
     mov bl, 3                                  ; interior width  (quantity only)

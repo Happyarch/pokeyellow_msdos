@@ -14,10 +14,36 @@ user. All tools live in `dos_port/tools/`; they read `translation.db`, which is
 
 ## The gate (run before committing a change that touches a pret-labeled routine)
 
+0. **Annotate the divergence in the source, structurally.** Before the tools:
+   every sanctioned divergence carries a machine-parsed
+   `DEVIATION{class=…; pret=…; behavior=…; evidence=…; lifetime=…}` (or
+   `BUG{}` / `GLITCH{}` / `STUB{}` — those four kinds and no others). `lint_pret_labels`
+   parses them strictly, so a malformed one or an unknown `class` **fails the gate**.
+   A commit message is not a substitute: it is not queryable, and a cold `faithdiff`
+   run months later re-discovers the divergence with no pointer to the reasoning.
+   Full schema, the legal `class` values, and the "no `;` inside a value" trap →
+   skill **`project-conventions`**.
+
+   **A pure file relocation is not a deviation** — a faithful body that merely lives at
+   a non-mirrored path belongs in `tools/pret_label_allowlist.json`, not an annotation.
+
 1. **`tools/faithdiff <Label>`** for every pret-labeled routine you touched.
    It diffs the pret vs port call graph and named-WRAM/HRAM store set.
    - Every unsuppressed **ADDED/DROPPED** line must be either (a) fixed, or
-     (b) justified **in the commit message** (what diverged and why it must).
+     (b) justified — in the **source annotation** (step 0) for anything durable, and
+     restated in the commit message. The annotation is the record that survives.
+   - **Known blind spots — do not "fix" a phantom.** `faithdiff` counts `call`/`jmp`
+     to a label; it does **not** count conditional jumps (`jz`/`jne`/`jnz` to a pret
+     label read as DROPPED though the routine is reached), and it matches stores
+     **by name**, so pret's pointer-indirect writes (`set BIT_x, [hl]` where `hl` is a
+     named symbol) surface as an ADDED named store on the port side. Confirm against
+     the source before acting.
+   - **It has no model of call-site relocation, routine decomposition, or a routine
+     inlined into a differently-named host.** A call that legitimately moved between
+     routines shows up as disconnected ADDED/`missing`/DROPPED lines, and an inlined
+     routine gets a *confident wrong provider* pointing at whatever dead file still
+     carries the label. See stigmergy memories `faithdiff-no-call-relocation-model`
+     and `label-db-wrong-provider-on-inlined-routines` before concluding "unported".
    - Global translation boundaries (DelayFrame plumbing, TODO-HW, banking,
      scroll-register mirrors) are already suppressed in
      `tools/faithdiff_suppress.json` — add there only symbols that are expected

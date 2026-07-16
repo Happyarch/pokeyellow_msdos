@@ -311,6 +311,72 @@ Prioritized task list. Check off items as they complete; add new items with phas
       promotion. See `dos_port/tools/pret_label_allowlist.json` suppression whys.
 - [ ] **Relocation allowlist spot-review** — the draft allowlist blesses all 298
       pre-existing relocation groups wholesale (Session H note); worth a user pass.
+- [ ] **faithdiff has no model of call-site relocation / routine decomposition**
+      (found 2026-07-16, overworld-events Stage 3). The gate compares calls/stores
+      *within a label span*, so when the port hoists a call out of one pret routine
+      into another — or decomposes a monolithic pret routine into several port
+      routines — faithdiff reports three *disconnected* anomalies (ADDED in the new
+      host, `missing` on the dissolved routine, DROPPED in the decomposed one) with
+      nothing linking them to each other or to the justification. It can neither
+      confirm a justification exists nor tell a documented deliberate decomposition
+      from accidental drift; the "why" lives only in commit messages + plan prose,
+      not in any allowlist/ledger the static tools consult. **Load-bearing live
+      example:** pret's monolithic `RunMapScript` (per frame: `TryPushingBoulder` →
+      `RunNPCMovementScript` → map `_Script`, reached via `JoypadOverworld`) is
+      decomposed in the port — `OverworldLoop` calls `RunNPCMovementScript` +
+      a skeleton `RunMapScript` directly, there is **no `JoypadOverworld`**, and the
+      boulder step is dropped (deferred → overworld-events Stage 4). This decomposition
+      is sanctioned + documented (`docs/plans/current_plan_script_engine.md:52`) but
+      invisible to the tooling as anything other than raw divergence. Fix: give the
+      allowlist a `relocated_calls` / `decomposed_routines` category faithdiff reads,
+      so a cold run is pointed at the justification instead of re-discovering it.
+      Then seed it with the `RunMapScript` case above.
+      **UPDATE (2026-07-16, overworld-events Stage 4):** the boulder half of that
+      example is CLOSED — `RunMapScript` now runs pret's full chain internally and
+      faithdiff matches 3/3 of its calls. The **`JoypadOverworld` `missing` + ADDED
+      calls on `OverworldLoop`** half remains, and is still the live example. Seed the
+      category with that, not with the boulder drop.
+- [ ] **label DB reports a CONFIDENT WRONG PROVIDER for a pret routine inlined into a
+      differently-named port routine** (found 2026-07-16, overworld-events Stage 4).
+      A THIRD shape of the gap above, and the nastiest: the entry immediately above
+      emits three disconnected anomalies that at least signal "look here", but this
+      emits one clean, plausible, **wrong** line. **Live example:**
+      `project_state DiscardButtonPresses` reports
+      `unlisted, provider=dos_port/src/engine/joypad.asm` — a DEAD file (in no SRCS
+      list; unlinkable, it ends in `jmp Joypad` which the port never defines; it is the
+      relic of the REJECTED faithful-input model). The routine was in fact live every
+      frame, INLINED into the ISR edge layer as the local label `.discard` in
+      `src/input/joypad.asm`. So `unlisted` reads as `unported`, and the two natural
+      reactions are both wrong: linking the dead file re-introduces the rejected input
+      model, and hand-writing a second copy creates two realizations of one pret label.
+      Stage 4 resolved this instance by extracting `.discard` into a real global, but
+      the tooling gap stands for every other inlined routine. **The proposed
+      `relocated_calls` / `decomposed_routines` categories do NOT cover it** — the call
+      site never moved and the routine was not split; it ceased to exist as a callable
+      symbol while its body survived inside a host with another name. Needs a third
+      category (`inlined_into` / `absorbed_by`) mapping pret label → host port label +
+      local anchor. **And the allowlist alone is NOT enough — verified 2026-07-16:**
+      after the extraction, a `relocated_labels` entry naming
+      `dos_port/src/input/joypad.asm` AND a `dup_def` suppression, `project_state`
+      *still* reports `unlisted, provider=dos_port/src/engine/joypad.asm` (the dead
+      file). `relocated_labels` does not drive provider selection when two files define
+      a label — the picker takes the dead one regardless (apparently path order).
+      `label_status --callers` is correct. So the fix must also make the provider picker
+      **consult** the allowlist, else the entry is decorative. Detail: stigmergy
+      `label-db-wrong-provider-on-inlined-routines`.
+- [ ] **`lint_pret_labels --strict-claims` cannot pass: `stale_provider` does not follow
+      `%include`** (found 2026-07-16, overworld-events Stage 4). The check tests
+      `(provider, symbol) in port_defs`, and `update_label_db` scans `.asm` text without
+      following `%include`, so any symbol provided through a generated `assets/*.inc`
+      looks undefined. Live false positive: `src/home/hidden_events.asm:185` externs
+      `HiddenEventMaps` naming `src/data/hidden_events_data.asm`, which `%include`s
+      `assets/hidden_events.inc`. Ground truth disagrees with the tool —
+      `nm src/data/hidden_events_data.o` → `HiddenEventMaps` is defined. The extern
+      comment is CORRECT; the linter is wrong. This is the only `--strict-claims`
+      violation tree-wide, so it alone blocks that gate from ever exiting 0. Fix: teach
+      the scanner to resolve `%include` (at least for `assets/*.inc`), or record
+      generated-data providers explicitly. Default `lint_pret_labels` is unaffected
+      (exits 0) — only the strict gate is blocked.
 - [ ] **Pret-tree contamination (decision-for-user, Session A)** — port commit
       `101c5a9c` edited pret sources at the repo root (violates the read-only-spec
       rule; root `make yellow` fails). Golden ROM builds from the pinned worktree

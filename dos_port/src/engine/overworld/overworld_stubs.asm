@@ -118,3 +118,21 @@ LoadHoppingShadowOAM:
 ; src/engine/overworld/cut2.asm (AnimCut / AnimCutGrass_UpdateOAMEntries /
 ; _SwapOAMEntries). Its only caller (UsedCut, cut.asm) is check-only, so no
 ; linked caller depended on this stub — deleted cleanly (no dup_def).
+
+; TalkToPikachu — pret engine/pikachu/pikachu.asm:TalkToPikachu. DisplayTextID's
+; TEXT_PIKACHU_ANIM service reaches this tail, but the full Pikachu interaction
+; FSM is not part of the current Stage 2 text-service closure. The follower spawn
+; FSM is linked separately; this menu/dialog tail still needs its own port.
+; STUB{class=stub; label=TalkToPikachu; pret=engine/pikachu/pikachu.asm:TalkToPikachu; behavior=return immediately instead of running Pikachu emotion/dialog; evidence=overworld-events Stage 2 lists Pikachu tail open; lifetime=until Pikachu service tail lands}
+global TalkToPikachu
+TalkToPikachu:
+    ret
+
+; PrintSafariGameOverText — pret engine/events/safari_game.asm:PrintSafariGameOverText.
+; The Safari-zone service tail is deferred with the rest of Safari story/event
+; rollout; keep it as a structured overworld/event stub, not as a hidden
+; DisplayTextID link blocker.
+; STUB{class=stub; label=PrintSafariGameOverText; pret=engine/events/safari_game.asm:PrintSafariGameOverText; behavior=return immediately instead of printing Safari game-over text; evidence=overworld-events Stage 2 lists Safari tail open; lifetime=until Safari service tail lands}
+global PrintSafariGameOverText
+PrintSafariGameOverText:
+    ret

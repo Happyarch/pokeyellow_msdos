@@ -275,6 +275,7 @@ X_SPECIAL              equ 0x44
 BICYCLE                equ 0x06   ; StartMenu_Item special-cases it (skips the USE/TOSS box)
 
 ; --- wStatusFlags4/6 bits used by the START menu / bag (constants/ram_constants.asm) ---
+BIT_TEXT_PREDEF        equ 0      ; wTextPredefFlag: PrintPredefTextID table active
 BIT_LINK_CONNECTED     equ 6      ; wStatusFlags4: link session active (SAVE → RESET label)
 BIT_ALWAYS_ON_BIKE     equ 5      ; wStatusFlags6: map forbids dismounting (Cycling Road)
 
@@ -305,8 +306,22 @@ TOXIC                   equ 0x5C       ; move id (PoisonEffect: badly-poison bra
 ENEMY_HUD_SHAKE_ANIM    equ 0xA9
 SHAKE_SCREEN_ANIM       equ 0xC7
 
-; --- text id: "REPEL's effect wore off" (constants/text_constants.asm) ---
+; --- DisplayTextID special text IDs (constants/text_constants.asm) ---
+TEXT_MON_FAINTED        equ 0xD0
+TEXT_BLACKED_OUT        equ 0xD1
 TEXT_REPEL_WORE_OFF     equ 0xD2
+TEXT_SAFARI_GAME_OVER   equ 0xD3
+TEXT_PIKACHU_ANIM       equ 0xD4
+
+; --- DisplayTextID TX_SCRIPT sentinels (macros/scripts/text.asm) ---
+TX_SCRIPT_POKECENTER_NURSE        equ 0xFF
+TX_SCRIPT_MART                    equ 0xFE
+TX_SCRIPT_BILLS_PC                equ 0xFD
+TX_SCRIPT_PLAYERS_PC              equ 0xFC
+TX_SCRIPT_POKECENTER_PC           equ 0xF9
+TX_SCRIPT_PRIZE_VENDOR            equ 0xF7
+TX_SCRIPT_CABLE_CLUB_RECEPTIONIST equ 0xF6
+TX_SCRIPT_VENDING_MACHINE         equ 0xF5
 
 ; --- move record load (GetCurrentMove) ---
 ; (MOVE_LENGTH defined once in the Moves-table-record section above.)

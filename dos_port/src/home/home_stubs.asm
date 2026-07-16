@@ -12,46 +12,6 @@ bits 32
 section .text
 
 ; ---------------------------------------------------------------------------
-; DisplayTextID — pret home/text_script.asm:DisplayTextID
-;
-; DEVIATION{class=temporary; pret=home/text_script.asm:DisplayTextID; behavior=the linked provider returns immediately instead of running the translated check-only text-script body; evidence=label_status:DisplayTextID reports translated text_script.asm plus linked home_stubs.asm provider and three callers; lifetime=until the text-script link closure is complete}
-; Integration stub promoted for the live overworld path on 2026-07-10.
-;
-; The faithful body is already translated in src/home/text_script.asm, but that
-; file is CHECK-only: its link closure is 15 symbols deep and most of it is
-; owned by another session. Unresolved, measured by `nm -u` against the linked
-; build's defined globals:
-;   Joypad                            — not defined anywhere in the port yet
-;   _PlayerBlackedOutText,   _PokemartGreetingText,
-;   _PokemonFaintedText,     _RepelWoreOffText      — Tier-1 generated strings
-;   CableClubNPC, DisplayPokemartDialogue_, DisplayPokemonCenterDialogue_,
-;   PrintSafariGameOverText, TalkToPikachu, TextScript_BillsPC,
-;   TextScript_GameCornerPrizeMenu, TextScript_ItemStoragePC,
-;   TextScript_PokemonCenterPC, VendingMachineMenu
-;       — the DisplayTextID special-case dispatch targets, explicitly deferred by
-;         docs/current_plan_script_engine.md (that session owns them).
-;
-; Generated state currently reports three linked callers: TryDoWildEncounter,
-; DisplayEnemyTrainerTextAndStartBattle, and PrintPredefTextID. Therefore the ret
-; is a live temporary behavior gap: it can drop repel/trainer/predef text instead
-; of dispatching it. The ordinary NPC dialog path remains separate through
-; CheckNPCInteraction -> PrintText, but that does not make DisplayTextID itself
-; unreachable.
-;
-; Contract: pret's DisplayTextID has no return value; the stand-in deliberately
-; provides no message side effects. Callers must not infer successful display.
-;
-; TODO(script_engine): retire by linking src/home/text_script.asm — i.e. port
-; Joypad, generate the four text strings, and land the eight special-case
-; dispatch targets. Deleting this stub is REQUIRED at that point: two linked
-; globals of one name is a link error, so the collision will be loud, not a
-; silent shadow. Also un-stub the repel path in wild_encounters.asm's comment.
-; ---------------------------------------------------------------------------
-global DisplayTextID
-DisplayTextID:
-    ret
-
-; ---------------------------------------------------------------------------
 ; PlayCry — pret ref: home/pokemon.asm:PlayCry (AL = species).
 ;
 ; The mon cry. pret ref: home/pokemon.asm:140 — FOURTEEN instructions, a direct

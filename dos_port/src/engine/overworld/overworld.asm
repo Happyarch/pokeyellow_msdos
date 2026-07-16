@@ -113,6 +113,8 @@ extern text_engine_init
 extern CheckNPCInteraction
 ; Sign reading (the sign branch of IsSpriteOrSignInFrontOfPlayer, below).
 extern SignLoop                     ; src/home/hidden_events.asm — DH/DL → CF + [hTextID]
+; Hidden-event / bookshelf / card-key A-press dispatch (checked before signs/sprites).
+extern CheckForHiddenEventOrBookshelfOrCardKeyDoor ; src/home/hidden_events.asm
 extern DisplaySignText              ; src/home/overworld_text.asm — [hTextID] → ShowTextStream
 extern LoadFontTilePatterns         ; src/home/load_font.asm
 extern ReloadWalkingTilePatterns    ; src/engine/overworld/map_sprites.asm
@@ -283,6 +285,8 @@ global AdvancePlayerSprite
 global _AdvancePlayerSprite                 ; OW-A.3: engine body, de-folded from the home wrapper
 global IsTilePassable
 global IsSpriteOrSignInFrontOfPlayer         ; sign branch (fidelity Stage 1b)
+global IsSpriteInFrontOfPlayer               ; sprite scan (Stage 4 boulder bullet) — TryPushingBoulder
+global IsSpriteInFrontOfPlayer2              ; long-range entry; consumers open (Surf / counter tiles)
 global CheckWarpTile
 global LoadWarpDestination
 global PlayerStepOutFromDoor
@@ -948,7 +952,13 @@ EnterMap:
 ;     land collision check, and (if passable) start an 8-frame walk.
 ; ---------------------------------------------------------------------------
 OverworldLoop:
-    call RunNPCMovementScript                    ; door-exit auto-walk (BIT_STANDING_ON_DOOR path)
+    ; RunMapScript now runs pret's full per-frame chain internally — TryPushingBoulder
+    ; → [dust] → RunNPCMovementScript → the map's _Script (home/overworld.asm:1712).
+    ; The RunNPCMovementScript call that used to sit here (door-exit auto-walk,
+    ; BIT_STANDING_ON_DOOR path) was a hoisted copy from inside RunMapScript; it moved
+    ; back where pret has it, so calling it here too would run it twice per frame.
+    ; pret reaches RunMapScript via JoypadOverworld, which the port does not have —
+    ; that remaining deviation is documented on RunMapScript itself.
     call RunMapScript                            ; per-frame map _Script (default no-op; Pallet event-gate)
     ; wIgnoreInputCounter countdown now runs faithfully via CountDownIgnoreInputBitReset
     ; (called by TrackPlayTime inside DelayFrame, Wave-2/M2.1). The old inline block that
@@ -1016,6 +1026,13 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     ; A-press: check for NPC or sign. EAX = H_JOY_HELD (level-triggered, reliable).
     test al, PAD_A
     jz .checkPADDown
+    ; pret order: on A-press CheckForHiddenEventOrBookshelfOrCardKeyDoor runs FIRST
+    ; (home/overworld.asm:OverworldLoop). hItemAlreadyFound == 0 → a hidden event or
+    ; bookshelf consumed the press: return to OverworldLoop without the sprite/sign
+    ; scan. $ff → nothing found (or a card-key door), so fall through to the scan.
+    call CheckForHiddenEventOrBookshelfOrCardKeyDoor
+    cmp byte [ebp + hItemAlreadyFound], 0
+    jz .interactionDone                        ; hidden event/bookshelf handled → skip scan
     ; Signs first, then sprites — pret's order (OverworldLoopLessDelay runs
     ; IsSpriteOrSignInFrontOfPlayer, whose sign branch precedes its sprite scan).
     call IsSpriteOrSignInFrontOfPlayer
@@ -2828,10 +2845,123 @@ IsSpriteOrSignInFrontOfPlayer:
     ret
 
 ; ---------------------------------------------------------------------------
+; IsSpriteInFrontOfPlayer / IsSpriteInFrontOfPlayer2 — detect-only sprite scan.
+; Pret ref: home/overworld.asm:IsSpriteInFrontOfPlayer (:1084-1175)
+;
+; Finds the sprite (if any) standing at the pixel position the player faces, sets
+; BIT_FACE_PLAYER on it, and reports its SLOT in [hSpriteIndex]. pret's two labels
+; are one routine with two entry points: IsSpriteInFrontOfPlayer presets the normal
+; $10-pixel talking range, IsSpriteInFrontOfPlayer2 expects the caller to have set
+; DH (the long $20 range used over pokécenter/mart counter tiles). Both labels are
+; kept, per CLAUDE.md's rule on structural splits.
+;
+; STRUCTURAL SPLIT — this is the SECOND realization of pret's sprite scan, and that
+; is deliberate. The port already has IsNPCAtTargetBlock (map_sprites.asm), a
+; bespoke MAPY/MAPX *block* scan used by CollisionCheckOnLand (see its note at
+; pret :1234). The two are NOT interchangeable:
+;   - IsNPCAtTargetBlock answers "is a block occupied" for collision, in map coords.
+;   - This answers "which slot is at the faced PIXEL position", in screen coords,
+;     with the BIT_FACE_PLAYER side effect and the hSpriteIndex hand-off that
+;     TryPushingBoulder's boulder identification depends on.
+; Rewiring CollisionCheckOnLand onto this routine is deliberately NOT done here: it
+; would change live collision behavior, which this bullet does not own. The port
+; therefore keeps pret's name on this half and IsNPCAtTargetBlock's on the other.
+;
+; CONSUMERS: TryPushingBoulder (push_boulder.asm) — the only live caller today.
+; IsSpriteInFrontOfPlayer2's own consumers (the counter-tile talking-range branch of
+; IsSpriteOrSignInFrontOfPlayer above, and ItemUseSurfboard's check at pret
+; engine/items/item_effects.asm:725) are still open: the counter branch waits on
+; marts/pokécenters (Stage 2) and Surf on the Stage 4 Surf bullet, which lists
+; "supply IsSpriteInFrontOfPlayer2" as its dependency — this supplies it.
+;
+; Register map: a=AL, b=BH (player Y), c=BL (player X), d=DH, e=DL, hl=ESI.
+; pret reuses D: it is the talking RANGE until .doneCheckingDirection, then the
+; loop COUNTER. That reuse is preserved here rather than tidied away.
+;
+; Out: CF=1 and [hSpriteIndex] = slot (1-15) if a sprite faces the player;
+;      CF=0 and AL=0 otherwise ([hSpriteIndex] is left alone — pret makes the
+;      CALLER zero it first, and TryPushingBoulder does exactly that).
+; ---------------------------------------------------------------------------
+IsSpriteInFrontOfPlayer:
+    mov dh, 0x10                     ; ld d, $10 — normal talking range, in pixels
+IsSpriteInFrontOfPlayer2:
+    mov bh, 0x3c                     ; lb bc, $3c, $40 — the player sprite's fixed
+    mov bl, 0x40                     ; screen Y ($3c) and X ($40)
+    mov al, [ebp + W_SPRITE_PLAYER_FACING_DIR]
+.checkIfPlayerFacingUp:
+    cmp al, SPRITE_FACING_UP
+    jne .checkIfPlayerFacingDown
+    sub bh, dh                       ; ld a,b / sub d / ld b,a
+    mov al, PLAYER_DIR_UP
+    jmp .doneCheckingDirection
+.checkIfPlayerFacingDown:
+    cmp al, SPRITE_FACING_DOWN
+    jne .checkIfPlayerFacingRight
+    add bh, dh
+    mov al, PLAYER_DIR_DOWN
+    jmp .doneCheckingDirection
+.checkIfPlayerFacingRight:
+    cmp al, SPRITE_FACING_RIGHT
+    jne .playerFacingLeft
+    add bl, dh
+    mov al, PLAYER_DIR_RIGHT
+    jmp .doneCheckingDirection
+.playerFacingLeft:
+    sub bl, dh
+    mov al, PLAYER_DIR_LEFT
+.doneCheckingDirection:
+    mov [ebp + W_PLAYER_DIRECTION], al
+    mov esi, wSprite01StateData1     ; slot 1 (slot 0 is the player)
+    mov dl, 0x01                     ; e = slot index, 1-based
+    mov dh, 0x0f                     ; d = 15 slots to scan (range is dead from here)
+; Yellow does not have Red's "if sprites are existent" check.
+.spriteLoop:
+    push esi
+    mov al, [ebp + esi + SPRITESTATEDATA1_PICTUREID]
+    test al, al
+    jz .nextSprite                   ; 0 = no sprite in this slot
+    mov al, [ebp + esi + SPRITESTATEDATA1_IMAGEINDEX]
+    inc al
+    jz .nextSprite                   ; $ff = sprite hidden (pret: inc a / jr z)
+    mov al, [ebp + esi + SPRITESTATEDATA1_YPIXELS]
+    cmp al, bh
+    jne .nextSprite
+    mov al, [ebp + esi + SPRITESTATEDATA1_XPIXELS]
+    cmp al, bl
+    je .foundSpriteInFrontOfPlayer
+.nextSprite:
+    pop esi
+    ; pret does this as `ld a,l / add SPRITESTATEDATA1_LENGTH / ld l,a` — 8-bit math
+    ; on L alone. Equivalent here: the scan runs slots 1-15 ($C110..$C1F0), so L never
+    ; wraps before the counter ends the loop.
+    add esi, SPRITESTATEDATA1_LENGTH
+    inc dl
+    dec dh                           ; sets the ZF the loop branch reads
+    jnz .spriteLoop
+    xor al, al                       ; also clears CF: no sprite in front
+    ret
+.foundSpriteInFrontOfPlayer:
+    pop esi
+    ; pret: ld a,l / and $f0 / inc a / ld l,a — mask back to the slot base, then +1.
+    ; ESI is already the slot base (16-aligned), so the mask is a no-op here.
+    add esi, SPRITESTATEDATA1_MOVEMENTSTATUS
+    or byte [ebp + esi], (1 << BIT_FACE_PLAYER)  ; set BIT_FACE_PLAYER, [hl]
+    mov al, dl
+    mov [ebp + H_SPRITE_INDEX], al
+    ; pret re-reads hSpriteIndex here ("possible useless read because a already has
+    ; the value") — elided; AL already holds it.
+    cmp al, PIKACHU_SPRITE_INDEX
+    jne .dontwritetowd436            ; pret's label typo (.dontwritetowd436 → wd435) kept
+    mov byte [ebp + wd435], 0xFF
+.dontwritetowd436:
+    stc                              ; scf: found
+    ret
+
+; ---------------------------------------------------------------------------
 ; DoSignInteraction — display the sign text IsSpriteOrSignInFrontOfPlayer resolved
 ; into [hTextID].
 ;
-; DEVIATION{class=temporary; pret=home/overworld.asm:IsSpriteOrSignInFrontOfPlayer; behavior=port-only DoSignInteraction supplies font and player-state framing before DisplaySignText; evidence=pret dispatch continues through DisplayTextID while project_state reports DisplayTextID check-only; lifetime=until a linked DisplayTextID owns the sign path}
+; DEVIATION{class=temporary; pret=home/overworld.asm:IsSpriteOrSignInFrontOfPlayer; behavior=port-only DoSignInteraction supplies font and player-state framing before DisplaySignText; evidence=sign_pallet golden-matches through the A-press sign path while DisplayTextID now owns the map-text service dispatcher; lifetime=until the sign interaction path is folded through DisplayTextID}
 ; pret has no counterpart for this glue. pret reaches the sign text
 ; through DisplayTextID, which sets up the font/player state itself. The port's
 ; overworld does not use DisplayTextID on the NPC path either — CheckNPCInteraction
@@ -2840,7 +2970,7 @@ IsSpriteOrSignInFrontOfPlayer:
 ; loaded the font and frozen the player, "exactly as CheckNPCInteraction does" (the
 ; integration note in hidden_events.asm). This routine is that caller. It mirrors the
 ; NPC path's framing rather than DisplayTextID's, so both overworld text paths enter
-; and leave the dialog identically. Retires if the port ever grows a real DisplayTextID.
+; and leave the dialog identically. Retires when signs are routed through DisplayTextID.
 ; ---------------------------------------------------------------------------
 DoSignInteraction:
     pushad

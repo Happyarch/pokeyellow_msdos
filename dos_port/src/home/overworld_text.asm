@@ -48,6 +48,7 @@ section .text
 
 extern w_map_text_table_ptr             ; map_sprites.asm — flat ptr to cur map TextTable
 extern ShowTextStream                   ; map_sprites.asm — print flat TX stream, wait
+extern PickUpItem                       ; engine/events/pick_up_item.asm (PickUpItemText predef)
 
 global DisplaySignText
 global TextScriptEnd
@@ -95,7 +96,6 @@ DisplaySignText:
     ; SKIPPED so the sentinel byte is never rendered as a garbage glyph (the SCAFFOLD bug
     ; this fixes — pret would dispatch them to DisplayPokemartDialogue /
     ; DisplayPokemonCenterDialogue / CableClubNPC, all still NI here).
-%ifdef M72_OVERWORLD_TEXTSCRIPTS
     cmp al, TX_SCRIPT_PLAYERS_PC        ; $FC → item-storage PC
     je  .toItemStoragePC
     cmp al, TX_SCRIPT_BILLS_PC          ; $FD → Bill's PC
@@ -104,11 +104,8 @@ DisplaySignText:
     je  .toPokemonCenterPC
     cmp al, TX_SCRIPT_PRIZE_VENDOR      ; $F7 → Game Corner prize menu
     je  .toPrizeMenu
-%endif
-    ; ; SCAFFOLD: TX_SCRIPT_MART ($FE) / _POKECENTER_NURSE ($FF) / _CABLE ($F6) need
-    ; DisplayPokemartDialogue / DisplayPokemonCenterDialogue / CableClubNPC (NI), and with
-    ; M72_OVERWORLD_TEXTSCRIPTS off none dispatch. TODO(M7.2): dispatch once those handlers
-    ; land + M72 is flipped.
+    ; TX_SCRIPT_MART ($FE), _POKECENTER_NURSE ($FF), vending ($F8), and cable
+    ; ($F6) are owned by DisplayTextID proper, not this sign-only shim.
     jmp .done
 
 .printText:
@@ -121,7 +118,6 @@ DisplaySignText:
     popad
     ret
 
-%ifdef M72_OVERWORLD_TEXTSCRIPTS
 ; The TextScript_* handlers tail-jump to HoldTextDisplayOpen (pret: jr AfterDisplayingTextID)
 ; and never return here, so restore the caller's registers (popad) before the tail-jump.
 .toItemStoragePC:
@@ -136,7 +132,6 @@ DisplaySignText:
 .toPrizeMenu:
     popad
     jmp TextScript_GameCornerPrizeMenu
-%endif ; M72_OVERWORLD_TEXTSCRIPTS
 
 ; ---------------------------------------------------------------------------
 ; TextScriptEnd / TextScriptEndingText — pret home/overworld_text.asm.
@@ -154,13 +149,26 @@ TextScriptEnd:
     ret
 
 ; ---------------------------------------------------------------------------
-; DEFERRED — the remaining 6 home/overworld_text.asm labels are NOT ported here:
+; PickUpItemText — pret home/overworld_text.asm: `text_asm / predef PickUpItem /
+; jp TextScriptEnd`. A text_asm handler the map text table routes an item ball's
+; text id to; DisplayTextID reaches it via text_script.asm's `call esi`.
+; PickUpItem (src/engine/events/pick_up_item.asm) does its own printing, so this
+; runs it (predef → direct call, no predef dispatcher in the port) and tails into
+; TextScriptEnd. The dispatch discards the returned stream (text_script.asm:194
+; `call esi` / `jmp AfterDisplayingTextID`), so the empty TextScriptEnd stream is
+; harmless — it preserves pret's structure exactly.
+; ---------------------------------------------------------------------------
+global PickUpItemText
+PickUpItemText:
+    call PickUpItem                     ; predef PickUpItem
+    jmp TextScriptEnd                   ; jp TextScriptEnd
+
+; ---------------------------------------------------------------------------
+; DEFERRED — the remaining 5 home/overworld_text.asm labels are NOT ported here:
 ;   ExclamationText, GroundRoseText, BoulderText, MartSignText, PokeCenterSignText
 ;     — each is `text_far _XxxText / text_end`; the underlying _XxxText strings are
 ;       Tier-1 DATA not yet generated for the port. Per the two-tier rule they must come
 ;       from a gen_*.py → assets/*.inc, NOT hand-encoded charmap bytes here.
-;   PickUpItemText — `text_asm / predef PickUpItem / jp TextScriptEnd`; needs the
-;       PickUpItem predef (unported).
 ; No live caller needs them today; port them with the sign-text string generator when a
 ; map that uses them lands.
 ; ---------------------------------------------------------------------------
@@ -169,8 +177,8 @@ TextScriptEnd:
 ; TextScript_* special cases — pret home/text_script.asm (DisplayTextID dispatch targets).
 ; Tier-2 dispatch stubs: they bankswitch (no-op under flat memory) and jump into a bank
 ; routine (PlayerPC / BillsPC_ / CeladonPrizeMenu / ActivatePC), then fall into
-; HoldTextDisplayOpen.  All target routines are NI, so these are guarded out of assembly
-; until their targets land.  Kept to record the faithful structure + integration point.
+; HoldTextDisplayOpen. PlayerPC and ActivatePC are linked; BillsPC_ and
+; CeladonPrizeMenu resolve through structured menu stubs until their real UIs land.
 ;
 ;   TextScript_ItemStoragePC   -> PlayerPC        (SaveScreenTilesToBuffer2 first)
 ;   TextScript_BillsPC         -> BillsPC_        (SaveScreenTilesToBuffer2 first)
@@ -178,13 +186,12 @@ TextScriptEnd:
 ;   TextScript_PokemonCenterPC -> ActivatePC
 ; all converge on BankswitchAndContinue: Bankswitch + jp HoldTextDisplayOpen.
 ; ---------------------------------------------------------------------------
-%ifdef M72_OVERWORLD_TEXTSCRIPTS
-extern SaveScreenTilesToBuffer2         ; NI
-extern HoldTextDisplayOpen              ; NI (home/text_script.asm — currently check-only)
-extern PlayerPC                         ; NI
-extern BillsPC_                         ; NI
-extern CeladonPrizeMenu                 ; NI
-extern ActivatePC                       ; NI
+extern SaveScreenTilesToBuffer2         ; movie/title.asm
+extern HoldTextDisplayOpen              ; home/text_script.asm
+extern PlayerPC                         ; engine/menus/players_pc.asm
+extern BillsPC_                         ; engine/menus/pc_stubs.asm
+extern CeladonPrizeMenu                 ; engine/menus/main_menu_stubs.asm
+extern ActivatePC                       ; engine/menus/pc.asm
 
 global TextScript_ItemStoragePC
 global TextScript_BillsPC
@@ -210,7 +217,6 @@ TextScript_PokemonCenterPC:
 BankswitchAndContinue:
     call esi                            ; Bankswitch is a no-op under flat memory
     jmp HoldTextDisplayOpen
-%endif ; M72_OVERWORLD_TEXTSCRIPTS
 
 ; ---------------------------------------------------------------------------
 section .data

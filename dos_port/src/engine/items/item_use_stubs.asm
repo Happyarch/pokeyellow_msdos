@@ -17,7 +17,9 @@
 ;                            ItemUsePPRestore
 ;   (Bicycle / CoinCase / OaksParcel / Pokedex / PokeFlute / CardKey landed in
 ;    item_effects.asm — stubs retired)
-; BLOCKED (docs/items_blockers.md): ItemUseItemfinder (B5: hidden-object data),
+;   (ItemUseItemfinder landed in item_effects.asm 2026-07-16 — overworld-events
+;    Stage 3 bullet 2 published HiddenItemCoords and linked itemfinder.asm.)
+; BLOCKED (docs/items_blockers.md):
 ;   ItemUseOldRod / ItemUseGoodRod / ItemUseSuperRod (B7: FishingAnim needs the
 ;   trainer_engine link closure)
 ; TODO(safari, battle plan): ItemUseBait / ItemUseRock (Safari Zone throws)
@@ -29,7 +31,6 @@ bits 32
 section .text
 
 global ItemUseSurfboard
-global ItemUseItemfinder
 global ItemUseOldRod
 global ItemUseGoodRod
 global ItemUseSuperRod
@@ -37,7 +38,6 @@ global ItemUsePPUp
 global ItemUsePPRestore
 
 ItemUseSurfboard:
-ItemUseItemfinder:
 ItemUseOldRod:
 ItemUseGoodRod:
 ItemUseSuperRod:

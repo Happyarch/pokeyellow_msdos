@@ -6,37 +6,33 @@
 ; Pikachu-emotion / Safari game-over). Plus the general `DisplayTextBoxID`
 ; dispatcher (pret home/textbox.asm) and `FarPrintText` (pret home/print_num.asm).
 ;
-; This is the M1.3 skeleton of the Wave-1 home rectification (see
-; docs/current_plan_home_rectification.md). It is intended to live at
-; dos_port/src/home/text_script.asm and be assembled CHECK-ONLY (a *_CHECK_SRCS
-; Makefile entry): its non-home dependencies (DisplayTextIDInit, the mart/PC/
-; PokéCenter special-case handlers, the map text-pointer subsystem, the event
-; flag system) are externed with `; TODO(home-rectify M1.3 follow-up):` markers
-; and do not resolve until later waves — so it will not LINK yet, only assemble.
+; This file is linked in the default build. The ordinary map-text path uses the
+; port's generated flat map table, while the TEXT_PREDEF path preserves pret's
+; wCurMapTextPtr lookup. The service-dialog tails below are intentionally owned
+; by their subsystems; unresolved behavior lives behind structured stubs there,
+; not behind a DisplayTextID link-time stand-in.
 ;
 ; Register map (project convention): A=AL, HL=ESI, BC=BX (B=BH,C=BL),
 ; DE=DX (D=DH,E=DL), EBP=GB base; GB memory accessed as [EBP + addr].
-; GB 16-bit pointers (wCurMapTextPtr, map text tables) are treated as EBP-relative
-; GB-space addresses and read little-endian (x86 is LE, matching the GB).
+; GB 16-bit pointers are treated as EBP-relative GB-space addresses and read
+; little-endian (x86 is LE, matching the GB) only for the TEXT_PREDEF path.
+; Ordinary map text uses the port's generated flat MapTextTablePointers table.
 ;
 ;   ── ADDRESSING MODEL CAVEAT (follow-up glue) ──────────────────────────────
 ;   pret resolves the text address by walking the map's ROM text-pointer table
-;   via `wCurMapTextPtr`. The port has no map text-pointer-table subsystem yet
-;   (dialogue currently flows through NPC_DIALOG_BUF + per-map script files). The
-;   table walk below is translated faithfully assuming wCurMapTextPtr points into
-;   EBP GB-space; when the real map-text subsystem lands, reconcile whether these
-;   tables live in EBP GB-space or as flat program labels. See SUMMARY.md.
+;   via `wCurMapTextPtr`. The port's live map text subsystem is generated as flat
+;   {dd stream, dd size} rows and published as w_map_text_table_ptr. The ordinary
+;   map path therefore uses that flat table, while the TEXT_PREDEF path keeps the
+;   faithful 16-bit GB pointer walk used by PrintPredefTextID.
 ;
-; Build (check-only): nasm -f coff -I include/ -I . -o /dev/null text_script.asm
+; Build: nasm -f coff -I include/ -I . -o text_script.o text_script.asm
 
 bits 32
 
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
 %include "gb_macros.inc"                ; BUG_FIX_LEVEL
-; TEMPORARY: symbols the root must migrate into the canonical includes, then drop
-; this line (see m1_3_pending_symbols.inc header).
-%include "m1_3_pending_symbols.inc"
+%include "gb_text.inc"                  ; text_far / text_end wrappers
 
 section .text
 
@@ -52,28 +48,26 @@ global FarPrintText
 extern PrintText                    ; pret PrintText (window.asm) — ESI = FLAT TX stream ptr
 extern PrintText_NoCreatingTextBox                  ; pret PrintText_NoCreatingTextBox
 extern DelayFrame
+extern WaitForTextScrollButtonPress ; engine/battle/battle_menu.asm — relocated joypad2 routine
 
-; ── non-home glue: DEFERRED, resolves in later waves ──────────────────────────
+; ── non-home glue ─────────────────────────────────────────────────────────────
 ; RESOLVED (menus S2): DisplayTextIDInit is now a real linked routine
 ; (src/engine/menus/display_text_id_init.asm).
 extern DisplayTextIDInit
-; TODO(home-rectify M1.3 follow-up): overworld/map glue (overworld.asm, map_sprites.asm)
 extern SwitchToMapRomBank               ; ld a,[wCurMap]; bankswitch (flat = no-op wrapper)
 extern InitMapSprites                   ; reload sprite tile patterns after text
 extern LoadCurrentMapView
 extern LoadPlayerSpriteGraphics
 extern UpdateSprites                    ; movement.asm (already ported) — final jp target
-extern Joypad                           ; joypad read (pret Joypad); port uses ISR + wrapper
 extern LoadGBPal                        ; palettes/fade (Wave 10)
 extern BankswitchCommon                 ; home/bankswitch.asm (Wave 0, no-op flat) — extern
-; TODO(home-rectify M1.3 follow-up): the START-menu / Pikachu / Safari handlers are
-;   non-home engine routines (Wave 4 menu framework, pikachu FSM Wave 9, safari).
+extern w_map_text_table_ptr             ; map_sprites.asm — flat ptr to current map TextTable
+extern wMapSpriteData                   ; map_sprites.asm — flat [movbyte2,textid] per slot
 extern DisplayStartMenu
 extern TalkToPikachu                    ; callfar (engine/pikachu)
 extern PrintSafariGameOverText          ; callfar (engine/safari)
-; TODO(home-rectify M1.3 follow-up): mart / PokéCenter / PC / vending / prize / cable
-;   special-case bodies are non-home (engine bank routines). Externed here; the
-;   home-layer *dispatch* to them is faithful.
+; The home-layer dispatch to these non-home service bodies is faithful. Some
+; service bodies remain structured stubs in their owning subsystem.
 extern DisplayPokemartDialogue_         ; homecall (engine/menus)
 extern DisplayPokemonCenterDialogue_    ; homecall (engine/menus)
 extern TextScript_ItemStoragePC
@@ -86,13 +80,6 @@ extern CableClubNPC                     ; callfar
 ;   src/home/textbox.asm (linked), calling the real DisplayTextBoxID_
 ;   (src/engine/menus/text_box.asm). The interim definition here is gone.
 extern DisplayTextBoxID
-; TODO(home-rectify M1.3 follow-up): far-text labels below are TX_FAR streams whose
-;   data lives in ROM banks (M1.1 TX_FAR work). Externed as flat labels; the text
-;   data tables are not ported here.
-extern _PokemartGreetingText
-extern _PokemonFaintedText
-extern _PlayerBlackedOutText
-extern _RepelWoreOffText
 extern msgbox_dialog                    ; src/home/text.asm — overworld dialog projection
 extern text_msgbox                      ; src/home/text.asm — active msgbox projection (msgbox.inc)
 
@@ -111,6 +98,7 @@ DisplayTextID:
 
     ; ld hl, wTextPredefFlag / bit BIT_TEXT_PREDEF,[hl] / res BIT_TEXT_PREDEF,[hl]
     ; jr nz,.skipSwitchToMapBank
+    xor edi, edi                         ; 0 = flat map TextTable, 1 = GB pointer table
     mov al, [ebp + wTextPredefFlag]
     mov ah, al                          ; save original for the bit test (below)
     ; res BIT_TEXT_PREDEF,[hl] (clear regardless — pret does `res` after `bit`).
@@ -123,13 +111,26 @@ DisplayTextID:
     ; ld a,[wCurMap] / call SwitchToMapRomBank
     mov al, [ebp + wCurMap]
     call SwitchToMapRomBank
+    xor edi, edi                         ; ordinary map table: flat {ptr,size} rows
+    jmp .selectMapTextTable
 .skipSwitchToMapBank:
+    mov edi, 1                           ; TEXT_PREDEF keeps the GB pointer-table path
+.selectMapTextTable:
     ; ld a,30 / ldh [hFrameCounter],a  — used as joypad poll timer (half a second)
     mov al, 30
     mov [ebp + hFrameCounter], al
 
-    ; ld hl, wCurMapTextPtr / ld a,[hli] / ld h,[hl] / ld l,a  → hl = map text pointer
+    ; ld hl, wCurMapTextPtr / ld a,[hli] / ld h,[hl] / ld l,a  → hl = map text pointer.
+    ; Port ordinary maps use w_map_text_table_ptr (flat {ptr,size} rows) instead.
+    test edi, edi
+    jnz .loadPredefTextPtr
+    mov esi, [w_map_text_table_ptr]
+    test esi, esi
+    jnz .haveTextTable
+    jmp AfterDisplayingTextID
+.loadPredefTextPtr:
     movzx esi, word [ebp + wCurMapTextPtr]
+.haveTextTable:
 
     ; ld d,$00 / ldh a,[hTextID] / ld [wSpriteIndex],a
     xor edx, edx                        ; d = 0 (de high byte)
@@ -172,19 +173,33 @@ DisplayTextID:
     dec al
     add al, al                           ; a = (spriteID-1)*2
     movzx edx, al                        ; de = a (d=0)
-    lea esi, [wMapSpriteData + edx + 1]  ; hl = wMapSpriteData + de + 1
-    movzx eax, byte [ebp + esi]          ; a = text ID of the sprite (byte 1 of entry)
+    movzx eax, byte [wMapSpriteData + edx + 1] ; a = text ID of the sprite (byte 1 of entry)
     pop esi                              ; pop hl (map text ptr)
 .skipSpriteHandling:
     ; ── look up the address of the text in the map's text entries ──
     ; dec a ; ld e,a ; ld d,0 ; add hl,de ; add hl,de ; ld a,[hli]; ld h,[hl]; ld l,a
     dec al
     movzx edx, al                        ; de = (textID-1), d=0
+    test edi, edi
+    jnz .lookupGbPointerTable
+    lea edx, [edx * 8]                   ; flat rows are {dd stream, dd size}
+    mov ebx, [esi + edx + 4]             ; 0xFFFFFFFF marks text_asm script entry
+    mov esi, [esi + edx]                 ; flat pointer to TX stream
+    test esi, esi
+    jnz .gotTextPtr
+    jmp AfterDisplayingTextID
+.gotTextPtr:
+    cmp ebx, 0xFFFFFFFF
+    jne .readFirstByte
+    call esi                             ; text_asm routine owns its own text stream
+    jmp AfterDisplayingTextID
+.lookupGbPointerTable:
     add esi, edx
     add esi, edx                         ; hl += 2*(textID-1)  (word index into pointer table)
     and esi, 0xFFFF                       ; faithful 16-bit GB-pointer wrap
     ; hl = [hl] (LE 16-bit pointer to the text stream)
     movzx esi, word [ebp + esi]
+.readFirstByte:
     ; ld a,[hl] — a = first byte of text
     movzx eax, byte [ebp + esi]
 
@@ -234,16 +249,14 @@ AfterDisplayingTextID:
     mov al, [ebp + wEnteringCableClub]
     test al, al
     jnz HoldTextDisplayOpen
-    ; call WaitForTextScrollButtonPress — the port's WaitForTextScrollButtonPress is
-    ; folded into manual_text_scroll inside the printers; the box was already advanced
-    ; by PrintText_NoCreatingTextBox's TX stream. HoldTextDisplayOpen handles the A-held hold-open.
-    ; (pret joypad2.asm:WaitForTextScrollButtonPress; see SUMMARY follow-up note.)
-    ; fall through
+    call WaitForTextScrollButtonPress
+    ; fall through to hold-open
 
 ; loop to hold the dialogue box open as long as the player keeps holding A
 HoldTextDisplayOpen:
-    ; call Joypad ; ldh a,[hJoyHeld]; bit B_PAD_A,a; jr nz,HoldTextDisplayOpen
-    call Joypad
+    ; call Joypad ; ldh a,[hJoyHeld]; bit B_PAD_A,a; jr nz,HoldTextDisplayOpen.
+    ; The port's ISR-backed joypad state is refreshed by DelayFrame.
+    call DelayFrame
     mov al, [ebp + hJoyHeld]
     test al, PAD_A
     jnz HoldTextDisplayOpen
@@ -313,10 +326,8 @@ DisplayPokemartDialogue:
     jmp AfterDisplayingTextID
 
 PokemartGreetingText:
-    ; pret: text_far _PokemartGreetingText / text_end
-    db 0x17                              ; TX_FAR
-    dd _PokemartGreetingText             ; far pointer (flat label; TX_FAR handling = M1.1)
-    db 0x50                              ; text_end (TX_END)
+    text_far _PokemartGreetingText
+    text_end
 
 ; ─────────────────────────────────────────────────────────────────────────────
 ; LoadItemList — pret home/text_script.asm:152. Copies the $ff-terminated item id
@@ -372,9 +383,8 @@ DisplayPokemonFaintedText:
     jmp AfterDisplayingTextID
 
 PokemonFaintedText:
-    db 0x17                              ; TX_FAR
-    dd _PokemonFaintedText
-    db 0x50                              ; TX_END
+    text_far _PokemonFaintedText
+    text_end
 
 ; ─────────────────────────────────────────────────────────────────────────────
 ; DisplayPlayerBlackedOutText — pret home/text_script.asm:192
@@ -406,9 +416,8 @@ DisplayPlayerBlackedOutText:
     jmp HoldTextDisplayOpen
 
 PlayerBlackedOutText:
-    db 0x17                              ; TX_FAR
-    dd _PlayerBlackedOutText
-    db 0x50                              ; TX_END
+    text_far _PlayerBlackedOutText
+    text_end
 
 ; ─────────────────────────────────────────────────────────────────────────────
 ; DisplayRepelWoreOffText — pret home/text_script.asm:214
@@ -420,9 +429,8 @@ DisplayRepelWoreOffText:
     jmp AfterDisplayingTextID
 
 RepelWoreOffText:
-    db 0x17                              ; TX_FAR
-    dd _RepelWoreOffText
-    db 0x50                              ; TX_END
+    text_far _RepelWoreOffText
+    text_end
 
 ; ─────────────────────────────────────────────────────────────────────────────
 ; DisplayPikachuEmotion — pret home/text_script.asm:223
@@ -452,3 +460,5 @@ FarPrintText:
     pop eax
     call BankswitchCommon
     ret
+
+%include "assets/text_script_text.inc"

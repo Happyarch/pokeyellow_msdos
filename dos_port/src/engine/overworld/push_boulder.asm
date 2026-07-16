@@ -77,15 +77,20 @@ global PushBoulderDownMovementData
 global PushBoulderLeftMovementData
 global PushBoulderRightMovementData
 
-extern IsSpriteInFrontOfPlayer      ; UNPORTED (pret home/overworld.asm) — sets H_SPRITE_INDEX
-                                    ; to the slot in front of the player. The port's bespoke
-                                    ; IsNPCAtTargetBlock is NOT a drop-in (different ABI). TODO: port.
+extern IsSpriteInFrontOfPlayer      ; src/engine/overworld/overworld.asm — sets H_SPRITE_INDEX to
+                                    ; the slot in front of the player (ported, overworld-events
+                                    ; Stage 4). NOTE the port's bespoke IsNPCAtTargetBlock is a
+                                    ; SEPARATE realization of pret's sprite scan for collision and
+                                    ; is NOT a drop-in here (different ABI) — see the STRUCTURAL
+                                    ; SPLIT note on IsSpriteInFrontOfPlayer.
 extern GetSpriteMovementByte2Pointer ; pathfinding.asm (reads H_CURRENT_SPRITE_OFFSET; ret flat ESI)
 extern MoveSprite                   ; pathfinding.asm (In: EDI = flat movement-data ptr)
 extern CheckForCollisionWhenPushingBoulder ; player_state.asm (pret predef; banking elided)
 extern PlaySound                    ; home/audio.asm
-extern DiscardButtonPresses         ; engine/joypad.asm (returns AL = 0)
-extern AnimateBoulderDust           ; UNPORTED (OW-4.3 dust_smoke.asm) — pret callfar target
+extern DiscardButtonPresses         ; src/input/joypad.asm (returns AL = 0). RELOCATED from its
+                                    ; pret home engine/joypad.asm, which is DEAD/unlisted — see
+                                    ; that routine's header for why.
+extern AnimateBoulderDust           ; src/engine/overworld/dust_smoke.asm — pret callfar target
 
 section .text
 

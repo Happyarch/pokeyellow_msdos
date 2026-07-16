@@ -61,6 +61,29 @@ running, hearing, or inspecting anything → `build-and-debug`; notes and chords
 The always-apply hard rules below stay here so they're in force every session; the
 skills hold the "look it up while doing X" detail.
 
+## Evidence and Knowledge Policy
+
+Repository and runtime evidence outrank prose. Use this order: pret source and
+the current linked build; deterministic mGBA/DOSBox-X state; generated static
+analysis; then comments, plans, skills, commits, and memory. Unsupported negative
+claims are prohibited: `missing`, `stub`, `unported`, `check-only`, `unreachable`,
+and `no caller` must cite generated state (`dos_port/tools/project_state`) or
+runtime evidence.
+
+Verification terms are not interchangeable: `defined`, `linked`, `reachable`,
+`executed`, `golden-matched`, and `visually-observed` describe distinct evidence.
+A regression-only run must not be reported as feature execution. A clean static
+gate means only “no detected structural divergence”; run
+`dos_port/tools/fidelity_gate` for changed pret labels and add a must-hit runtime
+scenario when behavior is changed.
+
+When a capability becomes live, sweep related `TODO-HW`, `STUB`, extern,
+allowlist, plan, skill, and stigmergy claims in the same workstream. Stigmergy is
+an evidence index, not authority: durable entries need evidence and state;
+volatile status needs expiry; contradictory repository evidence updates the
+existing key. Run `dos_port/tools/project_state --plans` for the generated active
+plan inventory; do not maintain a second hand-written inventory.
+
 ---
 
 ## Current Phase
@@ -241,11 +264,37 @@ commit: `dos_port/tools/faithdiff <Label>` (justify every unsuppressed
 added/dropped call in the commit message) and `dos_port/tools/lint_pret_labels`
 (must exit 0). Workflow + tools → skill **`faithfulness-review`**.
 
-### Bug / glitch tags
+### Structured annotations — `DEVIATION` / `BUG` / `GLITCH` / `STUB`
 
-Known bugs get a `; BUG(level):` + `%if BUG_FIX_LEVEL >= N` block; intentional
-exploitable glitches get a `; GLITCH:` + `; Safety:` comment. Templates and levels
-→ skill **`project-conventions`**.
+Every sanctioned divergence, known bug, exploitable glitch, and link-time stand-in
+carries a **machine-parsed** annotation. `tools/lint_pret_labels` parses these
+strictly: a malformed one, an unknown `class`, or a missing field is a **violation**,
+not a style nit. This is how the "why" becomes queryable instead of living only in a
+commit message nobody greps.
+
+```nasm
+; DEVIATION{class=<class>; pret=<file>:<Label>; behavior=<what differs>; evidence=<why that is the truth>; lifetime=<what retires it>}
+```
+
+- **Kinds — `DEVIATION`, `BUG`, `GLITCH`, `STUB`. There are no others.** Do not invent
+  one: an unrecognized kind is invisible to the linter, so it reads as an ordinary
+  comment and silently proves nothing. A pure *file* relocation is faithful code, not a
+  deviation — register it in `tools/pret_label_allowlist.json` instead.
+- **Required fields (all kinds):** `class`, `pret`, `behavior`, `evidence`, `lifetime`.
+  `GLITCH` also requires `safety`. `STUB` also requires `label`, and its `class` must be
+  `stub` or `temporary`.
+- **`class` ∈ {`HAL`, `banking`, `projection`, `data-model`, `timing`, `stub`,
+  `temporary`}** — nothing else parses.
+- **No `;` or `}` inside a value** — the parser splits fields on `;`. Use commas.
+- Bugs still pair the annotation with a `%if BUG_FIX_LEVEL >= N` block (`1` = critical,
+  `2` = all).
+- **The legacy free-form format is dead — do not resurrect it.** `; BUG(critical): …` /
+  `; GLITCH:` + `; Safety:` still parse (migration-era acceptance), and
+  `lint_pret_labels --strict-claims` flags each as `legacy_annotation`. The migration is
+  complete: strict-claims reports **zero** tree-wide. Writing one now is a regression.
+
+Templates → skill **`project-conventions`**; the gate that enforces them → skill
+**`faithfulness-review`**.
 
 ---
 

@@ -5,19 +5,18 @@
 ; pret home/map_objects.asm / home/hidden_events.asm (CheckCoords family,
 ; CheckForHiddenEventOrBookshelfOrCardKeyDoor, UpdateCinnabarGymGateTileBlocks).
 ;
-; TWO BUILD TIERS in this one file:
-;   * LINKABLE (default assembly): CopySignData, SignLoop, ArePlayerCoordsInArray,
-;     CheckCoords.  These are fully self-contained (memmap symbols only) and are
-;     linked so LoadMapHeader can call CopySignData live.  They have no live
-;     interaction caller yet (SignLoop is wired later — see overworld_text.asm),
-;     but an unused global links cleanly.
-;   * DEEP (guarded by %ifdef M72_HIDDEN_EVENTS_DEEP — NOT in the default build):
+; Both tiers are LINKED as of overworld-events Stage 3 (bullet 1):
+;   * Sign/coord helpers: CopySignData, SignLoop, ArePlayerCoordsInArray,
+;     CheckCoords.  Self-contained (memmap symbols only); LoadMapHeader calls
+;     CopySignData live and the A-press path calls SignLoop.
+;   * Hidden-event dispatch: CheckForHiddenEvent, CheckIfCoordsInFrontOfPlayerMatch,
 ;     CheckBoulderCoords, CheckForHiddenEventOrBookshelfOrCardKeyDoor,
-;     UpdateCinnabarGymGateTileBlocks.  These depend on NI pret routines
-;     (CheckForHiddenEvent, PrintBookshelfText, JumpToAddress,
-;     GetTileAndCoordsInFrontOfPlayer predef, UpdateCinnabarGymGateTileBlocks_)
-;     and on the not-yet-ported boulder/strength subsystem, so they are excluded
-;     from the linked image and only assembled under `make check` with the define.
+;     UpdateCinnabarGymGateTileBlocks.  Their deps now resolve: the generated
+;     HiddenEventMaps data (src/data/hidden_events_data.asm), the Tier-2 handler
+;     stubs + PrintBookshelfText/UpdateCinnabarGymGateTileBlocks_ stubs
+;     (src/engine/overworld/hidden_object_stubs.asm), JumpToAddress
+;     (src/home/bankswitch.asm), and the linked GetTileAndCoordsInFrontOfPlayer
+;     predef (src/engine/overworld/player_state.asm).
 ;
 ; Register map (SM83->x86): A->AL, HL->ESI, BC->BX (B=BH,C=BL), DE->DX (D=DH,E=DL).
 ; GB memory = [ebp + SYM] with SYM from gb_memmap.inc.
@@ -173,22 +172,20 @@ CheckCoords:
     ret
 
 ; ===========================================================================
-; DEEP tier — excluded from the linked image (unported deps).  Assembled only
-; under `make check` with -DM72_HIDDEN_EVENTS_DEEP.
+; DEEP tier — LINKED as of overworld-events Stage 3 (bullet 1). The generated
+; HiddenEventMaps data + Tier-2 handler stubs landed, so the guard is retired.
 ; ===========================================================================
-%ifdef M72_HIDDEN_EVENTS_DEEP
 
-extern BankswitchCommon                 ; ported (Wave 0)
-extern PrintBookshelfText               ; NI — bookshelf / interactable BG dialog
-extern JumpToAddress                    ; NI — indirect JP for hidden-event fn ptr
-extern GetTileAndCoordsInFrontOfPlayer  ; NI — predef (front tile+coords)
-extern UpdateCinnabarGymGateTileBlocks_ ; NI — Cinnabar gym gate tile flip
+extern BankswitchCommon                 ; src/home/bankswitch.asm (flat no-op)
+extern PrintBookshelfText               ; src/engine/overworld/hidden_object_stubs.asm (stub → $ff)
+extern JumpToAddress                    ; src/home/bankswitch.asm — jp hl trampoline
+extern GetTileAndCoordsInFrontOfPlayer  ; src/engine/overworld/player_state.asm (linked predef)
+extern UpdateCinnabarGymGateTileBlocks_ ; src/engine/overworld/hidden_object_stubs.asm (stub)
 extern IsInArray                        ; src/home/array.asm (map-id search, stride DE)
-extern HiddenEventMaps                  ; DATA — deferred: gen_hidden_events.py →
-                                        ; assets/hidden_events.inc (60-map coord+handler
-                                        ; table) + Tier-2 hidden_object_stubs.asm handlers.
-                                        ; No in-scope map has a hidden event, so the full
-                                        ; data + guard-retirement + link is the OW-3.3 tail.
+extern HiddenEventMaps                  ; src/data/hidden_events_data.asm — generated flat
+                                        ; {db map, dd HiddenEventsFor_<map>} table
+                                        ; (gen_hidden_events.py). Per-map lists point at the
+                                        ; Tier-2 handlers in hidden_object_stubs.asm.
 
 ; --- Deep-tier memmap symbols — golden sym-verified (were PLACEHOLDER) ---
 %ifndef H_SPRITE_INDEX
@@ -265,7 +262,9 @@ CheckForHiddenEvent:
     mov [ebp + esi + 2], al             ; [hSavedMapTextPtr + 1]
     mov [ebp + esi + 3], al             ; [hDidntFindAnyHiddenEvent]
     mov esi, HiddenEventMaps            ; ld hl, HiddenEventMaps (flat data ptr)
-    mov edx, 3                          ; ld de, 3 (entry stride: db map + dw ptr)
+    ; pret stride is 3 (db map + dw same-bank ptr); the flat port has no banks, so
+    ; the per-map pointer is a dd (see gen_hidden_events.py) → stride 5.
+    mov edx, 5                          ; ld de, 5 (entry stride: db map + dd ptr)
     mov al, [ebp + W_CUR_MAP]
     call IsInArray                      ; CF=1 if wCurMap is in the array (ESI→match)
     jnc .noMatch                        ; jr nc
@@ -412,5 +411,3 @@ CheckForHiddenEventOrBookshelfOrCardKeyDoor:
 UpdateCinnabarGymGateTileBlocks:
     call UpdateCinnabarGymGateTileBlocks_
     ret
-
-%endif ; M72_HIDDEN_EVENTS_DEEP

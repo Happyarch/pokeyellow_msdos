@@ -49,13 +49,24 @@ resolved blockers remain in git history rather than being maintained here.
 
 ## Remaining Stage 11 work
 
-- [ ] **Itemfinder.** `ItemUseItemfinder` is a linked ret-stub and
-      `HiddenItemNear` is implemented but unlisted. The generated hidden-object
-      coordinate/data layer does not yet exist. Overworld-events Stage 3 owns
-      `HiddenItemCoords` and hidden-object A-press dispatch; once that data
-      contract lands, this plan links `itemfinder.asm`, ports the USE handler,
-      and verifies both "near" and "nothing" outcomes. See
-      `docs/items_blockers.md` → Itemfinder.
+- [x] **Itemfinder** — done 2026-07-16 via a **cross-cut from
+      `docs/current_plan_overworld_events.md` Stage 3** (that session owned the
+      `HiddenItemCoords` data contract and did the whole item-side promotion in
+      the same pass; recorded here per the cross-cut rule). `HiddenItemCoords` is
+      now generated (`tools/gen_hidden_item_coords.py` →
+      `assets/hidden_item_coords.inc`, linked via `src/data/hidden_events_data.asm`).
+      `src/engine/items/itemfinder.asm` (`HiddenItemNear`/`Sub5ClampTo0`) is
+      linked (`ITEMS_SRCS`); `IsInRestOfArray` was promoted with `vcopy.asm` into
+      `HOME_SRCS`. `ItemUseItemfinder` moved from the `item_use_stubs.asm`
+      ret-stub to a real body in `item_effects.asm` (`farcall HiddenItemNear` →
+      flat `call`; `jp PrintText` → the `iu_print_text` overworld tail;
+      `ItemfinderFound{Item,Nothing}Text` were already generated). Build clean,
+      `lint_pret_labels` 0, `faithdiff HiddenItemNear`/`ItemUseItemfinder` show
+      only the documented predef→`FlagAction` and `iu_print_text` deviations.
+      **Open tail:** the "near"/"nothing" must-hit runtime scenario still owes
+      evidence — ITEMFINDER is not obtainable in the current build, so acceptance
+      (both outcomes, without mutating the found flag) lands with the first
+      reachable hidden-item map. See `docs/items_blockers.md` → Itemfinder.
 
 - [ ] **Fishing rods.** This is ready item-layer work, not an external blocker:
       `FishingAnim` is linked and `ReadSuperRodData` is check-only. Promote
