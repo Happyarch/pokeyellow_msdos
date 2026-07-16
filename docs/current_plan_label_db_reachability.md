@@ -1,6 +1,9 @@
 # Current Plan: label-DB reachability — %ifdef-aware scan + fall-through edges
 
-**Status:** round 5 — **adversarial review converged; implementation-ready v1**. The "Normative
+**Status:** round 6 — **adversarial review converged; implementation-ready v1**
+(round 5 = codex sign-off; round 6 = post-signoff self-review, three small
+amendments — codex root inactive, standing invitation to object recorded in
+the round-6 section). The "Normative
 specification (v1)" section below is the ONLY normative text; everything under
 "Review history" is a record of how it got that way and must not be implemented
 from. All measurements verified against the live `translation.db` / tree at
@@ -113,8 +116,11 @@ Hence the rename (S9).
 **OUT — documented gaps, do not implement in v1**
 - `dd Label` dispatch-table edges and address-taken operands (`mov esi, Table`).
   Leaves `PickUpItemText`, `PalletTown_ScriptPointers`, `ItemUsePtrTable`,
-  `OptionMenuJumpTable`, `HiddenEventMaps` handlers dark. Must be stated in the
-  tool's `--help`/docstring and in the rename note.
+  `OptionMenuJumpTable`, `HiddenEventMaps` handlers dark. The same gap covers
+  **interrupt handlers installed by address** — the PIT and keyboard ISRs
+  (`boot/timing.asm:176`, `src/input/joypad.asm:313`, the tree's only two `iret`
+  sites) are provably live yet permanently `not-proven-reached` under v1. Must
+  be stated in the tool's `--help`/docstring and in the rename note.
 - Graph/body content inside `%include`d files and `%macro` expansions (includes
   and macros ARE consulted for conditional state and byte-emission
   classification — S3/S5 — just not for labels/calls they may contain).
@@ -422,7 +428,15 @@ definite/possible BFS**: S4 removed the uncertainty they would have described.
   twice. So: comment the lint query, and keep "lint exits 0" as a **real
   Verification check**, never an assumption.
 - `label_status` consumes the complete source inventory; its existing queries do
-  not filter `build_active`. A caller-side regression check rides in V5.
+  not filter `build_active`. **Its `--callers` output DOES change** (round-6
+  self-review): the query has no `kind` filter (`label_status:86-89`, verified),
+  so fall-through predecessors will appear as additional rows, self-describing
+  via the displayed `kind` column. This is judged desirable — a fall-through
+  predecessor is a real control-flow reference and belongs in a stub-retirement
+  audit — but it is a visible output change, not a no-op, and V5 asserts it
+  rather than letting it be discovered. (Cosmetic: `kind:<5` formatting will
+  overflow on `fallthrough`; widen when touching V5.) A caller-side regression
+  check rides in V5.
 
 ### S9. Rename (`project_state:136-138`) + citation sweep
 
@@ -462,8 +476,9 @@ Sweep the citations (full-repo search):
 | *(new)* `dos_port/tools/test_label_db.py` | fixtures + live-tree assertions (Verification) — there are no tests today |
 
 **Not modified:** `faithdiff` (immune, S8), `lint_pret_labels` (verified by
-check, not by construction), `label_status` (its all-source query semantics are
-preserved), `fidelity_gate`, the pret-side scanner. The regenerated `calls`
+check, not by construction), `label_status` (query code untouched, but its
+`--callers` *output* gains kind-labeled fallthrough rows — see S8/V5; do not
+call this "unchanged"), `fidelity_gate`, the pret-side scanner. The regenerated `calls`
 schema gains `build_active`; no hand migration is needed because the scanner
 drops/recreates the table.
 
@@ -529,11 +544,20 @@ size. **Fixtures are the gate; the live tree is corroboration** (round-2 R11).
   check-only `trainer_engine.asm` callers while those rows have
   `build_active=0`. This specifically catches accidental deletion of non-member
   source edges; `--callees` alone reads pret-side rows and cannot catch it.
+  Additionally, `label_status --callers EnterMap` must show `EnterMapBoot` with
+  `kind='fallthrough'` — the S8 output change is asserted as intentional, not
+  discovered by a surprised future session.
 - **V6 — Idempotency:** run `update_label_db` twice on an unchanged tree →
   identical `content_hash` (`:423-430`). All new sets/streams iterate in
   sorted order before emission, matching `:409-416`.
-- **V7 — Differential probe:** default vs `--config BUG_FIX_LEVEL=2` counts
-  must differ (a silent no-op evaluator is the classic filter bug). For
+- **V7 — Differential probe:** default vs `--config BUG_FIX_LEVEL=2` —
+  compare the **build-active edge sets**, not the reached-label count.
+  Measured (round-6 self-review): the tree's 25 `BUG_FIX_LEVEL` blocks contain
+  only 4 call/jmp-to-label lines and 1 top-level label, so the edge-set delta
+  is guaranteed nonzero, while the *reached count* may legitimately not move
+  (those targets may already be reached via other edges) — asserting on the
+  count would be flaky by design (a silent no-op evaluator is still the bug
+  this probe exists to catch). For
   `--config DEBUG_PARTY=1`: membership must include `debug_dump.asm`, and the
   run must either complete with `RunPartySeedTest` reached **or** hard-fail
   naming a DOS-exit tail-call boundary (S6) — record which at implementation
@@ -565,7 +589,7 @@ size. **Fixtures are the gate; the live tree is corroboration** (round-2 R11).
 
 ---
 
-# Review history (rounds 1–5, non-normative)
+# Review history (rounds 1–6, non-normative)
 
 > Everything below records how the spec above was reached. Superseded draft-1
 > text has been consolidated away per codex's round-3 editorial blocker; each
@@ -735,6 +759,39 @@ whose unknown label-arithmetic assertion is permitted because it guards only
 
 **Codex sign-off:** no remaining design blocker. Implementation may begin against
 the single normative v1 section above; review history remains non-normative.
+
+## Round 6 — Claude post-signoff self-review
+
+A final cold read of the *converged* text, applying the review's own standard
+to its author: verify every "unchanged" claim and every live-tree assumption.
+Three amendments, all verified against the tree. **Codex's root had gone
+inactive before this round could be mailed** (delivery to `r-d27268021560`
+failed with `recipient_inactive`), so this section is the standing invitation:
+the next codex session reviewing this plan should check the three items below —
+especially #1, which contains the one judgment call (fallthrough rows shown in
+`--callers` vs filtered out) — and may amend or object in place.
+
+1. **`label_status --callers` output was falsely implied unchanged** — the
+   third wrong "unchanged" claim of this review, same class rounds 1–5 kept
+   killing. Verified: the query (`label_status:86-89`) has no `kind` filter, so
+   fall-through predecessors appear as new rows. Judged desirable (a
+   fall-through IS a control-flow reference for stub auditing), made explicit
+   in S8/Files, asserted in V5 (`--callers EnterMap` must show `EnterMapBoot`
+   `kind='fallthrough'`).
+2. **V7's "counts must differ" was flaky by design.** Measured: 25
+   `BUG_FIX_LEVEL` blocks hold only 4 call/jmp-to-label lines + 1 label, so the
+   reached-label count may legitimately not move at `BUG_FIX_LEVEL=2` even with
+   a correct evaluator. V7 now compares build-active edge sets (guaranteed
+   nonzero delta).
+3. **ISR entry points named in the OUT gap.** The PIT/keyboard ISRs
+   (`boot/timing.asm:176`, `src/input/joypad.asm:313` — verified as the tree's
+   only `iret` sites) are installed by address-taken operands and stay
+   `not-proven-reached` forever under v1; now stated so nobody re-derives it.
+
+Checked and clean (no change needed): no `jmp $`, no `iretd`, no `hlt`
+anywhere in `src/`+`boot/`, so the S6 terminator table is complete for the
+live corpus; the 1 top-level label inside a `BUG_FIX_LEVEL` block is covered
+by S2's definitions-unfiltered rule.
 
 ## Resolved inline-comment ledger (codex comments on superseded draft-1 text)
 
