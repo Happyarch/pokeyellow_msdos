@@ -79,6 +79,20 @@ address-taken operands emit no edge, so every jump-table handler and both ISRs
 (PIT, keyboard) read `not-proven-reached` while provably running. Cite
 `--callers` or runtime evidence instead.
 
+**Unsupported CONFIRMATIONS are prohibited too — the rule is symmetric.** A
+result that matches an expectation is not evidence until you state what it is
+made of: a matching aggregate (count, total, hash, "no diff") counts only with
+its decomposition, because two opposing errors cancel to a plausible total and
+nobody adversarially reviews good news. `1051 ≈ the projected 1046` was really
+`1046 +135 −130`. Treat a number landing where you expected as a prompt to
+decompose it, not as a result.
+
+Corollary: **"unchanged by construction" is not a verification — run the check.**
+Any sentence that *explains away* a discrepancy instead of measuring it (`just`,
+`merely`, `crude estimate`, `coincidence`, `by construction`) marks the spot
+where a measurement was cheap and skipped. In the review that produced this rule,
+every such claim was false.
+
 Verification terms are not interchangeable: `defined`, `linked`, `reachable`,
 `executed`, `golden-matched`, and `visually-observed` describe distinct evidence.
 A regression-only run must not be reported as feature execution. A clean static
