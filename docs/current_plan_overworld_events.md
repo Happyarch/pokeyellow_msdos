@@ -429,21 +429,54 @@ pret's real tail: `call UsedCut` → `wActionResultOrTookBattleTurn` → `jz .lo
    `PrintText` inherits whatever the last owner left. Latent-in-a-never-linked-file,
    exactly the class as the boulder bullet's `dust_smoke.asm` `CL`/`BL` bug.
 
-**TOOLING TRAP — `project_state` reachability is a FALSE NEGATIVE for this whole
-subtree. Do not cite it as evidence here.** `UsedCut` still reports
-`not-statically-reached` after gaining a real caller — but so do `OverworldLoop`,
-`DisplayTextID`, `DisplayStartMenu`, and `StartMenu_Pokemon`, every one of which is
-provably live (the `overworld_pallet` golden executes `OverworldLoop` each run; the
-party menu's other field moves were observed running live 2026-07-13). The metric's
-roots simply do not reach the overworld/menu subtree, so `not-statically-reached`
-there means nothing at all. **`callers` is the field that actually moved (0 → 1).**
-This matters retroactively: the boulder handoff cited `PrintStrengthText` = "linked
-but not-statically-reached" as evidence that nothing arms `BIT_STRENGTH_ACTIVE`.
-That inference leaned on this metric and is not supported by it — its *conclusion*
-still stands, but on the separate ground that no reachable map carries a boulder.
-This is a FOURTH shape of the faithdiff/label-DB gap, after
-relocation / decomposition / inlining: the routine is genuinely called, and the tool
-reports it unreached because the root set never gets there.
+**TOOLING TRAP — `project_state` reachability is a FALSE NEGATIVE across ~63% of the
+port. Never cite `not-statically-reached` as evidence that anything is unreachable.**
+Root cause established 2026-07-16 (full detail + measurements in stigmergy
+`project-state-reachability-false-negative-overworld-menu-subtree`):
+
+`project_state` (`tools/project_state:111`) BFSes from the single root `start` over
+`calls` edges, and those edges come from `update_label_db`'s `PORT_CALL_RE`
+(`tools/update_label_db:121`), which matches **only** explicit `call`/`jmp`/`j??`
+mnemonics. **A fall-through is not an instruction** — when execution crosses a label
+boundary by plain sequential execution there is no mnemonic to match, so no edge
+exists. It is unrepresentable in the scanner's model, not a regex bug.
+
+The boot chain into the entire game world is exactly that shape:
+
+```
+start --call--> Init --jmp--> EnterMapBoot --FALL--> EnterMap --FALL--> OverworldLoop --FALL--> OverworldLoopLessDelay
+```
+
+(`overworld.asm:427` "fall into EnterMap", `:939` "fall through to OverworldLoop",
+`:969` "OverworldLoop falls through into OverworldLoopLessDelay (pret)"). The BFS
+reaches `EnterMapBoot`, follows its explicit `call`s, and dies at the fall-through:
+`EnterMapBoot` reachable, `EnterMap` — the very next instruction — not. Measured over
+the live DB: 385 labels reachable; adding just that ONE edge → 948; adding all three
+boot-chain fall-throughs → 1046. **Three missing edges dark 661 labels.**
+
+A second, smaller class: data-table dispatch (`dd Label` in a table, `jmp esi` /
+`jmp [tbl+ecx*4]`) is equally invisible — `PickUpItemText` is reached only from a map
+text_asm pointer table, so `PickUpItem` stays dark even after the fall-through repair.
+Map script tables, `HiddenEventMaps` handlers and `.outOfBattleMovePointers` are all
+this shape.
+
+The irony worth carrying: the port falls through pervasively (65+ commented instances)
+**because pret does** — it is a core SM83 idiom and this project's hard rule is to
+preserve pret's control flow. **The metric under-reports precisely where the port is
+most faithful.** Use `callers` instead — that is the field that actually moved here
+(`UsedCut` 0 → 1; `reachability` never changed) — plus `label_status --callers`, which
+names the call site and line.
+
+Retroactive: the boulder handoff cited `PrintStrengthText` = "linked but
+not-statically-reached" as evidence that nothing arms `BIT_STRENGTH_ACTIVE`. That
+inference is **not supported** — `PrintStrengthText` flips to reachable the moment the
+fall-through edges are added. Its *conclusion* still stands, but only on the separate
+ground that no reachable map carries a boulder.
+
+This is a FOURTH shape of the faithdiff/label-DB gap, after relocation /
+decomposition / inlining: the routine is genuinely called, and the tool reports it
+unreached because the edge that reaches it is a fall-through or a table dispatch and
+the scanner models neither.
 
 **Evidence — what is and is not proven.** `make -C dos_port` clean;
 `update_label_db`; `lint_pret_labels` **0 violations** (6 suppressed, unchanged — no
