@@ -12,7 +12,13 @@ dos_port/tools/translation.db:
     port_defs  every port `global`-declared definition (raw; feeds the linter):
                name, file, line, is_stub, defined_here, instr_count, has_call
     calls      caller → callee edges, side = pret | port, with kind
-               (call/jp/jr/jmp/jcc/predef/farcall/…)
+               (call/jp/jr/jmp/jcc/predef/farcall/… and, port-side,
+               'fallthrough' for a proven sequential label boundary), plus
+               build_active: 1 = an active line of a LINK_SRCS member in the
+               analyzed config, 0 = present in source but not in this build
+               (NULL on pret rows). The complete source inventory is kept —
+               label_status --callers promises every port caller — while
+               project_state's reachability BFS consumes only build_active=1.
     externs    every port `extern` (file, symbol, trailing comment, line)
 
 THE DB IS ALWAYS DERIVED BY RESCANNING — never hand-edited, never written
@@ -28,7 +34,24 @@ from the sidecar dos_port/tools/pret_label_allowlist.json:
       "suppress": [ {"rule": "...", "key": "...", "why": "..."} ] }
 (relocated_* is consumed here → status 'relocated'; suppress is the linter's.)
 
-Usage:  dos_port/tools/update_label_db [--db PATH]
+THE BUILD GRAPH REFUSES TO GUESS. Membership and defines come from GNU Make
+itself (buildprobe); NASM conditionals are evaluated over member files; where
+the analysis cannot prove something that affects the graph it fails loudly
+naming file:line rather than emitting a number.
+
+KNOWN GAPS in the port build graph (documented, not bugs to rediscover):
+  * `dd Label` dispatch tables and address-taken operands (`mov esi, Table`)
+    produce no edge — so jump-table handlers and the PIT/keyboard ISRs
+    (installed by address) are reachable at runtime yet stay
+    not-proven-reached here.
+  * labels/calls inside %include'd files and %macro expansions are not graph
+    content (includes and macros ARE consulted for conditional state and for
+    byte-emission classification).
+  * the graph is name-keyed: duplicate definitions of one name union their
+    out-edges.
+This is why a not-proven-reached result is never proof of unreachability.
+
+Usage:  dos_port/tools/update_label_db [--db PATH] [--config VAR[=VAL]]...
 """
 
 import argparse
@@ -41,6 +64,9 @@ import subprocess
 import sys
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, SCRIPT_DIR)
+import buildprobe  # noqa: E402  (same-directory helper, shared with project_state)
+
 DOS_PORT   = os.path.normpath(os.path.join(SCRIPT_DIR, '..'))
 REPO_ROOT  = os.path.normpath(os.path.join(SCRIPT_DIR, '..', '..'))
 DB_PATH    = os.path.join(SCRIPT_DIR, 'translation.db')
@@ -274,6 +300,687 @@ def scan_port(pret_names):
                              None, None, sect))
     return defs, calls, externs
 
+# ── build graph: NASM conditional classification + boundaries (S3–S6) ──────────
+#
+# Definitions are config-independent source facts (scan_port above, unfiltered).
+# EDGES are build facts: everything below runs only over LINK_SRCS members of
+# the analyzed config, because that is what NASM itself assembles — and that is
+# what keeps a hard-fail in a file the build never sees (debug_dump.asm's
+# %if GBSTATE_SCENARIO) from aborting the shipping analysis.
+
+class ScanError(RuntimeError):
+    """The analysis could not prove something that affects the graph.
+
+    Always names file:line. Every one of these is a place where a guess would
+    have become sanctioned evidence.
+    """
+
+# Byte-emitting directives: they place bytes (or reserve/pad space), so a label
+# whose first material token is one of these is DATA, wherever it sits.
+BYTE_DIRECTIVES = {
+    'db', 'dw', 'dd', 'dq', 'dt', 'do', 'dy', 'incbin',
+    'times', 'resb', 'resw', 'resd', 'resq', 'rest', 'reso', 'resy',
+    'align', 'alignb',
+}
+# Directives that emit nothing and are not instructions.
+NONMATERIAL_DIRECTIVES = {
+    'global', 'extern', 'section', 'segment', 'bits', 'cpu', 'default',
+    'use32', 'use16', 'group', 'common', 'absolute', 'static', 'export',
+    'import', 'org',
+}
+COND_OPEN = {'%if', '%ifdef', '%ifndef', '%ifidn', '%ifidni', '%ifmacro',
+             '%ifctx', '%ifnum', '%ifstr', '%ifid', '%ifempty', '%iftoken',
+             '%ifn', '%ifnidn', '%ifnidni', '%ifnmacro', '%ifnctx', '%ifnnum',
+             '%ifnstr', '%ifnid', '%ifnempty', '%ifntoken', '%ifnidn'}
+COND_ELIF = {'%elif', '%elifdef', '%elifndef', '%elifidn', '%elifidni',
+             '%elifmacro', '%elifctx', '%elifnum', '%elifstr', '%elifid',
+             '%elifempty', '%eliftoken', '%elifn', '%elifnidn', '%elifnidni',
+             '%elifnmacro', '%elifnctx', '%elifnnum', '%elifnstr', '%elifnid',
+             '%elifnempty', '%elifntoken'}
+ASSERT_DIRECTIVES = {'%error', '%fatal', '%warning'}
+MUTATION_DIRECTIVES = {'%define', '%xdefine', '%idefine', '%ixdefine',
+                       '%undef', '%assign', '%iassign', '%defstr', '%deftok'}
+
+LOCAL_LABEL_RE = re.compile(r'^(\.[A-Za-z0-9_$#@~.?]+|%%[A-Za-z0-9_]+):')
+DEFINE_RE = re.compile(r'^%[ix]?x?define\s+([A-Za-z_?][\w?$#@~.]*)\s*(?:\(([^)]*)\))?\s*(.*)$')
+UNDEF_RE = re.compile(r'^%undef\s+([A-Za-z_?][\w?$#@~.]*)')
+ASSIGN_RE = re.compile(r'^%i?assign\s+([A-Za-z_?][\w?$#@~.]*)\s+(.*)$')
+EQU_RE = re.compile(r'^([A-Za-z_?][\w?$#@~.]*)\s+equ\s+(.*)$', re.I)
+INCLUDE_RE = re.compile(r'^%include\s+"([^"]+)"')
+MACRO_OPEN_RE = re.compile(r'^%i?macro\s+([^\s]+)', re.I)
+INT_RE = re.compile(r'^(?:0x([0-9a-f]+)|([0-9]+)|([0-9a-f]+)h|0b([01]+))$', re.I)
+CMP_RE = re.compile(r'^(.*?)(==|!=|<=|>=|<|>|=)(.*)$')
+UNKNOWN = object()      # a value that exists but cannot be evaluated
+
+
+class Token:
+    """One active token of a classified file.
+
+    kind   'label' (top-level label occurrence) | 'instr' | 'data'
+    macro  name of the macro whose invocation produced this token, else None
+    """
+    __slots__ = ('kind', 'name', 'line', 'sect', 'text', 'macro')
+
+    def __init__(self, kind, name, line, sect, text, macro=None):
+        self.kind, self.name, self.line = kind, name, line
+        self.sect, self.text, self.macro = sect, text, macro
+
+    def __repr__(self):
+        return f'<{self.kind} {self.name or self.text!r} @{self.line} {self.sect}>'
+
+
+class ClassifiedFile:
+    """The immutable classified stream of one member file.
+
+    Produced by exactly one pass; every consumer (entry kinds, boundaries,
+    build_active, diagnostics) reads this. Two consumers replaying a mutable
+    define dict would make the second pass start from the first's final state.
+    """
+    __slots__ = ('rel', 'tokens', 'active_lines')
+
+    def __init__(self, rel, tokens, active_lines):
+        self.rel = rel
+        self.tokens = tuple(tokens)
+        self.active_lines = frozenset(active_lines)
+
+
+# ── expression evaluation (S3): small on purpose ──────────────────────────────
+
+def _expand(text, defines, depth=0):
+    if depth > 8:
+        return None
+    out, changed = [], False
+    for tok in re.split(r'([A-Za-z_?][\w?$#@~.]*)', text):
+        if tok and (tok[0].isalpha() or tok[0] in '_?') and tok in defines:
+            val = defines[tok]
+            if val is UNKNOWN:
+                return None
+            out.append('(%s)' % val)
+            changed = True
+        else:
+            out.append(tok)
+    joined = ''.join(out)
+    if changed:
+        return _expand(joined, defines, depth + 1)
+    return joined
+
+
+def _as_int(text):
+    text = text.strip()
+    while text.startswith('(') and text.endswith(')'):
+        inner = text[1:-1]
+        if inner.count('(') != inner.count(')'):
+            break
+        text = inner.strip()
+    m = INT_RE.match(text)
+    if not m:
+        return None
+    if m.group(1):
+        return int(m.group(1), 16)
+    if m.group(2):
+        return int(m.group(2), 10)
+    if m.group(3):
+        return int(m.group(3), 16)
+    return int(m.group(4), 2)
+
+
+def eval_expr(text, defines):
+    """True / False / None(unknown). Deliberately not a general evaluator:
+    defined-ness, integer literals, one comparison, bare truthiness."""
+    expanded = _expand(text, defines)
+    if expanded is None:
+        return None
+    expanded = expanded.strip()
+    m = CMP_RE.match(expanded)
+    if m:
+        lhs, op, rhs = _as_int(m.group(1)), m.group(2), _as_int(m.group(3))
+        if lhs is None or rhs is None:
+            return None
+        return {'==': lhs == rhs, '=': lhs == rhs, '!=': lhs != rhs,
+                '<': lhs < rhs, '<=': lhs <= rhs,
+                '>': lhs > rhs, '>=': lhs >= rhs}[op]
+    val = _as_int(expanded)
+    if val is None:
+        return None
+    return val != 0
+
+
+def eval_condition(directive, arg, defines):
+    """True / False / None(unknown) for one %if-family condition."""
+    base = directive.replace('%elif', '%if', 1) if directive.startswith('%elif') \
+        else directive
+    if base in ('%ifdef', '%ifndef'):
+        name = arg.strip()
+        if not re.match(r'^[A-Za-z_?][\w?$#@~.]*$', name):
+            return None
+        present = name in defines
+        return present if base == '%ifdef' else not present
+    if base == '%if':
+        return eval_expr(arg, defines)
+    return None     # %ifidn/%ifmacro/… — not modelled; unknown, so S4 decides
+
+
+# ── macro registry (S5.4): derived transitively, never a hand list ────────────
+
+class MacroRegistry:
+    """Every %macro defined in repository sources/includes, classified by
+    whether its expansion emits bytes and whether it returns control to the
+    following token. Both are derived transitively through nested invocations;
+    an unresolvable one stays unknown and hard-fails at a boundary rather than
+    being guessed into an ordinary instruction."""
+
+    def __init__(self, bodies):
+        self.bodies = bodies            # name -> [(line, text), …]
+        self._emits, self._returns = {}, {}
+
+    def __contains__(self, name):
+        return name in self.bodies
+
+    def emits_bytes(self, name):
+        return self._resolve(name)[0]
+
+    def returns(self, name):
+        return self._resolve(name)[1]
+
+    def _resolve(self, name, stack=()):
+        if name in self._emits:
+            return self._emits[name], self._returns[name]
+        if name in stack:               # recursive macro: unresolvable
+            return None, None
+        emits, last = False, None
+        for _line, text in self.bodies.get(name, ()):
+            kind, mac = self._token_kind(text, stack + (name,))
+            if kind is None:
+                continue
+            if kind == 'unknown':
+                emits, last = None, 'unknown'
+                break
+            if kind == 'data':
+                emits = True
+            else:
+                last = (text, mac)
+        if emits is None or last == 'unknown':
+            emits = rets = None
+        elif last is None:
+            rets = True                 # emits no instructions: control flows on
+        else:
+            text, mac = last
+            if mac:
+                # returns-control is the same tail question, one level down.
+                rets = self._resolve(mac, stack + (name,))[1]
+            else:
+                rets = not _terminal_text(text, None)
+        if stack:                       # partial result under recursion: don't memo
+            return emits, rets
+        self._emits[name], self._returns[name] = emits, rets
+        return emits, rets
+
+    def _token_kind(self, text, stack):
+        """(None | 'instr' | 'data' | 'unknown', macro_name)"""
+        op = text.split()[0].lower() if text.split() else ''
+        if op in BYTE_DIRECTIVES:
+            return 'data', None
+        if op in NONMATERIAL_DIRECTIVES:
+            return None, None
+        head = text.split()[0]
+        if head in self.bodies:
+            emits, rets = self._resolve(head, stack)
+            if emits is None:
+                return 'unknown', head
+            return ('data' if emits else 'instr'), head
+        return 'instr', None
+
+
+def build_macro_registry(scan_paths):
+    """Scan every repository .asm/.inc for %macro definitions. Bodies are
+    collected verbatim; nested %macro definitions do not occur in this tree and
+    are rejected loudly if they appear."""
+    bodies = {}
+    for root in scan_paths:
+        for dirpath, dirnames, filenames in os.walk(root):
+            dirnames.sort()
+            for fn in sorted(filenames):
+                if not fn.endswith(('.asm', '.inc')):
+                    continue
+                path = os.path.join(dirpath, fn)
+                cur, body = None, None
+                for idx, raw in enumerate(read_lines(path), 1):
+                    line = strip_comment(raw).strip()
+                    m = MACRO_OPEN_RE.match(line)
+                    if m:
+                        if cur is not None:
+                            raise ScanError(f'{path}:{idx}: nested %macro '
+                                            f'definition inside {cur}')
+                        cur, body = m.group(1), []
+                        continue
+                    if line.lower().startswith('%endmacro'):
+                        if cur is not None:
+                            bodies.setdefault(cur, body)
+                        cur, body = None, None
+                        continue
+                    if cur is None or not line:
+                        continue
+                    lm = LOCAL_LABEL_RE.match(line)
+                    if lm:
+                        line = line[lm.end():].strip()
+                    if line:
+                        body.append((idx, line))
+    return MacroRegistry(bodies)
+
+
+# ── per-file classification (S3): ONE pass into an immutable stream ────────────
+
+class _Frame:
+    __slots__ = ('active', 'taken', 'unknown', 'line')
+
+    def __init__(self, active, taken, unknown, line):
+        self.active, self.taken, self.unknown, self.line = active, taken, unknown, line
+
+
+def _logical_lines(lines):
+    """Join NASM's backslash line continuations. The reported line number is
+    the first physical line, as NASM reports it."""
+    out, buf, start = [], None, 0
+    for idx, raw in enumerate(lines, 1):
+        text = strip_comment(raw).rstrip()
+        if buf is None:
+            start = idx
+            buf = ''
+        cont = text.endswith('\\')
+        buf += text[:-1] if cont else text
+        if cont:
+            continue
+        out.append((start, buf))
+        buf = None
+    if buf is not None:
+        out.append((start, buf))
+    return out
+
+
+def resolve_include(name, include_dirs):
+    for inc in include_dirs:
+        path = os.path.normpath(os.path.join(DOS_PORT, inc, name))
+        if path.startswith(REPO_ROOT + os.sep) and os.path.isfile(path):
+            return path
+    return None
+
+
+def classify_file(path, rel, defines, macros, include_dirs):
+    """One pass over a member file -> ClassifiedFile.
+
+    `defines` is this file's own preprocessor state (each .asm is a separate
+    nasm invocation, so the %ifndef/%define constant-guard idiom needs per-file
+    scope) and is mutated in place only by ACTIVE branches.
+    """
+    tokens, active_lines = [], set()
+    stack = []
+    sect = ['.text']    # nasm files that omit a directive default to code
+
+    def enclosing_active():
+        return all(f.active for f in stack)
+
+    def unknown_region():
+        return any(f.unknown for f in stack)
+
+    def walk(path, rel, emit, seen):
+        macro_depth = 0
+        for line_no, text in _logical_lines(read_lines(path)):
+            s = text.strip()
+            if not s:
+                continue
+            where = f'{rel}:{line_no}'
+            low = s.lower()
+            word = low.split()[0].split(',')[0]
+
+            # %macro bodies: NASM evaluates a body's conditionals at expansion,
+            # not at definition, so the body contributes no classification
+            # state here. (It IS scanned for the byte-emission registry.)
+            if macro_depth:
+                if MACRO_OPEN_RE.match(s):
+                    macro_depth += 1
+                elif word == '%endmacro':
+                    macro_depth -= 1
+                continue
+
+            if word in COND_OPEN:
+                arg = s[len(word):].strip()
+                if not enclosing_active() or unknown_region():
+                    stack.append(_Frame(False, True, False, line_no))
+                else:
+                    val = eval_condition(word, arg, defines)
+                    if val is None:
+                        stack.append(_Frame(False, False, True, line_no))
+                    else:
+                        stack.append(_Frame(bool(val), bool(val), False, line_no))
+                continue
+            if word in COND_ELIF or word == '%else':
+                if not stack:
+                    raise ScanError(f'{where}: {word} without %if')
+                fr = stack[-1]
+                outer = all(f.active for f in stack[:-1])
+                if fr.unknown or not outer or fr.taken:
+                    fr.active = False
+                elif word == '%else':
+                    fr.active, fr.taken = True, True
+                else:
+                    arg = s[len(word):].strip()
+                    val = eval_condition(word, arg, defines)
+                    if val is None:
+                        fr.unknown, fr.active = True, False
+                    else:
+                        fr.active = bool(val)
+                        fr.taken = fr.taken or bool(val)
+                continue
+            if word == '%endif':
+                if not stack:
+                    raise ScanError(f'{where}: %endif without %if')
+                stack.pop()
+                continue
+
+            # S4 — inside an unknown region nothing may exist but assertions,
+            # comments and further conditionals. Not a list of "graph-relevant"
+            # tokens: `%if UNKNOWN / ret / %endif` changes fall-through while
+            # containing no label, call, section or byte directive, and a define
+            # mutation can control a later condition outside the region.
+            if unknown_region():
+                if word in ASSERT_DIRECTIVES:
+                    continue
+                raise ScanError(
+                    f'{where}: unevaluable condition at {rel}:{stack[-1].line} '
+                    f'guards real content ({s[:60]!r}). The build graph refuses '
+                    f'to guess which arm ships — teach eval_expr this condition '
+                    f'or restructure the source.')
+            if not enclosing_active():
+                continue
+
+            if emit:
+                # Line numbers are only meaningful for the file being
+                # classified: an %include is walked for conditional state only,
+                # and its line numbers would otherwise alias this file's.
+                active_lines.add(line_no)
+
+            if MACRO_OPEN_RE.match(s):
+                macro_depth = 1
+                continue
+            if word == '%endmacro':
+                raise ScanError(f'{where}: %endmacro without %macro')
+            if word in ASSERT_DIRECTIVES:
+                continue
+
+            m = INCLUDE_RE.match(s)
+            if m:
+                # Processed IN PLACE with the live conditional state, for
+                # conditional state only: scenario_registry.inc assigns
+                # GBSTATE_SCENARIO in ~20 mutually exclusive arms, so
+                # bulk-harvesting its equates would pick last-textual-wins.
+                inc = resolve_include(m.group(1), include_dirs)
+                if inc is None:
+                    raise ScanError(f'{where}: cannot resolve %include '
+                                    f'"{m.group(1)}" through -I {include_dirs}')
+                if inc not in seen:
+                    walk(inc, os.path.relpath(inc, REPO_ROOT).replace('\\', '/'),
+                         False, seen | {inc})
+                continue
+
+            m = DEFINE_RE.match(s)
+            if m:
+                value = m.group(3).strip()
+                defines[m.group(1)] = UNKNOWN if m.group(2) is not None else \
+                    (value if value else '1')
+                continue
+            m = UNDEF_RE.match(s)
+            if m:
+                defines.pop(m.group(1), None)
+                continue
+            m = ASSIGN_RE.match(s)
+            if m:
+                val = _expand(m.group(2), defines)
+                num = _as_int(val) if val is not None else None
+                defines[m.group(1)] = UNKNOWN if num is None else str(num)
+                continue
+            m = EQU_RE.match(s)
+            if m:
+                val = _expand(m.group(2), defines)
+                num = _as_int(val) if val is not None else None
+                defines[m.group(1)] = UNKNOWN if num is None else str(num)
+                continue
+            if s.startswith('%'):
+                continue                # %rep/%endrep/%rotate/%push/… : no bytes
+
+            sm = SECTION_RE.match(s)
+            if sm:
+                # Classification runs BEFORE this, so an inactive block's
+                # section toggles never touch the current section — matching
+                # NASM. This ordering is load-bearing.
+                sect[0] = sm.group(1).lower()
+                continue
+
+            if not emit:
+                continue
+
+            # lex: an optional leading label (top-level or local) may carry a
+            # same-line instruction (`.done: clc`).
+            lm = LABEL_RE.match(s)
+            if lm:
+                tokens.append(Token('label', lm.group(1), line_no, sect[0], s))
+                s = s[lm.end():].strip()
+            else:
+                lm = LOCAL_LABEL_RE.match(s)
+                if lm:
+                    s = s[lm.end():].strip()
+            if not s:
+                continue
+            head = s.split()[0]
+            op = head.lower()
+            if op in NONMATERIAL_DIRECTIVES:
+                continue
+            if op in BYTE_DIRECTIVES:
+                tokens.append(Token('data', None, line_no, sect[0], s))
+                continue
+            if head in macros:
+                # Unclassifiable (emits is None) stays an 'instr'-shaped token
+                # carrying its macro name: only a boundary decision needs the
+                # answer, and that is where it hard-fails.
+                tokens.append(Token('data' if macros.emits_bytes(head) else 'instr',
+                                    None, line_no, sect[0], s, macro=head))
+                continue
+            tokens.append(Token('instr', None, line_no, sect[0], s))
+
+    walk(path, rel, True, {path})
+    if stack:
+        raise ScanError(f'{rel}:{stack[-1].line}: unterminated %if at EOF')
+    return ClassifiedFile(rel, tokens, active_lines)
+
+
+# ── terminators (S6) ──────────────────────────────────────────────────────────
+
+DOS_EXIT_AX_RE = re.compile(r'^mov\s+ax\s*,\s*(0x4c00|4c00h|19456)\s*$', re.I)
+INT_21_RE = re.compile(r'^int\s+(0x21|21h|33)\s*$', re.I)
+CALL_RE = re.compile(r'^call\s+(?:short\s+|near\s+|dword\s+)?'
+                     r'([A-Za-z_][A-Za-z0-9_]*)\s*$', re.I)
+
+
+def _terminal_text(text, prev_text):
+    """Is this instruction a terminator? Tested over counted instruction
+    TOKENS, never raw lines. A bare `int 0x21` is an ordinary DOS/DPMI call
+    (audio_hal.asm:177) — only the mov ax,0x4C00 pair terminates."""
+    op = text.split()[0].lower()
+    if op in ('ret', 'retn', 'retf', 'iret', 'iretd', 'iretw'):
+        return True
+    if op == 'jmp':
+        return True         # label / reg (`jp hl`) / [mem] dispatch: no edge
+    if INT_21_RE.match(text.strip()):
+        return bool(prev_text and DOS_EXIT_AX_RE.match(prev_text.strip()))
+    return False
+
+
+def is_terminal(tok, prev, macros, where):
+    if tok.macro:
+        # A non-byte macro at a boundary needs a proven summary: an expansion
+        # ending in `ret` or an external `jmp` would otherwise manufacture a
+        # fall-through edge.
+        rets = macros.returns(tok.macro)
+        if rets is not True:
+            raise ScanError(
+                f'{where}: boundary decided by macro {tok.macro}, whose '
+                f'expansion is not proven to return control '
+                f'({"may terminate or jump out" if rets is False else "unclassifiable"}). '
+                f'Refusing to guess the fall-through.')
+        return False
+    return _terminal_text(tok.text, prev.text if prev and not prev.macro else None)
+
+
+def dos_exit_tails(classified):
+    """Names whose active material TAIL is the DOS-terminate idiom (S6).
+
+    A tail `call` into one of these has unproved return behavior: the callee's
+    only proven exit is process termination, and an earlier path *might* return
+    — which is exactly why this refuses rather than deciding either way.
+
+    Tail, not "contains the idiom anywhere": the plan's own reasoning excludes
+    DumpSeamLog from this class "because it ends in `ret`", i.e. by tail. The
+    round-5 text also asserted the anywhere-reading "never fires in the default
+    config"; it does — DelayFrame (video/frame.asm:237) has a mid-body Esc-quit
+    path and returns via `.done: popad / ret` at :240-241, and OverworldLoop's
+    tail is `call DelayFrame`, so the anywhere-reading hard-fails the shipping
+    tree and deletes the very boot-chain edge the plan exists to add. Tail is
+    also the standard the rest of the model already uses (S5.5). See the plan's
+    round-7 amendment.
+    """
+    names = set()
+    for cf in classified.values():
+        for _sect, toks, i, body, _nxt in stream_entries(cf):
+            instrs = [t for t in body if t.kind == 'instr' and not t.macro]
+            if len(instrs) < 2:
+                continue
+            if INT_21_RE.match(instrs[-1].text.strip()) \
+               and DOS_EXIT_AX_RE.match(instrs[-2].text.strip()):
+                names.add(toks[i].name)
+    return names
+
+
+# ── boundaries (S5): per-output-section streams ───────────────────────────────
+
+def stream_entries(cf):
+    """Yield (sect, toks, entry_index, body, next_entry_index) for every active
+    top-level label occurrence of every EXECUTABLE stream of one file.
+
+    Streams are per output-section class: a source detour through `section
+    .data` is simply absent from the .text stream, so it is never a code/data
+    boundary. Entries are occurrence-keyed, never name-keyed — debug_dump.asm
+    defines `windows:` repeatedly in mutually exclusive branches, and a
+    name-keyed map would overwrite one occurrence with another.
+    """
+    streams = {}
+    for tok in cf.tokens:
+        streams.setdefault(tok.sect, []).append(tok)
+    for sect in sorted(streams):
+        if sect in DATA_SECTIONS:
+            continue                    # not executable: no control flow
+        toks = streams[sect]
+        label_at = [i for i, t in enumerate(toks) if t.kind == 'label']
+        for n, i in enumerate(label_at):
+            nxt = label_at[n + 1] if n + 1 < len(label_at) else len(toks)
+            body = [t for t in toks[i + 1:nxt] if t.kind in ('instr', 'data')]
+            yield sect, toks, i, body, nxt
+
+
+def boundary_edges(cf, macros, dos_exit):
+    """Proven sequential label boundaries of one member file.
+
+    Data is a BOUNDARY property, not an anywhere-in-body node property: a
+    routine that returns and then parks a local `dd` table (OptionsMenu_TextSpeed,
+    StartMenu_Pokemon, DisplayNamingScreen) is still code, and unreachable data
+    after a proven terminator must not reclassify it.
+    """
+    edges = []
+    for sect, toks, i, body, nxt in stream_entries(cf):
+        entry = toks[i]
+        # Entry kind comes from the first material token AFTER the entry —
+        # crossing any zero-byte aliases, so an alias of data never
+        # masquerades as code.
+        first = _next_material(toks, i + 1)
+        if first is None:
+            continue                    # no body at all in this stream
+        if first.macro and macros.emits_bytes(first.macro) is None:
+            raise ScanError(f'{cf.rel}:{first.line}: entry kind of '
+                            f'{entry.name} decided by unclassifiable macro '
+                            f'{first.macro}')
+        if first.kind == 'data':
+            continue                    # data entry: no control flow
+        if not body:
+            # zero-byte code alias: reaches its target trivially, so the whole
+            # alias chain stays connected.
+            edges.append((entry.name, toks[nxt].name, 'fallthrough',
+                          cf.rel, entry.line, 1))
+            continue
+        instrs = [t for t in body if t.kind == 'instr']
+        last = instrs[-1]
+        prev = instrs[-2] if len(instrs) > 1 else None
+        tail = f'{cf.rel}:{last.line}'
+        if is_terminal(last, prev, macros, tail):
+            continue                    # proven terminator: no edge. Material
+                                        # tokens after it are legal unreachable
+                                        # data and must not reclassify E.
+        if body[-1] is not last:
+            raise ScanError(
+                f'{tail}: {entry.name} runs off the end of its last '
+                f'instruction into data/padding at {cf.rel}:{body[-1].line} '
+                f'in the same {sect} stream — execution would reach bytes. '
+                f'Either the port has a real bug or this tool misclassified '
+                f'a token; both want a human.')
+        m = CALL_RE.match(last.text)
+        if m and m.group(1) in dos_exit:
+            raise ScanError(
+                f'{tail}: {entry.name} falls through after `call {m.group(1)}`, '
+                f'whose own material tail terminates the process in this '
+                f'config — its return behavior is unproved (an earlier path '
+                f'may return). Refusing to emit a knowingly spurious edge.')
+        nextmat = _next_material(toks, nxt)
+        if nextmat is None:
+            raise ScanError(
+                f'{tail}: {entry.name} does not terminate and is the last '
+                f'entry of the {sect} stream in {cf.rel} — this would be a '
+                f'cross-file fall-through, and link order is not modelled. '
+                f'If this fires, link order genuinely matters: that is a '
+                f'finding, not a footnote.')
+        if nextmat.kind == 'data':
+            raise ScanError(
+                f'{tail}: {entry.name} does not terminate and the next entry '
+                f'{toks[nxt].name} ({cf.rel}:{toks[nxt].line}) is data in the '
+                f'same {sect} stream.')
+        edges.append((entry.name, toks[nxt].name, 'fallthrough',
+                      cf.rel, last.line, 1))
+    return edges
+
+
+def _next_material(toks, start):
+    for t in toks[start:]:
+        if t.kind in ('instr', 'data'):
+            return t
+    return None
+
+
+def scan_build_graph(cfg):
+    """Classify the analyzed config's LINK_SRCS members -> (fallthrough edges,
+    {rel: active line numbers})."""
+    macros = build_macro_registry([os.path.join(DOS_PORT, d)
+                                   for d in ('boot', 'src', 'include', 'assets')])
+    classified = {}
+    for rel in sorted(cfg.link):
+        path = os.path.join(REPO_ROOT, rel)
+        if not os.path.isfile(path):
+            raise ScanError(f'{rel}: LINK_SRCS member does not exist')
+        classified[rel] = classify_file(path, rel, dict(cfg.defines), macros,
+                                        cfg.includes)
+    dos_exit = dos_exit_tails(classified)
+    edges = []
+    for rel in sorted(classified):
+        edges.extend(boundary_edges(classified[rel], macros, dos_exit))
+    active = {rel: cf.active_lines for rel, cf in classified.items()}
+    return edges, active
+
+
 # ── summarize + write ───────────────────────────────────────────────────────────
 
 SCHEMA = """
@@ -311,7 +1018,10 @@ CREATE TABLE calls (
     kind   TEXT NOT NULL,
     side   TEXT NOT NULL CHECK(side IN ('pret','port')),
     file   TEXT NOT NULL,
-    line   INTEGER
+    line   INTEGER,
+    -- port rows: 1 = active line of a LINK_SRCS member in the analyzed config.
+    -- pret rows: NULL (no build model on that side).
+    build_active INTEGER
 );
 CREATE INDEX idx_calls_callee ON calls(callee, side);
 CREATE INDEX idx_calls_caller ON calls(caller, side);
@@ -348,7 +1058,18 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('--db', default=DB_PATH)
+    ap.add_argument('--config', action='append', default=[], metavar='VAR[=VAL]',
+                    help='analyze an alternate build config (report-only: the '
+                         'committed DB always holds the default shipping graph). '
+                         'Passed verbatim to the Make probe, so source '
+                         'membership and NASM defines cannot diverge.')
     args = ap.parse_args()
+
+    cfg = buildprobe.probe(args.config)
+    if args.config and os.path.abspath(args.db) == DB_PATH:
+        # The committed translation.db always holds the default shipping graph.
+        args.db = ':memory:'
+        print('--config: report-only, the committed DB is not written')
 
     allow = load_allowlist()
     reloc_files  = {k: v['port_file'] for k, v in
@@ -359,6 +1080,13 @@ def main():
     pret_labels, pret_calls = scan_pret()
     port_defs, port_calls, port_externs = scan_port(set(pret_labels))
     scanned_at, git_hash = git_stamp()
+
+    # Build facts (S2): the complete textual call inventory above is kept for
+    # label_status --callers; build_active marks the subset this config
+    # assembles, which is what the reachability BFS may consume.
+    fallthrough, active = scan_build_graph(cfg)
+    port_calls = [row + (int(row[3] in active and row[4] in active[row[3]]),)
+                  for row in port_calls] + fallthrough
 
     # index port defs by name
     by_name = {}
@@ -408,9 +1136,9 @@ def main():
     cur.executemany("INSERT INTO labels VALUES (?,?,?,?,?,?,?)", label_rows)
     cur.executemany("INSERT INTO port_defs VALUES (?,?,?,?,?,?,?,?,?)",
                     sorted(port_defs))
-    cur.executemany("INSERT INTO calls VALUES (?,?,?,'pret',?,?)",
+    cur.executemany("INSERT INTO calls VALUES (?,?,?,'pret',?,?,NULL)",
                     sorted(pret_calls))
-    cur.executemany("INSERT INTO calls VALUES (?,?,?,'port',?,?)",
+    cur.executemany("INSERT INTO calls VALUES (?,?,?,'port',?,?,?)",
                     sorted(port_calls))
     cur.executemany("INSERT INTO externs VALUES (?,?,?,?)",
                     sorted(port_externs))
@@ -434,6 +1162,9 @@ def main():
     print(f"port_defs: {len(port_defs)}  calls: "
           f"{len(pret_calls)} pret + {len(port_calls)} port  "
           f"externs: {len(port_externs)}")
+    print(f"build: {len(cfg.link)} linked + {len(cfg.check)} check-only sources; "
+          f"{sum(r[5] for r in port_calls)} build-active port edges "
+          f"({len(fallthrough)} fallthrough)")
     print(f"stamp: {git_hash} @ {scanned_at}")
     print(f"content_hash: {h.hexdigest()}")
 

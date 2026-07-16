@@ -376,17 +376,22 @@ reads DROPPED though `jz`/`jne`/`jnz` reach it, and it matches stores by name, s
 `sign_pallet` both PASS — `overworld_pallet` is the load-bearing one here, proving the
 rebuilt `OverworldLoop`/`RunMapScript` per-frame chain did not regress.
 **NO must-hit for the push itself, and the bullet's "permitted push plus blocked push"
-acceptance is therefore NOT satisfied.** Evidence for why it cannot be today:
-`project_state PrintStrengthText` = linked but **not-statically-reached** (nothing can
-arm `BIT_STRENGTH_ACTIVE`), and no reachable map carries a boulder object, so
+acceptance is therefore NOT satisfied.** Evidence for why it cannot be today: nothing
+can arm `BIT_STRENGTH_ACTIVE`, and no reachable map carries a boulder object, so
 `TryPushingBoulder` returns at its first `test` every frame. The code is **linked and
-executing per-frame**, not **executed** in the push sense. Both must-hits land with the
+executing per-frame**, not **executed** in the push sense.
+(This bullet originally cited `project_state PrintStrengthText` = "not-statically-reached"
+as part of that evidence; that was the tooling artifact described below, now fixed —
+it reads `statically-reached-from-start`. The two facts above are what carry the
+conclusion, and they are unchanged.) Both must-hits land with the
 first reachable Strength/boulder map (Stage 5 — Seafoam/Victory Road), exactly as the
 Stage 3 pickup/itemfinder must-hits were deferred.
 
 **Left for the Stage 4 Cut bullet.** `cut.asm`/`cut2.asm` are linked for the OAM
-primitives the dust shares, so `UsedCut`/`AnimCut` are now linked but still unreachable —
-that bullet still owns replacing the party-menu no-op tail. Its "port the missing
+primitives the dust shares, so `UsedCut`/`AnimCut` are now linked but had no caller —
+that bullet still owns replacing the party-menu no-op tail. ("still unreachable" as
+originally written was an unsupported negative: the tool could not see the subtree at
+all. See the TOOLING TRAP section below.) Its "port the missing
 `AdjustOAMBlock{X,Y}Pos` primitives" and "promote `WriteOAMBlock`" sub-items are done.
 
 ### Stage 4 Cut-bullet handoff — 2026-07-16
@@ -462,16 +467,33 @@ this shape.
 
 The irony worth carrying: the port falls through pervasively (65+ commented instances)
 **because pret does** — it is a core SM83 idiom and this project's hard rule is to
-preserve pret's control flow. **The metric under-reports precisely where the port is
-most faithful.** Use `callers` instead — that is the field that actually moved here
-(`UsedCut` 0 → 1; `reachability` never changed) — plus `label_status --callers`, which
-names the call site and line.
+preserve pret's control flow. **The metric under-reported precisely where the port was
+most faithful.** Use `callers` — that is the field that actually moved here
+(`UsedCut` 0 → 1) — plus `label_status --callers`, which names the call site and line.
 
 Retroactive: the boulder handoff cited `PrintStrengthText` = "linked but
 not-statically-reached" as evidence that nothing arms `BIT_STRENGTH_ACTIVE`. That
 inference is **not supported** — `PrintStrengthText` flips to reachable the moment the
 fall-through edges are added. Its *conclusion* still stands, but only on the separate
 ground that no reachable map carries a boulder.
+
+### RESOLVED 2026-07-16 — the trap is fixed; the lesson is not retired
+
+`docs/current_plan_label_db_reachability.md` landed the repair. The scanner now
+evaluates NASM conditionals over the real member set (asked of GNU Make itself) and
+emits proven `kind='fallthrough'` edges; reachable labels went **385 → 1051**, all
+three boot-chain edges exist, and every label named above — `UsedCut`,
+`PrintStrengthText`, `StartMenu_Pokemon`, `DisplayTextID`, `OverworldLoop` — now reads
+`statically-reached-from-start`. The values were renamed
+(`static-live-entry` → `statically-reached-from-start`, `not-statically-reached` →
+`not-proven-reached`) to stop the negative reading as "unreachable".
+
+**What still holds, and is now permanent:** the second class above — `dd Label`
+dispatch tables and address-taken operands — is a documented v1 gap, not a bug to
+rediscover. `PickUpItemText`, map script tables, `HiddenEventMaps` handlers,
+`.outOfBattleMovePointers`, and both ISRs (PIT, keyboard) stay `not-proven-reached`
+while provably live. **`not-proven-reached` is still never proof of unreachability**;
+`--callers` and runtime evidence remain the fields to cite.
 
 This is a FOURTH shape of the faithdiff/label-DB gap, after relocation /
 decomposition / inlining: the routine is genuinely called, and the tool reports it

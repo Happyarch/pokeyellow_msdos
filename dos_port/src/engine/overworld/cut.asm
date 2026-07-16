@@ -25,11 +25,13 @@
 ; cutscene's must-hit (animation + tree-tile replacement) lands with the first
 ; reachable Cut map in Stage 5.
 ;
-; Do NOT read `project_state UsedCut` reachability as evidence either way: it says
-; `not-statically-reached`, but so do OverworldLoop, DisplayTextID and
-; DisplayStartMenu, which are all provably live (overworld_pallet golden). The
-; metric's roots do not reach the overworld/menu subtree at all — `callers` is the
-; field that moved here (0 -> 1). See the plan's Stage 4 Cut handoff.
+; `project_state UsedCut` now reads `statically-reached-from-start`: the scanner
+; learned fall-through edges, so the boot chain into the overworld/menu subtree
+; is connected (it previously dead-ended at EnterMapBoot -> EnterMap and read
+; `not-statically-reached` here, as it also did for OverworldLoop/DisplayTextID/
+; DisplayStartMenu — all provably live). That still proves only that a static
+; path exists, NOT that Cut has run; the executed claim above stands on its own
+; evidence.
 ;
 ; Build (check): nasm -f coff -I include/ -I . -o /dev/null \
 ;                     src/engine/overworld/cut.asm

@@ -5613,6 +5613,12 @@ Supersedes the Script-engine Stage 5 entry above (which also mislocated this fil
   `goldencheck overworld_pallet` + `sign_pallet` PASS — `overworld_pallet` is the
   load-bearing one, proving the rebuilt per-frame chain did not regress.
 - **No must-hit for the push itself.** `project_state PrintStrengthText` = linked but
-  `not-statically-reached` (nothing arms `BIT_STRENGTH_ACTIVE`) and no reachable map has
-  a boulder, so `TryPushingBoulder` returns at its first `test` every frame. Linked and
+  never executed: nothing arms `BIT_STRENGTH_ACTIVE` and no reachable map has a
+  boulder, so `TryPushingBoulder` returns at its first `test` every frame. Linked and
   executing per-frame ≠ executed. Permitted/blocked push land with Stage 5.
+  (Correction: this bullet originally cited `not-statically-reached` as part of that
+  evidence. That reading was a tooling artifact — the scanner could not see
+  fall-through edges, so the whole overworld subtree read unreached; it now reports
+  `statically-reached-from-start` for `PrintStrengthText`. The conclusion is
+  unchanged, because it never rested on the metric: the arming/map facts are what
+  make it unexecuted. See docs/current_plan_label_db_reachability.md.)

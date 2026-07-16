@@ -87,9 +87,14 @@ def main():
                 SELECT caller, file, line, kind FROM calls
                 WHERE callee=? AND side='port'
                 ORDER BY file, line""", (name,)).fetchall()
+            # The complete source inventory, deliberately unfiltered by
+            # build_active: this is the stub-retirement checklist and promises
+            # every PORT routine calling <Label>, including check-only
+            # providers. kind='fallthrough' rows are sequential label
+            # boundaries — a real control-flow reference into <Label>.
             print(f"  port callers ({len(callers)}):")
             for caller, file, line, kind in callers:
-                print(f"    {caller:<32} {kind:<5} {file}:{line}")
+                print(f"    {caller:<32} {kind:<11} {file}:{line}")
             externs = cur.execute("""
                 SELECT file, line, comment FROM externs WHERE symbol=?
                 ORDER BY file, line""", (name,)).fetchall()

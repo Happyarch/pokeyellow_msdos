@@ -70,6 +70,15 @@ claims are prohibited: `missing`, `stub`, `unported`, `check-only`, `unreachable
 and `no caller` must cite generated state (`dos_port/tools/project_state`) or
 runtime evidence.
 
+**`unreachable` needs runtime evidence; the `reachability` column is never proof
+of unreachability.** It supports the positive direction only
+(`statically-reached-from-start` = a path exists from `start`, assuming calls
+return — still not proof of execution). `not-proven-reached` means the analysis
+found no path, and it has permanent blind spots: `dd Label` dispatch tables and
+address-taken operands emit no edge, so every jump-table handler and both ISRs
+(PIT, keyboard) read `not-proven-reached` while provably running. Cite
+`--callers` or runtime evidence instead.
+
 Verification terms are not interchangeable: `defined`, `linked`, `reachable`,
 `executed`, `golden-matched`, and `visually-observed` describe distinct evidence.
 A regression-only run must not be reported as feature execution. A clean static

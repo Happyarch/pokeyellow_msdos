@@ -2,9 +2,33 @@
 """Generate repository-derived pret-label provider/linkage state.
 
 This is an evidence report, not a status database.  It refreshes translation.db,
-derives shipping/check-only membership from the Makefile source lists, and emits
-one record per pret label. Static reachability starts at the shipping `start`
-symbol; runtime execution remains unknown until scenario-marker evidence exists.
+asks GNU Make itself which sources link (buildprobe), and emits one record per
+pret label. Static reachability starts at the shipping `start` symbol over the
+build-active port call graph — explicit call/jmp/jcc edges plus proven
+fall-through boundaries; runtime execution remains unknown until
+scenario-marker evidence exists.
+
+WHAT `reachability` PROVES, AND WHAT IT DOES NOT
+
+  statically-reached-from-start   name-level static analysis finds a path from
+                                  `start` in this build's graph, ASSUMING every
+                                  call returns. Not evidence of execution.
+  not-proven-reached              this analysis found no such path. THIS IS NOT
+                                  PROOF OF UNREACHABILITY — see the gaps below.
+  not-applicable                  the label's provider does not link.
+
+Known gaps, each a source of residual false negatives:
+  * `dd Label` dispatch tables and address-taken operands produce no edge, so
+    every jump-table handler and both interrupt handlers (the PIT and keyboard
+    ISRs, installed by address) are provably live at runtime yet permanently
+    not-proven-reached here.
+  * labels/calls inside %include'd files and %macro expansions are not graph
+    content.
+  * the graph is name-keyed: duplicate definitions of one name union their
+    out-edges, so a label can read as reached via its namesake's callers.
+
+An `unreachable`/`no caller` claim therefore needs runtime evidence; this
+column can support the positive direction only.
 """
 
 import argparse
@@ -17,6 +41,9 @@ import sys
 from pathlib import Path
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+import buildprobe  # noqa: E402  (same-directory helper, shared with update_label_db)
+
 PORT = os.path.dirname(HERE)
 DB = os.path.join(HERE, "translation.db")
 MAKEFILE = os.path.join(PORT, "Makefile")
@@ -38,30 +65,16 @@ def active_plans():
 
 
 def source_sets():
-    text = open(MAKEFILE, encoding="utf-8").read()
-    assignments = {}
-    current = None
-    for raw in text.splitlines():
-        m = re.match(r"^([A-Z][A-Z0-9_]*)\s*(?::|\+)?=\s*(.*)$", raw)
-        if m:
-            current = m.group(1)
-            assignments.setdefault(current, [])
-            tail = m.group(2)
-        elif current and raw[:1].isspace():
-            tail = raw
-        else:
-            current = None
-            continue
-        assignments[current].extend(re.findall(r"(?:boot|src)/[^\s\\]+\.asm", tail))
-        if not raw.rstrip().endswith("\\"):
-            current = None
-    linked_vars = {"BOOT_SRCS", "HOME_SRCS", "HAL_SRCS", "SAVE_SRCS",
-                   "AUDIO_SRCS", "GAME_SRCS", "POKEMON_SRCS", "ITEMS_SRCS",
-                   "FRONTEND_SRCS", "BATTLE_SUPPORT_SRCS"}
-    linked = {"dos_port/" + p for v in linked_vars for p in assignments.get(v, [])}
-    check_vars = {v for v in assignments if v.endswith("_CHECK_SRCS")} | {"BATTLE_SRCS"}
-    check = {"dos_port/" + p for v in check_vars for p in assignments.get(v, [])} - linked
-    return linked, check
+    """(linked, check-only) — resolved by GNU Make, not by regexing it.
+
+    The regex version this replaces ignored Make conditionals, so it reported
+    src/debug/debug_dump.asm (Makefile ifdef NEED_DEBUG_DUMP) and
+    src/debug/perf.asm (ifdef DEBUG_PERF) as linked in the default build. They
+    are not. LINK_SRCS is what links; ALL_SRCS additionally holds the
+    check-only sources (BATTLE_SRCS is deliberately not linked).
+    """
+    cfg = buildprobe.probe()
+    return set(cfg.link), set(cfg.check)
 
 
 def main():
@@ -100,7 +113,12 @@ def main():
     rows = con.execute(f"SELECT l.* FROM labels l {where} ORDER BY l.name", params).fetchall()
     all_labels = con.execute("SELECT * FROM labels").fetchall()
     providers = {r['name']: r['port_file'] or r['stub_file'] for r in all_labels}
-    calls = con.execute("SELECT caller, callee FROM calls WHERE side='port'").fetchall()
+    # Build facts only: a call inside an %ifdef the shipping build never
+    # assembles is a source fact (label_status --callers keeps it) but not an
+    # edge of this build's graph. 'fallthrough' rows are proven boundaries and
+    # count exactly like explicit edges — regardless of kind.
+    calls = con.execute("SELECT caller, callee FROM calls "
+                        "WHERE side='port' AND build_active=1").fetchall()
     graph, callers = {}, {}
     for caller, callee in calls:
         caller_provider = providers.get(caller)
@@ -133,8 +151,11 @@ def main():
             "label": row["name"], "pret_file": row["pret_file"],
             "provider": provider, "provider_type": provider_type,
             "linkage": linkage, "linked_callers": len(callers.get(row['name'], ())),
-            "reachability": ("static-live-entry" if row['name'] in reachable
-                             else "not-statically-reached" if linkage == "linked"
+            # Names say exactly what the analysis proves. "static-live-entry"
+            # and "not-statically-reached" both overclaimed, and the negative
+            # was read as "unreachable" in at least two sessions.
+            "reachability": ("statically-reached-from-start" if row['name'] in reachable
+                             else "not-proven-reached" if linkage == "linked"
                              else "not-applicable"),
             "debug_reachability": "unknown",
             "coverage": [], "deviation": deviation,
