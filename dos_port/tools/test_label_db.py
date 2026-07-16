@@ -560,6 +560,48 @@ B:
     ret
 """), [])
 
+    def test_any_ah_4c_exit_code_terminates_not_just_0x4C00(self):
+        # Round-7 adversarial review, PROVEN DEFECT: AH=4Ch is terminate-with-
+        # return-code and AL is the code, so 0x4C02/0x4C01 terminate too.
+        # Matching 0x4C00 alone put two spurious edges in the DEFAULT shipping
+        # graph (entry.asm setup_flat_access.fail :196-197 ->  alloc_gb_memory,
+        # alloc_gb_memory.alloc_failed :240-241 -> parse_cmdline).
+        for setup in ('mov ax, 0x4C00', 'mov ax, 0x4C01', 'mov ax, 0x4C02',
+                      'mov ax, 0x4CFF', 'mov ax, 4c02h', 'mov ah, 0x4C'):
+            with self.subTest(setup=setup):
+                self.assertEqual(self.edges(
+                    f'section .text\nA:\n    call X\n.fail:\n    {setup}\n'
+                    f'    int 0x21\nB:\n    ret\n'), [])
+
+    def test_non_exit_ax_values_before_int21_are_not_terminators(self):
+        for setup in ('mov ax, 0x3D00', 'mov ax, 0x0101', 'mov ah, 0x09'):
+            with self.subTest(setup=setup):
+                edges = self.edges(
+                    f'section .text\nA:\n    {setup}\n    int 0x21\nB:\n    ret\n')
+                self.assertEqual([(e[0], e[1]) for e in edges], [('A', 'B')])
+
+    def test_dos_exit_tails_are_transitive_over_jmp_chains(self):
+        # Round-7 adversarial review, LATENT hole (pre-existing: the superseded
+        # anywhere-reading missed it identically). RunCalcStatsTest tails
+        # `jmp DebugDumpMemory` and never returns while containing no idiom.
+        cf = self.classify("""
+section .text
+DebugDumpMemory:
+    call WriteFile
+    mov ax, 0x4C00
+    int 0x21
+RunCalcStatsTest:
+    call ComputeStats
+    jmp DebugDumpMemory
+Innocent:
+    call Thing
+    jmp SomewhereThatReturns
+Last:
+    ret
+""")
+        self.assertEqual(uld.dos_exit_tails({'t.asm': cf}),
+                         {'DebugDumpMemory', 'RunCalcStatsTest'})
+
     def test_dos_exit_tail_callee_makes_a_tail_call_unproved(self):
         with self.assertRaises(uld.ScanError) as ctx:
             self.edges('section .text\nA:\n    call DumpBackbuffer\nB:\n    ret\n',

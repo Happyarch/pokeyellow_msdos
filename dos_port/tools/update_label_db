@@ -794,10 +794,32 @@ def classify_file(path, rel, defines, macros, include_dirs):
 
 # ── terminators (S6) ──────────────────────────────────────────────────────────
 
-DOS_EXIT_AX_RE = re.compile(r'^mov\s+ax\s*,\s*(0x4c00|4c00h|19456)\s*$', re.I)
 INT_21_RE = re.compile(r'^int\s+(0x21|21h|33)\s*$', re.I)
 CALL_RE = re.compile(r'^call\s+(?:short\s+|near\s+|dword\s+)?'
                      r'([A-Za-z_][A-Za-z0-9_]*)\s*$', re.I)
+JMP_LABEL_RE = re.compile(r'^jmp\s+(?:short\s+|near\s+|dword\s+)?'
+                          r'([A-Za-z_][A-Za-z0-9_]*)\s*$', re.I)
+_DOS_EXIT_MOV_RE = re.compile(r'^mov\s+(ax|ah)\s*,\s*(\S+)\s*$', re.I)
+
+
+def _is_dos_exit_setup(text):
+    """Does this instruction load the INT 21h terminate function?
+
+    AH=4Ch is "terminate with return code" and **AL is the code**, so every
+    0x4C__ terminates — not only 0x4C00. Matching 0x4C00 alone put two spurious
+    fall-through edges in the default shipping graph, because entry.asm exits
+    0x4C02 (`setup_flat_access.fail`, :196-197) and 0x4C01
+    (`alloc_gb_memory.alloc_failed`, :240-241) and both read as non-terminal.
+    Found by adversarial review, round 7. The `mov ah,0x4C` form does not occur
+    in this tree but is the same instruction and costs nothing to accept.
+    """
+    m = _DOS_EXIT_MOV_RE.match((text or '').strip())
+    if not m:
+        return False
+    val = _as_int(m.group(2))
+    if val is None:
+        return False
+    return (val >> 8) == 0x4C if m.group(1).lower() == 'ax' else val == 0x4C
 
 
 def _terminal_text(text, prev_text):
@@ -810,7 +832,7 @@ def _terminal_text(text, prev_text):
     if op == 'jmp':
         return True         # label / reg (`jp hl`) / [mem] dispatch: no edge
     if INT_21_RE.match(text.strip()):
-        return bool(prev_text and DOS_EXIT_AX_RE.match(prev_text.strip()))
+        return _is_dos_exit_setup(prev_text)
     return False
 
 
@@ -831,7 +853,7 @@ def is_terminal(tok, prev, macros, where):
 
 
 def dos_exit_tails(classified):
-    """Names whose active material TAIL is the DOS-terminate idiom (S6).
+    """Names whose active material TAIL ends the process rather than returning.
 
     A tail `call` into one of these has unproved return behavior: the callee's
     only proven exit is process termination, and an earlier path *might* return
@@ -845,17 +867,37 @@ def dos_exit_tails(classified):
     tail is `call DelayFrame`, so the anywhere-reading hard-fails the shipping
     tree and deletes the very boot-chain edge the plan exists to add. Tail is
     also the standard the rest of the model already uses (S5.5). See the plan's
-    round-7 amendment.
+    round-7 amendments.
+
+    TRANSITIVE over jmp-chains: a routine whose tail is `jmp Y` does not return
+    if Y does not — `RunCalcStatsTest` (debug_dump.asm:666) tails
+    `jmp DebugDumpMemory` (:680) and never returns, while containing no exit
+    idiom of its own. A single-level tail test misses it (so did the superseded
+    anywhere-reading), and it is one call-site away from manufacturing a
+    spurious edge. Name-keyed like the BFS: any occurrence poisons the name.
     """
-    names = set()
+    direct, jmps = set(), {}
     for cf in classified.values():
         for _sect, toks, i, body, _nxt in stream_entries(cf):
             instrs = [t for t in body if t.kind == 'instr' and not t.macro]
-            if len(instrs) < 2:
+            if not instrs:
                 continue
-            if INT_21_RE.match(instrs[-1].text.strip()) \
-               and DOS_EXIT_AX_RE.match(instrs[-2].text.strip()):
-                names.add(toks[i].name)
+            name = toks[i].name
+            if len(instrs) > 1 and INT_21_RE.match(instrs[-1].text.strip()) \
+               and _is_dos_exit_setup(instrs[-2].text):
+                direct.add(name)
+                continue
+            m = JMP_LABEL_RE.match(instrs[-1].text)
+            if m:
+                jmps.setdefault(name, set()).add(m.group(1))
+    names = set(direct)
+    changed = True
+    while changed:                  # fixpoint: chains are short, this converges
+        changed = False
+        for name, targets in jmps.items():
+            if name not in names and targets & names:
+                names.add(name)
+                changed = True
     return names
 
 

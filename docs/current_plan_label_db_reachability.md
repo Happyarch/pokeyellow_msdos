@@ -1,12 +1,15 @@
 # Current Plan: label-DB reachability — %ifdef-aware scan + fall-through edges
 
-**Status:** round 7 — **IMPLEMENTED AND LANDED** (2026-07-16). All V1–V8 pass;
-reachable 385 → 1051. One normative amendment was forced by the tree during
-implementation (S6's DOS-exit rule is decided by the callee's material TAIL, not
-by "contains the idiom anywhere" — the anywhere-reading hard-fails the shipping
-tree and deletes the boot-chain edge V2 mandates). See "Round 7 —
-implementation" for the evidence, the corrected measurements, and what a
-reviewer should scrutinize. Ready to archive once round 7 is reviewed.
+**Status:** round 7 — **IMPLEMENTED, LANDED, AND REVIEWED** (2026-07-16). All
+V1–V8 pass (67 fixtures); reachable 385 → 1051. One normative amendment was
+forced by the tree during implementation (S6's DOS-exit rule is decided by the
+callee's material TAIL, not by "contains the idiom anywhere" — the
+anywhere-reading hard-fails the shipping tree and deletes the boot-chain edge V2
+mandates). Round-7 review then found and fixed a **real false-edge defect in the
+shipping graph** (Amendment 5: AH=4Ch terminates with any exit code) that the
+author's own three audits had passed. See "Round 7 — implementation + review".
+**A codex/second-agent read of Amendments 1, 5 and 6 is the one thing still
+outstanding** — A5 exists precisely because the adversary was absent.
 
 **Status before implementation:** round 6 — **adversarial review converged; implementation-ready v1**
 (round 5 = codex sign-off; round 6 = post-signoff self-review, three small
@@ -811,10 +814,21 @@ anywhere in `src/`+`boot/`, so the S6 terminator table is complete for the
 live corpus; the 1 top-level label inside a `BUG_FIX_LEVEL` block is covered
 by S2's definitions-unfiltered rule.
 
-## Round 7 — implementation (Claude, 2026-07-16)
+## Round 7 — implementation + review (Claude, 2026-07-16)
 
-**Implemented and landed.** All V1–V8 pass. One normative amendment was forced by
-the tree, one measurement corrected, one bug found in the spec's own premise.
+**Implemented and landed.** All V1–V8 pass (67 fixtures). Six amendments: one
+normative rule change forced by the tree (A1), three measurement corrections
+(A2/A3/A4), and **two defects found by an independent adversarial reviewer after
+the author's own review had already passed** (A5 — a real false-edge bug shipping
+in the committed default graph — and A6).
+
+A5 is the round's most useful result, and not because of the bug. The author ran
+three audits, all passed, and the round-7 text above was written declaring the
+work sound. A reviewer with fresh context, instructed to *refute* rather than
+check, found a defect all three audits were structurally incapable of seeing.
+**Self-review converges on the author's blind spot; an adversary with the tree
+does not.** That is the entire reason this plan was reviewed across six rounds by
+a second agent, and A5 is what happened the one time that adversary was absent.
 
 ### Amendment 1 (normative, S6): the DOS-exit rule is decided by the callee's TAIL, not by "anywhere in its body"
 
@@ -838,15 +852,27 @@ self-contradictory with V2/V3:**
 **The tail rule is what the plan already means.** Its own reason for excluding
 `DumpSeamLog` is "it ends in `ret`" — that is a tail test, not an anywhere test.
 Tail is also the standard the whole model uses (S5.5, and S6's own direct rule).
-Under the amendment, `DumpBackbuffer`/`DebugDumpMemory` still hard-fail (their
-tails ARE the idiom), `DumpSeamLog` still does not, and `DelayFrame`-shaped
+Under the amendment `DumpSeamLog` is still excluded and `DelayFrame`-shaped
 callees keep their real edges. Fixtures:
 `Terminators.test_dos_exit_tails_are_detected_by_tail_not_by_presence` and
 `test_delayframe_shaped_callee_keeps_its_edge`.
 
-This is the *fourth* wrong "never fires / unchanged" claim of this review, same
-class as the three rounds 1–6 caught. The lesson repeats: **verify the assertion
-against the tree, not against the argument.**
+**Correction (round-7 self-review, measured):** an earlier draft of this
+amendment said the rule "fires on `DumpBackbuffer`/`DebugDumpMemory`" in a
+`--config DEBUG_*` run. **It does not fire in any config.** Swept 17 DEBUG_*
+configs: the DOS-exit-tail set is only ever `{start, DebugDumpMemory,
+DumpBackbuffer, DumpPerf, DumpNpcLog}` (plus `setup_flat_access`/
+`alloc_gb_memory`, Amendment 5), and **none of them is ever a boundary
+tail-call** — every call site is mid-body, and `start`'s own tail is the exit
+pair. So the S6 hard-fail is a **backstop that is dead in the shipping tree and
+in every advertised config**; its correctness is proven by fixture only. That is
+still worth keeping (it is the refusal that stops a future tail-call from
+silently minting a false edge), but the plan must not claim it fires. This was
+the *fifth* wrong "it fires / never fires / is unchanged" claim of this review —
+and the first one this document made about its own implementation.
+
+The lesson repeats: **verify the assertion against the tree, not against the
+argument.**
 
 ### Amendment 2 (measurement): V7's DEBUG_PARTY either/or resolved
 
@@ -864,30 +890,36 @@ V7's pass condition. Recorded as the plan asked.
 | boot-chain fallthrough edges | all three exist, `kind='fallthrough'` |
 | V2 positives | all 9 `statically-reached-from-start` |
 | V2 negatives (Bug 2) | all 5 gone; `debug_dump.asm`/`perf.asm` non-members (Bug 3) |
-| fallthrough edges emitted | 139 |
+| fallthrough edges emitted | **137** (139 before Amendment 5 removed two false ones) |
 | V5 | `faithdiff` byte-identical; lint 0/6 suppressed; labels/port_defs/externs/pret-calls and the full 4565-row explicit call inventory **byte-identical** vs a controlled old-scanner run; 546 non-member rows kept at `build_active=0`; `--callers StoreTrainerHeaderPointer` keeps its 70 check-only rows; `--callers EnterMap` shows `EnterMapBoot` `fallthrough` |
 | V6 | identical `content_hash` across runs |
 | V7 | `BUG_FIX_LEVEL=2` moves the edge set by exactly **+4** (round 6 predicted 4) |
 | V8 | `fidelity_gate` rc=0; `make` builds; `goldencheck overworld_pallet` **PASS** |
 
-### Amendment 3 (measurement): 139 real fall-throughs, not ~857 — audited, not asserted
+### Amendment 3 (measurement): 137 real fall-throughs, not ~857 — audited, not asserted
 
 The Context section's "~857 apparent sites, ~40% of 2147 top-level labels" does not
-survive contact: **139** edges are emitted (111 fall-throughs + 28 zero-byte code
+survive contact: **137** edges are emitted (109 fall-throughs + 28 zero-byte code
 aliases). A 6x gap is exactly the shape of an implementation silently dropping
 edges, so it was audited in both directions rather than explained away.
 
-**Full accounting of the default config (every number countable):**
+**Full accounting of the default config (every number countable, post-Amendment 5):**
 
 | | count |
 |---|---|
 | active top-level label occurrences in member files | 2006 |
 | …in an executable stream | 1590 |
-| …of those: **terminal tail → no edge (correct)** | **1384** (`ret` 1050, `jmp` 331, `iret` 2, DOS-exit 1) |
+| …of those: **terminal tail → no edge (correct)** | **1386** (`ret` 1050, `jmp` 331, DOS-exit 3, `iret` 2) |
 | …data entry (first material token emits bytes) | 66 |
 | …no body at all | 1 |
 | …zero-byte code alias → edge | 28 |
-| …non-terminal → **fall-through edge** | 111 |
+| …non-terminal → **fall-through edge** | 109 |
+
+Of the 331 `jmp` tails, **1224 direct `jmp Label` sites tree-wide are already
+explicit edges** and only **12** are indirect (`jmp esi`, `jmp [OptionMenuJumpTable
++ eax*4]`, `.outOfBattleMovePointers`) — i.e. the documented dd-table gap is
+narrow at the `jmp` level; the bulk of it is address-taken `dd Label` tables and
+the two ISRs.
 
 The gap is one fact: **most routines end in `ret` or `jmp`.** The crude estimate
 counted labels whose *preceding physical line* is not a terminator, which sweeps in
@@ -896,24 +928,46 @@ non-member files. Re-deriving that rule here yields 1120/2187 — not the plan's
 857/2147 either, so the original heuristic is not reconstructible and was never
 load-bearing.
 
-**Audit 1 — no missed fall-through (the human comments are ground truth).** The
-port carries 174 `; fall through`-style comments in member files. 27 point at a
-LOCAL label (intra-routine — no edge by design); 56 sit at a top-level boundary,
-of which **34 produced an edge and 22 did not**. All 22 were checked individually:
-every one has a proven terminal tail (`ret`/`jmp`) or is a `.data` label — they are
-header comments for the *next* routine, or describe pret's structure, or describe a
-fall into a *local* label. Two worth keeping: `Audio1_note_length`
+**Where completeness actually comes from — and where it does not.** The
+accounting above is exhaustive *by construction*: every executable entry lands in
+exactly one bucket, so no entry can be silently skipped. That is the completeness
+argument. The two audits below are narrower checks on *specific* misclassification
+risks, and neither proves completeness on its own. Amendment 5 is the proof that
+this distinction is not pedantry: both audits passed while two of the "111" were
+false.
+
+**Audit 1 — no missed fall-through among the COMMENTED sites.** The port carries
+174 `; fall through`-style comments in member files. 27 point at a LOCAL label
+(intra-routine — no edge by design); 56 sit at a top-level boundary, of which
+**34 produced an edge and 22 did not**. All 22 were checked individually: every
+one has a proven terminal tail (`ret`/`jmp`) or is a `.data` label — they are
+header comments for the *next* routine, or describe pret's structure, or describe
+a fall into a *local* label. Two worth keeping: `Audio1_note_length`
 (`engine_1.asm:673`) is commented "falls through … with the command byte on the
-stack" but genuinely ends in `ret` — the paths into `Audio1_note_pitch` are explicit
-`jnz`/`jz`, already edges. `UncompressSpriteData` ends `call _UncompressSpriteData`
-/ `ret`; its comment is a header for the next routine. **Zero real misses.**
+stack" but genuinely ends in `ret` — the paths into `Audio1_note_pitch` are
+explicit `jnz`/`jz`, already edges. `UncompressSpriteData` ends
+`call _UncompressSpriteData` / `ret`; its comment is a header for the next routine.
+**Scope: this proves no *commented* fall-through was missed.** Only 34 of 137
+edges are comment-covered, and nobody comments a fall-through that does not
+exist — so this audit is a lower bound and is structurally incapable of finding a
+false-positive edge (which is exactly what Amendment 5 turned out to be).
 
 **Audit 2 — no code misfiled as data.** All 66 data-in-`.text` entries were listed
 and eyeballed: `text_far` string pointers, `dd` dispatch tables
 (`MoveEffectPointerTable`, `TrainerAIPointers`, `NPCMovementScriptPointerTables`),
 movement/coordinate/animation byte tables (`PushBoulder*MovementData`,
 `CutAnimationOffsets`, `CutTreeBlockSwaps`). Every one is genuinely data.
-**Zero misclassifications.**
+**Zero misclassifications. Scope: entry-kind only — it says nothing about
+terminator correctness**, which is where the real defect was.
+
+**Audit 3 — every emitted edge re-derived from raw source.** All 137 rows
+re-validated by a script sharing no code with the classifier (fresh regexes, fresh
+terminator notion, reading the `.asm` files as plain text): for each row, the
+cited line really is the caller's last instruction and really is non-terminal, and
+the callee really is the next top-level label. 109 tail edges + 28 alias edges,
+**zero failures**. This one *can* catch a false positive — but only for
+terminators it also models, which is why it did not catch Amendment 5 either
+(it inherited the same 0x4C00 assumption). The independent reviewer did.
 
 ### Amendment 4 (measurement): 1051 ≈ 1046 is a COINCIDENCE — do not read it as confirmation
 
@@ -934,6 +988,68 @@ So "it landed on the projection" would be a **false confirmation** — the proje
 only ever modelled 3 edges and no false positives. The number to trust is the
 decomposition above, not the total. (Same failure mode the review kept catching: a
 satisfying number that was never evidence for the claim attached to it.)
+
+### Amendment 5 (DEFECT, fixed): AH=4Ch terminates with ANY exit code — the tool emitted two spurious edges in the shipping graph
+
+Found by an **independent adversarial reviewer** (fresh context, told to refute)
+after the author's own round-7 review had passed the amendment. The author
+missed it.
+
+`DOS_EXIT_AX_RE` matched only `mov ax, 0x4C00`. But `INT 21h` **AH=4Ch** is
+"terminate with return code" and **AL is the code** — so every `0x4C__`
+terminates. `boot/entry.asm` exits with codes on setup failure:
+
+- `setup_flat_access.fail` (`:196-197`) — `mov ax, 0x4C02` / `int 0x21`
+- `alloc_gb_memory.alloc_failed` (`:240-241`) — `mov ax, 0x4C01` / `int 0x21`
+
+`.fail`/`.alloc_failed` are *local* labels, so those pairs are the **material
+tails** of two top-level routines. `_terminal_text` saw `int 0x21` with a
+non-matching `prev`, called it non-terminal, and emitted:
+
+```
+setup_flat_access -> alloc_gb_memory   (fallthrough, entry.asm:197)
+alloc_gb_memory   -> parse_cmdline     (fallthrough, entry.asm:241)
+```
+
+Both are **false** — those routines terminate the process — and both were
+`build_active=1` in the **committed default graph**. A tool whose stated posture
+is "refusing to emit a knowingly spurious edge" was shipping two.
+
+Fixed: `_is_dos_exit_setup` now tests `(val >> 8) == 0x4C` for `mov ax, …`
+(accepting `0x4C02`, `4c02h`, decimal) and `val == 0x4C` for the `mov ah, …`
+form, which does not occur in this tree but is the same instruction. Edges
+**139 → 137**; reachable stays **1051**, because `entry.asm:94-96` calls all
+three routines directly — the false edges were redundant, which is exactly why
+nothing downstream noticed. Fixtures:
+`test_any_ah_4c_exit_code_terminates_not_just_0x4C00` (6 forms) and
+`test_non_exit_ax_values_before_int21_are_not_terminators` (0x3D00/0x0101/`mov
+ah,0x09` must stay non-terminal).
+
+**Why the author's audits missed it:** Audit 1 checks human `; fall through`
+comments, and nobody comments a fall-through that does not exist. Audit 2 checks
+data-vs-code, not terminator correctness. The accounting table counted these two
+in the 111 without questioning them. A confirmation-shaped audit cannot find a
+defect in the rule it assumes.
+
+### Amendment 6 (latent hole, closed): DOS-exit tails are transitive over jmp-chains
+
+Same reviewer. A routine that never returns *by one level of indirection* was
+not in the set: `RunCalcStatsTest` (`debug_dump.asm:666`) tails
+`jmp DebugDumpMemory` (`:680`), and `RunPartySeedTest` (`:757`) tails the same
+(`:764`). Neither contains an exit idiom of its own, so a boundary tail-calling
+one would have sailed past the guard and emitted a spurious edge.
+
+**Latent, and pre-existing rather than introduced by Amendment 1** — the
+superseded "contains the idiom anywhere" reading missed it identically (the
+idiom is in the *callee*, not in these bodies). Verified not to fire: across 17
+configs no boundary tail-calls a never-returning routine. Closed anyway, because
+it is one call site away from mattering: `dos_exit_tails` is now a fixpoint over
+`jmp`-chains. Fixture: `test_dos_exit_tails_are_transitive_over_jmp_chains`.
+
+Terminator table otherwise confirmed complete for this corpus by the same sweep:
+no `hlt`/`ud2`/`into`; `int3` appears only mid-body as an assertion trap
+(`window.asm:180`, `text.asm:248,665`, `ppu.asm:985,1201`), never as a tail; no
+`mov ah,0x4C` form; `jmp` through reg/mem and `iret` handled.
 
 ### Notes for the next session
 - `lint_pret_labels --strict-claims` reports **1** violation (`stale_provider`,
