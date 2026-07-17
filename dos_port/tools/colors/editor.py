@@ -8,9 +8,12 @@ sidecar deltas, Esc quits.
 
 Every palette starts from pret's CGB colours auto-mapped to VGA (six-bit); the
 sidecar only stores manual deltas on top, so an untouched palette reads "auto
-GBC->VGA". The battle mock shows the active palette on real sprites: mon mode =
-enemy front sprite + the player-mon back sprite; trainer mode = enemy trainer
-front pic + Red's back sprite.
+GBC->VGA". In mon mode each species previews in ITS OWN palette (pret
+MonsterPalettes, base unless overridden), so cycling species shows real
+per-species colours and the edited palette follows the sprite; [/] steps palette
+families directly and snaps to a species that uses the one you land on. The
+battle mock shows real sprites: mon mode = enemy front sprite + the player-mon
+back sprite; trainer mode = enemy trainer front pic + Red's back sprite.
 """
 from __future__ import annotations
 
@@ -41,11 +44,40 @@ class Editor:
         self.pals = list(self.base)
         self.species = sprites.previewable_species()   # dex order, no MISSINGNO
         self.trainers = sprites.trainer_pngs()          # (label, path) list
+        self.mon_pal = palettes.parse_monster_palettes()  # species -> PAL_* family
         self.mode = "mon"                               # "mon" | "trainer"
         self.pi = self.si = self.ti = 0
         self.shade = BG_SHADE + 1                        # start on an editable slot
+        self.sync_pal_to_species()                       # each mon shows its own palette
         pygame.init(); self.screen = pygame.display.set_mode((720, 520))
         self.font = pygame.font.SysFont("monospace", 17)
+
+    def species_pal_name(self) -> str:
+        """The PAL_* family the current species uses (its sidecar remap, else the
+        pret MonsterPalettes default)."""
+        sp = self.species[self.si]
+        return self.sidecar.species_overrides.get(sp, {}).get("pal", self.mon_pal[sp])
+
+    def sync_pal_to_species(self):
+        """In mon mode the edited palette IS the species' palette, so a mon always
+        previews in its own colours (base unless overridden) instead of whatever
+        family the cursor last sat on."""
+        if self.mode == "mon":
+            name = self.species_pal_name()
+            if name in self.pals:
+                self.pi = self.pals.index(name)
+
+    def snap_species_to_pal(self):
+        """After a raw palette step in mon mode, jump to a species that actually
+        uses it so the sprite matches the palette being edited; leave the sprite
+        as-is for a non-mon palette (route/UI) that no species uses."""
+        if self.mode != "mon":
+            return
+        target = self.pals[self.pi]
+        for i, sp in enumerate(self.species):
+            if self.mon_pal[sp] == target:
+                self.si = i
+                return
 
     def active(self):
         name = self.pals[self.pi]
@@ -68,6 +100,7 @@ class Editor:
             self.ti = (self.ti + step) % len(self.trainers)
         else:
             self.si = (self.si + step) % len(self.species)
+            self.sync_pal_to_species()
 
     def draw(self):
         pal = self.active(); subj, name = self.subject()
@@ -119,11 +152,12 @@ class Editor:
                 if ev.type == pygame.QUIT or (ev.type == pygame.KEYDOWN and ev.key == pygame.K_ESCAPE): return
                 if ev.type != pygame.KEYDOWN: continue
                 if ev.key in (pygame.K_LEFT, pygame.K_RIGHT, pygame.K_UP, pygame.K_DOWN, pygame.K_PAGEUP, pygame.K_PAGEDOWN): self.key(ev.key)
-                elif ev.key == pygame.K_LEFTBRACKET: self.pi = (self.pi - 1) % len(self.pals)
-                elif ev.key == pygame.K_RIGHTBRACKET: self.pi = (self.pi + 1) % len(self.pals)
+                elif ev.key == pygame.K_LEFTBRACKET: self.pi = (self.pi - 1) % len(self.pals); self.snap_species_to_pal()
+                elif ev.key == pygame.K_RIGHTBRACKET: self.pi = (self.pi + 1) % len(self.pals); self.snap_species_to_pal()
                 elif ev.key == pygame.K_COMMA: self.cycle_subject(-1)
                 elif ev.key == pygame.K_PERIOD: self.cycle_subject(1)
-                elif ev.key == pygame.K_t: self.mode = "trainer" if self.mode == "mon" else "mon"
+                elif ev.key == pygame.K_t:
+                    self.mode = "trainer" if self.mode == "mon" else "mon"; self.sync_pal_to_species()
                 elif pygame.K_1 <= ev.key <= pygame.K_4: self.shade = ev.key - pygame.K_1
                 elif ev.key == pygame.K_s: self.save()
             self.draw(); pygame.time.wait(16)

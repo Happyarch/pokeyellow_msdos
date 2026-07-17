@@ -474,9 +474,14 @@ there; the battle BG/OBJ colour 0 comes from it, so editing it per-palette would
 recolour the whole background). Every palette starts from pret's CGB colours
 **auto-mapped to VGA six-bit** (`round(v*63/31)` in `parse_cgb_base_palettes`);
 the sidecar (`pal_overrides`) holds only manual deltas, so an untouched palette
-shows "auto GBC->VGA" and the generated `palettes.inc` is the automap unless you
-tweak it (there are currently zero overrides — the pipeline is already ~100%
-automated). Sprite files are resolved via pret's real filenames
+shows "auto" and the generated `palettes.inc` is the automap unless you tweak it
+(there are currently zero overrides — the pipeline is already ~100% automated).
+**In mon mode the preview palette follows the species** — each mon renders in its
+own `MonsterPalettes` family (base unless overridden), so cycling species shows
+real per-species colours (Bulbasaur green, Charizard red, …) rather than whatever
+family the cursor last sat on; `[`/`]` steps palette families directly and snaps
+to a species that uses the one you land on. Sprite files are resolved via pret's
+real filenames
 (`gfx_core/sprites.py`, keyed off `base_stats.asm` like `gen_mon_pics.py`), not
 guessed from the species constant. There is no `--edit <path>` flag on
 `colorize.py` itself — for a non-default sidecar run `tools/colors/editor.py
