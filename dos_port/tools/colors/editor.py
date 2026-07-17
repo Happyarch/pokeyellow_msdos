@@ -2,12 +2,15 @@
 """C2 shade editor — palette-family RGB editing with Pokémon/battle previews.
 
 Controls: [/] choose palette, ,/. choose species (or trainer), t toggle
-mon/trainer battle mock, 1-4 choose shade, arrow keys adjust R/G, PgUp/PgDn
-adjust B, S saves sidecar deltas, Esc quits.
+mon/trainer battle mock, 2-4 choose shade (shade 1 is the shared white
+background and is read-only), arrow keys adjust R/G, PgUp/PgDn adjust B, S saves
+sidecar deltas, Esc quits.
 
-The battle mock shows the active palette on real sprites: mon mode = enemy
-front sprite + the player-mon back sprite; trainer mode = enemy trainer front
-pic + Red's back sprite.
+Every palette starts from pret's CGB colours auto-mapped to VGA (six-bit); the
+sidecar only stores manual deltas on top, so an untouched palette reads "auto
+GBC->VGA". The battle mock shows the active palette on real sprites: mon mode =
+enemy front sprite + the player-mon back sprite; trainer mode = enemy trainer
+front pic + Red's back sprite.
 """
 from __future__ import annotations
 
@@ -21,6 +24,14 @@ sys.path.insert(0, str(HERE))
 from colors import render, schema
 from gfx_core import palettes, sprites
 
+# Shade 0 is the shared white background across every pret CGB palette (all 40
+# rows of CGBBasePalettes are 31,31,31 at index 0). The battle BG and OBJ colour
+# 0 come from it, so it is read-only here — editing it per-palette would recolour
+# the whole battle background and diverge from the GBC. (When a mon genuinely
+# reuses that white for its own body, it is shared with the background and is
+# likewise left alone — same slot, same rule.)
+BG_SHADE = 0
+
 
 class Editor:
     def __init__(self, path: Path, zoom: int):
@@ -31,8 +42,9 @@ class Editor:
         self.species = sprites.previewable_species()   # dex order, no MISSINGNO
         self.trainers = sprites.trainer_pngs()          # (label, path) list
         self.mode = "mon"                               # "mon" | "trainer"
-        self.pi = self.si = self.ti = self.shade = 0
-        pygame.init(); self.screen = pygame.display.set_mode((640, 520))
+        self.pi = self.si = self.ti = 0
+        self.shade = BG_SHADE + 1                        # start on an editable slot
+        pygame.init(); self.screen = pygame.display.set_mode((720, 520))
         self.font = pygame.font.SysFont("monospace", 17)
 
     def active(self):
@@ -65,20 +77,31 @@ class Editor:
         self.screen.fill((22, 22, 28)); self.screen.blit(surf, (0, 0))
         x, y = 332, 16
         subj_kind = "trainer" if self.mode == "trainer" else "species"
-        lines = [f"palette {self.pals[self.pi]}", f"{subj_kind} {name}",
+        # Every palette starts from pret's CGB colours auto-mapped to VGA; the
+        # sidecar only holds manual deltas. Show which the active palette is so
+        # the automap default is visible, not mistaken for hand-entered values.
+        src = "override" if self.pals[self.pi] in self.sidecar.pal_overrides else "auto"
+        lines = [f"palette {self.pals[self.pi]} ({src})", f"{subj_kind} {name}",
                  "[/] palette  [,/.] subject", "t mon/trainer battle",
-                 "1-4 shade  arrows R/G  Pg B", "S save  Esc quit"]
+                 "2-4 shade  arrows R/G  Pg B", "1 = bg (locked)", "S save  Esc quit"]
         for line in lines:
             self.screen.blit(self.font.render(line, True, (230, 230, 230)), (x, y)); y += 24
         y += 8
         for i, color in enumerate(pal):
             rgb = tuple(v * 255 // 63 for v in color)
+            locked = i == BG_SHADE
             pygame.draw.rect(self.screen, rgb, (x, y, 80, 32))
-            pygame.draw.rect(self.screen, (255, 80, 80) if i == self.shade else (220,220,220), (x, y, 80, 32), 2)
-            self.screen.blit(self.font.render(f"{i+1}: {color}", True, (230,230,230)), (x+92, y+7)); y += 40
+            border = (110, 110, 120) if locked else \
+                     (255, 80, 80) if i == self.shade else (220, 220, 220)
+            pygame.draw.rect(self.screen, border, (x, y, 80, 32), 2)
+            label = f"{i+1}: {color}" + ("  bg lock" if locked else "")
+            tint = (150, 150, 160) if locked else (230, 230, 230)
+            self.screen.blit(self.font.render(label, True, tint), (x + 92, y + 7)); y += 40
         pygame.display.flip()
 
     def key(self, key):
+        if self.shade == BG_SHADE:
+            return                                       # shared bg white — read-only
         if key == pygame.K_LEFT: delta = (-1, 0, 0)
         elif key == pygame.K_RIGHT: delta = (1, 0, 0)
         elif key == pygame.K_UP: delta = (0, 1, 0)

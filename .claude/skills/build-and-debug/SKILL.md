@@ -466,13 +466,21 @@ tools/colorize.py --import-png PATH.png    # re-import a repainted PNG (<=4 colo
 `--edit` controls (`colors/editor.py`, live battle-scene mock preview): `[`/`]`
 cycle the `PAL_*` family, `,`/`.` cycle the preview subject, `t` toggle the mock
 between mon battle (enemy front sprite + player-mon **back** sprite) and trainer
-battle (enemy trainer front pic + Red's back sprite), `1`-`4` pick a shade,
+battle (enemy trainer front pic + Red's back sprite), `2`-`4` pick a shade,
 arrow keys adjust R/G, `PgUp`/`PgDn` adjust B, `S` saves sidecar deltas (prints
-a reminder to run `--gen`), `Esc` quits. Sprite files are resolved via pret's
-real filenames (`gfx_core/sprites.py`, keyed off `base_stats.asm` like
-`gen_mon_pics.py`), not guessed from the species constant. There is no
-`--edit <path>` flag on `colorize.py` itself — for a non-default sidecar run
-`tools/colors/editor.py <path> --zoom N` directly.
+a reminder to run `--gen`), `Esc` quits. **Shade 1 (index 0) is the shared white
+background — read-only** (all 40 pret `CGBBasePalettes` rows are `31,31,31`
+there; the battle BG/OBJ colour 0 comes from it, so editing it per-palette would
+recolour the whole background). Every palette starts from pret's CGB colours
+**auto-mapped to VGA six-bit** (`round(v*63/31)` in `parse_cgb_base_palettes`);
+the sidecar (`pal_overrides`) holds only manual deltas, so an untouched palette
+shows "auto GBC->VGA" and the generated `palettes.inc` is the automap unless you
+tweak it (there are currently zero overrides — the pipeline is already ~100%
+automated). Sprite files are resolved via pret's real filenames
+(`gfx_core/sprites.py`, keyed off `base_stats.asm` like `gen_mon_pics.py`), not
+guessed from the species constant. There is no `--edit <path>` flag on
+`colorize.py` itself — for a non-default sidecar run `tools/colors/editor.py
+<path> --zoom N` directly.
 
 **Overworld maps:** `tools/map_editor/editor.py` — viewer/painter for the
 border-ring authoring + block painting that feed `generators/gen_map_borders.py`
