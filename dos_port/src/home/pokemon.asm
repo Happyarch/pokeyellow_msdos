@@ -86,7 +86,7 @@ global DrawHPBar
 CHAR_LV        equ 0x6E     ; '<LV>' ":L" tile (constants/charmap.asm:67)
 
 ; "FNT" (PrintStatusCondition) — Tier-1 data, charmap-encoded by
-; tools/gen_menu_strings.py. Unterminated: pret writes it with ld_hli_a_string.
+; tools/generators/gen_menu_strings.py. Unterminated: pret writes it with ld_hli_a_string.
 %include "assets/home_pokemon_strings.inc"
 
 section .text

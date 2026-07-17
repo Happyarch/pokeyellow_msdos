@@ -267,7 +267,7 @@ AskName:
 ;
 ; It used to be 12 lines of hand-encoded charmap `db` bytes, under a comment claiming
 ; the inline "stays only because data/text/text_3.asm has no generator yet". That was
-; false: tools/gen_battle_text.collect_far already flattened every stream in text_3.asm
+; false: tools/generators/gen_battle_text.collect_far already flattened every stream in text_3.asm
 ; (483 labels, this one among them) — nobody had pointed it at this label. Both halves
 ; of the old comment's excuse were gone: TX_FAR takes a flat 32-bit operand and the
 ; text engine splices it recursively (home/text.asm:1141). Migrated at menu-fidelity

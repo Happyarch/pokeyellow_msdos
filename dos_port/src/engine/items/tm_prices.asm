@@ -2,7 +2,7 @@
 ; GetMachinePrice: look up a TM's buy price (in thousands) from the packed-nybble
 ; TechnicalMachinePrices table and store it as BCD at hItemPrice.
 ;
-; TechnicalMachinePrices is generated into assets/items.inc by tools/gen_items.py.
+; TechnicalMachinePrices is generated into assets/items.inc by tools/generators/gen_items.py.
 ;
 ; Build: nasm -f coff -I include/ -I . -o /dev/null src/engine/items/tm_prices.asm
 

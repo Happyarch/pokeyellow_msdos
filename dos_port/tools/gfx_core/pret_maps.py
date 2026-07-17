@@ -1,10 +1,10 @@
 """pret_maps.py — read-only pret map metadata, via gen_map_headers's parsers.
 
-Imports tools/gen_map_headers.py as a module (its main() is guarded) and
-reuses its parsers/tables verbatim — parse_map_constants, parse_all_headers,
-parse_object_file, TILESET_IDS/TILESET_CANONICAL, CONNECTIONS,
-get_connection — so the tools can never drift from what the generator emits.
-Everything here reads the pret tree; nothing writes.
+Imports tools/generators/gen_map_headers.py as a module (its main() is
+guarded) and reuses its parsers/tables verbatim — parse_map_constants,
+parse_all_headers, parse_object_file, TILESET_IDS/TILESET_CANONICAL,
+CONNECTIONS, get_connection — so the tools can never drift from what the
+generator emits. Everything here reads the pret tree; nothing writes.
 """
 from __future__ import annotations
 
@@ -15,6 +15,7 @@ from pathlib import Path
 
 _TOOLS = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_TOOLS))
+sys.path.insert(0, str(_TOOLS / "generators"))
 
 import gen_map_headers as gmh          # noqa: E402
 

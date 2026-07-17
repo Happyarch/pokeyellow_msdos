@@ -4,11 +4,11 @@
 ; (GetMonHeader, CalcStat, CalcExperience, …) can `extern` them. Per the linker
 ; rule in docs/assembly.md, embedded data lives in .data (not .rodata).
 ;
-; BaseStats / IndexToPokedex : tools/gen_base_stats.py (from data/pokemon/).
-; GrowthRateTable            : tools/gen_growth_rates.py (from data/growth_rates.asm).
-; Moves                      : tools/gen_moves.py (from data/moves/moves.asm).
-; EvosMovesPointerTable      : tools/gen_evos_moves.py (flat dd pointers + blobs).
-; MonsterNames               : tools/gen_monster_names.py (charmap-encoded names).
+; BaseStats / IndexToPokedex : tools/generators/gen_base_stats.py (from data/pokemon/).
+; GrowthRateTable            : tools/generators/gen_growth_rates.py (from data/growth_rates.asm).
+; Moves                      : tools/generators/gen_moves.py (from data/moves/moves.asm).
+; EvosMovesPointerTable      : tools/generators/gen_evos_moves.py (flat dd pointers + blobs).
+; MonsterNames               : tools/generators/gen_monster_names.py (charmap-encoded names).
 ;
 ; Build: nasm -f coff -I include/ -I . -o pokemon_data.o pokemon_data.asm
 

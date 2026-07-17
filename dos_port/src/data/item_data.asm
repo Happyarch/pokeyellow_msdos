@@ -4,10 +4,10 @@
 ; can `extern` them. Per the linker rule in docs/assembly.md, embedded data lives
 ; in .data (not .rodata).
 ;
-; ItemNames       : tools/gen_items.py ('@'-terminated, GB-charmap encoded).
-; ItemPrices      : tools/gen_items.py (3-byte BCD per item id).
-; KeyItemFlags    : tools/gen_items.py (1-bit-per-item untossable flags).
-; MartInventories : tools/gen_items.py (db count, item ids, $FF per mart);
+; ItemNames       : tools/generators/gen_items.py ('@'-terminated, GB-charmap encoded).
+; ItemPrices      : tools/generators/gen_items.py (3-byte BCD per item id).
+; KeyItemFlags    : tools/generators/gen_items.py (1-bit-per-item untossable flags).
+; MartInventories : tools/generators/gen_items.py (db count, item ids, $FF per mart);
 ;                   MartPointers indexes them in source order.
 ;
 ; Build: nasm -f coff -I include/ -I . -o item_data.o item_data.asm

@@ -13,7 +13,7 @@ make compare                # verify the reference ROM (requires rgbds 1.0.1)
 `dos_port/assets/font_1bpp.inc` is committed and regenerated from the source PNG:
 
 ```sh
-python3 tools/gen_font_inc.py   # requires Pillow: pip install Pillow
+python3 tools/generators/gen_font_inc.py   # requires Pillow: pip install Pillow
 ```
 
 ## Running in DOSBox-X

@@ -5,7 +5,7 @@
 ;
 ; *** PORT DIVERGENCE — read before touching ***
 ; The port's toggleable-object subsystem was flattened ahead of this ticket
-; (tools/gen_toggleable_objects.py + map_sprites.asm). Instead of pret's runtime
+; (tools/generators/gen_toggleable_objects.py + map_sprites.asm). Instead of pret's runtime
 ; model — a 3-byte-per-entry `ToggleableObjectStates` table, a `wToggleableObjectList`
 ; rebuilt per map by dividing a pointer difference by 3, and an ebp-relative
 ; `wToggleableObjectFlags` bit array — the port:

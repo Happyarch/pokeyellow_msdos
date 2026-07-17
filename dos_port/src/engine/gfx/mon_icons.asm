@@ -78,7 +78,7 @@ OBJ_SIZE  equ OAM_ENTRY_SIZE                     ; 4 — pret's name for it
 
 section .data
 align 4
-; Icon tile patterns + the ICON_* enum + MonPartyData (tools/gen_mon_icons_inc.py).
+; Icon tile patterns + the ICON_* enum + MonPartyData (tools/generators/gen_mon_icons_inc.py).
 ; Tier-1 data — never hand-edit; MonPartySpritePointers below is the Tier-2 pointer
 ; table that indexes it (project-conventions: pointer tables are code).
 %include "assets/mon_icons.inc"

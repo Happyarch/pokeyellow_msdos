@@ -1447,7 +1447,7 @@ PLAYER_DIR_BIT_UP        equ 3
 ; The unused ROM area ($0000–$7FFF, below VRAM) holds asset data that faithful
 ; routines (LoadTilesetTilePatternData, DrawTileBlock, LoadTileBlockMap,
 ; LoadMapHeader, LoadTilesetHeader) read via 16-bit pointers stored in WRAM.
-; The whole layout is ALLOCATED by tools/gen_map_headers.py and emitted to
+; The whole layout is ALLOCATED by tools/generators/gen_map_headers.py and emitted to
 ; assets/rom_window.inc — do not hand-write addresses here again. The old
 ; hand-maintained table had silently overflowed: the map-headers blob ran
 ; $5400-$8D72, across INDOOR_BLK_GBADDR ($7600) and 3442 bytes into VRAM ($8000).

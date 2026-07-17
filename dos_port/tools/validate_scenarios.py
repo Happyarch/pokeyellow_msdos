@@ -94,13 +94,13 @@ def validate():
                            ("full", "FIDELITY_SCENARIOS_FULL")):
         expected = [x["name"] for x in scenarios
                     if tier == "full" or x["tier"] == "core"]
-        command = (f'{variable} := $(shell python3 tools/gen_scenario_registry.py '
+        command = (f'{variable} := $(shell python3 tools/generators/gen_scenario_registry.py '
                    f'--names {tier})')
         if command not in makefile:
             errors.append(f"Makefile does not derive {variable} from the manifest")
     import importlib.util
     spec = importlib.util.spec_from_file_location(
-        'gen_scenario_registry', PORT / 'tools' / 'gen_scenario_registry.py')
+        'gen_scenario_registry', PORT / 'tools' / 'generators' / 'gen_scenario_registry.py')
     generator = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(generator)
     if not REGISTRY.is_file() or REGISTRY.read_text(encoding='ascii') != generator.render_nasm():

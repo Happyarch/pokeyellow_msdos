@@ -10,7 +10,7 @@
 ; printing the "current too fast" / "cycling is fun" message when it's blocked.
 ;
 ; The FAR text streams (_UsedStrengthText etc.) are Tier-1 generated data
-; (tools/gen_overworld_strings.py → assets/field_move_text.inc, flattening pret's
+; (tools/generators/gen_overworld_strings.py → assets/field_move_text.inc, flattening pret's
 ; data/text/text_8.asm). The text-command WRAPPERS (UsedStrengthText…) are Tier-2
 ; code here — the text_far pointer + the text_asm cry hook (pret's grammar branch,
 ; not machine-generatable).

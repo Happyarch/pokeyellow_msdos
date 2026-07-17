@@ -4,10 +4,10 @@
 ; Per the linker rule in docs/assembly.md, embedded data lives in .data (not .rodata,
 ; which has no output-section rule and reads back as zero).
 ;
-; TrainerDataPointers / SpecialTrainerMoves : tools/gen_trainer_parties.py
+; TrainerDataPointers / SpecialTrainerMoves : tools/generators/gen_trainer_parties.py
 ;     (from data/trainers/parties.asm + special_moves.asm; consumed by
 ;      src/engine/battle/read_trainer_party.asm).
-; TrainerNames : tools/gen_trainer_names.py
+; TrainerNames : tools/generators/gen_trainer_names.py
 ;     (from data/trainers/names.asm; '@'-terminated, walked by GetName — see
 ;      src/home/names.asm / src/engine/battle/get_trainer_name.asm).
 ;

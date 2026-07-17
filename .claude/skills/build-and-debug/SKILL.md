@@ -1,6 +1,6 @@
 ---
 name: build-and-debug
-description: Build, run, and debug reference for the Pokémon Yellow DOS port. Invoke when building or running the port, regenerating assets, configuring/launching DOSBox-X, debugging emulated GB memory (DUMP.BIN / FRAME.BIN dumps instead of screenshots), running the golden fidelity harness (mGBA ground truth vs DOSBox-X port), or auditioning music (host-side audition.py vs in-DOS DEBUG_AUDIO TRACK= loop). Also holds the repo layout map and the key reference URLs. Triggers: "build the port", "make -C dos_port", "SKIP_TITLE", "make assets", "regenerate assets", "DEBUG_DUMP / DEBUG_TRANSITION / DEBUG_WALK_NORTH", "FRAME.BIN", "render_frame.py", "DOSBox-X config", "linker section / .rodata / orphan section", "goldencheck / make fidelity / make goldens", "GBSTATE.BIN", "golden scenario / mGBA harness / mgba-mcp", "audition / listen to / play <track> music", "DEBUG_AUDIO / TRACK= / audition.py / MUNT", "where is <file> in the repo", "Pan Docs / DPMI spec / RBIL".
+description: Build, run, and debug reference for the Pokémon Yellow DOS port. Invoke when building or running the port, regenerating assets, configuring/launching DOSBox-X, debugging emulated GB memory (DUMP.BIN / FRAME.BIN dumps instead of screenshots), running the golden fidelity harness (mGBA ground truth vs DOSBox-X port), auditioning music (host-side audition.py vs in-DOS DEBUG_AUDIO TRACK= loop), or using a dos_port/tools/ dev tool (colorize.py + colors/editor.py, map_editor/editor.py, ui_layout/editor.py, read_perf.py, read_seamlog.py, audit_memmap.py, unnamed.py, saveconv.py). Also holds the repo layout map and the key reference URLs. Triggers: "build the port", "make -C dos_port", "SKIP_TITLE", "make assets", "regenerate assets", "DEBUG_DUMP / DEBUG_TRANSITION / DEBUG_WALK_NORTH", "FRAME.BIN", "render_frame.py", "DOSBox-X config", "linker section / .rodata / orphan section", "goldencheck / make fidelity / make goldens", "GBSTATE.BIN", "golden scenario / mGBA harness / mgba-mcp", "audition / listen to / play <track> music", "DEBUG_AUDIO / TRACK= / audition.py / MUNT", "where is <file> in the repo", "Pan Docs / DPMI spec / RBIL", "colorize.py / palette editor / repaint PNG", "map_editor / overworld map tool", "ui_layout editor / layout sidecar", "PERF.BIN / read_perf.py", "SEAMLOG.BIN / read_seamlog.py", "audit_memmap.py", "unnamed.py / unnamed symbols", "saveconv.py / .sav .dsv".
 ---
 
 # Build & Debug Reference
@@ -33,16 +33,21 @@ dos_port/
   src/input/
     joypad.asm             ← INT 9h keyboard ISR → GB joypad state
   tools/
-    gen_all_assets.py      ← tileset/blockset/map .inc generator
-    gen_map_headers.py     ← map header blob + pointer table generator
+    README.md              ← wayfinding map of this directory (generators vs
+                             human-facing tools vs shared libraries)
+    generators/            ← every gen_*.py Tier-1 asset generator (~60 files,
+                             invoked by `make assets`, not run standalone —
+                             see gen_all_assets.py / gen_map_headers.py / etc.)
+                             + gb_text.py (charmap-encode helper) + gen_symfile.py
+                             (PKMN.EXE COFF symtab → pkmn.sym, runs at every link)
     render_frame.py        ← render FRAME.BIN back-buffer dump to PNG
-    colorize.py            ← palette tool (stub, Phase 5)
-    saveconv.py            ← GB .sav ↔ DOS .dsv converter (stub, Phase 5)
+    colorize.py            ← palette CLI (--gen/--verify/--edit/--export-png/
+                             --import-png); colors/editor.py is the pygame editor
+    saveconv.py            ← GB .sav ↔ DOS .dsv converter — STUB, Phase 5
     dosbox_mcp/            ← MCP server for live LLM-driven DOSBox-X debugging
     dosbox-x/              ← dosbox-x fork SUBMODULE (Happyarch/dosbox-x, branch
                              mcp-debug: MCP socket bridge + SYMF symbol table)
     dosbox-x-mcp/          ← built fork binary `dosbox-x-mcp` (gitignored)
-    gen_symfile.py         ← PKMN.EXE COFF symtab → pkmn.sym (runs at every link)
     mgba/, mgba_build/     ← vendored mGBA submodule + Lua-runner build (build_mgba.sh)
     mgba_harness/          ← golden-generation Lua scenarios + libs (fidelity harness)
     mgba_mcp/              ← MCP server for the mGBA ground-truth side (run_mgba_mcp.sh)
@@ -182,7 +187,7 @@ symbol-annotated disassembly, and paused-frame PNG dumps.
 
 **Symbols are always fresh and include NASM local labels.** The link rule
 generates `pkmn.sym` from PKMN.EXE's own COFF symbol table
-(`tools/gen_symfile.py` — ~9.4k symbols, e.g. `_AdvancePlayerSprite.scroll`).
+(`tools/generators/gen_symfile.py` — ~9.4k symbols, e.g. `_AdvancePlayerSprite.scroll`).
 The server stats the file on every resolution and reloads transparently, so a
 mid-session rebuild can NOT leave stale addresses (the old pkmn.map staleness
 bug class is dead); if PKMN.EXE is newer than pkmn.sym it errors loudly
@@ -411,6 +416,78 @@ DOSBox-X, waits, screenshots (spectacle → import fallback), and force-kills.
 Good for confirming a final render once the data is known-correct. Note: under a
 Wayland session the compositor screenshot may grab the wrong window — the
 `FRAME.BIN` route above is more reliable.
+
+### Other dump decoders and static audits
+
+Same family as `render_frame.py` above — decode a captured `.BIN` on the host
+instead of staring at DOSBox-X, or check a static invariant without booting
+anything:
+
+```sh
+# Per-stage frame timing (src/debug/perf.asm DEBUG_PERF build)
+tools/read_perf.py PERF.BIN                       # ms/stage table
+tools/read_perf.py PERF.BIN --baseline OTHER.BIN   # before/after delta
+
+# DEBUG_SEAM harness trace (map-connection walk): view-pointer lockstep +
+# other invariants, one 12-byte record per rendered frame
+tools/read_seamlog.py SEAMLOG.BIN
+
+# Blast-radius audit of the emulated GB address space: every `equ` region in
+# include/gb_memmap.inc + assets/rom_window.inc, checked for overlaps/strays.
+# Also wired into `make assets` (it's the last step) — run standalone after
+# touching gb_memmap.inc/rom_window.inc without a full asset rebuild.
+tools/audit_memmap.py
+
+# Find symbols pkmn.sym couldn't name (helps spot a missing `global`)
+tools/unnamed.py pkmn.sym
+tools/unnamed.py -r src pkmn.sym    # only symbols under src/
+```
+
+## Asset-authoring tools (palettes, overworld maps, UI layout)
+
+Interactive pygame editors that write hand-authored **sidecar JSON**, which a
+`generators/gen_*.py` script then turns into the actual `assets/*.inc` — never
+edit the generated `.inc` directly (see "Never hand-edit generated
+`assets/*.inc` files" above); edit the sidecar and regenerate.
+
+**Palettes** (colorization pipeline, complete as of 2026-07-13 —
+`docs/plans/colorization.md`):
+
+```sh
+tools/colorize.py --gen                    # sidecar (assets/colors/palettes.json)
+                                            # + pret data -> assets/colors/palettes.inc
+tools/colorize.py --verify                 # sidecar valid + palettes.inc not stale
+tools/colorize.py --edit                   # launch the pygame shade editor
+tools/colorize.py --export-png SPECIES     # e.g. CHARIZARD -> indexed repaint PNG
+tools/colorize.py --import-png PATH.png    # re-import a repainted PNG (<=4 colors/
+                                            # tile, <=4 palettes/asset), then --gen
+```
+
+`--edit` controls (`colors/editor.py`, live battle-scene mock preview): `[`/`]`
+cycle the `PAL_*` family, `,`/`.` cycle preview species, `1`-`4` pick a shade,
+arrow keys adjust R/G, `PgUp`/`PgDn` adjust B, `S` saves sidecar deltas (prints
+a reminder to run `--gen`), `Esc` quits. There is no `--edit <path>` flag on
+`colorize.py` itself — for a non-default sidecar run `tools/colors/editor.py
+<path> --zoom N` directly.
+
+**Overworld maps:** `tools/map_editor/editor.py` — viewer/painter for the
+border-ring authoring + block painting that feed `generators/gen_map_borders.py`
+and `assets/map_overrides/<Pascal>.json`. See its own `--help`/docstring for
+current controls (actively developed alongside `docs/current_plan_map_tool.md`).
+
+**UI layout** (menu/battle element placement, complete —
+`docs/plans/battle_ui.md`): `tools/ui_layout/editor.py
+assets/ui_layout_<subsystem>_sidecar.json` hand-positions elements with a live
+canvas preview; `generators/gen_ui_layout.py <subsystem>` projects the sidecar
+into `assets/ui_layout_<subsystem>.inc`. `ui_layout/seed_from_battle.py` /
+`seed_from_pret.py` are one-shot scripts that bootstrap a new sidecar from an
+existing battle layout / from pret's `TextBoxCoordTable` — run once when adding
+a new subsystem's sidecar, not part of the normal edit loop.
+
+**Save converter:** `tools/saveconv.py` is a **stub** — `.sav`↔`.dsv`
+conversion is not implemented yet (Phase 5). The `.dsv` format it will target
+is already real and documented in its own header (`src/save/dsv_io.asm` writes/
+reads version-1 files).
 
 ## Auditioning music (listen to a track — do NOT tailspin into rebuilds)
 

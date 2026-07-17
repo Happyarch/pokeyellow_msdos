@@ -32,7 +32,7 @@
 ; supersedes pret's wTrainerHeaderPtr — matching the port precedent w_map_text_table_ptr
 ; (map_sprites.asm) which is likewise a flat .bss dword, not emulated WRAM.
 ;
-; The generated (Tier-1) trainer-header blob a future `tools/gen_trainer_headers.py`
+; The generated (Tier-1) trainer-header blob a future `tools/generators/gen_trainer_headers.py`
 ; must emit has this FLAT per-entry layout (stride TH_SIZE=22, replacing pret's $c):
 ;   +0  db   flag_bit            (0..7 within its wEventFlags byte)
 ;   +1  db   view_range << 4     (pret packs it shifted; kept verbatim)

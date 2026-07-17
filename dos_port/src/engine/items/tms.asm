@@ -2,7 +2,7 @@
 ;   CanLearnTM — can [wCurPartySpecies] learn TM/HM move [wMoveNum]?
 ;   TMToMove   — convert TM/HM number [wTempTMHM] into its move number.
 ; TechnicalMachines (the TM/HM -> move-id list) is generated into assets/items.inc
-; by tools/gen_items.py.
+; by tools/generators/gen_items.py.
 ;
 ; Build: nasm -f coff -I include/ -I . -o /dev/null src/engine/items/tms.asm
 

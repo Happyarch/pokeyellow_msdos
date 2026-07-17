@@ -86,7 +86,7 @@ extern RegainedHealthText
 ; `StartedSleepingEffect: text_far _StartedSleepingEffect`) was checked against
 ; dos_port/assets/battle_text.inc and is NOT currently emitted there — only
 ; FellAsleepBecameHealthyText and RegainedHealthText (this routine's other two strings)
-; are present. tools/gen_battle_text.py needs the missing label added (Tier-1, generator-
+; are present. tools/generators/gen_battle_text.py needs the missing label added (Tier-1, generator-
 ; owned — do not hand-add to the .inc) before this handler can link. Externed here on the
 ; assumption it lands under this same name.
 extern StartedSleepingEffect

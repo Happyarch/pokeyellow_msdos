@@ -775,7 +775,7 @@ WarpTileIDLists:
 ; ---------------------------------------------------------------------------
 ; SafariSteps / SafariBallText — Tier-1 text data (project-conventions: strings
 ; are DATA, generated, never hand-encoded charmap bytes). Produced by
-; tools/gen_overworld_strings.py (gb_text.encode of the pret literals) into
+; tools/generators/gen_overworld_strings.py (gb_text.encode of the pret literals) into
 ; assets/overworld_strings.inc, %include'd below. pret: engine/overworld/player_state.asm.
 ; ---------------------------------------------------------------------------
 %include "assets/overworld_strings.inc"

@@ -4,8 +4,8 @@
 ; them. Per the linker rule in docs/assembly.md, embedded data lives in .data
 ; (not .rodata, which has no output-section rule and reads back as zero).
 ;
-; TypeEffects : tools/gen_type_matchups.py (from data/types/type_matchups.asm).
-; MoveNames   : tools/gen_move_names.py   (from data/moves/names.asm; '@'-terminated,
+; TypeEffects : tools/generators/gen_type_matchups.py (from data/types/type_matchups.asm).
+; MoveNames   : tools/generators/gen_move_names.py   (from data/moves/names.asm; '@'-terminated,
 ;               walked by GetName — see src/home/names.asm).
 ;
 ; Build: nasm -f coff -I include/ -I . -o battle_data.o battle_data.asm

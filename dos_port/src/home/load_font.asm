@@ -4,13 +4,13 @@
 ; LoadFontTilePatterns — source: home/load_font.asm.
 ; Mirrors home/copy2.asm:FarCopyDataDouble (1bpp → 2bpp expansion).
 ; The font art (gfx/font/font.png) is embedded as NASM data via
-; assets/font_1bpp.inc (tools/gen_font_inc.py). With LCDC_DEFAULT ($8800
+; assets/font_1bpp.inc (tools/generators/gen_font_inc.py). With LCDC_DEFAULT ($8800
 ; signed addressing), char code C ('A'=$80) maps to tile at $8800+(C-$80)*16.
 ;
 ; LoadTextBoxTilePatterns — source: home/load_font.asm:LoadTextBoxTilePatterns.
 ; Copies 2bpp data (gfx/font/font_extra.png, chars $60-$7F) to vChars2+$60
 ; (EBP offset $9600). Includes box-drawing tiles $79-$7E used by TextBoxBorder.
-; Data embedded via assets/font_extra_2bpp.inc (tools/gen_font_extra_inc.py).
+; Data embedded via assets/font_extra_2bpp.inc (tools/generators/gen_font_extra_inc.py).
 ;
 ; Build: nasm -f coff -I include/ -I . -o load_font.o load_font.asm
 

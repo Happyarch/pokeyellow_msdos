@@ -63,7 +63,7 @@ global DrawBugCatcherPic_Stub
 
 ; MonFrontPics: Tier-1 GENERATED table (dex order, 151 records of {dd flatptr, dd len})
 ; pointing at the incbin'd compressed front .pic blobs. Build with -D MON_FRONT_PICS
-; once tools/gen_mon_pics.py + assets/mon_pics.inc + src/data/mon_pics.asm land and
+; once tools/generators/gen_mon_pics.py + assets/mon_pics.inc + src/data/mon_pics.asm land and
 ; src/data/mon_pics.asm is added to the link set. See M6.3 SUMMARY "data follow-up".
 %ifdef MON_FRONT_PICS
 extern MonFrontPics
@@ -629,7 +629,7 @@ UncompressMonSprite:
 %else
     ; FALLBACK (build without -D MON_FRONT_PICS): stage the single embedded debug
     ; front pic (pidgey) for EVERY mon. The real per-mon MonFrontPics table now
-    ; ships (tools/gen_mon_pics.py → assets/mon_pics.inc + src/data/mon_pics.asm),
+    ; ships (tools/generators/gen_mon_pics.py → assets/mon_pics.inc + src/data/mon_pics.asm),
     ; and MON_FRONT_PICS is on by default in the Makefile — this path is only for
     ; an explicit no-data build. See the M6.3 SUMMARY history.
     mov esi, embedded_pic

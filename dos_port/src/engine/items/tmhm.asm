@@ -15,7 +15,7 @@ global CheckIfMoveIsKnown
 
 extern AddNTimes            ; ESI += AL * BX; AL := 0  (hl += a*bc)
 ; AlreadyKnowsText ("<MON> knows <MOVE>!") is Tier-1 generated data — pret's
-; text_far _AlreadyKnowsText (data/text/text_9.asm), flattened by tools/gen_item_text.py
+; text_far _AlreadyKnowsText (data/text/text_9.asm), flattened by tools/generators/gen_item_text.py
 ; into assets/item_text.inc. <Label>_ref is its {dd stream, dd length} pair.
 extern AlreadyKnowsText_ref     ; assets/item_text.inc
 ; CheckIfMoveIsKnown only runs out of battle (ItemUseTMHM refuses in-battle use), so

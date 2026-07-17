@@ -1,0 +1,315 @@
+#!/usr/bin/env python3
+"""gen_items.py — generate dos_port/assets/items.inc from pret source.
+
+Emits two item data tables (no UI; the mart/bag screens that consume them are
+deferred):
+
+  ItemNames  — data/items/names.asm `li "NAME"`: each name GB-charmap encoded and
+               '@'-terminated ($50), concatenated (variable length, as pret).
+  ItemPrices — data/items/prices.asm `bcd3 N`: 3-byte BCD price per item id.
+
+Run from repo root or dos_port/.
+"""
+import re
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[3]
+ASSETS = ROOT / "dos_port" / "assets"
+
+
+def load_charmap(path: Path) -> list:
+    cm = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        m = re.match(r'\s+charmap\s+"((?:[^"\\]|\\.)*)",\s*\$([0-9a-fA-F]+)', line)
+        if m:
+            cm.append((m.group(1), int(m.group(2), 16)))
+    cm.sort(key=lambda x: -len(x[0]))
+    return cm
+
+
+def encode(s: str, charmap: list) -> bytes:
+    out, i = [], 0
+    while i < len(s):
+        for key, val in charmap:
+            if key and s[i:].startswith(key):
+                out.append(val)
+                i += len(key)
+                break
+        else:
+            raise ValueError(f"Unrecognised char at {i}: {s[i:i+4]!r}")
+    return bytes(out)
+
+
+def bcd3(v: int) -> bytes:
+    """3-byte BCD, matching pret's bcd3 macro (dn packs two nibbles)."""
+    digits = [(v // 10**e) % 10 for e in (5, 4, 3, 2, 1, 0)]
+    return bytes(((digits[0] << 4) | digits[1],
+                  (digits[2] << 4) | digits[3],
+                  (digits[4] << 4) | digits[5]))
+
+
+def load_item_ids(path: Path) -> dict:
+    """Map every item-constant name -> numeric id from constants/item_constants.asm.
+
+    Each `const NAME`, `add_tm NAME`, `add_hm NAME` line carries a trailing
+    `; $XX` comment with the resolved id (the macros compute it via const_value);
+    we read that rather than re-implement the const_def/const_next bookkeeping.
+    add_tm/add_hm define the item as TM_NAME / HM_NAME respectively.
+    """
+    ids = {}
+    pat = re.compile(r"\s*(const|add_tm|add_hm)\s+(\w+)\s*;\s*\$([0-9A-Fa-f]+)")
+    for line in path.read_text().splitlines():
+        m = pat.match(line)
+        if not m:
+            continue
+        kind, name, hexval = m.group(1), m.group(2), int(m.group(3), 16)
+        if kind == "add_tm":
+            name = "TM_" + name
+        elif kind == "add_hm":
+            name = "HM_" + name
+        ids[name] = hexval
+    return ids
+
+
+def load_move_ids(path: Path) -> dict:
+    """Map every move constant name -> numeric id from constants/move_constants.asm.
+
+    The file is a plain `const_def` / `const NAME` sequence (NO_MOVE = 0), so the
+    id is just the running counter — moves are not reindexed like species.
+    """
+    ids, val = {}, 0
+    for line in path.read_text().splitlines():
+        s = line.split(";", 1)[0].strip()
+        m = re.match(r"const_def(?:\s+(-?\d+))?$", s)
+        if m:
+            val = int(m.group(1)) if m.group(1) else 0
+            continue
+        m = re.match(r"const\s+(\w+)$", s)
+        if m:
+            ids[m.group(1)] = val
+            val += 1
+    return ids
+
+
+def load_tmhm_move_names(path: Path) -> tuple:
+    """Ordered move names behind each `add_tm`/`add_hm` in item_constants.asm.
+
+    add_tm/add_hm define `TM##_MOVE`/`HM##_MOVE EQU <MOVE>`; TechnicalMachines is
+    those move ids, all TMs (TM01..) followed by all HMs (HM01..), then -1.
+    """
+    tm, hm = [], []
+    for line in path.read_text().splitlines():
+        s = line.split(";", 1)[0].strip()
+        m = re.match(r"add_tm\s+(\w+)", s)
+        if m:
+            tm.append(m.group(1))
+            continue
+        m = re.match(r"add_hm\s+(\w+)", s)
+        if m:
+            hm.append(m.group(1))
+    return tm, hm
+
+
+def load_marts(path: Path, ids: dict) -> list:
+    """Parse `script_mart ITEM, ITEM, ...` entries from data/items/marts.asm.
+
+    Returns [(clerk_label, [item_id, ...]), ...] in source order. The mart's
+    text-script label (e.g. ViridianMartClerkText) is the line above; the
+    TX_SCRIPT_MART dispatch byte is script-engine territory and omitted — we
+    keep only the inventory (count, ids, $FF terminator).
+    """
+    marts, label = [], None
+    for line in path.read_text().splitlines():
+        m = re.match(r"(\w+)::", line)
+        if m:
+            label = m.group(1)
+            continue
+        m = re.match(r"\s*script_mart\s+(.*?)\s*(?:;.*)?$", line)
+        if m:
+            toks = [t.strip() for t in m.group(1).split(",") if t.strip()]
+            marts.append((label, [ids[t] for t in toks]))
+    return marts
+
+
+def main() -> int:
+    charmap = load_charmap(ROOT / "constants/charmap.asm")
+
+    names, namebytes = [], bytearray()
+    for line in (ROOT / "data/items/names.asm").read_text(encoding="utf-8").splitlines():
+        m = re.match(r'\s*li\s+"((?:[^"\\]|\\.)*)"', line)
+        if m:
+            names.append(m.group(1))
+            namebytes += encode(m.group(1), charmap) + b"\x50"
+
+    prices = []
+    for line in (ROOT / "data/items/prices.asm").read_text().splitlines():
+        s = line.split(";", 1)[0].strip()
+        m = re.match(r"bcd3\s+(\d+)$", s)
+        if m:
+            prices.append(int(m.group(1)))
+
+    # KeyItemFlags bit array (data/items/key_items.asm): one bit per item id,
+    # LSB-first (bit i = byte i//8, bit i&7), TRUE = key item (can't be tossed).
+    keybits = []
+    for line in (ROOT / "data/items/key_items.asm").read_text().splitlines():
+        m = re.match(r"\s*dbit\s+(TRUE|FALSE)", line)
+        if m:
+            keybits.append(1 if m.group(1) == "TRUE" else 0)
+    keyflags = bytearray((len(keybits) + 7) // 8)
+    for i, b in enumerate(keybits):
+        if b:
+            keyflags[i // 8] |= 1 << (i & 7)
+
+    item_ids = load_item_ids(ROOT / "constants/item_constants.asm")
+    marts = load_marts(ROOT / "data/items/marts.asm", item_ids)
+
+    # TechnicalMachinePrices (data/items/tm_prices.asm): one nybble per TM (price
+    # in thousands), packed two-per-byte high-nybble-first as rgbds' nybble_array
+    # does — byte = (even << 4) | odd. 50 TMs -> 25 bytes.
+    tm_nybbles = []
+    for line in (ROOT / "data/items/tm_prices.asm").read_text().splitlines():
+        m = re.match(r"\s*nybble\s+(\d+)", line)
+        if m:
+            tm_nybbles.append(int(m.group(1)))
+    tm_pricebytes = bytearray()
+    for i in range(0, len(tm_nybbles), 2):
+        hi = tm_nybbles[i]
+        lo = tm_nybbles[i + 1] if i + 1 < len(tm_nybbles) else 0
+        tm_pricebytes.append((hi << 4) | lo)
+
+    # TechnicalMachines (data/moves/tmhm_moves.asm): the move id learned by each
+    # TM then each HM, -1 terminated (CanLearnTM / TMToMove index this list).
+    move_ids = load_move_ids(ROOT / "constants/move_constants.asm")
+    tm_moves, hm_moves = load_tmhm_move_names(ROOT / "constants/item_constants.asm")
+    tmhm_bytes = bytearray(move_ids[m] for m in tm_moves)
+    tmhm_bytes += bytearray(move_ids[m] for m in hm_moves)
+    tmhm_bytes.append(0xFF)
+
+    pricebytes = bytearray()
+    for p in prices:
+        pricebytes += bcd3(p)
+
+    out = [
+        "; items.inc — generated by tools/generators/gen_items.py. DO NOT EDIT BY HAND.",
+        f"; ItemNames: {len(names)} '@'-terminated charmap names (variable length).",
+        f"; ItemPrices: {len(prices)} x 3-byte BCD prices, item-id order.",
+        "",
+        "ItemNames:",
+    ]
+    o = 0
+    for nm in names:
+        enc = encode(nm, charmap)
+        rec = namebytes[o:o + len(enc) + 1]
+        o += len(enc) + 1
+        out.append("    db " + ", ".join(f"0x{b:02X}" for b in rec) + f'    ; {nm}')
+    out += ["ItemNames_end:", "", "ItemPrices:"]
+    for i, p in enumerate(prices):
+        rec = pricebytes[i * 3:i * 3 + 3]
+        out.append("    db " + ", ".join(f"0x{b:02X}" for b in rec) + f"    ; item {i+1}: {p}")
+    out += ["ItemPrices_end:", ""]
+
+    out += [
+        f"; KeyItemFlags: {len(keybits)}-bit array (LSB-first), TRUE = key item",
+        "; (untossable). Test bit (item_id - 1). HMs ($C4-$C8) are key via a",
+        "; separate range check, not this table.",
+        "KeyItemFlags:",
+        "    db " + ", ".join(f"0x{b:02X}" for b in keyflags),
+        "",
+    ]
+
+    # Mart inventories (data/items/marts.asm). Each entry: db count, item ids,
+    # $FF terminator — mirroring script_mart's body (count, ids, -1) minus the
+    # TX_SCRIPT_MART dispatch byte. MartPointers is a flat dd table indexed in
+    # source order; clerk label kept as a comment for the future script engine.
+    out += [
+        f"; MartInventories: {len(marts)} marts, each = db count, item ids, 0xFF.",
+        "; MartPointers: dd per mart (source order). NUM_MARTS exposed below.",
+        "MartInventories:",
+    ]
+    martlabels = []
+    for label, items in marts:
+        sub = f"Mart_{label}"
+        martlabels.append(sub)
+        body = ", ".join([f"{len(items)}"] + [f"0x{i:02X}" for i in items] + ["0xFF"])
+        out.append(f"{sub}:")
+        out.append(f"    db {body}    ; {label}")
+    out += ["MartInventories_end:", "", "MartPointers:"]
+    for sub in martlabels:
+        out.append(f"    dd {sub}")
+    out += ["MartPointers_end:", "", f"NUM_MARTS equ {len(marts)}", ""]
+
+    out += [
+        f"; TechnicalMachinePrices: {len(tm_nybbles)} TM prices (thousands), packed",
+        "; two nybbles per byte, high nybble first (GetMachinePrice indexes this).",
+        "TechnicalMachinePrices:",
+        "    db " + ", ".join(f"0x{b:02X}" for b in tm_pricebytes),
+        "",
+    ]
+
+    out += [
+        f"; TechnicalMachines: {len(tm_moves)} TM + {len(hm_moves)} HM move ids,",
+        "; TMs first then HMs, 0xFF-terminated (CanLearnTM / TMToMove index this).",
+        "TechnicalMachines:",
+        "    db " + ", ".join(f"0x{b:02X}" for b in tmhm_bytes),
+        "",
+    ]
+
+    # VitaminStats (data/battle/stat_names.asm): the five stat names a vitamin can
+    # raise, as a fixed-width list of STAT_NAME_LENGTH (10) bytes each — pret's
+    # `list_start STAT_NAME_LENGTH - 1` pads every entry to 9 chars + '@', and
+    # ItemUseMedicine.statNameLoop walks it by scanning for the '@'.
+    STAT_NAME_LENGTH = 10
+    statnames = []
+    for line in (ROOT / "data/battle/stat_names.asm").read_text().splitlines():
+        m = re.match(r'\s*li\s+"((?:[^"\\]|\\.)*)"', line.split(";", 1)[0])
+        if m:
+            statnames.append(m.group(1))
+    out += [
+        f"; VitaminStats: {len(statnames)} stat names, {STAT_NAME_LENGTH} bytes each",
+        "; ('@'-terminated, space-padded to the fixed stride — pret list_start).",
+        "global VitaminStats",
+        "VitaminStats:",
+    ]
+    for nm in statnames:
+        # Exactly ONE '@' per record: .statNameLoop walks entries by scanning for
+        # the next '@', so the pad must be spaces ($7F), never more terminators.
+        rec = bytearray(encode(nm, charmap))
+        rec += b"\x7F" * (STAT_NAME_LENGTH - 1 - len(rec))
+        rec += b"\x50"
+        assert len(rec) == STAT_NAME_LENGTH, nm
+        out.append("    db " + ", ".join(f"0x{b:02X}" for b in rec) + f'    ; {nm}')
+    out.append("")
+
+    # Bag-USE routing arrays (data/items/use_overworld.asm, use_party.asm): the
+    # item ids StartMenu_Item scans with IsInArray to decide whether USE closes
+    # the START menu or opens the party menu. $FF-terminated, source order.
+    for fname, label in (("use_overworld.asm", "UsableItems_CloseMenu"),
+                         ("use_party.asm", "UsableItems_PartyMenu")):
+        ids = []
+        for line in (ROOT / "data/items" / fname).read_text().splitlines():
+            m = re.match(r"\s*db\s+([A-Z_0-9]+)\s*$", line.split(";", 1)[0])
+            if m and m.group(1) in item_ids:
+                ids.append(item_ids[m.group(1)])
+        out += [
+            f"; {label}: {len(ids)} item ids, 0xFF-terminated (IsInArray, stride 1).",
+            f"global {label}",
+            f"{label}:",
+            "    db " + ", ".join(f"0x{i:02X}" for i in ids) + ", 0xFF",
+            "",
+        ]
+
+    ASSETS.mkdir(parents=True, exist_ok=True)
+    dst = ASSETS / "items.inc"
+    dst.write_text("\n".join(out))
+    print(f"wrote {dst} (ItemNames {len(names)} names / {len(namebytes)} bytes, "
+          f"ItemPrices {len(prices)} x 3 = {len(pricebytes)} bytes, "
+          f"KeyItemFlags {len(keyflags)} bytes / {len(keybits)} items, "
+          f"MartInventories {len(marts)} marts, "
+          f"TechnicalMachinePrices {len(tm_pricebytes)} bytes, "
+          f"TechnicalMachines {len(tmhm_bytes)} bytes)")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

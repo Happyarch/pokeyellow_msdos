@@ -311,7 +311,7 @@ BikeRidingTilesets:
 ; ---------------------------------------------------------------------------
 ; Alternate player sprite sheets — pret gfx/sprites.asm:35,74,87
 ; (RedBikeSprite / SeelSprite / SurfingPikachuSprite). Tier-1 generated data:
-; assets/<stem>_sprite.inc, emitted by tools/gen_all_assets.py from
+; assets/<stem>_sprite.inc, emitted by tools/generators/gen_all_assets.py from
 ; gfx/sprites/<stem>.2bpp. Each is a 384-byte, 24-tile sheet laid out exactly
 ; like player_sprite (12 standing tiles + 12 walking tiles), which is what
 ; LoadPlayerSpriteGraphicsCommon's two 192-byte copies assume.

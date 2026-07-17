@@ -4,7 +4,7 @@
 ; current map's wild-encounter data from WildDataPointers into the wGrassRate/
 ; wGrassMons and wWaterRate/wWaterMons WRAM buffers, ready for TryDoWildEncounter.
 ;
-; The blob layout per map (see tools/gen_wild_encounters.py / data/wild/maps/):
+; The blob layout per map (see tools/generators/gen_wild_encounters.py / data/wild/maps/):
 ;   [grass_rate]  (+ 20 mon bytes = 10×(level,species) iff grass_rate != 0)
 ;   [water_rate]  (+ 20 mon bytes iff water_rate != 0)
 ;

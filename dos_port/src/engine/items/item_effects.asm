@@ -3274,7 +3274,7 @@ section .text
 ; PORT: pret's WildDataPointers is a `dw` table ending in `dw -1`, and the loop's
 ; end test reads that sentinel's high byte (`inc hl / ld a,[hld] / inc a / jr z`).
 ; The port's table is flat 32-bit (`dd`, one entry per map, no sentinel — see
-; tools/gen_wild_encounters.py), so the same loop is bounded by WildDataPointersEnd.
+; tools/generators/gen_wild_encounters.py), so the same loop is bounded by WildDataPointersEnd.
 ; The blobs themselves are flat .data, so ESI walks them WITHOUT the EBP bias; only
 ; the output list (EDX) and wPokedexNum are GB memory.
 ; --------------------------------------------------------------------------- #

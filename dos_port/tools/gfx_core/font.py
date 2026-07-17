@@ -46,7 +46,7 @@ def tile_for_code(code: int) -> Tile:
 
 
 def encode_label(s: str) -> list[int]:
-    """Preview-only text encoding via tools/gb_text.py (single-char charmap).
+    """Preview-only text encoding via tools/generators/gb_text.py (single-char charmap).
 
     Falls back to space tiles if the charmap isn't generated yet — the editor
     must render without a full asset build.

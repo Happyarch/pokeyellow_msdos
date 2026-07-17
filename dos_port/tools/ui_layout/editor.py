@@ -344,7 +344,7 @@ class Editor:
         self.dirty = False
         self.saved_flash = pygame.time.get_ticks()
         print(f"saved {self.sidecar}")
-        print("regenerate with: python3 tools/gen_ui_layout.py "
+        print("regenerate with: python3 tools/generators/gen_ui_layout.py "
               f"{self.layout.subsystem}")
 
     def run(self):

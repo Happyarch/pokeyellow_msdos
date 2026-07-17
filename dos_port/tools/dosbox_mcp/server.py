@@ -8,7 +8,7 @@ space (EBP + gb_offset) and translate symbol names via pkmn.sym /
 gb_memmap.inc.
 
 Symbols come from pkmn.sym — generated at every link from PKMN.EXE's own
-COFF symbol table (tools/gen_symfile.py), so it includes every NASM local
+COFF symbol table (tools/generators/gen_symfile.py), so it includes every NASM local
 label. SymbolMap stats the file on each resolution and reloads when it
 changed: a mid-session rebuild can NOT leave this server resolving stale
 addresses (it raises StaleSymbolsError if the EXE is newer than the sym

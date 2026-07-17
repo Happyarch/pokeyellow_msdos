@@ -13,7 +13,7 @@
 ;
 ;   TrainerDataPointers — an array of NUM_TRAINERS flat pointers (dd), one per
 ;     trainer class, each pointing to that class's sequential trainer blobs.
-;     Needs generator: tools/gen_trainer_parties.py → assets/trainer_parties.inc
+;     Needs generator: tools/generators/gen_trainer_parties.py → assets/trainer_parties.inc
 ;     + a global in dos_port/src/data/battle_data.asm (or a new file
 ;     dos_port/src/data/trainer_data.asm).
 ;

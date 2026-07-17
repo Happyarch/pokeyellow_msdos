@@ -113,7 +113,7 @@ extern JoypadLowSensitivity     ; refresh hJoy5 (H_JOY5) low-sensitivity input
 extern ReloadTilesetTilePatterns ; home/reload_tiles.asm — restore map tileset after evo screen
 
 ; Evolution text command streams (generated into assets/battle_text.inc by
-; tools/gen_battle_text.py from engine/pokemon/evos_moves.asm wrappers):
+; tools/generators/gen_battle_text.py from engine/pokemon/evos_moves.asm wrappers):
 extern IsEvolvingText           ; "<MON> is evolving!"
 extern EvolvedText              ; "Congratulations! Your <MON> evolved into"
 extern IntoText                 ; " <SPECIES>!"

@@ -1,6 +1,6 @@
 """Resolve program symbols from pkmn.sym (always fresh) and GB constants from gb_memmap.inc.
 
-pkmn.sym is generated at every link by tools/gen_symfile.py from PKMN.EXE's own
+pkmn.sym is generated at every link by tools/generators/gen_symfile.py from PKMN.EXE's own
 COFF symbol table, so it contains every label — including NASM local labels
 (`_AdvancePlayerSprite.scroll`) that the ld -Map file never had — at the final
 linked VMAs.

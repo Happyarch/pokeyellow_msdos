@@ -343,7 +343,7 @@ CONNECTION_SOUTH           equ 1 << 2
 ; used to live here are GONE. They were hand-computed for MAP_BORDER = 6 (e.g.
 ; `NORTH_STRIP_DEST equ W_OVERWORLD_MAP + 6`, `_win = (w+12)*h + 1`) and had been
 ; dead since LoadMapHeader started reading the connection headers that
-; tools/gen_map_headers.py emits into assets/map_headers.inc — which is the one
+; tools/generators/gen_map_headers.py emits into assets/map_headers.inc — which is the one
 ; place that knows MAP_BORDER. Nothing referenced them; they only survived as a
 ; second, silently-stale copy of the same arithmetic. Edit the generator.
 

@@ -1,6 +1,6 @@
 ; move_grammar.asm — generated move-use sentence-grammar table (battle engine).
 ;
-; MoveGrammar : tools/gen_move_grammar.py (from data/moves/grammar.asm). Vestigial in
+; MoveGrammar : tools/generators/gen_move_grammar.py (from data/moves/grammar.asm). Vestigial in
 ; the English ROM (all groups yield the same "<MON> used <MOVE>!" sentence) but the base
 ; game still ships and walks it, so we carry it for faithfulness. Consumed by the
 ; (hand-authored, Tier-2) GetMoveGrammar in the future used_move_text translation.

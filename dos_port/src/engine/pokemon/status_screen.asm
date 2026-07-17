@@ -57,7 +57,7 @@ align 4
 ; Status-screen PlaceString label strings (TypesIDNoOTText, StatusText, OKText,
 ; StatsText, StatusScreenExpText). pret keeps these as file-inline db/next data;
 ; the port generates them (charmap-encoded) per the two-tier rule — see
-; tools/gen_status_strings.py. DO NOT hand-edit the .inc.
+; tools/generators/gen_status_strings.py. DO NOT hand-edit the .inc.
 %include "assets/status_strings.inc"
 
 ; Name / OT pointer tables — 16-bit GB offsets (pret dw). Indexed by wMonDataLocation.

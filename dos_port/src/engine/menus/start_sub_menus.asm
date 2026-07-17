@@ -18,7 +18,7 @@
 ; also carried as STUB(text) — "link play not ported", "bike riding not ported".
 ; Neither was ever true of the message: the text engine takes a flat stream, the
 ; streams flatten straight out of pret's data/text/text_8.asm (Tier-1, via
-; tools/gen_menu_strings.py → assets/menu_text.inc), and PrintText links. They
+; tools/generators/gen_menu_strings.py → assets/menu_text.inc), and PrintText links. They
 ; print now. A guard whose branch is kept but whose message is dropped is not a
 ; stub, it is a silently wrong screen.
 ;
@@ -61,7 +61,7 @@ bits 32
 %define UI_LAYOUT_EQUATES_ONLY 1
 %include "assets/ui_layout_menus.inc"
 
-; The two refusal MESSAGES are Tier-1 data (tools/gen_menu_strings.py flattens
+; The two refusal MESSAGES are Tier-1 data (tools/generators/gen_menu_strings.py flattens
 ; pret's data/text/text_8.asm); their text_far WRAPPERS are Tier-2 code, at the
 ; foot of this file under pret's own label names.
 %include "assets/menu_text.inc"

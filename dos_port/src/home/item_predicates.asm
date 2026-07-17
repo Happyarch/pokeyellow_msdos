@@ -18,7 +18,7 @@
 ; small hand-authored `db` list of HM move ids. pret INCLUDEs
 ; data/moves/hm_moves.asm here (and again for HMMoveArray in bills_pc.asm); we
 ; inline the five ids directly as a Tier-2 table. It is NOT emitted by any
-; tools/gen_*.py and `make assets` must never touch it.
+; tools/generators/gen_*.py and `make assets` must never touch it.
 ;
 ; Register map: A=AL, HL=ESI, BC=EBX (B=BH,C=BL), DE=EDX. GB memory = [ebp+SYM].
 ;

@@ -5,7 +5,7 @@
 ; super-rod encounters.
 ;
 ; SuperRodFishingSlots data is generated into assets/super_rod.inc by
-; tools/gen_super_rod.py and embedded below (standalone/dangling file).
+; tools/generators/gen_super_rod.py and embedded below (standalone/dangling file).
 ;
 ; Build: nasm -f coff -I include/ -I . -o /dev/null src/engine/items/super_rod.asm
 

@@ -191,8 +191,8 @@ Generators:
 
 | Script | Produces | Source data |
 |--------|----------|-------------|
-| `dos_port/tools/gen_all_assets.py` | `overworld_gfx.inc`, `overworld_blocks.inc`, `pallet_town_blk.inc`, all `*_blk.inc` / `*_gfx.inc` / `*_blocks.inc` / `*_coll.inc` | `gfx/tilesets/*.2bpp`, `maps/*.blk` |
-| `dos_port/tools/gen_map_headers.py` | `map_headers.inc`, `extra_includes.inc` | `constants/map_constants.asm`, `data/maps/headers/*.asm`, `data/maps/objects/*.asm` |
+| `dos_port/tools/generators/gen_all_assets.py` | `overworld_gfx.inc`, `overworld_blocks.inc`, `pallet_town_blk.inc`, all `*_blk.inc` / `*_gfx.inc` / `*_blocks.inc` / `*_coll.inc` | `gfx/tilesets/*.2bpp`, `maps/*.blk` |
+| `dos_port/tools/generators/gen_map_headers.py` | `map_headers.inc`, `extra_includes.inc` | `constants/map_constants.asm`, `data/maps/headers/*.asm`, `data/maps/objects/*.asm` |
 
 `gen_all_assets.py` requires the tilesets to have been rendered to `.2bpp` first
 (`make` at the repo root with rgbds 1.0.1 installed).

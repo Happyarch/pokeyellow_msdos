@@ -9,6 +9,7 @@ import sys
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
+sys.path.insert(0, str(HERE / "generators"))
 
 from colors import schema
 
@@ -25,7 +26,7 @@ def main() -> None:
     actions.add_argument("--import-png", metavar="PNG", help="import repaint PNG (C3)")
     args = parser.parse_args()
     if args.gen:
-        subprocess.run([sys.executable, str(HERE / "gen_palettes.py")], check=True)
+        subprocess.run([sys.executable, str(HERE / "generators" / "gen_palettes.py")], check=True)
         return
     if args.verify:
         schema.load(SIDECAR)

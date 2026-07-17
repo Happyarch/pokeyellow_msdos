@@ -6,7 +6,7 @@
 ; output-section rule and reads back as zero).
 ;
 ; WildDataPointers / WildMonEncounterSlotChances / per-map blobs:
-;   tools/gen_wild_encounters.py (from data/wild/).
+;   tools/generators/gen_wild_encounters.py (from data/wild/).
 ;
 ; Build: nasm -f coff -I include/ -I . -o wild_data.o wild_data.asm
 
