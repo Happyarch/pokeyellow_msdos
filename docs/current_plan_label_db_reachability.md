@@ -1,15 +1,30 @@
 # Current Plan: label-DB reachability — %ifdef-aware scan + fall-through edges
 
-**Status:** round 7 — **IMPLEMENTED, LANDED, AND REVIEWED** (2026-07-16). All
-V1–V8 pass (67 fixtures); reachable 385 → 1051. One normative amendment was
+**Status:** round 8 — **ADVERSARIALLY REVIEWED; STILL ACTIVE** (2026-07-16). All
+V1–V8 pass (**72 fixtures**). The round-7 amendments got the second-agent read
+they were waiting for: four independent reviewers with fresh context, each told
+to **refute** rather than check. **A1 survived; A5/A6 did not survive intact** —
+one **live wrong answer** (A7, dropped a real edge under `make DEBUG_ASSERTIONS=1`)
+and two latent false-edge generators (A8, A9) were found, fixed, and fixtured, so
+the plan **stays active**. Amendment 4's headline number is also wrong in the way
+this plan was written to catch: **the tool does not report 1051, it reports 742**
+(A10). See "Round 8 — independent adversarial review".
+
+**Result the round exists to record:** round 7 closed by saying self-review
+converges on the author's blind spot and an adversary with the tree does not.
+That was tested, and it reproduced exactly. Every round-8 defect lives in a rule
+an author-run audit had to *assume* to run at all — and the author's round-7
+sweep across 17 configs, which reported "all 137 edges, zero delta", never ran
+the one config (`DEBUG_ASSERTIONS=1`) where the model gives a wrong answer.
+
+**Status:** round 7 — implemented and landed (superseded by round 8 above; kept
+for the record). All V1–V8 passed (67 fixtures). One normative amendment was
 forced by the tree during implementation (S6's DOS-exit rule is decided by the
 callee's material TAIL, not by "contains the idiom anywhere" — the
 anywhere-reading hard-fails the shipping tree and deletes the boot-chain edge V2
 mandates). Round-7 review then found and fixed a **real false-edge defect in the
 shipping graph** (Amendment 5: AH=4Ch terminates with any exit code) that the
 author's own three audits had passed. See "Round 7 — implementation + review".
-**A codex/second-agent read of Amendments 1, 5 and 6 is the one thing still
-outstanding** — A5 exists precisely because the adversary was absent.
 
 **Status before implementation:** round 6 — **adversarial review converged; implementation-ready v1**
 (round 5 = codex sign-off; round 6 = post-signoff self-review, three small
@@ -84,6 +99,14 @@ start --call--> Init --jmp--> EnterMapBoot --FALL--> EnterMap --FALL--> Overworl
 | + `EnterMapBoot -> EnterMap` (ONE edge) | 948 |
 | + `EnterMap -> OverworldLoop` | 966 |
 | + `OverworldLoop -> OverworldLoopLessDelay` | 1046 |
+
+⚠️ **Population caveat (Amendment 10, round 8).** This column counts **BFS graph
+nodes** — not what `project_state` reports. It reports per *pret label* and also
+applies the `linked` provider filter; of these 385 nodes only **181** are pret
+labels (111 are not in `labels` at all). The rows reproduce **only against the
+post-change DB** with no `build_active` filter (which is the original method: the
+old scanner had no such column). Same shape, different population — do not quote
+these as tool output.
 
 **Three missing edges dark 661 labels**, of ~1720 port defs (~63%). The port
 falls through pervasively (~857 apparent sites, ~40% of 2147 top-level labels)
@@ -862,7 +885,10 @@ amendment said the rule "fires on `DumpBackbuffer`/`DebugDumpMemory`" in a
 `--config DEBUG_*` run. **It does not fire in any config.** Swept 17 DEBUG_*
 configs: the DOS-exit-tail set is only ever `{start, DebugDumpMemory,
 DumpBackbuffer, DumpPerf, DumpNpcLog}` (plus `setup_flat_access`/
-`alloc_gb_memory`, Amendment 5), and **none of them is ever a boundary
+`alloc_gb_memory`, Amendment 5) — ⚠️ **this enumeration is FALSE, see Amendment
+11**: `RunPartySeedTest` (`DEBUG_PARTY=1`) and `RunCalcStatsTest`
+(`DEBUG_CALCSTATS=1`) are also in the set, and the tool's own docstring says so —
+and **none of them is ever a boundary
 tail-call** — every call site is mid-body, and `start`'s own tail is the exit
 pair. So the S6 hard-fail is a **backstop that is dead in the shipping tree and
 in every advertised config**; its correctness is proven by fixture only. That is
@@ -886,7 +912,7 @@ V7's pass condition. Recorded as the plan asked.
 
 | check | result |
 |---|---|
-| reachable from `start` | **385 → 1051** (plan projected ~1046+, but see Amendment 4: the agreement is a coincidence of +135/−130, not a confirmation) |
+| reachable from `start` | **385 → 1051** — ⚠️ **WRONG POPULATION, see Amendment 10.** These are BFS *node* counts with the `linked` filter dropped; the tool reports **181 → 742**. (Plan projected ~1046+; per Amendment 4 the agreement is a coincidence of +135/−130, not a confirmation — and per A10 the +135/−130 labels are wrong too.) |
 | boot-chain fallthrough edges | all three exist, `kind='fallthrough'` |
 | V2 positives | all 9 `statically-reached-from-start` |
 | V2 negatives (Bug 2) | all 5 gone; `debug_dump.asm`/`perf.asm` non-members (Bug 3) |
@@ -915,11 +941,14 @@ edges, so it was audited in both directions rather than explained away.
 | …zero-byte code alias → edge | 28 |
 | …non-terminal → **fall-through edge** | 109 |
 
-Of the 331 `jmp` tails, **1224 direct `jmp Label` sites tree-wide are already
-explicit edges** and only **12** are indirect (`jmp esi`, `jmp [OptionMenuJumpTable
-+ eax*4]`, `.outOfBattleMovePointers`) — i.e. the documented dd-table gap is
-narrow at the `jmp` level; the bulk of it is address-taken `dd Label` tables and
-the two ISRs.
+Of the 331 `jmp` tails, ~~**1224 direct `jmp Label` sites tree-wide are already
+explicit edges**~~ (⚠️ **wrong three ways — see Amendment 10**: member-scoped not
+tree-wide; 731 of the 1224 are jumps to *local* labels, which are never edges; the
+real figure is **493 in members / 515 tree-wide**) and only **12** are indirect
+(`jmp esi`, `jmp [OptionMenuJumpTable + eax*4]`, `.outOfBattleMovePointers`) — i.e.
+the documented dd-table gap is narrow at the `jmp` level; the bulk of it is
+address-taken `dd Label` tables and the two ISRs. (The **12** is confirmed, and it
+is what the argument actually rests on.)
 
 The gap is one fact: **most routines end in `ret` or `jmp`.** The crude estimate
 counted labels whose *preceding physical line* is not a terminator, which sweeps in
@@ -1058,6 +1087,227 @@ no `hlt`/`ud2`/`into`; `int3` appears only mid-body as an assertion trap
   here (out of scope); the plan's "strict-claims reports zero tree-wide" is stale.
 - Codex's root was inactive throughout; the round-6 standing invitation to object
   now extends to Amendment 1, which is the round-7 judgment call.
+  **(Round 8: taken up — see below.)**
+
+## Round 8 — independent adversarial review (Claude, 2026-07-16)
+
+The second-agent read Amendments 1/5/6 were waiting for. Four reviewers with
+**fresh context**, each told to **refute, not check**, and to verify against the
+tree rather than the argument; every finding below was then re-verified by the
+adjudicating session against the tree before being acted on. **A1 survived on
+soundness. A5/A6 did not survive intact.** Three defects fixed (A7 live, A8/A9
+latent), five measurement corrections (A10/A11), two holes documented open.
+
+**The round-7 hypothesis reproduced.** Round 7 closed by observing that
+self-review converges on the author's blind spot. Every defect below sits in a
+rule an author-run audit had to *assume* in order to run — and A7 is sharper
+than that: round 7 swept **17 DEBUG_* configs** and reported "all 137 edges,
+zero delta", but never ran `DEBUG_ASSERTIONS=1`, the one config where the model
+is wrong. A sweep chooses its own configs; a sweep that reports no delta has
+proven only that it did not look where the defect is.
+
+### Amendment 7 (DEFECT, fixed): the last INSTRUCTION is not the entry's last REACHABLE point
+
+**Live wrong answer under a supported config**, found by the reviewer told to
+find a *third* way the terminator model is wrong.
+
+`classify_file` dropped local labels entirely (old `:767-770`). So a local label
+sitting **after** an entry's last instruction was invisible, and a terminal `jmp`
+tail read as "no edge" even where control lands on that trailing local and falls
+into the next entry. `PrintText` (`src/home/window.asm:176-183`) is exactly that
+shape under `DEBUG_ASSERT_REENTRANCY`:
+
+```nasm
+    pop esi
+%ifdef DEBUG_ASSERT_REENTRANCY
+    jmp .projection_ready       ; :178 — the path actually taken
+.assert_reentrant:
+    int3
+    jmp .assert_reentrant       ; :181 — read as the tail: terminal -> no edge
+.projection_ready:              ; :182 — dropped: the real fall-through point
+%endif
+PrintText_NoCreatingTextBox:    ; :191
+```
+
+Measured, not argued: `make DEBUG_ASSERTIONS=1` (`Makefile:82-86`, a real
+supported config) reported **136** edges, silently losing
+`PrintText → PrintText_NoCreatingTextBox` with **no diagnostic**. A tool whose
+posture is "refuse to guess, fail loudly" was quietly returning a wrong graph.
+
+**Sign matters: this is a false NEGATIVE**, the opposite of A5's false positives —
+so it is a *different* hole, not a third instance of the same one. The shared root
+cause is the model's notion of "tail": *last text line*, not *last reachable
+point*.
+
+Fixed: local labels are now recorded as a **non-material `local` token** (invisible
+to entry-kind, body, and tail selection, so nothing else moves), and a trailing
+local makes the tail fall through **only if a branch inside the entry actually
+targets it** — proven in both directions. An untargeted trailing local is
+unreachable and changes nothing; an **address-taken** local (`mov esi, .Strings`,
+the `OptionsMenu_TextSpeed` shape) is not a branch and must not make a returning
+routine fall through, which would recreate the very data-table false positive S5
+exists to prevent. Fixtures:
+`test_targeted_trailing_local_label_makes_a_terminal_tail_fall_through`,
+`test_untargeted_trailing_local_label_does_not_resurrect_a_terminator`,
+`test_address_taken_trailing_local_is_not_a_branch_target`.
+
+### Amendment 8 (LATENT, fixed): NASM's qualified-local `Foo.bar:` lexed as an INSTRUCTION
+
+`LABEL_RE` (`:77`) forbids a dot; `LOCAL_LABEL_RE` (`:344`) requires a *leading*
+dot. NASM's `Foo.bar:` — which defines local `.bar` of top-level `Foo` — matched
+neither and fell through to `Token('instr', …)` **whose text is the label**. A
+label-as-instruction is non-terminal, so it minted a spurious fall-through edge
+*cited at a label line*. Amendment 5's family exactly: a lexical rule that
+silently reads as non-terminal.
+
+Does not fire today: all three tree occurrences (`audio/low_health_alarm.asm:88,
+92,97`) sit under `section .data`, which `stream_entries` skips — so the 137 was
+**the right count by luck, not by classification**, and Amendment 6's "terminator
+table confirmed complete for this corpus" did not cover it because the hole is in
+the *label lexer*, not the terminator table. Fixed via `QUALIFIED_LOCAL_RE`;
+fixture `test_qualified_local_label_is_not_lexed_as_an_instruction`.
+
+### Amendment 9 (LATENT, fixed): the macro tail path was exempt from Amendment 5
+
+`MacroRegistry._resolve` tested its tail with `_terminal_text(text, None)` —
+`prev_text` **hardcoded `None`**. `_is_dos_exit_setup(None)` is always `False`,
+so a macro body ending in the DOS-exit **pair** was summarized as **"proven to
+return"**, and `is_terminal` would emit a fall-through through it. This is
+literally Amendment 5's bug, one code path over, and it failed *silently* because
+`_is_dos_exit_setup` does `(text or '')`. `dos_exit_tails` filters `not t.macro`,
+so the `call <dos_exit>` refusal would not have fired either.
+
+No macro in this tree contains `int 0x21`, so it is latent. Fixed by carrying the
+real predecessor instruction; fixture
+`test_macro_ending_in_the_dos_exit_pair_does_not_return` (3 exit forms), which
+also asserts an ordinary `mov ah,0x09 / int 0x21` macro still returns.
+
+### Amendment 10 (measurement): the headline "385 → 1051" is in a population the tool does not report
+
+**The tool reports 742, not 1051.** Verified:
+`project_state --no-scan` tallies `not-applicable 2074 / not-proven-reached 545 /
+statically-reached-from-start 742`. `385` and `1051` are **BFS node counts with
+the `linked` provider filter dropped**, of which only **181** and **751** are pret
+labels at all; `project_state` reports per pret label and additionally applies the
+linked filter. Two reviewers reproduced 742 independently, and the BFS agrees with
+the tool exactly — there is no disagreement about the graph, only about which
+population the headline counts.
+
+The fix's *direction* is unaffected and large either way (181 → 742 in the
+reported population). But the plan's own status line, its Context table, and the
+stigmergy memory all quote a number that is not the tool's output — the exact
+"counts a different population than you assume" failure the metric exists to
+prevent. Four further corrections, all measured:
+
+- **Amendment 4's `+135 / −130` are mis-characterized.** The arithmetic is valid
+  and the netted sets *are* disjoint, but the prose describes the wrong sets: the
+  true causal sets are **144** ("reached via the other fall-throughs") and **139**
+  ("die when the Bug 2/3 edges die"), and they **overlap by 9** — the Bill's PC /
+  Oak's PC subtree (`BillsPC`, `PCMainMenu`, `LogOff`, …), reached by a false
+  `DEBUG_PC` edge *and* independently by a real fall-through. `+135/−130` are the
+  overlap-netted residuals presented under un-netted causal labels. The total
+  survives; the explanation does not. (Corroborating the entanglement: removing
+  the `Run*Test` edges alone kills **302** labels, not 130.)
+- **"the OTHER 136 fall-through edges"** → **134** (137 − 3), stale from the
+  pre-Amendment-5 count of 139.
+- **`AutoKeyDrive` is mis-attributed.** It is not a `call Run*Test` line in
+  `EnterMap`; its only call site is `DelayFrame` (`src/video/frame.asm:163`) under
+  `%ifdef DEBUG_AUTOKEY`. The other three named examples check out.
+- **Amendment 3's "1224 direct `jmp Label` sites tree-wide are already explicit
+  edges"** is wrong three ways: it is **member-scoped, not tree-wide** (tree-wide
+  direct = **515**); **731 of the 1224 are jumps to LOCAL labels, which are not
+  edges at all** (`select count(*) from calls where kind='jmp' and callee like
+  '.%'` → **0**); the real figure is **493 in members / 488 `build_active=1` /
+  515 tree-wide**. The paragraph's actual argument (the dd-table gap is narrow at
+  the `jmp` level) rests on the **12**, which is correct and confirmed — but this
+  is the *second* unreconstructible number in a document that already confessed to
+  one (~857).
+
+`~26 call Run*Test`, `iret 2`, `DOS-exit 3`, `66` data entries, `12` indirect
+jumps, and the whole 2006/1590/1386/66/1/28/109 accounting were **independently
+re-derived and hold** — 1386+66+1+28+109 = 1590 and 1050+331+3+2 = 1386, with
+every addend confirmed separately rather than by the total. An independent scanner
+sharing no code with the classifier re-derived all **137** edges with **zero
+tool-only and zero scanner-only rows** — including the false-positive direction the
+author's audits were structurally blind to. The apparent "DOS-exit 3 vs Amendment
+5's ~7 names" conflict is not a discrepancy: 3 is the default config, 7 is the
+union over 17 DEBUG configs.
+
+### Amendment 11 (correction to A1): the "Correction" paragraph is itself wrong
+
+A1's correction paragraph — the one that *tallies* the review's wrong "it fires /
+never fires" claims — asserts the DOS-exit-tail set is "**only ever**
+`{start, DebugDumpMemory, DumpBackbuffer, DumpPerf, DumpNpcLog}` (plus
+`setup_flat_access`/`alloc_gb_memory`)". Measured per config: under
+`--config DEBUG_PARTY=1` the set also contains **`RunPartySeedTest`**, and under
+`DEBUG_CALCSTATS=1` **`RunCalcStatsTest`** (both enter via Amendment 6's jmp-chain
+fixpoint — which is thereby confirmed working, transitively and live). The tool's
+**own docstring names `RunCalcStatsTest`**, so the plan text contradicts its
+implementation. Sixth instance of the pattern, in the paragraph counting the
+pattern.
+
+A1's premise and soundness both hold, verified independently: `DelayFrame`
+(`frame.asm:225-241`, unconditionally active, `.done: popad/ret`) is a default
+member, `overworld.asm:968` really is `OverworldLoop`'s material tail, so the
+anywhere-reading really does hard-fail the shipping tree. A reviewer's independent
+conservative no-return fixpoint — including the `call`-chain case the tool does not
+model — yields exactly `{start, setup_flat_access, alloc_gb_memory}`, **identical
+to the tool's `dos_exit_tails`**: zero false edges from a missed no-return callee.
+All 34 call-tailed fallthrough edges were resolved to callees that reach `ret`.
+
+### Open holes — documented, not fixed (no instance in tree)
+
+1. **`dos_exit_tails` contains routines that DO return.** `setup_flat_access`
+   (`entry.asm:135`, `ret` at `:193`) and `alloc_gb_memory` (`:202`) both return
+   on their normal path; their `.fail:`/`.alloc_failed:` exit blocks are merely
+   textually **last**. They are `DelayFrame` written with the exit block last. So
+   the tail rule is not a semantic test — it is a *"which basic block did the
+   author put last"* test, and **A1's rescue of `OverworldLoop →
+   OverworldLoopLessDelay` rests on `frame.asm` happening to place `.done` after
+   its quit path.** A pure block reorder of `DelayFrame`, semantically identical,
+   re-arms the hard-fail on the one edge this plan exists to add. Latent only
+   because both are called mid-body (`start:94,96`), never at a boundary. The
+   honest framing: A1 **shrank** the false-hard-fail class and hid the residue
+   behind a coding-style accident; it did not eliminate it.
+2. **`%if`/`%endif`/`%rep` inside a macro body classify as instructions.**
+   `NONMATERIAL_DIRECTIVES` holds no `%` directive and `build_macro_registry`
+   collects bodies verbatim, so a `%endif`-terminated macro summarizes as
+   `returns=True`. All 24 such macros in the tree get the right answer by luck
+   (none guards a `jmp`/`ret`). The registry ignores `defines` entirely, so it
+   cannot answer this correctly in principle — under refuse-to-guess it should
+   **hard-fail**, not guess. One `%ifdef`-guarded `jmp` in a macro used at an
+   entry tail makes it real.
+3. Smaller, all latent, no instance: symbolic exit code (`mov ax, DOS_EXIT_OK`
+   defeats `_as_int`); macro-tail asymmetry (`dos_exit_tails` filters `not
+   t.macro`, `is_terminal` does not); zero-byte alias of a no-return routine never
+   enters `dos_exit_tails`; `call`-chain no-return is not propagated (only `jmp`
+   chains); `%include`d bodies are invisible to the boundary model (all 7
+   candidate sites checked benign).
+
+### Verification (round 8)
+
+| check | result |
+|---|---|
+| gate | **72 fixtures pass** (67 + 5 new) |
+| new fixtures vs OLD tool | 3 defect fixtures **FAIL**, 2 non-regression guards **pass** — they catch the defects rather than describing the fix |
+| default edge SET, old vs new tool | **identical** — 137, zero added, zero removed (set comparison, not count) |
+| `DEBUG_ASSERTIONS=1` | 136 → **137**: `+PrintText → PrintText_NoCreatingTextBox`, nothing else |
+| `content_hash`, old vs new tool | **identical** (`3278483f…`) — the default graph is provably unmoved, so the committed DB was left alone rather than churned 4.9 MB for a no-op |
+| `lint_pret_labels` | 0 violations / 6 suppressed (V5 unchanged) |
+| `fidelity_gate --base HEAD~1` | rc=0 |
+| `--strict-claims` | 1 violation — the pre-existing `HiddenEventMaps` `stale_provider` (`c9bda8dc`), untouched |
+
+### The lesson, sharpened
+
+Round 7 said: verify the assertion against the tree, not against the argument.
+Round 8 adds the failure mode one level up — **a sweep is an argument too.**
+"17 configs, zero delta" reads as exhaustive and is not: it proves only that the
+defect is not in the configs the author thought to run. A5, A7, A8 and A9 are all
+the same shape — a rule that silently reads as non-terminal — and each was found
+by someone attacking the rule the previous audit had to assume. The count landing
+where expected (137 across every swept config) was itself the tell: **A8 shows the
+tree can produce the right number by luck**, through a mis-tokenization that never
+reaches an executable stream.
 
 ## Resolved inline-comment ledger (codex comments on superseded draft-1 text)
 

@@ -342,6 +342,14 @@ MUTATION_DIRECTIVES = {'%define', '%xdefine', '%idefine', '%ixdefine',
                        '%undef', '%assign', '%iassign', '%defstr', '%deftok'}
 
 LOCAL_LABEL_RE = re.compile(r'^(\.[A-Za-z0-9_$#@~.?]+|%%[A-Za-z0-9_]+):')
+# NASM's qualified-local form: `Foo.bar:` defines local `.bar` of top-level
+# `Foo` — it is NOT a new top-level label (LABEL_RE rightly rejects the dot).
+# Without this it lexes as an INSTRUCTION whose text is the label, which reads
+# as non-terminal and mints a spurious fall-through edge. The tree's three
+# occurrences (audio/low_health_alarm.asm:88,92,97) sit in `.data`, which
+# stream_entries skips, so this never fired — the right count by luck.
+QUALIFIED_LOCAL_RE = re.compile(
+    r'^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z0-9_$#@~?][A-Za-z0-9_$#@~.?]*):')
 DEFINE_RE = re.compile(r'^%[ix]?x?define\s+([A-Za-z_?][\w?$#@~.]*)\s*(?:\(([^)]*)\))?\s*(.*)$')
 UNDEF_RE = re.compile(r'^%undef\s+([A-Za-z_?][\w?$#@~.]*)')
 ASSIGN_RE = re.compile(r'^%i?assign\s+([A-Za-z_?][\w?$#@~.]*)\s+(.*)$')
@@ -487,7 +495,7 @@ class MacroRegistry:
             return self._emits[name], self._returns[name]
         if name in stack:               # recursive macro: unresolvable
             return None, None
-        emits, last = False, None
+        emits, last, prev_text = False, None, None
         for _line, text in self.bodies.get(name, ()):
             kind, mac = self._token_kind(text, stack + (name,))
             if kind is None:
@@ -498,6 +506,12 @@ class MacroRegistry:
             if kind == 'data':
                 emits = True
             else:
+                # Carry the preceding instruction: the DOS-exit idiom is a
+                # PAIR, and a macro body ending in `mov ax,0x4C00 / int 0x21`
+                # must not be summarized as returning (Amendment 5's bug, one
+                # code path over). If the predecessor was itself a macro
+                # invocation its text cannot match the mov, which fails safe.
+                prev_text = last[0] if last else None
                 last = (text, mac)
         if emits is None or last == 'unknown':
             emits = rets = None
@@ -509,7 +523,7 @@ class MacroRegistry:
                 # returns-control is the same tail question, one level down.
                 rets = self._resolve(mac, stack + (name,))[1]
             else:
-                rets = not _terminal_text(text, None)
+                rets = not _terminal_text(text, prev_text)
         if stack:                       # partial result under recursion: don't memo
             return emits, rets
         self._emits[name], self._returns[name] = emits, rets
@@ -765,8 +779,15 @@ def classify_file(path, rel, defines, macros, include_dirs):
                 tokens.append(Token('label', lm.group(1), line_no, sect[0], s))
                 s = s[lm.end():].strip()
             else:
-                lm = LOCAL_LABEL_RE.match(s)
+                lm = LOCAL_LABEL_RE.match(s) or QUALIFIED_LOCAL_RE.match(s)
                 if lm:
+                    # Recorded, not dropped: a local label sitting after an
+                    # entry's last instruction can be the entry's real last
+                    # reachable point (boundary_edges). 'local' is
+                    # non-material, so it is invisible to entry-kind, body,
+                    # and tail selection.
+                    tokens.append(Token('local', lm.group(1), line_no,
+                                        sect[0], s))
                     s = s[lm.end():].strip()
             if not s:
                 continue
@@ -960,8 +981,9 @@ def boundary_edges(cf, macros, dos_exit):
         last = instrs[-1]
         prev = instrs[-2] if len(instrs) > 1 else None
         tail = f'{cf.rel}:{last.line}'
-        if is_terminal(last, prev, macros, tail):
-            continue                    # proven terminator: no edge. Material
+        if not _falls_through_trailing_local(toks, i, nxt, last):
+            if is_terminal(last, prev, macros, tail):
+                continue                # proven terminator: no edge. Material
                                         # tokens after it are legal unreachable
                                         # data and must not reclassify E.
         if body[-1] is not last:
@@ -1001,6 +1023,43 @@ def _next_material(toks, start):
         if t.kind in ('instr', 'data'):
             return t
     return None
+
+
+BRANCH_TO_LOCAL_RE = re.compile(
+    r'^(?:jmp|j[a-z]{1,3}|loop\w*)\s+(?:short\s+|near\s+)?'
+    r'(\.[A-Za-z0-9_$#@~.?]+)\s*$', re.I)
+
+
+def _falls_through_trailing_local(toks, i, nxt, last):
+    """Does control reach the END of this entry via a local label that sits
+    AFTER its last instruction?
+
+    The tail instruction is not automatically the entry's last reachable
+    point. `PrintText` (home/window.asm:176-183) under DEBUG_ASSERT_REENTRANCY
+    is `jmp .projection_ready / .assert_reentrant: int3 / jmp .assert_reentrant
+    / .projection_ready:` — the last INSTRUCTION is a terminal `jmp`, but
+    control lands on the trailing `.projection_ready` and falls into the next
+    entry. Reading the tail as terminal silently deletes that real edge.
+
+    Proven, not guessed, in both directions: the trailing local counts only if
+    a branch inside this entry actually targets it. An untargeted trailing
+    local is unreachable and changes nothing; an address-taken local
+    (`mov esi, .Strings`) is not a branch and must NOT make a returning
+    routine fall through — that would recreate the data-table false positive
+    S5 exists to prevent.
+    """
+    trailing = {t.name for t in toks[i + 1:nxt]
+                if t.kind == 'local' and t.line > last.line}
+    if not trailing:
+        return False
+    targeted = set()
+    for t in toks[i + 1:nxt]:
+        if t.kind != 'instr':
+            continue
+        bm = BRANCH_TO_LOCAL_RE.match(t.text.strip())
+        if bm:
+            targeted.add(bm.group(1))
+    return bool(trailing & targeted)
 
 
 def scan_build_graph(cfg):

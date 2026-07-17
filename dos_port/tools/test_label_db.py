@@ -580,6 +580,65 @@ B:
                     f'section .text\nA:\n    {setup}\n    int 0x21\nB:\n    ret\n')
                 self.assertEqual([(e[0], e[1]) for e in edges], [('A', 'B')])
 
+    def test_targeted_trailing_local_label_makes_a_terminal_tail_fall_through(self):
+        # Round-7 adversarial review, PROVEN DEFECT (live under
+        # `make DEBUG_ASSERTIONS=1`): the last INSTRUCTION is not always the
+        # entry's last reachable point. home/window.asm:176-183 under
+        # DEBUG_ASSERT_REENTRANCY is exactly this shape — control takes
+        # `jmp .projection_ready`, lands on the trailing local, and falls into
+        # PrintText_NoCreatingTextBox. Reading the terminal `jmp` as the tail
+        # silently deleted that real edge (137 -> 136, no diagnostic).
+        edges = self.edges("""
+section .text
+A:
+    pop esi
+    jmp .ready
+.trap:
+    int3
+    jmp .trap
+.ready:
+B:
+    ret
+""")
+        self.assertEqual([(e[0], e[1]) for e in edges], [('A', 'B')])
+
+    def test_untargeted_trailing_local_label_does_not_resurrect_a_terminator(self):
+        # The other direction, so the fix cannot become a false-edge generator:
+        # an untargeted trailing local is unreachable and changes nothing.
+        self.assertEqual(self.edges(
+            'section .text\nA:\n    call X\n    ret\n.unused:\nB:\n    ret\n'), [])
+
+    def test_address_taken_trailing_local_is_not_a_branch_target(self):
+        # A local data table addressed by `mov esi, .Strings` (the
+        # OptionsMenu_TextSpeed shape) must NOT make a returning routine fall
+        # through — that would recreate the false positive S5 exists to stop.
+        self.assertEqual(self.edges("""
+section .text
+A:
+    mov esi, .Strings
+    call PrintIt
+    ret
+.Strings:
+    db 0x80
+B:
+    ret
+"""), [])
+
+    def test_qualified_local_label_is_not_lexed_as_an_instruction(self):
+        # Round-7 adversarial review, LATENT: NASM's `Foo.bar:` defines local
+        # `.bar` of Foo. LABEL_RE forbids the dot and LOCAL_LABEL_RE requires a
+        # leading one, so it lexed as an INSTRUCTION whose text is the label —
+        # non-terminal, minting a spurious edge cited at a label line. The
+        # tree's three occurrences (audio/low_health_alarm.asm:88,92,97) sit in
+        # `.data`, which stream_entries skips: the right count by luck.
+        cf = self.classify(
+            'section .text\nAlpha:\n    mov eax, 1\n    ret\nAlpha.endmark:\n'
+            'Beta:\n    ret\n')
+        self.assertEqual(self.names(cf), ['Alpha', 'Beta'])
+        self.assertEqual(self.edges(
+            'section .text\nAlpha:\n    mov eax, 1\n    ret\nAlpha.endmark:\n'
+            'Beta:\n    ret\n'), [])
+
     def test_dos_exit_tails_are_transitive_over_jmp_chains(self):
         # Round-7 adversarial review, LATENT hole (pre-existing: the superseded
         # anywhere-reading missed it identically). RunCalcStatsTest tails
@@ -682,6 +741,20 @@ _TextData:
         with self.assertRaises(uld.ScanError) as ctx:
             self.edges('section .text\nA:\n    tail_ret\nB:\n    ret\n', macros=macros)
         self.assertIn('not proven to return', str(ctx.exception))
+
+    def test_macro_ending_in_the_dos_exit_pair_does_not_return(self):
+        # Round-7 adversarial review, LATENT: MacroRegistry._resolve tested the
+        # tail with prev_text hardcoded None, so `_is_dos_exit_setup(None)` was
+        # always False and a macro body ending in the exit PAIR summarized as
+        # "returns" — Amendment 5's bug one code path over, and a false-edge
+        # generator. No macro in this tree contains int 0x21 today.
+        for setup in ('mov ax, 0x4C00', 'mov ax, 0x4C02', 'mov ah, 0x4C'):
+            with self.subTest(setup=setup):
+                macros = self.reg({'exit_now': [setup, 'int 0x21']})
+                self.assertIs(macros.returns('exit_now'), False)
+        # …while an ordinary DOS call through a macro still returns.
+        macros = self.reg({'dos_print': ['mov ah, 0x09', 'int 0x21']})
+        self.assertIs(macros.returns('dos_print'), True)
 
     def test_unknown_macro_at_a_boundary_raises(self):
         macros = self.reg({'recursive': ['recursive']})
