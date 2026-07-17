@@ -400,6 +400,43 @@ Prioritized task list. Check off items as they complete; add new items with phas
       `spr_dos_sx/sy` now — see the cross-plan note in the archived plan before
       moving the pokéball OAM bases.
 
+### Deferred tails from the label-DB reachability plan (archived 2026-07-16)
+
+The plan (`docs/plans/label_db_reachability.md`) is COMPLETE: fall-through edges,
+`%ifdef`-aware scanning and Make-resolved membership all landed, and its gate is
+`python3 dos_port/tools/test_label_db.py` (75 fixtures). These are its **documented
+holes** — every one is latent with **no instance in the tree**, kept here so they are
+not lost with the plan. Each is a place `update_label_db` could answer wrongly *if*
+the tree grew the shape; none is scheduled.
+
+- [ ] **ACCEPTED, not scheduled — the tail rule is "which block did the author put
+      last", not a semantic test.** `dos_exit_tails` contains `setup_flat_access`
+      (`boot/entry.asm:135`, `ret` at `:193`) and `alloc_gb_memory` (`:202`), which
+      **demonstrably return** — their `.fail:`/`.alloc_failed:` exit blocks are merely
+      textually last. They are `DelayFrame` written with the exit block last. So round-7
+      Amendment 1's rescue of `OverworldLoop → OverworldLoopLessDelay` rests on
+      `src/video/frame.asm` happening to place `.done: popad/ret` after its quit path:
+      a pure block reorder, semantically identical, re-arms the hard-fail on the one edge
+      the plan existed to add. Latent only because both are called mid-body
+      (`entry.asm:94,96`), never at a boundary. **A sound fix needs real basic-block
+      reachability analysis** — out of proportion to a hole with no instance. If the
+      hard-fail ever fires on a legitimate routine, this is why.
+- [ ] **Smaller latent holes** (fix only if one acquires an instance):
+      symbolic exit code — `mov ax, DOS_EXIT_OK` defeats `_as_int`, so the DOS-exit
+      idiom reads as non-terminal (Amendment 5's shape, one lexeme over);
+      `dos_exit_tails` filters `not t.macro` while `is_terminal` does not, so a
+      macro-expanded tail is asymmetric between the two rules; a zero-byte **alias** of a
+      no-return routine never enters `dos_exit_tails`; `call`-chain no-return is not
+      propagated (only `jmp` chains are, via Amendment 6's fixpoint); `%include`d bodies
+      are invisible to the boundary model (all 7 candidate sites checked benign).
+- [ ] **Permanent v1 gap — not a bug to rediscover** (also in CLAUDE.md/AGENTS.md and
+      memory `project-state-reachability-false-negative-overworld-menu-subtree`):
+      `dd Label` dispatch tables and address-taken operands emit no edge, so jump-table
+      handlers and both ISRs (PIT `boot/timing.asm:176`, keyboard
+      `src/input/joypad.asm:313`) read `not-proven-reached` while provably running.
+      `not-proven-reached` is **never** proof of unreachability — cite `--callers` or
+      runtime evidence. End state: provider-qualified BFS nodes.
+
 ### Deferred tails from archived plans (menus, pokemon_behavior) — 2026-07-04
 
 - [ ] **Title screen faithful reimpl** (low priority) — `src/movie/title.asm` is a

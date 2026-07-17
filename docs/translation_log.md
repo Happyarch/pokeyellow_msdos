@@ -5621,4 +5621,4 @@ Supersedes the Script-engine Stage 5 entry above (which also mislocated this fil
   fall-through edges, so the whole overworld subtree read unreached; it now reports
   `statically-reached-from-start` for `PrintStrengthText`. The conclusion is
   unchanged, because it never rested on the metric: the arming/map facts are what
-  make it unexecuted. See docs/current_plan_label_db_reachability.md.)
+  make it unexecuted. See docs/plans/label_db_reachability.md.)

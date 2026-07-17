@@ -1,12 +1,25 @@
-# Current Plan: label-DB reachability — %ifdef-aware scan + fall-through edges
+# Plan (archived): label-DB reachability — %ifdef-aware scan + fall-through edges
 
-**Status:** round 8 — **ADVERSARIALLY REVIEWED; STILL ACTIVE** (2026-07-16). All
+**Status: COMPLETE & archived** (2026-07-16). Implemented and landed over rounds
+7–8; round 8's live defect (A7) is fixed, and round-8 open hole 2 (conditional
+structure in a macro body) is closed by a hard-fail — the tool now refuses that
+tail instead of guessing `returns=True`. Gate: `python3
+dos_port/tools/test_label_db.py` — **75 fixtures**, green. The remaining
+documented holes (round-8 open hole 1 and the smaller latent ones) carry
+forward as a TODO.md backlog entry so they outlive this file; **hole 1 is
+accepted, not scheduled** — a sound fix needs real basic-block reachability
+analysis and there is no instance in the tree. The `reachability` column's
+permanent limits (dd-tables, ISRs; `not-proven-reached` is never proof of
+unreachability) live in CLAUDE.md/AGENTS.md and the stigmergy memory
+`project-state-reachability-false-negative-overworld-menu-subtree`.
+
+**Status:** round 8 — **ADVERSARIALLY REVIEWED** (2026-07-16). All
 V1–V8 pass (**72 fixtures**). The round-7 amendments got the second-agent read
 they were waiting for: four independent reviewers with fresh context, each told
 to **refute** rather than check. **A1 survived; A5/A6 did not survive intact** —
 one **live wrong answer** (A7, dropped a real edge under `make DEBUG_ASSERTIONS=1`)
-and two latent false-edge generators (A8, A9) were found, fixed, and fixtured, so
-the plan **stays active**. Amendment 4's headline number is also wrong in the way
+and two latent false-edge generators (A8, A9) were found, fixed, and fixtured
+(which is why the plan stayed active past round 7). Amendment 4's headline number is also wrong in the way
 this plan was written to catch: **the tool does not report 1051, it reports 742**
 (A10). See "Round 8 — independent adversarial review".
 
@@ -1269,20 +1282,54 @@ All 34 call-tailed fallthrough edges were resolved to callees that reach `ret`.
    because both are called mid-body (`start:94,96`), never at a boundary. The
    honest framing: A1 **shrank** the false-hard-fail class and hid the residue
    behind a coding-style accident; it did not eliminate it.
-2. **`%if`/`%endif`/`%rep` inside a macro body classify as instructions.**
-   `NONMATERIAL_DIRECTIVES` holds no `%` directive and `build_macro_registry`
-   collects bodies verbatim, so a `%endif`-terminated macro summarizes as
-   `returns=True`. All 24 such macros in the tree get the right answer by luck
-   (none guards a `jmp`/`ret`). The registry ignores `defines` entirely, so it
-   cannot answer this correctly in principle — under refuse-to-guess it should
-   **hard-fail**, not guess. One `%ifdef`-guarded `jmp` in a macro used at an
-   entry tail makes it real.
+2. ~~**`%if`/`%endif`/`%rep` inside a macro body classify as instructions.**~~
+   **CLOSED at archive time (2026-07-16).** `NONMATERIAL_DIRECTIVES` held no
+   `%` directive and `build_macro_registry` collects bodies verbatim, so a
+   `%endif`-terminated macro summarized as `returns=True`. The registry has no
+   define state and never sees the invocation's arguments, so it cannot answer
+   this in principle — per the governing refuse-to-guess posture it now
+   **hard-fails**, modelled on the unknown-macro-at-a-boundary rule (S5.4).
+   Fixed: `MACRO_UNPROVABLE_DIRECTIVES` (`%if*`/`%elif*`/`%else`/`%endif`/
+   `%rep`/`%endrep`/`%exitrep`) makes a macro body's **tail** unprovable
+   (`returns=None`), transitively through nested invocations, and the existing
+   `is_terminal` boundary refuses it naming the use site plus the defining
+   `file:line`. **Scoped to the tail**: `emits_bytes` is still derived, because
+   the tree's byte-emitting families (`dname`/`tmhm`/`dn`/`dc`/`bigdw`/…) are
+   built out of `%rep`/`%if` and refusing entry KIND too would hard-fail the
+   shipping tree — a macro nobody uses at a tail must not break the build.
+   Measured: 28 of 87 macros carry conditional structure; the default edge set
+   and `content_hash` are unchanged, and no config starts hard-failing (80
+   configs swept, old vs new, zero delta). Fixtures (all three FAIL against the
+   pre-change tool for the first two):
+   `test_conditional_structure_in_a_macro_body_makes_its_tail_unprovable`,
+   `test_conditional_macro_tail_refusal_is_transitive`,
+   `test_conditional_macro_body_still_classifies_its_byte_emission`.
 3. Smaller, all latent, no instance: symbolic exit code (`mov ax, DOS_EXIT_OK`
    defeats `_as_int`); macro-tail asymmetry (`dos_exit_tails` filters `not
    t.macro`, `is_terminal` does not); zero-byte alias of a no-return routine never
    enters `dos_exit_tails`; `call`-chain no-return is not propagated (only `jmp`
    chains); `%include`d bodies are invisible to the boundary model (all 7
    candidate sites checked benign).
+
+### Archive-time correction: "the S6 hard-fail fires in no config" is FALSE
+
+Measured while sweeping 80 configs for the hole-2 fix, and reproduced **on the
+pre-change tool byte-for-byte**, so it is pre-existing rather than introduced:
+
+```
+--config DEBUG_ITEMTM=1    ScanError debug_dump.asm:869  RunTMHMTest  falls through after `call DebugDumpMemory`
+--config DEBUG_ITEMSTONE=1 ScanError debug_dump.asm:2310 RunStoneTest falls through after `call DebugDumpMemory`
+```
+
+Both are the S6 DOS-exit-callee refusal **working as designed** — `DebugDumpMemory`'s
+material tail terminates the process, so the tool refuses the edge instead of guessing.
+Nothing is wrong with the tool; what is wrong is the sentence. Round 7 and round 8 both
+wrote that this backstop "fires in no config", and round 8 even re-derived the
+DOS-exit-tail *set* per config (A11) without noticing that two configs never complete a
+scan at all. Seventh instance of the pattern this review exists to catch — a
+"never fires" claim that nobody ran. Two configs of 80 hard-fail today; that is the
+refuse-to-guess contract doing its job, and V7's "either completes or hard-fails naming
+the site" is the clause that anticipated it.
 
 ### Verification (round 8)
 

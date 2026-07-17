@@ -479,9 +479,11 @@ ground that no reachable map carries a boulder.
 
 ### RESOLVED 2026-07-16 — the trap is fixed; the lesson is not retired
 
-`docs/current_plan_label_db_reachability.md` landed the repair. The scanner now
+`docs/plans/label_db_reachability.md` landed the repair. The scanner now
 evaluates NASM conditionals over the real member set (asked of GNU Make itself) and
-emits proven `kind='fallthrough'` edges; reachable labels went **385 → 1051**, all
+emits proven `kind='fallthrough'` edges; reachable pret labels went **181 → 742**
+(the tool's reported population — "385 → 1051" is BFS *nodes* with the `linked`
+provider filter dropped, corrected by the plan's round-8 Amendment 10), all
 three boot-chain edges exist, and every label named above — `UsedCut`,
 `PrintStrengthText`, `StartMenu_Pokemon`, `DisplayTextID`, `OverworldLoop` — now reads
 `statically-reached-from-start`. The values were renamed

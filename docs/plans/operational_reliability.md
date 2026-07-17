@@ -493,7 +493,7 @@ regression without comparing its categorized inventory.
   (The scanner met this spec, but the value name `not-statically-reached` invited
   the misreading anyway, and sequential fall-through — not just indirect/
   table-driven paths — was also invisible, darkening ~63% of the port. Fixed and
-  renamed by docs/current_plan_label_db_reachability.md.)
+  renamed by docs/plans/label_db_reachability.md.)
 - [x] Generate the active-plan inventory with `tools/project_state --plans`.
 - [x] Add changed-label `tools/fidelity_gate` with conservative evidence wording
   and an explicit static-blind-spot report.

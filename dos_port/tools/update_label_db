@@ -46,7 +46,10 @@ KNOWN GAPS in the port build graph (documented, not bugs to rediscover):
     not-proven-reached here.
   * labels/calls inside %include'd files and %macro expansions are not graph
     content (includes and macros ARE consulted for conditional state and for
-    byte-emission classification).
+    byte-emission classification). A macro whose body carries conditional or
+    %rep structure has no provable tail — the registry has no define state and
+    never sees the invocation's arguments — so a boundary decided by one is a
+    hard error, not a guessed fall-through.
   * the graph is name-keyed: duplicate definitions of one name union their
     out-edges.
 This is why a not-proven-reached result is never proof of unreachability.
@@ -338,6 +341,13 @@ COND_ELIF = {'%elif', '%elifdef', '%elifndef', '%elifidn', '%elifidni',
              '%elifnmacro', '%elifnctx', '%elifnnum', '%elifnstr', '%elifnid',
              '%elifnempty', '%elifntoken'}
 ASSERT_DIRECTIVES = {'%error', '%fatal', '%warning'}
+# Conditional/repeat structure inside a %MACRO BODY. NASM resolves these at
+# EXPANSION, against define state and the invocation's own arguments; the macro
+# registry has neither, so it cannot answer them in principle — hence a refusal
+# (S5.4), never a guess. See MacroRegistry._resolve.
+MACRO_UNPROVABLE_DIRECTIVES = (COND_OPEN | COND_ELIF |
+                               {'%else', '%endif', '%rep', '%endrep',
+                                '%exitrep'})
 MUTATION_DIRECTIVES = {'%define', '%xdefine', '%idefine', '%ixdefine',
                        '%undef', '%assign', '%iassign', '%defstr', '%deftok'}
 
@@ -477,9 +487,11 @@ class MacroRegistry:
     an unresolvable one stays unknown and hard-fails at a boundary rather than
     being guessed into an ordinary instruction."""
 
-    def __init__(self, bodies):
+    def __init__(self, bodies, sites=None):
         self.bodies = bodies            # name -> [(line, text), …]
+        self.sites = sites or {}        # name -> file the %macro is defined in
         self._emits, self._returns = {}, {}
+        self._why = {}                  # name -> why its tail is unprovable
 
     def __contains__(self, name):
         return name in self.bodies
@@ -490,18 +502,37 @@ class MacroRegistry:
     def returns(self, name):
         return self._resolve(name)[1]
 
+    def why_unprovable(self, name):
+        """Where the refusal comes from, for the boundary's error message."""
+        self._resolve(name)
+        return self._why.get(name)
+
     def _resolve(self, name, stack=()):
         if name in self._emits:
             return self._emits[name], self._returns[name]
         if name in stack:               # recursive macro: unresolvable
             return None, None
-        emits, last, prev_text = False, None, None
-        for _line, text in self.bodies.get(name, ()):
+        emits, last, prev_text, why = False, None, None, None
+        for line, text in self.bodies.get(name, ()):
             kind, mac = self._token_kind(text, stack + (name,))
+            if kind == 'cond':
+                # A conditional or %rep region can hold ANY tail — including a
+                # `jmp` or `ret` — and whether it expands is decided at
+                # expansion time, so no later token in this body is provably
+                # the tail either (an active earlier arm may jump out first).
+                # The body is still scanned for byte emission: entry KIND is a
+                # separate question this hole does not touch, and the tree's
+                # byte-emitting families (dname/tmhm/dn/dc/…) are built out of
+                # %rep/%if. Refuse only the tail, and only where a boundary
+                # actually asks (is_terminal).
+                why = why or (f'{self.sites.get(name, "<macro>")}:{line}: '
+                              f'`{text.split()[0]}` in the body of macro {name}')
+                continue
             if kind is None:
                 continue
             if kind == 'unknown':
                 emits, last = None, 'unknown'
+                why = why or f'macro {mac or name} is unclassifiable'
                 break
             if kind == 'data':
                 emits = True
@@ -515,6 +546,8 @@ class MacroRegistry:
                 last = (text, mac)
         if emits is None or last == 'unknown':
             emits = rets = None
+        elif why is not None:
+            rets = None                 # tail unprovable; `emits` still derived
         elif last is None:
             rets = True                 # emits no instructions: control flows on
         else:
@@ -522,16 +555,23 @@ class MacroRegistry:
             if mac:
                 # returns-control is the same tail question, one level down.
                 rets = self._resolve(mac, stack + (name,))[1]
+                if rets is None:
+                    why = (self._why.get(mac)
+                           or f'macro {mac} does not return provably')
             else:
                 rets = not _terminal_text(text, prev_text)
         if stack:                       # partial result under recursion: don't memo
             return emits, rets
         self._emits[name], self._returns[name] = emits, rets
+        if why is not None:
+            self._why[name] = why
         return emits, rets
 
     def _token_kind(self, text, stack):
-        """(None | 'instr' | 'data' | 'unknown', macro_name)"""
+        """(None | 'instr' | 'data' | 'cond' | 'unknown', macro_name)"""
         op = text.split()[0].lower() if text.split() else ''
+        if op in MACRO_UNPROVABLE_DIRECTIVES:
+            return 'cond', None
         if op in BYTE_DIRECTIVES:
             return 'data', None
         if op in NONMATERIAL_DIRECTIVES:
@@ -549,7 +589,7 @@ def build_macro_registry(scan_paths):
     """Scan every repository .asm/.inc for %macro definitions. Bodies are
     collected verbatim; nested %macro definitions do not occur in this tree and
     are rejected loudly if they appear."""
-    bodies = {}
+    bodies, sites = {}, {}
     for root in scan_paths:
         for dirpath, dirnames, filenames in os.walk(root):
             dirnames.sort()
@@ -568,8 +608,9 @@ def build_macro_registry(scan_paths):
                         cur, body = m.group(1), []
                         continue
                     if line.lower().startswith('%endmacro'):
-                        if cur is not None:
-                            bodies.setdefault(cur, body)
+                        if cur is not None and cur not in bodies:
+                            bodies[cur] = body
+                            sites[cur] = os.path.relpath(path, REPO_ROOT)
                         cur, body = None, None
                         continue
                     if cur is None or not line:
@@ -579,7 +620,7 @@ def build_macro_registry(scan_paths):
                         line = line[lm.end():].strip()
                     if line:
                         body.append((idx, line))
-    return MacroRegistry(bodies)
+    return MacroRegistry(bodies, sites)
 
 
 # ── per-file classification (S3): ONE pass into an immutable stream ────────────
@@ -864,10 +905,12 @@ def is_terminal(tok, prev, macros, where):
         # fall-through edge.
         rets = macros.returns(tok.macro)
         if rets is not True:
+            why = macros.why_unprovable(tok.macro)
             raise ScanError(
                 f'{where}: boundary decided by macro {tok.macro}, whose '
                 f'expansion is not proven to return control '
-                f'({"may terminate or jump out" if rets is False else "unclassifiable"}). '
+                f'({"may terminate or jump out" if rets is False else "unclassifiable"}'
+                f'{"; " + why if rets is None and why else ""}). '
                 f'Refusing to guess the fall-through.')
         return False
     return _terminal_text(tok.text, prev.text if prev and not prev.macro else None)

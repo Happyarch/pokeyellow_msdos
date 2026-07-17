@@ -710,7 +710,9 @@ class Macros(Base):
     """S5.4 — macro classification derived transitively, checked at boundaries."""
 
     def reg(self, bodies):
-        return uld.MacroRegistry({k: [(1, l) for l in v] for k, v in bodies.items()})
+        return uld.MacroRegistry(
+            {k: list(enumerate(v, 1)) for k, v in bodies.items()},
+            {k: 'macros.inc' for k in bodies})
 
     def test_byte_emitting_macro_makes_a_data_entry(self):
         macros = self.reg({'text_far': ['db 0x17', 'dw %1']})
@@ -755,6 +757,56 @@ _TextData:
         # …while an ordinary DOS call through a macro still returns.
         macros = self.reg({'dos_print': ['mov ah, 0x09', 'int 0x21']})
         self.assertIs(macros.returns('dos_print'), True)
+
+    def test_conditional_structure_in_a_macro_body_makes_its_tail_unprovable(self):
+        # Round-8 open hole 2, closed: NONMATERIAL_DIRECTIVES holds no `%`
+        # directive and bodies are collected verbatim, so `%if`/`%endif`/`%rep`
+        # lexed as INSTRUCTIONS — non-terminal ones — and a %endif-terminated
+        # macro summarized as returns=True. The registry has no define state
+        # and never sees the invocation's arguments, so it cannot answer this
+        # in principle: under refuse-to-guess it must fail, not guess. The 24
+        # such macros in the tree get the right answer only by luck (none
+        # guards a jmp/ret); one %ifdef-guarded `jmp` makes it real.
+        for body in (
+                ['%ifdef DEBUG_X', 'jmp Away', '%endif', 'nop'],   # guards a jmp
+                ['%if 1', 'nop', '%endif'],                        # %endif tail
+                ['%rep 2', 'nop', '%endrep'],
+                ['%else'],
+                ['%elifdef Y'],
+        ):
+            with self.subTest(body=body):
+                macros = self.reg({'cond_macro': body})
+                self.assertIsNone(macros.returns('cond_macro'))
+                with self.assertRaises(uld.ScanError) as ctx:
+                    self.edges('section .text\nA:\n    call X\n    cond_macro\n'
+                               'B:\n    ret\n', macros=macros)
+                self.assertIn('not proven to return', str(ctx.exception))
+                # The refusal names the directive that caused it (file:line).
+                self.assertIn('macros.inc:', str(ctx.exception))
+
+    def test_conditional_macro_tail_refusal_is_transitive(self):
+        macros = self.reg({'inner': ['%ifdef X', 'ret', '%endif'],
+                           'outer': ['nop', 'inner']})
+        self.assertIsNone(macros.returns('outer'))
+        with self.assertRaises(uld.ScanError):
+            self.edges('section .text\nA:\n    call X\n    outer\nB:\n    ret\n',
+                       macros=macros)
+
+    def test_conditional_macro_body_still_classifies_its_byte_emission(self):
+        # Scope guard: the refusal is the TAIL only. The tree's byte-emitting
+        # families (dname/tmhm/dn/dc/bigdw/…) are built out of %rep/%if, so
+        # refusing entry KIND too would hard-fail the shipping tree — and a
+        # macro nobody uses at a tail must not break the build.
+        macros = self.reg({'dname': ['%rep %0', 'db %1', '%rotate 1', '%endrep']})
+        self.assertTrue(macros.emits_bytes('dname'))
+        edges = self.edges("""
+section .text
+A:
+    ret
+NameTable:
+    dname "RED"
+""", macros=macros)
+        self.assertEqual(edges, [])
 
     def test_unknown_macro_at_a_boundary_raises(self):
         macros = self.reg({'recursive': ['recursive']})
