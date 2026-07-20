@@ -1986,3 +1986,43 @@ main + generated text; A4.4 naming via the existing `DisplayNamingScreen` +
 post-naming surface re-establishment; A4.5 wire the boot path (delete the stub),
 the `oak_intro` golden, and the Oak timing trace. The boot path keeps working
 throughout because the `OakSpeech` stub stays live until A4.5 swaps it.
+
+### A4 progress (2026-07-20): pic engine, fade, text, PrepareOakSpeech; the PrintText-under-surface finding
+
+A4 is being ported bottom-up behind debug gates (the OakSpeech body itself waits
+for A4.5 — defining it now would duplicate the still-live stub's global). Done and
+verified so far:
+
+- **A4.1 pic engine** — `CopyUncompressedPicToTilemap` (init_battle.asm),
+  `IntroDisplayPicCenteredOrUpperRight` / `DisplayPicCenteredOrUpperRight`
+  (oak_speech.asm). Oak's pic renders centred on the surface (`DEBUG_OAKPIC`:
+  matte clean, 7-tile pic at projected row 7). Most of the engine already
+  existed; these are glue over `LoadMonPicToVRAM` + `CopyUncompressedPicToHL`.
+  `ProfOakPic`/`Rival1Pic` assets already existed (trainer-pic generator).
+- **A4.2 fade** — `FadeInIntroPic` + `IntroFadePalettes` (ramp bytes from the
+  `dc` macro, terminal `0xE4` = normal BGP validates them). Pixel-verified.
+  Slides (`MovePicLeft`, `OakSpeechSlidePic*`) still open — and they come *after*
+  the oak_intro checkpoint, so off the critical path to the golden.
+- **A4.3 text** — `gen_oak_speech_strings.py` emits the five intro streams;
+  `sound_cry_pikachu` ($14) added to the shared parser (the one permitted silent
+  audio op).
+- **A4.3 PrepareOakSpeech** — ported in full (save-block clear + option
+  preservation + InitOptions + debug names). faithdiff caught an incomplete first
+  attempt (only the name-copy tail) before commit.
+
+**Open finding — PrintText does not compose over the cinematic surface.** The
+`DEBUG_OAKINTRO` diagnostic gate drives Oak pic + fade + `PrintText(OakSpeechText1)`
+and photographs the parked frame. It came back wrong, and the cause is precise:
+`PrintText`'s box creation calls `set_single_window` (`home/text.asm:423`), which
+sets `g_window_count = 1` and **replaces** `MovieBeginSurface`'s surface
+descriptor — the Oak pic (in the surface window) vanishes. And `msgbox_dialog` is
+a screen-space descriptor (`WY=152`, `MAXY=RENDER_H`), so its box extends below
+the surface (`y1=168`) and leaks into the matte (measured: 904 colour-3 px
+outside the surface, 0 pic ink).
+
+The reconciliation (A4.3/A4.5): the intro text is part of the GB 20x18 screen,
+which under projection **is** the surface, so `PrintText`'s box must be drawn into
+the surface's own canvas (`W_TILEMAP`, committed by `MovieMirrorSurface`) through
+a `UI_OAK_SPEECH`-projected msgbox descriptor, WITHOUT `set_single_window`
+replacing the surface window. The `DEBUG_OAKINTRO` gate is the tool to build that
+fix against; its captured frame is wrong by design until the reconciliation lands.

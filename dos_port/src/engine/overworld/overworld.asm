@@ -249,6 +249,9 @@ extern RunContinueSeedTest
 %ifdef DEBUG_OAKPIC
 extern RunOakPicTest
 %endif
+%ifdef DEBUG_OAKINTRO
+extern RunOakSpeechCheckpoint
+%endif
 %ifdef DEBUG_SAVE
 extern RunSaveTest
 %endif
@@ -855,6 +858,9 @@ EnterMap:
 %endif
 %ifdef DEBUG_OAKPIC
     call RunOakPicTest                      ; A4.1: display Oak pic on the surface, dump FRAME.BIN, exits
+%endif
+%ifdef DEBUG_OAKINTRO
+    call RunOakSpeechCheckpoint             ; A4.3: oak_intro checkpoint (pic+fade+text), AutoKeyDrive dumps
 %endif
 %ifdef DEBUG_NAMINGSCREEN
     call RunNamingScreenTest                ; open PLAYER naming screen, draw grid, dump FRAME.BIN, exits

@@ -262,3 +262,63 @@ RunOakPicTest:
 .hang:
     jmp .hang
 %endif
+
+%ifdef DEBUG_OAKINTRO
+; ---------------------------------------------------------------------------
+; RunOakSpeechCheckpoint — A4.3/A4.5 oak_intro checkpoint DIAGNOSTIC. Drives the
+; opening beats — Prof. Oak's pic, FadeInIntroPic, PrintText(OakSpeechText1) — on
+; the projected surface, then AutoKeyDrive (AUTOKEY_QUIET) photographs the parked
+; frame at AUTOKEY_DUMP_FRAME.
+;
+; OPEN FINDING (2026-07-20), what this gate revealed: PrintText does NOT compose
+; over the cinematic surface as written. PrintText's text-box creation calls
+; set_single_window (home/text.asm), which sets g_window_count = 1 and REPLACES
+; MovieBeginSurface's surface descriptor — so the Oak pic (drawn in the surface
+; window) vanishes, and only the msgbox window remains. Worse, msgbox_dialog is a
+; SCREEN-SPACE descriptor (WY=152, MAXY=RENDER_H=200), so its box extends BELOW
+; the surface (y1=168) and leaks into the matte (measured: 904 colour-3 px
+; outside the surface, 0 pic ink).
+;
+; The reconciliation (A4.3/A4.5): the intro text is part of the GB 20x18 screen,
+; which under projection IS the surface. So PrintText's box must be drawn into
+; the surface's own canvas (W_TILEMAP, committed by MovieMirrorSurface) via a
+; UI_OAK_SPEECH-projected msgbox descriptor, WITHOUT set_single_window replacing
+; the surface window — not as a second screen-space msgbox_dialog window. Until
+; that lands, this gate's captured frame is WRONG BY DESIGN; it is the tool to
+; build the fix against, not a passing checkpoint.
+;
+; In: EBP = GB base. PrintText parks at the stream's `prompt`; never returns.
+; ---------------------------------------------------------------------------
+extern MovieBeginSurface             ; movie_projection.asm
+extern MovieMirrorSurface            ; movie_projection.asm
+extern LoadFontTilePatterns          ; home/load_font.asm
+extern LoadTextBoxTilePatterns       ; home/load_font.asm
+extern PrintText                     ; home/window.asm — ESI = text stream
+extern text_msgbox                   ; home/text.asm — active msgbox projection
+extern msgbox_dialog                 ; home/text.asm — standard bottom dialog box
+extern ProfOakPic                    ; data/trainer_pics.asm
+global RunOakSpeechCheckpoint
+
+OAKINTRO_PIC_LEN equ 286             ; gfx/trainers/prof.oak.pic byte length
+
+RunOakSpeechCheckpoint:
+    call LoadFontTilePatterns
+    call LoadTextBoxTilePatterns
+    call MovieBeginSurface
+
+    ; Prof. Oak, centred, faded up.
+    mov byte [ebp + IO_BGP], 0
+    mov esi, ProfOakPic
+    mov ecx, OAKINTRO_PIC_LEN
+    xor bl, bl                        ; centred
+    call IntroDisplayPicCenteredOrUpperRight
+    call MovieMirrorSurface
+    call FadeInIntroPic
+
+    ; First text page through the surface's dialog projection.
+    mov dword [text_msgbox], msgbox_dialog
+    mov esi, OakSpeechText1
+    call PrintText                    ; types out, parks at `prompt`; AutoKeyDrive dumps
+.hang:
+    jmp .hang
+%endif
