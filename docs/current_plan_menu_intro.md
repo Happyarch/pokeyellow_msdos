@@ -2009,6 +2009,19 @@ verified so far:
 - **A4.3 PrepareOakSpeech** — ported in full (save-block clear + option
   preservation + InitOptions + debug names). faithdiff caught an incomplete first
   attempt (only the name-copy tail) before commit.
+- **A4.3 text-over-surface** — RESOLVED (commit `05da5bcc`); see the dedicated
+  execution note below. `g_surface_redraw_cb` per-frame mirror + `msgbox_oak_speech`.
+- **A4.4.a default-name data** — `gen_default_names.py` → `assets/default_names.inc`
+  (`DefaultNames{Player,Rival}{,List}`, decode-verified byte-exact). Commit `b09cdae7`.
+- **A4.4.b (in progress)** — `oak_speech2.asm` created; `GetDefaultName` ported
+  (flat→GB `rep movsb` for the `jp CopyData` tail, `data-model` DEVIATION — the
+  name list is program-image data and the port's CopyData is EBP-relative on both
+  ends). Assembles, links into the full image, lint clean. Remaining in
+  `oak_speech2.asm`: `OakSpeechSlidePic*` (projected tilemap-shift), `DisplayIntro
+  NameTextBox` (projected name menu), `ChoosePlayer/RivalName` (+ `DisplayNamingScreen`
+  and post-naming surface re-establishment) — each needs a runtime pixel gate, so
+  they land with their own verification, not a blind assemble. Analysis in stigmergy
+  `a4-4-oak-speech2-porting-plan`.
 
 **Open finding — PrintText does not compose over the cinematic surface.** The
 `DEBUG_OAKINTRO` diagnostic gate drives Oak pic + fade + `PrintText(OakSpeechText1)`

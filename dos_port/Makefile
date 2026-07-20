@@ -293,6 +293,7 @@ GAME_SRCS := \
     src/engine/movie/movie_projection.asm \
     src/engine/movie/oak_speech/init_player_data.asm \
     src/engine/movie/oak_speech/oak_speech.asm \
+    src/engine/movie/oak_speech/oak_speech2.asm \
     src/engine/overworld/overworld.asm \
     src/engine/overworld/movement.asm \
     src/engine/overworld/map_sprites.asm \
@@ -1584,6 +1585,8 @@ src/engine/movie/oak_speech/oak_speech.o: assets/oak_speech_strings.inc
 # names.asm + names_list.asm). Consumed by oak_speech2.asm (naming flow).
 assets/default_names.inc: tools/generators/gen_default_names.py tools/generators/gb_text.py
 	python3 tools/generators/gen_default_names.py
+
+src/engine/movie/oak_speech/oak_speech2.o: assets/default_names.inc
 
 src/data/hidden_events_data.o: assets/hidden_events.inc assets/hidden_item_coords.inc
 src/data/pickup_text.o: assets/pickup_text.inc
