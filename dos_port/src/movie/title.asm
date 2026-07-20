@@ -16,16 +16,22 @@
 ;      the H_AUTO_BG_TRANSFER_EN/DEST writes below are vestigial bookkeeping.)
 ;   6. After bounce, restore Buffer1 (logo+pikachu); DelayFrames(36) —
 ;      Pikachu appears (render_bg reads the restored wTileMap).
-;   7. Place speech bubble; play PCM (stub); play music (stub).
+;   7. Place speech bubble; play PCM; play music.
 ;   8. Main idle loop: blink Pikachu's eyes, await A/Start → main menu.
 ;      Inactivity for ~51 s resets to Init.
 ;
 ; Hardware I/O boundaries in this file:
-;   OBP0 write     — ; TODO-HW: OBP0 palette (no sprite renderer yet)
-;   UpdateCGBPal   — ; TODO-HW: CGB palette (Phase 5)
-;   RunPaletteCommand — ; TODO-HW: CGB/SGB palette (Phase 5)
-;   PlaySound / StopAllMusic / TitleScreen_PlayPikachuPCM — ; TODO-HW: audio (Phase 3)
-;   FillSpriteBuffer0WithAA — SRAM not yet emulated; stub no-op
+;   FillSpriteBuffer0WithAA — not ported (project_state: missing). SRAM is not
+;     emulated, and pret uses this only to prime a sprite buffer with $AA.
+;
+; NOT boundaries any more — the former TODO-HW block here was stale and is
+; deleted rather than carried: every routine it disclaimed is a linked
+; implementation (project_state, 2026-07-20). PlaySound (35 callers),
+; StopAllMusic (9), PlayMusic (11), PlayPikachuSoundClip, RunPaletteCommand
+; (14), UpdateCGBPal_OBP0 (5), GBPalNormal (13) are all live, and the OBP0 note
+; ("no sprite renderer yet") predates render_sprites. A comment asserting a
+; capability is missing is a claim like any other: it needs evidence, and these
+; had gone false without anyone noticing.
 ;
 ; Build: nasm -f coff -I include/ -I . -o title.o title.asm
 
@@ -33,6 +39,10 @@ bits 32
 
 %include "gb_memmap.inc"
 %include "gb_macros.inc"
+%include "gb_constants.inc"             ; SET_PAL_TITLE_SCREEN
+%include "assets/audio_constants.inc"   ; SFX_INTRO_*/MUSIC_TITLE_SCREEN
+%define PIKA_PCM_EQUATES_ONLY 1         ; indices only — the blob lives in pikachu_pcm.o
+%include "assets/pika_pcm.inc"          ; PIKA_CRY_*_IDX
 
 ; ---------------------------------------------------------------------------
 ; Externs
@@ -53,6 +63,14 @@ extern EnterMapBoot              ; overworld.asm — one-time overworld boot glu
 extern OakSpeech                 ; main_menu_stubs.asm — new-game data init (InitPlayerData2)
 extern g_tilecache_dirty
 extern JoypadLowSensitivity     ; src/home/joypad_lowsens.asm (home/joypad2.asm)
+extern PlaySound                ; src/home/audio.asm — AL = sound id
+extern StopAllMusic             ; src/home/audio.asm
+extern WaitForSoundToFinish     ; src/home/audio.asm
+extern PlayPikachuSoundClip     ; src/engine/pikachu/pikachu_pcm.asm — DL = clip index (pret: E)
+extern RunPaletteCommand        ; src/home/palettes.asm — BH = palette command
+extern UpdateCGBPal_OBP0        ; src/home/cgb_palettes.asm
+extern GBPalWhiteOutWithDelay3  ; src/home/fade.asm
+extern LoadGBPal                ; src/home/fade.asm
 
 ; ---------------------------------------------------------------------------
 ; Globals
@@ -105,8 +123,9 @@ align 4
 
 ; Pikachu eye OAM data — 8 sprites × 4 bytes = 32 bytes
 ; Copied to wShadowOAM by TitleScreen_PlacePikachu.
-; Phase 1 open item: OAM sprite renderer not yet implemented; sprites won't
-; render until Phase 1 OAM pass, but writes are kept for correctness.
+; (The old "OAM renderer not yet implemented" note here was stale: render_sprites
+; has emulated DMG OBJ since the Phase-1 OAM pass. A2.4 routes these records
+; through PublishProjectedOAM so they land on the centred cinematic surface.)
 TitleScreenPikachuEyesOAMData:
     db 0x60, 0x40, 0xf1, 0x22
     db 0x60, 0x48, 0xf0, 0x22
@@ -125,8 +144,22 @@ TitleScreenPikachuEyesOAMData:
 CopyrightRowTiles:
     db 0xe0,0xe1,0xe2,0xe3,0xe1,0xe2,0xee,0xe5,0xe6,0xe7,0xe8,0xe9,0xea,0xeb,0xec,0xed,0xff
 
-; Bounce table: pairs of (signed SCY delta, repeat count); $00 = end.
-TitleScreenYScrolls:
+; Controls the bouncing effect of the Pokemon logo on the title screen.
+; Pairs of (signed SCY delta, number of times to scroll); $00 terminates.
+;
+; pret: engine/movie/title.asm:DisplayTitleScreen.TitleScreenPokemonLogoYScrolls
+; — a LOCAL label inside DisplayTitleScreen, so the port keeps that exact name
+; and scope (an earlier revision invented a global `TitleScreenYScrolls`). The
+; qualified spelling defines the same local NASM would produce from `.name`,
+; without having to move the data below DisplayTitleScreen: NASM binds a bare
+; `.name` to the most recent textually preceding global, which here would be the
+; wrong routine.
+;
+; hSCY starts at $40 and this table walks it 64 -> 0 -> 12 -> 0 -> 4 -> 0 -> 2
+; -> 0: range [0,64], and it NEVER crosses the 0/255 boundary. The -3 entry is
+; special only because pret's `cp -3` dispatches SFX_INTRO_CRASH there — it is
+; not an unsigned wrap, so it is not wrap evidence for the compositor.
+DisplayTitleScreen.TitleScreenPokemonLogoYScrolls:
     db -4, 16
     db  3,  4
     db -3,  4
@@ -289,17 +322,20 @@ DisplayTitleScreen:
     mov al, TILEMAP_DEST_HI_ROW0
     call TitleScreenCopyTileMapToVRAM
 
-    ; RunPaletteCommand / GBPalNormal — ; TODO-HW: CGB palette (Phase 5)
+    ; pret: ld b, SET_PAL_TITLE_SCREEN / call RunPaletteCommand / call GBPalNormal
+    mov bh, SET_PAL_TITLE_SCREEN        ; port contract: command in BH
+    call RunPaletteCommand
     call GBPalNormal
 
-    ; rOBP0 = %11100000 — ; TODO-HW: OBP0 (sprite renderer Phase 1)
-    ; mov byte [ebp + IO_OBP0], 0xE0
+    ; pret: ld a, %11100000 / ldh [rOBP0], a / call UpdateCGBPal_OBP0
+    mov byte [ebp + IO_OBP0], 0xE0
+    call UpdateCGBPal_OBP0
 
     ; ---------------------------------------------------------------------------
     ; Bounce animation: SCY slides from 64 → 0 with spring-damped overshoot.
     ; Table: pairs (delta, count); $00 = end of table.
     ; ---------------------------------------------------------------------------
-    lea esi, [TitleScreenYScrolls]    ; ESI = table pointer (flat DS address)
+    lea esi, [DisplayTitleScreen.TitleScreenPokemonLogoYScrolls]    ; ESI = table pointer (flat DS address)
 
 .bounceLoop:
     movsx eax, byte [esi]             ; AL = delta (signed)
@@ -309,7 +345,18 @@ DisplayTitleScreen:
     movzx ecx, byte [esi]             ; CL = repeat count
     inc esi
 
-    ; SFX_INTRO_CRASH on first -3 scroll step — ; TODO-HW: audio (Phase 3)
+    ; pret: cp -3 / jr nz,.skipPlayingSound / ld a,SFX_INTRO_CRASH / call PlaySound.
+    ; The test is on the DELTA, so the crash lands on the entry that overshoots
+    ; back through the logo's rest position — the -3 row, which occurs once.
+    cmp al, -3
+    jne .skipPlayingSound
+    push eax
+    push ecx
+    mov al, SFX_INTRO_CRASH
+    call PlaySound
+    pop ecx
+    pop eax
+.skipPlayingSound:
 
 .scrollStep:
     call DelayFrame
@@ -327,17 +374,24 @@ DisplayTitleScreen:
     mov bl, 36
     call DelayFrames                  ; 36 frames → Pikachu appears
 
-    ; SFX_INTRO_WHOOSH — ; TODO-HW: audio (Phase 3)
+    mov al, SFX_INTRO_WHOOSH
+    call PlaySound
 
     ; Add speech bubble to current wTileMap (logo+pikachu)
     call TitleScreen_PlacePikaSpeechBubble
     mov byte [ebp + H_WY], RENDER_H            ; window off-screen (past 320×200 bottom)
     call Delay3
 
-    ; TitleScreen_PlayPikachuPCM — ; TODO-HW: audio (Phase 3)
-    ; WaitForSoundToFinish         — ; TODO-HW: audio (Phase 3)
-    ; StopAllMusic                 — ; TODO-HW: audio (Phase 3)
-    ; PlaySound(MUSIC_TITLE_SCREEN)— ; TODO-HW: audio (Phase 3)
+    ; pret: ldpikacry e, PikachuCry1 / call TitleScreen_PlayPikachuPCM.
+    ; The clip argument is an INDEX into PikachuCriesPointerTable, not an address.
+; DEVIATION{class=banking; pret=engine/movie/title.asm:TitleScreen_PlayPikachuPCM; behavior=both PCM sites call PlayPikachuSoundClip directly instead of through the one-line TitleScreen_PlayPikachuPCM thunk; evidence=that routine's entire body is `callfar PlayPikachuSoundClip / ret`, a bank trampoline with no behavior in the port's flat model; lifetime=permanent flat-banking model}
+    mov dl, PIKA_CRY_1_IDX
+    call PlayPikachuSoundClip
+    call WaitForSoundToFinish
+    call StopAllMusic
+    mov al, MUSIC_TITLE_SCREEN
+    mov [ebp + wNewSoundID], al                ; pret writes it before PlaySound
+    call PlaySound
 
     ; ---------------------------------------------------------------------------
     ; Main idle loop: blink Pikachu's eyes, wait for input, reset on timeout.
@@ -366,7 +420,11 @@ DisplayTitleScreen:
     jmp .titleScreenLoop
 
 .go_to_main_menu:
-    ; GBPalWhiteOutWithDelay3 — ; TODO-HW: palette fade (Phase 5)
+    ; pret: ldpikacry e, PikachuCry11 / call TitleScreen_PlayPikachuPCM —
+    ; the title-exit PCM beat, the second of the two.
+    mov dl, PIKA_CRY_11_IDX
+    call PlayPikachuSoundClip
+    call GBPalWhiteOutWithDelay3
     call ClearSprites
     xor al, al
     mov byte [ebp + H_WY], al
@@ -378,8 +436,7 @@ DisplayTitleScreen:
     mov al, (GB_TILEMAP1 >> 8) & 0xFF
     call TitleScreenCopyTileMapToVRAM
     call Delay3
-    ; LoadGBPal — TODO: when CGB palettes land (Phase 5); GBPalNormal suffices
-    call GBPalNormal
+    call LoadGBPal                      ; pret's exact call here, now linked
 
     ; Check if the reset-save combo was pressed (PAD_UP|PAD_SELECT|PAD_B)
     mov al, [ebp + H_JOY_HELD]
@@ -399,8 +456,16 @@ DisplayTitleScreen:
     jmp Init
 
 .doTitlescreenReset:
-    ; Audio fade — ; TODO-HW: audio (Phase 3)
-    ; StopAllMusic — ; TODO-HW: audio (Phase 3)
+    ; pret: ld [wAudioFadeOutControl], a / call StopAllMusic. `a` is $0C here —
+    ; IncrementResetCounter leaves a = d = $0C on its reset path — and that value
+    ; is the fade length, so it must be carried, not invented.
+    mov [ebp + W_AUDIO_FADE_OUT], al
+    call StopAllMusic
+; DEVIATION{class=HAL; pret=engine/movie/title.asm:DisplayTitleScreen.audioFadeLoop; behavior=the fade-out wait calls DelayFrame each iteration instead of spinning on wAudioFadeOutControl alone; evidence=on the GB the audio engine runs from the VBlank interrupt so a bare spin still advances the fade, while this port ticks audio inside DelayFrame (frame.asm calls audio_tick which calls FadeOutAudio) so a bare spin would never decrement it and would hang forever; lifetime=permanent, audio is frame-driven in this port}
+.audioFadeLoop:
+    call DelayFrame
+    cmp byte [ebp + W_AUDIO_FADE_OUT], 0
+    jnz .audioFadeLoop
     jmp Init
 
 ; ---------------------------------------------------------------------------
@@ -614,9 +679,8 @@ TitleScreen_PlacePikachu:
     mov byte [ebp + W_TILEMAP + 12 * SCREEN_TILES_W + 16], 0xA7
     mov byte [ebp + W_TILEMAP + 13 * SCREEN_TILES_W + 16], 0xB1
 
-    ; Copy eye OAM data to wShadowOAM (32 bytes = 8 sprites × 4 bytes)
-    ; OAM rendering is a Phase 1 open item; writes are correct for when it lands.
-    ; ; TODO-HW: OAM sprite renderer (Phase 1)
+    ; Copy eye OAM data to wShadowOAM (32 bytes = 8 sprites × 4 bytes).
+    ; Canonical OAM only — A2.4 publishes it to the projected surface.
     lea esi, [TitleScreenPikachuEyesOAMData]
     lea edi, [ebp + W_SHADOW_OAM]
     mov ecx, 32
@@ -690,8 +754,8 @@ section .text
 .BlinkClosed:
     mov dl, 8
 .LoadBlinkFrame:
-    ; Modify TileID byte of 8 OAM sprites: clear bits 2-3, OR with DL (blink state)
-    ; ; TODO-HW: OAM sprite renderer (Phase 1) — writes correct but not visible yet
+    ; Modify TileID byte of 8 OAM sprites: clear bits 2-3, OR with DL (blink state).
+    ; A2.4 republishes after this mutation so the change reaches the next frame.
     lea esi, [ebp + W_SHADOW_OAM + 2]    ; TileID of sprite 0
     mov ecx, 8
 .blink_loop:
@@ -748,5 +812,10 @@ IncrementResetCounter:
     ret
 .do_reset:
     popad
-    stc
+    ; pret returns here with a = d = $0C (it loaded d into a for the `cp $c`
+    ; that detected the reset). .doTitlescreenReset stores that byte as the
+    ; audio fade length, so the value is load-bearing — popad would otherwise
+    ; hand back whatever the caller had in AL.
+    mov al, 0x0C
+    stc                                 ; mov does not disturb CF
     ret

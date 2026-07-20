@@ -91,6 +91,11 @@ def main():
         f"PIKA_PCM_RATE   equ {OUT_RATE}",
         f"NUM_PIKA_CRIES  equ {NUM_CLIPS}",
         "",
+        "; The table and the sample blob are guarded so a consumer that only",
+        "; needs the clip INDICES (PlayPikachuSoundClip's DL argument) can",
+        "; %define PIKA_PCM_EQUATES_ONLY first and include this without pulling a",
+        "; second copy of the ~700 KB incbin into its object file.",
+        "%ifndef PIKA_PCM_EQUATES_ONLY",
         "PikachuCriesPointerTable:",
     ]
     for i, (off, cnt) in enumerate(offsets, 1):
@@ -98,6 +103,15 @@ def main():
     lines += ["", 'PikaPcmData: incbin "assets/pika_pcm.bin"', ""]
     for i, (off, cnt) in enumerate(offsets, 1):
         lines.append(f"PikachuCry{i:<2} equ PikaPcmData + {off}")
+    lines.append("%endif")
+    # 0-based indices into PikachuCriesPointerTable. PlayPikachuSoundClip takes
+    # an INDEX (DL; pret's E), not a data address, so callers need these — pret
+    # derives the same number from its `ldpikacry` macro. Emitting them keeps
+    # call sites free of magic ordinals: the table order is generated data, so
+    # the index that names an entry has to be generated with it.
+    lines.append("")
+    for i, _ in enumerate(offsets, 1):
+        lines.append(f"{f'PIKA_CRY_{i}_IDX':<16} equ {i - 1}")
     lines.append("")
     (ASSETS / "pika_pcm.inc").write_text("\n".join(lines))
 

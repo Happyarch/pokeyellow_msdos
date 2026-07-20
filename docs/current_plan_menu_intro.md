@@ -983,6 +983,121 @@ block and `AUTOKEY_DUMP_FRAME` forwarding fix. That is declared in the commit
 message rather than swept in silently; the rest of that workstream is untouched
 and uncommitted.
 
+### A2 — CORRECTION: the title bounce does not wrap, and the label is pret-local
+
+Two planning-baseline errors found by reading pret before implementing. Both
+change A2's acceptance criteria; the text above is superseded where it conflicts.
+
+**1. `TitleScreenYScrolls` is not a pret name.** Pret has the table as a LOCAL
+label inside `DisplayTitleScreen`:
+`engine/movie/title.asm:DisplayTitleScreen.TitleScreenPokemonLogoYScrolls`. The
+port invented a global `TitleScreenYScrolls`. The *values* are byte-identical and
+faithful — `(-4,16) (3,4) (-3,4) (2,2) (-2,2) (1,2) (-1,2) 0` — so this is a
+naming divergence only. Per the preserve-pret-labels rule the port keeps pret's
+local name and scope; A2 renames it. (NASM binds a local label to the most recent
+textually preceding global, so the data block must sit after `DisplayTitleScreen:`
+or be written fully qualified.)
+
+**2. The bounce NEVER WRAPS.** `hSCY` starts at `$40` and the table walks it:
+
+```text
+64 --(-4 x16)--> 0 --(+3 x4)--> 12 --(-3 x4)--> 0 --(+2 x2)--> 4
+   --(-2 x2)--> 0 --(+1 x2)--> 2 --(-1 x2)--> 0
+```
+
+Range [0,64], 22 distinct values, **zero crossings of the 0/255 boundary**. The
+`-3` entry is special because it is where `SFX_INTRO_CRASH` is dispatched
+(pret compares `cp -3` to trigger the sound), **not** because it overshoots into
+a wrap. The planning text calling it "the `-3` crash step whose unsigned byte
+values wrap" is wrong on the wrap.
+
+Consequences:
+
+- A2 **cannot** supply wrapped-frame pixel evidence, because no wrapped frame
+  exists. The "Scroll-render pixel evidence" rule is written conditionally
+  ("whenever the stage's scroll sequence wraps"), so it is satisfied vacuously —
+  but the A2 acceptance line "including every wrapped/overshoot frame" must read
+  **"including the `-3` crash-SFX frame"** instead.
+- The two-distinct-offsets-per-axis requirement still binds and is easily met
+  (22 distinct `hSCY` values), so a renderer that ignored `WIN_SRC_Y` still
+  cannot pass.
+- The wrap machinery remains justified and is already proven: A1's marker harness
+  established it synthetically. Whether any B3 `hSCX` scene actually wraps must be
+  **measured in B3**, not assumed — the same assumption is what produced this
+  error.
+
+**3. The title's audio `TODO-HW` comments are stale.** `PlaySound` / `PlayMusic`
+and the PCM path are live (the plan's own evidence table says so). The crash /
+whoosh / title-music sites in `src/movie/title.asm` still carry
+`; TODO-HW: audio (Phase 3)` comments from before the audio engine landed. Those
+are false negative claims of the kind the evidence policy forbids; A2 deletes
+them as it wires the real calls.
+
+### A2.1 / A2.2 done — labels restored, live audio and palettes wired
+
+- `TitleScreenYScrolls` → pret's `DisplayTitleScreen.TitleScreenPokemonLogoYScrolls`
+  (qualified spelling; NASM would otherwise bind a bare `.name` to the wrong
+  preceding global). Values already matched pret byte-for-byte.
+- The header's `TODO-HW` block is **deleted, not carried**: `project_state`
+  shows every routine it disclaimed is a linked implementation — `PlaySound`
+  (35 callers), `StopAllMusic` (9), `PlayMusic` (11), `PlayPikachuSoundClip`,
+  `RunPaletteCommand` (14), `UpdateCGBPal_OBP0` (5), `GBPalNormal` (13) — and
+  the OBP0 note predated `render_sprites`. Only `FillSpriteBuffer0WithAA` is
+  genuinely absent (`missing`), and its note is corrected rather than removed.
+- Live wiring at pret's exact call points: `SET_PAL_TITLE_SCREEN` via
+  `RunPaletteCommand` (BH), `rOBP0` + `UpdateCGBPal_OBP0`, `SFX_INTRO_CRASH` on
+  the `-3` entry, `SFX_INTRO_WHOOSH`, both PCM beats (`PikachuCry1` at reveal,
+  `PikachuCry11` at exit), `WaitForSoundToFinish`, `StopAllMusic`,
+  `MUSIC_TITLE_SCREEN`, `GBPalWhiteOutWithDelay3`, `LoadGBPal`.
+
+**Generator change (Tier-1).** `PlayPikachuSoundClip` takes an INDEX, but
+`gen_pika_pcm.py` emitted only data addresses, which would have forced magic
+ordinals (`0`, `10`) into the `.asm`. It now also emits `PIKA_CRY_<n>_IDX`, and
+guards the table + ~700 KB `incbin` behind `PIKA_PCM_EQUATES_ONLY` so an
+index-only consumer does not duplicate the blob into a second object. The diff is
+emission-only — the sample-blob path has zero changed lines, so `pika_pcm.bin` is
+byte-identical.
+
+`SET_PAL_TITLE_SCREEN` moved into `include/gb_constants.inc` beside the three
+`SET_PAL_*` already there, rather than duplicating `palettes.asm`'s file-local
+`%define` (those two headers must not both define a symbol).
+
+**Gates:** build clean; `lint_pret_labels` 0 violations; the new
+`DEVIATION{class=banking}` for the `TitleScreen_PlayPikachuPCM` thunk parses.
+`faithdiff DisplayTitleScreen` is otherwise unchanged from its pre-existing
+bespoke-title divergences (the `MainMenu` → `OakSpeech`/`EnterMapBoot` shortcut
+is A3's to remove). One **pre-existing, unrelated** `--strict-claims` violation
+remains: a stale `extern HiddenEventMaps` in `home/hidden_events.asm`.
+
+### Stale-claim sweep done in passing (A2.1/A2.2)
+
+`--strict-claims` is back to **zero tree-wide**, the property CLAUDE.md
+documents.
+
+- **`extern HiddenEventMaps`** (`src/home/hidden_events.asm`) named
+  `src/data/hidden_events_data.asm`, which does not literally define it — the
+  symbol is in the generated `assets/hidden_events.inc` that file `%include`s,
+  and the linter does not follow includes. Comment now names the defining `.inc`
+  and the including `.asm`. Pre-existing, unrelated to menu-intro; fixed because
+  it was a one-line correction.
+- **Title OAM notes** claiming "OAM sprite renderer not yet implemented"
+  predated `render_sprites`; replaced with pointers to A2.4's publication step.
+- **`.doTitlescreenReset` is now really wired**, and doing so exposed a genuine
+  translation boundary rather than a comment fix:
+  - pret's `IncrementResetCounter` returns with `a = d = $0C`, and
+    `.doTitlescreenReset` stores that byte as the **audio fade length**. The
+    port's `pushad`/`popad` discarded it, so the reset path now restores
+    `AL = $0C` explicitly on the carry return.
+  - pret's `.audioFadeLoop` is a **bare spin** on `wAudioFadeOutControl`, which
+    works on the GB because the audio engine runs from the VBlank interrupt.
+    This port ticks audio inside `DelayFrame` (`frame.asm` → `audio_tick` →
+    `FadeOutAudio`), so a bare spin would never decrement the counter and would
+    **hang forever**. The loop calls `DelayFrame` each iteration under a
+    `DEVIATION{class=HAL}`.
+
+Only one `TODO-HW` remains in `title.asm` — `FillSpriteBuffer0WithAA`, which
+`project_state` confirms is genuinely `missing`.
+
 ### A4 — `InitPlayerData2` relocation branch is moot
 
 Generated state (`project_state`, 2026-07-20) reports `InitPlayerData2` as

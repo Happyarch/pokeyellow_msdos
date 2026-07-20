@@ -182,7 +182,8 @@ extern JumpToAddress                    ; src/home/bankswitch.asm — jp hl tram
 extern GetTileAndCoordsInFrontOfPlayer  ; src/engine/overworld/player_state.asm (linked predef)
 extern UpdateCinnabarGymGateTileBlocks_ ; src/engine/overworld/hidden_object_stubs.asm (stub)
 extern IsInArray                        ; src/home/array.asm (map-id search, stride DE)
-extern HiddenEventMaps                  ; src/data/hidden_events_data.asm — generated flat
+extern HiddenEventMaps                  ; assets/hidden_events.inc, %included by
+                                        ; src/data/hidden_events_data.asm — generated flat
                                         ; {db map, dd HiddenEventsFor_<map>} table
                                         ; (gen_hidden_events.py). Per-map lists point at the
                                         ; Tier-2 handlers in hidden_object_stubs.asm.
