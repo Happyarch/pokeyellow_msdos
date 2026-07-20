@@ -481,6 +481,19 @@ SCENARIOS = {
     # as a GB-shaped STRIDE-20 scratch (options.asm GBSCR_W / trainer_card.asm
     # TCSCR_W) and mirror rows 0-17 to GB_TILEMAP1, so the golden maps at
     # "stride": 20, window (0,0) — flat offset r*20+c, not the 40-wide canvas. ---
+    "main_menu": {
+        "flags": "DEBUG_MAINMENU_LIVE=1",
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
+        # Like the title, the main menu keeps the GB composition and is centred
+        # on the canvas rather than re-flowed -- one rigid translation of the
+        # whole GB screen, from the generated UI_MAIN_MENU_* layout.
+        "window": (0, 0),
+        "projections": (
+            [((0, 0, 17, 19), (10, 0),
+              "main menu projected to the canvas at UI_MAIN_MENU_(COL,ROW) = "
+              "(10,0), from the generated assets/ui_layout_menus.inc")]
+        ),
+    },
     "title": {
         "flags": "DEBUG_TITLE=1",
         # The wOptionsBlock mask this scenario carried at A2.6 is RETIRED, not

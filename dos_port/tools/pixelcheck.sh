@@ -44,6 +44,9 @@ case "$SCENARIO" in
     markers)    FLAGS="DEBUG_CINEMATIC_MARKERS=1 MARKER_SX=${MARKER_SX:-0} MARKER_SY=${MARKER_SY:-0}" ;;
     # The real title, booted through the full bounce to its stable checkpoint
     # (menu-intro A2.3/A2.6). No SKIP_TITLE — that would defeat the scenario.
+    # The real main menu, reached by booting the real title and latching START at
+    # its idle loop (menu-intro A3). No SKIP_TITLE: the routing is the evidence.
+    mainmenu)   FLAGS="DEBUG_MAINMENU_LIVE=1" ;;
     title)      FLAGS="DEBUG_TITLE=1 TITLE_DUMP_FRAME=${TITLE_DUMP_FRAME:-0} TITLE_DUMP_SCENE=${TITLE_DUMP_SCENE:-0} TITLE_DUMP_LOOP=${TITLE_DUMP_LOOP:-0}" ;;
     *) echo "unknown scenario: $SCENARIO" >&2; exit 2 ;;
 esac

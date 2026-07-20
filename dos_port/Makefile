@@ -834,6 +834,15 @@ endif
 # photographs the Nth frame of the logo bounce instead. The mid-bounce frames are
 # the ONLY ones that can evidence pret's bounce window (hWY=64) — by the
 # checkpoint pret has parked it off-screen again.
+# main_menu scenario (A3): boot the REAL title, latch START at its idle loop so
+# the genuine .go_to_main_menu exit runs, then photograph MainMenu with the box
+# drawn and no input consumed. Deliberately no SKIP_TITLE — the routing is part
+# of what this evidences.
+#   make image DEBUG_MAINMENU_LIVE=1
+ifdef DEBUG_MAINMENU_LIVE
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_MAINMENU_LIVE
+endif
 ifdef DEBUG_TITLE
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_TITLE

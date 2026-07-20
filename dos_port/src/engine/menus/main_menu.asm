@@ -262,6 +262,24 @@ MainMenu:
     ; single descriptor + the per-frame mirror as menu_redraw_cb). Stands in for
     ; pret relying on the LCD showing the drawn BG map directly.
     call MainMenuShowWindow
+%ifdef DEBUG_MAINMENU_LIVE
+    ; main_menu scenario (A3). Photograph the menu drawn WITH its cursor and
+    ; before HandleMenuInput consumes anything — the same stopping point the
+    ; mGBA side uses. This is the real MainMenu reached by the real title route,
+    ; not RunMainMenuTest's synthetic redraw, so it evidences the routing as
+    ; well as the layout.
+    ;
+    ; PlaceMenuCursor is required here: HandleMenuInput draws the cursor at its
+    ; start, so dumping straight after MainMenuShowWindow catches the one frame
+    ; before it exists. The golden has the cursor, and the first run of this
+    ; scenario failed on exactly one cell — (row 2, col 1), want $ED got $7F.
+    call PlaceMenuCursor
+    call mainmenu_mirror
+    call DelayFrame
+    call DelayFrame
+    call DelayFrame
+    call DumpBackbuffer              ; never returns
+%endif
     call HandleMenuInput
     test al, PAD_B                              ; bit B_PAD_B, a
     jnz .backToTitle                            ; jp nz DisplayTitleScreen
@@ -644,6 +662,10 @@ dcgi_mirror:
 ; renders 3 frames and dumps FRAME.BIN. Never returns.
 ; In: EBP = GB base.  make DEBUG_MAINMENU=1  (root wires the flag + call site).
 ; ===========================================================================
+%ifdef DEBUG_MAINMENU_LIVE
+extern DumpBackbuffer      ; debug/debug_dump.asm — FRAME.BIN + exit (main_menu scenario)
+%endif
+
 %ifdef DEBUG_MAINMENU
 global RunMainMenuTest
 extern PrepareNewGameDebug      ; debug/debug_party.asm — seed a debug party

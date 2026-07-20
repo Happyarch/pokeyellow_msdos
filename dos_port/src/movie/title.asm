@@ -148,7 +148,13 @@ align 4
 ; has emulated DMG OBJ since the Phase-1 OAM pass. A2.4 routes these records
 ; through PublishProjectedOAM so they land on the centred cinematic surface.)
 %ifdef DEBUG_TITLE
-title_dbg_frame: dd 0                   ; frames elapsed (mid-bounce / idle-loop capture)
+%define TITLE_DBG_COUNTER 1
+%endif
+%ifdef DEBUG_MAINMENU_LIVE
+%define TITLE_DBG_COUNTER 1
+%endif
+%ifdef TITLE_DBG_COUNTER
+title_dbg_frame: dd 0                   ; frames elapsed (mid-bounce / idle-loop / forced-start counter)
 %endif
 
 TitleScreenPikachuEyesOAMData:
@@ -504,6 +510,25 @@ DisplayTitleScreen:
     jc   .doTitlescreenReset
     call DelayFrame
     call JoypadLowSensitivity
+%ifdef DEBUG_MAINMENU_LIVE
+    ; main_menu scenario (A3): reach the main menu by the REAL route rather than
+    ; a synthetic draw. Latch START on the second idle-loop iteration so the
+    ; check below takes .go_to_main_menu, which runs the genuine exit sequence
+    ; (exit PCM, whiteout, ClearSprites, ClearScreen, the two tilemap blanks,
+    ; LoadGBPal, MovieEndSurface) rather than jumping into MainMenu and skipping
+    ; all of it.
+    ;
+    ; This MUST sit after JoypadLowSensitivity and before the read: put it at the
+    ; end of the loop body instead and the next iteration's DelayFrame ->
+    ; joypad_update and JoypadLowSensitivity both refresh hJoyHeld from the
+    ; keyboard, wiping the latch before anything reads it. First attempt did
+    ; exactly that and the harness sat on the title until it timed out.
+    inc dword [title_dbg_frame]
+    cmp dword [title_dbg_frame], 2
+    jne .no_forced_start
+    mov byte [ebp + H_JOY_HELD], PAD_START
+.no_forced_start:
+%endif
     mov al, [ebp + H_JOY_HELD]
     cmp al, PAD_UP | PAD_SELECT | PAD_B       ; secret reset-save combo
     je  .go_to_main_menu

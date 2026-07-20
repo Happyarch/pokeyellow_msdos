@@ -1661,8 +1661,44 @@ makes the normal path faithful, and `goldencheck title` now compares 8 regions
 with 5 skipped — up from 7 and 6 — with `wOptionsBlock` clean.
 
 Gates: build clean, `lint_pret_labels` 0, `--strict-claims` 0, `fidelity` 13/13
-PASS. Still open in A3: `main_menu`, `title_reentry` and `continue_seed`
-scenarios, and verifying the continue path separately from new-game.
+PASS.
+
+#### `main_menu` scenario — real navigation, not a synthetic redraw
+
+The plan said "register `RunMainMenuTest` as `main_menu`". That predates the
+routing existing. `RunMainMenuTest` is a *synthetic* gate — it seeds a save,
+forces `wSaveFileStatus`, and re-draws the box with the same calls as
+`MainMenu.mainMenuLoop` while skipping `HandleMenuInput`. Now that the title
+actually reaches `MainMenu`, real navigation is available and is strictly
+stronger evidence, so `main_menu` uses it and `RunMainMenuTest` stays as the
+appearance-only unit gate it was.
+
+`DEBUG_MAINMENU_LIVE` boots the real title, latches START in the joypad shadow on
+the second idle-loop iteration so `.go_to_main_menu` runs the genuine exit
+sequence, and dumps at `MainMenu` with the box drawn and the cursor placed,
+before `HandleMenuInput` consumes anything — the same stopping point as the mGBA
+side. The mGBA scenario (`main_menu.lua`) is `smoke_title`'s navigation migrated
+verbatim, and the proof it was migrated rather than re-authored is that the
+generated golden is byte-identical to `smoke_title.bin` (sha1 `db178e19`).
+
+`goldencheck main_menu`: TILEMAP OK (360/360 cells), VRAM OK, OAM OK, WRAM OK
+(8 regions, 5 skipped). `fidelity` 14/14 PASS.
+
+Two capture-point facts, both surfaced by first-run failures rather than
+inspection:
+
+- The START latch has to sit *after* `JoypadLowSensitivity` and before the read.
+  At the end of the loop body it is wiped by the next iteration's
+  `DelayFrame -> joypad_update` and `JoypadLowSensitivity`, both of which refresh
+  `hJoyHeld` from the keyboard. The first attempt did that and the harness sat on
+  the title until it timed out.
+- The dump must run `PlaceMenuCursor` first. `HandleMenuInput` draws the cursor
+  at its start, so dumping straight after `MainMenuShowWindow` catches the one
+  frame before it exists. The first run failed on exactly one cell — (row 2, col
+  1), want `$ED` got `$7F`.
+
+Still open in A3: `title_reentry` and `continue_seed`, and verifying the continue
+path separately from new-game.
 
 **Method note.** This was found by reading pret's routine end-to-end while
 starting an unrelated subtask, not by any gate. Every gate was green across it:

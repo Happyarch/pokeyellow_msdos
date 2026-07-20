@@ -405,6 +405,38 @@
         "masks": "golden_diff.SCENARIOS"
       },
       "verification": "stable-composition checkpoint: bounce complete, hSCY=0, eyes open in the post-blink window, no input consumed"
+    },
+    {
+      "name": "main_menu",
+      "id": 22,
+      "tier": "core",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_MAINMENU_LIVE=1",
+      "port_entry_gate": "DEBUG_MAINMENU_LIVE",
+      "navigation_script": "tools/mgba_harness/scenarios/main_menu.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 300,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "DisplayTitleScreen",
+        "MainMenu",
+        "InitOptions"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "boot main menu with no save file, reached by the real title route; box drawn, no input consumed"
     }
   ],
   "disabled_scenarios": [
