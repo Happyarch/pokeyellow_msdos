@@ -494,6 +494,17 @@ SCENARIOS = {
               "(10,0), from the generated assets/ui_layout_menus.inc")]
         ),
     },
+    "continue_seed": {
+        "class": "datastruct",
+        # The port gate seeds the deterministic save, writes POKEMON.DSV, zeroes
+        # the live save WRAM, then loads it back with TryLoadSaveFile -- the
+        # CONTINUE load. A match against the seed spec proves the load preserved
+        # every saved region. Compares WRAM only (datastruct class): the visual
+        # state at the post-load dump is irrelevant, what is pinned is the loaded
+        # game data. The gate calls NEITHER OakSpeech NOR InitPlayerData2.
+        "flags": "DEBUG_CONTINUE_SEED=1",
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
+    },
     "title_reentry": {
         # The title checkpoint reached through title -> menu -> B -> title. Same
         # config as `title`: any divergence outside the F-25 mask is leaked

@@ -1730,8 +1730,43 @@ the plan was never validated, and measuring beat assuming again.
 `goldencheck title_reentry`: TILEMAP OK, VRAM OK, OAM OK, WRAM OK (F-25 masked).
 `fidelity` 15/15 PASS.
 
-Still open in A3: `continue_seed`, and verifying the continue path separately from
-new-game.
+#### `continue_seed` — CONTINUE preserves loaded state (PASS)
+
+The `.choseContinue` path (`DisplayContinueGameInfo` → input loop →
+`SpecialEnterMap`) calls **neither** `OakSpeech` **nor** `InitPlayerData2` —
+verified structurally: those are new-game-only (`OakSpeech` has one caller,
+`StartNewGame`), and reading the continue path confirms it. `continue_seed`'s
+`must_hit` is `TryLoadSaveFile` and nothing else.
+
+The runtime half is a datastruct scenario that proves the load *preserves* state
+rather than re-seeding it. The port gate (`DEBUG_CONTINUE_SEED`,
+`save.asm:RunContinueSeedTest`) seeds the deterministic debug save
+(`PrepareNewGameDebug` + `SeedDeterministicPlayerIdentity`, matching `seed.lua`),
+writes `POKEMON.DSV`, **zeroes every saved WRAM span** (exactly `dsv_io.asm`'s
+`payload_blocks`), then loads it back with `TryLoadSaveFile` — the identical load
+`MainMenu`'s save-present branch runs. The clobber is what makes it a real load
+test: without it the dumped bytes could be leftover seed. The golden
+(`continue_seed.lua`) is the seed spec — the invariant the load must reproduce.
+
+Result: all 8 compared WRAM regions match — the entire party, player name,
+pokédex, bag, money, options block, and player id round-tripped through
+save → clobber → load byte-for-byte. The DSV save/load is faithful for the whole
+save block.
+
+One reconciliation, caught by the first diff: `wLetterPrintingDelayFlags` came
+back `$01` on the port (InitOptions sets it, so it was saved and faithfully
+restored) against `$00` in the first golden — because the golden set `wOptions`
+but not its `InitOptions` sibling `wLetterPrintingDelayFlags`. Both are in
+`wMainData` and both round-trip through the save, so the golden sets both; the
+port's restored `$01` was correct all along.
+
+`goldencheck continue_seed`: WRAM OK (datastruct class). `fidelity` 16/16 PASS.
+
+**A3 is complete.** Title → `MainMenu` routes for real; `SKIP_TITLE` seeds
+correctly without the shortcut; the `wOptions` mask is retired; `main_menu`,
+`title_reentry` and `continue_seed` are registered and passing; and the
+new-game/continue split is verified (new game reaches `OakSpeech` once, continue
+reaches neither `OakSpeech` nor `InitPlayerData2`).
 
 **Method note.** This was found by reading pret's routine end-to-end while
 starting an unrelated subtask, not by any gate. Every gate was green across it:

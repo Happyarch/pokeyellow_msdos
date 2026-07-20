@@ -243,6 +243,9 @@ extern RunPlayersPCTest
 %ifdef DEBUG_MAINMENU
 extern RunMainMenuTest
 %endif
+%ifdef DEBUG_CONTINUE_SEED
+extern RunContinueSeedTest
+%endif
 %ifdef DEBUG_SAVE
 extern RunSaveTest
 %endif
@@ -843,6 +846,9 @@ EnterMap:
 %endif
 %ifdef DEBUG_SAVE
     call RunSaveTest                        ; seed party, run SaveGameData, dump "saved!" FRAME.BIN, exits
+%endif
+%ifdef DEBUG_CONTINUE_SEED
+    call RunContinueSeedTest                ; A3: seed+save, clobber, CONTINUE-load, dump GBSTATE, exits
 %endif
 %ifdef DEBUG_NAMINGSCREEN
     call RunNamingScreenTest                ; open PLAYER naming screen, draw grid, dump FRAME.BIN, exits

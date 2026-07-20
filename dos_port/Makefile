@@ -925,6 +925,14 @@ NASMFLAGS += -D AUTOKEY_QUIET
 NASMFLAGS += -D AUTOKEY_DUMP_FRAME=200
 NASMFLAGS += -D SKIP_TITLE
 endif
+# continue_seed gate (menu-intro A3): seed a deterministic save, clobber the live
+# save WRAM, load it back via TryLoadSaveFile (the CONTINUE load), dump GBSTATE.
+# make image DEBUG_CONTINUE_SEED=1
+ifdef DEBUG_CONTINUE_SEED
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_CONTINUE_SEED
+NASMFLAGS += -D SKIP_TITLE
+endif
 ifdef DEBUG_SAVE_ROUNDTRIP
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_SAVE

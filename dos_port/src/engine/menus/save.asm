@@ -188,6 +188,63 @@ extern DumpBackbuffer           ; debug/debug_dump.asm — writes FRAME.BIN + ex
 global RunSaveTest
 %endif
 
+%ifdef DEBUG_CONTINUE_SEED
+; ---------------------------------------------------------------------------
+; RunContinueSeedTest — menu-intro A3 continue_seed gate.
+;
+; Proves the CONTINUE path PRESERVES loaded state and does not re-seed. It seeds
+; the deterministic debug save (matching seed.lua), writes it to disk, ZEROES the
+; live save WRAM, then loads it back with TryLoadSaveFile -- the exact load
+; MainMenu's save-present branch runs before .choseContinue. The clobber is what
+; makes this a real load test: without it the "loaded" bytes could be leftover
+; seed. If the dumped WRAM matches the seed spec, the load repopulated every
+; saved region from the file.
+;
+; It deliberately calls NEITHER OakSpeech NOR InitPlayerData2 -- the continue path
+; calls neither, and re-seeding would defeat the test. TryLoadSaveFile is the
+; whole flow.
+;
+; In: EBP = GB base. Called from EnterMap (SKIP_TITLE boot).
+; ---------------------------------------------------------------------------
+extern PrepareNewGameDebug          ; engine/debug/debug_party.asm
+extern SeedDeterministicPlayerIdentity ; engine/debug/debug_party.asm — "RED"/id 0 (seed.lua)
+extern DumpBackbuffer               ; debug/debug_dump.asm
+global RunContinueSeedTest
+
+RunContinueSeedTest:
+    ; 1. Seed the deterministic save (party+bag+money+badges+dex, then RED/id 0).
+    call PrepareNewGameDebug
+    call SeedDeterministicPlayerIdentity
+
+    ; 2. Persist it to POKEMON.DSV.
+    call DsvWriteSave
+
+    ; 3. Clobber every saved WRAM span, so a match after the load can only come
+    ;    FROM the load. These are exactly dsv_io.asm's payload_blocks.
+    lea edi, [ebp + wPlayerName]
+    mov ecx, NAME_LENGTH
+    xor al, al
+    rep stosb
+    lea edi, [ebp + wMainDataStart]
+    mov ecx, wMainDataEnd - wMainDataStart
+    rep stosb
+    lea edi, [ebp + wBoxDataStart]
+    mov ecx, wBoxDataEnd - wBoxDataStart
+    rep stosb
+    lea edi, [ebp + wPartyDataStart]
+    mov ecx, wPartyDataEnd - wPartyDataStart
+    rep stosb
+
+    ; 4. Load it back — the real CONTINUE load. Sets wSaveFileStatus = 2 on a good
+    ;    checksum and repopulates the payload from disk.
+    call TryLoadSaveFile
+
+    ; 5. Photograph the loaded WRAM.
+    call DumpBackbuffer                 ; never returns
+.hang:
+    jmp .hang
+%endif
+
 ; ---------------------------------------------------------------------------
 ; charmap glyphs (constants/charmap.asm). NOT GB-memory symbols.
 CHAR_TERM  equ 0x50             ; '@'
