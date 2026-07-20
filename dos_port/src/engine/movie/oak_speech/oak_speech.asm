@@ -27,6 +27,8 @@ extern GetPredefRegisters            ; home/predef.asm — restore HL/DE/BC for 
 extern CopyUncompressedPicToTilemap  ; engine/battle/init_battle.asm — predef; place 7×7 ids at wPredefHL
 extern UpdateCGBPal_BGP              ; home/cgb_palettes.asm — commit rBGP to the DAC
 extern DelayFrames                   ; video/frame.asm — wait BL frames
+extern DelayFrame                    ; video/frame.asm — wait one frame (MovePicLeft)
+extern MovieSyncWindow               ; movie_projection.asm — project rWX/hWY to the window descriptor
 extern DebugNewGamePlayerName        ; movie/title.asm — shared debug boot names
 extern DebugNewGameRivalName         ; movie/title.asm
 extern FillMemory                    ; home/fill_memory.asm — ESI=dest, BX=len, AL=val
@@ -44,6 +46,7 @@ global DisplayPicCenteredOrUpperRight
 global IntroDisplayPicCenteredOrUpperRight
 global FadeInIntroPic
 global PrepareOakSpeech
+global MovePicLeft
 
 ; The GB scratch the pic decoder addresses its input through (home/pics.asm).
 %define PIC_STAGE_GB  0xA4A0
@@ -122,6 +125,38 @@ FadeInIntroPic:
     call DelayFrames
     dec bh
     jnz .next
+    ret
+
+; ---------------------------------------------------------------------------
+; MovePicLeft — slide the on-window picture in from the right by walking rWX from
+; 119 down to 0 (8 px/frame), after snapping BGP to normal. Source:
+; engine/movie/oak_speech/oak_speech.asm:MovePicLeft.
+;
+; pret writes rWX and lets the LCD reveal more of the window each frame. The port's
+; compositor reads the window DESCRIPTOR, not rWX, so each rWX change is projected
+; through MovieSyncWindow (the same helper the title bounce uses) to move the
+; window descriptor's x — otherwise the slide would not appear.
+;
+; DEVIATION{class=projection; pret=engine/movie/oak_speech/oak_speech.asm:MovePicLeft; behavior=each rWX write is followed by MovieSyncWindow so the projected window descriptor tracks the slide; evidence=the port renders the window from a descriptor list (movie_projection) rather than sampling rWX per scanline like the GB LCD; lifetime=permanent widescreen projection}
+;
+; In: EBP = GB base.
+; ---------------------------------------------------------------------------
+MovePicLeft:
+    mov byte [ebp + IO_WX], 119           ; ld a, 119 / ldh [rWX], a
+    call MovieSyncWindow                   ; project the initial window position
+    call DelayFrame
+    mov byte [ebp + IO_BGP], 0xE4         ; ld a, %11100100 / ldh [rBGP], a
+    call UpdateCGBPal_BGP
+.next:
+    call DelayFrame
+    movzx eax, byte [ebp + IO_WX]         ; ldh a, [rWX]
+    sub al, 8                              ; sub 8
+    cmp al, 0xFF                           ; cp $FF (dropped below 0)
+    je .done                               ; ret z
+    mov [ebp + IO_WX], al                  ; ldh [rWX], a
+    call MovieSyncWindow                   ; re-project after the slide step
+    jmp .next
+.done:
     ret
 
 ; ---------------------------------------------------------------------------
