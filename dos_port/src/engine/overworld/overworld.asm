@@ -255,6 +255,9 @@ extern RunOakSpeechCheckpoint
 %ifdef DEBUG_NAMEMENU
 extern RunNameMenuTest
 %endif
+%ifdef DEBUG_OAKSLIDE
+extern RunOakSlideTest
+%endif
 %ifdef DEBUG_SAVE
 extern RunSaveTest
 %endif
@@ -867,6 +870,9 @@ EnterMap:
 %endif
 %ifdef DEBUG_NAMEMENU
     call RunNameMenuTest                    ; A4.4: projected name-select menu, AutoKeyDrive dumps
+%endif
+%ifdef DEBUG_OAKSLIDE
+    call RunOakSlideTest                    ; A4.4: slide the projected pic right, AutoKeyDrive dumps
 %endif
 %ifdef DEBUG_NAMINGSCREEN
     call RunNamingScreenTest                ; open PLAYER naming screen, draw grid, dump FRAME.BIN, exits

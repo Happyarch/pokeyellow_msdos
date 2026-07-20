@@ -37,6 +37,27 @@ extern UpdateSprites                 ; engine/overworld/movement.asm
 extern HandleMenuInput               ; home/window.asm — menu loop; returns choice in wCurrentMenuItem
 extern text_row_stride               ; home/text.asm — W_TILEMAP row stride for the box/string helpers
 extern menu_item_step                ; home/window.asm — menu cursor vertical spacing
+extern ClearScreenArea               ; home/copy2.asm — clear BL x BH tiles of W_TILEMAP at ESI
+extern CopyData                      ; home/copy_data.asm — ESI/EDX EBP-relative, BX count
+extern Delay3                        ; video/frame.asm — wait 3 frames
+extern DelayFrames                   ; video/frame.asm — wait BL frames
+
+; The slide band spans `SLIDE_ROWS` tile-rows; in a 40-wide canvas its linear size
+; is SLIDE_ROWS*SCREEN_TILES_W + 5 (pret's 6*SCREEN_WIDTH+5, restrided). Fits a byte.
+SLIDE_ROWS       equ 6
+SLIDE_REGION     equ (SLIDE_ROWS * SCREEN_TILES_W + 5)
+SLIDE_STEPS      equ 6                ; pret hSlideAmount — columns to slide
+
+; Projected slide-band origins (pret hlcoord + UI_OAK_SPEECH). Right slide starts at
+; hlcoord(5,4); left at hlcoord(12,4); the name-box clear at hlcoord(0,0).
+SLIDE_RIGHT_ORIGIN equ (W_TILEMAP + (4 + UI_OAK_SPEECH_ROW) * SCREEN_TILES_W + (5 + UI_OAK_SPEECH_COL))
+SLIDE_LEFT_ORIGIN  equ (W_TILEMAP + (4 + UI_OAK_SPEECH_ROW) * SCREEN_TILES_W + (12 + UI_OAK_SPEECH_COL))
+SLIDE_CLEAR_ORIGIN equ (W_TILEMAP + (0 + UI_OAK_SPEECH_ROW) * SCREEN_TILES_W + (0 + UI_OAK_SPEECH_COL))
+
+section .bss
+slide_dir:    resb 1                  ; 0 = right, 0xFF = left (pret hSlideDirection)
+slide_steps:  resb 1                  ; columns remaining (pret hSlideAmount)
+slide_region: resb 1                  ; linear tiles per column-shift (pret hSlidingRegionSize)
 
 ; Projected tilemap corners for the name menu (pret hlcoord + UI_OAK_SPEECH origin,
 ; 40-wide canvas). Box hlcoord(0,0); "NAME" title hlcoord(3,0); list hlcoord(2,2).
@@ -134,6 +155,134 @@ DisplayIntroNameTextBox:
     add eax, eax
     mov [menu_item_step], eax
     jmp HandleMenuInput
+
+; ---------------------------------------------------------------------------
+; OakSpeechSlidePicLeft / Right / Common — slide the on-surface picture one tile
+; column at a time. Source: engine/movie/oak_speech/oak_speech2.asm.
+;
+; pret shifts a `SLIDE_ROWS*SCREEN_WIDTH + 5`-tile linear band of wTileMap one
+; column per Delay3, SLIDE_STEPS times, walking backward (right) or forward (left).
+; Under projection the band starts at a UI_OAK_SPEECH-projected origin and its
+; linear span uses the port's 40-wide stride (SLIDE_ROWS*SCREEN_TILES_W + 5), so it
+; shifts the same 6-row region. The per-frame g_surface_redraw_cb commits each
+; shifted column to the surface; pret's hAutoBGTransferEnabled/Portion toggles are
+; dropped (the port retired the VBlank auto-BG-transfer they gate).
+;
+; DEVIATION{class=projection; pret=engine/movie/oak_speech/oak_speech2.asm:OakSpeechSlidePicCommon; behavior=the slide band starts at a UI_OAK_SPEECH-projected origin and its linear span is restrided to SLIDE_ROWS*SCREEN_TILES_W+5 for the 40-wide canvas, the hAutoBGTransferEnabled/Portion toggles are dropped, and pret's hSlideDirection/hSlideAmount/hSlidingRegionSize HRAM scratch becomes file-local .bss (slide_dir/steps/region); evidence=the picture is a boot cinematic centred on the 320x200 canvas, the port has no VBlank auto-BG-transfer (do_bg_transfer retired -- g_surface_redraw_cb mirrors W_TILEMAP every frame instead), and those pret HRAM slide temps are not in the port memmap; lifetime=permanent widescreen projection}
+;
+; Left In: EDX = GB dest for the chosen name (pret de). EBP = GB base.
+; ---------------------------------------------------------------------------
+global OakSpeechSlidePicLeft
+global OakSpeechSlidePicRight
+global OakSpeechSlidePicCommon
+OakSpeechSlidePicLeft:
+    push edx                              ; pret push de (the name dest)
+    mov dword [text_row_stride], SCREEN_TILES_W
+    mov esi, SLIDE_CLEAR_ORIGIN           ; hlcoord 0,0 -> clear the name list box
+    mov bh, 12                            ; height (pret b)
+    mov bl, 11                            ; width  (pret c)
+    call ClearScreenArea
+    mov bl, 10
+    call DelayFrames                      ; ld c,10 / DelayFrames
+    pop edx                               ; pret pop de
+    mov esi, wNameBuffer                  ; ld hl, wNameBuffer (GB src)
+    mov bx, NAME_LENGTH                   ; ld bc, NAME_LENGTH
+    call CopyData                         ; copy name -> [EDX]
+    call Delay3
+    mov esi, SLIDE_LEFT_ORIGIN            ; hlcoord 12,4 (projected)
+    mov al, 0xFF                          ; direction = left
+    jmp OakSpeechSlidePicCommon
+OakSpeechSlidePicRight:
+    mov esi, SLIDE_RIGHT_ORIGIN           ; hlcoord 5,4 (projected)
+    xor al, al                            ; direction = right
+OakSpeechSlidePicCommon:
+    ; In: ESI = start tilemap offset (hl), AL = 0 right / $ff left.
+    mov [slide_dir], al
+    mov byte [slide_steps], SLIDE_STEPS
+    mov byte [slide_region], SLIDE_REGION
+    test al, al
+    jnz .haveStart                        ; left: ESI already at the region start
+    add esi, SLIDE_REGION                 ; right: point to the region end (pret add hl,de)
+.haveStart:
+    mov edi, esi                          ; EDI = de = saved start-of-pass (pret ld d,h/ld e,l)
+.colLoop:
+    ; --- shift the whole band one column ---
+    movzx ecx, byte [slide_region]
+    cmp byte [slide_dir], 0
+    jne .shiftLeft
+.shiftRight:
+    mov al, [ebp + esi]                   ; ld a, [hli]
+    inc esi
+    mov [ebp + esi], al                   ; ld [hld], a
+    dec esi
+    dec esi                               ; dec hl
+    dec ecx
+    jnz .shiftRight
+    jmp .colDone
+.shiftLeft:
+    mov al, [ebp + esi]                   ; ld a, [hld]
+    dec esi
+    mov [ebp + esi], al                   ; ld [hli], a
+    inc esi
+    inc esi                               ; inc hl
+    dec ecx
+    jnz .shiftLeft
+.colDone:
+    cmp byte [slide_dir], 0
+    je .afterZero                         ; right: nothing to blank
+    ; left: zero the last tile in the pic (pret dec hl / xor a / ld [hl], a)
+    dec esi
+    mov byte [ebp + esi], 0
+.afterZero:
+    call Delay3                           ; let the shifted column show (per-frame mirror)
+    ; reset the walk to the saved start, advance it one tile, loop for SLIDE_STEPS
+    mov esi, edi                          ; ld h,d / ld l,e
+    cmp byte [slide_dir], 0
+    jne .startBack
+    inc esi                               ; right: start++
+    jmp .startSet
+.startBack:
+    dec esi                               ; left: start--
+.startSet:
+    mov edi, esi                          ; EDI = new saved start
+    dec byte [slide_steps]
+    jnz .colLoop
+    ret
+
+%ifdef DEBUG_OAKSLIDE
+; ---------------------------------------------------------------------------
+; RunOakSlideTest — A4.4 pixel harness. Display Oak centred, then slide the pic
+; right (OakSpeechSlidePicRight). AUTOKEY_QUIET photographs the parked frame at
+; AUTOKEY_DUMP_FRAME: a low frame captures the pic centred (pre-slide), a high one
+; captures it slid right. Proves the projected slide shifts the pic on the surface.
+; In: EBP = GB base. Never returns.
+; ---------------------------------------------------------------------------
+extern LoadFontTilePatterns          ; home/load_font.asm
+extern LoadTextBoxTilePatterns       ; home/load_font.asm
+extern MovieBeginSurface             ; movie_projection.asm
+extern MovieMirrorSurface            ; movie_projection.asm
+extern IntroDisplayPicCenteredOrUpperRight  ; oak_speech.asm
+extern FadeInIntroPic                ; oak_speech.asm
+extern ProfOakPic                    ; data/trainer_pics.asm
+extern DelayFrame                    ; video/frame.asm
+global RunOakSlideTest
+OAKSLIDE_PIC_LEN equ 286
+RunOakSlideTest:
+    call LoadFontTilePatterns
+    call LoadTextBoxTilePatterns
+    call MovieBeginSurface
+    mov byte [ebp + IO_BGP], 0
+    mov esi, ProfOakPic
+    mov ecx, OAKSLIDE_PIC_LEN
+    xor bl, bl                            ; centred
+    call IntroDisplayPicCenteredOrUpperRight
+    call MovieMirrorSurface
+    call FadeInIntroPic                   ; pic centred + faded (pre-slide capture window)
+    call OakSpeechSlidePicRight           ; slide it right (each column Delay3-paced)
+.hang:
+    call DelayFrame                       ; keep the per-frame mirror running for the dump
+    jmp .hang
+%endif
 
 %ifdef DEBUG_NAMEMENU
 ; ---------------------------------------------------------------------------
