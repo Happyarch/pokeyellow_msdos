@@ -2034,10 +2034,16 @@ verified so far:
     restrided to `SLIDE_ROWS*SCREEN_TILES_W+5` for the 40-wide canvas, the vestigial
     `hAutoBGTransfer` toggles dropped (`g_surface_redraw_cb` mirrors every frame),
     and pret's `hSlide*` HRAM temps → file-local `.bss`.
-  - **Last `oak_speech2.asm` piece**: `ChoosePlayer/RivalName` — ties the slides +
-    name menu + `DisplayNamingScreen` together, plus post-naming surface
-    re-establishment (the rival-pic acceptance gate). Analysis in stigmergy
-    `a4-4-oak-speech2-porting-plan`.
+  - `ChoosePlayerName`/`ChooseRivalName` (commit `a191c3e8`): the name-selection
+    flow — **`oak_speech2.asm` is now code-complete**. faithdiff 8/9 calls + 1/1
+    store each; the single divergence is `ClearScreen` → `MovieBeginSurface`, the
+    `projection` DEVIATION that re-establishes the `UI_OAK_SPEECH` surface
+    `DisplayNamingScreen` took over. Added pret label `RedPicFront` (= the port's
+    `PlayerPicFront`, both `red.pic`). The default path is composed of already-
+    pixel-verified pieces; **end-to-end runtime verification of both paths — the
+    custom-path surface re-establishment is the rival-pic-after-naming acceptance
+    gate — lands in A4.5**, where the full `OakSpeech` cinematic runs the boot→
+    naming flow under AUTOKEY. Analysis in stigmergy `a4-4-oak-speech2-porting-plan`.
 
 **Open finding — PrintText does not compose over the cinematic surface.** The
 `DEBUG_OAKINTRO` diagnostic gate drives Oak pic + fade + `PrintText(OakSpeechText1)`
