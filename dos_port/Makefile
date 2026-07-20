@@ -1580,6 +1580,11 @@ assets/oak_speech_strings.inc: tools/generators/gen_oak_speech_strings.py tools/
 
 src/engine/movie/oak_speech/oak_speech.o: assets/oak_speech_strings.inc
 
+# Oak-speech default player/rival name data (menu-intro A4.4; pret data/player/
+# names.asm + names_list.asm). Consumed by oak_speech2.asm (naming flow).
+assets/default_names.inc: tools/generators/gen_default_names.py tools/generators/gb_text.py
+	python3 tools/generators/gen_default_names.py
+
 src/data/hidden_events_data.o: assets/hidden_events.inc assets/hidden_item_coords.inc
 src/data/pickup_text.o: assets/pickup_text.inc
 
@@ -2039,6 +2044,7 @@ assets: assets/scenario_registry.inc \
         assets/wild_data.inc assets/map_scripts.inc assets/hidden_events.inc \
         assets/hidden_item_coords.inc assets/pickup_text.inc \
         assets/oak_speech_strings.inc \
+        assets/default_names.inc \
         assets/battle_hud_2bpp.inc \
         assets/trainer_pics.inc \
         assets/super_rod.inc assets/town_map_data.inc assets/town_map_gfx.inc \
