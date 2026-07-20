@@ -78,6 +78,8 @@ def main() -> int:
     emit(out, "DefaultNamesRival", menu_string(RIVAL_NAMES))
     emit(out, "DefaultNamesPlayerList", lookup_list(PLAYER_NAMES))
     emit(out, "DefaultNamesRivalList", lookup_list(RIVAL_NAMES))
+    # DisplayIntroNameTextBox's embedded box title (pret's local .namestring "NAME@").
+    emit(out, "IntroNameString", gb_text.encode("NAME") + [TERM])
     out.append("")
 
     OUT.parent.mkdir(parents=True, exist_ok=True)

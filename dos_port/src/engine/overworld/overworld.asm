@@ -252,6 +252,9 @@ extern RunOakPicTest
 %ifdef DEBUG_OAKINTRO
 extern RunOakSpeechCheckpoint
 %endif
+%ifdef DEBUG_NAMEMENU
+extern RunNameMenuTest
+%endif
 %ifdef DEBUG_SAVE
 extern RunSaveTest
 %endif
@@ -861,6 +864,9 @@ EnterMap:
 %endif
 %ifdef DEBUG_OAKINTRO
     call RunOakSpeechCheckpoint             ; A4.3: oak_intro checkpoint (pic+fade+text), AutoKeyDrive dumps
+%endif
+%ifdef DEBUG_NAMEMENU
+    call RunNameMenuTest                    ; A4.4: projected name-select menu, AutoKeyDrive dumps
 %endif
 %ifdef DEBUG_NAMINGSCREEN
     call RunNamingScreenTest                ; open PLAYER naming screen, draw grid, dump FRAME.BIN, exits
