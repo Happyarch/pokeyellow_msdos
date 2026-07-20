@@ -1943,3 +1943,46 @@ Oak’s cry remains silent by explicit scope decision. Every other cinematic aud
 - [ ] Strict label and annotation lint reports no stale extern, malformed annotation, or duplicate provider.
 - [ ] Related false `TODO-HW`, stub, allowlist, plan, and status claims are corrected.
 - [ ] The plan is archived as `docs/plans/menu_intro.md`.
+
+### A4 — investigation (2026-07-20): most of the pic engine already exists
+
+Before porting anything, A4 was surveyed against the port. The result changes its
+shape substantially: it is far less from-scratch than the routine list implies.
+
+**`InitPlayerData2` ownership is settled.** It and `InitPlayerData1` are already a
+faithful translated provider at the correct pret-mirrored path
+`src/engine/movie/oak_speech/init_player_data.asm` (`faithdiff` 4/4 calls). Per
+the A4 rule it stays put and is only a dependency — no relocation, no new module.
+
+**Dependency map for the pic engine (A4.1).** `project_state` + reading pret's
+`oak_speech.asm` shows the heavy routines are all already in the port:
+
+| pret routine | port state |
+| --- | --- |
+| `CopyUncompressedPicToHL` | EXISTS — `home/pics.asm`, `global`, flip-aware |
+| `UncompressSpriteData` | EXISTS — `home/uncompress.asm`, `global` |
+| `InterlaceMergeSpriteBuffers` | EXISTS — `home/pics.asm`, linked |
+| `GetPredefRegisters` | EXISTS — `home/predef.asm` |
+| `CopyUncompressedPicToTilemap` | MISSING — thin predef wrapper over `CopyUncompressedPicToHL` (reads `wPredefHL`/`hStartTileID`) |
+| `UncompressSpriteFromDE` | MISSING — thin adapter over `UncompressSpriteData` (source from DE + bank in A) |
+| `DisplayPicCenteredOrUpperRight` / `IntroDisplayPicCenteredOrUpperRight` | MISSING — orchestrate uncompress → SRAM-buffer copy (HAL boundary) → `InterlaceMergeSpriteBuffers` → place at hlcoord (15,1) upper-right or (6,4) centred → predef `CopyUncompressedPicToTilemap` |
+
+So A4.1 is: two thin wrappers + the two pic-display routines (glue), projected
+through `UI_OAK_SPEECH`. The port's `CopyUncompressedPicToHL` already re-strides
+per caller (`EDX` = 20 menu / 40 canvas) and reads `wSpriteFlipped`, so the
+projection is a stride/coord choice, not new decode logic. `hStartTileID` (HRAM
+`$FFE1`) is not yet in `gb_memmap.inc` — add it when the predef wrapper lands.
+
+The SRAM sprite-buffer copy (`sSpriteBuffer1 -> sSpriteBuffer0` in pret's pic
+display) is a HAL boundary: the port has no SRAM, and its `LoadMonFrontSprite`
+path already decodes straight to the buffers, so the pic-display routines
+reconcile that copy the way `LoadFrontSpriteByMonIndex` already does rather than
+emulating SRAM.
+
+**Remaining A4 shape** (subtasks A4.1–A4.5 in the harness): A4.1 pic engine;
+A4.2 fades/slides (`FadeInIntroPic`/`IntroFadePalettes`/`MovePicLeft`/
+`OakSpeechSlidePic*`, `GBFadeIn/OutFromWhite` already exist); A4.3 `oak_speech.asm`
+main + generated text; A4.4 naming via the existing `DisplayNamingScreen` +
+post-naming surface re-establishment; A4.5 wire the boot path (delete the stub),
+the `oak_intro` golden, and the Oak timing trace. The boot path keeps working
+throughout because the `OakSpeech` stub stays live until A4.5 swaps it.
