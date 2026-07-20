@@ -43,6 +43,8 @@ bits 32
 %include "assets/audio_constants.inc"   ; SFX_INTRO_*/MUSIC_TITLE_SCREEN
 %define PIKA_PCM_EQUATES_ONLY 1         ; indices only — the blob lives in pikachu_pcm.o
 %include "assets/pika_pcm.inc"          ; PIKA_CRY_*_IDX
+%define UI_LAYOUT_EQUATES_ONLY 1
+%include "assets/ui_layout_intro.inc"   ; UI_TITLE_* projected surface geometry
 
 ; ---------------------------------------------------------------------------
 ; Externs
@@ -71,6 +73,13 @@ extern RunPaletteCommand        ; src/home/palettes.asm — BH = palette command
 extern UpdateCGBPal_OBP0        ; src/home/cgb_palettes.asm
 extern GBPalWhiteOutWithDelay3  ; src/home/fade.asm
 extern LoadGBPal                ; src/home/fade.asm
+extern MovieBeginSurface        ; src/engine/movie/movie_projection.asm
+extern MovieEndSurface          ; src/engine/movie/movie_projection.asm
+extern MovieMirrorSurface       ; src/engine/movie/movie_projection.asm
+extern MovieSyncScroll          ; src/engine/movie/movie_projection.asm
+%ifdef DEBUG_TITLE
+extern DumpBackbuffer           ; src/debug/debug_dump.asm — writes FRAME.BIN + exits
+%endif
 
 ; ---------------------------------------------------------------------------
 ; Globals
@@ -102,7 +111,16 @@ PAD_LEFT             equ 0x20
 PAD_UP               equ 0x40
 PAD_DOWN             equ 0x80
 
-SCREEN_HEIGHT_PX     equ 144     ; hWY value to hide the window layer
+SCREEN_HEIGHT_PX     equ 144     ; pret's hWY "hide the window layer" value (see .hWY note below)
+
+; Projected drawing origin. The title composes a Game Boy 20x18 screen, but
+; wTileMap here is the port's 40x25 canvas, so every placement pret writes at
+; coord(col,row) lands at coord(col+UI_TITLE_COL, row+UI_TITLE_ROW). Keeping
+; pret's own col/row literals at the call sites and adding this one offset means
+; the coordinates stay diffable against the disassembly instead of becoming
+; pre-baked canvas numbers. Geometry comes from the generated layout, never a
+; literal 10/3.
+TITLE_ORIGIN         equ UI_TITLE_ROW * SCREEN_TILES_W + UI_TITLE_COL
 
 ; VRAM tile destination constants
 VCHARS1_TILE_60      equ GB_VFONT + 0x60 * 16   ; = $8E00  (copyright tiles)
@@ -244,6 +262,17 @@ DisplayTitleScreen:
     mov byte [ebp + H_WY],                  RENDER_H ; window off-screen (200)
 
     call ClearScreen
+
+    ; Take over the screen as a centred 160x144 cinematic surface. This must run
+    ; AFTER ClearScreen: ClearScreen is the shared pret routine and fills the
+    ; whole 40x25 canvas with $7F, which would paint space tiles across the
+    ; matte. MovieBeginSurface then zeroes the canvas (matte = colour zero) and
+    ; publishes the descriptor, and TitleBlankSurface restores $7F to just the
+    ; 20x18 rectangle — which is the projection of what pret's ClearScreen
+    ; actually means on a Game Boy, where wTileMap IS the 20x18 screen.
+    call MovieBeginSurface
+    call TitleBlankSurface
+
     call DisableLCD
 
     ; Load the game font (needed for text tiles displayed later)
@@ -364,22 +393,29 @@ DisplayTitleScreen:
     mov dl, [ebp + H_SCY]
     add dl, al
     mov [ebp + H_SCY], dl
+    call MovieSyncScroll              ; hSCY -> WIN_SRC_Y, GB wrap semantics
     loop .scrollStep                  ; ECX-- until zero
 
     jmp .bounceLoop
 
 .finishedBouncing:
-    ; Restore logo+pikachu and let auto-BG-transfer commit it to $9800
+    ; The bounce ends at hSCY = 0, so the composition is now read from source row
+    ; zero. Restore logo+pikachu and commit it to $9800 explicitly — there is no
+    ; auto-BG-transfer in this port to do it on the next frame.
     call Title_LoadScreenTilesFromBuffer1
+    call MovieMirrorSurface
+    call MovieSyncScroll               ; hSCY is 0 here, so WIN_SRC_Y returns to 0
     mov bl, 36
     call DelayFrames                  ; 36 frames → Pikachu appears
 
     mov al, SFX_INTRO_WHOOSH
     call PlaySound
 
-    ; Add speech bubble to current wTileMap (logo+pikachu)
+    ; Add speech bubble to current wTileMap (logo+pikachu), then mirror it — the
+    ; mutation has to reach the GB tilemap before the next frame samples it.
     call TitleScreen_PlacePikaSpeechBubble
-    mov byte [ebp + H_WY], RENDER_H            ; window off-screen (past 320×200 bottom)
+    call MovieMirrorSurface
+; DEVIATION{class=projection; pret=engine/movie/title.asm:DisplayTitleScreen; behavior=pret's `ld a, SCREEN_HEIGHT_PX / ldh [hWY], a` here is dropped instead of translated; evidence=pret hides the GB window layer because the title composes entirely on BG, but in this port the single window descriptor IS the cinematic surface published by MovieBeginSurface, and set_single_window mirrors its wy into hWY, so writing SCREEN_HEIGHT_PX or RENDER_H here would corrupt that mirror and trip the sync_dialog_window hWY==RENDER_H closed-gate; lifetime=permanent, the port presents cinematics on the window layer}
     call Delay3
 
     ; pret: ldpikacry e, PikachuCry1 / call TitleScreen_PlayPikachuPCM.
@@ -397,6 +433,18 @@ DisplayTitleScreen:
     ; Main idle loop: blink Pikachu's eyes, wait for input, reset on timeout.
     ; ---------------------------------------------------------------------------
 .loop:
+%ifdef DEBUG_TITLE
+    ; A2.3/A2.6 pixel gate. This point is the plan's stable title checkpoint: the
+    ; bounce has finished, hSCY and WIN_SRC_Y are back to zero, the logo+pikachu
+    ; tilemap is installed at source row zero, the matte and centred window are
+    ; published, the palette is live, MUSIC_TITLE_SCREEN has been dispatched, and
+    ; no input has been consumed. Three frames settle the compositor, then the
+    ; back buffer is photographed. Never returns.
+    call DelayFrame
+    call DelayFrame
+    call DelayFrame
+    call DumpBackbuffer
+%endif
     ; Reset per-loop title screen state
     xor al, al
     mov byte [ebp + W_UNUSED_FLAG],            al
@@ -437,6 +485,7 @@ DisplayTitleScreen:
     call TitleScreenCopyTileMapToVRAM
     call Delay3
     call LoadGBPal                      ; pret's exact call here, now linked
+    call MovieEndSurface                ; hand the screen back before any next owner
 
     ; Check if the reset-save combo was pressed (PAD_UP|PAD_SELECT|PAD_B)
     mov al, [ebp + H_JOY_HELD]
@@ -466,15 +515,79 @@ DisplayTitleScreen:
     call DelayFrame
     cmp byte [ebp + W_AUDIO_FADE_OUT], 0
     jnz .audioFadeLoop
+    ; The timeout path re-enters Init, which does not itself restore the
+    ; compositor, so the surface has to be released here too or a narrow OBJ clip
+    ; and a stuck whiteout survive the reset.
+    call MovieEndSurface
     jmp Init
 
 ; ---------------------------------------------------------------------------
-; TitleScreenCopyTileMapToVRAM — set hAutoBGTransferDest hi byte, wait 3 frames.
+; TitleBlankSurface — fill the projected 20x18 rectangle with $7F (space).
+;
+; Port-only. The GB equivalent is ClearScreen's wTileMap fill; here that fill
+; has to be rectangle-limited or it destroys the matte. Not a pret label —
+; ClearScreen keeps its own name and its whole-canvas meaning for every other
+; caller.
+; ---------------------------------------------------------------------------
+TitleBlankSurface:
+    pushad
+    lea edi, [ebp + W_TILEMAP + TITLE_ORIGIN]
+    mov edx, UI_TITLE_GBH                 ; 18 rows
+    mov al, 0x7F
+.row:
+    mov ecx, UI_TITLE_GBW                 ; 20 columns
+    push edi
+    rep stosb
+    pop edi
+    add edi, SCREEN_TILES_W               ; next canvas row (stride 40)
+    dec edx
+    jnz .row
+    popad
+    ret
+
+; ---------------------------------------------------------------------------
+; TitleScreenCopyTileMapToVRAM — commit wTileMap to the GB tilemap, wait 3 frames.
 ; In:  AL = high byte of the GB tilemap destination.
 ; Source: engine/movie/title.asm:TitleScreenCopyTileMapToVRAM
+;
+; On the GB this only re-points hAutoBGTransferDest and lets the VBlank handler's
+; auto-transfer do the copy over the following frames. This port has no
+; auto-BG-transfer implementation (nothing else in the tree reads
+; hAutoBGTransferDest), so the byte was being stored and the copy never happened
+; — the old bespoke title got away with it because render_bg read wTileMap flat.
+; Under projection the compositor samples the GB tilemap through the window
+; descriptor, so the transfer has to be real. The dest byte is still written,
+; because it is observable GB state that goldens compare.
+;
+; Rows are written byte-contiguously at the GB's 32-byte stride and are NOT
+; wrapped: a row-24 destination ($9B00) genuinely runs off the end of tilemap 0
+; and into tilemap 1 at $9C00, exactly as the hardware transfer would. The
+; wrap belongs to the SAMPLER, not the writer — render_window re-reads rows
+; mod-32 within one tilemap, which is what makes the bounce show tilemap 0's
+; row 0 content once hSCY scrolls past row 31.
 ; ---------------------------------------------------------------------------
 TitleScreenCopyTileMapToVRAM:
     mov byte [ebp + H_AUTO_BG_TRANSFER_DEST + 1], al
+    pushad
+    movzx edi, byte [ebp + H_AUTO_BG_TRANSFER_DEST + 1]
+    shl edi, 8
+    movzx edx, byte [ebp + H_AUTO_BG_TRANSFER_DEST]
+    add edi, edx                          ; dest = hi:lo, as pret assembles it
+    add edi, ebp
+    lea esi, [ebp + W_TILEMAP + TITLE_ORIGIN]
+    mov edx, UI_TITLE_GBH                 ; 18 rows
+.row:
+    mov ecx, UI_TITLE_GBW                 ; 20 columns
+    push esi
+    push edi
+    rep movsb
+    pop edi
+    pop esi
+    add esi, SCREEN_TILES_W               ; next canvas row (stride 40)
+    add edi, 32                           ; next GB tilemap row (stride 32)
+    dec edx
+    jnz .row
+    popad
     jmp Delay3    ; tail call
 
 ; ---------------------------------------------------------------------------
@@ -485,8 +598,8 @@ WriteCopyrightTiles:
     push esi
     push edi
     lea esi, [CopyrightRowTiles]
-    ; coord(2, 17) in wTileMap = W_TILEMAP + 17*20 + 2
-    lea edi, [ebp + W_TILEMAP + 17 * SCREEN_TILES_W + 2]
+    ; projected coord(2, 17) in wTileMap (canvas stride 40, not the GB's 20)
+    lea edi, [ebp + W_TILEMAP + TITLE_ORIGIN + 17 * SCREEN_TILES_W + 2]
 .copy:
     mov al, [esi]
     inc esi
@@ -642,13 +755,13 @@ LoadYellowTitleScreenGFX:
 TitleScreen_PlacePokemonLogo:
     pushad
     lea esi, [pokemon_logo_tilemap]
-    ; dest = wTileMap + row=1 * SCREEN_TILES_W + col=2
-    lea edi, [ebp + W_TILEMAP + 1 * SCREEN_TILES_W + 2]
+    ; dest = wTileMap + projected coord(2, 1)
+    lea edi, [ebp + W_TILEMAP + TITLE_ORIGIN + 1 * SCREEN_TILES_W + 2]
     mov ebx, POKEMON_LOGO_TILEMAP_HEIGHT   ; 7 rows
 .logo_row:
     mov ecx, POKEMON_LOGO_TILEMAP_WIDTH    ; 16 tiles per row
     rep movsb
-    add edi, SCREEN_TILES_W - POKEMON_LOGO_TILEMAP_WIDTH  ; skip to next row (4 bytes)
+    add edi, SCREEN_TILES_W - POKEMON_LOGO_TILEMAP_WIDTH  ; next canvas row (stride 40)
     dec ebx
     jnz .logo_row
     popad
@@ -664,7 +777,7 @@ TitleScreen_PlacePikachu:
 
     ; Place 12×9 pikachu tilemap at coord (col=4, row=8)
     lea esi, [pikachu_tilemap]
-    lea edi, [ebp + W_TILEMAP + 8 * SCREEN_TILES_W + 4]
+    lea edi, [ebp + W_TILEMAP + TITLE_ORIGIN + 8 * SCREEN_TILES_W + 4]
     mov ebx, PIKACHU_TILEMAP_HEIGHT       ; 9 rows
 .pika_row:
     mov ecx, PIKACHU_TILEMAP_WIDTH        ; 12 tiles per row
@@ -674,10 +787,10 @@ TitleScreen_PlacePikachu:
     jnz .pika_row
 
     ; Place extra tail/overlap tiles at column 16, rows 10-13
-    mov byte [ebp + W_TILEMAP + 10 * SCREEN_TILES_W + 16], 0x96
-    mov byte [ebp + W_TILEMAP + 11 * SCREEN_TILES_W + 16], 0x9D
-    mov byte [ebp + W_TILEMAP + 12 * SCREEN_TILES_W + 16], 0xA7
-    mov byte [ebp + W_TILEMAP + 13 * SCREEN_TILES_W + 16], 0xB1
+    mov byte [ebp + W_TILEMAP + TITLE_ORIGIN + 10 * SCREEN_TILES_W + 16], 0x96
+    mov byte [ebp + W_TILEMAP + TITLE_ORIGIN + 11 * SCREEN_TILES_W + 16], 0x9D
+    mov byte [ebp + W_TILEMAP + TITLE_ORIGIN + 12 * SCREEN_TILES_W + 16], 0xA7
+    mov byte [ebp + W_TILEMAP + TITLE_ORIGIN + 13 * SCREEN_TILES_W + 16], 0xB1
 
     ; Copy eye OAM data to wShadowOAM (32 bytes = 8 sprites × 4 bytes).
     ; Canonical OAM only — A2.4 publishes it to the projected surface.
@@ -699,7 +812,7 @@ TitleScreen_PlacePikaSpeechBubble:
 
     ; 7×4 bubble tilemap at coord (col=6, row=4)
     lea esi, [pika_bubble_tilemap]
-    lea edi, [ebp + W_TILEMAP + 4 * SCREEN_TILES_W + 6]
+    lea edi, [ebp + W_TILEMAP + TITLE_ORIGIN + 4 * SCREEN_TILES_W + 6]
     mov ebx, PIKA_BUBBLE_TILEMAP_HEIGHT   ; 4 rows
 .bubble_row:
     mov ecx, PIKA_BUBBLE_TILEMAP_WIDTH    ; 7 tiles per row
@@ -710,8 +823,8 @@ TitleScreen_PlacePikaSpeechBubble:
 
     ; Two logo-area tiles placed at (9,8) and (10,8)
     ; $64 = logo tile 100 (signed + → vChars2), $65 = logo tile 101
-    mov byte [ebp + W_TILEMAP + 8 * SCREEN_TILES_W + 9],  0x64
-    mov byte [ebp + W_TILEMAP + 8 * SCREEN_TILES_W + 10], 0x65
+    mov byte [ebp + W_TILEMAP + TITLE_ORIGIN + 8 * SCREEN_TILES_W + 9],  0x64
+    mov byte [ebp + W_TILEMAP + TITLE_ORIGIN + 8 * SCREEN_TILES_W + 10], 0x65
 
     popad
     ret

@@ -823,6 +823,17 @@ NASMFLAGS += -D SKIP_TITLE
 NASMFLAGS += -D MARKER_SX=$(or $(MARKER_SX),0)
 NASMFLAGS += -D MARKER_SY=$(or $(MARKER_SY),0)
 endif
+# Projected-title pixel gate (menu-intro A2.3/A2.6). Deliberately does NOT set
+# SKIP_TITLE: the whole point is to boot the real title through the full bounce
+# and photograph the stable checkpoint at .loop. GBSTATE goldens cannot observe
+# any of this — they compare GB memory, and the projection lives in the
+# compositor — so FRAME.BIN is the only binding evidence that the surface is
+# centred, the matte is clean and the tilemap reached VRAM.
+#   make image DEBUG_TITLE=1
+ifdef DEBUG_TITLE
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_TITLE
+endif
 # Oak's-PC gate (menu-fidelity row 17 part 3): boot to overworld, call OpenOaksPC.
 # It PrintTexts AccessedOaksPCText and blocks in the stream's page-break prompt;
 # with no presses scripted, AutoKeyDrive photographs the open "Accessed PROF. /

@@ -1330,6 +1330,77 @@ make -C dos_port goldens-verify
 
 Do not use root-level `make clean`. Use `make -C dos_port clean` only when generated dependencies require it.
 
+### A2.3 — the port had no auto-BG-transfer, so the title's VRAM copy was a no-op
+
+Implementing the projection surfaced a defect the plan did not anticipate, and it
+is very likely a cause of the long-standing "title screen graphics are wrong"
+entry in CLAUDE.md.
+
+`TitleScreenCopyTileMapToVRAM` was storing `hAutoBGTransferDest+1` and calling
+`Delay3` — and **nothing in this tree reads `hAutoBGTransferDest`**. There is no
+auto-BG-transfer implementation. The physical copy pret's title depends on has
+never run. The bespoke title only looked plausible because `render_bg` read
+`wTileMap` flat and never consulted the GB tilemap at all.
+
+Under projection the compositor samples the GB tilemap through the window
+descriptor, so the transfer had to be made real. It now copies the 20x18
+rectangle (canvas stride 40) to the destination at the GB's 32-byte row stride,
+**byte-contiguous and deliberately not wrapped**: a row-24 destination (`$9B00`)
+genuinely runs off tilemap 0 into tilemap 1 at `$9C00`, exactly as the hardware
+transfer would. The wrap belongs to the *sampler* — `render_window` re-reads rows
+mod-32 within one tilemap — never to the writer. That is what makes the bounce
+show tilemap 0's row-0 content once `hSCY` scrolls past row 31, and it is why
+pret copies to row 24 and row 0 separately.
+
+**Carry-forward:** any other pret screen that relies on `hAutoBGTransferEnabled`
+to commit `wTileMap` has the same latent no-op. Check before assuming a screen's
+tilemap reaches VRAM.
+
+Three smaller corrections came with it:
+
+- `SCREEN_TILES_W` is **40**, not 20. Title comments reading `17*20` and "skip to
+  next row (4 bytes)" were GB-era leftovers that were *wrong*, not merely stale.
+- `ClearScreen` is exported and other screens need its whole-canvas meaning, so
+  it was left alone; the title uses a local `TitleBlankSurface` for the
+  rectangle-limited `$7F` fill, called after `MovieBeginSurface` zeroes the matte.
+- **`hWY` reconciled by evidence, not by choosing a side.** Neither pret's 144 nor
+  the port's 200 was correct. `set_single_window` mirrors the descriptor's `wy`
+  into `H_WY`, and `sync_dialog_window` gates on `H_WY == RENDER_H`, so writing
+  either value after the surface is published corrupts the mirror. The write is
+  dropped under `DEVIATION{class=projection}`; the descriptor owns the window.
+
+#### A2.3 pixel evidence (PASS)
+
+`make fidelity` is 12/12 PASS, but that is a **no-regression** result and cannot
+evidence this change: the goldens compare GB memory, and the projection lives in
+the compositor. The binding evidence is `tools/pixelcheck.sh title`, a new
+scenario (`DEBUG_TITLE=1`) that deliberately does **not** set `SKIP_TITLE` — it
+boots the real title through the full bounce and photographs the stable
+checkpoint at `.loop`.
+
+Decomposed, because a matching total is not a result:
+
+| Check | Measured |
+| --- | --- |
+| Matte outside (80,24)-(240,168) | 40960 px, all colour 0 |
+| Surface interior | 23040 px = 160x144 exactly |
+| Non-matte bounding box | x 96-223, y 32-166 |
+| Logo at pret coord(2,1) | 4658 ink px |
+| Pikachu at pret coord(4,8) | 4759 ink px |
+| Ear/tail tiles col 16, rows 10-13 | 162 ink px |
+| Copyright row 17 | 383 ink px |
+| Row 0 (must be blank) | 0 ink px |
+
+The bounding box is derived from pret's own coordinates rather than compared to a
+remembered number: logo col 2 gives `80 + 2*8 = 96`, 18 columns wide gives `223`,
+row 1 gives `24 + 8 = 32`. Four distinct shades inside the surface prove the
+tilemap genuinely reached VRAM — under the old no-op copy nothing could have
+rendered there.
+
+Still open for A2.4/A2.5: eye OAM is not yet published to the surface, so the
+checkpoint above is the composition **without** eyes, and no timing trace has
+been taken yet.
+
 ## Full-chain target-runtime smoke test
 
 After deterministic gates pass, perform one uninterrupted normal DOSBox-X run with a configured audio device:
