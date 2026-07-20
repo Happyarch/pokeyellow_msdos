@@ -1528,6 +1528,55 @@ expectation rather than by inspection:
   at that point. The states to capture are `S=2` (half), `S=5` (closed) and
   `S=11` (reopened).
 
+### A2.5 — bounce timing verified frame by frame (PASS)
+
+**The reference exists and is built.** `tools/mgba_harness/scenarios/title_trace.lua`
+records `(frame, hSCY, hWY, wTitleScreenScene)` from the golden ROM (sha1
+`cc7d0326`, verified against `roms.sha1`). Two things it taught, both encoded in
+the script: 700 uninterrupted frames never reach the title, because the ROM plays
+the copyright screen, the Game Freak splash and the whole Yellow intro first; and
+the safe detector is `hSCY == 64`, since the bounce never reads the joypad.
+
+Reference findings:
+
+- `hSCY` delta runs are exactly pret's table, one frame per step.
+- `hSCY` range `[0,64]`, 22 distinct values, **zero** crossings of the 0/255
+  boundary — the plan's "the bounce wraps" premise is now measured wrong, not
+  merely derived wrong.
+- `hWY` goes `144 -> 64` at the bounce start and back to `144` once `hSCY`
+  reaches 0. This independently confirms the bounce window from the reference,
+  having previously been concluded only from reading pret.
+
+**Port comparison is through pixels, deliberately.** A register trace was not
+used, for two reasons: `GBSTATE.BIN` has no HRAM region (so `hSCY` is in no dump
+the port already writes, and adding a region would change the region count for
+every existing golden), and more importantly a register trace proves what the
+game *wrote*, not what the renderer *drew* — the projection is precisely the
+layer in between, so it is the layer under test. `hSCY` drives `WIN_SRC_Y`, which
+shifts the BG sample point, which moves the logo; measuring the logo's bottom
+edge in a mid-bounce `FRAME.BIN` recovers the `hSCY` that actually reached the
+screen.
+
+`tools/check_title_timing.py` automates it. Result over 14 sampled frames
+spanning every delta run in the table, including the run boundaries at 16/17,
+20/21 and 24/25:
+
+**exact = 13, mismatch = 0, unmeasurable = 1** (frame 1, where the logo has
+scrolled entirely above the viewport and the measurement carries no signal).
+
+**One real finding, not a fudge factor.** The first pass showed a constant
+non-zero residual exactly equal to the current run's delta. The cause is that
+pret's `.ScrollTitleScreenPokemonLogo` is `call DelayFrame` and *then*
+`ld [bc], a` — the frame is rendered before `hSCY` is updated — so the buffer
+captured at bounce frame N shows step N-1's `hSCY`. The port preserves that
+order, so the lag is correct behaviour and the checker models it explicitly. A
+constant residual was the clue; had it been absorbed as a calibration offset the
+real ordering fact would have been missed.
+
+Still open in A2.5: the blink half. The reference `wTitleScreenScene` column is
+already captured in the same CSV and the port's blink states are capturable via
+`TITLE_DUMP_SCENE`, so it is tractable by the same route — it has not been done.
+
 **Method note.** This was found by reading pret's routine end-to-end while
 starting an unrelated subtask, not by any gate. Every gate was green across it:
 the build, `lint_pret_labels`, `--strict-claims`, 12/12 `fidelity`, and a
