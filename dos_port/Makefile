@@ -838,6 +838,7 @@ ifdef DEBUG_TITLE
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_TITLE
 NASMFLAGS += -D TITLE_DUMP_FRAME=$(or $(TITLE_DUMP_FRAME),0)
+NASMFLAGS += -D TITLE_DUMP_SCENE=$(or $(TITLE_DUMP_SCENE),0)
 endif
 # Oak's-PC gate (menu-fidelity row 17 part 3): boot to overworld, call OpenOaksPC.
 # It PrintTexts AccessedOaksPCText and blocks in the stream's page-break prompt;

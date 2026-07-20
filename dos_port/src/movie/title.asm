@@ -80,6 +80,7 @@ extern MovieEndSurface          ; src/engine/movie/movie_projection.asm
 extern MovieMirrorSurface       ; src/engine/movie/movie_projection.asm
 extern MovieSyncScroll          ; src/engine/movie/movie_projection.asm
 extern MovieSyncWindow          ; src/engine/movie/movie_projection.asm
+extern PublishProjectedOAM      ; src/engine/gfx/sprite_oam.asm — ESI=src ECX=n EAX/EBX=offset
 %ifdef DEBUG_TITLE
 extern DumpBackbuffer           ; src/debug/debug_dump.asm — writes FRAME.BIN + exits
 %endif
@@ -463,7 +464,7 @@ DisplayTitleScreen:
     ; ---------------------------------------------------------------------------
 .loop:
 %ifdef DEBUG_TITLE
-%if TITLE_DUMP_FRAME == 0
+%if TITLE_DUMP_FRAME == 0 && TITLE_DUMP_SCENE == 0
     ; A2.3/A2.6 pixel gate. This point is the plan's stable title checkpoint: the
     ; bounce has finished, hSCY and WIN_SRC_Y are back to zero, the logo+pikachu
     ; tilemap is installed at source row zero, the matte and centred window are
@@ -496,6 +497,19 @@ DisplayTitleScreen:
     and al, PAD_A | PAD_START
     jnz .go_to_main_menu
     call DoTitleScreenFunction
+%ifdef DEBUG_TITLE
+%if TITLE_DUMP_SCENE > 0
+    ; Blink-state capture (A2.4). Photograph the frame on which the eye-blink
+    ; state machine has reached a chosen wTitleScreenScene, so the half and
+    ; closed frames are observable instead of only the open state the stable
+    ; checkpoint holds. Scene numbering: 1/7 half, 4 closed, 10 open.
+    cmp byte [ebp + W_TITLE_SCREEN_SCENE], TITLE_DUMP_SCENE
+    jne .no_scene_dump
+    call DelayFrame                   ; let the republished OAM reach the buffer
+    call DumpBackbuffer               ; never returns
+.no_scene_dump:
+%endif
+%endif
     jmp .titleScreenLoop
 
 .go_to_main_menu:
@@ -824,13 +838,34 @@ TitleScreen_PlacePikachu:
     mov byte [ebp + W_TILEMAP + TITLE_ORIGIN + 12 * SCREEN_TILES_W + 16], 0xA7
     mov byte [ebp + W_TILEMAP + TITLE_ORIGIN + 13 * SCREEN_TILES_W + 16], 0xB1
 
-    ; Copy eye OAM data to wShadowOAM (32 bytes = 8 sprites × 4 bytes).
-    ; Canonical OAM only — A2.4 publishes it to the projected surface.
+    ; Copy eye OAM data to wShadowOAM (32 bytes = 8 sprites × 4 bytes). The
+    ; records stay canonical GB OAM — byte-comparable against a golden — and the
+    ; projection lives only in the published DOS coordinates.
     lea esi, [TitleScreenPikachuEyesOAMData]
     lea edi, [ebp + W_SHADOW_OAM]
     mov ecx, 32
     rep movsb
 
+    call TitleScreenPublishEyes
+
+    popad
+    ret
+
+; ---------------------------------------------------------------------------
+; TitleScreenPublishEyes — put the 8 canonical eye records on the surface.
+;
+; Port-only helper; no pret counterpart, because on the GB OAM already IS screen
+; space. MovieBeginSurface parked wUpdateSpritesEnabled at $FF, so nothing else
+; republishes OAM while the cinematic owns the screen — every eye change has to
+; come back through here or the compositor keeps drawing the previous frame.
+; ---------------------------------------------------------------------------
+TitleScreenPublishEyes:
+    pushad
+    mov esi, W_SHADOW_OAM               ; GB-relative source
+    mov ecx, 8                          ; 8 eye records
+    mov eax, UI_TITLE_COL * 8           ; projection X = 80
+    mov ebx, UI_TITLE_WY                ; projection Y = 24
+    call PublishProjectedOAM
     popad
     ret
 
@@ -911,6 +946,8 @@ section .text
     add esi, 4                             ; advance to next sprite's TileID
     dec ecx
     jnz .blink_loop
+    ; The tile IDs changed; republish so the new blink frame is what gets drawn.
+    call TitleScreenPublishEyes
 .BlinkWait:
     inc byte [ebp + W_TITLE_SCREEN_SCENE]
     ret

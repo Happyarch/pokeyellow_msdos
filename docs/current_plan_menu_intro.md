@@ -1485,6 +1485,49 @@ band.
 The stable checkpoint is unaffected and its A2.3 capture is bit-for-bit
 unchanged, confirming the new descriptor does not leak into the BG-only frame.
 
+### A2.4 — eye OAM on the projected surface (PASS)
+
+`TitleScreen_PlacePikachu` copies the 8 canonical eye records to `wShadowOAM` as
+before — the records stay byte-comparable against a golden, and the projection
+lives only in the published DOS coordinates — then calls the new local
+`TitleScreenPublishEyes` (`PublishProjectedOAM`, offset `(80,24)`).
+`.LoadBlinkFrame` republishes after mutating the tile IDs. That republish is
+mandatory, not defensive: `MovieBeginSurface` parks `wUpdateSpritesEnabled` at
+`$FF`, so nothing else rebuilds OAM while the cinematic owns the screen and the
+compositor would otherwise keep drawing the previous blink frame.
+
+Placement evidence, against the OAM records rather than a remembered box: all
+**152** changed pixels versus the eyeless capture fall inside the union of the
+eight expected 8x8 boxes, with **zero** outside and zero anywhere in the matte.
+Per-record pixel counts are `[1,9,17,49]` for records 0-3 and `[9,1,49,17]` for
+records 4-7 — the mirrored pattern the `$22` vs `$02` attribute byte (bit 5,
+X-flip) predicts.
+
+Animation evidence, via a new `TITLE_DUMP_SCENE=N` capture mode:
+
+| Comparison | px differ | outside eye boxes |
+| --- | --- | --- |
+| open vs half | 64 | 0 |
+| open vs closed | 126 | 0 |
+| half vs closed | 82 | 0 |
+| **open vs reopened** | **0** | 0 |
+
+Three visually distinct states, all confined to the eye boxes, and the cycle
+returns **byte-identically** to the open state — so `BlinkOpen` restores the tile
+bits exactly and the animation cannot drift over repeated blinks.
+
+Two harness notes worth keeping, both found by the captures disagreeing with
+expectation rather than by inspection:
+
+- The checkpoint dump was initially gated only on `TITLE_DUMP_FRAME == 0`, so it
+  fired at `.loop` and exited before `.titleScreenLoop` ever ran. Every
+  scene capture came back byte-identical to the checkpoint. Identical captures
+  across supposedly different states are a harness smell, not a pass.
+- Post-call `wTitleScreenScene` is one AHEAD of the dispatch that ran, because
+  `.BlinkWait` increments before the check. Scene 1 is therefore never observable
+  at that point. The states to capture are `S=2` (half), `S=5` (closed) and
+  `S=11` (reopened).
+
 **Method note.** This was found by reading pret's routine end-to-end while
 starting an unrelated subtask, not by any gate. Every gate was green across it:
 the build, `lint_pret_labels`, `--strict-claims`, 12/12 `fidelity`, and a
