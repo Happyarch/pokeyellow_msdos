@@ -494,6 +494,51 @@ SCENARIOS = {
               "(10,0), from the generated assets/ui_layout_menus.inc")]
         ),
     },
+    "title_reentry": {
+        # The title checkpoint reached through title -> menu -> B -> title. Same
+        # config as `title`: any divergence outside the F-25 mask is leaked
+        # round-trip state, which is what the scenario exists to catch. OAM stays
+        # unmasked (proves no OAM leak); WRAM stays compared (proves the round
+        # trip changed no game data); the logo and copyright tilemap stay
+        # compared. The compositor-state no-leak property (g_obj_clip,
+        # g_bg_whiteout, source offsets, callbacks) is proven separately and more
+        # strongly at the pixel level: tools/pixelcheck.sh title_reentry is
+        # BYTE-IDENTICAL to tools/pixelcheck.sh title.
+        "flags": "DEBUG_TITLE_REENTRY=1",
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
+        "window": (0, 0),
+        "projections": (
+            [((0, 0, 17, 19), (10, 3),
+              "cinematic surface centred at UI_TITLE_(COL,ROW) = (10,3)")]
+        ),
+        "masks": {
+            # F-25 (OPEN, route difference): on title RE-ENTRY the ROM loads the
+            # Pikachu tile block to VRAM slots $40 higher than on first boot and
+            # references them with tilemap ids shifted by the same $40 -- the
+            # graphic under reentry id N is byte-identical to first-boot id N+$40
+            # (measured: reentry.tile($26) == title.tile($66)). The cause is the
+            # vChars1 font timeshare: the main menu loaded the font into vChars1,
+            # so the title's second graphics load packs Pikachu around it. The
+            # port re-loads to the first-boot slots both times, so its rendered
+            # frame is pixel-identical to the title checkpoint (that is the whole
+            # point) but its VRAM bookkeeping does not follow the ROM's re-entry
+            # relocation. Invisible on screen; nothing reads these ids by number
+            # on the title. Retire F-25 by reproducing the ROM's re-entry VRAM
+            # allocation, after which this mask and its slots go.
+            "tilemap": [
+                ((4, 4, 16, 16),
+                 "F-25: Pikachu sprite region; the ROM relocates its tile ids by "
+                 "$40 on title re-entry (vChars1 font timeshare), the port re-loads "
+                 "to first-boot ids -- pixel-identical, VRAM ids differ"),
+            ],
+            "vram": [
+                (s, "F-25: Pikachu tile slot the ROM relocates by $40 on title "
+                    "re-entry; port keeps the first-boot slot -- same graphic, "
+                    "different id")
+                for s in range(0x173, 0x17F)
+            ],
+        },
+    },
     "title": {
         "flags": "DEBUG_TITLE=1",
         # The wOptionsBlock mask this scenario carried at A2.6 is RETIRED, not

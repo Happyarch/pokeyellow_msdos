@@ -437,6 +437,38 @@
         "masks": "golden_diff.SCENARIOS"
       },
       "verification": "boot main menu with no save file, reached by the real title route; box drawn, no input consumed"
+    },
+    {
+      "name": "title_reentry",
+      "id": 23,
+      "tier": "core",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_TITLE_REENTRY=1",
+      "port_entry_gate": "DEBUG_TITLE_REENTRY",
+      "navigation_script": "tools/mgba_harness/scenarios/title_reentry.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 300,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "DisplayTitleScreen",
+        "MainMenu",
+        "MovieBeginSurface"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "title stable checkpoint after a title->menu->B->title round trip; proves no leaked compositor state"
     }
   ],
   "disabled_scenarios": [

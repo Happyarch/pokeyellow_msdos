@@ -1697,8 +1697,41 @@ inspection:
   frame before it exists. The first run failed on exactly one cell — (row 2, col
   1), want `$ED` got `$7F`.
 
-Still open in A3: `title_reentry` and `continue_seed`, and verifying the continue
-path separately from new-game.
+#### `title_reentry` — no leaked state, and a new finding (F-25)
+
+`DEBUG_TITLE_REENTRY` boots the real title, latches START to reach `MainMenu`,
+takes the B-cancel path back to `DisplayTitleScreen`, and dumps the checkpoint on
+the second visit. The counter that distinguishes the visits lives in `.data`, so
+it survives the `jmp` re-entry.
+
+**The core acceptance is proven at the pixel level, and it is byte-exact.** The
+reentry `FRAME.BIN` is *byte-identical* to the `title` `FRAME.BIN`
+(`cmp title_reentry.bin title.bin` → identical). Since the compositor produces
+the identical frame after a full round trip, every piece of state
+`MovieBeginSurface` owns — `g_obj_clip`, `g_bg_whiteout`, the source offsets, the
+window callbacks — was restored. `goldencheck title_reentry` independently
+confirms the OAM half (OAM OK) and that no game data changed (WRAM OK).
+
+**F-25 (OPEN, route difference), discovered here.** The plan assumed re-entry
+reproduces the title checkpoint exactly. On the *ROM* it does not: the second
+title visit loads the Pikachu tile block to VRAM slots `$40` higher than first
+boot and shifts its tilemap ids by the same `$40` — measured directly,
+`reentry.tile($26) == title.tile($66)`. The cause is the vChars1 font timeshare:
+the main menu loaded the font into vChars1, so the title's second graphics load
+packs Pikachu around it. The port re-loads to the first-boot slots both times, so
+its rendered frame is pixel-identical to the checkpoint (the whole point) but its
+VRAM bookkeeping does not follow the ROM's re-entry relocation. It is invisible —
+nothing reads those ids by number on the title — so it is masked as a route
+difference (`golden_diff.py` F-25, 136 tilemap cells + 12 VRAM slots) rather than
+faked away, and F-25 retires when the port reproduces the ROM's re-entry
+allocation. This is the same class of false premise as the "bounce wraps" one:
+the plan was never validated, and measuring beat assuming again.
+
+`goldencheck title_reentry`: TILEMAP OK, VRAM OK, OAM OK, WRAM OK (F-25 masked).
+`fidelity` 15/15 PASS.
+
+Still open in A3: `continue_seed`, and verifying the continue path separately from
+new-game.
 
 **Method note.** This was found by reading pret's routine end-to-end while
 starting an unrelated subtask, not by any gate. Every gate was green across it:

@@ -81,6 +81,12 @@ extern MovieSyncScroll          ; src/engine/movie/movie_projection.asm
 extern MovieSyncWindow          ; src/engine/movie/movie_projection.asm
 extern PublishProjectedOAM      ; src/engine/gfx/sprite_oam.asm — ESI=src ECX=n EAX/EBX=offset
 %ifdef DEBUG_TITLE
+%define TITLE_NEEDS_DUMP 1
+%endif
+%ifdef DEBUG_TITLE_REENTRY
+%define TITLE_NEEDS_DUMP 1
+%endif
+%ifdef TITLE_NEEDS_DUMP
 extern DumpBackbuffer           ; src/debug/debug_dump.asm — writes FRAME.BIN + exits
 %endif
 
@@ -153,8 +159,18 @@ align 4
 %ifdef DEBUG_MAINMENU_LIVE
 %define TITLE_DBG_COUNTER 1
 %endif
+%ifdef DEBUG_TITLE_REENTRY
+%define TITLE_DBG_COUNTER 1
+%endif
 %ifdef TITLE_DBG_COUNTER
 title_dbg_frame: dd 0                   ; frames elapsed (mid-bounce / idle-loop / forced-start counter)
+%endif
+%ifdef DEBUG_TITLE_REENTRY
+; Persists across the DisplayTitleScreen re-entry (.data survives the jmp).
+; Visit 1 latches START -> MainMenu; MainMenu B-cancels back to DisplayTitleScreen;
+; visit 2 dumps the checkpoint, proving the round trip restored every piece of
+; state MovieBeginSurface owns (g_obj_clip, g_bg_whiteout, source offsets, OAM).
+title_reentry_visit: dd 0
 %endif
 
 TitleScreenPikachuEyesOAMData:
@@ -482,6 +498,20 @@ DisplayTitleScreen:
     ; Main idle loop: blink Pikachu's eyes, wait for input, reset on timeout.
     ; ---------------------------------------------------------------------------
 .loop:
+%ifdef DEBUG_TITLE_REENTRY
+    ; title_reentry scenario (A3). Count title visits. Visit 1 falls through to
+    ; latch START below; visit 2 is the post-B-cancel re-entry and dumps the
+    ; checkpoint here — the same point and settle as the `title` golden, so a
+    ; clean round trip produces a byte-identical frame.
+    inc dword [title_reentry_visit]
+    cmp dword [title_reentry_visit], 2
+    jne .reentry_no_dump
+    call DelayFrame
+    call DelayFrame
+    call DelayFrame
+    call DumpBackbuffer                ; never returns
+.reentry_no_dump:
+%endif
 %ifdef DEBUG_TITLE
 %if TITLE_DUMP_FRAME == 0 && TITLE_DUMP_SCENE == 0 && TITLE_DUMP_LOOP == 0
     ; A2.3/A2.6 pixel gate. This point is the plan's stable title checkpoint: the
@@ -528,6 +558,15 @@ DisplayTitleScreen:
     jne .no_forced_start
     mov byte [ebp + H_JOY_HELD], PAD_START
 .no_forced_start:
+%endif
+%ifdef DEBUG_TITLE_REENTRY
+    ; Visit 1 only (visit 2 dumps at .loop and never reaches here): latch START
+    ; on the 2nd iteration so the genuine exit sequence runs into MainMenu.
+    inc dword [title_dbg_frame]
+    cmp dword [title_dbg_frame], 2
+    jne .reentry_no_start
+    mov byte [ebp + H_JOY_HELD], PAD_START
+.reentry_no_start:
 %endif
     mov al, [ebp + H_JOY_HELD]
     cmp al, PAD_UP | PAD_SELECT | PAD_B       ; secret reset-save combo

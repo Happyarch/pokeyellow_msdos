@@ -843,6 +843,13 @@ ifdef DEBUG_MAINMENU_LIVE
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_MAINMENU_LIVE
 endif
+# title_reentry scenario (A3): boot the real title, latch START -> MainMenu,
+# B-cancel back to DisplayTitleScreen, dump the checkpoint on the 2nd visit.
+# Proves the title round trip leaks no compositor state. make DEBUG_TITLE_REENTRY=1
+ifdef DEBUG_TITLE_REENTRY
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_TITLE_REENTRY
+endif
 ifdef DEBUG_TITLE
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_TITLE

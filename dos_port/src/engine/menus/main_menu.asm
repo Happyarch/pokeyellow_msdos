@@ -262,6 +262,15 @@ MainMenu:
     ; single descriptor + the per-frame mirror as menu_redraw_cb). Stands in for
     ; pret relying on the LCD showing the drawn BG map directly.
     call MainMenuShowWindow
+%ifdef DEBUG_TITLE_REENTRY
+    ; title_reentry scenario (A3): take the B-cancel path immediately, without
+    ; waiting on HandleMenuInput. .backToTitle is `jmp DisplayTitleScreen`, and
+    ; nothing sits between HandleMenuInput's PAD_B test and it, so this IS the
+    ; faithful B path — it exercises the title re-entry (and thus the state
+    ; restore) rather than HandleMenuInput's key detection, which has its own
+    ; coverage.
+    jmp .backToTitle
+%endif
 %ifdef DEBUG_MAINMENU_LIVE
     ; main_menu scenario (A3). Photograph the menu drawn WITH its cursor and
     ; before HandleMenuInput consumes anything — the same stopping point the
@@ -663,6 +672,12 @@ dcgi_mirror:
 ; In: EBP = GB base.  make DEBUG_MAINMENU=1  (root wires the flag + call site).
 ; ===========================================================================
 %ifdef DEBUG_MAINMENU_LIVE
+%define MAINMENU_NEEDS_DUMP 1
+%endif
+%ifdef DEBUG_TITLE_REENTRY
+%define MAINMENU_NEEDS_DUMP 1
+%endif
+%ifdef MAINMENU_NEEDS_DUMP
 extern DumpBackbuffer      ; debug/debug_dump.asm — FRAME.BIN + exit (main_menu scenario)
 %endif
 

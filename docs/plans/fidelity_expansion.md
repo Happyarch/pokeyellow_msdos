@@ -1216,6 +1216,27 @@ naming_screen golden's 2-cell first diff caught it; the earlier FRAME.BIN
 sign-offs had not — the misplaced ▶ reads as cosmetic noise in a PNG. Fixed at
 both sites (the live `.dPadReturnPoint` and the gate).
 
+### F-25. The title relocates its Pikachu VRAM by $40 on re-entry; the port keeps the first-boot slots [OPEN — route difference]
+
+Found by the `title_reentry` scenario (menu-intro A3), which reaches the title
+checkpoint through title → `MainMenu` → B → title. On the **ROM** the second
+title visit loads the Pikachu tile block to VRAM slots `$40` higher than first
+boot and shifts its tilemap ids by the same `$40`: measured directly,
+`reentry.tile($26) == title.tile($66)`, a clean relocation of the whole block by
+exactly its own `$400` size. The cause is the vChars1 font timeshare — the main
+menu loads the font into vChars1, so the title's second graphics load packs
+Pikachu around it. The port re-loads to the **first-boot** slots on both visits,
+so its rendered frame is *byte-identical* to the title checkpoint (proven by
+`tools/pixelcheck.sh title_reentry` == `tools/pixelcheck.sh title`) while its
+VRAM ids diverge from the ROM's re-entry allocation. Invisible: nothing reads
+these ids by number on the title. Masked as a route difference in
+`golden_diff.py` (`title_reentry`, 136 tilemap cells `(4,4)-(16,16)` + VRAM
+slots `$173-$17E`). Retire by reproducing the ROM's re-entry VRAM allocation,
+after which the mask and its slots go. Severity: low (no visible or read effect
+on the title). Note: this is another instance of the menu-intro plan's
+never-validated assumptions — it asserted re-entry reproduces the checkpoint
+exactly; the ROM does not.
+
 ## Imported open findings from the menu-fidelity audit
 
 That audit closed with ~20 `M-` findings filed OPEN against files outside the rows that found
