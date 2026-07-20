@@ -481,6 +481,27 @@ SCENARIOS = {
     # as a GB-shaped STRIDE-20 scratch (options.asm GBSCR_W / trainer_card.asm
     # TCSCR_W) and mirror rows 0-17 to GB_TILEMAP1, so the golden maps at
     # "stride": 20, window (0,0) — flat offset r*20+c, not the 40-wide canvas. ---
+    "title": {
+        "flags": "DEBUG_TITLE=1",
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
+        # The title is a CINEMATIC: it keeps the Game Boy's 160x144 composition
+        # rather than expanding to the overworld's 40x25 camera, and the port
+        # centres that surface on the canvas at tile (10,3). So the whole golden
+        # screen maps through one rigid translation, not a re-layout — unlike
+        # party_menu, nothing is re-flowed. See docs/ui_projection.md.
+        "window": (0, 0),  # every golden cell is covered by the projection rect
+        "projections": (
+            [((0, 0, 17, 19), (10, 3),
+              "cinematic surface: the GB 20x18 screen centred on the canvas at "
+              "tile (10,3) — UI_TITLE_COL/UI_TITLE_ROW")]
+        ),
+        # OAM is NOT masked and must not be: PublishProjectedOAM deliberately
+        # leaves the canonical GB records in $FE00 byte-for-byte and publishes
+        # the projection only through the separate DOS coordinate tables, so the
+        # eye records are directly comparable against the golden. If a future
+        # change makes OAM need a mask here, that is a regression in that
+        # contract, not a scenario quirk — fix the publisher, not this table.
+    },
     "options_menu": {
         "flags": "DEBUG_OPTIONS=1",
         "wram_skip": dict(_NONBATTLE_WRAM_SKIP),

@@ -72,17 +72,23 @@ scenario.run(function()
 	-- function of the title's own state machine.
 	for _ = 1, FRAMES do
 		scenario.exec(function()
-			rows[#rows + 1] = string.format("%d,%d,%d,%d",
+			-- wTitleScreenScene+4 is the .loop marker: pret's idle loop writes
+			-- $0F there as its first act, so the transition pins idle-loop entry
+			-- exactly. hSCY and hWY have both settled several routines earlier
+			-- and cannot distinguish .loop from the PCM/music sequence before
+			-- it — aligning the blink onset on hWY instead is off by that gap.
+			rows[#rows + 1] = string.format("%d,%d,%d,%d,%d",
 				scenario.frame(),
 				emu:read8(rSCY),
 				emu:read8(rWY),
-				emu:read8(wTitleScreenScene))
+				emu:read8(wTitleScreenScene),
+				emu:read8(wTitleScreenScene + 4))
 		end)
 	end
 
 	scenario.exec(function()
 		local fh = assert(io.open(OUT, "w"))
-		fh:write("frame,scy,wy,scene\n")
+		fh:write("frame,scy,wy,scene,marker\n")
 		fh:write(table.concat(rows, "\n"))
 		fh:write("\n")
 		fh:close()
