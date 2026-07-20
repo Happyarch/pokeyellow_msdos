@@ -343,8 +343,20 @@ DisplayTitleScreen:
     ; Save logo+pikachu tilemap to Buffer1
     call Title_SaveScreenTilesToBuffer1
 
-    ; Set SCY=64 (viewport 8 tile rows down; logo slides in from below)
-    mov byte [ebp + H_SCY], 0x40
+    ; pret here is `ld a, $40 / ldh [hWY], a` — it turns the GB WINDOW ON at
+    ; y=64 for the duration of the bounce. The port had `mov [H_SCY], 0x40`,
+    ; which is a mistranslation twice over: hSCY was already set to $40 at the
+    ; top of DisplayTitleScreen, so the write was a dead duplicate, and pret's
+    ; actual hWY write was dropped on the floor.
+    ;
+    ; What that window does is load-bearing, not decoration. The row-24 copy
+    ; above runs contiguously off tilemap 0 into tilemap 1 at $9C00, which lands
+    ; wTileMap rows 8..17 (Pikachu + the copyright line) in vBGMap1 rows 0..9.
+    ; LCDC $E3 has the window enabled and mapped to $9C00, so the window at y=64
+    ; paints exactly those rows at exactly the screen position they belong to.
+    ; The result: the top 64 px bounce with hSCY while the bottom 80 px stay
+    ; nailed down. Without it the copyright line bounces along with the logo.
+; STUB{class=temporary; label=DisplayTitleScreen.bounceWindow; pret=engine/movie/title.asm:DisplayTitleScreen; behavior=pret's `ld a, $40 / ldh [hWY], a` window-enable for the bounce is not translated, so the whole surface bounces instead of only its top 64 px; evidence=the port publishes ONE window descriptor and MovieBeginSurface has already claimed it for the cinematic surface itself, so reproducing pret's window layer needs a SECOND descriptor over the projected rect at source row 8 — that is an A2.5 change, not a one-line write; lifetime=A2.5, when the mid-bounce pixel captures make the bottom-half masking observable}
 
     ; Restore logo-only tilemap and copy to row 0 ($9800)
     call LoadScreenTilesFromBuffer2
@@ -415,7 +427,7 @@ DisplayTitleScreen:
     ; mutation has to reach the GB tilemap before the next frame samples it.
     call TitleScreen_PlacePikaSpeechBubble
     call MovieMirrorSurface
-; DEVIATION{class=projection; pret=engine/movie/title.asm:DisplayTitleScreen; behavior=pret's `ld a, SCREEN_HEIGHT_PX / ldh [hWY], a` here is dropped instead of translated; evidence=pret hides the GB window layer because the title composes entirely on BG, but in this port the single window descriptor IS the cinematic surface published by MovieBeginSurface, and set_single_window mirrors its wy into hWY, so writing SCREEN_HEIGHT_PX or RENDER_H here would corrupt that mirror and trip the sync_dialog_window hWY==RENDER_H closed-gate; lifetime=permanent, the port presents cinematics on the window layer}
+; DEVIATION{class=projection; pret=engine/movie/title.asm:DisplayTitleScreen; behavior=pret's `ld a, SCREEN_HEIGHT_PX / ldh [hWY], a` here is dropped instead of translated; evidence=this write turns the GB window layer back OFF after the bounce used it (pret enables it at hWY=$40 before the bounce, see the STUB above), so it only matters once that window exists in the port, and meanwhile writing it is actively harmful — the port's single descriptor IS the cinematic surface, set_single_window mirrors its wy into hWY, and any write here corrupts that mirror and trips the sync_dialog_window hWY==RENDER_H closed-gate; lifetime=A2.5, revisit together with the bounce window it disables}
     call Delay3
 
     ; pret: ldpikacry e, PikachuCry1 / call TitleScreen_PlayPikachuPCM.

@@ -1401,6 +1401,52 @@ Still open for A2.4/A2.5: eye OAM is not yet published to the surface, so the
 checkpoint above is the composition **without** eyes, and no timing trace has
 been taken yet.
 
+### A2.3 SELF-CORRECTION: the title DOES use the GB window layer, and the port dropped it
+
+The `hWY` reconciliation recorded above is right about the mechanism but its
+stated *evidence* was wrong, and the wrong version shipped in `eaf70452` before
+being caught while starting A2.4. Recording it rather than quietly amending it.
+
+Pret's full `hWY` sequence is four writes, not one:
+
+1. `$90` (144) — window off, at the top of `DisplayTitleScreen`.
+2. **`$40` (64), immediately after `SaveScreenTilesToBuffer1` — window ON.**
+3. `SCREEN_HEIGHT_PX` at the speech bubble — window off again.
+4. `0` at `.go_to_main_menu`.
+
+So the claim "the title composes entirely on BG" is false. Worse, the port never
+translated write 2 at all: at that line it has `mov [H_SCY], 0x40`, which is a
+mistranslation twice over — `hSCY` was already set to `$40` at the top of the
+routine, so the write is a dead duplicate, and pret's `hWY` write was dropped.
+
+**What that window does is load-bearing.** The row-24 copy runs contiguously off
+tilemap 0 into tilemap 1 at `$9C00`, which places `wTileMap` rows 8..17 (Pikachu
+and the copyright line) into vBGMap1 rows 0..9. `LCDC $E3` has the window enabled
+and mapped to `$9C00`, so the window at `y=64` paints exactly those rows at
+exactly the screen position they belong to. The top 64 px bounce with `hSCY`
+while the bottom 80 px stay nailed down. Without it the copyright line bounces
+along with the logo.
+
+This retroactively justifies A2.3's byte-contiguous, non-wrapping copy: the
+spill into tilemap 1 is not an artifact to be tolerated, it is the mechanism.
+
+**Consequence for A2.5.** The port publishes ONE window descriptor and
+`MovieBeginSurface` has already claimed it for the cinematic surface itself.
+Reproducing pret's window layer needs a SECOND descriptor over the projected
+rectangle at source row 8 — an architecture change, not a one-line write. It is
+recorded in `title.asm` as `STUB{class=temporary;
+label=DisplayTitleScreen.bounceWindow}` and is A2.5 work, because A2.5's
+mid-bounce captures are what make the missing bottom-half masking observable.
+The stable checkpoint captured above is unaffected: by then pret has turned the
+window off again, so the composition there is genuinely BG-only.
+
+**Method note.** This was found by reading pret's routine end-to-end while
+starting an unrelated subtask, not by any gate. Every gate was green across it:
+the build, `lint_pret_labels`, `--strict-claims`, 12/12 `fidelity`, and a
+decomposed pixel capture. None of them can see a dropped write whose only
+symptom is motion, and the checkpoint frame is deliberately the one frame where
+the window is off. A green board is not evidence that a translation is complete.
+
 ## Full-chain target-runtime smoke test
 
 After deterministic gates pass, perform one uninterrupted normal DOSBox-X run with a configured audio device:
