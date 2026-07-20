@@ -40,6 +40,11 @@ global FadeInIntroPic
 OAKPIC_CENTER  equ (W_TILEMAP + (4 + UI_OAK_SPEECH_ROW) * SCREEN_TILES_W + (6 + UI_OAK_SPEECH_COL))
 OAKPIC_UPRIGHT equ (W_TILEMAP + (1 + UI_OAK_SPEECH_ROW) * SCREEN_TILES_W + (15 + UI_OAK_SPEECH_COL))
 
+; Oak-speech intro text streams (Tier-1 generated: OakSpeechText1/2/3,
+; IntroducePlayerText, IntroduceRivalText + their _ref pairs). The A4.3 control
+; flow PrintText's these; declared here so the data links with the cutscene.
+%include "assets/oak_speech_strings.inc"
+
 section .data
 align 4
 ; IntroFadePalettes — 6 BGP ramp bytes, computed from pret's `dc a,b,c,d` macro

@@ -152,11 +152,12 @@ def parse_body(lines, cm, mem, far_db):
         # TextCommandProcessor currently skips them (TODO-HW: audio in text streams).
         if s in ("text_promptbutton", "text_waitbutton", "text_scroll", "text_low", "text_pause",
                  "sound_get_item_1", "sound_level_up",
-                 "sound_caught_mon", "sound_dex_page_added"):
+                 "sound_caught_mon", "sound_dex_page_added", "sound_cry_pikachu"):
             out.append({"text_promptbutton": 0x06, "text_waitbutton": 0x0D,
                         "text_scroll": 0x07, "text_low": 0x05, "text_pause": 0x0A,
                         "sound_get_item_1": 0x0B, "sound_level_up": 0x0B,
-                        "sound_caught_mon": 0x12, "sound_dex_page_added": 0x13}[s]); continue
+                        "sound_caught_mon": 0x12, "sound_dex_page_added": 0x13,
+                        "sound_cry_pikachu": 0x14}[s]); continue
         if s == "text_asm":
             raise ValueError("text_asm body cannot be generated (translate as code)")
         # bare `db "..."` raw string (e.g. WhichTechniqueString)
