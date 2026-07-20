@@ -31,7 +31,9 @@ bits 32
 %include "assets/ui_layout_intro.inc"
 
 extern set_single_window        ; ppu.asm — EAX=wx EBX=wy ECX=clip_w EDX=max_y ESI=tilemap EDI=start_row
+extern add_window               ; ppu.asm — same args, appends (painter's order)
 extern hide_window              ; ppu.asm
+extern g_window_count           ; ppu.asm
 extern g_windows                ; ppu.asm — descriptor array (slot 0 is ours)
 extern g_bg_whiteout            ; ppu.asm
 extern g_obj_over_window        ; ppu.asm
@@ -42,6 +44,12 @@ global MovieBeginSurface
 global MovieEndSurface
 global MovieMirrorSurface
 global MovieSyncScroll
+global MovieSyncWindow
+
+; The GB hides its window layer by parking rWY at or past the bottom scanline.
+; This is the Game Boy's 144, NOT the port's RENDER_H — a cinematic reasons in
+; GB screen space, and the projection converts.
+SCREEN_HEIGHT_PX equ 144
 
 section .text
 
@@ -72,6 +80,8 @@ MovieBeginSurface:
     rep stosb
 
     ; 2. One descriptor, geometry straight from the generated layout.
+    movzx eax, byte [ebp + IO_WX]       ; stash the GB's own rWX first
+    push eax
     mov eax, UI_TITLE_WX                ; 87 -> screen x 80
     mov ebx, UI_TITLE_WY                ; 24
     mov ecx, UI_TITLE_CLIP              ; 160
@@ -79,6 +89,16 @@ MovieBeginSurface:
     mov esi, GB_TILEMAP0
     xor edi, edi                        ; start_row 0
     call set_single_window              ; also zeroes WIN_SRC_X/WIN_SRC_Y
+    pop eax
+
+    ; set_single_window mirrors the descriptor's wx/wy into rWX/hWY for the
+    ; overworld's "is the dialog open?" gate. A cinematic needs both bytes back:
+    ; they are where the screen's own `ldh [hWY], a` / rWX writes land, and
+    ; MovieSyncWindow reads them as the GB window position. Leaving the PROJECTED
+    ; wx in rWX is the subtle one — MovieSyncWindow would then project an already
+    ; projected value and place the window a full 80 px right of the surface.
+    mov [ebp + IO_WX], al               ; restore the GB rWX (Init leaves it 7)
+    mov byte [ebp + H_WY], SCREEN_HEIGHT_PX  ; GB "window hidden", pret's start state
 
     ; Park the overworld OAM rebuild. $FF is "already hidden/frozen, do nothing";
     ; 0 would make PrepareOAMData run HideSprites and republish spr_oam_valid = 0,
@@ -146,6 +166,59 @@ MovieMirrorSurface:
     add edi, 32                         ; next GB tilemap row (stride 32)
     dec edx
     jnz .row
+    popad
+    ret
+
+; ---------------------------------------------------------------------------
+; MovieSyncWindow — present the GB WINDOW LAYER as a second projected descriptor.
+;
+; A cinematic is not always BG-only. The title enables the window at hWY=64 for
+; the whole logo bounce, and that is load-bearing: the row-24 tilemap copy runs
+; contiguously off tilemap 0 into tilemap 1 at $9C00, which lands wTileMap rows
+; 8..17 (Pikachu and the copyright line) in vBGMap1 rows 0..9. With LCDC bit 6
+; selecting $9C00, the window at y=64 paints exactly those rows at exactly the
+; screen position they belong to — so the top 64 px bounce with hSCY while the
+; bottom 80 px stay nailed down. Drop the window and the copyright bounces too.
+;
+; Descriptor 0 is the cinematic surface itself (MovieBeginSurface). This appends
+; descriptor 1 for the GB window on top of it, and drops back to just the surface
+; when the window is parked off-screen. It never touches descriptor 0, so a
+; MovieSyncScroll fine offset set for the bounce survives across this call.
+;
+; hWY carries pret's OWN hWY value during a cinematic (see MovieBeginSurface),
+; not the descriptor mirror set_single_window would otherwise leave there — that
+; is what lets the screen keep pret's `ldh [hWY], a` writes verbatim.
+;
+; LCDC bit 5 (window enable) and bit 6 (window map select) are honoured, so this
+; is GB window semantics rather than a title-shaped special case.
+;
+; Must run after the screen writes hWY and before the next frame.
+; In:  EBP = GB memory base. All registers preserved.
+; ---------------------------------------------------------------------------
+MovieSyncWindow:
+    pushad
+    mov dword [g_window_count], 1       ; surface only; re-add the window below
+
+    test byte [ebp + IO_LCDC], (1 << 5) ; window layer disabled?
+    jz .done
+    movzx eax, byte [ebp + H_WY]
+    cmp eax, SCREEN_HEIGHT_PX           ; parked at/past the bottom scanline?
+    jae .done
+
+    mov ebx, eax
+    add ebx, UI_TITLE_WY                ; GB screen y -> canvas y
+    movzx eax, byte [ebp + IO_WX]       ; WX units; 7 == GB x 0
+    add eax, UI_TITLE_COL * 8           ; -> projected WX units
+    mov ecx, UI_TITLE_CLIP
+    mov edx, UI_TITLE_MAXY              ; clipped to the surface, never the matte
+    mov esi, GB_TILEMAP0
+    test byte [ebp + IO_LCDC], (1 << 6) ; window map select
+    jz .map_selected
+    mov esi, GB_TILEMAP1
+.map_selected:
+    xor edi, edi                        ; window always starts at map row 0
+    call add_window
+.done:
     popad
     ret
 

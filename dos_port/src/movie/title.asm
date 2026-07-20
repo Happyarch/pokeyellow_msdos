@@ -9,11 +9,13 @@
 ;   3. Add pikachu to wTileMap; copy to physical tilemap at $9B00 (row 24);
 ;      save to Buffer1.  hSCY = 64.
 ;   4. Restore Buffer2 (logo only); copy to physical tilemap at $9800 (row 0).
-;   5. Bounce hSCY from 64 → 0 over ~32 frames (DelayFrame each step).
-;      (Historical: do_bg_transfer used to re-copy wTileMap → $9800 each
-;      DelayFrame; it is retired — render_bg's flat path reads wTileMap
-;      directly, so the physical-tilemap copies here are write-only noise and
-;      the H_AUTO_BG_TRANSFER_EN/DEST writes below are vestigial bookkeeping.)
+;   5. hWY = 64 turns the GB window on, then hSCY bounces 64 → 0 over ~32
+;      frames (DelayFrame each step). The window is what keeps the bottom of
+;      the screen still while the logo bounces — see the hWY comment there.
+;      (The physical-tilemap copies are NOT noise, whatever the old comment
+;      here claimed. Under projection the compositor samples the GB tilemap
+;      through the window descriptor, and the row-24 copy's contiguous spill
+;      into tilemap 1 is exactly what feeds the bounce window.)
 ;   6. After bounce, restore Buffer1 (logo+pikachu); DelayFrames(36) —
 ;      Pikachu appears (render_bg reads the restored wTileMap).
 ;   7. Place speech bubble; play PCM; play music.
@@ -77,6 +79,7 @@ extern MovieBeginSurface        ; src/engine/movie/movie_projection.asm
 extern MovieEndSurface          ; src/engine/movie/movie_projection.asm
 extern MovieMirrorSurface       ; src/engine/movie/movie_projection.asm
 extern MovieSyncScroll          ; src/engine/movie/movie_projection.asm
+extern MovieSyncWindow          ; src/engine/movie/movie_projection.asm
 %ifdef DEBUG_TITLE
 extern DumpBackbuffer           ; src/debug/debug_dump.asm — writes FRAME.BIN + exits
 %endif
@@ -144,6 +147,10 @@ align 4
 ; (The old "OAM renderer not yet implemented" note here was stale: render_sprites
 ; has emulated DMG OBJ since the Phase-1 OAM pass. A2.4 routes these records
 ; through PublishProjectedOAM so they land on the centred cinematic surface.)
+%ifdef DEBUG_TITLE
+title_dbg_frame: dd 0                   ; bounce frames elapsed (mid-bounce capture)
+%endif
+
 TitleScreenPikachuEyesOAMData:
     db 0x60, 0x40, 0xf1, 0x22
     db 0x60, 0x48, 0xf0, 0x22
@@ -259,7 +266,7 @@ DisplayTitleScreen:
     mov byte [ebp + H_TILE_ANIMATIONS],     0
     mov byte [ebp + H_SCX],                 0
     mov byte [ebp + H_SCY],                 0x40   ; start with SCY=64
-    mov byte [ebp + H_WY],                  RENDER_H ; window off-screen (200)
+    mov byte [ebp + H_WY],                  SCREEN_HEIGHT_PX ; pret's $90 — window off
 
     call ClearScreen
 
@@ -343,20 +350,15 @@ DisplayTitleScreen:
     ; Save logo+pikachu tilemap to Buffer1
     call Title_SaveScreenTilesToBuffer1
 
-    ; pret here is `ld a, $40 / ldh [hWY], a` — it turns the GB WINDOW ON at
-    ; y=64 for the duration of the bounce. The port had `mov [H_SCY], 0x40`,
-    ; which is a mistranslation twice over: hSCY was already set to $40 at the
-    ; top of DisplayTitleScreen, so the write was a dead duplicate, and pret's
-    ; actual hWY write was dropped on the floor.
-    ;
-    ; What that window does is load-bearing, not decoration. The row-24 copy
-    ; above runs contiguously off tilemap 0 into tilemap 1 at $9C00, which lands
-    ; wTileMap rows 8..17 (Pikachu + the copyright line) in vBGMap1 rows 0..9.
-    ; LCDC $E3 has the window enabled and mapped to $9C00, so the window at y=64
-    ; paints exactly those rows at exactly the screen position they belong to.
-    ; The result: the top 64 px bounce with hSCY while the bottom 80 px stay
-    ; nailed down. Without it the copyright line bounces along with the logo.
-; STUB{class=temporary; label=DisplayTitleScreen.bounceWindow; pret=engine/movie/title.asm:DisplayTitleScreen; behavior=pret's `ld a, $40 / ldh [hWY], a` window-enable for the bounce is not translated, so the whole surface bounces instead of only its top 64 px; evidence=the port publishes ONE window descriptor and MovieBeginSurface has already claimed it for the cinematic surface itself, so reproducing pret's window layer needs a SECOND descriptor over the projected rect at source row 8 — that is an A2.5 change, not a one-line write; lifetime=A2.5, when the mid-bounce pixel captures make the bottom-half masking observable}
+    ; Turn the GB window on at y=64 for the bounce. This is load-bearing, not
+    ; decoration: the row-24 copy above runs contiguously off tilemap 0 into
+    ; tilemap 1 at $9C00, landing wTileMap rows 8..17 (Pikachu + the copyright
+    ; line) in vBGMap1 rows 0..9. LCDC $E3 has the window enabled and mapped to
+    ; $9C00, so the window at y=64 paints exactly those rows at exactly the
+    ; screen position they belong to — the top 64 px bounce with hSCY while the
+    ; bottom 80 px stay nailed down. Without it the copyright bounces too.
+    mov byte [ebp + H_WY], 0x40
+    call MovieSyncWindow
 
     ; Restore logo-only tilemap and copy to row 0 ($9800)
     call LoadScreenTilesFromBuffer2
@@ -406,6 +408,18 @@ DisplayTitleScreen:
     add dl, al
     mov [ebp + H_SCY], dl
     call MovieSyncScroll              ; hSCY -> WIN_SRC_Y, GB wrap semantics
+%ifdef DEBUG_TITLE
+%if TITLE_DUMP_FRAME > 0
+    ; Mid-bounce capture (A2.5). The stable checkpoint cannot evidence the bounce
+    ; window at all — pret parks it off-screen before then — so the only way to
+    ; see the bottom-half masking is to photograph a frame while hSCY is moving.
+    inc dword [title_dbg_frame]
+    cmp dword [title_dbg_frame], TITLE_DUMP_FRAME
+    jne .no_dump
+    call DumpBackbuffer               ; never returns
+.no_dump:
+%endif
+%endif
     loop .scrollStep                  ; ECX-- until zero
 
     jmp .bounceLoop
@@ -427,7 +441,10 @@ DisplayTitleScreen:
     ; mutation has to reach the GB tilemap before the next frame samples it.
     call TitleScreen_PlacePikaSpeechBubble
     call MovieMirrorSurface
-; DEVIATION{class=projection; pret=engine/movie/title.asm:DisplayTitleScreen; behavior=pret's `ld a, SCREEN_HEIGHT_PX / ldh [hWY], a` here is dropped instead of translated; evidence=this write turns the GB window layer back OFF after the bounce used it (pret enables it at hWY=$40 before the bounce, see the STUB above), so it only matters once that window exists in the port, and meanwhile writing it is actively harmful — the port's single descriptor IS the cinematic surface, set_single_window mirrors its wy into hWY, and any write here corrupts that mirror and trips the sync_dialog_window hWY==RENDER_H closed-gate; lifetime=A2.5, revisit together with the bounce window it disables}
+    ; Bounce is over — park the window off-screen again. Everything from here on
+    ; composes on BG alone, which is why the stable checkpoint is BG-only.
+    mov byte [ebp + H_WY], SCREEN_HEIGHT_PX
+    call MovieSyncWindow
     call Delay3
 
     ; pret: ldpikacry e, PikachuCry1 / call TitleScreen_PlayPikachuPCM.
@@ -446,6 +463,7 @@ DisplayTitleScreen:
     ; ---------------------------------------------------------------------------
 .loop:
 %ifdef DEBUG_TITLE
+%if TITLE_DUMP_FRAME == 0
     ; A2.3/A2.6 pixel gate. This point is the plan's stable title checkpoint: the
     ; bounce has finished, hSCY and WIN_SRC_Y are back to zero, the logo+pikachu
     ; tilemap is installed at source row zero, the matte and centred window are
@@ -456,6 +474,7 @@ DisplayTitleScreen:
     call DelayFrame
     call DelayFrame
     call DumpBackbuffer
+%endif
 %endif
     ; Reset per-loop title screen state
     xor al, al
@@ -488,6 +507,7 @@ DisplayTitleScreen:
     call ClearSprites
     xor al, al
     mov byte [ebp + H_WY], al
+    call MovieSyncWindow            ; hWY=0 — pret's full-screen window over the blanked maps
     inc al
     mov byte [ebp + H_AUTO_BG_TRANSFER_EN], al
     call ClearScreen

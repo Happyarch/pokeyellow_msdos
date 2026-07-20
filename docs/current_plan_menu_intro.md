@@ -1430,15 +1430,60 @@ along with the logo.
 This retroactively justifies A2.3's byte-contiguous, non-wrapping copy: the
 spill into tilemap 1 is not an artifact to be tolerated, it is the mechanism.
 
-**Consequence for A2.5.** The port publishes ONE window descriptor and
-`MovieBeginSurface` has already claimed it for the cinematic surface itself.
-Reproducing pret's window layer needs a SECOND descriptor over the projected
-rectangle at source row 8 — an architecture change, not a one-line write. It is
-recorded in `title.asm` as `STUB{class=temporary;
-label=DisplayTitleScreen.bounceWindow}` and is A2.5 work, because A2.5's
-mid-bounce captures are what make the missing bottom-half masking observable.
-The stable checkpoint captured above is unaffected: by then pret has turned the
-window off again, so the composition there is genuinely BG-only.
+**RESOLVED — the bounce window is implemented, not deferred.** The initial
+instinct was to record it as a `STUB` and push it to A2.5; that was wrong, since
+leaving a known-unfaithful gap in place is exactly what the fidelity rules exist
+to prevent. `MovieSyncWindow` (`movie_projection.asm`) now presents the GB window
+layer as a **second** projected descriptor appended over the surface, honouring
+`LCDC` bit 5 (window enable) and bit 6 (map select) — real GB window semantics,
+not a title-shaped special case. `title.asm` carries pret's `hWY` writes verbatim
+(`$90`, `$40`, `SCREEN_HEIGHT_PX`, `0`) and calls `MovieSyncWindow` after each,
+so the STUB and the projection DEVIATION are both retired.
+
+Two register-ownership traps had to be resolved for that to work, and they are
+the same trap twice:
+
+- `set_single_window` mirrors the descriptor's `wy` into `hWY`. A cinematic needs
+  that byte to hold **pret's** `hWY`, so `MovieBeginSurface` parks it back at 144.
+- `set_single_window` also mirrors the descriptor's `wx` into `rWX` — and that one
+  is the subtle one. `MovieSyncWindow` projects `rWX`, so an already-projected 87
+  became 167 and placed the window a full **80 px** right of the surface, with the
+  overflow clipped at the surface edge. `MovieBeginSurface` now saves and restores
+  the GB's own `rWX` across the call.
+
+The 80 px was not diagnosed by inspection — it was measured. The first capture
+showed the window band at exactly half the checkpoint's ink, and the halving was
+uniform across colours 1/2/3, which pointed at geometry rather than content;
+dumping the actual column positions showed the whole band displaced by exactly
+`UI_TITLE_COL * 8`.
+
+#### Bounce-window pixel evidence (PASS)
+
+`tools/pixelcheck.sh title` gained `TITLE_DUMP_FRAME=N`, which photographs the
+Nth frame of the bounce instead of the checkpoint. This is required: by the
+checkpoint pret has parked the window off-screen, so the checkpoint frame
+**structurally cannot** evidence the window.
+
+At `TITLE_DUMP_FRAME=8` (`hSCY` = 64 − 8·4 = 32):
+
+| Check | Measured |
+| --- | --- |
+| Window band y96..168 vs checkpoint | **byte-identical** |
+| Copyright band y160..168 vs checkpoint | **byte-identical** |
+| Bottom-half ink | 5291 vs checkpoint 5304 |
+| Top-half ink (must differ — it is bouncing) | 1953 vs checkpoint 4658 |
+| Matte above / below | 0 / 0 |
+
+Byte-identity of the bottom band across a frame where the top half is mid-bounce
+*is* the property under test: the window nails the bottom 80 px down while the
+logo moves. The 13-pixel bottom-half residual was not waved away — it localises
+to surface tile columns 9-10 at row 8, exactly the two speech-bubble overlay
+tiles (`$64`/`$65`) that `TitleScreen_PlacePikaSpeechBubble` writes *after* the
+row-24 copy that feeds the window. Expected, and it sits outside the identical
+band.
+
+The stable checkpoint is unaffected and its A2.3 capture is bit-for-bit
+unchanged, confirming the new descriptor does not leak into the BG-only frame.
 
 **Method note.** This was found by reading pret's routine end-to-end while
 starting an unrelated subtask, not by any gate. Every gate was green across it:

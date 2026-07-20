@@ -830,9 +830,14 @@ endif
 # compositor — so FRAME.BIN is the only binding evidence that the surface is
 # centred, the matte is clean and the tilemap reached VRAM.
 #   make image DEBUG_TITLE=1
+# TITLE_DUMP_FRAME=0 (default) photographs the stable checkpoint; TITLE_DUMP_FRAME=N
+# photographs the Nth frame of the logo bounce instead. The mid-bounce frames are
+# the ONLY ones that can evidence pret's bounce window (hWY=64) — by the
+# checkpoint pret has parked it off-screen again.
 ifdef DEBUG_TITLE
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_TITLE
+NASMFLAGS += -D TITLE_DUMP_FRAME=$(or $(TITLE_DUMP_FRAME),0)
 endif
 # Oak's-PC gate (menu-fidelity row 17 part 3): boot to overworld, call OpenOaksPC.
 # It PrintTexts AccessedOaksPCText and blocks in the stream's page-break prompt;
