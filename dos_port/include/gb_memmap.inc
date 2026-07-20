@@ -44,7 +44,19 @@ WIN_CLIP_W      equ 8      ; dd: visible width in px (cols blitted from row_buf)
 WIN_MAX_Y       equ 12     ; dd: first screen row the box stops drawing at (exclusive)
 WIN_TILEMAP     equ 16     ; dd: EBP-relative tilemap base (GB_TILEMAP0 / GB_TILEMAP1)
 WIN_START_ROW   equ 20     ; dd: tilemap row that WLY=0 maps to (the box's first src row)
-WIN_DESC_SIZE   equ 24     ; bytes per descriptor (6 dwords)
+; Fine SOURCE scroll offsets, in pixels, default 0 (docs/ui_projection.md).
+; They move the SOURCE the window samples, never the projected destination
+; rectangle. Sampling wraps modulo 256 px / 32 tiles WITHIN the single tilemap
+; WIN_TILEMAP names — exactly what the GB PPU does; it never walks past the map
+; boundary into the adjacent tilemap. Cinematic BG scrolling (the title bounce
+; via hSCY, Yellow-intro cloud/bar scrolling via hSCX) is presented through
+; these; whole-tile remirroring would quantize the motion and moving the
+; destination would expose content outside the projected surface.
+; At 0/0 render_window takes its original unwrapped path, so every descriptor
+; that predates this feature is pixel- and cost-identical.
+WIN_SRC_X       equ 24     ; dd: horizontal source offset, px (0..255)
+WIN_SRC_Y       equ 28     ; dd: vertical source offset, px (0..255)
+WIN_DESC_SIZE   equ 32     ; bytes per descriptor (8 dwords)
 MAX_WINDOWS     equ 6      ; bag needs <=4 simultaneously (list + sub-menu/qty + dialog)
 
 ; WRAM bank 0 — $C000–$CFFF (4 KB)

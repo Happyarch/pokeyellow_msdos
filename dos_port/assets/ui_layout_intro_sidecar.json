@@ -1,0 +1,87 @@
+{
+  "subsystem": "intro",
+  "canvas": {
+    "cols": 40,
+    "rows": 25,
+    "tile_px": 8
+  },
+  "gb_canvas": {
+    "cols": 20,
+    "rows": 18
+  },
+  "frozen_at": "",
+  "elements": [
+    {
+      "id": "TITLE",
+      "kind": "window",
+      "gb_x": 0,
+      "gb_y": 0,
+      "gb_w": 20,
+      "gb_h": 18,
+      "anchor_x": "center",
+      "anchor_y": "center",
+      "movable": false,
+      "resizable": false,
+      "min_w": 3,
+      "min_h": 3,
+      "source": "cinematic_surface",
+      "pret_ref": "engine/movie/title.asm",
+      "anchor_source": "plan",
+      "notes": "Full 160x144 GB cinematic surface, centered as a matte vignette. Not a designer choice: the title bounce, eye OBJ placement and screen-edge timing are authored against the GB viewport, so widescreen expansion would expose hidden state. See docs/current_plan_menu_intro.md Presentation boundary."
+    },
+    {
+      "id": "OAK_SPEECH",
+      "kind": "window",
+      "gb_x": 0,
+      "gb_y": 0,
+      "gb_w": 20,
+      "gb_h": 18,
+      "anchor_x": "center",
+      "anchor_y": "center",
+      "movable": false,
+      "resizable": false,
+      "min_w": 3,
+      "min_h": 3,
+      "source": "cinematic_surface",
+      "pret_ref": "engine/movie/oak_speech/oak_speech.asm",
+      "anchor_source": "plan",
+      "notes": "Oak intro cutscene surface. Picture slide distances and endpoints are authored against the 160x144 viewport."
+    },
+    {
+      "id": "SPLASH",
+      "kind": "window",
+      "gb_x": 0,
+      "gb_y": 0,
+      "gb_w": 20,
+      "gb_h": 18,
+      "anchor_x": "center",
+      "anchor_y": "center",
+      "movable": false,
+      "resizable": false,
+      "min_w": 3,
+      "min_h": 3,
+      "source": "cinematic_surface",
+      "pret_ref": "engine/movie/splash.asm",
+      "anchor_source": "plan",
+      "notes": "Game Freak splash surface. Shooting-star and small-star OBJ enter and exit across the GB screen edges, so the projected edge is load-bearing for clipping."
+    },
+    {
+      "id": "YELLOW_INTRO",
+      "kind": "window",
+      "gb_x": 0,
+      "gb_y": 0,
+      "gb_w": 20,
+      "gb_h": 18,
+      "anchor_x": "center",
+      "anchor_y": "center",
+      "movable": false,
+      "resizable": false,
+      "min_w": 3,
+      "min_h": 3,
+      "source": "cinematic_surface",
+      "pret_ref": "engine/movie/intro_yellow.asm",
+      "anchor_source": "plan",
+      "notes": "All 18 Yellow intro scenes share one surface. Scenes scroll BG content horizontally via hSCX, presented through WIN_SRC_X with GB mod-256 wrap."
+    }
+  ]
+}

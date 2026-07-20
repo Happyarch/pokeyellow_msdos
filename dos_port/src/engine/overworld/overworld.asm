@@ -222,6 +222,9 @@ extern RunDrawBadgesTest
 %ifdef DEBUG_TRAINERCARD
 extern RunTrainerCardTest
 %endif
+%ifdef DEBUG_CINEMATIC_MARKERS
+extern RunCinematicMarkersTest  ; debug/debug_dump.asm — menu-intro A1.6 harness
+%endif
 %ifdef DEBUG_OAKSPC
 extern RunOaksPCTest
 %endif
@@ -816,6 +819,9 @@ EnterMap:
 %endif
 %ifdef DEBUG_TRAINERCARD
     call RunTrainerCardTest                 ; draw full trainer card, dump FRAME.BIN, exits
+%endif
+%ifdef DEBUG_CINEMATIC_MARKERS
+    call RunCinematicMarkersTest            ; cinematic projection/clip/wrap markers, dump FRAME.BIN, exits
 %endif
 %ifdef DEBUG_OAKSPC
     call RunOaksPCTest                      ; open Oak's PC, dump the dialog FRAME.BIN, exits

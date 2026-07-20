@@ -32,6 +32,7 @@ extern spr_dos_sy, spr_dos_sx, spr_oam_valid
 
 global PrepareOAMData
 global PrepareStaticOAM
+global PublishProjectedOAM
 
 section .bss
 dos_base_y_tmp: resd 1      ; per-sprite DOS base Y for extended viewport
@@ -65,6 +66,76 @@ PrepareStaticOAM:
     jb .loop
 .done:
     ret
+
+; ---------------------------------------------------------------------------
+; PublishProjectedOAM — port-only. Publish canonical GB OAM records onto the
+; widescreen canvas at a fixed projection offset, for cinematic screens.
+;
+; No pret counterpart: pret's OAM IS screen space. Here the cinematic surface is
+; a 160x144 GB screen centred on a 320x200 canvas, so canonical OAM stays exactly
+; what the GB would hold (byte-comparable against a golden) while the compositor
+; draws from separately published native coordinates.
+;
+; Deliberately performs NO visibility culling. A record the GB would hide
+; (OAM_Y=0, OAM_Y>=160, OAM_X=0, OAM_X>=168) is published with its raw value and
+; falls outside g_obj_clip, so render_sprites produces no pixels for it; a record
+; straddling the GB screen edge is clipped PER PIXEL by the same rectangle. That
+; is what preserves partial edge clipping — culling here would round it to
+; all-or-nothing and diverge from hardware.
+;
+; In:  ESI = GB-relative address of the canonical Y,X,tile,attr records
+;      ECX = valid entry count, 0..40
+;      EAX = projection X offset (80 for every cinematic surface)
+;      EBX = projection Y offset (24)
+;      EBP = GB memory base
+; Out: all 160 canonical bytes copied to GB_OAM; spr_dos_sx/sy published for the
+;      first ECX entries; spr_oam_valid = ECX. Entries beyond ECX are not drawn.
+;      Clip rectangle and z-order are left to the calling screen.
+; Registers: ALL preserved (pushad/popad); flags clobbered.
+; ---------------------------------------------------------------------------
+PublishProjectedOAM:
+    pushad
+    mov [proj_oam_x], eax
+    mov [proj_oam_y], ebx
+    mov [proj_oam_n], ecx
+
+    ; 1. Canonical OAM: copy every byte, including records the GB would hide, so
+    ;    a GBSTATE diff against the golden compares like for like.
+    lea esi, [ebp + esi]
+    lea edi, [ebp + GB_OAM]
+    mov ecx, OAM_COUNT * OAM_ENTRY_SIZE / 4
+    rep movsd
+
+    ; 2. Native positions: GB screen space -> canvas, at the projection offset.
+    mov ecx, [proj_oam_n]
+    mov [spr_oam_valid], ecx
+    test ecx, ecx
+    jz .done
+    xor edx, edx
+.loop:
+    lea esi, [ebp + GB_OAM + edx*4]
+    movzx eax, byte [esi]                ; raw OAM Y (no culling)
+    sub eax, 16                          ; OAM stores screen + (8,16)
+    add eax, [proj_oam_y]
+    mov [spr_dos_sy + edx*4], eax
+    movzx eax, byte [esi + 1]            ; raw OAM X
+    sub eax, 8
+    add eax, [proj_oam_x]
+    mov [spr_dos_sx + edx*4], eax
+    inc edx
+    cmp edx, ecx
+    jb .loop
+.done:
+    popad
+    ret
+
+section .bss
+align 4
+proj_oam_x:  resd 1
+proj_oam_y:  resd 1
+proj_oam_n:  resd 1
+
+section .text
 
 ; ---------------------------------------------------------------------------
 ; PrepareOAMData — determine OAM data for visible sprites, write to wShadowOAM.

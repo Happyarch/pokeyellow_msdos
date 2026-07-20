@@ -290,6 +290,7 @@ GAME_SRCS := \
     src/home/cgb_palettes.asm \
     src/home/fade.asm \
     src/movie/title.asm \
+    src/engine/movie/movie_projection.asm \
     src/engine/movie/oak_speech/init_player_data.asm \
     src/engine/overworld/overworld.asm \
     src/engine/overworld/movement.asm \
@@ -711,11 +712,21 @@ endif
 ifdef AUTOKEY_TITLE
 NASMFLAGS += -D AUTOKEY_TITLE
 endif
+# overworld-events Stage 4 Fly must-hit: drive START -> POKéMON -> SNORLAX -> FLY ->
+# Town Map -> destination, then let OverworldLoop warp+arrive. Dump defaults to 900
+# (well past arrival). make DEBUG_AUTOKEY=1 AUTOKEY_FLY=1 [AUTOKEY_DUMP_FRAME=n]
+ifdef AUTOKEY_FLY
+NASMFLAGS += -D AUTOKEY_FLY
+AUTOKEY_DUMP_FRAME ?= 900
+endif
 ifdef AUTOKEY_DOWNS
 NASMFLAGS += -D AUTOKEY_DOWNS=$(AUTOKEY_DOWNS)
 endif
+# M-120 class: this was a hardcoded `-D AUTOKEY_DUMP_FRAME=160` that ignored the
+# value the caller (or an AUTOKEY_* block above) set. Forward the real value, so
+# AUTOKEY_FLY's post-arrival default of 900 — and any command-line override — takes.
 ifdef AUTOKEY_DUMP_FRAME
-NASMFLAGS += -D AUTOKEY_DUMP_FRAME=160
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 endif
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_AUTOKEY
@@ -798,6 +809,19 @@ ifdef DEBUG_TRAINERCARD
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_TRAINERCARD
 NASMFLAGS += -D SKIP_TITLE
+endif
+# Cinematic projection/clipping/wrap marker harness (menu-intro A1.6). Builds the
+# synthetic marker surface, applies MARKER_SX/MARKER_SY as fine source offsets,
+# dumps FRAME.BIN, exits. This is the ONLY evidence that distinguishes correct
+# GB mod-256 wrap sampling from a linear read — a register trace cannot, because
+# it logs the value the game wrote, not the pixel the renderer sampled.
+#   make image DEBUG_CINEMATIC_MARKERS=1 MARKER_SX=252
+ifdef DEBUG_CINEMATIC_MARKERS
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_CINEMATIC_MARKERS
+NASMFLAGS += -D SKIP_TITLE
+NASMFLAGS += -D MARKER_SX=$(or $(MARKER_SX),0)
+NASMFLAGS += -D MARKER_SY=$(or $(MARKER_SY),0)
 endif
 # Oak's-PC gate (menu-fidelity row 17 part 3): boot to overworld, call OpenOaksPC.
 # It PrintTexts AccessedOaksPCText and blocks in the stream's page-break prompt;
@@ -1879,6 +1903,16 @@ src/engine/battle/pokeballs.o src/home/pics.o \
 src/engine/battle/core.o src/engine/battle/battle_menu.o: \
         assets/ui_layout_battle.inc
 
+# Cinematic (boot movie) UI layout geometry — docs/current_plan_menu_intro.md.
+# All four elements are the same full 160x144 GB surface centered on the 40x25
+# canvas (COL=10 ROW=3, WX=87 -> screen x 80, WY=24, CLIP=160, MAXY=168); they
+# are separate IDs so each screen owns and restores its own descriptor state.
+# Deliberately NOT widescreen-expanded: cinematic framing, slide distances and
+# screen-edge timing are authored against the GB viewport.
+assets/ui_layout_intro.inc: assets/ui_layout_intro_sidecar.json \
+		tools/generators/gen_ui_layout.py tools/ui_layout/canvas.py tools/ui_layout/schema.py
+	python3 tools/generators/gen_ui_layout.py intro
+
 # Authored map border-ring overrides (map-tool C3): painted in
 # tools/map_editor/editor.py paint mode -> assets/map_borders/*.json ->
 # this Tier-1 .inc, consumed by overworld.asm ApplyMapBorderOverrides.
@@ -1938,6 +1972,7 @@ assets: assets/scenario_registry.inc \
         assets/trainer_pics.inc \
         assets/super_rod.inc assets/town_map_data.inc assets/town_map_gfx.inc \
         assets/ui_layout_menus.inc assets/ui_layout_battle.inc \
+        assets/ui_layout_intro.inc \
         assets/map_border_overrides.inc assets/badge_tiles.inc \
         assets/trainer_card_tiles.inc assets/trainer_card_strings.inc \
         assets/party_menu_strings.inc assets/home_pokemon_strings.inc assets/emotes.inc \

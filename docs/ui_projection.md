@@ -34,6 +34,97 @@ box hand-drawn at the same offset. The player HUD uses +3 (not +4) so its frame
 in `battle_hud.asm` / `init_battle.asm` / `pics.asm`. See `current_plan_battle_pret_alignment.md`
 (battle-frontend draw layer; the old `current_plan_battle_frontend.md` is archived at `docs/plans/`).
 
+### Cinematics — boot movie (splash, Yellow intro, title, Oak speech) — GB-centered
+
+The whole 160×144 GB screen is centered as a **presentation matte vignette**:
+canvas tile `(10,3)`, pixel `(80,24)`, ending exclusively at `(240,168)`. Same
+uniform +10 col / +3 row offset as battle. Geometry comes from
+`assets/ui_layout_intro_sidecar.json` → `assets/ui_layout_intro.inc`
+(`UI_TITLE`, `UI_OAK_SPEECH`, `UI_SPLASH`, `UI_YELLOW_INTRO`), never literals.
+
+**Why cinematics are NOT widescreen-expanded** (unlike the overworld): the
+overworld expands because its camera observes a larger part of an existing
+spatial map. Cinematics are *authored compositions* whose framing, entrances,
+exits, slide distances, object masks and screen-edge timing depend on the
+160×144 viewport. Expanding them would either expose artwork and sprite states
+pret deliberately hides, or require inventing new staging. Both break fidelity.
+
+The border is a matte: 80 px left/right, 24 px top, 32 px bottom (tile-aligned on
+the 25-row canvas). It carries only the cinematic's colour-zero/whiteout field —
+no duplicated artwork, no overworld residue, no OBJ.
+
+Mechanics live in `src/engine/movie/movie_projection.asm` (`MovieBeginSurface` /
+`MovieEndSurface` / `MovieMirrorSurface` / `MovieSyncScroll`), so no screen
+hand-rolls them.
+
+#### Fine source scrolling — `WIN_SRC_X` / `WIN_SRC_Y`, with GB wrap
+
+Cinematic BG content scrolls (the title bounce walks `hSCY` a pixel at a time
+including overshoot steps; Yellow-intro scenes scroll clouds/bars via `hSCX`).
+The window descriptor carries two default-zero **source** offsets
+(`gb_memmap.inc`). They move what the window *samples*, never the projected
+destination rectangle — whole-tile remirroring would quantize the motion, and
+moving the destination would expose content outside the surface.
+
+Sampling reproduces the hardware exactly:
+
+```text
+src_y       = (WIN_SRC_Y + (screen_y - WIN_WY)) & 255
+src_x       = (WIN_SRC_X + (screen_x - WIN_X0)) & 255
+source tile = SRC_MAP[(src_y / 8) & 31][(src_x / 8) & 31]
+```
+
+The `& 31` is the whole point: the GB PPU wraps **within the single 32×32
+tilemap**; it never walks past the map boundary into the adjacent one. A linear
+read is not equivalent — past the boundary it picks up the next tilemap or
+cleared VRAM, where hardware wraps back to *this* map's row/column 0.
+
+**A register trace cannot verify this.** A trace logs the scroll value the game
+*wrote*, which matches ground truth even when the renderer mis-samples it.
+Wrapped and linear readings differ only in rendered pixels, and only on wrapped
+frames. The evidence is `DEBUG_CINEMATIC_MARKERS` + `tools/check_projection.py`:
+the harness fills the adjacent tilemap with a POISON tile, so a linear read
+paints poison and fails. Verified across offsets 0..7 and 252..255 on both axes.
+
+At `0/0` both offsets take `render_window`'s original unwrapped path, so every
+descriptor predating the feature is pixel- and cost-identical.
+
+#### OBJ viewport clipping — `g_obj_clip`
+
+`g_obj_clip = (x0, y0, x1, y1)`, upper bounds **exclusive**, default
+`(0,0,320,200)` — the full canvas, which is the semantic identity. Cinematics set
+`(80,24,240,168)`.
+
+Clipping is done in the **renderer**, not by culling in the publisher, so partial
+edge clipping survives and canonical OAM stays byte-exact: a GB-hidden sprite
+(`OAM_Y`=0, `OAM_Y`≥160, `OAM_X`=0, `OAM_X`≥168) lands outside the rectangle and
+paints nothing, while a sprite straddling the edge shows exactly its on-screen
+pixels.
+
+Ownership follows the `g_obj_over_window` model: only code needing non-default
+behavior sets, owns and restores it. `ClearSprites` deliberately does **not**
+reset it (a cinematic clears sprites between frames while the rectangle must
+persist). A leaked narrow rectangle is caught immediately — the next overworld
+frame visibly clips its sprites and the overworld goldens fail.
+
+Cost note: the default configuration deliberately stays on the ORIGINAL code
+path in both `render_window` and `render_sprites` rather than routing everything
+through a new general test. At DOSBox's 23880 cycles/ms, ~2 extra cycles/pixel
+over ~2560 sprite pixels is ~0.2 ms against a 0.548 ms `render_sprites` budget.
+So OBJ vertical clipping is per-ROW and horizontal uses a separate
+`SPR_COL_CLIP` unrolled variant reached only when the rectangle is non-default.
+
+#### Two traps, both found the hard way
+
+- **BG tile addressing follows `rLCDC` bit 4.** Tiles loaded at `$8000` need the
+  bit SET; with it clear (the overworld's setting) ids resolve through signed
+  `$9000` addressing and the BG decodes as garbage while OBJ — always unsigned
+  `$8000` — look fine.
+- **`W_UPDATE_SPRITES_ENABLED = 0` erases cinematic OAM.** 0 means "hide once,
+  then park at `$FF`", so `PrepareOAMData` runs `HideSprites` and republishes
+  `spr_oam_valid = 0` on the next `DelayFrame`. The parking value is **`$FF`**;
+  `MovieBeginSurface` sets it and restores 1 on exit.
+
 ### Future subsystems
 
 Add an entry here when introduced, stating the transform and whether it uses

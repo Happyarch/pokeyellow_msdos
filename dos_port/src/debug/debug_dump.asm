@@ -2479,6 +2479,29 @@ autokey_script:
     dd 600, 606, PAD_A          ; party menu: mon 1 (healthy → refusal)
     dd 660, 666, PAD_A          ; dismiss the refusal
     dd  -1,  -1, 0
+%elifdef AUTOKEY_FLY
+    ; overworld-events Stage 4 (DEBUG_AUTOKEY AUTOKEY_FLY): drive the real FLY path
+    ; end-to-end so the town-map destination selection warps and ARRIVES, not just
+    ; arms the flag. Prereqs are all seeded by PrepareNewGameDebug (DEBUG_SEED_PARTY):
+    ; THUNDERBADGE set, SNORLAX (party slot 0) knows FLY, wTownVisitedFlag=$FFFF (every
+    ; town flyable), and Pallet Town is an outside map so .canFly is taken.
+    ;   START → DOWN → A     : open START, POKéDEX(0)→POKéMON(1), select it
+    ;   A                    : party menu → SNORLAX (slot 0) → field-move pop-up
+    ;   A                    : FLY (pop-up top — it is SNORLAX move slot 0) → Town Map
+    ;                          (ChooseFlyDestination → LoadTownMap_Fly)
+    ;   UP → A               : Town Map: step off PALLET to the next visited town,
+    ;                          select it → wDestinationMap + BIT_FLY_WARP armed
+    ;   (return to OverworldLoop, whose idle branch consumes BIT_FLY_WARP →
+    ;    HandleFlyWarpOrDungeonWarp → the destination map loads and renders)
+    ; Frame ranges are generous; AUTOKEY_DUMP_FRAME (default 900, Makefile) is set
+    ; well past arrival so FRAME.BIN shows the destination map.
+    dd  60,  66, PAD_START
+    dd 110, 116, PAD_DOWN       ; POKéDEX → POKéMON
+    dd 160, 166, PAD_A          ; open the party menu
+    dd 250, 256, PAD_A          ; select SNORLAX → field-move pop-up
+    dd 330, 336, PAD_A          ; select FLY → Town Map (ChooseFlyDestination)
+    dd 470, 476, PAD_A          ; select the highlighted town → arm the Fly warp
+    dd  -1,  -1, 0
 %else
     dd  60,  66, PAD_START
 %assign AK_I 0
@@ -2490,4 +2513,178 @@ autokey_script:
     dd  -1,  -1, 0
 %endif
 section .text
+%endif
+
+%ifdef DEBUG_CINEMATIC_MARKERS
+; ---------------------------------------------------------------------------
+; RunCinematicMarkersTest — A1.6 of docs/current_plan_menu_intro.md.
+;
+; Proves the cinematic projection substrate synthetically, BEFORE any real
+; content depends on it: exact projection, OBJ clipping (hidden + edge-straddling),
+; the matte, and — the part nothing else can prove — GB mod-256/mod-32 WRAP
+; sampling on both axes.
+;
+; Why a dedicated harness rather than leaning on the title screen: a timing trace
+; records the scroll value the game WROTE, which matches ground truth even if the
+; renderer ignores or mis-samples it. Only pixels can distinguish a correct
+; wrapped read from a linear one, and they only differ on wrapped frames. So this
+; builds a scene whose wrapped and linear readings are unmistakably different:
+;
+;   GB_TILEMAP0 rows 0..17 / cols 0..19 : the mirrored marker scene
+;   GB_TILEMAP0 row 0 / col 0           : DISTINCT wrap-target content
+;   GB_TILEMAP0 rows 18..31, cols 20..31: left clear (0)
+;   GB_TILEMAP1 (the ADJACENT map)      : POISON fill
+;
+; A correct wrap at src=252 samples this map's row/col 0 and shows the distinct
+; content. A linear read walks past the map boundary into GB_TILEMAP1 and shows
+; POISON. The verifier fails on any poison pixel.
+;
+; Offsets come from -D MARKER_SX / -D MARKER_SY so one build parameterizes the
+; whole sweep (0..7 for sub-tile motion, 252..255 for wrap).
+;
+; Tiles are synthesized directly into VRAM, so g_tilecache_dirty MUST be armed —
+; the compositor draws BG, window AND sprites from tile_cache, never from raw
+; VRAM.
+; ---------------------------------------------------------------------------
+%ifndef MARKER_SX
+%define MARKER_SX 0
+%endif
+%ifndef MARKER_SY
+%define MARKER_SY 0
+%endif
+
+%define UI_LAYOUT_EQUATES_ONLY 1
+%include "assets/ui_layout_intro.inc"
+
+extern MovieBeginSurface        ; engine/movie/movie_projection.asm
+extern MovieMirrorSurface
+extern MovieSyncScroll
+extern PublishProjectedOAM      ; engine/gfx/sprite_oam.asm
+extern g_tilecache_dirty        ; ppu/ppu.asm
+extern ClearSprites             ; home/sprites.asm
+extern DelayFrame               ; video/frame.asm
+
+global RunCinematicMarkersTest
+
+MARK_SOLID   equ 1      ; color 3 — scene / OBJ marker
+MARK_WRAP    equ 2      ; color 2 — the wrap target at row 0 / col 0
+MARK_POISON  equ 3      ; color 1 — GB_TILEMAP1; must never be sampled
+
+; MARKER_OBJ idx, oam_y, oam_x — one canonical OAM record at EDI (GB-relative).
+; Y and X are RAW GB OAM values (screen + (8,16)), written unmodified so the
+; hidden cases stay hidden by their real hardware values rather than by culling.
+%macro MARKER_OBJ 3
+    mov byte [edi + (%1) * OAM_ENTRY_SIZE + 0], %2      ; Y
+    mov byte [edi + (%1) * OAM_ENTRY_SIZE + 1], %3      ; X
+    mov byte [edi + (%1) * OAM_ENTRY_SIZE + 2], MARK_SOLID  ; tile
+    mov byte [edi + (%1) * OAM_ENTRY_SIZE + 3], 0       ; attr
+%endmacro
+
+RunCinematicMarkersTest:
+    ; ── synthesize marker tiles into VRAM ($8000, unsigned OBJ addressing) ──
+    ; 2bpp: 8 rows x (lo plane, hi plane); color = (hi<<1)|lo.
+    lea edi, [ebp + GB_VRAM0]
+    mov ecx, 16
+    xor al, al
+    rep stosb                              ; tile 0 = blank
+    mov ecx, 8                             ; tile 1 = color 3 (lo=FF, hi=FF)
+.t1: mov byte [edi], 0xFF
+    mov byte [edi + 1], 0xFF
+    add edi, 2
+    dec ecx
+    jnz .t1
+    mov ecx, 8                             ; tile 2 = color 2 (lo=00, hi=FF)
+.t2: mov byte [edi], 0x00
+    mov byte [edi + 1], 0xFF
+    add edi, 2
+    dec ecx
+    jnz .t2
+    mov ecx, 8                             ; tile 3 = color 1 (lo=FF, hi=00)
+.t3: mov byte [edi], 0xFF
+    mov byte [edi + 1], 0x00
+    add edi, 2
+    dec ecx
+    jnz .t3
+    mov byte [g_tilecache_dirty], 1        ; raw VRAM tile write — arm the cache
+
+    ; Marker tiles live at $8000, so the BG/window must use UNSIGNED addressing.
+    ; rLCDC bit 4 selects it; with the bit clear (the overworld's setting) tile
+    ; ids resolve through SIGNED $9000 addressing and these markers decode as
+    ; whatever happens to sit there. OBJ always use unsigned $8000, which is why
+    ; a wrong setting here corrupts only the BG half of the scene — caught
+    ; exactly this way on the first run of this harness.
+    or byte [ebp + IO_LCDC], (1 << 4)
+
+    call ClearSprites
+    ; W_UPDATE_SPRITES_ENABLED is parked by MovieBeginSurface (to $FF, not 0 —
+    ; 0 means "hide once", which erases the published cinematic OAM).
+    mov word [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], 0
+
+    ; ── poison the ADJACENT tilemap ────────────────────────────────────────
+    lea edi, [ebp + GB_TILEMAP1]
+    mov ecx, 32 * 32
+    mov al, MARK_POISON
+    rep stosb
+
+    ; ── take over the screen as a centred cinematic surface ────────────────
+    call MovieBeginSurface                 ; clears W_TILEMAP, publishes matte+clip
+
+    ; ── draw the BG marker scene into the projected 20x18 rectangle ────────
+    ; Corner markers are the projection assertions: GB (0,0) must land at canvas
+    ; (10,3) = pixel (80,24), and GB (19,17) at canvas (29,20).
+    lea esi, [ebp + W_TILEMAP + UI_TITLE_ROW * SCREEN_WIDTH + UI_TITLE_COL]
+    mov byte [esi], MARK_SOLID                                     ; GB (0,0)
+    mov byte [esi + (UI_TITLE_GBH - 1) * SCREEN_WIDTH + UI_TITLE_GBW - 1], MARK_SOLID  ; GB (19,17)
+    ; Distinct wrap-target content along GB row 0 and GB column 0, skipping
+    ; (0,0) so the corner marker stays the projection assertion.
+    lea edi, [esi + 1]                     ; GB row 0, cols 1..19
+    mov ecx, UI_TITLE_GBW - 1
+    mov al, MARK_WRAP
+    rep stosb
+    lea edi, [esi + SCREEN_WIDTH]          ; GB col 0, rows 1..17
+    mov ecx, UI_TITLE_GBH - 1
+.col0:
+    mov byte [edi], MARK_WRAP
+    add edi, SCREEN_WIDTH
+    dec ecx
+    jnz .col0
+
+    call MovieMirrorSurface                ; stride 40 -> stride 32 into GB_TILEMAP0
+
+    ; ── fine source scroll, through the shared helper ──────────────────────
+    mov byte [ebp + H_SCX], MARKER_SX
+    mov byte [ebp + H_SCY], MARKER_SY
+    call MovieSyncScroll
+
+    ; ── OBJ markers ────────────────────────────────────────────────────────
+    ; Records 0-3 are GB-HIDDEN and must produce ZERO pixels; records 4-7
+    ; straddle each screen edge and must be clipped PER PIXEL, never painting
+    ; the matte. Built in GB memory because PublishProjectedOAM takes a
+    ; GB-relative source.
+    lea edi, [ebp + wShadowOAMBackup]
+    mov ecx, OAM_COUNT * OAM_ENTRY_SIZE
+    xor al, al
+    rep stosb
+    lea edi, [ebp + wShadowOAMBackup]
+    MARKER_OBJ 0,   0,  80          ; hidden: OAM_Y = 0
+    MARKER_OBJ 1, 160,  80          ; hidden: OAM_Y >= 160
+    MARKER_OBJ 2,  80,   0          ; hidden: OAM_X = 0
+    MARKER_OBJ 3,  80, 168          ; hidden: OAM_X >= 168
+    MARKER_OBJ 4,  40,   4          ; straddles LEFT   (screen x = -4)
+    MARKER_OBJ 5,  40, 164          ; straddles RIGHT  (screen x = 156)
+    MARKER_OBJ 6,  12,  80          ; straddles TOP    (screen y = -4)
+    MARKER_OBJ 7, 156,  80          ; straddles BOTTOM (screen y = 140)
+
+    mov esi, wShadowOAMBackup       ; GB-relative source
+    mov ecx, 8                      ; valid entries
+    mov eax, UI_TITLE_COL * 8       ; projection X = 80
+    mov ebx, UI_TITLE_WY            ; projection Y = 24
+    call PublishProjectedOAM
+
+    call DelayFrame
+    call DelayFrame
+    call DelayFrame
+    call DumpBackbuffer             ; writes FRAME.BIN + exits (never returns)
+.hang:
+    jmp .hang
 %endif

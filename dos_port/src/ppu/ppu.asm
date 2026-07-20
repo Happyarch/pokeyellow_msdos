@@ -135,6 +135,34 @@ g_bg_whiteout: dd 0
 global g_obj_over_window
 g_obj_over_window: dd 0
 
+; OBJ viewport clip rectangle (x0, y0, x1, y1) — upper bounds EXCLUSIVE.
+;
+; Default is the whole canvas, which is the semantic identity: every screen that
+; predates this feature is unaffected, and render_sprites keeps its original
+; per-pixel cost because the default takes the unclipped column path (the clip
+; test is not free — ~2 cycles/pixel over ~2560 sprite pixels is ~0.2 ms against
+; a 0.548 ms render_sprites budget at DOSBox's 23880 cycles/ms).
+;
+; Cinematic screens set (80,24,240,168) so a GB OBJ that hardware would hide or
+; edge-clip at the 160x144 boundary is hidden or edge-clipped at the PROJECTED
+; boundary instead of leaking into the widescreen matte. Clipping lives in the
+; RENDERER, not in the publisher, so partial edge clipping survives and canonical
+; OAM stays byte-exact (a GB-hidden sprite at OAM_Y=0/>=160 or OAM_X=0/>=168
+; simply falls outside the rectangle and paints nothing).
+;
+; Ownership follows the proven g_obj_over_window model: only code needing
+; non-default behavior sets, owns and restores it. ClearSprites deliberately does
+; NOT reset it (unlike g_obj_over_window) — a cinematic clears sprites between
+; frames while its clip rectangle must persist for the whole screen. A leaked
+; narrow rectangle is caught immediately: the next overworld frame visibly clips
+; its sprites and the overworld goldens fail.
+global g_obj_clip
+g_obj_clip:
+    dd 0            ; x0
+    dd 0            ; y0
+    dd RENDER_W     ; x1 (exclusive)
+    dd RENDER_H     ; y1 (exclusive)
+
 ; --- 2bpp bitplane → 8bpp spread tables (compositor-perf Stage 4a) --------------
 ; A GB tile row is two bitplane bytes, MSB = leftmost pixel. Spreading one byte
 ; into 8 one-byte pixels is a pure function of that byte, so precompute it:
@@ -189,6 +217,7 @@ spr_sy:      resd 1        ; sprite top screen Y (signed)
 spr_tileidx: resd 1        ; sprite's tile id (= its index into tile_cache)
 spr_srcrow:  resd 1        ; tile_cache address of the current 8-px decoded row
 spr_palbase: resd 1        ; 4 (OBP0) or 8 (OBP1) — fixed per sprite
+spr_clipped: resd 1        ; nonzero if g_obj_clip's X bounds are non-default
 spr_attr:    resd 1        ; OAM attribute byte
 spr_row:     resd 1        ; current sprite row 0..7
 spr_rowbase: resd 1        ; GB-relative back-buffer offset of the current row
@@ -220,6 +249,7 @@ id_cache_lut:      resd 256          ; tile id → tile_cache pointer (rebuilt o
 ; px). Every scanline of a tile row therefore costs one straight copy out of it;
 ; the decode happens once per 8 scanlines, not once per scanline (Stage 2a).
 win_rowbuf8:     resb 8 * 256
+win_rotbuf:      resb 256  ; source row rotated left by WIN_SRC_X (fine path only)
 win_ntiles:      resd 1    ; tiles to decode this row = ceil(clip_w/8), capped at 32
 win_src:         resd 1    ; win_rowbuf8 + (WLY & 7)*256 — this scanline's source
 win_map_row:     resd 1    ; EBP-relative offset of current window tilemap row
@@ -233,6 +263,12 @@ win_wx:          resd 1    ; cached descriptor WIN_WX
 win_wy:          resd 1    ; cached descriptor WIN_WY
 win_clip_w:      resd 1    ; cached descriptor WIN_CLIP_W
 win_max_y:       resd 1    ; cached descriptor WIN_MAX_Y
+win_src_x:       resd 1    ; cached descriptor WIN_SRC_X (fine source scroll, px)
+win_src_y:       resd 1    ; cached descriptor WIN_SRC_Y
+win_fine:        resd 1    ; nonzero if either source offset is set (wrap path)
+win_tilemap:     resd 1    ; cached descriptor WIN_TILEMAP (wrap path needs the raw base)
+win_start_row:   resd 1    ; cached descriptor WIN_START_ROW
+win_last_row:    resd 1    ; tile-row index currently decoded in win_rowbuf8, or -1
 win_map_base:    resd 1    ; tilemap_base + start_row*32 (row WLY=0 maps to)
 
 ; ---------------------------------------------------------------------------
@@ -786,6 +822,31 @@ rebuild_tile_cache:
 %%skip:
 %endmacro
 
+; SPR_COL_CLIP — SPR_COL with the horizontal bound taken from g_obj_clip instead
+; of the canvas edge. Used ONLY when the rectangle is non-default (cinematic
+; screens), so the default path above keeps its exact instruction sequence. The
+; single unsigned `cmp/jae` trick does not apply here because x0 may be nonzero,
+; hence the explicit pair. Vertical clipping is done once per row, not per pixel.
+%macro SPR_COL_CLIP 2
+    movzx eax, byte [ebx + (%2)]         ; color 0..3
+    test eax, eax
+    jz %%skip                            ; color 0 = transparent
+    lea ecx, [edx + (%1)]                ; px = sx + col
+    cmp ecx, [g_obj_clip + 0]            ; x0 (inclusive)
+    jl %%skip
+    cmp ecx, [g_obj_clip + 8]            ; x1 (exclusive)
+    jge %%skip
+    add ecx, edi                         ; back-buffer offset (GB-relative)
+    add eax, [spr_palbase]
+    test byte [spr_attr], OAM_PRIO
+    jz %%write
+    test byte [ebp + ecx], 3             ; behind BG: only over color 0 of any slot
+    jnz %%skip
+%%write:
+    mov [ebp + ecx], al
+%%skip:
+%endmacro
+
 ; ---------------------------------------------------------------------------
 ; render_sprites — composite the 40 OAM sprites over the back buffer.
 ;
@@ -828,6 +889,19 @@ render_sprites:
     ; No OBP unpack: sprite pixels are written as raw palette-indexed values
     ; (4 + color for OBP0, 8 + color for OBP1). commit_palette (video.asm) sets
     ; DAC entries 4-7 / 8-11 to the OBP0/OBP1-mapped DMG shades.
+
+    ; Non-default OBJ clip rectangle? Only the horizontal bounds affect the
+    ; per-pixel column code (vertical is handled once per row), so the flag keys
+    ; off x0/x1. Hoisted once per call: the default keeps the original columns.
+    xor eax, eax
+    cmp dword [g_obj_clip + 0], 0
+    jne .clip_active
+    cmp dword [g_obj_clip + 8], RENDER_W
+    je .clip_stored
+.clip_active:
+    inc eax
+.clip_stored:
+    mov [spr_clipped], eax
 
     mov dword [spr_oam_ptr], GB_OAM + (OAM_COUNT - 1) * OAM_ENTRY_SIZE
     mov dword [spr_count], OAM_COUNT
@@ -879,8 +953,11 @@ render_sprites:
 .rowLoop:
     mov eax, [spr_sy]
     add eax, [spr_row]                   ; py
-    js  .rowNext                         ; row above the screen
-    cmp eax, RENDER_H
+    ; Vertical clip, once per row. Defaults are 0/RENDER_H, so this is the same
+    ; accept/reject set as the original `js` + `cmp RENDER_H` pair.
+    cmp eax, [g_obj_clip + 4]            ; y0 (inclusive; also rejects py < 0)
+    jl  .rowNext
+    cmp eax, [g_obj_clip + 12]           ; y1 (exclusive)
     jge .rowNext
     imul ecx, eax, RENDER_W
     add ecx, GB_BACKBUF
@@ -911,6 +988,8 @@ render_sprites:
     test byte [spr_attr], OAM_XFLIP
     jnz .xflip
 
+    cmp dword [spr_clipped], 0
+    jnz .noflip_clipped
 %assign _c 0
 %rep 8
     SPR_COL _c, _c
@@ -918,10 +997,28 @@ render_sprites:
 %endrep
     jmp .rowNext
 
+.noflip_clipped:
+%assign _c 0
+%rep 8
+    SPR_COL_CLIP _c, _c
+    %assign _c _c + 1
+%endrep
+    jmp .rowNext
+
 .xflip:
+    cmp dword [spr_clipped], 0
+    jnz .xflip_clipped
 %assign _c 0
 %rep 8
     SPR_COL _c, 7 - _c
+    %assign _c _c + 1
+%endrep
+    jmp .rowNext
+
+.xflip_clipped:
+%assign _c 0
+%rep 8
+    SPR_COL_CLIP _c, 7 - _c
     %assign _c _c + 1
 %endrep
 
@@ -1002,9 +1099,25 @@ render_window:
     mov [win_max_y], eax
     ; win_map_base = tilemap_base + start_row*32 (the tilemap row WLY=0 maps to)
     mov eax, [esi + WIN_START_ROW]
+    mov [win_start_row], eax
     shl eax, 5
     add eax, [esi + WIN_TILEMAP]
     mov [win_map_base], eax
+    mov eax, [esi + WIN_TILEMAP]
+    mov [win_tilemap], eax
+
+    ; Fine source scroll (WIN_SRC_X/WIN_SRC_Y). Hoisted once per descriptor:
+    ; when both are zero the scanline loop takes the original unwrapped path,
+    ; so pre-existing screens keep byte-identical pixels and cost.
+    mov eax, [esi + WIN_SRC_X]
+    and eax, 255
+    mov [win_src_x], eax
+    mov edx, [esi + WIN_SRC_Y]
+    and edx, 255
+    mov [win_src_y], edx
+    or eax, edx
+    mov [win_fine], eax
+    mov dword [win_last_row], -1       ; nothing decoded yet for this descriptor
 
     ; Cache tile data addressing mode (shared LCDC bit 4).
     movzx eax, byte [ebp + IO_LCDC]
@@ -1024,6 +1137,12 @@ render_window:
     mov eax, TILEMAP_W
 .have_ntiles:
     mov [win_ntiles], eax
+    ; Horizontal wrap can sample any column of the source row, so the fine path
+    ; must decode the whole 32-tile row rather than just ceil(clip_w/8).
+    cmp dword [win_fine], 0
+    jz .ntiles_done
+    mov dword [win_ntiles], TILEMAP_W
+.ntiles_done:
 
     ; Reset WLY for this descriptor.
     mov dword [win_line_ctr], 0
@@ -1044,6 +1163,9 @@ render_window:
     ; WLY starts at 0 on the descriptor's first drawn scanline and advances one
     ; per drawn scanline, so (WLY & 7) == 0 is exactly the first scanline of each
     ; window tile row — decode there, and the other seven scanlines just copy.
+    cmp dword [win_fine], 0
+    jnz .fine_row
+
     mov edx, [win_line_ctr]
     test edx, 7
     jnz .row_decoded
@@ -1064,6 +1186,60 @@ render_window:
     shl eax, 8
     add eax, win_rowbuf8
     mov [win_src], eax
+    jmp .have_src
+
+    ; ── Fine source scroll: GB mod-256 / mod-32 wrap sampling ───────────────
+    ; src_y = (WIN_SRC_Y + WLY) & 255, and the tile row wraps mod 32 WITHIN the
+    ; single tilemap this descriptor names. A linear read is NOT equivalent:
+    ; past the map boundary it would pick up the next tilemap or cleared VRAM,
+    ; whereas the hardware wraps back to this same map's row 0.
+.fine_row:
+    mov edx, [win_line_ctr]
+    add edx, [win_src_y]
+    and edx, 255                        ; src_y
+    push edx
+    shr edx, 3
+    add edx, [win_start_row]
+    and edx, 31                         ; tile row, wrapped inside this map
+    cmp edx, [win_last_row]
+    je .fine_decoded                    ; already in win_rowbuf8
+    mov [win_last_row], edx
+    shl edx, 5
+    add edx, [win_tilemap]
+    mov [win_map_row], edx
+    push ecx
+    call decode_win_row8
+    pop ecx
+.fine_decoded:
+    pop edx                             ; src_y
+    and edx, 7                          ; line within the tile row
+    shl edx, 8
+    add edx, win_rowbuf8
+    mov [win_src], edx
+
+    ; Horizontal wrap: rotate the 256-px source row left by src_x into
+    ; win_rotbuf so the copies below need no change. The second run restarts at
+    ; column 0 of the SAME row — that is the wrap target on hardware.
+    mov eax, [win_src_x]
+    test eax, eax
+    jz .have_src
+    push ecx
+    push esi
+    push edi
+    mov esi, [win_src]
+    add esi, eax
+    mov edi, win_rotbuf
+    mov ecx, 256
+    sub ecx, eax
+    rep movsb
+    mov esi, [win_src]
+    mov ecx, [win_src_x]
+    rep movsb
+    pop edi
+    pop esi
+    pop ecx
+    mov dword [win_src], win_rotbuf
+.have_src:
 
     ; ── Copy visible window pixels into the back buffer ─────────────────────
 
@@ -1158,6 +1334,10 @@ set_single_window:
     mov [g_windows + WIN_MAX_Y], edx
     mov [g_windows + WIN_TILEMAP], esi
     mov [g_windows + WIN_START_ROW], edi
+    ; Fine source scroll defaults to 0: every existing caller keeps its current
+    ; API and pixel output, and render_window takes its original path.
+    mov dword [g_windows + WIN_SRC_X], 0
+    mov dword [g_windows + WIN_SRC_Y], 0
     mov dword [g_window_count], 1
     mov [ebp + H_WY], bl                ; mirror wy → rWY (legacy dialog-open flag)
     mov [ebp + IO_WX], al               ; mirror wx → rWX (faithfulness)
@@ -1211,6 +1391,8 @@ add_window:
     mov [g_windows + ebp + WIN_MAX_Y], edx
     mov [g_windows + ebp + WIN_TILEMAP], esi
     mov [g_windows + ebp + WIN_START_ROW], edi
+    mov dword [g_windows + ebp + WIN_SRC_X], 0   ; fine scroll defaults to 0
+    mov dword [g_windows + ebp + WIN_SRC_Y], 0
     pop ebp
     inc dword [g_window_count]
     ret

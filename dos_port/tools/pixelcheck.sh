@@ -38,6 +38,10 @@ case "$SCENARIO" in
     pokedex)    FLAGS="DEBUG_G1=1" ;;                           # flat wTileMap path
     battle)     FLAGS="DEBUG_BATTLE=1" ;;                       # flat path + sprites
     status)     FLAGS="DEBUG_STATUS=1" ;;                       # flat path + pics
+    # Cinematic projection/clipping/wrap markers (menu-intro A1.6). Offsets come
+    # from the MARKER_SX/MARKER_SY environment variables so one scenario drives
+    # the whole sweep: 0..7 proves sub-tile motion, 252..255 proves GB wrap.
+    markers)    FLAGS="DEBUG_CINEMATIC_MARKERS=1 MARKER_SX=${MARKER_SX:-0} MARKER_SY=${MARKER_SY:-0}" ;;
     *) echo "unknown scenario: $SCENARIO" >&2; exit 2 ;;
 esac
 

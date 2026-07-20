@@ -51,6 +51,15 @@ PIT_LATCH_CH0  equ 0x00        ; counter-latch command, channel 0
 
 PERF_STAGES    equ 9           ; keep in sync with tools/read_perf.py STAGE_NAMES
 
+; Per-frame WORK series (PERF.BIN v2). The accumulators above give mean and
+; worst only; a mean cannot show a deadline-miss COUNT and two opposing stage
+; regressions cancel in a total. The A1 performance contract of
+; docs/current_plan_menu_intro.md gates on median, 95th percentile, and
+; deadline misses, none of which are recoverable from sums — so each frame's
+; busy total (stages 1..N-1, excluding the stage-0 pacing spin) is also
+; recorded, and the host derives the distribution.
+PERF_MAX_FRAMES equ 1024       ; series cap; scenarios run 300-400 frames
+
 ; DPMI real-mode call structure field offsets (DPMI 0.9 spec)
 RMCS_EBX     equ 0x10
 RMCS_EDX     equ 0x14
@@ -84,10 +93,12 @@ perf_frames:     resd 1        ; measured frames
 perf_acc:        resd PERF_STAGES   ; total PIT counts per stage
 perf_max:        resd PERF_STAGES   ; worst single frame per stage
 perf_cur:        resd PERF_STAGES   ; this frame's counts (folded into max at frame end)
+perf_series:     resd PERF_MAX_FRAMES ; per-frame WORK totals, PIT counts (v2 tail)
 rmcs:            resb RMCS_SIZE
 dos_seg:         resw 1
 dos_sel:         resw 1
 dos_flat:        resd 1
+perf_body_size:  resd 1        ; PERF.BIN payload bytes (varies with series count)
 file_handle:     resw 1
 
 ; ---------------------------------------------------------------------------
@@ -167,15 +178,28 @@ perf_frame_end:
     pushfd
     pushad
     xor ebx, ebx
+    xor esi, esi                   ; ESI = this frame's WORK total (stages 1..N-1)
 .max_loop:
     mov eax, [perf_cur + ebx*4]
     cmp eax, [perf_max + ebx*4]
     jbe .no_max
     mov [perf_max + ebx*4], eax
 .no_max:
+    test ebx, ebx                  ; stage 0 is the pacing spin, not work
+    jz .not_work
+    add esi, eax
+.not_work:
     inc ebx
     cmp ebx, PERF_STAGES
     jb .max_loop
+
+    ; Record this frame's WORK total for the host-side distribution (v2 tail).
+    ; Frames past the cap still count in perf_frames; the series just stops.
+    mov ebx, [perf_frames]
+    cmp ebx, PERF_MAX_FRAMES
+    jae .no_series
+    mov [perf_series + ebx*4], esi
+.no_series:
 
     inc dword [perf_frames]
 %if DEBUG_PERF_FRAMES > 0
@@ -203,13 +227,19 @@ perf_frame_end:
 ;   0x10  PIT divisor
 ;   0x14  perf_acc[stage]  — total PIT counts
 ;   ...   perf_max[stage]  — worst single frame, PIT counts
+;   ...   series count     — v2 only: min(frames, PERF_MAX_FRAMES)
+;   ...   perf_series[]    — v2 only: per-frame WORK totals, PIT counts
+;
+; v2 keeps the v1 header and accumulator layout byte-identical and only appends
+; the series, so a v1 reader's offsets stay valid.
 ; Never returns.
 ; ---------------------------------------------------------------------------
-PERF_BODY_SIZE equ 0x14 + PERF_STAGES * 8
+PERF_FIXED_SIZE equ 0x14 + PERF_STAGES * 8
 
 DumpPerf:
     mov ax, 0x0100
-    mov bx, 0x40                   ; 1 KB conventional buffer (needs ~0x100)
+    ; 0x10 filename + fixed body + 4 + 1024*4 = ~4.2 KB → 0x150 paras (5376 B)
+    mov bx, 0x150
     int 0x31
     jc .exit
     mov [dos_seg], ax
@@ -230,7 +260,7 @@ DumpPerf:
     add edi, 0x10
     mov esi, perf_magic
     movsd                          ; "PERF"
-    mov eax, 1
+    mov eax, 2
     stosd                          ; version
     mov eax, PERF_STAGES
     stosd
@@ -244,6 +274,21 @@ DumpPerf:
     mov esi, perf_max
     mov ecx, PERF_STAGES
     rep movsd
+
+    ; v2 tail: series count, then that many per-frame WORK totals
+    mov ecx, [perf_frames]
+    cmp ecx, PERF_MAX_FRAMES
+    jbe .series_count_ok
+    mov ecx, PERF_MAX_FRAMES
+.series_count_ok:
+    mov eax, ecx
+    stosd                          ; series count
+    mov esi, perf_series
+    push ecx
+    rep movsd
+    pop ecx
+    lea eax, [ecx*4 + (PERF_FIXED_SIZE + 4)]
+    mov [perf_body_size], eax
 
     ; create
     call zero_rmcs
@@ -262,7 +307,8 @@ DumpPerf:
     mov word [rmcs + RMCS_EAX], 0x4000
     movzx eax, word [file_handle]
     mov [rmcs + RMCS_EBX], eax
-    mov dword [rmcs + RMCS_ECX], PERF_BODY_SIZE
+    mov eax, [perf_body_size]
+    mov [rmcs + RMCS_ECX], eax
     mov dword [rmcs + RMCS_EDX], 0x10
     mov ax, [dos_seg]
     mov [rmcs + RMCS_DS], ax
