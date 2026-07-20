@@ -232,8 +232,17 @@ DisplayTitleScreen.TitleScreenPokemonLogoYScrolls:
 ; ROM runs into IncrementResetCounter's opcodes — bytes the port cannot
 ; reproduce and does not need to, since nothing reads past the terminator.
 ; N=$8D I=$88 T=$93 E=$84 @=$50 / S=$92 O=$8E Y=$98
+; pret's PrepareOakSpeech copies the SAME DebugNewGamePlayerName/RivalName as
+; PrepareTitleScreen, so oak_speech.asm shares this one contiguous block (the
+; overrun behaviour is identical). Exported under pret's labels.
+global DebugPlayerName
+global DebugRivalName
+global DebugNewGamePlayerName
+global DebugNewGameRivalName
+DebugNewGamePlayerName:
 DebugPlayerName:
     db 0x8D,0x88,0x8D,0x93,0x84,0x8D,0x50
+DebugNewGameRivalName:
 DebugRivalName:
     db 0x92,0x8E,0x8D,0x98,0x50
 DebugNameTail:

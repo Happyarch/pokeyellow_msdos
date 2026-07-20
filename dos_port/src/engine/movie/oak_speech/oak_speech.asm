@@ -27,10 +27,23 @@ extern GetPredefRegisters            ; home/predef.asm — restore HL/DE/BC for 
 extern CopyUncompressedPicToTilemap  ; engine/battle/init_battle.asm — predef; place 7×7 ids at wPredefHL
 extern UpdateCGBPal_BGP              ; home/cgb_palettes.asm — commit rBGP to the DAC
 extern DelayFrames                   ; video/frame.asm — wait BL frames
+extern DebugNewGamePlayerName        ; movie/title.asm — shared debug boot names
+extern DebugNewGameRivalName         ; movie/title.asm
+extern FillMemory                    ; home/fill_memory.asm — ESI=dest, BX=len, AL=val
+extern InitOptions                   ; engine/menus/main_menu.asm
+
+NAME_LENGTH  equ 11                  ; wPlayerName / wRivalName field size
+
+; wSurfingMinigameHiScore (pret sym 00:d494) — not yet in gb_memmap.inc; report
+; to root for promotion. %ifndef-guarded so promotion is a no-op here.
+%ifndef wSurfingMinigameHiScore
+wSurfingMinigameHiScore equ 0xD494
+%endif
 
 global DisplayPicCenteredOrUpperRight
 global IntroDisplayPicCenteredOrUpperRight
 global FadeInIntroPic
+global PrepareOakSpeech
 
 ; The GB scratch the pic decoder addresses its input through (home/pics.asm).
 %define PIC_STAGE_GB  0xA4A0
@@ -79,6 +92,70 @@ FadeInIntroPic:
     call DelayFrames
     dec bh
     jnz .next
+    ret
+
+; ---------------------------------------------------------------------------
+; PrepareOakSpeech — clear the save block for a new game, keeping only the four
+; option/status bytes, (re)init options, then seed the debug player/rival names.
+; Source: engine/movie/oak_speech/oak_speech.asm:PrepareOakSpeech.
+;
+; The name copy uses NAME_LENGTH=11, overrunning each 7/5-byte string into the
+; next (wPlayerName = "NINTEN@SONY"); the shared title.asm block lays the strings
+; out contiguously so the overrun is reproduced faithfully. pret's `call CopyData`
+; (GB->GB) becomes rep movsb here because the names are program-image data — the
+; port's PrepareTitleScreen does the same.
+; ---------------------------------------------------------------------------
+PrepareOakSpeech:
+    ; Preserve the option/status bytes across the wholesale save-block clear.
+    movzx eax, byte [ebp + W_LETTER_PRINTING_DELAY]
+    push eax
+    movzx eax, byte [ebp + wOptions]
+    push eax
+    movzx eax, byte [ebp + W_STATUS_FLAGS_6]      ; carries BIT_DEBUG_MODE (pret note)
+    push eax
+    movzx eax, byte [ebp + wPrinterSettings]
+    push eax
+
+    ; Zero wPlayerName..wBoxDataEnd (the whole main+box save block) and the
+    ; sprite state block.
+    mov esi, W_PLAYER_NAME
+    mov bx, (wBoxDataEnd - W_PLAYER_NAME) & 0xFFFF
+    xor al, al
+    call FillMemory
+    mov esi, wSpriteDataStart
+    mov bx, (wSpriteDataEnd - wSpriteDataStart) & 0xFFFF
+    xor al, al
+    call FillMemory
+    xor al, al
+    mov [ebp + wSurfingMinigameHiScore + 0], al
+    mov [ebp + wSurfingMinigameHiScore + 1], al
+    mov [ebp + wSurfingMinigameHiScore + 2], al
+
+    ; Restore the four preserved bytes (pop order mirrors the pushes).
+    pop eax
+    mov [ebp + wPrinterSettings], al
+    pop eax
+    mov [ebp + W_STATUS_FLAGS_6], al
+    pop eax
+    mov [ebp + wOptions], al
+    pop eax
+    mov [ebp + W_LETTER_PRINTING_DELAY], al
+
+    ; InitOptions only if it has not run yet (pret: call z, InitOptions).
+    cmp byte [ebp + wOptionsInitialized], 0
+    jnz .optsReady
+    call InitOptions
+.optsReady:
+
+    ; Seed the debug names.
+    lea esi, [DebugNewGamePlayerName]
+    lea edi, [ebp + W_PLAYER_NAME]
+    mov ecx, NAME_LENGTH
+    rep movsb
+    lea esi, [DebugNewGameRivalName]
+    lea edi, [ebp + W_RIVAL_NAME]
+    mov ecx, NAME_LENGTH
+    rep movsb
     ret
 
 ; ---------------------------------------------------------------------------

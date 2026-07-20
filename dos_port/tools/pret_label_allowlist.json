@@ -1119,6 +1119,14 @@
       "port_file": "dos_port/src/engine/pokemon/evolution.asm",
       "why": "Scanner-reviewed 2026-07-15: EvolveMon from pret engine/movie/evolution.asm has its selected single non-stub definition at dos_port/src/engine/pokemon/evolution.asm; preserve this per-label split."
     },
+    "DebugNewGamePlayerName": {
+      "port_file": "dos_port/src/movie/title.asm",
+      "why": "A4 2026-07-20: the debug boot names live in the title module (dos_port/src/movie/title.asm, its established non-mirror location) and are shared by PrepareTitleScreen and PrepareOakSpeech, exactly as pret shares them. Same relocation as the other title.asm labels below."
+    },
+    "DebugNewGameRivalName": {
+      "port_file": "dos_port/src/movie/title.asm",
+      "why": "A4 2026-07-20: shared debug boot name; see DebugNewGamePlayerName. Lives in the title module alongside DebugNewGamePlayerName."
+    },
     "DisplayTitleScreen": {
       "port_file": "dos_port/src/movie/title.asm",
       "why": "Scanner-reviewed 2026-07-15: DisplayTitleScreen from pret engine/movie/title.asm has its selected single non-stub definition at dos_port/src/movie/title.asm; preserve this per-label split."
