@@ -2013,15 +2013,24 @@ verified so far:
   execution note below. `g_surface_redraw_cb` per-frame mirror + `msgbox_oak_speech`.
 - **A4.4.a default-name data** — `gen_default_names.py` → `assets/default_names.inc`
   (`DefaultNames{Player,Rival}{,List}`, decode-verified byte-exact). Commit `b09cdae7`.
-- **A4.4.b (in progress)** — `oak_speech2.asm` created; `GetDefaultName` ported
-  (flat→GB `rep movsb` for the `jp CopyData` tail, `data-model` DEVIATION — the
-  name list is program-image data and the port's CopyData is EBP-relative on both
-  ends). Assembles, links into the full image, lint clean. Remaining in
-  `oak_speech2.asm`: `OakSpeechSlidePic*` (projected tilemap-shift), `DisplayIntro
-  NameTextBox` (projected name menu), `ChoosePlayer/RivalName` (+ `DisplayNamingScreen`
-  and post-naming surface re-establishment) — each needs a runtime pixel gate, so
-  they land with their own verification, not a blind assemble. Analysis in stigmergy
-  `a4-4-oak-speech2-porting-plan`.
+- **A4.4.b (in progress)** — `oak_speech2.asm` created.
+  - `GetDefaultName` (commit `45252920`): flat→GB `rep movsb` for the `jp CopyData`
+    tail (`data-model` DEVIATION — the name list is program-image data and the
+    port's CopyData is EBP-relative on both ends). Assembles/links/lint-clean;
+    runtime-verified later (dead code until `ChoosePlayerName`).
+  - `DisplayIntroNameTextBox` (commit `67857d6b`): the projected name-select menu,
+    **pixel-verified** (`DEBUG_NAMEMENU` gate, `pixelcheck.sh namemenu`) — box +
+    "NAME" title + cursor + `NEW NAME`/`YELLOW`/`ASH`/`JACK`, matte clean; faithdiff
+    clean (4 calls / 6 stores). Two fidelity facts verified against pret, not
+    assumed: the list is `<NEXT>`-**double-spaced** (`2*SCREEN_WIDTH`, no
+    `BIT_SINGLE_SPACED_LINES`), and the cursor step is `2 * text_row_stride` (pret
+    `PlaceMenuCursor` `ld bc, 2*SCREEN_WIDTH`). The box title `NAME@` is generated
+    (`IntroNameString`), not hand-encoded.
+  - Remaining in `oak_speech2.asm`: `OakSpeechSlidePic*` (projected tilemap-shift —
+    the `6*SCREEN_WIDTH+5` span must use the port's 40-wide stride, pixel-verify at
+    two offsets), `ChoosePlayer/RivalName` (+ `DisplayNamingScreen` and post-naming
+    surface re-establishment — the rival-pic acceptance gate). Analysis in stigmergy
+    `a4-4-oak-speech2-porting-plan`.
 
 **Open finding — PrintText does not compose over the cinematic surface.** The
 `DEBUG_OAKINTRO` diagnostic gate drives Oak pic + fade + `PrintText(OakSpeechText1)`
