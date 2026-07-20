@@ -2026,10 +2026,17 @@ verified so far:
     `BIT_SINGLE_SPACED_LINES`), and the cursor step is `2 * text_row_stride` (pret
     `PlaceMenuCursor` `ld bc, 2*SCREEN_WIDTH`). The box title `NAME@` is generated
     (`IntroNameString`), not hand-encoded.
-  - Remaining in `oak_speech2.asm`: `OakSpeechSlidePic*` (projected tilemap-shift —
-    the `6*SCREEN_WIDTH+5` span must use the port's 40-wide stride, pixel-verify at
-    two offsets), `ChoosePlayer/RivalName` (+ `DisplayNamingScreen` and post-naming
-    surface re-establishment — the rival-pic acceptance gate). Analysis in stigmergy
+  - `OakSpeechSlidePic{Left,Right,Common}` (commit `ba54f7e7`): the projected
+    picture slide, **pixel-verified** (`DEBUG_OAKSLIDE` gate, `pixelcheck.sh
+    oakslide`) — Oak displayed centred (surface cols 128–168) slides to 176–216, a
+    rigid +48px = 6-column shift matching pret's `hSlideAmount`, ink preserved,
+    matte clean. `projection` DEVIATION: band origin projected, linear span
+    restrided to `SLIDE_ROWS*SCREEN_TILES_W+5` for the 40-wide canvas, the vestigial
+    `hAutoBGTransfer` toggles dropped (`g_surface_redraw_cb` mirrors every frame),
+    and pret's `hSlide*` HRAM temps → file-local `.bss`.
+  - **Last `oak_speech2.asm` piece**: `ChoosePlayer/RivalName` — ties the slides +
+    name menu + `DisplayNamingScreen` together, plus post-naming surface
+    re-establishment (the rival-pic acceptance gate). Analysis in stigmergy
     `a4-4-oak-speech2-porting-plan`.
 
 **Open finding — PrintText does not compose over the cinematic surface.** The
