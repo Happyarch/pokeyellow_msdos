@@ -25,9 +25,12 @@ bits 32
 extern LoadMonPicToVRAM              ; home/pics.asm — decode staged pic → [EDX] VRAM, arm tilecache
 extern GetPredefRegisters            ; home/predef.asm — restore HL/DE/BC for a predef body
 extern CopyUncompressedPicToTilemap  ; engine/battle/init_battle.asm — predef; place 7×7 ids at wPredefHL
+extern UpdateCGBPal_BGP              ; home/cgb_palettes.asm — commit rBGP to the DAC
+extern DelayFrames                   ; video/frame.asm — wait BL frames
 
 global DisplayPicCenteredOrUpperRight
 global IntroDisplayPicCenteredOrUpperRight
+global FadeInIntroPic
 
 ; The GB scratch the pic decoder addresses its input through (home/pics.asm).
 %define PIC_STAGE_GB  0xA4A0
@@ -37,7 +40,41 @@ global IntroDisplayPicCenteredOrUpperRight
 OAKPIC_CENTER  equ (W_TILEMAP + (4 + UI_OAK_SPEECH_ROW) * SCREEN_TILES_W + (6 + UI_OAK_SPEECH_COL))
 OAKPIC_UPRIGHT equ (W_TILEMAP + (1 + UI_OAK_SPEECH_ROW) * SCREEN_TILES_W + (15 + UI_OAK_SPEECH_COL))
 
+section .data
+align 4
+; IntroFadePalettes — 6 BGP ramp bytes, computed from pret's `dc a,b,c,d` macro
+; (macros/data.asm: db (a<<6)|(b<<4)|(c<<2)|d). The ramp fades the pic UP from
+; darkest to the normal DMG palette; the final 0xE4 == %11100100 is the normal
+; BGP, which is the load-bearing check that these bytes are right.
+IntroFadePalettes:
+    db 0x54    ; dc 1,1,1,0
+    db 0xA8    ; dc 2,2,2,0
+    db 0xFC    ; dc 3,3,3,0
+    db 0xF8    ; dc 3,3,2,0
+    db 0xF4    ; dc 3,3,1,0
+    db 0xE4    ; dc 3,2,1,0  (= %11100100, normal BGP)
+
 section .text
+
+; ---------------------------------------------------------------------------
+; FadeInIntroPic — fade the current picture up through 6 BGP steps, 10 frames
+; each. Source: engine/movie/oak_speech/oak_speech.asm:FadeInIntroPic.
+; DelayFrames touches only BL, so the BH step counter survives the call (matching
+; pret keeping b across the DelayFrames).
+; ---------------------------------------------------------------------------
+FadeInIntroPic:
+    lea esi, [IntroFadePalettes]         ; ld hl, IntroFadePalettes
+    mov bh, 6                             ; ld b, 6
+.next:
+    mov al, [esi]                         ; ld a, [hli]
+    inc esi
+    mov [ebp + IO_BGP], al                ; ldh [rBGP], a
+    call UpdateCGBPal_BGP
+    mov bl, 10                            ; ld c, 10
+    call DelayFrames
+    dec bh
+    jnz .next
+    ret
 
 ; ---------------------------------------------------------------------------
 ; DisplayPicCenteredOrUpperRight — predef entry. Restores the predef registers,
@@ -134,6 +171,8 @@ RunOakPicTest:
     call IntroDisplayPicCenteredOrUpperRight
 
     call MovieMirrorSurface           ; commit the 20x18 rect to GB_TILEMAP0
+    mov byte [ebp + IO_BGP], 0        ; start blacked-out, then fade the pic UP
+    call FadeInIntroPic               ; ends at BGP 0xE4 (normal) — the checkpoint palette
     call DelayFrame
     call DelayFrame
     call DelayFrame
