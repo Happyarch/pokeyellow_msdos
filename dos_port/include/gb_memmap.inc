@@ -1612,6 +1612,7 @@ VGA_FRAMEBUF    equ 0xA0000    ; linear address of VGA framebuffer (flat DS)
 H_JOY_LAST                                       equ 0xFFB1 ; hJoyLast (also mapped locally in joypad.asm)
 H_JOY_RELEASED                                   equ 0xFFB2 ; hJoyReleased (shared: joypad.asm + simulate_joypad.asm)
 H_RLE_BYTE_VALUE                                 equ 0xFF81 ; hRLEByteValue (union base)
+hStartTileID                                     equ 0xFFE1 ; hStartTileID — first tile id CopyUncompressedPicToTilemap places
 H_DIVIDEND2                                      equ 0xFFE5 ; hDividend2
 H_DIVISOR2                                       equ 0xFFE6 ; hDivisor2
 H_QUOTIENT2                                      equ 0xFFE7 ; hQuotient2

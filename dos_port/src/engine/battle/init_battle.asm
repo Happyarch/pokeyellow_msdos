@@ -68,6 +68,8 @@ section .text
 global InitBattle
 global DrawBattleIntroBox
 global _InitBattleCommon
+global CopyUncompressedPicToTilemap    ; predef target; OakSpeech pic display (A4)
+extern CopyUncompressedPicToHL         ; src/home/pics.asm — shared flip-aware 7×7 placement
 extern text_msgbox                     ; src/home/text.asm — active msgbox projection
 extern msgbox_dialog                   ; src/home/text.asm — overworld dialog projection
 extern InitBattleVariables
@@ -382,3 +384,27 @@ DrawBattleIntroBox:
     ; the enemy name/HP bar. The call is gone; the enemy HUD now first draws
     ; exactly where pret draws it.
     ret
+
+; ---------------------------------------------------------------------------
+; CopyUncompressedPicToTilemap — predef target. Place a 7×7 block of ascending
+; tile ids into the tilemap at wPredefHL, starting from hStartTileID.
+; Source: engine/battle/init_battle.asm:CopyUncompressedPicToTilemap.
+;
+; pret sets HL=wPredefHL, A=hStartTileID, DE=SCREEN_WIDTH, then FALLS THROUGH into
+; CopyUncompressedPicToHL. The port's CopyUncompressedPicToHL lives in home/pics.asm
+; (it was extracted there as the shared placement LoadFrontSpriteByMonIndex uses)
+; and takes an explicit signature — EDI=dest(+EBP), EDX=stride, AL=start id — so
+; this reconciled entry assembles those and tail-jumps rather than falling through.
+;
+; wPredefHL is stored big-endian ([addr]=H, [addr+1]=L), matching GetPredefRegisters.
+; In: [wPredefHL] = GB tilemap dest, [hStartTileID] = first id, [wSpriteFlipped] set.
+; ---------------------------------------------------------------------------
+CopyUncompressedPicToTilemap:
+    movzx eax, byte [ebp + wPredefHL]        ; H (high byte)
+    shl eax, 8
+    mov al, [ebp + wPredefHL + 1]            ; L (low byte) -> AX = HL dest
+    movzx esi, ax
+    lea edi, [ebp + esi]                      ; EDI = full dest pointer
+    mov al, [ebp + hStartTileID]             ; AL = start tile id
+    mov edx, SCREEN_WIDTH                     ; DE = SCREEN_WIDTH (40, the canvas stride)
+    jmp CopyUncompressedPicToHL              ; tail (flip-aware; reads wSpriteFlipped)
