@@ -15,6 +15,8 @@ global TrainerPicPointers
 global TrainerBaseMoney
 global PlayerPicFront
 global PlayerPicBack
+global ShrinkPic1
+global ShrinkPic2
 
 ; pret names for the two trainer pics the Oak-speech intro displays (A4). The
 ; generator emits them as trnpic_<file>; keep pret's labels as the primary

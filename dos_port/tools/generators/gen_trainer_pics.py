@@ -104,6 +104,11 @@ def main():
         'PlayerPicFront: incbin "../gfx/player/red.pic"',
         'PlayerPicBack:  incbin "../gfx/player/redb.pic"',
         "",
+        "; Oak-speech shrink frames (menu-intro A4.5): the two compressed pics the",
+        "; intro morphs the player into as he shrinks down into the overworld sprite.",
+        'ShrinkPic1: incbin "../gfx/player/shrink1.pic"',
+        'ShrinkPic2: incbin "../gfx/player/shrink2.pic"',
+        "",
     ]
 
     DST.parent.mkdir(parents=True, exist_ok=True)
