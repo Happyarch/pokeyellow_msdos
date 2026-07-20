@@ -2064,3 +2064,49 @@ descriptor. Pinpointing it needs the interactive DOSBox debugger
 Oak pic, fade) is verified; the descriptor and the two mechanism requirements
 above are correct and reusable. This is the concrete next step for an attended /
 debugger session.
+
+### A4.3 text-over-surface — RESOLVED (2026-07-20, commit `05da5bcc`)
+
+The "runtime blocker" above was a **misdiagnosis**. It was neither a crash nor in
+`PrintText`. Two facts, found by *reading* the text engine and the frame pipeline
+(no debugger needed):
+
+1. **The surface never received the typed text.** The cinematic surface is shown
+   through a WINDOW sampling `GB_TILEMAP0` (stride 32); `PrintText` types into
+   `W_TILEMAP` (stride 40). The text engine's own per-char mirror
+   (`sync_dialog_window`) is *gated off* when `g_bg_whiteout=1` (which
+   `MovieBeginSurface` sets) **and** targets `GB_TILEMAP1`, not `GB_TILEMAP0` — so
+   nothing typed ever reached the surface source. This is the concrete form of
+   "mechanism fact 1" above.
+   **Fix:** `g_surface_redraw_cb` (`src/ppu/ppu.asm`, `dd 0`). `DelayFrame` invokes
+   it once per frame in the BG-transfer phase; `MovieBeginSurface` arms it =
+   `MovieMirrorSurface`, `MovieEndSurface` clears it. This repacks the canvas to
+   `GB_TILEMAP0` every frame while a cinematic owns the screen — the port's
+   legitimate analog of the GB VBlank auto-BG-transfer (retired for menus, but the
+   cinematic genuinely needs it). Inert (one predictable branch) otherwise. It
+   *replaces* the "mirror after each page / arm an intro hook" TODO in mechanism
+   fact 1 — no per-caller mirroring is needed anywhere now.
+
+2. **Page 1 of `OakSpeechText1` ends with `<PARA>` (`$51`), not `<PROMPT>`
+   (`$58`).** Both route through `text_pause → text_prompt_hook`, and `PrintText`'s
+   box setup copies the descriptor's `MB_PROMPT` into that global — so the hold is
+   installed via `msgbox_oak_speech`'s `MB_PROMPT` field, confirming mechanism
+   fact 2. The headless gate simply HUNG in the input-wait; the blank `FRAME.BIN`
+   read back was a **stale leftover**, not a real render. The gate now builds with
+   `DEBUG_AUTOKEY + AUTOKEY_QUIET + AUTOKEY_DUMP_FRAME` (default 360) and parks in
+   `.introWait` (the intro's ▼-hold: `DelayFrame`, return on A/B); `AutoKeyDrive`
+   photographs the parked page-1 frame.
+
+**Evidence** (`tools/pixelcheck.sh oakintro`, decomposed — not a bare aggregate):
+Oak's pic **703 ink px** (matches `DEBUG_OAKPIC`), page-1 text **764 ink px** in
+glyph shapes inside a correct box border, matte **clean (0 ink outside** the
+surface rect). ASCII render confirms Oak's pic centred over a text box reading
+"Hello there! Welcome to the world of #MON!". `faithdiff DelayFrame` +
+`lint_pret_labels` clean; fidelity **16/16**.
+
+**Still open under A4.3/A4.5** (unchanged by this fix): the full `OakSpeech` body
+stays behind the stub until A4.5 (defining it now duplicates the live stub's
+global); `.introWait` is a minimal park — the real flow wants the
+`BattlePromptWait`-style ▼ arrow blink. `msgbox_oak_speech` + `g_surface_redraw_cb`
+are the reusable substrate for the whole speech (pages 2/3, name-intro text,
+`YourNameIs`/`HisNameIs`) and for A4.4's naming screen.
