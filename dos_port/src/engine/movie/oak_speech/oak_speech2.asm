@@ -41,6 +41,19 @@ extern ClearScreenArea               ; home/copy2.asm — clear BL x BH tiles of
 extern CopyData                      ; home/copy_data.asm — ESI/EDX EBP-relative, BX count
 extern Delay3                        ; video/frame.asm — wait 3 frames
 extern DelayFrames                   ; video/frame.asm — wait BL frames
+extern DisplayNamingScreen           ; engine/menus/naming_screen.asm — ESI = name dest (pret HL)
+extern IntroDisplayPicCenteredOrUpperRight  ; oak_speech.asm — ESI flat pic, ECX len, BL centre/UR
+extern MovieBeginSurface             ; movie_projection.asm — re-establish the UI_OAK_SPEECH surface
+extern PrintText                     ; home/window.asm — ESI = text stream
+extern text_msgbox                   ; home/text.asm — active projection record
+extern msgbox_oak_speech             ; oak_speech.asm — the intro no-window text descriptor
+extern RedPicFront                   ; data/trainer_pics.asm — player intro pic (= PlayerPicFront)
+extern Rival1Pic                     ; data/trainer_pics.asm — rival intro pic
+extern YourNameIsText                ; assets/oak_speech_strings.inc (linked via oak_speech.o)
+extern HisNameIsText                 ; assets/oak_speech_strings.inc
+
+RED_PIC_LEN    equ 255               ; gfx/player/red.pic byte length
+RIVAL1_PIC_LEN equ 241               ; gfx/trainers/rival1.pic byte length
 
 ; The slide band spans `SLIDE_ROWS` tile-rows; in a 40-wide canvas its linear size
 ; is SLIDE_ROWS*SCREEN_TILES_W + 5 (pret's 6*SCREEN_WIDTH+5, restrided). Fits a byte.
@@ -155,6 +168,78 @@ DisplayIntroNameTextBox:
     add eax, eax
     mov [menu_item_step], eax
     jmp HandleMenuInput
+
+; ---------------------------------------------------------------------------
+; ChoosePlayerName / ChooseRivalName — the intro name-selection flow. Source:
+; engine/movie/oak_speech/oak_speech2.asm. Slide the pic aside, run the default-name
+; menu; a default choice slides the chosen name/pic back in, "NEW NAME" opens the
+; naming screen (retrying on an empty '@' name). Then re-show the pic and print
+; "YOUR/HIS NAME IS ...". On the projected surface, the naming screen takes the whole
+; screen, so the custom path re-establishes the UI_OAK_SPEECH surface on return.
+;
+; DEVIATION{class=projection; pret=engine/movie/oak_speech/oak_speech2.asm:ChoosePlayerName; behavior=the custom-name path re-establishes the cinematic surface with MovieBeginSurface in place of pret's ClearScreen, and the shared final PrintText is given the msgbox_oak_speech projection record; evidence=DisplayNamingScreen takes over the window list and whiteout on the projected surface, and the port's PrintText reads its text box from a projection record instead of fixed hlcoord; lifetime=permanent widescreen projection}
+;
+; In: EBP = GB base.
+; ---------------------------------------------------------------------------
+global ChoosePlayerName
+ChoosePlayerName:
+    call OakSpeechSlidePicRight            ; slide the current pic right, reveal the box
+    mov edx, DefaultNamesPlayer            ; ld de, DefaultNamesPlayer
+    call DisplayIntroNameTextBox           ; -> wCurrentMenuItem
+    movzx eax, byte [ebp + wCurrentMenuItem]
+    test al, al
+    jz .customNamePlayer                   ; item 0 = "NEW NAME" -> custom
+    mov esi, DefaultNamesPlayerList        ; ld hl, DefaultNamesPlayerList
+    call GetDefaultName                    ; AL = menu item = list index
+    mov edx, W_PLAYER_NAME                  ; ld de, wPlayerName
+    call OakSpeechSlidePicLeft             ; slide the chosen name/pic back in
+    jmp .donePlayer
+.customNamePlayer:
+    mov esi, W_PLAYER_NAME                  ; ld hl, wPlayerName (naming dest, pret HL)
+    mov byte [ebp + wNamingScreenType], NAME_PLAYER_SCREEN
+    call DisplayNamingScreen
+    cmp byte [ebp + wStringBuffer], '@'     ; empty name -> retry
+    je .customNamePlayer
+    call MovieBeginSurface                  ; pret ClearScreen: re-establish the surface
+    call Delay3
+    mov esi, RedPicFront
+    mov ecx, RED_PIC_LEN
+    xor bl, bl                              ; centred
+    call IntroDisplayPicCenteredOrUpperRight
+.donePlayer:
+    mov dword [text_msgbox], msgbox_oak_speech
+    mov esi, YourNameIsText
+    jmp PrintText                           ; jp PrintText
+
+global ChooseRivalName
+ChooseRivalName:
+    call OakSpeechSlidePicRight
+    mov edx, DefaultNamesRival             ; ld de, DefaultNamesRival
+    call DisplayIntroNameTextBox
+    movzx eax, byte [ebp + wCurrentMenuItem]
+    test al, al
+    jz .customNameRival
+    mov esi, DefaultNamesRivalList         ; ld hl, DefaultNamesRivalList
+    call GetDefaultName
+    mov edx, W_RIVAL_NAME                    ; ld de, wRivalName
+    call OakSpeechSlidePicLeft
+    jmp .doneRival
+.customNameRival:
+    mov esi, W_RIVAL_NAME                    ; ld hl, wRivalName
+    mov byte [ebp + wNamingScreenType], NAME_RIVAL_SCREEN
+    call DisplayNamingScreen
+    cmp byte [ebp + wStringBuffer], '@'
+    je .customNameRival
+    call MovieBeginSurface
+    call Delay3
+    mov esi, Rival1Pic
+    mov ecx, RIVAL1_PIC_LEN
+    xor bl, bl                              ; centred
+    call IntroDisplayPicCenteredOrUpperRight
+.doneRival:
+    mov dword [text_msgbox], msgbox_oak_speech
+    mov esi, HisNameIsText
+    jmp PrintText
 
 ; ---------------------------------------------------------------------------
 ; OakSpeechSlidePicLeft / Right / Common — slide the on-surface picture one tile
