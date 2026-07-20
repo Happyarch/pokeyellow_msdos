@@ -37,6 +37,7 @@ extern g_windows
 extern g_window_count
 extern render_sprites
 extern g_obj_over_window        ; src/ppu/ppu.asm — OBJ-vs-window z-order (GB order when set)
+extern g_surface_redraw_cb      ; src/ppu/ppu.asm — cinematic per-frame surface-mirror hook
 extern draw_player_marker
 extern present
 extern joypad_update
@@ -145,6 +146,16 @@ DelayFrame:
     ; Does not reorder update_oam/render_bg/present.
     call VBlankCopyBgMap
     call UpdateMovingBgTiles
+    ; Cinematic surface per-frame BG commit (0 = none). A movie surface draws into
+    ; W_TILEMAP but is shown through a window over GB_TILEMAP0, so its canvas must
+    ; be repacked every frame for typed text / animated pics to appear. Armed by
+    ; MovieBeginSurface (= MovieMirrorSurface), cleared by MovieEndSurface. Preserves
+    ; all registers. Inert (skipped) whenever no cinematic owns the screen.
+    mov eax, [g_surface_redraw_cb]
+    test eax, eax
+    jz .noSurfaceRedraw
+    call eax
+.noSurfaceRedraw:
     PERF_MARK PERF_COMMIT
     call update_oam             ; PrepareOAMData → shadow OAM, then DMA to OAM
     PERF_MARK PERF_OAM

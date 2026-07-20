@@ -942,12 +942,17 @@ NASMFLAGS += -D DEBUG_OAKPIC
 NASMFLAGS += -D SKIP_TITLE
 endif
 # oak_intro checkpoint harness (menu-intro A4.3/A4.5): drive Oak pic + fade +
-# PrintText(OakSpeechText1) into the surface canvas (msgbox_oak_speech), then dump.
-# make image DEBUG_OAKINTRO=1
+# PrintText(OakSpeechText1) into the surface canvas (msgbox_oak_speech), letting the
+# text type page 1 and park at the <PARA> ▼-wait, then AUTOKEY_QUIET photographs the
+# parked frame at AUTOKEY_DUMP_FRAME (default 260 — after page 1 is fully typed).
+# make image DEBUG_OAKINTRO=1 [AUTOKEY_DUMP_FRAME=260]
 ifdef DEBUG_OAKINTRO
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_OAKINTRO
 NASMFLAGS += -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_QUIET
+AUTOKEY_DUMP_FRAME ?= 360
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 endif
 ifdef DEBUG_SAVE_ROUNDTRIP
 NEED_DEBUG_DUMP := 1

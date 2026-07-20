@@ -125,6 +125,18 @@ g_window_count: dd 0
 global g_bg_whiteout
 g_bg_whiteout: dd 0
 
+; Per-frame surface-redraw callback (0 = none). DelayFrame invokes it once per
+; frame during the BG-transfer phase, before render. It is the cinematic's
+; legitimate analog of the GB VBlank auto-BG-transfer the port retired for menus:
+; a cinematic draws its pic/text into W_TILEMAP (stride 40) like every screen, but
+; the surface is presented through a WINDOW sampling GB_TILEMAP0 (stride 32), so
+; the canvas must be repacked into GB_TILEMAP0 every frame or nothing typed after
+; the last explicit MovieMirrorSurface is visible (the text engine's own per-char
+; sync_dialog_window is gated off under g_bg_whiteout and targets GB_TILEMAP1).
+; MovieBeginSurface arms it with MovieMirrorSurface; MovieEndSurface clears it.
+global g_surface_redraw_cb
+g_surface_redraw_cb: dd 0
+
 ; OBJ-vs-window z-order (see the long comment at frame.asm's compositor sequence).
 ; The port normally composites the window layer LAST — over the sprites — because
 ; its only window is the bottom dialog box, which must occlude NPCs the widescreen

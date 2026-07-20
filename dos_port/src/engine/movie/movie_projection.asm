@@ -38,6 +38,7 @@ extern g_windows                ; ppu.asm — descriptor array (slot 0 is ours)
 extern g_bg_whiteout            ; ppu.asm
 extern g_obj_over_window        ; ppu.asm
 extern g_obj_clip               ; ppu.asm — (x0,y0,x1,y1), upper bounds exclusive
+extern g_surface_redraw_cb      ; ppu.asm — cinematic per-frame surface-mirror hook
 extern spr_oam_valid            ; ppu.asm
 
 global MovieBeginSurface
@@ -109,6 +110,10 @@ MovieBeginSurface:
     ; 3-5. Cinematic compositor state.
     mov dword [g_bg_whiteout], 1
     mov dword [g_obj_over_window], 1
+    ; Per-frame surface commit: repack W_TILEMAP -> GB_TILEMAP0 (MovieMirrorSurface)
+    ; every DelayFrame, so pic/text drawn into the canvas becomes visible through the
+    ; surface window without every caller mirroring by hand. MovieEndSurface clears it.
+    mov dword [g_surface_redraw_cb], MovieMirrorSurface
     mov dword [g_obj_clip + 0], UI_TITLE_COL * 8            ; x0 = 80
     mov dword [g_obj_clip + 4], UI_TITLE_WY                 ; y0 = 24
     mov dword [g_obj_clip + 8], UI_TITLE_COL * 8 + UI_TITLE_CLIP   ; x1 = 240
@@ -130,6 +135,7 @@ MovieEndSurface:
     call hide_window
     mov dword [g_bg_whiteout], 0
     mov dword [g_obj_over_window], 0
+    mov dword [g_surface_redraw_cb], 0  ; stop mirroring the canvas once the surface ends
     mov dword [spr_oam_valid], 0        ; cinematic OBJ die with the screen
     mov byte [ebp + W_UPDATE_SPRITES_ENABLED], 1  ; hand the rebuild back on
     mov dword [g_obj_clip + 0], 0       ; back to the full canvas

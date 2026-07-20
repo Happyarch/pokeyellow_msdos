@@ -298,28 +298,26 @@ RunOakPicTest:
 ; RunOakSpeechCheckpoint — A4.3/A4.5 oak_intro checkpoint DIAGNOSTIC. Drives the
 ; opening beats — Prof. Oak's pic, FadeInIntroPic, PrintText(OakSpeechText1) — on
 ; the projected surface, then AutoKeyDrive (AUTOKEY_QUIET) photographs the parked
-; frame at AUTOKEY_DUMP_FRAME.
+; page-1 frame at AUTOKEY_DUMP_FRAME.
 ;
-; STATUS (2026-07-20): the pic + fade half is verified (DEBUG_OAKPIC). The TEXT
-; half is built at the data level — msgbox_oak_speech (below) is the correct
-; no-window, canvas-draw descriptor modelled on the battle's msgbox_centered — but
-; the runtime PrintText integration under the surface CRASHES before the dump and
-; needs the interactive DOSBox debugger to pinpoint (blind iteration in the
-; unattended loop was not converging). Two mechanism facts established while
-; getting here, both real requirements for the fix:
-;   1. The text engine does NOT invoke menu_redraw_cb during PrintText's typing
-;      (only the menu loop does), so canvas text is not mirrored to the surface
-;      tilemap per frame — the intro must mirror after each page (or arm its own
-;      per-frame hook), unlike the battle where render_bg shows W_TILEMAP directly.
-;   2. The `para`/<PROMPT> dispatches through text_prompt_hook (a global), NOT the
-;      descriptor's MB_PROMPT; when it is 0 the engine runs the WINDOWED overworld
-;      scroll (which recreates the window-replaces-surface problem and hangs
-;      headless). The intro must install its own text_prompt_hook.
-; This gate installs .introPromptCapture as that hook; the remaining crash is
-; upstream of it (in PrintText's own setup / box draw), to be found with the
-; debugger.
+; STATUS (2026-07-20): rendering resolved. The earlier "crash before dump" was a
+; MISDIAGNOSIS: page 1 of OakSpeechText1 ends with <PARA> ($51), not <PROMPT>
+; ($58), and <PARA> parks in text_pause's key-wait — headless with no dump timer it
+; simply HUNG, and the blank FRAME.BIN read back was a stale leftover, not a real
+; render. Two mechanism facts drove the fix:
+;   1. The surface is shown through a WINDOW sampling GB_TILEMAP0 (stride 32), but
+;      PrintText types into W_TILEMAP (stride 40), and the text engine's own
+;      per-char mirror (sync_dialog_window) is gated off under g_bg_whiteout and
+;      targets GB_TILEMAP1. So canvas text was invisible. FIX: g_surface_redraw_cb
+;      (ppu.asm) — DelayFrame repacks W_TILEMAP -> GB_TILEMAP0 every frame while a
+;      cinematic owns the screen (armed by MovieBeginSurface = MovieMirrorSurface).
+;   2. <PARA>/<PROMPT> dispatch through text_prompt_hook, and PrintText's box setup
+;      copies the descriptor's MB_PROMPT into it — so the hold is installed via
+;      msgbox_oak_speech's MB_PROMPT (= .introWait), which parks WITHOUT the
+;      windowed overworld scroll that replaces the surface.
+; AUTOKEY_QUIET + AUTOKEY_DUMP_FRAME photograph the parked page-1 frame.
 ;
-; In: EBP = GB base. WIP — currently crashes before dumping.
+; In: EBP = GB base. Never returns (AutoKeyDrive dumps FRAME.BIN + exits).
 ; ---------------------------------------------------------------------------
 extern MovieBeginSurface             ; movie_projection.asm
 extern MovieMirrorSurface            ; movie_projection.asm
@@ -327,8 +325,9 @@ extern LoadFontTilePatterns          ; home/load_font.asm
 extern LoadTextBoxTilePatterns       ; home/load_font.asm
 extern PrintText                     ; home/window.asm — ESI = text stream
 extern text_msgbox                   ; home/text.asm — active msgbox projection
-extern text_prompt_hook              ; home/text.asm — <PROMPT>/para handler (0 = overworld scroll)
+; text_prompt_hook is driven via msgbox_oak_speech's MB_PROMPT (PrintText copies it)
 extern DumpBackbuffer                ; debug/debug_dump.asm — FRAME.BIN + exit
+extern DelayFrame                    ; video/frame.asm
 extern ProfOakPic                    ; data/trainer_pics.asm
 global RunOakSpeechCheckpoint
 
@@ -348,18 +347,29 @@ RunOakSpeechCheckpoint:
     call MovieMirrorSurface
     call FadeInIntroPic
 
-    ; First text page, drawn into the surface canvas (msgbox_oak_speech = no
-    ; window). The page-1 `para` reaches text_prompt_hook, which we point at the
-    ; capture: mirror the canvas (now holding pic + page-1 text) to the surface
-    ; and dump. This is the oak_intro checkpoint — page 1 + waiting.
-    mov dword [text_prompt_hook], .introPromptCapture
+    ; First text page, typed into the surface canvas (msgbox_oak_speech = no window).
+    ; The per-frame g_surface_redraw_cb (armed by MovieBeginSurface = MovieMirrorSurface)
+    ; repacks the canvas into GB_TILEMAP0 every DelayFrame, so each character appears
+    ; through the surface window as PrintText types it — no manual per-page mirror.
+    ; At the page-1 <PARA> the engine calls text_pause -> text_prompt_hook; PrintText's
+    ; box setup COPIES the descriptor's MB_PROMPT (offset 28) into that global, so the
+    ; hold must be installed via MB_PROMPT (setting text_prompt_hook directly is
+    ; clobbered). .introWait parks (the ▼-wait) without hijacking the window.
+    mov dword [msgbox_oak_speech + 28], .introWait   ; MB_PROMPT
     mov dword [text_msgbox], msgbox_oak_speech
     mov esi, OakSpeechText1
-    call PrintText                    ; hits page-1 para -> .introPromptCapture, never returns
-.hang:
-    jmp .hang
+    call PrintText                    ; types page 1, then parks in .introWait at <PARA>
+    jmp $                             ; unreached: AutoKeyDrive photographs + exits mid-wait
 
-.introPromptCapture:
-    call MovieMirrorSurface           ; commit pic + page-1 text to GB_TILEMAP0
-    jmp DumpBackbuffer                ; FRAME.BIN + exit
+    ; .introWait — the intro's <PARA>/<PROMPT> hold: park until A/B, letting each frame
+    ; mirror via the surface hook. Returns so the engine advances to the next paragraph
+    ; in real gameplay; under AUTOKEY_QUIET no key is pressed, so it parks until
+    ; AutoKeyDrive writes FRAME.BIN at AUTOKEY_DUMP_FRAME and exits. All regs saved by
+    ; text_pause's pushad, so this need not preserve them.
+.introWait:
+    call DelayFrame
+    movzx eax, byte [ebp + H_JOY_PRESSED]
+    test al, (PAD_A | PAD_B)
+    jz .introWait
+    ret
 %endif
