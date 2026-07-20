@@ -2026,3 +2026,41 @@ the surface's own canvas (`W_TILEMAP`, committed by `MovieMirrorSurface`) throug
 a `UI_OAK_SPEECH`-projected msgbox descriptor, WITHOUT `set_single_window`
 replacing the surface window. The `DEBUG_OAKINTRO` gate is the tool to build that
 fix against; its captured frame is wrong by design until the reconciliation lands.
+
+### A4 text-box reconciliation — RE-DIAGNOSED (tractable, not risky) + runtime blocker
+
+The earlier "PrintText replaces the surface via set_single_window" finding was
+right about the symptom but pointed at the wrong fix. The battle already solved
+this: `msgbox_centered` draws its box + text DIRECTLY into the canvas
+(`W_TILEMAP`, stride 40) with `MB_WIN_TILEMAP = 0` ("no window: drawn into the
+canvas, so the caller's window list survives"). So the intro needs its OWN
+no-window descriptor, not a change to the shared windowed path — safe, no
+95-caller risk.
+
+Built: **`msgbox_oak_speech`** (oak_speech.asm) — `msgbox_centered`'s shape with
+every coordinate projected by `UI_OAK_SPEECH_(COL,ROW) = (10,3)`: box at canvas
+(10,15), lines at (11,17)/(11,19), ▼ at (28,19), `MB_WIN_TILEMAP = 0`. With this
+the text lands in the surface canvas; `MovieMirrorSurface` commits pic + text to
+`GB_TILEMAP0` and the one surface window shows both.
+
+Two more mechanism facts, both real requirements the reconciliation must honour:
+
+1. **The text engine does not mirror the canvas during typing.** `menu_redraw_cb`
+   is invoked only by the menu loop (`window.asm`), not by `PrintText`. In the
+   battle the canvas IS shown (render_bg reads `W_TILEMAP` on the flat path); the
+   intro shows a WINDOW over `GB_TILEMAP0`, so its canvas text must be mirrored to
+   `GB_TILEMAP0` after each page (or via an intro-armed per-frame hook).
+2. **`para`/`<PROMPT>` dispatches through `text_prompt_hook` (a global), not the
+   descriptor's `MB_PROMPT`.** When it is 0 the engine runs the windowed overworld
+   scroll — which recreates the surface-replace problem and hangs headless. The
+   intro must install its own `text_prompt_hook` (the checkpoint gate points it at
+   a mirror-then-dump capture).
+
+**Runtime blocker.** With `msgbox_oak_speech` + the intro prompt hook, the
+`DEBUG_OAKINTRO` gate still crashes *before* the capture — the fault is upstream,
+in `PrintText`'s own setup or box-border draw under the projected canvas
+descriptor. Pinpointing it needs the interactive DOSBox debugger
+(`tools/dosbox-x-mcp`), not blind iteration. Everything up to the text (surface,
+Oak pic, fade) is verified; the descriptor and the two mechanism requirements
+above are correct and reusable. This is the concrete next step for an attended /
+debugger session.

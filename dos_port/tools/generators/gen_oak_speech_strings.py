@@ -32,11 +32,15 @@ import gen_battle_text as gbt  # noqa: E402
 ROOT = Path(__file__).resolve().parents[3]
 OUT = ROOT / "dos_port" / "assets" / "oak_speech_strings.inc"
 
-OAK_SRC = ["engine/movie/oak_speech/oak_speech.asm"]
+OAK_SRC = [
+    "engine/movie/oak_speech/oak_speech.asm",
+    "engine/movie/oak_speech/oak_speech2.asm",   # YourNameIsText / HisNameIsText
+]
 
 WANT = {
     "OakSpeechText1", "OakSpeechText2", "OakSpeechText3",
     "IntroducePlayerText", "IntroduceRivalText",
+    "YourNameIsText", "HisNameIsText",
 }
 
 

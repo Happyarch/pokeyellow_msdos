@@ -60,6 +60,36 @@ OAKPIC_UPRIGHT equ (W_TILEMAP + (1 + UI_OAK_SPEECH_ROW) * SCREEN_TILES_W + (15 +
 
 section .data
 align 4
+; msgbox_oak_speech — the intro dialog projection. Modelled on the battle's
+; msgbox_centered: draw the box + text DIRECTLY into the surface canvas
+; (W_TILEMAP, stride 40) at the UI_OAK_SPEECH-projected dialog location, with NO
+; window of its own (MB_WIN_TILEMAP = 0). MovieMirrorSurface then commits the
+; whole surface — pic AND text — to GB_TILEMAP0, and the ONE surface window
+; MovieBeginSurface published shows both. This is why the intro must NOT use
+; msgbox_dialog: that descriptor creates a second, screen-space window that
+; replaces the surface (pic vanishes) and leaks into the matte (the DEBUG_OAKINTRO
+; finding). MB_PROMPT = 0 ("caller waits"), so PrintText types the first page and
+; returns at the paragraph break — exactly the oak_intro checkpoint state.
+;
+; pret's dialog box is GB(0,12) 20x6, text lines at (1,14)/(1,16), ▼ at (18,16);
+; every coord is offset by UI_OAK_SPEECH_(COL,ROW) = (10,3) into the 40-wide canvas.
+global msgbox_oak_speech
+msgbox_oak_speech:
+    dd SCREEN_TILES_W                                                   ; MB_STRIDE (40, canvas)
+    dd (W_TILEMAP + (12 + UI_OAK_SPEECH_ROW) * SCREEN_TILES_W + (0 + UI_OAK_SPEECH_COL))  ; MB_BOX_OFS
+    dd 18                                                               ; MB_BOX_W (interior cols)
+    dd 4                                                                ; MB_BOX_H (interior rows)
+    dd (W_TILEMAP + (14 + UI_OAK_SPEECH_ROW) * SCREEN_TILES_W + (1 + UI_OAK_SPEECH_COL))  ; MB_LINE1
+    dd (W_TILEMAP + (16 + UI_OAK_SPEECH_ROW) * SCREEN_TILES_W + (1 + UI_OAK_SPEECH_COL))  ; MB_LINE2
+    dd (W_TILEMAP + (16 + UI_OAK_SPEECH_ROW) * SCREEN_TILES_W + (18 + UI_OAK_SPEECH_COL)) ; MB_ARROW
+    dd 0                                                                ; MB_PROMPT (0 = caller waits)
+    dd 0                                                                ; MB_WIN_WX  ] no window:
+    dd 0                                                                ; MB_WIN_WY  ] drawn into the
+    dd 0                                                                ; MB_WIN_CLIP] surface canvas,
+    dd 0                                                                ; MB_WIN_MAXY] shown through
+    dd 0                                                                ; MB_WIN_TILEMAP (0 = none)
+    dd 0                                                                ; MB_WIN_STARTROW
+
 ; IntroFadePalettes — 6 BGP ramp bytes, computed from pret's `dc a,b,c,d` macro
 ; (macros/data.asm: db (a<<6)|(b<<4)|(c<<2)|d). The ramp fades the pic UP from
 ; darkest to the normal DMG palette; the final 0xE4 == %11100100 is the normal
@@ -270,24 +300,26 @@ RunOakPicTest:
 ; the projected surface, then AutoKeyDrive (AUTOKEY_QUIET) photographs the parked
 ; frame at AUTOKEY_DUMP_FRAME.
 ;
-; OPEN FINDING (2026-07-20), what this gate revealed: PrintText does NOT compose
-; over the cinematic surface as written. PrintText's text-box creation calls
-; set_single_window (home/text.asm), which sets g_window_count = 1 and REPLACES
-; MovieBeginSurface's surface descriptor — so the Oak pic (drawn in the surface
-; window) vanishes, and only the msgbox window remains. Worse, msgbox_dialog is a
-; SCREEN-SPACE descriptor (WY=152, MAXY=RENDER_H=200), so its box extends BELOW
-; the surface (y1=168) and leaks into the matte (measured: 904 colour-3 px
-; outside the surface, 0 pic ink).
+; STATUS (2026-07-20): the pic + fade half is verified (DEBUG_OAKPIC). The TEXT
+; half is built at the data level — msgbox_oak_speech (below) is the correct
+; no-window, canvas-draw descriptor modelled on the battle's msgbox_centered — but
+; the runtime PrintText integration under the surface CRASHES before the dump and
+; needs the interactive DOSBox debugger to pinpoint (blind iteration in the
+; unattended loop was not converging). Two mechanism facts established while
+; getting here, both real requirements for the fix:
+;   1. The text engine does NOT invoke menu_redraw_cb during PrintText's typing
+;      (only the menu loop does), so canvas text is not mirrored to the surface
+;      tilemap per frame — the intro must mirror after each page (or arm its own
+;      per-frame hook), unlike the battle where render_bg shows W_TILEMAP directly.
+;   2. The `para`/<PROMPT> dispatches through text_prompt_hook (a global), NOT the
+;      descriptor's MB_PROMPT; when it is 0 the engine runs the WINDOWED overworld
+;      scroll (which recreates the window-replaces-surface problem and hangs
+;      headless). The intro must install its own text_prompt_hook.
+; This gate installs .introPromptCapture as that hook; the remaining crash is
+; upstream of it (in PrintText's own setup / box draw), to be found with the
+; debugger.
 ;
-; The reconciliation (A4.3/A4.5): the intro text is part of the GB 20x18 screen,
-; which under projection IS the surface. So PrintText's box must be drawn into
-; the surface's own canvas (W_TILEMAP, committed by MovieMirrorSurface) via a
-; UI_OAK_SPEECH-projected msgbox descriptor, WITHOUT set_single_window replacing
-; the surface window — not as a second screen-space msgbox_dialog window. Until
-; that lands, this gate's captured frame is WRONG BY DESIGN; it is the tool to
-; build the fix against, not a passing checkpoint.
-;
-; In: EBP = GB base. PrintText parks at the stream's `prompt`; never returns.
+; In: EBP = GB base. WIP — currently crashes before dumping.
 ; ---------------------------------------------------------------------------
 extern MovieBeginSurface             ; movie_projection.asm
 extern MovieMirrorSurface            ; movie_projection.asm
@@ -295,7 +327,8 @@ extern LoadFontTilePatterns          ; home/load_font.asm
 extern LoadTextBoxTilePatterns       ; home/load_font.asm
 extern PrintText                     ; home/window.asm — ESI = text stream
 extern text_msgbox                   ; home/text.asm — active msgbox projection
-extern msgbox_dialog                 ; home/text.asm — standard bottom dialog box
+extern text_prompt_hook              ; home/text.asm — <PROMPT>/para handler (0 = overworld scroll)
+extern DumpBackbuffer                ; debug/debug_dump.asm — FRAME.BIN + exit
 extern ProfOakPic                    ; data/trainer_pics.asm
 global RunOakSpeechCheckpoint
 
@@ -315,10 +348,18 @@ RunOakSpeechCheckpoint:
     call MovieMirrorSurface
     call FadeInIntroPic
 
-    ; First text page through the surface's dialog projection.
-    mov dword [text_msgbox], msgbox_dialog
+    ; First text page, drawn into the surface canvas (msgbox_oak_speech = no
+    ; window). The page-1 `para` reaches text_prompt_hook, which we point at the
+    ; capture: mirror the canvas (now holding pic + page-1 text) to the surface
+    ; and dump. This is the oak_intro checkpoint — page 1 + waiting.
+    mov dword [text_prompt_hook], .introPromptCapture
+    mov dword [text_msgbox], msgbox_oak_speech
     mov esi, OakSpeechText1
-    call PrintText                    ; types out, parks at `prompt`; AutoKeyDrive dumps
+    call PrintText                    ; hits page-1 para -> .introPromptCapture, never returns
 .hang:
     jmp .hang
+
+.introPromptCapture:
+    call MovieMirrorSurface           ; commit pic + page-1 text to GB_TILEMAP0
+    jmp DumpBackbuffer                ; FRAME.BIN + exit
 %endif
