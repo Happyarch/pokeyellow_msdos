@@ -63,8 +63,7 @@ extern DelayFrames
 extern Delay3
 extern GBPalNormal
 extern Init
-extern EnterMapBoot              ; overworld.asm — one-time overworld boot glue → EnterMap
-extern OakSpeech                 ; main_menu_stubs.asm — new-game data init (InitPlayerData2)
+extern MainMenu                  ; engine/menus/main_menu.asm — the real post-title route
 extern g_tilecache_dirty
 extern JoypadLowSensitivity     ; src/home/joypad_lowsens.asm (home/joypad2.asm)
 extern PlaySound                ; src/home/audio.asm — AL = sound id
@@ -564,12 +563,7 @@ DisplayTitleScreen:
     cmp al, PAD_UP | PAD_SELECT | PAD_B
     je  .doClearSaveDialogue
 
-    ; jp MainMenu → EnterMap (Phase 2: load Pallet Town directly). MainMenu's
-    ; new-game path is StartNewGame → OakSpeech → SpecialEnterMap; OakSpeech's
-    ; ported prologue (InitPlayerData2) seeds the party/box/bag list terminators,
-    ; so a new game does not boot with garbage inventories (docs/glitch_safety.md).
-    call OakSpeech
-    jmp EnterMapBoot
+    jmp MainMenu
 
 .doClearSaveDialogue:
     ; DoClearSaveDialogue — ; TODO: save clear screen (Phase 5). Reset for now.

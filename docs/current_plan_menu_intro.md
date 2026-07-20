@@ -1625,6 +1625,45 @@ back byte-identical, which is also a determinism check on the harness.
 Still open in A2.6: `title_timeout`. The timeout path is ~51 s of idle frames,
 which no current scenario shape captures cheaply.
 
+### A3 — the title routes through MainMenu for real (PASS)
+
+`DisplayTitleScreen.go_to_main_menu` was `call OakSpeech / jmp EnterMapBoot`, a
+Phase-2 shortcut that skipped the menu entirely. It is now `jmp MainMenu`.
+
+`MainMenu` was already a complete linked implementation — `InitOptions`, the
+save-file probe, `StartNewGame`, continue, options, and `.backToTitle ->
+DisplayTitleScreen` — with **zero callers**. Nothing needed writing; the shortcut
+was the only thing standing between it and the boot path.
+
+Structural evidence (`project_state`, before -> after):
+
+| label | callers | reachability |
+| --- | --- | --- |
+| `MainMenu` | 0 -> 1 | not-proven-reached -> statically-reached-from-start |
+| `StartNewGame` | 1 -> 1 | not-proven-reached -> statically-reached-from-start |
+| `InitOptions` | 1 -> 1 | not-proven-reached -> statically-reached-from-start |
+
+`faithdiff DisplayTitleScreen` closed the corresponding delta: matched calls
+29 -> 30, port calls 44 -> 43, with the `MainMenu` DROPPED entry and the
+`OakSpeech` / `EnterMapBoot` ADDED entries all gone.
+
+**`SKIP_TITLE` had been free-riding on the shortcut.** It called the `OakSpeech`
+stub purely for its `InitPlayerData2` prologue. With the shortcut gone that path
+seeds nothing, so `Init` now calls `InitOptions` and `InitPlayerData2` directly
+**under `SKIP_TITLE` only** — a harness posture standing in for the two routines
+normal boot reaches via `MainMenu` and `StartNewGame -> OakSpeech`. `InitOptions`
+is called rather than partially duplicated, so `wPrinterSettings` matches too.
+
+**The A2.6 `wOptions` mask is retired, not re-justified.** pret's `Init` never
+writes `wOptions`; the port's early write was an unconditional divergence that
+the title golden caught (`want $00 / got $03`). Moving it under `SKIP_TITLE`
+makes the normal path faithful, and `goldencheck title` now compares 8 regions
+with 5 skipped — up from 7 and 6 — with `wOptionsBlock` clean.
+
+Gates: build clean, `lint_pret_labels` 0, `--strict-claims` 0, `fidelity` 13/13
+PASS. Still open in A3: `main_menu`, `title_reentry` and `continue_seed`
+scenarios, and verifying the continue path separately from new-game.
+
 **Method note.** This was found by reading pret's routine end-to-end while
 starting an unrelated subtask, not by any gate. Every gate was green across it:
 the build, `lint_pret_labels`, `--strict-claims`, 12/12 `fidelity`, and a

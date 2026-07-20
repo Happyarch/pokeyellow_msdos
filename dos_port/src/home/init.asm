@@ -43,7 +43,8 @@ extern PrepareTitleScreen
 extern g_window_count        ; src/ppu/ppu.asm — unified window descriptor list count
 %ifdef SKIP_TITLE
 extern EnterMapBoot          ; overworld.asm — one-time overworld boot glue → EnterMap
-extern OakSpeech             ; main_menu_stubs.asm — new-game data init (InitPlayerData2)
+extern InitPlayerData2       ; engine/movie/oak_speech/init_player_data.asm
+extern InitOptions           ; engine/menus/main_menu.asm
 %endif
 
 global Init
@@ -145,17 +146,21 @@ Init:
     call ClearSprites
     mov byte [ebp + IO_LCDC], LCDC_DEFAULT_VAL
 
-    ; Default text options (pret ref: engine/menus/main_menu.asm:InitOptions).
-    ; OPTIONS menu not yet implemented; speed stays at MEDIUM until it is.
-    mov byte [ebp + W_LETTER_PRINTING_DELAY], (1 << BIT_FAST_TEXT_DELAY)
-    mov byte [ebp + W_OPTIONS], TEXT_DELAY_MEDIUM
-
 %ifdef SKIP_TITLE
-    ; test build: skip the title/MainMenu, but still run OakSpeech's ported
-    ; prologue (InitPlayerData2) so the party/box/bag list terminators are seeded
-    ; before the overworld — otherwise every list scan runs off a garbage,
-    ; DPMI-uninitialised inventory (docs/glitch_safety.md).
-    call OakSpeech
+    ; test build: skip the title AND MainMenu. Two things that boot normally does
+    ; therefore have to be done here, and ONLY here — pret's Init does neither,
+    ; so doing them unconditionally is an unfaithful divergence that the title
+    ; golden caught (wOptions want $00 / got $03: the ROM has not reached
+    ; InitOptions at the title, but the port had already written it in Init).
+    ;
+    ;   1. InitOptions — normally reached via MainMenu. Called rather than
+    ;      partially duplicated, so wPrinterSettings matches too.
+    ;   2. InitPlayerData2 — normally reached via StartNewGame -> OakSpeech. It
+    ;      seeds the party/box/bag list terminators; without it every list scan
+    ;      runs off a garbage, DPMI-uninitialised inventory
+    ;      (docs/glitch_safety.md).
+    call InitOptions
+    call InitPlayerData2
     jmp EnterMapBoot         ; go straight to overworld (boot glue → faithful EnterMap)
 %else
     jmp PrepareTitleScreen   ; tail call — runs title screen, never returns normally

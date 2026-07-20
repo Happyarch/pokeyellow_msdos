@@ -483,23 +483,11 @@ SCENARIOS = {
     # "stride": 20, window (0,0) — flat offset r*20+c, not the 40-wide canvas. ---
     "title": {
         "flags": "DEBUG_TITLE=1",
-        "wram_skip": dict(
-            _NONBATTLE_WRAM_SKIP,
-            # pret sets wOptions in InitOptions (engine/menus/main_menu.asm:129),
-            # i.e. AT THE MAIN MENU, which the title has not reached — the ROM
-            # still holds 0 here. The port writes TEXT_DELAY_MEDIUM early in
-            # Init as a pre-MainMenu scaffold, so it reads 3. Every other
-            # scenario navigates through the main menu, where the ROM sets it
-            # too, which is why this only surfaces on the title.
-            #
-            # NOT maskable forever: the real fix is deleting the Init write once
-            # the title actually routes through MainMenu, which is A3. Doing it
-            # now would leave wOptions at 0 through the overworld scenarios and
-            # break them. Retire this mask with A3.
-            wOptionsBlock="port sets wOptions in Init as a pre-MainMenu scaffold; "
-                          "pret sets it in InitOptions at the main menu, which the "
-                          "title has not reached — retires with A3 routing",
-        ),
+        # The wOptionsBlock mask this scenario carried at A2.6 is RETIRED, not
+        # re-justified: A3 moved the port's early wOptions write out of Init and
+        # under SKIP_TITLE only, so on the normal boot path InitOptions runs from
+        # MainMenu exactly as it does on the ROM and the title now compares clean.
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
         # The title is a CINEMATIC: it keeps the Game Boy's 160x144 composition
         # rather than expanding to the overworld's 40x25 camera, and the port
         # centres that surface on the canvas at tile (10,3). So the whole golden
