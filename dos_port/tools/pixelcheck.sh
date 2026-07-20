@@ -48,6 +48,7 @@ case "$SCENARIO" in
     # its idle loop (menu-intro A3). No SKIP_TITLE: the routing is the evidence.
     mainmenu)   FLAGS="DEBUG_MAINMENU_LIVE=1" ;;
     title_reentry) FLAGS="DEBUG_TITLE_REENTRY=1" ;;
+    oakpic)     FLAGS="DEBUG_OAKPIC=1" ;;
     title)      FLAGS="DEBUG_TITLE=1 TITLE_DUMP_FRAME=${TITLE_DUMP_FRAME:-0} TITLE_DUMP_SCENE=${TITLE_DUMP_SCENE:-0} TITLE_DUMP_LOOP=${TITLE_DUMP_LOOP:-0}" ;;
     *) echo "unknown scenario: $SCENARIO" >&2; exit 2 ;;
 esac

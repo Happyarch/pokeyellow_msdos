@@ -292,6 +292,7 @@ GAME_SRCS := \
     src/movie/title.asm \
     src/engine/movie/movie_projection.asm \
     src/engine/movie/oak_speech/init_player_data.asm \
+    src/engine/movie/oak_speech/oak_speech.asm \
     src/engine/overworld/overworld.asm \
     src/engine/overworld/movement.asm \
     src/engine/overworld/map_sprites.asm \
@@ -931,6 +932,13 @@ endif
 ifdef DEBUG_CONTINUE_SEED
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_CONTINUE_SEED
+NASMFLAGS += -D SKIP_TITLE
+endif
+# Oak-pic pixel harness (menu-intro A4.1): display Prof. Oak on the centred
+# cinematic surface and dump FRAME.BIN. make image DEBUG_OAKPIC=1
+ifdef DEBUG_OAKPIC
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_OAKPIC
 NASMFLAGS += -D SKIP_TITLE
 endif
 ifdef DEBUG_SAVE_ROUNDTRIP

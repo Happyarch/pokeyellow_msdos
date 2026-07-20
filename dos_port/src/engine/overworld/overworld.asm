@@ -246,6 +246,9 @@ extern RunMainMenuTest
 %ifdef DEBUG_CONTINUE_SEED
 extern RunContinueSeedTest
 %endif
+%ifdef DEBUG_OAKPIC
+extern RunOakPicTest
+%endif
 %ifdef DEBUG_SAVE
 extern RunSaveTest
 %endif
@@ -849,6 +852,9 @@ EnterMap:
 %endif
 %ifdef DEBUG_CONTINUE_SEED
     call RunContinueSeedTest                ; A3: seed+save, clobber, CONTINUE-load, dump GBSTATE, exits
+%endif
+%ifdef DEBUG_OAKPIC
+    call RunOakPicTest                      ; A4.1: display Oak pic on the surface, dump FRAME.BIN, exits
 %endif
 %ifdef DEBUG_NAMINGSCREEN
     call RunNamingScreenTest                ; open PLAYER naming screen, draw grid, dump FRAME.BIN, exits

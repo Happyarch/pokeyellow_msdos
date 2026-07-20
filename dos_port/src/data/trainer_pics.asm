@@ -16,6 +16,15 @@ global TrainerBaseMoney
 global PlayerPicFront
 global PlayerPicBack
 
+; pret names for the two trainer pics the Oak-speech intro displays (A4). The
+; generator emits them as trnpic_<file>; keep pret's labels as the primary
+; export the cutscene references, aliased onto the generated bodies.
+global ProfOakPic
+global Rival1Pic
+
 section .data
 align 4
 %include "assets/trainer_pics.inc"
+
+ProfOakPic equ trnpic_prof_oak
+Rival1Pic  equ trnpic_rival1
