@@ -73,11 +73,21 @@ scenario.run(function()
 	end
 	assert(settled, "title: .loop never stamped wTitleScreenScene+4 = $0F")
 
-	-- Settle a few frames inside the stable window, matching the port's
-	-- DEBUG_TITLE checkpoint (which dumps at .loop + 3 frames). Any frame here
-	-- is identical until the first blink, ~54 frames away, so this is not a
-	-- race -- but stay well clear of that edge.
-	scenario.wait(3)
+	-- Land in the OPEN-eye window, after the first blink.
+	--
+	-- The first version waited 3 frames here on the belief that the first blink
+	-- was ~54 frames away. It is not: the blink starts ONE frame after .loop, so
+	-- frame 3 is mid-blink and the golden captured half-closed eyes ($F4-$F7
+	-- instead of $F0-$F3) -- which the port then "failed". The 54 came from
+	-- indexing the reference at the hWY settle instead of at .loop, and the gap
+	-- between those two points is the PCM/music sequence.
+	--
+	-- The blink cycle is 10 frames (dispatches 1..10, half/closed/half/open) and
+	-- is followed by ~110 frames of open eyes. Waiting 20 lands well inside that
+	-- window with ~100 frames of margin before the next blink, and matches the
+	-- port's DEBUG_TITLE checkpoint, which dumps before .titleScreenLoop has run
+	-- DoTitleScreenFunction even once and so is unambiguously open-eyed.
+	scenario.wait(20)
 
 	scenario.exec(function()
 		dump.write("title", dump.standard_regions(sym), {

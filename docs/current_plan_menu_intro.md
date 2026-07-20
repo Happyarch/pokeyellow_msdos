@@ -1573,9 +1573,57 @@ order, so the lag is correct behaviour and the checker models it explicitly. A
 constant residual was the clue; had it been absorbed as a calibration offset the
 real ordering fact would have been missed.
 
-Still open in A2.5: the blink half. The reference `wTitleScreenScene` column is
-already captured in the same CSV and the port's blink states are capturable via
-`TITLE_DUMP_SCENE`, so it is tractable by the same route — it has not been done.
+### A2.5 — blink timing verified against the golden ROM (PASS)
+
+Same method as the bounce: golden ROM for the reference, pixels for the port.
+`tools/check_title_blink.py` classifies the eye state in each idle-loop capture
+and compares it to the reference sequence. `TITLE_DUMP_LOOP=N` captures the Nth
+iteration of `.titleScreenLoop`.
+
+**Alignment was the entire difficulty, and it produced a false negative first.**
+The reference must be indexed from `.loop`, marked by `wTitleScreenScene + 4`
+becoming `$0F` (pret's idle loop writes it first thing). Indexing from the `hWY`
+settle instead puts the origin ~54 frames early — that lands in the PCM/music
+sequence *preceding* `.loop` — and makes the blink look like it starts at frame
+54 when it actually starts one frame after `.loop`. A sweep aimed at iterations
+50-63 on that mistaken alignment returned "all open" for the port. That looked
+like a port defect for a moment, and it was neither: both sides are in the long
+110-frame open window there. `title_trace.lua` now records the marker column so
+the alignment is measured rather than re-derived.
+
+The one-frame lag appears again, for the same structural reason: `.titleScreenLoop`
+runs `DelayFrame` *before* `DoTitleScreenFunction`, so the buffer captured at
+iteration N was rendered before that iteration's tile mutation and shows the
+reference's `.loop`-relative frame N-1. This was predicted from the code order
+before looking at the data, not fitted afterwards.
+
+Scene-to-state mapping (the observed scene is one ahead of the dispatch that
+ran, because `.BlinkWait` increments before anything can sample it): dispatch 1
+half, 2-3 hold, 4 closed, 5-6 hold, 7 half, 8-9 hold, 10 open, 11 wrap.
+
+The checker refuses to pass on a sample range containing no blink, precisely
+because that is what the mis-aligned sweep looked like — "all open, no
+mismatches" must not read as agreement.
+
+### A2.6 — `title` golden registered
+
+`tools/mgba_harness/scenarios/title.lua` dumps the stable checkpoint, detected by
+the same `$0F` marker. The `golden_diff.py` entry uses one rigid projection rect
+— the GB 20x18 screen translated to canvas tile `(10,3)`. Unlike `party_menu`
+nothing is re-flowed, because a cinematic keeps the GB composition by design.
+
+OAM is deliberately **not** masked. `PublishProjectedOAM` leaves the canonical
+records in `$FE00` byte-for-byte and publishes the projection only through the
+separate DOS coordinate tables, so the eye records compare directly against the
+golden; the generated golden confirms it with exactly 32/160 OAM bytes nonzero
+(8 records x 4 bytes). If a future change makes OAM need a mask here, that is a
+regression in that contract, not a scenario quirk.
+
+Regenerating the goldens rebuilt all 20 scenarios and every pre-existing one came
+back byte-identical, which is also a determinism check on the harness.
+
+Still open in A2.6: `title_timeout`. The timeout path is ~51 s of idle frames,
+which no current scenario shape captures cheaply.
 
 **Method note.** This was found by reading pret's routine end-to-end while
 starting an unrelated subtask, not by any gate. Every gate was green across it:

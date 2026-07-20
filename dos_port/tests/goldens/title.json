@@ -1,6 +1,6 @@
 {
   "description": "title screen stable checkpoint: bounce complete, hSCY=0, eyes open, title music dispatched, no input consumed",
-  "frame": 562,
+  "frame": 579,
   "regions": [
     {
       "file_offset": 0,

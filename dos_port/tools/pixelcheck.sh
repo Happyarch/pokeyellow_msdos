@@ -44,7 +44,7 @@ case "$SCENARIO" in
     markers)    FLAGS="DEBUG_CINEMATIC_MARKERS=1 MARKER_SX=${MARKER_SX:-0} MARKER_SY=${MARKER_SY:-0}" ;;
     # The real title, booted through the full bounce to its stable checkpoint
     # (menu-intro A2.3/A2.6). No SKIP_TITLE — that would defeat the scenario.
-    title)      FLAGS="DEBUG_TITLE=1 TITLE_DUMP_FRAME=${TITLE_DUMP_FRAME:-0} TITLE_DUMP_SCENE=${TITLE_DUMP_SCENE:-0}" ;;
+    title)      FLAGS="DEBUG_TITLE=1 TITLE_DUMP_FRAME=${TITLE_DUMP_FRAME:-0} TITLE_DUMP_SCENE=${TITLE_DUMP_SCENE:-0} TITLE_DUMP_LOOP=${TITLE_DUMP_LOOP:-0}" ;;
     *) echo "unknown scenario: $SCENARIO" >&2; exit 2 ;;
 esac
 

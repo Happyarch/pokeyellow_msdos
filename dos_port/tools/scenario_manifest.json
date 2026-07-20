@@ -373,6 +373,38 @@
       "must_hit": ["RunNamingScreenTest"],
       "comparison": {"regions": ["tilemap", "vram", "oam", "wram"], "projection": "golden_diff.SCENARIOS", "masks": "golden_diff.SCENARIOS"},
       "verification": "deterministic screen/navigation state"
+    },
+    {
+      "name": "title",
+      "id": 21,
+      "tier": "core",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_TITLE=1",
+      "port_entry_gate": "DEBUG_TITLE",
+      "navigation_script": "tools/mgba_harness/scenarios/title.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 300,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "DisplayTitleScreen",
+        "MovieBeginSurface",
+        "PublishProjectedOAM"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "stable-composition checkpoint: bounce complete, hSCY=0, eyes open in the post-blink window, no input consumed"
     }
   ],
   "disabled_scenarios": [
