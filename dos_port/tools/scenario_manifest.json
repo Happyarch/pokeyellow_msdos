@@ -624,18 +624,15 @@
         "masks": "golden_diff.SCENARIOS"
       },
       "verification": "CONTINUE preserves loaded state: seed+save, clobber, TryLoadSaveFile reproduces the seed; no OakSpeech/InitPlayerData2"
-    }
-  ],
-  "disabled_scenarios": [
+    },
     {
       "name": "oak_intro",
-      "disabled_reason": "Scaffold preserved from Stage 1. Do not register until title/new-game seeding and mGBA WRAM projection produce a valid golden.",
-      "id": 21,
-      "tier": "core",
-      "scenario_class": "datastruct",
-      "build_flags": "DEBUG_OAK_INTRO=1",
-      "port_entry_gate": "DEBUG_OAK_INTRO",
-      "navigation_script": "tools/mgba_harness/scenarios/oak_intro.lua.disabled",
+      "id": 29,
+      "tier": "full",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_OAKINTRO=1",
+      "port_entry_gate": "DEBUG_OAKINTRO",
+      "navigation_script": "tools/mgba_harness/scenarios/oak_intro.lua",
       "dump": {
         "type": "GBSTATE",
         "schema_version": 2,
@@ -644,19 +641,23 @@
         "terminal_marker": "complete"
       },
       "must_hit": [
-        "PalletTownDefaultScript",
-        "PalletTownPikachuBattleScript",
-        "PalletTownOakNotSafeComeWithMeScript",
-        "RunNPCMovementScript"
+        "OakSpeech",
+        "PrepareOakSpeech",
+        "FadeInIntroPic",
+        "DisplayPicCenteredOrUpperRight"
       ],
       "comparison": {
         "regions": [
+          "tilemap",
+          "vram",
+          "oam",
           "wram"
         ],
         "projection": "golden_diff.SCENARIOS",
         "masks": "golden_diff.SCENARIOS"
       },
-      "verification": "Pallet north-exit Oak intro script state, Pikachu battle seed, and scripted movement consumer"
+      "verification": "Prof. Oak opening speech, page 1 parked at the cont key-wait: Oak pic + box + 'Hello there! Welcome to the'; reached via real NEW GAME -> OakSpeech (the route the port SKIP_TITLEs for a state golden)"
     }
-  ]
+  ],
+  "disabled_scenarios": []
 }

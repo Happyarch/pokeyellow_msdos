@@ -677,6 +677,72 @@ SCENARIOS = {
                     for i in range(40)],
         },
     },
+    "oak_intro": {
+        "flags": "DEBUG_OAKINTRO=1",
+        # Prof. Oak opening speech, page 1 parked at the `cont` key-wait (menu-intro A4).
+        # The port's RunOakSpeechCheckpoint (DEBUG_OAKINTRO) clears BIT_DEBUG_MODE and drives
+        # the REAL OakSpeech — Oak's pic, FadeInIntroPic, PrintText(OakSpeechText1) — on the
+        # cinematic surface, then AUTOKEY_QUIET (never presses a key) parks at the first
+        # key-wait, showing "Hello there!" / "Welcome to the". The mGBA golden reaches the
+        # same parked state through the real NEW GAME -> OakSpeech route (no key tapped past
+        # page 1). Ground truth: mGBA oak_intro.lua.
+        "wram_skip": {**_NONBATTLE_WRAM_SKIP,
+            # Naming happens AFTER this checkpoint, so the name is not chosen yet; both sides
+            # hold PrepareOakSpeech's placeholder defaults, but the port's debug-seeded default
+            # and the ROM's differ pre-game. Irrelevant at the speech checkpoint.
+            "wPlayerName": "name not chosen until after page 1: placeholder default differs "
+                           "pre-game (port debug-seeded vs ROM), irrelevant at the speech",
+            "wRivalName": "rival name not chosen until later: placeholder default differs "
+                          "pre-game, irrelevant at the speech",
+            "wPlayerID": "player ID is rolled later in the new game, not by page 1: pre-game "
+                         "random on both sides, irrelevant at the speech checkpoint"},
+        # Same cinematic surface as the splash/title: GB 20x18 centred at tile (10,3).
+        "window": (0, 0),
+        "projections": (
+            [((0, 0, 17, 19), (10, 3),
+              "cinematic surface: the GB 20x18 screen centred on the canvas at "
+              "tile (10,3) — UI_SPLASH_COL/UI_SPLASH_ROW")]
+        ),
+        # Masks measured from the first goldencheck diff (2026-07-21). The DISPLAYED cinematic
+        # — Oak's pic (tilemap rows 4-10 cols 6-12 + its VRAM at $9000-$9300, signed), the font
+        # ($8800-$8FF0), and the whole box+text (rows 12-17 + box tiles $9600-$97F0) — is NOT
+        # masked and matches the ROM byte-for-byte. Everything masked below is undisplayed
+        # residue or a blank-equivalent surround, exactly as naming_screen / _STATUS_MASKS do:
+        # the port reaches the checkpoint via the overworld boot (SKIP_TITLE), the ROM via the
+        # clean NEW GAME route, so the two leave different leftovers in the areas the speech
+        # does not display.
+        "masks": {
+            "tilemap": [
+                # The cinematic surround: everything above the dialog box that is NOT Oak's pic.
+                # pret's OakSpeech ClearScreen fills the screen with $7F (space glyph); the port's
+                # cinematic surface clears to $00. Both index a zero VRAM tile at this checkpoint
+                # (tiles $00 and $7F are zero slots here), so the surround renders identically blank.
+                ((0, 0, 3, 19),
+                 "surround rows 0-3: port surface-clear $00 vs pret ClearScreen $7F, both zero-tile blank"),
+                ((11, 0, 11, 19),
+                 "surround row 11: port $00 vs pret $7F, both zero-tile blank"),
+                ((4, 0, 10, 5),
+                 "surround left of the pic (rows 4-10, cols 0-5): port $00 vs pret $7F, both blank"),
+                ((4, 13, 10, 19),
+                 "surround right of the pic (rows 4-10, cols 13-19): port $00 vs pret $7F, both blank"),
+            ],
+            "vram": (
+                [(s, "overworld-boot tileset residue in the unsigned vChars area $8000-$87F0; the "
+                     "signed-addressed cinematic (font at $8800+, pic/box at $9000+) never displays "
+                     "it, and the ROM's clean NEW GAME route leaves it zero here")
+                 for s in range(0, 128)]
+                + [(s, "bilateral undisplayed residue at tiles $31-$5F ($9310-$95F0): the ROM holds "
+                       "prior-screen (intro/title) leftovers, the port its boot leftovers; the matching "
+                       "tilemap references only the pic $00-$30, the box $79-$7E, and the font $80+, "
+                       "never $31-$5F")
+                   for s in range(256 + 0x31, 256 + 0x60)]
+            ),
+            "oam": [(i, "OakSpeech page 1 displays no OBJ; the port's canonical $FE00 holds overworld-boot "
+                        "player-sprite residue (spr_oam_valid=0 so it is not composited), the ROM (clean "
+                        "NEW GAME route) is empty")
+                    for i in range(40)],
+        },
+    },
     "yellow_intro_s01": {
         "flags": "DEBUG_YELLOW_S01=1",
         # Yellow intro scene 1, the first "wait last" hold (menu-intro B4). Real boot

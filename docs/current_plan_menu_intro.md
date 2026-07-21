@@ -19,7 +19,7 @@ Required project skills: `asm-translation`, `project-conventions`, `build-and-de
   - [x] A1 — Cinematic projection substrate
   - [x] A2 — Projected title with live audio and palettes *(port-side done; only the mGBA-blocked `title_timeout` golden remains)*
   - [ ] A3 — Real title → menu → entry routing
-  - [x] A4 — Oak speech, naming, and stub retirement *(port-side done, faithdiff 24/24 + fidelity 16/16; only the mGBA-blocked oak_intro golden + Oak timing trace remain)*
+  - [x] A4 — Oak speech, naming, and stub retirement *(port-side done, faithdiff 24/24 + fidelity 16/16; oak_intro GBSTATE golden id 29 DONE + PASS 2026-07-21; only the Oak timing trace remains)*
 - [ ] Phase B — Power-on movie
   - [x] B1 — Animated-object engine *(engine + data + runtime test; sine rides B3)*
   - [x] B2 — Game Freak splash *(bars + PlayShootingStar + copyright, per-row verified)*
@@ -2575,7 +2575,7 @@ Oak’s cry remains silent by explicit scope decision. Every other cinematic aud
 - [ ] CONTINUE preserves loaded state and does not run new-game initialization.
 - [ ] `EnterMapBoot` follows the measured route contract.
 - [ ] The A1 decomposed performance contract passes.
-- [ ] `title`, `title_reentry`, `title_timeout`, `continue_seed`, `main_menu`, `oak_intro`, and `gamefreak_intro` pass.
+- [x] `title`, `title_reentry`, `title_timeout`, `continue_seed`, `main_menu`, `oak_intro`, and `gamefreak_intro` pass. *(oak_intro id 29 PASS 2026-07-21; all others previously registered + PASS)*
 - [ ] All 18 Yellow-scene scenarios pass.
 - [ ] Native visual evidence is retained for every frame-yielding Yellow scene.
 - [ ] `fidelity`, `fidelity-full`, and `goldens-verify` pass.
@@ -2666,15 +2666,23 @@ new game skips speech+naming.
   rival-pic-after-naming acceptance gate — the deferred runtime evidence for `a191c3e8`.
   Both naming paths now render end-to-end on the projected surface.
 
-**⚠ BLOCKED (needs mGBA + baserom, neither present in this environment — `mgba not
-found`, no `*.gbc`):** the oak_intro **GBSTATE golden** (id 21) and the **Oak timing
-trace** can't be generated here — they require mGBA to drive the real ROM (`make
-goldens` → `tools/mgba_harness/make_goldens.sh`). The port side is *ready*: the real
-`OakSpeech` renders the checkpoint (`53308bc4`) and default naming renders
-(`cff85d0f`). When back in an mGBA-capable env: repurpose scenario id 21 (nav
-boot→title→menu→NEW GAME→`OakSpeech` page-1 wait; must-hits `OakSpeech`/
-`PrepareOakSpeech`/`FadeInIntroPic`/`DisplayPicCenteredOrUpperRight`; drop the Pallet
-must-hits), `make goldens`, enable it, add to `goldencheck`.
+**✅ DONE (2026-07-21, mGBA UNBLOCKED):** the oak_intro **GBSTATE golden** is authored,
+registered, and PASSES canonical `goldencheck`. Scenario **id 29** (NOT 21 — the disabled
+scaffold's id 21 collides with active `title`=21), gate **`DEBUG_OAKINTRO`** (the real
+checkpoint; `DEBUG_OAK_INTRO` with the underscore was the stale Pallet-overworld-event
+scaffold — its `.lua.disabled` is `git rm`'d), must-hits `OakSpeech`/`PrepareOakSpeech`/
+`FadeInIntroPic`/`DisplayPicCenteredOrUpperRight`. The mGBA `oak_intro.lua` navigates the
+real boot→menu→NEW GAME→OakSpeech and parks at the page-1 `cont` key-wait ("Hello there!"
+/ "Welcome to the"); the port's `RunOakSpeechCheckpoint` (AUTOKEY_QUIET, never taps) parks
+at the same state. **The displayed cinematic matches the ROM byte-for-byte** — Oak's pic
+(tilemap rows 4-10 + VRAM $9000-$9300 signed), font ($8800-$8FF0), and the whole box+text
+(rows 12-17 + box tiles $9600-$97F0) are all compared and pass. Masked (justified, measured
+from the first diff, naming_screen/_STATUS_MASKS pattern): the blank surround (rows 0-11
+non-pic: port cinematic-clear $00 vs pret ClearScreen $7F, both zero-tile), the overworld-
+boot VRAM residue in the unsigned area ($8000-$87F0) and the bilateral undisplayed residue
+at $31-$5F, the overworld player-sprite OAM residue (spr_oam_valid=0), and pre-game WRAM
+(wPlayerName/wRivalName/wPlayerID). **Only the Oak timing trace remains open** (needs
+port-side per-frame trace instrumentation, the same as the yellow-scene trace note).
 
 - **A4.5.f: cry-audio audit** (acceptance "the cry command is the sole silent audio
   operation"): verified. `OakSpeech`'s direct audio (`PlayMusic(Routes2)` /
