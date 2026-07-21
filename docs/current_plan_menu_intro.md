@@ -1783,12 +1783,16 @@ breaking the working `SKIP_TITLE` overworld boot).
 > are the shared-letterbox holds (s01, s05, s09 — a running-Pikachu OBJ over the letterbox), which are
 > redundant with s01 (same static wTileMap; the object is masked). **Conclusion: s01 is sufficient
 > GBSTATE coverage for the Yellow intro.** The unique-BG scenes (2/10/12) are verified by construction
-> (faithful paste/tilemap code — the assets are byte-identical, the coords use `INTRO_BG_ORIGIN`) and
-> would need a **FRAME.BIN rendered-pixel** comparison (per the B3 scroll/frame-evidence rule), not a
-> GBSTATE golden — or a regions change to capture vBGMap0 (cross-cutting; affects every scenario, not
-> worth it for a few scenes). The B3 scene coverage is therefore: s01 GBSTATE golden (done) + the
-> byte-identical asset check (done) + by-construction faithful scene code (faithdiff-swept) + optional
-> future FRAME.BIN captures for the unique/scrolling scenes.
+> (faithful paste/tilemap code — the assets are byte-identical, the coords use `INTRO_BG_ORIGIN`).
+> **A rendered-pixel comparison is also not feasible** (verified 2026-07-21): the mGBA harness has no
+> framebuffer dump — it yields GBSTATE + register traces, not pixels (the A2 "mid-bounce FRAME.BIN"
+> path recovers the *scroll value* from the port's FRAME.BIN and compares it to an expected sequence;
+> it is not a pixel-vs-ROM-render diff). And even a software re-render of the ROM's GBSTATE can't show
+> the paste, because it lives in the uncaptured vBGMap0 ($9800). Capturing vBGMap0 is rejected: the
+> port's compositor reads `W_TILEMAP`, so its $9800 is stale for most screens → it would break existing
+> goldens. **Net B3 scene coverage (accepted as sufficient): s01 GBSTATE golden (done) + byte-identical
+> asset check (done) + by-construction faithful scene code (faithdiff-swept, done).** The unique/
+> scrolling scenes get no per-scene ROM-diff beyond that — by design, not omission.
 
 > **F-GFI (RESOLVED, `3175ff22`) — copyright screen dropped the "GAME FREAK inc." glyphs.**
 > Root cause: `LoadCopyrightTiles` loaded only 19 tiles (copyright.2bpp), but pret's single
