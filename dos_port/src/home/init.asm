@@ -145,7 +145,7 @@ Init:
     ; would shift all their dump frames. Making it the faithful default is a follow-up
     ; that updates those scenarios to skip it. (menu-intro B4.)
 %ifdef BOOT_CINEMATIC
-    extern PlayIntro                        ; engine/movie/splash.asm
+    extern PlayIntro                        ; engine/movie/intro.asm
     call PlayIntro
 %endif
 
