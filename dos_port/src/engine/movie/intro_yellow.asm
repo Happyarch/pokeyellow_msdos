@@ -259,6 +259,59 @@ YellowIntroScene13:
     call YellowIntro_NextScene
     ret
 
+; Scene 14 — "fade + reframe": run the DMG fade (YellowIntroPalSequence_f9dd6)
+; one byte per frame; when it terminates, mask the objects, blank OAM, rebuild the
+; framed BG (rows 0-3 tile 1, 4-13 tile 0, 14-17 tile 1 — the Func_f9e5f layout,
+; inlined to match pret's three fills), restore the DMG palettes, spawn object $7,
+; advance, and arm a $28-frame timer for the next scene.
+;
+; DEVIATION{class=HAL; pret=engine/movie/intro_yellow.asm:YellowIntroScene14; behavior=the two hAutoBGTransferEnabled stores gating the wTileMap->vBGMap0 auto-transfer are dropped while the three DelayFrame waits remain, because the port surface mirror copies W_TILEMAP every frame with no enable flag; evidence=hAutoBGTransferEnabled was retired when the surface mirror replaced the GB auto BG transfer and the compositor renders directly from W_TILEMAP; lifetime=permanent surface-mirror model}
+; DEVIATION{class=projection; pret=engine/movie/intro_yellow.asm:YellowIntroScene14; behavior=the wTileMap row fills use the port 40-tile W_TILEMAP row stride instead of the GB 20-tile stride, so each SCREEN_WIDTH*N fill becomes SCREEN_TILES_W*N; evidence=the compositor renders the BG from the 40-wide W_TILEMAP not the GB shadow map, the same redirect as Func_f9e5f; lifetime=permanent widescreen tilemap model}
+YellowIntroScene14:
+    mov edx, YellowIntroPalSequence_f9dd6          ; ld de, ...
+    call YellowIntro_LoadDMGPalAndIncrementCounter
+    jc .expired                                    ; jr c, .expired
+    mov [ebp + IO_BGP], al                         ; ldh [rBGP], a
+    mov [ebp + IO_OBP0], al                        ; ldh [rOBP0], a
+    and al, 0xf0                                   ; and $f0
+    mov [ebp + IO_OBP1], al                        ; ldh [rOBP1], a
+    call UpdateCGBPal_BGP
+    call UpdateCGBPal_OBP0
+    call UpdateCGBPal_OBP1
+    ret
+.expired:
+    call MaskAllAnimatedObjectStructs
+    call YellowIntro_BlankOAMBuffer
+    mov esi, W_TILEMAP                             ; ld hl, wTileMap
+    mov bx, 4 * SCREEN_TILES_W                     ; ld bc, SCREEN_WIDTH * 4
+    mov al, 0x1
+    call FillMemory                                ; call Bank3E_FillMemory
+    mov esi, W_TILEMAP + 4 * SCREEN_TILES_W        ; hlcoord 0, 4
+    mov bx, 10 * SCREEN_TILES_W                    ; ld bc, SCREEN_WIDTH * 10
+    xor al, al
+    call FillMemory
+    mov esi, W_TILEMAP + 14 * SCREEN_TILES_W       ; hlcoord 0, 14
+    mov bx, 4 * SCREEN_TILES_W                     ; ld bc, SCREEN_WIDTH * 4
+    mov al, 0x1
+    call FillMemory
+    ; hAutoBGTransferEnabled=1 dropped (surface mirror; see DEVIATION)
+    call DelayFrame
+    call DelayFrame
+    call DelayFrame
+    ; hAutoBGTransferEnabled=0 dropped
+    mov al, 0xe4                                   ; ld a, $e4
+    mov [ebp + IO_OBP0], al                        ; ldh [rOBP0], a
+    mov [ebp + IO_BGP], al                         ; ldh [rBGP], a
+    call UpdateCGBPal_BGP
+    call UpdateCGBPal_OBP0
+    mov dh, 0x58                                   ; lb de, $58, $58
+    mov dl, 0x58
+    mov al, 0x7
+    call YellowIntro_SpawnAnimatedObjectAndSavePointer
+    call YellowIntro_NextScene
+    mov byte [ebp + wYellowIntroSceneTimer], 0x28  ; ld a,$28 / ld [timer],a  (vc_hook is a no-op in base ROM)
+    ret
+
 YellowIntroScene17:
     mov bl, 64                                     ; ld c, 64
     call DelayFrames
@@ -841,7 +894,7 @@ Jumptable_f9906:
     dd YellowIntro_NextScene        ; scene 11 (unported)
     dd YellowIntro_NextScene        ; scene 12 (unported)
     dd YellowIntroScene13
-    dd YellowIntro_NextScene        ; scene 14 (unported)
+    dd YellowIntroScene14
     dd YellowIntroScene15
     dd YellowIntroScene16
     dd YellowIntroScene17
