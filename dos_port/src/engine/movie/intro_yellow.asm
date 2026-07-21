@@ -823,6 +823,26 @@ PlayIntroScene:
     call DumpBackbuffer
 .no_ys01_dump:
 %endif
+%ifdef YELLOW_DUMP_SCENE
+    ; scroll-evidence dump (menu-intro B3): capture FRAME.BIN/GBSTATE at a chosen scene
+    ; AND scene-timer value, so a SCROLLING scene (3/7/11/15) can be photographed at a
+    ; specific H_SCX. The scene timer counts DOWN from its per-scene init, and scene 7
+    ; walks `H_SCX += 2` once per surviving decrement, so a HIGHER YELLOW_DUMP_TIMER =
+    ; earlier in the scene = smaller H_SCX, a LOWER one = later = larger H_SCX. Two builds
+    ; at two timer values give the plan's "two distinct scroll offsets" evidence: the
+    ; captured FRAME.BIN reflects the real WIN_SRC_X the loop's MovieSyncScroll set (the
+    ; general DumpBackbuffer does NOT sync scroll — only the render did), so the water
+    ; band is displaced by the H_SCX delta iff the scroll is actually presented.
+    extern DumpBackbuffer                             ; debug/debug_dump.asm
+    mov al, [ebp + wYellowIntroCurrentScene]
+    cmp al, YELLOW_DUMP_SCENE
+    jne .no_yscroll_dump
+    mov al, [ebp + wYellowIntroSceneTimer]
+    cmp al, YELLOW_DUMP_TIMER
+    jne .no_yscroll_dump
+    call DumpBackbuffer
+.no_yscroll_dump:
+%endif
     jmp .loop
 .exit:
     call YellowIntro_BlankPalettes

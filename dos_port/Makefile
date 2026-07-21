@@ -1047,6 +1047,15 @@ NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D BOOT_CINEMATIC
 NASMFLAGS += -D DEBUG_YELLOW_S01
 endif
+# Yellow scroll-evidence gate (menu-intro B3): dump FRAME.BIN/GBSTATE at a chosen scene +
+# scene-timer, to photograph a SCROLLING scene at a specific H_SCX. Two builds at two
+# timers give the two-offset scroll pixel evidence.  make image YELLOW_DUMP_SCENE=7 YELLOW_DUMP_TIMER=38
+ifdef YELLOW_DUMP_SCENE
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D BOOT_CINEMATIC
+NASMFLAGS += -D YELLOW_DUMP_SCENE=$(YELLOW_DUMP_SCENE)
+NASMFLAGS += -D YELLOW_DUMP_TIMER=$(or $(YELLOW_DUMP_TIMER),1)
+endif
 # Animated-object engine harness (menu-intro B1.3): establish the surface, stage
 # the intro anim data, spawn one object, run RunObjectAnimations + publish OAM
 # each frame; AUTOKEY_QUIET photographs a frame at AUTOKEY_DUMP_FRAME.
