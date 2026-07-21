@@ -1510,7 +1510,44 @@ Sampling only early, middle, and final scenes would leave most scene-specific ti
 - Timers and active-object masks match ground truth.
 - Skip exits cleanly to title preparation.
 
-### ⚠ CINEMATIC BG-ORIGIN FINDING (2026-07-21) — likely affects B3
+### ⚠ CINEMATIC BG-ORIGIN — CONFIRMED B3 DEFECT (2026-07-21)
+
+**CONFIRMED at the code level (no longer "likely").** `MovieBeginSurface` sets
+`g_surface_redraw_cb = MovieMirrorSurface` (there is exactly one mirror), and
+`MovieMirrorSurface` reads the visible 18×20 window from `W_TILEMAP +
+UI_TITLE_ROW*SCREEN_WIDTH + UI_TITLE_COL` (row 3, col 10). The intro's
+`PlayIntroScene` calls the same `MovieBeginSurface`, so it uses the identical
+mapping (`surface_row = W_TILEMAP_row − 3`, `surface_col = W_TILEMAP_col − 10`)
+that the splash-bars test measured empirically. The intro authors every scene BG at
+raw `W_TILEMAP + N*SCREEN_TILES_W` (row 0, col 0). **Therefore the intro's frame is
+shifted up 3 rows, and the column-specific scenes (2 gengar grid, 10/12 boxed
+pastes) are also shifted left 10 cols.** A2 (title) avoided this by projecting its
+origin (`TITLE_ORIGIN equ UI_TITLE_ROW*SCREEN_TILES_W + UI_TITLE_COL` = 130, then
+`W_TILEMAP + TITLE_ORIGIN + row*40 + col`); B3 did not.
+
+**Fix design (the B3-align task):**
+- Define `INTRO_ORIGIN equ UI_YELLOW_INTRO_ROW*SCREEN_TILES_W + UI_YELLOW_INTRO_COL`
+  (= 3*40+10 = 130) in `intro_yellow.asm`, mirroring `TITLE_ORIGIN`.
+- **Row-range fills** (`Func_f9e5f`, scene 6's row fills, scene 10/12's clear+row
+  fills): these fill full-width, so only the row origin matters — add
+  `UI_YELLOW_INTRO_ROW*SCREEN_TILES_W` (= 120) to each fill base. (Full-width covers
+  the visible cols 10-29; the off-window cols 0-9/30-39 are clipped.)
+- **Column-specific writes** (scene 2 `PlaceGraphic` @ GB col 20, scene 10
+  `.FillBGMapBox` dests, scene 12 procedural paste + 3 singles): add the **full**
+  `INTRO_ORIGIN` (row 3 + col 10) to each dest.
+- **Verify per-row, not aggregate.** A clean, shift-sensitive test: before the fix
+  the intro's surface bottom rows 15-17 are blank (W_TILEMAP rows 18-20 unwritten);
+  after the fix they carry the bottom bar. Profile a framed scene's per-row bands.
+- Then close the B3-align task and re-affirm B3.
+
+**B2 splash unblocks once `INTRO_ORIGIN` exists** — the splash bars/copyright use
+the same origin (a `SPLASH_ORIGIN`, same value).
+
+---
+
+### (superseded) earlier framing of the finding — kept for history
+
+⚠ CINEMATIC BG-ORIGIN FINDING (2026-07-21) — likely affects B3
 
 While building the splash's framing bars I hit a **surface-geometry misalignment
 that needs resolution before more cinematic BG work, and likely means the yellow
