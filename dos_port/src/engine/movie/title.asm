@@ -21,6 +21,8 @@ extern ClearScreen                   ; movie/title.asm — clear the surface til
 extern LoadTextBoxTilePatterns       ; home/load_font.asm — font_extra -> vChars2 $60
 extern CopyVideoData                 ; home/copy2.asm — ESI=VRAM dest, EDX=flat src, BL=tiles
 extern title_copyright_2bpp          ; movie/title.asm — = NintendoCopyrightLogoGraphics (full copyright.png)
+extern gamefreak_inc_2bpp            ; movie/title.asm — = GameFreakLogoGraphics ("GAME FREAK inc." glyphs)
+extern nine_2bpp                     ; movie/title.asm — = NineTile (© separator glyph)
 extern PlaceString                   ; home/text.asm — ESI=dest(GB offset), EAX=flat src
 extern text_row_stride               ; home/text.asm — PlaceString row stride (port's SCREEN_WIDTH)
 
@@ -32,13 +34,16 @@ section .text
 ; "©1995-1999  Nintendo / Creatures inc. / GAME FREAK inc." lines at surface coord
 ; (col 2, row 7). (+ its fall-through LoadCopyrightTiles.)
 ;
-; The copyright-logo graphic occupies vChars2 $60-$72 (19 tiles); the "GAME FREAK
-; inc." glyphs ($73-$7b) and the hyphen/space ($7c/$7f) come from the font_extra
-; tiles that LoadTextBoxTilePatterns leaves at $73-$7F. CopyrightTextString is placed
-; through PlaceString exactly as pret does (`jp PlaceString`); the only projection is
-; the drawing origin (cinematic canvas) and the 40-wide row stride.
+; The © screen's glyphs occupy vChars2 $60-$7C: copyright.png at $60-$72 (19 tiles,
+; "©1995-1999" + "Nintendo" + "Creatures inc."), the "GAME FREAK inc." glyphs at
+; $73-$7B (gamefreak_inc.2bpp), and the separator at $7C (nine.2bpp). On the GB these
+; three graphics are laid out contiguously right after copyright.png, so pret loads
+; them with a SINGLE CopyVideoData whose count spans all three (+1 font_extra overflow);
+; the flat port loads the same tiles to the same slots with three copies (see the body).
+; CopyrightTextString is placed through PlaceString exactly as pret does (`jp PlaceString`);
+; the only projection is the drawing origin (cinematic canvas) and the 40-wide row stride.
 ;
-; DEVIATION{class=data-model; pret=engine/movie/title.asm:LoadCopyrightTiles; behavior=the copyright graphic is loaded as its exact 19 tiles instead of pret's count of 20, which on the GB overflows one tile past NintendoCopyrightLogoGraphics into the adjacent TextBoxGraphics ("A" tile); evidence=in the port's flat data model the two assets are not adjacent so the overflow would read unrelated bytes, and the 19 real tiles are what the layout references; lifetime=permanent flat-memory model}
+; DEVIATION{class=data-model; pret=engine/movie/title.asm:LoadCopyrightTiles; behavior=pret's single CopyVideoData spanning the ROM-contiguous copyright + GameFreakLogoGraphics + NineTile + 1 font_extra overflow is issued as three separate copies (copyright 19 tiles, gamefreak_inc 9, nine 1) to the identical vChars2 slots, and the unused 1-tile font_extra overflow at $7D is omitted; evidence=those three graphics are separate flat assets in the port so a single contiguous copy is impossible, and CopyrightTextString references only $60-$7C so the $7D overflow is never displayed; lifetime=permanent flat-memory model}
 ; ---------------------------------------------------------------------------
 global LoadCopyrightAndTextBoxTiles
 LoadCopyrightAndTextBoxTiles:
@@ -48,10 +53,24 @@ LoadCopyrightAndTextBoxTiles:
     ; fall through into LoadCopyrightTiles (a separate pret entry point)
 global LoadCopyrightTiles
 LoadCopyrightTiles:
+    ; pret's LoadCopyrightTiles issues ONE CopyVideoData whose count spans the ROM's
+    ; contiguous NintendoCopyrightLogoGraphics + GameFreakLogoGraphics + NineTile (+1
+    ; font_extra overflow) — 30 tiles to vChars2 $60. In the port those are three separate
+    ; flat assets, so we load them to the same contiguous slots ($60-$7C) with three copies.
     mov esi, GB_VCHARS2 + 0x60 * TILE_SIZE ; ld hl, vChars2 tile $60
-    mov edx, title_copyright_2bpp          ; ld de, NintendoCopyrightLogoGraphics (flat)
-    mov bl, 19                             ; 19 real copyright tiles (see DEVIATION)
-    call CopyVideoData                     ; overwrites vChars2 $60-$72
+    mov edx, title_copyright_2bpp          ; NintendoCopyrightLogoGraphics (copyright.2bpp)
+    mov bl, 19                             ; 19 tiles -> $60-$72
+    call CopyVideoData
+    mov esi, GB_VCHARS2 + 0x73 * TILE_SIZE  ; GameFreakLogoGraphics (gamefreak_inc.2bpp)
+    mov edx, gamefreak_inc_2bpp
+    mov bl, 9                              ; 9 "GAME FREAK inc." glyphs -> $73-$7B (© line 3)
+    call CopyVideoData
+    mov esi, GB_VCHARS2 + 0x7C * TILE_SIZE  ; NineTile (nine.2bpp) — the © separator glyph
+    mov edx, nine_2bpp
+    mov bl, 1                              ; 1 tile -> $7C
+    call CopyVideoData
+    ; (pret's 30th tile is a 1-tile font_extra overflow at $7D that CopyrightTextString
+    ; never references, so the port omits it.)
     ; hlcoord 2, 7 (projected to the cinematic origin) then jp PlaceString — pret's
     ; exact tail call. PlaceString advances <NEXT> by 2*stride (double-spaced: the pret
     ; default, since BIT_SINGLE_SPACED_LINES is clear through boot), so the three lines

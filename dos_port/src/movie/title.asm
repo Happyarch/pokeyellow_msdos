@@ -234,6 +234,10 @@ DisplayTitleScreen.TitleScreenPokemonLogoYScrolls:
 %include "assets/pikachu_ob_2bpp.inc"
 global title_copyright_2bpp          ; = the full copyright.png (NintendoCopyrightLogoGraphics); splash.asm reuses it for the © screen
 %include "assets/title_copyright_2bpp.inc"
+; The boot copyright screen (LoadCopyrightTiles) also consumes these two — pret loads
+; copyright + GameFreakLogoGraphics (gamefreak_inc) + NineTile contiguously to vChars2 $60.
+global gamefreak_inc_2bpp            ; = GameFreakLogoGraphics — "GAME FREAK inc." glyphs (© screen line 3)
+global nine_2bpp                     ; = NineTile — the © screen's separator glyph
 %include "assets/gamefreak_inc_2bpp.inc"
 %include "assets/nine_2bpp.inc"
 %include "assets/pokemon_logo_tilemap.inc"
