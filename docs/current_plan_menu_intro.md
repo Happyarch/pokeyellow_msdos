@@ -21,7 +21,7 @@ Required project skills: `asm-translation`, `project-conventions`, `build-and-de
   - [ ] A3 — Real title → menu → entry routing
   - [ ] A4 — Oak speech, naming, and stub retirement
 - [ ] Phase B — Power-on movie
-  - [ ] B1 — Animated-object engine
+  - [x] B1 — Animated-object engine *(engine + data + runtime test; sine rides B3)*
   - [ ] B2 — Game Freak splash
   - [ ] B3 — All 18 Yellow intro scenes
   - [ ] B4 — Full boot integration and permanent coverage
@@ -1135,8 +1135,19 @@ B2 must not create a `PlayIntroScene` stub.
 
 ### B1 — Animated-object engine
 
-> **B1 progress (2026-07-21) — the ENGINE is ported (14/14 routines) and the WRAM
-> model is audited.** `src/engine/gfx/animated_objects.asm` (`9f39c54f`) is the
+> **B1 COMPLETE (2026-07-21) — engine + data + runtime test, all verified.**
+> The engine (14/14 routines, `9f39c54f`), the immutable Frames/OAM/Spawn data
+> blob (`73f95c3c`, GB-space at 0xF700), and the runtime lifecycle harness
+> (`abfcd4de`, `DEBUG_CINEMATIC_ANIMOBJ` / `pixelcheck animobj`: a spawned
+> frameset-1 object renders a 16×16 4-OBJ block — 256 px inside the surface, 0
+> outside, native positions = canonical + (80,24)). Only the **sine** data is
+> deferred (it lives in the scene callbacks → B3). Bring-up caught one harness
+> ordering bug (table pointers must be set AFTER ClearObjectAnimationBuffers,
+> which zeroes the block they live in — the engine itself was correct).
+>
+> Detail below.
+>
+> `src/engine/gfx/animated_objects.asm` (`9f39c54f`) is the
 > faithful translation of all 14 pret routines (Clear/Run/Spawn/Mask×2,
 > UpdateCurrentAnimatedObjectFrame, tile Y/X, OAM attrs, the pointer getters,
 > the duration/frame-script interpreter, and the callback trampoline).
@@ -1175,9 +1186,9 @@ B2 must not create a `PlayIntroScene` stub.
 - [~] Generate immutable frame, spawn, OAM, and sine data. *(frame/OAM/spawn DONE — 73f95c3c, src/data/sprite_anims/intro_anim_data.asm, GB-space blob at 0xF700 copied flat→GB by CopyYellowIntroAnimatedObjectData; SINE rides B3 — it lives in the scene callbacks, not the object tables)*
 - [x] Keep code-address tables in `.asm`. *(jumptable = flat `dd Label`, per the DEVIATION)*
 - [x] Preserve masks, scripts, timers, and sine arithmetic. *(frame-script interpreter faithful; sine lives in scene callbacks = B3)*
-- [ ] Publish canonical OAM through `PublishProjectedOAM`. *(B3 scene driver; pattern proven in B2)*
+- [x] Publish canonical OAM through `PublishProjectedOAM`. *(proven in B1.3 harness; B3 driver reuses it)*
 - [x] Do not wire the surfing minigame. *(engine only; no `surfing_pikachu` dep)*
-- [ ] Add deterministic lifecycle and edge-crossing tests. *(B1.3)*
+- [x] Add deterministic lifecycle and edge-crossing tests. *(B1.3 — abfcd4de, DEBUG_CINEMATIC_ANIMOBJ / pixelcheck animobj: 4-OBJ block, 256 px inside surface, 0 outside, native = canonical + (80,24))*
 
 #### Acceptance
 
