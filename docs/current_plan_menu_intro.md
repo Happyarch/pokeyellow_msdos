@@ -1353,6 +1353,18 @@ B2 must not create a `PlayIntroScene` stub.
 >   (surface clean/0-matte through ~f540, ending fade ~f580, teardown by f600).
 >   Remaining even 2/6/10/12; odd 7/11. **Next best: a `YellowIntro_FillBGMapBox`
 >   32→40-stride boxed-paste helper unlocks scenes 10 and 12.**
+> - **B3.2e-4 done (`e118095e`)** — `YellowIntroScene10` (gengar battle): clears the
+>   BG map, paints rows 0-7 tile `$2`, pastes three tilemap boxes (Unkn_f9b6e/be6/
+>   bf2) via a scene-10-local `.FillBGMapBox` (kept local as in pret — the box copy
+>   advances one 40-tile W_TILEMAP row per source row), spawns obj `$6`. Renders
+>   distinct content (7964px) at 0 matte.
+> - **B3.2e-5 done (`9a7e8757`)** — `YellowIntroScene12` (closing pan): framed BG
+>   (Func_f9e5f pattern inlined) + a procedural 8×12 tile-incrementing paste at
+>   (5,6) + three single-tile patches + spawn obj `$9`. Renders distinct content
+>   (8808px) at 0 matte. **14/18 scenes render** (0/1/3/4/5/8/9/10/12/13/14/15/16/
+>   17). **Remaining: even 2 (gengar grid, off-screen col — needs a scroll/clip
+>   decision) + 6 (striped BG + inert LY-SCY wobble); odd 7/11 (VBlank-copy shim or
+>   stub).**
 >
 > **B3.2c-8 done (2026-07-21, `3858c01d`)** — `Copy8BitSineWave` +
 > `wLYOverridesBuffer`@0xFA00 (amp-4 wave ×8 via inline flat→GB `rep movsb`;
