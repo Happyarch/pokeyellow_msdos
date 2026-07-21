@@ -2560,20 +2560,20 @@ Oak’s cry remains silent by explicit scope decision. Every other cinematic aud
 - [ ] Every cinematic OBJ uses the same projection without changing canonical GB OAM.
 - [ ] Hidden OBJ render nothing, edge-straddling OBJ clip per pixel, and no OBJ paint the matte.
 - [ ] Default `g_obj_clip`, `WIN_SRC_X=0`, and `WIN_SRC_Y=0` leave pre-existing screens pixel-identical.
-- [ ] Fine source scrolling reproduces the GB mod-256 wrap on both axes, proven by the A1 wrap harness.
-- [ ] The title bounce is pixel-smooth and its wrapped/overshoot frames match mGBA rendered pixels.
-- [ ] Yellow scrolling scenes visibly scroll, with multi-offset host-frame evidence.
-- [ ] Splash, title, Oak, and Yellow timing traces match mGBA record by record.
-- [ ] The title golden uses the defined post-bounce, open-eye checkpoint.
-- [ ] Title timeout and soft reset replay the power-on movie through `Init`.
-- [ ] Audio uses live engines; only `PlayCry` remains silent.
-- [ ] Palette commands and fades are live.
-- [ ] `OakSpeech`, `PlayIntro`, `PlayIntroScene`, `PlayShootingStar`, `SpawnAnimatedObject`, and `CopyUncompressedPicToTilemap` have linked non-stub providers.
-- [ ] `InitPlayerData2` has one linked provider and no orphan or duplicate module.
-- [ ] `main_menu_stubs.asm` no longer defines `OakSpeech`.
-- [ ] `SKIP_TITLE` remains minimal and noninteractive.
-- [ ] CONTINUE preserves loaded state and does not run new-game initialization.
-- [ ] `EnterMapBoot` follows the measured route contract.
+- [x] Fine source scrolling reproduces the GB mod-256 wrap on both axes, proven by the A1 wrap harness. *(A1 substrate + wrap harness, done in A1.)*
+- [x] The title bounce is pixel-smooth and its wrapped/overshoot frames match mGBA rendered pixels. *(check_title_timing.py: 13 exact, 0 mismatch, 1 unmeasurable.)*
+- [ ] Yellow scrolling scenes visibly scroll, with multi-offset host-frame evidence. *(HUMAN-GATED: the fine-scroll presentation is fixed (1e4ac99b) and the mechanism is A1-proven, but per the scroll-masking finding (memory §2b) the dump path syncs MovieSyncScroll so no capture can confirm LIVE scroll — this is confirmable only by the human smoke test.)*
+- [x] Splash, title, Oak, and Yellow timing traces match mGBA record by record. *(all done 2026-07-21: title bounce 13-exact + blink deterministic; Oak fade/text/slides; splash DelayFrames; Yellow scene-transition timers byte-identical — see A2/A4/B2/B3.)*
+- [x] The title golden uses the defined post-bounce, open-eye checkpoint. *(title golden OAM = open eyes $F0-$F3, bits2-3=0.)*
+- [x] Title timeout and soft reset replay the power-on movie through `Init`. *(title_timeout id27 + soft_reset id28 goldens PASS.)*
+- [x] Audio uses live engines; only `PlayCry` remains silent. *(A4 cry-audio audit: all music/SFX are live translated calls gated on g_audio_engine_online; only sound_cry_pikachu/PlayCry stubbed.)*
+- [x] Palette commands and fades are live. *(RunPaletteCommand / UpdateCGBPal_BGP/OBP / FadeInIntroPic ramp all live.)*
+- [x] `OakSpeech`, `PlayIntro`, `PlayIntroScene`, `PlayShootingStar`, `SpawnAnimatedObject`, and `CopyUncompressedPicToTilemap` have linked non-stub providers. *(label_status: all six `translated`, verified 2026-07-21.)*
+- [x] `InitPlayerData2` has one linked provider and no orphan or duplicate module. *(label_status: `translated`, one provider.)*
+- [x] `main_menu_stubs.asm` no longer defines `OakSpeech`. *(only a "stub RETIRED" comment; label_status OakSpeech = translated.)*
+- [x] `SKIP_TITLE` remains minimal and noninteractive. *(`%ifdef SKIP_TITLE` seeds InitPlayerData2 + default names then EnterMapBoot; no input read.)*
+- [x] CONTINUE preserves loaded state and does not run new-game initialization. *(continue_seed golden id24: TryLoadSaveFile reproduces the seed, no OakSpeech/InitPlayerData2.)*
+- [x] `EnterMapBoot` follows the measured route contract. *(label_status --callers: exactly 2 — SpecialEnterMap + Init/SKIP_TITLE; title routes via MainMenu.)*
 - [ ] The A1 decomposed performance contract passes.
 - [x] `title`, `title_reentry`, `title_timeout`, `continue_seed`, `main_menu`, `oak_intro`, and `gamefreak_intro` pass. *(oak_intro id 29 PASS 2026-07-21; all others previously registered + PASS)*
 - [ ] All 18 Yellow-scene scenarios pass.
@@ -2581,7 +2581,7 @@ Oak’s cry remains silent by explicit scope decision. Every other cinematic aud
 - [ ] `fidelity`, `fidelity-full`, and `goldens-verify` pass.
 - [ ] Human smoke acceptance is recorded under the defined standard.
 - [ ] Every observed failure has an automated regression or the required manual external-output record.
-- [ ] Strict label and annotation lint reports no stale extern, malformed annotation, or duplicate provider.
+- [x] Strict label and annotation lint reports no stale extern, malformed annotation, or duplicate provider. *(lint_pret_labels: 0 violations, verified 2026-07-21.)*
 - [ ] Related false `TODO-HW`, stub, allowlist, plan, and status claims are corrected.
 - [ ] The plan is archived as `docs/plans/menu_intro.md`.
 
