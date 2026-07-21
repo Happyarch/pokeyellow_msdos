@@ -1736,10 +1736,31 @@ breaking the working `SKIP_TITLE` overworld boot).
       RunObjectAnimations all `implementation linked` at their mirror paths; label DB current.)*
 - [~] Activate all permanent cinematic scenarios. *(IN PROGRESS. `gamefreak_intro`
       mGBA golden authored + committed (`8dd7b6b1`): splash copyright checkpoint,
-      wTileMap rows 7/9/11 (12/14/15 tiles), deterministic. Remaining: its port-side
-      comparison (DEBUG_CINEMATIC_SPLASH → GBSTATE dump aligned to the copyright state +
-      a `golden_diff.py` `gamefreak_intro` entry, window (10,3) + goldencheck), then the
-      `yellow_intro_s00..17` scene goldens by the same pattern.)*
+      wTileMap rows 7/9/11 (12/14/15 tiles), deterministic. The port-side goldencheck
+      was prototyped and RAN end-to-end (via `BOOT_CINEMATIC` — the real boot path, not
+      the DEBUG_CINEMATIC_SPLASH harness which skips Init's ClearVram + seeds player
+      data): TILEMAP/OAM/WRAM all OK, but it surfaced **F-GFI** (below). The wiring was
+      reverted pending F-GFI so it does not red the fidelity run; re-add it once F-GFI is
+      resolved. Then the `yellow_intro_s00..17` scene goldens by the same pattern.)*
+
+> **F-GFI (OPEN, 2026-07-21) — copyright-screen glyph tiles $73–$7D diverge from the ROM.**
+> `goldencheck gamefreak_intro` (port `BOOT_CINEMATIC=1 AUTOKEY_DUMP_FRAME=50` vs the
+> committed mGBA golden) reports TILEMAP OK (360/360), OAM OK, WRAM OK — but **11 VRAM
+> tile-DATA slots, vChars2 $73–$7D**, differ. That is exactly the "GAME FREAK inc." glyph
+> region + the $7C/$7F separators the copyright text references. Evidence: tile $7C
+> want `0000f870d8d8f8f81818f0f0…` (a real glyph) vs got `28282828…` (a "‖" vertical-bar
+> pattern). So the port loads *wrong pixels* there — its earlier pixel-**count** check
+> (289/335/308) passed because counts are shift/shape-blind (the "aggregate hides errors"
+> trap). Likely root cause: the `LoadCopyrightTiles` 19-vs-20-tile `data-model` DEVIATION
+> **understates** the divergence — pret's copyright graphic (20 tiles, $60–$73) supplies
+> glyphs the port truncates to 19 ($60–$72), so $73+ falls back to `LoadTextBoxTilePatterns`
+> font/box tiles that don't match the ROM's copyright glyphs. NEXT: decode the ROM's
+> $73–$7D (golden) vs the port's, confirm whether the copyright renders the wrong glyphs
+> visually, then fix the tile load (or justify+mask if provably invisible). Repro wiring
+> (reverted): golden_diff `gamefreak_intro` entry {flags `BOOT_CINEMATIC=1
+> AUTOKEY_DUMP_FRAME=50`, window (0,0), projection ((0,0,17,19),(10,3)), wram_skip
+> `_NONBATTLE_WRAM_SKIP`}; `%elifdef BOOT_CINEMATIC → GBSTATE_SCENARIO 25` in
+> debug_dump.asm; manifest `gamefreak_intro` id 25.
 - [ ] Regenerate the scenario registry. *(rides scenario activation above.)*
 - [x] Add coordinate transforms to `golden_diff.py`. *(2026-07-21: no new code needed —
       the generic `projections` mechanism (window (col,row) + `(dcol,drow)` rects,
