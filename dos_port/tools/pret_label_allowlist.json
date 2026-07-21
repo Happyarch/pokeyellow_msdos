@@ -1655,6 +1655,26 @@
       "port_file": "dos_port/src/engine/movie/splash.asm",
       "why": "pret puts the Game Freak logo GFX (GameFreakIntro INCBIN) in intro.asm, but only the splash uses it. The port generates it (gen_title_gfx_inc.py) and %includes it in splash.asm alongside the OAM tables + shooting-star routines that consume it \u2014 menu-intro B2."
     },
+    "IntroDrawBlackBars": {
+      "port_file": "dos_port/src/engine/movie/splash.asm",
+      "why": "pret engine/movie/intro.asm holds the Game Freak splash's framing helpers; the port keeps all splash code in splash.asm - menu-intro B2. The vBGMap0/vBGMap1 writes redirect to the single W_TILEMAP surface at the cinematic BG origin (projection DEVIATION on the routine)."
+    },
+    "IntroClearScreen": {
+      "port_file": "dos_port/src/engine/movie/splash.asm",
+      "why": "pret engine/movie/intro.asm splash framing helper (clears the surface); the port keeps splash code in splash.asm - menu-intro B2."
+    },
+    "IntroClearMiddleOfScreen": {
+      "port_file": "dos_port/src/engine/movie/splash.asm",
+      "why": "pret engine/movie/intro.asm splash framing helper (clears rows 4-13); the port keeps splash code in splash.asm - menu-intro B2."
+    },
+    "IntroClearCommon": {
+      "port_file": "dos_port/src/engine/movie/splash.asm",
+      "why": "pret engine/movie/intro.asm splash framing helper (shared W_TILEMAP fill-with-0 loop); the port keeps splash code in splash.asm - menu-intro B2."
+    },
+    "IntroPlaceBlackTiles": {
+      "port_file": "dos_port/src/engine/movie/splash.asm",
+      "why": "pret engine/movie/intro.asm splash framing helper (fills W_TILEMAP cells with the bar tile); the port keeps splash code in splash.asm - menu-intro B2."
+    },
     "YellowIntro_AnimatedObjectFramesData": {
       "port_file": "dos_port/src/data/sprite_anims/intro_anim_data.asm",
       "why": "pret intro_frames.asm/intro_oam.asm + intro_yellow.asm spawn table merged into one port file so the whole animated-object data blob shares a single GB base for the flat->GB copy (menu-intro B1.4)"

@@ -265,18 +265,96 @@ MoveDownSmallStars:
 .done:
     ret
 
+; Cinematic BG-drawing origin (same as intro_yellow.asm INTRO_BG_ORIGIN and
+; title.asm TITLE_ORIGIN): MovieMirrorSurface reads the visible 18x20 window from
+; W_TILEMAP + UI_SPLASH_ROW*SCREEN_TILES_W + UI_SPLASH_COL (row 3, col 10), so BG
+; content is authored at that origin. Row-range fills add the row part; the whole-
+; surface clear covers everything so it stays at 0.
+SPLASH_BG_ROW_OFF  equ UI_SPLASH_ROW * SCREEN_TILES_W       ; = 120
+
+; ---------------------------------------------------------------------------
+; IntroDrawBlackBars — draw the splash's framing bars (bar tile $1 = the $ff tile,
+; which is white under the splash palette) on GB rows 0-3 and 14-17, clearing the
+; surface first. Source: engine/movie/intro.asm:IntroDrawBlackBars (+ IntroClear
+; Screen / IntroClearMiddleOfScreen / IntroClearCommon / IntroPlaceBlackTiles).
+;
+; DEVIATION{class=projection; pret=engine/movie/intro.asm:IntroDrawBlackBars; behavior=the vBGMap0 (hlcoord) and vBGMap1 bar/clear writes are redirected to the single 40-wide W_TILEMAP surface at the cinematic BG origin (bars on GB rows 0-3 & 14-17, whole surface cleared), so pret's two vBGMap1 bar writes coincide with the wTileMap ones on the one surface; evidence=the port compositor renders BG from W_TILEMAP through the row3/col10 MovieMirrorSurface window and there is no second BG map, the same redirect as the yellow-intro scenes; lifetime=permanent widescreen tilemap model}
+; ---------------------------------------------------------------------------
+global IntroDrawBlackBars
+IntroDrawBlackBars:
+    call IntroClearScreen
+    mov esi, W_TILEMAP + SPLASH_BG_ROW_OFF                 ; GB rows 0-3 -> surface rows 0-3
+    mov ecx, 4 * SCREEN_TILES_W                            ; ld c, SCREEN_WIDTH * 4
+    call IntroPlaceBlackTiles
+    mov esi, W_TILEMAP + SPLASH_BG_ROW_OFF + 14 * SCREEN_TILES_W  ; GB rows 14-17
+    mov ecx, 4 * SCREEN_TILES_W
+    call IntroPlaceBlackTiles
+    mov esi, W_TILEMAP + SPLASH_BG_ROW_OFF                 ; ld hl, vBGMap1  (-> same surface)
+    mov ecx, 4 * SCREEN_TILES_W                            ; ld c, TILEMAP_WIDTH * 4
+    call IntroPlaceBlackTiles
+    mov esi, W_TILEMAP + SPLASH_BG_ROW_OFF + 14 * SCREEN_TILES_W  ; hlbgcoord 0,14,vBGMap1
+    mov ecx, 4 * SCREEN_TILES_W
+    jmp IntroPlaceBlackTiles                               ; jp IntroPlaceBlackTiles
+
+; IntroClearScreen — clear the whole surface (pret clears vBGMap1 32x18; the port
+; clears all of W_TILEMAP, which covers the visible window). Falls into common.
+global IntroClearScreen
+IntroClearScreen:
+    mov esi, W_TILEMAP                                     ; ld hl, vBGMap1 (whole surface)
+    mov ecx, SCREEN_AREA                                   ; ld bc, TILEMAP_WIDTH * SCREEN_HEIGHT
+    jmp IntroClearCommon
+
+; IntroClearMiddleOfScreen — clear GB rows 4-13 (between the bars) at the origin.
+global IntroClearMiddleOfScreen
+IntroClearMiddleOfScreen:
+    mov esi, W_TILEMAP + SPLASH_BG_ROW_OFF + 4 * SCREEN_TILES_W   ; hlcoord 0, 4
+    mov ecx, 10 * SCREEN_TILES_W                           ; ld bc, SCREEN_WIDTH * 10
+    ; fall through
+global IntroClearCommon
+IntroClearCommon:
+    mov byte [ebp + esi], 0                                ; ld [hl], 0
+    inc esi
+    dec ecx                                                ; dec bc / ld a,b / or c
+    jnz IntroClearCommon
+    ret
+
+; IntroPlaceBlackTiles — fill ECX W_TILEMAP cells (from ESI) with bar tile 1.
+global IntroPlaceBlackTiles
+IntroPlaceBlackTiles:
+    mov al, 1                                              ; ld a, 1
+.loop:
+    mov [ebp + esi], al                                   ; ld [hli], a
+    inc esi
+    dec ecx                                                ; dec c
+    jnz .loop
+    ret
+
 %ifdef DEBUG_CINEMATIC_SPLASH
 ; ---------------------------------------------------------------------------
-; RunSplashTest — B2 pixel harness. Establish the cinematic surface, load the logo
-; tiles to vChars1 (PlayShootingStar does this; LoadShootingStarGraphics does not),
-; and run AnimateShootingStar. AUTOKEY_QUIET photographs a frame of the animation at
-; AUTOKEY_DUMP_FRAME. In: EBP = GB base. Never returns.
+; RunSplashTest — B2 pixel harness. Establish the cinematic surface (signed BG tile
+; mode + pinned scroll), build the $00/$ff bar tiles in vChars2, draw the framing
+; bars, load the logo tiles, and run AnimateShootingStar. AUTOKEY_QUIET photographs
+; a frame at AUTOKEY_DUMP_FRAME. In: EBP = GB base. Never returns.
 ; ---------------------------------------------------------------------------
 extern MovieBeginSurface             ; movie_projection.asm
 extern DelayFrame                    ; video/frame.asm
+extern g_tilecache_dirty             ; ppu.asm — arm the tile-cache rebuild
 global RunSplashTest
 RunSplashTest:
     call MovieBeginSurface                ; black matte surface + g_obj_clip
+    mov byte [ebp + IO_LCDC], 0xE3        ; signed BG tile addressing (bit4=0) — bar tiles live in vChars2
+    mov byte [ebp + H_SCX], 0             ; splash does not scroll — pin the surface origin
+    mov byte [ebp + H_SCY], 0
+    ; build the bar tiles: vChars2 tile 0 = $00 (color 0), tile 1 = $ff (color 3)
+    lea edi, [ebp + GB_VCHARS2]
+    xor eax, eax
+    mov ecx, 16
+    rep stosb                             ; tile 0 = $00
+    mov al, 0xFF
+    mov ecx, 16
+    rep stosb                             ; tile 1 = $ff
+    mov byte [g_tilecache_dirty], 1       ; VRAM tile data changed -> rebuild decode cache
+    call IntroDrawBlackBars               ; framing bars on GB rows 0-3 & 14-17
     mov esi, GB_VFONT                     ; logo -> vChars1 tile $00 (OAM tiles $80..)
     mov edx, GameFreakIntro
     mov bl, GAMEFREAKINTRO_TILES          ; 20 tiles
