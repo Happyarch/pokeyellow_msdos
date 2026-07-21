@@ -1245,6 +1245,21 @@ B2 must not create a `PlayIntroScene` stub.
 
 ### B3 — All 18 Yellow intro scenes
 
+> **B3.1 done (2026-07-21) — the animated-object BEHAVIOR layer is ported.**
+> `src/engine/movie/intro_yellow.asm` (`0551d98c`, the file that will grow to
+> hold PlayIntroScene + the scenes) holds `YellowIntro_AnimatedObjectJumptable`
+> + the 6 callbacks (fa007/008/014/02b/062 + sub-jumptable fa03b→fa03f/051) +
+> the sine helpers fa077/079/08e + `sine_table 32` (Unkn_fa0aa, verified
+> byte-exact vs rgbasm). Both code-address jumptables are flat `dd` / ×4 stride
+> (data-model DEVIATION); the sine table is read flat. **Motion-verified**: the
+> animobj harness now dispatches the REAL jumptable and spawns object 4 (fa008
+> mover) — the 36-OBJ block slides 28px left (frame 3→25), Y fixed, matte clean,
+> matching fa008's 4px/frame clamp at 0x58. **Remaining B3**: `Func_fa06e` +
+> the scene engine (PlayIntroScene, InitYellowIntroGFXAndMusic, scene dispatch
+> 0–17, `YellowIntro_Copy8BitSineWave` + its amp-4 wave, gfx/tilemap INCBINs,
+> `UI_YELLOW_INTRO` projection, per-scene palettes/music/SFX). Detail in
+> stigmergy `a4-4-oak-speech2-porting-plan`.
+
 #### Work
 
 - [ ] Extract, before implementation, the per-frame mGBA `hSCX`/`hSCY` sequences for every scrolling scene; these define each scene’s scroll-evidence capture points.
