@@ -1669,7 +1669,11 @@
     },
     "PlayShootingStar": {
       "port_file": "dos_port/src/engine/movie/splash.asm",
-      "why": "pret engine/movie/intro.asm holds PlayShootingStar (the Game Freak splash orchestration); the port keeps all splash code in splash.asm alongside AnimateShootingStar which it calls - menu-intro B2. Its GB screen/LCD-control drops are on the HAL DEVIATION at the routine; the copyright-screen call is a plain TODO (unfinished B2 work)."
+      "why": "pret engine/movie/intro.asm holds PlayShootingStar (the Game Freak splash orchestration); the port keeps all splash code in splash.asm alongside AnimateShootingStar which it calls - menu-intro B2. Its GB screen/LCD-control drops are on the HAL DEVIATION at the routine."
+    },
+    "PlayIntro": {
+      "port_file": "dos_port/src/engine/movie/splash.asm",
+      "why": "pret engine/movie/intro.asm holds PlayIntro (the boot cinematic: splash + intro); the port keeps it in splash.asm next to PlayShootingStar which it calls (PlayIntroScene is externed from intro_yellow.asm) - menu-intro B4."
     },
     "IntroDrawBlackBars": {
       "port_file": "dos_port/src/engine/movie/splash.asm",

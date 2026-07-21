@@ -35,12 +35,16 @@ extern DelayFrames                   ; video/frame.asm — BL = frame count
 extern FillMemory                    ; home/copy_data.asm — ESI dest, BX count, AL value
 extern MovieBeginSurface             ; movie_projection.asm — black-matte cinematic surface
 extern MovieEndSurface               ; movie_projection.asm — tear down the surface
+extern DelayFrame                    ; video/frame.asm — wait one frame
+extern PlayIntroScene                ; engine/movie/intro_yellow.asm — the Yellow intro scenes (B3)
 extern g_tilecache_dirty             ; ppu.asm — arm the tile-cache rebuild
 extern ClearScreen                   ; movie/title.asm — clear the surface tilemap
 extern LoadTextBoxTilePatterns       ; home/load_font.asm — font_extra -> vChars2 $60
 extern title_copyright_2bpp          ; movie/title.asm — = NintendoCopyrightLogoGraphics (full copyright.png)
 
 %include "assets/audio_constants.inc"   ; SFX_SHOOTING_STAR
+
+hAutoBGTransferEnabled equ H_AUTO_BG_TRANSFER_EN   ; pret name (inert byte; consumer do_bg_transfer retired)
 
 ; wMoveDownSmallStarsOAMCount (pokeyellow.sym 00:cd3d) — not yet in gb_memmap.inc;
 ; report to root for promotion. %ifndef-guarded so promotion is a no-op here.
@@ -441,15 +445,33 @@ PlayShootingStar:
     call Delay3
     ret
 
+; ---------------------------------------------------------------------------
+; PlayIntro — the full boot cinematic: the Game Freak shooting-star splash, then the
+; Yellow intro scenes. Called from Init before the title. (pret engine/movie/
+; intro.asm:PlayIntro.) hAutoBGTransferEnabled is written faithfully but inert (the
+; port's surface mirror replaces the GB VBlank auto-transfer; the byte is kept, as
+; elsewhere in the port).
+; ---------------------------------------------------------------------------
+global PlayIntro
+PlayIntro:
+    mov byte [ebp + H_JOY_HELD], 0             ; xor a / ldh [hJoyHeld], a
+    mov byte [ebp + hAutoBGTransferEnabled], 1 ; inc a / ldh [hAutoBGTransferEnabled], a
+    call PlayShootingStar                       ; the Game Freak splash (B2)
+    call PlayIntroScene                         ; callfar in pret — the Yellow intro scenes (B3)
+    mov byte [ebp + H_SCX], 0                   ; xor a / ldh [hSCX], a
+    mov byte [ebp + hAutoBGTransferEnabled], 0 ; ldh [hAutoBGTransferEnabled], a
+    call ClearSprites
+    call DelayFrame
+    ret
+
 %ifdef DEBUG_CINEMATIC_SPLASH
 ; ---------------------------------------------------------------------------
-; RunSplashTest — B2 pixel harness: run the real PlayShootingStar and park.
-; AUTOKEY_QUIET photographs a frame at AUTOKEY_DUMP_FRAME. Never returns.
+; RunSplashTest — B2/B4 pixel harness: run the full PlayIntro (splash -> intro) and
+; park. AUTOKEY_QUIET photographs a frame at AUTOKEY_DUMP_FRAME. Never returns.
 ; ---------------------------------------------------------------------------
-extern DelayFrame                    ; video/frame.asm
 global RunSplashTest
 RunSplashTest:
-    call PlayShootingStar                 ; the real B2 orchestration; returns after teardown
+    call PlayIntro                        ; the full boot cinematic (splash + intro)
 .hang:
     call DelayFrame
     jmp .hang
