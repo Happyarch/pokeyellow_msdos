@@ -2035,10 +2035,24 @@ boot→title→menu→NEW GAME→`OakSpeech` page-1 wait; must-hits `OakSpeech`/
 `PrepareOakSpeech`/`FadeInIntroPic`/`DisplayPicCenteredOrUpperRight`; drop the Pallet
 must-hits), `make goldens`, enable it, add to `goldencheck`.
 
-**Remaining port-side (no mGBA needed):** the custom-name path (drive
-`DisplayNamingScreen` letter entry + END → the rival-pic re-establishment acceptance
-gate), and the whole-chain new-game boot under AUTOKEY. Detail in stigmergy
-`a4-4-oak-speech2-porting-plan`.
+- **A4.5.f: cry-audio audit** (acceptance "the cry command is the sole silent audio
+  operation"): verified. `OakSpeech`'s direct audio (`PlayMusic(Routes2)` /
+  `PlaySound(SFX_SHRINK)` / `StopAllMusic`) are all `translated` (real, gated on
+  `g_audio_engine_online`), and a scan of every generated intro text stream finds
+  exactly ONE sound command — `sound_cry_pikachu` (0x14) in `OakSpeechText2` — which
+  the text engine silently skips ("$0E+ sound command — no audio yet") and whose
+  `PlayCry` is a stub. So the cry is the only silent op; music + SFX play. ✅
+
+**A4 acceptance status** (plan §Acceptance): ✅ non-stub `OakSpeech`; ✅ no
+hand-encoded boot strings; ✅ `InitPlayerData2` one provider; ✅
+`CopyUncompressedPicToTilemap` linked+translated; ✅ pics on surface (pixel);
+✅ slides preserve cadence (OAKSLIDE pixel); ✅ custom+default naming work + names
+render (persistence shown by the `<PLAYER>`-read "YOUR NAME IS" text); ✅ cry is the
+sole silent audio. **⛔ mGBA-blocked here:** the Oak timing trace and the initial
+bag/party/box **golden** comparison (both need mGBA + baserom to produce the
+reference). **Remaining port-side:** the whole-chain new-game boot under AUTOKEY
+(title→menu→OakSpeech→overworld — the individual beats are all verified). Detail in
+stigmergy `a4-4-oak-speech2-porting-plan`.
 
 ### A4 progress (2026-07-20): pic engine, fade, text, PrepareOakSpeech; the PrintText-under-surface finding
 
