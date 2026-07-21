@@ -29,6 +29,7 @@ global YellowIntro_CheckFrameTimerDecrement
 global YellowIntroScene1, YellowIntroScene5, YellowIntroScene9
 global YellowIntroScene13, YellowIntroScene17, YellowIntroScene3
 global Func_fa06e, YellowIntroScene0
+global YellowIntroScene16, YellowIntro_LoadDMGPalAndIncrementCounter
 
 extern YellowIntroFramesData_GB, YellowIntroOAMData_GB, YellowIntroSpawnData_GB
 extern SpawnAnimatedObject, MaskCurrentAnimatedObjectStruct, MaskAllAnimatedObjectStructs
@@ -275,6 +276,40 @@ Func_fa06e:
     ret
 
 ; ---------------------------------------------------------------------------
+; YellowIntro_LoadDMGPalAndIncrementCounter — index a DMG-palette sequence table
+; (EDX = flat table ptr) by the scene timer, incrementing it. Out: AL = the
+; palette byte, CF set (sequence over) when the byte is 0xff. The pal-sequence
+; tables are flat program-image data, so the read is flat (not EBP-relative).
+; ---------------------------------------------------------------------------
+YellowIntro_LoadDMGPalAndIncrementCounter:
+    movzx esi, byte [ebp + wYellowIntroSceneTimer] ; ld a,[hl] / ld l,a / ld h,$0
+    inc byte [ebp + wYellowIntroSceneTimer]        ; inc [hl]
+    add esi, edx                                   ; add hl, de  (de = flat table)
+    mov al, [esi]                                  ; ld a, [hl]  (FLAT read)
+    cmp al, 0xff
+    je .expired
+    clc                                            ; and a
+    ret
+.expired:
+    stc                                            ; scf
+    ret
+
+; Scene 16 — "fade to white": step the DMG BGP/OBP0 through YellowIntroPal-
+; Sequence_f9e0a one byte per frame until it terminates (0xff), then advance.
+YellowIntroScene16:
+    mov edx, YellowIntroPalSequence_f9e0a          ; ld de, ...  (flat)
+    call YellowIntro_LoadDMGPalAndIncrementCounter
+    jc .expired                                    ; jr c, .expired
+    mov [ebp + IO_OBP0], al                        ; ldh [rOBP0], a
+    mov [ebp + IO_BGP], al                         ; ldh [rBGP], a
+    call UpdateCGBPal_BGP
+    call UpdateCGBPal_OBP0
+    ret
+.expired:
+    call YellowIntro_NextScene
+    ret
+
+; ---------------------------------------------------------------------------
 ; Func_fa007 — no-op object callback.
 ; ---------------------------------------------------------------------------
 Func_fa007:
@@ -438,6 +473,27 @@ Unkn_fa0aa:
     dw 0xb505, 0xc5e4, 0xd4db, 0xe1c6, 0xec83, 0xf4fa, 0xfb15, 0xfec4
     dw 0x0000, 0xfec4, 0xfb15, 0xf4fa, 0xec83, 0xe1c6, 0xd4db, 0xc5e4
     dw 0xb505, 0xa268, 0x8e3a, 0x78ad, 0x61f8, 0x4a50, 0x31f1, 0x1918
+
+; DMG-palette fade sequences (one byte per frame, 0xff terminates). Flat data,
+; read by YellowIntro_LoadDMGPalAndIncrementCounter.
+global YellowIntroPalSequence_f9dd6, YellowIntroPalSequence_f9e0a
+YellowIntroPalSequence_f9dd6:
+    db 0xe4, 0xc0, 0xc0, 0xe4
+    db 0xe4, 0xc0, 0xc0, 0xe4
+    db 0xe4, 0xc0, 0xc0, 0xe4
+    db 0xe4, 0xc0, 0xc0, 0xe4
+    db 0xe4, 0xc0, 0xc0, 0xe4
+    db 0xe4, 0xc0, 0xc0, 0xe4
+    db 0xe4, 0xc0, 0xc0, 0xe4
+    db 0xe4, 0xc0, 0xc0, 0xe4
+    db 0xe4, 0xc0, 0xc0, 0xe4
+    db 0xe4, 0xc0, 0xc0, 0xe4
+    db 0xe4, 0xc0, 0xc0, 0xe4
+    db 0xe4, 0xc0, 0xc0, 0xe4
+    db 0xe4, 0xc0, 0xc0, 0xff
+YellowIntroPalSequence_f9e0a:
+    db 0xe4, 0x90, 0x90, 0x40
+    db 0x40, 0x00, 0x00, 0xff
 
 ; --- Yellow-intro gfx (B3.2b, gen_intro_gfx_inc.py; verified byte-exact vs the
 ; pret gfx/intro/*.2bpp). Loaded to VRAM by InitYellowIntroGFXAndMusic (B3.2c);
