@@ -589,6 +589,61 @@ YellowIntroScene0:
     call YellowIntro_NextScene
     ret
 
+; Scene 2 — "flying speed bars": clear the BG map, place the 6x6 gengar grid
+; off-screen at col 20 (revealed later when scene 3 scrolls the BG right), and
+; spawn the 8 flying speed-bar objects. The de/a set before LoadYellowIntroFlying
+; SpeedBars are overloaded/ignored by that routine (kept for fidelity).
+;
+; DEVIATION{class=projection; pret=engine/movie/intro_yellow.asm:YellowIntroScene2; behavior=the vBGMap0 whole-map clear is redirected to W_TILEMAP over SCREEN_AREA; evidence=the compositor renders the BG from the 40-wide W_TILEMAP not the GB BG map, the same redirect as Func_f9e5f; lifetime=permanent widescreen tilemap model}
+YellowIntroScene2:
+    call YellowIntro_BlankPalsDelay2AndDisableLCD
+    mov bl, 0x8                                    ; ld c, $8
+    call UpdateMusicCTimes
+    xor al, al
+    mov [ebp + H_LCDC_POINTER], al                 ; ldh [hLCDCPointer], a
+    mov esi, W_TILEMAP                             ; ld hl, vBGMap0
+    mov bx, SCREEN_AREA                            ; ld bc, $400  (clear whole map)
+    xor al, al
+    call FillMemory                                ; call Bank3E_FillMemory
+    call YellowIntroScene2_PlaceGraphic
+    mov dh, 0x58                                   ; lb de, $58, $b8  (overloaded)
+    mov dl, 0xb8
+    mov al, 0x4                                    ; ld a, $4  (overloaded)
+    call LoadYellowIntroFlyingSpeedBars
+    mov al, 0x1
+    call Func_f9e9a
+    call YellowIntro_SetTimerFor128Frames
+    call YellowIntro_NextScene
+    ret
+
+; YellowIntroScene2_PlaceGraphic — paint a 6x6 grid of tiles ($90.., +$10 per row)
+; into vBGMap0 at (col 20, row 6). Col 20 is off the right of the visible 20-col
+; area at SCX=0; scene 3 scrolls the BG right to bring it into view.
+;
+; DEVIATION{class=projection; pret=engine/movie/intro_yellow.asm:YellowIntroScene2_PlaceGraphic; behavior=the vBGMap0 grid write is redirected to W_TILEMAP at its 40-tile row stride (dest = W_TILEMAP + 6*SCREEN_TILES_W + 20, advancing +SCREEN_TILES_W per row), and the hOnCGB CGB attribute-map block is omitted; evidence=the compositor renders the BG from W_TILEMAP and has no CGB tile-attribute plane (the Phase-5 boundary), same as YellowIntroScene4; lifetime=Phase-5 CGB palette port and permanent widescreen tilemap model}
+YellowIntroScene2_PlaceGraphic:
+    mov esi, W_TILEMAP + 6 * SCREEN_TILES_W + 20   ; ld hl, $98d4  (col 20, row 6)
+    mov bh, 0x6                                    ; ld b, $6  (rows)
+    mov al, 0x90                                   ; ld a, $90
+.row:
+    mov cl, 0x6                                    ; ld c, $6  (cols)
+    push eax                                       ; push af  (row start tile)
+    push esi                                       ; push hl  (row start addr)
+.col:
+    mov [ebp + esi], al                           ; ld [hli], a
+    inc esi
+    inc al                                         ; inc a
+    dec cl                                         ; dec c
+    jnz .col
+    pop esi                                        ; pop hl
+    add esi, SCREEN_TILES_W                        ; add hl, de  ($20 -> 40)
+    pop eax                                        ; pop af
+    add al, 0x10                                   ; add $10
+    dec bh                                         ; dec b
+    jnz .row
+    ; hOnCGB CGB attribute-map block omitted (Phase-5; port renders DMG shades)
+    ret
+
 ; Scene 3 — hold the "running Pikachu 1" pose while scrolling the BG right to
 ; hSCX = 0x68, then mask the objects and advance. hSCX is the port's own scroll
 ; shadow (H_SCX), reconciled to the projected surface by PlayIntroScene.
@@ -1126,7 +1181,7 @@ Unkn_fa0aa:
 Jumptable_f9906:
     dd YellowIntroScene0
     dd YellowIntroScene1
-    dd YellowIntro_NextScene        ; scene 2  (unported)
+    dd YellowIntroScene2
     dd YellowIntroScene3
     dd YellowIntroScene4
     dd YellowIntroScene5
