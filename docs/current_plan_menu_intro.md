@@ -1281,12 +1281,17 @@ B2 must not create a `PlayIntroScene` stub.
 > `H_SCX` + MaskAll) and `Func_fa06e` (scene-jumptable lookup, flat×4 DEVIATION —
 > the dispatch keystone). **6/18 scenes ported** (1/3/5/9/13/17).
 >
-> **Remaining B3**: `Func_f98fc` + `Jumptable_f9906` (needs all 18 scene labels),
-> `PlayIntroScene`, `InitYellowIntroGFXAndMusic` (loads the B3.2b gfx), the even
-> active scenes 0/2/4/6/8/10/12/14/16 + odd 7/11/15/16 (LCD/CGB-palette/
-> LY-override/VBlank-copy → HAL), the deferred pal/LY helpers, `UI_YELLOW_INTRO`
-> projection, per-scene palettes/music/SFX. Detail in stigmergy
-> `a4-4-oak-speech2-porting-plan`.
+> **B3.2c-4 done (2026-07-21, `194a4da3`)** — scene 0 (intro opening): spawn +
+> scroll/window/DMG+CGB palette setup + 130-frame timer. Confirmed the HAL the
+> heavy scenes need (`UpdateCGBPal_*`, `DisableLCD`, `RunPaletteCommand`, IO
+> shadows) all already exist, so the even scenes are portable. **7/18 scenes**
+> (0/1/3/5/9/13/17).
+>
+> **Remaining B3**: the rest of the even scenes 2/4/6/8/10/12/14/16 + odd
+> 7/11/15/16 (some need the deferred pal/LY helpers + VBlank-copy/LY-override),
+> `Func_f98fc` + `Jumptable_f9906`, `InitYellowIntroGFXAndMusic` (loads the B3.2b
+> gfx), `PlayIntroScene`, `UI_YELLOW_INTRO` projection, per-scene music/SFX.
+> Detail in stigmergy `a4-4-oak-speech2-porting-plan`.
 
 #### Work
 
