@@ -27,10 +27,11 @@ global YellowIntro_SpawnAnimatedObjectAndSavePointer, YellowIntro_MaskCurrentAni
 global YellowIntro_SetTimerFor128Frames, YellowIntro_SetTimerFor88Frames
 global YellowIntro_CheckFrameTimerDecrement
 global YellowIntroScene1, YellowIntroScene5, YellowIntroScene9
-global YellowIntroScene13, YellowIntroScene17
+global YellowIntroScene13, YellowIntroScene17, YellowIntroScene3
+global Func_fa06e
 
 extern YellowIntroFramesData_GB, YellowIntroOAMData_GB, YellowIntroSpawnData_GB
-extern SpawnAnimatedObject, MaskCurrentAnimatedObjectStruct
+extern SpawnAnimatedObject, MaskCurrentAnimatedObjectStruct, MaskAllAnimatedObjectStructs
 extern DelayFrames
 
 ; wShadowOAM per-sprite attribute bytes (wShadowOAM + N*4 + 3). Pret names kept.
@@ -213,6 +214,36 @@ YellowIntroScene17:
     mov bl, 64                                     ; ld c, 64
     call DelayFrames
     or byte [ebp + wYellowIntroCurrentScene], 0x80 ; set 7, [hl]  (done flag)
+    ret
+
+; Scene 3 — hold the "running Pikachu 1" pose while scrolling the BG right to
+; hSCX = 0x68, then mask the objects and advance. hSCX is the port's own scroll
+; shadow (H_SCX), reconciled to the projected surface by PlayIntroScene.
+YellowIntroScene3:
+    call YellowIntro_CheckFrameTimerDecrement
+    jc .expired                                    ; jr c, .expired
+    mov al, [ebp + H_SCX]                          ; ldh a, [hSCX]
+    cmp al, 0x68                                   ; cp $68
+    je .done                                       ; ret z
+    add al, 0x4                                    ; add $4
+    mov [ebp + H_SCX], al                          ; ldh [hSCX], a
+.done:
+    ret
+.expired:
+    call MaskAllAnimatedObjectStructs
+    call YellowIntro_NextScene
+    ret
+
+; ---------------------------------------------------------------------------
+; Func_fa06e — index a word-pointer table (ESI/HL) by AL and return the entry.
+; pret's only caller is the scene dispatcher Func_f98fc, whose table
+; (Jumptable_f9906) is a flat 32-bit code-address table in the port.
+;
+; DEVIATION{class=data-model; pret=engine/movie/intro_yellow.asm:Func_fa06e; behavior=indexes the table at a x4 stride and returns a 32-bit flat entry instead of pret's 2-byte GB pointer at a x2 stride; evidence=its sole caller dispatches the Yellow-intro scene jumptable whose entries are native x86 code addresses (flat link-time labels), same rationale as the animated-object jumptable; lifetime=permanent — intrinsic to running GB code as native x86}
+; ---------------------------------------------------------------------------
+Func_fa06e:
+    movzx eax, al                                  ; ld e,a / ld d,$0  (index)
+    mov esi, [esi + eax*4]                          ; hl = table[index]  (flat, x4)
     ret
 
 ; ---------------------------------------------------------------------------
