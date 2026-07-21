@@ -34,7 +34,7 @@ global YellowIntroScene16, YellowIntro_LoadDMGPalAndIncrementCounter
 global YellowIntro_BlankPalsDelay2AndDisableLCD, YellowIntroScene15
 global YellowIntro_Copy8BitSineWave, LoadYellowIntroFlyingSpeedBars
 global YellowIntro_BlankTileMap, YellowIntro_BlankOAMBuffer, YellowIntro_BlankPalettes
-global Func_f9e9a
+global Func_f9e9a, Func_f9e5f
 
 extern YellowIntroFramesData_GB, YellowIntroOAMData_GB, YellowIntroSpawnData_GB
 extern SpawnAnimatedObject, MaskCurrentAnimatedObjectStruct, MaskAllAnimatedObjectStructs
@@ -489,6 +489,28 @@ YellowIntro_BlankPalsDelay2AndDisableLCD:
     call DelayFrame
     call DelayFrame
     call DisableLCD
+    ret
+
+; ---------------------------------------------------------------------------
+; Func_f9e5f — lay out the BG for the framed scenes: rows 0-3 tile $1, rows 4-13
+; tile $0, rows 14-17 tile $1. Establishes the BG-map redirect all vBGMap0-writing
+; even scenes use.
+;
+; DEVIATION{class=projection; pret=engine/movie/intro_yellow.asm:Func_f9e5f; behavior=the vBGMap0 ($9800 GB BG map) fills are redirected to the port's canonical W_TILEMAP at its 40-tile row stride (the surface mirror carries W_TILEMAP to GB_TILEMAP0), so the multi-row fills become contiguous W_TILEMAP row ranges; evidence=the cinematic compositor renders the BG from W_TILEMAP not the 32-wide GB BG map, proven by the running intro whose Init W_TILEMAP fill renders; lifetime=permanent widescreen tilemap model}
+; ---------------------------------------------------------------------------
+Func_f9e5f:
+    mov esi, W_TILEMAP                              ; vBGMap0 rows 0-3 (GB $80 = 4x32)
+    mov bx, 4 * SCREEN_TILES_W                      ; 4 rows x 40
+    mov al, 0x1
+    call FillMemory
+    mov esi, W_TILEMAP + 4 * SCREEN_TILES_W         ; rows 4-13 (GB $140 = 10x32)
+    mov bx, 10 * SCREEN_TILES_W                     ; 10 rows x 40
+    xor al, al
+    call FillMemory
+    mov esi, W_TILEMAP + 14 * SCREEN_TILES_W        ; rows 14-17 (GB $80 = 4x32)
+    mov bx, 4 * SCREEN_TILES_W                      ; 4 rows x 40
+    mov al, 0x1
+    call FillMemory
     ret
 
 ; ---------------------------------------------------------------------------
