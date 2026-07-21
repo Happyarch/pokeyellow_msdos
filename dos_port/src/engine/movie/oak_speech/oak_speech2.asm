@@ -389,3 +389,36 @@ RunNameMenuTest:
 .hang:
     jmp .hang
 %endif
+
+%ifdef DEBUG_CHOOSENAME
+; ---------------------------------------------------------------------------
+; RunChooseNameTest — A4.5f end-to-end naming (default path). Show the player pic,
+; run ChoosePlayerName; AUTOKEY_CHOOSENAME taps DOWN then A to pick the first default
+; name (YELLOW), exercising DisplayIntroNameTextBox -> GetDefaultName ->
+; OakSpeechSlidePicLeft -> PrintText(YourNameIsText). AUTOKEY_DUMP_FRAME photographs
+; the "YOUR NAME IS ..." result. In: EBP = GB base. Never returns.
+; ---------------------------------------------------------------------------
+extern LoadFontTilePatterns          ; home/load_font.asm
+extern LoadTextBoxTilePatterns       ; home/load_font.asm
+extern MovieMirrorSurface            ; movie_projection.asm
+extern FadeInIntroPic                ; oak_speech.asm
+extern DelayFrame                    ; video/frame.asm
+global RunChooseNameTest
+RunChooseNameTest:
+    call LoadFontTilePatterns
+    call LoadTextBoxTilePatterns
+    call MovieBeginSurface
+    mov byte [ebp + IO_BGP], 0
+    mov esi, RedPicFront
+    mov ecx, RED_PIC_LEN
+    xor bl, bl                            ; centred
+    call IntroDisplayPicCenteredOrUpperRight
+    call MovieMirrorSurface
+    call FadeInIntroPic
+    mov dword [text_row_stride], SCREEN_TILES_W
+    mov dword [text_msgbox], msgbox_oak_speech
+    call ChoosePlayerName                 ; AUTOKEY_CHOOSENAME drives DOWN+A -> YELLOW
+.hang:
+    call DelayFrame
+    jmp .hang
+%endif

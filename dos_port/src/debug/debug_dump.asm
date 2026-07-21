@@ -2379,6 +2379,13 @@ autokey_script:
     ; DisplayChooseQuantityMenu) can be photographed mid-wait instead of run to a
     ; DumpBackbuffer the routine never reaches.
     dd  -1,  -1, 0
+%elifdef AUTOKEY_CHOOSENAME
+    ; menu-intro A4.5f (DEBUG_CHOOSENAME): after the pic fade (~60 frames) and the
+    ; ChoosePlayerName slide-out, the default-name menu is up. DOWN moves the cursor
+    ; NEW NAME -> YELLOW, A selects it (GetDefaultName + slide-in + "YOUR NAME IS ...").
+    dd 110, 118, PAD_DOWN
+    dd 135, 143, PAD_A
+    dd  -1,  -1, 0
 %elifdef AUTOKEY_SEAM
     ; DEBUG_SEAM_LIVE companion: hold AUTOKEY_PAD (default PAD_UP) into the seeded
     ; map's edge with LIVE collision, then press A so SeamLogRecord writes

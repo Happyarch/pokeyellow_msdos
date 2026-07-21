@@ -258,6 +258,9 @@ extern RunNameMenuTest
 %ifdef DEBUG_OAKSLIDE
 extern RunOakSlideTest
 %endif
+%ifdef DEBUG_CHOOSENAME
+extern RunChooseNameTest
+%endif
 %ifdef DEBUG_SAVE
 extern RunSaveTest
 %endif
@@ -873,6 +876,9 @@ EnterMap:
 %endif
 %ifdef DEBUG_OAKSLIDE
     call RunOakSlideTest                    ; A4.4: slide the projected pic right, AutoKeyDrive dumps
+%endif
+%ifdef DEBUG_CHOOSENAME
+    call RunChooseNameTest                  ; A4.5f: end-to-end default-name pick, AutoKeyDrive dumps
 %endif
 %ifdef DEBUG_NAMINGSCREEN
     call RunNamingScreenTest                ; open PLAYER naming screen, draw grid, dump FRAME.BIN, exits
