@@ -1736,7 +1736,14 @@ breaking the working `SKIP_TITLE` overworld boot).
 - [ ] Regenerate the scenario registry.
 - [ ] Add coordinate transforms to `golden_diff.py`.
 - [ ] Add only measured, justified masks.
-- [ ] Sweep stale `TODO-HW`, `STUB`, extern, allowlist, plan, and status claims.
+- [~] Sweep stale `TODO-HW`, `STUB`, extern, allowlist, plan, and status claims.
+      *(2026-07-21: TODO-HW/STUB/extern/status portion done — fixed init.asm's stale
+      header TODOs for PlayIntro + title (`142a3197`); `project_state` confirms all
+      cinematic routines `implementation linked` at their mirror paths, no stub-shadow
+      or stale extern tree-wide. Remaining: the `pret_label_allowlist.json` may hold
+      stale relocation entries for the mirror-moved labels — SHA-gated, needs a
+      maintainer. CLAUDE.md's "title renders wrong" note is likely stale post-A2.3 but
+      has uncommitted third-party edits, so left to a maintainer.)*
 - [ ] Add and verify `title_timeout` and `soft_reset` route scenarios.
 - [ ] Run one uninterrupted power-on to overworld without `SKIP_TITLE`.
 
