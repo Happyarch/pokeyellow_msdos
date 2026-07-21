@@ -10,9 +10,12 @@
 ;   di/ei, rIF/rIE writes        → no GB interrupt controller; shadows only
 ;   WriteDMACodeToHRAM + rROMB   → ; TODO-HW: OAM DMA + ROM banking
 ;   predef LoadSGB               → ; TODO-HW: SGB detect (wOnSGB stays 0)
-;   predef PlayIntro             → ; TODO: Pikachu intro (later in Phase 2)
+;   predef PlayIntro             → call PlayIntro (Game Freak splash + Yellow intro);
+;                                  ported + wired, gated behind BOOT_CINEMATIC pending
+;                                  the faithful-default flip (menu-intro B4)
 ;   audio engine setup           → ; TODO: audio HAL (Phase 3)
-;   jp PrepareTitleScreen        → ; TODO: title screen (Phase 2); returns for now
+;   jp PrepareTitleScreen        → jmp PrepareTitleScreen (title screen implemented;
+;                                  routes to MainMenu — menu-intro A2/A3)
 ;
 ; Constants resolved from the rgbds build (pokeyellow.sym):
 ;   LCDC_DEFAULT = $E3, LCDC_ON = $80, IE = $0D, BGP normal = $E4, OBP0 = $D0
