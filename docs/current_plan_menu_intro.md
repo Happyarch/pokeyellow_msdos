@@ -1281,6 +1281,18 @@ B2 must not create a `PlayIntroScene` stub.
 > `H_SCX` + MaskAll) and `Func_fa06e` (scene-jumptable lookup, flat×4 DEVIATION —
 > the dispatch keystone). **6/18 scenes ported** (1/3/5/9/13/17).
 >
+> **B3.2c-6 done (2026-07-21, `5b378f7e`)** — `BlankPalsDelay2AndDisableLCD`
+> (a wrongly-deferred helper: all deps existed). An audit fork confirmed the
+> deferred set: **PORTABLE-NOW** = `BlankPalsDelay2AndDisableLCD` (done),
+> `Copy8BitSineWave` (effect inert, needs a `wLYOverridesBuffer` slot ≠ 0xF6CE),
+> maybe scene 15; **BLOCKED** = `Func_f9e9a` (needs `YellowIntroPaletteAction`,
+> missing), scenes 7/11 (no port VBlank-copy mechanism for `hVBlankCopy*`),
+> `LoadYellowIntroFlyingSpeedBars`; **DESIGN-COUPLED** = even scenes 2/4/6/8/10/
+> 12/14 write `vBGMap0` + toggle the retired `hAutoBGTransferEnabled`, which the
+> surface mirror (`W_TILEMAP`→`GB_TILEMAP0`) would clobber — needs the BG-map↔
+> surface reconciliation (route scene BG through `W_TILEMAP`, or gate the mirror),
+> done WITH `PlayIntroScene`.
+>
 > **B3.2c-5 done (2026-07-21, `ed201f0b`)** — scene 16 (fade to white) +
 > `LoadDMGPalAndIncrementCounter` + the f9dd6/f9e0a pal-sequence tables.
 > **8/18 scenes** (0/1/3/5/9/13/16/17).
