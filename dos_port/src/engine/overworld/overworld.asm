@@ -261,6 +261,9 @@ extern RunOakSlideTest
 %ifdef DEBUG_CHOOSENAME
 extern RunChooseNameTest
 %endif
+%ifdef DEBUG_CINEMATIC_SPLASH
+extern RunSplashTest
+%endif
 %ifdef DEBUG_SAVE
 extern RunSaveTest
 %endif
@@ -879,6 +882,9 @@ EnterMap:
 %endif
 %ifdef DEBUG_CHOOSENAME
     call RunChooseNameTest                  ; A4.5f: end-to-end default-name pick, AutoKeyDrive dumps
+%endif
+%ifdef DEBUG_CINEMATIC_SPLASH
+    call RunSplashTest                      ; B2: Game Freak splash animation, AutoKeyDrive dumps
 %endif
 %ifdef DEBUG_NAMINGSCREEN
     call RunNamingScreenTest                ; open PLAYER naming screen, draw grid, dump FRAME.BIN, exits

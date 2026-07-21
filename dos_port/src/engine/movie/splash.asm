@@ -265,6 +265,28 @@ MoveDownSmallStars:
 .done:
     ret
 
+%ifdef DEBUG_CINEMATIC_SPLASH
+; ---------------------------------------------------------------------------
+; RunSplashTest — B2 pixel harness. Establish the cinematic surface, load the logo
+; tiles to vChars1 (PlayShootingStar does this; LoadShootingStarGraphics does not),
+; and run AnimateShootingStar. AUTOKEY_QUIET photographs a frame of the animation at
+; AUTOKEY_DUMP_FRAME. In: EBP = GB base. Never returns.
+; ---------------------------------------------------------------------------
+extern MovieBeginSurface             ; movie_projection.asm
+extern DelayFrame                    ; video/frame.asm
+global RunSplashTest
+RunSplashTest:
+    call MovieBeginSurface                ; black matte surface + g_obj_clip
+    mov esi, GB_VFONT                     ; logo -> vChars1 tile $00 (OAM tiles $80..)
+    mov edx, GameFreakIntro
+    mov bl, GAMEFREAKINTRO_TILES          ; 20 tiles
+    call CopyVideoData
+    call AnimateShootingStar              ; publishes OAM each frame; AutoKeyDrive dumps
+.hang:
+    call DelayFrame
+    jmp .hang
+%endif
+
 section .data
 align 4
 
