@@ -992,6 +992,18 @@ NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_QUIET
 AUTOKEY_DUMP_FRAME ?= 20
 NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 endif
+# Animated-object engine harness (menu-intro B1.3): establish the surface, stage
+# the intro anim data, spawn one object, run RunObjectAnimations + publish OAM
+# each frame; AUTOKEY_QUIET photographs a frame at AUTOKEY_DUMP_FRAME.
+# make image DEBUG_CINEMATIC_ANIMOBJ=1 AUTOKEY_DUMP_FRAME=N
+ifdef DEBUG_CINEMATIC_ANIMOBJ
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_CINEMATIC_ANIMOBJ
+NASMFLAGS += -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_QUIET
+AUTOKEY_DUMP_FRAME ?= 30
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
 # name-selection end-to-end harness (menu-intro A4.5f): show the player pic, run
 # ChoosePlayerName; AUTOKEY_CHOOSENAME taps DOWN+A to pick a default name (YELLOW),
 # then photographs the "YOUR NAME IS ..." result. make image DEBUG_CHOOSENAME=1

@@ -264,6 +264,9 @@ extern RunChooseNameTest
 %ifdef DEBUG_CINEMATIC_SPLASH
 extern RunSplashTest
 %endif
+%ifdef DEBUG_CINEMATIC_ANIMOBJ
+extern RunAnimObjectTest
+%endif
 %ifdef DEBUG_SAVE
 extern RunSaveTest
 %endif
@@ -885,6 +888,9 @@ EnterMap:
 %endif
 %ifdef DEBUG_CINEMATIC_SPLASH
     call RunSplashTest                      ; B2: Game Freak splash animation, AutoKeyDrive dumps
+%endif
+%ifdef DEBUG_CINEMATIC_ANIMOBJ
+    call RunAnimObjectTest                  ; B1.3: animated-object engine lifecycle, AutoKeyDrive dumps
 %endif
 %ifdef DEBUG_NAMINGSCREEN
     call RunNamingScreenTest                ; open PLAYER naming screen, draw grid, dump FRAME.BIN, exits

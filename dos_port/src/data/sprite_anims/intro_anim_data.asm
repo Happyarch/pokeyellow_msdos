@@ -314,3 +314,72 @@ CopyYellowIntroAnimatedObjectData:
     rep movsb
     popad
     ret
+
+%ifdef DEBUG_CINEMATIC_ANIMOBJ
+; ---------------------------------------------------------------------------
+; RunAnimObjectTest — B1.3 lifecycle harness for the animated-object engine.
+; Stages the real intro data, sets the port table pointers + a local no-op
+; jumptable (all callbacks = ret, so the engine's frame-script interpreter is
+; exercised without B3's real callbacks), spawns one object, and republishes
+; the projected shadow OAM every frame. AUTOKEY dumps FRAME.BIN mid-run.
+;
+; Verifies: spawn→run→OAM-stamp, projected native positions (= canonical +
+; (80,24)), and surface clipping (unused/edge OBJ never paint the matte).
+; ---------------------------------------------------------------------------
+extern MovieBeginSurface, ClearObjectAnimationBuffers, SpawnAnimatedObject
+extern RunObjectAnimations, PublishProjectedOAM, DelayFrame
+extern MaskAllAnimatedObjectStructs
+extern g_tilecache_dirty
+global RunAnimObjectTest
+
+RunAnimObjectTest:
+    call MovieBeginSurface                          ; black matte surface + g_obj_clip
+    mov byte [ebp + IO_OBP0], 0xe4                  ; visible OBJ palettes (color 3 = dark)
+    mov byte [ebp + IO_OBP1], 0xe4
+    ; fill the OBJ tile bank solid so whatever tile ids the object uses render
+    mov al, 0xff
+    lea edi, [ebp + GB_VCHARS0]
+    mov ecx, 0x1000                                 ; 256 tiles x 16 bytes
+    rep stosb
+    mov byte [g_tilecache_dirty], 1                 ; VRAM tiles changed → rebuild cache
+    ; stage the immutable data into GB space
+    call CopyYellowIntroAnimatedObjectData
+    ; clear the object block FIRST, then set the table pointers — the four
+    ; pointers live inside wAnimatedObjectsData, so ClearObjectAnimationBuffers
+    ; would wipe them if set earlier (pret sets them after the clear too, in
+    ; InitYellowIntroGFXAndMusic → LoadYellowIntroObjectAnimationDataPointers).
+    call ClearObjectAnimationBuffers
+    call MaskAllAnimatedObjectStructs               ; masked slots must produce no OAM
+    mov word [ebp + wAnimatedObjectSpawnStateDataPointer], GBPTR(YellowIntro_AnimatedObjectSpawnStateData)
+    mov word [ebp + wAnimatedObjectFramesDataPointer], GBPTR(YellowIntro_AnimatedObjectFramesData)
+    mov word [ebp + wAnimatedObjectOAMDataPointer], GBPTR(YellowIntro_AnimatedObjectOAMData)
+    mov dword [ebp + wAnimatedObjectJumptablePointer], TestAnimObjectJumptable
+    ; spawn frameset-1 object (4-OBJ 16x16 animating block, callback = ret)
+    mov al, 1                                       ; spawn-state index → frameset 1, animseq 1
+    mov dh, 0x40                                    ; Y coord
+    mov dl, 0x50                                    ; X coord
+    call SpawnAnimatedObject
+.loop:
+    mov byte [ebp + wCurrentAnimatedObjectOAMBufferOffset], 0
+    call RunObjectAnimations
+    movzx ecx, byte [ebp + wCurrentAnimatedObjectOAMBufferOffset]
+    shr ecx, 2                                      ; OBJ count = shadow-OAM cursor / 4
+    mov esi, W_SHADOW_OAM
+    mov eax, 80                                     ; projection X offset (surface at col 10)
+    mov ebx, 24                                     ; projection Y offset (surface at row 3)
+    call PublishProjectedOAM
+    call DelayFrame
+    jmp .loop
+
+AnimObjTestCbRet:                                   ; no-op object callback (B3 supplies real ones)
+    ret
+
+section .data
+TestAnimObjectJumptable:
+    dd AnimObjTestCbRet
+    dd AnimObjTestCbRet
+    dd AnimObjTestCbRet
+    dd AnimObjTestCbRet
+    dd AnimObjTestCbRet
+    dd AnimObjTestCbRet
+%endif
