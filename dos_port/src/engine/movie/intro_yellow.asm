@@ -29,7 +29,7 @@ global YellowIntro_CheckFrameTimerDecrement
 global YellowIntroScene1, YellowIntroScene5, YellowIntroScene9
 global YellowIntroScene13, YellowIntroScene17, YellowIntroScene3
 global Func_fa06e, YellowIntroScene0, Func_f98fc, Jumptable_f9906
-global InitYellowIntroGFXAndMusic
+global InitYellowIntroGFXAndMusic, PlayIntroScene
 global YellowIntroScene16, YellowIntro_LoadDMGPalAndIncrementCounter
 global YellowIntro_BlankPalsDelay2AndDisableLCD, YellowIntroScene15
 global YellowIntro_Copy8BitSineWave, LoadYellowIntroFlyingSpeedBars
@@ -40,6 +40,8 @@ extern SpawnAnimatedObject, MaskCurrentAnimatedObjectStruct, MaskAllAnimatedObje
 extern DelayFrames, DelayFrame, DisableLCD, FillMemory
 extern UpdateCGBPal_BGP, UpdateCGBPal_OBP0, UpdateCGBPal_OBP1
 extern CopyVideoData, RunPaletteCommand, PlayMusic, ClearObjectAnimationBuffers
+extern MovieBeginSurface, MovieEndSurface, PublishProjectedOAM, JoypadLowSensitivity
+extern RunObjectAnimations
 
 ; wShadowOAM per-sprite attribute bytes (wShadowOAM + N*4 + 3). Pret names kept.
 %define wShadowOAMSpriteAttr(n) (W_SHADOW_OAM + (n)*4 + 3)
@@ -333,6 +335,77 @@ InitYellowIntroGFXAndMusic:
     mov al, 0xdc                                   ; ld a, MUSIC_YELLOW_INTRO ($dc)
     call PlayMusic
     ret
+
+; ---------------------------------------------------------------------------
+; PlayIntroScene — the Yellow-intro main loop: init, then step scenes until the
+; done bit (scene bit 7) is set or A/B/START skips it; teardown and return.
+;
+; DEVIATION{class=projection; pret=engine/movie/intro_yellow.asm:PlayIntroScene; behavior=wraps the loop in MovieBeginSurface/MovieEndSurface and republishes the animated-object shadow OAM through PublishProjectedOAM each frame instead of the GB VBlank OAM DMA, and the rIE/rIF/rSTAT + hAutoBGTransferEnabled hardware setup is dropped; evidence=the port renders OBJ from a projected shadow onto the cinematic surface (UI_YELLOW_INTRO) and uses its own PIT/keyboard ISR, not GB interrupts or VBlank auto-transfer; lifetime=permanent widescreen/flat-memory model}
+; ---------------------------------------------------------------------------
+PlayIntroScene:
+    ; pret saves rIE/rIF/rSTAT here (GB interrupt + STAT setup) — the port uses
+    ; its own PIT/keyboard ISR, so it is dropped.
+    call MovieBeginSurface                          ; PORT: cinematic surface + UI_YELLOW_INTRO projection
+    call InitYellowIntroGFXAndMusic
+    call DelayFrame
+.loop:
+    mov al, [ebp + wYellowIntroCurrentScene]        ; ld a, [wYellowIntroCurrentScene]
+    test al, 0x80                                    ; bit 7, a
+    jnz .exit                                        ; jr nz, .go_to_title_screen
+    call JoypadLowSensitivity
+    mov al, [ebp + H_JOY_PRESSED]                    ; ldh a, [hJoyPressed]
+    test al, PAD_A | PAD_B | PAD_START               ; and PAD_A | PAD_B | PAD_START
+    jnz .exit                                        ; jr nz, .go_to_title_screen
+    call Func_f98fc
+    mov byte [ebp + wCurrentAnimatedObjectOAMBufferOffset], 0  ; xor a / ld [..], a
+    call RunObjectAnimations
+    mov al, [ebp + wYellowIntroCurrentScene]         ; ld a, [wYellowIntroCurrentScene]
+    cmp al, 0x7                                       ; cp 7
+    jne .not7
+    call Func_f98a2                                   ; call z, Func_f98a2  (clobbers AL, as pret's does)
+.not7:
+    cmp al, 0xb                                       ; cp $b
+    jne .notb
+    call Func_f98cb                                   ; call z, Func_f98cb
+.notb:
+    ; PORT: publish the animated-object shadow OAM, projected onto the surface
+    movzx ecx, byte [ebp + wCurrentAnimatedObjectOAMBufferOffset]
+    shr ecx, 2                                        ; OBJ count = shadow-OAM cursor / 4
+    mov esi, W_SHADOW_OAM
+    mov eax, 80                                       ; UI_YELLOW_INTRO_COL * 8
+    mov ebx, 24                                       ; UI_YELLOW_INTRO_ROW * 8
+    call PublishProjectedOAM
+    call DelayFrame
+    jmp .loop
+.exit:
+    call YellowIntro_BlankPalettes
+    mov byte [ebp + H_LCDC_POINTER], 0               ; ldh [hLCDCPointer], a
+    call DelayFrame
+    mov byte [ebp + H_WY], 0x90                       ; ld a,$90 / ldh [hWY], a
+    call ClearObjectAnimationBuffers
+    mov esi, W_TILEMAP                                ; ld hl, wTileMap
+    mov bx, SCREEN_AREA                               ; ld bc, SCREEN_AREA
+    xor al, al
+    call FillMemory
+    call YellowIntro_BlankOAMBuffer
+    ; hAutoBGTransferEnabled toggle retired (surface mirror handles BG) — omit.
+    call DelayFrame
+    call DelayFrame
+    call DelayFrame
+    call MovieEndSurface                             ; PORT: tear down the cinematic surface
+    ret
+
+%ifdef DEBUG_CINEMATIC_YELLOW
+global RunYellowIntroTest
+; RunYellowIntroTest — B3.2d harness: play the Yellow intro (9 ported scenes render
+; animated OBJ projected/clipped; the 9 unported even scenes auto-advance).
+; AUTOKEY dumps FRAME.BIN mid-intro.
+RunYellowIntroTest:
+    call PlayIntroScene
+.hang:
+    call DelayFrame
+    jmp .hang
+%endif
 
 ; ---------------------------------------------------------------------------
 ; YellowIntro_LoadDMGPalAndIncrementCounter — index a DMG-palette sequence table

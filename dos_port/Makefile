@@ -1005,6 +1005,17 @@ NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_QUIET
 AUTOKEY_DUMP_FRAME ?= 30
 NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 endif
+# Full Yellow-intro harness (menu-intro B3.2d): PlayIntroScene plays the 9 ported
+# scenes (animated OBJ projected via UI_YELLOW_INTRO) + 9 auto-advance scaffolds.
+# make image DEBUG_CINEMATIC_YELLOW=1 AUTOKEY_DUMP_FRAME=N
+ifdef DEBUG_CINEMATIC_YELLOW
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_CINEMATIC_YELLOW
+NASMFLAGS += -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_QUIET
+AUTOKEY_DUMP_FRAME ?= 40
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
 # name-selection end-to-end harness (menu-intro A4.5f): show the player pic, run
 # ChoosePlayerName; AUTOKEY_CHOOSENAME taps DOWN+A to pick a default name (YELLOW),
 # then photographs the "YOUR NAME IS ..." result. make image DEBUG_CHOOSENAME=1
