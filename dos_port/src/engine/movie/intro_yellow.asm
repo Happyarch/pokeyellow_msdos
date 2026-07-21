@@ -30,10 +30,11 @@ global YellowIntroScene1, YellowIntroScene5, YellowIntroScene9
 global YellowIntroScene13, YellowIntroScene17, YellowIntroScene3
 global Func_fa06e, YellowIntroScene0
 global YellowIntroScene16, YellowIntro_LoadDMGPalAndIncrementCounter
+global YellowIntro_BlankPalsDelay2AndDisableLCD
 
 extern YellowIntroFramesData_GB, YellowIntroOAMData_GB, YellowIntroSpawnData_GB
 extern SpawnAnimatedObject, MaskCurrentAnimatedObjectStruct, MaskAllAnimatedObjectStructs
-extern DelayFrames
+extern DelayFrames, DelayFrame, DisableLCD
 extern UpdateCGBPal_BGP, UpdateCGBPal_OBP0, UpdateCGBPal_OBP1
 
 ; wShadowOAM per-sprite attribute bytes (wShadowOAM + N*4 + 3). Pret names kept.
@@ -307,6 +308,24 @@ YellowIntroScene16:
     ret
 .expired:
     call YellowIntro_NextScene
+    ret
+
+; ---------------------------------------------------------------------------
+; YellowIntro_BlankPalsDelay2AndDisableLCD — black out the DMG+CGB palettes, wait
+; two frames for them to take, then disable the LCD (scenes call this before
+; rebuilding the BG map).
+; ---------------------------------------------------------------------------
+YellowIntro_BlankPalsDelay2AndDisableLCD:
+    xor al, al
+    mov [ebp + IO_BGP], al                         ; ldh [rBGP], a
+    mov [ebp + IO_OBP0], al                        ; ldh [rOBP0], a
+    mov [ebp + IO_OBP1], al                        ; ldh [rOBP1], a
+    call UpdateCGBPal_BGP
+    call UpdateCGBPal_OBP0
+    call UpdateCGBPal_OBP1
+    call DelayFrame
+    call DelayFrame
+    call DisableLCD
     ret
 
 ; ---------------------------------------------------------------------------
