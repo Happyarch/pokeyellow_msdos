@@ -1281,6 +1281,10 @@ B2 must not create a `PlayIntroScene` stub.
 > `H_SCX` + MaskAll) and `Func_fa06e` (scene-jumptable lookup, flat×4 DEVIATION —
 > the dispatch keystone). **6/18 scenes ported** (1/3/5/9/13/17).
 >
+> **B3.2c-5 done (2026-07-21, `ed201f0b`)** — scene 16 (fade to white) +
+> `LoadDMGPalAndIncrementCounter` + the f9dd6/f9e0a pal-sequence tables.
+> **8/18 scenes** (0/1/3/5/9/13/16/17).
+>
 > **B3.2c-4 done (2026-07-21, `194a4da3`)** — scene 0 (intro opening): spawn +
 > scroll/window/DMG+CGB palette setup + 130-frame timer. Confirmed the HAL the
 > heavy scenes need (`UpdateCGBPal_*`, `DisableLCD`, `RunPaletteCommand`, IO
