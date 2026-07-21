@@ -22,9 +22,9 @@ Required project skills: `asm-translation`, `project-conventions`, `build-and-de
   - [x] A4 — Oak speech, naming, and stub retirement *(port-side done, faithdiff 24/24 + fidelity 16/16; only the mGBA-blocked oak_intro golden + Oak timing trace remain)*
 - [ ] Phase B — Power-on movie
   - [x] B1 — Animated-object engine *(engine + data + runtime test; sine rides B3)*
-  - [ ] B2 — Game Freak splash
-  - [ ] B3 — All 18 Yellow intro scenes
-  - [ ] B4 — Full boot integration and permanent coverage
+  - [x] B2 — Game Freak splash *(bars + PlayShootingStar + copyright, per-row verified)*
+  - [x] B3 — All 18 Yellow intro scenes *(ported; BG-origin fixed + per-row verified; mGBA scene goldens blocked unattended)*
+  - [ ] B4 — Full boot integration and permanent coverage *(PlayIntro ported + wired + Init-context runtime-verified `edafa36d`; remaining: HELD faithful-default flip + mGBA/human-blocked goldens)*
 - [ ] Whole-chain acceptance
 - [ ] Plan archived
 
@@ -1684,25 +1684,46 @@ breaking the working `SKIP_TITLE` overworld boot).
 > splash→intro chain is verified via the `DEBUG_CINEMATIC_SPLASH` harness (f50 =
 > copyright screen, f900 = intro framed scene with bars at surface rows 0-3/14-17,
 > 0 matte, no crash); the Init wiring point (`ef101dfb`) adds a gated
-> `call PlayIntro` at pret's `predef PlayIntro` spot behind `BOOT_CINEMATIC`,
-> builds both ways, but is **not yet runtime-verified from the Init context**
-> (needs a Makefile `BOOT_CINEMATIC` scenario + boot-context pixelcheck) and the
-> **faithful-default flip** (drop the gate, update the piece-test scenarios to skip
-> it) is a follow-up.
+> `call PlayIntro` at pret's `predef PlayIntro` spot behind `BOOT_CINEMATIC`.
 >
-> **⏸ Further menu-intro relocation/build work is PAUSED** pending a concurrent
-> agent's pret-relocation-gate hardening (it holds `pret_label_allowlist.json`,
-> `lint_pret_labels`, the skills, CLAUDE.md/AGENTS.md, translation.db, and
-> `docs/pret_relocation_findings.md`). The splash routines were relocated
-> intro.asm/title.asm → `splash.asm`; that gate may prefer a mirrored file layout,
-> after which the relocations are re-worked. Don't build/faithdiff against the
-> in-progress lint/allowlist until it lands.
+> **✅ Init-context runtime verify — DONE (`edafa36d`, 2026-07-21).** Added the
+> `BOOT_CINEMATIC` Makefile harness + `bootcine` pixelcheck scenario, which boot the
+> REAL `Init` chain (no `SKIP_TITLE`) with the gated `call PlayIntro` enabled and
+> photograph frame 50. Result: the dump is the copyright screen — surface rows
+> 7/8/9 = 289/335/308 non-bg px, **byte-identical** to the standalone `splash`
+> scenario, 0 matte outside the surface. The gated `Init → PlayIntro` edge now has
+> permanent runtime evidence, not just link-time presence. (The relocation-gate
+> pause is lifted: the mirror-move landed in `3b16cfbe` — all cinematic pret labels
+> live at `engine/movie/intro.asm` + `title.asm`, R-004 retired, lint 0.)
+>
+> **⏸ HELD (not a follow-up to sneak in unattended): the faithful-default flip.**
+> Dropping the gate so `Init` calls `PlayIntro` unconditionally is the sole
+> remaining B4 *code* step, but it is deliberately **not** performed by the
+> unattended loop because it (a) changes the **default shipping build** to play a
+> cinematic that has not passed the human full-chain smoke test (reserved for a
+> maintainer, see "Human-acceptance standard"), and (b) `entry.asm:120` always
+> `call Init`, so **every** real-title DEBUG scenario (`title`, `main_menu`,
+> `title_reentry`, `continue_seed`, `oakpic`, `oakintro`, `namemenu`, `oakslide`,
+> `choosename`, `choosename_custom`) would then play the ~20 s cinematic before its
+> dump frame — each needs a bypass. **Turnkey design when a human greenlights it:**
+> 1. In `home/init.asm`, replace `%ifdef BOOT_CINEMATIC` with: call `PlayIntro`
+>    unless `SKIP_INTRO` **or** `SKIP_TITLE` is defined (`SKIP_TITLE` must not play
+>    the intro — plan §`SKIP_TITLE=1`). Add the `class=banking` DEVIATION on `Init`
+>    (predef→direct-call lowering, plan §Predef boundary) and run `faithdiff Init`.
+> 2. Auto-`-D SKIP_INTRO` for the enumerated real-title DEBUG flags in the Makefile
+>    so their dump frames don't shift; leave `bootcine`/`gamefreak_intro`/`yellow_*`
+>    intentionally intro-on.
+> 3. Rebuild + re-verify each retrofitted scenario's dump frame is unchanged.
+> Until then the gate stays; `bootcine` is the standing runtime proof.
 
 #### Work
 
 - [x] Add complete `PlayIntro`. *(ported + full-chain verified; `332f84cd`)*
-- [ ] Call it from `Init` through direct predef lowering.
-- [ ] Preserve later LCD, VRAM, palette, and title setup.
+- [~] Call it from `Init` through direct predef lowering. *(gated `call PlayIntro`
+      wired + Init-context runtime-verified via `bootcine`, `edafa36d`; the
+      **unconditional** faithful-default flip is HELD — see the status box above)*
+- [x] Preserve later LCD, VRAM, palette, and title setup. *(Init still runs
+      DisableLCD/ClearVram/GBPalNormal/ClearSprites after PlayIntro; verified linkable both ways)*
 - [ ] Register translated and linked state.
 - [ ] Activate all permanent cinematic scenarios.
 - [ ] Regenerate the scenario registry.
