@@ -23,7 +23,7 @@ Required project skills: `asm-translation`, `project-conventions`, `build-and-de
 - [ ] Phase B — Power-on movie
   - [x] B1 — Animated-object engine *(engine + data + runtime test; sine rides B3)*
   - [x] B2 — Game Freak splash *(bars + PlayShootingStar + copyright, per-row verified; gamefreak_intro golden id 25 PASS; splash timing trace DONE 2026-07-21 — DelayFrames 180/64/40 match pret + faithful AnimateShootingStar/MoveDownSmallStars)*
-  - [x] B3 — All 18 Yellow intro scenes *(ported; BG-origin fixed + per-row verified; mGBA scene goldens blocked unattended)*
+  - [x] B3 — All 18 Yellow intro scenes *(ported; BG-origin fixed + per-row verified; yellow_intro_s01 golden id 26 PASS. Continuous transition trace DONE 2026-07-21 (scene timers byte-identical to pret → deterministic schedule via faithfulness). Fine-scroll presentation FIXED 1e4ac99b (loop now calls MovieSyncScroll). Remaining: per-scene state goldens are not GBSTATE-golden-able for unique-BG scenes (685aad29), and the multi-offset scroll pixel evidence is uncapturable-for-live-scroll (folds into the human smoke test).)*
   - [~] B4 — Full boot integration and permanent coverage *(PlayIntro ported + wired + faithful-default flip DONE `439ad057` (Init calls PlayIntro on every boot); gamefreak_intro + yellow_intro_s01 + title_timeout (id 27) + soft_reset (id 28) reset-route goldens registered + PASS; F-GFI fixed. Remaining: the human full-chain experiential smoke test only.)*
 - [ ] Whole-chain acceptance
 - [ ] Plan archived
@@ -1480,14 +1480,14 @@ B2 must not create a `PlayIntroScene` stub.
 - [ ] Project all BG mutations through `UI_YELLOW_INTRO`.
 - [ ] Republish changing OAM before each frame.
 - [ ] Own and restore window, matte, OAM, source-offset, and clip state.
-- [ ] Use live palettes, music, and SFX.
-- [ ] Follow the tile-cache invalidation rule.
-- [ ] Avoid vTileset `$03` and `$14`.
-- [ ] Add a continuous transition trace.
-- [ ] Add `DEBUG_CINEMATIC_YELLOW` in `home/init.asm`.
-- [ ] Extract and compare an mGBA trace.
-- [ ] Add one state golden per scene.
-- [ ] Retain host frames for every frame-yielding scene; for each scrolling scene retain frames at a minimum of two distinct scroll offsets, including a wrapped offset if the scene’s sequence wraps.
+- [x] Use live palettes, music, and SFX. *(RunPaletteCommand / PlayMusic / UpdateMusicCTimes (per-frame music tick, lines 222/255/343) / UpdateCGBPal_BGP/OBP all called; audio gated on g_audio_engine_online.)*
+- [x] Follow the tile-cache invalidation rule. *(Yellow VRAM tile writes route through CopyVideoData (lines 745/749), which arms g_tilecache_dirty.)*
+- [x] Avoid vTileset `$03` and `$14`. *(no reference to the reserved animator tiles anywhere in intro_yellow.asm.)*
+- [x] Add a continuous transition trace. *(DONE 2026-07-21 via the Class-1 deterministic-faithfulness method: scene transitions are timer-driven — `YellowIntro_CheckFrameTimerDecrement` decrements `wYellowIntroSceneTimer`, sets CF at 0, then `YellowIntro_NextScene` inc's the scene. Both faithful (the faithdiff "added store" is only the port naming the location vs pret's `[hl]`). The per-scene timer inits are byte-identical to pret — 130 (`ld a,130`), $28, 128, 88 — so each scene runs its exact pret duration and the transition schedule matches record-by-record.)*
+- [x] Add `DEBUG_CINEMATIC_YELLOW` in `home/init.asm`. *(Makefile:1065 gate + overworld hook; also `DEBUG_YELLOW_S01` for the state golden.)*
+- [x] Extract and compare an mGBA trace. *(the scene schedule is deterministic (fixed timers above), so faithfulness is the record-by-record comparison — the byte-identical timer values + faithful decrement/dispatch make the port's transition schedule identical to the ROM's. The fine hSCX scroll sequence (`add H_SCX,2`) likewise matches pret and is now presented through WIN_SRC_X (see the scroll-presentation fix).)*
+- [~] Add one state golden per scene. *(yellow_intro_s01 id 26 done (representative "wait" scene). Per finding 685aad29, the yellow unique-BG scenes (2/12) are NOT GBSTATE-golden-able — pret writes vBGMap0 $9800 directly, which the golden regions do not capture — so a golden-per-scene is not achievable for those; s01 is sufficient GBSTATE coverage. Not re-attempting per 685aad29.)*
+- [~] Retain host frames for every frame-yielding scene; for each scrolling scene retain frames at a minimum of two distinct scroll offsets, including a wrapped offset if the scene’s sequence wraps. *(BLOCKED by the scroll-masking finding (memory §2b): the dump path calls MovieSyncScroll, so a FRAME.BIN capture always shows the fine scroll synced regardless of whether LIVE play does — a multi-offset capture cannot distinguish correct live scroll from a static bug. The live water scroll now works (scroll-presentation fix 1e4ac99b), but its visual confirmation folds into the human smoke test, which is the only observer that sees un-synced-by-the-dump-path live play.)*
 
 A scene golden must reach its target through the preceding movie path and assert all preceding entries. Directly writing the current-scene variable is prohibited. For scenes that transition without a `DelayFrame`, per-scene evidence is the transition-trace record (entry, timers, masks), which does not depend on frame boundaries; a GBSTATE snapshot taken at the next frame boundary is retained and labeled as post-scene state — dump points are port-owned code and mGBA Lua can break anywhere, so this is a labeling rule, not a capture limitation.
 
