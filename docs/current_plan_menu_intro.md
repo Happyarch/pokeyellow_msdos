@@ -1734,9 +1734,12 @@ breaking the working `SKIP_TITLE` overworld boot).
 - [x] Register translated and linked state. *(2026-07-21: `project_state` reports
       PlayIntro / PlayShootingStar / PlayIntroScene / SpawnAnimatedObject /
       RunObjectAnimations all `implementation linked` at their mirror paths; label DB current.)*
-- [ ] Activate all permanent cinematic scenarios. *(NOW ACTIONABLE — the mGBA harness
-      runs in this environment; author `gamefreak_intro`, `yellow_intro_s00..17` Lua
-      scenarios + port DEBUG gates + goldencheck registration.)*
+- [~] Activate all permanent cinematic scenarios. *(IN PROGRESS. `gamefreak_intro`
+      mGBA golden authored + committed (`8dd7b6b1`): splash copyright checkpoint,
+      wTileMap rows 7/9/11 (12/14/15 tiles), deterministic. Remaining: its port-side
+      comparison (DEBUG_CINEMATIC_SPLASH → GBSTATE dump aligned to the copyright state +
+      a `golden_diff.py` `gamefreak_intro` entry, window (10,3) + goldencheck), then the
+      `yellow_intro_s00..17` scene goldens by the same pattern.)*
 - [ ] Regenerate the scenario registry. *(rides scenario activation above.)*
 - [x] Add coordinate transforms to `golden_diff.py`. *(2026-07-21: no new code needed —
       the generic `projections` mechanism (window (col,row) + `(dcol,drow)` rects,
