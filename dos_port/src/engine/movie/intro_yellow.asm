@@ -29,6 +29,7 @@ global YellowIntro_CheckFrameTimerDecrement
 global YellowIntroScene1, YellowIntroScene5, YellowIntroScene9
 global YellowIntroScene13, YellowIntroScene17, YellowIntroScene3
 global Func_fa06e, YellowIntroScene0, Func_f98fc, Jumptable_f9906
+global InitYellowIntroGFXAndMusic
 global YellowIntroScene16, YellowIntro_LoadDMGPalAndIncrementCounter
 global YellowIntro_BlankPalsDelay2AndDisableLCD, YellowIntroScene15
 global YellowIntro_Copy8BitSineWave, LoadYellowIntroFlyingSpeedBars
@@ -38,6 +39,7 @@ extern YellowIntroFramesData_GB, YellowIntroOAMData_GB, YellowIntroSpawnData_GB
 extern SpawnAnimatedObject, MaskCurrentAnimatedObjectStruct, MaskAllAnimatedObjectStructs
 extern DelayFrames, DelayFrame, DisableLCD, FillMemory
 extern UpdateCGBPal_BGP, UpdateCGBPal_OBP0, UpdateCGBPal_OBP1
+extern CopyVideoData, RunPaletteCommand, PlayMusic, ClearObjectAnimationBuffers
 
 ; wShadowOAM per-sprite attribute bytes (wShadowOAM + N*4 + 3). Pret names kept.
 %define wShadowOAMSpriteAttr(n) (W_SHADOW_OAM + (n)*4 + 3)
@@ -290,6 +292,47 @@ Func_f98fc:
     mov esi, Jumptable_f9906                        ; ld hl, Jumptable_f9906
     call Func_fa06e                                 ; hl = Jumptable_f9906[a]
     jmp esi                                          ; jp hl
+
+; ---------------------------------------------------------------------------
+; InitYellowIntroGFXAndMusic — blank the tilemap, load the intro tile sheets to
+; VRAM, point the object engine at the intro tables, set the generic palette and
+; music, and zero the scene state. The retired hAutoBGTransferEnabled/Dest writes
+; are omitted (the cinematic surface mirror handles BG transfer, not the GB's
+; VBlank auto-transfer). Graphics2 loads 255 tiles (pret's (size-$10)/$10).
+; ---------------------------------------------------------------------------
+InitYellowIntroGFXAndMusic:
+    xor al, al
+    mov [ebp + H_SCX], al                          ; ldh [hSCX], a
+    mov [ebp + H_SCY], al                          ; ldh [hSCY], a
+    call YellowIntro_BlankTileMap
+    mov esi, W_TILEMAP                             ; ld hl, wTileMap
+    mov bx, SCREEN_AREA                            ; ld bc, SCREEN_AREA
+    mov al, 0x1                                    ; ld a, $1
+    call FillMemory
+    mov esi, W_TILEMAP + 4 * SCREEN_TILES_W        ; hlcoord 0, 4
+    mov bx, SCREEN_TILES_W * 10                    ; ld bc, SCREEN_WIDTH * 10
+    xor al, al
+    call FillMemory
+    call DelayFrame                                ; pret waits 3 frames for the (retired)
+    call DelayFrame                                ; auto-transfer; kept for frame timing
+    call DelayFrame
+    mov edx, YellowIntroGraphics2                  ; ld de, YellowIntroGraphics2
+    mov esi, GB_VCHARS0                            ; ld hl, vChars0
+    mov bl, YELLOWINTROGRAPHICS2_TILES - 1          ; (End - Start - $10) / $10
+    call CopyVideoData
+    mov edx, YellowIntroGraphics1                  ; ld de, YellowIntroGraphics1
+    mov esi, GB_VCHARS2                            ; ld hl, vChars2
+    mov bl, YELLOWINTROGRAPHICS1_TILES              ; (End - Start) / $10
+    call CopyVideoData
+    call ClearObjectAnimationBuffers
+    call LoadYellowIntroObjectAnimationDataPointers
+    mov bh, 0x08                                   ; ld b, SET_PAL_GENERIC ($08)
+    call RunPaletteCommand
+    xor eax, eax                                   ; zero the 4 scene-state bytes
+    mov [ebp + wYellowIntroCurrentScene], eax       ; CurrentScene / Timer / StructPointer
+    mov al, 0xdc                                   ; ld a, MUSIC_YELLOW_INTRO ($dc)
+    call PlayMusic
+    ret
 
 ; ---------------------------------------------------------------------------
 ; YellowIntro_LoadDMGPalAndIncrementCounter — index a DMG-palette sequence table
