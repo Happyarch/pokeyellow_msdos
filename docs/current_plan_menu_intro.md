@@ -1273,12 +1273,16 @@ B2 must not create a `PlayIntroScene` stub.
 > `CheckFrameTimerDecrement` (+ `wYellowIntroAnimatedObjectStructPointer` @0xF6CC).
 > faithdiff clean; image builds; lint 0.
 >
+> **B3.2c-2 done (2026-07-21, `7b1ea69c`)** — the simple "wait-last" scenes
+> 1/5/9 (timer→mask→next), 13 (+spawn obj $0a), 17 (DelayFrames + set done bit).
+> faithdiff clean; image builds; lint 0.
+>
 > **Remaining B3**: `Func_fa06e` + the scene dispatch (`Func_f98fc` /
 > `Jumptable_f9906`), `PlayIntroScene`, `InitYellowIntroGFXAndMusic` (loads the
-> B3.2b gfx), scenes 0–17 (the odd "wait-last" scenes are small next chunks; the
-> even scenes are LCD/CGB-palette/LY-override heavy → HAL), the deferred pal/LY
-> helpers, `UI_YELLOW_INTRO` projection, per-scene palettes/music/SFX. Detail in
-> stigmergy `a4-4-oak-speech2-porting-plan`.
+> B3.2b gfx), the even active scenes 0/2/4/6/8/10/12/14/16 + odd 3/7/11/15
+> (LCD/CGB-palette/LY-override/VBlank-copy → HAL), the deferred pal/LY helpers,
+> `UI_YELLOW_INTRO` projection, per-scene palettes/music/SFX. Detail in stigmergy
+> `a4-4-oak-speech2-porting-plan`.
 
 #### Work
 
