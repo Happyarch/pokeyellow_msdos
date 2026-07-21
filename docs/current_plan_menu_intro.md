@@ -24,7 +24,7 @@ Required project skills: `asm-translation`, `project-conventions`, `build-and-de
   - [x] B1 — Animated-object engine *(engine + data + runtime test; sine rides B3)*
   - [x] B2 — Game Freak splash *(bars + PlayShootingStar + copyright, per-row verified)*
   - [x] B3 — All 18 Yellow intro scenes *(ported; BG-origin fixed + per-row verified; mGBA scene goldens blocked unattended)*
-  - [ ] B4 — Full boot integration and permanent coverage *(PlayIntro ported + wired + Init-context runtime-verified `edafa36d`; remaining: HELD faithful-default flip + mGBA/human-blocked goldens)*
+  - [~] B4 — Full boot integration and permanent coverage *(PlayIntro ported + wired + faithful-default flip DONE `439ad057` (Init calls PlayIntro on every boot); gamefreak_intro + yellow_intro_s01 goldens registered + PASS; F-GFI fixed. Remaining: the human full-chain experiential smoke test only.)*
 - [ ] Whole-chain acceptance
 - [ ] Plan archived
 
@@ -1703,32 +1703,30 @@ breaking the working `SKIP_TITLE` overworld boot).
 > pause is lifted: the mirror-move landed in `3b16cfbe` — all cinematic pret labels
 > live at `engine/movie/intro.asm` + `title.asm`, R-004 retired, lint 0.)
 >
-> **⏸ HELD (not a follow-up to sneak in unattended): the faithful-default flip.**
-> Dropping the gate so `Init` calls `PlayIntro` unconditionally is the sole
-> remaining B4 *code* step, but it is deliberately **not** performed by the
-> unattended loop because it (a) changes the **default shipping build** to play a
-> cinematic that has not passed the human full-chain smoke test (reserved for a
-> maintainer, see "Human-acceptance standard"), and (b) `entry.asm:120` always
-> `call Init`, so **every** real-title DEBUG scenario (`title`, `main_menu`,
-> `title_reentry`, `continue_seed`, `oakpic`, `oakintro`, `namemenu`, `oakslide`,
-> `choosename`, `choosename_custom`) would then play the ~20 s cinematic before its
-> dump frame — each needs a bypass. **Turnkey design when a human greenlights it:**
-> 1. In `home/init.asm`, replace `%ifdef BOOT_CINEMATIC` with: call `PlayIntro`
->    unless `SKIP_INTRO` **or** `SKIP_TITLE` is defined (`SKIP_TITLE` must not play
->    the intro — plan §`SKIP_TITLE=1`). Add the `class=banking` DEVIATION on `Init`
->    (predef→direct-call lowering, plan §Predef boundary) and run `faithdiff Init`.
-> 2. Auto-`-D SKIP_INTRO` for the enumerated real-title DEBUG flags in the Makefile
->    so their dump frames don't shift; leave `bootcine`/`gamefreak_intro`/`yellow_*`
->    intentionally intro-on.
-> 3. Rebuild + re-verify each retrofitted scenario's dump frame is unchanged.
-> Until then the gate stays; `bootcine` is the standing runtime proof.
+> **✅ DONE (`439ad057`, user-greenlit): the faithful-default flip.** `Init` now calls
+> `PlayIntro` on every normal power-on (pret's `predef PlayIntro` lowered to a direct
+> `call`), skipped only under `SKIP_TITLE` (the overworld bypass) or `SKIP_INTRO` (the
+> piece-test bypass). A `class=banking` DEVIATION documents the predef→direct-call lowering;
+> `faithdiff Init` is clean (PlayIntro now matches pret's predef). **Retrofit was smaller than
+> feared:** only THREE real-title gates lack `SKIP_TITLE` (`DEBUG_TITLE`, `DEBUG_MAINMENU_LIVE`,
+> `DEBUG_TITLE_REENTRY`) — every other DEBUG harness already implies `SKIP_TITLE` (Makefile
+> "any debug flag implies SKIP_TITLE"), including all the oak/naming piece-tests and
+> `continue_seed`; so `SKIP_INTRO` was added to just those 3. **Verified:** default build links;
+> `title` / `main_menu` / `title_reentry` PASS (skip via `SKIP_INTRO`, land on the title
+> unchanged); `gamefreak_intro` / `yellow_intro_s01` PASS (play the intro); `overworld_pallet`
+> PASS (SKIP_TITLE skips it). The only remaining B4 item is the human full-chain experiential
+> smoke test (audio + continuous motion) — the deterministic correctness is golden-established.
 
 #### Work
 
 - [x] Add complete `PlayIntro`. *(ported + full-chain verified; `332f84cd`)*
-- [~] Call it from `Init` through direct predef lowering. *(gated `call PlayIntro`
-      wired + Init-context runtime-verified via `bootcine`, `edafa36d`; the
-      **unconditional** faithful-default flip is HELD — see the status box above)*
+- [x] Call it from `Init` through direct predef lowering. *(DONE — the faithful-default
+      flip landed `439ad057`: Init calls PlayIntro on every normal boot, skipped only
+      under SKIP_TITLE / SKIP_INTRO; class=banking DEVIATION on Init; faithdiff Init clean.
+      SKIP_INTRO retrofitted into the 3 real-title gates that lack SKIP_TITLE (DEBUG_TITLE,
+      DEBUG_MAINMENU_LIVE, DEBUG_TITLE_REENTRY). Verified: title/main_menu/title_reentry PASS
+      (skip via SKIP_INTRO), gamefreak_intro/yellow_intro_s01 PASS (play it), overworld_pallet
+      PASS (SKIP_TITLE skips it).)*
 - [x] Preserve later LCD, VRAM, palette, and title setup. *(Init still runs
       DisableLCD/ClearVram/GBPalNormal/ClearSprites after PlayIntro; verified linkable both ways)*
 - [x] Register translated and linked state. *(2026-07-21: `project_state` reports
