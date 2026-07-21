@@ -1843,11 +1843,21 @@ breaking the working `SKIP_TITLE` overworld boot).
       stale relocation entries for the mirror-moved labels — SHA-gated, needs a
       maintainer. CLAUDE.md's "title renders wrong" note is likely stale post-A2.3 but
       has uncommitted third-party edits, so left to a maintainer.)*
-- [ ] Add and verify `title_timeout` and `soft_reset` route scenarios. *(mGBA route
-      traces NOW ACTIONABLE; the replay-the-movie behavior is still coupled to the HELD
-      faithful-default flip — in the default build Init does not yet call PlayIntro.)*
-- [ ] Run one uninterrupted power-on to overworld without `SKIP_TITLE`. *(needs the HELD
-      flip + the human full-chain smoke test; the chain itself is BOOT_CINEMATIC-verifiable.)*
+- [~] Add and verify `title_timeout` and `soft_reset` route scenarios. *(UNBLOCKED by the
+      flip; route is sound by code inspection — `DisplayTitleScreen.doTitlescreenReset`
+      calls `MovieEndSurface` (releases the cinematic surface) before `jmp Init`, then Init
+      clears state and (post-flip) calls PlayIntro, which re-establishes the surface and
+      replays the movie. DEPRIORITIZED as low-value: a full scenario would be either a
+      redundant STATE golden (the replayed copyright screen == `gamefreak_intro`) or a
+      route TRACE (which needs port-side per-frame trace instrumentation that doesn't exist
+      — see the yellow-scene trace note). The corner-case attract-loop restart isn't worth
+      that infra given the boot chain is otherwise golden-verified.)*
+- [~] Run one uninterrupted power-on to overworld without `SKIP_TITLE`. *(Deterministic half
+      DONE: the flip makes the default build boot Init → PlayIntro (splash + intro) → title
+      → menu → … → overworld, and 8 scenarios across every category PASS after the flip. The
+      remaining half is the HUMAN full-chain experiential smoke test — audio + continuous
+      motion + interactive naming — which the plan's "Human-acceptance standard" reserves for
+      a maintainer and which deterministic gates cannot replace.)*
 
 > **B4 status (2026-07-21, mGBA UNBLOCKED).** Correcting a prior wrong assumption: the
 > mGBA golden harness **runs in this environment** — `pokeyellow.gbc`/`.sym` are present
