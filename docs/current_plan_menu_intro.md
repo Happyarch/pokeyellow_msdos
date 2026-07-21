@@ -17,9 +17,9 @@ Required project skills: `asm-translation`, `project-conventions`, `build-and-de
 
 - [ ] Phase A — Playable title → menu → new game
   - [x] A1 — Cinematic projection substrate
-  - [ ] A2 — Projected title with live audio and palettes
+  - [x] A2 — Projected title with live audio and palettes *(port-side done; only the mGBA-blocked `title_timeout` golden remains)*
   - [ ] A3 — Real title → menu → entry routing
-  - [ ] A4 — Oak speech, naming, and stub retirement
+  - [x] A4 — Oak speech, naming, and stub retirement *(port-side done, faithdiff 24/24 + fidelity 16/16; only the mGBA-blocked oak_intro golden + Oak timing trace remain)*
 - [ ] Phase B — Power-on movie
   - [x] B1 — Animated-object engine *(engine + data + runtime test; sine rides B3)*
   - [ ] B2 — Game Freak splash
@@ -1254,11 +1254,19 @@ B2 must not create a `PlayIntroScene` stub.
 > (data-model DEVIATION); the sine table is read flat. **Motion-verified**: the
 > animobj harness now dispatches the REAL jumptable and spawns object 4 (fa008
 > mover) — the 36-OBJ block slides 28px left (frame 3→25), Y fixed, matte clean,
-> matching fa008's 4px/frame clamp at 0x58. **Remaining B3**: `Func_fa06e` +
-> the scene engine (PlayIntroScene, InitYellowIntroGFXAndMusic, scene dispatch
-> 0–17, `YellowIntro_Copy8BitSineWave` + its amp-4 wave, gfx/tilemap INCBINs,
-> `UI_YELLOW_INTRO` projection, per-scene palettes/music/SFX). Detail in
-> stigmergy `a4-4-oak-speech2-porting-plan`.
+> matching fa008's 4px/frame clamp at 0x58.
+>
+> **B3.2a done (2026-07-21, `02dd02e7`)** — the scene-engine leaf helpers:
+> `LoadYellowIntroObjectAnimationDataPointers` (3 GB addrs, exported as GBPTR
+> equs from intro_anim_data.asm, + the flat jumptable), the OAM BG-priority hooks
+> `Func_f98a2`/`Func_f98cb`, and `YellowIntro_NextScene`. faithdiff clean (stores
+> match 4/4, 5/5, 6/6); image builds; lint 0.
+>
+> **Remaining B3**: `Func_fa06e` + the scene dispatch (`Func_f98fc` /
+> `Jumptable_f9906`), `PlayIntroScene`, `InitYellowIntroGFXAndMusic`, scenes
+> 0–17, `YellowIntro_Copy8BitSineWave` + its amp-4 wave, the intro gfx/tilemap
+> assets (`gfx/intro/*.2bpp` + tilemaps), `UI_YELLOW_INTRO` projection, per-scene
+> palettes/music/SFX. Detail in stigmergy `a4-4-oak-speech2-porting-plan`.
 
 #### Work
 
