@@ -33,6 +33,47 @@ extern DebugNewGamePlayerName        ; movie/title.asm — shared debug boot nam
 extern DebugNewGameRivalName         ; movie/title.asm
 extern FillMemory                    ; home/fill_memory.asm — ESI=dest, BX=len, AL=val
 extern InitOptions                   ; engine/menus/main_menu.asm
+; --- OakSpeech body (A4.5): all deps now linked ---
+extern StopAllMusic                  ; home/audio.asm
+extern PlayMusic                     ; home/audio.asm — AL = music id, BL = bank
+extern PlaySound                     ; home/audio.asm — AL = sound id
+extern ClearScreen                   ; movie/title.asm — blank W_TILEMAP (surface state survives)
+extern LoadTextBoxTilePatterns       ; home/load_font.asm
+extern InitPlayerData2               ; oak_speech/init_player_data.asm (pret predef)
+extern AddItemToInventory            ; items/inventory.asm — ESI = count addr, [wCurItem]/[wItemQuantity]
+extern PrepareForSpecialWarp         ; overworld/special_warps.asm
+extern GBFadeOutToWhite              ; home/fade.asm
+extern GBFadeInFromWhite             ; home/fade.asm
+extern GetMonHeader                  ; home/pokemon.asm — [wCurSpecies]
+extern LoadFlippedFrontSpriteByMonIndex ; home/pics.asm — [wCurPartySpecies], ESI = tilemap dest
+extern ChoosePlayerName              ; oak_speech2.asm
+extern ChooseRivalName               ; oak_speech2.asm
+extern BankswitchCommon              ; home/bankswitch.asm — AL = bank (flat no-op)
+extern CopyVideoData                 ; home/copy2.asm — ESI = VRAM dest, EDX = flat src, BL = tiles
+extern ResetPlayerSpriteData         ; home/reset_player_sprite.asm
+extern ClearScreenArea               ; home/copy2.asm — ESI, BL x BH
+extern MovieBeginSurface             ; movie_projection.asm
+extern MovieEndSurface               ; movie_projection.asm
+extern text_msgbox                   ; home/text.asm
+extern text_row_stride               ; home/text.asm
+extern RedPicFront                   ; data/trainer_pics.asm
+extern Rival1Pic                     ; data/trainer_pics.asm
+extern ShrinkPic1                    ; data/trainer_pics.asm
+extern ShrinkPic2                    ; data/trainer_pics.asm
+extern player_sprite                 ; == pret RedSprite (walking sprite set, player_gfx.asm)
+extern ProfOakPic                    ; data/trainer_pics.asm
+extern PrintText                     ; home/window.asm — ESI = text stream
+
+%include "assets/audio_constants.inc"   ; SFX_SHRINK, MUSIC_ROUTES2, MUSIC_PALLET_TOWN(+_BANK)
+
+%ifndef BIT_DEBUG_MODE
+BIT_DEBUG_MODE  equ 1                 ; wStatusFlags6 bit (constants/ram_constants.asm)
+%endif
+PROF_OAK_PIC_LEN  equ 286
+RED_PIC_LEN       equ 255
+RIVAL1_PIC_LEN    equ 241
+SHRINK1_PIC_LEN   equ 90
+SHRINK2_PIC_LEN   equ 50
 
 NAME_LENGTH  equ 11                  ; wPlayerName / wRivalName field size
 
@@ -221,6 +262,158 @@ PrepareOakSpeech:
     lea edi, [ebp + W_RIVAL_NAME]
     mov ecx, NAME_LENGTH
     rep movsb
+    ret
+
+; Projected tilemap dests for the OakSpeech body (pret hlcoord + UI_OAK_SPEECH).
+OAK_FLIP_SPRITE_DEST equ (W_TILEMAP + (4 + UI_OAK_SPEECH_ROW) * SCREEN_TILES_W + (6 + UI_OAK_SPEECH_COL))
+OAK_CLEAR_AREA_DEST  equ (W_TILEMAP + (5 + UI_OAK_SPEECH_ROW) * SCREEN_TILES_W + (6 + UI_OAK_SPEECH_COL))
+
+; ---------------------------------------------------------------------------
+; OakSpeech — the new-game intro cutscene. Source: engine/movie/oak_speech/
+; oak_speech.asm:OakSpeech. Music, save-block init, the four intro pics + text,
+; the player/rival naming flow, then the shrink-into-overworld hand-off.
+;
+; PROJECTION: the whole cutscene runs on the centred UI_OAK_SPEECH surface. pret's
+; ClearScreen calls blank W_TILEMAP but the port surface state (window, whiteout,
+; per-frame mirror) survives them, so the surface is established ONCE with
+; MovieBeginSurface and torn down with MovieEndSurface at the hand-off. All hlcoord
+; are projected; text_row_stride / text_msgbox are published for the projected
+; helpers. The banking (hLoadedROMBank/BankswitchCommon) is faithful bookkeeping —
+; a no-op under the flat model.
+;
+; DEVIATION{class=projection; pret=engine/movie/oak_speech/oak_speech.asm:OakSpeech; behavior=establish/tear down the UI_OAK_SPEECH cinematic surface (MovieBeginSurface/MovieEndSurface) around the body and publish text_row_stride/text_msgbox for the projected helpers; evidence=the boot cutscene is a 160x144 GB surface centred on the 320x200 canvas (movie_projection) and the port text/box helpers read a projection record instead of fixed hlcoord; lifetime=permanent widescreen projection}
+;
+; In: EBP = GB base.
+; ---------------------------------------------------------------------------
+global OakSpeech
+OakSpeech:
+    call StopAllMusic
+    mov bl, MUSIC_ROUTES2_BANK             ; ld a,BANK(Music_Routes2) / ld c,a
+    mov al, MUSIC_ROUTES2                   ; ld a, MUSIC_ROUTES2
+    call PlayMusic
+    call ClearScreen
+    call LoadTextBoxTilePatterns
+    call PrepareOakSpeech
+    call InitPlayerData2                    ; predef InitPlayerData2
+    ; POTION x1 into the box-item list (pret ld hl, wNumBoxItems)
+    mov byte [ebp + wCurItem], POTION
+    mov byte [ebp + wItemQuantity], 1
+    mov esi, wNumBoxItems
+    call AddItemToInventory
+    mov al, [ebp + wDefaultMap]             ; ld a,[wDefaultMap] / ld [wDestinationMap],a
+    mov [ebp + wDestinationMap], al
+    call PrepareForSpecialWarp
+    mov byte [ebp + hTileAnimations], 0     ; xor a / ldh [hTileAnimations], a
+    ; establish the projected surface for the pic/text beats
+    call MovieBeginSurface
+    mov dword [text_row_stride], SCREEN_TILES_W
+    mov dword [text_msgbox], msgbox_oak_speech
+    mov al, [ebp + wStatusFlags6]           ; bit BIT_DEBUG_MODE -> skip speech + naming
+    test al, (1 << BIT_DEBUG_MODE)
+    jnz .skipSpeech
+    ; Prof. Oak
+    mov esi, ProfOakPic
+    mov ecx, PROF_OAK_PIC_LEN
+    xor bl, bl
+    call IntroDisplayPicCenteredOrUpperRight
+    call FadeInIntroPic
+    mov esi, OakSpeechText1
+    call PrintText
+    call GBFadeOutToWhite
+    call ClearScreen
+    ; Pikachu (the Yellow starter, flipped) sliding in
+    mov byte [ebp + wCurSpecies], STARTER_PIKACHU
+    mov byte [ebp + wCurPartySpecies], STARTER_PIKACHU
+    call GetMonHeader
+    mov esi, OAK_FLIP_SPRITE_DEST           ; hlcoord 6,4 (projected)
+    call LoadFlippedFrontSpriteByMonIndex
+    call MovePicLeft
+    mov esi, OakSpeechText2
+    call PrintText
+    call GBFadeOutToWhite
+    call ClearScreen
+    ; player pic sliding in, then choose the player name
+    mov esi, RedPicFront
+    mov ecx, RED_PIC_LEN
+    xor bl, bl
+    call IntroDisplayPicCenteredOrUpperRight
+    call MovePicLeft
+    mov esi, IntroducePlayerText
+    call PrintText
+    call ChoosePlayerName
+    call GBFadeOutToWhite
+    call ClearScreen
+    ; rival pic, then choose the rival name
+    mov esi, Rival1Pic
+    mov ecx, RIVAL1_PIC_LEN
+    xor bl, bl
+    call IntroDisplayPicCenteredOrUpperRight
+    call FadeInIntroPic
+    mov esi, IntroduceRivalText
+    call PrintText
+    call ChooseRivalName
+.skipSpeech:
+    call GBFadeOutToWhite
+    call ClearScreen
+    mov esi, RedPicFront
+    mov ecx, RED_PIC_LEN
+    xor bl, bl
+    call IntroDisplayPicCenteredOrUpperRight
+    call GBFadeInFromWhite
+    mov al, [ebp + W_STATUS_FLAGS_3]        ; and a / jr nz, .next
+    test al, al
+    jnz .next
+    mov dword [text_msgbox], msgbox_oak_speech
+    mov esi, OakSpeechText3
+    call PrintText
+.next:
+    ; SFX_SHRINK. pret saves/restores hLoadedROMBank around PlaySound (a flat no-op).
+    movzx eax, byte [ebp + hLoadedROMBank]
+    push eax
+    mov al, SFX_SHRINK
+    call PlaySound
+    pop eax
+    call BankswitchCommon                   ; AL = restored bank
+    mov bl, 4
+    call DelayFrames
+    ; RedSprite -> vSprites ($0C tiles)
+    mov esi, GB_VCHARS0                      ; ld hl, vSprites
+    mov edx, player_sprite                   ; ld de, RedSprite
+    mov bl, 0x0C                             ; ld c, $0C
+    call CopyVideoData
+    mov esi, ShrinkPic1
+    mov ecx, SHRINK1_PIC_LEN
+    xor bl, bl
+    call IntroDisplayPicCenteredOrUpperRight
+    mov bl, 4
+    call DelayFrames
+    mov esi, ShrinkPic2
+    mov ecx, SHRINK2_PIC_LEN
+    xor bl, bl
+    call IntroDisplayPicCenteredOrUpperRight
+    call ResetPlayerSpriteData
+    ; hand audio to Pallet Town with a fade-out
+    movzx eax, byte [ebp + hLoadedROMBank]
+    push eax
+    mov byte [ebp + wAudioROMBank], MUSIC_PALLET_TOWN_BANK
+    mov byte [ebp + wAudioSavedROMBank], MUSIC_PALLET_TOWN_BANK
+    mov byte [ebp + wAudioFadeOutControl], 10
+    call StopAllMusic
+    pop eax
+    call BankswitchCommon
+    mov bl, 20
+    call DelayFrames
+    mov esi, OAK_CLEAR_AREA_DEST             ; hlcoord 6,5 (projected)
+    mov bh, 7                                ; lb bc, 7, 7
+    mov bl, 7
+    call ClearScreenArea
+    call LoadTextBoxTilePatterns
+    mov byte [ebp + wUpdateSpritesEnabled], 1
+    mov bl, 50
+    call DelayFrames
+    call GBFadeOutToWhite
+    call ClearScreen
+    call MovieEndSurface                     ; hand the screen to the overworld
     ret
 
 ; ---------------------------------------------------------------------------

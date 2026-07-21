@@ -12,22 +12,12 @@ bits 32
 
 section .text
 
-extern InitPlayerData2               ; engine/movie/oak_speech/init_player_data.asm
-
-; STUB{class=stub; label=OakSpeech; pret=engine/movie/oak_speech/oak_speech.asm:OakSpeech; behavior=run only InitPlayerData2 then return instead of presenting the intro cutscene and naming flow; evidence=project_state:OakSpeech reports linked stub with three callers; lifetime=until the script/cutscene OakSpeech implementation lands}
-; OakSpeech's intro cutscene + naming screen (pret,
-; package C) are not ported (script/cutscene work, docs/current_plan_script_engine.md).
-; But its FIRST real action, `predef InitPlayerData2`, IS now ported and MUST run:
-; it seeds the party/box/bag/box-item list terminators + starting money/ID. Without
-; it a new game boots with uninitialised (DPMI-garbage) inventories and every list
-; scan loops through memory (docs/glitch_safety.md). StartNewGameDebug falls through
-; to SpecialEnterMap after this returns, so a new game boots straight to the
-; overworld (the SKIP_TITLE posture). Replace the whole stub when the real OakSpeech
-; cutscene lands (keep the InitPlayerData2 call — pret keeps it there too).
-global OakSpeech
-OakSpeech:
-    call InitPlayerData2
-    ret
+; OakSpeech stub RETIRED (menu-intro A4.5): the real cutscene now links from
+; engine/movie/oak_speech/oak_speech.asm (music, four intro pics + text, the
+; player/rival naming flow, shrink-into-overworld hand-off). It still calls
+; InitPlayerData2 first, exactly as pret keeps it. StartNewGame(Debug) calls the
+; real OakSpeech now; a debug-mode (BIT_DEBUG_MODE) new game still skips the speech
+; and naming, so the seeded debug names survive.
 
 ; DisplayTitleScreen (B on the main menu returns to the title) is now REAL — the
 ; title module (src/movie/title.asm) exports its complete DisplayTitleScreen body;
