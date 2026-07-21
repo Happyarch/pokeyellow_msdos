@@ -243,11 +243,11 @@ YellowIntroScene6:
     mov al, 0x42                                   ; ld a, LOW(rSCY)  ($FF42)
     mov [ebp + H_LCDC_POINTER], al                 ; ldh [hLCDCPointer], a  (inert)
     call YellowIntro_Copy8BitSineWave
-    mov esi, W_TILEMAP                             ; ld hl, vBGMap0
+    mov esi, W_TILEMAP + INTRO_BG_ROW_OFF          ; GB rows 0-2 (at the BG row origin)
     mov bx, 3 * SCREEN_TILES_W                     ; ld bc, $60  (rows 0-2)
     xor al, al
     call FillMemory                                ; call Bank3E_FillMemory
-    mov esi, W_TILEMAP + 3 * SCREEN_TILES_W        ; ld hl, $9860  (row 3, col 0)
+    mov esi, W_TILEMAP + INTRO_BG_ROW_OFF + 3 * SCREEN_TILES_W  ; GB row 3 (col 0 start: the 32-col stripe covers the visible cols 10-29 with matching parity)
     mov cl, 0x10                                   ; ld c, $10
     mov al, 0x20                                   ; ld a, $20
 .stripe:
@@ -259,8 +259,8 @@ YellowIntroScene6:
     dec al                                         ; dec a
     dec cl                                         ; dec c
     jnz .stripe
-    mov esi, W_TILEMAP + 4 * SCREEN_TILES_W        ; ld hl, $9880  (row 4, col 0)
-    mov bx, SCREEN_AREA - 4 * SCREEN_TILES_W       ; ld bc, $300  (rows 4-to-end)
+    mov esi, W_TILEMAP + INTRO_BG_ROW_OFF + 4 * SCREEN_TILES_W  ; GB rows 4-to-end
+    mov bx, SCREEN_AREA - INTRO_BG_ROW_OFF - 4 * SCREEN_TILES_W ; capped at the surface bottom (origin-shifted)
     mov al, 0x10
     call FillMemory
     mov dh, 0x40                                   ; lb de, $40, $f8
@@ -366,21 +366,21 @@ YellowIntroScene10:
     mov bx, SCREEN_AREA                            ; ld bc, $400  (clear whole map)
     xor al, al
     call FillMemory                                ; call Bank3E_FillMemory
-    mov esi, W_TILEMAP                             ; ld hl, vBGMap0
+    mov esi, W_TILEMAP + INTRO_BG_ROW_OFF          ; GB rows 0-7 (at the BG row origin)
     mov bx, 8 * SCREEN_TILES_W                     ; ld bc, $100  (rows 0-7)
     mov al, 0x2
     call FillMemory
-    mov esi, W_TILEMAP + 8 * SCREEN_TILES_W        ; ld hl, $9900  (row 8, col 0)
+    mov esi, W_TILEMAP + INTRO_BG_ORIGIN + 8 * SCREEN_TILES_W       ; ld hl, $9900  (GB row 8, col 0)
     mov edi, Unkn_f9b6e                            ; ld de, Unkn_f9b6e  (flat)
     mov bh, 6                                      ; lb bc, 6, 20
     mov bl, 20
     call .FillBGMapBox
-    mov esi, W_TILEMAP + 4 * SCREEN_TILES_W + 12   ; ld hl, $988c  (row 4, col 12)
+    mov esi, W_TILEMAP + INTRO_BG_ORIGIN + 4 * SCREEN_TILES_W + 12  ; ld hl, $988c  (GB row 4, col 12)
     mov edi, Unkn_f9be6
     mov bh, 3                                      ; lb bc, 3, 4
     mov bl, 4
     call .FillBGMapBox
-    mov esi, W_TILEMAP + 7 * SCREEN_TILES_W + 3    ; ld hl, $98e3  (row 7, col 3)
+    mov esi, W_TILEMAP + INTRO_BG_ORIGIN + 7 * SCREEN_TILES_W + 3   ; ld hl, $98e3  (GB row 7, col 3)
     mov edi, Unkn_f9bf2
     mov bh, 2                                      ; lb bc, 2, 2
     mov bl, 2
@@ -458,20 +458,20 @@ YellowIntroScene12:
     call UpdateMusicCTimes
     xor al, al
     mov [ebp + H_LCDC_POINTER], al                 ; ldh [hLCDCPointer], a
-    mov esi, W_TILEMAP                             ; ld hl, vBGMap0
+    mov esi, W_TILEMAP + INTRO_BG_ROW_OFF          ; GB rows 0-3 (at the BG row origin)
     mov bx, 4 * SCREEN_TILES_W                     ; ld bc, $80   (rows 0-3)
     mov al, 0x1
     call FillMemory                                ; call Bank3E_FillMemory
-    mov esi, W_TILEMAP + 4 * SCREEN_TILES_W        ; ld hl, $9880 (rows 4-13)
+    mov esi, W_TILEMAP + INTRO_BG_ROW_OFF + 4 * SCREEN_TILES_W  ; GB rows 4-13
     mov bx, 10 * SCREEN_TILES_W                    ; ld bc, $140
     xor al, al
     call FillMemory
-    mov esi, W_TILEMAP + 14 * SCREEN_TILES_W       ; ld hl, $99c0 (rows 14-17)
+    mov esi, W_TILEMAP + INTRO_BG_ROW_OFF + 14 * SCREEN_TILES_W ; GB rows 14-17
     mov bx, 4 * SCREEN_TILES_W                     ; ld bc, $80
     mov al, 0x1
     call FillMemory
-    ; paste 8x12 graphic at (5,6), tile ids 4.., skipping 4 vtiles per row
-    mov esi, W_TILEMAP + 6 * SCREEN_TILES_W + 5    ; ld hl, $98c5
+    ; paste 8x12 graphic at GB (col 5, row 6), tile ids 4.., skipping 4 vtiles per row
+    mov esi, W_TILEMAP + INTRO_BG_ORIGIN + 6 * SCREEN_TILES_W + 5  ; ld hl, $98c5
     mov al, 0x4                                    ; ld a, $4  (start tile)
     mov bh, 8                                      ; ld b, 8   (rows)
 .paste_row:
@@ -488,9 +488,9 @@ YellowIntroScene12:
     add al, 0x4                                    ; add $4
     dec bh                                         ; dec b
     jnz .paste_row
-    mov byte [ebp + W_TILEMAP + 6 * SCREEN_TILES_W + 4], 0x3   ; ld hl,$98c4 / ld [hl],$3
-    mov byte [ebp + W_TILEMAP + 7 * SCREEN_TILES_W + 4], 0x74  ; ld hl,$98e4 / ld [hl],$74
-    mov byte [ebp + W_TILEMAP + 13 * SCREEN_TILES_W + 5], 0x0  ; ld hl,$99a5 / ld [hl],$0
+    mov byte [ebp + W_TILEMAP + INTRO_BG_ORIGIN + 6 * SCREEN_TILES_W + 4], 0x3   ; ld hl,$98c4 / ld [hl],$3
+    mov byte [ebp + W_TILEMAP + INTRO_BG_ORIGIN + 7 * SCREEN_TILES_W + 4], 0x74  ; ld hl,$98e4 / ld [hl],$74
+    mov byte [ebp + W_TILEMAP + INTRO_BG_ORIGIN + 13 * SCREEN_TILES_W + 5], 0x0  ; ld hl,$99a5 / ld [hl],$0
     mov dh, 0x60                                   ; lb de, $60, $58
     mov dl, 0x58
     mov al, 0x9
@@ -536,15 +536,15 @@ YellowIntroScene14:
 .expired:
     call MaskAllAnimatedObjectStructs
     call YellowIntro_BlankOAMBuffer
-    mov esi, W_TILEMAP                             ; ld hl, wTileMap
+    mov esi, W_TILEMAP + INTRO_BG_ROW_OFF          ; GB rows 0-3 (at the BG row origin)
     mov bx, 4 * SCREEN_TILES_W                     ; ld bc, SCREEN_WIDTH * 4
     mov al, 0x1
     call FillMemory                                ; call Bank3E_FillMemory
-    mov esi, W_TILEMAP + 4 * SCREEN_TILES_W        ; hlcoord 0, 4
+    mov esi, W_TILEMAP + INTRO_BG_ROW_OFF + 4 * SCREEN_TILES_W  ; GB rows 4-13
     mov bx, 10 * SCREEN_TILES_W                    ; ld bc, SCREEN_WIDTH * 10
     xor al, al
     call FillMemory
-    mov esi, W_TILEMAP + 14 * SCREEN_TILES_W       ; hlcoord 0, 14
+    mov esi, W_TILEMAP + INTRO_BG_ROW_OFF + 14 * SCREEN_TILES_W ; GB rows 14-17
     mov bx, 4 * SCREEN_TILES_W                     ; ld bc, SCREEN_WIDTH * 4
     mov al, 0x1
     call FillMemory
@@ -632,7 +632,7 @@ YellowIntroScene2:
 ;
 ; DEVIATION{class=projection; pret=engine/movie/intro_yellow.asm:YellowIntroScene2_PlaceGraphic; behavior=the vBGMap0 grid write is redirected to W_TILEMAP at its 40-tile row stride (dest = W_TILEMAP + 6*SCREEN_TILES_W + 20, advancing +SCREEN_TILES_W per row), and the hOnCGB CGB attribute-map block is omitted; evidence=the compositor renders the BG from W_TILEMAP and has no CGB tile-attribute plane (the Phase-5 boundary), same as YellowIntroScene4; lifetime=Phase-5 CGB palette port and permanent widescreen tilemap model}
 YellowIntroScene2_PlaceGraphic:
-    mov esi, W_TILEMAP + 6 * SCREEN_TILES_W + 20   ; ld hl, $98d4  (col 20, row 6)
+    mov esi, W_TILEMAP + INTRO_BG_ORIGIN + 6 * SCREEN_TILES_W + 20  ; ld hl, $98d4  (GB col 20, row 6 — off-screen right, revealed by scene 3's scroll)
     mov bh, 0x6                                    ; ld b, $6  (rows)
     mov al, 0x90                                   ; ld a, $90
 .row:
@@ -713,7 +713,7 @@ InitYellowIntroGFXAndMusic:
     mov bx, SCREEN_AREA                            ; ld bc, SCREEN_AREA
     mov al, 0x1                                    ; ld a, $1
     call FillMemory
-    mov esi, W_TILEMAP + 4 * SCREEN_TILES_W        ; hlcoord 0, 4
+    mov esi, W_TILEMAP + INTRO_BG_ROW_OFF + 4 * SCREEN_TILES_W  ; GB rows 4-13 (clear middle at the BG row origin)
     mov bx, SCREEN_TILES_W * 10                    ; ld bc, SCREEN_WIDTH * 10
     xor al, al
     call FillMemory
