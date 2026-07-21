@@ -1296,8 +1296,9 @@ B2 must not create a `PlayIntroScene` stub.
 >   boundary. The port must route intro palettes through its VGA HAL
 >   (`RunPaletteCommand`), NOT port that routine faithfully.
 > - **VBlank-copy**: scenes 7/11 use `hVBlankCopy*` — no port mechanism exists.
-> - Then: `Func_f98fc`+`Jumptable_f9906` (stub unported scenes at `NextScene`),
->   `InitYellowIntroGFXAndMusic`, `PlayIntroScene`, gate + pixel-verify.
+> - `Func_f98fc`+`Jumptable_f9906` — **DONE (`5f570940`)**, 9 real handlers + 9
+>   `NextScene` scaffolds. Remaining: `InitYellowIntroGFXAndMusic`,
+>   `PlayIntroScene`, the BG-map/palette decisions, gate + pixel-verify.
 >
 > **B3.2c-8 done (2026-07-21, `3858c01d`)** — `Copy8BitSineWave` +
 > `wLYOverridesBuffer`@0xFA00 (amp-4 wave ×8 via inline flat→GB `rep movsb`;
