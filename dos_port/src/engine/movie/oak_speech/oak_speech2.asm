@@ -102,7 +102,7 @@ GetDefaultName:
 .innerLoop:
     mov al, [esi]                     ; ld a, [hli]  — flat list read
     inc esi
-    cmp al, '@'                       ; cp '@'
+    cmp al, 0x50                      ; cp '@'  — charmap '@' = 0x50, NOT NASM ASCII 0x40 (no charmap here)
     jne .innerLoop
     cmp bh, bl                        ; ld a,b / cp c
     je .foundName
@@ -198,7 +198,7 @@ ChoosePlayerName:
     mov esi, W_PLAYER_NAME                  ; ld hl, wPlayerName (naming dest, pret HL)
     mov byte [ebp + wNamingScreenType], NAME_PLAYER_SCREEN
     call DisplayNamingScreen
-    cmp byte [ebp + wStringBuffer], '@'     ; empty name -> retry
+    cmp byte [ebp + wStringBuffer], 0x50   ; charmap '@' = 0x50 (NOT NASM ASCII 0x40)     ; empty name -> retry
     je .customNamePlayer
     call MovieBeginSurface                  ; pret ClearScreen: re-establish the surface
     call Delay3
@@ -228,7 +228,7 @@ ChooseRivalName:
     mov esi, W_RIVAL_NAME                    ; ld hl, wRivalName
     mov byte [ebp + wNamingScreenType], NAME_RIVAL_SCREEN
     call DisplayNamingScreen
-    cmp byte [ebp + wStringBuffer], '@'
+    cmp byte [ebp + wStringBuffer], 0x50   ; charmap '@' = 0x50 (NOT NASM ASCII 0x40)
     je .customNameRival
     call MovieBeginSurface
     call Delay3
