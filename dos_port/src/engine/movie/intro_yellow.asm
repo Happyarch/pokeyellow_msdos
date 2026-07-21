@@ -219,6 +219,25 @@ YellowIntroScene5:
     call YellowIntro_NextScene
     ret
 
+; Scene 8 — "running Pikachu 3": identical layout to scene 4, spawning animated
+; object $3 instead of $2. No CGB branch here in pret, so no DMG/CGB split.
+YellowIntroScene8:
+    call YellowIntro_BlankPalsDelay2AndDisableLCD
+    mov bl, 0x5                                     ; ld c, $5
+    call UpdateMusicCTimes
+    xor al, al
+    mov [ebp + H_LCDC_POINTER], al                 ; ldh [hLCDCPointer], a
+    call Func_f9e5f
+    mov dh, 0x58                                    ; lb de, $58, $58
+    mov dl, 0x58
+    mov al, 0x3
+    call YellowIntro_SpawnAnimatedObjectAndSavePointer
+    xor al, al
+    call Func_f9e9a
+    call YellowIntro_SetTimerFor128Frames
+    call YellowIntro_NextScene
+    ret
+
 YellowIntroScene9:
     call YellowIntro_CheckFrameTimerDecrement
     jc .expired
@@ -816,7 +835,7 @@ Jumptable_f9906:
     dd YellowIntroScene5
     dd YellowIntro_NextScene        ; scene 6  (unported)
     dd YellowIntro_NextScene        ; scene 7  (unported)
-    dd YellowIntro_NextScene        ; scene 8  (unported)
+    dd YellowIntroScene8
     dd YellowIntroScene9
     dd YellowIntro_NextScene        ; scene 10 (unported)
     dd YellowIntro_NextScene        ; scene 11 (unported)
