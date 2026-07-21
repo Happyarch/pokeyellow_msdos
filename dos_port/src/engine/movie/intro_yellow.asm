@@ -219,6 +219,50 @@ YellowIntroScene5:
     call YellowIntro_NextScene
     ret
 
+; Scene 6 — "surfing scene": arm the per-scanline SCY wobble (inert in the port),
+; lay out a custom BG (rows 0-2 tile 0, row 3 a $20/$21 stripe, rows 4+ tile $10 =
+; the water), and spawn object $5. The rSCY LY-effect + sine buffer produce the
+; wave wobble on hardware; the port stores them faithfully but does not emulate the
+; per-scanline override (see Copy8BitSineWave), so the wobble is inert.
+;
+; DEVIATION{class=projection; pret=engine/movie/intro_yellow.asm:YellowIntroScene6; behavior=the vBGMap0 fills are redirected to the port 40-wide W_TILEMAP (rows 0-2 = 3*SCREEN_TILES_W of 0, row 3 stripe at W_TILEMAP + 3*SCREEN_TILES_W, rows 4-to-end = SCREEN_AREA - 4*SCREEN_TILES_W of tile $10) instead of the GB 32-wide map, and the rows-4+ fill is capped at the surface bottom rather than pret's fixed $300 GB-row count; evidence=the compositor renders the BG from W_TILEMAP not the GB BG map (same redirect as Func_f9e5f), and a raw $300 byte count would overrun W_TILEMAP at the 40-tile stride; lifetime=permanent widescreen tilemap model}
+YellowIntroScene6:
+    call YellowIntro_BlankPalsDelay2AndDisableLCD
+    mov bl, 0x5                                    ; ld c, $5
+    call UpdateMusicCTimes
+    mov al, 0x42                                   ; ld a, LOW(rSCY)  ($FF42)
+    mov [ebp + H_LCDC_POINTER], al                 ; ldh [hLCDCPointer], a  (inert)
+    call YellowIntro_Copy8BitSineWave
+    mov esi, W_TILEMAP                             ; ld hl, vBGMap0
+    mov bx, 3 * SCREEN_TILES_W                     ; ld bc, $60  (rows 0-2)
+    xor al, al
+    call FillMemory                                ; call Bank3E_FillMemory
+    mov esi, W_TILEMAP + 3 * SCREEN_TILES_W        ; ld hl, $9860  (row 3, col 0)
+    mov cl, 0x10                                   ; ld c, $10
+    mov al, 0x20                                   ; ld a, $20
+.stripe:
+    mov [ebp + esi], al                            ; ld [hli], a  ($20)
+    inc esi
+    inc al                                         ; inc a
+    mov [ebp + esi], al                            ; ld [hli], a  ($21)
+    inc esi
+    dec al                                         ; dec a
+    dec cl                                         ; dec c
+    jnz .stripe
+    mov esi, W_TILEMAP + 4 * SCREEN_TILES_W        ; ld hl, $9880  (row 4, col 0)
+    mov bx, SCREEN_AREA - 4 * SCREEN_TILES_W       ; ld bc, $300  (rows 4-to-end)
+    mov al, 0x10
+    call FillMemory
+    mov dh, 0x40                                   ; lb de, $40, $f8
+    mov dl, 0xf8
+    mov al, 0x5
+    call YellowIntro_SpawnAnimatedObjectAndSavePointer
+    mov al, 0x1
+    call Func_f9e9a
+    call YellowIntro_SetTimerFor88Frames
+    call YellowIntro_NextScene
+    ret
+
 ; Scene 8 — "running Pikachu 3": identical layout to scene 4, spawning animated
 ; object $3 instead of $2. No CGB branch here in pret, so no DMG/CGB split.
 YellowIntroScene8:
@@ -1003,7 +1047,7 @@ Jumptable_f9906:
     dd YellowIntroScene3
     dd YellowIntroScene4
     dd YellowIntroScene5
-    dd YellowIntro_NextScene        ; scene 6  (unported)
+    dd YellowIntroScene6
     dd YellowIntro_NextScene        ; scene 7  (unported)
     dd YellowIntroScene8
     dd YellowIntroScene9
