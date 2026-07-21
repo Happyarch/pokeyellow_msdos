@@ -1322,6 +1322,25 @@ B2 must not create a `PlayIntroScene` stub.
 > (palette via `RunPaletteCommand`); repoint each `Jumptable_f9906` scaffold as it
 > lands; then per-scene pixel-verify. Detail in stigmergy `a4-4-oak-speech2-porting-plan`.
 >
+> **BG-map↔surface decision RESOLVED + first framed even scene lands
+> (2026-07-21).** The pattern: pret scenes write `vBGMap0` (`$9800`, 32-wide GB BG
+> map); the port compositor renders from `W_TILEMAP` (40-wide, mirrored to
+> `GB_TILEMAP0` by `g_surface_redraw_cb`). Translation: `vBGMap0` `$98xx` →
+> `row=off/32, col=off%32` → `W_TILEMAP + row*SCREEN_TILES_W(40) + col`; uniform
+> row-range fills become contiguous `W_TILEMAP` regions (projection DEVIATION).
+> - **B3.2d-6 done (`21f6786b`)** — `Func_f9e5f` (framed-scene BG layout: rows 0-3
+>   tile 1, 4-13 tile 0, 14-17 tile 1) establishes the redirect.
+> - **B3.2e-1 done (`ff0ff9e6`)** — `YellowIntroScene4`, the **first framed even
+>   scene** and the template for 6/8/10/12/14: `BlankPalsDelay2AndDisableLCD` +
+>   `UpdateMusicCTimes(5)` + `Func_f9e5f` + spawn obj `$2` + `Func_f9e9a` +
+>   128-frame timer + `NextScene`. The `hOnCGB` `rVBK` attribute box is omitted
+>   (HAL DEVIATION, Phase-5). faithdiff 7/7 clean; `pixelcheck yellow` f40 =
+>   10246 px inside / 0 matte, **f300 (past scene-4 activation) = 10240 / 0, no
+>   crash through the chain**. **10/18 scenes** (0/1/3/4/5/9/13/15/16/17).
+>   Remaining even scenes 2/6/8/10/12/14 follow this template (scene 2 also needs
+>   `YellowIntroScene2_PlaceGraphic`'s 6×6 gengar grid; scene 10 `.FillBGMapBox`);
+>   odd 7/11 still need a VBlank-copy shim/stub.
+>
 > **B3.2c-8 done (2026-07-21, `3858c01d`)** — `Copy8BitSineWave` +
 > `wLYOverridesBuffer`@0xFA00 (amp-4 wave ×8 via inline flat→GB `rep movsb`;
 > wobble inert — per-scanline LY not emulated). The easy scene-independent wins
