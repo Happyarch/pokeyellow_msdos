@@ -104,9 +104,9 @@ LoadShootingStarGraphics:
 ; ---------------------------------------------------------------------------
 ; AnimateShootingStar — the full splash animation: the big star sweeps down-left
 ; off-screen, the Game Freak logo flashes, then 4 waves of small stars fall from it.
-; Source: engine/movie/splash.asm:AnimateShootingStar.
-;
-; DEVIATION{class=projection; pret=engine/movie/splash.asm:AnimateShootingStar; behavior=publish_splash_oam (PublishProjectedOAM) runs before each frame wait and the two OAM-priming copies (CopyData) are inline flat->GB rep movsb; evidence=the port renders OBJ from a projected shadow not the VBlank-DMA'd wShadowOAM, and the OAM template/logo tables are program-image data the EBP-relative CopyData cannot source; lifetime=permanent widescreen/flat-memory model}
+; Source: engine/movie/splash.asm:AnimateShootingStar. (Calls publish_splash_oam
+; before each frame wait — the port's OAM projection, documented there; the OAM
+; priming copies live in LoadShootingStarGraphics, see its data-model note.)
 ;
 ; In: EBP = GB base. Out: CF set if the user skipped. Clobbers EAX/EBX/ECX/EDX/ESI/EDI.
 ; ---------------------------------------------------------------------------
@@ -233,9 +233,8 @@ AnimateShootingStar:
 ; ---------------------------------------------------------------------------
 ; MoveDownSmallStars — over 8 frames, walk the falling small stars down by their
 ; current count and blink the lower star (toggle OBP1). Source:
-; engine/movie/splash.asm:MoveDownSmallStars.
-;
-; DEVIATION{class=projection; pret=engine/movie/splash.asm:MoveDownSmallStars; behavior=publish_splash_oam (PublishProjectedOAM) runs before each frame wait; evidence=the port renders OBJ from a projected shadow, not the VBlank-DMA'd wShadowOAM; lifetime=permanent widescreen projection}
+; engine/movie/splash.asm:MoveDownSmallStars. (Calls publish_splash_oam before each
+; frame wait — the port's OAM projection, documented there.)
 ;
 ; In: EBP = GB base. Out: CF set if the user skipped. Clobbers EAX/EBX/ESI.
 ; ---------------------------------------------------------------------------
@@ -277,8 +276,9 @@ SPLASH_BG_ROW_OFF  equ UI_SPLASH_ROW * SCREEN_TILES_W       ; = 120
 ; which is white under the splash palette) on GB rows 0-3 and 14-17, clearing the
 ; surface first. Source: engine/movie/intro.asm:IntroDrawBlackBars (+ IntroClear
 ; Screen / IntroClearMiddleOfScreen / IntroClearCommon / IntroPlaceBlackTiles).
-;
-; DEVIATION{class=projection; pret=engine/movie/intro.asm:IntroDrawBlackBars; behavior=the vBGMap0 (hlcoord) and vBGMap1 bar/clear writes are redirected to the single 40-wide W_TILEMAP surface at the cinematic BG origin (bars on GB rows 0-3 & 14-17, whole surface cleared), so pret's two vBGMap1 bar writes coincide with the wTileMap ones on the one surface; evidence=the port compositor renders BG from W_TILEMAP through the row3/col10 MovieMirrorSurface window and there is no second BG map, the same redirect as the yellow-intro scenes; lifetime=permanent widescreen tilemap model}
+; BG writes use the cinematic origin (SPLASH_BG_ROW_OFF above); pret's vBGMap0 and
+; vBGMap1 bar writes both land on the single W_TILEMAP canvas (there is no second
+; BG map) — the port's surface model, not a per-routine deviation.
 ; ---------------------------------------------------------------------------
 global IntroDrawBlackBars
 IntroDrawBlackBars:

@@ -44,11 +44,18 @@ extern CopyVideoData, RunPaletteCommand, PlayMusic, ClearObjectAnimationBuffers
 extern MovieBeginSurface, MovieEndSurface, PublishProjectedOAM, JoypadLowSensitivity
 extern RunObjectAnimations, UpdateMusicCTimes
 
-; Cinematic BG-drawing origin. MovieMirrorSurface reads the visible 18x20 window
-; from W_TILEMAP + UI_YELLOW_INTRO_ROW*SCREEN_TILES_W + UI_YELLOW_INTRO_COL (row 3,
-; col 10), so a GB coord(col,row) must be authored at (col+10, row+3) — cf.
-; title.asm TITLE_ORIGIN. Row-range fills (contiguous full-width) add only the row
-; part; column-specific writes add the full origin.
+; --- Cinematic BG surface model (the port's own; documented here once) ----------
+; pret writes the GB BG map vBGMap0 ($9800, 32-wide). The port has no such map for
+; the cinematic; it composites the BG from the widescreen W_TILEMAP canvas, of which
+; MovieMirrorSurface shows the 18x20 window at W_TILEMAP + UI_YELLOW_INTRO_ROW*
+; SCREEN_TILES_W + UI_YELLOW_INTRO_COL (row 3, col 10) — cf. title.asm TITLE_ORIGIN.
+; So the scenes below mirror pret's vBGMap0 writes as W_TILEMAP writes at this
+; origin: a GB coord(col,row) is authored at (col+INTRO_BG_COL, row+INTRO_BG_ROW).
+; Row-range (contiguous full-width) fills add only the row part (INTRO_BG_ROW_OFF);
+; column-specific writes add the full origin (INTRO_BG_ORIGIN). This is a uniform
+; port convention, NOT a per-scene deviation — the scenes carry only plain
+; "projected coord" comments, and DEVIATION annotations are reserved for genuine
+; behavioural divergences (HAL / data-model / banking).
 INTRO_BG_ROW      equ 3                                  ; UI_YELLOW_INTRO_ROW
 INTRO_BG_COL      equ 10                                 ; UI_YELLOW_INTRO_COL
 INTRO_BG_ROW_OFF  equ INTRO_BG_ROW * SCREEN_TILES_W      ; = 120 (row-only origin)
@@ -233,9 +240,9 @@ YellowIntroScene5:
 ; lay out a custom BG (rows 0-2 tile 0, row 3 a $20/$21 stripe, rows 4+ tile $10 =
 ; the water), and spawn object $5. The rSCY LY-effect + sine buffer produce the
 ; wave wobble on hardware; the port stores them faithfully but does not emulate the
-; per-scanline override (see Copy8BitSineWave), so the wobble is inert.
-;
-; DEVIATION{class=projection; pret=engine/movie/intro_yellow.asm:YellowIntroScene6; behavior=the vBGMap0 fills are redirected to the port 40-wide W_TILEMAP (rows 0-2 = 3*SCREEN_TILES_W of 0, row 3 stripe at W_TILEMAP + 3*SCREEN_TILES_W, rows 4-to-end = SCREEN_AREA - 4*SCREEN_TILES_W of tile $10) instead of the GB 32-wide map, and the rows-4+ fill is capped at the surface bottom rather than pret's fixed $300 GB-row count; evidence=the compositor renders the BG from W_TILEMAP not the GB BG map (same redirect as Func_f9e5f), and a raw $300 byte count would overrun W_TILEMAP at the 40-tile stride; lifetime=permanent widescreen tilemap model}
+; per-scanline override (see Copy8BitSineWave), so the wobble is inert. (BG fills
+; use the cinematic origin, as documented once at the top; pret's rows-4+ $300 fill
+; is capped at the surface bottom so it does not overrun the 40-wide canvas.)
 YellowIntroScene6:
     call YellowIntro_BlankPalsDelay2AndDisableLCD
     mov bl, 0x5                                    ; ld c, $5
@@ -353,9 +360,9 @@ YellowIntroScene9:
 ; Scene 10 — "gengar battle scene": clear the BG map, paint rows 0-7 with tile $2,
 ; then paste three tilemap boxes (the gengar/battle graphics) and spawn object $6.
 ; The .FillBGMapBox local (kept as in pret) copies a BH x BL tile box from a flat
-; tilemap into W_TILEMAP.
-;
-; DEVIATION{class=projection; pret=engine/movie/intro_yellow.asm:YellowIntroScene10; behavior=the vBGMap0 fills and the three box pastes are redirected to the port's 40-wide W_TILEMAP (whole-map clear = SCREEN_AREA, row-range fill = N*SCREEN_TILES_W, box dest = W_TILEMAP + row*SCREEN_TILES_W + col) and .FillBGMapBox advances one 40-tile row per source row instead of the GB 32; evidence=the cinematic compositor renders the BG from W_TILEMAP not the 32-wide GB BG map, the same redirect as Func_f9e5f, and all three boxes fall inside the visible 20-col region so nothing is clipped; lifetime=permanent widescreen tilemap model}
+; tilemap into W_TILEMAP, advancing one canvas row per source row. BG writes use the
+; cinematic origin (documented once at the top); all three boxes fall inside the
+; visible 20-col region.
 YellowIntroScene10:
     call YellowIntro_BlankPalsDelay2AndDisableLCD
     mov bl, 0x5                                    ; ld c, $5
@@ -451,7 +458,8 @@ YellowIntroScene11:
 ; as in pret), paste an 8x12 graphic at (5,6) whose tile ids run 4.. with a 4-tile
 ; gap per row, patch three individual tiles, and spawn object $9.
 ;
-; DEVIATION{class=projection; pret=engine/movie/intro_yellow.asm:YellowIntroScene12; behavior=the vBGMap0 fills, the 8x12 procedural paste, and the three single-tile writes are redirected to the port's 40-wide W_TILEMAP (row-range fill = N*SCREEN_TILES_W, cell = W_TILEMAP + row*SCREEN_TILES_W + col) and the paste advances one 40-tile row per graphic row instead of the GB 32; evidence=the compositor renders the BG from W_TILEMAP not the 32-wide GB BG map, the same redirect as Func_f9e5f, and the 12-col paste at col 5 stays inside the visible 20-col region; lifetime=permanent widescreen tilemap model}
+; (BG writes use the cinematic origin, documented once at the top; the 12-col paste
+; at col 5 stays inside the visible 20-col region.)
 YellowIntroScene12:
     call YellowIntro_BlankPalsDelay2AndDisableLCD
     mov bl, 0x5                                    ; ld c, $5
@@ -520,7 +528,7 @@ YellowIntroScene13:
 ; advance, and arm a $28-frame timer for the next scene.
 ;
 ; DEVIATION{class=HAL; pret=engine/movie/intro_yellow.asm:YellowIntroScene14; behavior=the two hAutoBGTransferEnabled stores gating the wTileMap->vBGMap0 auto-transfer are dropped while the three DelayFrame waits remain, because the port surface mirror copies W_TILEMAP every frame with no enable flag; evidence=hAutoBGTransferEnabled was retired when the surface mirror replaced the GB auto BG transfer and the compositor renders directly from W_TILEMAP; lifetime=permanent surface-mirror model}
-; DEVIATION{class=projection; pret=engine/movie/intro_yellow.asm:YellowIntroScene14; behavior=the wTileMap row fills use the port 40-tile W_TILEMAP row stride instead of the GB 20-tile stride, so each SCREEN_WIDTH*N fill becomes SCREEN_TILES_W*N; evidence=the compositor renders the BG from the 40-wide W_TILEMAP not the GB shadow map, the same redirect as Func_f9e5f; lifetime=permanent widescreen tilemap model}
+; (BG row fills use the cinematic origin, documented once at the top.)
 YellowIntroScene14:
     mov edx, YellowIntroPalSequence_f9dd6          ; ld de, ...
     call YellowIntro_LoadDMGPalAndIncrementCounter
@@ -603,8 +611,6 @@ YellowIntroScene0:
 ; off-screen at col 20 (revealed later when scene 3 scrolls the BG right), and
 ; spawn the 8 flying speed-bar objects. The de/a set before LoadYellowIntroFlying
 ; SpeedBars are overloaded/ignored by that routine (kept for fidelity).
-;
-; DEVIATION{class=projection; pret=engine/movie/intro_yellow.asm:YellowIntroScene2; behavior=the vBGMap0 whole-map clear is redirected to W_TILEMAP over SCREEN_AREA; evidence=the compositor renders the BG from the 40-wide W_TILEMAP not the GB BG map, the same redirect as Func_f9e5f; lifetime=permanent widescreen tilemap model}
 YellowIntroScene2:
     call YellowIntro_BlankPalsDelay2AndDisableLCD
     mov bl, 0x8                                    ; ld c, $8
@@ -627,10 +633,10 @@ YellowIntroScene2:
     ret
 
 ; YellowIntroScene2_PlaceGraphic — paint a 6x6 grid of tiles ($90.., +$10 per row)
-; into vBGMap0 at (col 20, row 6). Col 20 is off the right of the visible 20-col
-; area at SCX=0; scene 3 scrolls the BG right to bring it into view.
+; at GB (col 20, row 6), authored at the cinematic origin. Col 20 is off the right
+; of the visible 20-col area at SCX=0; scene 3 scrolls the BG right to bring it in.
 ;
-; DEVIATION{class=projection; pret=engine/movie/intro_yellow.asm:YellowIntroScene2_PlaceGraphic; behavior=the vBGMap0 grid write is redirected to W_TILEMAP at its 40-tile row stride (dest = W_TILEMAP + 6*SCREEN_TILES_W + 20, advancing +SCREEN_TILES_W per row), and the hOnCGB CGB attribute-map block is omitted; evidence=the compositor renders the BG from W_TILEMAP and has no CGB tile-attribute plane (the Phase-5 boundary), same as YellowIntroScene4; lifetime=Phase-5 CGB palette port and permanent widescreen tilemap model}
+; DEVIATION{class=HAL; pret=engine/movie/intro_yellow.asm:YellowIntroScene2_PlaceGraphic; behavior=the hOnCGB branch that writes the CGB VRAM bank-1 attribute map is omitted, the port always takes the DMG path; evidence=the port renders DMG shades through the VGA compositor and has no CGB tile-attribute plane, the Phase-5 CGB palette boundary, same as YellowIntroScene4; lifetime=Phase-5 CGB palette translation}
 YellowIntroScene2_PlaceGraphic:
     mov esi, W_TILEMAP + INTRO_BG_ORIGIN + 6 * SCREEN_TILES_W + 20  ; ld hl, $98d4  (GB col 20, row 6 — off-screen right, revealed by scene 3's scroll)
     mov bh, 0x6                                    ; ld b, $6  (rows)
@@ -742,7 +748,10 @@ InitYellowIntroGFXAndMusic:
 ; PlayIntroScene — the Yellow-intro main loop: init, then step scenes until the
 ; done bit (scene bit 7) is set or A/B/START skips it; teardown and return.
 ;
-; DEVIATION{class=projection; pret=engine/movie/intro_yellow.asm:PlayIntroScene; behavior=wraps the loop in MovieBeginSurface/MovieEndSurface and republishes the animated-object shadow OAM through PublishProjectedOAM each frame instead of the GB VBlank OAM DMA, and the rIE/rIF/rSTAT + hAutoBGTransferEnabled hardware setup is dropped; evidence=the port renders OBJ from a projected shadow onto the cinematic surface (UI_YELLOW_INTRO) and uses its own PIT/keyboard ISR, not GB interrupts or VBlank auto-transfer; lifetime=permanent widescreen/flat-memory model}
+; The loop is wrapped in MovieBeginSurface/MovieEndSurface and republishes the
+; animated-object shadow OAM through PublishProjectedOAM each frame — the port's
+; cinematic surface model (documented once at the top).
+; DEVIATION{class=HAL; pret=engine/movie/intro_yellow.asm:PlayIntroScene; behavior=pret's rIE/rIF/rSTAT (GB interrupt + STAT) and hAutoBGTransferEnabled hardware setup is dropped; evidence=the port drives OBJ from a projected shadow with its own PIT/keyboard ISR, not GB interrupts, and has no VBlank auto-transfer; lifetime=permanent flat-memory/HAL model}
 ; ---------------------------------------------------------------------------
 PlayIntroScene:
     ; pret saves rIE/rIF/rSTAT here (GB interrupt + STAT setup) — the port uses
@@ -893,11 +902,9 @@ YellowIntro_BlankPalsDelay2AndDisableLCD:
     ret
 
 ; ---------------------------------------------------------------------------
-; Func_f9e5f — lay out the BG for the framed scenes: rows 0-3 tile $1, rows 4-13
-; tile $0, rows 14-17 tile $1. Establishes the BG-map redirect all vBGMap0-writing
-; even scenes use.
-;
-; DEVIATION{class=projection; pret=engine/movie/intro_yellow.asm:Func_f9e5f; behavior=the vBGMap0 ($9800 GB BG map) fills are redirected to the port's canonical W_TILEMAP at its 40-tile row stride (the surface mirror carries W_TILEMAP to GB_TILEMAP0), so the multi-row fills become contiguous W_TILEMAP row ranges; evidence=the cinematic compositor renders the BG from W_TILEMAP not the 32-wide GB BG map, proven by the running intro whose Init W_TILEMAP fill renders; lifetime=permanent widescreen tilemap model}
+; Func_f9e5f — lay out the BG for the framed scenes: GB rows 0-3 tile $1, rows 4-13
+; tile $0, rows 14-17 tile $1. Authored at the cinematic BG origin (see INTRO_BG_*
+; at the top of this file) like every scene here — no per-scene projection note.
 ; ---------------------------------------------------------------------------
 Func_f9e5f:
     mov esi, W_TILEMAP + INTRO_BG_ROW_OFF          ; GB rows 0-3 -> surface rows 0-3
