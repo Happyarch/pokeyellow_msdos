@@ -1121,6 +1121,17 @@ wc634                           equ 0xF6CA ; alias
 wYellowIntroSceneTimer          equ 0xF6CB ; db (= wc635)
 wc635                           equ 0xF6CB ; alias
 
+; --- Yellow-intro animated-object DATA blob (menu-intro B1) ---
+; The Frames/OAM/Spawn tables (pret data/sprite_anims/intro_frames.asm +
+; intro_oam.asm + intro_yellow.asm's spawn table) are pure GB-pointer data. Per
+; the B1 pointer model they stay 16-bit GB pointers, so the immutable blob is
+; assembled flat with GB-base-relative internal pointers (INTRO_ANIM_DATA + off)
+; and copied flat->GB once at intro init (CopyYellowIntroAnimatedObjectData).
+; ~657 B; reserved 0x2A0. Intro-cinematic-only, echo RAM, never live with the
+; overworld buffers. See src/data/sprite_anims/intro_anim_data.asm.
+W_INTRO_ANIM_DATA               equ 0xF700 ; wYellowIntroAnimatedObjectData blob (GB base)
+W_INTRO_ANIM_DATA_SIZE          equ 0x2A0  ; reservation (actual ~0x291), ends <= 0xF9A0
+
 ; Overworld map block buffer (2304 bytes). Worst case is Route 17 / Route 23 (10x72):
 ; (10 + 2*7) * (72 + 2*7) = 24 * 86 = 2064 bytes at MAP_BORDER=7, which overflows the old
 ; 2048. Grown to 0x900; end = 0xF100, and nothing is used until GB_OAM at 0xFE00.
