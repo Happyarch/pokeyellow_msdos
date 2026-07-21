@@ -15,9 +15,9 @@ Required project skills: `asm-translation`, `project-conventions`, `build-and-de
 
 ## Status
 
-- [x] Phase A — Playable title → menu → new game *(all four subtasks port-side done + golden-verified; the only open tails are the per-stage TIMING TRACES (title bounce/blink, Oak — both need port-side per-frame trace instrumentation that does not yet exist, same blocker as the yellow-scene trace) and the deferred bespoke title-bounce reimpl. Functional playable chain + all state goldens PASS.)*
+- [x] Phase A — Playable title → menu → new game *(all four subtasks port-side done + golden-verified; the title bounce+blink timing traces are DONE (2026-07-21). Remaining open tails: the Oak timing trace (A4) and the deferred bespoke full-title reimpl. Functional playable chain + all state goldens PASS.)*
   - [x] A1 — Cinematic projection substrate
-  - [x] A2 — Projected title with live audio and palettes *(port-side done; `title_timeout` golden id 27 DONE + PASS 2026-07-21; only the title bounce/blink timing trace + deferred bounce reimpl remain)*
+  - [x] A2 — Projected title with live audio and palettes *(port-side done; `title_timeout` golden id 27 DONE + PASS; title BOUNCE + BLINK timing traces DONE + verified 2026-07-21 (13-exact bounce + deterministic faithdiff-clean blink, runtime-confirmed). Only the deferred bespoke full-title reimpl remains, per CLAUDE.md.)*
   - [x] A3 — Real title → menu → entry routing *(DONE + verified 2026-07-21: title `jmp MainMenu`, reset-save branch preserved, `SKIP_TITLE`→`InitPlayerData2`, `EnterMapBoot` 2 legit callers; main_menu id22 / title_reentry id23 / continue_seed id24 goldens registered + committed)*
   - [x] A4 — Oak speech, naming, and stub retirement *(port-side done, faithdiff 24/24 + fidelity 16/16; oak_intro GBSTATE golden id 29 DONE + PASS 2026-07-21; only the Oak timing trace remains)*
 - [ ] Phase B — Power-on movie
@@ -651,13 +651,13 @@ This frame is the correct visual golden because it contains the complete final c
 - [ ] Play both Pikachu PCM beats.
 - [ ] Wait, stop, start, and fade at pret’s call points.
 - [ ] Remove stale hardware comments.
-- [ ] Generate and compare the title timing trace.
-- [ ] Capture mid-bounce `FRAME.BIN` frames at each distinct `TitleScreenYScrolls` step, mandatorily including every overshoot/wrap entry (the `-3` crash frame), and diff them against mGBA rendered frames through the projection transform.
+- [x] Generate and compare the title timing trace. *(BOTH HALVES DONE. Reference: `title_trace.lua` records (frame, hSCY, hWY, wTitleScreenScene) CSV from the ROM. **Bounce** (`eccc45b0`/`1b443ab8`): `check_title_timing.py` recovers hSCY from the rendered logo edge — 13 exact, 0 mismatch, 1 unmeasurable (logo above viewport). **Blink** (verified 2026-07-21): the blink is DETERMINISTIC — `.CheckTimer` triggers scene=1 at `wTitleScreenTimer` $00/$80/$90 (intervals 128/16/112, matching the CSV exactly), then the 12-entry jumptable advances scene 1→11 one per frame. The port's `DoTitleScreenFunction`/`.CheckTimer`/jumptable are a faithful line-for-line translation (`faithdiff` clean bar the justified `TitleScreenPublishEyes` OAM-republish + the `jp hl`→indexed-jmp lowering — the permanent regression guard). Rendering runtime-confirmed: a `TITLE_DUMP_SCENE=5` (closed) capture shows all 8 eye OBJ mutated to $F8-$FB = the golden's open $F0-$F3 with the `.BlinkClosed` DL=8 offset, same positions/attrs.)*
+- [x] Capture mid-bounce `FRAME.BIN` frames at each distinct `TitleScreenYScrolls` step, mandatorily including every overshoot/wrap entry (the `-3` crash frame), and diff them against mGBA rendered frames through the projection transform. *(done with the bounce trace above — `check_title_timing.py` on `TITLE_DUMP_FRAME=N` captures; 13 bounce steps exact.)*
 - [x] Register `title_timeout`. *(id 27, `c553c01c` — PASS; sibling `soft_reset` id 28 registered too.)*
 
 #### Acceptance
 
-- Bounce and blink timing traces match mGBA record by record.
+- [x] Bounce and blink timing traces match mGBA record by record. *(bounce 13-exact via check_title_timing.py; blink deterministic + faithdiff-clean state machine + runtime closed-eye capture, verified 2026-07-21)*
 - Mid-bounce pixel captures match mGBA rendered frames through the projection transform, including every wrapped/overshoot frame.
 - The stable title checkpoint meets every condition above.
 - The centered surface begins at `(80,24)`.
