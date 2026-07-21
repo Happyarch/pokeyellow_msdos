@@ -2014,10 +2014,24 @@ new game skips speech+naming.
   `RunOakSpeechCheckpoint` now drives the real `OakSpeech`; pixel-verified — Oak pic +
   box + page-1 text, matte clean, **zero** OBJ-palette pixels; fidelity 16/16.
 
-**Remaining A4.5.f:** register the oak_intro golden (id 21), the Oak timing trace, and
-end-to-end naming/rival-pic runtime verification (default + custom naming under
-AUTOKEY — the custom-path surface re-establishment, `MovePicLeft` slide, and shrink
-beats get their runtime evidence there). Detail in stigmergy
+- **A4.5.f: default naming verified** (`cff85d0f`): the `DEBUG_CHOOSENAME` gate +
+  `AUTOKEY_CHOOSENAME` (DOWN+A) drive `ChoosePlayerName`'s default path end-to-end —
+  `pixelcheck.sh choosename` shows the pic + box + "YOUR NAME IS …" text, matte clean.
+  Runtime evidence for the naming machinery ported in `a191c3e8`.
+
+**⚠ BLOCKED (needs mGBA + baserom, neither present in this environment — `mgba not
+found`, no `*.gbc`):** the oak_intro **GBSTATE golden** (id 21) and the **Oak timing
+trace** can't be generated here — they require mGBA to drive the real ROM (`make
+goldens` → `tools/mgba_harness/make_goldens.sh`). The port side is *ready*: the real
+`OakSpeech` renders the checkpoint (`53308bc4`) and default naming renders
+(`cff85d0f`). When back in an mGBA-capable env: repurpose scenario id 21 (nav
+boot→title→menu→NEW GAME→`OakSpeech` page-1 wait; must-hits `OakSpeech`/
+`PrepareOakSpeech`/`FadeInIntroPic`/`DisplayPicCenteredOrUpperRight`; drop the Pallet
+must-hits), `make goldens`, enable it, add to `goldencheck`.
+
+**Remaining port-side (no mGBA needed):** the custom-name path (drive
+`DisplayNamingScreen` letter entry + END → the rival-pic re-establishment acceptance
+gate), and the whole-chain new-game boot under AUTOKEY. Detail in stigmergy
 `a4-4-oak-speech2-porting-plan`.
 
 ### A4 progress (2026-07-20): pic engine, fade, text, PrepareOakSpeech; the PrintText-under-surface finding
