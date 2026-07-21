@@ -1307,10 +1307,20 @@ B2 must not create a `PlayIntroScene` stub.
 > them → **run with the 9 ported scenes + 9 auto-advance scaffolds** → then port
 > each even scene against the *live* `DEBUG_CINEMATIC_YELLOW` harness (BG-map
 > decision made only when the first `vBGMap0` scene lands).
-> `InitYellowIntroGFXAndMusic` — **DONE (`064ac6c9`)**. **Only `PlayIntroScene`
-> (loop + `MovieBeginSurface` + per-frame `PublishProjectedOAM` + `UI_YELLOW_INTRO`
-> projection) + the `DEBUG_CINEMATIC_YELLOW` gate remain to make the intro RUN.**
-> Full `PlayIntroScene` loop spec is in stigmergy `a4-4-oak-speech2-porting-plan`.
+> `InitYellowIntroGFXAndMusic` — **DONE (`064ac6c9`)**.
+>
+> **🎉 THE YELLOW INTRO RUNS (`40598dcc`).** `PlayIntroScene` + the
+> `DEBUG_CINEMATIC_YELLOW` gate (`pixelcheck yellow`) — the intro plays end-to-end
+> on the `UI_YELLOW_INTRO` surface: frame 40 (scene 0) = 10246 px inside, **0
+> outside (matte clean)**, BG tilemap + animated Pikachu OBJ projected/clipped, no
+> crash. The 9 ported scenes render; the 9 unported even scenes auto-advance
+> (jumptable scaffold). DMG shades (CGB palette = Phase-5 boundary).
+>
+> **Remaining B3 (now against the LIVE harness):** port the even scenes
+> 2/4/6/8/10/12/14 (the BG-map↔surface decision lands with the first `vBGMap0`
+> scene), scenes 7/11 (VBlank-copy mechanism), and scene 16's `Func_f9e9a`
+> (palette via `RunPaletteCommand`); repoint each `Jumptable_f9906` scaffold as it
+> lands; then per-scene pixel-verify. Detail in stigmergy `a4-4-oak-speech2-porting-plan`.
 >
 > **B3.2c-8 done (2026-07-21, `3858c01d`)** — `Copy8BitSineWave` +
 > `wLYOverridesBuffer`@0xFA00 (amp-4 wave ×8 via inline flat→GB `rep movsb`;
