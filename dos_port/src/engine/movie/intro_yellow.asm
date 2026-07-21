@@ -31,7 +31,7 @@ global YellowIntroScene13, YellowIntroScene17, YellowIntroScene3
 global Func_fa06e, YellowIntroScene0
 global YellowIntroScene16, YellowIntro_LoadDMGPalAndIncrementCounter
 global YellowIntro_BlankPalsDelay2AndDisableLCD, YellowIntroScene15
-global YellowIntro_Copy8BitSineWave
+global YellowIntro_Copy8BitSineWave, LoadYellowIntroFlyingSpeedBars
 
 extern YellowIntroFramesData_GB, YellowIntroOAMData_GB, YellowIntroSpawnData_GB
 extern SpawnAnimatedObject, MaskCurrentAnimatedObjectStruct, MaskAllAnimatedObjectStructs
@@ -380,6 +380,34 @@ YellowIntro_Copy8BitSineWave:
     ret
 
 ; ---------------------------------------------------------------------------
+; LoadYellowIntroFlyingSpeedBars — spawn the 8 flying speed-bar objects (scene 2)
+; from the flat (y, x, speed) table, stashing each object's speed in FieldB.
+; The table is flat program-image data (flat reads); the struct write is GB.
+; ---------------------------------------------------------------------------
+LoadYellowIntroFlyingSpeedBars:
+    mov esi, YellowIntroFlyingSpeedBarData          ; ld hl, ... (flat)
+    mov al, 0x8                                     ; ld a, $8  (count)
+.loop:
+    push eax                                        ; push af  (count)
+    mov dl, [esi]                                   ; ld e, [hl]
+    inc esi
+    mov dh, [esi]                                   ; ld d, [hl]
+    inc esi
+    mov al, [esi]                                   ; ld a, [hli]  (speed)
+    inc esi
+    push esi                                        ; push hl  (data ptr)
+    push eax                                        ; push af  (speed)
+    mov al, 0x8                                     ; ld a, $8  (spawn index)
+    call SpawnAnimatedObject                        ; EBX = struct base
+    pop eax                                         ; pop af  (speed)
+    mov [ebp + ebx + 0x0b], al                      ; ld hl,$b/add hl,bc/ld [hl],a  (FieldB)
+    pop esi                                         ; pop hl
+    pop eax                                         ; pop af  (count)
+    dec al                                          ; dec a
+    jnz .loop
+    ret
+
+; ---------------------------------------------------------------------------
 ; Func_fa007 — no-op object callback.
 ; ---------------------------------------------------------------------------
 Func_fa007:
@@ -572,6 +600,18 @@ YellowIntroSineWave8:
     db  0,  0, -1, -2, -2, -3, -3, -3
     db -4, -3, -3, -3, -2, -2, -1,  0
 YellowIntroSineWave8End:
+
+; Flying speed-bar spawn table (scene 2): y, x, speed per object.
+global YellowIntroFlyingSpeedBarData
+YellowIntroFlyingSpeedBarData:
+    db 0xd0, 0x20, 0x02
+    db 0xf0, 0x30, 0x04
+    db 0xd0, 0x40, 0x06
+    db 0xc0, 0x50, 0x08
+    db 0xe0, 0x60, 0x08
+    db 0xc0, 0x70, 0x06
+    db 0xe0, 0x80, 0x04
+    db 0xf0, 0x90, 0x02
 
 ; --- Yellow-intro gfx (B3.2b, gen_intro_gfx_inc.py; verified byte-exact vs the
 ; pret gfx/intro/*.2bpp). Loaded to VRAM by InitYellowIntroGFXAndMusic (B3.2c);
