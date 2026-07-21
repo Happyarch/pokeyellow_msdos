@@ -2017,7 +2017,13 @@ new game skips speech+naming.
 - **A4.5.f: default naming verified** (`cff85d0f`): the `DEBUG_CHOOSENAME` gate +
   `AUTOKEY_CHOOSENAME` (DOWN+A) drive `ChoosePlayerName`'s default path end-to-end —
   `pixelcheck.sh choosename` shows the pic + box + "YOUR NAME IS …" text, matte clean.
-  Runtime evidence for the naming machinery ported in `a191c3e8`.
+- **A4.5.f: custom naming + surface re-establishment verified** (`36a2dc33`): the
+  `CHOOSENAME_CUSTOM=1` variant (A → NEW NAME, A → letter, START → submit) drives the
+  custom path with **before/after** proof — frame 180 the `DisplayNamingScreen` grid
+  has taken over the whole surface (pic gone); frame 320 the pic is **restored** +
+  "YOUR NAME IS" (`MovieBeginSurface` re-established the surface). This is the
+  rival-pic-after-naming acceptance gate — the deferred runtime evidence for `a191c3e8`.
+  Both naming paths now render end-to-end on the projected surface.
 
 **⚠ BLOCKED (needs mGBA + baserom, neither present in this environment — `mgba not
 found`, no `*.gbc`):** the oak_intro **GBSTATE golden** (id 21) and the **Oak timing
