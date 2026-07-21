@@ -1160,6 +1160,16 @@ B2 must not create a `PlayIntroScene` stub.
 
 ### B2 — Game Freak splash
 
+> **B2 progress (2026-07-21):** the splash graphics are generated (`fb24333b`) —
+> `gen_title_gfx_inc.py` now emits `GameFreakIntro` (presents 13t + logo 6t + blank
+> 1t = 20t) and `FallingStar` (1t) under pret's labels (checked in like the title
+> gfx). Remaining: port `engine/movie/splash.asm` (`LoadShootingStarGraphics` /
+> `AnimateShootingStar` / `MoveDownSmallStars`) + the OAM data tables, projected
+> through `UI_SPLASH` / `PublishProjectedOAM`, with a `DEBUG_CINEMATIC_SPLASH` gate.
+> ⚠ The splash **timing trace** acceptance is mGBA-blocked in this environment
+> (see the A4.5.f note); porting + pixel verification proceed. Detail in stigmergy
+> `a4-4-oak-speech2-porting-plan`.
+
 #### Work
 
 - [ ] Port `PlayShootingStar` and `GameFreakIntro`.
