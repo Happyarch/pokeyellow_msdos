@@ -1306,9 +1306,11 @@ B2 must not create a `PlayIntroScene` stub.
 > `Init` + `PlayIntroScene` + the surface wiring are portable **now**. Plan: port
 > them → **run with the 9 ported scenes + 9 auto-advance scaffolds** → then port
 > each even scene against the *live* `DEBUG_CINEMATIC_YELLOW` harness (BG-map
-> decision made only when the first `vBGMap0` scene lands). `InitYellowIntroGFX-
-> AndMusic` is next — all its symbols/signatures are gathered in stigmergy
-> `a4-4-oak-speech2-porting-plan`.
+> decision made only when the first `vBGMap0` scene lands).
+> `InitYellowIntroGFXAndMusic` — **DONE (`064ac6c9`)**. **Only `PlayIntroScene`
+> (loop + `MovieBeginSurface` + per-frame `PublishProjectedOAM` + `UI_YELLOW_INTRO`
+> projection) + the `DEBUG_CINEMATIC_YELLOW` gate remain to make the intro RUN.**
+> Full `PlayIntroScene` loop spec is in stigmergy `a4-4-oak-speech2-porting-plan`.
 >
 > **B3.2c-8 done (2026-07-21, `3858c01d`)** — `Copy8BitSineWave` +
 > `wLYOverridesBuffer`@0xFA00 (amp-4 wave ×8 via inline flat→GB `rep movsb`;
