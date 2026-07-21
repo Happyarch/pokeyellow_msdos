@@ -1381,6 +1381,30 @@ B2 must not create a `PlayIntroScene` stub.
 >   setup + timer) and **stub the tile-animation transfer** (deferred visual polish,
 >   annotated STUB/DEVIATION — the water/cloud tile cycling won't animate but the
 >   scenes run). Scene 2 still needs the gengar-grid scroll/clip decision.
+> - **B3.2e-7 done (`e08638ba`)** — `YellowIntroScene7` (surf wait: hSCX scroll +
+>   circular LY-buffer roll), `YellowIntroScene11` (clouds: every-8th-frame setup),
+>   and `Request7TileTransferFromC810ToC710`. Defined `hVBlankCopySize/Source/Dest`
+>   as inert HRAM (0xFFC6-CA) + `W_LY_OVERRIDES`: the port has no generic VBlank
+>   tile copy, so the request bytes are written faithfully but never consumed — the
+>   LY-wave / cloud tile animation does not cycle (HAL DEVIATION). Scroll, roll, and
+>   timers are real. All three faithdiff-clean.
+> - **B3.2e-8 done (`de5ffd36`)** — `YellowIntroScene2` + `YellowIntroScene2_Place
+>   Graphic`, the **last scaffold**. The 6×6 gengar grid is placed at col 20
+>   (off-screen at SCX=0, revealed when scene 3 scrolls right — the faithful,
+>   non-clamped placement); CGB attr block omitted (Phase-5). Pixel-verified: scene
+>   2 shows only the flying-bar OBJ, then the grid scrolls into view during scene 3.
+>
+> ### 🎉 B3 SCENE WORK COMPLETE — ALL 18 YELLOW INTRO SCENES PORTED
+>
+> Every `Jumptable_f9906` entry (0–17) now points at a real scene (zero scaffolds).
+> The intro runs end-to-end through the `DEBUG_CINEMATIC_YELLOW` harness; every
+> `YellowIntroScene*` is faithdiff- and lint-clean; `pixelcheck yellow` shows
+> distinct per-scene content at 0 matte across the whole surface-active window,
+> with a clean teardown to the post-intro state. DMG shades (CGB = Phase-5). The
+> reusable **BG-map↔surface** translation (vBGMap0 → W_TILEMAP at the 40-tile
+> stride) carried every framed/boxed/procedural scene. Deferred (mGBA-blocked): the
+> per-scene / timing goldens. **Next: B3 whole-chain acceptance, then B4 (boot
+> integration: power-on → splash → intro → title → menu → Oak → overworld).**
 >
 > **B3.2c-8 done (2026-07-21, `3858c01d`)** — `Copy8BitSineWave` +
 > `wLYOverridesBuffer`@0xFA00 (amp-4 wave ×8 via inline flat→GB `rep movsb`;
