@@ -1365,6 +1365,22 @@ B2 must not create a `PlayIntroScene` stub.
 >   17). **Remaining: even 2 (gengar grid, off-screen col — needs a scroll/clip
 >   decision) + 6 (striped BG + inert LY-SCY wobble); odd 7/11 (VBlank-copy shim or
 >   stub).**
+> - **B3.2e-6 done (`0ee2e983`)** — `YellowIntroScene6` (surfing scene): arms the
+>   per-scanline SCY wobble (`hLCDCPointer=LOW(rSCY)`, inert in the port), copies
+>   the sine buffer, lays out a custom BG (rows 0-2 tile 0, row 3 a `$20/$21`
+>   stripe, rows 4+ the water tile `$10`), spawns obj `$5`. The rows-4+ fill is
+>   **capped at `SCREEN_AREA`** (pret's raw `$300` byte count would overrun
+>   W_TILEMAP at the 40-tile stride). Renders distinct content (9280px) at 0 matte.
+>   **15/18 scenes render.**
+> - **Remaining 3 scenes — the VBlank tile-transfer decision.** Scenes 7/11 use the
+>   generic VRAM tile-transfer VBlank pipeline (`hVBlankCopySource/Dest/Size`,
+>   `Request7TileTransferFromC810ToC710`), which **the port does not have** (it has
+>   only `VBlankCopyBgMap` for BG-map *rows*, in `src/video/bg_anim.asm`). Decision:
+>   port each scene's portable logic faithfully (scene 7 = `hSCX+=2` scroll + the
+>   circular `wLYOverridesBuffer` roll + timer; scene 11 = the every-8th-frame cloud
+>   setup + timer) and **stub the tile-animation transfer** (deferred visual polish,
+>   annotated STUB/DEVIATION — the water/cloud tile cycling won't animate but the
+>   scenes run). Scene 2 still needs the gengar-grid scroll/clip decision.
 >
 > **B3.2c-8 done (2026-07-21, `3858c01d`)** — `Copy8BitSineWave` +
 > `wLYOverridesBuffer`@0xFA00 (amp-4 wave ×8 via inline flat→GB `rep movsb`;
