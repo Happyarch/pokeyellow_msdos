@@ -42,7 +42,7 @@ extern DelayFrames, DelayFrame, DisableLCD, FillMemory
 extern UpdateCGBPal_BGP, UpdateCGBPal_OBP0, UpdateCGBPal_OBP1
 extern CopyVideoData, RunPaletteCommand, PlayMusic, ClearObjectAnimationBuffers
 extern MovieBeginSurface, MovieEndSurface, PublishProjectedOAM, JoypadLowSensitivity
-extern RunObjectAnimations
+extern RunObjectAnimations, UpdateMusicCTimes
 
 ; wShadowOAM per-sprite attribute bytes (wShadowOAM + N*4 + 3). Pret names kept.
 %define wShadowOAMSpriteAttr(n) (W_SHADOW_OAM + (n)*4 + 3)
@@ -187,6 +187,26 @@ YellowIntroScene1:
     ret
 .expired:
     call YellowIntro_MaskCurrentAnimatedObjectStruct
+    call YellowIntro_NextScene
+    ret
+
+; Scene 4 — "running Pikachu 2": pump the music, lay out the framed BG (Func_f9e5f),
+; spawn animated object $2, reset the DMG palettes, arm a 128-frame timer, advance.
+; DEVIATION{class=HAL; pret=engine/movie/intro_yellow.asm:YellowIntroScene4; behavior=the hOnCGB branch that writes the CGB VRAM bank-1 attribute map (rVBK, the 6x6 tile-attribute box at $98d4) is omitted, the port always takes the DMG path; evidence=the port renders DMG shades through the VGA compositor and has no CGB tile-attribute plane, hOnCGB is 0-equivalent, this is the Phase-5 CGB palette boundary; lifetime=Phase-5 CGB palette translation}
+YellowIntroScene4:
+    call YellowIntro_BlankPalsDelay2AndDisableLCD
+    mov bl, 0x5                                     ; ld c, $5
+    call UpdateMusicCTimes
+    xor al, al
+    mov [ebp + H_LCDC_POINTER], al                 ; ldh [hLCDCPointer], a
+    call Func_f9e5f
+    mov dh, 0x58                                    ; lb de, $58, $58
+    mov dl, 0x58
+    mov al, 0x2
+    call YellowIntro_SpawnAnimatedObjectAndSavePointer
+    xor al, al
+    call Func_f9e9a
+    call YellowIntro_SetTimerFor128Frames
     call YellowIntro_NextScene
     ret
 
@@ -792,7 +812,7 @@ Jumptable_f9906:
     dd YellowIntroScene1
     dd YellowIntro_NextScene        ; scene 2  (unported)
     dd YellowIntroScene3
-    dd YellowIntro_NextScene        ; scene 4  (unported)
+    dd YellowIntroScene4
     dd YellowIntroScene5
     dd YellowIntro_NextScene        ; scene 6  (unported)
     dd YellowIntro_NextScene        ; scene 7  (unported)
