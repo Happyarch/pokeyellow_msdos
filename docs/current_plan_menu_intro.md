@@ -1281,6 +1281,10 @@ B2 must not create a `PlayIntroScene` stub.
 > `H_SCX` + MaskAll) and `Func_fa06e` (scene-jumptable lookup, flat×4 DEVIATION —
 > the dispatch keystone). **6/18 scenes ported** (1/3/5/9/13/17).
 >
+> **B3.2c-7 done (2026-07-21, `4053cac6`)** — scene 15 (thunderbolt palette
+> flash; placed before scene 16 to keep the pret fallthrough). **9/18 scenes**
+> (0/1/3/5/9/13/15/16/17) — halfway.
+>
 > **B3.2c-6 done (2026-07-21, `5b378f7e`)** — `BlankPalsDelay2AndDisableLCD`
 > (a wrongly-deferred helper: all deps existed). An audit fork confirmed the
 > deferred set: **PORTABLE-NOW** = `BlankPalsDelay2AndDisableLCD` (done),
