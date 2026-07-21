@@ -232,6 +232,7 @@ DisplayTitleScreen.TitleScreenPokemonLogoYScrolls:
 %include "assets/pokemon_logo_corner_2bpp.inc"
 %include "assets/pikachu_bg_2bpp.inc"
 %include "assets/pikachu_ob_2bpp.inc"
+global title_copyright_2bpp          ; = the full copyright.png (NintendoCopyrightLogoGraphics); splash.asm reuses it for the © screen
 %include "assets/title_copyright_2bpp.inc"
 %include "assets/gamefreak_inc_2bpp.inc"
 %include "assets/nine_2bpp.inc"

@@ -1655,6 +1655,18 @@
       "port_file": "dos_port/src/engine/movie/splash.asm",
       "why": "pret puts the Game Freak logo GFX (GameFreakIntro INCBIN) in intro.asm, but only the splash uses it. The port generates it (gen_title_gfx_inc.py) and %includes it in splash.asm alongside the OAM tables + shooting-star routines that consume it \u2014 menu-intro B2."
     },
+    "LoadCopyrightAndTextBoxTiles": {
+      "port_file": "dos_port/src/engine/movie/splash.asm",
+      "why": "pret engine/movie/title.asm holds the boot copyright screen (used by the Game Freak splash); the port keeps all splash code in splash.asm - menu-intro B2. It reuses title.asm's title_copyright_2bpp (= the full copyright.png = NintendoCopyrightLogoGraphics) and places CopyrightTextString directly (its tile-index layout does not fit PlaceString's dialog stride)."
+    },
+    "LoadCopyrightTiles": {
+      "port_file": "dos_port/src/engine/movie/splash.asm",
+      "why": "pret engine/movie/title.asm — the copyright-graphic-load + string-place entry that LoadCopyrightAndTextBoxTiles falls through into (kept as a separate label per pret); the port keeps all splash code in splash.asm - menu-intro B2."
+    },
+    "CopyrightTextString": {
+      "port_file": "dos_port/src/engine/movie/splash.asm",
+      "why": "pret engine/movie/title.asm data for the copyright screen; the port keeps all splash code + data in splash.asm - menu-intro B2 (consumed by LoadCopyrightAndTextBoxTiles there)."
+    },
     "PlayShootingStar": {
       "port_file": "dos_port/src/engine/movie/splash.asm",
       "why": "pret engine/movie/intro.asm holds PlayShootingStar (the Game Freak splash orchestration); the port keeps all splash code in splash.asm alongside AnimateShootingStar which it calls - menu-intro B2. Its GB screen/LCD-control drops are on the HAL DEVIATION at the routine; the copyright-screen call is a plain TODO (unfinished B2 work)."

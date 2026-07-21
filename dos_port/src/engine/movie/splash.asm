@@ -36,6 +36,9 @@ extern FillMemory                    ; home/copy_data.asm — ESI dest, BX count
 extern MovieBeginSurface             ; movie_projection.asm — black-matte cinematic surface
 extern MovieEndSurface               ; movie_projection.asm — tear down the surface
 extern g_tilecache_dirty             ; ppu.asm — arm the tile-cache rebuild
+extern ClearScreen                   ; movie/title.asm — clear the surface tilemap
+extern LoadTextBoxTilePatterns       ; home/load_font.asm — font_extra -> vChars2 $60
+extern title_copyright_2bpp          ; movie/title.asm — = NintendoCopyrightLogoGraphics (full copyright.png)
 
 %include "assets/audio_constants.inc"   ; SFX_SHOOTING_STAR
 
@@ -278,7 +281,8 @@ MoveDownSmallStars:
 ; W_TILEMAP + UI_SPLASH_ROW*SCREEN_TILES_W + UI_SPLASH_COL (row 3, col 10), so BG
 ; content is authored at that origin. Row-range fills add the row part; the whole-
 ; surface clear covers everything so it stays at 0.
-SPLASH_BG_ROW_OFF  equ UI_SPLASH_ROW * SCREEN_TILES_W       ; = 120
+SPLASH_BG_ROW_OFF  equ UI_SPLASH_ROW * SCREEN_TILES_W       ; = 120 (row-only origin)
+SPLASH_BG_ORIGIN   equ SPLASH_BG_ROW_OFF + UI_SPLASH_COL    ; = 130 (full origin, for coord placement)
 
 ; ---------------------------------------------------------------------------
 ; IntroDrawBlackBars — draw the splash's framing bars (bar tile $1 = the $ff tile,
@@ -339,31 +343,75 @@ IntroPlaceBlackTiles:
     ret
 
 ; ---------------------------------------------------------------------------
+; LoadCopyrightAndTextBoxTiles — the boot copyright screen. Loads the textbox font
+; tiles + the Nintendo copyright logo graphic to vChars2 $60, then lays out the three
+; "©1995-1999  Nintendo / Creatures inc. / GAME FREAK inc." lines at surface coord
+; (col 2, row 7). Source: engine/movie/title.asm:LoadCopyrightAndTextBoxTiles (+
+; LoadCopyrightTiles).
+;
+; The copyright-logo graphic occupies vChars2 $60-$72 (19 tiles); the "GAME FREAK
+; inc." glyphs ($73-$7b) and the hyphen/space ($7c/$7f) come from the font_extra
+; tiles that LoadTextBoxTilePatterns leaves at $73-$7F. CopyrightTextString is a
+; tile-index layout (like title.asm's CopyrightRowTiles), placed directly rather
+; than through PlaceString, whose dialog-box stride does not fit the cinematic canvas.
+;
+; DEVIATION{class=data-model; pret=engine/movie/title.asm:LoadCopyrightTiles; behavior=the copyright graphic is loaded as its exact 19 tiles instead of pret's count of 20, which on the GB overflows one tile past NintendoCopyrightLogoGraphics into the adjacent TextBoxGraphics ("A" tile); evidence=in the port's flat data model the two assets are not adjacent so the overflow would read unrelated bytes, and the 19 real tiles are what the layout references; lifetime=permanent flat-memory model}
+; ---------------------------------------------------------------------------
+global LoadCopyrightAndTextBoxTiles
+LoadCopyrightAndTextBoxTiles:
+    mov byte [ebp + H_WY], 0              ; ldh [hWY], a
+    call ClearScreen                      ; clear the surface tilemap
+    call LoadTextBoxTilePatterns          ; font_extra -> vChars2 $60-$7F
+    ; fall through into LoadCopyrightTiles (a separate pret entry point)
+global LoadCopyrightTiles
+LoadCopyrightTiles:
+    mov esi, GB_VCHARS2 + 0x60 * TILE_SIZE ; ld hl, vChars2 tile $60
+    mov edx, title_copyright_2bpp          ; ld de, NintendoCopyrightLogoGraphics (flat)
+    mov bl, 19                             ; 19 real copyright tiles (see DEVIATION)
+    call CopyVideoData                     ; overwrites vChars2 $60-$72
+    ; place the 3-line tile-index layout at the cinematic origin, coord (col 2, row 7)
+    lea edx, [ebp + W_TILEMAP + SPLASH_BG_ORIGIN + 7 * SCREEN_TILES_W + 2] ; line start (flat)
+    mov esi, edx
+    mov edi, CopyrightTextString
+.place_char:
+    mov al, [edi]
+    inc edi
+    cmp al, 0x50                          ; "@" terminator
+    je .done
+    cmp al, 0x4E                          ; "next" (newline)
+    je .newline
+    mov [esi], al                         ; write the tile index (rendered from vChars2, signed mode)
+    inc esi
+    jmp .place_char
+.newline:
+    add edx, SCREEN_TILES_W               ; next surface row, same start col
+    mov esi, edx
+    jmp .place_char
+.done:
+    ret
+
+; ---------------------------------------------------------------------------
 ; PlayShootingStar — the Game Freak "shooting star" splash (pret engine/movie/
-; intro.asm:PlayShootingStar). Sets the intro palette, draws the framing bars, loads
-; the logo tiles, and runs the shooting-star animation on the cinematic surface, then
-; tears it down.
+; intro.asm:PlayShootingStar). Shows the copyright screen, then draws the framing
+; bars, loads the logo tiles, and runs the shooting-star animation on the cinematic
+; surface, then tears it down.
 ;
-; TODO(B2 copyright screen): pret opens with `farcall LoadCopyrightAndTextBoxTiles`
-; then `DelayFrames 180` (the ©1995-1999 Nintendo/Creatures/GAME FREAK screen). That
-; is the last B2 piece — its tile-index layout (copyright.2bpp interleaved with
-; font_extra at vChars2 $60) needs porting + pixel verification and is NOT yet done,
-; so this routine currently opens straight on the animation. B2 is not complete until
-; it lands. (Deliberately a plain TODO, not a DEVIATION — it is unfinished work.)
-;
-; DEVIATION{class=HAL; pret=engine/movie/intro.asm:PlayShootingStar; behavior=the GB screen/LCD control (ClearScreen, DisableLCD/EnableLCD + rLCDC window/BG-map bits) is dropped in favour of the cinematic surface, and IO_LCDC is set only to select signed BG tile addressing; evidence=the port has no LCD and composites a matte surface with its own loop, so those hardware writes have no counterpart; lifetime=permanent flat-memory/HAL model}
+; DEVIATION{class=HAL; pret=engine/movie/intro.asm:PlayShootingStar; behavior=the GB LCD control (DisableLCD/EnableLCD + rLCDC window/BG-map bits, and the standalone ClearScreen before the bars which IntroDrawBlackBars already covers) is dropped in favour of the cinematic surface, and IO_LCDC is set only to select signed BG tile addressing; evidence=the port has no LCD and composites a matte surface with its own loop, so those hardware writes have no counterpart; lifetime=permanent flat-memory/HAL model}
 ; ---------------------------------------------------------------------------
 global PlayShootingStar
 PlayShootingStar:
     call MovieBeginSurface                ; PORT: black-matte cinematic surface
+    mov byte [ebp + IO_LCDC], 0xE3        ; signed BG tile addressing (bit4=0) — © / bar / logo tiles in vChars2
+    mov byte [ebp + H_SCX], 0             ; splash does not scroll — pin the surface origin
+    mov byte [ebp + H_SCY], 0
     mov bh, 0x0C                          ; ld b, SET_PAL_GAME_FREAK_INTRO
     call RunPaletteCommand
+    call LoadCopyrightAndTextBoxTiles     ; the ©1995-1999 Nintendo/Creatures/GAME FREAK screen
     mov al, 0x1B                          ; ldpal a, SHADE_BLACK,SHADE_DARK,SHADE_LIGHT,SHADE_WHITE
     mov [ebp + IO_BGP], al                ; ldh [rBGP], a  (inverted splash palette)
     call UpdateCGBPal_BGP
-    mov byte [ebp + IO_LCDC], 0xE3        ; signed BG tile addressing (bit4=0) — bar/logo tiles in vChars2
-    mov byte [ebp + H_SCX], 0             ; splash does not scroll — pin the surface origin
-    mov byte [ebp + H_SCY], 0
+    mov bl, 180                           ; ld c, 180
+    call DelayFrames                      ; show the copyright screen for ~3 seconds
     mov byte [ebp + wCurOpponent], 0      ; xor a / ld [wCurOpponent], a
     ; build the bar tiles: vChars2 tile 0 = $00 (color 0), tile 1 = $ff (color 3 = white)
     mov esi, GB_VCHARS2                    ; ld hl, vChars2
@@ -416,6 +464,15 @@ global GameFreakIntro
 %include "assets/gamefreak_intro_2bpp.inc"   ; GameFreakIntro
 global FallingStar
 %include "assets/falling_star_2bpp.inc"      ; FallingStar
+
+; Copyright-screen tile-index layout (pret title.asm:CopyrightTextString). Three
+; lines of copyright-logo/font tile indices ($60-$7f); $4E = newline ("next"),
+; $50 = end ("@"). Placed at surface coord (2,7) by LoadCopyrightAndTextBoxTiles.
+global CopyrightTextString
+CopyrightTextString:
+    db 0x60,0x61,0x62,0x63,0x61,0x62,0x7c,0x7f,0x65,0x66,0x67,0x68,0x69,0x6a, 0x4E             ; ©1995-1999  Nintendo
+    db 0x60,0x61,0x62,0x63,0x61,0x62,0x7c,0x7f,0x6b,0x6c,0x6d,0x6e,0x6f,0x70,0x71,0x72, 0x4E    ; ©1995-1999  Creatures inc.
+    db 0x60,0x61,0x62,0x63,0x61,0x62,0x7c,0x7f,0x73,0x74,0x75,0x76,0x77,0x78,0x79,0x7a,0x7b, 0x50 ; ©1995-1999  GAME FREAK inc.
 
 ; --- OAM tables (pret engine/movie/splash.asm, dbsprite verbatim) ---
 
