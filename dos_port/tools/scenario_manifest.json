@@ -503,6 +503,38 @@
       "verification": "title timeout -> Init -> PlayIntro replay: copyright screen reappears (route proof; state == gamefreak_intro)"
     },
     {
+      "name": "soft_reset",
+      "id": 28,
+      "tier": "full",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_SOFT_RESET=1",
+      "port_entry_gate": "DEBUG_SOFT_RESET",
+      "navigation_script": "tools/mgba_harness/scenarios/soft_reset.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "DisplayTitleScreen",
+        "PlayIntro",
+        "PlayShootingStar"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "title soft-reset combo (UP+SELECT+B) -> Init -> PlayIntro replay: copyright reappears (route proof; state == gamefreak_intro)"
+    },
+    {
       "name": "main_menu",
       "id": 22,
       "tier": "core",

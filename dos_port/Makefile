@@ -869,6 +869,14 @@ ifdef DEBUG_TITLE_TIMEOUT
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_TITLE_TIMEOUT
 endif
+# soft_reset scenario (menu-intro B4): prove the title UP+SELECT+B reset-save combo
+# replays the boot movie (post-flip: combo -> jmp Init -> PlayIntro). Like title_timeout,
+# does NOT set SKIP_INTRO (intro plays to reach the title, then replays); the title
+# latches the combo and PlayShootingStar dumps the replay via g_title_reset_replay.
+ifdef DEBUG_SOFT_RESET
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_SOFT_RESET
+endif
 ifdef DEBUG_TITLE
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_TITLE

@@ -162,6 +162,9 @@ align 4
 %ifdef DEBUG_TITLE_REENTRY
 %define TITLE_DBG_COUNTER 1
 %endif
+%ifdef DEBUG_SOFT_RESET
+%define TITLE_DBG_COUNTER 1
+%endif
 %ifdef TITLE_DBG_COUNTER
 title_dbg_frame: dd 0                   ; frames elapsed (mid-bounce / idle-loop / forced-start counter)
 %endif
@@ -566,6 +569,17 @@ DisplayTitleScreen:
     mov byte [ebp + H_JOY_HELD], PAD_START
 .reentry_no_start:
 %endif
+%ifdef DEBUG_SOFT_RESET
+    ; soft_reset scenario: latch the UP+SELECT+B reset-save combo on the 2nd idle-loop
+    ; iteration (same placement as the START latch — after JoypadLowSensitivity, before
+    ; the read). The combo takes .go_to_main_menu -> .doClearSaveDialogue -> jmp Init,
+    ; which (post-flip) replays the boot movie.
+    inc dword [title_dbg_frame]
+    cmp dword [title_dbg_frame], 2
+    jne .no_soft_reset
+    mov byte [ebp + H_JOY_HELD], PAD_UP | PAD_SELECT | PAD_B
+.no_soft_reset:
+%endif
     mov al, [ebp + H_JOY_HELD]
     cmp al, PAD_UP | PAD_SELECT | PAD_B       ; secret reset-save combo
     je  .go_to_main_menu
@@ -619,6 +633,15 @@ DisplayTitleScreen:
     call LoadGBPal                      ; pret's exact call here, now linked
     call MovieEndSurface                ; hand the screen back before any next owner
 
+%ifdef DEBUG_SOFT_RESET
+    ; soft_reset: the exit sequence above ran DelayFrame (GBPalWhiteOutWithDelay3 / Delay3),
+    ; and each DelayFrame refreshes hJoyHeld from the harness keyboard — which holds nothing,
+    ; so the frame-2 latch is already wiped by the time we re-check the combo below. On real
+    ; hardware the player HOLDS UP+SELECT+B continuously through the exit, so the re-check
+    ; still sees it; re-assert it here to model that continuous hold (the mGBA scenario holds
+    ; the combo for 60 frames for exactly this reason).
+    mov byte [ebp + H_JOY_HELD], PAD_UP | PAD_SELECT | PAD_B
+%endif
     ; Check if the reset-save combo was pressed (PAD_UP|PAD_SELECT|PAD_B)
     mov al, [ebp + H_JOY_HELD]
     and al, PAD_UP | PAD_SELECT | PAD_B
@@ -629,6 +652,11 @@ DisplayTitleScreen:
 
 .doClearSaveDialogue:
     ; DoClearSaveDialogue — ; TODO: save clear screen (Phase 5). Reset for now.
+%ifdef DEBUG_SOFT_RESET
+    ; soft_reset golden (menu-intro B4): the UP+SELECT+B combo re-enters Init, which
+    ; (post-flip) replays the boot movie. Mark it so PlayShootingStar dumps the replay.
+    mov byte [g_title_reset_replay], 1
+%endif
     jmp Init
 
 .doTitlescreenReset:

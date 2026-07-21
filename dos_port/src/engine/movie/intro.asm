@@ -119,6 +119,12 @@ PlayShootingStar:
     mov [ebp + IO_BGP], al                ; ldh [rBGP], a  (inverted splash palette)
     call UpdateCGBPal_BGP
 %ifdef DEBUG_TITLE_TIMEOUT
+%define DUMP_RESET_REPLAY 1
+%endif
+%ifdef DEBUG_SOFT_RESET
+%define DUMP_RESET_REPLAY 1
+%endif
+%ifdef DUMP_RESET_REPLAY
     ; title_timeout / soft_reset golden (menu-intro B4): if this PlayShootingStar is the
     ; REPLAY that a title-screen reset triggered (the flip: title timeout/combo -> jmp Init
     ; -> PlayIntro), the copyright is now drawn — dump it (== the gamefreak_intro state, but

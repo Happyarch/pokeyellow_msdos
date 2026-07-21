@@ -638,6 +638,45 @@ SCENARIOS = {
                     for i in range(40)],
         },
     },
+    "soft_reset": {
+        "flags": "DEBUG_SOFT_RESET=1",
+        # Reset route (menu-intro B4): the title-screen SOFT-RESET COMBO (UP+SELECT+B) re-enters
+        # Init via .go_to_main_menu -> .doClearSaveDialogue -> jmp Init, which (post-flip) calls
+        # PlayIntro, REPLAYING the boot movie. Sibling of title_timeout — same replayed copyright
+        # state, but reached through the combo route rather than the timeout. The port plays the
+        # intro to the title, a one-shot debug latch injects the combo, .doClearSaveDialogue sets
+        # g_title_reset_replay, and the REPLAY's PlayShootingStar dumps the copyright.
+        #
+        # DEVIATION: pret's combo opens the "Clear all saved data? NO/YES" box (DoClearSaveDialogue)
+        # and resets on either choice; the port stubs that dialogue (Phase-5 save system) and jumps
+        # straight to Init. The reset-REPLAY observable is identical either way — the dialogue is a
+        # pre-reset transient the copyright-state golden does not capture. Ground truth: soft_reset.lua.
+        "wram_skip": {**_NONBATTLE_WRAM_SKIP,
+            # Reached via the title, so the debug build has seeded its default player name by now;
+            # the ROM (fresh boot -> title -> combo -> replay) never named, so its wPlayerName is
+            # blank. Pre-game and irrelevant at the copyright screen.
+            "wPlayerName": "reached via the title: debug default name is seeded, ROM is unnamed "
+                           "(pre-game, irrelevant at the copyright)"},
+        "window": (0, 0),
+        "projections": (
+            [((0, 0, 17, 19), (10, 3),
+              "cinematic surface: the GB 20x18 screen centred on the canvas at "
+              "tile (10,3) — UI_SPLASH_COL/UI_SPLASH_ROW")]
+        ),
+        "masks": {
+            "vram": [
+                (0x100 + 0x7D, "pret copyright-load 1-tile overflow into font_extra[0] at "
+                               "$7D; port omits it (unused by CopyrightTextString) — flat-model DEVIATION"),
+            ],
+            # Same title eye-OAM residue as title_timeout: the title published eye OAM to $FE00;
+            # ClearSprites zeroes the compositor count (spr_oam_valid=0 so not drawn) but not
+            # canonical $FE00, while the ROM's reset clears it. Invisible residue, overwritten by
+            # the shooting-star OAM moments later; the copyright has no meaningful OBJ.
+            "oam": [(i, "title eye-OAM residue in $FE00 after the reset (spr_oam_valid=0 so not "
+                        "drawn; ClearSprites doesn't zero canonical OAM) — copyright has no OBJ")
+                    for i in range(40)],
+        },
+    },
     "yellow_intro_s01": {
         "flags": "DEBUG_YELLOW_S01=1",
         # Yellow intro scene 1, the first "wait last" hold (menu-intro B4). Real boot

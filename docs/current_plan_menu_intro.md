@@ -24,7 +24,7 @@ Required project skills: `asm-translation`, `project-conventions`, `build-and-de
   - [x] B1 — Animated-object engine *(engine + data + runtime test; sine rides B3)*
   - [x] B2 — Game Freak splash *(bars + PlayShootingStar + copyright, per-row verified)*
   - [x] B3 — All 18 Yellow intro scenes *(ported; BG-origin fixed + per-row verified; mGBA scene goldens blocked unattended)*
-  - [~] B4 — Full boot integration and permanent coverage *(PlayIntro ported + wired + faithful-default flip DONE `439ad057` (Init calls PlayIntro on every boot); gamefreak_intro + yellow_intro_s01 goldens registered + PASS; F-GFI fixed. Remaining: the human full-chain experiential smoke test only.)*
+  - [~] B4 — Full boot integration and permanent coverage *(PlayIntro ported + wired + faithful-default flip DONE `439ad057` (Init calls PlayIntro on every boot); gamefreak_intro + yellow_intro_s01 + title_timeout (id 27) + soft_reset (id 28) reset-route goldens registered + PASS; F-GFI fixed. Remaining: the human full-chain experiential smoke test only.)*
 - [ ] Whole-chain acceptance
 - [ ] Plan archived
 
@@ -653,7 +653,7 @@ This frame is the correct visual golden because it contains the complete final c
 - [ ] Remove stale hardware comments.
 - [ ] Generate and compare the title timing trace.
 - [ ] Capture mid-bounce `FRAME.BIN` frames at each distinct `TitleScreenYScrolls` step, mandatorily including every overshoot/wrap entry (the `-3` crash frame), and diff them against mGBA rendered frames through the projection transform.
-- [ ] Register `title_timeout`.
+- [x] Register `title_timeout`. *(id 27, `c553c01c` — PASS; sibling `soft_reset` id 28 registered too.)*
 
 #### Acceptance
 
@@ -1843,15 +1843,24 @@ breaking the working `SKIP_TITLE` overworld boot).
       stale relocation entries for the mirror-moved labels — SHA-gated, needs a
       maintainer. CLAUDE.md's "title renders wrong" note is likely stale post-A2.3 but
       has uncommitted third-party edits, so left to a maintainer.)*
-- [~] Add and verify `title_timeout` and `soft_reset` route scenarios. *(UNBLOCKED by the
-      flip; route is sound by code inspection — `DisplayTitleScreen.doTitlescreenReset`
-      calls `MovieEndSurface` (releases the cinematic surface) before `jmp Init`, then Init
-      clears state and (post-flip) calls PlayIntro, which re-establishes the surface and
-      replays the movie. DEPRIORITIZED as low-value: a full scenario would be either a
-      redundant STATE golden (the replayed copyright screen == `gamefreak_intro`) or a
-      route TRACE (which needs port-side per-frame trace instrumentation that doesn't exist
-      — see the yellow-scene trace note). The corner-case attract-loop restart isn't worth
-      that infra given the boot chain is otherwise golden-verified.)*
+- [x] Add and verify `title_timeout` and `soft_reset` route scenarios. *(BOTH BUILT — per the
+      user's "title timeouts are integral … I'd do soft reset too", reversing the earlier
+      deprioritization. `title_timeout` (id 27, `c553c01c`, PASS): idle-loop
+      `IncrementResetCounter` CF → `.doTitlescreenReset` → `MovieEndSurface` → `jmp Init` →
+      (post-flip) PlayIntro replay. `soft_reset` (id 28): the UP+SELECT+B combo →
+      `.go_to_main_menu` → `.doClearSaveDialogue` → `jmp Init` → replay. Each is a STATE
+      golden of the replayed copyright, byte-identical to `gamefreak_intro` (the mGBA goldens
+      share SHA `ec3db348…`) but reached via the reset route the scenario proves — enforced by
+      `must_hit` (`DisplayTitleScreen`/`IncrementResetCounter` + `PlayIntro`/`PlayShootingStar`).
+      Two documented divergences: `title_timeout` shortens the ~51 s idle countdown under its
+      flag; `soft_reset`'s combo route hits the port's Phase-5-stubbed `DoClearSaveDialogue`
+      (pret opens a NO/YES box, port jumps straight to Init) — the reset-replay observable is
+      identical either way, the box is a pre-reset transient the copyright-state golden can't
+      capture. Port-side gotcha fixed during build: the port's `.go_to_main_menu` exit sequence
+      runs DelayFrame (whiteout/Delay3) which refreshes hJoyHeld from the empty harness keyboard,
+      wiping a one-shot combo latch before the re-check — so the latch is re-asserted before the
+      re-check to model the continuous hold real hardware requires, exactly as the mGBA .lua
+      holds the combo 60 frames.)*
 - [~] Run one uninterrupted power-on to overworld without `SKIP_TITLE`. *(Deterministic half
       DONE: the flip makes the default build boot Init → PlayIntro (splash + intro) → title
       → menu → … → overworld, and 8 scenarios across every category PASS after the flip. The
