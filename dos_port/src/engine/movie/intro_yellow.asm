@@ -44,6 +44,16 @@ extern CopyVideoData, RunPaletteCommand, PlayMusic, ClearObjectAnimationBuffers
 extern MovieBeginSurface, MovieEndSurface, PublishProjectedOAM, JoypadLowSensitivity
 extern RunObjectAnimations, UpdateMusicCTimes
 
+; Cinematic BG-drawing origin. MovieMirrorSurface reads the visible 18x20 window
+; from W_TILEMAP + UI_YELLOW_INTRO_ROW*SCREEN_TILES_W + UI_YELLOW_INTRO_COL (row 3,
+; col 10), so a GB coord(col,row) must be authored at (col+10, row+3) — cf.
+; title.asm TITLE_ORIGIN. Row-range fills (contiguous full-width) add only the row
+; part; column-specific writes add the full origin.
+INTRO_BG_ROW      equ 3                                  ; UI_YELLOW_INTRO_ROW
+INTRO_BG_COL      equ 10                                 ; UI_YELLOW_INTRO_COL
+INTRO_BG_ROW_OFF  equ INTRO_BG_ROW * SCREEN_TILES_W      ; = 120 (row-only origin)
+INTRO_BG_ORIGIN   equ INTRO_BG_ROW_OFF + INTRO_BG_COL    ; = 130 (full origin)
+
 ; wShadowOAM per-sprite attribute bytes (wShadowOAM + N*4 + 3). Pret names kept.
 %define wShadowOAMSpriteAttr(n) (W_SHADOW_OAM + (n)*4 + 3)
 %define wShadowOAMSprite08Attributes wShadowOAMSpriteAttr(8)
@@ -890,15 +900,15 @@ YellowIntro_BlankPalsDelay2AndDisableLCD:
 ; DEVIATION{class=projection; pret=engine/movie/intro_yellow.asm:Func_f9e5f; behavior=the vBGMap0 ($9800 GB BG map) fills are redirected to the port's canonical W_TILEMAP at its 40-tile row stride (the surface mirror carries W_TILEMAP to GB_TILEMAP0), so the multi-row fills become contiguous W_TILEMAP row ranges; evidence=the cinematic compositor renders the BG from W_TILEMAP not the 32-wide GB BG map, proven by the running intro whose Init W_TILEMAP fill renders; lifetime=permanent widescreen tilemap model}
 ; ---------------------------------------------------------------------------
 Func_f9e5f:
-    mov esi, W_TILEMAP                              ; vBGMap0 rows 0-3 (GB $80 = 4x32)
-    mov bx, 4 * SCREEN_TILES_W                      ; 4 rows x 40
+    mov esi, W_TILEMAP + INTRO_BG_ROW_OFF          ; GB rows 0-3 -> surface rows 0-3
+    mov bx, 4 * SCREEN_TILES_W                      ; 4 rows x 40 (full-width covers visible cols 10-29)
     mov al, 0x1
     call FillMemory
-    mov esi, W_TILEMAP + 4 * SCREEN_TILES_W         ; rows 4-13 (GB $140 = 10x32)
+    mov esi, W_TILEMAP + INTRO_BG_ROW_OFF + 4 * SCREEN_TILES_W  ; GB rows 4-13
     mov bx, 10 * SCREEN_TILES_W                     ; 10 rows x 40
     xor al, al
     call FillMemory
-    mov esi, W_TILEMAP + 14 * SCREEN_TILES_W        ; rows 14-17 (GB $80 = 4x32)
+    mov esi, W_TILEMAP + INTRO_BG_ROW_OFF + 14 * SCREEN_TILES_W ; GB rows 14-17
     mov bx, 4 * SCREEN_TILES_W                      ; 4 rows x 40
     mov al, 0x1
     call FillMemory
