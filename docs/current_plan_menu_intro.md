@@ -1987,6 +1987,29 @@ post-naming surface re-establishment; A4.5 wire the boot path (delete the stub),
 the `oak_intro` golden, and the Oak timing trace. The boot path keeps working
 throughout because the `OakSpeech` stub stays live until A4.5 swaps it.
 
+### A4.5 progress (2026-07-20): full OakSpeech body assembled, stub retired
+
+`oak_speech2.asm` is code-complete (A4.4). A4.5 has landed the full body:
+- **ShrinkPic1/2** (`9838258a`): generated (`gen_trainer_pics.py`).
+- **MovePicLeft** (`329efeca`): projected `rWX` window slide via `MovieSyncWindow`.
+- **Full `OakSpeech` body + stub retirement** (`ec0639fe`): the real cutscene links
+  from `oak_speech.asm` and replaces the `InitPlayerData2`-only stub in
+  `main_menu_stubs.asm` (retired same commit). **faithdiff 24/24 calls + 10/10
+  stores** — only `MovieBeginSurface`/`MovieEndSurface` added (the surface
+  establish/teardown DEVIATION). lint clean; **fidelity 16/16** (no regression: the
+  existing goldens use `SKIP_TITLE` or never select NEW GAME, so none hit
+  `OakSpeech`). `OakSpeech` is now `translated`, not a stub.
+
+Boot fact: `StartNewGame` clears `BIT_DEBUG_MODE` then calls the real `OakSpeech`,
+so a real new game runs the full cutscene incl. naming (input-driven); a debug-mode
+new game skips speech+naming.
+
+**Remaining A4.5:** e) migrate the `title.asm` hand-encoded debug boot names to
+generated data; f) the oak_intro golden (id 21) via the real `OakSpeech` + Oak
+timing trace + end-to-end naming/rival-pic runtime verification (this is where the
+`MovePicLeft` slide, `Choose*Name`, and the custom-path surface re-establishment get
+their runtime pixel evidence). Detail in stigmergy `a4-4-oak-speech2-porting-plan`.
+
 ### A4 progress (2026-07-20): pic engine, fade, text, PrepareOakSpeech; the PrintText-under-surface finding
 
 A4 is being ported bottom-up behind debug gates (the OakSpeech body itself waits
