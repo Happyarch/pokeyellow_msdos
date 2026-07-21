@@ -28,7 +28,7 @@ global YellowIntro_SetTimerFor128Frames, YellowIntro_SetTimerFor88Frames
 global YellowIntro_CheckFrameTimerDecrement
 global YellowIntroScene1, YellowIntroScene5, YellowIntroScene9
 global YellowIntroScene13, YellowIntroScene17, YellowIntroScene3
-global Func_fa06e, YellowIntroScene0
+global Func_fa06e, YellowIntroScene0, Func_f98fc, Jumptable_f9906
 global YellowIntroScene16, YellowIntro_LoadDMGPalAndIncrementCounter
 global YellowIntro_BlankPalsDelay2AndDisableLCD, YellowIntroScene15
 global YellowIntro_Copy8BitSineWave, LoadYellowIntroFlyingSpeedBars
@@ -276,6 +276,19 @@ Func_fa06e:
     movzx eax, al                                  ; ld e,a / ld d,$0  (index)
     mov esi, [esi + eax*4]                          ; hl = table[index]  (flat, x4)
     ret
+
+; ---------------------------------------------------------------------------
+; Func_f98fc — dispatch to the current intro scene. jmp esi follows Func_fa06e's
+; flat pointer (data-model DEVIATION annotated on Func_fa06e), mirroring pret's
+; `jp hl`. Jumptable_f9906 entries for scenes not yet ported point at
+; YellowIntro_NextScene so the intro auto-advances past them (temporary scaffold;
+; repoint each as its scene lands — B3.2d milestone).
+; ---------------------------------------------------------------------------
+Func_f98fc:
+    mov al, [ebp + wYellowIntroCurrentScene]       ; ld a, [wYellowIntroCurrentScene]
+    mov esi, Jumptable_f9906                        ; ld hl, Jumptable_f9906
+    call Func_fa06e                                 ; hl = Jumptable_f9906[a]
+    jmp esi                                          ; jp hl
 
 ; ---------------------------------------------------------------------------
 ; YellowIntro_LoadDMGPalAndIncrementCounter — index a DMG-palette sequence table
@@ -571,6 +584,29 @@ Unkn_fa0aa:
     dw 0xb505, 0xc5e4, 0xd4db, 0xe1c6, 0xec83, 0xf4fa, 0xfb15, 0xfec4
     dw 0x0000, 0xfec4, 0xfb15, 0xf4fa, 0xec83, 0xe1c6, 0xd4db, 0xc5e4
     dw 0xb505, 0xa268, 0x8e3a, 0x78ad, 0x61f8, 0x4a50, 0x31f1, 0x1918
+
+; Scene dispatch table (flat 32-bit code addresses, indexed by
+; wYellowIntroCurrentScene). Unported scenes point at YellowIntro_NextScene
+; (auto-advance scaffold) — repoint each as its scene lands (B3.2d).
+Jumptable_f9906:
+    dd YellowIntroScene0
+    dd YellowIntroScene1
+    dd YellowIntro_NextScene        ; scene 2  (unported)
+    dd YellowIntroScene3
+    dd YellowIntro_NextScene        ; scene 4  (unported)
+    dd YellowIntroScene5
+    dd YellowIntro_NextScene        ; scene 6  (unported)
+    dd YellowIntro_NextScene        ; scene 7  (unported)
+    dd YellowIntro_NextScene        ; scene 8  (unported)
+    dd YellowIntroScene9
+    dd YellowIntro_NextScene        ; scene 10 (unported)
+    dd YellowIntro_NextScene        ; scene 11 (unported)
+    dd YellowIntro_NextScene        ; scene 12 (unported)
+    dd YellowIntroScene13
+    dd YellowIntro_NextScene        ; scene 14 (unported)
+    dd YellowIntroScene15
+    dd YellowIntroScene16
+    dd YellowIntroScene17
 
 ; DMG-palette fade sequences (one byte per frame, 0xff terminates). Flat data,
 ; read by YellowIntro_LoadDMGPalAndIncrementCounter.
