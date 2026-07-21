@@ -1734,15 +1734,15 @@ breaking the working `SKIP_TITLE` overworld boot).
 - [x] Register translated and linked state. *(2026-07-21: `project_state` reports
       PlayIntro / PlayShootingStar / PlayIntroScene / SpawnAnimatedObject /
       RunObjectAnimations all `implementation linked` at their mirror paths; label DB current.)*
-- [ ] Activate all permanent cinematic scenarios. *(BLOCKED unattended: mGBA goldens
-      need a baserom.)*
-- [ ] Regenerate the scenario registry. *(rides scenario activation above — mGBA-blocked.)*
+- [ ] Activate all permanent cinematic scenarios. *(NOW ACTIONABLE — the mGBA harness
+      runs in this environment; author `gamefreak_intro`, `yellow_intro_s00..17` Lua
+      scenarios + port DEBUG gates + goldencheck registration.)*
+- [ ] Regenerate the scenario registry. *(rides scenario activation above.)*
 - [x] Add coordinate transforms to `golden_diff.py`. *(2026-07-21: no new code needed —
       the generic `projections` mechanism (window (col,row) + `(dcol,drow)` rects,
       `docs/ui_projection.md`) built in A1/A2 already covers the cinematic surface; a
-      cinematic scenario just declares `"window": (10, 3)`. Only scenario registration
-      (mGBA-blocked) remains.)*
-- [ ] Add only measured, justified masks. *(BLOCKED: needs the mGBA goldens to measure against.)*
+      cinematic scenario just declares `"window": (10, 3)`.)*
+- [ ] Add only measured, justified masks. *(NOW ACTIONABLE — measure against the mGBA goldens once authored.)*
 - [~] Sweep stale `TODO-HW`, `STUB`, extern, allowlist, plan, and status claims.
       *(2026-07-21: TODO-HW/STUB/extern/status portion done — fixed init.asm's stale
       header TODOs for PlayIntro + title (`142a3197`); `project_state` confirms all
@@ -1751,20 +1751,31 @@ breaking the working `SKIP_TITLE` overworld boot).
       stale relocation entries for the mirror-moved labels — SHA-gated, needs a
       maintainer. CLAUDE.md's "title renders wrong" note is likely stale post-A2.3 but
       has uncommitted third-party edits, so left to a maintainer.)*
-- [ ] Add and verify `title_timeout` and `soft_reset` route scenarios. *(BLOCKED:
-      mGBA route traces need a baserom, and the replay-the-movie behavior is coupled to
-      the HELD faithful-default flip — in the default build Init does not yet call PlayIntro.)*
-- [ ] Run one uninterrupted power-on to overworld without `SKIP_TITLE`. *(BLOCKED: needs
-      the HELD flip + the human full-chain smoke test.)*
+- [ ] Add and verify `title_timeout` and `soft_reset` route scenarios. *(mGBA route
+      traces NOW ACTIONABLE; the replay-the-movie behavior is still coupled to the HELD
+      faithful-default flip — in the default build Init does not yet call PlayIntro.)*
+- [ ] Run one uninterrupted power-on to overworld without `SKIP_TITLE`. *(needs the HELD
+      flip + the human full-chain smoke test; the chain itself is BOOT_CINEMATIC-verifiable.)*
 
-> **B4 unattended stopping point (2026-07-21).** Every checkable-without-mGBA/human B4
-> item is now done: PlayIntro ported + wired + Init-context runtime-verified (`edafa36d`),
-> the two real faithfulness bugs this surfaced fixed (`6a05a616` copyright spacing,
-> `59412c80` hAutoBGTransfer), 144 menu-intro pret labels faithdiff-swept DROPPED-clean,
-> stale status claims swept (`142a3197`), translated/linked state registered, and the
-> golden_diff projection infra confirmed ready. **Everything still open above is gated on
-> either the faithful-default flip greenlight or a baserom/human observer** — it cannot be
-> progressed unattended.
+> **B4 status (2026-07-21, mGBA UNBLOCKED).** Correcting a prior wrong assumption: the
+> mGBA golden harness **runs in this environment** — `pokeyellow.gbc`/`.sym` are present
+> and SHA-valid (repo root + `../pokeyellow_msdos-pret-golden`), mGBA is built
+> (`dos_port/tools/mgba_build/`), and `mgba-lua-runner` regenerated the `title` golden
+> byte-identical to the committed one. **Ground-truth win:** an mGBA probe confirmed the
+> ROM draws the boot copyright on `wTileMap` rows **7/9/11** (tile counts 12/14/15) —
+> exactly the `6a05a616` PlaceString fix, validating it against the real ROM (not just
+> pret-reading).
+>
+> Done (checkable): PlayIntro ported + wired + Init-context runtime-verified (`edafa36d`),
+> two real faithfulness bugs fixed (`6a05a616` copyright spacing — now ROM-confirmed,
+> `59412c80` hAutoBGTransfer), 144 labels faithdiff-swept clean, stale claims swept
+> (`142a3197`), translated/linked registered, golden_diff projection infra ready.
+>
+> **Remaining, now MOSTLY actionable via the mGBA harness:** author the cinematic golden
+> scenarios (`gamefreak_intro`, `yellow_intro_s00..17`) — Lua nav + port DEBUG gate +
+> goldencheck registration; then `title_timeout`/`soft_reset` traces + the whole-chain
+> fidelity run. Only two things still truly gate on the human: the **faithful-default
+> flip greenlight** and the **final full-chain human smoke test** (experiential/audio).
 
 #### Golden naming
 
