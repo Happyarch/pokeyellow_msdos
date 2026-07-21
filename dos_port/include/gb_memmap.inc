@@ -1120,6 +1120,10 @@ wYellowIntroCurrentScene        equ 0xF6CA ; db (= wc634)
 wc634                           equ 0xF6CA ; alias
 wYellowIntroSceneTimer          equ 0xF6CB ; db (= wc635)
 wc635                           equ 0xF6CB ; alias
+; saved struct base of the scene's current animated object (2 bytes; RELOCATED
+; with the rest of the intro scene state). Free echo gap 0xF6CC-0xF6FF (before
+; the anim-data blob at 0xF700).
+wYellowIntroAnimatedObjectStructPointer equ 0xF6CC ; dw
 
 ; --- Yellow-intro animated-object DATA blob (menu-intro B1) ---
 ; The Frames/OAM/Spawn tables (pret data/sprite_anims/intro_frames.asm +

@@ -23,8 +23,12 @@ global Func_fa007, Func_fa008, Func_fa014, Func_fa02b, Func_fa062
 global Func_fa03f, Func_fa051, Func_fa077, Func_fa079, Func_fa08e
 global Func_f98a2, Func_f98cb, YellowIntro_NextScene
 global LoadYellowIntroObjectAnimationDataPointers
+global YellowIntro_SpawnAnimatedObjectAndSavePointer, YellowIntro_MaskCurrentAnimatedObjectStruct
+global YellowIntro_SetTimerFor128Frames, YellowIntro_SetTimerFor88Frames
+global YellowIntro_CheckFrameTimerDecrement
 
 extern YellowIntroFramesData_GB, YellowIntroOAMData_GB, YellowIntroSpawnData_GB
+extern SpawnAnimatedObject, MaskCurrentAnimatedObjectStruct
 
 ; wShadowOAM per-sprite attribute bytes (wShadowOAM + N*4 + 3). Pret names kept.
 %define wShadowOAMSpriteAttr(n) (W_SHADOW_OAM + (n)*4 + 3)
@@ -111,6 +115,50 @@ Func_f98cb:
 YellowIntro_NextScene:
     inc byte [ebp + wYellowIntroCurrentScene]      ; ld hl, .. / inc [hl]
     ; vc_hook Reduce_intro_scene_flashing_0E — VC patch hook, no-op in the port
+    ret
+
+; ---------------------------------------------------------------------------
+; YellowIntro_SpawnAnimatedObjectAndSavePointer — spawn an object (index AL,
+; coords DX) and remember its struct base for the scene to mask later.
+; ---------------------------------------------------------------------------
+YellowIntro_SpawnAnimatedObjectAndSavePointer:
+    call SpawnAnimatedObject                        ; EBX = struct base on success
+    mov [ebp + wYellowIntroAnimatedObjectStructPointer], bx  ; ld [ptr],c / ld [ptr+1],b
+    ret
+
+; ---------------------------------------------------------------------------
+; YellowIntro_MaskCurrentAnimatedObjectStruct — mask the saved object.
+; ---------------------------------------------------------------------------
+YellowIntro_MaskCurrentAnimatedObjectStruct:
+    movzx ebx, word [ebp + wYellowIntroAnimatedObjectStructPointer]  ; bc = saved base
+    call MaskCurrentAnimatedObjectStruct
+    ret
+
+; ---------------------------------------------------------------------------
+; YellowIntro_SetTimerFor128Frames / _SetTimerFor88Frames.
+; ---------------------------------------------------------------------------
+YellowIntro_SetTimerFor128Frames:
+    mov byte [ebp + wYellowIntroSceneTimer], 128
+    ret
+
+YellowIntro_SetTimerFor88Frames:
+    mov byte [ebp + wYellowIntroSceneTimer], 88
+    ret
+
+; ---------------------------------------------------------------------------
+; YellowIntro_CheckFrameTimerDecrement — decrement the scene timer; CF set (and
+; nothing decremented) once it has reached 0.
+; ---------------------------------------------------------------------------
+YellowIntro_CheckFrameTimerDecrement:
+    mov al, [ebp + wYellowIntroSceneTimer]         ; ld a, [hl]
+    test al, al                                    ; and a
+    jz .asm_f9e4b                                  ; jr z
+    dec byte [ebp + wYellowIntroSceneTimer]        ; dec [hl]
+    clc                                            ; and a  (CF = 0)
+    ret
+.asm_f9e4b:
+    ; vc_hook Stop_reducing_intro_scene_flashing_0F — no-op in the port
+    stc                                            ; scf
     ret
 
 ; ---------------------------------------------------------------------------
