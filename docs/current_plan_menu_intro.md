@@ -15,11 +15,11 @@ Required project skills: `asm-translation`, `project-conventions`, `build-and-de
 
 ## Status
 
-- [x] Phase A — Playable title → menu → new game *(all four subtasks port-side done + golden-verified; the title bounce+blink timing traces are DONE (2026-07-21). Remaining open tails: the Oak timing trace (A4) and the deferred bespoke full-title reimpl. Functional playable chain + all state goldens PASS.)*
+- [x] Phase A — Playable title → menu → new game *(all four subtasks port-side done + golden-verified; the title bounce+blink AND Oak timing traces are DONE (2026-07-21). The only remaining Phase-A tail is the deferred bespoke full-title reimpl (per CLAUDE.md). Functional playable chain + all state goldens PASS.)*
   - [x] A1 — Cinematic projection substrate
   - [x] A2 — Projected title with live audio and palettes *(port-side done; `title_timeout` golden id 27 DONE + PASS; title BOUNCE + BLINK timing traces DONE + verified 2026-07-21 (13-exact bounce + deterministic faithdiff-clean blink, runtime-confirmed). Only the deferred bespoke full-title reimpl remains, per CLAUDE.md.)*
   - [x] A3 — Real title → menu → entry routing *(DONE + verified 2026-07-21: title `jmp MainMenu`, reset-save branch preserved, `SKIP_TITLE`→`InitPlayerData2`, `EnterMapBoot` 2 legit callers; main_menu id22 / title_reentry id23 / continue_seed id24 goldens registered + committed)*
-  - [x] A4 — Oak speech, naming, and stub retirement *(port-side done, faithdiff 24/24 + fidelity 16/16; oak_intro GBSTATE golden id 29 DONE + PASS 2026-07-21; only the Oak timing trace remains)*
+  - [x] A4 — Oak speech, naming, and stub retirement *(port-side done, faithdiff 24/24 + fidelity 16/16; oak_intro GBSTATE golden id 29 DONE + PASS; Oak timing trace DONE 2026-07-21 (fade/text/slides all deterministic + faithful); OakSpeech stub retired. A4 fully complete.)*
 - [ ] Phase B — Power-on movie
   - [x] B1 — Animated-object engine *(engine + data + runtime test; sine rides B3)*
   - [x] B2 — Game Freak splash *(bars + PlayShootingStar + copyright, per-row verified)*
@@ -769,10 +769,10 @@ This stage does not create an otherwise empty `oak_speech/init_player_data.asm`.
 - [ ] Verify register, tile-order, flip, and flag contracts before reusing nearby helpers.
 - [ ] Invalidate the tile cache for all picture tile writes.
 - [ ] Migrate hand-encoded boot names into generated data.
-- [ ] Generate and compare the Oak timing trace.
-- [ ] Delete the `OakSpeech` stub and its annotation.
-- [ ] Repoint extern comments.
-- [ ] Confirm one linked non-stub provider per required label.
+- [x] Generate and compare the Oak timing trace. *(DONE 2026-07-21. Every Oak opening beat is DETERMINISTIC, so — as with the title blink — faithfulness is the record-by-record proof: **fade** `FadeInIntroPic` is 6×`DelayFrames(10)` over the byte-identical ramp `[0x54,0xA8,0xFC,0xF8,0xF4,0xE4]` (= pret's `dc` macro), faithdiff clean bar the `[IO_BGP]` HAL store; the `oak_intro` golden id 29 confirms the fade completed to the terminal normal BGP. **Text** is the standard shared `PrintText` cadence (verified by the streamed-text scenarios). **Slides** `MovePicLeft`/`OakSpeechSlidePicLeft` are faithful (translated, faithdiff clean bar the `IO_WX`/`MovieSyncWindow` projection HAL) with the `DEBUG_OAKSLIDE` pixel gate for the window position. No RNG or unmodeled projection-sampling needs a separate mGBA CSV.)*
+- [x] Delete the `OakSpeech` stub and its annotation. *(retired in A4.5 — `label_status OakSpeech` = translated at oak_speech.asm; `main_menu_stubs.asm` holds only a "stub RETIRED" comment, no definition.)*
+- [x] Repoint extern comments. *(externs point to oak_speech.asm; `lint_pret_labels` reports 0 stale-extern violations.)*
+- [x] Confirm one linked non-stub provider per required label. *(OakSpeech has exactly one provider — translated, no shadow stub.)*
 
 #### `oak_intro` correction
 
@@ -799,7 +799,7 @@ Add `new_game_seed` immediately before `SpecialEnterMap` if relevant initializat
 
 - Oak, Nidorino, player, and rival pictures occupy the centered surface — the rival picture appearing after naming is the built-in gate on post-naming surface re-establishment.
 - Slides preserve pret positions and cadence, with pixel evidence at two slide offsets if fine scroll is used.
-- The Oak timing trace matches mGBA.
+- [x] The Oak timing trace matches mGBA. *(fade + text + slides all deterministic + faithful; verified 2026-07-21 via faithdiff + byte-identical fade ramp + oak_intro golden terminal state + DEBUG_OAKSLIDE.)*
 - Custom and default naming work.
 - Selected names persist.
 - Initial bag, party, box, and inventory state matches ground truth.
