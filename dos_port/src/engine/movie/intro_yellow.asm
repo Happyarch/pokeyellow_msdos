@@ -247,6 +247,69 @@ YellowIntroScene9:
     call YellowIntro_NextScene
     ret
 
+; Scene 10 — "gengar battle scene": clear the BG map, paint rows 0-7 with tile $2,
+; then paste three tilemap boxes (the gengar/battle graphics) and spawn object $6.
+; The .FillBGMapBox local (kept as in pret) copies a BH x BL tile box from a flat
+; tilemap into W_TILEMAP.
+;
+; DEVIATION{class=projection; pret=engine/movie/intro_yellow.asm:YellowIntroScene10; behavior=the vBGMap0 fills and the three box pastes are redirected to the port's 40-wide W_TILEMAP (whole-map clear = SCREEN_AREA, row-range fill = N*SCREEN_TILES_W, box dest = W_TILEMAP + row*SCREEN_TILES_W + col) and .FillBGMapBox advances one 40-tile row per source row instead of the GB 32; evidence=the cinematic compositor renders the BG from W_TILEMAP not the 32-wide GB BG map, the same redirect as Func_f9e5f, and all three boxes fall inside the visible 20-col region so nothing is clipped; lifetime=permanent widescreen tilemap model}
+YellowIntroScene10:
+    call YellowIntro_BlankPalsDelay2AndDisableLCD
+    mov bl, 0x5                                    ; ld c, $5
+    call UpdateMusicCTimes
+    xor al, al
+    mov [ebp + H_LCDC_POINTER], al                 ; ldh [hLCDCPointer], a
+    mov esi, W_TILEMAP                             ; ld hl, vBGMap0
+    mov bx, SCREEN_AREA                            ; ld bc, $400  (clear whole map)
+    xor al, al
+    call FillMemory                                ; call Bank3E_FillMemory
+    mov esi, W_TILEMAP                             ; ld hl, vBGMap0
+    mov bx, 8 * SCREEN_TILES_W                     ; ld bc, $100  (rows 0-7)
+    mov al, 0x2
+    call FillMemory
+    mov esi, W_TILEMAP + 8 * SCREEN_TILES_W        ; ld hl, $9900  (row 8, col 0)
+    mov edi, Unkn_f9b6e                            ; ld de, Unkn_f9b6e  (flat)
+    mov bh, 6                                      ; lb bc, 6, 20
+    mov bl, 20
+    call .FillBGMapBox
+    mov esi, W_TILEMAP + 4 * SCREEN_TILES_W + 12   ; ld hl, $988c  (row 4, col 12)
+    mov edi, Unkn_f9be6
+    mov bh, 3                                      ; lb bc, 3, 4
+    mov bl, 4
+    call .FillBGMapBox
+    mov esi, W_TILEMAP + 7 * SCREEN_TILES_W + 3    ; ld hl, $98e3  (row 7, col 3)
+    mov edi, Unkn_f9bf2
+    mov bh, 2                                      ; lb bc, 2, 2
+    mov bl, 2
+    call .FillBGMapBox
+    mov dh, 0x98                                   ; lb de, $98, $58
+    mov dl, 0x58
+    mov al, 0x6
+    call YellowIntro_SpawnAnimatedObjectAndSavePointer
+    mov al, 0x1
+    call Func_f9e9a
+    call YellowIntro_SetTimerFor128Frames
+    call YellowIntro_NextScene
+    ret
+
+; In: ESI = W_TILEMAP dest offset, EDI = flat src, BH = rows, BL = cols.
+.FillBGMapBox:
+.fill_row:
+    movzx ecx, bl                                  ; c = cols (fresh each row)
+    push esi                                       ; push hl  (dest row start)
+.fill_col:
+    mov al, [edi]                                  ; ld a, [de]  (flat src)
+    inc edi
+    mov [ebp + esi], al                            ; ld [hli], a
+    inc esi
+    dec ecx                                        ; dec c
+    jnz .fill_col
+    pop esi                                        ; pop hl
+    add esi, SCREEN_TILES_W                        ; ld bc,$20 / add hl,bc  (port stride 40)
+    dec bh                                         ; dec b  (rows)
+    jnz .fill_row
+    ret
+
 YellowIntroScene13:
     call YellowIntro_CheckFrameTimerDecrement
     jc .expired
@@ -890,7 +953,7 @@ Jumptable_f9906:
     dd YellowIntro_NextScene        ; scene 7  (unported)
     dd YellowIntroScene8
     dd YellowIntroScene9
-    dd YellowIntro_NextScene        ; scene 10 (unported)
+    dd YellowIntroScene10
     dd YellowIntro_NextScene        ; scene 11 (unported)
     dd YellowIntro_NextScene        ; scene 12 (unported)
     dd YellowIntroScene13
