@@ -46,6 +46,7 @@ extern SpawnAnimatedObject, MaskCurrentAnimatedObjectStruct, MaskAllAnimatedObje
 extern DelayFrames, DelayFrame, DisableLCD, FillMemory
 extern UpdateCGBPal_BGP, UpdateCGBPal_OBP0, UpdateCGBPal_OBP1
 extern CopyVideoData, RunPaletteCommand, PlayMusic, ClearObjectAnimationBuffers
+extern CopyYellowIntroAnimatedObjectData          ; data/sprite_anims/intro_anim_data.asm — stage the frame/OAM/spawn blob into GB space (0xF700)
 extern MovieBeginSurface, MovieEndSurface, PublishProjectedOAM, JoypadLowSensitivity
 extern MovieSyncScroll                            ; movie_projection.asm — H_SCX/H_SCY -> WIN_SRC_X/Y
 extern RunObjectAnimations, UpdateMusicCTimes
@@ -747,6 +748,14 @@ InitYellowIntroGFXAndMusic:
     mov esi, GB_VCHARS2                            ; ld hl, vChars2
     mov bl, YELLOWINTROGRAPHICS1_TILES              ; (End - Start) / $10
     call CopyVideoData
+    ; BUGFIX: stage the immutable frame/OAM/spawn blob from the program image into
+    ; GB space (W_INTRO_ANIM_DATA = 0xF700) BEFORE the engine reads it. Without this
+    ; the tables at 0xF700 are zero, so every animated object drew 40 blank sprites
+    ; ($00 tiles) piled at its spawn point — the running Pikachu appeared as a few
+    ; stuck pixels that never animated. pret keeps this data ROM-resident; the flat
+    ; port must copy it (same flat->GB staging LoadShootingStarGraphics uses). The
+    ; call was only wired into the DEBUG_CINEMATIC_ANIMOBJ harness, never the real intro.
+    call CopyYellowIntroAnimatedObjectData
     call ClearObjectAnimationBuffers
     call LoadYellowIntroObjectAnimationDataPointers
     mov bh, 0x08                                   ; ld b, SET_PAL_GENERIC ($08)
