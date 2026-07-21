@@ -1734,14 +1734,13 @@ breaking the working `SKIP_TITLE` overworld boot).
 - [x] Register translated and linked state. *(2026-07-21: `project_state` reports
       PlayIntro / PlayShootingStar / PlayIntroScene / SpawnAnimatedObject /
       RunObjectAnimations all `implementation linked` at their mirror paths; label DB current.)*
-- [~] Activate all permanent cinematic scenarios. *(IN PROGRESS. `gamefreak_intro`
-      mGBA golden authored + committed (`8dd7b6b1`): splash copyright checkpoint,
-      wTileMap rows 7/9/11 (12/14/15 tiles), deterministic. The port-side goldencheck
-      was prototyped and RAN end-to-end (via `BOOT_CINEMATIC` — the real boot path, not
-      the DEBUG_CINEMATIC_SPLASH harness which skips Init's ClearVram + seeds player
-      data): TILEMAP/OAM/WRAM all OK, but it surfaced **F-GFI** (below). The wiring was
-      reverted pending F-GFI so it does not red the fidelity run; re-add it once F-GFI is
-      resolved. Then the `yellow_intro_s00..17` scene goldens by the same pattern.)*
+- [~] Activate all permanent cinematic scenarios. *(IN PROGRESS. **`gamefreak_intro` is
+      DONE and registered** — mGBA golden (`8dd7b6b1`) + F-GFI fix (`3175ff22`) +
+      full CI registration (`da12fd4c`, gate `DEBUG_GAMEFREAK_INTRO` → BOOT_CINEMATIC
+      real boot): `validate_scenarios` consistent, `goldencheck gamefreak_intro` PASS
+      (TILEMAP/VRAM/OAM/WRAM OK), runs in `make fidelity-full`. This establishes the
+      full pattern (mGBA `.lua` → golden → golden_diff entry → manifest + DEBUG_ gate →
+      goldencheck). Remaining: the `yellow_intro_s00..17` scene goldens by the same pattern.)*
 
 > **F-GFI (RESOLVED, `3175ff22`) — copyright screen dropped the "GAME FREAK inc." glyphs.**
 > Root cause: `LoadCopyrightTiles` loaded only 19 tiles (copyright.2bpp), but pret's single
@@ -1752,12 +1751,12 @@ breaking the working `SKIP_TITLE` overworld boot).
 > three flat assets to their contiguous slots (copyright→$60, gamefreak_inc→$73, nine→$7C);
 > omit pret's unused font_extra[0] overflow at $7D. **Verified**: `goldencheck gamefreak_intro`
 > (BOOT_CINEMATIC vs the mGBA golden) = TILEMAP/VRAM(384)/OAM/WRAM **OK → PASS** (only the $7D
-> overflow masked); faithdiff clean, lint 0. FOLLOW-UP: the scenario *registration* (golden_diff
-> entry + `GBSTATE_SCENARIO` id + manifest) was reverted because `validate_scenarios` requires a
-> `DEBUG_*`-prefixed gate and `BOOT_CINEMATIC` doesn't match — re-add it under a `DEBUG_`-named
-> gate (or extend the validator) to make gamefreak_intro a permanent CI scenario. (Note: the
-> validator also flags a PRE-EXISTING `scenario_registry.inc` staleness — the A-phase manifest
-> vs registry gap — unrelated to this fix.)
+> overflow masked); faithdiff clean, lint 0. **Registration DONE (`da12fd4c`):** added a
+> `DEBUG_GAMEFREAK_INTRO` gate (validate_scenarios requires `DEBUG_*`) that enables the
+> BOOT_CINEMATIC real boot; manifest + golden_diff entry + regenerated (gitignored)
+> `scenario_registry.inc`. `validate_scenarios` consistent, `goldencheck gamefreak_intro` PASS,
+> runs in `make fidelity-full`. (The earlier `scenario_registry.inc` "staleness" was just the
+> local generated file left over from the prototype build — it regenerates from the manifest.)
 >
 > <details><summary>original F-GFI finding (history)</summary>
 >
