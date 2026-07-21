@@ -1135,18 +1135,49 @@ B2 must not create a `PlayIntroScene` stub.
 
 ### B1 — Animated-object engine
 
+> **B1 progress (2026-07-21) — the ENGINE is ported (14/14 routines) and the WRAM
+> model is audited.** `src/engine/gfx/animated_objects.asm` (`9f39c54f`) is the
+> faithful translation of all 14 pret routines (Clear/Run/Spawn/Mask×2,
+> UpdateCurrentAnimatedObjectFrame, tile Y/X, OAM attrs, the pointer getters,
+> the duration/frame-script interpreter, and the callback trampoline).
+> **Verification:** nasm clean; full image links with the file in the Makefile
+> SOURCES; `lint_pret_labels` 0 violations; `faithdiff` clean on every routine
+> except two explained diffs — `SpawnAnimatedObject`'s store to
+> `wNumLoadedAnimatedObjects` (pret writes it via `inc [hl]`, invisible to
+> faithdiff as a pret-side store) and `ExecuteCurrentAnimatedObjectCallback`'s
+> `jp hl`→`jmp esi` (the data-model DEVIATION below).
+>
+> **Pointer/data model DECIDED (resolves the plan's "biggest unknown"):** the
+> Spawn/Frames/OAMData tables stay 16-bit **GB pointers** so the engine's pointer
+> arithmetic is byte-identical to pret — **B3 must generate those tables into a
+> GB-space blob** (a reserved region ≤ 0xFFFF, addressed `[ebp+ptr]`). The
+> **callback jumptable is the sole exception**: its entries are native x86 code
+> addresses (link-time flat labels, not bakeable into a GB blob), so
+> `wAnimatedObjectJumptablePointer` is a **32-bit flat** pointer and the dispatch
+> uses a ×4 stride — one `data-model` DEVIATION, annotated in the file. **B3's
+> per-set jumptable is therefore `dd Label` flat data in `.asm`**, and the scene
+> driver stores its flat address into `wAnimatedObjectJumptablePointer`.
+>
+> **WRAM (B1.1):** relocated to free echo RAM at **0xF600** (202 B; pret's 0xC508
+> union branch is swallowed by the port's extended 40×25 wTileMap). All members +
+> `wYellowIntroCurrentScene`/`wc634` have symbols; `audit_memmap.py` clean.
+> **Remaining B1:** the sine data + the deterministic lifecycle/edge-crossing test
+> harness (B1.3); the per-frame projected-OAM publish is the same
+> `PublishProjectedOAM`(80,24) pattern B2 proved (`publish_splash_oam`), wired by
+> the B3 scene driver. Detail in stigmergy `a4-4-oak-speech2-porting-plan`.
+
 #### Work
 
-- [ ] Port `engine/gfx/animated_objects.asm` with exact labels.
-- [ ] Inventory required WRAM and HRAM.
-- [ ] Add exact aliases or correctly sized regions.
-- [ ] Run `audit_memmap.py` after memory-map changes.
-- [ ] Generate immutable frame, spawn, OAM, and sine data.
-- [ ] Keep code-address tables in `.asm`.
-- [ ] Preserve masks, scripts, timers, and sine arithmetic.
-- [ ] Publish canonical OAM through `PublishProjectedOAM`.
-- [ ] Do not wire the surfing minigame.
-- [ ] Add deterministic lifecycle and edge-crossing tests.
+- [x] Port `engine/gfx/animated_objects.asm` with exact labels. *(9f39c54f, 14/14)*
+- [x] Inventory required WRAM and HRAM. *(B1.1 — no HRAM; WRAM block enumerated)*
+- [x] Add exact aliases or correctly sized regions. *(0xF600 block + wc634)*
+- [x] Run `audit_memmap.py` after memory-map changes. *(clean, 47 regions)*
+- [ ] Generate immutable frame, spawn, OAM, and sine data. *(B3 — GB-space blob; see model note)*
+- [x] Keep code-address tables in `.asm`. *(jumptable = flat `dd Label`, per the DEVIATION)*
+- [x] Preserve masks, scripts, timers, and sine arithmetic. *(frame-script interpreter faithful; sine lives in scene callbacks = B3)*
+- [ ] Publish canonical OAM through `PublishProjectedOAM`. *(B3 scene driver; pattern proven in B2)*
+- [x] Do not wire the surfing minigame. *(engine only; no `surfing_pikachu` dep)*
+- [ ] Add deterministic lifecycle and edge-crossing tests. *(B1.3)*
 
 #### Acceptance
 
