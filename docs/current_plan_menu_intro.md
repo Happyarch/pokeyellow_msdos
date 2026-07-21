@@ -1757,6 +1757,19 @@ breaking the working `SKIP_TITLE` overworld boot).
 > parameterized mGBA scenario per scene (detect `wYellowIntroCurrentScene == N`, dump). Alternative/
 > complement per the B3 plan: a single continuous transition TRACE (scene entries/timers/masks
 > record-by-record) which catches scene-dispatch/timing bugs across all 18 in one scenario.
+>
+> **UPDATE (`ceb1f878`): `yellow_intro_s01` DONE + registered.** Built the state-triggered-dump
+> pattern: a `DEBUG_YELLOW_S01` hook in `PlayIntroScene`'s loop (DEBUG-gated; `-D BOOT_CINEMATIC`
+> real boot, no AUTOKEY) fires `DumpBackbuffer` at `wYellowIntroCurrentScene == 1` (deterministic
+> scene-entry state); the mGBA scenario plays the boot (no START) and dumps at the same scene.
+> `goldencheck yellow_intro_s01` PASS — **TILEMAP OK + VRAM OK (384 slots)** + WRAM OK (OBJ OAM
+> masked: the running-Pikachu animates, so its phase depends on the dump frame — OBJ motion is the
+> transition trace's job). This is the RUNTIME confirmation that the intro's graphics load faithfully
+> to VRAM + the framing matches the ROM. Since all scenes share one `InitYellowIntroGFXAndMusic`
+> graphics load + the same surface projection, s01 gives strong whole-intro confidence. Remaining
+> (lower-priority, mechanical via the same pattern — new `DEBUG_YELLOW_Snn` gate/id per scene): the
+> other holds, and especially the even scenes with UNIQUE BG (s02 gengar grid, s10/s12 boxed pastes)
+> which s01's shared-graphics check doesn't cover.
 
 > **F-GFI (RESOLVED, `3175ff22`) — copyright screen dropped the "GAME FREAK inc." glyphs.**
 > Root cause: `LoadCopyrightTiles` loaded only 19 tiles (copyright.2bpp), but pret's single
