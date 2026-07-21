@@ -1510,6 +1510,45 @@ Sampling only early, middle, and final scenes would leave most scene-specific ti
 - Timers and active-object masks match ground truth.
 - Skip exits cleanly to title preparation.
 
+### ⚠ CINEMATIC BG-ORIGIN FINDING (2026-07-21) — likely affects B3
+
+While building the splash's framing bars I hit a **surface-geometry misalignment
+that needs resolution before more cinematic BG work, and likely means the yellow
+intro (B3) frame is mis-positioned.**
+
+**Proven:** `MovieMirrorSurface` (movie_projection.asm) copies the visible window
+from `W_TILEMAP + UI_TITLE_ROW*SCREEN_WIDTH + UI_TITLE_COL` = **W_TILEMAP row 3,
+col 10** into `GB_TILEMAP0`. So the cinematic BG-authoring origin is **(row 3, col
+10)** — content written at `W_TILEMAP + N*40` (row 0, col 0) lands 3 rows above /
+10 cols left of the visible surface. Confirmed empirically on the same surface: a
+minimal `MovieBeginSurface` + bars written at W_TILEMAP rows 0-3 / 14-17 rendered
+at surface rows **0 and 11-14** (shift = −3), not 0-3 / 14-17.
+
+**Implication for B3 (needs definitive confirmation):** the intro's `Func_f9e5f`
+and all scene fills author at `W_TILEMAP + N*40` (row 0, col 0) — the *wrong*
+origin. If the intro uses the same surface path (it sets
+`g_surface_redraw_cb = MovieMirrorSurface`), its letterbox frame is shifted up 3
+rows. **My B3 aggregate pixelchecks (inside-count + 0-matte) could not catch this**
+— full-row fills keep both the count and the matte unchanged under a vertical
+shift. This is the "matching aggregate hides errors" trap. Note **A2 (title) DID
+handle the origin** (task A2.3.a "Project the title's tilemap drawing origin"), so
+the correct pattern exists; B3 apparently did not adopt it.
+
+**Required before proceeding:**
+1. **Definitively confirm** whether the live intro is shifted — per-row profile a
+   framed scene (e.g. scene 4/6) at a column inside the fill (surface col 0 =
+   x=80 = W_TILEMAP col 10), on a scene whose BG has a *distinct* top-vs-middle
+   tile so the shift is visible (not a uniform fill). aggregate counts are not
+   sufficient.
+2. If confirmed, decide the fix: a shared **cinematic coord origin** (add
+   `UI_TITLE_ROW`,`UI_TITLE_COL`) that all cinematic BG authoring uses — mirror
+   how A2 projects the title's drawing origin — and apply it to the intro scene
+   fills + `Func_f9e5f` + the splash bars/copyright. Re-verify B3 per-row.
+3. **B2 is blocked on this** — the splash bars/copyright need the same origin, so
+   there is no point finishing `PlayShootingStar` until the origin convention is
+   settled (and the framing helpers, which were faithfully ported + faithdiff-clean
+   this pass, were reverted to avoid landing misaligned output).
+
 ### B2 completion — `PlayShootingStar` orchestration (2026-07-21 scoping)
 
 B3 is done; the boot cinematic's remaining prerequisite is **B2's top-level
