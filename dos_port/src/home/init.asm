@@ -11,8 +11,8 @@
 ;   WriteDMACodeToHRAM + rROMB   → ; TODO-HW: OAM DMA + ROM banking
 ;   predef LoadSGB               → ; TODO-HW: SGB detect (wOnSGB stays 0)
 ;   predef PlayIntro             → call PlayIntro (Game Freak splash + Yellow intro);
-;                                  ported + wired, gated behind BOOT_CINEMATIC pending
-;                                  the faithful-default flip (menu-intro B4)
+;                                  faithful default — runs on every normal power-on,
+;                                  skipped only under SKIP_TITLE / SKIP_INTRO (menu-intro B4)
 ;   audio engine setup           → ; TODO: audio HAL (Phase 3)
 ;   jp PrepareTitleScreen        → jmp PrepareTitleScreen (title screen implemented;
 ;                                  routes to MainMenu — menu-intro A2/A3)
@@ -141,15 +141,20 @@ Init:
     mov byte [ebp + H_AUTO_BG_TRANSFER_DEST + 1], (GB_TILEMAP1 >> 8) & 0xFF
     mov byte [ebp + H_AUTO_BG_TRANSFER_DEST],      GB_TILEMAP1 & 0xFF
 
-    ; pret runs `predef PlayIntro` here (the Game Freak splash + Yellow intro).
-    ; Gated behind BOOT_CINEMATIC for now: the piece-test scenarios (title / mainmenu
-    ; / oakintro) boot through this same Init->PrepareTitleScreen path and expect to
-    ; land on their screen immediately, so playing the ~20 s cinematic unconditionally
-    ; would shift all their dump frames. Making it the faithful default is a follow-up
-    ; that updates those scenarios to skip it. (menu-intro B4.)
-%ifdef BOOT_CINEMATIC
+    ; pret runs `predef PlayIntro` here — the Game Freak splash + Yellow intro — on
+    ; every normal power-on. This is the faithful default (menu-intro B4 flip). It is
+    ; skipped only under two test bypasses:
+    ;   SKIP_TITLE — the deterministic overworld bypass skips the whole boot movie
+    ;                (and the title/menu); PlayIntro must not run before EnterMapBoot.
+    ;   SKIP_INTRO — piece-test harnesses (title / mainmenu / oak / naming) that boot
+    ;                the real title but must land on their screen immediately, without
+    ;                the ~20 s cinematic shifting their dump frames.
+    ; DEVIATION{class=banking; pret=home/init.asm:Init; behavior=pret's `predef PlayIntro` (a banked predef-table dispatch) is lowered to a direct `call PlayIntro`; evidence=the flat 32-bit port has no predef table or ROM banking, so every predef becomes a direct call to the exact pret label (see the Predef boundary in docs/current_plan_menu_intro.md); lifetime=permanent flat-banking model}
+%ifndef SKIP_TITLE
+%ifndef SKIP_INTRO
     extern PlayIntro                        ; engine/movie/intro.asm
     call PlayIntro
+%endif
 %endif
 
     call DisableLCD

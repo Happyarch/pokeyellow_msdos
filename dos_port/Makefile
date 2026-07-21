@@ -851,6 +851,7 @@ endif
 ifdef DEBUG_MAINMENU_LIVE
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_MAINMENU_LIVE
+NASMFLAGS += -D SKIP_INTRO       # B4 flip: boot the real title/menu, skip the boot cinematic
 endif
 # title_reentry scenario (A3): boot the real title, latch START -> MainMenu,
 # B-cancel back to DisplayTitleScreen, dump the checkpoint on the 2nd visit.
@@ -858,10 +859,14 @@ endif
 ifdef DEBUG_TITLE_REENTRY
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_TITLE_REENTRY
+NASMFLAGS += -D SKIP_INTRO       # B4 flip: boot the real title, skip the boot cinematic
 endif
 ifdef DEBUG_TITLE
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_TITLE
+# menu-intro B4 flip: PlayIntro now runs on every normal boot; this piece-test boots
+# the real title and must land on it immediately, so skip the ~20 s boot cinematic.
+NASMFLAGS += -D SKIP_INTRO
 NASMFLAGS += -D TITLE_DUMP_FRAME=$(or $(TITLE_DUMP_FRAME),0)
 NASMFLAGS += -D TITLE_DUMP_SCENE=$(or $(TITLE_DUMP_SCENE),0)
 NASMFLAGS += -D TITLE_DUMP_LOOP=$(or $(TITLE_DUMP_LOOP),0)
