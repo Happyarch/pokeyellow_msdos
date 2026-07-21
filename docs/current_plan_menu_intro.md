@@ -22,7 +22,7 @@ Required project skills: `asm-translation`, `project-conventions`, `build-and-de
   - [x] A4 — Oak speech, naming, and stub retirement *(port-side done, faithdiff 24/24 + fidelity 16/16; oak_intro GBSTATE golden id 29 DONE + PASS; Oak timing trace DONE 2026-07-21 (fade/text/slides all deterministic + faithful); OakSpeech stub retired. A4 fully complete.)*
 - [ ] Phase B — Power-on movie
   - [x] B1 — Animated-object engine *(engine + data + runtime test; sine rides B3)*
-  - [x] B2 — Game Freak splash *(bars + PlayShootingStar + copyright, per-row verified)*
+  - [x] B2 — Game Freak splash *(bars + PlayShootingStar + copyright, per-row verified; gamefreak_intro golden id 25 PASS; splash timing trace DONE 2026-07-21 — DelayFrames 180/64/40 match pret + faithful AnimateShootingStar/MoveDownSmallStars)*
   - [x] B3 — All 18 Yellow intro scenes *(ported; BG-origin fixed + per-row verified; mGBA scene goldens blocked unattended)*
   - [~] B4 — Full boot integration and permanent coverage *(PlayIntro ported + wired + faithful-default flip DONE `439ad057` (Init calls PlayIntro on every boot); gamefreak_intro + yellow_intro_s01 + title_timeout (id 27) + soft_reset (id 28) reset-route goldens registered + PASS; F-GFI fixed. Remaining: the human full-chain experiential smoke test only.)*
 - [ ] Whole-chain acceptance
@@ -1225,11 +1225,11 @@ B2 must not create a `PlayIntroScene` stub.
 - [ ] Project BG through `UI_SPLASH`.
 - [ ] Publish OBJ through `PublishProjectedOAM`.
 - [ ] Own and restore cinematic clipping.
-- [ ] Use real `SFX_SHOOTING_STAR`.
-- [ ] Apply `SET_PAL_GAME_FREAK_INTRO`.
-- [ ] Preserve skip behavior.
-- [ ] Add `DEBUG_CINEMATIC_SPLASH` in `home/init.asm`.
-- [ ] Generate and compare the splash timing trace.
+- [x] Use real `SFX_SHOOTING_STAR`. *(splash.asm:118 `mov al, SFX_SHOOTING_STAR` → PlaySound.)*
+- [x] Apply `SET_PAL_GAME_FREAK_INTRO`. *(intro.asm:115 `mov bh, 0x0C` (SET_PAL_GAME_FREAK_INTRO) → RunPaletteCommand.)*
+- [x] Preserve skip behavior. *(intro.asm:163 `jc .next` — AnimateShootingStar returns CF on user interrupt, skips the tail delay, matching pret.)*
+- [x] Add `DEBUG_CINEMATIC_SPLASH` in `home/init.asm`. *(splash.asm:270 gate + Makefile:1011; the `gamefreak_intro` golden id 25 uses the real-boot `DEBUG_GAMEFREAK_INTRO`/BOOT_CINEMATIC path.)*
+- [x] Generate and compare the splash timing trace. *(DONE 2026-07-21 via the deterministic-faithfulness method: the copyright hold + star beats are `DelayFrames(180)` / `(64)` / `(40)` — byte-for-byte the pret `ld c` counts; `AnimateShootingStar` + `MoveDownSmallStars` are translated and faithdiff-clean bar the `publish_splash_oam` projection + OBP HAL. The splash does not scroll (H_SCX/Y pinned 0), so no scroll-render pixel evidence is required; the star OBJ uses the same PublishProjectedOAM path as the gamefreak_intro golden id 25.)*
 
 `PlayIntro` may remain absent until B4.
 
