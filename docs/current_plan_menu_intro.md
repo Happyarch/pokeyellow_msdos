@@ -1277,11 +1277,15 @@ B2 must not create a `PlayIntroScene` stub.
 > 1/5/9 (timer→mask→next), 13 (+spawn obj $0a), 17 (DelayFrames + set done bit).
 > faithdiff clean; image builds; lint 0.
 >
-> **Remaining B3**: `Func_fa06e` + the scene dispatch (`Func_f98fc` /
-> `Jumptable_f9906`), `PlayIntroScene`, `InitYellowIntroGFXAndMusic` (loads the
-> B3.2b gfx), the even active scenes 0/2/4/6/8/10/12/14/16 + odd 3/7/11/15
-> (LCD/CGB-palette/LY-override/VBlank-copy → HAL), the deferred pal/LY helpers,
-> `UI_YELLOW_INTRO` projection, per-scene palettes/music/SFX. Detail in stigmergy
+> **B3.2c-3 done (2026-07-21, `8b993e89`)** — scene 3 (BG scroll to hSCX=0x68 via
+> `H_SCX` + MaskAll) and `Func_fa06e` (scene-jumptable lookup, flat×4 DEVIATION —
+> the dispatch keystone). **6/18 scenes ported** (1/3/5/9/13/17).
+>
+> **Remaining B3**: `Func_f98fc` + `Jumptable_f9906` (needs all 18 scene labels),
+> `PlayIntroScene`, `InitYellowIntroGFXAndMusic` (loads the B3.2b gfx), the even
+> active scenes 0/2/4/6/8/10/12/14/16 + odd 7/11/15/16 (LCD/CGB-palette/
+> LY-override/VBlank-copy → HAL), the deferred pal/LY helpers, `UI_YELLOW_INTRO`
+> projection, per-scene palettes/music/SFX. Detail in stigmergy
 > `a4-4-oak-speech2-porting-plan`.
 
 #### Work
