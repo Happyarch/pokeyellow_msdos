@@ -1281,6 +1281,12 @@ B2 must not create a `PlayIntroScene` stub.
 > `H_SCX` + MaskAll) and `Func_fa06e` (scene-jumptable lookup, flat×4 DEVIATION —
 > the dispatch keystone). **6/18 scenes ported** (1/3/5/9/13/17).
 >
+> **B3.2c-8 done (2026-07-21, `3858c01d`)** — `Copy8BitSineWave` +
+> `wLYOverridesBuffer`@0xFA00 (amp-4 wave ×8 via inline flat→GB `rep movsb`;
+> wobble inert — per-scanline LY not emulated). The easy scene-independent wins
+> are now exhausted; what remains needs the BG-map↔surface decision and the
+> dispatch/`Init`/`PlayIntroScene` wiring.
+>
 > **B3.2c-7 done (2026-07-21, `4053cac6`)** — scene 15 (thunderbolt palette
 > flash; placed before scene 16 to keep the pret fallthrough). **9/18 scenes**
 > (0/1/3/5/9/13/15/16/17) — halfway.
