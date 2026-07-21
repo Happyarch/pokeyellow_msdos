@@ -1406,6 +1406,30 @@ B2 must not create a `PlayIntroScene` stub.
 > per-scene / timing goldens. **Next: B3 whole-chain acceptance, then B4 (boot
 > integration: power-on → splash → intro → title → menu → Oak → overworld).**
 >
+> #### B3 acceptance — PASS (2026-07-21)
+>
+> Consolidated faithfulness + visual gate over the whole intro:
+> - **faithdiff**: all 18 `YellowIntroScene0..17` + `YellowIntroScene2_PlaceGraphic`
+>   + `Request7TileTransferFromC810ToC710` report `status: translated` with **zero
+>   non-benign diffs** — every remaining diff is one of the documented benign
+>   classes (banking `Bank3E_FillMemory→FillMemory`; `IO_BGP/OBP0/OBP1` shadow ADDs
+>   for pret `ldh`; `hAutoBGTransferEnabled` HAL drop; and the named-store-vs-pret-
+>   indirect-`[hl]` ADDs `[W_TILEMAP]` / `[wYellowIntroCurrentScene]`), each carried
+>   by a DEVIATION annotation.
+> - **lint_pret_labels**: 0 violations, 5 suppressed.
+> - **jumptable**: 0 `NextScene` scaffolds — every `Jumptable_f9906` entry is a real
+>   scene.
+> - **pixelcheck yellow**: distinct per-scene content at **0 matte** (documented per
+>   scene: e.g. scene 2 = 1103px flying bars, scene 10 = 7964, scene 12 = 8808,
+>   scene 6 = 9280, scenes 0/4/8 = 10246, a busy surf frame = 16890) — the varied
+>   inside-content counts are the decomposition proving *different* scenes execute,
+>   not a single repeated frame; the chain completes and tears down cleanly. Current
+>   committed build re-confirmed booting clean (frame 40 = 10246px / 0 matte).
+>
+> **B3 is complete** (scene porting + faithfulness + visual acceptance). The only
+> open B3 tail — mGBA per-scene / timing goldens — stays **deferred** (no
+> mgba/baserom in the unattended env), not a completion blocker.
+>
 > **B3.2c-8 done (2026-07-21, `3858c01d`)** — `Copy8BitSineWave` +
 > `wLYOverridesBuffer`@0xFA00 (amp-4 wave ×8 via inline flat→GB `rep movsb`;
 > wobble inert — per-scanline LY not emulated). The easy scene-independent wins
