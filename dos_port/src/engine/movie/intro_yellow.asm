@@ -32,10 +32,11 @@ global Func_fa06e, YellowIntroScene0, Func_f98fc, Jumptable_f9906
 global YellowIntroScene16, YellowIntro_LoadDMGPalAndIncrementCounter
 global YellowIntro_BlankPalsDelay2AndDisableLCD, YellowIntroScene15
 global YellowIntro_Copy8BitSineWave, LoadYellowIntroFlyingSpeedBars
+global YellowIntro_BlankTileMap, YellowIntro_BlankOAMBuffer, YellowIntro_BlankPalettes
 
 extern YellowIntroFramesData_GB, YellowIntroOAMData_GB, YellowIntroSpawnData_GB
 extern SpawnAnimatedObject, MaskCurrentAnimatedObjectStruct, MaskAllAnimatedObjectStructs
-extern DelayFrames, DelayFrame, DisableLCD
+extern DelayFrames, DelayFrame, DisableLCD, FillMemory
 extern UpdateCGBPal_BGP, UpdateCGBPal_OBP0, UpdateCGBPal_OBP1
 
 ; wShadowOAM per-sprite attribute bytes (wShadowOAM + N*4 + 3). Pret names kept.
@@ -371,6 +372,40 @@ YellowIntro_BlankPalsDelay2AndDisableLCD:
     call DelayFrame
     call DelayFrame
     call DisableLCD
+    ret
+
+; ---------------------------------------------------------------------------
+; YellowIntro_BlankTileMap — fill W_TILEMAP with the blank tile ($7f). Writes the
+; port's canonical tilemap (the surface mirror carries it to GB_TILEMAP0).
+; ---------------------------------------------------------------------------
+YellowIntro_BlankTileMap:
+    mov esi, W_TILEMAP                              ; ld hl, wTileMap
+    mov bx, SCREEN_AREA                             ; ld bc, SCREEN_AREA
+    mov al, 0x7f                                    ; ld a, $7f
+    call FillMemory
+    ret
+
+; ---------------------------------------------------------------------------
+; YellowIntro_BlankOAMBuffer — zero the shadow OAM.
+; ---------------------------------------------------------------------------
+YellowIntro_BlankOAMBuffer:
+    mov esi, W_SHADOW_OAM                           ; ld hl, wShadowOAM
+    mov bx, W_SHADOW_OAM_SIZE                       ; ld bc, wShadowOAMEnd - wShadowOAM
+    xor al, al
+    call FillMemory
+    ret
+
+; ---------------------------------------------------------------------------
+; YellowIntro_BlankPalettes — black out the DMG+CGB palettes.
+; ---------------------------------------------------------------------------
+YellowIntro_BlankPalettes:
+    xor al, al
+    mov [ebp + IO_BGP], al                          ; ldh [rBGP], a
+    mov [ebp + IO_OBP0], al                         ; ldh [rOBP0], a
+    mov [ebp + IO_OBP1], al                         ; ldh [rOBP1], a
+    call UpdateCGBPal_BGP
+    call UpdateCGBPal_OBP0
+    call UpdateCGBPal_OBP1
     ret
 
 ; ---------------------------------------------------------------------------
