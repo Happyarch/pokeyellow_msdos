@@ -34,6 +34,7 @@ global YellowIntroScene16, YellowIntro_LoadDMGPalAndIncrementCounter
 global YellowIntro_BlankPalsDelay2AndDisableLCD, YellowIntroScene15
 global YellowIntro_Copy8BitSineWave, LoadYellowIntroFlyingSpeedBars
 global YellowIntro_BlankTileMap, YellowIntro_BlankOAMBuffer, YellowIntro_BlankPalettes
+global Func_f9e9a
 
 extern YellowIntroFramesData_GB, YellowIntroOAMData_GB, YellowIntroSpawnData_GB
 extern SpawnAnimatedObject, MaskCurrentAnimatedObjectStruct, MaskAllAnimatedObjectStructs
@@ -488,6 +489,31 @@ YellowIntro_BlankPalsDelay2AndDisableLCD:
     call DelayFrame
     call DelayFrame
     call DisableLCD
+    ret
+
+; ---------------------------------------------------------------------------
+; Func_f9e9a — per-scene reset: scroll/window to 0/0/$90, LCDC on, DMG palettes
+; ($e4/$e4/$e0), CGB palettes applied. In: AL = palette variant (CGB-only).
+;
+; DEVIATION{class=HAL; pret=engine/movie/intro_yellow.asm:Func_f9e9a; behavior=the callfar YellowIntroPaletteAction (CGB palette-RAM + SGB packet setup) is dropped, and the DMG rBGP/rOBP shadows this routine also writes drive the port's rendering instead; evidence=CGB->VGA palette translation is the Phase-5 boundary (YellowIntroPaletteAction's InitCGBPalettes/SendSGBPacket are unported) and the port renders DMG shades from the IO palette shadows; lifetime=Phase-5 CGB palette port}
+; ---------------------------------------------------------------------------
+Func_f9e9a:
+    ; ld e, a — variant selector, only read by the omitted YellowIntroPaletteAction.
+    xor al, al
+    mov [ebp + H_SCX], al                          ; ldh [hSCX], a
+    mov [ebp + H_SCY], al                           ; ldh [hSCY], a
+    mov al, 0x90
+    mov [ebp + H_WY], al                            ; ldh [hWY], a
+    mov al, 0xe3
+    mov [ebp + IO_LCDC], al                         ; ldh [rLCDC], a
+    mov al, 0xe4
+    mov [ebp + IO_BGP], al                          ; ldh [rBGP], a
+    mov [ebp + IO_OBP0], al                         ; ldh [rOBP0], a
+    mov al, 0xe0
+    mov [ebp + IO_OBP1], al                         ; ldh [rOBP1], a
+    call UpdateCGBPal_BGP
+    call UpdateCGBPal_OBP0
+    call UpdateCGBPal_OBP1
     ret
 
 ; ---------------------------------------------------------------------------
