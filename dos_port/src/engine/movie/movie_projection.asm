@@ -106,6 +106,11 @@ MovieBeginSurface:
     ; erasing the screen's own OAM on the very next DelayFrame. The cinematic owns
     ; OAM from here via PublishProjectedOAM.
     mov byte [ebp + W_UPDATE_SPRITES_ENABLED], 0xFF
+    ; Clear any OAM the previous screen left (e.g. the overworld player sprite, or an
+    ; init-path publish before a cutscene). The cinematic starts with no sprites and
+    ; publishes its own via PublishProjectedOAM; screens that DO show OBJ (the title's
+    ; eyes) call PublishProjectedOAM AFTER this, so nothing they own is lost.
+    mov dword [spr_oam_valid], 0
 
     ; 3-5. Cinematic compositor state.
     mov dword [g_bg_whiteout], 1

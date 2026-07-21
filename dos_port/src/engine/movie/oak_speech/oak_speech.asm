@@ -112,8 +112,9 @@ align 4
 ; MovieBeginSurface published shows both. This is why the intro must NOT use
 ; msgbox_dialog: that descriptor creates a second, screen-space window that
 ; replaces the surface (pic vanishes) and leaks into the matte (the DEBUG_OAKINTRO
-; finding). MB_PROMPT = 0 ("caller waits"), so PrintText types the first page and
-; returns at the paragraph break — exactly the oak_intro checkpoint state.
+; finding). MB_PROMPT = IntroTextWait, the <PARA>/<PROMPT> hold that parks for A/B
+; without hijacking the window; without it the text engine falls to the windowed
+; overworld scroll at the first paragraph break and the surface vanishes.
 ;
 ; pret's dialog box is GB(0,12) 20x6, text lines at (1,14)/(1,16), ▼ at (18,16);
 ; every coord is offset by UI_OAK_SPEECH_(COL,ROW) = (10,3) into the 40-wide canvas.
@@ -126,7 +127,7 @@ msgbox_oak_speech:
     dd (W_TILEMAP + (14 + UI_OAK_SPEECH_ROW) * SCREEN_TILES_W + (1 + UI_OAK_SPEECH_COL))  ; MB_LINE1
     dd (W_TILEMAP + (16 + UI_OAK_SPEECH_ROW) * SCREEN_TILES_W + (1 + UI_OAK_SPEECH_COL))  ; MB_LINE2
     dd (W_TILEMAP + (16 + UI_OAK_SPEECH_ROW) * SCREEN_TILES_W + (18 + UI_OAK_SPEECH_COL)) ; MB_ARROW
-    dd 0                                                                ; MB_PROMPT (0 = caller waits)
+    dd IntroTextWait                                                    ; MB_PROMPT — <PARA>/<PROMPT> hold
     dd 0                                                                ; MB_WIN_WX  ] no window:
     dd 0                                                                ; MB_WIN_WY  ] drawn into the
     dd 0                                                                ; MB_WIN_CLIP] surface canvas,
@@ -198,6 +199,22 @@ MovePicLeft:
     call MovieSyncWindow                   ; re-project after the slide step
     jmp .next
 .done:
+    ret
+
+; ---------------------------------------------------------------------------
+; IntroTextWait — the intro's <PARA>/<PROMPT> hold (msgbox_oak_speech's MB_PROMPT).
+; PrintText copies MB_PROMPT into text_prompt_hook, so the text engine calls this at
+; each page break instead of the windowed overworld scroll (which would replace the
+; surface). Park until A/B, letting g_surface_redraw_cb mirror the canvas each frame,
+; then return so the engine advances to the next paragraph. text_pause pushad/popad
+; around the call, so this need not preserve registers.
+; ---------------------------------------------------------------------------
+global IntroTextWait
+IntroTextWait:
+    call DelayFrame
+    movzx eax, byte [ebp + H_JOY_PRESSED]
+    test al, (PAD_A | PAD_B)
+    jz IntroTextWait
     ret
 
 ; ---------------------------------------------------------------------------
@@ -547,57 +564,19 @@ RunOakPicTest:
 ;
 ; In: EBP = GB base. Never returns (AutoKeyDrive dumps FRAME.BIN + exits).
 ; ---------------------------------------------------------------------------
-extern MovieBeginSurface             ; movie_projection.asm
-extern MovieMirrorSurface            ; movie_projection.asm
-extern LoadFontTilePatterns          ; home/load_font.asm
-extern LoadTextBoxTilePatterns       ; home/load_font.asm
-extern PrintText                     ; home/window.asm — ESI = text stream
-extern text_msgbox                   ; home/text.asm — active msgbox projection
-; text_prompt_hook is driven via msgbox_oak_speech's MB_PROMPT (PrintText copies it)
-extern DumpBackbuffer                ; debug/debug_dump.asm — FRAME.BIN + exit
-extern DelayFrame                    ; video/frame.asm
-extern ProfOakPic                    ; data/trainer_pics.asm
+extern LoadFontTilePatterns          ; home/load_font.asm — ensure $7F/glyph tiles are decoded
 global RunOakSpeechCheckpoint
 
-OAKINTRO_PIC_LEN equ 286             ; gfx/trainers/prof.oak.pic byte length
-
+; RunOakSpeechCheckpoint — A4.5f oak_intro checkpoint. Drives the REAL OakSpeech
+; (not a bespoke replica): clears BIT_DEBUG_MODE so the speech runs, then calls
+; OakSpeech, which establishes the surface, shows Prof. Oak + fade, and types
+; OakSpeechText1 to its first <PARA> where IntroTextWait parks. AUTOKEY_QUIET
+; photographs that parked page-1 frame at AUTOKEY_DUMP_FRAME. This exercises the
+; golden's must-hits (OakSpeech / PrepareOakSpeech / FadeInIntroPic /
+; DisplayPicCenteredOrUpperRight) for real. In: EBP = GB base. Never returns.
 RunOakSpeechCheckpoint:
     call LoadFontTilePatterns
-    call LoadTextBoxTilePatterns
-    call MovieBeginSurface
-
-    ; Prof. Oak, centred, faded up.
-    mov byte [ebp + IO_BGP], 0
-    mov esi, ProfOakPic
-    mov ecx, OAKINTRO_PIC_LEN
-    xor bl, bl                        ; centred
-    call IntroDisplayPicCenteredOrUpperRight
-    call MovieMirrorSurface
-    call FadeInIntroPic
-
-    ; First text page, typed into the surface canvas (msgbox_oak_speech = no window).
-    ; The per-frame g_surface_redraw_cb (armed by MovieBeginSurface = MovieMirrorSurface)
-    ; repacks the canvas into GB_TILEMAP0 every DelayFrame, so each character appears
-    ; through the surface window as PrintText types it — no manual per-page mirror.
-    ; At the page-1 <PARA> the engine calls text_pause -> text_prompt_hook; PrintText's
-    ; box setup COPIES the descriptor's MB_PROMPT (offset 28) into that global, so the
-    ; hold must be installed via MB_PROMPT (setting text_prompt_hook directly is
-    ; clobbered). .introWait parks (the ▼-wait) without hijacking the window.
-    mov dword [msgbox_oak_speech + 28], .introWait   ; MB_PROMPT
-    mov dword [text_msgbox], msgbox_oak_speech
-    mov esi, OakSpeechText1
-    call PrintText                    ; types page 1, then parks in .introWait at <PARA>
-    jmp $                             ; unreached: AutoKeyDrive photographs + exits mid-wait
-
-    ; .introWait — the intro's <PARA>/<PROMPT> hold: park until A/B, letting each frame
-    ; mirror via the surface hook. Returns so the engine advances to the next paragraph
-    ; in real gameplay; under AUTOKEY_QUIET no key is pressed, so it parks until
-    ; AutoKeyDrive writes FRAME.BIN at AUTOKEY_DUMP_FRAME and exits. All regs saved by
-    ; text_pause's pushad, so this need not preserve them.
-.introWait:
-    call DelayFrame
-    movzx eax, byte [ebp + H_JOY_PRESSED]
-    test al, (PAD_A | PAD_B)
-    jz .introWait
-    ret
+    and byte [ebp + wStatusFlags6], ~(1 << BIT_DEBUG_MODE) & 0xFF  ; speech must show
+    call OakSpeech                    ; real cutscene; parks at page-1 <PARA> (IntroTextWait)
+    jmp $                             ; AutoKeyDrive photographs the parked frame + exits
 %endif
