@@ -1510,6 +1510,21 @@ Sampling only early, middle, and final scenes would leave most scene-specific ti
 - Timers and active-object masks match ground truth.
 - Skip exits cleanly to title preparation.
 
+### ✅ CINEMATIC BG-ORIGIN — RESOLVED (2026-07-21, per-row verified)
+
+**Fixed** in commits `9cf24236` (`Func_f9e5f`) + `d4e7f944` (all scenes). Defined
+`INTRO_BG_ROW_OFF` (120) / `INTRO_BG_ORIGIN` (130) in `intro_yellow.asm` and applied
+the (row 3, col 10) origin: row-range fills add the row offset (full-width), column-
+specific writes add the full origin, whole-map `SCREEN_AREA` clears stay at 0.
+**Per-row verified** (x=224): frame 300 (framed scene) went `[3,0×10,3,3,3,3,0,0,0]`
+→ `[3,3,3,3,0×10,3,3,3,3]` (bars at surface rows 0-3 & 14-17); scene 10's tile-2
+region now sits at the surface top; chain completes, 0 matte, no crash; lint 0.
+The B3 letterbox now matches pret. Task #79 closed. **B2 splash is unblocked** (same
+origin). Residual (non-blocking): confirm scene 2's grid reveal under scene 3's
+scroll and scene 12's paste position — correct by construction, not frame-checked.
+
+<details><summary>original confirmation write-up (history)</summary>
+
 ### ⚠ CINEMATIC BG-ORIGIN — CONFIRMED B3 DEFECT (2026-07-21)
 
 **CONFIRMED at the code level (no longer "likely").** `MovieBeginSurface` sets
