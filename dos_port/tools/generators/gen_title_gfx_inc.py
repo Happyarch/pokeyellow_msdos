@@ -153,6 +153,19 @@ def main():
     write_2bpp_inc(ASSETS / "nine_2bpp.inc", "nine_2bpp",
                    data, "Nine tile loaded to vChars2 tile $6E.")
 
+    # Game Freak splash (menu-intro B2). pret intro.asm:GameFreakIntro is
+    # gamefreak_presents (13 tiles) + gamefreak_logo (6) + one blank tile (pret
+    # `ds TILE_SIZE, $00`); FallingStar is the single shooting-star tile. Kept under
+    # pret's exact labels so the splash port (engine/movie/splash.asm) cross-refs.
+    gf = png_to_2bpp(gfx_splash / "gamefreak_presents.png")
+    gf += png_to_2bpp(gfx_splash / "gamefreak_logo.png")
+    gf += b"\x00" * 16  # pret's trailing blank tile
+    write_2bpp_inc(ASSETS / "gamefreak_intro_2bpp.inc", "GameFreakIntro",
+                   gf, "GAME FREAK presents + logo + blank tile (splash).")
+    data = png_to_2bpp(gfx_splash / "falling_star.png")
+    write_2bpp_inc(ASSETS / "falling_star_2bpp.inc", "FallingStar",
+                   data, "Shooting-star tile (splash).")
+
     print("Generating title screen tilemap include files...")
 
     write_tilemap_inc(ASSETS / "pokemon_logo_tilemap.inc", "pokemon_logo_tilemap",

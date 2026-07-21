@@ -54,8 +54,10 @@ dos_port/capture/
 dos_port/assets/*
 !dos_port/assets/font_1bpp.inc
 !dos_port/assets/font_extra_2bpp.inc
+!dos_port/assets/falling_star_2bpp.inc
 !dos_port/assets/font_battle_extra_2bpp.inc
 !dos_port/assets/gamefreak_inc_2bpp.inc
+!dos_port/assets/gamefreak_intro_2bpp.inc
 !dos_port/assets/mon_icons.inc
 !dos_port/assets/nine_2bpp.inc
 !dos_port/assets/npc_fisher_still.inc
