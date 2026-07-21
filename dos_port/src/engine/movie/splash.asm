@@ -17,6 +17,59 @@ bits 32
 %include "gb_memmap.inc"      ; OAM_PRIO / OAM_PAL1 / OAM_HIGH_PALS / OAM_XFLIP
 %include "gfx_macros.inc"     ; dbsprite (== pret macros/gfx.asm:dbsprite)
 
+extern UpdateCGBPal_OBP0             ; home/cgb_palettes.asm — commit rOBP0 to the DAC
+extern UpdateCGBPal_OBP1             ; home/cgb_palettes.asm
+extern CopyVideoData                 ; home/copy2.asm — ESI=VRAM dest, EDX=flat src, BL=tiles
+extern MoveAnimationTiles1           ; engine/overworld/cut.asm — battle move-anim tile sheet
+
+section .text
+
+; ---------------------------------------------------------------------------
+; LoadShootingStarGraphics — set the star OBP palettes, load the star tiles into
+; vChars1, and prime the logo + shooting-star shadow OAM. Source:
+; engine/movie/splash.asm:LoadShootingStarGraphics.
+;
+; The star tiles time-share vChars1 ($8800, the text font) exactly as pret does —
+; there is no text during the splash. The OAM tables are flat program-image data
+; (this file's .data), so the two OAM copies are inline flat->GB rep movsb rather
+; than pret's `call/jp CopyData` (the port's CopyData is EBP-relative on both ends,
+; so a flat source cannot go through it — the GetDefaultName / PrepareOakSpeech path).
+;
+; DEVIATION{class=data-model; pret=engine/movie/splash.asm:LoadShootingStarGraphics; behavior=the two OAM-table copies (CopyData/jp CopyData) become inline flat->GB rep movsb; evidence=GameFreakLogoOAMData / GameFreakShootingStarOAMData are program-image data and the port CopyData adds EBP to BOTH ends; lifetime=permanent flat-memory model}
+;
+; In: EBP = GB base. Clobbers EAX/ECX/ESI/EDI (BH/BL via CopyVideoData).
+; ---------------------------------------------------------------------------
+global LoadShootingStarGraphics
+LoadShootingStarGraphics:
+    mov byte [ebp + IO_OBP0], 0xF9        ; ld a,$f9 / ldh [rOBP0], a
+    mov byte [ebp + IO_OBP1], 0xA4        ; ld a,$a4 / ldh [rOBP1], a
+    call UpdateCGBPal_OBP0
+    call UpdateCGBPal_OBP1
+    ; star tiles (from the battle move-anim set) -> vChars1 $20 / $21
+    mov esi, GB_VFONT + 0x20 * TILE_SIZE  ; ld hl, vChars1 tile $20
+    mov edx, MoveAnimationTiles1 + 3 * TILE_SIZE  ; ld de, MoveAnimationTiles1 tile 3
+    mov bl, 1                             ; ld c, 1 (bh = bank, no-op)
+    call CopyVideoData
+    mov esi, GB_VFONT + 0x21 * TILE_SIZE
+    mov edx, MoveAnimationTiles1 + 19 * TILE_SIZE ; MoveAnimationTiles1 tile 19
+    mov bl, 1
+    call CopyVideoData
+    ; falling-star tile -> vChars1 $22
+    mov esi, GB_VFONT + 0x22 * TILE_SIZE
+    mov edx, FallingStar
+    mov bl, FALLINGSTAR_TILES             ; (FallingStarEnd - FallingStar) / TILE_SIZE
+    call CopyVideoData
+    ; prime the logo OAM (24..) and the shooting-star OAM (0..) — flat -> GB shadow OAM
+    mov esi, GameFreakLogoOAMData
+    lea edi, [ebp + W_SHADOW_OAM + 24 * 4] ; wShadowOAMSprite24
+    mov ecx, GameFreakLogoOAMDataEnd - GameFreakLogoOAMData
+    rep movsb
+    mov esi, GameFreakShootingStarOAMData
+    lea edi, [ebp + W_SHADOW_OAM]
+    mov ecx, GameFreakShootingStarOAMDataEnd - GameFreakShootingStarOAMData
+    rep movsb
+    ret
+
 section .data
 align 4
 
