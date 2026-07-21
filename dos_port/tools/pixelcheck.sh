@@ -57,6 +57,8 @@ case "$SCENARIO" in
     splash)     FLAGS="DEBUG_CINEMATIC_SPLASH=1 AUTOKEY_DUMP_FRAME=${AUTOKEY_DUMP_FRAME:-20}" ;;
     animobj)    FLAGS="DEBUG_CINEMATIC_ANIMOBJ=1 AUTOKEY_DUMP_FRAME=${AUTOKEY_DUMP_FRAME:-30}" ;;
     yellow)     FLAGS="DEBUG_CINEMATIC_YELLOW=1 AUTOKEY_DUMP_FRAME=${AUTOKEY_DUMP_FRAME:-40}" ;;
+    # Boot-cinematic wiring (menu-intro B4): real Init boot with PlayIntro enabled.
+    bootcine)   FLAGS="BOOT_CINEMATIC=1 AUTOKEY_DUMP_FRAME=${AUTOKEY_DUMP_FRAME:-50}" ;;
     title)      FLAGS="DEBUG_TITLE=1 TITLE_DUMP_FRAME=${TITLE_DUMP_FRAME:-0} TITLE_DUMP_SCENE=${TITLE_DUMP_SCENE:-0} TITLE_DUMP_LOOP=${TITLE_DUMP_LOOP:-0}" ;;
     *) echo "unknown scenario: $SCENARIO" >&2; exit 2 ;;
 esac

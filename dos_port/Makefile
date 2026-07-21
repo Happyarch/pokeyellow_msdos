@@ -995,6 +995,18 @@ NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_QUIET
 AUTOKEY_DUMP_FRAME ?= 20
 NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 endif
+# Boot-cinematic wiring harness (menu-intro B4): boot the REAL Init chain (NO
+# SKIP_TITLE) with the gated `call PlayIntro` enabled, so PlayIntro runs from Init
+# (Init -> PlayIntro splash+intro -> title). AUTOKEY_QUIET photographs a frame at
+# AUTOKEY_DUMP_FRAME (~50 = the copyright screen, proving PlayIntro runs from Init).
+# make image BOOT_CINEMATIC=1 AUTOKEY_DUMP_FRAME=N
+ifdef BOOT_CINEMATIC
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D BOOT_CINEMATIC
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_QUIET
+AUTOKEY_DUMP_FRAME ?= 50
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
 # Animated-object engine harness (menu-intro B1.3): establish the surface, stage
 # the intro anim data, spawn one object, run RunObjectAnimations + publish OAM
 # each frame; AUTOKEY_QUIET photographs a frame at AUTOKEY_DUMP_FRAME.
