@@ -315,6 +315,14 @@ CopyYellowIntroAnimatedObjectData:
     popad
     ret
 
+; GB-space addresses of the three tables (after the flat→GB copy), exported so
+; LoadYellowIntroObjectAnimationDataPointers (intro_yellow.asm) can point the
+; engine at them. The jumptable pointer is set separately (flat, B3 code).
+YellowIntroFramesData_GB   equ GBPTR(YellowIntro_AnimatedObjectFramesData)
+YellowIntroOAMData_GB      equ GBPTR(YellowIntro_AnimatedObjectOAMData)
+YellowIntroSpawnData_GB    equ GBPTR(YellowIntro_AnimatedObjectSpawnStateData)
+global YellowIntroFramesData_GB, YellowIntroOAMData_GB, YellowIntroSpawnData_GB
+
 %ifdef DEBUG_CINEMATIC_ANIMOBJ
 ; ---------------------------------------------------------------------------
 ; RunAnimObjectTest — B1.3 lifecycle harness for the animated-object engine.

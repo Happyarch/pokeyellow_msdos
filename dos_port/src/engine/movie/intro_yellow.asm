@@ -21,8 +21,97 @@ bits 32
 global YellowIntro_AnimatedObjectJumptable
 global Func_fa007, Func_fa008, Func_fa014, Func_fa02b, Func_fa062
 global Func_fa03f, Func_fa051, Func_fa077, Func_fa079, Func_fa08e
+global Func_f98a2, Func_f98cb, YellowIntro_NextScene
+global LoadYellowIntroObjectAnimationDataPointers
+
+extern YellowIntroFramesData_GB, YellowIntroOAMData_GB, YellowIntroSpawnData_GB
+
+; wShadowOAM per-sprite attribute bytes (wShadowOAM + N*4 + 3). Pret names kept.
+%define wShadowOAMSpriteAttr(n) (W_SHADOW_OAM + (n)*4 + 3)
+%define wShadowOAMSprite08Attributes wShadowOAMSpriteAttr(8)
+%define wShadowOAMSprite14Attributes wShadowOAMSpriteAttr(14)
+%define wShadowOAMSprite16Attributes wShadowOAMSpriteAttr(16)
+%define wShadowOAMSprite18Attributes wShadowOAMSpriteAttr(18)
+%define wShadowOAMSprite19Attributes wShadowOAMSpriteAttr(19)
+%define wShadowOAMSprite20Attributes wShadowOAMSpriteAttr(20)
+%define wShadowOAMSprite25Attributes wShadowOAMSpriteAttr(25)
+%define wShadowOAMSprite26Attributes wShadowOAMSpriteAttr(26)
+%define wShadowOAMSprite28Attributes wShadowOAMSpriteAttr(28)
 
 section .text
+
+; ---------------------------------------------------------------------------
+; LoadYellowIntroObjectAnimationDataPointers — point the animated-object engine
+; at the Yellow-intro tables. MUST run after ClearObjectAnimationBuffers, which
+; zeroes the block these pointers live in. Spawn/OAM/Frames are 16-bit GB
+; addresses into the copied blob; the jumptable is a 32-bit flat pointer (B1
+; data-model split).
+; ---------------------------------------------------------------------------
+LoadYellowIntroObjectAnimationDataPointers:
+    ; The GB addresses are external absolutes; COFF has no 16-bit relocation, so
+    ; load each into EAX (32-bit reloc) and store its low word.
+    mov eax, YellowIntroSpawnData_GB
+    mov [ebp + wAnimatedObjectSpawnStateDataPointer], ax
+    mov dword [ebp + wAnimatedObjectJumptablePointer], YellowIntro_AnimatedObjectJumptable
+    mov eax, YellowIntroOAMData_GB
+    mov [ebp + wAnimatedObjectOAMDataPointer], ax
+    mov eax, YellowIntroFramesData_GB
+    mov [ebp + wAnimatedObjectFramesDataPointer], ax
+    ret
+
+; ---------------------------------------------------------------------------
+; Func_f98a2 — scene-7 hook: set the BG-priority bit (OAM attr bit 0) on the
+; surfing-Pikachu OBJ so the wave BG draws over them.
+; ---------------------------------------------------------------------------
+Func_f98a2:
+    mov al, [ebp + wShadowOAMSprite08Attributes]
+    or al, 0x1
+    mov [ebp + wShadowOAMSprite08Attributes], al
+    mov al, [ebp + wShadowOAMSprite14Attributes]
+    or al, 0x1
+    mov [ebp + wShadowOAMSprite14Attributes], al
+    mov al, [ebp + wShadowOAMSprite16Attributes]
+    or al, 0x1
+    mov [ebp + wShadowOAMSprite16Attributes], al
+    mov al, [ebp + wShadowOAMSprite18Attributes]
+    or al, 0x1
+    mov [ebp + wShadowOAMSprite18Attributes], al
+    mov al, [ebp + wShadowOAMSprite19Attributes]
+    or al, 0x1
+    mov [ebp + wShadowOAMSprite19Attributes], al
+    ret
+
+; ---------------------------------------------------------------------------
+; Func_f98cb — scene-0xb hook: same BG-priority bit on the flying-Pikachu OBJ.
+; ---------------------------------------------------------------------------
+Func_f98cb:
+    mov al, [ebp + wShadowOAMSprite18Attributes]
+    or al, 0x1
+    mov [ebp + wShadowOAMSprite18Attributes], al
+    mov al, [ebp + wShadowOAMSprite19Attributes]
+    or al, 0x1
+    mov [ebp + wShadowOAMSprite19Attributes], al
+    mov al, [ebp + wShadowOAMSprite20Attributes]
+    or al, 0x1
+    mov [ebp + wShadowOAMSprite20Attributes], al
+    mov al, [ebp + wShadowOAMSprite25Attributes]
+    or al, 0x1
+    mov [ebp + wShadowOAMSprite25Attributes], al
+    mov al, [ebp + wShadowOAMSprite26Attributes]
+    or al, 0x1
+    mov [ebp + wShadowOAMSprite26Attributes], al
+    mov al, [ebp + wShadowOAMSprite28Attributes]
+    or al, 0x1
+    mov [ebp + wShadowOAMSprite28Attributes], al
+    ret
+
+; ---------------------------------------------------------------------------
+; YellowIntro_NextScene — advance to the next intro scene.
+; ---------------------------------------------------------------------------
+YellowIntro_NextScene:
+    inc byte [ebp + wYellowIntroCurrentScene]      ; ld hl, .. / inc [hl]
+    ; vc_hook Reduce_intro_scene_flashing_0E — VC patch hook, no-op in the port
+    ret
 
 ; ---------------------------------------------------------------------------
 ; Func_fa007 — no-op object callback.
