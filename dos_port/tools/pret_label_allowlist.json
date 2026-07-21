@@ -1,10 +1,10 @@
 {
   "_comment": [
     "Sidecar allowlist for update_label_db / lint_pret_labels (fidelity plan Stage 2.1).",
-    "relocated_files / relocated_labels contain maintainer-approved PURE relocations only.",
-    "Pure means a complete independently callable routine/file with every pret call boundary intact: no fusion, inlining, decomposition, or partial translation.",
+    "relocated_files / relocated_labels are a LEGACY-DEBT inventory, not permission or precedent. NEW RELOCATIONS ARE FORBIDDEN.",
+    "Every pret counterpart belongs at dos_port/src/<pret path>; move legacy entries back to their mirrors when touched.",
     "structural_findings records audited legacy violations as OPEN debt, never precedent or authority for new work.",
-    "Agents may not add or edit either category to make their own lint failure pass; the exact file hash is approved outside the worktree.",
+    "Agents may not add entries or edit either category to make their own lint failure pass; registry edits may only retire/reclassify debt and the exact file hash is approved outside the worktree.",
     "suppress: linter suppressions [{rule, key, why}].",
     "Legacy entries began as a 2026-07-07 full-tree inventory and remain subject to structural audit."
   ],

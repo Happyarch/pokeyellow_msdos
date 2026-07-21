@@ -24,13 +24,12 @@ user. All tools live in `dos_port/tools/`; they read `translation.db`, which is
    Full schema, the legal `class` values, and the "no `;` inside a value" trap →
    skill **`project-conventions`**.
 
-   **A pure relocation is not a deviation**, but it is narrowly defined: one
-   complete, independently callable pret routine (or complete pret file) moves
-   without inlining, fusion, decomposition, partial translation, or changed pret
-   call boundaries. Only the user or a maintainer may authorize and register it.
-   An agent whose work trips the mirror rule must move the routine to its mirrored
-   path, never add an allowlist entry or a structural finding to make its own gate
-   pass. Registry approval is content-hash locked outside the worktree.
+   **New relocations are not allowed.** A pret counterpart's complete routine and
+   every pret entry point belong in `dos_port/src/<pret path>`. The relocation
+   registry is legacy debt, not authority or precedent. An agent whose work trips
+   the mirror rule must move the routine to its mirrored path, never add an
+   allowlist entry or structural finding. Registry edits may only retire or
+   reclassify audited debt and are content-hash locked outside the worktree.
 
 1. **`tools/faithdiff <Label>`** for every pret-labeled routine you touched.
    It diffs the pret vs port call graph and named-WRAM/HRAM store set.
@@ -58,8 +57,8 @@ user. All tools live in `dos_port/tools/`; they read `translation.db`, which is
    tree (so it sees your change) and enforces: pret-named globals live in the
    path-mirrored file or a `*_stubs.asm`. A `mirror` finding means move the
    complete routine to the mirrored file; it is not an instruction to edit the
-   relocation registry. Maintainer-approved pure relocations are recognized
-   separately; stubs stay
+   relocation registry. Existing registered relocations are printed loudly as
+   legacy debt and must be moved when touched; stubs stay
    ret-only; no duplicate global defs (silent-shadow trap); extern comments
    point at stub files that still define the symbol.
 3. **Run every golden scenario whose compared surface could observe the change.**

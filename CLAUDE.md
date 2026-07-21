@@ -287,6 +287,21 @@ commit: `dos_port/tools/faithdiff <Label>` (justify every unsuppressed
 added/dropped call in the commit message) and `dos_port/tools/lint_pret_labels`
 (must exit 0). Workflow + tools → skill **`faithfulness-review`**.
 
+**A failed fidelity check means repair the implementation.** New relocations are
+not allowed. If a routine has a pret counterpart, put its complete body and every
+pret entry point in `dos_port/src/<pret path>`. “Related code belongs together,”
+“next to its caller/callee,” private-helper convenience, or a port-specific notion
+of cohesion never overrides the mirror. Port-only helpers with no pret counterpart
+may live where their subsystem requires, but they do not absorb pret labels.
+
+An agent must not add, expand, or reinterpret
+`dos_port/tools/pret_label_allowlist.json` to make its own work pass. Its relocation
+entries are a legacy-debt inventory, not permission or precedent. Registry edits
+may only retire or reclassify audited debt and require explicit user/maintainer
+approval for the exact contents, recorded outside the worktree. Agents may not add
+`structural_findings` to self-waive new work either. If the linter reports
+`mirror`, move the complete routine to the indicated mirrored file.
+
 ### Structured annotations — `DEVIATION` / `BUG` / `GLITCH` / `STUB`
 
 Every sanctioned divergence, known bug, exploitable glitch, and link-time stand-in
@@ -301,8 +316,8 @@ commit message nobody greps.
 
 - **Kinds — `DEVIATION`, `BUG`, `GLITCH`, `STUB`. There are no others.** Do not invent
   one: an unrecognized kind is invisible to the linter, so it reads as an ordinary
-  comment and silently proves nothing. A pure *file* relocation is faithful code, not a
-  deviation — register it in `tools/pret_label_allowlist.json` instead.
+  comment and silently proves nothing. Legacy relocation entries describe debt,
+  not faithful structure; do not add another one.
 - **Required fields (all kinds):** `class`, `pret`, `behavior`, `evidence`, `lifetime`.
   `GLITCH` also requires `safety`. `STUB` also requires `label`, and its `class` must be
   `stub` or `temporary`.

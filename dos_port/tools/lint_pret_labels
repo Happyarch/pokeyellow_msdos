@@ -44,8 +44,9 @@ Violation classes:
 
 Suppressions live in dos_port/tools/pret_label_allowlist.json:
   "suppress": [ {"rule": "<class>", "key": "<label | file:symbol>", "why": "…"} ]
-Relocations are not suppressions — they go in relocated_files/relocated_labels
-(consumed by update_label_db → status 'relocated').
+relocated_files/relocated_labels are a legacy-debt inventory consumed by
+update_label_db → status 'relocated'. New entries are forbidden; every pret
+counterpart must move to dos_port/src/<pret path>.
 Known invalid legacy cases go in structural_findings. They are printed as OPEN
 findings and never serve as precedent for a new relocation.
 
@@ -177,6 +178,8 @@ def main():
     structural_findings = allow.get('structural_findings', {})
     con = sqlite3.connect(args.db)
     cur = con.cursor()
+    legacy_relocation_count = cur.execute(
+        "SELECT COUNT(*) FROM labels WHERE status='relocated'").fetchone()[0]
     findings = []      # (rule, key, message)
     suppressed = 0
 
@@ -368,6 +371,11 @@ def main():
     by_rule = {}
     for rule, _, msg in findings:
         by_rule.setdefault(rule, []).append(msg)
+    if legacy_relocation_count:
+        print(f"\n!! LEGACY RELOCATION DEBT: {legacy_relocation_count} pret label(s) "
+              "remain outside their mirrored files !!")
+        print("  NEW RELOCATIONS ARE FORBIDDEN. This registry is not precedent. "
+              "Move any touched label to dos_port/src/<pret path>.")
     if open_structural:
         print(f"\n== OPEN structural_findings ({len(open_structural)}; non-precedent debt) ==")
         print('\n'.join('  ' + m for m in open_structural))

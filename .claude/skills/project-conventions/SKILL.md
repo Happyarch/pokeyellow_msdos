@@ -23,14 +23,13 @@ divergence's "why" queryable by tooling instead of stranded in a commit message.
 **Kinds — exactly four: `DEVIATION`, `BUG`, `GLITCH`, `STUB`.**
 Do **not** invent a kind. An unrecognized one (`RELOCATION{…}`, `NOTE{…}`) does not
 parse, so the linter treats it as an ordinary comment: it looks rigorous and proves
-nothing. A pure relocation is **not** an annotation, but only the user or a
-maintainer may authorize and register one in `tools/pret_label_allowlist.json`.
-It must preserve a complete independently callable pret routine (or complete pret
-file), every entry point, and every pret call boundary; inlining, fusion,
-decomposition, and partial translation never qualify. An agent whose change trips
-the mirror rule must repair the file placement, not edit the registry or add a
-`structural_findings` entry. Registry approval is content-hash locked outside the
-worktree.
+nothing. **New relocations are not allowed.** A pret counterpart's complete body
+and every pret entry point belong in `dos_port/src/<pret path>`. Existing entries
+in `tools/pret_label_allowlist.json` are a legacy-debt inventory, not permission or
+precedent; move them back to their mirrors when touched. An agent whose change
+trips the mirror rule must repair the file placement, not edit the registry or add
+a `structural_findings` entry. Registry edits may only retire or reclassify audited
+debt and are content-hash locked outside the worktree.
 
 **Required fields — all four kinds:** `class`, `pret`, `behavior`, `evidence`,
 `lifetime`. Plus:
