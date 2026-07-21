@@ -281,6 +281,7 @@ GAME_SRCS := \
     src/home/sprites.asm \
     src/engine/gfx/sprite_oam.asm \
     src/engine/gfx/animated_objects.asm \
+    src/engine/movie/intro_yellow.asm \
     src/data/sprite_anims/intro_anim_data.asm \
     src/engine/gfx/mon_icons.asm \
     src/engine/gfx/palettes.asm \

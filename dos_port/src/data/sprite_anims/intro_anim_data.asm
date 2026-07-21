@@ -330,6 +330,7 @@ extern MovieBeginSurface, ClearObjectAnimationBuffers, SpawnAnimatedObject
 extern RunObjectAnimations, PublishProjectedOAM, DelayFrame
 extern MaskAllAnimatedObjectStructs
 extern g_tilecache_dirty
+extern YellowIntro_AnimatedObjectJumptable    ; B3.1 real callbacks
 global RunAnimObjectTest
 
 RunAnimObjectTest:
@@ -353,11 +354,13 @@ RunAnimObjectTest:
     mov word [ebp + wAnimatedObjectSpawnStateDataPointer], GBPTR(YellowIntro_AnimatedObjectSpawnStateData)
     mov word [ebp + wAnimatedObjectFramesDataPointer], GBPTR(YellowIntro_AnimatedObjectFramesData)
     mov word [ebp + wAnimatedObjectOAMDataPointer], GBPTR(YellowIntro_AnimatedObjectOAMData)
-    mov dword [ebp + wAnimatedObjectJumptablePointer], TestAnimObjectJumptable
-    ; spawn frameset-1 object (4-OBJ 16x16 animating block, callback = ret)
-    mov al, 1                                       ; spawn-state index → frameset 1, animseq 1
-    mov dh, 0x40                                    ; Y coord
-    mov dl, 0x50                                    ; X coord
+    mov dword [ebp + wAnimatedObjectJumptablePointer], YellowIntro_AnimatedObjectJumptable
+    ; spawn object 4 → frameset 4 (36-OBJ block), animseq 2 = Func_fa008, which
+    ; slides XCoord left toward 0x58. Dumping early vs late shows it move left —
+    ; a real callback exercised end-to-end (B3.1).
+    mov al, 4                                       ; spawn-state index → frameset 4, animseq 2
+    mov dh, 0x60                                    ; Y coord
+    mov dl, 0x80                                    ; X coord (slides down to 0x58)
     call SpawnAnimatedObject
 .loop:
     mov byte [ebp + wCurrentAnimatedObjectOAMBufferOffset], 0
@@ -370,16 +373,4 @@ RunAnimObjectTest:
     call PublishProjectedOAM
     call DelayFrame
     jmp .loop
-
-AnimObjTestCbRet:                                   ; no-op object callback (B3 supplies real ones)
-    ret
-
-section .data
-TestAnimObjectJumptable:
-    dd AnimObjTestCbRet
-    dd AnimObjTestCbRet
-    dd AnimObjTestCbRet
-    dd AnimObjTestCbRet
-    dd AnimObjTestCbRet
-    dd AnimObjTestCbRet
 %endif
