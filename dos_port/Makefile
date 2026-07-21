@@ -1610,6 +1610,13 @@ assets/default_names.inc: tools/generators/gen_default_names.py tools/generators
 
 src/engine/movie/oak_speech/oak_speech2.o: assets/default_names.inc
 
+# Debug new-game boot names (menu-intro A4.5e; pret DebugNewGame{Player,Rival}Name).
+# Consumed by title.asm; must stay contiguous (the NAME_LENGTH copies overrun).
+assets/debug_boot_names.inc: tools/generators/gen_debug_boot_names.py tools/generators/gb_text.py
+	python3 tools/generators/gen_debug_boot_names.py
+
+src/movie/title.o: assets/debug_boot_names.inc
+
 src/data/hidden_events_data.o: assets/hidden_events.inc assets/hidden_item_coords.inc
 src/data/pickup_text.o: assets/pickup_text.inc
 
@@ -2070,6 +2077,7 @@ assets: assets/scenario_registry.inc \
         assets/hidden_item_coords.inc assets/pickup_text.inc \
         assets/oak_speech_strings.inc \
         assets/default_names.inc \
+        assets/debug_boot_names.inc \
         assets/battle_hud_2bpp.inc \
         assets/trainer_pics.inc \
         assets/super_rod.inc assets/town_map_data.inc assets/town_map_gfx.inc \
