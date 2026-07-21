@@ -16,13 +16,40 @@ bits 32
 
 %include "gb_memmap.inc"      ; OAM_PRIO / OAM_PAL1 / OAM_HIGH_PALS / OAM_XFLIP
 %include "gfx_macros.inc"     ; dbsprite (== pret macros/gfx.asm:dbsprite)
+%define UI_LAYOUT_EQUATES_ONLY 1
+%include "assets/ui_layout_intro.inc"   ; UI_SPLASH_COL / UI_SPLASH_ROW
 
 extern UpdateCGBPal_OBP0             ; home/cgb_palettes.asm — commit rOBP0 to the DAC
 extern UpdateCGBPal_OBP1             ; home/cgb_palettes.asm
 extern CopyVideoData                 ; home/copy2.asm — ESI=VRAM dest, EDX=flat src, BL=tiles
 extern MoveAnimationTiles1           ; engine/overworld/cut.asm — battle move-anim tile sheet
+extern CheckForUserInterruption      ; home/check_user_interruption.asm — BL frames, CF on skip
+extern PublishProjectedOAM           ; engine/gfx/sprite_oam.asm — project wShadowOAM to the canvas
+
+; wMoveDownSmallStarsOAMCount (pokeyellow.sym 00:cd3d) — not yet in gb_memmap.inc;
+; report to root for promotion. %ifndef-guarded so promotion is a no-op here.
+%ifndef wMoveDownSmallStarsOAMCount
+wMoveDownSmallStarsOAMCount equ 0xCD3D
+%endif
 
 section .text
+
+; ---------------------------------------------------------------------------
+; publish_splash_oam — port-only: project the splash's canonical wShadowOAM onto
+; the cinematic canvas (offset 80,24) so the OBJ render each frame. pret relies on
+; the VBlank OAM DMA; the port renders OBJ from the projected shadow, so the splash
+; publishes before every frame wait (cf. MovePicLeft's MovieSyncWindow). All
+; registers preserved (pushad/popad).
+; ---------------------------------------------------------------------------
+publish_splash_oam:
+    pushad
+    mov esi, W_SHADOW_OAM                 ; canonical Y,X,tile,attr records
+    mov ecx, 40                           ; all 40 OBJ slots
+    mov eax, UI_SPLASH_COL * 8            ; projection X offset (80)
+    mov ebx, UI_SPLASH_ROW * 8            ; projection Y offset (24)
+    call PublishProjectedOAM
+    popad
+    ret
 
 ; ---------------------------------------------------------------------------
 ; LoadShootingStarGraphics — set the star OBP palettes, load the star tiles into
@@ -68,6 +95,41 @@ LoadShootingStarGraphics:
     lea edi, [ebp + W_SHADOW_OAM]
     mov ecx, GameFreakShootingStarOAMDataEnd - GameFreakShootingStarOAMData
     rep movsb
+    ret
+
+; ---------------------------------------------------------------------------
+; MoveDownSmallStars — over 8 frames, walk the falling small stars down by their
+; current count and blink the lower star (toggle OBP1). Source:
+; engine/movie/splash.asm:MoveDownSmallStars.
+;
+; DEVIATION{class=projection; pret=engine/movie/splash.asm:MoveDownSmallStars; behavior=publish_splash_oam (PublishProjectedOAM) runs before each frame wait; evidence=the port renders OBJ from a projected shadow, not the VBlank-DMA'd wShadowOAM; lifetime=permanent widescreen projection}
+;
+; In: EBP = GB base. Out: CF set if the user skipped. Clobbers EAX/EBX/ESI.
+; ---------------------------------------------------------------------------
+global MoveDownSmallStars
+MoveDownSmallStars:
+    mov bh, 8                             ; ld b, 8
+.loop:
+    mov esi, W_SHADOW_OAM + 23 * 4        ; ld hl, wShadowOAMSprite23
+    movzx eax, byte [ebp + wMoveDownSmallStarsOAMCount]
+    mov bl, al                            ; ld c, a (entries to step; always >= 6 at call sites)
+.innerLoop:
+    inc byte [ebp + esi]                  ; inc [hl] — the OBJ Y coordinate
+    sub esi, 4                            ; add hl, de (de = -OBJ_SIZE)
+    dec bl
+    jnz .innerLoop
+    ; blink the lower small-star row: toggle OBP1 bits 5+7
+    mov al, [ebp + IO_OBP1]               ; ldh a, [rOBP1]
+    xor al, 0xA0                          ; xor %10100000
+    mov [ebp + IO_OBP1], al               ; ldh [rOBP1], a
+    call UpdateCGBPal_OBP1
+    call publish_splash_oam               ; PORT: project the OAM before the frame wait
+    mov bl, 3                             ; ld c, 3
+    call CheckForUserInterruption
+    jc .done                              ; ret c
+    dec bh                                ; dec b
+    jnz .loop
+.done:
     ret
 
 section .data
