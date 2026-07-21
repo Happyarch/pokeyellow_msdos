@@ -47,6 +47,7 @@ extern DelayFrames, DelayFrame, DisableLCD, FillMemory
 extern UpdateCGBPal_BGP, UpdateCGBPal_OBP0, UpdateCGBPal_OBP1
 extern CopyVideoData, RunPaletteCommand, PlayMusic, ClearObjectAnimationBuffers
 extern MovieBeginSurface, MovieEndSurface, PublishProjectedOAM, JoypadLowSensitivity
+extern MovieSyncScroll                            ; movie_projection.asm — H_SCX/H_SCY -> WIN_SRC_X/Y
 extern RunObjectAnimations, UpdateMusicCTimes
 
 ; --- Cinematic BG surface model (the port's own; documented here once) ----------
@@ -799,6 +800,16 @@ PlayIntroScene:
     mov eax, 80                                       ; UI_YELLOW_INTRO_COL * 8
     mov ebx, 24                                       ; UI_YELLOW_INTRO_ROW * 8
     call PublishProjectedOAM
+    ; PORT: present this frame's GB fine scroll on the cinematic window. Scenes
+    ; 3/7/11/15 walk H_SCX (e.g. scene 7's `add H_SCX,2` — a pure hSCX water scroll
+    ; with no tilemap roll), which on the GB the LCD reads automatically each frame.
+    ; The port has no hardware scroll, so H_SCX must be transferred to the compositor
+    ; window's fine source offset (WIN_SRC_X) explicitly — exactly as the title bounce
+    ; does (title.asm:.scrollStep). Without this the water only scrolled inside a
+    ; GBSTATE/FRAME dump (the dump path in debug_dump.asm calls MovieSyncScroll), never
+    ; during live play — implements the B3 "present all H_SCX/H_SCY scrolling through
+    ; the A1 WIN_SRC_X/WIN_SRC_Y helper" item.
+    call MovieSyncScroll                              ; H_SCX/H_SCY -> WIN_SRC_X/Y (GB mod-256 wrap)
     call DelayFrame
 %ifdef DEBUG_YELLOW_S01
     ; yellow_intro_s01 golden (menu-intro B4): state-triggered GBSTATE dump at the
