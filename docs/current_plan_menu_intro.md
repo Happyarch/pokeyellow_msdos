@@ -1740,7 +1740,23 @@ breaking the working `SKIP_TITLE` overworld boot).
       real boot): `validate_scenarios` consistent, `goldencheck gamefreak_intro` PASS
       (TILEMAP/VRAM/OAM/WRAM OK), runs in `make fidelity-full`. This establishes the
       full pattern (mGBA `.lua` → golden → golden_diff entry → manifest + DEBUG_ gate →
-      goldencheck). Remaining: the `yellow_intro_s00..17` scene goldens by the same pattern.)*
+      goldencheck). Remaining: the `yellow_intro_s00..17` scene goldens — see the note below.)*
+
+> **Yellow-intro scene goldens (2026-07-21) — asset integrity verified; per-scene GBSTATE
+> goldens need a state-triggered dump.** Asset-integrity check (like the one that caught F-GFI)
+> passed clean: `YellowIntroGraphics1` (128 tiles), `YellowIntroGraphics2` (256), `YellowIntroCloudGFX`
+> (8), and all three scene-10 tilemaps (`Unkn_f9b6e/be6/bf2`) are **byte-identical to pret** — no
+> F-GFI-class asset truncation/mismatch in the yellow intro. `YellowIntroScene0` is a faithful
+> line-for-line port. So the yellow intro is sound at the asset + code level (plus the earlier
+> per-row BG-origin + hAutoBGTransfer fixes). **Blocker for the 18 GBSTATE scene goldens:** the
+> scenes are ANIMATED — even scenes spawn an animated object + set a timer then advance; the odd
+> "wait" scenes hold while `RunObjectAnimations` advances the pikachu every frame. So a single
+> frame-based AUTOKEY dump (port) won't align with the mGBA scene-detected dump. NEXT: add a
+> port-side STATE-triggered GBSTATE dump (fire when `wYellowIntroCurrentScene == N` at scene entry,
+> before `RunObjectAnimations` runs that scene — the deterministic setup state), then author one
+> parameterized mGBA scenario per scene (detect `wYellowIntroCurrentScene == N`, dump). Alternative/
+> complement per the B3 plan: a single continuous transition TRACE (scene entries/timers/masks
+> record-by-record) which catches scene-dispatch/timing bugs across all 18 in one scenario.
 
 > **F-GFI (RESOLVED, `3175ff22`) — copyright screen dropped the "GAME FREAK inc." glyphs.**
 > Root cause: `LoadCopyrightTiles` loaded only 19 tiles (copyright.2bpp), but pret's single
