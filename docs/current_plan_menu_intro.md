@@ -1340,6 +1340,19 @@ B2 must not create a `PlayIntroScene` stub.
 >   Remaining even scenes 2/6/8/10/12/14 follow this template (scene 2 also needs
 >   `YellowIntroScene2_PlaceGraphic`'s 6×6 gengar grid; scene 10 `.FillBGMapBox`);
 >   odd 7/11 still need a VBlank-copy shim/stub.
+> - **B3.2e-2 done (`0761c1f6`)** — `YellowIntroScene8`, exact scene-4 clone
+>   (spawns obj `$3`, no CGB branch).
+> - **B3.2e-3 done (`2d9eff7c`)** — `YellowIntroScene14`, a fade-transition (like
+>   scene 16): DMG fade via `LoadDMGPalAndIncrementCounter(f9dd6)`, then mask
+>   objects + blank OAM + rebuild the framed BG (the `Func_f9e5f` pattern inlined,
+>   targeting `wTileMap` directly) + restore palettes + spawn obj `$7` + advance +
+>   `$28` timer. The two `hAutoBGTransferEnabled` stores are dropped (HAL
+>   DEVIATION: the surface mirror copies `W_TILEMAP` each frame, so the three
+>   `DelayFrame` waits stay but the flag is gone). **12/18 scenes render**
+>   (0/1/3/4/5/8/9/13/14/15/16/17); the intro now runs **end-to-end to completion**
+>   (surface clean/0-matte through ~f540, ending fade ~f580, teardown by f600).
+>   Remaining even 2/6/10/12; odd 7/11. **Next best: a `YellowIntro_FillBGMapBox`
+>   32→40-stride boxed-paste helper unlocks scenes 10 and 12.**
 >
 > **B3.2c-8 done (2026-07-21, `3858c01d`)** — `Copy8BitSineWave` +
 > `wLYOverridesBuffer`@0xFA00 (amp-4 wave ×8 via inline flat→GB `rep movsb`;
