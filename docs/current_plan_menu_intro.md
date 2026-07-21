@@ -1281,6 +1281,11 @@ B2 must not create a `PlayIntroScene` stub.
 > `H_SCX` + MaskAll) and `Func_fa06e` (scene-jumptable lookup, flat×4 DEVIATION —
 > the dispatch keystone). **6/18 scenes ported** (1/3/5/9/13/17).
 >
+> **B3.2c-9 done (2026-07-21, `ccfc0a03`)** — `LoadYellowIntroFlyingSpeedBars`
+> (scene-2 spawn helper; clears 1 of scene 2's 3 blockers). Remaining blocked
+> prereqs: `Func_f9e9a` (needs `YellowIntroPaletteAction`), scenes 7/11 (need a
+> VBlank-copy mechanism).
+>
 > **B3.2c-8 done (2026-07-21, `3858c01d`)** — `Copy8BitSineWave` +
 > `wLYOverridesBuffer`@0xFA00 (amp-4 wave ×8 via inline flat→GB `rep movsb`;
 > wobble inert — per-scanline LY not emulated). The easy scene-independent wins
