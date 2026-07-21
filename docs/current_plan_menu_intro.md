@@ -1680,6 +1680,13 @@ breaking the working `SKIP_TITLE` overworld boot).
 
 > **Status (2026-07-21).** **B2 (Game Freak splash) is COMPLETE** — framing bars,
 > `PlayShootingStar`, and the copyright screen all ported and per-row verified.
+> *(Fix `6a05a616`: `LoadCopyrightTiles` now uses pret's exact `jp PlaceString` instead
+> of a bespoke placement loop — faithdiff had flagged the DROPPED PlaceString. The
+> bespoke loop hand-rolled single-spaced newlines (lines on surface rows 7/8/9); pret's
+> PlaceString double-spaces `<NEXT>` (`BIT_SINGLE_SPACED_LINES` is clear at boot), so the
+> faithful layout is rows 7/9/11 — now verified. Also corrected the `CopyrightTextString`
+> comment: it is a byte-exact mirror of pret's own hand-authored raw tile-index `db`, not
+> two-tier debt — pret hand-encodes it too, the glyphs are not gb_text-encodable.)*
 > **B4 is in progress:** `PlayIntro` is ported (`332f84cd`) and the full
 > splash→intro chain is verified via the `DEBUG_CINEMATIC_SPLASH` harness (f50 =
 > copyright screen, f900 = intro framed scene with bars at surface rows 0-3/14-17,
