@@ -781,6 +781,12 @@ H_WY                     equ 0xFFB0     ; hWY  — shadow of rWY
 ; hram address not load-bearing.
 H_SPRITE_VRAM_SLOT_AND_FACING equ 0xFFC0 ; hSpriteVRAMSlotAndFacing
 H_SPRITE_ANIM_FRAME_COUNTER   equ 0xFFC1 ; hSpriteAnimFrameCounter
+; hLCDCPointer — pret's per-scanline LCDC pointer (STAT-ISR driven). The port
+; does not emulate per-scanline LCDC, so this is an inert HRAM byte; the intro
+; writes 0 (disabled) at scene starts. Port-assigned to free HRAM (exact pret
+; address not load-bearing here). If per-scanline effects are ever emulated
+; (surfing-wobble scenes 6/7), this needs the real STAT mechanism, not this byte.
+H_LCDC_POINTER                equ 0xFFC2 ; hLCDCPointer (inert in the port)
 H_LOADED_ROM_BANK        equ 0xFFB8     ; hLoadedROMBank
 H_AUTO_BG_TRANSFER_EN    equ 0xFFBA     ; hAutoBGTransferEnabled
 H_AUTO_BG_TRANSFER_DEST  equ 0xFFBC     ; hAutoBGTransferDest (2 bytes, lo/hi)

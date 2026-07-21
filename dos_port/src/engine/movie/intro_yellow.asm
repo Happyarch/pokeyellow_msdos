@@ -28,11 +28,12 @@ global YellowIntro_SetTimerFor128Frames, YellowIntro_SetTimerFor88Frames
 global YellowIntro_CheckFrameTimerDecrement
 global YellowIntroScene1, YellowIntroScene5, YellowIntroScene9
 global YellowIntroScene13, YellowIntroScene17, YellowIntroScene3
-global Func_fa06e
+global Func_fa06e, YellowIntroScene0
 
 extern YellowIntroFramesData_GB, YellowIntroOAMData_GB, YellowIntroSpawnData_GB
 extern SpawnAnimatedObject, MaskCurrentAnimatedObjectStruct, MaskAllAnimatedObjectStructs
 extern DelayFrames
+extern UpdateCGBPal_BGP, UpdateCGBPal_OBP0, UpdateCGBPal_OBP1
 
 ; wShadowOAM per-sprite attribute bytes (wShadowOAM + N*4 + 3). Pret names kept.
 %define wShadowOAMSpriteAttr(n) (W_SHADOW_OAM + (n)*4 + 3)
@@ -214,6 +215,33 @@ YellowIntroScene17:
     mov bl, 64                                     ; ld c, 64
     call DelayFrames
     or byte [ebp + wYellowIntroCurrentScene], 0x80 ; set 7, [hl]  (done flag)
+    ret
+
+; Scene 0 — "running Pikachu 1": spawn the object, set scroll/window/palettes to
+; the intro defaults, arm a 130-frame timer, advance. (hLCDCPointer=0 disables
+; the per-scanline LCDC effect, inert in the port.)
+YellowIntroScene0:
+    xor al, al
+    mov [ebp + H_LCDC_POINTER], al                 ; ldh [hLCDCPointer], a
+    mov dh, 0x58                                    ; lb de, $58, $58
+    mov dl, 0x58
+    mov al, 0x1
+    call YellowIntro_SpawnAnimatedObjectAndSavePointer
+    xor al, al
+    mov [ebp + H_SCX], al                           ; ldh [hSCX], a
+    mov [ebp + H_SCY], al                           ; ldh [hSCY], a
+    mov al, 0x90
+    mov [ebp + H_WY], al                            ; ldh [hWY], a
+    mov al, 0xe4
+    mov [ebp + IO_BGP], al                          ; ldh [rBGP], a
+    mov [ebp + IO_OBP0], al                         ; ldh [rOBP0], a
+    mov al, 0xc4
+    mov [ebp + IO_OBP1], al                         ; ldh [rOBP1], a
+    call UpdateCGBPal_BGP
+    call UpdateCGBPal_OBP0
+    call UpdateCGBPal_OBP1
+    mov byte [ebp + wYellowIntroSceneTimer], 130    ; ld a,130 / ld [timer],a
+    call YellowIntro_NextScene
     ret
 
 ; Scene 3 — hold the "running Pikachu 1" pose while scrolling the BG right to
