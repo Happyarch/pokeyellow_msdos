@@ -1297,8 +1297,18 @@ B2 must not create a `PlayIntroScene` stub.
 >   (`RunPaletteCommand`), NOT port that routine faithfully.
 > - **VBlank-copy**: scenes 7/11 use `hVBlankCopy*` — no port mechanism exists.
 > - `Func_f98fc`+`Jumptable_f9906` — **DONE (`5f570940`)**, 9 real handlers + 9
->   `NextScene` scaffolds. Remaining: `InitYellowIntroGFXAndMusic`,
->   `PlayIntroScene`, the BG-map/palette decisions, gate + pixel-verify.
+>   `NextScene` scaffolds. Blank helpers `BlankTileMap`/`BlankOAMBuffer`/
+>   `BlankPalettes` — **DONE (`8d0d345f`)**.
+>
+> **Reassessment (2026-07-21):** the milestone doesn't need all 3 design
+> decisions up front. The `vBGMap0` coupling is *only* in the unported even
+> scenes (scaffolded to `NextScene`); `Init` writes the canonical `W_TILEMAP`, so
+> `Init` + `PlayIntroScene` + the surface wiring are portable **now**. Plan: port
+> them → **run with the 9 ported scenes + 9 auto-advance scaffolds** → then port
+> each even scene against the *live* `DEBUG_CINEMATIC_YELLOW` harness (BG-map
+> decision made only when the first `vBGMap0` scene lands). `InitYellowIntroGFX-
+> AndMusic` is next — all its symbols/signatures are gathered in stigmergy
+> `a4-4-oak-speech2-porting-plan`.
 >
 > **B3.2c-8 done (2026-07-21, `3858c01d`)** — `Copy8BitSineWave` +
 > `wLYOverridesBuffer`@0xFA00 (amp-4 wave ×8 via inline flat→GB `rep movsb`;
