@@ -1518,15 +1518,34 @@ B3 is done; the boot cinematic's remaining prerequisite is **B2's top-level
 `MoveDownSmallStars`, `GameFreakIntro`/OAM data, the `RunSplashTest` harness) — the
 **orchestrating routine is what's missing**.
 
-**Key design decision (resolved):** the port renders the splash through a
-**black-matte cinematic surface** (`MovieBeginSurface`) with the Game Freak logo,
+**Rendering model:** the port renders the splash through a **cinematic surface**
+(`MovieBeginSurface`, which clears `W_TILEMAP` to color 0) with the Game Freak logo,
 shooting star, and small stars as **projected OBJ** (`AnimateShootingStar` →
-`PublishProjectedOAM`). Therefore pret's BG-framing helpers —
-`IntroDrawBlackBars` / `IntroClearScreen` / `IntroPlaceBlackTiles` /
-`IntroClearMiddleOfScreen` (black bars top/bottom + clear middle on vBGMap0 **and**
-vBGMap1) — are **subsumed by the black matte** and need **not** be ported: the
-surface BG is already uniform black, and there is no second BG map (vBGMap1) in the
-port's surface model. This is a projection DEVIATION (the letterbox is the matte).
+`PublishProjectedOAM`). The genuine GB-hardware calls (`DisableLCD`/`EnableLCD` +
+`rLCDC` window/BG-map bits, `hAutoBGTransferEnabled`, the VBlank/DMA path) have no
+port counterpart — that is a real, permanent HAL DEVIATION (identical boundary to
+`PlayIntroScene`).
+
+**CORRECTION (2026-07-21) — the black bars are NOT subsumed by the matte.** An
+earlier note claimed `IntroDrawBlackBars` could be dropped because the matte is
+black. That was an *unverified* claim and is **wrong**: `MovieBeginSurface` clears
+`W_TILEMAP` to color 0, and under the splash palette (`ldpal a, SHADE_BLACK,
+SHADE_DARK, SHADE_LIGHT, SHADE_WHITE` → `rBGP = 0x1B`) **color 0 = SHADE_BLACK but
+the bar tile (`$ff` = color 3) = SHADE_WHITE**. So pret draws a *white* frame on
+rows 0-3 / 14-17 over a black middle — a visible element the uniform-black matte
+would drop. The faithful port must **replicate** the framing on `W_TILEMAP` (load
+the `$00`/`$ff` bar tiles into the BG tile area + arm `g_tilecache_dirty`, then fill
+rows 0-3 & 14-17 with the bar tile) as a projection redirect, **not** drop it. The
+second BG map (vBGMap1) writes collapse onto the single `W_TILEMAP` (projection).
+The exact bar colour (white vs black) is **unverified pending an mGBA golden**
+(blocked) — replicate pret's tile writes rather than guess the appearance.
+
+**Process note:** a first pass ported `PlayShootingStar` as a thin core that
+*dropped* the black bars ("subsumed") and *deferred* the copyright screen behind a
+`class=temporary` DEVIATION. Both were rejected as rubberstamping — a deferred
+screen is incomplete work, not a deviation, and the "subsumed bars" claim was
+unverified/wrong. That pass was **reverted** (uncommitted). The faithful port below
+is the real B2 work.
 
 **Remaining B2 steps:**
 - **B2.x-1 — copyright screen.** Port `LoadCopyrightAndTextBoxTiles` + the 180-frame
@@ -1535,11 +1554,17 @@ port's surface model. This is a projection DEVIATION (the letterbox is the matte
   copyright onto the surface (BG tiles → W_TILEMAP, or OBJ) following the intro/oak
   text pattern. If the asset/route proves large, it can itself be a sub-increment.
 - **B2.x-2 — `PlayShootingStar` orchestration.** `MovieBeginSurface`; palette setup
-  (`RunPaletteCommand SET_PAL_GAME_FREAK_INTRO` — HAL/inert like the intro, DMG
-  shades via `rBGP`); copyright screen (B2.x-1); load logo tiles to vChars1 (as
-  `RunSplashTest` does); `AnimateShootingStar`; cleanup (`ClearSprites`, `Delay3`,
-  `MovieEndSurface`). Drop the GB HW setup (`EnableLCD`/LCDC bits/vBGMap1/
-  `hAutoBGTransferEnabled`) — HAL DEVIATIONs, the surface model replaces them.
+  (`RunPaletteCommand SET_PAL_GAME_FREAK_INTRO` — HAL/inert like the intro; DMG
+  shades via `rBGP = 0x1B`); copyright screen (B2.x-1); **faithfully draw the
+  framing bars** — load the `$00`/`$ff` bar tiles into the BG tile area (arm
+  `g_tilecache_dirty`) and fill `W_TILEMAP` rows 0-3 & 14-17 with the bar tile
+  (`IntroDrawBlackBars` redirected to the surface, vBGMap1 writes collapsed onto
+  W_TILEMAP); load logo tiles to vChars1; `AnimateShootingStar`;
+  `IntroClearMiddleOfScreen` (redirected); cleanup (`ClearSprites`, `Delay3`,
+  `MovieEndSurface`). Drop **only** the true GB HW with no port counterpart
+  (`DisableLCD`/`EnableLCD`/`rLCDC` bits/`hAutoBGTransferEnabled`) — a tight HAL
+  DEVIATION. Do **not** drop the bars or defer the copyright screen behind a
+  deviation.
 - **B2.x-3 — verify + close B2.** `pixelcheck splash` (scenario exists, dump 20);
   faithdiff `PlayShootingStar`; lint 0. Then close task #6.
 
