@@ -25,6 +25,10 @@ extern CopyVideoData                 ; home/copy2.asm — ESI=VRAM dest, EDX=fla
 extern MoveAnimationTiles1           ; engine/overworld/cut.asm — battle move-anim tile sheet
 extern CheckForUserInterruption      ; home/check_user_interruption.asm — BL frames, CF on skip
 extern PublishProjectedOAM           ; engine/gfx/sprite_oam.asm — project wShadowOAM to the canvas
+extern PlaySound                     ; home/audio.asm — AL = sound id
+extern CopyData                      ; home/copy_data.asm — ESI/EDX EBP-relative, BX count
+
+%include "assets/audio_constants.inc"   ; SFX_SHOOTING_STAR
 
 ; wMoveDownSmallStarsOAMCount (pokeyellow.sym 00:cd3d) — not yet in gb_memmap.inc;
 ; report to root for promotion. %ifndef-guarded so promotion is a no-op here.
@@ -95,6 +99,135 @@ LoadShootingStarGraphics:
     lea edi, [ebp + W_SHADOW_OAM]
     mov ecx, GameFreakShootingStarOAMDataEnd - GameFreakShootingStarOAMData
     rep movsb
+    ret
+
+; ---------------------------------------------------------------------------
+; AnimateShootingStar — the full splash animation: the big star sweeps down-left
+; off-screen, the Game Freak logo flashes, then 4 waves of small stars fall from it.
+; Source: engine/movie/splash.asm:AnimateShootingStar.
+;
+; DEVIATION{class=projection; pret=engine/movie/splash.asm:AnimateShootingStar; behavior=publish_splash_oam (PublishProjectedOAM) runs before each frame wait and the two OAM-priming copies (CopyData) are inline flat->GB rep movsb; evidence=the port renders OBJ from a projected shadow not the VBlank-DMA'd wShadowOAM, and the OAM template/logo tables are program-image data the EBP-relative CopyData cannot source; lifetime=permanent widescreen/flat-memory model}
+;
+; In: EBP = GB base. Out: CF set if the user skipped. Clobbers EAX/EBX/ECX/EDX/ESI/EDI.
+; ---------------------------------------------------------------------------
+global AnimateShootingStar
+AnimateShootingStar:
+    call LoadShootingStarGraphics
+    mov al, SFX_SHOOTING_STAR
+    call PlaySound
+    ; --- big star: move down (+4 Y) and left (-4 X) until Y wraps to $a0 ---
+    mov esi, W_SHADOW_OAM                  ; ld hl, wShadowOAM
+    mov bh, 0xA0                           ; b = target Y ($a0)
+    mov bl, 4                              ; c = 4 OBJ entries
+.bigStarLoop:
+    push esi                               ; push hl
+    push ebx                               ; push bc
+.bigStarInner:
+    add byte [ebp + esi], 4                ; [Y] += 4
+    inc esi
+    sub byte [ebp + esi], 4                ; [X] += -4
+    inc esi
+    inc esi                                ; skip tile
+    inc esi                                ; skip attr
+    dec bl
+    jnz .bigStarInner
+    call publish_splash_oam                ; PORT: project before the frame wait
+    mov bl, 1                              ; ld c, 1
+    call CheckForUserInterruption
+    pop ebx
+    pop esi
+    jc .done                               ; ret c
+    mov al, [ebp + esi]                    ; a = [hl] (Y of entry 0)
+    cmp al, 80
+    jne .bsNext
+    jmp .bigStarLoop                       ; Y == 80 → keep going
+.bsNext:
+    cmp al, bh                             ; cp b ($a0)
+    jne .bigStarLoop                       ; Y != $a0 → keep going
+    ; --- clear the 4 big-star OBJ (park off the bottom) ---
+    mov esi, W_SHADOW_OAM                  ; wShadowOAMSprite00YCoord
+    mov bl, 4
+.clearLoop:
+    mov byte [ebp + esi], SCREEN_H + OAM_Y_OFS  ; 144 + 16 = 160
+    add esi, OAM_ENTRY_SIZE                       ; add hl, de (de = OBJ_SIZE)
+    dec bl
+    jnz .clearLoop
+    ; --- flash the Game Freak logo (rotate OBP0 twice, 3 times) ---
+    mov bh, 3                              ; ld b, 3
+.flashLoop:
+    ror byte [ebp + IO_OBP0], 1            ; rrc [hl] (rOBP0)
+    ror byte [ebp + IO_OBP0], 1            ; rrc [hl]
+    call UpdateCGBPal_OBP0
+    call publish_splash_oam
+    mov bl, 10                             ; ld c, 10
+    call CheckForUserInterruption
+    jc .done
+    dec bh
+    jnz .flashLoop
+    ; --- prime 24 small-star OBJ (off-screen), from the SmallStarsOAM template ---
+    mov edx, W_SHADOW_OAM                  ; ld de, wShadowOAM (GB dest, advances)
+    mov eax, 24                            ; ld a, 24 (rep movsb leaves EAX untouched)
+.initSmall:
+    mov esi, SmallStarsOAM                 ; flat template
+    lea edi, [ebp + edx]
+    mov ecx, SmallStarsOAMEnd - SmallStarsOAM
+    rep movsb
+    add edx, SmallStarsOAMEnd - SmallStarsOAM
+    dec eax
+    jnz .initSmall
+    ; --- 4 waves of small stars fall from the logo ---
+    mov byte [ebp + wMoveDownSmallStarsOAMCount], 0
+    mov esi, SmallStarsWaveCoordsPointerTable   ; ld hl, table
+    mov bl, 6                              ; ld c, 6 (6 waves, last two empty)
+.waveLoop:
+    mov edx, [esi]                         ; the wave-coords pointer (dd flat vs pret dw)
+    add esi, 4
+    push ebx                               ; push bc (wave count)
+    push esi                               ; push hl (table ptr)
+    mov esi, W_SHADOW_OAM + 20 * 4         ; ld hl, wShadowOAMSprite20
+    mov bl, 4                              ; ld c, 4 (4 stars per wave)
+.waveInner:
+    mov al, [edx]                          ; a = [de] (Y coord, flat)
+    cmp al, 0xFF
+    je .waveDone                           ; -1 = empty wave, stop
+    mov [ebp + esi], al                    ; [hli] = Y
+    inc esi
+    inc edx
+    mov al, [edx]                          ; X
+    mov [ebp + esi], al                    ; [hli] = X
+    inc esi
+    inc edx
+    inc esi                                ; skip tile
+    mov ah, [edx]                          ; b = [de] (attr-nibble byte)
+    mov al, [ebp + esi]                    ; a = [hl]
+    and al, 0xF0
+    or al, ah                              ; merge the low nibble
+    mov [ebp + esi], al
+    inc edx
+    inc esi                                ; past attr
+    dec bl
+    jnz .waveInner
+    mov al, [ebp + wMoveDownSmallStarsOAMCount]
+    cmp al, 24
+    je .waveDone
+    add al, 6                              ; +6 (pret note: 4 visible, 2 off-screen)
+    mov [ebp + wMoveDownSmallStarsOAMCount], al
+.waveDone:
+    call MoveDownSmallStars                ; steps them down; CF = skip
+    pushfd                                 ; push af (save the skip flag)
+    ; shift the on-screen entries down one slot (GB->GB, real CopyData)
+    mov esi, W_SHADOW_OAM + 4 * 4          ; ld hl, wShadowOAMSprite04
+    mov edx, W_SHADOW_OAM                  ; ld de, wShadowOAM
+    mov bx, OAM_ENTRY_SIZE * 20                  ; ld bc, OBJ_SIZE * 20
+    call CopyData
+    popfd                                  ; pop af
+    pop esi                                ; pop hl (table ptr)
+    pop ebx                                ; pop bc (wave count)
+    jc .done                               ; ret c (MoveDownSmallStars was skipped)
+    dec bl                                 ; dec c
+    jnz .waveLoop
+    xor al, al                             ; and a — clear CF (no skip)
+.done:
     ret
 
 ; ---------------------------------------------------------------------------
