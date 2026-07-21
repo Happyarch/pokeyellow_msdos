@@ -15,10 +15,10 @@ Required project skills: `asm-translation`, `project-conventions`, `build-and-de
 
 ## Status
 
-- [ ] Phase A — Playable title → menu → new game
+- [x] Phase A — Playable title → menu → new game *(all four subtasks port-side done + golden-verified; the only open tails are the per-stage TIMING TRACES (title bounce/blink, Oak — both need port-side per-frame trace instrumentation that does not yet exist, same blocker as the yellow-scene trace) and the deferred bespoke title-bounce reimpl. Functional playable chain + all state goldens PASS.)*
   - [x] A1 — Cinematic projection substrate
-  - [x] A2 — Projected title with live audio and palettes *(port-side done; only the mGBA-blocked `title_timeout` golden remains)*
-  - [ ] A3 — Real title → menu → entry routing
+  - [x] A2 — Projected title with live audio and palettes *(port-side done; `title_timeout` golden id 27 DONE + PASS 2026-07-21; only the title bounce/blink timing trace + deferred bounce reimpl remain)*
+  - [x] A3 — Real title → menu → entry routing *(DONE + verified 2026-07-21: title `jmp MainMenu`, reset-save branch preserved, `SKIP_TITLE`→`InitPlayerData2`, `EnterMapBoot` 2 legit callers; main_menu id22 / title_reentry id23 / continue_seed id24 goldens registered + committed)*
   - [x] A4 — Oak speech, naming, and stub retirement *(port-side done, faithdiff 24/24 + fidelity 16/16; oak_intro GBSTATE golden id 29 DONE + PASS 2026-07-21; only the Oak timing trace remains)*
 - [ ] Phase B — Power-on movie
   - [x] B1 — Animated-object engine *(engine + data + runtime test; sine rides B3)*
@@ -668,21 +668,21 @@ This frame is the correct visual golden because it contains the complete final c
 - `/NOSOUND` remains safe.
 - Timeout returns through `Init` and replays the complete movie once B4 is active.
 
-### A3 — Real title → main-menu routing
+### A3 — Real title → main-menu routing  ✅ DONE (verified 2026-07-21)
 
 #### Work
 
-- [ ] Replace the title’s `OakSpeech → EnterMapBoot` shortcut with `jmp MainMenu`.
-- [ ] Remove obsolete title externs.
-- [ ] Preserve the reset-save branch.
-- [ ] Change `SKIP_TITLE` to call `InitPlayerData2`.
-- [ ] Keep harness seeding outside shared boot code.
-- [ ] Measure `EnterMapBoot` callers, hit counts, and continue-state writes.
-- [ ] Make only the correction proven necessary.
-- [ ] Verify continue and new-game separately.
-- [ ] Register `RunMainMenuTest` as `main_menu`.
-- [ ] Add `title_reentry`.
-- [ ] Add `continue_seed`.
+- [x] Replace the title’s `OakSpeech → EnterMapBoot` shortcut with `jmp MainMenu`. *(title.asm:651 `jmp MainMenu` at `.go_to_main_menu`; no `EnterMapBoot`/`OakSpeech` reference remains in title.asm.)*
+- [x] Remove obsolete title externs. *(title externs are current — `MainMenu` is "the real post-title route"; `lint_pret_labels` reports 0 stale-extern violations.)*
+- [x] Preserve the reset-save branch. *(title.asm:584/645 — the UP+SELECT+B combo → `.doClearSaveDialogue`; the soft_reset golden id 28 exercises it.)*
+- [x] Change `SKIP_TITLE` to call `InitPlayerData2`. *(init.asm:180 `call InitPlayerData2` under `%ifdef SKIP_TITLE`.)*
+- [x] Keep harness seeding outside shared boot code. *(the default-name/`InitPlayerData2` seeding is `%ifdef SKIP_TITLE`-gated in init.asm / overworld.asm, not in the shared boot path.)*
+- [x] Measure `EnterMapBoot` callers, hit counts, and continue-state writes. *(`label_status --callers`: exactly 2 — `SpecialEnterMap` (main_menu.asm, the menu→overworld path) and `Init` (SKIP_TITLE bypass); the title routes through MainMenu, not EnterMapBoot.)*
+- [x] Make only the correction proven necessary. *(EnterMapBoot kept as the one-time overworld boot glue for both legit callers; only the title→shortcut was replaced with `jmp MainMenu`.)*
+- [x] Verify continue and new-game separately. *(continue_seed golden id 24 = CONTINUE preserves loaded state and hits neither OakSpeech nor InitPlayerData2; NEW GAME→OakSpeech verified by oak_intro id 29.)*
+- [x] Register `RunMainMenuTest` as `main_menu`. *(scenario id 22, `main_menu.bin` committed.)*
+- [x] Add `title_reentry`. *(scenario id 23, `title_reentry.bin` committed.)*
+- [x] Add `continue_seed`. *(scenario id 24, `continue_seed.bin` committed.)*
 
 #### Golden correction
 
