@@ -1552,6 +1552,9 @@ goldens-verify:
 	cd "$$repo_root"; \
 	for scenario in dos_port/tools/mgba_harness/scenarios/*.lua; do \
 		name=$$(basename "$$scenario" .lua); \
+		case "$$name" in \
+			*_trace) echo "=== goldens-verify: $$name (timing-trace recorder, no committed golden -- skipped)"; continue ;; \
+		esac; \
 		echo "=== goldens-verify: $$name"; \
 		log="$$out_dir/$$name.log"; \
 		if GOLDEN_DIR="$$out_dir" PKMN_SYM="$$sym" "$$runner" -s "$$scenario" "$$rom" >"$$log" 2>&1; then \
