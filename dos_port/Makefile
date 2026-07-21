@@ -292,6 +292,7 @@ GAME_SRCS := \
     src/home/fade.asm \
     src/movie/title.asm \
     src/engine/movie/movie_projection.asm \
+    src/engine/movie/splash.asm \
     src/engine/movie/oak_speech/init_player_data.asm \
     src/engine/movie/oak_speech/oak_speech.asm \
     src/engine/movie/oak_speech/oak_speech2.asm \

@@ -1650,6 +1650,10 @@
 		"CheckForUserInterruption": {
 			"port_file": "dos_port/src/home/check_user_interruption.asm",
 			"why": "pret home/overworld.asm is a large file the port splits by area (overworld logic lives under engine/overworld/). CheckForUserInterruption is a small standalone intro/title/splash skip-check (used by the movie code, not overworld gameplay), so it gets a dedicated home file — menu-intro B2."
+		},
+		"GameFreakIntro": {
+			"port_file": "dos_port/src/engine/movie/splash.asm",
+			"why": "pret puts the Game Freak logo GFX (GameFreakIntro INCBIN) in intro.asm, but only the splash uses it. The port generates it (gen_title_gfx_inc.py) and %includes it in splash.asm alongside the OAM tables + shooting-star routines that consume it — menu-intro B2."
 		}
 	},
 	"suppress": [
