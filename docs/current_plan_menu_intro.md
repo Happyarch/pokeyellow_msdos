@@ -1770,6 +1770,25 @@ breaking the working `SKIP_TITLE` overworld boot).
 > (lower-priority, mechanical via the same pattern — new `DEBUG_YELLOW_Snn` gate/id per scene): the
 > other holds, and especially the even scenes with UNIQUE BG (s02 gengar grid, s10/s12 boxed pastes)
 > which s01's shared-graphics check doesn't cover.
+>
+> **FINDING (2026-07-21) — the unique-BG scenes are NOT cleanly GBSTATE-golden-able; s01 is the
+> representative + sufficient GBSTATE golden.** Attempted `yellow_intro_s13` (scene-12 close-up paste,
+> to close the "not frame-checked" residual) and found the surface-model divergence blocks it:
+> **pret's scenes 2/12 write the BG map DIRECTLY to VRAM vBGMap0 ($98xx)** (e.g. scene 12 pastes at
+> `$98c5`), while the port authors in `W_TILEMAP` (its 40×25 canvas, mirrored to $9800). The golden
+> region set is `wTileMap` ($c3a0) + `vram_tiles` ($8000–$97FF) + `oam` — it does **not** capture
+> vBGMap0 ($9800). So (a) the ROM's captured wTileMap for scene 13 is just the letterbox (the paste
+> went to $9800, uncaptured), and (b) the port's wTileMap HAS the paste → they'd mismatch. Net: the
+> direct-VRAM scenes can't be verified via the wTileMap GBSTATE golden. The golden-able yellow scenes
+> are the shared-letterbox holds (s01, s05, s09 — a running-Pikachu OBJ over the letterbox), which are
+> redundant with s01 (same static wTileMap; the object is masked). **Conclusion: s01 is sufficient
+> GBSTATE coverage for the Yellow intro.** The unique-BG scenes (2/10/12) are verified by construction
+> (faithful paste/tilemap code — the assets are byte-identical, the coords use `INTRO_BG_ORIGIN`) and
+> would need a **FRAME.BIN rendered-pixel** comparison (per the B3 scroll/frame-evidence rule), not a
+> GBSTATE golden — or a regions change to capture vBGMap0 (cross-cutting; affects every scenario, not
+> worth it for a few scenes). The B3 scene coverage is therefore: s01 GBSTATE golden (done) + the
+> byte-identical asset check (done) + by-construction faithful scene code (faithdiff-swept) + optional
+> future FRAME.BIN captures for the unique/scrolling scenes.
 
 > **F-GFI (RESOLVED, `3175ff22`) — copyright screen dropped the "GAME FREAK inc." glyphs.**
 > Root cause: `LoadCopyrightTiles` loaded only 19 tiles (copyright.2bpp), but pret's single
