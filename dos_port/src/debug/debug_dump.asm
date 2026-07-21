@@ -2386,6 +2386,15 @@ autokey_script:
     dd 110, 118, PAD_DOWN
     dd 135, 143, PAD_A
     dd  -1,  -1, 0
+%elifdef AUTOKEY_CHOOSENAME_CUSTOM
+    ; menu-intro A4.5f custom path (DEBUG_CHOOSENAME CHOOSENAME_CUSTOM=1): A picks the
+    ; name menu's item 0 (NEW NAME) -> DisplayNamingScreen; A enters the cursor's first
+    ; letter (grid starts on 'A'); START submits (.pressedStart). ChoosePlayerName then
+    ; re-establishes the surface (MovieBeginSurface) and shows the pic + "YOUR NAME IS".
+    dd 110, 118, PAD_A          ; name menu: select NEW NAME
+    dd 160, 168, PAD_A          ; naming grid: enter the letter under the cursor
+    dd 195, 203, PAD_START      ; submit the name
+    dd  -1,  -1, 0
 %elifdef AUTOKEY_SEAM
     ; DEBUG_SEAM_LIVE companion: hold AUTOKEY_PAD (default PAD_UP) into the seeded
     ; map's edge with LIVE collision, then press A so SeamLogRecord writes
