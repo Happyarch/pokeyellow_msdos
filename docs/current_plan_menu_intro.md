@@ -2004,11 +2004,21 @@ Boot fact: `StartNewGame` clears `BIT_DEBUG_MODE` then calls the real `OakSpeech
 so a real new game runs the full cutscene incl. naming (input-driven); a debug-mode
 new game skips speech+naming.
 
-**Remaining A4.5:** e) migrate the `title.asm` hand-encoded debug boot names to
-generated data; f) the oak_intro golden (id 21) via the real `OakSpeech` + Oak
-timing trace + end-to-end naming/rival-pic runtime verification (this is where the
-`MovePicLeft` slide, `Choose*Name`, and the custom-path surface re-establishment get
-their runtime pixel evidence). Detail in stigmergy `a4-4-oak-speech2-porting-plan`.
+- **A4.5.e** (`62c36422`): the `title.asm` hand-encoded debug boot names are now
+  generated (`gen_debug_boot_names.py`) — the last hand-encoded charmap string in the
+  workstream is gone.
+- **A4.5.f START** (`53308bc4`): the **real `OakSpeech` renders the oak_intro
+  checkpoint**. `IntroTextWait` is now `msgbox_oak_speech`'s permanent `MB_PROMPT`
+  (the `<PARA>`/`<PROMPT>` hold), and `MovieBeginSurface` clears `spr_oam_valid` so the
+  cinematic starts with no stray OBJ (the title's eyes, published after, survive).
+  `RunOakSpeechCheckpoint` now drives the real `OakSpeech`; pixel-verified — Oak pic +
+  box + page-1 text, matte clean, **zero** OBJ-palette pixels; fidelity 16/16.
+
+**Remaining A4.5.f:** register the oak_intro golden (id 21), the Oak timing trace, and
+end-to-end naming/rival-pic runtime verification (default + custom naming under
+AUTOKEY — the custom-path surface re-establishment, `MovePicLeft` slide, and shrink
+beats get their runtime evidence there). Detail in stigmergy
+`a4-4-oak-speech2-porting-plan`.
 
 ### A4 progress (2026-07-20): pic engine, fade, text, PrepareOakSpeech; the PrintText-under-surface finding
 
