@@ -602,6 +602,32 @@ SCENARIOS = {
             ],
         },
     },
+    "yellow_intro_s01": {
+        "flags": "DEBUG_YELLOW_S01=1",
+        # Yellow intro scene 1, the first "wait last" hold (menu-intro B4). Real boot
+        # (BOOT_CINEMATIC) into PlayIntroScene; a state-triggered DumpBackbuffer fires
+        # at scene-1 entry (no AUTOKEY — frame dumps can't align across animated scenes).
+        # Ground truth: mGBA yellow_intro_s01.lua.
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
+        # Same cinematic surface as the title: GB 20x18 centred at tile (10,3).
+        "window": (0, 0),
+        "projections": (
+            [((0, 0, 17, 19), (10, 3),
+              "cinematic surface: the GB 20x18 screen centred on the canvas at "
+              "tile (10,3) — UI_YELLOW_INTRO_COL/UI_YELLOW_INTRO_ROW")]
+        ),
+        # The scene's compared content is the deterministic per-scene BG tilemap
+        # (letterbox frame) + VRAM (the intro tile sheets loaded to $8000). The
+        # running-Pikachu OBJ animates every frame, so its OAM phase depends on the
+        # exact dump frame (port dumps at scene-1 frame 1; the mGBA a few frames in) —
+        # mask all OBJ so this golden checks graphics-load + framing fidelity, not
+        # OBJ motion (which the B3 transition trace verifies).
+        "masks": {
+            "oam": [(i, "animated running-Pikachu OBJ; phase depends on dump frame — "
+                        "OBJ motion is verified by the B3 transition trace, not this state golden")
+                    for i in range(40)],
+        },
+    },
     "options_menu": {
         "flags": "DEBUG_OPTIONS=1",
         "wram_skip": dict(_NONBATTLE_WRAM_SKIP),

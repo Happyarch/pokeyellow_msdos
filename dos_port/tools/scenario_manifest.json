@@ -439,6 +439,38 @@
       "verification": "Game Freak splash copyright checkpoint: 3 lines on wTileMap rows 7/9/11, copyright+gamefreak_inc glyphs in vChars2, no OAM"
     },
     {
+      "name": "yellow_intro_s01",
+      "id": 26,
+      "tier": "full",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_YELLOW_S01=1",
+      "port_entry_gate": "DEBUG_YELLOW_S01",
+      "navigation_script": "tools/mgba_harness/scenarios/yellow_intro_s01.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "PlayIntroScene",
+        "InitYellowIntroGFXAndMusic",
+        "YellowIntroScene1"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "Yellow intro scene 1 (first wait-hold): intro BG letterbox + graphics loaded, running-Pikachu OBJ spawned (OAM masked)"
+    },
+    {
       "name": "main_menu",
       "id": 22,
       "tier": "core",

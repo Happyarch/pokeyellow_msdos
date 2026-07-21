@@ -1015,6 +1015,17 @@ NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_QUIET
 AUTOKEY_DUMP_FRAME ?= 50
 NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 endif
+
+# yellow_intro_s01 golden scenario (menu-intro B4): the Yellow intro's scene-1 hold.
+# Real boot (-D BOOT_CINEMATIC so init.asm calls PlayIntro) but NO AUTOKEY — the
+# state-triggered DumpBackbuffer hook in PlayIntroScene fires at scene-1 entry instead
+# (frame-based dump can't align port↔ROM across the animated scenes). Uses -D (not the
+# BOOT_CINEMATIC make var) so the AUTOKEY block above stays off.
+ifdef DEBUG_YELLOW_S01
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D BOOT_CINEMATIC
+NASMFLAGS += -D DEBUG_YELLOW_S01
+endif
 # Animated-object engine harness (menu-intro B1.3): establish the surface, stage
 # the intro anim data, spawn one object, run RunObjectAnimations + publish OAM
 # each frame; AUTOKEY_QUIET photographs a frame at AUTOKEY_DUMP_FRAME.

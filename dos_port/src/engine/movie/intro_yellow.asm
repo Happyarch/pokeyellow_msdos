@@ -800,6 +800,18 @@ PlayIntroScene:
     mov ebx, 24                                       ; UI_YELLOW_INTRO_ROW * 8
     call PublishProjectedOAM
     call DelayFrame
+%ifdef DEBUG_YELLOW_S01
+    ; yellow_intro_s01 golden (menu-intro B4): state-triggered GBSTATE dump at the
+    ; first rendered frame of scene 1 (the first "wait last" hold — deterministic
+    ; per-scene setup: intro graphics/tilemap loaded, running-pika object spawned).
+    ; DumpBackbuffer emits GBSTATE.BIN + FRAME.BIN and exits, so it fires exactly once.
+    extern DumpBackbuffer                             ; debug/debug_dump.asm
+    mov al, [ebp + wYellowIntroCurrentScene]
+    cmp al, 1
+    jne .no_ys01_dump
+    call DumpBackbuffer
+.no_ys01_dump:
+%endif
     jmp .loop
 .exit:
     call YellowIntro_BlankPalettes
