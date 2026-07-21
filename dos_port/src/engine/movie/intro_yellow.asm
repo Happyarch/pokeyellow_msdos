@@ -30,7 +30,7 @@ global YellowIntroScene1, YellowIntroScene5, YellowIntroScene9
 global YellowIntroScene13, YellowIntroScene17, YellowIntroScene3
 global Func_fa06e, YellowIntroScene0
 global YellowIntroScene16, YellowIntro_LoadDMGPalAndIncrementCounter
-global YellowIntro_BlankPalsDelay2AndDisableLCD
+global YellowIntro_BlankPalsDelay2AndDisableLCD, YellowIntroScene15
 
 extern YellowIntroFramesData_GB, YellowIntroOAMData_GB, YellowIntroSpawnData_GB
 extern SpawnAnimatedObject, MaskCurrentAnimatedObjectStruct, MaskAllAnimatedObjectStructs
@@ -294,6 +294,37 @@ YellowIntro_LoadDMGPalAndIncrementCounter:
 .expired:
     stc                                            ; scf
     ret
+
+; Scene 15 — "thunderbolt flash": every 4th frame invert OBP0 / toggle BGP low
+; bits for a strobe; on timer expiry restore the palettes and fall through into
+; scene 16 (pret has no ret here — the fallthrough is intentional, so scene 15
+; is placed physically before scene 16).
+YellowIntroScene15:
+    call YellowIntro_CheckFrameTimerDecrement
+    jc .expired                                    ; jr c, .expired
+    mov al, [ebp + wYellowIntroSceneTimer]
+    and al, 0x3
+    jnz .ret                                       ; ret nz  (flash only every 4th frame)
+    mov al, [ebp + IO_OBP0]                        ; ldh a, [rOBP0]
+    xor al, 0xff
+    mov [ebp + IO_OBP0], al                        ; ldh [rOBP0], a
+    mov al, [ebp + IO_BGP]                         ; ldh a, [rBGP]
+    xor al, 0x3
+    mov [ebp + IO_BGP], al                         ; ldh [rBGP], a
+    call UpdateCGBPal_BGP
+    call UpdateCGBPal_OBP0
+.ret:
+    ret
+.expired:
+    xor al, al
+    mov [ebp + H_LCDC_POINTER], al                 ; ldh [hLCDCPointer], a
+    mov al, 0xe4
+    mov [ebp + IO_BGP], al                         ; ldh [rBGP], a
+    mov [ebp + IO_OBP0], al                        ; ldh [rOBP0], a
+    call UpdateCGBPal_BGP
+    call UpdateCGBPal_OBP0
+    call YellowIntro_NextScene
+    ; fall through into YellowIntroScene16 (faithful to pret's missing ret)
 
 ; Scene 16 — "fade to white": step the DMG BGP/OBP0 through YellowIntroPal-
 ; Sequence_f9e0a one byte per frame until it terminates (0xff), then advance.
