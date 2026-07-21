@@ -138,7 +138,16 @@ Init:
     mov byte [ebp + H_AUTO_BG_TRANSFER_DEST + 1], (GB_TILEMAP1 >> 8) & 0xFF
     mov byte [ebp + H_AUTO_BG_TRANSFER_DEST],      GB_TILEMAP1 & 0xFF
 
-    ; predef PlayIntro — ; TODO: Pikachu intro animation (later Phase 2).
+    ; pret runs `predef PlayIntro` here (the Game Freak splash + Yellow intro).
+    ; Gated behind BOOT_CINEMATIC for now: the piece-test scenarios (title / mainmenu
+    ; / oakintro) boot through this same Init->PrepareTitleScreen path and expect to
+    ; land on their screen immediately, so playing the ~20 s cinematic unconditionally
+    ; would shift all their dump frames. Making it the faithful default is a follow-up
+    ; that updates those scenarios to skip it. (menu-intro B4.)
+%ifdef BOOT_CINEMATIC
+    extern PlayIntro                        ; engine/movie/splash.asm
+    call PlayIntro
+%endif
 
     call DisableLCD
     call ClearVram
