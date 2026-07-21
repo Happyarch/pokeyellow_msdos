@@ -54,7 +54,7 @@ FormatMovesString:
     jz .done
     jmp .printMoveNameLoop
 .printDashLoop:
-    mov al, '-'
+    mov al, 0xE3                    ; charmap '-' = 0xE3 (NOT NASM ASCII 0x2D)
     mov [ebp + edx], al
     inc edx
     inc bh

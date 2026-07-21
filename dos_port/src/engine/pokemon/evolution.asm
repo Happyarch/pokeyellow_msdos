@@ -671,7 +671,7 @@ RenameEvolvedMon:
     cmp al, [ebp + esi]
     inc esi
     jne .return                     ; differs → had a nickname, keep it
-    cmp al, '@'
+    cmp al, 0x50                    ; charmap '@' = 0x50 terminator (NOT NASM ASCII 0x40)
     jne .compareNamesLoop           ; not terminator → keep comparing
     ; Names match: replace the mon's nickname with the new species name
     mov al, [ebp + wWhichPokemon]
