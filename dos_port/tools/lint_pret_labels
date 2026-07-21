@@ -29,6 +29,11 @@ Violation classes:
                 provider, making searches and static call attribution ambiguous.
   weak_relocation a file-level relocation has boilerplate evidence or does not
                 actually cover every translated pret label in that file.
+  relocation_shape an approved relocation's own evidence admits fusion,
+                decomposition, partial translation, or loss of a standalone
+                routine boundary. Such debt belongs in structural_findings.
+  registry_approval the relocation registry's SHA-256 does not match the exact
+                hash approved outside the worktree by the maintainer.
   annotation    a structured exception annotation is malformed, uses an unknown
                 class, or omits evidence/retirement metadata. Legacy free-form
                 annotations are enumerated by --strict-claims during migration.
@@ -41,11 +46,14 @@ Suppressions live in dos_port/tools/pret_label_allowlist.json:
   "suppress": [ {"rule": "<class>", "key": "<label | file:symbol>", "why": "…"} ]
 Relocations are not suppressions — they go in relocated_files/relocated_labels
 (consumed by update_label_db → status 'relocated').
+Known invalid legacy cases go in structural_findings. They are printed as OPEN
+findings and never serve as precedent for a new relocation.
 
 Usage:  dos_port/tools/lint_pret_labels [--no-scan] [--db PATH]
 """
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -56,6 +64,8 @@ import sys
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH    = os.path.join(SCRIPT_DIR, 'translation.db')
 ALLOWLIST  = os.path.join(SCRIPT_DIR, 'pret_label_allowlist.json')
+REPO_ROOT  = os.path.normpath(os.path.join(SCRIPT_DIR, '..', '..'))
+APPROVAL_CONFIG_KEY = 'pokeyellow.pretAllowlistApprovedSha256'
 
 # A stub body beyond this many instructions (or containing a call/jmp) is no
 # longer "ret-only + minimal flag/CF contract".
@@ -124,12 +134,26 @@ def looks_hand_encoded_text(text, current_label=None):
     return bool(re.search(r'"[^"\n]+"', comment) or
                 (current_label and TEXT_LABEL_RE.search(current_label)))
 
-def load_suppressions():
+def load_registry():
     if not os.path.exists(ALLOWLIST):
-        return set()
+        return {}
     with open(ALLOWLIST, encoding='utf-8') as fh:
-        allow = json.load(fh)
+        return json.load(fh)
+
+
+def load_suppressions(allow):
     return {(s['rule'], s['key']) for s in allow.get('suppress', [])}
+
+
+def registry_approval():
+    """Return (current hash, externally approved hash or '')."""
+    with open(ALLOWLIST, 'rb') as fh:
+        current = hashlib.sha256(fh.read()).hexdigest()
+    result = subprocess.run(
+        ['git', '-C', REPO_ROOT, 'config', '--get', APPROVAL_CONFIG_KEY],
+        stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+    approved = result.stdout.strip().lower() if result.returncode == 0 else ''
+    return current, approved
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
@@ -148,7 +172,9 @@ def main():
         if r.returncode != 0:
             sys.exit('lint_pret_labels: scan failed')
 
-    suppress = load_suppressions()
+    allow = load_registry()
+    suppress = load_suppressions(allow)
+    structural_findings = allow.get('structural_findings', {})
     con = sqlite3.connect(args.db)
     cur = con.cursor()
     findings = []      # (rule, key, message)
@@ -161,15 +187,35 @@ def main():
         else:
             findings.append((rule, key, msg))
 
+    # The same process that failed the mirror rule must not be able to approve
+    # its own registry edit. The exact JSON content is authorized through
+    # maintainer-owned Git config outside the worktree.
+    current_hash, approved_hash = registry_approval()
+    if current_hash != approved_hash:
+        approved_display = approved_hash or '(not configured)'
+        add('registry_approval', 'pret_label_allowlist.json',
+            f"pret_label_allowlist.json SHA-256 is {current_hash}, but maintainer "
+            f"approval {APPROVAL_CONFIG_KEY} is {approved_display}; agents must "
+            "not set or update this approval")
+
     # ── mirror: translated at a non-mirrored path, not allowlisted ─────────
+    open_structural = []
     for name, pret_file, port_file in cur.execute("""
             SELECT name, pret_file, port_file FROM labels
             WHERE status='translated'
               AND port_file != 'dos_port/src/' || pret_file
             ORDER BY pret_file, name"""):
+        known = structural_findings.get(name)
+        if known and known.get('port_file') == port_file:
+            open_structural.append(
+                f"{known.get('id', 'UNNUMBERED')} {name}: pret {pret_file} -> "
+                f"{port_file}; {known.get('problem', 'structural divergence')} "
+                f"[retires: {known.get('retirement', 'unspecified')}]")
+            continue
         add('mirror', name,
-            f"{name}: pret {pret_file} -> {port_file} "
-            f"(expected dos_port/src/{pret_file}; allowlist if deliberate)")
+            f"{name}: pret {pret_file} -> {port_file} (expected "
+            f"dos_port/src/{pret_file}); move the complete routine to its "
+            "mirrored file — do not edit the relocation registry")
 
     # ── non_ret_stub ────────────────────────────────────────────────────────
     for name, file, line, n, has_call in cur.execute("""
@@ -250,14 +296,30 @@ def main():
 
     # ── weak_relocation: reject boilerplate file-level authority ────────────
     if os.path.exists(ALLOWLIST):
-        with open(ALLOWLIST, encoding='utf-8') as fh:
-            allow = json.load(fh)
         weak = re.compile(r'\b(pre-existing relocation|draft session|all \d+ translated)\b', re.I)
+        structural = re.compile(
+            r'\b(fused with|reports? as [`\'"]?missing|only (?:the )?.*branch is translated|'
+            r'not a standalone routine|inlined into|decomposed into)\b', re.I)
         for pret_file, entry in allow.get('relocated_files', {}).items():
             why = entry.get('why', '')
             if args.strict_claims and (weak.search(why) or len(why) < 80):
                 add('weak_relocation', pret_file,
                     f"{pret_file}: file-level relocation lacks substantive per-split evidence: {why!r}")
+            if structural.search(why):
+                add('relocation_shape', pret_file,
+                    f"{pret_file}: relocation evidence admits a forbidden structural change: {why!r}")
+        for label, entry in allow.get('relocated_labels', {}).items():
+            why = entry.get('why', '')
+            if structural.search(why):
+                add('relocation_shape', label,
+                    f"{label}: relocation evidence admits a forbidden structural change: {why!r}")
+
+        required_finding_fields = {'id', 'port_file', 'problem', 'retirement'}
+        for label, entry in structural_findings.items():
+            missing = sorted(required_finding_fields - entry.keys())
+            if missing:
+                add('relocation_shape', label,
+                    f"{label}: structural finding missing {', '.join(missing)}")
 
     # ── structured annotations: strict when present, legacy accepted ────────
     src_root = os.path.normpath(os.path.join(SCRIPT_DIR, '..', 'src'))
@@ -306,8 +368,12 @@ def main():
     by_rule = {}
     for rule, _, msg in findings:
         by_rule.setdefault(rule, []).append(msg)
-    for rule in ('mirror', 'non_ret_stub', 'dup_def', 'call_into_data',
-                 'stale_extern', 'stale_provider', 'local_shadow', 'weak_relocation'):
+    if open_structural:
+        print(f"\n== OPEN structural_findings ({len(open_structural)}; non-precedent debt) ==")
+        print('\n'.join('  ' + m for m in open_structural))
+    for rule in ('registry_approval', 'mirror', 'non_ret_stub', 'dup_def',
+                 'call_into_data', 'stale_extern', 'stale_provider',
+                 'local_shadow', 'weak_relocation', 'relocation_shape'):
         msgs = by_rule.get(rule, [])
         if msgs:
             print(f"\n== {rule} ({len(msgs)}) ==")

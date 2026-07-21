@@ -1678,9 +1678,29 @@ breaking the working `SKIP_TITLE` overworld boot).
 
 ### B4 — Full power-on integration
 
+> **Status (2026-07-21).** **B2 (Game Freak splash) is COMPLETE** — framing bars,
+> `PlayShootingStar`, and the copyright screen all ported and per-row verified.
+> **B4 is in progress:** `PlayIntro` is ported (`332f84cd`) and the full
+> splash→intro chain is verified via the `DEBUG_CINEMATIC_SPLASH` harness (f50 =
+> copyright screen, f900 = intro framed scene with bars at surface rows 0-3/14-17,
+> 0 matte, no crash); the Init wiring point (`ef101dfb`) adds a gated
+> `call PlayIntro` at pret's `predef PlayIntro` spot behind `BOOT_CINEMATIC`,
+> builds both ways, but is **not yet runtime-verified from the Init context**
+> (needs a Makefile `BOOT_CINEMATIC` scenario + boot-context pixelcheck) and the
+> **faithful-default flip** (drop the gate, update the piece-test scenarios to skip
+> it) is a follow-up.
+>
+> **⏸ Further menu-intro relocation/build work is PAUSED** pending a concurrent
+> agent's pret-relocation-gate hardening (it holds `pret_label_allowlist.json`,
+> `lint_pret_labels`, the skills, CLAUDE.md/AGENTS.md, translation.db, and
+> `docs/pret_relocation_findings.md`). The splash routines were relocated
+> intro.asm/title.asm → `splash.asm`; that gate may prefer a mirrored file layout,
+> after which the relocations are re-worked. Don't build/faithdiff against the
+> in-progress lint/allowlist until it lands.
+
 #### Work
 
-- [ ] Add complete `PlayIntro`.
+- [x] Add complete `PlayIntro`. *(ported + full-chain verified; `332f84cd`)*
 - [ ] Call it from `Init` through direct predef lowering.
 - [ ] Preserve later LCD, VRAM, palette, and title setup.
 - [ ] Register translated and linked state.

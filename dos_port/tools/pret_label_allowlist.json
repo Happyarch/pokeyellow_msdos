@@ -1,13 +1,39 @@
 {
   "_comment": [
     "Sidecar allowlist for update_label_db / lint_pret_labels (fidelity plan Stage 2.1).",
-    "relocated_files: every translated label of <pret file> deliberately lives at <port_file>.",
-    "relocated_labels: per-label relocations where one pret file split across port files.",
+    "relocated_files / relocated_labels contain maintainer-approved PURE relocations only.",
+    "Pure means a complete independently callable routine/file with every pret call boundary intact: no fusion, inlining, decomposition, or partial translation.",
+    "structural_findings records audited legacy violations as OPEN debt, never precedent or authority for new work.",
+    "Agents may not add or edit either category to make their own lint failure pass; the exact file hash is approved outside the worktree.",
     "suppress: linter suppressions [{rule, key, why}].",
-    "DRAFT (Session H 2026-07-07): entries below bless pre-existing relocations found by the",
-    "first full-tree scan; they predate the mirror rule. Flagged for user review \u2014 deleting an",
-    "entry makes the linter fire on it again."
+    "Legacy entries began as a 2026-07-07 full-tree inventory and remain subject to structural audit."
   ],
+  "structural_findings": {
+    "DisplayTwoOptionMenu": {
+      "id": "R-001",
+      "port_file": "dos_port/src/home/yes_no.asm",
+      "problem": "the former relocation justification says the pret routine is not standalone and keeps it with port-private state/helpers, which does not establish a pure independently callable relocation",
+      "retirement": "move a complete independently callable DisplayTwoOptionMenu to dos_port/src/engine/menus/text_box.asm and preserve the pret call boundary"
+    },
+    "IsSpriteOrSignInFrontOfPlayer": {
+      "id": "R-002",
+      "port_file": "dos_port/src/engine/overworld/overworld.asm",
+      "problem": "the former relocation justification admits only the sign branch is translated while the sprite scan and counter-range behavior are split or absent",
+      "retirement": "restore the complete pret routine and its entry/call boundaries in dos_port/src/home/overworld.asm"
+    },
+    "PrintMonType": {
+      "id": "R-003",
+      "port_file": "dos_port/src/engine/pokemon/status_screen.asm",
+      "problem": "the former relocation justification admits PrintMonType is fused with the separate missing pret label EraseType2Text",
+      "retirement": "separate PrintMonType and EraseType2Text under their exact labels in dos_port/src/engine/battle/print_type.asm"
+    },
+    "PlayIntro": {
+      "id": "R-004",
+      "port_file": "dos_port/src/engine/movie/splash.asm",
+      "problem": "an in-progress change placed PlayIntro beside its callee for convenience and attempted to self-authorize that placement through the relocation registry",
+      "retirement": "move the complete PlayIntro routine to dos_port/src/engine/movie/intro.asm"
+    }
+  },
   "relocated_files": {
     "engine/menus/link_menu.asm": {
       "port_file": "dos_port/src/engine/menus/link_cups.asm",
@@ -266,10 +292,6 @@
     "DisplayEnemyTrainerTextAndStartBattle": {
       "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
       "why": "pret home/trainers.asm split across port files (draft Session H)"
-    },
-    "DisplayTwoOptionMenu": {
-      "port_file": "dos_port/src/home/yes_no.asm",
-      "why": "Deliberate, and NOT a file-level relocation (the old entry keyed the whole of pret engine/menus/text_box.asm to yes_no.asm, which was simply false: that file's other labels do live in dos_port/src/engine/menus/text_box.asm). Only this routine moves. Reason: in the port DisplayTwoOptionMenu is not a standalone routine. pret receives the box position in a register triple (b=cursor Y, c=cursor X, hl=tilemap address of the border); the port's window compositor needs GB TILE coordinates, not a tilemap address, so the position now arrives in yn_box_col/yn_box_row -- private .bss written by the home/yes_no.asm entry points -- and the box is placed and dropped through yn_show_window/yn_mirror/yn_teardown, also private to this file. Hosting the routine in its mirrored path would export three .bss cells and three helpers across a file boundary purely to satisfy the mirror rule, splitting one cohesive unit in two. Its only out-of-file caller, DisplayTextBoxID_'s TWO_OPTION_MENU dispatch, is an extern either way. Re-justified by hand at menu-fidelity row 5 (2026-07-13)."
     },
     "DoBikeSpeedup": {
       "port_file": "dos_port/src/engine/overworld/overworld.asm",
@@ -551,10 +573,6 @@
       "port_file": "dos_port/src/home/item_predicates.asm",
       "why": "pret engine/items/item_effects.asm split across port files (draft Session H)"
     },
-    "IsSpriteOrSignInFrontOfPlayer": {
-      "port_file": "dos_port/src/engine/overworld/overworld.asm",
-      "why": "pret home/overworld.asm split across port files; overworld.asm is the port's home/overworld.asm (same rationale as EnterMap/OverworldLoop/StopMusic). It sits beside its only caller, OverworldLoop's A-press dispatch. Only the SIGN branch is translated \u2014 see the routine's header for the documented split: pret's sprite scan (IsSpriteInFrontOfPlayer2) is realized as CheckNPCInteraction, which both detects AND displays, and the counter-tile talking-range extension is unported (it needs mart/pokecenter counter tilesets). Reviewed on the merits when the sign feature was folded back from worktree-fidelity-expansion (2026-07-14), NOT auto-blessed boilerplate."
-    },
     "IsTilePassable": {
       "port_file": "dos_port/src/engine/overworld/overworld.asm",
       "why": "pret home/copy2.asm split across port files (draft Session H)"
@@ -782,10 +800,6 @@
     "PrintMayNotAttackText": {
       "port_file": "dos_port/src/engine/battle/move_effect_helpers.asm",
       "why": "pret engine/battle/effects.asm split across port files (draft Session H)"
-    },
-    "PrintMonType": {
-      "port_file": "dos_port/src/engine/pokemon/status_screen.asm",
-      "why": "Row 22 created the real mirror (dos_port/src/engine/battle/print_type.asm) and put pret's move-type half there (PrintMoveType/PrintType/PrintType_), so the old file-level blanket entry for engine/battle/print_type.asm is deleted. PrintMonType alone is still elsewhere: its port body was written INTO status_screen.asm, fused with EraseType2Text (which pret keeps as a separate label and the port therefore reports as `missing`), and it reads the status screen's own layout offsets. Relocating it is a real, separable change to status_screen.asm \u2014 see menu-fidelity finding M-119 \u2014 not a fact about this file, so it is allowlisted per-label, not per-file."
     },
     "PrintMoveFailureText": {
       "port_file": "dos_port/src/engine/battle/print_move_failure.asm",
@@ -1670,10 +1684,6 @@
     "PlayShootingStar": {
       "port_file": "dos_port/src/engine/movie/splash.asm",
       "why": "pret engine/movie/intro.asm holds PlayShootingStar (the Game Freak splash orchestration); the port keeps all splash code in splash.asm alongside AnimateShootingStar which it calls - menu-intro B2. Its GB screen/LCD-control drops are on the HAL DEVIATION at the routine."
-    },
-    "PlayIntro": {
-      "port_file": "dos_port/src/engine/movie/splash.asm",
-      "why": "pret engine/movie/intro.asm holds PlayIntro (the boot cinematic: splash + intro); the port keeps it in splash.asm next to PlayShootingStar which it calls (PlayIntroScene is externed from intro_yellow.asm) - menu-intro B4."
     },
     "IntroDrawBlackBars": {
       "port_file": "dos_port/src/engine/movie/splash.asm",

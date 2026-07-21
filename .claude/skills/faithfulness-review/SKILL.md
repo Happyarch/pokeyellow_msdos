@@ -24,8 +24,13 @@ user. All tools live in `dos_port/tools/`; they read `translation.db`, which is
    Full schema, the legal `class` values, and the "no `;` inside a value" trap →
    skill **`project-conventions`**.
 
-   **A pure file relocation is not a deviation** — a faithful body that merely lives at
-   a non-mirrored path belongs in `tools/pret_label_allowlist.json`, not an annotation.
+   **A pure relocation is not a deviation**, but it is narrowly defined: one
+   complete, independently callable pret routine (or complete pret file) moves
+   without inlining, fusion, decomposition, partial translation, or changed pret
+   call boundaries. Only the user or a maintainer may authorize and register it.
+   An agent whose work trips the mirror rule must move the routine to its mirrored
+   path, never add an allowlist entry or a structural finding to make its own gate
+   pass. Registry approval is content-hash locked outside the worktree.
 
 1. **`tools/faithdiff <Label>`** for every pret-labeled routine you touched.
    It diffs the pret vs port call graph and named-WRAM/HRAM store set.
@@ -51,8 +56,10 @@ user. All tools live in `dos_port/tools/`; they read `translation.db`, which is
      never goes in the suppression file; it goes in the commit message.
 2. **`tools/lint_pret_labels`** — must exit 0 before committing. It rescans the
    tree (so it sees your change) and enforces: pret-named globals live in the
-   path-mirrored file or a `*_stubs.asm` (else the relocation allowlist
-   `tools/pret_label_allowlist.json` needs an entry with a why); stubs stay
+   path-mirrored file or a `*_stubs.asm`. A `mirror` finding means move the
+   complete routine to the mirrored file; it is not an instruction to edit the
+   relocation registry. Maintainer-approved pure relocations are recognized
+   separately; stubs stay
    ret-only; no duplicate global defs (silent-shadow trap); extern comments
    point at stub files that still define the symbol.
 3. **Run every golden scenario whose compared surface could observe the change.**
