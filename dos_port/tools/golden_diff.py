@@ -602,6 +602,42 @@ SCENARIOS = {
             ],
         },
     },
+    "title_timeout": {
+        "flags": "DEBUG_TITLE_TIMEOUT=1",
+        # Reset route (menu-intro B4): the title-screen timeout re-enters Init, which
+        # (post-flip) calls PlayIntro, REPLAYING the boot movie. The port plays the intro
+        # to reach the title, the idle loop times out (shortened under the flag), and the
+        # REPLAY's PlayShootingStar dumps the copyright via g_title_reset_replay. The dumped
+        # state is identical to gamefreak_intro (same copyright), but reached via the reset
+        # route — that route is what this scenario proves. Ground truth: title_timeout.lua.
+        "wram_skip": {**_NONBATTLE_WRAM_SKIP,
+            # Reached via the title, so the debug build has seeded its default player name
+            # by now; the ROM (fresh boot -> title -> timeout -> replay) never named, so its
+            # wPlayerName is blank. Pre-game and irrelevant at the copyright screen.
+            "wPlayerName": "reached via the title: debug default name is seeded, ROM is unnamed "
+                           "(pre-game, irrelevant at the copyright)"},
+        "window": (0, 0),
+        "projections": (
+            [((0, 0, 17, 19), (10, 3),
+              "cinematic surface: the GB 20x18 screen centred on the canvas at "
+              "tile (10,3) — UI_SPLASH_COL/UI_SPLASH_ROW")]
+        ),
+        "masks": {
+            "vram": [
+                (0x100 + 0x7D, "pret copyright-load 1-tile overflow into font_extra[0] at "
+                               "$7D; port omits it (unused by CopyrightTextString) — flat-model DEVIATION"),
+            ],
+            # The title (before the timeout) published eye OAM to $FE00; the port's ClearSprites
+            # sets the compositor count (spr_oam_valid) to 0 — so the eyes are NOT drawn on the
+            # copyright — but does not zero canonical $FE00 (the documented party-icons behavior),
+            # while the ROM's reset clears it. Invisible residue, overwritten by the shooting-star
+            # OAM moments later. Unlike the `title` golden (where OAM IS the content), here the
+            # copyright has no meaningful OAM, so the leaked eyes are masked.
+            "oam": [(i, "title eye-OAM residue in $FE00 after the reset (spr_oam_valid=0 so not "
+                        "drawn; ClearSprites doesn't zero canonical OAM) — copyright has no OBJ")
+                    for i in range(40)],
+        },
+    },
     "yellow_intro_s01": {
         "flags": "DEBUG_YELLOW_S01=1",
         # Yellow intro scene 1, the first "wait last" hold (menu-intro B4). Real boot

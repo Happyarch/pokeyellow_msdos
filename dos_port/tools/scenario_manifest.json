@@ -471,6 +471,38 @@
       "verification": "Yellow intro scene 1 (first wait-hold): intro BG letterbox + graphics loaded, running-Pikachu OBJ spawned (OAM masked)"
     },
     {
+      "name": "title_timeout",
+      "id": 27,
+      "tier": "full",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_TITLE_TIMEOUT=1",
+      "port_entry_gate": "DEBUG_TITLE_TIMEOUT",
+      "navigation_script": "tools/mgba_harness/scenarios/title_timeout.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "IncrementResetCounter",
+        "PlayIntro",
+        "PlayShootingStar"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "title timeout -> Init -> PlayIntro replay: copyright screen reappears (route proof; state == gamefreak_intro)"
+    },
+    {
       "name": "main_menu",
       "id": 22,
       "tier": "core",

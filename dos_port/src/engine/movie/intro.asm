@@ -118,6 +118,21 @@ PlayShootingStar:
     mov al, 0x1B                          ; ldpal a, SHADE_BLACK,SHADE_DARK,SHADE_LIGHT,SHADE_WHITE
     mov [ebp + IO_BGP], al                ; ldh [rBGP], a  (inverted splash palette)
     call UpdateCGBPal_BGP
+%ifdef DEBUG_TITLE_TIMEOUT
+    ; title_timeout / soft_reset golden (menu-intro B4): if this PlayShootingStar is the
+    ; REPLAY that a title-screen reset triggered (the flip: title timeout/combo -> jmp Init
+    ; -> PlayIntro), the copyright is now drawn — dump it (== the gamefreak_intro state, but
+    ; reached via the reset route) and exit. The initial boot's PlayShootingStar has the flag
+    ; clear, so it plays through normally to reach the title where the reset happens.
+    extern g_title_reset_replay           ; movie/title.asm
+    cmp byte [g_title_reset_replay], 0
+    je .not_reset_replay
+    extern DumpBackbuffer                 ; debug/debug_dump.asm
+    call DelayFrame                       ; let the copyright render to the surface
+    call DelayFrame
+    call DumpBackbuffer                   ; GBSTATE.BIN + FRAME.BIN + exit (fires once)
+.not_reset_replay:
+%endif
     mov bl, 180                           ; ld c, 180
     call DelayFrames                      ; show the copyright screen for ~3 seconds
     mov byte [ebp + wCurOpponent], 0      ; xor a / ld [wCurOpponent], a

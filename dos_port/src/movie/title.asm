@@ -172,6 +172,13 @@ title_dbg_frame: dd 0                   ; frames elapsed (mid-bounce / idle-loop
 ; state MovieBeginSurface owns (g_obj_clip, g_bg_whiteout, source offsets, OAM).
 title_reentry_visit: dd 0
 %endif
+; title_timeout / soft_reset goldens (menu-intro B4): set to 1 on a title-screen reset
+; (timeout or the UP+SELECT+B combo) so PlayShootingStar dumps the REPLAYED copyright
+; the flip produces. Host .data, so it survives the jmp Init back into the boot movie.
+; Defined unconditionally (1 byte, inert in the default build); only the reset paths
+; write it and only the DEBUG_TITLE_TIMEOUT/DEBUG_SOFT_RESET dump hook reads it.
+global g_title_reset_replay
+g_title_reset_replay: db 0
 
 TitleScreenPikachuEyesOAMData:
     db 0x60, 0x40, 0xf1, 0x22
@@ -639,6 +646,13 @@ DisplayTitleScreen:
     ; compositor, so the surface has to be released here too or a narrow OBJ clip
     ; and a stuck whiteout survive the reset.
     call MovieEndSurface
+%ifdef DEBUG_TITLE_TIMEOUT
+    ; title_timeout golden (menu-intro B4): mark that a title-screen reset just
+    ; occurred, so PlayShootingStar dumps the REPLAYED copyright (the flip makes
+    ; jmp Init -> PlayIntro replay the boot movie). Survives Init (host .bss, not
+    ; GB WRAM). Set on the timeout path; the soft_reset combo sets it separately.
+    mov byte [g_title_reset_replay], 1
+%endif
     jmp Init
 
 ; ---------------------------------------------------------------------------
@@ -1054,6 +1068,14 @@ IncrementResetCounter:
     movzx eax, byte [esi]       ; lo byte of counter
     movzx edx, byte [esi + 1]   ; hi byte of counter
     inc eax
+%ifdef DEBUG_TITLE_TIMEOUT
+    ; title_timeout golden: fire the reset after ~40 idle frames instead of the real
+    ; $0C00 (~3072), so the headless run stays well under the 150 s cap. The REPLAY
+    ; ROUTE is identical — only the wait is shortened; the mGBA side uses the ROM's
+    ; real $0C00 timeout to generate the golden (both reach the same replay copyright).
+    cmp eax, 40
+    jae .do_reset
+%endif
     cmp eax, 0x100
     jb .no_carry
     xor eax, eax

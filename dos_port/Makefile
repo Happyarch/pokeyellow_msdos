@@ -861,6 +861,14 @@ NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_TITLE_REENTRY
 NASMFLAGS += -D SKIP_INTRO       # B4 flip: boot the real title, skip the boot cinematic
 endif
+# title_timeout scenario (menu-intro B4): prove the title-screen timeout replays the
+# boot movie (post-flip: title timeout -> jmp Init -> PlayIntro). Deliberately does NOT
+# set SKIP_INTRO — the intro must play (to reach the title) and REPLAY (after the
+# shortened timeout); PlayShootingStar dumps the replayed copyright via g_title_reset_replay.
+ifdef DEBUG_TITLE_TIMEOUT
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_TITLE_TIMEOUT
+endif
 ifdef DEBUG_TITLE
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_TITLE
