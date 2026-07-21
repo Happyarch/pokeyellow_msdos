@@ -1000,6 +1000,14 @@ endif
 # (Init -> PlayIntro splash+intro -> title). AUTOKEY_QUIET photographs a frame at
 # AUTOKEY_DUMP_FRAME (~50 = the copyright screen, proving PlayIntro runs from Init).
 # make image BOOT_CINEMATIC=1 AUTOKEY_DUMP_FRAME=N
+# gamefreak_intro golden scenario (menu-intro B4): the real-boot copyright screen.
+# A DEBUG_-prefixed gate (validate_scenarios requires it; it also tags the GBSTATE
+# dump id via the generated scenario_registry.inc) that turns on the BOOT_CINEMATIC
+# real-boot build below. Must precede the BOOT_CINEMATIC block so the `ifdef` sees it.
+ifdef DEBUG_GAMEFREAK_INTRO
+BOOT_CINEMATIC := 1
+NASMFLAGS += -D DEBUG_GAMEFREAK_INTRO
+endif
 ifdef BOOT_CINEMATIC
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D BOOT_CINEMATIC

@@ -575,6 +575,33 @@ SCENARIOS = {
         # change makes OAM need a mask here, that is a regression in that
         # contract, not a scenario quirk — fix the publisher, not this table.
     },
+    "gamefreak_intro": {
+        "flags": "DEBUG_GAMEFREAK_INTRO=1 AUTOKEY_DUMP_FRAME=50",
+        # Game Freak splash copyright checkpoint (menu-intro B4). DEBUG_GAMEFREAK_INTRO
+        # turns on the REAL boot path (BOOT_CINEMATIC: Init -> ClearVram -> gated
+        # PlayIntro, no player seeding) — not the DEBUG_CINEMATIC_SPLASH harness, which
+        # skips ClearVram and seeds player data. PlayShootingStar holds the copyright
+        # 180 frames; the AUTOKEY dump at frame 50 lands mid-still. Ground truth:
+        # mGBA gamefreak_intro.lua.
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
+        # Same cinematic surface as the title: GB 20x18 centred at tile (10,3).
+        "window": (0, 0),
+        "projections": (
+            [((0, 0, 17, 19), (10, 3),
+              "cinematic surface: the GB 20x18 screen centred on the canvas at "
+              "tile (10,3) — UI_SPLASH_COL/UI_SPLASH_ROW")]
+        ),
+        # vChars2 $7D: pret's LoadCopyrightTiles contiguous copy runs 1 tile past NineTile
+        # into font_extra[0] (its overflow); the flat port omits that unused tile
+        # (CopyrightTextString references only $60-$7C), leaving font_extra[$1D] there.
+        # Never displayed. See the LoadCopyrightTiles data-model DEVIATION.
+        "masks": {
+            "vram": [
+                (0x100 + 0x7D, "pret copyright-load 1-tile overflow into font_extra[0] at "
+                               "$7D; port omits it (unused by CopyrightTextString) — flat-model DEVIATION"),
+            ],
+        },
+    },
     "options_menu": {
         "flags": "DEBUG_OPTIONS=1",
         "wram_skip": dict(_NONBATTLE_WRAM_SKIP),

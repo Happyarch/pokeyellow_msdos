@@ -407,6 +407,38 @@
       "verification": "stable-composition checkpoint: bounce complete, hSCY=0, eyes open in the post-blink window, no input consumed"
     },
     {
+      "name": "gamefreak_intro",
+      "id": 25,
+      "tier": "full",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_GAMEFREAK_INTRO=1 AUTOKEY_DUMP_FRAME=50",
+      "port_entry_gate": "DEBUG_GAMEFREAK_INTRO",
+      "navigation_script": "tools/mgba_harness/scenarios/gamefreak_intro.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "PlayShootingStar",
+        "LoadCopyrightAndTextBoxTiles",
+        "MovieBeginSurface"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "Game Freak splash copyright checkpoint: 3 lines on wTileMap rows 7/9/11, copyright+gamefreak_inc glyphs in vChars2, no OAM"
+    },
+    {
       "name": "main_menu",
       "id": 22,
       "tier": "core",
