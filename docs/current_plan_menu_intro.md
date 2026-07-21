@@ -1510,6 +1510,43 @@ Sampling only early, middle, and final scenes would leave most scene-specific ti
 - Timers and active-object masks match ground truth.
 - Skip exits cleanly to title preparation.
 
+### B2 completion — `PlayShootingStar` orchestration (2026-07-21 scoping)
+
+B3 is done; the boot cinematic's remaining prerequisite is **B2's top-level
+`PlayShootingStar`**, which B4's `PlayIntro` calls. Its pieces mostly exist in
+`splash.asm` (`LoadShootingStarGraphics`, `AnimateShootingStar`,
+`MoveDownSmallStars`, `GameFreakIntro`/OAM data, the `RunSplashTest` harness) — the
+**orchestrating routine is what's missing**.
+
+**Key design decision (resolved):** the port renders the splash through a
+**black-matte cinematic surface** (`MovieBeginSurface`) with the Game Freak logo,
+shooting star, and small stars as **projected OBJ** (`AnimateShootingStar` →
+`PublishProjectedOAM`). Therefore pret's BG-framing helpers —
+`IntroDrawBlackBars` / `IntroClearScreen` / `IntroPlaceBlackTiles` /
+`IntroClearMiddleOfScreen` (black bars top/bottom + clear middle on vBGMap0 **and**
+vBGMap1) — are **subsumed by the black matte** and need **not** be ported: the
+surface BG is already uniform black, and there is no second BG map (vBGMap1) in the
+port's surface model. This is a projection DEVIATION (the letterbox is the matte).
+
+**Remaining B2 steps:**
+- **B2.x-1 — copyright screen.** Port `LoadCopyrightAndTextBoxTiles` + the 180-frame
+  © display that opens `PlayShootingStar`. Check whether the copyright tile graphic
+  is already generated (`assets/`), generate it if not (Tier-1 data). Project the
+  copyright onto the surface (BG tiles → W_TILEMAP, or OBJ) following the intro/oak
+  text pattern. If the asset/route proves large, it can itself be a sub-increment.
+- **B2.x-2 — `PlayShootingStar` orchestration.** `MovieBeginSurface`; palette setup
+  (`RunPaletteCommand SET_PAL_GAME_FREAK_INTRO` — HAL/inert like the intro, DMG
+  shades via `rBGP`); copyright screen (B2.x-1); load logo tiles to vChars1 (as
+  `RunSplashTest` does); `AnimateShootingStar`; cleanup (`ClearSprites`, `Delay3`,
+  `MovieEndSurface`). Drop the GB HW setup (`EnableLCD`/LCDC bits/vBGMap1/
+  `hAutoBGTransferEnabled`) — HAL DEVIATIONs, the surface model replaces them.
+- **B2.x-3 — verify + close B2.** `pixelcheck splash` (scenario exists, dump 20);
+  faithdiff `PlayShootingStar`; lint 0. Then close task #6.
+
+**Then B4:** `PlayIntro` is a thin wrapper — `PlayShootingStar` + `callfar
+PlayIntroScene` (done) + cleanup — wired into the boot chain (carefully, without
+breaking the working `SKIP_TITLE` overworld boot).
+
 ### B4 — Full power-on integration
 
 #### Work
