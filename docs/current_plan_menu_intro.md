@@ -1731,11 +1731,18 @@ breaking the working `SKIP_TITLE` overworld boot).
       **unconditional** faithful-default flip is HELD — see the status box above)*
 - [x] Preserve later LCD, VRAM, palette, and title setup. *(Init still runs
       DisableLCD/ClearVram/GBPalNormal/ClearSprites after PlayIntro; verified linkable both ways)*
-- [ ] Register translated and linked state.
-- [ ] Activate all permanent cinematic scenarios.
-- [ ] Regenerate the scenario registry.
-- [ ] Add coordinate transforms to `golden_diff.py`.
-- [ ] Add only measured, justified masks.
+- [x] Register translated and linked state. *(2026-07-21: `project_state` reports
+      PlayIntro / PlayShootingStar / PlayIntroScene / SpawnAnimatedObject /
+      RunObjectAnimations all `implementation linked` at their mirror paths; label DB current.)*
+- [ ] Activate all permanent cinematic scenarios. *(BLOCKED unattended: mGBA goldens
+      need a baserom.)*
+- [ ] Regenerate the scenario registry. *(rides scenario activation above — mGBA-blocked.)*
+- [x] Add coordinate transforms to `golden_diff.py`. *(2026-07-21: no new code needed —
+      the generic `projections` mechanism (window (col,row) + `(dcol,drow)` rects,
+      `docs/ui_projection.md`) built in A1/A2 already covers the cinematic surface; a
+      cinematic scenario just declares `"window": (10, 3)`. Only scenario registration
+      (mGBA-blocked) remains.)*
+- [ ] Add only measured, justified masks. *(BLOCKED: needs the mGBA goldens to measure against.)*
 - [~] Sweep stale `TODO-HW`, `STUB`, extern, allowlist, plan, and status claims.
       *(2026-07-21: TODO-HW/STUB/extern/status portion done — fixed init.asm's stale
       header TODOs for PlayIntro + title (`142a3197`); `project_state` confirms all
@@ -1744,8 +1751,20 @@ breaking the working `SKIP_TITLE` overworld boot).
       stale relocation entries for the mirror-moved labels — SHA-gated, needs a
       maintainer. CLAUDE.md's "title renders wrong" note is likely stale post-A2.3 but
       has uncommitted third-party edits, so left to a maintainer.)*
-- [ ] Add and verify `title_timeout` and `soft_reset` route scenarios.
-- [ ] Run one uninterrupted power-on to overworld without `SKIP_TITLE`.
+- [ ] Add and verify `title_timeout` and `soft_reset` route scenarios. *(BLOCKED:
+      mGBA route traces need a baserom, and the replay-the-movie behavior is coupled to
+      the HELD faithful-default flip — in the default build Init does not yet call PlayIntro.)*
+- [ ] Run one uninterrupted power-on to overworld without `SKIP_TITLE`. *(BLOCKED: needs
+      the HELD flip + the human full-chain smoke test.)*
+
+> **B4 unattended stopping point (2026-07-21).** Every checkable-without-mGBA/human B4
+> item is now done: PlayIntro ported + wired + Init-context runtime-verified (`edafa36d`),
+> the two real faithfulness bugs this surfaced fixed (`6a05a616` copyright spacing,
+> `59412c80` hAutoBGTransfer), 144 menu-intro pret labels faithdiff-swept DROPPED-clean,
+> stale status claims swept (`142a3197`), translated/linked state registered, and the
+> golden_diff projection infra confirmed ready. **Everything still open above is gated on
+> either the faithful-default flip greenlight or a baserom/human observer** — it cannot be
+> progressed unattended.
 
 #### Golden naming
 
