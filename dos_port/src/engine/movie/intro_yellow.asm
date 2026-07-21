@@ -310,6 +310,60 @@ YellowIntroScene10:
     jnz .fill_row
     ret
 
+; Scene 12 — "closing pan": lay out the framed BG (the Func_f9e5f pattern, inlined
+; as in pret), paste an 8x12 graphic at (5,6) whose tile ids run 4.. with a 4-tile
+; gap per row, patch three individual tiles, and spawn object $9.
+;
+; DEVIATION{class=projection; pret=engine/movie/intro_yellow.asm:YellowIntroScene12; behavior=the vBGMap0 fills, the 8x12 procedural paste, and the three single-tile writes are redirected to the port's 40-wide W_TILEMAP (row-range fill = N*SCREEN_TILES_W, cell = W_TILEMAP + row*SCREEN_TILES_W + col) and the paste advances one 40-tile row per graphic row instead of the GB 32; evidence=the compositor renders the BG from W_TILEMAP not the 32-wide GB BG map, the same redirect as Func_f9e5f, and the 12-col paste at col 5 stays inside the visible 20-col region; lifetime=permanent widescreen tilemap model}
+YellowIntroScene12:
+    call YellowIntro_BlankPalsDelay2AndDisableLCD
+    mov bl, 0x5                                    ; ld c, $5
+    call UpdateMusicCTimes
+    xor al, al
+    mov [ebp + H_LCDC_POINTER], al                 ; ldh [hLCDCPointer], a
+    mov esi, W_TILEMAP                             ; ld hl, vBGMap0
+    mov bx, 4 * SCREEN_TILES_W                     ; ld bc, $80   (rows 0-3)
+    mov al, 0x1
+    call FillMemory                                ; call Bank3E_FillMemory
+    mov esi, W_TILEMAP + 4 * SCREEN_TILES_W        ; ld hl, $9880 (rows 4-13)
+    mov bx, 10 * SCREEN_TILES_W                    ; ld bc, $140
+    xor al, al
+    call FillMemory
+    mov esi, W_TILEMAP + 14 * SCREEN_TILES_W       ; ld hl, $99c0 (rows 14-17)
+    mov bx, 4 * SCREEN_TILES_W                     ; ld bc, $80
+    mov al, 0x1
+    call FillMemory
+    ; paste 8x12 graphic at (5,6), tile ids 4.., skipping 4 vtiles per row
+    mov esi, W_TILEMAP + 6 * SCREEN_TILES_W + 5    ; ld hl, $98c5
+    mov al, 0x4                                    ; ld a, $4  (start tile)
+    mov bh, 8                                      ; ld b, 8   (rows)
+.paste_row:
+    mov cl, 12                                     ; ld c, 12  (cols)
+    push esi                                       ; push hl
+.paste_col:
+    mov [ebp + esi], al                            ; ld [hli], a
+    inc esi
+    inc al                                         ; inc a
+    dec cl                                         ; dec c
+    jnz .paste_col
+    pop esi                                        ; pop hl
+    add esi, SCREEN_TILES_W                        ; ld de,$20 / add hl,de  (port stride 40)
+    add al, 0x4                                    ; add $4
+    dec bh                                         ; dec b
+    jnz .paste_row
+    mov byte [ebp + W_TILEMAP + 6 * SCREEN_TILES_W + 4], 0x3   ; ld hl,$98c4 / ld [hl],$3
+    mov byte [ebp + W_TILEMAP + 7 * SCREEN_TILES_W + 4], 0x74  ; ld hl,$98e4 / ld [hl],$74
+    mov byte [ebp + W_TILEMAP + 13 * SCREEN_TILES_W + 5], 0x0  ; ld hl,$99a5 / ld [hl],$0
+    mov dh, 0x60                                   ; lb de, $60, $58
+    mov dl, 0x58
+    mov al, 0x9
+    call YellowIntro_SpawnAnimatedObjectAndSavePointer
+    xor al, al
+    call Func_f9e9a
+    call YellowIntro_SetTimerFor128Frames
+    call YellowIntro_NextScene
+    ret
+
 YellowIntroScene13:
     call YellowIntro_CheckFrameTimerDecrement
     jc .expired
@@ -955,7 +1009,7 @@ Jumptable_f9906:
     dd YellowIntroScene9
     dd YellowIntroScene10
     dd YellowIntro_NextScene        ; scene 11 (unported)
-    dd YellowIntro_NextScene        ; scene 12 (unported)
+    dd YellowIntroScene12
     dd YellowIntroScene13
     dd YellowIntroScene14
     dd YellowIntroScene15
