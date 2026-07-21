@@ -218,6 +218,7 @@ HOME_SRCS := \
     src/home/serial_stubs.asm \
     src/home/fill_memory.asm \
     src/home/copy_data.asm \
+    src/home/check_user_interruption.asm \
     src/home/bankswitch.asm \
     src/home/text_script.asm \
     src/home/textbox.asm \
