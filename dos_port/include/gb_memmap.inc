@@ -1141,6 +1141,11 @@ wYellowIntroAnimatedObjectStructPointer equ 0xF6CC ; dw
 ; overworld buffers. See src/data/sprite_anims/intro_anim_data.asm.
 W_INTRO_ANIM_DATA               equ 0xF700 ; wYellowIntroAnimatedObjectData blob (GB base)
 W_INTRO_ANIM_DATA_SIZE          equ 0x2A0  ; reservation (actual ~0x291), ends <= 0xF9A0
+; wLYOverridesBuffer — the intro's LY-override staging buffer (surfing wobble).
+; Free echo RAM after the anim-data blob. The port does NOT emulate per-scanline
+; LY overrides, so this buffer is written faithfully but never consumed (inert).
+W_LY_OVERRIDES_BUFFER           equ 0xFA00 ; wLYOverridesBuffer (ds 0x100)
+W_LY_OVERRIDES_BUFFER_SIZE      equ 0x100  ; 256 B, ends 0xFB00 (< GB_OAM 0xFE00)
 
 ; Overworld map block buffer (2304 bytes). Worst case is Route 17 / Route 23 (10x72):
 ; (10 + 2*7) * (72 + 2*7) = 24 * 86 = 2064 bytes at MAP_BORDER=7, which overflows the old

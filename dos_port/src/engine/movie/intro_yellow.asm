@@ -31,6 +31,7 @@ global YellowIntroScene13, YellowIntroScene17, YellowIntroScene3
 global Func_fa06e, YellowIntroScene0
 global YellowIntroScene16, YellowIntro_LoadDMGPalAndIncrementCounter
 global YellowIntro_BlankPalsDelay2AndDisableLCD, YellowIntroScene15
+global YellowIntro_Copy8BitSineWave
 
 extern YellowIntroFramesData_GB, YellowIntroOAMData_GB, YellowIntroSpawnData_GB
 extern SpawnAnimatedObject, MaskCurrentAnimatedObjectStruct, MaskAllAnimatedObjectStructs
@@ -360,6 +361,25 @@ YellowIntro_BlankPalsDelay2AndDisableLCD:
     ret
 
 ; ---------------------------------------------------------------------------
+; YellowIntro_Copy8BitSineWave — fill wLYOverridesBuffer (0x100 bytes) with the
+; amp-4 sine wave repeated 8 times (scene 6's surfing wobble source).
+;
+; DEVIATION{class=data-model; pret=engine/movie/intro_yellow.asm:YellowIntro_Copy8BitSineWave; behavior=the Bank3E_CopyData loop becomes an inline flat->GB rep movsb; evidence=the .SineWave source is flat program-image data while the port CopyData is EBP-relative on both ends, same as the splash OAM-table copies; lifetime=permanent flat-memory model}
+; NOTE: the port does not emulate per-scanline LY overrides, so this buffer is
+; written faithfully but never consumed (the wobble is inert).
+; ---------------------------------------------------------------------------
+YellowIntro_Copy8BitSineWave:
+    lea edi, [ebp + W_LY_OVERRIDES_BUFFER]          ; ld de, wLYOverridesBuffer (dest)
+    mov dl, 8                                       ; ld a, $8  (repeat count)
+.loop:
+    mov esi, YellowIntroSineWave8                   ; ld hl, .SineWave (flat source)
+    mov ecx, YellowIntroSineWave8End - YellowIntroSineWave8
+    rep movsb                                       ; call Bank3E_CopyData (flat -> GB)
+    dec dl                                          ; dec a
+    jnz .loop                                       ; jr nz, .loop
+    ret
+
+; ---------------------------------------------------------------------------
 ; Func_fa007 — no-op object callback.
 ; ---------------------------------------------------------------------------
 Func_fa007:
@@ -544,6 +564,14 @@ YellowIntroPalSequence_f9dd6:
 YellowIntroPalSequence_f9e0a:
     db 0xe4, 0x90, 0x90, 0x40
     db 0x40, 0x00, 0x00, 0xff
+
+; amplitude-4 sine wave, copied 8x into wLYOverridesBuffer by Copy8BitSineWave.
+YellowIntroSineWave8:
+    db  0,  0,  1,  2,  2,  3,  3,  3
+    db  4,  3,  3,  3,  2,  2,  1,  0
+    db  0,  0, -1, -2, -2, -3, -3, -3
+    db -4, -3, -3, -3, -2, -2, -1,  0
+YellowIntroSineWave8End:
 
 ; --- Yellow-intro gfx (B3.2b, gen_intro_gfx_inc.py; verified byte-exact vs the
 ; pret gfx/intro/*.2bpp). Loaded to VRAM by InitYellowIntroGFXAndMusic (B3.2c);
