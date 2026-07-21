@@ -18,6 +18,11 @@ bits 32
 
 %include "gb_memmap.inc"
 
+; pret HRAM names for the auto-BG-transfer registers — used so the faithful (inert)
+; writes below cross-reference against pret by name (faithdiff matches stores by name).
+hAutoBGTransferEnabled equ H_AUTO_BG_TRANSFER_EN
+hAutoBGTransferDest    equ H_AUTO_BG_TRANSFER_DEST
+
 global YellowIntro_AnimatedObjectJumptable
 global Func_fa007, Func_fa008, Func_fa014, Func_fa02b, Func_fa062
 global Func_fa03f, Func_fa051, Func_fa077, Func_fa079, Func_fa08e
@@ -527,8 +532,9 @@ YellowIntroScene13:
 ; inlined to match pret's three fills), restore the DMG palettes, spawn object $7,
 ; advance, and arm a $28-frame timer for the next scene.
 ;
-; DEVIATION{class=HAL; pret=engine/movie/intro_yellow.asm:YellowIntroScene14; behavior=the two hAutoBGTransferEnabled stores gating the wTileMap->vBGMap0 auto-transfer are dropped while the three DelayFrame waits remain, because the port surface mirror copies W_TILEMAP every frame with no enable flag; evidence=hAutoBGTransferEnabled was retired when the surface mirror replaced the GB auto BG transfer and the compositor renders directly from W_TILEMAP; lifetime=permanent surface-mirror model}
-; (BG row fills use the cinematic origin, documented once at the top.)
+; (BG row fills use the cinematic origin, documented once at the top. The
+; hAutoBGTransferEnabled toggle is written faithfully though inert — nothing in the
+; port reads the byte, do_bg_transfer is retired — matching every other port caller.)
 YellowIntroScene14:
     mov edx, YellowIntroPalSequence_f9dd6          ; ld de, ...
     call YellowIntro_LoadDMGPalAndIncrementCounter
@@ -556,11 +562,11 @@ YellowIntroScene14:
     mov bx, 4 * SCREEN_TILES_W                     ; ld bc, SCREEN_WIDTH * 4
     mov al, 0x1
     call FillMemory
-    ; hAutoBGTransferEnabled=1 dropped (surface mirror; see DEVIATION)
+    mov byte [ebp + hAutoBGTransferEnabled], 1      ; ld a,$1 / ldh [hAutoBGTransferEnabled],a (inert, pret fidelity)
     call DelayFrame
     call DelayFrame
     call DelayFrame
-    ; hAutoBGTransferEnabled=0 dropped
+    mov byte [ebp + hAutoBGTransferEnabled], 0      ; xor a / ldh [hAutoBGTransferEnabled],a
     mov al, 0xe4                                   ; ld a, $e4
     mov [ebp + IO_OBP0], al                        ; ldh [rOBP0], a
     mov [ebp + IO_BGP], al                         ; ldh [rBGP], a
@@ -706,14 +712,18 @@ Func_f98fc:
 ; ---------------------------------------------------------------------------
 ; InitYellowIntroGFXAndMusic — blank the tilemap, load the intro tile sheets to
 ; VRAM, point the object engine at the intro tables, set the generic palette and
-; music, and zero the scene state. The retired hAutoBGTransferEnabled/Dest writes
-; are omitted (the cinematic surface mirror handles BG transfer, not the GB's
-; VBlank auto-transfer). Graphics2 loads 255 tiles (pret's (size-$10)/$10).
+; music, and zero the scene state. hAutoBGTransferEnabled/Dest are written faithfully
+; though inert (no port consumer reads the enable byte, do_bg_transfer is retired, and
+; the compositor renders directly from W_TILEMAP); the port keeps these writes exactly
+; as pret does throughout the tree. Graphics2 loads 255 tiles (pret's (size-$10)/$10).
 ; ---------------------------------------------------------------------------
 InitYellowIntroGFXAndMusic:
     xor al, al
+    mov [ebp + hAutoBGTransferEnabled], al          ; ldh [hAutoBGTransferEnabled], a (=0, inert)
     mov [ebp + H_SCX], al                          ; ldh [hSCX], a
     mov [ebp + H_SCY], al                          ; ldh [hSCY], a
+    mov [ebp + hAutoBGTransferDest], al        ; ldh [hAutoBGTransferDest], a (lo=0)
+    mov byte [ebp + hAutoBGTransferDest + 1], 0x98 ; ld a,$98 / ldh [hAutoBGTransferDest+1],a (vBGMap0 $9800)
     call YellowIntro_BlankTileMap
     mov esi, W_TILEMAP                             ; ld hl, wTileMap
     mov bx, SCREEN_AREA                            ; ld bc, SCREEN_AREA
@@ -723,9 +733,11 @@ InitYellowIntroGFXAndMusic:
     mov bx, SCREEN_TILES_W * 10                    ; ld bc, SCREEN_WIDTH * 10
     xor al, al
     call FillMemory
+    mov byte [ebp + hAutoBGTransferEnabled], 1      ; ld a,$1 / ldh [hAutoBGTransferEnabled],a (inert, pret fidelity)
     call DelayFrame                                ; pret waits 3 frames for the (retired)
     call DelayFrame                                ; auto-transfer; kept for frame timing
     call DelayFrame
+    mov byte [ebp + hAutoBGTransferEnabled], 0      ; xor a / ldh [hAutoBGTransferEnabled],a
     mov edx, YellowIntroGraphics2                  ; ld de, YellowIntroGraphics2
     mov esi, GB_VCHARS0                            ; ld hl, vChars0
     mov bl, YELLOWINTROGRAPHICS2_TILES - 1          ; (End - Start - $10) / $10
@@ -751,11 +763,12 @@ InitYellowIntroGFXAndMusic:
 ; The loop is wrapped in MovieBeginSurface/MovieEndSurface and republishes the
 ; animated-object shadow OAM through PublishProjectedOAM each frame — the port's
 ; cinematic surface model (documented once at the top).
-; DEVIATION{class=HAL; pret=engine/movie/intro_yellow.asm:PlayIntroScene; behavior=pret's rIE/rIF/rSTAT (GB interrupt + STAT) and hAutoBGTransferEnabled hardware setup is dropped; evidence=the port drives OBJ from a projected shadow with its own PIT/keyboard ISR, not GB interrupts, and has no VBlank auto-transfer; lifetime=permanent flat-memory/HAL model}
+; DEVIATION{class=HAL; pret=engine/movie/intro_yellow.asm:PlayIntroScene; behavior=pret's rIE/rIF/rSTAT (GB interrupt enable + flags + STAT) save/setup/restore is dropped; evidence=the port drives OBJ from a projected shadow with its own PIT/keyboard ISR, not the GB interrupt controller; lifetime=permanent flat-memory/HAL model}
 ; ---------------------------------------------------------------------------
 PlayIntroScene:
     ; pret saves rIE/rIF/rSTAT here (GB interrupt + STAT setup) — the port uses
-    ; its own PIT/keyboard ISR, so it is dropped.
+    ; its own PIT/keyboard ISR, so it is dropped. (hAutoBGTransferEnabled IS written
+    ; faithfully in the exit tail, as everywhere else in the port — see below.)
     call MovieBeginSurface                          ; PORT: cinematic surface + UI_YELLOW_INTRO projection
     call InitYellowIntroGFXAndMusic
     call DelayFrame
@@ -799,10 +812,11 @@ PlayIntroScene:
     xor al, al
     call FillMemory
     call YellowIntro_BlankOAMBuffer
-    ; hAutoBGTransferEnabled toggle retired (surface mirror handles BG) — omit.
+    mov byte [ebp + hAutoBGTransferEnabled], 1        ; ld a,$1 / ldh [hAutoBGTransferEnabled],a (inert, pret fidelity)
     call DelayFrame
     call DelayFrame
     call DelayFrame
+    mov byte [ebp + hAutoBGTransferEnabled], 0        ; xor a / ldh [hAutoBGTransferEnabled],a
     call MovieEndSurface                             ; PORT: tear down the cinematic surface
     ret
 
