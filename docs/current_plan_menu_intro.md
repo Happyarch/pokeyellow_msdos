@@ -1267,11 +1267,18 @@ B2 must not create a `PlayIntroScene` stub.
 > (PNG→2bpp, byte-exact vs the committed `gfx/intro/*.2bpp`) + the `Unkn_f9b6e/
 > be6/bf2` tilemaps, `%include`d into intro_yellow.asm. Image builds; lint 0.
 >
+> **B3.2c-1 done (2026-07-21, `8c465d18`)** — the scene timer/lifecycle
+> primitives: `YellowIntro_SpawnAnimatedObjectAndSavePointer`,
+> `YellowIntro_MaskCurrentAnimatedObjectStruct`, `SetTimerFor128/88Frames`,
+> `CheckFrameTimerDecrement` (+ `wYellowIntroAnimatedObjectStructPointer` @0xF6CC).
+> faithdiff clean; image builds; lint 0.
+>
 > **Remaining B3**: `Func_fa06e` + the scene dispatch (`Func_f98fc` /
 > `Jumptable_f9906`), `PlayIntroScene`, `InitYellowIntroGFXAndMusic` (loads the
-> B3.2b gfx), scenes 0–17, `YellowIntro_Copy8BitSineWave` + its amp-4 wave,
-> `UI_YELLOW_INTRO` projection, per-scene palettes/music/SFX. Detail in stigmergy
-> `a4-4-oak-speech2-porting-plan`.
+> B3.2b gfx), scenes 0–17 (the odd "wait-last" scenes are small next chunks; the
+> even scenes are LCD/CGB-palette/LY-override heavy → HAL), the deferred pal/LY
+> helpers, `UI_YELLOW_INTRO` projection, per-scene palettes/music/SFX. Detail in
+> stigmergy `a4-4-oak-speech2-porting-plan`.
 
 #### Work
 
