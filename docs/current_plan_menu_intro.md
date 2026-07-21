@@ -1743,6 +1743,24 @@ breaking the working `SKIP_TITLE` overworld boot).
       reverted pending F-GFI so it does not red the fidelity run; re-add it once F-GFI is
       resolved. Then the `yellow_intro_s00..17` scene goldens by the same pattern.)*
 
+> **F-GFI (RESOLVED, `3175ff22`) — copyright screen dropped the "GAME FREAK inc." glyphs.**
+> Root cause: `LoadCopyrightTiles` loaded only 19 tiles (copyright.2bpp), but pret's single
+> CopyVideoData count spans the ROM-contiguous copyright + `GameFreakLogoGraphics`
+> (gamefreak_inc, 9 tiles) + `NineTile` (1 tile) = 30 tiles to $60–$7C. The port's DEVIATION
+> miscomputed this as "20 tiles / 1 overflow" and truncated, dropping the "GAME FREAK inc."
+> glyphs ($73–$7B) + separator ($7C); those slots held stale font_extra tiles. Fix: load the
+> three flat assets to their contiguous slots (copyright→$60, gamefreak_inc→$73, nine→$7C);
+> omit pret's unused font_extra[0] overflow at $7D. **Verified**: `goldencheck gamefreak_intro`
+> (BOOT_CINEMATIC vs the mGBA golden) = TILEMAP/VRAM(384)/OAM/WRAM **OK → PASS** (only the $7D
+> overflow masked); faithdiff clean, lint 0. FOLLOW-UP: the scenario *registration* (golden_diff
+> entry + `GBSTATE_SCENARIO` id + manifest) was reverted because `validate_scenarios` requires a
+> `DEBUG_*`-prefixed gate and `BOOT_CINEMATIC` doesn't match — re-add it under a `DEBUG_`-named
+> gate (or extend the validator) to make gamefreak_intro a permanent CI scenario. (Note: the
+> validator also flags a PRE-EXISTING `scenario_registry.inc` staleness — the A-phase manifest
+> vs registry gap — unrelated to this fix.)
+>
+> <details><summary>original F-GFI finding (history)</summary>
+>
 > **F-GFI (OPEN, 2026-07-21) — copyright-screen glyph tiles $73–$7D diverge from the ROM.**
 > `goldencheck gamefreak_intro` (port `BOOT_CINEMATIC=1 AUTOKEY_DUMP_FRAME=50` vs the
 > committed mGBA golden) reports TILEMAP OK (360/360), OAM OK, WRAM OK — but **11 VRAM
@@ -1761,6 +1779,7 @@ breaking the working `SKIP_TITLE` overworld boot).
 > AUTOKEY_DUMP_FRAME=50`, window (0,0), projection ((0,0,17,19),(10,3)), wram_skip
 > `_NONBATTLE_WRAM_SKIP`}; `%elifdef BOOT_CINEMATIC → GBSTATE_SCENARIO 25` in
 > debug_dump.asm; manifest `gamefreak_intro` id 25.
+> </details>
 - [ ] Regenerate the scenario registry. *(rides scenario activation above.)*
 - [x] Add coordinate transforms to `golden_diff.py`. *(2026-07-21: no new code needed —
       the generic `projections` mechanism (window (col,row) + `(dcol,drow)` rects,
