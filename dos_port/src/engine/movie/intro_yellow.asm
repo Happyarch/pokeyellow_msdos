@@ -26,9 +26,12 @@ global LoadYellowIntroObjectAnimationDataPointers
 global YellowIntro_SpawnAnimatedObjectAndSavePointer, YellowIntro_MaskCurrentAnimatedObjectStruct
 global YellowIntro_SetTimerFor128Frames, YellowIntro_SetTimerFor88Frames
 global YellowIntro_CheckFrameTimerDecrement
+global YellowIntroScene1, YellowIntroScene5, YellowIntroScene9
+global YellowIntroScene13, YellowIntroScene17
 
 extern YellowIntroFramesData_GB, YellowIntroOAMData_GB, YellowIntroSpawnData_GB
 extern SpawnAnimatedObject, MaskCurrentAnimatedObjectStruct
+extern DelayFrames
 
 ; wShadowOAM per-sprite attribute bytes (wShadowOAM + N*4 + 3). Pret names kept.
 %define wShadowOAMSpriteAttr(n) (W_SHADOW_OAM + (n)*4 + 3)
@@ -159,6 +162,57 @@ YellowIntro_CheckFrameTimerDecrement:
 .asm_f9e4b:
     ; vc_hook Stop_reducing_intro_scene_flashing_0F — no-op in the port
     stc                                            ; scf
+    ret
+
+; ---------------------------------------------------------------------------
+; The "wait-last" scenes (odd indices) that only touch the timer/object engine.
+; Scenes 3/7/11/15 (hSCX scroll, LY-buffer roll, VBlank cloud copy) and the even
+; active scenes ride later B3 increments (HAL). YellowIntro_NextScene advances
+; wYellowIntroCurrentScene, so each of these runs once the timer expires.
+; ---------------------------------------------------------------------------
+YellowIntroScene1:
+    call YellowIntro_CheckFrameTimerDecrement
+    jc .expired                                    ; ret nc → fall through only when expired
+    ret
+.expired:
+    call YellowIntro_MaskCurrentAnimatedObjectStruct
+    call YellowIntro_NextScene
+    ret
+
+YellowIntroScene5:
+    call YellowIntro_CheckFrameTimerDecrement
+    jc .expired
+    ret
+.expired:
+    call YellowIntro_MaskCurrentAnimatedObjectStruct
+    call YellowIntro_NextScene
+    ret
+
+YellowIntroScene9:
+    call YellowIntro_CheckFrameTimerDecrement
+    jc .expired
+    ret
+.expired:
+    call YellowIntro_MaskCurrentAnimatedObjectStruct
+    call YellowIntro_NextScene
+    ret
+
+YellowIntroScene13:
+    call YellowIntro_CheckFrameTimerDecrement
+    jc .expired
+    ret
+.expired:
+    mov dh, 0x68                                   ; lb de, $68, $58
+    mov dl, 0x58
+    mov al, 0x0a
+    call SpawnAnimatedObject
+    call YellowIntro_NextScene
+    ret
+
+YellowIntroScene17:
+    mov bl, 64                                     ; ld c, 64
+    call DelayFrames
+    or byte [ebp + wYellowIntroCurrentScene], 0x80 ; set 7, [hl]  (done flag)
     ret
 
 ; ---------------------------------------------------------------------------
