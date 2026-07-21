@@ -67,6 +67,10 @@ dos_port/assets/*
 !dos_port/assets/pikachu_bg_2bpp.inc
 !dos_port/assets/pikachu_ob_2bpp.inc
 !dos_port/assets/pikachu_tilemap.inc
+!dos_port/assets/yellow_intro_1_2bpp.inc
+!dos_port/assets/yellow_intro_2_2bpp.inc
+!dos_port/assets/yellow_intro_clouds_2bpp.inc
+!dos_port/assets/yellow_intro_tilemaps.inc
 !dos_port/assets/pokemon_logo_2bpp.inc
 !dos_port/assets/pokemon_logo_corner_2bpp.inc
 !dos_port/assets/pokemon_logo_tilemap.inc

@@ -277,3 +277,13 @@ Unkn_fa0aa:
     dw 0xb505, 0xc5e4, 0xd4db, 0xe1c6, 0xec83, 0xf4fa, 0xfb15, 0xfec4
     dw 0x0000, 0xfec4, 0xfb15, 0xf4fa, 0xec83, 0xe1c6, 0xd4db, 0xc5e4
     dw 0xb505, 0xa268, 0x8e3a, 0x78ad, 0x61f8, 0x4a50, 0x31f1, 0x1918
+
+; --- Yellow-intro gfx (B3.2b, gen_intro_gfx_inc.py; verified byte-exact vs the
+; pret gfx/intro/*.2bpp). Loaded to VRAM by InitYellowIntroGFXAndMusic (B3.2c);
+; the tilemaps are placed by scene 10. Flat program-image data. ---
+global YellowIntroGraphics1, YellowIntroGraphics2, YellowIntroCloudGFX
+global Unkn_f9b6e, Unkn_f9be6, Unkn_f9bf2
+%include "assets/yellow_intro_1_2bpp.inc"       ; YellowIntroGraphics1 (128 tiles)
+%include "assets/yellow_intro_2_2bpp.inc"       ; YellowIntroGraphics2 (256 tiles)
+%include "assets/yellow_intro_clouds_2bpp.inc"  ; YellowIntroCloudGFX (8 tiles)
+%include "assets/yellow_intro_tilemaps.inc"     ; Unkn_f9b6e/be6/bf2

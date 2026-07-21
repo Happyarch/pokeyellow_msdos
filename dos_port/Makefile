@@ -1663,6 +1663,11 @@ assets/debug_boot_names.inc: tools/generators/gen_debug_boot_names.py tools/gene
 
 src/movie/title.o: assets/debug_boot_names.inc
 
+# Yellow-intro gfx (menu-intro B3.2b) — committed incs from gen_intro_gfx_inc.py.
+src/engine/movie/intro_yellow.o: assets/yellow_intro_1_2bpp.inc \
+    assets/yellow_intro_2_2bpp.inc assets/yellow_intro_clouds_2bpp.inc \
+    assets/yellow_intro_tilemaps.inc
+
 src/data/hidden_events_data.o: assets/hidden_events.inc assets/hidden_item_coords.inc
 src/data/pickup_text.o: assets/pickup_text.inc
 
