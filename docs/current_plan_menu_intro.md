@@ -2578,7 +2578,7 @@ Oak’s cry remains silent by explicit scope decision. Every other cinematic aud
 - [x] `title`, `title_reentry`, `title_timeout`, `continue_seed`, `main_menu`, `oak_intro`, and `gamefreak_intro` pass. *(oak_intro id 29 PASS 2026-07-21; all others previously registered + PASS)*
 - [ ] All 18 Yellow-scene scenarios pass.
 - [ ] Native visual evidence is retained for every frame-yielding Yellow scene.
-- [ ] `fidelity`, `fidelity-full`, and `goldens-verify` pass.
+- [~] `fidelity`, `fidelity-full`, and `goldens-verify` pass. *(**goldens-verify PASSES** 2026-07-21 — all 29 committed goldens regenerate byte-identical from the ROM, no drift, incl. this session's oak_intro/soft_reset/title_timeout; fixed a harness bug where it always failed on the title_trace CSV recorder (`e8f9e68b` — now skips `*_trace`). `fidelity`/`fidelity-full` (the port-side goldencheck sweep) not run this session, but every scenario touched this session was individually goldencheck-PASS.)*
 - [ ] Human smoke acceptance is recorded under the defined standard.
 - [ ] Every observed failure has an automated regression or the required manual external-output record.
 - [x] Strict label and annotation lint reports no stale extern, malformed annotation, or duplicate provider. *(lint_pret_labels: 0 violations, verified 2026-07-21.)*
