@@ -1262,11 +1262,16 @@ B2 must not create a `PlayIntroScene` stub.
 > `Func_f98a2`/`Func_f98cb`, and `YellowIntro_NextScene`. faithdiff clean (stores
 > match 4/4, 5/5, 6/6); image builds; lint 0.
 >
+> **B3.2b done (2026-07-21, `d828d753`)** — the intro gfx assets (the gating
+> dependency): `gen_intro_gfx_inc.py` → `YellowIntroGraphics1/2` + `CloudGFX`
+> (PNG→2bpp, byte-exact vs the committed `gfx/intro/*.2bpp`) + the `Unkn_f9b6e/
+> be6/bf2` tilemaps, `%include`d into intro_yellow.asm. Image builds; lint 0.
+>
 > **Remaining B3**: `Func_fa06e` + the scene dispatch (`Func_f98fc` /
-> `Jumptable_f9906`), `PlayIntroScene`, `InitYellowIntroGFXAndMusic`, scenes
-> 0–17, `YellowIntro_Copy8BitSineWave` + its amp-4 wave, the intro gfx/tilemap
-> assets (`gfx/intro/*.2bpp` + tilemaps), `UI_YELLOW_INTRO` projection, per-scene
-> palettes/music/SFX. Detail in stigmergy `a4-4-oak-speech2-porting-plan`.
+> `Jumptable_f9906`), `PlayIntroScene`, `InitYellowIntroGFXAndMusic` (loads the
+> B3.2b gfx), scenes 0–17, `YellowIntro_Copy8BitSineWave` + its amp-4 wave,
+> `UI_YELLOW_INTRO` projection, per-scene palettes/music/SFX. Detail in stigmergy
+> `a4-4-oak-speech2-porting-plan`.
 
 #### Work
 
