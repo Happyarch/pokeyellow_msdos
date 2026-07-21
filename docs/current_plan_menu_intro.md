@@ -1160,15 +1160,19 @@ B2 must not create a `PlayIntroScene` stub.
 
 ### B2 — Game Freak splash
 
-> **B2 progress (2026-07-21):** the splash graphics are generated (`fb24333b`) —
-> `gen_title_gfx_inc.py` now emits `GameFreakIntro` (presents 13t + logo 6t + blank
-> 1t = 20t) and `FallingStar` (1t) under pret's labels (checked in like the title
-> gfx). Remaining: port `engine/movie/splash.asm` (`LoadShootingStarGraphics` /
-> `AnimateShootingStar` / `MoveDownSmallStars`) + the OAM data tables, projected
-> through `UI_SPLASH` / `PublishProjectedOAM`, with a `DEBUG_CINEMATIC_SPLASH` gate.
-> ⚠ The splash **timing trace** acceptance is mGBA-blocked in this environment
-> (see the A4.5.f note); porting + pixel verification proceed. Detail in stigmergy
-> `a4-4-oak-speech2-porting-plan`.
+> **B2 progress (2026-07-21) — the splash ANIMATION is ported and pixel-verified.**
+> `engine/movie/splash.asm` holds the full splash: the graphics (`fb24333b`), the OAM
+> data tables (`7db09d52`, byte-exact `dbsprite`), `LoadShootingStarGraphics`
+> (`a938454b`), `MoveDownSmallStars` + the per-frame `publish_splash_oam`
+> (`c99a6c99`), and `AnimateShootingStar` (`ece7812e`) — plus the missing shared
+> `CheckForUserInterruption` (`ea5c0584`). **Pixel-verified** via a
+> `DEBUG_CINEMATIC_SPLASH` gate (`56aa0470`, `pixelcheck.sh splash`): the big star
+> sweeps down-left over the Game Freak logo, OBJ projected + clipped to `UI_SPLASH`,
+> matte clean (0 outside), ink 509→433 as the star clears. The OBJ-projection
+> reconciliation is `publish_splash_oam` (`PublishProjectedOAM` 80,24) before each
+> frame wait. **Remaining B2** (not blocking): `PlayShootingStar` + `GameFreakIntro`
+> boot wiring (rides with B4), and the splash **timing trace** (⚠ mGBA-blocked here).
+> Detail in stigmergy `a4-4-oak-speech2-porting-plan`.
 
 #### Work
 
