@@ -61,6 +61,17 @@ ALIASES = {
     "GB_VCHARS0", "GB_VFONT", "GB_VCHARS2",      # VRAM sub-regions
     "GB_TILEMAP0", "GB_TILEMAP1",                # VRAM sub-regions
     "OW_MAP_GBADDR",           # legacy alias of OW_PALLET_BLK_GBADDR
+    # Members of the W_ANIMATED_OBJECTS_DATA block (menu-intro B1): they legally
+    # live inside its extent — it is one relocated pret union branch, not a
+    # foreign buffer landing in the middle of another.
+    "wAnimatedObjectStartTileOffsets", "wAnimatedObjectDataStructs",
+    "wNumLoadedAnimatedObjects", "wCurrentAnimatedObjectOAMBufferOffset",
+    "wAnimatedObjectSpawnStateDataPointer", "wAnimatedObjectFramesDataPointer",
+    "wAnimatedObjectJumptablePointer", "wAnimatedObjectOAMDataPointer",
+    "wCurAnimatedObjectOAMAttributes", "wCurrentAnimatedObjectVTileOffset",
+    "wCurrentAnimatedObjectXCoord", "wCurrentAnimatedObjectYCoord",
+    "wCurrentAnimatedObjectXOffset", "wCurrentAnimatedObjectYOffset",
+    "wAnimatedObjectGlobalYOffset", "wAnimatedObjectGlobalXOffset",
 }
 
 # Region markers: address-space landmarks, not buffers — never treated as

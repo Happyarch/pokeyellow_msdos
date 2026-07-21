@@ -1068,6 +1068,59 @@ W_TILEMAP_BACKUP2            equ 0xF100 ; wTileMapBackup2 (1000 B)
 ; 48×36 = 1728 bytes; DrawTileBlock writes here before crop to wTileMap.
 W_SURROUNDING_TILES          equ 0xE000 ; wSurroundingTiles = wTileMapBackup
 
+; --- Animated-object engine (menu-intro B1: engine/gfx/animated_objects.asm) ---
+; RELOCATED (port-only): pret places this WRAM0 union branch at 0xC508 (the
+; "OAM Buffer"/"Tilemap" union, 4th NEXTU: wAnimatedObjectsData). The port's
+; wTileMap is 40x25 = 1000 bytes and SWALLOWS 0xC508 (W_TILEMAP spans
+; 0xC3A0-0xC787), so — exactly as wShadowOAMBackup did — the block goes to free
+; echo RAM instead. It is intro-cinematic-only and never live at the same time
+; as the overworld buffers below it. 200 bytes: 0xF600-0xF6C7.
+;   Struct (16 B x 10, wAnimatedObject0..9), byte offsets used as raw literals in
+;   the engine (pret does the same): 0 Index, 1 FramesetID, 2 AnimSeqID(callback),
+;   3 TileID(VTileOffset), 4 XCoord, 5 YCoord, 6 XOffset, 7 YOffset, 8 Duration,
+;   9 DurationOffset, a FrameIndex, b..f FieldB..FieldF.
+; The engine indexes wShadowOAM (0xC300, kept at the pret address) by a LOW-byte
+; offset in wCurrentAnimatedObjectOAMBufferOffset — page-aligned, so the offset
+; adds directly to W_SHADOW_OAM in x86.
+; Pointer model (menu-intro B1/B3): the Spawn/Frames/OAMData tables are pure
+; DATA (2-/3-byte GB-pointer structures). B3 generates them into a GB-space blob
+; so the engine's pointer arithmetic (add hl,de x2/x3, 16-bit pointer reads)
+; stays byte-identical to pret — those three stay 16-bit GB pointers (dw). The
+; JUMPTABLE is different: its entries are callback CODE addresses, which in the
+; port are 32-bit flat x86 labels (link-time, not bakeable into a GB data blob),
+; so wAnimatedObjectJumptablePointer holds a 32-bit FLAT pointer and
+; ExecuteCurrentAnimatedObjectCallback dispatches with a x4 stride
+; (data-model DEVIATION, annotated in animated_objects.asm). Widening that one
+; slot 2->4 bytes grows the block 200->202 B; safe — this is engine-internal
+; runtime scratch, not Gen-1 save/party data (the byte-identical rule is scoped
+; to mon structs).
+W_ANIMATED_OBJECTS_DATA         equ 0xF600 ; wAnimatedObjectsData (block base)
+W_ANIMATED_OBJECTS_DATA_SIZE    equ 0xCA   ; 202 B, ends 0xF6CA (wAnimatedObjectsDataEnd)
+wAnimatedObjectStartTileOffsets equ 0xF600 ; ds 10*2 (20 B)
+wAnimatedObjectDataStructs      equ 0xF614 ; wAnimatedObject0 (10 x 16 = 160 B)
+wNumLoadedAnimatedObjects       equ 0xF6B4 ; db — running spawn counter → struct Index
+wCurrentAnimatedObjectOAMBufferOffset equ 0xF6B5 ; ds 3 (LOW-byte shadow-OAM cursor)
+wAnimatedObjectSpawnStateDataPointer  equ 0xF6B8 ; dw → per-set spawn table (GB blob)
+wAnimatedObjectFramesDataPointer      equ 0xF6BA ; dw → per-set frame-script table (GB blob)
+wAnimatedObjectJumptablePointer       equ 0xF6BC ; dd → per-set callback jumptable (FLAT, port)
+wAnimatedObjectOAMDataPointer         equ 0xF6C0 ; dw → per-set OAM template table (GB blob)
+wCurAnimatedObjectOAMAttributes equ 0xF6C2 ; db — flip/prio/pal scratch for current frame
+wCurrentAnimatedObjectVTileOffset equ 0xF6C3 ; db
+wCurrentAnimatedObjectXCoord    equ 0xF6C4 ; db
+wCurrentAnimatedObjectYCoord    equ 0xF6C5 ; db
+wCurrentAnimatedObjectXOffset   equ 0xF6C6 ; db
+wCurrentAnimatedObjectYOffset   equ 0xF6C7 ; db
+wAnimatedObjectGlobalYOffset    equ 0xF6C8 ; db
+wAnimatedObjectGlobalXOffset    equ 0xF6C9 ; db
+; Yellow-intro scene state (menu-intro B3 will grow this; the engine already
+; reads wYellowIntroCurrentScene, pret alias wc634, in UpdateCurrentAnimated-
+; ObjectFrame: cp $7 skips the per-OBJ attribute write during scene 7).
+; RELOCATED: pret 0xC634 is inside the port's extended wTileMap too.
+wYellowIntroCurrentScene        equ 0xF6CA ; db (= wc634)
+wc634                           equ 0xF6CA ; alias
+wYellowIntroSceneTimer          equ 0xF6CB ; db (= wc635)
+wc635                           equ 0xF6CB ; alias
+
 ; Overworld map block buffer (2304 bytes). Worst case is Route 17 / Route 23 (10x72):
 ; (10 + 2*7) * (72 + 2*7) = 24 * 86 = 2064 bytes at MAP_BORDER=7, which overflows the old
 ; 2048. Grown to 0x900; end = 0xF100, and nothing is used until GB_OAM at 0xFE00.

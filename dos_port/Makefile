@@ -280,6 +280,7 @@ GAME_SRCS := \
     src/home/play_time.asm \
     src/home/sprites.asm \
     src/engine/gfx/sprite_oam.asm \
+    src/engine/gfx/animated_objects.asm \
     src/engine/gfx/mon_icons.asm \
     src/engine/gfx/palettes.asm \
     src/home/load_font.asm \
