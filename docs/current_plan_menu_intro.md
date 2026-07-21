@@ -1172,7 +1172,7 @@ B2 must not create a `PlayIntroScene` stub.
 - [x] Inventory required WRAM and HRAM. *(B1.1 — no HRAM; WRAM block enumerated)*
 - [x] Add exact aliases or correctly sized regions. *(0xF600 block + wc634)*
 - [x] Run `audit_memmap.py` after memory-map changes. *(clean, 47 regions)*
-- [ ] Generate immutable frame, spawn, OAM, and sine data. *(B3 — GB-space blob; see model note)*
+- [~] Generate immutable frame, spawn, OAM, and sine data. *(frame/OAM/spawn DONE — 73f95c3c, src/data/sprite_anims/intro_anim_data.asm, GB-space blob at 0xF700 copied flat→GB by CopyYellowIntroAnimatedObjectData; SINE rides B3 — it lives in the scene callbacks, not the object tables)*
 - [x] Keep code-address tables in `.asm`. *(jumptable = flat `dd Label`, per the DEVIATION)*
 - [x] Preserve masks, scripts, timers, and sine arithmetic. *(frame-script interpreter faithful; sine lives in scene callbacks = B3)*
 - [ ] Publish canonical OAM through `PublishProjectedOAM`. *(B3 scene driver; pattern proven in B2)*
