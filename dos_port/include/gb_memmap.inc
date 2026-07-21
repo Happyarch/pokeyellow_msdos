@@ -787,6 +787,14 @@ H_SPRITE_ANIM_FRAME_COUNTER   equ 0xFFC1 ; hSpriteAnimFrameCounter
 ; address not load-bearing here). If per-scanline effects are ever emulated
 ; (surfing-wobble scenes 6/7), this needs the real STAT mechanism, not this byte.
 H_LCDC_POINTER                equ 0xFFC2 ; hLCDCPointer (inert in the port)
+; Generic VBlank tile-transfer request (yellow-intro scenes 7/11 +
+; Request7TileTransferFromC810ToC710). INERT: the port has no generic VBlank tile
+; copy (only VBlankCopyBgMap handles BG-map rows), so these request bytes are
+; written faithfully but never consumed — the intro's LY-wave / cloud tile
+; animation does not play. Free HRAM slots 0xFFC6-0xFFCA.
+hVBlankCopySize               equ 0xFFC6 ; db
+hVBlankCopySource             equ 0xFFC7 ; dw
+hVBlankCopyDest               equ 0xFFC9 ; dw
 H_LOADED_ROM_BANK        equ 0xFFB8     ; hLoadedROMBank
 H_AUTO_BG_TRANSFER_EN    equ 0xFFBA     ; hAutoBGTransferEnabled
 H_AUTO_BG_TRANSFER_DEST  equ 0xFFBC     ; hAutoBGTransferDest (2 bytes, lo/hi)
@@ -1146,6 +1154,10 @@ W_INTRO_ANIM_DATA_SIZE          equ 0x2A0  ; reservation (actual ~0x291), ends <
 ; LY overrides, so this buffer is written faithfully but never consumed (inert).
 W_LY_OVERRIDES_BUFFER           equ 0xFA00 ; wLYOverridesBuffer (ds 0x100)
 W_LY_OVERRIDES_BUFFER_SIZE      equ 0x100  ; 256 B, ends 0xFB00 (< GB_OAM 0xFE00)
+; wLYOverrides — pret's consumed per-scanline buffer, 0x100 before the source
+; buffer. The port does not emulate per-scanline LY, so only its HIGH byte is
+; referenced (by Request7TileTransferFromC810ToC710, into inert HRAM), never read.
+W_LY_OVERRIDES                  equ W_LY_OVERRIDES_BUFFER - 0x100 ; 0xF900 (inert)
 
 ; Overworld map block buffer (2304 bytes). Worst case is Route 17 / Route 23 (10x72):
 ; (10 + 2*7) * (72 + 2*7) = 24 * 86 = 2064 bytes at MAP_BORDER=7, which overflows the old

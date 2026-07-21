@@ -263,6 +263,55 @@ YellowIntroScene6:
     call YellowIntro_NextScene
     ret
 
+; Scene 7 — "surf wait": scroll the water right (hSCX += 2), circularly roll the
+; LY-override wave buffer left by one (the wobble source), and request the 7-tile
+; VBlank copy — until the timer expires. The scroll and timing are real; the LY
+; wave and its VBlank transfer are inert in the port (no per-scanline LY / generic
+; VBlank tile copy), so the buffer is maintained faithfully but the wobble is not
+; visible.
+YellowIntroScene7:
+    call YellowIntro_CheckFrameTimerDecrement
+    jc .expired                                    ; jr c, .expired
+    add byte [ebp + H_SCX], 2                       ; ld hl,hSCX / inc [hl] / inc [hl]
+    mov al, [ebp + W_LY_OVERRIDES_BUFFER]           ; ld a, [hl]  (save buffer[0])
+    push eax                                        ; push af
+    lea esi, [ebp + W_LY_OVERRIDES_BUFFER]          ; ld hl, wLYOverridesBuffer   (dest)
+    lea edi, [ebp + W_LY_OVERRIDES_BUFFER + 1]      ; ld de, wLYOverridesBuffer+1 (src)
+    mov cl, 0xff                                    ; ld c, $ff
+.shift_loop:
+    mov al, [edi]                                   ; ld a, [de]
+    inc edi                                         ; inc de
+    mov [esi], al                                   ; ld [hli], a
+    inc esi
+    dec cl                                          ; dec c
+    jnz .shift_loop
+    pop eax                                         ; pop af
+    mov [esi], al                                   ; ld [hl], a  (buffer[255] = saved)
+    call Request7TileTransferFromC810ToC710
+    ret
+.expired:
+    call YellowIntro_MaskCurrentAnimatedObjectStruct
+    call YellowIntro_NextScene
+    ret
+
+; Request7TileTransferFromC810ToC710 — queue a 7-tile VBlank copy of the rolled
+; wave data (wLYOverridesBuffer+$10 -> wLYOverrides+$10). Ported verbatim, but INERT:
+; the port has no generic VBlank tile copy, so the request bytes are written and
+; never consumed.
+; DEVIATION{class=HAL; pret=engine/movie/intro_yellow.asm:Request7TileTransferFromC810ToC710; behavior=the hVBlankCopySource/Dest/Size request is written but never acted on because the port has no generic VBlank tile copy (only VBlankCopyBgMap for BG-map rows), so the surfing LY-wave tile animation does not play; evidence=the port composites from tile_cache and does not emulate the per-scanline LY overrides this transfer feeds; lifetime=deferred VBlank tile-transfer HAL}
+Request7TileTransferFromC810ToC710:
+    mov al, 0x10
+    mov [ebp + hVBlankCopySource], al               ; ldh [hVBlankCopySource], a
+    mov al, (W_LY_OVERRIDES_BUFFER >> 8)            ; ld a, HIGH(wLYOverridesBuffer)
+    mov [ebp + hVBlankCopySource + 1], al           ; ldh [hVBlankCopySource+1], a
+    mov al, 0x10
+    mov [ebp + hVBlankCopyDest], al                 ; ldh [hVBlankCopyDest], a
+    mov al, (W_LY_OVERRIDES >> 8)                   ; ld a, HIGH(wLYOverrides)
+    mov [ebp + hVBlankCopyDest + 1], al             ; ldh [hVBlankCopyDest+1], a
+    mov al, 0x7
+    mov [ebp + hVBlankCopySize], al                 ; ldh [hVBlankCopySize], a
+    ret
+
 ; Scene 8 — "running Pikachu 3": identical layout to scene 4, spawning animated
 ; object $3 instead of $2. No CGB branch here in pret, so no DMG/CGB split.
 YellowIntroScene8:
@@ -352,6 +401,40 @@ YellowIntroScene10:
     add esi, SCREEN_TILES_W                        ; ld bc,$20 / add hl,bc  (port stride 40)
     dec bh                                         ; dec b  (rows)
     jnz .fill_row
+    ret
+
+; Scene 11 — "clouds": every 8th frame, queue a VBlank copy of 4 cloud tiles
+; (alternating halves of YellowIntroCloudGFX by bit 3 of the timer) into vChars
+; $9600 — the cloud tile animation. INERT in the port (no generic VBlank tile
+; copy), so the request is written faithfully but the clouds do not cycle.
+; DEVIATION{class=HAL; pret=engine/movie/intro_yellow.asm:YellowIntroScene11; behavior=the hVBlankCopySource/Dest/Size cloud-tile request is written but never acted on because the port has no generic VBlank tile copy, so the cloud tiles do not animate; evidence=the port composites from tile_cache and does not run the generic VBlank tile transfer this scene queues; lifetime=deferred VBlank tile-transfer HAL}
+YellowIntroScene11:
+    call YellowIntro_CheckFrameTimerDecrement
+    jc .expired                                    ; jr c, .expired
+    mov al, [ebp + wYellowIntroSceneTimer]         ; ld a, [wYellowIntroSceneTimer]
+    and al, 0x7                                     ; and $7
+    jnz .ret                                        ; ret nz  (only every 8th frame)
+    mov al, [ebp + wYellowIntroSceneTimer]         ; ld a, [wYellowIntroSceneTimer]
+    and al, 0x8                                     ; and $8
+    shl al, 1                                       ; sla a
+    shl al, 1                                       ; sla a
+    shl al, 1                                       ; sla a   (al = 0 or $40)
+    movzx edx, al                                   ; ld e,a / ld d,$0
+    lea esi, [YellowIntroCloudGFX + edx]           ; ld hl, YellowIntroCloudGFX / add hl,de
+    mov eax, esi
+    mov [ebp + hVBlankCopySource], al               ; ld a,l / ldh [hVBlankCopySource], a
+    mov [ebp + hVBlankCopySource + 1], ah           ; ld a,h / ldh [hVBlankCopySource+1], a
+    xor al, al                                      ; xor a
+    mov [ebp + hVBlankCopyDest], al                 ; ldh [hVBlankCopyDest], a
+    mov al, 0x96                                    ; ld a, $96
+    mov [ebp + hVBlankCopyDest + 1], al             ; ldh [hVBlankCopyDest+1], a  ($9600)
+    mov al, 0x4                                     ; ld a, $4
+    mov [ebp + hVBlankCopySize], al                 ; ldh [hVBlankCopySize], a
+.ret:
+    ret
+.expired:
+    call YellowIntro_MaskCurrentAnimatedObjectStruct
+    call YellowIntro_NextScene
     ret
 
 ; Scene 12 — "closing pan": lay out the framed BG (the Func_f9e5f pattern, inlined
@@ -1048,11 +1131,11 @@ Jumptable_f9906:
     dd YellowIntroScene4
     dd YellowIntroScene5
     dd YellowIntroScene6
-    dd YellowIntro_NextScene        ; scene 7  (unported)
+    dd YellowIntroScene7
     dd YellowIntroScene8
     dd YellowIntroScene9
     dd YellowIntroScene10
-    dd YellowIntro_NextScene        ; scene 11 (unported)
+    dd YellowIntroScene11
     dd YellowIntroScene12
     dd YellowIntroScene13
     dd YellowIntroScene14
