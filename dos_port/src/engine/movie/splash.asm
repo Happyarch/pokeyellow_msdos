@@ -27,6 +27,15 @@ extern CheckForUserInterruption      ; home/check_user_interruption.asm — BL f
 extern PublishProjectedOAM           ; engine/gfx/sprite_oam.asm — project wShadowOAM to the canvas
 extern PlaySound                     ; home/audio.asm — AL = sound id
 extern CopyData                      ; home/copy_data.asm — ESI/EDX EBP-relative, BX count
+extern RunPaletteCommand             ; home/palettes.asm — BH = SET_PAL_* command
+extern UpdateCGBPal_BGP              ; home/cgb_palettes.asm — commit rBGP to the DAC
+extern ClearSprites                  ; home/sprites.asm — zero shadow OAM + count
+extern Delay3                        ; video/frame.asm — wait 3 frames
+extern DelayFrames                   ; video/frame.asm — BL = frame count
+extern FillMemory                    ; home/copy_data.asm — ESI dest, BX count, AL value
+extern MovieBeginSurface             ; movie_projection.asm — black-matte cinematic surface
+extern MovieEndSurface               ; movie_projection.asm — tear down the surface
+extern g_tilecache_dirty             ; ppu.asm — arm the tile-cache rebuild
 
 %include "assets/audio_constants.inc"   ; SFX_SHOOTING_STAR
 
@@ -329,37 +338,70 @@ IntroPlaceBlackTiles:
     jnz .loop
     ret
 
-%ifdef DEBUG_CINEMATIC_SPLASH
 ; ---------------------------------------------------------------------------
-; RunSplashTest — B2 pixel harness. Establish the cinematic surface (signed BG tile
-; mode + pinned scroll), build the $00/$ff bar tiles in vChars2, draw the framing
-; bars, load the logo tiles, and run AnimateShootingStar. AUTOKEY_QUIET photographs
-; a frame at AUTOKEY_DUMP_FRAME. In: EBP = GB base. Never returns.
+; PlayShootingStar — the Game Freak "shooting star" splash (pret engine/movie/
+; intro.asm:PlayShootingStar). Sets the intro palette, draws the framing bars, loads
+; the logo tiles, and runs the shooting-star animation on the cinematic surface, then
+; tears it down.
+;
+; TODO(B2 copyright screen): pret opens with `farcall LoadCopyrightAndTextBoxTiles`
+; then `DelayFrames 180` (the ©1995-1999 Nintendo/Creatures/GAME FREAK screen). That
+; is the last B2 piece — its tile-index layout (copyright.2bpp interleaved with
+; font_extra at vChars2 $60) needs porting + pixel verification and is NOT yet done,
+; so this routine currently opens straight on the animation. B2 is not complete until
+; it lands. (Deliberately a plain TODO, not a DEVIATION — it is unfinished work.)
+;
+; DEVIATION{class=HAL; pret=engine/movie/intro.asm:PlayShootingStar; behavior=the GB screen/LCD control (ClearScreen, DisableLCD/EnableLCD + rLCDC window/BG-map bits) is dropped in favour of the cinematic surface, and IO_LCDC is set only to select signed BG tile addressing; evidence=the port has no LCD and composites a matte surface with its own loop, so those hardware writes have no counterpart; lifetime=permanent flat-memory/HAL model}
 ; ---------------------------------------------------------------------------
-extern MovieBeginSurface             ; movie_projection.asm
-extern DelayFrame                    ; video/frame.asm
-extern g_tilecache_dirty             ; ppu.asm — arm the tile-cache rebuild
-global RunSplashTest
-RunSplashTest:
-    call MovieBeginSurface                ; black matte surface + g_obj_clip
-    mov byte [ebp + IO_LCDC], 0xE3        ; signed BG tile addressing (bit4=0) — bar tiles live in vChars2
+global PlayShootingStar
+PlayShootingStar:
+    call MovieBeginSurface                ; PORT: black-matte cinematic surface
+    mov bh, 0x0C                          ; ld b, SET_PAL_GAME_FREAK_INTRO
+    call RunPaletteCommand
+    mov al, 0x1B                          ; ldpal a, SHADE_BLACK,SHADE_DARK,SHADE_LIGHT,SHADE_WHITE
+    mov [ebp + IO_BGP], al                ; ldh [rBGP], a  (inverted splash palette)
+    call UpdateCGBPal_BGP
+    mov byte [ebp + IO_LCDC], 0xE3        ; signed BG tile addressing (bit4=0) — bar/logo tiles in vChars2
     mov byte [ebp + H_SCX], 0             ; splash does not scroll — pin the surface origin
     mov byte [ebp + H_SCY], 0
-    ; build the bar tiles: vChars2 tile 0 = $00 (color 0), tile 1 = $ff (color 3)
-    lea edi, [ebp + GB_VCHARS2]
-    xor eax, eax
-    mov ecx, 16
-    rep stosb                             ; tile 0 = $00
+    mov byte [ebp + wCurOpponent], 0      ; xor a / ld [wCurOpponent], a
+    ; build the bar tiles: vChars2 tile 0 = $00 (color 0), tile 1 = $ff (color 3 = white)
+    mov esi, GB_VCHARS2                    ; ld hl, vChars2
+    mov bx, 0x10
+    xor al, al
+    call FillMemory                       ; tile 0 = $00
+    mov esi, GB_VCHARS2 + 0x10            ; ld hl, vChars2 + $10
+    mov bx, 0x10
     mov al, 0xFF
-    mov ecx, 16
-    rep stosb                             ; tile 1 = $ff
+    call FillMemory                       ; tile 1 = $ff
     mov byte [g_tilecache_dirty], 1       ; VRAM tile data changed -> rebuild decode cache
-    call IntroDrawBlackBars               ; framing bars on GB rows 0-3 & 14-17
-    mov esi, GB_VFONT                     ; logo -> vChars1 tile $00 (OAM tiles $80..)
+    call IntroDrawBlackBars               ; white framing bars on GB rows 0-3 & 14-17
+    mov esi, GB_VFONT                     ; logo -> vChars1 (OAM tiles $80..)
     mov edx, GameFreakIntro
-    mov bl, GAMEFREAKINTRO_TILES          ; 20 tiles
+    mov bl, GAMEFREAKINTRO_TILES
     call CopyVideoData
-    call AnimateShootingStar              ; publishes OAM each frame; AutoKeyDrive dumps
+    mov bl, 64                            ; ld c, 64
+    call DelayFrames
+    call AnimateShootingStar              ; farcall in pret; direct here (CF = user skip)
+    jc .next                              ; jr c, .next (skip the tail delay on interrupt)
+    mov bl, 40                            ; ld c, 40
+    call DelayFrames
+.next:
+    call IntroClearMiddleOfScreen
+    call ClearSprites
+    call MovieEndSurface                  ; PORT: tear down the surface
+    call Delay3
+    ret
+
+%ifdef DEBUG_CINEMATIC_SPLASH
+; ---------------------------------------------------------------------------
+; RunSplashTest — B2 pixel harness: run the real PlayShootingStar and park.
+; AUTOKEY_QUIET photographs a frame at AUTOKEY_DUMP_FRAME. Never returns.
+; ---------------------------------------------------------------------------
+extern DelayFrame                    ; video/frame.asm
+global RunSplashTest
+RunSplashTest:
+    call PlayShootingStar                 ; the real B2 orchestration; returns after teardown
 .hang:
     call DelayFrame
     jmp .hang

@@ -1655,6 +1655,10 @@
       "port_file": "dos_port/src/engine/movie/splash.asm",
       "why": "pret puts the Game Freak logo GFX (GameFreakIntro INCBIN) in intro.asm, but only the splash uses it. The port generates it (gen_title_gfx_inc.py) and %includes it in splash.asm alongside the OAM tables + shooting-star routines that consume it \u2014 menu-intro B2."
     },
+    "PlayShootingStar": {
+      "port_file": "dos_port/src/engine/movie/splash.asm",
+      "why": "pret engine/movie/intro.asm holds PlayShootingStar (the Game Freak splash orchestration); the port keeps all splash code in splash.asm alongside AnimateShootingStar which it calls - menu-intro B2. Its GB screen/LCD-control drops are on the HAL DEVIATION at the routine; the copyright-screen call is a plain TODO (unfinished B2 work)."
+    },
     "IntroDrawBlackBars": {
       "port_file": "dos_port/src/engine/movie/splash.asm",
       "why": "pret engine/movie/intro.asm holds the Game Freak splash's framing helpers; the port keeps all splash code in splash.asm - menu-intro B2. The vBGMap0/vBGMap1 writes redirect to the single W_TILEMAP surface at the cinematic BG origin (projection DEVIATION on the routine)."
