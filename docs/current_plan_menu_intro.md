@@ -1540,6 +1540,19 @@ second BG map (vBGMap1) writes collapse onto the single `W_TILEMAP` (projection)
 The exact bar colour (white vs black) is **unverified pending an mGBA golden**
 (blocked) — replicate pret's tile writes rather than guess the appearance.
 
+**Tile-addressing requirement (verified 2026-07-21).** The splash's bar/copyright
+tiles are loaded to `vChars2` (`$9000`) and referenced by BG tile index (`1` for
+the bar, `$60`-`$7b` for the copyright), which only resolve there under **`$8800`
+signed** tile addressing (index `1` → `$9010`, index `$60`/96 → `$9600`). The port
+compositor **does** honor this: `render_bg` reads `IO_LCDC` bit 4 each frame into
+`tiledata_mode` (0 = signed, base `$9000`) and rebuilds `id_cache_lut` accordingly
+(the title already relies on it — its copyright tiles at `$8E00` are addressed via
+signed indices `$e0+`). **So the faithful `PlayShootingStar` MUST set `IO_LCDC` bit
+4 = 0 (e.g. `0xe3`, as `Func_f9e9a` does for the intro)** — that write is the port's
+real equivalent of pret's `EnableLCD` + LCDC setup (a projection requirement), not a
+droppable HAL call. If left unsigned, index `1` would render `vChars0` tile 1, not
+the bar tile.
+
 **Process note:** a first pass ported `PlayShootingStar` as a thin core that
 *dropped* the black bars ("subsumed") and *deferred* the copyright screen behind a
 `class=temporary` DEVIATION. Both were rejected as rubberstamping — a deferred
