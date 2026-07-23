@@ -83,8 +83,30 @@ LoadCopyrightTiles:
     mov eax, CopyrightTextString                                   ; ld de, CopyrightTextString (flat src)
     jmp PlaceString                                                ; jp PlaceString
 
+; ---------------------------------------------------------------------------
+; CopyDebugName — copy one NAME_LENGTH debug boot name (pret engine/movie/
+; title.asm:CopyDebugName: ld bc, NAME_LENGTH / jp CopyData; the source is
+; program-image data here, so the CopyData tail is a flat rep movsb).
+; In: ESI = flat source name, EDI = flat dest (EBP-biased). Clobbers ECX/ESI/EDI.
+; ---------------------------------------------------------------------------
+NAME_LENGTH equ 11                   ; wPlayerName / wRivalName field size
+global CopyDebugName
+CopyDebugName:
+    mov ecx, NAME_LENGTH               ; ld bc, NAME_LENGTH
+    rep movsb                          ; jp CopyData
+    ret
+
 section .data
 align 4
+
+; Debug player/rival names (pret charmap encoding), Tier-1 generated data at its
+; pret mirror (pret engine/movie/title.asm holds DebugNewGamePlayerName/RivalName).
+; Copied to W_PLAYER_NAME / W_RIVAL_NAME by PrepareTitleScreen (movie/title.asm)
+; and PrepareOakSpeech (oak_speech.asm). The three labels MUST stay contiguous at
+; pret's exact lengths: the NAME_LENGTH(11) copies deliberately overrun, so
+; wPlayerName really holds "NINTEN@SONY" on hardware — the golden caught the
+; padded-to-11 version as wrong. See tools/generators/gen_debug_boot_names.py.
+%include "assets/debug_boot_names.inc"   ; DebugNewGame{Player,Rival}Name + DebugNameTail
 
 ; Copyright-screen tile-index layout — a byte-exact mirror of pret title.asm's own
 ; hand-authored CopyrightTextString (`db $60,$61,... / next ... / db "@"`). Three lines

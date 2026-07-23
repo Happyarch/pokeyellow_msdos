@@ -40,7 +40,7 @@ extern FlagAction                       ; ESI=array base, CL=index, BH=action
 extern AddNTimes                        ; ESI=base, BX=stride, AL=count → ESI advanced
 extern LoadEnemyMonFromParty            ; load wEnemyMons[wWhichPokemon] → enemy battle mon
 extern PrintEmptyString
-extern SaveScreenTilesToBuffer1
+extern SaveScreenTilesToBuffer1         ; src/home/tilemap.asm
 extern ClearSprites
 extern DrawHUDsAndHPBars                ; redraw enemy + player HUD/HP bars
 extern PrintBattleText                  ; EAX = flat battle-text stream

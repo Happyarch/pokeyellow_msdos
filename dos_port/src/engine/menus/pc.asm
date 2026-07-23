@@ -74,8 +74,8 @@ extern text_msgbox                   ; home/text.asm — the active msgbox proje
 extern msgbox_dialog                 ; home/text.asm — the standard bottom dialog box
 extern PlaySound                     ; home/audio.asm — In: AL = sound id
 extern WaitForSoundToFinish          ; home/audio.asm
-extern SaveScreenTilesToBuffer2      ; movie/title.asm — wTileMap → wTileMapBackup2
-extern LoadScreenTilesFromBuffer2    ; movie/title.asm — wTileMapBackup2 → wTileMap
+extern SaveScreenTilesToBuffer2      ; src/home/tilemap.asm
+extern LoadScreenTilesFromBuffer2    ; src/home/tilemap.asm
 extern ReloadMapData                 ; home/reload_tiles.asm
 extern UpdateSprites                 ; engine/overworld/movement.asm
 extern Delay3                        ; video/frame.asm

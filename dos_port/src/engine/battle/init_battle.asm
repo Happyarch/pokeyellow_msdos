@@ -93,7 +93,7 @@ extern LoadBattleMonFromParty            ; faint_leaves.asm — build wBattleMon
 extern DrawPlayerRedBackPic_Stub         ; home/pics.asm — player trainer (Red) back pic
 extern LoadMonBackPic                    ; home/pics.asm — generic send-out back pic (MonBackPics)
 extern SlideBattlePicsIn                 ; home/pics.asm — silhouette slide-in
-extern SaveBattleScreen                  ; battle_menu.asm — snapshot clean screen
+extern SaveBattleScreen                  ; src/home/tilemap.asm — alias of the Buffer1 pair
 extern DrawBattlePokeballs               ; pokeballs.asm — party-status ball row
 extern WaitForAPress                     ; battle_menu.asm
 extern HideBattlePokeballs               ; pokeballs.asm

@@ -42,8 +42,8 @@ extern PrintText                        ; home/window.asm — In: ESI = text str
 extern text_msgbox                      ; home/text.asm — the active msgbox projection
 extern msgbox_dialog                    ; home/text.asm — the standard bottom dialog box
 extern YesNoChoice                      ; home/yes_no.asm — sets [wCurrentMenuItem]
-extern SaveScreenTilesToBuffer2         ; movie/title.asm — wTileMap → wTileMapBackup2
-extern LoadScreenTilesFromBuffer2       ; movie/title.asm — wTileMapBackup2 → wTileMap
+extern SaveScreenTilesToBuffer2         ; src/home/tilemap.asm
+extern LoadScreenTilesFromBuffer2       ; src/home/tilemap.asm
 extern hide_window                      ; ppu/ppu.asm — drop the dialog window layer
 extern DisplayDexRating                 ; oaks_pc_stubs.asm SEAM (pokédex package)
 

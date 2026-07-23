@@ -77,7 +77,7 @@ global PushBoulderDownMovementData
 global PushBoulderLeftMovementData
 global PushBoulderRightMovementData
 
-extern IsSpriteInFrontOfPlayer      ; src/engine/overworld/overworld.asm — sets H_SPRITE_INDEX to
+extern IsSpriteInFrontOfPlayer      ; src/home/overworld.asm — sets H_SPRITE_INDEX to
                                     ; the slot in front of the player (ported, overworld-events
                                     ; Stage 4). NOTE the port's bespoke IsNPCAtTargetBlock is a
                                     ; SEPARATE realization of pret's sprite scan for collision and

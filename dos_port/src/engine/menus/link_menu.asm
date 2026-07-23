@@ -101,8 +101,8 @@ extern DelayFrame               ; video/frame.asm
 extern DelayFrames              ; video/frame.asm — In: BL = frame count
 extern Delay3                   ; video/frame.asm
 extern UpdateSprites            ; engine/overworld/movement.asm
-extern SaveScreenTilesToBuffer1     ; engine/battle/battle_menu.asm (pret home/vcopy.asm)
-extern LoadScreenTilesFromBuffer1   ; engine/battle/battle_menu.asm (pret home/vcopy.asm)
+extern SaveScreenTilesToBuffer1     ; src/home/tilemap.asm
+extern LoadScreenTilesFromBuffer1   ; src/home/tilemap.asm (pret home/tilemap.asm)
 
 ; --- serial: ; TODO-HW: network HAL — stubs in src/home/serial_stubs.asm ----
 extern Serial_ExchangeByte

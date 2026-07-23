@@ -1,11 +1,18 @@
-; intro_yellow.asm — the Yellow intro's animated-object behavior callbacks.
+; intro_yellow.asm — the complete Yellow intro (menu-intro B3).
 ;
-; Faithful translation of the animated-object jumptable + callbacks + sine
-; helpers from pret engine/movie/intro_yellow.asm (menu-intro B3.1). These are
-; the per-object behaviors ExecuteCurrentAnimatedObjectCallback dispatches to
-; (via YellowIntro_AnimatedObjectJumptable). The scene engine (PlayIntroScene,
-; InitYellowIntroGFXAndMusic, scene dispatch 0-17, Func_fa06e, gfx/tilemaps)
-; rides later B3 increments; this file will grow to hold them.
+; Faithful translation of pret engine/movie/intro_yellow.asm: the scene engine
+; (PlayIntroScene, InitYellowIntroGFXAndMusic, all 18 YellowIntroScene0..17
+; handlers via Jumptable_f9906, Func_fa06e and the flying-Pikachu helpers), the
+; animated-object jumptable + behavior callbacks
+; (ExecuteCurrentAnimatedObjectCallback via YellowIntro_AnimatedObjectJumptable),
+; and the sine helpers. The frame/OAM/spawn data blob lives in
+; data/sprite_anims/intro_anim_data.asm (single GB base for the flat->GB copy).
+;
+; The pret-only bank thunks Bank3E_CopyData / Bank3E_FillMemory are not defined
+; here: Bank3E_CopyData is inlined at its one caller (DEVIATION at
+; YellowIntro_Copy8BitSineWave), and Bank3E_FillMemory — pret's in-bank copy of
+; home FillMemory, byte-identical logic — is realized by the shared home
+; FillMemory (banking; every call site comments the pret name).
 ;
 ; Register map (as reached from the engine): EBX = current-struct base (pret BC),
 ; ESI = HL, EDX = DE, AL = A, EBP = GB base. Struct byte offsets are raw literals
@@ -701,9 +708,8 @@ Func_fa06e:
 ; ---------------------------------------------------------------------------
 ; Func_f98fc — dispatch to the current intro scene. jmp esi follows Func_fa06e's
 ; flat pointer (data-model DEVIATION annotated on Func_fa06e), mirroring pret's
-; `jp hl`. Jumptable_f9906 entries for scenes not yet ported point at
-; YellowIntro_NextScene so the intro auto-advances past them (temporary scaffold;
-; repoint each as its scene lands — B3.2d milestone).
+; `jp hl`. All 18 Jumptable_f9906 entries point at their real
+; YellowIntroScene0..17 handlers (the B3.2 auto-advance scaffold is gone).
 ; ---------------------------------------------------------------------------
 Func_f98fc:
     mov al, [ebp + wYellowIntroCurrentScene]       ; ld a, [wYellowIntroCurrentScene]

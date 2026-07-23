@@ -83,7 +83,7 @@ extern RemoveFaintedPlayerMon          ; NEEDS-INTEGRATION (see block above) —
 extern AnyPartyAlive                   ; src/home/wild_encounter_check.asm — out: DH = OR of all party HP bytes (nz => someone alive)
 extern PrintBattleText                 ; src/engine/battle/core.asm — in: EAX = flat ptr to battle_text.inc stream
 extern PrintEmptyString                ; src/engine/battle/battle_exp_stubs.asm (currently a bare ret stub)
-extern SaveScreenTilesToBuffer1        ; src/engine/battle/battle_menu.asm — no args, snapshots screen
+extern SaveScreenTilesToBuffer1        ; src/home/tilemap.asm
 extern IsItemInBag                     ; src/home/item_predicates.asm — in: BH = item id; out: ZF (1 = not in bag), AL = qty
 extern GainExperience                  ; src/engine/battle/experience.asm — no args, reads wBoostExpByExpAll/wPartyGainExpFlags
 extern SlideDownFaintedMonPic          ; NEEDS-INTEGRATION (see block above) — central ANIMATION=OFF stub, missing

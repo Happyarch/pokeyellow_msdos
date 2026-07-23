@@ -55,3 +55,7 @@ CeladonPrizeMenu:
 global CableClubNPC
 CableClubNPC:
     ret
+
+; DoClearSaveDialogue lives at its pret mirror, engine/movie/oak_speech/
+; clear_save.asm (a temporary-DEVIATION body, not a stub — pret reaches it with
+; farjp, so a ret-only stub cannot model it).

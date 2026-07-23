@@ -48,7 +48,7 @@ extern MimicLearnedMoveText
 ; table, but real/linked, not effect-private — called per §3, never redefined here) ---
 extern GetMoveName                  ; home/names.asm — [wNamedObjectIndex] → wNameBuffer
 extern MoveSelectionMenu            ; engine/battle/core.asm — see TODO(master) below
-extern LoadScreenTilesFromBuffer1   ; engine/battle/battle_menu.asm
+extern LoadScreenTilesFromBuffer1   ; src/home/tilemap.asm
 
 ; ===========================================================================
 ; MimicEffect_ — copy a move from the target's moveset into the user's Mimic

@@ -57,7 +57,7 @@ BANK_PikachuOverworld                equ 0x3F  ; pret "Overworld Pikachu" bank; 
 ; ---------------------------------------------------------------------------
 ; Externs
 ; ---------------------------------------------------------------------------
-extern BankswitchCommon                 ; dos_port/src/home/bankswitch.asm (M0.2)
+extern BankswitchCommon                 ; dos_port/src/home/bankswitch2.asm
 extern IsStarterPikachuAliveInOurParty  ; dos_port/src/engine/pikachu/pikachu_status.asm
                                         ; (defined but currently UNLINKED — see SUMMARY)
 

@@ -1560,7 +1560,7 @@ global SendNewMonToBox
 
 extern PlayMoveAnimation      ; engine/battle/animations.asm — AL = animation id (predef MoveAnimation)
 extern IsGhostBattle          ; engine/battle/ghost.asm — ZF=1 → unidentified ghost
-extern LoadScreenTilesFromBuffer1 ; engine/battle/battle_menu.asm
+extern LoadScreenTilesFromBuffer1 ; src/home/tilemap.asm
 extern Delay3                 ; video/frame.asm
 extern StatModifierUpEffect   ; engine/battle/move_effects/stat_modifiers.asm
 extern PlayDefaultMusic       ; home/audio.asm

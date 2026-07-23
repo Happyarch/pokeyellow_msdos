@@ -186,7 +186,7 @@ PickUpItemText:
 ;   TextScript_PokemonCenterPC -> ActivatePC
 ; all converge on BankswitchAndContinue: Bankswitch + jp HoldTextDisplayOpen.
 ; ---------------------------------------------------------------------------
-extern SaveScreenTilesToBuffer2         ; movie/title.asm
+extern SaveScreenTilesToBuffer2         ; src/home/tilemap.asm
 extern HoldTextDisplayOpen              ; home/text_script.asm
 extern PlayerPC                         ; engine/menus/players_pc.asm
 extern BillsPC_                         ; engine/menus/pc_stubs.asm

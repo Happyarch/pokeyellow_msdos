@@ -29,8 +29,8 @@ extern UpdateCGBPal_BGP              ; home/cgb_palettes.asm — commit rBGP to 
 extern DelayFrames                   ; video/frame.asm — wait BL frames
 extern DelayFrame                    ; video/frame.asm — wait one frame (MovePicLeft)
 extern MovieSyncWindow               ; movie_projection.asm — project rWX/hWY to the window descriptor
-extern DebugNewGamePlayerName        ; movie/title.asm — shared debug boot names
-extern DebugNewGameRivalName         ; movie/title.asm
+extern DebugNewGamePlayerName        ; engine/movie/title.asm — generated debug boot names
+extern DebugNewGameRivalName         ; engine/movie/title.asm
 extern FillMemory                    ; home/fill_memory.asm — ESI=dest, BX=len, AL=val
 extern InitOptions                   ; engine/menus/main_menu.asm
 ; --- OakSpeech body (A4.5): all deps now linked ---
@@ -48,7 +48,7 @@ extern GetMonHeader                  ; home/pokemon.asm — [wCurSpecies]
 extern LoadFlippedFrontSpriteByMonIndex ; home/pics.asm — [wCurPartySpecies], ESI = tilemap dest
 extern ChoosePlayerName              ; oak_speech2.asm
 extern ChooseRivalName               ; oak_speech2.asm
-extern BankswitchCommon              ; home/bankswitch.asm — AL = bank (flat no-op)
+extern BankswitchCommon              ; home/bankswitch2.asm — AL = bank (flat no-op)
 extern CopyVideoData                 ; home/copy2.asm — ESI = VRAM dest, EDX = flat src, BL = tiles
 extern ResetPlayerSpriteData         ; home/reset_player_sprite.asm
 extern ClearScreenArea               ; home/copy2.asm — ESI, BL x BH

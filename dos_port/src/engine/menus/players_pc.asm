@@ -100,8 +100,8 @@ extern msgbox_dialog                 ; home/text.asm — the overworld dialog pr
 extern text_arrow_pos                ; home/text.asm — <PROMPT> ▼ cell (from MB_ARROW)
 extern PlaySound                     ; home/audio.asm — In: AL = sound id
 extern WaitForSoundToFinish          ; home/audio.asm
-extern SaveScreenTilesToBuffer1      ; battle/battle_menu.asm — wTileMap → wTileMapBackup
-extern LoadScreenTilesFromBuffer2    ; movie/title.asm — wTileMapBackup2 → wTileMap
+extern SaveScreenTilesToBuffer1      ; src/home/tilemap.asm
+extern LoadScreenTilesFromBuffer2    ; src/home/tilemap.asm
 extern UpdateSprites                 ; engine/overworld/movement.asm
 extern RefreshCollisionTileMap       ; engine/overworld/overworld.asm
 extern AddItemToInventory            ; engine/items/inventory.asm — ESI=count addr; CF=1 room

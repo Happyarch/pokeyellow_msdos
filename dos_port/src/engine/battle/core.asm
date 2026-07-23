@@ -108,8 +108,8 @@ extern DrawHUDsAndHPBars               ; (DrawBattleHUDs) HUDs + HP bars
 extern AnimateEnemyHPBar               ; battle_hud.asm — gradual enemy HP-bar drain (ECX=old HP)
 extern AnimatePlayerHPBar              ; battle_hud.asm — gradual player HP-bar drain (ECX=old HP)
 extern DrawEnemyHUDAndHPBar            ; battle_hud.asm — faithful enemy-only HUD+bar redraw
-extern SaveScreenTilesToBuffer1        ; (SaveBattleScreen) snapshot clean screen
-extern LoadScreenTilesFromBuffer1      ; (RestoreBattleScreen) restore it
+extern SaveScreenTilesToBuffer1        ; src/home/tilemap.asm
+extern LoadScreenTilesFromBuffer1      ; src/home/tilemap.asm — restore clean screen
 extern DrawEmptyDialogBox              ; pret PrintEmptyString equiv (blank dialog box)
 extern DrawBattleMenuBox               ; DisplayTextBoxID(BATTLE_MENU_TEMPLATE) equiv
 extern HandleMenuInput                 ; home/window.asm

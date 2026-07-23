@@ -67,7 +67,7 @@ extern StartMenu_SaveReset
 extern StartMenu_Option
 extern PlaySound                     ; home/audio.asm — sound id in AL
 extern PrintSafariZoneSteps          ; engine/overworld/player_state.asm (self-guards on wCurMap)
-extern SaveScreenTilesToBuffer2      ; movie/title.asm (pret: home/tilemap.asm)
+extern SaveScreenTilesToBuffer2      ; src/home/tilemap.asm
 extern HandleMenuInput               ; home/window.asm
 extern EraseMenuCursor
 extern PlaceUnfilledArrowMenuCursor

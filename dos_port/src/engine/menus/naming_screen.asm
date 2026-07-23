@@ -64,8 +64,8 @@ global DisplayNamingScreen
 extern msgbox_centered                  ; src/engine/battle/core.asm — centered projection
 extern msgbox_dialog                    ; src/home/text.asm — overworld dialog projection
 extern text_msgbox                      ; src/home/text.asm — active msgbox projection (msgbox.inc)
-extern SaveScreenTilesToBuffer1        ; movie/title.asm
-extern LoadScreenTilesFromBuffer1      ; movie/title.asm
+extern SaveScreenTilesToBuffer1        ; src/home/tilemap.asm
+extern LoadScreenTilesFromBuffer1      ; src/home/tilemap.asm
 extern GetPredefRegisters              ; home/predef.asm — ESI/EDX/EBX = hl/de/bc
 extern GetMonName                      ; home/names.asm — AL=wNamedObjectIndex -> wNameBuffer
 extern ClearScreenArea                 ; home/copy2.asm — ESI=dest, BH=rows, BL=cols

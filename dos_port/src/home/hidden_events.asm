@@ -176,9 +176,9 @@ CheckCoords:
 ; HiddenEventMaps data + Tier-2 handler stubs landed, so the guard is retired.
 ; ===========================================================================
 
-extern BankswitchCommon                 ; src/home/bankswitch.asm (flat no-op)
+extern BankswitchCommon                 ; src/home/bankswitch2.asm (flat no-op)
 extern PrintBookshelfText               ; src/engine/overworld/hidden_object_stubs.asm (stub → $ff)
-extern JumpToAddress                    ; src/home/bankswitch.asm — jp hl trampoline
+extern JumpToAddress                    ; src/home/bankswitch2.asm
 extern GetTileAndCoordsInFrontOfPlayer  ; src/engine/overworld/player_state.asm (linked predef)
 extern UpdateCinnabarGymGateTileBlocks_ ; src/engine/overworld/hidden_object_stubs.asm (stub)
 extern IsInArray                        ; src/home/array.asm (map-id search, stride DE)

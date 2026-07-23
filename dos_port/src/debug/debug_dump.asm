@@ -114,8 +114,8 @@ extern DrawPlayerBackPic_Stub
 extern DrawBattleMenu
 extern MainInBattleLoop          ; core.asm — faithful battle loop (replaces bespoke DisplayBattleMenu loop)
 extern MoveSelectionMenu         ; core.asm — the FIGHT sub-menu (DEBUG_MOVEMENU)
-extern SaveBattleScreen
-extern RestoreBattleScreen
+extern SaveBattleScreen          ; src/home/tilemap.asm — alias of the Buffer1 pair
+extern RestoreBattleScreen       ; src/home/tilemap.asm — alias of the Buffer1 pair
 extern EndBattleScreen
 extern EndOfBattle               ; end_of_battle.asm — post-battle evolution + state reset
 extern wBattleOver
@@ -142,10 +142,10 @@ extern LoadBattleMonFromParty    ; faint_leaves.asm — real send-out loader
 extern FlagAction                ; flag_action.asm
 extern DisplayBattleMenu         ; core.asm — real menu (parks in HandleMenuInput)
 extern LoadMonBackPic            ; home/pics.asm — sent-out mon's back pic
-extern LoadScreenTilesFromBuffer1 ; battle_menu.asm
+extern LoadScreenTilesFromBuffer1 ; src/home/tilemap.asm
 extern DrawHUDsAndHPBars         ; battle_menu.asm
 extern DrawEmptyDialogBox        ; battle_menu.asm
-extern SaveScreenTilesToBuffer1  ; battle_menu.asm
+extern SaveScreenTilesToBuffer1  ; src/home/tilemap.asm
 extern DrawBattleMenuBox         ; battle_menu.asm
 %endif
 global RunBattleTest

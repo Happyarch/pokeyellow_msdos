@@ -99,8 +99,8 @@ extern RestoreScreenTilesAndReloadTilePatterns ; src/home/fade.asm
 extern Delay3                       ; src/video/frame.asm
 extern LoadGBPal                    ; src/home/fade.asm
 extern LoadCurrentMapView           ; src/engine/overworld/overworld.asm
-extern SaveScreenTilesToBuffer2     ; src/movie/title.asm
-extern LoadScreenTilesFromBuffer2   ; src/movie/title.asm
+extern SaveScreenTilesToBuffer2     ; src/home/tilemap.asm
+extern LoadScreenTilesFromBuffer2   ; src/home/tilemap.asm
 extern RedrawMapView                ; src/engine/overworld/update_map.asm (OW-3.1)
 extern AnimCut                      ; src/engine/overworld/cut2.asm (OW-6.1)
 extern PlaySound                    ; src/home/audio.asm

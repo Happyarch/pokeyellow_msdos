@@ -218,7 +218,8 @@ HOME_SRCS := \
     src/home/serial_stubs.asm \
     src/home/fill_memory.asm \
     src/home/copy_data.asm \
-    src/home/check_user_interruption.asm \
+    src/home/overworld.asm \
+    src/home/bankswitch2.asm \
     src/home/bankswitch.asm \
     src/home/text_script.asm \
     src/home/textbox.asm \
@@ -230,6 +231,7 @@ HOME_SRCS := \
     src/home/reset_player_sprite.asm \
     src/home/map_text_pointer.asm \
     src/home/reload_tiles.asm \
+    src/home/tilemap.asm \
     src/home/npc_movement.asm \
     src/home/vcopy.asm \
     src/home/give.asm \
@@ -298,8 +300,10 @@ GAME_SRCS := \
     src/engine/movie/splash.asm \
     src/engine/movie/intro.asm \
     src/engine/movie/title.asm \
+    src/engine/movie/title_yellow.asm \
     src/engine/movie/oak_speech/init_player_data.asm \
     src/engine/movie/oak_speech/oak_speech.asm \
+    src/engine/movie/oak_speech/clear_save.asm \
     src/engine/movie/oak_speech/oak_speech2.asm \
     src/engine/overworld/overworld.asm \
     src/engine/overworld/movement.asm \
@@ -1738,7 +1742,7 @@ src/engine/movie/oak_speech/oak_speech2.o: assets/default_names.inc
 assets/debug_boot_names.inc: tools/generators/gen_debug_boot_names.py tools/generators/gb_text.py
 	python3 tools/generators/gen_debug_boot_names.py
 
-src/movie/title.o: assets/debug_boot_names.inc
+src/engine/movie/title.o: assets/debug_boot_names.inc
 
 # Yellow-intro gfx (menu-intro B3.2b) — committed incs from gen_intro_gfx_inc.py.
 src/engine/movie/intro_yellow.o: assets/yellow_intro_1_2bpp.inc \

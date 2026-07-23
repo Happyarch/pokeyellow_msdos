@@ -72,8 +72,8 @@ wBattleOver: resb 1
 ; WaitForTextScrollButtonPress: saved down-arrow blink counters (pret push af x2)
 wtsbp_saved_c1: resb 1
 wtsbp_saved_c2: resb 1
-; Saved "clean" battle screen — SaveScreenTilesToBuffer1 / LoadScreenTilesFromBuffer1.
-screen_save: resb SCREEN_AREA
+; screen_save moved to src/home/tilemap.asm with the Buffer1 routines
+; (menu-intro review: the pret labels belong in the home/tilemap.asm mirror).
 lvl_mon_ptr: resd 1                       ; GB offset of the leveling party mon (PrintStatsBox)
 
 section .text
@@ -81,10 +81,6 @@ section .text
 global DrawBattleMenu
 global DrawBattleMenuBox
 global DrawEmptyDialogBox
-global SaveBattleScreen
-global RestoreBattleScreen
-global SaveScreenTilesToBuffer1
-global LoadScreenTilesFromBuffer1
 global DrawHUDsAndHPBars
 global EndBattleScreen
 global WaitForAPress
@@ -128,22 +124,14 @@ extern LearnMove                     ; src/engine/pokemon/learn_move.asm — fai
 ; Draw primitives (the sanctioned divergence point) under pret names.
 ; ===========================================================================
 
-; SaveScreenTilesToBuffer1 / LoadScreenTilesFromBuffer1 (pret names) — snapshot the
-; clean battle screen (W_TILEMAP) and restore it (wiping transient menu/info overlays).
-SaveScreenTilesToBuffer1:
-SaveBattleScreen:
-    lea esi, [ebp + W_TILEMAP]
-    mov edi, screen_save
-    mov ecx, SCREEN_AREA
-    rep movsb
-    ret
-LoadScreenTilesFromBuffer1:
-RestoreBattleScreen:
-    mov esi, screen_save
-    lea edi, [ebp + W_TILEMAP]
-    mov ecx, SCREEN_AREA
-    rep movsb
-    ret
+; SaveScreenTilesToBuffer1 / LoadScreenTilesFromBuffer1 moved to their pret
+; mirror, src/home/tilemap.asm (menu-intro review 2026-07-23) — this file held
+; them under the pret names but with a private host buffer and no annotation.
+; The battle-flavored aliases SaveBattleScreen / RestoreBattleScreen live there
+; too, alongside the pret names.
+extern SaveScreenTilesToBuffer1      ; src/home/tilemap.asm
+extern LoadScreenTilesFromBuffer1    ; src/home/tilemap.asm
+extern RestoreBattleScreen           ; src/home/tilemap.asm — alias of the Buffer1 pair
 
 ; DrawHUDsAndHPBars (pret name) — alias to the centered-canvas HUD draw helper.
 DrawHUDsAndHPBars:

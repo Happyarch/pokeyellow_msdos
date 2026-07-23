@@ -54,8 +54,8 @@ global AbandonLearning
 global TryingToLearn
 global PrintLearnedMove
 
-extern SaveScreenTilesToBuffer1     ; src/engine/battle/battle_menu.asm
-extern LoadScreenTilesFromBuffer1   ; src/engine/battle/battle_menu.asm
+extern SaveScreenTilesToBuffer1     ; src/home/tilemap.asm
+extern LoadScreenTilesFromBuffer1   ; src/home/tilemap.asm
 extern GetPartyMonName              ; src/home/pokemon.asm
 extern CopyData                     ; src/home/copy_data.asm
 extern AddNTimes                    ; src/home/array.asm

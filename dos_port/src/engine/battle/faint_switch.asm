@@ -40,8 +40,8 @@ extern AnyPartyAlive                    ; wild_encounter_check.asm — DL=0 if n
 extern ReadPlayerMonCurHPAndStatus      ; core.asm — sync battle mon HP/status (no-op today)
 extern PrintBattleText                  ; core.asm — EAX = flat battle-text stream
 extern PrintEmptyString                 ; battle_exp_stubs.asm
-extern SaveScreenTilesToBuffer1         ; battle_menu.asm
-extern LoadScreenTilesFromBuffer1       ; battle_menu.asm
+extern SaveScreenTilesToBuffer1         ; src/home/tilemap.asm
+extern LoadScreenTilesFromBuffer1       ; src/home/tilemap.asm
 extern DrawHUDsAndHPBars                ; battle_menu.asm — redraw both HUDs + HP bars
 extern ClearScreen                      ; title.asm
 extern PlayerMonFaintedText             ; battle_text.inc

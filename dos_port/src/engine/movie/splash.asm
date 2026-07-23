@@ -23,7 +23,7 @@ extern UpdateCGBPal_OBP0             ; home/cgb_palettes.asm — commit rOBP0 to
 extern UpdateCGBPal_OBP1             ; home/cgb_palettes.asm
 extern CopyVideoData                 ; home/copy2.asm — ESI=VRAM dest, EDX=flat src, BL=tiles
 extern MoveAnimationTiles1           ; engine/overworld/cut.asm — battle move-anim tile sheet
-extern CheckForUserInterruption      ; home/check_user_interruption.asm — BL frames, CF on skip
+extern CheckForUserInterruption      ; src/home/overworld.asm — BL frames, CF on skip
 extern PublishProjectedOAM           ; engine/gfx/sprite_oam.asm — project wShadowOAM to the canvas
 extern PlaySound                     ; home/audio.asm — AL = sound id
 extern CopyData                      ; home/copy_data.asm — ESI/EDX EBP-relative, BX count

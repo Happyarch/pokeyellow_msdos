@@ -101,8 +101,8 @@ extern LoadMonData              ; deferred: load party/box mon into wLoadedMon
 extern ModifyPikachuHappiness   ; deferred: Pikachu happiness events
 extern PrintStatsBox            ; deferred: level-up stats overlay
 extern WaitForTextScrollButtonPress  ; deferred: A-press wait
-extern SaveScreenTilesToBuffer1      ; deferred: screen tile save
-extern LoadScreenTilesFromBuffer1    ; deferred: screen tile restore
+extern SaveScreenTilesToBuffer1      ; src/home/tilemap.asm
+extern LoadScreenTilesFromBuffer1    ; src/home/tilemap.asm
 extern PrintEmptyString              ; deferred: clear text line
 extern LearnMoveFromLevelUp          ; deferred: move-learn flow
 
