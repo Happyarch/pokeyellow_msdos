@@ -51,6 +51,7 @@ TX_SOUND_GET_ITEM_1 equ 0x0B
 TX_DOTS             equ 0x0C
 TX_WAIT_BUTTON      equ 0x0D
 TX_SOUND_PDEX_RATE  equ 0x0E    ; first sound-range command
+TX_SOUND_CRY_PIKACHU equ 0x14   ; $14-$16: cry commands (pret macros/scripts/text.asm)
 TX_FAR              equ 0x17
 TX_END              equ 0x50    ; text_end / '@' string terminator
 
@@ -145,6 +146,24 @@ extern g_window_count      ; src/ppu/ppu.asm — unified window list count (open
 extern g_bg_whiteout       ; src/ppu/ppu.asm — set by full-takeover menus (party/dex/…)
 extern PrintNumber         ; src/home/print_num.asm — TX_NUM (text_decimal)
 extern PrintBCDNumber      ; src/home/print_bcd.asm — TX_BCD (text_bcd / money)
+extern PlaySound           ; src/home/audio.asm — AL = sound id (TextCommand_SOUND)
+extern WaitForSoundToFinish ; src/home/audio.asm
+extern PlayCry             ; home_stubs.asm — pret: home/pokemon.asm (AL = species; ret-stub)
+
+%include "assets/audio_constants.inc"   ; SFX_* ids for the TextCommandSounds table
+
+; Species ids for the cry text commands (pret constants/pokemon_constants.asm
+; internal indexes). STARTER_PIKACHU/DEWGONG live in gb_constants.inc, which this
+; file does not pull in; defined %ifndef-safe with their pret values.
+%ifndef STARTER_PIKACHU
+STARTER_PIKACHU     equ 0x54
+%endif
+%ifndef PIDGEOT
+PIDGEOT             equ 0x97
+%endif
+%ifndef DEWGONG
+DEWGONG             equ 0x78
+%endif
 
 ; ---------------------------------------------------------------------------
 ; .data — inline substitution strings in DS (flat, not EBP-relative).
@@ -1112,8 +1131,8 @@ TextCommandProcessor:
     cmp al, TX_FAR                  ; $17: far-bank text — skip 3 bytes in flat model
     je .cmd_far
 
-    cmp al, TX_SOUND_PDEX_RATE      ; $0E+: sound command — no audio yet
-    jae .cmd_skip0                  ; zero-byte operand skip
+    cmp al, TX_SOUND_PDEX_RATE      ; $0E-$16: TextCommand_SOUND family
+    jae .cmd_sound                  ; (TX_FAR $17 / TX_END $50 handled above)
 
     cmp al, TX_START
     je .cmd_start
@@ -1137,9 +1156,8 @@ TextCommandProcessor:
     je .cmd_num
     cmp al, TX_PAUSE
     je .cmd_pause
-    ; TX_SOUND_GET_ITEM_1 ($0B): TODO-HW: audio
-    cmp al, TX_SOUND_GET_ITEM_1
-    je .cmd_skip0
+    cmp al, TX_SOUND_GET_ITEM_1     ; $0B: same TextCommand_SOUND dispatch
+    je .cmd_sound
     cmp al, TX_DOTS
     je .cmd_dots
     cmp al, TX_WAIT_BUTTON
@@ -1390,6 +1408,52 @@ TextCommandProcessor:
     inc esi
 .cmd_skip0:
     jmp .next_cmd
+
+; --- TX sound commands ($0B, $0E-$16): pret home/text.asm:TextCommand_SOUND ---
+; Faithful TextCommandSounds dispatch: the three cry commands route through
+; PlayCry (a ret-stub today — the call structure is pret's, so text-stream cries
+; go live the moment PlayCry lands); the rest PlaySound + WaitForSoundToFinish.
+; Zero operand bytes, so ESI is already at the next command.
+.cmd_sound:
+    pushad
+    lea edi, [.TextCommandSounds]
+    mov ecx, (.TextCommandSoundsEnd - .TextCommandSounds) / 2
+.sound_lookup:
+    cmp al, [edi]
+    je .sound_found
+    add edi, 2
+    dec ecx
+    jnz .sound_lookup
+    popad                           ; not in the table ($18-$4F junk): skip, as before
+    jmp .next_cmd
+.sound_found:
+    mov dl, [edi + 1]               ; SFX id, or species for the cry commands
+    cmp al, TX_SOUND_CRY_PIKACHU
+    jb .sound_sfx
+    mov al, dl                      ; pret .pokemonCry: ld a, [hl] / call PlayCry
+    call PlayCry
+    popad
+    jmp .next_cmd
+.sound_sfx:
+    mov al, dl                      ; pret: ld a, [hl] / call PlaySound
+    call PlaySound
+    call WaitForSoundToFinish
+    popad
+    jmp .next_cmd
+
+; pret home/text.asm:TextCommandSounds — same pairs, same order.
+.TextCommandSounds:
+    db TX_SOUND_GET_ITEM_1,           SFX_GET_ITEM_1   ; plays SFX_LEVEL_UP under the battle audio engine (pret note)
+    db 0x12,                          SFX_CAUGHT_MON             ; TX_SOUND_CAUGHT_MON
+    db TX_SOUND_PDEX_RATE,            SFX_POKEDEX_RATING         ; TX_SOUND_POKEDEX_RATING (unused)
+    db 0x0F,                          SFX_GET_ITEM_1             ; TX_SOUND_GET_ITEM_1_DUPLICATE (unused)
+    db 0x10,                          SFX_GET_ITEM_2             ; TX_SOUND_GET_ITEM_2
+    db 0x11,                          SFX_GET_KEY_ITEM           ; TX_SOUND_GET_KEY_ITEM
+    db 0x13,                          SFX_DEX_PAGE_ADDED         ; TX_SOUND_DEX_PAGE_ADDED
+    db TX_SOUND_CRY_PIKACHU,          STARTER_PIKACHU            ; used in OakSpeechText2
+    db 0x15,                          PIDGEOT                    ; TX_SOUND_CRY_PIDGEOT (SaffronCityPidgeotText)
+    db 0x16,                          DEWGONG                    ; TX_SOUND_CRY_DEWGONG (unused)
+.TextCommandSoundsEnd:
 
 ; ---------------------------------------------------------------------------
 ; msgbox_dialog — the OVERWORLD dialog projection (msgbox.inc).

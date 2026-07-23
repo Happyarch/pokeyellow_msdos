@@ -145,7 +145,18 @@ def parse_body(lines, cm, mem, far_db):
             far = m.group(1)
             if far not in far_db:
                 raise KeyError(f"text_far target {far!r} not found")
-            out += far_db[far]
+            body = list(far_db[far])
+            # A far body that ends with a literal "@" AND text_end (e.g.
+            # _OakSpeechText2A: cont "#MON!@" / text_end) encodes as a DOUBLE
+            # $50. In pret the first ends PlaceString and the second returns
+            # from the far stream (TX_FAR is a recursive call). Inlined flat,
+            # the second $50 reads as TX_END and kills the rest of the wrapper
+            # (OakSpeechText2 lost its cry + whole second page). Keep exactly
+            # one: the string terminator. Single-$50 bodies are untouched —
+            # the port engine already resumes after a lone terminator.
+            if len(body) >= 2 and body[-1] == TX_END and body[-2] == TX_END:
+                body = body[:-1]
+            out += body
             continue
         # tolerated no-ops in our model:
         # The sound commands ($0B, $0E+) are emitted faithfully; the port's
