@@ -142,6 +142,7 @@ PlayShootingStar:
     mov bl, 180                           ; ld c, 180
     call DelayFrames                      ; show the copyright screen for ~3 seconds
     mov byte [ebp + wCurOpponent], 0      ; xor a / ld [wCurOpponent], a
+    call IntroDrawBlackBars               ; white framing bars on GB rows 0-3 & 14-17
     ; build the bar tiles: vChars2 tile 0 = $00 (color 0), tile 1 = $ff (color 3 = white)
     mov esi, GB_VCHARS2                    ; ld hl, vChars2
     mov bx, 0x10
@@ -152,8 +153,13 @@ PlayShootingStar:
     mov al, 0xFF
     call FillMemory                       ; tile 1 = $ff
     mov byte [g_tilecache_dirty], 1       ; VRAM tile data changed -> rebuild decode cache
-    call IntroDrawBlackBars               ; white framing bars on GB rows 0-3 & 14-17
-    mov esi, GB_VFONT                     ; logo -> vChars1 (OAM tiles $80..)
+    ; copy gamefreak logo and others — BOTH of pret's copies: vChars2 + $600
+    ; (signed BG tiles $60..) first, then vChars1 (OBJ tiles $80..)
+    mov esi, GB_VCHARS2 + 0x600           ; ld de, vChars2 + $600
+    mov edx, GameFreakIntro
+    mov bl, GAMEFREAKINTRO_TILES
+    call CopyVideoData
+    mov esi, GB_VFONT                     ; ld de, vChars1
     mov edx, GameFreakIntro
     mov bl, GAMEFREAKINTRO_TILES
     call CopyVideoData
