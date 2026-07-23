@@ -39,6 +39,8 @@ VRAM_SIZE        equ 0x2000
 
 extern FillMemory
 extern StopAllMusic          ; src/home/audio.asm
+extern GBPalWhiteOut         ; src/home/fade.asm — SoftReset prologue
+extern DelayFrames           ; src/video/frame.asm — BL = frame count
 extern DisableLCD
 extern ClearBgMap
 extern ClearSprites
@@ -57,6 +59,22 @@ global GBPalNormal
 extern g_tilecache_dirty
 
 section .text
+
+; ---------------------------------------------------------------------------
+; SoftReset — the warm-boot entry (pret home/init.asm:SoftReset). Stops all
+; sounds, whites the palettes out, waits 32 frames, then falls into Init.
+; Nothing calls it yet in the live build — pret's caller is TrySoftReset in the
+; joypad handler, which sits behind the port-input-model deviation (the title
+; screen's own UP+SELECT+B check routes through jmp Init directly, as pret's
+; title does) — but the entry is faithful and ready for that wiring.
+; ---------------------------------------------------------------------------
+global SoftReset
+SoftReset:
+    call StopAllSounds
+    call GBPalWhiteOut
+    mov bl, 32                       ; ld c, 32
+    call DelayFrames
+    ; fallthrough
 
 ; ---------------------------------------------------------------------------
 ; Init — power-on / soft-reset routine.
@@ -114,6 +132,7 @@ Init:
     ; Move window off-screen (200 = past bottom of 320×200 viewport). The unified
     ; window compositor starts with an empty list (count=0 ⇒ nothing drawn); the
     ; rWY/rWX shadows are kept for faithfulness + the sync_dialog_window flag.
+    ; DEVIATION{class=projection; pret=home/init.asm:Init; behavior=hWY/rWY are parked at 200 instead of pret's 144 (SCREEN_HEIGHT_PX); evidence=the port viewport is 320x200, so 144 is still on-screen and would leave a live window row visible; lifetime=permanent widescreen projection}
     mov dword [g_window_count], 0
     mov byte [ebp + H_WY],   200
     mov byte [ebp + IO_WY],  200
@@ -135,11 +154,12 @@ Init:
 
     ; predef LoadSGB — ; TODO-HW: SGB detection. wOnSGB stays 0 (zeroed above).
 
-    ; Audio ROM-bank setup — ; TODO: audio HAL (Phase 3).
+    ; DEVIATION{class=HAL; pret=home/init.asm:Init; behavior=pret's wAudioROMBank/wAudioSavedROMBank = BANK(SFX_Shooting_Star) seed is dropped; evidence=the audio engine is Phase 3 (docs/current_plan_audio.md) and the bank cells are inert until it lands; lifetime=retired by the Phase 3 audio engine wiring the boot banks}
 
     ; hAutoBGTransferDest = vBGMap1 ($9C00)
     mov byte [ebp + H_AUTO_BG_TRANSFER_DEST + 1], (GB_TILEMAP1 >> 8) & 0xFF
     mov byte [ebp + H_AUTO_BG_TRANSFER_DEST],      GB_TILEMAP1 & 0xFF
+    mov byte [ebp + wUpdateSpritesEnabled], 0xFF   ; dec a / ld [wUpdateSpritesEnabled], a
 
     ; pret runs `predef PlayIntro` here — the Game Freak splash + Yellow intro — on
     ; every normal power-on. This is the faithful default (menu-intro B4 flip). It is
