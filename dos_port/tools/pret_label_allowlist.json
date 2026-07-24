@@ -123,14 +123,6 @@
       "port_file": "dos_port/src/home/hidden_events.asm",
       "why": "pret home/map_objects.asm split across port files (draft Session H)"
     },
-    "CheckFightingMapTrainers": {
-      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
-      "why": "pret home/trainers.asm split across port files (draft Session H)"
-    },
-    "CheckForEngagingTrainers": {
-      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
-      "why": "pret home/trainers.asm split across port files (draft Session H)"
-    },
     "CheckForHiddenEvent": {
       "port_file": "dos_port/src/home/hidden_events.asm",
       "why": "engine/overworld/hidden_events.asm engine-side section (CheckForHiddenEvent, OW-3.3) consolidated into the home-primary port file src/home/hidden_events.asm (overworld-port plan, file-layout name-collision rule)"
@@ -243,10 +235,6 @@
       "port_file": "dos_port/src/engine/overworld/overworld.asm",
       "why": "pret home/overworld.asm split across port files (draft Session H)"
     },
-    "DisplayEnemyTrainerTextAndStartBattle": {
-      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
-      "why": "pret home/trainers.asm split across port files (draft Session H)"
-    },
     "DoBikeSpeedup": {
       "port_file": "dos_port/src/engine/overworld/overworld.asm",
       "why": "pret home/overworld.asm split across port files; OW-A.6 moved the real body here (linked, called from OverworldLoop .moveAhead) and retired the check-only player_gfx.asm copy"
@@ -291,10 +279,6 @@
       "port_file": "dos_port/src/engine/battle/faint_sendout.asm",
       "why": "pret engine/battle/core.asm split across port files (draft Session H)"
     },
-    "EngageMapTrainer": {
-      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
-      "why": "pret home/trainers.asm split across port files (draft Session H)"
-    },
     "EnterMap": {
       "port_file": "dos_port/src/engine/overworld/overworld.asm",
       "why": "pret home/overworld.asm split across port files (draft Session H)"
@@ -302,10 +286,6 @@
     "EvolutionAfterBattle": {
       "port_file": "dos_port/src/engine/pokemon/evolution.asm",
       "why": "pret engine/pokemon/evos_moves.asm split across port files (draft Session H)"
-    },
-    "ExecuteCurMapScriptInTable": {
-      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
-      "why": "pret home/trainers.asm split across port files (draft Session H)"
     },
     "ExtraWarpCheck": {
       "port_file": "dos_port/src/engine/overworld/warp_check.asm",
@@ -383,10 +363,6 @@
       "port_file": "dos_port/src/engine/pokemon/write_moves.asm",
       "why": "pret engine/pokemon/evos_moves.asm split across port files (draft Session H)"
     },
-    "GetSavedEndBattleTextPointer": {
-      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
-      "why": "pret home/trainers.asm split across port files (draft Session H)"
-    },
     "GetSelectedMoveOffset": {
       "port_file": "dos_port/src/engine/items/get_max_pp.asm",
       "why": "pret engine/items/item_effects.asm split across port files (draft Session H)"
@@ -406,14 +382,6 @@
     "GetSpriteMovementByte2Pointer": {
       "port_file": "dos_port/src/home/pathfinding.asm",
       "why": "pret home/map_objects.asm split across port files (draft Session H)"
-    },
-    "GetSpritePosition1": {
-      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
-      "why": "pret home/trainers.asm split across port files (draft Session H)"
-    },
-    "GetSpritePosition2": {
-      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
-      "why": "pret home/trainers.asm split across port files (draft Session H)"
     },
     "HalveAttackDueToBurn": {
       "port_file": "dos_port/src/engine/battle/status_penalties.asm",
@@ -555,10 +523,6 @@
       "port_file": "dos_port/src/home/pics.asm",
       "why": "pret home/pokemon.asm split across port files (draft Session H)"
     },
-    "LoadGymLeaderAndCityName": {
-      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
-      "why": "pret home/trainers.asm split across port files (draft Session H)"
-    },
     "LoadHudTilePatterns": {
       "port_file": "dos_port/src/home/load_font.asm",
       "why": "pret engine/battle/core.asm split across port files (draft Session H)"
@@ -671,10 +635,6 @@
       "port_file": "dos_port/src/home/audio.asm",
       "why": "audio-branch consolidation (Phase A, merged 2026-07-07): the port's home-audio entry points live together in src/home/audio.asm with the audio HAL"
     },
-    "PlayTrainerMusic": {
-      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
-      "why": "pret home/trainers.asm split across port files (draft Session H)"
-    },
     "PrintButItFailedText_": {
       "port_file": "dos_port/src/engine/battle/move_effect_helpers.asm",
       "why": "pret engine/battle/effects.asm split across port files (draft Session H)"
@@ -690,10 +650,6 @@
     "PrintDoesntAffectText": {
       "port_file": "dos_port/src/engine/battle/move_effect_helpers.asm",
       "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
-    "PrintEndBattleText": {
-      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
-      "why": "pret home/trainers.asm split across port files (draft Session H)"
     },
     "PrintGhostText": {
       "port_file": "dos_port/src/engine/battle/ghost.asm",
@@ -726,10 +682,6 @@
     "RandomizeDamage": {
       "port_file": "dos_port/src/engine/battle/core_damage.asm",
       "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
-    "ReadTrainerHeaderInfo": {
-      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
-      "why": "pret home/trainers.asm split across port files (draft Session H)"
     },
     "ReloadMoveData": {
       "port_file": "dos_port/src/engine/battle/mirror_move.asm",
@@ -771,10 +723,6 @@
       "port_file": "dos_port/src/home/run_map_script.asm",
       "why": "pret home/overworld.asm split across port files (draft Session H)"
     },
-    "SaveEndBattleTextPointers": {
-      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
-      "why": "pret home/trainers.asm split across port files (draft Session H)"
-    },
     "SelectEnemyMove": {
       "port_file": "dos_port/src/engine/battle/select_enemy_move.asm",
       "why": "pret engine/battle/core.asm split across port files (draft Session H)"
@@ -786,14 +734,6 @@
     "SetSpriteMovementBytesToFF": {
       "port_file": "dos_port/src/home/pathfinding.asm",
       "why": "pret home/map_objects.asm split across port files (draft Session H)"
-    },
-    "SetSpritePosition1": {
-      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
-      "why": "pret home/trainers.asm split across port files (draft Session H)"
-    },
-    "SetSpritePosition2": {
-      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
-      "why": "pret home/trainers.asm split across port files (draft Session H)"
     },
     "SignLoop": {
       "port_file": "dos_port/src/home/hidden_events.asm",
@@ -823,14 +763,6 @@
       "port_file": "dos_port/src/engine/overworld/overworld.asm",
       "why": "pret home/overworld.asm split across port files; overworld.asm is the port's home/overworld.asm (wild-live promotion) \u2014 StopMusic sits beside its only caller HandleBlackOut"
     },
-    "StoreTrainerHeaderPointer": {
-      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
-      "why": "pret home/trainers.asm split across port files (draft Session H)"
-    },
-    "TalkToTrainer": {
-      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
-      "why": "pret home/trainers.asm split across port files (draft Session H)"
-    },
     "TextScript_BillsPC": {
       "port_file": "dos_port/src/home/overworld_text.asm",
       "why": "pret home/map_objects.asm split across port files (draft Session H)"
@@ -850,18 +782,6 @@
     "TrainerBattleVictory": {
       "port_file": "dos_port/src/engine/battle/faint_sendout.asm",
       "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
-    "TrainerEndBattleText": {
-      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
-      "why": "pret home/trainers.asm split across port files (draft Session H)"
-    },
-    "TrainerFlagAction": {
-      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
-      "why": "pret home/trainers.asm split across port files (draft Session H)"
-    },
-    "TrainerWalkUpToPlayer_Bank0": {
-      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
-      "why": "pret home/trainers.asm split across port files (draft Session H)"
     },
     "TryEvolvingMon": {
       "port_file": "dos_port/src/engine/pokemon/evolution.asm",
@@ -998,14 +918,6 @@
     "IsPlayerStandingOnDoorTile": {
       "port_file": "dos_port/src/engine/overworld/overworld.asm",
       "why": "Scanner-reviewed 2026-07-15: IsPlayerStandingOnDoorTile from pret engine/overworld/doors.asm has its selected single non-stub definition at dos_port/src/engine/overworld/overworld.asm; preserve this per-label split."
-    },
-    "EmotionBubble": {
-      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
-      "why": "Scanner-reviewed 2026-07-15: EmotionBubble from pret engine/overworld/emotion_bubbles.asm has its selected single non-stub definition at dos_port/src/engine/overworld/trainer_engine.asm; preserve this per-label split."
-    },
-    "EmotionBubblesOAMBlock": {
-      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
-      "why": "Scanner-reviewed 2026-07-15: EmotionBubblesOAMBlock from pret engine/overworld/emotion_bubbles.asm has its selected single non-stub definition at dos_port/src/engine/overworld/trainer_engine.asm; preserve this per-label split."
     },
     "PlayerJumpingYScreenCoords": {
       "port_file": "dos_port/src/engine/overworld/ledges.asm",
@@ -1221,11 +1133,6 @@
       "rule": "dup_def",
       "key": "DiscardButtonPresses",
       "why": "NOT the silent-shadow trap this rule targets: only ONE definition is linked. src/input/joypad.asm (HAL_SRCS) holds the live body; src/engine/joypad.asm is DEAD - in no SRCS list at all (not even a check-only one), so it is never assembled and cannot shadow anything. It is retained solely as a cross-reference to pret's original input routine (_Joypad/ReadJoypad_/TrySoftReset) for a future faithful-input pass, and its header says so. Retire this entry by deleting engine/joypad.asm, or by dropping its DiscardButtonPresses copy, if that reference is ever cashed in or abandoned (overworld-events Stage 4)."
-    },
-    {
-      "rule": "dup_def",
-      "key": "EmotionBubble",
-      "why": "known interim (audited 2026-07-23 allowlist audit): overworld_stubs.asm ret-stub is linked (only caller FishingAnim, fishing rods are stubs); the real faithful body in trainer_engine.asm is check-only (HOME_CHECK_SRCS) and file-local, so the two never coexist in one link. Delete the stub when trainer_engine.asm is promoted to GAME_SRCS."
     }
   ]
 }
