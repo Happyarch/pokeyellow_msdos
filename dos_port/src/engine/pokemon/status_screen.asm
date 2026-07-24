@@ -3,7 +3,8 @@
 ; Faithful port of pret engine/pokemon/status_screen.asm:
 ;   StatusScreen (page 1: name/level/HP/status/types/№/OT/ID/pic/cry),
 ;   DrawHP/DrawHP_ (HP bar), DrawLineBox, PrintStatsBox' status-box branch,
-;   PrintMonType, PrintLevel, .GetStringPointer, and CalcExpToLevelUp.
+;   PrintLevel, .GetStringPointer, and CalcExpToLevelUp. (PrintMonType /
+;   EraseType2Text live in their own mirror, engine/battle/print_type.asm.)
 ;   StatusScreen2 (page 2) is TODO (next session).
 ;
 ; PROJECTION (PROJ status-screen): the port renders the 20×18 GB screen centered
@@ -76,7 +77,6 @@ global DrawHP                           ; the pret DrawHP/DrawHP2/DrawHP_ family
 global DrawHP2                          ; lives here, in its mirror — stride-
 global DrawHP_                          ; parameterized via [text_row_stride]
 global DrawLineBox
-global PrintMonType
 global CalcExpToLevelUp
 
 ; data / stat helpers (all linked)
@@ -88,7 +88,7 @@ extern PlaceString
 extern PrintStatusCondition
 extern SkipFixedLengthTextEntries
 extern IndexToPokedex                                ; engine/menus/pokedex.asm — predef, wPokedexNum in place
-extern WideTypeNames                                 ; data table (type id*4 → name ptr)
+extern PrintMonType                                  ; engine/battle/print_type.asm — [wCurSpecies], ESI=type1 dest
 extern GetHealthBarColor
 extern DrawHPBar                                     ; home/pokemon.asm — ESI=dest, DH=tiles, DL=px, BL=sliver
 extern GetHPBarLength                                ; engine/gfx/hp_bar.asm — BX=hp, DX=maxhp → DL=px
@@ -455,34 +455,10 @@ StatusScreen_PrintLevel:
     call PrintNumber
     ret
 
-; ---------------------------------------------------------------------------
-; PrintMonType — pret engine/battle/print_type.asm PrintMonType. Prints the loaded
-; mon's type name(s) from WideTypeNames. In: ESI = dest canvas offset (type1 row).
-; Reads wMonHType1/2 (base-stats header, filled by LoadMonData→GetMonHeader).
-; ---------------------------------------------------------------------------
-PrintMonType:
-    push esi                                          ; save type1 dest
-    movzx ecx, byte [ebp + wMonHType1]
-    mov eax, [WideTypeNames + ecx * 4]
-    call PlaceString                                  ; type1 name at ESI (clobbers ESI)
-    pop esi                                           ; ESI = type1 dest
-    mov al, [ebp + wMonHType1]
-    mov ah, [ebp + wMonHType2]
-    cmp ah, al
-    je .eraseType2                                    ; single type
-    lea esi, [esi + FW * 2]                            ; type2 two rows down
-    movzx ecx, byte [ebp + wMonHType2]
-    mov eax, [WideTypeNames + ecx * 4]
-    call PlaceString
-    ret
-.eraseType2:
-    ; pret EraseType2Text: blank 6 tiles at type1 dest + $13 (the "TYPE2/" label at
-    ; GB(10,11)). scoord(10,11) is that cell on the wide canvas.
-    lea edi, [ebp + scoord(10, 11)]
-    mov al, T_SPACE
-    mov ecx, 6
-    rep stosb
-    ret
+; (PrintMonType / EraseType2Text moved to their pret mirror,
+;  src/engine/battle/print_type.asm — R-003 retirement 2026-07-23. The mirror
+;  routine calls GetMonHeader itself, as pret does, and reads the type2/erase
+;  row steps from [text_row_stride] — 40 here, set by StatusScreen above.)
 
 ; ---------------------------------------------------------------------------
 ; StatusScreen_StatsBox — pret PrintStatsBox with d=STATUS_SCREEN_STATS_BOX (0):

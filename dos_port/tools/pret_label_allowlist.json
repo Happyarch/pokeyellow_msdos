@@ -21,12 +21,6 @@
       "problem": "the former relocation justification admits only the sign branch is translated while the sprite scan and counter-range behavior are split or absent",
       "retirement": "restore the complete pret routine and its entry/call boundaries in dos_port/src/home/overworld.asm"
     },
-    "PrintMonType": {
-      "id": "R-003",
-      "port_file": "dos_port/src/engine/pokemon/status_screen.asm",
-      "problem": "the former relocation justification admits PrintMonType is fused with the separate missing pret label EraseType2Text",
-      "retirement": "separate PrintMonType and EraseType2Text under their exact labels in dos_port/src/engine/battle/print_type.asm"
-    },
     "YellowIntro_AnimatedObjectFramesData": {
       "id": "R-005",
       "port_file": "dos_port/src/data/sprite_anims/intro_anim_data.asm",
