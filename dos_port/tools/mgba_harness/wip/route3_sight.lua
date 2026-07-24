@@ -18,6 +18,15 @@
 --     wDestinationMap = ROUTE_10 ($15) landed at PALLET_TOWN (5,6) with
 --     wDestinationMap still reading $15 afterwards — i.e. the value the warp used
 --     was not the one we wrote. Seeding a party first did not change it.
+--   * Third probe (2026-07-24): pre-setting BIT_FLY_OR_DUNGEON_WARP (bit 2) as well
+--     as BIT_FLY_WARP changed nothing — still PALLET_TOWN (5,6) — and bit 2 was
+--     still SET afterwards, i.e. PrepareForSpecialWarp's own
+--     `res BIT_FLY_OR_DUNGEON_WARP` never executed, while BIT_FLY_WARP *was*
+--     cleared (which only EnterMap does). So EnterMap ran but
+--     PrepareForSpecialWarp seemingly did not, and the branch actually taken is
+--     still unidentified. This wants live debugging (mgba-mcp breakpoints on
+--     HandleFlyWarpOrDungeonWarp / LoadSpecialWarpData), not more blind 20-frame
+--     sampling.
 --
 -- Everything below the blocker is written and believed correct — the frame loop,
 -- the region list (mirrored by the %ifdef DEBUG_MAPSCRIPT_SIGHT gbregion rows in

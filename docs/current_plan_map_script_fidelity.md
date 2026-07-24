@@ -181,10 +181,15 @@ differential harness can — and it's the only check that also validates the
      `ROUTE_10`, whose trainers sit ~50 tiles from the fly spot; and a probe
      setting `wDestinationMap = ROUTE_10` (`$15`) landed at `PALLET_TOWN` (5,6)
      while `wDestinationMap` still read `$15` afterwards — the warp did not use
-     the value we wrote. Seeding a party first changed nothing.
-  Next step is a 20-line probe: instrument `LoadSpecialWarpData`'s branch
-  selection (log `wStatusFlags6` and `wLastBlackoutMap` at the moment
-  `.otherDestination` is reached) to find out which branch actually ran. If the
+     the value we wrote. Seeding a party first changed nothing. A third probe
+     pre-set `BIT_FLY_OR_DUNGEON_WARP` too: same landing, and that bit was still
+     set afterwards — `PrepareForSpecialWarp`'s own `res` never ran, while
+     `BIT_FLY_WARP` *was* cleared (only `EnterMap` does that). So `EnterMap` ran
+     and `PrepareForSpecialWarp` apparently did not; which branch actually
+     executed is still unidentified.
+  Next step is **live** debugging, not more blind 20-frame sampling: `mgba-mcp`
+  breakpoints on `HandleFlyWarpOrDungeonWarp` and `LoadSpecialWarpData` will say
+  in one run which branch runs and what it reads. If the
   fly warp can be made to honour `wDestinationMap`, `route10_sight` on `ROUTE_10`
   becomes the cheapest first golden (it is a standard trainer map, its fly spot
   is (11,20), and `ROUTE10_COOLTRAINER_F1` at (7,25) facing LEFT view 3 sees
