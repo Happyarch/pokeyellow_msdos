@@ -25,6 +25,9 @@ import re
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import gen_items  # noqa: E402  (sibling generator: load_item_ids owns the TM/HM forms)
+
 ROOT = Path(__file__).resolve().parent.parent.parent.parent
 ASSETS = ROOT / "dos_port" / "assets"
 MAP_HEADERS_DIR = ROOT / "data" / "maps" / "headers"
@@ -212,19 +215,71 @@ TILESET_CANONICAL = [
 # NPC object-event constant resolution tables
 # Source: constants/sprite_constants.asm, constants/map_object_constants.asm
 # ---------------------------------------------------------------------------
+def _parse_const_enum(rel_path):
+    """{NAME: value} from an rgbds `const_def` / `const` enum file.
+
+    Handles const_def [n] / const_next n / const_skip [n] / const NAME, and
+    CROSS-CHECKS every computed value against the trailing `; $XX` comment pret
+    carries on these lines. A silent off-by-one here would mis-resolve species and
+    item ids everywhere, so the comment is used as an independent witness rather
+    than trusted blindly in either direction.
+    """
+    out, val, checked = {}, 0, 0
+    for line in (ROOT / rel_path).read_text().splitlines():
+        body, _, comment = line.partition(";")
+        body = body.strip()
+        if not body:
+            continue
+        m = re.match(r"const_def(?:\s+(-?\d+))?$", body)
+        if m:
+            val = int(m.group(1)) if m.group(1) else 0
+            continue
+        m = re.match(r"const_next\s+(-?\d+)$", body)
+        if m:
+            val = int(m.group(1))
+            continue
+        m = re.match(r"const_skip(?:\s+(\d+))?$", body)
+        if m:
+            val += int(m.group(1)) if m.group(1) else 1
+            continue
+        m = re.match(r"const\s+(\w+)$", body)
+        if m:
+            want = re.match(r"\s*\$([0-9A-Fa-f]+)\s*$", comment)
+            if want and int(want.group(1), 16) != val:
+                sys.exit(f"gen_map_headers: {rel_path}: computed {m.group(1)}="
+                         f"0x{val:02X} but the source comment says "
+                         f"${want.group(1)} — the enum walk is wrong")
+            checked += want is not None
+            out[m.group(1)] = val
+            val += 1
+    if not out:
+        sys.exit(f"gen_map_headers: no const entries parsed from {rel_path}")
+    return out
+
+
+def _parse_def_equs(rel_path):
+    """{NAME: value} for plain `DEF NAME EQU <int literal>` lines.
+
+    Expression-valued DEFs (`EQU const_value`, `EQU 1 << BIT_TRAINER`) are skipped:
+    this is for the movement/direction byte constants, which are all literals.
+    """
+    out = {}
+    for line in (ROOT / rel_path).read_text().splitlines():
+        m = re.match(r"^DEF\s+(\w+)\s+EQU\s+(\$[0-9A-Fa-f]+|\d+)\s*(?:;.*)?$", line)
+        if m:
+            raw = m.group(2)
+            out[m.group(1)] = int(raw[1:], 16) if raw.startswith("$") else int(raw)
+    if not out:
+        sys.exit(f"gen_map_headers: no DEF..EQU literals parsed from {rel_path}")
+    return out
+
+
 def _parse_opp_consts():
     """{OPP_<CLASS>: id} from constants/trainer_constants.asm.
 
     pret's `trainer_const NAME` macro emits `DEF OPP_NAME EQU OPP_ID_OFFSET + n`
     with n counting from the enclosing const_def, so the ids are positional and
     OPP_ID_OFFSET is read from the same file rather than hardcoded.
-
-    This table used to be missing entirely: object_event's trainer-class argument
-    was resolved against an EMPTY dict, so every OPP_* name fell through to
-    _resolve_const's "unknown constant, using 0x00" warning and all 470 trainers
-    in the generated map-object binaries carried class 0. Nothing consumed that
-    byte until the trainer engine did, and the route3_sight golden then caught it
-    (want $CA = OPP_BUG_CATCHER, got $00).
     """
     text = (ROOT / "constants" / "trainer_constants.asm").read_text()
     m = re.search(r"^DEF OPP_ID_OFFSET EQU (\d+)", text, re.M)
@@ -237,7 +292,28 @@ def _parse_opp_consts():
     return {f"OPP_{name}": offset + i for i, name in enumerate(names)}
 
 
+def _merge_disjoint(a, b, what):
+    """Union two constant tables, refusing to guess if a name is in both."""
+    clash = {k for k in a.keys() & b.keys() if a[k] != b[k]}
+    if clash:
+        sys.exit(f"gen_map_headers: {what}: {sorted(clash)} resolve differently in "
+                 "the two namespaces — the object_event slot is ambiguous")
+    return {**a, **b}
+
+
+# object_event's 7th argument is ONE byte whose namespace depends on the form
+# (macros/scripts/maps.asm): the 8-arg TRAINER form uses it for a trainer class,
+# EXCEPT for the stationary wild encounters, which put a SPECIES there and the
+# level in the 8th (`object_event 9, 20, SPRITE_POKE_BALL, STAY, NONE,
+# TEXT_POWERPLANT_VOLTORB1, VOLTORB, 40`). The engine tells them apart by value:
+# < OPP_ID_OFFSET is a species, >= is a trainer class. So the slot's table is the
+# union of both namespaces, and _merge_disjoint refuses if a name is in both.
+_SPECIES_CONSTS = _parse_const_enum("constants/pokemon_constants.asm")
 _OPP_CONSTS = _parse_opp_consts()
+_TRAINER_CLASS_CONSTS = _merge_disjoint(_OPP_CONSTS, _SPECIES_CONSTS, "trainer_class")
+# The 7-arg ITEM form's byte is an item id (item balls, key items, TMs/HMs).
+# load_item_ids also handles the add_tm/add_hm macro forms.
+_ITEM_CONSTS = gen_items.load_item_ids(ROOT / "constants" / "item_constants.asm")
 
 _SPRITE_CONSTS = {
     'SPRITE_NONE': 0x00, 'SPRITE_RED': 0x01, 'SPRITE_BLUE': 0x02,
@@ -275,11 +351,12 @@ _SPRITE_CONSTS = {
     'SPRITE_OLD_AMBER': 0x4F, 'SPRITE_UNUSED_GAMBLER_ASLEEP_1': 0x50,
     'SPRITE_UNUSED_GAMBLER_ASLEEP_2': 0x51, 'SPRITE_GAMBLER_ASLEEP': 0x52,
 }
-_MOV_CONSTS = {'WALK': 0xFE, 'STAY': 0xFF}
-_DIR_CONSTS = {
-    'NONE': 0xFF, 'ANY_DIR': 0x00, 'UP_DOWN': 0x01, 'LEFT_RIGHT': 0x02,
-    'DOWN': 0xD0, 'UP': 0xD1, 'LEFT': 0xD2, 'RIGHT': 0xD3,
-}
+# Movement byte 1 / byte 2 constants, read from pret rather than transcribed:
+# both slots draw from the same `DEF … EQU` block in map_object_constants.asm, and
+# byte 2 additionally takes BOULDER_MOVEMENT_BYTE_2 ($10) on every pushable boulder.
+_MAP_OBJECT_CONSTS = _parse_def_equs("constants/map_object_constants.asm")
+_MOV_CONSTS = _MAP_OBJECT_CONSTS
+_DIR_CONSTS = _MAP_OBJECT_CONSTS
 _TRAINER_FLAG = 0x40   # constants/map_object_constants.asm: TRAINER = 1 << BIT_TRAINER
 _ITEM_FLAG    = 0x80   # constants/map_object_constants.asm: ITEM    = 1 << BIT_ITEM
 # The text byte's low 6 bits are the text id; bits 6/7 are the flags above, so an id
@@ -290,7 +367,16 @@ _TEXT_ID_MAX  = 0x3F
 
 
 def _resolve_const(name, table, context=''):
-    """Resolve a named constant or hex/decimal literal to an integer."""
+    """Resolve a named constant or hex/decimal literal to an integer.
+
+    UNKNOWN NAMES ARE FATAL. This used to warn and return 0, which is how every
+    trainer's class byte, every item ball's item id, every stationary wild mon's
+    species and every boulder's movement byte 2 came to be 0 in the generated
+    map-object binaries — 470 + 141 warnings scrolling past in a build nobody
+    reads, producing plausible-looking data that was simply wrong. The tables
+    above now cover every namespace object_event uses, so an unknown name means
+    either a new pret constant or a real typo, and both should stop the build.
+    """
     if name in table:
         return table[name]
     if name.startswith('$'):
@@ -300,8 +386,8 @@ def _resolve_const(name, table, context=''):
     try:
         return int(name)
     except ValueError:
-        print(f"  WARNING: unknown constant '{name}' {context}, using 0x00", file=sys.stderr)
-        return 0
+        sys.exit(f"gen_map_headers: unknown constant '{name}' {context} — add it to "
+                 "the constant tables (it must not silently become 0x00)")
 
 
 # Connection data for outdoor maps (preserved exactly from Phase 2)
@@ -572,9 +658,9 @@ def parse_object_file(label: str, debug_warps: bool = False):
 
         is_trainer = (arg7 is not None and arg8 is not None)
         is_item    = (arg7 is not None and arg8 is None)
-        trainer_class = _resolve_const(arg7.strip(), _OPP_CONSTS, f"trainer_class in {label}") if is_trainer else 0
+        trainer_class = _resolve_const(arg7.strip(), _TRAINER_CLASS_CONSTS, f"trainer_class in {label}") if is_trainer else 0
         trainer_num   = _resolve_const(arg8.strip(), {}, f"trainer_num in {label}")   if is_trainer else 0
-        item_id       = _resolve_const(arg7.strip(), {}, f"item_id in {label}")       if is_item    else 0
+        item_id       = _resolve_const(arg7.strip(), _ITEM_CONSTS, f"item_id in {label}") if is_item    else 0
 
         sprites.append({
             'sprite_id':     sprite_id,
