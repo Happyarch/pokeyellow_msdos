@@ -3,7 +3,7 @@
 update_label_db — per-label translation DB scanner (fidelity plan Stage 2.1).
 
 Scans the pret source (home/ + engine/; data/ is generator-owned and skipped)
-and the port (dos_port/src/**/*.asm) and rebuilds four tables in
+and the port (dos_port/src/**/*.asm) and rebuilds five tables in
 dos_port/tools/translation.db:
 
     labels     one row per pret top-level label ∪ port global:
@@ -20,6 +20,16 @@ dos_port/tools/translation.db:
                label_status --callers promises every port caller — while
                project_state's reachability BFS consumes only build_active=1.
     externs    every port `extern` (file, symbol, trailing comment, line)
+    script_labels
+               NAMES-ONLY provenance side table for pret scripts/*.asm globals:
+               name, pret_file. Per-map scripts are macro-heavy (def_script_pointers,
+               dw_const, CheckEvent…), so they are deliberately NOT modelled as
+               call graphs or given a translated/missing status — pulling them into
+               `labels` would swamp the headline counts with thousands of rows the
+               port never intends to translate one-for-one. The table exists purely
+               so lint_pret_labels can answer "does this port symbol borrow a pret
+               scripts/ name, and if so is it in the right map file?"
+               (rules script_collision / script_misplaced).
 
 THE DB IS ALWAYS DERIVED BY RESCANNING — never hand-edited, never written
 directly by agents. These four tables are dropped and rebuilt on every run;
@@ -139,6 +149,70 @@ def scan_pret():
                     if m:
                         calls.append((cur, m.group(2), m.group(1), rel, ln))
     return labels, calls
+
+# ── pret scripts/ provenance (names only) ───────────────────────────────────────
+#
+# pret map-script file basenames are CamelCase (scripts/Route3.asm); the port's
+# hand-written script layer is snake_case (dos_port/src/scripts/route_3.asm).
+# CAMEL_TOK splits the CamelCase into words, keeping a floor suffix glued to its
+# number ("1F" -> "1f", so CeladonMart1F -> celadon_mart_1f) and an all-caps run
+# together ("SSAnne1F" -> ss_anne_1f). The consumer (lint_pret_labels) compares
+# with underscores stripped, so a port file that spells a boundary differently
+# (mt_moon_b1f vs mt_moon_b_1f) still matches; this is the canonical *suggestion*.
+CAMEL_TOK = re.compile(
+    r'[0-9]+[A-Za-z]?(?![a-z])|[A-Z]+(?=[A-Z][a-z])|[A-Z]+(?![a-z])'
+    r'|[A-Z][a-z]*|[a-z]+')
+
+def script_snake_case(basename):
+    """CamelCase pret script basename -> the port's snake_case file stem."""
+    return '_'.join(t.lower() for t in CAMEL_TOK.findall(basename))
+
+SPLIT_SUFFIX_RE = re.compile(r'_\d+$')
+
+def script_port_stems(pret_file):
+    """pret 'scripts/Route3.asm' -> (canonical stem, all accepted stems).
+
+    Two tolerances, both deliberate and both narrow (underscore-insensitive
+    matching is NOT used: it would conflate Route1_2 with Route12):
+      * pret's bank-split continuation files (Route1_2.asm, CinnabarGym_3.asm)
+        are the same map — the port has no banks, so one file per map is right
+        and the canonical stem drops the `_N` suffix.
+      * a basement/floor token may be spelled either way (mt_moon_b_1f or
+        mt_moon_b1f).
+    """
+    stem = SPLIT_SUFFIX_RE.sub(
+        '', os.path.splitext(os.path.basename(pret_file))[0])
+    canonical = script_snake_case(stem)
+    accepted = {canonical, re.sub(r'_b_(\d)', r'_b\1', canonical)}
+    return canonical, sorted(accepted)
+
+def script_port_file(pret_file):
+    """pret 'scripts/Route3.asm' -> 'dos_port/src/scripts/route_3.asm'."""
+    return 'dos_port/src/scripts/' + script_port_stems(pret_file)[0] + '.asm'
+
+def scan_pret_scripts(exclude):
+    """Yield {label: 'scripts/<Map>.asm'} for every top-level pret scripts/ label.
+
+    Names only — no call graph, no status. `exclude` (the home/+engine/ label
+    universe) wins: a name owned by the modelled universe stays governed by the
+    mirror rule, never by the script rules.
+    """
+    labels = {}
+    top_dir = os.path.join(REPO_ROOT, 'scripts')
+    if not os.path.isdir(top_dir):
+        return labels
+    for dirpath, dirnames, filenames in os.walk(top_dir):
+        dirnames.sort()
+        for fn in sorted(filenames):
+            if not fn.endswith('.asm'):
+                continue
+            rel = os.path.relpath(os.path.join(dirpath, fn),
+                                  REPO_ROOT).replace('\\', '/')
+            for raw in read_lines(os.path.join(dirpath, fn)):
+                m = LABEL_RE.match(strip_comment(raw))
+                if m and m.group(1) not in exclude:
+                    labels.setdefault(m.group(1), rel)
+    return labels
 
 # ── port side ───────────────────────────────────────────────────────────────────
 
@@ -1132,6 +1206,7 @@ DROP TABLE IF EXISTS labels;
 DROP TABLE IF EXISTS port_defs;
 DROP TABLE IF EXISTS calls;
 DROP TABLE IF EXISTS externs;
+DROP TABLE IF EXISTS script_labels;
 CREATE TABLE labels (
     name       TEXT NOT NULL,
     pret_file  TEXT,
@@ -1176,6 +1251,17 @@ CREATE TABLE externs (
     line    INTEGER
 );
 CREATE INDEX idx_externs_symbol ON externs(symbol);
+-- Names-only provenance for pret scripts/*.asm globals. expect_port_file is the
+-- canonical snake_case mirror the port's hand-written script layer uses; the
+-- linter compares it with underscores stripped (see script_snake_case).
+CREATE TABLE script_labels (
+    name             TEXT NOT NULL,
+    pret_file        TEXT NOT NULL,
+    expect_port_file TEXT NOT NULL,
+    -- '|'-joined stems the linter accepts under dos_port/src/scripts/
+    accept_stems     TEXT NOT NULL
+);
+CREATE INDEX idx_script_labels_name ON script_labels(name);
 """
 
 def git_stamp():
@@ -1222,6 +1308,7 @@ def main():
                     allow.get('relocated_labels', {}).items()}
 
     pret_labels, pret_calls = scan_pret()
+    script_labels = scan_pret_scripts(set(pret_labels))
     port_defs, port_calls, port_externs = scan_port(set(pret_labels))
     scanned_at, git_hash = git_stamp()
 
@@ -1286,6 +1373,10 @@ def main():
                     sorted(port_calls))
     cur.executemany("INSERT INTO externs VALUES (?,?,?,?)",
                     sorted(port_externs))
+    script_rows = [(name, pret_file, script_port_file(pret_file),
+                    '|'.join(script_port_stems(pret_file)[1]))
+                   for name, pret_file in sorted(script_labels.items())]
+    cur.executemany("INSERT INTO script_labels VALUES (?,?,?,?)", script_rows)
     con.commit()
 
     counts = {s: n for s, n in cur.execute(
@@ -1297,12 +1388,14 @@ def main():
     # the sqlite *file* is never byte-stable across rewrites).
     h = hashlib.sha256()
     for rows in (label_rows, sorted(port_defs), sorted(pret_calls),
-                 sorted(port_calls), sorted(port_externs)):
+                 sorted(port_calls), sorted(port_externs), script_rows):
         for r in rows:
             h.update(repr(r).encode())
 
     print(f"labels: {sum(counts.values())} "
           f"({', '.join(f'{k}={v}' for k, v in sorted(counts.items()))})")
+    print(f"script_labels: {len(script_rows)} pret scripts/ names "
+          f"(provenance side table; no status)")
     print(f"port_defs: {len(port_defs)}  calls: "
           f"{len(pret_calls)} pret + {len(port_calls)} port  "
           f"externs: {len(port_externs)}")

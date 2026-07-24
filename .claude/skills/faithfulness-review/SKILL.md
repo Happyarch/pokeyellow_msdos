@@ -55,7 +55,9 @@ user. All tools live in `dos_port/tools/`; they read `translation.db`, which is
      never goes in the suppression file; it goes in the commit message.
 2. **`tools/lint_pret_labels`** — must exit 0 before committing. It rescans the
    tree (so it sees your change) and enforces: pret-named globals live in the
-   path-mirrored file or a `*_stubs.asm`. A `mirror` finding means move the
+   path-mirrored file or a `*_stubs.asm`; and — for names taken from pret
+   `scripts/*.asm`, which have **no** call-graph/status model — the provenance
+   rules `script_collision` / `script_misplaced` (see "Map scripts" below). A `mirror` finding means move the
    complete routine to the mirrored file; it is not an instruction to edit the
    relocation registry. Existing registered relocations are printed loudly as
    legacy debt and must be moved when touched; stubs stay
@@ -79,11 +81,44 @@ user. All tools live in `dos_port/tools/`; they read `translation.db`, which is
    - Battle UI/menu changes need the relevant battle/menu tier
      (`battle_intro`, `battle_menu`, `move_selection`, `ball_catch`, or the
      core/full target that covers them).
+   - **Map scripts: no scenario, no wire.** A newly wired per-map script layer
+     (a `<Map>_Script` reached from `MapScriptPointers`, whether hand-written or
+     a `map_script_tables.inc` row) lands together with a must-hit scenario that
+     exercises at least its default script path — `route3_sight` is the
+     template. Static checks cannot see a wrong flag bit or a swapped text
+     pointer, and the mGBA differential is also the only check that validates
+     the *generated* trainer-header data behind the script.
 
    A new legitimate divergence needs a mask **with a written justification** in
    `tools/golden_diff.py` — never a bare mask. If an OPEN finding owns the
    divergence, the mask's why-string must carry that finding id so retiring the
    finding greps to the masks that must be deleted.
+
+## Map scripts (`src/scripts/`) — provenance, not call graph
+
+`update_label_db` models pret `home/` + `engine/` only, so a name the port takes
+from pret `scripts/*.asm` is `port_only`: `faithdiff` answers "not a pret label"
+and the mirror rule cannot fire. What *does* cover them:
+
+- **`script_labels`** — a names-only side table of every pret `scripts/*.asm`
+  global (3.7k names, no status, no headline-count impact).
+- **`script_collision`** — a port symbol borrowing one of those names is defined
+  outside `dos_port/src/scripts/`. Either the port symbol means something else
+  (rename it) or a map's script layer landed in the wrong subsystem.
+- **`script_misplaced`** — right layer, wrong map file. Expected path is
+  `dos_port/src/scripts/<snake_case map>.asm`; pret's bank-split continuations
+  (`Route1_2.asm`) belong in the same file as the main half.
+- Exempt: `*_stubs.asm` (the stub convention owns stand-in placement), and
+  labels defined inside a generated `assets/*.inc` (the scan walks `.asm` only —
+  placement of generated Tier-1 data is governed by its carrier file).
+
+Deliberate non-goal: no faithdiff for script labels. Per-map pret scripts are
+macro-heavy (`dw_const`, `def_script_pointers`, `CheckEvent`), so a call-graph
+model would need per-map suppressions everywhere. The intended protection is to
+shrink the hand-written surface instead — see the `TrainerMapScript` driver and
+`gen_map_script_tables.py`, which turn a standard trainer map's script layer
+into a generated table row with no per-map assembly at all. Revisit only if
+hand-written lines under `src/scripts/` grow anyway.
 
 ## While translating (before writing code)
 

@@ -10,6 +10,13 @@
 ;
 ; In: EBP = GB memory base; font already loaded; player frozen in a standing pose.
 ; The routine may use AL/flags freely (caller preserves via pushad).
+;
+; PROVENANCE GATE: pret scripts/ labels carry no call-graph model in the label DB
+; (update_label_db scans home/ + engine/ for that), but every pret scripts/*.asm
+; global name IS indexed in the names-only `script_labels` side table, and
+; lint_pret_labels' script_collision / script_misplaced rules require a port
+; symbol borrowing such a name to live in that map's file under src/scripts/.
+; So the earlier "the linter never fires on these" caveat no longer holds.
 
 bits 32
 

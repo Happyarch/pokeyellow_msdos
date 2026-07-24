@@ -29,6 +29,14 @@ Violation classes:
                 runtime → executes table bytes → page fault. (This is the
                 `call IndexToPokedex` crash; IndexToPokedex is a flat table in
                 the port, not pret's predef routine.)
+  script_collision a port symbol borrows a pret scripts/*.asm label name but is
+                defined outside dos_port/src/scripts/ — either a genuine name
+                collision (the port symbol means something else) or a map's
+                script layer written into the wrong subsystem. pret scripts/
+                labels are otherwise invisible to the DB (update_label_db models
+                home/ + engine/ only), so before this rule nothing checked them.
+  script_misplaced a pret scripts/ label defined under dos_port/src/scripts/ but
+                in a different map's file than the one pret owns it in.
   local_shadow  a pret label has a non-global definition outside its selected
                 provider, making searches and static call attribution ambiguous.
   weak_relocation a file-level relocation has boilerplate evidence or does not
@@ -296,6 +304,37 @@ def main():
             add('stale_provider', f'{file}:{symbol}',
                 f"{file}:{line}: extern {symbol} names {provider}, which does not define it")
 
+    # ── script_collision / script_misplaced: pret scripts/ provenance ──────
+    #
+    # The names-only side table (update_label_db.scan_pret_scripts) exists so a
+    # borrowed pret scripts/ name is checked for PROVENANCE even though per-map
+    # scripts carry no call-graph/status model. Two exemptions:
+    #   * *_stubs.asm — the stub convention owns link-time stand-ins wherever
+    #     the subsystem puts them (hidden_object_stubs.asm holds the four
+    #     Mansion*Script_Switches stubs).
+    #   * Labels defined inside a generated assets/*.inc are invisible here:
+    #     scan_port walks .asm only, so a `global` emitted by a generator (the
+    #     <Map>TrainerHeaders tables) never reaches port_defs. Placement of
+    #     generated Tier-1 data is governed by its carrier file, not this rule.
+    SCRIPTS_DIR = 'dos_port/src/scripts/'
+    for name, pret_file, expect, stems, file, line in cur.execute("""
+            SELECT s.name, s.pret_file, s.expect_port_file, s.accept_stems,
+                   d.file, d.line
+            FROM script_labels s JOIN port_defs d ON d.name = s.name
+            WHERE d.is_stub = 0
+            ORDER BY s.name, d.file"""):
+        if not file.startswith(SCRIPTS_DIR):
+            add('script_collision', f'{file}:{name}',
+                f"{file}:{line}: {name} is a pret {pret_file} label defined "
+                f"outside the script layer (expected {expect}); rename the port "
+                f"symbol if it means something else, or move the map script")
+            continue
+        stem = os.path.splitext(os.path.basename(file))[0]
+        if stem not in stems.split('|'):
+            add('script_misplaced', f'{file}:{name}',
+                f"{file}:{line}: {name} belongs to pret {pret_file} "
+                f"(expected {expect})")
+
     # ── local_shadow: another file defines the selected pret label locally ──
     for name, selected, shadow in cur.execute("""
             SELECT l.name, l.port_file, d.file FROM labels l JOIN port_defs d
@@ -391,6 +430,7 @@ def main():
         print('\n'.join('  ' + m for m in open_structural))
     for rule in ('registry_approval', 'mirror', 'non_ret_stub', 'dup_def',
                  'call_into_data', 'stale_extern', 'stale_provider',
+                 'script_collision', 'script_misplaced',
                  'local_shadow', 'weak_relocation', 'relocation_shape'):
         msgs = by_rule.get(rule, [])
         if msgs:

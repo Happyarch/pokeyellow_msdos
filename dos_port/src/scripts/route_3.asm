@@ -5,9 +5,13 @@
 ; over a generated trainer-header table (Route3TrainerHeaders, from
 ; assets/trainer_headers.inc via src/data/trainer_headers.asm).
 ;
-; Model: src/scripts/pallet_town.asm (the text_asm/_Script template). As there,
-; scripts/ labels are port_only (update_label_db scans only home/ + engine/, so the
-; mirror linter never fires on these) — but pret label NAMES are preserved.
+; Model: src/scripts/pallet_town.asm (the text_asm/_Script template). scripts/
+; labels stay port_only in the label DB (update_label_db models call graphs for
+; home/ + engine/ only), but their PROVENANCE is checked: update_label_db keeps a
+; names-only `script_labels` side table of every pret scripts/*.asm global, and
+; lint_pret_labels' script_collision / script_misplaced rules require any port
+; symbol borrowing one of those names to be defined in this map's file under
+; src/scripts/. pret label NAMES are preserved, and now enforced.
 ;
 ; ── Two flows, mirroring pret Route3_Script + Route3_ScriptPointers ──────────
 ;  * SIGHT flow (the pilot's primary driver): RunMapScript dispatches here every
