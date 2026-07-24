@@ -3,7 +3,10 @@
 ; Source: home/overworld.asm (pret/pokeyellow). Started at the menu-intro review
 ; (2026-07-23) to retire relocations: CheckForUserInterruption (was a dedicated
 ; home/check_user_interruption.asm), IsSpriteInFrontOfPlayer/-2 (were in
-; engine/overworld/overworld.asm), SwitchToMapRomBank (was in home/bankswitch.asm).
+; engine/overworld/overworld.asm), SwitchToMapRomBank (was in home/bankswitch.asm),
+; and the complete IsSpriteOrSignInFrontOfPlayer (R-002 retirement, 2026-07-23 —
+; sign branch + counter-range extension + fallthrough into the sprite scan;
+; a sign-branch-only version previously lived in engine/overworld/overworld.asm).
 ; pret home/overworld.asm's REMAINING labels still live in
 ; engine/overworld/overworld.asm (the port's historical home for them — legacy
 ; relocation debt, see tools/pret_label_allowlist.json); move them here when
@@ -21,6 +24,10 @@ bits 32
 extern DelayFrame                    ; video/frame.asm
 extern JoypadLowSensitivity          ; home/joypad_lowsens.asm — writes hJoy5
 extern BankswitchCommon              ; home/bankswitch2.asm — AL = bank (flat no-op)
+extern GetTileAndCoordsInFrontOfPlayer ; engine/overworld/player_state.asm (predef
+                                     ; entry) — DH/DL = front map coords, CL = tile
+extern SignLoop                      ; home/hidden_events.asm — DH/DL in;
+                                     ; CF=1 + [hTextID]=sign text id on a match
 
 section .text
 
@@ -67,8 +74,9 @@ SwitchToMapRomBank:
     call BankswitchCommon                        ; record AL in hLoadedROMBank (flat no-op MBC)
     ret
 
+global IsSpriteOrSignInFrontOfPlayer         ; A-press dispatch head (overworld.asm)
 global IsSpriteInFrontOfPlayer               ; sprite scan — TryPushingBoulder (push_boulder.asm)
-global IsSpriteInFrontOfPlayer2              ; long-range entry; consumers open (Surf / counter tiles)
+global IsSpriteInFrontOfPlayer2              ; long-range entry — counter branch above; Surf open
 
 ; ---------------------------------------------------------------------------
 ; IsSpriteInFrontOfPlayer / IsSpriteInFrontOfPlayer2 — detect-only sprite scan.
@@ -93,12 +101,11 @@ global IsSpriteInFrontOfPlayer2              ; long-range entry; consumers open 
 ; would change live collision behavior, which this bullet does not own. The port
 ; therefore keeps pret's name on this half and IsNPCAtTargetBlock's on the other.
 ;
-; CONSUMERS: TryPushingBoulder (push_boulder.asm) — the only live caller today.
-; IsSpriteInFrontOfPlayer2's own consumers (the counter-tile talking-range branch of
-; IsSpriteOrSignInFrontOfPlayer above, and ItemUseSurfboard's check at pret
-; engine/items/item_effects.asm:725) are still open: the counter branch waits on
-; marts/pokécenters (Stage 2) and Surf on the Stage 4 Surf bullet, which lists
-; "supply IsSpriteInFrontOfPlayer2" as its dependency — this supplies it.
+; CONSUMERS: TryPushingBoulder (push_boulder.asm), and the
+; IsSpriteOrSignInFrontOfPlayer head above (counter branch → the -2 entry,
+; no-counter fallthrough → the normal entry). ItemUseSurfboard's -2 check at
+; pret engine/items/item_effects.asm:725 is still open (Stage 4 Surf bullet,
+; which lists "supply IsSpriteInFrontOfPlayer2" as its dependency).
 ;
 ; Register map: a=AL, b=BH (player Y), c=BL (player X), d=DH, e=DL, hl=ESI.
 ; pret reuses D: it is the talking RANGE until .doneCheckingDirection, then the
@@ -108,6 +115,51 @@ global IsSpriteInFrontOfPlayer2              ; long-range entry; consumers open 
 ;      CF=0 and AL=0 otherwise ([hSpriteIndex] is left alone — pret makes the
 ;      CALLER zero it first, and TryPushingBoulder does exactly that).
 ; ---------------------------------------------------------------------------
+
+; ---------------------------------------------------------------------------
+; IsSpriteOrSignInFrontOfPlayer — pret home/overworld.asm:IsSpriteOrSignInFrontOfPlayer.
+; The A-press interaction head: sign lookup first, then the counter-tile
+; talking-range extension, then FALLS THROUGH into the sprite scan below —
+; pret has no ret between the counter loop and IsSpriteInFrontOfPlayer, and
+; that fallthrough is load-bearing: do not insert anything between them.
+;
+; Leaves the found id in [hTextID] (== [hSpriteIndex] — same HRAM byte, the
+; linchpin of pret's contract): SignLoop stores the sign's text id, the sprite
+; scan stores the slot number. Out: CF=1 if a sign or sprite faces the player;
+; CF=0 and [hTextID]=0 otherwise. The caller distinguishes sign vs sprite by
+; id <= [wNumSprites] (pret DisplayTextID's rule) and zeroes wd435 first
+; (pret OverworldLoop does both).
+;
+; A counter-tile match enters the scan at IsSpriteInFrontOfPlayer2 with
+; DH = $20 (two-tile range) still live — that is the entire effect of the
+; counter branch: at a mart/center counter you can talk to the clerk one tile
+; behind it. wTilesetTalkingOverTiles is loaded per-map by LoadTilesetHeader.
+; ---------------------------------------------------------------------------
+IsSpriteOrSignInFrontOfPlayer:
+    mov byte [ebp + hTextID], 0      ; xor a / ldh [hTextID], a
+    mov al, [ebp + W_NUM_SIGNS]      ; ld a, [wNumSigns]
+    test al, al                      ; and a
+    jz .extendRangeOverCounter       ; jr z, .extendRangeOverCounter
+; if there are signs
+    call GetTileAndCoordsInFrontOfPlayer ; predef — front map coords in DH/DL
+    call SignLoop                    ; CF=1 + [hTextID]=sign id on a match
+    jnc .extendRangeOverCounter      ; ┐ pret `ret c`: return only when a sign
+    ret                              ; ┘ matched (CF stays set for the caller)
+.extendRangeOverCounter:
+; counter tile in front? then extend the range at which the player can talk
+    call GetTileAndCoordsInFrontOfPlayer ; predef — front tile id in CL
+    mov esi, W_TILESET_TALKING_OVER_TILES ; ld hl, wTilesetTalkingOverTiles
+    mov bh, 3                        ; ld b, 3 — the list is 3 bytes
+    mov dh, 0x20                     ; ld d, $20 — long talking range, in pixels
+.counterTilesLoop:
+    mov al, [ebp + esi]              ; ld a, [hli]
+    inc esi
+    cmp al, cl                       ; cp c — is the front tile a counter tile?
+    je IsSpriteInFrontOfPlayer2      ; jr z — long-range scan (DH = $20 survives)
+    dec bh                           ; dec b
+    jnz .counterTilesLoop            ; jr nz
+    ; fall through into IsSpriteInFrontOfPlayer (which presets DH = $10)
+
 IsSpriteInFrontOfPlayer:
     mov dh, 0x10                     ; ld d, $10 — normal talking range, in pixels
 IsSpriteInFrontOfPlayer2:

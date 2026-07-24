@@ -111,8 +111,8 @@ wNumSprites equ 0xD4E0
 extern InitToggleableObjectFlags
 extern text_engine_init
 extern CheckNPCInteraction
-; Sign reading (the sign branch of IsSpriteOrSignInFrontOfPlayer, below).
-extern SignLoop                     ; src/home/hidden_events.asm — DH/DL → CF + [hTextID]
+extern IsSpriteOrSignInFrontOfPlayer ; src/home/overworld.asm — A-press head:
+                                    ; CF=1 + [hTextID]=sign id or sprite slot
 ; Hidden-event / bookshelf / card-key A-press dispatch (checked before signs/sprites).
 extern CheckForHiddenEventOrBookshelfOrCardKeyDoor ; src/home/hidden_events.asm
 extern DisplaySignText              ; src/home/overworld_text.asm — [hTextID] → ShowTextStream
@@ -314,9 +314,9 @@ global OverworldLoopLessDelay               ; OW-A.3: de-folded from OverworldLo
 global AdvancePlayerSprite
 global _AdvancePlayerSprite                 ; OW-A.3: engine body, de-folded from the home wrapper
 global IsTilePassable
-global IsSpriteOrSignInFrontOfPlayer         ; sign branch (fidelity Stage 1b)
+; IsSpriteOrSignInFrontOfPlayer (complete: sign + counter + sprite scan) and
 ; IsSpriteInFrontOfPlayer / IsSpriteInFrontOfPlayer2 moved to their pret mirror,
-; src/home/overworld.asm (menu-intro review 2026-07-23).
+; src/home/overworld.asm (menu-intro review + R-002 retirement, 2026-07-23).
 global CheckWarpTile
 global LoadWarpDestination
 global PlayerStepOutFromDoor
@@ -770,8 +770,9 @@ EnterMap:
     ; whole point of this scenario is that the sign's text reaches the screen through
     ; IsSpriteOrSignInFrontOfPlayer → SignLoop → DisplaySignText → ShowTextStream.
     call IsSpriteOrSignInFrontOfPlayer
-    test al, al
-    jz .signtext_nosign
+    cmp byte [ebp + hTextID], 0             ; pret gate: found anything? (the
+    je .signtext_nosign                     ; scenario faces a sign, so a hit
+                                            ; here is the sign's text id)
     call DoSignInteraction                  ; never returns: ShowTextStream's DEBUG_SIGNTEXT
                                             ; hook dumps once the text is printed
 .signtext_nosign:
@@ -1093,17 +1094,27 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     call CheckForHiddenEventOrBookshelfOrCardKeyDoor
     cmp byte [ebp + hItemAlreadyFound], 0
     jz .interactionDone                        ; hidden event/bookshelf handled → skip scan
-    ; Signs first, then sprites — pret's order (OverworldLoopLessDelay runs
-    ; IsSpriteOrSignInFrontOfPlayer, whose sign branch precedes its sprite scan).
+    ; pret order (OverworldLoop A-press): zero wd435, run the complete
+    ; IsSpriteOrSignInFrontOfPlayer (sign branch, counter-range extension, then
+    ; the sprite scan), gate on [hTextID] != 0 — pret home/overworld.asm:95-99.
+    ; (pret then runs Func_0ffe / IsPlayerTalkingToPikachu and DisplayTextID;
+    ; the port's display split below is the documented dispatcher deviation —
+    ; see DoSignInteraction's DEVIATION{class=temporary}.)
+    mov byte [ebp + wd435], 0                  ; xor a / ld [wd435], a
     call IsSpriteOrSignInFrontOfPlayer
-    test al, al
-    jz .checkNPC
+    mov al, [ebp + hTextID]                    ; ldh a, [hTextID]
+    test al, al                                ; and a
+    jz .checkPADDown                           ; jp z, OverworldLoop — nothing found
+    ; Route by id — pret DisplayTextID's sprite-vs-textID rule (cp wNumSprites:
+    ; id <= wNumSprites → sprite slot, else a sign/board text id).
+    cmp al, [ebp + wNumSprites]
+    jbe .checkNPC
     call DoSignInteraction
     jmp .interactionDone
 .checkNPC:
-    call CheckNPCInteraction                   ; the port's sprite branch (detects AND displays)
+    call CheckNPCInteraction                   ; the port's display half (re-detects, then displays)
     test al, al
-    jz .checkPADDown                           ; no NPC/sign found → fall to D-pad
+    jz .checkPADDown                           ; scan disagreement → fall to D-pad
 .interactionDone:
 
     ; Interaction handled. Wait for A to be released before restarting to prevent
@@ -2840,70 +2851,12 @@ DoBikeSpeedup:
 .done:
     ret
 
-; ---------------------------------------------------------------------------
-; IsSpriteOrSignInFrontOfPlayer — the SIGN branch.
-; Pret ref: home/overworld.asm:IsSpriteOrSignInFrontOfPlayer
-;
-; STRUCTURAL SPLIT (CLAUDE.md: "keep pret's names on both halves"). pret's routine
-; does three things:
-;   1. sign lookup via SignLoop                          <- this routine
-;   2. counter-tile talking-range extension              <- NOT IMPLEMENTED (see below)
-;   3. the sprite scan (IsSpriteInFrontOfPlayer2)        <- CheckNPCInteraction
-; In the port, (3) is CheckNPCInteraction (map_sprites.asm), which both *detects* and
-; *runs* the dialog, so it cannot be a drop-in for pret's detect-only sprite branch.
-; This routine therefore keeps pret's name for the sign branch, and the A-press
-; dispatcher calls the two halves in pret's order: signs first, then sprites.
-; (2) is deferred: wTilesetTalkingOverTiles / counter tiles only matter for marts and
-; pokécenters, neither of which is live yet — TODO when they land.
-;
-; This closes the gap the fidelity harness found: SignLoop (hidden_events.asm) and
-; DisplaySignText (overworld_text.asm) were both written and both dead — nothing
-; called them, so pressing A at any sign in the game did nothing at all.
-;
-; Faithful to pret: hTextID is zeroed first, and the front coords are wYCoord/wXCoord
-; adjusted by facing — pret's _GetTileAndCoordsInFrontOfPlayer D/E outputs, which the
-; port's GetTileInFrontOfPlayer deliberately drops (see its DEFERRED note below).
-;
-; Out: AL = 1 and [hTextID] = the sign's text id (pret's 1-based id) if a sign faces
-;      the player, else AL = 0. Clobbers EAX, ECX, EDX, ESI.
-; ---------------------------------------------------------------------------
-IsSpriteOrSignInFrontOfPlayer:
-    mov byte [ebp + hTextID], 0          ; xor a / ldh [hTextID], a
-    mov al, [ebp + W_NUM_SIGNS]
-    test al, al
-    jz .noSign                           ; pret: jr z, .extendRangeOverCounter
-
-    ; Front-tile MAP coords (pret: d = wYCoord ± 1, e = wXCoord ± 1 — raw block
-    ; coords, NOT the +4 MAPY/MAPX form). SignLoop reads them from DH/DL.
-    mov dh, [ebp + W_Y_COORD]
-    mov dl, [ebp + W_X_COORD]
-    mov al, [ebp + W_SPRITE_PLAYER_FACING_DIR]
-    cmp al, SPRITE_FACING_UP
-    je .up
-    cmp al, SPRITE_FACING_LEFT
-    je .left
-    cmp al, SPRITE_FACING_RIGHT
-    je .right
-    inc dh                               ; SPRITE_FACING_DOWN
-    jmp .lookup
-.up:
-    dec dh
-    jmp .lookup
-.left:
-    dec dl
-    jmp .lookup
-.right:
-    inc dl
-.lookup:
-    call SignLoop                        ; CF = matched; sets [hTextID]. Preserves DX.
-    jc .found
-.noSign:
-    xor eax, eax
-    ret
-.found:
-    mov eax, 1
-    ret
-
+; (IsSpriteOrSignInFrontOfPlayer moved to its pret mirror, src/home/overworld.asm
+;  — R-002 retirement 2026-07-23, now COMPLETE: sign branch + counter-tile
+;  talking-range extension + fallthrough into the sprite scan, under pret's
+;  CF/[hTextID] contract. The sign-branch-only version that lived here, with
+;  its inline front-coord computation and AL=1/0 return, is retired; the
+;  mirror routine uses GetTileAndCoordsInFrontOfPlayer as pret does.)
 
 ; ---------------------------------------------------------------------------
 ; DoSignInteraction — display the sign text IsSpriteOrSignInFrontOfPlayer resolved

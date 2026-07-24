@@ -9,12 +9,6 @@
     "Legacy entries began as a 2026-07-07 full-tree inventory and remain subject to structural audit."
   ],
   "structural_findings": {
-    "IsSpriteOrSignInFrontOfPlayer": {
-      "id": "R-002",
-      "port_file": "dos_port/src/engine/overworld/overworld.asm",
-      "problem": "the former relocation justification admits only the sign branch is translated while the sprite scan and counter-range behavior are split or absent",
-      "retirement": "restore the complete pret routine and its entry/call boundaries in dos_port/src/home/overworld.asm"
-    },
     "YellowIntro_AnimatedObjectFramesData": {
       "id": "R-005",
       "port_file": "dos_port/src/data/sprite_anims/intro_anim_data.asm",

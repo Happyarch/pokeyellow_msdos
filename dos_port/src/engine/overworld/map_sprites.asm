@@ -18,10 +18,12 @@
 ; Port extensions kept here (; DIVERGENCE): the toggleable-hidden object gate and the
 ; overworld interaction stack (CheckNPCInteraction / IsNPCAtTargetBlock /
 ; CheckTrainerSight / TrainerEncounterFlow / ShowTextStream).
-; pret's IsSpriteOrSignInFrontOfPlayer IS ported — its SIGN branch, in
-; engine/overworld/overworld.asm — and OverworldLoop's A-press calls it before the
-; sprite scan (pret's order). What is bespoke is only its SPRITE branch: pret's
-; IsSpriteInFrontOfPlayer2 is realized here as CheckNPCInteraction.
+; pret's IsSpriteOrSignInFrontOfPlayer is ported COMPLETE in its mirror,
+; src/home/overworld.asm (R-002 retirement: sign branch + counter-range
+; extension + the faithful pixel-based sprite scan). OverworldLoop's A-press
+; calls it and routes the found [hTextID] here: CheckNPCInteraction is the
+; port's DISPLAY half for the NPC path (it re-detects by block coords, then
+; runs the dialog) — a port helper, not pret's detection routine.
 ;
 ; Build: nasm -f coff -I include/ -I . -o map_sprites.o src/engine/overworld/map_sprites.asm
 
@@ -697,7 +699,10 @@ IsToggleableHidden:
 ; ---------------------------------------------------------------------------
 ; IsNPCAtTargetBlock — test if any NPC occupies the block directly in front of the player.
 ;
-; Pret ref: home/overworld.asm:IsSpriteOrSignInFrontOfPlayer (scan loop only).
+; Port-only helper (block-coord scan; pret satisfies this caller with the
+; pixel-based IsSpriteInFrontOfPlayer — now in src/home/overworld.asm — but
+; rewiring live collision is deliberately out of scope, see that file's
+; STRUCTURAL SPLIT note).
 ;
 ; Same MAPY/MAPX scan as CheckNPCInteraction.  Used by CollisionCheckOnLand to
 ; block the player from walking into an NPC's tile.
@@ -771,8 +776,11 @@ IsNPCAtTargetBlock:
 ; CheckNPCInteraction — check if an NPC is one block in front of the player;
 ; if so, make it face the player, copy its dialog to WRAM, and run PrintText.
 ;
-; Pret ref: home/overworld.asm:IsSpriteOrSignInFrontOfPlayer (block-coord variant).
-; Called from OverworldLoop when A is pressed and W_WALK_COUNTER == 0.
+; Port-only display half of the A-press NPC path (the faithful detection —
+; IsSpriteOrSignInFrontOfPlayer's sprite scan — lives in src/home/overworld.asm;
+; this re-detects by block coords, then runs the dialog).
+; Called from OverworldLoop when A is pressed and the head routine reported a
+; sprite slot in [hTextID].
 ;
 ; Detection: NPC in front iff (MAPY - 4) == W_Y_COORD + dy
 ;                         AND (MAPX - 4) == W_X_COORD + dx
