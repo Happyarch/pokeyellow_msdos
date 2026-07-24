@@ -19,9 +19,9 @@
 ;   .data and are addressed as FLAT 32-bit host pointers ([esi] / [Table + esi]),
 ;   per the port convention (see map_sprites.asm / simulate_joypad.asm).
 ;
-; This file is CHECK-ONLY by default (assembled by `make check`, not linked). It is
-; reached only when overworld.asm is built with -D OVERWORLD_LEDGES, at which point it
-; must be promoted to a linked source list. See SUMMARY / Makefile note below.
+; This file is LINKED (GAME_SRCS, since OW-7.2): HandleLedges is called from
+; CollisionCheckOnLand and HandleMidJump from the overworld frame loop. (It was
+; originally check-only, reached only under -D OVERWORLD_LEDGES; that gate is gone.)
 ;
 ; Build (check): nasm -f coff -I include/ -I . -o ledges.o \
 ;                     src/engine/overworld/ledges.asm

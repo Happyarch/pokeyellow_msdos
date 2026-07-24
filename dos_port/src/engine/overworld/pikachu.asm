@@ -23,15 +23,15 @@
 ;     dos_port/src/engine/overworld/pikachu.asm
 ;
 ; ============================================================================
-; LINK/CHECK STATUS: CHECK-ONLY (do NOT add to the Makefile yet).
-;   The Pikachu OVERWORLD SPRITE GRAPHICS are not staged (no LoadPlayerSprite-
-;   Graphics-style Pikachu tile load), and the deep movement FSM (pret
-;   PointerTable_fc710 state handlers, WillPikachuSpawnOnTheScreen, the
-;   pikachu_follow/pikachu_movement subsystem) is not ported. Until that lands
-;   the follower cannot actually be drawn, so per the M9.1 brief this stays
-;   CHECK-only and the ret-stub `SpawnPikachu` in overworld_stubs.asm STAYS
-;   (removing it now would leave the M6.2 $f0 dispatch calling nothing / would
-;   duplicate the global if both were linked). See SUMMARY.md.
+; LINK/CHECK STATUS: LINKED (GAME_SRCS, since OW-7.2). The ret-stub `SpawnPikachu`
+;   in overworld_stubs.asm was RETIRED when this file was promoted; the M6.2 $f0
+;   dispatch now reaches the real follower FSM here.
+;   The follower is nonetheless INERT in the live build: the Pikachu OVERWORLD
+;   SPRITE GRAPHICS are not staged (no LoadPlayerSpriteGraphics-style Pikachu tile
+;   load), and the deep movement FSM (pret PointerTable_fc710 state handlers,
+;   WillPikachuSpawnOnTheScreen, the pikachu_follow/pikachu_movement subsystem) is
+;   not ported. The only reachable path (follower disabled) is byte-faithful:
+;   SpawnPikachu -> _SpawnPikachu -> TrySpawnPikachu.dont_spawn -> ret nc. See SUMMARY.md.
 ; ============================================================================
 
 bits 32

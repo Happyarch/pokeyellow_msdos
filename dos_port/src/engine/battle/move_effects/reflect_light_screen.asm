@@ -34,7 +34,7 @@ section .text
 global ReflectLightScreenEffect_
 
 ; --- shared scaffold externs (§4: call, never define) ---
-extern PlayCurrentMoveAnimation      ; move_effect_helpers.asm — allowlist subanim stub (§2.1)
+extern PlayCurrentMoveAnimation      ; core_stubs.asm (STUB)
 extern PrintText                     ; move_effect_helpers.asm — ESI = flat text stream
 extern PrintButItFailedText_         ; move_effect_helpers.asm — "But it failed!"
 extern DelayFrames                   ; move_effect_helpers.asm — BL = frame count

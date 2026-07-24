@@ -173,25 +173,17 @@ Bankswitch:
     jmp esi
 
 ; ===========================================================================
-; Literal move-subanimation — allowlist stub (divergence §2 item 1). With
-; ANIMATION=OFF the literal VFX stream is skipped; the faithful damage shake / HP
-; drain are driven separately (PlayApplyingAttackAnimation / UpdateCurMonHPBar).
-; The handlers still CALL these (correct + required) — here they are no-ops.
-; ; TODO-HW: move-subanimation tile/OAM-stream engine (deferred).
+; Literal move-subanimation (PlayCurrentMoveAnimation / *2, PlayBattleAnimation
+; / *2, AnimationSubstitute, AnimationTransformMon) — ret-stubs, moved to
+; core_stubs.asm where link-time stand-ins belong (STUB{} annotations there).
+; The handlers still CALL them (correct + required); they are no-ops for now.
 ; ===========================================================================
-global PlayCurrentMoveAnimation
-global PlayCurrentMoveAnimation2
-global PlayBattleAnimation
-global PlayBattleAnimation2
-global AnimationSubstitute
-global AnimationTransformMon
-PlayCurrentMoveAnimation:
-PlayCurrentMoveAnimation2:
-PlayBattleAnimation:
-PlayBattleAnimation2:
-AnimationSubstitute:
-AnimationTransformMon:
-    ret
+extern PlayCurrentMoveAnimation      ; core_stubs.asm (STUB)
+extern PlayCurrentMoveAnimation2     ; core_stubs.asm (STUB)
+extern PlayBattleAnimation           ; core_stubs.asm (STUB)
+extern PlayBattleAnimation2          ; core_stubs.asm (STUB)
+extern AnimationSubstitute           ; core_stubs.asm (STUB)
+extern AnimationTransformMon         ; core_stubs.asm (STUB)
 
 ; ===========================================================================
 ; Audio — PlaySound stub retired: the real routine lives in src/home/audio.asm
@@ -237,13 +229,9 @@ UpdateCurMonHPBar:
 
 ; HideSubstituteShowMonAnim / ReshowSubstituteAnim — pret animations.asm: swap the
 ; Substitute doll pic with the mon pic in VRAM (and back). No substitute support in
-; the port yet, so the pics are unchanged — linking symbol now.
-; TODO(faithful): Substitute↔mon pic VRAM swap once Substitute is wired.
-global HideSubstituteShowMonAnim
-global ReshowSubstituteAnim
-HideSubstituteShowMonAnim:
-ReshowSubstituteAnim:
-    ret
+; the port yet — ret-stubs in core_stubs.asm (STUB{} annotations there).
+extern HideSubstituteShowMonAnim     ; core_stubs.asm (STUB)
+extern ReshowSubstituteAnim          ; core_stubs.asm (STUB)
 
 ; ---------------------------------------------------------------------------
 ; StatModTextStrings — pret data/battle/stat_mod_names.asm. '@'-terminated stat

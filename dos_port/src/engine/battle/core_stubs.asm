@@ -105,3 +105,57 @@ global PredefShakeScreenHorizontally
 ; (HP bars / faints / text are all real; only the literal shake visual is off).
 PredefShakeScreenHorizontally:
     ret
+
+; ===========================================================================
+; Move-subanimation ret-stubs — moved here from move_effect_helpers.asm /
+; faint_switch.asm (2026-07-23 allowlist audit): a link-time stand-in belongs in
+; the subsystem stub file under a STUB{} annotation, not in a code file behind a
+; relocation-registry entry. The handlers still CALL each of these (correct +
+; required — pret does); the bodies are no-ops until the ANIMATION=OFF
+; subanimation layer / Substitute pic swap land.
+; ===========================================================================
+
+; STUB{class=temporary; label=PlayCurrentMoveAnimation; pret=engine/battle/effects.asm:PlayCurrentMoveAnimation; behavior=skip the literal move VFX stream entirely instead of loading wAnimationID and running the subanimation; evidence=no move-subanimation tile/OAM-stream engine exists yet (TODO-HW), damage shake and HP drain run separately via PlayApplyingAttackAnimation/UpdateCurMonHPBar; lifetime=until the move-subanimation engine lands}
+global PlayCurrentMoveAnimation
+PlayCurrentMoveAnimation:
+    ret
+
+; STUB{class=temporary; label=PlayCurrentMoveAnimation2; pret=engine/battle/effects.asm:PlayCurrentMoveAnimation2; behavior=skip the literal move VFX stream entirely instead of loading wAnimationID and running the subanimation; evidence=no move-subanimation tile/OAM-stream engine exists yet (TODO-HW); lifetime=until the move-subanimation engine lands}
+global PlayCurrentMoveAnimation2
+PlayCurrentMoveAnimation2:
+    ret
+
+; STUB{class=temporary; label=PlayBattleAnimation; pret=engine/battle/effects.asm:PlayBattleAnimation; behavior=skip the requested battle animation (AL = anim id) instead of storing wAnimationID and playing it; evidence=no move-subanimation tile/OAM-stream engine exists yet (TODO-HW); lifetime=until the move-subanimation engine lands}
+global PlayBattleAnimation
+PlayBattleAnimation:
+    ret
+
+; STUB{class=temporary; label=PlayBattleAnimation2; pret=engine/battle/effects.asm:PlayBattleAnimation2; behavior=skip the requested battle animation instead of playing it with saved-OAM restore; evidence=no move-subanimation tile/OAM-stream engine exists yet (TODO-HW); lifetime=until the move-subanimation engine lands}
+global PlayBattleAnimation2
+PlayBattleAnimation2:
+    ret
+
+; STUB{class=temporary; label=AnimationSubstitute; pret=engine/battle/animations.asm:AnimationSubstitute; behavior=leave the mon pic unchanged instead of slide-out plus Substitute doll draw; evidence=no Substitute pic support in the port yet, callers in substitute.asm run the faithful state changes around it; lifetime=until Substitute pic VRAM support lands}
+global AnimationSubstitute
+AnimationSubstitute:
+    ret
+
+; STUB{class=temporary; label=AnimationTransformMon; pret=engine/battle/animations.asm:AnimationTransformMon; behavior=leave the mon pic unchanged instead of redrawing as the transformed species; evidence=no battle pic reload path for Transform yet, transform.asm runs the faithful stat/move copies around it; lifetime=until the Transform pic reload lands}
+global AnimationTransformMon
+AnimationTransformMon:
+    ret
+
+; STUB{class=temporary; label=HideSubstituteShowMonAnim; pret=engine/battle/animations.asm:HideSubstituteShowMonAnim; behavior=leave the pics unchanged instead of swapping the Substitute doll pic for the mon pic; evidence=no Substitute pic support in the port yet; lifetime=until Substitute pic VRAM support lands}
+global HideSubstituteShowMonAnim
+HideSubstituteShowMonAnim:
+    ret
+
+; STUB{class=temporary; label=ReshowSubstituteAnim; pret=engine/battle/animations.asm:ReshowSubstituteAnim; behavior=leave the pics unchanged instead of restoring the Substitute doll pic; evidence=no Substitute pic support in the port yet; lifetime=until Substitute pic VRAM support lands}
+global ReshowSubstituteAnim
+ReshowSubstituteAnim:
+    ret
+
+; STUB{class=temporary; label=SlideDownFaintedMonPic; pret=engine/battle/core.asm:SlideDownFaintedMonPic; behavior=return immediately instead of sliding the fainted mon pic off the screen row by row; evidence=ANIMATION=OFF layer, the HP bar has already drained to 0 in the faithful damage path (faint_switch.asm/faint_enemy.asm callers); lifetime=until the ANIMATION=OFF faint slide lands}
+global SlideDownFaintedMonPic
+SlideDownFaintedMonPic:
+    ret

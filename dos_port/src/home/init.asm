@@ -228,7 +228,8 @@ StopAllSounds:
     jmp StopAllMusic
 
 ; ---------------------------------------------------------------------------
-; GBPalNormal — reset BGP/OBP0/OBP1 shadows to DMG normal palettes.
+; GBPalNormal — reset the BGP/OBP0 shadows to DMG normal palettes (pret writes
+; only rBGP and rOBP0 here — OBP1 is untouched, as in pret).
 ; CGB palette updates deferred to Phase 5.
 ; ---------------------------------------------------------------------------
 GBPalNormal:

@@ -636,12 +636,12 @@ Evolution_CheckForCancel:
     ret
 
 ; ---------------------------------------------------------------------------
-; Evolution_BackAndForthAnim — [2b] deferred tile-morph stub. pret morphs the
+; Evolution_BackAndForthAnim — [2b] deferred tile-morph; ret-stub in
+; engine/movie/evolution_stubs.asm (STUB{} annotation there). pret morphs the
 ; on-screen pic back and forth BH times (Evolution_ChangeMonPic ±$31 tile
-; offset); the software-PPU/palette morph is deferred, so this is a no-op.
+; offset); the software-PPU/palette morph is deferred.
 ; ---------------------------------------------------------------------------
-Evolution_BackAndForthAnim:
-    ret
+extern Evolution_BackAndForthAnim    ; engine/movie/evolution_stubs.asm (STUB)
 
 ; ===========================================================================
 ; RenameEvolvedMon

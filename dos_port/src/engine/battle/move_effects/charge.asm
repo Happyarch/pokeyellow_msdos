@@ -59,9 +59,9 @@ global ChargeEffect_
 
 ; --- shared scaffold externs (§4: call, never define) ---
 extern Bankswitch                   ; move_effect_helpers.asm — §2 item 4: jmp esi (no banks)
-extern PlayBattleAnimation          ; move_effect_helpers.asm — §2 item 1: no-op (ANIMATION=OFF)
-extern HideSubstituteShowMonAnim    ; move_effect_helpers.asm — §3: no-op stand-in (no Substitute pic yet)
-extern ReshowSubstituteAnim         ; move_effect_helpers.asm — §3: no-op stand-in
+extern PlayBattleAnimation          ; core_stubs.asm (STUB)
+extern HideSubstituteShowMonAnim    ; core_stubs.asm (STUB)
+extern ReshowSubstituteAnim         ; core_stubs.asm (STUB)
 extern PrintText                    ; move_effect_helpers.asm — ESI = flat text stream
 
 ; --- missing-WRAM / missing-constant equs (flag for master) ---

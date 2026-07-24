@@ -86,7 +86,7 @@ extern PrintEmptyString                ; src/engine/battle/battle_exp_stubs.asm 
 extern SaveScreenTilesToBuffer1        ; src/home/tilemap.asm
 extern IsItemInBag                     ; src/home/item_predicates.asm — in: BH = item id; out: ZF (1 = not in bag), AL = qty
 extern GainExperience                  ; src/engine/battle/experience.asm — no args, reads wBoostExpByExpAll/wPartyGainExpFlags
-extern SlideDownFaintedMonPic          ; NEEDS-INTEGRATION (see block above) — central ANIMATION=OFF stub, missing
+extern SlideDownFaintedMonPic          ; core_stubs.asm (STUB)
 extern EnemyMonFaintedText             ; dos_port/assets/battle_text.inc (global label, battle_text stream)
 extern EndLowHealthAlarm               ; src/audio/play_battle_music.asm — clears wLowHealthAlarm + CHAN5
 extern PlayBattleVictoryMusic          ; src/audio/play_battle_music.asm — AL=music id, plays victory jingle

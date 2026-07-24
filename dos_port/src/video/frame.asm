@@ -353,7 +353,7 @@ DelayFrames:
 
 ; ---------------------------------------------------------------------------
 ; Delay3 — wait exactly 3 frames (tail-call into DelayFrames).
-; Matches home/delay.asm:Delay3. All registers preserved.
+; Matches home/palettes.asm:Delay3. All registers preserved.
 ; ---------------------------------------------------------------------------
 Delay3:
     push ebx

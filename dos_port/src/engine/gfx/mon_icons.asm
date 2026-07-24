@@ -432,81 +432,13 @@ GetPartyMonSpriteID:
 ; ===========================================================================
 
 ; ---------------------------------------------------------------------------
-; WriteSymmetricMonPartySpriteOAM — pret ref: town_map.asm:WriteSymmetricMonPartySpriteOAM.
-; Writes 4 OAM blocks for a mon party sprite other than a helix. All the sprites
-; other than the helix one have a vertical line of symmetry, which lets the X-flip
-; OAM bit cover the right column — so only 2 rather than 4 tile patterns are needed.
+; WriteSymmetricMonPartySpriteOAM / WriteAsymmetricMonPartySpriteOAM — the
+; faithful bodies live in their pret mirror, engine/items/town_map.asm (which
+; also preserves pret's WriteTownMapSpriteOAM fallthrough into the asymmetric
+; writer). The duplicate copies that used to live here were removed by the
+; 2026-07-23 allowlist audit (silent-shadow dedup).
 ; In: ESI (hl) = shadow-OAM cursor, BH (b) = Y, BL (c) = X, [wOAMBaseTile] = tile.
 ; ---------------------------------------------------------------------------
-global WriteSymmetricMonPartySpriteOAM
-WriteSymmetricMonPartySpriteOAM:
-    mov byte [ebp + wSymmetricSpriteOAMAttributes], 0 ; xor a / ld [..],a
-    mov dh, 2                               ; lb de, 2, 2 — d = rows
-    mov dl, 2                               ;              e = columns
-.loop:
-    push edx                                ; push de
-    push ebx                                ; push bc
-.innerLoop:
-    mov al, bh
-    mov [ebp + esi], al                     ; ld [hli],a — Y
-    inc esi
-    mov al, bl
-    mov [ebp + esi], al                     ; ld [hli],a — X
-    inc esi
-    mov al, [ebp + wOAMBaseTile]
-    mov [ebp + esi], al                     ; ld [hli],a — tile (BOTH columns: the
-    inc esi                                 ;   right one is the left one, X-flipped)
-    mov al, [ebp + wSymmetricSpriteOAMAttributes]
-    mov [ebp + esi], al                     ; ld [hli],a — attributes
-    inc esi
-    xor al, OAM_XFLIP                       ; xor OAM_XFLIP
-    mov [ebp + wSymmetricSpriteOAMAttributes], al
-    inc dh                                  ; inc d — dead (the pop below restores d)
-    add bl, 8                               ; ld a,8 / add c / ld c,a — next column
-    dec dl                                  ; dec e
-    jnz .innerLoop
-    pop ebx                                 ; pop bc
-    pop edx                                 ; pop de
-    add byte [ebp + wOAMBaseTile], 2        ; inc [hl] / inc [hl] — next tile row
-    add bh, 8                               ; ld a,8 / add b / ld b,a — next row
-    dec dh                                  ; dec d
-    jnz .loop
-    ret
+extern WriteSymmetricMonPartySpriteOAM  ; engine/items/town_map.asm
+extern WriteAsymmetricMonPartySpriteOAM ; engine/items/town_map.asm
 
-; ---------------------------------------------------------------------------
-; WriteAsymmetricMonPartySpriteOAM — pret ref: town_map.asm:WriteAsymmetricMonPartySpriteOAM.
-; Writes 4 OAM blocks for a helix mon party sprite, which has no vertical line of
-; symmetry — so all four tile patterns are distinct and no X-flip is used.
-; Same in/out contract as the symmetric writer.
-; ---------------------------------------------------------------------------
-global WriteAsymmetricMonPartySpriteOAM
-WriteAsymmetricMonPartySpriteOAM:
-    mov dh, 2                               ; lb de, 2, 2
-    mov dl, 2
-.loop:
-    push edx                                ; push de
-    push ebx                                ; push bc
-.innerLoop:
-    mov al, bh
-    mov [ebp + esi], al                     ; ld [hli],a — Y
-    inc esi
-    mov al, bl
-    mov [ebp + esi], al                     ; ld [hli],a — X
-    inc esi
-    mov al, [ebp + wOAMBaseTile]
-    mov [ebp + esi], al                     ; ld [hli],a — tile
-    inc esi
-    inc al                                  ; inc a — every tile is its own pattern
-    mov [ebp + wOAMBaseTile], al
-    mov byte [ebp + esi], 0                 ; xor a / ld [hli],a — attributes
-    inc esi
-    inc dh                                  ; inc d — dead (as above)
-    add bl, 8                               ; next column
-    dec dl
-    jnz .innerLoop
-    pop ebx                                 ; pop bc
-    pop edx                                 ; pop de
-    add bh, 8                               ; next row
-    dec dh
-    jnz .loop
-    ret

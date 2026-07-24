@@ -48,7 +48,7 @@ extern QuarterSpeedDueToParalysis   ; status_penalties.asm — quarters off-turn
 extern HalveAttackDueToBurn         ; status_penalties.asm — halves off-turn mon's Attack
 extern AddNTimes                    ; home/array.asm — ESI += EBX(stride) * AL(count)
 ; --- allowlist anim stubs (§2 item 1: literal subanim, ANIMATION=OFF path) ---
-extern PlayBattleAnimation          ; move_effect_helpers.asm allowlist stub
+extern PlayBattleAnimation          ; core_stubs.asm (STUB)
 extern PlayBattleAnimation2
 extern ClearHyperBeam               ; move_effect_helpers.asm — shared (Flinch/Trapping too)
 ; --- battle_text.inc streams (global in core.o) ---

@@ -40,7 +40,7 @@ extern PrintDidntAffectText         ; move_effect_helpers.asm
 extern ConditionalPrintButItFailed  ; move_effect_helpers.asm
 extern ReadPlayerMonCurHPAndStatus  ; engine/battle/core.asm — already live + linked
 ; --- allowlist anim stub (§2 item 1: literal subanim, ANIMATION=OFF path) ---
-extern PlayBattleAnimation          ; move_effect_helpers.asm allowlist stub
+extern PlayBattleAnimation          ; core_stubs.asm (STUB)
 ; --- battle_text.inc streams (global in core.o; flat addresses) ---
 extern IsUnaffectedText
 extern RanFromBattleText

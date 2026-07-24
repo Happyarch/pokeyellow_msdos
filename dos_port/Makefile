@@ -416,6 +416,7 @@ POKEMON_SRCS := \
     src/engine/pokemon/knows_hm_move.asm \
     src/engine/pikachu/pikachu_status.asm \
     src/engine/pokemon/evolution.asm \
+    src/engine/movie/evolution_stubs.asm \
     src/engine/pokemon/learn_move.asm
 
 # Items layer (current_plan_items.md). Non-UI inventory/bag logic + item data.

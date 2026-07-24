@@ -17,9 +17,10 @@
 ; in H_CURRENT_SPRITE_OFFSET / wNPCMovementScriptSpriteOffset (= wSpriteIndex<<4,
 ; pret's `swap a` / hSpriteIndex).
 ;
-; Check-only (HOME_CHECK_SRCS) until the Pallet/Pewter map scripts that set
-; wNPCMovementScriptPointerTableNum are ported (OW-2.5) — HideObject is likewise
-; an unported predef (extern).
+; LINKED (GAME_SRCS, since OW-7.2). The per-map movement-script pointer tables here
+; are dispatched by RunNPCMovementScript, but the machinery stays inert until a map
+; script sets wNPCMovementScriptPointerTableNum nonzero (OW-2.5 Oak cutscene wires
+; the first one) — HideObject is likewise an unported predef (extern).
 ;
 ; NOTE: pret's PlayerStepOutFromDoor lives in this file; the port already has it
 ; in overworld.asm (home/npc_movement mirror), so it is NOT redefined here.

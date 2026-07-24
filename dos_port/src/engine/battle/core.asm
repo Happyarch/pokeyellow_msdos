@@ -1019,8 +1019,8 @@ extern PrintCriticalOHKOText           ; print_critical_ohko.asm (real)
 extern DisplayEffectiveness            ; display_effectiveness.asm (real)
 extern HandleExplodingAnimation        ; exploding_animation.asm (real)
 extern HandleBuildingRage              ; building_rage.asm (real)
-extern HideSubstituteShowMonAnim       ; move_effect_helpers.asm (stub)
-extern ReshowSubstituteAnim            ; move_effect_helpers.asm (stub)
+extern HideSubstituteShowMonAnim       ; core_stubs.asm (STUB)
+extern ReshowSubstituteAnim            ; core_stubs.asm (STUB)
 extern DelayFrames                     ; frame.asm
 extern MultiHitText                    ; battle_text.inc
 extern PrintMoveFailureText            ; print_move_failure.asm (real: DoesntAffect/miss/unaffected)

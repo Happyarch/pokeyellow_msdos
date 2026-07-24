@@ -33,10 +33,13 @@ global DisplayTownMap
 global LoadTownMap_Fly
 global LoadTownMap_Nest
 global TownMapSpriteBlinkingAnimation
+global WriteAsymmetricMonPartySpriteOAM ; pret entry points here (mon_icons.asm externs them)
+global WriteSymmetricMonPartySpriteOAM
 
 ; ---- ported helpers -------------------------------------------------------
 extern PlaceString, TextBoxBorder, CopyData, FarCopyData
 extern ClearScreen, ClearSprites, UpdateSprites
+extern RefreshCollisionTileMap         ; engine/overworld/overworld.asm — rebuild W_TILEMAP
 extern DisableLCD, EnableLCD, Delay3, DelayFrame, DelayFrames
 extern GetMonName, WaitForTextScrollButtonPress, PlaySound
 extern GBPalNormal, LoadPlayerSpriteGraphics, LoadFontTilePatterns
@@ -369,6 +372,10 @@ LoadTownMap_Fly:
     mov [ebp + wTownMapSpriteBlinkingEnabled], al
     mov [ebp + H_JOY7], al              ; ldh [hJoy7], a
     call GBPalWhiteOutWithDelay3
+    ; DEVIATION{class=projection; pret=engine/items/town_map.asm:LoadTownMap_Fly; behavior=call the port-only ExitTownMap on exit to restore the caller overworld canvas (W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR, H_SCX/IO_SCX, H_SCY/IO_SCY, g_bg_whiteout, text_row_stride) and reload the player sprite tiles the bird graphic overwrote, instead of restoring only wUpdateSpritesEnabled; evidence=LoadTownMap saves exactly this state on entry and the sibling LoadTownMap_Nest already calls ExitTownMap on its identical exit, and pret has no equivalent because its caller CloseTextDisplay does a full LoadCurrentMapView that the port replaces with the lighter CloseStartMenu fold; lifetime=permanent, the port split render-state and collision-buffer model requires this on every LoadTownMap exit path}
+    call ExitTownMap
+    ; DEVIATION{class=timing; pret=engine/items/town_map.asm:LoadTownMap_Fly; behavior=rebuild W_TILEMAP via the port-only RefreshCollisionTileMap before returning; evidence=ExitTownMap ClearScreen blanks W_TILEMAP to 0x7F which is at or above MAP_TILESET_SIZE 0x60, and the caller StartMenu_Pokemon.canFly .goBackToMap runs RestoreScreenTilesAndReloadTilePatterns whose ReloadMapSpriteTilePatterns tail-jumps UpdateSprites BEFORE CloseStartMenu reaches its own RefreshCollisionTileMap, so without this the first UpdateSprites reads a text-box tile under the player and UpdatePlayerSprite.disable sets wSpritePlayerStateData1ImageIndex 0xFF which InitFacingDirectionList then searches for unbounded in wFacingDirectionList and walks off GB memory into a page fault; lifetime=permanent, the port lighter CloseStartMenu fold does not rebuild the collision buffer early enough on this path}
+    call RefreshCollisionTileMap
     pop esi                             ; pop hl (wUpdateSpritesEnabled)
     pop eax                             ; pop af
     mov [ebp + esi], al                 ; ld [hl], a

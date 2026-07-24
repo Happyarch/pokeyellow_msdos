@@ -31,7 +31,6 @@ global SendOutMon
 global HandlePlayerBlackOut
 global EnemyRan
 ; --- ANIMATION=OFF / palette-HAL stubs (consumed by the enemy-faint file too) ---
-global SlideDownFaintedMonPic
 
 ; --- externs ---
 extern FlagAction                       ; flag_action.asm — ESI=array base, CL=index, BH=action
@@ -50,12 +49,12 @@ extern WildRanText                      ; battle_text.inc
 ; ===========================================================================
 ; SlideDownFaintedMonPic / RunPaletteCommand — deferred leaves.
 ; SlideDownFaintedMonPic: pret slides the fainted pic off (ANIMATION=OFF → no-op;
-; the HP bar has already drained to 0 in the faithful damage path).
+; the HP bar has already drained to 0 in the faithful damage path). Ret-stub in
+; core_stubs.asm (STUB{} annotation there).
 ; RunPaletteCommand: pret's palette dispatcher (SET_PAL_BATTLE etc.) — palette HAL,
 ; deferred to Phase 5 (GBC palette translation). No-op keeps the DMG placebo palette.
 ; ===========================================================================
-SlideDownFaintedMonPic:
-    ret
+extern SlideDownFaintedMonPic        ; core_stubs.asm (STUB)
 extern RunPaletteCommand             ; home/palettes.asm
 
 ; ===========================================================================
