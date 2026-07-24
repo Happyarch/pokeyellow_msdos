@@ -61,8 +61,6 @@ global SetPartyMenuHPBarColor
 global PartyMenuMirror
 global PartyMenuPrintText               ; home/pokemon.asm:HandlePartyMenuInput prints
                                         ; PartyMenuText_12cc through this screen's msgbox
-global DrawHP
-global DrawHP2
 
 extern LoadMonPartySpriteGfxWithLCDDisabled  ; engine/gfx/mon_icons.asm
 extern WriteMonPartySpriteOAMByPartyIndex    ; engine/gfx/mon_icons.asm
@@ -486,68 +484,11 @@ SetPartyMenuHPBarColor:
     inc byte [ebp + wWhichPartyMenuHPBar]   ; ld hl,… / inc [hl]
     ret
 
-; ---------------------------------------------------------------------------
-; DrawHP / DrawHP2 / DrawHP_ — HP bar + "cur/ max" fraction for the loaded mon.
-; pret ref: engine/pokemon/status_screen.asm:DrawHP/DrawHP2/DrawHP_ — hosted
-; here until pokemon_behavior's StatusScreen lands (that plan owns the file's
-; port; the routines keep their pret names and move verbatim).
-; In: ESI (hl) = bar position. Out: DL = bar pixels (pret leaves them in e).
-; ---------------------------------------------------------------------------
-DrawHP:
-    ; call GetPredefRegisters — predef plumbing, collapsed in the flat port
-    mov al, 1                               ; stats screen
-    jmp DrawHP_
-DrawHP2:
-    ; call GetPredefRegisters
-    mov al, 2                               ; party menu
-DrawHP_:
-    mov [ebp + wHPBarType], al
-    push esi                                ; push hl
-    mov bh, [ebp + wLoadedMonHP]            ; ld a,[wLoadedMonHP] / ld b,a
-    mov bl, [ebp + wLoadedMonHP + 1]        ; ld c,a
-    mov al, bl
-    or al, bh                               ; or b
-    jnz .nonzeroHP
-    xor al, al                              ; xor a
-    mov bl, al                              ; ld c,a — no sliver
-    mov dl, al                              ; ld e,a — 0 pixels
-    mov dh, 6                               ; ld d,$6
-    jmp .drawHPBarAndPrintFraction
-.nonzeroHP:
-    mov dh, [ebp + wLoadedMonMaxHP]         ; ld a,[wLoadedMonMaxHP] / ld d,a
-    mov dl, [ebp + wLoadedMonMaxHP + 1]     ; ld e,a
-    call GetHPBarLength                     ; predef HPBarLength → DL = pixels
-    mov dh, 6                               ; ld a,$6 / ld d,a
-    mov bl, 6                               ; ld c,a — alive → force a sliver
-.drawHPBarAndPrintFraction:
-    pop esi                                 ; pop hl
-    push edx                                ; push de
-    push esi                                ; push hl
-    push esi                                ; push hl
-    call DrawHPBar
-    pop esi                                 ; pop hl
-    test byte [ebp + H_UI_LAYOUT_FLAGS], 1 << BIT_PARTY_MENU_HP_BAR
-    jz .printFractionBelowBar
-    add esi, 9                              ; ld bc,$9 — right of bar
-    jmp .printFraction
-.printFractionBelowBar:
-    add esi, GBSCR_W + 1               ; below bar (stride-20 scratch)
-.printFraction:
-    push ebx
-    mov edx, wLoadedMonHP                   ; ld de,wLoadedMonHP
-    mov bh, 2                               ; 2 bytes
-    mov bl, 3                               ; 3 digits
-    call PrintNumber                        ; ESI advances past the field
-    mov byte [ebp + esi], 0xF3              ; ld a,'/' / ld [hli],a
-    inc esi
-    mov edx, wLoadedMonMaxHP
-    mov bh, 2
-    mov bl, 3
-    call PrintNumber
-    pop ebx
-    pop esi                                 ; pop hl
-    pop edx                                 ; pop de — DL = bar pixels
-    ret
+; DrawHP / DrawHP2 / DrawHP_ — moved to their pret mirror,
+; engine/pokemon/status_screen.asm (the stride divergence that kept a second
+; copy here is now a runtime [text_row_stride] read). Only DrawHP2 is called
+; from this file.
+extern DrawHP2                          ; engine/pokemon/status_screen.asm
 
 ; ---------------------------------------------------------------------------
 ; ShowPartyMenuWindows — (re)build the party screen's window descriptors:

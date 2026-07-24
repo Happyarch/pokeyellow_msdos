@@ -72,13 +72,9 @@ SECTION .text
 
 global StatusScreen
 global StatusScreen2
-; NOTE: DrawHP is intentionally file-LOCAL here (no `global`). pret has a single
-; DrawHP in engine/pokemon/status_screen.asm, but the port needs two because of
-; the tilemap-stride divergence: this self-contained copy targets the 40-wide
-; status canvas (fraction at +FW+1), while the party menu's global DrawHP/DrawHP2/
-; DrawHP_ family (src/engine/menus/party_menu.asm) targets the stride-20 scratch.
-; Both keep pret's name (CLAUDE.md "Preserve pret Labels" port-split rule); only
-; the party-menu one is global. status_screen's `call DrawHP` binds to this local.
+global DrawHP                           ; the pret DrawHP/DrawHP2/DrawHP_ family
+global DrawHP2                          ; lives here, in its mirror — stride-
+global DrawHP_                          ; parameterized via [text_row_stride]
 global DrawLineBox
 global PrintMonType
 global CalcExpToLevelUp
@@ -94,6 +90,8 @@ extern SkipFixedLengthTextEntries
 extern IndexToPokedex                                ; engine/menus/pokedex.asm — predef, wPokedexNum in place
 extern WideTypeNames                                 ; data table (type id*4 → name ptr)
 extern GetHealthBarColor
+extern DrawHPBar                                     ; home/pokemon.asm — ESI=dest, DH=tiles, DL=px, BL=sliver
+extern GetHPBarLength                                ; engine/gfx/hp_bar.asm — BX=hp, DX=maxhp → DL=px
 extern RunPaletteCommand                             ; palette Phase 5 (no-op)
 ; screen / frame helpers
 extern GBPalWhiteOutWithDelay3
@@ -369,82 +367,73 @@ DrawLineBox:
     ret
 
 ; ---------------------------------------------------------------------------
-; DrawHP — pret DrawHP_ for the status screen (wHPBarType == 1: cap $6d, fraction
-; drawn BELOW the bar). Reads wLoadedMonHP/MaxHP (big-endian). Draws a 6-segment
-; gauge at ESI + "cur/max" one row below.
-; In:  ESI = canvas offset of the bar. Out: DL = bar pixel length (for
-;      GetHealthBarColor). Preserves nothing meaningful else.
+; DrawHP / DrawHP2 / DrawHP_ — HP bar + "cur/ max" fraction for the loaded mon.
+; pret ref: engine/pokemon/status_screen.asm:DrawHP/DrawHP2/DrawHP_ (predefs),
+; in their mirror at last (moved back from party_menu.asm, which hosted them
+; until this file's StatusScreen landed). DrawHP → wHPBarType 1 (status/battle
+; cap $6d), DrawHP2 → 2 (party cap $6c). The fraction goes right of the bar
+; (+9) when H_UI_LAYOUT_FLAGS bit BIT_PARTY_MENU_HP_BAR is set (party menu),
+; else one row below the bar — pret's SCREEN_WIDTH+1, taken from the runtime
+; [text_row_stride] (20 menu scratch / 40 flat canvas), the port's one
+; divergence from pret's constant.
+; In: ESI (hl) = bar position. Out: DL = bar pixels (pret leaves them in e;
+; StatusScreen feeds them to GetHealthBarColor).
 ; ---------------------------------------------------------------------------
 DrawHP:
-    push esi                                         ; save bar position
-    ; curHP → EBX (big-endian), pixel length → EDX
-    movzx eax, byte [ebp + wLoadedMonHP]             ; hi
-    shl eax, 8
-    mov al, [ebp + wLoadedMonHP + 1]                 ; lo → EAX = curHP
-    test eax, eax
+    ; call GetPredefRegisters — predef plumbing, collapsed in the flat port
+    mov al, 1                               ; stats screen
+    jmp DrawHP_
+DrawHP2:
+    ; call GetPredefRegisters
+    mov al, 2                               ; party menu
+DrawHP_:
+    mov [ebp + wHPBarType], al
+    push esi                                ; push hl
+    mov bh, [ebp + wLoadedMonHP]            ; ld a,[wLoadedMonHP] / ld b,a
+    mov bl, [ebp + wLoadedMonHP + 1]        ; ld c,a
+    mov al, bl
+    or al, bh                               ; or b
     jnz .nonzeroHP
-    ; fainted: 0-length bar, no sliver
-    xor edx, edx                                     ; pixels = 0
-    jmp .drawBar
+    xor al, al                              ; xor a
+    mov bl, al                              ; ld c,a — no sliver
+    mov dl, al                              ; ld e,a — 0 pixels
+    mov dh, 6                               ; ld d,$6
+    jmp .drawHPBarAndPrintFraction
 .nonzeroHP:
-    ; pixels = curHP*48 / maxHP, at least 1 (pret GetHPBarLength)
-    imul eax, eax, 48
-    movzx ecx, byte [ebp + wLoadedMonMaxHP]          ; hi
-    shl ecx, 8
-    mov cl, [ebp + wLoadedMonMaxHP + 1]              ; lo → ECX = maxHP
-    ; BUG{class=data-model; pret=engine/pokemon/status_screen.asm:DrawHP_; behavior=divide both HP-bar operands by four when max HP exceeds 255, losing precision; evidence=pret GetHPBarLength high-byte path plus matching status-screen implementation; lifetime=permanent Gen-1 behavior unless BUG_FIX_LEVEL >= 2}
-    ; pret GetHPBarLength divides both curHP*48 and maxHP by 4 when maxHP>=256
-    ; before an 8-bit divide (lossy). Preserved to match pret (see battle_hud.asm).
-%if BUG_FIX_LEVEL < 2
-    cmp ecx, 256
-    jb .exactDiv
-    shr eax, 2
-    shr ecx, 2
-.exactDiv:
-%endif
-    xor edx, edx
-    div ecx
-    test eax, eax
-    jnz .havePixels
-    mov eax, 1                                       ; alive → at least 1 pixel
-.havePixels:
-    mov edx, eax                                     ; EDX = pixel length
-.drawBar:
-    pop esi                                          ; ESI = bar position
-    push edx                                         ; save pixel length (for GetHealthBarColor)
-    ; --- draw gauge (pret DrawHPBar, d=6 segments, status cap) ---
-    mov byte [ebp + esi], HPB_HP                     ; "HP:"
-    mov byte [ebp + esi + 1], HPB_LEFT               ; gauge left edge
-    mov byte [ebp + esi + 8], HPB_CAP                ; right cap (status/battle)
-    lea edi, [esi + 2]                               ; first of 6 gauge segments
-    mov ecx, 6
-.seg:
-    cmp edx, 8
-    jb .partial
-    mov byte [ebp + edi], HPB_FULL
-    sub edx, 8
-    jmp .segNext
-.partial:
-    lea eax, [edx + HPB_EMPTY]                        ; $63 + n-pixel partial
-    mov [ebp + edi], al
-    xor edx, edx                                     ; rest stays empty
-.segNext:
-    inc edi
-    dec ecx
-    jnz .seg
-    ; --- "cur/max" one row below the bar (pret .printFractionBelowBar: +SCREEN_WIDTH+1) ---
-    lea esi, [esi + FW + 1]
-    mov edx, wLoadedMonHP
-    mov bh, 2                                         ; 2 bytes (big-endian)
-    mov bl, 3                                         ; 3 digits
-    call PrintNumber
-    mov byte [ebp + esi], T_SLASH
+    mov dh, [ebp + wLoadedMonMaxHP]         ; ld a,[wLoadedMonMaxHP] / ld d,a
+    mov dl, [ebp + wLoadedMonMaxHP + 1]     ; ld e,a
+    call GetHPBarLength                     ; predef HPBarLength → DL = pixels
+    mov dh, 6                               ; ld a,$6 / ld d,a
+    mov bl, 6                               ; ld c,a — alive → force a sliver
+.drawHPBarAndPrintFraction:
+    pop esi                                 ; pop hl
+    push edx                                ; push de
+    push esi                                ; push hl
+    push esi                                ; push hl
+    call DrawHPBar
+    pop esi                                 ; pop hl
+    test byte [ebp + H_UI_LAYOUT_FLAGS], 1 << BIT_PARTY_MENU_HP_BAR
+    jz .printFractionBelowBar
+    add esi, 9                              ; ld bc,$9 — right of bar
+    jmp .printFraction
+.printFractionBelowBar:
+    add esi, [text_row_stride]              ; ld bc, SCREEN_WIDTH + 1 — below bar,
+    inc esi                                 ;   at the active row stride (20/40)
+.printFraction:
+    push ebx
+    mov edx, wLoadedMonHP                   ; ld de,wLoadedMonHP
+    mov bh, 2                               ; 2 bytes
+    mov bl, 3                               ; 3 digits
+    call PrintNumber                        ; ESI advances past the field
+    mov byte [ebp + esi], T_SLASH           ; ld a,'/' / ld [hli],a
     inc esi
     mov edx, wLoadedMonMaxHP
     mov bh, 2
     mov bl, 3
     call PrintNumber
-    pop edx                                          ; DL = pixel length (GetHealthBarColor)
+    pop ebx
+    pop esi                                 ; pop hl
+    pop edx                                 ; pop de — DL = bar pixels
     ret
 
 ; ---------------------------------------------------------------------------
