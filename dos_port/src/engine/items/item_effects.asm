@@ -1583,7 +1583,7 @@ extern PlayMusic                  ; home/audio.asm
 extern Random                 ; home/random.asm — AL = next random byte
 extern PlayBattleAnimation    ; engine/battle/move_effect_helpers.asm (ANIMATION=OFF hook)
 extern Multiply               ; home/math.asm — hMultiplicand(3) * hMultiplier → hProduct(4)
-extern IndexToPokedex         ; data/pokemon_data.asm — FLAT TABLE: [species-1] → dex number
+extern IndexToPokedex         ; engine/menus/pokedex.asm — predef, wPokedexNum in place
 extern ShowPokedexData        ; engine/menus/pokedex.asm (predef)
 extern AskName                ; engine/menus/naming_screen.asm (predef; hl = nickname dest)
 extern LoadEnemyMonData       ; engine/battle/load_enemy_mon_data.asm
@@ -1982,10 +1982,7 @@ ItemUseBall:
     call PrintText
 
 ; Add the caught mon to the Pokédex (test first — a new species shows its entry).
-    movzx eax, byte [ebp + wPokedexNum]
-    dec eax
-    movzx eax, byte [IndexToPokedex + eax]   ; predef IndexToPokedex (DEVIATION 6)
-    mov [ebp + wPokedexNum], al
+    call IndexToPokedex                      ; predef IndexToPokedex — wPokedexNum in place
 ; BUG{class=data-model; pret=engine/items/item_effects.asm:ItemUseBall; behavior=dex-number zero wraps to bit 255 and writes beyond wPokedexOwned after capture; evidence=pret .captured unconditional dec plus FlagAction bit addressing and docs/bug_categorization.md Battle table; lifetime=permanent Gen-1 behavior unless BUG_FIX_LEVEL >= 1}
 ; "Index #000 Post-Capture" — pret ref: engine/items/item_effects.asm
 ; :ItemUseBall (.captured); docs/bug_categorization.md (Battle table). A species with

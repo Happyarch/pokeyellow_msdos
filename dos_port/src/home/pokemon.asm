@@ -10,7 +10,7 @@
 ; index in [wCurSpecies] into wMonHeader, then overwrites byte 0 (the dex id)
 ; with the internal index — matching the original.
 ;
-; DEVIATION{class=data-model; pret=home/pokemon.asm:GetMonHeader; behavior=index flat BaseStats directly and copy into wMonHeader while eliding bank switches and the net-neutral IndexToPokedex predef; evidence=pret GetMonHeader push/pop wPokedexNum flow plus port flat generated tables; lifetime=permanent flat-data and banking boundary}
+; DEVIATION{class=data-model; pret=home/pokemon.asm:GetMonHeader; behavior=index flat BaseStats directly and copy into wMonHeader while eliding bank switches (the IndexToPokedex predef call is faithful again since the 2026-07-23 allowlist audit); evidence=pret GetMonHeader push/pop wPokedexNum flow plus port flat generated tables; lifetime=permanent flat-data and banking boundary}
 ; The data tables (BaseStats, IndexToPokedex) live in the
 ; program image as flat labels, not in EBP-relative GB memory, so GetMonHeader
 ; indexes them directly and `rep movsb`s into [ebp+wMonHeader] instead of going
@@ -38,7 +38,7 @@ bits 32
 %include "gb_constants.inc"
 
 extern BaseStats
-extern IndexToPokedex
+extern IndexToPokedex               ; engine/menus/pokedex.asm — predef, wPokedexNum in place
 extern SkipFixedLengthTextEntries
 extern CopyData
 extern PrintNumber
@@ -95,7 +95,9 @@ section .text
 ; INPUT: [wCurSpecies] = internal species index
 GetMonHeader:
     pushad
-
+    mov dl, [ebp + wPokedexNum]       ; ld a, [wPokedexNum] / push af — save it
+                                      ; (wd11e is live multi-use scratch; pret
+                                      ; restores it at .done on every path)
     movzx eax, byte [ebp + wCurSpecies]
 
     ; --- fossil/ghost special sprite IDs (pret GetMonHeader .specialID) ---
@@ -107,9 +109,9 @@ GetMonHeader:
     je .aerodactyl
 
     ; normal path: src = BaseStats + (dex - 1) * BASE_DATA_SIZE
-    ; dex = IndexToPokedex[wCurSpecies - 1]   (internal index -> national dex)
-    dec eax
-    movzx eax, byte [IndexToPokedex + eax]
+    mov [ebp + wPokedexNum], al         ; ld [wPokedexNum], a
+    call IndexToPokedex                 ; predef IndexToPokedex
+    movzx eax, byte [ebp + wPokedexNum] ; ld a, [wPokedexNum]
     dec eax
     imul eax, eax, BASE_DATA_SIZE
     lea esi, [BaseStats + eax]        ; flat (program-image) source
@@ -138,6 +140,7 @@ GetMonHeader:
     ; wMonHIndex = wCurSpecies (write internal index back over the dex byte)
     mov al, [ebp + wCurSpecies]
     mov [ebp + wMonHIndex], al
+    mov [ebp + wPokedexNum], dl       ; pop af / ld [wPokedexNum], a — restore
 
     popad
     ret

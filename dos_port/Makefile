@@ -396,6 +396,7 @@ GAME_SRCS := \
 # Pokémon data/stats engine (current_plan_pokemon_engine.md). Grows per stage.
 POKEMON_SRCS := \
     src/data/pokemon_data.asm \
+    src/data/pokemon/dex_order.asm \
     src/home/math.asm \
     src/engine/math/multiply_divide.asm \
     src/home/array.asm \
@@ -2027,9 +2028,11 @@ src/engine/overworld/field_move_messages.o: assets/field_move_text.inc
 src/engine/overworld/cut.o: assets/cut_text.inc
 src/engine/overworld/player_animations.o: assets/player_anim_text.inc
 
-# Pokémon base stats + IndexToPokedex (static data, generated from pret source).
-assets/base_stats.inc:
+# Pokémon base stats + PokedexOrder (static data, generated from pret source).
+assets/base_stats.inc assets/dex_order.inc:
 	python3 tools/generators/gen_base_stats.py
+
+src/data/pokemon/dex_order.o: assets/dex_order.inc
 
 # GrowthRateTable (static data, generated from data/growth_rates.asm).
 assets/growth_rates.inc:
@@ -2101,7 +2104,7 @@ assets/alphabets.inc: ../data/text/alphabets.asm ../constants/charmap.asm \
 # (flat dd) + inlined per-mon name/height/weight/flavor blobs (text_far flavor
 # inlined). NOTE: the index->dex order table pret keeps as PokedexOrder is NOT
 # regenerated here — the port already ships that exact byte table as the global
-# `IndexToPokedex` (base_stats.inc); pokedex.asm's PokedexToIndex walks it.
+# `PokedexOrder` (src/data/pokemon/dex_order.asm); pokedex.asm walks it.
 assets/dex_entries.inc: ../data/pokemon/dex_entries.asm ../data/pokemon/dex_text.asm \
                         ../constants/charmap.asm tools/generators/gen_dex_entries.py
 	python3 tools/generators/gen_dex_entries.py

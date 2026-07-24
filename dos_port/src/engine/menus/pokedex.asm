@@ -18,10 +18,10 @@
 ; PokedexToIndex / ShowPokedexDataInternal). Merged back to the mirrored path; all
 ; nine entries deleted, not re-blessed. Ledger M-78.
 ;
-; NOT IndexToPokedex: pret has a ROUTINE by that name (dex# lookup), while the port
-; gives the name to a DATA TABLE in pokemon_data.asm and has no such routine. That
-; label squat is real but cross-file (pokemon_data.asm + home/pics.asm + the base-stats
-; generator all depend on the table name), so it is filed as ledger M-71, not fixed here.
+; IndexToPokedex (the ROUTINE, below) and PokedexOrder (the table it walks,
+; src/data/pokemon/dex_order.asm) now carry their pret names — the old label
+; squat (table shipped under the routine's name, ledger M-71) was unwound by the
+; 2026-07-23 allowlist audit.
 ;
 ; Same routines, same labels, same branch structure/order as pret; divergences
 ; are tagged PROJ / TODO-HW / DEVIATION / STUB only.
@@ -77,6 +77,7 @@ global Pokedex_PlacePokemonList
 global IsPokemonBitSet
 global DrawTileLine
 global PokedexToIndex
+global IndexToPokedex
 ; the DATA (entry) page — pret pokedex.asm:438-693:
 global ShowPokedexData
 global ShowPokedexDataInternal
@@ -85,7 +86,7 @@ global Pokedex_PrintFlavorTextAtRow11
 global Pokedex_PrintFlavorTextAtBC
 global Pokedex_PrepareDexEntryForPrinting
 global LoadPokedexTilePatterns       ; REAL body (below), not a stub — G2 externs it
-extern IndexToPokedex                ; base_stats.inc — index->dex TABLE (== pret PokedexOrder)
+extern PokedexOrder                  ; src/data/pokemon/dex_order.asm — index->dex table
 
 ; ---- externs -------------------------------------------------------------
 extern GBPalWhiteOut                 ; home/fade.asm
@@ -188,9 +189,7 @@ TILE_BLANK        equ 0x7F         ; ' '
 
 ; ===========================================================================
 section .data
-; (PokedexToIndex walks the existing global IndexToPokedex table from
-; base_stats.inc — byte-identical to pret's PokedexOrder — so no separate
-; dex-order table is emitted here.)
+; (PokedexOrder itself lives in its pret mirror, src/data/pokemon/dex_order.asm.)
 
 ; Pokédex interface tileset (PokedexTileGraphics 18 tiles + PokeballTileGraphics
 ; 1 tile) — generated passthrough of gfx/pokedex/pokedex.2bpp + balls.2bpp.
@@ -718,12 +717,6 @@ DrawTileLine:
 ; Convert the pokédex number at [wPokedexNum] to an internal index (walks
 ; the index->dex table until a matching dex number is found; the 1-based
 ; position is the index). In/Out via [wPokedexNum]. Preserves BX/ESI.
-; DEVIATION{class=data-model; pret=engine/menus/pokedex.asm:PokedexToIndex; behavior=walk the byte-identical IndexToPokedex table instead of duplicating PokedexOrder; evidence=pret PokedexOrder scan plus generated base_stats.inc table identity; lifetime=permanent generated-data deduplication}
-; pret walks PokedexOrder; the port already ships that exact table
-; (byte-identical) as the global `IndexToPokedex` (base_stats.inc), so we walk
-; it instead of duplicating the data. pret's IndexToPokedex ROUTINE (the reverse
-; lookup) is unused here — the port's callers index the table directly
-; (IndexToPokedex[index-1]), which is what G2 does — so it is not re-ported.
 ; ---------------------------------------------------------------------------
 PokedexToIndex:
     push ebx
@@ -731,7 +724,7 @@ PokedexToIndex:
     mov al, [ebp + wPokedexNum]
     mov bh, al                                          ; ld b, a (target dex#)
     mov bl, 0                                           ; ld c, 0 (counter)
-    mov esi, IndexToPokedex                              ; port's index->dex table (== PokedexOrder)
+    mov esi, PokedexOrder                                ; ld hl, PokedexOrder
 .loop:
     inc bl                                              ; inc c
     mov al, [esi]                                       ; ld a, [hli] (flat)
@@ -742,6 +735,23 @@ PokedexToIndex:
     mov [ebp + wPokedexNum], al
     pop esi
     pop ebx
+    ret
+
+; ---------------------------------------------------------------------------
+; IndexToPokedex — pret ref: pokedex.asm:IndexToPokedex (a predef).
+; Convert the internal index number at [wPokedexNum] to a pokédex number,
+; in place. Preserves BX/ESI (pret push bc / push hl).
+; ---------------------------------------------------------------------------
+IndexToPokedex:
+    push ebx                                            ; push bc
+    push esi                                            ; push hl
+    mov al, [ebp + wPokedexNum]
+    dec al                                              ; dec a — 8-bit, so index $00 wraps to
+    movzx eax, al                                       ;   $FF and reads PokedexOrder+$FF, as pret
+    mov al, [PokedexOrder + eax]                        ; ld hl, PokedexOrder / add hl, bc / ld a, [hl] (flat)
+    mov [ebp + wPokedexNum], al
+    pop esi                                             ; pop hl
+    pop ebx                                             ; pop bc
     ret
 
 ; ===========================================================================
@@ -892,16 +902,9 @@ DrawDexEntryOnScreen:
     ; --- № + national dex number (row 8) ---------------------------------------
     mov byte [ebp + HL(2, 8)], GLYPH_NO  ; ld a,'№' / ld [hli],a
     mov byte [ebp + HL(3, 8)], GLYPH_DOT ; ld a,'<DOT>' / ld [hli],a
-    movzx eax, byte [ebp + wPokedexNum]  ; internal index
+    mov al, [ebp + wPokedexNum]          ; internal index
     mov [saved_pokedexnum], al           ; pret: push af
-    dec eax
-    ; DEVIATION{class=data-model; pret=engine/menus/pokedex.asm:DrawDexEntryOnScreen; behavior=read IndexToPokedex table data directly instead of calling the reverse-lookup routine; evidence=pret IndexToPokedex call plus port generated table ownership documented by M-71; lifetime=until the routine and table names are represented separately}
-    ; pret calls the IndexToPokedex ROUTINE; in the port that pret
-    ; name belongs to the TABLE it walks (see the file header + ledger M-71), so the
-    ; lookup is the table read the routine would have done. Cross-file rename, not fixed
-    ; here; faithdiff therefore shows IndexToPokedex as a DROPPED call.
-    movzx eax, byte [IndexToPokedex + eax]
-    mov [ebp + wPokedexNum], al          ; wPokedexNum := dex# (PrintNumber + the owned bit)
+    call IndexToPokedex                  ; predef IndexToPokedex — wPokedexNum := dex#
     mov edx, wPokedexNum
     mov bh, LEADING_ZEROES | 1           ; lb bc, LEADING_ZEROES | 1, 3
     mov bl, 3

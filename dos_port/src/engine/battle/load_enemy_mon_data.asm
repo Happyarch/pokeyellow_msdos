@@ -35,7 +35,7 @@ extern CopyData                         ; home/copy_data.asm — copy BC bytes E
 extern GetMonName                       ; home/names.asm — wNamedObjectIndex -> wNameBuffer
 extern WriteMonMoves                    ; write_moves.asm — level-up moveset (predef: wPredefDE)
 extern LoadMovePPs                      ; write_moves.asm — PPs (predef: wPredefHL/DE)
-extern IndexToPokedex                   ; pokemon_data.asm — flat TABLE byte[species-1]=dex# (NOT a routine)
+extern IndexToPokedex                   ; engine/menus/pokedex.asm — predef, wPokedexNum in place
 extern FlagAction                       ; flag_action.asm — ESI=array, CL=bit, BH=action
 
 ; ---------------------------------------------------------------------------
@@ -214,13 +214,10 @@ LoadEnemyMonData:
     call CopyData
 
     ; --- mark seen in the pokédex ---
-    ; pret does `predef IndexToPokedex` (species in wd11e → dex# in wd11e). In the
-    ; PORT, IndexToPokedex is a flat DATA TABLE (byte[species-1] = national dex#),
-    ; NOT a routine — index it directly (mirrors LoadFrontSpriteByMonIndex in
-    ; home/pics.asm). Calling it as code jumps into .data → page fault.
-    movzx eax, byte [ebp + wEnemyMonSpecies2]
-    dec eax
-    movzx eax, byte [IndexToPokedex + eax]  ; dex number (1-based)
+    mov al, [ebp + wEnemyMonSpecies2]   ; ld a, [wEnemyMonSpecies2]
+    mov [ebp + wPokedexNum], al         ; ld [wPokedexNum], a
+    call IndexToPokedex                 ; predef IndexToPokedex
+    movzx eax, byte [ebp + wPokedexNum] ; ld a, [wPokedexNum]
     dec eax                             ; dex bit index (0-based)
     mov cl, al
     mov bh, FLAG_SET                    ; FlagAction reads the action in BH

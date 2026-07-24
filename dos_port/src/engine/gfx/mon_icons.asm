@@ -59,7 +59,7 @@ extern CopyVideoData            ; home/copy2.asm — ESI=dest VRAM, EDX=src flat
 extern DelayFrame               ; video/frame.asm
 extern DisableLCD               ; video/lcd_control.asm
 extern EnableLCD                ; video/lcd_control.asm
-extern IndexToPokedex           ; data/pokemon_data.asm — flat table, [species-1] → dex #
+extern IndexToPokedex           ; engine/menus/pokedex.asm — predef, wPokedexNum in place
 extern spr_dos_sy, spr_dos_sx   ; ppu/ppu.asm — render_sprites' canvas positions
 extern spr_oam_valid            ; ppu/ppu.asm — render_sprites' live-entry count
 
@@ -401,12 +401,8 @@ GetPartyMonSpriteID:
     push ebx
     push esi
     mov [ebp + wPokedexNum], al             ; ld [wPokedexNum],a
-    ; predef IndexToPokedex — the port keeps it as a flat table, not a routine
-    ; (see home/pokemon.asm; port-predefs-as-inline-tables).
-    movzx eax, al
-    dec eax
-    movzx eax, byte [IndexToPokedex + eax]  ; internal index → national dex #
-    mov [ebp + wPokedexNum], al
+    call IndexToPokedex                     ; predef IndexToPokedex
+    mov al, [ebp + wPokedexNum]             ; ld a, [wPokedexNum]
     mov bl, al                              ; ld c,a
     dec al                                  ; dec a
     shr al, 1                               ; srl a — 2 mons per byte
@@ -421,15 +417,6 @@ GetPartyMonSpriteID:
     pop esi
     pop ebx
     ret
-
-; ===========================================================================
-; The two OAM writers. pret defines them in engine/items/town_map.asm (they sit
-; beside the town-map's own OAM code, which is where the bank had room), and they
-; are called only from here. The port's src/engine/items/town_map.asm is a DANGLING
-; file — it assembles but is not in the linked build — so hosting them there would
-; not link. They live with their only caller instead; the relocation is registered
-; in tools/pret_label_allowlist.json.
-; ===========================================================================
 
 ; ---------------------------------------------------------------------------
 ; WriteSymmetricMonPartySpriteOAM / WriteAsymmetricMonPartySpriteOAM — the

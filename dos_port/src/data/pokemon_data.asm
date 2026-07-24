@@ -4,7 +4,8 @@
 ; (GetMonHeader, CalcStat, CalcExperience, …) can `extern` them. Per the linker
 ; rule in docs/assembly.md, embedded data lives in .data (not .rodata).
 ;
-; BaseStats / IndexToPokedex : tools/generators/gen_base_stats.py (from data/pokemon/).
+; BaseStats                  : tools/generators/gen_base_stats.py (from data/pokemon/).
+; (PokedexOrder now lives in its pret mirror, src/data/pokemon/dex_order.asm.)
 ; GrowthRateTable            : tools/generators/gen_growth_rates.py (from data/growth_rates.asm).
 ; Moves                      : tools/generators/gen_moves.py (from data/moves/moves.asm).
 ; EvosMovesPointerTable      : tools/generators/gen_evos_moves.py (flat dd pointers + blobs).
@@ -15,7 +16,6 @@
 bits 32
 
 global BaseStats
-global IndexToPokedex
 global GrowthRateTable
 global Moves
 global EvosMovesPointerTable

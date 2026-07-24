@@ -46,7 +46,7 @@ extern AddNTimes
 extern WriteMonMoves
 extern Moves
 extern MonsterNames
-extern IndexToPokedex               ; flat table: byte[species-1] = national dex#
+extern IndexToPokedex               ; engine/menus/pokedex.asm — predef, wPokedexNum in place
 extern FlagAction                   ; esi=flag array, cl=bit index, bh=action
 extern AskName                      ; engine/menus/naming_screen.asm — pret predef target
 
@@ -138,13 +138,10 @@ _AddPartyMon:
     jnz .writeDVs                    ; enemy party ⇒ fixed IVs, skip Dex
 
     ; Player path: update the Pokédex (owned + seen).
-    ; pret: ld [wPokedexNum],a; predef IndexToPokedex. Port table is flat.
-    mov al, [ebp + wCurPartySpecies]
-    mov [ebp + wPokedexNum], al
-    dec al
-    movzx eax, al
-    movzx eax, byte [IndexToPokedex + eax]   ; national dex # (1-based)
-    mov [ebp + wPokedexNum], al              ; pret leaves dex# in wPokedexNum
+    mov al, [ebp + wCurPartySpecies]         ; ld a, [wCurPartySpecies]
+    mov [ebp + wPokedexNum], al              ; ld [wPokedexNum], a
+    call IndexToPokedex                      ; predef IndexToPokedex
+    mov al, [ebp + wPokedexNum]              ; ld a, [wPokedexNum] — dex# (1-based)
     dec al                                    ; 0-based flag index
     mov cl, al
     mov bh, FLAG_TEST

@@ -78,7 +78,7 @@ extern WriteMonMoves_ShiftMoveData
 
 ; From pokemon_data.asm:
 extern EvosMovesPointerTable
-extern IndexToPokedex           ; flat label: byte[species-1] = dex number
+extern IndexToPokedex           ; engine/menus/pokedex.asm — predef, wPokedexNum in place
 extern BaseStats                ; flat label: BASE_DATA_SIZE-byte structs, dex order
 extern MonsterNames             ; flat label: NAME_LENGTH-byte names, internal-index order
 
@@ -355,25 +355,15 @@ EvolutionAfterBattle:
     call ClearScreen
     call RenameEvolvedMon           ; keep the nickname, else adopt the new name
 
-    ; IndexToPokedex: species → dex number
+    ; predef IndexToPokedex: species → dex number (1-based; the `inc al` that
+    ; once re-based it to dex+1 made a stone evolution read the NEXT species'
+    ; BaseStats — NINETALES got JIGGLYPUFF's; caught by item_stone_evolve).
     push eax
     mov al, [ebp + wPokedexNum]
-    push eax                        ; save old wPokedexNum
-    mov al, [ebp + wCurSpecies]
-    dec al
-    movzx eax, al
-    movzx eax, byte [IndexToPokedex + eax]  ; flat dex-order lookup — the table
-                                    ; stores pret's 1-BASED dex number (see
-                                    ; gen_base_stats.py and every other consumer:
-                                    ; GetMonHeader/`dec eax`, the dex-flag site
-                                    ; below/`dec al`). The `inc al` that used to
-                                    ; sit here re-based it to dex+1, so the
-                                    ; BaseStats copy below read the NEXT species'
-                                    ; record — a stone evolution recalculated the
-                                    ; evolved mon's stats from the wrong base
-                                    ; stats (NINETALES got JIGGLYPUFF's; caught
-                                    ; by the item_stone_evolve golden).
-    mov [ebp + wPokedexNum], al
+    push eax                        ; ld a, [wPokedexNum] / push af — save it
+    mov al, [ebp + wCurSpecies]     ; ld a, [wCurSpecies]
+    mov [ebp + wPokedexNum], al     ; ld [wPokedexNum], a
+    call IndexToPokedex             ; predef IndexToPokedex
 
     ; Copy new species base stats into wMonHeader
     ; DEVIATION{class=data-model; pret=engine/pokemon/evolution.asm:EvolveMon; behavior=copy BaseStats directly from flat data into wMonHeader instead of using GB-offset AddNTimes and CopyData; evidence=pret EvolveMon base-stat copy plus port flat BaseStats address and CopyData EBP-relative contract; lifetime=permanent flat-data boundary}
@@ -484,11 +474,11 @@ EvolutionAfterBattle:
 
     ; Mark pokedex seen/owned for the new species
 
-    ; IndexToPokedex again to get 0-based dex index for flag actions
+    ; predef IndexToPokedex again to get the 0-based dex index for flag actions
     mov al, [ebp + wCurSpecies]
-    dec al
-    movzx eax, al
-    movzx eax, byte [IndexToPokedex + eax]
+    mov [ebp + wPokedexNum], al     ; ld [wPokedexNum], a
+    call IndexToPokedex             ; predef IndexToPokedex
+    mov al, [ebp + wPokedexNum]     ; ld a, [wPokedexNum]
     dec al                          ; 1-based → 0-based
     mov cl, al
     mov bh, FLAG_SET

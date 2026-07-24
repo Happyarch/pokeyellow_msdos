@@ -33,7 +33,7 @@ extern AddNTimes
 extern CopyData
 extern SkipFixedLengthTextEntries
 extern FlagAction
-extern IndexToPokedex
+extern IndexToPokedex               ; engine/menus/pokedex.asm — predef, wPokedexNum in place
 extern LoadMonData
 extern CalcLevelFromExperience
 extern CalcStats
@@ -93,12 +93,12 @@ _AddEnemyMonToPlayerParty:
     mov bx, NAME_LENGTH
     call CopyData
     
-    ; pret does `predef IndexToPokedex` (species in wd11e → dex# in wd11e). In the
-    ; PORT, IndexToPokedex is a flat DATA TABLE (byte[species-1]=national dex#), NOT
-    ; a routine — index it directly. Calling it as code jumps into .data → page fault.
-    movzx eax, byte [ebp + wCurPartySpecies]
-    dec eax
-    movzx eax, byte [IndexToPokedex + eax]  ; dex number (1-based)
+    mov al, [ebp + wCurPartySpecies]    ; ld a, [wCurPartySpecies]
+    mov [ebp + wPokedexNum], al         ; ld [wPokedexNum], a
+    push edx                            ; push de
+    call IndexToPokedex                 ; predef IndexToPokedex
+    pop edx                             ; pop de
+    movzx eax, byte [ebp + wPokedexNum] ; ld a, [wPokedexNum]
     dec eax                             ; dex bit index (0-based)
     mov cl, al
     mov bh, FLAG_SET                    ; pret `ld b, FLAG_SET` (B=BH); FlagAction reads action in BH

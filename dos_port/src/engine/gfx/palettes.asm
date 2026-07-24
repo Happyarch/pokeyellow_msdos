@@ -44,7 +44,7 @@ global SetPal_TitleScreen, SetPal_NidorinoIntro, SetPal_Generic, SetPal_Overworl
 global SetPal_PartyMenu, SetPal_PokemonWholeScreen, SetPal_GameFreakIntro
 global SetPal_TrainerCard, SetPal_PikachusBeach, SetPal_PikachusBeachTitle
 
-extern IndexToPokedex
+extern IndexToPokedex               ; engine/menus/pokedex.asm — predef, wPokedexNum in place
 extern tile_pal, g_tilecache_dirty
 extern g_pal_dirty, bg_slot_pal, obj_slot_pal
 extern mon_pal_table, battle_slot_pal, battle_tile_pal, command_pal_table
@@ -218,15 +218,18 @@ SetPal_PikachusBeach:           mov al, SET_PAL_SURFING_PIKACHU_TITLE
 SetPal_PikachusBeachTitle:      mov al, SET_PAL_SURFING_PIKACHU_MINIGAME
                                 jmp SetPal_Screen
 
-; Flat port equivalent of predef IndexToPokedex + MonsterPalettes lookup.
+; DeterminePaletteIDOutOfBattle flow (pret palettes.asm): store the index,
+; convert via predef IndexToPokedex, then the MonsterPalettes lookup.
 DeterminePaletteID:
-    test al, al
-    jz .missingno
-    dec al
-    movzx eax, al
-    movzx eax, byte [IndexToPokedex + eax]
-.missingno:
-    movzx eax, al
+    mov [ebp + wPokedexNum], al         ; ld [wPokedexNum], a
+    test al, al                         ; and a — is the mon index 0?
+    jz .skipDexNumConversion
+    push ebx                            ; push bc
+    call IndexToPokedex                 ; predef IndexToPokedex
+    pop ebx                             ; pop bc
+    mov al, [ebp + wPokedexNum]         ; ld a, [wPokedexNum]
+.skipDexNumConversion:
+    movzx eax, al                       ; ld e, a / ld d, 0
     mov al, [mon_pal_table + eax]
     ret
 

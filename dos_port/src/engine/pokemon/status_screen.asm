@@ -91,7 +91,7 @@ extern PrintNumber
 extern PlaceString
 extern PrintStatusCondition
 extern SkipFixedLengthTextEntries
-extern IndexToPokedex                                ; data table (internal idx → dex)
+extern IndexToPokedex                                ; engine/menus/pokedex.asm — predef, wPokedexNum in place
 extern WideTypeNames                                 ; data table (type id*4 → name ptr)
 extern GetHealthBarColor
 extern RunPaletteCommand                             ; palette Phase 5 (no-op)
@@ -253,11 +253,7 @@ StatusScreen:
     mov al, [ebp + wMonHIndex]
     mov [ebp + wPokedexNum], al
     mov [ebp + wCurSpecies], al
-    ; predef IndexToPokedex (data table lookup in the port)
-    movzx eax, byte [ebp + wMonHIndex]
-    dec eax
-    movzx eax, byte [IndexToPokedex + eax]
-    mov [ebp + wPokedexNum], al
+    call IndexToPokedex                 ; predef IndexToPokedex
     mov esi, scoord(3, 7)
     mov edx, wPokedexNum
     mov bh, LEADING_ZEROES | 1                        ; flags | 1 byte

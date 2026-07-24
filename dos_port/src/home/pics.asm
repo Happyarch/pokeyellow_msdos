@@ -37,7 +37,8 @@ extern g_tilecache_dirty
 extern DelayFrame
 extern SetPal_BattleBlack
 extern SetPal_Battle
-extern IndexToPokedex             ; flat dex table (pokemon_data.asm): [species-1] -> dex#
+extern IndexToPokedex             ; engine/menus/pokedex.asm — predef, wPokedexNum in place
+extern PokedexOrder               ; data/pokemon/dex_order.asm — index->dex table (LoadMonBackPic projection)
 extern text_row_stride            ; text/text.asm — active W_TILEMAP row stride (20/40)
 extern repaint_front_table, tile_pal, bg_slot_pal, g_pal_dirty
 global SlideBattlePicsIn
@@ -362,10 +363,14 @@ LoadFrontSpriteByMonIndex:
     mov byte [ebp + wSpriteFlipped], 0
 .body:
     push esi                                ; preserve tilemap dest (pret: push hl)
-    ; dex = IndexToPokedex[wCurPartySpecies - 1]   (internal index -> national dex)
-    movzx eax, byte [ebp + wCurPartySpecies]
-    dec eax
-    movzx eax, byte [IndexToPokedex + eax]
+    mov al, [ebp + wPokedexNum]             ; ld a, [wPokedexNum]
+    push eax                                ; push af — save the caller's wPokedexNum
+    mov al, [ebp + wCurPartySpecies]        ; ld a, [wCurPartySpecies]
+    mov [ebp + wPokedexNum], al             ; ld [wPokedexNum], a
+    call IndexToPokedex                     ; predef IndexToPokedex
+    movzx eax, byte [ebp + wPokedexNum]     ; ld hl, wPokedexNum / ld a, [hl]
+    pop ebx                                 ; pop bc
+    mov [ebp + wPokedexNum], bl             ; ld [hl], b — restore the caller's wPokedexNum
     and al, al
     jz .invalidDexNumber                    ; dex #0 invalid
     cmp al, NUM_POKEMON + 1
@@ -693,10 +698,12 @@ LoadMonBackPic:
 %ifdef MON_FRONT_PICS
     mov al, [ebp + wBattleMonSpecies2]
     mov [ebp + wCurPartySpecies], al           ; pret: ld [wCurPartySpecies], a
-    ; species → national dex − 1 (IndexToPokedex is the flat table, NOT a routine)
+    ; species → national dex − 1 (port projection: direct PokedexOrder table read
+    ; — pret's LoadMonBackPic has no dex conversion; the flat MonBackPics blob is
+    ; dex-ordered, so the port converts here)
     movzx eax, al
     dec eax
-    movzx eax, byte [IndexToPokedex + eax]     ; dex number (1-based)
+    movzx eax, byte [PokedexOrder + eax]       ; dex number (1-based)
     dec eax                                    ; dex−1 = MonBackPics record index
     ; stage MonBackPics[dex−1] (record = { dd flatptr, dd len }) into GB scratch
     lea esi, [MonBackPics + eax*8]
