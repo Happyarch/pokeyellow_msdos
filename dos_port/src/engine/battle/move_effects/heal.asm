@@ -52,7 +52,7 @@
 ; carry-chained cmp/sbb, with a real independent-byte-compare fix at BUG_FIX_LEVEL>=2.
 ;
 ; Fidelity boundary: docs/move_translation_divergence.md. Template:
-; dos_port/src/engine/battle/move_effects/poison.asm. Shared externs (§4) are called, not
+; dos_port/src/engine/battle/effects.asm:PoisonEffect. Shared externs (§4) are called, not
 ; redefined; only §2 allowlist items (literal subanim, audio, banks) diverge.
 ;
 ; Register map: A=AL, B=BH (BC=BX), D=DH, E=DL (DE=EDX), HL=ESI, EBP=GB base.
@@ -176,7 +176,7 @@ HealEffect_:
     ; "Rest + Toxic Counter" — this overwrites only wBattleMon/
     ; EnemyMonStatus (PSN/BRN/FRZ/PAR/SLP), which clears the PSN bit so residual
     ; damage stops ticking, but BADLY_POISONED lives in the separate wBattleMon/
-    ; EnemyMonStatus3 byte (see move_effects/poison.asm's inflictPoison) and the
+    ; EnemyMonStatus3 byte (see effects.asm:PoisonEffect's inflictPoison) and the
     ; toxic counter (wPlayer/EnemyToxicCounter) — neither is touched here. If the
     ; mon is poisoned again later by a non-Toxic move (which doesn't reset the
     ; counter, only a fresh TOXIC application does), residual_damage.asm's

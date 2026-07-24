@@ -5622,3 +5622,34 @@ Supersedes the Script-engine Stage 5 entry above (which also mislocated this fil
   `statically-reached-from-start` for `PrintStrengthText`. The conclusion is
   unchanged, because it never rested on the metric: the arming/map facts are what
   make it unexecuted. See docs/plans/label_db_reachability.md.)
+
+---
+
+## 2026-07-24 — engine/battle/effects.asm consolidated into its mirror (relocation grind)
+
+Not a translation: a **file-layout** change. Every pret `engine/battle/effects.asm`
+label whose body pret defines INLINE now lives in `dos_port/src/engine/battle/effects.asm`
+in pret source order. **Earlier entries in this log that place these routines in
+`stat_mod_effects.asm`, `move_effect_helpers.asm`, or `move_effects/{bide,charge,
+disable,explode,flinch_side,freeze_burn_paralyze,hyper_beam,mimic,poison,rage,sleep,
+splash,switch_and_teleport,thrash_petal_dance,trapping,two_to_five_attacks,confusion}.asm`
+are historically accurate but no longer describe the tree** — those 18 files are gone.
+
+- `ef4e4977` — 20 labels out of `stat_mod_effects.asm` / `move_effect_helpers.asm` /
+  `move_effects/confusion.asm`; retired 20 `relocated_labels` registry rows (274 → 254).
+- `6d44a6de` — the 16 port-invented `move_effects/*.asm` splits un-forked. pret has
+  only **14** files in `engine/battle/move_effects/`; for those, `XxxEffect_` is a real
+  pret label reached by `jpfar` and the port mirrors them 1:1 (untouched). The other 16
+  port files had no pret counterpart, so their `_` suffix was a **forked name** — which
+  is why the label DB read 16 pret labels as `missing` while their bodies sat beside
+  them as `port_only`, invisible to the linter and to the registry.
+- Two pret labels the forks had hidden were restored in the same pass: `CheckDefrost`
+  (had been a `.checkDefrost` dot-local inside `FreezeBurnParalyzeEffect`) and
+  `PrintNoEffectText` (had been inlined into `SplashEffect`).
+- Rule of thumb this establishes: **a trailing underscore is a pret label only when
+  pret itself has the matching `move_effects/` file.** Check before splitting a body out.
+- Gate: 43+16 blocks byte-identical vs their sources (comments stripped); build/link
+  EXIT=0; faithdiff 40/40 `translated` with no pre-existing residual changed;
+  `make fidelity-full` 31/31 PASS by name; `lint_pret_labels` = `registry_approval`
+  only (awaiting maintainer re-bless). Label DB: `relocated` 273 → 253,
+  `port_only` 410 → 394, `missing` 1885 → 1867, `translated` 1119 → 1159.

@@ -11,7 +11,7 @@
 ;
 ; Fidelity boundary: docs/move_translation_divergence.md. Shared externs (§4) are
 ; called, not redefined; only §2 allowlist items (predef/bank flattening) diverge.
-; Structure copied from move_effects/poison.asm (the swarm's reference template).
+; Structure copied from effects.asm:PoisonEffect (the swarm's reference template).
 ;
 ; RE-TRANSLATION NOTE (prior draft at
 ; dos_port/src/engine/battle/move_effects/drain_hp.asm FAILED audit — do not

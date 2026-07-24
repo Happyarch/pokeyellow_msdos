@@ -6,7 +6,7 @@
 ; null move with ATTACK_UP1_EFFECT, runs StatModifierUpEffect, then restores the
 ; Rage move and the turn flag.
 ;
-; Depends on StatModifierUpEffect (Stage 5, stat_mod_effects.asm). PrintText +
+; Depends on StatModifierUpEffect (Stage 5, effects.asm). PrintText +
 ; BuildingRageText are the deferred battle front end (extern), so this assembles
 ; (make check) but does not yet link; the stat-mod outcome is native-validated end
 ; to end through the real StatModifierUpEffect.

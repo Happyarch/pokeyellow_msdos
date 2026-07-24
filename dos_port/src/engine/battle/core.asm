@@ -1489,7 +1489,7 @@ CheckPlayerStatusConditions:
     ; frozen while it still owes a Hyper Beam recharge turn never reaches the
     ; `and ..., ~(1<<NEEDS_TO_RECHARGE)` clear at .hyperBeamCheck while frozen.
     ; Gen-1 freeze has no auto-thaw (only a Fire-type hit via CheckDefrost cures
-    ; it — see move_effects/freeze_burn_paralyze.asm), so the stale
+    ; it — see effects.asm:FreezeBurnParalyzeEffect), so the stale
     ; NEEDS_TO_RECHARGE bit survives every frozen turn; once thawed, the mon must
     ; ALSO burn a full "must recharge" turn it would otherwise not owe, on top of
     ; however long the freeze itself lasted — effectively "permanently unable to

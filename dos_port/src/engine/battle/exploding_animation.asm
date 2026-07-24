@@ -10,7 +10,7 @@
 ; PlayMoveAnimation with that same value as the animation id — ported here as an
 ; explicit tail jmp since PlayMoveAnimation is a separate routine in this port.
 ;
-; Template: dos_port/src/engine/battle/move_effects/poison.asm (swarm reference
+; Template: effects.asm:PoisonEffect (swarm reference
 ; handler). Fidelity boundary: docs/plans/move_translation_divergence.md — the
 ; PlayMoveAnimation tail call lands in the allowlisted ANIMATION=OFF realization
 ; (dos_port/src/engine/battle/animations.asm), not a full subanimation engine.
