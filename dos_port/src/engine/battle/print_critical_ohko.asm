@@ -34,7 +34,7 @@ section .text
 global PrintCriticalOHKOText
 
 ; --- shared scaffold externs (§4: call, never define) ---
-extern PrintText                    ; move_effect_helpers.asm — ESI = flat text stream
+extern PrintText                    ; src/home/window.asm — ESI = flat text stream
 extern DelayFrames                  ; frame.asm — BL = frame count
 ; --- battle_text.inc streams (global, assets/battle_text.inc) ---
 extern CriticalHitText

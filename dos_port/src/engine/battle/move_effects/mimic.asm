@@ -36,8 +36,8 @@ global MimicEffect_
 ; --- shared scaffold externs (§4: call, never define) ---
 extern MoveHitTest                  ; core_damage.asm — accuracy test → wMoveMissed
 extern BattleRandom                 ; core_damage.asm / home/random.asm
-extern PrintText                    ; move_effect_helpers.asm — ESI = flat text stream
-extern PrintButItFailedText_        ; move_effect_helpers.asm
+extern PrintText                    ; src/home/window.asm — ESI = flat text stream
+extern PrintButItFailedText_        ; engine/battle/effects.asm
 extern DelayFrames                  ; video/frame.asm — BL = frame count
 ; --- allowlist anim stub (§2 item 1: literal subanim, ANIMATION=OFF path) ---
 extern PlayCurrentMoveAnimation

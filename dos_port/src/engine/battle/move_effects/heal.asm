@@ -69,8 +69,8 @@ bits 32
 
 ; --- shared scaffold externs (§4: call, never define) ---
 extern EffectCallBattleCore         ; move_effect_helpers.asm — flat tail-call (no banks, §2.4)
-extern PrintText                    ; move_effect_helpers.asm — ESI = flat text stream
-extern PrintButItFailedText_        ; move_effect_helpers.asm
+extern PrintText                    ; src/home/window.asm — ESI = flat text stream
+extern PrintButItFailedText_        ; engine/battle/effects.asm
 extern DelayFrames                  ; frame.asm (already live) — BL = frame count
 extern UpdateCurMonHPBar            ; move_effect_helpers.asm — faithful HP-bar redraw; see
                                      ; header note #2 (substitutes pret's inlined hlcoord +

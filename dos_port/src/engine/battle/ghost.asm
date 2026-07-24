@@ -20,7 +20,7 @@ section .text
 global PrintGhostText
 global IsGhostBattle
 
-extern PrintText                ; move_effect_helpers.asm — ESI = flat text stream
+extern PrintText                ; src/home/window.asm — ESI = flat text stream
 extern ScaredText                ; assets/battle_text.inc
 extern GetOutText                ; assets/battle_text.inc
 extern IsItemInBag               ; home/item_predicates.asm — In: BH=item id.

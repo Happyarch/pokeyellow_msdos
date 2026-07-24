@@ -42,7 +42,7 @@ global RecoilEffect_
 extern UpdateCurMonHPBar            ; move_effect_helpers.asm — reads hWhoseTurn, sets
                                      ; wHPBarType, redraws HUDs/HP bars (replaces pret's
                                      ; hlcoord + predef UpdateHPBar2 — see header note)
-extern PrintText                    ; move_effect_helpers.asm — ESI = flat text stream
+extern PrintText                    ; src/home/window.asm — ESI = flat text stream
 ; --- battle_text.inc stream (generated, global in core.o) ---
 extern HitWithRecoilText
 

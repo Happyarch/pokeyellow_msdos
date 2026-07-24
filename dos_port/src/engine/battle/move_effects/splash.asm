@@ -49,7 +49,7 @@ global SplashEffect_
 extern PlayCurrentMoveAnimation
 
 ; --- shared scaffold extern (§4: call, never define) ---
-extern PrintText                    ; move_effect_helpers.asm — ESI = flat text stream
+extern PrintText                    ; src/home/window.asm — ESI = flat text stream
 
 ; --- battle_text.inc stream (global in core.o) ---
 extern NoEffectText

@@ -35,9 +35,9 @@ global ReflectLightScreenEffect_
 
 ; --- shared scaffold externs (§4: call, never define) ---
 extern PlayCurrentMoveAnimation      ; core_stubs.asm (STUB)
-extern PrintText                     ; move_effect_helpers.asm — ESI = flat text stream
-extern PrintButItFailedText_         ; move_effect_helpers.asm — "But it failed!"
-extern DelayFrames                   ; move_effect_helpers.asm — BL = frame count
+extern PrintText                     ; src/home/window.asm — ESI = flat text stream
+extern PrintButItFailedText_         ; engine/battle/effects.asm — "But it failed!"
+extern DelayFrames                   ; src/video/frame.asm — BL = frame count
 extern EffectCallBattleCore          ; move_effect_helpers.asm — tail into ESI (no banks, §2.4)
 
 ; --- battle_text.inc streams (global in core.o; flat addresses) ---

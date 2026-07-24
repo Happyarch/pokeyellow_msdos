@@ -26,12 +26,12 @@ section .text
 global PoisonEffect_
 
 ; --- shared scaffold externs (§4: call, never define) ---
-extern CheckTargetSubstitute        ; move_effect_helpers.asm — ZF=1 if no substitute
+extern CheckTargetSubstitute        ; engine/battle/effects.asm — ZF=1 if no substitute
 extern MoveHitTest                  ; core_damage.asm — accuracy test → wMoveMissed
 extern BattleRandom                 ; home/random.asm
-extern PrintText                    ; move_effect_helpers.asm — ESI = flat text stream
-extern PrintDidntAffectText         ; move_effect_helpers.asm
-extern DelayFrames                  ; move_effect_helpers.asm — BL = frame count
+extern PrintText                    ; src/home/window.asm — ESI = flat text stream
+extern PrintDidntAffectText         ; engine/battle/effects.asm
+extern DelayFrames                  ; src/video/frame.asm — BL = frame count
 ; --- allowlist anim stubs (§2 item 1: literal subanim, ANIMATION=OFF path) ---
 extern PlayBattleAnimation2
 extern PlayCurrentMoveAnimation2

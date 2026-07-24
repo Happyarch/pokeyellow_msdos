@@ -34,9 +34,9 @@ section .text
 global FlinchSideEffect_
 
 ; --- shared scaffold externs (§4: call, never define) ---
-extern CheckTargetSubstitute        ; move_effect_helpers.asm — ZF=1 if no substitute
+extern CheckTargetSubstitute        ; engine/battle/effects.asm — ZF=1 if no substitute
 extern BattleRandom                 ; home/random.asm — al = random roll
-extern ClearHyperBeam               ; move_effect_helpers.asm — clears target's recharge
+extern ClearHyperBeam               ; engine/battle/effects.asm — clears target's recharge
 
 ; ===========================================================================
 ; FlinchSideEffect_ — pret engine/battle/effects.asm:FlinchSideEffect.

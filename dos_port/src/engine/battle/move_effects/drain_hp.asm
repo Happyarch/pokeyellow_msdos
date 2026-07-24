@@ -54,7 +54,7 @@ extern UpdateCurMonHPBar            ; move_effect_helpers.asm — gradual HP-bar
                                      ; DrawPlayerHUDAndHPBar + DrawEnemyHUDAndHPBar
                                      ; (see RE-TRANSLATION NOTE #2 above).
 extern ReadPlayerMonCurHPAndStatus  ; core.asm — global, flat call (was `callfar`)
-extern PrintText                    ; move_effect_helpers.asm — ESI = flat text stream
+extern PrintText                    ; src/home/window.asm — ESI = flat text stream
 ; --- battle_text.inc streams (global in core.o) ---
 extern SuckedHealthText
 extern DreamWasEatenText

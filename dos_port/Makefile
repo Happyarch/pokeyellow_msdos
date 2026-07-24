@@ -1396,13 +1396,11 @@ FRONTEND_SRCS := \
     src/engine/battle/residual_damage.asm \
     src/engine/battle/building_rage.asm \
     src/engine/battle/effects.asm \
-    src/engine/battle/stat_mod_effects.asm \
     src/engine/battle/move_effect_helpers.asm \
     src/home/names.asm \
     src/engine/battle/move_effects/poison.asm \
     src/engine/battle/move_effects/splash.asm \
     src/engine/battle/move_effects/flinch_side.asm \
-    src/engine/battle/move_effects/confusion.asm \
     src/engine/battle/move_effects/sleep.asm \
     src/engine/battle/move_effects/freeze_burn_paralyze.asm \
     src/engine/battle/move_effects/conversion.asm \

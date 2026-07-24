@@ -40,7 +40,7 @@ global ReloadMoveData
 global IncrementMovePP
 
 ; --- shared scaffold externs (call, never define) ---
-extern PrintText                    ; move_effect_helpers.asm — ESI = flat text stream
+extern PrintText                    ; src/home/window.asm — ESI = flat text stream
 extern GetMoveName                  ; home/names.asm — index [wNamedObjectIndex] -> wNameBuffer
 extern CopyToStringBuffer            ; engine/battle/core.asm (global) — EDX = source '@'-str
 extern AddNTimes                    ; home/array.asm — ESI += BX*AL

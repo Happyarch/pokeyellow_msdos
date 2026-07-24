@@ -28,7 +28,7 @@ section .text
 global DisplayEffectiveness
 
 ; --- shared scaffold extern (call, never define) ---
-extern PrintText                    ; move_effect_helpers.asm — ESI = flat text stream
+extern PrintText                    ; src/home/window.asm — ESI = flat text stream
 
 ; ===========================================================================
 ; DisplayEffectiveness — pret engine/battle/display_effectiveness.asm.

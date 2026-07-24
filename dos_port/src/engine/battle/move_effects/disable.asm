@@ -29,8 +29,8 @@ global DisableEffect_
 ; --- shared scaffold externs (§4: call, never define) ---
 extern MoveHitTest                  ; core_damage.asm — accuracy test → wMoveMissed
 extern BattleRandom                 ; core_damage.asm
-extern PrintText                    ; move_effect_helpers.asm — ESI = flat text stream
-extern PrintButItFailedText_        ; move_effect_helpers.asm — "But it failed!"
+extern PrintText                    ; src/home/window.asm — ESI = flat text stream
+extern PrintButItFailedText_        ; engine/battle/effects.asm — "But it failed!"
 extern GetMoveName                  ; home/names.asm — name of move [wNamedObjectIndex]
 ; --- allowlist anim stub (§2 item 1: literal subanim, ANIMATION=OFF path) ---
 extern PlayCurrentMoveAnimation2

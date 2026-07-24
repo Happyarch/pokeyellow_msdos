@@ -27,7 +27,7 @@ section .text
 global TrappingEffect_
 
 ; --- shared scaffold externs (§4: call, never define) ---
-extern ClearHyperBeam               ; move_effect_helpers.asm — already shared global
+extern ClearHyperBeam               ; engine/battle/effects.asm — already shared global
 extern BattleRandom                 ; core_damage.asm — battle RNG
 
 ; ===========================================================================

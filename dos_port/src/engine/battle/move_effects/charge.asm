@@ -62,7 +62,7 @@ extern Bankswitch                   ; move_effect_helpers.asm — §2 item 4: jm
 extern PlayBattleAnimation          ; core_stubs.asm (STUB)
 extern HideSubstituteShowMonAnim    ; core_stubs.asm (STUB)
 extern ReshowSubstituteAnim         ; core_stubs.asm (STUB)
-extern PrintText                    ; move_effect_helpers.asm — ESI = flat text stream
+extern PrintText                    ; src/home/window.asm — ESI = flat text stream
 
 ; --- missing-WRAM / missing-constant equs (flag for master) ---
 ; wChargeMoveNum (ram/wram.asm:1014) lives in the same NEXTU lane (offset 0 of the

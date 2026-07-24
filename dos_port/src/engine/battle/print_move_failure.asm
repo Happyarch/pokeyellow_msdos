@@ -24,7 +24,7 @@ section .text
 global PrintMoveFailureText
 
 ; --- shared scaffold externs (call, never define) ---
-extern PrintText                        ; move_effect_helpers.asm — ESI = flat text stream
+extern PrintText                        ; src/home/window.asm — ESI = flat text stream
 ; --- battle_text.inc streams (global in assets/battle_text.inc) ---
 extern DoesntAffectMonText
 extern AttackMissedText

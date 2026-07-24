@@ -40,17 +40,17 @@ section .text
 global FreezeBurnParalyzeEffect_
 
 ; --- shared scaffold externs (§4: call, never define) ---
-extern CheckTargetSubstitute        ; move_effect_helpers.asm — ZF=1 if no substitute
+extern CheckTargetSubstitute        ; engine/battle/effects.asm — ZF=1 if no substitute
 extern BattleRandom                 ; home/random.asm
-extern PrintText                    ; move_effect_helpers.asm — ESI = flat text stream
-extern PrintMayNotAttackText        ; move_effect_helpers.asm
+extern PrintText                    ; src/home/window.asm — ESI = flat text stream
+extern PrintMayNotAttackText        ; engine/battle/effects.asm
 extern QuarterSpeedDueToParalysis   ; status_penalties.asm — quarters off-turn mon's Speed
 extern HalveAttackDueToBurn         ; status_penalties.asm — halves off-turn mon's Attack
 extern AddNTimes                    ; home/array.asm — ESI += EBX(stride) * AL(count)
 ; --- allowlist anim stubs (§2 item 1: literal subanim, ANIMATION=OFF path) ---
 extern PlayBattleAnimation          ; core_stubs.asm (STUB)
 extern PlayBattleAnimation2
-extern ClearHyperBeam               ; move_effect_helpers.asm — shared (Flinch/Trapping too)
+extern ClearHyperBeam               ; engine/battle/effects.asm — shared (Flinch/Trapping too)
 ; --- battle_text.inc streams (global in core.o) ---
 extern BurnedText
 extern FrozenText

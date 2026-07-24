@@ -46,8 +46,8 @@ section .text
 global TransformEffect_
 
 ; --- shared scaffold externs (§4: call, never define) ---
-extern PrintText                    ; move_effect_helpers.asm — ESI = flat text stream
-extern PrintButItFailedText_        ; move_effect_helpers.asm
+extern PrintText                    ; src/home/window.asm — ESI = flat text stream
+extern PrintButItFailedText_        ; engine/battle/effects.asm
 extern EffectCallBattleCore         ; move_effect_helpers.asm — jp [hl]/jpfar equivalent (flat jmp esi)
 extern CopyData                     ; home/copy_data.asm — ESI=src GB off, EDX=dst GB off, BX=count
 extern GetMonName                   ; home/names.asm — wNamedObjectIndex -> wNameBuffer

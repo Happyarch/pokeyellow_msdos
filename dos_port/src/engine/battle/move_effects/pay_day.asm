@@ -51,7 +51,7 @@ global PayDayEffect_
 ; --- shared scaffold externs (§4: call, never define) ---
 extern Divide                       ; home/math.asm — preserves esi/edx/bx, BH = dividend byte count
 extern AddBCD                       ; engine/math/bcd.asm — ESI=hl src, EDX=de dst, CL=c (flat target; §2 item 4)
-extern PrintText                    ; move_effect_helpers.asm — ESI = flat text stream
+extern PrintText                    ; src/home/window.asm — ESI = flat text stream
 extern CoinsScatteredText           ; assets/battle_text.inc (generated Tier-1 data)
 
 ; --- missing-WRAM equs (flag for master) ---

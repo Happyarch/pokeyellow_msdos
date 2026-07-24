@@ -28,8 +28,8 @@ bits 32
 ; --- shared scaffold externs (§4: call, never define) ---
 extern MoveHitTest                  ; core_damage.asm — accuracy/substitute/mist test → wMoveMissed
 extern BattleRandom                 ; home/random.asm
-extern PrintText                    ; move_effect_helpers.asm — ESI = flat text stream
-extern PrintDidntAffectText         ; move_effect_helpers.asm
+extern PrintText                    ; src/home/window.asm — ESI = flat text stream
+extern PrintDidntAffectText         ; engine/battle/effects.asm
 ; --- allowlist anim stub (§2 item 1: literal subanim, ANIMATION=OFF path) ---
 extern PlayCurrentMoveAnimation2
 ; --- battle_text.inc streams (global in core.o) ---
