@@ -1,39 +1,4 @@
 ---@diagnostic disable: undefined-global -- emu/C/callbacks/console/socket are mGBA runtime globals (runner.c)
--- ⚠ WORK IN PROGRESS — NOT a registered scenario, and deliberately NOT under
--- scenarios/ (goldens-verify globs that directory and demands a committed golden
--- for every file in it).
---
--- BLOCKER, measured 2026-07-24: the golden harness has no way to put the player on
--- Route 3.
---   * Walking is out: Route 3 is six maps past the start, behind the Viridian
---     parcel guard and the Viridian Forest maze, and navigate.walk cannot path-find.
---   * WarpFound2 (wStatusFlags3 BIT_WARP_FROM_CUR_SCRIPT) is out: its destination
---     byte hWarpDestinationMap is $FF8B, a UNION shared with hDownArrowBlinkCount1,
---     hSpriteInterlaceCounter and ~12 others (ram/hram.asm). A probe wrote $0E and
---     the warp consumed $0A ~12 frames later — the byte is clobbered before the
---     check reads it, and a scenario cannot write mid-frame.
---   * The fly warp (wStatusFlags6 BIT_FLY_WARP + wDestinationMap) is out twice
---     over: FlyWarpDataPtr's only non-town destinations are ROUTE_4 and ROUTE_10,
---     whose trainers sit ~50 tiles from the fly spot; and a probe setting
---     wDestinationMap = ROUTE_10 ($15) landed at PALLET_TOWN (5,6) with
---     wDestinationMap still reading $15 afterwards — i.e. the value the warp used
---     was not the one we wrote. Seeding a party first did not change it.
---   * Third probe (2026-07-24): pre-setting BIT_FLY_OR_DUNGEON_WARP (bit 2) as well
---     as BIT_FLY_WARP changed nothing — still PALLET_TOWN (5,6) — and bit 2 was
---     still SET afterwards, i.e. PrepareForSpecialWarp's own
---     `res BIT_FLY_OR_DUNGEON_WARP` never executed, while BIT_FLY_WARP *was*
---     cleared (which only EnterMap does). So EnterMap ran but
---     PrepareForSpecialWarp seemingly did not, and the branch actually taken is
---     still unidentified. This wants live debugging (mgba-mcp breakpoints on
---     HandleFlyWarpOrDungeonWarp / LoadSpecialWarpData), not more blind 20-frame
---     sampling.
---
--- Everything below the blocker is written and believed correct — the frame loop,
--- the region list (mirrored by the %ifdef DEBUG_MAPSCRIPT_SIGHT gbregion rows in
--- src/debug/debug_dump.asm) and the dump call. What it needs is a working way onto
--- the map. Most promising next step: find (or add to the harness) a legal in-game
--- mechanism that sets wCurMap from WRAM only, or measure why the fly warp ignored
--- wDestinationMap — that one is a 20-line probe away from an answer.
 -- route3_sight — golden for the port's DEBUG_MAPSCRIPT_SIGHT gate (map-script
 -- fidelity plan, Stage 3): a Route 3 trainer seeing the player, dumped on the frame
 -- the map's _Script engages.
@@ -56,7 +21,16 @@
 --                              WarpFound2, which (outside map) copies
 --                              hWarpDestinationMap into wCurMap and falls into EnterMap
 --
--- Fly warp is not usable here: FlyWarpDataPtr only covers fly-able towns.
+-- ⚠ ARM IT ONLY WHEN THE PLAYER IS SETTLED. navigate.walk_until_map returns while the
+-- door step-out is still being simulated, and an EnterMap is in flight for several
+-- hundred frames after that. Anything armed during it is consumed by THAT EnterMap
+-- instead of by the overworld loop, and — worse — hWarpDestinationMap is $FF8B, a
+-- union shared with hDownArrowBlinkCount1 / hSpriteInterlaceCounter and ~12 more
+-- (ram/hram.asm), so a value left sitting for a dozen frames is overwritten by
+-- unrelated code. Measured: armed at the door, the warp consumed $0A instead of the
+-- $0E written 12 frames earlier. Armed after the settle below, the check runs two
+-- frames after the write and the byte survives. This is a sequencing requirement, not
+-- a fragile hack: the write and its consumer are adjacent by construction.
 --
 -- The one thing LoadDestinationWarpPosition would normally do for us is set
 -- wCurrentTileBlockMapViewPointer alongside the coords, and nothing in the load path
@@ -138,6 +112,11 @@ scenario.run(function()
 	navigate.walk("DOWN", 6)
 	navigate.walk("LEFT", 4)
 	navigate.walk_until_map("DOWN", PALLET_TOWN)
+	-- Settle: see the ⚠ note in the header. One more step puts the player clear of
+	-- the door, and the wait lets the arrival's EnterMap finish, so the warp we arm
+	-- next is consumed by the overworld loop and not by that EnterMap.
+	navigate.walk("DOWN", 1)
+	scenario.wait(60)
 
 	-- Arm the script warp to Route 3 with the destination position pre-set.
 	scenario.exec(function()

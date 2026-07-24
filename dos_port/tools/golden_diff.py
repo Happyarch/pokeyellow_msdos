@@ -429,6 +429,51 @@ SCENARIOS = {
         "flags": "DEBUG_ITEMSTONE=1",
         "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
     },
+    # Map-script fidelity plan, Stage 3. The port gate drives RunMapScript per frame
+    # on Route 3 until the map's _Script engages ROUTE3_YOUNGSTER1 (x=10 y=6, facing
+    # RIGHT, view range 2 — scripts/Route3.asm Route3TrainerHeader0) with the player
+    # seeded two tiles into its line of sight at (Y=6, X=12).
+    #
+    # datastruct class, and deliberately so: the two sides do NOT run the same frame
+    # loop. The golden is the real overworld loop; the port gate runs only the
+    # faithful map-script dispatch, because the port additionally carries a bespoke
+    # CheckTrainerSight/TrainerEncounterFlow hook with no pret counterpart that would
+    # double-engage the trainer (retiring it is a separate behavior-change task that
+    # this scenario is the prerequisite for). What is compared is the trainer-flow
+    # WRAM both sides must agree on — including the GENERATED trainer-header data,
+    # which nothing else checks end to end.
+    "route3_sight": {
+        "class": "datastruct",
+        "flags": "DEBUG_MAPSCRIPT_SIGHT=1",
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP, **{
+            "wPartyData": "the gate seeds no party (DEBUG_MAPSCRIPT_SIGHT boots the "
+                          "map, it does not run PrepareNewGameDebug) and the golden "
+                          "reaches Route 3 by script-warp from a fresh new game",
+            "wPokedex": "same: no party, so no dex flags on either side",
+            "wBagItems": "new-game bag on the golden vs the port's boot state; the "
+                         "sight flow does not touch the bag",
+            "wPlayerMoney": "same — untouched by the flow, differs by boot path",
+            "wOptionsBlock": "same — untouched by the flow, differs by boot path",
+            "wLoadedMon": "no party: uninitialized scratch on both sides",
+        }),
+        "wram_masks": {
+            "wPlayerMapPos": [
+                ((1, 2), "wCurrentTileBlockMapViewPointer: the port's MAP_BORDER is 7, "
+                         "not pret's 3 (include/gb_memmap.inc — the 40x25 viewport is "
+                         "12x9 blocks, so the border must exceed SCREEN_BLOCK_WIDTH/2), "
+                         "so the same player position yields a different pointer into a "
+                         "differently-sized wOverworldMap. wCurMap and wYCoord/wXCoord "
+                         "on either side of it ARE compared."),
+            ],
+            "wStatusFlags5to7": [
+                ((2, 2), "wStatusFlags6 BIT_GAME_TIMER_COUNTING: the golden has been "
+                         "playing since the new game, the port gate boots straight into "
+                         "the map and never starts the play-time counter. Unrelated to "
+                         "the sight flow; wStatusFlags5 and wStatusFlags7 in the same "
+                         "region ARE compared, and they carry the flow's state."),
+            ],
+        },
+    },
     "item_potion_use": {
         # frame 700 = the gate's AUTOKEY_ITEMUSE script done (POTION heal +
         # ANTIDOTE refusal), bag list reopened — the WRAM state is settled there

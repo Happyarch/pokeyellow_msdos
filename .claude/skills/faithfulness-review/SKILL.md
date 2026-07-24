@@ -112,6 +112,15 @@ and the mirror rule cannot fire. What *does* cover them:
   labels defined inside a generated `assets/*.inc` (the scan walks `.asm` only —
   placement of generated Tier-1 data is governed by its carrier file).
 
+**`route3_sight` is the worked example, and it earned its keep on run one:** it
+caught `EngageMapTrainer` reading a WRAM address the port never writes (the
+port's `wMapSpriteExtraData` is a flat `.bss` array, but
+`m8_2_pending_symbols.inc` binds the pret name to pret's WRAM address `$D503` —
+so a file including that `.inc` cannot reach the array by its pret name), and it
+caught every trainer's class byte being `0` in the generated map-object binaries
+(`gen_map_headers.py` resolved `OPP_*` against an empty table and swallowed 470
+"unknown constant, using 0x00" warnings). Neither is visible to any static check.
+
 Deliberate non-goal: no faithdiff for script labels. Per-map pret scripts are
 macro-heavy (`dw_const`, `def_script_pointers`, `CheckEvent`), so a call-graph
 model would need per-map suppressions everywhere. The intended protection is to

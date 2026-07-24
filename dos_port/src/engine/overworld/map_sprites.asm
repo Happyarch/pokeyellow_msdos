@@ -118,8 +118,18 @@ w_player_frozen:      resb 1   ; 1 = block player input during encounter flow
 ; OPP_* value (>= OPP_ID_OFFSET) and set holds the trainer party set index; both
 ; are copied straight from the map-object binary by InitMapSprites (which used to
 ; DISCARD them).  Index for slot N (1-15) = (N-1)*2.  Cleared per map load.
-; TODO(M8.2): pret's EngageMapTrainer reads this array via wSpriteIndex; the M8.1
-; inline engage in TrainerEncounterFlow reads it directly until EngageMapTrainer lands.
+; THE ARRAY IS FLAT .bss, NOT GB WRAM. include/m8_2_pending_symbols.inc separately
+; defines `wMapSpriteExtraData equ 0xD503` (pret's WRAM address) for files that need
+; the pret-side number, and nothing ever writes that WRAM. A file including that .inc
+; therefore CANNOT reach the real array by the pret name — it silently reads unwritten
+; emulated RAM. That is what EngageMapTrainer did until the route3_sight golden caught
+; it (want trainer class $CA set $04, got $00/$00). `map_sprite_extra_data` is the
+; port-only flat alias such files extern instead; the pret name stays primary here.
+; STILL AFFECTED, NOT FIXED HERE (out of this change's scope, see the plan file):
+; src/engine/events/pick_up_item.asm:71 reads `[ebp + wMapSpriteExtraData]` the same
+; way, so PickUpItem resolves an item-ball's item id from unwritten WRAM.
+global map_sprite_extra_data
+map_sprite_extra_data:
 wMapSpriteExtraData:  resb NPC_SLOTS_MAX * 2
 
 ; wMapSpriteData — pret wMapSpriteData (home/overworld.asm:LoadSprite).  Two bytes per

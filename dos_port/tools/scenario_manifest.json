@@ -657,6 +657,15 @@
         "masks": "golden_diff.SCENARIOS"
       },
       "verification": "Prof. Oak opening speech, page 1 parked at the cont key-wait: Oak pic + box + 'Hello there! Welcome to the'; reached via real NEW GAME -> OakSpeech (the route the port SKIP_TITLEs for a state golden)"
+    },
+    {
+      "name": "route3_sight", "id": 30, "tier": "full", "scenario_class": "datastruct",
+      "build_flags": "DEBUG_MAPSCRIPT_SIGHT=1", "port_entry_gate": "DEBUG_MAPSCRIPT_SIGHT",
+      "navigation_script": "tools/mgba_harness/scenarios/route3_sight.lua",
+      "dump": {"type": "GBSTATE", "schema_version": 2, "artifact": "GBSTATE.BIN", "timeout_seconds": 150, "terminal_marker": "complete"},
+      "must_hit": ["TrainerMapScript", "CheckFightingMapTrainers"],
+      "comparison": {"regions": ["wram"], "projection": "golden_diff.SCENARIOS", "masks": "golden_diff.SCENARIOS"},
+      "verification": "deterministic map-script trainer engagement state; state verification, not UI verification"
     }
   ],
   "disabled_scenarios": []

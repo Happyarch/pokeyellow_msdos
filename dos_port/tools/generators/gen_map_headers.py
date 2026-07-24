@@ -212,6 +212,33 @@ TILESET_CANONICAL = [
 # NPC object-event constant resolution tables
 # Source: constants/sprite_constants.asm, constants/map_object_constants.asm
 # ---------------------------------------------------------------------------
+def _parse_opp_consts():
+    """{OPP_<CLASS>: id} from constants/trainer_constants.asm.
+
+    pret's `trainer_const NAME` macro emits `DEF OPP_NAME EQU OPP_ID_OFFSET + n`
+    with n counting from the enclosing const_def, so the ids are positional and
+    OPP_ID_OFFSET is read from the same file rather than hardcoded.
+
+    This table used to be missing entirely: object_event's trainer-class argument
+    was resolved against an EMPTY dict, so every OPP_* name fell through to
+    _resolve_const's "unknown constant, using 0x00" warning and all 470 trainers
+    in the generated map-object binaries carried class 0. Nothing consumed that
+    byte until the trainer engine did, and the route3_sight golden then caught it
+    (want $CA = OPP_BUG_CATCHER, got $00).
+    """
+    text = (ROOT / "constants" / "trainer_constants.asm").read_text()
+    m = re.search(r"^DEF OPP_ID_OFFSET EQU (\d+)", text, re.M)
+    if not m:
+        sys.exit("gen_map_headers: OPP_ID_OFFSET not found in trainer_constants.asm")
+    offset = int(m.group(1))
+    names = re.findall(r"^\s*trainer_const\s+(\w+)", text, re.M)
+    if not names:
+        sys.exit("gen_map_headers: no trainer_const entries in trainer_constants.asm")
+    return {f"OPP_{name}": offset + i for i, name in enumerate(names)}
+
+
+_OPP_CONSTS = _parse_opp_consts()
+
 _SPRITE_CONSTS = {
     'SPRITE_NONE': 0x00, 'SPRITE_RED': 0x01, 'SPRITE_BLUE': 0x02,
     'SPRITE_OAK': 0x03, 'SPRITE_YOUNGSTER': 0x04, 'SPRITE_MONSTER': 0x05,
@@ -545,7 +572,7 @@ def parse_object_file(label: str, debug_warps: bool = False):
 
         is_trainer = (arg7 is not None and arg8 is not None)
         is_item    = (arg7 is not None and arg8 is None)
-        trainer_class = _resolve_const(arg7.strip(), {}, f"trainer_class in {label}") if is_trainer else 0
+        trainer_class = _resolve_const(arg7.strip(), _OPP_CONSTS, f"trainer_class in {label}") if is_trainer else 0
         trainer_num   = _resolve_const(arg8.strip(), {}, f"trainer_num in {label}")   if is_trainer else 0
         item_id       = _resolve_const(arg7.strip(), {}, f"item_id in {label}")       if is_item    else 0
 

@@ -100,6 +100,8 @@ extern WaitForSoundToFinish     ; src/home/audio.asm (real gateway)
 extern DisplayTextID            ; src/home/text_script.asm — pret: home/text_script.asm
 extern EmotionBubble            ; src/engine/overworld/emotion_bubbles.asm (pret: predef)
 extern TrainerWalkUpToPlayer    ; src/engine/overworld/trainer_sight.asm
+extern map_sprite_extra_data    ; src/engine/overworld/map_sprites.asm — flat alias of
+                                ; wMapSpriteExtraData (see EngageMapTrainer's note)
 extern TrainerEngage            ; src/engine/overworld/trainer_sight.asm
 extern _GetSpritePosition1      ; src/engine/overworld/trainer_sight.asm
 extern _GetSpritePosition2      ; src/engine/overworld/trainer_sight.asm
@@ -591,6 +593,15 @@ SaveEndBattleTextPointers:
 ; EngageMapTrainer — load the engaged trainer's class/set + play battle music.
 ; pret: home/trainers.asm:EngageMapTrainer
 ; In: wSpriteIndex = engaged trainer's sprite id.  Reads wMapSpriteExtraData[(idx-1)*2].
+; ⚠ THE ARRAY IS FLAT .bss, NOT GB WRAM, and this file cannot reach it by its pret
+; name: include/m8_2_pending_symbols.inc defines `wMapSpriteExtraData equ 0xD503`
+; (pret's WRAM address), which nothing in the port ever writes. Reading
+; [ebp + wMapSpriteExtraData] therefore returned unwritten emulated RAM — zeros —
+; which is exactly what the route3_sight golden caught (want class $CA set $04, got
+; $00/$00). Use the port-only flat alias `map_sprite_extra_data`, which
+; map_sprites.asm exports alongside the pret name for precisely this case; the writer
+; (LoadSprite, overworld.asm) and the other reader (TrainerEncounterFlow) both index
+; the flat array.
 ; NOTE: wMapSpriteExtraData is populated by InitMapSprites (M8.1) from the map
 ;       object binary's trainer class/set pairs.
 ; ----------------------------------------------------------------------------
@@ -598,7 +609,7 @@ EngageMapTrainer:
     movzx eax, byte [ebp + wSpriteIndex]
     dec eax
     add eax, eax                    ; (idx-1)*2
-    lea esi, [ebp + eax + wMapSpriteExtraData]
+    lea esi, [eax + map_sprite_extra_data]  ; FLAT array alias (see the ⚠ above)
     mov al, [esi]                   ; trainer class
     mov [ebp + wEngagedTrainerClass], al
     mov al, [esi + 1]               ; trainer mon set
