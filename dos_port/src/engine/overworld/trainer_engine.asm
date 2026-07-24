@@ -11,9 +11,9 @@
 ;                          CheckForEngagingTrainers, SaveEndBattleTextPointers,
 ;                          EngageMapTrainer, PrintEndBattleText, GetSavedEndBattleTextPointer,
 ;                          TrainerEndBattleText, PlayTrainerMusic
-;   home/trainers2.asm   — GetTrainerInformation, IsFightingJessieJames, GetTrainerName
-;   engine/overworld/trainer_sight.asm  — TrainerWalkUpToPlayer, ReadTrainerScreenPosition,
-;                          TrainerEngage, CheckSpriteCanSeePlayer, CheckPlayerIsInFrontOfSprite
+;   home/trainers2.asm   — MOVED to the pret mirror src/home/trainers2.asm (2026-07-24)
+;   engine/overworld/trainer_sight.asm  — MOVED to the pret mirror
+;                          src/engine/overworld/trainer_sight.asm (2026-07-24)
 ;   engine/overworld/emotion_bubbles.asm — EmotionBubble
 ;   data/trainers/encounter_types.asm    — FemaleTrainerList / EvilTrainerList
 ;
@@ -96,12 +96,8 @@ TH_SIZE        equ 22
 extern FlagAction               ; src/engine/flag_action.asm (persistent flag array)
 extern CallFunctionInTable      ; src/home/run_map_script.asm
 extern CopyData                 ; src/home/copy_data.asm
-extern AddNTimes                ; src/home/array.asm
-extern IsInArray                ; src/home/array.asm
 extern BankswitchHome           ; src/home/bankswitch.asm (no-op flat)
 extern BankswitchBack           ; src/home/bankswitch.asm (no-op flat)
-extern CalcDifference           ; src/home/pathfinding.asm
-extern MoveSprite_              ; src/home/pathfinding.asm
 extern FillMemory               ; home/copy2.asm  (ESI unchanged on return!)
 extern WriteOAMBlock            ; src/home/oam.asm
 extern DelayFrame               ; src/video/frame.asm
@@ -109,18 +105,13 @@ extern DelayFrames              ; src/video/frame.asm
 extern UpdateSprites            ; src/engine/overworld/movement.asm
 extern PrintText                ; src/home/window.asm
 extern PlaySound                ; src/home/audio.asm (real gateway)
-extern GetTrainerName_          ; src/engine/battle/get_trainer_name.asm
 extern DisplayTextID            ; src/home/text_script.asm — pret: home/text_script.asm
 
-; --- Tier-1 asset data (generated; already in the port tree) ---
-extern TrainerPicPointers       ; src/data/trainer_pics.asm  (flat dd, index=class-1)
-extern TrainerBaseMoney         ; src/data/trainer_pics.asm  (bcd3 per class, index=class-1)
-extern PlayerPicFront           ; src/data/trainer_pics.asm  (== pret RedPicFront)
 
 ; --- UNPORTED deps: extern + TODO(M8.2 follow-up); root supplies or stubs ---
-extern StartTrainerBattle       ; TODO(M8.2 follow-up): M8.1 owns (home/trainers.asm)
-extern InitBattleEnemyParameters; TODO(M8.2 follow-up): M8.1 owns (home/trainers.asm)
-extern ResetButtonPressedAndMapScript ; TODO(M8.2 follow-up): M8.1 (home/trainers.asm)
+extern StartTrainerBattle       ; src/home/trainers.asm (pret mirror, LINKED)
+extern InitBattleEnemyParameters; src/home/trainers.asm (pret mirror, LINKED)
+extern ResetButtonPressedAndMapScript ; TODO(M8.2 follow-up): unported, no body anywhere yet (pret home/trainers.asm)
 extern StopAllMusic             ; src/home/audio.asm (real gateway)
 extern WaitForSoundToFinish     ; src/home/audio.asm (real gateway)
 extern SaveTrainerName          ; TODO(M8.2 follow-up): engine/battle/*, unported
@@ -131,7 +122,6 @@ extern HideObject               ; TODO(M8.2 follow-up): hidden_events, unported
 extern CopyVideoData            ; src/home/copy2.asm (ported): ESI=dst VRAM offset, EDX=flat src, BL=tile count
 ; EmotionBubbleGfx is now defined here via %include "assets/emotes.inc" (gen_emotes.py).
 extern _TrainerNameText         ; TODO(M8.2 follow-up): Tier-1 text (data/text) — NOT in port
-extern JessieJamesPic           ; TODO(M8.2 follow-up): Tier-1 pic not in port TrainerPicPointers
 extern msgbox_dialog                    ; src/home/text.asm — overworld dialog projection
 extern text_msgbox                      ; src/home/text.asm — active msgbox projection (msgbox.inc)
 
@@ -147,18 +137,18 @@ global TalkToTrainer
 global CheckFightingMapTrainers
 global DisplayEnemyTrainerTextAndStartBattle
 global TrainerWalkUpToPlayer_Bank0
-global TrainerWalkUpToPlayer
-global ReadTrainerScreenPosition
-global TrainerEngage
 global CheckForEngagingTrainers
 global SaveEndBattleTextPointers
 global GetSavedEndBattleTextPointer
 global EngageMapTrainer
 global PrintEndBattleText
 global PlayTrainerMusic
-global GetTrainerInformation
-global GetTrainerName
 global w_trainer_header_ptr
+; (TrainerWalkUpToPlayer / ReadTrainerScreenPosition / TrainerEngage moved to
+;  src/engine/overworld/trainer_sight.asm; GetTrainerInformation / GetTrainerName
+;  to src/home/trainers2.asm — both pret mirrors, 2026-07-24.)
+extern TrainerWalkUpToPlayer    ; src/engine/overworld/trainer_sight.asm
+extern TrainerEngage            ; src/engine/overworld/trainer_sight.asm
 
 ; ============================================================================
 section .bss
@@ -425,253 +415,11 @@ DisplayEnemyTrainerTextAndStartBattle:
 TrainerWalkUpToPlayer_Bank0:
     jmp TrainerWalkUpToPlayer
 
-; ----------------------------------------------------------------------------
-; TrainerWalkUpToPlayer — make the engaging trainer walk up to the player.
-; pret: engine/overworld/trainer_sight.asm:TrainerWalkUpToPlayer
-; Uses the port scripted-movement primitive MoveSprite_ (EDI=flat stream,
-; H_CURRENT_SPRITE_OFFSET=slot*0x10).
-; ----------------------------------------------------------------------------
-TrainerWalkUpToPlayer:
-    mov al, [ebp + wSpriteIndex]
-    shl al, 4                       ; swap-nibble equiv for a<16 (slot*0x10)
-    mov [ebp + wTrainerSpriteOffset], al
-    call ReadTrainerScreenPosition
-    mov al, [ebp + wTrainerFacingDirection]
-    test al, al
-    jz .facingDown                  ; SPRITE_FACING_DOWN
-    cmp al, SPRITE_FACING_UP
-    je .facingUp
-    cmp al, SPRITE_FACING_LEFT
-    je .facingLeft
-    jmp .facingRight
-.facingDown:
-    mov al, [ebp + wTrainerScreenY]
-    mov bh, al
-    mov al, 0x3c                    ; fixed player screen Y
-    call CalcDifference             ; AL = |screenY - 0x3c|
-    cmp al, 0x10
-    je .retEarly                    ; already right above player
-    shr al, 4                       ; pret: swap a. Here AL is a block-aligned pixel
-                                    ; distance (multiple of $10 from CalcDifference), so
-                                    ; swap DIVIDES by 16 → block/step count. (Was shl,
-                                    ; which overflowed AL to 0 → dec → $FF steps → 255-byte
-                                    ; FillMemory into the 10-byte wNPCMovementDirections2.)
-    dec al
-    mov bl, al                      ; c = steps to go
-    mov al, NPC_MOVEMENT_DOWN       ; 0x00
-    jmp .writeWalkScript
-.facingUp:
-    mov al, [ebp + wTrainerScreenY]
-    mov bh, al
-    mov al, 0x3c
-    call CalcDifference
-    cmp al, 0x10
-    je .retEarly
-    shr al, 4                       ; pret: swap a = divide (block-aligned distance); see .facingDown
-    dec al
-    mov bl, al
-    mov al, NPC_MOVEMENT_UP
-    jmp .writeWalkScript
-.facingRight:
-    mov al, [ebp + wTrainerScreenX]
-    mov bh, al
-    mov al, 0x40                    ; fixed player screen X
-    call CalcDifference
-    cmp al, 0x10
-    je .retEarly
-    shr al, 4                       ; pret: swap a = divide (block-aligned distance); see .facingDown
-    dec al
-    mov bl, al
-    mov al, NPC_MOVEMENT_RIGHT
-    jmp .writeWalkScript
-.facingLeft:
-    mov al, [ebp + wTrainerScreenX]
-    mov bh, al
-    mov al, 0x40
-    call CalcDifference
-    cmp al, 0x10
-    je .retEarly
-    shr al, 4                       ; pret: swap a = divide (block-aligned distance); see .facingDown
-    dec al
-    mov bl, al
-    mov al, NPC_MOVEMENT_LEFT
-.writeWalkScript:
-    ; pret: fill wNPCMovementDirections2 with `a` for `c` bytes, then $ff sentinel.
-    ; Port FillMemory: In ESI=dst GB offset, BX=count, AL=value; ESI unchanged on return.
-    ; So BL already holds the step count (c); BH still holds the CalcDifference operand —
-    ; save the direction, set up regs.
-    push eax                        ; save direction byte (AL)
-    movzx ebx, bl                   ; count -> full BX (BH cleared)
-    mov esi, wNPCMovementDirections2
-    pop eax                         ; AL = direction
-    call FillMemory                 ; fill BX dir bytes at [ebp+ESI]
-    ; end-of-list sentinel. ESI==wNPCMovementDirections2 (const) here and is
-    ; unchanged by FillMemory, so fold it into the displacement (x86 allows only
-    ; base+index, not base+index+index).
-    mov byte [ebp + ebx + wNPCMovementDirections2], 0xff
-    mov al, [ebp + wSpriteIndex]
-    shl al, 4
-    mov [ebp + H_CURRENT_SPRITE_OFFSET], al  ; port MoveSprite_ selector (pret hSpriteIndex)
-    lea edi, [ebp + wNPCMovementDirections2] ; flat stream ptr for MoveSprite_
-    ; TODO(M8.2 follow-up): confirm MoveSprite_ EDI/hCurrentSpriteOffset contract at wiring.
-    jmp MoveSprite_
-.retEarly:
-    ret
-
-; ----------------------------------------------------------------------------
-; ReadTrainerScreenPosition — wTrainerScreenY/X from the trainer's sprite slot.
-; pret: engine/overworld/trainer_sight.asm:ReadTrainerScreenPosition
-; Reads wSpriteStateData1[offset + YPIXELS/XPIXELS], offset = wTrainerSpriteOffset.
-; ----------------------------------------------------------------------------
-ReadTrainerScreenPosition:
-    movzx esi, byte [ebp + wTrainerSpriteOffset]
-    mov al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_YPIXELS]
-    mov [ebp + wTrainerScreenY], al
-    mov al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_XPIXELS]
-    mov [ebp + wTrainerScreenX], al
-    ret
-
-; ----------------------------------------------------------------------------
-; TrainerEngage — is this trainer lined up + able to see the player? engage if so.
-; pret: engine/overworld/trainer_sight.asm:TrainerEngage (predef in pret; direct call here)
-; In: wTrainerSpriteOffset (slot*0x10), wTrainerEngageDistance set by caller.
-; Out: wTrainerSpriteOffset = $ff if engaging, 0 otherwise.
-; ----------------------------------------------------------------------------
-TrainerEngage:
-    ; sprite on screen? (IMAGEINDEX != $ff)
-    movzx esi, byte [ebp + wTrainerSpriteOffset]
-    mov al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_IMAGEINDEX]
-    cmp al, 0xff
-    je .noEngage                    ; sprite off screen
-    ; facing dir
-    mov al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_FACINGDIRECTION]
-    mov [ebp + wTrainerFacingDirection], al
-    call ReadTrainerScreenPosition
-    ; lined up on Y? (screenY == $3c)
-    mov al, [ebp + wTrainerScreenY]
-    cmp al, 0x3c
-    je .linedUpY
-    mov al, [ebp + wTrainerScreenX]
-    cmp al, 0x40
-    je .linedUpX
-    jmp .noEngage
-.linedUpY:
-    mov al, [ebp + wTrainerScreenX]
-    mov bh, al
-    mov al, 0x40
-    call CalcDifference             ; AL = distance, ZF if equal
-    jz .noEngage
-    call CheckSpriteCanSeePlayer    ; CF=1 => can see
-    jc .engage
-    jmp .noEngage
-.linedUpX:
-    mov al, [ebp + wTrainerScreenY]
-    mov bh, al
-    mov al, 0x3c
-    call CalcDifference
-    jz .noEngage
-    call CheckSpriteCanSeePlayer
-    jc .engage
-    jmp .noEngage
-.engage:
-    call CheckPlayerIsInFrontOfSprite  ; sets wTrainerSpriteOffset ($ff/0)
-    mov al, [ebp + wTrainerSpriteOffset]
-    test al, al
-    jz .noEngage
-    or byte [ebp + wMiscFlags], (1 << BIT_SEEN_BY_TRAINER)
-    call EngageMapTrainer
-    mov byte [ebp + wTrainerSpriteOffset], 0xff
-    ret
-.noEngage:
-    mov byte [ebp + wTrainerSpriteOffset], 0
-    ret
-
-; ----------------------------------------------------------------------------
-; CheckSpriteCanSeePlayer — lined-up + within engage distance?
-; pret: engine/overworld/trainer_sight.asm:CheckSpriteCanSeePlayer
-; In: AL = distance player<->sprite.  Out: CF=1 if in line & in range.
-; ----------------------------------------------------------------------------
-CheckSpriteCanSeePlayer:
-    mov bh, al                      ; b = distance
-    mov al, [ebp + wTrainerEngageDistance]
-    cmp al, bh                      ; engageDist >= dist?  (CF=0 => can reach)
-    jc .notInLine                   ; engageDist < dist => too far
-    mov al, [ebp + wTrainerFacingDirection]
-    cmp al, SPRITE_FACING_DOWN
-    je .checkXCoord
-    cmp al, SPRITE_FACING_UP
-    je .checkXCoord
-    cmp al, SPRITE_FACING_LEFT
-    je .checkYCoord
-    cmp al, SPRITE_FACING_RIGHT
-    je .checkYCoord
-    jmp .notInLine
-.checkXCoord:
-    mov al, [ebp + wTrainerScreenX]
-    cmp al, 0x40
-    je .inLine
-    jmp .notInLine
-.checkYCoord:
-    mov al, [ebp + wTrainerScreenY]
-    cmp al, 0x3c
-    jne .notInLine
-.inLine:
-    stc
-    ret
-.notInLine:
-    clc
-    ret
-
-; ----------------------------------------------------------------------------
-; CheckPlayerIsInFrontOfSprite — is the player in front of (not behind) the sprite?
-; pret: engine/overworld/trainer_sight.asm:CheckPlayerIsInFrontOfSprite
-; Out: wTrainerSpriteOffset = $ff (engage) or 0 (no engage).
-; ----------------------------------------------------------------------------
-CheckPlayerIsInFrontOfSprite:
-    mov al, [ebp + wCurMap]
-    cmp al, POWER_PLANT
-    je .engage                      ; Power Plant bypass (fake-item Voltorbs)
-    movzx esi, byte [ebp + wTrainerSpriteOffset]
-    mov al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_YPIXELS]
-    cmp al, 0xfc                    ; topmost tile special-case
-    jne .notOnTopmostTile
-    mov al, 0x0c
-.notOnTopmostTile:
-    mov [ebp + wTrainerScreenY], al
-    mov al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_XPIXELS]
-    mov [ebp + wTrainerScreenX], al
-    mov al, [ebp + wTrainerFacingDirection]
-    cmp al, SPRITE_FACING_DOWN
-    jne .notFacingDown
-    mov al, [ebp + wTrainerScreenY]
-    cmp al, 0x3c
-    jb .engage                      ; sprite above player
-    jmp .noEngage
-.notFacingDown:
-    cmp al, SPRITE_FACING_UP
-    jne .notFacingUp
-    mov al, [ebp + wTrainerScreenY]
-    cmp al, 0x3c
-    jae .engage                     ; sprite below player
-    jmp .noEngage
-.notFacingUp:
-    cmp al, SPRITE_FACING_LEFT
-    jne .notFacingLeft
-    mov al, [ebp + wTrainerScreenX]
-    cmp al, 0x40
-    jae .engage                     ; sprite right of player
-    jmp .noEngage
-.notFacingLeft:
-    ; facing right
-    mov al, [ebp + wTrainerScreenX]
-    cmp al, 0x40
-    jae .noEngage                   ; sprite right of player
-.engage:
-    mov byte [ebp + wTrainerSpriteOffset], 0xff
-    ret
-.noEngage:
-    mov byte [ebp + wTrainerSpriteOffset], 0
-    ret
+; (TrainerWalkUpToPlayer, ReadTrainerScreenPosition, TrainerEngage,
+;  CheckSpriteCanSeePlayer and CheckPlayerIsInFrontOfSprite moved to their pret
+;  mirror src/engine/overworld/trainer_sight.asm — relocated-labels grind,
+;  2026-07-24. TrainerWalkUpToPlayer_Bank0 above and CheckForEngagingTrainers
+;  below reach them via extern.)
 
 ; ----------------------------------------------------------------------------
 ; CheckForEngagingTrainers — scan the map's trainer headers for one engaging.
@@ -866,70 +614,9 @@ PlayTrainerMusic:
 .retNow:
     ret
 
-; ============================================================================
-; home/trainers2.asm
-; ============================================================================
-
-; ----------------------------------------------------------------------------
-; GetTrainerInformation — load the trainer's name + battle pic pointer + prize money.
-; pret: home/trainers2.asm:GetTrainerInformation
-; Adapted to the port's SPLIT flat tables (TrainerPicPointers / TrainerBaseMoney),
-; not pret's interleaved TrainerPicAndMoneyPointers (5 bytes/entry).
-; ----------------------------------------------------------------------------
-GetTrainerInformation:
-    call GetTrainerName
-    mov al, [ebp + wLinkState]
-    test al, al
-    jnz .linkBattle
-    ; class index = wTrainerClass - 1
-    movzx eax, byte [ebp + wTrainerClass]
-    dec eax
-    ; wTrainerPicPointer (flat dword) = TrainerPicPointers[idx]
-    mov edi, [TrainerPicPointers + eax*4]
-    mov [ebp + wTrainerPicPointer], edi
-    ; wTrainerBaseMoney (2-byte dw, pret ram/wram.asm:1400 `wTrainerBaseMoney:: dw`)
-    ; = the TOP 2 BCD bytes of this class's bcd3 base money. OW-A.9: pret
-    ; GetTrainerInformation (home/trainers2.asm) copies exactly 2 bytes — the low BCD
-    ; byte (always $00 for the shipped values, e.g. 1500 = $00 $15 $00) is DELIBERATELY
-    ; dropped (Gen-1 money-width quirk). The port previously copied all 3, which BOTH
-    ; diverged from pret's value AND overflowed the 2-byte field by 1 byte into
-    ; wTrainerBaseMoney+2 (a foreign WRAM cell). Copy 2 now, matching pret.
-    lea esi, [eax + eax*2]                      ; idx*3 (bcd3 stride into the split table)
-    add esi, TrainerBaseMoney
-    mov al, [esi]                               ; high BCD byte
-    mov [ebp + wTrainerBaseMoney + 0], al
-    mov al, [esi + 1]                           ; second BCD byte (pret keeps 2, drops [esi+2])
-    mov [ebp + wTrainerBaseMoney + 1], al
-    call IsFightingJessieJames
-    ret
-.linkBattle:
-    mov edi, PlayerPicFront         ; pret RedPicFront
-    mov [ebp + wTrainerPicPointer], edi
-    ret
-
-; ----------------------------------------------------------------------------
-; IsFightingJessieJames — override the pic for the Jessie&James Rocket duo.
-; pret: home/trainers2.asm:IsFightingJessieJames
-; ----------------------------------------------------------------------------
-IsFightingJessieJames:
-    mov al, [ebp + wTrainerClass]
-    cmp al, ROCKET
-    jne .ret
-    mov al, [ebp + wTrainerNo]
-    cmp al, 0x2a
-    jb .ret                         ; below the Jessie&James range
-    ; both the <$2e and >=$2e pret branches use JessieJamesPic (the second is a no-op dup)
-    mov edi, JessieJamesPic         ; TODO(M8.2 follow-up): pic not in port table yet
-    mov [ebp + wTrainerPicPointer], edi
-.ret:
-    ret
-
-; ----------------------------------------------------------------------------
-; GetTrainerName — pret farjp GetTrainerName_ (flat: direct jmp).
-; pret: home/trainers2.asm:GetTrainerName
-; ----------------------------------------------------------------------------
-GetTrainerName:
-    jmp GetTrainerName_
+; (GetTrainerInformation / IsFightingJessieJames / GetTrainerName moved to
+;  their pret mirror src/home/trainers2.asm — relocated-labels grind,
+;  2026-07-24.)
 
 ; ============================================================================
 ; engine/overworld/emotion_bubbles.asm
@@ -1008,108 +695,26 @@ EmotionBubble:
 GB_VCHARS1_TILE78 equ GB_VFONT + 0x780
 
 ; ============================================================================
-; trainer_sight accessors (pret: engine/overworld/trainer_sight.asm)
+; Get/SetSpritePosition1/2 — pret bank-wrapper trampolines (home/trainers.asm:246-262)
+; around the byte-verified _Get/_SetSpritePosition1/2 bodies, which live at their
+; pret mirror src/engine/overworld/trainer_sight.asm (moved 2026-07-24). pret loads
+; the target into hl then `ld b, BANK("Trainer Sight") / jp Bankswitch`; under the
+; port's flat model banking is a no-op, so each is a direct tail-jump. (pret's
+; shared SpritePositionBankswitch tail collapses into these four jmps — its
+; SetSpritePosition2 fallthrough is realized by SetSpritePosition2's own jmp.)
+; Called by scripts/OaksLab.asm (Oak cutscene, not yet ported) — provided so the
+; pret labels resolve. OW-A.9.
 ; ============================================================================
-; OW-1.7. The sight-line logic itself (TrainerEngage, CheckSpriteCanSeePlayer,
-; CheckPlayerIsInFrontOfSprite, TrainerWalkUpToPlayer, ReadTrainerScreenPosition)
-; is already ported above (M8.2). This section adds only the 5 pure position
-; accessors: _GetSpritePosition1/2, _SetSpritePosition1/2, GetSpriteDataPointer.
-; None pre-existed in this file before this section.
-;
-; Register map: A->AL, HL->ESI, DE->EDX (asm-translation skill). Every pret body
-; here is straight-line loads/stores ending in `ret` — no branch reads a flag
-; out of any of these, so no ZF/CF preservation concern applies.
-;
-; New symbols added here (none were already available via this file's includes):
-;
-;   WRAM (confident — derived the same way this file's existing wSpriteIndex
-;   anchor was: assembled a truncated copy of ram/wram.asm (through the end of
-;   its "WRAM" SECTION, i.e. through pret line 1894) with rgbasm/rgblink and
-;   read the linked addresses. That relink reproduced wSpriteIndex at exactly
-;   0xD1FF = 0xCF13 + 0x2EC — i.e. the same "clean = link − 0x2EC" correction
-;   documented in m1_3_pending_symbols.inc for this working tree's over-budget
-;   WRAM link. Applying that identical correction to the 3 sibling bytes
-;   immediately follow wSavedSpriteScreenY at pret ram/wram.asm:1837-1840
-;   (all plain `db`, no intervening UNION) gives:
-;     wSavedSpriteScreenY  = 0xD12F  (pret ram/wram.asm:1837)
-;     wSavedSpriteScreenX  = 0xD130  (pret ram/wram.asm:1838)
-;     wSavedSpriteMapY     = 0xD131  (pret ram/wram.asm:1839)
-;     wSavedSpriteMapX     = 0xD132  (pret ram/wram.asm:1840)
-;   No collision with gb_memmap.inc or m8_2/m1_3_pending_symbols.inc (checked).
-;
-;   HRAM (new port allocation). Pret's hSpriteScreenYCoord/XCoord/MapYCoord/
-;   MapXCoord union (ram/hram.asm:367-371) sits at a pret address the port does
-;   NOT reuse — the port already remaps this exact HRAM neighborhood for other
-;   symbols (hTextID/hSpriteIndex live at the port's own 0xFF8C, not pret's
-;   0xFF82; see m1_3_pending_symbols.inc's "port REMAPS HRAM" note). So these 4
-;   bytes are a fresh port-private scratch allocation (pret's original union is
-;   likewise pure scratch — reused by unrelated systems between calls — so a
-;   new home is behaviorally equivalent, just not byte-address-identical).
-;   0xFF82-0xFF85 are the first 4 contiguous bytes free of any claim across
-;   gb_memmap.inc / m8_2_pending_symbols.inc / m1_3_pending_symbols.inc
-;   (verified by grep across dos_port/include and dos_port/src):
-;     hSpriteScreenYCoord = 0xFF82
-;     hSpriteScreenXCoord = 0xFF83
-;     hSpriteMapYCoord    = 0xFF84
-;     hSpriteMapXCoord    = 0xFF85
-;   TODO(root): fold into gb_memmap.inc when the canonical HRAM map lands;
-;   re-verify no collision once a full faithful HRAM re-layout exists.
-; ----------------------------------------------------------------------------
-%ifndef wSavedSpriteScreenY
-wSavedSpriteScreenY equ 0xD12F
-%endif
-%ifndef wSavedSpriteScreenX
-wSavedSpriteScreenX equ 0xD130
-%endif
-%ifndef wSavedSpriteMapY
-wSavedSpriteMapY    equ 0xD131
-%endif
-%ifndef wSavedSpriteMapX
-wSavedSpriteMapX    equ 0xD132
-%endif
-%ifndef hSpriteScreenYCoord
-hSpriteScreenYCoord equ 0xFF82
-%endif
-%ifndef hSpriteScreenXCoord
-hSpriteScreenXCoord equ 0xFF83
-%endif
-%ifndef hSpriteMapYCoord
-hSpriteMapYCoord    equ 0xFF84
-%endif
-%ifndef hSpriteMapXCoord
-hSpriteMapXCoord    equ 0xFF85
-%endif
+extern _GetSpritePosition1      ; src/engine/overworld/trainer_sight.asm
+extern _GetSpritePosition2      ; src/engine/overworld/trainer_sight.asm
+extern _SetSpritePosition1      ; src/engine/overworld/trainer_sight.asm
+extern _SetSpritePosition2      ; src/engine/overworld/trainer_sight.asm
 
-; Delta to hop from array1's XPIXELS[slot] to array2's MAPY[slot] (same slot).
-; pret: `ld de, wSpritePlayerStateData2MapY - wSpritePlayerStateData1XPixels`
-; — a 16-bit HL-wraparound trick specific to SM83 (wSpriteStateData2 is exactly
-; wSpriteStateData1 + 0x100, page-aligned; see pret ram/wram.asm:139-142 ASSERTs).
-; The port computes the identical byte delta as a plain positive x86 add
-; (0x100 + SPRITESTATEDATA2_MAPY - SPRITESTATEDATA1_XPIXELS = 0xFE); no
-; wraparound needed since ESI holds the full linear GB offset, not a 16-bit HL.
-; PROJ: this replaces pret's two-instruction "ld de,const / add hl,de" with a
-; single "add esi,const" (flags-neutral either way; nothing here branches on
-; the result) — a 386+ simplification, not a behavior change.
-SPRITE_XPIXELS_TO_MAPY_DELTA equ (W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPY) - (W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_XPIXELS)
-
-global _GetSpritePosition1
-global _GetSpritePosition2
-global _SetSpritePosition1
-global _SetSpritePosition2
-global GetSpriteDataPointer
 global GetSpritePosition1
 global GetSpritePosition2
 global SetSpritePosition1
 global SetSpritePosition2
 
-; ----------------------------------------------------------------------------
-; Get/SetSpritePosition1/2 — pret bank-wrapper trampolines (home/trainers.asm:246-262)
-; around the byte-verified _Get/_SetSpritePosition1/2 below. pret loads the target
-; into hl then `ld b, BANK("Trainer Sight") / jp Bankswitch`; under the port's flat
-; model banking is a no-op, so each is a direct tail-jump. Called by
-; scripts/OaksLab.asm (Oak cutscene, not yet ported) — provided so the pret labels
-; resolve. OW-A.9.
-; ----------------------------------------------------------------------------
 GetSpritePosition1:
     jmp _GetSpritePosition1
 GetSpritePosition2:
@@ -1118,112 +723,3 @@ SetSpritePosition1:
     jmp _SetSpritePosition1
 SetSpritePosition2:
     jmp _SetSpritePosition2
-
-; ----------------------------------------------------------------------------
-; GetSpriteDataPointer — form a pointer into a sprite's wSpriteStateData1/2
-; entry from a caller-supplied member offset + [hSpriteIndex] (raw slot 0-15,
-; set by the caller just before this call — NOT pre-shifted).
-; pret: engine/overworld/trainer_sight.asm:GetSpriteDataPointer
-; In:  ESI = base (e.g. W_SPRITE_STATE_DATA_1), EDX = member offset within entry
-;      [ebp+hSpriteIndex] = raw slot (0-15)
-; Out: ESI = base + member + slot*0x10
-; ----------------------------------------------------------------------------
-GetSpriteDataPointer:
-    push edx                        ; pret: push de
-    add esi, edx                    ; pret: add hl, de   (hl = base + member)
-    mov al, [ebp + hSpriteIndex]    ; pret: ldh a, [hSpriteIndex]
-    shl al, 4                       ; pret: swap a       (slot<16 => *0x10)
-    movzx edx, al                   ; pret: ld d,0 / ld e,a
-    add esi, edx                    ; pret: add hl, de   (hl = base+member+slot*0x10)
-    pop edx                         ; pret: pop de
-    ret
-
-; ----------------------------------------------------------------------------
-; _GetSpritePosition1 — read [wSpriteIndex]'s screen Y/X + map Y/X into the
-; hSprite*Coord HRAM scratch bytes.
-; pret: engine/overworld/trainer_sight.asm:_GetSpritePosition1
-; ----------------------------------------------------------------------------
-_GetSpritePosition1:
-    mov al, [ebp + wSpriteIndex]
-    mov [ebp + hSpriteIndex], al
-    mov esi, W_SPRITE_STATE_DATA_1
-    mov edx, SPRITESTATEDATA1_YPIXELS
-    call GetSpriteDataPointer         ; ESI -> array1[slot].YPIXELS
-    mov al, [ebp + esi]               ; SPRITESTATEDATA1_YPIXELS
-    mov [ebp + hSpriteScreenYCoord], al
-    mov al, [ebp + esi + 2]           ; SPRITESTATEDATA1_XPIXELS (YPIXELS+2)
-    mov [ebp + hSpriteScreenXCoord], al
-    add esi, 2                        ; ESI -> array1[slot].XPIXELS (pret's hl there)
-    add esi, SPRITE_XPIXELS_TO_MAPY_DELTA  ; ESI -> array2[slot].MAPY (same slot)
-    mov al, [ebp + esi]               ; SPRITESTATEDATA2_MAPY
-    mov [ebp + hSpriteMapYCoord], al
-    mov al, [ebp + esi + 1]           ; SPRITESTATEDATA2_MAPX (MAPY+1)
-    mov [ebp + hSpriteMapXCoord], al
-    ret
-
-; ----------------------------------------------------------------------------
-; _GetSpritePosition2 — same as _GetSpritePosition1 but into the wSavedSprite*
-; WRAM scratch (stash a position, e.g. across a scripted-movement detour).
-; pret: engine/overworld/trainer_sight.asm:_GetSpritePosition2
-; ----------------------------------------------------------------------------
-_GetSpritePosition2:
-    mov al, [ebp + wSpriteIndex]
-    mov [ebp + hSpriteIndex], al
-    mov esi, W_SPRITE_STATE_DATA_1
-    mov edx, SPRITESTATEDATA1_YPIXELS
-    call GetSpriteDataPointer
-    mov al, [ebp + esi]               ; SPRITESTATEDATA1_YPIXELS
-    mov [ebp + wSavedSpriteScreenY], al
-    mov al, [ebp + esi + 2]           ; SPRITESTATEDATA1_XPIXELS
-    mov [ebp + wSavedSpriteScreenX], al
-    add esi, 2
-    add esi, SPRITE_XPIXELS_TO_MAPY_DELTA
-    mov al, [ebp + esi]               ; SPRITESTATEDATA2_MAPY
-    mov [ebp + wSavedSpriteMapY], al
-    mov al, [ebp + esi + 1]           ; SPRITESTATEDATA2_MAPX
-    mov [ebp + wSavedSpriteMapX], al
-    ret
-
-; ----------------------------------------------------------------------------
-; _SetSpritePosition1 — write hSprite*Coord back into [wSpriteIndex]'s entry.
-; pret: engine/overworld/trainer_sight.asm:_SetSpritePosition1
-; ----------------------------------------------------------------------------
-_SetSpritePosition1:
-    mov al, [ebp + wSpriteIndex]
-    mov [ebp + hSpriteIndex], al
-    mov esi, W_SPRITE_STATE_DATA_1
-    mov edx, SPRITESTATEDATA1_YPIXELS
-    call GetSpriteDataPointer
-    mov al, [ebp + hSpriteScreenYCoord]
-    mov [ebp + esi], al               ; SPRITESTATEDATA1_YPIXELS
-    mov al, [ebp + hSpriteScreenXCoord]
-    mov [ebp + esi + 2], al           ; SPRITESTATEDATA1_XPIXELS
-    add esi, 2
-    add esi, SPRITE_XPIXELS_TO_MAPY_DELTA
-    mov al, [ebp + hSpriteMapYCoord]
-    mov [ebp + esi], al               ; SPRITESTATEDATA2_MAPY
-    mov al, [ebp + hSpriteMapXCoord]
-    mov [ebp + esi + 1], al           ; SPRITESTATEDATA2_MAPX
-    ret
-
-; ----------------------------------------------------------------------------
-; _SetSpritePosition2 — write wSavedSprite* back into [wSpriteIndex]'s entry.
-; pret: engine/overworld/trainer_sight.asm:_SetSpritePosition2
-; ----------------------------------------------------------------------------
-_SetSpritePosition2:
-    mov al, [ebp + wSpriteIndex]
-    mov [ebp + hSpriteIndex], al
-    mov esi, W_SPRITE_STATE_DATA_1
-    mov edx, SPRITESTATEDATA1_YPIXELS
-    call GetSpriteDataPointer
-    mov al, [ebp + wSavedSpriteScreenY]
-    mov [ebp + esi], al               ; SPRITESTATEDATA1_YPIXELS
-    mov al, [ebp + wSavedSpriteScreenX]
-    mov [ebp + esi + 2], al           ; SPRITESTATEDATA1_XPIXELS
-    add esi, 2
-    add esi, SPRITE_XPIXELS_TO_MAPY_DELTA
-    mov al, [ebp + wSavedSpriteMapY]
-    mov [ebp + esi], al               ; SPRITESTATEDATA2_MAPY
-    mov al, [ebp + wSavedSpriteMapX]
-    mov [ebp + esi + 1], al           ; SPRITESTATEDATA2_MAPX
-    ret

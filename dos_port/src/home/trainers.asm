@@ -1,9 +1,24 @@
-; trainer_battle.asm — trainer battle entry/exit (Wave 8, M8.1).
+; trainers.asm — trainer battle entry/exit, at the pret mirror of
+; home/trainers.asm (Wave 8, M8.1; moved here from the legacy
+; engine/battle/trainer_battle.asm, relocated-labels grind 2026-07-24).
 ;
-; Faithful translation of pret home/trainers.asm:
-;   InitBattleEnemyParameters  home/trainers.asm:233 (seed wCurOpponent/wTrainerNo)
+; PARTIAL MIRROR: this file holds the three LINKED, runtime-live pret
+; home/trainers.asm labels, in pret's in-file order:
 ;   StartTrainerBattle         home/trainers.asm:172
 ;   EndTrainerBattle           home/trainers.asm:184
+;   InitBattleEnemyParameters  home/trainers.asm:233
+; The rest of pret home/trainers.asm (TalkToTrainer, ReadTrainerHeaderInfo,
+; CheckForEngagingTrainers, ...) currently lives in the CHECK-ONLY
+; engine/overworld/trainer_engine.asm bundle — registered legacy relocations,
+; blocked from joining this linked file until the M8.2 promotion resolves its
+; unported externs (TextScriptEnd, HideObject, _TrainerNameText, ...). Pret's
+; fallthroughs at the seams do not cross this file's labels:
+;   * DisplayEnemyTrainerTextAndStartBattle -> StartTrainerBattle is realized
+;     as an explicit jmp in trainer_engine.asm (cross-file);
+;   * pret EndTrainerBattle's conditional fall-through into
+;     ResetButtonPressedAndMapScript is part of the M8.2-deferred tail (see the
+;     TODO inside EndTrainerBattle) — ResetButtonPressedAndMapScript has no
+;     port body yet.
 ;
 ; This closes the audit gap "bespoke CheckTrainerSight/TrainerEncounterFlow detect
 ; but never battle" (docs/current_plan_home_rectification.md, trainers/trainers2 row).
@@ -22,8 +37,7 @@
 ;
 ; Register map: A=AL, EBP=GB memory base; GB WRAM = [EBP + symbol] (gb_memmap.inc).
 ;
-; Build (check): nasm -f coff -I include/ -I . -o trainer_battle.o \
-;                     src/engine/battle/trainer_battle.asm
+; Build (check): nasm -f coff -I include/ -I . -o /dev/null src/home/trainers.asm
 
 bits 32
 
@@ -50,40 +64,6 @@ global EndTrainerBattle
 %ifdef TRAINER_BATTLE_LIVE
 extern InitBattle                       ; src/engine/battle/init_battle.asm (wild-only setup)
 %endif
-
-; ---------------------------------------------------------------------------
-; InitBattleEnemyParameters — set opponent type + mon set/level from the engaging
-; trainer data.  Pret ref: home/trainers.asm:233.
-;
-; In:  wEngagedTrainerClass = OPP_* value (trainer) or a wild species id (< OPP_ID_OFFSET)
-;      wEngagedTrainerSet   = trainer party set index (trainer) or level (wild)
-; Out: wCurOpponent   = engaged class/species
-;      wTrainerNo     = trainer party set   (trainer path)
-;      wTrainerClass  = class = wCurOpponent - OPP_ID_OFFSET   (see DIVERGENCE below)
-;      wCurEnemyLevel = level               (wild/noTrainer path)
-; ---------------------------------------------------------------------------
-InitBattleEnemyParameters:
-    mov al, [ebp + wEngagedTrainerClass]   ; ld a, [wEngagedTrainerClass]
-    mov [ebp + wCurOpponent], al           ; ld [wCurOpponent], a
-    ; pret also: ld [wEnemyMonOrTrainerClass], a — wEnemyMonOrTrainerClass has no
-    ; port memmap alias yet; TODO(M8.2/battle): add it and mirror the write here.
-    cmp al, OPP_ID_OFFSET                   ; cp OPP_ID_OFFSET  (carry => class < 200 = wild)
-    mov al, [ebp + wEngagedTrainerSet]     ; ld a, [wEngagedTrainerSet] (flags preserved)
-    jb .noTrainer                           ; jr c, .noTrainer
-    mov [ebp + wTrainerNo], al             ; ld [wTrainerNo], a
-    ; DIVERGENCE(M8.1): pret sets wTrainerClass later, inside InitBattle/InitOpponent
-    ; (engine/battle/init_battle.asm:34-36  `sub OPP_ID_OFFSET; ld [wTrainerClass],a`).
-    ; The port's InitBattle is wild-only and never runs that, so seed wTrainerClass
-    ; here (M8.1 task explicitly seeds wCurOpponent/wTrainerClass/wTrainerNo) so
-    ; trainer_ai.asm / read_trainer_party.asm see a valid class.  When InitOpponent
-    ; gains its trainer branch this store becomes redundant (harmless).
-    mov al, [ebp + wCurOpponent]
-    sub al, OPP_ID_OFFSET
-    mov [ebp + wTrainerClass], al
-    ret
-.noTrainer:
-    mov [ebp + wCurEnemyLevel], al         ; ld [wCurEnemyLevel], a
-    ret
 
 ; ---------------------------------------------------------------------------
 ; StartTrainerBattle — enter a trainer battle.  Pret ref: home/trainers.asm:172.
@@ -120,7 +100,42 @@ EndTrainerBattle:
     ; pret: res BIT_SEEN_BY_TRAINER, [wMiscFlags]  — wMiscFlags has no port memmap
     ; alias yet; TODO(M8.2): clear it so the player is no longer engaged.
     ; pret then, for a fought trainer: ReadTrainerHeaderInfo + TrainerFlagAction
-    ; (persistent beaten flag) + HideObject + ResetButtonPressedAndMapScript — all
-    ; M8.2 (trainer-header engine).  M8.1 uses map_sprites.asm's npc_beaten_flags as
-    ; the (per-map, non-persistent) beaten proxy; TrainerFlagAction replaces it in M8.2.
+    ; (persistent beaten flag) + HideObject + ResetButtonPressedAndMapScript (pret's
+    ; conditional fall-through target) — all M8.2 (trainer-header engine).  M8.1 uses
+    ; map_sprites.asm's npc_beaten_flags as the (per-map, non-persistent) beaten proxy;
+    ; TrainerFlagAction replaces it in M8.2.
+    ret
+
+; ---------------------------------------------------------------------------
+; InitBattleEnemyParameters — set opponent type + mon set/level from the engaging
+; trainer data.  Pret ref: home/trainers.asm:233.
+;
+; In:  wEngagedTrainerClass = OPP_* value (trainer) or a wild species id (< OPP_ID_OFFSET)
+;      wEngagedTrainerSet   = trainer party set index (trainer) or level (wild)
+; Out: wCurOpponent   = engaged class/species
+;      wTrainerNo     = trainer party set   (trainer path)
+;      wTrainerClass  = class = wCurOpponent - OPP_ID_OFFSET   (see DIVERGENCE below)
+;      wCurEnemyLevel = level               (wild/noTrainer path)
+; ---------------------------------------------------------------------------
+InitBattleEnemyParameters:
+    mov al, [ebp + wEngagedTrainerClass]   ; ld a, [wEngagedTrainerClass]
+    mov [ebp + wCurOpponent], al           ; ld [wCurOpponent], a
+    ; pret also: ld [wEnemyMonOrTrainerClass], a — wEnemyMonOrTrainerClass has no
+    ; port memmap alias yet; TODO(M8.2/battle): add it and mirror the write here.
+    cmp al, OPP_ID_OFFSET                   ; cp OPP_ID_OFFSET  (carry => class < 200 = wild)
+    mov al, [ebp + wEngagedTrainerSet]     ; ld a, [wEngagedTrainerSet] (flags preserved)
+    jb .noTrainer                           ; jr c, .noTrainer
+    mov [ebp + wTrainerNo], al             ; ld [wTrainerNo], a
+    ; DIVERGENCE(M8.1): pret sets wTrainerClass later, inside InitBattle/InitOpponent
+    ; (engine/battle/init_battle.asm:34-36  `sub OPP_ID_OFFSET; ld [wTrainerClass],a`).
+    ; The port's InitBattle is wild-only and never runs that, so seed wTrainerClass
+    ; here (M8.1 task explicitly seeds wCurOpponent/wTrainerClass/wTrainerNo) so
+    ; trainer_ai.asm / read_trainer_party.asm see a valid class.  When InitOpponent
+    ; gains its trainer branch this store becomes redundant (harmless).
+    mov al, [ebp + wCurOpponent]
+    sub al, OPP_ID_OFFSET
+    mov [ebp + wTrainerClass], al
+    ret
+.noTrainer:
+    mov [ebp + wCurEnemyLevel], al         ; ld [wCurEnemyLevel], a
     ret

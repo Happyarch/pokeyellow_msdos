@@ -1388,7 +1388,7 @@ FRONTEND_SRCS := \
     src/home/pics.asm \
     src/engine/battle/experience.asm \
     src/engine/battle/battle_exp_stubs.asm \
-    src/engine/battle/trainer_battle.asm \
+    src/home/trainers.asm \
     src/engine/battle/trainer_ai.asm \
     src/engine/battle/read_trainer_party.asm \
     src/engine/battle/faint_leaves.asm \
@@ -1459,6 +1459,8 @@ ITEMS_CHECK_SRCS := \
 # (the latter pair via the vcopy.asm promotion in Stage 3 — the old note claiming
 # they blocked cut.asm was stale).
 HOME_CHECK_SRCS := \
+    src/home/trainers2.asm \
+    src/engine/overworld/trainer_sight.asm \
     src/home/predef_text.asm \
     src/engine/overworld/trainer_engine.asm
 # B1 (2026-07-13) promoted player_animations.asm to GAME_SRCS: its link closure was

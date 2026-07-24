@@ -279,10 +279,6 @@
       "port_file": "dos_port/src/engine/overworld/auto_movement.asm",
       "why": "pret home/npc_movement.asm wrapper (farjp _EndNPCMovementScript); the port has no home/npc_movement.asm mirror, so the trivial banking-elided jump is co-located with its target _EndNPCMovementScript in auto_movement.asm (OW-2.3)"
     },
-    "EndTrainerBattle": {
-      "port_file": "dos_port/src/engine/battle/trainer_battle.asm",
-      "why": "pret home/trainers.asm split across port files (draft Session H)"
-    },
     "EnemyRan": {
       "port_file": "dos_port/src/engine/battle/faint_switch.asm",
       "why": "pret engine/battle/core.asm split across port files (draft Session H)"
@@ -474,10 +470,6 @@
     "IncrementMovePP": {
       "port_file": "dos_port/src/engine/battle/mirror_move.asm",
       "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
-    "InitBattleEnemyParameters": {
-      "port_file": "dos_port/src/engine/battle/trainer_battle.asm",
-      "why": "pret home/trainers.asm split across port files (draft Session H)"
     },
     "InitMapSprites": {
       "port_file": "dos_port/src/engine/overworld/map_sprites.asm",
@@ -811,10 +803,6 @@
       "port_file": "dos_port/src/home/simulate_joypad.asm",
       "why": "pret home/map_objects.asm split across port files (draft Session H)"
     },
-    "StartTrainerBattle": {
-      "port_file": "dos_port/src/engine/battle/trainer_battle.asm",
-      "why": "pret home/trainers.asm split across port files (draft Session H)"
-    },
     "StatModifierDownEffect": {
       "port_file": "dos_port/src/engine/battle/stat_mod_effects.asm",
       "why": "pret engine/battle/effects.asm split across port files (draft Session H)"
@@ -1055,46 +1043,6 @@
       "port_file": "dos_port/src/engine/overworld/overworld.asm",
       "why": "Scanner-reviewed 2026-07-15: LoadTilesetHeader from pret engine/overworld/tilesets.asm has its selected single non-stub definition at dos_port/src/engine/overworld/overworld.asm; preserve this per-label split."
     },
-    "CheckPlayerIsInFrontOfSprite": {
-      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
-      "why": "Scanner-reviewed 2026-07-15: CheckPlayerIsInFrontOfSprite from pret engine/overworld/trainer_sight.asm has its selected single non-stub definition at dos_port/src/engine/overworld/trainer_engine.asm; preserve this per-label split."
-    },
-    "CheckSpriteCanSeePlayer": {
-      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
-      "why": "Scanner-reviewed 2026-07-15: CheckSpriteCanSeePlayer from pret engine/overworld/trainer_sight.asm has its selected single non-stub definition at dos_port/src/engine/overworld/trainer_engine.asm; preserve this per-label split."
-    },
-    "GetSpriteDataPointer": {
-      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
-      "why": "Scanner-reviewed 2026-07-15: GetSpriteDataPointer from pret engine/overworld/trainer_sight.asm has its selected single non-stub definition at dos_port/src/engine/overworld/trainer_engine.asm; preserve this per-label split."
-    },
-    "ReadTrainerScreenPosition": {
-      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
-      "why": "Scanner-reviewed 2026-07-15: ReadTrainerScreenPosition from pret engine/overworld/trainer_sight.asm has its selected single non-stub definition at dos_port/src/engine/overworld/trainer_engine.asm; preserve this per-label split."
-    },
-    "TrainerEngage": {
-      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
-      "why": "Scanner-reviewed 2026-07-15: TrainerEngage from pret engine/overworld/trainer_sight.asm has its selected single non-stub definition at dos_port/src/engine/overworld/trainer_engine.asm; preserve this per-label split."
-    },
-    "TrainerWalkUpToPlayer": {
-      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
-      "why": "Scanner-reviewed 2026-07-15: TrainerWalkUpToPlayer from pret engine/overworld/trainer_sight.asm has its selected single non-stub definition at dos_port/src/engine/overworld/trainer_engine.asm; preserve this per-label split."
-    },
-    "_GetSpritePosition1": {
-      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
-      "why": "Scanner-reviewed 2026-07-15: _GetSpritePosition1 from pret engine/overworld/trainer_sight.asm has its selected single non-stub definition at dos_port/src/engine/overworld/trainer_engine.asm; preserve this per-label split."
-    },
-    "_GetSpritePosition2": {
-      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
-      "why": "Scanner-reviewed 2026-07-15: _GetSpritePosition2 from pret engine/overworld/trainer_sight.asm has its selected single non-stub definition at dos_port/src/engine/overworld/trainer_engine.asm; preserve this per-label split."
-    },
-    "_SetSpritePosition1": {
-      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
-      "why": "Scanner-reviewed 2026-07-15: _SetSpritePosition1 from pret engine/overworld/trainer_sight.asm has its selected single non-stub definition at dos_port/src/engine/overworld/trainer_engine.asm; preserve this per-label split."
-    },
-    "_SetSpritePosition2": {
-      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
-      "why": "Scanner-reviewed 2026-07-15: _SetSpritePosition2 from pret engine/overworld/trainer_sight.asm has its selected single non-stub definition at dos_port/src/engine/overworld/trainer_engine.asm; preserve this per-label split."
-    },
     "ResetPikachuOverworldStateFlag2": {
       "port_file": "dos_port/src/engine/overworld/pikachu.asm",
       "why": "Scanner-reviewed 2026-07-15: ResetPikachuOverworldStateFlag2 from pret engine/pikachu/pikachu_follow.asm has its selected single non-stub definition at dos_port/src/engine/overworld/pikachu.asm; preserve this per-label split."
@@ -1234,18 +1182,6 @@
     "PrintLetterDelay": {
       "port_file": "dos_port/src/home/text.asm",
       "why": "Scanner-reviewed 2026-07-15: PrintLetterDelay from pret home/print_text.asm has its selected single non-stub definition at dos_port/src/home/text.asm; preserve this per-label split."
-    },
-    "GetTrainerInformation": {
-      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
-      "why": "Scanner-reviewed 2026-07-15: GetTrainerInformation from pret home/trainers2.asm has its selected single non-stub definition at dos_port/src/engine/overworld/trainer_engine.asm; preserve this per-label split."
-    },
-    "GetTrainerName": {
-      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
-      "why": "Scanner-reviewed 2026-07-15: GetTrainerName from pret home/trainers2.asm has its selected single non-stub definition at dos_port/src/engine/overworld/trainer_engine.asm; preserve this per-label split."
-    },
-    "IsFightingJessieJames": {
-      "port_file": "dos_port/src/engine/overworld/trainer_engine.asm",
-      "why": "Scanner-reviewed 2026-07-15: IsFightingJessieJames from pret home/trainers2.asm has its selected single non-stub definition at dos_port/src/engine/overworld/trainer_engine.asm; preserve this per-label split."
     },
     "UpdateSprites": {
       "port_file": "dos_port/src/engine/overworld/movement.asm",

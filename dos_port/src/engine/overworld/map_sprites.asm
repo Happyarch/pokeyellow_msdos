@@ -83,9 +83,9 @@ global wMapSpriteData            ; OW-A.2: [movement byte 2, masked text id] per
 ; M8.1 sight->battle wiring — the trainer battle-entry these overworld routines call.
 ; StartTrainerBattle seeds wCurOpponent/wTrainerClass/wTrainerNo from the engaged
 ; trainer's cached class/set (and, under -D TRAINER_BATTLE_LIVE, calls InitBattle).
-extern StartTrainerBattle
+extern StartTrainerBattle              ; home/trainers.asm (pret mirror)
 %ifdef TRAINER_BATTLE_LIVE
-extern EndTrainerBattle
+extern EndTrainerBattle                ; home/trainers.asm (pret mirror)
 %endif
 
 ; ---------------------------------------------------------------------------
