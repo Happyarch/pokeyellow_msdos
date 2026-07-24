@@ -29,7 +29,7 @@ Source of truth (read-only): data/pokemon/dex_entries.asm (fixed fields + dw
 order) + data/pokemon/dex_text.asm (flavor) + constants/charmap.asm. Tier-1
 machine output (CLAUDE.md two-tier rule) — DO NOT EDIT BY HAND. Consumed by
 src/engine/menus/pokedex.asm / pokedex_entry.asm (S8 pkg G) and the PetitCup
-height/weight gate in link_cups.asm (S8 pkg I2).
+height/weight gate in link_menu.asm (formerly link_cups.asm, merged 2026-07-24).
 """
 import re
 import sys
@@ -211,7 +211,7 @@ def main():
         "; tools/generators/gen_dex_entries.py from data/pokemon/dex_entries.asm +",
         "; data/pokemon/dex_text.asm + constants/charmap.asm).",
         ";",
-        "; Per-entry layout (contract for pokedex_entry.asm G2 + link_cups.asm I2):",
+        "; Per-entry layout (contract for pokedex_entry.asm G2 + link_menu.asm PetitCup):",
         ";   +0        name (charmap, '@'=$50 terminated, variable length)",
         ";   after @   feet(1), inches(1), weight(2 LE, tenths lb)",
         ";   +4..      inlined flavor stream: $00 <text/next=$4e/page=$49> $5f $50",

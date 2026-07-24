@@ -336,7 +336,6 @@ GAME_SRCS := \
     src/engine/menus/pokedex.asm \
     src/engine/printer/printer_stubs.asm \
     src/engine/menus/link_menu.asm \
-    src/engine/menus/link_cups.asm \
     src/home/reload_sprites.asm \
     src/home/simulate_joypad.asm \
     src/engine/overworld/overworld_stubs.asm \
@@ -2014,7 +2013,6 @@ src/engine/menus/naming_screen.o: assets/ui_layout_menus.inc assets/alphabets.in
 src/engine/menus/pokedex.o: assets/ui_layout_menus.inc assets/pokedex_tiles.inc \
         assets/pokedex_strings.inc assets/dex_entries.inc
 src/engine/menus/link_menu.o: assets/ui_layout_menus.inc assets/link_text.inc
-src/engine/menus/link_cups.o: assets/dex_entries.inc
 
 # Status screen %includes the generated status_strings.inc label block.
 src/engine/pokemon/status_screen.o: assets/status_strings.inc

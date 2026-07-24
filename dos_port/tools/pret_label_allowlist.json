@@ -10,10 +10,6 @@
   ],
   "structural_findings": {},
   "relocated_files": {
-    "engine/menus/link_menu.asm": {
-      "port_file": "dos_port/src/engine/menus/link_cups.asm",
-      "why": "The 18 labels are the COLOSSEUM cup ELIGIBILITY rules (PokeCup/PikaCup/PetitCup and their 15 verdict routines), reached only as data through PointerTable_f5488. They are a different concern from the two menus with a different dependency set: they scan the party, read the Pokedex entry pointers (link_cups.o depends on assets/dex_entries.inc) and call GetMonName, and they touch no window, tilemap or menu-driver state at all \u2014 pret bundles them with the menus only because they share a ROM bank. Reviewed on the merits 2026-07-14 (menu-fidelity row 20 part 2), NOT kept as boilerplate: no pret label is forked, renamed or duplicated across the split (link_cups.asm externs the Colosseum*Text wrappers from link_menu.asm and prints them itself, exactly as pret does), faithdiff/label_status key on labels rather than files, and the discovery trail runs both ways (each file's header names the other and the pret file). Merging back would put ~1500 lines in one file, which is the size at which this very review had to be split across two iterations."
-    },
     "engine/menus/start_sub_menus.asm": {
       "port_file": "dos_port/src/engine/menus/trainer_card.asm",
       "why": "DrawTrainerInfo + its 5 TrainerInfo_* helpers are one self-contained SCREEN (VRAM tile loads, Red's front pic, box drawing, present/teardown); pret bundles them into start_sub_menus.asm only because they share a ROM bank with the six unrelated StartMenu_* dispatchers, which the flat port has no reason to reproduce. Reviewed on the merits 2026-07-13 (menu-fidelity row 10), NOT kept as boilerplate: no pret label is forked, renamed or duplicated across the split, faithdiff/label_status key on labels rather than files, and the discovery trail runs both ways (start_sub_menus.asm:116-119 externs name trainer_card.asm; trainer_card.asm's header names pret's file). Merging back would push the dispatch file past 1700 lines for zero cross-reference gain."

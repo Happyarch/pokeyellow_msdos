@@ -207,7 +207,7 @@ section .data
 %include "assets/pokedex_strings.inc"
 
 ; PokedexEntryPointers + the 151 entry blobs (flat .data, charmap-encoded).
-global PokedexEntryPointers          ; link_cups.asm (PetitCup) externs it
+global PokedexEntryPointers          ; link_menu.asm (PetitCup) externs it
 %include "assets/dex_entries.inc"
 
 ; ===========================================================================

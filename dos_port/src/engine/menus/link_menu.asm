@@ -2,19 +2,21 @@
 ; link_menu.asm — the link (cable club) MENU/DISPATCH half of pret
 ; engine/menus/link_menu.asm.  menus-port Session 8, package I1.
 ;
-; SCOPE (this file): the two link menus and their scaffolding —
+; SCOPE (this file): the COMPLETE pret file —
 ;   * LinkMenu            — TRADE CENTER / COLOSSEUM / COLOSSEUM2 / CANCEL select
 ;   * Func_f531b          — the Colosseum cup-select screen (View/Rules + cup
 ;                           list + rules panel) and Func_f56bd (rules redraw)
 ;   * Func_f59ec          — the LinkMenu locked-in cursor-arrow blit
 ;   * the menu/rules text tables + the Colosseum*Text message wrappers
 ;   * Func_f5476 / asm_f547c / asm_f547f dispatch tails
-;   * PointerTable_f5488 (dd PokeCup/PikaCup/PetitCup — SEAM to package I2)
+;   * PointerTable_f5488 (dd PokeCup/PikaCup/PetitCup)
 ;   * PointerTable_f56ee (dd Text_f56f4/5728/575b)
-; The cup-eligibility routines PokeCup/PikaCup/PetitCup + their result routines
-; (NotThreeMonsInParty, MewInParty, LevelAbove55, ...) are package I2
-; (link_cups.asm); I2 externs the Colosseum*Text text_far wrappers FROM this file
-; and prints them itself, the way pret does (ld hl, X / call PrintText).
+;   * PokeCup / PikaCup / PetitCup + their result routines (NotThreeMonsInParty,
+;     MewInParty, LevelAbove55, ..., asm_f5689/asm_f569b/asm_f56ad) — the
+;     COLOSSEUM cup-eligibility rules.  Formerly split out as link_cups.asm
+;     (menus swarm Session 8 package I2); merged back into this mirror 2026-07-24
+;     (relocated-labels grind — the split was registered legacy debt in
+;     pret_label_allowlist.json, now retired).
 ;
 ; ---------------------------------------------------------------------------
 ; PORT MODEL (CLAUDE.md + translation_log "menus-port S2..S7"):
@@ -116,16 +118,22 @@ extern CloseLinkConnection
 extern PrepareForSpecialWarp    ; engine/overworld/special_warps.asm (callfar target)
 extern SpecialEnterMap          ; engine/menus/main_menu.asm       (jpfar target)
 
-; --- SEAM to package I2 (link_cups.asm): PointerTable_f5488 targets ---------
-extern PokeCup                  ; link_cups.asm — POKé Cup eligibility check
-extern PikaCup                  ; link_cups.asm — Pika Cup eligibility check
-extern PetitCup                 ; link_cups.asm — Petit Cup eligibility check
+; --- cup-eligibility dependencies (PokeCup/PikaCup/PetitCup, below) ----------
+extern GetMonName               ; home/names.asm — in: wNamedObjectIndex -> wNameBuffer
+; PokedexEntryPointers — assets/dex_entries.inc (DO NOT %include the data file
+; here: engine/menus/pokedex.asm owns the %include/embed; duplicate-including it
+; would double-define every DexEntry label at link time). `dd` flat 32-bit .data
+; pointers, index = internal_species_index - 1 (dex_entries.inc header).
+extern PokedexEntryPointers
 
 ; ---------------------------------------------------------------------------
 ; globals — the pret-named routines / data (I2 + root reference these)
 ; ---------------------------------------------------------------------------
 global Func_f531b
 global Func_f56bd
+global PokeCup
+global PikaCup
+global PetitCup
 global Func_f59ec
 global Func_f5476
 global asm_f547c
@@ -195,6 +203,16 @@ COLOSSEUM               equ 0xF0           ; constants/map_constants.asm
 LINK_STATE_IN_CABLE_CLUB equ 0x01          ; constants/serial_constants.asm
 USING_INTERNAL_CLOCK     equ 0x02          ; constants/serial_constants.asm
 CONNECTION_NOT_ESTABLISHED equ 0xFF        ; constants/serial_constants.asm
+MEW                      equ 0x15          ; constants/pokemon_constants.asm (=21)
+; (TX_END — the '@' string terminator PetitCup scans for — comes from
+; gb_text.inc's %define, already included above.)
+
+; wPartyMon2Level/3Level: gb_memmap.inc only pins wPartyMon1Level (lead-mon
+; sym anchor); the other two party slots are +N*PARTYMON_STRUCT_LENGTH from
+; it, same as wPartyMon{d:n} in pret's ram/wram.asm. Local equ, not touching
+; gb_memmap.inc — root may want to promote these if another package needs them.
+wPartyMon2Level equ wPartyMon1Level + PARTYMON_STRUCT_LENGTH
+wPartyMon3Level equ wPartyMon2Level + PARTYMON_STRUCT_LENGTH
 
 ; --- charmap tiles (constants/charmap.asm; NOT GB-memory symbols) ----------
 CHAR_SPACE  equ 0x7F            ; ' '  blank tile
@@ -244,7 +262,7 @@ section .text
 ; ###########################################################################
 ; # Colosseum*Text — pret's text_far WRAPPERS (engine/menus/link_menu.asm:571-633).
 ; # These are DATA, not routines: `ld hl, ColosseumMewText / call PrintText` is how
-; # pret prints one, and link_cups.asm's result routines do exactly that.  The
+; # pret prints one, and the cup result routines below do exactly that.  The
 ; # Tier-1 stream bodies live in assets/link_text.inc.
 ; ###########################################################################
 Colosseum3MonsText:
@@ -296,7 +314,8 @@ ColosseumTotalL50Text:
     text_end
 
 ; The three name-splicing streams: each begins `text_ram wNameBuffer`, so the mon
-; name link_cups.asm just fetched with GetMonName is spliced in by the text engine.
+; name asm_f5689/asm_f569b/asm_f56ad just fetched with GetMonName is spliced in
+; by the text engine.
 ColosseumHeightText:
     text_far _ColosseumHeightText
     text_end
@@ -516,7 +535,6 @@ Func_f531b:
     inc al
     mov [ebp + wUnknownSerialFlag_d499], al
     ; hl = PointerTable_f5488[currentMenuItem]; call it (returns eligibility in AL).
-    ; SEAM: PokeCup/PikaCup/PetitCup live in package I2 (link_cups.asm).
     movzx ecx, byte [ebp + wCurrentMenuItem]
     mov esi, PointerTable_f5488
     mov esi, [esi + ecx * 4]        ; port dd table (pret dw -> dd)
@@ -550,6 +568,401 @@ asm_f547c:
 asm_f547f:
     mov word [ebp + wUnknownSerialCounter], 0
     stc                             ; scf -> CF=1 (cancel)
+    ret
+
+; ###########################################################################
+; # PokeCup / PikaCup / PetitCup — the COLOSSEUM cup-eligibility rules
+; # (pret engine/menus/link_menu.asm:197-511, in pret's in-file order: the
+; # three cups, then the fifteen shared result routines).  Reached only as
+; # data through PointerTable_f5488 (.data above — pret places the dw table
+; # immediately before PokeCup).  Pure logic — no window, tilemap or
+; # menu-driver state; the result routines print their Colosseum*Text (defined
+; # above) exactly as pret does (ld hl, X / call PrintText).
+; #
+; # FLAGS: every `cp NN / jr nc / jr c / jr z` here is ported onto the x86
+; # flag set by the *same* logical op pret used (cmp -> jc/jnc/jz map 1:1 onto
+; # GB cp's C/Z, both unsigned-subtract semantics).  The two-byte weight
+; # compare in PetitCup (sub $b9 / sbc $1) is a real 16-bit borrow chain —
+; # ported as sub/mov/sbb with the `mov` (no EFLAGS side effect, same as GB
+; # LD) sitting between them so CF survives untouched, exactly as on hardware.
+; ###########################################################################
+
+; ===========================================================================
+; PokeCup — pret ref: engine/menus/link_menu.asm:PokeCup.
+; Team-shape (3 mons, no MEW, no duplicate species) + level gate 50-55 each,
+; combined <=155. a=0 on a valid team; else the fail routine's error code.
+; ===========================================================================
+PokeCup:
+    mov esi, wPartyCount
+    mov al, [ebp + esi]
+    inc esi                             ; esi -> wPartySpecies (mon1)
+    cmp al, 3
+    jnz NotThreeMonsInParty
+    mov bh, 3
+.loop:
+    mov al, [ebp + esi]                 ; wPartySpecies
+    inc esi
+    cmp al, MEW
+    jz MewInParty
+    dec bh
+    jnz .loop
+    dec esi
+    dec esi                             ; esi -> mon2 address
+    cmp al, [ebp + esi]                 ; is third mon second mon?
+    jz DuplicateSpecies
+    dec esi                             ; esi -> mon1 address (wPartySpecies)
+    cmp al, [ebp + esi]                 ; is third mon first mon?
+    jz DuplicateSpecies
+    mov al, [ebp + esi]
+    inc esi
+    cmp al, [ebp + esi]                 ; is first mon second mon?
+    jz DuplicateSpecies
+
+    mov al, [ebp + wPartyMon1Level]
+    cmp al, 56
+    jnc LevelAbove55
+    cmp al, 50
+    jc LevelUnder50
+    mov bh, al
+    mov al, [ebp + wPartyMon2Level]
+    cmp al, 56
+    jnc LevelAbove55
+    cmp al, 50
+    jc LevelUnder50
+    mov bl, al
+    mov al, [ebp + wPartyMon3Level]
+    cmp al, 56
+    jnc LevelAbove55
+    cmp al, 50
+    jc LevelUnder50
+    add al, bh
+    add al, bl
+    cmp al, 156
+    jnc CombinedLevelsGreaterThan155
+    xor al, al
+    ret
+
+; ===========================================================================
+; PikaCup — pret ref: engine/menus/link_menu.asm:PikaCup.
+; Same team-shape gate; level gate 15-20 each, combined <=50.
+; ===========================================================================
+PikaCup:
+    mov esi, wPartyCount
+    mov al, [ebp + esi]
+    inc esi
+    cmp al, 3
+    jnz NotThreeMonsInParty
+    mov bh, 3
+.loop:
+    mov al, [ebp + esi]                 ; wPartySpecies
+    inc esi
+    cmp al, MEW
+    jz MewInParty
+    dec bh
+    jnz .loop
+    dec esi
+    dec esi
+    cmp al, [ebp + esi]                 ; is third mon second mon?
+    jz DuplicateSpecies
+    dec esi
+    cmp al, [ebp + esi]                 ; is third mon first mon?
+    jz DuplicateSpecies
+    mov al, [ebp + esi]
+    inc esi
+    cmp al, [ebp + esi]                 ; is first mon second mon?
+    jz DuplicateSpecies
+
+    mov al, [ebp + wPartyMon1Level]
+    cmp al, 21
+    jnc LevelAbove20
+    cmp al, 15
+    jc LevelUnder15
+    mov bh, al
+    mov al, [ebp + wPartyMon2Level]
+    cmp al, 21
+    jnc LevelAbove20
+    cmp al, 15
+    jc LevelUnder15
+    mov bl, al
+    mov al, [ebp + wPartyMon3Level]
+    cmp al, 21
+    jnc LevelAbove20
+    cmp al, 15
+    jc LevelUnder15
+    add al, bh
+    add al, bl
+    cmp al, 51
+    jnc CombinedLevelsAbove50
+    xor al, al
+    ret
+
+; ===========================================================================
+; PetitCup — pret ref: engine/menus/link_menu.asm:PetitCup.
+; Same team-shape gate; per-mon evolution-stage check (Func_3b10f — stubbed,
+; see below); per-mon dex-entry height (<6'8") + weight (<=44lb) check;
+; level gate 25-30 each, combined <=80.
+; ===========================================================================
+PetitCup:
+    mov esi, wPartyCount
+    mov al, [ebp + esi]
+    inc esi
+    cmp al, 3
+    jnz NotThreeMonsInParty
+    mov bh, 3
+.loop:
+    mov al, [ebp + esi]                 ; wPartySpecies
+    inc esi
+    cmp al, MEW
+    jz MewInParty
+    dec bh
+    jnz .loop
+    dec esi
+    dec esi
+    cmp al, [ebp + esi]                 ; is third mon second mon?
+    jz DuplicateSpecies
+    dec esi
+    cmp al, [ebp + esi]                 ; is third mon first mon?
+    jz DuplicateSpecies
+    mov al, [ebp + esi]
+    inc esi
+    cmp al, [ebp + esi]                 ; is first mon second mon?
+    jz DuplicateSpecies                 ; esi -> mon2 address here
+
+    ; --- per-mon evolution-stage check (x3) ---
+    ; pret: `ld a,[hl] / ld [wCurPartySpecies],a / push hl / callfar Func_3b10f
+    ; / pop hl / jp c, asm_f56ad` for mon1, mon2, mon3 in turn.
+    ; DEVIATION{class=temporary; pret=engine/menus/link_menu.asm:PetitCup; behavior=treat all three party species as basic forms instead of calling Func_3b10f; evidence=pret PetitCup callfar sequence and project_state reports Func_3b10f missing; lifetime=until Func_3b10f is ported and wired}
+    ; Func_3b10f (engine/pokemon/evos_moves.asm — "does some species
+    ; evolve into wCurPartySpecies") is not yet ported (pokemon_behavior plan).
+    ; Stubbed to the "basic form" result (CF clear -> jc NOT taken) for every
+    ; mon. TODO once ported: extern Func_3b10f, preserve esi across the call
+    ; (pret wraps it in push/pop hl since callfar clobbers registers), replace
+    ; each `clc` stub below with `mov [ebp+wCurPartySpecies], al` / real call.
+    dec esi                             ; esi -> mon1 address
+    mov al, [ebp + esi]
+    mov [ebp + wCurPartySpecies], al
+    clc                                 ; structured temporary deviation above: basic path
+    jc asm_f56ad
+    inc esi                             ; esi -> mon2 address
+    mov al, [ebp + esi]
+    mov [ebp + wCurPartySpecies], al
+    clc                                 ; structured temporary deviation above: basic path
+    jc asm_f56ad
+    inc esi                             ; esi -> mon3 address
+    mov al, [ebp + esi]
+    mov [ebp + wCurPartySpecies], al
+    clc                                 ; structured temporary deviation above: basic path
+    jc asm_f56ad
+    dec esi
+    dec esi                             ; esi -> mon1 address (wPartySpecies)
+
+    ; --- per-mon dex-entry height/weight check (x3) ---
+    mov bh, 3
+.bigloop:
+    mov al, [ebp + esi]                 ; wPartySpecies[i]
+    inc esi
+    push esi
+    push ebx
+    push eax
+    ; DEVIATION{class=data-model; pret=engine/menus/link_menu.asm:PetitCup; behavior=read each flat PokedexEntryPointers dd directly instead of two banked FarCopyData operations; evidence=pret PetitCup pointer and entry copies plus generated dex_entries.inc flat-pointer contract; lifetime=permanent flat-memory boundary}
+    ; FarCopyData bank read -> flat read. pret does two FarCopyData
+    ; calls (fetch the far pointer, then 20 bytes of the entry) because
+    ; PokedexEntryPointers is bank-switched `dw` data on hardware; the port's
+    ; PokedexEntryPointers is already a flat `dd` pointer (dex_entries.inc
+    ; contract), so one direct load replaces both banked copies.
+    movzx ecx, al
+    dec ecx                             ; pret: dec a; ld c,a (species-1 index)
+    mov esi, [PokedexEntryPointers + ecx*4]   ; flat dex-entry ptr (pret: hl = table+bc*2, FarCopyData)
+.scanAt:
+    mov al, [esi]
+    inc esi
+    cmp al, TX_END                      ; '@' name terminator
+    jne .scanAt
+    mov al, [esi]                       ; feet
+    inc esi
+    cmp al, 7
+    jnc asm_f5689
+    add al, al                          ; a = 2*feet
+    add al, al                          ; a = 4*feet
+    mov bh, al                          ; b = 4*feet
+    add al, al                          ; a = 8*feet
+    add al, bh                          ; a = 8*feet + 4*feet = 12*feet
+    mov bh, al                          ; b = 12*feet
+    mov al, [esi]                       ; inches
+    inc esi
+    add al, bh                          ; a = inches + 12*feet (total inches)
+    cmp al, 0x51                        ; 81 = 6'8" + 1"
+    jnc asm_f5689
+    mov al, [esi]                       ; weight low byte
+    inc esi
+    sub al, 0xb9
+    mov al, [esi]                       ; weight high byte (esi NOT advanced — mirrors pret `ld a,[hl]`)
+    sbb al, 1                           ; 16-bit borrow chain: weight - 0x1b9 (441 tenths = 44.1 lb)
+    jnc asm_f569b
+    pop eax
+    pop ebx
+    pop esi
+    dec bh
+    jnz .bigloop
+
+    mov al, [ebp + wPartyMon1Level]
+    cmp al, 31
+    jnc LevelAbove30
+    cmp al, 25
+    jc LevelUnder25
+    mov bh, al
+    mov al, [ebp + wPartyMon2Level]
+    cmp al, 31
+    jnc LevelAbove30
+    cmp al, 25
+    jc LevelUnder25
+    mov bl, al
+    mov al, [ebp + wPartyMon3Level]
+    cmp al, 31
+    jnc LevelAbove30
+    cmp al, 25
+    jc LevelUnder25
+    add al, bh
+    add al, bl
+    cmp al, 81
+    jnc CombinedLevelsAbove80
+    xor al, al
+    ret
+
+; ===========================================================================
+; Result routines — pret ref: engine/menus/link_menu.asm:410-511. Shared
+; `jp z`/`jp nc`/`jp c` targets reached from all three cups (and, for
+; asm_f5689/asm_f569b/asm_f56ad, only from PetitCup). Each prints its
+; Colosseum*Text and returns its fixed error code in AL; not `global` — only
+; reached via internal jumps within this file.
+; ===========================================================================
+NotThreeMonsInParty:
+    mov dword [text_msgbox], msgbox_dialog
+    mov esi, Colosseum3MonsText                 ; ld hl, Colosseum3MonsText
+    call PrintText
+    mov al, 0x1
+    ret
+
+MewInParty:
+    mov dword [text_msgbox], msgbox_dialog
+    mov esi, ColosseumMewText                 ; ld hl, ColosseumMewText
+    call PrintText
+    mov al, 0x2
+    ret
+
+DuplicateSpecies:
+    mov dword [text_msgbox], msgbox_dialog
+    mov esi, ColosseumDifferentMonsText                 ; ld hl, ColosseumDifferentMonsText
+    call PrintText
+    mov al, 0x3
+    ret
+
+LevelAbove55:
+    mov dword [text_msgbox], msgbox_dialog
+    mov esi, ColosseumMaxL55Text                 ; ld hl, ColosseumMaxL55Text
+    call PrintText
+    mov al, 0x4
+    ret
+
+LevelUnder50:
+    mov dword [text_msgbox], msgbox_dialog
+    mov esi, ColosseumMinL50Text                 ; ld hl, ColosseumMinL50Text
+    call PrintText
+    mov al, 0x5
+    ret
+
+CombinedLevelsGreaterThan155:
+    mov dword [text_msgbox], msgbox_dialog
+    mov esi, ColosseumTotalL155Text                 ; ld hl, ColosseumTotalL155Text
+    call PrintText
+    mov al, 0x6
+    ret
+
+LevelAbove30:
+    mov dword [text_msgbox], msgbox_dialog
+    mov esi, ColosseumMaxL30Text                 ; ld hl, ColosseumMaxL30Text
+    call PrintText
+    mov al, 0x7
+    ret
+
+LevelUnder25:
+    mov dword [text_msgbox], msgbox_dialog
+    mov esi, ColosseumMinL25Text                 ; ld hl, ColosseumMinL25Text
+    call PrintText
+    mov al, 0x8
+    ret
+
+CombinedLevelsAbove80:
+    mov dword [text_msgbox], msgbox_dialog
+    mov esi, ColosseumTotalL80Text                 ; ld hl, ColosseumTotalL80Text
+    call PrintText
+    mov al, 0x9
+    ret
+
+LevelAbove20:
+    mov dword [text_msgbox], msgbox_dialog
+    mov esi, ColosseumMaxL20Text                 ; ld hl, ColosseumMaxL20Text
+    call PrintText
+    mov al, 0xa
+    ret
+
+LevelUnder15:
+    mov dword [text_msgbox], msgbox_dialog
+    mov esi, ColosseumMinL15Text                 ; ld hl, ColosseumMinL15Text
+    call PrintText
+    mov al, 0xb
+    ret
+
+CombinedLevelsAbove50:
+    mov dword [text_msgbox], msgbox_dialog
+    mov esi, ColosseumTotalL50Text                 ; ld hl, ColosseumTotalL50Text
+    call PrintText
+    mov al, 0xc
+    ret
+
+; asm_f5689 — pret ref: engine/menus/link_menu.asm:asm_f5689. Height-over-limit
+; fail. Reached via `jnc asm_f5689` from PetitCup's .bigloop with (esi, ebx,
+; eax) still pushed (pret: `pop af / pop bc / pop hl` happen HERE, not before
+; the jump — mirrored exactly: PetitCup does not pop before jumping in).
+asm_f5689:
+    pop eax
+    pop ebx
+    pop esi
+    mov [ebp + wNamedObjectIndex], al   ; al = species internal index (pret: a from popped af)
+    call GetMonName
+    mov dword [text_msgbox], msgbox_dialog
+    mov esi, ColosseumHeightText                 ; ld hl, ColosseumHeightText
+    call PrintText
+    mov al, 0xd
+    ret
+
+; asm_f569b — pret ref: engine/menus/link_menu.asm:asm_f569b. Weight-over-limit
+; fail. Same stack-popping contract as asm_f5689.
+asm_f569b:
+    pop eax
+    pop ebx
+    pop esi
+    mov [ebp + wNamedObjectIndex], al
+    call GetMonName
+    mov dword [text_msgbox], msgbox_dialog
+    mov esi, ColosseumWeightText                 ; ld hl, ColosseumWeightText
+    call PrintText
+    mov al, 0xe
+    ret
+
+; asm_f56ad — pret ref: engine/menus/link_menu.asm:asm_f56ad. Evolved-mon fail
+; (Func_3b10f's `jp c`). Currently unreachable while Func_3b10f is stubbed to
+; the basic-form path (see PetitCup) — kept live so the seam is a one-line
+; flip (`clc` -> real call) once Func_3b10f lands. pret: `ld a,[hl]` — esi
+; still points at the current mon's species byte at the jc site.
+asm_f56ad:
+    mov al, [ebp + esi]
+    mov [ebp + wNamedObjectIndex], al
+    call GetMonName
+    mov dword [text_msgbox], msgbox_dialog
+    mov esi, ColosseumEvolvedText                 ; ld hl, ColosseumEvolvedText
+    call PrintText
+    mov al, 0xf
     ret
 
 ; ###########################################################################
@@ -1010,5 +1423,74 @@ RunLinkMenuTest:
 %endif
 .hang:
     call DelayFrame                 ; keep the frame counter running for AUTOKEY
+    jmp .hang
+%endif
+
+; ===========================================================================
+; RunLinkCupsTest — DEBUG_I2 harness. Seeds a 3-mon party and exercises:
+;   1. PokeCup on a passing team (levels 53/52/50, sum 155 -- both boundary
+;      values) -> expect al=0.
+;   2. PokeCup on the same team with mon1's level pushed to 60 -> expect
+;      al=4 (LevelAbove55), the "cp 56 / jnc" gate.
+;   3. PetitCup on a passing team of small real Pokemon (Diglett 0'8"/2lb,
+;      Nidoran-F 1'4"/15lb, Pikachu 1'4"/13lb) at levels 28/27/25 (sum 80,
+;      boundary) -> expect al=0. This is the one that actually walks the
+;      real PokedexEntryPointers data end-to-end.
+;   4. PetitCup with the third slot replaced by Rhydon (6'3", 265 lb, real
+;      dex data) at the same valid levels -> expect al=14 (asm_f569b, the
+;      two-byte weight-compare fail: 2650 tenths >> 441-tenth/44.1lb cutoff).
+; Results land in `link_cups_test_results` (this file's own flat .bss, NOT
+; GB WRAM -- avoids claiming any WRAM scratch address). No rendering; this
+; harness has no UI. `make DEBUG_I2=1` (root wires the flag + call site).
+; ===========================================================================
+%ifdef DEBUG_I2
+global RunLinkCupsTest
+
+SPECIES_RHYDON      equ 0x01
+SPECIES_KANGASKHAN  equ 0x02
+SPECIES_NIDORAN_M   equ 0x03
+SPECIES_NIDORAN_F   equ 0x0f
+SPECIES_DIGLETT     equ 0x3b
+SPECIES_PIKACHU     equ 0x54
+
+section .bss
+align 4
+link_cups_test_results: resb 4         ; [0]=PokeCup pass [1]=PokeCup fail
+                                        ; [2]=PetitCup pass [3]=PetitCup fail
+
+section .text
+RunLinkCupsTest:
+    ; --- scenario 1: PokeCup, valid team ---
+    mov byte [ebp + wPartyCount], 3
+    mov byte [ebp + wPartySpecies + 0], SPECIES_RHYDON
+    mov byte [ebp + wPartySpecies + 1], SPECIES_KANGASKHAN
+    mov byte [ebp + wPartySpecies + 2], SPECIES_NIDORAN_M
+    mov byte [ebp + wPartyMon1Level], 53
+    mov byte [ebp + wPartyMon2Level], 52
+    mov byte [ebp + wPartyMon3Level], 50
+    call PokeCup
+    mov [link_cups_test_results + 0], al
+
+    ; --- scenario 2: PokeCup, mon1 level pushed above the L55 ceiling ---
+    mov byte [ebp + wPartyMon1Level], 60
+    call PokeCup
+    mov [link_cups_test_results + 1], al
+
+    ; --- scenario 3: PetitCup, valid team of small real Pokemon ---
+    mov byte [ebp + wPartySpecies + 0], SPECIES_DIGLETT
+    mov byte [ebp + wPartySpecies + 1], SPECIES_NIDORAN_F
+    mov byte [ebp + wPartySpecies + 2], SPECIES_PIKACHU
+    mov byte [ebp + wPartyMon1Level], 28
+    mov byte [ebp + wPartyMon2Level], 27
+    mov byte [ebp + wPartyMon3Level], 25
+    call PetitCup
+    mov [link_cups_test_results + 2], al
+
+    ; --- scenario 4: PetitCup, mon3 = Rhydon (real dex weight 265lb >> 44lb) ---
+    mov byte [ebp + wPartySpecies + 2], SPECIES_RHYDON
+    call PetitCup
+    mov [link_cups_test_results + 3], al
+
+.hang:
     jmp .hang
 %endif
