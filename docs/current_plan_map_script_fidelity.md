@@ -222,13 +222,17 @@ Both are the identical "unresolved constant / wrong array" pattern.
   - The hand-transcribed `_MOV_CONSTS` / `_DIR_CONSTS` dicts are retired too:
     both slots now read the same `DEF … EQU` block out of
     `constants/map_object_constants.asm`, so they cannot drift from pret.
-- `[ ]` **`src/engine/events/pick_up_item.asm:71` — still open.** It reads
-  `[ebp + wMapSpriteExtraData]`, the same never-written WRAM address
-  `EngageMapTrainer` used, so `PickUpItem` resolves an item ball's item id from
-  garbage. The item ids it wants are now *correct in the data*; this one line is
-  what stands between that and working item balls. Fix is the same shape as
-  `EngageMapTrainer`'s (extern the flat alias), and it wants its own scenario —
-  an item-ball pickup golden — rather than riding along here.
+- `[x]` **`src/engine/events/pick_up_item.asm` — FIXED** (same follow-up wave, at
+  the maintainer's direction, documented rather than scenario-gated). It read
+  `[ebp + wMapSpriteExtraData]` — the same never-written WRAM address
+  `EngageMapTrainer` used — so `PickUpItem` handed `GiveItem` the item id `0` for
+  every visible item ball. Same one-line fix: read the flat
+  `map_sprite_extra_data` alias. Together with the item ids now being correct in
+  the generated data, both halves of visible item-ball pickup are in place.
+  **Not runtime-verified:** there is no item-ball pickup scenario, so this rests
+  on `faithdiff PickUpItem` (clean), the fidelity tier (no regression) and the
+  fact that it is the identical fix to the one `route3_sight` proved. An
+  item-ball golden is the obvious next scenario.
 
 ## Sequencing & interactions
 

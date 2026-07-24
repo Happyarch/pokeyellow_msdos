@@ -125,9 +125,10 @@ w_player_frozen:      resb 1   ; 1 = block player input during encounter flow
 ; emulated RAM. That is what EngageMapTrainer did until the route3_sight golden caught
 ; it (want trainer class $CA set $04, got $00/$00). `map_sprite_extra_data` is the
 ; port-only flat alias such files extern instead; the pret name stays primary here.
-; STILL AFFECTED, NOT FIXED HERE (out of this change's scope, see the plan file):
-; src/engine/events/pick_up_item.asm:71 reads `[ebp + wMapSpriteExtraData]` the same
-; way, so PickUpItem resolves an item-ball's item id from unwritten WRAM.
+; Both readers now use the alias: EngageMapTrainer (src/home/trainers.asm) and
+; PickUpItem (src/engine/events/pick_up_item.asm), which had the same defect — it
+; handed GiveItem the item id 0 for every visible item ball. If you add a third
+; reader in a file that includes m8_2_pending_symbols.inc, use the alias too.
 global map_sprite_extra_data
 map_sprite_extra_data:
 wMapSpriteExtraData:  resb NPC_SLOTS_MAX * 2

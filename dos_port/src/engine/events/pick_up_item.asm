@@ -39,6 +39,8 @@ global PickUpItem
 extern EnableAutoTextBoxDrawing        ; home/window.asm
 extern GiveItem                        ; home/give.asm — b=item, c=qty; CF=success
 extern HideObject                      ; overworld/toggleable_objects.asm (predef in pret)
+extern map_sprite_extra_data           ; overworld/map_sprites.asm — flat alias of
+                                       ; wMapSpriteExtraData (see the note at its use)
 extern PrintText                       ; home/window.asm — ESI = flat TX stream
 extern text_msgbox                     ; home/text.asm — active msgbox projection
 extern msgbox_dialog                   ; home/text.asm — overworld dialog projection
@@ -68,13 +70,20 @@ PickUpItem:
     mov al, [ebp + esi]                  ; ld a, [hl]  (toggleable-object index)
     mov [ebp + hToggleableObjectIndex], al   ; ldh [hToggleableObjectIndex], a
 
-    mov esi, wMapSpriteExtraData         ; ld hl, wMapSpriteExtraData
+    ; ⚠ FLAT array, NOT GB WRAM — and this file cannot reach it by its pret name.
+    ; m8_2_pending_symbols.inc (included above) binds `wMapSpriteExtraData` to pret's
+    ; WRAM address $D503, which the port never writes: the real array is flat .bss in
+    ; map_sprites.asm, filled by LoadSprite. So `mov esi, wMapSpriteExtraData` +
+    ; `[ebp + esi]` read unwritten emulated RAM and every item ball handed GiveItem
+    ; the item id 0. Same defect the route3_sight golden caught in EngageMapTrainer
+    ; (src/home/trainers.asm); same fix — the port-only flat alias.
+    mov esi, map_sprite_extra_data       ; ld hl, wMapSpriteExtraData
     mov al, [ebp + hSpriteIndex]         ; ldh a, [hSpriteIndex]
     dec al                               ; dec a
     add al, al                           ; add a  (index * 2)
     movzx edx, al                        ; ld d, 0 ; ld e, a
     add esi, edx                         ; add hl, de
-    mov al, [ebp + esi]                  ; ld a, [hl]
+    mov al, [esi]                        ; ld a, [hl]  (flat read — see the ⚠ above)
     mov bh, al                           ; ld b, a  (item)
     mov bl, 1                            ; ld c, 1  (quantity)
     call GiveItem
