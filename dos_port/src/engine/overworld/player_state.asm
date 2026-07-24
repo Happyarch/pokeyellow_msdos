@@ -164,7 +164,7 @@ extern ForceBikeOrSurf       ; src/home/player_gfx.asm
 ; fixed here (hard rule: this ticket creates ONLY this file).
 extern IsPlayerStandingOnDoorTile ; src/engine/overworld/overworld.asm — LINKED file, but NOT yet `global` there (link blocker; see CLOSURE)
 ; OW-4.1 CheckForCollisionWhenPushingBoulder deps:
-extern IsTilePassable                    ; src/engine/overworld/overworld.asm — LINKED (returns CF)
+extern IsTilePassable                    ; home/copy2.asm — LINKED (returns CF)
 extern CheckForTilePairCollisions2       ; src/engine/overworld/ledges.asm — CHECK-ONLY (ESI=flat table, returns CF)
 extern TilePairCollisionsLand            ; src/engine/overworld/ledges.asm — CHECK-ONLY (flat tile-pair table)
 ; CheckForBoulderCollisionWithSprites is defined below (pret player_state.asm — same file).

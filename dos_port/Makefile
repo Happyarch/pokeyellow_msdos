@@ -216,7 +216,6 @@ BOOT_SRCS := \
 HOME_SRCS := \
     src/home/home_stubs.asm \
     src/home/serial_stubs.asm \
-    src/home/fill_memory.asm \
     src/home/copy_data.asm \
     src/home/overworld.asm \
     src/home/bankswitch2.asm \

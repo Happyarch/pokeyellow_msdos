@@ -47,7 +47,7 @@ global GymLeaderFaceAndBadgeTileGraphics ; defined in assets/badge_tiles.inc (be
 global LoadBadgeTiles
 
 extern CopyData                      ; home/copy_data.asm — ESI src off, EDX dst off, BX count
-extern FillMemory                    ; home/fill_memory.asm — ESI dest, BX count, AL value
+extern FillMemory                    ; home/copy2.asm — ESI dest, BX count, AL value
 extern g_tilecache_dirty             ; ppu.asm — set on any VRAM tile-data write
 
 %ifdef DEBUG_DRAWBADGES

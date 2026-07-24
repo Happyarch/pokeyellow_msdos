@@ -1,11 +1,9 @@
 ; copy2.asm — VRAM tile-data copy family + screen-area helpers.
 ;
-; Source: home/copy2.asm (pret/pokeyellow) — FarCopyDataDouble, CopyVideoData,
-;         CopyVideoDataDouble, GetFarByte, ClearScreenArea,
-;         CopyScreenTileBufferToVRAM, ClearScreen.
-;         (FillMemory lives in src/home/fill_memory.asm and IsTilePassable in
-;          src/engine/overworld/overworld.asm — both registered legacy
-;          relocations, tools/pret_label_allowlist.json.)
+; Source: home/copy2.asm (pret/pokeyellow) — the complete pret file:
+;         IsTilePassable, FarCopyDataDouble, CopyVideoData, CopyVideoDataDouble,
+;         FillMemory, GetFarByte, ClearScreenArea, CopyScreenTileBufferToVRAM,
+;         ClearScreen.
 ;
 ; ---------------------------------------------------------------------------
 ; PORT MODEL — READ THIS BEFORE CHANGING SIGNATURES
@@ -49,18 +47,31 @@ bits 32
 
 extern g_tilecache_dirty                     ; src/ppu/ppu.asm — arm tile-cache re-decode
 extern DelayFrame                            ; src/video/frame.asm — one-frame yield
-extern FillMemory                            ; src/home/fill_memory.asm (registered relocation)
 extern Delay3                                ; src/video/frame.asm
+extern _IsTilePassable                       ; src/engine/gfx/sprite_oam.asm — CL=tile → CF
 
+global IsTilePassable
 global FarCopyDataDouble
 global CopyVideoData
 global CopyVideoDataDouble
+global FillMemory
 global GetFarByte
 global ClearScreenArea
 global CopyScreenTileBufferToVRAM
 global ClearScreen
 
 section .text
+
+; ---------------------------------------------------------------------------
+; IsTilePassable — sets carry if tile is NOT passable, clears carry otherwise.
+; pret home/copy2.asm:IsTilePassable — `homecall_sf _IsTilePassable / ret`,
+; i.e. a bank trampoline around _IsTilePassable (engine/gfx/sprite_oam.asm).
+; Flat model: the bank switch is a no-op, so the trampoline is a tail jump.
+;
+; In:  CL = tile ID.  Out: CF = 0 passable, CF = 1 blocked. Clobbers AL, ESI.
+; ---------------------------------------------------------------------------
+IsTilePassable:
+    jmp _IsTilePassable                      ; pret: homecall_sf _IsTilePassable
 
 ; ---------------------------------------------------------------------------
 ; CopyVideoData — copy BL (C) 2bpp tiles from a flat source to VRAM.
@@ -159,6 +170,35 @@ FarCopyDataDouble:
     pop esi
     pop ecx
     pop eax
+    ret
+
+; ---------------------------------------------------------------------------
+; FillMemory — fill BX bytes at [EBP+ESI] with AL.
+; pret home/copy2.asm:FillMemory ("fill bc bytes at hl with a"). The SM83
+; double-loop (inc b when c!=0, nested 8-bit loops) collapses to movzx+rep stosb;
+; semantics match pret for all counts 1..65535.
+;
+; In:  ESI = destination offset (GB address, EBP-relative)
+;      BX  = byte count (16-bit)
+;      AL  = fill value
+; Out: ESI/EBX/EAX unchanged (EDI/ECX scratch, saved). DF must be 0 (always is
+;      under DJGPP). CF not touched.
+; ---------------------------------------------------------------------------
+FillMemory:
+    push ecx
+    push edi
+    movzx   ecx, bx              ; zero-extend 16-bit BC count to full 32 bits
+                                 ; count=0 → ECX=0 → rep stosb no-op.
+                                 ; DIVERGENCE: pret FillMemory(BC=0) writes 256
+                                 ; bytes (B=0→inc b→1, then C=0 underflows the
+                                 ; inner loop 256×). The port writes 0. Safe: no
+                                 ; caller passes BC=0 expecting 256 (callers that
+                                 ; want 256 pass $100). Intentionally NOT emulated.
+    lea     edi, [ebp + esi]     ; flat destination: EBP base + GB-space offset
+    rep stosb                    ; fill ECX bytes at ES:EDI with AL
+                                 ; ES = DS = flat selector under DJGPP
+    pop edi
+    pop ecx
     ret
 
 ; ---------------------------------------------------------------------------

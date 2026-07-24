@@ -31,7 +31,7 @@ extern DelayFrame                    ; video/frame.asm — wait one frame (MoveP
 extern MovieSyncWindow               ; movie_projection.asm — project rWX/hWY to the window descriptor
 extern DebugNewGamePlayerName        ; engine/movie/title.asm — generated debug boot names
 extern DebugNewGameRivalName         ; engine/movie/title.asm
-extern FillMemory                    ; home/fill_memory.asm — ESI=dest, BX=len, AL=val
+extern FillMemory                    ; home/copy2.asm — ESI=dest, BX=len, AL=val
 extern InitOptions                   ; engine/menus/main_menu.asm
 ; --- OakSpeech body (A4.5): all deps now linked ---
 extern StopAllMusic                  ; home/audio.asm

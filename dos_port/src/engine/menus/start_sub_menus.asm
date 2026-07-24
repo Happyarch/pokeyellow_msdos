@@ -1710,7 +1710,7 @@ SwitchPartyMon_InitVarOrSwapData:
 ; (overworld.asm, same %ifdef).
 ; make SKIP_TITLE=1 DEBUG_TRAINERCARD=1
 ; ---------------------------------------------------------------------------
-extern FillMemory                    ; home/fill_memory.asm
+extern FillMemory                    ; home/copy2.asm
 extern DelayFrame                    ; video/frame.asm
 extern DumpBackbuffer                ; debug/debug_dump.asm
 extern SeedDeterministicPlayerIdentity ; engine/debug/debug_party.asm — "RED"/id 0 (seed.lua spec)

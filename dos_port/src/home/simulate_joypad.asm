@@ -31,7 +31,7 @@ global StartSimulatingJoypadStates
 global DecodeRLEList
 global DecodeArrowMovementRLE
 
-extern FillMemory                 ; src/home/fill_memory.asm — ESI=dest, BX=count, AL=val (ESI preserved)
+extern FillMemory                 ; home/copy2.asm — ESI=dest, BX=count, AL=val (ESI preserved)
 
 section .text
 

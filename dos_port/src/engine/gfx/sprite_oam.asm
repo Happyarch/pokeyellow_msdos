@@ -427,6 +427,51 @@ Func_4a7b:
     ret
 
 ; ---------------------------------------------------------------------------
+; _IsTilePassable — scan the tileset's passable-tile list for a tile id.
+; Pret ref: engine/gfx/sprite_oam.asm:_IsTilePassable (last routine in the pret
+; file, before its collision_tile_ids.asm INCLUDE). Reached through the
+; IsTilePassable trampoline in home/copy2.asm (pret homecall_sf; flat tail jmp).
+;
+; In:  CL = tile ID. Scans the $FF-terminated passable-tile list pointed to by
+;      wTilesetCollisionPtr (GB pointer to list in ROM window at OW_COLL_GBADDR).
+; Out: CF = 0 if CL is in the list (passable), CF = 1 otherwise.
+; Clobbers AL, ESI.
+;
+; SM83 original:
+;   ld hl, wTilesetCollisionPtr  ; load the pointer-to-pointer
+;   ld a, [hli]
+;   ld h, [hl]
+;   ld l, a                       ; HL = *wTilesetCollisionPtr (the actual list address)
+;   .loop:
+;     ld a, [hli]
+;     cp $ff
+;     jr z, .tileNotPassable
+;     cp c                         ; c = tile to test
+;     jr nz, .loop
+;     xor a                        ; ZF=1 CF=0 → passable
+;     ret
+;   .tileNotPassable:
+;     scf                          ; CF=1 → not passable
+;     ret
+; ---------------------------------------------------------------------------
+global _IsTilePassable
+_IsTilePassable:
+    ; ESI = *wTilesetCollisionPtr (the flat GB address of the passable-tile list)
+    movzx esi, word [ebp + W_TILESET_COLLISION_PTR]
+.loop:
+    mov al, byte [ebp + esi]
+    inc esi
+    cmp al, 0xFF
+    je  .tileNotPassable            ; hit terminator → blocked
+    cmp al, cl
+    jne .loop                       ; not this tile → keep scanning
+    clc                             ; found in list → passable
+    ret
+.tileNotPassable:
+    stc                             ; not found → blocked
+    ret
+
+; ---------------------------------------------------------------------------
 ; SpriteFacingAndAnimationTable — 33 pointers to facing/animation OAM blocks.
 ; Pret ref: data/sprites/facings.asm. Original is a dw table of 16-bit GB
 ; addresses; here it is a dd table of absolute label addresses, indexed *4.

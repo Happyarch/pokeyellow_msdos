@@ -313,7 +313,7 @@ global OverworldLoop
 global OverworldLoopLessDelay               ; OW-A.3: de-folded from OverworldLoop.lessDelay
 global AdvancePlayerSprite
 global _AdvancePlayerSprite                 ; OW-A.3: engine body, de-folded from the home wrapper
-global IsTilePassable
+extern IsTilePassable                       ; home/copy2.asm — CL=tile → CF (body: _IsTilePassable, engine/gfx/sprite_oam.asm)
 ; IsSpriteOrSignInFrontOfPlayer (complete: sign + counter + sprite scan) and
 ; IsSpriteInFrontOfPlayer / IsSpriteInFrontOfPlayer2 moved to their pret mirror,
 ; src/home/overworld.asm (menu-intro review + R-002 retirement, 2026-07-23).
@@ -2947,47 +2947,9 @@ GetTileInFrontOfPlayer:
     mov [ebp + W_TILE_IN_FRONT_OF_PLAYER], cl
     ret
 
-; ---------------------------------------------------------------------------
-; IsTilePassable — faithful translation.
-; Pret ref: engine/gfx/sprite_oam.asm:_IsTilePassable
-;
-; In:  CL = tile ID. Scans the $FF-terminated passable-tile list pointed to by
-;      wTilesetCollisionPtr (GB pointer to list in ROM window at OW_COLL_GBADDR).
-; Out: CF = 0 if CL is in the list (passable), CF = 1 otherwise.
-; Clobbers AL, ESI.
-;
-; SM83 original:
-;   ld hl, wTilesetCollisionPtr  ; load the pointer-to-pointer
-;   ld a, [hli]
-;   ld h, [hl]
-;   ld l, a                       ; HL = *wTilesetCollisionPtr (the actual list address)
-;   .loop:
-;     ld a, [hli]
-;     cp $ff
-;     jr z, .tileNotPassable
-;     cp c                         ; c = tile to test
-;     jr nz, .loop
-;     xor a                        ; ZF=1 CF=0 → passable
-;     ret
-;   .tileNotPassable:
-;     scf                          ; CF=1 → not passable
-;     ret
-; ---------------------------------------------------------------------------
-IsTilePassable:
-    ; ESI = *wTilesetCollisionPtr (the flat GB address of the passable-tile list)
-    movzx esi, word [ebp + W_TILESET_COLLISION_PTR]
-.loop:
-    mov al, byte [ebp + esi]
-    inc esi
-    cmp al, 0xFF
-    je  .tileNotPassable            ; hit terminator → blocked
-    cmp al, cl
-    jne .loop                       ; not this tile → keep scanning
-    clc                             ; found in list → passable
-    ret
-.tileNotPassable:
-    stc                             ; not found → blocked
-    ret
+; (IsTilePassable moved to its pret mirror home/copy2.asm as the trampoline to
+;  _IsTilePassable, whose body now lives at ITS pret mirror
+;  engine/gfx/sprite_oam.asm — relocated-labels grind, 2026-07-24.)
 
 ; ---------------------------------------------------------------------------
 ; LoadMapHeader — faithful translation.

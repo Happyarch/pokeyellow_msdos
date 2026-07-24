@@ -47,7 +47,7 @@ global GetSpriteScreenYPointer
 global GetSpriteScreenXPointer
 global GetSpriteScreenXYPointerCommon
 
-extern IsTilePassable
+extern IsTilePassable                   ; home/copy2.asm — CL=tile, CF=1 blocked
 extern Random_
 
 ; Wave-9 Pikachu-follower FSM — pret home/pikachu.asm:SpawnPikachu (not yet ported).

@@ -102,7 +102,7 @@ extern BankswitchHome           ; src/home/bankswitch.asm (no-op flat)
 extern BankswitchBack           ; src/home/bankswitch.asm (no-op flat)
 extern CalcDifference           ; src/home/pathfinding.asm
 extern MoveSprite_              ; src/home/pathfinding.asm
-extern FillMemory               ; src/home/fill_memory.asm  (ESI unchanged on return!)
+extern FillMemory               ; home/copy2.asm  (ESI unchanged on return!)
 extern WriteOAMBlock            ; src/home/oam.asm
 extern DelayFrame               ; src/video/frame.asm
 extern DelayFrames              ; src/video/frame.asm

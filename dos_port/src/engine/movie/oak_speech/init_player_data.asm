@@ -28,7 +28,7 @@ global InitPlayerData2
 global InitializeEmptyList
 
 extern Random                              ; home/random.asm
-extern FillMemory                          ; home/fill_memory.asm — ESI=dst, BX=count, AL=value
+extern FillMemory                          ; home/copy2.asm — ESI=dst, BX=count, AL=value
 extern InitializeToggleableObjectsFlags    ; overworld_stubs.asm (TODO: toggleable_objects.asm)
 
 START_MONEY equ 0x3000

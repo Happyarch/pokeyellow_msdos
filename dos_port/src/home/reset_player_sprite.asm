@@ -30,7 +30,7 @@ bits 32
 global ResetPlayerSpriteData
 global ResetPlayerSpriteData_ClearSpriteData
 
-extern FillMemory                   ; src/home/fill_memory.asm
+extern FillMemory                   ; home/copy2.asm
 
 section .text
 

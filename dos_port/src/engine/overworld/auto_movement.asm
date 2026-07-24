@@ -41,7 +41,7 @@ global PalletMovementScriptPointerTable
 global PewterMuseumGuyMovementScriptPointerTable
 global PewterGymGuyMovementScriptPointerTable
 
-extern FillMemory                  ; src/home/fill_memory.asm
+extern FillMemory                  ; home/copy2.asm
 extern MoveSprite                  ; src/home/pathfinding.asm
 extern ConvertNPCMovementDirectionsToJoypadMasks ; pathfinding.asm (pret: predef)
 extern DecodeRLEList               ; src/home/simulate_joypad.asm

@@ -29,7 +29,7 @@ extern MovieBeginSurface             ; movie_projection.asm — black-matte cine
 extern MovieEndSurface               ; movie_projection.asm — tear down the surface
 extern RunPaletteCommand             ; home/palettes.asm — BH = SET_PAL_* command
 extern UpdateCGBPal_BGP              ; home/cgb_palettes.asm — commit rBGP to the DAC
-extern FillMemory                    ; home/copy_data.asm — ESI dest, BX count, AL value
+extern FillMemory                    ; home/copy2.asm — ESI dest, BX count, AL value
 extern CopyVideoData                 ; home/copy2.asm — ESI=VRAM dest, EDX=flat src, BL=tiles
 extern DelayFrames                   ; video/frame.asm — BL = frame count
 extern DelayFrame                    ; video/frame.asm — wait one frame

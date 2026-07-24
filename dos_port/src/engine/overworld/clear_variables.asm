@@ -9,7 +9,7 @@
 ; GB memory = [ebp + SYM], SYM from gb_memmap.inc.
 ;
 ; Reuses (does not duplicate):
-;   extern FillMemory   ; src/home/fill_memory.asm
+;   extern FillMemory   ; home/copy2.asm
 ;     Contract (per that file's header): ESI = dest (EBP-relative GB offset),
 ;     BX = byte count, AL = fill value. Preserves ESI/EBX/EAX/ECX.
 ;   extern hide_window  ; src/ppu/ppu.asm
