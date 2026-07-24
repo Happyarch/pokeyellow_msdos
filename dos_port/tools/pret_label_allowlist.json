@@ -9,12 +9,7 @@
     "Legacy entries began as a 2026-07-07 full-tree inventory and remain subject to structural audit."
   ],
   "structural_findings": {},
-  "relocated_files": {
-    "engine/menus/start_sub_menus.asm": {
-      "port_file": "dos_port/src/engine/menus/trainer_card.asm",
-      "why": "DrawTrainerInfo + its 5 TrainerInfo_* helpers are one self-contained SCREEN (VRAM tile loads, Red's front pic, box drawing, present/teardown); pret bundles them into start_sub_menus.asm only because they share a ROM bank with the six unrelated StartMenu_* dispatchers, which the flat port has no reason to reproduce. Reviewed on the merits 2026-07-13 (menu-fidelity row 10), NOT kept as boilerplate: no pret label is forked, renamed or duplicated across the split, faithdiff/label_status key on labels rather than files, and the discovery trail runs both ways (start_sub_menus.asm:116-119 externs name trainer_card.asm; trainer_card.asm's header names pret's file). Merging back would push the dispatch file past 1700 lines for zero cross-reference gain."
-    }
-  },
+  "relocated_files": {},
   "relocated_labels": {
     "AIGetTypeEffectiveness": {
       "port_file": "dos_port/src/engine/battle/core_damage.asm",

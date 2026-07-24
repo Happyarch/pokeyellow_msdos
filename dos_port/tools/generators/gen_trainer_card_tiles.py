@@ -29,7 +29,7 @@ loading the wrong 23rd tile.
 The gym-leader face + badge sheet (gfx/trainer_card/badges.2bpp) is NOT bundled
 here — it is already carried by tools/generators/gen_badge_tiles.py (assets/badge_tiles.inc)
 and loaded by draw_badges.asm:LoadBadgeTiles, exactly the pixels pret loads to
-vChars2 tile $20. trainer_card.asm calls LoadBadgeTiles for those.
+vChars2 tile $20. DrawTrainerInfo (start_sub_menus.asm) calls LoadBadgeTiles for those.
 
 This is Tier-1 machine output: a deterministic passthrough of pret .2bpp, no
 hand-authored information. Rerunning is idempotent.

@@ -318,7 +318,6 @@ GAME_SRCS := \
     src/engine/menus/field_moves.asm \
     src/engine/menus/text_box.asm \
     src/engine/menus/draw_badges.asm \
-    src/engine/menus/trainer_card.asm \
     src/engine/menus/pc.asm \
     src/engine/menus/pc_stubs.asm \
     src/engine/menus/oaks_pc.asm \
@@ -1978,7 +1977,7 @@ src/engine/overworld/trainer_engine.o: assets/emotes.inc
 
 # Trainer-card tile graphics (box/bg/blank-names/badge-numbers/colon/circle),
 # 2bpp passthrough of gfx/trainer_card/*.2bpp + gfx/font/font_extra.2bpp, for the
-# TRAINER CARD screen (trainer_card.asm, menus S9). Faces/badges come from
+# TRAINER CARD screen (DrawTrainerInfo, start_sub_menus.asm). Faces/badges come from
 # assets/badge_tiles.inc (package B) via LoadBadgeTiles.
 assets/trainer_card_tiles.inc: ../gfx/trainer_card/trainer_info.2bpp \
                                ../gfx/trainer_card/blank_leader_names.2bpp \
@@ -1987,9 +1986,6 @@ assets/trainer_card_tiles.inc: ../gfx/trainer_card/trainer_info.2bpp \
                                ../gfx/font/font_extra.2bpp \
                                tools/generators/gen_trainer_card_tiles.py
 	python3 tools/generators/gen_trainer_card_tiles.py
-
-src/engine/menus/trainer_card.o: assets/trainer_card_tiles.inc assets/trainer_card_strings.inc \
-                                 assets/ui_layout_menus.inc
 
 # Pokédex interface tiles (2bpp passthrough of gfx/pokedex/pokedex.2bpp + the
 # plain pokéball tile from gfx/battle/balls.2bpp) for LoadPokedexTilePatterns.
@@ -2004,7 +2000,7 @@ src/home/start_menu.o: assets/event_constants.inc assets/audio_constants.inc
 src/engine/menus/draw_start_menu.o: assets/event_constants.inc \
         assets/menu_strings.inc assets/ui_layout_menus.inc
 src/engine/menus/start_sub_menus.o: assets/ui_layout_menus.inc assets/audio_constants.inc \
-        assets/menu_text.inc
+        assets/menu_text.inc assets/trainer_card_tiles.inc assets/trainer_card_strings.inc
 src/engine/menus/pc.o: assets/event_constants.inc assets/audio_constants.inc \
         assets/pc_text.inc
 src/engine/menus/players_pc.o: assets/ui_layout_menus.inc assets/audio_constants.inc \

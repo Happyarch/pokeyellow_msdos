@@ -90,7 +90,7 @@ section .text
 ; $20 = face 0. Any VRAM tile-data write must arm g_tilecache_dirty (CLAUDE.md).
 ; In: EBP = GB base. All registers preserved.
 ;
-; DEVIATION{class=banking; pret=engine/menus/start_sub_menus.asm:DrawTrainerInfo; behavior=extract the inline face-and-badge graphics load into port-only LoadBadgeTiles; evidence=pret DrawTrainerInfo FarCopyData sequence and linked port call from trainer_card.asm; lifetime=permanent flat-data helper split}
+; DEVIATION{class=banking; pret=engine/menus/start_sub_menus.asm:DrawTrainerInfo; behavior=extract the inline face-and-badge graphics load into port-only LoadBadgeTiles; evidence=pret DrawTrainerInfo FarCopyData sequence and linked port call from start_sub_menus.asm; lifetime=permanent flat-data helper split}
 ; pret has no such routine — DrawTrainerInfo loads these
 ; tiles inline (engine/menus/start_sub_menus.asm:523-527, `ld hl,
 ; GymLeaderFaceAndBadgeTileGraphics / ld de,vChars2 tile $20 / ld bc,... /
@@ -98,7 +98,7 @@ section .text
 ; x86 code space, not in a GB-addressable ROM bank, so the copy is flat→GB and
 ; cannot go through a routine whose source is a GB offset. Keeping it here (next
 ; to the tile-id math that depends on the $20 base) rather than duplicating the
-; flat-copy loop in trainer_card.asm; the call site there is tagged to match.
+; flat-copy loop in DrawTrainerInfo (start_sub_menus.asm); the call site there is tagged to match.
 ; ---------------------------------------------------------------------------
 LoadBadgeTiles:
     mov byte [g_tilecache_dirty], 1

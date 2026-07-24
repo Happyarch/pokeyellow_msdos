@@ -478,7 +478,7 @@ SCENARIOS = {
         "wram_masks": dict(_BATTLE_WRAM_MASKS),
     },
     # --- Stage 3: full-screen takeover menus. Both port screens draw W_TILEMAP
-    # as a GB-shaped STRIDE-20 scratch (options.asm GBSCR_W / trainer_card.asm
+    # as a GB-shaped STRIDE-20 scratch (options.asm GBSCR_W / start_sub_menus.asm
     # TCSCR_W) and mirror rows 0-17 to GB_TILEMAP1, so the golden maps at
     # "stride": 20, window (0,0) — flat offset r*20+c, not the 40-wide canvas. ---
     "main_menu": {
