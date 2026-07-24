@@ -130,7 +130,7 @@ PlayShootingStar:
     ; -> PlayIntro), the copyright is now drawn — dump it (== the gamefreak_intro state, but
     ; reached via the reset route) and exit. The initial boot's PlayShootingStar has the flag
     ; clear, so it plays through normally to reach the title where the reset happens.
-    extern g_title_reset_replay           ; movie/title.asm
+    extern g_title_reset_replay           ; engine/movie/title.asm
     cmp byte [g_title_reset_replay], 0
     je .not_reset_replay
     extern DumpBackbuffer                 ; debug/debug_dump.asm

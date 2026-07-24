@@ -19,8 +19,8 @@ section .text
 ; real OakSpeech now; a debug-mode (BIT_DEBUG_MODE) new game still skips the speech
 ; and naming, so the seeded debug names survive.
 
-; DisplayTitleScreen (B on the main menu returns to the title) is now REAL — the
-; title module (src/movie/title.asm) exports its complete DisplayTitleScreen body;
+; DisplayTitleScreen (B on the main menu returns to the title) is now REAL — its
+; pret mirror (src/engine/movie/title.asm) exports the complete DisplayTitleScreen body;
 ; the former ret stub here is retired. (MainMenu is still not the boot path, so this
 ; seam is not yet exercised live, but it now resolves to the faithful renderer.)
 

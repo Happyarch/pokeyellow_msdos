@@ -1000,46 +1000,6 @@
       "port_file": "dos_port/src/engine/pokemon/evolution.asm",
       "why": "Scanner-reviewed 2026-07-15: EvolveMon from pret engine/movie/evolution.asm has its selected single non-stub definition at dos_port/src/engine/pokemon/evolution.asm; preserve this per-label split."
     },
-    "DisplayTitleScreen": {
-      "port_file": "dos_port/src/movie/title.asm",
-      "why": "Scanner-reviewed 2026-07-15: DisplayTitleScreen from pret engine/movie/title.asm has its selected single non-stub definition at dos_port/src/movie/title.asm; preserve this per-label split."
-    },
-    "DoTitleScreenFunction": {
-      "port_file": "dos_port/src/movie/title.asm",
-      "why": "Scanner-reviewed 2026-07-15: DoTitleScreenFunction from pret engine/movie/title.asm has its selected single non-stub definition at dos_port/src/movie/title.asm; preserve this per-label split."
-    },
-    "IncrementResetCounter": {
-      "port_file": "dos_port/src/movie/title.asm",
-      "why": "Scanner-reviewed 2026-07-15: IncrementResetCounter from pret engine/movie/title.asm has its selected single non-stub definition at dos_port/src/movie/title.asm; preserve this per-label split."
-    },
-    "PrepareTitleScreen": {
-      "port_file": "dos_port/src/movie/title.asm",
-      "why": "Scanner-reviewed 2026-07-15: PrepareTitleScreen from pret engine/movie/title.asm has its selected single non-stub definition at dos_port/src/movie/title.asm; preserve this per-label split."
-    },
-    "TitleScreenCopyTileMapToVRAM": {
-      "port_file": "dos_port/src/movie/title.asm",
-      "why": "Scanner-reviewed 2026-07-15: TitleScreenCopyTileMapToVRAM from pret engine/movie/title.asm has its selected single non-stub definition at dos_port/src/movie/title.asm; preserve this per-label split."
-    },
-    "LoadYellowTitleScreenGFX": {
-      "port_file": "dos_port/src/movie/title.asm",
-      "why": "Scanner-reviewed 2026-07-15: LoadYellowTitleScreenGFX from pret engine/movie/title_yellow.asm has its selected single non-stub definition at dos_port/src/movie/title.asm; preserve this per-label split."
-    },
-    "TitleScreenPikachuEyesOAMData": {
-      "port_file": "dos_port/src/movie/title.asm",
-      "why": "Scanner-reviewed 2026-07-15: TitleScreenPikachuEyesOAMData from pret engine/movie/title_yellow.asm has its selected single non-stub definition at dos_port/src/movie/title.asm; preserve this per-label split."
-    },
-    "TitleScreen_PlacePikaSpeechBubble": {
-      "port_file": "dos_port/src/movie/title.asm",
-      "why": "Scanner-reviewed 2026-07-15: TitleScreen_PlacePikaSpeechBubble from pret engine/movie/title_yellow.asm has its selected single non-stub definition at dos_port/src/movie/title.asm; preserve this per-label split."
-    },
-    "TitleScreen_PlacePikachu": {
-      "port_file": "dos_port/src/movie/title.asm",
-      "why": "Scanner-reviewed 2026-07-15: TitleScreen_PlacePikachu from pret engine/movie/title_yellow.asm has its selected single non-stub definition at dos_port/src/movie/title.asm; preserve this per-label split."
-    },
-    "TitleScreen_PlacePokemonLogo": {
-      "port_file": "dos_port/src/movie/title.asm",
-      "why": "Scanner-reviewed 2026-07-15: TitleScreen_PlacePokemonLogo from pret engine/movie/title_yellow.asm has its selected single non-stub definition at dos_port/src/movie/title.asm; preserve this per-label split."
-    },
     "MoveTileBlockMapPointerEast": {
       "port_file": "dos_port/src/engine/overworld/overworld.asm",
       "why": "Scanner-reviewed 2026-07-15: MoveTileBlockMapPointerEast from pret engine/overworld/advance_player_sprite.asm has its selected single non-stub definition at dos_port/src/engine/overworld/overworld.asm; preserve this per-label split."

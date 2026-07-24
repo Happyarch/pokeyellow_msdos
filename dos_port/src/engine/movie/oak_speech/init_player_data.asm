@@ -14,7 +14,7 @@
 ; The port's title/SKIP_TITLE boot jumps straight to EnterMap (standing in for
 ; "new game → OakSpeech → SpecialEnterMap"), so OakSpeech — and therefore this
 ; routine — is invoked on that shortcut too (see main_menu_stubs.asm:OakSpeech,
-; src/init/init.asm, src/movie/title.asm .go_to_main_menu).
+; src/init/init.asm, src/engine/movie/title.asm .go_to_main_menu).
 ;
 ; Register map (CLAUDE.md): A=AL, BC=BX, DE=DX, HL=ESI, EBP = GB base.
 ; ---------------------------------------------------------------------------

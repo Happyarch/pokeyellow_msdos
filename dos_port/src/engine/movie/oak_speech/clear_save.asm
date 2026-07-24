@@ -1,7 +1,7 @@
 ; clear_save.asm — the title screen's CLEAR ALL SAVE DATA dialog.
 ;
 ; Source: engine/movie/oak_speech/clear_save.asm (pret/pokeyellow). Reached from
-; DisplayTitleScreen's UP+SELECT+B reset-save combo (movie/title.asm
+; DisplayTitleScreen's UP+SELECT+B reset-save combo (engine/movie/title.asm
 ; .doClearSaveDialogue — pret farjp, so there is no return address).
 ;
 ; Build: nasm -f coff -I include/ -o clear_save.o clear_save.asm

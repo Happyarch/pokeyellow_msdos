@@ -1744,7 +1744,15 @@ src/engine/movie/oak_speech/oak_speech2.o: assets/default_names.inc
 assets/debug_boot_names.inc: tools/generators/gen_debug_boot_names.py tools/generators/gb_text.py
 	python3 tools/generators/gen_debug_boot_names.py
 
-src/engine/movie/title.o: assets/debug_boot_names.inc
+src/engine/movie/title.o: assets/debug_boot_names.inc \
+    assets/title_copyright_2bpp.inc assets/gamefreak_inc_2bpp.inc \
+    assets/nine_2bpp.inc assets/audio_constants.inc assets/pika_pcm.inc \
+    assets/ui_layout_intro.inc
+src/engine/movie/title_yellow.o: assets/pokemon_logo_2bpp.inc \
+    assets/pokemon_logo_corner_2bpp.inc assets/pikachu_bg_2bpp.inc \
+    assets/pikachu_ob_2bpp.inc assets/pokemon_logo_tilemap.inc \
+    assets/pikachu_tilemap.inc assets/pika_bubble_tilemap.inc \
+    assets/ui_layout_intro.inc
 
 # Yellow-intro gfx (menu-intro B3.2b) — committed incs from gen_intro_gfx_inc.py.
 src/engine/movie/intro_yellow.o: assets/yellow_intro_1_2bpp.inc \
