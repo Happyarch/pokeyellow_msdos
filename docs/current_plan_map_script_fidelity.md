@@ -1,6 +1,9 @@
 # Map-Script Fidelity — closing the `scripts/` gate gap
 
-**Status: PLANNED** (maintainer-approved direction, 2026-07-24 M8.3 session).
+**Status: STAGE 1 DONE, STAGE 2 DONE, STAGE 3 BLOCKED** (2026-07-24 autonomous
+implementation session; direction maintainer-approved in the M8.3 session).
+Stage 3's blocker is measured and written up under that stage — it is a golden
+*harness reachability* problem, not a fidelity finding.
 **Owner topic:** the per-map script layer (`src/scripts/*.asm` + the generators
 that feed it). **Prerequisites landed:** M8.2 trainer-engine promotion
 (`5806ecf8`), M8.3 trainer-header data + Route 3 pilot (`7e8f31ad`).
@@ -48,24 +51,28 @@ engine/home files, and get full gate coverage there).
 
 ---
 
-## Stage 1 — Provenance lint for `scripts/` labels  `[ ]`
+## Stage 1 — Provenance lint for `scripts/` labels  `[x]`  (commit `3bb2d443`)
 
 The cheapest check that catches the worst failure (name collision / wrong
 provider), without dragging thousands of script labels into the DB's
 missing/translated counts.
 
-- `[ ]` Teach `tools/lint_pret_labels` (or `update_label_db`, whichever owns
+- `[x]` Teach `tools/lint_pret_labels` (or `update_label_db`, whichever owns
   the scan) a **names-only side table** of pret `scripts/*.asm` global labels
   (plus their owning map file). No status bookkeeping, no headline-count
   impact.
-- `[ ]` New lint rule: any port-defined global whose name appears in that side
+- `[x]` New lint rule: any port-defined global whose name appears in that side
   table must be defined in `src/scripts/<snake_case map>.asm` (the
   `pallet_town.asm` / `route_3.asm` naming), exactly once. Violations:
   `script_collision` (name used by a non-scripts port file) and
   `script_misplaced` (wrong scripts file).
-- `[ ]` Run tree-wide; fix or annotate anything it flags on the existing two
-  script files (expected: clean).
-- `[ ]` Update the `faithfulness-review` skill + `route_3.asm`/
+- `[x]` Run tree-wide: 26 borrowed names, all correctly placed, lint exits 0.
+  Two exemptions were needed and are documented in the rule: `*_stubs.asm` (the
+  four `Mansion*Script_Switches` stubs) and labels defined inside a generated
+  `assets/*.inc` — `scan_port` walks `.asm` only, so a generator-emitted `global`
+  such as `<Map>TrainerHeaders` never reaches `port_defs` at all. That last one is
+  a standing blind spot of the scan, not of this rule.
+- `[x]` Update the `faithfulness-review` skill + `route_3.asm`/
   `pallet_town.asm` headers to name the new rule (they currently say "the
   mirror linter never fires on these").
 
@@ -75,19 +82,19 @@ would need per-map suppressions everywhere — poor return while Stage 2 shrinks
 the surface anyway. Revisit only if hand-written script code grows despite
 Stage 2 (measure: count of hand-written lines under `src/scripts/`).
 
-## Stage 2 — Data-driven drivers for the formulaic script shapes  `[ ]`
+## Stage 2 — Data-driven drivers for the formulaic script shapes  `[x]`
 
 Replace the copy-paste majority of a map's script layer with one generic
 driver + generated Tier-1 tables. Hand-written per-map `.asm` remains only for
 genuinely bespoke logic (Oak walk-up, Route 22 rival, the truncated tails).
 
-- `[ ]` **`TrainerMapScript` driver** (port-only routine; lives with the script
+- `[x]` **`TrainerMapScript` driver** (port-only routine; lives with the script
   engine, gets normal gate coverage): parameterized by
   `(flat header table, flat script-pointer table, per-map CurScript GB addr)`,
   it performs the universal skeleton — `EnableAutoTextBoxDrawing`,
   `ExecuteCurMapScriptInTable(ESI=headers, EDI=table, AL=[CurScript])`, store
   AL back. Exactly what `Route3_Script` hand-writes today.
-- `[ ]` **`gen_map_script_tables.py`** → `assets/map_script_tables.inc`: for
+- `[x]` **`gen_map_script_tables.py`** → `assets/map_script_tables.inc`: for
   every "standard trainer map" (a `_Script` that is *only* the skeleton, and a
   `_ScriptPointers` table that is *only*
   `CheckFightingMapTrainers / DisplayEnemyTrainerTextAndStartBattle /
@@ -96,43 +103,101 @@ genuinely bespoke logic (Oak walk-up, Route 22 rival, the truncated tails).
   addresses from the golden `pokeyellow.sym` (single source; retires the
   hand-pulled `wRoute3CurScript equ`). Maps that don't match the standard
   shape are listed in the generator output as hand-port debt (no silent caps).
-- `[ ]` **Generic `TrainerTalkHook`**: one routine + a generated
+- `[x]` **Generic `TrainerTalkHook`**: one routine + a generated
   (map, text-id) → header-ptr table replaces the N per-map
   `ld hl, HeaderN / call TalkToTrainer / jp TextScriptEnd` hooks. Needs a
   small extension to the `gen_npc_dialogs` SCRIPT_OVERRIDES mechanism (a
   parameterized-hook entry form) — design against `CheckNPCInteraction`'s
   `call edi` dispatch.
-- `[ ]` Convert Route 3 to the driver (deleting most of `route_3.asm`) and
-  wire the next 2–3 pure-trainer maps (candidates: Route 4, Route 6, Route 24
-  — pick from the generator's standard-shape list) as table entries only.
-- `[ ]` **Truncated-tail retirement path**: extend the trainer-header
+- `[x]` Convert Route 3 to the driver — `src/scripts/route_3.asm` is **deleted**
+  outright (153 lines → zero); its `_Script`, its `_ScriptPointers` table, its
+  hand-pulled `wRoute3CurScript equ` and all eight talk hooks are now generated
+  data plus the two shared routines.
+- `[~]` **The other 16 standard maps are NOT wired**, deliberately. Their
+  parameter blocks and `_ScriptPointers` tables are emitted (wiring one is a
+  one-line `WIRED_MAPS` edit), but the standing rule this plan itself adds is
+  "no scenario, no wire" — and Stage 3, which produces those scenarios, is
+  blocked. Route 3 stays wired because it was already live before this plan
+  (M8.3); nothing newly went live without evidence. The generator prints the 16
+  on every run so they cannot be silently forgotten.
+- `[ ]` **Truncated-tail retirement path** (untouched — no affected map is wired
+  yet, and the plan defers the decision to the first one that is): extend the trainer-header
   generator with an optional per-header "post-end-battle event" field (data
   representation of the 3 behavioral `SetEvent` tails) consumed by the engine
   after `PrintEndBattleText`, OR schedule those 3 maps for bespoke hand-ports.
   Decide when the first affected map (Rocket Hideout / Lance) is wired.
   `PlayCry` tails ride on the existing text-stream sound-command model.
 
-## Stage 3 — Behavioral goldens: one must-hit scenario per scripted map  `[ ]`
+## Stage 3 — Behavioral goldens: one must-hit scenario per scripted map  `[~]`
 
 Static checks can't see a wrong flag bit or swapped text pointer; the mGBA
 differential harness can — and it's the only check that also validates the
 *generated* header data.
 
-- `[ ]` New golden scenario `route3_sight`: spawn on Route 3 inside a
-  trainer's view range (`DEBUG_START_MAP=0x0E` + coords), let the sight flow
-  fire, dump at a deterministic gate; compare vs mGBA ground truth the WRAM
-  the flow mutates (`wSpriteIndex`, `wTrainerHeaderFlagBit`, `wCurMapScript`
-  progression, `wEngagedTrainerClass/Set`, `wJoyIgnore`) + emotion-bubble
-  OAM/VRAM. This retroactively end-to-end-verifies M8.2 + M8.3.
-- `[ ]` New scenario `route3_talk` (after the talk hooks or generic hook are
-  live on a reachable interaction): TalkToTrainer path incl.
-  `SaveEndBattleTextPointers` WRAM effects.
-- `[ ]` **Standing rule** (add to the `faithfulness-review` skill's subsystem
-  guide): a newly wired map script lands with a must-hit scenario exercising
-  at least its default script path. No scenario, no wire.
+**PORT HALF: DONE. GOLDEN HALF: BLOCKED on harness reachability.**
+
+- `[x]` Port-side gate `DEBUG_MAPSCRIPT_SIGHT` (`RunMapScriptSightTest`,
+  `src/debug/debug_dump.asm`; spawn seeding in `EnterMap`). Defaults to Route 3
+  with the player at (Y=6, X=12) — two tiles inside `ROUTE3_YOUNGSTER1`'s
+  view range 2 — and is parameterised (`MAPSCRIPT_MAP/Y/X`) so any wired map can
+  reuse it. It drives `RunMapScript` + `UpdateSprites` per frame until the map's
+  `_Script` engages, then dumps `GBSTATE.BIN` + `FRAME.BIN`.
+  It deliberately does **not** enter `OverworldLoop`: the port still carries a
+  bespoke `CheckTrainerSight`/`TrainerEncounterFlow` pair with no pret
+  counterpart, and running both engages the trainer twice.
+- `[x]` The trainer-flow WRAM rows (`%ifdef DEBUG_MAPSCRIPT_SIGHT` `gbregion`
+  block). Scenario-local on purpose: putting them in the shared region set would
+  change every committed golden's `.bin` layout and force a full `make goldens`.
+- `[x]` **Measured port-side result** (`tools/run_headless.sh
+  "DEBUG_MAPSCRIPT_SIGHT=1"`, GBSTATE flags `0x9E` = terminal + scenario 30):
+
+  | field | value | meaning |
+  |---|---|---|
+  | `wSpriteIndex` / `wTrainerHeaderFlagBit` | `02` | ROUTE3_YOUNGSTER1 — object index 1, sprite slot 2 |
+  | `wTrainerEngage` | `20 0C 3C 20` | view 2 (`<<4`), facing DOWN-code `$0C`, screenY `$3C`, screenX `$20` = exactly 2 tiles left of the player |
+  | `wEmotionBubble` | `02 00` | sprite 2, EXCLAMATION |
+  | `wStatusFlags7` | bit 3 | `BIT_TRAINER_BATTLE` |
+  | `wStatusFlags5` | bit 0 | scripted NPC movement armed (walk-up running) |
+  | `wCurMapScript` | `01` | advanced DEFAULT → START_BATTLE |
+  | `wGameProgressFlags+8` (`$D5F7`) | `01` | **`wRoute3CurScript`** — the driver wrote back to the right per-map byte |
+
+  This is real end-to-end execution of the generated trainer-header data through
+  the Stage 2 driver. It is **not** a differential result: nothing here is
+  compared against the real game.
+- `[!]` **BLOCKED — the golden harness cannot put the player on Route 3.** All
+  three mechanisms were tried and measured (details + the written scenario are in
+  `dos_port/tools/mgba_harness/wip/route3_sight.lua`, kept out of `scenarios/`
+  so `goldens-verify` does not demand a golden for it):
+  1. **Walking.** Route 3 is six maps past the start, behind the Viridian parcel
+     guard and the Viridian Forest maze; `navigate.walk` holds a direction, it
+     cannot path-find.
+  2. **Script warp** (`wStatusFlags3` `BIT_WARP_FROM_CUR_SCRIPT` → `WarpFound2`).
+     Its destination byte `hWarpDestinationMap` is `$FF8B`, a **union** shared
+     with `hDownArrowBlinkCount1`, `hSpriteInterlaceCounter` and ~12 others
+     (`ram/hram.asm`). Probe: wrote `$0E`, the warp consumed `$0A` ~12 frames
+     later. A scenario writes between frames; the clobber happens within one.
+  3. **Fly warp** (`wStatusFlags6` `BIT_FLY_WARP` + `wDestinationMap`). Blocked
+     twice over: `FlyWarpDataPtr`'s only non-town destinations are `ROUTE_4` and
+     `ROUTE_10`, whose trainers sit ~50 tiles from the fly spot; and a probe
+     setting `wDestinationMap = ROUTE_10` (`$15`) landed at `PALLET_TOWN` (5,6)
+     while `wDestinationMap` still read `$15` afterwards — the warp did not use
+     the value we wrote. Seeding a party first changed nothing.
+  Next step is a 20-line probe: instrument `LoadSpecialWarpData`'s branch
+  selection (log `wStatusFlags6` and `wLastBlackoutMap` at the moment
+  `.otherDestination` is reached) to find out which branch actually ran. If the
+  fly warp can be made to honour `wDestinationMap`, `route10_sight` on `ROUTE_10`
+  becomes the cheapest first golden (it is a standard trainer map, its fly spot
+  is (11,20), and `ROUTE10_COOLTRAINER_F1` at (7,25) facing LEFT view 3 sees
+  (4..6, 25) — a ~10-tile walk).
+- `[ ]` New scenario `route3_talk`: unstarted, same blocker.
+- `[x]` **Standing rule** written into the `faithfulness-review` skill's
+  subsystem guide: a newly wired map script lands with a must-hit scenario
+  exercising at least its default script path. This is why Stage 2 wired no new
+  maps.
 - `[ ]` Known blocker to record in the scenario masks: the battle handoff is
   seeded-only (`TRAINER_BATTLE_LIVE` gate), so scenarios gate on the pre-battle
-  WRAM state, not battle entry.
+  WRAM state, not battle entry. (Not yet recorded — there is no scenario entry
+  to record it in.)
 
 ## Sequencing & interactions
 
@@ -151,6 +216,12 @@ differential harness can — and it's the only check that also validates the
 ## Completion
 
 Archive to `docs/plans/map_script_fidelity.md` when: the lint rule is live and
-clean tree-wide; ≥3 standard maps run on the driver+tables with zero per-map
-hand-written skeleton code; `route3_sight` (minimum) is in the fidelity tiers;
-and the standing scenario rule is written into the skill.
+clean tree-wide **(done)**; ≥3 standard maps run on the driver+tables with zero
+per-map hand-written skeleton code **(1 of 3 — the driver and all 17 tables
+exist; wiring is gated on Stage 3)**; a must-hit sight scenario is in the
+fidelity tiers **(blocked)**; and the standing scenario rule is written into the
+skill **(done)**.
+
+The remaining work is one problem, not four: **give the mGBA harness a way to
+place the player on an arbitrary map.** Everything else in this plan is finished
+or is a one-line edit behind it.

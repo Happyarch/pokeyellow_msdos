@@ -310,8 +310,9 @@ GAME_SRCS := \
     src/home/run_map_script.asm \
     src/data/map_scripts.asm \
     src/data/trainer_headers.asm \
+    src/data/map_script_tables.asm \
     src/scripts/pallet_town.asm \
-    src/scripts/route_3.asm \
+    src/scripts/trainer_map_script.asm \
     src/engine/math/random.asm \
     src/engine/menus/draw_start_menu.asm \
     src/engine/menus/start_sub_menus.asm \
@@ -567,6 +568,36 @@ NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_APRESS
 AUTOKEY_DUMP_FRAME ?= 999999
 NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 endif
+# Map-script trainer-sight gate (map-script fidelity plan Stage 3 — the port half
+# of the route3_sight golden): spawn inside a trainer's view range on a
+# driver-wired map, run the REAL per-frame map-script dispatch (RunMapScript ->
+# MapScriptPointers[wCurMap] -> TrainerMapScript -> CheckFightingMapTrainers)
+# until it engages, then dump GBSTATE.BIN + FRAME.BIN and exit.
+#
+# It deliberately does NOT enter OverworldLoop: the port still carries a bespoke
+# CheckTrainerSight/TrainerEncounterFlow hook (map_sprites.asm) that pret has no
+# counterpart for, and running both would engage the trainer twice. See
+# RunMapScriptSightTest's header in src/debug/debug_dump.asm.
+#
+# Defaults are Route 3 (Y=6, X=12) vs ROUTE3_YOUNGSTER1; override MAPSCRIPT_MAP/Y/X
+# to point the same gate at another wired map (add it to WIRED_MAPS in
+# tools/generators/gen_map_script_tables.py first, with its own golden).
+#   make DEBUG_MAPSCRIPT_SIGHT=1 [MAPSCRIPT_MAP=0x0E MAPSCRIPT_Y=6 MAPSCRIPT_X=12]
+ifdef DEBUG_MAPSCRIPT_SIGHT
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_MAPSCRIPT_SIGHT
+NASMFLAGS += -D SKIP_TITLE
+MAPSCRIPT_MAP ?= 0x0E
+MAPSCRIPT_Y   ?= 6
+MAPSCRIPT_X   ?= 12
+# Frames of map-script dispatch before giving up and dumping an un-engaged state
+# (which fails the diff loudly rather than passing silently).
+MAPSCRIPT_SIGHT_FRAMES ?= 120
+NASMFLAGS += -D MAPSCRIPT_MAP=$(MAPSCRIPT_MAP) -D MAPSCRIPT_Y=$(MAPSCRIPT_Y) \
+             -D MAPSCRIPT_X=$(MAPSCRIPT_X) \
+             -D MAPSCRIPT_SIGHT_FRAMES=$(MAPSCRIPT_SIGHT_FRAMES)
+endif
+
 # Oak intro state gate: seed Pallet's north-exit trigger, execute the Pallet
 # state-machine/battle-seed boundary deterministically, and dump GBSTATE+FRAME.
 ifdef DEBUG_OAK_INTRO
@@ -1712,10 +1743,19 @@ src/engine/overworld/map_sprites.o: \
 src/scripts/pallet_town.o: assets/event_constants.inc
 
 # Per-map script dispatch table (generated from constants/map_constants.asm).
-assets/map_scripts.inc:
+assets/map_scripts.inc: tools/generators/gen_map_script_tables.py
 	python3 tools/generators/gen_map_scripts.py
 
 src/data/map_scripts.o: assets/map_scripts.inc
+
+# Per-map parameter blocks for the generic TrainerMapScript driver (map-script
+# fidelity plan Stage 2). Derived from pret scripts/*.asm + ram/wram.asm; the
+# dispatch table above reads its WIRED_MAPS list, so map_scripts.inc depends on
+# this generator too.
+assets/map_script_tables.inc: tools/generators/gen_map_script_tables.py
+	python3 tools/generators/gen_map_script_tables.py
+
+src/data/map_script_tables.o: assets/map_script_tables.inc
 
 # Trainer-header tables + battle-text streams (generated from scripts/*.asm +
 # text/*.asm; event bit indices via assets/event_constants.inc).
@@ -2236,6 +2276,7 @@ assets: assets/scenario_registry.inc \
         assets/type_matchups.inc assets/move_names.inc assets/field_moves.inc \
         assets/effect_categories.inc \
         assets/wild_data.inc assets/map_scripts.inc assets/trainer_headers.inc \
+        assets/map_script_tables.inc \
         assets/hidden_events.inc \
         assets/hidden_item_coords.inc assets/pickup_text.inc \
         assets/oak_speech_strings.inc \

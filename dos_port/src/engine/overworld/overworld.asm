@@ -145,6 +145,9 @@ extern DumpBackbuffer
 %ifdef DEBUG_OAK_INTRO
 extern RunOakIntroTest
 %endif
+%ifdef DEBUG_MAPSCRIPT_SIGHT
+extern RunMapScriptSightTest
+%endif
 %ifdef DEBUG_SEAM
 extern DumpBackbuffer
 extern SeamLogRecord
@@ -172,6 +175,9 @@ extern RunBagMenuTest
 %ifdef DEBUG_OAK_INTRO
 %define NEED_SEED_IDENTITY
 %endif
+%ifdef DEBUG_MAPSCRIPT_SIGHT
+%define NEED_SEED_IDENTITY
+%endif
 %ifdef NEED_SEED_IDENTITY
 extern SeedDeterministicPlayerIdentity  ; engine/debug/debug_party.asm — "RED"/id 0 (seed.lua spec)
 %endif
@@ -184,6 +190,9 @@ extern SeedDeterministicPlayerIdentity  ; engine/debug/debug_party.asm — "RED"
 %define NEED_SEAM_RESEAT
 %endif
 %ifdef DEBUG_OAK_INTRO
+%define NEED_SEAM_RESEAT
+%endif
+%ifdef DEBUG_MAPSCRIPT_SIGHT
 %define NEED_SEAM_RESEAT
 %endif
 %ifdef DEBUG_BAGMENU_LIVE
@@ -546,6 +555,19 @@ EnterMap:
     mov byte [ebp + W_CUR_MAP], SIGNTEXT_MAP   ; default PALLET_TOWN
     mov byte [ebp + W_Y_COORD], SIGNTEXT_Y
     mov byte [ebp + W_X_COORD], SIGNTEXT_X
+    mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF  ; "not a warp arrival" (see DEBUG_SEAM)
+%endif
+%ifdef DEBUG_MAPSCRIPT_SIGHT
+    ; Map-script sight gate (map-script fidelity plan, Stage 3): spawn inside a
+    ; trainer's view range on a driver-wired map, so the map's _Script engages on
+    ; its own. Defaults are Route 3 (Y=6, X=12): ROUTE3_YOUNGSTER1 stands at
+    ; (x=10, y=6) facing RIGHT with view range 2 (scripts/Route3.asm
+    ; Route3TrainerHeader0), so the player is the second tile in its line of sight
+    ; — far enough that TrainerWalkUpToPlayer has a step to take.
+    ; Seeded BEFORE LoadMapData, which reads the coords (same rule as DEBUG_SEAM).
+    mov byte [ebp + W_CUR_MAP], MAPSCRIPT_MAP
+    mov byte [ebp + W_Y_COORD], MAPSCRIPT_Y
+    mov byte [ebp + W_X_COORD], MAPSCRIPT_X
     mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF  ; "not a warp arrival" (see DEBUG_SEAM)
 %endif
 %ifdef DEBUG_OAK_INTRO
@@ -997,6 +1019,18 @@ EnterMap:
 
     ; xor a / ld [wJoyIgnore], a
     mov byte [ebp + W_JOY_IGNORE], 0
+%ifdef DEBUG_MAPSCRIPT_SIGHT
+    ; Map-script sight gate. Placed HERE, at the very end of EnterMap, not beside the
+    ; other gates further up: everything above is part of entering a map, and the
+    ; golden observes the map fully entered — in particular wJoyIgnore is $FF for the
+    ; whole of EnterMap and cleared only on this line, so a gate that dumped earlier
+    ; would compare a byte the real game never shows the player.
+    ; The coords were seeded before LoadMapData; LoadMapData does not derive the view
+    ; pointer for a hand-seeded spawn, so do that first.
+    call SeedDeterministicPlayerIdentity     ; "RED" / id 0 — the golden's identity
+    call SeamReseatView                      ; view ptr + block coords + collision mirror
+    call RunMapScriptSightTest               ; dumps GBSTATE + FRAME and exits
+%endif
     ; fall through to OverworldLoop
 
 ; ---------------------------------------------------------------------------

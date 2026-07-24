@@ -21,6 +21,10 @@ bits 32
 %include "gb_memmap.inc"
 %include "gb_macros.inc"
 %include "gb_constants.inc"
+%ifdef DEBUG_MAPSCRIPT_SIGHT
+; Trainer-flow WRAM addresses the shared memmap has not absorbed yet (M8.2 scaffold).
+%include "m8_2_pending_symbols.inc"
+%endif
 
 extern ds_base
 extern pal_rgb_table, bg_slot_pal, obj_slot_pal
@@ -193,6 +197,14 @@ extern UpdateSprites
 extern DelayFrame
 global RunOakIntroTest
 %endif
+%ifdef DEBUG_MAPSCRIPT_SIGHT
+extern RunMapScript
+%ifndef DEBUG_OAK_INTRO
+extern UpdateSprites
+extern DelayFrame
+%endif
+global RunMapScriptSightTest
+%endif
 
 global DebugDumpMemory
 global DumpBackbuffer
@@ -337,6 +349,58 @@ RMCS_SIZE    equ 0x32
 section .data
 align 4
 
+%ifdef DEBUG_MAPSCRIPT_SIGHT
+section .text
+
+; ---------------------------------------------------------------------------
+; RunMapScriptSightTest — map-script fidelity plan, Stage 3.
+;
+; Drives the per-frame map-script dispatch on a driver-wired map until that map's
+; _Script engages a trainer that can see the player, then dumps. The compared
+; surface is the trainer-flow WRAM (see the DEBUG_MAPSCRIPT_SIGHT gbregion rows
+; below), which is what CheckFightingMapTrainers -> EmotionBubble ->
+; TrainerWalkUpToPlayer mutate — and, because those headers are generated data,
+; the only end-to-end check that assets/trainer_headers.inc is RIGHT and not just
+; well-formed.
+;
+; WHY THIS LOOP AND NOT OverworldLoop: the port currently runs TWO sight paths.
+; RunMapScript reaches the faithful one (the map's _Script ->
+; CheckFightingMapTrainers, pret's own mechanism, which pret reaches from
+; JoypadOverworld); OverworldLoopLessDelay then ALSO calls the port-only bespoke
+; CheckTrainerSight/TrainerEncounterFlow pair from map_sprites.asm, which pret has
+; no counterpart for. Entering the full loop would engage the trainer twice and
+; could never match ground truth. Retiring the bespoke hook is a separate
+; behavior-change task, and this scenario is its prerequisite: it pins the
+; faithful path's state first.
+;
+; In: EBP = GB memory base, map loaded, player seeded in the trainer's view range.
+; Never returns (DumpBackbuffer writes GBSTATE.BIN + FRAME.BIN, then exits).
+; ---------------------------------------------------------------------------
+RunMapScriptSightTest:
+    mov ecx, MAPSCRIPT_SIGHT_FRAMES
+.frame:
+    push ecx
+    ; UpdateSprites first, as every overworld frame does: TrainerEngage reads the
+    ; trainer's SCREEN position (wSpriteStateData1 YPIXELS/XPIXELS) and bails on an
+    ; IMAGEINDEX of $FF, so a map-script dispatch with no sprite update behind it
+    ; sees every trainer as off-screen and can never engage.
+    call UpdateSprites
+    call RunMapScript                     ; the map's _Script, once per frame
+    call DelayFrame
+    pop ecx
+    ; wCurMapScript leaves 0 (the map's DEFAULT sub-script) only when
+    ; CheckFightingMapTrainers engaged someone and advanced it.
+    cmp byte [ebp + wCurMapScript], 0
+    jne .engaged
+    dec ecx
+    jnz .frame
+    ; Frame cap with no engagement: fall through and dump anyway, so the golden
+    ; diff FAILS LOUDLY on an all-zero trainer-flow state instead of the harness
+    ; quietly reporting a pass for a scenario that never happened.
+.engaged:
+    jmp DumpBackbuffer
+%endif
+
 %ifdef DEBUG_OAK_INTRO
 section .text
 
@@ -442,6 +506,27 @@ gbstate_regions:
     gbregion "wEnemyMon",      wEnemyMon,      BATTLEMON_STRUCT_LENGTH
     gbregion "wBattleMonNick", wBattleMonNick, NAME_LENGTH
     gbregion "wBattleMon",     wBattleMon,     BATTLEMON_STRUCT_LENGTH
+%ifdef DEBUG_MAPSCRIPT_SIGHT
+    ; --- trainer sight/engage flow (map-script fidelity plan Stage 3) ---
+    ; SCENARIO-LOCAL rows: adding them to the shared set above would change every
+    ; committed golden's .bin layout and force a full `make goldens`. The differ
+    ; joins regions by NAME, so a scenario may carry extra ones as long as both
+    ; sides emit them (tools/mgba_harness/scenarios/route3_sight.lua mirrors this
+    ; list). Each is a tight span, not a convenient enclosing block: the bytes
+    ; between these fields are volatile scratch that no two runs need to agree on.
+    gbregion "wTrainerFlagBit", wTrainerHeaderFlagBit, 1
+    gbregion "wEngagedTrainer",  wEngagedTrainerClass, 2   ; class, set
+    gbregion "wTrainerEngage",   wTrainerEngageDistance, 4 ; distance, facing, screenY, screenX
+    gbregion "wEmotionBubble",   wEmotionBubbleSpriteIndex, 2
+    gbregion "wJoyIgnore",       wJoyIgnore, 1
+    gbregion "wSpriteIndex",     wSpriteIndex, 1
+    gbregion "wPlayerMapPos",    wCurMap, 5                ; wCurMap .. wXCoord
+    gbregion "wStatusFlags5to7", wStatusFlags5, 4
+    gbregion "wCurMapScript",    wCurMapScript, 1
+    ; The persistent per-map script bytes, incl. w<Map>CurScript for the map under
+    ; test — the byte TrainerMapScript reads and writes back.
+    gbregion "wGameProgressFlags", wPalletTownCurScript - 1, 0x30
+%endif
 gbstate_regions_end:
 
 GBSTATE_DIR_SIZE     equ gbstate_regions_end - gbstate_regions

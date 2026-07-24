@@ -11,7 +11,9 @@ bits 32
 global MapScriptPointers
 extern DefaultMapScript
 extern PalletTown_Script
-extern Route3_Script
+; Standard trainer maps dispatch through one driver parameterised by
+; MapScriptParams[wCurMap] (map-script fidelity plan Stage 2).
+extern TrainerMapScript
 
 section .data
 align 4

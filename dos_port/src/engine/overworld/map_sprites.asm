@@ -84,6 +84,9 @@ global wMapSpriteData            ; OW-A.2: [movement byte 2, masked text id] per
 ; StartTrainerBattle seeds wCurOpponent/wTrainerClass/wTrainerNo from the engaged
 ; trainer's cached class/set (and, under -D TRAINER_BATTLE_LIVE, calls InitBattle).
 extern StartTrainerBattle              ; home/trainers.asm (pret mirror)
+; Generic trainer talk hook (map-script fidelity plan Stage 2): pret's per-map
+; `ld hl, <Map>TrainerHeaderN / call TalkToTrainer / jp TextScriptEnd`, kept once.
+extern TrainerTalkHook                 ; src/scripts/trainer_map_script.asm
 %ifdef TRAINER_BATTLE_LIVE
 extern EndTrainerBattle                ; home/trainers.asm (pret mirror)
 %endif
@@ -925,14 +928,28 @@ CheckNPCInteraction:
     ; Restore font glyphs to GB_VFONT before text rendering (walk tiles share it).
     call LoadFontTilePatterns
 
-    ; Dispatch: SCRIPT entry (sentinel size) → CALL the flat text_asm routine, which
-    ; runs its own logic + ShowTextStream. Plain entry → display the TX stream.
-    ; The table's size field is now ONLY a script/stream discriminator: the stream is
-    ; walked in place and self-terminates, so no length is needed to print it.
+    ; Dispatch on the entry's size field, which is ONLY a discriminator (the stream
+    ; is walked in place and self-terminates, so no length is needed to print it):
+    ;   0xFFFFFFFF  SCRIPT       — CALL the flat text_asm routine, which runs its
+    ;                              own logic + ShowTextStream.
+    ;   0xFFFFFFFE  TRAINER TALK — the pointer is a TRAINER HEADER, not a routine.
+    ;                              pret's per-map hook is `ld hl, <Map>TrainerHeaderN
+    ;                              / call TalkToTrainer / jp TextScriptEnd`; the port
+    ;                              keeps that body once (TrainerTalkHook,
+    ;                              src/scripts/trainer_map_script.asm) and the header
+    ;                              immediate travels in the map's generated text
+    ;                              table — map-script fidelity plan, Stage 2.
+    ;   anything else            — plain entry: display the TX stream.
     cmp ebx, 0xFFFFFFFF
     je .run_script
+    cmp ebx, 0xFFFFFFFE
+    je .run_trainer_talk
     mov esi, edi                            ; flat src ptr
     call ShowTextStream
+    jmp .dialog_done
+.run_trainer_talk:
+    mov esi, edi                            ; ESI = flat trainer-header ptr (pret: ld hl)
+    call TrainerTalkHook
     jmp .dialog_done
 .run_script:
     call edi                                ; flat text_asm routine (does its own ShowTextStream)

@@ -5,7 +5,8 @@
 ; The .inc holds every pret map's `<Map>TrainerHeaders` flat table (stride
 ; TH_SIZE=22) plus the pre/end/after-battle text streams they point at, and
 ; `global`s the per-map table + per-trainer header labels so a map _Script
-; (e.g. src/scripts/route_3.asm) can extern them.
+; (or the generated MapScriptParams rows in assets/map_script_tables.inc) can
+; reference them.
 ;
 ; Model: src/data/map_scripts.asm — a thin .data carrier for a generated .inc.
 ; Per the linker rule (docs/assembly.md / link.ld orphan-section trap) embedded
