@@ -568,21 +568,52 @@ NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_APRESS
 AUTOKEY_DUMP_FRAME ?= 999999
 NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 endif
-# Map-script trainer-sight gate (map-script fidelity plan Stage 3 — the port half
-# of the route3_sight golden): spawn inside a trainer's view range on a
-# driver-wired map, run the REAL per-frame map-script dispatch (RunMapScript ->
-# MapScriptPointers[wCurMap] -> TrainerMapScript -> CheckFightingMapTrainers)
-# until it engages, then dump GBSTATE.BIN + FRAME.BIN and exit.
+# Map-script trainer-sight gates (map-script fidelity plan Stage 3): spawn inside a
+# trainer's view range on a driver-wired map, run the REAL per-frame map-script
+# dispatch (RunMapScript -> MapScriptPointers[wCurMap] -> TrainerMapScript ->
+# CheckFightingMapTrainers) until it engages, then dump GBSTATE.BIN + FRAME.BIN.
 #
-# It deliberately does NOT enter OverworldLoop: the port still carries a bespoke
-# CheckTrainerSight/TrainerEncounterFlow hook (map_sprites.asm) that pret has no
-# counterpart for, and running both would engage the trainer twice. See
-# RunMapScriptSightTest's header in src/debug/debug_dump.asm.
+# They deliberately do NOT enter OverworldLoop: the port still carries a bespoke
+# CheckTrainerSight/TrainerEncounterFlow hook that pret has no counterpart for, and
+# running both would engage the trainer twice. See RunMapScriptSightTest's header in
+# src/debug/debug_dump.asm.
 #
-# Defaults are Route 3 (Y=6, X=12) vs ROUTE3_YOUNGSTER1; override MAPSCRIPT_MAP/Y/X
-# to point the same gate at another wired map (add it to WIRED_MAPS in
-# tools/generators/gen_map_script_tables.py first, with its own golden).
-#   make DEBUG_MAPSCRIPT_SIGHT=1 [MAPSCRIPT_MAP=0x0E MAPSCRIPT_Y=6 MAPSCRIPT_X=12]
+# ONE GATE PER MAP, not one gate with overrides: golden_diff validates the scenario
+# id stamped in the dump against the manifest, and gen_scenario_registry derives that
+# id from the port_entry_gate define — so two scenarios sharing a gate would stamp the
+# same id and one of them would always fail. Each gate below therefore sets the shared
+# implementation define plus its own registry define, and the coords for its map.
+# The trainer each one targets is chosen for COVERAGE, not convenience:
+#   R3  ROUTE_3  (0x0E) — ROUTE3_YOUNGSTER1  (x=10,y=6)  faces RIGHT, view 2:
+#                         horizontal sight, first header in the scan.
+#   R6  ROUTE_6  (0x11) — ROUTE6_YOUNGSTER1  (x=0,y=15)  faces RIGHT, view 4, and it
+#                         is header 2: headers 0 and 1 have view range 0, so this one
+#                         only engages if the scan correctly skips non-seeing trainers.
+#   R11 ROUTE_11 (0x16) — ROUTE11_GAMBLER1   (x=10,y=14) faces DOWN, view 3: VERTICAL
+#                         sight, which takes TrainerEngage's other branch (linedUpX,
+#                         screenX == $40) — untested by the two horizontal ones.
+#   make DEBUG_MAPSCRIPT_SIGHT_R3=1   (or _R6 / _R11)
+ifdef DEBUG_MAPSCRIPT_SIGHT_R3
+DEBUG_MAPSCRIPT_SIGHT := 1
+NASMFLAGS += -D DEBUG_MAPSCRIPT_SIGHT_R3
+MAPSCRIPT_MAP ?= 0x0E
+MAPSCRIPT_Y   ?= 6
+MAPSCRIPT_X   ?= 12
+endif
+ifdef DEBUG_MAPSCRIPT_SIGHT_R6
+DEBUG_MAPSCRIPT_SIGHT := 1
+NASMFLAGS += -D DEBUG_MAPSCRIPT_SIGHT_R6
+MAPSCRIPT_MAP ?= 0x11
+MAPSCRIPT_Y   ?= 15
+MAPSCRIPT_X   ?= 2
+endif
+ifdef DEBUG_MAPSCRIPT_SIGHT_R11
+DEBUG_MAPSCRIPT_SIGHT := 1
+NASMFLAGS += -D DEBUG_MAPSCRIPT_SIGHT_R11
+MAPSCRIPT_MAP ?= 0x16
+MAPSCRIPT_Y   ?= 16
+MAPSCRIPT_X   ?= 10
+endif
 ifdef DEBUG_MAPSCRIPT_SIGHT
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_MAPSCRIPT_SIGHT

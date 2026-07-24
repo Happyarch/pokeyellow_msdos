@@ -660,8 +660,26 @@
     },
     {
       "name": "route3_sight", "id": 30, "tier": "full", "scenario_class": "datastruct",
-      "build_flags": "DEBUG_MAPSCRIPT_SIGHT=1", "port_entry_gate": "DEBUG_MAPSCRIPT_SIGHT",
+      "build_flags": "DEBUG_MAPSCRIPT_SIGHT_R3=1", "port_entry_gate": "DEBUG_MAPSCRIPT_SIGHT_R3",
       "navigation_script": "tools/mgba_harness/scenarios/route3_sight.lua",
+      "dump": {"type": "GBSTATE", "schema_version": 2, "artifact": "GBSTATE.BIN", "timeout_seconds": 150, "terminal_marker": "complete"},
+      "must_hit": ["TrainerMapScript", "CheckFightingMapTrainers"],
+      "comparison": {"regions": ["wram"], "projection": "golden_diff.SCENARIOS", "masks": "golden_diff.SCENARIOS"},
+      "verification": "deterministic map-script trainer engagement state; state verification, not UI verification"
+    },
+    {
+      "name": "route6_sight", "id": 31, "tier": "full", "scenario_class": "datastruct",
+      "build_flags": "DEBUG_MAPSCRIPT_SIGHT_R6=1", "port_entry_gate": "DEBUG_MAPSCRIPT_SIGHT_R6",
+      "navigation_script": "tools/mgba_harness/scenarios/route6_sight.lua",
+      "dump": {"type": "GBSTATE", "schema_version": 2, "artifact": "GBSTATE.BIN", "timeout_seconds": 150, "terminal_marker": "complete"},
+      "must_hit": ["TrainerMapScript", "CheckFightingMapTrainers"],
+      "comparison": {"regions": ["wram"], "projection": "golden_diff.SCENARIOS", "masks": "golden_diff.SCENARIOS"},
+      "verification": "deterministic map-script trainer engagement state; state verification, not UI verification"
+    },
+    {
+      "name": "route11_sight", "id": 32, "tier": "full", "scenario_class": "datastruct",
+      "build_flags": "DEBUG_MAPSCRIPT_SIGHT_R11=1", "port_entry_gate": "DEBUG_MAPSCRIPT_SIGHT_R11",
+      "navigation_script": "tools/mgba_harness/scenarios/route11_sight.lua",
       "dump": {"type": "GBSTATE", "schema_version": 2, "artifact": "GBSTATE.BIN", "timeout_seconds": 150, "terminal_marker": "complete"},
       "must_hit": ["TrainerMapScript", "CheckFightingMapTrainers"],
       "comparison": {"regions": ["wram"], "projection": "golden_diff.SCENARIOS", "masks": "golden_diff.SCENARIOS"},

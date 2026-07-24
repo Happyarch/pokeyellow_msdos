@@ -1,0 +1,157 @@
+---@diagnostic disable: undefined-global -- emu/C/callbacks/console/socket are mGBA runtime globals (runner.c)
+-- sight.lua — the shared body of the map-script trainer-sight goldens
+-- (map-script fidelity plan, Stage 3). One scenario file per map supplies only the
+-- map's numbers; everything below is identical across them, so a fix or an extra
+-- compared region lands on all of them at once.
+--
+-- WHAT IT DOES: new game -> Pallet Town -> script-warp onto the target map at a tile
+-- inside a trainer's view range -> run until that map's _Script engages -> dump.
+--
+-- GETTING ONTO AN ARBITRARY MAP. The target maps are many maps and several event
+-- gates past the start, so this uses the game's own script warp — the one a map
+-- script uses:
+--
+--   wDestinationWarpID = $FF   "not a warp arrival" — engine/overworld/tilesets.asm's
+--                              LoadTilesetHeader tail skips LoadDestinationWarpPosition
+--                              on that value, so the hand-set coords survive the load
+--   hWarpDestinationMap = <map>
+--   wStatusFlags3 BIT_WARP_FROM_CUR_SCRIPT  -> OverworldLoopLessDelay jumps to
+--                              WarpFound2, which (outside map) copies
+--                              hWarpDestinationMap into wCurMap and falls into EnterMap
+--
+-- ⚠ ARM IT ONLY WHEN THE PLAYER IS SETTLED. navigate.walk_until_map returns while the
+-- door step-out is still being simulated, and an EnterMap is in flight for a long
+-- while after that. Anything armed during it is consumed by THAT EnterMap (which
+-- clears BIT_FLY_WARP and never re-enters a map) instead of by the overworld loop —
+-- and, worse, hWarpDestinationMap is $FF8B, a union shared with
+-- hDownArrowBlinkCount1 / hSpriteInterlaceCounter and ~12 others (ram/hram.asm), so a
+-- value left sitting for a dozen frames is overwritten by unrelated code. Measured:
+-- armed at the door, the warp consumed $0A instead of the $0E written 12 frames
+-- earlier. Armed after the settle below, the check runs two frames after the write and
+-- the byte survives. This is a sequencing requirement, not a fragile hack: the write
+-- and its consumer end up adjacent by construction.
+--
+-- LoadDestinationWarpPosition would normally set wCurrentTileBlockMapViewPointer
+-- alongside the coords, and nothing else in the load path derives it (that is exactly
+-- why the port has SeamReseatView), so this computes it with pret's own formula —
+-- macros/coords.asm, event_displacement:
+--
+--   wOverworldMap + 7 + width + (width + 6) * (y >> 1) + (x >> 1)
+--
+-- and the computation is SELF-CHECKING: a wrong view pointer places the map's sprites
+-- somewhere else, TrainerEngage reads their screen positions, and no trainer engages —
+-- tripping the assert below instead of producing a quietly wrong golden.
+--
+-- Player identity is seeded to the shared "RED" spec; no party is seeded, matching the
+-- port gates (DEBUG_MAPSCRIPT_SIGHT boots the map, it does not run PrepareNewGameDebug).
+
+local scenario = require("lib.scenario")
+local navigate = require("lib.navigate")
+local dump = require("lib.dump")
+local seed = require("lib.seed")
+
+local sight = {}
+
+local REDS_HOUSE_1F = 37 -- pret constants/map_constants.asm
+local PALLET_TOWN = 0
+local BIT_WARP_FROM_CUR_SCRIPT = 3 -- constants/ram_constants.asm
+
+-- The extra WRAM these scenarios compare on top of dump.standard_regions: the state
+-- the sight flow mutates. MIRRORED BY the %ifdef DEBUG_MAPSCRIPT_SIGHT gbregion rows
+-- in dos_port/src/debug/debug_dump.asm — the differ joins by NAME and cross-checks
+-- each address, so the two lists must agree. Deliberately scenario-local: adding them
+-- to dump.wram_regions would change every committed golden's .bin layout.
+function sight.regions(sym)
+	local regions = dump.standard_regions(sym)
+	for _, r in ipairs({
+		{ name = "wTrainerFlagBit", addr = sym:addr("wTrainerHeaderFlagBit"), size = 1 },
+		{ name = "wEngagedTrainer", addr = sym:addr("wEngagedTrainerClass"), size = 2 },
+		-- distance, facing, screenY, screenX
+		{ name = "wTrainerEngage", addr = sym:addr("wTrainerEngageDistance"), size = 4 },
+		{ name = "wEmotionBubble", addr = sym:addr("wEmotionBubbleSpriteIndex"), size = 2 },
+		{ name = "wJoyIgnore", addr = sym:addr("wJoyIgnore"), size = 1 },
+		{ name = "wSpriteIndex", addr = sym:addr("wSpriteIndex"), size = 1 },
+		-- wCurMap .. wXCoord
+		{ name = "wPlayerMapPos", addr = sym:addr("wCurMap"), size = 5 },
+		{ name = "wStatusFlags5to7", addr = sym:addr("wStatusFlags5"), size = 4 },
+		{ name = "wCurMapScript", addr = sym:addr("wCurMapScript"), size = 1 },
+		-- the persistent per-map script bytes, incl. w<Map>CurScript
+		{ name = "wGameProgressFlags", addr = sym:addr("wGameProgressFlags"), size = 0x30 },
+	}) do
+		regions[#regions + 1] = r
+	end
+	return regions
+end
+
+-- spec = { name, map, width, y, x, cur_script, description }
+--   map        pret map id (wCurMap)
+--   width      map width in BLOCKS (constants/map_constants.asm) — the view formula
+--   y, x       the sight tile, in the same raw coords data/maps/objects uses
+--   cur_script the map's w<Map>CurScript pret label
+function sight.run(sym, text, spec)
+	navigate.init(sym, text)
+
+	scenario.run(function()
+		navigate.boot_to_main_menu()
+		navigate.new_game_to_bedroom()
+
+		-- bedroom (2F) -> 1F -> Pallet Town (route notes in start_menu.lua)
+		navigate.walk("RIGHT", 1)
+		navigate.walk("UP", 5)
+		navigate.walk_until_map("RIGHT", REDS_HOUSE_1F)
+		navigate.walk("DOWN", 6)
+		navigate.walk("LEFT", 4)
+		navigate.walk_until_map("DOWN", PALLET_TOWN)
+		-- Settle: see the ⚠ note in the header. One more step puts the player clear of
+		-- the door, and the wait lets the arrival's EnterMap finish, so the warp armed
+		-- next is consumed by the overworld loop and not by that EnterMap.
+		navigate.walk("DOWN", 1)
+		scenario.wait(60)
+
+		scenario.exec(function()
+			seed.player(sym, text:encode(seed.PLAYER_NAME))
+			local view = sym:addr("wOverworldMap") + 7 + spec.width
+				+ (spec.width + 6) * (spec.y >> 1) + (spec.x >> 1)
+			local ptr = sym:addr("wCurrentTileBlockMapViewPointer")
+			emu:write8(ptr, view & 0xFF)
+			emu:write8(ptr + 1, (view >> 8) & 0xFF)
+			emu:write8(sym:addr("wYCoord"), spec.y)
+			emu:write8(sym:addr("wXCoord"), spec.x)
+			emu:write8(sym:addr("wDestinationWarpID"), 0xFF)
+			emu:write8(sym:addr("hWarpDestinationMap"), spec.map)
+			local flags = sym:addr("wStatusFlags3")
+			emu:write8(flags, emu:read8(flags) | (1 << BIT_WARP_FROM_CUR_SCRIPT))
+		end)
+
+		local deadline = scenario.frame() + 900
+		while navigate.read8("wCurMap") ~= spec.map do
+			assert(scenario.frame() < deadline,
+				spec.name .. ": script warp to map " .. spec.map .. " never fired")
+			scenario.wait(1)
+		end
+		local y, x = navigate.coords()
+		scenario.log(("%s: on map %d at (%d,%d)"):format(spec.name, spec.map, y, x))
+		assert(y == spec.y and x == spec.x,
+			spec.name .. ": the warp moved the player off the seeded sight tile")
+
+		-- The map's _Script runs every overworld frame; w<Map>CurScript leaves 0 only
+		-- when CheckFightingMapTrainers has engaged someone.
+		local cur_script = sym:addr(spec.cur_script)
+		deadline = scenario.frame() + 600
+		while scenario.read_range(cur_script, 1):byte(1) == 0 do
+			assert(scenario.frame() < deadline,
+				spec.name .. ": no trainer engaged — check the sight tile and the view pointer")
+			scenario.wait(1)
+		end
+		scenario.log(("%s: engaged at frame %d"):format(spec.name, scenario.frame()))
+
+		scenario.exec(function()
+			dump.write(spec.name, sight.regions(sym), {
+				frame = scenario.frame(),
+				description = spec.description,
+			})
+		end)
+	end)
+end
+
+return sight

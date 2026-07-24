@@ -1,9 +1,11 @@
 # Map-Script Fidelity — closing the `scripts/` gate gap
 
-**Status: STAGES 1-3 DONE** (2026-07-24 autonomous implementation session;
-direction maintainer-approved in the M8.3 session). `route3_sight` is live in the
-`full` fidelity tier and PASSES — and it earned its keep immediately by catching
-two real defects on its first run (see Stage 3).
+**Status: COMPLETE** (2026-07-24). All four completion criteria met: the
+provenance lint is live and clean, three standard trainer maps run on the generic
+driver with zero per-map skeleton code, three sight goldens are in the `full`
+fidelity tier and pass, and the standing scenario rule is in the
+`faithfulness-review` skill. The goldens earned their keep immediately — three
+real defects fell out of them (see Stage 3).
 **Owner topic:** the per-map script layer (`src/scripts/*.asm` + the generators
 that feed it). **Prerequisites landed:** M8.2 trainer-engine promotion
 (`5806ecf8`), M8.3 trainer-header data + Route 3 pilot (`7e8f31ad`).
@@ -113,12 +115,12 @@ genuinely bespoke logic (Oak walk-up, Route 22 rival, the truncated tails).
   outright (153 lines → zero); its `_Script`, its `_ScriptPointers` table, its
   hand-pulled `wRoute3CurScript equ` and all eight talk hooks are now generated
   data plus the two shared routines.
-- `[~]` **The other 16 standard maps are NOT wired yet.** Their parameter blocks
-  and `_ScriptPointers` tables are emitted, so wiring one is a one-line
-  `WIRED_MAPS` edit plus its own sight scenario — and now that `route3_sight`
-  works, that scenario is a near-copy (the gate is already parameterised by
-  `MAPSCRIPT_MAP/Y/X`). The generator prints the 16 on every run so they cannot
-  be silently forgotten.
+- `[x]` **Three maps wired: ROUTE_3, ROUTE_6, ROUTE_11**, each with its own sight
+  golden. The remaining 14 standard maps have their parameter blocks and
+  `_ScriptPointers` tables emitted but stay dark under "no scenario, no wire";
+  the generator prints them on every run so they cannot be silently forgotten.
+  Wiring one is now a `WIRED_MAPS` line, a per-map Makefile gate, a ~15-line
+  scenario file over `lib/sight.lua`, and a golden.
 - `[ ]` **Truncated-tail retirement path** (untouched — no affected map is wired
   yet, and the plan defers the decision to the first one that is): extend the trainer-header
   generator with an optional per-header "post-end-battle event" field (data
@@ -142,10 +144,19 @@ differential harness can — and it's the only check that also validates the
   It deliberately does **not** enter `OverworldLoop`: the port still carries a
   bespoke `CheckTrainerSight`/`TrainerEncounterFlow` pair with no pret
   counterpart, and running both engages the trainer twice.
-- `[x]` Golden scenario `tools/mgba_harness/scenarios/route3_sight.lua` +
-  `tests/goldens/route3_sight.{bin,json}`, registered in
-  `scenario_manifest.json` (id 30, `full` tier, datastruct class) and
-  `golden_diff.SCENARIOS`. Two consecutive generations are byte-identical.
+- `[x]` **Three golden scenarios**, sharing one body in
+  `tools/mgba_harness/lib/sight.lua` and differing only in their numbers, all in
+  the `full` tier as datastruct-class comparisons. The trainer each targets was
+  picked for coverage, not convenience:
+  | scenario | id | trainer | why this one |
+  |---|---|---|---|
+  | `route3_sight` | 30 | ROUTE3_YOUNGSTER1 (10,6) RIGHT, view 2 | horizontal sight, first header in the scan |
+  | `route6_sight` | 31 | ROUTE6_YOUNGSTER1 (0,15) RIGHT, view 4 | it is header **2**; headers 0-1 have view range **0** and are on screen, so it only engages if the scan skips non-seeing trainers — the golden confirms it (`wSpriteIndex` = 3) |
+  | `route11_sight` | 32 | ROUTE11_GAMBLER1 (10,14) DOWN, view 3 | the **vertical** branch: `TrainerEngage` splits on which axis lines up, and the two horizontal ones never take `.linedUpX`. The golden confirms it (`screenX` = `$40`, `screenY` = `$1C`) |
+  One gate per map (`DEBUG_MAPSCRIPT_SIGHT_R3/_R6/_R11`) rather than one gate with
+  overrides, because `golden_diff` validates the scenario id stamped in the dump
+  and `gen_scenario_registry` derives that id from the `port_entry_gate` define —
+  scenarios sharing a gate would stamp the same id and one would always fail.
   The trainer-flow WRAM rows are scenario-local `%ifdef DEBUG_MAPSCRIPT_SIGHT`
   `gbregion`s: putting them in the shared set would change every committed
   golden's `.bin` layout and force a full `make goldens`.
@@ -165,7 +176,7 @@ differential harness can — and it's the only check that also validates the
   (measured: wrote `$0E`, the warp consumed `$0A`). Armed after a settle, the
   check runs two frames after the write and it lands first time. Three earlier
   probes failed purely on this sequencing, not on any game limitation.
-- `[x]` **Two real defects caught on the scenario's first run**, both fixed:
+- `[x]` **Three real defects caught by these goldens**, all fixed:
   1. **`EngageMapTrainer` read a WRAM address nothing writes.**
      `m8_2_pending_symbols.inc` defines `wMapSpriteExtraData equ 0xD503` (pret's
      WRAM home) while the port's actual array is flat `.bss`, written by
@@ -248,12 +259,29 @@ Both are the identical "unresolved constant / wrong array" pattern.
   behavior-change task** deliberately outside this plan; Stage 3's scenarios
   are prerequisites for doing that swap safely.
 
-## Completion
+## Completion — met, 2026-07-24
 
-Archive to `docs/plans/map_script_fidelity.md` when: the lint rule is live and
-clean tree-wide **(done)**; ≥3 standard maps run on the driver+tables with zero
-per-map hand-written skeleton code **(1 of 3 — the driver and all 17 tables
-exist; each further map is a `WIRED_MAPS` line plus a near-copy of
-`route3_sight`)**; `route3_sight` is in the fidelity tiers **(done — `full`
-tier, passing)**; and the standing scenario rule is written into the skill
-**(done)**.
+| criterion | state |
+|---|---|
+| lint rule live and clean tree-wide | **done** — `script_collision` / `script_misplaced`, 26 borrowed names, exit 0 |
+| ≥3 standard maps on the driver+tables, zero per-map skeleton code | **done** — ROUTE_3, ROUTE_6, ROUTE_11; `src/scripts/route_3.asm` deleted outright |
+| a must-hit sight scenario in the fidelity tiers | **done** — three of them, `full` tier, passing |
+| standing scenario rule written into the skill | **done** — `faithfulness-review`, "Map scripts: no scenario, no wire" |
+
+Carried forward (not blockers, recorded so they are not lost):
+
+- The other **14** standard maps are table-only. Each is a `WIRED_MAPS` line, a
+  Makefile gate, a ~15-line scenario over `lib/sight.lua`, and a golden.
+- `route3_talk` — the `TalkToTrainer` / `SaveEndBattleTextPointers` path — is
+  still unwritten. The mechanism is proven; it is ordinary work now.
+- An **item-ball pickup golden**: `PickUpItem`'s fix (`5f01bba1`) is the only
+  change in this workstream with no runtime evidence behind it.
+- A **boulder** scenario: `BOULDER_MOVEMENT_BYTE_2` reaching the data is verified
+  in the emitted bytes, but pushing a boulder has never been exercised.
+- The truncated-tail retirement path (Stage 2's last bullet) is untouched — no
+  affected map is wired yet, and the plan defers the decision to the first one
+  that is.
+- The map_sprites.asm sight-hook swap (bespoke `CheckTrainerSight` →
+  `CheckFightingMapTrainers`, retiring `npc_beaten_flags`) remains the separate
+  behavior-change task these scenarios were the prerequisite for. It is now
+  unblocked.

@@ -65,6 +65,8 @@ WGAMEPROGRESSFLAGS = 0xD5EF
 # see the faithfulness-review skill, "Map scripts: no scenario, no wire".
 WIRED_MAPS = {
     "ROUTE_3": "route3_sight",
+    "ROUTE_6": "route6_sight",
+    "ROUTE_11": "route11_sight",
 }
 
 
