@@ -11,6 +11,7 @@ bits 32
 global MapScriptPointers
 extern DefaultMapScript
 extern PalletTown_Script
+extern Route3_Script
 
 section .data
 align 4

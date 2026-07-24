@@ -309,7 +309,9 @@ GAME_SRCS := \
     src/engine/overworld/map_sprites.asm \
     src/home/run_map_script.asm \
     src/data/map_scripts.asm \
+    src/data/trainer_headers.asm \
     src/scripts/pallet_town.asm \
+    src/scripts/route_3.asm \
     src/engine/math/random.asm \
     src/engine/menus/draw_start_menu.asm \
     src/engine/menus/start_sub_menus.asm \
@@ -1715,6 +1717,14 @@ assets/map_scripts.inc:
 
 src/data/map_scripts.o: assets/map_scripts.inc
 
+# Trainer-header tables + battle-text streams (generated from scripts/*.asm +
+# text/*.asm; event bit indices via assets/event_constants.inc).
+assets/trainer_headers.inc: assets/event_constants.inc \
+        tools/generators/gen_trainer_headers.py tools/generators/gen_battle_text.py
+	python3 tools/generators/gen_trainer_headers.py
+
+src/data/trainer_headers.o: assets/trainer_headers.inc
+
 # Hidden-event data (generated from data/events/hidden_events.asm).
 assets/hidden_events.inc:
 	python3 tools/generators/gen_hidden_events.py
@@ -2225,7 +2235,8 @@ assets: assets/scenario_registry.inc \
         assets/cut_text.inc assets/player_anim_text.inc \
         assets/type_matchups.inc assets/move_names.inc assets/field_moves.inc \
         assets/effect_categories.inc \
-        assets/wild_data.inc assets/map_scripts.inc assets/hidden_events.inc \
+        assets/wild_data.inc assets/map_scripts.inc assets/trainer_headers.inc \
+        assets/hidden_events.inc \
         assets/hidden_item_coords.inc assets/pickup_text.inc \
         assets/oak_speech_strings.inc \
         assets/default_names.inc \

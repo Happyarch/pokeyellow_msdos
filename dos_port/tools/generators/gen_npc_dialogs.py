@@ -73,6 +73,17 @@ _SCRIPT_STUB = bytes(
 SCRIPT_SENTINEL = 0xFFFFFFFF
 SCRIPT_OVERRIDES = {
     'PalletTownOakText': 'PalletTownOakText',
+    # Route 3 trainer talk hooks (src/scripts/route_3.asm): each text_asm entry
+    # loads its trainer header and calls TalkToTrainer. Keys are the pret
+    # text-pointer labels from scripts/Route3.asm Route3_TextPointers.
+    'Route3Youngster1Text':    'Route3Youngster1Text',
+    'Route3Youngster2Text':    'Route3Youngster2Text',
+    'Route3CooltrainerF1Text': 'Route3CooltrainerF1Text',
+    'Route3Youngster3Text':    'Route3Youngster3Text',
+    'Route3CooltrainerF2Text': 'Route3CooltrainerF2Text',
+    'Route3Youngster4Text':    'Route3Youngster4Text',
+    'Route3Youngster5Text':    'Route3Youngster5Text',
+    'Route3CooltrainerF3Text': 'Route3CooltrainerF3Text',
 }
 
 # ---------------------------------------------------------------------------

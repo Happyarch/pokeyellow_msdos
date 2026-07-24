@@ -23,6 +23,7 @@ ASSETS = ROOT / "dos_port" / "assets"
 # Extend as per-map scripts are translated (script engine milestones).
 SCRIPT_OVERRIDES = {
     "PALLET_TOWN": "PalletTown_Script",
+    "ROUTE_3": "Route3_Script",
 }
 
 
