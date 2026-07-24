@@ -137,12 +137,11 @@ DisplaySignText:
 ; TextScriptEnd / TextScriptEndingText — pret home/overworld_text.asm.
 ; TextScriptEnd returns HL(->ESI) pointing at an empty (terminator-only) text stream,
 ; used by text_asm scripts as their "nothing more to print" tail (e.g. pret PickUpItemText
-; and the port's TrainerEndBattleText, trainer_engine.asm:808 `jmp TextScriptEnd`).
-; Porting this pair here resolves the trainer_engine.asm extern (its promotion, OW-7.2)
-; without pulling in the deferred text-data labels below.
-; NOTE(consumer read-model): ESI is a FLAT .data pointer; whether the eventual consumer
-; reads it flat vs EBP-relative rides the deferred TrainerEndBattleText work (OW-A.9
-; KNOWN-BROKEN note) — porting the label here is purely to unblock the link.
+; and the port's TrainerEndBattleText, src/home/trainers.asm `jmp TextScriptEnd` —
+; linked since the M8.2 promotion, 2026-07-24).
+; NOTE(consumer read-model): ESI is a FLAT .data pointer, which is exactly what
+; TextCommandProcessor's stream pointer is (home/text.asm header) — the old
+; OW-A.9 KNOWN-BROKEN caveat here is retired with text-engine finding T-1.
 ; ---------------------------------------------------------------------------
 TextScriptEnd:
     mov esi, TextScriptEndingText       ; ld hl, TextScriptEndingText

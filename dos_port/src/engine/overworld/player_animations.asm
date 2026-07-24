@@ -232,7 +232,7 @@ extern CopyVideoData              ; home/copy2.asm (ESI=VRAM dest, EDX=flat src,
 extern LoadFontTilePatterns       ; gfx/load_font.asm
 extern PrintText                  ; engine/battle/move_effect_helpers.asm (ESI=flat text stream)
 extern LoadAnimSpriteGfx          ; UNPORTED (battle-animation sprite-gfx loader)
-extern EmotionBubble              ; engine/overworld/trainer_engine.asm (pret: predef)
+extern EmotionBubble              ; src/engine/overworld/emotion_bubbles.asm (pret: predef)
 extern player_sprite              ; engine/overworld/player_gfx.asm — == RedSprite (flat)
 extern msgbox_dialog                    ; src/home/text.asm — overworld dialog projection
 extern text_msgbox                      ; src/home/text.asm — active msgbox projection (msgbox.inc)

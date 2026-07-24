@@ -1389,6 +1389,8 @@ FRONTEND_SRCS := \
     src/engine/battle/experience.asm \
     src/engine/battle/battle_exp_stubs.asm \
     src/home/trainers.asm \
+    src/engine/overworld/trainer_sight.asm \
+    src/engine/overworld/emotion_bubbles.asm \
     src/engine/battle/trainer_ai.asm \
     src/engine/battle/read_trainer_party.asm \
     src/engine/battle/faint_leaves.asm \
@@ -1460,9 +1462,7 @@ ITEMS_CHECK_SRCS := \
 # they blocked cut.asm was stale).
 HOME_CHECK_SRCS := \
     src/home/trainers2.asm \
-    src/engine/overworld/trainer_sight.asm \
-    src/home/predef_text.asm \
-    src/engine/overworld/trainer_engine.asm
+    src/home/predef_text.asm
 # B1 (2026-07-13) promoted player_animations.asm to GAME_SRCS: its link closure was
 # already fully satisfied (nm -u resolves to translated/relocated symbols only), so
 # the file was being assembled and thrown away while the overworld_stubs.asm
@@ -1506,12 +1506,16 @@ HOME_CHECK_SRCS := \
 #   documented ret-stub in home_stubs.asm, which costs the STRENGTH cry and
 #   nothing else. Linking it is what makes STRENGTH and SURF reachable from
 #   the field-move menu.
-# - player_animations.asm: EmotionBubble (trainer_engine), LoadAnimSpriteGfx.
+# - player_animations.asm: EmotionBubble is LINKED now (emotion_bubbles.asm
+#   pret mirror, M8.2 promotion); LoadAnimSpriteGfx.
 #   (StopMusic is REAL now — ported into overworld.asm by the wild-live
 #   promotion; player_sprite is exported from overworld.asm.)
-# - trainer_engine.asm: GetTrainerName_/SaveTrainerName/_TrainerNameText/
-#   JessieJamesPic unported; WriteOAMBlock (home/oam.asm). DisplayTextID is now
-#   the linked home/text_script.asm dispatcher.
+# - trainer_engine.asm: DISSOLVED (M8.2 promotion, 2026-07-24) — the pret
+#   home/trainers.asm remainder went home to the linked src/home/trainers.asm
+#   full mirror, the EmotionBubble family to src/engine/overworld/
+#   emotion_bubbles.asm, and trainer_sight.asm joined the link. Only
+#   trainers2.asm (GetTrainerInformation/GetTrainerName, blocked on
+#   JessieJamesPic + trainer-pic data) stays check-only.
 # - text_script.asm promoted to HOME_SRCS (overworld-events Stage 2): the real
 #   DisplayTextID dispatcher links, uses the flat map text table for ordinary
 #   map text, and owns the generated text_script_text.inc far streams. The
@@ -1972,7 +1976,7 @@ assets/mon_icons.inc: ../gfx/sprites/monster.2bpp ../gfx/sprites/poke_ball.2bpp 
 src/engine/gfx/mon_icons.o: assets/mon_icons.inc
 
 # Overworld emotion-bubble tiles (2bpp passthrough of gfx/emotes/*.2bpp) for
-# EmotionBubble (engine/overworld/emotion_bubbles.asm, folded into trainer_engine.asm).
+# EmotionBubble (src/engine/overworld/emotion_bubbles.asm pret mirror).
 assets/emotes.inc: ../gfx/emotes/shock.2bpp ../gfx/emotes/question.2bpp \
                    ../gfx/emotes/happy.2bpp ../gfx/emotes/skull.2bpp \
                    ../gfx/emotes/heart.2bpp ../gfx/emotes/bolt.2bpp \
@@ -1980,7 +1984,11 @@ assets/emotes.inc: ../gfx/emotes/shock.2bpp ../gfx/emotes/question.2bpp \
                    tools/generators/gen_emotes.py
 	python3 tools/generators/gen_emotes.py
 
-src/engine/overworld/trainer_engine.o: assets/emotes.inc
+src/engine/overworld/emotion_bubbles.o: assets/emotes.inc
+
+# home/trainers.asm %includes the generated _TrainerNameText far stream +
+# MUSIC_MEET_* ids.
+src/home/trainers.o: assets/trainer_text.inc assets/audio_constants.inc
 
 # Trainer-card tile graphics (box/bg/blank-names/badge-numbers/colon/circle),
 # 2bpp passthrough of gfx/trainer_card/*.2bpp + gfx/font/font_extra.2bpp, for the

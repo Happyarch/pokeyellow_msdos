@@ -1,16 +1,16 @@
-; m8_2_pending_symbols.inc — TEMPORARY scaffold for M8.2 (trainer-header engine)
-; so trainer_engine.asm assembles CHECK-ONLY *before* the root migrates these into
-; the canonical includes.  Mirrors the m1_3_pending_symbols.inc convention.
+; m8_2_pending_symbols.inc — TEMPORARY scaffold for M8.2 (trainer-header engine).
+; Primary consumer is now the LINKED src/home/trainers.asm full mirror (+
+; emotion_bubbles.asm, trainer_sight.asm, trainers2.asm and the other overworld
+; includers) — trainer_engine.asm was dissolved by the M8.2 promotion 2026-07-24.
+; Mirrors the m1_3_pending_symbols.inc convention.
 ;
 ; ROOT INTEGRATION:
 ;   1. Move every WRAM/HRAM symbol below into gb_memmap.inc and every constant into
-;      gb_constants.inc, then DELETE this include + its %include line from
-;      trainer_engine.asm.
-;   2. VERIFY every address tagged  ; VERIFY  against the build .sym (pokeyellow
-;      clean-pret = link − 0x2EC, per the m1_3 note).  The UNION-region bytes
-;      (wTrainerScreen*/wTrainerSpriteOffset/wEmotionBubble*) and the "Main Data"
-;      bytes (wCurMapScript, wEndBattle*, wEventFlags) cannot be resolved statically
-;      here — their placeholder addresses are structurally-plausible but UNVERIFIED.
+;      gb_constants.inc, then DELETE this include + its %include lines from all
+;      consumers.
+;   2. (DONE, M8.2 promotion 2026-07-24) Every former ; VERIFY placeholder was
+;      resolved against the golden pokeyellow.sym — see the per-line golden
+;      citations. No unverified addresses remain in this file.
 ;   3. The  (confident)  ones were computed from verified anchors and can be trusted.
 ;   4. The MUSIC_MEET_* ids are audio-HAL-deferred (PlaySound is a ret-stub), so the
 ;      numeric value is functionally inert; assign the real music-const value at will.

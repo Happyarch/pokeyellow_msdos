@@ -11,11 +11,12 @@
 ; as in pret (single-colon labels there). No routine here falls through into the
 ; next — every body is ret/jmp-terminated, matching pret.
 ;
-; STATUS: CHECK-ONLY (Makefile HOME_CHECK_SRCS), like the rest of the trainer
-; engine — nothing calls these at runtime until M8.2 wiring lands. The pret
-; home/trainers.asm bank trampolines (GetSpritePosition1/2, SetSpritePosition1/2,
-; TrainerWalkUpToPlayer_Bank0) stay with the home/trainers.asm material in
-; trainer_engine.asm and jmp here.
+; STATUS: LINKED (M8.2 promotion, 2026-07-24 — moved from HOME_CHECK_SRCS to
+; the linked list with the full home/trainers.asm mirror). Nothing reaches these
+; at runtime until the trainer-header data generator lands: linked, not
+; executed. The pret home/trainers.asm bank trampolines (GetSpritePosition1/2,
+; SetSpritePosition1/2, TrainerWalkUpToPlayer_Bank0) live with the rest of the
+; home/trainers.asm material in src/home/trainers.asm and jmp here.
 ;
 ; Register map (CLAUDE.md): A=AL, BC=BX, DE=DX, HL=ESI, EBP = GB base.
 ;
@@ -31,7 +32,7 @@ bits 32
 extern CalcDifference           ; src/home/pathfinding.asm
 extern MoveSprite_              ; src/home/pathfinding.asm
 extern FillMemory               ; home/copy2.asm  (ESI unchanged on return!)
-extern EngageMapTrainer         ; src/engine/overworld/trainer_engine.asm (pret home/trainers.asm, registered relocation)
+extern EngageMapTrainer         ; src/home/trainers.asm (pret mirror, linked)
 
 global _GetSpritePosition1
 global _GetSpritePosition2

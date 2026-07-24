@@ -8,25 +8,18 @@
 ;   facing direction (restored by CloseTextDisplay), freeze mid-step walk
 ;   animation, and re-enable the VBlank BG transfer.
 ;
-; ── REACHABILITY: this routine is DEAD CODE in the linked build ─────────────
-; It is linked (`nm`: T DisplayTextIDInit) but nothing reaches it. Its only
-; caller is DisplayTextID in src/home/text_script.asm, and that file is in
-; HOME_CHECK_SRCS — it assembles, it does not link. The DisplayTextID that IS in
-; the binary is the documented ret-stub in src/home/home_stubs.asm, which calls
-; nothing. (Checked, not assumed: the three linked-looking DisplayTextID callers
-; — wild_encounters.asm, trainer_engine.asm, predef_text.asm — are all either
-; check-only themselves or on the unreachable repel path the stub's comment
-; describes; only wild_encounters.asm is linked, and the stub's account of it is
-; accurate.) The port's live NPC dialog does NOT route through DisplayTextID at
-; all: CheckNPCInteraction calls PrintText directly.
-;
-; So the body below is a faithful translation of a routine that has never run,
-; and its box-drawing behavior is UNVERIFIED at runtime. It becomes live the
-; moment text_script.asm links (which is what retires the home_stubs ret-stub),
-; and that is the point at which the SCREEN MODEL notes below need re-checking
-; against an actual frame rather than against reasoning. The teardown mirror is
-; CloseTextDisplay in text_script.asm. Recorded at menu-fidelity row 13 (M-51);
-; an earlier header stated the caller relationship as though it were live.
+; ── REACHABILITY (updated M8.2 promotion, 2026-07-24) ───────────────────────
+; The block that stood here claimed text_script.asm was check-only and the
+; linked DisplayTextID a home_stubs ret-stub. Both are stale: text_script.asm
+; was promoted to HOME_SRCS (overworld-events Stage 2 — see the Makefile note),
+; the home_stubs ret-stub is gone, and the real DisplayTextID dispatcher links
+; and calls this routine. Callers of DisplayTextID in the linked build now also
+; include home/trainers.asm (DisplayEnemyTrainerTextAndStartBattle, M8.2) —
+; linked, but with no live driver until trainer-header data lands. The port's
+; live NPC dialog still does NOT route through DisplayTextID (CheckNPCInteraction
+; calls PrintText directly), so this routine remains runtime-UNVERIFIED: the
+; SCREEN MODEL notes below are still reasoning, not observation. The teardown
+; mirror is CloseTextDisplay in text_script.asm. (Menu-fidelity row 13, M-51.)
 ;
 ; ── SCREEN MODEL (overworld stride-20 scratch) ──────────────────────────────
 ; DisplayTextID runs in OVERWORLD context: text_row_stride is the default 20

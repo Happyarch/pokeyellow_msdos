@@ -45,7 +45,7 @@ extern DelayFrames               ; src/video/frame.asm (BL=count)
 extern CalcPositionOfPlayerRelativeToNPC ; src/home/pathfinding.asm
 extern FindPathToPlayer          ; src/home/pathfinding.asm
 extern MoveSprite                ; src/home/pathfinding.asm (EDI=flat movement stream)
-extern EmotionBubble             ; src/engine/overworld/trainer_engine.asm
+extern EmotionBubble             ; src/engine/overworld/emotion_bubbles.asm (pret mirror, linked)
 
 ; PalletTown_ScriptPointers state indices (pret: def_script_pointers in
 ; scripts/PalletTown.asm — SCRIPT_PALLETTOWN_*).

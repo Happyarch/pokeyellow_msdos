@@ -18,7 +18,7 @@
 ;  * pret prints via `call PrintText` with the message stream already the active
 ;    text box. The port's text_asm dispatch (text_script.asm) has NOT set the
 ;    msgbox projection before `call esi`, so PickUpItem points text_msgbox at the
-;    overworld dialog itself (as trainer_engine / field_move_messages tails do)
+;    overworld dialog itself (as home/trainers.asm / field_move_messages tails do)
 ;    before PrintText. FoundItemText/NoMoreRoomForItemText are generated flat
 ;    streams (assets/pickup_text.inc); their `_ref` gives the flat pointer.
 ;    (The pret `sound_get_item_1` jingle rides in that stream but sits past the

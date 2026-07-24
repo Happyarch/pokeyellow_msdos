@@ -20,8 +20,10 @@
 ;   (ItemUseItemfinder landed in item_effects.asm 2026-07-16 — overworld-events
 ;    Stage 3 bullet 2 published HiddenItemCoords and linked itemfinder.asm.)
 ; BLOCKED (docs/items_blockers.md):
-;   ItemUseOldRod / ItemUseGoodRod / ItemUseSuperRod (B7: FishingAnim needs the
-;   trainer_engine link closure)
+;   ItemUseOldRod / ItemUseGoodRod / ItemUseSuperRod (B7 — the old "FishingAnim
+;   needs the trainer_engine link closure" half is RESOLVED by the M8.2
+;   promotion: EmotionBubble is linked at its emotion_bubbles.asm mirror; the
+;   rod item-effect bodies themselves are still the open half)
 ; TODO(safari, battle plan): ItemUseBait / ItemUseRock (Safari Zone throws)
 ;
 ; Build: nasm -f coff -I include/ -I . -o item_use_stubs.o src/engine/items/item_use_stubs.asm

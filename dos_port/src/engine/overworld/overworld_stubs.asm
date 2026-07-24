@@ -60,18 +60,10 @@ global MapEntryAfterBattle
 MapEntryAfterBattle:
     ret
 
-; EmotionBubble — pret engine/overworld/trainer_engine.asm:EmotionBubble (draws the
-; "!" / "?" / heart bubble over a sprite, via predef). Its REAL body is already
-; translated in engine/overworld/trainer_engine.asm — that file is still check-only
-; (HOME_CHECK_SRCS), so there is no duplicate-global shadow; this stub only exists to
-; close the link now that player_animations.asm is linked (B1).
-; NOT REACHED in the live build: player_animations.asm's only call site is FishingAnim
-; (the "!" on a bite), and the fishing rods are themselves still ret-stubs (blocker B7,
-; docs/items_blockers.md). TODO(overworld-port): delete this stub when trainer_engine.asm
-; is promoted to GAME_SRCS — its real EmotionBubble then takes over with no other change.
-global EmotionBubble
-EmotionBubble:
-    ret
+; EmotionBubble — RETIRED (M8.2 promotion, 2026-07-24). The real faithful body is
+; now LINKED at its pret mirror src/engine/overworld/emotion_bubbles.asm (carved
+; out of the dissolved check-only trainer_engine.asm bundle), so the ret-stub that
+; existed to close player_animations.asm's link is deleted per its own note.
 
 ; EnterMapAnim — RETIRED (B1, 2026-07-13). The real body was already translated in
 ; engine/overworld/player_animations.asm; that file was merely never LINKED (it sat in
