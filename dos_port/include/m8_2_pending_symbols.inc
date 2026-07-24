@@ -47,48 +47,62 @@ hLoadedROMBank         equ H_LOADED_ROM_BANK  ; (confident) = 0xFFB8 (canonical 
 wUpdateSpritesEnabled  equ W_UPDATE_SPRITES_ENABLED  ; (confident) = 0xCFCA (canonical alias)
 %endif
 
-; ---- WRAM: "Main Data" / event region — VERIFY via build .sym --------------
+; ---- WRAM: "Main Data" / event region — golden-.sym verified 2026-07-24 ----
+; (M8.2 promotion session: every VERIFY placeholder below was resolved against
+; the repo's golden pokeyellow.sym. Three of the old guesses were live
+; COLLISIONS: wCurMapScript 0xD5F0 sat on wPalletTownCurScript (gb_memmap.inc),
+; wGymCityName 0xD35D sat on W_CUR_MAP/W_Y_COORD/W_X_COORD, and
+; wEnemyMonOrTrainerClass 0xD058 aliased wCurOpponent — which pret keeps as a
+; SEPARATE copy precisely because wCurOpponent is cleared before EndTrainerBattle
+; reads the class back.)
 %ifndef wCurMapScript
-wCurMapScript           equ 0xD5F0   ; VERIFY  pret wram.asm:2456 (db)
+wCurMapScript           equ 0xDA38   ; golden 00:da38 (was 0xD5F0 = wPalletTownCurScript COLLISION)
 %endif
 %ifndef wTrainerHeaderFlagBit
-wTrainerHeaderFlagBit   equ 0xCC5C   ; VERIFY  pret wram.asm:477 (db)
+wTrainerHeaderFlagBit   equ 0xCC55   ; golden 00:cc55 (was 0xCC5C)
 %endif
 %ifndef wEnemyMonOrTrainerClass
-wEnemyMonOrTrainerClass equ 0xD058   ; VERIFY  pret wram.asm:2324 (db) (aliases wCurOpponent region)
+wEnemyMonOrTrainerClass equ 0xD712   ; golden 00:d712 (was 0xD058 = wCurOpponent alias, wrong)
 %endif
-%ifndef wEndBattleTextRomBank
-wEndBattleTextRomBank   equ 0xD08C   ; VERIFY  pret wram.asm:1602 (db)
-%endif
+; The end-battle text slots are flat-adapted (dd, 4 bytes each), so only the win
+; pointer keeps its golden base; lose/bank shift by the +2/+4 widening. All three
+; land in the golden gap d08b..d094 (port gb_memmap: wOptionsInitialized 0xD089,
+; W_SLOT_MACHINE_ALLOW_MATCHES_COUNTER 0xD095 — no overlap).
 %ifndef wEndBattleWinTextPointer
-wEndBattleWinTextPointer  equ 0xD088 ; VERIFY  pret wram.asm:1599 (dw)  ** flat-adapted: 4 bytes **
+wEndBattleWinTextPointer  equ 0xD08B ; golden 00:d08b (dw)  ** flat-adapted: 4 bytes **
 %endif
 %ifndef wEndBattleLoseTextPointer
-wEndBattleLoseTextPointer equ 0xD08C ; VERIFY  pret wram.asm:1600 (dw)  ** flat-adapted: 4 bytes **
+wEndBattleLoseTextPointer equ 0xD08F ; golden 00:d08d +2 (win dd widening)  ** flat-adapted: 4 bytes **
+%endif
+%ifndef wEndBattleTextRomBank
+wEndBattleTextRomBank   equ 0xD093   ; golden 00:d091 +2 (was 0xD08C = lose-ptr OVERLAP)
 %endif
 %ifndef wGymLeaderNo
-wGymLeaderNo            equ 0xD05B   ; VERIFY  pret wram.asm:1440 (db)
+wGymLeaderNo            equ 0xD05B   ; golden 00:d05b (db)
 %endif
 %ifndef wGymCityName
-wGymCityName           equ 0xD35D   ; VERIFY  pret wram.asm:1261 (ds GYM_CITY_LENGTH)
+wGymCityName           equ 0xCF5E   ; golden 00:cf5e (was 0xD35D = W_CUR_MAP COLLISION)
 %endif
 %ifndef wGymLeaderName
-wGymLeaderName         equ 0xD36E   ; VERIFY  pret wram.asm:1263 (ds NAME_LENGTH)
+wGymLeaderName         equ 0xCF6F   ; golden 00:cf6f (was 0xD36E)
 %endif
 ; wMiscFlags is canonical in gb_memmap.inc (menus S2: 0xCD60, derived from the
 ; verified anchor wActionResultOrTookBattleTurn 0xCD6A − ds 9 − 1 byte).
 ; The 0xD72E that used to live here was pokered's wd72e — wrong address.
 %ifndef wEventFlags
-wEventFlags            equ 0xD5A6   ; VERIFY  pret wram.asm:2400 (flag_array NUM_EVENTS)
+wEventFlags            equ 0xD746   ; golden 00:d746 = W_EVENT_FLAGS (gb_memmap.inc canonical; was 0xD5A6)
 %endif
 %ifndef wToggleableObjectIndex
 wToggleableObjectIndex equ 0xCC4D   ; golden 00:cc4d (was wrongly 0xCC5A, adjacent to wNPCMovementDirections)
 %endif
 %ifndef wToggleableObjectList
-wToggleableObjectList  equ 0xD5CD   ; VERIFY  pret wram.asm:2177 (ds 16*2+1)
+wToggleableObjectList  equ 0xD5CD   ; golden 00:d5cd (ds 16*2+1)
 %endif
 %ifndef wTrainerPicPointer
-wTrainerPicPointer     equ 0xD048   ; VERIFY  pret wram.asm (dw) ** flat-adapted: 4 bytes **
+; golden 00:d032, but the flat dd widening (4 bytes) would overlap wLearnMoveMonName
+; (0xD035); the port keeps its slot in the free d048..d04b gap (wTrainerBaseMoney
+; 0xD045 word below, wIsInBattle 0xD056 above — no overlap).
+wTrainerPicPointer     equ 0xD048   ; port flat slot ** flat-adapted: 4 bytes **
 %endif
 %ifndef wNPCMovementDirections2
 wNPCMovementDirections2 equ 0xCC97  ; golden sym 00:cc97 (unions with wNPCMovementDirections)

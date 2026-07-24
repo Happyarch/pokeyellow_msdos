@@ -1813,6 +1813,12 @@ assets/menu_strings.inc assets/menu_text.inc assets/trainer_card_strings.inc \
 assets/status_strings.inc: assets/gb_charmap.txt tools/generators/gen_status_strings.py tools/generators/gb_text.py
 	python3 tools/generators/gen_status_strings.py
 
+# Trainer-engine FAR message streams (_TrainerNameText), flattened out of pret's
+# data/text/*.asm by gen_battle_text.collect_far; %included by src/home/trainers.asm.
+assets/trainer_text.inc: assets/gb_charmap.txt tools/generators/gen_trainer_text.py \
+        tools/generators/gen_battle_text.py
+	python3 tools/generators/gen_trainer_text.py
+
 # Text-box menu strings (pret data/text_boxes.asm) — charmap-encoded via gb_text;
 # two-tier rule. <NEXT>/<PK>/<MN> are emitted as named raw bytes by the generator.
 assets/textbox_strings.inc: assets/gb_charmap.txt tools/generators/gen_textbox_strings.py tools/generators/gb_text.py
@@ -2223,6 +2229,7 @@ assets: assets/scenario_registry.inc \
         assets/ui_layout_intro.inc \
         assets/map_border_overrides.inc assets/badge_tiles.inc \
         assets/trainer_card_tiles.inc assets/trainer_card_strings.inc \
+        assets/trainer_text.inc \
         assets/party_menu_strings.inc assets/home_pokemon_strings.inc assets/emotes.inc \
         assets/options_strings.inc \
         assets/alphabets.inc assets/dex_entries.inc assets/sprite_sets.inc \
