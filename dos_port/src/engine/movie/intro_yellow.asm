@@ -5,8 +5,11 @@
 ; handlers via Jumptable_f9906, Func_fa06e and the flying-Pikachu helpers), the
 ; animated-object jumptable + behavior callbacks
 ; (ExecuteCurrentAnimatedObjectCallback via YellowIntro_AnimatedObjectJumptable),
-; and the sine helpers. The frame/OAM/spawn data blob lives in
-; data/sprite_anims/intro_anim_data.asm (single GB base for the flat->GB copy).
+; and the sine helpers, plus the spawn-state table (pret defines it here). The
+; frame/OAM tables live in their pret data mirrors
+; (src/data/sprite_anims/intro_frames.asm / intro_oam.asm — pret INCLUDEs both
+; into this file); CopyYellowIntroAnimatedObjectData composes all three into GB
+; space at W_INTRO_ANIM_DATA at intro init.
 ;
 ; The pret-only bank thunks Bank3E_CopyData / Bank3E_FillMemory are not defined
 ; here: Bank3E_CopyData is inlined at its one caller (DEVIATION at
@@ -48,12 +51,14 @@ global YellowIntro_Copy8BitSineWave, LoadYellowIntroFlyingSpeedBars
 global YellowIntro_BlankTileMap, YellowIntro_BlankOAMBuffer, YellowIntro_BlankPalettes
 global Func_f9e9a, Func_f9e5f
 
-extern YellowIntroFramesData_GB, YellowIntroOAMData_GB, YellowIntroSpawnData_GB
 extern SpawnAnimatedObject, MaskCurrentAnimatedObjectStruct, MaskAllAnimatedObjectStructs
 extern DelayFrames, DelayFrame, DisableLCD, FillMemory
 extern UpdateCGBPal_BGP, UpdateCGBPal_OBP0, UpdateCGBPal_OBP1
 extern CopyVideoData, RunPaletteCommand, PlayMusic, ClearObjectAnimationBuffers
-extern CopyYellowIntroAnimatedObjectData          ; data/sprite_anims/intro_anim_data.asm — stage the frame/OAM/spawn blob into GB space (0xF700)
+; The frame/OAM data mirrors (pret INCLUDEs both files into this one); staged
+; into GB space by CopyYellowIntroAnimatedObjectData below.
+extern YellowIntro_AnimatedObjectFramesData       ; data/sprite_anims/intro_frames.asm
+extern YellowIntro_AnimatedObjectOAMData          ; data/sprite_anims/intro_oam.asm
 extern MovieBeginSurface, MovieEndSurface, PublishProjectedOAM, JoypadLowSensitivity
 extern MovieSyncScroll                            ; movie_projection.asm — H_SCX/H_SCY -> WIN_SRC_X/Y
 extern RunObjectAnimations, UpdateMusicCTimes
@@ -93,19 +98,14 @@ section .text
 ; LoadYellowIntroObjectAnimationDataPointers — point the animated-object engine
 ; at the Yellow-intro tables. MUST run after ClearObjectAnimationBuffers, which
 ; zeroes the block these pointers live in. Spawn/OAM/Frames are 16-bit GB
-; addresses into the copied blob; the jumptable is a 32-bit flat pointer (B1
-; data-model split).
+; addresses of the staged tables (gb_memmap.inc constants, pret store order);
+; the jumptable is a 32-bit flat pointer (B1 data-model split).
 ; ---------------------------------------------------------------------------
 LoadYellowIntroObjectAnimationDataPointers:
-    ; The GB addresses are external absolutes; COFF has no 16-bit relocation, so
-    ; load each into EAX (32-bit reloc) and store its low word.
-    mov eax, YellowIntroSpawnData_GB
-    mov [ebp + wAnimatedObjectSpawnStateDataPointer], ax
+    mov word [ebp + wAnimatedObjectSpawnStateDataPointer], W_INTRO_SPAWN_DATA
     mov dword [ebp + wAnimatedObjectJumptablePointer], YellowIntro_AnimatedObjectJumptable
-    mov eax, YellowIntroOAMData_GB
-    mov [ebp + wAnimatedObjectOAMDataPointer], ax
-    mov eax, YellowIntroFramesData_GB
-    mov [ebp + wAnimatedObjectFramesDataPointer], ax
+    mov word [ebp + wAnimatedObjectOAMDataPointer], W_INTRO_OAM_DATA
+    mov word [ebp + wAnimatedObjectFramesDataPointer], W_INTRO_FRAMES_DATA
     ret
 
 ; ---------------------------------------------------------------------------
@@ -725,6 +725,35 @@ Func_f98fc:
 ; the compositor renders directly from W_TILEMAP); the port keeps these writes exactly
 ; as pret does throughout the tree. Graphics2 loads 255 tiles (pret's (size-$10)/$10).
 ; ---------------------------------------------------------------------------
+; ---------------------------------------------------------------------------
+; CopyYellowIntroAnimatedObjectData — port-only: stage the three immutable
+; animated-object tables from the program image (flat .data) into GB space at
+; [ebp + W_INTRO_ANIM_DATA], composed back-to-back (frames, OAM, spawn — the
+; frames/OAM adjacency matches pret ROM $fa0ea-$fa35a, where intro_frames.asm
+; and intro_oam.asm are INCLUDEd contiguously) so the GB-base-relative pointers
+; inside them resolve under [ebp+ptr]. pret keeps this data ROM-resident; the
+; port has no GB-space ROM window for it, so it is copied once at intro init
+; (the same flat→GB staging LoadShootingStarGraphics and GetDefaultName use).
+; The frames/OAM copy sizes are the gb_memmap.inc region deltas — each data
+; mirror statically asserts its assembled size equals its delta, so these
+; constants cannot drift from the tables. Clobbers nothing (pushad/popad).
+; ---------------------------------------------------------------------------
+CopyYellowIntroAnimatedObjectData:
+    pushad
+    mov esi, YellowIntro_AnimatedObjectFramesData   ; flat program-image source
+    lea edi, [ebp + W_INTRO_FRAMES_DATA]            ; GB-space destination
+    mov ecx, W_INTRO_OAM_DATA - W_INTRO_FRAMES_DATA
+    rep movsb
+    mov esi, YellowIntro_AnimatedObjectOAMData
+    ; EDI already = &[ebp + W_INTRO_OAM_DATA]: the regions are contiguous.
+    mov ecx, W_INTRO_SPAWN_DATA - W_INTRO_OAM_DATA
+    rep movsb
+    mov esi, YellowIntro_AnimatedObjectSpawnStateData
+    mov ecx, W_INTRO_SPAWN_DATA_SIZE
+    rep movsb
+    popad
+    ret
+
 InitYellowIntroGFXAndMusic:
     xor al, al
     mov [ebp + hAutoBGTransferEnabled], al          ; ldh [hAutoBGTransferEnabled], a (=0, inert)
@@ -1244,6 +1273,29 @@ Jumptable_fa03b:
     dd Func_fa03f
     dd Func_fa051
 
+; Spawn-state table — each entry: db FramesetID, AnimSeqID (callback index),
+; unused. Indexed by spawn id. Byte-for-byte pret (no internal pointers);
+; staged into GB space at W_INTRO_SPAWN_DATA by
+; CopyYellowIntroAnimatedObjectData, read by the engine at
+; [ebp + wAnimatedObjectSpawnStateDataPointer].
+global YellowIntro_AnimatedObjectSpawnStateData
+YellowIntro_AnimatedObjectSpawnStateData:
+    db 0x00, 0x00, 0x00
+    db 0x01, 0x01, 0x00
+    db 0x02, 0x01, 0x00
+    db 0x03, 0x01, 0x00
+    db 0x04, 0x02, 0x00
+    db 0x05, 0x03, 0x00
+    db 0x06, 0x04, 0x00
+    db 0x07, 0x01, 0x00
+    db 0x08, 0x05, 0x00
+    db 0x09, 0x01, 0x00
+    db 0x0a, 0x01, 0x00
+YellowIntro_AnimatedObjectSpawnStateDataEnd:
+; Static assert: the assembled size must equal the gb_memmap.inc staging size.
+times ((YellowIntro_AnimatedObjectSpawnStateDataEnd - YellowIntro_AnimatedObjectSpawnStateData) - W_INTRO_SPAWN_DATA_SIZE) db 0
+times (W_INTRO_SPAWN_DATA_SIZE - (YellowIntro_AnimatedObjectSpawnStateDataEnd - YellowIntro_AnimatedObjectSpawnStateData)) db 0
+
 ; The animated-object callback jumptable — flat 32-bit code addresses, consumed
 ; by ExecuteCurrentAnimatedObjectCallback (data-model DEVIATION annotated there).
 YellowIntro_AnimatedObjectJumptable:
@@ -1336,4 +1388,62 @@ global Unkn_f9b6e, Unkn_f9be6, Unkn_f9bf2
 %include "assets/yellow_intro_1_2bpp.inc"       ; YellowIntroGraphics1 (128 tiles)
 %include "assets/yellow_intro_2_2bpp.inc"       ; YellowIntroGraphics2 (256 tiles)
 %include "assets/yellow_intro_clouds_2bpp.inc"  ; YellowIntroCloudGFX (8 tiles)
+
+%ifdef DEBUG_CINEMATIC_ANIMOBJ
+; ---------------------------------------------------------------------------
+; RunAnimObjectTest — B1.3 lifecycle harness for the animated-object engine.
+; Stages the real intro data, sets the port table pointers + a local no-op
+; jumptable (all callbacks = ret, so the engine's frame-script interpreter is
+; exercised without B3's real callbacks), spawns one object, and republishes
+; the projected shadow OAM every frame. AUTOKEY dumps FRAME.BIN mid-run.
+;
+; Verifies: spawn→run→OAM-stamp, projected native positions (= canonical +
+; (80,24)), and surface clipping (unused/edge OBJ never paint the matte).
+; ---------------------------------------------------------------------------
+extern g_tilecache_dirty
+global RunAnimObjectTest
+
+section .text
+
+RunAnimObjectTest:
+    call MovieBeginSurface                          ; black matte surface + g_obj_clip
+    mov byte [ebp + IO_OBP0], 0xe4                  ; visible OBJ palettes (color 3 = dark)
+    mov byte [ebp + IO_OBP1], 0xe4
+    ; fill the OBJ tile bank solid so whatever tile ids the object uses render
+    mov al, 0xff
+    lea edi, [ebp + GB_VCHARS0]
+    mov ecx, 0x1000                                 ; 256 tiles x 16 bytes
+    rep stosb
+    mov byte [g_tilecache_dirty], 1                 ; VRAM tiles changed → rebuild cache
+    ; stage the immutable data into GB space
+    call CopyYellowIntroAnimatedObjectData
+    ; clear the object block FIRST, then set the table pointers — the four
+    ; pointers live inside wAnimatedObjectsData, so ClearObjectAnimationBuffers
+    ; would wipe them if set earlier (pret sets them after the clear too, in
+    ; InitYellowIntroGFXAndMusic → LoadYellowIntroObjectAnimationDataPointers).
+    call ClearObjectAnimationBuffers
+    call MaskAllAnimatedObjectStructs               ; masked slots must produce no OAM
+    mov word [ebp + wAnimatedObjectSpawnStateDataPointer], W_INTRO_SPAWN_DATA
+    mov word [ebp + wAnimatedObjectFramesDataPointer], W_INTRO_FRAMES_DATA
+    mov word [ebp + wAnimatedObjectOAMDataPointer], W_INTRO_OAM_DATA
+    mov dword [ebp + wAnimatedObjectJumptablePointer], YellowIntro_AnimatedObjectJumptable
+    ; spawn object 4 → frameset 4 (36-OBJ block), animseq 2 = Func_fa008, which
+    ; slides XCoord left toward 0x58. Dumping early vs late shows it move left —
+    ; a real callback exercised end-to-end (B3.1).
+    mov al, 4                                       ; spawn-state index → frameset 4, animseq 2
+    mov dh, 0x60                                    ; Y coord
+    mov dl, 0x80                                    ; X coord (slides down to 0x58)
+    call SpawnAnimatedObject
+.loop:
+    mov byte [ebp + wCurrentAnimatedObjectOAMBufferOffset], 0
+    call RunObjectAnimations
+    movzx ecx, byte [ebp + wCurrentAnimatedObjectOAMBufferOffset]
+    shr ecx, 2                                      ; OBJ count = shadow-OAM cursor / 4
+    mov esi, W_SHADOW_OAM
+    mov eax, 80                                     ; projection X offset (surface at col 10)
+    mov ebx, 24                                     ; projection Y offset (surface at row 3)
+    call PublishProjectedOAM
+    call DelayFrame
+    jmp .loop
+%endif
 %include "assets/yellow_intro_tilemaps.inc"     ; Unkn_f9b6e/be6/bf2

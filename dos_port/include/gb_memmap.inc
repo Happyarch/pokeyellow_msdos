@@ -1139,16 +1139,24 @@ wc635                           equ 0xF6CB ; alias
 ; the anim-data blob at 0xF700).
 wYellowIntroAnimatedObjectStructPointer equ 0xF6CC ; dw
 
-; --- Yellow-intro animated-object DATA blob (menu-intro B1) ---
+; --- Yellow-intro animated-object DATA region (menu-intro B1) ---
 ; The Frames/OAM/Spawn tables (pret data/sprite_anims/intro_frames.asm +
 ; intro_oam.asm + intro_yellow.asm's spawn table) are pure GB-pointer data. Per
-; the B1 pointer model they stay 16-bit GB pointers, so the immutable blob is
-; assembled flat with GB-base-relative internal pointers (INTRO_ANIM_DATA + off)
-; and copied flat->GB once at intro init (CopyYellowIntroAnimatedObjectData).
-; ~657 B; reserved 0x2A0. Intro-cinematic-only, echo RAM, never live with the
-; overworld buffers. See src/data/sprite_anims/intro_anim_data.asm.
-W_INTRO_ANIM_DATA               equ 0xF700 ; wYellowIntroAnimatedObjectData blob (GB base)
-W_INTRO_ANIM_DATA_SIZE          equ 0x2A0  ; reservation (actual ~0x291), ends <= 0xF9A0
+; the B1 pointer model they stay 16-bit GB pointers, so each table is assembled
+; flat with GB-base-relative internal pointers (its W_INTRO_* base + offset) and
+; copied flat->GB once at intro init (CopyYellowIntroAnimatedObjectData,
+; engine/movie/intro_yellow.asm), which composes the three mirrors back-to-back
+; here — frames then OAM contiguous exactly as pret ROM lays them out
+; ($fa0ea-$fa35a), spawn appended after. Each data mirror carries a `times`
+; static assert that its assembled size matches these region deltas, so the
+; fixed bases cannot silently drift from the tables. 657 B total; reserved
+; 0x2A0. Intro-cinematic-only, echo RAM, never live with the overworld buffers.
+W_INTRO_ANIM_DATA               equ 0xF700 ; whole-region base (= W_INTRO_FRAMES_DATA)
+W_INTRO_ANIM_DATA_SIZE          equ 0x2A0  ; reservation (actual 0x291), ends <= 0xF9A0
+W_INTRO_FRAMES_DATA             equ W_INTRO_ANIM_DATA          ; 0xF700, size 0x53 (src/data/sprite_anims/intro_frames.asm)
+W_INTRO_OAM_DATA                equ W_INTRO_ANIM_DATA + 0x53   ; 0xF753, size 0x21D (src/data/sprite_anims/intro_oam.asm)
+W_INTRO_SPAWN_DATA              equ W_INTRO_OAM_DATA + 0x21D   ; 0xF970 (engine/movie/intro_yellow.asm spawn table)
+W_INTRO_SPAWN_DATA_SIZE         equ 0x21   ; staged image ends 0xF991, inside the 0x2A0 reservation
 ; wLYOverridesBuffer — the intro's LY-override staging buffer (surfing wobble).
 ; Free echo RAM after the anim-data blob. The port does NOT emulate per-scanline
 ; LY overrides, so this buffer is written faithfully but never consumed (inert).

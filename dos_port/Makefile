@@ -284,7 +284,8 @@ GAME_SRCS := \
     src/engine/gfx/sprite_oam.asm \
     src/engine/gfx/animated_objects.asm \
     src/engine/movie/intro_yellow.asm \
-    src/data/sprite_anims/intro_anim_data.asm \
+    src/data/sprite_anims/intro_frames.asm \
+    src/data/sprite_anims/intro_oam.asm \
     src/engine/gfx/mon_icons.asm \
     src/engine/gfx/palettes.asm \
     src/home/load_font.asm \
