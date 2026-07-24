@@ -20,7 +20,7 @@
 ;     plays SFX. All six calls (SFX_TURN_ON_PC / SFX_ENTER_PC ×4 / SFX_TURN_OFF_PC)
 ;     are restored. M-79.
 ;   * "SaveScreenTilesToBuffer2 / LoadScreenTilesFromBuffer2 → window-model
-;     save/restore" — both are ported (movie/title.asm), are pure wTileMap ↔
+;     save/restore" — both are ported (home/tilemap.asm), are pure wTileMap ↔
 ;     wTileMapBackup2 WRAM copies, and are already called from home/start_menu.asm
 ;     and overworld/cut.asm. The port's substitute (snapshot g_window_count)
 ;     saved nothing at all. Restored. M-80.

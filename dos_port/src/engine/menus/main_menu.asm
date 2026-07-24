@@ -160,7 +160,7 @@ extern add_window               ; ppu.asm — append one descriptor
 extern g_bg_whiteout            ; ppu.asm — 1 = blank BG behind the window list
 extern DelayFrame               ; frame.asm
 extern DelayFrames              ; frame.asm — BL = frame count
-extern ClearScreen              ; title.asm — blank canvas + auto-transfer
+extern ClearScreen              ; home/copy2.asm — blank canvas + auto-transfer
 extern LoadTextBoxTilePatterns  ; load_font.asm
 extern LoadFontTilePatterns     ; load_font.asm
 extern UpdateSprites            ; movement.asm

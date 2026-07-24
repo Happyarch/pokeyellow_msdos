@@ -9,8 +9,8 @@
 ; title module src/movie/title.asm 2026-07-24 (relocated-labels grind — the
 ; split was registered legacy debt in tools/pret_label_allowlist.json, now
 ; retired). The Yellow graphics/placement half is in its own mirror,
-; src/engine/movie/title_yellow.asm; ClearScreen (pret home/copy2.asm) remains
-; in src/movie/title.asm (its own registered relocation, separate debt item).
+; src/engine/movie/title_yellow.asm; ClearScreen went to its pret mirror
+; src/home/copy2.asm (2026-07-24) and the legacy module is deleted.
 ;
 ; Animation overview (DisplayTitleScreen):
 ;   1. Load all title graphics to VRAM.
@@ -80,7 +80,7 @@ extern MovieMirrorSurface       ; src/engine/movie/movie_projection.asm
 extern MovieSyncScroll          ; src/engine/movie/movie_projection.asm
 extern MovieSyncWindow          ; src/engine/movie/movie_projection.asm
 extern PublishProjectedOAM      ; src/engine/gfx/sprite_oam.asm — ESI=src ECX=n EAX/EBX=offset
-extern ClearScreen                   ; movie/title.asm — clear the surface tilemap (pret home/copy2.asm, registered relocation)
+extern ClearScreen                   ; home/copy2.asm — clear the surface tilemap
 extern CopyVideoData                 ; home/copy2.asm — ESI=VRAM dest, EDX=flat src, BL=tiles
 extern PlaceString                   ; home/text.asm — ESI=dest(GB offset), EAX=flat src
 extern text_row_stride               ; home/text.asm — PlaceString row stride (port's SCREEN_WIDTH)

@@ -106,7 +106,7 @@ extern GetPartyMonName          ; (AL=index, ESI=nick list) → wNameBuffer (EDX
 extern CopyToStringBuffer       ; (EDX=src '@'-terminated) → wStringBuffer
 extern ClearScreenArea          ; (ESI=tilemap dst, BH=rows, BL=width)
 extern ClearSprites             ; zero shadow OAM
-extern ClearScreen              ; blank tilemap + Delay3
+extern ClearScreen              ; home/copy2.asm — blank tilemap + Delay3
 extern DelayFrames              ; (BL = frame count)
 extern DelayFrame               ; wait one frame
 extern JoypadLowSensitivity     ; refresh hJoy5 (H_JOY5) low-sensitivity input

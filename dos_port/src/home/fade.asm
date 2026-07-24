@@ -20,8 +20,7 @@
 ;   Phase-5 work of translating the true CGB color values into the VGA DAC:
 ;   these routines only choose shade indices, never RGB. Hence "implementable now".
 ;   The GB's UpdateCGBPal_{BGP,OBP0,OBP1} calls (which push CGB RGB) are the only
-;   Phase-5-blocked part; they are elided here with ; TODO-HW: comments, exactly as
-;   the existing GBPalWhiteOut scaffold in src/movie/title.asm does.
+;   Phase-5-blocked part; they are elided here with ; TODO-HW: comments.
 ;
 ; Register mapping used (SM83 -> x86): A->AL, HL->(flat data ptr in EDI here,
 ;   since the FadePal tables live in the port's own .data, not GB address space),
@@ -162,10 +161,9 @@ GBFadeDecCommon:
 ; ===========================================================================
 ; GBPalWhiteOut / GBPalWhiteOutWithDelay3 — white out all palettes.
 ; Source: home/palettes.asm:GBPalWhiteOut, GBPalWhiteOutWithDelay3
-;   NOTE: src/movie/title.asm carries a FILE-LOCAL GBPalWhiteOut scaffold (M0.4,
-;   not `global`). This is the faithful home-located, exported copy; a future
-;   cleanup should drop title.asm's private copy and extern this one. A file-local
-;   symbol does not collide with this global at link.
+;   This is the canonical exported copy. (The old file-local scaffold in the
+;   legacy src/movie/title.asm was retired 2026-07-23 and the file itself is
+;   deleted, 2026-07-24.)
 ; ===========================================================================
 GBPalWhiteOut:
     mov byte [ebp + IO_BGP],  0x00        ; xor a / ldh [rBGP],  a
@@ -194,7 +192,8 @@ RestoreScreenTilesAndReloadTilePatterns:
     ; caller is an overworld-context exit, so the reload is in-context here.
     call ReloadMapSpriteTilePatterns
     ; TODO(unimplemented): call LoadScreenTilesFromBuffer2
-    ;   (file-local scaffold in src/movie/title.asm; not yet a linkable global)
+    ;   (now a linkable global in src/home/tilemap.asm — wire when this path is
+    ;   next audited; the call is still dropped here)
     call LoadTextBoxTilePatterns
     ; TODO(unimplemented): call RunDefaultPaletteCommand
     ;   (SGB/CGB palette command dispatch — Phase 5; town_map.asm stubs it too)

@@ -14,7 +14,7 @@
 ;     WaitForSoundToFinish triple in both .roomAvailable paths) are restored. M-83.
 ;   * "call SaveScreenTilesToBuffer1 / LoadScreenTilesFromBuffer2 — port(window
 ;     model): there is no screen to save/restore" — both routines are ported and
-;     linked (battle/battle_menu.asm and movie/title.asm) and are plain
+;     linked (home/tilemap.asm, the canonical buffer provider) and are plain
 ;     wTileMap ↔ wTileMapBackup{,2} WRAM copies. All three calls are restored. M-83.
 ;   * The fourteen messages were "DRAWN WHOLE … with the pret wording", i.e. as
 ;     hand-encoded charmap glyph runs — the Tier-1 DATA violation. That form cannot

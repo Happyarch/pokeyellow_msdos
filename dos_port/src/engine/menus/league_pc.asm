@@ -56,7 +56,7 @@ extern msgbox_dialog            ; home/text.asm — the standard bottom dialog b
 extern hide_window              ; ppu/ppu.asm — drop the dialog window layer
 extern TextBoxBorder            ; home/textbox.asm — ESI=top-left, BL=int_w, BH=int_h
 extern GBPalWhiteOutWithDelay3  ; home/fade.asm
-extern ClearScreen              ; movie/title.asm
+extern ClearScreen              ; home/copy2.asm
 extern GBPalNormal              ; home/init.asm
 extern RunPaletteCommand        ; home/palettes.asm — In: BH = palette command
 extern RunDefaultPaletteCommand ; engine/menus/naming_screen.asm

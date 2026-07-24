@@ -180,10 +180,6 @@
       "port_file": "dos_port/src/engine/battle/move_effect_helpers.asm",
       "why": "pret engine/battle/effects.asm split across port files (draft Session H)"
     },
-    "ClearScreen": {
-      "port_file": "dos_port/src/movie/title.asm",
-      "why": "pret home/copy2.asm split across port files (draft Session H)"
-    },
     "CollisionCheckOnLand": {
       "port_file": "dos_port/src/engine/overworld/overworld.asm",
       "why": "pret home/overworld.asm split across port files (draft Session H)"

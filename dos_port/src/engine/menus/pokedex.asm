@@ -101,7 +101,7 @@ extern RunDefaultPaletteCommand      ; engine/menus/naming_screen.asm — BH=SET
 extern ReloadMapData                 ; home/reload_tiles.asm
 extern LoadHpBarAndStatusTilePatterns ; gfx/load_font.asm — pret loader's 1st step
 extern g_tilecache_dirty             ; ppu.asm — set after any VRAM tile write
-extern ClearScreen                   ; movie/title.asm
+extern ClearScreen                   ; home/copy2.asm
 extern UpdateSprites                 ; engine/overworld/movement.asm
 extern Delay3                        ; video/frame.asm — 3× DelayFrame
 extern DelayFrame                    ; video/frame.asm

@@ -42,7 +42,7 @@ extern PrintEmptyString                 ; battle_exp_stubs.asm
 extern SaveScreenTilesToBuffer1         ; src/home/tilemap.asm
 extern LoadScreenTilesFromBuffer1       ; src/home/tilemap.asm
 extern DrawHUDsAndHPBars                ; battle_menu.asm — redraw both HUDs + HP bars
-extern ClearScreen                      ; title.asm
+extern ClearScreen                      ; home/copy2.asm
 extern PlayerMonFaintedText             ; battle_text.inc
 extern WildRanText                      ; battle_text.inc
 

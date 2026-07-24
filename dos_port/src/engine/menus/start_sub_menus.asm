@@ -122,11 +122,11 @@ extern trainer_card_present          ; engine/menus/trainer_card.asm (S9) — wi
 extern trainer_card_teardown         ; engine/menus/trainer_card.asm (S9)
 extern Delay3                        ; video/frame.asm
 extern UpdateSprites                 ; engine/overworld/movement.asm
-extern ClearScreen                   ; movie/title.asm
+extern ClearScreen                   ; home/copy2.asm
 extern LoadTextBoxTilePatterns       ; gfx/load_font.asm
 extern LoadFontTilePatterns          ; gfx/load_font.asm
 extern WaitForTextScrollButtonPress  ; engine/battle/battle_menu.asm — ▼-wait + A/B
-extern GBPalWhiteOut                 ; movie/title.asm
+extern GBPalWhiteOut                 ; home/fade.asm
 extern GBPalNormal                   ; init/init.asm
 extern RunPaletteCommand             ; engine/battle/faint_switch.asm (palette stub)
 extern ReloadMapData                 ; home/reload_tiles.asm

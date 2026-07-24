@@ -768,7 +768,7 @@ extern RespawnOverworldPikachu   ; battle_exp_stubs.asm (deferred)
 extern DoubleOrHalveSelectedStats ; battle_exp_stubs.asm (deferred)
 
 ; --- screen / text / sound ---
-extern ClearScreen          ; movie/title.asm (pret home/copy2.asm)
+extern ClearScreen          ; home/copy2.asm
 extern GBPalWhiteOut        ; home/fade.asm
 extern ReloadMapData        ; home/reload_tiles.asm
 extern DelayFrames          ; video/frame.asm — BL = frames

@@ -37,7 +37,7 @@ extern InitOptions                   ; engine/menus/main_menu.asm
 extern StopAllMusic                  ; home/audio.asm
 extern PlayMusic                     ; home/audio.asm — AL = music id, BL = bank
 extern PlaySound                     ; home/audio.asm — AL = sound id
-extern ClearScreen                   ; movie/title.asm — blank W_TILEMAP (surface state survives)
+extern ClearScreen                   ; home/copy2.asm — blank W_TILEMAP (surface state survives)
 extern LoadTextBoxTilePatterns       ; home/load_font.asm
 extern InitPlayerData2               ; oak_speech/init_player_data.asm (pret predef)
 extern AddItemToInventory            ; items/inventory.asm — ESI = count addr, [wCurItem]/[wItemQuantity]

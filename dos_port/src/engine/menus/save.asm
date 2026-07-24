@@ -154,7 +154,7 @@ extern WaitForSoundToFinish     ; home/audio.asm
 extern UpdateSprites            ; engine/overworld/movement.asm
 extern SetMapTextPointer        ; home/predef_text.asm
 extern RestoreMapTextPointer    ; home/predef_text.asm
-extern ClearScreen              ; movie/title.asm
+extern ClearScreen              ; home/copy2.asm
 extern LoadFontTilePatterns     ; gfx/load_font.asm
 extern LoadTextBoxTilePatterns  ; gfx/load_font.asm
 ; --- the S3 YES/NO driver (home/yes_no.asm) --------------------------------

@@ -296,7 +296,6 @@ GAME_SRCS := \
     src/home/palettes.asm \
     src/home/cgb_palettes.asm \
     src/home/fade.asm \
-    src/movie/title.asm \
     src/engine/movie/movie_projection.asm \
     src/engine/movie/splash.asm \
     src/engine/movie/intro.asm \

@@ -77,7 +77,7 @@ extern ReloadMapSpriteTilePatterns     ; engine/overworld/reload_sprites.asm
 extern GBPalWhiteOutWithDelay3         ; home/fade.asm
 extern RestoreScreenTilesAndReloadTilePatterns ; home/fade.asm
 extern LoadGBPal                       ; home/fade.asm
-extern ClearScreen                     ; movie/title.asm — whole-canvas blank + auto-BG re-arm
+extern ClearScreen                     ; home/copy2.asm — whole-canvas blank + auto-BG re-arm
 extern ClearSprites                    ; gfx/sprites.asm
 extern GBPalNormal                     ; init/init.asm
 extern UpdateSprites                   ; engine/overworld/movement.asm

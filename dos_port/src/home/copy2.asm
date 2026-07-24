@@ -2,9 +2,10 @@
 ;
 ; Source: home/copy2.asm (pret/pokeyellow) — FarCopyDataDouble, CopyVideoData,
 ;         CopyVideoDataDouble, GetFarByte, ClearScreenArea,
-;         CopyScreenTileBufferToVRAM.
-;         (FillMemory lives in src/home/fill_memory.asm; ClearScreen/IsTilePassable
-;          are not ported here — see SUMMARY.md.)
+;         CopyScreenTileBufferToVRAM, ClearScreen.
+;         (FillMemory lives in src/home/fill_memory.asm and IsTilePassable in
+;          src/engine/overworld/overworld.asm — both registered legacy
+;          relocations, tools/pret_label_allowlist.json.)
 ;
 ; ---------------------------------------------------------------------------
 ; PORT MODEL — READ THIS BEFORE CHANGING SIGNATURES
@@ -48,6 +49,8 @@ bits 32
 
 extern g_tilecache_dirty                     ; src/ppu/ppu.asm — arm tile-cache re-decode
 extern DelayFrame                            ; src/video/frame.asm — one-frame yield
+extern FillMemory                            ; src/home/fill_memory.asm (registered relocation)
+extern Delay3                                ; src/video/frame.asm
 
 global FarCopyDataDouble
 global CopyVideoData
@@ -55,6 +58,7 @@ global CopyVideoDataDouble
 global GetFarByte
 global ClearScreenArea
 global CopyScreenTileBufferToVRAM
+global ClearScreen
 
 section .text
 
@@ -233,3 +237,22 @@ CopyScreenTileBufferToVRAM:
     call DelayFrame
     call DelayFrame
     ret
+
+; ---------------------------------------------------------------------------
+; ClearScreen — fill wTileMap with $7F (space), enable auto-BG-transfer,
+; wait 3 frames.
+; Source: home/copy2.asm:ClearScreen
+; ---------------------------------------------------------------------------
+ClearScreen:
+    push esi
+    push ebx
+    push eax
+    mov esi, W_TILEMAP
+    mov bx,  SCREEN_AREA & 0xFFFF
+    mov al,  0x7F
+    call FillMemory
+    mov byte [ebp + H_AUTO_BG_TRANSFER_EN], 1
+    pop eax
+    pop ebx
+    pop esi
+    jmp Delay3    ; tail call

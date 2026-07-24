@@ -17,7 +17,7 @@
 ;    keeps both resident; this is the port's tile-pattern management, mirroring
 ;    pret's LoadTextBoxTilePatterns/CloseTextDisplay reloads).
 ;  * SaveScreenTilesToBuffer2 IS called, faithfully (it is a pure wTileMap →
-;    wTileMapBackup2 WRAM copy — movie/title.asm — with no compositor coupling).
+;    wTileMapBackup2 WRAM copy — home/tilemap.asm — with no compositor coupling).
 ;    Only the *restore* half diverges: DEVIATION(window-compositor) — while a
 ;    sub-menu is open the port drops the START window rather than leaving the box
 ;    tiles on screen beneath it, so the sub-menus replace pret's
