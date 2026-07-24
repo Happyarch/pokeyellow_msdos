@@ -13,8 +13,12 @@ Violation classes:
   non_ret_stub  a *_stubs.asm body that isn't ret-only (calls something, or
                 grew past a minimal flag/CF contract) — the "silently patched
                 instead of stubbed" GetName class.
-  dup_def       one global defined in 2+ port files — the silent-shadow trap
+  dup_def       one label defined in 2+ port files — the silent-shadow trap
                 (a stub linked while the real body sits in a check-only list).
+                Covers globals AND file-local column-0 copies of pret names:
+                a local duplicate never collides at link, so it silently
+                shadows nothing while READING as the routine's home (the
+                WriteSymmetricMonPartySpriteOAM pair survived a year this way).
   stale_extern  an `extern` trailing comment naming a *_stubs.asm that no
                 longer defines the symbol (stub retired, comment not repointed
                 — stub convention rule 3/5).
@@ -230,10 +234,16 @@ def main():
         add('non_ret_stub', name,
             f"{name} ({file}:{line}): stub body isn't ret-only ({why})")
 
-    # ── dup_def: same global defined in 2+ files ────────────────────────────
+    # ── dup_def: same label defined in 2+ files ─────────────────────────────
+    # Globals AND file-local column-0 pret-named defs (the scan only records
+    # locals for pret names, so generic local helpers can't fire this). A local
+    # copy can't collide at link but silently masquerades as the label's home.
     for name, files in cur.execute("""
-            SELECT name, GROUP_CONCAT(file, '  ') FROM port_defs
-            WHERE is_global=1
+            SELECT name,
+                   GROUP_CONCAT(file || CASE WHEN is_global=1
+                                             THEN '' ELSE ' (local)' END, '  ')
+            FROM port_defs
+            WHERE is_global=1 OR defined_here=1
             GROUP BY name HAVING COUNT(DISTINCT file) > 1
             ORDER BY name"""):
         add('dup_def', name, f"{name}: defined in {files}")

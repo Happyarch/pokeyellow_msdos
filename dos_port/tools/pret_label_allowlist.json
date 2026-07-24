@@ -1391,6 +1391,16 @@
       "rule": "dup_def",
       "key": "DiscardButtonPresses",
       "why": "NOT the silent-shadow trap this rule targets: only ONE definition is linked. src/input/joypad.asm (HAL_SRCS) holds the live body; src/engine/joypad.asm is DEAD - in no SRCS list at all (not even a check-only one), so it is never assembled and cannot shadow anything. It is retained solely as a cross-reference to pret's original input routine (_Joypad/ReadJoypad_/TrySoftReset) for a future faithful-input pass, and its header says so. Retire this entry by deleting engine/joypad.asm, or by dropping its DiscardButtonPresses copy, if that reference is ever cashed in or abandoned (overworld-events Stage 4)."
+    },
+    {
+      "rule": "dup_def",
+      "key": "DrawHP",
+      "why": "documented port split (status_screen.asm NOTE, 2026-07 menu fidelity): pret's single DrawHP needs two port bodies because of the tilemap-stride divergence — party_menu.asm's global targets the stride-20 scratch, status_screen.asm's intentionally file-LOCAL copy targets the 40-wide status canvas. Both keep pret's name per the CLAUDE.md port-split rule; only one is global, so no link collision. Retires with the tilemap-stride unification."
+    },
+    {
+      "rule": "dup_def",
+      "key": "EmotionBubble",
+      "why": "known interim (audited 2026-07-23 allowlist audit): overworld_stubs.asm ret-stub is linked (only caller FishingAnim, fishing rods are stubs); the real faithful body in trainer_engine.asm is check-only (HOME_CHECK_SRCS) and file-local, so the two never coexist in one link. Delete the stub when trainer_engine.asm is promoted to GAME_SRCS."
     }
   ]
 }
