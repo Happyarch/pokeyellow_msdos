@@ -9,12 +9,6 @@
     "Legacy entries began as a 2026-07-07 full-tree inventory and remain subject to structural audit."
   ],
   "structural_findings": {
-    "DisplayTwoOptionMenu": {
-      "id": "R-001",
-      "port_file": "dos_port/src/home/yes_no.asm",
-      "problem": "the former relocation justification says the pret routine is not standalone and keeps it with port-private state/helpers, which does not establish a pure independently callable relocation",
-      "retirement": "move a complete independently callable DisplayTwoOptionMenu to dos_port/src/engine/menus/text_box.asm and preserve the pret call boundary"
-    },
     "IsSpriteOrSignInFrontOfPlayer": {
       "id": "R-002",
       "port_file": "dos_port/src/engine/overworld/overworld.asm",

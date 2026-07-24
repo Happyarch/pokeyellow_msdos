@@ -2120,9 +2120,8 @@ src/engine/menus/field_moves.o: assets/field_moves.inc
 # the BATTLE/SAFARI template rows come from the battle layout (battle-UI B5).
 # DisplayTextIDInit checks EVENT_GOT_POKEDEX via events.inc → event_constants.inc.
 src/engine/menus/text_box.o: assets/ui_layout_menus.inc assets/ui_layout_battle.inc \
-        assets/textbox_strings.inc
+        assets/textbox_strings.inc assets/yes_no_strings.inc
 src/home/list_menu.o: assets/list_menu_strings.inc
-src/home/yes_no.o: assets/yes_no_strings.inc
 src/debug/debug_dump.o: $(if $(DEBUG_TEXT),assets/text_oracle.inc)
 src/debug/debug_dump.o: assets/scenario_registry.inc
 src/engine/menus/display_text_id_init.o: assets/event_constants.inc

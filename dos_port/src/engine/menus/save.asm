@@ -488,7 +488,7 @@ SaveTheGame_YesOrNo:
     call PrintText                               ; the question ends in `done`
     ; hlcoord 0, 7 / lb bc, 8, 1.
     ; DEVIATION{class=projection; pret=engine/menus/save.asm:SaveTheGame_YesOrNo; behavior=pass projected yes-no box geometry through yn_box state instead of the pret HL/BC triple; evidence=pret SaveTheGame_YesOrNo hlcoord/lb setup plus port DisplayTwoOptionMenu private geometry contract; lifetime=until DisplayTwoOptionMenu accepts explicit geometry}
-    ; The port's DisplayTwoOptionMenu (home/yes_no.asm)
+    ; The port's DisplayTwoOptionMenu (engine/menus/text_box.asm)
     ; draws the box as a compositor window, so it takes the top-left from
     ; yn_box_col/row (GB coords, projected) instead of pret's HL, and derives the
     ; cursor from the box rather than from B/C — the HL/BC triple is dead here.

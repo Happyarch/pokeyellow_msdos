@@ -2,7 +2,7 @@
 ; cable_club.asm — Cable Club (link) helpers.
 ;
 ; menus S3: holds only CableClub_TextBoxBorder + CableClub_DrawHorizontalLine,
-; needed by yes_no.asm's DisplayTwoOptionMenu TRADE_CANCEL_MENU branch (pret
+; needed by text_box.asm's DisplayTwoOptionMenu TRADE_CANCEL_MENU branch (pret
 ; engine/menus/text_box.asm:257 picks this border for that menu id).
 ; Session 8 (link_menu packages I1/I2) extends this file with the rest of pret
 ; engine/link/cable_club.asm.
