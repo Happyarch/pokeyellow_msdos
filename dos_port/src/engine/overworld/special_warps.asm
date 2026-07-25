@@ -98,7 +98,7 @@ USING_INTERNAL_CLOCK      equ 0x02 ; constants/serial_constants.asm
 global PrepareForSpecialWarp
 global LoadSpecialWarpData
 
-extern LoadTilesetHeader           ; engine/overworld/overworld.asm (pret: predef)
+extern LoadTilesetHeader           ; src/engine/overworld/tilesets.asm (pret: predef)
 extern PrepareNewGameDebug         ; engine/debug/debug_party.asm
 
 section .text

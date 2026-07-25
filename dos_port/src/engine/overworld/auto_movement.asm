@@ -49,7 +49,7 @@ extern StartSimulatingJoypadStates ; src/home/simulate_joypad.asm
 extern PlayMusic                   ; src/home/audio.asm (real gateway)
 extern PewterGuys                  ; src/engine/events/pewter_guys.asm
 extern HideObject                  ; src/engine/overworld/toggleable_objects.asm (OW-3.2)
-extern IsPlayerStandingOnDoorTile  ; src/engine/overworld/overworld.asm
+extern IsPlayerStandingOnDoorTile  ; src/engine/overworld/doors.asm
 
 section .text
 

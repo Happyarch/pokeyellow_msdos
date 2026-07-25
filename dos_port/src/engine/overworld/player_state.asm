@@ -29,12 +29,10 @@
 ;                                 but currently HOME_CHECK_SRCS / check-only —
 ;                                 see the CLOSURE note on CheckForceBikeOrSurf).
 ;   DoorTileTable / IsPlayerStandingOnDoorTile
-;                              -> src/engine/overworld/overworld.asm. Reused by
-;                                 IsPlayerStandingOnDoorTileOrWarpTile below via
-;                                 `extern IsPlayerStandingOnDoorTile` — see the
-;                                 CLOSURE note: that symbol is NOT currently
-;                                 `global` in overworld.asm, so this is a link
-;                                 blocker until root adds it there.
+;                              -> src/engine/overworld/doors.asm (the pret
+;                                 mirror of engine/overworld/doors.asm). Reused
+;                                 by IsPlayerStandingOnDoorTileOrWarpTile below
+;                                 via `extern IsPlayerStandingOnDoorTile`.
 ;
 ; Register map (asm-translation skill): A=AL, BC=BX (B=BH,C=BL), DE=DX (D=DH,
 ; E=DL), HL=ESI, EBP=GB memory base ([ebp+addr]). GB data is big-endian (not
@@ -156,13 +154,7 @@ extern text_row_stride      ; src/home/text.asm — linked (GAME_SRCS); active
 ; carved out) — see the CLOSURE REPORT in the task write-up.
 extern ForceBikeOrSurf       ; src/home/overworld.asm
 
-; CLOSURE: IsPlayerStandingOnDoorTile is defined in src/engine/overworld/
-; overworld.asm (a LINKED file, GAME_SRCS) but is NOT declared `global` there
-; (verified: `grep '^global ' overworld.asm` lists no door/tile routines) — it
-; is currently file-local. This extern will not resolve at final link until
-; root adds `global IsPlayerStandingOnDoorTile` to overworld.asm. Flagged, not
-; fixed here (hard rule: this ticket creates ONLY this file).
-extern IsPlayerStandingOnDoorTile ; src/engine/overworld/overworld.asm — LINKED file, but NOT yet `global` there (link blocker; see CLOSURE)
+extern IsPlayerStandingOnDoorTile ; src/engine/overworld/doors.asm
 ; OW-4.1 CheckForCollisionWhenPushingBoulder deps:
 extern IsTilePassable                    ; home/copy2.asm — LINKED (returns CF)
 extern CheckForTilePairCollisions2       ; src/home/overworld.asm — ESI=flat table, returns CF

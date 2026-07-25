@@ -91,7 +91,7 @@ extern FillMemory                         ; src/home/copy2.asm
 extern GBPalNormal                        ; src/home/init.asm
 extern InitMapSprites                     ; src/engine/overworld/map_sprites.asm
 extern LoadTextBoxTilePatterns            ; src/home/load_font.asm
-extern LoadTilesetHeader                  ; src/engine/overworld/overworld.asm
+extern LoadTilesetHeader                  ; src/engine/overworld/tilesets.asm
 extern LoadWildData                       ; src/engine/overworld/wild_mons.asm
 extern MapTextTablePointers               ; assets/npc_dialogs/all_dialogs.inc
 extern PlayDefaultMusicFadeOutCurrent     ; src/home/audio.asm
@@ -185,7 +185,7 @@ extern TilePairCollisionsWater            ; src/engine/overworld/ledges.asm
 extern TrainerEncounterFlow               ; src/engine/overworld/map_sprites.asm
 extern UpdateSprites                      ; src/engine/overworld/movement.asm
 extern WalkSpeedSample                    ; src/engine/overworld/overworld.asm
-extern _AdvancePlayerSprite               ; src/engine/overworld/overworld.asm
+extern _AdvancePlayerSprite               ; src/engine/overworld/advance_player_sprite.asm
 extern _LeaveMapAnim                      ; src/engine/overworld/player_animations.asm
 extern g_audio_engine_online              ; src/home/audio.asm
 extern pad_noclip                         ; src/input/joypad.asm

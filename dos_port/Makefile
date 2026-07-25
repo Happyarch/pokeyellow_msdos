@@ -305,6 +305,9 @@ GAME_SRCS := \
     src/engine/movie/oak_speech/clear_save.asm \
     src/engine/movie/oak_speech/oak_speech2.asm \
     src/engine/overworld/overworld.asm \
+    src/engine/overworld/advance_player_sprite.asm \
+    src/engine/overworld/tilesets.asm \
+    src/engine/overworld/doors.asm \
     src/engine/overworld/movement.asm \
     src/engine/overworld/map_sprites.asm \
     src/home/run_map_script.asm \

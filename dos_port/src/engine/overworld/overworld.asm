@@ -43,7 +43,6 @@ bits 32
 %include "events.inc"                   ; CheckEvent/SetEvent/ResetEvent over W_EVENT_FLAGS
 
 extern CopyData                           ; src/home/copy_data.asm
-extern IsInArray              ; src/home/array.asm — shared home global (LoadTilesetHeader dungeon check)
 extern DelayFrame                         ; src/video/frame.asm
 extern g_player_marker_on                 ; src/ppu/ppu.asm
 ; EnterMap reset-ladder leaves (OW-A.4): ClearVariablesOnEnterMap (clear_variables.asm,
@@ -51,7 +50,6 @@ extern g_player_marker_on                 ; src/ppu/ppu.asm
 extern LoadPlayerSpriteGraphics        ; engine/overworld/player_gfx.asm (faithful pret dispatcher;
                                        ; the walking-only scaffold that lived here is retired)
 ; HandleBlackOut's closure (wild-live promotion)
-extern g_tilecache_dirty                  ; src/ppu/ppu.asm
 extern hide_window           ; src/ppu/ppu.asm — empty the window list (count=0)
 %define SET_PAL_OVERWORLD 9
 ; OW-A.2 P3b: the faithful home object-loader (InitSprites/LoadSprite, below) writes
@@ -202,14 +200,11 @@ extern tick_count                         ; boot/timing.asm
 global EnterMapBoot
 ; (OW-A.5: dead `global CopyMapViewToVRAM` removed — routine obsoleted by native
 ;  render_bg; had no body, exported an undefined symbol. See its note ~L1729.)
-global _AdvancePlayerSprite                 ; OW-A.3: engine body, de-folded from the home wrapper
 ; IsSpriteOrSignInFrontOfPlayer (complete: sign + counter + sprite scan) and
 ; IsSpriteInFrontOfPlayer / IsSpriteInFrontOfPlayer2 moved to their pret mirror,
 ; src/home/overworld.asm (menu-intro review + R-002 retirement, 2026-07-23).
 global CheckWarpTile
 global LoadWarpDestination
-global IsPlayerStandingOnDoorTile          ; OW-7.2: for player_state.asm (check-only) when it promotes
-global LoadTilesetHeader                   ; OW-7.2: for special_warps.asm (now linked)
 ; LoadPlayerSpriteGraphics moved to engine/overworld/player_gfx.asm (wild-live
 ; promotion) — the scaffold here is retired; player_sprite is exported to it.
 global player_sprite                       ; pret RedSprite; consumed by player_gfx.asm
@@ -217,7 +212,6 @@ global RefreshCollisionTileMap             ; menus S4: home/start_menu.asm resto
 
 ; --- moved to src/home/overworld.asm (pret home/overworld.asm mirror) ---
 extern EnterMap                           ; src/home/overworld.asm
-extern CheckMapConnections                ; src/home/overworld.asm
 extern LoadCurrentMapView                 ; src/home/overworld.asm
 extern LoadDestinationWarpPosition        ; src/home/overworld.asm
 extern LoadMapHeader                      ; src/home/overworld.asm
@@ -734,204 +728,6 @@ WalkSpeedSample:
     ret
 %endif
 
-; ---------------------------------------------------------------------------
-; _AdvancePlayerSprite — engine body.
-; pret: engine/overworld/advance_player_sprite.asm:_AdvancePlayerSprite.
-;
-; Runs once per advanced frame of a walk. Decrements wWalkCounter; on the first
-; frame (counter == 7) it slides wMapViewVRAMPointer by 2 tiles, advances the
-; tile-block-map pointer when a block boundary is crossed, rebuilds the map view,
-; and schedules the newly exposed row/column for VBlank redraw. Every frame it
-; scrolls the BG by 2 px (hSCX/hSCY) in the direction of motion.
-;
-; Remaining Phase-2 omissions vs. pret (inside this body): IsSpinning and the
-; Pikachu overworld-state flag.
-;
-; b (SM83) = wSpritePlayerStateData1YStepVector → kept in BL  (+1 / -1 / 0)
-; c (SM83) = wSpritePlayerStateData1XStepVector → kept in CL  (+1 / -1 / 0)
-; ---------------------------------------------------------------------------
-_AdvancePlayerSprite:
-    push eax
-    push ebx
-    push ecx
-    push edx
-
-    mov bl, [ebp + W_SPRITE_PLAYER_Y_STEP_VECTOR]    ; BL = b (Y step)
-    mov cl, [ebp + W_SPRITE_PLAYER_X_STEP_VECTOR]    ; CL = c (X step)
-
-    dec byte [ebp + W_WALK_COUNTER]
-    jnz .afterUpdateMapCoords
-    ; end of animation → commit the player's map coordinates
-    mov al, [ebp + W_Y_COORD]
-    add al, bl
-    mov [ebp + W_Y_COORD], al
-    mov al, [ebp + W_X_COORD]
-    add al, cl
-    mov [ebp + W_X_COORD], al
-    call CheckMapConnections
-    jc .transitionExit                         ; CF=1 → map changed, abort frame
-.afterUpdateMapCoords:
-    cmp byte [ebp + W_WALK_COUNTER], 7
-    jne .scroll                                       ; only the first frame slides the view
-
-    jmp .adjustXCoordWithinBlock
-
-.adjustXCoordWithinBlock:
-    mov al, [ebp + W_X_BLOCK_COORD]
-    add al, cl
-    mov [ebp + W_X_BLOCK_COORD], al
-    cmp al, 0x02
-    jne .checkForMoveToWestBlock
-    ; crossed into the block to the east
-    mov byte [ebp + W_X_BLOCK_COORD], 0
-    inc byte [ebp + W_X_OFFSET_SINCE_LAST_SPECIAL_WARP]
-    call MoveTileBlockMapPointerEast
-    jmp .updateMapView
-.checkForMoveToWestBlock:
-    cmp al, 0xFF
-    jne .adjustYCoordWithinBlock
-    ; crossed into the block to the west
-    mov byte [ebp + W_X_BLOCK_COORD], 1
-    dec byte [ebp + W_X_OFFSET_SINCE_LAST_SPECIAL_WARP]
-    call MoveTileBlockMapPointerWest
-    jmp .updateMapView
-.adjustYCoordWithinBlock:
-    mov al, [ebp + W_Y_BLOCK_COORD]
-    add al, bl
-    mov [ebp + W_Y_BLOCK_COORD], al
-    cmp al, 0x02
-    jne .checkForMoveToNorthBlock
-    ; crossed into the block to the south
-    mov byte [ebp + W_Y_BLOCK_COORD], 0
-    inc byte [ebp + W_Y_OFFSET_SINCE_LAST_SPECIAL_WARP]
-    mov al, [ebp + W_CUR_MAP_WIDTH]
-    call MoveTileBlockMapPointerSouth
-    jmp .updateMapView
-.checkForMoveToNorthBlock:
-    cmp al, 0xFF
-    jne .refreshTileMap                  ; no block crossing → only resync collision grid
-    ; crossed into the block to the north
-    mov byte [ebp + W_Y_BLOCK_COORD], 1
-    dec byte [ebp + W_Y_OFFSET_SINCE_LAST_SPECIAL_WARP]
-    mov al, [ebp + W_CUR_MAP_WIDTH]
-    call MoveTileBlockMapPointerNorth
-
-.updateMapView:
-    call LoadCurrentMapView              ; rebuilds wSurroundingTiles AND refreshes wTileMap
-    jmp .scroll
-.refreshTileMap:
-    ; Non-crossing step: the player's sub-block coords just changed, so re-copy
-    ; wTileMap from the (unchanged) wSurroundingTiles with the new sub-block offset.
-    ; Without this, NPC collision reads a stale grid and walks into rendered walls.
-    call RefreshCollisionTileMap
-
-.scroll:
-    ; Sprite-shift loop: slide each NPC's screen position by 2*step pixels to
-    ; keep them world-anchored while the BG scrolls under the player.
-    ; Pret ref: engine/overworld/advance_player_sprite.asm lines 162-192.
-    push esi
-    mov bl, [ebp + W_SPRITE_PLAYER_Y_STEP_VECTOR]
-    add bl, bl                                          ; BL = 2 * Ystep (+2/-2/0)
-    mov cl, [ebp + W_SPRITE_PLAYER_X_STEP_VECTOR]
-    add cl, cl                                          ; CL = 2 * Xstep
-    mov esi, W_SPRITE_STATE_DATA_1 + 0x10 + SPRITESTATEDATA1_YPIXELS  ; slot 1 YPixels
-    mov edx, 15                                         ; 15 NPC/Pikachu slots
-.spriteShift:
-    mov al, [ebp + esi]
-    sub al, bl
-    mov [ebp + esi], al                                 ; YPixels -= 2*Ystep
-    mov al, [ebp + esi + 2]                             ; XPixels is YPIXELS+2 in data1
-    sub al, cl
-    mov [ebp + esi + 2], al                             ; XPixels -= 2*Xstep
-    add esi, 0x10                                       ; next slot
-    dec edx
-    jnz .spriteShift
-    pop esi
-    ; hSCY += 2*Yvec ; hSCX += 2*Xvec
-    mov al, [ebp + W_SPRITE_PLAYER_Y_STEP_VECTOR]
-    add al, al
-    add [ebp + H_SCY], al
-    mov al, [ebp + W_SPRITE_PLAYER_X_STEP_VECTOR]
-    add al, al
-    add [ebp + H_SCX], al
-
-    pop edx
-    pop ecx
-    pop ebx
-    pop eax
-    clc                                        ; CF=0 → no transition
-    ret
-
-.transitionExit:
-    ; CheckMapConnections set CF=1 → propagate up to caller
-    pop edx
-    pop ecx
-    pop ebx
-    pop eax
-    stc                                        ; CF=1 → transition occurred
-    ret
-
-; ---------------------------------------------------------------------------
-; MoveTileBlockMapPointer{East,West,South,North} — faithful translations.
-; Pret ref: engine/overworld/advance_player_sprite.asm
-;
-; Move wCurrentTileBlockMapViewPointer (the upper-left corner of the visible
-; block-map region) by one block in the given direction. South/North take the
-; row stride (wCurMapWidth + 2*MAP_BORDER) in AL on entry.
-; All registers except the pointer are preserved.
-; ---------------------------------------------------------------------------
-MoveTileBlockMapPointerEast:
-    push eax
-    mov al, [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR]
-    add al, 0x01
-    mov [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], al
-    jnc .done
-    inc byte [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR + 1]
-.done:
-    pop eax
-    ret
-
-MoveTileBlockMapPointerWest:
-    push eax
-    mov al, [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR]
-    sub al, 0x01
-    mov [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], al
-    jnc .done
-    dec byte [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR + 1]
-.done:
-    pop eax
-    ret
-
-MoveTileBlockMapPointerSouth:            ; AL = wCurMapWidth
-    push eax
-    push ebx
-    add al, MAP_BORDER * 2                ; AL = row stride
-    movzx ebx, al
-    mov al, [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR]
-    add al, bl
-    mov [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], al
-    jnc .done
-    inc byte [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR + 1]
-.done:
-    pop ebx
-    pop eax
-    ret
-
-MoveTileBlockMapPointerNorth:            ; AL = wCurMapWidth
-    push eax
-    push ebx
-    add al, MAP_BORDER * 2                ; AL = row stride
-    movzx ebx, al
-    mov al, [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR]
-    sub al, bl
-    mov [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], al
-    jnc .done
-    dec byte [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR + 1]
-.done:
-    pop ebx
-    pop eax
-    ret
-
 %ifdef DEBUG_SEAM
 section .data
 seam_seeded: db 0        ; EnterMap is re-entered per map transition; seed once
@@ -1115,166 +911,6 @@ h_load_sprite_temp1: db 0    ; pret hLoadSpriteTemp1
 h_load_sprite_temp2: db 0    ; pret hLoadSpriteTemp2
 
 section .text
-; ---------------------------------------------------------------------------
-; LoadTilesetHeader — dynamic dispatch via W_CUR_MAP_TILESET.
-; Pret ref: home/overworld.asm:LoadTilesetHeader
-; Copies current tileset gfx/blocks/coll from .data section → fixed EBP slots,
-; then sets g_tilecache_dirty so render_bg rebuilds the decoded-tile cache.
-; ---------------------------------------------------------------------------
-LoadTilesetHeader:
-    push eax
-    push ebx
-    push esi
-    push edi
-    push ecx
-
-    movzx eax, byte [ebp + W_CUR_MAP_TILESET]   ; tileset index 0-24
-
-    ; Copy tileset GFX to fixed EBP slot
-    mov esi, [TilesetGfxPtrs + eax*4]
-    lea edi, [ebp + OW_GFX_GBADDR]
-    mov ecx, [TilesetGfxSizes + eax*4]
-    rep movsb
-
-    ; Copy blockset to fixed EBP slot
-    mov esi, [TilesetBlocksPtrs + eax*4]
-    lea edi, [ebp + OW_BLOCKS_GBADDR]
-    mov ecx, [TilesetBlocksSizes + eax*4]
-    rep movsb
-
-    ; Copy collision list to fixed EBP slot (max 64 bytes, $FF-terminated)
-    mov esi, [TilesetCollPtrs + eax*4]
-    lea edi, [ebp + OW_COLL_GBADDR]
-    mov ecx, 64
-    rep movsb
-
-    ; Mark tile cache dirty — render_bg must rebuild decoded tiles
-    mov byte [g_tilecache_dirty], 1
-
-    ; Populate tileset header fields in WRAM.
-    ; TODO-HW: wTilesetBank is meaningless under flat memory (no ROM banking) —
-    ; left as a fixed no-op write, faithful in spirit to pret's CopyData'd bank
-    ; byte, but never consumed as a real bank switch. Pret ref: engine/overworld/
-    ; tilesets.asm (ld a,[hl] / ldh [hTileAnimations],a is the real 12th byte;
-    ; the bank byte itself is CopyData'd from Tilesets[0]).
-    mov byte [ebp + W_TILESET_BANK], 0x01  ; TODO-HW: banking no-op under flat memory
-    mov word [ebp + W_TILESET_BLOCKS_PTR], OW_BLOCKS_GBADDR
-    mov word [ebp + W_TILESET_GFX_PTR],   OW_GFX_GBADDR
-    mov word [ebp + W_TILESET_COLLISION_PTR],  OW_COLL_GBADDR
-    ; Per-tileset grass tile + tile-animation kind — pret ref: data/tilesets/
-    ; tileset_headers.asm (`tileset` macro \5/\6 fields), inlined below as
-    ; TilesetGrassTiles/TilesetAnimations (small pret data tables, EAX still
-    ; holds the 0-24 tileset index from the movzx above).
-    mov bl, [TilesetGrassTiles + eax]
-    mov [ebp + W_GRASS_TILE], bl
-    mov bl, [TilesetAnimations + eax]
-    mov [ebp + H_TILE_ANIMATIONS], bl
-
-    ; Per-tileset counter ("talking-over") tiles. pret copies these as bytes 7-9 of the
-    ; 12-byte tileset header (wTilesetTalkingOverTiles, 3 bytes; part of its $b-byte
-    ; CopyData in LoadTilesetHeader). Consumed by IsSpriteOrSignInFrontOfPlayer's
-    ; .counterTilesLoop to extend NPC talking range over Pokemart/Pokecenter counters.
-    ; Not yet read by the port's bespoke CheckNPCInteraction, but populated here so the
-    ; data is correct when talking-range-over-counter lands. Table inlined below;
-    ; EAX still holds the 0-24 tileset index (preserved through here for IsInArray).
-    lea edi, [eax + eax*2]                       ; EDI = tileset * 3 (row into the table)
-    mov bl, [TilesetCounterTiles + edi + 0]
-    mov [ebp + W_TILESET_TALKING_OVER_TILES + 0], bl
-    mov bl, [TilesetCounterTiles + edi + 1]
-    mov [ebp + W_TILESET_TALKING_OVER_TILES + 1], bl
-    mov bl, [TilesetCounterTiles + edi + 2]
-    mov [ebp + W_TILESET_TALKING_OVER_TILES + 2], bl
-
-    ; -----------------------------------------------------------------------
-    ; Pret tail — engine/overworld/tilesets.asm lines 21-47 (previously
-    ; silently omitted; see docs/current_plan_overworld_port.md OW-A.1).
-    ; Gates the warp-arrival sub-block alignment (wYBlockCoord/wXBlockCoord =
-    ; coord & 1) behind a dungeon-tileset check and a "did the tileset change"
-    ; compare, exactly as pret does.
-    ; -----------------------------------------------------------------------
-    mov edx, 1                          ; IsInArray entry stride (1 byte/tileset id)
-    mov esi, DungeonTilesets
-    call IsInArray                      ; AL (tileset id) still set from the movzx above
-    jc .dungeon                         ; pret: jr c, .dungeon
-
-    ; pret: ld a,[wCurMapTileset] / ld b,a / ldh a,[hPreviousTileset] / cp b / jr z,.done
-    mov bl, al                           ; BL = current tileset (AL untouched by IsInArray)
-    mov al, [ebp + H_PREVIOUS_TILESET]   ; HRAM union w/ hMapStride/hNSConnectionStripWidth — read-only here
-    cmp al, bl
-    je .done                            ; tileset unchanged and not a dungeon tileset — skip realignment
-
-.dungeon:
-    cmp byte [ebp + W_DESTINATION_WARP_ID], 0xFF
-    je .done                            ; pret: ld a,[wDestinationWarpID] / cp $ff / jr z,.done
-
-    call LoadDestinationWarpPosition     ; pret: call LoadDestinationWarpPosition
-    mov al, [ebp + W_Y_COORD]            ; pret: ld a,[wYCoord] / and $1 / ld [wYBlockCoord],a
-    and al, 1
-    mov [ebp + W_Y_BLOCK_COORD], al
-    mov al, [ebp + W_X_COORD]            ; pret: ld a,[wXCoord] / and $1 / ld [wXBlockCoord],a
-    and al, 1
-    mov [ebp + W_X_BLOCK_COORD], al
-
-.done:
-    pop ecx
-    pop edi
-    pop esi
-    pop ebx
-    pop eax
-    ret
-
-; ---------------------------------------------------------------------------
-; IsPlayerStandingOnDoorTile — check if the player's current tile is a door tile.
-; Returns CF=1 if yes, CF=0 otherwise (stair, ladder, or unknown tileset).
-; Reads W_CUR_MAP_TILESET, looks up DoorTileTable, then checks W_TILEMAP at
-; PLAYER_STANDING_ROW/COL (the tile directly under the player sprite).
-; All registers preserved.
-; Pret ref: engine/overworld/doors.asm:IsPlayerStandingOnDoorTile
-; ---------------------------------------------------------------------------
-IsPlayerStandingOnDoorTile:
-    push eax
-    push esi
-
-    movzx eax, byte [ebp + W_CUR_MAP_TILESET]
-    mov esi, DoorTileTable
-
-.search_tileset:
-    cmp byte [esi], 0xFF               ; end of table → tileset not listed
-    je .not_door
-    cmp byte [esi], al                 ; tileset match?
-    je .found_tileset
-    inc esi                            ; skip tileset byte, then scan past 0-terminated tile list
-.skip_tiles:
-    cmp byte [esi], 0
-    je .skip_done
-    inc esi
-    jmp .skip_tiles
-.skip_done:
-    inc esi                            ; skip the 0 terminator
-    jmp .search_tileset
-
-.found_tileset:
-    inc esi                            ; ESI now points at first tile ID for this tileset
-    movzx eax, byte [ebp + W_TILEMAP + PLAYER_STANDING_ROW * SCREEN_TILES_W + PLAYER_STANDING_COL]
-.check_tile:
-    cmp byte [esi], 0
-    je .not_door
-    cmp [esi], al
-    je .is_door
-    inc esi
-    jmp .check_tile
-
-.is_door:
-    pop esi
-    pop eax
-    stc
-    ret
-.not_door:
-    pop esi
-    pop eax
-    clc
-    ret
-
 ; ---------------------------------------------------------------------------
 ; CheckWarpTile — scan W_WARP_ENTRIES for a player coord match.
 ; Returns CF=1 if a warp matches; BL = resolved destination map ID;
@@ -1460,145 +1096,6 @@ LoadWarpDestination:
     pop eax
     ret
 
-; ---------------------------------------------------------------------------
-; Embedded overworld asset data (Phase 2 scaffold).
-; gen_overworld_assets.py regenerates these from source binaries.
-; ---------------------------------------------------------------------------
-
-section .data
-
-; Door tile IDs per tileset — pret ref: data/tilesets/door_tile_ids.asm
-; Format: tileset_id, tile_id..., 0  (one entry per tileset); 0xFF = end table.
-; IsPlayerStandingOnDoorTile scans this to decide whether the arrival tile
-; after a warp is a building entrance/exit (needs auto-walk) or a stair/ladder (skip).
-DoorTileTable:
-    db  0, 0x1B, 0x58, 0       ; OVERWORLD
-    db  2, 0x5E, 0             ; MART
-    db  3, 0x3A, 0             ; FOREST
-    db  8, 0x54, 0             ; HOUSE
-    db  9, 0x3B, 0             ; FOREST_GATE
-    db 10, 0x3B, 0             ; MUSEUM
-    db 12, 0x3B, 0             ; GATE
-    db 13, 0x1E, 0             ; SHIP
-    db 16, 0x04, 0x15, 0       ; INTERIOR
-    db 18, 0x1C, 0x38, 0x1A, 0 ; LOBBY
-    db 19, 0x1A, 0x1C, 0x53, 0 ; MANSION
-    db 20, 0x34, 0             ; LAB
-    db 22, 0x43, 0x58, 0x1B, 0 ; FACILITY
-    db 23, 0x3B, 0x1B, 0       ; PLATEAU
-    db 0xFF                     ; end
-
-; Dungeon-type tilesets — pret ref: data/tilesets/dungeon_tilesets.asm
-; (DungeonTilesets). $FF-terminated, stride 1 (searched by LoadTilesetHeader
-; via the shared IsInArray, src/home/array.asm).
-; Tileset ids per constants/tileset_constants.asm: FOREST=3, MUSEUM=10, SHIP=13,
-; CAVERN=17, LOBBY=18, MANSION=19, GATE=12, LAB=20, FACILITY=22, CEMETERY=15,
-; GYM=7.
-DungeonTilesets:
-    db 3            ; FOREST
-    db 10           ; MUSEUM
-    db 13           ; SHIP
-    db 17           ; CAVERN
-    db 18           ; LOBBY
-    db 19           ; MANSION
-    db 12           ; GATE
-    db 20           ; LAB
-    db 22           ; FACILITY
-    db 15           ; CEMETERY
-    db 7            ; GYM
-    db 0xFF         ; end
-
-; Per-tileset grass tile + tile-animation kind — pret ref: data/tilesets/
-; tileset_headers.asm (the `tileset` macro's \5 grass-tile / \6 TILEANIM_*
-; fields). Indexed by W_CUR_MAP_TILESET (0-24, constants/tileset_constants.asm
-; order); read by LoadTilesetHeader. TILEANIM_NONE=0, TILEANIM_WATER=1,
-; TILEANIM_WATER_FLOWER=2 (constants/map_data_constants.asm).
-TilesetGrassTiles:
-    db 0x52 ; 0  OVERWORLD
-    db 0xFF ; 1  REDS_HOUSE_1
-    db 0xFF ; 2  MART
-    db 0x20 ; 3  FOREST
-    db 0xFF ; 4  REDS_HOUSE_2
-    db 0xFF ; 5  DOJO
-    db 0xFF ; 6  POKECENTER
-    db 0xFF ; 7  GYM
-    db 0xFF ; 8  HOUSE
-    db 0xFF ; 9  FOREST_GATE
-    db 0xFF ; 10 MUSEUM
-    db 0xFF ; 11 UNDERGROUND
-    db 0xFF ; 12 GATE
-    db 0xFF ; 13 SHIP
-    db 0xFF ; 14 SHIP_PORT
-    db 0xFF ; 15 CEMETERY
-    db 0xFF ; 16 INTERIOR
-    db 0xFF ; 17 CAVERN
-    db 0xFF ; 18 LOBBY
-    db 0xFF ; 19 MANSION
-    db 0xFF ; 20 LAB
-    db 0xFF ; 21 CLUB
-    db 0xFF ; 22 FACILITY
-    db 0x45 ; 23 PLATEAU
-    db 0xFF ; 24 BEACH_HOUSE
-
-TilesetAnimations:
-    db 2 ; 0  OVERWORLD     TILEANIM_WATER_FLOWER
-    db 0 ; 1  REDS_HOUSE_1  TILEANIM_NONE
-    db 0 ; 2  MART
-    db 1 ; 3  FOREST        TILEANIM_WATER
-    db 0 ; 4  REDS_HOUSE_2
-    db 2 ; 5  DOJO          TILEANIM_WATER_FLOWER
-    db 0 ; 6  POKECENTER
-    db 2 ; 7  GYM           TILEANIM_WATER_FLOWER
-    db 0 ; 8  HOUSE
-    db 0 ; 9  FOREST_GATE
-    db 0 ; 10 MUSEUM
-    db 0 ; 11 UNDERGROUND
-    db 0 ; 12 GATE
-    db 1 ; 13 SHIP          TILEANIM_WATER
-    db 1 ; 14 SHIP_PORT     TILEANIM_WATER
-    db 0 ; 15 CEMETERY
-    db 0 ; 16 INTERIOR
-    db 1 ; 17 CAVERN        TILEANIM_WATER
-    db 0 ; 18 LOBBY
-    db 0 ; 19 MANSION
-    db 0 ; 20 LAB
-    db 0 ; 21 CLUB
-    db 1 ; 22 FACILITY      TILEANIM_WATER
-    db 1 ; 23 PLATEAU       TILEANIM_WATER
-    db 0 ; 24 BEACH_HOUSE
-
-; Per-tileset counter ("talking-over") tiles — pret ref: data/tilesets/
-; tileset_headers.asm (the `tileset` macro's \2 \3 \4 fields, "3 counter tiles").
-; 3 bytes per tileset ($FF = unused slot), indexed by W_CUR_MAP_TILESET * 3; copied
-; into wTilesetTalkingOverTiles by LoadTilesetHeader. These extend NPC talking range
-; over Pokemart/Pokecenter/etc. counter tiles (IsSpriteOrSignInFrontOfPlayer).
-TilesetCounterTiles:
-    db 0xFF, 0xFF, 0xFF ; 0  OVERWORLD
-    db 0xFF, 0xFF, 0xFF ; 1  REDS_HOUSE_1
-    db 0x18, 0x19, 0x1E ; 2  MART
-    db 0xFF, 0xFF, 0xFF ; 3  FOREST
-    db 0xFF, 0xFF, 0xFF ; 4  REDS_HOUSE_2
-    db 0x3A, 0xFF, 0xFF ; 5  DOJO
-    db 0x18, 0x19, 0x1E ; 6  POKECENTER
-    db 0x3A, 0xFF, 0xFF ; 7  GYM
-    db 0xFF, 0xFF, 0xFF ; 8  HOUSE
-    db 0x17, 0x32, 0xFF ; 9  FOREST_GATE
-    db 0x17, 0x32, 0xFF ; 10 MUSEUM
-    db 0xFF, 0xFF, 0xFF ; 11 UNDERGROUND
-    db 0x17, 0x32, 0xFF ; 12 GATE
-    db 0xFF, 0xFF, 0xFF ; 13 SHIP
-    db 0xFF, 0xFF, 0xFF ; 14 SHIP_PORT
-    db 0x12, 0xFF, 0xFF ; 15 CEMETERY
-    db 0xFF, 0xFF, 0xFF ; 16 INTERIOR
-    db 0xFF, 0xFF, 0xFF ; 17 CAVERN
-    db 0x15, 0x36, 0xFF ; 18 LOBBY
-    db 0xFF, 0xFF, 0xFF ; 19 MANSION
-    db 0xFF, 0xFF, 0xFF ; 20 LAB
-    db 0x07, 0x17, 0xFF ; 21 CLUB
-    db 0x12, 0xFF, 0xFF ; 22 FACILITY
-    db 0xFF, 0xFF, 0xFF ; 23 PLATEAU
-    db 0xFF, 0xFF, 0xFF ; 24 BEACH_HOUSE
-
 section .rodata
 
 ; per-map (music id, music ROM bank), indexed by map id — pret data/maps/songs.asm
@@ -1651,6 +1148,15 @@ global OVERWORLD_BLOCKS_SIZE             ; DrawTileBlock block-ID clamp (relocat
 ; npc_*_still.inc files removed — LoadNPCSpriteTiles reads both still and walk
 ; halves from the full 384-byte sheet in npc_sprite_data_table.inc.
 global MapHeaderPointers                  ; LoadMapHeader (relocated to src/home/overworld.asm)
+; per-tileset gfx/blockset/collision pointer + size tables, also from
+; assets/map_headers.inc — read by LoadTilesetHeader, which lives in its own pret
+; mirror (src/engine/overworld/tilesets.asm). This file owns the generated blob,
+; so it exports the four-plus-one symbols rather than the mirror re-%including it.
+global TilesetGfxPtrs
+global TilesetGfxSizes
+global TilesetBlocksPtrs
+global TilesetBlocksSizes
+global TilesetCollPtrs
 
 ; --- consumed by the relocated pret home/overworld.asm routines ---
 global DoSignInteraction
@@ -1661,7 +1167,4 @@ global seam_reseat
 global seam_seeded
 %include "assets/map_headers.inc"
 %include "assets/extra_includes.inc"
-
-
-
 
