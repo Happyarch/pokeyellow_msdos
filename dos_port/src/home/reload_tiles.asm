@@ -28,8 +28,8 @@ global ChooseFlyDestination
 extern DisableLCD                   ; src/video/lcd_control.asm
 extern EnableLCD                    ; src/video/lcd_control.asm
 extern LoadTextBoxTilePatterns      ; src/home/load_font.asm
-extern LoadCurrentMapView           ; src/engine/overworld/overworld.asm
-extern LoadTilesetTilePatternData   ; src/engine/overworld/overworld.asm
+extern LoadCurrentMapView           ; src/home/overworld.asm
+extern LoadTilesetTilePatternData   ; src/home/overworld.asm
 extern SwitchToMapRomBank           ; flat-model bank bookkeeping (see note)
 extern BankswitchCommon             ; src/home/bankswitch2.asm
 extern LoadTownMap_Fly              ; src/engine/items/town_map.asm

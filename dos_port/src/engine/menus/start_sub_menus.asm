@@ -22,10 +22,11 @@
 ; print now. A guard whose branch is kept but whose message is dropped is not a
 ; stub, it is a silently wrong screen.
 ;
-; What IS still deferred inside StartMenu_Pokemon's field-move dispatch: FLY only
-; (.canFly — ChooseFlyDestination is genuinely `missing`; the Town Map fly-target
-; UI). CUT was deferred on linkage and is now wired (overworld-events Stage 4):
-; .cut calls UsedCut for real. SURF reaches UseItem, whose ItemUseSurfboard is a
+; The field-move dispatch is now fully wired. FLY (.canFly) calls the real
+; ChooseFlyDestination (home/reload_tiles.asm → the linked Town Map fly-target UI,
+; src/engine/items/town_map.asm) and its armed BIT_FLY_WARP is consumed by
+; OverworldLoop → HandleFlyWarpOrDungeonWarp (overworld-events Stage 4). CUT
+; (.cut) calls UsedCut for real. SURF reaches UseItem, whose ItemUseSurfboard is a
 ; ret-stub owned by docs/current_plan_items.md, so it lands on pret's own refusal
 ; path rather than a port no-op.
 ;
@@ -158,6 +159,7 @@ extern IsSurfingAllowed              ; engine/overworld/field_move_messages.asm 
 extern PrintStrengthText              ; engine/overworld/field_move_messages.asm (now LINKED)
 extern UsedCut                        ; engine/overworld/cut.asm — predef UsedCut (.cut)
 extern Func_1510                     ; engine/overworld/pikachu.asm (relocated)
+extern ChooseFlyDestination          ; home/reload_tiles.asm — Town Map Fly UI wrapper
 extern DelayFrames                   ; video/frame.asm — BL = frame count
 extern Divide                        ; home/math.asm — hDividend/hDivisor, BH = byte count
 extern text_msgbox                   ; home/text.asm — active message-box projection
@@ -403,18 +405,23 @@ StartMenu_Pokemon:
     call PrintText
     jmp .loop
 .canFly:
-    ; DEVIATION{class=temporary; pret=engine/menus/start_sub_menus.asm:StartMenu_Pokemon; behavior=FLY returns to the party loop because ChooseFlyDestination is absent; evidence=project_state:ChooseFlyDestination reports missing; lifetime=until town-map fly-target UI lands}
-    ; ChooseFlyDestination is the ONE genuinely `missing`
-    ; routine in this whole dispatch — the Town Map fly-target UI (pret
-    ; engine/menus/town_map.asm). Everything after it here (BIT_FLY_WARP,
-    ; Func_1510, LoadFontTilePatterns, BIT_UNKNOWN_4_1) is linked and would work;
-    ; there is simply nowhere to fly to yet. pret's own indoor refusal falls back
-    ; to .loop, so this lands on a shape the player already sees.
-    ; TODO(town-map): port ChooseFlyDestination, then restore pret's tail:
-    ;   call ChooseFlyDestination / bit BIT_FLY_WARP,[wStatusFlags6] / jr nz →
-    ;   Func_1510 + .goBackToMap, else LoadFontTilePatterns + set BIT_UNKNOWN_4_1 +
-    ;   jp StartMenu_Pokemon.
-    jmp .loop
+    ; pret's real tail. ChooseFlyDestination (home/reload_tiles.asm) shows the Town
+    ; Map fly-target UI (LoadTownMap_Fly), arming wDestinationMap + BIT_FLY_WARP on an
+    ; A-press or leaving them clear on a B-cancel. The whole selector is linked
+    ; (src/engine/items/town_map.asm); OverworldLoop's idle branch consumes
+    ; BIT_FLY_WARP via HandleFlyWarpOrDungeonWarp on the next iteration.
+    call ChooseFlyDestination           ; call ChooseFlyDestination
+    mov al, [ebp + W_STATUS_FLAGS_6]    ; ld a, [wStatusFlags6]
+    test al, (1 << BIT_FLY_WARP)        ; bit BIT_FLY_WARP, a
+    jnz .flyChosen                      ; jr nz, .asm_5d4c
+    ; B-cancel: no destination chosen. Reload the font tiles the Town Map clobbered
+    ; (vChars1 shares them) and re-open the party menu.
+    call LoadFontTilePatterns           ; call LoadFontTilePatterns
+    or byte [ebp + W_STATUS_FLAGS_4], (1 << BIT_UNKNOWN_4_1)  ; set BIT_UNKNOWN_4_1,[wStatusFlags4]
+    jmp StartMenu_Pokemon               ; jp StartMenu_Pokemon
+.flyChosen:                             ; pret .asm_5d4c — destination armed
+    call Func_1510                      ; call Func_1510
+    jmp .goBackToMap                    ; jp .goBackToMap
 
 .cut:
     test al, (1 << BIT_CASCADEBADGE)
@@ -933,9 +940,8 @@ TrainerInfo_FarCopyData:
 ; its call site in DrawTrainerInfo). Stages PlayerPicFront (red.pic, 7×7) into
 ; GB scratch, decodes + merges it to GB_VCHARS2 (49 tiles at ids $00+), and
 ; places the tilemap at the upper-right (pret hlcoord 15,1, hStartTileID 0).
-; DEVIATION(pic): the placement is clamped to the on-screen columns (15-19) so
-; the 7-wide block does not wrap the 20-wide scratch; the VRAM shift in
-; DrawTrainerInfo keeps the faces' $20 range free exactly as pret.
+; DEVIATION{class=projection; pret=engine/menus/start_sub_menus.asm:DrawTrainerInfo; behavior=the 7-wide pic placement is clamped to the on-screen columns 15-19 so the block does not wrap the 20-wide tilemap scratch, where pret's hlcoord 15,1 writes all 7 columns into its own 20-wide wTileMap; evidence=the port's tilemap scratch for this screen is 20 columns wide and starts the pic at column 15, so columns 22-26 would wrap into the next row; lifetime=until this screen is rebuilt on the port's native 40-column surface}
+; The VRAM shift in DrawTrainerInfo keeps the faces' $20 range free exactly as pret.
 ; In: EBP = GB base.
 ; ---------------------------------------------------------------------------
 TrainerInfo_DisplayPlayerPic:
