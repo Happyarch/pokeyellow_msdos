@@ -599,34 +599,6 @@
       "port_file": "dos_port/src/engine/pokemon/evolution.asm",
       "why": "Scanner-reviewed 2026-07-15: EvolveMon from pret engine/movie/evolution.asm has its selected single non-stub definition at dos_port/src/engine/pokemon/evolution.asm; preserve this per-label split."
     },
-    "MoveTileBlockMapPointerEast": {
-      "port_file": "dos_port/src/engine/overworld/overworld.asm",
-      "why": "Scanner-reviewed 2026-07-15: MoveTileBlockMapPointerEast from pret engine/overworld/advance_player_sprite.asm has its selected single non-stub definition at dos_port/src/engine/overworld/overworld.asm; preserve this per-label split."
-    },
-    "MoveTileBlockMapPointerNorth": {
-      "port_file": "dos_port/src/engine/overworld/overworld.asm",
-      "why": "Scanner-reviewed 2026-07-15: MoveTileBlockMapPointerNorth from pret engine/overworld/advance_player_sprite.asm has its selected single non-stub definition at dos_port/src/engine/overworld/overworld.asm; preserve this per-label split."
-    },
-    "MoveTileBlockMapPointerSouth": {
-      "port_file": "dos_port/src/engine/overworld/overworld.asm",
-      "why": "Scanner-reviewed 2026-07-15: MoveTileBlockMapPointerSouth from pret engine/overworld/advance_player_sprite.asm has its selected single non-stub definition at dos_port/src/engine/overworld/overworld.asm; preserve this per-label split."
-    },
-    "MoveTileBlockMapPointerWest": {
-      "port_file": "dos_port/src/engine/overworld/overworld.asm",
-      "why": "Scanner-reviewed 2026-07-15: MoveTileBlockMapPointerWest from pret engine/overworld/advance_player_sprite.asm has its selected single non-stub definition at dos_port/src/engine/overworld/overworld.asm; preserve this per-label split."
-    },
-    "_AdvancePlayerSprite": {
-      "port_file": "dos_port/src/engine/overworld/overworld.asm",
-      "why": "Scanner-reviewed 2026-07-15: _AdvancePlayerSprite from pret engine/overworld/advance_player_sprite.asm has its selected single non-stub definition at dos_port/src/engine/overworld/overworld.asm; preserve this per-label split."
-    },
-    "PlayerStepOutFromDoor": {
-      "port_file": "dos_port/src/engine/overworld/overworld.asm",
-      "why": "Scanner-reviewed 2026-07-15: PlayerStepOutFromDoor from pret engine/overworld/auto_movement.asm has its selected single non-stub definition at dos_port/src/engine/overworld/overworld.asm; preserve this per-label split."
-    },
-    "IsPlayerStandingOnDoorTile": {
-      "port_file": "dos_port/src/engine/overworld/overworld.asm",
-      "why": "Scanner-reviewed 2026-07-15: IsPlayerStandingOnDoorTile from pret engine/overworld/doors.asm has its selected single non-stub definition at dos_port/src/engine/overworld/overworld.asm; preserve this per-label split."
-    },
     "PlayerJumpingYScreenCoords": {
       "port_file": "dos_port/src/engine/overworld/ledges.asm",
       "why": "Scanner-reviewed 2026-07-15: PlayerJumpingYScreenCoords from pret engine/overworld/player_animations.asm has its selected single non-stub definition at dos_port/src/engine/overworld/ledges.asm; preserve this per-label split."
@@ -658,10 +630,6 @@
     "_UpdateSprites": {
       "port_file": "dos_port/src/engine/overworld/movement.asm",
       "why": "Scanner-reviewed 2026-07-15: _UpdateSprites from pret engine/overworld/sprite_collisions.asm has its selected single non-stub definition at dos_port/src/engine/overworld/movement.asm; preserve this per-label split."
-    },
-    "LoadTilesetHeader": {
-      "port_file": "dos_port/src/engine/overworld/overworld.asm",
-      "why": "Scanner-reviewed 2026-07-15: LoadTilesetHeader from pret engine/overworld/tilesets.asm has its selected single non-stub definition at dos_port/src/engine/overworld/overworld.asm; preserve this per-label split."
     },
     "ResetPikachuOverworldStateFlag2": {
       "port_file": "dos_port/src/engine/overworld/pikachu.asm",
@@ -738,10 +706,6 @@
     "NamePointers": {
       "port_file": "dos_port/src/home/names.asm",
       "why": "Scanner-reviewed 2026-07-15: NamePointers from pret home/names2.asm has its selected single non-stub definition at dos_port/src/home/names.asm; preserve this per-label split."
-    },
-    "RunNPCMovementScript": {
-      "port_file": "dos_port/src/engine/overworld/overworld.asm",
-      "why": "Scanner-reviewed 2026-07-15: RunNPCMovementScript from pret home/npc_movement.asm has its selected single non-stub definition at dos_port/src/engine/overworld/overworld.asm; preserve this per-label split."
     },
     "ApplyPikachuMovementData": {
       "port_file": "dos_port/src/engine/overworld/pikachu.asm",
