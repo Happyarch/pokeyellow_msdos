@@ -1,5 +1,24 @@
 # Current Plan: Overworld Events — story scripts and interaction services
 
+> **Gate — re-run the STRICT linter, every time (rule change 2026-07-25).**
+> `dos_port/tools/lint_pret_labels` on its own is NOT sufficient and never was.
+> It does not gate on `legacy_annotation`, `stale_provider`, `local_shadow` or
+> `hand_encoded_text` — only `dos_port/tools/lint_pret_labels --strict-claims`
+> reports those, and nothing runs it for you.
+>
+> For every commit made under this plan:
+> 1. Record the strict finding counts **before** you start, per class.
+> 2. Run **both** `lint_pret_labels` and `lint_pret_labels --strict-claims`
+>    before committing.
+> 3. Compare per class. A class that grew is your regression to fix now, not
+>    the next agent's to discover. Moving a routine between files silently
+>    invalidates `extern` provider comments elsewhere in the tree, and that
+>    collateral is visible **only** under `--strict-claims`.
+>
+> Do not quote a finding count from this file, CLAUDE.md, AGENTS.md, a skill, or
+> a stigmergy memory as evidence that a class is clean — every one of those has
+> been wrong before. Re-measure it.
+
 Status: **the script/event foundation, sign milestone, Pallet Oak-intro
 state-machine code, core `DisplayTextID` dispatcher, all of Stage 3 (hidden
 interactions, hidden-item coords, ground-item pickup), and Stage 4's
@@ -307,9 +326,13 @@ owe the boulder and cut cutscenes their first actual execution.
       through `CopyVideoData` or `g_tilecache_dirty`.
       **Wired, NOT executed: the cut-animation / tree-tile-replacement must-hit is
       NOT met and cannot be met in the current build state — see the handoff.**
-- [ ] **Fly:** port `ChooseFlyDestination` on the linked Town Map foundation,
-      restore the existing warp tail, and verify destination selection through
-      arrival rather than stopping after flag arming.
+- [~] **Fly:** `ChooseFlyDestination` is ported and the `.canFly` warp tail is
+      restored; the Town Map fly-target UI, destination selection, the fly-away
+      LEAVE animation, and the wide-canvas bird trajectory all work live. **The
+      ARRIVAL still page-faults** in the `DEBUG_SEED_PARTY` harness — NOT met, and
+      suspected to be a debug-seed/new-game (title-screen) player-state artifact
+      rather than a Fly-logic bug. See the Fly-bullet handoff below. Uncommitted;
+      commit deferred until arrival verifies (needs the real title→new-game route).
 - [ ] **Surf:** ~~supply `IsSpriteInFrontOfPlayer2`~~ (DONE — the boulder bullet ported
       it as the long-range entry point of `IsSpriteInFrontOfPlayer`, in
       `src/engine/overworld/overworld.asm`; it is `linked` but has no caller yet.
@@ -565,6 +588,57 @@ pickup success/bag-full and itemfinder near/nothing. None are reachable in the c
 build state; all are honest deferrals, not claimed coverage. The one piece of *executable*
 evidence identified but not yet built is the `DEBUG_CUT` refusal-path harness (see the
 Cut handoff).
+### Stage 4 Fly-bullet handoff — 2026-07-17 (arrival OPEN, changes UNCOMMITTED)
+
+**What landed (in the working tree, gate-green, NOT committed).** `ChooseFlyDestination`
+ported into `dos_port/src/home/reload_tiles.asm` (res `BIT_NO_BATTLES`, tail-`jmp
+LoadTownMap_Fly` — a `farjp`→flat banking DEVIATION); `.canFly` tail restored in
+`start_sub_menus.asm` (`call ChooseFlyDestination` / test `BIT_FLY_WARP` / `LoadFontTilePatterns`+
+`set BIT_UNKNOWN_4_1`+`jmp StartMenu_Pokemon`, else `Func_1510`+`.goBackToMap`). `LoadTownMap_Fly`
+(the whole Town Map fly selector) was already a linked, faithful port. An `AUTOKEY_FLY`
+scripted-input harness was added (`debug_dump.asm` + Makefile `DEBUG_AUTOKEY=1 AUTOKEY_FLY=1`;
+also fixed the M-120-class hardcoded `AUTOKEY_DUMP_FRAME=160` in the DEBUG_AUTOKEY block).
+
+**Verified LIVE (user-driven headed DEBUG_SEED_PARTY):** Town Map opens on FLY, destination
+selection works, and after two downstream fixes the fly-away LEAVE animation plays with the
+bird sweeping the wide canvas. Static gate green throughout (lint 0; `faithdiff LoadTownMap_Fly`
+= only the two documented ADDED calls; `goldencheck overworld_pallet`+`sign_pallet` PASS).
+
+**Two downstream bugs this exposed (both PRE-EXISTING in the never-executed special-warp
+path), fixed:**
+1. **Crash on leave + no-warp — FIXED.** `LoadTownMap_Fly.pressedB` skipped `ExitTownMap`, so
+   the shared `W_TILEMAP` kept town-map tile IDs (≥ `MAP_TILESET_SIZE`) under the player;
+   the next `UpdateSprites` (via `.goBackToMap`→`RestoreScreenTilesAndReloadTilePatterns`→
+   `ReloadMapSpriteTilePatterns` tail-`jmp UpdateSprites`, BEFORE `CloseStartMenu`'s own
+   `RefreshCollisionTileMap`) hit `UpdatePlayerSprite.disable` → `image index = 0xFF` →
+   `InitFacingDirectionList`'s unbounded scan walked off GB memory (`cr2=0x5c2000`). Fix:
+   `LoadTownMap_Fly.pressedB` now calls `ExitTownMap` + `RefreshCollisionTileMap` (mirrors
+   `LoadTownMap_Nest`). `eax=0` in the fault dumps is CWSDPMI handler noise; the real index is `0xFF`.
+2. **Bird trajectory on the wide canvas — FIXED.** `DoFlyAnimation` writes GB-screen coords
+   into the slot-0 player sprite, which `PrepareOAMData` projects via signed `movsx +96` for
+   the 320-wide canvas — so the pret coord bytes `≥ 0x80` (X up to `0xA0`) sign-wrapped to a
+   negative canvas X (bird snapped to the left edge). Fix: rescaled the X columns of
+   `FlyAnimationScreenCoords1/2` + `FlyAnimationEnterScreenCoords` to `≤ 0x7F`
+   (`player_animations.asm`, projection DEVIATIONs).
+
+**STILL OPEN — the ARRIVAL page-faults.** After the leave animation plays, the warp arrival
+(`EnterMap`→`EnterMapAnim`→`InitFacingDirectionList`) still faults on a non-facing player
+image index. Applied the port's own standing-pose precedent (image index = facing dir, anim
+frame 0 — as in `map_sprites.asm:909` / `start_menu.asm:110`) at BOTH `EnterMapAnim` and
+`_LeaveMapAnim` entry (this is the SHARED special-warp path, so it is intended to also cover
+Teleport/Dig/Escape-Rope). **It did NOT stop the arrival fault.** Key contradiction to chase
+next: the player walks fine in the seed overworld, so `wSpritePlayerStateData1FacingDirection`
+(0xC109) IS a valid facing there — yet forcing image index from it doesn't prevent the arrival
+crash. That means either the fault is at a different `InitFacingDirectionList` call than
+assumed, or facing-dir/sprite state is specifically inconsistent on WARP ARRIVAL under the
+debug seed. The user's read: the `DEBUG_SEED_PARTY`/new-game boot (no real title→new-game
+route) leaves warp-arrival player state inconsistent — a proper title/new-game flow is the
+likely prerequisite to verify/fix, and is **deferred to a future session**. The next session
+should capture the arrival fault's exact `eip` in the current binary (addresses shifted after
+these edits) and read `0xC102`/`0xC109` at the crash before deciding whether the standing-pose
+additions are the right fix or should be reverted. `PrepareForSpecialWarp`/`SpecialEnterMap`
+(`special_warps.asm`) look complete and are NOT the suspect — they are simply never reached.
+
 - [ ] Retain the already-linked Flash, Dig, Teleport, and Softboiled paths, but
       add must-hit coverage when their observable behavior is first claimed.
       For Dig and the item-owned Escape Rope handler, this plan owns the
