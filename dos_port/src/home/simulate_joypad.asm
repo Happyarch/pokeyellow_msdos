@@ -25,8 +25,6 @@
 %include "gb_memmap.inc"
 %include "gb_macros.inc"
 
-global AreInputsSimulated
-global GetSimulatedInput
 global StartSimulatingJoypadStates
 global DecodeRLEList
 global DecodeArrowMovementRLE
@@ -45,40 +43,6 @@ section .text
 ; Out: hJoyHeld (and hJoyPressed/hJoyReleased on the zero-input edge) possibly rewritten
 ; Clobbers: AL, BL, ESI, flags
 ; ---------------------------------------------------------------------------
-AreInputsSimulated:
-    test byte [ebp + W_STATUS_FLAGS_5], (1 << BIT_SCRIPTED_MOVEMENT_STATE)
-    jz .ret                                   ; pret: bit .../ ret z — not simulating
-
-    ; if simulating: real presses in the override mask cancel the simulation this frame
-    mov bl, [ebp + H_JOY_HELD]                ; b = hJoyHeld
-    mov al, [ebp + W_OVERRIDE_SIMULATED_JOYPAD_STATES_MASK]
-    and al, bl
-    jnz .ret                                  ; overridden -> keep real input
-
-    call GetSimulatedInput                    ; CF=1 -> AL = next simulated state
-    jnc .doneSimulating                       ; CF=0 -> buffer drained
-
-    mov [ebp + H_JOY_HELD], al                ; inject simulated press
-    test al, al
-    jnz .ret                                  ; nonzero press: leave pressed/released alone
-    ; a == 0 (a queued "no buttons" frame): also clear pressed/released
-    mov byte [ebp + H_JOY_PRESSED], 0
-    mov byte [ebp + H_JOY_RELEASED], 0
-.ret:
-    ret
-
-; if done simulating button presses (pret: .doneSimulating)
-.doneSimulating:
-    mov byte [ebp + W_UNUSED_OVERRIDE_SIMULATED_JOYPAD_STATES_INDEX], 0
-    mov byte [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], 0
-    mov byte [ebp + W_SIMULATED_JOYPAD_STATES_END], 0
-    mov byte [ebp + W_JOY_IGNORE], 0
-    mov byte [ebp + H_JOY_HELD], 0
-    ; preserve only movement-flag bits 7,6,5,4,3 (SPINNING|LEDGE_OR_FISHING|5|4|3),
-    ; clearing STANDING_ON_DOOR|EXITING_DOOR|STANDING_ON_WARP (bits 2,1,0). pret mask 0xF8.
-    and byte [ebp + W_MOVEMENT_FLAGS], (1 << BIT_SPINNING) | (1 << BIT_LEDGE_OR_FISHING) | (1 << 5) | (1 << 4) | (1 << 3)
-    and byte [ebp + W_STATUS_FLAGS_5], ~(1 << BIT_SCRIPTED_MOVEMENT_STATE)
-    ret
 
 ; ---------------------------------------------------------------------------
 ; GetSimulatedInput — pop the next simulated joypad state off the buffer.
@@ -90,19 +54,6 @@ AreInputsSimulated:
 ; Out: CF=1 and AL = simulated state, if any remain; CF=0 (and AL=0) when drained.
 ; Clobbers: AL, ESI, flags
 ; ---------------------------------------------------------------------------
-GetSimulatedInput:
-    dec byte [ebp + W_SIMULATED_JOYPAD_STATES_INDEX]
-    mov al, [ebp + W_SIMULATED_JOYPAD_STATES_INDEX]
-    cmp al, 0xFF                              ; wrapped past 0 -> end of simulated input
-    je .endofsimulatedinputs
-    movzx esi, al                             ; e = index (d = 0)
-    add esi, W_SIMULATED_JOYPAD_STATES_END
-    mov al, [ebp + esi]                       ; a = [wSimulatedJoypadStatesEnd + index]
-    stc
-    ret
-.endofsimulatedinputs:
-    xor al, al                               ; pret: and a — AL=0, CF=0
-    ret
 
 ; ---------------------------------------------------------------------------
 ; StartSimulatingJoypadStates — arm scripted-movement input simulation.

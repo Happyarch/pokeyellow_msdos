@@ -47,30 +47,9 @@ extern RunNPCMovementScript         ; src/engine/overworld/overworld.asm
 
 section .text
 
-global RunMapScript
 global DefaultMapScript
 global CallFunctionInTable
 
-RunMapScript:
-    ; pret: push hl / push de / push bc around the boulder step, restored before
-    ; RunNPCMovementScript. TryPushingBoulder and the dust animation clobber freely.
-    push esi
-    push edx
-    push ebx
-    call TryPushingBoulder                   ; pret: farcall (banking elided)
-    mov al, [ebp + wMiscFlags]
-    test al, (1 << BIT_BOULDER_DUST)
-    jz .afterBoulderEffect                   ; jr z — no push happened this frame
-    call DoBoulderDustAnimation              ; pret: farcall (banking elided)
-.afterBoulderEffect:
-    pop ebx
-    pop edx
-    pop esi
-    call RunNPCMovementScript                ; pret home/overworld.asm:1725
-    ; TODO-HW: SwitchToMapRomBank — no-op under the flat address model.
-    movzx ecx, byte [ebp + wCurMap]
-    call dword [MapScriptPointers + ecx*4]   ; run this map's _Script (flat ptr)
-    ret
 
 ; Default _Script for maps without a ported one. Most pret map scripts that do
 ; nothing else are exactly `jp EnableAutoTextBoxDrawing`, so that is the faithful

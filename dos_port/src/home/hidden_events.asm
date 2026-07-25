@@ -27,8 +27,6 @@
 
 section .text
 
-global CopySignData
-global SignLoop
 global ArePlayerCoordsInArray
 global CheckCoords
 
@@ -55,34 +53,6 @@ W_COORD_INDEX   equ 0xD152   ; wCoordIndex  — PLACEHOLDER, sym-verify vs pret 
 ;      ESI advanced past the block.
 ; Preserves EAX (LoadMapHeader keeps its header cursor there) + EBX/ECX/EDI.
 ; ---------------------------------------------------------------------------
-CopySignData:
-    push eax
-    push ebx
-    push ecx
-    push edi
-    lea edi, [ebp + W_SIGN_COORDS]      ; de = wSignCoords
-    lea ebx, [ebp + W_SIGN_TEXT_IDS]    ; bc = wSignTextIDs
-    movzx ecx, byte [ebp + W_NUM_SIGNS]
-.loop:
-    mov al, [esi]                       ; sign Y
-    inc esi
-    mov [edi], al
-    inc edi
-    mov al, [esi]                       ; sign X
-    inc esi
-    mov [edi], al
-    inc edi
-    mov al, [esi]                       ; sign textID
-    inc esi
-    mov [ebx], al
-    inc ebx
-    dec ecx
-    jnz .loop
-    pop edi
-    pop ecx
-    pop ebx
-    pop eax
-    ret
 
 ; ---------------------------------------------------------------------------
 ; SignLoop — search for a sign at the coords the player is facing.
@@ -100,35 +70,6 @@ CopySignData:
 ;   facing coords into DH/DL, calls here, and on CF=1 hands [hTextID] to
 ;   DoSignInteraction → DisplaySignText (overworld_text.asm).
 ; ---------------------------------------------------------------------------
-SignLoop:
-    lea esi, [ebp + W_SIGN_COORDS]      ; hl = wSignCoords
-    mov cl, [ebp + W_NUM_SIGNS]         ; CL = remaining count (b)
-    xor ch, ch                          ; CH = 1-based index (c)
-.signLoop:
-    inc ch                              ; c++
-    mov al, [esi]                       ; sign Y
-    inc esi
-    cmp al, dh
-    je .yMatched
-    inc esi                             ; skip X
-    jmp .retry
-.yMatched:
-    mov al, [esi]                       ; sign X
-    inc esi
-    cmp al, dl
-    jne .retry
-    ; matched: text ID at wSignTextIDs[c-1]
-    movzx eax, ch
-    dec eax
-    mov al, [ebp + eax + W_SIGN_TEXT_IDS]
-    mov [ebp + hTextID], al
-    stc
-    ret
-.retry:
-    dec cl
-    jnz .signLoop
-    clc
-    ret
 
 ; ---------------------------------------------------------------------------
 ; ArePlayerCoordsInArray / CheckCoords — test whether coords are in a $ff-

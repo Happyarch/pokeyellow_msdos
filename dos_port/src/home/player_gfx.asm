@@ -39,13 +39,11 @@
 
 ; Map ids — constants/map_constants.asm
 %ifndef INDIGO_PLATEAU
-INDIGO_PLATEAU              equ 0x09
 %endif
 %ifndef ROUTE_17
 ROUTE_17                   equ 0x1C   ; Cycling Road
 %endif
 %ifndef ROUTE_23
-ROUTE_23                   equ 0x22
 %endif
 
 ; Tileset ids — constants/tileset_constants.asm (for BikeRidingTilesets)
@@ -67,22 +65,18 @@ CAVERN                     equ 17
 
 ; wStatusFlags6 bit — constants/ram_constants.asm
 %ifndef BIT_DUNGEON_WARP
-BIT_DUNGEON_WARP           equ 4
 %endif
 
 ; wPikachuSpawnStateFlags bit — constants/pikachu_emotion_constants.asm
 %ifndef BIT_PIKACHU_SPAWN_SURFING
-BIT_PIKACHU_SPAWN_SURFING  equ 6
 %endif
 
 ; WRAM addresses absent from the port memmap (pret ram/wram.asm).
 ;   wPikachuSpawnStateFlags and wd472 are adjacent; the "wd472" label is the
 ;   literal address $D472, so wPikachuSpawnStateFlags = $D471.
 %ifndef W_PIKACHU_SPAWN_STATE_FLAGS
-W_PIKACHU_SPAWN_STATE_FLAGS equ 0xD471
 %endif
 %ifndef W_D472
-W_D472                      equ 0xD472
 %endif
 ; (The old W_NPC_MOVEMENT_SCRIPT_POINTER_TABLE_NUM 0xCF17 placeholder is gone —
 ; its only consumer, DoBikeSpeedup, was retired to overworld.asm; the golden
@@ -105,19 +99,11 @@ extern player_sprite                ; == RedSprite (walking)
 ; ---------------------------------------------------------------------------
 ; Globals
 ; ---------------------------------------------------------------------------
-global LoadPlayerSpriteGraphics
-global LoadWalkingPlayerSpriteGraphics
-global LoadSurfingPlayerSpriteGraphics2
-global LoadSurfingPlayerSpriteGraphics
-global LoadBikePlayerSpriteGraphics
-global LoadPlayerSpriteGraphicsCommon
-global IsBikeRidingAllowed
-global ForceBikeOrSurf
 ; DoBikeSpeedup RETIRED → overworld.asm (OW-A.6; see note at its old body site)
-global StopBikeSurf
 
-PLAYER_HALF_TILES equ 12                       ; 12 tiles per VRAM half
-PLAYER_HALF_BYTES equ PLAYER_HALF_TILES * TILE_SIZE   ; 192 bytes ($C0)
+
+; called by the routines that moved to src/home/overworld.asm
+global BikeRidingTilesets
 
 section .text
 
@@ -128,81 +114,27 @@ section .text
 ; (0=standing, 1=biking, 2=surfing). If biking is not currently allowed the
 ; state is reset to standing first.
 ; ---------------------------------------------------------------------------
-LoadPlayerSpriteGraphics:
-    mov al, [ebp + W_WALK_BIKE_SURF_STATE]
-    dec al
-    jz .ridingBike                          ; state == 1
-
-    ; standing (or surfing): honor hTileAnimations gate as pret does
-    mov al, [ebp + H_TILE_ANIMATIONS]
-    test al, al
-    jnz .determineGraphics
-    jmp .startWalking
-
-.ridingBike:
-    ; If the bike can't be used here, start walking instead.
-    call IsBikeRidingAllowed                ; CF = biking allowed
-    jc .determineGraphics
-
-.startWalking:
-    xor al, al
-    mov [ebp + W_WALK_BIKE_SURF_STATE],      al
-    mov [ebp + W_WALK_BIKE_SURF_STATE_COPY], al
-    jmp LoadWalkingPlayerSpriteGraphics
-
-.determineGraphics:
-    mov al, [ebp + W_WALK_BIKE_SURF_STATE]
-    test al, al
-    jz LoadWalkingPlayerSpriteGraphics       ; 0 → walking
-    dec al
-    jz LoadBikePlayerSpriteGraphics          ; 1 → biking
-    dec al
-    jz LoadSurfingPlayerSpriteGraphics2      ; 2 → surfing
-    jmp LoadWalkingPlayerSpriteGraphics      ; fallback
 
 ; ---------------------------------------------------------------------------
 ; LoadWalkingPlayerSpriteGraphics
 ; Pret ref: home/overworld.asm:LoadWalkingPlayerSpriteGraphics
 ; ---------------------------------------------------------------------------
-LoadWalkingPlayerSpriteGraphics:
-    mov byte [ebp + W_D472], 0
-    mov esi, player_sprite                  ; RedSprite (walking) — DE in pret
-    jmp LoadPlayerSpriteGraphicsCommon
 
 ; ---------------------------------------------------------------------------
 ; LoadSurfingPlayerSpriteGraphics2
 ; Pret ref: home/overworld.asm:LoadSurfingPlayerSpriteGraphics2
 ; Picks Surfing-Pikachu vs. Seel graphics from wd472 / the Pikachu-spawn flag.
 ; ---------------------------------------------------------------------------
-LoadSurfingPlayerSpriteGraphics2:
-    mov al, [ebp + W_D472]
-    test al, al
-    jz .checkPikachu                        ; d472 == 0
-    dec al
-    jz LoadSurfingPlayerSpriteGraphics      ; d472 == 1
-    dec al
-    jz .surfPikachu                         ; d472 == 2
-.checkPikachu:
-    test byte [ebp + W_PIKACHU_SPAWN_STATE_FLAGS], (1 << BIT_PIKACHU_SPAWN_SURFING)
-    jz LoadSurfingPlayerSpriteGraphics
-.surfPikachu:
-    mov esi, SurfingPikachuSprite
-    jmp LoadPlayerSpriteGraphicsCommon
 
 ; ---------------------------------------------------------------------------
 ; LoadSurfingPlayerSpriteGraphics — Seel (surf without following Pikachu).
 ; Pret ref: home/overworld.asm:LoadSurfingPlayerSpriteGraphics
 ; ---------------------------------------------------------------------------
-LoadSurfingPlayerSpriteGraphics:
-    mov esi, SeelSprite
-    jmp LoadPlayerSpriteGraphicsCommon
 
 ; ---------------------------------------------------------------------------
 ; LoadBikePlayerSpriteGraphics — falls through to Common.
 ; Pret ref: home/overworld.asm:LoadBikePlayerSpriteGraphics
 ; ---------------------------------------------------------------------------
-LoadBikePlayerSpriteGraphics:
-    mov esi, RedBikeSprite
     ; fall through
 
 ; ---------------------------------------------------------------------------
@@ -215,20 +147,6 @@ LoadBikePlayerSpriteGraphics:
 ; 192 across the first copy exactly as pret advances DE by $C0.
 ; Clobbers: ESI, EDI, ECX, AL (faithful: GB clobbers HL/DE/BC/A).
 ; ---------------------------------------------------------------------------
-LoadPlayerSpriteGraphicsCommon:
-    mov byte [g_tilecache_dirty], 1         ; VRAM tile data changes → re-decode cache
-
-    ; standing tiles (0-11) → OBJ $00-$0B at $8000 (vNPCSprites)
-    lea edi, [ebp + GB_VCHARS0]
-    mov ecx, PLAYER_HALF_BYTES
-    rep movsb
-
-    ; walking tiles (12-23) → OBJ $80-$8B at $8800 (vChars1; shares vFont)
-    ; ESI is already at source+$C0 after the first copy (pret: add e,$C0).
-    lea edi, [ebp + GB_VFONT]
-    mov ecx, PLAYER_HALF_BYTES
-    rep movsb
-    ret
     ; NOTE (faithfulness): pret Common does NOT clear OAM. The old overworld.asm
     ; scaffold appended `call ClearSprites`; that is intentionally omitted here.
     ; If a caller relied on it, hoist the ClearSprites into the caller instead.
@@ -240,27 +158,6 @@ LoadPlayerSpriteGraphicsCommon:
 ; BikeRidingTilesets. Hand loop (pret does not use IsInArray here).
 ; Clobbers: AL, BH, ESI.
 ; ---------------------------------------------------------------------------
-IsBikeRidingAllowed:
-    mov al, [ebp + W_CUR_MAP]
-    cmp al, ROUTE_23
-    je .allowed
-    cmp al, INDIGO_PLATEAU
-    je .allowed
-
-    mov bh, [ebp + W_CUR_MAP_TILESET]       ; B = BH
-    mov esi, BikeRidingTilesets             ; HL → table
-.loop:
-    mov al, [esi]                           ; ld a,[hli]
-    inc esi
-    cmp al, bh
-    je .allowed
-    inc al                                  ; $FF terminator → 0 (ZF)
-    jnz .loop
-    clc                                     ; pret: `and a` → CF=0 (not allowed)
-    ret
-.allowed:
-    stc
-    ret
 
 ; ---------------------------------------------------------------------------
 ; ForceBikeOrSurf — force the current bike/surf graphics + music.
@@ -268,9 +165,6 @@ IsBikeRidingAllowed:
 ; Pret bank-switches to (bank-0) LoadPlayerSpriteGraphics then jumps to
 ; PlayDefaultMusic. Bank switch is a no-op in the flat model.
 ; ---------------------------------------------------------------------------
-ForceBikeOrSurf:
-    call LoadPlayerSpriteGraphics
-    jmp PlayDefaultMusic                     ; pret: jp PlayDefaultMusic (tail call)
 
 ; ---------------------------------------------------------------------------
 ; DoBikeSpeedup — RETIRED from this file (OW-A.6). The routine now links LIVE
@@ -284,16 +178,6 @@ ForceBikeOrSurf:
 ; StopBikeSurf — revert to walking; restore music if leaving a dungeon warp.
 ; Pret ref: home/overworld.asm:StopBikeSurf
 ; ---------------------------------------------------------------------------
-StopBikeSurf:
-    mov al, [ebp + W_WALK_BIKE_SURF_STATE]
-    test al, al
-    jz .done                                ; ret z (already walking)
-    mov byte [ebp + W_WALK_BIKE_SURF_STATE], 0
-    test byte [ebp + W_STATUS_FLAGS_6], (1 << BIT_DUNGEON_WARP)
-    jz .done                                ; ret z
-    call PlayDefaultMusic                    ; pret: call PlayDefaultMusic
-.done:
-    ret
 
 ; ---------------------------------------------------------------------------
 ; BikeRidingTilesets — data/tilesets/bike_riding_tilesets.asm (pret embeds it

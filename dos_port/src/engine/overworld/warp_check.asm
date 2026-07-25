@@ -28,23 +28,17 @@ bits 32
 ; --- Tileset IDs (constants/tileset_constants.asm) ------------------------
 ; The port's gb_constants.inc does not (yet) define these; kept local. OVERWORLD
 ; is 0 (tested via `test al,al`), so only the non-zero ones need symbols.
-TILESET_SHIP        equ 13          ; S.S. Anne interior
-TILESET_SHIP_PORT   equ 14          ; Vermilion Port
-TILESET_PLATEAU     equ 23          ; Route 23 / Indigo Plateau
 
 ; --- Map IDs (constants/map_constants.asm) --------------------------------
 ; These maps are not yet in the port's map set, so their branches simply never
 ; match today — but wiring them now is faithful and future-proof.
-MAP_ROCK_TUNNEL_1F      equ 0x52
-MAP_SS_ANNE_3F          equ 0x61
-MAP_ROCKET_HIDEOUT_B1F  equ 0xC7
-MAP_ROCKET_HIDEOUT_B2F  equ 0xC8
-MAP_ROCKET_HIDEOUT_B4F  equ 0xCA
 
 extern IsInArray                    ; src/home/array.asm — $FF-terminated flat search
 
-global ExtraWarpCheck
-global CheckIfInOutsideMap
+
+; called by the routines that moved to src/home/overworld.asm
+global IsPlayerFacingEdgeOfMap
+global IsWarpTileInFrontOfPlayer
 
 section .text
 
@@ -74,48 +68,6 @@ section .text
 ; 2 reads the already-populated wTileInFrontOfPlayer (see below), so no
 ; fallback to the old behavior is required.
 ; ---------------------------------------------------------------------------
-ExtraWarpCheck:
-    push eax
-    push ebx
-    push ecx
-    push edx
-    push esi
-
-    mov al, [ebp + W_CUR_MAP]
-    cmp al, MAP_SS_ANNE_3F
-    je .useFunction1
-    cmp al, MAP_ROCKET_HIDEOUT_B1F
-    je .useFunction2
-    cmp al, MAP_ROCKET_HIDEOUT_B2F
-    je .useFunction2
-    cmp al, MAP_ROCKET_HIDEOUT_B4F
-    je .useFunction2
-    cmp al, MAP_ROCK_TUNNEL_1F
-    je .useFunction2
-
-    mov al, [ebp + W_CUR_MAP_TILESET]
-    test al, al                     ; OVERWORLD (0) → function 2
-    jz .useFunction2
-    cmp al, TILESET_SHIP
-    je .useFunction2
-    cmp al, TILESET_SHIP_PORT
-    je .useFunction2
-    cmp al, TILESET_PLATEAU
-    je .useFunction2
-
-.useFunction1:
-    call IsPlayerFacingEdgeOfMap    ; sets CF
-    jmp .done
-.useFunction2:
-    call IsWarpTileInFrontOfPlayer  ; sets CF
-.done:
-    ; POP does not affect CF, so the helper's CF is returned intact.
-    pop esi
-    pop edx
-    pop ecx
-    pop ebx
-    pop eax
-    ret
 
 ; ---------------------------------------------------------------------------
 ; IsPlayerFacingEdgeOfMap (function 1)
@@ -207,13 +159,6 @@ IsWarpTileInFrontOfPlayer:
 ; inline test). Global so that consumer can switch to this when it is touched.
 ; Out: ZF=1 if outside, else ZF=0.  Clobbers AL only.
 ; ---------------------------------------------------------------------------
-CheckIfInOutsideMap:
-    mov al, [ebp + W_CUR_MAP_TILESET]
-    test al, al                     ; OVERWORLD → ZF=1
-    jz .ret
-    cmp al, TILESET_PLATEAU         ; PLATEAU  → ZF=1
-.ret:
-    ret
 
 ; ---------------------------------------------------------------------------
 ; Warp-carpet tile IDs — data/tilesets/warp_carpet_tile_ids.asm

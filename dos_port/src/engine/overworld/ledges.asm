@@ -51,11 +51,7 @@ PAD_ALL             equ 0xFF
 ; uses as its base (overworld.asm).
 STANDING_TILE_OFF   equ W_TILEMAP + PLAYER_STANDING_ROW * SCREEN_TILES_W + PLAYER_STANDING_COL
 
-global CheckForJumpingAndTilePairCollisions
-global CheckForTilePairCollisions2
-global CheckForTilePairCollisions
 global HandleLedges
-global HandleMidJump
 global _HandleMidJump
 global TilePairCollisionsLand
 global TilePairCollisionsWater
@@ -91,21 +87,11 @@ section .text
 ;   and a / ld a,[wMovementFlags] / bit BIT_LEDGE_OR_FISHING,a / ret nz
 ;   (falls into CheckForTilePairCollisions2)
 ; ---------------------------------------------------------------------------
-CheckForJumpingAndTilePairCollisions:
-    push esi                                       ; preserve the table ptr across HandleLedges
-    call HandleLedges                              ; may arm a ledge hop
-    pop esi
-    test byte [ebp + W_MOVEMENT_FLAGS], (1 << BIT_LEDGE_OR_FISHING)
-    jz  CheckForTilePairCollisions2               ; not jumping a ledge → run the tile-pair scan
-    clc                                            ; jumping a ledge → no tile-pair collision
-    ret
 
 ; ---------------------------------------------------------------------------
 ; CheckForTilePairCollisions2 — pret. Recomputes the standing tile, then falls
 ; through to CheckForTilePairCollisions.
 ; ---------------------------------------------------------------------------
-CheckForTilePairCollisions2:
-    mov dh, [ebp + STANDING_TILE_OFF]              ; DH = tile the player stands on (pret wTilePlayerStandingOn)
     ; fall through
 
 ; ---------------------------------------------------------------------------
@@ -123,48 +109,6 @@ CheckForTilePairCollisions2:
 ; `inc hl` so the following `jr nz` still tests the tile compare (x86 `inc` would
 ; clobber ZF, GB `inc hl` does not).
 ; ---------------------------------------------------------------------------
-CheckForTilePairCollisions:
-    mov cl, [ebp + W_TILE_IN_FRONT_OF_PLAYER]      ; c = tile in front
-.loop:
-    mov bl, [ebp + W_CUR_MAP_TILESET]              ; b = current tileset (pret re-reads each iter)
-    mov al, [esi]                                  ; entry tileset (hl→tile1)
-    inc esi
-    cmp al, 0xFF
-    je  .noMatch
-    cmp al, bl
-    je  .tilesetMatches
-    inc esi                                        ; skip tile1 (hl→tile2)
-.retry:
-    inc esi                                        ; skip tile2 (hl→next entry)
-    jmp .loop
-.tilesetMatches:
-    mov al, [esi]                                  ; tile1
-    cmp al, dh
-    je  .firstInPair
-    inc esi                                        ; hl→tile2
-    mov al, [esi]                                  ; tile2
-    cmp al, dh
-    je  .secondInPair
-    jmp .retry
-.firstInPair:
-    inc esi                                        ; hl→tile2
-    mov al, [esi]                                  ; tile2
-    cmp al, cl
-    je  .foundMatch
-    jmp .loop                                      ; (faithful: ESI left at tile2)
-.secondInPair:
-    dec esi                                        ; hl→tile1
-    mov al, [esi]                                  ; a = tile1 (hli)
-    inc esi                                        ; hl→tile2
-    cmp al, cl                                     ; compare tile1 vs front tile → sets ZF
-    lea esi, [esi + 1]                             ; hl→next entry (flag-preserving inc)
-    jne .loop
-.foundMatch:
-    stc
-    ret
-.noMatch:
-    clc
-    ret
 
 ; ---------------------------------------------------------------------------
 ; HandleLedges — engine/overworld/ledges.asm:HandleLedges.
@@ -234,12 +178,6 @@ HandleLedges:
 ; Called from the overworld frame loop (M7.1) each iteration. Advances the ledge-hop
 ; animation only while BIT_LEDGE_OR_FISHING is set.
 ; ---------------------------------------------------------------------------
-HandleMidJump:
-    test byte [ebp + W_MOVEMENT_FLAGS], (1 << BIT_LEDGE_OR_FISHING)
-    jz  .ret
-    call _HandleMidJump
-.ret:
-    ret
 
 ; ---------------------------------------------------------------------------
 ; _HandleMidJump — pret engine/overworld/player_animations.asm:_HandleMidJump.
