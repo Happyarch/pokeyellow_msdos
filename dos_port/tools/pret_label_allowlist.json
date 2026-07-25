@@ -35,10 +35,6 @@
       "port_file": "dos_port/src/engine/battle/core_damage.asm",
       "why": "pret engine/battle/core.asm split across port files (draft Session H)"
     },
-    "AdvancePlayerSprite": {
-      "port_file": "dos_port/src/engine/overworld/overworld.asm",
-      "why": "pret home/overworld.asm split across port files (draft Session H)"
-    },
     "AnyEnemyPokemonAliveCheck": {
       "port_file": "dos_port/src/engine/battle/faint_leaves.asm",
       "why": "pret engine/battle/core.asm split across port files (draft Session H)"
@@ -115,10 +111,6 @@
       "port_file": "dos_port/src/home/hidden_events.asm",
       "why": "engine/overworld/hidden_events.asm engine-side section (CheckForHiddenEvent, OW-3.3) consolidated into the home-primary port file src/home/hidden_events.asm (overworld-port plan, file-layout name-collision rule)"
     },
-    "CheckMapConnections": {
-      "port_file": "dos_port/src/engine/overworld/overworld.asm",
-      "why": "pret home/overworld.asm split across port files (draft Session H)"
-    },
     "ChooseNextMon": {
       "port_file": "dos_port/src/engine/battle/faint_switch.asm",
       "why": "pret engine/battle/core.asm split across port files (draft Session H)"
@@ -127,14 +119,6 @@
       "port_file": "dos_port/src/video/lcd_control.asm",
       "why": "pret home/vcopy.asm split across port files (draft Session H)"
     },
-    "CollisionCheckOnLand": {
-      "port_file": "dos_port/src/engine/overworld/overworld.asm",
-      "why": "pret home/overworld.asm split across port files (draft Session H)"
-    },
-    "CollisionCheckOnWater": {
-      "port_file": "dos_port/src/engine/overworld/overworld.asm",
-      "why": "pret home/overworld.asm split across port files (OW-A.6); lives beside CollisionCheckOnLand/OverworldLoop in the fused overworld.asm"
-    },
     "ConvertNPCMovementDirectionToJoypadMask": {
       "port_file": "dos_port/src/home/pathfinding.asm",
       "why": "engine/overworld/pathfinding.asm engine-side section (FindPathToPlayer et al., OW-2.2) consolidated into the home-primary port file src/home/pathfinding.asm (overworld-port plan, file-layout name-collision rule)"
@@ -142,10 +126,6 @@
     "ConvertNPCMovementDirectionsToJoypadMasks": {
       "port_file": "dos_port/src/home/pathfinding.asm",
       "why": "engine/overworld/pathfinding.asm engine-side section (FindPathToPlayer et al., OW-2.2) consolidated into the home-primary port file src/home/pathfinding.asm (overworld-port plan, file-layout name-collision rule)"
-    },
-    "CopyMapConnectionHeader": {
-      "port_file": "dos_port/src/engine/overworld/overworld.asm",
-      "why": "pret home/overworld.asm split across port files (draft Session H)"
     },
     "CopyString": {
       "port_file": "dos_port/src/home/vcopy.asm",
@@ -175,14 +155,6 @@
       "port_file": "dos_port/src/video/frame.asm",
       "why": "pret home/palettes.asm split across port files (draft Session H)"
     },
-    "DisableRegularSprites": {
-      "port_file": "dos_port/src/engine/overworld/overworld.asm",
-      "why": "pret home/overworld.asm split across port files (draft Session H)"
-    },
-    "DoBikeSpeedup": {
-      "port_file": "dos_port/src/engine/overworld/overworld.asm",
-      "why": "pret home/overworld.asm split across port files; OW-A.6 moved the real body here (linked, called from OverworldLoop .moveAhead) and retired the check-only player_gfx.asm copy"
-    },
     "DoUseNextMonDialogue": {
       "port_file": "dos_port/src/engine/battle/faint_switch.asm",
       "why": "pret engine/battle/core.asm split across port files (draft Session H)"
@@ -198,10 +170,6 @@
     "DrawPlayerHUDAndHPBar": {
       "port_file": "dos_port/src/engine/battle/battle_hud.asm",
       "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
-    "DrawTileBlock": {
-      "port_file": "dos_port/src/engine/overworld/overworld.asm",
-      "why": "pret home/overworld.asm split across port files (draft Session H)"
     },
     "EndLowHealthAlarm": {
       "port_file": "dos_port/src/audio/play_battle_music.asm",
@@ -222,10 +190,6 @@
     "EnemySendOutFirstMon": {
       "port_file": "dos_port/src/engine/battle/faint_sendout.asm",
       "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
-    "EnterMap": {
-      "port_file": "dos_port/src/engine/overworld/overworld.asm",
-      "why": "pret home/overworld.asm split across port files (draft Session H)"
     },
     "EvolutionAfterBattle": {
       "port_file": "dos_port/src/engine/pokemon/evolution.asm",
@@ -319,10 +283,6 @@
       "port_file": "dos_port/src/engine/battle/status_penalties.asm",
       "why": "pret engine/battle/core.asm split across port files (draft Session H)"
     },
-    "HandleBlackOut": {
-      "port_file": "dos_port/src/engine/overworld/overworld.asm",
-      "why": "pret home/overworld.asm split across port files; overworld.asm is the port's home/overworld.asm (wild-live promotion)"
-    },
     "HandleBuildingRage": {
       "port_file": "dos_port/src/engine/battle/building_rage.asm",
       "why": "pret engine/battle/core.asm split across port files (draft Session H)"
@@ -334,10 +294,6 @@
     "HandleExplodingAnimation": {
       "port_file": "dos_port/src/engine/battle/exploding_animation.asm",
       "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
-    "HandleFlyWarpOrDungeonWarp": {
-      "port_file": "dos_port/src/engine/overworld/overworld.asm",
-      "why": "pret home/overworld.asm split across port files; overworld.asm is the port's home/overworld.asm (same rationale as HandleBlackOut/StopBikeSurf, which sit beside it). Ported 2026-07-13 (blocker B1): it is the CONSUMER of the wStatusFlags6 FLY_WARP/DUNGEON_WARP bits that ItemUseEscapeRope/Dig/Fly set, and it lives next to its OverworldLoopLessDelay call site."
     },
     "HandlePlayerBlackOut": {
       "port_file": "dos_port/src/engine/battle/faint_switch.asm",
@@ -359,10 +315,6 @@
       "port_file": "dos_port/src/engine/battle/faint_switch.asm",
       "why": "pret engine/battle/core.asm split across port files (draft Session H)"
     },
-    "IgnoreInputForHalfSecond": {
-      "port_file": "dos_port/src/engine/overworld/overworld.asm",
-      "why": "pret home/overworld.asm split across port files (draft Session H)"
-    },
     "IncrementMovePP": {
       "port_file": "dos_port/src/engine/battle/mirror_move.asm",
       "why": "pret engine/battle/core.asm split across port files (draft Session H)"
@@ -370,10 +322,6 @@
     "InitMapSprites": {
       "port_file": "dos_port/src/engine/overworld/map_sprites.asm",
       "why": "pret home/palettes.asm split across port files (draft Session H)"
-    },
-    "InitSprites": {
-      "port_file": "dos_port/src/engine/overworld/overworld.asm",
-      "why": "pret home/overworld.asm split across port files (draft Session H)"
     },
     "IsGhostBattle": {
       "port_file": "dos_port/src/engine/battle/ghost.asm",
@@ -407,25 +355,9 @@
       "port_file": "dos_port/src/engine/battle/battle_menu.asm",
       "why": "pret engine/pokemon/evos_moves.asm split across port files (draft Session H)"
     },
-    "LeaveMapAnim": {
-      "port_file": "dos_port/src/engine/overworld/overworld.asm",
-      "why": "pret home/overworld.asm:778 (`farjp _LeaveMapAnim`) — a bank wrapper, kept as its own pret-named symbol so HandleFlyWarpOrDungeonWarp still matches pret line-for-line. Sits with its only caller, same split as HandleBlackOut."
-    },
     "LoadBattleMonFromParty": {
       "port_file": "dos_port/src/engine/battle/faint_leaves.asm",
       "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
-    "LoadCurrentMapView": {
-      "port_file": "dos_port/src/engine/overworld/overworld.asm",
-      "why": "pret home/overworld.asm split across port files (draft Session H)"
-    },
-    "LoadDestinationWarpPosition": {
-      "port_file": "dos_port/src/engine/overworld/overworld.asm",
-      "why": "pret home/overworld.asm split across port files (draft Session H)"
-    },
-    "LoadEastWestConnectionsTileMap": {
-      "port_file": "dos_port/src/engine/overworld/overworld.asm",
-      "why": "pret home/overworld.asm split across port files (draft Session H)"
     },
     "LoadEnemyMonData": {
       "port_file": "dos_port/src/engine/battle/load_enemy_mon_data.asm",
@@ -447,14 +379,6 @@
       "port_file": "dos_port/src/home/load_font.asm",
       "why": "pret engine/battle/core.asm split across port files (draft Session H)"
     },
-    "LoadMapData": {
-      "port_file": "dos_port/src/engine/overworld/overworld.asm",
-      "why": "pret home/overworld.asm split across port files (draft Session H)"
-    },
-    "LoadMapHeader": {
-      "port_file": "dos_port/src/engine/overworld/overworld.asm",
-      "why": "pret home/overworld.asm split across port files (draft Session H)"
-    },
     "LoadMonData": {
       "port_file": "dos_port/src/engine/pokemon/load_mon_data.asm",
       "why": "pret home/pokemon.asm split across port files (draft Session H)"
@@ -462,26 +386,6 @@
     "LoadMovePPs": {
       "port_file": "dos_port/src/engine/pokemon/write_moves.asm",
       "why": "pret engine/pokemon/add_mon.asm split across port files (draft Session H)"
-    },
-    "LoadNorthSouthConnectionsTileMap": {
-      "port_file": "dos_port/src/engine/overworld/overworld.asm",
-      "why": "pret home/overworld.asm split across port files (draft Session H)"
-    },
-    "LoadScreenRelatedData": {
-      "port_file": "dos_port/src/engine/overworld/overworld.asm",
-      "why": "pret home/overworld.asm split across port files (draft Session H)"
-    },
-    "LoadSprite": {
-      "port_file": "dos_port/src/engine/overworld/overworld.asm",
-      "why": "pret home/overworld.asm split across port files (draft Session H)"
-    },
-    "LoadTileBlockMap": {
-      "port_file": "dos_port/src/engine/overworld/overworld.asm",
-      "why": "pret home/overworld.asm split across port files (draft Session H)"
-    },
-    "LoadTilesetTilePatternData": {
-      "port_file": "dos_port/src/engine/overworld/overworld.asm",
-      "why": "pret home/overworld.asm split across port files (draft Session H)"
     },
     "MetronomePickMove": {
       "port_file": "dos_port/src/engine/battle/metronome.asm",
@@ -503,21 +407,9 @@
       "port_file": "dos_port/src/home/pathfinding.asm",
       "why": "engine/overworld/pathfinding.asm engine-side section (FindPathToPlayer et al., OW-2.2) consolidated into the home-primary port file src/home/pathfinding.asm (overworld-port plan, file-layout name-collision rule)"
     },
-    "OverworldLoop": {
-      "port_file": "dos_port/src/engine/overworld/overworld.asm",
-      "why": "pret home/overworld.asm split across port files (draft Session H)"
-    },
-    "OverworldLoopLessDelay": {
-      "port_file": "dos_port/src/engine/overworld/overworld.asm",
-      "why": "pret home/overworld.asm split across port files (draft Session H)"
-    },
     "PlayBattleVictoryMusic": {
       "port_file": "dos_port/src/audio/play_battle_music.asm",
       "why": "pret engine/battle/core.asm battle-music routine co-located with PlayBattleMusic in src/audio/play_battle_music.asm (battle-music consolidation)"
-    },
-    "PlayMapChangeSound": {
-      "port_file": "dos_port/src/engine/overworld/overworld.asm",
-      "why": "pret home/overworld.asm consolidated in overworld.asm (OW-A.14 P4c), alongside EnterMap/LoadMapHeader/IsPlayerStandingOnDoorTile"
     },
     "PlayMoveAnimation": {
       "port_file": "dos_port/src/engine/battle/animations.asm",
@@ -575,10 +467,6 @@
       "port_file": "dos_port/src/engine/battle/faint_sendout.asm",
       "why": "pret engine/battle/core.asm split across port files (draft Session H)"
     },
-    "ResetMapVariables": {
-      "port_file": "dos_port/src/engine/overworld/overworld.asm",
-      "why": "pret home/overworld.asm split across port files (draft Session H)"
-    },
     "RestoreScreenTilesAndReloadTilePatterns": {
       "port_file": "dos_port/src/home/fade.asm",
       "why": "pret home/palettes.asm split across port files (draft Session H)"
@@ -602,10 +490,6 @@
     "StartSimulatingJoypadStates": {
       "port_file": "dos_port/src/home/simulate_joypad.asm",
       "why": "pret home/map_objects.asm split across port files (draft Session H)"
-    },
-    "StopMusic": {
-      "port_file": "dos_port/src/engine/overworld/overworld.asm",
-      "why": "pret home/overworld.asm split across port files; overworld.asm is the port's home/overworld.asm (wild-live promotion) — StopMusic sits beside its only caller HandleBlackOut"
     },
     "TextScript_BillsPC": {
       "port_file": "dos_port/src/home/overworld_text.asm",
@@ -662,10 +546,6 @@
     "WriteMonMoves_ShiftMoveData": {
       "port_file": "dos_port/src/engine/pokemon/write_moves.asm",
       "why": "pret engine/pokemon/evos_moves.asm split across port files (draft Session H)"
-    },
-    "ZeroSpriteStateData": {
-      "port_file": "dos_port/src/engine/overworld/overworld.asm",
-      "why": "pret home/overworld.asm split across port files (draft Session H)"
     },
     "_AddPartyMon": {
       "port_file": "dos_port/src/engine/pokemon/add_party_mon.asm",
