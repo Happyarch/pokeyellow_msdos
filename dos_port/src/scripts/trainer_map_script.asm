@@ -45,7 +45,7 @@ MSP_HEADERS     equ 0
 MSP_POINTERS    equ 4
 MSP_CUR_SCRIPT  equ 8
 
-extern EnableAutoTextBoxDrawing              ; src/home/textbox.asm (pret home)
+extern EnableAutoTextBoxDrawing              ; src/home/window.asm (pret home/window.asm)
 extern ExecuteCurMapScriptInTable            ; src/home/trainers.asm
 extern TalkToTrainer                         ; src/home/trainers.asm
 extern TextScriptEnd                         ; src/home/overworld_text.asm

@@ -154,7 +154,7 @@ extern text_row_stride      ; src/home/text.asm — linked (GAME_SRCS); active
 ; player_gfx.asm (or at least ForceBikeOrSurf) is promoted to GAME_SRCS. Until
 ; then, this file must also be treated as check-only (or CheckForceBikeOrSurf
 ; carved out) — see the CLOSURE REPORT in the task write-up.
-extern ForceBikeOrSurf       ; src/home/player_gfx.asm
+extern ForceBikeOrSurf       ; src/home/overworld.asm
 
 ; CLOSURE: IsPlayerStandingOnDoorTile is defined in src/engine/overworld/
 ; overworld.asm (a LINKED file, GAME_SRCS) but is NOT declared `global` there
@@ -165,7 +165,7 @@ extern ForceBikeOrSurf       ; src/home/player_gfx.asm
 extern IsPlayerStandingOnDoorTile ; src/engine/overworld/overworld.asm — LINKED file, but NOT yet `global` there (link blocker; see CLOSURE)
 ; OW-4.1 CheckForCollisionWhenPushingBoulder deps:
 extern IsTilePassable                    ; home/copy2.asm — LINKED (returns CF)
-extern CheckForTilePairCollisions2       ; src/engine/overworld/ledges.asm — CHECK-ONLY (ESI=flat table, returns CF)
+extern CheckForTilePairCollisions2       ; src/home/overworld.asm — ESI=flat table, returns CF
 extern TilePairCollisionsLand            ; src/engine/overworld/ledges.asm — CHECK-ONLY (flat tile-pair table)
 ; CheckForBoulderCollisionWithSprites is defined below (pret player_state.asm — same file).
 

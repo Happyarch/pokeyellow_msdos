@@ -29,7 +29,7 @@ global ReloadMapSpriteTilePatterns
 extern DisableLCD                   ; src/video/lcd_control.asm
 extern EnableLCD                    ; src/video/lcd_control.asm
 extern InitMapSprites               ; src/engine/overworld/map_sprites.asm
-extern LoadPlayerSpriteGraphics     ; src/home/player_gfx.asm
+extern LoadPlayerSpriteGraphics     ; src/home/overworld.asm
 extern LoadFontTilePatterns         ; src/home/load_font.asm
 extern UpdateSprites                ; src/engine/overworld/movement.asm
 

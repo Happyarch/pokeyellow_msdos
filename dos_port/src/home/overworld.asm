@@ -2799,7 +2799,6 @@ LoadMapHeader:
     ; Per sign (3 bytes): Y, X, textID.  Y/X -> wSignCoords (interleaved pairs),
     ; textID -> wSignTextIDs.  When wNumSigns == 0 the copy is skipped and the
     ; cursor advance adds 0, so a sign-less map is byte-identical to before.
-    extern CopySignData                 ; src/home/hidden_events.asm
     mov bl, [eax]
     mov [ebp + W_NUM_SIGNS], bl
     inc eax                             ; EAX -> first sign entry (flat address)
