@@ -214,11 +214,17 @@ def main():
             "not set or update this approval")
 
     # ── mirror: translated at a non-mirrored path, not allowlisted ─────────
+    # dos_port/assets/ is exempt, and not as a loophole: the two-tier rule REQUIRES
+    # human-rendered text and other Tier-1 data to be emitted by a generator into
+    # assets/*.inc and %included. There is no dos_port/src/<pret path> for a
+    # generated stream to live at, so the mirror rule has nothing to say about it.
+    # The rule still governs every hand-written .asm, which is what it is for.
     open_structural = []
     for name, pret_file, port_file in cur.execute("""
             SELECT name, pret_file, port_file FROM labels
             WHERE status='translated'
               AND port_file != 'dos_port/src/' || pret_file
+              AND port_file NOT LIKE 'dos_port/assets/%'
             ORDER BY pret_file, name"""):
         known = structural_findings.get(name)
         if known and known.get('port_file') == port_file:
@@ -246,13 +252,39 @@ def main():
     # Globals AND file-local column-0 pret-named defs (the scan only records
     # locals for pret names, so generic local helpers can't fire this). A local
     # copy can't collide at link but silently masquerades as the label's home.
+    #
+    # Count DEFINITIONS, not declarations. `global Foo` in an .asm that %includes
+    # the assets/*.inc defining Foo is one symbol, not two — and since the scan
+    # started reading generated .inc files that pairing is the normal shape of
+    # every generated table, so counting the declaration would fire ~88 times on
+    # correct code. A `global` whose definition is nowhere in the scan is still
+    # counted, which preserves the pre-scan behaviour for includes we cannot see.
     for name, files in cur.execute("""
+            WITH defs AS (
+                SELECT name, file, is_global FROM port_defs WHERE defined_here=1
+                UNION ALL
+                SELECT p.name, p.file, p.is_global FROM port_defs p
+                 WHERE p.is_global=1 AND p.defined_here=0
+                   AND NOT EXISTS (SELECT 1 FROM port_defs q
+                                    WHERE q.name=p.name AND q.defined_here=1)
+            )
             SELECT name,
                    GROUP_CONCAT(file || CASE WHEN is_global=1
                                              THEN '' ELSE ' (local)' END, '  ')
-            FROM port_defs
-            WHERE is_global=1 OR defined_here=1
-            GROUP BY name HAVING COUNT(DISTINCT file) > 1
+            FROM defs
+            GROUP BY name
+            HAVING COUNT(DISTINCT file) > 1
+               -- Not a shadow when EVERY copy is a file-local definition in
+               -- generated data. This rule catches a name that means two things:
+               -- that needs either a link-level collision (which requires a
+               -- `global`) or a hand-written .asm claiming to be the label's
+               -- home. Per-TU local copies are how the generators deliberately
+               -- avoid a duplicate-symbol at final link (see
+               -- gen_overworld_strings' FIELD_MOVE_FAR comment), so flagging them
+               -- reports the pattern working as designed. Still fires the moment
+               -- either copy is made global, or any .asm defines the name.
+               AND NOT (MAX(is_global) = 0
+                        AND MIN(file LIKE 'dos_port/assets/%') = 1)
             ORDER BY name"""):
         add('dup_def', name, f"{name}: defined in {files}")
 
@@ -312,16 +344,20 @@ def main():
     #   * *_stubs.asm — the stub convention owns link-time stand-ins wherever
     #     the subsystem puts them (hidden_object_stubs.asm holds the four
     #     Mansion*Script_Switches stubs).
-    #   * Labels defined inside a generated assets/*.inc are invisible here:
-    #     scan_port walks .asm only, so a `global` emitted by a generator (the
-    #     <Map>TrainerHeaders tables) never reaches port_defs. Placement of
-    #     generated Tier-1 data is governed by its carrier file, not this rule.
+    #   * Labels defined inside a generated assets/*.inc. Placement of generated
+    #     Tier-1 data is governed by its carrier file, not this rule — a text
+    #     stream for AgathasRoom belongs in the generated dialog/trainer-header
+    #     table, not in dos_port/src/scripts/agathas_room.asm. This exemption used
+    #     to hold BY ACCIDENT (scan_port walked .asm only, so generated labels
+    #     never reached port_defs); the scan now reads assets/*.inc, so it is
+    #     stated explicitly. Without it the rule fires ~1300 times on correct data.
     SCRIPTS_DIR = 'dos_port/src/scripts/'
     for name, pret_file, expect, stems, file, line in cur.execute("""
             SELECT s.name, s.pret_file, s.expect_port_file, s.accept_stems,
                    d.file, d.line
             FROM script_labels s JOIN port_defs d ON d.name = s.name
             WHERE d.is_stub = 0
+              AND d.file NOT LIKE 'dos_port/assets/%'
             ORDER BY s.name, d.file"""):
         if not file.startswith(SCRIPTS_DIR):
             add('script_collision', f'{file}:{name}',

@@ -236,6 +236,70 @@ DIRECTIVE_RE = re.compile(
     r'^\s*(global|extern|section|segment|bits|align|cpu|default|use32'
     r'|%\w+|db|dw|dd|dq|incbin|resb|resw|resd|times\s+\d+\s+d[bwd]\b)', re.I)
 
+ASSETS_DIR = os.path.join(DOS_PORT, 'assets')
+
+def scan_generated_assets():
+    """Scan dos_port/assets/**/*.inc for label definitions.
+
+    Generated Tier-1 data (text streams, tables, tilesets) is emitted into
+    assets/*.inc and reaches the link through a %include in some .asm. The scan
+    used to walk dos_port/{boot,src}/**/*.asm only, so none of it was visible:
+    345 pret labels are defined here, 263 of which reported `missing` while their
+    bytes sat in the binary as `D` symbols. Worse, dup_def could not see them at
+    all, which is how a file-local `ret` stub in experience.asm shadowed the real
+    generated BoostedText/ExpPointsText streams with the linter exiting 0.
+
+    Returns port_defs-shaped rows. These are DATA: instr_count 0 and has_call 0,
+    so the code-shaped rules (non_ret_stub) cannot fire on them, and `section` is
+    recorded so call_into_data still catches anyone jumping into a table.
+
+    NOTE these files are generated and .gitignored, so a tree that has not run
+    `make assets` yields a smaller DB. That would silently change every headline
+    count, so an absent/empty assets tree is reported rather than shrugged off.
+    """
+    rows = []
+    if not os.path.isdir(ASSETS_DIR):
+        sys.stderr.write('update_label_db: WARNING dos_port/assets missing — '
+                         'generated data labels will read `missing`; run `make assets`\n')
+        return rows
+    n_files = 0
+    for dirpath, dirnames, filenames in os.walk(ASSETS_DIR):
+        dirnames.sort()
+        for fn in sorted(filenames):
+            if not fn.endswith('.inc'):
+                continue
+            n_files += 1
+            path = os.path.join(dirpath, fn)
+            rel  = os.path.relpath(path, REPO_ROOT).replace('\\', '/')
+            # An .inc may carry its own `section`; most are pulled in under the
+            # includer's .data. Default to .data — these are data assets.
+            cur_section = '.data'
+            globals_here = set()
+            seen = {}
+            for idx, raw in enumerate(read_lines(path)):
+                line = strip_comment(raw)
+                sm = SECTION_RE.match(line)
+                if sm:
+                    cur_section = sm.group(1).lower()
+                    continue
+                gm = GLOBAL_RE.match(line)
+                if gm:
+                    for name in gm.group(1).split(','):
+                        if name.strip():
+                            globals_here.add(name.strip())
+                    continue
+                m = LABEL_RE.match(line)
+                if m:
+                    seen.setdefault(m.group(1), (idx + 1, cur_section))
+            for name, (line_no, sec) in seen.items():
+                rows.append((name, rel, line_no, 0, int(name in globals_here),
+                             1, 0, 0, sec))
+    if not rows:
+        sys.stderr.write(f'update_label_db: WARNING no labels found in {n_files} '
+                         'assets/*.inc file(s) — run `make assets`\n')
+    return rows
+
+
 def scan_port(pret_names):
     """Scan dos_port/{boot,src}/**/*.asm.
 
@@ -1310,6 +1374,7 @@ def main():
     pret_labels, pret_calls = scan_pret()
     script_labels = scan_pret_scripts(set(pret_labels))
     port_defs, port_calls, port_externs = scan_port(set(pret_labels))
+    port_defs += scan_generated_assets()
     scanned_at, git_hash = git_stamp()
 
     # Build facts (S2): the complete textual call inventory above is kept for
@@ -1332,7 +1397,15 @@ def main():
         stubs   = sorted(d[1] for d in defs if d[3])
         if nonstub:
             mirror = mirror_path(pret_file)
-            glob_nonstub = sorted(d[1] for d in defs if not d[3] and d[4])
+            # A generated assets/*.inc definition is a real definition, but when a
+            # hand-written .asm also defines the label that .asm is its home — the
+            # .inc is where the bytes are emitted, not where the port keeps the
+            # routine. Sorting alone would pick 'dos_port/assets/…' every time.
+            def _prefer(paths):
+                src = [q for q in paths if not q.startswith('dos_port/assets/')]
+                return src or paths
+            nonstub = _prefer(nonstub)
+            glob_nonstub = _prefer(sorted(d[1] for d in defs if not d[3] and d[4]))
             if mirror in nonstub:
                 port_file = mirror
             elif glob_nonstub:
@@ -1355,6 +1428,14 @@ def main():
                                scanned_at, git_hash))
     for name in sorted(set(by_name) - set(pret_labels)):
         defs = by_name[name]
+        # Generated-data names that are NOT pret labels stay out of `labels`, for
+        # the same reason scan_pret_scripts keeps pret's scripts/ names in a side
+        # table: assets/*.inc holds ~7k emitted names (every DexEntry, EvosMoves,
+        # trainer header…) and admitting them would swamp the headline counts with
+        # rows the port never intends to model one-for-one. They remain in
+        # port_defs, so dup_def still sees them — which is the point of the scan.
+        if all(d[1].startswith('dos_port/assets/') for d in defs):
+            continue
         nonstub = sorted(d[1] for d in defs if not d[3])
         stubs   = sorted(d[1] for d in defs if d[3])
         label_rows.append((name, None,
