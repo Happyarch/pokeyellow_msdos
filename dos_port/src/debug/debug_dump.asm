@@ -142,7 +142,7 @@ extern LoadEnemyMonData               ; engine/battle/core.asm — real wild loa
 extern CalcStats                 ; home/move_mon.asm — stat recompute from the spec DVs
 extern CopyData                  ; home/copy_data.asm
 extern LoadFrontSpriteByMonIndex ; home/pics.asm — real enemy front pic
-extern LoadBattleMonFromParty    ; faint_leaves.asm — real send-out loader
+extern LoadBattleMonFromParty         ; engine/battle/core.asm — real send-out loader
 extern FlagAction                ; flag_action.asm
 extern DisplayBattleMenu         ; core.asm — real menu (parks in HandleMenuInput)
 extern LoadMonBackPic            ; home/pics.asm — sent-out mon's back pic

@@ -1389,14 +1389,10 @@ FRONTEND_SRCS := \
     src/engine/battle/core.asm \
     src/engine/battle/core_stubs.asm \
     src/engine/battle/counter.asm \
-    src/engine/battle/mirror_move.asm \
     src/engine/battle/metronome.asm \
-    src/engine/battle/print_critical_ohko.asm \
     src/engine/battle/display_effectiveness.asm \
     src/engine/battle/print_move_failure.asm \
-    src/engine/battle/ghost.asm \
     src/engine/battle/exploding_animation.asm \
-    src/engine/battle/residual_damage.asm \
     src/engine/battle/building_rage.asm \
     src/engine/battle/effects.asm \
     src/engine/battle/move_effect_helpers.asm \
@@ -1438,11 +1434,8 @@ FRONTEND_SRCS := \
     src/engine/overworld/emotion_bubbles.asm \
     src/engine/battle/trainer_ai.asm \
     src/engine/battle/read_trainer_party.asm \
-    src/engine/battle/faint_leaves.asm \
-    src/engine/battle/faint_switch.asm \
     src/engine/battle/faint_enemy.asm \
     src/engine/battle/load_enemy_from_party.asm \
-    src/engine/battle/faint_sendout.asm \
     src/engine/battle/end_of_battle.asm \
     src/engine/flag_action.asm
 

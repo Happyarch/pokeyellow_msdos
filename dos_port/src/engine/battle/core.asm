@@ -35,6 +35,12 @@ bits 32
 %define ANIM_OFF_DELAY 30              ; pret .animationsDisabled: ld c,30 / call DelayFrames
 ; carried in with CalculateDamage (was core_damage.asm)
 EFFECT_1E equ 0x1E                     ; unused move effect, special-cased in CalculateDamage
+; carried in with the unit-C faint/send-out cluster
+wPartyMon1HP      equ (wPartyMon1 + MON_HP)
+wPartyMon1Species equ wPartyMon1
+wEnemyMon1        equ wEnemyMons
+wEnemyMon1Level   equ (wEnemyMons + MON_LEVEL)
+MIRROR_MOVE       equ 0x4D
 
 ; battle menu geometry — the generated battle UI layout (Tier 1,
 ; assets/ui_layout_battle.inc ← ui_layout_battle_sidecar.json; edit with
@@ -123,11 +129,33 @@ global MoveHitTest
 global CalcHitChance
 global RandomizeDamage
 global AIGetTypeEffectiveness
+global AnyEnemyPokemonAliveCheck
+global ChooseNextMon
+global CriticalOHKOTextPointers
+global DoUseNextMonDialogue
+global EnemyRan
+global EnemySendOut
+global EnemySendOutFirstMon
+global HandlePlayerBlackOut
+global HandlePoisonBurnLeechSeed
+global HandlePoisonBurnLeechSeed_DecreaseOwnHP
+global HandlePoisonBurnLeechSeed_IncreaseEnemyHP
+global HasMonFainted
+global IncrementMovePP
+global IsGhostBattle
+global LoadBattleMonFromParty
+global MirrorMoveCopyMove
+global PrintCriticalOHKOText
+global PrintGhostText
+global ReloadMoveData
+global RemoveFaintedPlayerMon
+global ReplaceFaintedEnemyMon
+global SendOutMon
+global TrainerBattleVictory
 
 ; --- backend (already-faithful translations in other files) ---
 extern SelectEnemyMove                 ; select_enemy_move.asm
 extern TrainerAI                       ; trainer_ai.asm (CF if AI used item/switch)
-extern HandlePoisonBurnLeechSeed       ; residual_damage.asm (ZF if target fainted)
 
 ; --- draw primitives (category-D divergence point; battle_menu.asm draw helpers) ---
 extern DrawHUDsAndHPBars               ; (DrawBattleHUDs) HUDs + HP bars
@@ -181,15 +209,7 @@ extern GainExperience                  ; experience.asm — EXP award + level-up
 extern TryRunningFromBattle            ; battle_menu.asm — flee odds (CF = escaped)
 ; --- faint / switch lifecycle (battle-swarm-C) ---
 extern FaintEnemyPokemon               ; faint_enemy.asm — enemy-faint state + EXP(-ALL)
-extern RemoveFaintedPlayerMon          ; faint_switch.asm — player-faint state
 extern AnyPartyAlive                   ; wild_encounter_check.asm — DH=0 if no party alive
-extern AnyEnemyPokemonAliveCheck       ; faint_leaves.asm — ZF=1 if all enemy mons fainted
-extern HandlePlayerBlackOut            ; faint_switch.asm — no usable mons → CF=1
-extern DoUseNextMonDialogue            ; faint_switch.asm — "use next mon?" (CF=ran)
-extern ChooseNextMon                   ; faint_switch.asm — forced switch-in (ZF=enemy HP0)
-extern ReplaceFaintedEnemyMon          ; faint_sendout.asm — trainer sends next mon
-extern TrainerBattleVictory            ; faint_sendout.asm — prize money + victory text
-extern EnemyRan                        ; faint_switch.asm — enemy fled (link) tail
 
 ; --- pulled in with the session-8 consolidated bodies ---
 extern Moves                           ; src/data/pokemon_data.asm — flat move-record table
@@ -212,6 +232,17 @@ extern TypeEffects                     ; battle_data.asm — type-matchup table
 extern HighCriticalMoves               ; battle_data.asm — high-crit move list
 extern StatModifierRatios              ; battle_data.asm — stat-stage numerator/denominator
 extern CheckTargetSubstitute           ; substitute.asm
+
+; --- pulled in with the unit-C faint/send-out cluster ---
+extern AddBCD                          ; engine/math/bcd.asm
+extern ClearScreen                     ; home/copy2.asm
+extern ClearSprites                    ; home/sprites.asm
+extern IsItemInBag                     ; home/item_predicates.asm
+extern PrintEmptyString                ; battle_exp_stubs.asm (STUB)
+extern RunPaletteCommand               ; home/palettes.asm
+extern SkipFixedLengthTextEntries      ; home/array.asm
+extern SlideDownFaintedMonPic          ; core_stubs.asm (STUB)
+extern UpdateCurMonHPBar               ; move_effect_helpers.asm
 
 ; ---------------------------------------------------------------------------
 ; MainInBattleLoop — pret engine/battle/core.asm:MainInBattleLoop (line 289).
@@ -1050,11 +1081,8 @@ section .text
 ;   - PrintCriticalOHKOText, DisplayEffectiveness, HandleBuildingRage, move-failure text
 ; ---------------------------------------------------------------------------
 ; --- externs for the faithful ExecutePlayerMove flow (Stage 2.5) ---
-extern PrintGhostText                  ; ghost.asm (real)
 extern HandleCounterMove               ; counter.asm (real)
-extern MirrorMoveCopyMove              ; mirror_move.asm (real)
 extern MetronomePickMove               ; metronome.asm (real)
-extern PrintCriticalOHKOText           ; print_critical_ohko.asm (real)
 extern DisplayEffectiveness            ; display_effectiveness.asm (real)
 extern HandleExplodingAnimation        ; exploding_animation.asm (real)
 extern HandleBuildingRage              ; building_rage.asm (real)
@@ -4161,3 +4189,1020 @@ AIGetTypeEffectiveness:
     mov [ebp + wTypeEffectiveness], al
 .ret:
     ret
+
+
+; ---------------------------------------------------------------------------
+; The faint / send-out / residual-damage cluster — pret engine/battle/core.asm,
+; moved here from seven satellite port files (grind session 8, unit C). Each of
+; those files held nothing but pret core.asm labels, so all seven are gone.
+; Bodies moved by line range, not retyped.
+; ---------------------------------------------------------------------------
+
+
+; --- was src/engine/battle/faint_switch.asm ---
+
+; ===========================================================================
+; HasMonFainted — pret core.asm:HasMonFainted. Tests whether the mon at
+; wWhichPokemon has fainted; returns ZF=1 if fainted (HP == 0).
+; (pret also prints NoWillText when wFirstMonsNotOutYet==0; that text path is a
+; TODO — the ZF contract, which the switch loop reads, is exact.)
+; ===========================================================================
+HasMonFainted:
+    mov esi, wPartyMon1HP
+    mov bx, PARTYMON_STRUCT_LENGTH
+    mov al, [ebp + wWhichPokemon]
+    call AddNTimes                      ; esi -> this mon's HP word
+    mov al, [ebp + esi]
+    or  al, [ebp + esi + 1]             ; ZF=1 → fainted
+    ret
+
+; ===========================================================================
+; RemoveFaintedPlayerMon — pret core.asm:1015-1090. Clears the fainted mon's
+; gain-exp flag, resets the enemy's multi-attack + accumulated Bide damage,
+; sets wBattleResult=loss, and (only when called from HandlePlayerMonFainted,
+; i.e. wInHandlePlayerMonFainted==1) plays the cry + "<mon> fainted!" message.
+; Deferred (ANIMATION/audio/Yellow): low-health alarm, SlideDownFaintedMonPic
+; animation, PlayCry, ModifyPikachuHappiness.
+; ===========================================================================
+RemoveFaintedPlayerMon:
+    ; clear gain-exp flag for the fainted mon (pret: predef FlagActionPredef, FLAG_RESET)
+    mov cl, [ebp + wPlayerMonNumber]
+    mov esi, wPartyGainExpFlags
+    mov bh, FLAG_RESET
+    call FlagAction
+    ; res ATTACKING_MULTIPLE_TIMES on the enemy
+    and byte [ebp + wEnemyBattleStatus1], (~(1 << ATTACKING_MULTIPLE_TIMES)) & 0xFF
+    ; TODO-HW: low-health alarm (audio HAL, Phase 3).
+    ; a==0 here → zero the enemy's accumulated Bide damage (both bytes) + status
+    xor al, al
+    mov [ebp + wEnemyBideAccumulatedDamage + 0], al
+    mov [ebp + wEnemyBideAccumulatedDamage + 1], al
+    mov [ebp + wBattleMonStatus], al
+    call ReadPlayerMonCurHPAndStatus
+    call SlideDownFaintedMonPic          ; ANIMATION=OFF
+    mov byte [ebp + wBattleResult], 1    ; player lost (overwritten on later continue)
+    ; When both mons faint and the enemy faint was detected first, don't print /
+    ; cry (pret: called by HandleEnemyMonFainted with wInHandlePlayerMonFainted==0).
+    mov al, [ebp + wInHandlePlayerMonFainted]
+    and al, al
+    jz .ret
+    ; TODO-HW: PlayCry(wBattleMonSpecies) (audio HAL); Yellow ModifyPikachuHappiness.
+    mov eax, PlayerMonFaintedText
+    call PrintBattleText                 ; "<nick> fainted!"
+.ret:
+    ret
+
+; ===========================================================================
+; DoUseNextMonDialogue — pret core.asm:1091-1117. Trainer battles: no prompt,
+; return CF=0. Wild battles: pret asks "Use next Pokémon?" (Yes → switch, No →
+; try to run). Returns CF=1 if the player ran.
+; TODO(faithful): the wild Yes/No box (TWO_OPTION_MENU) + No→TryRunningFromBattle;
+; stubbed to "Yes" (CF=0 → proceed to the forced switch).
+; ===========================================================================
+DoUseNextMonDialogue:
+    call PrintEmptyString
+    call SaveScreenTilesToBuffer1
+    mov al, [ebp + wIsInBattle]
+    and al, al
+    dec al                               ; wIsInBattle==2 (trainer) → nz
+    jnz .noRun                           ; trainer: no prompt
+    ; wild: "Use next mon?" — defaulting to YES (switch). TODO: real Yes/No + run.
+.noRun:
+    clc                                  ; CF=0 → did not run
+    ret
+
+; ===========================================================================
+; ChooseNextMon — pret core.asm:1125-1167. Faithful state: clear the turn flag,
+; set wPlayerMonNumber, set the gain-exp + fought flags for the new mon, load it
+; into the battle-mon struct, send it out. Returns ZF from the enemy's HP word
+; (pret's contract, read by HandlePlayerMonFainted).
+; DEFERRAL: pret runs BATTLE_PARTY_MENU here; that interactive picker is the
+; deferred BattlePartyMenu sub-UI, so this auto-selects the first live party mon.
+; ===========================================================================
+ChooseNextMon:
+    ; find the first party slot with non-zero HP (AnyPartyAlive already guaranteed one)
+    movzx ebx, byte [ebp + wPartyCount]
+    xor eax, eax                         ; idx = 0
+.scanLoop:
+    mov esi, wPartyMon1HP
+    movzx edx, al
+    imul edx, edx, PARTYMON_STRUCT_LENGTH
+    add esi, edx
+    mov dl, [ebp + esi]
+    or  dl, [ebp + esi + 1]
+    jnz .found
+    inc al
+    dec bl
+    jnz .scanLoop
+    ; fallback (should be unreachable): keep idx 0
+    xor al, al
+.found:
+    mov [ebp + wWhichPokemon], al
+    mov [ebp + wPlayerMonNumber], al
+    mov byte [ebp + wActionResultOrTookBattleTurn], 0
+    ; set the gain-exp flag for the new mon (predef FlagActionPredef, FLAG_SET)
+    push eax
+    mov cl, al
+    mov esi, wPartyGainExpFlags
+    mov bh, FLAG_SET
+    call FlagAction
+    pop eax
+    ; set the fought-current-enemy flag for the new mon
+    push eax
+    mov cl, al
+    mov esi, wPartyFoughtCurrentEnemyFlags
+    mov bh, FLAG_SET
+    call FlagAction
+    pop eax
+    call LoadBattleMonFromParty
+    call SendOutMon
+    mov al, [ebp + wEnemyMonHP]
+    or  al, [ebp + wEnemyMonHP + 1]      ; ZF = enemy has 0 HP (pret return contract)
+    ret
+
+; ===========================================================================
+; SendOutMon — pret core.asm:1764+. Redraws the HUDs and resets the player-side
+; per-mon battle state for the incoming mon. ANIMATION=OFF: the send-out pic
+; animation / cry / palette command are deferred; the STATE resets are faithful.
+; ===========================================================================
+SendOutMon:
+    ; TODO-HW: PrintSendOutMonMessage ("Go! <mon>!" / audio).
+    call DrawHUDsAndHPBars               ; enemy + player HUD/HP (pret draws each)
+    xor al, al
+    mov [ebp + wBattleAndStartSavedMenuItem + 0], al
+    mov [ebp + wBattleAndStartSavedMenuItem + 1], al
+    mov [ebp + wBoostExpByExpAll], al
+    mov [ebp + wDamageMultipliers], al
+    mov [ebp + wPlayerMoveNum], al
+    mov [ebp + wPlayerUsedMove + 0], al
+    mov [ebp + wPlayerUsedMove + 1], al
+    mov [ebp + wPlayerStatsToDouble + 0], al
+    mov [ebp + wPlayerStatsToDouble + 1], al   ; StatsToHalve
+    mov [ebp + wPlayerBattleStatus1], al
+    mov [ebp + wPlayerBattleStatus2], al
+    mov [ebp + wPlayerBattleStatus3], al
+    mov [ebp + wPlayerDisabledMove], al
+    mov [ebp + wPlayerDisabledMoveNumber], al
+    mov [ebp + wPlayerMonMinimized], al
+    ; FIXED: pret is `ld b, SET_PAL_BATTLE / call RunPaletteCommand`. The port set
+    ; B NOT AT ALL and dispatched on whatever junk BX happened to hold — harmless only
+    ; while RunPaletteCommand ignored its argument, which stopped being true when the
+    ; palette engine landed. Ledger M-72.
+    mov bh, SET_PAL_BATTLE               ; ld b, SET_PAL_BATTLE
+    call RunPaletteCommand
+    and byte [ebp + wEnemyBattleStatus1], (~(1 << USING_TRAPPING_MOVE)) & 0xFF
+    ; ANIMATION=OFF: PlayMoveAnimation(POOF_ANIM) / AnimateSendingOutMon / Pikachu.
+    ret
+
+; ===========================================================================
+; HandlePlayerBlackOut — pret core.asm:1171-1204. Called when the player has no
+; usable mons. Prints the lose message, clears the screen, returns CF=1.
+; TODO(faithful): the OPP_RIVAL1 / OAKS_LAB starter-battle no-blackout special
+; case + link-lost text + SET_PAL_BATTLE_BLACK palette command.
+; ===========================================================================
+HandlePlayerBlackOut:
+    ; TODO-HW: RunPaletteCommand(SET_PAL_BATTLE_BLACK); PlayerBlackedOutText2.
+    call ClearScreen
+    stc                                  ; CF=1 → player blacked out
+    ret
+
+; ===========================================================================
+; EnemyRan — pret core.asm:263. Reached (single-player) only as the ReplaceFainted-
+; EnemyMon "ran" tail, which is link-only, so this is effectively a safety path:
+; restore the screen, note the fled enemy, end the battle.
+; ===========================================================================
+EnemyRan:
+    call LoadScreenTilesFromBuffer1
+    mov eax, WildRanText
+    call PrintBattleText
+    mov byte [ebp + wBattleResult], 0
+    ; ANIMATION=OFF: AnimationSlideEnemyMonOff.
+    ret
+
+; --- was src/engine/battle/faint_sendout.asm ---
+
+; ===========================================================================
+; EnemySendOut — pret core.asm:1315. Player-exp bookkeeping, then send out the
+; enemy's next live mon (faint path enters the .next scan with b=$ff).
+; ===========================================================================
+EnemySendOut:
+    ; pret: clear then set the active player mon's gain-exp + fought flags, so the
+    ; mon currently out earns EXP from the incoming enemy mon.
+    mov byte [ebp + wPartyGainExpFlags], 0
+    mov cl, [ebp + wPlayerMonNumber]
+    mov esi, wPartyGainExpFlags
+    mov bh, FLAG_SET
+    call FlagAction
+    mov byte [ebp + wPartyFoughtCurrentEnemyFlags], 0
+    mov cl, [ebp + wPlayerMonNumber]
+    mov esi, wPartyFoughtCurrentEnemyFlags
+    mov bh, FLAG_SET
+    call FlagAction
+EnemySendOutFirstMon:
+    ; clear enemy statuses (5 contiguous bytes) + disabled/minimized/used-move
+    xor al, al
+    mov [ebp + wEnemyStatsToDouble], al
+    mov [ebp + wEnemyStatsToHalve], al
+    mov [ebp + wEnemyBattleStatus1], al
+    mov [ebp + wEnemyBattleStatus2], al
+    mov [ebp + wEnemyBattleStatus3], al
+    mov [ebp + wEnemyDisabledMove], al
+    mov [ebp + wEnemyDisabledMoveNumber], al
+    mov [ebp + wEnemyMonMinimized], al
+    mov [ebp + wPlayerUsedMove], al
+    mov [ebp + wEnemyUsedMove], al
+    mov byte [ebp + wAICount], 0xFF             ; pret: dec a → $ff
+    and byte [ebp + wPlayerBattleStatus1], (~(1 << USING_TRAPPING_MOVE)) & 0xFF
+    ; ANIMATION=OFF: SlideTrainerPicOffScreen (trainer pic slide).
+    call PrintEmptyString
+    call SaveScreenTilesToBuffer1
+    ; TODO-HW: link-battle received-switch index (Phase 4).
+    ; --- find the next non-fainted enemy party mon (skip the current fainted slot) ---
+.next:
+    mov bh, 0xFF                                 ; b = $ff
+.next2:
+    inc bh
+    mov al, [ebp + wEnemyMonPartyPos]
+    cmp al, bh
+    je  .next2                                   ; skip the current (fainted) slot
+    mov al, bh                                   ; al = slot index (AddNTimes count)
+    mov [ebp + wWhichPokemon], al
+    mov esi, wEnemyMon1
+    push ebx                                      ; preserve the loop counter (BH)
+    mov bx, PARTYMON_STRUCT_LENGTH
+    call AddNTimes                               ; esi -> this mon's struct (clobbers BX/AL)
+    pop ebx
+    inc esi                                      ; -> HP word
+    mov al, [ebp + esi]
+    or  al, [ebp + esi + 1]
+    jz  .next2                                   ; fainted → try the next slot
+.next3:
+    ; wCurEnemyLevel = party-slot level
+    mov al, [ebp + wWhichPokemon]
+    mov esi, wEnemyMon1Level
+    mov bx, PARTYMON_STRUCT_LENGTH
+    call AddNTimes
+    mov al, [ebp + esi]
+    mov [ebp + wCurEnemyLevel], al
+    ; wEnemyMonSpecies2 / wCurPartySpecies = enemy party species list[idx]
+    mov al, [ebp + wWhichPokemon]
+    inc al
+    movzx ecx, al
+    mov al, [ebp + wEnemyPartyCount + ecx]       ; wEnemyPartyCount+(idx+1) = species
+    mov [ebp + wEnemyMonSpecies2], al
+    mov [ebp + wCurPartySpecies], al
+    call LoadEnemyMonFromParty                   ; sets wEnemyMonPartyPos, loads the struct
+    mov byte [ebp + wCurrentMenuItem], 1         ; pret: default (no player switch)
+    ; TODO(faithful): the BIT_BATTLE_SHIFT "TrainerAboutToUse / switch?" prompt +
+    ; the party-menu path + SwitchPlayerMon. Treated as SET mode (no prompt).
+.next4:
+    call ClearSprites
+    ; FIXED: pret is `ld b, SET_PAL_BATTLE / call RunPaletteCommand`; the port set B
+    ; not at all and dispatched on junk. See faint_switch.asm. Ledger M-72.
+    mov bh, SET_PAL_BATTLE                        ; ld b, SET_PAL_BATTLE
+    call RunPaletteCommand
+    ; ANIMATION=OFF: TrainerSentOutText + LoadMonFrontSprite + AnimateSendingOutMon + PlayCry.
+    call DrawHUDsAndHPBars                         ; ~ DrawEnemyHUDAndHPBar
+    ; pret: `ld a,[wCurrentMenuItem]; and a; ret nz` — always nz here (we never prompt
+    ; for a player switch), so the SwitchPlayerMon tail is unreachable and deferred.
+    ret
+
+; ===========================================================================
+; ReplaceFaintedEnemyMon — pret core.asm:901. Palette/pokéball redraw (stubbed),
+; then send out the next mon and reset the enemy move/AI bookkeeping. Returns ZF=0
+; (single-player never "runs"; the ZF=1 → EnemyRan path is link-only).
+; ===========================================================================
+ReplaceFaintedEnemyMon:
+    ; ANIMATION=OFF/palette: GetBattleHealthBarColor, OBP palettes, DrawEnemyPokeballs.
+    ; TODO-HW: link-battle LinkBattleExchangeData → LINKBATTLE_RUN → ret z (EnemyRan).
+    call EnemySendOut
+    mov byte [ebp + wEnemyMoveNum], 0
+    mov byte [ebp + wActionResultOrTookBattleTurn], 0
+    mov byte [ebp + wAILayer2Encouragement], 0
+    mov al, 1
+    and al, al                                     ; ZF=0 → sent out (did not run)
+    ret
+
+; ===========================================================================
+; TrainerBattleVictory — pret core.asm:929. Prize money + "defeated / money" text.
+; Music, ScrollTrainerPicAfterBattle, PrintEndBattleText, and the gym-leader/rival
+; music branches are deferred (audio/animation). wAmountMoneyWon was computed by
+; ReadTrainer at battle start.
+; ===========================================================================
+TrainerBattleVictory:
+    ; TODO-HW: PlayBattleVictoryMusic; ScrollTrainerPicAfterBattle; TrainerDefeatedText
+    ; (TrainerDefeatedText is not yet in the generated battle_text.inc).
+    mov eax, MoneyForWinningText
+    call PrintBattleText
+    ; win money: wPlayerMoney += wAmountMoneyWon (3-byte BCD). pret:
+    ;   ld de, wPlayerMoney+2 / ld hl, wAmountMoneyWon+2 / ld c,3 / predef AddBCDPredef.
+    ; Flat call to AddBCD (predef bank drop, §2 item 4): ESI=src LSB, EDX=dst LSB, CL=count.
+    mov esi, wAmountMoneyWon + 2
+    mov edx, W_PLAYER_MONEY + 2
+    mov cl, 3
+    call AddBCD
+    mov byte [ebp + wBattleResult], 0              ; player won
+    ret
+
+; --- was src/engine/battle/faint_leaves.asm ---
+
+; ---------------------------------------------------------------------------
+; AnyEnemyPokemonAliveCheck — pret engine/battle/core.asm:883-898
+;
+; Loops wEnemyPartyCount times over the enemy party, OR-ing the big-endian HP
+; word (2 bytes) of each mon at stride PARTYMON_STRUCT_LENGTH into AL. Returns
+; with ZF set from that accumulated AL (pret: `and a` / `ret` — ZF=1 means
+; every enemy mon's HP bytes were all zero, i.e. every mon has fainted; ZF=0
+; means at least one enemy mon is still alive). Caller is expected to
+; `jz`/`jnz` on return, per pret's "stores whether enemy ran in Z flag"-style
+; contract used throughout core.asm.
+;
+; In:  wEnemyPartyCount, wEnemyMon1HP..HP array (WRAM only). No caller-set
+;      registers required (pure GB-memory loop).
+; Out: ZF = all-fainted flag (1 = all fainted, matches pret `and a`/ret).
+;      AL clobbered (final OR accumulator, no defined meaning beyond ZF).
+;      ESI, ECX clobbered. EBX/EDX untouched.
+; ---------------------------------------------------------------------------
+AnyEnemyPokemonAliveCheck:
+    movzx ecx, byte [ebp + wEnemyPartyCount]   ; ld a,[wEnemyPartyCount] / ld b,a
+    xor al, al                                 ; xor a
+    mov esi, wEnemyMon1HP                      ; ld hl, wEnemyMon1HP (raw GB offset)
+.nextPokemon:
+    or al, [ebp + esi]                         ; or [hl]
+    inc esi                                    ; inc hl
+    or al, [ebp + esi]                         ; or [hl]
+    dec esi                                    ; dec hl
+    add esi, PARTYMON_STRUCT_LENGTH            ; add hl, de (de was a compile-time constant)
+    ; FIXED at integration: pret's counter is the 8-bit B (`dec b`), so a 0 count
+    ; (a wild battle: wEnemyPartyCount==0) wraps at 256 and stays inside GB RAM — benign.
+    ; This was widened to 32-bit `dec ecx`, so count 0 → ~4 billion iterations, walking
+    ; ESI off the ~96 KB allocation → page fault. Restore pret's 8-bit wrap with `dec cl`
+    ; (matches the sibling ChooseNextMon's `dec bl`). Reached only via a wild faint that
+    ; shouldn't hit this routine at all — see the wIsInBattle-guard TODO below.
+    dec cl                                     ; dec b (8-bit: count 0 wraps at 256, bounded)
+    jnz .nextPokemon                           ; jr nz, .nextPokemon
+    test al, al                                ; and a — sets ZF from AL, AL unchanged
+    ret
+
+; ---------------------------------------------------------------------------
+; LoadBattleMonFromParty — pret engine/battle/core.asm:1667-1708
+; "copies from party data to battle mon data when sending out a new player mon"
+;
+; Faithful chunked copy. GEN-2 FORWARD-COMPAT (CLAUDE.md, load-bearing): the
+; party struct's offset 7 (MON_CATCH_RATE, aka held-item slot after a Gen1<->
+; Gen2 trade) must never be clobbered by this routine. It never is: every
+; CopyData call below only *reads* the party struct as a source; the byte at
+; source offset 7 is read (as part of the first 12-byte species..moves chunk,
+; core.asm:1673-1674) but never written back into the party struct. The
+; `add hl, MON_DVS - MON_OTID` (core.asm:1675-1676) skips the source cursor
+; over the party-only OTID/Exp/StatExp region (offsets 12-26, absent from the
+; battle-mon struct) so the *next* chunk copy resumes at the party struct's
+; DVs field (offset 27) — it does not re-touch offset 7. Preserved exactly,
+; chunk-for-chunk, per the task brief: do not collapse this into one copy.
+;
+; In:  wWhichPokemon = party index of the mon being sent out (WRAM only).
+;      No caller-set registers required.
+; Out: wBattleMon* struct populated; wCurSpecies/wMonHeader set via
+;      GetMonHeader; wPlayerMonUnmodifiedLevel..stats block set; burn/
+;      paralysis + badge boosts applied; wPlayerMonAttackMod..(+7) reset to
+;      the default stat modifier ($7). All GP registers clobbered (matches
+;      pret: no register state is preserved across this routine acting as a
+;      call boundary with several nested calls).
+; ---------------------------------------------------------------------------
+LoadBattleMonFromParty:
+    ; --- hl = wPartyMon1Species + wWhichPokemon * PARTYMON_STRUCT_LENGTH ---
+    mov al, [ebp + wWhichPokemon]              ; ld a, [wWhichPokemon]
+    mov bx, PARTYMON_STRUCT_LENGTH              ; ld bc, PARTYMON_STRUCT_LENGTH
+    mov esi, wPartyMon1Species                  ; ld hl, wPartyMon1Species
+    call AddNTimes                              ; hl = party mon base (raw GB offset)
+
+    ; --- species..moves (12 bytes, core.asm:1673-1674) — includes offset 7
+    ;     (MON_CATCH_RATE) as a READ-ONLY source byte; see header note. ---
+    mov edx, wBattleMonSpecies                  ; ld de, wBattleMonSpecies
+    mov bx, wBattleMonDVs - wBattleMonSpecies    ; ld bc, wBattleMonDVs - wBattleMonSpecies
+    call CopyData                                ; hl/de both advance by 12
+
+    ; --- skip party-only OTID/Exp/StatExp (core.asm:1675-1676) ---
+    add esi, MON_DVS - MON_OTID                  ; ld bc, MON_DVS - MON_OTID / add hl, bc
+
+    ; --- DVs word (core.asm:1677-1679) ---
+    mov edx, wBattleMonDVs                       ; ld de, wBattleMonDVs
+    mov bx, MON_PP - MON_DVS                     ; ld bc, MON_PP - MON_DVS
+    call CopyData
+
+    ; --- PP, 4 bytes (core.asm:1680-1682) ---
+    mov edx, wBattleMonPP                        ; ld de, wBattleMonPP
+    mov bx, NUM_MOVES                            ; ld bc, NUM_MOVES
+    call CopyData
+
+    ; --- Level + 5 stats, 11 bytes (core.asm:1683-1685) ---
+    mov edx, wBattleMonLevel                     ; ld de, wBattleMonLevel
+    mov bx, wBattleMonPP - wBattleMonLevel        ; ld bc, wBattleMonPP - wBattleMonLevel
+    call CopyData
+
+    ; --- header lookup: wCurSpecies = wBattleMonSpecies2; call GetMonHeader ---
+    mov al, [ebp + wBattleMonSpecies2]           ; ld a, [wBattleMonSpecies2]
+    mov [ebp + wCurSpecies], al                  ; ld [wCurSpecies], a
+    call GetMonHeader
+
+    ; --- nickname copy: skip wPlayerMonNumber NAME_LENGTH entries, then copy ---
+    mov esi, wPartyMonNicks                      ; ld hl, wPartyMonNicks
+    mov al, [ebp + wPlayerMonNumber]             ; ld a, [wPlayerMonNumber]
+    call SkipFixedLengthTextEntries              ; hl += NAME_LENGTH * a
+    mov edx, wBattleMonNick                      ; ld de, wBattleMonNick
+    mov bx, NAME_LENGTH                          ; ld bc, NAME_LENGTH
+    call CopyData
+
+    ; --- snapshot unmodified level+stats block (1 + NUM_STATS*2 bytes) ---
+    mov esi, wBattleMonLevel                     ; ld hl, wBattleMonLevel
+    mov edx, wPlayerMonUnmodifiedLevel            ; ld de, wPlayerMonUnmodifiedLevel
+    mov bx, 1 + NUM_STATS * 2                    ; ld bc, 1 + NUM_STATS * 2
+    call CopyData
+
+    ; --- burn/paralysis penalties + badge boosts ---
+    call ApplyBurnAndParalysisPenaltiesToPlayer
+    call ApplyBadgeStatBoosts
+
+    ; --- reset the 8 stat mods (wPlayerMonAttackMod..) to the default $7 ---
+    mov al, 7                                    ; ld a, $7
+    mov ecx, NUM_STAT_MODS                       ; ld b, NUM_STAT_MODS
+    mov esi, wPlayerMonAttackMod                  ; ld hl, wPlayerMonAttackMod
+.statModLoop:
+    mov [ebp + esi], al                          ; ld [hli], a
+    inc esi
+    dec ecx                                      ; dec b
+    jnz .statModLoop                             ; jr nz, .statModLoop
+    ret
+
+; --- was src/engine/battle/residual_damage.asm ---
+
+; ===========================================================================
+; HandlePoisonBurnLeechSeed
+;
+; Called at end of each turn to apply Poison/Burn/Leech-Seed residual damage.
+; hWhoseTurn selects which mon's residuals are processed:
+;   0 = player's turn → process player mon's residuals (wBattleMonHP/Status)
+;   1 = enemy's turn  → process enemy mon's residuals  (wEnemyMonHP/Status)
+;
+; Returns: ZF=0, AL≠0  — mon still alive
+;          ZF=1, AL=0  — mon fainted (HP became 0)
+;
+; pret: engine/battle/core.asm:HandlePoisonBurnLeechSeed (line 479)
+; ===========================================================================
+HandlePoisonBurnLeechSeed:
+    ; Select HP pointer (ESI=HL) and status byte address (EDX=DE).
+    mov esi, wBattleMonHP
+    mov edx, wBattleMonStatus
+    mov al, [ebp + hWhoseTurn]
+    test al, al
+    jz .playersTurn
+    mov esi, wEnemyMonHP
+    mov edx, wEnemyMonStatus
+.playersTurn:
+
+    ; ── Burn / Poison check ─────────────────────────────────────────────────
+    mov al, [ebp + edx]
+    and al, (1 << BRN) | (1 << PSN)
+    jz .notBurnedOrPoisoned
+
+    ; Select text label: default to poison text, override to burn if BRN bit set.
+    ; (pret loads HurtByPoisonText first, then conditionally overwrites with
+    ;  HurtByBurnText if the BRN flag is present — BRN bit is higher than PSN.)
+    push esi                        ; save HP pointer around PrintText call
+    mov esi, HurtByPoisonText
+    mov al, [ebp + edx]
+    test al, (1 << BRN)
+    jz .poisoned
+    mov esi, HurtByBurnText
+.poisoned:
+    call PrintText                  ; deferred UI — print hurt-by-burn/poison text
+
+    ; Play burn/poison animation (wAnimationType=0 = move animation type).
+    xor al, al
+    mov [ebp + wAnimationType], al
+    mov al, BURN_PSN_ANIM
+    call PlayMoveAnimation          ; deferred UI — AL = animation ID
+
+    pop esi                         ; restore HP pointer
+    call HandlePoisonBurnLeechSeed_DecreaseOwnHP
+
+.notBurnedOrPoisoned:
+    ; ── Leech Seed check (SEEDED = bit 7 of wPlayer/EnemyBattleStatus2) ────
+    ; pret: ld de, wPlayerBattleStatus2/wEnemyBattleStatus2 based on hWhoseTurn,
+    ;       then "add a" (shifts SEEDED bit 7 into carry).
+    mov edx, wPlayerBattleStatus2
+    mov al, [ebp + hWhoseTurn]
+    test al, al
+    jz .playersTurn2
+    mov edx, wEnemyBattleStatus2
+.playersTurn2:
+    test byte [ebp + edx], (1 << SEEDED)
+    jz .notLeechSeeded
+
+    ; Flip hWhoseTurn so the ABSORB animation fires from the seeder's side,
+    ; then restore it before the drain math.
+    push esi                        ; save HP pointer
+    mov al, [ebp + hWhoseTurn]
+    push eax                        ; save hWhoseTurn across animation
+    xor al, 1
+    mov [ebp + hWhoseTurn], al      ; flip turn for the animation
+    xor al, al
+    mov [ebp + wAnimationType], al
+    mov al, ABSORB
+    call PlayMoveAnimation          ; deferred UI — Leech Seed animation
+    pop eax                         ; restore saved hWhoseTurn (low byte = value)
+    mov [ebp + hWhoseTurn], al
+    pop esi                         ; restore HP pointer
+
+    ; Drain the seeded mon (BX = drain amount on return).
+    ; GLITCH{class=data-model; pret=engine/battle/core.asm:HandlePoisonBurnLeechSeed; behavior=the Leech Seed call increments Toxic's counter a second time in the same turn; evidence=pret call flow into DecreaseOwnHP; lifetime=permanent Gen-1 behavior; safety=bounded WRAM arithmetic with no ACE potential under DPMI}
+    ; If the mon is also Badly Poisoned, the toxic counter is incremented
+    ; here too, scaling the drain by the (now twice-bumped) counter.
+    call HandlePoisonBurnLeechSeed_DecreaseOwnHP
+    ; GLITCH{class=data-model; pret=engine/battle/core.asm:HandlePoisonBurnLeechSeed_IncreaseEnemyHP; behavior=BX can exceed actual HP taken and over-heal the seeder; evidence=pret uncapped BC handoff between decrease and increase helpers; lifetime=permanent Gen-1 behavior; safety=bounded WRAM arithmetic with no ACE potential under DPMI}
+    ; Overkill heal: BX may exceed actual HP taken if HP was < 1/16 maxHP.
+    call HandlePoisonBurnLeechSeed_IncreaseEnemyHP  ; heals seeder by BX
+
+    push esi
+    mov esi, HurtByLeechSeedText
+    call PrintText                  ; deferred UI
+    pop esi                         ; restore HP pointer
+
+.notLeechSeeded:
+    ; ── Faint check ─────────────────────────────────────────────────────────
+    ; pret: ld a, [hli] / or [hl] — test whether the current-mon HP is zero.
+    ; ESI = hp_ptr (wBattleMonHP or wEnemyMonHP), pointing to HP high byte.
+    mov al, [ebp + esi]             ; HP high byte
+    or al, [ebp + esi + 1]          ; OR with HP low byte
+    ; pret: ret nz (return if ZF=0 → alive). x86 has no conditional ret.
+    jz .fainted
+    ret                             ; HP > 0: alive — ZF=0, AL≠0
+.fainted:
+    ; HP == 0: mon fainted.
+    call DrawHUDsAndHPBars          ; deferred UI — redraw HUDs
+    mov bl, 20
+    call DelayFrames                ; deferred UI — delay 20 frames
+    xor al, al                      ; ZF=1, AL=0 → caller sees "fainted"
+    ret
+
+; ===========================================================================
+; HandlePoisonBurnLeechSeed_DecreaseOwnHP
+;
+; Decreases the current mon's HP by 1/16 of its maxHP (min 1).
+; If the mon has BADLY_POISONED (Toxic), the toxic counter is incremented and
+; the per-tick damage is multiplied by the new counter value.
+;
+; On entry:  ESI = GB address of the mon's current HP high byte.
+; On return: BX  = total damage applied (or uncapped amount if HP was < drain);
+;            ESI = restored to entry value (HP pointer).
+; Clobbers:  EAX, EDX, EDI (EDI used as 16-bit accumulator for toxic multiply).
+;
+; pret: engine/battle/core.asm:HandlePoisonBurnLeechSeed_DecreaseOwnHP (line 559)
+; ===========================================================================
+HandlePoisonBurnLeechSeed_DecreaseOwnHP:
+    push esi                        ; push #1 — caller's HP pointer restore
+    push esi                        ; push #2 — HP pointer for subtraction section
+
+    ; ── Read MaxHP (big-endian 16-bit at hp_ptr + 14) ───────────────────────
+    ; wBattleMonHP + 0xE = wBattleMonMaxHP; same gap for the enemy side.
+    add esi, 0xE                    ; ESI → MaxHP high byte
+    mov al, [ebp + esi]
+    mov [ebp + wHPBarMaxHP + 1], al ; scratch (pret: ld [wHPBarMaxHP+1], a)
+    mov bh, al                      ; BH = MaxHP high byte
+    inc esi                         ; ESI → MaxHP low byte
+    mov al, [ebp + esi]
+    mov [ebp + wHPBarMaxHP], al     ; scratch (pret: ld [wHPBarMaxHP], a)
+    mov bl, al                      ; BL = MaxHP low byte
+    ; BX = MaxHP (BH:BL big-endian)
+
+    ; ── Compute base damage = MaxHP / 16 ────────────────────────────────────
+    ; pret: two 16-bit right-shifts (srl b / rr c pairs) then two BL-only shifts.
+    ; For MaxHP < 1024: after the two 16-bit shifts BH = 0; result lives in BL.
+    shr bh, 1
+    rcr bl, 1
+    shr bh, 1
+    rcr bl, 1                       ; BX >>= 2 (16-bit; BH = 0 for MaxHP < 1024)
+    shr bl, 1
+    shr bl, 1                       ; BL >>= 2 more → BL = MaxHP / 16, BH = 0
+
+    ; Minimum damage is 1 (pret: inc c if c == 0)
+    test bl, bl
+    jnz .nonZeroDamage
+    mov bl, 1
+.nonZeroDamage:
+    ; BX = (BH=0, BL=per-tick damage)
+
+    ; ── Toxic counter check and multiply ────────────────────────────────────
+    ; pret selects the BADLY_POISONED flag from wPlayer/EnemyBattleStatus3
+    ; and the toxic counter from wPlayer/EnemyToxicCounter based on hWhoseTurn.
+    ; GLITCH{class=data-model; pret=engine/battle/core.asm:HandlePoisonBurnLeechSeed_DecreaseOwnHP; behavior=Toxic multiplication executes for Leech Seed as well as poison and burn; evidence=pret shared helper branch; lifetime=permanent Gen-1 behavior; safety=bounded WRAM arithmetic with no ACE potential under DPMI}
+    ; This branch executes even when called from the Leech Seed path,
+    ; causing the toxic counter to scale Leech Seed drain too.
+    mov esi, wPlayerBattleStatus3
+    mov edx, wPlayerToxicCounter
+    mov al, [ebp + hWhoseTurn]
+    test al, al
+    jz .playersTurn_toxic
+    mov esi, wEnemyBattleStatus3
+    mov edx, wEnemyToxicCounter
+.playersTurn_toxic:
+    test byte [ebp + esi], (1 << BADLY_POISONED)
+    jz .noToxic
+
+    ; Increment the toxic counter (pret: ld a, [de] / inc a / ld [de], a).
+    mov al, [ebp + edx]
+    inc al
+    mov [ebp + edx], al             ; save incremented counter
+
+    ; Multiply base damage BX by the counter (AL) via repeated addition:
+    ; pret: ld hl, 0 / .loop: add hl, bc / dec a / jr nz / ld b, h / ld c, l
+    ; Use EDI as the 16-bit HL accumulator (pushed to avoid clobbering caller).
+    push edi
+    xor edi, edi                    ; EDI = 0 (HL accumulator)
+.toxicTicksLoop:
+    add di, bx                      ; DI += BX (16-bit; pret: add hl, bc)
+    dec al
+    jnz .toxicTicksLoop
+    movzx ebx, di                   ; BX = total damage (pret: ld b, h / ld c, l)
+    pop edi
+
+.noToxic:
+    ; BX = total damage (BH:BL, 16-bit)
+
+    ; ── Subtract damage from current HP ─────────────────────────────────────
+    pop esi                         ; pop #2 → ESI = original HP ptr (high byte)
+    inc esi                         ; ESI → HP low byte (pret: inc hl)
+
+    ; Subtract low byte (pret: ld a, [hl] / sub c / ld [hld], a):
+    mov al, [ebp + esi]
+    mov [ebp + wHPBarOldHP], al     ; save old HP low byte
+    sub al, bl                      ; HP_low -= damage_low
+    mov [ebp + esi], al             ; store new HP_low (pret: ld [hld], a)
+    mov [ebp + wHPBarNewHP], al     ; save new HP low byte
+    dec esi                         ; ESI → HP high byte (pret: [hld] auto-dec)
+
+    ; Subtract high byte with borrow (pret: ld a, [hl] / sbc b / ld [hl], a):
+    mov al, [ebp + esi]
+    mov [ebp + wHPBarOldHP + 1], al ; save old HP high byte
+    sbb al, bh                      ; HP_high -= damage_high + borrow
+    mov [ebp + esi], al             ; store new HP high byte
+    mov [ebp + wHPBarNewHP + 1], al
+
+    ; Overkill check (carry = result was negative):
+    jnc .noOverkill
+    ; Zero HP (pret: xor a / ld [hli], a / ld [hl], a):
+    xor al, al
+    mov [ebp + esi], al             ; zero HP high byte
+    inc esi                         ; ESI → HP low byte (pret: [hli] auto-inc)
+    mov [ebp + esi], al             ; zero HP low byte
+    mov [ebp + wHPBarNewHP], al
+    mov [ebp + wHPBarNewHP + 1], al
+    dec esi                         ; restore ESI to HP high byte
+    ; BX still holds uncapped damage (see Leech Seed overkill GLITCH in header)
+.noOverkill:
+
+    ; Update HP bar (pret: UpdateCurMonHPBar, which does push bc / pop bc).
+    ; Push BX for safety in case the deferred impl forgets the pret contract.
+    push ebx
+    call UpdateCurMonHPBar          ; deferred UI
+    pop ebx
+
+    pop esi                         ; pop #1 → ESI = original HP ptr (for caller)
+    ret
+
+; ===========================================================================
+; HandlePoisonBurnLeechSeed_IncreaseEnemyHP
+;
+; Heals the opposing mon (the Leech Seed attacker) by BX (the drain amount
+; computed by DecreaseOwnHP). Caps at MaxHP.
+;
+; On entry:  ESI = seeded mon's HP pointer (caller's HL, pushed/restored here).
+;            BX  = drain amount (from DecreaseOwnHP).
+;            hWhoseTurn: 0 = player's turn → heal enemy; 1 = enemy's turn → heal player.
+; On return: ESI = restored (caller's HP pointer).
+;
+; pret: engine/battle/core.asm:HandlePoisonBurnLeechSeed_IncreaseEnemyHP (line 627)
+; ===========================================================================
+HandlePoisonBurnLeechSeed_IncreaseEnemyHP:
+    push esi                        ; save caller's HP pointer (seeded mon's)
+
+    ; ── Select MaxHP pointer for the healing side ────────────────────────────
+    ; pret: player's turn → heal enemy (wEnemyMonMaxHP);
+    ;       enemy's turn  → heal player (wBattleMonMaxHP).
+    mov esi, wEnemyMonMaxHP
+    mov al, [ebp + hWhoseTurn]
+    test al, al
+    jz .playersTurn_heal
+    mov esi, wBattleMonMaxHP
+.playersTurn_heal:
+
+    ; ── Read MaxHP of the healing mon ───────────────────────────────────────
+    ; pret: ld a, [hli] (high byte → [wHPBarMaxHP+1], HL++);
+    ;       ld a, [hl]  (low byte  → [wHPBarMaxHP],   HL stays).
+    mov al, [ebp + esi]
+    mov [ebp + wHPBarMaxHP + 1], al ; MaxHP high byte to scratch
+    inc esi                         ; ESI → MaxHP low byte (pret: [hli] auto-inc)
+    mov al, [ebp + esi]
+    mov [ebp + wHPBarMaxHP], al     ; MaxHP low byte to scratch
+
+    ; ── Navigate from MaxHP+1 to HP low byte ────────────────────────────────
+    ; pret: ld de, wBattleMonHP - wBattleMonMaxHP = -14
+    ;       add hl, de → HL = (MaxHP_low address) - 14 = HP_low address.
+    ; The gap is the same for both sides:
+    ;   wBattleMonHP (0xD014) - wBattleMonMaxHP (0xD022) = -14
+    ;   wEnemyMonHP  (0xCFE5) - wEnemyMonMaxHP  (0xCFF3) = -14  (then +1 = HP_low)
+    ; After ld a,[hli] ESI is at MaxHP_low (+1 from MaxHP base); -14 → HP_low.
+    sub esi, 14                     ; ESI → HP low byte of the healing mon
+
+    ; ── Add BX (drain amount) to current HP ─────────────────────────────────
+    ; pret: ld a,[hl] / add c / ld [hld],a ; ld a,[hl] / adc b / ld [hli],a
+    mov al, [ebp + esi]
+    mov [ebp + wHPBarOldHP], al     ; old HP low byte
+    add al, bl                      ; HP_low += damage_low (pret: add c)
+    mov [ebp + esi], al             ; store new HP_low (pret: ld [hld], a)
+    mov [ebp + wHPBarNewHP], al
+    dec esi                         ; ESI → HP high byte (pret: [hld] auto-dec)
+
+    mov al, [ebp + esi]
+    mov [ebp + wHPBarOldHP + 1], al ; old HP high byte
+    adc al, bh                      ; HP_high += damage_high + carry (pret: adc b)
+    mov [ebp + esi], al             ; store new HP_high (pret: ld [hli], a)
+    mov [ebp + wHPBarNewHP + 1], al
+    inc esi                         ; ESI → HP low byte again (pret: [hli] auto-inc)
+
+    ; ── Overheal clamp: if new HP > MaxHP, set HP = MaxHP ───────────────────
+    ; pret reads MaxHP from the wHPBarMaxHP scratch (stored above), loads new HP
+    ; from memory, then does a 16-bit subtraction to detect overflow.
+    ; If HP - MaxHP >= 0 (no borrow), HP is >= MaxHP → clamp.
+    mov al, [ebp + esi]             ; new HP low byte (pret: ld a, [hld])
+    sub al, [ebp + wHPBarMaxHP]     ; HP_low - MaxHP_low (pret: sub c)
+    dec esi                         ; ESI → HP high byte (pret: [hld] auto-dec)
+    mov al, [ebp + esi]             ; new HP high byte (pret: ld a, [hl])
+    sbb al, [ebp + wHPBarMaxHP + 1] ; HP_high - MaxHP_high - borrow (pret: sbc b)
+    jc .noOverfullHeal              ; carry set → HP < MaxHP, no clamp
+
+    ; Clamp HP to MaxHP (pret: ld a, b / ld [hli], a / ld a, c / ld [hl], a):
+    mov al, [ebp + wHPBarMaxHP + 1] ; MaxHP high byte (pret: ld a, b)
+    mov [ebp + esi], al             ; store to HP high byte (pret: ld [hli], a)
+    mov [ebp + wHPBarNewHP + 1], al
+    inc esi                         ; ESI → HP low byte
+    mov al, [ebp + wHPBarMaxHP]     ; MaxHP low byte (pret: ld a, c)
+    mov [ebp + esi], al             ; store to HP low byte
+    mov [ebp + wHPBarNewHP], al
+.noOverfullHeal:
+
+    ; ── Update HP bar for the healing side ──────────────────────────────────
+    ; pret flips hWhoseTurn so UpdateCurMonHPBar draws the correct (healed) side.
+    mov al, [ebp + hWhoseTurn]
+    xor al, 1
+    mov [ebp + hWhoseTurn], al      ; flip turn (pret: ldh a,[hWhoseTurn] / xor $1)
+    call UpdateCurMonHPBar          ; deferred UI
+    mov al, [ebp + hWhoseTurn]
+    xor al, 1
+    mov [ebp + hWhoseTurn], al      ; restore turn
+
+    pop esi                         ; restore caller's HP pointer
+    ret
+
+; --- was src/engine/battle/mirror_move.asm ---
+
+; wEnemyMon1PP now lives in gb_memmap.inc (0xD8C0) — added during integration.
+
+; ===========================================================================
+; MirrorMoveCopyMove — pret core.asm:5132. Copies the target's last-used move
+; (wEnemyUsedMove on the player's turn, wPlayerUsedMove on the enemy's turn)
+; into the acting side's SelectedMove slot, then tail-jumps into ReloadMoveData.
+; Fails (AL=0, ZF=1) if the target hasn't used a move yet, or if the target's
+; last move was Mirror Move itself (Gen-1: Mirror Move can't mirror Mirror Move).
+; Out: ZF=1 -> failed (caller: jz ExecutePlayerMoveDone); ZF=0 -> success,
+;      control passed into ReloadMoveData (falls through / tail-jumps).
+; ===========================================================================
+MirrorMoveCopyMove:
+    mov al, [ebp + hWhoseTurn]          ; ldh a, [hWhoseTurn]
+    test al, al                         ; and a  (ZF tested below; not clobbered by
+                                          ;         the plain `mov`s that follow)
+    ; values for player turn
+    mov al, [ebp + wEnemyUsedMove]      ; ld a, [wEnemyUsedMove]
+    mov esi, wPlayerSelectedMove        ; ld hl, wPlayerSelectedMove
+    mov edx, wPlayerMoveNum             ; ld de, wPlayerMoveNum
+    jz .next                            ; jr z, .next
+    ; values for enemy turn
+    mov al, [ebp + wPlayerUsedMove]     ; ld a, [wPlayerUsedMove]
+    mov edx, wEnemyMoveNum              ; ld de, wEnemyMoveNum
+    mov esi, wEnemySelectedMove         ; ld hl, wEnemySelectedMove
+.next:
+    mov [ebp + esi], al                 ; ld [hl], a
+    cmp al, MIRROR_MOVE                 ; did the target last use Mirror Move (and miss)?
+    je .mirrorMoveFailed                ; jr z, .mirrorMoveFailed
+    test al, al                         ; and a — has the target selected any move yet?
+    jnz ReloadMoveData                  ; jr nz, ReloadMoveData (tail jump)
+.mirrorMoveFailed:
+    mov esi, MirrorMoveFailedText       ; ld hl, MirrorMoveFailedText
+    call PrintText
+    xor al, al                          ; xor a  (AL=0, ZF=1 -> failure)
+    ret
+
+; ===========================================================================
+; ReloadMoveData — pret core.asm:5167. Reloads move [AL]'s (1-based id) 6-byte
+; record into the struct at [EDX] (wPlayerMoveNum/wEnemyMoveNum), restores its
+; PP (IncrementMovePP), and reloads its name into wStringBuffer. Shared tail
+; target for MirrorMoveCopyMove and MetronomePickMove (scratch/metronome.asm).
+; In:  AL = move id (1-based), EDX = dest struct offset.
+; Out: AL=1, ZF=0 (success). ESI/EDX left advanced past the copied range.
+; ===========================================================================
+ReloadMoveData:
+    mov [ebp + wNamedObjectIndex], al   ; ld [wNamedObjectIndex], a
+    dec al                              ; dec a
+    mov esi, Moves                      ; ld hl, Moves  (flat program-image table)
+    mov bx, MOVE_LENGTH                 ; ld bc, MOVE_LENGTH
+    call AddNTimes                      ; esi = Moves + (id-1)*MOVE_LENGTH  (flat; AddNTimes
+                                          ; does a plain `add esi,ecx` — no EBP bias — so it's
+                                          ; safe to use on this flat pointer, exactly as
+                                          ; names.asm:GetMonName does for the flat MonsterNames
+                                          ; table)
+    ; ALLOWLIST (§2 item 4, bank switching): pret does `ld a, BANK(Moves)` here before
+    ; FarCopyData. The flat DPMI model has no ROM banks, so that load is dropped entirely
+    ; (nothing to translate it into).
+    ;
+    ; DIVERGENCE (forced by the above, not itself allowlisted — reported per ticket):
+    ; pret's next step is `call FarCopyData` (copy MOVE_LENGTH bytes a:HL -> DE). This
+    ; port's FarCopyData/CopyData (src/home/copy_data.asm) both do `lea esi, [ebp+esi]`
+    ; on the SOURCE: they assume the source is a GB-space offset relative to EBP. `Moves`
+    ; is a FLAT program-image label (data/pokemon_data.asm / assets/moves.inc), not a GB
+    ; WRAM offset — the identical situation already documented and solved in
+    ; get_current_move.asm's "Flat-source note" for this same Moves table. Calling
+    ; FarCopyData on the ESI computed above would compute [ebp + (Moves+offset)],
+    ; double-counting the bias and copying garbage. So, exactly as get_current_move.asm
+    ; already does, this uses an inline flat-src -> WRAM-dst byte copy instead of
+    ; FarCopyData/CopyData.
+    push ecx
+    mov ecx, MOVE_LENGTH
+.copy:
+    mov al, [esi]
+    inc esi
+    mov [ebp + edx], al
+    inc edx
+    dec ecx
+    jnz .copy
+    pop ecx
+    ; the following two calls are used to reload the move's PP and name
+    call IncrementMovePP
+    call GetMoveName
+    ; DIVERGENCE-COMPENSATION (not a bug in this file — a pre-existing gap in the
+    ; already-linked GetMoveName): pret's GetMoveName (home/names.asm:129) explicitly
+    ; does `ld de, wNameBuffer` right after `call GetName`, so DE is guaranteed to point
+    ; at the freshly-loaded name string when the caller (here) falls into
+    ; CopyToStringBuffer. The PORT's GetMoveName (dos_port/src/home/names.asm) instead
+    ; tail-jumps into GetName (`jmp GetName`) and never sets EDX = wNameBuffer itself
+    ; before returning — GetName's own `.walk`/GetMonName paths never touch EDX either.
+    ; Left alone, EDX here would still hold the stale wPlayerMoveNum/wEnemyMoveNum offset
+    ; from earlier in this routine, and CopyToStringBuffer would copy the wrong bytes.
+    ; Set EDX = wNameBuffer explicitly to preserve ReloadMoveData's faithful behavior
+    ; without editing names.asm (out of scope for this file).
+    mov edx, wNameBuffer
+    call CopyToStringBuffer
+    mov al, 1                           ; ld a, $01
+    test al, al                         ; and a  (AL=1, ZF=0 -> success)
+    ret
+
+; ===========================================================================
+; IncrementMovePP — pret core.asm:5214. Increments PP for the move at
+; [wPlayerMoveListIndex]/[wEnemyMoveListIndex] in BOTH the currently-battling
+; copy (wBattleMonPP/wEnemyMonPP) and the underlying party-mon copy
+; (wPartyMon1PP/wEnemyMon1PP, offset by the active party position), so that a
+; move which runs another move within the same turn (Mirror Move, Metronome)
+; doesn't lose 2 PP net.
+; ===========================================================================
+IncrementMovePP:
+    mov al, [ebp + hWhoseTurn]          ; ldh a, [hWhoseTurn]
+    test al, al                         ; and a
+    ; values for player turn
+    mov esi, wBattleMonPP               ; ld hl, wBattleMonPP
+    mov edx, wPartyMon1PP               ; ld de, wPartyMon1PP
+    mov al, [ebp + wPlayerMoveListIndex]; ld a, [wPlayerMoveListIndex]
+    jz .next                            ; jr z, .next
+    ; values for enemy turn
+    mov esi, wEnemyMonPP                ; ld hl, wEnemyMonPP
+    mov edx, wEnemyMon1PP               ; ld de, wEnemyMon1PP  (derived above)
+    mov al, [ebp + wEnemyMoveListIndex] ; ld a, [wEnemyMoveListIndex]
+.next:
+    mov bh, 0                           ; ld b, $00
+    mov bl, al                          ; ld c, a
+    movzx ecx, bx                       ; add hl, bc  (16-bit add, zero-extended per
+    add esi, ecx                        ;              src/home/move_mon.asm precedent)
+    inc byte [ebp + esi]                ; inc [hl]  — battle-mon copy's PP
+    mov esi, edx                        ; ld h, d / ld l, e
+    add esi, ecx                        ; add hl, bc  (same bc: move-list index)
+    mov al, [ebp + hWhoseTurn]          ; ldh a, [hWhoseTurn]
+    test al, al                         ; and a
+    mov al, [ebp + wPlayerMonNumber]    ; ld a, [wPlayerMonNumber]  (value for player turn)
+    jz .updatePP                        ; jr z, .updatePP
+    mov al, [ebp + wEnemyMonPartyPos]   ; ld a, [wEnemyMonPartyPos]  (value for enemy turn)
+.updatePP:
+    mov bx, PARTYMON_STRUCT_LENGTH      ; ld bc, PARTYMON_STRUCT_LENGTH
+    call AddNTimes                      ; esi += PARTYMON_STRUCT_LENGTH * (party position)
+    inc byte [ebp + esi]                ; inc [hl]  — party-mon copy's PP
+    ret
+
+; --- was src/engine/battle/ghost.asm ---
+                                  ; Out: ZF=1 if NOT in bag, ZF=0 if in bag; BH=qty.
+                                  ; (Matches pret home/map_objects.asm:IsItemInBag
+                                  ; exactly — no polarity adaptation needed.)
+
+; ===========================================================================
+; PrintGhostText — pret engine/battle/core.asm:PrintGhostText.
+; Prints the "Sacred ash..."/scared flavor text on the player's turn (unless
+; frozen/asleep) or the "You're not scaring me!"-style get-out text on the
+; ghost's turn, but only during an actual disguised-ghost battle.
+; Out: ZF=0 (via IsGhostBattle) if not a ghost battle (no-op, no text printed).
+;      Otherwise prints text and returns with ZF=1 (xor a).
+; ===========================================================================
+PrintGhostText:
+    call IsGhostBattle
+    jnz .ret                            ; ret nz
+    mov al, [ebp + hWhoseTurn]
+    and al, al
+    jnz .Ghost                          ; jr nz, .Ghost
+    mov al, [ebp + wBattleMonStatus]    ; ld a, [wBattleMonStatus]
+    and al, (1 << FRZ) | SLP_MASK       ; = 0x27
+    jnz .ret                            ; ret nz
+    mov esi, ScaredText                 ; ld hl, ScaredText
+    call PrintText
+    xor al, al
+    ret
+.Ghost:
+    mov esi, GetOutText                 ; ld hl, GetOutText
+    call PrintText
+    xor al, al
+    ret
+.ret:
+    ret
+
+; ===========================================================================
+; IsGhostBattle — pret engine/battle/core.asm:IsGhostBattle.
+; Out: ZF=1 if this IS a disguised-ghost battle; ZF=0 if it is not.
+; (wIsInBattle != 1 [not a wild battle], or outside the Pokémon Tower ghost
+; floors, or the player holds the Silph Scope → all ZF=0 "not ghost".)
+; ===========================================================================
+IsGhostBattle:
+    mov al, [ebp + wIsInBattle]         ; ld a, [wIsInBattle]
+    dec al                              ; dec a
+    jnz .ret                            ; ret nz
+    mov al, [ebp + wCurMap]             ; ld a, [wCurMap]
+    cmp al, 0x8E                        ; cp POKEMON_TOWER_1F
+    jb .next                            ; jr c, .next
+    cmp al, 0x95                        ; cp POKEMON_TOWER_7F + 1
+    jae .next                           ; jr nc, .next
+    mov bh, 0x48                        ; ld b, SILPH_SCOPE
+    call IsItemInBag
+    jz .ret                             ; ret z
+.next:
+    mov al, 1                           ; ld a, 1
+    and al, al                          ; and a
+    ret
+.ret:
+    ret
+
+; --- was src/engine/battle/print_critical_ohko.asm ---
+section .data
+; STRUCTURAL PORT ADAPTATION: dw->dd flat pointer table (index *2 -> *4).
+; pret: CriticalOHKOTextPointers: dw CriticalHitText, dw OHKOText (engine/battle/core.asm)
+CriticalOHKOTextPointers:
+    dd CriticalHitText
+    dd OHKOText
+
+section .text
+; ===========================================================================
+; PrintCriticalOHKOText — pret engine/battle/core.asm:3967
+;
+;	ld a, [wCriticalHitOrOHKO]
+;	and a
+;	jr z, .done
+;	dec a
+;	add a                    ; *2 (port: *4)
+;	ld hl, CriticalOHKOTextPointers
+;	ld b, $0
+;	ld c, a
+;	add hl, bc
+;	ld a, [hli]
+;	ld h, [hl]
+;	ld l, a
+;	call PrintText
+;	xor a
+;	ld [wCriticalHitOrOHKO], a
+;.done
+;	ld c, 20
+;	jp DelayFrames
+; ===========================================================================
+PrintCriticalOHKOText:
+    mov al, [ebp + wCriticalHitOrOHKO]
+    and al, al
+    jz .done                            ; no crit / no OHKO -> nothing to print
+    dec al                              ; a -= 1  (1=crit -> 0, 2=OHKO -> 1)
+    movzx eax, al                       ; widen index byte, zero upper bits
+    mov esi, [CriticalOHKOTextPointers + eax*4]   ; *4: dd flat-pointer table (was *2 dw in pret)
+    call PrintText
+    mov byte [ebp + wCriticalHitOrOHKO], 0
+.done:
+    mov bl, 20                          ; PORT: DelayFrames reads BL, not C
+    jmp DelayFrames                     ; tail call (pret: jp DelayFrames)

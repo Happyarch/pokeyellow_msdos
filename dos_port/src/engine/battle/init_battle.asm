@@ -87,9 +87,9 @@ extern LoadFontTilePatterns              ; home/load_font.asm
 extern LoadTextBoxTilePatterns           ; home/load_font.asm
 extern LoadEnemyMonData               ; engine/battle/core.asm — build wEnemyMon*
 extern LoadFrontSpriteByMonIndex         ; home/pics.asm — enemy front pic (generic)
-extern HasMonFainted                     ; faint_switch.asm — ZF=1 → fainted
+extern HasMonFainted                  ; engine/battle/core.asm — ZF=1 → fainted
 extern FlagAction                        ; flag_action.asm — ESI=array, CL=bit, BH=action
-extern LoadBattleMonFromParty            ; faint_leaves.asm — build wBattleMon* + stat mods
+extern LoadBattleMonFromParty         ; engine/battle/core.asm — build wBattleMon* + stat mods
 extern DrawPlayerRedBackPic_Stub         ; home/pics.asm — player trainer (Red) back pic
 extern LoadMonBackPic                    ; home/pics.asm — generic send-out back pic (MonBackPics)
 extern SlideBattlePicsIn                 ; home/pics.asm — silhouette slide-in

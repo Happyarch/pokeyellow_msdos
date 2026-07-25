@@ -1559,7 +1559,7 @@ global BoxFullCannotThrowBall
 global SendNewMonToBox
 
 extern PlayMoveAnimation              ; engine/battle/core.asm — AL = animation id (predef MoveAnimation)
-extern IsGhostBattle          ; engine/battle/ghost.asm — ZF=1 → unidentified ghost
+extern IsGhostBattle                  ; engine/battle/engine/battle/core.asm — ZF=1 → unidentified ghost
 extern LoadScreenTilesFromBuffer1 ; src/home/tilemap.asm
 extern Delay3                 ; video/frame.asm
 extern StatModifierUpEffect   ; engine/battle/effects.asm
