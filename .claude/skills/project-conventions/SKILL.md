@@ -65,13 +65,16 @@ only (`/FIXCRIT`), `2` = all (`/FIXALL`); the Makefile passes `-D BUG_FIX_LEVEL=
 `--strict-claims` flags each one as `legacy_annotation` ("requires evidence-backed
 migration").
 
-**The migration is complete: `--strict-claims` reports zero `legacy_annotation`
-violations tree-wide.** Every real annotation is structured (95 `DEVIATION{}`,
-44 `BUG{}`, 13 `GLITCH{}`, 11 `STUB{}`). The handful of `BUG(critical)`-looking
-strings that survive are *prose references inside comment text* ("cataloged
-BUG(critical) with…", "see the two BUG(cosmetic) blocks below") — not annotations,
-and not a precedent. Writing a free-form one now is a regression that
-`--strict-claims` will report.
+**`--strict-claims` reported zero `legacy_annotation` violations tree-wide when
+last measured (2026-07-25; 132 `DEVIATION{}`, 44 `BUG{}`, 13 `GLITCH{}`,
+22 `STUB{}`).** Treat that as a measurement with a date on it, not an invariant:
+it had silently drifted to 2 before this line was corrected, because plain
+`lint_pret_labels` does not gate on this class — only `--strict-claims` does, and
+nothing runs it automatically. **Re-run the check; do not quote this paragraph as
+evidence.** The handful of `BUG(critical)`-looking strings that survive are *prose
+references inside comment text* ("cataloged BUG(critical) with…", "see the two
+BUG(cosmetic) blocks below") — not annotations, and not a precedent. Writing a
+free-form one now is a regression that `--strict-claims` will report.
 
 ## Stub Conventions (all stubs live in a subsystem `*_stubs.asm`)
 

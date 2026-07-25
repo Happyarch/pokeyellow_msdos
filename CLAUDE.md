@@ -1,7 +1,22 @@
 # CLAUDE.md — Pokemon Yellow DOS Port
 
-Project context for Claude Code sessions. Read this at the start of every session.
 
+Project context for Claude Code sessions. Read this at the start of every session.
+## ⚠ THIS PROJECT USES STIGMERGY — coordination is MANDATORY
+
+You are ALREADY registered as a root (stigmergy did it from your host session —
+do NOT call context_open or root_register). Do the part that ISN'T automatic:
+
+1. **memory_search BEFORE you plan or edit.** Other agents left notes here; you
+   are not starting from a blank slate.
+2. **claim_acquire every file you'll edit, BEFORE editing it.** An edit to a file
+   another agent claimed is BLOCKED OUTRIGHT and names the owner.
+3. **Stay warm.** Every stigmergy call refreshes your liveness. Go quiet ~15 min
+   and your root is considered dead and your claims drop (claim TTL 30 min, root
+   liveness 15). Use claim_renew on long-held claims.
+
+Subagents: 1–3 for exploration only. NO planning agents — the ROOT writes the
+plan. Subagents may be Sonnet, rarely Opus. NEVER a Fable subagent.
 ---
 
 ## What This Project Is
@@ -17,11 +32,36 @@ stays cross-referenceable against pret as documentation.
 
 ---
 
-## Skills — load detailed reference on demand
+## Skills — mandatory routing gate
 
 The deep reference lives in **project skills** (`.claude/skills/`) so it only
-loads into context when needed. Invoke the matching skill (via the `Skill`
-tool) BEFORE doing that kind of work. Full index, by task:
+loads into context when needed. Loading the matching skill via the `Skill` tool
+is required before planning, editing, reviewing, or verifying work in that area.
+
+Before planning or editing, run a skill-routing check. If the task matches any
+skill trigger below, load the skill before deciding on an approach, not after.
+Do not rely on memory, CLAUDE.md, TODOs, or plan files as substitutes for the
+skill.
+
+At the start of any non-trivial task, state one of:
+- `Skills used: <skill names>` and why they apply.
+- `Skills not used: no listed skill matches this task`.
+
+Skipping an applicable skill is a process failure. If work touches an area
+covered by a skill, stop and load the skill before continuing.
+
+Common mandatory routes:
+- Translating or editing pret-labeled x86 routines: `asm-translation`, then
+  `faithfulness-review`.
+- Touching stubs, generated data, annotations, active plans, or BUG/GLITCH tags:
+  `project-conventions`.
+- Building, running, debugging, fidelity harnesses, DOSBox-X, dumps, assets, or
+  auditioning: `build-and-debug`.
+- Reviewing pret fidelity or changed pret labels: `faithfulness-review`.
+- Music analysis or arrangement: `score-analysis`, then `music-theory`, then the
+  relevant enhancement skill.
+
+Full index, by task:
 
 **Porting code** (the main loop — usually all four, in this order):
 - **`asm-translation`** — translating any SM83/pret routine to x86: register map,
@@ -107,6 +147,12 @@ volatile status needs expiry; contradictory repository evidence updates the
 existing key. Run `dos_port/tools/project_state --plans` for the generated active
 plan inventory; do not maintain a second hand-written inventory.
 
+Use stigmergy memories before making decisions that depend on project history,
+prior agent work, local conventions, or non-obvious constraints. Search with
+`memory_search` early, before choosing an approach, and again before recording a
+durable decision; treat hits as leads to verify against repository/runtime
+evidence, not as final authority.
+
 ---
 
 ## Current Phase
@@ -121,7 +167,8 @@ supporting home routines (`src/util/copy_data.asm`, `src/video/lcd_control.asm`,
 `src/video/frame.asm`, `src/gfx/sprites.asm`), and a text/font engine
 (`src/gfx/load_font.asm` 1bpp→2bpp expansion from `gfx/font/font.png`,
 `src/text/text.asm` PlaceString/TextBoxBorder). The overworld map loader/renderer
-(`src/engine/overworld/overworld.asm`) renders correctly in DOSBox-X: `SKIP_TITLE=1`
+(pret mirror `src/home/overworld.asm`; `src/engine/overworld/overworld.asm` keeps
+the port-only glue and the embedded asset blobs) renders correctly in DOSBox-X: `SKIP_TITLE=1`
 boots straight into a fully drawn Pallet Town (Oak's Lab, tree border, sign) in the
 DMG-green palette. The title screen (`src/movie/title.asm`) is a **bespoke early
 implementation that does NOT render fully correctly** — it boots and reaches the
@@ -130,8 +177,11 @@ faithful reimpl deferred (likely rides with the overworld tile-management rewrit
 Use `SKIP_TITLE=1` to bypass it.
 Player movement now works: `OverworldLoop` reads the joypad and walks the
 player in all four directions, scrolling the map smoothly via
-`AdvancePlayerSprite` (which now relies purely on `LoadCurrentMapView` without
-VRAM sliding) with land collision against the embedded `Overworld_Coll` passable-tile list.
+`AdvancePlayerSprite` (the home-bank wrapper in `src/home/overworld.asm`; its engine
+body `_AdvancePlayerSprite` and the `MoveTileBlockMapPointer{East,West,South,North}`
+family live in the pret mirror `src/engine/overworld/advance_player_sprite.asm`, and it
+now relies purely on `LoadCurrentMapView` without VRAM sliding) with land collision
+against the embedded `Overworld_Coll` passable-tile list.
 The OAM sprite renderer (`src/ppu/ppu.asm:render_sprites`) is in: 8×8 DMG OBJ
 emulation (X/Y flip, OBP0/OBP1, color-0 transparency, BG-priority bit). It draws
 `spr_oam_valid` entries **positioned from `spr_dos_sx/sy`** (canvas coords), taking
@@ -174,7 +224,7 @@ at full speed as of 2026-07-12 — see `docs/plans/compositor_perf.md` (archived
 before changing any of these hot loops; it also ships the `DEBUG_PERF` profiler
 (`tools/perf_capture.sh`) and `tools/pixelcheck.sh`.
 
-**Temporary scaffold — two out-of-map clamps (`src/engine/overworld/overworld.asm`):**
+**Temporary scaffold — two out-of-map clamps (`src/home/overworld.asm`):**
 the extended 40×25-tile viewport draws a larger area than the original 20×18 and
 the player is pinned at screen-center, so a player-centered camera near a map
 edge reaches past the populated `wOverworldMap` data. Two complementary stopgaps
@@ -209,6 +259,11 @@ extension (enlarged border / bigger block grid). See TODO.md (Phase 2).
 
 These stay in-context every session. Deeper detail is in the skill named at the
 end of each rule — invoke it when the rule needs its full context.
+
+Before any edit, confirm:
+- Which skill applies, or why none applies.
+- Which stigmergy memories were checked.
+- Which files are claimed if coordination is needed.
 
 ### Preserve pret Labels
 
@@ -329,7 +384,9 @@ commit message nobody greps.
 - **The legacy free-form format is dead — do not resurrect it.** `; BUG(critical): …` /
   `; GLITCH:` + `; Safety:` still parse (migration-era acceptance), and
   `lint_pret_labels --strict-claims` flags each as `legacy_annotation`. The migration is
-  complete: strict-claims reports **zero** tree-wide. Writing one now is a regression.
+  effectively complete — strict-claims reports **zero** tree-wide as of 2026-07-25 — but
+  that is a measured number, not an invariant: re-run the check rather than quoting this
+  line. Writing a free-form annotation now is a regression.
 
 Templates → skill **`project-conventions`**; the gate that enforces them → skill
 **`faithfulness-review`**.
@@ -379,17 +436,3 @@ already holding an item via it (e.g. Kadabra → `TWISTEDSPOON_GSC` $60, written
 `_AddPartyMon`). Any new code that builds/copies/converts a mon (party↔box
 deposit/withdraw, trades, save format) must carry offset 7 through verbatim.
 See `dos_port/include/gb_constants.inc` (struct members) for the load-bearing note.
-
-<!-- stigmergy:begin — managed block, do not edit; `stigmergy init` regenerates it -->
-## stigmergy
-
-This project uses **stigmergy** for memory and coordination shared across every agent working here (Claude Code and Codex alike).
-
-- **Memory lives in stigmergy, not in your own memory files.** Use `memory_search` before starting work, and record durable facts with `memory_write`. Do not keep a private memory directory for this project.
-- **Register at the start of every session**: `context_open`, then `root_register` with your host session id as `session_label`.
-- **Claim before you edit** anything another agent might touch: `claim_acquire`. Edits to a file claimed by another agent are blocked outright.
-- **When a claim blocks you**, the owner is named. Negotiate with `mailbox_send`, or work elsewhere. Never edit around a claim.
-- **Write to the agent that is actually there.** The conflict names the root holding the path and says whether it is still live; `root_list_active` shows who else is working here. Do not address a root id you remember from earlier — it may belong to an agent that has since died, while the one blocking you goes unasked.
-- **Your mail is handed to you at the end of your turn**, and you cannot finish while a message is undelivered. Answer it: someone is usually blocked on you. Agreeing to hand over a file is not enough — `claim_release` is what frees it.
-- **Only the root session** may claim, write memory, or send mail. Subagents read and report back.
-<!-- stigmergy:end -->
