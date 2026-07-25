@@ -2,7 +2,7 @@
 %include "gb_constants.inc"
 %include "gb_macros.inc"
 
-extern MoveHitTest
+extern MoveHitTest                    ; engine/battle/core.asm — accuracy test → wMoveMissed
 extern QuarterSpeedDueToParalysis     ; engine/battle/core.asm
 extern DelayFrames
 extern PlayCurrentMoveAnimation

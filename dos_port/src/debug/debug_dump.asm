@@ -131,10 +131,10 @@ extern DoEnemyAttackDamage
 extern LoadWildMonMoves
 extern SelectEnemyMove
 extern GetCurrentMove                 ; engine/battle/core.asm — move record -> wPlayerMove*/wEnemyMove*
-extern GetDamageVarsForPlayerAttack
-extern CalculateDamage
-extern AdjustDamageForMoveType
-extern RandomizeDamage
+extern GetDamageVarsForPlayerAttack   ; engine/battle/core.asm
+extern CalculateDamage                ; engine/battle/core.asm (ZF if 0 BP)
+extern AdjustDamageForMoveType        ; engine/battle/core.asm
+extern RandomizeDamage                ; engine/battle/core.asm
 extern DelayFrame
 %ifdef DEBUG_BATTLE_GOLDEN
 ; --- Stage 2 golden gate: the REAL loaders replace the synthetic seed ---

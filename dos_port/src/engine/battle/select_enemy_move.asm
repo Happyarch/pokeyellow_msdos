@@ -29,7 +29,7 @@ bits 32
 section .text
 
 global SelectEnemyMove
-extern BattleRandom
+extern BattleRandom                   ; engine/battle/core.asm — battle PRNG, result in AL
 extern AIEnemyTrainerChooseMoves        ; trainer_ai.asm — score-adjust the move weights
 
 SelectEnemyMove:

@@ -27,7 +27,7 @@ section .text
 global HandleCounterMove
 
 ; --- shared scaffold extern (§4: call, never define) ---
-extern MoveHitTest                  ; core_damage.asm — accuracy test → wMoveMissed
+extern MoveHitTest                    ; engine/battle/core.asm — accuracy test → wMoveMissed
 
 ; ===========================================================================
 ; HandleCounterMove — engine/battle/core.asm:4718.

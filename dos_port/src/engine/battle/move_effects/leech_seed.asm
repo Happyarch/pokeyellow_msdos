@@ -7,7 +7,7 @@ bits 32
 
 section .text
 
-extern MoveHitTest
+extern MoveHitTest                    ; engine/battle/core.asm — accuracy test → wMoveMissed
 extern PlayCurrentMoveAnimation
 extern PrintText
 extern DelayFrames

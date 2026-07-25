@@ -1422,7 +1422,6 @@ FRONTEND_SRCS := \
     src/data/move_grammar.asm \
     src/data/type_names.asm \
     src/home/random.asm \
-    src/engine/battle/core_damage.asm \
     src/engine/battle/print_type.asm \
     src/engine/battle/select_enemy_move.asm \
     src/engine/battle/load_enemy_moves.asm \

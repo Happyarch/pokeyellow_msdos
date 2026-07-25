@@ -71,7 +71,7 @@ extern CopyData
 extern Random
 extern Divide
 extern Moves
-extern AIGetTypeEffectiveness
+extern AIGetTypeEffectiveness         ; engine/battle/core.asm — → wTypeEffectiveness
 extern StatModifierUpEffect
 extern IsInArray                ; src/home/array.asm (shared home global)
 

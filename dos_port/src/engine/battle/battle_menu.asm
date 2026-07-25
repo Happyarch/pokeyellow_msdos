@@ -105,16 +105,16 @@ extern Moves
 extern DelayFrame
 extern HandleDownArrowBlinkTiming     ; src/home/window.asm — faithful ▼ blink (COUNT1==0 guard)
 extern DrawBattleHUDs
-extern BattleRandom
+extern BattleRandom                   ; engine/battle/core.asm — battle PRNG, result in AL
 extern Multiply
 extern Divide
 extern GetMonLearnset                ; write_moves.asm — flat learnset ptr for wCurPartySpecies
 ; --- DEBUG_BATTLE_ENEMYHIT ground-truth scaffold only ---
 extern GetCurrentMove                 ; engine/battle/core.asm — move record -> wPlayerMove*/wEnemyMove*
-extern GetDamageVarsForEnemyAttack
-extern CalculateDamage
-extern AdjustDamageForMoveType
-extern RandomizeDamage
+extern GetDamageVarsForEnemyAttack    ; engine/battle/core.asm
+extern CalculateDamage                ; engine/battle/core.asm (ZF if 0 BP)
+extern AdjustDamageForMoveType        ; engine/battle/core.asm
+extern RandomizeDamage                ; engine/battle/core.asm
 extern IsThisPartyMonStarterPikachu  ; src/engine/pikachu/pikachu_status.asm (mood bump)
 extern GetMoveName                   ; src/home/names.asm — move name -> wNameBuffer
 extern CopyToStringBuffer            ; src/engine/battle/core.asm — wNameBuffer -> wStringBuffer

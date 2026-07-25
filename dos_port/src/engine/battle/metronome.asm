@@ -27,7 +27,7 @@ section .text
 global MetronomePickMove
 
 ; --- shared scaffold externs (call, never define) ---
-extern BattleRandom          ; core_damage.asm — battle PRNG, result in AL
+extern BattleRandom                   ; engine/battle/core.asm — battle PRNG, result in AL
 extern PlayMoveAnimation              ; engine/battle/core.asm — allowlist anim (ANIMATION=OFF path, §2 item 1)
 extern ReloadMoveData        ; mirror_move.asm (sibling file) — reloads move data+name;
                               ; resolves at final link. In: AL = picked move id,

@@ -78,8 +78,8 @@ extern StatModifierRatios
 extern ApplyBadgeStatBoosts           ; engine/battle/core.asm
 extern QuarterSpeedDueToParalysis     ; engine/battle/core.asm
 extern HalveAttackDueToBurn           ; engine/battle/core.asm
-extern MoveHitTest                      ; core_damage.asm — accuracy test → wMoveMissed
-extern BattleRandom                     ; home/random.asm
+extern MoveHitTest                    ; engine/battle/core.asm — accuracy test → wMoveMissed
+extern BattleRandom                   ; engine/battle/core.asm — battle PRNG, result in AL
 extern DelayFrames                      ; frame.asm — BL = frame count
 extern PrintText                        ; src/home/window.asm — pret's PrintText
 extern MonsStatsRose                    ; core.asm — composes "<mon>'s STAT [greatly] rose!"
