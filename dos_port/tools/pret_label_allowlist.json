@@ -11,10 +11,6 @@
   "structural_findings": {},
   "relocated_files": {},
   "relocated_labels": {
-    "AIGetTypeEffectiveness": {
-      "port_file": "dos_port/src/engine/battle/core_damage.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
     "AddAmountSoldToMoney": {
       "port_file": "dos_port/src/home/money.asm",
       "why": "pret home/inventory.asm split across port files (draft Session H)"
@@ -31,32 +27,8 @@
       "port_file": "dos_port/src/engine/pokemon/write_moves.asm",
       "why": "pret engine/pokemon/add_mon.asm split across port files (draft Session H)"
     },
-    "AdjustDamageForMoveType": {
-      "port_file": "dos_port/src/engine/battle/core_damage.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
-    "AnyEnemyPokemonAliveCheck": {
-      "port_file": "dos_port/src/engine/battle/faint_leaves.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
     "AnyPartyAlive": {
       "port_file": "dos_port/src/home/wild_encounter_check.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
-    "ApplyBadgeStatBoosts": {
-      "port_file": "dos_port/src/engine/battle/badge_boosts.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
-    "ApplyBurnAndParalysisPenalties": {
-      "port_file": "dos_port/src/engine/battle/status_penalties.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
-    "ApplyBurnAndParalysisPenaltiesToEnemy": {
-      "port_file": "dos_port/src/engine/battle/status_penalties.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
-    "ApplyBurnAndParalysisPenaltiesToPlayer": {
-      "port_file": "dos_port/src/engine/battle/status_penalties.asm",
       "why": "pret engine/battle/core.asm split across port files (draft Session H)"
     },
     "ArePlayerCoordsInArray": {
@@ -71,21 +43,9 @@
       "port_file": "dos_port/src/home/overworld_text.asm",
       "why": "pret home/map_objects.asm split across port files (draft Session H)"
     },
-    "BattleRandom": {
-      "port_file": "dos_port/src/engine/battle/core_damage.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
-    "CalcHitChance": {
-      "port_file": "dos_port/src/engine/battle/core_damage.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
     "CalcPositionOfPlayerRelativeToNPC": {
       "port_file": "dos_port/src/home/pathfinding.asm",
       "why": "engine/overworld/pathfinding.asm engine-side section (FindPathToPlayer et al., OW-2.2) consolidated into the home-primary port file src/home/pathfinding.asm (overworld-port plan, file-layout name-collision rule)"
-    },
-    "CalculateDamage": {
-      "port_file": "dos_port/src/engine/battle/core_damage.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
     },
     "CallFunctionInTable": {
       "port_file": "dos_port/src/home/run_map_script.asm",
@@ -111,10 +71,6 @@
       "port_file": "dos_port/src/home/hidden_events.asm",
       "why": "engine/overworld/hidden_events.asm engine-side section (CheckForHiddenEvent, OW-3.3) consolidated into the home-primary port file src/home/hidden_events.asm (overworld-port plan, file-layout name-collision rule)"
     },
-    "ChooseNextMon": {
-      "port_file": "dos_port/src/engine/battle/faint_switch.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
     "ClearBgMap": {
       "port_file": "dos_port/src/video/lcd_control.asm",
       "why": "pret home/vcopy.asm split across port files (draft Session H)"
@@ -135,14 +91,6 @@
       "port_file": "dos_port/src/engine/battle/core.asm",
       "why": "pret home/copy_string.asm split across port files (draft Session H)"
     },
-    "CriticalHitTest": {
-      "port_file": "dos_port/src/engine/battle/core_damage.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
-    "CriticalOHKOTextPointers": {
-      "port_file": "dos_port/src/engine/battle/print_critical_ohko.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
     "DecodeArrowMovementRLE": {
       "port_file": "dos_port/src/home/simulate_joypad.asm",
       "why": "pret home/map_objects.asm split across port files (draft Session H)"
@@ -154,10 +102,6 @@
     "Delay3": {
       "port_file": "dos_port/src/video/frame.asm",
       "why": "pret home/palettes.asm split across port files (draft Session H)"
-    },
-    "DoUseNextMonDialogue": {
-      "port_file": "dos_port/src/engine/battle/faint_switch.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
     },
     "DrawEnemyHUDAndHPBar": {
       "port_file": "dos_port/src/engine/battle/battle_hud.asm",
@@ -178,18 +122,6 @@
     "EndNPCMovementScript": {
       "port_file": "dos_port/src/engine/overworld/auto_movement.asm",
       "why": "pret home/npc_movement.asm wrapper (farjp _EndNPCMovementScript); the port has no home/npc_movement.asm mirror, so the trivial banking-elided jump is co-located with its target _EndNPCMovementScript in auto_movement.asm (OW-2.3)"
-    },
-    "EnemyRan": {
-      "port_file": "dos_port/src/engine/battle/faint_switch.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
-    "EnemySendOut": {
-      "port_file": "dos_port/src/engine/battle/faint_sendout.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
-    "EnemySendOutFirstMon": {
-      "port_file": "dos_port/src/engine/battle/faint_sendout.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
     },
     "EvolutionAfterBattle": {
       "port_file": "dos_port/src/engine/pokemon/evolution.asm",
@@ -235,22 +167,6 @@
       "port_file": "dos_port/src/home/fade.asm",
       "why": "pret home/palettes.asm split across port files (draft Session H)"
     },
-    "GetCurrentMove": {
-      "port_file": "dos_port/src/engine/battle/get_current_move.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
-    "GetDamageVarsForEnemyAttack": {
-      "port_file": "dos_port/src/engine/battle/core_damage.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
-    "GetDamageVarsForPlayerAttack": {
-      "port_file": "dos_port/src/engine/battle/core_damage.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
-    "GetEnemyMonStat": {
-      "port_file": "dos_port/src/engine/battle/core_damage.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
     "GetHealthBarColor": {
       "port_file": "dos_port/src/home/fade.asm",
       "why": "pret home/palettes.asm split across port files (draft Session H)"
@@ -279,10 +195,6 @@
       "port_file": "dos_port/src/home/pathfinding.asm",
       "why": "pret home/map_objects.asm split across port files (draft Session H)"
     },
-    "HalveAttackDueToBurn": {
-      "port_file": "dos_port/src/engine/battle/status_penalties.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
     "HandleBuildingRage": {
       "port_file": "dos_port/src/engine/battle/building_rage.asm",
       "why": "pret engine/battle/core.asm split across port files (draft Session H)"
@@ -295,37 +207,9 @@
       "port_file": "dos_port/src/engine/battle/exploding_animation.asm",
       "why": "pret engine/battle/core.asm split across port files (draft Session H)"
     },
-    "HandlePlayerBlackOut": {
-      "port_file": "dos_port/src/engine/battle/faint_switch.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
-    "HandlePoisonBurnLeechSeed": {
-      "port_file": "dos_port/src/engine/battle/residual_damage.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
-    "HandlePoisonBurnLeechSeed_DecreaseOwnHP": {
-      "port_file": "dos_port/src/engine/battle/residual_damage.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
-    "HandlePoisonBurnLeechSeed_IncreaseEnemyHP": {
-      "port_file": "dos_port/src/engine/battle/residual_damage.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
-    "HasMonFainted": {
-      "port_file": "dos_port/src/engine/battle/faint_switch.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
-    "IncrementMovePP": {
-      "port_file": "dos_port/src/engine/battle/mirror_move.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
     "InitMapSprites": {
       "port_file": "dos_port/src/engine/overworld/map_sprites.asm",
       "why": "pret home/palettes.asm split across port files (draft Session H)"
-    },
-    "IsGhostBattle": {
-      "port_file": "dos_port/src/engine/battle/ghost.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
     },
     "IsInArray": {
       "port_file": "dos_port/src/home/array.asm",
@@ -347,21 +231,9 @@
       "port_file": "dos_port/src/home/joypad_lowsens.asm",
       "why": "pret home/joypad2.asm split across port files (draft Session H)"
     },
-    "JumpToOHKOMoveEffect": {
-      "port_file": "dos_port/src/engine/battle/core_damage.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
     "LearnMoveFromLevelUp": {
       "port_file": "dos_port/src/engine/battle/battle_menu.asm",
       "why": "pret engine/pokemon/evos_moves.asm split across port files (draft Session H)"
-    },
-    "LoadBattleMonFromParty": {
-      "port_file": "dos_port/src/engine/battle/faint_leaves.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
-    "LoadEnemyMonData": {
-      "port_file": "dos_port/src/engine/battle/load_enemy_mon_data.asm",
-      "why": "pret engine/battle/core.asm:LoadEnemyMonData ported to its own file (sibling of load_enemy_from_party.asm; core.asm is split across many port files)"
     },
     "LoadEnemyMonFromParty": {
       "port_file": "dos_port/src/engine/battle/load_enemy_from_party.asm",
@@ -391,17 +263,9 @@
       "port_file": "dos_port/src/engine/battle/metronome.asm",
       "why": "pret engine/battle/core.asm split across port files (draft Session H)"
     },
-    "MirrorMoveCopyMove": {
-      "port_file": "dos_port/src/engine/battle/mirror_move.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
     "MoveAnimationTiles1": {
       "port_file": "dos_port/src/engine/overworld/cut.asm",
       "why": "INTERIM: battle engine/battle/animations.asm not yet ported; cut.asm (OW-3.4) incbins move_anim_1.2bpp as MoveAnimationTiles1 for the grass-leaf tile (tile 6). Retire and extern from animations.asm once battle move-anim tiles are ported."
-    },
-    "MoveHitTest": {
-      "port_file": "dos_port/src/engine/battle/core_damage.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
     },
     "NPCMovementDirectionsToJoypadMasksTable": {
       "port_file": "dos_port/src/home/pathfinding.asm",
@@ -411,24 +275,12 @@
       "port_file": "dos_port/src/audio/play_battle_music.asm",
       "why": "pret engine/battle/core.asm battle-music routine co-located with PlayBattleMusic in src/audio/play_battle_music.asm (battle-music consolidation)"
     },
-    "PlayMoveAnimation": {
-      "port_file": "dos_port/src/engine/battle/animations.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
     "PlaySoundWaitForCurrent": {
       "port_file": "dos_port/src/home/audio.asm",
       "why": "audio-branch consolidation (Phase A, merged 2026-07-07): the port's home-audio entry points live together in src/home/audio.asm with the audio HAL"
     },
-    "PrintCriticalOHKOText": {
-      "port_file": "dos_port/src/engine/battle/print_critical_ohko.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
     "PrintDoesntAffectText": {
       "port_file": "dos_port/src/engine/battle/move_effect_helpers.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
-    "PrintGhostText": {
-      "port_file": "dos_port/src/engine/battle/ghost.asm",
       "why": "pret engine/battle/core.asm split across port files (draft Session H)"
     },
     "PrintMoveFailureText": {
@@ -439,22 +291,6 @@
       "port_file": "dos_port/src/engine/battle/battle_menu.asm",
       "why": "pret engine/pokemon/status_screen.asm split across port files (draft Session H)"
     },
-    "QuarterSpeedDueToParalysis": {
-      "port_file": "dos_port/src/engine/battle/status_penalties.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
-    "RandomizeDamage": {
-      "port_file": "dos_port/src/engine/battle/core_damage.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
-    "ReloadMoveData": {
-      "port_file": "dos_port/src/engine/battle/mirror_move.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
-    "RemoveFaintedPlayerMon": {
-      "port_file": "dos_port/src/engine/battle/faint_switch.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
     "RemoveItemFromInventory": {
       "port_file": "dos_port/src/engine/items/inventory.asm",
       "why": "pret home/inventory.asm split across port files (draft Session H)"
@@ -462,10 +298,6 @@
     "RenameEvolvedMon": {
       "port_file": "dos_port/src/engine/pokemon/evolution.asm",
       "why": "pret engine/pokemon/evos_moves.asm split across port files (draft Session H)"
-    },
-    "ReplaceFaintedEnemyMon": {
-      "port_file": "dos_port/src/engine/battle/faint_sendout.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
     },
     "RestoreScreenTilesAndReloadTilePatterns": {
       "port_file": "dos_port/src/home/fade.asm",
@@ -477,10 +309,6 @@
     },
     "SelectEnemyMove": {
       "port_file": "dos_port/src/engine/battle/select_enemy_move.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
-    "SendOutMon": {
-      "port_file": "dos_port/src/engine/battle/faint_switch.asm",
       "why": "pret engine/battle/core.asm split across port files (draft Session H)"
     },
     "SetSpriteMovementBytesToFF": {
@@ -506,10 +334,6 @@
     "TextScript_PokemonCenterPC": {
       "port_file": "dos_port/src/home/overworld_text.asm",
       "why": "pret home/map_objects.asm split across port files (draft Session H)"
-    },
-    "TrainerBattleVictory": {
-      "port_file": "dos_port/src/engine/battle/faint_sendout.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
     },
     "TryEvolvingMon": {
       "port_file": "dos_port/src/engine/pokemon/evolution.asm",
