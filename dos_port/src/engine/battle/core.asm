@@ -31,6 +31,8 @@ bits 32
 %ifndef LINK_STATE_BATTLING
 %define LINK_STATE_BATTLING 4
 %endif
+; carried in with PlayMoveAnimation (was animations.asm)
+%define ANIM_OFF_DELAY 30              ; pret .animationsDisabled: ld c,30 / call DelayFrames
 
 ; battle menu geometry — the generated battle UI layout (Tier 1,
 ; assets/ui_layout_battle.inc ← ui_layout_battle_sidecar.json; edit with
@@ -97,11 +99,22 @@ global ReadPlayerMonCurHPAndStatus
 global CheckNumAttacksLeft
 global BattleMenu_RunWasSelected
 
+; --- consolidated from other port files (grind session 8) ---
+global GetCurrentMove
+global LoadEnemyMonData
+global ApplyBurnAndParalysisPenaltiesToPlayer
+global ApplyBurnAndParalysisPenaltiesToEnemy
+global ApplyBurnAndParalysisPenalties
+global QuarterSpeedDueToParalysis
+global HalveAttackDueToBurn
+global ApplyBadgeStatBoosts
+global PlayMoveAnimation
+
 ; --- backend (already-faithful translations in other files) ---
 extern SelectEnemyMove                 ; select_enemy_move.asm
 extern TrainerAI                       ; trainer_ai.asm (CF if AI used item/switch)
 extern HandlePoisonBurnLeechSeed       ; residual_damage.asm (ZF if target fainted)
-extern BattleRandom                    ; home/random.asm
+extern BattleRandom                    ; core_damage.asm — battle RNG
 
 ; --- draw primitives (category-D divergence point; battle_menu.asm draw helpers) ---
 extern DrawHUDsAndHPBars               ; (DrawBattleHUDs) HUDs + HP bars
@@ -140,7 +153,6 @@ extern BattleItemMenu                  ; ITEM → bag (deferred; re-shows the me
 extern BattlePartyMenu                 ; PKMN → party/switch (deferred; re-shows the menu)
 
 ; --- move-execution backend (already-faithful, in other files) ---
-extern GetCurrentMove                  ; get_current_move.asm
 extern AddNTimes                       ; home/array.asm — ESI += BX * AL (party index)
 extern CriticalHitTest                 ; core_damage.asm
 extern GetDamageVarsForPlayerAttack    ; core_damage.asm
@@ -149,7 +161,6 @@ extern CalculateDamage                 ; core_damage.asm (ZF if 0 BP)
 extern AdjustDamageForMoveType         ; core_damage.asm
 extern RandomizeDamage                 ; core_damage.asm
 extern MoveHitTest                     ; core_damage.asm (sets wMoveMissed)
-extern PlayMoveAnimation               ; animations.asm (placeholder ; TODO-HW)
 extern DecrementPP                     ; decrement_pp.asm
 extern JumpMoveEffect                  ; effects.asm — MoveEffectPointerTable dispatch
 extern IsInArray                       ; home/array.asm — AL in [ESI] ($FF-term, stride EDX) → CF
@@ -173,6 +184,18 @@ extern ChooseNextMon                   ; faint_switch.asm — forced switch-in (
 extern ReplaceFaintedEnemyMon          ; faint_sendout.asm — trainer sends next mon
 extern TrainerBattleVictory            ; faint_sendout.asm — prize money + victory text
 extern EnemyRan                        ; faint_switch.asm — enemy fled (link) tail
+
+; --- pulled in with the session-8 consolidated bodies ---
+extern Moves                           ; src/data/pokemon_data.asm — flat move-record table
+extern LoadEnemyMonFromParty           ; load_enemy_from_party.asm — link-battle path
+extern GetMonHeader                    ; home/pokemon.asm — loads wMonHeader from wCurSpecies
+extern CalcStats                       ; home/move_mon.asm — EDX=dest, ESI=EV base, BH=useEVs
+extern GetMonName                      ; home/names.asm — wNamedObjectIndex -> wNameBuffer
+extern WriteMonMoves                   ; write_moves.asm — level-up moveset (predef: wPredefDE)
+extern LoadMovePPs                     ; write_moves.asm — PPs (predef: wPredefHL/DE)
+extern IndexToPokedex                  ; engine/menus/pokedex.asm — predef, wPokedexNum in place
+extern FlagAction                      ; flag_action.asm — ESI=array, CL=bit, BH=action
+extern PlayApplyingAttackAnimation     ; animations.asm — pret animations.asm:488
 
 ; ---------------------------------------------------------------------------
 ; MainInBattleLoop — pret engine/battle/core.asm:MainInBattleLoop (line 289).
@@ -2750,4 +2773,462 @@ BattleMenu_RunWasSelected:
     ret
 .escaped:
     stc                                 ; MainInBattleLoop: jc .ret → battle ends (ran)
+    ret
+
+
+; ===========================================================================
+; Consolidated from other port files — grind session 8. These are pret
+; engine/battle/core.asm labels that had been split into satellite port files;
+; the mirror rule puts them here. Bodies are byte-for-byte the code that was in
+; those files (moved by line range, not retyped).
+; ===========================================================================
+
+; ---------------------------------------------------------------------------
+; GetCurrentMove — pret engine/battle/core.asm:6142. Moved here from
+; src/engine/battle/get_current_move.asm (grind session 8).
+; ---------------------------------------------------------------------------
+GetCurrentMove:
+    mov al, [ebp + hWhoseTurn]
+    test al, al
+    jz .player
+    mov edx, wEnemyMoveNum
+    mov al, [ebp + wEnemySelectedMove]
+    jmp .selected
+.player:
+    mov edx, wPlayerMoveNum
+    ; TestBattle (debug) forces a specific player move
+    mov al, [ebp + wStatusFlags7]
+    test al, (1 << BIT_TEST_BATTLE)
+    mov al, [ebp + wTestBattlePlayerSelectedMove]
+    jnz .selected
+    mov al, [ebp + wPlayerSelectedMove]
+.selected:
+    mov [ebp + wNameListIndex], al       ; ld [wNameListIndex], a (name fetch input)
+    ; esi = &Moves[(id - 1) * MOVE_LENGTH]  (flat)
+    dec al
+    movzx ecx, al
+    imul ecx, ecx, MOVE_LENGTH
+    mov esi, Moves
+    add esi, ecx
+    ; copy MOVE_LENGTH bytes flat [esi] → WRAM [ebp + edx]
+    mov ecx, MOVE_LENGTH
+.copy:
+    mov al, [esi]
+    inc esi
+    mov [ebp + edx], al
+    inc edx
+    dec ecx
+    jnz .copy
+    ret
+
+; ---------------------------------------------------------------------------
+; LoadEnemyMonData — pret engine/battle/core.asm:6174. Moved here from
+; src/engine/battle/load_enemy_mon_data.asm (grind session 8).
+; ---------------------------------------------------------------------------
+; ---------------------------------------------------------------------------
+LoadEnemyMonData:
+    ; link battle → copy from the enemy party structs instead (pret: jp z)
+    mov al, [ebp + wLinkState]
+    cmp al, LINK_STATE_BATTLING
+    je  LoadEnemyMonFromParty
+
+    ; wCurSpecies = wEnemyMonSpecies = wEnemyMonSpecies2, then load its header.
+    mov al, [ebp + wEnemyMonSpecies2]
+    mov [ebp + wEnemyMonSpecies], al
+    mov [ebp + wCurSpecies], al
+    ; ; PROJ(port): the port's WriteMonMoves->GetMonLearnset reads wCurPartySpecies
+    ; (not pret's wCurSpecies), so mirror the species there too for the moveset gen.
+    mov [ebp + wCurPartySpecies], al
+    call GetMonHeader
+
+    ; --- DVs: transformed → original DVs; trainer → fixed; wild → random ---
+    mov al, [ebp + wEnemyBattleStatus3]
+    test al, 1 << TRANSFORMED
+    mov esi, wTransformedEnemyMonOriginalDVs
+    mov al, [ebp + esi]                 ; a = orig DV byte 1
+    inc esi
+    mov bh, [ebp + esi]                 ; b = orig DV byte 2
+    jnz .storeDVs                       ; transformed → keep original DVs
+    mov al, [ebp + wIsInBattle]
+    cmp al, 2                           ; trainer battle?
+    mov al, ATKDEFDV_TRAINER
+    mov bh, SPDSPCDV_TRAINER
+    jz  .storeDVs                       ; trainer → fixed DVs
+    call BattleRandom                   ; wild → random DVs
+    mov bh, al
+    call BattleRandom
+.storeDVs:
+    mov esi, wEnemyMonDVs
+    mov [ebp + esi], al                 ; DV byte 1
+    inc esi
+    mov [ebp + esi], bh                 ; DV byte 2
+
+    ; --- level + stats ---
+    mov edx, wEnemyMonLevel
+    mov al, [ebp + wCurEnemyLevel]
+    mov [ebp + edx], al                 ; store level
+    inc edx                             ; edx → wEnemyMonMaxHP (stat block dest)
+    mov bh, 0                           ; b = 0 (don't consider stat exp)
+    mov esi, wEnemyMonHP                ; hl = EV base (pret passes wEnemyMonHP; unused, b=0)
+    push esi
+    call CalcStats                      ; writes MaxHP/Atk/Def/Spd/Spc to [edx]
+    pop esi                             ; esi = wEnemyMonHP (current-HP dest below)
+
+    mov al, [ebp + wIsInBattle]
+    cmp al, 2
+    jz  .copyHPAndStatusFromPartyData
+    mov al, [ebp + wEnemyBattleStatus3]
+    test al, 1 << TRANSFORMED
+    jnz .copyTypes                      ; transformed → HP already set, skip
+    ; wild, not transformed: current HP = max HP, status = 0
+    mov al, [ebp + wEnemyMonMaxHP]
+    mov [ebp + esi], al                 ; ld [hli], a
+    inc esi
+    mov al, [ebp + wEnemyMonMaxHP + 1]
+    mov [ebp + esi], al
+    inc esi
+    inc esi                             ; skip wEnemyMonPartyPos (pret: inc hl)
+    mov byte [ebp + esi], 0             ; status = 0
+    jmp .copyTypes
+
+.copyHPAndStatusFromPartyData:
+    ; trainer mon: copy HP + status from the enemy party struct wWhichPokemon
+    mov esi, wEnemyMon1HP
+    mov al, [ebp + wWhichPokemon]
+    mov ebx, PARTYMON_STRUCT_LENGTH     ; pret: wEnemyMon2 - wEnemyMon1 (enemy party stride)
+    call AddNTimes                      ; esi += ebx*al
+    mov al, [ebp + esi]
+    mov [ebp + wEnemyMonHP], al
+    inc esi
+    mov al, [ebp + esi]
+    mov [ebp + wEnemyMonHP + 1], al
+    inc esi
+    mov al, [ebp + wWhichPokemon]
+    mov [ebp + wEnemyMonPartyPos], al
+    inc esi                             ; pret: inc hl (skip to status byte)
+    mov al, [ebp + esi]
+    mov [ebp + wEnemyMonStatus], al
+
+.copyTypes:
+    ; types (2) + catch rate (1) from the mon header
+    mov esi, wMonHTypes
+    mov edx, wEnemyMonType
+    mov al, [ebp + esi]                 ; type 1
+    inc esi
+    mov [ebp + edx], al
+    inc edx
+    mov al, [ebp + esi]                 ; type 2
+    inc esi
+    mov [ebp + edx], al
+    inc edx
+    mov al, [ebp + esi]                 ; catch rate
+    inc esi
+    mov [ebp + edx], al
+    inc edx                             ; edx → wEnemyMonMoves
+
+    mov al, [ebp + wIsInBattle]
+    cmp al, 2
+    jnz .copyStandardMoves
+    ; trainer: copy the 4 moves straight from the enemy party struct
+    mov esi, wEnemyMon1Moves
+    mov al, [ebp + wWhichPokemon]
+    mov ebx, PARTYMON_STRUCT_LENGTH
+    call AddNTimes
+    mov ebx, NUM_MOVES
+    call CopyData                       ; copies to [edx], advances edx by NUM_MOVES
+    jmp .loadMovePPs
+
+.copyStandardMoves:
+    ; wild: copy the header's 4 default moves, then WriteMonMoves fills level-up moves
+    mov esi, wMonHMoves
+    mov al, [ebp + esi]
+    inc esi
+    mov [ebp + edx], al
+    inc edx
+    mov al, [ebp + esi]
+    inc esi
+    mov [ebp + edx], al
+    inc edx
+    mov al, [ebp + esi]
+    inc esi
+    mov [ebp + edx], al
+    inc edx
+    mov al, [ebp + esi]                 ; 4th move (no esi advance needed)
+    mov [ebp + edx], al
+    dec edx
+    dec edx
+    dec edx                             ; edx → wEnemyMonMoves (base) for the predef
+    mov byte [ebp + wLearningMovesFromDayCare], 0
+    ; predef WriteMonMoves — stage de = wEnemyMonMoves in wPredefDE (big-endian)
+    mov [ebp + wPredefDE], dh
+    mov [ebp + wPredefDE + 1], dl
+    call WriteMonMoves
+
+.loadMovePPs:
+    ; predef LoadMovePPs — hl = wEnemyMonMoves, de = wEnemyMonPP - 1
+    mov word [ebp + wPredefHL], (wEnemyMonMoves >> 8) | ((wEnemyMonMoves & 0xFF) << 8)
+    mov edx, wEnemyMonPP - 1
+    mov [ebp + wPredefDE], dh
+    mov [ebp + wPredefDE + 1], dl
+    call LoadMovePPs
+
+    ; --- base stats (NUM_STATS) + catch rate + base exp from the header ---
+    mov esi, wMonHBaseStats
+    mov edx, wEnemyMonBaseStats
+    mov bh, NUM_STATS
+.copyBaseStatsLoop:
+    mov al, [ebp + esi]
+    inc esi
+    mov [ebp + edx], al
+    inc edx
+    dec bh
+    jnz .copyBaseStatsLoop
+    mov esi, wMonHCatchRate
+    mov al, [ebp + esi]                 ; catch rate
+    inc esi
+    mov [ebp + edx], al
+    inc edx
+    mov al, [ebp + esi]                 ; base exp
+    mov [ebp + edx], al
+
+    ; --- nickname = species name ---
+    mov al, [ebp + wEnemyMonSpecies2]
+    mov [ebp + wNamedObjectIndex], al
+    call GetMonName
+    mov esi, wNameBuffer
+    mov edx, wEnemyMonNick
+    mov ebx, NAME_LENGTH
+    call CopyData
+
+    ; --- mark seen in the pokédex ---
+    mov al, [ebp + wEnemyMonSpecies2]   ; ld a, [wEnemyMonSpecies2]
+    mov [ebp + wPokedexNum], al         ; ld [wPokedexNum], a
+    call IndexToPokedex                 ; predef IndexToPokedex
+    movzx eax, byte [ebp + wPokedexNum] ; ld a, [wPokedexNum]
+    dec eax                             ; dex bit index (0-based)
+    mov cl, al
+    mov bh, FLAG_SET                    ; FlagAction reads the action in BH
+    mov esi, wPokedexSeen
+    call FlagAction
+
+    ; --- snapshot unmodified level + stats (1 + NUM_STATS*2 bytes) ---
+    mov esi, wEnemyMonLevel
+    mov edx, wEnemyMonUnmodifiedLevel
+    mov ebx, 1 + NUM_STATS * 2
+    call CopyData
+
+    ; --- default stat mods ($7) ---
+    mov esi, wEnemyMonStatMods
+    mov bh, NUM_STAT_MODS
+.statModLoop:
+    mov byte [ebp + esi], 7
+    inc esi
+    dec bh
+    jnz .statModLoop
+    ret
+
+; ---------------------------------------------------------------------------
+; ApplyBurnAndParalysisPenaltiesToPlayer / ...ToEnemy / ApplyBurnAndParalysisPenalties /
+; QuarterSpeedDueToParalysis / HalveAttackDueToBurn — pret engine/battle/core.asm:
+; 6456-6511. Moved here from
+; src/engine/battle/status_penalties.asm (grind session 8).
+; The ...ToEnemy -> ApplyBurnAndParalysisPenalties FALLTHROUGH is preserved: the two
+; labels stay adjacent and in that order, exactly as in the source file.
+; ---------------------------------------------------------------------------
+ApplyBurnAndParalysisPenaltiesToPlayer:
+    mov al, 1
+    jmp ApplyBurnAndParalysisPenalties
+
+ApplyBurnAndParalysisPenaltiesToEnemy:
+    xor al, al
+ApplyBurnAndParalysisPenalties:
+    mov [ebp + hWhoseTurn], al
+    call QuarterSpeedDueToParalysis
+    jmp HalveAttackDueToBurn
+
+; --- Speed /= 4 if the off-turn mon is paralysed (min 1) ---
+QuarterSpeedDueToParalysis:
+    mov al, [ebp + hWhoseTurn]
+    test al, al
+    jz .playerTurn
+; enemy's turn -> quarter the player's speed
+    mov al, [ebp + wBattleMonStatus]
+    and al, 1 << PAR
+    jz .ret
+    mov esi, wBattleMonSpeed + 1
+    mov al, [ebp + esi]              ; low ([hld])
+    dec esi
+    mov bl, al
+    mov al, [ebp + esi]              ; high
+    shr al, 1
+    rcr bl, 1
+    shr al, 1
+    rcr bl, 1                        ; (a:bl) = speed >> 2
+    mov [ebp + esi], al              ; store high ([hli])
+    inc esi
+    or al, bl
+    jnz .storePlayerSpeed
+    mov bl, 1                        ; minimum 1
+.storePlayerSpeed:
+    mov [ebp + esi], bl
+.ret:
+    ret
+.playerTurn:
+; quarter the enemy's speed
+    mov al, [ebp + wEnemyMonStatus]
+    and al, 1 << PAR
+    jz .ret
+    mov esi, wEnemyMonSpeed + 1
+    mov al, [ebp + esi]
+    dec esi
+    mov bl, al
+    mov al, [ebp + esi]
+    shr al, 1
+    rcr bl, 1
+    shr al, 1
+    rcr bl, 1
+    mov [ebp + esi], al
+    inc esi
+    or al, bl
+    jnz .storeEnemySpeed
+    mov bl, 1
+.storeEnemySpeed:
+    mov [ebp + esi], bl
+    ret
+
+; --- Attack /= 2 if the off-turn mon is burned (min 1) ---
+HalveAttackDueToBurn:
+    mov al, [ebp + hWhoseTurn]
+    test al, al
+    jz .playerTurn
+; enemy's turn -> halve the player's attack
+    mov al, [ebp + wBattleMonStatus]
+    and al, 1 << BRN
+    jz .ret
+    mov esi, wBattleMonAttack + 1
+    mov al, [ebp + esi]
+    dec esi
+    mov bl, al
+    mov al, [ebp + esi]
+    shr al, 1
+    rcr bl, 1                        ; (a:bl) = attack >> 1
+    mov [ebp + esi], al
+    inc esi
+    or al, bl
+    jnz .storePlayerAttack
+    mov bl, 1
+.storePlayerAttack:
+    mov [ebp + esi], bl
+.ret:
+    ret
+.playerTurn:
+; halve the enemy's attack
+    mov al, [ebp + wEnemyMonStatus]
+    and al, 1 << BRN
+    jz .ret
+    mov esi, wEnemyMonAttack + 1
+    mov al, [ebp + esi]
+    dec esi
+    mov bl, al
+    mov al, [ebp + esi]
+    shr al, 1
+    rcr bl, 1
+    mov [ebp + esi], al
+    inc esi
+    or al, bl
+    jnz .storeEnemyAttack
+    mov bl, 1
+.storeEnemyAttack:
+    mov [ebp + esi], bl
+    ret
+
+; ---------------------------------------------------------------------------
+; ApplyBadgeStatBoosts — pret engine/battle/core.asm:6639. Moved here from
+; src/engine/battle/badge_boosts.asm (grind session 8).
+; Its file-local `wObtainedBadges equ 0xD355` is NOT carried: this file already
+; defines it under %ifndef with the identical value.
+; ---------------------------------------------------------------------------
+ApplyBadgeStatBoosts:
+    mov al, [ebp + wLinkState]
+    cmp al, LINK_STATE_BATTLING
+    je .ret                          ; ret z — no badge boosts in link battles
+    mov al, [ebp + wObtainedBadges]
+    mov bh, al                       ; b = badge bitfield
+    mov esi, wBattleMonAttack
+    mov bl, 4                        ; c = 4 stats (Atk, Def, Spd, Spc)
+.loop:
+    shr bh, 1                        ; srl b
+    jnc .skipBoost
+    call .applyBoostToStat           ; call c
+.skipBoost:
+    inc esi
+    inc esi
+    shr bh, 1                        ; srl b (skip odd-position badge bit)
+    dec bl
+    jnz .loop
+.ret:
+    ret
+
+; multiply 16-bit big-endian stat at [esi] by 1.125 (stat + stat/8), cap at 999.
+; esi unchanged on return.
+.applyBoostToStat:
+    mov al, [ebp + esi]              ; high byte ([hli])
+    inc esi
+    mov dh, al                       ; d = high
+    mov dl, [ebp + esi]              ; e = low (esi at low byte)
+    shr dx, 1                        ; de = stat >> 3 = stat / 8
+    shr dx, 1
+    shr dx, 1
+    mov al, [ebp + esi]              ; low byte
+    add al, dl
+    mov [ebp + esi], al              ; [hld] -> store low; esi -> high
+    dec esi
+    mov al, [ebp + esi]              ; high byte
+    adc al, dh
+    mov [ebp + esi], al              ; [hli] -> store high; esi -> low
+    inc esi
+    mov al, [ebp + esi]              ; low ([hld])
+    dec esi
+    sub al, MAX_STAT_VALUE & 0xFF
+    mov al, [ebp + esi]              ; high
+    sbb al, MAX_STAT_VALUE >> 8      ; sbb (x86), not sbc (SM83)
+    jc .boostRet                     ; ret c — stat below cap
+    mov al, MAX_STAT_VALUE >> 8
+    mov [ebp + esi], al              ; [hli] high = 999 high
+    inc esi
+    mov al, MAX_STAT_VALUE & 0xFF
+    mov [ebp + esi], al              ; [hld] low = 999 low
+    dec esi
+.boostRet:
+    ret
+
+; ---------------------------------------------------------------------------
+; PlayMoveAnimation — pret engine/battle/core.asm:6820. Moved here from
+; src/engine/battle/animations.asm (grind session 8).
+; ---------------------------------------------------------------------------
+; ---------------------------------------------------------------------------
+; PlayMoveAnimation — pret core.asm:PlayMoveAnimation → predef MoveAnimation, the
+; ANIMATION=OFF realization. In: AL = animation id (the move number, as core.asm
+; passes wPlayerMoveNum/wEnemyMoveNum). All registers preserved.
+; ---------------------------------------------------------------------------
+PlayMoveAnimation:
+    push eax
+    push ebx
+    mov [ebp + wAnimationID], al
+    ; TODO-HW: audio HAL — WaitForSoundToFinish (no-op until the APU HAL, Phase 3).
+    ; TODO-HW: SetAnimationPalette — our VGA palette is fixed (Phase 5), so no-op.
+    mov al, [ebp + wAnimationID]
+    and al, al
+    jz .done                            ; wAnimationID 0 → nothing to play
+    ; .moveAnimation → .animationsDisabled: a fixed 30-frame delay where the move
+    ; animation would play. TODO-HW: full subanimation engine (ShareMoveAnimations +
+    ; PlayAnimation) when the battle-animation tile/OAM stream interpreter is ported.
+    mov bl, ANIM_OFF_DELAY
+    call DelayFrames
+    ; .next: the generic applying-attack animation runs in BOTH the on and off cases.
+    call PlayApplyingAttackAnimation
+.done:
+    mov byte [ebp + wAnimationID], 0    ; .animationFinished: clear the anim id scratch
+    pop ebx
+    pop eax
     ret

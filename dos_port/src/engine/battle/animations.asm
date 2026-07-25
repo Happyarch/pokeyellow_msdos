@@ -1,23 +1,13 @@
-; animations.asm — battle move-animation entry (faithful ANIMATION=OFF path).
+; animations.asm — battle move-animation helpers.
 ;
-; Port of pret engine/battle/animations.asm:MoveAnimation + PlayApplyingAttackAnimation,
-; restricted to the behaviour the original game takes when the ANIMATION option is set
-; to OFF (wOptions bit BIT_BATTLE_ANIMATION = 1). We have no subanimation engine yet, so
-; we ALWAYS implement exactly that branch — this is the sanctioned placeholder, NOT a
-; bespoke HP-bar drain. (We can't gate on the wOptions bit the way pret does: its DEFAULT
-; is animations ON, which would take the unported PlayAnimation path and play nothing,
-; skipping even the delay. We have no engine, so the OFF behaviour is what we render.)
-; The HP-bar update is a SEPARATE faithful step (DrawHUDsAndHPBars), done by the caller
-; after the move resolves — not here.
+; PlayMoveAnimation (pret engine/battle/core.asm:6820) used to live here; the
+; mirror rule moved it to src/engine/battle/core.asm (grind session 8). What
+; remains are the pret engine/battle/animations.asm labels themselves:
 ;
-; pret MoveAnimation (animations.asm:418):
-;   WaitForSoundToFinish / SetAnimationPalette       (audio + palette setup)
-;   wAnimationID == 0          → finish (no-op)
-;   .moveAnimation:
-;     wOptions BIT_BATTLE_ANIMATION set (OFF) → .animationsDisabled: DelayFrames(30)
-;     (else: ShareMoveAnimations + PlayAnimation — the full subanim engine, NOT ported)
-;   .next: PlayApplyingAttackAnimation  (generic "show damage" shake/blink, BOTH cases)
-;   .animationFinished: WaitForSoundToFinish + reset anim scratch
+;   PlayApplyingAttackAnimation  (pret animations.asm:488) — the generic
+;     "show damage" shake/blink dispatched by wAnimationType. Called by
+;     PlayMoveAnimation in BOTH the animations-on and animations-off cases.
+;   AdjustOAMBlock{X,Y}Pos / ...2 (pret animations.asm:1381-1426).
 ;
 ; Build: nasm -f coff -I include/ -I . -o animations.o animations.asm
 ; Register map: A=AL, EBP = GB base; GB memory = [EBP+addr].
@@ -25,16 +15,11 @@ bits 32
 
 %include "gb_memmap.inc"
 
-%define ANIM_OFF_DELAY 30        ; pret .animationsDisabled: ld c,30 / call DelayFrames
-
-global PlayMoveAnimation
 global PlayApplyingAttackAnimation
 global AdjustOAMBlockXPos
 global AdjustOAMBlockXPos2
 global AdjustOAMBlockYPos
 global AdjustOAMBlockYPos2
-
-extern DelayFrames               ; src/video/frame.asm — BL = frame count
 
 %ifndef wCoordAdjustmentAmount
 wCoordAdjustmentAmount   equ 0xD089 ; golden 00:d089
@@ -48,32 +33,6 @@ SCREEN_HEIGHT_PX         equ 144   ; constants/hardware.inc
 
 section .text
 
-; ---------------------------------------------------------------------------
-; PlayMoveAnimation — pret core.asm:PlayMoveAnimation → predef MoveAnimation, the
-; ANIMATION=OFF realization. In: AL = animation id (the move number, as core.asm
-; passes wPlayerMoveNum/wEnemyMoveNum). All registers preserved.
-; ---------------------------------------------------------------------------
-PlayMoveAnimation:
-    push eax
-    push ebx
-    mov [ebp + wAnimationID], al
-    ; TODO-HW: audio HAL — WaitForSoundToFinish (no-op until the APU HAL, Phase 3).
-    ; TODO-HW: SetAnimationPalette — our VGA palette is fixed (Phase 5), so no-op.
-    mov al, [ebp + wAnimationID]
-    and al, al
-    jz .done                            ; wAnimationID 0 → nothing to play
-    ; .moveAnimation → .animationsDisabled: a fixed 30-frame delay where the move
-    ; animation would play. TODO-HW: full subanimation engine (ShareMoveAnimations +
-    ; PlayAnimation) when the battle-animation tile/OAM stream interpreter is ported.
-    mov bl, ANIM_OFF_DELAY
-    call DelayFrames
-    ; .next: the generic applying-attack animation runs in BOTH the on and off cases.
-    call PlayApplyingAttackAnimation
-.done:
-    mov byte [ebp + wAnimationID], 0    ; .animationFinished: clear the anim id scratch
-    pop ebx
-    pop eax
-    ret
 
 ; ---------------------------------------------------------------------------
 ; PlayApplyingAttackAnimation — pret animations.asm:488. The generic post-move effect

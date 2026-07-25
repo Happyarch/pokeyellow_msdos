@@ -43,7 +43,7 @@ extern CopyData                                ; dos_port/src/home/copy_data.asm
 extern AddNTimes                               ; dos_port/src/home/array.asm
 extern GetMonHeader                            ; dos_port/src/home/pokemon.asm
 extern SkipFixedLengthTextEntries              ; dos_port/src/home/array.asm
-extern ApplyBurnAndParalysisPenaltiesToEnemy   ; dos_port/src/engine/battle/status_penalties.asm
+extern ApplyBurnAndParalysisPenaltiesToEnemy ; engine/battle/core.asm
 
 global LoadEnemyMonFromParty
 

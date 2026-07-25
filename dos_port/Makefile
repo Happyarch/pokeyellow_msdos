@@ -1415,8 +1415,6 @@ FRONTEND_SRCS := \
     src/engine/battle/move_effects/mist.asm \
     src/engine/battle/move_effects/one_hit_ko.asm \
     src/engine/battle/move_effects/paralyze.asm \
-    src/engine/battle/badge_boosts.asm \
-    src/engine/battle/status_penalties.asm \
     src/engine/battle/decrement_pp.asm \
     src/engine/battle/animations.asm \
     src/data/battle_data.asm \
@@ -1425,7 +1423,6 @@ FRONTEND_SRCS := \
     src/data/type_names.asm \
     src/home/random.asm \
     src/engine/battle/core_damage.asm \
-    src/engine/battle/get_current_move.asm \
     src/engine/battle/print_type.asm \
     src/engine/battle/select_enemy_move.asm \
     src/engine/battle/load_enemy_moves.asm \
@@ -1446,7 +1443,6 @@ FRONTEND_SRCS := \
     src/engine/battle/faint_switch.asm \
     src/engine/battle/faint_enemy.asm \
     src/engine/battle/load_enemy_from_party.asm \
-    src/engine/battle/load_enemy_mon_data.asm \
     src/engine/battle/faint_sendout.asm \
     src/engine/battle/end_of_battle.asm \
     src/engine/flag_action.asm

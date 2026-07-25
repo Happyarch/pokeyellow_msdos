@@ -85,7 +85,7 @@ extern SetPal_Battle                    ; engine/gfx/palettes.asm
 ; --- _InitBattleCommon dependencies (the real overworld→battle orchestration) ---
 extern LoadFontTilePatterns              ; home/load_font.asm
 extern LoadTextBoxTilePatterns           ; home/load_font.asm
-extern LoadEnemyMonData                  ; load_enemy_mon_data.asm — build wEnemyMon*
+extern LoadEnemyMonData               ; engine/battle/core.asm — build wEnemyMon*
 extern LoadFrontSpriteByMonIndex         ; home/pics.asm — enemy front pic (generic)
 extern HasMonFainted                     ; faint_switch.asm — ZF=1 → fainted
 extern FlagAction                        ; flag_action.asm — ESI=array, CL=bit, BH=action

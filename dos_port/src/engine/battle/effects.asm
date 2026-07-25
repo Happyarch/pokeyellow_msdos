@@ -75,9 +75,9 @@ extern ParalyzeEffect_         ; move_effects/paralyze.asm
 extern Multiply
 extern Divide
 extern StatModifierRatios
-extern ApplyBadgeStatBoosts
-extern QuarterSpeedDueToParalysis
-extern HalveAttackDueToBurn
+extern ApplyBadgeStatBoosts           ; engine/battle/core.asm
+extern QuarterSpeedDueToParalysis     ; engine/battle/core.asm
+extern HalveAttackDueToBurn           ; engine/battle/core.asm
 extern MoveHitTest                      ; core_damage.asm — accuracy test → wMoveMissed
 extern BattleRandom                     ; home/random.asm
 extern DelayFrames                      ; frame.asm — BL = frame count

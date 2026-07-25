@@ -35,8 +35,8 @@ extern CopyData                                ; dos_port/src/home/copy_data.asm
 extern AddNTimes                               ; dos_port/src/home/array.asm
 extern GetMonHeader                            ; dos_port/src/home/pokemon.asm
 extern SkipFixedLengthTextEntries              ; dos_port/src/home/array.asm
-extern ApplyBurnAndParalysisPenaltiesToPlayer  ; dos_port/src/engine/battle/status_penalties.asm
-extern ApplyBadgeStatBoosts                    ; dos_port/src/engine/battle/badge_boosts.asm
+extern ApplyBurnAndParalysisPenaltiesToPlayer ; engine/battle/core.asm
+extern ApplyBadgeStatBoosts           ; engine/battle/core.asm
 
 global AnyEnemyPokemonAliveCheck
 global LoadBattleMonFromParty

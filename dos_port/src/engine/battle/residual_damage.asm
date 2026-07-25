@@ -74,7 +74,7 @@ bits 32
 
 ; ── Deferred UI externs ──────────────────────────────────────────────────────
 extern PrintText
-extern PlayMoveAnimation
+extern PlayMoveAnimation              ; engine/battle/core.asm — AL = animation id
 extern DrawHUDsAndHPBars
 extern DelayFrames
 extern UpdateCurMonHPBar

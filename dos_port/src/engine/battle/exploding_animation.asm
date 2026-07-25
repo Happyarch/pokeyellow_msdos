@@ -30,7 +30,7 @@ section .text
 global HandleExplodingAnimation
 
 ; --- shared scaffold extern (§4-style: call, never define) ---
-extern PlayMoveAnimation            ; animations.asm — AL = animation id (ANIMATION=OFF path)
+extern PlayMoveAnimation              ; engine/battle/core.asm — AL = animation id (ANIMATION=OFF path)
 
 ; Numeric ids not present as named constants in gb_constants.inc — literal + comment,
 ; per the swarm's numeric-id convention (matches poison.asm's TOXIC/POISON_EFFECT style).

@@ -1558,7 +1558,7 @@ global ThrowBallAtTrainerMon
 global BoxFullCannotThrowBall
 global SendNewMonToBox
 
-extern PlayMoveAnimation      ; engine/battle/animations.asm — AL = animation id (predef MoveAnimation)
+extern PlayMoveAnimation              ; engine/battle/core.asm — AL = animation id (predef MoveAnimation)
 extern IsGhostBattle          ; engine/battle/ghost.asm — ZF=1 → unidentified ghost
 extern LoadScreenTilesFromBuffer1 ; src/home/tilemap.asm
 extern Delay3                 ; video/frame.asm
@@ -1586,7 +1586,7 @@ extern Multiply               ; home/math.asm — hMultiplicand(3) * hMultiplier
 extern IndexToPokedex         ; engine/menus/pokedex.asm — predef, wPokedexNum in place
 extern ShowPokedexData        ; engine/menus/pokedex.asm (predef)
 extern AskName                ; engine/menus/naming_screen.asm (predef; hl = nickname dest)
-extern LoadEnemyMonData       ; engine/battle/load_enemy_mon_data.asm
+extern LoadEnemyMonData               ; engine/battle/core.asm
 extern CalcExperience         ; engine/pokemon/experience.asm — DH = level → hExperience
 extern ClearSprites           ; home/sprites.asm
 extern AddPartyMon            ; home/move_mon.asm — adds wCurPartySpecies to the party

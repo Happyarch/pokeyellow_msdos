@@ -3,7 +3,7 @@
 %include "gb_macros.inc"
 
 extern MoveHitTest
-extern QuarterSpeedDueToParalysis
+extern QuarterSpeedDueToParalysis     ; engine/battle/core.asm
 extern DelayFrames
 extern PlayCurrentMoveAnimation
 extern PrintMayNotAttackText

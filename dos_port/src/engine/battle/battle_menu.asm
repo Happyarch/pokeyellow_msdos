@@ -110,7 +110,7 @@ extern Multiply
 extern Divide
 extern GetMonLearnset                ; write_moves.asm — flat learnset ptr for wCurPartySpecies
 ; --- DEBUG_BATTLE_ENEMYHIT ground-truth scaffold only ---
-extern GetCurrentMove
+extern GetCurrentMove                 ; engine/battle/core.asm — move record -> wPlayerMove*/wEnemyMove*
 extern GetDamageVarsForEnemyAttack
 extern CalculateDamage
 extern AdjustDamageForMoveType

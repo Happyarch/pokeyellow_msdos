@@ -130,7 +130,7 @@ extern DrawBattleHUDs
 extern DoEnemyAttackDamage
 extern LoadWildMonMoves
 extern SelectEnemyMove
-extern GetCurrentMove
+extern GetCurrentMove                 ; engine/battle/core.asm — move record -> wPlayerMove*/wEnemyMove*
 extern GetDamageVarsForPlayerAttack
 extern CalculateDamage
 extern AdjustDamageForMoveType
@@ -138,7 +138,7 @@ extern RandomizeDamage
 extern DelayFrame
 %ifdef DEBUG_BATTLE_GOLDEN
 ; --- Stage 2 golden gate: the REAL loaders replace the synthetic seed ---
-extern LoadEnemyMonData          ; load_enemy_mon_data.asm — real wild loader
+extern LoadEnemyMonData               ; engine/battle/core.asm — real wild loader
 extern CalcStats                 ; home/move_mon.asm — stat recompute from the spec DVs
 extern CopyData                  ; home/copy_data.asm
 extern LoadFrontSpriteByMonIndex ; home/pics.asm — real enemy front pic
