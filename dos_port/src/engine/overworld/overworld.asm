@@ -42,8 +42,6 @@ bits 32
 %include "assets/event_constants.inc"   ; EVENT_* bit indices (EVENT_2A7, OW-A.6)
 %include "events.inc"                   ; CheckEvent/SetEvent/ResetEvent over W_EVENT_FLAGS
 
-global RunNPCMovementScript
-
 extern CopyData                           ; src/home/copy_data.asm
 extern IsInArray              ; src/home/array.asm — shared home global (LoadTilesetHeader dungeon check)
 extern DelayFrame                         ; src/video/frame.asm
@@ -72,8 +70,6 @@ extern text_engine_init                   ; src/home/text.asm
 extern DisplaySignText              ; src/home/overworld_text.asm — [hTextID] → ShowTextStream
 extern LoadFontTilePatterns         ; src/home/load_font.asm
 extern ReloadWalkingTilePatterns    ; src/engine/overworld/map_sprites.asm
-; M3.3 home-rectify: faithful simulated-joypad framework
-extern StartSimulatingJoypadStates  ; src/home/simulate_joypad.asm
 ; M7.4 home-rectify: faithful ExtraWarpCheck function-1/function-2 dispatch
 %ifdef DEBUG_DUMP
 %endif
@@ -212,7 +208,6 @@ global _AdvancePlayerSprite                 ; OW-A.3: engine body, de-folded fro
 ; src/home/overworld.asm (menu-intro review + R-002 retirement, 2026-07-23).
 global CheckWarpTile
 global LoadWarpDestination
-global PlayerStepOutFromDoor
 global IsPlayerStandingOnDoorTile          ; OW-7.2: for player_state.asm (check-only) when it promotes
 global LoadTilesetHeader                   ; OW-7.2: for special_warps.asm (now linked)
 ; LoadPlayerSpriteGraphics moved to engine/overworld/player_gfx.asm (wild-live
@@ -317,13 +312,6 @@ DefaultRivalName:
     encode_name RIVAL_NAME
 
 section .text
-
-; PAD_BUTTONS | PAD_CTRL_PAD = every button ($0F | $F0 = $FF); pret's EnterMap
-; writes this to wJoyIgnore so no real input is honored during the map load.
-; (hardware.inc constants; not defined in overworld.asm's include chain, so declared
-; locally here — same idiom as ledges.asm's PAD_ALL.)
-PAD_BUTTONS  equ 0x0F   ; A|B|SELECT|START (button byte low nibble)
-PAD_CTRL_PAD equ 0xF0   ; RIGHT|LEFT|UP|DOWN (D-pad high nibble)
 
 ; ---------------------------------------------------------------------------
 ; EnterMapBoot — port-only ONE-TIME overworld boot glue (runs once per game boot).
@@ -1286,93 +1274,6 @@ IsPlayerStandingOnDoorTile:
     pop eax
     clc
     ret
-
-; ---------------------------------------------------------------------------
-; PlayerStepOutFromDoor — force one auto-step south off a warp-arrival tile.
-; Called by RunNPCMovementScript when BIT_STANDING_ON_DOOR is detected.
-; Calls IsPlayerStandingOnDoorTile first: if not a door tile (stair/ladder),
-; clears the flags with no auto-walk. If on a door tile, sets BIT_EXITING_DOOR
-; (marks auto-walk in progress) and BIT_SCRIPTED_MOVEMENT_STATE (injects PAD_DOWN
-; into the idle-path direction logic; .handleDirection bypasses the turn-delay and
-; fires the collision-exit warp). Pret ref: engine/overworld/auto_movement.asm:PlayerStepOutFromDoor
-; ---------------------------------------------------------------------------
-PlayerStepOutFromDoor:
-    ; pret auto_movement.asm:PlayerStepOutFromDoor entry — clear BIT_UNKNOWN_5_1 in
-    ; wStatusFlags5 unconditionally (both door and non-door paths run through here).
-    and byte [ebp + W_STATUS_FLAGS_5], ~(1 << BIT_UNKNOWN_5_1)
-    call IsPlayerStandingOnDoorTile
-    jnc .notStandingOnDoor
-    ; Door tile — set up one forced south step to walk off the arrival warp tile.
-    mov byte [ebp + W_JOY_IGNORE], PAD_SELECT | PAD_START | PAD_CTRL_PAD
-    or byte [ebp + W_MOVEMENT_FLAGS], (1 << BIT_EXITING_DOOR)
-    mov byte [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], 1
-    mov byte [ebp + W_SIMULATED_JOYPAD_STATES_END], PAD_DOWN
-    xor al, al
-    mov [ebp + W_SPRITE_PLAYER_IMAGE_INDEX], al       ; pret: wSpritePlayerStateData1ImageIndex = 0
-    ; StartSimulatingJoypadStates zeroes the override mask + slot-0 movement byte 1 and
-    ; sets BIT_SCRIPTED_MOVEMENT_STATE so AreInputsSimulated feeds this one PAD_DOWN.
-    ; wJoyIgnore now matches pret and is cleared by AreInputsSimulated.doneSimulating
-    ; after the one-step queue drains, sharing the same ownership model as the
-    ; multi-step Pallet/Pewter scripted-input machinery.
-    call StartSimulatingJoypadStates
-    ret
-.notStandingOnDoor:
-    ; Stair/ladder arrival — no auto-walk. Clear standing and exiting flags.
-    ; pret: engine/overworld/auto_movement.asm:PlayerStepOutFromDoor:.notStandingOnDoor
-    ; Zero the simulated-joypad fields first: otherwise a stale index/queued PAD_* byte
-    ; leaks into AreInputsSimulated and would replay a phantom step on the next frame.
-    xor al, al
-    mov byte [ebp + W_UNUSED_OVERRIDE_SIMULATED_JOYPAD_STATES_INDEX], al
-    mov byte [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], al
-    mov byte [ebp + W_SIMULATED_JOYPAD_STATES_END],   al
-    and byte [ebp + W_MOVEMENT_FLAGS], ~((1 << BIT_STANDING_ON_DOOR) | (1 << BIT_EXITING_DOOR))
-    and byte [ebp + W_STATUS_FLAGS_5], ~(1 << BIT_SCRIPTED_MOVEMENT_STATE)
-    ret
-
-; ---------------------------------------------------------------------------
-; RunNPCMovementScript — dispatch door-exit auto-walk on warp arrival.
-; Checks BIT_STANDING_ON_DOOR (set by .warpTransition), clears it, and calls
-; PlayerStepOutFromDoor to inject one forced DOWN step and set BIT_EXITING_DOOR.
-; Phase 2: door path only. Full NPC movement script dispatch deferred to Phase 3.
-; Pret ref: home/npc_movement.asm:RunNPCMovementScript
-; ---------------------------------------------------------------------------
-RunNPCMovementScript:
-    ; pret: home/npc_movement.asm:RunNPCMovementScript
-    test byte [ebp + W_MOVEMENT_FLAGS], (1 << BIT_STANDING_ON_DOOR)
-    jz .notDoor
-    and byte [ebp + W_MOVEMENT_FLAGS], ~(1 << BIT_STANDING_ON_DOOR)
-    call PlayerStepOutFromDoor
-    ret
-.notDoor:
-    ; Scripted-NPC-movement dispatch half: index wNPCMovementScriptPointerTableNum
-    ; (1-based) into a table of per-map movement-script pointer tables, then call
-    ; function wNPCMovementScriptFunctionNum within it (pret: CallFunctionInTable).
-    ; Bankswitching is a no-op under flat memory. UNGATED at OW-7.3 (2026-07-10):
-    ; the NPC_MOVEMENT_SCRIPTS_LINKED %ifdef existed only because the per-map
-    ; pointer tables (auto_movement.asm / pewter_guys chain) weren't linked; the
-    ; OW-7.2 promotion linked them. Still inert until a script sets the table
-    ; num nonzero (OW-2.5 Oak cutscene wires the first one).
-    mov al, [ebp + wNPCMovementScriptPointerTableNum]
-    test al, al
-    jz .done
-    dec al                                          ; table num is 1-based
-    movzx eax, al
-    mov esi, [NPCMovementScriptPointerTables + eax*4] ; ESI = flat per-map jumptable
-    mov al, [ebp + W_NPC_MOVEMENT_SCRIPT_FUNCTION_NUM]
-    call CallFunctionInTable                        ; call function AL within ESI
-.done:
-    ret
-
-extern CallFunctionInTable                ; src/home/run_map_script.asm
-extern PalletMovementScriptPointerTable   ; src/engine/overworld/auto_movement.asm
-extern PewterMuseumGuyMovementScriptPointerTable ; src/engine/overworld/auto_movement.asm
-extern PewterGymGuyMovementScriptPointerTable ; src/engine/overworld/auto_movement.asm
-; pret: RunNPCMovementScript.NPCMovementScriptPointerTables (flat dd in the port;
-; read-only, lives in .text by placement — reads only, never written)
-NPCMovementScriptPointerTables:
-    dd PalletMovementScriptPointerTable
-    dd PewterMuseumGuyMovementScriptPointerTable
-    dd PewterGymGuyMovementScriptPointerTable
 
 ; ---------------------------------------------------------------------------
 ; CheckWarpTile — scan W_WARP_ENTRIES for a player coord match.

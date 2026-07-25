@@ -43,7 +43,7 @@ extern MapScriptPointers
 extern EnableAutoTextBoxDrawing
 extern TryPushingBoulder            ; src/engine/overworld/push_boulder.asm
 extern DoBoulderDustAnimation       ; src/engine/overworld/push_boulder.asm
-extern RunNPCMovementScript         ; src/engine/overworld/overworld.asm
+extern RunNPCMovementScript         ; src/home/npc_movement.asm
 
 section .text
 

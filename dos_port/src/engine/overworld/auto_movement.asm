@@ -22,8 +22,7 @@
 ; script sets wNPCMovementScriptPointerTableNum nonzero (OW-2.5 Oak cutscene wires
 ; the first one) — HideObject is likewise an unported predef (extern).
 ;
-; NOTE: pret's PlayerStepOutFromDoor lives in this file; the port already has it
-; in overworld.asm (home/npc_movement mirror), so it is NOT redefined here.
+; pret's PlayerStepOutFromDoor is the first routine in this file and lives here.
 ;
 ; Build (check): nasm -f coff -I include/ -I . -o auto_movement.o \
 ;                     src/engine/overworld/auto_movement.asm
@@ -35,6 +34,7 @@
 %include "m8_2_pending_symbols.inc"   ; wSpriteIndex / wToggleableObjectIndex / PAD_CTRL_PAD
 %include "assets/audio_constants.inc"
 
+global PlayerStepOutFromDoor
 global _EndNPCMovementScript
 global EndNPCMovementScript
 global PalletMovementScriptPointerTable
@@ -49,8 +49,51 @@ extern StartSimulatingJoypadStates ; src/home/simulate_joypad.asm
 extern PlayMusic                   ; src/home/audio.asm (real gateway)
 extern PewterGuys                  ; src/engine/events/pewter_guys.asm
 extern HideObject                  ; src/engine/overworld/toggleable_objects.asm (OW-3.2)
+extern IsPlayerStandingOnDoorTile  ; src/engine/overworld/overworld.asm
 
 section .text
+
+; ---------------------------------------------------------------------------
+; PlayerStepOutFromDoor — force one auto-step south off a warp-arrival tile.
+; Called by RunNPCMovementScript when BIT_STANDING_ON_DOOR is detected.
+; Calls IsPlayerStandingOnDoorTile first: if not a door tile (stair/ladder),
+; clears the flags with no auto-walk. If on a door tile, sets BIT_EXITING_DOOR
+; (marks auto-walk in progress) and BIT_SCRIPTED_MOVEMENT_STATE (injects PAD_DOWN
+; into the idle-path direction logic; .handleDirection bypasses the turn-delay and
+; fires the collision-exit warp). Pret ref: engine/overworld/auto_movement.asm:PlayerStepOutFromDoor
+; ---------------------------------------------------------------------------
+PlayerStepOutFromDoor:
+    ; pret auto_movement.asm:PlayerStepOutFromDoor entry — clear BIT_UNKNOWN_5_1 in
+    ; wStatusFlags5 unconditionally (both door and non-door paths run through here).
+    and byte [ebp + W_STATUS_FLAGS_5], ~(1 << BIT_UNKNOWN_5_1)
+    call IsPlayerStandingOnDoorTile
+    jnc .notStandingOnDoor
+    ; Door tile — set up one forced south step to walk off the arrival warp tile.
+    mov byte [ebp + W_JOY_IGNORE], PAD_SELECT | PAD_START | PAD_CTRL_PAD
+    or byte [ebp + W_MOVEMENT_FLAGS], (1 << BIT_EXITING_DOOR)
+    mov byte [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], 1
+    mov byte [ebp + W_SIMULATED_JOYPAD_STATES_END], PAD_DOWN
+    xor al, al
+    mov [ebp + W_SPRITE_PLAYER_IMAGE_INDEX], al       ; pret: wSpritePlayerStateData1ImageIndex = 0
+    ; StartSimulatingJoypadStates zeroes the override mask + slot-0 movement byte 1 and
+    ; sets BIT_SCRIPTED_MOVEMENT_STATE so AreInputsSimulated feeds this one PAD_DOWN.
+    ; wJoyIgnore now matches pret and is cleared by AreInputsSimulated.doneSimulating
+    ; after the one-step queue drains, sharing the same ownership model as the
+    ; multi-step Pallet/Pewter scripted-input machinery.
+    call StartSimulatingJoypadStates
+    ret
+.notStandingOnDoor:
+    ; Stair/ladder arrival — no auto-walk. Clear standing and exiting flags.
+    ; pret: engine/overworld/auto_movement.asm:PlayerStepOutFromDoor:.notStandingOnDoor
+    ; Zero the simulated-joypad fields first: otherwise a stale index/queued PAD_* byte
+    ; leaks into AreInputsSimulated and would replay a phantom step on the next frame.
+    xor al, al
+    mov byte [ebp + W_UNUSED_OVERRIDE_SIMULATED_JOYPAD_STATES_INDEX], al
+    mov byte [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], al
+    mov byte [ebp + W_SIMULATED_JOYPAD_STATES_END],   al
+    and byte [ebp + W_MOVEMENT_FLAGS], ~((1 << BIT_STANDING_ON_DOOR) | (1 << BIT_EXITING_DOOR))
+    and byte [ebp + W_STATUS_FLAGS_5], ~(1 << BIT_SCRIPTED_MOVEMENT_STATE)
+    ret
 
 ; ---------------------------------------------------------------------------
 ; _EndNPCMovementScript — tear down all scripted-movement state.

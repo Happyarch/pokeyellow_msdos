@@ -192,7 +192,7 @@ global RunAudioTest
 extern PalletTownDefaultScript
 extern PalletTownPikachuBattleScript
 extern PalletTownOakNotSafeComeWithMeScript
-extern RunNPCMovementScript
+extern RunNPCMovementScript         ; src/home/npc_movement.asm
 extern UpdateSprites
 extern DelayFrame
 global RunOakIntroTest

@@ -72,7 +72,7 @@ extern IsWarpTileInFrontOfPlayer                    ; src/engine/overworld/warp_
 extern MapScriptPointers                  ; assets/map_scripts.inc
 extern PlayDefaultMusic             ; src/home/audio.asm (real gateway)
 extern RedBikeSprite                    ; src/home/player_gfx.asm
-extern RunNPCMovementScript         ; src/engine/overworld/overworld.asm
+extern RunNPCMovementScript         ; src/home/npc_movement.asm
 extern SeelSprite                    ; src/home/player_gfx.asm
 extern SurfingPikachuSprite                    ; src/home/player_gfx.asm
 extern TryDoWildEncounter                    ; engine/battle/wild_encounters.asm (LINKED)
