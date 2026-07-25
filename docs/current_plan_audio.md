@@ -1,5 +1,24 @@
 # Audio Subsystem — Phase 3 Plan
 
+> **Gate — re-run the STRICT linter, every time (rule change 2026-07-25).**
+> `dos_port/tools/lint_pret_labels` on its own is NOT sufficient and never was.
+> It does not gate on `legacy_annotation`, `stale_provider`, `local_shadow` or
+> `hand_encoded_text` — only `dos_port/tools/lint_pret_labels --strict-claims`
+> reports those, and nothing runs it for you.
+>
+> For every commit made under this plan:
+> 1. Record the strict finding counts **before** you start, per class.
+> 2. Run **both** `lint_pret_labels` and `lint_pret_labels --strict-claims`
+>    before committing.
+> 3. Compare per class. A class that grew is your regression to fix now, not
+>    the next agent's to discover. Moving a routine between files silently
+>    invalidates `extern` provider comments elsewhere in the tree, and that
+>    collateral is visible **only** under `--strict-claims`.
+>
+> Do not quote a finding count from this file, CLAUDE.md, AGENTS.md, a skill, or
+> a stigmergy memory as evidence that a class is clean — every one of those has
+> been wrong before. Re-measure it.
+
 Worktree: `/mnt/sdb1/Code/Active Code/pokeyellow_msdos-audio` (branch `audio`).
 
 Status: **implemented and merged to master (2026-07-07)** — phases A–E. The engine,
