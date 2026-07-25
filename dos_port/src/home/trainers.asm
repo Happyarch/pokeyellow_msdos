@@ -625,7 +625,8 @@ PrintEndBattleText:
     jz .noText
     and byte [ebp + wStatusFlags3], ~(1 << BIT_PRINT_END_BATTLE_TEXT)
     ; TODO-HW: bank save/restore is a no-op under the flat model (kept structurally).
-    call SaveTrainerName            ; STUB (battle_stubs.asm) — wNameBuffer keeps prior contents
+; STUB{label=SaveTrainerName; class=stub; pret=home/trainers.asm:PrintEndBattleText; behavior=the call returns without copying the trainer class name into wNameBuffer, so the TX_RAM wNameBuffer prefix of TrainerEndBattleText prints whatever the buffer last held; evidence=label DB reports SaveTrainerName status=stub with stub_file dos_port/src/engine/battle/battle_stubs.asm, whose body is ret-only; lifetime=retired with that stub, once TrainerNamePointers exists as generated Tier-1 data and the real save_trainer_name.asm body is ported}
+    call SaveTrainerName
     mov esi, TrainerEndBattleText   ; flat text-script
     mov dword [text_msgbox], msgbox_dialog     ; overworld dialog projection
     call PrintText
