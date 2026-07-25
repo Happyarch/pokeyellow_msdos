@@ -47,10 +47,7 @@ global RunNPCMovementScript
 extern PlaySound                       ; src/home/audio.asm (real gateway, OW-A.14)
 extern PlayDefaultMusic                ; src/home/audio.asm — surf-dismount music restore (OW-A.6)
 extern PlayDefaultMusicFadeOutCurrent  ; src/home/audio.asm (real gateway, OW-A.14)
-extern UpdateMusic6Times               ; src/home/audio.asm (real gateway, OW-A.14)
-extern FillMemory
 extern CopyData
-extern FarCopyData
 extern IsInArray              ; src/home/array.asm — shared home global (LoadTilesetHeader dungeon check)
 extern RunMapScript           ; per-frame map _Script dispatch (script engine)
 extern StepCountCheck         ; wild_encounter_check.asm — per-step counter decrement (M7.1)
@@ -61,11 +58,7 @@ extern CheckForJumpingAndTilePairCollisions ; src/engine/overworld/ledges.asm (l
 extern TilePairCollisionsWater              ; src/engine/overworld/ledges.asm — water seam pairs
 extern NewBattle              ; wild_encounter_check.asm — wild/trainer encounter gate (LIVE)
 extern AllPokemonFainted      ; wild_encounter_check.asm — blackout handoff
-extern DisableLCD
-extern EnableLCD
 extern DelayFrame
-extern LoadTextBoxTilePatterns
-extern GBPalNormal
 extern RunPaletteCommand
 extern g_player_marker_on
 extern UpdateSprites
@@ -77,7 +70,6 @@ extern MapEntryAfterBattle             ; overworld_stubs.asm (TODO OW-A.4(b)/fai
 extern EnterMapAnim                    ; engine/overworld/player_animations.asm (real body; stub retired B1)
 extern IsSurfingPikachuInParty         ; overworld_stubs.asm (TODO faithful — pikachu follower)
 extern CheckForceBikeOrSurf            ; player_state.asm (LINKED — wild-live promotion)
-extern LoadWildData                    ; wild_mons.asm — per-map wild data → wGrass/wWaterMons (OW-A.5)
 extern LoadPlayerSpriteGraphics        ; engine/overworld/player_gfx.asm (faithful pret dispatcher;
                                        ; the walking-only scaffold that lived here is retired)
 ; HandleBlackOut's closure (wild-live promotion)
@@ -100,8 +92,6 @@ extern InitMapSprites
 ; OW-A.2 P3b: the faithful home object-loader (InitSprites/LoadSprite, below) writes
 ; the per-slot movement-byte-2 + masked-text-id to wMapSpriteData and trainer
 ; class/num (or item) to wMapSpriteExtraData — both flat .bss globals in map_sprites.asm.
-extern wMapSpriteData
-extern wMapSpriteExtraData
 ; pret wNumSprites (ram/wram.asm) — number of sprites on the current map. Read by
 ; src/home/text_script.asm; not in this file's include chain, so define it here
 ; (guarded; matches m1_3_pending_symbols.inc's %ifndef pattern).
@@ -310,12 +300,6 @@ extern tick_count
 
 global EnterMap
 global EnterMapBoot
-global ResetMapVariables
-global LoadScreenRelatedData
-global LoadTilesetTilePatternData
-global LoadTileBlockMap
-global DrawTileBlock
-global LoadCurrentMapView
 ; (OW-A.5: dead `global CopyMapViewToVRAM` removed — routine obsoleted by native
 ;  render_bg; had no body, exported an undefined symbol. See its note ~L1729.)
 global OverworldLoop
@@ -336,6 +320,21 @@ global LoadTilesetHeader                   ; OW-7.2: for special_warps.asm (now 
 ; promotion) — the scaffold here is retired; player_sprite is exported to it.
 global player_sprite                       ; pret RedSprite; consumed by player_gfx.asm
 global RefreshCollisionTileMap             ; menus S4: home/start_menu.asm restores
+
+; --- moved to src/home/overworld.asm (pret home/overworld.asm mirror) ---
+extern CheckMapConnections
+extern LoadCurrentMapView
+extern LoadDestinationWarpPosition
+extern LoadMapData
+extern LoadMapHeader
+extern LoadTileBlockMap
+extern LoadTilesetTilePatternData
+extern PlayMapChangeSound
+
+; --- consumed by the relocated pret home/overworld.asm routines ---
+global ApplyMapBorderOverrides
+global h_load_sprite_temp1
+global h_load_sprite_temp2
                                            ; the W_TILEMAP mirror around the menu
 
 ; ---------------------------------------------------------------------------
@@ -344,15 +343,12 @@ global RefreshCollisionTileMap             ; menus S4: home/start_menu.asm resto
 MAP_ID_PALLET_TOWN          equ 0x00
 TILESET_OVERWORLD           equ 0x00
 ; tileset ids (constants/tileset_constants.asm; not in gb_memmap.inc) — PlayMapChangeSound
-CEMETERY                    equ 15
-FACILITY                    equ 22
 ; wStatusFlags6 bit 5 (constants/ram_constants.asm). Its siblings (BIT_FLY_WARP,
 ; BIT_DUNGEON_WARP, BIT_ESCAPE_WARP, …) come from gb_memmap.inc, but this one only
 ; exists in gb_constants.inc, which this file does not include — and the two headers
 ; must not both define it (bare `equ` redefinition is a NASM error in any file that
 ; includes both). Local def, same as player_gfx.asm / special_warps.asm do for theirs.
 BIT_ALWAYS_ON_BIKE          equ 5
-OVERWORLD_DOOR_TILE         equ 0x0B   ; pret: door tile in tileset 0 (PlayMapChangeSound)
 PALLET_TOWN_WIDTH           equ 10
 PALLET_TOWN_HEIGHT          equ 9
 PALLET_TOWN_BORDER_BLOCK    equ 0x0B   ; border block from PalletTown_Object
@@ -368,15 +364,12 @@ TILESET_BANK_FLAT           equ 0x01   ; ignored in flat model (TODO-HW: ROM ban
 PALLET_TOWN_VIEW_PTR        equ W_OVERWORLD_MAP + (MAP_BORDER) * (PALLET_TOWN_WIDTH + MAP_BORDER * 2) + (MAP_BORDER - 2)
 
 ; Number of connections in the Block/Connect strips (0xFF = none — disables strip loading)
-MAP_NO_CONNECTION           equ 0xFF
 
 ; Pallet Town map connections (computed from the pret `connection` macro for the
 ; north=Route1 / south=Route21 connections, both at offset 0). See
 ; macros/scripts/maps.asm:connection. Route1 = 10×18, Route21 = 10×45.
 MAP_ID_ROUTE_1              equ 0x0C
 MAP_ID_ROUTE_21             equ 0x20
-CONNECTION_NORTH           equ 1 << 3   ; wCurMapConnections bits (EAST=1,WEST=2,SOUTH=4,NORTH=8)
-CONNECTION_SOUTH           equ 1 << 2
 
 ; The Pallet Town north(Route1)/south(Route21) strip + view-pointer equs that
 ; used to live here are GONE. They were hand-computed for MAP_BORDER = 6 (e.g.
@@ -1683,46 +1676,6 @@ SetupPlayerSprite:
     ret
 
 ; ---------------------------------------------------------------------------
-; LoadMapData — faithful translation.
-; Pret ref: home/overworld.asm:LoadMapData
-; ---------------------------------------------------------------------------
-LoadMapData:
-    call DisableLCD
-    call ResetMapVariables
-    call LoadTextBoxTilePatterns
-    call LoadMapHeader
-    ; Dispatch per-map text table: MapTextTablePointers[W_CUR_MAP] → w_map_text_table_ptr.
-    movzx eax, byte [ebp + W_CUR_MAP]
-    lea esi, [MapTextTablePointers]
-    mov esi, [esi + eax*4]
-    mov [w_map_text_table_ptr], esi
-    call InitMapSprites                 ; pret: InitMapSprites (load sprite tile patterns)
-    ; OW-A.5: pret calls LoadScreenRelatedData ONCE (home/overworld.asm:1967) then
-    ; CopyMapViewToVRAM. The port's LoadScreenRelatedData (LoadTileBlockMap +
-    ; LoadTilesetTilePatternData + LoadCurrentMapView) is idempotent and its
-    ; LoadCurrentMapView is the native-render equivalent of pret's trailing
-    ; CopyMapViewToVRAM, so one call covers both. (Removed a redundant second call.)
-    call LoadScreenRelatedData
-
-    mov byte [ebp + W_UPDATE_SPRITES_ENABLED], 1
-    call EnableLCD
-    call GBPalNormal
-    mov bh, SET_PAL_OVERWORLD
-    call RunPaletteCommand
-    call LoadPlayerSpriteGraphics       ; pret: LoadPlayerSpriteGraphics (:1972)
-    ; pret tail (:1975-1985): play this map's default music unless we entered via a
-    ; dungeon/fly warp (DUNGEON_WARP|FLY_WARP) or the map suppresses it (NO_MAP_MUSIC).
-    ; Bank save/restore around it is a no-op in the flat model. Real now (OW-A.14).
-    test byte [ebp + W_STATUS_FLAGS_6], (1 << BIT_DUNGEON_WARP) | (1 << BIT_FLY_WARP)
-    jnz .noMapMusic
-    test byte [ebp + W_STATUS_FLAGS_7], (1 << BIT_NO_MAP_MUSIC)
-    jnz .noMapMusic
-    call UpdateMusic6Times
-    call PlayDefaultMusicFadeOutCurrent
-.noMapMusic:
-    ret
-
-; ---------------------------------------------------------------------------
 ; HandleFlyWarpOrDungeonWarp — leave the current map by a SPECIAL warp (Fly, Dig,
 ; Escape Rope, or a dungeon warp-pad/hole), rather than by stepping on a warp tile.
 ; Pret ref: home/overworld.asm:761 (HandleFlyWarpOrDungeonWarp, bank 00).
@@ -1830,195 +1783,6 @@ StopMusic:
 .done:
     jmp StopAllSounds                       ; jp StopAllSounds (tail)
 
-; LoadPlayerSpriteGraphics — RETIRED from this file (wild-live promotion).
-; The Phase-2 scaffold that lived here (walking-only, standing tiles → $8000 /
-; walking tiles → $8800, plus a `call ClearSprites`) is superseded by the
-; faithful pret dispatcher now linked from engine/overworld/player_gfx.asm
-; (LoadPlayerSpriteGraphics → Walking/Bike/Surfing → LoadPlayerSpriteGraphicsCommon).
-; Same VRAM layout; the scaffold's extra ClearSprites is intentionally NOT carried
-; over — pret's LoadPlayerSpriteGraphicsCommon (home/overworld.asm:1775) does not
-; clear OAM, and neither does pret's LoadMapData. `player_sprite` (pret RedSprite)
-; stays defined here and is exported for player_gfx.asm.
-
-; ---------------------------------------------------------------------------
-; ResetMapVariables — faithful translation.
-; Pret ref: home/overworld.asm:ResetMapVariables
-;
-; Sets wMapViewVRAMPointer = vBGMap0 ($9800 → port GB_TILEMAP0), zeroes SCX/SCY
-; and walk state.
-; ---------------------------------------------------------------------------
-ResetMapVariables:
-    ; pret home/overworld.asm:2024-2027 — wMapViewVRAMPointer = vBGMap0. Vestigial under
-    ; the native-width renderer (dropped/unused; the torus rings are gone), but kept in
-    ; lockstep with the other reset sites (EnterMapBoot etc. write GB_TILEMAP0) so the
-    ; pointer is never left stale, matching pret's byte-for-byte reset here.
-    mov word [ebp + W_MAP_VIEW_VRAM_POINTER], GB_TILEMAP0
-    xor al, al
-    mov byte [ebp + H_SCY],                       al
-    mov byte [ebp + H_SCX],                       al
-    mov byte [ebp + W_WALK_COUNTER],              al
-    mov byte [ebp + W_UNUSED_CUR_MAP_TILESET_COPY], al
-    mov byte [ebp + W_SPRITE_SET_ID],             al
-    mov byte [ebp + W_WALK_BIKE_SURF_STATE_COPY], al
-    ; Empty the window list on map entry: visibility is count-driven now, so this
-    ; guarantees no stale box leaks over the overworld (e.g. the title's
-    ; go_to_main_menu path). Dialog/menu code re-populates the list when it opens a
-    ; box. The rWY/rWX shadows are parked off-screen for faithfulness.
-    call hide_window                    ; count=0; sets H_WY = RENDER_H
-    mov byte [ebp + IO_WY], RENDER_H
-    mov byte [ebp + IO_WX], 7
-    ret
-
-; ---------------------------------------------------------------------------
-; LoadScreenRelatedData — faithful translation.
-; Pret ref: home/overworld.asm:LoadScreenRelatedData
-; ---------------------------------------------------------------------------
-LoadScreenRelatedData:
-    call LoadTileBlockMap
-    call LoadTilesetTilePatternData
-    call LoadCurrentMapView
-    ret
-
-; ---------------------------------------------------------------------------
-; LoadTilesetTilePatternData — faithful translation.
-; Pret ref: home/overworld.asm:LoadTilesetTilePatternData
-;
-; Reads wTilesetGfxPtr (16-bit GB address) and copies $600 bytes (1536) from
-; that ROM-window address to vTileset ($9000 = GB_VCHARS2).
-; In the flat model wTilesetBank (FarCopyData bank arg) is ignored.
-; ---------------------------------------------------------------------------
-LoadTilesetTilePatternData:
-    mov byte [g_tilecache_dirty], 1     ; VRAM tile data changes → rebuild decode cache
-    ; ESI = wTilesetGfxPtr (16-bit GB address, LE word)
-    movzx esi, word [ebp + W_TILESET_GFX_PTR]    ; ESI = HL = 0x4000
-    mov edx, GB_VCHARS2                            ; EDX = DE = 0x9000 (vTileset)
-    mov bx,  0x0600                                ; BX = BC = $600 bytes
-    movzx eax, byte [ebp + W_TILESET_BANK]         ; AL = bank (ignored)
-    jmp FarCopyData                                ; tail call
-
-; ---------------------------------------------------------------------------
-; LoadTileBlockMap — faithful translation.
-; Pret ref: home/overworld.asm:LoadTileBlockMap
-;
-; 1. Fills wOverworldMap with wMapBackgroundTile (border block).
-; 2. Copies PalletTown.blk data (from wCurMapDataPtr) into wOverworldMap,
-;    offset by MAP_BORDER rows and MAP_BORDER columns.
-; 3. Processes N/S/W/E connection strips (all $FF = none for Phase 2).
-; ---------------------------------------------------------------------------
-LoadTileBlockMap:
-    push esi
-    push edi
-    push ebx
-    push ecx
-
-    ; Fill wOverworldMap..wOverworldMapEnd with wMapBackgroundTile
-    mov esi, W_OVERWORLD_MAP
-    mov bx,  W_OVERWORLD_MAP_SIZE & 0xFFFF
-    movzx eax, byte [ebp + W_MAP_BACKGROUND_TILE]
-    call FillMemory
-
-    ; HL = ESI = wOverworldMap
-    mov esi, W_OVERWORLD_MAP
-
-    ; hMapWidth = wCurMapWidth; hMapStride = width + MAP_BORDER*2
-    movzx ecx, byte [ebp + W_CUR_MAP_WIDTH]       ; ECX = width (= 10)
-    mov byte [ebp + H_MAP_WIDTH], cl
-    add cl, MAP_BORDER * 2                         ; CL = stride (= 16)
-    mov byte [ebp + H_MAP_STRIDE], cl
-
-    ; Skip MAP_BORDER rows: ESI += stride * MAP_BORDER
-    movzx eax, cl                                  ; EAX = stride
-    imul eax, MAP_BORDER                           ; EAX = stride * 3
-    add esi, eax                                   ; ESI = row MAP_BORDER start
-
-    ; Skip MAP_BORDER cols: ESI += MAP_BORDER
-    add esi, MAP_BORDER                            ; ESI = first cell of map data
-
-    ; DE = wCurMapDataPtr (source: .blk data in ROM window)
-    movzx edx, word [ebp + W_CUR_MAP_DATA_PTR]    ; EDX = map .blk GB addr (rom_window.inc)
-
-    ; B (BH) = wCurMapHeight (row count)
-    movzx eax, byte [ebp + W_CUR_MAP_HEIGHT]
-    mov bh, al
-
-.row_loop:
-    push esi                                       ; save row-start write ptr
-    movzx ecx, byte [ebp + H_MAP_WIDTH]            ; CL = map width (without border)
-.row_inner_loop:
-    mov al, byte [ebp + edx]                       ; read block ID from .blk
-    inc edx
-    mov byte [ebp + esi], al                       ; write block ID to wOverworldMap
-    inc esi
-    dec cl
-    jnz .row_inner_loop
-    pop esi                                        ; restore row-start ptr
-    movzx eax, byte [ebp + H_MAP_STRIDE]           ; EAX = stride
-    add esi, eax                                   ; advance ESI to next row
-    dec bh
-    jnz .row_loop
-
-    ; --- Border overrides (map-tool C3): hand-authored blocks for the border
-    ;     ring, painted in tools/map_editor/editor.py and generated into
-    ;     assets/map_border_overrides.inc. Applied BEFORE the connection
-    ;     strips so connections always win (the generator also rejects any
-    ;     cell inside a strip or the real map area).
-    call ApplyMapBorderOverrides
-
-    ; --- Connection strips: copy each connected map's edge into the wOverworldMap
-    ;     border. SwitchToMapRomBank is a no-op in the flat model. The strip src
-    ;     pointers (CONN_STRIP_SRC) index into the connected maps' block data
-    ;     loaded at OW_ROUTE*_BLK_GBADDR. hNorthSouthConnectionStripWidth and the
-    ;     connected-map width reuse H_MAP_STRIDE/H_MAP_WIDTH (they are HRAM unions).
-
-.north_connection:
-    cmp byte [ebp + W_NORTH_CONNECTED_MAP], MAP_NO_CONNECTION
-    je  .south_connection
-    movzx esi, word [ebp + W_NORTH_CONNECTED_MAP + CONN_STRIP_SRC]   ; HL = strip src
-    movzx edx, word [ebp + W_NORTH_CONNECTED_MAP + CONN_STRIP_DEST]  ; DE = strip dest
-    mov al, [ebp + W_NORTH_CONNECTED_MAP + CONN_STRIP_LENGTH]
-    mov [ebp + H_MAP_STRIDE], al                                     ; hNSConnectionStripWidth
-    mov al, [ebp + W_NORTH_CONNECTED_MAP + CONN_MAP_WIDTH]
-    mov [ebp + H_MAP_WIDTH], al                                      ; hNSConnectedMapWidth
-    call LoadNorthSouthConnectionsTileMap
-
-.south_connection:
-    cmp byte [ebp + W_SOUTH_CONNECTED_MAP], MAP_NO_CONNECTION
-    je  .west_connection
-    movzx esi, word [ebp + W_SOUTH_CONNECTED_MAP + CONN_STRIP_SRC]
-    movzx edx, word [ebp + W_SOUTH_CONNECTED_MAP + CONN_STRIP_DEST]
-    mov al, [ebp + W_SOUTH_CONNECTED_MAP + CONN_STRIP_LENGTH]
-    mov [ebp + H_MAP_STRIDE], al
-    mov al, [ebp + W_SOUTH_CONNECTED_MAP + CONN_MAP_WIDTH]
-    mov [ebp + H_MAP_WIDTH], al
-    call LoadNorthSouthConnectionsTileMap
-
-.west_connection:
-    cmp byte [ebp + W_WEST_CONNECTED_MAP], MAP_NO_CONNECTION
-    je  .east_connection
-    movzx esi, word [ebp + W_WEST_CONNECTED_MAP + CONN_STRIP_SRC]
-    movzx edx, word [ebp + W_WEST_CONNECTED_MAP + CONN_STRIP_DEST]
-    movzx ebx, byte [ebp + W_WEST_CONNECTED_MAP + CONN_STRIP_LENGTH] ; B = row count
-    mov al, [ebp + W_WEST_CONNECTED_MAP + CONN_MAP_WIDTH]
-    mov [ebp + H_MAP_WIDTH], al                                      ; hEWConnectedMapWidth
-    call LoadEastWestConnectionsTileMap
-
-.east_connection:
-    cmp byte [ebp + W_EAST_CONNECTED_MAP], MAP_NO_CONNECTION
-    je  .done
-    movzx esi, word [ebp + W_EAST_CONNECTED_MAP + CONN_STRIP_SRC]
-    movzx edx, word [ebp + W_EAST_CONNECTED_MAP + CONN_STRIP_DEST]
-    movzx ebx, byte [ebp + W_EAST_CONNECTED_MAP + CONN_STRIP_LENGTH]
-    mov al, [ebp + W_EAST_CONNECTED_MAP + CONN_MAP_WIDTH]
-    mov [ebp + H_MAP_WIDTH], al
-    call LoadEastWestConnectionsTileMap
-
-.done:
-    pop ecx
-    pop ebx
-    pop edi
-    pop esi
-    ret
-
 ; ---------------------------------------------------------------------------
 ; ApplyMapBorderOverrides — write the current map's authored border-ring
 ; blocks into wOverworldMap (map-tool plan C3; data from
@@ -2057,241 +1821,6 @@ ApplyMapBorderOverrides:
     jnz .copy
     jmp .run
 .done:
-    ret
-
-; ---------------------------------------------------------------------------
-; LoadNorthSouthConnectionsTileMap — faithful translation.
-; Pret ref: home/overworld.asm:LoadNorthSouthConnectionsTileMap
-;
-; Copies MAP_BORDER (3) rows of the connected map's edge into the wOverworldMap
-; border. Each row copies hNorthSouthConnectionStripWidth (=H_MAP_STRIDE) bytes;
-; src advances by hNorthSouthConnectedMapWidth (=H_MAP_WIDTH), dest by the
-; wOverworldMap stride (wCurMapWidth + 2*MAP_BORDER).
-;
-; In:  ESI = HL = strip src, EDX = DE = strip dest, [H_MAP_STRIDE] = strip width,
-;      [H_MAP_WIDTH] = connected-map width. EBP = GB base.
-; Clobbers: EAX, EBX, ECX, ESI, EDX.
-; ---------------------------------------------------------------------------
-LoadNorthSouthConnectionsTileMap:
-    mov ecx, MAP_BORDER                  ; C = 3 rows
-.row:
-    push esi
-    push edx
-    movzx ebx, byte [ebp + H_MAP_STRIDE] ; B = strip width
-.inner:
-    mov al, [ebp + esi]
-    mov [ebp + edx], al
-    inc esi
-    inc edx
-    dec bl
-    jnz .inner
-    pop edx
-    pop esi
-    movzx eax, byte [ebp + H_MAP_WIDTH]  ; src += connected-map width
-    add esi, eax
-    movzx eax, byte [ebp + W_CUR_MAP_WIDTH]
-    add eax, MAP_BORDER * 2
-    add edx, eax                         ; dest += wOverworldMap stride
-    dec ecx
-    jnz .row
-    ret
-
-; ---------------------------------------------------------------------------
-; LoadEastWestConnectionsTileMap — faithful translation.
-; Pret ref: home/overworld.asm:LoadEastWestConnectionsTileMap
-;
-; Copies MAP_BORDER (3) columns of the connected map's edge into the
-; wOverworldMap border, for B (strip length) rows. Each row copies 3 bytes; src
-; advances by hEastWestConnectedMapWidth (=H_MAP_WIDTH), dest by the wOverworldMap
-; stride. (Pallet Town has no E/W connection, but kept faithful for completeness.)
-;
-; In:  ESI = HL = strip src, EDX = DE = strip dest, BL = row count,
-;      [H_MAP_WIDTH] = connected-map width. EBP = GB base.
-; Clobbers: EAX, EBX(bl=counter), ECX, ESI, EDX.
-; ---------------------------------------------------------------------------
-LoadEastWestConnectionsTileMap:
-.row:
-    push esi
-    push edx
-    mov ecx, MAP_BORDER                  ; 3 columns
-.inner:
-    mov al, [ebp + esi]
-    mov [ebp + edx], al
-    inc esi
-    inc edx
-    dec ecx
-    jnz .inner
-    pop edx
-    pop esi
-    movzx eax, byte [ebp + H_MAP_WIDTH]  ; src += connected-map width
-    add esi, eax
-    movzx eax, byte [ebp + W_CUR_MAP_WIDTH]
-    add eax, MAP_BORDER * 2
-    add edx, eax                         ; dest += wOverworldMap stride
-    dec bl
-    jnz .row
-    ret
-
-; ---------------------------------------------------------------------------
-; DrawTileBlock — faithful translation.
-; Pret ref: home/overworld.asm:DrawTileBlock
-;
-; Expands one 4×4 map block into tile IDs in wSurroundingTiles.
-;
-; In:  ESI = write ptr in wSurroundingTiles (HL)
-;      BL  = block ID (C)
-; Out: ESI advanced by 4*SURROUNDING_WIDTH (past all 4 tile rows of this block)
-;      BL unchanged (saved/restored by caller via push/pop ecx before call)
-; Clobbers: AL, ECX (internal row counter), EDX (tile data source ptr)
-; ---------------------------------------------------------------------------
-DrawTileBlock:
-    push ecx
-    push edx
-
-    ; Compute tile data source: [EBP + wTilesetBlocksPtr + blockID*16]
-    movzx edx, word [ebp + W_TILESET_BLOCKS_PTR]  ; EDX = OW_BLOCKS_GBADDR (DE in SM83)
-    movzx eax, bl                                  ; EAX = blockID (C in SM83)
-    shl eax, 4                                     ; EAX = blockID * 16
-    add edx, eax                                   ; EDX = pointer into blockset
-
-    ; TEMPORARY (no GB equivalent — remove once map data is extended): clamp
-    ; out-of-range block IDs to block 0 (the black/border tile). The extended
-    ; 40×25-tile draw can pull the camera viewport into uninitialized
-    ; wOverworldMap padding, handing us a block ID past the embedded blockset;
-    ; without this the tile read walks off the blockset and paints garbage. This
-    ; is a stopgap: the plan is to extend the map data so those regions hold real
-    ; blocks (no blank area exists), at which point this clamp is dead code and
-    ; should be deleted. See TODO.md (Phase 2) and CLAUDE.md.
-    cmp edx, OW_BLOCKS_GBADDR + OVERWORLD_BLOCKS_SIZE
-    jb  .block_in_range
-    mov edx, OW_BLOCKS_GBADDR
-.block_in_range:
-
-    mov cl, BLOCK_HEIGHT                           ; CL = 4 (row count)
-
-.draw_row:
-    push ecx
-    ; Tiles 0–2: write to [ESI] with post-increment
-    mov al, byte [ebp + edx]
-    mov byte [ebp + esi], al
-    inc esi
-    inc edx
-    mov al, byte [ebp + edx]
-    mov byte [ebp + esi], al
-    inc esi
-    inc edx
-    mov al, byte [ebp + edx]
-    mov byte [ebp + esi], al
-    inc esi
-    inc edx
-    ; Tile 3: write to [ESI] without incrementing ESI (SM83: ld [hl], a)
-    mov al, byte [ebp + edx]
-    mov byte [ebp + esi], al
-    inc edx
-    ; Advance ESI to start of next tile row: +45 = SURROUNDING_WIDTH - (BLOCK_WIDTH-1)
-    add esi, SURROUNDING_WIDTH - BLOCK_WIDTH + 1   ; = 48 - 4 + 1 = 45
-    pop ecx
-    dec cl
-    jnz .draw_row
-
-    pop edx
-    pop ecx
-    ret
-
-; ---------------------------------------------------------------------------
-; LoadCurrentMapView — faithful translation.
-; Pret ref: home/overworld.asm:LoadCurrentMapView
-;
-; Reads SCREEN_BLOCK_HEIGHT×SCREEN_BLOCK_WIDTH blocks from wOverworldMap
-; (starting at wCurrentTileBlockMapViewPointer) and expands each via
-; DrawTileBlock into wSurroundingTiles (SURROUNDING_WIDTH×SURROUNDING_HEIGHT).
-; Then adjusts for wYBlockCoord/wXBlockCoord and copies the 20×18 view to
-; wTileMap.
-;
-; The bank-switch (BankswitchCommon) is a no-op in the flat model.
-; ---------------------------------------------------------------------------
-LoadCurrentMapView:
-    push esi
-    push edi
-    push ebx
-    push ecx
-
-    ; ; TODO-HW: BankswitchCommon (flat model — no-op)
-
-    ; DE = wCurrentTileBlockMapViewPointer (block map source ptr)
-    movzx edx, word [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR]
-
-    ; HL = ESI = wSurroundingTiles (tile write destination)
-    mov esi, W_SURROUNDING_TILES
-
-    ; B (BH) = SCREEN_BLOCK_HEIGHT outer loop count
-    mov bh, SCREEN_BLOCK_HEIGHT
-
-.row_loop:
-    push esi                                       ; save row-start of wSurroundingTiles
-    push edx                                       ; save row-start of block map
-
-    mov cl, SCREEN_BLOCK_WIDTH                     ; CL = C = inner block count
-
-.row_inner_loop:
-    push ecx                                       ; push bc (saves CL=inner count)
-    push edx                                       ; push de
-    push esi                                       ; push hl
-
-    ; STOPGAP (no GB equivalent — remove once map data is extended): the 40×25
-    ; viewport is larger than the GB's 20×18, so a player-centered camera near a
-    ; map edge reaches past wOverworldMap. wOverworldMap ($E580) sits directly
-    ; above wSurroundingTiles ($E000) in WRAM, so reads above its top border land
-    ; in the tile buffer and decode tile IDs as block IDs → a garbage band. Any
-    ; read outside [wOverworldMap, wOverworldMapEnd) instead yields the map's
-    ; border block, so the extended/out-of-map area renders as clean dummy tiles
-    ; (matching the in-bounds border) rather than garbage. See CLAUDE.md / TODO.md:
-    ; the real fix is to extend map data to fill the larger viewport.
-    cmp edx, W_OVERWORLD_MAP
-    jb  .oobBlock
-    cmp edx, W_OVERWORLD_MAP + W_OVERWORLD_MAP_SIZE
-    jae .oobBlock
-    movzx eax, byte [ebp + edx]                   ; A = block ID from wOverworldMap
-    jmp .haveBlock
-.oobBlock:
-    movzx eax, byte [ebp + W_MAP_BACKGROUND_TILE] ; dummy = map border block
-.haveBlock:
-    mov bl, al                                     ; BL = block ID arg to DrawTileBlock (C)
-    call DrawTileBlock                             ; writes 4×4 tiles to [EBP+ESI..]
-                                                   ; ECX preserved by DrawTileBlock
-
-    pop esi                                        ; pop hl (restore wSurroundingTiles ptr)
-    pop edx                                        ; pop de (restore block map ptr)
-    pop ecx                                        ; pop bc (restores CL=inner count)
-
-    add esi, BLOCK_WIDTH                           ; HL += 4 (next block column in wSurroundingTiles)
-    inc edx                                        ; DE++ (next block in block-map row)
-    dec cl                                         ; dec C (inner count, not block ID)
-    jnz .row_inner_loop
-
-    ; Advance block-map pointer to next row
-    pop edx                                        ; restore row-start of block map
-    movzx eax, byte [ebp + W_CUR_MAP_WIDTH]
-    add al, MAP_BORDER * 2                         ; stride = width + 6
-    add edx, eax                                   ; EDX += stride (next block-map row)
-
-    ; Advance wSurroundingTiles pointer to next block row (4 tile rows down)
-    pop esi                                        ; restore row-start of wSurroundingTiles
-    add esi, SURROUNDING_WIDTH * BLOCK_HEIGHT      ; ESI += 96 (= 24 * 4)
-
-    dec bh                                         ; dec B (outer row count)
-    jnz .row_loop
-
-    ; Copy the sub-block window of wSurroundingTiles into wTileMap (the collision
-    ; grid). Factored out so AdvancePlayerSprite can refresh it every step.
-    call RefreshCollisionTileMap
-
-    ; ; TODO-HW: BankswitchCommon restore (flat model — no-op)
-
-    pop ecx
-    pop ebx
-    pop edi
-    pop esi
     ret
 
 ; ---------------------------------------------------------------------------
@@ -2981,197 +2510,6 @@ GetTileInFrontOfPlayer:
     mov [ebp + W_TILE_IN_FRONT_OF_PLAYER], cl
     ret
 
-; (IsTilePassable moved to its pret mirror home/copy2.asm as the trampoline to
-;  _IsTilePassable, whose body now lives at ITS pret mirror
-;  engine/gfx/sprite_oam.asm — relocated-labels grind, 2026-07-24.)
-
-; ---------------------------------------------------------------------------
-; LoadMapHeader — faithful translation.
-; Pret ref: home/overworld.asm:LoadMapHeader
-; ---------------------------------------------------------------------------
-LoadMapHeader:
-    push eax
-    push ebx
-    push ecx
-    push esi
-    push edi
-
-    ; pret: farcall MarkTownVisitedAndLoadToggleableObjects (mark this town visited on
-    ; the town map + load per-map toggleable-object visibility flags).
-    ; TODO(faithful): not ported — the town-map visited-flag set and the hidden/toggleable
-    ; object show-flag load aren't implemented yet (cf. InitToggleableObjectFlags scaffold,
-    ; map_sprites.asm). Harmless for the current maps; restore with the town-map subsystem.
-
-    ; pret: ld a,[wCurMapTileset] / ld b,a / res BIT_NO_PREVIOUS_MAP,a /
-    ;       ld [wCurMapTileset],a / ldh [hPreviousTileset],a.
-    ; Snapshot the previous map's tileset into hPreviousTileset BEFORE the header copy
-    ; below overwrites wCurMapTileset (= wCurMapHeader first byte, 0xD366) with the new
-    ; map's tileset. LoadTilesetHeader (tail of this routine) compares the two to decide
-    ; whether to run the warp-arrival block-coord alignment: without this snapshot its
-    ; "tileset unchanged" gate reads a stale value and the alignment fires on every load,
-    ; shifting the sub-block viewport.
-    ; BIT_NO_PREVIOUS_MAP (bit 7) is set by the save-load path (save.asm) to mean "this
-    ; map is already loaded". pret res's it here and snapshots the CLEARED value; the
-    ; res is zero-behavior on the current paths (the header copy below already overwrites
-    ; wCurMapTileset), but keeping it faithful avoids a stale bit-7 leaking into
-    ; hPreviousTileset. The 0xFF8B HRAM byte is a union with hMapStride/
-    ; hNSConnectionStripWidth, written only later during LoadCurrentMapView / connection-
-    ; strip drawing — never between here and the LoadTilesetHeader read — so it is safe.
-    mov al, [ebp + W_CUR_MAP_TILESET]
-    mov bl, al                              ; b = full tileset (incl. BIT_NO_PREVIOUS_MAP)
-    and al, ~(1 << BIT_NO_PREVIOUS_MAP)     ; res BIT_NO_PREVIOUS_MAP
-    mov [ebp + W_CUR_MAP_TILESET], al
-    mov [ebp + H_PREVIOUS_TILESET], al
-    ; pret: bit BIT_NO_PREVIOUS_MAP,b / ret nz — if the map is already loaded (bit was
-    ; set), skip the whole header reload.
-    ; TODO(OW-A.5/verify): the early return is DEFERRED. All 3 FRAME.BIN baselines exercise
-    ; this routine with the bit CLEAR, so they cannot prove the bit-set path; that path is
-    ; only reached after a continue-from-save, and skipping the header reload there would
-    ; break the map if the port's .dsv restore does not repopulate wCurMapHeader (it does
-    ; not today). Restore the `ret nz` once the save/continue flow can be driven live
-    ; (MCP) and verified — same conservatism as OW-A.4(b). Faithful code:
-    ;     test bl, (1 << BIT_NO_PREVIOUS_MAP)
-    ;     jnz .noPreviousMapReturn   ; pop edi/esi/ecx/ebx/eax ; ret
-
-    ; W_CUR_MAP_HEADER is a 10-byte buffer: tileset(1), h(1), w(1), blkptr(2), txtptr(2), scrptr(2), conn(1)
-    movzx eax, byte [ebp + W_CUR_MAP]
-    add eax, eax ; * 2 (MapHeaderPointers table is 2 bytes per entry)
-    mov esi, MapHeaderPointers
-    movzx ebx, word [esi + eax]
-    add ebx, ebp ; EBX = address of map header in flat space (rom window)
-    
-    ; Copy 10 bytes to W_CUR_MAP_HEADER
-    mov esi, ebx
-    lea edi, [ebp + W_CUR_MAP_HEADER]
-    mov ecx, W_CUR_MAP_HEADER_SIZE
-    rep movsb
-    
-    ; Initialize all 4 connected maps to $FF (disabled) before loading actual values.
-    ; Faithful to pret: home/overworld.asm line 1820-1825.
-    ; Without this, stale connection data from the previous map persists.
-    mov byte [ebp + W_NORTH_CONNECTED_MAP], MAP_NO_CONNECTION
-    mov byte [ebp + W_SOUTH_CONNECTED_MAP], MAP_NO_CONNECTION
-    mov byte [ebp + W_WEST_CONNECTED_MAP],  MAP_NO_CONNECTION
-    mov byte [ebp + W_EAST_CONNECTED_MAP],  MAP_NO_CONNECTION
-    
-    ; ESI now points past the 10-byte header. Check connections bitmask.
-    mov al, [ebp + W_CUR_MAP_CONNECTIONS]
-    test al, CONNECTION_NORTH
-    jz .noNorth
-    mov edi, W_NORTH_CONNECTED_MAP
-    call CopyMapConnectionHeader
-.noNorth:
-    mov al, [ebp + W_CUR_MAP_CONNECTIONS]
-    test al, CONNECTION_SOUTH
-    jz .noSouth
-    mov edi, W_SOUTH_CONNECTED_MAP
-    call CopyMapConnectionHeader
-.noSouth:
-    mov al, [ebp + W_CUR_MAP_CONNECTIONS]
-    test al, CONNECTION_WEST
-    jz .noWest
-    mov edi, W_WEST_CONNECTED_MAP
-    call CopyMapConnectionHeader
-.noWest:
-    mov al, [ebp + W_CUR_MAP_CONNECTIONS]
-    test al, CONNECTION_EAST
-    jz .noEast
-    mov edi, W_EAST_CONNECTED_MAP
-    call CopyMapConnectionHeader
-.noEast:
-
-    ; ESI now points to object_data_ptr
-    movzx eax, word [esi]
-    add eax, ebp ; EAX = object data flat address
-    
-    ; Read border block
-    mov bl, [eax]
-    mov [ebp + W_MAP_BACKGROUND_TILE], bl
-    inc eax
-    
-    ; Copy warps to W_WARP_ENTRIES
-    mov bl, [eax]
-    mov [ebp + W_NUMBER_OF_WARPS], bl
-    inc eax
-    movzx ecx, bl
-    shl ecx, 2                          ; * 4 bytes per warp entry
-    mov esi, eax
-    lea edi, [ebp + W_WARP_ENTRIES]
-    rep movsb                           ; copy all warp entries to WRAM
-    mov eax, esi                        ; advance EAX past copied warp bytes
-    
-    ; Signs: store the count, then copy the sign block into WRAM.
-    ; Pret ref: home/overworld.asm:LoadMapHeader (.loadSignData) + CopySignData.
-    ; Per sign (3 bytes): Y, X, textID.  Y/X -> wSignCoords (interleaved pairs),
-    ; textID -> wSignTextIDs.  When wNumSigns == 0 the copy is skipped and the
-    ; cursor advance adds 0, so a sign-less map is byte-identical to before.
-    extern CopySignData                 ; src/home/hidden_events.asm
-    mov bl, [eax]
-    mov [ebp + W_NUM_SIGNS], bl
-    inc eax                             ; EAX -> first sign entry (flat address)
-    test bl, bl
-    jz .noSigns
-    mov esi, eax                        ; ESI = flat src of the sign block
-    call CopySignData                   ; copies wNumSigns*3 bytes; preserves EAX
-.noSigns:
-    movzx ebx, byte [ebp + W_NUM_SIGNS]
-    lea ebx, [ebx + ebx * 2]           ; * 3 bytes per sign
-    add eax, ebx                        ; advance cursor past the sign block
-    
-    ; Save object data pointer temp
-    sub eax, ebp
-    mov [ebp + W_OBJECT_DATA_PTR_TEMP], ax
-
-    ; pret home/overworld.asm:1888-1892 (.loadSpriteData): populate the NPC sprite
-    ; slots from the map-object binary, UNLESS returning from a battle/blackout
-    ; (that data survives a battle, so it isn't rebuilt). W_OBJECT_DATA_PTR_TEMP
-    ; (just set above) points at the sprite_count byte = pret's HL on InitSprites entry.
-    ; OW-A.2 P3b: this is the faithful home object-loader; the bespoke InitMapSprites
-    ; (still the driver until P3c) clears+repopulates the same slots afterward in
-    ; LoadMapData, so this is currently redundant-but-harmless (byte-identical).
-    mov al, [ebp + W_STATUS_FLAGS_4]
-    test al, (1 << BIT_BATTLE_OVER_OR_BLACKOUT)
-    jnz .skipInitSprites
-    call InitSprites
-.skipInitSprites:
-
-    call LoadTilesetHeader
-
-    ; pret: (gated on !BIT_BATTLE_OVER_OR_BLACKOUT) callfar SchedulePikachuSpawnForAfterText —
-    ; queue the Pikachu-follower spawn to appear after the next text box.
-    ; TODO(faithful): not ported (Pikachu-follower subsystem absent; cf. SpawnPikachu stub).
-
-    ; Load this map's wild-encounter data (pret home/overworld.asm:LoadMapHeader:1900,
-    ; callfar LoadWildData). Populates wGrassRate/wGrassMons + wWaterRate/wWaterMons from
-    ; WildDataPointers[wCurMap] for TryDoWildEncounter. OW-A.5: previously LoadWildData had
-    ; ZERO call sites, so every map's wild slots were stale. LoadWildData clobbers only
-    ; EAX/ECX/EDX/ESI (no banking, no I/O), all of which the pops below restore, so it is
-    ; safe here.
-    call LoadWildData
-
-    ; pret next doubles wCurMapHeight/Width -> wCurrentMapHeight2/Width2 (:1902-1907).
-    ; DIVERGENCE (verified safe): the port derives those in CheckMapConnections (its ONLY
-    ; consumer), at the top of that routine (set-before-use) — every read of
-    ; W_CURRENT_MAP_HEIGHT_2/WIDTH_2 is inside CheckMapConnections, after the set — so
-    ; LoadMapHeader does not need to compute them here.
-    ; pret LoadMapHeader:1908-1923: load this map's default music (id, ROM bank) from
-    ; MapSongBanks[wCurMap] into wMapMusicSoundID/wMapMusicROMBank. PlayDefaultMusic (the
-    ; LoadMapData tail + connection crossing) plays it. Real now (OW-A.14); the pops below
-    ; restore eax/esi. Flat model: MapSongBanks is a host-address label, stride 2.
-    movzx eax, byte [ebp + W_CUR_MAP]
-    lea esi, [MapSongBanks + eax*2]
-    mov al, [esi]
-    mov [ebp + wMapMusicSoundID], al            ; music 1
-    mov al, [esi + 1]
-    mov [ebp + wMapMusicROMBank], al            ; music 2
-
-    pop edi
-    pop esi
-    pop ecx
-    pop ebx
-    pop eax
-    ret
-
 ; ---------------------------------------------------------------------------
 ; Home object-loader (pret home/overworld.asm:2137-2274). OW-A.2 P3b.
 ;
@@ -3194,189 +2532,6 @@ h_load_sprite_temp1: db 0    ; pret hLoadSpriteTemp1
 h_load_sprite_temp2: db 0    ; pret hLoadSpriteTemp2
 
 section .text
-global InitSprites
-global ZeroSpriteStateData
-global DisableRegularSprites
-global LoadSprite
-
-InitSprites:
-    pushad
-    ; A = [wNumSprites source] = sprite_count byte; ESI advances past it.
-    ; W_OBJECT_DATA_PTR_TEMP holds the GB offset of the sprite_count byte.
-    movzx esi, word [ebp + W_OBJECT_DATA_PTR_TEMP]   ; ESI = GB addr of sprite_count
-    movzx eax, byte [ebp + esi]
-    mov [ebp + wNumSprites], al                       ; wNumSprites = count
-    inc esi                                            ; past the count byte
-    call ZeroSpriteStateData
-    call DisableRegularSprites
-    ; zero wMapSpriteData ($20 bytes) — pret: ld hl,wMapSpriteData; ld bc,$20; FillMemory
-    mov edi, wMapSpriteData
-    xor al, al
-    mov ecx, 0x20
-    rep stosb
-    ; any sprites?
-    movzx eax, byte [ebp + wNumSprites]
-    test al, al
-    jz .done
-    mov ebx, eax                                       ; EBX = count remaining (pret B)
-    mov edx, 0x10                                       ; EDX = slot byte offset (slot 1)
-    xor edi, edi                                        ; EDI = wMapSpriteData index (pret C): 0,2,4,...
-.loadSpriteLoop:
-    ; picture id -> x#SPRITESTATEDATA1_PICTUREID
-    movzx eax, byte [ebp + esi]
-    inc esi
-    mov [ebp + edx + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_PICTUREID], al
-    ; mapy -> x#SPRITESTATEDATA2_MAPY
-    movzx eax, byte [ebp + esi]
-    inc esi
-    mov [ebp + edx + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPY], al
-    ; mapx -> x#SPRITESTATEDATA2_MAPX
-    movzx eax, byte [ebp + esi]
-    inc esi
-    mov [ebp + edx + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPX], al
-    ; movement byte 1 -> x#SPRITESTATEDATA2_MOVEMENTBYTE1
-    movzx eax, byte [ebp + esi]
-    inc esi
-    mov [ebp + edx + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTBYTE1], al
-    ; movement byte 2 -> temp1
-    movzx eax, byte [ebp + esi]
-    inc esi
-    mov [h_load_sprite_temp1], al
-    ; text id + flags -> temp2
-    movzx eax, byte [ebp + esi]
-    inc esi
-    mov [h_load_sprite_temp2], al
-    ; DIVERGENCE (port ext): set the per-slot ISTRAINER flag (SPRITESTATEDATA2 0x0A)
-    ; that the port interaction stack (CheckNPCInteraction / CheckTrainerSight /
-    ; TrainerEncounterFlow) reads. pret has no such field — it re-derives trainer-ness
-    ; from the text-id flags at interaction time, in the SPRITE branch of
-    ; IsSpriteOrSignInFrontOfPlayer (the branch the port realizes as CheckNPCInteraction;
-    ; the sign branch itself is ported, below).
-    ; The bespoke InitMapSprites used to set this; it is retired in P3c, so InitSprites
-    ; (the slot populator) carries it. ZeroSpriteStateData already cleared the slot.
-    test al, TRAINER_FLAG
-    jz .not_trainer_slot
-    mov byte [ebp + edx + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_ISTRAINER], 1
-.not_trainer_slot:
-    ; LoadSprite: ECX = wMapSpriteData index; ESI = read ptr (advanced past any
-    ; trainer/item extra bytes on return). It preserves EBX/EDX/EDI and clobbers EAX.
-    mov ecx, edi
-    call LoadSprite
-    ; advance to next sprite: slot offset += $10, wMapSpriteData index += 2, count--
-    add edx, 0x10
-    add edi, 2
-    dec ebx
-    jnz .loadSpriteLoop
-.done:
-    popad
-    ret
-
-; Zero sprite state data for slots 1-14 (slot 15 is Pikachu, left intact — pret).
-ZeroSpriteStateData:
-    push eax
-    push ecx
-    push edi
-    xor al, al
-    lea edi, [ebp + W_SPRITE_STATE_DATA_1 + 0x10]      ; slot 1
-    mov ecx, 14 * 0x10
-    rep stosb
-    lea edi, [ebp + W_SPRITE_STATE_DATA_2 + 0x10]
-    mov ecx, 14 * 0x10
-    rep stosb
-    pop edi
-    pop ecx
-    pop eax
-    ret
-
-; Disable regular sprites: SPRITESTATEDATA1_IMAGEINDEX for slots 1-14.
-; DIVERGENCE (harness-only; zero real-game effect): pret writes $ff here — a
-; "hidden until initialized" marker. This seed is IRRELEVANT to the running game:
-; the first UpdateSprites frame calls InitializeSpriteStatus (movement.asm:727),
-; which unconditionally overwrites IMAGEINDEX with $ff; the second frame's
-; CheckSpriteAvailability → UpdateSpriteImage then computes the real facing index.
-; So under the live game (EnterMap + OverworldLoop both run UpdateSprites) a $ff or
-; a 0 seed here behave identically. The seed ONLY changes the STATIC pre-UpdateSprites
-; DEBUG-harness snapshot (DEBUG_BASELINE etc. render without running UpdateSprites):
-; $ff hides the NPCs there, 0 (the ZeroSpriteStateData value → facing-down anim-0)
-; shows them. We keep 0 so that regression snapshot still exercises NPC rendering.
-; Restoring the faithful $ff needs the DEBUG harness to run UpdateSprites like EnterMap
-; — but on frame 2 the port's random-movement path makes a WALK NPC try to move
-; immediately (no initial move-delay), so it also needs pret's move-delay/probability
-; ported (movement-engine work, OW-A.7 territory) to keep the snapshot deterministic.
-DisableRegularSprites:
-    push ecx
-    push esi
-    mov esi, 0x10                                       ; slot 1
-    mov ecx, 14
-.loop:
-    mov byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_IMAGEINDEX], 0
-    add esi, 0x10
-    dec ecx
-    jnz .loop
-    pop esi
-    pop ecx
-    ret
-
-; LoadSprite (pret home/overworld.asm:2218). In: ECX = wMapSpriteData/ExtraData byte
-; index ((slot-1)*2); ESI = GB read ptr just past the text-id byte; temp1 = movement
-; byte 2, temp2 = text id + flags. Out: ESI advanced past trainer/item extra bytes.
-; Preserves EBX/ECX/EDX/EDI; clobbers EAX.
-LoadSprite:
-    push eax
-    ; wMapSpriteData[C] = movement byte 2
-    mov al, [h_load_sprite_temp1]
-    mov [wMapSpriteData + ecx], al
-    ; pret writes text id+flags to [C+1] here then immediately overwrites it with the
-    ; masked value — kept for faithfulness ("this appears pointless").
-    mov al, [h_load_sprite_temp2]
-    mov [wMapSpriteData + ecx + 1], al
-    mov al, [h_load_sprite_temp2]
-    mov [h_load_sprite_temp1], al                       ; temp1 = text id+flags (save for flag test)
-    and al, 0x3f
-    mov [wMapSpriteData + ecx + 1], al                  ; wMapSpriteData[C+1] = masked text id
-    ; branch on the raw (unmasked) text-id+flags byte
-    mov al, [h_load_sprite_temp1]
-    test al, TRAINER_FLAG
-    jnz .trainerSprite
-    test al, ITEM_FLAG
-    jnz .itemBallSprite
-    ; regular sprite: zero both wMapSpriteExtraData bytes
-    mov word [wMapSpriteExtraData + ecx], 0
-    pop eax
-    ret
-.trainerSprite:
-    movzx eax, byte [ebp + esi]                         ; trainer class
-    inc esi
-    mov [h_load_sprite_temp1], al
-    movzx eax, byte [ebp + esi]                         ; trainer number
-    inc esi
-    mov [h_load_sprite_temp2], al
-    mov al, [h_load_sprite_temp1]
-    mov [wMapSpriteExtraData + ecx], al                 ; ExtraData[C] = trainer class
-    mov al, [h_load_sprite_temp2]
-    mov [wMapSpriteExtraData + ecx + 1], al             ; ExtraData[C+1] = trainer number
-    pop eax
-    ret
-.itemBallSprite:
-    movzx eax, byte [ebp + esi]                         ; item number
-    inc esi
-    mov [h_load_sprite_temp1], al
-    mov al, [h_load_sprite_temp1]
-    mov [wMapSpriteExtraData + ecx], al                 ; ExtraData[C] = item number
-    mov byte [wMapSpriteExtraData + ecx + 1], 0         ; ExtraData[C+1] = 0
-    pop eax
-    ret
-
-CopyMapConnectionHeader:
-    push ecx
-    push edi
-    add edi, ebp
-    mov ecx, CONN_HEADER_SIZE
-    rep movsb
-    pop edi
-    pop ecx
-    ret
-
 ; ---------------------------------------------------------------------------
 ; LoadTilesetHeader — dynamic dispatch via W_CUR_MAP_TILESET.
 ; Pret ref: home/overworld.asm:LoadTilesetHeader
@@ -3486,38 +2641,6 @@ LoadTilesetHeader:
     ret
 
 ; ---------------------------------------------------------------------------
-; LoadDestinationWarpPosition — load spawn Y/X from the destination map's warp
-; table entry selected by W_DESTINATION_WARP_ID.
-; Pret ref: home/overworld.asm:LoadDestinationWarpPosition
-; PROJ divergence: pret's predef version copies a 4-byte (block-view-pointer,
-; Y, X) struct from an hl-indexed ROM table straight into
-; wCurrentTileBlockMapViewPointer/wYCoord/wXCoord. The port has no parallel
-; per-map view-pointer table; it reads Y/X directly out of the already-loaded
-; W_WARP_ENTRIES (Y, X, dest_warp_id, dest_map_id per entry — see the
-; `warp_event` macro / CheckWarpTile), and leaves wCurrentTileBlockMapViewPointer
-; to LoadWarpDestination's explicit stride-math recompute, which replaces
-; pret's ROM view-pointer lookup with an equivalent runtime computation.
-; In:  W_DESTINATION_WARP_ID = 0-based warp index (destination map's table)
-; Out: W_Y_COORD, W_X_COORD set. Preserves all other registers/flags.
-; ---------------------------------------------------------------------------
-LoadDestinationWarpPosition:
-    push eax
-    push esi
-
-    movzx eax, byte [ebp + W_DESTINATION_WARP_ID]
-    shl eax, 2                          ; * 4 bytes per warp entry
-    lea esi, [ebp + W_WARP_ENTRIES]
-    add esi, eax
-    mov al, [esi]                       ; spawn Y tile
-    mov [ebp + W_Y_COORD], al
-    mov al, [esi+1]                     ; spawn X tile
-    mov [ebp + W_X_COORD], al
-
-    pop esi
-    pop eax
-    ret
-
-; ---------------------------------------------------------------------------
 ; IgnoreInputForHalfSecond — suppress player input for ~30 frames after a warp.
 ; Sets wIgnoreInputCounter=30 and BIT_DISABLE_JOYPAD in wStatusFlags5.
 ; The countdown runs at the top of OverworldLoop; joypad is re-enabled when it
@@ -3579,39 +2702,6 @@ IsPlayerStandingOnDoorTile:
     pop esi
     pop eax
     clc
-    ret
-
-; ---------------------------------------------------------------------------
-; PlayMapChangeSound — on a warp, play the "go inside" jingle if the player
-; walked through an overworld door tile, else "go outside".
-; Pret ref: home/overworld.asm:PlayMapChangeSound (:666). Called from WarpFound2
-; (the port's .warpTransition) before EnterMap, so it reads the SOURCE map's
-; tilemap (the door the player stepped on), not the destination.
-; Preserves nothing pret doesn't (AL used); the caller has no live regs here.
-; ---------------------------------------------------------------------------
-PlayMapChangeSound:
-    mov al, [ebp + W_CUR_MAP_TILESET]
-    cmp al, FACILITY
-    je .didNotGoThroughDoor
-    cmp al, CEMETERY
-    je .didNotGoThroughDoor
-    ; pret lda_coord 8, 8 = upper-left tile of the player's block, one row above the
-    ; standing tile (lda_coord 8, 9 → port PLAYER_STANDING). Port row scaling is 1:1
-    ; (fronts are ±2 rows), so project to (PLAYER_STANDING_ROW - 1, PLAYER_STANDING_COL).
-    ; ; PROJ: this door-tile row projection + the pre-EnterMap tilemap timing are
-    ; unverified (no golden warp scenario) — the go-inside/go-outside SFX selection
-    ; needs MCP live-warp verification. Wrong projection only mis-picks the jingle.
-    movzx eax, byte [ebp + W_TILEMAP + (PLAYER_STANDING_ROW - 1) * SCREEN_TILES_W + PLAYER_STANDING_COL]
-    cmp al, OVERWORLD_DOOR_TILE                  ; pret: cp $0b (door tile in tileset 0)
-    jne .didNotGoThroughDoor
-    mov al, SFX_GO_INSIDE
-    jmp .playSound
-.didNotGoThroughDoor:
-    mov al, SFX_GO_OUTSIDE
-.playSound:
-    call PlaySound
-    ; pret tail: if wMapPalOffset != 0 ret; else jp GBFadeOutToBlack.
-    ; TODO-HW: palette/fade (Phase 5) — GBFadeOutToBlack deferred (DMG-green debug palette).
     ret
 
 ; ---------------------------------------------------------------------------
@@ -3887,185 +2977,6 @@ LoadWarpDestination:
     ret
 
 ; ---------------------------------------------------------------------------
-; CheckMapConnections — faithful translation.
-; Pret ref: home/overworld.asm:CheckMapConnections
-; ---------------------------------------------------------------------------
-CheckMapConnections:
-    push ebx
-    push edx
-
-    ; Edge thresholds
-    mov al, [ebp + W_CUR_MAP_HEIGHT]
-    add al, al
-    mov [ebp + W_CURRENT_MAP_HEIGHT_2], al
-    mov al, [ebp + W_CUR_MAP_WIDTH]
-    add al, al
-    mov [ebp + W_CURRENT_MAP_WIDTH_2], al
-
-    ; East connection check
-    mov al, [ebp + W_X_COORD]
-    cmp al, [ebp + W_CURRENT_MAP_WIDTH_2]
-    jne .checkWest
-    mov al, [ebp + W_EAST_CONNECTED_MAP]
-    cmp al, MAP_NO_CONNECTION
-    je .checkWest
-    mov ebx, W_EAST_CONNECTED_MAP
-    
-    mov [ebp + W_CUR_MAP], al
-    mov al, [ebp + W_EAST_CONNECTED_MAP + CONN_X_ALIGN]
-    mov [ebp + W_X_COORD], al
-    mov al, [ebp + W_Y_COORD]
-    mov cl, al
-    mov al, [ebp + W_EAST_CONNECTED_MAP + CONN_Y_ALIGN]
-    add cl, al
-    mov [ebp + W_Y_COORD], cl
-    
-    mov al, [ebp + W_EAST_CONNECTED_MAP + CONN_VIEW_PTR]
-    mov dl, al
-    mov al, [ebp + W_EAST_CONNECTED_MAP + CONN_VIEW_PTR + 1]
-    mov dh, al
-    
-    shr cl, 1
-    jz .savePointer2
-    
-.pointerAdjustmentLoop2:
-    mov al, [ebp + W_EAST_CONNECTED_MAP + CONN_MAP_WIDTH]
-    add al, MAP_BORDER * 2
-    movzx eax, al
-    add edx, eax
-    dec cl
-    jnz .pointerAdjustmentLoop2
-.savePointer2:
-    mov [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], dx
-    jmp .loadNewMap
-
-.checkWest:
-    mov al, [ebp + W_X_COORD]
-    cmp al, 255
-    jne .checkSouth
-    mov al, [ebp + W_WEST_CONNECTED_MAP]
-    cmp al, MAP_NO_CONNECTION
-    je .checkSouth
-    mov ebx, W_WEST_CONNECTED_MAP
-    
-    mov [ebp + W_CUR_MAP], al
-    mov al, [ebp + W_WEST_CONNECTED_MAP + CONN_X_ALIGN]
-    mov [ebp + W_X_COORD], al
-    mov al, [ebp + W_Y_COORD]
-    mov cl, al
-    mov al, [ebp + W_WEST_CONNECTED_MAP + CONN_Y_ALIGN]
-    add cl, al
-    mov [ebp + W_Y_COORD], cl
-    
-    mov al, [ebp + W_WEST_CONNECTED_MAP + CONN_VIEW_PTR]
-    mov dl, al
-    mov al, [ebp + W_WEST_CONNECTED_MAP + CONN_VIEW_PTR + 1]
-    mov dh, al
-    
-    shr cl, 1
-    jz .savePointer1
-    
-.pointerAdjustmentLoop1:
-    mov al, [ebp + W_WEST_CONNECTED_MAP + CONN_MAP_WIDTH]
-    add al, MAP_BORDER * 2
-    movzx eax, al
-    add edx, eax
-    dec cl
-    jnz .pointerAdjustmentLoop1
-.savePointer1:
-    mov [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], dx
-    jmp .loadNewMap
-
-.checkSouth:
-    mov al, [ebp + W_Y_COORD]
-    cmp al, [ebp + W_CURRENT_MAP_HEIGHT_2]
-    jne .checkNorth
-    mov al, [ebp + W_SOUTH_CONNECTED_MAP]
-    cmp al, MAP_NO_CONNECTION
-    je .checkNorth
-    mov ebx, W_SOUTH_CONNECTED_MAP
-    
-    mov [ebp + W_CUR_MAP], al
-    mov al, [ebp + W_SOUTH_CONNECTED_MAP + CONN_Y_ALIGN]
-    mov [ebp + W_Y_COORD], al
-    mov al, [ebp + W_X_COORD]
-    mov cl, al
-    mov al, [ebp + W_SOUTH_CONNECTED_MAP + CONN_X_ALIGN]
-    add cl, al
-    mov [ebp + W_X_COORD], cl
-    
-    mov al, [ebp + W_SOUTH_CONNECTED_MAP + CONN_VIEW_PTR]
-    mov dl, al
-    mov al, [ebp + W_SOUTH_CONNECTED_MAP + CONN_VIEW_PTR + 1]
-    mov dh, al
-    
-    shr cl, 1
-    jz .savePointer4
-    movzx ecx, cl
-    add edx, ecx
-.savePointer4:
-    mov [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], dx
-    jmp .loadNewMap
-
-.checkNorth:
-    mov al, [ebp + W_Y_COORD]
-    cmp al, 255
-    jne .done
-    mov al, [ebp + W_NORTH_CONNECTED_MAP]
-    cmp al, MAP_NO_CONNECTION
-    je .done
-    mov ebx, W_NORTH_CONNECTED_MAP
-    
-    mov [ebp + W_CUR_MAP], al
-    mov al, [ebp + W_NORTH_CONNECTED_MAP + CONN_Y_ALIGN]
-    mov [ebp + W_Y_COORD], al
-    mov al, [ebp + W_X_COORD]
-    mov cl, al
-    mov al, [ebp + W_NORTH_CONNECTED_MAP + CONN_X_ALIGN]
-    add cl, al
-    mov [ebp + W_X_COORD], cl
-    
-    mov al, [ebp + W_NORTH_CONNECTED_MAP + CONN_VIEW_PTR]
-    mov dl, al
-    mov al, [ebp + W_NORTH_CONNECTED_MAP + CONN_VIEW_PTR + 1]
-    mov dh, al
-    
-    shr cl, 1
-    jz .savePointer3
-    movzx ecx, cl
-    add edx, ecx
-.savePointer3:
-    mov [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], dx
-    jmp .loadNewMap
-
-.done:
-    pop edx
-    pop ebx
-    clc                                        ; CF=0 → no transition
-    ret
-
-.loadNewMap:
-    ; A connection was crossed. pret home/overworld.asm:.loadNewMap inlines the whole
-    ; reload here — Pikachu spawn set, LoadMapHeader, PlayDefaultMusicFadeOutCurrent,
-    ; RunPaletteCommand(SET_PAL_OVERWORLD), InitMapSprites, LoadTileBlockMap, then
-    ; jp OverworldLoopLessDelay. The port instead returns CF=1 and the caller performs
-    ; that reload at OverworldLoop.mapTransition, which now does LoadMapHeader +
-    ; PlayDefaultMusicFadeOutCurrent (OW-A.14, real); palette reload still deferred.
-    ; Only the coordinate/block sync stays inline here.
-    ; First, synchronize block coordinates with the new tile coordinates.
-    mov al, [ebp + W_X_COORD]
-    and al, 1
-    mov [ebp + W_X_BLOCK_COORD], al
-    mov al, [ebp + W_Y_COORD]
-    and al, 1
-    mov [ebp + W_Y_BLOCK_COORD], al
-
-    pop edx
-    pop ebx
-    stc                                        ; CF=1 → transition occurred
-    ret
-
-; ---------------------------------------------------------------------------
 ; Embedded overworld asset data (Phase 2 scaffold).
 ; gen_overworld_assets.py regenerates these from source binaries.
 ; ---------------------------------------------------------------------------
@@ -4207,12 +3118,15 @@ TilesetCounterTiles:
 section .rodata
 
 ; per-map (music id, music ROM bank), indexed by map id — pret data/maps/songs.asm
+global MapSongBanks                       ; LoadMapData map music (relocated)
 %include "assets/map_songs.inc"
 
 ; authored border-ring blocks (map-tool C3; see ApplyMapBorderOverrides)
 %include "assets/map_border_overrides.inc"
 global overworld_gfx                     ; exported for cut.asm (InitCutAnimOAM tree tiles $2d/$3d)
+
 %include "assets/overworld_gfx.inc"
+global OVERWORLD_BLOCKS_SIZE             ; DrawTileBlock block-ID clamp (relocated)
 %include "assets/overworld_blocks.inc"
 %include "assets/pallet_town_blk.inc"
 %include "assets/route1_blk.inc"
@@ -4252,5 +3166,8 @@ global overworld_gfx                     ; exported for cut.asm (InitCutAnimOAM 
 %include "assets/player_sprite.inc"
 ; npc_*_still.inc files removed — LoadNPCSpriteTiles reads both still and walk
 ; halves from the full 384-byte sheet in npc_sprite_data_table.inc.
+global MapHeaderPointers                  ; LoadMapHeader (relocated to src/home/overworld.asm)
 %include "assets/map_headers.inc"
 %include "assets/extra_includes.inc"
+
+

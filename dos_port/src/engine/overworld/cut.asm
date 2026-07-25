@@ -98,7 +98,7 @@ extern ClearSprites                 ; src/home/sprites.asm
 extern RestoreScreenTilesAndReloadTilePatterns ; src/home/fade.asm
 extern Delay3                       ; src/video/frame.asm
 extern LoadGBPal                    ; src/home/fade.asm
-extern LoadCurrentMapView           ; src/engine/overworld/overworld.asm
+extern LoadCurrentMapView           ; src/home/overworld.asm
 extern SaveScreenTilesToBuffer2     ; src/home/tilemap.asm
 extern LoadScreenTilesFromBuffer2   ; src/home/tilemap.asm
 extern RedrawMapView                ; src/engine/overworld/update_map.asm (OW-3.1)
@@ -115,7 +115,7 @@ extern text_msgbox                      ; src/home/text.asm — active msgbox pr
 extern g_window_count                   ; src/ppu/ppu.asm
 extern g_bg_whiteout                    ; src/ppu/ppu.asm
 extern g_obj_over_window                ; src/ppu/ppu.asm — OBJ-over-window z-order
-extern LoadTilesetTilePatternData       ; src/engine/overworld/overworld.asm — BG tileset reload
+extern LoadTilesetTilePatternData       ; src/home/overworld.asm — BG tileset reload
 
 section .text
 

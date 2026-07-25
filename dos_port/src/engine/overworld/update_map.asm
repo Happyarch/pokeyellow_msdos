@@ -31,7 +31,7 @@ global RedrawMapView
 global CompareHLWithBC
 
 extern GetPredefRegisters       ; src/home/predef.asm (restores BX=b:c, DX=d:e, ESI=hl)
-extern LoadCurrentMapView       ; src/engine/overworld/overworld.asm
+extern LoadCurrentMapView       ; src/home/overworld.asm
 extern DelayFrame               ; src/video/frame.asm
 extern g_tilecache_dirty        ; src/ppu/ppu.asm (flat global)
 
