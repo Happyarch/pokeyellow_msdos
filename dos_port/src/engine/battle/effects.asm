@@ -47,6 +47,7 @@ bits 32
 %include "gb_macros.inc"
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
+%include "gb_text.inc"                 ; text_far / text_asm stream macros
 
 ; ---------------------------------------------------------------------------
 ; Externs — jpfar handler globals from move_effects/*.asm (pret XxxEffect_ names)
@@ -86,6 +87,13 @@ extern MonsStatsFell                    ; core.asm — composes "<mon>'s STAT [g
 
 ; --- battle_text.inc streams (global in core.o; flat addresses) ---
 extern NothingHappenedText
+extern _ChargeMoveEffectText            ; assets/battle_text.inc — pret text_5.asm "<USER>"
+extern MadeWhirlwindText                ; assets/battle_text.inc (ChargeMoveEffectText hook)
+extern TookInSunlightText
+extern LoweredItsHeadText
+extern SkyAttackGlowingText
+extern FlewUpHighText
+extern DugAHoleText
 extern BecameConfusedText
 extern ButItFailedText
 extern DidntAffectText
@@ -1380,63 +1388,53 @@ ChargeEffect:
     mov al, [ebp + edx]                 ; ld a, [de]
     mov [ebp + wChargeMoveNum], al     ; ld [wChargeMoveNum], a
 
-    ; ld hl, ChargeMoveEffectText / jp PrintText — resolved here (see file header):
-    ; faithful translation of the pret text_asm cascade, cp/jr-z order preserved,
-    ; DIG falls through as the unconditional default exactly like pret (no `jr z`
-    ; after the last `cp DIG`).
-    cmp al, RAZOR_WIND
-    je .razorWind
-    cmp al, SOLARBEAM
-    je .solarbeam
-    cmp al, SKULL_BASH
-    je .skullBash
-    cmp al, SKY_ATTACK
-    je .skyAttack
-    cmp al, FLY
-    je .fly
-.dig:
-    mov esi, .DugAHoleChargeText
-    jmp PrintText
-.razorWind:
-    mov esi, .MadeWhirlwindChargeText
-    jmp PrintText
-.solarbeam:
-    mov esi, .TookInSunlightChargeText
-    jmp PrintText
-.skullBash:
-    mov esi, .LoweredItsHeadChargeText
-    jmp PrintText
-.skyAttack:
-    mov esi, .SkyAttackGlowingChargeText
-    jmp PrintText
-.fly:
-    mov esi, .FlewUpHighChargeText
-    jmp PrintText
+    mov esi, ChargeMoveEffectText       ; ld hl, ChargeMoveEffectText
+    jmp PrintText                       ; jp PrintText
 
 ; ---------------------------------------------------------------------------
-; Local composite charge-text streams — TX_START($00) + <USER>($5A) + the matching
-; completion text's own body bytes (assets/battle_text.inc: MadeWhirlwindText,
-; TookInSunlightText, LoweredItsHeadText, SkyAttackGlowingText, FlewUpHighText,
-; DugAHoleText — bytes copied verbatim, only the leading TX_START swapped for
-; TX_START+<USER>). See file header for why this composition happens in code
-; instead of via pret's text_far+text_asm splice.
+; ChargeMoveEffectText — pret engine/battle/effects.asm:ChargeMoveEffectText.
+;
+; pret's own shape, restored: a text_far intro ("<USER>", data/text/text_5.asm
+; _ChargeMoveEffectText, generated into assets/battle_text.inc) followed by a
+; text_asm hook that picks the matching completion stream by wChargeMoveNum and
+; returns it in HL(ESI), so TextCommandProcessor resumes the message there.
+;
+; This replaces six hand-encoded composite `db 0x00, 0x5A, ...` blobs that pasted
+; <USER> in front of each completion text's bytes. They rendered the same thing,
+; but they were charmap hex in a .asm (the two-tier rule forbids it), they
+; duplicated six generated streams byte-for-byte, and they dropped both pret
+; labels. Nothing here needs composing in code: TX_FAR and TX_START_ASM are both
+; real in the port's TextCommandProcessor (text-engine finding T-1).
+;
+; Flags: pret's `ld hl, XxxText` between the `cp` and the `jr z` does not disturb
+; the compare, and neither does `mov esi, imm32` — the cascade translates directly.
+; DIG is the unconditional default: pret has no `jr z` after its last `cp DIG`, so
+; an unmatched move also falls into .gotText holding DugAHoleText.
 ; ---------------------------------------------------------------------------
-.MadeWhirlwindChargeText:
-    db 0x00, 0x5A, 0x4F, 0xAC, 0xA0, 0xA3, 0xA4, 0x7F, 0xA0, 0x7F, 0xB6, 0xA7, 0xA8, 0xB1, 0xAB, 0xB6
-    db 0xA8, 0xAD, 0xA3, 0xE7, 0x58
-.TookInSunlightChargeText:
-    db 0x00, 0x5A, 0x4F, 0xB3, 0xAE, 0xAE, 0xAA, 0x7F, 0xA8, 0xAD, 0x7F, 0xB2, 0xB4, 0xAD, 0xAB, 0xA8
-    db 0xA6, 0xA7, 0xB3, 0xE7, 0x58
-.LoweredItsHeadChargeText:
-    db 0x00, 0x5A, 0x4F, 0xAB, 0xAE, 0xB6, 0xA4, 0xB1, 0xA4, 0xA3, 0x7F, 0xA8, 0xB3, 0xB2, 0x7F, 0xA7
-    db 0xA4, 0xA0, 0xA3, 0xE7, 0x58
-.SkyAttackGlowingChargeText:
-    db 0x00, 0x5A, 0x4F, 0xA8, 0xB2, 0x7F, 0xA6, 0xAB, 0xAE, 0xB6, 0xA8, 0xAD, 0xA6, 0xE7, 0x58
-.FlewUpHighChargeText:
-    db 0x00, 0x5A, 0x4F, 0xA5, 0xAB, 0xA4, 0xB6, 0x7F, 0xB4, 0xAF, 0x7F, 0xA7, 0xA8, 0xA6, 0xA7, 0xE7
-    db 0x58
-.DugAHoleChargeText:
-    db 0x00, 0x5A, 0x4F, 0xA3, 0xB4, 0xA6, 0x7F, 0xA0, 0x7F, 0xA7, 0xAE, 0xAB, 0xA4, 0xE7, 0x58
+ChargeMoveEffectText:
+    text_far _ChargeMoveEffectText
+    text_asm                            ; TX_START_ASM → TextCommandProcessor jumps here
+    mov al, [ebp + wChargeMoveNum]      ; ld a, [wChargeMoveNum]
+    cmp al, RAZOR_WIND
+    mov esi, MadeWhirlwindText           ; ld hl, MadeWhirlwindText (flag-neutral)
+    je .gotText                          ; jr z, .gotText
+    cmp al, SOLARBEAM
+    mov esi, TookInSunlightText
+    je .gotText
+    cmp al, SKULL_BASH
+    mov esi, LoweredItsHeadText
+    je .gotText
+    cmp al, SKY_ATTACK
+    mov esi, SkyAttackGlowingText
+    je .gotText
+    cmp al, FLY
+    mov esi, FlewUpHighText
+    je .gotText
+    cmp al, DIG
+    mov esi, DugAHoleText               ; no `jr z` in pret — DIG is the fallthrough default
+.gotText:
+    ret
+
 ; ===========================================================================
 ; TrappingEffect — pret engine/battle/effects.asm:TrappingEffect
 ;

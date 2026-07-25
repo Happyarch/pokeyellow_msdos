@@ -1911,7 +1911,15 @@ assets/overworld_strings.inc assets/field_move_text.inc assets/cut_text.inc asse
 
 # Battle message command streams (pret data/text + engine/battle wrappers, text_far
 # flattened). %included by the battle core engine. Generated from the read-only spec.
-assets/battle_text.inc: ../data/text/text_2.asm ../engine/battle/core.asm \
+# The generator globs ../data/text/text_*.asm (TEXT_SRC) and scans every file in its
+# BATTLE_SRC list, so depend on both sets — naming only text_2.asm/core.asm meant a
+# change to any other source (e.g. text_5.asm, which holds _ChargeMoveEffectText)
+# left a stale .inc behind.
+assets/battle_text.inc: $(wildcard ../data/text/text_*.asm) \
+                        ../engine/battle/core.asm ../engine/battle/effects.asm \
+                        ../engine/battle/used_move_text.asm ../engine/battle/experience.asm \
+                        ../engine/battle/misc.asm ../engine/battle/end_of_battle.asm \
+                        ../engine/battle/print_type.asm ../engine/pokemon/evos_moves.asm \
                         ../constants/charmap.asm include/gb_memmap.inc tools/generators/gen_battle_text.py
 	python3 tools/generators/gen_battle_text.py
 
