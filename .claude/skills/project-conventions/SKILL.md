@@ -189,9 +189,14 @@ header, `%include`d by the `.asm` and wired into the Makefile `assets` target.
 Active multi-step implementation plans live as a **family** of files named
 **`docs/current_plan_<topic>.md`** — one per work item, suffixed by what it's
 about. **Multiple may be active at once** (e.g. one engine in progress while
-another is paused). They sit between TODO.md (big-picture scope for the entire
-port) and individual task lists: use one for anything too large for a single
-commit but too specific to belong in TODO.md.
+another is paused). They sit between `ROADMAP.md` (big-picture scope for the
+entire port) and individual task lists: use one for anything too large for a
+single commit but too specific to belong in `ROADMAP.md`.
+
+> The root `TODO.md` was **removed 2026-07-25** (commit `3bee670d`) as stale
+> beyond salvage. Several deferred tails below named it as their tracker and are
+> therefore **untracked right now** — they are open, not done. Inventory:
+> stigmergy memory `todo-md-deleted-orphaned-trackers`.
 
 **Workflow:**
 - At the start of each session, scan `docs/current_plan_*.md` to see every open
@@ -222,7 +227,7 @@ commit but too specific to belong in TODO.md.
   (`update_label_db` / `lint_pret_labels` / `faithdiff` / `label_status`, the
   `faithfulness-review` skill), plus the dosbox-x unattended-quit fix. Deferred
   tails (battle_menu golden spec, CI wiring, FormatMovesString relocation,
-  allowlist review, pret-tree contamination decision) → TODO.md.
+  allowlist review, pret-tree contamination decision) — currently untracked.
 - **Compositor performance — COMPLETE & archived** at
   `docs/plans/compositor_perf.md` (2026-07-12). The port was running at ~half
   speed (31–34 ms/frame against a 16.348 ms budget); it now lands every frame
@@ -259,7 +264,7 @@ commit but too specific to belong in TODO.md.
   evolution/`EvolveMon`, `learn_move`, status-screen pages 1&2, post-battle wire —
   is **complete and archived** at `docs/plans/pokemon_behavior.md` (2026-07-04);
   its deferred tails — status-screen front-pic/cry/STATS-wire, Bill's PC full UI —
-  are tracked in TODO.md.)
+  are currently untracked.)
 - **Party mon icons — COMPLETE & archived** at `docs/plans/party_icons_oam.md`
   (2026-07-12, `f8863164` + `12dfdbe2`). The BG-tile icon hack is gone: icons are OBJ
   through pret's `engine/gfx/mon_icons.asm`, in the party menu and the naming screen.
@@ -281,7 +286,7 @@ commit but too specific to belong in TODO.md.
   `ui_layout_battle_sidecar.json` -> `assets/ui_layout_battle.inc` pipeline, editor
   hardened. **Session B6 (the human-in-the-loop widescreen redesign) is on the back
   burner at the user's direction** -- it needs a scheduling decision, not
-  engineering. Tracked in TODO.md -> "Deferred tail from the battle-UI plan".
+  engineering. Currently untracked ("Deferred tail from the battle-UI plan").
 - `docs/current_plan_map_tool.md` — **overworld map tool** (viewer → border-ring
   authoring → clamp retirement → block painting), built on `gfx_core`. Needed only
   battle-UI Session A2 (landed 2026-07-02) — **not** blocked by that plan's
@@ -294,7 +299,7 @@ commit but too specific to belong in TODO.md.
   bug — it's the overworld VRAM tile-slot defect (owned by `overworld_port` above).
   Menu-input lethargy fixed in `JoypadLowSensitivity` (2026-07-04). Non-VRAM tails
   (window-compositor gap, `LoadPokedexTilePatterns` tileset, interactive sweeps,
-  cable-club warp seam) → TODO.md.
+  cable-club warp seam) — currently untracked.
 - `docs/current_plan_macros.md` — **port pret's portable RGBDS macros** to real
   NASM `%macro`s in `dos_port/include/` (coords, event-macro family, data/gfx
   helpers, text-command macros), "add macros only" (no call-site retrofit),

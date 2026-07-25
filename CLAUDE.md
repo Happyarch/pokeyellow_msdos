@@ -157,7 +157,11 @@ evidence, not as final authority.
 
 ## Current Phase
 
-**Phase 2: Game Loop** — See [TODO.md](TODO.md) for open items.
+**Phase 2: Game Loop** — big-picture scope lives in `ROADMAP.md`; per-work-item
+detail lives in the active `docs/current_plan_*.md` set (generated inventory:
+`dos_port/tools/project_state --plans`). The old root `TODO.md` was removed
+2026-07-25 as stale beyond salvage — do not cite it, and note that some deferred
+tails it used to track are now untracked (memory `todo-md-deleted-orphaned-trackers`).
 Phase 1 delivered the BG tile decoder + tilemap renderer with SCX/SCY scrolling
 (`src/ppu/ppu.asm`) and the keyboard → joypad ISR (`src/input/joypad.asm`);
 window layer, OAM sprites, and the save system remain open there.
@@ -211,7 +215,8 @@ and runs `PrintText` with per-character reveal and multi-page scroll; player-NPC
 collision is enforced by `IsNPCAtTargetBlock` in `CollisionCheckOnLand`; NPC
 wall-blocking uses MAPY/MAPX-based tile lookup in `GetTileSpriteStandsOn`.
 Open Phase 2 items: scripted NPC movement, trainer battle engine, random encounter
-trigger, battle engine. See TODO.md.
+trigger, battle engine. Battle fidelity specifically is tracked in
+`docs/battle_audit_findings.md`.
 
 `render_bg` (`src/ppu/ppu.asm`) is a **native-width surface renderer**: it decodes
 tile IDs into a 48×36-tile (384×288 px) surface using the existing `tile_cache`
@@ -251,7 +256,8 @@ hold real blocks (no blank area), after which both clamps are dead code and
 should be deleted. The address clamp removes the garbage *now* (verified via
 `FRAME.BIN` for baseline / north-transition / walk-to-edge); it does **not** yet
 give editable map cells for that extended area — that still needs the map-data
-extension (enlarged border / bigger block grid). See TODO.md (Phase 2).
+extension (enlarged border / bigger block grid). Until that lands, both clamps
+stay — this section is the record of that work, which no other file tracks.
 
 ---
 
