@@ -244,8 +244,20 @@ def collect_far(cm, mem):
 ASM_TAIL_OK = {"PlayedFluteHadEffectText"}
 
 
+def _terminates(body):
+    """True if this wrapper's stream ends itself rather than running into the next
+    label. Anything else is a pret fallthrough and must be joined."""
+    for raw in reversed(body):
+        s = raw.split(";", 1)[0].strip()
+        if not s:
+            continue
+        return s.startswith(("text_end", "prompt", "done", "dex"))
+    return False
+
+
 def collect_wrappers(cm, mem, far_db):
     out = {}
+    falls = {}
     for rel in BATTLE_SRC:
         p = ROOT / rel
         if not p.exists():
@@ -273,7 +285,15 @@ def collect_wrappers(cm, mem, far_db):
                 if not t:
                     j += 1; continue
                 if re.match(r'[A-Za-z_.]\w*:', t) and not t.startswith(("text", "db", "done", "prompt")):
-                    break  # next label
+                    # Next label. pret FALLS THROUGH into it unless this block ended
+                    # in a terminator (text_end / prompt / done). GreatlyRoseText ->
+                    # RoseText, GreatlyFellText -> FellText and BoostedText ->
+                    # ExpPointsText all do exactly that, so stopping here truncated
+                    # them: "<MON>'s ATTACK greatly" with no " rose!" and no prompt.
+                    # Record the successor and join the streams after the scan.
+                    if not _terminates(body):
+                        falls[label] = re.match(r'([A-Za-z_.]\w*):', t).group(1)
+                    break
                 if t == "text_asm":
                     # A text_asm TAIL (printable content first, then an asm action
                     # like "play the flute jingle") is generatable: emit the printable
@@ -318,6 +338,28 @@ def collect_wrappers(cm, mem, far_db):
                 except (KeyError, ValueError):
                     pass  # text_asm / unresolved — skip (translated as code)
             i = j
+    # Join each fallthrough chain. Flattening text_far puts the far stream's own
+    # $50 inline, which ends that PlaceString and leaves the processor reading the
+    # NEXT command byte — so appending the successor's bytes reproduces exactly what
+    # pret does when its TX_FAR recursion returns into the following label.
+    def resolve(label, seen=None):
+        seen = seen or set()
+        if label in seen or label not in falls:
+            return out.get(label, [])
+        seen.add(label)
+        nxt = falls[label]
+        if nxt not in out:
+            sys.stderr.write(f"gen_battle_text: {label} falls through to {nxt}, "
+                             f"which was not generated — stream left truncated\n")
+            return out[label]
+        return out[label] + resolve(nxt, seen)
+    for label in list(out):
+        if label in falls:
+            joined = resolve(label)
+            if joined != out[label]:
+                sys.stderr.write(f"gen_battle_text: joined {label} + {falls[label]} "
+                                 f"(pret fallthrough)\n")
+                out[label] = joined
     return out
 
 def fmt(label, data):
