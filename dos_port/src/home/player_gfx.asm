@@ -86,7 +86,7 @@ CAVERN                     equ 17
 ; Externs
 ; ---------------------------------------------------------------------------
 extern g_tilecache_dirty            ; src/ppu/ppu.asm — arm tile-cache re-decode
-extern AdvancePlayerSprite          ; src/engine/overworld/overworld.asm
+extern AdvancePlayerSprite          ; src/home/overworld.asm
 extern PlayDefaultMusic             ; src/home/audio.asm (real gateway)
 
 ; Player sprite tile data. player_sprite is the port's existing walking (Red)

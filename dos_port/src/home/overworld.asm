@@ -55,6 +55,9 @@ FACILITY                    equ 22
 MAP_NO_CONNECTION           equ 0xFF
 OVERWORLD_DOOR_TILE         equ 0x0B   ; pret: door tile in tileset 0 (PlayMapChangeSound)
 wNumSprites equ 0xD4E0
+BIT_ALWAYS_ON_BIKE          equ 5
+PAD_BUTTONS  equ 0x0F   ; A|B|SELECT|START (button byte low nibble)
+PAD_CTRL_PAD equ 0xF0   ; RIGHT|LEFT|UP|DOWN (D-pad high nibble)
 
 extern DelayFrame                    ; video/frame.asm
 extern JoypadLowSensitivity          ; home/joypad_lowsens.asm — writes hJoy5
@@ -62,12 +65,11 @@ extern BankswitchCommon              ; home/bankswitch2.asm — AL = bank (flat 
 extern GetTileAndCoordsInFrontOfPlayer ; engine/overworld/player_state.asm (predef
 extern BikeRidingTilesets                    ; src/home/player_gfx.asm
 extern DoBoulderDustAnimation       ; src/engine/overworld/push_boulder.asm
-extern HandleBlackOut                        ; engine/overworld/overworld.asm (pret home/overworld.asm)
 extern HandleLedges                    ; src/engine/overworld/ledges.asm
 extern IsPlayerCharacterBeingControlledByGame ; src/home/npc_movement.asm (real, linked — OW-A.6)
 extern IsPlayerFacingEdgeOfMap                    ; src/engine/overworld/warp_check.asm
 extern IsWarpTileInFrontOfPlayer                    ; src/engine/overworld/warp_check.asm
-extern MapScriptPointers
+extern MapScriptPointers                  ; assets/map_scripts.inc
 extern PlayDefaultMusic             ; src/home/audio.asm (real gateway)
 extern RedBikeSprite                    ; src/home/player_gfx.asm
 extern RunNPCMovementScript         ; src/engine/overworld/overworld.asm
@@ -81,31 +83,1075 @@ extern g_tilecache_dirty            ; src/ppu/ppu.asm — arm tile-cache re-deco
 extern player_sprite                ; == RedSprite (walking)
 
 ; --- relocated from src/engine/overworld/overworld.asm (unit 6a) ---
-extern ApplyMapBorderOverrides
-extern DisableLCD
-extern EnableLCD
-extern FarCopyData
-extern FillMemory
-extern GBPalNormal
-extern InitMapSprites
-extern LoadTextBoxTilePatterns
-extern LoadTilesetHeader
-extern LoadWildData
-extern MapTextTablePointers
-extern PlayDefaultMusicFadeOutCurrent
-extern PlaySound
-extern RefreshCollisionTileMap
-extern RunPaletteCommand
-extern UpdateMusic6Times
-extern h_load_sprite_temp1
-extern h_load_sprite_temp2
-extern hide_window
-extern wMapSpriteData
-extern wMapSpriteExtraData
-extern w_map_text_table_ptr
+extern ApplyMapBorderOverrides            ; src/engine/overworld/overworld.asm
+extern DisableLCD                         ; src/video/lcd_control.asm
+extern EnableLCD                          ; src/video/lcd_control.asm
+extern FarCopyData                        ; src/home/copy_data.asm
+extern FillMemory                         ; src/home/copy2.asm
+extern GBPalNormal                        ; src/home/init.asm
+extern InitMapSprites                     ; src/engine/overworld/map_sprites.asm
+extern LoadTextBoxTilePatterns            ; src/home/load_font.asm
+extern LoadTilesetHeader                  ; src/engine/overworld/overworld.asm
+extern LoadWildData                       ; src/engine/overworld/wild_mons.asm
+extern MapTextTablePointers               ; assets/npc_dialogs/all_dialogs.inc
+extern PlayDefaultMusicFadeOutCurrent     ; src/home/audio.asm
+extern PlaySound                          ; src/home/audio.asm
+extern RefreshCollisionTileMap            ; src/engine/overworld/overworld.asm
+extern RunPaletteCommand                  ; src/home/palettes.asm
+extern UpdateMusic6Times                  ; src/home/audio.asm
+extern h_load_sprite_temp1                ; src/engine/overworld/overworld.asm
+extern h_load_sprite_temp2                ; src/engine/overworld/overworld.asm
+extern hide_window                        ; src/ppu/ppu.asm
+extern wMapSpriteData                     ; src/engine/overworld/map_sprites.asm
+extern wMapSpriteExtraData                ; src/engine/overworld/map_sprites.asm
+extern w_map_text_table_ptr               ; src/engine/overworld/map_sprites.asm
 extern MapHeaderPointers            ; src/engine/overworld/overworld.asm (assets/map_headers.inc)
 extern MapSongBanks                 ; src/engine/overworld/overworld.asm (assets/map_songs.inc)
 extern OVERWORLD_BLOCKS_SIZE        ; src/engine/overworld/overworld.asm (assets/overworld_blocks.inc)
+
+; --- relocated from src/engine/overworld/overworld.asm (unit 6b) ---
+extern AnyPartyAlive                      ; src/home/wild_encounter_check.asm
+extern CheckForHiddenEventOrBookshelfOrCardKeyDoor ; src/home/hidden_events.asm
+extern CheckForceBikeOrSurf               ; src/engine/overworld/player_state.asm
+extern CheckNPCInteraction                ; src/engine/overworld/map_sprites.asm
+extern CheckTrainerSight                  ; src/engine/overworld/map_sprites.asm
+extern CheckWarpTile                      ; src/engine/overworld/overworld.asm
+extern ClearVariablesOnEnterMap           ; src/engine/overworld/clear_variables.asm
+extern DebugDumpMemory                    ; src/debug/debug_dump.asm
+extern Delay3                             ; src/video/frame.asm
+extern DelayFrames                        ; src/video/frame.asm
+extern DisplayStartMenu                   ; src/home/start_menu.asm
+extern DoSignInteraction                  ; src/engine/overworld/overworld.asm
+extern DumpBackbuffer                     ; src/debug/debug_dump.asm
+extern DumpSeamLog                        ; src/debug/debug_dump.asm
+extern EnterMapAnim                       ; src/engine/overworld/player_animations.asm
+extern GBFadeOutToBlack                   ; src/home/fade.asm
+extern GetTileInFrontOfPlayer             ; src/engine/overworld/overworld.asm
+extern IsNPCAtTargetBlock                 ; src/engine/overworld/map_sprites.asm
+extern IsNextTileShoreOrWater             ; src/engine/items/item_effects.asm
+extern IsPlayerStandingOnDoorTileOrWarpTile ; src/engine/overworld/player_state.asm
+extern IsSurfingPikachuInParty            ; src/engine/overworld/overworld_stubs.asm
+extern IsTilePassable                     ; src/home/copy2.asm
+extern LoadWarpDestination                ; src/engine/overworld/overworld.asm
+extern MapEntryAfterBattle                ; src/engine/overworld/overworld_stubs.asm
+extern PrepareForSpecialWarp              ; src/engine/overworld/special_warps.asm
+extern PrepareNewGameDebug                ; src/engine/debug/debug_party.asm
+extern ResetStatusAndHalveMoneyOnBlackout ; src/engine/events/black_out.asm
+extern ResetUsingStrengthOutOfBattleBit   ; src/engine/overworld/overworld_stubs.asm
+extern RunAnimObjectTest                  ; src/engine/movie/intro_yellow.asm
+extern RunBagMenuTest                     ; src/debug/debug_dump.asm
+extern RunBattleTest                      ; src/debug/debug_dump.asm
+extern RunChooseNameTest                  ; src/engine/movie/oak_speech/oak_speech2.asm
+extern RunCinematicMarkersTest            ; src/debug/debug_dump.asm
+extern RunContinueSeedTest                ; src/engine/menus/save.asm
+extern RunDrawBadgesTest                  ; src/engine/menus/draw_badges.asm
+extern RunLeaguePCTest                    ; src/engine/menus/league_pc.asm
+extern RunLearnMoveTest                   ; src/debug/debug_dump.asm
+extern RunLinkCupsTest                    ; src/engine/menus/link_menu.asm
+extern RunLinkMenuTest                    ; src/engine/menus/link_menu.asm
+extern RunListMenuTest                    ; src/debug/debug_dump.asm
+extern RunMainMenuTest                    ; src/engine/menus/main_menu.asm
+extern RunMapScriptSightTest              ; src/debug/debug_dump.asm
+extern RunNameMenuTest                    ; src/engine/movie/oak_speech/oak_speech2.asm
+extern RunNamingScreenTest                ; src/engine/menus/naming_screen.asm
+extern RunOakIntroTest                    ; src/debug/debug_dump.asm
+extern RunOakPicTest                      ; src/engine/movie/oak_speech/oak_speech.asm
+extern RunOakSlideTest                    ; src/engine/movie/oak_speech/oak_speech2.asm
+extern RunOakSpeechCheckpoint             ; src/engine/movie/oak_speech/oak_speech.asm
+extern RunOaksPCTest                      ; src/engine/menus/oaks_pc.asm
+extern RunOptionsTest                     ; src/engine/menus/options.asm
+extern RunPCTest                          ; src/engine/menus/pc.asm
+extern RunPartyMenuTest                   ; src/debug/debug_dump.asm
+extern RunPlayersPCTest                   ; src/engine/menus/players_pc.asm
+extern RunPokedexEntryTest                ; src/engine/menus/pokedex.asm
+extern RunPokedexTest                     ; src/engine/menus/pokedex.asm
+extern RunSaveTest                        ; src/engine/menus/save.asm
+extern RunSplashTest                      ; src/engine/movie/splash.asm
+extern RunStatusScreenTest                ; src/debug/debug_dump.asm
+extern RunStoneTest                       ; src/debug/debug_dump.asm
+extern RunTMHMTest                        ; src/debug/debug_dump.asm
+extern RunTextBoxIDTest                   ; src/debug/debug_dump.asm
+extern RunTextTest                        ; src/debug/debug_dump.asm
+extern RunTrainerCardTest                 ; src/engine/menus/start_sub_menus.asm
+extern RunYellowIntroTest                 ; src/engine/movie/intro_yellow.asm
+extern RunYesNoTest                       ; src/debug/debug_dump.asm
+extern SeamLogRecord                      ; src/debug/debug_dump.asm
+extern SeamReseatView                     ; src/engine/overworld/overworld.asm
+extern SeedDeterministicPlayerIdentity    ; src/engine/debug/debug_party.asm
+extern SpecialEnterMap                    ; src/engine/menus/main_menu.asm
+extern StopAllMusic                       ; src/home/audio.asm
+extern StopAllSounds                      ; src/home/init.asm
+extern TilePairCollisionsWater            ; src/engine/overworld/ledges.asm
+extern TrainerEncounterFlow               ; src/engine/overworld/map_sprites.asm
+extern UpdateSprites                      ; src/engine/overworld/movement.asm
+extern WalkSpeedSample                    ; src/engine/overworld/overworld.asm
+extern _AdvancePlayerSprite               ; src/engine/overworld/overworld.asm
+extern _LeaveMapAnim                      ; src/engine/overworld/player_animations.asm
+extern g_audio_engine_online              ; src/home/audio.asm
+extern pad_noclip                         ; src/input/joypad.asm
+extern seam_reseat                        ; src/engine/overworld/overworld.asm
+extern seam_seeded                        ; src/engine/overworld/overworld.asm
+extern set_single_window                  ; src/ppu/ppu.asm
+
+
+
+; ---------------------------------------------------------------------------
+; EnterMap — faithful map (re-)entry. Pret ref: home/overworld.asm:1-41 (EnterMap).
+; Sets wJoyIgnore, loads the map, clears per-map scratch, then runs the fly/warp/
+; battle-return reset ladder before falling into OverworldLoop. Re-entered on every
+; warp/battle-return (OW-A.4(b) routes those paths back here).
+;
+; Tripwire (OW-A.4): the DEBUG dump harnesses stay IMMEDIATELY after LoadMapData,
+; BEFORE the resets. Every FRAME.BIN-baseline DEBUG build (DEBUG_BASELINE/
+; DEBUG_TRANSITION/DEBUG_WALK_NORTH) dump-and-exits inside its harness, so the resets
+; below NEVER run under those builds — the 3 baselines must stay byte-identical,
+; proving the render/transition path is untouched. Resets run only in the real build.
+; ---------------------------------------------------------------------------
+EnterMap:
+    ; ld a, PAD_BUTTONS | PAD_CTRL_PAD / ld [wJoyIgnore], a
+    mov byte [ebp + W_JOY_IGNORE], PAD_BUTTONS | PAD_CTRL_PAD
+%ifdef DEBUG_SEAM
+    ; Seam-crossing trace harness: spawn on the target map next to a connection
+    ; edge, walk into it with the REAL movement primitives, and sample state every
+    ; frame into SEAMLOG.BIN. Must seed wCurMap/coords BEFORE LoadMapData reads them.
+    ;
+    ; Default target is the Viridian City <-> Route 22 (west) seam, the reported
+    ; repro. wStatusFlags4 BIT_NO_BATTLES suppresses wild encounters through the
+    ; engine's own gate (NewBattle checks it) rather than by de-wiring the call —
+    ; keeps the seam-crossing trace deterministic (no random battle mid-walk).
+    ; (W-1, the old battle-return tile-cache clobber, is now fixed — commit 02cf0d2f.)
+%ifndef DEBUG_SEAM_MAP
+%define DEBUG_SEAM_MAP 0x01               ; VIRIDIAN_CITY
+%endif
+%ifndef DEBUG_SEAM_X
+%define DEBUG_SEAM_X 3                    ; 3 tiles from the west edge
+%endif
+%ifndef DEBUG_SEAM_Y
+%define DEBUG_SEAM_Y 16                   ; inside Route 22's strip (Viridian y 8..25)
+%endif
+%ifndef DEBUG_SEAM_STEPS
+%define DEBUG_SEAM_STEPS 8                ; x: 3,2,1,0,255(cross),then 3 more in Route 22
+%endif
+%ifndef DEBUG_SEAM_DIR
+%define DEBUG_SEAM_DIR 0                  ; 0 = walk west, 1 = walk east
+%endif
+%if DEBUG_SEAM_DIR
+%define SEAM_XVEC 0x01
+%define SEAM_PDIR PLAYER_DIR_RIGHT
+%define SEAM_FACE SPRITE_FACING_RIGHT
+%else
+%define SEAM_XVEC 0xFF
+%define SEAM_PDIR PLAYER_DIR_LEFT
+%define SEAM_FACE SPRITE_FACING_LEFT
+%endif
+    ; ONE-SHOT: OverworldLoop re-enters EnterMap on every map transition, so the
+    ; seed must only fire on the first entry — otherwise a crossing teleports the
+    ; player straight back to the spawn and the seam can never be left.
+    cmp byte [seam_seeded], 0
+    jne .seam_no_seed
+    mov byte [seam_seeded], 1
+    or byte [ebp + W_STATUS_FLAGS_4], (1 << BIT_NO_BATTLES)
+    mov byte [ebp + W_CUR_MAP],  DEBUG_SEAM_MAP
+    mov byte [ebp + W_X_COORD],  DEBUG_SEAM_X
+    mov byte [ebp + W_Y_COORD],  DEBUG_SEAM_Y
+    ; $FF = "not a warp arrival": LoadTilesetHeader's faithful tail otherwise
+    ; re-derives the coords from the stale wDestinationWarpID on any dungeon-
+    ; tileset map (e.g. a seeded Viridian Forest spawned at warp 0's (1,0)).
+    mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF
+    mov byte [seam_reseat], 1             ; hand-seeded coords need the view ptr derived
+.seam_no_seed:
+%endif
+%ifdef DEBUG_NO_WILD
+    ; Debug: suppress wild encounters via the game's own flag (wStatusFlags4
+    ; BIT_NO_BATTLES — the same gate NewBattle already honours). Re-set on every
+    ; EnterMap so it survives StartNewGame's WRAM clear on a fully normal boot
+    ; (title screen intact). Trainer/forced battles are unaffected.
+    or byte [ebp + W_STATUS_FLAGS_4], (1 << BIT_NO_BATTLES)
+%endif
+%ifdef DEBUG_SIGNTEXT
+    ; Streamed-text gate (fidelity plan Stage 1b): stand next to the Pallet Town town
+    ; sign and face it. The sign is `bg_event 7, 9, TEXT_PALLETTOWN_SIGN`
+    ; (data/maps/objects/PalletTown.asm), i.e. X=7 Y=9, so the tile in front of the
+    ; player must be (9,7).
+    ; THE READING TILE IS (Y=9, X=8) FACING LEFT, *not* (10,7) facing UP: the tile
+    ; below the sign is a flower ($03, absent from Overworld_Coll) and the real game
+    ; cannot stand there. Seeding coords bypasses collision, so the port happily read
+    ; the sign from a tile no player can occupy — and the mGBA golden, which has to
+    ; WALK there, could not reproduce it (it blocks stepping onto (10,7)). The gate now
+    ; stands where the game lets you stand, so both sides see the same screen.
+    ; Overridable (SIGNTEXT_MAP/Y/X/DIR) so any map's sign can be driven headlessly —
+    ; used to prove F-10 on Route 5, whose sign was one of the 7 that id 0 swallowed.
+    ; Seeded BEFORE LoadMapData, which reads the coords (same rule as DEBUG_SEAM).
+    mov byte [ebp + W_CUR_MAP], SIGNTEXT_MAP   ; default PALLET_TOWN
+    mov byte [ebp + W_Y_COORD], SIGNTEXT_Y
+    mov byte [ebp + W_X_COORD], SIGNTEXT_X
+    mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF  ; "not a warp arrival" (see DEBUG_SEAM)
+%endif
+%ifdef DEBUG_MAPSCRIPT_SIGHT
+    ; Map-script sight gate (map-script fidelity plan, Stage 3): spawn inside a
+    ; trainer's view range on a driver-wired map, so the map's _Script engages on
+    ; its own. Defaults are Route 3 (Y=6, X=12): ROUTE3_YOUNGSTER1 stands at
+    ; (x=10, y=6) facing RIGHT with view range 2 (scripts/Route3.asm
+    ; Route3TrainerHeader0), so the player is the second tile in its line of sight
+    ; — far enough that TrainerWalkUpToPlayer has a step to take.
+    ; Seeded BEFORE LoadMapData, which reads the coords (same rule as DEBUG_SEAM).
+    mov byte [ebp + W_CUR_MAP], MAPSCRIPT_MAP
+    mov byte [ebp + W_Y_COORD], MAPSCRIPT_Y
+    mov byte [ebp + W_X_COORD], MAPSCRIPT_X
+    mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF  ; "not a warp arrival" (see DEBUG_SEAM)
+%endif
+%ifdef DEBUG_OAK_INTRO
+    ; Oak-intro state gate: start on the Pallet north-exit tile that triggers
+    ; PalletTownDefaultScript, then let RunOakIntroTest drive the stage boundary.
+    mov byte [ebp + W_CUR_MAP], 0x00          ; PALLET_TOWN
+    mov byte [ebp + W_Y_COORD], 0
+    mov byte [ebp + W_X_COORD], 10
+    mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF
+%endif
+    call LoadMapData
+%ifdef DEBUG_SEAM
+    cmp byte [seam_reseat], 0
+    je .seam_no_reseat
+    mov byte [seam_reseat], 0
+    call SeamReseatView                   ; LoadMapData does not derive the view ptr
+.seam_no_reseat:
+%ifdef DEBUG_SEAM_LIVE
+    ; Live mode: no scripted walk. Fall through to the real OverworldLoop so the
+    ; player drives with the keyboard and COLLISION IS LIVE (the scripted harness
+    ; bypasses it, and its traces came back clean). frame.asm samples every frame;
+    ; pressing A writes SEAMLOG.BIN + FRAME.BIN and exits. Drive to the spot that
+    ; reproduces, then press A.
+%else
+    mov ecx, DEBUG_SEAM_STEPS
+.seam_step:
+    push ecx
+    mov byte [ebp + W_SPRITE_PLAYER_Y_STEP_VECTOR], 0
+    mov byte [ebp + W_SPRITE_PLAYER_X_STEP_VECTOR], SEAM_XVEC
+    mov byte [ebp + W_PLAYER_DIRECTION],        SEAM_PDIR
+    mov byte [ebp + W_PLAYER_MOVING_DIRECTION], SEAM_PDIR
+    mov byte [ebp + W_SPRITE_PLAYER_FACING_DIR], SEAM_FACE
+    mov byte [ebp + W_WALK_COUNTER], 8
+.seam_frames:
+    call UpdateSprites
+    call AdvancePlayerSprite
+    pushf                                 ; CF=1 => CheckMapConnections fired
+    call DelayFrame
+    call SeamLogRecord                    ; one sample per rendered frame
+    popf
+    jc .seam_crossed
+    cmp byte [ebp + W_WALK_COUNTER], 0
+    jne .seam_frames
+    pop ecx
+    dec ecx
+    jnz .seam_step
+    jmp .seam_done                        ; never reached the edge
+
+.seam_crossed:
+    ; Mimic OverworldLoop's .mapTransition: a crossing reloads the whole map.
+    ; Keep walking afterwards so post-crossing oscillation is visible in the log.
+    pop ecx
+    call LoadMapData
+    call SeamLogRecord                    ; marker: first sample on the new map
+    mov ecx, DEBUG_SEAM_STEPS
+.seam_after:
+    push ecx
+    mov byte [ebp + W_SPRITE_PLAYER_Y_STEP_VECTOR], 0
+    mov byte [ebp + W_SPRITE_PLAYER_X_STEP_VECTOR], SEAM_XVEC
+    mov byte [ebp + W_PLAYER_DIRECTION],        SEAM_PDIR
+    mov byte [ebp + W_PLAYER_MOVING_DIRECTION], SEAM_PDIR
+    mov byte [ebp + W_SPRITE_PLAYER_FACING_DIR], SEAM_FACE
+    mov byte [ebp + W_WALK_COUNTER], 8
+.seam_after_frames:
+    call UpdateSprites
+    call AdvancePlayerSprite
+    call DelayFrame
+    call SeamLogRecord
+    cmp byte [ebp + W_WALK_COUNTER], 0
+    jne .seam_after_frames
+    pop ecx
+    dec ecx
+    jnz .seam_after
+.seam_done:
+    call DumpSeamLog                      ; SEAMLOG.BIN (returns)
+    call DumpBackbuffer                   ; FRAME.BIN: the final screen — then exits
+%endif ; DEBUG_SEAM_LIVE
+%endif ; DEBUG_SEAM
+%ifdef DEBUG_OAK_INTRO
+    call SeamReseatView
+    call RunOakIntroTest                      ; dumps GBSTATE+FRAME and exits
+%endif
+%ifdef DEBUG_DUMP
+    call DebugDumpMemory     ; dump GB memory to DUMP.BIN, then exit (debug only)
+%endif
+%ifdef DEBUG_WALK_NORTH
+    ; Walk-simulation harness: drive the REAL movement primitives north for
+    ; DEBUG_WALK_STEPS steps (default 8: wYCoord 8 -> 0, the north edge), then
+    ; dump the frame. Reveals where the player is VISUALLY when it reaches the
+    ; map edge / when CheckMapConnections fires — i.e. whether the transition
+    ; triggers at an appropriate point. Collision is skipped so the walk is
+    ; unconditional. If a crossing fires mid-walk, we dump immediately.
+    ;
+    ; The spawn (tile 8,8 = Pallet block col 4) sits under a tree at block-row 0,
+    ; so a blind straight-north walk drove the player THROUGH the tree and off the
+    ; top edge into the OOB-clamped region (collision is skipped). Pre-walk east
+    ; onto the passable north-exit column first so the northward walk stays on
+    ; valid tiles and crosses into Route 1 legitimately.
+%ifndef DEBUG_WALK_STEPS
+%define DEBUG_WALK_STEPS 8
+%endif
+%ifndef DEBUG_WALK_EAST_STEPS
+%define DEBUG_WALK_EAST_STEPS 2
+%endif
+    mov ecx, DEBUG_WALK_EAST_STEPS
+.we_step:
+    push ecx
+    mov byte [ebp + W_SPRITE_PLAYER_Y_STEP_VECTOR], 0
+    mov byte [ebp + W_SPRITE_PLAYER_X_STEP_VECTOR], 1     ; +1 (east)
+    mov byte [ebp + W_PLAYER_DIRECTION],        PLAYER_DIR_RIGHT
+    mov byte [ebp + W_PLAYER_MOVING_DIRECTION], PLAYER_DIR_RIGHT
+    mov byte [ebp + W_SPRITE_PLAYER_FACING_DIR], SPRITE_FACING_RIGHT
+    mov byte [ebp + W_WALK_COUNTER], 8
+.we_frames:
+    call UpdateSprites
+    call AdvancePlayerSprite
+    call DelayFrame
+    cmp byte [ebp + W_WALK_COUNTER], 0
+    jne .we_frames
+    pop ecx
+    dec ecx
+    jnz .we_step
+
+    mov ecx, DEBUG_WALK_STEPS
+.wn_step:
+    push ecx
+    mov byte [ebp + W_SPRITE_PLAYER_Y_STEP_VECTOR], 0xFF   ; -1 (north)
+    mov byte [ebp + W_SPRITE_PLAYER_X_STEP_VECTOR], 0
+    mov byte [ebp + W_PLAYER_DIRECTION],        PLAYER_DIR_UP
+    mov byte [ebp + W_PLAYER_MOVING_DIRECTION], PLAYER_DIR_UP
+    mov byte [ebp + W_SPRITE_PLAYER_FACING_DIR], SPRITE_FACING_UP
+    mov byte [ebp + W_WALK_COUNTER], 8
+.wn_frames:
+    call UpdateSprites
+    call AdvancePlayerSprite
+    jc .wn_crossed                ; CF=1 → CheckMapConnections fired this step
+    call DelayFrame
+    cmp byte [ebp + W_WALK_COUNTER], 0
+    jne .wn_frames
+    pop ecx
+    dec ecx
+    jnz .wn_step
+    call DumpBackbuffer           ; reached edge without crossing — dump it
+.wn_crossed:
+    pop ecx                       ; (balance stack; ecx unused after)
+    call DumpBackbuffer           ; dump the frame at the moment of crossing
+%endif
+%ifdef DEBUG_TRANSITION
+    ; Deterministic transition test: simulate stepping off the north edge of
+    ; Pallet Town (wYCoord wraps to 255), run the real CheckMapConnections, then
+    ; the same reload .mapTransition does. Lets us screenshot the post-crossing
+    ; render of Route 1's bottom without keyboard input.
+%ifndef DEBUG_BASELINE
+    mov byte [ebp + W_X_COORD], 8
+    mov byte [ebp + W_Y_COORD], 255
+    call CheckMapConnections                  ; sets W_CUR_MAP + view ptr for Route 1
+%endif
+    ; Player identity = the golden spec ("RED" / id 0), as the DEBUG_STARTMENU gate
+    ; below already does. Without this the overworld_pallet golden compares the build
+    ; define (PLAYER_NAME, e.g. "NINTEN") against the golden's "RED", and — worse —
+    ; wPlayerID is whatever InitPlayerData rolled from the RNG, so it is not even
+    ; reproducible run to run. Only visible since the WRAM regions are compared (F-5).
+    call SeedDeterministicPlayerIdentity
+    mov byte [ebp + W_WALK_COUNTER], 0
+    mov byte [ebp + W_SPRITE_PLAYER_Y_STEP_VECTOR], 0
+    mov byte [ebp + W_SPRITE_PLAYER_X_STEP_VECTOR], 0
+    mov byte [ebp + H_SCY], 0
+    mov byte [ebp + H_SCX], 0
+    mov word [ebp + W_MAP_VIEW_VRAM_POINTER], GB_TILEMAP0
+    call LoadMapHeader
+    ; OW-A.2 P3b: LoadMapHeader now runs the faithful InitSprites (pret :1892), which
+    ; repopulates the NPC slots from the destination map's object binary but leaves
+    ; IMAGEBASEOFFSET cleared (that is InitMapSprites' job). The real .mapTransition
+    ; (:902/:913) pairs LoadMapHeader with InitMapSprites; this harness claimed to do
+    ; "the same reload .mapTransition does" but had OMITTED that InitMapSprites call —
+    ; harmless before P3b (LoadMapHeader was sprite-agnostic), required now so the
+    ; slots are tile-loaded / IMAGEBASEOFFSET-assigned like the real crossing does.
+    call InitMapSprites
+    call LoadTileBlockMap
+    call LoadCurrentMapView
+    ; Render a few frames so GB_BACKBUF holds the post-transition image, then
+    ; exfiltrate the exact rendered pixels to FRAME.BIN for host inspection.
+    call DelayFrame
+    call DelayFrame
+    call DelayFrame
+    call DumpBackbuffer        ; writes FRAME.BIN then exits (never returns)
+%endif
+%ifdef DEBUG_DIALOG
+    ; Dialog-box position test: fill GB_TILEMAP1 rows 0-5 with a checkerboard of
+    ; tile IDs 0x50/0x51 (visible non-blank), show the window at the centered-bottom
+    ; position (WY=152, WX=87), render 3 frames, dump FRAME.BIN.
+    ; Tests Bug 2 (window at bottom, centered) and that the window renders at all.
+    lea edi, [ebp + GB_TILEMAP1]
+    mov ecx, 6 * 32                        ; 6 rows × 32 tiles = 192 bytes
+    xor eax, eax
+.dd_fill:
+    mov byte [edi], 0x50
+    inc edi
+    mov byte [edi], 0x51
+    inc edi
+    sub ecx, 2
+    jnz .dd_fill
+    mov eax, 87                            ; wx (centered dialog: WX-7=80)
+    mov ebx, 152                           ; wy (bottom of viewport)
+    mov ecx, SCREEN_W                      ; clip_w = 160px
+    mov edx, RENDER_H                      ; max_y = 200
+    mov esi, GB_TILEMAP1
+    xor edi, edi
+    call set_single_window
+    call DelayFrame
+    call DelayFrame
+    call DelayFrame
+    call DumpBackbuffer                    ; writes FRAME.BIN, exits
+%endif
+%ifdef DEBUG_SIGNTEXT
+    ; The coords were seeded before LoadMapData (above); LoadMapData does not derive
+    ; the view pointer for a hand-seeded spawn, so do that first.
+    call SeedDeterministicPlayerIdentity    ; "RED" / id 0 — the golden's identity
+    call SeamReseatView                     ; view ptr + block coords + collision mirror
+    mov byte [ebp + W_SPRITE_PLAYER_FACING_DIR], SIGNTEXT_DIR  ; default SPRITE_FACING_LEFT
+    ; Run the REAL A-press dispatch, not a bespoke "print this text" shortcut: the
+    ; whole point of this scenario is that the sign's text reaches the screen through
+    ; IsSpriteOrSignInFrontOfPlayer → SignLoop → DisplaySignText → ShowTextStream.
+    call IsSpriteOrSignInFrontOfPlayer
+    cmp byte [ebp + hTextID], 0             ; pret gate: found anything? (the
+    je .signtext_nosign                     ; scenario faces a sign, so a hit
+                                            ; here is the sign's text id)
+    call DoSignInteraction                  ; never returns: ShowTextStream's DEBUG_SIGNTEXT
+                                            ; hook dumps once the text is printed
+.signtext_nosign:
+    ; No sign in front of the player → dump anyway, with no dialog box on screen, so the
+    ; golden diff FAILS LOUDLY instead of the harness silently walking into the game.
+    call DumpBackbuffer
+%endif
+%ifdef DEBUG_STARTMENU
+    call SeedDeterministicPlayerIdentity   ; menu's name row = "RED" (golden spec), not the build define
+    call DisplayStartMenu                  ; draws menu, renders one frame, dumps FRAME.BIN, exits
+%endif
+%ifdef DEBUG_BAGMENU
+    call RunBagMenuTest                    ; seed bag, open bag screen, render one frame, dump FRAME.BIN, exits
+%endif
+%ifdef DEBUG_BAGMENU_LIVE
+    ; Live, interactive: seed a full bag + money, then fall through to the normal
+    ; OverworldLoop. Open the bag via START → ITEM (the real path) to exercise the
+    ; list, TOSS quantity chooser, YES/NO confirm, and the "TOO IMPORTANT!" notice.
+    mov byte [ebp + 0xD162], 0             ; wPartyCount = 0
+    mov byte [ebp + 0xD163], 0xFF          ; wPartySpecies sentinel
+    mov byte [ebp + 0xD31C], 0             ; wNumBagItems = 0
+    mov byte [ebp + 0xD31D], 0xFF          ; wBagItems sentinel
+    call PrepareNewGameDebug               ; seed party + bag + money (returns)
+%endif
+%ifdef DEBUG_SEED_PARTY
+    ; Plain playable build with a seeded party: seed a full party + bag + money,
+    ; then fall through to the normal OverworldLoop. No frame dump, no exit — reach
+    ; the stats screen the real way (START → POKéMON → a mon → STATS), so the render
+    ; runs through the faithful .choseStats path (ClearSprites etc.), not the harness.
+    mov byte [ebp + 0xD162], 0             ; wPartyCount = 0
+    mov byte [ebp + 0xD163], 0xFF          ; wPartySpecies sentinel
+    mov byte [ebp + 0xD31C], 0             ; wNumBagItems = 0
+    mov byte [ebp + 0xD31D], 0xFF          ; wBagItems sentinel
+    call PrepareNewGameDebug               ; seed party + bag + money (returns)
+%endif
+%ifdef DEBUG_ITEMUSE
+    ; Item-USE gate (items-plan Stage 5): the seeded party is at full HP, so knock
+    ; party mon 1 (Snorlax) down to 1 HP — that gives the seeded POTION (bag slot 1,
+    ; qty 1) a visible effect while leaving the mon status-free, so the ANTIDOTE the
+    ; scripted joypad tries next must refuse ("It won't have any effect!").
+    ; Current HP is a big-endian word: hi byte first. (gb_constants.inc is not
+    ; included here, so the struct offset is spelled out: wPartyMon1 + MON_HP.)
+    mov byte [ebp + wPartyMon1 + 0x01], 0
+    mov byte [ebp + wPartyMon1 + 0x02], 1
+%endif
+%ifdef DEBUG_ITEMTM
+    call RunTMHMTest
+%endif
+%ifdef DEBUG_ITEMSTONE
+    call RunStoneTest                       ; items-plan Stage 8: use a stone, dump, exit
+%endif
+%ifdef DEBUG_PARTYMENU
+    call RunPartyMenuTest                  ; seed party, open party screen, render one frame, dump FRAME.BIN, exits
+%endif
+%ifdef DEBUG_BATTLE
+    call RunBattleTest                     ; seed party+enemy, enter battle, render one frame, dump FRAME.BIN, exits
+%endif
+%ifdef DEBUG_TEXT
+    call RunTextTest                       ; text-engine oracle: run one probe stream, dump FRAME.BIN, exits
+%endif
+%ifdef DEBUG_TEXTBOXID
+    call RunTextBoxIDTest                  ; canvas mode, draw text box id, dump FRAME.BIN, exits
+%endif
+%ifdef DEBUG_LISTMENU
+    call RunListMenuTest                   ; seed party+bag, drive generic list menu, dump FRAME.BIN, exits
+%endif
+%ifdef DEBUG_YESNO
+    call RunYesNoTest                      ; draw the two-option box, park in HandleMenuInput; AutoKeyDrive dumps
+%endif
+%ifdef DEBUG_DRAWBADGES
+    call RunDrawBadgesTest                  ; seed badges, draw grid, window it, dump FRAME.BIN, exits
+%endif
+%ifdef DEBUG_TRAINERCARD
+    call RunTrainerCardTest                 ; draw full trainer card, dump FRAME.BIN, exits
+%endif
+%ifdef DEBUG_CINEMATIC_MARKERS
+    call RunCinematicMarkersTest            ; cinematic projection/clip/wrap markers, dump FRAME.BIN, exits
+%endif
+%ifdef DEBUG_OAKSPC
+    call RunOaksPCTest                      ; open Oak's PC, dump the dialog FRAME.BIN, exits
+%endif
+%ifdef DEBUG_PC
+    call RunPCTest                          ; ActivatePC: dialog + SFX; AutoKeyDrive dumps
+%endif
+%ifdef DEBUG_LEAGUEPC
+    call RunLeaguePCTest                    ; draw HoF-PC dialog (0 teams), dump FRAME.BIN, exits
+%endif
+%ifdef DEBUG_OPTIONS
+    call RunOptionsTest                     ; open OPTION menu, dump FRAME.BIN, exits
+%endif
+%ifdef DEBUG_PLAYERSPC
+    call RunPlayersPCTest                   ; seed+open PlayerPC, dump parent-menu FRAME.BIN, exits
+%endif
+%ifdef DEBUG_MAINMENU
+    call RunMainMenuTest                    ; seed save, draw CONTINUE menu + info panel, dump FRAME.BIN, exits
+%endif
+%ifdef DEBUG_SAVE
+    call RunSaveTest                        ; seed party, run SaveGameData, dump "saved!" FRAME.BIN, exits
+%endif
+%ifdef DEBUG_CONTINUE_SEED
+    call RunContinueSeedTest                ; A3: seed+save, clobber, CONTINUE-load, dump GBSTATE, exits
+%endif
+%ifdef DEBUG_OAKPIC
+    call RunOakPicTest                      ; A4.1: display Oak pic on the surface, dump FRAME.BIN, exits
+%endif
+%ifdef DEBUG_OAKINTRO
+    call RunOakSpeechCheckpoint             ; A4.3: oak_intro checkpoint (pic+fade+text), AutoKeyDrive dumps
+%endif
+%ifdef DEBUG_NAMEMENU
+    call RunNameMenuTest                    ; A4.4: projected name-select menu, AutoKeyDrive dumps
+%endif
+%ifdef DEBUG_OAKSLIDE
+    call RunOakSlideTest                    ; A4.4: slide the projected pic right, AutoKeyDrive dumps
+%endif
+%ifdef DEBUG_CHOOSENAME
+    call RunChooseNameTest                  ; A4.5f: end-to-end default-name pick, AutoKeyDrive dumps
+%endif
+%ifdef DEBUG_CINEMATIC_SPLASH
+    call RunSplashTest                      ; B2: Game Freak splash animation, AutoKeyDrive dumps
+%endif
+%ifdef DEBUG_CINEMATIC_ANIMOBJ
+    call RunAnimObjectTest                  ; B1.3: animated-object engine lifecycle, AutoKeyDrive dumps
+%endif
+%ifdef DEBUG_CINEMATIC_YELLOW
+    call RunYellowIntroTest                 ; B3.2d: full Yellow intro (PlayIntroScene), AutoKeyDrive dumps
+%endif
+%ifdef DEBUG_NAMINGSCREEN
+    call RunNamingScreenTest                ; open PLAYER naming screen, draw grid, dump FRAME.BIN, exits
+%endif
+%ifdef DEBUG_G1
+    call RunPokedexTest                     ; seed seen/owned, draw pokédex CONTENTS list, dump FRAME.BIN, exits
+%endif
+%ifdef DEBUG_G2
+    call RunPokedexEntryTest                ; open RHYDON dex data page (pic+HT/WT), dump FRAME.BIN, exits
+%endif
+%ifdef DEBUG_I1
+    call RunLinkMenuTest                    ; open link cup-select screen (serial stubbed), dump FRAME.BIN, exits
+%endif
+%ifdef DEBUG_I2
+    call RunLinkCupsTest                    ; run cup validators (pass+gated fail), record codes, dump, exits
+%endif
+%ifdef DEBUG_LEARNMOVE
+    call RunLearnMoveTest                  ; force a level-up move-learn, render one frame, dump FRAME.BIN, exits
+%endif
+%ifdef DEBUG_STATUS
+    call RunStatusScreenTest               ; open status screen page 1, render one frame, dump FRAME.BIN, exits
+%endif
+%ifdef DEBUG_WALKSPEED
+    ; Live walk-speed instrumentation: boots normally into OverworldLoop so you can
+    ; WALK with the keyboard. WalkSpeedSample (called at each real tile completion)
+    ; records ticks-per-tile into $D1E0; pressing Esc dumps DUMP.BIN via DelayFrame's
+    ; quit hook. tick_count is the true 60 Hz PIT counter, so avg ticks/tile = 16 →
+    ; faithful walk speed; notably < 16 → movement really is too fast.
+    ;   $D1E0 first tick   $D1E4 last tick   $D1E8 tiles   $D1EC min Δ   $D1F0 init flag
+    mov dword [ebp + 0xD1E0], 0
+    mov dword [ebp + 0xD1E4], 0
+    mov dword [ebp + 0xD1E8], 0
+    mov dword [ebp + 0xD1EC], 0xFFFFFFFF
+    mov dword [ebp + 0xD1F0], 0
+%endif
+
+    ; --- faithful EnterMap reset ladder (pret home/overworld.asm:6-41) ----------
+    ; Placed AFTER the DEBUG harnesses (tripwire): baseline DEBUG builds dump-and-exit
+    ; before reaching here, so this only runs in the real build (and live-DEBUG builds
+    ; that fall through, e.g. DEBUG_WALKSPEED / DEBUG_BAGMENU_LIVE).
+
+    ; farcall ClearVariablesOnEnterMap
+    call ClearVariablesOnEnterMap
+
+    ; ld hl, wStatusFlags2 / bit BIT_WILD_ENCOUNTER_COOLDOWN, [hl]
+    ; jr z, .skip / ld a, 3 / ld [wNumberOfNoRandomBattleStepsLeft], a
+    test byte [ebp + W_STATUS_FLAGS_2], (1 << BIT_WILD_ENCOUNTER_COOLDOWN)
+    jz .skipGivingThreeStepsOfNoRandomBattles
+    mov byte [ebp + wNumberOfNoRandomBattleStepsLeft], 3   ; minimum steps between battles
+.skipGivingThreeStepsOfNoRandomBattles:
+
+    ; ld hl, wStatusFlags4 / bit BIT_BATTLE_OVER_OR_BLACKOUT, [hl]
+    ; res BIT_BATTLE_OVER_OR_BLACKOUT, [hl]
+    ; call z, ResetUsingStrengthOutOfBattleBit / call nz, MapEntryAfterBattle
+    ; pret tests the bit, then `res`es it before the two conditional calls; in x86 the
+    ; `res` (and [mem]) would clobber the ZF the calls read, so capture the tested bit
+    ; into CL first, then res, then branch on CL.
+    test byte [ebp + W_STATUS_FLAGS_4], (1 << BIT_BATTLE_OVER_OR_BLACKOUT)
+    setnz cl                                               ; cl=1 if returning from a battle
+    and byte [ebp + W_STATUS_FLAGS_4], ~(1 << BIT_BATTLE_OVER_OR_BLACKOUT)
+    test cl, cl
+    jnz .mapEntryAfterBattle
+    call ResetUsingStrengthOutOfBattleBit                  ; z: normal (non-battle) entry
+    jmp .afterBattleReturnCheck
+.mapEntryAfterBattle:
+    call MapEntryAfterBattle                               ; nz: post-battle re-entry
+.afterBattleReturnCheck:
+
+    ; ld hl, wStatusFlags6 / ld a, [hl] / and (1<<FLY_WARP)|(1<<DUNGEON_WARP)
+    ; jr z, .didNot... / farcall EnterMapAnim / call UpdateSprites
+    ; res FLY_WARP,[wStatusFlags6] / res NO_BATTLES,[wStatusFlags4]
+    test byte [ebp + W_STATUS_FLAGS_6], (1 << BIT_FLY_WARP) | (1 << BIT_DUNGEON_WARP)
+    jz .didNotEnterUsingFlyWarpOrDungeonWarp
+    call EnterMapAnim
+    call UpdateSprites
+    and byte [ebp + W_STATUS_FLAGS_6], ~(1 << BIT_FLY_WARP)
+    and byte [ebp + W_STATUS_FLAGS_4], ~(1 << BIT_NO_BATTLES)
+.didNotEnterUsingFlyWarpOrDungeonWarp:
+
+    ; call IsSurfingPikachuInParty
+    call IsSurfingPikachuInParty
+    ; farcall CheckForceBikeOrSurf (player_state.asm — LINKED as of the wild-live
+    ; promotion; the PLAYER_STATE_LINKED gate is retired).
+    call CheckForceBikeOrSurf ; handle SF-island currents / forced cycling-road bike
+
+    ; ld hl, wStatusFlags6 / bit BIT_DUNGEON_WARP,[hl] / res BIT_DUNGEON_WARP,[hl]
+    ; (pret's bit test result is unused here — just clear the bit)
+    and byte [ebp + W_STATUS_FLAGS_6], ~(1 << BIT_DUNGEON_WARP)
+    ; ld hl, wStatusFlags3 / res BIT_NO_NPC_FACE_PLAYER, [hl]
+    and byte [ebp + W_STATUS_FLAGS_3], ~(1 << BIT_NO_NPC_FACE_PLAYER)
+
+    ; call UpdateSprites
+    call UpdateSprites
+
+    ; ld hl, wCurrentMapScriptFlags / set CUR_MAP_LOADED_1,[hl] / set CUR_MAP_LOADED_2,[hl]
+    or byte [ebp + W_CURRENT_MAP_SCRIPT_FLAGS], (1 << BIT_CUR_MAP_LOADED_1) | (1 << BIT_CUR_MAP_LOADED_2)
+
+    ; xor a / ld [wJoyIgnore], a
+    mov byte [ebp + W_JOY_IGNORE], 0
+%ifdef DEBUG_MAPSCRIPT_SIGHT
+    ; Map-script sight gate. Placed HERE, at the very end of EnterMap, not beside the
+    ; other gates further up: everything above is part of entering a map, and the
+    ; golden observes the map fully entered — in particular wJoyIgnore is $FF for the
+    ; whole of EnterMap and cleared only on this line, so a gate that dumped earlier
+    ; would compare a byte the real game never shows the player.
+    ; The coords were seeded before LoadMapData; LoadMapData does not derive the view
+    ; pointer for a hand-seeded spawn, so do that first.
+    call SeedDeterministicPlayerIdentity     ; "RED" / id 0 — the golden's identity
+    call SeamReseatView                      ; view ptr + block coords + collision mirror
+    call RunMapScriptSightTest               ; dumps GBSTATE + FRAME and exits
+%endif
+
+    ; fall through to OverworldLoop
+
+; ---------------------------------------------------------------------------
+; OverworldLoop — player-movement frame loop.
+; Pret ref: home/overworld.asm:OverworldLoop / OverworldLoopLessDelay (the
+; movement-relevant subset; no menus, warps, NPCs, battles, or scripts yet).
+;
+; Cadence matches the original: two DelayFrame calls per iteration, then one
+; AdvancePlayerSprite (2 px scroll) — so a 16 px step takes ~16 frames.
+;
+; State machine:
+;   - mid-walk (wWalkCounter != 0): keep advancing the sprite.
+;   - idle: read held D-pad; on a press, set the step vector + facing, run the
+;     land collision check, and (if passable) start an 8-frame walk.
+; ---------------------------------------------------------------------------
+OverworldLoop:
+    ; RunMapScript now runs pret's full per-frame chain internally — TryPushingBoulder
+    ; → [dust] → RunNPCMovementScript → the map's _Script (home/overworld.asm:1712).
+    ; The RunNPCMovementScript call that used to sit here (door-exit auto-walk,
+    ; BIT_STANDING_ON_DOOR path) was a hoisted copy from inside RunMapScript; it moved
+    ; back where pret has it, so calling it here too would run it twice per frame.
+    ; pret reaches RunMapScript via JoypadOverworld, which the port does not have —
+    ; that remaining deviation is documented on RunMapScript itself.
+    call RunMapScript                            ; per-frame map _Script (default no-op; Pallet event-gate)
+    ; wIgnoreInputCounter countdown now runs faithfully via CountDownIgnoreInputBitReset
+    ; (called by TrackPlayTime inside DelayFrame, Wave-2/M2.1). The old inline block that
+    ; lived here decremented an extra time per loop (double-decrement) and only cleared
+    ; hJoyHeld; the DelayFrame path is per-frame and also clears hJoyPressed. Removed.
+    call UpdateSprites                         ; advance player facing + walk animation
+    call DelayFrame
+
+    ; --- OverworldLoop falls through into OverworldLoopLessDelay (pret) ---
+OverworldLoopLessDelay:                      ; pret: home/overworld.asm:OverworldLoopLessDelay
+    call DelayFrame
+
+    cmp byte [ebp + W_WALK_COUNTER], 0
+    jne .moveAhead                           ; still mid-step → keep walking
+
+    ; --- idle: clear step vectors, then sample the held D-pad ---
+    mov byte [ebp + W_SPRITE_PLAYER_Y_STEP_VECTOR], 0
+    mov byte [ebp + W_SPRITE_PLAYER_X_STEP_VECTOR], 0
+
+    ; A special warp was armed since the last idle iteration (Escape Rope / Dig / Fly /
+    ; a dungeon warp-pad): leave the map now, before any input is acted on.
+    ;   pret: ld a, [wStatusFlags6] / and (1 << BIT_FLY_WARP) | (1 << BIT_DUNGEON_WARP)
+    ;         jp nz, HandleFlyWarpOrDungeonWarp        (home/overworld.asm:62-64)
+    ; PLACEMENT DEVIATION: pret tests this AFTER JoypadOverworld + SafariZoneCheck + the
+    ; script-warp check; the port's loop reads the joypad further down (and has no
+    ; SafariZoneCheck/script-warp check here yet), so the test sits at the top of the
+    ; idle branch instead. Equivalent: the bits are set by an item/script on a PREVIOUS
+    ; iteration, never by this iteration's input, and we leave the map either way — so
+    ; nothing between the two positions can observe the difference.
+    test byte [ebp + W_STATUS_FLAGS_6], (1 << BIT_FLY_WARP) | (1 << BIT_DUNGEON_WARP)
+    jnz HandleFlyWarpOrDungeonWarp           ; jp nz (tail — SpecialEnterMap re-enters the loop)
+
+    ; Check trainer sight lines before reading joypad (pret: CheckTrainerSightLine).
+    call CheckTrainerSight
+    jnc .noTrainerSight
+    call TrainerEncounterFlow
+    jmp OverworldLoop
+.noTrainerSight:
+
+    ; Simulated joypad state overrides real input (pret: AreInputsSimulated).
+    ; BIT_SCRIPTED_MOVEMENT_STATE is armed by PlayerStepOutFromDoor (via
+    ; StartSimulatingJoypadStates). AreInputsSimulated (simulate_joypad.asm) pops the
+    ; next queued PAD_* byte into H_JOY_HELD while scripted movement is active and
+    ; leaves real input untouched otherwise; the door step's flag is then consumed at
+    ; .handleDirection below (one-step buffer). H_JOY_HELD is used for A (not
+    ; H_JOY_PRESSED): joypad_update runs twice per OverworldLoop idle iteration (one
+    ; per DelayFrame), so H_JOY_PRESSED is always cleared before we read it.
+    ; Re-trigger after dialog dismiss is prevented by .waitAReleased below.
+    call AreInputsSimulated
+    movzx eax, byte [ebp + H_JOY_HELD]
+    test byte [ebp + W_STATUS_FLAGS_5], (1 << BIT_SCRIPTED_MOVEMENT_STATE)
+    jnz .checkPADDown                               ; scripted step: skip START/A, go to D-pad
+.checkJoyDisable:
+    test byte [ebp + W_STATUS_FLAGS_5], (1 << BIT_DISABLE_JOYPAD)
+    jnz .noDirection                            ; input suppressed during warp-arrival window
+
+    ; START-press: open the start menu (pret: OverworldLoopLessDelay TEXT_START_MENU).
+    ; Read from H_JOY_HELD like the A-press below; DisplayStartMenu's close path waits
+    ; for START release before returning, so a held START can't re-open it next frame.
+    test al, PAD_START
+    jz .checkAPress
+    call DisplayStartMenu
+    jmp OverworldLoop
+.checkAPress:
+
+    ; A-press: check for NPC or sign. EAX = H_JOY_HELD (level-triggered, reliable).
+    test al, PAD_A
+    jz .checkPADDown
+    ; pret order: on A-press CheckForHiddenEventOrBookshelfOrCardKeyDoor runs FIRST
+    ; (home/overworld.asm:OverworldLoop). hItemAlreadyFound == 0 → a hidden event or
+    ; bookshelf consumed the press: return to OverworldLoop without the sprite/sign
+    ; scan. $ff → nothing found (or a card-key door), so fall through to the scan.
+    call CheckForHiddenEventOrBookshelfOrCardKeyDoor
+    cmp byte [ebp + hItemAlreadyFound], 0
+    jz .interactionDone                        ; hidden event/bookshelf handled → skip scan
+    ; pret order (OverworldLoop A-press): zero wd435, run the complete
+    ; IsSpriteOrSignInFrontOfPlayer (sign branch, counter-range extension, then
+    ; the sprite scan), gate on [hTextID] != 0 — pret home/overworld.asm:95-99.
+    ; (pret then runs Func_0ffe / IsPlayerTalkingToPikachu and DisplayTextID;
+    ; the port's display split below is the documented dispatcher deviation —
+    ; see DoSignInteraction's DEVIATION{class=temporary}.)
+    mov byte [ebp + wd435], 0                  ; xor a / ld [wd435], a
+    call IsSpriteOrSignInFrontOfPlayer
+    mov al, [ebp + hTextID]                    ; ldh a, [hTextID]
+    test al, al                                ; and a
+    jz .checkPADDown                           ; jp z, OverworldLoop — nothing found
+    ; Route by id — pret DisplayTextID's sprite-vs-textID rule (cp wNumSprites:
+    ; id <= wNumSprites → sprite slot, else a sign/board text id).
+    cmp al, [ebp + wNumSprites]
+    jbe .checkNPC
+    call DoSignInteraction
+    jmp .interactionDone
+.checkNPC:
+    call CheckNPCInteraction                   ; the port's display half (re-detects, then displays)
+    test al, al
+    jz .checkPADDown                           ; scan disagreement → fall to D-pad
+.interactionDone:
+
+    ; Interaction handled. Wait for A to be released before restarting to prevent
+    ; the next OverworldLoop iteration from re-triggering while A is still held.
+.waitAReleased:
+    call DelayFrame
+    test byte [ebp + H_JOY_HELD], PAD_A
+    jnz .waitAReleased
+    jmp OverworldLoop
+
+.checkPADDown:                                  ; EAX = H_JOY_HELD from above
+    test al, PAD_DOWN
+    jz .checkUp
+    mov byte [ebp + W_SPRITE_PLAYER_Y_STEP_VECTOR], 1
+    mov dl, PLAYER_DIR_DOWN
+    mov dh, SPRITE_FACING_DOWN
+    jmp .handleDirection
+.checkUp:
+    test al, PAD_UP
+    jz .checkLeft
+    mov byte [ebp + W_SPRITE_PLAYER_Y_STEP_VECTOR], 0xFF   ; -1
+    mov dl, PLAYER_DIR_UP
+    mov dh, SPRITE_FACING_UP
+    jmp .handleDirection
+.checkLeft:
+    test al, PAD_LEFT
+    jz .checkRight
+    mov byte [ebp + W_SPRITE_PLAYER_X_STEP_VECTOR], 0xFF   ; -1
+    mov dl, PLAYER_DIR_LEFT
+    mov dh, SPRITE_FACING_LEFT
+    jmp .handleDirection
+.checkRight:
+    test al, PAD_RIGHT
+    jz .noDirection                          ; nothing held → idle (stop animating)
+    mov byte [ebp + W_SPRITE_PLAYER_X_STEP_VECTOR], 1
+    mov dl, PLAYER_DIR_RIGHT
+    mov dh, SPRITE_FACING_RIGHT
+
+.handleDirection:
+    ; Always commit the new direction/facing — this happens even on turn-only presses.
+    mov [ebp + W_PLAYER_DIRECTION],         dl
+    mov [ebp + W_PLAYER_MOVING_DIRECTION],  dl
+    mov [ebp + W_SPRITE_PLAYER_FACING_DIR], dh
+
+    ; pret: bit BIT_SCRIPTED_MOVEMENT_STATE, a / jr nz, .noDirectionChange
+    ; Scripted movement (door auto-walk) bypasses the 180° turn-delay entirely.
+    test byte [ebp + W_STATUS_FLAGS_5], (1 << BIT_SCRIPTED_MOVEMENT_STATE)
+    jz .notScripted
+    and byte [ebp + W_STATUS_FLAGS_5], ~(1 << BIT_SCRIPTED_MOVEMENT_STATE)
+    jmp .walkStart
+.notScripted:
+
+    ; Turn delay (pret: wCheckFor180DegreeTurn / wPlayerLastStopDirection).
+    ; First press after idle with a NEW direction: update facing but don't walk.
+    ; Second press (same direction, or same as last-stop dir): walk normally.
+    cmp byte [ebp + W_CHECK_FOR_TURN], 0
+    je .walkStart                             ; already committed to walking direction
+    mov byte [ebp + W_CHECK_FOR_TURN], 0     ; consume the turn-check token
+    cmp dl, [ebp + W_PLAYER_LAST_STOP_DIRECTION]
+    je .walkStart                             ; same direction → walk normally
+    ; Turn-only press (pret home/overworld.asm:186-199): facing was updated above;
+    ; don't walk. OW-A.6 faithful turn tail: arm the Pikachu-collision grace
+    ; counter, flag the in-place turn for this frame (.moveAhead clears it), and —
+    ; pret :197 — roll a wild encounter on the turn itself (turning in grass can
+    ; trigger a battle).
+    mov byte [ebp + wPikachuCollisionCounter], 8
+    or byte [ebp + wMiscFlags], (1 << BIT_TURNING)   ; set BIT_TURNING, [hl]
+    call NewBattle                            ; CF=1 → a battle occurred on the turn
+    jc .battleOccurred
+    jmp OverworldLoop                         ; turn only — no step
+
+.walkStart:
+    ; OW-A.6 (pret .noDirectionChange, home/overworld.asm:203-226): while surfing
+    ; (wWalkBikeSurfState == 2) collision routes through CollisionCheckOnWater;
+    ; on land through CollisionCheckOnLand. Inert in today's live build — nothing
+    ; sets state 2 until Surf item-use / ForceBikeOrSurf links (player_gfx.asm).
+    cmp byte [ebp + W_WALK_BIKE_SURF_STATE], 2 ; surfing?
+    jne .collisionOnLand
+    call CollisionCheckOnWater                ; CF=1 → blocked on water
+    jc OverworldLoop                          ; pret .surfing: jp c, OverworldLoop
+    jmp .startWalk                            ; water clear → begin the step
+.collisionOnLand:
+    call CollisionCheckOnLand                 ; CF=1 → blocked
+    jnc .startWalk
+
+    ; Blocked. Collision-exit path (pret: bit BIT_STANDING_ON_WARP / ExtraWarpCheck).
+    ; Only attempt exit if player IS on a warp tile (set at spawn by LoadWarpDestination
+    ; or after a step by .moveAhead). BIT_EXITING_DOOR is NOT checked here — pret does
+    ; not suppress collision-exit during the auto-walk window.
+    test byte [ebp + W_MOVEMENT_FLAGS], (1 << BIT_STANDING_ON_WARP)
+    jz OverworldLoop
+    ; M7.4: faithful ExtraWarpCheck (pret home/overworld.asm:ExtraWarpCheck +
+    ; jp c, CheckWarpsCollision). Replaces the hardcoded "facing DOWN" test with
+    ; pret's per-map function-1 (IsPlayerFacingEdgeOfMap) / function-2
+    ; (IsWarpTileInFrontOfPlayer) dispatch. Register-safe (returns only CF); DL
+    ; is no longer consulted here. CheckWarpTile below is the port's
+    ; CheckWarpsCollision (scans W_WARP_ENTRIES by the player's current coords).
+    call ExtraWarpCheck
+    jnc OverworldLoop
+    call CheckWarpTile
+    jnc OverworldLoop
+    jmp .warpTransition
+
+.startWalk:
+    mov byte [ebp + W_WALK_COUNTER], 8        ; begin an 8-frame step
+    jmp .moveAhead                             ; pret: jr .moveAhead2 — advance immediately, no extra delay
+
+.noDirection:
+    ; Save the last-used moving direction so the next press can check for a turn.
+    ; (Pret: .noDirectionButtonsPressed — saves wPlayerMovingDirection to
+    ; wPlayerLastStopDirection, zeroes moving dir, sets wCheckFor180DegreeTurn=1.)
+    mov al, [ebp + W_PLAYER_MOVING_DIRECTION]
+    mov [ebp + W_PLAYER_LAST_STOP_DIRECTION], al
+    mov byte [ebp + W_PLAYER_MOVING_DIRECTION], 0
+    mov byte [ebp + W_CHECK_FOR_TURN], 1
+    jmp OverworldLoop
+
+.moveAhead:
+    ; pret .moveAhead2 head (home/overworld.asm:243-248): clear the in-place-turn
+    ; flag + Pikachu-collision grace counter, then the bike double-step, then
+    ; advance. DoBikeSpeedup is live but inert (wWalkBikeSurfState is never 1
+    ; until Bicycle use / ForceBikeOrSurf links). OW-A.6.
+    and byte [ebp + wMiscFlags], ~(1 << BIT_TURNING) & 0xFF  ; res BIT_TURNING, [hl]
+    mov byte [ebp + wPikachuCollisionCounter], 0
+    call DoBikeSpeedup
+    call AdvancePlayerSprite
+    jc .mapTransition
+    cmp byte [ebp + W_WALK_COUNTER], 0
+    jne OverworldLoop
+%ifdef DEBUG_WALKSPEED
+    call WalkSpeedSample                       ; tile just completed → record ticks/tile
+%endif
+    ; --- M7.1/OW-A.6: step count + wild-encounter gate (pret home/overworld.asm:249-268) ---
+    ; The tile step just finished. pret runs StepCountCheck here, then (after
+    ; poison/safari, deferred) NewBattle, taking the warp checks only when no battle
+    ; occurred. StepCountCheck decrements the WRAM step counters — including
+    ; wNumberOfNoRandomBattleStepsLeft, the post-battle 3-step encounter-free window
+    ; that NewBattle's DetermineWildOpponent gate reads. Wild encounters are LIVE
+    ; (the WILD_ENCOUNTERS_LIVE gate is retired).
+    call StepCountCheck
+    call NewBattle                            ; CF=1 → a wild/forced battle occurred
+    jnc .noBattleOccurred                     ; pret: jp nc, CheckWarpsNoCollision
+.battleOccurred:
+    ; pret .battleOccurred (home/overworld.asm:269-296) — reached from the
+    ; post-step NewBattle above and the on-turn NewBattle in .handleDirection.
+    and byte [ebp + W_STATUS_FLAGS_3], ~(1 << BIT_TALKED_TO_TRAINER) & 0xFF
+    and byte [ebp + W_STATUS_FLAGS_7], ~(1 << BIT_TRAINER_BATTLE) & 0xFF
+    or  byte [ebp + W_CURRENT_MAP_SCRIPT_FLAGS], (1 << BIT_CUR_MAP_LOADED_1) | (1 << BIT_CUR_MAP_LOADED_2)
+    mov byte [ebp + H_JOY_HELD], 0            ; xor a / ldh [hJoyHeld], a
+    mov al, [ebp + W_CUR_MAP]
+    cmp al, CINNABAR_GYM
+    jne .notCinnabarGym
+    SetEvent EVENT_2A7
+.notCinnabarGym:
+    or byte [ebp + W_STATUS_FLAGS_4], (1 << BIT_BATTLE_OVER_OR_BLACKOUT)
+    mov al, [ebp + W_CUR_MAP]
+    cmp al, OAKS_LAB
+    je .noFaintCheck                          ; no blackout after losing to the rival in Oak's lab
+    call AnyPartyAlive                        ; DH = OR of every party mon's HP bytes
+    test dh, dh                               ; ld a, d / and a
+    jz .allFainted
+.noFaintCheck:
+    mov bl, 10                                ; ld c, 10 (DelayFrames: BL = frame count)
+    call DelayFrames
+    jmp EnterMap                              ; full map re-entry (reset ladder, OW-A.4)
+.allFainted:
+    jmp AllPokemonFainted                     ; wild_encounter_check.asm → HandleBlackOut
+.noBattleOccurred:
+    ; pret CheckWarpsNoCollision (home/overworld.asm:360-417). The coord scan is
+    ; CheckWarpTile (the port's CheckWarpsNoCollisionLoop); for the matched entry
+    ; pret sets BIT_STANDING_ON_WARP, then fires on
+    ; IsPlayerStandingOnDoorTileOrWarpTile (CF=1 → WarpFound1) and otherwise on
+    ; ExtraWarpCheck. The `res` precedes the scan (pret does it at :267).
+    and byte [ebp + W_MOVEMENT_FLAGS], ~(1 << BIT_STANDING_ON_WARP)
+    call CheckWarpTile
+    jnc OverworldLoop                         ; no coord match → bit stays cleared
+    or byte [ebp + W_MOVEMENT_FLAGS], (1 << BIT_STANDING_ON_WARP)
+    call IsPlayerStandingOnDoorTileOrWarpTile ; may `res` the bit for a warp carpet
+    jc .warpTransition                        ; pret: jr c, WarpFound1
+    call ExtraWarpCheck
+    jnc OverworldLoop                         ; pret: jr nc, ...Retry2 (no other match)
+.warpTransition:
+    ; BL = resolved destination map; W_DESTINATION_WARP_ID = 0-based spawn warp index
+    ; Only update W_LAST_MAP when leaving an outdoor map (mirrors pret CheckIfInOutsideMap).
+    ; Indoor→indoor and indoor→outdoor transitions must NOT overwrite W_LAST_MAP or the
+    ; 0xFF warp-destination resolver will return an indoor map instead of Pallet Town.
+    ; ; DIVERGENCE: this is the `W_CUR_MAP < FIRST_INDOOR_MAP_ID` heuristic, NOT pret's
+    ; tileset-based CheckIfInOutsideMap (OVERWORLD/PLATEAU → outside). The two disagree
+    ; for edge maps (e.g. Route 23 / Indigo Plateau use the PLATEAU tileset but sit above
+    ; FIRST_INDOOR_MAP_ID), so those would be misclassified here.
+    ; ; TODO(edge-maps): switch this test to `call CheckIfInOutsideMap` (warp_check.asm,
+    ; already global + faithful) when Route 23 / Plateau warping is exercised.
+    mov al, [ebp + W_CUR_MAP]
+    cmp al, FIRST_INDOOR_MAP_ID
+    jae .skipLastMapUpdate
+    mov [ebp + W_LAST_MAP], al
+.skipLastMapUpdate:
+    mov [ebp + W_CUR_MAP], bl
+    ; Update text table dispatch for the new map.
+    movzx eax, byte [ebp + W_CUR_MAP]
+    lea esi, [MapTextTablePointers]
+    mov esi, [esi + eax*4]
+    mov [w_map_text_table_ptr], esi
+    mov byte [ebp + W_WALK_COUNTER], 0
+    mov byte [ebp + W_SPRITE_PLAYER_Y_STEP_VECTOR], 0
+    mov byte [ebp + W_SPRITE_PLAYER_X_STEP_VECTOR], 0
+    mov byte [ebp + H_SCY], 0
+    mov byte [ebp + H_SCX], 0
+    mov word [ebp + W_MAP_VIEW_VRAM_POINTER], GB_TILEMAP0
+    ; pret WarpFound2 plays the map-change jingle here (:477/498/510), BEFORE the
+    ; destination is loaded, so it reads the SOURCE map's tileset + door tile. Must
+    ; precede LoadWarpDestination (which calls LoadMapHeader → destination tileset/
+    ; tilemap + music). OW-A.14. Warp-pad/fly skip branch is deferred, so the single
+    ; call here matches pret's 3 non-skip branches.
+    call PlayMapChangeSound
+    call LoadWarpDestination
+    call InitMapSprites                        ; populate NPC slots for the new map
+    ; pret: home/overworld.asm:515 (WarpFound2.indoorMaps) — clear BIT_EXITING_DOOR,
+    ; then set BIT_STANDING_ON_DOOR to trigger RunNPCMovementScript→PlayerStepOutFromDoor
+    ; on the next idle frame. PlayerStepOutFromDoor re-sets BIT_EXITING_DOOR only if the
+    ; arrival tile is a door tile; stair arrivals leave it clear.
+    and byte [ebp + W_MOVEMENT_FLAGS], ~(1 << BIT_EXITING_DOOR)
+    or byte [ebp + W_MOVEMENT_FLAGS], (1 << BIT_STANDING_ON_DOOR)
+    call IgnoreInputForHalfSecond
+    ; OW-A.4(b): re-enter EnterMap on every warp, faithful to pret WarpFound2.done
+    ; (home/overworld.asm:517, `jp EnterMap`). The pre-work above (wCurMap/wLastMap,
+    ; LoadWarpDestination, view/scroll reset, door flags) mirrors WarpFound2's body;
+    ; EnterMap then re-runs the full reset ladder — wJoyIgnore gate, LoadMapData
+    ; (re-loads header/blocks/view/sprites for the new map), ClearVariablesOnEnterMap,
+    ; the fly/dungeon-warp & battle-return resets, UpdateSprites, CUR_MAP_LOADED_1/2 —
+    ; which the old `jmp OverworldLoop` silently skipped. The RunNPCMovementScript
+    ; PlayerStepOutFromDoor still fires on the first post-warp idle frame (BIT_STANDING_ON_DOOR
+    ; set above survives the LoadMapData reload). NOTE: the port's InitMapSprites here is
+    ; now partially redundant with LoadMapData's sprite load inside EnterMap — verified
+    ; harmless (idempotent slot repopulate), MCP live-warp confirmed.
+    jmp EnterMap
+
+.mapTransition:
+    ; A connection was crossed — reload everything for the new map.
+    mov byte [ebp + W_WALK_COUNTER], 0
+    mov byte [ebp + W_SPRITE_PLAYER_Y_STEP_VECTOR], 0
+    mov byte [ebp + W_SPRITE_PLAYER_X_STEP_VECTOR], 0
+
+    ; Reset scroll and VRAM pointer. During the walk, H_SCY/H_SCX accumulated
+    ; 2 px/frame (e.g. −144 px over 9 north steps). CopyMapViewToVRAM always
+    ; writes to GB_TILEMAP0 ($9800), so the PPU must start reading from row 0
+    ; (SCY=0). W_MAP_VIEW_VRAM_POINTER must also reset so RedrawRowOrColumn
+    ; uses the correct base address on subsequent frames.
+    mov byte [ebp + H_SCY], 0
+    mov byte [ebp + H_SCX], 0
+    mov word [ebp + W_MAP_VIEW_VRAM_POINTER], GB_TILEMAP0
+
+    call LoadMapHeader
+    ; pret home/overworld.asm:.loadNewMap (:652-654): LoadMapHeader (loads the new map's
+    ; wMapMusicSoundID via the MapSongBanks load above) then fade in that music. Real now
+    ; (OW-A.14); unconditional on a connection crossing (not a warp, so no warp gate).
+    call PlayDefaultMusicFadeOutCurrent
+    mov bh, SET_PAL_OVERWORLD
+    call RunPaletteCommand
+    ; pret also does the Pikachu spawn set (wPikachuOverworldStateFlags bit 4 /
+    ;   wPikachuSpawnState = 2) at .loadNewMap — deferred with the Pikachu-follow engine.
+    call InitMapSprites                        ; populate NPC slots for the new map
+    ; Update text table dispatch for the new map.
+    movzx eax, byte [ebp + W_CUR_MAP]
+    lea esi, [MapTextTablePointers]
+    mov esi, [esi + eax*4]
+    mov [w_map_text_table_ptr], esi
+    call LoadTileBlockMap
+    call LoadCurrentMapView
+
+    jmp OverworldLoopLessDelay
 
 section .text
 
@@ -212,6 +1258,40 @@ NewBattle:
     ret
 .noBattle:
     clc                                        ; and a — CF=0, no battle
+    ret
+
+
+; ---------------------------------------------------------------------------
+; DoBikeSpeedup — bikes move twice as fast as walking (OW-A.6).
+; Pret ref: home/overworld.asm:339 DoBikeSpeedup.
+;
+; Called once per .moveAhead frame; when riding a bike it advances the player
+; sprite a second time (2 px/frame). On Cycling Road (ROUTE_17) the speedup is
+; suppressed while UP/LEFT/RIGHT is held (the forced-southward drift stays at
+; walking speed). Inert in today's live build — wWalkBikeSurfState is never 1
+; until Bicycle item-use / ForceBikeOrSurf links.
+;
+; PORT NOTE: the port's AdvancePlayerSprite returns CF=1 on a map-connection
+; crossing; this inner call's CF is discarded (pret drops it too — its crossing
+; is caught by CheckMapConnections on the wWalkCounter path). Revisit the
+; crossing-mid-speedup case when biking goes live.
+; ---------------------------------------------------------------------------
+DoBikeSpeedup:
+    mov al, [ebp + W_WALK_BIKE_SURF_STATE]
+    dec al                                         ; riding a bike? (state == 1)
+    jnz .done                                      ; ret nz
+    test byte [ebp + W_MOVEMENT_FLAGS], (1 << BIT_LEDGE_OR_FISHING)
+    jnz .done                                      ; ret nz — mid ledge-hop/fishing
+    cmp byte [ebp + wNPCMovementScriptPointerTableNum], 0
+    jne .done                                      ; ret nz — movement script active
+    mov al, [ebp + W_CUR_MAP]
+    cmp al, ROUTE_17                               ; Cycling Road
+    jne .goFaster
+    test byte [ebp + H_JOY_HELD], PAD_UP | PAD_LEFT | PAD_RIGHT
+    jnz .done                                      ; ret nz — braking on Cycling Road
+.goFaster:
+    call AdvancePlayerSprite                       ; second advance → double speed
+.done:
     ret
 
 ; ---------------------------------------------------------------------------
@@ -503,6 +1583,118 @@ ExtraWarpCheck:
     pop ebx
     pop eax
     ret
+
+; ---------------------------------------------------------------------------
+; HandleBlackOut — the whole party fainted: fade out, kill the music, halve the
+; money / heal the party, and warp the player to their last Pokémon Center.
+; Pret ref: home/overworld.asm:737 (HandleBlackOut, bank 00 — golden 00:0762).
+; Does NOT print the "blacked out" message (its caller does).
+; Reached from AllPokemonFainted (engine/overworld/wild_encounter_check.asm).
+; ---------------------------------------------------------------------------
+global HandleBlackOut
+HandleBlackOut:
+    call GBFadeOutToBlack
+    mov al, 0x08                        ; ld a, $08 — fade-out control value
+    call StopMusic
+    ; ld hl, wStatusFlags4 / res BIT_BATTLE_OVER_OR_BLACKOUT, [hl]
+    and byte [ebp + W_STATUS_FLAGS_4], (~(1 << BIT_BATTLE_OVER_OR_BLACKOUT)) & 0xFF
+    mov al, 0x01                        ; ld a, BANK(PrepareForSpecialWarp) — golden 01:6042
+    call BankswitchCommon               ; flat: records hLoadedROMBank (no MBC write)
+    call ResetStatusAndHalveMoneyOnBlackout   ; callfar (flat: direct call)
+    call PrepareForSpecialWarp
+    call PlayDefaultMusicFadeOutCurrent
+    jmp SpecialEnterMap                 ; jp SpecialEnterMap (tail)
+
+
+; ---------------------------------------------------------------------------
+; StopMusic — arm the audio fade-out (AL = wAudioFadeOutControl), stop the music
+; engine, wait for the fade to finish, then silence every channel.
+; Pret ref: home/overworld.asm:752 (StopMusic, golden 00:0785).
+; In: AL = fade-out control value.
+;
+; DIVERGENCE 1 (audio tick location): on the GB the VBlank ISR advances the audio
+; engine, so pret's bare `jr nz, .wait` spin sees wAudioFadeOutControl reach 0.
+; The port has no VBlank audio ISR — the tick lives in DelayFrame (→ audio_tick →
+; FadeOutAudio, which is what decrements the counter). A bare spin here would
+; hang forever, so the wait pumps DelayFrame. Same idiom and same reason as
+; home/audio.asm:WaitForSoundToFinish. (engine/overworld/healing_machine.asm
+; bounds its copy of this spin instead; pumping is the correct form.)
+;
+; DIVERGENCE 2 (engine-offline guard): the port has a state the GB does not — the
+; audio engine can be OFFLINE (`/NOSOUND`, or any build before audio_init runs;
+; audio_tick self-gates on g_audio_engine_online). Offline, FadeOutAudio never
+; runs, so nothing would ever clear the byte we just wrote and the wait above
+; would spin forever. PlaySound already carries the mirror-image scaffold — it
+; swallows requests while offline so WaitForSoundToFinish's spin exits at once —
+; but StopMusic writes wAudioFadeOutControl directly, bypassing that. So: offline,
+; skip the fade and clear the byte, preserving pret's post-condition
+; (wAudioFadeOutControl == 0 on return) for whoever brings the engine online later.
+; ---------------------------------------------------------------------------
+global StopMusic
+StopMusic:
+    mov [ebp + wAudioFadeOutControl], al    ; ld [wAudioFadeOutControl], a
+    call StopAllMusic
+    cmp byte [g_audio_engine_online], 0     ; PORT GUARD — see DIVERGENCE 2
+    jz .offline
+.wait:
+    mov al, [ebp + wAudioFadeOutControl]
+    test al, al                             ; and a — fade-out finished?
+    jz .done
+    call DelayFrame                         ; pump the audio tick (see DIVERGENCE 1)
+    jmp .wait
+.offline:
+    mov byte [ebp + wAudioFadeOutControl], 0 ; no tick will ever clear it
+.done:
+    jmp StopAllSounds                       ; jp StopAllSounds (tail)
+
+
+; ---------------------------------------------------------------------------
+; HandleFlyWarpOrDungeonWarp — leave the current map by a SPECIAL warp (Fly, Dig,
+; Escape Rope, or a dungeon warp-pad/hole), rather than by stepping on a warp tile.
+; Pret ref: home/overworld.asm:761 (HandleFlyWarpOrDungeonWarp, bank 00).
+;
+; The producers (ItemUseEscapeRope / ItemUseFly / the warp-pad script) only SET the
+; wStatusFlags6 FLY_WARP / DUNGEON_WARP bits; this is the consumer that acts on them.
+; OverworldLoopLessDelay tests those bits every idle iteration and tail-jumps here.
+;
+; PrepareForSpecialWarp reads the same two bits to pick the destination (last Pokémon
+; Center for a fly/escape warp, the dungeon's paired warp for a dungeon warp), so they
+; must still be set on entry — this routine does NOT clear them. EnterMap clears them
+; on arrival (see .didNotEnterUsingFlyWarpOrDungeonWarp above), after EnterMapAnim has
+; consumed them for the arrival animation.
+;
+; PORT NOTE: `ld a, BANK(PrepareForSpecialWarp) / call BankswitchCommon` is kept (it
+; records hLoadedROMBank; no MBC write in the flat model), same as HandleBlackOut.
+; ---------------------------------------------------------------------------
+global HandleFlyWarpOrDungeonWarp
+HandleFlyWarpOrDungeonWarp:
+    call UpdateSprites
+    call Delay3
+    xor al, al
+    mov [ebp + wBattleResult], al
+    mov [ebp + wIsInBattle], al
+    mov [ebp + wMapPalOffset], al
+    ; ld hl, wStatusFlags6 / set BIT_FLY_OR_DUNGEON_WARP, [hl] / res BIT_ALWAYS_ON_BIKE, [hl]
+    or  byte [ebp + W_STATUS_FLAGS_6], (1 << BIT_FLY_OR_DUNGEON_WARP)
+    and byte [ebp + W_STATUS_FLAGS_6], (~(1 << BIT_ALWAYS_ON_BIKE)) & 0xFF
+    call LeaveMapAnim
+    call StopBikeSurf
+    mov al, 0x01                        ; ld a, BANK(PrepareForSpecialWarp)
+    call BankswitchCommon               ; flat: records hLoadedROMBank (no MBC write)
+    call PrepareForSpecialWarp
+    jmp SpecialEnterMap                 ; jp SpecialEnterMap (tail)
+
+
+; ---------------------------------------------------------------------------
+; LeaveMapAnim — pret home/overworld.asm:778 (`farjp _LeaveMapAnim`). The bank
+; switch is a no-op in the flat model, so the wrapper is a bare tail-jump; it is
+; kept as its own pret-named symbol rather than inlined, so callers keep matching
+; pret line-for-line.
+; ---------------------------------------------------------------------------
+global LeaveMapAnim
+LeaveMapAnim:
+    jmp _LeaveMapAnim                   ; engine/overworld/player_animations.asm
+
 StopBikeSurf:
     mov al, [ebp + W_WALK_BIKE_SURF_STATE]
     test al, al
@@ -920,6 +2112,110 @@ SignLoop:
     clc
     ret
 
+
+; ---------------------------------------------------------------------------
+; CollisionCheckOnLand — tile passability + sprite collision check.
+; Pret ref: home/overworld.asm:CollisionCheckOnLand.
+;
+; Checks both the tile in front of the player (IsTilePassable) and whether any
+; NPC occupies that block (IsNPCAtTargetBlock).  CF=1 if movement is blocked.
+; ---------------------------------------------------------------------------
+CollisionCheckOnLand:
+%ifdef OVERWORLD_LEDGES
+    ; M7.3 ledge-hop + tile-pair collisions live in src/engine/overworld/ledges.asm
+    ; (CHECK-only by default; see Makefile). Referenced only under this flag, so the
+    ; default build neither links ledges.asm nor alters land-collision behavior.
+    extern CheckForJumpingAndTilePairCollisions
+    extern TilePairCollisionsLand
+%endif
+%ifdef DEBUG_NOCLIP
+    cmp byte [pad_noclip], 0
+    jne .passable                 ; noclip active: always passable
+%endif
+    push eax
+    push ecx
+    push esi
+    ; pret home/overworld.asm:1223-1225 — no collisions while the game is scripting the
+    ; player's movement (wSimulatedJoypadStatesIndex != 0). Inert today: nothing sets the
+    ; index until scripted NPC/cutscene movement lands (Stage 2), so this always falls
+    ; through. Restored for faithfulness / to be correct once that path is live.
+    cmp byte [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], 0
+    jne .noCollision                               ; scripted movement → always passable
+    ; pret :1226-1231 — quick sprite reject. The accumulated collision-direction bits in
+    ; wSpritePlayerStateData1CollisionData (player = slot 0) use the same bit layout as
+    ; wPlayerDirection (bit0=RIGHT, bit1=LEFT, bit2=DOWN, bit3=UP — see the DH[3:2]/DH[1:0]
+    ; write in movement.asm:DetectCollisionBetweenSprites); if a set bit overlaps the
+    ; direction the player is trying to move, a sprite is already known to be there. This
+    ; can only ADD a block that the thorough IsNPCAtTargetBlock scan below would also catch
+    ; (pret itself questions why the deeper check ever misses). pret's `nop`, the
+    ; res BIT_FACE_PLAYER / hTextID / Pikachu-collision-counter tail are folded into the
+    ; bespoke IsNPCAtTargetBlock replacement below.
+    mov dl, [ebp + W_PLAYER_DIRECTION]
+    mov al, [ebp + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_COLLISIONDATA]
+    and al, dl
+    jnz .blocked                                   ; sprite already flagged in travel dir
+    ; wTileMap is a sub-block viewport into wSurroundingTiles, offset by W_Y_BLOCK_COORD /
+    ; W_X_BLOCK_COORD. AdvancePlayerSprite only calls LoadCurrentMapView on block-boundary
+    ; crossings, so the viewport can be stale within a block (YBC/XBC changed but wTileMap
+    ; not rebuilt). Rebuild here to apply the current sub-block offset before the tile read.
+    call LoadCurrentMapView
+    call GetTileInFrontOfPlayer                    ; CL = tile in front
+%ifdef OVERWORLD_LEDGES
+    ; M7.3 hook — pret home/overworld.asm:CollisionCheckOnLand (.noSpriteCollision):
+    ;   ld hl, TilePairCollisionsLand / call CheckForJumpingAndTilePairCollisions
+    ;   jr c, .collision   — an illegal tile-pair (elevation-seam) boundary blocks;
+    ; plus the top-of-function `bit BIT_LEDGE_OR_FISHING, a / jr nz .noCollision`:
+    ; once a ledge hop is armed the move is allowed (the hop carries the player).
+    ; Faithful gate: in the OVERWORLD tileset with no matching ledge tile HandleLedges
+    ; sets no state, and TilePairCollisionsLand holds only CAVERN/FOREST entries, so
+    ; the scan returns CF=0 — this block is inert and behavior is byte-identical.
+    push ebx                                       ; CheckForTilePairCollisions uses BL
+    push edx                                       ; ...and DH (tile player stands on)
+    mov esi, TilePairCollisionsLand                ; flat host ptr to the tile-pair table
+    call CheckForJumpingAndTilePairCollisions      ; may arm a ledge hop; CF=1 → seam-blocked
+    pop edx
+    pop ebx
+    jc .blocked                                    ; illegal tile-pair boundary → blocked
+    test byte [ebp + W_MOVEMENT_FLAGS], (1 << BIT_LEDGE_OR_FISHING)
+    jnz .noCollision                               ; ledge hop armed → allow the move
+    movzx ecx, byte [ebp + W_TILE_IN_FRONT_OF_PLAYER] ; restore CL (HandleLedges clobbered ECX)
+%endif
+    call IsTilePassable                            ; CF = 1 if not passable
+    jc .blocked                                    ; tile impassable → blocked
+    ; IsNPCAtTargetBlock is the port's BESPOKE replacement for pret's IsSpriteInFrontOfPlayer
+    ; (home/overworld.asm:1234) plus the res BIT_FACE_PLAYER / hTextID / Pikachu-collision-
+    ; counter tail (:1236-1252): a straight MAPY/MAPX block scan of slots 1–15. It does not
+    ; reproduce the sprite-facing side effect or the Pikachu-follow B-button leniency; those
+    ; ride the sprite-engine reimpl. CF=1 → an NPC occupies the target block.
+    call IsNPCAtTargetBlock                        ; CF = 1 if NPC is in front
+    jc .blocked                                    ; NPC in the way → blocked
+.noCollision:
+    pop esi
+    pop ecx
+    pop eax
+    clc
+    ret
+.blocked:
+    ; pret home/overworld.asm:1259-1264 (.collision): play SFX_COLLISION on the bump,
+    ; unless it's already playing on CHAN5. Done before the pops so PlaySound's clobber
+    ; of eax/ecx/esi is undone by the restores; stc lands after (pop doesn't touch CF).
+    mov al, [ebp + wChannelSoundIDs + CHAN5]        ; sound currently on CHAN5
+    cmp al, SFX_COLLISION                            ; already playing?
+    je .blockedSetCarry                              ; yes → don't retrigger
+    mov al, SFX_COLLISION
+    call PlaySound
+.blockedSetCarry:
+    pop esi
+    pop ecx
+    pop eax
+    stc
+    ret
+%ifdef DEBUG_NOCLIP
+.passable:
+    clc
+    ret
+%endif
+
 ; ---------------------------------------------------------------------------
 ; CheckForJumpingAndTilePairCollisions — pret home/overworld.asm.
 ;
@@ -1090,6 +2386,28 @@ LoadCurrentMapView:
     ret
 
 
+
+; ---------------------------------------------------------------------------
+; AdvancePlayerSprite — home wrapper.
+; pret: home/overworld.asm:AdvancePlayerSprite.
+;
+; Forces wUpdateSpritesEnabled = $FF for the duration of the sprite advance (so the
+; OAM/sprite update runs while the player steps), then restores the prior value. This
+; is pret's home-bank wrapper around _AdvancePlayerSprite; OW-A.3 de-folded it back out
+; of the engine body it had been merged into (the save/restore was previously a
+; documented Phase-2 omission). Register-safe.
+; ---------------------------------------------------------------------------
+AdvancePlayerSprite:
+    push eax                                          ; keep caller EAX (wrapper clobbers AL)
+    mov al, [ebp + W_UPDATE_SPRITES_ENABLED]          ; pret: ld a,[wUpdateSpritesEnabled] / push af
+    mov byte [ebp + W_UPDATE_SPRITES_ENABLED], 0xFF   ; pret: ld a,$FF / ld [wUpdateSpritesEnabled],a
+    push eax
+    call _AdvancePlayerSprite                         ; pret: callfar _AdvancePlayerSprite
+    pop eax
+    mov [ebp + W_UPDATE_SPRITES_ENABLED], al          ; pret: pop af / ld [wUpdateSpritesEnabled],a
+    pop eax
+    ret
+
 ; ---------------------------------------------------------------------------
 ; DrawTileBlock — faithful translation.
 ; Pret ref: home/overworld.asm:DrawTileBlock
@@ -1212,6 +2530,90 @@ GetSimulatedInput:
     ret
 .endofsimulatedinputs:
     xor al, al                               ; pret: and a — AL=0, CF=0
+    ret
+
+
+; ---------------------------------------------------------------------------
+; CollisionCheckOnWater — collision check while surfing (OW-A.6).
+; Pret ref: home/overworld.asm:1665 CollisionCheckOnWater.
+;
+; CF=1 → blocked on water; CF=0 → move allowed. The "passable land tile ahead"
+; case disembarks (.stopSurfing): clears wWalkBikeSurfState, reloads the walking
+; sprite, restores the map music, and returns CF=0 so the step onto land runs.
+; Unreachable in today's live build — nothing sets wWalkBikeSurfState=2 until
+; Surf item-use / ForceBikeOrSurf (player_gfx.asm) links.
+;
+; PORT (established divergence, same as CollisionCheckOnLand): pret's
+; `predef GetTileAndCoordsInFrontOfPlayer` is realized as LoadCurrentMapView +
+; GetTileInFrontOfPlayer (the port's simplified front-tile read; the coord
+; side-outputs are dropped — see GetTileInFrontOfPlayer's DEFERRED note).
+; Register safety mirrors CollisionCheckOnLand: EAX/ECX/ESI saved; DL is
+; (re)written with W_PLAYER_DIRECTION, the same value callers already hold.
+; ---------------------------------------------------------------------------
+CollisionCheckOnWater:
+    push eax
+    push ecx
+    push esi
+    ; pret: bit BIT_SCRIPTED_MOVEMENT_STATE → never collide under simulated input
+    test byte [ebp + W_STATUS_FLAGS_5], (1 << BIT_SCRIPTED_MOVEMENT_STATE)
+    jnz .noCollision
+    ; pret :1669-1672 — quick sprite reject in the travel direction (same
+    ; collision-direction bit layout as CollisionCheckOnLand's reject).
+    mov dl, [ebp + W_PLAYER_DIRECTION]
+    mov al, [ebp + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_COLLISIONDATA]
+    and al, dl
+    jnz .collision
+    ; pret :1673-1675 — water-seam tile pairs block (and may arm a ledge state);
+    ; same save set as CollisionCheckOnLand's land hook.
+    push ebx
+    push edx
+    mov esi, TilePairCollisionsWater               ; flat host ptr (ledges.asm)
+    call CheckForJumpingAndTilePairCollisions
+    pop edx
+    pop ebx
+    jc .collision
+    ; pret :1676 predef GetTileAndCoordsInFrontOfPlayer → port idiom (see header):
+    ; rebuild the viewport (stale within a block), then read the front tile.
+    call LoadCurrentMapView
+    call GetTileInFrontOfPlayer                    ; CL = tile → W_TILE_IN_FRONT_OF_PLAYER
+    call IsNextTileShoreOrWater                    ; CF=1 → shore/water ahead
+    jc .noCollision                                ; keep surfing
+    movzx ecx, byte [ebp + W_TILE_IN_FRONT_OF_PLAYER] ; ld a,[wTileInFrontOfPlayer] / ld c,a
+    call IsTilePassable                            ; CF=1 → not passable
+    jnc .stopSurfing                               ; passable land ahead → disembark
+.collision:
+    ; pret :1685-1690 — bump SFX unless already playing on CHAN5.
+    mov al, [ebp + wChannelSoundIDs + CHAN5]
+    cmp al, SFX_COLLISION
+    je .setCarry
+    mov al, SFX_COLLISION
+    call PlaySound
+.setCarry:
+    pop esi
+    pop ecx
+    pop eax
+    stc
+    ret
+.checkIfVermilionDockTileset:
+    ; UNREFERENCED in pret Yellow (no jump targets this label — Red-era remnant
+    ; kept for label fidelity, like Func_5288 set 3).
+    mov al, [ebp + W_CUR_MAP_TILESET]
+    cmp al, SHIP_PORT                              ; Vermilion Dock tileset?
+    jne .noCollision                               ; keep surfing if not
+    jmp .stopSurfing
+.stopSurfing:
+    ; pret :1699-1708 ("based game freak") — disembark onto the passable tile.
+    mov byte [ebp + wPikachuSpawnState], 3
+    or byte [ebp + wPikachuOverworldStateFlags], (1 << 5) ; set 5, [hl] (hide)
+    mov byte [ebp + W_WALK_BIKE_SURF_STATE], 0
+    call LoadPlayerSpriteGraphics
+    call PlayDefaultMusic
+    ; fall through — pret: jr .noCollision
+.noCollision:
+    pop esi
+    pop ecx
+    pop eax
+    clc                                            ; and a — CF=0
     ret
 
 RunMapScript:
@@ -1611,6 +3013,19 @@ SwitchToMapRomBank:
     call BankswitchCommon                        ; record AL in hLoadedROMBank (flat no-op MBC)
     ret
 
+
+; ---------------------------------------------------------------------------
+; IgnoreInputForHalfSecond — suppress player input for ~30 frames after a warp.
+; Sets wIgnoreInputCounter=30 and BIT_DISABLE_JOYPAD in wStatusFlags5.
+; The countdown runs at the top of OverworldLoop; joypad is re-enabled when it
+; reaches 0. OverworldLoop's idle path skips direction reads while the bit is set.
+; Pret ref: home/overworld.asm:IgnoreInputForHalfSecond
+; ---------------------------------------------------------------------------
+IgnoreInputForHalfSecond:
+    mov byte [ebp + W_IGNORE_INPUT_COUNTER], 30
+    or byte [ebp + W_STATUS_FLAGS_5], (1 << BIT_DISABLE_JOYPAD) | (1 << 2) | (1 << 1)
+    ret
+
 global IsSpriteOrSignInFrontOfPlayer         ; A-press dispatch head (overworld.asm)
 global IsSpriteInFrontOfPlayer               ; sprite scan — TryPushingBoulder (push_boulder.asm)
 global IsSpriteInFrontOfPlayer2              ; long-range entry — counter branch above; Surf open
@@ -1886,6 +3301,14 @@ CheckForUserInterruption:
 ; In: AL = map bank id. All other registers preserved.
 ; ---------------------------------------------------------------------------
 global SwitchToMapRomBank
+global AdvancePlayerSprite
+global CollisionCheckOnLand
+global CollisionCheckOnWater
+global DoBikeSpeedup
+global EnterMap
+global IgnoreInputForHalfSecond
+global OverworldLoop
+global OverworldLoopLessDelay
 
 ; ---------------------------------------------------------------------------
 ; LoadDestinationWarpPosition — load spawn Y/X from the destination map's warp
@@ -1918,5 +3341,7 @@ LoadDestinationWarpPosition:
     pop esi
     pop eax
     ret
+
+
 
 
