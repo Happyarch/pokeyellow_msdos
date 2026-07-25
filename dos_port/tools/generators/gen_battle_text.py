@@ -396,6 +396,11 @@ PLAIN = [
 # SkyAttackGlowingText / FlewUpHighText / DugAHoleText (all emitted as wrappers).
 EXTRA_FAR = [
     "_ChargeMoveEffectText",
+    # engine/battle/experience.asm:GainedText / WithExpAllText — same shape: a
+    # text_far intro, then a text_asm selector picking ExpPointsText /
+    # WithExpAllText / BoostedText (all three emitted as ordinary wrappers).
+    "_GainedText",
+    "_WithExpAllText",
 ]
 
 def main():

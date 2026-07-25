@@ -47,6 +47,7 @@ bits 32
 %include "gb_macros.inc"
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
+%include "gb_text.inc"                  ; text_far / text_asm stream macros
 
 ; ---------------------------------------------------------------------------
 ; Local defines — constants/aliases not yet in the shared include files.
@@ -664,30 +665,62 @@ CallBattleCore:
     ret
 
 ; ---------------------------------------------------------------------------
-; Text stubs — labels referenced by `mov esi, <label>; call PrintText`.
-; PrintText is deferred (extern above); these labels just need to exist.
-; In pret these carry `text_far` / `text_asm` / `sound_level_up` directives
-; processed by the text engine.  In the flat port the text-engine integration
-; is deferred to Wave 2; for now they are bare `ret` stubs.
+; pret's EXP text wrappers (engine/battle/experience.asm:352-380).
+;
+; These were five `ret`-only stubs under a "DEFERRED to Wave 2" comment. That was
+; wrong twice over: bare rets in a mirror file are not how this project spells a
+; stand-in (they belong in *_stubs.asm with a STUB{} annotation), and being
+; file-local they SHADOWED the correctly-generated globals of the same name inside
+; this object — pkmn.sym carried both `t BoostedText` (a lone 0xC3) and
+; `D BoostedText` (the real stream). A PrintText on the stub would have fed an
+; opcode byte to the text engine as a command.
+;
+; BoostedText / ExpPointsText / GrewLevelText are pure data (text_far + text_end,
+; and a sound command) — they are generated into assets/battle_text.inc and are
+; simply extern'd now; the stubs are deleted, leaving one definition each.
+;
+; GainedText / WithExpAllText are text_far + text_asm, so the generator correctly
+; skips them and they are Tier-2 code here, the same idiom as effects.asm's
+; ChargeMoveEffectText: a generated far intro, then a selector that returns the
+; next stream in HL(ESI) for TextCommandProcessor to continue with.
+;
+; NOT YET WIRED: pret reaches GainedText at experience.asm:149 with
+; `ld hl, GainedText / call PrintText`, but the port still calls the bespoke
+; ShowGainedExpText front end (battle_menu.asm), which paints the box and the
+; number itself instead of driving the text engine. Replacing that front end is a
+; live-battle-path change with no covering fidelity scenario, so it is tracked
+; separately (stigmergy: battle-text-composed-in-code-audit, OPEN 3) rather than
+; smuggled in here. These wrappers are correct and linked; they do not execute yet.
 ; ---------------------------------------------------------------------------
+extern _GainedText                  ; assets/battle_text.inc
+extern _WithExpAllText              ; assets/battle_text.inc
+extern BoostedText                  ; assets/battle_text.inc (joined with ExpPointsText)
+extern ExpPointsText                ; assets/battle_text.inc
+extern GrewLevelText                ; assets/battle_text.inc
 
+; GainedText — pret experience.asm:352. Picks the EXP.ALL / boosted / plain tail.
+; pret's `ld hl, Xxx` sits between the load and the `and a`; `mov esi, imm32` is
+; flag-neutral in the same way, so the order translates directly.
+global GainedText
 GainedText:
-    ; DEFERRED: text_far _GainedText + text_asm dispatch (wBoostExpByExpAll /
-    ; wGainBoostedExp → choose ExpPointsText / WithExpAllText / BoostedText).
+    text_far _GainedText
+    text_asm                            ; TX_START_ASM → TextCommandProcessor jumps here
+    mov al, [ebp + wBoostExpByExpAll]   ; ld a, [wBoostExpByExpAll]
+    mov esi, WithExpAllText             ; ld hl, WithExpAllText
+    test al, al                         ; and a
+    jnz .ret                            ; ret nz
+    mov esi, ExpPointsText              ; ld hl, ExpPointsText
+    mov al, [ebp + wGainBoostedExp]     ; ld a, [wGainBoostedExp]
+    test al, al                         ; and a
+    jz .ret                             ; ret z
+    mov esi, BoostedText                ; ld hl, BoostedText
+.ret:
     ret
 
+; WithExpAllText — pret experience.asm:366. Always continues at ExpPointsText.
+global WithExpAllText
 WithExpAllText:
-    ; DEFERRED: text_far _WithExpAllText + text_asm → ExpPointsText
-    ret
-
-BoostedText:
-    ; DEFERRED: text_far _BoostedText
-    ret
-
-ExpPointsText:
-    ; DEFERRED: text_far _ExpPointsText + text_end
-    ret
-
-GrewLevelText:
-    ; DEFERRED: text_far _GrewLevelText + sound_level_up + text_end
+    text_far _WithExpAllText
+    text_asm
+    mov esi, ExpPointsText              ; ld hl, ExpPointsText
     ret
