@@ -115,7 +115,13 @@ scenario:** the player-mon faint path (`RemoveFaintedPlayerMon`,
 `HandlePlayerBlackOut`, `ChooseNextMon`), trainer-battle victory
 (`TrainerBattleVictory`, `ReplaceFaintedEnemyMon`), residual damage, mirror
 move, metronome, counter, `SelectEnemyMove`, and every link-battle branch.
-A player-faint/black-out scenario is the natural next gate.
+A player-faint/black-out scenario is the natural next gate, and is **half-built**:
+the `DEBUG_BATTLE_BLACKOUT` gate + its Lua scenario landed in `89864fa8` but
+**HANG and are deliberately unregistered** (not in the manifest, so the suite is
+unaffected). The design is proven working up to "Enemy PIDGEY used GUST!";
+prime suspect for the hang is the low-health alarm's `WaitForSoundToFinish`,
+which if confirmed is a real port defect rather than a harness bug. Full
+diagnosis and next step: memory `regression-battle-blackout-gate-hangs`.
 
 ### 9. battle_menu golden convergence spec
 From `docs/plans/battle_ui.md` / `fidelity_harness.md`. The remaining
