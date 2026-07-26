@@ -548,6 +548,11 @@ CRABHAMMER              equ 0x98
 SLASH                   equ 0xA3
 STRUGGLE                equ 0xA5
 
+; --- other move ids used by name (constants/move_constants.asm) ---
+GUST                    equ 0x10    ; the battle_blackout gate pins the wild
+                                    ; enemy's 4 moves to it so its turn always
+                                    ; damages (see src/debug/debug_dump.asm)
+
 ; --- field-move ids (data/moves/field_moves.asm; lifted out of party_menu.asm) ---
 CUT                     equ 0x0F
 FLY                     equ 0x13

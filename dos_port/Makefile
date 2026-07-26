@@ -719,6 +719,21 @@ NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_APRESS -D DEBUG_SEED_PARTY
 AUTOKEY_DUMP_FRAME ?= 999999
 NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 endif
+# Player-faint / black-out gate (battle_blackout): the other half of the faint
+# coverage battle_faint opened. battle_faint kills the ENEMY; this one kills the
+# PLAYER, so RemoveFaintedPlayerMon and HandlePlayerBlackOut finally execute.
+# Leaves exactly one mon alive (slot 3, PIKACHU L5) at 1 HP so the black-out
+# branch is reached without the interactive ChooseNextMon menu, and pins the
+# enemy's moves so nothing compared depends on an RNG roll -- see the gate's
+# header in src/debug/debug_dump.asm.
+# make DEBUG_BATTLE_BLACKOUT=1
+ifdef DEBUG_BATTLE_BLACKOUT
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_BATTLE_BLACKOUT -D DEBUG_BATTLE_GOLDEN -D DEBUG_BATTLE -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_APRESS -D DEBUG_SEED_PARTY
+AUTOKEY_DUMP_FRAME ?= 999999
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
 # Items-plan Stage 7 gate: teach the TM/HM in ITEMTM_ID (default TM06 TOXIC) to party
 # slot ITEMTM_MON, headless, capturing the result to DUMP.BIN. AUTOKEY answers the
 # yes/no box, the party menu and the messages.

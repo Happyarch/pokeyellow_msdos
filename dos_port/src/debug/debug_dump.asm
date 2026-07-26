@@ -155,6 +155,10 @@ extern DrawBattleMenuBox         ; battle_menu.asm
 extern ExecutePlayerMove         ; core.asm — the real player-turn/damage pipeline
 extern HandleEnemyMonFainted     ; core.asm — faint + EXP chain (FaintEnemyPokemon, GainExperience)
 %endif
+%ifdef DEBUG_BATTLE_BLACKOUT
+extern ExecuteEnemyMove          ; core.asm — the real enemy-turn/damage pipeline
+extern HandlePlayerMonFainted    ; core.asm — RemoveFaintedPlayerMon + the black-out branch
+%endif
 %endif
 global RunBattleTest
 %endif
@@ -1393,8 +1397,88 @@ RunBattleTest:
 .faintKO:
     call HandleEnemyMonFainted          ; FaintEnemyPokemon -> GainExperience
     call DebugDumpMemory                ; GBSTATE.BIN (id 21) + DUMP.BIN + exit
+%elifdef DEBUG_BATTLE_BLACKOUT
+    ; ------------------------------------------------------------------
+    ; battle_blackout golden gate — the OTHER half of the faint coverage
+    ; battle_faint opened. battle_faint kills the ENEMY; nothing in the
+    ; suite has ever killed the PLAYER, so RemoveFaintedPlayerMon and
+    ; HandlePlayerBlackOut are still moved-blind code. This gate runs the
+    ; real enemy turn into a player faint that empties the party.
+    ;
+    ; WHY THE PARTY IS RESHAPED. Routing to the black-out branch requires
+    ; AnyPartyAlive to fail (core.asm:985-988); any surviving mon instead
+    ; reaches DoUseNextMonDialogue + ChooseNextMon, an INTERACTIVE party
+    ; menu, which is both a port stub and untimeable against a golden. So
+    ; exactly one mon is left alive. It is party slot 3, STARTER_PIKACHU
+    ; L5 (tools/mgba_harness/lib/seed.lua DEBUG_PARTY[4]), not slot 0:
+    ; the send-out scan takes the first ALIVE mon, so zeroing 0-2 selects
+    ; slot 3 on BOTH sides without either side naming it.
+    ;
+    ; RNG-INDEPENDENCE, same discipline as battle_faint (the two sides do
+    ; NOT share an RNG stream):
+    ;   * PIKACHU L5 speed ~14 vs the spec PIDGEY L13's measured 21, so
+    ;     the ENEMY ALWAYS MOVES FIRST. The player mon faints before it
+    ;     ever acts, so its PP and the party's PP are untouched -- which
+    ;     is what makes the compared party data roll-invariant.
+    ;   * The player mon is left at 1 HP, so ANY damage roll and any crit
+    ;     outcome faints it. Gen-1 minimum damage is 1.
+    ;   * The enemy's 4 moves are PINNED to GUST so move SELECTION cannot
+    ;     matter. Without this the AI could pick SAND-ATTACK, deal no
+    ;     damage, and hand the turn to the player -- who would then act,
+    ;     decrementing PP a different number of times on each side. This
+    ;     is a seed pin of the same class as seed.enemy's DV pin, and the
+    ;     golden applies the identical pin.
+    ; Residual roll: GUST's 1/256 Gen-1 accuracy miss. Deterministic per
+    ; side, so the .blackoutAlive assert below makes it loud.
+    ;
+    ; pret refs: MainInBattleLoop calls ExecuteEnemyMove (core.asm:3244
+    ; is the player twin) and then HandlePlayerMonFainted (core.asm:981)
+    ; when the battle mon hits 0 HP; that runs RemoveFaintedPlayerMon and,
+    ; with no mon alive, jp HandlePlayerBlackOut (core.asm:1171), which
+    ; prints the blacked-out text, clears the screen and returns carry.
+    ; ------------------------------------------------------------------
+    call LoadScreenTilesFromBuffer1
+    ; --- leave exactly one mon alive: slot 3 at 1 HP, the rest at 0 ---
+    ; party-mon HP is a big-endian word at wPartyMon1HP + slot*44.
+%assign BO_SLOT 0
+%rep 6
+%if BO_SLOT == 3
+    mov word [ebp + wPartyMon1HP + BO_SLOT * PARTYMON_STRUCT_LENGTH], 0x0100
 %else
-%error DEBUG_BATTLE_GOLDEN needs DEBUG_BATTLE_INTRO, DEBUG_BATTLE_MENU, DEBUG_MOVEMENU, DEBUG_ITEMBALL or DEBUG_BATTLE_FAINT
+    mov word [ebp + wPartyMon1HP + BO_SLOT * PARTYMON_STRUCT_LENGTH], 0x0000
+%endif
+%assign BO_SLOT BO_SLOT + 1
+%endrep
+    ; --- re-run the send-out for the one alive mon (slot 3) ---
+    mov byte [ebp + wWhichPokemon], 3
+    mov byte [ebp + wPlayerMonNumber], 3
+    mov al, [ebp + wPartySpecies + 3]
+    mov [ebp + wCurPartySpecies], al
+    mov [ebp + wBattleMonSpecies2], al
+    call LoadBattleMonFromParty         ; REAL loader; copies the 1 HP across
+    call DrawHUDsAndHPBars
+    ; --- pin the enemy's moves and its selection to GUST (see header) ---
+    mov byte [ebp + wEnemyMonMoves + 0], GUST
+    mov byte [ebp + wEnemyMonMoves + 1], GUST
+    mov byte [ebp + wEnemyMonMoves + 2], GUST
+    mov byte [ebp + wEnemyMonMoves + 3], GUST
+    mov byte [ebp + wEnemySelectedMove], GUST
+    mov byte [ebp + wEnemyMoveListIndex], 0
+    mov byte [ebp + wActionResultOrTookBattleTurn], 0
+    call ExecuteEnemyMove               ; the real enemy turn
+    ; The player mon must be down now.
+    mov al, [ebp + wBattleMonHP]
+    or al, [ebp + wBattleMonHP + 1]     ; big-endian word, either byte set = alive
+    jz .blackoutKO
+.blackoutAlive:
+    mov byte [ebp + W_TILEMAP], 0xEE    ; distinctive marker for FRAME.BIN
+    call DelayFrame
+    call DumpBackbuffer                 ; writes FRAME.BIN, then exits
+.blackoutKO:
+    call HandlePlayerMonFainted         ; RemoveFaintedPlayerMon -> HandlePlayerBlackOut
+    call DebugDumpMemory                ; GBSTATE.BIN + DUMP.BIN + exit
+%else
+%error DEBUG_BATTLE_GOLDEN needs DEBUG_BATTLE_INTRO, DEBUG_BATTLE_MENU, DEBUG_MOVEMENU, DEBUG_ITEMBALL, DEBUG_BATTLE_FAINT or DEBUG_BATTLE_BLACKOUT
 %endif
 %endif
 
