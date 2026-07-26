@@ -247,10 +247,6 @@
       "port_file": "dos_port/src/home/pics.asm",
       "why": "pret home/pokemon.asm split across port files (draft Session H)"
     },
-    "LoadHudTilePatterns": {
-      "port_file": "dos_port/src/home/load_font.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
     "LoadMonData": {
       "port_file": "dos_port/src/engine/pokemon/load_mon_data.asm",
       "why": "pret home/pokemon.asm split across port files (draft Session H)"
