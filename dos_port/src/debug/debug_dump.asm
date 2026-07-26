@@ -2834,7 +2834,7 @@ extern MovieMirrorSurface
 extern MovieSyncScroll
 extern PublishProjectedOAM      ; engine/gfx/sprite_oam.asm
 extern g_tilecache_dirty        ; ppu/ppu.asm
-extern ClearSprites             ; home/sprites.asm
+extern ClearSprites             ; home/clear_sprites.asm
 extern DelayFrame               ; video/frame.asm
 
 global RunCinematicMarkersTest

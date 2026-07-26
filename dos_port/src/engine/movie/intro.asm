@@ -34,7 +34,7 @@ extern CopyVideoData                 ; home/copy2.asm — ESI=VRAM dest, EDX=fla
 extern DelayFrames                   ; video/frame.asm — BL = frame count
 extern DelayFrame                    ; video/frame.asm — wait one frame
 extern Delay3                        ; src/home/palettes.asm — wait 3 frames
-extern ClearSprites                  ; home/sprites.asm — zero shadow OAM + count
+extern ClearSprites                  ; home/clear_sprites.asm — zero shadow OAM + count
 extern g_tilecache_dirty             ; ppu.asm — arm the tile-cache rebuild
 extern AnimateShootingStar           ; engine/movie/splash.asm — the shooting-star animation
 extern LoadCopyrightAndTextBoxTiles  ; engine/movie/title.asm — the boot copyright screen

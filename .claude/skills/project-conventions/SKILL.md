@@ -303,9 +303,9 @@ Plans that exist today and have **no entry below** — go to the files themselve
   (2026-07-12, `f8863164` + `12dfdbe2`). The BG-tile icon hack is gone: icons are OBJ
   through pret's `engine/gfx/mon_icons.asm`, in the party menu and the naming screen.
   Two invariants it left behind, both enforced at the primitive
-  (`dos_port/src/home/sprites.asm` — note pret splits these two labels into
-  `home/clear_sprites.asm`, so the bare `home/sprites.asm` this line used to give
-  resolved to nothing on either side):
+  (`dos_port/src/home/clear_sprites.asm`, the mirror of pret `home/clear_sprites.asm`
+  — it was `dos_port/src/home/sprites.asm` until the s16 relocation repair, a name
+  that resolved to nothing on the pret side):
   **`ClearSprites`/`HideSprites` publish `spr_oam_valid = 0`** (the port gates the OAM
   DMA on `wUpdateSpritesEnabled`, so a cleared shadow OAM never reached the compositor
   — that is what would ghost overworld sprites onto a whiteout screen), **and they

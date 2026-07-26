@@ -8,7 +8,7 @@
 ; bucket" header. Those are home/copy_string.asm and home/array2.asm labels and
 ; now live in their own mirrors (src/home/copy_string.asm, src/home/array2.asm);
 ; the BG family arrived here from src/video/bg_anim.asm (deleted) and
-; src/video/lcd_control.asm (which keeps DisableLCD / EnableLCD).
+; src/home/lcd.asm (which keeps DisableLCD / EnableLCD).
 ;
 ; pret labels of home/vcopy.asm this port does NOT hold, so nobody thinks they
 ; were lost in the move: GetRowColAddressBgMap, FillBgMapCommon,

@@ -122,7 +122,7 @@ extern ShowPokedexMenu               ; engine/menus/pokedex.asm (S8, pkg G)
 extern DisplayOptionMenu             ; engine/menus/main_menu.asm (S6/S7, pkg D wrapper)
 extern DrawBadges                    ; engine/menus/draw_badges.asm (S6, pkg B)
 ; --- DrawTrainerInfo family (the trainer card, formerly engine/menus/trainer_card.asm) ---
-extern DisableLCD                    ; video/lcd_control.asm
+extern DisableLCD                    ; home/lcd.asm
 extern EnableLCD
 extern CopyVideoData                 ; home/copy2.asm — ESI dest VRAM off, EDX flat src, BL tiles
 extern PlaceString                   ; text/text.asm — ESI=dest, EAX=flat src

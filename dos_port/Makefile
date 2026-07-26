@@ -277,10 +277,10 @@ AUDIO_SRCS := \
 # Phase 2: game-loop core
 GAME_SRCS := \
     src/home/init.asm \
-    src/video/lcd_control.asm \
+    src/home/lcd.asm \
     src/video/frame.asm \
     src/home/play_time.asm \
-    src/home/sprites.asm \
+    src/home/clear_sprites.asm \
     src/engine/gfx/sprite_oam.asm \
     src/engine/gfx/animated_objects.asm \
     src/engine/movie/intro_yellow.asm \

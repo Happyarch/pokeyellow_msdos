@@ -57,8 +57,8 @@ global CommitMonPartySpriteOAM
 extern CopyData                 ; home/copy_data.asm — ESI=src, EDX=dest, BX=count
 extern CopyVideoData            ; home/copy2.asm — ESI=dest VRAM, EDX=src flat, BL=tiles
 extern DelayFrame               ; video/frame.asm
-extern DisableLCD               ; video/lcd_control.asm
-extern EnableLCD                ; video/lcd_control.asm
+extern DisableLCD               ; home/lcd.asm
+extern EnableLCD                ; home/lcd.asm
 extern IndexToPokedex           ; engine/menus/pokedex.asm — predef, wPokedexNum in place
 extern spr_dos_sy, spr_dos_sx   ; ppu/ppu.asm — render_sprites' canvas positions
 extern spr_oam_valid            ; ppu/ppu.asm — render_sprites' live-entry count

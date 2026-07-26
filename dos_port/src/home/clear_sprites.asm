@@ -1,6 +1,10 @@
-; sprites.asm — ClearSprites / HideSprites translated from SM83 to x86.
+; clear_sprites.asm — mirror of pret home/clear_sprites.asm.
 ;
-; Source: home/clear_sprites.asm:ClearSprites, HideSprites
+; Holds both of that file's pret labels, in pret order:
+;   ClearSprites, HideSprites
+;
+; Was src/home/sprites.asm until the mirror repair — a name that collided with
+; pret's own gfx/sprites.asm and with src/home/reload_sprites.asm.
 ;
 ; Operate on shadow OAM (wShadowOAM, $C300, 40 sprites × 4 bytes each).
 ; ClearSprites zeroes it; HideSprites sets each sprite's Y to 160 (off-screen).
@@ -18,7 +22,7 @@
 ; that wants its own OBJ afterwards republishes: PrepareOAMData (overworld),
 ; PrepareStaticOAM (battle pokéballs), WriteMonPartySpriteOAM (party/naming icons).
 ;
-; Build: nasm -f coff -I include/ -o sprites.o sprites.asm
+; Build: nasm -f coff -I include/ -o clear_sprites.o clear_sprites.asm
 
 bits 32
 

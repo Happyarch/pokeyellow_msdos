@@ -297,7 +297,7 @@ _InitBattleCommon:
     ; --- W-1 FIX (sprites): re-enable OBJ rendering. HideBattlePokeballs
     ;     (pokeballs.asm:112, run after the intro) cleared LCDCF_OBJ_ON so the battle
     ;     proper draws no OBJ sprites; the overworld default (LCDC_DEFAULT_VAL=$E3) has
-    ;     it set. Nothing on the return path restores it — EnableLCD (lcd_control.asm:38,
+    ;     it set. Nothing on the return path restores it — EnableLCD (home/lcd.asm:40,
     ;     in LoadMapData) only touches the LCD-ON bit — so render_sprites' gate
     ;     (ppu.asm: test IO_LCDC,LCDCF_OBJ_ON / jz .done) stays closed and the player +
     ;     every NPC vanish while the BG renders fine. Restore it here alongside the view

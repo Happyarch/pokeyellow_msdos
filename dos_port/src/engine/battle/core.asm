@@ -243,7 +243,7 @@ extern CheckTargetSubstitute           ; substitute.asm
 ; --- pulled in with the unit-C faint/send-out cluster ---
 extern AddBCD                          ; engine/math/bcd.asm
 extern ClearScreen                     ; home/copy2.asm
-extern ClearSprites                    ; home/sprites.asm
+extern ClearSprites                    ; home/clear_sprites.asm
 extern IsItemInBag                     ; src/home/map_objects.asm
 extern PrintEmptyString                ; battle_exp_stubs.asm (STUB)
 extern RunPaletteCommand               ; home/palettes.asm

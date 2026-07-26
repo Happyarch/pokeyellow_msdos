@@ -45,7 +45,7 @@ extern PrintNumber
 ; --- party-menu home driver (menus S5) ---
 extern LoadHpBarAndStatusTilePatterns   ; src/home/load_font.asm
 extern GBPalWhiteOutWithDelay3          ; src/home/palettes.asm
-extern ClearSprites                     ; src/home/sprites.asm
+extern ClearSprites                     ; src/home/clear_sprites.asm
 extern DrawPartyMenu_                   ; src/engine/menus/party_menu.asm
 extern RedrawPartyMenu_
 extern HandleMenuInput_                 ; src/home/window.asm — loop entry that does NOT

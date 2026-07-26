@@ -47,7 +47,7 @@ extern _RunPaletteCommand
 extern _InitMapSprites               ; src/engine/overworld/map_sprites.asm
 extern ResetMapTrainerState          ; src/engine/overworld/map_sprites.asm (port ext)
 extern ApplyToggleableHiddenGate     ; src/engine/overworld/map_sprites.asm (port ext)
-extern ClearSprites                 ; src/home/sprites.asm
+extern ClearSprites                 ; src/home/clear_sprites.asm
 extern LoadTextBoxTilePatterns      ; src/home/load_font.asm
 extern ReloadMapSpriteTilePatterns  ; src/home/reload_sprites.asm
 extern DelayFrames                  ; src/video/frame.asm  (In: BL = frame count)

@@ -117,7 +117,7 @@ global DisplayTitleScreen        ; MainMenu "B returns to title" seam
 ; ---------------------------------------------------------------------------
 NAME_LENGTH          equ 11      ; wPlayerName / wRivalName field size
 
-; LCDC bit 7 — LCD enable (used by EnableLCD/DisableLCD in lcd_control.asm)
+; LCDC bit 7 — LCD enable (used by EnableLCD/DisableLCD in lcd.asm)
 LCDC_DEFAULT_VAL     equ 0xE3
 
 ; GB joypad bits in the hJoyHeld shadow (active HIGH)

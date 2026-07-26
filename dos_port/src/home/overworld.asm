@@ -84,8 +84,8 @@ extern player_sprite                ; == RedSprite (walking)
 
 ; --- relocated from src/engine/overworld/overworld.asm (unit 6a) ---
 extern ApplyMapBorderOverrides            ; src/engine/overworld/overworld.asm
-extern DisableLCD                         ; src/video/lcd_control.asm
-extern EnableLCD                          ; src/video/lcd_control.asm
+extern DisableLCD                         ; src/home/lcd.asm
+extern EnableLCD                          ; src/home/lcd.asm
 extern FarCopyData                        ; src/home/copy_data.asm
 extern FillMemory                         ; src/home/copy2.asm
 extern GBPalNormal                        ; src/home/palettes.asm

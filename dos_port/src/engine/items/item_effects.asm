@@ -1595,7 +1595,7 @@ extern ShowPokedexData        ; engine/menus/pokedex.asm (predef)
 extern AskName                ; engine/menus/naming_screen.asm (predef; hl = nickname dest)
 extern LoadEnemyMonData               ; engine/battle/core.asm
 extern CalcExperience         ; engine/pokemon/experience.asm — DH = level → hExperience
-extern ClearSprites           ; home/sprites.asm
+extern ClearSprites           ; home/clear_sprites.asm
 extern AddPartyMon            ; home/move_mon.asm — adds wCurPartySpecies to the party
 
 ; --- generated text streams (assets/item_text.inc) ---

@@ -878,7 +878,7 @@ rebuild_tile_cache:
 ; a menu could not own OAM; the party mon icons were drawn as BG tiles precisely
 ; because of that. The contract now is "whoever owns the canvas owns OAM": a
 ; flat-canvas/menu screen that wants no OBJ says so by publishing spr_oam_valid = 0,
-; which ClearSprites/HideSprites (home/sprites.asm) do for it — matching the GB,
+; which ClearSprites/HideSprites (home/clear_sprites.asm) do for it — matching the GB,
 ; where a cleared shadow OAM + the unconditional VBlank DMA means nothing is drawn.
 ; A screen that wants its own OBJ writes them (PrepareStaticOAM, the mon-icon
 ; writers). See docs/plans/party_icons_oam.md.

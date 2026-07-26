@@ -25,8 +25,8 @@ global ReloadMapData
 global ReloadTilesetTilePatterns
 global ChooseFlyDestination
 
-extern DisableLCD                   ; src/video/lcd_control.asm
-extern EnableLCD                    ; src/video/lcd_control.asm
+extern DisableLCD                   ; src/home/lcd.asm
+extern EnableLCD                    ; src/home/lcd.asm
 extern LoadTextBoxTilePatterns      ; src/home/load_font.asm
 extern LoadCurrentMapView           ; src/home/overworld.asm
 extern LoadTilesetTilePatternData   ; src/home/overworld.asm

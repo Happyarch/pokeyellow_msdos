@@ -94,7 +94,7 @@ global ReplaceTreeTileBlock
 extern PrintText                    ; src/home/window.asm
 extern GetPartyMonName              ; src/home/pokemon.asm (AL=index, ESI=nick list)
 extern GBPalWhiteOutWithDelay3      ; src/home/palettes.asm
-extern ClearSprites                 ; src/home/sprites.asm
+extern ClearSprites                 ; src/home/clear_sprites.asm
 extern RestoreScreenTilesAndReloadTilePatterns ; src/home/palettes.asm
 extern Delay3                       ; src/home/palettes.asm
 extern LoadGBPal                    ; src/home/fade.asm

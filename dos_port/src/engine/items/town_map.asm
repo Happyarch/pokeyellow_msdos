@@ -54,7 +54,7 @@ extern g_bg_whiteout                   ; ppu.asm — full-screen BG whiteout fla
 extern spr_oam_valid                   ; ppu.asm — render_sprites active-entry count
 extern hide_window                     ; home/window.asm
 extern PrepareStaticOAM                ; engine/gfx/sprite_oam.asm — publish OBJ positions
-extern HideSprites                     ; home/sprites.asm — zero shadow OAM
+extern HideSprites                     ; home/clear_sprites.asm — zero shadow OAM
 extern FindWildLocationsOfMon          ; engine/items/item_effects.asm (pret: predef)
 extern RunPaletteCommand               ; src/home/palettes.asm
 extern RunDefaultPaletteCommand        ; src/home/palettes.asm

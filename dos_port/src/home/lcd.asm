@@ -1,8 +1,10 @@
-; lcd_control.asm — DisableLCD / EnableLCD.
+; lcd.asm — mirror of pret home/lcd.asm.
 ;
-; Sources: home/lcd.asm:DisableLCD, EnableLCD
+; Holds both of that file's pret labels, in pret order:
+;   DisableLCD, EnableLCD
 ;
-; ClearBgMap and FillBgMap are home/vcopy.asm labels and moved to that mirror,
+; Was src/video/lcd_control.asm until the mirror repair; ClearBgMap and FillBgMap,
+; which that file also used to carry, are home/vcopy.asm labels and live in
 ; src/home/vcopy.asm.
 ;
 ; The LCD on/off dance on real hardware races the PPU scanline counter and
@@ -10,7 +12,7 @@
 ; so we only keep/clear the shadow bit — there is no scanline hazard.
 ; ; TODO-HW: honour LCD-off timing if a scanline-accurate renderer is added.
 ;
-; Build: nasm -f coff -I include/ -o lcd_control.o lcd_control.asm
+; Build: nasm -f coff -I include/ -o lcd.o lcd.asm
 
 bits 32
 

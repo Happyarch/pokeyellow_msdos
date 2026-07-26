@@ -169,8 +169,8 @@ Phase 1 delivered the BG tile decoder + tilemap renderer with SCX/SCY scrolling
 window layer, OAM sprites, and the save system remain open there.
 
 Phase 2 so far: `Init`/`ClearVram`/`StopAllSounds` (`src/home/init.asm`),
-supporting home routines (`src/home/copy_data.asm`, `src/video/lcd_control.asm`,
-`src/video/frame.asm`, `src/home/sprites.asm`), and a text/font engine
+supporting home routines (`src/home/copy_data.asm`, `src/home/lcd.asm`,
+`src/video/frame.asm`, `src/home/clear_sprites.asm`), and a text/font engine
 (`src/home/load_font.asm` 1bpp→2bpp expansion from `gfx/font/font.png`,
 `src/home/text.asm` PlaceString/TextBoxBorder). The overworld map loader/renderer
 (pret mirror `src/home/overworld.asm`; `src/engine/overworld/overworld.asm` keeps
