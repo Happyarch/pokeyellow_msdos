@@ -1,7 +1,8 @@
 # Handoff — session 13 (relocated-labels grind, chunks 2/3/4)
 
-Written 2026-07-26 at the end of the batch. HEAD is `0d5085af` on `master`.
-Everything below is measured against that HEAD, not recalled.
+Written 2026-07-26 at the end of the batch, and kept current through the bless.
+Everything below is measured, not recalled. Verify anything you intend to rely on
+against the tree rather than against this file.
 
 ---
 
@@ -40,8 +41,12 @@ stop. A docs-only commit still lands, because the hook exits 0 when nothing unde
 | `aa121793` | chunk 2 restamp (the maintainer blessed `8972c75b` mid-session, so this one landed) |
 | `00c7d0a9` | chunk 3 — 8 `home/palettes.asm` rows into the existing mirror + a 58-comment provider sweep |
 | `fec6e9a3` | chunk 4 — 11 `engine/battle/core.asm` rows; **deleted 9 port files** |
-| `16e1a9ac` | chunks 3+4 registry retirement (115 → 96) — **awaiting bless** |
+| `16e1a9ac` | chunks 3+4 registry retirement (115 → 96) |
 | `0d5085af` | doc-staleness patrol: 39 dangling live-doc pointers measured, 19 fixed |
+| `de8f6f5b` | retired the skill's plan inventory; fixed a false `InitMapSprites` claim |
+| `d39e97f8` | full audit of all 8 skills — 11 verified-false claims fixed |
+| `df00ff43` | `.agents/AGENTS.md`: actively-wrong `GLITCH:` advice + its plan list |
+| `0dad14b7` | the owed `translation.db` restamp, after the bless |
 
 Debt: **130 → 96 rows.** Linked sources 257 → 248. Tree-wide fallthrough
 unchanged at 142. `--strict-claims` back at its 24 baseline (21 `local_shadow` +
@@ -124,16 +129,16 @@ pre-existing or out of a relocation's scope.
 4. **20 dangling path pointers remain** in `docs/current_plan_*.md` prose (mostly
    `tools/gen_*.py` paths from before the move to `tools/generators/`). Owner is
    `docs/current_plan_doc_staleness.md`, which exists for exactly this.
-5. **The hand-written "Currently active plans" list in CLAUDE.md / AGENTS.md (and
-   the `project-conventions` skill) is materially wrong** — needs a decision, not
-   an edit. It lists `docs/current_plan_script_engine.md` and
-   `docs/current_plan_overworld_port.md`, **neither of which exists**, and omits
-   five plans that do (`battle_completion`, `bug_tagging`, `doc_staleness`,
-   `menu_intro`, `overworld_events`). Measured against
-   `dos_port/tools/project_state --plans`, the generated inventory CLAUDE.md
-   itself tells agents to use — and CLAUDE.md's own Evidence policy says not to
-   maintain a second hand-written inventory. Delete it in favour of the generated
-   one, or re-sync it. Maintainer's call.
+5. ~~The hand-written plan inventory~~ — **RESOLVED, and my first report of it was
+   wrong about where it lived.** It is NOT in CLAUDE.md or AGENTS.md; both of those
+   correctly point at `dos_port/tools/project_state --plans` and carry no list.
+   THREE hand-written inventories actually existed, and all three had rotted: the
+   `project-conventions` skill (3 dead entries, 5 plans omitted), `.agents/AGENTS.md`
+   (6 entries, **4 dead**, 7 omitted — the worst), and ROADMAP.md (2 dead refs). All
+   retired in `de8f6f5b` / `df00ff43` / `0d5085af` rather than re-synced, since
+   re-syncing recreates the thing CLAUDE.md's Evidence policy forbids. The pattern
+   is in memory `plan-filing-and-skill-mirror` (v4). **If you are about to write a
+   plan list into a doc, don't.**
 
 ---
 
