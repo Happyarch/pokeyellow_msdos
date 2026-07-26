@@ -27,10 +27,6 @@
       "port_file": "dos_port/src/engine/pokemon/write_moves.asm",
       "why": "pret engine/pokemon/add_mon.asm split across port files (draft Session H)"
     },
-    "AnyPartyAlive": {
-      "port_file": "dos_port/src/home/wild_encounter_check.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
     "Bankswitch": {
       "port_file": "dos_port/src/engine/battle/move_effect_helpers.asm",
       "why": "pret home/bankswitch2.asm split across port files (draft Session H)"
@@ -75,14 +71,6 @@
       "port_file": "dos_port/src/engine/battle/core.asm",
       "why": "pret home/copy_string.asm split across port files (draft Session H)"
     },
-    "Delay3": {
-      "port_file": "dos_port/src/video/frame.asm",
-      "why": "pret home/palettes.asm split across port files (draft Session H)"
-    },
-    "EndLowHealthAlarm": {
-      "port_file": "dos_port/src/audio/play_battle_music.asm",
-      "why": "pret engine/battle/core.asm battle-music routine co-located with PlayBattleMusic in src/audio/play_battle_music.asm (battle-music consolidation)"
-    },
     "EndNPCMovementScript": {
       "port_file": "dos_port/src/engine/overworld/auto_movement.asm",
       "why": "pret home/npc_movement.asm wrapper (farjp _EndNPCMovementScript); the port has no home/npc_movement.asm mirror, so the trivial banking-elided jump is co-located with its target _EndNPCMovementScript in auto_movement.asm (OW-2.3)"
@@ -94,10 +82,6 @@
     "FadeOutAudio": {
       "port_file": "dos_port/src/home/audio.asm",
       "why": "audio-branch consolidation (Phase A, merged 2026-07-07): the port's home-audio entry points live together in src/home/audio.asm with the audio HAL"
-    },
-    "FaintEnemyPokemon": {
-      "port_file": "dos_port/src/engine/battle/faint_enemy.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
     },
     "FillBgMap": {
       "port_file": "dos_port/src/video/lcd_control.asm",
@@ -119,22 +103,6 @@
       "port_file": "dos_port/src/video/bg_anim.asm",
       "why": "pret home/vcopy.asm split across port files (draft Session H)"
     },
-    "GBPalNormal": {
-      "port_file": "dos_port/src/home/init.asm",
-      "why": "pret home/palettes.asm split across port files (draft Session H)"
-    },
-    "GBPalWhiteOut": {
-      "port_file": "dos_port/src/home/fade.asm",
-      "why": "pret home/palettes.asm split across port files (draft Session H)"
-    },
-    "GBPalWhiteOutWithDelay3": {
-      "port_file": "dos_port/src/home/fade.asm",
-      "why": "pret home/palettes.asm split across port files (draft Session H)"
-    },
-    "GetHealthBarColor": {
-      "port_file": "dos_port/src/home/fade.asm",
-      "why": "pret home/palettes.asm split across port files (draft Session H)"
-    },
     "GetMaxPP": {
       "port_file": "dos_port/src/engine/items/get_max_pp.asm",
       "why": "pret engine/items/item_effects.asm split across port files (draft Session H)"
@@ -150,22 +118,6 @@
     "GetSelectedMoveOffset2": {
       "port_file": "dos_port/src/engine/items/get_max_pp.asm",
       "why": "pret engine/items/item_effects.asm split across port files (draft Session H)"
-    },
-    "HandleBuildingRage": {
-      "port_file": "dos_port/src/engine/battle/building_rage.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
-    "HandleCounterMove": {
-      "port_file": "dos_port/src/engine/battle/counter.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
-    "HandleExplodingAnimation": {
-      "port_file": "dos_port/src/engine/battle/exploding_animation.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
-    "InitMapSprites": {
-      "port_file": "dos_port/src/engine/overworld/map_sprites.asm",
-      "why": "pret home/palettes.asm split across port files (draft Session H)"
     },
     "IsInArray": {
       "port_file": "dos_port/src/home/array.asm",
@@ -187,10 +139,6 @@
       "port_file": "dos_port/src/engine/battle/battle_menu.asm",
       "why": "pret engine/pokemon/evos_moves.asm split across port files (draft Session H)"
     },
-    "LoadEnemyMonFromParty": {
-      "port_file": "dos_port/src/engine/battle/load_enemy_from_party.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
     "LoadFlippedFrontSpriteByMonIndex": {
       "port_file": "dos_port/src/home/pics.asm",
       "why": "pret home/pokemon.asm split across port files (draft Session H)"
@@ -207,10 +155,6 @@
       "port_file": "dos_port/src/engine/pokemon/write_moves.asm",
       "why": "pret engine/pokemon/add_mon.asm split across port files (draft Session H)"
     },
-    "MetronomePickMove": {
-      "port_file": "dos_port/src/engine/battle/metronome.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
     "MoveAnimationTiles1": {
       "port_file": "dos_port/src/engine/overworld/cut.asm",
       "why": "INTERIM: battle engine/battle/animations.asm not yet ported; cut.asm (OW-3.4) incbins move_anim_1.2bpp as MoveAnimationTiles1 for the grass-leaf tile (tile 6). Retire and extern from animations.asm once battle move-anim tiles are ported."
@@ -219,17 +163,9 @@
       "port_file": "dos_port/src/home/pathfinding.asm",
       "why": "engine/overworld/pathfinding.asm engine-side section (FindPathToPlayer et al., OW-2.2) consolidated into the home-primary port file src/home/pathfinding.asm (overworld-port plan, file-layout name-collision rule)"
     },
-    "PlayBattleVictoryMusic": {
-      "port_file": "dos_port/src/audio/play_battle_music.asm",
-      "why": "pret engine/battle/core.asm battle-music routine co-located with PlayBattleMusic in src/audio/play_battle_music.asm (battle-music consolidation)"
-    },
     "PlaySoundWaitForCurrent": {
       "port_file": "dos_port/src/home/audio.asm",
       "why": "audio-branch consolidation (Phase A, merged 2026-07-07): the port's home-audio entry points live together in src/home/audio.asm with the audio HAL"
-    },
-    "PrintMoveFailureText": {
-      "port_file": "dos_port/src/engine/battle/print_move_failure.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
     },
     "PrintStatsBox": {
       "port_file": "dos_port/src/engine/battle/battle_menu.asm",
@@ -242,18 +178,6 @@
     "RenameEvolvedMon": {
       "port_file": "dos_port/src/engine/pokemon/evolution.asm",
       "why": "pret engine/pokemon/evos_moves.asm split across port files (draft Session H)"
-    },
-    "RestoreScreenTilesAndReloadTilePatterns": {
-      "port_file": "dos_port/src/home/fade.asm",
-      "why": "pret home/palettes.asm split across port files (draft Session H)"
-    },
-    "RunDefaultPaletteCommand": {
-      "port_file": "dos_port/src/engine/menus/naming_screen.asm",
-      "why": "pret home/palettes.asm split across port files (draft Session H)"
-    },
-    "SelectEnemyMove": {
-      "port_file": "dos_port/src/engine/battle/select_enemy_move.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
     },
     "TryEvolvingMon": {
       "port_file": "dos_port/src/engine/pokemon/evolution.asm",
