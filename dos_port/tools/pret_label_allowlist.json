@@ -15,33 +15,13 @@
       "port_file": "dos_port/src/home/money.asm",
       "why": "pret home/inventory.asm split across port files (draft Session H)"
     },
-    "AddBonusPP": {
-      "port_file": "dos_port/src/engine/items/get_max_pp.asm",
-      "why": "pret engine/items/item_effects.asm split across port files (draft Session H)"
-    },
     "AddItemToInventory": {
       "port_file": "dos_port/src/engine/items/inventory.asm",
       "why": "pret home/inventory.asm split across port files (draft Session H)"
     },
-    "AddPartyMon_WriteMovePP": {
-      "port_file": "dos_port/src/engine/pokemon/write_moves.asm",
-      "why": "pret engine/pokemon/add_mon.asm split across port files (draft Session H)"
-    },
     "Bankswitch": {
       "port_file": "dos_port/src/engine/battle/move_effect_helpers.asm",
       "why": "pret home/bankswitch2.asm split across port files (draft Session H)"
-    },
-    "CalcPositionOfPlayerRelativeToNPC": {
-      "port_file": "dos_port/src/home/pathfinding.asm",
-      "why": "engine/overworld/pathfinding.asm engine-side section (FindPathToPlayer et al., OW-2.2) consolidated into the home-primary port file src/home/pathfinding.asm (overworld-port plan, file-layout name-collision rule)"
-    },
-    "CallFunctionInTable": {
-      "port_file": "dos_port/src/home/run_map_script.asm",
-      "why": "pret home/array2.asm split across port files (draft Session H)"
-    },
-    "CancelledEvolution": {
-      "port_file": "dos_port/src/engine/pokemon/evolution.asm",
-      "why": "pret engine/pokemon/evos_moves.asm split across port files (draft Session H)"
     },
     "CheckForHiddenEvent": {
       "port_file": "dos_port/src/home/hidden_events.asm",
@@ -51,93 +31,17 @@
       "port_file": "dos_port/src/home/hidden_events.asm",
       "why": "engine/overworld/hidden_events.asm engine-side section (CheckForHiddenEvent, OW-3.3) consolidated into the home-primary port file src/home/hidden_events.asm (overworld-port plan, file-layout name-collision rule)"
     },
-    "ClearBgMap": {
-      "port_file": "dos_port/src/video/lcd_control.asm",
-      "why": "pret home/vcopy.asm split across port files (draft Session H)"
-    },
-    "ConvertNPCMovementDirectionToJoypadMask": {
-      "port_file": "dos_port/src/home/pathfinding.asm",
-      "why": "engine/overworld/pathfinding.asm engine-side section (FindPathToPlayer et al., OW-2.2) consolidated into the home-primary port file src/home/pathfinding.asm (overworld-port plan, file-layout name-collision rule)"
-    },
-    "ConvertNPCMovementDirectionsToJoypadMasks": {
-      "port_file": "dos_port/src/home/pathfinding.asm",
-      "why": "engine/overworld/pathfinding.asm engine-side section (FindPathToPlayer et al., OW-2.2) consolidated into the home-primary port file src/home/pathfinding.asm (overworld-port plan, file-layout name-collision rule)"
-    },
-    "CopyString": {
-      "port_file": "dos_port/src/home/vcopy.asm",
-      "why": "pret home/copy_string.asm split across port files (draft Session H)"
-    },
-    "CopyToStringBuffer": {
-      "port_file": "dos_port/src/engine/battle/core.asm",
-      "why": "pret home/copy_string.asm split across port files (draft Session H)"
-    },
     "EndNPCMovementScript": {
       "port_file": "dos_port/src/engine/overworld/auto_movement.asm",
       "why": "pret home/npc_movement.asm wrapper (farjp _EndNPCMovementScript); the port has no home/npc_movement.asm mirror, so the trivial banking-elided jump is co-located with its target _EndNPCMovementScript in auto_movement.asm (OW-2.3)"
-    },
-    "EvolutionAfterBattle": {
-      "port_file": "dos_port/src/engine/pokemon/evolution.asm",
-      "why": "pret engine/pokemon/evos_moves.asm split across port files (draft Session H)"
     },
     "FadeOutAudio": {
       "port_file": "dos_port/src/home/audio.asm",
       "why": "audio-branch consolidation (Phase A, merged 2026-07-07): the port's home-audio entry points live together in src/home/audio.asm with the audio HAL"
     },
-    "FillBgMap": {
-      "port_file": "dos_port/src/video/lcd_control.asm",
-      "why": "pret home/vcopy.asm split across port files (draft Session H)"
-    },
-    "FindPathToPlayer": {
-      "port_file": "dos_port/src/home/pathfinding.asm",
-      "why": "engine/overworld/pathfinding.asm engine-side section (FindPathToPlayer et al., OW-2.2) consolidated into the home-primary port file src/home/pathfinding.asm (overworld-port plan, file-layout name-collision rule)"
-    },
-    "FlowerTile1": {
-      "port_file": "dos_port/src/video/bg_anim.asm",
-      "why": "pret home/vcopy.asm split across port files (draft Session H)"
-    },
-    "FlowerTile2": {
-      "port_file": "dos_port/src/video/bg_anim.asm",
-      "why": "pret home/vcopy.asm split across port files (draft Session H)"
-    },
-    "FlowerTile3": {
-      "port_file": "dos_port/src/video/bg_anim.asm",
-      "why": "pret home/vcopy.asm split across port files (draft Session H)"
-    },
-    "GetMaxPP": {
-      "port_file": "dos_port/src/engine/items/get_max_pp.asm",
-      "why": "pret engine/items/item_effects.asm split across port files (draft Session H)"
-    },
-    "GetMonLearnset": {
-      "port_file": "dos_port/src/engine/pokemon/write_moves.asm",
-      "why": "pret engine/pokemon/evos_moves.asm split across port files (draft Session H)"
-    },
-    "GetSelectedMoveOffset": {
-      "port_file": "dos_port/src/engine/items/get_max_pp.asm",
-      "why": "pret engine/items/item_effects.asm split across port files (draft Session H)"
-    },
-    "GetSelectedMoveOffset2": {
-      "port_file": "dos_port/src/engine/items/get_max_pp.asm",
-      "why": "pret engine/items/item_effects.asm split across port files (draft Session H)"
-    },
-    "IsInArray": {
-      "port_file": "dos_port/src/home/array.asm",
-      "why": "pret home/array2.asm split across port files (draft Session H)"
-    },
-    "IsInRestOfArray": {
-      "port_file": "dos_port/src/home/vcopy.asm",
-      "why": "pret home/array2.asm split across port files (draft Session H)"
-    },
-    "IsKeyItem_": {
-      "port_file": "dos_port/src/home/item_predicates.asm",
-      "why": "pret engine/items/item_effects.asm split across port files (draft Session H)"
-    },
     "JoypadLowSensitivity": {
       "port_file": "dos_port/src/home/joypad_lowsens.asm",
       "why": "pret home/joypad2.asm split across port files (draft Session H)"
-    },
-    "LearnMoveFromLevelUp": {
-      "port_file": "dos_port/src/engine/battle/battle_menu.asm",
-      "why": "pret engine/pokemon/evos_moves.asm split across port files (draft Session H)"
     },
     "LoadFlippedFrontSpriteByMonIndex": {
       "port_file": "dos_port/src/home/pics.asm",
@@ -151,17 +55,9 @@
       "port_file": "dos_port/src/engine/pokemon/load_mon_data.asm",
       "why": "pret home/pokemon.asm split across port files (draft Session H)"
     },
-    "LoadMovePPs": {
-      "port_file": "dos_port/src/engine/pokemon/write_moves.asm",
-      "why": "pret engine/pokemon/add_mon.asm split across port files (draft Session H)"
-    },
     "MoveAnimationTiles1": {
       "port_file": "dos_port/src/engine/overworld/cut.asm",
       "why": "INTERIM: battle engine/battle/animations.asm not yet ported; cut.asm (OW-3.4) incbins move_anim_1.2bpp as MoveAnimationTiles1 for the grass-leaf tile (tile 6). Retire and extern from animations.asm once battle move-anim tiles are ported."
-    },
-    "NPCMovementDirectionsToJoypadMasksTable": {
-      "port_file": "dos_port/src/home/pathfinding.asm",
-      "why": "engine/overworld/pathfinding.asm engine-side section (FindPathToPlayer et al., OW-2.2) consolidated into the home-primary port file src/home/pathfinding.asm (overworld-port plan, file-layout name-collision rule)"
     },
     "PlaySoundWaitForCurrent": {
       "port_file": "dos_port/src/home/audio.asm",
@@ -175,22 +71,6 @@
       "port_file": "dos_port/src/engine/items/inventory.asm",
       "why": "pret home/inventory.asm split across port files (draft Session H)"
     },
-    "RenameEvolvedMon": {
-      "port_file": "dos_port/src/engine/pokemon/evolution.asm",
-      "why": "pret engine/pokemon/evos_moves.asm split across port files (draft Session H)"
-    },
-    "TryEvolvingMon": {
-      "port_file": "dos_port/src/engine/pokemon/evolution.asm",
-      "why": "pret engine/pokemon/evos_moves.asm split across port files (draft Session H)"
-    },
-    "UpdateMovingBgTiles": {
-      "port_file": "dos_port/src/video/bg_anim.asm",
-      "why": "pret home/vcopy.asm split across port files (draft Session H)"
-    },
-    "VBlankCopyBgMap": {
-      "port_file": "dos_port/src/video/bg_anim.asm",
-      "why": "pret home/vcopy.asm split across port files (draft Session H)"
-    },
     "WaitForSoundToFinish": {
       "port_file": "dos_port/src/home/audio.asm",
       "why": "audio-branch consolidation (Phase A, merged 2026-07-07): the port's home-audio entry points live together in src/home/audio.asm with the audio HAL"
@@ -198,18 +78,6 @@
     "WaitForTextScrollButtonPress": {
       "port_file": "dos_port/src/engine/battle/battle_menu.asm",
       "why": "pret home/joypad2.asm split across port files (draft Session H)"
-    },
-    "WriteMonMoves": {
-      "port_file": "dos_port/src/engine/pokemon/write_moves.asm",
-      "why": "pret engine/pokemon/evos_moves.asm split across port files (draft Session H)"
-    },
-    "WriteMonMoves_ShiftMoveData": {
-      "port_file": "dos_port/src/engine/pokemon/write_moves.asm",
-      "why": "pret engine/pokemon/evos_moves.asm split across port files (draft Session H)"
-    },
-    "_AddPartyMon": {
-      "port_file": "dos_port/src/engine/pokemon/add_party_mon.asm",
-      "why": "pret engine/pokemon/add_mon.asm split across port files (draft Session H)"
     },
     "CopyUncompressedPicToHL": {
       "port_file": "dos_port/src/home/pics.asm",
@@ -222,26 +90,6 @@
     "EffectCallBattleCore": {
       "port_file": "dos_port/src/engine/battle/move_effect_helpers.asm",
       "why": "Scanner-reviewed 2026-07-15: EffectCallBattleCore from pret engine/battle/move_effects/reflect_light_screen.asm has its selected single non-stub definition at dos_port/src/engine/battle/move_effect_helpers.asm; preserve this per-label split."
-    },
-    "DuplicateBitsTable": {
-      "port_file": "dos_port/src/home/pics.asm",
-      "why": "Scanner-reviewed 2026-07-15: DuplicateBitsTable from pret engine/battle/scale_sprites.asm has its selected single non-stub definition at dos_port/src/home/pics.asm; preserve this per-label split."
-    },
-    "ScaleFirstThreeSpriteColumnsByTwo": {
-      "port_file": "dos_port/src/home/pics.asm",
-      "why": "Scanner-reviewed 2026-07-15: ScaleFirstThreeSpriteColumnsByTwo from pret engine/battle/scale_sprites.asm has its selected single non-stub definition at dos_port/src/home/pics.asm; preserve this per-label split."
-    },
-    "ScaleLastSpriteColumnByTwo": {
-      "port_file": "dos_port/src/home/pics.asm",
-      "why": "Scanner-reviewed 2026-07-15: ScaleLastSpriteColumnByTwo from pret engine/battle/scale_sprites.asm has its selected single non-stub definition at dos_port/src/home/pics.asm; preserve this per-label split."
-    },
-    "ScalePixelsByTwo": {
-      "port_file": "dos_port/src/home/pics.asm",
-      "why": "Scanner-reviewed 2026-07-15: ScalePixelsByTwo from pret engine/battle/scale_sprites.asm has its selected single non-stub definition at dos_port/src/home/pics.asm; preserve this per-label split."
-    },
-    "ScaleSpriteByTwo": {
-      "port_file": "dos_port/src/home/pics.asm",
-      "why": "Scanner-reviewed 2026-07-15: ScaleSpriteByTwo from pret engine/battle/scale_sprites.asm has its selected single non-stub definition at dos_port/src/home/pics.asm; preserve this per-label split."
     },
     "DisplayUsedMoveText": {
       "port_file": "dos_port/src/engine/battle/core.asm",
