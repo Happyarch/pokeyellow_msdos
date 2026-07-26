@@ -11,7 +11,7 @@
 ; ── REACHABILITY (checked at menu-fidelity row 15, not assumed) ─────────────
 ; AskName has ONE live caller: src/engine/items/item_effects.asm:2157 (the box-mon
 ; nickname prompt), and item_effects.asm is in GAME_SRCS. The *catch* path does NOT
-; reach it: src/engine/pokemon/add_party_mon.asm:98 short-circuits pret's
+; reach it: src/engine/pokemon/add_mon.asm _AddPartyMon short-circuits pret's
 ; `predef AskName` and keeps the default species name (a documented STUB there).
 ; DisplayNameRaterScreen has no caller yet (the Name Rater script is unported).
 ;

@@ -19,7 +19,7 @@
 ; wMoveData with `ld a, BANK(Moves) / call FarCopyData` and then reads
 ; [wMoveData + MOVE_PP]. The port's `Moves` is a flat program-image label with no
 ; ROM bank, so the base-PP byte is read straight out of the table — the same
-; documented divergence already carried by engine/pokemon/write_moves.asm
+; documented divergence already carried by engine/pokemon/add_mon.asm
 ; (LoadMovePPs) and engine/pokemon/get_max_pp.asm. AddNTimes is retained: it is
 ; pure pointer arithmetic (ESI += AL*BX) and works on the flat pointer unchanged.
 ;

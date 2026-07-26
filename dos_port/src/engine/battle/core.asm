@@ -225,7 +225,7 @@ extern GetMonHeader                    ; home/pokemon.asm — loads wMonHeader f
 extern CalcStats                       ; home/move_mon.asm — EDX=dest, ESI=EV base, BH=useEVs
 extern GetMonName                      ; home/names.asm — wNamedObjectIndex -> wNameBuffer
 extern WriteMonMoves                   ; evos_moves.asm — level-up moveset (predef: wPredefDE)
-extern LoadMovePPs                     ; write_moves.asm — PPs (predef: wPredefHL/DE)
+extern LoadMovePPs                     ; add_mon.asm — PPs (predef: wPredefHL/DE)
 extern IndexToPokedex                  ; engine/menus/pokedex.asm — predef, wPokedexNum in place
 extern FlagAction                      ; flag_action.asm — ESI=array, CL=bit, BH=action
 extern PlayApplyingAttackAnimation     ; animations.asm — pret animations.asm:488

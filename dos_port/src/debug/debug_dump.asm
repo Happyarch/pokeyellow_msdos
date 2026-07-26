@@ -1758,7 +1758,7 @@ RunBattleTest:
 ; src/engine/pokemon/evos_moves.asm:LearnMoveFromLevelUp entry point the real
 ; post-battle level-up sequence calls, on PrepareNewGameDebug's real STARTER_
 ; PIKACHU (party slot 3, level 5) — its moves come from the real WriteMonMoves
-; learnset walk (add_party_mon.asm), not hand-picked, so whichever slot is open
+; learnset walk (add_mon.asm), not hand-picked, so whichever slot is open
 ; is authentic. Levels it 5->6, which pret's PikachuEvosMoves learns TAIL_WHIP
 ; at (evos_moves.asm-equivalent assets/evos_moves.inc). wPlayerMonNumber is also
 ; set to slot 3 so the in-battle wBattleMonMoves/PP sync branch runs too.

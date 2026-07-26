@@ -409,12 +409,10 @@ POKEMON_SRCS := \
     src/home/pokemon.asm \
     src/home/move_mon.asm \
     src/engine/pokemon/experience.asm \
-    src/engine/pokemon/add_party_mon.asm \
     src/engine/pokemon/add_mon.asm \
     src/engine/pokemon/load_mon_data.asm \
     src/engine/pokemon/set_types.asm \
     src/engine/pokemon/remove_mon.asm \
-    src/engine/pokemon/write_moves.asm \
     src/engine/pokemon/evos_moves.asm \
     src/engine/pokemon/status_ailments.asm \
     src/engine/gfx/hp_bar.asm \

@@ -98,7 +98,7 @@ SetDebugNewGameParty:
 ; -----------------------------------------------------------------------------
 PrepareNewGameDebug:
     ; Deterministic player identity FIRST — before the party is built, so
-    ; _AddPartyMon copies "RED" into each mon's OT-name slot (add_party_mon.asm:
+    ; _AddPartyMon copies "RED" into each mon's OT-name slot (add_mon.asm:
     ; OT source = wPlayerName).
     call SeedDeterministicPlayerIdentity
 

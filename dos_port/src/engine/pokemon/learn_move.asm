@@ -136,7 +136,7 @@ DontAbandonLearning:
     mov [ebp + esi], al               ; write the new move into the slot
     mov edi, esi
     add edi, MON_PP - MON_MOVES       ; edi = the slot's corresponding PP byte
-    ; New move's base PP, from the flat Moves table (matches write_moves.asm's
+    ; New move's base PP, from the flat Moves table (matches add_mon.asm's
     ; LoadMovePPs idiom — flat model replaces pret's AddNTimes+FarCopyData+wBuffer
     ; ROM-bank roundtrip with a direct indexed read).
     movzx ecx, al

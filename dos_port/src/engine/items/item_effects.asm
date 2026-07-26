@@ -42,7 +42,7 @@ global RareCandyLevelUp
 extern CalcStats        ; home/move_mon.asm (BH=consider-exp, ESI=stat-exp ptr, EDX=dest)
 extern CalcExperience   ; engine/pokemon/experience.asm (DH=level -> H_EXPERIENCE)
 extern AddNTimes        ; home/array.asm (ESI += AL*BX)
-extern LoadMovePPs      ; engine/pokemon/write_moves.asm (predef; reads wPredefHL/DE)
+extern LoadMovePPs      ; engine/pokemon/add_mon.asm (predef; reads wPredefHL/DE)
 
 global AddBonusPP
 global GetMaxPP
