@@ -147,8 +147,9 @@ evidence, not as final authority.
 **Phase 2: Game Loop** — big-picture scope lives in `ROADMAP.md`; per-work-item
 detail lives in the active `docs/current_plan_*.md` set (generated inventory:
 `dos_port/tools/project_state --plans`). The old root `TODO.md` was removed
-2026-07-25 as stale beyond salvage — do not cite it, and note that some deferred
-tails it used to track are now untracked (memory `todo-md-deleted-orphaned-trackers`).
+2026-07-25 as stale beyond salvage — do not cite it. The deferred tails it used
+to track now live in `docs/current_plan_backlog.md` (memory
+`todo-md-deleted-orphaned-trackers` records what moved and why).
 Phase 1 delivered the BG tile decoder + tilemap renderer with SCX/SCY scrolling
 (`src/ppu/ppu.asm`) and the keyboard → joypad ISR (`src/input/joypad.asm`);
 window layer, OAM sprites, and the save system remain open there.
