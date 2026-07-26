@@ -65,7 +65,7 @@ global PartyMenuPrintText               ; home/pokemon.asm:HandlePartyMenuInput 
 extern LoadMonPartySpriteGfxWithLCDDisabled  ; engine/gfx/mon_icons.asm
 extern WriteMonPartySpriteOAMByPartyIndex    ; engine/gfx/mon_icons.asm
 extern IsThisPartyMonStarterPikachu          ; engine/pikachu/pikachu_status.asm
-extern CheckPikachuFollowingPlayer           ; engine/overworld/pikachu.asm
+extern CheckPikachuFollowingPlayer           ; home/pikachu.asm
 extern SetMonPartySpriteOrigin               ; engine/gfx/mon_icons.asm (port: OAM→canvas projection)
 extern FillMemory                    ; home/copy2.asm — ESI=dest, BX=count, AL=value
 extern UpdateSprites                 ; engine/overworld/movement.asm

@@ -60,7 +60,7 @@ extern PartyMenuMirror                  ; src/engine/menus/party_menu.asm — sc
 extern PartyMenuPrintText               ; src/engine/menus/party_menu.asm — PrintText via msgbox_party
 extern PrintStatusAilment               ; src/engine/pokemon/status_ailments.asm
 extern IsThisPartyMonStarterPikachu     ; src/engine/pikachu/pikachu_status.asm
-extern CheckPikachuFollowingPlayer      ; src/engine/overworld/pikachu.asm
+extern CheckPikachuFollowingPlayer      ; src/home/pikachu.asm
 extern PartyMenuText_12cc               ; assets/item_text.inc (_SleepingPikachuText1)
 %ifdef DEBUG_PARTYMENU
 extern DelayFrame

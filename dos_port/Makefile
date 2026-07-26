@@ -218,6 +218,7 @@ HOME_SRCS := \
     src/home/serial_stubs.asm \
     src/home/copy_data.asm \
     src/home/overworld.asm \
+    src/home/pikachu.asm \
     src/home/bankswitch2.asm \
     src/home/bankswitch.asm \
     src/home/text_script.asm \

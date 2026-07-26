@@ -772,7 +772,7 @@ extern ClearScreen          ; home/copy2.asm
 extern GBPalWhiteOut        ; home/fade.asm
 extern ReloadMapData        ; home/reload_tiles.asm
 extern DelayFrames          ; video/frame.asm — BL = frames
-extern Func_1510            ; engine/overworld/pikachu.asm — ItemUseEscapeRope's Pikachu refresh
+extern Func_1510            ; home/pikachu.asm — ItemUseEscapeRope's Pikachu refresh
 extern WaitForTextScrollButtonPress ; engine/battle/battle_menu.asm
 extern ItemUseText00_ref            ; assets/item_text.inc — "<PLAYER> used <ITEM>!"
 extern PrintText        ; home/window.asm — ESI = FLAT TX stream ptr

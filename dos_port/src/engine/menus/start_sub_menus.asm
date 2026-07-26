@@ -158,7 +158,7 @@ extern CheckIfInOutsideMap           ; engine/overworld/warp_check.asm — ZF=1 
 extern IsSurfingAllowed              ; engine/overworld/field_move_messages.asm (now LINKED)
 extern PrintStrengthText              ; engine/overworld/field_move_messages.asm (now LINKED)
 extern UsedCut                        ; engine/overworld/cut.asm — predef UsedCut (.cut)
-extern Func_1510                     ; engine/overworld/pikachu.asm (relocated)
+extern Func_1510                     ; home/pikachu.asm
 extern ChooseFlyDestination          ; home/reload_tiles.asm — Town Map Fly UI wrapper
 extern DelayFrames                   ; video/frame.asm — BL = frame count
 extern Divide                        ; home/math.asm — hDividend/hDivisor, BH = byte count
