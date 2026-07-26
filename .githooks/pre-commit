@@ -42,13 +42,38 @@ fi
 # sneaked past — the finding still fires on every SUBSEQUENT commit until the
 # maintainer re-blesses, so an unapproved registry cannot quietly persist. Every
 # other class is still enforced in full.
+#
+# AND IT PRINTS THE HASH. This block used to say "hand the new SHA-256 to the
+# maintainer" without ever printing one, which left an agent to source a
+# 64-hex-character value from somewhere. In session 15 an agent sourced it from
+# nowhere: it wrote a well-formed, entirely fabricated hash into the retirement
+# commit message, and only caught it because that same message told the reader
+# to verify with sha256sum. A hash has no semantic content, so nothing about a
+# wrong one looks wrong. The fix is not vigilance — it is never leaving a slot
+# for an unmeasured value. The hook has the file; the hook computes it.
+# (Hash the WORKTREE file, because that is what lint_pret_labels' own
+# registry_approval hashes -- see its open(ALLOWLIST,'rb'). Do not switch this
+# to `git show :path` without changing that too, or the gate and the hook will
+# disagree the moment someone stages and then edits.)
 GATEFLAGS=
 if ! git diff --cached --quiet -- "$root/dos_port/tools/pret_label_allowlist.json"; then
     GATEFLAGS=--allow-unapproved-registry
+    allowlist_sha=$(sha256sum "$root/dos_port/tools/pret_label_allowlist.json" | cut -d' ' -f1)
+    rows=$(python3 -c 'import json,sys; print(len(json.load(open(sys.argv[1]))["relocated_labels"]))' \
+           "$root/dos_port/tools/pret_label_allowlist.json" 2>/dev/null || echo '?')
     echo "pre-commit: pret_label_allowlist.json is staged — treating this as a"
     echo "pre-commit: deliberate registry edit; registry_approval is reported as"
-    echo "pre-commit: INFO for this commit only. Hand the new SHA-256 to the"
-    echo "pre-commit: maintainer; it will block again on the next commit until blessed."
+    echo "pre-commit: INFO for this commit only. It will block again on the next"
+    echo "pre-commit: commit until the maintainer re-blesses."
+    echo "pre-commit:"
+    echo "pre-commit: MAINTAINER ACTION — $rows relocation row(s). Agents must NOT run this:"
+    echo "pre-commit:"
+    echo "pre-commit:   git config pokeyellow.pretAllowlistApprovedSha256 \\"
+    echo "pre-commit:     $allowlist_sha"
+    echo "pre-commit:"
+    echo "pre-commit: That value was COMPUTED from the file just now. Do not retype it;"
+    echo "pre-commit: copy it, or re-derive it with:"
+    echo "pre-commit:   sha256sum dos_port/tools/pret_label_allowlist.json"
 fi
 
 echo "pre-commit: running the static gate (make -C dos_port static_gate)..."

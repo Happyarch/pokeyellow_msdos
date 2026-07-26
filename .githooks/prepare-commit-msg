@@ -1,0 +1,127 @@
+#!/bin/sh
+# prepare-commit-msg — inject the relocation registry's real SHA-256 into the
+# commit message whenever pret_label_allowlist.json is staged.
+#
+# Installed by the same `make -C dos_port install-hooks` (it sets core.hooksPath
+# to this directory, so every hook here is picked up automatically).
+#
+# WHY THIS EXISTS.
+#
+# Retiring relocation rows requires handing the maintainer a 64-hex-character
+# SHA-256 so they can re-bless the registry. Until now the author typed that
+# value into the commit message by hand. In session 15 an agent did not type it
+# — it GENERATED it: a perfectly well-formed, completely fabricated hash, in a
+# message whose own next line instructed the reader to verify with sha256sum.
+#
+# That is not a discipline failure you can fix with a reminder. A hash carries
+# no meaning, so a wrong one is indistinguishable from a right one on sight, and
+# writing plausible hex is the single easiest thing a language model does. Any
+# workflow that leaves a hash-shaped hole in prose for someone to fill will get
+# it filled with confabulation eventually.
+#
+# So the hole is gone. The hook measures the file and writes the value itself.
+# Nothing between `sha256sum` and the commit message is authored by hand.
+#
+# The same rule generalises: never leave an unmeasured value as a slot in text
+# you are composing. Compute it into a variable and let the machine substitute.
+#
+# WHAT IT DOES NOT DO. It does not bless anything, and it must never learn how —
+# the approval deliberately lives in repo-local git config, OUTSIDE the worktree,
+# so that nothing committed can forge it. This hook only reports.
+set -e
+
+msgfile=$1
+source=$2
+
+root=$(git rev-parse --show-toplevel)
+allowlist="$root/dos_port/tools/pret_label_allowlist.json"
+
+[ -f "$allowlist" ] || exit 0
+
+MARKER='registry approval (inserted by .githooks/prepare-commit-msg)'
+EMPTY_TREE=$(git hash-object -t tree /dev/null)
+
+head=$(git rev-parse --verify --quiet HEAD 2>/dev/null) || head=
+[ -n "$head" ] || head=$EMPTY_TREE
+parent=$(git rev-parse --verify --quiet HEAD^ 2>/dev/null) || parent=
+[ -n "$parent" ] || parent=$EMPTY_TREE
+
+# *** AMEND SILENTLY DELETES THIS BLOCK IF YOU GET THE TRIGGER WRONG, AND GIT
+# GIVES YOU NO CLEAN WAY TO DETECT AN AMEND. *** Measured, not assumed:
+#
+#     git commit -m          -> source=message  sha=      GIT_REFLOG_ACTION unset
+#     git commit --amend -m  -> source=message  sha=      GIT_REFLOG_ACTION unset
+#     git commit --amend     -> source=commit   sha=HEAD
+#
+# So `--amend -m` is INDISTINGUISHABLE from an ordinary `-m` commit, and `-m`/`-F`
+# is how this workflow commits. A naive "is the allowlist staged vs HEAD?" guard
+# therefore stays silent on exactly the amend that reworded the retirement commit
+# — which is when the maintainer's one action goes missing. That is not a
+# hypothetical: the session that motivated this hook amended its retirement
+# commit for precisely this reason.
+#
+# Three clauses, chosen so none of them can fire on an ordinary unrelated commit:
+#
+#   A. NORMAL — the allowlist differs between the index and HEAD. This is the
+#      retirement commit itself.
+#   B. AMEND WE CAN SEE (source=commit, i.e. `--amend` / `--amend --no-edit`) —
+#      compare against HEAD's PARENT, since HEAD is the commit being rewritten.
+#   C. REWORD AMEND WE CANNOT SEE (`--amend -m/-F`) — detected structurally
+#      instead: NOTHING AT ALL is staged relative to HEAD. Only an amend can
+#      produce that, because an ordinary commit must stage something. Require
+#      HEAD's own message to already carry the marker, so this re-injects the
+#      block onto the commit it belongs to and cannot leak onto anything else.
+emit=no
+if ! git diff --cached --quiet "$head" -- "$allowlist" 2>/dev/null; then
+    emit=yes                                             # A
+elif [ "$source" = "commit" ] &&
+     ! git diff --cached --quiet "$parent" -- "$allowlist" 2>/dev/null; then
+    emit=yes                                             # B
+elif git diff --cached --quiet "$head" 2>/dev/null &&
+     [ "$head" != "$EMPTY_TREE" ] &&
+     git log -1 --format=%B 2>/dev/null | grep -qF "$MARKER"; then
+    emit=yes                                             # C
+fi
+[ "$emit" = yes ] || exit 0
+
+# Hash the WORKTREE file: that is what lint_pret_labels' registry_approval
+# hashes, and what the maintainer will get from `sha256sum` after checkout.
+# Keep these two in step if either ever changes.
+sha=$(sha256sum "$allowlist" | cut -d' ' -f1)
+
+# Idempotent: an --amend re-runs this hook, and the block is already there.
+if grep -qF "$sha" "$msgfile" 2>/dev/null; then
+    exit 0
+fi
+
+rows=$(python3 -c 'import json,sys; print(len(json.load(open(sys.argv[1]))["relocated_labels"]))' \
+       "$allowlist" 2>/dev/null || echo '?')
+
+# Append below the message the author wrote.
+#
+# Everything here is stored VERBATIM, `#` lines included. Git only strips
+# comments under --cleanup=strip, which is the default for editor-driven commits
+# but NOT for `-m`/`-F` — and `-F` is how this workflow commits. (Measured: a
+# first draft of this hook used `#` framing on the assumption it would be
+# stripped, and it landed in the commit message. Do not reintroduce it.)
+cat >>"$msgfile" <<EOF
+
+--- $MARKER ---
+
+This commit stages dos_port/tools/pret_label_allowlist.json, so
+registry_approval is 1 by construction and every subsequent commit staging
+anything under dos_port/ is blocked until the maintainer re-blesses.
+
+Relocation rows remaining: $rows
+Allowlist SHA-256:         $sha
+
+MAINTAINER ACTION (agents must never run this):
+
+    git config pokeyellow.pretAllowlistApprovedSha256 \\
+      $sha
+
+The SHA-256 above was measured from the file by the hook, not typed by the
+commit's author. Verify it independently before blessing:
+
+    sha256sum dos_port/tools/pret_label_allowlist.json
+EOF
