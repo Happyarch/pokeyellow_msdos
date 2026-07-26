@@ -26,7 +26,10 @@ principle).
 
 ### Voice budget
 - OPL3 has 18 FM voices total
-- The APU shim uses 4 (music) + up to 4 (SFX with `/SFXOVERLAP`)
+- The APU shim uses 4 (music) + up to 4 (SFX) — note `/SFXOVERLAP` is **not
+  implemented yet**: `src/audio/opl_enh.asm:12` records it as "still deferred —
+  will contend here when it lands". Budget as if it will land, but do not go
+  looking for the flag.
 - **~10 spare voices** for your enhancements
 - Budget per song: **4–6 tier-1 voices** (leave headroom for SFX overlap
   and tier 2–3 on MT-32)

@@ -198,3 +198,11 @@ for block fills/copies.
    + `tools/lint_pret_labels`; then `tools/update_label_db` so the label DB
    reflects the new translation/stubs (rescan-derived — skipping is
    self-healing, not corrupting).
+   Two automated gates sit behind those: `tools/fidelity_gate` runs the
+   per-change/per-label chain for you (and carries the relocation move battery,
+   `--move-baseline` / `--move-verify`), and `tools/static_gate` is the whole-tree
+   ratchet that **`.githooks/pre-commit` runs on every commit staging anything
+   under `dos_port/`**. Neither says anything about behaviour — the golden suite is
+   separate. See skill `faithfulness-review`.
+   CAUTION: a bare `tools/lint_pret_labels` **rescans the tracked
+   `translation.db` in place**; pass `--no-scan` when you only want findings.

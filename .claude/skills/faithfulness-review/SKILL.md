@@ -12,6 +12,39 @@ This gate makes that class of divergence fail a check instead of surviving to th
 user. All tools live in `dos_port/tools/`; they read `translation.db`, which is
 **always rescan-derived — never edit it by hand or write it from an agent.**
 
+## Two automated gates exist. Know which is which before you start.
+
+This skill used to describe only the hand-run tools below, which left two things
+invisible: that a **pre-commit hook already runs a whole-tree ratchet on every
+commit**, and that the per-change evidence chain and the relocation move battery
+are a tool, not a manual procedure.
+
+    tools/static_gate     WHOLE-TREE structural ratchet against the checked-in
+                          per-class baseline (tools/static_gate_baseline.json).
+                          No arguments. **Invoked by .githooks/pre-commit**, so it
+                          runs whether or not you remember it — install with
+                          `make -C dos_port install-hooks`. It runs both
+                          lint_pret_labels modes, the label-DB pytest suite, and
+                          validate_scenarios.py. THE RATCHET GOES BOTH WAYS: a
+                          class that shrank fails too, until the baseline is
+                          lowered deliberately with a stated reason.
+                          It exits 0 when nothing under `dos_port/` is staged.
+    tools/fidelity_gate   PER-CHANGE, PER-LABEL: derives the pret labels a diff
+                          touched and runs lint / project_state / faithdiff over
+                          them — the automated form of steps 1-2 below. It ALSO
+                          carries the relocation move battery:
+                            fidelity_gate --move-baseline DIR file...   (BEFORE editing)
+                            fidelity_gate --move-verify   DIR [--gates LIST|auto]
+                          Use the battery for any mirror move; it decomposes the
+                          diff into moved / new / dropped, hard-fails a non-
+                          declaration line that appears or vanishes, and builds
+                          the `%ifdef`-only link paths you name.
+
+Neither replaces step 3: **a green gate proves no structural or bookkeeping
+drift and NOTHING about behaviour.** Both print that caveat on every pass.
+Design notes, non-vacuity proofs and traps: stigmergy memory
+`static-gate-and-ci-wiring`.
+
 ## The gate (run before committing a change that touches a pret-labeled routine)
 
 0. **Annotate the divergence in the source, structurally.** Before the tools:

@@ -355,6 +355,15 @@ commit: `dos_port/tools/faithdiff <Label>` (justify every unsuppressed
 added/dropped call in the commit message) and `dos_port/tools/lint_pret_labels`
 (must exit 0). Workflow + tools → skill **`faithfulness-review`**.
 
+**Two automated gates back this up, and one of them runs whether you remember it
+or not.** `dos_port/tools/static_gate` is a whole-tree ratchet over a checked-in
+per-class baseline and is **invoked by `.githooks/pre-commit`** (install:
+`make -C dos_port install-hooks`); it exits 0 only when nothing under `dos_port/`
+is staged. `dos_port/tools/fidelity_gate` is the per-change, per-label chain and
+also carries the relocation move battery (`--move-baseline` before editing,
+`--move-verify` after). A green gate proves no structural or bookkeeping drift and
+**nothing about behaviour** — the golden suite is separate.
+
 **A failed fidelity check means repair the implementation.** New relocations are
 not allowed. If a routine has a pret counterpart, put its complete body and every
 pret entry point in `dos_port/src/<pret path>`. “Related code belongs together,”

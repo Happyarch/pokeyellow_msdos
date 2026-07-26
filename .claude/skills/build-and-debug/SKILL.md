@@ -26,8 +26,10 @@ dos_port/
     entry.asm              ← DPMI entry, memory alloc, /FIXALL|/FIXCRIT parsing, main loop
     video.asm              ← VGA mode 13h, test pattern, 2× blit
     timing.asm             ← PIT 60 Hz, tick ISR, vblank sync
-  src/util/
-    fill_memory.asm        ← first translated routine (FillMemory)
+  src/home/
+    copy2.asm              ← FillMemory / CopyVideoData (FillMemory was the first
+                             routine translated, when it lived in the long-gone
+                             src/util/fill_memory.asm)
   src/ppu/
     ppu.asm                ← software PPU: BG tile decoder + tilemap renderer
   src/input/
@@ -35,7 +37,8 @@ dos_port/
   tools/
     README.md              ← wayfinding map of this directory (generators vs
                              human-facing tools vs shared libraries)
-    generators/            ← every gen_*.py Tier-1 asset generator (~60 files,
+    generators/            ← every gen_*.py Tier-1 asset generator (68 files at
+                             2026-07-26,
                              invoked by `make assets`, not run standalone —
                              see gen_all_assets.py / gen_map_headers.py / etc.)
                              + gb_text.py (charmap-encode helper) + gen_symfile.py
@@ -64,7 +67,9 @@ docs/
   glitch_safety.md         ← glitch sandbox guidance
   386_optimization_strategy.md ← Guide for fast and faithful 386 assembly optimizations
   ui_projection.md         ← per-subsystem GB→port UI coordinate registry + ; PROJ tags
-  current_plan.md          ← active multi-step implementation plan (see below)
+  current_plan_*.md        ← active multi-step implementation plans, one per work
+                             item (there is no single current_plan.md; the generated
+                             inventory is `tools/project_state --plans`)
   references/
     README.md              ← reference link index
     pandocs/               ← downloaded Pan Docs markdown pages
@@ -130,7 +135,7 @@ dos_port/build                         # build (passes args to make)
 dos_port/run                           # build + launch in DOSBox-X
 
 # Single file assembly check
-nasm -f coff -o /dev/null dos_port/src/util/fill_memory.asm
+nasm -f coff -I dos_port/include -I dos_port -o /dev/null dos_port/src/home/copy2.asm
 ```
 
 DOSBox-X is driven by the tracked repo config **`dos_port/dosbox-x.conf`**, loaded
@@ -187,7 +192,9 @@ symbol-annotated disassembly, and paused-frame PNG dumps.
 
 **Symbols are always fresh and include NASM local labels.** The link rule
 generates `pkmn.sym` from PKMN.EXE's own COFF symbol table
-(`tools/generators/gen_symfile.py` — ~9.4k symbols, e.g. `_AdvancePlayerSprite.scroll`).
+(`tools/generators/gen_symfile.py` — 12729 symbols at the 2026-07-26 link, e.g.
+`_AdvancePlayerSprite.scroll`; the count is printed by every link, so read it there
+rather than trusting this line).
 The server stats the file on every resolution and reloads transparently, so a
 mid-session rebuild can NOT leave stale addresses (the old pkmn.map staleness
 bug class is dead); if PKMN.EXE is newer than pkmn.sym it errors loudly
@@ -266,8 +273,14 @@ superproject. Upstream bumps = rebase `mcp-debug` onto the new upstream tag.
 The strongest ground truth of all: compare the port's GB state **byte-for-byte
 against the real game**. mGBA (vendored submodule, built with Lua scripting by
 `tools/build_mgba.sh`) runs the **sha1-verified golden ROM** — built in the
-pinned pristine pret worktree `../pokeyellow_msdos-pret-golden` @ `7caf2e09`,
-NOT the branch tree, whose pret sources are contaminated — through deterministic
+pinned pristine pret worktree `../pokeyellow_msdos-pret-golden` @ `7caf2e09`.
+That worktree is still a HARD requirement of `make goldens` / `goldens-verify`
+(they resolve pret symbols against it), but the old reason given here — "the
+branch tree's pret sources are contaminated" — is STALE: the pret tree was
+restored to upstream in `ea26854a`, and `make compare` in-tree prints
+`pokeyellow.gbc: OK` against `roms.sha1` (re-verified 2026-07-26). Keep the
+worktree; stop believing the in-tree pret sources are broken. See memory
+`pret-tree-contaminated-golden-worktree` — through deterministic
 Lua scenarios (`tools/mgba_harness/scenarios/*.lua`: boot → seeded party →
 real-menu navigation → dump). Each scenario writes a **golden**
 (`tests/goldens/<scenario>.bin` + `.json` sidecar, committed). The port side
@@ -297,11 +310,15 @@ render state is not the evidence.
 make -C dos_port goldencheck SCENARIO=status_p1
 
 # Core pre-commit tier: representative status/start/overworld/party/bag/text/
-# datastruct/battle/menu coverage (currently 12 scenarios)
+# datastruct/battle/menu coverage (16 scenarios as of 2026-07-26 — do not quote
+# this number, it grows; measure with
+#   python3 tools/generators/gen_scenario_registry.py --names core | wc -w)
 make -C dos_port fidelity
 
-# Full active suite (currently 19 scenarios): core plus long-tail status,
-# item, battle, and menu/dex scenarios
+# Full active suite (33 scenarios as of 2026-07-26; this line said 19 for a long
+# time): core plus long-tail status, item, battle, menu/dex, cinematic and
+# map-script-sight scenarios. Same rule — measure, do not quote:
+#   python3 tools/generators/gen_scenario_registry.py --names full | wc -w
 make -C dos_port fidelity-full
 
 # Regenerate every Lua golden into a temp dir and diff against committed
@@ -563,11 +580,13 @@ Anti-patterns (both caused a real lost session, 2026-07-07):
   use audition.py; the DOS build is for driver verification only.
 - **Root-level `make clean` / `make tidy` in this tree.** It deletes
   pret-built intermediates (gfx `.2bpp`, etc.) that `make -C dos_port assets`
-  needs — and this branch's pret tree is contaminated and can NOT rebuild
-  them end-to-end (`make yellow` fails; see the golden-worktree note in the
-  fidelity section). `make -C dos_port clean` is safe: it removes only `.o`s,
-  `PKMN.EXE`, and the flags stamp — never assets. If root intermediates are
-  already gone, rebuild them via the pristine golden worktree.
+  needs, and regenerating them means a full pret build you probably did not want.
+  It is a costly detour, NOT the unrecoverable one this line used to claim: the
+  older text said the pret tree "is contaminated and can NOT rebuild them
+  end-to-end (`make yellow` fails)", which stopped being true at `ea26854a` —
+  `make compare` passes in-tree today (verified 2026-07-26). `make -C dos_port
+  clean` remains the safe one: only `.o`s, `PKMN.EXE`, and the flags stamp —
+  never assets. Requires rgbds 1.0.1 to redo the root build.
 
 ## Key Reference URLs
 

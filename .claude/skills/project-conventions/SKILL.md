@@ -297,7 +297,10 @@ Plans that exist today and have **no entry below** — go to the files themselve
 - **Party mon icons — COMPLETE & archived** at `docs/plans/party_icons_oam.md`
   (2026-07-12, `f8863164` + `12dfdbe2`). The BG-tile icon hack is gone: icons are OBJ
   through pret's `engine/gfx/mon_icons.asm`, in the party menu and the naming screen.
-  Two invariants it left behind, both enforced at the primitive (`home/sprites.asm`):
+  Two invariants it left behind, both enforced at the primitive
+  (`dos_port/src/home/sprites.asm` — note pret splits these two labels into
+  `home/clear_sprites.asm`, so the bare `home/sprites.asm` this line used to give
+  resolved to nothing on either side):
   **`ClearSprites`/`HideSprites` publish `spr_oam_valid = 0`** (the port gates the OAM
   DMA on `wUpdateSpritesEnabled`, so a cleared shadow OAM never reached the compositor
   — that is what would ghost overworld sprites onto a whiteout screen), **and they
@@ -345,7 +348,8 @@ Plans that exist today and have **no entry below** — go to the files themselve
   swarm** (Masters A/B/C, archived at `docs/archive/battle_swarm_*`, merged to
   `master`); both plans are archived under `docs/plans/`. A live wild battle plays
   end-to-end (menu, move select, speed-ordered turns, damage, faint, EXP/level-up,
-  RUN). **Remaining battle work is tracked in the ledger `docs/battle_audit_findings.md`**
+  RUN). **Remaining battle work is tracked in the ledger `docs/archive/battle_audit_findings.md`**
+  (archived; the root-level path this line used to give was dangling)
   (open fidelity findings + not-yet-linked routines), not in a `current_plan_*` file.
 
 (NPC implementation is complete and archived at `docs/plans/npc_implementation.md`.
