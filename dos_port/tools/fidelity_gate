@@ -1,15 +1,113 @@
 #!/usr/bin/env python3
-"""Changed-files pret-fidelity gate with explicit evidence-level reporting."""
+"""Changed-files pret-fidelity gate with explicit evidence-level reporting.
+
+Two modes:
+
+  fidelity_gate [--base REF] [files...]
+      The original per-change evidence chain: derive the pret labels a diff
+      touched, then lint + project_state + faithdiff over them.
+
+  fidelity_gate --move-baseline DIR file...     (BEFORE you edit anything)
+  fidelity_gate --move-verify   DIR [--gates]   (after)
+      The RELOCATION MOVE BATTERY — the per-unit verification a
+      relocated-label move needs, from the `relocated-labels-grind` recipe.
+
+NOT to be confused with `tools/static_gate`, which is the whole-tree structural
+ratchet run by .githooks/pre-commit. The division is by scope: static_gate checks
+the WHOLE TREE against a checked-in baseline; this tool checks the labels a
+SPECIFIC diff touched.
+
+=== WHY THE MOVE BATTERY IS SHAPED THIS WAY ===
+
+The most valuable check in the battery is the whole-tree line invariant, and it
+is the one most easily destroyed by automating it. It earns its keep by
+DISAGREEING with you: in session 11 the hand derivation predicted +7, the
+measurement said +8, and the gap located a real miscount (8 new `extern` lines
+counted where the file had 9). A tool that prints `delta +8` deletes that value
+entirely — the agent reads a green line having predicted nothing. An
+`--expect-lines +7` flag fails the same way: you see the failure and edit the
+flag to match.
+
+So this tool does not print a verdict for the line invariant. It prints a
+DECOMPOSITION derived from file CONTENT, by a path independent of the raw
+measurement:
+
+  * every line in the unit's diff is classified: a line removed from a source
+    file AND added to a target file verbatim is MOVED and must cancel; removed
+    and not re-added is DROPPED; added without being removed is NEW.
+  * the residual is `new - dropped`, which should be exactly your declaration
+    edits, and every one of them is ENUMERATED for you to read.
+  * that residual is then compared against the measured file-count delta.
+  * and — because a ONE-FOR-ONE alteration balances the residual and would
+    otherwise slip through — any added or dropped line that is not a DECLARATION
+    is a hard failure. In a pure relocation every non-declaration line must move
+    verbatim; one that appears or vanishes means code was altered, invented or
+    lost.
+
+You still have to read the enumerated declarations and confirm they are the ones
+you meant. The tool forces the decomposition into view; it does not bless it.
+
+LIMITATION, stated plainly: the move classification is LINE-level, not
+block-level. It does not prove the moved lines are contiguous, in the same order,
+or inside the routine you think they are at the destination. It proves only that
+the SET of non-declaration lines is unchanged and that the declaration residual
+accounts for the size delta.
+
+=== WHAT THIS DELIBERATELY DOES NOT DO ===
+
+  * The COVERAGE VERDICT — whether each moved row is executed by any golden
+    scenario. That needs call-site reading, and redoing it in session 11
+    overturned session 8's recorded answer. A tool printing a green wall here
+    would make the judgement feel done when it had not started.
+  * The COMMIT MESSAGE. It carries the per-row regression caveat.
+  * Deciding WHAT moves, and retiring the registry row.
+  * Any runtime evidence at all. Run `make fidelity-full` yourself.
+"""
 
 import argparse
+import collections
+import difflib
+import importlib.machinery
+import importlib.util
+import json
 import os
 import re
 import subprocess
 import sys
 import sqlite3
+import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, "..", ".."))
+
+
+def _load(name, path):
+    loader = importlib.machinery.SourceFileLoader(name, path)
+    spec = importlib.util.spec_from_loader(name, loader)
+    mod = importlib.util.module_from_spec(spec)
+    loader.exec_module(mod)
+    return mod
+
+
+# Reuse the scanner's own NASM comment stripper rather than reimplementing it —
+# the line counts must agree with what update_label_db considers a code line.
+_uld = _load("_uld_fg", os.path.join(HERE, "update_label_db"))
+strip_comment = _uld.strip_comment
+
+BOLD, RED, GREEN, YELLOW, DIM, OFF = (
+    ('\033[1m', '\033[31m', '\033[32m', '\033[33m', '\033[2m', '\033[0m')
+    if sys.stdout.isatty() else ('', '', '', '', '', ''))
+
+# faithdiff header lines legitimately change on a move: they name the port file
+# and the status. Anything else differing is a real divergence.
+HEADER_RE = re.compile(r'^pret: .*   port: .*   status: ')
+
+# In a pure relocation the only lines that may legitimately APPEAR or VANISH are
+# declarations — everything else must move verbatim. A dropped or new line that
+# is not one of these means code was altered, invented, or lost.
+DECL_RE = re.compile(
+    r'^\s*(global|extern|section|%define|%include|%ifdef|%ifndef|%endif|%else|bits)\b'
+    r'|^\s*[A-Za-z_][A-Za-z0-9_]*\s+equ\s', re.I)
 
 
 def run(argv):
@@ -38,14 +136,21 @@ def labels_in_diff(base, files):
     return sorted(labels)
 
 
-def labels_in_files(files):
+def labels_in_files(files, db_path=None):
     """Conservatively include all pret definitions in a touched port file.
 
     This avoids the old false negative where a body-only edit had no label on a
     zero-context diff line.  Over-selection costs extra faithdiff runs but never
     hides a touched routine.
+
+    `db_path` selects an alternate translation.db. EVERY reader in the move
+    battery must be pointed at the post-edit rescan: this tool reads the DB, not
+    the tree, so a reader left on the tracked (pre-edit) DB silently reports "no
+    change" however badly the move went. That mistake was made twice while
+    building this — once here and once in the faithdiff capture — and both times
+    it made a deliberately broken test case pass.
     """
-    db = sqlite3.connect(os.path.join(HERE, "translation.db"))
+    db = sqlite3.connect(db_path or os.path.join(HERE, "translation.db"))
     labels = set()
     for path in files:
         labels.update(r[0] for r in db.execute(
@@ -55,11 +160,370 @@ def labels_in_files(files):
     return labels
 
 
+# ── the relocation move battery ────────────────────────────────────────────────
+
+def is_code(line):
+    """A line that contributes to the comment-stripped non-blank count."""
+    return bool(strip_comment(line).strip())
+
+
+def count_code_lines(path):
+    full = os.path.join(ROOT, path)
+    if not os.path.exists(full):
+        return 0
+    with open(full, encoding="utf-8", errors="replace") as fh:
+        return sum(1 for ln in fh if is_code(ln))
+
+
+def db_census(db_path):
+    db = sqlite3.connect(db_path)
+    q = lambda s: db.execute(s).fetchone()[0]
+    out = {
+        "labels_by_status": dict(db.execute(
+            "SELECT status, count(*) FROM labels GROUP BY status").fetchall()),
+        "port_defs": q("SELECT count(*) FROM port_defs"),
+        "port_calls": q("SELECT count(*) FROM calls WHERE side='port'"),
+        "externs": q("SELECT count(*) FROM externs"),
+        "fallthrough": q("SELECT count(*) FROM calls "
+                         "WHERE side='port' AND kind='fallthrough'"),
+    }
+    db.close()
+    return out
+
+
+def label_shapes(db_path, labels):
+    """Per-label instr_count + section — step 4's data, already in port_defs."""
+    db = sqlite3.connect(db_path)
+    out = {}
+    for name in labels:
+        rows = db.execute("SELECT file, instr_count, section FROM port_defs "
+                          "WHERE name=? AND defined_here=1", (name,)).fetchall()
+        if rows:
+            out[name] = [{"file": f, "instr_count": i, "section": s} for f, i, s in rows]
+    db.close()
+    return out
+
+
+def faithdiff_capture(labels, db=None):
+    """Capture faithdiff output. `db` selects an alternate translation.db.
+
+    This matters more than it looks: faithdiff reads the DB, not the tree, so an
+    "after" capture taken without rescanning first compares the OLD call graph
+    against itself and reports no change however badly the move went. Found by
+    the tool's own violation test.
+    """
+    if not labels:
+        return ""
+    argv = [os.path.join(HERE, "faithdiff"), *labels]
+    if db:
+        argv += ["--db", db]
+    p = subprocess.run(argv, cwd=ROOT, stdout=subprocess.PIPE,
+                       stderr=subprocess.STDOUT, text=True)
+    return p.stdout
+
+
+def git_clean(files):
+    out = subprocess.check_output(["git", "status", "--porcelain", "--", *files],
+                                  cwd=ROOT, text=True)
+    return [l for l in out.splitlines() if l.strip()]
+
+
+def move_baseline(outdir, files):
+    os.makedirs(outdir, exist_ok=True)
+    dirty = git_clean(files)
+    if dirty:
+        print(f"{RED}move-baseline: these files already have uncommitted "
+              f"changes:{OFF}")
+        for d in dirty:
+            print(f"  {d}")
+        print(f"{RED}The baseline must be taken BEFORE you edit. `git stash` or "
+              f"commit first — otherwise --move-verify's diff is not the "
+              f"unit.{OFF}")
+        return 1
+
+    labels = sorted(labels_in_files(files))
+    head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT,
+                                   text=True).strip()
+    snap = {
+        "head": head,
+        "files": list(files),
+        "labels": labels,
+        "line_counts": {f: count_code_lines(f) for f in files},
+        "db": db_census(os.path.join(HERE, "translation.db")),
+        "shapes": label_shapes(os.path.join(HERE, "translation.db"), labels),
+    }
+    with open(os.path.join(outdir, "baseline.json"), "w", encoding="utf-8") as fh:
+        json.dump(snap, fh, indent=2, sort_keys=True)
+    with open(os.path.join(outdir, "faithdiff.txt"), "w", encoding="utf-8") as fh:
+        fh.write(faithdiff_capture(labels))
+
+    print(f"{BOLD}move-baseline{OFF} -> {outdir}")
+    print(f"  HEAD           {head[:12]}")
+    print(f"  files          {len(files)}")
+    print(f"  pret labels    {len(labels)}")
+    print(f"  code lines     {sum(snap['line_counts'].values())}")
+    print(f"  relocated      {snap['db']['labels_by_status'].get('relocated', 0)}")
+    print(f"{DIM}  Now make the move, then: fidelity_gate --move-verify {outdir}{OFF}")
+    return 0
+
+
+def classify_lines(base, files):
+    """Split the unit's diff into moved / new / dropped, by exact line text.
+
+    A line removed from one file and added to another VERBATIM is 'moved' and
+    cancels. This is the independent path to the expected line delta, and it is
+    also what catches a block that did not move byte-for-byte: an altered line
+    shows up as one dropped plus one new.
+    """
+    removed, added = collections.Counter(), collections.Counter()
+    for path in files:
+        text = subprocess.check_output(
+            ["git", "diff", "--unified=0", base, "--", path],
+            cwd=ROOT, text=True, errors="replace")
+        for line in text.splitlines():
+            if line.startswith(("+++", "---", "@@", "diff ", "index ",
+                                "new file", "deleted file", "similarity",
+                                "rename ")):
+                continue
+            if line.startswith("+"):
+                added[line[1:]] += 1
+            elif line.startswith("-"):
+                removed[line[1:]] += 1
+    moved = removed & added          # multiset intersection
+    return moved, (added - moved), (removed - moved)
+
+
+def enumerate_decls(counter, limit=40):
+    """Print the code lines in `counter`; return (total, non_declaration_lines)."""
+    items = [(t, n) for t, n in sorted(counter.items()) if is_code(t)]
+    offenders = []
+    shown = items[:limit]
+    for text, n in shown:
+        suffix = f"  (x{n})" if n > 1 else ""
+        decl = DECL_RE.match(text)
+        if not decl:
+            offenders.append(text)
+        mark = "" if decl else RED + "  <-- NOT a declaration" + OFF
+        print(f"      {text.strip()}{suffix}{mark}")
+    if len(items) > len(shown):
+        print(f"      ... and {len(items) - len(shown)} more")
+        offenders += [t for t, _ in items[limit:] if not DECL_RE.match(t)]
+    return sum(n for _, n in items), offenders
+
+
+def move_verify(outdir, gates):
+    with open(os.path.join(outdir, "baseline.json"), encoding="utf-8") as fh:
+        snap = json.load(fh)
+    files = snap["files"]
+    base = snap["head"]
+    failures = []
+
+    # Rescan FIRST, into a temp DB. faithdiff and the census both read a DB, not
+    # the tree, so everything below is meaningless against a stale one — and the
+    # tracked translation.db must not be dirtied by a verification step.
+    tmp = tempfile.TemporaryDirectory(prefix="fgate-db.")
+    tmpdb = os.path.join(tmp.name, "translation.db")
+    print(f"{BOLD}[0/5] rescan{OFF} {DIM}(temp DB; tracked translation.db untouched){OFF}")
+    _r = subprocess.run([os.path.join(HERE, "update_label_db"), "--db", tmpdb],
+                        cwd=ROOT, stdout=subprocess.PIPE,
+                        stderr=subprocess.STDOUT, text=True)
+    if _r.returncode != 0:
+        print(_r.stdout)
+        print(f"{RED}move-verify: FAIL — the rescan itself failed; nothing below "
+              f"would be trustworthy.{OFF}")
+        return 1
+
+    print(f"{BOLD}[1/5] label set{OFF}")
+    now_labels = sorted(labels_in_files(files, db_path=tmpdb))
+    if now_labels != snap["labels"]:
+        gone = set(snap["labels"]) - set(now_labels)
+        new = set(now_labels) - set(snap["labels"])
+        print(f"  {RED}CHANGED — the two faithdiff runs would not compare the "
+              f"same things.{OFF}")
+        if gone:
+            print(f"    no longer present: {', '.join(sorted(gone))}")
+        if new:
+            print(f"    newly present:     {', '.join(sorted(new))}")
+        failures.append("label set changed between baseline and verify")
+    else:
+        print(f"  {DIM}unchanged, {len(now_labels)} pret labels{OFF}")
+
+    print(f"{BOLD}[2/5] faithdiff{OFF}")
+    before = open(os.path.join(outdir, "faithdiff.txt"), encoding="utf-8").read()
+    after = faithdiff_capture(now_labels, db=tmpdb)
+    with open(os.path.join(outdir, "faithdiff.after.txt"), "w", encoding="utf-8") as fh:
+        fh.write(after)
+    b, a = before.splitlines(), after.splitlines()
+    # A real unified diff, so an inserted line does not cascade every line after
+    # it into the report. Only the changed lines are shown, and only lines that
+    # are NOT the intended port:/status: header count as a divergence.
+    delta = [d for d in difflib.unified_diff(b, a, n=0, lineterm="")
+             if d[:1] in "+-" and not d.startswith(("+++", "---"))]
+    off_header = [d for d in delta if not HEADER_RE.match(d[1:])]
+    if off_header:
+        print(f"  {RED}{len(off_header)} line(s) differ that are NOT the intended "
+              f"port:/status: header:{OFF}")
+        for d in off_header[:12]:
+            print(f"      {d}")
+        if len(off_header) > 12:
+            print(f"      ... and {len(off_header) - 12} more "
+                  f"(full text in the baseline dir)")
+        failures.append("faithdiff diverged beyond the header lines")
+    else:
+        print(f"  {DIM}{len(delta)} line(s) differ, all of them the intended "
+              f"port:/status: header{OFF}")
+
+    print(f"{BOLD}[3/5] line decomposition{OFF}  "
+          f"{DIM}(read this — it is not a verdict){OFF}")
+    moved, new, dropped = classify_lines(base, files)
+    moved_code = sum(n for t, n in moved.items() if is_code(t))
+    print(f"  moved verbatim, cancels : {moved_code} code lines")
+    print(f"  {GREEN}new declarations:{OFF}")
+    n_new, bad_new = enumerate_decls(new)
+    print(f"  {YELLOW}dropped declarations:{OFF}")
+    n_drop, bad_drop = enumerate_decls(dropped)
+    if bad_new or bad_drop:
+        print(f"  {RED}{len(bad_new) + len(bad_drop)} line(s) above are NOT "
+              f"declarations. In a pure relocation every non-declaration line "
+              f"must MOVE verbatim — one that appears or vanishes means code was "
+              f"altered, invented or lost. A one-for-one alteration balances the "
+              f"residual, so this is the check that catches it.{OFF}")
+        failures.append("non-declaration lines were added or dropped, not moved")
+    expected = n_new - n_drop
+    after_counts = {f: count_code_lines(f) for f in files}
+    measured = sum(after_counts.values()) - sum(snap["line_counts"].values())
+    print(f"  residual  = {n_new} new - {n_drop} dropped = {expected:+d}")
+    print(f"  measured  = {measured:+d}")
+    if expected != measured:
+        print(f"  {RED}MISMATCH by {measured - expected:+d}. Something changed "
+              f"that the classification does not account for — find the line, "
+              f"do not adjust the expectation.{OFF}")
+        failures.append(f"line decomposition {expected:+d} != measured {measured:+d}")
+    else:
+        print(f"  {DIM}decomposition and measurement agree — now confirm the "
+              f"declarations above are the ones you meant{OFF}")
+
+    print(f"{BOLD}[4/5] DB reconciliation{OFF}")
+    now = db_census(tmpdb)
+    was = snap["db"]
+    for key in ("port_defs", "port_calls", "externs", "fallthrough"):
+        d = now[key] - was[key]
+        mark = DIM + "=" if d == 0 else YELLOW + "~"
+        print(f"  {mark}  {key:12s} {was[key]:6d} -> {now[key]:6d}  "
+              f"({d:+d}){OFF}")
+    for st in sorted(set(was["labels_by_status"]) | set(now["labels_by_status"])):
+        w = was["labels_by_status"].get(st, 0)
+        n = now["labels_by_status"].get(st, 0)
+        if w != n:
+            print(f"  {YELLOW}~  status {st:11s} {w:6d} -> {n:6d} "
+                  f"({n - w:+d}){OFF}")
+    reloc = (now["labels_by_status"].get("relocated", 0)
+             - was["labels_by_status"].get("relocated", 0))
+    trans = (now["labels_by_status"].get("translated", 0)
+             - was["labels_by_status"].get("translated", 0))
+    if reloc + trans != 0:
+        print(f"  {RED}relocated {reloc:+d} and translated {trans:+d} do "
+              f"not cancel — a move should convert one to the other.{OFF}")
+        failures.append("relocated/translated deltas do not cancel")
+    print(f"  {DIM}every nonzero delta above must be decomposable — "
+          f"say what each one is made of in the commit message{OFF}")
+
+    print(f"{BOLD}[5/5] %ifdef gate builds{OFF}")
+    if not gates:
+        print(f"  {YELLOW}SKIPPED — pass --gates LIST (or --gates auto).{OFF}")
+        print(f"  {YELLOW}%ifdef-only externs are invisible to the default build; "
+              f"a move can break a DEBUG_* gate and nothing else will tell you.{OFF}")
+    else:
+        mk = open(os.path.join(ROOT, "dos_port", "Makefile"), encoding="utf-8").read()
+        known = set(re.findall(r"^ifdef (DEBUG_[A-Z0-9_]+)", mk, re.M))
+        if gates == "auto":
+            # Gates whose %ifdef appears in the unit's own files. Cheap and sound
+            # for the failure this catches (an ifdef-only extern in a moved or
+            # edited file); it will NOT find a gate broken from a distance.
+            names = set()
+            for f in files:
+                full = os.path.join(ROOT, f)
+                if os.path.exists(full):
+                    txt = open(full, encoding="utf-8", errors="replace").read()
+                    names |= set(re.findall(r"%ifn?def\s+(DEBUG_[A-Z0-9_]+)", txt))
+            names &= known
+            print(f"  {DIM}auto-derived from %ifdef in the unit's files{OFF}")
+            if not names:
+                print(f"  {YELLOW}no DEBUG_* gate is referenced by these files. That "
+                      f"does NOT mean none is affected — a gate-only source "
+                      f"elsewhere can extern a label you moved. Pass an explicit "
+                      f"list if this unit touches one.{OFF}")
+        else:
+            names = {g.strip() for g in gates.split(",") if g.strip()}
+            unknown = names - known
+            if unknown:
+                print(f"  {RED}not gates in the Makefile: "
+                      f"{', '.join(sorted(unknown))}{OFF}")
+                failures.append("unknown gate name passed to --gates")
+                names &= known
+        # DEBUG_BATTLE_GOLDEN %errors by design unless a sub-gate is also set.
+        names = sorted(names - {"DEBUG_BATTLE_GOLDEN"})
+        bad = []
+        for n in names:
+            subprocess.run(["make", "-s", "clean"], cwd=os.path.join(ROOT, "dos_port"),
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            r = subprocess.run(["make", "-j8", f"{n}=1"],
+                               cwd=os.path.join(ROOT, "dos_port"),
+                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                               text=True)
+            ok = r.returncode == 0
+            print(f"  {'OK  ' if ok else RED + 'FAIL'} {n}{OFF if not ok else ''}")
+            if not ok:
+                bad.append(n)
+        if bad:
+            failures.append(f"gates failed to build: {', '.join(bad)}")
+        subprocess.run(["make", "-s", "clean"], cwd=os.path.join(ROOT, "dos_port"),
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    print()
+    if failures:
+        print(f"{RED}{BOLD}move-verify: FAIL{OFF}")
+        for f in failures:
+            print(f"{RED}  - {f}{OFF}")
+    else:
+        print(f"{GREEN}{BOLD}move-verify: no objective check failed{OFF}")
+    print(f"{DIM}This is STRUCTURAL evidence only. It does not run a single "
+          f"scenario. Run `make fidelity-full` before committing, and settle the "
+          f"per-row coverage verdict by reading call sites — this tool "
+          f"deliberately does not.{OFF}")
+    return 1 if failures else 0
+
+
 def main():
-    ap = argparse.ArgumentParser()
+    ap = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--base", default="HEAD")
+    ap.add_argument("--move-baseline", metavar="DIR",
+                    help="snapshot BEFORE editing; pass the files the unit touches")
+    ap.add_argument("--move-verify", metavar="DIR",
+                    help="verify against a --move-baseline snapshot")
+    ap.add_argument("--gates", metavar="LIST", nargs="?", const="auto", default=None,
+                    help="with --move-verify, build these DEBUG_* gates and assert "
+                         "each links (comma-separated). %%ifdef-only externs are "
+                         "invisible to the default build, so this is the only way "
+                         "to catch one a move broke. `--gates auto` derives the "
+                         "list from %%ifdef DEBUG_* appearing in the unit's own "
+                         "files. There are 104 gates in the Makefile; building all "
+                         "of them is impractical, so pick the ones whose code "
+                         "paths the unit touches.")
     ap.add_argument("files", nargs="*")
     args = ap.parse_args()
+
+    if args.move_baseline and args.move_verify:
+        ap.error("--move-baseline and --move-verify are separate steps")
+    if args.move_baseline:
+        if not args.files:
+            ap.error("--move-baseline needs the file list the unit will touch")
+        raise SystemExit(move_baseline(args.move_baseline, args.files))
+    if args.move_verify:
+        raise SystemExit(move_verify(args.move_verify, args.gates))
+
     files = args.files or changed_files(args.base)
     rc = run([os.path.join(HERE, "lint_pret_labels")])
     labels = sorted(set(labels_in_diff(args.base, files)) | labels_in_files(files))

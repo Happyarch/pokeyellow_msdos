@@ -196,6 +196,10 @@ def main():
     ap.add_argument('labels', nargs='+', metavar='PretLabel')
     ap.add_argument('--all-hits', action='store_true',
                     help='also show suppressed items (with their whys)')
+    ap.add_argument('--db', default=DB_PATH,
+                    help='read an alternate translation.db — e.g. a temp rescan, '
+                         'so a caller can diff before/after without dirtying the '
+                         'tracked DB (matches lint_pret_labels and update_label_db)')
     args = ap.parse_args()
 
     suppress = {}
@@ -203,7 +207,7 @@ def main():
         with open(SUPPRESS, encoding='utf-8') as fh:
             suppress = json.load(fh)
 
-    con = sqlite3.connect(DB_PATH)
+    con = sqlite3.connect(args.db)
     rc = 0
     for label in args.labels:
         rc |= diff_one(con.cursor(), label, suppress, args.all_hits)
