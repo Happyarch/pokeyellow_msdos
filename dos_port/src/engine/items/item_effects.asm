@@ -761,8 +761,8 @@ extern CopyData             ; home/copy_data.asm — ESI → EDX, BX bytes
 extern Divide               ; home/math.asm — BH = dividend bytes
 extern FlagAction           ; engine/flag_action.asm — ESI=array, CL=index, BH=action
 extern PrintStatsBox        ; engine/battle/battle_menu.asm — DH = box type
-extern LearnMoveFromLevelUp ; engine/battle/battle_menu.asm (predef)
-extern TryEvolvingMon       ; engine/pokemon/evolution.asm
+extern LearnMoveFromLevelUp ; engine/pokemon/evos_moves.asm (predef)
+extern TryEvolvingMon       ; engine/pokemon/evos_moves.asm
 extern ModifyPikachuHappiness    ; battle_exp_stubs.asm (deferred)
 extern RespawnOverworldPikachu   ; battle_exp_stubs.asm (deferred)
 extern DoubleOrHalveSelectedStats ; battle_exp_stubs.asm (deferred)

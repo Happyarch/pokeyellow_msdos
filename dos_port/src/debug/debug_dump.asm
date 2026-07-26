@@ -1755,7 +1755,7 @@ RunBattleTest:
 ; Stage 3: does LearnMove's PrintText(LearnedMove1Text) render a legible box
 ; with the right nick/move-name substitutions in the live battle canvas? Seeds
 ; a battle-mode canvas (InitBattle, no enemy scene needed) then calls the exact
-; src/engine/battle/battle_menu.asm:LearnMoveFromLevelUp entry point the real
+; src/engine/pokemon/evos_moves.asm:LearnMoveFromLevelUp entry point the real
 ; post-battle level-up sequence calls, on PrepareNewGameDebug's real STARTER_
 ; PIKACHU (party slot 3, level 5) — its moves come from the real WriteMonMoves
 ; learnset walk (add_party_mon.asm), not hand-picked, so whichever slot is open

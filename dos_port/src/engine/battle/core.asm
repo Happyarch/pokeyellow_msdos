@@ -223,7 +223,7 @@ extern Moves                           ; src/data/pokemon_data.asm — flat move
 extern GetMonHeader                    ; home/pokemon.asm — loads wMonHeader from wCurSpecies
 extern CalcStats                       ; home/move_mon.asm — EDX=dest, ESI=EV base, BH=useEVs
 extern GetMonName                      ; home/names.asm — wNamedObjectIndex -> wNameBuffer
-extern WriteMonMoves                   ; write_moves.asm — level-up moveset (predef: wPredefDE)
+extern WriteMonMoves                   ; evos_moves.asm — level-up moveset (predef: wPredefDE)
 extern LoadMovePPs                     ; write_moves.asm — PPs (predef: wPredefHL/DE)
 extern IndexToPokedex                  ; engine/menus/pokedex.asm — predef, wPokedexNum in place
 extern FlagAction                      ; flag_action.asm — ESI=array, CL=bit, BH=action

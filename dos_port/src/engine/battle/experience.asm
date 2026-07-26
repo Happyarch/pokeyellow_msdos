@@ -507,7 +507,7 @@ GainExperience:
     ; Learnset Skipping)
     mov al, [ebp + wCurSpecies]
     mov [ebp + wPokedexNum], al
-    call LearnMoveFromLevelUp          ; REAL (battle_menu.asm → learn_move.asm LearnMove)
+    call LearnMoveFromLevelUp          ; REAL (evos_moves.asm → learn_move.asm LearnMove)
 
     ; Set the can-evolve flag for this mon.
     mov esi, wCanEvolveFlags

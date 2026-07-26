@@ -47,7 +47,7 @@ global DoubleOrHalveSelectedStats
 ; ApplyBadgeStatBoosts (badge_boosts.asm) and ApplyBurnAndParalysisPenaltiesToPlayer
 ; (status_penalties.asm) are now REAL + linked via the move-effect scaffold — no longer
 ; stubbed here (the documented latent collision is resolved by deleting these stubs).
-; LearnMoveFromLevelUp is now REAL (battle_menu.asm) — no longer stubbed.
+; LearnMoveFromLevelUp is now REAL (evos_moves.asm) — no longer stubbed.
 
 ModifyPikachuHappiness:
 PrintEmptyString:

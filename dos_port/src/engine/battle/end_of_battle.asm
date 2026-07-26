@@ -32,7 +32,7 @@ section .text
 
 global EndOfBattle
 
-extern EvolutionAfterBattle              ; evolution.asm — walks party, evolves eligible mons
+extern EvolutionAfterBattle              ; evos_moves.asm — walks party, evolves eligible mons
 extern UpdatePikachuMoodAfterBattle      ; pikachu_status.asm — raises starter Pikachu mood (DH=$82)
 extern GBPalWhiteOut                     ; src/home/palettes.asm — fade to white on the way out
 
