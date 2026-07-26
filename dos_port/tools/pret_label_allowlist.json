@@ -103,18 +103,6 @@
       "port_file": "dos_port/src/video/frame.asm",
       "why": "pret home/palettes.asm split across port files (draft Session H)"
     },
-    "DrawEnemyHUDAndHPBar": {
-      "port_file": "dos_port/src/engine/battle/battle_hud.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
-    "DrawHUDsAndHPBars": {
-      "port_file": "dos_port/src/engine/battle/battle_menu.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
-    "DrawPlayerHUDAndHPBar": {
-      "port_file": "dos_port/src/engine/battle/battle_hud.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
     "EndLowHealthAlarm": {
       "port_file": "dos_port/src/audio/play_battle_music.asm",
       "why": "pret engine/battle/core.asm battle-music routine co-located with PlayBattleMusic in src/audio/play_battle_music.asm (battle-music consolidation)"
@@ -334,10 +322,6 @@
     "TryEvolvingMon": {
       "port_file": "dos_port/src/engine/pokemon/evolution.asm",
       "why": "pret engine/pokemon/evos_moves.asm split across port files (draft Session H)"
-    },
-    "TryRunningFromBattle": {
-      "port_file": "dos_port/src/engine/battle/battle_menu.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
     },
     "UpdateCurMonHPBar": {
       "port_file": "dos_port/src/engine/battle/move_effect_helpers.asm",
