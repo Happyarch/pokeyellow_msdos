@@ -26,11 +26,22 @@ git config --get pokeyellow.pretAllowlistApprovedSha256
 sha256sum dos_port/tools/pret_label_allowlist.json
 ```
 
-Run both. If they differ, `registry_approval` is 1, `static_gate` fails, and
-**every commit staging anything under `dos_port/` is blocked** until the
-maintainer runs the bless printed at the end of the retirement commit.
-Docs-only commits still land (the hook exits 0 when nothing under `dos_port/` is
-staged). **Do not `--no-verify`. Agents must never run the bless themselves.**
+Run both. While they differ, `registry_approval` is 1, `static_gate` fails, and
+**every commit staging anything under `dos_port/` is blocked**. Docs-only commits
+still land (the hook exits 0 when nothing under `dos_port/` is staged).
+**Do not `--no-verify`. Agents must never run the bless themselves.**
+
+**MAINTAINER ACTION — the one thing owed** (52-row allowlist, retired in
+`3026f32a`):
+
+```
+git config pokeyellow.pretAllowlistApprovedSha256 \
+  a3d2da9e869101202413a47e2d08a090572a8b865218d502d8b24c96e1ed3cee
+```
+
+**Verify that against a real `sha256sum` run before using it.** s15 fabricated
+this hash in the retirement commit message on the first attempt and had to amend
+it — a hash written into prose is not evidence, wherever you read it.
 
 No `translation.db` restamp is stuck behind the block: s15 restamped in
 `67aac60c`, after its chunk and before its retirement.
@@ -43,7 +54,8 @@ No `translation.db` restamp is stuck behind the block: s15 restamped in
 |---|---|
 | `ca0da4b7` | chunk 11 — names / names2 / item mirror repair, 6 rows, NEW mirror, `item_predicates.asm` deleted |
 | `67aac60c` | restamp `translation.db` at that HEAD |
-| (this batch) | docs staleness sweep + handoff purge + the registry retirement |
+| `707dc237` | docs staleness sweep + handoff purge + a misleading skill claim |
+| `3026f32a` | **the registry retirement, 6 rows, 58 → 52** (amended to fix a fabricated hash) |
 
 Debt **58 → 52** by DB count. Linked sources unchanged at **249**. Tree-wide
 fallthrough unchanged at **142**. `--strict-claims` at its standing baseline
