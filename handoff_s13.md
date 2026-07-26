@@ -5,52 +5,31 @@ Everything below is measured against that HEAD, not recalled.
 
 ---
 
-## 1. FIRST: the bless, and why nothing else can be committed until it happens
+## 1. The bless is DONE and the restamp is CLEARED
 
-The batch retired 19 more relocation rows, which by construction invalidates the
-maintainer's allowlist approval. **`registry_approval` is 1 right now,
-`tools/static_gate` FAILS, and `.githooks/pre-commit` therefore blocks every
-commit that stages anything under `dos_port/`.**
-
-Maintainer command (agents must never run this — it is the one thing that lives
-outside the worktree so no commit can forge it):
+Nothing is outstanding. The maintainer blessed the 96-row allowlist on 2026-07-26
+and the owed `translation.db` restamp landed as `0dad14b7`, so the tree is green
+and unblocked:
 
 ```
-git config pokeyellow.pretAllowlistApprovedSha256 \
-  6916f93ac83b77564ebc168fad3f9f5eb133d34fa2519f33fba7dacedca61e1b
-```
-
-Verify it took:
-
-```
-cd "/mnt/sdb1/Code/Active Code/pokeyellow_msdos"
 git config --get pokeyellow.pretAllowlistApprovedSha256
-sha256sum dos_port/tools/pret_label_allowlist.json      # must match
-dos_port/tools/lint_pret_labels                          # expect 0 violations / 5 suppressed
-dos_port/tools/static_gate                               # expect PASS — 5 static checks
+  6916f93ac83b77564ebc168fad3f9f5eb133d34fa2519f33fba7dacedca61e1b
+sha256sum dos_port/tools/pret_label_allowlist.json   # matches
+dos_port/tools/static_gate                           # PASS — 5 static checks
 ```
 
-96 rows in the registry; the label DB agrees at 96.
+  relocated 96 == registry 96 · linked sources 248 + 8 check-only
+  lint_pret_labels 0 violations / 5 suppressed
+  --strict-claims 24 = 21 local_shadow + 3 hand_encoded_text
+  registry_approval back to 0 · stale_provider 0 · legacy_annotation 0
 
-### The one job owed immediately after the bless
-
-The customary `translation.db` restamp could not be committed — that commit stages
-a `dos_port/` path, so the hook blocks it. The DB was deliberately restored to its
-committed state rather than left staged in the shared index (another agent's bare
-commit would sweep it). After blessing:
-
-```
-cd "/mnt/sdb1/Code/Active Code/pokeyellow_msdos"
-dos_port/tools/update_label_db          # expect: relocated=96, build: 248 linked + 8 check-only
-git add -- dos_port/tools/translation.db
-git commit -- dos_port/tools/translation.db     # message: "tools: restamp translation.db at HEAD"
-```
-
-Note: a **docs-only** commit still lands while unapproved — the hook exits 0 when
-nothing under `dos_port/` is staged (lines 24-26). That is by design, not a hole,
-and is how commit `0d5085af` went in. Do not reach for `--no-verify`.
-
----
+Kept here because the mechanism will bite the next grind session too: **retiring a
+registry row raises `registry_approval` 0 -> 1 by construction**, and from that
+moment until the maintainer re-blesses, `.githooks/pre-commit` blocks every commit
+that stages anything under `dos_port/` — including the customary restamp. Stage the
+allowlist in the retirement commit (the hook tolerates that one), print the hash,
+stop. A docs-only commit still lands, because the hook exits 0 when nothing under
+`dos_port/` is staged.
 
 ## 2. What landed
 
