@@ -330,6 +330,15 @@
       "verification": "synthetic-port-gate plus real-navigation golden; state verification, not UI verification"
     },
     {
+      "name": "battle_faint", "id": 33, "tier": "full", "scenario_class": "datastruct",
+      "build_flags": "DEBUG_BATTLE_FAINT=1", "port_entry_gate": "DEBUG_BATTLE_FAINT",
+      "navigation_script": "tools/mgba_harness/scenarios/battle_faint.lua",
+      "dump": {"type": "GBSTATE", "schema_version": 2, "artifact": "GBSTATE.BIN", "timeout_seconds": 150, "terminal_marker": "complete"},
+      "must_hit": ["RunBattleTest", "ExecutePlayerMove", "HandleEnemyMonFainted", "FaintEnemyPokemon", "GainExperience"],
+      "comparison": {"regions": ["wram"], "projection": "golden_diff.SCENARIOS", "masks": "golden_diff.SCENARIOS"},
+      "verification": "synthetic-port-gate plus real-navigation golden; state verification, not UI verification. FIRST scenario in which a battle turn resolves and a mon faints: before it no scenario reached the damage pipeline or the faint/EXP chain"
+    },
+    {
       "name": "options_menu", "id": 8, "tier": "core", "scenario_class": "default",
       "build_flags": "DEBUG_OPTIONS=1", "port_entry_gate": "DEBUG_OPTIONS",
       "navigation_script": "tools/mgba_harness/scenarios/options_menu.lua",

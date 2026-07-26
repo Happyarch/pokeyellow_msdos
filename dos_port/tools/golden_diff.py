@@ -533,6 +533,47 @@ SCENARIOS = {
         "flags": "DEBUG_BATTLE_GOLDEN=1 DEBUG_ITEMBALL=1",
         "wram_masks": dict(_BATTLE_WRAM_MASKS),
     },
+    "battle_faint": {
+        # datastruct: the WRAM outcome of a RESOLVED TURN — the first scenario
+        # in the suite where one happens. SNORLAX L80 knocks out the spec wild
+        # PIDGEY L13 with STRENGTH; what is pinned is the EXP and stat-EXP the
+        # party gained, the zeroed enemy HP, and wBattleResult.
+        #
+        # Everything compared here is RNG-independent BY MATCHUP, which the
+        # scenario depends on: the port and the golden do not share an RNG
+        # stream (mgba_harness/lib/seed.lua), so a comparison that moved with a
+        # damage roll could never converge. STRENGTH's minimum roll still
+        # overkills 36 HP, so the KO is one turn for every roll, and SNORLAX
+        # outspeeds PIDGEY so the enemy never acts. The damage VALUE does
+        # differ between the sides and is deliberately not compared — it lives
+        # only in transient battle scratch, and the enemy ends at 0 HP either
+        # way.
+        "class": "datastruct",
+        "flags": "DEBUG_BATTLE_FAINT=1",
+        "wram_masks": dict(_BATTLE_WRAM_MASKS, **{
+            "wLoadedMon": [
+                ((36, 43), "Attack/Defense/Speed/Special of the wLoadedMon "
+                           "STAGING buffer, which this flow writes from two "
+                           "different sources: LoadMonData's party copy (true, "
+                           "unboosted stats) and DrawPlayerHUDAndHPBar's "
+                           "wBattleMon copy (badge-boosted), pret core.asm:1904. "
+                           "HandleEnemyMonFainted runs the second one right "
+                           "after GainExperience, so the two sides' dump "
+                           "instants straddle it and the buffer holds different "
+                           "stagings. Measured, and the ratio identifies it "
+                           "exactly: port 219/136/72/132 vs golden "
+                           "195/121/64/118 = 9/8 on every stat, i.e. the badge "
+                           "boost, not a stat-calculation divergence. This is "
+                           "NOT a hole in the comparison: wBattleMon -- the "
+                           "buffer the boost actually lives in -- is compared "
+                           "UNMASKED in this same scenario and is byte-identical "
+                           "(219/136/72 on both sides), as are wLoadedMon's own "
+                           "species, EXP, stat EXP, DVs, level and PP. Only the "
+                           "4 stat words, which are a copy of data already "
+                           "checked elsewhere, are masked."),
+            ],
+        }),
+    },
     # --- Stage 3: full-screen takeover menus. Both port screens draw W_TILEMAP
     # as a GB-shaped STRIDE-20 scratch (options.asm GBSCR_W / start_sub_menus.asm
     # TCSCR_W) and mirror rows 0-17 to GB_TILEMAP1, so the golden maps at

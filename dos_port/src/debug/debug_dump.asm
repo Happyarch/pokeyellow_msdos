@@ -151,6 +151,10 @@ extern DrawHUDsAndHPBars         ; battle_menu.asm
 extern DrawEmptyDialogBox        ; battle_menu.asm
 extern SaveScreenTilesToBuffer1  ; src/home/tilemap.asm
 extern DrawBattleMenuBox         ; battle_menu.asm
+%ifdef DEBUG_BATTLE_FAINT
+extern ExecutePlayerMove         ; core.asm — the real player-turn/damage pipeline
+extern HandleEnemyMonFainted     ; core.asm — faint + EXP chain (FaintEnemyPokemon, GainExperience)
+%endif
 %endif
 global RunBattleTest
 %endif
@@ -1319,8 +1323,78 @@ RunBattleTest:
     mov byte [ebp + wBattleResult], 2
     call EndOfBattle
     call DebugDumpMemory                ; GBSTATE.BIN (id 20) + DUMP.BIN + exit
+%elifdef DEBUG_BATTLE_FAINT
+    ; ------------------------------------------------------------------
+    ; battle_faint golden gate — the FIRST harness in which a battle turn
+    ; actually resolves and a mon faints. Session 8's coverage analysis
+    ; measured that 49 of the 62 pret core.asm labels it moved are never
+    ; executed by the suite, because every existing battle gate stops at
+    ; the menu, the move list, or a Master Ball capture. This gate runs
+    ; the real damage pipeline and the real faint/EXP chain, which is
+    ; where the bulk of those 49 live.
+    ;
+    ; RNG-INDEPENDENCE IS THE WHOLE DESIGN. The port and the golden do NOT
+    ; share an RNG stream (tools/mgba_harness/lib/seed.lua: the debug
+    ; seed's DVs "cannot be reproduced by construction"), so nothing this
+    ; scenario compares may depend on a roll. The matchup is chosen to
+    ; make that true rather than hoped for:
+    ;   * SNORLAX L80 (debug party slot 0) vs the spec PIDGEY L13, 36 HP.
+    ;     STRENGTH's minimum roll still exceeds 36 by a wide margin, so
+    ;     the KO takes exactly one turn for ANY damage roll and any crit.
+    ;   * SNORLAX outspeeds PIDGEY (L80 vs L13), so the enemy never acts:
+    ;     the player mon's HP, status and PP are untouched by a roll.
+    ;   * Therefore every compared datum -- EXP and stat EXP gained, party
+    ;     HP, wBattleResult, the zeroed enemy HP -- is a deterministic
+    ;     function of species and level, not of the stream. The damage
+    ;     VALUE differs between the sides and is deliberately not compared:
+    ;     it survives only in transient battle scratch, and the enemy ends
+    ;     at 0 HP either way.
+    ; The one roll that could still diverge is the 1/256 accuracy miss
+    ; (Gen-1 hit test). It is not a flake -- both emulators are
+    ; deterministic, so it is a fixed outcome per side. The .kod assert
+    ; below turns a divergence there into a loud failure instead of a
+    ; confusing WRAM diff.
+    ;
+    ; Turn entry is preset rather than driven through the menus, the same
+    ; documented bypass DEBUG_ITEMBALL uses above: the port's in-battle
+    ; menus are still battle-plan stubs. What is NOT bypassed is anything
+    ; under test -- ExecutePlayerMove and HandleEnemyMonFainted are the
+    ; real routines, and everything they reach runs for real.
+    ; pret refs: MainInBattleLoop sets wPlayerSelectedMove from the move
+    ; list then calls ExecutePlayerMove (core.asm:3244); it calls
+    ; HandleEnemyMonFainted (core.asm:708) when the enemy hits 0 HP, which
+    ; for a WILD battle runs FaintEnemyPokemon -> GainExperience and
+    ; returns at the `ld a,[wIsInBattle] / dec a / ret z` wild exit.
+    ; ------------------------------------------------------------------
+    call LoadScreenTilesFromBuffer1
+    call DrawHUDsAndHPBars
+    ; The debug party pokes STRENGTH into SNORLAX's move slot 4
+    ; (tools/mgba_harness/lib/seed.lua DEBUG_PARTY[1].pokes[4]), so the
+    ; 0-based list index is 3. Both are set: GetCurrentMove reads
+    ; wPlayerSelectedMove, DecrementPP reads wPlayerMoveListIndex.
+    mov byte [ebp + wPlayerMoveListIndex], 3
+    mov byte [ebp + wPlayerSelectedMove], STRENGTH
+    ; not an item/run/switch turn -- ExecutePlayerMove bails to
+    ; ExecutePlayerMoveDone if this is nonzero (core.asm:3257)
+    mov byte [ebp + wActionResultOrTookBattleTurn], 0
+    call ExecutePlayerMove
+    ; The enemy must be at 0 HP now. If a 1/256 miss (or any pipeline
+    ; regression) left it standing, fail loudly here rather than dumping a
+    ; state that silently is not the scenario's subject.
+    mov al, [ebp + wEnemyMonHP]
+    or al, [ebp + wEnemyMonHP + 1]      ; big-endian word, either byte set = alive
+    jz .faintKO
+.faintAlive:
+    ; Park with a distinctive marker so a failed run is diagnosable from
+    ; FRAME.BIN rather than looking like a hang.
+    mov byte [ebp + W_TILEMAP], 0xEE
+    call DelayFrame
+    call DumpBackbuffer                 ; writes FRAME.BIN, then exits
+.faintKO:
+    call HandleEnemyMonFainted          ; FaintEnemyPokemon -> GainExperience
+    call DebugDumpMemory                ; GBSTATE.BIN (id 21) + DUMP.BIN + exit
 %else
-%error DEBUG_BATTLE_GOLDEN needs DEBUG_BATTLE_INTRO, DEBUG_BATTLE_MENU, DEBUG_MOVEMENU or DEBUG_ITEMBALL
+%error DEBUG_BATTLE_GOLDEN needs DEBUG_BATTLE_INTRO, DEBUG_BATTLE_MENU, DEBUG_MOVEMENU, DEBUG_ITEMBALL or DEBUG_BATTLE_FAINT
 %endif
 %endif
 

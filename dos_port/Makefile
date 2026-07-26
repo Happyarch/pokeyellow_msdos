@@ -699,6 +699,26 @@ endif
 AUTOKEY_DUMP_FRAME ?= 999999
 NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 endif
+# Turn-resolution / faint / EXP gate (battle_faint): the same seeded wild battle as
+# DEBUG_ITEMBALL, but SNORLAX L80 actually swings STRENGTH at the spec PIDGEY L13 and
+# knocks it out, so the real damage pipeline and the real FaintEnemyPokemon ->
+# GainExperience chain execute. This is the gate session 8's coverage analysis asked
+# for: before it, NO scenario resolved a turn or fainted a mon, so 49 of the 62 pret
+# core.asm labels moved that session were never executed by a green suite.
+# The matchup is chosen so nothing compared depends on an RNG roll -- see the gate's
+# header in src/debug/debug_dump.asm for why one turn always suffices.
+# make DEBUG_BATTLE_FAINT=1
+ifdef DEBUG_BATTLE_FAINT
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_BATTLE_FAINT -D DEBUG_BATTLE_GOLDEN -D DEBUG_BATTLE -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_APRESS -D DEBUG_SEED_PARTY
+# The turn prints "SNORLAX used STRENGTH!", the faint message and the EXP messages,
+# several of which block on a button; AUTOKEY_APRESS answers them. As with
+# DEBUG_ITEMBALL, AutoKeyDrive's own FRAME.BIN dump would exit the program mid-flow,
+# so push it past the end of the run.
+AUTOKEY_DUMP_FRAME ?= 999999
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
 # Items-plan Stage 7 gate: teach the TM/HM in ITEMTM_ID (default TM06 TOXIC) to party
 # slot ITEMTM_MON, headless, capturing the result to DUMP.BIN. AUTOKEY answers the
 # yes/no box, the party menu and the messages.
