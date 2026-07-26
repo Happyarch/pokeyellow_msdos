@@ -115,13 +115,22 @@ scenario:** the player-mon faint path (`RemoveFaintedPlayerMon`,
 `HandlePlayerBlackOut`, `ChooseNextMon`), trainer-battle victory
 (`TrainerBattleVictory`, `ReplaceFaintedEnemyMon`), residual damage, mirror
 move, metronome, counter, `SelectEnemyMove`, and every link-battle branch.
-A player-faint/black-out scenario is the natural next gate, and is **half-built**:
-the `DEBUG_BATTLE_BLACKOUT` gate + its Lua scenario landed in `89864fa8` but
-**HANG and are deliberately unregistered** (not in the manifest, so the suite is
-unaffected). The design is proven working up to "Enemy PIDGEY used GUST!";
-prime suspect for the hang is the low-health alarm's `WaitForSoundToFinish`,
-which if confirmed is a real port defect rather than a harness bug. Full
-diagnosis and next step: memory `regression-battle-blackout-gate-hangs`.
+The player-faint/black-out half is now **CLOSED**: `battle_blackout` (id 34,
+tier `full`) is registered and passing, so `RemoveFaintedPlayerMon`,
+`ReadPlayerMonCurHPAndStatus`, `AnyPartyAlive` and `HandlePlayerBlackOut` are
+executed by the suite. Building it found a real port defect — the hang was NOT
+the low-health alarm (that call is not even translated): the no-op
+`ReadPlayerMonCurHPAndStatus` never wrote the fainted mon's 0 HP back to its
+party slot, so `AnyPartyAlive` never failed and the battle looped
+faint -> re-send forever. Detail: memory `regression-battle-blackout-gate-hangs`.
+**Still not executed by any scenario:** `ChooseNextMon`, trainer-battle victory
+(`TrainerBattleVictory`, `ReplaceFaintedEnemyMon`), residual damage, mirror
+move, metronome, counter, `SelectEnemyMove`, and every link-battle branch.
+One narrower tail this gate left open: `battle_blackout` stops inside
+`RemoveFaintedPlayerMon` (at the `wBattleResult = 1` landmark), so pret's
+`HandlePlayerBlackOut` side effect — `res BIT_ALWAYS_ON_BIKE` in
+`wStatusFlags6`, core.asm:1200, which the port omits — is executed but not
+compared. Covering it needs a landmark between the black-out and `EndOfBattle`.
 
 ### 9. battle_menu golden convergence spec
 From `docs/plans/battle_ui.md` / `fidelity_harness.md`. The remaining

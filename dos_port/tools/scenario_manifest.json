@@ -339,6 +339,15 @@
       "verification": "synthetic-port-gate plus real-navigation golden; state verification, not UI verification. FIRST scenario in which a battle turn resolves and a mon faints: before it no scenario reached the damage pipeline or the faint/EXP chain"
     },
     {
+      "name": "battle_blackout", "id": 34, "tier": "full", "scenario_class": "datastruct",
+      "build_flags": "DEBUG_BATTLE_BLACKOUT=1", "port_entry_gate": "DEBUG_BATTLE_BLACKOUT",
+      "navigation_script": "tools/mgba_harness/scenarios/battle_blackout.lua",
+      "dump": {"type": "GBSTATE", "schema_version": 2, "artifact": "GBSTATE.BIN", "timeout_seconds": 150, "terminal_marker": "complete"},
+      "must_hit": ["RunBattleTest", "ExecuteEnemyMove", "HandlePlayerMonFainted", "RemoveFaintedPlayerMon", "ReadPlayerMonCurHPAndStatus", "AnyPartyAlive", "HandlePlayerBlackOut"],
+      "comparison": {"regions": ["wram"], "projection": "golden_diff.SCENARIOS", "masks": "golden_diff.SCENARIOS"},
+      "verification": "synthetic-port-gate plus real-navigation golden; state verification, not UI verification. The other half of battle_faint's coverage: battle_faint kills the ENEMY, this one kills the PLAYER, so RemoveFaintedPlayerMon and HandlePlayerBlackOut execute for the first time. Building it found a real defect: ReadPlayerMonCurHPAndStatus was a no-op, so the fainted mon's 0 HP never reached the party and the battle looped faint->resend forever"
+    },
+    {
       "name": "options_menu", "id": 8, "tier": "core", "scenario_class": "default",
       "build_flags": "DEBUG_OPTIONS=1", "port_entry_gate": "DEBUG_OPTIONS",
       "navigation_script": "tools/mgba_harness/scenarios/options_menu.lua",

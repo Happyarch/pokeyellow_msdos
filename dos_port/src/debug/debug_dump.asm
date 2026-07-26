@@ -1455,6 +1455,14 @@ RunBattleTest:
     mov al, [ebp + wPartySpecies + 3]
     mov [ebp + wCurPartySpecies], al
     mov [ebp + wBattleMonSpecies2], al
+    ; The gain-exp flags still carry InitBattle's send-out of slot 0, which this
+    ; reshape retired. The golden never has that bit: its reshape lands BEFORE
+    ; the send-out, so the real ChooseNextMon/send-out FLAG_SETs slot 3 and
+    ; nothing else. LoadBattleMonFromParty does no flag bookkeeping, so restate
+    ; it here or the flags diverge by exactly bit 0 (measured: port $01 vs
+    ; golden $00 -- RemoveFaintedPlayerMon then clears slot 3's bit on both
+    ; sides, so the compared end state is $00).
+    mov byte [ebp + wPartyGainExpFlags], 1 << 3
     call LoadBattleMonFromParty         ; REAL loader; copies the 1 HP across
     call DrawHUDsAndHPBars
     ; --- pin the enemy's moves and its selection to GUST (see header) ---
@@ -2705,8 +2713,14 @@ autokey_script:
     ; declines the nickname; TM/stone/sign flows require affirmative A presses.
     ; Keep the train long: a flow that outlives it blocks forever on the next
     ; prompt (the harness has no other input source) and reads as a hang.
+    ; AUTOKEY_APRESS_COUNT overrides the length for a flow that needs a longer
+    ; train; the last press lands at frame 30 + (COUNT-1)*20 + 5, and every
+    ; frame after that reads as "no keys" for the rest of the run.
+%ifndef AUTOKEY_APRESS_COUNT
+%define AUTOKEY_APRESS_COUNT 300
+%endif
 %assign AK_A 30
-%rep 300
+%rep AUTOKEY_APRESS_COUNT
 %ifdef DEBUG_ITEMBALL
     dd AK_A, AK_A + 5, PAD_B
 %else

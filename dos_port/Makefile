@@ -734,6 +734,11 @@ NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_APRESS -D DEBUG_SEED_PARTY
 AUTOKEY_DUMP_FRAME ?= 999999
 NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 endif
+# Length of the AUTOKEY_APRESS button train (any AUTOKEY_APRESS gate), for a flow
+# that raises more button waits than the 300-press default covers.
+ifdef AUTOKEY_APRESS_COUNT
+NASMFLAGS += -D AUTOKEY_APRESS_COUNT=$(AUTOKEY_APRESS_COUNT)
+endif
 # Items-plan Stage 7 gate: teach the TM/HM in ITEMTM_ID (default TM06 TOXIC) to party
 # slot ITEMTM_MON, headless, capturing the result to DUMP.BIN. AUTOKEY answers the
 # yes/no box, the party menu and the messages.

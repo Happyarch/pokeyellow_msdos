@@ -123,10 +123,41 @@ scenario.run(function()
 	assert(down, "battle_blackout: the player mon never reached 0 HP — a 1/256 " ..
 		"accuracy miss, or the enemy turn did not resolve")
 
-	-- Walk the faint + blacked-out messages through to where the port gate
-	-- dumps (after HandlePlayerMonFainted returns).
-	navigate.tap_until("A", text:encode("blacked out"), 3600)
-	scenario.wait(60)
+	-- Dump point, anchored to a ROUTINE landmark rather than to a message.
+	--
+	-- wBattleResult = 1 is stored by RemoveFaintedPlayerMon a few instructions
+	-- after ReadPlayerMonCurHPAndStatus has written the fainted mon's 0 HP back
+	-- into its party slot (pret core.asm:1036/1044), and before the cry and the
+	-- "<mon> fainted!" message. Both sides pass through that store in the same
+	-- routine at the same point in the flow, so it pins the party data the
+	-- scenario is here to compare.
+	--
+	-- Two message-shaped dump points were tried and are wrong, both recorded so
+	-- they are not retried:
+	--   * text:encode("blacked out") can NEVER match — PlayerBlackedOutText2
+	--     breaks the line between the words (`<PLAYER> blacked` $4F `out!`) and
+	--     the tilemap search is a plain row-major substring.
+	--   * stopping on "blacked" alone still overshoots: the taps that walk the
+	--     message keep landing during the poll window, the battle ends, and
+	--     EndOfBattle's .resetVariables (end_of_battle.asm:54) zeroes
+	--     wIsInBattle — measured as `want $00 | got $01` against the port,
+	--     which is still mid-battle at its own dump.
+	--
+	-- COVERAGE NOTE: because this stops inside RemoveFaintedPlayerMon, pret's
+	-- HandlePlayerBlackOut side effect (res BIT_ALWAYS_ON_BIKE in wStatusFlags6,
+	-- core.asm:1200) is NOT compared here. The port's HandlePlayerBlackOut does
+	-- execute (it is in the gate's must_hit list) but omits that store; covering
+	-- it needs a landmark between the black-out and EndOfBattle.
+	local resolved = false
+	for _ = 1, 3600 do
+		if read_be("wBattleResult", 1) == 1 then
+			resolved = true
+			break
+		end
+		input.tap("A", 2, 10)
+	end
+	assert(resolved, "battle_blackout: wBattleResult never reached 1 — " ..
+		"RemoveFaintedPlayerMon did not run")
 
 	scenario.exec(function()
 		dump.write("battle_blackout", dump.standard_regions(sym), {

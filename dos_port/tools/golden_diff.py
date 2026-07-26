@@ -574,6 +574,56 @@ SCENARIOS = {
             ],
         }),
     },
+    "battle_blackout": {
+        # datastruct: the WRAM outcome of the PLAYER's mon fainting with no
+        # other mon alive — the first scenario in the suite where that happens.
+        # The party is reshaped so exactly one mon is alive (slot 3, PIKACHU L5,
+        # at 1 HP): the black-out branch is reached only when AnyPartyAlive
+        # fails (pret core.asm:985-988), and any survivor instead routes into
+        # ChooseNextMon's interactive party menu, which is a port stub and
+        # untimeable against a golden. Neither side names slot 3 — the send-out
+        # scan takes the first ALIVE mon, so zeroing slots 0-2 selects it.
+        #
+        # RNG-independent BY MATCHUP, which this scenario depends on (the two
+        # sides do not share an RNG stream, mgba_harness/lib/seed.lua): PIKACHU
+        # L5's speed ~14 loses to the spec PIDGEY L13's 21, so the ENEMY ALWAYS
+        # MOVES FIRST and the 1-HP mon faints before it ever acts — its PP and
+        # the party's PP are therefore untouched by any roll. The enemy's moves
+        # are pinned to GUST on both sides so move SELECTION cannot diverge
+        # either (an AI SAND-ATTACK would deal no damage and hand the turn to
+        # the player, who would then act and decrement PP once on one side
+        # only). What is compared is the end state: every party slot at 0 HP,
+        # the battle mon at 0 HP, wBattleResult. The damage VALUE is not
+        # compared — it lives only in transient battle scratch and overkills
+        # 1 HP for every roll.
+        "class": "datastruct",
+        "flags": "DEBUG_BATTLE_BLACKOUT=1",
+        "wram_masks": dict(_BATTLE_WRAM_MASKS, **{
+            "wLoadedMon": [
+                ((23, 24), "wLoadedMon's speed stat-EXP word, which NEITHER "
+                           "side's dump-point routine writes. The only thing "
+                           "that touches wLoadedMon in this flow is "
+                           "DrawPlayerHUDAndHPBar, and it copies two disjoint "
+                           "runs -- species..moves (bytes 0-11) and "
+                           "level..stats (bytes 33-43); bytes 12-32 are "
+                           "whatever the last LoadMonData left, so they carry "
+                           "each side's flow history, not this flow's result. "
+                           "Measured rather than assumed: those 21 residue "
+                           "bytes are byte-identical on the two sides EXCEPT "
+                           "this one word -- golden $9876, port $0000. $9876 "
+                           "is the harness's seeded DV word (seed.lua 'spec "
+                           "DVs 98 76'), left in the buffer by the golden's "
+                           "real party/send-out LoadMonData path; the port's "
+                           "synthetic gate never runs LoadMonData, so it is "
+                           "still zero. This is NOT a hole: wBattleMon -- "
+                           "where the DVs actually live -- is compared "
+                           "UNMASKED in this same scenario and is "
+                           "byte-identical including that $9876, as are "
+                           "wLoadedMon's own species, level, maxHP and all "
+                           "four stat words."),
+            ],
+        }),
+    },
     # --- Stage 3: full-screen takeover menus. Both port screens draw W_TILEMAP
     # as a GB-shaped STRIDE-20 scratch (options.asm GBSCR_W / start_sub_menus.asm
     # TCSCR_W) and mirror rows 0-17 to GB_TILEMAP1, so the golden maps at

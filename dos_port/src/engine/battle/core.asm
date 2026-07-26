@@ -2781,14 +2781,29 @@ HandlePlayerMonFainted:
     ret
 
 ; ---------------------------------------------------------------------------
-; ReadPlayerMonCurHPAndStatus — pret: copy the active party mon's HP/status into the
-; battle-mon struct. In our scope the battle-mon struct IS the live source (seeded /
-; updated in place), so this is a no-op for now.
-; TODO(faithful): sync from wPartyMon[wPlayerMonNumber] once party↔battle-mon load
-; (LoadBattleMonFromParty) is wired.
+; ReadPlayerMonCurHPAndStatus — pret core.asm:1875. "Copies player's current
+; pokemon's current HP, party pos, and status into the party struct data so it
+; stays after battle or switching." The copy runs BATTLE MON -> PARTY, four bytes
+; (MON_STATUS + 1 - MON_HP): the big-endian HP word, the party-pos byte that sits
+; between HP and status, and the status byte.
+;
+; This was a no-op stub whose comment had the direction backwards ("the battle-mon
+; struct IS the live source"). The direction is load-bearing: RemoveFaintedPlayerMon
+; calls this (pret core.asm:1036) and HandlePlayerMonFainted then consults
+; AnyPartyAlive, which reads the PARTY HP words. With the write-back missing, a
+; fainted mon still read as alive in its party slot, so the black-out branch was
+; unreachable and ChooseNextMon re-sent the same mon at its pre-faint HP — an
+; infinite faint loop, found by the battle_blackout gate.
 ; ---------------------------------------------------------------------------
 ReadPlayerMonCurHPAndStatus:
-    ret
+    mov al, [ebp + wPlayerMonNumber]
+    mov esi, wPartyMon1HP
+    mov bx, PARTYMON_STRUCT_LENGTH
+    call AddNTimes                      ; ESI = &wPartyMon<n>HP
+    mov edx, esi                        ; pret: ld d,h / ld e,l
+    mov esi, wBattleMonHP
+    mov bx, MON_STATUS + 1 - MON_HP     ; HP word + party pos + status
+    jmp CopyData                        ; tail (pret: jp CopyData)
 
 ; ---------------------------------------------------------------------------
 ; CheckNumAttacksLeft — pret core.asm: manage multi-turn move counters (Bide/Thrash/
