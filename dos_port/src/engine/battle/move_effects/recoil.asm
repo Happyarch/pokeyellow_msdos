@@ -11,7 +11,7 @@
 ;   2. externed `predef_UpdateHPBar2`, which is not linked anywhere (link-time undefined
 ;      reference).
 ; Fix: per docs/move_translation_divergence.md §4, the HP-bar redraw is the shared
-; extern `UpdateCurMonHPBar` (move_effect_helpers.asm) — it reads hWhoseTurn itself,
+; extern `UpdateCurMonHPBar` (engine/battle/core.asm) — it reads hWhoseTurn itself,
 ; sets wHPBarType, and redraws the HUD/HP bars (tail-calls DrawHUDsAndHPBars). Pret's
 ; `hlcoord 10,9` / `hlcoord 2,2` + `ld [wHPBarType],a` + `predef UpdateHPBar2` sequence
 ; is dropped entirely in favor of one call (§2.4 bank/predef flattening — flat DPMI has
@@ -39,7 +39,7 @@ section .text
 global RecoilEffect_
 
 ; --- shared scaffold externs (§4: call, never define) ---
-extern UpdateCurMonHPBar            ; move_effect_helpers.asm — reads hWhoseTurn, sets
+extern UpdateCurMonHPBar            ; engine/battle/core.asm — reads hWhoseTurn, sets
                                      ; wHPBarType, redraws HUDs/HP bars (replaces pret's
                                      ; hlcoord + predef UpdateHPBar2 — see header note)
 extern PrintText                    ; src/home/window.asm — ESI = flat text stream

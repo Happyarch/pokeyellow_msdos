@@ -251,7 +251,6 @@ extern PrintEmptyString                ; battle_exp_stubs.asm (STUB)
 extern RunPaletteCommand               ; home/palettes.asm
 extern SkipFixedLengthTextEntries      ; home/array.asm
 extern SlideDownFaintedMonPic          ; core_stubs.asm (STUB)
-extern UpdateCurMonHPBar               ; move_effect_helpers.asm
 
 ; ---------------------------------------------------------------------------
 ; MainInBattleLoop — pret engine/battle/core.asm:MainInBattleLoop (line 289).
@@ -5457,4 +5456,51 @@ PrintRunLine:
     call PlaceString
     mov esi, ebx
     call WaitForAPress
+    ret
+
+; ===========================================================================
+; Consolidated here from move_effect_helpers.asm (relocated-labels grind): both
+; are pret engine/battle/core.asm labels and belong in this mirror. Their
+; dependencies were already present in this file — AnimateEnemyHPBar /
+; AnimatePlayerHPBar / PrintText are externed above, and DoesntAffectMonText is
+; local here via the assets/battle_text.inc include (nm: R, not U), so it must
+; NOT be re-externed. move_effect_helpers.asm keeps only the labels whose pret
+; home is some other file.
+; ===========================================================================
+section .text
+
+; ===========================================================================
+; PrintDoesntAffectText — pret engine/battle/core.asm: ld hl, DoesntAffectMonText
+; / jp PrintText.
+; ===========================================================================
+global PrintDoesntAffectText
+PrintDoesntAffectText:
+    mov esi, DoesntAffectMonText
+    jmp PrintText
+
+; ===========================================================================
+; UpdateCurMonHPBar — pret engine/battle/core.asm:677 (UpdateCurMonHPBar → predef
+; UpdateHPBar2). Faithful gradual, tick-by-tick HP-bar drain. Selects the bar by
+; hWhoseTurn exactly as pret: hWhoseTurn==0 (player's turn) → the PLAYER mon's bar
+; (pret hlcoord 10,9 / wHPBarType=1, i.e. the side that also ticks the HP number);
+; else → the ENEMY mon's bar (pret hlcoord 2,2 / wHPBarType=0, no number). The old HP
+; to start the drain from is wHPBarOldHP (pret stores it little-endian; each caller —
+; residual_damage / drain_hp / heal / recoil — populates wHPBar{Old,New,Max}HP and the
+; mon-struct HP before calling, matching pret). Animate{Player,Enemy}HPBar tick from
+; ECX(old HP) to the final struct HP (== wHPBarNewHP here), redrawing on each pixel
+; change with 2 DelayFrames per pixel — pret's UpdateHPBar cadence. pret preserves bc.
+; ===========================================================================
+global UpdateCurMonHPBar
+UpdateCurMonHPBar:
+    push ebx                            ; pret UpdateCurMonHPBar: push bc / pop bc
+    movzx ecx, word [ebp + wHPBarOldHP] ; old HP (pret little-endian word) → drain start
+    mov al, [ebp + hWhoseTurn]
+    and al, al
+    jz .playerBar                       ; hWhoseTurn==0 → player's mon bar (wHPBarType=1)
+    call AnimateEnemyHPBar
+    jmp .done
+.playerBar:
+    call AnimatePlayerHPBar
+.done:
+    pop ebx
     ret

@@ -24,7 +24,7 @@
 ;      flattening), pret's `ld a,$1 / hlcoord 10,9 / ... / ld [wHPBarType],a /
 ;      predef UpdateHPBar2 / predef DrawPlayerHUDAndHPBar / predef
 ;      DrawEnemyHUDAndHPBar` triplet is replaced by a single
-;      `call UpdateCurMonHPBar`: the port's UpdateCurMonHPBar (move_effect_helpers.asm)
+;      `call UpdateCurMonHPBar`: the port's UpdateCurMonHPBar (engine/battle/core.asm)
 ;      already reads hWhoseTurn itself, sets wHPBarType, and redraws BOTH HUDs +
 ;      both HP bars (it tail-calls DrawHUDsAndHPBars) — i.e. it is the faithful
 ;      stand-in for all three pret predefs at once, not just UpdateHPBar2. This
@@ -48,7 +48,7 @@ section .text
 global DrainHPEffect_
 
 ; --- shared scaffold externs (§4: call, never define) ---
-extern UpdateCurMonHPBar            ; move_effect_helpers.asm — gradual HP-bar drain;
+extern UpdateCurMonHPBar            ; engine/battle/core.asm — gradual HP-bar drain;
                                      ; substitutes for predef UpdateHPBar2 +
                                      ; DrawPlayerHUDAndHPBar + DrawEnemyHUDAndHPBar
                                      ; (see RE-TRANSLATION NOTE #2 above).
