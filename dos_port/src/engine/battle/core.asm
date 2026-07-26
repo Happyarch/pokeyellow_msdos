@@ -14,6 +14,7 @@
 %include "gb_macros.inc"
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
+%include "assets/audio_constants.inc"   ; AUDIO_BANK_2 (PlayBattleVictoryMusic)
 %include "msgbox.inc"          ; the message-box projection record
 
 bits 32
@@ -166,7 +167,6 @@ global SendOutMon
 global TrainerBattleVictory
 
 ; --- backend (already-faithful translations in other files) ---
-extern SelectEnemyMove                 ; select_enemy_move.asm
 extern TrainerAI                       ; trainer_ai.asm (CF if AI used item/switch)
 
 ; --- draw primitives (category-D divergence point; battle_menu.asm draw helpers) ---
@@ -217,12 +217,9 @@ extern SpecialEffects
 extern FindMoveName                    ; battle_menu.asm — move id → flat name ptr
 extern GainExperience                  ; experience.asm — EXP award + level-up display
 ; --- faint / switch lifecycle (battle-swarm-C) ---
-extern FaintEnemyPokemon               ; faint_enemy.asm — enemy-faint state + EXP(-ALL)
-extern AnyPartyAlive                   ; wild_encounter_check.asm — DH=0 if no party alive
 
 ; --- pulled in with the session-8 consolidated bodies ---
 extern Moves                           ; src/data/pokemon_data.asm — flat move-record table
-extern LoadEnemyMonFromParty           ; load_enemy_from_party.asm — link-battle path
 extern GetMonHeader                    ; home/pokemon.asm — loads wMonHeader from wCurSpecies
 extern CalcStats                       ; home/move_mon.asm — EDX=dest, ESI=EV base, BH=useEVs
 extern GetMonName                      ; home/names.asm — wNamedObjectIndex -> wNameBuffer
@@ -1089,16 +1086,11 @@ section .text
 ;   - PrintCriticalOHKOText, DisplayEffectiveness, HandleBuildingRage, move-failure text
 ; ---------------------------------------------------------------------------
 ; --- externs for the faithful ExecutePlayerMove flow (Stage 2.5) ---
-extern HandleCounterMove               ; counter.asm (real)
-extern MetronomePickMove               ; metronome.asm (real)
 extern DisplayEffectiveness            ; display_effectiveness.asm (real)
-extern HandleExplodingAnimation        ; exploding_animation.asm (real)
-extern HandleBuildingRage              ; building_rage.asm (real)
 extern HideSubstituteShowMonAnim       ; core_stubs.asm (STUB)
 extern ReshowSubstituteAnim            ; core_stubs.asm (STUB)
 extern DelayFrames                     ; frame.asm
 extern MultiHitText                    ; battle_text.inc
-extern PrintMoveFailureText            ; print_move_failure.asm (real: DoesntAffect/miss/unaffected)
 
 ; Faithful port of pret engine/battle/core.asm:ExecutePlayerMove (3244). Re-entry
 ; labels (PlayerCanExecuteMove/PlayerCalcMoveDamage/HandleIfPlayerMoveMissed/
@@ -5290,6 +5282,29 @@ extern str_cantesc                     ; battle_menu.asm (assets/battle_menu_run
 extern str_norun1                      ; battle_menu.asm (assets/battle_menu_runtime_strings.inc)
 extern str_norun2                      ; battle_menu.asm (assets/battle_menu_runtime_strings.inc)
 extern str_norun3                      ; battle_menu.asm (assets/battle_menu_runtime_strings.inc)
+extern StopAllMusic                    ; src/home/audio.asm
+extern PlayMusic                       ; src/home/audio.asm
+extern StatModifierUpEffect            ; src/engine/battle/effects.asm
+extern BuildingRageText                ; dos_port/assets/battle_text.inc
+extern ClearScreenArea                 ; src/home/copy2.asm — ESI=W_TILEMAP dest, BH=rows, BL=width
+extern EnemyMonFaintedText             ; dos_port/assets/battle_text.inc (global label, battle_text stream)
+extern DoesntAffectMonText             ; dos_port/assets/battle_text.inc
+extern AttackMissedText                ; dos_port/assets/battle_text.inc
+extern UnaffectedText                  ; dos_port/assets/battle_text.inc
+extern KeptGoingAndCrashedText         ; dos_port/assets/battle_text.inc
+extern PredefShakeScreenHorizontally   ; src/engine/battle/core_stubs.asm (STUB)
+extern AIEnemyTrainerChooseMoves       ; src/engine/battle/trainer_ai.asm — score-adjust the move weights
+global FaintEnemyPokemon
+global EndLowHealthAlarm
+global PlayBattleVictoryMusic
+global AnyPartyAlive
+global LoadEnemyMonFromParty
+global SelectEnemyMove
+global PrintMoveFailureText
+global HandleCounterMove
+global HandleBuildingRage
+global MetronomePickMove
+global HandleExplodingAnimation
 ; Carried in with the moved blocks (battle_menu.asm preamble). MSG_LINE1 is the
 ; same UI_DIALOG_LINE1_OFS this file already calls BTXT_LINE1; DLG_INT(n) is the
 ; box-relative single-spaced interior row used by the trainer-battle run message.
@@ -5503,4 +5518,805 @@ UpdateCurMonHPBar:
     call AnimatePlayerHPBar
 .done:
     pop ebx
+    ret
+
+
+; ===========================================================================
+; Consolidated 2026-07-26 (mirror rule): the eleven pret engine/battle/core.asm
+; labels the port had grown in ten separate files. Grouped by the file each came
+; from, following this file's existing "; --- was <file> ---" convention (s8).
+; ORDER CAVEAT: pret orders these 741/873/973/1494/1711/3086/3889/4718/5084/
+; 5184/6787, but this file has never been in pret order — s8 assembled it by
+; APPENDING whole files, so its own existing content is already out of order.
+; Interleaving 5.5k lines into pret order is a separate change from a
+; relocation, so these are appended in pret order among THEMSELVES.
+; ===========================================================================
+
+; --- was src/engine/battle/faint_enemy.asm ---
+
+; 1. TRUE — pret constants/misc_constants.asm:3 `DEF TRUE EQU 1`. Not defined
+;    anywhere in dos_port/include/*.inc. Used for wBoostExpByExpAll = TRUE
+;    (core.asm:857). Move into gb_constants.inc when integrating.
+%ifndef TRUE
+TRUE equ 1
+%endif
+
+; 2. wEnemyStatsToDouble / wEnemyStatsToHalve — now defined directly in
+;    gb_memmap.inc (0xD064/0xD065, = wEnemyBattleStatus1 - 2/-1), so the
+;    %ifndef guard below is inert. Kept only as a fallback.
+%ifndef wEnemyStatsToDouble
+wEnemyStatsToDouble equ wEnemyBattleStatus1 - 2   ; = 0xD064
+wEnemyStatsToHalve  equ wEnemyBattleStatus1 - 1   ; = 0xD065
+%endif
+
+; 3. EXP_ALL — item id constant, not defined anywhere in gb_constants.inc or
+;    dos_port/assets (grepped the whole dos_port/ tree). Value from pret
+;    constants/item_constants.asm:87 (`const EXP_ALL` is the 76th entry in the
+;    0-based `const_value` chain starting at NO_ITEM=$00, i.e. $4B). Move into
+;    gb_constants.inc when integrating.
+%ifndef EXP_ALL
+EXP_ALL equ 0x4B
+%endif
+
+; 4. MUSIC_DEFEATED_WILD_MON — victory jingle id ($F9), from assets/audio_constants.inc
+;    (not included here to avoid pulling the whole audio table). Local guard mirrors
+;    the constants above.
+%ifndef MUSIC_DEFEATED_WILD_MON
+MUSIC_DEFEATED_WILD_MON equ 0xF9
+%endif
+
+
+
+; ---------------------------------------------------------------------------
+; FaintEnemyPokemon — pret engine/battle/core.asm:741-867.
+;
+; No caller-set registers required (pure GB-memory / extern-call routine,
+; matching pret's parameterless call convention). Clobbers all GP registers
+; (matches pret: acts as a call boundary with several nested calls).
+; ---------------------------------------------------------------------------
+FaintEnemyPokemon:
+    call ReadPlayerMonCurHPAndStatus
+
+    ; --- trainer-only: zero the fainted enemy's party-slot HP word ---
+    mov al, [ebp + wIsInBattle]
+    dec al
+    jz .wild                              ; wIsInBattle == 1 (wild) -> skip
+
+    mov al, [ebp + wEnemyMonPartyPos]     ; ld a, [wEnemyMonPartyPos]
+    mov esi, wEnemyMon1HP                 ; ld hl, wEnemyMon1HP
+    mov bx, PARTYMON_STRUCT_LENGTH        ; ld bc, PARTYMON_STRUCT_LENGTH
+    call AddNTimes                        ; hl = &party-slot HP word
+    mov byte [ebp + esi], 0               ; ld [hli], a  (a=0)
+    inc esi
+    mov byte [ebp + esi], 0               ; ld [hl], a
+
+.wild:
+    and byte [ebp + wPlayerBattleStatus1], (~(1 << ATTACKING_MULTIPLE_TIMES)) & 0xFF
+                                           ; res ATTACKING_MULTIPLE_TIMES, [hl]
+
+    ; BUG{class=data-model; pret=engine/battle/core.asm:FaintEnemyPokemon; behavior=only the high byte of accumulated Bide damage is cleared at compatibility level 0; evidence=pret source FaintEnemyPokemon plus docs/bugs_and_glitches.md Bide link-desync entry; lifetime=permanent Gen-1 behavior at compatibility level 0}
+    ; Gen-1 zeroes only the high byte of wPlayerBideAccumulatedDamage
+    ; (link desync) — pret core.asm:756-766, docs/bugs_and_glitches.md. Preserved by default.
+    ; Endianness confirmed against pret core.asm:3662-3681 (adds to "+1" first with
+    ; `add c`, then to the base "+0" with `adc b` after `ld hl,...+1`/`ld a,[hld]`):
+    ; the BASE address (+0) is the HIGH byte pret's `ld [wPlayerBideAccumulatedDamage],a`
+    ; targets; "+1" is the low byte the real bug leaves untouched.
+%if BUG_FIX_LEVEL >= 1
+    mov byte [ebp + wPlayerBideAccumulatedDamage + 0], 0
+    mov byte [ebp + wPlayerBideAccumulatedDamage + 1], 0
+%else
+    mov byte [ebp + wPlayerBideAccumulatedDamage], 0   ; high byte only (Gen-1 bug)
+%endif
+
+    ; --- clear enemy statuses: 5 contiguous bytes starting at wEnemyStatsToDouble
+    ;     (wEnemyStatsToDouble, wEnemyStatsToHalve, wEnemyBattleStatus1/2/3) ---
+    mov byte [ebp + wEnemyStatsToDouble], 0
+    mov byte [ebp + wEnemyStatsToHalve], 0
+    mov byte [ebp + wEnemyBattleStatus1], 0
+    mov byte [ebp + wEnemyBattleStatus2], 0
+    mov byte [ebp + wEnemyBattleStatus3], 0
+
+    mov byte [ebp + wEnemyDisabledMove], 0
+    mov byte [ebp + wEnemyDisabledMoveNumber], 0
+    mov byte [ebp + wEnemyMonMinimized], 0
+
+    mov byte [ebp + wPlayerUsedMove], 0       ; ld hl,wPlayerUsedMove / ld[hli],a
+    mov byte [ebp + wEnemyUsedMove], 0        ; ld[hl],a
+
+    ; ANIMATION=OFF: pret `hlcoord 12,5 / decoord 12,6 / call SlideDownFaintedMonPic`
+    ; is a pure pixel-slide graphics effect. Call site kept faithful (extern, called
+    ; unconditionally as pret does) but no coordinate setup — the stub owns its own
+    ; no-op geometry until the animation layer exists.
+    call SlideDownFaintedMonPic
+
+    ; ClearScreenArea IS real: pret `hlcoord 0,0 / lb bc,4,11`.
+    mov esi, W_TILEMAP + 0                    ; hlcoord 0, 0
+    mov bh, 4                                 ; b = 4 rows
+    mov bl, 11                                ; c = 11 width
+    call ClearScreenArea
+
+    ; --- win audio (pret core.asm:786-806): a trainer win plays SFX_FAINT_FALL then
+    ;     SFX_FAINT_THUD; a wild win ends the low-health alarm and plays the victory
+    ;     jingle. The post-audio logic at .sfxplayed is common to both. ---
+    mov al, [ebp + wIsInBattle]
+    dec al
+    jz .wild_win                              ; wIsInBattle == 1 (wild) -> victory music
+    ; Trainer win: SFX_FAINT_FALL / SFX_FAINT_THUD.
+    ; TODO-HW: trainer faint SFX (wFrequencyModifier/wTempoModifier=0,
+    ; PlaySoundWaitForCurrent SFX_FAINT_FALL, wait CHAN5, PlaySound SFX_FAINT_THUD,
+    ; WaitForSoundToFinish). Trainer battles aren't the live overworld path yet.
+    jmp .sfxplayed
+.wild_win:
+    call EndLowHealthAlarm                     ; pret: call EndLowHealthAlarm
+    mov al, MUSIC_DEFEATED_WILD_MON            ; pret: ld a, MUSIC_DEFEATED_WILD_MON
+    call PlayBattleVictoryMusic                ; pret: call PlayBattleVictoryMusic
+
+.sfxplayed:
+    ; --- double-faint guard (pret :808-815) ---
+    mov al, [ebp + wBattleMonHP]
+    or al, [ebp + wBattleMonHP + 1]
+    jnz .playermonnotfaint                    ; battle mon HP != 0 -> not fainted
+    mov al, [ebp + wInHandlePlayerMonFainted]
+    and al, al
+    jnz .playermonnotfaint                    ; already inside HandlePlayerMonFainted -> skip
+    call RemoveFaintedPlayerMon
+
+.playermonnotfaint:
+    call AnyPartyAlive
+    test dh, dh
+    jz .return                                  ; ret z (no party alive -> just return)
+
+    mov eax, EnemyMonFaintedText
+    call PrintBattleText                       ; ld hl,EnemyMonFaintedText / call PrintText
+    call PrintEmptyString
+    call SaveScreenTilesToBuffer1
+
+    mov byte [ebp + wBattleResult], 0
+
+    mov bh, EXP_ALL                            ; ld b, EXP_ALL (B -> BH per register map)
+    call IsItemInBag                           ; ZF=1 -> not in bag
+    setz byte [faint_enemy_has_exp_all]         ; push af (parked in memory, see .bss note)
+    jz .giveExpToMonsThatFought                 ; jr z, .giveExpToMonsThatFought
+
+    ; --- has EXP_ALL: halve wEnemyMonBaseStats for NUM_STATS+2 bytes ---
+    mov esi, wEnemyMonBaseStats
+    mov ecx, NUM_STATS + 2
+.halveExpDataLoop:
+    shr byte [ebp + esi], 1                    ; srl [hl]
+    inc esi
+    dec ecx
+    jnz .halveExpDataLoop
+
+.giveExpToMonsThatFought:
+    mov byte [ebp + wBoostExpByExpAll], 0
+    call GainExperience                        ; callfar GainExperience
+
+    ; pret: `pop af / ret z` — ret if the saved IsItemInBag ZF was set (EXP_ALL
+    ; NOT in bag). faint_enemy_has_exp_all = setz(that ZF) = 1 when NOT in bag, so
+    ; the faithful test is `ret nz` here, NOT `ret z` — the byte holds the raw ZF,
+    ; not "has exp all". (Was `jz`: inverted → on a normal wild win it wrongly ran
+    ; the EXP_ALL block, a 2nd whole-party GainExperience that clobbered wIsInBattle
+    ; → TrainerAI `call edi` page fault. bug#3.)
+    cmp byte [faint_enemy_has_exp_all], 0       ; pop af / ret z (byte=1 ⇒ ZF was set ⇒ no EXP_ALL)
+    jnz .return                                  ; no EXP_ALL -> done
+
+    ; --- has EXP_ALL: award to every party mon (halved share) ---
+    mov byte [ebp + wBoostExpByExpAll], TRUE
+    mov al, [ebp + wPartyCount]
+    xor bh, bh                                  ; ld b, 0 (B -> BH per register map)
+.gainExpFlagsLoop:
+    stc                                          ; scf
+    rcl bh, 1                                    ; rl b
+    dec al
+    jnz .gainExpFlagsLoop
+    mov [ebp + wPartyGainExpFlags], bh
+    call GainExperience                          ; jpfar GainExperience (tail call -> plain call+ret)
+
+.return:
+    ret
+
+section .bss
+; Local scratch: pret uses `push af` / `pop af` to carry the "does the player
+; have EXP_ALL" ZF result across the halving loop and the first GainExperience
+; call. x86 EFLAGS are not guaranteed to survive a `call` (GainExperience
+; clobbers freely), so the boolean is parked in memory instead of relying on
+; ZF/pushfd across the call boundary.
+faint_enemy_has_exp_all: resb 1
+
+section .text
+
+; --- was src/audio/play_battle_music.asm ---
+
+
+; ---------------------------------------------------------------------------
+; EndLowHealthAlarm — pret engine/battle/core.asm:EndLowHealthAlarm.
+; Called on battle win: turn off the low-health alarm and free its SFX channel.
+; DIVERGENCE: pret also sets wLowHealthAlarmDisabled=1 to prevent the alarm from
+; reactivating until the next battle. The port's alarm engine does not consult that
+; flag (no reader exists in the tree), and the alarm can only re-arm while in battle
+; — which is ending here — so the store is inert and omitted (no memmap symbol added).
+; ---------------------------------------------------------------------------
+EndLowHealthAlarm:
+    xor al, al
+    mov [ebp + wLowHealthAlarm], al               ; turn off low-health alarm
+    mov [ebp + wChannelSoundIDs + CHAN5], al       ; free the alarm's SFX channel
+    ret
+
+
+; ---------------------------------------------------------------------------
+; PlayBattleVictoryMusic — pret engine/battle/core.asm:PlayBattleVictoryMusic.
+; In: AL = victory music id (MUSIC_DEFEATED_WILD_MON or MUSIC_DEFEATED_TRAINER).
+; Stops the current battle theme and plays the victory jingle, then Delay3.
+; The bank is fixed (BANK(Music_DefeatedTrainer) = $08); both victory tracks
+; share it, matching pret. Preserves the id in AL across StopAllMusic (pret push/pop af).
+; ---------------------------------------------------------------------------
+PlayBattleVictoryMusic:
+    push eax                       ; pret: push af (keep music id across StopAllMusic)
+    call StopAllMusic
+    mov bl, AUDIO_BANK_2           ; pret: ld c, BANK(Music_DefeatedTrainer) = $08
+    pop eax                        ; pret: pop af
+    call PlayMusic                 ; AL = song, BL = bank
+    jmp Delay3                     ; pret: jp Delay3 (tail)
+
+; --- was src/home/wild_encounter_check.asm ---
+
+
+; --------------------------------------------------------------------------
+; StepCountCheck — decrement the per-step counters (pret home/overworld.asm:298).
+; If simulated joypad input is active (scripted movement) it does nothing, so
+; scripted door-exit steps don't count. Otherwise it decrements wStepCounter, and
+; — only while the post-battle "no random battle" cooldown is armed — decrements
+; wNumberOfNoRandomBattleStepsLeft, clearing the cooldown bit when it hits 0.
+; Touches WRAM only; safe to call unconditionally.
+; --------------------------------------------------------------------------
+
+; --------------------------------------------------------------------------
+; AnyPartyAlive — OR together every party mon's 2-byte HP. Returns the OR in DH
+; (pret returns it in d): DH == 0 => all party mons fainted; DH != 0 => at least
+; one is alive. This is pret's `callfar AnyPartyAlive` (home/overworld.asm:289),
+; the scan NewBattle's blackout decision consumes. Self-contained; LINK-clean.
+; Guard: pret assumes wPartyCount >= 1; the port adds a count==0 -> DH=0 guard so
+; an empty/uninitialised party can't spin the loop 2^32 times.
+; --------------------------------------------------------------------------
+AnyPartyAlive:
+    movzx ecx, byte [ebp + wPartyCount]       ; e = party count
+    xor al, al
+    test ecx, ecx
+    jz .done                                  ; port safety: empty party => all fainted
+    lea esi, [ebp + wPartyMon1 + MON_HP]      ; hl = &wPartyMon1HP (0xD16B)
+.partyLoop:
+    or al, [esi]                              ; HP high byte
+    or al, [esi + 1]                          ; HP low byte
+    add esi, PARTYMON_STRUCT_LENGTH           ; next party mon (44 bytes)
+    dec ecx
+    jnz .partyLoop
+.done:
+    mov dh, al                                ; d = OR of all HP bytes
+    ret
+
+; --- was src/engine/battle/load_enemy_from_party.asm ---
+
+
+; ---------------------------------------------------------------------------
+; LoadEnemyMonFromParty — pret engine/battle/core.asm:1711-1762
+; "copies from enemy party data to current enemy mon data when sending out a
+; new enemy mon"
+;
+; Faithful chunked copy, mirroring LoadBattleMonFromParty's structure exactly
+; (see dos_port/scratch/faint_leaves.asm for the player-side twin and its
+; header note on the CopyData/AddNTimes/SkipFixedLengthTextEntries register
+; contracts, verified there against dos_port/src/home/copy_data.asm and
+; dos_port/src/home/array.asm — reused unchanged here).
+;
+; GEN-2 FORWARD-COMPAT (CLAUDE.md, load-bearing): the enemy party struct's
+; offset 7 (MON_CATCH_RATE, aka held-item slot after a Gen1<->Gen2 trade) must
+; never be clobbered by this routine. It never is: the first CopyData call
+; below (species..moves, 12 bytes, core.asm:1714-1717 / wEnemyMonSpecies..
+; wEnemyMonDVs) only *reads* offset 7 out of wEnemyMons (the party struct) as
+; a source byte and writes it into wEnemyMonCatchRate (0xCFEB, offset 7 of
+; the battle-mon struct — a real, distinct field there, not a repurposed
+; slot) — it never writes back into the party struct. The `add hl, MON_DVS - MON_OTID`
+; (core.asm:1718-1719) then skips the source cursor over the party-only
+; OTID/Exp/StatExp region (offsets 12-26, absent from the battle-mon struct)
+; so the *next* chunk copy resumes at the party struct's DVs field (offset
+; 27) — it does not re-touch offset 7. Preserved exactly, chunk-for-chunk.
+;
+; In:  wWhichPokemon = party index of the enemy mon being sent out (WRAM
+;      only). No caller-set registers required.
+; Out: wEnemyMon* struct populated; wCurSpecies/wMonHeader set via
+;      GetMonHeader; wEnemyMonUnmodifiedLevel..stats block set; burn/
+;      paralysis penalties applied; wEnemyMonBaseStats copied from
+;      wMonHBaseStats; wEnemyMonAttackMod..(+7) reset to the default stat
+;      modifier ($7); wEnemyMonPartyPos = wWhichPokemon. All GP registers
+;      clobbered (matches pret: no register state is preserved across this
+;      routine acting as a call boundary with several nested calls).
+; ---------------------------------------------------------------------------
+LoadEnemyMonFromParty:
+    ; --- hl = wEnemyMons + wWhichPokemon * PARTYMON_STRUCT_LENGTH ---
+    mov al, [ebp + wWhichPokemon]               ; ld a, [wWhichPokemon]
+    mov bx, PARTYMON_STRUCT_LENGTH               ; ld bc, PARTYMON_STRUCT_LENGTH
+    mov esi, wEnemyMons                          ; ld hl, wEnemyMons
+    call AddNTimes                               ; hl = enemy party mon base (raw GB offset)
+
+    ; --- species..moves (12 bytes, core.asm:1714-1717) — includes offset 7
+    ;     (MON_CATCH_RATE) as a READ-ONLY source byte; see header note. ---
+    mov edx, wEnemyMonSpecies                    ; ld de, wEnemyMonSpecies
+    mov bx, wEnemyMonDVs - wEnemyMonSpecies       ; ld bc, wEnemyMonDVs - wEnemyMonSpecies
+    call CopyData                                 ; hl/de both advance by 12
+
+    ; --- skip party-only OTID/Exp/StatExp (core.asm:1718-1719) ---
+    add esi, MON_DVS - MON_OTID                   ; ld bc, MON_DVS - MON_OTID / add hl, bc
+
+    ; --- DVs word (core.asm:1720-1722) ---
+    mov edx, wEnemyMonDVs                         ; ld de, wEnemyMonDVs
+    mov bx, MON_PP - MON_DVS                      ; ld bc, MON_PP - MON_DVS
+    call CopyData
+
+    ; --- PP, 4 bytes (core.asm:1723-1725) ---
+    mov edx, wEnemyMonPP                          ; ld de, wEnemyMonPP
+    mov bx, NUM_MOVES                             ; ld bc, NUM_MOVES
+    call CopyData
+
+    ; --- Level + 5 stats, 11 bytes (core.asm:1726-1728) ---
+    mov edx, wEnemyMonLevel                       ; ld de, wEnemyMonLevel
+    mov bx, wEnemyMonPP - wEnemyMonLevel           ; ld bc, wEnemyMonPP - wEnemyMonLevel
+    call CopyData
+
+    ; --- header lookup: wCurSpecies = wEnemyMonSpecies; call GetMonHeader ---
+    mov al, [ebp + wEnemyMonSpecies]              ; ld a, [wEnemyMonSpecies]
+    mov [ebp + wCurSpecies], al                   ; ld [wCurSpecies], a
+    call GetMonHeader
+
+    ; --- nickname copy: skip wWhichPokemon NAME_LENGTH entries, then copy ---
+    mov esi, wEnemyMonNicks                       ; ld hl, wEnemyMonNicks
+    mov al, [ebp + wWhichPokemon]                 ; ld a, [wWhichPokemon]
+    call SkipFixedLengthTextEntries               ; hl += NAME_LENGTH * a
+    mov edx, wEnemyMonNick                        ; ld de, wEnemyMonNick
+    mov bx, NAME_LENGTH                           ; ld bc, NAME_LENGTH
+    call CopyData
+
+    ; --- snapshot unmodified level+stats block (1 + NUM_STATS*2 bytes) ---
+    mov esi, wEnemyMonLevel                       ; ld hl, wEnemyMonLevel
+    mov edx, wEnemyMonUnmodifiedLevel             ; ld de, wEnemyMonUnmodifiedLevel
+    mov bx, 1 + NUM_STATS * 2                     ; ld bc, 1 + NUM_STATS * 2
+    call CopyData
+
+    ; --- burn/paralysis penalties (enemy has no badge boosts) ---
+    call ApplyBurnAndParalysisPenaltiesToEnemy
+
+    ; --- base-stats copy loop: wMonHBaseStats -> wEnemyMonBaseStats, NUM_STATS bytes ---
+    mov esi, wMonHBaseStats                       ; ld hl, wMonHBaseStats
+    mov edx, wEnemyMonBaseStats                   ; ld de, wEnemyMonBaseStats
+    mov ecx, NUM_STATS                            ; ld b, NUM_STATS
+.copyBaseStatsLoop:
+    mov al, [ebp + esi]                           ; ld a, [hli]
+    inc esi
+    mov [ebp + edx], al                           ; ld [de], a
+    inc edx                                        ; inc de
+    dec ecx                                        ; dec b
+    jnz .copyBaseStatsLoop                        ; jr nz, .copyBaseStatsLoop
+
+    ; --- reset the 8 stat mods (wEnemyMonAttackMod..) to the default $7 ---
+    mov al, 7                                     ; ld a, $7
+    mov ecx, NUM_STAT_MODS                        ; ld b, NUM_STAT_MODS
+    mov esi, wEnemyMonStatMods                    ; ld hl, wEnemyMonStatMods
+.statModLoop:
+    mov [ebp + esi], al                           ; ld [hli], a
+    inc esi
+    dec ecx                                        ; dec b
+    jnz .statModLoop                              ; jr nz, .statModLoop
+
+    ; --- wEnemyMonPartyPos = wWhichPokemon ---
+    mov al, [ebp + wWhichPokemon]                 ; ld a, [wWhichPokemon]
+    mov [ebp + wEnemyMonPartyPos], al             ; ld [wEnemyMonPartyPos], a
+    ret
+
+; --- was src/engine/battle/select_enemy_move.asm ---
+
+; pret `n percent` = n * $ff / 100 (macros/data.asm). 25→63, 50→127, 75→191.
+%define PERCENT(n) ((n) * 0xFF / 100)
+
+
+
+SelectEnemyMove:
+    ; TODO-HW: link-battle move exchange (Phase 4 network HAL). Single-player skips
+    ; it and selects locally; the link path would read the opponent's chosen move.
+    mov al, [ebp + wLinkState]
+    cmp al, LINK_STATE_BATTLING
+    jne .noLinkBattle
+    ; (link path not implemented; fall through to local selection for determinism)
+.noLinkBattle:
+    ; --- forced-move early-outs: keep the current wEnemySelectedMove ---
+    mov al, [ebp + wEnemyBattleStatus2]
+    test al, (1 << NEEDS_TO_RECHARGE) | (1 << USING_RAGE)   ; Hyper Beam recharge / Rage
+    jnz .ret
+    mov al, [ebp + wEnemyBattleStatus1]
+    test al, (1 << CHARGING_UP) | (1 << THRASHING_ABOUT)    ; Solar Beam/Fly / Thrash
+    jnz .ret
+    mov al, [ebp + wEnemyMonStatus]
+    test al, (1 << FRZ) | SLP_MASK                          ; frozen or asleep
+    jnz .ret
+    mov al, [ebp + wEnemyBattleStatus1]
+    test al, (1 << USING_TRAPPING_MOVE) | (1 << STORING_ENERGY)  ; Wrap etc. / Bide
+    jnz .ret
+    mov al, [ebp + wPlayerBattleStatus1]
+    test al, (1 << USING_TRAPPING_MOVE)   ; caught in the player's trapping move
+    jz .canSelectMove
+.unableToSelectMove:
+    mov al, 0xFF
+    jmp .done
+.canSelectMove:
+    ; if the 2nd move slot is empty there is only one move; Struggle if it is disabled
+    mov esi, wEnemyMonMoves + 1
+    mov al, [ebp + esi]                   ; a = move slot 1 ([hld])
+    dec esi                               ; esi -> slot 0
+    test al, al
+    jnz .atLeastTwoMovesAvailable
+    mov al, [ebp + wEnemyDisabledMove]
+    test al, al
+    mov al, STRUGGLE
+    jnz .done                             ; only move is disabled → Struggle
+    ; else: one usable move — fall through; the random loop re-rolls onto slot 0
+.atLeastTwoMovesAvailable:
+    ; pret core.asm:3138-3141 — wild encounters roll uniformly; trainer battles first
+    ; run the class-based AI, which RETURNS a move-candidate buffer pointer in ESI
+    ; (filtered wBuffer, non-minimum slots zeroed — or wEnemyMonMoves if no mods). It
+    ; does NOT pick wEnemySelectedMove itself; ESI carries into .chooseRandomMove below,
+    ; whose uniform roll then only lands on the AI's preferred (non-zero) slots.
+    mov al, [ebp + wIsInBattle]
+    dec al
+    jz .chooseRandomMove                  ; wild encounter → uniform random
+    call AIEnemyTrainerChooseMoves        ; trainer → weighted move choice
+.chooseRandomMove:
+    push esi                              ; remember slot-0 ptr for re-rolls
+    call BattleRandom
+    mov bh, 1                             ; b = 1: 25% → move 1
+    cmp al, PERCENT(25)
+    jb .moveChosen
+    inc esi
+    inc bh                                ; 25% → move 2
+    cmp al, PERCENT(50)
+    jb .moveChosen
+    inc esi
+    inc bh                                ; 25% → move 3
+    cmp al, PERCENT(75) - 1
+    jb .moveChosen
+    inc esi
+    inc bh                                ; 25% → move 4
+.moveChosen:
+    mov al, bh
+    dec al
+    mov [ebp + wEnemyMoveListIndex], al
+    mov al, [ebp + wEnemyDisabledMove]
+    shr al, 4                             ; pret `swap a` + `and $f` = high nybble = disabled slot
+    cmp al, bh                            ; chosen slot == disabled slot?
+    mov al, [ebp + esi]                   ; a = candidate move id ([hl]); preserves flags
+    pop esi                               ; restore slot-0 ptr
+    je .chooseRandomMove                  ; disabled → re-roll
+    test al, al
+    jz .chooseRandomMove                  ; empty slot → re-roll
+.done:
+    mov [ebp + wEnemySelectedMove], al
+.ret:
+    ret
+
+; --- was src/engine/battle/print_move_failure.asm ---
+
+
+; ===========================================================================
+; PrintMoveFailureText — pret engine/battle/core.asm:3889
+; Prints why a move had no effect (immune / missed / already-unaffected via
+; the OHKO "unaffected" marker), then clears wCriticalHitOrOHKO. If the move
+; whose turn just failed was Jump Kick/Hi Jump Kick (JUMP_KICK_EFFECT), applies
+; the Gen-1 crash-recoil damage (always damage/8, minimum 1) to the user.
+; ===========================================================================
+PrintMoveFailureText:
+    mov edx, wPlayerMoveEffect          ; ld de, wPlayerMoveEffect
+    mov al, [ebp + hWhoseTurn]          ; ldh a, [hWhoseTurn]
+    and al, al
+    jz .playersTurn
+    mov edx, wEnemyMoveEffect           ; ld de, wEnemyMoveEffect
+.playersTurn:
+    mov esi, DoesntAffectMonText        ; ld hl, DoesntAffectMonText
+    mov al, [ebp + wDamageMultipliers]
+    and al, EFFECTIVENESS_MASK          ; 0x7F
+    jz .gotTextToPrint                  ; multiplier==0 -> "doesn't affect"
+    mov esi, AttackMissedText           ; ld hl, AttackMissedText
+    mov al, [ebp + wCriticalHitOrOHKO]
+    cmp al, 0xFF
+    jnz .gotTextToPrint                 ; not the "unaffected" OHKO marker -> "missed"
+    mov esi, UnaffectedText             ; ld hl, UnaffectedText
+.gotTextToPrint:
+    push edx                            ; push de (move-effect ptr survives PrintText)
+    call PrintText
+    xor al, al
+    mov [ebp + wCriticalHitOrOHKO], al
+    pop edx                             ; pop de
+    mov al, [ebp + edx]                 ; ld a, [de] — move effect
+    cmp al, JUMP_KICK_EFFECT            ; 0x2D
+    jnz .ret                            ; ret nz
+
+    ; GLITCH{class=data-model; pret=engine/battle/core.asm:PrintMoveFailureText; behavior=Jump Kick and Hi Jump Kick crash recoil is always one HP because wDamage is zero before the shifts; evidence=pret source PrintMoveFailureText arithmetic; lifetime=permanent Gen-1 behavior; safety=bounded WRAM arithmetic with no ACE potential under DPMI}
+    ; Gen-1 Jump Kick/Hi Jump Kick crash recoil is always exactly 1 HP.
+    ; wDamage is 0 here (the move missed before any damage was calculated), so the
+    ; intended "damage/8" recoil always collapses to the post-shift minimum of 1.
+    ; Preserved as-is. Not separately catalogued in docs/bugs_and_glitches.md or
+    ; docs/references/yellow_glitches.md (corrected a stale backref to the former
+    ; this pass — that file has no Jump Kick entry). pret ref:
+    ; engine/battle/core.asm:PrintMoveFailureText. Safety: safe under DPMI
+    ; (bounded WRAM arithmetic, no ACE potential).
+    mov esi, wDamage                    ; ld hl, wDamage
+    mov al, [ebp + esi]                 ; ld a, [hli] — high byte
+    inc esi
+    mov bl, [ebp + esi]                 ; ld b, [hl] — low byte (hl == wDamage+1)
+    ; 16-bit big-endian {al:bl} >>= 3, faithful SRL A / RR B x3 (x86 SHR/RCR are
+    ; bit-for-bit equivalent to Z80 SRL/RR w.r.t. the carry flag).
+    shr al, 1
+    rcr bl, 1
+    shr al, 1
+    rcr bl, 1
+    shr al, 1
+    rcr bl, 1
+    mov [ebp + esi], bl                 ; ld [hl], b — store low byte at wDamage+1
+    dec esi                             ; dec hl -> wDamage
+    mov [ebp + esi], al                 ; ld [hli], a — store high byte at wDamage
+    inc esi                             ; (hli post-increment) hl -> wDamage+1
+    or al, bl                           ; or b — a = high | low, sets ZF
+    jnz .applyRecoil
+    inc al                              ; inc a (a was 0 here -> a = 1)
+    mov [ebp + esi], al                 ; ld [hl], a — clamp low byte (== wDamage+1) to 1
+.applyRecoil:
+    mov esi, KeptGoingAndCrashedText    ; ld hl, KeptGoingAndCrashedText
+    call PrintText
+    mov bh, 4                           ; ld b, $4
+    call PredefShakeScreenHorizontally  ; predef PredefShakeScreenHorizontally (allowlist §2.4)
+    mov al, [ebp + hWhoseTurn]          ; ldh a, [hWhoseTurn]
+    and al, al
+    jnz .enemyTurn
+    jmp ApplyDamageToPlayerPokemon      ; jp ApplyDamageToPlayerPokemon — recoil hits the user
+.enemyTurn:
+    jmp ApplyDamageToEnemyPokemon
+.ret:
+    ret
+
+; --- was src/engine/battle/counter.asm ---
+
+
+; ===========================================================================
+; HandleCounterMove — engine/battle/core.asm:4718.
+;
+; The variables checked by Counter are updated whenever the cursor points to a new move
+; in the battle selection menu. This is irrelevant for the opponent's side outside of
+; link battles, since the move selection is controlled by the AI. However, in the
+; scenario where the player switches out and the opponent uses Counter, the outcome may
+; be affected by the player's actions in the move selection menu prior to switching the
+; Pokemon. This might also lead to desync glitches in link battles.
+;
+; Caller contract (do not change): "Not Counter" returns ZF=0 (caller falls through to
+; normal damage); every path where the attacker's move IS Counter returns ZF=1 (its
+; damage, if any, is already in wDamage) — this is exactly what the faithful translation
+; below produces, with no manual ZF massaging.
+; ===========================================================================
+HandleCounterMove:
+    mov al, [ebp + hWhoseTurn]      ; ldh a, [hWhoseTurn] ; whose turn
+    and al, al
+    ; player's turn
+    mov esi, wEnemySelectedMove     ; ld hl, wEnemySelectedMove
+    mov edx, wEnemyMovePower        ; ld de, wEnemyMovePower
+    mov al, [ebp + wPlayerSelectedMove]   ; ld a, [wPlayerSelectedMove]
+    jz .next                        ; jr z, .next
+    ; enemy's turn
+    mov esi, wPlayerSelectedMove    ; ld hl, wPlayerSelectedMove
+    mov edx, wPlayerMovePower       ; ld de, wPlayerMovePower
+    mov al, [ebp + wEnemySelectedMove]    ; ld a, [wEnemySelectedMove]
+.next:
+    cmp al, 0x44                    ; cp COUNTER
+    jnz .notCounter                 ; ret nz ; return if not using Counter (ZF=0 preserved)
+    mov byte [ebp + wMoveMissed], 1 ; ld a,$01 / ld [wMoveMissed],a — assume miss until it lands
+    mov al, [ebp + esi]             ; ld a, [hl]
+    cmp al, 0x44                    ; cp COUNTER
+    jz .ret                         ; ret z ; miss if the opponent's last selected move is Counter.
+    mov al, [ebp + edx]             ; ld a, [de]
+    and al, al
+    jz .ret                         ; ret z ; miss if the opponent's last selected move's Base Power is 0.
+    ; check if the move the target last selected was Normal or Fighting type
+    ; (wPlayerMoveType/wEnemyMoveType sit immediately after MovePower in gb_memmap.inc,
+    ; so this indexes [edx+1] rather than a pret "inc de")
+    mov al, [ebp + edx + 1]         ; inc de / ld a, [de]
+    and al, al                      ; normal type
+    jz .counterableType
+    cmp al, 0x01                    ; cp FIGHTING
+    jz .counterableType
+    ; if the move wasn't Normal or Fighting type, miss
+    xor al, al
+    ret
+.counterableType:
+    ; BUG{class=data-model; pret=engine/battle/move_effects/counter.asm:HandleCounterMove; behavior=Counter doubles stale wDamage without proving the immediately previous hit was counterable; evidence=pret source HandleCounterMove plus docs/references/yellow_glitches.md battle-system Unexpected Counter damage; lifetime=permanent Gen-1 behavior}
+    ; "Unexpected Counter damage" — Counter simply doubles wDamage, which
+    ; holds the last damage value dealt by *anyone* (player, opponent, a since-switched-out
+    ; opponent, or even another link-battle player) because wDamage is shared and never
+    ; cleared between turns/switches/battles. Inherent Gen-1 behavior, preserved verbatim.
+    ; pret ref: engine/battle/core.asm#L4960, bugs_and_glitches.md#unexpected-counter-damage
+    ; (fix listed as TBD upstream — no BUG_FIX_LEVEL gate to key off here).
+    ; Same root cause as yellow_glitches.md's "Counter Glitch" entry ("Counter
+    ; can reflect non-Normal/Fighting moves or the user's own damage"): the
+    ; type check above (Normal/Fighting) only inspects the *last-selected-move*
+    ; type field, not what actually produced the shared wDamage value being
+    ; doubled here — so a stale/mismatched wDamage from an unrelated attack can
+    ; still pass the type gate and get reflected.
+    mov esi, wDamage                ; ld hl, wDamage
+    mov al, [ebp + esi]             ; ld a, [hli] — high byte
+    or al, [ebp + esi + 1]          ; or [hl] — or with low byte
+    jz .ret                         ; ret z
+    mov al, [ebp + esi + 1]         ; ld a, [hl] — low byte
+    add al, al                      ; add a
+    mov [ebp + esi + 1], al         ; ld [hld], a — write doubled low byte
+    mov al, [ebp + esi]             ; ld a, [hl] — high byte
+    adc al, al                      ; adc a
+    mov [ebp + esi], al             ; ld [hl], a — write doubled(+carry) high byte
+    jnc .noCarry                    ; jr nc, .noCarry
+    mov byte [ebp + esi], 0xff      ; ld a,$ff / ld [hli],a
+    mov byte [ebp + esi + 1], 0xff  ; ld [hl], a
+.noCarry:
+    mov byte [ebp + wMoveMissed], 0 ; xor a / ld [wMoveMissed], a
+    call MoveHitTest
+    xor al, al
+    ret
+.notCounter:
+    ret                              ; ZF=0 still set from the cmp above
+.ret:
+    ret
+
+; --- was src/engine/battle/building_rage.asm ---
+
+
+HandleBuildingRage:
+    ; values for the player's turn (target = enemy mon)
+    mov esi, wEnemyBattleStatus2
+    mov edx, wEnemyMonStatMods
+    mov ebx, wEnemyMoveNum
+    mov al, [ebp + hWhoseTurn]
+    test al, al
+    jz .next
+    ; values for the enemy's turn (target = player mon)
+    mov esi, wPlayerBattleStatus2
+    mov edx, wPlayerMonStatMods
+    mov ebx, wPlayerMoveNum
+.next:
+    test byte [ebp + esi], (1 << USING_RAGE)
+    jz .ret                          ; ret z — target not raging
+    mov al, [ebp + edx]
+    cmp al, 0x0D                     ; attack mod already maxed (+6)?
+    je .ret                          ; ret z
+    mov al, [ebp + hWhoseTurn]
+    xor al, 0x01                     ; flip turn for the stat-raise
+    mov [ebp + hWhoseTurn], al
+    ; temporarily set the target's move to $00 / effect to ATTACK_UP1_EFFECT
+    mov esi, ebx                     ; hl = bc (move-number address)
+    mov byte [ebp + esi], 0x00       ; null move number
+    inc esi
+    mov byte [ebp + esi], ATTACK_UP1_EFFECT
+    push esi
+    mov esi, BuildingRageText
+    call PrintText
+    call StatModifierUpEffect
+    pop esi                          ; esi = move-effect address
+    xor al, al
+    mov [ebp + esi], al              ; ld [hld], a — null move effect
+    dec esi
+    mov al, RAGE
+    mov [ebp + esi], al              ; restore the target's move to Rage
+    mov al, [ebp + hWhoseTurn]
+    xor al, 0x01                     ; flip turn back
+    mov [ebp + hWhoseTurn], al
+.ret:
+    ret
+
+; --- was src/engine/battle/metronome.asm ---
+
+                              ; EDX = dest struct offset (wPlayerMoveNum/wEnemyMoveNum).
+
+; move ids (pret constants.asm move_constants.asm)
+METRONOME_MOVE  equ 0x4C     ; METRONOME
+STRUGGLE_MOVE   equ 0xA5     ; STRUGGLE — pret ASSERT NUM_ATTACKS == STRUGGLE;
+                              ; ids >= STRUGGLE are not real moves and are rejected.
+
+
+                              ; ids >= STRUGGLE are not real moves and are rejected.
+
+; ===========================================================================
+; MetronomePickMove — pret core.asm:5184. Picks a random move (not METRONOME,
+; not >= STRUGGLE) for the acting side and reloads its move data.
+; ===========================================================================
+MetronomePickMove:
+    xor al, al
+    mov [ebp + wAnimationType], al      ; xor a / ld [wAnimationType], a
+    mov al, METRONOME_MOVE              ; ld a, METRONOME
+    ; ALLOWLIST (§2 item 1): pret plays Metronome's own subanim here
+    ; (xor a / ld [wAnimationType],a / ld a, METRONOME / call PlayMoveAnimation).
+    ; PlayMoveAnimation in this port already implements the faithful
+    ; ANIMATION=OFF realization (fixed delay + PlayApplyingAttackAnimation), so
+    ; this call is kept exactly as pret has it — subanim -> ANIMATION=OFF
+    ; (kept faithful call), not a skip.
+    call PlayMoveAnimation
+    mov edx, wPlayerMoveNum             ; ld de, wPlayerMoveNum
+    mov esi, wPlayerSelectedMove        ; ld hl, wPlayerSelectedMove
+    mov al, [ebp + hWhoseTurn]          ; ldh a, [hWhoseTurn]
+    and al, al
+    jz .pickMoveLoop                    ; jr z, .pickMoveLoop
+    mov edx, wEnemyMoveNum              ; ld de, wEnemyMoveNum
+    mov esi, wEnemySelectedMove         ; ld hl, wEnemySelectedMove
+.pickMoveLoop:
+    call BattleRandom                   ; call BattleRandom -> AL
+    and al, al
+    jz .pickMoveLoop                    ; and a / jr z, .pickMoveLoop (reject 0)
+    cmp al, STRUGGLE_MOVE               ; cp STRUGGLE
+    jae .pickMoveLoop                   ; jr nc, .pickMoveLoop (reject id >= STRUGGLE)
+    cmp al, METRONOME_MOVE              ; cp METRONOME
+    je .pickMoveLoop                    ; jr z, .pickMoveLoop (reject Metronome itself)
+    mov [ebp + esi], al                 ; ld [hl], a
+    jmp ReloadMoveData                  ; jr ReloadMoveData (tail jump; DE/AL set as pret leaves them)
+
+; --- was src/engine/battle/exploding_animation.asm ---
+
+; Numeric ids not present as named constants in gb_constants.inc — literal + comment,
+; per the swarm's numeric-id convention (matches poison.asm's TOXIC/POISON_EFFECT style).
+%define SELFDESTRUCT_MOVE 0x4E      ; SELFDESTRUCT move id
+%define EXPLOSION_MOVE     0x63     ; EXPLOSION move id
+%define MEGA_PUNCH_ANIM    0x05     ; MEGA_PUNCH animation id — pret ASSERTs this ==
+                                     ; ANIMATIONTYPE_SHAKE_SCREEN_HORIZONTALLY_LIGHT (5)
+
+
+                                     ; ANIMATIONTYPE_SHAKE_SCREEN_HORIZONTALLY_LIGHT (5)
+
+; ===========================================================================
+; HandleExplodingAnimation — pret core.asm:6787. Called after a Self-Destruct/
+; Explosion hit resolves; decides whether to shake the screen. All branches that
+; don't reach the "isExplodingMove" success path return without touching
+; wAnimationType (faithful to pret's ret nz/ret z guards — no animation plays).
+;
+; In: EBP = GB base, [ebp+hWhoseTurn] = whose turn (0 = player, 1 = enemy).
+; Out (success path only): [ebp+wAnimationType] = 5, tail-jumps into
+;   PlayMoveAnimation with AL = 5 (MEGA_PUNCH id == ANIMATIONTYPE_SHAKE_SCREEN_
+;   HORIZONTALLY_LIGHT); PlayMoveAnimation's ret returns to our caller.
+; Out (no-op paths): ret, registers as left by the guard that fired.
+; ===========================================================================
+HandleExplodingAnimation:
+    mov al, [ebp + hWhoseTurn]
+    and al, al
+    mov esi, wEnemyMonType1         ; hl = target type1 — player's turn → target = enemy
+    ; NOTE: pret reads wEnemyBattleStatus1 in BOTH branches (ld de, wEnemyBattleStatus1
+    ; appears on both the z and fallthrough paths of the original code) — translated
+    ; verbatim, not "fixed" to wPlayerBattleStatus1 for the enemy's-turn case.
+    mov edx, wEnemyBattleStatus1    ; de = wEnemyBattleStatus1 (both branches, faithful)
+    mov al, [ebp + wPlayerMoveNum]
+    jz .player
+    mov esi, wBattleMonType1        ; hl = target type1 — enemy's turn → target = player
+    mov edx, wEnemyBattleStatus1    ; de = wEnemyBattleStatus1 (verbatim pret quirk, see above)
+    mov al, [ebp + wEnemyMoveNum]
+.player:
+    cmp al, SELFDESTRUCT_MOVE
+    je .isExplodingMove
+    cmp al, EXPLOSION_MOVE
+    jne .ret                        ; ret nz — not an exploding move, no animation
+.isExplodingMove:
+    mov al, [ebp + edx]
+    test al, 1 << INVULNERABLE      ; bit 6 — fly/dig target is invulnerable
+    jnz .ret                        ; ret nz — invulnerable target, no animation
+    mov al, [ebp + esi]             ; ld a,[hli] — target type1
+    inc esi
+    cmp al, GHOST
+    je .ret                         ; ret z — Ghost-type immune, no animation
+    mov al, [ebp + esi]             ; ld a,[hl] — target type2 (immediately follows type1)
+    cmp al, GHOST
+    je .ret                         ; ret z — Ghost-type immune, no animation
+    mov al, [ebp + wMoveMissed]
+    and al, al
+    jnz .ret                        ; ret nz — move missed, no animation
+    mov byte [ebp + wAnimationType], MEGA_PUNCH_ANIM   ; == ANIMATIONTYPE_SHAKE_SCREEN_HORIZONTALLY_LIGHT
+    ; falls through (pret) into PlayMoveAnimation with a == 5; ported as an
+    ; explicit tail jmp — PlayMoveAnimation's ret returns to our caller.
+    mov al, MEGA_PUNCH_ANIM
+    jmp PlayMoveAnimation
+.ret:
     ret

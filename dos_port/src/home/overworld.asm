@@ -110,7 +110,7 @@ extern MapSongBanks                 ; src/engine/overworld/overworld.asm (assets
 extern OVERWORLD_BLOCKS_SIZE        ; src/engine/overworld/overworld.asm (assets/overworld_blocks.inc)
 
 ; --- relocated from src/engine/overworld/overworld.asm (unit 6b) ---
-extern AnyPartyAlive                      ; src/home/wild_encounter_check.asm
+extern AnyPartyAlive                      ; src/engine/battle/core.asm
 extern CheckForHiddenEventOrBookshelfOrCardKeyDoor ; src/home/hidden_events.asm
 extern CheckForceBikeOrSurf               ; src/engine/overworld/player_state.asm
 extern CheckNPCInteraction                ; src/engine/overworld/map_sprites.asm
