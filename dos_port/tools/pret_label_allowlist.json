@@ -503,50 +503,6 @@
       "port_file": "dos_port/src/home/names.asm",
       "why": "Scanner-reviewed 2026-07-15: NamePointers from pret home/names2.asm has its selected single non-stub definition at dos_port/src/home/names.asm; preserve this per-label split."
     },
-    "ApplyPikachuMovementData": {
-      "port_file": "dos_port/src/engine/overworld/pikachu.asm",
-      "why": "Scanner-reviewed 2026-07-15: ApplyPikachuMovementData from pret home/pikachu.asm has its selected single non-stub definition at dos_port/src/engine/overworld/pikachu.asm; preserve this per-label split."
-    },
-    "CheckPikachuFollowingPlayer": {
-      "port_file": "dos_port/src/engine/overworld/pikachu.asm",
-      "why": "Scanner-reviewed 2026-07-15: CheckPikachuFollowingPlayer from pret home/pikachu.asm has its selected single non-stub definition at dos_port/src/engine/overworld/pikachu.asm; preserve this per-label split."
-    },
-    "DisablePikachuFollowingPlayer": {
-      "port_file": "dos_port/src/engine/overworld/pikachu.asm",
-      "why": "Scanner-reviewed 2026-07-15: DisablePikachuFollowingPlayer from pret home/pikachu.asm has its selected single non-stub definition at dos_port/src/engine/overworld/pikachu.asm; preserve this per-label split."
-    },
-    "DisablePikachuOverworldSpriteDrawing": {
-      "port_file": "dos_port/src/engine/overworld/pikachu.asm",
-      "why": "Scanner-reviewed 2026-07-15: DisablePikachuOverworldSpriteDrawing from pret home/pikachu.asm has its selected single non-stub definition at dos_port/src/engine/overworld/pikachu.asm; preserve this per-label split."
-    },
-    "EnablePikachuFollowingPlayer": {
-      "port_file": "dos_port/src/engine/overworld/pikachu.asm",
-      "why": "Scanner-reviewed 2026-07-15: EnablePikachuFollowingPlayer from pret home/pikachu.asm has its selected single non-stub definition at dos_port/src/engine/overworld/pikachu.asm; preserve this per-label split."
-    },
-    "EnablePikachuOverworldSpriteDrawing": {
-      "port_file": "dos_port/src/engine/overworld/pikachu.asm",
-      "why": "Scanner-reviewed 2026-07-15: EnablePikachuOverworldSpriteDrawing from pret home/pikachu.asm has its selected single non-stub definition at dos_port/src/engine/overworld/pikachu.asm; preserve this per-label split."
-    },
-    "Func_1510": {
-      "port_file": "dos_port/src/engine/overworld/pikachu.asm",
-      "why": "Scanner-reviewed 2026-07-15: Func_1510 from pret home/pikachu.asm has its selected single non-stub definition at dos_port/src/engine/overworld/pikachu.asm; preserve this per-label split."
-    },
-    "Func_151d": {
-      "port_file": "dos_port/src/engine/overworld/pikachu.asm",
-      "why": "Scanner-reviewed 2026-07-15: Func_151d from pret home/pikachu.asm has its selected single non-stub definition at dos_port/src/engine/overworld/pikachu.asm; preserve this per-label split."
-    },
-    "GetPikachuMovementScriptByte": {
-      "port_file": "dos_port/src/engine/overworld/pikachu.asm",
-      "why": "Scanner-reviewed 2026-07-15: GetPikachuMovementScriptByte from pret home/pikachu.asm has its selected single non-stub definition at dos_port/src/engine/overworld/pikachu.asm; preserve this per-label split."
-    },
-    "Pikachu_IsInArray": {
-      "port_file": "dos_port/src/engine/overworld/pikachu.asm",
-      "why": "Scanner-reviewed 2026-07-15: Pikachu_IsInArray from pret home/pikachu.asm has its selected single non-stub definition at dos_port/src/engine/overworld/pikachu.asm; preserve this per-label split."
-    },
-    "SpawnPikachu": {
-      "port_file": "dos_port/src/engine/overworld/pikachu.asm",
-      "why": "Scanner-reviewed 2026-07-15: SpawnPikachu from pret home/pikachu.asm has its selected single non-stub definition at dos_port/src/engine/overworld/pikachu.asm; preserve this per-label split."
-    },
     "RestoreMapTextPointer": {
       "port_file": "dos_port/src/home/map_text_pointer.asm",
       "why": "Scanner-reviewed 2026-07-15: RestoreMapTextPointer from pret home/predef_text.asm has its selected single non-stub definition at dos_port/src/home/map_text_pointer.asm; preserve this per-label split."
