@@ -1394,7 +1394,8 @@ B2 must not create a `PlayIntroScene` stub.
 > - **Remaining 3 scenes — the VBlank tile-transfer decision.** Scenes 7/11 use the
 >   generic VRAM tile-transfer VBlank pipeline (`hVBlankCopySource/Dest/Size`,
 >   `Request7TileTransferFromC810ToC710`), which **the port does not have** (it has
->   only `VBlankCopyBgMap` for BG-map *rows*, in `src/video/bg_anim.asm`). Decision:
+>   only `VBlankCopyBgMap` for BG-map *rows*, in `src/home/vcopy.asm` — it was in
+>   `src/video/bg_anim.asm` until s14 moved it to its pret mirror). Decision:
 >   port each scene's portable logic faithfully (scene 7 = `hSCX+=2` scroll + the
 >   circular `wLYOverridesBuffer` roll + timer; scene 11 = the every-8th-frame cloud
 >   setup + timer) and **stub the tile-animation transfer** (deferred visual polish,

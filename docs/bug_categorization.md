@@ -74,7 +74,7 @@ task, which this pass didn't need to add to.
 | Move 0x00 (CoolTrainer♀ glitch) | BUG(critical), ACE: Potential | critical | Yes | same site as Super Glitch (`GetName`/`.walk`, index 0 case) | Yes (same extended tag) |
 | Struggle PP Underflow | BUG(critical), ACE: Potential | critical | Yes | `src/engine/battle/decrement_pp.asm:DecrementPP` | Yes (newly tagged this pass) |
 | Hyper Beam + Freeze | BUG(critical) | critical | Yes | `src/engine/battle/core.asm` `.frozenCheck` / `.eFrozenCheck` | Yes (newly tagged this pass) |
-| Index #000 Post-Capture | BUG(critical), ACE: Potential | critical | **No** | pret's `ThrowBall`/capture-to-party path — no catch-during-battle system (`ThrowBall`/`CatchMon`) exists anywhere in `dos_port/src`; only post-battle party-add (`add_party_mon.asm`) and trade/evolution paths are ported | Pending port |
+| Index #000 Post-Capture | BUG(critical), ACE: Potential | critical | **No** | pret's `ThrowBall`/capture-to-party path — no catch-during-battle system (`ThrowBall`/`CatchMon`) exists anywhere in `dos_port/src`; only post-battle party-add (`add_mon.asm`, was `add_party_mon.asm` until s14) and trade/evolution paths are ported | Pending port |
 
 ### Overworld / Map (5 entries, yellow_glitches.md lines 87-91)
 
