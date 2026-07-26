@@ -141,7 +141,8 @@ gate means only “no detected structural divergence”; run
 scenario when behavior is changed.
 
 When a capability becomes live, sweep related `TODO-HW`, `STUB`, extern,
-allowlist, plan, skill, and stigmergy claims in the same workstream. Stigmergy is
+allowlist, plan, skill, `regression-*` memories, and stigmergy claims in the same
+workstream. Stigmergy is
 an evidence index, not authority: durable entries need evidence and state;
 volatile status needs expiry; contradictory repository evidence updates the
 existing key. Run `dos_port/tools/project_state --plans` for the generated active
@@ -269,6 +270,8 @@ end of each rule — invoke it when the rule needs its full context.
 Before any edit, confirm:
 - Which skill applies, or why none applies.
 - Which stigmergy memories were checked.
+- **Which regression memories cover the area** (`memory_search regression <area>`
+  — see "Known regressions" below).
 - Which files are claimed if coordination is needed.
 
 ### Preserve pret Labels
@@ -396,6 +399,55 @@ commit message nobody greps.
 
 Templates → skill **`project-conventions`**; the gate that enforces them → skill
 **`faithfulness-review`**.
+
+### Known regressions — QUERY them, never maintain a log
+
+**There is no regressions log file, and one must not be created.** A hand-kept
+log gets long, goes stale, and then gets cited as evidence — exactly how
+`TODO.md` died. Regressions live at two tiers, both of which are already
+load-bearing, and you QUERY them:
+
+1. **The site carries the machine-parsed annotation.** A regression in
+   pret-labeled code gets a `BUG{...}` (or `GLITCH{...}` / `DEVIATION{...}`)
+   annotation at the code that is wrong, in the format above. That is the
+   authority on *what* is broken, it travels with the code, and
+   `lint_pret_labels` parses it.
+2. **Stigmergy is the searchable index**, for regressions with no single site
+   (cross-subsystem, tooling, harness) and for the "why/when/how to reproduce"
+   behind an in-code tag. Key convention: **`regression-<area>-<slug>`**
+   (`regression-battle-exp-overflow`, `regression-tooling-strict-lint-gap`).
+
+**Query before you work an area — this is part of the pre-edit checklist:**
+
+```
+memory_search regression <area>          # e.g. "regression battle", "regression overworld"
+```
+
+A regression memory MUST carry, or it is not a regression memory:
+- **symptom** — what is observably wrong;
+- **repro** — a command, scenario name, or gate that shows it. "It looked wrong"
+  is not a repro;
+- **evidence** — per the Evidence and Knowledge Policy above, including for the
+  claim that it is still open;
+- **status + date in the DESCRIPTION**, because `memory_list` shows only
+  descriptions. Lead with `OPEN:` or `FIXED <date> (<commit>):`.
+
+**Currency is enforced by three rules, not by good intentions:**
+- **Whoever fixes a regression closes its memory in the SAME commit** that fixes
+  it, citing the commit — the same discipline the annotation and allowlist
+  sweeps already require. A fix that leaves the memory reading `OPEN:` is an
+  incomplete fix.
+- **A regression with a runtime repro should become a golden scenario.** Once it
+  has one, the fidelity suite — not prose — is the currency mechanism: the
+  memory shrinks to a pointer at the scenario, and a re-break fails the suite
+  instead of waiting to be re-noticed. This is the preferred end state.
+- **Contradictory repository or runtime evidence updates the existing key**
+  (never a new one). If you find a regression memory that the tree disproves,
+  fixing the memory is part of your task, not a favour to the next agent.
+
+Never delete a regression memory to "close" it — mark it `FIXED` with the
+commit. The record of what broke, and how it was caught, is the point.
+
 
 ---
 
