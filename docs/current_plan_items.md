@@ -72,7 +72,7 @@ resolved blockers remain in git history rather than being maintained here.
       `docs/current_plan_overworld_events.md` Stage 3** (that session owned the
       `HiddenItemCoords` data contract and did the whole item-side promotion in
       the same pass; recorded here per the cross-cut rule). `HiddenItemCoords` is
-      now generated (`tools/gen_hidden_item_coords.py` →
+      now generated (`tools/generators/gen_hidden_item_coords.py` →
       `assets/hidden_item_coords.inc`, linked via `src/data/hidden_events_data.asm`).
       `src/engine/items/itemfinder.asm` (`HiddenItemNear`/`Sub5ClampTo0`) is
       linked (`ITEMS_SRCS`); `IsInRestOfArray` was promoted with `vcopy.asm` into

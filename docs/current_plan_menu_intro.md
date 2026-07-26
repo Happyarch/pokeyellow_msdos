@@ -141,7 +141,7 @@ Repository and generated state must be rechecked immediately before each stage. 
 
 | Capability | Repository evidence | Consequence |
 |---|---|---|
-| Title | `dos_port/src/movie/title.asm` contains the title label set and state machine | Modify projection and live-service wiring; do not replace the state machine |
+| Title | `dos_port/src/engine/movie/title.asm` contains the title label set and state machine | Modify projection and live-service wiring; do not replace the state machine |
 | Main menu | `dos_port/src/engine/menus/main_menu.asm` is linked and already uses the `UI_*`, mirror, and compositor projection pattern | Route the title to it; do not create another menu |
 | `OakSpeech` | `project_state OakSpeech` reports a linked stub in `main_menu_stubs.asm` | Delete that definition when the real path-mirrored body is linked |
 | `InitPlayerData2` | A linked provider already exists and is called by the current Oak stub | Preserve that provider unless current generated evidence shows it must itself be translated or relocated |
@@ -1047,7 +1047,7 @@ Consequences:
 
 **3. The title's audio `TODO-HW` comments are stale.** `PlaySound` / `PlayMusic`
 and the PCM path are live (the plan's own evidence table says so). The crash /
-whoosh / title-music sites in `src/movie/title.asm` still carry
+whoosh / title-music sites in `src/engine/movie/title.asm` still carry
 `; TODO-HW: audio (Phase 3)` comments from before the audio engine landed. Those
 are false negative claims of the kind the evidence policy forbids; A2 deletes
 them as it wires the real calls.
@@ -1078,7 +1078,7 @@ emission-only — the sample-blob path has zero changed lines, so `pika_pcm.bin`
 byte-identical.
 
 `SET_PAL_TITLE_SCREEN` moved into `include/gb_constants.inc` beside the three
-`SET_PAL_*` already there, rather than duplicating `palettes.asm`'s file-local
+`SET_PAL_*` already there, rather than duplicating `src/engine/gfx/palettes.asm`'s file-local
 `%define` (those two headers must not both define a symbol).
 
 **Gates:** build clean; `lint_pret_labels` 0 violations; the new

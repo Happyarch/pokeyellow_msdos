@@ -109,7 +109,7 @@ checkboxes updated → commit.
   painted preview matches `render_map` composition.
 
 - [x] **Session C3 — generator + runtime for border overrides.** DONE
-  2026-07-02. `tools/gen_map_borders.py` → `assets/map_border_overrides.inc`
+  2026-07-02. `tools/generators/gen_map_borders.py` → `assets/map_border_overrides.inc`
   (`MapBorderOverridePointers` dd table by map id + per-map RLE runs
   `db row, col, len` + blocks, 0xFF-terminated; validates every cell against
   the editable ring at generation). Runtime `ApplyMapBorderOverrides`
@@ -119,7 +119,7 @@ checkboxes updated → commit.
   Gates: generator idempotent; empty-table build FRAME.BIN byte-identical;
   63-cell sentinel stripe on Pallet's west ring visible in DOSBox FRAME.BIN;
   sidecar removal reverts byte-identical; make + make check green.
-  Generator (extend `tools/gen_map_headers.py` or new `gen_map_borders.py`) →
+  Generator (extend `tools/generators/gen_map_headers.py` or new `gen_map_borders.py`) →
   `assets/map_border_overrides.inc`: per-map RLE rows `db row, col, len` +
   block bytes, plus `MapBorderOverridePointers` table parallel to
   `MapHeaderPointers` (null pointer when no sidecar). Runtime:
@@ -160,7 +160,7 @@ checkboxes updated → commit.
   .inc + FRAME.BIN byte-identical; dual-region routing/undo verified
   headless; make + make check green.
   `dos_port/assets/map_overrides/<Pascal>.json` (sparse `[[y,x,block],...]`
-  in map-block coords); `tools/gen_all_assets.py` merges overrides when
+  in map-block coords); `tools/generators/gen_all_assets.py` merges overrides when
   emitting `assets/<map>_blk.inc` (pret .blk untouched; regen idempotent —
   override is an explicit committed file). Editor paint extends to the real
   map area, overridden cells badged. Makefile: `_blk.inc` targets gain

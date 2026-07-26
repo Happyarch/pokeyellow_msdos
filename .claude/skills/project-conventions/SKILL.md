@@ -271,9 +271,14 @@ Plans that exist today and have **no entry below** — go to the files themselve
   shims (OPL3/SB Pro floor, Tandy, PC speaker), MT-32-flagship MIDI path via
   precompiled streams, Pikachu PCM via DSP direct mode / speaker PWM. Phases A–D;
   Phase A (engine + OPL) not started.
-- **script engine — plan file GONE, work re-homed.** There is no
-  `docs/current_plan_script_engine.md`: it was deleted in `eb17e64d` (2026-07-12)
-  and never archived, so do not go looking in `docs/plans/` either. The gen-1
+- **script engine — not active, but the plan file EXISTS. Read it.** There is no
+  `docs/current_plan_script_engine.md` — that path was deleted in `eb17e64d`
+  (2026-07-12). **This entry used to add "and never archived, so do not go
+  looking in `docs/plans/` either"; that was MEASURED FALSE (2026-07-26) and is
+  the exact opposite of the truth.** The plan is archived at
+  **`docs/plans/current_plan_script_engine.md`** — note it kept its
+  `current_plan_` prefix, against the archive convention two paragraphs above,
+  which is why a `docs/plans/script_engine.md` search finds nothing. The gen-1
   script system (event-gated dialog, per-map `_Script`/`text_asm`, `DisplayTextID`
   special cases) is owned by **`docs/current_plan_overworld_events.md`**, which is
   active. Its deferred tails — Oak walk-up cutscene, `_Script` state machines —

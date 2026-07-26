@@ -80,7 +80,7 @@ producing false negatives. **Unstarted.**
 From `docs/plans/fidelity_harness.md`. The static half is wired; the runtime
 half is deliberately still manual.
 
-**Landed.** `dos_port/tools/gate` runs the checks that were rotting because
+**Landed.** `dos_port/tools/static_gate` runs the checks that were rotting because
 nothing ran them: both `lint_pret_labels` modes against a checked-in per-class
 baseline (`tools/static_gate_baseline.json`), the `test_label_db.py` suite, and
 `validate_scenarios.py`. Each class is a **ratchet in both directions** — a

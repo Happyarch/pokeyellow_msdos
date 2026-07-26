@@ -96,7 +96,9 @@ Sound HAL abstraction layer defined first; drivers plugged in behind it.
 | PC Speaker | Low | Beeper fallback |
 
 Acceptance criteria:
-- HAL interface defined (`audio_hal.inc`)
+- HAL interface defined — LANDED as `dos_port/src/audio/audio_hal.asm` (not an
+  `.inc`), with the per-device shims beside it (`opl_shim`, `tandy_shim`,
+  `spk_shim`, `mpu401`, `sb_pcm`)
 - At least SB16 and General MIDI drivers functional
 - All GB APU channels (pulse 1/2, wave, noise) mapped to target sound card
 
@@ -112,7 +114,8 @@ Transport selection (decide during implementation):
 - Packet-driver TCP/IP (WATTCP or mTCP)
 
 Acceptance criteria:
-- Link cable I/O HAL defined (`serial_hal.inc`) replacing `; TODO-HW: network HAL` stubs
+- Link cable I/O HAL defined replacing `; TODO-HW: network HAL` stubs (no file
+  exists yet — `serial_hal.inc` is a proposed name, not a path)
 - Pokémon trade verified between two instances
 - Link battle verified between two instances
 

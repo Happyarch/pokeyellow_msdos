@@ -64,7 +64,7 @@ Changed:
   count as the GB (no re-orchestration), but with reverb, depth, and instrument
   character. SFX stay basic and get less attention.
   *Amended 2026-07-06*: an optional **additive enhancement layer** (Phase E, the
-  LLM-assisted arranger — see `docs/llm_arranger_design_notes.md`) can add tiered
+  LLM-assisted arranger — see `docs/plans/llm_arranger_design_notes.md`) can add tiered
   extra channels per song on top of that baseline. The base 4 GB channels remain
   untouchable; unenhanced songs keep the baseline aesthetic.
 - **SB floor is SB Pro**, not SB16 (OPL3 *or* dual-OPL2 stereo; 8-bit DSP is enough
@@ -136,11 +136,14 @@ Changed:
 
 ### DOS port scaffolding (`dos_port/`)
 
-- Audio is already stubbed on the pret label surface: `src/audio/audio_stubs.asm`
+- ~~Audio is already stubbed on the pret label surface: `src/audio/audio_stubs.asm`~~
+  **STALE — `src/audio/audio_stubs.asm` was deleted** (only a stray `.o` remains);
+  see the note further down in this file. The label list below is kept only as the
+  record of what that file used to carry:
   (`StopAllMusic`, `WaitForSoundToFinish`, `PlayMusic`, `PlayDefaultMusic`), plus
   stray stubs to consolidate/retire (`PlaySound` in
   `src/engine/battle/move_effect_helpers.asm`, `GetCryData` in
-  `src/engine/menus/pokedex.asm`, `StopAllSounds` in `src/init/init.asm`) and
+  `src/engine/menus/pokedex.asm`, `StopAllSounds` in `src/home/init.asm`) and
   `TODO-HW: audio HAL (Phase 3)` elision comments at call sites across menus,
   overworld, battle, and the text engine (`TX_SOUND_*` control codes).
   Stub-file contract: `WaitForSoundToFinish` must become a real spin on state the
@@ -193,7 +196,8 @@ game code (pret call sites: PlaySound / PlayMusic / PlayCry / …)
         │
   L1  home/audio.asm translations  ──────────────┐ (retire audio_stubs.asm
         │                                        │  routine-by-routine)
-  L2  translated engine  src/audio/engine.asm    │
+  L2  translated engine  src/audio/engine_1.asm  │  (split four ways since this
+      .. engine_4.asm                              │   diagram was drawn)
       (Audio1_* handlers; Audio2/3/4_PlaySound   │
        = header-base wrappers; generated         │
        bytecode blobs from assets/audio_*.inc)   │
@@ -279,7 +283,7 @@ hand-owned `.mid` files (the `assets/map_overrides/` precedent).
 
 ## Phase E — LLM music arranger (additive enhancement layer)
 
-Full design record: `docs/llm_arranger_design_notes.md` (multi-model design review,
+Full design record: `docs/plans/llm_arranger_design_notes.md` (multi-model design review,
 2026-07-06). This section records the *decisions*; the notes hold the rationale.
 
 **What it is**: an LLM acts as a music-theory assistant that drafts extra
