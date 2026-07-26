@@ -31,17 +31,9 @@
       "port_file": "dos_port/src/home/wild_encounter_check.asm",
       "why": "pret engine/battle/core.asm split across port files (draft Session H)"
     },
-    "ArePlayerCoordsInArray": {
-      "port_file": "dos_port/src/home/hidden_events.asm",
-      "why": "pret home/map_objects.asm split across port files (draft Session H)"
-    },
     "Bankswitch": {
       "port_file": "dos_port/src/engine/battle/move_effect_helpers.asm",
       "why": "pret home/bankswitch2.asm split across port files (draft Session H)"
-    },
-    "BankswitchAndContinue": {
-      "port_file": "dos_port/src/home/overworld_text.asm",
-      "why": "pret home/map_objects.asm split across port files (draft Session H)"
     },
     "CalcPositionOfPlayerRelativeToNPC": {
       "port_file": "dos_port/src/home/pathfinding.asm",
@@ -54,14 +46,6 @@
     "CancelledEvolution": {
       "port_file": "dos_port/src/engine/pokemon/evolution.asm",
       "why": "pret engine/pokemon/evos_moves.asm split across port files (draft Session H)"
-    },
-    "CheckBoulderCoords": {
-      "port_file": "dos_port/src/home/hidden_events.asm",
-      "why": "pret home/map_objects.asm split across port files (draft Session H)"
-    },
-    "CheckCoords": {
-      "port_file": "dos_port/src/home/hidden_events.asm",
-      "why": "pret home/map_objects.asm split across port files (draft Session H)"
     },
     "CheckForHiddenEvent": {
       "port_file": "dos_port/src/home/hidden_events.asm",
@@ -90,14 +74,6 @@
     "CopyToStringBuffer": {
       "port_file": "dos_port/src/engine/battle/core.asm",
       "why": "pret home/copy_string.asm split across port files (draft Session H)"
-    },
-    "DecodeArrowMovementRLE": {
-      "port_file": "dos_port/src/home/simulate_joypad.asm",
-      "why": "pret home/map_objects.asm split across port files (draft Session H)"
-    },
-    "DecodeRLEList": {
-      "port_file": "dos_port/src/home/simulate_joypad.asm",
-      "why": "pret home/map_objects.asm split across port files (draft Session H)"
     },
     "Delay3": {
       "port_file": "dos_port/src/video/frame.asm",
@@ -175,14 +151,6 @@
       "port_file": "dos_port/src/engine/items/get_max_pp.asm",
       "why": "pret engine/items/item_effects.asm split across port files (draft Session H)"
     },
-    "GetSpriteMovementByte1Pointer": {
-      "port_file": "dos_port/src/home/pathfinding.asm",
-      "why": "pret home/map_objects.asm split across port files (draft Session H)"
-    },
-    "GetSpriteMovementByte2Pointer": {
-      "port_file": "dos_port/src/home/pathfinding.asm",
-      "why": "pret home/map_objects.asm split across port files (draft Session H)"
-    },
     "HandleBuildingRage": {
       "port_file": "dos_port/src/engine/battle/building_rage.asm",
       "why": "pret engine/battle/core.asm split across port files (draft Session H)"
@@ -206,10 +174,6 @@
     "IsInRestOfArray": {
       "port_file": "dos_port/src/home/vcopy.asm",
       "why": "pret home/array2.asm split across port files (draft Session H)"
-    },
-    "IsItemInBag": {
-      "port_file": "dos_port/src/home/item_predicates.asm",
-      "why": "pret home/map_objects.asm split across port files (draft Session H)"
     },
     "IsKeyItem_": {
       "port_file": "dos_port/src/home/item_predicates.asm",
@@ -290,30 +254,6 @@
     "SelectEnemyMove": {
       "port_file": "dos_port/src/engine/battle/select_enemy_move.asm",
       "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
-    "SetSpriteMovementBytesToFF": {
-      "port_file": "dos_port/src/home/pathfinding.asm",
-      "why": "pret home/map_objects.asm split across port files (draft Session H)"
-    },
-    "StartSimulatingJoypadStates": {
-      "port_file": "dos_port/src/home/simulate_joypad.asm",
-      "why": "pret home/map_objects.asm split across port files (draft Session H)"
-    },
-    "TextScript_BillsPC": {
-      "port_file": "dos_port/src/home/overworld_text.asm",
-      "why": "pret home/map_objects.asm split across port files (draft Session H)"
-    },
-    "TextScript_GameCornerPrizeMenu": {
-      "port_file": "dos_port/src/home/overworld_text.asm",
-      "why": "pret home/map_objects.asm split across port files (draft Session H)"
-    },
-    "TextScript_ItemStoragePC": {
-      "port_file": "dos_port/src/home/overworld_text.asm",
-      "why": "pret home/map_objects.asm split across port files (draft Session H)"
-    },
-    "TextScript_PokemonCenterPC": {
-      "port_file": "dos_port/src/home/overworld_text.asm",
-      "why": "pret home/map_objects.asm split across port files (draft Session H)"
     },
     "TryEvolvingMon": {
       "port_file": "dos_port/src/engine/pokemon/evolution.asm",
