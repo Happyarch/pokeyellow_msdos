@@ -154,15 +154,15 @@ Phase 1 delivered the BG tile decoder + tilemap renderer with SCX/SCY scrolling
 (`src/ppu/ppu.asm`) and the keyboard → joypad ISR (`src/input/joypad.asm`);
 window layer, OAM sprites, and the save system remain open there.
 
-Phase 2 so far: `Init`/`ClearVram`/`StopAllSounds` (`src/init/init.asm`),
-supporting home routines (`src/util/copy_data.asm`, `src/video/lcd_control.asm`,
-`src/video/frame.asm`, `src/gfx/sprites.asm`), and a text/font engine
-(`src/gfx/load_font.asm` 1bpp→2bpp expansion from `gfx/font/font.png`,
-`src/text/text.asm` PlaceString/TextBoxBorder). The overworld map loader/renderer
+Phase 2 so far: `Init`/`ClearVram`/`StopAllSounds` (`src/home/init.asm`),
+supporting home routines (`src/home/copy_data.asm`, `src/video/lcd_control.asm`,
+`src/video/frame.asm`, `src/home/sprites.asm`), and a text/font engine
+(`src/home/load_font.asm` 1bpp→2bpp expansion from `gfx/font/font.png`,
+`src/home/text.asm` PlaceString/TextBoxBorder). The overworld map loader/renderer
 (pret mirror `src/home/overworld.asm`; `src/engine/overworld/overworld.asm` keeps
 the port-only glue and the embedded asset blobs) renders correctly in DOSBox-X: `SKIP_TITLE=1`
 boots straight into a fully drawn Pallet Town (Oak's Lab, tree border, sign) in the
-DMG-green palette. The title screen (`src/movie/title.asm`) is a **bespoke early
+DMG-green palette. The title screen (`src/engine/movie/title.asm`) is a **bespoke early
 implementation that does NOT render fully correctly** — it boots and reaches the
 menu ("works enough") but the graphics are wrong; a known low-priority defect, its
 faithful reimpl deferred (likely rides with the overworld tile-management rewrite).
@@ -186,7 +186,7 @@ screen and whose OBJ belong on top of it (party menu, naming screen) sets
 `g_obj_over_window` to get the hardware order back; `ClearSprites` clears it again.
 
 The `UpdatePlayerOAM` scaffold has been replaced by the **faithful sprite
-engine**: `PrepareOAMData` (`src/gfx/sprite_oam.asm`) builds shadow OAM from the
+engine**: `PrepareOAMData` (`src/engine/gfx/sprite_oam.asm`) builds shadow OAM from the
 16-slot `wSpriteStateData1/2` arrays (facing/animation table, under-grass
 priority, OBP→CGB palette mapping, `$80+` tile path), and `UpdateSprites`
 (`src/engine/overworld/movement.asm`, with `UpdatePlayerSprite`/`Func_4e32`/`Func_5274`)
@@ -204,7 +204,8 @@ collision is enforced by `IsNPCAtTargetBlock` in `CollisionCheckOnLand`; NPC
 wall-blocking uses MAPY/MAPX-based tile lookup in `GetTileSpriteStandsOn`.
 Open Phase 2 items: scripted NPC movement, trainer battle engine, random encounter
 trigger, battle engine. Battle fidelity specifically is tracked in
-`docs/battle_audit_findings.md`.
+`docs/archive/battle_audit_findings.md` (it was archived; the old root-level path
+this line used to give had been dangling).
 
 `render_bg` (`src/ppu/ppu.asm`) is a **native-width surface renderer**: it decodes
 tile IDs into a 48×36-tile (384×288 px) surface using the existing `tile_cache`

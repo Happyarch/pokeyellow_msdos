@@ -35,7 +35,7 @@ Scope discipline, so this does not rot the way its predecessor did:
 - **Big-picture phase scope → `ROADMAP.md`.** Not here.
 - **Active multi-step work → its own `docs/current_plan_*.md`.** Not here.
 - **Completed work + its deferred tails → `docs/plans/*.md`.** Not here.
-- **Battle fidelity findings → `docs/battle_audit_findings.md`.** Not here.
+- **Battle fidelity findings → `docs/archive/battle_audit_findings.md`.** Not here.
 - **Here:** only tails with no other owner. When an item grows into real work,
   it graduates to its own plan file and leaves a one-line pointer behind.
 
@@ -82,7 +82,7 @@ half is deliberately still manual.
 
 **Landed.** `dos_port/tools/gate` runs the checks that were rotting because
 nothing ran them: both `lint_pret_labels` modes against a checked-in per-class
-baseline (`tools/gate_baseline.json`), the `test_label_db.py` suite, and
+baseline (`tools/static_gate_baseline.json`), the `test_label_db.py` suite, and
 `validate_scenarios.py`. Each class is a **ratchet in both directions** — a
 class that grows is a regression, and a class that shrinks fails too until the
 baseline is lowered deliberately with `--update-baseline`, so an improvement

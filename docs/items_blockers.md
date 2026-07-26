@@ -36,7 +36,8 @@ stub and reports `IsSpriteInFrontOfPlayer2` and `SurfingAttemptFailed` missing.
 It reports `IsSurfingAllowed`, `IsNextTileShoreOrWater`,
 `CheckForTilePairCollisions`, `IsTilePassable`, and
 `LoadWalkingPlayerSpriteGraphics` implemented/relocated and linked. The
-simulated-input machinery also exists in `src/home/simulate_joypad.asm`.
+simulated-input machinery also exists (in `src/home/map_objects.asm` since
+2026-07-26; it was `src/home/simulate_joypad.asm`, now deleted).
 
 **Owner split:** overworld-events owns the pret
 `IsSpriteInFrontOfPlayer2` query and normal-loop consumption of the simulated

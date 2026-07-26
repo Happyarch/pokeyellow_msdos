@@ -55,10 +55,12 @@ Acceptance criteria:
       enough"). Faithful reimpl deferred — likely folds in with the overworld
       tile-management rewrite. See `docs/current_plan_backlog.md`.
 - [x] Overworld renders and scrolls; player walks around Pallet Town
-- [x] Wild encounters trigger (`wild_encounter_check.asm`)
+- [x] Wild encounters trigger (`src/engine/battle/wild_encounters.asm`; the
+      `AnyPartyAlive` gate moved to `src/engine/battle/core.asm` and the old
+      `src/home/wild_encounter_check.asm` was deleted 2026-07-26)
 - [x] Battle UI renders and accepts input — full wild + trainer battles play
       end-to-end (battle swarm, merged to `master`; open fidelity items in
-      `docs/battle_audit_findings.md`)
+      `docs/archive/battle_audit_findings.md`)
 - [x] NPCs display dialogue (`docs/plans/npc_implementation.md`)
 - [x] `engine/menus/` ported + realigned onto generic drivers
       (`docs/plans/menus.md`, complete 2026-07-04)
@@ -68,10 +70,10 @@ Acceptance criteria:
 - [x] New-game data init (`InitPlayerData2` — party/box/bag terminators + money/ID)
 
 **Remaining before Phase 2 closes:**
-- Faithful full `engine/overworld/` reimpl (`docs/current_plan_overworld_port.md`) —
+- Faithful full `engine/overworld/` reimpl (`docs/plans/overworld_port.md` (archived)) —
   scripted NPC movement, cut/boulder/fly/etc., and the **VRAM tile-slot management
   fix** that resolves the live menu-box corruption. This is the main open item.
-- Scripting engine (`docs/current_plan_script_engine.md`): per-map `_Script`
+- Scripting engine (`docs/current_plan_overworld_events.md` (the script work folded into it)): per-map `_Script`
   machines, Oak walk-up cutscene, mart/pokécenter/PC scripts.
 - Deferred UI/menu tails and item USE dispatch (see
   `docs/current_plan_backlog.md` and `docs/current_plan_items.md`).
