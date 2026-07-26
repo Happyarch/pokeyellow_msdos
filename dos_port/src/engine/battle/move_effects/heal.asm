@@ -75,7 +75,7 @@ extern DelayFrames                  ; frame.asm (already live) — BL = frame co
 extern UpdateCurMonHPBar            ; move_effect_helpers.asm — faithful HP-bar redraw; see
                                      ; header note #2 (substitutes pret's inlined hlcoord +
                                      ; predef UpdateHPBar2, which IS this routine's body)
-extern DrawHUDsAndHPBars            ; battle_menu.asm / battle_hud.asm — full HUD+bar redraw
+extern DrawHUDsAndHPBars            ; engine/battle/core.asm — full HUD+bar redraw
 ; --- allowlist anim stub (§2 item 1: literal subanim, ANIMATION=OFF path) ---
 extern PlayCurrentMoveAnimation
 ; --- battle_text.inc streams (Tier-1 generated; global in core.o) ---

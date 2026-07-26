@@ -28,9 +28,8 @@
 ;      already reads hWhoseTurn itself, sets wHPBarType, and redraws BOTH HUDs +
 ;      both HP bars (it tail-calls DrawHUDsAndHPBars) — i.e. it is the faithful
 ;      stand-in for all three pret predefs at once, not just UpdateHPBar2. This
-;      also avoids referencing DrawEnemyHUDAndHPBar, which does not exist as a
-;      linked symbol anywhere in dos_port (the prior draft's extern of it would
-;      have failed at link time).
+;      also avoids referencing DrawEnemyHUDAndHPBar directly (it is defined in
+;      engine/battle/core.asm as an alias of battle_hud.asm's DrawEnemyHUD).
 ;
 ; Register map: A=AL, B=BH, C=BL (BC=EBX here — full word offsets, not BX), D/E
 ; folded into EDX (DE=EDX), HL=ESI, EBP=GB base. GB memory at [EBP+addr];

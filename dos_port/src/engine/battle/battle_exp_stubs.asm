@@ -39,8 +39,9 @@ global CalculateModifiedStats
 ;                    (until then no item can be used mid-battle, so it is unreachable).
 global RespawnOverworldPikachu
 global DoubleOrHalveSelectedStats
-; DrawPlayerHUDAndHPBar is now REAL (battle_hud.asm — alias → DrawPlayerHUD) —
-; no longer stubbed here (retired with the enemy-side DrawEnemyHUDAndHPBar pattern).
+; DrawPlayerHUDAndHPBar is now REAL (engine/battle/core.asm — alias → battle_hud.asm
+; DrawPlayerHUD) — no longer stubbed here (retired with the enemy-side
+; DrawEnemyHUDAndHPBar pattern).
 ; LoadMonData is now REAL (load_mon_data.asm wrapper → LoadMonData_) — no longer stubbed;
 ; it populates wLoadedMon so GainExperience's CalcLevelFromExperience reads the right mon.
 ; ApplyBadgeStatBoosts (badge_boosts.asm) and ApplyBurnAndParalysisPenaltiesToPlayer

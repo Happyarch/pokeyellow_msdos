@@ -170,10 +170,8 @@ extern SelectEnemyMove                 ; select_enemy_move.asm
 extern TrainerAI                       ; trainer_ai.asm (CF if AI used item/switch)
 
 ; --- draw primitives (category-D divergence point; battle_menu.asm draw helpers) ---
-extern DrawHUDsAndHPBars               ; (DrawBattleHUDs) HUDs + HP bars
 extern AnimateEnemyHPBar               ; battle_hud.asm — gradual enemy HP-bar drain (ECX=old HP)
 extern AnimatePlayerHPBar              ; battle_hud.asm — gradual player HP-bar drain (ECX=old HP)
-extern DrawEnemyHUDAndHPBar            ; battle_hud.asm — faithful enemy-only HUD+bar redraw
 extern SaveScreenTilesToBuffer1        ; src/home/tilemap.asm
 extern LoadScreenTilesFromBuffer1      ; src/home/tilemap.asm — restore clean screen
 extern DrawEmptyDialogBox              ; pret PrintEmptyString equiv (blank dialog box)
@@ -218,7 +216,6 @@ extern AlwaysHappenSideEffects
 extern SpecialEffects
 extern FindMoveName                    ; battle_menu.asm — move id → flat name ptr
 extern GainExperience                  ; experience.asm — EXP award + level-up display
-extern TryRunningFromBattle            ; battle_menu.asm — flee odds (CF = escaped)
 ; --- faint / switch lifecycle (battle-swarm-C) ---
 extern FaintEnemyPokemon               ; faint_enemy.asm — enemy-faint state + EXP(-ALL)
 extern AnyPartyAlive                   ; wild_encounter_check.asm — DH=0 if no party alive
@@ -1512,7 +1509,6 @@ ApplyAttackToEnemyPokemonDone:
 ; --- externs for the status-condition checks (pret core.asm:3499) ---
 extern PrintText                       ; src/home/window.asm — pret PrintText (ESI = flat text stream)
 extern GetMoveName                     ; home/names.asm
-extern DrawPlayerHUDAndHPBar           ; self-confusion damage redraw — battle_hud.asm (alias → DrawPlayerHUD)
 extern FastAsleepText
 extern WokeUpText
 extern IsFrozenText
@@ -5269,4 +5265,196 @@ LoadHudTilePatterns:
     pop esi
     pop ecx
     pop eax
+    ret
+
+; ===========================================================================
+; Consolidated here from the port-only front-end files (relocated-labels grind):
+; the two HUD+HP-bar aliases and DrawHUDsAndHPBars came from battle_hud.asm /
+; battle_menu.asm, TryRunningFromBattle (with its private PrintRunLine helper)
+; from battle_menu.asm. All four are pret engine/battle/core.asm labels and
+; belong in this mirror; the draw primitives they tail-call stay behind as the
+; sanctioned front-end divergence point.
+; ===========================================================================
+section .text
+global DrawEnemyHUDAndHPBar
+global DrawPlayerHUDAndHPBar
+global DrawHUDsAndHPBars
+global TryRunningFromBattle
+extern DrawEnemyHUD                    ; battle_hud.asm — enemy name+level+HP bar+frame
+extern DrawPlayerHUD                   ; battle_hud.asm — player name+level+HP bar+frame
+extern DrawBattleHUDs                  ; battle_hud.asm — both HUDs, pret player-then-enemy order
+extern WaitForAPress                   ; battle_menu.asm — pret WaitForTextScrollButtonPress
+; run-message strings from the generated assets/battle_menu_runtime_strings.inc,
+; which battle_menu.asm carries (Tier-1 data; the blob stays with its %include).
+extern str_gotaway                     ; battle_menu.asm (assets/battle_menu_runtime_strings.inc)
+extern str_cantesc                     ; battle_menu.asm (assets/battle_menu_runtime_strings.inc)
+extern str_norun1                      ; battle_menu.asm (assets/battle_menu_runtime_strings.inc)
+extern str_norun2                      ; battle_menu.asm (assets/battle_menu_runtime_strings.inc)
+extern str_norun3                      ; battle_menu.asm (assets/battle_menu_runtime_strings.inc)
+; Carried in with the moved blocks (battle_menu.asm preamble). MSG_LINE1 is the
+; same UI_DIALOG_LINE1_OFS this file already calls BTXT_LINE1; DLG_INT(n) is the
+; box-relative single-spaced interior row used by the trainer-battle run message.
+%define MSG_LINE1    UI_DIALOG_LINE1_OFS
+%define DLG_INT(n)   (UI_DIALOG_BOX_OFS + (n) * FW + 1)
+
+; ---------------------------------------------------------------------------
+; DrawEnemyHUDAndHPBar — faithful enemy-ONLY HUD+HP-bar redraw (pret
+; engine/battle/core.asm:1951). Used where the port previously substituted the
+; both-bars DrawHUDsAndHPBars. The port's DrawEnemyHUD already is the faithful
+; enemy-only name+level+HP-bar+frame redraw (stride-agnostic, writing W_TILEMAP that
+; render_bg blits every frame). DIVERGENCES vs pret (all hardware/pre-existing, not
+; invented here): pret's hAutoBGTransferEnabled suspend/resume bracket is dropped —
+; it gates the GB torus-tilemap DMA (do_bg_transfer, frame.asm) which the native
+; render_bg does not use and which the overworld deliberately keeps disabled, so
+; forcing it on would run a pointless per-frame copy; pret's leading ClearScreenArea
+; of the 12×4 HUD tile area (home/copy2.asm not linked here; only needed when the
+; enemy name changes length — a multi-mon case not reachable in a wild battle);
+; CenterMonName (never ported → short names flush-left); status-condition-vs-level
+; (status_ailments.asm is an empty placeholder → always prints level); the
+; GetBattleHealthBarColor/RunPaletteCommand recolor tail (Phase-5 palette deferral).
+DrawEnemyHUDAndHPBar:
+    jmp DrawEnemyHUD                              ; name + level + HP bar + frame (enemy-only)
+
+; ---------------------------------------------------------------------------
+; DrawPlayerHUDAndHPBar — faithful player-ONLY HUD+HP-bar redraw (pret
+; engine/battle/core.asm:DrawPlayerHUDAndHPBar). Retires the former bare-ret stub in
+; battle_exp_stubs.asm: the port's DrawPlayerHUD already is the faithful player-side
+; name+level+HP-bar+frame redraw into W_TILEMAP, so this is the pret-named alias
+; (same shape as DrawEnemyHUDAndHPBar above). Same Phase-5 palette / hAutoBGTransfer
+; divergences as the enemy-side alias apply.
+DrawPlayerHUDAndHPBar:
+    jmp DrawPlayerHUD                             ; name + level + HP bar + frame (player-only)
+
+; DrawHUDsAndHPBars (pret name) — alias to the centered-canvas HUD draw helper.
+DrawHUDsAndHPBars:
+    jmp DrawBattleHUDs
+
+; ===========================================================================
+; TryRunningFromBattle — faithful pret escape-odds (engine/battle/core.asm).
+; Guaranteed-escape special cases first (Safari / "hurry get away" / link), then the
+; wild-mon speed odds; trainer battles can't be fled. Returns CF=1 on escape ("Got
+; away safely!"), CF=0 otherwise; on a failed escape sets wActionResultOrTookBattleTurn
+; (wild) and wForcePlayerToChooseMon (both paths).
+; ===========================================================================
+TryRunningFromBattle:
+    ; pret core.asm:1536-1545 — guaranteed-escape special cases before the odds math.
+    ; TODO(faithful): IsGhostBattle → .canEscape (Master A's IsGhostBattle; ghost
+    ; battles are not reachable yet).
+    cmp byte [ebp + wBattleType], BATTLE_TYPE_SAFARI
+    je .canEscape                        ; Safari battle always escapes (reachable)
+    cmp byte [ebp + wBattleType], BATTLE_TYPE_RUN
+    je .canEscape                        ; "hurry, get away?" forced-run
+    cmp byte [ebp + wLinkState], LINK_STATE_BATTLING
+    je .canEscape                        ; link battle always escapes
+    cmp byte [ebp + wIsInBattle], 2
+    je .trainerBattle
+    inc byte [ebp + wNumRunAttempts]
+    mov al, [ebp + wBattleMonSpeed]
+    mov [ebp + hMultiplicand + 1], al
+    mov al, [ebp + wBattleMonSpeed + 1]
+    mov [ebp + hMultiplicand + 2], al
+    mov al, [ebp + wEnemyMonSpeed]
+    mov [ebp + hEnemySpeed], al
+    mov al, [ebp + wEnemyMonSpeed + 1]
+    mov [ebp + hEnemySpeed + 1], al
+    ; player speed >= enemy speed → guaranteed escape (pret StringCmp + jr nc)
+    movzx eax, byte [ebp + wBattleMonSpeed]
+    shl eax, 8
+    mov al, [ebp + wBattleMonSpeed + 1]
+    movzx ecx, byte [ebp + wEnemyMonSpeed]
+    shl ecx, 8
+    mov cl, [ebp + wEnemyMonSpeed + 1]
+    cmp eax, ecx
+    jae .canEscape
+    ; quotient = (player speed * 32) / ((enemy speed / 4) % 256)
+    mov byte [ebp + hMultiplicand], 0
+    mov byte [ebp + hMultiplier], 32
+    call Multiply
+    mov al, [ebp + hProduct + 2]
+    mov [ebp + hDividend], al
+    mov al, [ebp + hProduct + 3]
+    mov [ebp + hDividend + 1], al
+    mov bh, [ebp + hEnemySpeed]
+    mov al, [ebp + hEnemySpeed + 1]
+    shr bh, 1
+    rcr al, 1
+    shr bh, 1
+    rcr al, 1
+    and al, al
+    jz .canEscape
+    mov [ebp + hDivisor], al
+    mov bh, 2
+    call Divide
+    mov al, [ebp + hQuotient + 2]
+    and al, al
+    jnz .canEscape
+    movzx ecx, byte [ebp + wNumRunAttempts]
+.addLoop:
+    dec ecx
+    jz .compareRandom
+    mov al, [ebp + hQuotient + 3]
+    add al, 30
+    mov [ebp + hQuotient + 3], al
+    jc .canEscape
+    jmp .addLoop
+.compareRandom:
+    call BattleRandom
+    mov bl, al
+    mov al, [ebp + hQuotient + 3]
+    cmp al, bl
+    jae .canEscape
+    ; can't escape: forfeit the turn, print "Can't escape!"
+    mov byte [ebp + wActionResultOrTookBattleTurn], 1
+    mov eax, str_cantesc
+    call PrintRunLine
+    mov byte [ebp + wForcePlayerToChooseMon], 1  ; pret core.asm:1620-1622
+    call SaveScreenTilesToBuffer1
+    clc
+    ret
+.trainerBattle:
+    ; "No! There's no / running from a / trainer battle!" (3 lines, single-spaced).
+    or  byte [ebp + W_LETTER_PRINTING_DELAY], (1 << BIT_TEXT_DELAY)
+    mov dword [menu_item_step], FW
+    mov esi, W_TILEMAP + OUTER_OFF
+    mov bh, OUTER_H
+    mov bl, OUTER_W
+    call TextBoxBorder
+    mov esi, W_TILEMAP + DLG_INT(1)
+    mov eax, str_norun1
+    call PlaceString
+    mov esi, ebx
+    mov esi, W_TILEMAP + DLG_INT(2)
+    mov eax, str_norun2
+    call PlaceString
+    mov esi, ebx
+    mov esi, W_TILEMAP + DLG_INT(3)
+    mov eax, str_norun3
+    call PlaceString
+    mov esi, ebx
+    call WaitForAPress
+    mov byte [ebp + wForcePlayerToChooseMon], 1  ; pret core.asm:1620-1622
+    call SaveScreenTilesToBuffer1
+    clc
+    ret
+.canEscape:
+    mov eax, str_gotaway
+    call PrintRunLine
+    stc
+    ret
+
+; PrintRunLine — redraw the dialog box and place a single-line run message (line 1),
+; then wait for A. In: EAX = string ptr; EBP = GB base.
+PrintRunLine:
+    push eax
+    or  byte [ebp + W_LETTER_PRINTING_DELAY], (1 << BIT_TEXT_DELAY)
+    mov dword [menu_item_step], 2 * FW
+    mov esi, W_TILEMAP + OUTER_OFF
+    mov bh, OUTER_H
+    mov bl, OUTER_W
+    call TextBoxBorder
+    pop eax
+    mov esi, W_TILEMAP + MSG_LINE1
+    call PlaceString
+    mov esi, ebx
+    call WaitForAPress
     ret

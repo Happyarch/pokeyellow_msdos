@@ -94,8 +94,6 @@ section .text
 
 global DrawBattleHUDs
 global DrawEnemyHUD
-global DrawEnemyHUDAndHPBar
-global DrawPlayerHUDAndHPBar
 global DrawPlayerHUD
 global DrawEnemyHUDFrame
 global DrawPlayerHUDFrame
@@ -195,34 +193,6 @@ DrawEnemyHUD:
     call draw_enemy_hp_bar
     call DrawEnemyHUDFrame
     ret
-
-; ---------------------------------------------------------------------------
-; DrawEnemyHUDAndHPBar — faithful enemy-ONLY HUD+HP-bar redraw (pret
-; engine/battle/core.asm:1951). Used where the port previously substituted the
-; both-bars DrawHUDsAndHPBars. The port's DrawEnemyHUD already is the faithful
-; enemy-only name+level+HP-bar+frame redraw (stride-agnostic, writing W_TILEMAP that
-; render_bg blits every frame). DIVERGENCES vs pret (all hardware/pre-existing, not
-; invented here): pret's hAutoBGTransferEnabled suspend/resume bracket is dropped —
-; it gates the GB torus-tilemap DMA (do_bg_transfer, frame.asm) which the native
-; render_bg does not use and which the overworld deliberately keeps disabled, so
-; forcing it on would run a pointless per-frame copy; pret's leading ClearScreenArea
-; of the 12×4 HUD tile area (home/copy2.asm not linked here; only needed when the
-; enemy name changes length — a multi-mon case not reachable in a wild battle);
-; CenterMonName (never ported → short names flush-left); status-condition-vs-level
-; (status_ailments.asm is an empty placeholder → always prints level); the
-; GetBattleHealthBarColor/RunPaletteCommand recolor tail (Phase-5 palette deferral).
-DrawEnemyHUDAndHPBar:
-    jmp DrawEnemyHUD                              ; name + level + HP bar + frame (enemy-only)
-
-; ---------------------------------------------------------------------------
-; DrawPlayerHUDAndHPBar — faithful player-ONLY HUD+HP-bar redraw (pret
-; engine/battle/core.asm:DrawPlayerHUDAndHPBar). Retires the former bare-ret stub in
-; battle_exp_stubs.asm: the port's DrawPlayerHUD already is the faithful player-side
-; name+level+HP-bar+frame redraw into W_TILEMAP, so this is the pret-named alias
-; (same shape as DrawEnemyHUDAndHPBar above). Same Phase-5 palette / hAutoBGTransfer
-; divergences as the enemy-side alias apply.
-DrawPlayerHUDAndHPBar:
-    jmp DrawPlayerHUD                             ; name + level + HP bar + frame (player-only)
 
 ; ---------------------------------------------------------------------------
 ; DrawEnemyHUDFrame / DrawPlayerHUDFrame — the HUD underline "shelf" (pret

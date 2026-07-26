@@ -111,7 +111,7 @@ extern LearnMoveFromLevelUp          ; deferred: move-learn flow
 extern CalculateModifiedStats
 extern ApplyBurnAndParalysisPenaltiesToPlayer ; engine/battle/core.asm
 extern ApplyBadgeStatBoosts           ; engine/battle/core.asm
-extern DrawPlayerHUDAndHPBar         ; battle_hud.asm (alias → DrawPlayerHUD)
+extern DrawPlayerHUDAndHPBar         ; engine/battle/core.asm (alias → battle_hud.asm DrawPlayerHUD)
 
 ; ---------------------------------------------------------------------------
 ; Globals

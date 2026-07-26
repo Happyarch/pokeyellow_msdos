@@ -1,14 +1,17 @@
-; battle_menu.asm — battle DRAW HELPERS + EXP/level-up display + run-odds.
+; battle_menu.asm — battle DRAW HELPERS + EXP/level-up display.
 ;
 ; This file is the sanctioned DRAW-LAYER divergence point for the battle front end.
 ; The bespoke battle ORCHESTRATION it used to hold (DisplayBattleMenu, MoveSelectionMenu,
 ; the turn loop, Render*/Do*AttackDamage, the fainted/no-PP/run message draws) has been
 ; replaced by the faithful translation in core.asm (engine/battle/core.asm). What remains
-; here are: (1) the centered-canvas draw primitives core.asm calls, exposed under pret
-; names (SaveScreenTilesToBuffer1 / LoadScreenTilesFromBuffer1 / DrawHUDsAndHPBars /
-; DrawEmptyDialogBox / DrawBattleMenuBox); (2) the EXP/level-up display routines that
-; GainExperience (experience.asm) calls inside its per-mon loop; (3) the move TYPE/PP box
-; and FindMoveName helper; (4) the faithful run-odds (TryRunningFromBattle).
+; here are: (1) the centered-canvas draw primitives core.asm calls (DrawEmptyDialogBox /
+; DrawBattleMenuBox / DrawBattleHUDs / WaitForAPress); (2) the EXP/level-up display
+; routines that GainExperience (experience.asm) calls inside its per-mon loop; (3) the
+; move TYPE/PP box and FindMoveName helper.
+;
+; The pret engine/battle/core.asm labels this file used to carry — DrawHUDsAndHPBars
+; and TryRunningFromBattle (with its private PrintRunLine helper) — now live in that
+; mirror; the Buffer1 pair moved earlier to src/home/tilemap.asm.
 ;
 ; All draw coords come from the generated battle UI layout (Tier 1,
 ; assets/ui_layout_battle.inc ← ui_layout_battle_sidecar.json; edit with
@@ -36,10 +39,6 @@ bits 32
 %define OUTER_OFF    UI_DIALOG_BOX_OFS
 %define OUTER_W      (UI_DIALOG_BOX_GBW - 2)
 %define OUTER_H      (UI_DIALOG_BOX_GBH - 2)
-; Dialog text rows, box-relative so text follows the box wherever the layout
-; puts it: DLG_INT(n) = single-spaced interior row n; the standard two
-; double-spaced message lines are the layout's own elements.
-%define DLG_INT(n)   (UI_DIALOG_BOX_OFS + (n) * FW + 1)
 ; PROJ battle: message lines = UI_DIALOG_LINE1 / UI_DIALOG_LINE2
 %define MSG_LINE1    UI_DIALOG_LINE1_OFS
 %define MSG_LINE2    UI_DIALOG_LINE2_OFS
@@ -62,6 +61,13 @@ bits 32
 %define ARROW_BLINK_FRAMES 20
 
 section .data
+; TryRunningFromBattle / PrintRunLine moved to their pret mirror core.asm and
+; still read these run-message strings, so the five they use are exported.
+global str_gotaway
+global str_cantesc
+global str_norun1
+global str_norun2
+global str_norun3
 %include "assets/battle_menu_runtime_strings.inc"
 
 section .bss
@@ -81,7 +87,6 @@ section .text
 global DrawBattleMenu
 global DrawBattleMenuBox
 global DrawEmptyDialogBox
-global DrawHUDsAndHPBars
 global EndBattleScreen
 global WaitForAPress
 global WaitForTextScrollButtonPress
@@ -90,7 +95,6 @@ global ShowGrewLevelText
 global PrintStatsBox
 global LearnMoveFromLevelUp
 global FindMoveName
-global TryRunningFromBattle
 global BattleItemMenu
 global BattlePartyMenu
 global DoEnemyAttackDamage
@@ -104,10 +108,6 @@ extern MoveNames
 extern Moves
 extern DelayFrame
 extern HandleDownArrowBlinkTiming     ; src/home/window.asm — faithful ▼ blink (COUNT1==0 guard)
-extern DrawBattleHUDs
-extern BattleRandom                   ; engine/battle/core.asm — battle PRNG, result in AL
-extern Multiply
-extern Divide
 extern GetMonLearnset                ; write_moves.asm — flat learnset ptr for wCurPartySpecies
 ; --- DEBUG_BATTLE_ENEMYHIT ground-truth scaffold only ---
 extern GetCurrentMove                 ; engine/battle/core.asm — move record -> wPlayerMove*/wEnemyMove*
@@ -132,10 +132,6 @@ extern LearnMove                     ; src/engine/pokemon/learn_move.asm — fai
 extern SaveScreenTilesToBuffer1      ; src/home/tilemap.asm
 extern LoadScreenTilesFromBuffer1    ; src/home/tilemap.asm
 extern RestoreBattleScreen           ; src/home/tilemap.asm — alias of the Buffer1 pair
-
-; DrawHUDsAndHPBars (pret name) — alias to the centered-canvas HUD draw helper.
-DrawHUDsAndHPBars:
-    jmp DrawBattleHUDs
 
 ; DrawEmptyDialogBox — pret PrintEmptyString: redraw the outer dialog box with a BLANK
 ; interior (clears any prior message). Labels/box are instant (pret PlaceString).
@@ -216,136 +212,6 @@ WaitForAPress:
     mov [ebp + H_DOWN_ARROW_COUNT1], al
     mov al, [wtsbp_saved_c2]
     mov [ebp + H_DOWN_ARROW_COUNT2], al
-    ret
-
-; ===========================================================================
-; TryRunningFromBattle — faithful pret escape-odds (engine/battle/core.asm).
-; Guaranteed-escape special cases first (Safari / "hurry get away" / link), then the
-; wild-mon speed odds; trainer battles can't be fled. Returns CF=1 on escape ("Got
-; away safely!"), CF=0 otherwise; on a failed escape sets wActionResultOrTookBattleTurn
-; (wild) and wForcePlayerToChooseMon (both paths).
-; ===========================================================================
-TryRunningFromBattle:
-    ; pret core.asm:1536-1545 — guaranteed-escape special cases before the odds math.
-    ; TODO(faithful): IsGhostBattle → .canEscape (Master A's IsGhostBattle; ghost
-    ; battles are not reachable yet).
-    cmp byte [ebp + wBattleType], BATTLE_TYPE_SAFARI
-    je .canEscape                        ; Safari battle always escapes (reachable)
-    cmp byte [ebp + wBattleType], BATTLE_TYPE_RUN
-    je .canEscape                        ; "hurry, get away?" forced-run
-    cmp byte [ebp + wLinkState], LINK_STATE_BATTLING
-    je .canEscape                        ; link battle always escapes
-    cmp byte [ebp + wIsInBattle], 2
-    je .trainerBattle
-    inc byte [ebp + wNumRunAttempts]
-    mov al, [ebp + wBattleMonSpeed]
-    mov [ebp + hMultiplicand + 1], al
-    mov al, [ebp + wBattleMonSpeed + 1]
-    mov [ebp + hMultiplicand + 2], al
-    mov al, [ebp + wEnemyMonSpeed]
-    mov [ebp + hEnemySpeed], al
-    mov al, [ebp + wEnemyMonSpeed + 1]
-    mov [ebp + hEnemySpeed + 1], al
-    ; player speed >= enemy speed → guaranteed escape (pret StringCmp + jr nc)
-    movzx eax, byte [ebp + wBattleMonSpeed]
-    shl eax, 8
-    mov al, [ebp + wBattleMonSpeed + 1]
-    movzx ecx, byte [ebp + wEnemyMonSpeed]
-    shl ecx, 8
-    mov cl, [ebp + wEnemyMonSpeed + 1]
-    cmp eax, ecx
-    jae .canEscape
-    ; quotient = (player speed * 32) / ((enemy speed / 4) % 256)
-    mov byte [ebp + hMultiplicand], 0
-    mov byte [ebp + hMultiplier], 32
-    call Multiply
-    mov al, [ebp + hProduct + 2]
-    mov [ebp + hDividend], al
-    mov al, [ebp + hProduct + 3]
-    mov [ebp + hDividend + 1], al
-    mov bh, [ebp + hEnemySpeed]
-    mov al, [ebp + hEnemySpeed + 1]
-    shr bh, 1
-    rcr al, 1
-    shr bh, 1
-    rcr al, 1
-    and al, al
-    jz .canEscape
-    mov [ebp + hDivisor], al
-    mov bh, 2
-    call Divide
-    mov al, [ebp + hQuotient + 2]
-    and al, al
-    jnz .canEscape
-    movzx ecx, byte [ebp + wNumRunAttempts]
-.addLoop:
-    dec ecx
-    jz .compareRandom
-    mov al, [ebp + hQuotient + 3]
-    add al, 30
-    mov [ebp + hQuotient + 3], al
-    jc .canEscape
-    jmp .addLoop
-.compareRandom:
-    call BattleRandom
-    mov bl, al
-    mov al, [ebp + hQuotient + 3]
-    cmp al, bl
-    jae .canEscape
-    ; can't escape: forfeit the turn, print "Can't escape!"
-    mov byte [ebp + wActionResultOrTookBattleTurn], 1
-    mov eax, str_cantesc
-    call PrintRunLine
-    mov byte [ebp + wForcePlayerToChooseMon], 1  ; pret core.asm:1620-1622
-    call SaveScreenTilesToBuffer1
-    clc
-    ret
-.trainerBattle:
-    ; "No! There's no / running from a / trainer battle!" (3 lines, single-spaced).
-    or  byte [ebp + W_LETTER_PRINTING_DELAY], (1 << BIT_TEXT_DELAY)
-    mov dword [menu_item_step], FW
-    mov esi, W_TILEMAP + OUTER_OFF
-    mov bh, OUTER_H
-    mov bl, OUTER_W
-    call TextBoxBorder
-    mov esi, W_TILEMAP + DLG_INT(1)
-    mov eax, str_norun1
-    call PlaceString
-    mov esi, ebx
-    mov esi, W_TILEMAP + DLG_INT(2)
-    mov eax, str_norun2
-    call PlaceString
-    mov esi, ebx
-    mov esi, W_TILEMAP + DLG_INT(3)
-    mov eax, str_norun3
-    call PlaceString
-    mov esi, ebx
-    call WaitForAPress
-    mov byte [ebp + wForcePlayerToChooseMon], 1  ; pret core.asm:1620-1622
-    call SaveScreenTilesToBuffer1
-    clc
-    ret
-.canEscape:
-    mov eax, str_gotaway
-    call PrintRunLine
-    stc
-    ret
-
-; PrintRunLine — redraw the dialog box and place a single-line run message (line 1),
-; then wait for A. In: EAX = string ptr; EBP = GB base.
-PrintRunLine:
-    push eax
-    or  byte [ebp + W_LETTER_PRINTING_DELAY], (1 << BIT_TEXT_DELAY)
-    mov dword [menu_item_step], 2 * FW
-    mov esi, W_TILEMAP + OUTER_OFF
-    mov bh, OUTER_H
-    mov bl, OUTER_W
-    call TextBoxBorder
-    pop eax
-    mov esi, W_TILEMAP + MSG_LINE1
-    call PlaceString
-    mov esi, ebx
-    call WaitForAPress
     ret
 
 ; ===========================================================================

@@ -29,7 +29,7 @@ global SubstituteEffect_
 ; --- shared scaffold externs (§4: call, never define) ---
 extern PrintText                    ; src/home/window.asm — ESI = flat text stream
 extern DelayFrames                  ; src/video/frame.asm — BL = frame count
-extern DrawHUDsAndHPBars            ; battle_menu.asm — jpfar target in pret; flat tail-call here
+extern DrawHUDsAndHPBars            ; engine/battle/core.asm — jpfar target in pret; flat tail-call here
 ; --- allowlist anim stub (§2 item 1: literal subanim, ANIMATION=OFF path) ---
 extern PlayCurrentMoveAnimation
 ; AnimationSubstitute (engine/battle/animations.asm:2020) is the literal hard-coded
