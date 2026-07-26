@@ -904,6 +904,79 @@ class Probe(unittest.TestCase):
         self.assertNotIn('dos_port/src/engine/overworld/trainer_engine.asm', cfg.link)
 
 
+class ProviderPicker(unittest.TestCase):
+    """A dead file must never out-rank a live definition as a label's provider.
+
+    Regression fixtures for the DiscardButtonPresses hazard: the dead
+    src/engine/joypad.asm sits at the pret-mirror path and beat the live
+    src/input/joypad.asm, so the label reported `translated` at a provider that
+    does not link while the live definition stayed relocated — which made its
+    registry row pass the relocation-retirement test. A bulk retirement would
+    have recorded live debt as discharged.
+    """
+
+    # port_defs row shape, only the fields pick_provider reads:
+    #   (name, file, line, is_stub, is_global, ...)
+    @staticmethod
+    def _d(path, stub=0, glob=1):
+        return ('L', path, 1, stub, glob)
+
+    def test_dead_mirror_loses_to_live_definition(self):
+        mirror = 'dos_port/src/engine/joypad.asm'
+        live_file = 'dos_port/src/input/joypad.asm'
+        defs = [self._d(mirror), self._d(live_file)]
+        self.assertEqual(
+            uld.pick_provider(defs, mirror, built={live_file}), live_file)
+
+    def test_live_mirror_still_wins(self):
+        # The mirror preference must survive: it only yields to deadness.
+        mirror = 'dos_port/src/home/overworld.asm'
+        other = 'dos_port/src/engine/overworld/overworld.asm'
+        defs = [self._d(mirror), self._d(other)]
+        self.assertEqual(
+            uld.pick_provider(defs, mirror, built={mirror, other}), mirror)
+
+    def test_all_definitions_unbuilt_still_reports_a_provider(self):
+        # 46 labels live only in unassembled files (debug/*.asm behind DEBUG_*
+        # gates, the unfinished slots engine). They must not lose their row.
+        dead = 'dos_port/src/engine/slots/slot_machine.asm'
+        defs = [self._d(dead)]
+        self.assertEqual(uld.pick_provider(defs, 'dos_port/src/x.asm',
+                                           built=set()), dead)
+
+    def test_asset_definition_still_yields_to_handwritten_source(self):
+        inc = 'dos_port/assets/textbox_strings.inc'
+        asm = 'dos_port/src/engine/menus/text_box.asm'
+        defs = [self._d(inc), self._d(asm)]
+        self.assertEqual(
+            uld.pick_provider(defs, 'dos_port/src/other.asm',
+                              built={asm}), asm)
+
+    def test_asset_only_definition_is_kept(self):
+        inc = 'dos_port/assets/battle_text.inc'
+        self.assertEqual(
+            uld.pick_provider([self._d(inc)], 'dos_port/src/x.asm',
+                              built=set()), inc)
+
+    def test_live_tree_never_picks_an_unbuilt_provider_over_a_built_one(self):
+        # The tree-wide invariant, not just the one fixture.
+        cfg = live()['cfg']
+        built = set(cfg.all)
+        defs, _calls, _ext = uld.scan_port(set())
+        by_name = {}
+        for row in defs:
+            by_name.setdefault(row[0], []).append(row)
+        for name, rows in by_name.items():
+            files = {r[1] for r in rows if not r[3]}
+            alive = {f for f in files
+                     if f in built or f.startswith('dos_port/assets/')}
+            if not alive or alive == files:
+                continue        # no competition to get wrong
+            for mirror in sorted(files):     # worst case: mirror is the dead one
+                with self.subTest(label=name, mirror=mirror):
+                    self.assertIn(uld.pick_provider(rows, mirror, built), alive)
+
+
 class LiveTree(unittest.TestCase):
     """V2/V3/V4 — corroboration against the shipping tree."""
 

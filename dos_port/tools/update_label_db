@@ -1342,6 +1342,57 @@ def git_stamp():
 def mirror_path(pret_file):
     return 'dos_port/src/' + pret_file
 
+
+def pick_provider(defs, mirror, built):
+    """Choose the one file a pret label's `labels` row reports as its provider.
+
+    `defs` are that label's port_defs rows; `mirror` is its pret-mirror path;
+    `built` is the set of sources the analyzed config assembles.
+
+    Two preferences apply before the mirror is honoured, strongest last:
+
+    1. A generated assets/*.inc definition is a real definition, but when a
+       hand-written .asm also defines the label that .asm is its home — the
+       .inc is where the bytes are emitted, not where the port keeps the
+       routine. Sorting alone would pick 'dos_port/assets/…' every time.
+    2. A definition in a file the config does not assemble is dead code, and
+       must never out-rank a live one — not even when the dead file sits at the
+       mirror path. That inversion is why this is a function with a test:
+       DiscardButtonPresses is defined both in the dead src/engine/joypad.asm
+       (a relic of the rejected faithful-input model, in no SRCS list) and in
+       the live src/input/joypad.asm. The dead file IS the mirror path, so the
+       old unconditional `mirror in nonstub` test reported the label
+       `translated` at a provider that does not link, while the live definition
+       stayed relocated — which made its registry row satisfy the retirement
+       test, so a bulk retirement would have discharged live debt. See memory
+       label-db-wrong-provider-on-inlined-routines.
+
+    Both preferences fall back rather than eliminate: a label defined ONLY in
+    assets, or ONLY in unassembled files (the debug/*.asm harnesses behind
+    DEBUG_* gates, the unfinished slots engine), still reports its provider
+    instead of vanishing.
+    """
+    def _prefer_src(paths):
+        src = [q for q in paths if not q.startswith('dos_port/assets/')]
+        return src or paths
+
+    def _prefer_built(paths):
+        alive = [q for q in paths
+                 if q in built or q.startswith('dos_port/assets/')]
+        return alive or paths
+
+    def _rank(paths):
+        return _prefer_built(_prefer_src(sorted(paths)))
+
+    nonstub = _rank(d[1] for d in defs if not d[3])
+    glob_nonstub = _rank(d[1] for d in defs if not d[3] and d[4])
+    if mirror in nonstub:
+        return mirror
+    if glob_nonstub:
+        return glob_nonstub[0]
+    return nonstub[0]
+
+
 def load_allowlist():
     if not os.path.exists(ALLOWLIST):
         return {}
@@ -1384,6 +1435,13 @@ def main():
     port_calls = [row + (int(row[3] in active and row[4] in active[row[3]]),)
                   for row in port_calls] + fallthrough
 
+    # Every source the analyzed config assembles (linked + check-only). Used
+    # below to keep a dead file from being chosen as a label's provider. It
+    # comes from the Make probe, never from reading the Makefile — parsing it
+    # here would be the second partial Make evaluator buildprobe exists to
+    # prevent.
+    built = set(cfg.all)
+
     # index port defs by name
     by_name = {}
     for row in port_defs:
@@ -1397,21 +1455,7 @@ def main():
         stubs   = sorted(d[1] for d in defs if d[3])
         if nonstub:
             mirror = mirror_path(pret_file)
-            # A generated assets/*.inc definition is a real definition, but when a
-            # hand-written .asm also defines the label that .asm is its home — the
-            # .inc is where the bytes are emitted, not where the port keeps the
-            # routine. Sorting alone would pick 'dos_port/assets/…' every time.
-            def _prefer(paths):
-                src = [q for q in paths if not q.startswith('dos_port/assets/')]
-                return src or paths
-            nonstub = _prefer(nonstub)
-            glob_nonstub = _prefer(sorted(d[1] for d in defs if not d[3] and d[4]))
-            if mirror in nonstub:
-                port_file = mirror
-            elif glob_nonstub:
-                port_file = glob_nonstub[0]
-            else:
-                port_file = nonstub[0]
+            port_file = pick_provider(defs, mirror, built)
             status = 'translated'
             if port_file != mirror_path(pret_file):
                 if reloc_labels.get(name) == port_file or \
