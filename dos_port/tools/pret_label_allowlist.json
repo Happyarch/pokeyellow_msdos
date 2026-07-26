@@ -179,10 +179,6 @@
       "port_file": "dos_port/src/video/frame.asm",
       "why": "Scanner-reviewed 2026-07-15: DelayFrames from pret home/delay.asm has its selected single non-stub definition at dos_port/src/video/frame.asm; preserve this per-label split."
     },
-    "IsKeyItem": {
-      "port_file": "dos_port/src/home/item_predicates.asm",
-      "why": "Scanner-reviewed 2026-07-15: IsKeyItem from pret home/item.asm has its selected single non-stub definition at dos_port/src/home/item_predicates.asm; preserve this per-label split."
-    },
     "DisableLCD": {
       "port_file": "dos_port/src/video/lcd_control.asm",
       "why": "Scanner-reviewed 2026-07-15: DisableLCD from pret home/lcd.asm has its selected single non-stub definition at dos_port/src/video/lcd_control.asm; preserve this per-label split."
@@ -194,26 +190,6 @@
     "CopyDataUntil": {
       "port_file": "dos_port/src/home/copy_data.asm",
       "why": "Scanner-reviewed 2026-07-15: CopyDataUntil from pret home/move_mon.asm has its selected single non-stub definition at dos_port/src/home/copy_data.asm; preserve this per-label split."
-    },
-    "HMMoves": {
-      "port_file": "dos_port/src/home/item_predicates.asm",
-      "why": "Scanner-reviewed 2026-07-15: HMMoves from pret home/names.asm has its selected single non-stub definition at dos_port/src/home/item_predicates.asm; preserve this per-label split."
-    },
-    "IsItemHM": {
-      "port_file": "dos_port/src/home/item_predicates.asm",
-      "why": "Scanner-reviewed 2026-07-15: IsItemHM from pret home/names.asm has its selected single non-stub definition at dos_port/src/home/item_predicates.asm; preserve this per-label split."
-    },
-    "IsMoveHM": {
-      "port_file": "dos_port/src/home/item_predicates.asm",
-      "why": "Scanner-reviewed 2026-07-15: IsMoveHM from pret home/names.asm has its selected single non-stub definition at dos_port/src/home/item_predicates.asm; preserve this per-label split."
-    },
-    "GetName": {
-      "port_file": "dos_port/src/home/names.asm",
-      "why": "Scanner-reviewed 2026-07-15: GetName from pret home/names2.asm has its selected single non-stub definition at dos_port/src/home/names.asm; preserve this per-label split."
-    },
-    "NamePointers": {
-      "port_file": "dos_port/src/home/names.asm",
-      "why": "Scanner-reviewed 2026-07-15: NamePointers from pret home/names2.asm has its selected single non-stub definition at dos_port/src/home/names.asm; preserve this per-label split."
     },
     "RestoreMapTextPointer": {
       "port_file": "dos_port/src/home/map_text_pointer.asm",
