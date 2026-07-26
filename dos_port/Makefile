@@ -1427,6 +1427,7 @@ FRONTEND_SRCS := \
     src/engine/battle/init_battle_variables.asm \
     src/engine/battle/init_battle.asm \
     src/engine/battle/battle_hud.asm \
+    src/engine/battle/scale_sprites.asm \
     src/engine/battle/battle_menu.asm \
     src/engine/battle/core.asm \
     src/engine/battle/core_stubs.asm \
