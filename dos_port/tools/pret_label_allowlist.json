@@ -263,10 +263,6 @@
       "port_file": "dos_port/src/home/audio.asm",
       "why": "audio-branch consolidation (Phase A, merged 2026-07-07): the port's home-audio entry points live together in src/home/audio.asm with the audio HAL"
     },
-    "PrintDoesntAffectText": {
-      "port_file": "dos_port/src/engine/battle/move_effect_helpers.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
-    },
     "PrintMoveFailureText": {
       "port_file": "dos_port/src/engine/battle/print_move_failure.asm",
       "why": "pret engine/battle/core.asm split across port files (draft Session H)"
@@ -322,10 +318,6 @@
     "TryEvolvingMon": {
       "port_file": "dos_port/src/engine/pokemon/evolution.asm",
       "why": "pret engine/pokemon/evos_moves.asm split across port files (draft Session H)"
-    },
-    "UpdateCurMonHPBar": {
-      "port_file": "dos_port/src/engine/battle/move_effect_helpers.asm",
-      "why": "pret engine/battle/core.asm split across port files (draft Session H)"
     },
     "UpdateMovingBgTiles": {
       "port_file": "dos_port/src/video/bg_anim.asm",
