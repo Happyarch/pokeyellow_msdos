@@ -94,7 +94,32 @@ group by pret_file order by 2 desc;
 
 Read memory `relocated-labels-grind` (v28) before planning — it now carries the
 chunking order, the extraction recipe, and everything this batch learned. Read
-`static-gate-and-ci-wiring` (v7) for the two gates and their traps.
+`static-gate-and-ci-wiring` (v8) for the two gates and their traps, and
+`skills-audit-2026-07-26` for what the skills can and cannot be trusted on.
+
+### The skills were audited in full at the end of this batch
+
+All 8 project skills (15 files, ~145 KB) read in full and every checkable claim
+verified. 11 false claims fixed in `de8f6f5b`/this batch's final commit. Two you
+should know about because they change how you work:
+
+- **`faithfulness-review` mentioned neither `fidelity_gate` nor `static_gate`** —
+  zero occurrences of either. The skill named for the fidelity gate never told you
+  a pre-commit hook runs a whole-tree ratchet, nor that the move battery is a tool.
+  Now fixed in the skill, CLAUDE.md, AGENTS.md and `asm-translation` step 9. If you
+  learned the gate workflow from that skill before today, you learned it with a
+  hole in it.
+- **`build-and-debug`'s scenario counts said core 12 / full 19; measured 16 / 33.**
+  Both now carry the measure-it command instead. Its repo-layout map also had dead
+  paths (`src/util/fill_memory.asm` in a runnable `nasm` command, `docs/current_plan.md`),
+  a 35%-low symbol count, and — twice — a claim that the pret tree is contaminated
+  and cannot rebuild the ROM, which is false since `ea26854a` (`make compare`
+  passes in-tree). The golden worktree requirement is real and was kept.
+
+Verified sound, so don't re-audit: `asm-translation`'s numbers (TIMING divisors,
+`$03`/`$14`, 384 tiles), `audio-enhance-mt32`'s yaml_lint assertions (exact),
+`score-analysis`'s 55-row index, `music-theory`'s vocabulary. Zero unresolvable
+`tools/` refs or make targets in any skill.
 
 ---
 
