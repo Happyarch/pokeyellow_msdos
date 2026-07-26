@@ -56,7 +56,7 @@ extern PlayCry                      ; UNPORTED (pret home/pokemon.asm) — cry s
                                     ; (status_screen.asm plays the regular cry as TODO-HW).
 extern Delay3                       ; src/video/frame.asm
 extern TextScriptEnd                ; src/home/overworld_text.asm
-extern ArePlayerCoordsInArray       ; src/home/hidden_events.asm
+extern ArePlayerCoordsInArray       ; src/home/map_objects.asm
 extern msgbox_dialog                    ; src/home/text.asm — overworld dialog projection
 extern text_msgbox                      ; src/home/text.asm — active msgbox projection (msgbox.inc)
 

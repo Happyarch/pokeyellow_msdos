@@ -83,7 +83,7 @@ extern IsSpriteInFrontOfPlayer      ; src/home/overworld.asm — sets H_SPRITE_I
                                     ; SEPARATE realization of pret's sprite scan for collision and
                                     ; is NOT a drop-in here (different ABI) — see the STRUCTURAL
                                     ; SPLIT note on IsSpriteInFrontOfPlayer.
-extern GetSpriteMovementByte2Pointer ; pathfinding.asm (reads H_CURRENT_SPRITE_OFFSET; ret flat ESI)
+extern GetSpriteMovementByte2Pointer ; src/home/map_objects.asm (reads H_CURRENT_SPRITE_OFFSET; ret flat ESI)
 extern MoveSprite                   ; pathfinding.asm (In: EDI = flat movement-data ptr)
 extern CheckForCollisionWhenPushingBoulder ; player_state.asm (pret predef; banking elided)
 extern PlaySound                    ; home/audio.asm

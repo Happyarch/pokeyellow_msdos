@@ -8,8 +8,11 @@
 ;     CheckNPCInteraction text-table dispatch (map_sprites.asm; the sign leg of pret
 ;     home/overworld.asm:IsSpriteOrSignInFrontOfPlayer), and its first-byte special-
 ;     case handling follows pret home/text_script.asm:DisplayTextID (lines 71-84).
-;   * TextScript_* special cases — pret home/text_script.asm (DisplayTextID's dispatch
-;     targets), NOT home/overworld_text.asm.
+;   * TextScript_* special cases — pret home/map_objects.asm (they are DisplayTextID's
+;     dispatch targets, which is why home/text_script.asm names them in its `dict`
+;     table; that is a reference, not their definition). NOT home/overworld_text.asm,
+;     and NOT home/text_script.asm as this header previously claimed. They now live in
+;     their mirror, src/home/map_objects.asm, and are externed below.
 ;   * TextScriptEnd / TextScriptEndingText — pret home/overworld_text.asm (ported here;
 ;     the remaining 6 home/overworld_text.asm labels are DEFERRED — see the note below).
 ;
@@ -173,49 +176,17 @@ PickUpItemText:
 ; ---------------------------------------------------------------------------
 
 ; ---------------------------------------------------------------------------
-; TextScript_* special cases — pret home/text_script.asm (DisplayTextID dispatch targets).
-; Tier-2 dispatch stubs: they bankswitch (no-op under flat memory) and jump into a bank
-; routine (PlayerPC / BillsPC_ / CeladonPrizeMenu / ActivatePC), then fall into
-; HoldTextDisplayOpen. PlayerPC and ActivatePC are linked; BillsPC_ and
-; CeladonPrizeMenu resolve through structured menu stubs until their real UIs land.
-;
-;   TextScript_ItemStoragePC   -> PlayerPC        (SaveScreenTilesToBuffer2 first)
-;   TextScript_BillsPC         -> BillsPC_        (SaveScreenTilesToBuffer2 first)
-;   TextScript_GameCornerPrizeMenu -> CeladonPrizeMenu
-;   TextScript_PokemonCenterPC -> ActivatePC
-; all converge on BankswitchAndContinue: Bankswitch + jp HoldTextDisplayOpen.
+; TextScript_* special cases — MOVED to src/home/map_objects.asm (mirror rule).
+; They are pret home/map_objects.asm labels, not home/text_script.asm ones: pret's
+; text_script.asm holds only the `dict` entries that NAME them. DisplaySignText
+; above tail-dispatches into them; they bankswitch (a no-op under flat memory) and
+; run PlayerPC / BillsPC_ / CeladonPrizeMenu / ActivatePC before falling into
+; HoldTextDisplayOpen, so control never returns here.
 ; ---------------------------------------------------------------------------
-extern SaveScreenTilesToBuffer2         ; src/home/tilemap.asm
-extern HoldTextDisplayOpen              ; home/text_script.asm
-extern PlayerPC                         ; engine/menus/players_pc.asm
-extern BillsPC_                         ; engine/menus/pc_stubs.asm
-extern CeladonPrizeMenu                 ; engine/menus/main_menu_stubs.asm
-extern ActivatePC                       ; engine/menus/pc.asm
-
-global TextScript_ItemStoragePC
-global TextScript_BillsPC
-global TextScript_GameCornerPrizeMenu
-global TextScript_PokemonCenterPC
-
-TextScript_ItemStoragePC:
-    call SaveScreenTilesToBuffer2
-    mov esi, PlayerPC
-    jmp BankswitchAndContinue
-
-TextScript_BillsPC:
-    call SaveScreenTilesToBuffer2
-    mov esi, BillsPC_
-    jmp BankswitchAndContinue
-
-TextScript_GameCornerPrizeMenu:
-    mov esi, CeladonPrizeMenu
-    jmp BankswitchAndContinue
-
-TextScript_PokemonCenterPC:
-    mov esi, ActivatePC
-BankswitchAndContinue:
-    call esi                            ; Bankswitch is a no-op under flat memory
-    jmp HoldTextDisplayOpen
+extern TextScript_ItemStoragePC          ; src/home/map_objects.asm
+extern TextScript_BillsPC                ; src/home/map_objects.asm
+extern TextScript_GameCornerPrizeMenu    ; src/home/map_objects.asm
+extern TextScript_PokemonCenterPC        ; src/home/map_objects.asm
 
 ; ---------------------------------------------------------------------------
 section .data

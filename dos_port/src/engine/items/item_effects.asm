@@ -1576,7 +1576,7 @@ extern NoCyclingAllowedHereText_ref ; assets/item_text.inc
 extern CoinCaseNumCoinsText_ref     ; assets/item_text.inc
 extern PlayedFluteHadEffectText_ref ; assets/item_text.inc
 extern PlayedFluteNoEffectText_ref  ; assets/item_text.inc
-extern ArePlayerCoordsInArray ; home/hidden_events.asm
+extern ArePlayerCoordsInArray ; src/home/map_objects.asm
 extern Music_PokeFluteInBattle    ; audio/poke_flute.asm
 extern StopAllMusic               ; home/audio.asm
 extern PlayMusic                  ; home/audio.asm

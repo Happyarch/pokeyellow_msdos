@@ -9,7 +9,8 @@
 ;   IsItemHM     — pret home/names.asm:IsItemHM        (item id → CF = is HM)
 ;   IsMoveHM     — pret home/names.asm:IsMoveHM        (move id → CF = is HM)
 ;   HMMoves      — pret data/moves/hm_moves.asm        (Tier-2 db list; see below)
-;   IsItemInBag  — pret home/map_objects.asm:IsItemInBag (BH=id → ZF = not in bag)
+;   (IsItemInBag — pret home/map_objects.asm:IsItemInBag — MOVED to its mirror,
+;                  src/home/map_objects.asm)
 ;   IsKeyItem    — pret home/item.asm:IsKeyItem        (thin save-regs wrapper)
 ;   IsKeyItem_   — pret engine/items/item_effects.asm:IsKeyItem_
 ;                                                      ([wCurItem] → [wIsKeyItem])
@@ -34,12 +35,10 @@ bits 32
 global IsItemHM
 global IsMoveHM
 global HMMoves
-global IsItemInBag
 global IsKeyItem
 global IsKeyItem_
 
 extern IsInArray                ; src/home/array.asm — flat $FF-terminated search
-extern GetQuantityOfItemInBag   ; src/engine/items/get_bag_item_quantity.asm (predef)
 extern FlagAction               ; src/engine/flag_action.asm — ESI=base, CL=bit, BH=act
 extern KeyItemFlags             ; src/data/item_data.asm — flat LSB-first bit array
 
@@ -75,22 +74,10 @@ IsMoveHM:
     jmp IsInArray              ; jp IsInArray → returns CF
 
 ; ---------------------------------------------------------------------------
-; IsItemInBag — pret home/map_objects.asm:IsItemInBag.
-; Zero flag SET if the item is NOT in the bag, RESET if it is.
-; pret invokes `predef GetQuantityOfItemInBag` (b = item id). The port's
-; GetQuantityOfItemInBag opens with GetPredefRegisters, which reloads BX from
-; wPredefBC — so stash the item id there first. (The predef dispatcher is dead
-; code in the port; the documented convention is to populate the wPredef*
-; slots directly at the call site — see src/home/predef.asm header.)
-; In:  BH = item id.   Out: ZF = 1 if not in bag; BH = quantity.  AL clobbered.
+; IsItemInBag — MOVED to its mirror, src/home/map_objects.asm (mirror rule). It is
+; a pret home/map_objects.asm label; nothing left in this file calls it, so the
+; GetQuantityOfItemInBag extern went with it.
 ; ---------------------------------------------------------------------------
-IsItemInBag:
-    mov [ebp + wPredefBC], bh        ; b → wPredefBC high byte (GetPredefRegisters)
-    mov [ebp + wPredefBC + 1], bl    ; c → low byte (unused by callee; kept faithful)
-    call GetQuantityOfItemInBag      ; → BH = quantity of that item in the bag
-    mov al, bh                       ; ld a, b
-    and al, al                       ; and a  (ZF=1 ⇒ qty 0 ⇒ not in bag)
-    ret
 
 ; ---------------------------------------------------------------------------
 ; IsKeyItem — pret home/item.asm:IsKeyItem.

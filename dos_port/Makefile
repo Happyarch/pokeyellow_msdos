@@ -341,7 +341,7 @@ GAME_SRCS := \
     src/engine/printer/printer_stubs.asm \
     src/engine/menus/link_menu.asm \
     src/home/reload_sprites.asm \
-    src/home/simulate_joypad.asm \
+    src/home/map_objects.asm \
     src/engine/overworld/overworld_stubs.asm \
     src/engine/overworld/player_animations.asm \
     src/engine/overworld/daycare_exp.asm \

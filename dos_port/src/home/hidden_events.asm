@@ -2,15 +2,19 @@
 ; hidden_events.asm — signs + hidden-event / coord-array helpers (Wave 7, M7.2)
 ;
 ; Faithful translations of pret home/overworld.asm (SignLoop, CopySignData) and
-; pret home/map_objects.asm / home/hidden_events.asm (CheckCoords family,
+; pret engine/overworld/hidden_events.asm + home/hidden_events.asm
+; (CheckForHiddenEvent, CheckIfCoordsInFrontOfPlayerMatch,
 ; CheckForHiddenEventOrBookshelfOrCardKeyDoor, UpdateCinnabarGymGateTileBlocks).
 ;
+; The pret home/map_objects.asm coord-array family this file used to carry
+; (ArePlayerCoordsInArray, CheckCoords, CheckBoulderCoords) MOVED to its mirror,
+; src/home/map_objects.asm, per the mirror rule.
+;
 ; Both tiers are LINKED as of overworld-events Stage 3 (bullet 1):
-;   * Sign/coord helpers: CopySignData, SignLoop, ArePlayerCoordsInArray,
-;     CheckCoords.  Self-contained (memmap symbols only); LoadMapHeader calls
-;     CopySignData live and the A-press path calls SignLoop.
+;   * Sign helpers: CopySignData, SignLoop.  Self-contained (memmap symbols only);
+;     LoadMapHeader calls CopySignData live and the A-press path calls SignLoop.
 ;   * Hidden-event dispatch: CheckForHiddenEvent, CheckIfCoordsInFrontOfPlayerMatch,
-;     CheckBoulderCoords, CheckForHiddenEventOrBookshelfOrCardKeyDoor,
+;     CheckForHiddenEventOrBookshelfOrCardKeyDoor,
 ;     UpdateCinnabarGymGateTileBlocks.  Their deps now resolve: the generated
 ;     HiddenEventMaps data (src/data/hidden_events_data.asm), the Tier-2 handler
 ;     stubs + PrintBookshelfText/UpdateCinnabarGymGateTileBlocks_ stubs
@@ -26,20 +30,6 @@
 %include "gb_macros.inc"
 
 section .text
-
-global ArePlayerCoordsInArray
-global CheckCoords
-
-; ---------------------------------------------------------------------------
-; Scaffold memmap symbols not yet in gb_memmap.inc.
-; TODO(M7.2): root must add these to gb_memmap.inc with sym-verified pret
-; addresses before any of these routines is wired to a live caller.  They are
-; guarded so this file assembles standalone; the placeholder addresses are inert
-; today because no linked caller reads/writes them.
-; ---------------------------------------------------------------------------
-%ifndef W_COORD_INDEX
-W_COORD_INDEX   equ 0xD152   ; wCoordIndex  — PLACEHOLDER, sym-verify vs pret Yellow
-%endif
 
 ; ---------------------------------------------------------------------------
 ; CopySignData — copy the map header's sign block into WRAM.
@@ -72,45 +62,11 @@ W_COORD_INDEX   equ 0xD152   ; wCoordIndex  — PLACEHOLDER, sym-verify vs pret 
 ; ---------------------------------------------------------------------------
 
 ; ---------------------------------------------------------------------------
-; ArePlayerCoordsInArray / CheckCoords — test whether coords are in a $ff-
-; terminated (Y,X) array.
-; Pret ref: home/map_objects.asm:ArePlayerCoordsInArray / CheckCoords
-;
-; ArePlayerCoordsInArray: loads BH=wYCoord, BL=wXCoord, falls through.
-; CheckCoords:
-;   In:  BH = Y, BL = X, ESI = flat ptr to a $ff-terminated array of (Y,X) pairs.
-;   Out: CF=1 and [wCoordIndex] = matching 1-based index if found; CF=0 else.
-;        [wCoordIndex] holds the count of entries examined either way (faithful).
-; Clobbers EAX, ESI.  Preserves BX/DX.
+; ArePlayerCoordsInArray / CheckCoords / CheckBoulderCoords — MOVED to their
+; mirror, src/home/map_objects.asm (mirror rule). They are pret
+; home/map_objects.asm labels; the W_COORD_INDEX scaffold equ went with them, and
+; nothing left in this file calls them.
 ; ---------------------------------------------------------------------------
-ArePlayerCoordsInArray:
-    mov bh, [ebp + W_Y_COORD]           ; b = wYCoord
-    mov bl, [ebp + W_X_COORD]           ; c = wXCoord
-    ; fallthrough
-CheckCoords:
-    mov byte [ebp + W_COORD_INDEX], 0
-.loop:
-    mov al, [esi]                       ; array Y (or $ff terminator)
-    inc esi
-    cmp al, 0xFF
-    je .notInArray
-    inc byte [ebp + W_COORD_INDEX]
-    cmp al, bh                          ; compare Y
-    jne .skipX
-    mov al, [esi]                       ; array X
-    inc esi
-    cmp al, bl                          ; compare X
-    je .inArray
-    jmp .loop                           ; X mismatch, ESI at next entry
-.skipX:
-    inc esi                             ; skip X, ESI at next entry
-    jmp .loop
-.inArray:
-    stc
-    ret
-.notInArray:
-    clc
-    ret
 
 ; ===========================================================================
 ; DEEP tier — LINKED as of overworld-events Stage 3 (bullet 1). The generated
@@ -166,25 +122,8 @@ W_SPRITE_PLAYER_FACING_DIR equ 0xC109   ; wSpritePlayerStateData1FacingDirection
 
 global CheckForHiddenEvent
 global CheckIfCoordsInFrontOfPlayerMatch
-global CheckBoulderCoords
 global CheckForHiddenEventOrBookshelfOrCardKeyDoor
 global UpdateCinnabarGymGateTileBlocks
-
-; ---------------------------------------------------------------------------
-; CheckBoulderCoords — test a boulder sprite's coords against an array.
-; Pret ref: home/map_objects.asm:CheckBoulderCoords
-;
-; In:  ESI = flat ptr to $ff-terminated (Y,X) array; [hSpriteIndex] = boulder slot.
-; Out: as CheckCoords (CF + wCoordIndex).
-; ---------------------------------------------------------------------------
-CheckBoulderCoords:
-    movzx eax, byte [ebp + H_SPRITE_INDEX]
-    shl eax, 4                          ; slot * 16 (SPRITESTATEDATA2 stride)
-    mov bh, [ebp + eax + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPY]
-    sub bh, 4                           ; sprite coords are offset by 4
-    mov bl, [ebp + eax + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPX]
-    sub bl, 4
-    jmp CheckCoords                     ; ESI already = array
 
 ; ---------------------------------------------------------------------------
 ; CheckForHiddenEvent (OW-3.3) — scan the current map's hidden-event list.

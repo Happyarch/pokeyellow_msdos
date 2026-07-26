@@ -4,8 +4,9 @@
 ;
 ; Translated from pret/pokeyellow:
 ;   home/pathfinding.asm : CalcDifference, MoveSprite, MoveSprite_, DivideBytes
-;   home/map_objects.asm : SetSpriteMovementBytesToFF,
-;                          GetSpriteMovementByte1Pointer, GetSpriteMovementByte2Pointer
+; (the three home/map_objects.asm accessors this file used to carry —
+;  SetSpriteMovementBytesToFF, GetSpriteMovementByte1Pointer,
+;  GetSpriteMovementByte2Pointer — moved to src/home/map_objects.asm.)
 ;
 ; MoveSprite loads a $ff-terminated movement-direction stream into
 ; wNPCMovementDirections and arms BIT_SCRIPTED_NPC_MOVEMENT so the per-frame sprite
@@ -31,16 +32,17 @@ global CalcDifference
 global MoveSprite
 global MoveSprite_
 global DivideBytes
-global SetSpriteMovementBytesToFF
-global GetSpriteMovementByte1Pointer
-global GetSpriteMovementByte2Pointer
 ; engine section (OW-2.2) — pret engine/overworld/pathfinding.asm
 global FindPathToPlayer
 global CalcPositionOfPlayerRelativeToNPC
 global ConvertNPCMovementDirectionsToJoypadMasks
 global ConvertNPCMovementDirectionToJoypadMask
 
-extern wMapSpriteData            ; map_sprites.asm — [movbyte2, textid] per slot (pret wMapSpriteData)
+; The three home/map_objects.asm sprite movement-byte accessors this file used to
+; carry now live in their mirror, src/home/map_objects.asm (mirror rule). MoveSprite
+; still calls two of them.
+extern SetSpriteMovementBytesToFF     ; src/home/map_objects.asm
+extern GetSpriteMovementByte1Pointer  ; src/home/map_objects.asm
 
 section .text
 
@@ -113,49 +115,6 @@ DivideBytes:
     inc byte [ebp + H_QUOTIENT2]
     jmp .loop
 .done:
-    ret
-
-; ---------------------------------------------------------------------------
-; SetSpriteMovementBytesToFF — movement byte 1 = STAY ($ff), byte 2 = NONE ($00),
-; for sprite [hCurrentSpriteOffset].
-; pret: home/map_objects.asm:SetSpriteMovementBytesToFF
-; Clobbers: ESI, flags
-; ---------------------------------------------------------------------------
-SetSpriteMovementBytesToFF:
-    call GetSpriteMovementByte1Pointer
-    mov byte [ebp + esi], 0xFF                ; STAY
-    call GetSpriteMovementByte2Pointer
-    mov byte [esi], 0x00                      ; NONE (ESI = flat wMapSpriteData ptr, not EBP-relative)
-    ret
-
-; ---------------------------------------------------------------------------
-; GetSpriteMovementByte1Pointer — ESI = EBP-rel offset of sprite [hCurrentSpriteOffset]
-; movement byte 1 (wSpriteStateData2 + slot*0x10 + 6).
-; pret: home/map_objects.asm:GetSpriteMovementByte1Pointer (swap a / add 6)
-; Out: ESI = offset   Clobbers: ESI
-; ---------------------------------------------------------------------------
-GetSpriteMovementByte1Pointer:
-    movzx esi, byte [ebp + H_CURRENT_SPRITE_OFFSET]
-    add esi, W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTBYTE1
-    ret
-
-; ---------------------------------------------------------------------------
-; GetSpriteMovementByte2Pointer — ESI = EBP-rel offset of the sprite's movement
-; byte 2 (direction constraint).
-; pret: home/map_objects.asm:GetSpriteMovementByte2Pointer.
-;
-; pret stores byte 2 in wMapSpriteData[(slot-1)*2]; OW-A.2 P2 relocated the port's copy
-; there too (it had been stashed in SPRITESTATEDATA2 offset 0x1). Since wMapSpriteData is
-; a flat .bss array, this returns ESI = flat address (NOT an EBP-relative offset like
-; GetSpriteMovementByte1Pointer); callers write [esi], not [ebp+esi].
-; Out: ESI = flat wMapSpriteData ptr   Clobbers: ESI, flags
-; ---------------------------------------------------------------------------
-GetSpriteMovementByte2Pointer:
-    movzx esi, byte [ebp + H_CURRENT_SPRITE_OFFSET]  ; slot byte offset (slot*0x10)
-    shr esi, 4                                        ; slot number (1-15)
-    dec esi
-    add esi, esi                                      ; (slot-1)*2 -> wMapSpriteData index
-    add esi, wMapSpriteData                           ; flat address; flags dead (ret follows)
     ret
 
 ; ===========================================================================

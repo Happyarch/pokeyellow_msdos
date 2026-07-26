@@ -57,7 +57,7 @@ global TilePairCollisionsLand
 global TilePairCollisionsWater
 global LedgeTiles
 
-extern StartSimulatingJoypadStates    ; src/home/simulate_joypad.asm (linked)
+extern StartSimulatingJoypadStates    ; src/home/map_objects.asm (linked)
 extern PlaySound                      ; src/home/audio.asm (real gateway, linked)
 extern UpdateSprites                  ; src/engine/overworld/movement.asm (linked)
 extern Delay3                         ; src/video/frame.asm (linked)

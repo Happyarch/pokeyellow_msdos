@@ -19,7 +19,7 @@
 ; GB memory = [ebp + SYM], SYM from gb_memmap.inc.
 ;
 ; Reuses (does not duplicate) the port's existing coord-array scan:
-;   extern ArePlayerCoordsInArray  ; src/engine/overworld/hidden_events.asm
+;   extern ArePlayerCoordsInArray  ; src/home/map_objects.asm
 ; Contract (per that file's own header comment):
 ;   In:  ESI = flat ptr to a $ff-terminated array of (Y,X) pairs.
 ;        Reads [W_Y_COORD]/[W_X_COORD] (player coords) internally -- caller
@@ -73,7 +73,7 @@ BIT_DUNGEON_WARP      equ 4
 section .text
 
 global IsPlayerOnDungeonWarp
-extern ArePlayerCoordsInArray            ; src/home/hidden_events.asm
+extern ArePlayerCoordsInArray            ; src/home/map_objects.asm
 
 ; ---------------------------------------------------------------------------
 ; IsPlayerOnDungeonWarp -- test whether the player is on (or already flagged

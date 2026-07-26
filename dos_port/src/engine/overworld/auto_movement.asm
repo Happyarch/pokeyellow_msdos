@@ -44,8 +44,8 @@ global PewterGymGuyMovementScriptPointerTable
 extern FillMemory                  ; home/copy2.asm
 extern MoveSprite                  ; src/home/pathfinding.asm
 extern ConvertNPCMovementDirectionsToJoypadMasks ; pathfinding.asm (pret: predef)
-extern DecodeRLEList               ; src/home/simulate_joypad.asm
-extern StartSimulatingJoypadStates ; src/home/simulate_joypad.asm
+extern DecodeRLEList               ; src/home/map_objects.asm
+extern StartSimulatingJoypadStates ; src/home/map_objects.asm
 extern PlayMusic                   ; src/home/audio.asm (real gateway)
 extern PewterGuys                  ; src/engine/events/pewter_guys.asm
 extern HideObject                  ; src/engine/overworld/toggleable_objects.asm (OW-3.2)

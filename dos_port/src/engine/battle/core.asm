@@ -246,7 +246,7 @@ extern CheckTargetSubstitute           ; substitute.asm
 extern AddBCD                          ; engine/math/bcd.asm
 extern ClearScreen                     ; home/copy2.asm
 extern ClearSprites                    ; home/sprites.asm
-extern IsItemInBag                     ; home/item_predicates.asm
+extern IsItemInBag                     ; src/home/map_objects.asm
 extern PrintEmptyString                ; battle_exp_stubs.asm (STUB)
 extern RunPaletteCommand               ; home/palettes.asm
 extern SkipFixedLengthTextEntries      ; home/array.asm

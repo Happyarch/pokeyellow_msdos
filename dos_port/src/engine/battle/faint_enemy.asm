@@ -84,7 +84,7 @@ extern AnyPartyAlive                   ; src/home/wild_encounter_check.asm — o
 extern PrintBattleText                 ; src/engine/battle/core.asm — in: EAX = flat ptr to battle_text.inc stream
 extern PrintEmptyString                ; src/engine/battle/battle_exp_stubs.asm (currently a bare ret stub)
 extern SaveScreenTilesToBuffer1        ; src/home/tilemap.asm
-extern IsItemInBag                     ; src/home/item_predicates.asm — in: BH = item id; out: ZF (1 = not in bag), AL = qty
+extern IsItemInBag                     ; src/home/map_objects.asm — in: BH = item id; out: ZF (1 = not in bag), AL = qty
 extern GainExperience                  ; src/engine/battle/experience.asm — no args, reads wBoostExpByExpAll/wPartyGainExpFlags
 extern SlideDownFaintedMonPic          ; core_stubs.asm (STUB)
 extern EnemyMonFaintedText             ; dos_port/assets/battle_text.inc (global label, battle_text stream)
