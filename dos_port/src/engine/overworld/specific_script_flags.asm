@@ -117,7 +117,7 @@ BRUNOS_ROOM             equ 0xF6
 AGATHAS_ROOM            equ 0xF7
 %endif
 
-extern IsInArray                     ; src/home/array.asm — $FF-terminated flat search
+extern IsInArray                     ; src/home/array2.asm — $FF-terminated flat search
 
 global SetMapSpecificScriptFlagsOnMapReload
 

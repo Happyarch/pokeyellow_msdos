@@ -91,7 +91,7 @@ TH_SIZE        equ 22
 ; Externs
 ; ----------------------------------------------------------------------------
 extern FlagAction               ; src/engine/flag_action.asm (persistent flag array)
-extern CallFunctionInTable      ; src/home/run_map_script.asm
+extern CallFunctionInTable      ; src/home/array2.asm
 extern CopyData                 ; src/home/copy_data.asm
 extern PrintText                ; src/home/window.asm
 extern PlaySound                ; src/home/audio.asm (real gateway)
@@ -112,7 +112,7 @@ extern SetEnemyTrainerToStayAndFaceAnyDirection ; src/engine/overworld/npc_movem
 extern TextCommandProcessor     ; src/home/text.asm
 extern TextScriptEnd            ; src/home/overworld_text.asm
 extern HideObject               ; src/engine/overworld/toggleable_objects.asm
-extern IsInArray                ; src/home/array.asm (flat [ESI] reads; pass lea esi,[ebp+..] for WRAM)
+extern IsInArray                ; src/home/array2.asm (flat [ESI] reads; pass lea esi,[ebp+..] for WRAM)
 extern msgbox_dialog            ; src/home/text.asm — overworld dialog projection
 extern text_msgbox              ; src/home/text.asm — active msgbox projection (msgbox.inc)
 %ifdef TRAINER_BATTLE_LIVE

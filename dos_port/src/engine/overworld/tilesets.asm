@@ -28,7 +28,7 @@ bits 32
 
 global LoadTilesetHeader
 
-extern IsInArray                          ; src/home/array.asm
+extern IsInArray                          ; src/home/array2.asm
 extern LoadDestinationWarpPosition        ; src/home/overworld.asm
 extern g_tilecache_dirty                  ; src/ppu/ppu.asm
 ; generated Tier-1 tileset pointer/size tables — assets/map_headers.inc,

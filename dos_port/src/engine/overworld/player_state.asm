@@ -136,7 +136,7 @@ TILE_SPC equ 0x7F   ; space
 ; Externs
 ; ---------------------------------------------------------------------------
 extern GetPredefRegisters   ; src/home/predef.asm — linked (POKEMON_SRCS)
-extern IsInArray            ; src/home/array.asm — linked (POKEMON_SRCS)
+extern IsInArray            ; src/home/array2.asm — linked (POKEMON_SRCS)
 extern TextBoxBorder        ; src/home/text.asm — linked (GAME_SRCS)
 extern PlaceString          ; src/home/text.asm — linked (GAME_SRCS)
 extern PrintNumber          ; src/home/print_num.asm — linked (GAME_SRCS)

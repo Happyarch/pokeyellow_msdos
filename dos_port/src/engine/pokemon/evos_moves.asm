@@ -77,7 +77,7 @@ extern lvl_mon_ptr              ; src/engine/battle/battle_menu.asm — PrintSta
 ; Text/display/input helpers:
 extern PrintText                ; battle-scope text engine (ESI = flat text stream)
 extern GetPartyMonName          ; (AL=index, ESI=nick list) → wNameBuffer (EDX out)
-extern CopyToStringBuffer            ; src/engine/battle/core.asm — wNameBuffer -> wStringBuffer
+extern CopyToStringBuffer            ; src/home/copy_string.asm — wNameBuffer -> wStringBuffer
 extern ClearScreenArea          ; (ESI=tilemap dst, BH=rows, BL=width)
 extern ClearSprites             ; zero shadow OAM
 extern ClearScreen              ; home/copy2.asm — blank tilemap + Delay3

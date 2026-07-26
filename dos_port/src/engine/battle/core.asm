@@ -207,7 +207,8 @@ extern BattlePartyMenu                 ; PKMN → party/switch (deferred; re-sho
 extern AddNTimes                       ; home/array.asm — ESI += BX * AL (party index)
 extern DecrementPP                     ; decrement_pp.asm
 extern JumpMoveEffect                  ; effects.asm — MoveEffectPointerTable dispatch
-extern IsInArray                       ; home/array.asm — AL in [ESI] ($FF-term, stride EDX) → CF
+extern CopyToStringBuffer              ; src/home/copy_string.asm — EDX=src → wStringBuffer
+extern IsInArray                       ; home/array2.asm — AL in [ESI] ($FF-term, stride EDX) → CF
 extern ResidualEffects1                ; battle_data.asm — effect-category arrays
 extern SpecialEffectsCont
 extern SetDamageEffects
@@ -1866,22 +1867,6 @@ SwapPlayerAndEnemyLevels:
     mov [ebp + wBattleMonLevel], al
     mov [ebp + wEnemyMonLevel], bl
     pop ebx
-    ret
-
-; ---------------------------------------------------------------------------
-; CopyToStringBuffer — pret home/copy_string.asm. Copies the '@'-terminated string
-; at EDX (GB addr) into wStringBuffer. Used by the Rage continuation (move name).
-; ---------------------------------------------------------------------------
-global CopyToStringBuffer            ; Wave 5/M5.3: give.asm consumes it once linked
-CopyToStringBuffer:
-    mov edi, wStringBuffer
-.copy:
-    mov al, [ebp + edx]
-    inc edx
-    mov [ebp + edi], al
-    inc edi
-    cmp al, 0x50                        ; '@'
-    jne .copy
     ret
 
 ; ---------------------------------------------------------------------------

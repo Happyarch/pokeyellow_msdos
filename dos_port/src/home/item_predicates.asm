@@ -38,7 +38,7 @@ global HMMoves
 global IsKeyItem
 global IsKeyItem_
 
-extern IsInArray                ; src/home/array.asm — flat $FF-terminated search
+extern IsInArray                ; src/home/array2.asm — flat $FF-terminated search
 extern FlagAction               ; src/engine/flag_action.asm — ESI=base, CL=bit, BH=act
 extern KeyItemFlags             ; src/data/item_data.asm — flat LSB-first bit array
 

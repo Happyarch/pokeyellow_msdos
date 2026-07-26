@@ -21,7 +21,7 @@ section .text
 
 global KnowsHMMove
 
-extern IsInArray                ; src/home/array.asm (shared home global)
+extern IsInArray                ; src/home/array2.asm (shared home global)
 
 ; ---------------------------------------------------------------------------
 ; KnowsHMMove

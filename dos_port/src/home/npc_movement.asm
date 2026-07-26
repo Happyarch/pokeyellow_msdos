@@ -73,7 +73,7 @@ RunNPCMovementScript:
 .done:
     ret
 
-extern CallFunctionInTable                ; src/home/run_map_script.asm
+extern CallFunctionInTable                ; src/home/array2.asm
 extern PalletMovementScriptPointerTable   ; src/engine/overworld/auto_movement.asm
 extern PewterMuseumGuyMovementScriptPointerTable ; src/engine/overworld/auto_movement.asm
 extern PewterGymGuyMovementScriptPointerTable ; src/engine/overworld/auto_movement.asm

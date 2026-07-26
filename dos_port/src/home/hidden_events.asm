@@ -78,7 +78,7 @@ extern PrintBookshelfText               ; src/engine/overworld/hidden_object_stu
 extern JumpToAddress                    ; src/home/bankswitch2.asm
 extern GetTileAndCoordsInFrontOfPlayer  ; src/engine/overworld/player_state.asm (linked predef)
 extern UpdateCinnabarGymGateTileBlocks_ ; src/engine/overworld/hidden_object_stubs.asm (stub)
-extern IsInArray                        ; src/home/array.asm (map-id search, stride DE)
+extern IsInArray                        ; src/home/array2.asm (map-id search, stride DE)
 extern HiddenEventMaps                  ; assets/hidden_events.inc, %included by
                                         ; src/data/hidden_events_data.asm — generated flat
                                         ; {db map, dd HiddenEventsFor_<map>} table

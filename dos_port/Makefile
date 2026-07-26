@@ -234,6 +234,7 @@ HOME_SRCS := \
     src/home/tilemap.asm \
     src/home/npc_movement.asm \
     src/home/vcopy.asm \
+    src/home/copy_string.asm \
     src/home/give.asm \
     src/home/oam.asm
 
@@ -278,7 +279,6 @@ GAME_SRCS := \
     src/home/init.asm \
     src/video/lcd_control.asm \
     src/video/frame.asm \
-    src/video/bg_anim.asm \
     src/home/play_time.asm \
     src/home/sprites.asm \
     src/engine/gfx/sprite_oam.asm \
@@ -403,6 +403,7 @@ POKEMON_SRCS := \
     src/home/math.asm \
     src/engine/math/multiply_divide.asm \
     src/home/array.asm \
+    src/home/array2.asm \
     src/home/predef.asm \
     src/home/pokemon.asm \
     src/home/move_mon.asm \

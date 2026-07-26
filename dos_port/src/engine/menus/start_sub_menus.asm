@@ -102,10 +102,10 @@ extern DisplayTextBoxID              ; home/textbox.asm
 extern HandleMenuInput               ; home/window.asm
 extern PlaceUnfilledArrowMenuCursor
 extern GetItemName                   ; home/names.asm — [wNamedObjectIndex] → wNameBuffer
-extern CopyToStringBuffer            ; engine/battle/core.asm — EDX=src → wStringBuffer
+extern CopyToStringBuffer            ; src/home/copy_string.asm — EDX=src → wStringBuffer
 extern TossItem                      ; home/item.asm — ESI=inventory; CF=1 not tossed
 extern UseItem                       ; home/item.asm — [wCurItem] → wActionResultOrTookBattleTurn
-extern IsInArray                     ; home/array.asm — AL=value, ESI=flat table, EDX=stride; CF=1
+extern IsInArray                     ; home/array2.asm — AL=value, ESI=flat table, EDX=stride; CF=1
 extern UsableItems_CloseMenu         ; data/item_data.asm (generated) — USE closes the menu
 extern UsableItems_PartyMenu         ; data/item_data.asm (generated) — USE opens the party menu
 extern add_window                    ; ppu/ppu.asm

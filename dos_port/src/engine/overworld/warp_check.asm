@@ -33,7 +33,7 @@ bits 32
 ; These maps are not yet in the port's map set, so their branches simply never
 ; match today — but wiring them now is faithful and future-proof.
 
-extern IsInArray                    ; src/home/array.asm — $FF-terminated flat search
+extern IsInArray                    ; src/home/array2.asm — $FF-terminated flat search
 
 
 ; called by the routines that moved to src/home/overworld.asm

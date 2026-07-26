@@ -1,7 +1,9 @@
-; lcd_control.asm — DisableLCD / EnableLCD / ClearBgMap / FillBgMap.
+; lcd_control.asm — DisableLCD / EnableLCD.
 ;
 ; Sources: home/lcd.asm:DisableLCD, EnableLCD
-;          home/vcopy.asm:ClearBgMap, FillBgMapCommon
+;
+; ClearBgMap and FillBgMap are home/vcopy.asm labels and moved to that mirror,
+; src/home/vcopy.asm.
 ;
 ; The LCD on/off dance on real hardware races the PPU scanline counter and
 ; toggles rLCDC bit 7. In this port the renderer is driven by the main loop,
@@ -19,8 +21,6 @@ LCDC_ON_BIT equ 7
 
 global DisableLCD
 global EnableLCD
-global ClearBgMap
-global FillBgMap
 
 section .text
 
@@ -36,31 +36,4 @@ DisableLCD:
 ; ---------------------------------------------------------------------------
 EnableLCD:
     or byte [ebp + IO_LCDC], (1 << LCDC_ON_BIT)
-    ret
-
-; ---------------------------------------------------------------------------
-; ClearBgMap — fill a BG tilemap (TILEMAP_AREA bytes) with the blank tile ($7F).
-; In:  ESI = tilemap base offset (GB_TILEMAP0 or GB_TILEMAP1)
-; Out: all registers preserved.
-; ---------------------------------------------------------------------------
-ClearBgMap:
-    push eax
-    mov al, 0x7F
-    call FillBgMap
-    pop eax
-    ret
-
-; ---------------------------------------------------------------------------
-; FillBgMap — fill a BG tilemap with tile AL.
-; In:  ESI = tilemap base offset, AL = tile index
-; Out: all registers preserved.
-; ---------------------------------------------------------------------------
-FillBgMap:
-    push ecx
-    push edi
-    lea edi, [ebp + esi]
-    mov ecx, TILEMAP_AREA
-    rep stosb
-    pop edi
-    pop ecx
     ret

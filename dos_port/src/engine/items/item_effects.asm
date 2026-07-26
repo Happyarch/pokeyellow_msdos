@@ -353,7 +353,7 @@ extern DelayFrame                    ; video/frame.asm
 extern IsItemHM                      ; home/item_predicates.asm — AL → CF
 extern IsKeyItem                     ; home/item_predicates.asm — [wCurItem] → [wIsKeyItem]
 extern GetItemName                   ; home/names.asm — [wNamedObjectIndex] → wNameBuffer
-extern CopyToStringBuffer            ; engine/battle/core.asm — EDX=src → wStringBuffer
+extern CopyToStringBuffer            ; src/home/copy_string.asm — EDX=src → wStringBuffer
 extern RemoveItemFromInventory       ; engine/items/inventory.asm
 extern InitYesNoTextBoxParameters    ; home/yes_no.asm — YES_NO_MENU at GB(14,7)
 extern DisplayTextBoxID              ; home/textbox.asm
@@ -560,7 +560,7 @@ ti_dialog_drop:
 
 global IsNextTileShoreOrWater
 
-extern IsInArray                     ; src/home/array.asm
+extern IsInArray                     ; src/home/array2.asm
 
 ; Tileset ids (OVERWORLD/FOREST/DOJO/GYM/SHIP/SHIP_PORT/CAVERN/FACILITY/
 ; PLATEAU) come from the generated assets/map_dims.inc TILESET_IDS block.

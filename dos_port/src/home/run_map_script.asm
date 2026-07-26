@@ -1,8 +1,9 @@
-; run_map_script.asm — RunMapScript + CallFunctionInTable (script engine, Stage 5).
+; run_map_script.asm — RunMapScript (script engine, Stage 5).
 ;
 ; Faithful translation of home/overworld.asm:RunMapScript (the per-frame map-script
-; dispatcher) and home/scripting.asm:CallFunctionInTable (the generic jumptable
-; dispatch every map _Script uses on its current-script index).
+; dispatcher). CallFunctionInTable used to live here too, attributed to a
+; home/scripting.asm that does not exist — it is a home/array2.asm label and now
+; sits in src/home/array2.asm.
 ;
 ; Each overworld frame, RunMapScript runs the current map's _Script. In the flat
 ; port the dispatch is a flat `dd` MapScriptPointers table indexed by wCurMap
@@ -48,7 +49,6 @@ extern RunNPCMovementScript         ; src/home/npc_movement.asm
 section .text
 
 global DefaultMapScript
-global CallFunctionInTable
 
 
 ; Default _Script for maps without a ported one. Most pret map scripts that do
@@ -56,18 +56,3 @@ global CallFunctionInTable
 ; default (a few, e.g. Indigo Plateau, are a bare ret — close enough here).
 DefaultMapScript:
     jmp EnableAutoTextBoxDrawing
-
-; CallFunctionInTable — call function index AL in the flat dd jumptable ESI.
-; pret's version is a 16-bit table (add a / ld a,[hli] / ld h,[hl]); here the table
-; is flat dd, so index ×4 and load a 32-bit pointer. ESI/EDX/EBX preserved.
-CallFunctionInTable:
-    push esi
-    push edx
-    push ebx
-    movzx ecx, al
-    mov esi, [esi + ecx*4]
-    call esi
-    pop ebx
-    pop edx
-    pop esi
-    ret

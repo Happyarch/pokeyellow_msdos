@@ -49,8 +49,8 @@ extern Random                ; src/home/random.asm — pret VBlank RNG churn (ho
 %ifdef DEBUG_AUTOKEY
 extern AutoKeyDrive          ; src/debug/debug_dump.asm
 %endif
-extern UpdateMovingBgTiles   ; M2.2: BG tile-animation step (self-gates on hTileAnimations)
-extern VBlankCopyBgMap       ; M2.2: staged BG-map copy (self-gates on its row-count)
+extern UpdateMovingBgTiles   ; src/home/vcopy.asm — BG tile-animation step (self-gates on hTileAnimations)
+extern VBlankCopyBgMap       ; src/home/vcopy.asm — staged BG-map copy (self-gates on its row-count)
 %ifdef DEBUG_NPC_WALK
 extern DumpNpcLog       ; dump NPC walk-decision log to NPCLOG.BIN on quit
 %endif

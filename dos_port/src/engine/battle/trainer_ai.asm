@@ -73,7 +73,7 @@ extern Divide
 extern Moves
 extern AIGetTypeEffectiveness         ; engine/battle/core.asm — → wTypeEffectiveness
 extern StatModifierUpEffect
-extern IsInArray                ; src/home/array.asm (shared home global)
+extern IsInArray                ; src/home/array2.asm (shared home global)
 
 ; ---------------------------------------------------------------------------
 ; Globals
