@@ -25,7 +25,7 @@ name: DOS port
 #                           prerequisite), so a partial gfx build is not enough.
 #   make -C dos_port assets exit 0, 413 .inc  (23 present in a bare checkout)
 #   make -C dos_port check   exit 0
-#   tools/gate               exit 0 with --allow-unapproved-registry
+#   tools/static_gate        exit 0 with --allow-unapproved-registry
 # Total wall time was minutes, not tens of minutes.
 #
 # NOTE FOR BACKLOG ITEM 5: that item records "this branch's pret tree cannot
@@ -108,4 +108,4 @@ jobs:
           fi
 
       - name: Static gate
-        run: make -C dos_port gate GATEFLAGS="$GATE_FLAGS"
+        run: make -C dos_port static_gate GATEFLAGS="$GATE_FLAGS"

@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""gate — the static pre-commit gate for the DOS port (backlog item 4, CI wiring).
+"""static_gate — the whole-tree static pre-commit gate for the DOS port.
+
+NOT to be confused with `tools/fidelity_gate`, which is the per-CHANGE, per-LABEL
+evidence chain (and which carries the relocation move battery). The division is
+by scope: static_gate checks the WHOLE TREE against a checked-in baseline and is
+invoked with no arguments by .githooks/pre-commit; fidelity_gate checks the
+labels a specific diff touched.
 
 WHY THIS EXISTS
 ---------------
@@ -19,7 +25,7 @@ memories record what that cost:
 
 Both failures share one shape: a check with no automatic runner and a count
 written down somewhere prose-shaped. This tool is the fix. The counts move out
-of prose into `tools/gate_baseline.json`, a checked-in file, and every class is
+of prose into `tools/static_gate_baseline.json`, a checked-in file, and every class is
 a RATCHET: a class that grows is a regression, and a class that shrinks is also
 a failure — because an unexplained improvement is exactly the "good news nobody
 adversarially reviews" the evidence policy warns about. Lowering the ratchet is
@@ -69,7 +75,7 @@ import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PORT = os.path.dirname(HERE)
-BASELINE = os.path.join(HERE, 'gate_baseline.json')
+BASELINE = os.path.join(HERE, 'static_gate_baseline.json')
 
 # `== class_name (N) ==` — the section header both linter modes print.
 CLASS_RE = re.compile(r'^== ([a-z_]+) \((\d+)\) ==$', re.M)
@@ -123,7 +129,7 @@ def main():
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('--update-baseline', action='store_true',
-                    help='rewrite gate_baseline.json from this run (deliberate '
+                    help='rewrite static_gate_baseline.json from this run (deliberate '
                          'act — commit the result with a why)')
     ap.add_argument('--allow-unapproved-registry', action='store_true',
                     help='report registry_approval as INFO instead of failing; '
@@ -141,7 +147,7 @@ def main():
     if os.path.exists(BASELINE):
         base = json.load(open(BASELINE, encoding='utf-8'))
     elif not args.update_baseline:
-        print(f'{RED}gate: {BASELINE} is missing. Create it deliberately with '
+        print(f'{RED}static_gate: {BASELINE} is missing. Create it deliberately with '
               f'--update-baseline.{OFF}')
         return 2
 
@@ -165,7 +171,7 @@ def main():
         print(r.stdout, end='' if r.stdout.endswith('\n') else '\n')
         if r.returncode != 0:
             failures.append('update_label_db failed — nothing below is trustworthy')
-            print(f'{RED}gate: FAIL — the scan itself failed.{OFF}')
+            print(f'{RED}static_gate: FAIL — the scan itself failed.{OFF}')
             return 1
         steps.append('update_label_db')
 
@@ -210,7 +216,7 @@ def main():
         json.dump(seen, open(BASELINE, 'w', encoding='utf-8'),
                   indent=2, sort_keys=True)
         open(BASELINE, 'a', encoding='utf-8').write('\n')
-        print(f'\n{YELLOW}gate: baseline rewritten -> {BASELINE}{OFF}')
+        print(f'\n{YELLOW}static_gate: baseline rewritten -> {BASELINE}{OFF}')
         print(f'{YELLOW}Commit it, and say in the message WHY each class moved. '
               f'A baseline bumped without a reason is how the counts started '
               f'rotting in the first place.{OFF}')
@@ -218,13 +224,13 @@ def main():
 
     print()
     if failures:
-        print(f'{RED}{BOLD}gate: FAIL{OFF}')
+        print(f'{RED}{BOLD}static_gate: FAIL{OFF}')
         for f in failures:
             print(f'{RED}  - {f}{OFF}')
         print(f'{DIM}The RUNTIME tier (make fidelity / fidelity-full / '
               f'goldens-verify) is separate and was NOT run.{OFF}')
         return 1
-    print(f'{GREEN}{BOLD}gate: PASS{OFF} — {len(steps)} static checks')
+    print(f'{GREEN}{BOLD}static_gate: PASS{OFF} — {len(steps)} static checks')
     print(f'{DIM}This is the STATIC tier only. It proves no structural or '
           f'bookkeeping drift; it proves nothing about behaviour. Run '
           f'`make fidelity` (core) or `make fidelity-full` before committing a '

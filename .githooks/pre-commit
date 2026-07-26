@@ -26,20 +26,20 @@ if git diff --cached --quiet -- "$root/dos_port"; then
     exit 0
 fi
 
-if [ ! -x "$root/dos_port/tools/gate" ]; then
-    echo "pre-commit: dos_port/tools/gate is missing or not executable; skipping." >&2
+if [ ! -x "$root/dos_port/tools/static_gate" ]; then
+    echo "pre-commit: dos_port/tools/static_gate is missing or not executable; skipping." >&2
     exit 0
 fi
 
-echo "pre-commit: running the static gate (make -C dos_port gate)..."
-if ! make -C "$root/dos_port" gate; then
+echo "pre-commit: running the static gate (make -C dos_port static_gate)..."
+if ! make -C "$root/dos_port" static_gate; then
     cat >&2 <<'EOF'
 
 pre-commit: the STATIC gate failed. The commit was not created.
 
   * A class that GREW is your regression — fix it.
   * A class that SHRANK is good news, but lower the ratchet deliberately:
-        dos_port/tools/gate --update-baseline
+        dos_port/tools/static_gate --update-baseline
     and say in the commit message WHY it moved.
   * registry_approval firing means pret_label_allowlist.json changed and the
     maintainer has not re-blessed it. Agents must NOT set that approval; print

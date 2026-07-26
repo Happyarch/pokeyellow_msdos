@@ -1612,7 +1612,7 @@ ALL_OBJS := $(ALL_SRCS:.asm=.o)
 # Targets
 # ---------------------------------------------------------------------------
 
-.PHONY: all clean clean-image image check assets regen goldens goldens-verify goldencheck fidelity fidelity-full gate install-hooks
+.PHONY: all clean clean-image image check assets regen goldens goldens-verify goldencheck fidelity fidelity-full static_gate install-hooks
 .DEFAULT_GOAL := all
 
 # Regenerate the committed mGBA goldens (tests/goldens/) from the
@@ -2469,14 +2469,15 @@ INC_DEPS := $(wildcard include/*.inc) $(wildcard assets/*.inc) \
 # suite, and the scenario-manifest validator. Every one of these used to be
 # manual and therefore skippable, which is exactly how the strict-claims counts
 # in CLAUDE.md went stale and how two test_label_db.py tests stayed red for
-# sessions. See tools/gate's docstring for the full reasoning.
+# sessions. See tools/static_gate's docstring for the full reasoning.
+# NOT tools/fidelity_gate — that is the per-change, per-label evidence chain.
 #
 # This is NOT a substitute for `make fidelity` / `fidelity-full`. It proves the
 # absence of structural and bookkeeping drift; it proves nothing about
 # behaviour. Run the runtime tier for anything that can move a pixel or a WRAM
 # byte.
-gate:
-	@tools/gate $(GATEFLAGS)
+static_gate:
+	@tools/static_gate $(GATEFLAGS)
 
 # Point git at the tracked hook directory, so the static gate runs on every
 # commit without anyone having to remember. Opt-in and reversible:
@@ -2486,7 +2487,7 @@ gate:
 # reviewable; .git/hooks/ is per-clone and invisible to everyone else.
 install-hooks:
 	@git -C .. config core.hooksPath .githooks
-	@echo "core.hooksPath -> .githooks (pre-commit runs 'make -C dos_port gate')"
+	@echo "core.hooksPath -> .githooks (pre-commit runs 'make -C dos_port static_gate')"
 	@echo "Undo with: git config --unset core.hooksPath"
 	@echo "Bypass one commit with: git commit --no-verify"
 
