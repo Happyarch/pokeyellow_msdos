@@ -419,7 +419,6 @@ POKEMON_SRCS := \
     src/engine/pokemon/status_ailments.asm \
     src/engine/gfx/hp_bar.asm \
     src/engine/pokemon/status_screen.asm \
-    src/engine/items/get_max_pp.asm \
     src/engine/pokemon/knows_hm_move.asm \
     src/engine/pikachu/pikachu_status.asm \
     src/engine/pokemon/evolution.asm \

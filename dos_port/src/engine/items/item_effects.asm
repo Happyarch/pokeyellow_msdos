@@ -43,7 +43,12 @@ extern CalcStats        ; home/move_mon.asm (BH=consider-exp, ESI=stat-exp ptr, 
 extern CalcExperience   ; engine/pokemon/experience.asm (DH=level -> H_EXPERIENCE)
 extern AddNTimes        ; home/array.asm (ESI += AL*BX)
 extern LoadMovePPs      ; engine/pokemon/write_moves.asm (predef; reads wPredefHL/DE)
-extern AddBonusPP       ; engine/pokemon/get_max_pp.asm (EDX = max-PP src, ESI = PP byte)
+
+global AddBonusPP
+global GetMaxPP
+global GetSelectedMoveOffset
+global GetSelectedMoveOffset2
+global IsKeyItem_
 
 section .text
 
@@ -351,6 +356,8 @@ extern TextBoxBorder                 ; text/text.asm — ESI=top-left, BL=int_w,
 extern place_flat_str                ; text/text.asm — ESI=dest, EAX=flat src
 extern DelayFrame                    ; video/frame.asm
 extern IsItemHM                      ; home/item_predicates.asm — AL → CF
+extern KeyItemFlags                  ; src/data/item_data.asm — flat LSB-first bit array
+extern Moves                                         ; flat move-data table
 extern IsKeyItem                     ; home/item_predicates.asm — [wCurItem] → [wIsKeyItem]
 extern GetItemName                   ; home/names.asm — [wNamedObjectIndex] → wNameBuffer
 extern CopyToStringBuffer            ; src/home/copy_string.asm — EDX=src → wStringBuffer
@@ -3331,4 +3338,184 @@ CheckMapForMon:
     dec bh                              ; dec b
     jnz .loop
     dec esi                             ; dec hl
+    ret
+
+; ===========================================================================
+; --- was src/engine/items/get_max_pp.asm and src/home/item_predicates.asm ---
+; pret engine/items/item_effects.asm: AddBonusPP, GetMaxPP,
+; GetSelectedMoveOffset, GetSelectedMoveOffset2, IsKeyItem_.
+;
+; Appended under a banner, ordered in pret order AMONG THEMSELVES, following this
+; file's own convention: the file is measurably not in pret order (15 of its 49
+; adjacent pret-labelled pairs run backwards against the pret line numbers), so
+; no insertion point satisfies both neighbours. Interleaving 3.3k lines is a
+; separate change.
+; ===========================================================================
+
+; ---------------------------------------------------------------------------
+; AddBonusPP — add the PP-Up bonus to the work byte at [ESI] (hl).
+; In:  EDX = GB addr of the move's normal max PP (de); ESI = work byte (hl,
+;      = PP-Up bits | normal max PP); [wUsingPPUp] = 1 to add one bonus only.
+; Out: [ESI] = work byte with the PP-Up bonus folded in.
+; ---------------------------------------------------------------------------
+AddBonusPP:
+    push ebx
+    ; hDividend = normal max PP; hQuotient = maxPP / 5
+    movzx eax, byte [ebp + edx]
+    mov [ebp + hDividend + 3], al
+    xor al, al
+    mov [ebp + hDividend], al
+    mov [ebp + hDividend + 1], al
+    mov [ebp + hDividend + 2], al
+    mov byte [ebp + hDivisor], 5
+    mov bh, 4                                         ; dividend byte count
+    call Divide                                       ; preserves BX
+    movzx eax, byte [ebp + esi]                       ; work byte
+    mov bl, al                                        ; b = running total (8-bit, starts = work byte)
+    shr al, 6                                          ; PP-Up count = bits 7-6 (pret swap/and/srl/srl)
+    mov cl, al                                        ; c = PP-Up count (8-bit counter — SM83-faithful)
+.loop:
+    movzx eax, byte [ebp + hQuotient + 3]             ; per-PP-Up bonus = maxPP/5, capped at 7
+    cmp al, 8
+    jb .addAmount
+    mov al, 7
+.addAmount:
+    add bl, al                                        ; 8-bit add (wraps like SM83 `add b`)
+    mov al, [ebp + wUsingPPUp]
+    dec al
+    jz .done                                          ; applying a PP Up now → add only once
+    ; NB: 8-bit `dec cl` (not ecx): c=0 (no PP-Ups) loops 256×, and adding a constant
+    ; to the 8-bit BL exactly 256 times is a net no-op (mod 256) → base PP unchanged.
+    ; This is how pret's do-while is correct-yet-bounded for 0 PP-Ups; a 32-bit dec
+    ; would spin ~4 billion times instead.
+    dec cl
+    jnz .loop
+.done:
+    mov [ebp + esi], bl
+    pop ebx
+    ret
+
+; ---------------------------------------------------------------------------
+; GetMaxPP — [wMaxPP] = max PP (incl. PP-Up bonus) of the selected move.
+; ---------------------------------------------------------------------------
+GetMaxPP:
+    ; --- pick the source move list into ESI, per-mon stride into BX ---
+    mov al, [ebp + wMonDataLocation]
+    test al, al
+    mov esi, wPartyMon1Moves
+    mov bx, PARTYMON_STRUCT_LENGTH
+    jz .multi
+    mov esi, wEnemyMon1Moves
+    dec al
+    jz .multi
+    mov esi, wBoxMon1Moves
+    mov bx, BOXMON_STRUCT_LENGTH
+    dec al
+    jz .multi
+    mov esi, wDayCareMonMoves
+    dec al
+    jz .oneMon
+    mov esi, wBattleMonMoves                          ; player's in-battle mon (loc 4)
+.oneMon:
+    call GetSelectedMoveOffset2
+    jmp .next
+.multi:
+    call GetSelectedMoveOffset
+.next:
+    ; ESI = GB offset of the selected move's id byte
+    movzx eax, byte [ebp + esi]                       ; move id
+    dec eax
+    imul eax, eax, MOVE_LENGTH                        ; (id-1) * MOVE_LENGTH
+    movzx edx, byte [Moves + eax + MOVE_PP]           ; base (normal) max PP
+    mov [ebp + wMoveData + MOVE_PP], dl               ; stage where AddBonusPP reads [de]
+    ; step from the move slot to the same-index PP byte within the mon struct
+    mov ecx, MON_PP - MON_MOVES
+    cmp byte [ebp + wMonDataLocation], BATTLE_MON_DATA
+    jne .addPPOffset
+    mov ecx, wBattleMonPP - wBattleMonMoves
+.addPPOffset:
+    add esi, ecx                                      ; ESI = current-PP byte for this move
+    movzx eax, byte [ebp + esi]
+    and al, PP_UP_MASK                                ; keep the PP-Up bits
+    or al, dl                                         ; a = PP-Up bits | normal max PP
+    mov [ebp + wPPUpCountAndMaxPP], al                ; work byte (hl)
+    mov byte [ebp + wUsingPPUp], 0                    ; not applying a PP Up right now
+    mov edx, wMoveData + MOVE_PP                      ; AddBonusPP: de = base-PP addr
+    mov esi, wPPUpCountAndMaxPP                        ; AddBonusPP: hl = work byte
+    call AddBonusPP
+    movzx eax, byte [ebp + wPPUpCountAndMaxPP]
+    and al, PP_MASK                                   ; strip the PP-Up bits → max PP
+    mov [ebp + wMaxPP], al
+    ret
+
+; ---------------------------------------------------------------------------
+; GetSelectedMoveOffset — ESI (hl) = move-list base + wWhichPokemon*BX + menu item.
+; GetSelectedMoveOffset2 — ESI += wCurrentMenuItem only.  In: ESI = list base,
+; BX = per-mon struct stride.  Out: ESI = GB offset of the selected move id byte.
+; ---------------------------------------------------------------------------
+GetSelectedMoveOffset:
+    mov al, [ebp + wWhichPokemon]
+    call AddNTimes                                   ; ESI += AL * BX (AL cleared, BX kept)
+GetSelectedMoveOffset2:
+    movzx ecx, byte [ebp + wCurrentMenuItem]
+    add esi, ecx
+    ret
+
+; ---------------------------------------------------------------------------
+; IsKeyItem_ — pret engine/items/item_effects.asm:IsKeyItem_.
+; Decides whether [wCurItem] is a "key" (untossable/unsellable) item and writes
+; the 0/1 result to [wIsKeyItem].
+;   * HMs ($C4..$C8)          → key.
+;   * TMs ($C9+)              → not key.
+;   * everything below $C4    → key iff KeyItemFlags bit (id-1) is set.
+;
+; Faithful structure. Two port-specific substitutions, both behavior-preserving:
+;  1) pret copies KeyItemFlags into wBuffer with `CopyData` (a ROM→WRAM copy).
+;     The port's CopyData is GB→GB only and KeyItemFlags is a FLAT .data table,
+;     so we inline the flat→GB copy. FlagAction reads its array with [ebp+ESI],
+;     hence the bit array must live in GB WRAM (wBuffer) first — same reason
+;     pret stages it there.
+;  2) pret does `predef FlagActionPredef`; we `call FlagAction` directly.
+;     FlagActionPredef begins with GetPredefRegisters, which would clobber the
+;     ESI/BH/CL we set up (no predef-slot setup here) — so, per the established
+;     port pattern (see experience.asm "FIX: was FlagActionPredef"), the direct
+;     FlagAction leaf is the faithful equivalent when registers are set by hand.
+;
+; In:  [wCurItem] = item id.   Out: [wIsKeyItem] = 0/1.  Clobbers AL, ECX (CL).
+; ---------------------------------------------------------------------------
+IsKeyItem_:
+    mov al, 1
+    mov [ebp + wIsKeyItem], al       ; ld [wIsKeyItem], 1  (assume key)
+    mov al, [ebp + wCurItem]         ; ld a, [wCurItem]
+    cmp al, HM01                     ; cp HM01
+    jae .checkIfItemIsHM             ; jr nc  (HM/TM range → skip bit array)
+
+    ; --- not an HM/TM: consult KeyItemFlags bit (id-1) --------------------
+    push eax                         ; push af  (save item id)
+    push esi
+    push edi
+    mov esi, KeyItemFlags            ; flat source (pret: ld hl, KeyItemFlags)
+    lea edi, [ebp + wBuffer]         ; GB dest  (pret: ld de, wBuffer)
+    mov ecx, 15                      ; ld bc, 15  (ASSERT 15 >= (NUM_ITEMS+7)/8)
+    rep movsb                        ; CopyData (flat→GB inline)
+    pop edi
+    pop esi
+    pop eax                          ; pop af   (restore item id)
+
+    dec al                           ; dec a
+    mov cl, al                       ; ld c, a   (bit index = id-1)
+    mov esi, wBuffer                 ; ld hl, wBuffer (GB offset; FlagAction adds ebp)
+    mov bh, FLAG_TEST                ; ld b, FLAG_TEST
+    call FlagAction                 ; predef FlagActionPredef → direct FlagAction
+    mov al, cl                       ; ld a, c   (FlagAction returns result in CL)
+    and al, al                       ; and a
+    jnz .ret                         ; ret nz    (bit set → key; wIsKeyItem stays 1)
+
+.checkIfItemIsHM:
+    mov al, [ebp + wCurItem]         ; ld a, [wCurItem]
+    call IsItemHM                    ; CF = is HM
+    jc .ret                          ; ret c     (HM → key; wIsKeyItem stays 1)
+    xor al, al
+    mov [ebp + wIsKeyItem], al       ; ld [wIsKeyItem], 0  (not a key item)
+.ret:
     ret

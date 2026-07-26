@@ -12,7 +12,8 @@
 ;   (IsItemInBag — pret home/map_objects.asm:IsItemInBag — MOVED to its mirror,
 ;                  src/home/map_objects.asm)
 ;   IsKeyItem    — pret home/item.asm:IsKeyItem        (thin save-regs wrapper)
-;   IsKeyItem_   — pret engine/items/item_effects.asm:IsKeyItem_
+;   IsKeyItem_   — pret engine/items/item_effects.asm:IsKeyItem_ — MOVED to that
+;                  mirror, src/engine/items/item_effects.asm. IsKeyItem still calls it.
 ;                                                      ([wCurItem] → [wIsKeyItem])
 ;
 ; TWO-TIER NOTE (per CLAUDE.md): HMMoves is *code*, not generated data — a
@@ -36,11 +37,9 @@ global IsItemHM
 global IsMoveHM
 global HMMoves
 global IsKeyItem
-global IsKeyItem_
 
 extern IsInArray                ; src/home/array2.asm — flat $FF-terminated search
-extern FlagAction               ; src/engine/flag_action.asm — ESI=base, CL=bit, BH=act
-extern KeyItemFlags             ; src/data/item_data.asm — flat LSB-first bit array
+extern IsKeyItem_               ; src/engine/items/item_effects.asm — its pret mirror
 
 section .text
 
@@ -93,65 +92,6 @@ IsKeyItem:
     pop ebx                     ; pop bc
     pop edx                     ; pop de
     pop esi                     ; pop hl
-    ret
-
-; ---------------------------------------------------------------------------
-; IsKeyItem_ — pret engine/items/item_effects.asm:IsKeyItem_.
-; Decides whether [wCurItem] is a "key" (untossable/unsellable) item and writes
-; the 0/1 result to [wIsKeyItem].
-;   * HMs ($C4..$C8)          → key.
-;   * TMs ($C9+)              → not key.
-;   * everything below $C4    → key iff KeyItemFlags bit (id-1) is set.
-;
-; Faithful structure. Two port-specific substitutions, both behavior-preserving:
-;  1) pret copies KeyItemFlags into wBuffer with `CopyData` (a ROM→WRAM copy).
-;     The port's CopyData is GB→GB only and KeyItemFlags is a FLAT .data table,
-;     so we inline the flat→GB copy. FlagAction reads its array with [ebp+ESI],
-;     hence the bit array must live in GB WRAM (wBuffer) first — same reason
-;     pret stages it there.
-;  2) pret does `predef FlagActionPredef`; we `call FlagAction` directly.
-;     FlagActionPredef begins with GetPredefRegisters, which would clobber the
-;     ESI/BH/CL we set up (no predef-slot setup here) — so, per the established
-;     port pattern (see experience.asm "FIX: was FlagActionPredef"), the direct
-;     FlagAction leaf is the faithful equivalent when registers are set by hand.
-;
-; In:  [wCurItem] = item id.   Out: [wIsKeyItem] = 0/1.  Clobbers AL, ECX (CL).
-; ---------------------------------------------------------------------------
-IsKeyItem_:
-    mov al, 1
-    mov [ebp + wIsKeyItem], al       ; ld [wIsKeyItem], 1  (assume key)
-    mov al, [ebp + wCurItem]         ; ld a, [wCurItem]
-    cmp al, HM01                     ; cp HM01
-    jae .checkIfItemIsHM             ; jr nc  (HM/TM range → skip bit array)
-
-    ; --- not an HM/TM: consult KeyItemFlags bit (id-1) --------------------
-    push eax                         ; push af  (save item id)
-    push esi
-    push edi
-    mov esi, KeyItemFlags            ; flat source (pret: ld hl, KeyItemFlags)
-    lea edi, [ebp + wBuffer]         ; GB dest  (pret: ld de, wBuffer)
-    mov ecx, 15                      ; ld bc, 15  (ASSERT 15 >= (NUM_ITEMS+7)/8)
-    rep movsb                        ; CopyData (flat→GB inline)
-    pop edi
-    pop esi
-    pop eax                          ; pop af   (restore item id)
-
-    dec al                           ; dec a
-    mov cl, al                       ; ld c, a   (bit index = id-1)
-    mov esi, wBuffer                 ; ld hl, wBuffer (GB offset; FlagAction adds ebp)
-    mov bh, FLAG_TEST                ; ld b, FLAG_TEST
-    call FlagAction                 ; predef FlagActionPredef → direct FlagAction
-    mov al, cl                       ; ld a, c   (FlagAction returns result in CL)
-    and al, al                       ; and a
-    jnz .ret                         ; ret nz    (bit set → key; wIsKeyItem stays 1)
-
-.checkIfItemIsHM:
-    mov al, [ebp + wCurItem]         ; ld a, [wCurItem]
-    call IsItemHM                    ; CF = is HM
-    jc .ret                          ; ret c     (HM → key; wIsKeyItem stays 1)
-    xor al, al
-    mov [ebp + wIsKeyItem], al       ; ld [wIsKeyItem], 0  (not a key item)
-.ret:
     ret
 
 ; ===========================================================================
