@@ -32,7 +32,7 @@ still land (the hook exits 0 when nothing under `dos_port/` is staged).
 **Do not `--no-verify`. Agents must never run the bless themselves.**
 
 **MAINTAINER ACTION — the one thing owed** (52-row allowlist, retired in
-`3026f32a`):
+`a561c72c`):
 
 ```
 git config pokeyellow.pretAllowlistApprovedSha256 \
@@ -55,7 +55,7 @@ No `translation.db` restamp is stuck behind the block: s15 restamped in
 | `ca0da4b7` | chunk 11 — names / names2 / item mirror repair, 6 rows, NEW mirror, `item_predicates.asm` deleted |
 | `67aac60c` | restamp `translation.db` at that HEAD |
 | `707dc237` | docs staleness sweep + handoff purge + a misleading skill claim |
-| `3026f32a` | **the registry retirement, 6 rows, 58 → 52** (amended to fix a fabricated hash) |
+| `a561c72c` | **the registry retirement, 6 rows, 58 → 52** (amended to fix a fabricated hash) |
 
 Debt **58 → 52** by DB count. Linked sources unchanged at **249**. Tree-wide
 fallthrough unchanged at **142**. `--strict-claims` at its standing baseline
