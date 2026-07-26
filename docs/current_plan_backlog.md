@@ -92,15 +92,26 @@ Memory: `strict-claims-gate-and-tooling-baselines`. The generated plan inventory
 silently omits `docs/current_plans_remaster_Music_Cities1.md` (note the plural).
 One-line fix; matters because CLAUDE.md points at that tool as the authority.
 
-### 7. Two stale tests in `tools/test_label_db.py`
-Found 2026-07-26; both predate that session and both fail on a clean tree:
-- `Probe::test_check_only_sources_are_not_linked` asserts `trainer_engine.asm`
-  is check-only. That file no longer exists anywhere in the tree.
-- `LiveTree::test_boot_chain_fallthrough_edges_exist` asserts an
-  `EnterMapBoot -> EnterMap` fallthrough. `EnterMap` moved to the
-  `src/home/overworld.asm` mirror in the 2026-07-23 R-002 retirement, so the two
-  labels are in different files and no such edge can exist.
-Both need rewriting to the current structure, not deleting.
+### 7. Two stale tests in `tools/test_label_db.py` — **FIXED 2026-07-26**
+Both were rewritten to the current structure rather than deleted, because both
+encoded a real invariant. `tools/test_label_db.py` is now **81 passed, 0
+failed** on a clean tree.
+- `Probe::test_check_only_sources_are_not_linked` asserted `trainer_engine.asm`
+  is check-only; the trainer-engine promotion deleted that file. It now asserts
+  the SET RELATIONSHIP instead of a filename — check is non-empty, disjoint from
+  link, and a subset of all — so it cannot rot the same way when the next file
+  moves.
+- `LiveTree::test_boot_chain_fallthrough_edges_exist` asserted an
+  `EnterMapBoot -> EnterMap` fallthrough; the 2026-07-23 R-002 retirement moved
+  `EnterMap` to the `src/home/overworld.asm` mirror, so no such edge can exist
+  between two files. It now asserts CONNECTIVITY (the edge, not the edge kind),
+  which survives a relocation that changes `jmp` to fallthrough or back. The two
+  genuine fallthrough edges are still asserted as fallthrough.
+All four new assertions were probed for non-vacuity: each was made to fail by
+violating exactly its own condition.
+**Residual, and it is item 4's problem, not this one's: nothing runs this pytest
+suite automatically either.** It went red for an unknown number of sessions
+precisely because no gate looks at it.
 
 ---
 

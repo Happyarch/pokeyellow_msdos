@@ -899,9 +899,18 @@ class Probe(unittest.TestCase):
         self.assertIn('SKIP_TITLE', party.defines)
 
     def test_check_only_sources_are_not_linked(self):
+        # This was pinned to trainer_engine.asm until the trainer-engine
+        # promotion deleted that file, at which point the assertion was simply
+        # false on a clean tree and stayed that way
+        # (regression-tooling-stale-label-db-tests). A filename is not the
+        # contract; the SET RELATIONSHIP is. Assert that instead, so the test
+        # cannot rot the same way when the next file moves.
         cfg = buildprobe.probe()
-        self.assertTrue(any(p.endswith('trainer_engine.asm') for p in cfg.check))
-        self.assertNotIn('dos_port/src/engine/overworld/trainer_engine.asm', cfg.link)
+        self.assertTrue(cfg.check, 'default config reports no check-only sources')
+        self.assertEqual(set(cfg.check) & set(cfg.link), set(),
+                         'a check-only source must never also be linked')
+        self.assertLessEqual(set(cfg.check), set(cfg.all),
+                             'every check-only source must be a known source')
 
 
 class ProviderPicker(unittest.TestCase):
@@ -989,10 +998,19 @@ class LiveTree(unittest.TestCase):
         # The static contract. The overworld_pallet golden is separate RUNTIME
         # evidence: execution does not prove which static edge caused it.
         edges = {(e[0], e[1]) for e in live()['fallthrough']}
-        for edge in (('EnterMapBoot', 'EnterMap'),
-                     ('EnterMap', 'OverworldLoop'),
+        for edge in (('EnterMap', 'OverworldLoop'),
                      ('OverworldLoop', 'OverworldLoopLessDelay')):
             self.assertIn(edge, edges)
+        # ('EnterMapBoot', 'EnterMap') was asserted here as a fallthrough too,
+        # until the 2026-07-23 R-002 retirement moved EnterMap into its pret
+        # mirror src/home/overworld.asm. Two labels in DIFFERENT FILES cannot
+        # fall through, so that assertion had become impossible by construction
+        # rather than merely wrong (regression-tooling-stale-label-db-tests).
+        # What survives the move is the CONNECTIVITY contract: EnterMapBoot
+        # still reaches EnterMap directly, now via `jmp`. Assert the edge, not
+        # the edge kind — a future relocation may change the kind again.
+        self.assertIn('EnterMap', live()['graph'].get('EnterMapBoot', set()),
+                      'EnterMapBoot must still reach EnterMap directly')
 
     def test_labels_that_must_be_reached(self):
         reached = live()['reached']
