@@ -208,7 +208,28 @@ single commit but too specific to belong in `ROADMAP.md`.
   subdirectory holds completed plans for reference.
 - Start a new work item by creating a new `docs/current_plan_<topic>.md`.
 
-**Currently active plans:**
+**Plan notes — NOT an inventory. Get the live list from the generator:**
+
+```
+dos_port/tools/project_state --plans
+```
+
+That is the authority on which plans exist and how many stages each has open, and
+it cannot drift because it reads the tree. CLAUDE.md's Evidence policy says not to
+maintain a second hand-written inventory next to it — so the list below is
+deliberately **not** one. It holds only the durable per-plan *narrative* the
+generator cannot produce: what a plan is for, what its lessons were, and which of
+its tails were deferred and to where.
+
+Read it for that narrative, never for "what is active". It was last reconciled
+against the generator on **2026-07-26**; entries marked *COMPLETE & archived*
+are history kept for their lessons. When this section and the generator disagree
+about existence, the generator wins and this section is the bug.
+
+Plans that exist today and have **no entry below** — go to the files themselves:
+`docs/current_plan_battle_completion.md`, `docs/current_plan_bug_tagging.md`,
+`docs/current_plan_doc_staleness.md`, `docs/current_plan_menu_intro.md`,
+`docs/current_plan_overworld_events.md`.
 - **Fidelity-harness expansion — COMPLETE & archived** at
   `docs/plans/fidelity_expansion.md` (2026-07-15). It expanded the golden harness from the
   original rendered-screen tier into GBSTATE v2 WRAM datastruct comparison, streamed text,
@@ -250,15 +271,22 @@ single commit but too specific to belong in `ROADMAP.md`.
   shims (OPL3/SB Pro floor, Tandy, PC speaker), MT-32-flagship MIDI path via
   precompiled streams, Pikachu PCM via DSP direct mode / speaker PWM. Phases A–D;
   Phase A (engine + OPL) not started.
-- `docs/current_plan_script_engine.md` — gen-1 script system (event-gated dialog,
-  per-map `_Script`/`text_asm`). In progress (Stage 6 stub conventions; Oak walk-up
-  cutscene + `_Script` state machines + `DisplayTextID` special cases deferred).
-- `docs/current_plan_overworld_port.md` — **full faithful port of pret
+- **script engine — plan file GONE, work re-homed.** There is no
+  `docs/current_plan_script_engine.md`: it was deleted in `eb17e64d` (2026-07-12)
+  and never archived, so do not go looking in `docs/plans/` either. The gen-1
+  script system (event-gated dialog, per-map `_Script`/`text_asm`, `DisplayTextID`
+  special cases) is owned by **`docs/current_plan_overworld_events.md`**, which is
+  active. Its deferred tails — Oak walk-up cutscene, `_Script` state machines —
+  live there.
+- **Overworld port — COMPLETE & archived** at `docs/plans/overworld_port.md`
+  (there is no `docs/current_plan_overworld_port.md`) — **full faithful port of pret
   `engine/overworld/`** (staged swarm+solo; branch `overworld-port` cut after the
   battle-swarm merge). **Now also owns the menu live-render defect** (VRAM
   tile-slot management: vChars2 `$79–$7F` box tiles + vFont `$80+` font/walk
   time-share) — see its "Cross-cutting defect" note + Stage 8 verification item,
-  and memory `menu-corruption-vram-tileslots`. Not started (Stage 0 gate pending).
+  and memory `menu-corruption-vram-tileslots`. Whether that cross-cutting VRAM
+  tile-slot defect was closed with the plan or outlived it is NOT recorded here —
+  check the archived plan and the memory before assuming either way.
   (The Pokémon **data/stats** layer — party structs, base stats, `CalcStats`,
   experience/leveling, `AddPartyMon`, learnset/moves, names — is **complete**; its
   plan `docs/plans/pokemon_engine.md` is archived DEAD. The **behavior/UI** layer —
@@ -297,11 +325,14 @@ single commit but too specific to belong in `ROADMAP.md`.
   (layout pipeline/editor, faithful `DisplayTextBoxID_`, generic drivers wired,
   start/bag/party realigned, leaf-screen swarm: PCs/pokédex/naming/options/save/
   link). The "menu boxes corrupt live but fine in harness" issue is **not** a menu
-  bug — it's the overworld VRAM tile-slot defect (owned by `overworld_port` above).
+  bug — it's the overworld VRAM tile-slot defect (see the archived
+  `docs/plans/overworld_port.md` entry above).
   Menu-input lethargy fixed in `JoypadLowSensitivity` (2026-07-04). Non-VRAM tails
   (window-compositor gap, `LoadPokedexTilePatterns` tileset, interactive sweeps,
   cable-club warp seam) — currently untracked.
-- `docs/current_plan_macros.md` — **port pret's portable RGBDS macros** to real
+- **RGBDS macro port — COMPLETE & archived** at `docs/plans/macros.md`
+  (there is no `docs/current_plan_macros.md`; it landed in `a7822644`) — **port
+  pret's portable RGBDS macros** to real
   NASM `%macro`s in `dos_port/include/` (coords, event-macro family, data/gfx
   helpers, text-command macros), "add macros only" (no call-site retrofit),
   checkbox-tracked across chunked stages. Excludes redundant-by-design banking

@@ -195,9 +195,11 @@ iteration. `frame.asm:update_oam` runs `PrepareOAMData` and DMA-copies shadow OA
 → `$FE00` in the `DelayFrame` pipeline (gated on `wUpdateSpritesEnabled`).
 `LoadPlayerSpriteGraphics` loads Red's standing tiles to `$8000` and walking
 tiles to `$8800` (the VRAM layout the engine indexes; walking tiles time-share
-vChars1 with the font, as on the GB). NPC implementation is complete: `InitMapSprites`
-(`src/engine/overworld/map_sprites.asm`) populates slots 1–15 from the map object
-binary; WALK/STAY movement and leg animation run via `UpdateNonPlayerSprite`;
+vChars1 with the font, as on the GB). NPC implementation is complete: `InitSprites`
+(`src/home/overworld.asm`, from `LoadMapHeader`) populates slots 1–15 from the map
+object binary, and the sprite-set TILE loading is the separate
+`InitMapSprites` (the pret home/palettes.asm wrapper, `src/home/palettes.asm`) ->
+`_InitMapSprites` (`src/engine/overworld/map_sprites.asm`) path; WALK/STAY movement and leg animation run via `UpdateNonPlayerSprite`;
 `CheckNPCInteraction` does the MAPY/MAPX block scan, calls `MakeNPCFacePlayer`,
 and runs `PrintText` with per-character reveal and multi-page scroll; player-NPC
 collision is enforced by `IsNPCAtTargetBlock` in `CollisionCheckOnLand`; NPC
