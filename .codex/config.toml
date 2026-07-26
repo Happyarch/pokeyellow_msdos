@@ -13,13 +13,31 @@ enabled = true
 
 [mcp_servers.dosbox-mcp]
 command = "python3"
-args = ["dos_port/tools/dosbox_mcp/server.py"]
+args = ["/mnt/sdb1/Code/Active Code/pokeyellow_msdos/dos_port/tools/dosbox_mcp/server.py"]
 
 [mcp_servers.dosbox-mcp.env]
 DOSBOX_MCP_SOCKET = "/tmp/dosbox-mcp.sock"
-PKMN_MAP = "dos_port/pkmn.map"
-GB_MEMMAP_INC = "dos_port/include/gb_memmap.inc"
-DOSBOX_MCP_DIR = "dos_port"
+PKMN_SYM = "/mnt/sdb1/Code/Active Code/pokeyellow_msdos/dos_port/pkmn.sym"
+GB_MEMMAP_INC = "/mnt/sdb1/Code/Active Code/pokeyellow_msdos/dos_port/include/gb_memmap.inc"
+DOSBOX_MCP_DIR = "/mnt/sdb1/Code/Active Code/pokeyellow_msdos/dos_port"
+
+[mcp_servers.dosbox-mcp.tools.pause_exec]
+approval_mode = "approve"
+
+[mcp_servers.dosbox-mcp.tools.where]
+approval_mode = "approve"
+
+[mcp_servers.dosbox-mcp.tools.get_registers]
+approval_mode = "approve"
+
+[mcp_servers.dosbox-mcp.tools.wait_break]
+approval_mode = "approve"
+
+[mcp_servers.dosbox-mcp.tools.continue_exec]
+approval_mode = "approve"
+
+[mcp_servers.dosbox-mcp.tools.set_breakpoint]
+approval_mode = "approve"
 
 # >>> stigmergy managed block — do not edit; `stigmergy init` regenerates it >>>
 [mcp_servers.stigmergy]
@@ -74,6 +92,12 @@ approval_mode = "approve"
 approval_mode = "approve"
 
 [mcp_servers.stigmergy.tools.mailbox_send]
+approval_mode = "approve"
+
+[mcp_servers.stigmergy.tools.mailbox_mark_read]
+approval_mode = "approve"
+
+[mcp_servers.stigmergy.tools.mailbox_resolve]
 approval_mode = "approve"
 
 [memories]

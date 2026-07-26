@@ -217,7 +217,7 @@ global GetPlayerTeleportAnimFrameDelay
 global IsPlayerStandingOnWarpPadOrHole
 global FishingAnim
 
-extern Delay3                     ; video/frame.asm
+extern Delay3                     ; src/home/palettes.asm
 extern DelayFrames                ; video/frame.asm
 extern GBFadeInFromWhite          ; home/fade.asm
 extern GBFadeOutToWhite           ; home/fade.asm
@@ -243,6 +243,11 @@ section .text
 ; EnterMapAnim — pret engine/overworld/player_animations.asm:EnterMapAnim
 ; ---------------------------------------------------------------------------
 EnterMapAnim:
+    ; DEVIATION{class=projection; pret=engine/overworld/player_animations.asm:EnterMapAnim; behavior=force the player to a standing pose (image index = facing dir, anim frame 0) before InitFacingDirectionList, matching the port precedent in map_sprites.asm CheckNPCInteraction and start_menu.asm DisplayStartMenu; evidence=InitFacingDirectionList scans the 4-entry wFacingDirectionList 0/4/8/12 unbounded assuming a facing image index, but the port arrives at a special warp with wSpritePlayerStateData1ImageIndex left non-facing by the leave DoFlyAnimation bird index / map-entry sprite reload where the GB keeps the player standing, so the scan walked off GB memory into a page fault at cr2 past the backbuffer on the first Fly/Teleport/dungeon arrival; lifetime=permanent, the port sprite model can present a hidden or animating player image index at points pret guarantees a standing pose}
+    mov al, [ebp + W_SPRITE_PLAYER_FACING_DIR]
+    mov [ebp + wSpritePlayerStateData1ImageIndex], al
+    mov byte [ebp + W_SPRITE_PLAYER_ANIM_FRAME], 0
+    mov byte [ebp + W_SPRITE_PLAYER_INTRA_ANIM], 0
     call InitFacingDirectionList
     mov al, 0xec
     mov [ebp + wSpritePlayerStateData1YPixels], al
@@ -303,12 +308,13 @@ EnterMapAnim:
     jmp .restoreDefaultMusic
 
 section .data
+; DEVIATION{class=projection; pret=engine/overworld/player_animations.asm:EnterMapAnim; behavior=the first four X bytes are rescaled from pret 0x98 0x90 0x88 0x80 to 0x7F 0x7D 0x7B 0x79 so every X stays in 0x00-0x7F; evidence=DoFlyAnimation writes these into wSpritePlayerStateData1XPixels and PrepareOAMData slot-0 projects the player X with signed movsx plus 96 onto the 320-wide DOS canvas so any byte at or above 0x80 sign-wraps to a negative canvas X whereas GB hardware reads OAM X unsigned 0-255, and this enter table is the reverse of the leave tables so its ceiling must match theirs at canvas X 223 resolving to the player rest position canvas 96 160; lifetime=permanent, the port signed slot-0 projection cannot represent the pret unsigned OAM X range without a shared-renderer change}
 FlyAnimationEnterScreenCoords:
 ; y, x pairs — Fly animation coords when the player is entering a map.
-    db 0x05, 0x98
-    db 0x0F, 0x90
-    db 0x18, 0x88
-    db 0x20, 0x80
+    db 0x05, 0x7F
+    db 0x0F, 0x7D
+    db 0x18, 0x7B
+    db 0x20, 0x79
     db 0x27, 0x78
     db 0x2D, 0x70
     db 0x32, 0x68
@@ -334,6 +340,11 @@ PlayerSpinWhileMovingDown:
 ; ---------------------------------------------------------------------------
 _LeaveMapAnim:
     call Func_1510
+    ; DEVIATION{class=projection; pret=engine/overworld/player_animations.asm:_LeaveMapAnim; behavior=force the player to a standing pose (image index = facing dir, anim frame 0) before InitFacingDirectionList, matching the port precedent in map_sprites.asm CheckNPCInteraction and start_menu.asm DisplayStartMenu; evidence=InitFacingDirectionList scans wFacingDirectionList unbounded assuming a facing image index, but the port can enter a special-warp leave (Fly/Teleport/Dig) with wSpritePlayerStateData1ImageIndex left non-facing (a hidden 0xFF from UpdatePlayerSprite.disable over a menu-poisoned tilemap) where the GB keeps the player standing, so the scan walked off GB memory into a page fault; lifetime=permanent, the port sprite model can present a hidden or animating player image index at points pret guarantees a standing pose}
+    mov al, [ebp + W_SPRITE_PLAYER_FACING_DIR]
+    mov [ebp + wSpritePlayerStateData1ImageIndex], al
+    mov byte [ebp + W_SPRITE_PLAYER_ANIM_FRAME], 0
+    mov byte [ebp + W_SPRITE_PLAYER_INTRA_ANIM], 0
     call InitFacingDirectionList
     call IsPlayerStandingOnWarpPadOrHole
     mov al, bh                                ; ld a, b
@@ -396,24 +407,27 @@ _LeaveMapAnim:
     jmp RestoreFacingDirectionAndYScreenPos
 
 section .data
+; DEVIATION{class=projection; pret=engine/overworld/player_animations.asm:_LeaveMapAnim; behavior=rescale the X column of FlyAnimationScreenCoords1 into 0x48-0x7F (was 0x48-0xA0) and the first two X bytes of FlyAnimationScreenCoords2 from 0x90 0x80 to 0x78 0x74 so every X stays in 0x00-0x7F; evidence=DoFlyAnimation writes these into wSpritePlayerStateData1XPixels and PrepareOAMData slot-0 projects the player X with signed movsx plus 96 for the extended 320-wide canvas so any byte at or above 0x80 sign-wraps to a negative canvas X (old 0x80 gave canvas -32 snapping the bird to the left edge instead of continuing the rightward sweep) whereas GB hardware reads OAM X unsigned 0-255; lifetime=permanent, the port signed slot-0 projection cannot represent the pret unsigned OAM X range without a shared-renderer change}
 FlyAnimationScreenCoords1:
-; y, x pairs — first part of the Fly overworld animation.
+; y, x pairs — first part of the Fly overworld animation. X rescaled to <=0x7F
+; (see DEVIATION above): monotonic sweep to canvas X 223, no signed-byte wrap.
     db 0x3C, 0x48
-    db 0x3C, 0x50
-    db 0x3B, 0x58
-    db 0x3A, 0x60
-    db 0x39, 0x68
-    db 0x37, 0x70
-    db 0x37, 0x78
-    db 0x33, 0x80
-    db 0x30, 0x88
-    db 0x2D, 0x90
-    db 0x2A, 0x98
-    db 0x27, 0xA0
+    db 0x3C, 0x4D
+    db 0x3B, 0x52
+    db 0x3A, 0x57
+    db 0x39, 0x5C
+    db 0x37, 0x61
+    db 0x37, 0x66
+    db 0x33, 0x6B
+    db 0x30, 0x70
+    db 0x2D, 0x75
+    db 0x2A, 0x7A
+    db 0x27, 0x7F
 FlyAnimationScreenCoords2:
-; y, x pairs — second part of the Fly overworld animation.
-    db 0x1A, 0x90
-    db 0x19, 0x80
+; y, x pairs — second part of the Fly overworld animation. First two X bytes
+; rescaled to <=0x7F (see DEVIATION above); the rest were already < 0x80.
+    db 0x1A, 0x78
+    db 0x19, 0x74
     db 0x17, 0x70
     db 0x15, 0x60
     db 0x12, 0x50
