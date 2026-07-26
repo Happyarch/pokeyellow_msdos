@@ -1,0 +1,210 @@
+#!/usr/bin/env python3
+"""gate — the static pre-commit gate for the DOS port (backlog item 4, CI wiring).
+
+WHY THIS EXISTS
+---------------
+Every fidelity gate in this repo was manual and therefore skippable, and two
+memories record what that cost:
+
+  * `strict-claims-gate-and-tooling-baselines` — four finding classes
+    (legacy_annotation / stale_provider / local_shadow / hand_encoded_text) are
+    reported ONLY by `lint_pret_labels --strict-claims`, which nothing ran
+    automatically. CLAUDE.md, AGENTS.md and a skill all asserted
+    "legacy_annotation is zero tree-wide" while the true count was 2, and had
+    been for a long time. A count in prose is a claim that rots and is then
+    cited as evidence.
+  * `regression-tooling-stale-label-db-tests` — two tests in test_label_db.py
+    failed on a clean tree for an unknown number of sessions, because no gate
+    looked at them. A suite that is always red trains everyone to skim past it.
+
+Both failures share one shape: a check with no automatic runner and a count
+written down somewhere prose-shaped. This tool is the fix. The counts move out
+of prose into `tools/gate_baseline.json`, a checked-in file, and every class is
+a RATCHET: a class that grows is a regression, and a class that shrinks is also
+a failure — because an unexplained improvement is exactly the "good news nobody
+adversarially reviews" the evidence policy warns about. Lowering the ratchet is
+a deliberate act (`--update-baseline`), recorded in a commit.
+
+WHAT IT RUNS (all static — no emulator, no ROM, no golden)
+  1. update_label_db          one shared rescan; everything below reads its DB
+  2. lint_pret_labels         per-class counts vs the baseline
+  3. lint_pret_labels --strict-claims   per-class counts vs the baseline
+  4. pytest tools/test_label_db.py      the label-DB build-graph suite
+  5. validate_scenarios.py    manifest <-> generated scenario registry
+
+DELIBERATELY NOT HERE: `make fidelity` / `fidelity-full` / `goldens-verify`.
+Those need DOSBox-X, mGBA and a built ROM; they are the RUNTIME tier and stay a
+separate, explicit step. This tool is the cheap tier that should never be
+skipped, and its whole value is that it is fast enough that nobody wants to.
+
+REGISTRY APPROVAL IN CI
+  `registry_approval` compares pret_label_allowlist.json's SHA-256 against
+  `git config pokeyellow.pretAllowlistApprovedSha256`, which lives in the
+  repo-LOCAL config, outside the worktree, so no commit can forge it. A fresh CI
+  clone has no such config, so the class would fire on every run and the gate
+  would be permanently red — the disease, not the cure. Pass
+  `--allow-unapproved-registry` when (and only when) the approval genuinely
+  cannot be present; the tool then reports the class as INFO and says so loudly
+  rather than silently tolerating it. It never sets the approval: that is the
+  maintainer's action and an agent must not take it.
+"""
+
+import argparse
+import json
+import os
+import re
+import subprocess
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+PORT = os.path.dirname(HERE)
+BASELINE = os.path.join(HERE, 'gate_baseline.json')
+
+# `== class_name (N) ==` — the section header both linter modes print.
+CLASS_RE = re.compile(r'^== ([a-z_]+) \((\d+)\) ==$', re.M)
+
+BOLD, RED, GREEN, YELLOW, DIM, OFF = (
+    ('\033[1m', '\033[31m', '\033[32m', '\033[33m', '\033[2m', '\033[0m')
+    if sys.stdout.isatty() else ('', '', '', '', '', ''))
+
+
+def run(cmd, **kw):
+    return subprocess.run(cmd, cwd=PORT, stdout=subprocess.PIPE,
+                          stderr=subprocess.STDOUT, text=True, **kw)
+
+
+def parse_classes(text):
+    """Per-class finding counts from a linter run. Absent class == 0."""
+    return {name: int(n) for name, n in CLASS_RE.findall(text)}
+
+
+def compare(label, seen, base, allow_unapproved):
+    """Ratchet one linter mode against its baseline. Returns (ok, notes)."""
+    ok, notes = True, []
+    for name in sorted(set(seen) | set(base)):
+        got, want = seen.get(name, 0), base.get(name, 0)
+        if got == want:
+            if got:
+                notes.append(f'  {DIM}=  {name}: {got} (baseline){OFF}')
+            continue
+        if name == 'registry_approval' and allow_unapproved and got > want:
+            notes.append(
+                f'  {YELLOW}i  {name}: {got} (baseline {want}) — TOLERATED by '
+                f'--allow-unapproved-registry.{OFF}\n'
+                f'     {YELLOW}The registry hash is unapproved here. This is '
+                f'expected only where the maintainer\'s repo-local git config '
+                f'cannot exist (a fresh CI clone). It is NOT a pass.{OFF}')
+            continue
+        ok = False
+        if got > want:
+            notes.append(f'  {RED}+  {name}: {got} (baseline {want}) — GREW by '
+                         f'{got - want}. This is your regression.{OFF}')
+        else:
+            notes.append(
+                f'  {RED}-  {name}: {got} (baseline {want}) — SHRANK by '
+                f'{want - got}. Good news, but the ratchet must be lowered '
+                f'deliberately: re-run with --update-baseline and commit it, so '
+                f'the improvement cannot silently reverse later.{OFF}')
+    return ok, notes
+
+
+def main():
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument('--update-baseline', action='store_true',
+                    help='rewrite gate_baseline.json from this run (deliberate '
+                         'act — commit the result with a why)')
+    ap.add_argument('--allow-unapproved-registry', action='store_true',
+                    help='report registry_approval as INFO instead of failing; '
+                         'for environments where the maintainer git config '
+                         'cannot exist (CI). Never sets the approval.')
+    ap.add_argument('--no-scan', action='store_true',
+                    help='skip update_label_db and lint the existing DB')
+    args = ap.parse_args()
+
+    base = {'lint': {}, 'strict': {}}
+    if os.path.exists(BASELINE):
+        base = json.load(open(BASELINE, encoding='utf-8'))
+    elif not args.update_baseline:
+        print(f'{RED}gate: {BASELINE} is missing. Create it deliberately with '
+              f'--update-baseline.{OFF}')
+        return 2
+
+    steps, failures = [], []
+
+    # ── 1. one shared rescan ───────────────────────────────────────────────
+    if not args.no_scan:
+        print(f'{BOLD}[1/5] update_label_db{OFF}')
+        r = run(['tools/update_label_db'])
+        print(r.stdout, end='' if r.stdout.endswith('\n') else '\n')
+        if r.returncode != 0:
+            failures.append('update_label_db failed — nothing below is trustworthy')
+            print(f'{RED}gate: FAIL — the scan itself failed.{OFF}')
+            return 1
+        steps.append('update_label_db')
+
+    # ── 2/3. the two linter modes ──────────────────────────────────────────
+    seen = {}
+    for idx, (key, extra, title) in enumerate(
+            [('lint', [], 'lint_pret_labels'),
+             ('strict', ['--strict-claims'], 'lint_pret_labels --strict-claims')],
+            start=2):
+        print(f'{BOLD}[{idx}/5] {title}{OFF}')
+        r = run(['tools/lint_pret_labels', '--no-scan'] + extra)
+        seen[key] = parse_classes(r.stdout)
+        ok, notes = compare(title, seen[key], base.get(key, {}),
+                            args.allow_unapproved_registry)
+        print('\n'.join(notes) if notes else f'  {DIM}(no findings){OFF}')
+        total = sum(seen[key].values())
+        print(f'  total {total} finding(s)')
+        if not ok:
+            failures.append(f'{title}: per-class counts diverge from the baseline')
+            print(r.stdout)
+        steps.append(title)
+
+    # ── 4. the label-DB suite ──────────────────────────────────────────────
+    print(f'{BOLD}[4/5] pytest tools/test_label_db.py{OFF}')
+    r = run([sys.executable, '-m', 'pytest', 'tools/test_label_db.py', '-q'])
+    tail = [ln for ln in r.stdout.strip().split('\n') if ln.strip()][-1:]
+    print('  ' + (tail[0] if tail else '(no output)'))
+    if r.returncode != 0:
+        failures.append('test_label_db.py failed')
+        print(r.stdout)
+    steps.append('test_label_db.py')
+
+    # ── 5. scenario manifest <-> generated registry ────────────────────────
+    print(f'{BOLD}[5/5] validate_scenarios.py{OFF}')
+    r = run([sys.executable, 'tools/validate_scenarios.py'])
+    print('  ' + r.stdout.strip().replace('\n', '\n  '))
+    if r.returncode != 0:
+        failures.append('validate_scenarios.py failed')
+    steps.append('validate_scenarios.py')
+
+    if args.update_baseline:
+        json.dump(seen, open(BASELINE, 'w', encoding='utf-8'),
+                  indent=2, sort_keys=True)
+        open(BASELINE, 'a', encoding='utf-8').write('\n')
+        print(f'\n{YELLOW}gate: baseline rewritten -> {BASELINE}{OFF}')
+        print(f'{YELLOW}Commit it, and say in the message WHY each class moved. '
+              f'A baseline bumped without a reason is how the counts started '
+              f'rotting in the first place.{OFF}')
+        return 0
+
+    print()
+    if failures:
+        print(f'{RED}{BOLD}gate: FAIL{OFF}')
+        for f in failures:
+            print(f'{RED}  - {f}{OFF}')
+        print(f'{DIM}The RUNTIME tier (make fidelity / fidelity-full / '
+              f'goldens-verify) is separate and was NOT run.{OFF}')
+        return 1
+    print(f'{GREEN}{BOLD}gate: PASS{OFF} — {len(steps)} static checks')
+    print(f'{DIM}This is the STATIC tier only. It proves no structural or '
+          f'bookkeeping drift; it proves nothing about behaviour. Run '
+          f'`make fidelity` (core) or `make fidelity-full` before committing a '
+          f'change that can move a pixel or a WRAM byte.{OFF}')
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

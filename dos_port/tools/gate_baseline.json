@@ -1,0 +1,10 @@
+{
+  "lint": {
+    "registry_approval": 0
+  },
+  "strict": {
+    "hand_encoded_text": 3,
+    "local_shadow": 21,
+    "registry_approval": 0
+  }
+}

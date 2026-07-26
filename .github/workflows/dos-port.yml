@@ -1,0 +1,111 @@
+name: DOS port
+
+# The port's STATIC tier. Backlog item 4 ("nothing runs any gate automatically")
+# — this is the half that a hosted runner can actually do.
+#
+# WHAT THIS PROVES, AND WHAT IT DOES NOT
+#   Proves: every source assembles, the pret-label linters hold their per-class
+#   baseline, the label-DB build-graph suite passes, and the scenario manifest
+#   matches its generated registry.
+#   Does NOT prove: any behaviour. `make fidelity` / `fidelity-full` /
+#   `goldens-verify` need DOSBox-X, mGBA and a golden ROM, and stay local.
+#   A green run here is a REGRESSION result, never feature evidence.
+#
+# MEASURED FEASIBILITY (2026-07-26, in a fresh `git worktree add` of HEAD, which
+# is the closest local analogue of a clean CI clone). Each step below was run
+# and its exit status recorded, in this order:
+#   submodules              REQUIRED — dos_port/tools/unicode_converter is a
+#                           submodule and gen_menu_strings.py imports from it.
+#                           Without it `make assets` dies at the first generator
+#                           with ModuleNotFoundError: data_manipulation_logic.
+#   make (repo root)        exit 0 — and pokeyellow.gbc came out at sha1
+#                           cc7d03262ebfaf2f06772c1a480c7d9d5f4a38e1, which
+#                           MATCHES roms.sha1. Needed because several asset
+#                           generators read gfx/**.2bpp directly (not via a make
+#                           prerequisite), so a partial gfx build is not enough.
+#   make -C dos_port assets exit 0, 413 .inc  (23 present in a bare checkout)
+#   make -C dos_port check   exit 0
+#   tools/gate               exit 0 with --allow-unapproved-registry
+# Total wall time was minutes, not tens of minutes.
+#
+# NOTE FOR BACKLOG ITEM 5: that item records "this branch's pret tree cannot
+# rebuild pokeyellow.gbc end-to-end". The measurement above contradicts it — the
+# root build succeeds and is byte-exact against roms.sha1. Item 5 should be
+# re-checked rather than inherited.
+
+on:
+  push:
+    branches: [ master ]
+    paths: [ 'dos_port/**', 'gfx/**', 'data/**', '.github/workflows/dos-port.yml' ]
+  pull_request:
+    paths: [ 'dos_port/**', 'gfx/**', 'data/**', '.github/workflows/dos-port.yml' ]
+  workflow_dispatch:
+
+env:
+  rgbds_version: v1.0.1
+
+jobs:
+  static-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (with submodules)
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Checkout rgbds
+        uses: actions/checkout@v7
+        with:
+          path: rgbds
+          ref: ${{ env.rgbds_version }}
+          repository: gbdev/rgbds
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -yq bison libpng-dev pkg-config nasm python3
+
+      - name: Install rgbds
+        working-directory: rgbds
+        run: sudo make -j$(nproc) install
+
+      # Several dos_port asset generators open gfx/**.2bpp directly, so the
+      # graphics have to exist before `make assets` runs. The root build is the
+      # simplest thing that produces all of them, and it also gives us a ROM
+      # whose sha1 we can check against roms.sha1 for free.
+      - name: Build the pret tree (produces gfx/** and the ROM)
+        run: make -j$(nproc)
+
+      - name: Verify the built ROM against roms.sha1
+        run: sha1sum -c --ignore-missing roms.sha1
+
+      - name: Generate dos_port assets
+        run: make -C dos_port assets
+
+      - name: Assemble every source
+        run: make -C dos_port check
+
+      # The maintainer's registry approval lives in the repo-LOCAL git config,
+      # deliberately outside the worktree so no commit can forge it — which
+      # means a fresh CI clone cannot have it. Restore it here from a repository
+      # VARIABLE, which only the maintainer can set and which a pull request
+      # cannot write. If it is unset the gate still runs, but reports
+      # registry_approval as INFO rather than passing it silently.
+      - name: Restore the maintainer's registry approval (if configured)
+        env:
+          APPROVED: ${{ vars.PRET_ALLOWLIST_APPROVED_SHA256 }}
+        run: |
+          if [ -n "$APPROVED" ]; then
+            git config pokeyellow.pretAllowlistApprovedSha256 "$APPROVED"
+            echo "registry approval configured from repository variable"
+            echo "GATE_FLAGS=" >> "$GITHUB_ENV"
+          else
+            echo "::notice::PRET_ALLOWLIST_APPROVED_SHA256 is not set, so the"\
+                 "registry_approval class cannot be enforced here. Set it to the"\
+                 "sha256 of dos_port/tools/pret_label_allowlist.json to close"\
+                 "this gap."
+            echo "GATE_FLAGS=--allow-unapproved-registry" >> "$GITHUB_ENV"
+          fi
+
+      - name: Static gate
+        run: make -C dos_port gate GATEFLAGS="$GATE_FLAGS"

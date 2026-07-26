@@ -76,16 +76,59 @@ running. This is documented in CLAUDE.md as a permanent caveat; the deferred wor
 is teaching the extractor to emit edges for dispatch tables so the column stops
 producing false negatives. **Unstarted.**
 
-### 4. CI wiring for the fidelity harness
-From `docs/plans/fidelity_harness.md`. Nothing runs `make fidelity` /
-`goldens-verify` / `lint_pret_labels --strict-claims` automatically; every gate
-in this repo is manual and therefore skippable. **Unstarted.**
+### 4. CI wiring for the fidelity harness — **STATIC TIER DONE 2026-07-26**
+From `docs/plans/fidelity_harness.md`. The static half is wired; the runtime
+half is deliberately still manual.
 
-### 5. pret-tree contamination decision
-From `docs/plans/fidelity_harness.md`. This branch's pret tree cannot rebuild
-`pokeyellow.gbc` end-to-end, which is why goldens come from the pinned pristine
-worktree `../pokeyellow_msdos-pret-golden`. Whether to clean the in-tree pret
-sources or formalise the golden worktree as the only ROM source is undecided.
+**Landed.** `dos_port/tools/gate` runs the checks that were rotting because
+nothing ran them: both `lint_pret_labels` modes against a checked-in per-class
+baseline (`tools/gate_baseline.json`), the `test_label_db.py` suite, and
+`validate_scenarios.py`. Each class is a **ratchet in both directions** — a
+class that grows is a regression, and a class that shrinks fails too until the
+baseline is lowered deliberately with `--update-baseline`, so an improvement
+cannot silently reverse later. Surfaces:
+- `make -C dos_port gate`
+- `.githooks/pre-commit` + `make -C dos_port install-hooks` (opt-in, sets
+  `core.hooksPath`; no-ops when nothing under `dos_port/` is staged; bypass with
+  `git commit --no-verify`). **Install it only after the registry is blessed**,
+  or `registry_approval` blocks every commit.
+- `.github/workflows/dos-port.yml` — submodules, rgbds, root build, assets,
+  `make check`, then the gate.
+
+**Registry approval in CI.** The approval lives in the repo-local git config,
+outside the worktree so no commit can forge it, which means a fresh CI clone
+cannot have it. The workflow restores it from the repository variable
+`PRET_ALLOWLIST_APPROVED_SHA256` (maintainer-settable, not writable by a pull
+request). **That variable is not set yet** — until it is, CI runs with
+`--allow-unapproved-registry` and reports the class as INFO. Closing that is a
+one-line maintainer action.
+
+**Still manual, on purpose.** `make fidelity` / `fidelity-full` /
+`goldens-verify` need DOSBox-X, mGBA and a golden ROM. Putting a multi-minute
+runtime tier in a pre-commit hook is how hooks get reflexively bypassed. **A
+green gate is a regression result about structure and bookkeeping only — it is
+never evidence that behaviour is unchanged.** The open question for whoever
+picks this up: whether a self-hosted runner should carry the runtime tier, or
+whether it stays a local pre-push discipline.
+
+### 5. pret-tree contamination decision — **PREMISE CONTRADICTED, RE-CHECK**
+From `docs/plans/fidelity_harness.md`. This item asserted that "this branch's
+pret tree cannot rebuild `pokeyellow.gbc` end-to-end", which is why goldens come
+from the pinned pristine worktree `../pokeyellow_msdos-pret-golden`.
+
+**Measured 2026-07-26 and that is not true today.** In a fresh
+`git worktree add --detach HEAD` (with submodules initialised), `make -j` at the
+repo root exits 0 and produces `pokeyellow.gbc` at sha1
+`cc7d03262ebfaf2f06772c1a480c7d9d5f4a38e1`, which **matches `roms.sha1`
+exactly**. The build was run as part of wiring item 4 and is reproduced by
+`.github/workflows/dos-port.yml`.
+
+That does not by itself decide the item — the golden worktree may still be worth
+keeping as an independent source, and this measurement says nothing about
+whether the in-tree pret sources have diverged in ways the ROM hash cannot see.
+But the stated *reason* for the split no longer holds, so the decision should be
+re-taken on current evidence rather than inherited. Whoever takes it: start by
+re-running the measurement above, do not quote this paragraph.
 
 ### 6. `project_state --plans` glob misses `current_plans_*`
 Memory: `strict-claims-gate-and-tooling-baselines`. The generated plan inventory

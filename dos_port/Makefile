@@ -1612,7 +1612,7 @@ ALL_OBJS := $(ALL_SRCS:.asm=.o)
 # Targets
 # ---------------------------------------------------------------------------
 
-.PHONY: all clean clean-image image check assets regen goldens goldens-verify goldencheck fidelity fidelity-full
+.PHONY: all clean clean-image image check assets regen goldens goldens-verify goldencheck fidelity fidelity-full gate install-hooks
 .DEFAULT_GOAL := all
 
 # Regenerate the committed mGBA goldens (tests/goldens/) from the
@@ -2464,6 +2464,32 @@ INC_DEPS := $(wildcard include/*.inc) $(wildcard assets/*.inc) \
 	$(NASM) $(NASMFLAGS) -o $@ $<
 
 # Assemble-only check (no link): useful for syntax verification
+# The STATIC gate (backlog item 4). Fast, no emulator, no ROM, no golden: the
+# label linters against a checked-in per-class baseline, the label-DB pytest
+# suite, and the scenario-manifest validator. Every one of these used to be
+# manual and therefore skippable, which is exactly how the strict-claims counts
+# in CLAUDE.md went stale and how two test_label_db.py tests stayed red for
+# sessions. See tools/gate's docstring for the full reasoning.
+#
+# This is NOT a substitute for `make fidelity` / `fidelity-full`. It proves the
+# absence of structural and bookkeeping drift; it proves nothing about
+# behaviour. Run the runtime tier for anything that can move a pixel or a WRAM
+# byte.
+gate:
+	@tools/gate $(GATEFLAGS)
+
+# Point git at the tracked hook directory, so the static gate runs on every
+# commit without anyone having to remember. Opt-in and reversible:
+#   make install-hooks     -> git config core.hooksPath .githooks
+#   git config --unset core.hooksPath   (to undo)
+# A tracked .githooks/ beats .git/hooks/ because it is version-controlled and
+# reviewable; .git/hooks/ is per-clone and invisible to everyone else.
+install-hooks:
+	@git -C .. config core.hooksPath .githooks
+	@echo "core.hooksPath -> .githooks (pre-commit runs 'make -C dos_port gate')"
+	@echo "Undo with: git config --unset core.hooksPath"
+	@echo "Bypass one commit with: git commit --no-verify"
+
 check:
 	@for src in $(ALL_SRCS); do \
 	    echo "Checking: $$src"; \

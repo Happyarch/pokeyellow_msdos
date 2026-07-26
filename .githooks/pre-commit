@@ -1,0 +1,51 @@
+#!/bin/sh
+# pre-commit — run the DOS port's STATIC gate before every commit.
+#
+# Install with:   make -C dos_port install-hooks   (sets core.hooksPath)
+# Undo with:      git config --unset core.hooksPath
+# Bypass once:    git commit --no-verify
+#
+# WHY A HOOK AT ALL. Backlog item 4: every gate in this repo was manual and
+# therefore skippable, and two documented failures came straight out of that —
+# the strict-claims counts quoted in CLAUDE.md/AGENTS.md/a skill were false for
+# a long time, and two test_label_db.py tests were red for an unknown number of
+# sessions. Neither was a hard problem; both were invisible because nothing ran
+# the check. This hook makes the cheap tier automatic.
+#
+# WHAT IT DOES NOT DO. It does not run `make fidelity` / `fidelity-full` /
+# `goldens-verify`. Those need DOSBox-X, mGBA and a built ROM, take minutes, and
+# would make the hook something people reflexively --no-verify past. The runtime
+# tier stays an explicit, deliberate step before a behaviour-changing commit.
+# A green hook is NOT evidence that behaviour is unchanged.
+set -e
+
+root=$(git rev-parse --show-toplevel)
+
+# Nothing under dos_port/ staged? The static gate has nothing to say.
+if git diff --cached --quiet -- "$root/dos_port"; then
+    exit 0
+fi
+
+if [ ! -x "$root/dos_port/tools/gate" ]; then
+    echo "pre-commit: dos_port/tools/gate is missing or not executable; skipping." >&2
+    exit 0
+fi
+
+echo "pre-commit: running the static gate (make -C dos_port gate)..."
+if ! make -C "$root/dos_port" gate; then
+    cat >&2 <<'EOF'
+
+pre-commit: the STATIC gate failed. The commit was not created.
+
+  * A class that GREW is your regression — fix it.
+  * A class that SHRANK is good news, but lower the ratchet deliberately:
+        dos_port/tools/gate --update-baseline
+    and say in the commit message WHY it moved.
+  * registry_approval firing means pret_label_allowlist.json changed and the
+    maintainer has not re-blessed it. Agents must NOT set that approval; print
+    the hash and stop.
+
+  Bypass (and say so in the commit message): git commit --no-verify
+EOF
+    exit 1
+fi
