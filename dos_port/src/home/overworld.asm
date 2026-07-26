@@ -2336,7 +2336,8 @@ LoadCurrentMapView:
     ; in the tile buffer and decode tile IDs as block IDs → a garbage band. Any
     ; read outside [wOverworldMap, wOverworldMapEnd) instead yields the map's
     ; border block, so the extended/out-of-map area renders as clean dummy tiles
-    ; (matching the in-bounds border) rather than garbage. See CLAUDE.md / TODO.md:
+    ; (matching the in-bounds border) rather than garbage. See CLAUDE.md and
+    ; docs/current_plan_backlog.md:
     ; the real fix is to extend map data to fill the larger viewport.
     cmp edx, W_OVERWORLD_MAP
     jb  .oobBlock
@@ -2437,7 +2438,7 @@ DrawTileBlock:
     ; without this the tile read walks off the blockset and paints garbage. This
     ; is a stopgap: the plan is to extend the map data so those regions hold real
     ; blocks (no blank area exists), at which point this clamp is dead code and
-    ; should be deleted. See TODO.md (Phase 2) and CLAUDE.md.
+    ; should be deleted. See docs/current_plan_backlog.md and CLAUDE.md.
     cmp edx, OW_BLOCKS_GBADDR + OVERWORLD_BLOCKS_SIZE
     jb  .block_in_range
     mov edx, OW_BLOCKS_GBADDR

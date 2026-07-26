@@ -126,7 +126,8 @@ enabled on bare hardware.
 ## Docs
 
 - [ROADMAP.md](ROADMAP.md) — Development phases and acceptance criteria
-- [TODO.md](TODO.md) — Prioritized task list
+- [docs/current_plan_backlog.md](docs/current_plan_backlog.md) — Deferred tails
+  with no other owner (the tracker TODO.md used to be)
 - [docs/register_map.md](docs/register_map.md) — SM83→x86 register mapping (living doc)
 - [docs/translation_log.md](docs/translation_log.md) — Per-routine translation notes
 - [docs/glitch_safety.md](docs/glitch_safety.md) — Glitch sandbox guidance

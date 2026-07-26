@@ -1,7 +1,8 @@
 # Pokémon Yellow DOS Port — Development Roadmap
 
 High-level phase view. Live status/scope lives in `CLAUDE.md` ("Current Phase" +
-"Currently active plans"), `TODO.md`, and `docs/(current_)plan_*.md`; this file is
+"Currently active plans") and `docs/(current_)plan_*.md` (deferred tails with no
+other owner: `docs/current_plan_backlog.md`); this file is
 the coarse map. **Current focus: Phase 2 (game loop) — substantially playable;
 remaining work is the faithful `engine/overworld/` reimpl + scripting.**
 
@@ -52,7 +53,7 @@ Acceptance criteria:
 - [~] Title screen — bespoke early implementation; boots and reaches the menu but
       does **not** render fully correctly (a known low-priority defect; "works
       enough"). Faithful reimpl deferred — likely folds in with the overworld
-      tile-management rewrite. See `TODO.md`.
+      tile-management rewrite. See `docs/current_plan_backlog.md`.
 - [x] Overworld renders and scrolls; player walks around Pallet Town
 - [x] Wild encounters trigger (`wild_encounter_check.asm`)
 - [x] Battle UI renders and accepts input — full wild + trainer battles play
@@ -72,7 +73,8 @@ Acceptance criteria:
   fix** that resolves the live menu-box corruption. This is the main open item.
 - Scripting engine (`docs/current_plan_script_engine.md`): per-map `_Script`
   machines, Oak walk-up cutscene, mart/pokécenter/PC scripts.
-- Deferred UI/menu tails and item USE dispatch (see `TODO.md`).
+- Deferred UI/menu tails and item USE dispatch (see
+  `docs/current_plan_backlog.md` and `docs/current_plan_items.md`).
 
 ---
 

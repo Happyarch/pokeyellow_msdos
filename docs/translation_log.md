@@ -1535,7 +1535,7 @@ into the back buffer.
   axes are now pixel-smooth.
 - **Cost:** ~200×41 tile-row decodes/frame vs. the blitter's 1000 tile decodes —
   more work, traded for correctness. (Note: this runs counter to the perf goal of
-  the open "VGA-native renderer" refactor in TODO.md Phase 2; revisit there.)
+  the open "VGA-native renderer" refactor — see ROADMAP.md Phase 2.)
 - `stosb`/`rep movsb` to/from the flat `.bss` line buffer mirror `decode_win_row` /
   `render_window` (ES base == DS base after `setup_flat_access`).
 
@@ -1551,7 +1551,8 @@ Added a clamp: if `wTilesetBlocksPtr + blockID*16` lands past the embedded block
   blockset fills a bank and map data is bounded by the loader).
 - **Temporary:** this is a stopgap. The plan is to **extend the map data** so those
   regions hold real blocks (no blank area from the extended draw), after which the
-  clamp is dead code and should be deleted. Tracked in TODO.md (Phase 2) and noted
+  clamp is dead code and should be deleted. Tracked in
+  `docs/current_plan_backlog.md` and noted
   in CLAUDE.md + a code comment at the clamp site.
 
 ### render_window — bottom-of-screen garbage fix (2026-06-15)
@@ -5588,7 +5589,8 @@ DEVIATION (pret's `call Joypad` has no counterpart; the ISR polls from the Delay
 pipeline) is unchanged. **Tooling trap:** `project_state` reported this label as
 `unlisted, provider=src/engine/joypad.asm` — a confident wrong provider pointing at the
 dead file, which reads as "unported". It still does, even after the `relocated_labels`
-entry: the provider picker does not consult the allowlist (TODO.md + stigmergy
+entry: the provider picker does not consult the allowlist
+(`docs/current_plan_backlog.md` + stigmergy
 `label-db-wrong-provider-on-inlined-routines`).
 
 `RunMapScript` (`src/home/run_map_script.asm`) — **decomposition closed.** It had been a

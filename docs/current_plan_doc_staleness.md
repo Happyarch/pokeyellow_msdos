@@ -36,7 +36,7 @@ anything below.
 
 | Doc / artifact | What's stale | Evidence | Confidence |
 |---|---|---|---|
-| `TODO.md` | Wholesale — user-confirmed "stale as fuck"; still frames Phase-2 items as open that are live (wild encounters, battle engine) and misses the real gaps | user statement 2026-07-12; mtime Jul 10 but content predates the battle/overworld landings | confirmed |
+| ~~`TODO.md`~~ | **RESOLVED 2026-07-25/26 — DELETED, not rewritten** (commit `3bee670d`). The maintainer chose deletion over the wholesale rewrite this row proposed. Its orphaned deferred tails now live in `docs/current_plan_backlog.md` (created 2026-07-26); dangling references repointed there. Recoverable: `git show 3bee670d^:TODO.md` | user statement 2026-07-12; deletion commit 3bee670d | done |
 | `CLAUDE.md` "Current Phase" | Open-items list ("scripted NPC movement, trainer battle engine, random encounter trigger, battle engine") — scripted NPC movement is DONE, wild encounters + wild battle are LIVE; trainer battles are coded-but-gated | 2026-07-12 surveys; `TRAINER_BATTLE_LIVE` never defined in Makefile | confirmed |
 | `.claude/skills/project-conventions/SKILL.md` "Currently active plans" | Lists `current_plan_overworld_port.md` ("Not started") and `current_plan_macros.md` — neither exists; both archived (`docs/plans/overworld_port.md`, `docs/plans/macros.md`). Says battle work is tracked in `docs/battle_audit_findings.md` — that file is now `docs/archive/…` and CLOSED. Omits the newer compositor-perf and bug-tagging plans | `ls docs/current_plan_*.md` vs skill text | confirmed |
 | `docs/current_plan_audio.md` | Own checkbox still `[ ]` Phase A (line ~332) and skill says "Phase A not started" — audio phases A–E merged to master 2026-07-07; engine is live in the build | grep + session memory | confirmed (verify merge commit in the session) |
@@ -47,19 +47,25 @@ anything below.
 | `docs/translation_progress.md` | Snapshot last generated 2026-06-25 22:28 UTC — 2.5 weeks and several subsystem landings old | file header | confirmed |
 | `translation.db` `stubs` table | 2 rows total (both `PalletTownOakText`); the real stub inventory lives in inline `; STUB(...)` comments — DB does not reflect reality | sqlite query, overworld survey §6 | confirmed |
 | `docs/current_plan_bug_tagging.md` | Phase A complete per commit trail (`ac88338f` "Phase A complete", follow-ups through `d0b95c09`); plan may be archivable depending on the optional Phase-B save-draft decision | git log on `chore/bug-tagging` | high |
-| ~~`docs/current_plan_battle_ui.md`~~ | **RESOLVED 2026-07-12** — archived to `docs/plans/battle_ui.md` at the user's direction; B6 (human-in-the-loop widescreen redesign) moved to the back burner and tracked in TODO.md | checkbox grep | done |
+| ~~`docs/current_plan_battle_ui.md`~~ | **RESOLVED 2026-07-12** — archived to `docs/plans/battle_ui.md` at the user's direction; B6 (human-in-the-loop widescreen redesign) moved to the back burner and tracked in TODO.md until its deletion; now `docs/current_plan_backlog.md` item 10 | checkbox grep | done |
 | `dos_port/tools/pret_label_allowlist.json` | Standing header: "DRAFT (Session H 2026-07-07)… flagged for user review" — review never happened (bug-tagging pass re-verified entries resolve but didn't clear the flag) | file header; `bug_categorization.md` note | confirmed |
 
-Out of scope: agent memory files (private, self-maintained). One convention
-reminder for the rewrite: TODO.md = big-picture scope only; work-item detail
-belongs in `current_plan_*.md` files (don't duplicate the three new plans into
-it).
+Out of scope: agent memory files (private, self-maintained).
+
+The convention reminder that used to sit here was written for a TODO.md rewrite
+that never happened — the file was deleted instead. The convention it encoded
+still holds, and now reads: big-picture scope is `ROADMAP.md`, work-item detail
+is `current_plan_*.md`, and deferred tails with no other owner are
+`docs/current_plan_backlog.md`. Do not duplicate a plan's contents into the
+backlog file.
 
 ## Questions for the user (the interactive session asks these)
 
-- **TODO.md:** rewrite wholesale from the three 2026-07-12 plans + survey
-  findings, or prune in place keeping the phase structure? Keep the "Known
-  Regressions" log section, move it elsewhere, or drop resolved entries?
+- ~~**TODO.md:** rewrite wholesale, or prune in place?~~ **ANSWERED
+  2026-07-25/26: neither — deleted (`3bee670d`), with the orphaned tails moved
+  to `docs/current_plan_backlog.md`.** The "Known Regressions" log section went
+  with it; nothing has re-homed it, so if a regression log is still wanted that
+  is a live open question.
 - **CLAUDE.md "Current Phase":** rewrite now to match reality, and should it
   keep enumerating open items at all (vs pointing at `current_plan_*.md` and a
   slimmed TODO)?
