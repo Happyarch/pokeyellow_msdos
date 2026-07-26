@@ -135,15 +135,34 @@ pre-existing or out of a relocation's scope.
 
 ## 5. Still open, still not mine
 
-- **The uncommitted foreign work.** `dos_port/src/engine/overworld/player_animations.asm`
-  (a Fly/Town-Map page-fault fix, **4** well-formed `DEVIATION` annotations —
+- **The uncommitted foreign work — ASSIGNED TO YOU (maintainer decision,
+  2026-07-26).** `dos_port/src/engine/overworld/player_animations.asm` (a
+  Fly/Town-Map page-fault fix, **4** well-formed `DEVIATION` annotations —
   measured; an older memory said 3) plus `.codex/config.toml`. Untouched by s11,
   s12 and s13, and deliberately excluded from every commit this session — verified
   by grepping the swept provider string out of its diff and by confirming it is
-  absent from each commit's `--stat`. It **is** in the linked build, so every
-  suite run since it appeared, including this session's three, included it. No
-  scenario covers Fly, Teleport, Dig or any warp, so it is entirely ungated either
-  way. It needs an owner: commit, revert, or hand back to its author.
+  absent from each commit's `--stat`.
+
+  **The maintainer has decided: take it with your next set of rows.** So it is no
+  longer homeless, and it is no longer optional — commit it as part of the
+  `evos_moves` chunk (or whichever chunk you run), not as a separate orphan.
+  Things to know before you do:
+  - It **is** in the linked build already, so every suite run since it appeared —
+    including this session's three clean `33 PASS` runs — included it. That is
+    regression evidence for it, and nothing more.
+  - **No scenario covers Fly, Teleport, Dig or any warp**, so the fix itself is
+    entirely ungated. Do not let the green suite read as evidence that the fix
+    works; say so explicitly in the commit message the way the per-row coverage
+    verdicts do.
+  - Its four `DEVIATION` annotations were already well-formed when measured — check
+    them against `lint_pret_labels` anyway, since you will be the one committing
+    them and the annotation format is machine-parsed.
+  - It carries a stale `extern Delay3 ; video/frame.asm` (the provider moved to
+    `src/home/palettes.asm` in `00c7d0a9`). It does NOT trip `stale_provider` (no
+    `src/` prefix), which is why s13 left it — fix it while you own the file.
+  - `.codex/config.toml` is a different agent's tooling config, not port code.
+    Judge it separately; see memory `dosbox-mcp-codex-config-uses-absolute-paths`
+    for why it was edited.
 - **CI has never run.** `origin/master` is ~267 commits behind (last push
   2026-07-17). The workflow and the `PRET_ALLOWLIST_APPROVED_SHA256` repo variable
   are both inert until someone pushes. See `ci-inert-until-master-is-pushed`.
