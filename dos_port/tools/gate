@@ -37,6 +37,16 @@ Those need DOSBox-X, mGBA and a built ROM; they are the RUNTIME tier and stay a
 separate, explicit step. This tool is the cheap tier that should never be
 skipped, and its whole value is that it is fast enough that nobody wants to.
 
+THE GATE DOES NOT MUTATE TRACKED STATE
+  `update_label_db` rewrites `tools/translation.db`, which is a TRACKED file. If
+  the gate rescanned in place, every commit through the pre-commit hook would
+  leave the DB dirty in the working tree, and a subsequent `git add -A` would
+  sweep the churn into an unrelated commit — exactly the ambient tree noise this
+  project keeps having to step around. So by default the gate scans into a
+  TEMPORARY database and lints that; the tracked DB is left untouched. Refresh it
+  deliberately, with `tools/update_label_db`, when you actually mean to commit it.
+  `--write-db` opts into the old in-place behaviour.
+
 REGISTRY APPROVAL IN CI
   `registry_approval` compares pret_label_allowlist.json's SHA-256 against
   `git config pokeyellow.pretAllowlistApprovedSha256`, which lives in the
@@ -55,6 +65,7 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PORT = os.path.dirname(HERE)
@@ -119,7 +130,11 @@ def main():
                          'for environments where the maintainer git config '
                          'cannot exist (CI). Never sets the approval.')
     ap.add_argument('--no-scan', action='store_true',
-                    help='skip update_label_db and lint the existing DB')
+                    help='skip update_label_db and lint the tracked DB as-is')
+    ap.add_argument('--write-db', action='store_true',
+                    help='rescan IN PLACE, rewriting the tracked '
+                         'tools/translation.db. Off by default: a gate should '
+                         'verify, not mutate tracked state.')
     args = ap.parse_args()
 
     base = {'lint': {}, 'strict': {}}
@@ -133,9 +148,20 @@ def main():
     steps, failures = [], []
 
     # ── 1. one shared rescan ───────────────────────────────────────────────
+    # Scanned into a TEMP db unless --write-db: tools/translation.db is tracked,
+    # and a verification gate must not dirty the working tree every time it runs.
+    tmpdir = None
+    db_args = []
     if not args.no_scan:
-        print(f'{BOLD}[1/5] update_label_db{OFF}')
-        r = run(['tools/update_label_db'])
+        where = 'in place' if args.write_db else 'to a temp DB'
+        print(f'{BOLD}[1/5] update_label_db{OFF} {DIM}({where}){OFF}')
+        cmd = ['tools/update_label_db']
+        if not args.write_db:
+            tmpdir = tempfile.TemporaryDirectory(prefix='gate-db.')
+            db = os.path.join(tmpdir.name, 'translation.db')
+            cmd += ['--db', db]
+            db_args = ['--db', db]
+        r = run(cmd)
         print(r.stdout, end='' if r.stdout.endswith('\n') else '\n')
         if r.returncode != 0:
             failures.append('update_label_db failed — nothing below is trustworthy')
@@ -150,7 +176,7 @@ def main():
              ('strict', ['--strict-claims'], 'lint_pret_labels --strict-claims')],
             start=2):
         print(f'{BOLD}[{idx}/5] {title}{OFF}')
-        r = run(['tools/lint_pret_labels', '--no-scan'] + extra)
+        r = run(['tools/lint_pret_labels', '--no-scan'] + db_args + extra)
         seen[key] = parse_classes(r.stdout)
         ok, notes = compare(title, seen[key], base.get(key, {}),
                             args.allow_unapproved_registry)
