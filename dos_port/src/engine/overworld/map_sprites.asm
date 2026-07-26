@@ -50,7 +50,6 @@ extern HandleDownArrowBlinkTiming
 extern DumpBackbuffer                   ; src/debug/debug_dump.asm — FRAME.BIN + GBSTATE.BIN, then exit
 %endif
 
-global InitMapSprites            ; home wrapper (pret name kept); reload sprite tiles after text
 ; Faithful pret engine/overworld/map_sprites.asm routines (OW-A.2 P3c de-bespoke):
 global _InitMapSprites
 global InitOutsideMapSprites
@@ -67,6 +66,7 @@ global ReadSpriteSheetData
 global LoadMapSpritesImageBaseOffset
 global GetSpriteImageBaseOffset
 global ResetMapTrainerState        ; port-ext per-map-load trainer state (called by wrapper)
+global ApplyToggleableHiddenGate    ; port-ext hidden-object gate (called by wrapper)
 global g_toggleable_flags          ; flat .bss event flags — toggleable_objects.asm Show/HideObject bts/btr it (OW-7.2)
 global CheckNPCInteraction
 global ShowTextStream
@@ -211,23 +211,13 @@ FIRST_INDOOR_MAP equ FIRST_INDOOR_MAP_ID
 ; ---------------------------------------------------------------------------
 
 ; ---------------------------------------------------------------------------
-; InitMapSprites — home wrapper (pret name; extern'd by overworld.asm + text_script.asm).
-; Runs the port-extension per-map bookkeeping, then the faithful _InitMapSprites.
-; All registers preserved (pushad/popad).
+; InitMapSprites MOVED to src/home/palettes.asm (mirror rule) — the home wrapper is
+; a pret home/palettes.asm label (`jpfar _InitMapSprites`), not one of this file's.
+; Its two port-only private helpers below did NOT go with it: they are this
+; subsystem's bookkeeping with no pret counterpart, so per CLAUDE.md they stay here
+; and are externed by the wrapper. _InitMapSprites, the pret
+; engine/overworld/map_sprites.asm body, is of course still this file's.
 ; ---------------------------------------------------------------------------
-InitMapSprites:
-    pushad
-    ; DIVERGENCE (port ext): reset the per-map trainer/interaction state. Kept here
-    ; (not in InitSprites) so it fires on exactly the paths the bespoke reset did —
-    ; map load + .mapTransition + post-text InitMapSprites — but NOT on the interaction
-    ; stack's post-dialog reload (that path calls ReloadWalkingTilePatterns, not this).
-    call ResetMapTrainerState
-    ; DIVERGENCE (port ext): hide toggleable-hidden objects before the sprite-set /
-    ; imageBaseOffset passes read PICTUREIDs, so a hidden object never gets a VRAM slot.
-    call ApplyToggleableHiddenGate
-    call _InitMapSprites
-    popad
-    ret
 
 ; ResetMapTrainerState (port ext) — zero the per-map interaction bookkeeping.
 ; Also called by InitSprites is NOT done; only the InitMapSprites wrapper calls it.

@@ -101,7 +101,7 @@ extern menu_redraw_cb           ; home/window.asm — per-frame redraw cb (0=non
 extern HandleMenuInput          ; home/window.asm — Out: AL = watched keys pressed
 extern DelayFrame               ; video/frame.asm
 extern DelayFrames              ; video/frame.asm — In: BL = frame count
-extern Delay3                   ; video/frame.asm
+extern Delay3                   ; src/home/palettes.asm
 extern UpdateSprites            ; engine/overworld/movement.asm
 extern SaveScreenTilesToBuffer1     ; src/home/tilemap.asm
 extern LoadScreenTilesFromBuffer1   ; src/home/tilemap.asm (pret home/tilemap.asm)

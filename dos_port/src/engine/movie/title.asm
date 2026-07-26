@@ -72,7 +72,7 @@ extern WaitForSoundToFinish     ; src/home/audio.asm
 extern PlayPikachuSoundClip     ; src/engine/pikachu/pikachu_pcm.asm — DL = clip index (pret: E)
 extern RunPaletteCommand        ; src/home/palettes.asm — BH = palette command
 extern UpdateCGBPal_OBP0        ; src/home/cgb_palettes.asm
-extern GBPalWhiteOutWithDelay3  ; src/home/fade.asm
+extern GBPalWhiteOutWithDelay3  ; src/home/palettes.asm
 extern LoadGBPal                ; src/home/fade.asm
 extern MovieBeginSurface        ; src/engine/movie/movie_projection.asm
 extern MovieEndSurface          ; src/engine/movie/movie_projection.asm
@@ -88,7 +88,7 @@ extern SaveScreenTilesToBuffer1     ; src/home/tilemap.asm
 extern LoadScreenTilesFromBuffer1   ; src/home/tilemap.asm
 extern SaveScreenTilesToBuffer2     ; src/home/tilemap.asm
 extern LoadScreenTilesFromBuffer2   ; src/home/tilemap.asm
-extern GBPalWhiteOut                ; src/home/fade.asm — the real pret routine
+extern GBPalWhiteOut                ; src/home/palettes.asm — the real pret routine
 extern DoClearSaveDialogue          ; engine/movie/oak_speech/clear_save.asm (temporary DEVIATION: plain reset)
 ; --- the Yellow graphics/placement half (its own pret mirror) ---------------
 extern LoadYellowTitleScreenGFX          ; src/engine/movie/title_yellow.asm

@@ -45,7 +45,7 @@ extern GetMonName, WaitForTextScrollButtonPress, PlaySound
 extern GBPalNormal, LoadPlayerSpriteGraphics, LoadFontTilePatterns
 extern text_row_stride          ; global dd in text.asm; default 20
 
-extern GBPalWhiteOut, GBPalWhiteOutWithDelay3   ; home/fade.asm (relocated)
+extern GBPalWhiteOut, GBPalWhiteOutWithDelay3   ; src/home/palettes.asm
 extern ClearScreenArea               ; home/copy2.asm
 extern FarCopyDataDouble, CopyVideoData, CopyVideoDataDouble  ; home/copy2.asm
 extern JoypadLowSensitivity            ; src/home/joypad_lowsens.asm (home/joypad2.asm)
@@ -56,8 +56,8 @@ extern hide_window                     ; home/window.asm
 extern PrepareStaticOAM                ; engine/gfx/sprite_oam.asm — publish OBJ positions
 extern HideSprites                     ; home/sprites.asm — zero shadow OAM
 extern FindWildLocationsOfMon          ; engine/items/item_effects.asm (pret: predef)
-extern RunPaletteCommand               ; engine/battle/faint_switch.asm (relocated)
-extern RunDefaultPaletteCommand        ; engine/menus/naming_screen.asm (relocated)
+extern RunPaletteCommand               ; src/home/palettes.asm
+extern RunDefaultPaletteCommand        ; src/home/palettes.asm
 
 ; ---- town-map WRAM ---------------------------------------------------------
 ; Now REAL allocations in gb_memmap.inc, at pret's own addresses. The old

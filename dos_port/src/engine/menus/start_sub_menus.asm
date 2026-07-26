@@ -86,7 +86,7 @@ extern CloseStartMenu
 extern DisplayPartyMenu              ; home/pokemon.asm (S5)
 extern GoBackToPartyMenu
 extern RedrawPartyMenu_              ; engine/menus/party_menu.asm
-extern GBPalWhiteOutWithDelay3       ; home/fade.asm
+extern GBPalWhiteOutWithDelay3       ; src/home/palettes.asm
 extern RestoreScreenTilesAndReloadTilePatterns
 extern LoadGBPal
 extern LoadTilesetTilePatternData    ; engine/overworld/overworld.asm — map tileset reload
@@ -133,15 +133,15 @@ extern LoadMonPicToVRAM              ; gfx/pics.asm — decode staged pic → [E
 extern PlayerPicFront                ; data/trainer_pics.asm — Red's compressed front .pic (red.pic)
 extern g_tilecache_dirty             ; ppu/ppu.asm — set on any VRAM tile-data write
 extern set_single_window             ; ppu/ppu.asm
-extern Delay3                        ; video/frame.asm
+extern Delay3                        ; src/home/palettes.asm
 extern UpdateSprites                 ; engine/overworld/movement.asm
 extern ClearScreen                   ; home/copy2.asm
 extern LoadTextBoxTilePatterns       ; gfx/load_font.asm
 extern LoadFontTilePatterns          ; gfx/load_font.asm
 extern WaitForTextScrollButtonPress  ; engine/battle/battle_menu.asm — ▼-wait + A/B
-extern GBPalWhiteOut                 ; home/fade.asm
-extern GBPalNormal                   ; init/init.asm
-extern RunPaletteCommand             ; engine/battle/faint_switch.asm (palette stub)
+extern GBPalWhiteOut                 ; src/home/palettes.asm
+extern GBPalNormal                   ; src/home/palettes.asm
+extern RunPaletteCommand             ; src/home/palettes.asm
 extern ReloadMapData                 ; home/reload_tiles.asm
 extern DrawStartMenu                 ; engine/menus/draw_start_menu.asm
 extern ClearSprites                  ; gfx/sprites.asm — zero shadow OAM
@@ -165,10 +165,11 @@ extern Divide                        ; home/math.asm — hDividend/hDivisor, BH 
 extern text_msgbox                   ; home/text.asm — active message-box projection
 extern msgbox_dialog                 ; home/text.asm — the standard bottom dialog box
 extern Init                          ; home/init.asm — soft reset (the link RESET item)
-extern RunDefaultPaletteCommand      ; engine/menus/naming_screen.asm (relocated; it is
-                                     ; the REAL body — SET_PAL_DEFAULT → RunPaletteCommand.
-                                     ; This file used to define a private ret-only copy
-                                     ; that shadowed it; see the header.)
+extern RunDefaultPaletteCommand      ; src/home/palettes.asm — the REAL body
+                                     ; (SET_PAL_DEFAULT → RunPaletteCommand, now its
+                                     ; immediate neighbour there). This file used to
+                                     ; define a private ret-only copy that shadowed
+                                     ; it; see the header.
 
 ; --- USE/TOSS box geometry (frozen layout; pret GB(13,10) 7x5, text (15,11)) ---
 ; ; PROJ menus: GB(13,10) 7x5 --(anchor=right/top, X+20, Y+0)--> wx=271 wy=80

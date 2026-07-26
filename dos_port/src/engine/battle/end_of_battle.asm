@@ -34,7 +34,7 @@ global EndOfBattle
 
 extern EvolutionAfterBattle              ; evolution.asm — walks party, evolves eligible mons
 extern UpdatePikachuMoodAfterBattle      ; pikachu_status.asm — raises starter Pikachu mood (DH=$82)
-extern GBPalWhiteOut                     ; home/fade.asm — fade to white on the way out
+extern GBPalWhiteOut                     ; src/home/palettes.asm — fade to white on the way out
 
 EndOfBattle:
     mov al, [ebp + wLinkState]

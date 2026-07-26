@@ -92,7 +92,7 @@ extern DelayFrames              ; frame.asm      BL=frame count
 extern DelayFrame               ; frame.asm      the port's frame pump — joypad edge
                                 ;                + compositor present both live here
                                 ;                (see .waitForKeyPressLoop)
-extern Delay3                   ; frame.asm
+extern Delay3                   ; src/home/palettes.asm
 extern JoypadLowSensitivity     ; input/joypad_lowsens.asm  → H_JOY_PRESSED
 extern BankswitchHome           ; home/bankswitch.asm  AL=bank (flat no-op bookkeeping)
 extern BankswitchBack           ; home/bankswitch.asm

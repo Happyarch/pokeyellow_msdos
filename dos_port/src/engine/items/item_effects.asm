@@ -769,7 +769,7 @@ extern DoubleOrHalveSelectedStats ; battle_exp_stubs.asm (deferred)
 
 ; --- screen / text / sound ---
 extern ClearScreen          ; home/copy2.asm
-extern GBPalWhiteOut        ; home/fade.asm
+extern GBPalWhiteOut        ; src/home/palettes.asm
 extern ReloadMapData        ; home/reload_tiles.asm
 extern DelayFrames          ; video/frame.asm — BL = frames
 extern Func_1510            ; home/pikachu.asm — ItemUseEscapeRope's Pikachu refresh
@@ -1561,7 +1561,7 @@ global SendNewMonToBox
 extern PlayMoveAnimation              ; engine/battle/core.asm — AL = animation id (predef MoveAnimation)
 extern IsGhostBattle                  ; engine/battle/engine/battle/core.asm — ZF=1 → unidentified ghost
 extern LoadScreenTilesFromBuffer1 ; src/home/tilemap.asm
-extern Delay3                 ; video/frame.asm
+extern Delay3                 ; src/home/palettes.asm
 extern StatModifierUpEffect   ; engine/battle/effects.asm
 extern PlayDefaultMusic       ; home/audio.asm
 extern LoadCurrentMapView     ; engine/overworld/overworld.asm
@@ -2320,7 +2320,7 @@ extern CheckIfMoveIsKnown         ; engine/items/tmhm.asm (callfar) — CF = alr
 extern LearnMove                  ; engine/pokemon/learn_move.asm (predef) — out: BH
 extern GetMoveName                ; home/names.asm — [wNamedObjectIndex] → wNameBuffer
 extern IsThisPartyMonStarterPikachu ; engine/pikachu/pikachu_status.asm — CF = yes
-extern GBPalWhiteOutWithDelay3    ; home/fade.asm
+extern GBPalWhiteOutWithDelay3    ; src/home/palettes.asm
 extern BootedUpTMText_ref
 extern BootedUpHMText_ref
 extern TeachMachineMoveText_ref

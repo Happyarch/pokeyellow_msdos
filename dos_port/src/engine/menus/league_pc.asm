@@ -55,11 +55,11 @@ extern text_msgbox              ; home/text.asm — the active msgbox projection
 extern msgbox_dialog            ; home/text.asm — the standard bottom dialog box
 extern hide_window              ; ppu/ppu.asm — drop the dialog window layer
 extern TextBoxBorder            ; home/textbox.asm — ESI=top-left, BL=int_w, BH=int_h
-extern GBPalWhiteOutWithDelay3  ; home/fade.asm
+extern GBPalWhiteOutWithDelay3  ; src/home/palettes.asm
 extern ClearScreen              ; home/copy2.asm
-extern GBPalNormal              ; home/init.asm
+extern GBPalNormal              ; src/home/palettes.asm
 extern RunPaletteCommand        ; home/palettes.asm — In: BH = palette command
-extern RunDefaultPaletteCommand ; engine/menus/naming_screen.asm
+extern RunDefaultPaletteCommand ; src/home/palettes.asm
 extern WaitForTextScrollButtonPress ; engine/battle/battle_menu.asm
 extern CopyData                 ; home/copy_data.asm — ESI=src, DX=dest, BX=count
 extern GetMonHeader             ; home/pokemon.asm

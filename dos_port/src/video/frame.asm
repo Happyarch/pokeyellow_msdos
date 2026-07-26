@@ -92,7 +92,6 @@ PERF_MISC     equ 8    ; everything else (joypad, RNG, play clock, quit check)
 
 global DelayFrame
 global DelayFrames
-global Delay3
 
 ; ---------------------------------------------------------------------------
 ; Symbol not yet in gb_memmap.inc. Defined %ifndef-safe with its sym-verified
@@ -352,12 +351,7 @@ DelayFrames:
     ret
 
 ; ---------------------------------------------------------------------------
-; Delay3 — wait exactly 3 frames (tail-call into DelayFrames).
-; Matches home/palettes.asm:Delay3. All registers preserved.
+; Delay3 MOVED to src/home/palettes.asm (mirror rule) — it is a pret
+; home/palettes.asm label, not a home/fade.asm / port-frame one. It still
+; tail-calls DelayFrames here, which stays global for it.
 ; ---------------------------------------------------------------------------
-Delay3:
-    push ebx
-    mov bl, 3
-    call DelayFrames
-    pop ebx
-    ret

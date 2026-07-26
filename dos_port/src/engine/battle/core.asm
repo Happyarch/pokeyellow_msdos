@@ -197,7 +197,7 @@ extern CopyData                        ; home/copy_data.asm — ESI→EDX, BX by
 extern PrintNumber                     ; home/print_num.asm — ESI dest, EDX src, BH flags/bytes, BL digits
 extern GetMaxPP                        ; engine/items/get_max_pp.asm — → wMaxPP (PP Ups incl.)
 extern PrintMoveType                   ; engine/battle/print_type.asm — pret predef PrintMoveType
-extern Delay3                          ; video/frame.asm
+extern Delay3                          ; src/home/palettes.asm
 
 ; --- deferred in-battle sub-UIs (bag / party-switch) — call faithfully, body deferred ---
 extern BattleItemMenu                  ; ITEM → bag (deferred; re-shows the menu)

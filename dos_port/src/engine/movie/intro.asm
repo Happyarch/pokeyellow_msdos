@@ -33,7 +33,7 @@ extern FillMemory                    ; home/copy2.asm — ESI dest, BX count, AL
 extern CopyVideoData                 ; home/copy2.asm — ESI=VRAM dest, EDX=flat src, BL=tiles
 extern DelayFrames                   ; video/frame.asm — BL = frame count
 extern DelayFrame                    ; video/frame.asm — wait one frame
-extern Delay3                        ; video/frame.asm — wait 3 frames
+extern Delay3                        ; src/home/palettes.asm — wait 3 frames
 extern ClearSprites                  ; home/sprites.asm — zero shadow OAM + count
 extern g_tilecache_dirty             ; ppu.asm — arm the tile-cache rebuild
 extern AnimateShootingStar           ; engine/movie/splash.asm — the shooting-star animation

@@ -57,7 +57,7 @@ extern WriteCutOrBoulderDustAnimationOAMBlock ; src/engine/overworld/cut.asm (OW
 extern AdjustOAMBlockYPos          ; src/engine/battle/animations.asm (pret home file)
 extern AdjustOAMBlockXPos          ; src/engine/battle/animations.asm (pret home file)
 extern CopyVideoData               ; home/copy2.asm (In: ESI=VRAM dest, EDX=flat src, BL=count)
-extern Delay3                      ; video/frame.asm
+extern Delay3                      ; src/home/palettes.asm
 extern LoadPlayerSpriteGraphics    ; engine/overworld/player_gfx.asm
 
 section .text

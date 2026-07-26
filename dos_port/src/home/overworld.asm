@@ -88,8 +88,8 @@ extern DisableLCD                         ; src/video/lcd_control.asm
 extern EnableLCD                          ; src/video/lcd_control.asm
 extern FarCopyData                        ; src/home/copy_data.asm
 extern FillMemory                         ; src/home/copy2.asm
-extern GBPalNormal                        ; src/home/init.asm
-extern InitMapSprites                     ; src/engine/overworld/map_sprites.asm
+extern GBPalNormal                        ; src/home/palettes.asm
+extern InitMapSprites                     ; src/home/palettes.asm
 extern LoadTextBoxTilePatterns            ; src/home/load_font.asm
 extern LoadTilesetHeader                  ; src/engine/overworld/tilesets.asm
 extern LoadWildData                       ; src/engine/overworld/wild_mons.asm
@@ -118,7 +118,7 @@ extern CheckTrainerSight                  ; src/engine/overworld/map_sprites.asm
 extern CheckWarpTile                      ; src/engine/overworld/overworld.asm
 extern ClearVariablesOnEnterMap           ; src/engine/overworld/clear_variables.asm
 extern DebugDumpMemory                    ; src/debug/debug_dump.asm
-extern Delay3                             ; src/video/frame.asm
+extern Delay3                             ; src/home/palettes.asm
 extern DelayFrames                        ; src/video/frame.asm
 extern DisplayStartMenu                   ; src/home/start_menu.asm
 extern DoSignInteraction                  ; src/engine/overworld/overworld.asm

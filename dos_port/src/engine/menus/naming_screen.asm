@@ -74,14 +74,15 @@ extern PrintText                   ; src/home/window.asm — the one printer; ES
 extern InitYesNoTextBoxParameters      ; home/yes_no.asm — pret's own: the box's hlcoord/lb bc
 extern DisplayTextBoxID                ; home/textbox.asm — pret's own box dispatcher
 extern ReloadMapSpriteTilePatterns     ; engine/overworld/reload_sprites.asm
-extern GBPalWhiteOutWithDelay3         ; home/fade.asm
-extern RestoreScreenTilesAndReloadTilePatterns ; home/fade.asm
+extern GBPalWhiteOutWithDelay3         ; src/home/palettes.asm
+extern RestoreScreenTilesAndReloadTilePatterns ; src/home/palettes.asm
 extern LoadGBPal                       ; home/fade.asm
 extern ClearScreen                     ; home/copy2.asm — whole-canvas blank + auto-BG re-arm
 extern ClearSprites                    ; gfx/sprites.asm
-extern GBPalNormal                     ; init/init.asm
+extern GBPalNormal                     ; src/home/palettes.asm
 extern UpdateSprites                   ; engine/overworld/movement.asm
-extern RunPaletteCommand               ; engine/battle/faint_switch.asm — palette HAL stub
+extern RunPaletteCommand               ; src/home/palettes.asm
+extern RunDefaultPaletteCommand        ; src/home/palettes.asm
 extern LoadHpBarAndStatusTilePatterns  ; gfx/load_font.asm
 extern LoadTextBoxTilePatterns         ; gfx/load_font.asm
 extern LoadHudTilePatterns             ; gfx/load_font.asm
@@ -95,7 +96,7 @@ extern PlaceString                     ; text/text.asm — ESI=dest, EAX=flat sr
 extern AddNTimes                       ; home/array.asm — AL=n, BX=step, ESI+=n*step
 extern JoypadLowSensitivity            ; input/joypad_lowsens.asm -> H_JOY5
 extern DelayFrame                      ; video/frame.asm
-extern Delay3                          ; video/frame.asm — 3x DelayFrame
+extern Delay3                          ; src/home/palettes.asm — 3x DelayFrame
 extern PlaceMenuCursor                 ; home/window.asm
 extern EraseMenuCursor                 ; home/window.asm
 extern menu_item_step                  ; home/window.asm — cursor per-item row step
@@ -118,7 +119,6 @@ PLAYER_NAME_LENGTH     equ 8
 
 ; pret ref: constants/palette_constants.asm
 SET_PAL_GENERIC        equ 0x08
-SET_PAL_DEFAULT        equ 0xFF
 
 ; NOTE (menu-fidelity row 15, M-57): a local `SFX_PRESS_AB equ 0x3E` used to sit here
 ; under a "TODO-HW(audio): PlaySound is a stub, value not yet load-bearing" comment.
@@ -566,19 +566,10 @@ DisplayNamingScreen:
     dd .ABStartReturnPoint,.pressedA
 
 ; ---------------------------------------------------------------------------
-; RunDefaultPaletteCommand — pret ref: home/palettes.asm:RunDefaultPaletteCommand
-; (a 1-line label that sets B=SET_PAL_DEFAULT and falls into RunPaletteCommand).
-; Promoted to a global (2026-07-12): ExitTownMap needs it too, which is the reuse
-; the old note here flagged. It still lives in this file rather than beside
-; RunPaletteCommand (engine/battle/faint_switch.asm) — hoisting it there is a
-; separate move. NOTE the register: pret sets `b` (= BH), this sets BL. Harmless
-; today because RunPaletteCommand is a ret-stub (Phase 5 palette engine), but it
-; must be fixed to BH when that engine lands or every caller picks the wrong palette.
+; RunDefaultPaletteCommand MOVED to src/home/palettes.asm (mirror rule), where it
+; now sits directly above RunPaletteCommand as pret has it. The stale note that
+; lived here (wrong provider, wrong register, "ret-stub") went with it, corrected.
 ; ---------------------------------------------------------------------------
-global RunDefaultPaletteCommand
-RunDefaultPaletteCommand:
-    mov bh, SET_PAL_DEFAULT
-    jmp RunPaletteCommand
 
 ; ---------------------------------------------------------------------------
 ; naming_show_window — port plumbing: full-screen window over the whited-out

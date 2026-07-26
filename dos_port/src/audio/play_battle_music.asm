@@ -15,7 +15,7 @@ global EndLowHealthAlarm
 extern StopAllMusic               ; src/home/audio.asm
 extern PlayMusic                  ; src/home/audio.asm
 extern DelayFrame                 ; src/video/frame.asm
-extern Delay3                     ; src/video/frame.asm
+extern Delay3                     ; src/home/palettes.asm
 
 section .text
 

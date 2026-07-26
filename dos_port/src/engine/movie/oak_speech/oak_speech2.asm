@@ -39,7 +39,7 @@ extern text_row_stride               ; home/text.asm — W_TILEMAP row stride fo
 extern menu_item_step                ; home/window.asm — menu cursor vertical spacing
 extern ClearScreenArea               ; home/copy2.asm — clear BL x BH tiles of W_TILEMAP at ESI
 extern CopyData                      ; home/copy_data.asm — ESI/EDX EBP-relative, BX count
-extern Delay3                        ; video/frame.asm — wait 3 frames
+extern Delay3                        ; src/home/palettes.asm — wait 3 frames
 extern DelayFrames                   ; video/frame.asm — wait BL frames
 extern DisplayNamingScreen           ; engine/menus/naming_screen.asm — ESI = name dest (pret HL)
 extern IntroDisplayPicCenteredOrUpperRight  ; oak_speech.asm — ESI flat pic, ECX len, BL centre/UR

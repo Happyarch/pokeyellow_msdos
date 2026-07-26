@@ -47,7 +47,7 @@ bits 32
 
 extern g_tilecache_dirty                     ; src/ppu/ppu.asm — arm tile-cache re-decode
 extern DelayFrame                            ; src/video/frame.asm — one-frame yield
-extern Delay3                                ; src/video/frame.asm
+extern Delay3                                ; src/home/palettes.asm
 extern _IsTilePassable                       ; src/engine/gfx/sprite_oam.asm — CL=tile → CF
 
 global IsTilePassable

@@ -7,6 +7,8 @@
 ;                         InFromWhite, GBFadeInc/DecCommon, FadePal1..8
 ;   home/palettes.asm   — GBPalWhiteOut, GBPalWhiteOutWithDelay3,
 ;                         RestoreScreenTilesAndReloadTilePatterns, GetHealthBarColor
+;                         MOVED OUT 2026-07-26 to their mirror src/home/palettes.asm
+;                         (mirror rule). This file now holds home/fade.asm only.
 ;
 ; NATURE OF THIS CODE — palette REGISTER plumbing, NOT Phase-5 CGB color.
 ;   The GB fade routines step the DMG palette REGISTERS (rBGP / rOBP0 / rOBP1)
@@ -38,13 +40,9 @@ bits 32
 ; Externs (all resolved globals in the current tree)
 ; ---------------------------------------------------------------------------
 extern DelayFrames                  ; src/video/frame.asm  (In: BL = frame count)
-extern Delay3                       ; src/video/frame.asm
-extern ClearSprites                 ; src/home/sprites.asm
-extern LoadTextBoxTilePatterns      ; src/home/load_font.asm
-extern ReloadMapSpriteTilePatterns  ; src/home/reload_sprites.asm
-extern UpdateCGBPal_BGP             ; palettes.asm
-extern UpdateCGBPal_OBP0             ; palettes.asm
-extern UpdateCGBPal_OBP1             ; palettes.asm
+extern UpdateCGBPal_BGP             ; src/home/cgb_palettes.asm
+extern UpdateCGBPal_OBP0            ; src/home/cgb_palettes.asm
+extern UpdateCGBPal_OBP1            ; src/home/cgb_palettes.asm
 
 ; ---------------------------------------------------------------------------
 ; Globals
@@ -54,10 +52,6 @@ global GBFadeInFromBlack
 global GBFadeOutToWhite
 global GBFadeOutToBlack
 global GBFadeInFromWhite
-global GBPalWhiteOut
-global GBPalWhiteOutWithDelay3
-global RestoreScreenTilesAndReloadTilePatterns
-global GetHealthBarColor
 global FadePal1
 global FadePal2
 global FadePal3
@@ -158,67 +152,12 @@ GBFadeDecCommon:
     jnz GBFadeDecCommon
     ret
 
-; ===========================================================================
-; GBPalWhiteOut / GBPalWhiteOutWithDelay3 — white out all palettes.
-; Source: home/palettes.asm:GBPalWhiteOut, GBPalWhiteOutWithDelay3
-;   This is the canonical exported copy. (The old file-local scaffold in the
-;   legacy src/movie/title.asm was retired 2026-07-23 and the file itself is
-;   deleted, 2026-07-24.)
-; ===========================================================================
-GBPalWhiteOut:
-    mov byte [ebp + IO_BGP],  0x00        ; xor a / ldh [rBGP],  a
-    mov byte [ebp + IO_OBP0], 0x00        ;         ldh [rOBP0], a
-    mov byte [ebp + IO_OBP1], 0x00        ;         ldh [rOBP1], a
-    call UpdateCGBPal_BGP
-    call UpdateCGBPal_OBP0
-    call UpdateCGBPal_OBP1
-    ret
-
-GBPalWhiteOutWithDelay3:
-    call GBPalWhiteOut
-    jmp Delay3                            ; pret: call GBPalWhiteOut then falls into Delay3
-
-; ===========================================================================
-; RestoreScreenTilesAndReloadTilePatterns
-; Source: home/palettes.asm:RestoreScreenTilesAndReloadTilePatterns
-;   Restores the saved screen (Buffer2) and reloads sprite/text tile patterns
-;   after a menu/overlay, then reasserts the default palette and waits 3 frames.
-; ===========================================================================
-RestoreScreenTilesAndReloadTilePatterns:
-    call ClearSprites
-    mov byte [ebp + W_UPDATE_SPRITES_ENABLED], 1  ; ld a,$1 / ld [wUpdateSpritesEnabled],a
-    ; Load-bearing since the party icons became OAM: they live in vSprites
-    ; ($8000-$87FF), i.e. exactly the map-sprite tiles this reloads. Every port
-    ; caller is an overworld-context exit, so the reload is in-context here.
-    call ReloadMapSpriteTilePatterns
-    ; TODO(unimplemented): call LoadScreenTilesFromBuffer2
-    ;   (now a linkable global in src/home/tilemap.asm — wire when this path is
-    ;   next audited; the call is still dropped here)
-    call LoadTextBoxTilePatterns
-    ; TODO(unimplemented): call RunDefaultPaletteCommand
-    ;   (SGB/CGB palette command dispatch — Phase 5; town_map.asm stubs it too)
-    jmp Delay3                            ; jr Delay3 (tail-call)
-
-; ===========================================================================
-; GetHealthBarColor
-; Source: home/palettes.asm:GetHealthBarColor
-;   In:  DL (E) = current HP-bar length in pixels (0..48 for a 6-tile bar).
-;        ESI (HL) = flat GB address to store the color into.
-;   Out: byte at [ebp+esi] = 0 green / 1 yellow / 2 red.
-;   Faithful pixel thresholds: >=27 px green, >=10 px yellow, else red
-;   (27/48 ~ 56%, 10/48 ~ 21%; pure gameplay logic, NOT color-blocked).
-; ===========================================================================
-GetHealthBarColor:
-    xor dh, dh                            ; ld d, 0  (green)
-    cmp dl, 27                            ; cp 27
-    jae .gotColor                         ; jr nc, .gotColor
-    inc dh                                ; inc d  (yellow)
-    cmp dl, 10                            ; cp 10
-    jae .gotColor                         ; jr nc, .gotColor
-    inc dh                                ; inc d  (red)
-.gotColor:
-    mov [ebp + esi], dh                   ; ld [hl], d
-    ret
+; ---------------------------------------------------------------------------
+; MOVED to src/home/palettes.asm (mirror rule): GBPalWhiteOut,
+; GBPalWhiteOutWithDelay3, RestoreScreenTilesAndReloadTilePatterns and
+; GetHealthBarColor are pret home/palettes.asm labels, not home/fade.asm ones.
+; This file keeps only its own pret home/fade.asm routines.
+; ---------------------------------------------------------------------------
 
 ; ===========================================================================
 ; FadePal tables — DMG palette-register ramps (BGP, OBP0, OBP1 per entry).

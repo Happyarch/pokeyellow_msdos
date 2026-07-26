@@ -44,7 +44,7 @@ WAIT_PA_MAX  equ 600  ; bounded audio-wait cap (DIVERGENCE — see header)
 global ShakeElevator
 global ShakeElevatorRedrawRow
 
-extern Delay3                      ; video/frame.asm
+extern Delay3                      ; src/home/palettes.asm
 extern DelayFrames                 ; video/frame.asm
 extern StopAllMusic                ; home/audio.asm (LIVE)
 extern PlayMusic                   ; home/audio.asm (LIVE; AL=id, BL=bank)

@@ -89,21 +89,21 @@ global LoadPokedexTilePatterns       ; REAL body (below), not a stub — G2 exte
 extern PokedexOrder                  ; src/data/pokemon/dex_order.asm — index->dex table
 
 ; ---- externs -------------------------------------------------------------
-extern GBPalWhiteOut                 ; home/fade.asm
-extern GBPalWhiteOutWithDelay3       ; home/fade.asm
-extern GBPalNormal                   ; init/init.asm
+extern GBPalWhiteOut                 ; src/home/palettes.asm
+extern GBPalWhiteOutWithDelay3       ; src/home/palettes.asm
+extern GBPalNormal                   ; src/home/palettes.asm
 ; RunPaletteCommand is a REAL, LINKED body (home/palettes.asm) — not the "no-op palette
 ; HAL stub" this file once claimed. It takes the command in GB `b` == BH, as pret does
 ; (M-62 resolved: the old BL-first normalizing shim is gone and every call site now
 ; passes BH; see home/palettes.asm for why the half-and-half state was dangerous).
 extern RunPaletteCommand             ; home/palettes.asm — REAL body; BH = pret's `b`
-extern RunDefaultPaletteCommand      ; engine/menus/naming_screen.asm — BH=SET_PAL_DEFAULT → RunPaletteCommand
+extern RunDefaultPaletteCommand      ; src/home/palettes.asm — BH=SET_PAL_DEFAULT → RunPaletteCommand
 extern ReloadMapData                 ; home/reload_tiles.asm
 extern LoadHpBarAndStatusTilePatterns ; gfx/load_font.asm — pret loader's 1st step
 extern g_tilecache_dirty             ; ppu.asm — set after any VRAM tile write
 extern ClearScreen                   ; home/copy2.asm
 extern UpdateSprites                 ; engine/overworld/movement.asm
-extern Delay3                        ; video/frame.asm — 3× DelayFrame
+extern Delay3                        ; src/home/palettes.asm — 3× DelayFrame
 extern DelayFrame                    ; video/frame.asm
 extern HandleMenuInput               ; home/window.asm — vertical menu input driver → AL
 extern PlaceUnfilledArrowMenuCursor  ; home/window.asm

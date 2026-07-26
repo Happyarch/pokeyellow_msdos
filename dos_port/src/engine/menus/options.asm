@@ -59,7 +59,7 @@ global OptionsMenu_UpdateCursorPosition
 
 extern JoypadLowSensitivity          ; input/joypad_lowsens.asm — → [hJoy5]
 extern DelayFrame                    ; video/frame.asm
-extern Delay3                        ; video/frame.asm — 3× DelayFrame
+extern Delay3                        ; src/home/palettes.asm — 3× DelayFrame
 extern TextBoxBorder                 ; text/text.asm — ESI=top-left, BL=int w, BH=int h
 extern PlaceString                   ; text/text.asm — ESI=dest, EAX=flat src
 extern AddNTimes                     ; home/array.asm — AL=n, BX=step, ESI=base → ESI+=n*step

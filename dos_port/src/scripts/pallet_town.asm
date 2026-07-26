@@ -47,7 +47,7 @@ extern StopAllMusic              ; src/home/audio.asm
 extern PlayMusic                 ; src/home/audio.asm (AL=id, BL=bank)
 extern ShowObject                ; src/engine/overworld/toggleable_objects.asm
 extern HideObject                ; src/engine/overworld/toggleable_objects.asm
-extern Delay3                    ; src/video/frame.asm
+extern Delay3                    ; src/home/palettes.asm
 extern DelayFrames               ; src/video/frame.asm (BL=count)
 extern CalcPositionOfPlayerRelativeToNPC ; src/home/pathfinding.asm
 extern FindPathToPlayer          ; src/home/pathfinding.asm

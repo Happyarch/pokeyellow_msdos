@@ -78,19 +78,19 @@ extern PrintNumber                   ; home/print_num.asm
 extern PrintLevel                    ; home/pokemon.asm — ESI=dest, [wLoadedMonLevel]
 extern LoadMonData                   ; engine/pokemon/load_mon_data.asm
 extern ErasePartyMenuCursors         ; engine/menus/start_sub_menus.asm
-extern GetHealthBarColor             ; home/fade.asm — DL=px, ESI=dest addr
+extern GetHealthBarColor             ; src/home/palettes.asm — DL=px, ESI=dest addr
 extern set_single_window             ; ppu/ppu.asm
 extern add_window
 extern g_bg_whiteout
 extern g_obj_over_window             ; ppu/ppu.asm — OBJ over the window layer (GB order)
-extern Delay3                        ; video/frame.asm
+extern Delay3                        ; src/home/palettes.asm
 extern DelayFrame                    ; video/frame.asm
-extern GBPalNormal                   ; init/init.asm
+extern GBPalNormal                   ; src/home/palettes.asm
 extern PrintText                     ; home/window.asm — ESI=FLAT TX stream ptr
 extern text_msgbox                   ; home/text.asm — → the active msgbox projection
 extern msgbox_dialog                 ; home/text.asm — the overworld default we restore
 extern text_arrow_pos                ; home/text.asm — MB_ARROW, republished by PrintText
-extern RunPaletteCommand             ; engine/battle/faint_switch.asm (palette-HAL stub)
+extern RunPaletteCommand             ; src/home/palettes.asm
 extern CanLearnTM                    ; engine/items/tms.asm — → CL (0 = can't learn)
 extern EvosMovesPointerTable         ; assets/evos_moves.inc — flat dd table of flat blobs
 ; pret PartyMenuMessagePointers streams — pret's own text_far bodies (data/text/

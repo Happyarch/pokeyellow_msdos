@@ -60,7 +60,7 @@ global LedgeTiles
 extern StartSimulatingJoypadStates    ; src/home/map_objects.asm (linked)
 extern PlaySound                      ; src/home/audio.asm (real gateway, linked)
 extern UpdateSprites                  ; src/engine/overworld/movement.asm (linked)
-extern Delay3                         ; src/video/frame.asm (linked)
+extern Delay3                         ; src/home/palettes.asm (linked)
 ; LoadHoppingShadowOAM stub lives in overworld_stubs.asm (stub convention: a stub never
 ; sits in the file mirroring its own pret source). Retire the stub + restore the real
 ; body here once PrepareOAMData models shadow-OAM slots. See overworld_stubs.asm.

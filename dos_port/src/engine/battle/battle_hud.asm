@@ -101,9 +101,9 @@ global AnimateEnemyHPBar
 global AnimatePlayerHPBar
 extern PlaceString
 extern DelayFrame
-extern Delay3                          ; frame.asm — wait 3 frames (pret UpdateHPBar2 tail)
+extern Delay3                          ; src/home/palettes.asm — wait 3 frames (pret UpdateHPBar2 tail)
 extern g_tilecache_dirty                ; ppu.asm — cloned VRAM patterns need re-decode
-extern GetHealthBarColor                ; fade.asm — pixel length -> green/yellow/red id
+extern GetHealthBarColor                ; src/home/palettes.asm — pixel length -> green/yellow/red id
 extern SetPal_Battle                    ; palettes.asm — consume both live HP-color ids
 extern CopyData                         ; home/copy_data.asm — wLoadedMon staging
 

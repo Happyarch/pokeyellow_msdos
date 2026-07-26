@@ -54,7 +54,7 @@ global CyclingIsFunText
 extern PrintText                    ; src/home/window.asm
 extern PlayCry                      ; UNPORTED (pret home/pokemon.asm) — cry synth deferred
                                     ; (status_screen.asm plays the regular cry as TODO-HW).
-extern Delay3                       ; src/video/frame.asm
+extern Delay3                       ; src/home/palettes.asm
 extern TextScriptEnd                ; src/home/overworld_text.asm
 extern ArePlayerCoordsInArray       ; src/home/map_objects.asm
 extern msgbox_dialog                    ; src/home/text.asm — overworld dialog projection

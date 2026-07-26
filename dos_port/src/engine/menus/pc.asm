@@ -78,7 +78,7 @@ extern SaveScreenTilesToBuffer2      ; src/home/tilemap.asm
 extern LoadScreenTilesFromBuffer2    ; src/home/tilemap.asm
 extern ReloadMapData                 ; home/reload_tiles.asm
 extern UpdateSprites                 ; engine/overworld/movement.asm
-extern Delay3                        ; video/frame.asm
+extern Delay3                        ; src/home/palettes.asm
 extern hide_window                   ; ppu/ppu.asm — drop the dialog window layer
 
 %ifdef DEBUG_PC

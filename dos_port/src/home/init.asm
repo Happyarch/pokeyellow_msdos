@@ -32,14 +32,13 @@ LCDC_ON_VAL      equ 0x80
 LCDC_DEFAULT_VAL equ 0xE3
 IE_DEFAULT_VAL   equ 0x0D
 CONNECTION_NONE  equ 0xFF
-BGP_NORMAL       equ 0xE4
-OBP0_NORMAL      equ 0xD0
 WRAM0_SIZE       equ 0x1000
 VRAM_SIZE        equ 0x2000
 
 extern FillMemory
 extern StopAllMusic          ; src/home/audio.asm
-extern GBPalWhiteOut         ; src/home/fade.asm — SoftReset prologue
+extern GBPalWhiteOut         ; src/home/palettes.asm — SoftReset prologue
+extern GBPalNormal           ; src/home/palettes.asm
 extern DelayFrames           ; src/video/frame.asm — BL = frame count
 extern DisableLCD
 extern ClearBgMap
@@ -55,7 +54,6 @@ extern InitOptions           ; engine/menus/main_menu.asm
 global Init
 global ClearVram
 global StopAllSounds
-global GBPalNormal
 extern g_tilecache_dirty
 
 section .text
@@ -228,11 +226,6 @@ StopAllSounds:
     jmp StopAllMusic
 
 ; ---------------------------------------------------------------------------
-; GBPalNormal — reset the BGP/OBP0 shadows to DMG normal palettes (pret writes
-; only rBGP and rOBP0 here — OBP1 is untouched, as in pret).
-; CGB palette updates deferred to Phase 5.
+; GBPalNormal MOVED to src/home/palettes.asm (mirror rule) — a pret
+; home/palettes.asm label. Init still calls it.
 ; ---------------------------------------------------------------------------
-GBPalNormal:
-    mov byte [ebp + IO_BGP],  BGP_NORMAL
-    mov byte [ebp + IO_OBP0], OBP0_NORMAL
-    ret

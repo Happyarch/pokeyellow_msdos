@@ -151,7 +151,7 @@ extern HandleMenuInput          ; window.asm — vertical menu loop; AL=key that
 extern PrintText                ; window.asm — In: ESI = text stream
 extern text_msgbox              ; text.asm — the active msgbox projection
 extern msgbox_dialog            ; text.asm — the standard bottom dialog box
-extern RunDefaultPaletteCommand ; naming_screen.asm — RunPaletteCommand(SET_PAL_DEFAULT)
+extern RunDefaultPaletteCommand ; src/home/palettes.asm — RunPaletteCommand(SET_PAL_DEFAULT)
 extern PlaceMenuCursor          ; window.asm — draw ▶ at the current item
 extern menu_item_step           ; window.asm — cursor per-item row step
 extern menu_redraw_cb           ; window.asm — per-frame redraw callback
@@ -164,7 +164,7 @@ extern ClearScreen              ; home/copy2.asm — blank canvas + auto-transfe
 extern LoadTextBoxTilePatterns  ; load_font.asm
 extern LoadFontTilePatterns     ; load_font.asm
 extern UpdateSprites            ; movement.asm
-extern GBPalWhiteOutWithDelay3  ; fade.asm
+extern GBPalWhiteOutWithDelay3  ; src/home/palettes.asm
 extern ResetPlayerSpriteData    ; reset_player_sprite.asm
 extern EnterMapBoot             ; overworld.asm — one-time overworld boot glue → EnterMap
 extern DsvFileExists            ; save/dsv_io.asm — CF=1/AL=1 if POKEMON.DSV present
