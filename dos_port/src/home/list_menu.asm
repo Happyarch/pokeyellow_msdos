@@ -98,7 +98,7 @@ extern BankswitchHome           ; home/bankswitch.asm  AL=bank (flat no-op bookk
 extern BankswitchBack           ; home/bankswitch.asm
 extern GetItemName              ; home/names.asm  [wNamedObjectIndex] → wNameBuffer
 extern GetMoveName              ; home/names.asm
-extern GetName                  ; home/names.asm  [wNameListIndex]/[wNameListType] → wNameBuffer
+extern GetName                  ; home/names2.asm  [wNameListIndex]/[wNameListType] → wNameBuffer
 extern GetItemPrice             ; engine/items/item_price.asm  [wCurItem] → hItemPrice
 extern LoadMonData              ; engine/pokemon/load_mon_data.asm
 extern GetPartyMonName          ; home/pokemon.asm  AL=index, ESI=nick list base
@@ -111,7 +111,7 @@ extern DivideBCDPredef3         ; engine/math/bcd.asm
 ;  stride-20 list scratch — replaced by the inline list_clear_interior below.)
 extern LoadGBPal                ; home/fade.asm  (flat: palette load)
 extern PlaceUnfilledArrowMenuCursor ; home/window.asm  AL=item → hollow ▶
-extern IsKeyItem                ; home/item_predicates.asm  [wCurItem] → [wIsKeyItem]
+extern IsKeyItem                ; home/item.asm  [wCurItem] → [wIsKeyItem]
 extern PrintLevel               ; home/pokemon.asm  ESI=dest, [wLoadedMonLevel]
 
 ; SELECT-swap driver lives in swap_items.asm (mutual extern; both link together)
@@ -785,7 +785,7 @@ PrintListMenuEntries:
     jne .nextListEntry
     mov al, [ebp + wNamedObjectIndex]
     mov [ebp + wCurItem], al
-    call IsKeyItem                             ; home/item_predicates.asm → [wIsKeyItem]
+    call IsKeyItem                             ; home/item.asm → [wIsKeyItem]
     mov al, [ebp + wIsKeyItem]
     test al, al                                ; unsellable?
     jnz .skipPrintingItemQuantity

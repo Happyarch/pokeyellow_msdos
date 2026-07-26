@@ -63,7 +63,7 @@ extern PrintText                    ; src/home/window.asm
 extern Moves                        ; src/data/pokemon_data.asm — flat move-record table
 
 extern GetMoveName                  ; src/home/names.asm — [wNamedObjectIndex] -> wNameBuffer
-extern IsMoveHM                     ; src/home/item_predicates.asm — AL=move id -> CF
+extern IsMoveHM                     ; src/home/names.asm — AL=move id -> CF
 extern TextBoxBorder                ; src/home/text.asm — ESI=top-left, BL=width, BH=height
 extern PlaceString                  ; src/home/text.asm — EAX=flat src, ESI=dest
 extern FormatMovesString            ; src/engine/battle/core_stubs.asm — wMoves -> wMovesString

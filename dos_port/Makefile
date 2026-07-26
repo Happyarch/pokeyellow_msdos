@@ -1433,6 +1433,7 @@ FRONTEND_SRCS := \
     src/engine/battle/effects.asm \
     src/engine/battle/move_effect_helpers.asm \
     src/home/names.asm \
+    src/home/names2.asm \
     src/engine/battle/move_effects/conversion.asm \
     src/engine/battle/move_effects/focus_energy.asm \
     src/engine/battle/move_effects/haze.asm \
@@ -1475,11 +1476,11 @@ FRONTEND_SRCS := \
 # Home/item helpers promoted to the live build now that battle faint/EXP-ALL
 # consumers (faint_enemy.asm: ClearScreenArea, IsItemInBag→GetQuantityOfItemInBag)
 # reference them. Closures resolve: copy2→DelayFrame/g_tilecache_dirty;
-# item_predicates→FlagAction/IsInArray/KeyItemFlags/GetQuantityOfItemInBag;
 # get_bag_item_quantity→GetPredefRegisters. Removed from HOME_CHECK_SRCS below.
+# (item_predicates.asm was deleted by the relocated-labels grind: its labels were
+# pret home/names.asm and home/item.asm ones and went to those two mirrors.)
 BATTLE_SUPPORT_SRCS := \
     src/home/copy2.asm \
-    src/home/item_predicates.asm \
     src/engine/items/get_bag_item_quantity.asm
 
 LINK_SRCS := $(BOOT_SRCS) $(HOME_SRCS) $(HAL_SRCS) $(SAVE_SRCS) $(AUDIO_SRCS) $(GAME_SRCS) $(POKEMON_SRCS) $(ITEMS_SRCS) $(FRONTEND_SRCS) $(BATTLE_SUPPORT_SRCS)

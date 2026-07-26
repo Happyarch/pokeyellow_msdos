@@ -7,8 +7,11 @@
 ;   model: the hLoadedROMBank save/restore and rROMB writes collapse to a plain
 ;   call (TODO-HW: MBC banking).
 ;
-; (pret home/item.asm's IsKeyItem wrapper is exported by
-; src/home/item_predicates.asm.)
+;   IsKeyItem:: — the third and last pret home/item.asm label (pret :41). It
+;   arrived here from the deleted src/home/item_predicates.asm bucket; pret
+;   orders it after UseItem (:10) and TossItem (:21), so it is appended at the
+;   foot of the file. (TossItem preceding UseItem here is a pre-existing
+;   inversion this chunk did not rewrite.)
 ;
 ; In:  ESI (hl) = inventory count addr (wNumBagItems / wNumBoxItems),
 ;      [wCurItem], [wWhichPokemon], [wItemQuantity].
@@ -21,9 +24,11 @@ bits 32
 
 global TossItem
 global UseItem
+global IsKeyItem
 
 extern TossItem_                     ; engine/items/item_effects.asm
 extern UseItem_                      ; engine/items/item_use.asm
+extern IsKeyItem_               ; src/engine/items/item_effects.asm — its pret mirror
 
 section .text
 
@@ -42,3 +47,19 @@ TossItem:
 ; ---------------------------------------------------------------------------
 UseItem:
     jmp UseItem_                     ; farjp — no bank to switch in the flat model
+
+; ---------------------------------------------------------------------------
+; IsKeyItem — pret home/item.asm:IsKeyItem.
+; Thin wrapper: preserve HL/DE/BC and run IsKeyItem_ (a farcall in pret; a plain
+; call under the flat model). Result left in [wIsKeyItem].
+; In:  [wCurItem] = item id.   Out: [wIsKeyItem] = 0/1.
+; ---------------------------------------------------------------------------
+IsKeyItem:
+    push esi                    ; push hl
+    push edx                    ; push de
+    push ebx                    ; push bc
+    call IsKeyItem_             ; farcall IsKeyItem_
+    pop ebx                     ; pop bc
+    pop edx                     ; pop de
+    pop esi                     ; pop hl
+    ret

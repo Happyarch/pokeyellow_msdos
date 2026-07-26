@@ -69,7 +69,7 @@ MarkTownVisitedAndLoadToggleableObjects:
     movzx ecx, al                           ; c = curMap (flag index)
     mov bh, FLAG_SET                         ; b = FLAG_SET
     mov esi, wTownVisitedFlag                ; hl = wTownVisitedFlag (FlagAction adds ebp)
-    ; pret: `predef FlagActionPredef`. Established port pattern (item_predicates.asm,
+    ; pret: `predef FlagActionPredef`. Established port pattern (engine/menus/pokedex.asm,
     ; experience.asm): call the FlagAction leaf directly when registers are hand-set —
     ; FlagActionPredef begins with GetPredefRegisters, which would clobber ESI/BH/CL.
     call FlagAction

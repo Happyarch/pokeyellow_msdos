@@ -277,7 +277,8 @@ ReadTrainerHeaderInfo:
 ; TrainerFlagAction — persistent trainer-beaten flag op (FLAG_TEST/SET/RESET).
 ; pret: home/trainers.asm:TrainerFlagAction  (predef_jump FlagActionPredef)
 ; The port calls the FlagAction leaf directly (regs set by hand) — same faithful
-; equivalent used elsewhere (see item_predicates.asm note).  This is the PERSISTENT
+; equivalent used elsewhere (see the DEVIATION on engine/menus/pokedex.asm:IsPokemonBitSet).
+; This is the PERSISTENT
 ; replacement for map_sprites.asm's non-persistent npc_beaten_flags (see header).
 ; In:  ESI = flag array base (GB WRAM offset, e.g. wEventFlags+N), CL = bit, BH = action.
 ; Out: CL = result (FLAG_TEST).

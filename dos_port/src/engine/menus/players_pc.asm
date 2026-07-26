@@ -106,8 +106,8 @@ extern UpdateSprites                 ; engine/overworld/movement.asm
 extern RefreshCollisionTileMap       ; engine/overworld/overworld.asm
 extern AddItemToInventory            ; engine/items/inventory.asm — ESI=count addr; CF=1 room
 extern RemoveItemFromInventory       ; engine/items/inventory.asm
-extern IsKeyItem                     ; home/item_predicates.asm — [wCurItem] → [wIsKeyItem]
-extern IsItemHM                      ; home/item_predicates.asm — AL=item id → CF
+extern IsKeyItem                     ; home/item.asm — [wCurItem] → [wIsKeyItem]
+extern IsItemHM                      ; home/names.asm — AL=item id → CF
 extern TossItem                      ; home/item.asm — ESI=inventory; CF=1 not tossed
 extern DelayFrame                    ; video/frame.asm
 extern hide_window                   ; ppu/ppu.asm

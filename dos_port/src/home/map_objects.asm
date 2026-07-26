@@ -22,7 +22,9 @@
 ;   src/home/pathfinding.asm       SetSpriteMovementBytesToFF,
 ;                                  GetSpriteMovementByte1Pointer,
 ;                                  GetSpriteMovementByte2Pointer
-;   src/home/item_predicates.asm   IsItemInBag
+;   src/home/item_predicates.asm   IsItemInBag — that bucket file has since been
+;                                  deleted entirely (its remaining labels went to
+;                                  src/home/names.asm and src/home/item.asm).
 ;
 ; Routine order follows pret home/map_objects.asm. The remaining pret labels in
 ; that file (IsSurfingPikachuInParty — a stub; DisplayPokedex, SetSpriteFacingDirection

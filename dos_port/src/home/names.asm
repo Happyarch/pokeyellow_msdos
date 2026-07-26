@@ -1,166 +1,62 @@
-; names.asm — shared name lookup (faithful: home/names.asm + home/names2.asm).
+; names.asm — mirror of pret home/names.asm.
 ;
-; The gen-1 name dispatcher. GetName resolves [wNameListIndex] within the list
-; chosen by [wNameListType] (a NamePointers index) into wNameBuffer. Wrappers
-; GetMonName / GetMoveName / GetItemName / GetMachineName set the type and call it.
+; The pret file's labels, in pret order, and where each one is:
 ;
-;   type 1 MONSTER_NAME  → GetMonName: FIXED-WIDTH (AddNTimes, NAME_LENGTH-1 stride).
-;   types 2-7            → walk the '@'(0x50)-terminated list, counting terminators.
+;   GetMonName      (:1)    here
+;   GetItemName     (:27)   here
+;   GetMachineName  (:51)   here
+;   TechnicalPrefix (:103)  assets/home_names_runtime_strings.inc (Tier-1 text)
+;   HiddenPrefix    (:105)  assets/home_names_runtime_strings.inc (Tier-1 text)
+;   IsItemHM        (:110)  here
+;   IsMoveHM        (:121)  here
+;   HMMoves         (:126)  here (Tier-2 db list — see the banner below)
+;   GetMoveName     (:129)  here
 ;
-; Addressing note (the flat-vs-WRAM hazard): NamePointers mixes FLAT program
-; labels (Monster/Move/Unused/Item/Trainer names — read [esi]) with WRAM lists
-; (wPartyMonOT/wEnemyMonOT — read [ebp+esi]). GetName biases the two OT entries by
-; EBP up front so the walk/copy is uniform afterwards. The flat name tables (incl.
-; MoveNames) are read flat; wNameBuffer is WRAM, so the copy is an inline
-; flat→WRAM loop (CopyData would EBP-bias the source — see get_current_move.asm).
+; NOT here, and not lost: GetName and NamePointers are pret home/names2.asm
+; labels and live in src/home/names2.asm. The two pret files are one subsystem
+; but two mirrors; the split follows pret. The BUG/GLITCH annotations for
+; GetName's HM01 threshold and its out-of-range name walk travel with it and are
+; in names2.asm — they are NOT duplicated here.
 ;
-; BUG{class=data-model; pret=home/names.asm:GetName; behavior=HM01 threshold redirects every name type, not only items, to machine-name formatting; evidence=pret GetName unconditional cp HM01 before type dispatch; lifetime=permanent latent Gen-1 behavior}
-; pret's `cp HM01` test applies to ALL name types,
-; not just items — any id >= HM01 fetches a TM/HM name. Harmless in normal play
-; (NUM_ATTACKS and the mon indexes are all < HM01). Preserved.
+; The four wrappers here set [wNameListType]/[wNameListIndex] and tail-call
+; GetName, except GetMonName, which is the fixed-width species path (AddNTimes,
+; NAME_LENGTH-1 stride) that GetName itself dispatches to for MONSTER_NAME.
 ;
-; GLITCH{class=data-model; pret=home/names.asm:GetName; behavior=out-of-range name indices walk beyond the source table until a terminator and produce glitch names; evidence=pret AddNTimes and terminator scan plus yellow_glitches.md Super Glitch and Move 0x00 entries; lifetime=permanent Gen-1 behavior; safety=destination is bounded to NAME_BUFFER_LENGTH in the port, cosmetic only with no port memory write overflow}
-; An out-of-range index walks the SOURCE past the table
-; through adjacent program/WRAM bytes until a 0x50 → garbage names (the glitch-
-; name mechanism). The destination copy is bounded (NAME_BUFFER_LENGTH), so
-; wNameBuffer never overflows — this is cosmetic, not memory corruption.
-; Safety: bounded under DPMI flat alloc. Optional FIXALL guard below.
-; This is the .walk mechanism behind two docs/references/yellow_glitches.md
-; #battle-system entries reached via a glitch move index in a mon's moveset:
-; "Super Glitch" (indices A6-C3, no name entry — search overruns MoveNames) and
-; "Move 0x00" (index 0x00, the CoolTrainer♀/"--" glitch — same overrun, index 0
-; walks from before the table start). Both are cataloged BUG(critical) with
-; "Potential" ACE on real hardware (ROM-bank-dependent overrun target); in this
-; port the overrun target is adjacent linked .data/.text, not attacker-chosen
-; ROM content, and the destination write stays within NAME_BUFFER_LENGTH — no
-; ACE path exists here (downgraded to a bounded cosmetic glitch, per the Safety
-; line above). Neither glitch move entry nor index-0 "--" is reachable through
-; normal ported gameplay yet (no glitch-Pokémon catch path — see
-; docs/bug_categorization.md, Save/SRAM "Index #000 Post-Capture" — pending
-; port), so this is latent/dormant rather than live, but the shared mechanism
-; is already faithfully preserved for whenever that path lands.
+; Addressing note: MonsterNames and the other name tables are FLAT program
+; labels read as [esi]; wNameBuffer is WRAM, so the copies here are inline
+; flat→WRAM loops (CopyData would EBP-bias the source — see get_current_move.asm).
 ;
-; This file lives in the not-yet-linked battle/name tier (assembled by `make
-; check`, validated by native harness). MoveNames/ItemNames are flat data labels;
-; TrainerNames/wPartyMonOT/wEnemyMonOT resolve when the battle UI is linked.
+; ORDER: this file is not fully pret-ordered — GetMoveName sits before
+; GetItemName, a pre-existing inversion this chunk did not introduce and did not
+; rewrite. The arrivals are appended in pret order among themselves under the
+; banner at the foot of the file.
 ;
+
 ; Build: nasm -f coff -I include/ -I . -o names.o src/home/names.asm
 
 bits 32
 
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
-%include "gb_macros.inc"        ; BUG_FIX_LEVEL
 
-global GetName
 global GetMonName
 global GetMoveName
 global GetItemName
 global GetMachineName
-global NamePointers
+global IsItemHM
+global IsMoveHM
+global HMMoves
 
 extern AddNTimes
 extern MonsterNames
-extern MoveNames
-extern ItemNames
-extern TrainerNames
-; wPartyMonOT / wEnemyMonOT are WRAM equs from gb_memmap.inc.
-
-%if BUG_FIX_LEVEL >= 2
-NAME_WALK_MAX   equ 0x2000      ; FIXALL: cap the source walk to bound runaways
-%endif
+extern GetName                  ; src/home/names2.asm — the shared list walker
+extern IsInArray                ; src/home/array2.asm — flat $FF-terminated search
 
 section .data
-align 4
-
-; NamePointers — indexed by (wNameListType - 1). See list_constants.asm.
-NamePointers:
-    dd MonsterNames         ; 1 MONSTER_NAME  (flat; routed via GetMonName)
-    dd MoveNames            ; 2 MOVE_NAME     (flat)
-    dd UnusedBadgeNames     ; 3 UNUSED_NAME   (flat)
-    dd ItemNames            ; 4 ITEM_NAME     (flat)
-    dd wPartyMonOT          ; 5 PLAYEROT_NAME (WRAM; +EBP)
-    dd wEnemyMonOT          ; 6 ENEMYOT_NAME  (WRAM; +EBP)
-    dd TrainerNames         ; 7 TRAINER_NAME  (flat)
-
-; type 3 is genuinely unused in gen 1; a lone terminator stands in for the table.
-UnusedBadgeNames:
-    db 0x50
 
 %include "assets/home_names_runtime_strings.inc"
 
 section .text
-
-; ---------------------------------------------------------------------------
-; GetName — resolve [wNameListIndex] in list [wNameListType] → wNameBuffer.
-; (wPredefBank is ignored: ROM banking is a no-op in the flat model.)
-; ---------------------------------------------------------------------------
-GetName:
-    mov al, [ebp + wNameListIndex]
-    mov [ebp + wNamedObjectIndex], al
-
-    ; The structured HM01 bug annotation in the file header applies to all name types.
-    cmp al, HM01
-    jae GetMachineName
-
-    mov al, [ebp + wNameListType]
-    cmp al, MONSTER_NAME
-    je GetMonName                       ; fixed-width path (tail)
-
-    ; types 2-7: esi = NamePointers[type-1]  (flat read of our own .data table)
-    movzx eax, al
-    dec eax
-    mov esi, [NamePointers + eax*4]
-
-    ; OT lists are WRAM offsets → bias by EBP so the walk reads linear memory.
-    mov al, [ebp + wNameListType]
-    cmp al, PLAYEROT_NAME
-    je .wram
-    cmp al, ENEMYOT_NAME
-    jne .walk
-.wram:
-    add esi, ebp
-.walk:
-    movzx ebx, byte [ebp + wNameListIndex]   ; bl = wanted entry (1-based)
-    xor ecx, ecx                             ; cl = entry counter
-%if BUG_FIX_LEVEL >= 2
-    xor edi, edi                             ; FIXALL: bytes-walked budget
-%endif
-.nextName:
-    mov edx, esi                             ; remember this entry's start
-.nextChar:
-    mov al, [esi]
-    inc esi
-%if BUG_FIX_LEVEL >= 2
-    inc edi
-    cmp edi, NAME_WALK_MAX
-    jae .placeholder                         ; runaway: bail to a safe empty name
-%endif
-    cmp al, 0x50                             ; '@'
-    jne .nextChar
-    inc cl
-    cmp cl, bl
-    jne .nextName
-    ; edx = start of the wanted entry. Faithful: stash it in wUnusedNamePointer.
-    mov [ebp + wUnusedNamePointer], dx
-    ; copy bounded NAME_BUFFER_LENGTH bytes (flat src → WRAM dst).
-    mov esi, edx
-    mov edi, wNameBuffer
-    mov ecx, NAME_BUFFER_LENGTH
-.copy:
-    mov al, [esi]
-    inc esi
-    mov [ebp + edi], al
-    inc edi
-    dec ecx
-    jnz .copy
-    ret
-
-%if BUG_FIX_LEVEL >= 2
-.placeholder:
-    mov byte [ebp + wNameBuffer], 0x50       ; empty, terminated name
-    ret
-%endif
 
 ; ---------------------------------------------------------------------------
 ; GetMonName — fixed-width species name (faithful; no walk). Index in
@@ -256,3 +152,59 @@ GetMachineName:
     pop eax                                  ; = pret pop af
     mov [ebp + wNamedObjectIndex], al
     ret
+
+; ===========================================================================
+; --- was src/home/item_predicates.asm ---
+; Arrivals from the deleted `home util bucket` src/home/item_predicates.asm.
+; They are pret home/names.asm labels and belong here by the mirror rule.
+; This file is NOT fully pret-ordered (GetMoveName precedes GetItemName, a
+; pre-existing inversion), so the arrivals are appended under this banner in
+; pret order among themselves: IsItemHM (pret :110), IsMoveHM (:121),
+; HMMoves (:126). pret puts GetMoveName (:129) after HMMoves.
+; ===========================================================================
+
+; ---------------------------------------------------------------------------
+; IsItemHM — pret home/names.asm:IsItemHM.
+; Sets CF if the item id is an HM (HM01..TM01-1, i.e. $C4..$C8), else clears CF.
+; Faithful: pret `cp HM01 / jr c,.notHM / cp TM01 / ret` — after the second
+; compare CF = (A < TM01), and since A >= HM01 here that is exactly "is HM".
+; In:  AL = item id.   Out: CF = 1 if HM.   Clobbers nothing but flags.
+; ---------------------------------------------------------------------------
+IsItemHM:
+    cmp al, HM01                ; cp HM01
+    jb .notHM                   ; jr c  (unsigned A < HM01 → below HMs)
+    cmp al, TM01                ; cp TM01 → CF = (A < TM01)  [A >= HM01 here]
+    ret
+.notHM:
+    clc                         ; and a  (clears carry)
+    ret
+
+; ---------------------------------------------------------------------------
+; IsMoveHM — pret home/names.asm:IsMoveHM.
+; Sets CF if the move id is one of the five HM moves.
+; Faithful: `ld hl, HMMoves / ld de, 1 / jp IsInArray`. HMMoves is a flat
+; .data table; IsInArray reads it with flat [ESI] addressing (matches the
+; other HM/effect-category arrays), so pass the flat label directly.
+; In:  AL = move id.   Out: CF = 1 if HM move, BH = index.  (tail call)
+; ---------------------------------------------------------------------------
+IsMoveHM:
+    mov esi, HMMoves            ; ld hl, HMMoves (flat label)
+    mov edx, 1                  ; ld de, 1  (entry stride)
+    jmp IsInArray              ; jp IsInArray → returns CF
+
+; ===========================================================================
+; Tier-2 data (hand-authored code table, NOT generated — see header note).
+; pret: home/names.asm:HMMoves INCLUDEs data/moves/hm_moves.asm. We inline the
+; five ids directly as a Tier-2 table; it is NOT emitted by any
+; tools/generators/gen_*.py and `make assets` must never touch it.
+; Flat .data so IsInArray's [ESI] reads reach it.
+; ===========================================================================
+section .data
+
+HMMoves:
+    db CUT                       ; $0F
+    db FLY                       ; $13
+    db SURF                      ; $39
+    db STRENGTH                  ; $46
+    db FLASH                     ; $94
+    db 0xFF                      ; db -1 ; end (IsInArray terminator)

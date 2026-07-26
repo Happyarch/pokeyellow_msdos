@@ -688,7 +688,8 @@ IsPokemonBitSet:
     ; pret does `predef FlagActionPredef`; the port calls FlagAction
     ; directly. FlagActionPredef's prologue is GetPredefRegisters, which would clobber
     ; the very registers this call passes its arguments in. Established port pattern with
-    ; the same justification at home/item_predicates.asm:125.
+    ; the same justification (home/trainers.asm:TrainerFlagAction,
+    ; engine/overworld/toggleable_objects.asm).
     call FlagAction                                     ; → CL = result bit (ESI/EDX preserved)
     mov al, cl                                          ; ld a, c
     and al, al                                          ; and a → ZF

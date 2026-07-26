@@ -355,10 +355,10 @@ global TossItem_
 extern TextBoxBorder                 ; text/text.asm — ESI=top-left, BL=int_w, BH=int_h
 extern place_flat_str                ; text/text.asm — ESI=dest, EAX=flat src
 extern DelayFrame                    ; video/frame.asm
-extern IsItemHM                      ; home/item_predicates.asm — AL → CF
+extern IsItemHM                      ; home/names.asm — AL → CF
 extern KeyItemFlags                  ; src/data/item_data.asm — flat LSB-first bit array
 extern Moves                                         ; flat move-data table
-extern IsKeyItem                     ; home/item_predicates.asm — [wCurItem] → [wIsKeyItem]
+extern IsKeyItem                     ; home/item.asm — [wCurItem] → [wIsKeyItem]
 extern GetItemName                   ; home/names.asm — [wNamedObjectIndex] → wNameBuffer
 extern CopyToStringBuffer            ; src/home/copy_string.asm — EDX=src → wStringBuffer
 extern RemoveItemFromInventory       ; engine/items/inventory.asm
@@ -726,7 +726,7 @@ RestoreBonusPP:
 ;    is a TODO-HW boundary (SGB/CGB palette commands, Phase 5).
 ;
 ; 4. predef → direct call (port-wide, no bank/predef dispatch): FlagActionPredef
-;    becomes `call FlagAction` (same idiom as home/item_predicates.asm),
+;    becomes `call FlagAction` (same idiom as engine/menus/pokedex.asm),
 ;    LearnMoveFromLevelUp / PrintStatsBox are called directly.
 ;
 ; Build: nasm -f coff -I include/ -I . -o item_use.o src/engine/items/item_use.asm
@@ -1320,7 +1320,7 @@ ItemUseMedicine:
 .gotStatName:
     ; pret: CopyData hl→wStringBuffer, STAT_NAME_LENGTH bytes. The port's CopyData
     ; is GB→GB and VitaminStats is a FLAT .data table, so inline the flat→GB copy
-    ; (same substitution home/item_predicates.asm makes for KeyItemFlags).
+    ; (same substitution IsKeyItem_ makes for KeyItemFlags, below in this file).
     push esi
     lea edi, [ebp + wStringBuffer]
     mov ecx, STAT_NAME_LENGTH
@@ -3341,7 +3341,7 @@ CheckMapForMon:
     ret
 
 ; ===========================================================================
-; --- was src/engine/items/get_max_pp.asm and src/home/item_predicates.asm ---
+; --- was src/engine/items/get_max_pp.asm and src/home/item_predicates.asm (both since deleted) ---
 ; pret engine/items/item_effects.asm: AddBonusPP, GetMaxPP,
 ; GetSelectedMoveOffset, GetSelectedMoveOffset2, IsKeyItem_.
 ;

@@ -113,8 +113,8 @@ extern g_window_count
 extern text_row_stride               ; text/text.asm
 extern menu_item_step                ; home/window.asm
 extern menu_redraw_cb
-extern IsKeyItem                     ; home/item_predicates.asm — [wCurItem] → [wIsKeyItem]
-extern IsItemHM                      ; home/item_predicates.asm — AL=item id → CF
+extern IsKeyItem                     ; home/item.asm — [wCurItem] → [wIsKeyItem]
+extern IsItemHM                      ; home/names.asm — AL=item id → CF
 extern SaveMenu                      ; engine/menus/save.asm (S7) — START→SAVE flow
 ; --- S9 package wirings (Pokédex / Options / Trainer Card) ---
 extern RedisplayStartMenu_DoNotDrawStartMenu ; home/start_menu.asm
