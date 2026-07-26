@@ -1996,8 +1996,16 @@ src/data/move_grammar.o: assets/move_grammar.inc
 src/data/type_names.o: assets/type_names.inc
 
 assets/battle_hud_2bpp.inc: ../gfx/battle/battle_hud_1.png ../gfx/battle/battle_hud_2.png \
-                            ../gfx/battle/battle_hud_3.png ../gfx/font/P.1bpp tools/generators/gen_battle_hud_inc.py
+                            ../gfx/battle/battle_hud_3.png tools/generators/gen_battle_hud_inc.py
 	python3 tools/generators/gen_battle_hud_inc.py
+
+# PTile (bold "P" of the status screen's "PP") is a separate blob from the battle
+# HUD tiles above: pret loads it in StatusScreen, not in LoadHudTilePatterns. The
+# split is what lets src/engine/battle/core.asm %include the HUD blob — which it
+# must, since BATTLE_HUD_TILES*_SIZE is assembly-time arithmetic — without
+# dragging the status screen's tile in with it.
+assets/ptile_2bpp.inc: ../gfx/font/P.1bpp tools/generators/gen_ptile_inc.py
+	python3 tools/generators/gen_ptile_inc.py
 
 assets/trainer_pics.inc: ../gfx/pics.asm ../data/trainers/pic_pointers_money.asm \
                          tools/generators/gen_trainer_pics.py
@@ -2334,7 +2342,7 @@ assets: assets/scenario_registry.inc \
         assets/oak_speech_strings.inc \
         assets/default_names.inc \
         assets/debug_boot_names.inc \
-        assets/battle_hud_2bpp.inc \
+        assets/battle_hud_2bpp.inc assets/ptile_2bpp.inc \
         assets/trainer_pics.inc \
         assets/super_rod.inc assets/town_map_data.inc assets/town_map_gfx.inc \
         assets/ui_layout_menus.inc assets/ui_layout_battle.inc \

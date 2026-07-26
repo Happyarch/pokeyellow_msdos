@@ -76,6 +76,18 @@ MIRROR_MOVE       equ 0x4D
 ; generated battle message streams (Tier-1 data; %included so labels are local)
 %include "assets/battle_text.inc"
 
+; Battle HUD frame/divider tiles (Tier-1 data, pret BattleHudTiles1/2/3 expanded
+; 1bpp->2bpp by tools/generators/gen_battle_hud_inc.py). %included here rather than
+; externed because LoadHudTilePatterns below sizes its copies with
+; BATTLE_HUD_TILES*_SIZE — assembly-time arithmetic, which an extern cannot
+; provide. src/home/load_font.asm externs both labels for the status screen's
+; variant of the load, so they are global.
+section .data
+align 4
+%include "assets/battle_hud_2bpp.inc"
+global battle_hud_tiles1_2bpp
+global battle_hud_tiles23_2bpp
+
 section .text
 
 global MainInBattleLoop
@@ -5221,3 +5233,40 @@ PrintCriticalOHKOText:
 .done:
     mov bl, 20                          ; PORT: DelayFrames reads BL, not C
     jmp DelayFrames                     ; tail call (pret: jp DelayFrames)
+
+; ---------------------------------------------------------------------------
+; LoadHudTilePatterns — load the battle HUD frame/divider tiles (pret
+; engine/battle/core.asm:LoadHudTilePatterns + BattleHudTiles1/2/3). These overwrite
+; the font_extra placeholders ("ID No.") at $73/$74 with the real underline/corner
+; pieces the HP bar and pokéballs sit on. Source is pret's 1bpp data already expanded
+; to 2bpp by the generator (FarCopyDataDouble equivalent):
+;   battle_hud_tiles1  (3 tiles) → vChars2 tile $6d ($96d0)
+;   battle_hud_tiles23 (6 tiles) → vChars2 tile $73 ($9730)
+; Call right after LoadHpBarAndStatusTilePatterns (pret's combined
+; LoadHudAndHpBarAndStatusTilePatterns). In: EBP = GB base. All registers preserved.
+; ---------------------------------------------------------------------------
+section .text
+global LoadHudTilePatterns
+extern g_tilecache_dirty               ; src/ppu/ppu.asm — tile-cache invalidation flag
+LoadHudTilePatterns:
+    mov byte [g_tilecache_dirty], 1
+    push eax
+    push ecx
+    push esi
+    push edi
+
+    mov esi, battle_hud_tiles1_2bpp
+    lea edi, [ebp + GB_VCHARS2 + 0x6d * TILE_SIZE]
+    mov ecx, BATTLE_HUD_TILES1_SIZE / 4
+    rep movsd
+
+    mov esi, battle_hud_tiles23_2bpp
+    lea edi, [ebp + GB_VCHARS2 + 0x73 * TILE_SIZE]
+    mov ecx, BATTLE_HUD_TILES23_SIZE / 4
+    rep movsd
+
+    pop edi
+    pop esi
+    pop ecx
+    pop eax
+    ret

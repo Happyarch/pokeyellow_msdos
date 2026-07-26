@@ -22,16 +22,22 @@ bits 32
 global LoadFontTilePatterns
 global LoadTextBoxTilePatterns
 global LoadHpBarAndStatusTilePatterns
-global LoadHudTilePatterns
 global LoadStatusScreenHudTilePatterns
 extern g_tilecache_dirty
+; The battle HUD tile blob now lives with its pret owner, LoadHudTilePatterns in
+; engine/battle/core.asm — that routine sizes its copies with assembly-time
+; arithmetic on BATTLE_HUD_TILES*_SIZE, which cannot be done on an extern, so the
+; %include has to sit in the file that defines it. LoadStatusScreenHudTilePatterns
+; below uses only literal tile counts, so externing the two labels is enough here.
+extern battle_hud_tiles1_2bpp    ; src/engine/battle/core.asm
+extern battle_hud_tiles23_2bpp   ; src/engine/battle/core.asm
 
 section .data
 align 4
 %include "assets/font_1bpp.inc"
 %include "assets/font_extra_2bpp.inc"
 %include "assets/font_battle_extra_2bpp.inc"
-%include "assets/battle_hud_2bpp.inc"
+%include "assets/ptile_2bpp.inc"
 
 section .text
 
@@ -127,44 +133,11 @@ LoadHpBarAndStatusTilePatterns:
     ret
 
 ; ---------------------------------------------------------------------------
-; LoadHudTilePatterns — load the battle HUD frame/divider tiles (pret
-; engine/battle/core.asm:LoadHudTilePatterns + BattleHudTiles1/2/3). These overwrite
-; the font_extra placeholders ("ID No.") at $73/$74 with the real underline/corner
-; pieces the HP bar and pokéballs sit on. Source is pret's 1bpp data already expanded
-; to 2bpp by the generator (FarCopyDataDouble equivalent):
-;   battle_hud_tiles1  (3 tiles) → vChars2 tile $6d ($96d0)
-;   battle_hud_tiles23 (6 tiles) → vChars2 tile $73 ($9730)
-; Call right after LoadHpBarAndStatusTilePatterns (pret's combined
-; LoadHudAndHpBarAndStatusTilePatterns). In: EBP = GB base. All registers preserved.
-; ---------------------------------------------------------------------------
-LoadHudTilePatterns:
-    mov byte [g_tilecache_dirty], 1
-    push eax
-    push ecx
-    push esi
-    push edi
-
-    mov esi, battle_hud_tiles1_2bpp
-    lea edi, [ebp + GB_VCHARS2 + 0x6d * TILE_SIZE]
-    mov ecx, BATTLE_HUD_TILES1_SIZE / 4
-    rep movsd
-
-    mov esi, battle_hud_tiles23_2bpp
-    lea edi, [ebp + GB_VCHARS2 + 0x73 * TILE_SIZE]
-    mov ecx, BATTLE_HUD_TILES23_SIZE / 4
-    rep movsd
-
-    pop edi
-    pop esi
-    pop ecx
-    pop eax
-    ret
-
-; ---------------------------------------------------------------------------
 ; LoadStatusScreenHudTilePatterns — status/summary-screen HUD tiles.
 ;
 ; Faithful to pret engine/pokemon/status_screen.asm:StatusScreen, which — unlike the
-; battle LoadHudTilePatterns bundle above — issues FOUR separate CopyVideoDataDouble
+; battle LoadHudTilePatterns bundle (src/engine/battle/core.asm) — issues FOUR
+; separate CopyVideoDataDouble
 ; loads to DISCONTIGUOUS vChars2 slots so it does NOT clobber the font's <ID> ($73)
 ; and № ($74) glyphs that LoadHpBarAndStatusTilePatterns just placed:
 ;   BattleHudTiles1 (3 tiles)      -> vChars2 $6d   (·│  :L  ← halfarrow end)

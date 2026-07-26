@@ -14,6 +14,12 @@ Emits two labels (matching that split):
   battle_hud_tiles1_2bpp   — 3 tiles (battle_hud_1)        -> loaded at $6d
   battle_hud_tiles23_2bpp  — 6 tiles (battle_hud_2 + _3)   -> loaded at $73
 
+PTile (pret gfx/font/P.1bpp, the bold "P" of the status screen's "PP") used to ride
+along in this .inc, but it belongs to StatusScreen and not to the battle HUD bundle.
+It now has its own generator/blob, tools/generators/gen_ptile_inc.py ->
+assets/ptile_2bpp.inc, so that this .inc can be %included by the pret owner of
+LoadHudTilePatterns (src/engine/battle/core.asm) without dragging PTile into it.
+
 Pixel convention (same as gen_font_battle_extra_inc.py): PNG dark pixel -> on.
 Requires Pillow.  Run from the repo root: python3 dos_port/tools/generators/gen_battle_hud_inc.py
 """
@@ -41,19 +47,6 @@ def png_to_2bpp_doubled(path):
                     byte |= 0x80 >> col
             data.append(byte)                # low bitplane
             data.append(byte)                # high bitplane (doubled -> color 0/3)
-    return data
-
-
-def onebpp_to_2bpp_doubled(path):
-    """Expand a raw .1bpp tile blob (8 bytes/tile) to 2bpp by writing each byte to
-    both bitplanes (pret CopyVideoDataDouble / FarCopyDataDouble: color 0 or 3)."""
-    raw = Path(path).read_bytes()
-    if len(raw) % TILE_H:
-        sys.exit(f"{path}: expected a multiple of {TILE_H} bytes (1bpp tiles)")
-    data = bytearray()
-    for b in raw:
-        data.append(b)   # low bitplane
-        data.append(b)   # high bitplane (doubled -> color 0/3)
     return data
 
 
@@ -88,17 +81,9 @@ def main():
     out.append("BATTLE_HUD_TILES23_SIZE equ $ - battle_hud_tiles23_2bpp")
     out.append("")
 
-    # PTile (pret gfx/font/P.1bpp) — the bold "P" for the status-screen "PP" label.
-    # pret loads it to vChars2 $72 via a fourth CopyVideoDataDouble in StatusScreen
-    # (NOT part of the battle LoadHudTilePatterns bundle). 1 tile.
-    ptile = onebpp_to_2bpp_doubled(ROOT / "gfx/font/P.1bpp")
-    emit(out, "ptile_2bpp", ptile, "; 1 tile -> vChars2 tile $72 (bold P for PP)")
-    out.append("PTILE_2BPP_SIZE equ $ - ptile_2bpp")
-    out.append("")
-
     DST.parent.mkdir(parents=True, exist_ok=True)
     DST.write_text("\n".join(out) + "\n")
-    print(f"wrote {DST} (tiles1 {len(t1)}B, tiles23 {len(t23)}B, ptile {len(ptile)}B)")
+    print(f"wrote {DST} (tiles1 {len(t1)}B, tiles23 {len(t23)}B)")
 
 
 if __name__ == "__main__":
