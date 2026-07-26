@@ -43,6 +43,14 @@ git config pokeyellow.pretAllowlistApprovedSha256 \
 this hash in the retirement commit message on the first attempt and had to amend
 it — a hash written into prose is not evidence, wherever you read it.
 
+**You should not have to type it again.** s15 closed the hole in `3ac9b60a`:
+`.githooks/pre-commit` now computes and prints the hash, the row count and the
+exact bless command whenever the allowlist is staged, and the new
+`.githooks/prepare-commit-msg` appends the same measured facts to the commit
+message itself. Nothing between `sha256sum` and the message is hand-authored.
+Re-run `.githooks/test_prepare_commit_msg.sh` (13 assertions) if you touch
+either hook — both of its failure modes are silent.
+
 No `translation.db` restamp is stuck behind the block: s15 restamped in
 `67aac60c`, after its chunk and before its retirement.
 
