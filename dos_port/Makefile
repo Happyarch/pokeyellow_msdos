@@ -359,6 +359,7 @@ GAME_SRCS := \
     src/engine/link/cable_club.asm \
     src/engine/overworld/ledges.asm \
     src/home/pathfinding.asm \
+    src/engine/overworld/pathfinding.asm \
     src/engine/overworld/npc_movement_2.asm \
     src/engine/overworld/auto_movement.asm \
     src/home/overworld_text.asm \
