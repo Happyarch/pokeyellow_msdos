@@ -1,88 +1,92 @@
 # Handoff
 
-**This is the ONE handoff file. Overwrite it; do not create `handoff_s16.md`.**
+**This is the ONE handoff file. Overwrite it; do not create `handoff_s17.md`.**
 
 Sessions 10, 13 and 14 each left their own `handoff_s*.md` behind and nothing ever
-deleted them, so by s15 the repo root held three handoffs — one untracked and
-three sessions stale — with no way to tell from the filenames which was current.
-All three were purged. Rewrite *this* file at the end of your session. Anything
-that outlives one session belongs in **stigmergy**, not here; this is a pointer
-sheet, not a record.
+deleted them, so by s15 the repo root held three handoffs with no way to tell from
+the filenames which was current. All three were purged. Rewrite *this* file at the
+end of your session. Anything that outlives one session belongs in **stigmergy**,
+not here; this is a pointer sheet, not a record.
 
-**Written:** 2026-07-26 (session 15) · **Branch:** `master`
+**Written:** 2026-07-26 (session 16) · **Branch:** `master`
 
 Everything below is measured. **Re-measure anything you rely on**, including these
 numbers.
 
 ---
 
-## 1. Nothing is owed. The tree is green and unblocked.
+## 1. ONE THING IS OWED, AND IT BLOCKS ALL `dos_port/` COMMITS
 
-The maintainer blessed the 52-row allowlist mid-session, so:
+s16 ended with a registry retirement, so the allowlist hash no longer matches the
+maintainer's approval. Until it is re-blessed, `.githooks/pre-commit` **blocks
+every commit that stages anything under `dos_port/`**. Docs-only commits still
+land (that is how this file got committed).
 
 ```
-git config --get pokeyellow.pretAllowlistApprovedSha256
-sha256sum dos_port/tools/pret_label_allowlist.json
+git config --get pokeyellow.pretAllowlistApprovedSha256   # a3d2da9e… (old, 52 rows)
+sha256sum dos_port/tools/pret_label_allowlist.json        # 39015d46… (current, 41 rows)
 ```
 
-were **equal** at end of session → `registry_approval` 0, `static_gate` passes,
-`dos_port/` commits unblocked, no restamp pending. Run both anyway; this line goes
-stale the moment anyone retires a row. Live state lives in **one** memory now:
-`registry-approval-state`.
+**MAINTAINER ACTION — agents must never run this:**
 
-**You should never type that hash again.** `.githooks/pre-commit` now computes and
-prints it (plus the row count and the exact bless command) whenever the allowlist
-is staged, and the new `.githooks/prepare-commit-msg` appends the same measured
-facts to the commit message. Regression test:
-`.githooks/test_prepare_commit_msg.sh`, 13 assertions — re-run it if you touch
-either hook, because both of its failure modes are silent.
+```
+git config pokeyellow.pretAllowlistApprovedSha256 \
+  39015d46c97f1fc8cc6427fb424178d12ca28c6147f692f5858ef8aa94db9ad3
+```
+
+That hash was measured twice and the two agreed: `.githooks/prepare-commit-msg`
+computed it into the retirement commit (`8282a245`), and `sha256sum` was then run
+independently. Verify it yourself before blessing. Live state:
+memory **`registry-approval-state`** — do not re-derive it from this file.
+
+Do **not** reach for `--no-verify`. If you need to work before the bless, work on
+docs, memories, or read-only analysis.
 
 ---
 
-## 2. What s15 landed
+## 2. What s16 landed
 
 | commit | what |
 |---|---|
-| `ca0da4b7` | chunk 11 — names / names2 / item mirror repair, 6 rows, NEW mirror, `item_predicates.asm` deleted |
-| `67aac60c` | restamp `translation.db` |
-| `707dc237` | docs staleness sweep, handoff purge, one misleading skill claim |
-| `a561c72c` | registry retirement, 6 rows, **58 → 52** |
-| `3ac9b60a` | hooks compute the registry SHA-256 (+ checked-in test) |
-| `e58dadf1`, `a5c01595`, `d7d4cdaf` | handoff fixups |
+| `67a0bf81` | chunk 12 — `lcd_control.asm` → `home/lcd.asm`, `home/sprites.asm` → `home/clear_sprites.asm`, 4 rows, 2 pure renames |
+| `13379388` | restamp `translation.db` |
+| `1d3ab899` | chunk 13 — `copy` / `move_mon` / `movie/evolution` / `bills_pc`, 7 rows, 1 new mirror, `knows_hm_move.asm` deleted |
+| `de0fd511` | restamp `translation.db` |
+| `8282a245` | registry retirement, 11 rows, **52 → 41** |
 
-Debt **58 → 52**. Linked sources **249** (unchanged — the deleted file's
-`GAME_SRCS` slot went to the new mirror). Fallthrough **142**. `--strict-claims`
-at its standing **24** (21 `local_shadow` + 3 `hand_encoded_text`).
-`make fidelity-full`: `MAKE_EXIT=0`, census exactly **33 PASS**, read from the full
-log not a pipe.
+Debt **52 → 41**. Linked sources **249** throughout (chunk 13's deletion and its
+`bills_pc.asm` promotion cancel). Check-only sources **8 → 7**. Fallthrough
+**142**. `port_defs` 9195, `port_calls` 5217, `externs` 2370 — none moved, because
+all 11 labels were already `global`. `--strict-claims` at its standing **24**
+(21 `local_shadow` + 3 `hand_encoded_text`). `make fidelity-full` after each
+chunk: `MAKE_EXIT=0`, census exactly **33 PASS**, read from the full log.
 
-**Coverage 4/6.** `bag_menu` reaches `GetName`, `NamePointers`, `IsKeyItem`,
-`IsItemHM`. `IsMoveHM`/`HMMoves` are **not** executed — `RunTMHMTest`'s seed
-deliberately frees three move slots so `TryingToLearn` is never entered. For those
-two, green is a regression result only.
+**Coverage: chunk 12 4/4, chunk 13 4/7.** The 4/4 is the best this grind has had —
+`Init` calls `DisableLCD` and `ClearSprites` unconditionally, so they run in every
+scenario. Not executed: `CopyDataUntil`, `KnowsHMMove`, `HMMoveArray`; for those
+three the green suite is a regression result only.
 
 ---
 
 ## 3. Do this first
 
-Read memory **`relocated-labels-grind`** (chunking order, recipes, landmines), then
-**`static-gate-and-ci-wiring`** (the two gates, the `DECL_RE` rules that decide how
-you may cut a file), then **`shared-worktree-git-safety`** before deleting anything.
+Read memory **`relocated-labels-grind`** (chunking order, recipes, landmines),
+then **`registry-approval-state`** (§1 above), then **`static-gate-and-ci-wiring`**
+(the two gates, the `DECL_RE` rules that decide how you may cut a file), then
+**`shared-worktree-git-safety`** before deleting or renaming anything.
 
-**Chunk 12 is scoped and is the cheapest work left** — three files whose *entire*
-contents are the relocated pair, so two are pure renames and one is a merge:
+**Chunk 14 is scoped — 9 rows in four units — but it is a step up from 12/13:
+two of the four are genuine mixed-file extractions, not renames.**
 
 | rows | move |
 |---|---|
-| 2 | `src/video/lcd_control.asm` → **`src/home/lcd.asm`** (`DisableLCD`, `EnableLCD`) |
-| 2 | `src/home/sprites.asm` → **`src/home/clear_sprites.asm`** (`ClearSprites`, `HideSprites`) |
-| 2 | `src/home/map_text_pointer.asm` → merge into the **existing** `src/home/predef_text.asm` |
+| 3 | `src/engine/overworld/pikachu.asm` → **new** `src/engine/pikachu/pikachu_follow.asm` |
+| 2 | `src/engine/overworld/warp_check.asm` → merge into existing `src/engine/overworld/player_state.asm` |
+| 2 | `src/home/hidden_events.asm` → **split**, new `src/engine/overworld/hidden_events.asm` (two home labels STAY) |
+| 2 | `src/engine/overworld/ledges.asm` → merge into existing `player_animations.asm` (`HandleLedges` + 3 port-only tables STAY) |
 
-Sweep measured: `home/sprites.asm` has 12 provider comments + 2 bare ones, and
-**CLAUDE.md and AGENTS.md both cite `src/home/sprites.asm` by name** — live pointers
-that must move in the same commit. `lcd_control` ~17 mentions, `map_text_pointer` 4.
-
-Re-measure the clusters rather than trusting any list:
+Per-unit detail, including the `_SpawnPikachu` placement decision, is in the grind
+memory. Re-measure the clusters rather than trusting any list:
 
 ```sql
 select pret_file, count(*) from labels where status='relocated'
@@ -93,117 +97,93 @@ Biggest remaining after that: **`engine/overworld/sprite_collisions.asm`, 4 rows
 all inside a 1734-line `movement.asm` interleaved with pret labels. Still the first
 genuinely entangled unit. Budget a whole session; don't use it as a warm-up.
 
+**Do not re-scope chunk 12's third unit.** s15 planned
+`map_text_pointer.asm` → `predef_text.asm`; s16 measured that it is blocked, not
+merely unstarted — see §5.
+
 ---
 
-## 4. Traps s15 paid for
+## 4. Traps s16 paid for
 
-- **`--gates` is COMMA-separated.** A space-separated list is parsed as one name,
-  so you get `not gates in the Makefile: <everything you typed>` — reads like your
-  names are wrong when the separator is. `DEBUG_BATTLE_GOLDEN` is silently dropped
-  by design; its absence from the OK list is not a skip.
-- **`align 4` and plain `%if` are NOT declarations** to the move battery
-  (`DECL_RE` has `%ifdef`/`%ifndef`, not `%if`), so they must move verbatim.
-  `section .data` *is* one, so pinning it to the source and emitting a fresh one at
-  the destination is legal and costs +1.
-- **A file's NAME can lie about which mirror it is — every chunk since s14 has hit
-  this.** `src/home/names.asm` held pret `home/names2.asm`'s two labels as well as
-  its own, turning a "3-row cluster" into a 6-row three-way repair.
-- **An annotation's `pret=` can be wrong and the linter cannot tell** — it parses
-  the form, never the truth of the path. Re-check `pret=` whenever an annotation
-  travels with a moved routine.
-- **A scenario seed can deliberately defeat the branch you want to claim.** Read
-  the harness routine, not just the call graph.
-- **Never leave a hash-shaped hole in prose.** s15 fabricated a well-formed
-  SHA-256 into a commit message; a hash has no semantic content so a wrong one
-  looks exactly right. Fixed structurally (§1). Corollary: **record a commit id
-  only after the commit is final** — the amend that fixed the hash orphaned the id
-  already written into memory.
+- **A MERGE CAN SILENTLY UNLINK THE THING YOU ARE MOVING.** `knows_hm_move.asm`
+  existed only so `KnowsHMMove` could link while `bills_pc.asm` sat in
+  `POKEMON_CHECK_SRCS`. Merging back would have dropped it out of the binary with
+  no gate noticing. **Check which link list the destination is in before merging.**
+- **A stale Makefile comment is a load-bearing claim.** The stated reason
+  `bills_pc.asm` was check-only ("needs a link-ready `_MoveMon`…") was measurably
+  false — s14 chunk 10 had already fixed it. Measuring beat routing around it:
+  the file was promoted, `POKEMON_CHECK_SRCS` is now empty, and the merge came out
+  binary-neutral.
+- **A free edit is not a true edit.** Header rewrites are invisible to the line
+  invariant, and s16 twice caught *itself* writing confident header claims it had
+  not measured (wrong label names for `home/copy.asm`'s other two pret labels;
+  "three" above a list of four). Query the `labels` table and paste the answer.
+- **An inversion can be load-bearing.** `src/home/copy.asm` is not in pret order,
+  but swapping it would turn `FarCopyData`'s `jmp CopyData` into a fallthrough —
+  a shape change. Left alone, with the reason in the file header.
+- **A pointer can carry a LINE NUMBER.** `init_battle.asm` cited
+  `lcd_control.asm:38`; the header rewrite pushed that body line to 40, so fixing
+  only the path would have left it silently wrong. Re-derive the line.
+- **The sweep reaches outside `dos_port/src`** — `include/`, `tools/generators/`,
+  `CLAUDE.md`, `AGENTS.md` and `.claude/skills/` all held live pointers this time.
+- **Gate names are not what you'd guess.** It is `DEBUG_BAGMENU`, not
+  `DEBUG_BAG_MENU`, and there is no `DEBUG_OVERWORLD` — the plain-boot gate is
+  `DEBUG_BASELINE`. Read them out of `tools/scenario_manifest.json`.
 
-Still true: never read a suite result through a pipe; plain `lint_pret_labels`
+Still true: `--gates` is COMMA-separated and a space-separated list fails
+misleadingly; never read a suite result through a pipe; plain `lint_pret_labels`
 rescans the tracked DB (use `--no-scan`); don't invent a provider comment for an
-extern that had none; `git add` refuses a path already staged as a deletion; don't
-edit any source while `make fidelity-full` runs (15–20 min, rebuilds per scenario).
+extern that had none; `git add` refuses a path already staged as a deletion, so
+name it in `git commit --` only; don't edit any source while `make fidelity-full`
+runs (~15–20 min, rebuilds per scenario — docs and memories are safe).
+
+**And one about sequencing:** the retirement blocks `dos_port/` commits, so it is
+the natural *end* of code work for a session. Don't scope another chunk expecting
+to land it afterwards.
 
 ---
 
-## 5. Staleness patrols (s15)
+## 5. Findings s16 surfaced and did NOT fix
 
-**Docs.** 815 path references resolved across `CLAUDE.md`, `AGENTS.md`,
-`ROADMAP.md` and every `docs/current_plan_*.md`. **CLAUDE.md and AGENTS.md came
-back clean.** Fixed: 8 `tools/gen_*.py` → `tools/generators/`, `src/movie/` →
-`src/engine/movie/`, five archived-doc paths, `tools/gate` → `tools/static_gate`,
-`src/init/init.asm` → `src/home/init.asm`, plus three materially-wrong claims
-(ROADMAP calling the audio HAL unbuilt because it looked for a `.inc`;
-`current_plan_audio.md` citing a deleted `audio_stubs.asm` it contradicted itself
-about 300 lines later; `oak_intro` described twice as a disabled scaffold when it
-is enabled and passing). The `project-conventions` skill said the script-engine
-plan was "never archived, so do not go looking in `docs/plans/`" — it is at
-`docs/plans/current_plan_script_engine.md`.
-
-**Memories.** All ~84 project memories verified against the tree by three
-read-only agents; **12 corrected**. The ones that would have cost someone real
-time:
-
-- `port-predefs-as-inline-tables` said `IndexToPokedex` is a data table you must
-  never `call`. It is a **real routine with 12 correct call sites** — acting on the
-  old wording would have deleted them all.
-- `map-connection-border6-clamp-bug` was still filed as an open bug; fixed in
-  `397766ae`, and both constants it keyed on (`BORDER=6`, `_tgt < 2`) are gone.
-- `trainer-engine-m83-headers` pointed at `src/scripts/route_3.asm`, deleted the
-  same day it was written.
-- `pret-relocations-forbidden` named four structural findings; all retired,
-  `structural_findings` is `{}`.
-- `overworld-events-stage1-oak-intro-handoff` said the oak_intro golden is
-  disabled; it is active and passing.
-- `overworld-events-stage4-fly-arrival-open` said its work was uncommitted pending
-  verification; it was committed anyway, so **the Fly fix is in the linked build
-  and no scenario covers Fly, Teleport, Dig or any warp**.
-
-Also corrected: `battle-text-composed-in-code-audit` (its OPEN A was fixed two days
-earlier), `compositor-perf-invariants` (all four "unaudited VRAM writers" settled),
-`coord-macros-logic-audit` + `debug-walk-north-oob-path` (`MAP_BORDER` is 7; the
-harness moved), `project-mcp-debugger` (generator path + symbol count),
-`colorization-c0-c1-pipeline`, `yellow-intro-palette-mewmon-bug` (line refs, and it
-was stored with literal `\n` escapes), `pret-relocation-enforcement-escalation`,
-`ci-inert-until-master-is-pushed`, `menu-intro-devloop-review-findings`.
-
-**Structural fix, not just edits:** the registry approval state was embedded in two
-~600-line memories, so every bless invalidated a headline and forced a full
-rewrite — it went stale twice inside this one session. It now lives in its own
-small key, `registry-approval-state`, and both long memories delegate to it.
-
-**Recurring shapes worth knowing** (they will recur): a per-stage handoff memory
-nobody closed when the next stage landed; a "still OPEN" item fixed days later by
-someone who never looked for the memory; a canonical example that inverted; and
-generator paths left behind by the `tools/` → `tools/generators/` move. **When you
-fix something, grep the memory list and close the entry in the same commit.**
-
-**Left unfixed deliberately:** `faint_sendout.asm`, `intro_anim_data.asm` and
-`bg_anim.asm` are cited by plans but survive only as stale `.o` artifacts with no
-source — no correct replacement exists to write. Six bare `overworld.asm` citations
-are genuinely two-way ambiguous inside `dos_port/src/`.
+- **`home/predef_text.asm`'s 2 rows are blocked, not pending.**
+  `src/home/predef_text.asm` is in `HOME_CHECK_SRCS` because `PrintPredefTextID`
+  externs `TextPredefs` (pret `data/text_predef_pointers.asm`, 69 `add_tx_pre`
+  entries) — and **68 of those 69 text labels exist nowhere in `dos_port/src` or
+  `dos_port/assets`**. Merging `map_text_pointer.asm` in would either unlink
+  `Set`/`RestoreMapTextPointer` (the SAVE flow's `ChangeBox` needs them live) or
+  require porting the predef-text table, which is script-engine work.
+- `CopyVideoDataAlternate` and `CopyVideoDataDoubleAlternate` (pret
+  `home/copy.asm`) are `missing` — unported, no callers.
+- `bills_pc.asm` being linked puts three port-only routines
+  (`BillsPCDepositLogic` / `WithdrawLogic` / `ReleaseLogic`) with zero callers
+  into the binary as dead bytes. Harmless, stated in the chunk 13 commit.
 
 ---
 
 ## 6. Still open, not started
 
 - **Phase 2** — the 21 `local_shadow` findings, all one shape (pret label defined
-  in a generated `assets/*.inc`, provider picked as the `.asm` that `%include`s it),
-  so probably one provider-picker bug.
+  in a generated `assets/*.inc`, provider picked as the `.asm` that `%include`s
+  it), so probably one provider-picker bug.
 - **Phase 3** — the 82 stubs. Retiring one means implementing the routine (32 are
   `hidden_object_stubs.asm`), so it collides with the feature freeze and needs its
   own conversation.
-- **CI has never run.** `origin/master` is 292 commits behind (last push
-  2026-07-17); the action is *push*, not "set the variable" —
-  `ci-inert-until-master-is-pushed` ranks what it would actually buy. A known
-  pre-existing gap: `pre-commit` exits early when nothing under `dos_port/` is
-  staged, so an amend that changes no `dos_port/` content never re-runs the gate.
-- **Fly/warp is entirely ungated** (see §5). A warp golden is the retirement.
+- **CI has never run.** `origin/master` is far behind (last push 2026-07-17); the
+  action is *push*, not "set the variable" — `ci-inert-until-master-is-pushed`
+  ranks what it would actually buy. Known pre-existing gap: `pre-commit` exits
+  early when nothing under `dos_port/` is staged, so an amend that changes no
+  `dos_port/` content never re-runs the gate.
+- **Fly/warp is entirely ungated.** No scenario covers Fly, Teleport, Dig or any
+  warp. A warp golden is the retirement.
 - Carried: `RestoreScreenTilesAndReloadTilePatterns` drops its
   `call RunDefaultPaletteCommand`; `GBPalNormal` drops three `UpdateCGBPal_*` calls
   its neighbour makes; `src/engine/battle/core.asm` is not in pret order;
   `GetMonLearnset_Evo` has zero callers tree-wide; the Yellow intro still renders
   in Mew's palette (Phase-5 CGB gap).
+- Docs staleness, remaining because each needs a decision not a sweep:
+  `faint_sendout.asm`, `intro_anim_data.asm` and `bg_anim.asm` are cited by plans
+  but survive only as stale `.o` artifacts with no source; six bare
+  `overworld.asm` citations are genuinely two-way ambiguous inside `dos_port/src/`.
 
 ---
 
@@ -215,4 +195,4 @@ are genuinely two-way ambiguous inside `dos_port/src/`.
 
 `docs/menu_intro_plan.md` is stale (it describes `dos_port/src/movie/title.asm`, a
 path that has not existed for some time). None were in scope; left for the
-maintainer.
+maintainer. Unchanged since s15 flagged them.
