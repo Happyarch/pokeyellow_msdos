@@ -66,16 +66,27 @@ jobs:
           ref: ${{ env.rgbds_version }}
           repository: gbdev/rgbds
 
-      # python3-pil is REQUIRED, not optional: several asset generators import PIL
-      # at module scope (tools/generators/gen_palettes.py, gen_battle_hud_inc.py,
-      # and the whole tools/gfx_core/ package -- font/tiles/tilesets/surface/
-      # battle_tiles). assets/colors/palettes.inc is in the `assets` chain, so
-      # without Pillow `make -C dos_port assets` dies with
-      # ModuleNotFoundError: No module named 'PIL'.
+      # The python3-* packages are REQUIRED, not optional. `make -C dos_port assets`
+      # runs generators that import third-party modules at module scope, and each
+      # missing one kills the step. Derived by scanning every import under
+      # dos_port/tools/ (excluding the vendored mgba/dosbox-x/unicode_converter
+      # trees) against sys.stdlib_module_names, then checking reachability from the
+      # assets target:
+      #   python3-pil   -- tools/generators/gen_palettes.py:7, gen_battle_hud_inc.py,
+      #                    and all of tools/gfx_core/ (font/tiles/tilesets/surface/
+      #                    battle_tiles). assets/colors/palettes.inc is in the chain.
+      #   python3-numpy -- tools/audio/gen_pika_pcm.py:28, which builds
+      #                    assets/pika_pcm.inc (Makefile:1884).
+      # NOT needed here, and deliberately not installed:
+      #   PyYAML  -- already present on ubuntu-latest (proven: gen_mt32_patches.py,
+      #              which imports yaml, ran to completion in run 30313580238).
+      #   pygame  -- imported lazily inside a function (gfx_core/surface.py:100),
+      #              so only the interactive editors reach it, never `make assets`.
+      #   mcp, requests -- dev tooling only (dosbox_mcp/mgba_mcp servers).
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -yq bison libpng-dev pkg-config nasm python3 python3-pil
+          sudo apt-get install -yq bison libpng-dev pkg-config nasm python3 python3-pil python3-numpy
 
       - name: Install rgbds
         working-directory: rgbds
