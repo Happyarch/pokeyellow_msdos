@@ -76,40 +76,78 @@ Linked sources **249 → 251** (−2 deleted, +4 new). Fallthrough **142**. `por
 
 ---
 
-## 3. Do this first — nothing is pre-scoped, and that is deliberate
+## 3. Do this first — chunk 17 is scoped and measured, 7 rows
 
-s16 handed s17 a scoped chunk. s17 does **not** do the same: the remaining 18 rows
-have no clean multi-row unit left, so the right batching depends on your session
-budget. Re-measure and choose:
+s17 measured the remaining debt properly and it is smaller work than advertised.
+Full per-unit detail in memory **`relocated-labels-grind`**. Re-measure before
+cutting, but the shape is settled.
 
-```
-select pret_file, count(*) from labels where status='relocated'
-group by pret_file order by 2 desc, 1;
-```
+**UNIT A — the `movement.asm` cluster. 5 rows, TWO new mirrors.**
 
-**The cheapest row on the board is `home/fade_audio.asm` (`FadeOutAudio`).** It
-sits in `src/home/audio.asm` — the file chunk 16 already cut — so its extraction
-shape is known and its provider sweep is small. s17 deliberately left it because
-the maintainer had scoped c16 to three units and deferred singletons; the cost
-argument for deferring it no longer holds.
+| new mirror | gets |
+|---|---|
+| `src/engine/overworld/sprite_collisions.asm` | `_UpdateSprites`, `UpdateNonPlayerSprite`, `DetectCollisionBetweenSprites`, `SetSpriteCollisionValues` |
+| `src/home/update_sprites.asm` | `UpdateSprites` (a 16-line bank-shuffle wrapper — separate pret file, so a separate mirror even though it sits adjacent) |
 
-Read memory **`relocated-labels-grind`** (recipes, landmines, the full c16 record),
-then **`registry-approval-state`** (§1), then **`static-gate-and-ci-wiring`**, then
-**`shared-worktree-git-safety`**.
+All five come out of `src/engine/overworld/movement.asm`. Measured:
+
+- they sit in **two contiguous blocks**, lines 145–254 and 1474–EOF; the 33 labels
+  that stay are one contiguous middle run.
+- **six cross-cut edges total** — 4 out, 2 back.
+- **zero fallthrough straddles the cut** (all 3 pairs are between labels that stay).
+- one `section .text`, no `.data`/`.bss` — no private data to carry.
+- **the port has two of them inverted vs pret** (`SetSpriteCollisionValues` before
+  `DetectCollisionBetweenSprites`). A new mirror has no excuse — reorder on the way
+  in; verify `SetSpriteCollisionValues` ends in `ret` first.
+- pret's other two labels, `Func_4d0a` and `SpriteCollisionBitTable`, are `missing`
+  **by design** — inlined into the port's bespoke `DetectCollisionBetweenSprites`,
+  already documented at `movement.asm:1664` and `:1712`. Say so in the header; do
+  not try to extract them.
+
+**UNIT B — the `move_effect_helpers.asm` pair. 2 rows, the file EMPTIES and is DELETED.**
+
+`EffectCallBattleCore` → `src/engine/battle/move_effects/reflect_light_screen.asm`
+(exists); `Bankswitch` → new `src/home/bankswitch2.asm`. That 54-line file's only
+two column-0 labels are these two — same shape as `frame.asm` and
+`knows_hm_move.asm`. Grep the Makefile for it before starting.
+
+Read memory **`relocated-labels-grind`**, then **`registry-approval-state`**, then
+**`static-gate-and-ci-wiring`**, then **`shared-worktree-git-safety`**.
 
 ---
 
-## 4. What's left — 18 rows, and it gets harder per row
+## 4. What's left after chunk 17 — and chunk 18 finishes the grind
 
-| rows | what | note |
-|---|---|---|
-| 4 | `engine/overworld/sprite_collisions.asm` | **hard** — all inside a 1734-line `movement.asm` interleaved with pret labels. The one genuinely entangled unit. Budget a whole session |
-| 2 | `home/predef_text.asm` | **BLOCKED, do not re-scope** — needs the unported 69-entry `TextPredefs` table; 68 of its 69 targets exist nowhere in the port |
-| 12 | singletons | one row each, across battle / overworld / home |
+**Chunk 18 = the 9 remaining singletons, batched into ONE chunk and ONE suite run.**
+Measured sweep surface across all nine is **11 extern lines** — against chunk 16's
+~95. They are cheap.
 
-**Cost warning:** c12–c16 averaged 6–9 rows each because whole files and clean
-pairs were still available. Those are gone. Batch several singletons into **one**
-chunk and **one** suite run.
+| label | → mirror | callers | externs |
+|---|---|---|---|
+| `MoveAnimationTiles1` | `engine/battle/animations.asm` | 0 | 1 |
+| `DisplayUsedMoveText` | `engine/battle/used_move_text.asm` | 2 | 0 |
+| `LoadPokedexTilePatterns` | `engine/gfx/load_pokedex_tiles.asm` | 4 | 0 |
+| `DiscardButtonPresses` | `engine/joypad.asm` | 3 | 1 |
+| `PrintStatsBox` | `engine/pokemon/status_screen.asm` | 2 | 2 |
+| `FadeOutAudio` | `home/fade_audio.asm` | 1 | 1 |
+| `EndNPCMovementScript` | `home/npc_movement.asm` | 2 | 0 |
+| `FarPrintText` | `home/print_num.asm` | 0 | 0 |
+| `PrintLetterDelay` | `home/print_text.asm` | 4 | 2 |
+
+**After chunk 18 the grind is done except for `home/predef_text.asm`'s 2 rows**,
+which are **BLOCKED, do not re-scope** — they need the unported 69-entry
+`TextPredefs` table; 68 of its 69 targets exist nowhere in the port.
+
+**⚠ A CORRECTION YOU ARE INHERITING.** Every handoff since s16 called
+`sprite_collisions.asm` "the one genuinely entangled unit — budget a whole session."
+**That was measured false in s17.** It had been inferred from two numbers ("4 rows",
+"1734-line file") and restated across five documents until it read as measured.
+Disproving it cost two queries. Before you inherit a difficulty rating, map the
+labels: a file's *length* says nothing about how entangled *your* labels are in it.
+
+**Keep this in proportion.** Relocation debt was always the cheapest tier — it is
+bookkeeping, not implementation. The real remaining work is 82 stubs and 1606
+`missing` labels, neither started. Do not read "95% retired" as "95% done".
 
 ---
 
