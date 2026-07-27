@@ -3,7 +3,7 @@
 ; Register map: A=AL, BC=BX, DE=DX, HL=ESI, EBP = GB memory base.
 
 %include "gb_memmap.inc"
-%include "m8_2_pending_symbols.inc"   ; OPP_* trainer ids
+%include "gb_constants.inc"           ; OPP_* trainer ids
 %include "assets/audio_constants.inc"
 
 global PlayBattleMusic

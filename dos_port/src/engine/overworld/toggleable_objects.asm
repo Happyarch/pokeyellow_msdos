@@ -33,7 +33,6 @@ bits 32
 %include "gb_memmap.inc"
 %include "gb_constants.inc"                  ; FLAG_SET / FLAG_RESET / FLAG_TEST
 %include "gb_macros.inc"
-%include "m8_2_pending_symbols.inc"          ; wToggleableObjectIndex
 
 %ifndef FIRST_ROUTE_MAP
 FIRST_ROUTE_MAP     equ 0x0C  ; constants/map_constants.asm (after UNUSED_MAP_0B)

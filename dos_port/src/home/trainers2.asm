@@ -16,7 +16,6 @@ bits 32
 
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
-%include "m8_2_pending_symbols.inc"   ; ROCKET, OPP_ID_OFFSET-era symbols
 
 extern GetTrainerName_          ; src/engine/battle/get_trainer_name.asm
 extern TrainerPicPointers       ; src/data/trainer_pics.asm  (flat dd, index=class-1)

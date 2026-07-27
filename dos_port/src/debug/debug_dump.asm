@@ -23,7 +23,6 @@ bits 32
 %include "gb_constants.inc"
 %ifdef DEBUG_MAPSCRIPT_SIGHT
 ; Trainer-flow WRAM addresses the shared memmap has not absorbed yet (M8.2 scaffold).
-%include "m8_2_pending_symbols.inc"
 %endif
 
 extern ds_base

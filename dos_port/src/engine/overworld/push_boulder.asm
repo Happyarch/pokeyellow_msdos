@@ -37,7 +37,6 @@ bits 32
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
 %include "gb_macros.inc"
-%include "m8_2_pending_symbols.inc"        ; hJoyHeld, PAD_CTRL_PAD
 %include "assets/audio_constants.inc"       ; SFX_PUSH_BOULDER, SFX_CUT
 
 ; --- symbols not yet in the shared headers (pret constants/*.asm, sym-verified) ---

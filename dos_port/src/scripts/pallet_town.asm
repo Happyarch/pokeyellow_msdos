@@ -25,7 +25,6 @@ bits 32
 %include "assets/audio_constants.inc"
 %include "assets/event_constants.inc"
 %include "events.inc"
-%include "m8_2_pending_symbols.inc"   ; wSpriteIndex / wToggleableObjectIndex / emotion bubble scratch
 
 global PalletTownOakText
 global PalletTown_Script

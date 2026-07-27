@@ -15,7 +15,6 @@ bits 32
 
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
-%include "m8_2_pending_symbols.inc"   ; wWhichEmotionBubble/wEmotionBubbleSpriteIndex
 
 extern CopyVideoData            ; src/home/copy2.asm: ESI=dst VRAM offset, EDX=flat src, BL=tile count
 extern WriteOAMBlock            ; src/home/oam.asm (flat tile/attr source in EDX)

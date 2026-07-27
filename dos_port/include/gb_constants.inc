@@ -680,4 +680,34 @@ FOSSIL_KABUTOPS         equ 0xB6
 FOSSIL_AERODACTYL       equ 0xB7
 MON_GHOST               equ 0xB8
 
+; ---------------------------------------------------------------------------
+; Trainer classes and opponent ids (constants/trainer_constants.asm).
+; Folded in 2026-07-27 from the retired include/m8_2_pending_symbols.inc scaffold.
+; pret builds these with the `trainer_const` macro as OPP_x = OPP_ID_OFFSET + x,
+; so they are written that way here rather than as bare decimals — the class id in
+; each comment is pret's own $xx, which makes every line checkable against
+; constants/trainer_constants.asm instead of trusted.
+; ---------------------------------------------------------------------------
+OPP_ID_OFFSET           equ 200
+ROCKET                  equ 0x1E   ; trainer class $1E (IsFightingJessieJames)
+OPP_LASS                equ OPP_ID_OFFSET + 0x03
+OPP_JR_TRAINER_F        equ OPP_ID_OFFSET + 0x06
+OPP_UNUSED_JUGGLER      equ OPP_ID_OFFSET + 0x0D
+OPP_GAMBLER             equ OPP_ID_OFFSET + 0x11
+OPP_BEAUTY              equ OPP_ID_OFFSET + 0x12
+OPP_ROCKER              equ OPP_ID_OFFSET + 0x14
+OPP_JUGGLER             equ OPP_ID_OFFSET + 0x15
+OPP_RIVAL1              equ OPP_ID_OFFSET + 0x19
+OPP_CHIEF               equ OPP_ID_OFFSET + 0x1B
+OPP_SCIENTIST           equ OPP_ID_OFFSET + 0x1C
+OPP_GIOVANNI            equ OPP_ID_OFFSET + 0x1D
+OPP_ROCKET              equ OPP_ID_OFFSET + ROCKET
+OPP_COOLTRAINER_F       equ OPP_ID_OFFSET + 0x20
+OPP_RIVAL2              equ OPP_ID_OFFSET + 0x2A
+OPP_RIVAL3              equ OPP_ID_OFFSET + 0x2B
+OPP_LANCE               equ OPP_ID_OFFSET + 0x2F   ; plays the gym-leader battle theme
+
+; Gym-leader name/city field width (constants/text_constants.asm:7).
+GYM_CITY_LENGTH         equ 17
+
 %endif ; GB_CONSTANTS_INC

@@ -72,7 +72,6 @@ bits 32
 
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
-%include "m8_2_pending_symbols.inc"   ; ROOT: fold into gb_memmap/gb_constants, then delete
 %include "assets/audio_constants.inc" ; MUSIC_MEET_* ids (generated, Tier-1)
 
 ; ----------------------------------------------------------------------------
@@ -594,15 +593,17 @@ SaveEndBattleTextPointers:
 ; EngageMapTrainer — load the engaged trainer's class/set + play battle music.
 ; pret: home/trainers.asm:EngageMapTrainer
 ; In: wSpriteIndex = engaged trainer's sprite id.  Reads wMapSpriteExtraData[(idx-1)*2].
-; ⚠ THE ARRAY IS FLAT .bss, NOT GB WRAM, and this file cannot reach it by its pret
-; name: include/m8_2_pending_symbols.inc defines `wMapSpriteExtraData equ 0xD503`
-; (pret's WRAM address), which nothing in the port ever writes. Reading
-; [ebp + wMapSpriteExtraData] therefore returned unwritten emulated RAM — zeros —
-; which is exactly what the route3_sight golden caught (want class $CA set $04, got
-; $00/$00). Use the port-only flat alias `map_sprite_extra_data`, which
-; map_sprites.asm exports alongside the pret name for precisely this case; the writer
+; ⚠ THE ARRAY IS FLAT .bss, NOT GB WRAM — read it flat, never as [ebp + …].
+; This file used not to reach it by its pret name at all: include/m8_2_pending_symbols.inc
+; defined `wMapSpriteExtraData equ 0xD503` (pret's WRAM address), which nothing in the
+; port ever writes, so `[ebp + wMapSpriteExtraData]` returned unwritten emulated RAM —
+; zeros — which is exactly what the route3_sight golden caught (want class $CA set $04,
+; got $00/$00). That scaffold was deleted 2026-07-27 and the shadowing equ was NOT
+; folded into gb_memmap.inc, so the pret name now resolves to the real .bss label.
+; The code below keeps the port-only flat alias `map_sprite_extra_data`, which
+; map_sprites.asm exports alongside the pret name at the same address; the writer
 ; (LoadSprite, overworld.asm) and the other reader (TrainerEncounterFlow) both index
-; the flat array.
+; the flat array too.
 ; NOTE: wMapSpriteExtraData is populated by InitMapSprites (M8.1) from the map
 ;       object binary's trainer class/set pairs.
 ; ----------------------------------------------------------------------------

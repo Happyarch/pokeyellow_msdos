@@ -24,45 +24,17 @@
 ;                           src/engine/overworld/npc_movement_2.asm
 ; ---------------------------------------------------------------------------
 
-; ---- TODO(root): promote to gb_memmap.inc ----------------------------------
-; wCurMap and wEngagedTrainerClass already exist in gb_memmap.inc — reused as-is.
-;
-; wSpriteIndex / hSpriteIndex: not yet in gb_memmap.inc. Values below match the
-; existing %ifndef-guarded copies already carried in m1_3_pending_symbols.inc /
-; m8_2_pending_symbols.inc (both agree), so this file's copy is consistent with
-; those pending root-integrations rather than introducing a third address.
-%ifndef wSpriteIndex
-wSpriteIndex            equ 0xCF13   ; pret ram/wram.asm:1198 (db)
-%endif
-%ifndef hSpriteIndex
-hSpriteIndex            equ 0xFF8C   ; pret ram/hram.asm:65 (db) — ASSERT == hTextID slot
-%endif
-
-; POKEMON_TOWER_7F: map id constant (constants/map_constants.asm:234, "; $94"
-; comment in the pret source — confirmed sequential against the surrounding
-; POKEMON_TOWER_2F..6F entries, $8F..$93).
-%ifndef POKEMON_TOWER_7F
-POKEMON_TOWER_7F         equ 0x94
-%endif
-
-; OPP_RIVAL1/2/3: trainer_const RIVAL1/2/3 (constants/trainer_constants.asm:42,
-; 59, 60 -> class ids $19/$2A/$2B) run through `trainer_const`'s
-; `OPP_\1 EQU OPP_ID_OFFSET + \1` (OPP_ID_OFFSET = 200, line 1):
-;   OPP_RIVAL1 = 200 + 0x19 (25) = 225 = 0xE1
-;   OPP_RIVAL2 = 200 + 0x2A (42) = 242 = 0xF2
-;   OPP_RIVAL3 = 200 + 0x2B (43) = 243 = 0xF3
-%ifndef OPP_RIVAL1
-OPP_RIVAL1               equ 0xE1
-%endif
-%ifndef OPP_RIVAL2
-OPP_RIVAL2               equ 0xF2
-%endif
-%ifndef OPP_RIVAL3
-OPP_RIVAL3               equ 0xF3
-%endif
-; ---------------------------------------------------------------------------
+; This file used to carry its own %ifndef copies of wSpriteIndex, hSpriteIndex,
+; POKEMON_TOWER_7F and OPP_RIVAL1/2/3 under a "TODO(root): promote to gb_memmap.inc"
+; banner. That promotion happened 2026-07-27, so the copies are gone and the
+; canonical headers below are the only definition of each:
+;   wSpriteIndex / hSpriteIndex  -> gb_memmap.inc (hSpriteIndex is the hTextID slot)
+;   OPP_RIVAL1/2/3               -> gb_constants.inc, as OPP_ID_OFFSET + $19/$2A/$2B
+;   POKEMON_TOWER_7F             -> assets/map_dims.inc (generated; the two-tier source)
 
 %include "gb_memmap.inc"
+%include "gb_constants.inc"           ; OPP_RIVAL1/2/3
+%include "assets/map_dims.inc"        ; POKEMON_TOWER_7F
 
 global SetEnemyTrainerToStayAndFaceAnyDirection
 extern SetSpriteMovementBytesToFF ; src/home/map_objects.asm

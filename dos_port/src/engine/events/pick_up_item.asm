@@ -30,7 +30,6 @@
 bits 32
 
 %include "gb_memmap.inc"
-%include "m8_2_pending_symbols.inc"   ; wToggleableObjectList/Index, wMapSpriteExtraData
 
 section .text
 
@@ -70,13 +69,14 @@ PickUpItem:
     mov al, [ebp + esi]                  ; ld a, [hl]  (toggleable-object index)
     mov [ebp + hToggleableObjectIndex], al   ; ldh [hToggleableObjectIndex], a
 
-    ; ⚠ FLAT array, NOT GB WRAM — and this file cannot reach it by its pret name.
-    ; m8_2_pending_symbols.inc (included above) binds `wMapSpriteExtraData` to pret's
-    ; WRAM address $D503, which the port never writes: the real array is flat .bss in
-    ; map_sprites.asm, filled by LoadSprite. So `mov esi, wMapSpriteExtraData` +
-    ; `[ebp + esi]` read unwritten emulated RAM and every item ball handed GiveItem
-    ; the item id 0. Same defect the route3_sight golden caught in EngageMapTrainer
-    ; (src/home/trainers.asm); same fix — the port-only flat alias.
+    ; ⚠ FLAT array, NOT GB WRAM — read it flat, never as [ebp + esi].
+    ; This used to be unreachable by its pret name here: m8_2_pending_symbols.inc bound
+    ; `wMapSpriteExtraData` to pret's WRAM address $D503, which the port never writes,
+    ; so `mov esi, wMapSpriteExtraData` + `[ebp + esi]` read unwritten emulated RAM and
+    ; every item ball handed GiveItem the item id 0 — the same defect the route3_sight
+    ; golden caught in EngageMapTrainer (src/home/trainers.asm). That scaffold was
+    ; deleted 2026-07-27 and the shadowing equ was not reinstated, so the pret name now
+    ; reaches the real .bss array; the flat alias below is the same address either way.
     mov esi, map_sprite_extra_data       ; ld hl, wMapSpriteExtraData
     mov al, [ebp + hSpriteIndex]         ; ldh a, [hSpriteIndex]
     dec al                               ; dec a

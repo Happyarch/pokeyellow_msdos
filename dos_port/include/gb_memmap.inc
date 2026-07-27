@@ -1451,11 +1451,13 @@ W_STATUS_FLAGS_7             equ 0xD732 ; wStatusFlags7
 W_ELITE4_FLAGS               equ 0xD733 ; wElite4Flags
 
 ; wStatusFlags bit indices (constants/ram_constants.asm) — consumed by EnterMap (OW-A.4).
-; Some of these are ALSO defined (same value) in gb_constants.inc / m1_3 / m8_2 pending-
-; symbol files; NASM permits an `equ` redefinition to the identical value, so a file
-; including both is fine. Duplicated here so overworld.asm (which includes only
-; gb_memmap.inc + gb_macros.inc) sees them. Fold the pending-symbol copies in as those
-; lanes integrate.
+; Some of these are ALSO defined (same value) in gb_constants.inc / m1_3_pending_symbols.inc
+; or under a local %ifndef in a consumer; NASM permits an `equ` redefinition to the
+; identical value (verified 2026-07-27: same value assembles, a differing one is a hard
+; "inconsistently redefined" error), so a file including both is fine. Duplicated here so
+; overworld.asm (which includes only gb_memmap.inc + gb_macros.inc) sees them.
+; The m8_2 copies were folded in 2026-07-27 when that scaffold was deleted; m1_3 is the
+; last pending-symbol file left to integrate the same way.
 BIT_WILD_ENCOUNTER_COOLDOWN  equ 0 ; wStatusFlags2 bit 0 — grants 3 no-battle steps (dup: gb_constants.inc)
 BIT_NO_NPC_FACE_PLAYER       equ 5 ; wStatusFlags3 bit 5 — suppress NPC-face-player on this entry
 BIT_TALKED_TO_TRAINER        equ 6 ; wStatusFlags3 bit 6 — talked to a trainer this encounter (OW-A.6)
@@ -1469,8 +1471,14 @@ BIT_ESCAPE_WARP              equ 6 ; wStatusFlags6 bit 6 — Escape Rope / black
 %ifndef BIT_NO_MAP_MUSIC
 BIT_NO_MAP_MUSIC             equ 1 ; wStatusFlags7 bit 1 — suppress this map's default music
 %endif
-BIT_CUR_MAP_LOADED_1         equ 5 ; wCurrentMapScriptFlags bit 5 (dup: m8_2_pending_symbols.inc)
-BIT_CUR_MAP_LOADED_2         equ 6 ; wCurrentMapScriptFlags bit 6 (dup: m8_2_pending_symbols.inc)
+BIT_CUR_MAP_LOADED_1         equ 5 ; wCurrentMapScriptFlags bit 5 (dup: main_menu.asm, specific_script_flags.asm)
+BIT_CUR_MAP_LOADED_2         equ 6 ; wCurrentMapScriptFlags bit 6 (dup: specific_script_flags.asm)
+; Folded in from m8_2_pending_symbols.inc 2026-07-27 (constants/ram_constants.asm).
+BIT_SEEN_BY_TRAINER          equ 0 ; wMiscFlags bit 0 — ram_constants.asm:8
+BIT_PRINT_END_BATTLE_TEXT    equ 7 ; wStatusFlags3 bit 7
+BIT_UNKNOWN_4_1              equ 1 ; wStatusFlags4 bit 1 (dup: start_sub_menus.asm)
+BIT_UNKNOWN_5_4              equ 4 ; wStatusFlags5 bit 4
+BIT_USE_CUR_MAP_SCRIPT       equ 4 ; wStatusFlags7 bit 4
 
 ; Screen-area size constant (used by save/restore functions).
 SCREEN_AREA              equ SCREEN_TILES_W * SCREEN_TILES_H  ; 40 * 25 = 1000
@@ -1971,5 +1979,61 @@ wDayCareMonMoves             equ 0xDA66
 wEvolutionOccurred            equ 0xD120 ; set when a mon evolved this EvolutionAfterBattle
 wPikachuMood                  equ 0xD470
 wPikachuEmotionModifier       equ 0xD49B
+
+; ---------------------------------------------------------------------------
+; Trainer-header / trainer-sight / emotion-bubble / toggleable-object scratch.
+;
+; Folded in 2026-07-27 from the retired include/m8_2_pending_symbols.inc scaffold
+; (M8.2, trainer-header engine), which was its own header's step 1: "move every
+; WRAM/HRAM symbol into gb_memmap.inc and every constant into gb_constants.inc,
+; then DELETE this include". Every address was resolved against the golden
+; pokeyellow.sym during the M8.2 promotion (2026-07-24); those citations are kept
+; verbatim below, because they are what makes each one checkable.
+;
+; Two of the scaffold's symbols were dropped rather than folded in — both had
+; zero users:
+;   * wEventFlags — superseded by W_EVENT_FLAGS + its alias below.
+;   * wMapSpriteExtraData equ 0xD503 — a TRAP, deliberately not reinstated. The
+;     port's array is flat .bss (src/engine/overworld/map_sprites.asm), and that
+;     equ shadowed the real label's pret name with an emulated-WRAM address the
+;     port never writes. It cost two silent bugs (EngageMapTrainer, PickUpItem;
+;     the route3_sight golden caught the first). With the scaffold gone, the pret
+;     name reaches the real array again — do not redefine it here.
+; ---------------------------------------------------------------------------
+wJoyIgnore                    equ W_JOY_IGNORE     ; golden 00:cd6b (pret alias)
+wStatusFlags3                 equ W_STATUS_FLAGS_3 ; golden 00:d72c (pret alias)
+wEventFlags                   equ W_EVENT_FLAGS    ; golden 00:d746 (pret alias)
+wCurMapScript                 equ 0xDA38   ; golden 00:da38
+wTrainerHeaderFlagBit         equ 0xCC55   ; golden 00:cc55
+wEnemyMonOrTrainerClass       equ 0xD712   ; golden 00:d712 — pret keeps this as a copy
+                                           ;  SEPARATE from wCurOpponent precisely because
+                                           ;  wCurOpponent is cleared before
+                                           ;  EndTrainerBattle reads the class back
+; The end-battle text slots are flat-adapted (dd, 4 bytes each), so only the win
+; pointer keeps its golden base; lose/bank shift by the +2/+4 widening. All three
+; land in the golden gap d08b..d094 (wOptionsInitialized 0xD089,
+; W_SLOT_MACHINE_ALLOW_MATCHES_COUNTER 0xD095 — no overlap).
+wEndBattleWinTextPointer      equ 0xD08B   ; golden 00:d08b (dw)   ** flat-adapted: 4 bytes **
+wEndBattleLoseTextPointer     equ 0xD08F   ; golden 00:d08d +2     ** flat-adapted: 4 bytes **
+wEndBattleTextRomBank         equ 0xD093   ; golden 00:d091 +2
+wGymCityName                  equ 0xCF5E   ; golden 00:cf5e
+wGymLeaderName                equ 0xCF6F   ; golden 00:cf6f
+wToggleableObjectIndex        equ 0xCC4D   ; golden 00:cc4d
+wToggleableObjectList         equ 0xD5CD   ; golden 00:d5cd (ds 16*2+1)
+; golden 00:d032, but the flat dd widening (4 bytes) would overlap wLearnMoveMonName
+; (0xD035); the port keeps its slot in the free d048..d04b gap (wTrainerBaseMoney
+; 0xD045 word below, wIsInBattle 0xD056 above — no overlap).
+wTrainerPicPointer            equ 0xD048   ; port flat slot ** flat-adapted: 4 bytes **
+; Trainer-sight / emotion scratch — the shared 0xCD3D+ union (slot-machine / HoF /
+; badges / options), golden-sym verified 2026-07-09. The earlier guesses put the
+; union base at 0xCD37, uniformly 6/7 bytes low, colliding with
+; wNPCMovementDirections2Index and the sim-joypad control bytes.
+wTrainerSpriteOffset          equ 0xCD3D   ; golden 00:cd3d
+wTrainerEngageDistance        equ 0xCD3E   ; golden 00:cd3e
+wTrainerFacingDirection       equ 0xCD3F   ; golden 00:cd3f
+wTrainerScreenY               equ 0xCD40   ; golden 00:cd40
+wTrainerScreenX               equ 0xCD41   ; golden 00:cd41
+wEmotionBubbleSpriteIndex     equ 0xCD4F   ; golden 00:cd4f
+wWhichEmotionBubble           equ 0xCD50   ; golden 00:cd50
 
 %endif ; GB_MEMMAP_INC

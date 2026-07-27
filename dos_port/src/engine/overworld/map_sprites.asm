@@ -118,17 +118,19 @@ w_player_frozen:      resb 1   ; 1 = block player input during encounter flow
 ; OPP_* value (>= OPP_ID_OFFSET) and set holds the trainer party set index; both
 ; are copied straight from the map-object binary by InitMapSprites (which used to
 ; DISCARD them).  Index for slot N (1-15) = (N-1)*2.  Cleared per map load.
-; THE ARRAY IS FLAT .bss, NOT GB WRAM. include/m8_2_pending_symbols.inc separately
-; defines `wMapSpriteExtraData equ 0xD503` (pret's WRAM address) for files that need
-; the pret-side number, and nothing ever writes that WRAM. A file including that .inc
-; therefore CANNOT reach the real array by the pret name — it silently reads unwritten
-; emulated RAM. That is what EngageMapTrainer did until the route3_sight golden caught
-; it (want trainer class $CA set $04, got $00/$00). `map_sprite_extra_data` is the
-; port-only flat alias such files extern instead; the pret name stays primary here.
-; Both readers now use the alias: EngageMapTrainer (src/home/trainers.asm) and
-; PickUpItem (src/engine/events/pick_up_item.asm), which had the same defect — it
-; handed GiveItem the item id 0 for every visible item ball. If you add a third
-; reader in a file that includes m8_2_pending_symbols.inc, use the alias too.
+; THE ARRAY IS FLAT .bss, NOT GB WRAM — index it flat ([esi]), never [ebp + esi].
+; HISTORY, because it cost two silent bugs: include/m8_2_pending_symbols.inc used to
+; define `wMapSpriteExtraData equ 0xD503` (pret's WRAM address, which the port never
+; writes), so any file including that scaffold could not reach the real array by the
+; pret name — it silently read unwritten emulated RAM. That is what EngageMapTrainer
+; did until the route3_sight golden caught it (want trainer class $CA set $04, got
+; $00/$00), and PickUpItem had the identical defect, handing GiveItem item id 0 for
+; every visible item ball. Both were fixed by externing the port-only flat alias
+; `map_sprite_extra_data`, and both still use it.
+; THE SHADOW IS GONE: that scaffold was dissolved 2026-07-27 and the 0xD503 equ was
+; deliberately NOT folded into gb_memmap.inc, so the pret name now resolves to this
+; label everywhere. Both names label the same address; a new reader may use either,
+; but must still read it FLAT.
 global map_sprite_extra_data
 map_sprite_extra_data:
 wMapSpriteExtraData:  resb NPC_SLOTS_MAX * 2

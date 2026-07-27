@@ -27,7 +27,7 @@ bits 32
 
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
-%include "m8_2_pending_symbols.inc"   ; wTrainer* scratch, BIT_SEEN_BY_TRAINER, POWER_PLANT
+%include "assets/map_dims.inc"        ; POWER_PLANT map id (generated; the two-tier source)
 
 extern CalcDifference           ; src/home/pathfinding.asm
 extern MoveSprite_              ; src/home/pathfinding.asm

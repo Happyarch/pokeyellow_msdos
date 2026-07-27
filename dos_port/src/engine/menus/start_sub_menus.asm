@@ -233,9 +233,8 @@ ESCAPE_ROPE  equ 0x1D                ; constants/item_constants.asm
 %ifndef wd472
 wd472        equ 0xD472              ; ram/wram.asm:wd472 — surf state (1 = board, 2 = Pikachu)
 %endif
-%ifndef BIT_UNKNOWN_4_1
-BIT_UNKNOWN_4_1 equ 1                ; wStatusFlags4 bit (constants/ram_constants.asm; the
-%endif                               ; port also carries it in m8_2_pending_symbols.inc)
+; BIT_UNKNOWN_4_1 (wStatusFlags4 bit 1, constants/ram_constants.asm) is canonical in
+; gb_memmap.inc as of 2026-07-27; the local %ifndef copy that lived here is gone.
 
 section .text
 

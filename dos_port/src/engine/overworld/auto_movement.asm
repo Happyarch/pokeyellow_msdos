@@ -31,7 +31,6 @@
 %include "gb_memmap.inc"
 %include "gb_macros.inc"
 %include "gb_constants.inc"
-%include "m8_2_pending_symbols.inc"   ; wSpriteIndex / wToggleableObjectIndex / PAD_CTRL_PAD
 %include "assets/audio_constants.inc"
 
 global PlayerStepOutFromDoor
