@@ -749,9 +749,9 @@ global iu_print_text                 ; port-only: the item layer's overworld tex
 global ItemUseItemfinder             ; Stage 3 bullet 2 (was item_use_stubs.asm ret-stub)
 
 ; --- the medicine family's effect cores (items-plan Stage 3, native-validated) ---
-extern ApplyHealingItem     ; item_effects.asm — pret .addHealAmount…setCurrentHPToMaxHp
-extern ApplyVitamin         ; item_effects.asm — pret .useVitamin's stat-exp add
-extern RareCandyLevelUp     ; item_effects.asm — pret .useRareCandy's level/exp/stat math
+; ApplyHealingItem / ApplyVitamin / RareCandyLevelUp are defined LOWER IN THIS FILE,
+; so they take no extern — NASM 2.16 rejects extern-then-define as "inconsistently
+; redefined" (NASM 3.x tolerated it, which is why this survived local builds).
 extern RemoveItemFromInventory ; src/home/inventory.asm
 extern VitaminStats         ; data/item_data.asm (generated) — 5 × STAT_NAME_LENGTH
 
@@ -804,29 +804,20 @@ extern ItemfinderFoundNothingText_ref   ; assets/item_text.inc
 ; --- itemfinder near-check (src/engine/items/itemfinder.asm, Stage 3 bullet 2) ---
 extern HiddenItemNear       ; CF set if an unobtained hidden item is nearby
 
-; --- the deferred ItemUse* families (item_use_stubs.asm) ---
-extern ItemUseBicycle
+; --- the STILL-deferred ItemUse* families (item_use_stubs.asm) ---
+; Only the ones that remain ret-stubs belong here. The rest of this family has since
+; been implemented LOWER IN THIS FILE (ItemUseBicycle, ItemUsePokedex, ItemUseEvoStone,
+; ItemUseEscapeRope, ItemUseRepel/SuperRepel/MaxRepel, ItemUseXAccuracy, ItemUsePokeDoll,
+; ItemUseGuardSpec, ItemUseDireHit, ItemUseXStat, ItemUseCoinCase, ItemUseOaksParcel,
+; ItemUsePokeFlute, ItemUseTMHM) and their externs were never retired — the stub
+; convention's "repoint the extern comments when the real routine lands" step. NASM 3.x
+; tolerated extern-then-define; 2.16 rejects it, which is what surfaced this.
 extern ItemUseSurfboard
-extern ItemUsePokedex
-extern ItemUseEvoStone
-extern ItemUseEscapeRope
-extern ItemUseRepel
-extern ItemUseSuperRepel
-extern ItemUseMaxRepel
-extern ItemUseXAccuracy
-extern ItemUsePokeDoll
-extern ItemUseGuardSpec
-extern ItemUseDireHit
-extern ItemUseXStat
-extern ItemUseCoinCase
-extern ItemUseOaksParcel
-extern ItemUsePokeFlute
 extern ItemUseOldRod
 extern ItemUseGoodRod
 extern ItemUseSuperRod
 extern ItemUsePPUp
 extern ItemUsePPRestore
-extern ItemUseTMHM
 
 section .data
 align 4
@@ -1576,7 +1567,6 @@ extern UpdateSprites          ; src/home/update_sprites.asm
 extern IsBikeRidingAllowed    ; home/player_gfx.asm
 extern DisplayTownMap               ; engine/items/town_map.asm
 extern ShowPokedexMenu        ; engine/menus/pokedex.asm
-extern ItemUseNotYoursToUse   ; (this file)
 extern GotOnBicycleText_ref         ; assets/item_text.inc
 extern GotOffBicycleText_ref        ; assets/item_text.inc
 extern NoCyclingAllowedHereText_ref ; assets/item_text.inc
