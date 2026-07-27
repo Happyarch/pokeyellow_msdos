@@ -18,9 +18,9 @@ bits 32
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
 %include "gb_macros.inc"
-; TEMPORARY: symbols the root must migrate into the canonical includes, then drop
-; this line (see m1_3_pending_symbols.inc header).
-%include "m1_3_pending_symbols.inc"
+; Every symbol this file needs (hTextID, wTextPredefFlag, BIT_TEXT_PREDEF) is
+; canonical in gb_memmap.inc / gb_constants.inc, included above. The
+; m1_3_pending_symbols.inc scaffold it used to include was dissolved 2026-07-27.
 
 section .text
 

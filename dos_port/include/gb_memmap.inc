@@ -546,6 +546,19 @@ hWY                    equ 0xFFB0
 hJoyHeld               equ 0xFFB4
 hItemAlreadyFound      equ 0xFFEB   ; CheckForHiddenEventOrBookshelfOrCardKeyDoor result: 0 = handled, $ff = fall through
 hToggleableObjectIndex equ 0xFFDB   ; PickUpItem scratch (pret hram union; == hInteractedWithBookshelf slot)
+; hSavedMapTextPtr — 2 bytes, Set/RestoreMapTextPointer's save slot.
+; golden 00:ffec, i.e. this takes pret's OWN address; 0xFFEC-0xFFED was free in the
+; port's remapped HRAM, and the neighbour hItemAlreadyFound above already sits at
+; pret's 0xFFEB, so this region tracks pret.
+; *** THIS REPLACES A PLACEHOLDER THAT COLLIDED. *** m1_3_pending_symbols.inc
+; carried `hSavedMapTextPtr equ 0xFF8E ; PLACEHOLDER`, with a comment asking the
+; root to allocate a real pair, and nobody did. As a 2-byte slot it ran to 0xFF8F
+; = H_SPRITE_OFFSET2, which PrepareOAMData writes once per sprite EVERY FRAME from
+; the vblank pipeline. So the saved pointer's high byte was overwritten with a
+; sprite slot offset between any save and its restore, and RestoreMapTextPointer
+; handed ChangeBox a corrupt wCurMapTextPtr across SaveGameData. Both routines are
+; linked; the flow is gated behind the Bill's-PC stubs, so it was latent, not live.
+hSavedMapTextPtr       equ 0xFFEC   ; golden 00:ffec (dw)
 
 ; Sprite state data — 16 slots × $10 bytes each, two parallel arrays.
 ; wSpriteStateData1 ($C100) and wSpriteStateData2 ($C200) — sym-verified.
@@ -558,8 +571,8 @@ NUM_SPRITE_SLOTS              equ 16
 wSprite01StateData1           equ 0xC110 ; golden 00:c110 — slot 1 (first non-player sprite)
 wSprite01StateData2OrigFacingDirection equ 0xC219 ; wSprite01StateData2 + SPRITESTATEDATA2_ORIGFACINGDIRECTION
 ; pret-named aliases (constants/map_object_constants.asm / macros/wram.asm) —
-; canonical here as of menus S2; m1_3_pending_symbols.inc's copies are
-; %ifndef-guarded so both include orders stay safe.
+; canonical here as of menus S2. (m1_3_pending_symbols.inc used to carry
+; %ifndef-guarded copies; that scaffold was dissolved 2026-07-27.)
 NUM_SPRITESTATEDATA_STRUCTS   equ NUM_SPRITE_SLOTS
 PIKACHU_SPRITE_INDEX          equ NUM_SPRITESTATEDATA_STRUCTS - 1 ; = 15 (pret map_object_constants.asm)
 SPRITESTATEDATA1_LENGTH       equ SPRITESTATEDATA_STRUCT_SIZE
@@ -1273,7 +1286,7 @@ W_NEW_TILE_BLOCK_ID          equ 0xD09E ; wNewTileBlockID (golden 00:d09e; Repla
 wBoulderSpriteIndex          equ 0xD717 ; golden 00:d717 (boulder push subsystem)
 %endif
 %ifndef wNumSprites
-wNumSprites                  equ 0xD4E0 ; golden 00:d4e0 (also in m1_3_pending_symbols.inc)
+wNumSprites                  equ 0xD4E0 ; golden 00:d4e0 (dup: overworld.asm, home/overworld.asm)
 %endif
 wTextPredefFlag              equ 0xCF11 ; BIT_TEXT_PREDEF gates PrintPredefTextID text table
 wSpriteIndex                 equ 0xCF13 ; DisplayTextID stores hTextID/hSpriteIndex here
@@ -1451,13 +1464,13 @@ W_STATUS_FLAGS_7             equ 0xD732 ; wStatusFlags7
 W_ELITE4_FLAGS               equ 0xD733 ; wElite4Flags
 
 ; wStatusFlags bit indices (constants/ram_constants.asm) — consumed by EnterMap (OW-A.4).
-; Some of these are ALSO defined (same value) in gb_constants.inc / m1_3_pending_symbols.inc
-; or under a local %ifndef in a consumer; NASM permits an `equ` redefinition to the
+; Some of these are ALSO defined (same value) in gb_constants.inc or under a local
+; %ifndef in a consumer; NASM permits an `equ` redefinition to the
 ; identical value (verified 2026-07-27: same value assembles, a differing one is a hard
 ; "inconsistently redefined" error), so a file including both is fine. Duplicated here so
 ; overworld.asm (which includes only gb_memmap.inc + gb_macros.inc) sees them.
-; The m8_2 copies were folded in 2026-07-27 when that scaffold was deleted; m1_3 is the
-; last pending-symbol file left to integrate the same way.
+; The m8_2 and m1_3 copies were folded in 2026-07-27 when both scaffolds were deleted;
+; no pending-symbol include remains.
 BIT_WILD_ENCOUNTER_COOLDOWN  equ 0 ; wStatusFlags2 bit 0 — grants 3 no-battle steps (dup: gb_constants.inc)
 BIT_NO_NPC_FACE_PLAYER       equ 5 ; wStatusFlags3 bit 5 — suppress NPC-face-player on this entry
 BIT_TALKED_TO_TRAINER        equ 6 ; wStatusFlags3 bit 6 — talked to a trainer this encounter (OW-A.6)
@@ -1465,7 +1478,7 @@ BIT_TRAINER_BATTLE           equ 3 ; wStatusFlags7 bit 3 — current battle is a
 BIT_NO_BATTLES               equ 4 ; wStatusFlags4 bit 4 — suppress wild battles
 BIT_BATTLE_OVER_OR_BLACKOUT  equ 5 ; wStatusFlags4 bit 5 — set on battle/blackout return
 BIT_FLY_OR_DUNGEON_WARP      equ 2 ; wStatusFlags6 bit 2 — entered via Fly OR dungeon warp
-BIT_FLY_WARP                 equ 3 ; wStatusFlags6 bit 3 — entered via Fly warp (dup: m1_3_pending_symbols.inc)
+BIT_FLY_WARP                 equ 3 ; wStatusFlags6 bit 3 — entered via Fly warp (dup: items/town_map.asm)
 BIT_DUNGEON_WARP             equ 4 ; wStatusFlags6 bit 4 — entered via dungeon warp
 BIT_ESCAPE_WARP              equ 6 ; wStatusFlags6 bit 6 — Escape Rope / blackout warp
 %ifndef BIT_NO_MAP_MUSIC

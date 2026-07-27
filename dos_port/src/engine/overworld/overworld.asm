@@ -57,7 +57,7 @@ extern hide_window           ; src/ppu/ppu.asm — empty the window list (count=
 ; class/num (or item) to wMapSpriteExtraData — both flat .bss globals in map_sprites.asm.
 ; pret wNumSprites (ram/wram.asm) — number of sprites on the current map. Read by
 ; src/home/text_script.asm; not in this file's include chain, so define it here
-; (guarded; matches m1_3_pending_symbols.inc's %ifndef pattern).
+; (guarded; gb_memmap.inc carries the canonical copy at the same value).
 %ifndef wNumSprites
 wNumSprites equ 0xD4E0
 %endif

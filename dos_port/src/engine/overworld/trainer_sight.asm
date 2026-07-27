@@ -47,9 +47,11 @@ global ReadTrainerScreenPosition
 ; WRAM/HRAM scratch used by the position accessors (moved with them; see the
 ; derivation notes in the git history of trainer_engine.asm OW-1.7):
 ;   wSavedSprite* = pret ram/wram.asm:1837-1840 (link-corrected addresses);
-;   hSprite*Coord = port-private HRAM allocation 0xFF82-0xFF85 (pret's union
-;   address neighborhood is remapped by the port — see m1_3_pending_symbols.inc).
-;   TODO(root): fold into gb_memmap.inc when the canonical HRAM map lands.
+;   hSprite*Coord = port-private HRAM allocation 0xFF82-0xFF85 (pret unions these
+;   at 0xFFEB-0xFFEE, which the port's remapped HRAM uses otherwise).
+;   TODO(root): fold into gb_memmap.inc when the canonical HRAM map lands. NOTE
+;   these four are NOT in gb_memmap.inc, so they do not show in an HRAM occupancy
+;   scan of that file alone — scan the tree.
 ; ----------------------------------------------------------------------------
 %ifndef wSavedSpriteScreenY
 wSavedSpriteScreenY equ 0xD12F

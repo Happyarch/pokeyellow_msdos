@@ -17,7 +17,6 @@ bits 32
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
 %include "gb_macros.inc"
-%include "m1_3_pending_symbols.inc"      ; wCurMapTextPtr, hSavedMapTextPtr
 
 global SetMapTextPointer
 global RestoreMapTextPointer

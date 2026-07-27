@@ -39,8 +39,8 @@
 
 ; --- pret TX_SCRIPT_* sentinels (macros/scripts/text.asm:185-236). The first byte of
 ; a resolved text stream in $F6-$FF selects a special DisplayTextID handler instead of
-; ordinary text. Defined locally (not in this file's include chain); mirror of the
-; canonical copies in include/m1_3_pending_symbols.inc. -----------------------------
+; ordinary text. Defined locally (not in this file's include chain); the canonical
+; copies are in include/gb_constants.inc. ------------------------------------------
 TX_SCRIPT_PRIZE_VENDOR              equ 0xF7
 TX_SCRIPT_POKECENTER_PC             equ 0xF9
 TX_SCRIPT_PLAYERS_PC                equ 0xFC
