@@ -85,7 +85,7 @@ global DrawDexEntryOnScreen
 global Pokedex_PrintFlavorTextAtRow11
 global Pokedex_PrintFlavorTextAtBC
 global Pokedex_PrepareDexEntryForPrinting
-global LoadPokedexTilePatterns       ; REAL body (below), not a stub — G2 externs it
+extern LoadPokedexTilePatterns      ; src/engine/gfx/load_pokedex_tiles.asm
 extern PokedexOrder                  ; src/data/pokemon/dex_order.asm — index->dex table
 
 ; ---- externs -------------------------------------------------------------
@@ -191,9 +191,11 @@ TILE_BLANK        equ 0x7F         ; ' '
 section .data
 ; (PokedexOrder itself lives in its pret mirror, src/data/pokemon/dex_order.asm.)
 
-; Pokédex interface tileset (PokedexTileGraphics 18 tiles + PokeballTileGraphics
-; 1 tile) — generated passthrough of gfx/pokedex/pokedex.2bpp + balls.2bpp.
-%include "assets/pokedex_tiles.inc"
+; The pokédex interface tileset (PokedexTileGraphics + PokeballTileGraphics) moved
+; to src/engine/gfx/load_pokedex_tiles.asm in chunk 18, with its only consumer.
+; gen_pokedex_tiles.py already names that pret file as the asset's reference, and
+; the blob's size equs are used in assembly-time arithmetic there, so the include
+; had to travel with the routine rather than be externed.
 
 ; pret ref: engine/menus/pokedex.asm text tables. These were hand-encoded charmap
 ; `db` bytes here until 2026-07-14, under a comment calling them "Tier-2 hand-authored
@@ -1222,38 +1224,6 @@ pdex_clear_list_area:
     pop edx
     pop ecx
     pop eax
-    ret
-
-; ===========================================================================
-; LoadPokedexTilePatterns — load the pokédex interface tileset into VRAM.
-; pret: engine/gfx/load_pokedex_tiles.asm:LoadPokedexTilePatterns —
-;   1. LoadHpBarAndStatusTilePatterns (fills $62-$7F; the dex tiles then
-;      overwrite $60-$71, exactly as on the GB),
-;   2. PokedexTileGraphics (18 tiles: frame/line tiles + the ′″ height
-;      glyphs) → vChars2 tile $60,
-;   3. PokeballTileGraphics (1 tile) → vChars2 tile $72 (caught marker).
-; Used by both halves of this file (ShowPokedexMenu.setUpGraphics and ShowPokedexData).
-; NB: this clobbers the box tiles $79-$7E via step 1 — the dex exit path
-; (ShowPokedexMenu.exitPokedex → ReloadMapData) reloads LoadTextBoxTilePatterns
-; + the map tileset, faithfully to pret. All registers preserved.
-; ===========================================================================
-LoadPokedexTilePatterns:
-    call LoadHpBarAndStatusTilePatterns
-    mov byte [g_tilecache_dirty], 1     ; VRAM tile data changes → rebuild cache
-    push ecx
-    push esi
-    push edi
-    mov esi, PokedexTileGraphics
-    lea edi, [ebp + GB_VCHARS2 + 0x60 * TILE_SIZE]
-    mov ecx, POKEDEX_TILE_GFX_SIZE / 4
-    rep movsd
-    mov esi, PokeballTileGraphics
-    lea edi, [ebp + GB_VCHARS2 + 0x72 * TILE_SIZE]
-    mov ecx, POKEBALL_TILE_SIZE / 4
-    rep movsd
-    pop edi
-    pop esi
-    pop ecx
     ret
 
 ; ===========================================================================

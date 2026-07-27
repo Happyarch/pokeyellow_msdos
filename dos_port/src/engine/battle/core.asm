@@ -86,6 +86,8 @@ MIRROR_MOVE       equ 0x4D
 section .data
 align 4
 %include "assets/battle_hud_2bpp.inc"
+global str_used_grammar               ; DisplayUsedMoveText, now engine/battle/used_move_text.asm
+global RunBattleTextStream            ; DisplayUsedMoveText, now engine/battle/used_move_text.asm
 global battle_hud_tiles1_2bpp
 global battle_hud_tiles23_2bpp
 
@@ -101,10 +103,10 @@ global SwapMovesInMenu
 global PrintMenuItem
 global AnyMoveToSelect
 global PrintBattleText
+extern DisplayUsedMoveText          ; src/engine/battle/used_move_text.asm
 extern PrintTextStaged                 ; src/home/window.asm — PrintText, stream already staged
 global ExecutePlayerMove
 global ExecutePlayerMoveDone
-global DisplayUsedMoveText
 global MonsStatsRose
 global MonsStatsFell
 global ApplyAttackToEnemyPokemon
@@ -1277,48 +1279,6 @@ MirrorMoveCheck:                        ; pret 3369
 ExecutePlayerMoveDone:
     mov byte [ebp + wActionResultOrTookBattleTurn], 0
     mov bh, 1                           ; b = 1 → target did not faint
-    ret
-
-; ---------------------------------------------------------------------------
-; DisplayUsedMoveText — pret engine/battle/used_move_text.asm (text_asm-composed).
-; Builds "<USER> used <MOVE>!" into the dialog buffer and prints it (no wait —
-; pret's text ends in text_end). <USER> ($5A) is resolved by the text engine
-; (player nick, or "Enemy "+enemy nick on the enemy's turn).
-; ---------------------------------------------------------------------------
-DisplayUsedMoveText:
-    lea edi, [ebp + NPC_DIALOG_BUF]
-    mov byte [edi], 0x00                ; TX_START
-    inc edi
-    mov byte [edi], 0x5A                ; <USER>
-    inc edi
-    mov esi, str_used_grammar           ; " used "
-    call .copyFlat
-    movzx eax, byte [ebp + hWhoseTurn]
-    test al, al
-    jz  .playerName
-    mov al, [ebp + wEnemySelectedMove]
-    jmp .gotId
-.playerName:
-    mov al, [ebp + wPlayerSelectedMove]
-.gotId:
-    call FindMoveName                   ; EAX = flat ptr to the move name
-    mov esi, eax
-    call .copyFlat
-    mov byte [edi], 0xE7                ; '!'
-    inc edi
-    mov byte [edi], 0x50                ; '@' (PlaceString terminator)
-    inc edi
-    mov byte [edi], 0x50                ; TX_END
-    jmp RunBattleTextStream
-.copyFlat:                              ; copy a $50-terminated flat string [ESI] → [EDI]
-    mov al, [esi]
-    cmp al, 0x50
-    je  .copyDone
-    mov [edi], al
-    inc edi
-    inc esi
-    jmp .copyFlat
-.copyDone:
     ret
 
 ; ---------------------------------------------------------------------------

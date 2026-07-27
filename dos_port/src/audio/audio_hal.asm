@@ -33,7 +33,7 @@ global g_sb_dma
 global g_sb_present
 global g_sb_dsp_ver
 
-extern FadeOutAudio               ; src/home/audio.asm
+extern FadeOutAudio               ; src/home/fade_audio.asm
 extern Music_DoLowHealthAlarm     ; src/audio/low_health_alarm.asm
 extern Audio1_UpdateMusic         ; src/audio/engine_1.asm
 extern StopAllSounds              ; src/home/init.asm

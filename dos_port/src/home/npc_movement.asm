@@ -83,3 +83,16 @@ NPCMovementScriptPointerTables:
     dd PalletMovementScriptPointerTable
     dd PewterMuseumGuyMovementScriptPointerTable
     dd PewterGymGuyMovementScriptPointerTable
+
+; pret order: EndNPCMovementScript follows RunNPCMovementScript. It does here too —
+; the port-only NPCMovementScriptPointerTables blob sits between them, which pret
+; keeps inside RunNPCMovementScript. Arrived in chunk 18 of the relocated-label
+; grind from src/engine/overworld/auto_movement.asm.
+global EndNPCMovementScript
+extern _EndNPCMovementScript              ; src/engine/overworld/auto_movement.asm
+
+; EndNPCMovementScript — pret home/npc_movement.asm wrapper (farjp _EndNPCMovementScript);
+; banking is elided under flat memory, so it is a plain jump. Kept as its own pret
+; label (the split mirrors pret's home/engine boundary).
+EndNPCMovementScript:
+    jmp _EndNPCMovementScript

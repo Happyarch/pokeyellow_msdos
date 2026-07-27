@@ -36,11 +36,11 @@
 
 global PlayerStepOutFromDoor
 global _EndNPCMovementScript
-global EndNPCMovementScript
 global PalletMovementScriptPointerTable
 global PewterMuseumGuyMovementScriptPointerTable
 global PewterGymGuyMovementScriptPointerTable
 
+extern EndNPCMovementScript         ; src/home/npc_movement.asm
 extern FillMemory                  ; home/copy2.asm
 extern MoveSprite                  ; src/home/pathfinding.asm
 extern ConvertNPCMovementDirectionsToJoypadMasks ; pathfinding.asm (pret: predef)
@@ -111,12 +111,6 @@ _EndNPCMovementScript:
     mov [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], al
     mov [ebp + W_SIMULATED_JOYPAD_STATES_END], al
     ret
-
-; EndNPCMovementScript — pret home/npc_movement.asm wrapper (farjp _EndNPCMovementScript);
-; banking is elided under flat memory, so it is a plain jump. Kept as its own pret
-; label (the split mirrors pret's home/engine boundary).
-EndNPCMovementScript:
-    jmp _EndNPCMovementScript
 
 ; ===========================================================================
 ; Pallet Town — Prof. Oak walks the player to his lab.

@@ -767,7 +767,7 @@ extern AddNTimes            ; home/array.asm — ESI += AL*BX
 extern CopyData             ; home/copy.asm — ESI → EDX, BX bytes
 extern Divide               ; home/math.asm — BH = dividend bytes
 extern FlagAction           ; engine/flag_action.asm — ESI=array, CL=index, BH=action
-extern PrintStatsBox        ; engine/battle/battle_menu.asm — DH = box type
+extern PrintStatsBox        ; engine/pokemon/status_screen.asm — DH = box type
 extern LearnMoveFromLevelUp ; engine/pokemon/evos_moves.asm (predef)
 extern TryEvolvingMon       ; engine/pokemon/evos_moves.asm
 extern ModifyPikachuHappiness    ; battle_exp_stubs.asm (deferred)

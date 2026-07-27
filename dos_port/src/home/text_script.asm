@@ -4,7 +4,8 @@
 ; DisplayTextID / CloseTextDisplay / HoldTextDisplayOpen and the special-case
 ; dialogue branches (mart / PokéCenter nurse / fainted / blacked-out / repel /
 ; Pikachu-emotion / Safari game-over). Plus the general `DisplayTextBoxID`
-; dispatcher (pret home/textbox.asm) and `FarPrintText` (pret home/print_num.asm).
+; dispatcher (pret home/textbox.asm). `FarPrintText` (pret home/print_num.asm) was
+; also carried here until chunk 18 moved it to src/home/print_num.asm.
 ;
 ; This file is linked in the default build. The ordinary map-text path uses the
 ; port's generated flat map table, while the TEXT_PREDEF path preserves pret's
@@ -42,7 +43,6 @@ global HoldTextDisplayOpen
 global CloseTextDisplay
 global DisplayPokemartDialogue
 global LoadItemList
-global FarPrintText
 
 ; ── text printers (text/text.asm) ──
 extern PrintText                    ; pret PrintText (window.asm) — ESI = FLAT TX stream ptr
@@ -443,22 +443,5 @@ DisplayPikachuEmotion:
 ; DisplayTextBoxID — moved to its canonical pret home, src/home/textbox.asm
 ; (menus S2). Externed above.
 ; ─────────────────────────────────────────────────────────────────────────────
-
-; ─────────────────────────────────────────────────────────────────────────────
-; FarPrintText — pret home/print_num.asm:1. Print far text b:hl at (1,14).
-; In: ESI = text stream (HL). B (BH) = source ROM bank (ignored — flat memory).
-;   pret: push bank; a=b; BankswitchCommon; PrintText; pop; BankswitchCommon; ret
-; ─────────────────────────────────────────────────────────────────────────────
-FarPrintText:
-    ; TODO-HW: bank switch is a no-op under flat EBP memory; the far bank in BH is
-    ; ignored (all ROM is flat-addressable). Faithful call structure preserved.
-    movzx eax, byte [ebp + hLoadedROMBank]
-    push eax
-    mov al, bh                           ; a = b (target bank)
-    call BankswitchCommon
-    call PrintText             ; pret PrintText (general printer)
-    pop eax
-    call BankswitchCommon
-    ret
 
 %include "assets/text_script_text.inc"

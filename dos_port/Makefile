@@ -256,6 +256,7 @@ SAVE_SRCS := \
 AUDIO_SRCS := \
     src/data/audio_data.asm \
     src/home/audio.asm \
+    src/home/fade_audio.asm \
     src/audio/audio_hal.asm \
     src/audio/opl_shim.asm \
     src/audio/opl_enh.asm \
@@ -291,9 +292,11 @@ GAME_SRCS := \
     src/data/sprite_anims/intro_oam.asm \
     src/engine/gfx/mon_icons.asm \
     src/engine/gfx/palettes.asm \
+    src/engine/gfx/load_pokedex_tiles.asm \
     src/home/load_font.asm \
     src/home/text.asm \
     src/home/print_num.asm \
+    src/home/print_text.asm \
     src/home/print_bcd.asm \
     src/home/window.asm \
     src/home/palettes.asm \
@@ -1453,6 +1456,7 @@ FRONTEND_SRCS := \
     src/engine/battle/move_effects/paralyze.asm \
     src/engine/battle/decrement_pp.asm \
     src/engine/battle/animations.asm \
+    src/engine/battle/used_move_text.asm \
     src/data/battle_data.asm \
     src/data/trainer_data.asm \
     src/data/move_grammar.asm \
@@ -2140,8 +2144,9 @@ src/engine/items/item_effects.o: assets/ui_layout_menus.inc
 src/engine/menus/main_menu.o src/engine/menus/save.o: assets/ui_layout_menus.inc
 src/engine/menus/naming_screen.o: assets/ui_layout_menus.inc assets/alphabets.inc \
         assets/naming_strings.inc assets/audio_constants.inc
-src/engine/menus/pokedex.o: assets/ui_layout_menus.inc assets/pokedex_tiles.inc \
+src/engine/menus/pokedex.o: assets/ui_layout_menus.inc \
         assets/pokedex_strings.inc assets/dex_entries.inc
+src/engine/gfx/load_pokedex_tiles.o: assets/pokedex_tiles.inc
 src/engine/menus/link_menu.o: assets/ui_layout_menus.inc assets/link_text.inc
 
 # Status screen %includes the generated status_strings.inc label block.

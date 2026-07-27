@@ -135,3 +135,20 @@ AdjustOAMBlockYPos2:
     dec bl                                   ; dec c
     jnz .loop
     ret
+
+; ===========================================================================
+; MoveAnimationTiles1 — pret engine/battle/animations.asm:411. Arrived in chunk 18
+; of the relocated-label grind from src/engine/overworld/cut.asm, which used tile 6
+; of this sheet for the Cut grass-leaf and tiles 3/19 for the Game Freak splash.
+; Its pret neighbours (MoveAnimationTilesPointers, MoveAnimationTiles0/2) are all
+; `missing`, so there is no pret ordering to preserve against them; it is appended.
+; This file's own `section .text` is pinned above — the directive below is required.
+; ===========================================================================
+section .data
+
+; grass-leaf tile source — pret uses MoveAnimationTiles1 tile 6 (battle move-anim
+; tiles, not yet ported); incbin the battle move-anim-1 sheet and index tile 6.
+; Also the Game Freak splash's star tiles (tiles 3 and 19) — LoadShootingStarGraphics.
+global MoveAnimationTiles1
+MoveAnimationTiles1:
+    incbin "../gfx/battle/move_anim_1.2bpp"

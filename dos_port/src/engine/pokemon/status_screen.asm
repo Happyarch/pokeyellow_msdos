@@ -510,6 +510,83 @@ ss2_b:  resd 1          ; StatusScreen2 .PrintPP: move index (0..NUM_MOVES-1)
 
 section .text
 
+global PrintStatsBox
+
+; PrintStatsBox needs the battle UI level-up box coordinates. They are `equ`s used
+; in address arithmetic (W_TILEMAP + LVLBOX_OFF), and an extern cannot be used in
+; assembly-time arithmetic — so the equates-only layout include comes along, exactly
+; as ARROW_OFF forced it into joypad2.asm in chunk 16.
+%define UI_LAYOUT_EQUATES_ONLY 1
+%include "assets/ui_layout_battle.inc"
+%define LVLBOX_OFF   UI_LVLUP_BOX_OFS
+%define LVLBOX_W     (UI_LVLUP_BOX_GBW - 2)
+%define LVLBOX_H     (UI_LVLUP_BOX_GBH - 2)
+%define LVL_LBL_OFF  UI_LVLUP_LBL_OFS
+%define LVL_VAL_OFF  UI_LVLUP_VAL_OFS
+
+extern print_num3                    ; src/engine/battle/battle_menu.asm
+extern lvl_mon_ptr                   ; src/engine/battle/battle_menu.asm
+extern menu_item_step                ; src/home/window.asm
+extern str_attack                    ; assets/battle_menu_runtime_strings.inc
+extern str_defense                   ; assets/battle_menu_runtime_strings.inc
+extern str_speed                     ; assets/battle_menu_runtime_strings.inc
+extern str_special                   ; assets/battle_menu_runtime_strings.inc
+
+; PrintStatsBox — pret PrintStatsBox.LevelUpStatsBox: box + ATTACK/DEFENSE/SPEED/SPECIAL
+; with right-aligned values from the leveled party mon (CalcStats wrote the new stats).
+PrintStatsBox:
+    and byte [ebp + W_LETTER_PRINTING_DELAY], (~(1 << BIT_TEXT_DELAY)) & 0xFF
+    mov dword [menu_item_step], FW
+    mov esi, W_TILEMAP + LVLBOX_OFF
+    mov bh, LVLBOX_H
+    mov bl, LVLBOX_W
+    call TextBoxBorder
+    movzx eax, byte [ebp + wWhichPokemon]
+    imul eax, eax, PARTYMON_STRUCT_LENGTH
+    add eax, wPartyMon1
+    mov [lvl_mon_ptr], eax
+    mov esi, W_TILEMAP + LVL_LBL_OFF
+    mov eax, str_attack
+    call PlaceString
+    mov esi, ebx
+    mov esi, W_TILEMAP + LVL_LBL_OFF + 2 * FW
+    mov eax, str_defense
+    call PlaceString
+    mov esi, ebx
+    mov esi, W_TILEMAP + LVL_LBL_OFF + 4 * FW
+    mov eax, str_speed
+    call PlaceString
+    mov esi, ebx
+    mov esi, W_TILEMAP + LVL_LBL_OFF + 6 * FW
+    mov eax, str_special
+    call PlaceString
+    mov esi, ebx
+    mov ebx, [lvl_mon_ptr]
+    mov edi, W_TILEMAP + LVL_VAL_OFF
+    movzx eax, byte [ebp + ebx + MON_ATK]
+    shl eax, 8
+    mov al, [ebp + ebx + MON_ATK + 1]
+    call print_num3
+    mov ebx, [lvl_mon_ptr]
+    mov edi, W_TILEMAP + LVL_VAL_OFF + 2 * FW
+    movzx eax, byte [ebp + ebx + MON_DEF]
+    shl eax, 8
+    mov al, [ebp + ebx + MON_DEF + 1]
+    call print_num3
+    mov ebx, [lvl_mon_ptr]
+    mov edi, W_TILEMAP + LVL_VAL_OFF + 4 * FW
+    movzx eax, byte [ebp + ebx + MON_SPD]
+    shl eax, 8
+    mov al, [ebp + ebx + MON_SPD + 1]
+    call print_num3
+    mov ebx, [lvl_mon_ptr]
+    mov edi, W_TILEMAP + LVL_VAL_OFF + 6 * FW
+    movzx eax, byte [ebp + ebx + MON_SPC]
+    shl eax, 8
+    mov al, [ebp + ebx + MON_SPC + 1]
+    call print_num3
+    ret
+
 ; ---------------------------------------------------------------------------
 ; StatusScreen2 — summary screen page 2: moves + PP, EXP + EXP-to-next, name.
 ; Faithful port of pret status_screen.asm:StatusScreen2. Assumes the page-1

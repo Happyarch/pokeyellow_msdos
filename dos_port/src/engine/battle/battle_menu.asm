@@ -54,11 +54,6 @@ bits 32
 
 ; PROJ battle: level-up stats box = UI_LVLUP_BOX / UI_LVLUP_LBL / UI_LVLUP_VAL
 ; (pret PrintStatsBox.LevelUpStatsBox; labels/values step 2 rows ×4).
-%define LVLBOX_OFF   UI_LVLUP_BOX_OFS
-%define LVLBOX_W     (UI_LVLUP_BOX_GBW - 2)
-%define LVLBOX_H     (UI_LVLUP_BOX_GBH - 2)
-%define LVL_LBL_OFF  UI_LVLUP_LBL_OFS
-%define LVL_VAL_OFF  UI_LVLUP_VAL_OFS
 
 ; ▼ "more text" advance arrow. UI_DIALOG_ARROW's ARROW_OFF projection left with
 ; WaitForTextScrollButtonPress (src/home/joypad2.asm); these two are unread by
@@ -70,7 +65,12 @@ bits 32
 section .data
 ; TryRunningFromBattle / PrintRunLine moved to their pret mirror core.asm and
 ; still read these run-message strings, so the five they use are exported.
+global print_num3                     ; PrintStatsBox, now engine/pokemon/status_screen.asm
 global str_gotaway
+global str_attack                     ; PrintStatsBox, now engine/pokemon/status_screen.asm
+global str_defense                    ; PrintStatsBox, now engine/pokemon/status_screen.asm
+global str_speed                      ; PrintStatsBox, now engine/pokemon/status_screen.asm
+global str_special                    ; PrintStatsBox, now engine/pokemon/status_screen.asm
 global str_cantesc
 global str_norun1
 global str_norun2
@@ -95,7 +95,6 @@ global DrawEmptyDialogBox
 global EndBattleScreen
 global ShowGainedExpText
 global ShowGrewLevelText
-global PrintStatsBox
 global FindMoveName
 global BattleItemMenu
 global BattlePartyMenu
@@ -241,61 +240,6 @@ ShowGrewLevelText:
     mov esi, ebx
     ret
 
-
-; PrintStatsBox — pret PrintStatsBox.LevelUpStatsBox: box + ATTACK/DEFENSE/SPEED/SPECIAL
-; with right-aligned values from the leveled party mon (CalcStats wrote the new stats).
-PrintStatsBox:
-    and byte [ebp + W_LETTER_PRINTING_DELAY], (~(1 << BIT_TEXT_DELAY)) & 0xFF
-    mov dword [menu_item_step], FW
-    mov esi, W_TILEMAP + LVLBOX_OFF
-    mov bh, LVLBOX_H
-    mov bl, LVLBOX_W
-    call TextBoxBorder
-    movzx eax, byte [ebp + wWhichPokemon]
-    imul eax, eax, PARTYMON_STRUCT_LENGTH
-    add eax, wPartyMon1
-    mov [lvl_mon_ptr], eax
-    mov esi, W_TILEMAP + LVL_LBL_OFF
-    mov eax, str_attack
-    call PlaceString
-    mov esi, ebx
-    mov esi, W_TILEMAP + LVL_LBL_OFF + 2 * FW
-    mov eax, str_defense
-    call PlaceString
-    mov esi, ebx
-    mov esi, W_TILEMAP + LVL_LBL_OFF + 4 * FW
-    mov eax, str_speed
-    call PlaceString
-    mov esi, ebx
-    mov esi, W_TILEMAP + LVL_LBL_OFF + 6 * FW
-    mov eax, str_special
-    call PlaceString
-    mov esi, ebx
-    mov ebx, [lvl_mon_ptr]
-    mov edi, W_TILEMAP + LVL_VAL_OFF
-    movzx eax, byte [ebp + ebx + MON_ATK]
-    shl eax, 8
-    mov al, [ebp + ebx + MON_ATK + 1]
-    call print_num3
-    mov ebx, [lvl_mon_ptr]
-    mov edi, W_TILEMAP + LVL_VAL_OFF + 2 * FW
-    movzx eax, byte [ebp + ebx + MON_DEF]
-    shl eax, 8
-    mov al, [ebp + ebx + MON_DEF + 1]
-    call print_num3
-    mov ebx, [lvl_mon_ptr]
-    mov edi, W_TILEMAP + LVL_VAL_OFF + 4 * FW
-    movzx eax, byte [ebp + ebx + MON_SPD]
-    shl eax, 8
-    mov al, [ebp + ebx + MON_SPD + 1]
-    call print_num3
-    mov ebx, [lvl_mon_ptr]
-    mov edi, W_TILEMAP + LVL_VAL_OFF + 6 * FW
-    movzx eax, byte [ebp + ebx + MON_SPC]
-    shl eax, 8
-    mov al, [ebp + ebx + MON_SPC + 1]
-    call print_num3
-    ret
 
 ; get_party_nick — EAX = flat ptr to the wWhichPokemon party nick.
 get_party_nick:

@@ -1,10 +1,10 @@
-; audio.asm — pret home/audio.asm translated to x86, plus FadeOutAudio from
-; pret home/fade_audio.asm. All pret labels preserved.
+; audio.asm — pret home/audio.asm translated to x86. All pret labels preserved.
 ;
-; The two sound-wait helpers this file used to carry, PlaySoundWaitForCurrent
-; and WaitForSoundToFinish, are pret home/delay.asm labels and now live in that
-; mirror, src/home/delay.asm. FadeOutAudio is still relocated here — pret
-; home/fade_audio.asm has no mirror yet.
+; Labels this file used to carry that belong to OTHER pret files, and where they
+; went: PlaySoundWaitForCurrent and WaitForSoundToFinish (pret home/delay.asm) to
+; src/home/delay.asm in chunk 16; FadeOutAudio (pret home/fade_audio.asm) to its
+; own mirror src/home/fade_audio.asm in chunk 18. This file now holds only pret
+; home/audio.asm's own labels.
 ;
 ; This is the gateway between game code and the banked sound engine. Banking
 ; collapses in the port: the four GB audio banks ($02/$08/$1F/$20) live in the
@@ -39,7 +39,6 @@ global InitMusicVariables
 global InitSFXVariables
 global StopAllAudio
 global DetermineAudioFunction
-global FadeOutAudio
 global g_audio_engine_online
 
 extern Audio1_UpdateMusic         ; src/audio/engine_1.asm
@@ -385,56 +384,6 @@ DetermineAudioFunction:
 .done:
     pop ebx
     ret
-
-; ---------------------------------------------------------------------------
-; pret home/fade_audio.asm — called once per audio tick, before the engine
-; update, to step the volume fade driven by wAudioFadeOutControl.
-FadeOutAudio:
-    mov al, [ebp + wAudioFadeOutControl]
-    test al, al                         ; currently fading out audio?
-    jnz .fadingOut
-    mov al, [ebp + wStatusFlags2]
-    test al, 1 << BIT_NO_AUDIO_FADE_OUT
-    jnz .ret
-    mov byte [ebp + rAUDVOL], 0x77
-.ret:
-    ret
-.fadingOut:
-    mov al, [ebp + wAudioFadeOutCounter]
-    test al, al
-    jz .counterReachedZero
-    dec al
-    mov [ebp + wAudioFadeOutCounter], al
-    ret
-.counterReachedZero:
-    mov al, [ebp + wAudioFadeOutCounterReloadValue]
-    mov [ebp + wAudioFadeOutCounter], al
-    mov al, [ebp + rAUDVOL]
-    test al, al                         ; has the volume reached 0?
-    jz .fadeOutComplete
-    mov bh, al
-    and al, 0x0F
-    dec al
-    mov bl, al                          ; c = right volume - 1
-    mov al, bh
-    and al, 0xF0
-    ror al, 4                           ; swap a
-    dec al                              ; left volume - 1 (in the low nibble)
-    rol al, 4                           ; swap a
-    or al, bl
-    mov [ebp + rAUDVOL], al
-    ret
-.fadeOutComplete:
-    mov al, [ebp + wAudioFadeOutControl]
-    mov bh, al
-    xor al, al
-    mov [ebp + wAudioFadeOutControl], al
-    call StopAllMusic
-    mov al, [ebp + wAudioSavedROMBank]
-    mov [ebp + wAudioROMBank], al
-    mov al, bh
-    mov [ebp + wNewSoundID], al
-    jmp PlaySound
 
 section .data
 

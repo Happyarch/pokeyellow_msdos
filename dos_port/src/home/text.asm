@@ -32,6 +32,7 @@ bits 32
 %include "gb_macros.inc"
 
 extern DelayFrame
+extern PrintLetterDelay             ; src/home/print_text.asm
 
 ; ---------------------------------------------------------------------------
 ; TX_* command bytes (home/macros/scripts/text.asm const_def block)
@@ -125,7 +126,6 @@ CHAR_DOTS_GLYPH                     equ 0x75       ; '…' single ellipsis glyph
 global TextBoxBorder
 global PlaceString
 global PlaceNextChar
-global PrintLetterDelay
 global TextCommandProcessor
 global text_msgbox              ; → the active msgbox projection record (msgbox.inc)
 global msgbox_dialog            ; the overworld dialog projection (this file, .data)
@@ -321,49 +321,6 @@ TextBoxBorder:
     jnz .fc_loop
     pop edi
     pop ecx
-    ret
-
-; ---------------------------------------------------------------------------
-; PrintLetterDelay — wait per-character delay based on the text speed setting.
-; Pret ref: home/print_text.asm:PrintLetterDelay.
-;
-; Reads delay frame count from wOptions bits 3-0 (TEXT_DELAY_FAST/MEDIUM/SLOW = 1/3/5).
-; Exits early if A or B is held. No-op if BIT_TEXT_DELAY is not set in
-; wLetterPrintingDelayFlags (TextCommandProcessor sets it) or if BIT_NO_TEXT_DELAY
-; is set in wStatusFlags5 (cutscenes, auto-scroll).
-; All registers preserved.
-; ---------------------------------------------------------------------------
-PrintLetterDelay:
-    push eax
-    push ecx
-    movzx eax, byte [ebp + W_STATUS_FLAGS_5]
-    test al, (1 << BIT_NO_TEXT_DELAY)          ; cutscene/auto-scroll: skip delay
-    jnz .done
-    movzx eax, byte [ebp + W_LETTER_PRINTING_DELAY]
-    test al, (1 << BIT_TEXT_DELAY)             ; delay enabled by TextCommandProcessor?
-    jz .done
-    call sync_dialog_window                    ; mirror latest char to window before first frame
-    movzx ecx, byte [ebp + H_JOY_HELD]
-    test cl, PAD_A | PAD_B
-    jnz .one_frame                             ; button held: skip to one-frame exit
-    test al, (1 << BIT_FAST_TEXT_DELAY)        ; use wOptions speed or fixed 1-frame?
-    jz .one_frame
-    movzx ecx, byte [ebp + W_OPTIONS]
-    and cl, TEXT_DELAY_MASK                    ; isolate speed bits (1, 3, or 5)
-    jz .done                                   ; speed 0: instant (not used in practice)
-    jmp .count_down
-.one_frame:
-    mov cl, 1
-.count_down:
-    call DelayFrame                            ; renders frame + updates H_JOY_HELD
-    movzx eax, byte [ebp + H_JOY_HELD]
-    test al, PAD_A | PAD_B
-    jnz .done                                  ; button held: abort remaining delay
-    dec cl
-    jnz .count_down
-.done:
-    pop ecx
-    pop eax
     ret
 
 ; HandleDownArrowBlinkTiming now lives canonically in home/window.asm (Wave 4/M4.3,

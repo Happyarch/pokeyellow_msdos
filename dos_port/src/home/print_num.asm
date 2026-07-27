@@ -37,6 +37,28 @@ pn_past:    resb 1                   ; non-zero once a significant digit has bee
 section .text
 
 global PrintNumber
+global FarPrintText
+
+extern BankswitchCommon              ; src/home/bankswitch2.asm
+extern PrintText                     ; src/home/window.asm
+
+; ─────────────────────────────────────────────────────────────────────────────
+; FarPrintText — pret home/print_num.asm:1. Print far text b:hl at (1,14).
+; In: ESI = text stream (HL). B (BH) = source ROM bank (ignored — flat memory).
+;   pret: push bank; a=b; BankswitchCommon; PrintText; pop; BankswitchCommon; ret
+; ─────────────────────────────────────────────────────────────────────────────
+FarPrintText:
+    ; TODO-HW: bank switch is a no-op under flat EBP memory; the far bank in BH is
+    ; ignored (all ROM is flat-addressable). Faithful call structure preserved.
+    movzx eax, byte [ebp + hLoadedROMBank]
+    push eax
+    mov al, bh                           ; a = b (target bank)
+    call BankswitchCommon
+    call PrintText             ; pret PrintText (general printer)
+    pop eax
+    call BankswitchCommon
+    ret
+
 
 PrintNumber:
     push ebx

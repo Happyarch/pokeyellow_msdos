@@ -652,7 +652,8 @@ SPLITSET_ROUTE_8    equ 0xFC
 NUM_SPLIT_SETS      equ 12
 
 ; Scratch WRAM for a TX command stream COMPOSED AT RUN TIME. Only the battle text
-; composers use it (core.asm: DisplayUsedMoveText, ComposeStatIntro), because they
+; composers use it (used_move_text.asm: DisplayUsedMoveText; core.asm:
+; ComposeStatIntro), because they
 ; splice a nickname / a TX_RAM operand together byte-by-byte and the result has to
 ; live somewhere addressable. They enter the printer at PrintTextStaged.
 ;
