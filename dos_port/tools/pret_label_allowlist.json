@@ -11,14 +11,6 @@
   "structural_findings": {},
   "relocated_files": {},
   "relocated_labels": {
-    "AddAmountSoldToMoney": {
-      "port_file": "dos_port/src/home/money.asm",
-      "why": "pret home/inventory.asm split across port files (draft Session H)"
-    },
-    "AddItemToInventory": {
-      "port_file": "dos_port/src/engine/items/inventory.asm",
-      "why": "pret home/inventory.asm split across port files (draft Session H)"
-    },
     "Bankswitch": {
       "port_file": "dos_port/src/engine/battle/move_effect_helpers.asm",
       "why": "pret home/bankswitch2.asm split across port files (draft Session H)"
@@ -31,33 +23,13 @@
       "port_file": "dos_port/src/home/audio.asm",
       "why": "audio-branch consolidation (Phase A, merged 2026-07-07): the port's home-audio entry points live together in src/home/audio.asm with the audio HAL"
     },
-    "JoypadLowSensitivity": {
-      "port_file": "dos_port/src/home/joypad_lowsens.asm",
-      "why": "pret home/joypad2.asm split across port files (draft Session H)"
-    },
     "MoveAnimationTiles1": {
       "port_file": "dos_port/src/engine/overworld/cut.asm",
       "why": "INTERIM: battle engine/battle/animations.asm not yet ported; cut.asm (OW-3.4) incbins move_anim_1.2bpp as MoveAnimationTiles1 for the grass-leaf tile (tile 6). Retire and extern from animations.asm once battle move-anim tiles are ported."
     },
-    "PlaySoundWaitForCurrent": {
-      "port_file": "dos_port/src/home/audio.asm",
-      "why": "audio-branch consolidation (Phase A, merged 2026-07-07): the port's home-audio entry points live together in src/home/audio.asm with the audio HAL"
-    },
     "PrintStatsBox": {
       "port_file": "dos_port/src/engine/battle/battle_menu.asm",
       "why": "pret engine/pokemon/status_screen.asm split across port files (draft Session H)"
-    },
-    "RemoveItemFromInventory": {
-      "port_file": "dos_port/src/engine/items/inventory.asm",
-      "why": "pret home/inventory.asm split across port files (draft Session H)"
-    },
-    "WaitForSoundToFinish": {
-      "port_file": "dos_port/src/home/audio.asm",
-      "why": "audio-branch consolidation (Phase A, merged 2026-07-07): the port's home-audio entry points live together in src/home/audio.asm with the audio HAL"
-    },
-    "WaitForTextScrollButtonPress": {
-      "port_file": "dos_port/src/engine/battle/battle_menu.asm",
-      "why": "pret home/joypad2.asm split across port files (draft Session H)"
     },
     "EffectCallBattleCore": {
       "port_file": "dos_port/src/engine/battle/move_effect_helpers.asm",
@@ -87,10 +59,6 @@
       "port_file": "dos_port/src/engine/overworld/movement.asm",
       "why": "Scanner-reviewed 2026-07-15: _UpdateSprites from pret engine/overworld/sprite_collisions.asm has its selected single non-stub definition at dos_port/src/engine/overworld/movement.asm; preserve this per-label split."
     },
-    "DelayFrames": {
-      "port_file": "dos_port/src/video/frame.asm",
-      "why": "Scanner-reviewed 2026-07-15: DelayFrames from pret home/delay.asm has its selected single non-stub definition at dos_port/src/video/frame.asm; preserve this per-label split."
-    },
     "RestoreMapTextPointer": {
       "port_file": "dos_port/src/home/map_text_pointer.asm",
       "why": "Scanner-reviewed 2026-07-15: RestoreMapTextPointer from pret home/predef_text.asm has its selected single non-stub definition at dos_port/src/home/map_text_pointer.asm; preserve this per-label split."
@@ -110,10 +78,6 @@
     "UpdateSprites": {
       "port_file": "dos_port/src/engine/overworld/movement.asm",
       "why": "Scanner-reviewed 2026-07-15: UpdateSprites from pret home/update_sprites.asm has its selected single non-stub definition at dos_port/src/engine/overworld/movement.asm; preserve this per-label split."
-    },
-    "DelayFrame": {
-      "port_file": "dos_port/src/video/frame.asm",
-      "why": "Scanner-reviewed 2026-07-15: DelayFrame from pret home/vblank.asm has its selected single non-stub definition at dos_port/src/video/frame.asm; preserve this per-label split."
     },
     "DiscardButtonPresses": {
       "port_file": "dos_port/src/input/joypad.asm",
