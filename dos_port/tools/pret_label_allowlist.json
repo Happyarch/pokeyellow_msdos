@@ -35,18 +35,6 @@
       "port_file": "dos_port/src/home/joypad_lowsens.asm",
       "why": "pret home/joypad2.asm split across port files (draft Session H)"
     },
-    "LoadFlippedFrontSpriteByMonIndex": {
-      "port_file": "dos_port/src/home/pics.asm",
-      "why": "pret home/pokemon.asm split across port files (draft Session H)"
-    },
-    "LoadFrontSpriteByMonIndex": {
-      "port_file": "dos_port/src/home/pics.asm",
-      "why": "pret home/pokemon.asm split across port files (draft Session H)"
-    },
-    "LoadMonData": {
-      "port_file": "dos_port/src/engine/pokemon/load_mon_data.asm",
-      "why": "pret home/pokemon.asm split across port files (draft Session H)"
-    },
     "MoveAnimationTiles1": {
       "port_file": "dos_port/src/engine/overworld/cut.asm",
       "why": "INTERIM: battle engine/battle/animations.asm not yet ported; cut.asm (OW-3.4) incbins move_anim_1.2bpp as MoveAnimationTiles1 for the grass-leaf tile (tile 6). Retire and extern from animations.asm once battle move-anim tiles are ported."
@@ -70,14 +58,6 @@
     "WaitForTextScrollButtonPress": {
       "port_file": "dos_port/src/engine/battle/battle_menu.asm",
       "why": "pret home/joypad2.asm split across port files (draft Session H)"
-    },
-    "CopyUncompressedPicToHL": {
-      "port_file": "dos_port/src/home/pics.asm",
-      "why": "Scanner-reviewed 2026-07-15: CopyUncompressedPicToHL from pret engine/battle/init_battle.asm has its selected single non-stub definition at dos_port/src/home/pics.asm; preserve this per-label split."
-    },
-    "LoadMonBackPic": {
-      "port_file": "dos_port/src/home/pics.asm",
-      "why": "Scanner-reviewed 2026-07-15: LoadMonBackPic from pret engine/battle/init_battle.asm has its selected single non-stub definition at dos_port/src/home/pics.asm; preserve this per-label split."
     },
     "EffectCallBattleCore": {
       "port_file": "dos_port/src/engine/battle/move_effect_helpers.asm",
