@@ -85,8 +85,21 @@ backlog file.
 - **translation.db stubs table:** backfill from the inline `; STUB` comments
   and maintain it, or bless inline comments as the canonical record and note
   that in the plan/skill docs?
-- **translation_progress.md:** regenerate now, and should regeneration be
-  a habit (e.g. part of plan-archival checklists) or on-demand only?
+- ~~**translation_progress.md:** regenerate now, and should regeneration be
+  a habit (e.g. part of plan-archival checklists) or on-demand only?~~
+  **ANSWERED 2026-07-27 (s20, at the maintainer's direction): regenerated.** The
+  generator `dos_port/tools/gen_progress_report` is still live and still works.
+  But the regeneration surfaced the real problem, which is not staleness: the file
+  renders the **hand-maintained `work_queue` pipeline**, whose statuses only move
+  when an agent runs `work_queue complete`/`wired`/`verified`, and that bookkeeping
+  was abandoned. Refreshed, it reports 97 `translated` while the label DB measures
+  1673 — it was never going to become accurate by being regenerated more often.
+  So the answer to "should regeneration be a habit" is **no**: a scheduled refresh
+  of a table nobody feeds would only make an unmeasured number look freshly
+  measured. The generator now emits a header telling readers exactly that and
+  redirecting them to `project_state`. **Open follow-up for the maintainer:** decide
+  whether the work_queue pipeline gets retired outright (it duplicates the label DB,
+  which is derived from the tree and cannot rot this way) or is deliberately revived.
 - **pret_label_allowlist.json:** do the deferred review of the 7 `suppress`
   entries + DRAFT header now, or explicitly re-defer with a dated note?
 - **Sweep mechanics:** one commit per doc or one sweep commit? Which branch?
