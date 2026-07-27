@@ -24,6 +24,12 @@ name: DOS port
 #                           generators read gfx/**.2bpp directly (not via a make
 #                           prerequisite), so a partial gfx build is not enough.
 #   make -C dos_port assets exit 0, 413 .inc  (23 present in a bare checkout)
+#                           CAVEAT (2026-07-27): that exit 0 was measured in a local
+#                           worktree where Pillow was ALREADY installed, so it did not
+#                           prove the dependency list below was sufficient. On a clean
+#                           runner this step failed with ModuleNotFoundError: PIL until
+#                           python3-pil was added. A measurement taken on a developer
+#                           machine does not establish what a fresh CI clone needs.
 #   make -C dos_port check   exit 0
 #   tools/static_gate        exit 0 with --allow-unapproved-registry
 # Total wall time was minutes, not tens of minutes.
@@ -60,10 +66,16 @@ jobs:
           ref: ${{ env.rgbds_version }}
           repository: gbdev/rgbds
 
+      # python3-pil is REQUIRED, not optional: several asset generators import PIL
+      # at module scope (tools/generators/gen_palettes.py, gen_battle_hud_inc.py,
+      # and the whole tools/gfx_core/ package -- font/tiles/tilesets/surface/
+      # battle_tiles). assets/colors/palettes.inc is in the `assets` chain, so
+      # without Pillow `make -C dos_port assets` dies with
+      # ModuleNotFoundError: No module named 'PIL'.
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -yq bison libpng-dev pkg-config nasm python3
+          sudo apt-get install -yq bison libpng-dev pkg-config nasm python3 python3-pil
 
       - name: Install rgbds
         working-directory: rgbds
