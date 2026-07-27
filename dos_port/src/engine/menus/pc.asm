@@ -86,11 +86,10 @@ extern LoadFontTilePatterns          ; home/load_font.asm
 global RunPCTest
 %endif
 
-; RemoveItemByID (hItemToRemove* are hram equs in gb_memmap.inc, not externs)
-extern wBagItems
-extern wItemQuantity
-extern wWhichPokemon
-extern wNumBagItems
+; RemoveItemByID: wBagItems / wItemQuantity / wWhichPokemon / wNumBagItems are all
+; WRAM address equs from the gb_memmap.inc included above, NOT link-time symbols, so
+; they take no extern. NASM 3.x tolerated `extern` on an already-defined equ; 2.16
+; (what CI's ubuntu-latest ships) rejects it as "inconsistently redefined".
 extern RemoveItemFromInventory       ; src/home/inventory.asm
 
 ; ===========================================================================

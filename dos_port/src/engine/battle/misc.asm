@@ -8,8 +8,8 @@ section .text
 ; ---------------------------------------------------------------------------
 global FormatMovesString
 
-extern wMoves
-extern wMovesString
+; wMoves / wMovesString are WRAM address equs from gb_memmap.inc, not link-time
+; symbols, so they take no extern (NASM 2.16 rejects extern on a defined equ).
 extern GetName
 ; BANK_MoveNames (gb_constants.inc), wPredefBank/wNameListType/wNameBuffer
 ; (gb_memmap.inc), and the *_NAME type ids (gb_constants.inc) come from the
@@ -76,16 +76,16 @@ FormatMovesString:
 ; ---------------------------------------------------------------------------
 global InitList
 
+; wEnemyMonOT / wItemList / wListPointer are WRAM address equs from gb_memmap.inc,
+; not link-time symbols, so they take no extern (NASM 2.16 rejects extern on a
+; defined equ).
 extern wInitListType
 extern INIT_ENEMYOT_LIST
-extern wEnemyMonOT
 extern INIT_PLAYEROT_LIST
 extern INIT_MON_LIST
-extern wItemList
 extern MonsterNames
 extern INIT_BAG_ITEM_LIST
 extern ItemNames
-extern wListPointer
 extern ItemPrices
 extern wItemPrices
 ; *_NAME type ids (MONSTER_NAME/ITEM_NAME/PLAYEROT_NAME/ENEMYOT_NAME) and
