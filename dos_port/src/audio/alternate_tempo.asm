@@ -17,7 +17,7 @@ global Music_Cities1AlternateTempo
 global Audio1_OverwriteChannelPointer
 
 extern PlayMusic                  ; src/home/audio.asm
-extern DelayFrames                ; src/video/frame.asm
+extern DelayFrames                ; src/home/delay.asm
 
 section .text
 

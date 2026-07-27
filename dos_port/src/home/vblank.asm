@@ -1,21 +1,31 @@
-; frame.asm — DelayFrame / DelayFrames / Delay3 and the per-frame pipeline.
+; vblank.asm — mirror of pret home/vblank.asm.
 ;
-; Source: home/vblank.asm:DelayFrame, home/delay.asm:DelayFrames
+; Holds ONE of that file's two pret labels: DelayFrame. The other, VBlank
+; itself, is `missing` in the port and has no body here — the DOS port has no
+; VBlank interrupt service routine at all. What the GB's VBlank ISR did, this
+; file's DelayFrame does inline: the port folds the whole per-frame pipeline
+; (shadow-register commit, staged BG copies, tile animation, OAM build+DMA,
+; play clock, RNG churn, joypad read, hFrameCounter decrement, audio tick,
+; render, present) into the "yield one frame" primitive, so any call to
+; DelayFrame produces exactly the work one GB VBlank produced. That is why the
+; port-only helpers below (commit_shadow_regs, update_oam, present_windows) and
+; the DEBUG_PERF stage marks live here and not in a video/ file: they ARE the
+; VBlank body, and DelayFrame is their only caller.
 ;
-; In the GB, the VBlank ISR handles shadow-register commits, auto-BG transfer,
-; and OAM DMA every frame. In the DOS port these are folded into DelayFrame so
-; that any call to DelayFrame (the standard "yield one frame" primitive) triggers
-; a full render + input update, matching the original VBlank-driven timing.
+; Was src/video/frame.asm, which carried pret labels from TWO different files
+; (home/vblank.asm:DelayFrame and home/delay.asm:DelayFrames) under a name that
+; matched neither. DelayFrames moved to src/home/delay.asm with the rest of
+; pret home/delay.asm; frame.asm was deleted.
 ;
-; pret's hAutoBGTransferEnabled VBlank transfer (wTileMap → physical BG map) has
-; NO runtime analog here — see the retirement note above DelayFrame's transfer
+; pret's hAutoBGTransferEnabled VBlank transfer (wTileMap -> physical BG map) has
+; NO runtime analog here — see the retirement note inside DelayFrame's transfer
 ; phase. Screens that need their staging visible mirror it explicitly into their
 ; window descriptor's GB_TILEMAP0/1 band (list_mirror / options_mirror /
-; pdex_mirror / sm_canvas_mirror / …), usually re-armed per frame via
+; pdex_mirror / sm_canvas_mirror / ...), usually re-armed per frame via
 ; menu_redraw_cb. The faithful `hAutoBGTransferEnabled` writes throughout the
 ; menu code are vestigial pret-fidelity bookkeeping that nothing reads.
 ;
-; Build: nasm -f coff -I include/ -o frame.o frame.asm
+; Build: nasm -f coff -I include/ -o vblank.o vblank.asm
 
 bits 32
 
@@ -91,7 +101,6 @@ PERF_MISC     equ 8    ; everything else (joypad, RNG, play clock, quit check)
 %endmacro
 
 global DelayFrame
-global DelayFrames
 
 ; ---------------------------------------------------------------------------
 ; Symbol not yet in gb_memmap.inc. Defined %ifndef-safe with its sym-verified
@@ -336,22 +345,4 @@ commit_shadow_regs:
 ; path; resurrect from git history only if a screen ever genuinely needs a
 ; generic transfer, and then per-descriptor (source stride + dest band owned by
 ; the descriptor), never as a global W_TILEMAP-wide copy.
-; ---------------------------------------------------------------------------
-; DelayFrames — wait BL (C register) frames.
-; In:  BL = frame count. Out: BL = 0. Other registers preserved.
-; ---------------------------------------------------------------------------
-DelayFrames:
-    test bl, bl
-    jz .done
-.loop:
-    call DelayFrame
-    dec bl
-    jnz .loop
-.done:
-    ret
-
-; ---------------------------------------------------------------------------
-; Delay3 MOVED to src/home/palettes.asm (mirror rule) — it is a pret
-; home/palettes.asm label, not a home/fade.asm / port-frame one. It still
-; tail-calls DelayFrames here, which stays global for it.
 ; ---------------------------------------------------------------------------

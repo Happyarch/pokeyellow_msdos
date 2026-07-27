@@ -101,7 +101,7 @@ extern GetPartyMonName          ; deferred: party name lookup
 extern LoadMonData              ; deferred: load party/box mon into wLoadedMon
 extern ModifyPikachuHappiness   ; deferred: Pikachu happiness events
 extern PrintStatsBox            ; deferred: level-up stats overlay
-extern WaitForTextScrollButtonPress  ; deferred: A-press wait
+extern WaitForTextScrollButtonPress  ; src/home/joypad2.asm — A-press wait
 extern SaveScreenTilesToBuffer1      ; src/home/tilemap.asm
 extern LoadScreenTilesFromBuffer1    ; src/home/tilemap.asm
 extern PrintEmptyString              ; deferred: clear text line

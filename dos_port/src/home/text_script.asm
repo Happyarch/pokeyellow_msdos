@@ -48,7 +48,7 @@ global FarPrintText
 extern PrintText                    ; pret PrintText (window.asm) — ESI = FLAT TX stream ptr
 extern PrintText_NoCreatingTextBox                  ; pret PrintText_NoCreatingTextBox
 extern DelayFrame
-extern WaitForTextScrollButtonPress ; engine/battle/battle_menu.asm — relocated joypad2 routine
+extern WaitForTextScrollButtonPress ; src/home/joypad2.asm
 
 ; ── non-home glue ─────────────────────────────────────────────────────────────
 ; RESOLVED (menus S2): DisplayTextIDInit is now a real linked routine

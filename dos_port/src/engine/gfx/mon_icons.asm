@@ -18,7 +18,7 @@
 ;
 ; PORT — publishing OAM to the compositor (the one non-pret piece here):
 ;   The GB DMAs wShadowOAM → $FE00 every VBlank unconditionally. The port's
-;   update_oam (video/frame.asm) gates BOTH PrepareOAMData and that DMA on
+;   update_oam (src/home/vblank.asm) gates BOTH PrepareOAMData and that DMA on
 ;   wUpdateSpritesEnabled — and every screen that shows mon icons zeroes it
 ;   (StartMenu_Pokemon, DisplayNamingScreen; pret does the same, because on the GB
 ;   the menu writes shadow OAM itself). So these writers publish their own OAM:
@@ -56,7 +56,7 @@ global CommitMonPartySpriteOAM
 
 extern CopyData                 ; home/copy.asm — ESI=src, EDX=dest, BX=count
 extern CopyVideoData            ; home/copy2.asm — ESI=dest VRAM, EDX=src flat, BL=tiles
-extern DelayFrame               ; video/frame.asm
+extern DelayFrame               ; src/home/vblank.asm
 extern DisableLCD               ; home/lcd.asm
 extern EnableLCD                ; home/lcd.asm
 extern IndexToPokedex           ; engine/menus/pokedex.asm — predef, wPokedexNum in place

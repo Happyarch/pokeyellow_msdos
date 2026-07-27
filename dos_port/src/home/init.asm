@@ -39,7 +39,7 @@ extern FillMemory
 extern StopAllMusic          ; src/home/audio.asm
 extern GBPalWhiteOut         ; src/home/palettes.asm — SoftReset prologue
 extern GBPalNormal           ; src/home/palettes.asm
-extern DelayFrames           ; src/video/frame.asm — BL = frame count
+extern DelayFrames           ; src/home/delay.asm — BL = frame count
 extern DisableLCD
 extern ClearBgMap
 extern ClearSprites

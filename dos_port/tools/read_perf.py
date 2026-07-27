@@ -21,7 +21,7 @@ from pathlib import Path
 
 PIT_HZ = 1193181.666
 
-# Must match the PERF_* stage ids in src/video/frame.asm.
+# Must match the PERF_* stage ids in src/home/vblank.asm.
 STAGE_NAMES = [
     "wait (vblank+PIT)",
     "commit (regs/pal/bgcopy/anim)",

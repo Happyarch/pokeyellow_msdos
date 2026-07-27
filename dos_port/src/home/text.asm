@@ -147,7 +147,7 @@ extern g_bg_whiteout       ; src/ppu/ppu.asm — set by full-takeover menus (par
 extern PrintNumber         ; src/home/print_num.asm — TX_NUM (text_decimal)
 extern PrintBCDNumber      ; src/home/print_bcd.asm — TX_BCD (text_bcd / money)
 extern PlaySound           ; src/home/audio.asm — AL = sound id (TextCommand_SOUND)
-extern WaitForSoundToFinish ; src/home/audio.asm
+extern WaitForSoundToFinish ; src/home/delay.asm
 extern PlayCry             ; home_stubs.asm — pret: home/pokemon.asm (AL = species; ret-stub)
 
 %include "assets/audio_constants.inc"   ; SFX_* ids for the TextCommandSounds table

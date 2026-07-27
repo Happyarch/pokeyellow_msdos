@@ -45,7 +45,7 @@ global ShakeElevator
 global ShakeElevatorRedrawRow
 
 extern Delay3                      ; src/home/palettes.asm
-extern DelayFrames                 ; video/frame.asm
+extern DelayFrames                 ; src/home/delay.asm
 extern StopAllMusic                ; home/audio.asm (LIVE)
 extern PlayMusic                   ; home/audio.asm (LIVE; AL=id, BL=bank)
 extern PlayDefaultMusic            ; home/audio.asm (LIVE)

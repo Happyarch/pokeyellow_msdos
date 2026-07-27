@@ -26,8 +26,8 @@ extern LoadMonPicToVRAM              ; home/pics.asm — decode staged pic → [
 extern GetPredefRegisters            ; home/predef.asm — restore HL/DE/BC for a predef body
 extern CopyUncompressedPicToTilemap  ; engine/battle/init_battle.asm — predef; place 7×7 ids at wPredefHL
 extern UpdateCGBPal_BGP              ; home/cgb_palettes.asm — commit rBGP to the DAC
-extern DelayFrames                   ; video/frame.asm — wait BL frames
-extern DelayFrame                    ; video/frame.asm — wait one frame (MovePicLeft)
+extern DelayFrames                   ; src/home/delay.asm — wait BL frames
+extern DelayFrame                    ; src/home/vblank.asm — wait one frame (MovePicLeft)
 extern MovieSyncWindow               ; movie_projection.asm — project rWX/hWY to the window descriptor
 extern DebugNewGamePlayerName        ; engine/movie/title.asm — generated debug boot names
 extern DebugNewGameRivalName         ; engine/movie/title.asm
@@ -40,7 +40,7 @@ extern PlaySound                     ; home/audio.asm — AL = sound id
 extern ClearScreen                   ; home/copy2.asm — blank W_TILEMAP (surface state survives)
 extern LoadTextBoxTilePatterns       ; home/load_font.asm
 extern InitPlayerData2               ; oak_speech/init_player_data.asm (pret predef)
-extern AddItemToInventory            ; items/inventory.asm — ESI = count addr, [wCurItem]/[wItemQuantity]
+extern AddItemToInventory            ; src/home/inventory.asm — ESI = count addr, [wCurItem]/[wItemQuantity]
 extern PrepareForSpecialWarp         ; overworld/special_warps.asm
 extern GBFadeOutToWhite              ; home/fade.asm
 extern GBFadeInFromWhite             ; home/fade.asm
@@ -497,7 +497,7 @@ extern LoadFontTilePatterns          ; home/load_font.asm — $7F space tile
 extern MovieBeginSurface             ; movie_projection.asm
 extern MovieMirrorSurface            ; movie_projection.asm
 extern DumpBackbuffer                ; debug/debug_dump.asm — FRAME.BIN + exit
-extern DelayFrame                    ; video/frame.asm
+extern DelayFrame                    ; src/home/vblank.asm
 extern ProfOakPic                    ; data/trainer_pics.asm (== pret ProfOakPic)
 global RunOakPicTest
 

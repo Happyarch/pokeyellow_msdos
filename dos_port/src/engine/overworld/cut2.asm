@@ -68,7 +68,7 @@ global AnimCut
 global AnimCutGrass_UpdateOAMEntries
 global AnimCutGrass_SwapOAMEntries
 
-extern DelayFrame                  ; video/frame.asm
+extern DelayFrame                  ; src/home/vblank.asm
 extern UpdateCGBPal_OBP1           ; home/cgb_palettes.asm
 extern AdjustOAMBlockXPos2         ; UNPORTED (pret engine/battle/animations.asm) — ESI=GB OAM off, BL=count
 extern AdjustOAMBlockYPos2         ; UNPORTED (pret engine/battle/animations.asm) — ESI=GB OAM off, BL=count

@@ -106,7 +106,7 @@ surf_path_shadow: dd -1     ; 1 = overworld surface, 0 = flat wTileMap (-1 = non
 
 ; --- Unified window-compositor descriptor list ----------------------------------
 ; g_windows[] is the ONE source of truth for what the window layer draws.
-; frame.asm loops g_window_count descriptors (painter's order); render_window draws
+; vblank.asm loops g_window_count descriptors (painter's order); render_window draws
 ; one. A screen fully (re)defines this list whenever its window state changes —
 ; never rely on prior contents. count==0 ⇒ nothing drawn. (Layout/field offsets:
 ; gb_memmap.inc WIN_*; default count=0 = hidden until a screen populates it.)
@@ -137,7 +137,7 @@ g_bg_whiteout: dd 0
 global g_surface_redraw_cb
 g_surface_redraw_cb: dd 0
 
-; OBJ-vs-window z-order (see the long comment at frame.asm's compositor sequence).
+; OBJ-vs-window z-order (see the long comment at vblank.asm's compositor sequence).
 ; The port normally composites the window layer LAST — over the sprites — because
 ; its only window is the bottom dialog box, which must occlude NPCs the widescreen
 ; camera exposes under it. That is an inversion of the GB, where OBJ draw over the
@@ -683,7 +683,7 @@ decode_surface_overworld:
 ; NOTE the read is direct from wTileMap at its native 40-wide stride. Funnelling
 ; it through the 32-wide GB VRAM tilemap is what produced the title-screen
 ; "Pikachu mirror" (surface cols 32-47 wrapped back onto cols 0-15); see the
-; do_bg_transfer retirement note in src/video/frame.asm.
+; do_bg_transfer retirement note in src/home/vblank.asm.
 ;
 ; In: EBP = GB memory base, [surf_force] set, id_cache_lut built. Clobbers EAX-EDI.
 ; ---------------------------------------------------------------------------
@@ -1058,7 +1058,7 @@ render_sprites:
 ; descriptor, NOT the loose IO_WX/IO_WY/g_win_* globals. Tile data addressing
 ; still follows the shared LCDC bit 4, identical to the BG. BGP applies — the
 ; window is fully opaque (color 0 is NOT transparent). Visibility is purely
-; count-driven now (frame.asm loops g_window_count descriptors), so the old LCDC
+; count-driven now (vblank.asm loops g_window_count descriptors), so the old LCDC
 ; bit-5/bit-0 enable gate moved out to the legacy shim during migration.
 ;
 ; WLY — window internal line counter:
@@ -1076,7 +1076,7 @@ render_sprites:
 ; the bottom dialog/menu box (WY=152), which must occlude NPCs under it. The
 ; bug only shows up because this port's extended 40×25 player-centered viewport
 ; renders NPCs in the bottom rows that the GB's 20×18 screen never put under the
-; box. See the DIVERGENCE note in src/video/frame.asm:DelayFrame.
+; box. See the DIVERGENCE note in src/home/vblank.asm:DelayFrame.
 ; In:  EBP = GB memory base, ESI = flat pointer to the window descriptor to draw.
 ;      All registers preserved.
 ; ---------------------------------------------------------------------------

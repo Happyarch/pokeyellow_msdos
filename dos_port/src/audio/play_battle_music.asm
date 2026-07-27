@@ -15,7 +15,7 @@ global PlayBattleMusic
 
 extern StopAllMusic               ; src/home/audio.asm
 extern PlayMusic                  ; src/home/audio.asm
-extern DelayFrame                 ; src/video/frame.asm
+extern DelayFrame                 ; src/home/vblank.asm
 
 section .text
 

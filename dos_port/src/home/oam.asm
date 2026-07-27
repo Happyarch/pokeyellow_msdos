@@ -7,7 +7,7 @@
 ; trade animations). In pret it targets wShadowOAM ($C300), the 40-entry shadow
 ; buffer that the DMA routine copies to real OAM ($FE00) each VBlank. THIS PORT
 ; USES THE SAME SHADOW-OAM MODEL: PrepareOAMData (src/gfx/sprite_oam.asm) builds
-; wShadowOAM (= W_SHADOW_OAM, $C300) and frame.asm:update_oam DMA-copies it to
+; wShadowOAM (= W_SHADOW_OAM, $C300) and vblank.asm:update_oam DMA-copies it to
 ; GB_OAM ($FE00) each frame; the software PPU (ppu.asm render_sprites) reads the
 ; 4-byte-per-entry (Y, X, tile, attr) layout out of $FE00. So writing the same
 ; (Y, X, tile, attr) layout into wShadowOAM is exactly faithful — this is NOT

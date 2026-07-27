@@ -46,7 +46,7 @@ bits 32
 %define TILE_BLANK 0x7F                      ; charmap " " (TILE_SPC in text.asm)
 
 extern g_tilecache_dirty                     ; src/ppu/ppu.asm — arm tile-cache re-decode
-extern DelayFrame                            ; src/video/frame.asm — one-frame yield
+extern DelayFrame                            ; src/home/vblank.asm — one-frame yield
 extern Delay3                                ; src/home/palettes.asm
 extern _IsTilePassable                       ; src/engine/gfx/sprite_oam.asm — CL=tile → CF
 
@@ -262,7 +262,7 @@ ClearScreenArea:
 ;
 ; PORT MODEL: the software PPU renders W_TILEMAP DIRECTLY every frame (render_bg,
 ; view-pointer = 0 path). There is no separate physical $9800 tilemap that the
-; renderer scans in the menu/battle path — do_bg_transfer (frame.asm) is inert
+; renderer scans in the menu/battle path — do_bg_transfer (vblank.asm) is inert
 ; whenever H_AUTO_BG_TRANSFER_EN is 0, which is the case here. So the buffer is
 ; ALREADY on screen; there is nothing to copy. The routine's only observable
 ; contract is its 3-frame cost, which callers use for pacing — reproduced with

@@ -138,7 +138,7 @@ extern UpdateSprites                 ; engine/overworld/movement.asm
 extern ClearScreen                   ; home/copy2.asm
 extern LoadTextBoxTilePatterns       ; gfx/load_font.asm
 extern LoadFontTilePatterns          ; gfx/load_font.asm
-extern WaitForTextScrollButtonPress  ; engine/battle/battle_menu.asm — ▼-wait + A/B
+extern WaitForTextScrollButtonPress  ; src/home/joypad2.asm — ▼-wait + A/B
 extern GBPalWhiteOut                 ; src/home/palettes.asm
 extern GBPalNormal                   ; src/home/palettes.asm
 extern RunPaletteCommand             ; src/home/palettes.asm
@@ -149,7 +149,7 @@ extern StatusScreen                  ; engine/pokemon/status_screen.asm — page
 extern StatusScreen2                 ; engine/pokemon/status_screen.asm — page 2
 extern CommitMonPartySpriteOAM       ; engine/gfx/mon_icons.asm — publish shadow OAM → compositor
 extern PartyMenuMirror               ; engine/menus/party_menu.asm — canvas → panel window
-extern WaitForSoundToFinish          ; home/audio.asm (pret: home/delay.asm)
+extern WaitForSoundToFinish          ; src/home/delay.asm
 extern PlaySound                     ; home/audio.asm — sound id in AL
 extern PrintText                     ; home/window.asm — ESI = flat text stream
 ; --- field-move dispatch (row 9 part 3) ---
@@ -160,7 +160,7 @@ extern PrintStrengthText              ; engine/overworld/field_move_messages.asm
 extern UsedCut                        ; engine/overworld/cut.asm — predef UsedCut (.cut)
 extern Func_1510                     ; home/pikachu.asm
 extern ChooseFlyDestination          ; home/reload_tiles.asm — Town Map Fly UI wrapper
-extern DelayFrames                   ; video/frame.asm — BL = frame count
+extern DelayFrames                   ; src/home/delay.asm — BL = frame count
 extern Divide                        ; home/math.asm — hDividend/hDivisor, BH = byte count
 extern text_msgbox                   ; home/text.asm — active message-box projection
 extern msgbox_dialog                 ; home/text.asm — the standard bottom dialog box
@@ -1718,7 +1718,7 @@ SwitchPartyMon_InitVarOrSwapData:
 ; make SKIP_TITLE=1 DEBUG_TRAINERCARD=1
 ; ---------------------------------------------------------------------------
 extern FillMemory                    ; home/copy2.asm
-extern DelayFrame                    ; video/frame.asm
+extern DelayFrame                    ; src/home/vblank.asm
 extern DumpBackbuffer                ; debug/debug_dump.asm
 extern SeedDeterministicPlayerIdentity ; engine/debug/debug_party.asm — "RED"/id 0 (seed.lua spec)
 global RunTrainerCardTest

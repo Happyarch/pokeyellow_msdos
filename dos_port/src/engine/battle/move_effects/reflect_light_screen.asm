@@ -37,7 +37,7 @@ global ReflectLightScreenEffect_
 extern PlayCurrentMoveAnimation      ; core_stubs.asm (STUB)
 extern PrintText                     ; src/home/window.asm — ESI = flat text stream
 extern PrintButItFailedText_         ; engine/battle/effects.asm — "But it failed!"
-extern DelayFrames                   ; src/video/frame.asm — BL = frame count
+extern DelayFrames                   ; src/home/delay.asm — BL = frame count
 extern EffectCallBattleCore          ; move_effect_helpers.asm — tail into ESI (no banks, §2.4)
 
 ; --- battle_text.inc streams (global in core.o; flat addresses) ---

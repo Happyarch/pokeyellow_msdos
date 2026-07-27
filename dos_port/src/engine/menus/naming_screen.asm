@@ -94,8 +94,8 @@ extern g_obj_over_window               ; ppu/ppu.asm — OBJ over the window lay
 extern TextBoxBorder                   ; text/text.asm — ESI=dest, BL=int_w, BH=int_h
 extern PlaceString                     ; text/text.asm — ESI=dest, EAX=flat src
 extern AddNTimes                       ; home/array.asm — AL=n, BX=step, ESI+=n*step
-extern JoypadLowSensitivity            ; input/joypad_lowsens.asm -> H_JOY5
-extern DelayFrame                      ; video/frame.asm
+extern JoypadLowSensitivity            ; src/home/joypad2.asm -> H_JOY5
+extern DelayFrame                      ; src/home/vblank.asm
 extern Delay3                          ; src/home/palettes.asm — 3x DelayFrame
 extern PlaceMenuCursor                 ; home/window.asm
 extern EraseMenuCursor                 ; home/window.asm
@@ -579,7 +579,7 @@ DisplayNamingScreen:
 naming_show_window:
     mov dword [g_bg_whiteout], 1
     ; The window IS this screen, and the mon icon is OBJ on top of it — restore the
-    ; GB's OBJ-over-window order (see frame.asm). ClearSprites drops it on exit.
+    ; GB's OBJ-over-window order (see vblank.asm). ClearSprites drops it on exit.
     mov dword [g_obj_over_window], 1
     mov eax, UI_NAMING_SCREEN_WX
     mov ebx, UI_NAMING_SCREEN_WY

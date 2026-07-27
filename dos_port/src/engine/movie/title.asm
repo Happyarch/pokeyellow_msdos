@@ -65,10 +65,10 @@ extern GBPalNormal
 extern Init
 extern MainMenu                  ; engine/menus/main_menu.asm — the real post-title route
 extern g_tilecache_dirty
-extern JoypadLowSensitivity     ; src/home/joypad_lowsens.asm (home/joypad2.asm)
+extern JoypadLowSensitivity     ; src/home/joypad2.asm
 extern PlaySound                ; src/home/audio.asm — AL = sound id
 extern StopAllMusic             ; src/home/audio.asm
-extern WaitForSoundToFinish     ; src/home/audio.asm
+extern WaitForSoundToFinish     ; src/home/delay.asm
 extern PlayPikachuSoundClip     ; src/engine/pikachu/pikachu_pcm.asm — DL = clip index (pret: E)
 extern RunPaletteCommand        ; src/home/palettes.asm — BH = palette command
 extern UpdateCGBPal_OBP0        ; src/home/cgb_palettes.asm
@@ -666,7 +666,7 @@ DisplayTitleScreen:
     ; is the fade length, so it must be carried, not invented.
     mov [ebp + W_AUDIO_FADE_OUT], al
     call StopAllMusic
-; DEVIATION{class=HAL; pret=engine/movie/title.asm:DisplayTitleScreen.audioFadeLoop; behavior=the fade-out wait calls DelayFrame each iteration instead of spinning on wAudioFadeOutControl alone; evidence=on the GB the audio engine runs from the VBlank interrupt so a bare spin still advances the fade, while this port ticks audio inside DelayFrame (frame.asm calls audio_tick which calls FadeOutAudio) so a bare spin would never decrement it and would hang forever; lifetime=permanent, audio is frame-driven in this port}
+; DEVIATION{class=HAL; pret=engine/movie/title.asm:DisplayTitleScreen.audioFadeLoop; behavior=the fade-out wait calls DelayFrame each iteration instead of spinning on wAudioFadeOutControl alone; evidence=on the GB the audio engine runs from the VBlank interrupt so a bare spin still advances the fade, while this port ticks audio inside DelayFrame (src/home/vblank.asm calls audio_tick which calls FadeOutAudio) so a bare spin would never decrement it and would hang forever; lifetime=permanent, audio is frame-driven in this port}
 .audioFadeLoop:
     call DelayFrame
     cmp byte [ebp + W_AUDIO_FADE_OUT], 0

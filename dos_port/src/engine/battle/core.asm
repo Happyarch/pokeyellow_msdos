@@ -189,7 +189,7 @@ extern text_msgbox                     ; text.asm — the active msgbox projecti
 extern text_arrow_pos                  ; text.asm — ▼ tile (read by BattlePromptWait;
                                        ; published by PrintText from the record)
 extern FormatMovesString               ; misc.asm — wMoves → wMovesString (+ '-' slots)
-extern DelayFrame                      ; frame.asm
+extern DelayFrame                      ; src/home/vblank.asm
 extern text_row_stride                 ; text.asm — W_TILEMAP row stride
 
 ; --- PrintMenuItem's helpers (pret core.asm:3010) ---
@@ -1090,7 +1090,7 @@ section .text
 extern DisplayEffectiveness            ; display_effectiveness.asm (real)
 extern HideSubstituteShowMonAnim       ; core_stubs.asm (STUB)
 extern ReshowSubstituteAnim            ; core_stubs.asm (STUB)
-extern DelayFrames                     ; frame.asm
+extern DelayFrames                     ; src/home/delay.asm
 extern MultiHitText                    ; battle_text.inc
 
 ; Faithful port of pret engine/battle/core.asm:ExecutePlayerMove (3244). Re-entry
@@ -5259,7 +5259,7 @@ global TryRunningFromBattle
 extern DrawEnemyHUD                    ; battle_hud.asm — enemy name+level+HP bar+frame
 extern DrawPlayerHUD                   ; battle_hud.asm — player name+level+HP bar+frame
 extern DrawBattleHUDs                  ; battle_hud.asm — both HUDs, pret player-then-enemy order
-extern WaitForAPress                   ; battle_menu.asm — pret WaitForTextScrollButtonPress
+extern WaitForAPress                   ; src/home/joypad2.asm — alias of pret WaitForTextScrollButtonPress
 ; run-message strings from the generated assets/battle_menu_runtime_strings.inc,
 ; which battle_menu.asm carries (Tier-1 data; the blob stays with its %include).
 extern str_gotaway                     ; battle_menu.asm (assets/battle_menu_runtime_strings.inc)
@@ -5303,7 +5303,7 @@ global HandleExplodingAnimation
 ; enemy-only name+level+HP-bar+frame redraw (stride-agnostic, writing W_TILEMAP that
 ; render_bg blits every frame). DIVERGENCES vs pret (all hardware/pre-existing, not
 ; invented here): pret's hAutoBGTransferEnabled suspend/resume bracket is dropped —
-; it gates the GB torus-tilemap DMA (do_bg_transfer, frame.asm) which the native
+; it gates the GB torus-tilemap DMA (do_bg_transfer, vblank.asm) which the native
 ; render_bg does not use and which the overworld deliberately keeps disabled, so
 ; forcing it on would run a pointless per-frame copy; pret's leading ClearScreenArea
 ; of the 12×4 HUD tile area (home/copy2.asm not linked here; only needed when the

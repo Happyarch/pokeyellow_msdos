@@ -96,7 +96,7 @@ extern CopyData                 ; src/home/copy.asm
 extern PrintText                ; src/home/window.asm
 extern PlaySound                ; src/home/audio.asm (real gateway)
 extern StopAllMusic             ; src/home/audio.asm (real gateway)
-extern WaitForSoundToFinish     ; src/home/audio.asm (real gateway)
+extern WaitForSoundToFinish     ; src/home/delay.asm (real gateway)
 extern DisplayTextID            ; src/home/text_script.asm — pret: home/text_script.asm
 extern EmotionBubble            ; src/engine/overworld/emotion_bubbles.asm (pret: predef)
 extern TrainerWalkUpToPlayer    ; src/engine/overworld/trainer_sight.asm

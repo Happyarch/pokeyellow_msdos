@@ -354,14 +354,14 @@ global TossItem_
 
 extern TextBoxBorder                 ; text/text.asm — ESI=top-left, BL=int_w, BH=int_h
 extern place_flat_str                ; text/text.asm — ESI=dest, EAX=flat src
-extern DelayFrame                    ; video/frame.asm
+extern DelayFrame                    ; src/home/vblank.asm
 extern IsItemHM                      ; home/names.asm — AL → CF
 extern KeyItemFlags                  ; src/data/item_data.asm — flat LSB-first bit array
 extern Moves                                         ; flat move-data table
 extern IsKeyItem                     ; home/item.asm — [wCurItem] → [wIsKeyItem]
 extern GetItemName                   ; home/names.asm — [wNamedObjectIndex] → wNameBuffer
 extern CopyToStringBuffer            ; src/home/copy_string.asm — EDX=src → wStringBuffer
-extern RemoveItemFromInventory       ; engine/items/inventory.asm
+extern RemoveItemFromInventory       ; src/home/inventory.asm
 extern InitYesNoTextBoxParameters    ; home/yes_no.asm — YES_NO_MENU at GB(14,7)
 extern DisplayTextBoxID              ; home/textbox.asm
 extern add_window                    ; ppu/ppu.asm
@@ -752,7 +752,7 @@ global ItemUseItemfinder             ; Stage 3 bullet 2 (was item_use_stubs.asm 
 extern ApplyHealingItem     ; item_effects.asm — pret .addHealAmount…setCurrentHPToMaxHp
 extern ApplyVitamin         ; item_effects.asm — pret .useVitamin's stat-exp add
 extern RareCandyLevelUp     ; item_effects.asm — pret .useRareCandy's level/exp/stat math
-extern RemoveItemFromInventory ; inventory.asm
+extern RemoveItemFromInventory ; src/home/inventory.asm
 extern VitaminStats         ; data/item_data.asm (generated) — 5 × STAT_NAME_LENGTH
 
 ; --- party menu / mon data ---
@@ -778,13 +778,13 @@ extern DoubleOrHalveSelectedStats ; battle_exp_stubs.asm (deferred)
 extern ClearScreen          ; home/copy2.asm
 extern GBPalWhiteOut        ; src/home/palettes.asm
 extern ReloadMapData        ; home/reload_tiles.asm
-extern DelayFrames          ; video/frame.asm — BL = frames
+extern DelayFrames          ; src/home/delay.asm — BL = frames
 extern Func_1510            ; home/pikachu.asm — ItemUseEscapeRope's Pikachu refresh
-extern WaitForTextScrollButtonPress ; engine/battle/battle_menu.asm
+extern WaitForTextScrollButtonPress ; src/home/joypad2.asm
 extern ItemUseText00_ref            ; assets/item_text.inc — "<PLAYER> used <ITEM>!"
 extern PrintText        ; home/window.asm — ESI = FLAT TX stream ptr
 extern PlaySound            ; home/audio.asm — AL = sound id
-extern PlaySoundWaitForCurrent ; home/audio.asm
+extern PlaySoundWaitForCurrent ; src/home/delay.asm
 
 ; --- generated text streams (assets/item_text.inc, flat .data) ---
 ; Each `<Label>_ref` is the generator's {dd stream, dd length} pair. Only the
@@ -2480,7 +2480,7 @@ ItemUseTMHM:
 ; tail — is faithful.
 
 extern EvosMovesPointerTable        ; src/data/pokemon_data.asm — flat dd TABLE (never call it)
-extern WaitForSoundToFinish         ; src/home/audio.asm
+extern WaitForSoundToFinish         ; src/home/delay.asm
 extern RefusingText_ref             ; assets/item_text.inc
 
 global ItemUseEvoStone

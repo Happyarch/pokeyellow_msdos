@@ -13,7 +13,7 @@
 ; Port model (window compositor):
 ; - The screen is pret's 20×18 stride-20 W_TILEMAP scratch, mirrored to
 ;   GB_TILEMAP1 rows 0-17 by PartyMenuMirror — the hAutoBGTransferEnabled
-;   analog (frame.asm's do_bg_transfer is canvas-scoped, stride 40, so it
+;   analog (vblank.asm's do_bg_transfer is canvas-scoped, stride 40, so it
 ;   can't serve this scratch; same explicit-mirror pattern as S3's
 ;   list_mirror). RedrawPartyMenu_'s .done mirrors once where pret re-enables
 ;   the transfer; PartyMenuAnimCB re-mirrors each input frame (live cursor).
@@ -84,7 +84,7 @@ extern add_window
 extern g_bg_whiteout
 extern g_obj_over_window             ; ppu/ppu.asm — OBJ over the window layer (GB order)
 extern Delay3                        ; src/home/palettes.asm
-extern DelayFrame                    ; video/frame.asm
+extern DelayFrame                    ; src/home/vblank.asm
 extern GBPalNormal                   ; src/home/palettes.asm
 extern PrintText                     ; home/window.asm — ESI=FLAT TX stream ptr
 extern text_msgbox                   ; home/text.asm — → the active msgbox projection
@@ -194,7 +194,7 @@ DrawPartyMenu_:
     ; The port's transfer analog is PartyMenuMirror, which isn't called until .done,
     ; so nothing here shows a half-drawn scratch — but pret's write is kept anyway
     ; (M-24's precedent, row 9). hAutoBGTransferEnabled is currently WRITE-ONLY in the
-    ; port: do_bg_transfer was deleted (frame.asm:126, the OW-A.13 corruption family)
+    ; port: do_bg_transfer was deleted (vblank.asm:135, the OW-A.13 corruption family)
     ; and no reader replaced it. Every other screen still writes it as pret does; a
     ; screen that quietly stops is how the flag's state drifts from pret's.
     mov byte [ebp + hAutoBGTransferEnabled], 0  ; xor a / ldh [hAutoBGTransferEnabled],a
@@ -507,7 +507,7 @@ ShowPartyMenuWindows:
     mov dword [g_bg_whiteout], 1
     ; The panel window covers the whole list, icons included — so the icon OBJ
     ; have to composite over it, as OBJ do over the window on the GB. (The port's
-    ; default order paints the window last; see frame.asm.)
+    ; default order paints the window last; see vblank.asm.)
     mov dword [g_obj_over_window], 1
     mov eax, UI_PARTY_PANEL_WX
     mov ebx, UI_PARTY_PANEL_WY

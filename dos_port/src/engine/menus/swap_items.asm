@@ -28,7 +28,7 @@ global HandleItemListSwapping
 
 ; ── code labels (resolved at link) ──
 extern DisplayListMenuIDLoop        ; src/home/list_menu.asm (M4.2)
-extern DelayFrames                  ; src/video/frame.asm
+extern DelayFrames                  ; src/home/delay.asm
 
 ; wListMenuID / wListPointer / ITEMLISTMENU / hSwapItemID / hSwapItemQuantity now
 ; live canonically in gb_memmap.inc / gb_constants.inc (Wave 4 integration).
@@ -69,7 +69,7 @@ HandleItemListSwapping:
     add al, bl
     mov [ebp + wMenuItemToSwap], al
     
-    mov bl, 20                          ; DelayFrames reads BL (frame.asm:213)
+    mov bl, 20                          ; DelayFrames reads BL (delay.asm:36)
     call DelayFrames
     jmp DisplayListMenuIDLoop
 
@@ -88,7 +88,7 @@ HandleItemListSwapping:
     dec al
     mov [ebp + wMenuItemToSwap], al
     
-    mov bl, 20                          ; DelayFrames reads BL (frame.asm:213)
+    mov bl, 20                          ; DelayFrames reads BL (delay.asm:36)
     call DelayFrames
     
     push esi                            ; pret: push hl

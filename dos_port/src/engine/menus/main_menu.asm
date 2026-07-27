@@ -158,8 +158,8 @@ extern menu_redraw_cb           ; window.asm — per-frame redraw callback
 extern set_single_window        ; ppu.asm — g_windows[] = one descriptor
 extern add_window               ; ppu.asm — append one descriptor
 extern g_bg_whiteout            ; ppu.asm — 1 = blank BG behind the window list
-extern DelayFrame               ; frame.asm
-extern DelayFrames              ; frame.asm — BL = frame count
+extern DelayFrame               ; src/home/vblank.asm
+extern DelayFrames              ; src/home/delay.asm — BL = frame count
 extern ClearScreen              ; home/copy2.asm — blank canvas + auto-transfer
 extern LoadTextBoxTilePatterns  ; load_font.asm
 extern LoadFontTilePatterns     ; load_font.asm

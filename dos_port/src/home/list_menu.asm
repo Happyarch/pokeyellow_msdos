@@ -88,12 +88,12 @@ extern text_row_stride          ; text.asm       (resd) active W_TILEMAP row str
 extern menu_item_step           ; home/window.asm(resd) per-item cursor row step
 extern menu_redraw_cb           ; home/window.asm(resd) per-frame redraw cb (0=none)
 extern menu_arrow_pos           ; home/window.asm(resd) the blinking ▼'s tile offset (0=none)
-extern DelayFrames              ; frame.asm      BL=frame count
-extern DelayFrame               ; frame.asm      the port's frame pump — joypad edge
+extern DelayFrames              ; src/home/delay.asm   BL=frame count
+extern DelayFrame               ; src/home/vblank.asm  the port's frame pump — joypad edge
                                 ;                + compositor present both live here
                                 ;                (see .waitForKeyPressLoop)
 extern Delay3                   ; src/home/palettes.asm
-extern JoypadLowSensitivity     ; input/joypad_lowsens.asm  → H_JOY_PRESSED
+extern JoypadLowSensitivity     ; src/home/joypad2.asm      → H_JOY_PRESSED
 extern BankswitchHome           ; home/bankswitch.asm  AL=bank (flat no-op bookkeeping)
 extern BankswitchBack           ; home/bankswitch.asm
 extern GetItemName              ; home/names.asm  [wNamedObjectIndex] → wNameBuffer

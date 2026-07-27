@@ -27,7 +27,7 @@ extern CheckForUserInterruption      ; src/home/overworld.asm — BL frames, CF 
 extern PublishProjectedOAM           ; engine/gfx/sprite_oam.asm — project wShadowOAM to the canvas
 extern PlaySound                     ; home/audio.asm — AL = sound id
 extern CopyData                      ; home/copy.asm — ESI/EDX EBP-relative, BX count
-extern DelayFrame                    ; video/frame.asm — wait one frame
+extern DelayFrame                    ; src/home/vblank.asm — wait one frame
 extern PlayIntro                     ; engine/movie/intro.asm — full boot cinematic (RunSplashTest harness)
 
 %include "assets/audio_constants.inc"   ; SFX_SHOOTING_STAR

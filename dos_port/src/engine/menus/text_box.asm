@@ -73,9 +73,9 @@ extern FieldMoveNames                   ; engine/menus/field_moves.asm (flat, '@
 extern CableClub_TextBoxBorder          ; engine/link/cable_club.asm — same interface as
                                         ; TextBoxBorder; TRADE_CANCEL_MENU border
 extern place_flat_str                   ; home/text.asm — EAX=flat str ptr, ESI=tile-buf pos
-extern DelayFrame                       ; video/frame.asm — one frame + present
-extern add_window                       ; ppu/frame.asm — EAX=wx EBX=wy ECX=clip_w EDX=max_y ESI=tilemap EDI=srow
-extern g_window_count                   ; ppu/frame.asm — active window-descriptor count
+extern DelayFrame                       ; src/home/vblank.asm — one frame + present
+extern add_window                       ; src/ppu/ppu.asm — EAX=wx EBX=wy ECX=clip_w EDX=max_y ESI=tilemap EDI=srow
+extern g_window_count                   ; src/ppu/ppu.asm — active window-descriptor count
 extern menu_redraw_cb                   ; home/window.asm — per-frame side-info redraw cb (0=none)
 extern yn_box_col                       ; home/yes_no.asm — box top-left GB column
 extern yn_box_row                       ; home/yes_no.asm — box top-left GB row

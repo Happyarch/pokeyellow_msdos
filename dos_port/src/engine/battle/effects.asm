@@ -80,7 +80,7 @@ extern QuarterSpeedDueToParalysis     ; engine/battle/core.asm
 extern HalveAttackDueToBurn           ; engine/battle/core.asm
 extern MoveHitTest                    ; engine/battle/core.asm — accuracy test → wMoveMissed
 extern BattleRandom                   ; engine/battle/core.asm — battle PRNG, result in AL
-extern DelayFrames                      ; frame.asm — BL = frame count
+extern DelayFrames                      ; src/home/delay.asm — BL = frame count
 extern PrintText                        ; src/home/window.asm — pret's PrintText
 extern MonsStatsRose                    ; core.asm — composes "<mon>'s STAT [greatly] rose!"
 extern MonsStatsFell                    ; core.asm — composes "<mon>'s STAT [greatly] fell!"

@@ -2564,7 +2564,7 @@ RunStoneTest:
 ; ---------------------------------------------------------------------------
 ; AutoKeyDrive — scripted joypad playback (debug harness).
 ;
-; Called once per rendered frame from frame.asm, immediately after joypad_update,
+; Called once per rendered frame from vblank.asm, immediately after joypad_update,
 ; so it OVERRIDES the real keyboard state for that frame. Replays a fixed button
 ; sequence from autokey_script so a keyboard-driven live path (overworld → START
 ; → a submenu) can be exercised in a headless DOSBox-X run. hJoyPressed is the
@@ -2835,7 +2835,7 @@ extern MovieSyncScroll
 extern PublishProjectedOAM      ; engine/gfx/sprite_oam.asm
 extern g_tilecache_dirty        ; ppu/ppu.asm
 extern ClearSprites             ; home/clear_sprites.asm
-extern DelayFrame               ; video/frame.asm
+extern DelayFrame               ; src/home/vblank.asm
 
 global RunCinematicMarkersTest
 

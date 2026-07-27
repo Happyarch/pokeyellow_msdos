@@ -140,14 +140,14 @@ extern text_row_stride          ; text/text.asm — active W_TILEMAP row stride
 extern menu_item_step           ; home/window.asm — per-item cursor row step
 extern menu_redraw_cb           ; home/window.asm — per-frame redraw cb (0=none)
 extern HandleMenuInput          ; home/window.asm — Out: AL = watched keys pressed
-extern DelayFrame               ; video/frame.asm
-extern DelayFrames              ; video/frame.asm — BL = frame count (pret's ld c,n)
+extern DelayFrame               ; src/home/vblank.asm
+extern DelayFrames              ; src/home/delay.asm — BL = frame count (pret's ld c,n)
 extern PrintText                ; home/window.asm — In: ESI = text stream
 extern text_msgbox              ; home/text.asm — the active msgbox projection
 extern msgbox_dialog            ; home/text.asm — the standard bottom dialog box
 extern DisplayTextBoxID         ; home/textbox.asm — [wTextBoxID] box (TWO_OPTION_MENU)
-extern PlaySoundWaitForCurrent  ; home/audio.asm — In: AL = sound id
-extern WaitForSoundToFinish     ; home/audio.asm
+extern PlaySoundWaitForCurrent  ; src/home/delay.asm — In: AL = sound id
+extern WaitForSoundToFinish     ; src/home/delay.asm
 ; --- generic engine seams ---------------------------------------------------
 ; (pret's CopyData / AddNTimes SRAM copies collapse to no-ops here — see the
 ;  TODO-HW: SRAM sites — so neither is externed.)

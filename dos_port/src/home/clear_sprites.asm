@@ -12,7 +12,7 @@
 ; PORT: both also publish `spr_oam_valid = 0`, the compositor's live-entry count.
 ; On the GB these routines are self-completing: the VBlank OAM DMA is
 ; unconditional, so a cleared/parked shadow OAM reaches $FE00 next frame and
-; nothing is drawn. In the port that DMA (video/frame.asm update_oam) is gated on
+; nothing is drawn. In the port that DMA (src/home/vblank.asm update_oam) is gated on
 ; wUpdateSpritesEnabled, which every full-takeover screen zeroes on entry — so the
 ; clear never reached the compositor, and render_sprites (which positions from
 ; spr_dos_sx/sy and counts spr_oam_valid, NOT the OAM Y byte) kept drawing the

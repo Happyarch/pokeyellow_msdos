@@ -1,50 +1,30 @@
-; joypad_lowsens.asm — JoypadLowSensitivity (low button sensitivity input).
+; joypad2.asm — mirror of pret home/joypad2.asm.
 ;
-; Intended path: dos_port/src/input/joypad_lowsens.asm
+; Holds two of that pret file's three labels, in pret's order:
+;   JoypadLowSensitivity          — was src/home/joypad_lowsens.asm, a file whose
+;                                   only content this was, so it was deleted.
+;   WaitForTextScrollButtonPress  — was src/engine/battle/battle_menu.asm, which
+;                                   keeps its own battle draw-layer labels.
 ;
-; Faithful translation of pret home/joypad2.asm:16-53 (JoypadLowSensitivity).
-; This is the low-sensitivity ("debounced") joypad read used by menus, maps,
-; the title screen and the town map. It exposes an auto-repeat model:
+; The third, ManualTextScroll, is `missing` in the port. The text engine's
+; port-only manual_text_scroll / text_pause helpers (src/home/text.asm) cover
+; part of what it does for the dialog ▼, but no routine carries the pret name.
 ;
-;   OUTPUT: [hJoy5] = pressed buttons in the usual (active-HIGH) format.
-;   Two flag inputs, [hJoy6] and [hJoy7], select one of three modes:
-;     1. Newly-pressed only ([hJoy7]==0, [hJoy6]==any):
-;        just copies [hJoyPressed] → [hJoy5].
-;     2. Currently-pressed at low sample rate with delay
-;        ([hJoy7]==1, [hJoy6]!=0):
-;        held >~1/2 s → report ~12x/second thereafter; held <1/2 s → one press.
-;     3. Same as 2, but report nothing while A or B is held
-;        ([hJoy7]==1, [hJoy6]==0).
+; Register map: A=AL, HL=ESI; GB memory / HRAM is [ebp+SYM] from gb_memmap.inc.
 ;
-;   Cadence (verbatim from pret):
-;     - INITIAL delay after a newly-pressed frame: 30 frames (~1/2 second).
-;     - AUTO-REPEAT cadence once the delay expires: 5 frames (~1/12 second).
-;   The frame delay lives in hFrameCounter (H_FRAME_COUNTER 0xFFD5), which is
-;   decremented once per V-blank by DelayFrame.
-;
-; Register map: A→AL; GB HRAM = [ebp + SYM].  ZF from `and al,al` mirrors SM83
-; `and a`; `mov` does not disturb flags (so the `ldh a,[..]` between an `and`
-; and its `jr z` is reproduced by `mov` between `and al,al` and `jz`).
-;
-; DEPENDENCIES (see SUMMARY.md):
-;   * Inputs hJoyPressed / hJoyHeld are produced by the joypad frontend
-;     (sibling M3.1, dos_port/src/input/joypad.asm → H_JOY_PRESSED / H_JOY_HELD).
-;     Referenced here only via memmap symbols, so this file assembles now and is
-;     CHECK-clean; it becomes runtime-correct once M3.1's writers land.
-;   * hFrameCounter must be decremented per frame in DelayFrame (sibling M2.1).
-;   * pret's JoypadLowSensitivity opens with `call Joypad`, which recomputes the
-;     newly-pressed EDGE at read time. The port's joypad_update runs that edge
-;     per-DelayFrame instead, which loses the edge across a caller's multi-frame
-;     dpad delay (see the routine body). This routine therefore recomputes the
-;     edge itself from the always-fresh H_JOY_HELD against a private snapshot
-;     (jls_prev) — the port equivalent of pret's `call Joypad`.
-;
-; Build: nasm -f coff -I include/ -o joypad_lowsens.o joypad_lowsens.asm
+; Build: nasm -f coff -I include/ -I . -o joypad2.o joypad2.asm
 
 bits 32
 
 %include "gb_memmap.inc"
 %include "gb_macros.inc"
+
+; WaitForTextScrollButtonPress's blink coordinate is a UI-layout projection, so
+; the generated battle layout comes in equates-only — the same include
+; battle_menu.asm uses. See the DEVIATION on the routine itself.
+%define UI_LAYOUT_EQUATES_ONLY 1
+%include "assets/ui_layout_battle.inc"
+%define ARROW_OFF          UI_DIALOG_ARROW_OFS
 
 ; ---------------------------------------------------------------------------
 ; HRAM low-sensitivity joypad slots (pret hram.asm order, anchored at H_SCX):
@@ -68,6 +48,12 @@ H_JOY7  equ 0xFFB7      ; hJoy7 — flag: 0 = newly-pressed only, 1 = held+delay
 ; Exported symbols
 ; ---------------------------------------------------------------------------
 global JoypadLowSensitivity
+global WaitForAPress
+global WaitForTextScrollButtonPress
+
+extern HandleDownArrowBlinkTiming     ; src/home/window.asm — faithful ▼ blink (COUNT1==0 guard)
+extern DelayFrame                     ; src/home/vblank.asm
+
 
 section .text
 
@@ -139,6 +125,45 @@ JoypadLowSensitivity:
     ret
 
 ; ---------------------------------------------------------------------------
+; WaitForAPress / WaitForTextScrollButtonPress — wait for A/B, faithfully mirroring
+; pret home/joypad2.asm:WaitForTextScrollButtonPress. pret does NOT draw an arrow; it
+; only *blinks a pre-existing* ▼ via HandleDownArrowBlinkTiming, gated by initializing
+; hDownArrowBlinkCount1 = 0 (the canonical HandleDownArrowBlinkTiming leaves the tile
+; alone when it isn't already ▼ and COUNT1 == 0). None of this routine's callers (status
+; screen, league PC, EXP, town map) place a ▼, so none show one — matching the real game.
+; The text-box advance ▼ is a *separate* mechanism (text.asm manual_text_scroll).
+;
+; The prior port version force-drew ▼ at ARROW_OFF and blanked it to a SPACE on exit,
+; which on the status screen (ARROW_OFF = scoord(18,16)) punched a hole in the types/ID/OT
+; box's bottom border and showed a spurious blinking arrow — a bespoke divergence.
+; Save/restore the blink counters like pret's push af / push af.
+;
+; DEVIATION{class=projection; pret=home/joypad2.asm:WaitForTextScrollButtonPress; behavior=the blink cell is UI_DIALOG_ARROW_OFS from the generated battle UI layout instead of pret's fixed hlcoord 18 16, and the port's saved-counter pair is a private .bss pair instead of the SM83 stack; evidence=the port's canvas is 40x25 not the GB's 20x18 so a literal coord(18,16) lands elsewhere, and every battle-screen coordinate comes from assets/ui_layout_battle.inc per the Tier-1 layout pipeline; lifetime=permanent, the widescreen canvas projection is by design}
+;
+; The port's WaitForAPress is a port-only alias on the same body, kept alongside
+; the pret name (never in place of it) because most of its call sites read as
+; "wait for A" rather than as text scrolling.
+WaitForTextScrollButtonPress:
+WaitForAPress:
+    mov al, [ebp + H_DOWN_ARROW_COUNT1]
+    mov [wtsbp_saved_c1], al
+    mov al, [ebp + H_DOWN_ARROW_COUNT2]
+    mov [wtsbp_saved_c2], al
+    mov byte [ebp + H_DOWN_ARROW_COUNT1], 0      ; pret: xor a  / ldh [hDownArrowBlinkCount1]
+    mov byte [ebp + H_DOWN_ARROW_COUNT2], 6      ; pret: ld a,6 / ldh [hDownArrowBlinkCount2]
+.wait:
+    mov esi, W_TILEMAP + ARROW_OFF               ; pret: hlcoord 18,16
+    call HandleDownArrowBlinkTiming              ; blinks only a pre-existing ▼ (COUNT1==0 guard)
+    call DelayFrame
+    test byte [ebp + H_JOY_PRESSED], PAD_A | PAD_B
+    jz .wait
+    mov al, [wtsbp_saved_c1]                      ; pret: pop af / ldh [hDownArrowBlinkCount1]
+    mov [ebp + H_DOWN_ARROW_COUNT1], al
+    mov al, [wtsbp_saved_c2]
+    mov [ebp + H_DOWN_ARROW_COUNT2], al
+    ret
+
+; ---------------------------------------------------------------------------
 ; JoypadLowSensitivity-private newly-pressed snapshot (pret: hJoyLast, but read
 ; only by this routine so the caller's per-frame joypad_update can't consume the
 ; edge between reads). Zeroed by the loader's BSS clear.
@@ -146,3 +171,6 @@ JoypadLowSensitivity:
 section .bss
 align 1
 jls_prev:   resb 1
+; WaitForTextScrollButtonPress: saved down-arrow blink counters (pret push af x2)
+wtsbp_saved_c1: resb 1
+wtsbp_saved_c2: resb 1

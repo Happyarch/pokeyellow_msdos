@@ -30,7 +30,7 @@
 ;
 ;  * VBlankCopyBgMap copies into the GB BG-map region addressed by
 ;    hVBlankCopyBGDest (a $9800-style pointer the caller supplies), exactly like
-;    the existing do_bg_transfer (frame.asm) writes the physical GB tilemap.
+;    the existing do_bg_transfer (vblank.asm) writes the physical GB tilemap.
 ;    In this port that region is vestigial/unread by render_bg, so a faithful
 ;    copy there is harmless. The per-row width is the GB-faithful 20 tiles with a
 ;    32-wide stride -- hardcoded below, NOT the port's redefined SCREEN_WIDTH

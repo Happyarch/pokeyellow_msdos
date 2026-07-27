@@ -10,7 +10,7 @@
 ; 320×200 back buffer (the path the title/menu screens use) — it only renders the
 ; overworld when wCurrentTileBlockMapViewPointer is nonzero. So InitBattle zeroes
 ; that pointer (+ SCX/SCY) and builds the layout directly in the 40-wide W_TILEMAP;
-; frame.asm then renders it via render_bg. No window descriptor (hide_window).
+; vblank.asm then renders it via render_bg. No window descriptor (hide_window).
 ;
 ; NOTE on the text helpers: TextBoxBorder / PlaceString hardcode a 20-wide stride
 ; (text.asm: SCREEN_W_TILES = 20), so they cannot lay out into the 40-wide canvas.
@@ -100,7 +100,7 @@ extern DrawPlayerRedBackPic_Stub         ; home/pics.asm — player trainer (Red
 extern SlideBattlePicsIn                 ; home/pics.asm — silhouette slide-in
 extern SaveBattleScreen                  ; src/home/tilemap.asm — alias of the Buffer1 pair
 extern DrawBattlePokeballs               ; pokeballs.asm — party-status ball row
-extern WaitForAPress                     ; battle_menu.asm
+extern WaitForAPress                     ; src/home/joypad2.asm — alias of pret WaitForTextScrollButtonPress
 extern HideBattlePokeballs               ; pokeballs.asm
 extern MainInBattleLoop                  ; core.asm — the whole battle loop
 extern EndOfBattle                       ; end_of_battle.asm — post-battle (EXP/evo/reset)
@@ -167,7 +167,7 @@ InitBattle:
     mov byte [ebp + IO_SCY], 0
     ; Disable BG tile animations for the battle. pret: DoBattleTransitionAndInit-
     ; BattleVariables does `xor a / ldh [hTileAnimations],a` (core.asm:6359). The
-    ; port's collapsed battle init dropped it, so UpdateMovingBgTiles (frame.asm,
+    ; port's collapsed battle init dropped it, so UpdateMovingBgTiles (vblank.asm,
     ; every DelayFrame) kept cycling the overworld water/flower tiles ($03/$14) —
     ; but in battle those VRAM slots hold mon-pic / HUD tile data ($9000+), so the
     ; animation painted flowers over the battle graphics. LoadTilesetHeader re-arms

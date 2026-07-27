@@ -82,7 +82,7 @@ extern CopyVideoData               ; home/copy2.asm (ESI=VRAM dest, EDX=flat src
 extern UpdateCGBPal_OBP1           ; home/cgb_palettes.asm
 extern StopAllMusic                ; home/audio.asm (LIVE)
 extern PlaySound                   ; home/audio.asm (LIVE)
-extern DelayFrames                 ; video/frame.asm
+extern DelayFrames                 ; src/home/delay.asm
 extern UpdateSprites               ; engine/overworld/movement.asm
 
 section .text

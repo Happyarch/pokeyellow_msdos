@@ -53,7 +53,7 @@ extern RunPartySeedTest  ; src/debug/debug_dump.asm — party/bag runtime-seed g
 global start
 global ds_base           ; linear base address of our DS selector
 global bug_fix_level     ; runtime BUG_FIX_LEVEL (0/1/2), set from command line
-global cleanup           ; called by frame.asm when pad_quit is set
+global cleanup           ; called by src/home/vblank.asm when pad_quit is set
 
 ; ---------------------------------------------------------------------------
 ; BSS (zeroed by the stub before start)

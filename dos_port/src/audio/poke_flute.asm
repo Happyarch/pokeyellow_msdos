@@ -14,7 +14,7 @@
 global Music_PokeFluteInBattle
 global Audio2_OverwriteChannelPointer
 
-extern PlaySoundWaitForCurrent    ; src/home/audio.asm
+extern PlaySoundWaitForCurrent    ; src/home/delay.asm
 
 section .text
 

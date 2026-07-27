@@ -71,7 +71,7 @@ bits 32
 extern EffectCallBattleCore         ; move_effect_helpers.asm — flat tail-call (no banks, §2.4)
 extern PrintText                    ; src/home/window.asm — ESI = flat text stream
 extern PrintButItFailedText_        ; engine/battle/effects.asm
-extern DelayFrames                  ; frame.asm (already live) — BL = frame count
+extern DelayFrames                  ; src/home/delay.asm (already live) — BL = frame count
 extern UpdateCurMonHPBar            ; engine/battle/core.asm — faithful HP-bar redraw; see
                                      ; header note #2 (substitutes pret's inlined hlcoord +
                                      ; predef UpdateHPBar2, which IS this routine's body)

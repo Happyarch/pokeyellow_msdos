@@ -19,8 +19,8 @@ bits 32
 
 extern CopyVideoData            ; src/home/copy2.asm: ESI=dst VRAM offset, EDX=flat src, BL=tile count
 extern WriteOAMBlock            ; src/home/oam.asm (flat tile/attr source in EDX)
-extern DelayFrame               ; src/video/frame.asm
-extern DelayFrames              ; src/video/frame.asm
+extern DelayFrame               ; src/home/vblank.asm
+extern DelayFrames              ; src/home/delay.asm
 extern UpdateSprites            ; src/engine/overworld/movement.asm
 
 global EmotionBubble

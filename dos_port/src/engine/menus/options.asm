@@ -7,7 +7,7 @@
 ;
 ; This screen does NOT use the generic HandleMenuInput driver. It runs its own
 ; JoypadLowSensitivity loop with a 3×DelayFrame cadence (pret's own dpad delay);
-; JoypadLowSensitivity is already ported (src/input/joypad_lowsens.asm) and is
+; JoypadLowSensitivity is already ported (src/home/joypad2.asm) and is
 ; extern'd here — the hJoy5 read model is preserved verbatim.
 ;
 ; The 18 rendered strings are GENERATED (assets/options_strings.inc, from
@@ -57,8 +57,8 @@ global OptionsControl
 global GetOptionPointer
 global OptionsMenu_UpdateCursorPosition
 
-extern JoypadLowSensitivity          ; input/joypad_lowsens.asm — → [hJoy5]
-extern DelayFrame                    ; video/frame.asm
+extern JoypadLowSensitivity          ; src/home/joypad2.asm — → [hJoy5]
+extern DelayFrame                    ; src/home/vblank.asm
 extern Delay3                        ; src/home/palettes.asm — 3× DelayFrame
 extern TextBoxBorder                 ; text/text.asm — ESI=top-left, BL=int w, BH=int h
 extern PlaceString                   ; text/text.asm — ESI=dest, EAX=flat src

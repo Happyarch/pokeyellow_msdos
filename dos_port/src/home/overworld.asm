@@ -59,8 +59,8 @@ BIT_ALWAYS_ON_BIKE          equ 5
 PAD_BUTTONS  equ 0x0F   ; A|B|SELECT|START (button byte low nibble)
 PAD_CTRL_PAD equ 0xF0   ; RIGHT|LEFT|UP|DOWN (D-pad high nibble)
 
-extern DelayFrame                    ; video/frame.asm
-extern JoypadLowSensitivity          ; home/joypad_lowsens.asm — writes hJoy5
+extern DelayFrame                    ; src/home/vblank.asm
+extern JoypadLowSensitivity          ; src/home/joypad2.asm — writes hJoy5
 extern BankswitchCommon              ; home/bankswitch2.asm — AL = bank (flat no-op)
 extern GetTileAndCoordsInFrontOfPlayer ; engine/overworld/player_state.asm (predef
 extern BikeRidingTilesets                    ; src/home/player_gfx.asm
@@ -119,7 +119,7 @@ extern CheckWarpTile                      ; src/engine/overworld/overworld.asm
 extern ClearVariablesOnEnterMap           ; src/engine/overworld/clear_variables.asm
 extern DebugDumpMemory                    ; src/debug/debug_dump.asm
 extern Delay3                             ; src/home/palettes.asm
-extern DelayFrames                        ; src/video/frame.asm
+extern DelayFrames                        ; src/home/delay.asm
 extern DisplayStartMenu                   ; src/home/start_menu.asm
 extern DoSignInteraction                  ; src/engine/overworld/overworld.asm
 extern DumpBackbuffer                     ; src/debug/debug_dump.asm
@@ -318,7 +318,7 @@ EnterMap:
 %ifdef DEBUG_SEAM_LIVE
     ; Live mode: no scripted walk. Fall through to the real OverworldLoop so the
     ; player drives with the keyboard and COLLISION IS LIVE (the scripted harness
-    ; bypasses it, and its traces came back clean). frame.asm samples every frame;
+    ; bypasses it, and its traces came back clean). vblank.asm samples every frame;
     ; pressing A writes SEAMLOG.BIN + FRAME.BIN and exits. Drive to the spot that
     ; reproduces, then press A.
 %else

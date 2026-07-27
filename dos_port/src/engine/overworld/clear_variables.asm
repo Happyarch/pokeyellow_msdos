@@ -72,7 +72,7 @@ ClearVariablesOnEnterMap:
 
     ; ldh [hAutoBGTransferEnabled], a
     ; Not hardware I/O — hAutoBGTransferEnabled is a plain HRAM shadow byte
-    ; the port's own VBlank-transfer gate reads (src/video/frame.asm,
+    ; the port's own VBlank-transfer gate reads (src/home/vblank.asm,
     ; src/home/copy2.asm). Faithful direct write.
     mov byte [ebp + H_AUTO_BG_TRANSFER_EN], al
 

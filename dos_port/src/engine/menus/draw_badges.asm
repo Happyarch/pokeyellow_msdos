@@ -56,7 +56,7 @@ extern LoadTextBoxTilePatterns       ; gfx/load_font.asm
 extern ClearSprites                  ; gfx/sprites.asm
 extern set_single_window             ; ppu/ppu.asm
 extern g_bg_whiteout                 ; ppu/ppu.asm
-extern DelayFrame                    ; video/frame.asm
+extern DelayFrame                    ; src/home/vblank.asm
 extern DumpBackbuffer                ; debug/debug_dump.asm
 %endif
 

@@ -60,7 +60,7 @@ extern ClearScreen              ; home/copy2.asm
 extern GBPalNormal              ; src/home/palettes.asm
 extern RunPaletteCommand        ; home/palettes.asm — In: BH = palette command
 extern RunDefaultPaletteCommand ; src/home/palettes.asm
-extern WaitForTextScrollButtonPress ; engine/battle/battle_menu.asm
+extern WaitForTextScrollButtonPress ; src/home/joypad2.asm
 extern CopyData                 ; home/copy.asm — ESI=src, DX=dest, BX=count
 extern GetMonHeader             ; home/pokemon.asm
 extern LoadFrontSpriteByMonIndex ; src/home/pokemon.asm

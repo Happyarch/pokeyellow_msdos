@@ -41,14 +41,16 @@ extern PlaceString, TextBoxBorder, CopyData, FarCopyData
 extern ClearScreen, ClearSprites, UpdateSprites
 extern RefreshCollisionTileMap         ; engine/overworld/overworld.asm — rebuild W_TILEMAP
 extern DisableLCD, EnableLCD, Delay3, DelayFrame, DelayFrames
-extern GetMonName, WaitForTextScrollButtonPress, PlaySound
+extern GetMonName                    ; src/home/names.asm
+extern PlaySound                     ; src/home/audio.asm
+extern WaitForTextScrollButtonPress  ; src/home/joypad2.asm
 extern GBPalNormal, LoadPlayerSpriteGraphics, LoadFontTilePatterns
 extern text_row_stride          ; global dd in text.asm; default 20
 
 extern GBPalWhiteOut, GBPalWhiteOutWithDelay3   ; src/home/palettes.asm
 extern ClearScreenArea               ; home/copy2.asm
 extern FarCopyDataDouble, CopyVideoData, CopyVideoDataDouble  ; home/copy2.asm
-extern JoypadLowSensitivity            ; src/home/joypad_lowsens.asm (home/joypad2.asm)
+extern JoypadLowSensitivity            ; src/home/joypad2.asm
 extern g_tilecache_dirty               ; ppu.asm — see the FarCopyData note in LoadTownMap
 extern g_bg_whiteout                   ; ppu.asm — full-screen BG whiteout flag
 extern spr_oam_valid                   ; ppu.asm — render_sprites active-entry count
@@ -85,7 +87,7 @@ SFX_TINK           equ 0x00
 SFX_HEAL_AILMENT   equ 0x00
 ; HRAM joypad (port layout: FFB3 pressed, FFB4 held, FFB5 hJoy5, FFB6, FFB7 hJoy7)
 ; %ifndef-guarded so these coexist once root promotes H_JOY5/6/7 into
-; gb_memmap.inc (shared with src/input/joypad_lowsens.asm).
+; gb_memmap.inc (shared with src/home/joypad2.asm).
 %ifndef H_JOY5
 H_JOY5             equ 0xFFB5
 %endif
@@ -884,7 +886,7 @@ TownMapSpriteBlinkingAnimation:
 ; hidden — leave the shadow OAM alone" (PrepareOAMData decrements A *before*
 ; `cp -1`, so its HideSprites branch fires on 0, not on $FF).
 ;
-; The port cannot inherit that: video/frame.asm's update_oam runs the DMA only when
+; The port cannot inherit that: src/home/vblank.asm's update_oam runs the DMA only when
 ; wUpdateSpritesEnabled == 1, and render_sprites positions OBJ from the spr_dos_sx/sy
 ; tables and counts spr_oam_valid — neither of which shadow OAM feeds by itself. So a
 ; screen that hand-writes OAM must publish it (CLAUDE.md: "whoever owns the canvas owns

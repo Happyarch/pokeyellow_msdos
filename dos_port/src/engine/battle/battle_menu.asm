@@ -5,7 +5,7 @@
 ; the turn loop, Render*/Do*AttackDamage, the fainted/no-PP/run message draws) has been
 ; replaced by the faithful translation in core.asm (engine/battle/core.asm). What remains
 ; here are: (1) the centered-canvas draw primitives core.asm calls (DrawEmptyDialogBox /
-; DrawBattleMenuBox / DrawBattleHUDs / WaitForAPress); (2) the EXP/level-up display
+; DrawBattleMenuBox / DrawBattleHUDs); (2) the EXP/level-up display
 ; routines that GainExperience (experience.asm) calls inside its per-mon loop; (3) the
 ; move TYPE/PP box and FindMoveName helper.
 ;
@@ -14,7 +14,9 @@
 ; mirror; the Buffer1 pair moved earlier to src/home/tilemap.asm. LearnMoveFromLevelUp
 ; is an engine/pokemon/evos_moves.asm label and moved to that mirror,
 ; src/engine/pokemon/evos_moves.asm; it still writes this file's lvl_mon_ptr scratch,
-; which is exported for it.
+; which is exported for it. WaitForTextScrollButtonPress (with its WaitForAPress alias
+; and the wtsbp_saved_c1/c2 counters) is a pret home/joypad2.asm label and moved to that
+; mirror, src/home/joypad2.asm; the routines here still call it as WaitForAPress.
 ;
 ; All draw coords come from the generated battle UI layout (Tier 1,
 ; assets/ui_layout_battle.inc ← ui_layout_battle_sidecar.json; edit with
@@ -58,8 +60,10 @@ bits 32
 %define LVL_LBL_OFF  UI_LVLUP_LBL_OFS
 %define LVL_VAL_OFF  UI_LVLUP_VAL_OFS
 
-; PROJ battle: ▼ "more text" advance arrow = UI_DIALOG_ARROW
-%define ARROW_OFF          UI_DIALOG_ARROW_OFS
+; ▼ "more text" advance arrow. UI_DIALOG_ARROW's ARROW_OFF projection left with
+; WaitForTextScrollButtonPress (src/home/joypad2.asm); these two are unread by
+; anything in this file and were already dead before that move, so they are left
+; alone rather than swept inside a relocation commit.
 %define T_DOWNARROW        0xEE
 %define ARROW_BLINK_FRAMES 20
 
@@ -78,9 +82,6 @@ section .bss
 ; the DEBUG_BATTLE harness still seeds this for compatibility.
 global wBattleOver
 wBattleOver: resb 1
-; WaitForTextScrollButtonPress: saved down-arrow blink counters (pret push af x2)
-wtsbp_saved_c1: resb 1
-wtsbp_saved_c2: resb 1
 ; screen_save moved to src/home/tilemap.asm with the Buffer1 routines
 ; (menu-intro review: the pret labels belong in the home/tilemap.asm mirror).
 global lvl_mon_ptr                        ; also written by LearnMoveFromLevelUp (evos_moves.asm)
@@ -92,8 +93,6 @@ global DrawBattleMenu
 global DrawBattleMenuBox
 global DrawEmptyDialogBox
 global EndBattleScreen
-global WaitForAPress
-global WaitForTextScrollButtonPress
 global ShowGainedExpText
 global ShowGrewLevelText
 global PrintStatsBox
@@ -110,7 +109,7 @@ extern text_row_stride               ; text.asm — W_TILEMAP row stride (battle
 extern MoveNames
 extern Moves
 extern DelayFrame
-extern HandleDownArrowBlinkTiming     ; src/home/window.asm — faithful ▼ blink (COUNT1==0 guard)
+extern WaitForAPress                  ; src/home/joypad2.asm — alias of pret WaitForTextScrollButtonPress
 ; --- DEBUG_BATTLE_ENEMYHIT ground-truth scaffold only ---
 extern GetCurrentMove                 ; engine/battle/core.asm — move record -> wPlayerMove*/wEnemyMove*
 extern GetDamageVarsForEnemyAttack    ; engine/battle/core.asm
@@ -178,38 +177,6 @@ EndBattleScreen:
 ; re-shows DisplayBattleMenu after). TODO(faithful): ITEM → bag use, PKMN → switch.
 BattleItemMenu:
 BattlePartyMenu:
-    ret
-
-; WaitForAPress / WaitForTextScrollButtonPress — wait for A/B, faithfully mirroring
-; pret home/joypad2.asm:WaitForTextScrollButtonPress. pret does NOT draw an arrow; it
-; only *blinks a pre-existing* ▼ via HandleDownArrowBlinkTiming, gated by initializing
-; hDownArrowBlinkCount1 = 0 (the canonical HandleDownArrowBlinkTiming leaves the tile
-; alone when it isn't already ▼ and COUNT1 == 0). None of this routine's callers (status
-; screen, league PC, EXP, town map) place a ▼, so none show one — matching the real game.
-; The text-box advance ▼ is a *separate* mechanism (text.asm manual_text_scroll).
-;
-; The prior port version force-drew ▼ at ARROW_OFF and blanked it to a SPACE on exit,
-; which on the status screen (ARROW_OFF = scoord(18,16)) punched a hole in the types/ID/OT
-; box's bottom border and showed a spurious blinking arrow — a bespoke divergence.
-; Save/restore the blink counters like pret's push af / push af.
-WaitForTextScrollButtonPress:
-WaitForAPress:
-    mov al, [ebp + H_DOWN_ARROW_COUNT1]
-    mov [wtsbp_saved_c1], al
-    mov al, [ebp + H_DOWN_ARROW_COUNT2]
-    mov [wtsbp_saved_c2], al
-    mov byte [ebp + H_DOWN_ARROW_COUNT1], 0      ; pret: xor a  / ldh [hDownArrowBlinkCount1]
-    mov byte [ebp + H_DOWN_ARROW_COUNT2], 6      ; pret: ld a,6 / ldh [hDownArrowBlinkCount2]
-.wait:
-    mov esi, W_TILEMAP + ARROW_OFF               ; pret: hlcoord 18,16
-    call HandleDownArrowBlinkTiming              ; blinks only a pre-existing ▼ (COUNT1==0 guard)
-    call DelayFrame
-    test byte [ebp + H_JOY_PRESSED], PAD_A | PAD_B
-    jz .wait
-    mov al, [wtsbp_saved_c1]                      ; pret: pop af / ldh [hDownArrowBlinkCount1]
-    mov [ebp + H_DOWN_ARROW_COUNT1], al
-    mov al, [wtsbp_saved_c2]
-    mov [ebp + H_DOWN_ARROW_COUNT2], al
     ret
 
 ; ===========================================================================

@@ -28,7 +28,7 @@ global SubstituteEffect_
 
 ; --- shared scaffold externs (§4: call, never define) ---
 extern PrintText                    ; src/home/window.asm — ESI = flat text stream
-extern DelayFrames                  ; src/video/frame.asm — BL = frame count
+extern DelayFrames                  ; src/home/delay.asm — BL = frame count
 extern DrawHUDsAndHPBars            ; engine/battle/core.asm — jpfar target in pret; flat tail-call here
 ; --- allowlist anim stub (§2 item 1: literal subanim, ANIMATION=OFF path) ---
 extern PlayCurrentMoveAnimation

@@ -106,7 +106,7 @@ extern g_bg_whiteout                                 ; ppu/ppu.asm — full-scre
 extern IsThisPartyMonStarterPikachu                  ; engine/pikachu/pikachu_status.asm (CF = starter)
 extern IsThisBoxMonStarterPikachu                    ; engine/pikachu/pikachu_status.asm
 extern PlayPikachuSoundClip                          ; engine/pikachu/pikachu_pcm.asm (DL = clip index)
-extern WaitForTextScrollButtonPress
+extern WaitForTextScrollButtonPress   ; src/home/joypad2.asm
 extern spr_oam_valid                                 ; ppu.asm — render_sprites active-entry count
 extern Delay3
 extern text_row_stride                               ; text.asm — engine row stride

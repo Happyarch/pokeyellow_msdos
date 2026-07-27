@@ -6,7 +6,7 @@
 ; entries, the engine now iterates all 16 sprite slots in wSpriteStateData1/2,
 ; looks each visible sprite's pose up in SpriteFacingAndAnimationTable, and
 ; writes the resulting OBJ entries into wShadowOAM ($C300). The frame pipeline
-; (frame.asm DelayFrame) then DMA-copies wShadowOAM into OAM ($FE00) before
+; (vblank.asm DelayFrame) then DMA-copies wShadowOAM into OAM ($FE00) before
 ; render_sprites composites it.
 ;
 ; Only the player slot (0) is populated for now (see overworld.asm), but the

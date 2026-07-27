@@ -14,7 +14,7 @@
 ;   src/home/fade.asm                     RestoreScreenTilesAndReloadTilePatterns,
 ;                                         GBPalWhiteOutWithDelay3, GBPalWhiteOut,
 ;                                         GetHealthBarColor
-;   src/video/frame.asm                   Delay3
+;   src/video/frame.asm (deleted in c16)  Delay3
 ;   src/home/init.asm                     GBPalNormal
 ;   src/engine/menus/naming_screen.asm    RunDefaultPaletteCommand
 ;
@@ -50,7 +50,7 @@ extern ApplyToggleableHiddenGate     ; src/engine/overworld/map_sprites.asm (por
 extern ClearSprites                 ; src/home/clear_sprites.asm
 extern LoadTextBoxTilePatterns      ; src/home/load_font.asm
 extern ReloadMapSpriteTilePatterns  ; src/home/reload_sprites.asm
-extern DelayFrames                  ; src/video/frame.asm  (In: BL = frame count)
+extern DelayFrames                  ; src/home/delay.asm  (In: BL = frame count)
 extern UpdateCGBPal_BGP             ; src/home/cgb_palettes.asm
 extern UpdateCGBPal_OBP0            ; src/home/cgb_palettes.asm
 extern UpdateCGBPal_OBP1            ; src/home/cgb_palettes.asm

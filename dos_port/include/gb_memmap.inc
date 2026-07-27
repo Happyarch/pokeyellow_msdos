@@ -34,7 +34,7 @@ GB_TILEMAP1     equ 0x9C00
 
 ; --- Unified window-compositor descriptor (see docs/current_plan_window_compositor.md) ---
 ; An ordered painter's-order list of window-layer boxes. render_window draws ONE
-; descriptor per call; src/video/frame.asm loops g_window_count of them (later
+; descriptor per call; src/home/vblank.asm loops g_window_count of them (later
 ; entries draw on top). These are field offsets within one descriptor; the actual
 ; storage (g_windows[]/g_window_count) and the set_single_window helper live in
 ; src/ppu/ppu.asm. A screen fully (re)defines the list on entry/state-change.

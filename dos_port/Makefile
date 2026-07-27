@@ -140,7 +140,7 @@ NASMFLAGS += -D DEBUG_SEAM -D SKIP_TITLE
 endif
 # Plain PLAYABLE build seeded at an arbitrary map/coord — no trace, no dump, A stays
 # a game button. Reuses the DEBUG_SEAM spawn seeding (EnterMap + SeamReseatView) with
-# DEBUG_SEAM_NOLOG to suppress frame.asm's per-frame SeamLogRecord hook.
+# DEBUG_SEAM_NOLOG to suppress vblank.asm's per-frame SeamLogRecord hook.
 #   make run DEBUG_START_MAP=0x0D DEBUG_START_X=3 DEBUG_START_Y=45   (Route 2, below
 #   the Viridian Forest south-gate warp)
 ifdef DEBUG_START_MAP
@@ -236,12 +236,13 @@ HOME_SRCS := \
     src/home/vcopy.asm \
     src/home/copy_string.asm \
     src/home/give.asm \
-    src/home/oam.asm
+    src/home/oam.asm \
+    src/home/joypad2.asm \
+    src/home/inventory.asm
 
 HAL_SRCS := \
     src/ppu/ppu.asm \
-    src/input/joypad.asm \
-    src/home/joypad_lowsens.asm
+    src/input/joypad.asm
 
 # Save HAL — .dsv file I/O (menus S7). DsvFileExists/DsvWriteSave/DsvReadSave;
 # the SRAM-banking seam every pret save/load routine collapses onto.
@@ -278,7 +279,8 @@ AUDIO_SRCS := \
 GAME_SRCS := \
     src/home/init.asm \
     src/home/lcd.asm \
-    src/video/frame.asm \
+    src/home/vblank.asm \
+    src/home/delay.asm \
     src/home/play_time.asm \
     src/home/clear_sprites.asm \
     src/engine/gfx/sprite_oam.asm \
@@ -810,7 +812,7 @@ ifdef DEBUG_SEED_PARTY
 NASMFLAGS += -D DEBUG_SEED_PARTY
 endif
 # Scripted-joypad harness: seeded party + SKIP_TITLE + AutoKeyDrive replaying a
-# button sequence (frame.asm), so a keyboard-only live path (overworld -> START ->
+# button sequence (src/home/vblank.asm), so a keyboard-only live path (overworld -> START ->
 # submenu) runs headless. make DEBUG_AUTOKEY=1
 ifdef DEBUG_AUTOKEY
 ifdef AUTOKEY_SEAM

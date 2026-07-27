@@ -40,7 +40,7 @@ extern menu_item_step                ; home/window.asm — menu cursor vertical 
 extern ClearScreenArea               ; home/copy2.asm — clear BL x BH tiles of W_TILEMAP at ESI
 extern CopyData                      ; home/copy.asm — ESI/EDX EBP-relative, BX count
 extern Delay3                        ; src/home/palettes.asm — wait 3 frames
-extern DelayFrames                   ; video/frame.asm — wait BL frames
+extern DelayFrames                   ; src/home/delay.asm — wait BL frames
 extern DisplayNamingScreen           ; engine/menus/naming_screen.asm — ESI = name dest (pret HL)
 extern IntroDisplayPicCenteredOrUpperRight  ; oak_speech.asm — ESI flat pic, ECX len, BL centre/UR
 extern MovieBeginSurface             ; movie_projection.asm — re-establish the UI_OAK_SPEECH surface
@@ -349,7 +349,7 @@ extern MovieMirrorSurface            ; movie_projection.asm
 extern IntroDisplayPicCenteredOrUpperRight  ; oak_speech.asm
 extern FadeInIntroPic                ; oak_speech.asm
 extern ProfOakPic                    ; data/trainer_pics.asm
-extern DelayFrame                    ; video/frame.asm
+extern DelayFrame                    ; src/home/vblank.asm
 global RunOakSlideTest
 OAKSLIDE_PIC_LEN equ 286
 RunOakSlideTest:
@@ -402,7 +402,7 @@ extern LoadFontTilePatterns          ; home/load_font.asm
 extern LoadTextBoxTilePatterns       ; home/load_font.asm
 extern MovieMirrorSurface            ; movie_projection.asm
 extern FadeInIntroPic                ; oak_speech.asm
-extern DelayFrame                    ; video/frame.asm
+extern DelayFrame                    ; src/home/vblank.asm
 global RunChooseNameTest
 RunChooseNameTest:
     call LoadFontTilePatterns

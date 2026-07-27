@@ -222,7 +222,7 @@ global _HandleMidJump
 
 extern Delay3                     ; src/home/palettes.asm
 extern UpdateSprites                  ; src/engine/overworld/movement.asm (linked)
-extern DelayFrames                ; video/frame.asm
+extern DelayFrames                ; src/home/delay.asm
 extern GBFadeInFromWhite          ; home/fade.asm
 extern GBFadeOutToWhite           ; home/fade.asm
 extern Func_151d                  ; src/home/pikachu.asm — was misattributed to engine/overworld/pikachu.asm

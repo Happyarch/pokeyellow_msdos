@@ -5,7 +5,7 @@
 ; Faithful port of pret home/play_time.asm. Both routines are per-frame VBlank
 ; responsibilities in the original (VBlank:: calls TrackPlayTime, which in turn
 ; calls CountDownIgnoreInputBitReset). In the DOS port they are driven once per
-; frame from DelayFrame (src/video/frame.asm), matching the GB VBlank cadence.
+; frame from DelayFrame (src/home/vblank.asm), matching the GB VBlank cadence.
 ;
 ;   TrackPlayTime — advance the in-game play clock frames→sec→min→hours, gated on
 ;   BIT_GAME_TIMER_COUNTING of wStatusFlags6, with the $ff:59:59 max-out cap and

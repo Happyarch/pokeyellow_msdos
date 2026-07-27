@@ -104,7 +104,7 @@ extern g_tilecache_dirty             ; ppu.asm — set after any VRAM tile write
 extern ClearScreen                   ; home/copy2.asm
 extern UpdateSprites                 ; engine/overworld/movement.asm
 extern Delay3                        ; src/home/palettes.asm — 3× DelayFrame
-extern DelayFrame                    ; video/frame.asm
+extern DelayFrame                    ; src/home/vblank.asm
 extern HandleMenuInput               ; home/window.asm — vertical menu input driver → AL
 extern PlaceUnfilledArrowMenuCursor  ; home/window.asm
 extern menu_item_step                ; home/window.asm — cursor per-item row step
@@ -129,7 +129,7 @@ extern PrintPokedexEntry             ; engine/printer/printer_stubs.asm — STUB
 extern TextCommandProcessor          ; home/text.asm — ESI = stream (FLAT ptr), EBX = cursor
 extern GetMonHeader                  ; home/pokemon.asm — wCurSpecies → wMonHeader
 extern LoadFlippedFrontSpriteByMonIndex ; src/home/pokemon.asm — ESI = tilemap coord; decode + place
-extern JoypadLowSensitivity          ; input/joypad_lowsens.asm → [hJoy5]
+extern JoypadLowSensitivity          ; src/home/joypad2.asm → [hJoy5]
 extern LoadTextBoxTilePatterns       ; gfx/load_font.asm
 ; PlayCry is a ret-only STUB (home_stubs.asm), NOT an absent routine and NOT an audio-HAL
 ; blocker — the engine is live and CryData is generated; nobody has written its ~15

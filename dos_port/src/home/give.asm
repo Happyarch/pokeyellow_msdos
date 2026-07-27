@@ -30,7 +30,7 @@ section .text
 global GiveItem
 global GivePokemon
 
-extern AddItemToInventory      ; ESI=inv count addr; [wCurItem],[wItemQuantity]; CF=success
+extern AddItemToInventory      ; src/home/inventory.asm — ESI=inv count addr; CF=success
 extern GetItemName             ; name of item [wNamedObjectIndex] -> name buffer
 extern CopyToStringBuffer      ; copy_string.asm — copy '@'-terminated name -> wStringBuffer
 extern _GivePokemon            ; engine/events/give_pokemon.asm (NOT YET PORTED)

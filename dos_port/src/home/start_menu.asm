@@ -73,7 +73,7 @@ extern EraseMenuCursor
 extern PlaceUnfilledArrowMenuCursor
 extern PlaceMenuCursor
 extern UpdateSprites                 ; engine/overworld/movement.asm
-extern DelayFrame                    ; video/frame.asm
+extern DelayFrame                    ; src/home/vblank.asm
 extern LoadFontTilePatterns          ; gfx/load_font.asm
 extern LoadTextBoxTilePatterns       ; gfx/load_font.asm
 extern ReloadWalkingTilePatterns     ; engine/overworld/map_sprites.asm (P3c: was LoadNPCSpriteTiles)

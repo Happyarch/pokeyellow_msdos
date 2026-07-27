@@ -32,7 +32,7 @@ global CompareHLWithBC
 
 extern GetPredefRegisters       ; src/home/predef.asm (restores BX=b:c, DX=d:e, ESI=hl)
 extern LoadCurrentMapView       ; src/home/overworld.asm
-extern DelayFrame               ; src/video/frame.asm
+extern DelayFrame               ; src/home/vblank.asm
 extern g_tilecache_dirty        ; src/ppu/ppu.asm (flat global)
 
 section .text

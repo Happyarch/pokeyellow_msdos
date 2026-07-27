@@ -27,7 +27,7 @@ bits 32
 global PlayPikachuSoundClip
 global pika_dbg_snapshot
 
-extern DelayFrame                 ; src/video/frame.asm
+extern DelayFrame                 ; src/home/vblank.asm
 extern g_audio_engine_online      ; src/home/audio.asm
 extern g_sb_present               ; src/audio/audio_hal.asm
 extern sb_pcm_play                ; src/audio/sb_pcm.asm

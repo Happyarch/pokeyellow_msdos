@@ -31,8 +31,8 @@ extern RunPaletteCommand             ; home/palettes.asm — BH = SET_PAL_* comm
 extern UpdateCGBPal_BGP              ; home/cgb_palettes.asm — commit rBGP to the DAC
 extern FillMemory                    ; home/copy2.asm — ESI dest, BX count, AL value
 extern CopyVideoData                 ; home/copy2.asm — ESI=VRAM dest, EDX=flat src, BL=tiles
-extern DelayFrames                   ; video/frame.asm — BL = frame count
-extern DelayFrame                    ; video/frame.asm — wait one frame
+extern DelayFrames                   ; src/home/delay.asm — BL = frame count
+extern DelayFrame                    ; src/home/vblank.asm — wait one frame
 extern Delay3                        ; src/home/palettes.asm — wait 3 frames
 extern ClearSprites                  ; home/clear_sprites.asm — zero shadow OAM + count
 extern g_tilecache_dirty             ; ppu.asm — arm the tile-cache rebuild

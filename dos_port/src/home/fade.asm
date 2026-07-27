@@ -15,7 +15,7 @@
 ;   through the FadePal tables over frames. Each FadePal byte is a DMG BGP-format
 ;   value: four 2-bit shade indices (bits 7-6 = color 3 … bits 1-0 = color 0).
 ;   Fading = walking those shade ramps 3->2->1->0 (or the reverse). The port's
-;   commit_palette (src/video/frame.asm -> video.asm) maps the shade index a
+;   commit_palette (src/home/vblank.asm -> video.asm) maps the shade index a
 ;   pixel resolves to through whichever of BGP/OBP0/OBP1 applies, every frame in
 ;   DelayFrame. So writing IO_BGP/IO_OBP0/IO_OBP1 + DelayFrame reproduces the GB
 ;   fade exactly, on the current DMG-green debug ramp. This is INDEPENDENT of the
@@ -39,7 +39,7 @@ bits 32
 ; ---------------------------------------------------------------------------
 ; Externs (all resolved globals in the current tree)
 ; ---------------------------------------------------------------------------
-extern DelayFrames                  ; src/video/frame.asm  (In: BL = frame count)
+extern DelayFrames                  ; src/home/delay.asm  (In: BL = frame count)
 extern UpdateCGBPal_BGP             ; src/home/cgb_palettes.asm
 extern UpdateCGBPal_OBP0            ; src/home/cgb_palettes.asm
 extern UpdateCGBPal_OBP1            ; src/home/cgb_palettes.asm

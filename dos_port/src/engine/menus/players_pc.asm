@@ -99,17 +99,17 @@ extern text_msgbox                   ; home/text.asm — the active msgbox proje
 extern msgbox_dialog                 ; home/text.asm — the overworld dialog projection
 extern text_arrow_pos                ; home/text.asm — <PROMPT> ▼ cell (from MB_ARROW)
 extern PlaySound                     ; home/audio.asm — In: AL = sound id
-extern WaitForSoundToFinish          ; home/audio.asm
+extern WaitForSoundToFinish          ; src/home/delay.asm
 extern SaveScreenTilesToBuffer1      ; src/home/tilemap.asm
 extern LoadScreenTilesFromBuffer2    ; src/home/tilemap.asm
 extern UpdateSprites                 ; engine/overworld/movement.asm
 extern RefreshCollisionTileMap       ; engine/overworld/overworld.asm
-extern AddItemToInventory            ; engine/items/inventory.asm — ESI=count addr; CF=1 room
-extern RemoveItemFromInventory       ; engine/items/inventory.asm
+extern AddItemToInventory            ; src/home/inventory.asm — ESI=count addr; CF=1 room
+extern RemoveItemFromInventory       ; src/home/inventory.asm
 extern IsKeyItem                     ; home/item.asm — [wCurItem] → [wIsKeyItem]
 extern IsItemHM                      ; home/names.asm — AL=item id → CF
 extern TossItem                      ; home/item.asm — ESI=inventory; CF=1 not tossed
-extern DelayFrame                    ; video/frame.asm
+extern DelayFrame                    ; src/home/vblank.asm
 extern hide_window                   ; ppu/ppu.asm
 extern add_window                    ; ppu/ppu.asm — EAX=wx EBX=wy ECX=clip EDX=max_y ESI=tm EDI=row
 extern g_window_count                ; ppu/ppu.asm

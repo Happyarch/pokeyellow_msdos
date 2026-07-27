@@ -73,7 +73,7 @@ extern PrintText                     ; home/window.asm — In: ESI = text stream
 extern text_msgbox                   ; home/text.asm — the active msgbox projection
 extern msgbox_dialog                 ; home/text.asm — the standard bottom dialog box
 extern PlaySound                     ; home/audio.asm — In: AL = sound id
-extern WaitForSoundToFinish          ; home/audio.asm
+extern WaitForSoundToFinish          ; src/home/delay.asm
 extern SaveScreenTilesToBuffer2      ; src/home/tilemap.asm
 extern LoadScreenTilesFromBuffer2    ; src/home/tilemap.asm
 extern ReloadMapData                 ; home/reload_tiles.asm
@@ -91,7 +91,7 @@ extern wBagItems
 extern wItemQuantity
 extern wWhichPokemon
 extern wNumBagItems
-extern RemoveItemFromInventory
+extern RemoveItemFromInventory       ; src/home/inventory.asm
 
 ; ===========================================================================
 ; Tier-1 DATA: the four message streams, generated from pret data/text/text_3.asm.

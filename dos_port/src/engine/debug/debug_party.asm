@@ -9,7 +9,7 @@ global SetDebugNewGameParty
 global PrepareNewGameDebug
 global SeedDeterministicPlayerIdentity
 extern AddPartyMon
-extern AddItemToInventory
+extern AddItemToInventory            ; src/home/inventory.asm
 extern GetMonHeader                ; home/pokemon.asm — base stats -> wMonHeader
 extern CalcStats                   ; home/move_mon.asm — recompute the 5 stats
 extern GetMonName                  ; home/names.asm — species default -> wNameBuffer

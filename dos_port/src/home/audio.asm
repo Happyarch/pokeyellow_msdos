@@ -1,7 +1,10 @@
-; audio.asm — pret home/audio.asm translated to x86, plus the sound-wait
-; helpers from pret home/delay.asm (PlaySoundWaitForCurrent,
-; WaitForSoundToFinish) and FadeOutAudio from pret home/fade_audio.asm.
-; All pret labels preserved.
+; audio.asm — pret home/audio.asm translated to x86, plus FadeOutAudio from
+; pret home/fade_audio.asm. All pret labels preserved.
+;
+; The two sound-wait helpers this file used to carry, PlaySoundWaitForCurrent
+; and WaitForSoundToFinish, are pret home/delay.asm labels and now live in that
+; mirror, src/home/delay.asm. FadeOutAudio is still relocated here — pret
+; home/fade_audio.asm has no mirror yet.
 ;
 ; This is the gateway between game code and the banked sound engine. Banking
 ; collapses in the port: the four GB audio banks ($02/$08/$1F/$20) live in the
@@ -36,8 +39,6 @@ global InitMusicVariables
 global InitSFXVariables
 global StopAllAudio
 global DetermineAudioFunction
-global PlaySoundWaitForCurrent
-global WaitForSoundToFinish
 global FadeOutAudio
 global g_audio_engine_online
 
@@ -50,7 +51,7 @@ extern Audio2_InitMusicVariables  ; src/audio/engine_2.asm
 extern Audio2_InitSFXVariables    ; src/audio/engine_2.asm
 extern Audio2_StopAllAudio        ; src/audio/engine_2.asm
 extern AudioRom                   ; src/data/audio_data.asm
-extern DelayFrame                 ; src/video/frame.asm
+extern WaitForSoundToFinish       ; src/home/delay.asm
 
 section .text
 
@@ -383,33 +384,6 @@ DetermineAudioFunction:
 
 .done:
     pop ebx
-    ret
-
-; ---------------------------------------------------------------------------
-; pret home/delay.asm
-PlaySoundWaitForCurrent:
-    push eax
-    call WaitForSoundToFinish
-    pop eax
-    jmp PlaySound
-
-; Wait for sound to finish playing
-WaitForSoundToFinish:
-    mov al, [ebp + wLowHealthAlarm]
-    and al, 0x80
-    jnz .done
-.waitLoop:
-    xor al, al
-    or al, [ebp + wChannelSoundIDs + CHAN5]
-    or al, [ebp + wChannelSoundIDs + CHAN6]
-    or al, [ebp + wChannelSoundIDs + CHAN8]  ; pret skips CHAN7 (inc hl x2)
-    jz .done
-    ; On the GB the VBlank ISR advanced the engine during this spin; in the
-    ; port the audio tick lives in DelayFrame (Task 5), so pump it here —
-    ; a bare spin would never see the sound IDs clear.
-    call DelayFrame
-    jmp .waitLoop
-.done:
     ret
 
 ; ---------------------------------------------------------------------------

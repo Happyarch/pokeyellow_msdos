@@ -99,8 +99,8 @@ extern g_bg_whiteout            ; ppu/ppu.asm — 1 = full-screen takeover (no B
 extern menu_item_step           ; home/window.asm — per-item cursor row step
 extern menu_redraw_cb           ; home/window.asm — per-frame redraw cb (0=none)
 extern HandleMenuInput          ; home/window.asm — Out: AL = watched keys pressed
-extern DelayFrame               ; video/frame.asm
-extern DelayFrames              ; video/frame.asm — In: BL = frame count
+extern DelayFrame               ; src/home/vblank.asm
+extern DelayFrames              ; src/home/delay.asm — In: BL = frame count
 extern Delay3                   ; src/home/palettes.asm
 extern UpdateSprites            ; engine/overworld/movement.asm
 extern SaveScreenTilesToBuffer1     ; src/home/tilemap.asm
