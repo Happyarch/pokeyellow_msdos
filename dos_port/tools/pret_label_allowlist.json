@@ -99,14 +99,6 @@
       "port_file": "dos_port/src/engine/menus/pokedex.asm",
       "why": "Scanner-reviewed 2026-07-15: LoadPokedexTilePatterns from pret engine/gfx/load_pokedex_tiles.asm has its selected single non-stub definition at dos_port/src/engine/menus/pokedex.asm; preserve this per-label split."
     },
-    "Evolution_CheckForCancel": {
-      "port_file": "dos_port/src/engine/pokemon/evolution.asm",
-      "why": "Scanner-reviewed 2026-07-15: Evolution_CheckForCancel from pret engine/movie/evolution.asm has its selected single non-stub definition at dos_port/src/engine/pokemon/evolution.asm; preserve this per-label split."
-    },
-    "EvolveMon": {
-      "port_file": "dos_port/src/engine/pokemon/evolution.asm",
-      "why": "Scanner-reviewed 2026-07-15: EvolveMon from pret engine/movie/evolution.asm has its selected single non-stub definition at dos_port/src/engine/pokemon/evolution.asm; preserve this per-label split."
-    },
     "PlayerJumpingYScreenCoords": {
       "port_file": "dos_port/src/engine/overworld/ledges.asm",
       "why": "Scanner-reviewed 2026-07-15: PlayerJumpingYScreenCoords from pret engine/overworld/player_animations.asm has its selected single non-stub definition at dos_port/src/engine/overworld/ledges.asm; preserve this per-label split."
@@ -151,45 +143,9 @@
       "port_file": "dos_port/src/engine/overworld/pikachu.asm",
       "why": "Scanner-reviewed 2026-07-15: TrySpawnPikachu from pret engine/pikachu/pikachu_follow.asm has its selected single non-stub definition at dos_port/src/engine/overworld/pikachu.asm; preserve this per-label split."
     },
-    "HMMoveArray": {
-      "port_file": "dos_port/src/engine/pokemon/knows_hm_move.asm",
-      "why": "Scanner-reviewed 2026-07-15: HMMoveArray from pret engine/pokemon/bills_pc.asm has its selected single non-stub definition at dos_port/src/engine/pokemon/knows_hm_move.asm; preserve this per-label split."
-    },
-    "KnowsHMMove": {
-      "port_file": "dos_port/src/engine/pokemon/knows_hm_move.asm",
-      "why": "Scanner-reviewed 2026-07-15: KnowsHMMove from pret engine/pokemon/bills_pc.asm has its selected single non-stub definition at dos_port/src/engine/pokemon/knows_hm_move.asm; preserve this per-label split."
-    },
-    "ClearSprites": {
-      "port_file": "dos_port/src/home/sprites.asm",
-      "why": "Scanner-reviewed 2026-07-15: ClearSprites from pret home/clear_sprites.asm has its selected single non-stub definition at dos_port/src/home/sprites.asm; preserve this per-label split."
-    },
-    "HideSprites": {
-      "port_file": "dos_port/src/home/sprites.asm",
-      "why": "Scanner-reviewed 2026-07-15: HideSprites from pret home/clear_sprites.asm has its selected single non-stub definition at dos_port/src/home/sprites.asm; preserve this per-label split."
-    },
-    "CopyData": {
-      "port_file": "dos_port/src/home/copy_data.asm",
-      "why": "Scanner-reviewed 2026-07-15: CopyData from pret home/copy.asm has its selected single non-stub definition at dos_port/src/home/copy_data.asm; preserve this per-label split."
-    },
-    "FarCopyData": {
-      "port_file": "dos_port/src/home/copy_data.asm",
-      "why": "Scanner-reviewed 2026-07-15: FarCopyData from pret home/copy.asm has its selected single non-stub definition at dos_port/src/home/copy_data.asm; preserve this per-label split."
-    },
     "DelayFrames": {
       "port_file": "dos_port/src/video/frame.asm",
       "why": "Scanner-reviewed 2026-07-15: DelayFrames from pret home/delay.asm has its selected single non-stub definition at dos_port/src/video/frame.asm; preserve this per-label split."
-    },
-    "DisableLCD": {
-      "port_file": "dos_port/src/video/lcd_control.asm",
-      "why": "Scanner-reviewed 2026-07-15: DisableLCD from pret home/lcd.asm has its selected single non-stub definition at dos_port/src/video/lcd_control.asm; preserve this per-label split."
-    },
-    "EnableLCD": {
-      "port_file": "dos_port/src/video/lcd_control.asm",
-      "why": "Scanner-reviewed 2026-07-15: EnableLCD from pret home/lcd.asm has its selected single non-stub definition at dos_port/src/video/lcd_control.asm; preserve this per-label split."
-    },
-    "CopyDataUntil": {
-      "port_file": "dos_port/src/home/copy_data.asm",
-      "why": "Scanner-reviewed 2026-07-15: CopyDataUntil from pret home/move_mon.asm has its selected single non-stub definition at dos_port/src/home/copy_data.asm; preserve this per-label split."
     },
     "RestoreMapTextPointer": {
       "port_file": "dos_port/src/home/map_text_pointer.asm",
