@@ -292,6 +292,30 @@ Before any edit, confirm:
   — see "Known regressions" below).
 - Which files are claimed if coordination is needed.
 
+### The interactive shell is zsh, NOT bash
+
+**Write zsh-compatible commands.** This is a repeated agent error, not a hypothetical
+— the differences are silent, so a bash-ism usually produces a wrong answer rather
+than an error:
+
+- **Unquoted `$var` is NOT word-split.** `set -- $pair` leaves it as ONE word; use
+  `${=var}` to split, or pass arguments explicitly.
+- **`$pipestatus`, not `$PIPESTATUS`** — and zsh arrays are **1-indexed**, so the
+  first element is `$pipestatus[1]`.
+- **Splitting on newlines** is `${(f)var}`, not bash's `IFS=$'\n'` idioms.
+- **`**` globs recursively by default**, and an unmatched glob is an ERROR (the
+  command does not run) rather than passing through literally.
+- Long `while read` / `for` loops that `cd` or invoke `git -C` have been observed to
+  lose `PATH` mid-iteration in this environment. If a loop's second iteration reports
+  `command not found: awk`, that is the failure — rewrite it as straight-line
+  commands rather than debugging the loop.
+
+Related shell rule, not zsh-specific but the same family: **put nothing between a
+gate and the status you read.** Both `make fidelity | tail -40` and
+`make fidelity > log; echo "EXIT=$?"` report the status of the LAST element, so a
+failing gate reads as a pass. Redirect to a file, record `$?` to a file, read that
+file. Full detail → skill **`build-and-debug`**.
+
 ### Preserve pret Labels
 
 **Keep the pret label names — do not rename or invent.** Every translated
