@@ -77,6 +77,12 @@ jobs:
       #                    battle_tiles). assets/colors/palettes.inc is in the chain.
       #   python3-numpy -- tools/audio/gen_pika_pcm.py:28, which builds
       #                    assets/pika_pcm.inc (Makefile:1884).
+      #   python3-pytest -- NOT findable by the import scan above, and that is the
+      #                    lesson: tools/test_label_db.py uses `unittest` and never
+      #                    imports pytest. static_gate:199 RUNS it via
+      #                    `python3 -m pytest`, so pytest is a RUNNER dependency.
+      #                    Scanning imports can only ever find import dependencies --
+      #                    check `-m` invocations and subprocess calls separately.
       # NOT needed here, and deliberately not installed:
       #   PyYAML  -- already present on ubuntu-latest (proven: gen_mt32_patches.py,
       #              which imports yaml, ran to completion in run 30313580238).
@@ -86,7 +92,7 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -yq bison libpng-dev pkg-config nasm python3 python3-pil python3-numpy
+          sudo apt-get install -yq bison libpng-dev pkg-config nasm python3 python3-pil python3-numpy python3-pytest
 
       - name: Install rgbds
         working-directory: rgbds
