@@ -41,8 +41,9 @@ Common mandatory routes:
   `faithfulness-review`.
 - Touching stubs, generated data, annotations, active plans, or BUG/GLITCH tags:
   `project-conventions`.
-- Building, running, debugging, fidelity harnesses, DOSBox-X, dumps, assets, or
-  auditioning: `build-and-debug`.
+- Building, running, debugging, fidelity harnesses, DOSBox-X, dumps, assets,
+  auditioning, or inspecting pret/DOS dependency and caller/callee graphs:
+  `build-and-debug`.
 - Reviewing pret fidelity or changed pret labels: `faithfulness-review`.
 - Music analysis or arrangement: `score-analysis`, then `music-theory`, then the
   relevant enhancement skill.
@@ -61,7 +62,8 @@ Full index, by task:
   memory-dump (`DUMP.BIN`) / back-buffer (`FRAME.BIN`) / GB-state (`GBSTATE.BIN`)
   debugging recipes, the golden fidelity harness (mGBA vs DOSBox-X, `goldencheck`
   / `make fidelity`), music auditioning (audition.py / `DEBUG_AUDIO TRACK=`),
-  the repo layout map, reference URLs.
+  the interactive dependency graph + agent-facing JSON caller/callee API, the
+  repo layout map, reference URLs.
 - **`faithfulness-review`** — the pre-commit fidelity gate for any change touching
   a pret-labeled routine: faithdiff / lint_pret_labels / label_status / golden
   scenarios, and the justification rules.
@@ -81,8 +83,8 @@ Full index, by task:
 
 Rule of thumb: writing/reviewing x86 from pret source → `asm-translation` +
 `faithfulness-review`; touching stubs/generators/tags → `project-conventions`;
-running, hearing, or inspecting anything → `build-and-debug`; notes and chords
-→ the music set.
+running, hearing, inspecting runtime state, or querying dependency/caller/callee
+graphs → `build-and-debug`; notes and chords → the music set.
 
 The always-apply hard rules below stay here so they're in force every session; the
 skills hold the "look it up while doing X" detail.
