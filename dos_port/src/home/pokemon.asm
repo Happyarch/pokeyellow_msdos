@@ -1,10 +1,15 @@
 ; pokemon.asm — GetMonHeader / GetPartyMonName + the party-menu home driver
 ; (menus-port Session 5).
 ;
-; Source: home/pokemon.asm:GetMonHeader, GetPartyMonName2, GetPartyMonName,
+; Mirror of pret home/pokemon.asm: GetMonHeader, GetPartyMonName2, GetPartyMonName,
 ;         DisplayPartyMenu, GoBackToPartyMenu, PartyMenuInit,
-;         HandlePartyMenuInput, PrintStatusCondition, DrawHPBar, PrintLevel* +
-;         engine/menus/pokedex.asm:IndexToPokedex (pret/pokeyellow).
+;         HandlePartyMenuInput, PrintStatusCondition, DrawHPBar, PrintLevel*,
+;         and — arriving in the s16 mirror repair — LoadMonData,
+;         LoadFlippedFrontSpriteByMonIndex and LoadFrontSpriteByMonIndex
+;         (see the banner at the end of this file).
+; The pic pair came from src/home/pics.asm and LoadMonData from
+; src/engine/pokemon/load_mon_data.asm, which keeps the real body LoadMonData_.
+; NOT here: OverwritewMoves, PlayCry, GetCryData and GetwMoves are unported.
 ;
 ; GetMonHeader copies the 28-byte base-stats record for the internal species
 ; index in [wCurSpecies] into wMonHeader, then overwrites byte 0 (the dex id)
@@ -37,6 +42,12 @@ bits 32
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
 
+%define RHYDON        0x01
+%define NUM_POKEMON   151
+
+extern CopyUncompressedPicToHL      ; src/engine/battle/init_battle.asm — shared flip-aware 7x7 placement
+extern LoadMonFrontSprite           ; src/home/pics.asm — decode the front pic to VRAM
+extern LoadMonData_                 ; src/engine/pokemon/load_mon_data.asm — the real body
 extern BaseStats
 extern IndexToPokedex               ; engine/menus/pokedex.asm — predef, wPokedexNum in place
 extern SkipFixedLengthTextEntries
@@ -82,6 +93,9 @@ global DrawPartyMenu
 global RedrawPartyMenu
 global PrintStatusCondition
 global DrawHPBar
+global LoadMonData
+global LoadFlippedFrontSpriteByMonIndex
+global LoadFrontSpriteByMonIndex
 
 CHAR_LV        equ 0x6E     ; '<LV>' ":L" tile (constants/charmap.asm:67)
 
@@ -451,4 +465,74 @@ DrawHPBar:
 .done:
     pop edx                                     ; pop de
     pop esi                                     ; pop hl
+    ret
+
+; --- was src/home/pics.asm / src/engine/pokemon/load_mon_data.asm ---
+; Arrived in the s16 mirror repair. src/home/pokemon.asm was MEASURED at 4 pret-order
+; inversions of 14 pairs BEFORE this move, so the arrivals are appended here under this
+; banner and ordered among THEMSELVES as pret orders them (LoadMonData :81,
+; LoadFlippedFrontSpriteByMonIndex :94, LoadFrontSpriteByMonIndex :98) rather than
+; interleaved into a file that is not sorted. Re-sorting the non-arrivals is a separate
+; change and is deliberately not done in a relocation commit.
+
+; LoadMonData — pret home/pokemon.asm wrapper (predef LoadMonData): bank-switch + call
+; LoadMonData_ + return. In the flat DPMI port there is no bank to switch, so it is a
+; direct tail-call. Caller sets wWhichPokemon + wMonDataLocation. (Replaces the former
+; no-op stub in battle_exp_stubs.asm, which left wLoadedMon stale for GainExperience.)
+LoadMonData:
+    jmp LoadMonData_
+
+; ---------------------------------------------------------------------------
+; LoadFrontSpriteByMonIndex / LoadFlippedFrontSpriteByMonIndex
+; Source: home/pokemon.asm (pret/pokeyellow). Faithful internal-index -> national-
+; dex -> Rhydon-trap -> front-pic path, doing BOTH halves pret does: decode the pic
+; to VRAM (fixed vFrontPic = $9000) AND place the 7×7 tile block on the tilemap at
+; the caller's coord (pret tail-calls CopyUncompressedPicToHL). The flipped entry
+; mirrors the pic in X (Pokédex / status / league-PC / evolution / trade / Oak /
+; printer callers). Callers just set the tilemap coord and call — exactly like pret
+; (hlcoord X,Y / call LoadFlippedFrontSpriteByMonIndex); no separate placement step.
+; In:  [wCurPartySpecies] = internal species index; ESI = tilemap dest (GB flat
+;      offset, i.e. hlcoord/scoord — the pret HL). Stride comes from text_row_stride.
+; Out: pic decoded to $9000 AND placed 7×7 at ESI (flip-aware); [wSpriteFlipped]
+;      cleared. Invalid dex -> "Rhydon trap": [wCurPartySpecies] = RHYDON, nothing
+;      drawn (https://glitchcity.wiki/wiki/Rhydon_trap).
+; ---------------------------------------------------------------------------
+LoadFlippedFrontSpriteByMonIndex:
+    mov byte [ebp + wSpriteFlipped], 1
+    jmp LoadFrontSpriteByMonIndex.body
+LoadFrontSpriteByMonIndex:
+    mov byte [ebp + wSpriteFlipped], 0
+.body:
+    push esi                                ; preserve tilemap dest (pret: push hl)
+    mov al, [ebp + wPokedexNum]             ; ld a, [wPokedexNum]
+    push eax                                ; push af — save the caller's wPokedexNum
+    mov al, [ebp + wCurPartySpecies]        ; ld a, [wCurPartySpecies]
+    mov [ebp + wPokedexNum], al             ; ld [wPokedexNum], a
+    call IndexToPokedex                     ; predef IndexToPokedex
+    movzx eax, byte [ebp + wPokedexNum]     ; ld hl, wPokedexNum / ld a, [hl]
+    pop ebx                                 ; pop bc
+    mov [ebp + wPokedexNum], bl             ; ld [hl], b — restore the caller's wPokedexNum
+    and al, al
+    jz .invalidDexNumber                    ; dex #0 invalid
+    cmp al, NUM_POKEMON + 1
+    jae .invalidDexNumber                   ; dex > #151 invalid (unsigned)
+    ; valid dex (1..151)
+    dec eax                                  ; dex-1 = index into MonFrontPics
+    mov edx, GB_VCHARS2                       ; VRAM dest FIXED = vFrontPic ($9000)
+    call LoadMonFrontSprite                  ; stage + decode + center/merge -> $9000
+    ; --- place the 7×7 tile block at the caller's coord (pret: pop hl / xor a /
+    ;     ldh [hStartTileID],a / call CopyUncompressedPicToHL). Stride from the
+    ;     runtime text_row_stride (20 menu scratch / 40 flat canvas) — the port's
+    ;     one divergence from pret's constant SCREEN_WIDTH. -----------------------
+    pop esi                                  ; restore tilemap dest (pret: pop hl)
+    lea edi, [ebp + esi]                     ; full pointer for the placement
+    xor al, al                               ; hStartTileID = 0
+    mov edx, [text_row_stride]
+    call CopyUncompressedPicToHL             ; flip-aware, reads [wSpriteFlipped]
+    mov byte [ebp + wSpriteFlipped], 0       ; pret clears the flip flag AFTER placement
+    ret
+.invalidDexNumber:
+    ; Rhydon trap — fail-safe invalid dex numbers to RHYDON (pret .invalidDexNumber)
+    add esp, 4                               ; discard the saved dest (nothing drawn)
+    mov byte [ebp + wCurPartySpecies], RHYDON
     ret

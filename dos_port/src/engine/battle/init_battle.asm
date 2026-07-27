@@ -44,6 +44,9 @@ bits 32
 
 %define FW    SCREEN_TILES_W           ; 40 — canvas stride (full widescreen)
 
+%define PIC_STAGE  0xA4A0                    ; GB scratch for the compressed input stream
+                                              ; (copied from src/home/pics.asm, which still uses it)
+
 ; Bottom dialog box — geometry from the generated battle UI layout (Tier 1,
 ; assets/ui_layout_battle.inc; edit via tools/ui_layout/battle.py). The old
 ; +10col/+3row GB-centering now lives in the sidecar's per-element shifts.
@@ -69,7 +72,10 @@ global InitBattle
 global DrawBattleIntroBox
 global _InitBattleCommon
 global CopyUncompressedPicToTilemap    ; predef target; OakSpeech pic display (A4)
-extern CopyUncompressedPicToHL         ; src/home/pics.asm — shared flip-aware 7×7 placement
+
+extern MonBackPics                ; dex-ordered back sprites (LoadMonBackPic); same gen/gate
+extern PokedexOrder               ; data/pokemon/dex_order.asm — index->dex table (LoadMonBackPic projection)
+extern LoadMonBackPicToVRAM       ; src/home/pics.asm — decode + 2x scale + merge
 extern text_msgbox                     ; src/home/text.asm — active msgbox projection
 extern msgbox_dialog                   ; src/home/text.asm — overworld dialog projection
 extern InitBattleVariables
@@ -86,12 +92,11 @@ extern SetPal_Battle                    ; engine/gfx/palettes.asm
 extern LoadFontTilePatterns              ; home/load_font.asm
 extern LoadTextBoxTilePatterns           ; home/load_font.asm
 extern LoadEnemyMonData               ; engine/battle/core.asm — build wEnemyMon*
-extern LoadFrontSpriteByMonIndex         ; home/pics.asm — enemy front pic (generic)
+extern LoadFrontSpriteByMonIndex         ; src/home/pokemon.asm — enemy front pic (generic)
 extern HasMonFainted                  ; engine/battle/core.asm — ZF=1 → fainted
 extern FlagAction                        ; flag_action.asm — ESI=array, CL=bit, BH=action
 extern LoadBattleMonFromParty         ; engine/battle/core.asm — build wBattleMon* + stat mods
 extern DrawPlayerRedBackPic_Stub         ; home/pics.asm — player trainer (Red) back pic
-extern LoadMonBackPic                    ; home/pics.asm — generic send-out back pic (MonBackPics)
 extern SlideBattlePicsIn                 ; home/pics.asm — silhouette slide-in
 extern SaveBattleScreen                  ; src/home/tilemap.asm — alias of the Buffer1 pair
 extern DrawBattlePokeballs               ; pokeballs.asm — party-status ball row
@@ -100,6 +105,8 @@ extern HideBattlePokeballs               ; pokeballs.asm
 extern MainInBattleLoop                  ; core.asm — the whole battle loop
 extern EndOfBattle                       ; end_of_battle.asm — post-battle (EXP/evo/reset)
 extern EndBattleScreen                   ; battle_menu.asm — clean terminal
+global LoadMonBackPic             ; generic player send-out back pic (retires DrawPlayerBackPic_Stub)
+global CopyUncompressedPicToHL          ; shared flip-aware 7×7 tilemap placement
 
 InitBattle:
     ; The battle projects the GB viewport into the full 40-wide W_TILEMAP canvas, so
@@ -278,7 +285,7 @@ _InitBattleCommon:
     call WaitForAPress
     call HideBattlePokeballs
     ; send-out: decode the actual sent-out mon's back sprite (generic, MonBackPics-indexed
-    ; from wBattleMonSpecies2) → vBackPic. pret LoadMonBackPic; see home/pics.asm.
+    ; from wBattleMonSpecies2) → vBackPic. pret LoadMonBackPic, now below in this file.
     call LoadMonBackPic
 
     ; --- the battle itself ---
@@ -408,3 +415,107 @@ CopyUncompressedPicToTilemap:
     mov al, [ebp + hStartTileID]             ; AL = start tile id
     mov edx, SCREEN_WIDTH                     ; DE = SCREEN_WIDTH (40, the canvas stride)
     jmp CopyUncompressedPicToHL              ; tail (flip-aware; reads wSpriteFlipped)
+
+; --- was src/home/pics.asm ---
+; Arrived in the s16 mirror repair. This file MEASURED 0 pret-order inversions, and both
+; arrivals are pret-later than every label already here (LoadMonBackPic :160,
+; CopyUncompressedPicToHL :227, vs the last resident CopyUncompressedPicToTilemap :221),
+; so appending in this order keeps the file fully pret-ordered.
+
+; ---------------------------------------------------------------------------
+; LoadMonBackPic — decode the SENT-OUT player mon's back sprite to vBackPic ($9310).
+; The generic replacement for DrawPlayerBackPic_Stub (which hardcoded PIKACHU).
+; pret: engine/battle/core.asm LoadMonBackPic — sets wCurPartySpecies from
+; wBattleMonSpecies2, UncompressMonSprite from the mon header's BACK-sprite pointer,
+; ScaleSpriteByTwo, InterlaceMergeSpriteBuffers → vBackPic. The port has no header
+; sprite pointer (flat model): index the generated MonBackPics table by dex-1 (the
+; same species→dex path LoadFrontSpriteByMonIndex uses for MonFrontPics), stage the
+; blob, and reuse LoadMonBackPicToVRAM (decode + 2x scale + merge). All 151 back pics
+; are 4x4 ($44), which is exactly what ScaleSpriteByTwo expects.
+; In: [wBattleMonSpecies2] = the sent-out mon's internal species index. EBP = GB base.
+; ---------------------------------------------------------------------------
+LoadMonBackPic:
+%ifdef MON_FRONT_PICS
+    mov al, [ebp + wBattleMonSpecies2]
+    mov [ebp + wCurPartySpecies], al           ; pret: ld [wCurPartySpecies], a
+    ; species → national dex − 1 (port projection: direct PokedexOrder table read
+    ; — pret's LoadMonBackPic has no dex conversion; the flat MonBackPics blob is
+    ; dex-ordered, so the port converts here)
+    movzx eax, al
+    dec eax
+    movzx eax, byte [PokedexOrder + eax]       ; dex number (1-based)
+    dec eax                                    ; dex−1 = MonBackPics record index
+    ; stage MonBackPics[dex−1] (record = { dd flatptr, dd len }) into GB scratch
+    lea esi, [MonBackPics + eax*8]
+    mov ecx, [esi + 4]                          ; blob length
+    mov esi, [esi]                              ; flat ptr to the compressed back .pic
+    lea edi, [ebp + PIC_STAGE]
+    rep movsb
+    mov word [ebp + wSpriteInputPtr], PIC_STAGE
+    mov byte [ebp + wSpriteFlipped], 0         ; back pic is not mirrored
+    mov edx, GB_VCHARS2 + 0x31 * 16            ; vBackPic dest (signed tile ID $31)
+    jmp LoadMonBackPicToVRAM                    ; decode → 2x scale → merge to VRAM
+%else
+    ; no MonBackPics table in a no-data build: fall back to the embedded stub pic.
+    jmp DrawPlayerBackPic_Stub
+%endif
+
+; ---------------------------------------------------------------------------
+; CopyUncompressedPicToHL — port of engine/battle/init_battle.asm
+; CopyUncompressedPicToHL. Write a 7×7 block of ascending tile ids into the
+; tilemap, column-major (id runs down each column, then to the next column),
+; flip-aware: when [wSpriteFlipped] is set the columns are laid RIGHT-TO-LEFT so
+; the internally-mirrored front-pic tiles complete the horizontal flip (pret's
+; `.flipped` branch). This is the ONE shared placement pret tail-calls from
+; LoadFrontSpriteByMonIndex; the port splits VRAM-decode (LoadMonFrontSprite,
+; done separately) from this tilemap step and re-strides it per caller.
+;
+; PORT SPLIT NOTE (the two routines are now in DIFFERENT files: LoadF[lipped]-
+; FrontSpriteByMonIndex is a home/pokemon.asm label and lives in
+; src/home/pokemon.asm, which externs this routine):
+; pret's LoadFrontSpriteByMonIndex clears [wSpriteFlipped] only
+; AFTER tail-calling this routine, so the flip flag is still live here. The port's
+; LoadF[lipped]FrontSpriteByMonIndex clears it at the end of the VRAM decode, so a
+; flipped caller must RE-ASSERT [wSpriteFlipped]=1 immediately before calling this.
+;
+; In:  EDI = dest tilemap flat address (caller has already added EBP)
+;      EDX = row stride in bytes (20 = menu scratch, 40 = battle/status canvas)
+;      AL  = start tile id (hStartTileID; 0 for front pics)
+;      [ebp + wSpriteFlipped] = 1 flipped (R→L cols) / 0 normal (L→R cols)
+; Out: 7×7 tile ids placed. Clobbers EAX, EBX, ECX, EDI. Preserves EDX, ESI.
+; ---------------------------------------------------------------------------
+CopyUncompressedPicToHL:
+    cmp byte [ebp + wSpriteFlipped], 0
+    jne .flipped
+    mov ebx, 7                               ; 7 columns, left to right
+.col:
+    push edi
+    mov ecx, 7                               ; 7 rows, top to bottom
+.row:
+    mov [edi], al
+    add edi, edx                             ; down one row
+    inc al                                   ; id ascends column-major
+    dec ecx
+    jnz .row
+    pop edi
+    inc edi                                  ; next column to the RIGHT
+    dec ebx
+    jnz .col
+    ret
+.flipped:
+    add edi, 6                               ; start at the rightmost column
+    mov ebx, 7
+.fcol:
+    push edi
+    mov ecx, 7
+.frow:
+    mov [edi], al
+    add edi, edx
+    inc al
+    dec ecx
+    jnz .frow
+    pop edi
+    dec edi                                  ; next column to the LEFT
+    dec ebx
+    jnz .fcol
+    ret

@@ -100,7 +100,7 @@ extern GetItemName              ; home/names.asm  [wNamedObjectIndex] → wNameB
 extern GetMoveName              ; home/names.asm
 extern GetName                  ; home/names2.asm  [wNameListIndex]/[wNameListType] → wNameBuffer
 extern GetItemPrice             ; engine/items/item_price.asm  [wCurItem] → hItemPrice
-extern LoadMonData              ; engine/pokemon/load_mon_data.asm
+extern LoadMonData              ; src/home/pokemon.asm
 extern GetPartyMonName          ; home/pokemon.asm  AL=index, ESI=nick list base
 extern CopyToStringBuffer       ; src/home/copy_string.asm  EDX=src → wStringBuffer
 extern AddBCDPredef             ; engine/math/bcd.asm

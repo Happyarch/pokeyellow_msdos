@@ -76,7 +76,7 @@ extern DrawHPBar                     ; home/pokemon.asm — ESI=dest, DH=tiles, 
 extern GetHPBarLength                ; engine/gfx/hp_bar.asm — BX=hp, DX=maxhp → DL=px
 extern PrintNumber                   ; home/print_num.asm
 extern PrintLevel                    ; home/pokemon.asm — ESI=dest, [wLoadedMonLevel]
-extern LoadMonData                   ; engine/pokemon/load_mon_data.asm
+extern LoadMonData                   ; src/home/pokemon.asm
 extern ErasePartyMenuCursors         ; engine/menus/start_sub_menus.asm
 extern GetHealthBarColor             ; src/home/palettes.asm — DL=px, ESI=dest addr
 extern set_single_window             ; ppu/ppu.asm

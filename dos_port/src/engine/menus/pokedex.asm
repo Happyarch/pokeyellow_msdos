@@ -128,7 +128,7 @@ extern PrintPokedexEntry             ; engine/printer/printer_stubs.asm — STUB
 ; ---- externs used only by the DATA (entry) page ---------------------------
 extern TextCommandProcessor          ; home/text.asm — ESI = stream (FLAT ptr), EBX = cursor
 extern GetMonHeader                  ; home/pokemon.asm — wCurSpecies → wMonHeader
-extern LoadFlippedFrontSpriteByMonIndex ; gfx/pics.asm — ESI = tilemap coord; decode + place
+extern LoadFlippedFrontSpriteByMonIndex ; src/home/pokemon.asm — ESI = tilemap coord; decode + place
 extern JoypadLowSensitivity          ; input/joypad_lowsens.asm → [hJoy5]
 extern LoadTextBoxTilePatterns       ; gfx/load_font.asm
 ; PlayCry is a ret-only STUB (home_stubs.asm), NOT an absent routine and NOT an audio-HAL

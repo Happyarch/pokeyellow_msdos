@@ -63,7 +63,7 @@ extern RunDefaultPaletteCommand ; src/home/palettes.asm
 extern WaitForTextScrollButtonPress ; engine/battle/battle_menu.asm
 extern CopyData                 ; home/copy.asm — ESI=src, DX=dest, BX=count
 extern GetMonHeader             ; home/pokemon.asm
-extern LoadFrontSpriteByMonIndex ; home/pics.asm
+extern LoadFrontSpriteByMonIndex ; src/home/pokemon.asm
 extern PlaceString              ; home/text.asm — EAX=flat src, ESI=dest
 extern PrintNumber              ; home/print_num.asm — EDX=src addr, BH=flags|bytes, BL=digits, ESI=dest
 extern LoadHallOfFameTeams      ; engine/menus/save.asm

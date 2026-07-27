@@ -1,7 +1,19 @@
 ; pics.asm — mon-pic merge + placement pipeline (Wave 2, Stage 1c-ii).
 ;
-; Source: home/pics.asm (pret/pokeyellow): LoadUncompressedSpriteData,
+; Mirror of pret home/pics.asm. Holds five of its six pret labels:
+;   UncompressMonSprite, LoadMonFrontSprite, LoadUncompressedSpriteData,
 ;   AlignSpriteDataCentered, ZeroSpriteBuffer, InterlaceMergeSpriteBuffers.
+; (Everything else here is PORT-ONLY: LoadMonPicToVRAM, LoadMonBackPicToVRAM,
+; PlacePicTilemap, RefreshMonFrontRepaintPalette, SlideBattlePicsIn and the four
+; Draw*Pic_Stub entries.)
+;
+; FOUR pret labels this file used to carry MOVED OUT in the s16 mirror repair,
+; because they belong to other pret files:
+;   LoadFrontSpriteByMonIndex + LoadFlippedFrontSpriteByMonIndex are
+;     home/pokemon.asm labels   -> src/home/pokemon.asm
+;   CopyUncompressedPicToHL + LoadMonBackPic are
+;     engine/battle/init_battle.asm labels -> src/engine/battle/init_battle.asm
+; Nothing left in this file calls any of them.
 ; Pairs with src/gfx/uncompress.asm (the byte-exact-validated decoder).
 ;
 ; Flow (front pic): UncompressSpriteData decodes the stream into the two dense,
@@ -38,20 +50,14 @@ extern g_tilecache_dirty
 extern DelayFrame
 extern SetPal_BattleBlack
 extern SetPal_Battle
-extern IndexToPokedex             ; engine/menus/pokedex.asm — predef, wPokedexNum in place
-extern PokedexOrder               ; data/pokemon/dex_order.asm — index->dex table (LoadMonBackPic projection)
-extern text_row_stride            ; text/text.asm — active W_TILEMAP row stride (20/40)
 extern repaint_front_table, tile_pal, bg_slot_pal, g_pal_dirty
 global SlideBattlePicsIn
 
 global LoadMonPicToVRAM
 global LoadMonBackPicToVRAM
 global PlacePicTilemap
-global CopyUncompressedPicToHL          ; shared flip-aware 7×7 tilemap placement
 
 ; --- mon front-pic dispatch (M6.3, faithful port of home/pokemon.asm + home/pics.asm) ---
-global LoadFrontSpriteByMonIndex
-global LoadFlippedFrontSpriteByMonIndex
 global LoadMonFrontSprite
 global UncompressMonSprite
 global RefreshMonFrontRepaintPalette
@@ -69,15 +75,11 @@ global DrawBugCatcherPic_Stub
 ; src/data/mon_pics.asm is added to the link set. See M6.3 SUMMARY "data follow-up".
 %ifdef MON_FRONT_PICS
 extern MonFrontPics
-extern MonBackPics                ; dex-ordered back sprites (LoadMonBackPic); same gen/gate
 %endif
-global LoadMonBackPic             ; generic player send-out back pic (retires DrawPlayerBackPic_Stub)
 
 ; pret constants not carried in gb_constants.inc:
 ;   RHYDON = internal index $01 (constants/pokemon_constants.asm)
 ;   NUM_POKEMON = 151          (constants/pokedex_constants.asm)
-%define RHYDON        0x01
-%define NUM_POKEMON   151
 
 section .text
 
@@ -268,118 +270,6 @@ PlacePicTilemap:
     inc edi                            ; next column to the right
     dec ecx
     jnz .col
-    ret
-
-; ---------------------------------------------------------------------------
-; LoadFrontSpriteByMonIndex / LoadFlippedFrontSpriteByMonIndex
-; Source: home/pokemon.asm (pret/pokeyellow). Faithful internal-index -> national-
-; dex -> Rhydon-trap -> front-pic path, doing BOTH halves pret does: decode the pic
-; to VRAM (fixed vFrontPic = $9000) AND place the 7×7 tile block on the tilemap at
-; the caller's coord (pret tail-calls CopyUncompressedPicToHL). The flipped entry
-; mirrors the pic in X (Pokédex / status / league-PC / evolution / trade / Oak /
-; printer callers). Callers just set the tilemap coord and call — exactly like pret
-; (hlcoord X,Y / call LoadFlippedFrontSpriteByMonIndex); no separate placement step.
-; In:  [wCurPartySpecies] = internal species index; ESI = tilemap dest (GB flat
-;      offset, i.e. hlcoord/scoord — the pret HL). Stride comes from text_row_stride.
-; Out: pic decoded to $9000 AND placed 7×7 at ESI (flip-aware); [wSpriteFlipped]
-;      cleared. Invalid dex -> "Rhydon trap": [wCurPartySpecies] = RHYDON, nothing
-;      drawn (https://glitchcity.wiki/wiki/Rhydon_trap).
-; ---------------------------------------------------------------------------
-LoadFlippedFrontSpriteByMonIndex:
-    mov byte [ebp + wSpriteFlipped], 1
-    jmp LoadFrontSpriteByMonIndex.body
-LoadFrontSpriteByMonIndex:
-    mov byte [ebp + wSpriteFlipped], 0
-.body:
-    push esi                                ; preserve tilemap dest (pret: push hl)
-    mov al, [ebp + wPokedexNum]             ; ld a, [wPokedexNum]
-    push eax                                ; push af — save the caller's wPokedexNum
-    mov al, [ebp + wCurPartySpecies]        ; ld a, [wCurPartySpecies]
-    mov [ebp + wPokedexNum], al             ; ld [wPokedexNum], a
-    call IndexToPokedex                     ; predef IndexToPokedex
-    movzx eax, byte [ebp + wPokedexNum]     ; ld hl, wPokedexNum / ld a, [hl]
-    pop ebx                                 ; pop bc
-    mov [ebp + wPokedexNum], bl             ; ld [hl], b — restore the caller's wPokedexNum
-    and al, al
-    jz .invalidDexNumber                    ; dex #0 invalid
-    cmp al, NUM_POKEMON + 1
-    jae .invalidDexNumber                   ; dex > #151 invalid (unsigned)
-    ; valid dex (1..151)
-    dec eax                                  ; dex-1 = index into MonFrontPics
-    mov edx, GB_VCHARS2                       ; VRAM dest FIXED = vFrontPic ($9000)
-    call LoadMonFrontSprite                  ; stage + decode + center/merge -> $9000
-    ; --- place the 7×7 tile block at the caller's coord (pret: pop hl / xor a /
-    ;     ldh [hStartTileID],a / call CopyUncompressedPicToHL). Stride from the
-    ;     runtime text_row_stride (20 menu scratch / 40 flat canvas) — the port's
-    ;     one divergence from pret's constant SCREEN_WIDTH. -----------------------
-    pop esi                                  ; restore tilemap dest (pret: pop hl)
-    lea edi, [ebp + esi]                     ; full pointer for the placement
-    xor al, al                               ; hStartTileID = 0
-    mov edx, [text_row_stride]
-    call CopyUncompressedPicToHL             ; flip-aware, reads [wSpriteFlipped]
-    mov byte [ebp + wSpriteFlipped], 0       ; pret clears the flip flag AFTER placement
-    ret
-.invalidDexNumber:
-    ; Rhydon trap — fail-safe invalid dex numbers to RHYDON (pret .invalidDexNumber)
-    add esp, 4                               ; discard the saved dest (nothing drawn)
-    mov byte [ebp + wCurPartySpecies], RHYDON
-    ret
-
-; ---------------------------------------------------------------------------
-; CopyUncompressedPicToHL — port of engine/battle/init_battle.asm
-; CopyUncompressedPicToHL. Write a 7×7 block of ascending tile ids into the
-; tilemap, column-major (id runs down each column, then to the next column),
-; flip-aware: when [wSpriteFlipped] is set the columns are laid RIGHT-TO-LEFT so
-; the internally-mirrored front-pic tiles complete the horizontal flip (pret's
-; `.flipped` branch). This is the ONE shared placement pret tail-calls from
-; LoadFrontSpriteByMonIndex; the port splits VRAM-decode (LoadMonFrontSprite,
-; done separately) from this tilemap step and re-strides it per caller.
-;
-; PORT SPLIT NOTE: pret's LoadFrontSpriteByMonIndex clears [wSpriteFlipped] only
-; AFTER tail-calling this routine, so the flip flag is still live here. The port's
-; LoadF[lipped]FrontSpriteByMonIndex clears it at the end of the VRAM decode, so a
-; flipped caller must RE-ASSERT [wSpriteFlipped]=1 immediately before calling this.
-;
-; In:  EDI = dest tilemap flat address (caller has already added EBP)
-;      EDX = row stride in bytes (20 = menu scratch, 40 = battle/status canvas)
-;      AL  = start tile id (hStartTileID; 0 for front pics)
-;      [ebp + wSpriteFlipped] = 1 flipped (R→L cols) / 0 normal (L→R cols)
-; Out: 7×7 tile ids placed. Clobbers EAX, EBX, ECX, EDI. Preserves EDX, ESI.
-; ---------------------------------------------------------------------------
-CopyUncompressedPicToHL:
-    cmp byte [ebp + wSpriteFlipped], 0
-    jne .flipped
-    mov ebx, 7                               ; 7 columns, left to right
-.col:
-    push edi
-    mov ecx, 7                               ; 7 rows, top to bottom
-.row:
-    mov [edi], al
-    add edi, edx                             ; down one row
-    inc al                                   ; id ascends column-major
-    dec ecx
-    jnz .row
-    pop edi
-    inc edi                                  ; next column to the RIGHT
-    dec ebx
-    jnz .col
-    ret
-.flipped:
-    add edi, 6                               ; start at the rightmost column
-    mov ebx, 7
-.fcol:
-    push edi
-    mov ecx, 7
-.frow:
-    mov [edi], al
-    add edi, edx
-    inc al
-    dec ecx
-    jnz .frow
-    pop edi
-    dec edi                                  ; next column to the LEFT
-    dec ebx
-    jnz .fcol
     ret
 
 ; ---------------------------------------------------------------------------
@@ -610,44 +500,6 @@ DrawPlayerBackPic_Stub:
     mov edx, GB_VCHARS2 + 0x31 * 16        ; VRAM $9310 -> signed tile ID $31
     call LoadMonBackPicToVRAM              ; decode → VRAM only; the slide-in places it
     ret
-
-; ---------------------------------------------------------------------------
-; LoadMonBackPic — decode the SENT-OUT player mon's back sprite to vBackPic ($9310).
-; The generic replacement for DrawPlayerBackPic_Stub (which hardcoded PIKACHU).
-; pret: engine/battle/core.asm LoadMonBackPic — sets wCurPartySpecies from
-; wBattleMonSpecies2, UncompressMonSprite from the mon header's BACK-sprite pointer,
-; ScaleSpriteByTwo, InterlaceMergeSpriteBuffers → vBackPic. The port has no header
-; sprite pointer (flat model): index the generated MonBackPics table by dex-1 (the
-; same species→dex path LoadFrontSpriteByMonIndex uses for MonFrontPics), stage the
-; blob, and reuse LoadMonBackPicToVRAM (decode + 2x scale + merge). All 151 back pics
-; are 4x4 ($44), which is exactly what ScaleSpriteByTwo expects.
-; In: [wBattleMonSpecies2] = the sent-out mon's internal species index. EBP = GB base.
-; ---------------------------------------------------------------------------
-LoadMonBackPic:
-%ifdef MON_FRONT_PICS
-    mov al, [ebp + wBattleMonSpecies2]
-    mov [ebp + wCurPartySpecies], al           ; pret: ld [wCurPartySpecies], a
-    ; species → national dex − 1 (port projection: direct PokedexOrder table read
-    ; — pret's LoadMonBackPic has no dex conversion; the flat MonBackPics blob is
-    ; dex-ordered, so the port converts here)
-    movzx eax, al
-    dec eax
-    movzx eax, byte [PokedexOrder + eax]       ; dex number (1-based)
-    dec eax                                    ; dex−1 = MonBackPics record index
-    ; stage MonBackPics[dex−1] (record = { dd flatptr, dd len }) into GB scratch
-    lea esi, [MonBackPics + eax*8]
-    mov ecx, [esi + 4]                          ; blob length
-    mov esi, [esi]                              ; flat ptr to the compressed back .pic
-    lea edi, [ebp + PIC_STAGE]
-    rep movsb
-    mov word [ebp + wSpriteInputPtr], PIC_STAGE
-    mov byte [ebp + wSpriteFlipped], 0         ; back pic is not mirrored
-    mov edx, GB_VCHARS2 + 0x31 * 16            ; vBackPic dest (signed tile ID $31)
-    jmp LoadMonBackPicToVRAM                    ; decode → 2x scale → merge to VRAM
-%else
-    ; no MonBackPics table in a no-data build: fall back to the embedded stub pic.
-    jmp DrawPlayerBackPic_Stub
-%endif
 
 ; ---------------------------------------------------------------------------
 ; DrawPlayerRedBackPic_Stub — decode the PLAYER (Red/Yellow) back sprite to the

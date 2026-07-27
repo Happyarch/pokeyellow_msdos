@@ -42,7 +42,7 @@ global DoubleOrHalveSelectedStats
 ; DrawPlayerHUDAndHPBar is now REAL (engine/battle/core.asm — alias → battle_hud.asm
 ; DrawPlayerHUD) — no longer stubbed here (retired with the enemy-side
 ; DrawEnemyHUDAndHPBar pattern).
-; LoadMonData is now REAL (load_mon_data.asm wrapper → LoadMonData_) — no longer stubbed;
+; LoadMonData is now REAL (src/home/pokemon.asm wrapper → LoadMonData_) — no longer stubbed;
 ; it populates wLoadedMon so GainExperience's CalcLevelFromExperience reads the right mon.
 ; ApplyBadgeStatBoosts (badge_boosts.asm) and ApplyBurnAndParalysisPenaltiesToPlayer
 ; (status_penalties.asm) are now REAL + linked via the move-effect scaffold — no longer

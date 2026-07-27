@@ -348,7 +348,7 @@ GainExperience:
     call ShowGainedExpText          ; front end: "<nick> gained N EXP. Points!" (+ wait)
     xor al, al
     mov [ebp + wMonDataLocation], al
-    call LoadMonData                ; REAL (load_mon_data.asm) — populates wLoadedMon
+    call LoadMonData                ; REAL (src/home/pokemon.asm wrapper) — populates wLoadedMon
 
     pop esi                         ; POP B: ESI = party_mon + 0x0E (EXP high)
     ; CalcLevelFromExperience reads the loaded-mon scratch (W_LOADED_MON_SPECIES/EXP),
@@ -485,7 +485,7 @@ GainExperience:
     call ShowGrewLevelText          ; front end: "<nick> grew to level N!" (no wait)
     xor al, al
     mov [ebp + wMonDataLocation], al
-    call LoadMonData                ; REAL (load_mon_data.asm) — populates wLoadedMon
+    call LoadMonData                ; REAL (src/home/pokemon.asm wrapper) — populates wLoadedMon
     ; LEVEL_UP_STATS_BOX = 1 (menu_constants.asm)
     mov dh, LEVEL_UP_STATS_BOX
     call PrintStatsBox              ; front end: level-up stats box (ATTACK/DEFENSE/SPEED/SPECIAL)

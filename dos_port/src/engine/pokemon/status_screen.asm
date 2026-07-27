@@ -101,7 +101,7 @@ extern UpdateSprites
 extern hide_window
 extern LoadHpBarAndStatusTilePatterns
 extern LoadStatusScreenHudTilePatterns               ; load_font.asm — pret's 4-load status HUD layout
-extern LoadFlippedFrontSpriteByMonIndex              ; gfx/pics.asm — ESI=tilemap coord; decode $9000 + place
+extern LoadFlippedFrontSpriteByMonIndex              ; src/home/pokemon.asm — ESI=tilemap coord; decode $9000 + place
 extern g_bg_whiteout                                 ; ppu/ppu.asm — full-screen BG whiteout flag
 extern IsThisPartyMonStarterPikachu                  ; engine/pikachu/pikachu_status.asm (CF = starter)
 extern IsThisBoxMonStarterPikachu                    ; engine/pikachu/pikachu_status.asm

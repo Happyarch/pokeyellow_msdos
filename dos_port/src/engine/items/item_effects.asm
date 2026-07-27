@@ -761,7 +761,7 @@ extern GoBackToPartyMenu    ; home/pokemon.asm
 extern RedrawPartyMenu      ; home/pokemon.asm
 extern GetPartyMonName      ; home/pokemon.asm — AL = index, ESI = name list
 extern GetMonHeader         ; home/pokemon.asm — [wCurSpecies] → wMonHeader
-extern LoadMonData          ; engine/pokemon/load_mon_data.asm
+extern LoadMonData          ; src/home/pokemon.asm
 extern CalcStats            ; home/move_mon.asm
 extern AddNTimes            ; home/array.asm — ESI += AL*BX
 extern CopyData             ; home/copy.asm — ESI → EDX, BX bytes

@@ -141,11 +141,11 @@ extern DelayFrame
 extern LoadEnemyMonData               ; engine/battle/core.asm — real wild loader
 extern CalcStats                 ; home/move_mon.asm — stat recompute from the spec DVs
 extern CopyData                  ; home/copy.asm
-extern LoadFrontSpriteByMonIndex ; home/pics.asm — real enemy front pic
+extern LoadFrontSpriteByMonIndex ; src/home/pokemon.asm — real enemy front pic
 extern LoadBattleMonFromParty         ; engine/battle/core.asm — real send-out loader
 extern FlagAction                ; flag_action.asm
 extern DisplayBattleMenu         ; core.asm — real menu (parks in HandleMenuInput)
-extern LoadMonBackPic            ; home/pics.asm — sent-out mon's back pic
+extern LoadMonBackPic            ; src/engine/battle/init_battle.asm — sent-out mon's back pic
 extern LoadScreenTilesFromBuffer1 ; src/home/tilemap.asm
 extern DrawHUDsAndHPBars         ; engine/battle/core.asm
 extern DrawEmptyDialogBox        ; battle_menu.asm

@@ -45,7 +45,7 @@ extern PrepareForSpecialWarp         ; overworld/special_warps.asm
 extern GBFadeOutToWhite              ; home/fade.asm
 extern GBFadeInFromWhite             ; home/fade.asm
 extern GetMonHeader                  ; home/pokemon.asm — [wCurSpecies]
-extern LoadFlippedFrontSpriteByMonIndex ; home/pics.asm — [wCurPartySpecies], ESI = tilemap dest
+extern LoadFlippedFrontSpriteByMonIndex ; src/home/pokemon.asm — [wCurPartySpecies], ESI = tilemap dest
 extern ChoosePlayerName              ; oak_speech2.asm
 extern ChooseRivalName               ; oak_speech2.asm
 extern BankswitchCommon              ; home/bankswitch2.asm — AL = bank (flat no-op)
