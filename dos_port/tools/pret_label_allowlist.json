@@ -11,30 +11,6 @@
   "structural_findings": {},
   "relocated_files": {},
   "relocated_labels": {
-    "EndNPCMovementScript": {
-      "port_file": "dos_port/src/engine/overworld/auto_movement.asm",
-      "why": "pret home/npc_movement.asm wrapper (farjp _EndNPCMovementScript); the port has no home/npc_movement.asm mirror, so the trivial banking-elided jump is co-located with its target _EndNPCMovementScript in auto_movement.asm (OW-2.3)"
-    },
-    "FadeOutAudio": {
-      "port_file": "dos_port/src/home/audio.asm",
-      "why": "audio-branch consolidation (Phase A, merged 2026-07-07): the port's home-audio entry points live together in src/home/audio.asm with the audio HAL"
-    },
-    "MoveAnimationTiles1": {
-      "port_file": "dos_port/src/engine/overworld/cut.asm",
-      "why": "INTERIM: battle engine/battle/animations.asm not yet ported; cut.asm (OW-3.4) incbins move_anim_1.2bpp as MoveAnimationTiles1 for the grass-leaf tile (tile 6). Retire and extern from animations.asm once battle move-anim tiles are ported."
-    },
-    "PrintStatsBox": {
-      "port_file": "dos_port/src/engine/battle/battle_menu.asm",
-      "why": "pret engine/pokemon/status_screen.asm split across port files (draft Session H)"
-    },
-    "DisplayUsedMoveText": {
-      "port_file": "dos_port/src/engine/battle/core.asm",
-      "why": "Scanner-reviewed 2026-07-15: DisplayUsedMoveText from pret engine/battle/used_move_text.asm has its selected single non-stub definition at dos_port/src/engine/battle/core.asm; preserve this per-label split."
-    },
-    "LoadPokedexTilePatterns": {
-      "port_file": "dos_port/src/engine/menus/pokedex.asm",
-      "why": "Scanner-reviewed 2026-07-15: LoadPokedexTilePatterns from pret engine/gfx/load_pokedex_tiles.asm has its selected single non-stub definition at dos_port/src/engine/menus/pokedex.asm; preserve this per-label split."
-    },
     "RestoreMapTextPointer": {
       "port_file": "dos_port/src/home/map_text_pointer.asm",
       "why": "Scanner-reviewed 2026-07-15: RestoreMapTextPointer from pret home/predef_text.asm has its selected single non-stub definition at dos_port/src/home/map_text_pointer.asm; preserve this per-label split."
@@ -42,18 +18,6 @@
     "SetMapTextPointer": {
       "port_file": "dos_port/src/home/map_text_pointer.asm",
       "why": "Scanner-reviewed 2026-07-15: SetMapTextPointer from pret home/predef_text.asm has its selected single non-stub definition at dos_port/src/home/map_text_pointer.asm; preserve this per-label split."
-    },
-    "FarPrintText": {
-      "port_file": "dos_port/src/home/text_script.asm",
-      "why": "Scanner-reviewed 2026-07-15: FarPrintText from pret home/print_num.asm has its selected single non-stub definition at dos_port/src/home/text_script.asm; preserve this per-label split."
-    },
-    "PrintLetterDelay": {
-      "port_file": "dos_port/src/home/text.asm",
-      "why": "Scanner-reviewed 2026-07-15: PrintLetterDelay from pret home/print_text.asm has its selected single non-stub definition at dos_port/src/home/text.asm; preserve this per-label split."
-    },
-    "DiscardButtonPresses": {
-      "port_file": "dos_port/src/input/joypad.asm",
-      "why": "pret engine/joypad.asm is the REJECTED faithful-input model and is DEAD (in no Makefile SRCS list, and unlinkable: it ends in `jmp Joypad`, which the port never defines). The port's live input model is the src/input/joypad.asm HAL, which polls from the DelayFrame pipeline - the documented port-input-model DEVIATION (pret's `call Joypad` has no port counterpart). DiscardButtonPresses is model-neutral (it just zeroes hJoyHeld/hJoyPressed/hJoyReleased) and was ALREADY live here, inlined as the local label `.discard`; overworld-events Stage 4 extracted it into a real global because DoBoulderDustAnimation calls it. Permanent while the port-input-model deviation stands."
     }
   },
   "suppress": [
@@ -76,11 +40,6 @@
       "rule": "dup_def",
       "key": "StartSlotMachine",
       "why": "known interim (overworld-events Stage 3): hidden_object_stubs.asm ret-stub is linked (a HiddenEventMaps handler for Game Corner slot tiles); the real body in engine/slots/game_corner_slots.asm is unlisted (in no Makefile SRCS list). Delete the stub when game_corner_slots.asm is promoted to a linked list (Stage 5 Celadon)"
-    },
-    {
-      "rule": "dup_def",
-      "key": "DiscardButtonPresses",
-      "why": "NOT the silent-shadow trap this rule targets: only ONE definition is linked. src/input/joypad.asm (HAL_SRCS) holds the live body; src/engine/joypad.asm is DEAD - in no SRCS list at all (not even a check-only one), so it is never assembled and cannot shadow anything. It is retained solely as a cross-reference to pret's original input routine (_Joypad/ReadJoypad_/TrySoftReset) for a future faithful-input pass, and its header says so. Retire this entry by deleting engine/joypad.asm, or by dropping its DiscardButtonPresses copy, if that reference is ever cashed in or abandoned (overworld-events Stage 4)."
     }
   ]
 }
