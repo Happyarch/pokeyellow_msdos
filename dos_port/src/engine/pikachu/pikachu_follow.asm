@@ -1,12 +1,28 @@
-; pikachu.asm — Pokemon Yellow overworld Pikachu-follower FSM (Wave 9 / M9.1).
+; pikachu_follow.asm — mirror of pret engine/pikachu/pikachu_follow.asm.
 ;
-; Intended path: dos_port/src/engine/overworld/pikachu.asm
+; Was src/engine/overworld/pikachu.asm until the mirror repair. Holds four of that
+; pret file's eighteen labels, in pret order:
+;   ShouldPikachuSpawn (:1), ResetPikachuOverworldStateFlag2 (:344),
+;   SpawnPikachu_ (:351, see the naming note below), TrySpawnPikachu (:403)
 ;
-; The pret engine/pikachu/pikachu_follow.asm labels: the SpawnPikachu_ guard entry
-; (here `_SpawnPikachu`), ShouldPikachuSpawn, TrySpawnPikachu and
-; ResetPikachuOverworldStateFlag2. The home/pikachu.asm half — the state-flag
-; plumbing, the SpawnPikachu wrapper, Pikachu_IsInArray and the movement-script
-; accessors — now lives in its own mirror, src/home/pikachu.asm.
+; The other fourteen are unported, and all belong to the deferred follower FSM:
+; SchedulePikachuSpawnForAfterText, ClearPikachuSpriteStateData,
+; CalculatePikachuSpawnCoordsAndFacing, CalculatePikachuPlacementCoords,
+; CalculatePikachuFacingDirection, SetPikachuSpawnOutside, Pointer_fc64b,
+; Pointer_fc653, SetPikachuSpawnWarpPad, Pointer_fc68e, SetPikachuSpawnBackOutside,
+; SetPikachuOverworldStateFlag2, GetPikachuFacingDirectionAndReturnToE,
+; Func_fcc08, ComputePikachuFacingDirection.
+;
+; *** NAMING DEBT, PRE-EXISTING AND NOT INTRODUCED HERE: pret's label is
+; `SpawnPikachu_` and the port calls it `_SpawnPikachu` — a forked name, which
+; CLAUDE.md's "Preserve pret Labels" rule forbids. It is left alone in this commit
+; because renaming it is a behaviour-neutral but separate change touching its
+; caller in src/home/pikachu.asm, and because it is why the label reads `port_only`
+; rather than `translated` in the label DB. ***
+;
+; The home/pikachu.asm half — the state-flag plumbing, the SpawnPikachu wrapper,
+; Pikachu_IsInArray and the movement-script accessors — lives in its own mirror,
+; src/home/pikachu.asm.
 ;
 ; Yellow's starter Pikachu walks the overworld one tile behind the player. The
 ; whole subsystem is INERT unless the follower is enabled: nothing turns it on
@@ -22,7 +38,7 @@
 ; pret citations are given per routine as `pret <file>:<label>`.
 ;
 ; Build (standalone check): nasm -f coff -I dos_port/include/ -o /dev/null \
-;     dos_port/src/engine/overworld/pikachu.asm
+;     dos_port/src/engine/pikachu/pikachu_follow.asm
 ;
 ; ============================================================================
 ; LINK/CHECK STATUS: LINKED (GAME_SRCS, since OW-7.2). The ret-stub `SpawnPikachu`
@@ -63,6 +79,30 @@ global _SpawnPikachu                    ; pret SpawnPikachu_; called by the home
 
 section .text
 
+; ShouldPikachuSpawn — pret pikachu_follow.asm:ShouldPikachuSpawn. Carry set only
+; if Pikachu should be visible: not hidden (bits 5,7 clear), starter Pikachu alive
+; in party, and on foot (wWalkBikeSurfState == 0).
+ShouldPikachuSpawn:
+    test byte [ebp + wPikachuOverworldStateFlags], 0x20  ; bit 5, a
+    jnz .hide
+    test byte [ebp + wPikachuOverworldStateFlags], 0x80  ; bit 7, a
+    jnz .hide
+    call IsStarterPikachuAliveInOurParty                  ; carry => alive
+    jnc .hide
+    mov al, [ebp + W_WALK_BIKE_SURF_STATE]                ; ld a,[wWalkBikeSurfState]
+    and al, al
+    jnz .hide
+    stc                                                   ; scf
+    ret
+.hide:
+    clc                                                   ; and a (clears carry)
+    ret
+
+; ResetPikachuOverworldStateFlag2 — pret pikachu_follow.asm. Clear moved-flag bit 2.
+ResetPikachuOverworldStateFlag2:
+    and byte [ebp + wPikachuOverworldStateFlags], 0xFB ; res 2, [hl]
+    ret
+
 ; ===========================================================================
 ; _SpawnPikachu — pret engine/pikachu/pikachu_follow.asm:SpawnPikachu_.
 ;
@@ -89,30 +129,6 @@ _SpawnPikachu:
     ; ...). Requires staged Pikachu overworld sprite tiles. Unreachable while the
     ; follower is disabled, so the default overworld is unaffected.
 .ret:
-    ret
-
-; ResetPikachuOverworldStateFlag2 — pret pikachu_follow.asm. Clear moved-flag bit 2.
-ResetPikachuOverworldStateFlag2:
-    and byte [ebp + wPikachuOverworldStateFlags], 0xFB ; res 2, [hl]
-    ret
-
-; ShouldPikachuSpawn — pret pikachu_follow.asm:ShouldPikachuSpawn. Carry set only
-; if Pikachu should be visible: not hidden (bits 5,7 clear), starter Pikachu alive
-; in party, and on foot (wWalkBikeSurfState == 0).
-ShouldPikachuSpawn:
-    test byte [ebp + wPikachuOverworldStateFlags], 0x20  ; bit 5, a
-    jnz .hide
-    test byte [ebp + wPikachuOverworldStateFlags], 0x80  ; bit 7, a
-    jnz .hide
-    call IsStarterPikachuAliveInOurParty                  ; carry => alive
-    jnc .hide
-    mov al, [ebp + W_WALK_BIKE_SURF_STATE]                ; ld a,[wWalkBikeSurfState]
-    and al, al
-    jnz .hide
-    stc                                                   ; scf
-    ret
-.hide:
-    clc                                                   ; and a (clears carry)
     ret
 
 ; TrySpawnPikachu — pret pikachu_follow.asm:TrySpawnPikachu. If Pikachu should not

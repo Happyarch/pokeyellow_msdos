@@ -3,7 +3,7 @@
 ; The overworld Pikachu-follower plumbing pret keeps in the home bank: the state
 ; flag setters/testers, the SpawnPikachu home wrapper, Pikachu_IsInArray, and the
 ; movement-script accessors. Consolidated here from
-; src/engine/overworld/pikachu.asm, which keeps the three
+; src/engine/pikachu/pikachu_follow.asm, which keeps the three
 ; engine/pikachu/pikachu_follow.asm labels (ShouldPikachuSpawn, TrySpawnPikachu,
 ; ResetPikachuOverworldStateFlag2) and the SpawnPikachu_ body they belong with.
 ;
@@ -21,7 +21,7 @@ bits 32
 %include "gb_macros.inc"
 
 extern BankswitchCommon                 ; src/home/bankswitch2.asm
-extern _SpawnPikachu                    ; src/engine/overworld/pikachu.asm — pret SpawnPikachu_
+extern _SpawnPikachu                    ; src/engine/pikachu/pikachu_follow.asm — pret SpawnPikachu_
 
 global SpawnPikachu
 global Func_1510

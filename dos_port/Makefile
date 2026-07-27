@@ -351,8 +351,8 @@ GAME_SRCS := \
     src/engine/overworld/clear_variables.asm \
     src/data/wild_data.asm \
     src/engine/overworld/wild_mons.asm \
-    src/engine/overworld/warp_check.asm \
     src/home/hidden_events.asm \
+    src/engine/overworld/hidden_events.asm \
     src/data/hidden_events_data.asm \
     src/engine/overworld/hidden_object_stubs.asm \
     src/engine/menus/swap_items.asm \
@@ -363,7 +363,7 @@ GAME_SRCS := \
     src/engine/overworld/npc_movement_2.asm \
     src/engine/overworld/auto_movement.asm \
     src/home/overworld_text.asm \
-    src/engine/overworld/pikachu.asm \
+    src/engine/pikachu/pikachu_follow.asm \
     src/engine/events/pewter_guys.asm \
     src/engine/overworld/toggleable_objects.asm \
     src/engine/overworld/update_map.asm \

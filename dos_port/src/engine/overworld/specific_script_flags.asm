@@ -35,8 +35,8 @@ BIT_CUR_MAP_LOADED_2   equ 6   ; ram_constants.asm: wCurrentMapScriptFlags bit 6
 ; does not (yet) carry a full MAP_* enum, so these are pinned directly from the
 ; pret constant file's map_const hex column (verified against map_constants.asm
 ; on 2026-07-04). %ifndef-guarded in case a sibling file in this same subsystem
-; already defines one (warp_check.asm defines a handful of MAP_* names, but not
-; these; no observed collision at the time of writing).
+; already defines one (no observed collision at the time of writing; the
+; warp_check.asm that used to define a handful of MAP_* names is gone).
 ; ---------------------------------------------------------------------------
 %ifndef VERMILION_GYM
 VERMILION_GYM           equ 0x5C

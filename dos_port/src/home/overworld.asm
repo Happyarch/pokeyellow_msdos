@@ -67,8 +67,8 @@ extern BikeRidingTilesets                    ; src/home/player_gfx.asm
 extern DoBoulderDustAnimation       ; src/engine/overworld/push_boulder.asm
 extern HandleLedges                    ; src/engine/overworld/ledges.asm
 extern IsPlayerCharacterBeingControlledByGame ; src/home/npc_movement.asm (real, linked — OW-A.6)
-extern IsPlayerFacingEdgeOfMap                    ; src/engine/overworld/warp_check.asm
-extern IsWarpTileInFrontOfPlayer                    ; src/engine/overworld/warp_check.asm
+extern IsPlayerFacingEdgeOfMap                    ; src/engine/overworld/player_state.asm
+extern IsWarpTileInFrontOfPlayer                    ; src/engine/overworld/player_state.asm
 extern MapScriptPointers                  ; assets/map_scripts.inc
 extern PlayDefaultMusic             ; src/home/audio.asm (real gateway)
 extern RedBikeSprite                    ; src/home/player_gfx.asm
@@ -77,7 +77,7 @@ extern SeelSprite                    ; src/home/player_gfx.asm
 extern SurfingPikachuSprite                    ; src/home/player_gfx.asm
 extern TryDoWildEncounter                    ; engine/battle/wild_encounters.asm (LINKED)
 extern TryPushingBoulder            ; src/engine/overworld/push_boulder.asm
-extern _HandleMidJump                    ; src/engine/overworld/ledges.asm
+extern _HandleMidJump                    ; src/engine/overworld/player_animations.asm
 extern _InitBattleCommon                     ; init_battle.asm — full wild-battle orchestration
 extern g_tilecache_dirty            ; src/ppu/ppu.asm — arm tile-cache re-decode
 extern player_sprite                ; == RedSprite (walking)
@@ -1071,7 +1071,7 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     ; tileset-based CheckIfInOutsideMap (OVERWORLD/PLATEAU → outside). The two disagree
     ; for edge maps (e.g. Route 23 / Indigo Plateau use the PLATEAU tileset but sit above
     ; FIRST_INDOOR_MAP_ID), so those would be misclassified here.
-    ; ; TODO(edge-maps): switch this test to `call CheckIfInOutsideMap` (warp_check.asm,
+    ; ; TODO(edge-maps): switch this test to `call CheckIfInOutsideMap` (this file,
     ; already global + faithful) when Route 23 / Plateau warping is exercised.
     mov al, [ebp + W_CUR_MAP]
     cmp al, FIRST_INDOOR_MAP_ID
@@ -3090,6 +3090,7 @@ global IsSpriteInFrontOfPlayer2              ; long-range entry — counter bran
 ForceBikeOrSurf:
     call LoadPlayerSpriteGraphics
     jmp PlayDefaultMusic                     ; pret: jp PlayDefaultMusic (tail call)
+; BUG{class=temporary; pret=home/overworld.asm:OverworldLoopLessDelay; behavior=nothing calls HandleMidJump so a ledge hop is never advanced or torn down, leaving BIT_LEDGE_OR_FISHING set forever after the first hop and permanently gating collision (CheckForJumpingAndTilePairCollisions ret nz), OBJ (sprite_oam.asm) and emotion bubbles; evidence=pret home/overworld.asm:49 has `call HandleMidJump` inside OverworldLoopLessDelay and tools/faithdiff OverworldLoopLessDelay reports DROPPED HandleMidJump (call), while label_status --callers HandleMidJump reports zero port callers and _HandleMidJump is the only routine that clears the flag on the ledge path; lifetime=until the call is restored in OverworldLoopLessDelay and a ledge-hop golden scenario covers it}
 HandleMidJump:
     test byte [ebp + W_MOVEMENT_FLAGS], (1 << BIT_LEDGE_OR_FISHING)
     jz  .ret

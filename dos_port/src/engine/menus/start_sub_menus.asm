@@ -154,7 +154,7 @@ extern PlaySound                     ; home/audio.asm — sound id in AL
 extern PrintText                     ; home/window.asm — ESI = flat text stream
 ; --- field-move dispatch (row 9 part 3) ---
 extern GetPartyMonName               ; home/pokemon.asm — AL = index, ESI = nick list
-extern CheckIfInOutsideMap           ; engine/overworld/warp_check.asm — ZF=1 if outside
+extern CheckIfInOutsideMap           ; src/home/overworld.asm — ZF=1 if outside
 extern IsSurfingAllowed              ; engine/overworld/field_move_messages.asm (now LINKED)
 extern PrintStrengthText              ; engine/overworld/field_move_messages.asm (now LINKED)
 extern UsedCut                        ; engine/overworld/cut.asm — predef UsedCut (.cut)

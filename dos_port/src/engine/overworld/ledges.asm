@@ -8,10 +8,13 @@
 ;   CheckForTilePairCollisions            home/overworld.asm:CheckForTilePairCollisions
 ;   HandleLedges                          engine/overworld/ledges.asm:HandleLedges
 ;   HandleMidJump                         home/overworld.asm:HandleMidJump
-;   _HandleMidJump                        engine/overworld/player_animations.asm:_HandleMidJump
 ;   TilePairCollisionsLand/Water          data/tilesets/pair_collision_tile_ids.asm
 ;   LedgeTiles                            data/tilesets/ledge_tiles.asm
-;   PlayerJumpingYScreenCoords            engine/overworld/player_animations.asm
+;
+; _HandleMidJump and PlayerJumpingYScreenCoords are pret
+; engine/overworld/player_animations.asm labels and MOVED to that mirror,
+; src/engine/overworld/player_animations.asm, in the s16 mirror repair. The
+; private .bss hop index (w_player_jumping_y_index) went with them.
 ;
 ; Register map (SM83 -> x86): A->AL, HL->ESI, B->BH, C->BL, DE->DX (see CLAUDE.md).
 ;   GB RAM/ROM  -> EBP-relative offset  [ebp + SYM]   (SYM from gb_memmap.inc)
@@ -20,8 +23,13 @@
 ;   per the port convention (see map_sprites.asm / simulate_joypad.asm).
 ;
 ; This file is LINKED (GAME_SRCS, since OW-7.2): HandleLedges is called from
-; CollisionCheckOnLand and HandleMidJump from the overworld frame loop. (It was
-; originally check-only, reached only under -D OVERWORLD_LEDGES; that gate is gone.)
+; CollisionCheckOnLand. (It was originally check-only, reached only under
+; -D OVERWORLD_LEDGES; that gate is gone.)
+;
+; This header used to add "and HandleMidJump from the overworld frame loop".
+; MEASURED FALSE (s16): HandleMidJump has ZERO callers tree-wide, so the hop is
+; armed here but never advanced or torn down. See the BUG{} on HandleMidJump in
+; src/home/overworld.asm.
 ;
 ; Build (check): nasm -f coff -I include/ -I . -o ledges.o \
 ;                     src/engine/overworld/ledges.asm
@@ -52,15 +60,12 @@ PAD_ALL             equ 0xFF
 STANDING_TILE_OFF   equ W_TILEMAP + PLAYER_STANDING_ROW * SCREEN_TILES_W + PLAYER_STANDING_COL
 
 global HandleLedges
-global _HandleMidJump
 global TilePairCollisionsLand
 global TilePairCollisionsWater
 global LedgeTiles
 
 extern StartSimulatingJoypadStates    ; src/home/map_objects.asm (linked)
 extern PlaySound                      ; src/home/audio.asm (real gateway, linked)
-extern UpdateSprites                  ; src/engine/overworld/movement.asm (linked)
-extern Delay3                         ; src/home/palettes.asm (linked)
 ; LoadHoppingShadowOAM stub lives in overworld_stubs.asm (stub convention: a stub never
 ; sits in the file mirroring its own pret source). Retire the stub + restore the real
 ; body here once PrepareOAMData models shadow-OAM slots. See overworld_stubs.asm.
@@ -179,47 +184,6 @@ HandleLedges:
 ; animation only while BIT_LEDGE_OR_FISHING is set.
 ; ---------------------------------------------------------------------------
 
-; ---------------------------------------------------------------------------
-; _HandleMidJump — pret engine/overworld/player_animations.asm:_HandleMidJump.
-;
-; Steps the player's on-screen Y through the 16-entry PlayerJumpingYScreenCoords arc
-; (the hop). When the arc finishes and the current walk step completes, tears down the
-; ledge/scripted-movement state and re-enables input.
-;
-; NOTE(port renderer): the hop's visible arc requires the player renderer to honor
-; W_SPRITE_PLAYER_Y_PIXELS. The port currently pins the player at screen-centre (memory:
-; "player Y pixel fixed"); until the renderer reads YPixels for the player, the logic
-; (state teardown, input gating, the two forward steps) is faithful but the vertical
-; arc will not be drawn. See SUMMARY.
-;
-; Clobbers: AL, CL, ESI, flags.
-; ---------------------------------------------------------------------------
-_HandleMidJump:
-    mov al, [w_player_jumping_y_index]             ; c = current index
-    mov cl, al
-    inc al
-    cmp al, 0x10                                    ; index+1 >= 16 → arc done
-    jae .finishedJump
-    mov [w_player_jumping_y_index], al             ; store incremented index
-    movzx esi, cl                                  ; b=0; hl = coords + old index
-    mov al, [PlayerJumpingYScreenCoords + esi]     ; next Y screen coord
-    mov [ebp + W_SPRITE_PLAYER_Y_PIXELS], al
-    ret
-.finishedJump:
-    cmp byte [ebp + W_WALK_COUNTER], 0
-    jne .ret                                        ; wait until the current step finishes
-    call UpdateSprites
-    call Delay3
-    mov byte [ebp + H_JOY_HELD], 0
-    mov byte [ebp + H_JOY_PRESSED], 0
-    mov byte [ebp + H_JOY_RELEASED], 0
-    mov byte [w_player_jumping_y_index], 0
-    and byte [ebp + W_MOVEMENT_FLAGS], ~(1 << BIT_LEDGE_OR_FISHING)
-    and byte [ebp + W_STATUS_FLAGS_5], ~(1 << BIT_SCRIPTED_MOVEMENT_STATE)
-    mov byte [ebp + W_JOY_IGNORE], 0
-.ret:
-    ret
-
 ; ===========================================================================
 ; Embedded data (pret data/tilesets/*.asm). Held in .data (flat host pointers).
 ; Kept inline here as this is the only consumer; a future pass may promote these
@@ -263,16 +227,3 @@ LedgeTiles:
     db SPRITE_FACING_RIGHT, 0x2C, 0x1D, PAD_RIGHT
     db SPRITE_FACING_RIGHT, 0x39, 0x0D, PAD_RIGHT
     db 0xFF                                         ; end
-
-; engine/overworld/player_animations.asm:PlayerJumpingYScreenCoords
-; Sequence of on-screen Y coords for the player sprite during a ledge hop.
-PlayerJumpingYScreenCoords:
-    db 0x38, 0x36, 0x34, 0x32, 0x31, 0x30, 0x30, 0x30
-    db 0x31, 0x32, 0x33, 0x34, 0x36, 0x38, 0x3C, 0x3C
-
-; ---------------------------------------------------------------------------
-section .bss
-; pret wPlayerJumpingYScreenCoordsIndex (ram/wram.asm). Private to _HandleMidJump in
-; this port; kept as a local .bss byte to avoid adding a gb_memmap.inc alias. Promote
-; to gb_memmap.inc if any other routine needs it.
-w_player_jumping_y_index: resb 1

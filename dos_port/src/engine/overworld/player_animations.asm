@@ -28,7 +28,9 @@
 ; Retires the EnterMapAnim ret-stub in overworld_stubs.asm (dup_def suppressed
 ; in the allowlist: the stub stays LINKED for EnterMap's caller until this file
 ; is promoted to GAME_SRCS at OW-7.2, exactly like SpawnPikachu/pikachu.asm).
-; _HandleMidJump + PlayerJumpingYScreenCoords stay in ledges.asm (per ticket).
+; _HandleMidJump + PlayerJumpingYScreenCoords ARRIVED here from ledges.asm in the
+; s16 mirror repair; see the banner at the end of this file. (This line used to
+; say they stay in ledges.asm "per ticket" — the mirror rule overrides that.)
 ;
 ; Check-only (HOME_CHECK_SRCS): externs the unported StopMusic (home/overworld.asm)
 ; and LoadAnimSpriteGfx (battle-animation gfx loader). BirdSprite + fishing tiles
@@ -216,13 +218,15 @@ global RestoreFacingDirectionAndYScreenPos
 global GetPlayerTeleportAnimFrameDelay
 global IsPlayerStandingOnWarpPadOrHole
 global FishingAnim
+global _HandleMidJump
 
 extern Delay3                     ; src/home/palettes.asm
+extern UpdateSprites                  ; src/engine/overworld/movement.asm (linked)
 extern DelayFrames                ; video/frame.asm
 extern GBFadeInFromWhite          ; home/fade.asm
 extern GBFadeOutToWhite           ; home/fade.asm
-extern Func_151d                  ; engine/overworld/pikachu.asm
-extern Func_1510                  ; engine/overworld/pikachu.asm
+extern Func_151d                  ; src/home/pikachu.asm — was misattributed to engine/overworld/pikachu.asm
+extern Func_1510                  ; src/home/pikachu.asm — was misattributed to engine/overworld/pikachu.asm
 extern LoadPlayerSpriteGraphics   ; engine/overworld/overworld.asm
 extern PlaySound                  ; home/audio.asm (LIVE)
 extern PlayDefaultMusic           ; home/audio.asm (LIVE)
@@ -797,3 +801,70 @@ RedFishingRodTiles:
     incbin "../gfx/overworld/fishing_rod.2bpp"
 
 %include "assets/player_anim_text.inc"
+
+; ===========================================================================
+; ARRIVED s16 (mirror repair) from src/engine/overworld/ledges.asm, which keeps
+; pret engine/overworld/ledges.asm:HandleLedges and its three port-only tables.
+; Appended rather than inserted because both are the LAST pret labels of
+; engine/overworld/player_animations.asm (_HandleMidJump :498,
+; PlayerJumpingYScreenCoords :530) and this file measured 0 pret-order
+; inversions, so appending keeps it fully pret-ordered.
+; ===========================================================================
+
+section .text
+
+; ---------------------------------------------------------------------------
+; _HandleMidJump — pret engine/overworld/player_animations.asm:_HandleMidJump.
+;
+; Steps the player's on-screen Y through the 16-entry PlayerJumpingYScreenCoords arc
+; (the hop). When the arc finishes and the current walk step completes, tears down the
+; ledge/scripted-movement state and re-enables input.
+;
+; NOTE(port renderer): the hop's visible arc requires the player renderer to honor
+; W_SPRITE_PLAYER_Y_PIXELS. The port currently pins the player at screen-centre (memory:
+; "player Y pixel fixed"); until the renderer reads YPixels for the player, the logic
+; (state teardown, input gating, the two forward steps) is faithful but the vertical
+; arc will not be drawn. See SUMMARY.
+;
+; Clobbers: AL, CL, ESI, flags.
+; ---------------------------------------------------------------------------
+_HandleMidJump:
+    mov al, [w_player_jumping_y_index]             ; c = current index
+    mov cl, al
+    inc al
+    cmp al, 0x10                                    ; index+1 >= 16 → arc done
+    jae .finishedJump
+    mov [w_player_jumping_y_index], al             ; store incremented index
+    movzx esi, cl                                  ; b=0; hl = coords + old index
+    mov al, [PlayerJumpingYScreenCoords + esi]     ; next Y screen coord
+    mov [ebp + W_SPRITE_PLAYER_Y_PIXELS], al
+    ret
+.finishedJump:
+    cmp byte [ebp + W_WALK_COUNTER], 0
+    jne .ret                                        ; wait until the current step finishes
+    call UpdateSprites
+    call Delay3
+    mov byte [ebp + H_JOY_HELD], 0
+    mov byte [ebp + H_JOY_PRESSED], 0
+    mov byte [ebp + H_JOY_RELEASED], 0
+    mov byte [w_player_jumping_y_index], 0
+    and byte [ebp + W_MOVEMENT_FLAGS], ~(1 << BIT_LEDGE_OR_FISHING)
+    and byte [ebp + W_STATUS_FLAGS_5], ~(1 << BIT_SCRIPTED_MOVEMENT_STATE)
+    mov byte [ebp + W_JOY_IGNORE], 0
+.ret:
+    ret
+
+section .data
+
+; engine/overworld/player_animations.asm:PlayerJumpingYScreenCoords
+; Sequence of on-screen Y coords for the player sprite during a ledge hop.
+PlayerJumpingYScreenCoords:
+    db 0x38, 0x36, 0x34, 0x32, 0x31, 0x30, 0x30, 0x30
+    db 0x31, 0x32, 0x33, 0x34, 0x36, 0x38, 0x3C, 0x3C
+
+; ---------------------------------------------------------------------------
+section .bss
+; pret wPlayerJumpingYScreenCoordsIndex (ram/wram.asm). Private to _HandleMidJump in
+; this port; kept as a local .bss byte to avoid adding a gb_memmap.inc alias. Promote
+; to gb_memmap.inc if any other routine needs it.
+w_player_jumping_y_index: resb 1

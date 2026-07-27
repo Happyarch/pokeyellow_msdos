@@ -176,8 +176,13 @@ _UpdateSprites:
     ; Slot 15 (offset $f0) is reserved for Pikachu; dispatch to the Wave-9 follower FSM
     ; instead of the free-roam NPC machine. ESI already equals hCurrentSpriteOffset
     ; (set at .loop top), so compare it directly.
-    ; GATED (byte-identical default): no port map populates slot 15 — pret reserves it
-    ; for Pikachu and SpawnPikachu is unported — so this branch is never taken today.
+    ; GATED (byte-identical default): slot 15 is never populated, so this branch is
+    ; never taken today. The reason given here used to be "SpawnPikachu is unported",
+    ; which is FALSE — it is ported and linked (OW-7.2). The real reason is the slot
+    ; itself: InitSprites fills slots 1..wNumSprites, and no map in the game has 15
+    ; or more object_events (measured s16 over all 224 data/maps/objects/*.asm; the
+    ; maximum is 14, in SaffronCity and PowerPlant). Slot 15 is reserved for Pikachu
+    ; exactly as pret intends, and only the unported Pikachu spawn path would fill it.
     cmp esi, 0xF0
     je .pikachu
     call UpdateNonPlayerSprite

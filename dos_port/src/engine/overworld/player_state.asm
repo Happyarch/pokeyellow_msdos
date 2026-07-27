@@ -6,13 +6,13 @@
 ; (CheckForCollisionWhenPushingBoulder / CheckForBoulderCollisionWithSprites)
 ; is explicitly OUT of scope here — deferred to OW-4.1.
 ;
-; ALREADY PORTED ELSEWHERE — do not re-implement:
-;   IsPlayerFacingEdgeOfMap    -> src/engine/overworld/warp_check.asm (function 1
-;                                 of pret's ExtraWarpCheck dispatch)
-;   IsWarpTileInFrontOfPlayer  -> src/engine/overworld/warp_check.asm (function 2).
-;                                 Its SS_ANNE_BOW special case is intentionally
-;                                 omitted there (SS Anne not yet in the port's
-;                                 map set); see IsSSAnneBowWarpTileInFrontOfPlayer
+; NOW HELD HERE (arrived in the s16 mirror repair from a src/engine/overworld/
+; warp_check.asm that is now deleted):
+;   IsPlayerFacingEdgeOfMap    function 1 of pret's ExtraWarpCheck dispatch
+;   IsWarpTileInFrontOfPlayer  function 2. Its SS_ANNE_BOW special case is
+;                                 intentionally omitted (SS Anne not yet in the
+;                                 port's map set); see
+;                                 IsSSAnneBowWarpTileInFrontOfPlayer
 ;                                 below for the standalone equivalent pret ships
 ;                                 as a fallthrough target of that routine.
 ;   GetTileInFrontOfPlayer     -> src/engine/overworld/overworld.asm (simplified
@@ -163,6 +163,8 @@ extern TilePairCollisionsLand            ; src/engine/overworld/ledges.asm — C
 
 global IsPlayerStandingOnWarp
 global CheckForceBikeOrSurf
+global IsPlayerFacingEdgeOfMap
+global IsWarpTileInFrontOfPlayer
 global IsSSAnneBowWarpTileInFrontOfPlayer
 global IsPlayerStandingOnDoorTileOrWarpTile
 global PrintSafariZoneSteps
@@ -269,6 +271,87 @@ CheckForceBikeOrSurf:
     call ForceBikeOrSurf
 .ret:
     ret
+; ---------------------------------------------------------------------------
+; IsPlayerFacingEdgeOfMap (function 1)
+; pret: engine/overworld/player_state.asm:IsPlayerFacingEdgeOfMap
+;   facingDown : (wCurMapHeight*2 - 1) == wYCoord  → carry
+;   facingUp   : wYCoord == 0                       → carry
+;   facingLeft : wXCoord == 0                       → carry
+;   facingRight: (wCurMapWidth*2  - 1) == wXCoord  → carry
+; Out: CF=1 at the outward-facing edge, else CF=0.
+; ---------------------------------------------------------------------------
+IsPlayerFacingEdgeOfMap:
+    mov al, [ebp + W_SPRITE_PLAYER_FACING_DIR]
+    cmp al, SPRITE_FACING_DOWN
+    je .facingDown
+    cmp al, SPRITE_FACING_UP
+    je .facingUp
+    cmp al, SPRITE_FACING_LEFT
+    je .facingLeft
+.facingRight:
+    movzx eax, byte [ebp + W_CUR_MAP_WIDTH]
+    add al, al                      ; width*2
+    dec al                          ; width*2 - 1
+    cmp al, [ebp + W_X_COORD]
+    je .setCarry
+    jmp .resetCarry
+.facingDown:
+    movzx eax, byte [ebp + W_CUR_MAP_HEIGHT]
+    add al, al                      ; height*2
+    dec al                          ; height*2 - 1
+    cmp al, [ebp + W_Y_COORD]
+    je .setCarry
+    jmp .resetCarry
+.facingUp:
+    cmp byte [ebp + W_Y_COORD], 0
+    je .setCarry
+    jmp .resetCarry
+.facingLeft:
+    cmp byte [ebp + W_X_COORD], 0
+    je .setCarry
+    ; fall through
+.resetCarry:
+    clc
+    ret
+.setCarry:
+    stc
+    ret
+
+; ---------------------------------------------------------------------------
+; IsWarpTileInFrontOfPlayer (function 2)
+; pret: engine/overworld/player_state.asm:IsWarpTileInFrontOfPlayer
+;
+; Selects the per-facing warp-carpet tile list and scans it for the tile in
+; front of the player.
+;
+; ; PROJ: this routine reads the already-populated wTileInFrontOfPlayer instead
+; of re-fetching it. pret's version opens with `call _GetTileAndCoordsInFrontOfPlayer`
+; to (re)populate wTileInFrontOfPlayer; the port relies on CollisionCheckOnLand's
+; GetTileInFrontOfPlayer call, which runs immediately before ExtraWarpCheck on the
+; collision-exit path (the only caller today), so the var is guaranteed fresh here.
+; Reading the WRAM var is equivalent at this call site and avoids re-exporting the
+; file-local GetTileInFrontOfPlayer. If a second caller is ever added that does NOT
+; pre-populate wTileInFrontOfPlayer, restore the pret _GetTileAndCoordsInFrontOfPlayer
+; prime here first.
+;
+; ; DIVERGENCE: the SS_ANNE_BOW special case is omitted. pret branches to
+; IsSSAnneBowWarpTileInFrontOfPlayer when wCurMap == SS_ANNE_BOW, which treats tile
+; $15 as the (single) warp tile → CF (any other tile → no carry), bypassing the
+; per-facing WarpTileListPointers scan entirely. SS Anne is not in the port's map
+; set yet, so the branch is unreachable and dropped.
+; ; TODO(SS-Anne): when MAP_SS_ANNE_BOW lands, add `cmp [wCurMap], SS_ANNE_BOW / je`
+; at entry dispatching to a ported IsSSAnneBowWarpTileInFrontOfPlayer (tile $15 → CF).
+;
+; Out: CF=1 if the faced tile is a warp-carpet tile, else CF=0.
+; ---------------------------------------------------------------------------
+IsWarpTileInFrontOfPlayer:
+    movzx eax, byte [ebp + W_SPRITE_PLAYER_FACING_DIR]  ; 0,4,8,12
+    shr eax, 2                                          ; → 0,1,2,3 (down/up/left/right)
+    mov esi, [WarpTileListPointers + eax*4]             ; flat list pointer
+    mov al, [ebp + W_TILE_IN_FRONT_OF_PLAYER]
+    mov edx, 1                                          ; entry stride
+    jmp IsInArray                                       ; tail call; returns CF (and this routine's ret)
+
 
 ; ---------------------------------------------------------------------------
 ; IsSSAnneBowWarpTileInFrontOfPlayer — pret: engine/overworld/player_state.asm
@@ -278,13 +361,13 @@ CheckForceBikeOrSurf:
 ; a fallthrough target reached from IsWarpTileInFrontOfPlayer (when wCurMap ==
 ; SS_ANNE_BOW) and it finishes by jumping into IsWarpTileInFrontOfPlayer.done
 ; (a shared pop-hl/de/bc + ret epilogue). The port's IsWarpTileInFrontOfPlayer
-; (src/engine/overworld/warp_check.asm) has no such epilogue — it tail-calls
+; (now above in this file) has no such epilogue — it tail-calls
 ; IsInArray directly and its SS_ANNE_BOW branch is intentionally omitted there
 ; (SS Anne is not yet in the port's map set). So this is a standalone routine
 ; with the same CF contract (CF=1 iff the tile in front of the player is the
 ; SS Anne bow's warp tile $15) rather than a shared-epilogue jump target.
 ; Presently unreachable: nothing calls it yet — wire the SS_ANNE_BOW dispatch
-; into warp_check.asm's IsWarpTileInFrontOfPlayer when SS Anne is implemented.
+; into this file's IsWarpTileInFrontOfPlayer when SS Anne is implemented.
 ; ---------------------------------------------------------------------------
 IsSSAnneBowWarpTileInFrontOfPlayer:
     cmp byte [ebp + W_TILE_IN_FRONT_OF_PLAYER], 0x15
@@ -328,7 +411,7 @@ IsPlayerStandingOnDoorTileOrWarpTile:
     jnc .done
     and byte [ebp + W_MOVEMENT_FLAGS], ~(1 << BIT_STANDING_ON_WARP) & 0xFF
 .done:
-    ; POP does not affect CF (matches warp_check.asm:ExtraWarpCheck's note).
+    ; POP does not affect CF (matches home/overworld.asm:ExtraWarpCheck's note).
     pop esi
     pop edx
     pop ecx
@@ -669,7 +752,7 @@ ForcedBikeOrSurfMaps:
 ; 25 entries (NUM_TILESETS, constants/tileset_constants.asm order: OVERWORLD=0
 ; .. BEACH_HOUSE=24). pret's `table_width 2` (dw) becomes flat `dd` pointers
 ; here (IsInArray reads flat [ESI]), matching the WarpTileListPointers
-; precedent in warp_check.asm. The byte-sharing fallthrough structure in
+; precedent further down this file. The byte-sharing fallthrough structure in
 ; WarpTileIDLists below is transcribed 1:1 from pret (several tileset labels
 ; alias into the MIDDLE of another tileset's list — faithful, not a mistake).
 ; ---------------------------------------------------------------------------
@@ -771,3 +854,29 @@ WarpTileIDLists:
 ; assets/overworld_strings.inc, %include'd below. pret: engine/overworld/player_state.asm.
 ; ---------------------------------------------------------------------------
 %include "assets/overworld_strings.inc"
+
+
+; ---------------------------------------------------------------------------
+; Warp-carpet tile IDs — data/tilesets/warp_carpet_tile_ids.asm
+; Flat .data (IsInArray uses flat [ESI] reads), each list $FF(-1)-terminated.
+; ---------------------------------------------------------------------------
+section .data
+
+WarpTileListPointers:
+    dd .FacingDownWarpTiles
+    dd .FacingUpWarpTiles
+    dd .FacingLeftWarpTiles
+    dd .FacingRightWarpTiles
+
+.FacingDownWarpTiles:
+    db 0x01, 0x12, 0x17, 0x3D, 0x04, 0x18, 0x33
+    db 0xFF
+.FacingUpWarpTiles:
+    db 0x01, 0x5C
+    db 0xFF
+.FacingLeftWarpTiles:
+    db 0x1A, 0x4B
+    db 0xFF
+.FacingRightWarpTiles:
+    db 0x0F, 0x4E
+    db 0xFF
