@@ -58,7 +58,7 @@ extern SwitchToMapRomBank               ; ld a,[wCurMap]; bankswitch (flat = no-
 extern InitMapSprites                   ; reload sprite tile patterns after text
 extern LoadCurrentMapView
 extern LoadPlayerSpriteGraphics
-extern UpdateSprites                    ; movement.asm (already ported) — final jp target
+extern UpdateSprites                    ; src/home/update_sprites.asm — final jp target
 extern LoadGBPal                        ; palettes/fade (Wave 10)
 extern BankswitchCommon                 ; home/bankswitch2.asm (no-op flat)
 extern w_map_text_table_ptr             ; map_sprites.asm — flat ptr to current map TextTable

@@ -51,7 +51,7 @@ bits 32
 global DisplayTextIDInit
 
 extern TextBoxBorder                    ; text.asm — ESI=top-left, BL=int_w, BH=int_h
-extern UpdateSprites                    ; engine/overworld/movement.asm
+extern UpdateSprites                    ; src/home/update_sprites.asm
 extern CopyScreenTileBufferToVRAM       ; home/copy2.asm — 3-frame pacing (port model)
 extern LoadFontTilePatterns             ; gfx/load_font.asm — font glyphs → vFont
 

@@ -60,7 +60,7 @@ extern DisplayTextBoxID                 ; home/textbox.asm — pret home wrapper
 extern TextBoxBorder                    ; text.asm — ESI=top-left, BL=int_w, BH=int_h
 extern PlaceString                      ; text.asm — EAX=flat src, ESI=dest
 extern text_row_stride                  ; text.asm — active W_TILEMAP row stride
-extern UpdateSprites                    ; engine/overworld/movement.asm (gated on wUpdateSpritesEnabled)
+extern UpdateSprites                    ; src/home/update_sprites.asm (gated on wUpdateSpritesEnabled)
 extern ClearScreenArea                  ; home/copy2.asm — ESI=top-left, BH=rows, BL=cols (stride 40)
 extern PrintBCDNumber                   ; home/print_bcd.asm — ESI=dest, EDX=src, BL=flags|len
 extern HandleMenuInput                  ; home/window.asm — AL = watched keys pressed

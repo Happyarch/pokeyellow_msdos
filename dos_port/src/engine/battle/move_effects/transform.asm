@@ -48,7 +48,7 @@ global TransformEffect_
 ; --- shared scaffold externs (§4: call, never define) ---
 extern PrintText                    ; src/home/window.asm — ESI = flat text stream
 extern PrintButItFailedText_        ; engine/battle/effects.asm
-extern EffectCallBattleCore         ; move_effect_helpers.asm — jp [hl]/jpfar equivalent (flat jmp esi)
+extern EffectCallBattleCore         ; move_effects/reflect_light_screen.asm — jp [hl]/jpfar equivalent (flat jmp esi)
 extern CopyData                     ; home/copy.asm — ESI=src GB off, EDX=dst GB off, BX=count
 extern GetMonName                   ; home/names.asm — wNamedObjectIndex -> wNameBuffer
 ; --- allowlist anim stubs (§2 item 1: literal subanim, ANIMATION=OFF path) ---
@@ -58,13 +58,13 @@ extern ReshowSubstituteAnim
 ; AnimationTransformMon (engine/battle/animations.asm) is the literal hard-coded
 ; "transform into" pop-up subanim pret reaches when wOptions/BIT_BATTLE_ANIMATION
 ; is SET (animations off). It is NOT yet defined anywhere in the dos_port scaffold
-; (move_effect_helpers.asm only stubs PlayCurrentMoveAnimation/PlayBattleAnimation/
+; (core_stubs.asm only stubs PlayCurrentMoveAnimation/PlayBattleAnimation/
 ; AnimationSubstitute, not this one — same situation 1196__SubstituteEffect.asm
 ; hit for AnimationSubstitute). Externed here per allowlist §2 item 1 so this file
 ; assembles standalone; resolving the undefined symbol at link time is the
 ; master's job.
 ; FLAG FOR MASTER: AnimationTransformMon has no stub yet — add a `ret`-stub
-; global to move_effect_helpers.asm's allowlist-stub block before this handler
+; global to core_stubs.asm's stub block before this handler
 ; can link (alongside AnimationSubstitute).
 extern AnimationTransformMon
 ; --- battle_text.inc streams (global in core.o) ---

@@ -33,7 +33,7 @@ bits 32
 ; --- naming-flow infra (already in the port) ---
 extern TextBoxBorder                 ; home/text.asm — box at ESI, BL wide x BH tall
 extern PlaceString                   ; home/text.asm — EAX flat src, ESI GB dest
-extern UpdateSprites                 ; engine/overworld/movement.asm
+extern UpdateSprites                 ; src/home/update_sprites.asm
 extern HandleMenuInput               ; home/window.asm — menu loop; returns choice in wCurrentMenuItem
 extern text_row_stride               ; home/text.asm — W_TILEMAP row stride for the box/string helpers
 extern menu_item_step                ; home/window.asm — menu cursor vertical spacing

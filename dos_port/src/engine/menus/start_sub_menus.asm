@@ -134,7 +134,7 @@ extern PlayerPicFront                ; data/trainer_pics.asm — Red's compresse
 extern g_tilecache_dirty             ; ppu/ppu.asm — set on any VRAM tile-data write
 extern set_single_window             ; ppu/ppu.asm
 extern Delay3                        ; src/home/palettes.asm
-extern UpdateSprites                 ; engine/overworld/movement.asm
+extern UpdateSprites                 ; src/home/update_sprites.asm
 extern ClearScreen                   ; home/copy2.asm
 extern LoadTextBoxTilePatterns       ; gfx/load_font.asm
 extern LoadFontTilePatterns          ; gfx/load_font.asm

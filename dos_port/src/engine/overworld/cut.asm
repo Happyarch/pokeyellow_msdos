@@ -104,7 +104,7 @@ extern LoadScreenTilesFromBuffer2   ; src/home/tilemap.asm
 extern RedrawMapView                ; src/engine/overworld/update_map.asm (OW-3.1)
 extern AnimCut                      ; src/engine/overworld/cut2.asm (OW-6.1)
 extern PlaySound                    ; src/home/audio.asm
-extern UpdateSprites                ; src/engine/overworld/movement.asm
+extern UpdateSprites                ; src/home/update_sprites.asm
 extern UpdateCGBPal_OBP1            ; home/cgb_palettes.asm
 extern CopyVideoData                ; src/home/copy2.asm (ESI=VRAM dest, EDX=flat src, BL=count)
 extern WriteOAMBlock                ; src/home/oam.asm (AL=block, EDX=flat src, BH=Y, BL=X)

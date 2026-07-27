@@ -5459,13 +5459,15 @@ PrintRunLine:
     ret
 
 ; ===========================================================================
-; Consolidated here from move_effect_helpers.asm (relocated-labels grind): both
+; Consolidated here from move_effect_helpers.asm (relocated-labels grind; that
+; file was itself deleted in chunk 17): both
 ; are pret engine/battle/core.asm labels and belong in this mirror. Their
 ; dependencies were already present in this file — AnimateEnemyHPBar /
 ; AnimatePlayerHPBar / PrintText are externed above, and DoesntAffectMonText is
 ; local here via the assets/battle_text.inc include (nm: R, not U), so it must
-; NOT be re-externed. move_effect_helpers.asm keeps only the labels whose pret
-; home is some other file.
+; NOT be re-externed. move_effect_helpers.asm went on to keep only the labels
+; whose pret home was some other file, and chunk 17 sent those to their own
+; mirrors (EffectCallBattleCore, Bankswitch, StatModTextStrings).
 ; ===========================================================================
 section .text
 

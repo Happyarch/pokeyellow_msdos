@@ -100,7 +100,7 @@ extern DidntAffectText
 extern ParalyzedMayNotAttackText
 
 ; --- data (pret data/battle/stat_mod_names.asm, generated asset) ---
-extern StatModTextStrings               ; move_effect_helpers.asm
+extern StatModTextStrings               ; src/data/battle_data.asm
 
 ; --- literal move-subanimation / substitute: ret-stubs in core_stubs.asm ---
 extern PlayCurrentMoveAnimation      ; core_stubs.asm (STUB)
@@ -109,7 +109,7 @@ extern HideSubstituteShowMonAnim     ; core_stubs.asm (STUB)
 extern ReshowSubstituteAnim          ; core_stubs.asm (STUB)
 
 ; --- flat-model bank passthrough (no banks under DPMI) ---
-extern Bankswitch                    ; move_effect_helpers.asm
+extern Bankswitch                    ; src/home/bankswitch2.asm
 extern PlayBattleAnimation2
 extern PlayBattleAnimation          ; core_stubs.asm (STUB)
 extern GetMoveName                  ; home/names.asm — name of move [wNamedObjectIndex]

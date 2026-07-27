@@ -283,6 +283,7 @@ GAME_SRCS := \
     src/home/delay.asm \
     src/home/play_time.asm \
     src/home/clear_sprites.asm \
+    src/home/update_sprites.asm \
     src/engine/gfx/sprite_oam.asm \
     src/engine/gfx/animated_objects.asm \
     src/engine/movie/intro_yellow.asm \
@@ -312,6 +313,7 @@ GAME_SRCS := \
     src/engine/overworld/tilesets.asm \
     src/engine/overworld/doors.asm \
     src/engine/overworld/movement.asm \
+    src/engine/overworld/sprite_collisions.asm \
     src/engine/overworld/map_sprites.asm \
     src/home/run_map_script.asm \
     src/data/map_scripts.asm \
@@ -1433,7 +1435,6 @@ FRONTEND_SRCS := \
     src/engine/battle/core_stubs.asm \
     src/engine/battle/display_effectiveness.asm \
     src/engine/battle/effects.asm \
-    src/engine/battle/move_effect_helpers.asm \
     src/home/names.asm \
     src/home/names2.asm \
     src/engine/battle/move_effects/conversion.asm \
@@ -1968,7 +1969,7 @@ src/engine/battle/battle_menu.o: assets/battle_menu_runtime_strings.inc
 src/engine/battle/core.o: assets/battle_core_runtime_strings.inc
 src/engine/battle/display_effectiveness.o: assets/effectiveness_runtime_strings.inc
 src/engine/battle/init_battle.o: assets/battle_intro_runtime_strings.inc
-src/engine/battle/move_effect_helpers.o: assets/stat_mod_runtime_strings.inc
+src/data/battle_data.o: assets/stat_mod_runtime_strings.inc
 src/engine/items/item_effects.o: assets/item_runtime_strings.inc
 src/engine/pokemon/status_ailments.o: assets/status_ailment_runtime_strings.inc
 src/home/names.o: assets/home_names_runtime_strings.inc

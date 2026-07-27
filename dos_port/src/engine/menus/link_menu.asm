@@ -102,7 +102,7 @@ extern HandleMenuInput          ; home/window.asm — Out: AL = watched keys pre
 extern DelayFrame               ; src/home/vblank.asm
 extern DelayFrames              ; src/home/delay.asm — In: BL = frame count
 extern Delay3                   ; src/home/palettes.asm
-extern UpdateSprites            ; engine/overworld/movement.asm
+extern UpdateSprites            ; src/home/update_sprites.asm
 extern SaveScreenTilesToBuffer1     ; src/home/tilemap.asm
 extern LoadScreenTilesFromBuffer1   ; src/home/tilemap.asm (pret home/tilemap.asm)
 

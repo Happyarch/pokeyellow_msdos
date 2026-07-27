@@ -31,7 +31,7 @@ extern EnableLCD                    ; src/home/lcd.asm
 extern InitMapSprites               ; src/home/palettes.asm
 extern LoadPlayerSpriteGraphics     ; src/home/overworld.asm
 extern LoadFontTilePatterns         ; src/home/load_font.asm
-extern UpdateSprites                ; src/engine/overworld/movement.asm
+extern UpdateSprites                ; src/home/update_sprites.asm
 
 section .text
 

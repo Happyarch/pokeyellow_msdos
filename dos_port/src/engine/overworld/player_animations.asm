@@ -221,7 +221,7 @@ global FishingAnim
 global _HandleMidJump
 
 extern Delay3                     ; src/home/palettes.asm
-extern UpdateSprites                  ; src/engine/overworld/movement.asm (linked)
+extern UpdateSprites                  ; src/home/update_sprites.asm (linked)
 extern DelayFrames                ; src/home/delay.asm
 extern GBFadeInFromWhite          ; home/fade.asm
 extern GBFadeOutToWhite           ; home/fade.asm
@@ -234,7 +234,7 @@ extern StopMusic                  ; UNPORTED (pret home/overworld.asm) — fade+
 extern CopyData                   ; home/copy.asm (WRAM->WRAM)
 extern CopyVideoData              ; home/copy2.asm (ESI=VRAM dest, EDX=flat src, BL=count)
 extern LoadFontTilePatterns       ; gfx/load_font.asm
-extern PrintText                  ; engine/battle/move_effect_helpers.asm (ESI=flat text stream)
+extern PrintText                  ; src/home/window.asm (ESI=flat text stream)
 extern LoadAnimSpriteGfx          ; UNPORTED (battle-animation sprite-gfx loader)
 extern EmotionBubble              ; src/engine/overworld/emotion_bubbles.asm (pret: predef)
 extern player_sprite              ; engine/overworld/player_gfx.asm — == RedSprite (flat)

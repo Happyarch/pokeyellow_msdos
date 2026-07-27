@@ -68,7 +68,7 @@ bits 32
 %include "gb_constants.inc"
 
 ; --- shared scaffold externs (§4: call, never define) ---
-extern EffectCallBattleCore         ; move_effect_helpers.asm — flat tail-call (no banks, §2.4)
+extern EffectCallBattleCore         ; move_effects/reflect_light_screen.asm — flat tail-call (no banks, §2.4)
 extern PrintText                    ; src/home/window.asm — ESI = flat text stream
 extern PrintButItFailedText_        ; engine/battle/effects.asm
 extern DelayFrames                  ; src/home/delay.asm (already live) — BL = frame count

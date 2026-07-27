@@ -102,7 +102,7 @@ extern PlaySound                     ; home/audio.asm — In: AL = sound id
 extern WaitForSoundToFinish          ; src/home/delay.asm
 extern SaveScreenTilesToBuffer1      ; src/home/tilemap.asm
 extern LoadScreenTilesFromBuffer2    ; src/home/tilemap.asm
-extern UpdateSprites                 ; engine/overworld/movement.asm
+extern UpdateSprites                 ; src/home/update_sprites.asm
 extern RefreshCollisionTileMap       ; engine/overworld/overworld.asm
 extern AddItemToInventory            ; src/home/inventory.asm — ESI=count addr; CF=1 room
 extern RemoveItemFromInventory       ; src/home/inventory.asm

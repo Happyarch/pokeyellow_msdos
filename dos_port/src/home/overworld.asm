@@ -183,7 +183,7 @@ extern StopAllMusic                       ; src/home/audio.asm
 extern StopAllSounds                      ; src/home/init.asm
 extern TilePairCollisionsWater            ; src/engine/overworld/ledges.asm
 extern TrainerEncounterFlow               ; src/engine/overworld/map_sprites.asm
-extern UpdateSprites                      ; src/engine/overworld/movement.asm
+extern UpdateSprites                      ; src/home/update_sprites.asm
 extern WalkSpeedSample                    ; src/engine/overworld/overworld.asm
 extern _AdvancePlayerSprite               ; src/engine/overworld/advance_player_sprite.asm
 extern _LeaveMapAnim                      ; src/engine/overworld/player_animations.asm
@@ -2144,7 +2144,7 @@ CollisionCheckOnLand:
     ; pret :1226-1231 — quick sprite reject. The accumulated collision-direction bits in
     ; wSpritePlayerStateData1CollisionData (player = slot 0) use the same bit layout as
     ; wPlayerDirection (bit0=RIGHT, bit1=LEFT, bit2=DOWN, bit3=UP — see the DH[3:2]/DH[1:0]
-    ; write in movement.asm:DetectCollisionBetweenSprites); if a set bit overlaps the
+    ; write in sprite_collisions.asm:DetectCollisionBetweenSprites); if a set bit overlaps the
     ; direction the player is trying to move, a sprite is already known to be there. This
     ; can only ADD a block that the thorough IsNPCAtTargetBlock scan below would also catch
     ; (pret itself questions why the deeper check ever misses). pret's `nop`, the

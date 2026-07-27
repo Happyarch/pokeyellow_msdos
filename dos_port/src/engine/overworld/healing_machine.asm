@@ -83,7 +83,7 @@ extern UpdateCGBPal_OBP1           ; home/cgb_palettes.asm
 extern StopAllMusic                ; home/audio.asm (LIVE)
 extern PlaySound                   ; home/audio.asm (LIVE)
 extern DelayFrames                 ; src/home/delay.asm
-extern UpdateSprites               ; engine/overworld/movement.asm
+extern UpdateSprites               ; src/home/update_sprites.asm
 
 section .text
 

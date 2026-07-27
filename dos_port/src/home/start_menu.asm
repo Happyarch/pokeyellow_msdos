@@ -72,7 +72,7 @@ extern HandleMenuInput               ; home/window.asm
 extern EraseMenuCursor
 extern PlaceUnfilledArrowMenuCursor
 extern PlaceMenuCursor
-extern UpdateSprites                 ; engine/overworld/movement.asm
+extern UpdateSprites                 ; src/home/update_sprites.asm
 extern DelayFrame                    ; src/home/vblank.asm
 extern LoadFontTilePatterns          ; gfx/load_font.asm
 extern LoadTextBoxTilePatterns       ; gfx/load_font.asm

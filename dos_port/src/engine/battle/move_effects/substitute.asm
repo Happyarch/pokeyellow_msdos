@@ -35,13 +35,13 @@ extern PlayCurrentMoveAnimation
 ; AnimationSubstitute (engine/battle/animations.asm:2020) is the literal hard-coded
 ; substitute pop-up subanim pret reaches when wOptions/BIT_BATTLE_ANIMATION is SET
 ; (animations off — see comment at .selectAnim below). It is NOT yet defined anywhere
-; in the dos_port scaffold (move_effect_helpers.asm only stubs PlayCurrentMoveAnimation/
+; in the dos_port scaffold (core_stubs.asm only stubs PlayCurrentMoveAnimation/
 ; PlayBattleAnimation, not this one). Externed here per allowlist §2 item 1 (literal
 ; subanimation engine, not ported) so this file assembles standalone; resolving the
 ; undefined symbol at link time is the master's job — add a `ret`-stub global
-; AnimationSubstitute alongside the others in move_effect_helpers.asm.
+; AnimationSubstitute alongside the others in core_stubs.asm.
 ; FLAG FOR MASTER: AnimationSubstitute has no stub yet — add one (ret) to
-; move_effect_helpers.asm's allowlist-stub block before this handler can link.
+; core_stubs.asm's stub block before this handler can link.
 extern AnimationSubstitute
 ; --- battle_text.inc streams (global in core.o) ---
 extern SubstituteText

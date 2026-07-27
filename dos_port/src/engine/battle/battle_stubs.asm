@@ -1,7 +1,7 @@
 ; battle_stubs.asm — battle front-end link stubs.
 ;
 ; CheckTargetSubstitute was stubbed here; it is now the faithful shared helper in
-; move_effect_helpers.asm (the move-effect scaffold), so MoveHitTest's substitute
+; move_effect_helpers.asm (the move-effect scaffold, deleted in chunk 17), so MoveHitTest's substitute
 ; check is real. JumpMoveEffect is live in effects.asm.
 ;
 bits 32

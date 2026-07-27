@@ -4,7 +4,12 @@
 ; Source: home/bankswitch2.asm (pret/pokeyellow). Split out of the port's
 ; home/bankswitch.asm (menu-intro review 2026-07-23) so both pret files map to
 ; their exact mirrors: home/bankswitch.asm keeps BankswitchHome/BankswitchBack,
-; this file holds pret bankswitch2.asm's two labels.
+; this file holds pret bankswitch2.asm's own labels, in pret's order:
+; BankswitchCommon, Bankswitch, JumpToAddress. Bankswitch arrived in chunk 17 of
+; the relocated-label grind, from src/engine/battle/move_effect_helpers.asm (a
+; convenience grouping holding no pret file's labels, now deleted); its body is
+; unchanged. pret bankswitch2.asm's other two labels, OpenSRAM and CloseSRAM,
+; are `missing` — no port body anywhere (SRAM enable/disable is a HAL boundary).
 ;
 ; Faithful-by-design adaptation (see CLAUDE.md): under this port's unified
 ; EBP-relative address space there are no MBC banks — every "ROM bank" already
@@ -22,6 +27,7 @@ bits 32
 %include "gb_memmap.inc"
 
 global BankswitchCommon
+global Bankswitch
 global JumpToAddress
 
 section .text
@@ -35,6 +41,13 @@ section .text
 BankswitchCommon:
     mov [ebp + H_LOADED_ROM_BANK], al   ; ldh [hLoadedROMBank], a
     ret
+
+; ===========================================================================
+; Bankswitch — allowlist stub (divergence §2 item 4). No banks in the flat DPMI
+; model: jump straight to the target in ESI (HL). B (bank) is ignored.
+; ===========================================================================
+Bankswitch:
+    jmp esi
 
 ; ---------------------------------------------------------------------------
 ; JumpToAddress — pret home/bankswitch2.asm:JumpToAddress. Trivial trampoline

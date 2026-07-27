@@ -163,7 +163,7 @@ extern DelayFrames              ; src/home/delay.asm — BL = frame count
 extern ClearScreen              ; home/copy2.asm — blank canvas + auto-transfer
 extern LoadTextBoxTilePatterns  ; load_font.asm
 extern LoadFontTilePatterns     ; load_font.asm
-extern UpdateSprites            ; movement.asm
+extern UpdateSprites            ; src/home/update_sprites.asm
 extern GBPalWhiteOutWithDelay3  ; src/home/palettes.asm
 extern ResetPlayerSpriteData    ; reset_player_sprite.asm
 extern EnterMapBoot             ; overworld.asm — one-time overworld boot glue → EnterMap

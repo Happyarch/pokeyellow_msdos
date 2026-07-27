@@ -102,7 +102,7 @@ extern ReloadMapData                 ; home/reload_tiles.asm
 extern LoadHpBarAndStatusTilePatterns ; gfx/load_font.asm — pret loader's 1st step
 extern g_tilecache_dirty             ; ppu.asm — set after any VRAM tile write
 extern ClearScreen                   ; home/copy2.asm
-extern UpdateSprites                 ; engine/overworld/movement.asm
+extern UpdateSprites                 ; src/home/update_sprites.asm
 extern Delay3                        ; src/home/palettes.asm — 3× DelayFrame
 extern DelayFrame                    ; src/home/vblank.asm
 extern HandleMenuInput               ; home/window.asm — vertical menu input driver → AL

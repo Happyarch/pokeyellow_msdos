@@ -7,13 +7,17 @@
 ; user, not the opponent), failing with "But it failed!" if that screen is
 ; already up.
 ;
-; RE-TRANSLATION: the prior draft at
-; dos_port/src/engine/battle/move_effects/reflect_light_screen.asm was missing
-; the entire ReflectLightScreenEffect_ body and wrongly REDEFINED the shared
-; global EffectCallBattleCore (which already lives in move_effect_helpers.asm,
-; tail-jumping ESI in the flat DPMI model — divergence §2 item 4: no banks).
-; This draft externs EffectCallBattleCore instead of redefining it, and
-; supplies the full effect body.
+; It holds both of that pret file's code labels, in pret's order:
+; ReflectLightScreenEffect_ first, EffectCallBattleCore last. (The two text
+; labels between them, LightScreenProtectedText / ReflectGainedArmorText, are
+; generated Tier-1 data in assets/battle_text.inc and reached as externs.)
+;
+; EffectCallBattleCore arrived here in chunk 17 of the relocated-label grind; it
+; had been carried by src/engine/battle/move_effect_helpers.asm, a convenience
+; grouping that held no pret file's labels and is now deleted. Nothing about the
+; routine changed: it still tail-jumps ESI in the flat DPMI model (divergence §2
+; item 4: no banks). Two other files extern it: move_effects/heal.asm and
+; move_effects/transform.asm.
 ;
 ; Fidelity boundary: docs/move_translation_divergence.md. Shared externs (§4)
 ; are called, not redefined; only §2 allowlist items (subanim, banks) diverge.
@@ -38,7 +42,6 @@ extern PlayCurrentMoveAnimation      ; core_stubs.asm (STUB)
 extern PrintText                     ; src/home/window.asm — ESI = flat text stream
 extern PrintButItFailedText_         ; engine/battle/effects.asm — "But it failed!"
 extern DelayFrames                   ; src/home/delay.asm — BL = frame count
-extern EffectCallBattleCore          ; move_effect_helpers.asm — tail into ESI (no banks, §2.4)
 
 ; --- battle_text.inc streams (global in core.o; flat addresses) ---
 extern LightScreenProtectedText
@@ -86,3 +89,12 @@ ReflectLightScreenEffect_:
     call DelayFrames
     mov esi, PrintButItFailedText_      ; ld hl, PrintButItFailedText_
     jmp EffectCallBattleCore            ; jp EffectCallBattleCore (flat: tail-jmp esi)
+
+; ===========================================================================
+; EffectCallBattleCore — pret move_effects/reflect_light_screen.asm. In the ROM
+; this banks into BattleCore and jp [hl]; in the flat DPMI model there are no
+; banks, so it tail-jumps to ESI (HL). (Same as Bankswitch, src/home/bankswitch2.asm.)
+; ===========================================================================
+global EffectCallBattleCore
+EffectCallBattleCore:
+    jmp esi

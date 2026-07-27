@@ -22,6 +22,7 @@ global SpecialEffects
 global SpecialEffectsCont
 global AlwaysHappenSideEffects
 global SetDamageEffects
+global StatModTextStrings
 
 section .data
 align 4
@@ -62,3 +63,14 @@ StatModifierRatios:
     db  3,   1  ; 3.00
     db 35,  10  ; 3.50
     db  4,   1  ; 4.00
+
+; ---------------------------------------------------------------------------
+; StatModTextStrings — pret data/battle/stat_mod_names.asm. '@'-terminated stat
+; names in GB charmap bytes, concatenated (li "X" → db "X","@"). Scanned by
+; PrintStatText (now in effects.asm), which reaches it as an extern.
+; Carried by src/engine/battle/move_effect_helpers.asm until chunk 17 of the
+; relocated-label grind deleted that file; it lands here because this is where
+; the port already keeps its pret data/battle/*.asm blobs (StatModifierRatios
+; from stat_modifiers.asm, HighCriticalMoves from critical_hit_moves.asm).
+; ---------------------------------------------------------------------------
+%include "assets/stat_mod_runtime_strings.inc"

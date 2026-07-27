@@ -25,7 +25,7 @@
 ; Sprite selector: the port addresses a sprite slot by its byte offset (slot*0x10)
 ; held in hCurrentSpriteOffset (H_CURRENT_SPRITE_OFFSET) — the analog of pret's
 ; `hSpriteIndex` after `swap a`. Callers set it before MoveSprite, matching the
-; _UpdateSprites loop convention (see movement.asm).
+; _UpdateSprites loop convention (see sprite_collisions.asm).
 ;
 ; Build (check): nasm -f coff -I include/ -I . -o pathfinding.o \
 ;                     src/engine/overworld/pathfinding.asm

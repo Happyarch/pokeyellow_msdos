@@ -21,7 +21,7 @@ extern CopyVideoData            ; src/home/copy2.asm: ESI=dst VRAM offset, EDX=f
 extern WriteOAMBlock            ; src/home/oam.asm (flat tile/attr source in EDX)
 extern DelayFrame               ; src/home/vblank.asm
 extern DelayFrames              ; src/home/delay.asm
-extern UpdateSprites            ; src/engine/overworld/movement.asm
+extern UpdateSprites            ; src/home/update_sprites.asm
 
 global EmotionBubble
 global EmotionBubblesOAMBlock

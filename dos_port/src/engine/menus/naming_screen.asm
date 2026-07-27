@@ -80,7 +80,7 @@ extern LoadGBPal                       ; home/fade.asm
 extern ClearScreen                     ; home/copy2.asm — whole-canvas blank + auto-BG re-arm
 extern ClearSprites                    ; gfx/sprites.asm
 extern GBPalNormal                     ; src/home/palettes.asm
-extern UpdateSprites                   ; engine/overworld/movement.asm
+extern UpdateSprites                   ; src/home/update_sprites.asm
 extern RunPaletteCommand               ; src/home/palettes.asm
 extern RunDefaultPaletteCommand        ; src/home/palettes.asm
 extern LoadHpBarAndStatusTilePatterns  ; gfx/load_font.asm

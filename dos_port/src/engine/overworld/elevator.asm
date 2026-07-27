@@ -49,7 +49,7 @@ extern DelayFrames                 ; src/home/delay.asm
 extern StopAllMusic                ; home/audio.asm (LIVE)
 extern PlayMusic                   ; home/audio.asm (LIVE; AL=id, BL=bank)
 extern PlayDefaultMusic            ; home/audio.asm (LIVE)
-extern UpdateSprites               ; engine/overworld/movement.asm
+extern UpdateSprites               ; src/home/update_sprites.asm
 
 section .text
 

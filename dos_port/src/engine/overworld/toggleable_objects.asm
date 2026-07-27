@@ -53,7 +53,7 @@ global HideObject
 global ToggleableObjectFlagAction
 
 extern FlagAction              ; src/engine/flag_action.asm (ebp-relative flag bit-manip)
-extern UpdateSprites           ; src/engine/overworld/movement.asm
+extern UpdateSprites           ; src/home/update_sprites.asm
 extern g_toggleable_flags      ; src/engine/overworld/map_sprites.asm (flat .bss bit array)
 
 section .text

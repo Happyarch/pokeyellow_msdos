@@ -151,7 +151,7 @@ extern WaitForSoundToFinish     ; src/home/delay.asm
 ; --- generic engine seams ---------------------------------------------------
 ; (pret's CopyData / AddNTimes SRAM copies collapse to no-ops here — see the
 ;  TODO-HW: SRAM sites — so neither is externed.)
-extern UpdateSprites            ; engine/overworld/movement.asm
+extern UpdateSprites            ; src/home/update_sprites.asm
 extern SetMapTextPointer        ; home/predef_text.asm
 extern RestoreMapTextPointer    ; home/predef_text.asm
 extern ClearScreen              ; home/copy2.asm

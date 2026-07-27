@@ -107,7 +107,8 @@ PredefShakeScreenHorizontally:
     ret
 
 ; ===========================================================================
-; Move-subanimation ret-stubs — moved here from move_effect_helpers.asm /
+; Move-subanimation ret-stubs — moved here from move_effect_helpers.asm (since
+; deleted, chunk 17) /
 ; faint_switch.asm (2026-07-23 allowlist audit): a link-time stand-in belongs in
 ; the subsystem stub file under a STUB{} annotation, not in a code file behind a
 ; relocation-registry entry. The handlers still CALL each of these (correct +

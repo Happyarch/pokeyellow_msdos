@@ -1572,7 +1572,7 @@ extern Delay3                 ; src/home/palettes.asm
 extern StatModifierUpEffect   ; engine/battle/effects.asm
 extern PlayDefaultMusic       ; home/audio.asm
 extern LoadCurrentMapView     ; engine/overworld/overworld.asm
-extern UpdateSprites          ; engine/overworld/movement.asm
+extern UpdateSprites          ; src/home/update_sprites.asm
 extern IsBikeRidingAllowed    ; home/player_gfx.asm
 extern DisplayTownMap               ; engine/items/town_map.asm
 extern ShowPokedexMenu        ; engine/menus/pokedex.asm
@@ -1588,7 +1588,7 @@ extern Music_PokeFluteInBattle    ; audio/poke_flute.asm
 extern StopAllMusic               ; home/audio.asm
 extern PlayMusic                  ; home/audio.asm
 extern Random                 ; home/random.asm — AL = next random byte
-extern PlayBattleAnimation    ; engine/battle/move_effect_helpers.asm (ANIMATION=OFF hook)
+extern PlayBattleAnimation    ; engine/battle/core_stubs.asm (ANIMATION=OFF hook)
 extern Multiply               ; home/math.asm — hMultiplicand(3) * hMultiplier → hProduct(4)
 extern IndexToPokedex         ; engine/menus/pokedex.asm — predef, wPokedexNum in place
 extern ShowPokedexData        ; engine/menus/pokedex.asm (predef)
@@ -2901,7 +2901,7 @@ section .text
 ; rather than taking a modulus, so the distribution is uniform; keep the loop.
 ;
 ; PORT: pret ends with `predef MoveAnimation`. The port realizes that whole family
-; as the ANIMATION=OFF hooks in engine/battle/move_effect_helpers.asm, where
+; as the ANIMATION=OFF hooks in engine/battle/core_stubs.asm, where
 ; PlayBattleAnimation (pret's own `ld [wAnimationID], a` wrapper around the same
 ; predef) is the entry every move effect already calls. The animation engine is
 ; deferred, so it is a no-op ret today — the state changes above are the effect.
