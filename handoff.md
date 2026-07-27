@@ -16,28 +16,27 @@ owed that had already been paid.
 
 ---
 
-## 1. One thing is owed: the registry bless
+## 1. Nothing is owed — the registry is blessed
 
-s17 ended with a retirement, so the allowlist hash no longer matches the approval.
-Until re-blessed, `.githooks/pre-commit` **blocks every commit that stages anything
-under `dos_port/`**. Docs-only commits still land (this file was one).
-
-```
-git config --get pokeyellow.pretAllowlistApprovedSha256   # 5beec673… (old, 27 rows)
-sha256sum dos_port/tools/pret_label_allowlist.json        # 8304337c… (current, 18 rows)
-```
-
-**MAINTAINER ACTION — agents must never run this:**
+s17 ended with a retirement, which normally blocks `dos_port/` commits until the
+maintainer re-blesses. **That bless was performed in-session**, so the tree starts
+clean and unblocked:
 
 ```
-git config pokeyellow.pretAllowlistApprovedSha256 \
-  8304337cb6fafcfc346c709e4ffb9dd8ec6e818dc0551d55eb3103914e44baee
+git config --get pokeyellow.pretAllowlistApprovedSha256   # 8304337c… (18 rows)
+sha256sum dos_port/tools/pret_label_allowlist.json        # 8304337c… — equal
 ```
 
-Measured twice and agreed: `.githooks/prepare-commit-msg` computed it into
-retirement commit `563cd9f6`, and `sha256sum` was run independently after.
+Verified three ways after blessing: the two values are byte-equal; the row count
+is 18, matching the DB's `relocated` count; and `tools/static_gate` returns PASS
+with `registry_approval` **absent** from the findings, which it cannot be while
+the hash differs.
+
 Live state: memory **`registry-approval-state`** — **check that key, not this
-file**. Never reach for `--no-verify`.
+file.** The previous handoff declared a bless owed that had already been paid; a
+handoff is written before the fact, that key is measured. If they ever differ,
+`.githooks/pre-commit` blocks every commit staging anything under `dos_port/`
+(docs-only commits still land). Never reach for `--no-verify`.
 
 **Otherwise the tree is clean** — `git status` shows only the three untracked
 maintainer files in §7. Nothing is uncommitted, nothing is half-done.
