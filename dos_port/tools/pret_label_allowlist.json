@@ -11,10 +11,6 @@
   "structural_findings": {},
   "relocated_files": {},
   "relocated_labels": {
-    "Bankswitch": {
-      "port_file": "dos_port/src/engine/battle/move_effect_helpers.asm",
-      "why": "pret home/bankswitch2.asm split across port files (draft Session H)"
-    },
     "EndNPCMovementScript": {
       "port_file": "dos_port/src/engine/overworld/auto_movement.asm",
       "why": "pret home/npc_movement.asm wrapper (farjp _EndNPCMovementScript); the port has no home/npc_movement.asm mirror, so the trivial banking-elided jump is co-located with its target _EndNPCMovementScript in auto_movement.asm (OW-2.3)"
@@ -31,10 +27,6 @@
       "port_file": "dos_port/src/engine/battle/battle_menu.asm",
       "why": "pret engine/pokemon/status_screen.asm split across port files (draft Session H)"
     },
-    "EffectCallBattleCore": {
-      "port_file": "dos_port/src/engine/battle/move_effect_helpers.asm",
-      "why": "Scanner-reviewed 2026-07-15: EffectCallBattleCore from pret engine/battle/move_effects/reflect_light_screen.asm has its selected single non-stub definition at dos_port/src/engine/battle/move_effect_helpers.asm; preserve this per-label split."
-    },
     "DisplayUsedMoveText": {
       "port_file": "dos_port/src/engine/battle/core.asm",
       "why": "Scanner-reviewed 2026-07-15: DisplayUsedMoveText from pret engine/battle/used_move_text.asm has its selected single non-stub definition at dos_port/src/engine/battle/core.asm; preserve this per-label split."
@@ -42,22 +34,6 @@
     "LoadPokedexTilePatterns": {
       "port_file": "dos_port/src/engine/menus/pokedex.asm",
       "why": "Scanner-reviewed 2026-07-15: LoadPokedexTilePatterns from pret engine/gfx/load_pokedex_tiles.asm has its selected single non-stub definition at dos_port/src/engine/menus/pokedex.asm; preserve this per-label split."
-    },
-    "DetectCollisionBetweenSprites": {
-      "port_file": "dos_port/src/engine/overworld/movement.asm",
-      "why": "Scanner-reviewed 2026-07-15: DetectCollisionBetweenSprites from pret engine/overworld/sprite_collisions.asm has its selected single non-stub definition at dos_port/src/engine/overworld/movement.asm; preserve this per-label split."
-    },
-    "SetSpriteCollisionValues": {
-      "port_file": "dos_port/src/engine/overworld/movement.asm",
-      "why": "Scanner-reviewed 2026-07-15: SetSpriteCollisionValues from pret engine/overworld/sprite_collisions.asm has its selected single non-stub definition at dos_port/src/engine/overworld/movement.asm; preserve this per-label split."
-    },
-    "UpdateNonPlayerSprite": {
-      "port_file": "dos_port/src/engine/overworld/movement.asm",
-      "why": "Scanner-reviewed 2026-07-15: UpdateNonPlayerSprite from pret engine/overworld/sprite_collisions.asm has its selected single non-stub definition at dos_port/src/engine/overworld/movement.asm; preserve this per-label split."
-    },
-    "_UpdateSprites": {
-      "port_file": "dos_port/src/engine/overworld/movement.asm",
-      "why": "Scanner-reviewed 2026-07-15: _UpdateSprites from pret engine/overworld/sprite_collisions.asm has its selected single non-stub definition at dos_port/src/engine/overworld/movement.asm; preserve this per-label split."
     },
     "RestoreMapTextPointer": {
       "port_file": "dos_port/src/home/map_text_pointer.asm",
@@ -74,10 +50,6 @@
     "PrintLetterDelay": {
       "port_file": "dos_port/src/home/text.asm",
       "why": "Scanner-reviewed 2026-07-15: PrintLetterDelay from pret home/print_text.asm has its selected single non-stub definition at dos_port/src/home/text.asm; preserve this per-label split."
-    },
-    "UpdateSprites": {
-      "port_file": "dos_port/src/engine/overworld/movement.asm",
-      "why": "Scanner-reviewed 2026-07-15: UpdateSprites from pret home/update_sprites.asm has its selected single non-stub definition at dos_port/src/engine/overworld/movement.asm; preserve this per-label split."
     },
     "DiscardButtonPresses": {
       "port_file": "dos_port/src/input/joypad.asm",
