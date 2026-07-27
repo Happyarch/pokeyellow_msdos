@@ -2,6 +2,37 @@
 """Interactive, read-only pret / DOS-port dependency graph.
 
 Usage: python3 dos_port/tools/dependency_graph.py [--scan] [--no-browser]
+                                                  [--db PATH] [--host H] [--port N]
+
+Serves a loopback-only canvas viewer plus a JSON API for agents:
+    /api/graph/pret   modeled pret labels + unknown referenced endpoints
+    /api/graph/port   the above plus port-only labels
+    /api/meta         DB path/stamp/commit, HEAD mismatch, status counts
+
+READING THE STATUS FIELD -- the one trap in this data
+-----------------------------------------------------
+`update_label_db` models pret home/ + engine/ ONLY. A faithful pret label whose
+home is audio/, data/, gfx/, ram/ or scripts/ is invisible to that model, so it
+is recorded as `status = "port_only"` BY ELIMINATION -- not because anyone
+determined it is bespoke port code.
+
+build_graph() corrects for this by joining the names-only `aux_labels` and
+`script_labels` provenance tables. Such nodes get:
+    display_status = "pret-unmodeled"
+    aux_pret_file  = e.g. "audio/engine_1.asm"
+    aux_pret_dir   = e.g. "audio"
+
+    *** A node is genuinely port-only only when display_status == "port_only"
+        AND aux_pret_file is null. ***
+
+Measured 2026-07-27: 90 pret-unmodeled vs 337 genuinely port-only, so reading
+raw `status` overstates the port's divergence by ~90 labels.
+
+Provenance is names-only by design: pret-unmodeled nodes carry no status and no
+call-graph edges. Absence of edges on them is not evidence of anything -- and
+neither is absence of edges generally, since the scanner emits no edge for
+`dd Label` dispatch tables or other address-taken targets (both ISRs and every
+jump-table handler therefore appear disconnected while provably running).
 """
 
 import argparse
@@ -24,7 +55,7 @@ from urllib.parse import urlparse
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
 DEFAULT_DB = HERE / "translation.db"
-STATUSES = {"translated", "relocated", "stub", "missing", "port_only"}
+STATUSES = {"translated", "relocated", "stub", "missing", "port_only", "pret-unmodeled"}
 REQUIRED = {
     "labels": {"name", "pret_file", "port_file", "status", "stub_file", "scanned_at", "git_hash"},
     "calls": {"caller", "callee", "kind", "side", "file", "line", "build_active"},
@@ -214,9 +245,27 @@ def build_graph(con, side, annotations=None):
             if endpoint not in nodes:
                 nodes[endpoint] = {"name": endpoint, "pret_file": None, "port_file": None,
                                    "status": "unindexed", "display_status": "unindexed", "stub_file": None}
+    # Names-only provenance for pret dirs the label model does not cover
+    # (audio/, data/, gfx/, ram/ via aux_labels; scripts/ via script_labels).
+    # Without this a faithful pret label from one of those reads as `port_only`
+    # BY ELIMINATION, and the graph repeats that misclassification as if it were
+    # a measured fact. aux_pret_file is provenance ONLY -- no status, no edges.
+    aux = {}
+    for tbl, col in (("aux_labels", "pret_dir"), ("script_labels", "'scripts'")):
+        try:
+            for r in con.execute(f"SELECT name, pret_file, {col} AS d FROM {tbl}"):
+                aux.setdefault(r["name"], (r["pret_file"], r["d"]))
+        except sqlite3.OperationalError:
+            pass  # older DB without the side table; provenance simply absent
     for name, node in nodes.items():
         node["providers"] = defs.get(name, [])
         node["annotations"] = (annotations or {}).get(name, [])
+        prov = aux.get(name)
+        node["aux_pret_file"], node["aux_pret_dir"] = prov if prov else (None, None)
+        if prov and node.get("status") == "port_only":
+            # Not a port addition: a faithful pret label outside the modeled
+            # home/ + engine/ universe. Say so instead of implying it is bespoke.
+            node["display_status"] = "pret-unmodeled"
     edges = aggregate_edges(calls)
     positions = layout(nodes, edges)
     result_nodes = []
@@ -230,7 +279,7 @@ def build_graph(con, side, annotations=None):
         node["callees"] = outgoing[name]
         result_nodes.append(node)
     return {"side": side, "nodes": result_nodes, "edges": edges,
-            "coverage_note": "Modeled labels/calls only. dd dispatch tables and address-taken targets emit no edge; ISR and jump-table execution is not disproved by their absence. Names-only script_labels and unmodeled audio/data are outside coverage."}
+            "coverage_note": "Modeled labels/calls only (pret home/ + engine/). dd dispatch tables and address-taken targets emit no edge; ISR and jump-table execution is not disproved by their absence. Nodes shown as pret-unmodeled are FAITHFUL PRET LABELS from audio/, data/, gfx/, ram/ or scripts/ that the label model does not cover: aux_pret_file gives their provenance, but they carry no status and no call-graph edges, so absence of edges on them means nothing. A node is only genuinely port-only if display_status is port_only AND aux_pret_file is null."}
 
 
 def metadata(con, db_path):
@@ -257,7 +306,7 @@ aside{overflow:auto;padding:12px;background:#141d29;border-left:1px solid #31415
 
 JS = r"""
 'use strict';
-const colors={translated:'#43c879',relocated:'#a873e8',stub:'#e7aa3b',missing:'#e45858',port_only:'#42cad5',unindexed:'#8491a3'};
+const colors={translated:'#43c879',relocated:'#a873e8',stub:'#e7aa3b',missing:'#e45858',port_only:'#42cad5','pret-unmodeled':'#d98adf',unindexed:'#8491a3'};
 const state={side:'pret',graphs:{},cams:{pret:{x:0,y:0,z:1,tx:0,ty:0,tz:1},port:{x:0,y:0,z:1,tx:0,ty:0,tz:1}},selected:null,query:'',enabled:new Set(Object.keys(colors)),drag:null};
 const canvas=document.querySelector('canvas'),ctx=canvas.getContext('2d'),panel=document.querySelector('aside'),count=document.querySelector('#count');
 function graph(){return state.graphs[state.side]} function cam(){return state.cams[state.side]}
@@ -265,7 +314,7 @@ function resize(){const d=devicePixelRatio||1,r=canvas.getBoundingClientRect();c
 function screen(p){const c=cam(),r=canvas.getBoundingClientRect();return{x:(p.x-c.x)*c.z+r.width/2,y:(p.y-c.y)*c.z+r.height/2}}
 function visible(n){return state.enabled.has(n.status)&&(!state.query||n.name.toLowerCase().includes(state.query)||((n.pret_file||'')+' '+(n.port_file||'')).toLowerCase().includes(state.query))}
 function fit(){const ns=graph().nodes.filter(visible);if(!ns.length)return;let xs=ns.map(n=>n.position.x),ys=ns.map(n=>n.position.y),r=canvas.getBoundingClientRect(),c=cam();c.tx=(Math.min(...xs)+Math.max(...xs))/2;c.ty=(Math.min(...ys)+Math.max(...ys))/2;c.tz=Math.min(1.2,Math.max(.05,Math.min(r.width/(Math.max(...xs)-Math.min(...xs)+300),r.height/(Math.max(...ys)-Math.min(...ys)+160))))}
-function detail(n){state.selected=n.name;const links=e=>`${e.caller} → ${e.callee} <small>${e.kinds.join(', ')} ×${e.count}</small>`;panel.innerHTML=`<h3>${n.name}</h3><div><span class=badge>${n.display_status}</span>${n.annotations.map(a=>`<span class=badge>${a.kind}</span>`).join('')}</div><p><b>Pret:</b> ${n.pret_file||'—'}<br><b>Port:</b> ${n.port_file||'—'}<br><b>Stub:</b> ${n.stub_file||'—'}</p><h3>Providers</h3><div class=rows>${n.providers.map(p=>`<div>${p.file}:${p.line||'?'}</div>`).join('')||'—'}</div><h3>Annotations</h3><div class=rows>${n.annotations.map(a=>`<div>${a.kind} ${a.file}:${a.line}<br>${Object.entries(a.fields).map(([k,v])=>`<b>${k}</b>=${v}`).join('<br>')}</div>`).join('')||'—'}</div><h3>Callers</h3><div class=rows>${n.callers.map(e=>`<div>${links(e)}<br>${e.sites.map(s=>`${s.file}:${s.line||'?'} (${s.kind})`).join('<br>')}</div>`).join('')||'—'}</div><h3>Callees</h3><div class=rows>${n.callees.map(e=>`<div>${links(e)}<br>${e.sites.map(s=>`${s.file}:${s.line||'?'} (${s.kind})`).join('<br>')}</div>`).join('')||'—'}</div>`}
+function detail(n){state.selected=n.name;const links=e=>`${e.caller} → ${e.callee} <small>${e.kinds.join(', ')} ×${e.count}</small>`;panel.innerHTML=`<h3>${n.name}</h3><div><span class=badge>${n.display_status}</span>${n.annotations.map(a=>`<span class=badge>${a.kind}</span>`).join('')}</div><p><b>Pret:</b> ${n.pret_file||n.aux_pret_file&&n.aux_pret_file+' (unmodeled '+n.aux_pret_dir+'/)'||'—'}<br><b>Port:</b> ${n.port_file||'—'}<br><b>Stub:</b> ${n.stub_file||'—'}</p><h3>Providers</h3><div class=rows>${n.providers.map(p=>`<div>${p.file}:${p.line||'?'}</div>`).join('')||'—'}</div><h3>Annotations</h3><div class=rows>${n.annotations.map(a=>`<div>${a.kind} ${a.file}:${a.line}<br>${Object.entries(a.fields).map(([k,v])=>`<b>${k}</b>=${v}`).join('<br>')}</div>`).join('')||'—'}</div><h3>Callers</h3><div class=rows>${n.callers.map(e=>`<div>${links(e)}<br>${e.sites.map(s=>`${s.file}:${s.line||'?'} (${s.kind})`).join('<br>')}</div>`).join('')||'—'}</div><h3>Callees</h3><div class=rows>${n.callees.map(e=>`<div>${links(e)}<br>${e.sites.map(s=>`${s.file}:${s.line||'?'} (${s.kind})`).join('<br>')}</div>`).join('')||'—'}</div>`}
 function render(){const g=graph();if(!g){requestAnimationFrame(render);return}const c=cam();c.x+=(c.tx-c.x)*.18;c.y+=(c.ty-c.y)*.18;c.z+=(c.tz-c.z)*.18;ctx.clearRect(0,0,canvas.width,canvas.height);const map=new Map(g.nodes.map(n=>[n.name,n])),shown=new Set(g.nodes.filter(visible).map(n=>n.name));let hood=new Set;if(state.selected){hood.add(state.selected);for(const e of g.edges)if(e.caller===state.selected||e.callee===state.selected){hood.add(e.caller);hood.add(e.callee)}}ctx.lineWidth=1;for(const e of g.edges){if(!shown.has(e.caller)||!shown.has(e.callee))continue;let a=screen(map.get(e.caller).position),b=screen(map.get(e.callee).position);ctx.strokeStyle=hood.size&&(!hood.has(e.caller)||!hood.has(e.callee))?'#26313e':'#71839a';ctx.setLineDash(e.kinds.includes('fallthrough')?[2,4]:e.build_active?[]:[8,5]);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();let t=.88,x=a.x+(b.x-a.x)*t,y=a.y+(b.y-a.y)*t,ang=Math.atan2(b.y-a.y,b.x-a.x);ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x-7*Math.cos(ang-.45),y-7*Math.sin(ang-.45));ctx.lineTo(x-7*Math.cos(ang+.45),y-7*Math.sin(ang+.45));ctx.fillStyle=ctx.strokeStyle;ctx.fill()}ctx.setLineDash([]);let seen=0;const r=canvas.getBoundingClientRect();for(const n of g.nodes){if(!shown.has(n.name))continue;let p=screen(n.position);if(p.x<-100||p.y<-30||p.x>r.width+100||p.y>r.height+30)continue;seen++;let w=c.z>.38?Math.max(70,Math.min(180,ctx.measureText(n.name).width+18)):12,h=c.z>.38?25:12;ctx.fillStyle=colors[n.status];ctx.globalAlpha=hood.size&&!hood.has(n.name)?.25:1;ctx.fillRect(p.x-w/2,p.y-h/2,w,h);if(c.z>.38){ctx.fillStyle='#0c1118';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(n.name,p.x,p.y)}if(n.annotations.length){ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(p.x+w/2-3,p.y-h/2+3,3,0,7);ctx.fill()}ctx.globalAlpha=1}count.textContent=`${seen} visible / ${shown.size} filtered / ${g.nodes.length} total`;requestAnimationFrame(render)}
 canvas.onwheel=e=>{e.preventDefault();const c=cam(),r=canvas.getBoundingClientRect(),wx=(e.offsetX-r.width/2)/c.tz+c.tx,wy=(e.offsetY-r.height/2)/c.tz+c.ty,nz=Math.max(.03,Math.min(3,c.tz*Math.exp(-e.deltaY*.001)));c.tx=wx-(e.offsetX-r.width/2)/nz;c.ty=wy-(e.offsetY-r.height/2)/nz;c.tz=nz};
 canvas.onpointerdown=e=>{canvas.setPointerCapture(e.pointerId);state.drag={x:e.clientX,y:e.clientY,cx:cam().tx,cy:cam().ty}};canvas.onpointermove=e=>{if(!state.drag)return;cam().tx=state.drag.cx-(e.clientX-state.drag.x)/cam().tz;cam().ty=state.drag.cy-(e.clientY-state.drag.y)/cam().tz};canvas.onpointerup=e=>state.drag=null;
@@ -276,7 +325,7 @@ document.querySelectorAll('.filters input').forEach(x=>x.onchange=()=>x.checked?
 Promise.all(['pret','port'].map(s=>fetch('/api/graph/'+s).then(r=>r.json()).then(g=>state.graphs[s]=g))).then(()=>fit());fetch('/api/meta').then(r=>r.json()).then(m=>{if(m.commit_mismatch||m.source_dirty)document.querySelector('#warning').textContent='⚠ DB may be stale';document.querySelector('#stamp').textContent=(m.db_commit||'?').slice(0,8)+' @ '+(m.scanned_at||'?')});requestAnimationFrame(render);
 """
 
-HTML = """<!doctype html><meta charset=utf-8><meta name=viewport content='width=device-width'><title>Pret / DOS Dependency Graph</title><style>""" + CSS + """</style><header><button class='tab active' data-side=pret>Pret</button><button class=tab data-side=port>DOS port</button><input id=search placeholder='Search label or path…'><button id=fit>Fit (0)</button><span class=grow></span><span id=warning class=warn></span><small id=stamp></small></header><div id=main><section id=stage><canvas></canvas><div id=hud><div id=count>Loading…</div><div class=filters>""" + "".join(f"<label><input type=checkbox checked value='{s}'>{'unported' if s=='missing' else s}</label>" for s in sorted(STATUSES | {'unindexed'})) + """</div><div class=legend>""" + "".join(f"<span><i class=dot style='background:{c}'></i>{'unported' if s=='missing' else s}</span>" for s,c in [("translated","#43c879"),("relocated","#a873e8"),("stub","#e7aa3b"),("missing","#e45858"),("port_only","#42cad5"),("unindexed","#8491a3")]) + """<br>solid active · dashed inactive/check-only · dotted fall-through</div><small>Drag/trackpad pan · cursor wheel zoom · arrows pan · 0 fits. Isolated nodes are grouped below the connected graph.<br>Coverage caveat: dd/address-taken dispatch targets emit no edge; absent edges do not prove an ISR or jump-table handler is unexecuted.</small></div></section><aside><p>Select a node for details.</p></aside></div><script>""" + JS + """</script>"""
+HTML = """<!doctype html><meta charset=utf-8><meta name=viewport content='width=device-width'><title>Pret / DOS Dependency Graph</title><style>""" + CSS + """</style><header><button class='tab active' data-side=pret>Pret</button><button class=tab data-side=port>DOS port</button><input id=search placeholder='Search label or path…'><button id=fit>Fit (0)</button><span class=grow></span><span id=warning class=warn></span><small id=stamp></small></header><div id=main><section id=stage><canvas></canvas><div id=hud><div id=count>Loading…</div><div class=filters>""" + "".join(f"<label><input type=checkbox checked value='{s}'>{'unported' if s=='missing' else s}</label>" for s in sorted(STATUSES | {'unindexed'})) + """</div><div class=legend>""" + "".join(f"<span><i class=dot style='background:{c}'></i>{'unported' if s=='missing' else s}</span>" for s,c in [("translated","#43c879"),("relocated","#a873e8"),("stub","#e7aa3b"),("missing","#e45858"),("port_only","#42cad5"),("pret-unmodeled","#d98adf"),("unindexed","#8491a3")]) + """<br>solid active · dashed inactive/check-only · dotted fall-through</div><small>Drag/trackpad pan · cursor wheel zoom · arrows pan · 0 fits. Isolated nodes are grouped below the connected graph.<br>Coverage caveat: dd/address-taken dispatch targets emit no edge; absent edges do not prove an ISR or jump-table handler is unexecuted.</small></div></section><aside><p>Select a node for details.</p></aside></div><script>""" + JS + """</script>"""
 
 
 class App:

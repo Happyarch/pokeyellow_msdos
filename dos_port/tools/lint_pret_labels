@@ -371,6 +371,43 @@ def main():
                 f"{file}:{line}: {name} belongs to pret {pret_file} "
                 f"(expected {expect})")
 
+    # ── aux_misplaced: pret audio/ + data/ provenance ─────────────────────
+    #
+    # update_label_db models home/ + engine/ only, so a faithful pret label from
+    # audio/, data/, gfx/ or ram/ reads as `port_only` BY ELIMINATION and neither
+    # the mirror rule nor faithdiff can fire on it. aux_labels (names only, see
+    # scan_pret_aux) restores provenance. Placement expectations differ per dir:
+    #   audio/ — the port mirrors pret's path exactly (dos_port/src/audio/x.asm),
+    #            measured 21/21 conformant, so this ratchets a convention that
+    #            already holds rather than importing debt.
+    #   data/  — the port groups by SUBSYSTEM (battle_data.asm, item_data.asm,
+    #            pokemon_data.asm), not by pret path, so a path mirror would be
+    #            wrong. The checkable invariant is that the label lives in the
+    #            DATA LAYER at all: under dos_port/src/data/ or in generated
+    #            assets/. A pret data table buried in engine/ or home/ code is
+    #            hand-copied Tier-1 data that regen cannot protect.
+    #   gfx/, ram/ — exempt. gfx/ is generated assets and ram/ names are WRAM
+    #            addresses owned by gb_memmap.inc, so neither has a port mirror.
+    # Same two exemptions as the script rules: *_stubs.asm and generated assets.
+    for name, pret_file, pret_dir, file, line in cur.execute("""
+            SELECT a.name, a.pret_file, a.pret_dir, d.file, d.line
+            FROM aux_labels a JOIN port_defs d ON d.name = a.name
+            WHERE d.is_stub = 0
+              AND d.file NOT LIKE 'dos_port/assets/%'
+              AND a.pret_dir IN ('audio', 'data')
+            ORDER BY a.pret_dir, d.file, a.name"""):
+        if pret_dir == 'audio':
+            expect = 'dos_port/src/' + pret_file
+            if file != expect:
+                add('aux_misplaced', f'{file}:{name}',
+                    f'{file}:{line}: {name} is a pret {pret_file} label; the '
+                    f'port mirrors pret audio/ paths exactly (expected {expect})')
+        elif not file.startswith('dos_port/src/data/'):
+            add('aux_misplaced', f'{file}:{name}',
+                f'{file}:{line}: {name} is a pret {pret_file} data table living '
+                f'outside the data layer (expected dos_port/src/data/ or a '
+                f'generated dos_port/assets/*.inc)')
+
     # ── local_shadow: another file defines the selected pret label locally ──
     for name, selected, shadow in cur.execute("""
             SELECT l.name, l.port_file, d.file FROM labels l JOIN port_defs d
@@ -466,7 +503,7 @@ def main():
         print('\n'.join('  ' + m for m in open_structural))
     for rule in ('registry_approval', 'mirror', 'non_ret_stub', 'dup_def',
                  'call_into_data', 'stale_extern', 'stale_provider',
-                 'script_collision', 'script_misplaced',
+                 'script_collision', 'script_misplaced', 'aux_misplaced',
                  'local_shadow', 'weak_relocation', 'relocation_shape'):
         msgs = by_rule.get(rule, [])
         if msgs:

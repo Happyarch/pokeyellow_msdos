@@ -112,6 +112,18 @@ claims are prohibited: `missing`, `stub`, `unported`, `check-only`, `unreachable
 and `no caller` must cite generated state (`dos_port/tools/project_state`) or
 runtime evidence.
 
+**`port-only` is a positive claim that needs the same discipline, and the raw
+`status` column does NOT support it.** `update_label_db` models pret `home/` +
+`engine/` only, so a faithful pret label from `audio/`, `data/`, `gfx/`, `ram/`
+or `scripts/` is recorded `port_only` *by elimination* — nobody determined it was
+bespoke. Measured 2026-07-27: 90 of 429 `port_only` rows were real pret labels
+(data 41, audio 21, scripts 16, gfx 10, ram 2). Cite the `aux_labels` /
+`script_labels` provenance tables, or the dependency graph's `display_status`
+(`pret-unmodeled`) and `aux_pret_file`. A label is genuinely port-only only when
+`display_status == "port_only"` AND `aux_pret_file` is null. Calling a pret
+routine "port-only" invites exactly the forked-name duplication the "Preserve
+pret Labels" rule exists to prevent.
+
 **`unreachable` needs runtime evidence; the `reachability` column is never proof
 of unreachability.** It supports the positive direction only
 (`statically-reached-from-start` = a path exists from `start`, assuming calls

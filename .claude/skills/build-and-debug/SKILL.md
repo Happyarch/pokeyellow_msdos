@@ -476,9 +476,18 @@ Normal operation opens the database read-only. `--scan` runs
 tracked database. The UI includes isolated/unported routines, unknown call
 endpoints, annotation badges, filters/search, neighborhood selection, and
 canvas pan/zoom. Its two scopes are intentional: pret excludes port-only-only
-rows, while DOS includes all modeled pret labels plus port-only labels. As with
-the label DB itself, names-only `script_labels` and unmodeled audio/data are not
-dependency coverage.
+rows, while DOS includes all modeled pret labels plus port-only labels.
+
+**Read `display_status`, not `status`, before calling anything port-only.** The
+label model covers pret `home/` + `engine/` only, so a faithful pret label from
+`audio/`, `data/`, `gfx/`, `ram/` or `scripts/` lands in `status = port_only` BY
+ELIMINATION. The graph resolves that against the `aux_labels` / `script_labels`
+provenance tables and shows those nodes as **`pret-unmodeled`**, with
+`aux_pret_file` / `aux_pret_dir` naming the real pret origin. Measured 2026-07-27:
+90 `pret-unmodeled` vs 337 genuinely port-only. A node is only genuinely
+port-only when `display_status == "port_only"` AND `aux_pret_file` is null.
+Provenance is names-only: those nodes still carry no status and no call-graph
+edges, so absent edges on them prove nothing.
 The call scanner also has no edge for `dd Label` dispatch tables or other
 address-taken targets. Both ISRs and jump-table handlers can therefore execute
 while appearing disconnected; the viewer states this caveat and must never be

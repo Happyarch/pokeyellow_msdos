@@ -214,6 +214,40 @@ def scan_pret_scripts(exclude):
                     labels.setdefault(m.group(1), rel)
     return labels
 
+# Pret directories the label model does NOT cover (it models home/ + engine/).
+# A name defined in one of these reads as `port_only` by elimination, conflating
+# "a genuine port addition" with "a faithful pret label the scanner cannot see".
+# This names-only table is the same fix `script_labels` already applies to
+# scripts/ — no status, no call graph, provenance only.
+AUX_PRET_DIRS = ('audio', 'data', 'gfx', 'ram')
+
+
+def scan_pret_aux(exclude):
+    """Yield {label: (rel_pret_file, top_dir)} for pret AUX_PRET_DIRS globals.
+
+    Names only. `exclude` (the home/+engine/ universe) wins, so a name already
+    governed by the mirror rule is never reclassified here. scripts/ is handled
+    separately by scan_pret_scripts, which carries richer placement semantics.
+    """
+    labels = {}
+    for top in AUX_PRET_DIRS:
+        top_dir = os.path.join(REPO_ROOT, top)
+        if not os.path.isdir(top_dir):
+            continue
+        for dirpath, dirnames, filenames in os.walk(top_dir):
+            dirnames.sort()
+            for fn in sorted(filenames):
+                if not fn.endswith(('.asm', '.inc')):
+                    continue
+                rel = os.path.relpath(os.path.join(dirpath, fn),
+                                      REPO_ROOT).replace('\\', '/')
+                for raw in read_lines(os.path.join(dirpath, fn)):
+                    m = LABEL_RE.match(strip_comment(raw))
+                    if m and m.group(1) not in exclude:
+                        labels.setdefault(m.group(1), (rel, top))
+    return labels
+
+
 # ── port side ───────────────────────────────────────────────────────────────────
 
 X86_REGS = {
@@ -1271,6 +1305,7 @@ DROP TABLE IF EXISTS port_defs;
 DROP TABLE IF EXISTS calls;
 DROP TABLE IF EXISTS externs;
 DROP TABLE IF EXISTS script_labels;
+DROP TABLE IF EXISTS aux_labels;
 CREATE TABLE labels (
     name       TEXT NOT NULL,
     pret_file  TEXT,
@@ -1326,6 +1361,16 @@ CREATE TABLE script_labels (
     accept_stems     TEXT NOT NULL
 );
 CREATE INDEX idx_script_labels_name ON script_labels(name);
+-- Names-only provenance for pret globals in directories the label model does
+-- not cover (audio/, data/, gfx/, ram/). Without this a faithful pret label
+-- from one of these reads as `port_only`, so neither the mirror rule nor
+-- faithdiff can fire on it. See scan_pret_aux.
+CREATE TABLE aux_labels (
+    name      TEXT NOT NULL,
+    pret_file TEXT NOT NULL,
+    pret_dir  TEXT NOT NULL
+);
+CREATE INDEX idx_aux_labels_name ON aux_labels(name);
 """
 
 def git_stamp():
@@ -1426,6 +1471,7 @@ def main():
 
     pret_labels, pret_calls = scan_pret()
     script_labels = scan_pret_scripts(set(pret_labels))
+    aux_labels = scan_pret_aux(set(pret_labels) | set(script_labels))
     port_defs, port_calls, port_externs = scan_port(set(pret_labels))
     port_defs += scan_generated_assets()
     scanned_at, git_hash = git_stamp()
@@ -1504,6 +1550,8 @@ def main():
                     '|'.join(script_port_stems(pret_file)[1]))
                    for name, pret_file in sorted(script_labels.items())]
     cur.executemany("INSERT INTO script_labels VALUES (?,?,?,?)", script_rows)
+    aux_rows = [(name, pf, d) for name, (pf, d) in sorted(aux_labels.items())]
+    cur.executemany("INSERT INTO aux_labels VALUES (?,?,?)", aux_rows)
     con.commit()
 
     counts = {s: n for s, n in cur.execute(
@@ -1515,13 +1563,16 @@ def main():
     # the sqlite *file* is never byte-stable across rewrites).
     h = hashlib.sha256()
     for rows in (label_rows, sorted(port_defs), sorted(pret_calls),
-                 sorted(port_calls), sorted(port_externs), script_rows):
+                 sorted(port_calls), sorted(port_externs), script_rows,
+                 aux_rows):
         for r in rows:
             h.update(repr(r).encode())
 
     print(f"labels: {sum(counts.values())} "
           f"({', '.join(f'{k}={v}' for k, v in sorted(counts.items()))})")
     print(f"script_labels: {len(script_rows)} pret scripts/ names "
+          f"(provenance side table; no status)")
+    print(f"aux_labels: {len(aux_rows)} pret {'/, '.join(AUX_PRET_DIRS)}/ names "
           f"(provenance side table; no status)")
     print(f"port_defs: {len(port_defs)}  calls: "
           f"{len(pret_calls)} pret + {len(port_calls)} port  "

@@ -1,8 +1,10 @@
 {
   "lint": {
+    "aux_misplaced": 14,
     "registry_approval": 0
   },
   "strict": {
+    "aux_misplaced": 14,
     "hand_encoded_text": 3,
     "local_shadow": 21,
     "registry_approval": 0

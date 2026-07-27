@@ -127,7 +127,7 @@ Design notes, non-vacuity proofs and traps: stigmergy memory
    divergence, the mask's why-string must carry that finding id so retiring the
    finding greps to the masks that must be deleted.
 
-## Map scripts (`src/scripts/`) — provenance, not call graph
+## Unmodeled pret dirs — provenance, not call graph
 
 `update_label_db` models pret `home/` + `engine/` only, so a name the port takes
 from pret `scripts/*.asm` is `port_only`: `faithdiff` answers "not a pret label"
@@ -144,6 +144,27 @@ and the mirror rule cannot fire. What *does* cover them:
 - Exempt: `*_stubs.asm` (the stub convention owns stand-in placement), and
   labels defined inside a generated `assets/*.inc` (the scan walks `.asm` only —
   placement of generated Tier-1 data is governed by its carrier file).
+
+The same blind spot covered `audio/`, `data/`, `gfx/` and `ram/` until 2026-07-27.
+It is now closed the same way:
+
+- **`aux_labels`** — names-only side table for those four dirs (5.7k names, no
+  status, no headline-count impact), built by `update_label_db.scan_pret_aux`.
+- **`aux_misplaced`** — the placement rule, and it is deliberately per-dir
+  because the port's conventions differ:
+  - `audio/` mirrors pret's path exactly (`dos_port/src/audio/<file>.asm`) —
+    measured 21/21 conformant, so this ratchets a convention that already holds.
+  - `data/` is grouped by SUBSYSTEM in the port (`battle_data.asm`,
+    `item_data.asm`, `pokemon_data.asm`), not by pret path, so a path mirror
+    would be wrong. The checkable invariant is that the label lives in the data
+    layer at all — under `dos_port/src/data/` or a generated `assets/*.inc`. A
+    pret data table buried in `engine/` or `home/` code is hand-copied Tier-1
+    data that `make assets` cannot protect. **Baseline 14** (pre-existing debt:
+    `LedgeTiles`, `TilePairCollisions{Land,Water}`, `CardKeyTable1-3`,
+    `BikeRidingTilesets`, `MapHeaderPointers`, `MapSongBanks`, …) — ratchet it
+    down, never up.
+  - `gfx/` and `ram/` are exempt: `gfx/` is generated assets and `ram/` names are
+    WRAM addresses owned by `gb_memmap.inc`, so neither has a port mirror.
 
 **`route3_sight` is the worked example, and it earned its keep on run one:** it
 caught `EngageMapTrainer` reading a WRAM address the port never writes (the
