@@ -92,7 +92,7 @@ TH_SIZE        equ 22
 ; ----------------------------------------------------------------------------
 extern FlagAction               ; src/engine/flag_action.asm (persistent flag array)
 extern CallFunctionInTable      ; src/home/array2.asm
-extern CopyData                 ; src/home/copy_data.asm
+extern CopyData                 ; src/home/copy.asm
 extern PrintText                ; src/home/window.asm
 extern PlaySound                ; src/home/audio.asm (real gateway)
 extern StopAllMusic             ; src/home/audio.asm (real gateway)

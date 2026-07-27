@@ -54,7 +54,7 @@ global GetPartyMonSpriteID
 global SetMonPartySpriteOrigin
 global CommitMonPartySpriteOAM
 
-extern CopyData                 ; home/copy_data.asm — ESI=src, EDX=dest, BX=count
+extern CopyData                 ; home/copy.asm — ESI=src, EDX=dest, BX=count
 extern CopyVideoData            ; home/copy2.asm — ESI=dest VRAM, EDX=src flat, BL=tiles
 extern DelayFrame               ; video/frame.asm
 extern DisableLCD               ; home/lcd.asm

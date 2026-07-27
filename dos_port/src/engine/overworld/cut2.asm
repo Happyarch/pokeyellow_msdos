@@ -72,7 +72,7 @@ extern DelayFrame                  ; video/frame.asm
 extern UpdateCGBPal_OBP1           ; home/cgb_palettes.asm
 extern AdjustOAMBlockXPos2         ; UNPORTED (pret engine/battle/animations.asm) — ESI=GB OAM off, BL=count
 extern AdjustOAMBlockYPos2         ; UNPORTED (pret engine/battle/animations.asm) — ESI=GB OAM off, BL=count
-extern CopyData                    ; home/copy_data.asm (WRAM->WRAM)
+extern CopyData                    ; home/copy.asm (WRAM->WRAM)
 
 section .text
 

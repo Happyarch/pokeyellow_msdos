@@ -38,7 +38,7 @@ extern HandleMenuInput               ; home/window.asm — menu loop; returns ch
 extern text_row_stride               ; home/text.asm — W_TILEMAP row stride for the box/string helpers
 extern menu_item_step                ; home/window.asm — menu cursor vertical spacing
 extern ClearScreenArea               ; home/copy2.asm — clear BL x BH tiles of W_TILEMAP at ESI
-extern CopyData                      ; home/copy_data.asm — ESI/EDX EBP-relative, BX count
+extern CopyData                      ; home/copy.asm — ESI/EDX EBP-relative, BX count
 extern Delay3                        ; src/home/palettes.asm — wait 3 frames
 extern DelayFrames                   ; video/frame.asm — wait BL frames
 extern DisplayNamingScreen           ; engine/menus/naming_screen.asm — ESI = name dest (pret HL)
@@ -87,7 +87,7 @@ section .text
 ; '@'-terminated list counting entries until the running index matches, then
 ; `jp CopyData` copies NAME_BUFFER_LENGTH bytes from that name to wNameBuffer.
 ;
-; DEVIATION{class=data-model; pret=engine/movie/oak_speech/oak_speech2.asm:GetDefaultName; behavior=the tail jp CopyData is realised as an inline flat->GB rep movsb instead of a call; evidence=the name list is flat program-image data (assets/default_names.inc) not GB WRAM, and the port's CopyData adds EBP to BOTH source and dest (copy_data.asm), so a flat source pointer cannot go through it -- PrepareOakSpeech takes the same flat rep movsb path for the same reason; lifetime=permanent flat-memory model}
+; DEVIATION{class=data-model; pret=engine/movie/oak_speech/oak_speech2.asm:GetDefaultName; behavior=the tail jp CopyData is realised as an inline flat->GB rep movsb instead of a call; evidence=the name list is flat program-image data (assets/default_names.inc) not GB WRAM, and the port's CopyData adds EBP to BOTH source and dest (copy.asm), so a flat source pointer cannot go through it -- PrepareOakSpeech takes the same flat rep movsb path for the same reason; lifetime=permanent flat-memory model}
 ;
 ; In:  AL = name index (0-based), ESI = FLAT ptr to the '@'-terminated name list.
 ; Out: the chosen name (NAME_BUFFER_LENGTH bytes) copied to [EBP + wNameBuffer].

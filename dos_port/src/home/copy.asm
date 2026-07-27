@@ -1,6 +1,18 @@
-; copy_data.asm — CopyData / FarCopyData translated from SM83 to x86.
+; copy.asm — mirror of pret home/copy.asm.
 ;
-; Source: home/copy.asm:CopyData, FarCopyData (pret/pokeyellow)
+; Holds two of that file's four pret labels: CopyData and FarCopyData. The other
+; two, CopyVideoDataAlternate and CopyVideoDataDoubleAlternate, are unported
+; (status `missing`) — the port's VRAM-write primitive is CopyVideoData, a
+; home/vcopy.asm label in src/home/vcopy.asm, and nothing calls the Alternate pair.
+;
+; NOT in pret order, and deliberately left that way: pret puts FarCopyData first
+; (home/copy.asm:1) and CopyData second (:13), while the port has them the other
+; way round with FarCopyData ending in `jmp CopyData`. Swapping them would turn
+; that jump into a fallthrough, which is a shape change, not a relocation — so it
+; is a separate piece of work, recorded here rather than smuggled into this move.
+;
+; Was src/home/copy_data.asm until the mirror repair; CopyDataUntil, which that
+; file also carried, is a home/move_mon.asm label and moved to src/home/move_mon.asm.
 ;
 ; CopyData    — copy BC bytes from HL to DE.
 ; FarCopyData — copy BC bytes from a:HL to DE (A = source ROM bank).
@@ -17,7 +29,7 @@
 ; Register map: HL→ESI (src, EBP-relative), DE→EDX (dst, EBP-relative),
 ; BC→BX (count), A→AL (bank for FarCopyData).
 ;
-; Build: nasm -f coff -I include/ -o copy_data.o copy_data.asm
+; Build: nasm -f coff -I include/ -o copy.o copy.asm
 
 bits 32
 
@@ -26,7 +38,6 @@ bits 32
 
 global CopyData
 global FarCopyData
-global CopyDataUntil
 
 section .text
 
@@ -60,24 +71,3 @@ CopyData:
 ; ---------------------------------------------------------------------------
 FarCopyData:
     jmp CopyData
-
-; ---------------------------------------------------------------------------
-; CopyDataUntil — copy [HL, BC) to [DE, ...). Source runs from HL up to (but
-; not including) BC; destination starts at DE.  Source: home/move_mon.asm.
-;
-; In:  ESI = source GB offset (HL), EDX = dest GB offset (DE),
-;      BX  = end-of-source GB offset, exclusive (BC).
-; Out: ESI = BX, EDX = DE + (BX - HL). AL clobbered; EBX preserved.
-;
-; The SM83 does a 16-bit equality via two 8-bit compares (cp b / cp c); the
-; whole-register `cmp si, bx` is the faithful equivalent. All these pointers
-; are WRAM ($C000-$DFFF), so the low-16-bit compare matches GB semantics.
-; ---------------------------------------------------------------------------
-CopyDataUntil:
-    mov al, [ebp + esi]
-    inc esi
-    mov [ebp + edx], al
-    inc edx
-    cmp si, bx
-    jne CopyDataUntil
-    ret

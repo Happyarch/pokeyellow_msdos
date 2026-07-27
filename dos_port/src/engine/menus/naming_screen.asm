@@ -69,7 +69,7 @@ extern LoadScreenTilesFromBuffer1      ; src/home/tilemap.asm
 extern GetPredefRegisters              ; home/predef.asm — ESI/EDX/EBX = hl/de/bc
 extern GetMonName                      ; home/names.asm — AL=wNamedObjectIndex -> wNameBuffer
 extern ClearScreenArea                 ; home/copy2.asm — ESI=dest, BH=rows, BL=cols
-extern CopyData                        ; home/copy_data.asm — ESI=src,EDX=dest,BX=count
+extern CopyData                        ; home/copy.asm — ESI=src,EDX=dest,BX=count
 extern PrintText                   ; src/home/window.asm — the one printer; ESI = FLAT TX stream ptr
 extern InitYesNoTextBoxParameters      ; home/yes_no.asm — pret's own: the box's hlcoord/lb bc
 extern DisplayTextBoxID                ; home/textbox.asm — pret's own box dispatcher

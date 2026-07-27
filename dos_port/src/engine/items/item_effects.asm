@@ -764,7 +764,7 @@ extern GetMonHeader         ; home/pokemon.asm — [wCurSpecies] → wMonHeader
 extern LoadMonData          ; engine/pokemon/load_mon_data.asm
 extern CalcStats            ; home/move_mon.asm
 extern AddNTimes            ; home/array.asm — ESI += AL*BX
-extern CopyData             ; home/copy_data.asm — ESI → EDX, BX bytes
+extern CopyData             ; home/copy.asm — ESI → EDX, BX bytes
 extern Divide               ; home/math.asm — BH = dividend bytes
 extern FlagAction           ; engine/flag_action.asm — ESI=array, CL=index, BH=action
 extern PrintStatsBox        ; engine/battle/battle_menu.asm — DH = box type

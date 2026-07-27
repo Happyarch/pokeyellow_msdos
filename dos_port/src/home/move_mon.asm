@@ -1,6 +1,11 @@
-; move_mon.asm — CalcStats / CalcStat (Pokémon data/stats plan).
+; move_mon.asm — mirror of pret home/move_mon.asm.
 ;
-; Source: home/move_mon.asm:CalcStats, CalcStat (pret/pokeyellow).
+; Holds four of that file's seven pret labels, in pret order:
+;   CopyDataUntil, AddPartyMon, CalcStats, CalcStat
+; CopyDataUntil arrived from src/home/copy_data.asm in the mirror repair; the file
+; was measured already pret-ordered, so it was prepended and the whole file still is.
+; The other three — RemovePokemon, AddEnemyMonToPlayerParty and MoveMon — are
+; unported (status `missing`, no port definition anywhere).
 ;
 ; Stat formula (per stat): (((Base + IV) * 2 + ceil(sqrt(statExp))/4) * Level)/100
 ;   then + Level + 10 for HP, or + 5 for the others; capped at MAX_STAT_VALUE (999).
@@ -24,11 +29,33 @@ global CalcStats
 global CalcStat
 global AddPartyMon
 extern _AddPartyMon
+global CopyDataUntil
 
 MAX_STAT_HIGH   equ (MAX_STAT_VALUE >> 8) & 0xFF    ; HIGH(999) = 0x03
 MAX_STAT_LOW    equ MAX_STAT_VALUE & 0xFF            ; LOW(999)  = 0xE7
 
 section .text
+
+; ---------------------------------------------------------------------------
+; CopyDataUntil — copy [HL, BC) to [DE, ...). Source runs from HL up to (but
+; not including) BC; destination starts at DE.  Source: home/move_mon.asm.
+;
+; In:  ESI = source GB offset (HL), EDX = dest GB offset (DE),
+;      BX  = end-of-source GB offset, exclusive (BC).
+; Out: ESI = BX, EDX = DE + (BX - HL). AL clobbered; EBX preserved.
+;
+; The SM83 does a 16-bit equality via two 8-bit compares (cp b / cp c); the
+; whole-register `cmp si, bx` is the faithful equivalent. All these pointers
+; are WRAM ($C000-$DFFF), so the low-16-bit compare matches GB semantics.
+; ---------------------------------------------------------------------------
+CopyDataUntil:
+    mov al, [ebp + esi]
+    inc esi
+    mov [ebp + edx], al
+    inc edx
+    cmp si, bx
+    jne CopyDataUntil
+    ret
 
 ; ---------------------------------------------------------------------------
 ; AddPartyMon — home wrapper around _AddPartyMon (pret home/move_mon.asm).

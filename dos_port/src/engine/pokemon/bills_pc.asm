@@ -4,8 +4,15 @@
 ; Source: engine/pokemon/bills_pc.asm (pret/pokeyellow).
 ; PC menu (UI) is deferred; only the data-manipulation backend is translated.
 ;
-; KnowsHMMove (+ HMMoveArray) has been split out to knows_hm_move.asm so it links
-; independently of this file's still-blocked _MoveMon draft closure.
+; Pret labels held here: KnowsHMMove and HMMoveArray. They lived in a split-out
+; src/engine/pokemon/knows_hm_move.asm — created so they could link while this
+; file's _MoveMon closure was blocked — and came back in the s16 mirror repair;
+; that file is deleted. The blocker was measured gone (add_mon.asm is linked and
+; exports _MoveMon), so this file is now linked rather than check-only.
+; Everything else in pret engine/pokemon/bills_pc.asm — DisplayPCMainMenu, BillsPC_,
+; the cable-club entry points and the whole text block — is unported or a stub;
+; BillsPCDepositLogic / BillsPCWithdrawLogic / BillsPCReleaseLogic below are
+; PORT-ONLY names for the deposit/withdraw/release backend, not pret labels.
 ;
 ; Register map: A=AL, B=BH, C=BL (BC=EBX), D=DH, E=DL (DE=EDX), HL=ESI.
 ; GB memory at [EBP+addr]; flat program-image tables read via [label] or [esi]
@@ -26,9 +33,11 @@ section .text
 global BillsPCDepositLogic
 global BillsPCWithdrawLogic
 global BillsPCReleaseLogic
+global KnowsHMMove
 
 extern _MoveMon
 extern _RemovePokemon
+extern IsInArray                ; src/home/array2.asm (shared home global)
 
 ; wMoveMonType/wRemoveMonFromBox values (constants/pokemon_data_constants.asm).
 ; Both live at the same WRAM address (wMoveMonType = wRemoveMonFromBox = $CF94).
@@ -130,3 +139,64 @@ BillsPCReleaseLogic:
 .fail:
     stc
     ret
+
+
+; ---------------------------------------------------------------------------
+; KnowsHMMove
+; Returns whether the party mon at index [wWhichPokemon] knows any HM move.
+; Sets C flag if yes; clears C flag if no.
+; Faithful to pret, including the dead wBoxMon1Moves branch below .next.
+;
+; Inputs (WRAM): wWhichPokemon = 0-based party slot index.
+; Clobbers: EAX, ECX, EDX, ESI, EBX.
+; ---------------------------------------------------------------------------
+KnowsHMMove:
+    mov esi, W_PARTY_MON1_MOVES     ; ld hl, wPartyMon1Moves ($D172)
+    mov ecx, PARTYMON_STRUCT_LENGTH  ; ld bc, PARTYMON_STRUCT_LENGTH (44)
+    jmp .next
+    ; --- unreachable — pret-faithful dead code (mirrors the original binary) ---
+    mov esi, W_BOX_MON1_MOVES       ; ld hl, wBoxMon1Moves ($DA9D)
+    mov ecx, BOXMON_STRUCT_LENGTH   ; ld bc, BOXMON_STRUCT_LENGTH (33)
+.next:
+    ; AddNTimes equivalent: esi += wWhichPokemon * ecx (stride)
+    movzx eax, byte [ebp + wWhichPokemon]   ; ld a,[wWhichPokemon]
+    imul ecx, eax                            ; ecx = index × stride
+    add esi, ecx                             ; esi → moves[wWhichPokemon]
+
+    mov bh, NUM_MOVES               ; ld b, NUM_MOVES (4)
+.loop:
+    mov al, byte [ebp + esi]        ; ld a,[hli]  — read move id from GB mem
+    inc esi                         ; (hli post-increment)
+
+    push esi                        ; push hl  (save GB pointer)
+    push ebx                        ; push bc  (save B=move-counter, C=scratch)
+
+    lea esi, [HMMoveArray]          ; ld hl, HMMoveArray  — flat program address
+    mov edx, 1                      ; ld de, 1  (stride = 1 byte)
+    call IsInArray                  ; C set if AL found in HMMoveArray
+
+    pop ebx                         ; pop bc
+    pop esi                         ; pop hl
+
+    jc .done                        ; ret c → jump to ret-with-carry
+
+    dec bh                          ; dec b
+    jnz .loop
+
+    clc                             ; and a  (clear carry = not found)
+.done:
+    ret
+
+; ---------------------------------------------------------------------------
+section .data
+
+; HM move list — searched by KnowsHMMove via IsInArray.
+; Matches data/moves/hm_moves.asm (pret); terminated by $FF (-1).
+; Move IDs from gb_constants.inc: CUT=$0F FLY=$13 SURF=$39 STRENGTH=$46 FLASH=$94
+HMMoveArray:
+    db CUT
+    db FLY
+    db SURF
+    db STRENGTH
+    db FLASH
+    db -1       ; terminator ($FF / -1); matches pret's "db -1"

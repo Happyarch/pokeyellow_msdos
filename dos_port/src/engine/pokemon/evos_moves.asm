@@ -48,7 +48,7 @@ global GetMonLearnset_Evo       ; local corrected version (×4 dd offset + 32-bi
 global GetMonLearnset_Evo_BlobStart
 
 ; From engine/movie/evolution.asm (the animation half, still in its own file):
-extern EvolveMon                ; src/engine/pokemon/evolution.asm — evo animation, CF = cancelled
+extern EvolveMon                ; src/engine/movie/evolution.asm — evo animation, CF = cancelled
 
 ; From pokemon_data.asm:
 extern EvosMovesPointerTable

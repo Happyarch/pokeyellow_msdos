@@ -216,7 +216,7 @@ BOOT_SRCS := \
 HOME_SRCS := \
     src/home/home_stubs.asm \
     src/home/serial_stubs.asm \
-    src/home/copy_data.asm \
+    src/home/copy.asm \
     src/home/overworld.asm \
     src/home/pikachu.asm \
     src/home/bankswitch2.asm \
@@ -410,6 +410,7 @@ POKEMON_SRCS := \
     src/home/move_mon.asm \
     src/engine/pokemon/experience.asm \
     src/engine/pokemon/add_mon.asm \
+    src/engine/pokemon/bills_pc.asm \
     src/engine/pokemon/load_mon_data.asm \
     src/engine/pokemon/set_types.asm \
     src/engine/pokemon/remove_mon.asm \
@@ -417,9 +418,8 @@ POKEMON_SRCS := \
     src/engine/pokemon/status_ailments.asm \
     src/engine/gfx/hp_bar.asm \
     src/engine/pokemon/status_screen.asm \
-    src/engine/pokemon/knows_hm_move.asm \
     src/engine/pikachu/pikachu_status.asm \
-    src/engine/pokemon/evolution.asm \
+    src/engine/movie/evolution.asm \
     src/engine/movie/evolution_stubs.asm \
     src/engine/pokemon/learn_move.asm
 
@@ -1491,13 +1491,18 @@ uniq = $(if $1,$(firstword $1) $(call uniq,$(filter-out $(firstword $1),$1)))
 LINK_OBJS := $(call uniq,$(LINK_SRCS:.asm=.o))
 
 # Pokémon backend that assembles + is native-harness-validated but is NOT linked
-# yet. bills_pc needs a link-ready _MoveMon (the draft in add_mon.asm has a
-# duplicate AddPartyMon_WriteMovePP symbol + extern-constant errors and an
-# unresolved dependency closure).
+# yet. EMPTY as of the s16 mirror repair: bills_pc.asm was the last member, and
+# its stated blocker had gone stale. This comment used to say it "needs a
+# link-ready _MoveMon (the draft in add_mon.asm has a duplicate
+# AddPartyMon_WriteMovePP symbol + extern-constant errors and an unresolved
+# dependency closure)" — measured false: add_mon.asm has been linked since s14
+# chunk 10 moved AddPartyMon_WriteMovePP into it, _MoveMon is global there, and
+# bills_pc.asm links with exit 0. It was promoted to POKEMON_SRCS so that merging
+# pret's KnowsHMMove + HMMoveArray back into their mirror did not quietly drop
+# them out of the binary.
 # (evolution.asm + pikachu_status.asm are now LINKED — moved to POKEMON_SRCS,
 #  current_plan_pokemon_behavior Stage 2.)
-POKEMON_CHECK_SRCS := \
-    src/engine/pokemon/bills_pc.asm
+POKEMON_CHECK_SRCS :=
 
 # Item routines that assemble-validate but aren't linked yet — either unwired
 # (nothing calls them) or dependent on not-yet-ported deps (town-map palette/video

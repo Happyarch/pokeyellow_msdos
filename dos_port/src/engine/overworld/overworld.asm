@@ -42,7 +42,7 @@ bits 32
 %include "assets/event_constants.inc"   ; EVENT_* bit indices (EVENT_2A7, OW-A.6)
 %include "events.inc"                   ; CheckEvent/SetEvent/ResetEvent over W_EVENT_FLAGS
 
-extern CopyData                           ; src/home/copy_data.asm
+extern CopyData                           ; src/home/copy.asm
 extern DelayFrame                         ; src/video/frame.asm
 extern g_player_marker_on                 ; src/ppu/ppu.asm
 ; EnterMap reset-ladder leaves (OW-A.4): ClearVariablesOnEnterMap (clear_variables.asm,

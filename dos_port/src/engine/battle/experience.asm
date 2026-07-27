@@ -18,7 +18,7 @@
 ;      GetPredefRegisters.
 ;   7. Overwrite-max-exp path: `dec esi` left ESI at party_mon+0x0F (middle byte of
 ;      EXP); should be party_mon+0x0E (high byte). Fixed: `sub esi, 2`.
-;   8. CopyData called with EDI as destination, but copy_data.asm uses EDX (dx).
+;   8. CopyData called with EDI as destination, but copy.asm uses EDX (dx).
 ;      Both CopyData calls (wBattleMonLevel, wPlayerMonUnmodifiedLevel) fixed.
 ;   9. `call BattleCore` inside CallBattleCore: BattleCore not defined or extern'd.
 ;      In the flat model, CallBattleCore dispatches via ESI (call esi); deferred.
@@ -448,7 +448,7 @@ GainExperience:
     push esi                        ; PUSH H: save MON_LEVEL pointer
     mov edx, wBattleMonLevel
     mov bx, 1 + NUM_STATS * 2      ; 11 bytes
-    call CopyData                   ; FIX: was EDI, must be EDX for copy_data.asm
+    call CopyData                   ; FIX: was EDI, must be EDX for copy.asm
     pop esi                         ; POP H: ESI = party_mon + MON_LEVEL
 
     ; If transformed, skip updating unmodified stats.
@@ -459,7 +459,7 @@ GainExperience:
     ; Update pre-stage-mod stats as well.
     mov edx, wPlayerMonUnmodifiedLevel
     mov bx, 1 + NUM_STATS * 2
-    call CopyData                   ; FIX: was EDI, must be EDX for copy_data.asm
+    call CopyData                   ; FIX: was EDI, must be EDX for copy.asm
 
 .recalcStatChanges:
     ; Recalculate modified stats for the battle mon (deferred — Wave 2 stubs).

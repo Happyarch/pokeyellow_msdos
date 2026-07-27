@@ -57,7 +57,7 @@ global PrintLearnedMove
 extern SaveScreenTilesToBuffer1     ; src/home/tilemap.asm
 extern LoadScreenTilesFromBuffer1   ; src/home/tilemap.asm
 extern GetPartyMonName              ; src/home/pokemon.asm
-extern CopyData                     ; src/home/copy_data.asm
+extern CopyData                     ; src/home/copy.asm
 extern AddNTimes                    ; src/home/array.asm
 extern PrintText                    ; src/home/window.asm
 extern Moves                        ; src/data/pokemon_data.asm — flat move-record table

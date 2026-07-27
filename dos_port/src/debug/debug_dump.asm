@@ -140,7 +140,7 @@ extern DelayFrame
 ; --- Stage 2 golden gate: the REAL loaders replace the synthetic seed ---
 extern LoadEnemyMonData               ; engine/battle/core.asm — real wild loader
 extern CalcStats                 ; home/move_mon.asm — stat recompute from the spec DVs
-extern CopyData                  ; home/copy_data.asm
+extern CopyData                  ; home/copy.asm
 extern LoadFrontSpriteByMonIndex ; home/pics.asm — real enemy front pic
 extern LoadBattleMonFromParty         ; engine/battle/core.asm — real send-out loader
 extern FlagAction                ; flag_action.asm

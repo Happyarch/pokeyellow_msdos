@@ -467,7 +467,7 @@ wTempMoveNameBuffer    equ 0xD035
 ; The TM/HM number under TMToMove / CanLearnTM. Unions with the D11D scratch cluster
 ; (wPokedexNum / wMaxPP / wTempByteValue), exactly as pret does.
 wTempTMHM              equ 0xD11D
-; evolution (src/engine/pokemon/evolution.asm)
+; evolution (src/engine/movie/evolution.asm)
 wCanEvolveFlags        equ 0xCCD3
 wForceEvolution        equ 0xCCD4
 wEvoOldSpecies         equ 0xCEE9   ; (union wHPBarMaxHP scratch)

@@ -2,7 +2,7 @@
 ;
 ; The evolution SEQUENCE (EvolveMon's control-flow spine: cancel check, species
 ; swap, stat recompute, learnset check) is faithful and live in
-; src/engine/pokemon/evolution.asm. The visual morph layer of pret's
+; src/engine/movie/evolution.asm. The visual morph layer of pret's
 ; engine/movie/evolution.asm is deferred; its entry point stubs here so the
 ; sequence still CALLS it where pret does (2026-07-23 allowlist audit: a
 ; ret-only stand-in belongs in a *_stubs.asm under a STUB{} annotation, not in a

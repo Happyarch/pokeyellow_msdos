@@ -13,7 +13,7 @@ extern AddItemToInventory
 extern GetMonHeader                ; home/pokemon.asm — base stats -> wMonHeader
 extern CalcStats                   ; home/move_mon.asm — recompute the 5 stats
 extern GetMonName                  ; home/names.asm — species default -> wNameBuffer
-extern CopyData                    ; home/copy_data.asm
+extern CopyData                    ; home/copy.asm
 
 ; Party-mon struct offsets (mirror gb_constants.inc). gb_constants.inc is NOT
 ; %included here: it defines CUT/FLY/SURF/STRENGTH via `equ`, which collides

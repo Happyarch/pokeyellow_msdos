@@ -45,7 +45,7 @@ BATTLE_SRC = [
     "engine/battle/end_of_battle.asm",
     "engine/battle/print_type.asm",
     # Evolution message wrappers (IsEvolving/Evolved/Into/StoppedEvolving) —
-    # consumed by src/engine/pokemon/evolution.asm (current_plan_pokemon_behavior).
+    # consumed by src/engine/movie/evolution.asm (current_plan_pokemon_behavior).
     "engine/pokemon/evos_moves.asm",
     # LearnMove wrappers (TryingToLearn/AbandonLearning/DidNotLearn/LearnedMove1) —
     # consumed by src/engine/pokemon/learn_move.asm (current_plan_pokemon_behavior

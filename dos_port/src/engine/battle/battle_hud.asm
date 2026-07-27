@@ -105,7 +105,7 @@ extern Delay3                          ; src/home/palettes.asm — wait 3 frames
 extern g_tilecache_dirty                ; ppu.asm — cloned VRAM patterns need re-decode
 extern GetHealthBarColor                ; src/home/palettes.asm — pixel length -> green/yellow/red id
 extern SetPal_Battle                    ; palettes.asm — consume both live HP-color ids
-extern CopyData                         ; home/copy_data.asm — wLoadedMon staging
+extern CopyData                         ; home/copy.asm — wLoadedMon staging
 
 ; DrawBattleHUDs draws both HUDs; the battle intro draws only the enemy HUD (the
 ; player side shows party-status pokéballs until the battle proper), so the two

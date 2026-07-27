@@ -193,7 +193,7 @@ extern DelayFrame                      ; frame.asm
 extern text_row_stride                 ; text.asm — W_TILEMAP row stride
 
 ; --- PrintMenuItem's helpers (pret core.asm:3010) ---
-extern CopyData                        ; home/copy_data.asm — ESI→EDX, BX bytes
+extern CopyData                        ; home/copy.asm — ESI→EDX, BX bytes
 extern PrintNumber                     ; home/print_num.asm — ESI dest, EDX src, BH flags/bytes, BL digits
 extern GetMaxPP                        ; engine/items/get_max_pp.asm — → wMaxPP (PP Ups incl.)
 extern PrintMoveType                   ; engine/battle/print_type.asm — pret predef PrintMoveType
@@ -5025,7 +5025,7 @@ ReloadMoveData:
     ;
     ; DIVERGENCE (forced by the above, not itself allowlisted — reported per ticket):
     ; pret's next step is `call FarCopyData` (copy MOVE_LENGTH bytes a:HL -> DE). This
-    ; port's FarCopyData/CopyData (src/home/copy_data.asm) both do `lea esi, [ebp+esi]`
+    ; port's FarCopyData/CopyData (src/home/copy.asm) both do `lea esi, [ebp+esi]`
     ; on the SOURCE: they assume the source is a GB-space offset relative to EBP. `Moves`
     ; is a FLAT program-image label (data/pokemon_data.asm / assets/moves.inc), not a GB
     ; WRAM offset — the identical situation already documented and solved in
@@ -5790,7 +5790,7 @@ AnyPartyAlive:
 ; Faithful chunked copy, mirroring LoadBattleMonFromParty's structure exactly
 ; (see dos_port/scratch/faint_leaves.asm for the player-side twin and its
 ; header note on the CopyData/AddNTimes/SkipFixedLengthTextEntries register
-; contracts, verified there against dos_port/src/home/copy_data.asm and
+; contracts, verified there against dos_port/src/home/copy.asm and
 ; dos_port/src/home/array.asm — reused unchanged here).
 ;
 ; GEN-2 FORWARD-COMPAT (CLAUDE.md, load-bearing): the enemy party struct's

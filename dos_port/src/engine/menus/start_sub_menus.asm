@@ -94,7 +94,7 @@ extern g_bg_whiteout                 ; ppu/ppu.asm
 extern g_obj_over_window             ; ppu/ppu.asm — OBJ-over-window z-order (party icons)
 extern AddNTimes                     ; home/array.asm — ESI += BX × AL
 extern SkipFixedLengthTextEntries    ; home/array.asm — ESI += NAME_LENGTH × AL
-extern CopyData                      ; home/copy_data.asm — ESI→EDX, BX bytes
+extern CopyData                      ; home/copy.asm — ESI→EDX, BX bytes
 extern DisplayListMenuID             ; home/list_menu.asm
 extern DisplayChooseQuantityMenu
 extern list_mirror                   ; home/list_menu.asm — refresh the list window

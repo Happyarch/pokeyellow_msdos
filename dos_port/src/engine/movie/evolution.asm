@@ -1,8 +1,15 @@
-; dos_port/src/engine/pokemon/evolution.asm
+; dos_port/src/engine/movie/evolution.asm
 ; ============================================================
-; The evolution ANIMATION half — pret engine/movie/evolution.asm.
+; Mirror of pret engine/movie/evolution.asm — the evolution ANIMATION half.
 ;
-; Pret refs: engine/movie/evolution.asm (EvolveMon, Evolution_CheckForCancel).
+; Holds two of that file's pret labels, in pret order:
+;   EvolveMon, Evolution_CheckForCancel
+; The rest of pret engine/movie/evolution.asm is the visual morph layer, which is
+; unported; its entry point Evolution_BackAndForthAnim is a ret-stub in the
+; sibling src/engine/movie/evolution_stubs.asm, and Evolution_ChangeMonPic and the
+; remaining pic/cry routines have no port counterpart at all.
+;
+; Was src/engine/pokemon/evolution.asm until the mirror repair.
 ;
 ; The engine/pokemon/evos_moves.asm labels this file used to carry —
 ; TryEvolvingMon, EvolutionAfterBattle, RenameEvolvedMon, CancelledEvolution,
@@ -21,8 +28,8 @@
 ;
 ; Build (from repo root):
 ;   nasm -f coff -I dos_port/include/ -I dos_port/ \
-;       -o dos_port/src/engine/pokemon/evolution.o \
-;       dos_port/src/engine/pokemon/evolution.asm
+;       -o dos_port/src/engine/movie/evolution.o \
+;       dos_port/src/engine/movie/evolution.asm
 
 bits 32
 

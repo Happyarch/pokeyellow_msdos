@@ -227,7 +227,7 @@ extern LoadPlayerSpriteGraphics   ; engine/overworld/overworld.asm
 extern PlaySound                  ; home/audio.asm (LIVE)
 extern PlayDefaultMusic           ; home/audio.asm (LIVE)
 extern StopMusic                  ; UNPORTED (pret home/overworld.asm) — fade+StopAllMusic+StopAllSounds
-extern CopyData                   ; home/copy_data.asm (WRAM->WRAM)
+extern CopyData                   ; home/copy.asm (WRAM->WRAM)
 extern CopyVideoData              ; home/copy2.asm (ESI=VRAM dest, EDX=flat src, BL=count)
 extern LoadFontTilePatterns       ; gfx/load_font.asm
 extern PrintText                  ; engine/battle/move_effect_helpers.asm (ESI=flat text stream)

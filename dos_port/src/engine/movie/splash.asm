@@ -26,7 +26,7 @@ extern MoveAnimationTiles1           ; engine/overworld/cut.asm — battle move-
 extern CheckForUserInterruption      ; src/home/overworld.asm — BL frames, CF on skip
 extern PublishProjectedOAM           ; engine/gfx/sprite_oam.asm — project wShadowOAM to the canvas
 extern PlaySound                     ; home/audio.asm — AL = sound id
-extern CopyData                      ; home/copy_data.asm — ESI/EDX EBP-relative, BX count
+extern CopyData                      ; home/copy.asm — ESI/EDX EBP-relative, BX count
 extern DelayFrame                    ; video/frame.asm — wait one frame
 extern PlayIntro                     ; engine/movie/intro.asm — full boot cinematic (RunSplashTest harness)
 
