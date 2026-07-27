@@ -122,3 +122,7 @@ pokemon_score_descriptions/
 
 # Generated per-song analysis (music_analysis.py output — regenerable)
 dos_port/tools/audio/analysis/
+
+# Session handoff notes — local scratch, never committed (see stigmergy for anything durable)
+handoff.md
+handoff_s*.md
