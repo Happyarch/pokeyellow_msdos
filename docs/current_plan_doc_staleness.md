@@ -87,19 +87,29 @@ backlog file.
   that in the plan/skill docs?
 - ~~**translation_progress.md:** regenerate now, and should regeneration be
   a habit (e.g. part of plan-archival checklists) or on-demand only?~~
-  **ANSWERED 2026-07-27 (s20, at the maintainer's direction): regenerated.** The
-  generator `dos_port/tools/gen_progress_report` is still live and still works.
-  But the regeneration surfaced the real problem, which is not staleness: the file
-  renders the **hand-maintained `work_queue` pipeline**, whose statuses only move
-  when an agent runs `work_queue complete`/`wired`/`verified`, and that bookkeeping
-  was abandoned. Refreshed, it reports 97 `translated` while the label DB measures
-  1673 — it was never going to become accurate by being regenerated more often.
-  So the answer to "should regeneration be a habit" is **no**: a scheduled refresh
-  of a table nobody feeds would only make an unmeasured number look freshly
-  measured. The generator now emits a header telling readers exactly that and
-  redirecting them to `project_state`. **Open follow-up for the maintainer:** decide
-  whether the work_queue pipeline gets retired outright (it duplicates the label DB,
-  which is derived from the tree and cannot rot this way) or is deliberately revived.
+  **ANSWERED 2026-07-27 (s20, at the maintainer's direction): regenerated, then the
+  generator was rewritten onto derived data.** Two steps, because the first exposed
+  the real problem. The file used to render the **hand-maintained `work_queue`
+  pipeline**, whose statuses only move when an agent runs
+  `work_queue complete`/`wired`/`verified` — bookkeeping that was abandoned.
+  Refreshed as-was, it reported 97 `translated` while the label DB measured 1673. It
+  was never going to become accurate by being regenerated more often.
+  `gen_progress_report` now reads `project_state` (the scanned label DB) and the
+  structured `DEVIATION`/`BUG`/`GLITCH`/`STUB` annotations, parsed by importing
+  `lint_pret_labels.parse_annotation` rather than a second regex. So the report is
+  now derived from the tree and cannot rot the old way, and it gained the two things
+  the queue never had: per-pret-subsystem coverage, and the full known-defect and
+  stub ledger with lifetimes.
+  On **"should regeneration be a habit?"** — the premise changed with the rewrite.
+  It is now a cheap, meaningful refresh rather than a re-timestamping of an unfed
+  table, and the report prints the DB scan's commit so a stale run is visible on its
+  face. Still deliberately NOT wired into a Make target or a hook: it is a narrative
+  document, and a report that regenerates itself in every commit becomes diff noise
+  nobody reads. On-demand, and at plan-archival time.
+  **Open follow-up for the maintainer:** the `work_queue` pipeline (and its
+  `functions` / `stubs` / `translation_log` tables) now has no reader. Retire it, or
+  deliberately revive it — but it is currently dead weight that duplicates the label
+  DB, which is derived from the tree and cannot rot this way.
 - **pret_label_allowlist.json:** do the deferred review of the 7 `suppress`
   entries + DRAFT header now, or explicitly re-defer with a dated note?
 - **Sweep mechanics:** one commit per doc or one sweep commit? Which branch?

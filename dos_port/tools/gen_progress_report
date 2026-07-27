@@ -1,18 +1,46 @@
 #!/usr/bin/env python3
 """
-gen_progress_report — Render a human-readable translation-progress snapshot from the
-work queue to docs/translation_progress.md.
+gen_progress_report — Render docs/translation_progress.md from DERIVED state.
 
-Read-only. The DB stays the source of truth; this is the committable markdown view.
-It shells out to `work_queue` (JSON) rather than touching translation.db directly, so
-it never bypasses the audit/migration path (see the work_queue header).
+WHAT CHANGED, AND WHY (2026-07-27)
+----------------------------------
+This tool used to render the `work_queue` pipeline: a hand-maintained table whose
+statuses only advanced when an agent remembered to run `work_queue complete` /
+`wired` / `verified`. That bookkeeping was abandoned, so the report measured who
+filed paperwork, not what is in the tree — it read 97 `translated` while the label
+DB measured 1673. Regenerating it more often would only have made an unmeasured
+number look freshly measured.
+
+It now reads the two sources that are DERIVED FROM THE TREE and therefore cannot
+rot the same way:
+
+  1. `project_state --json` — one record per pret label (provider, status,
+     linkage, linked_callers), refreshed from the source tree and from GNU Make's
+     own answer about which sources link.
+  2. The structured `DEVIATION` / `BUG` / `GLITCH` / `STUB` annotations, parsed
+     with `lint_pret_labels.parse_annotation` — imported, not reimplemented, so
+     this report and the linter can never disagree about what parses.
+
+Nothing here is hand-maintained, so "stale" is now a property of when you last ran
+it, not of whether anyone kept a table up to date.
+
+WHAT THIS REPORT DOES NOT PROVE
+-------------------------------
+`translated` means a non-stub definition exists at the label's mirrored path. It
+is NOT `linked`, `executed`, `golden-matched` or `visually-observed` — those are
+distinct evidence, and the golden suite (`make fidelity-full`), not this file, is
+what speaks to behaviour. Treat the tables as an inventory, not a quality claim.
 
 Usage:
     dos_port/tools/gen_progress_report            # write docs/translation_progress.md
     dos_port/tools/gen_progress_report --stdout   # print to stdout instead
+    dos_port/tools/gen_progress_report --no-scan  # reuse translation.db as-is (fast)
 """
 
 import argparse
+import collections
+import importlib.machinery
+import importlib.util
 import json
 import os
 import subprocess
@@ -21,128 +49,265 @@ from datetime import datetime, timezone
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT  = os.path.normpath(os.path.join(SCRIPT_DIR, '..', '..'))
-WORK_QUEUE = os.path.join(SCRIPT_DIR, 'work_queue')
+SRC_ROOT   = os.path.normpath(os.path.join(SCRIPT_DIR, '..', 'src'))
+PROJECT_STATE = os.path.join(SCRIPT_DIR, 'project_state')
 OUT_PATH   = os.path.join(REPO_ROOT, 'docs', 'translation_progress.md')
 
-# Column order for status tables (only columns with data are shown).
-STATUS_ORDER = ['needs_translation', 'in_progress', 'translated', 'wired',
-                'verified', 'skip', 'complete', 'unverified']
+# Status columns, in the order they tell the story: done -> partial -> not done.
+STATUS_ORDER = ['translated', 'stub', 'relocated', 'missing']
+
+# project_state names the provider, the labels table names the status. Same fact,
+# two vocabularies; translate here so the report speaks the labels table's, which
+# is the one CLAUDE.md and lint_pret_labels use.
+PROVIDER_TYPE_TO_STATUS = {
+    'implementation': 'translated',
+    'stub':           'stub',
+    'relocated':      'relocated',
+    'missing':        'missing',
+}
 
 
-def wq(*args):
-    """Run a work_queue subcommand and parse its JSON output."""
-    res = subprocess.run([sys.executable, WORK_QUEUE, *args],
-                         capture_output=True, text=True)
-    if res.returncode != 0:
-        sys.stderr.write(res.stderr or res.stdout)
-        sys.exit(f'work_queue {" ".join(args)} failed')
-    return json.loads(res.stdout)
+def _load(name, path):
+    """Import one of the extension-less sibling tools as a module."""
+    loader = importlib.machinery.SourceFileLoader(name, path)
+    spec = importlib.util.spec_from_loader(name, loader)
+    mod = importlib.util.module_from_spec(spec)
+    loader.exec_module(mod)
+    return mod
+
+
+# Reuse the linter's own annotation parser rather than writing a second regex.
+# A second regex is how two tools start disagreeing about what "malformed" means.
+_lint = _load('_lint_gpr', os.path.join(SCRIPT_DIR, 'lint_pret_labels'))
+parse_annotation = _lint.parse_annotation
+
+
+def cell(value):
+    """Annotation values may legally contain '|', which would split the row."""
+    return str(value).replace('|', '\\|').replace('\n', ' ')
 
 
 def md_table(headers, rows):
     out = ['| ' + ' | '.join(headers) + ' |',
            '| ' + ' | '.join('---' for _ in headers) + ' |']
     for r in rows:
-        out.append('| ' + ' | '.join(str(c) for c in r) + ' |')
+        out.append('| ' + ' | '.join(cell(c) for c in r) + ' |')
     return '\n'.join(out)
 
 
-def build_report():
-    status   = wq('status')
-    summary  = status['summary']          # {category: {status: n}}
-    allfns   = wq('list')['functions']    # every function row
-    stubs    = wq('stub', 'list')['stubs']
+def pct(done, total):
+    return '—' if not total else f'{100.0 * done / total:.1f}%'
 
-    # Which status columns actually appear, in canonical order.
-    present = [s for s in STATUS_ORDER
-               if any(s in cats for cats in summary.values())]
 
-    lines = ['# Translation Progress', '',
-             '_Generated by `dos_port/tools/gen_progress_report` from '
-             '`translation.db`. Do not hand-edit._', '',
-             f'_Last generated: {datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")}_',
-             '',
-             '> **This is the hand-maintained `work_queue` pipeline, NOT a measure of how '
-             'much of the port is translated.** Its statuses only advance when an agent '
-             'runs `work_queue complete` / `wired` / `verified`, and that bookkeeping '
-             'stopped being kept up long ago — so the counts below track who remembered '
-             'to file a status, not what is in the tree. They also count a different '
-             'universe from the label DB (queue rows vs pret labels), so the two are not '
-             'ratio-comparable; as of 2026-07-27 this table said 97 `translated` while '
-             'the label DB measured 1673. For the real state use '
-             '`dos_port/tools/project_state` (or `update_label_db`), whose '
-             '`translated` / `missing` / `stub` counts are derived from the tree and the '
-             'build. Do not cite the tables below as evidence of coverage.',
-             '']
+def subsystem_of(pret_file):
+    """Group pret paths into reportable areas: home/, engine/<area>/, audio/, ..."""
+    if not pret_file:
+        return '(no pret file)'
+    parts = pret_file.split('/')
+    if len(parts) == 1:
+        return parts[0]
+    if parts[0] == 'engine' and len(parts) > 2:
+        return 'engine/' + parts[1]
+    return parts[0] + '/' + (parts[1] if len(parts) > 2 else '')
 
-    # ── Summary by category ──────────────────────────────────────────────────
+
+def db_stamp():
+    """The scan the label rows came from, so a stale DB is visible in the report."""
+    try:
+        import sqlite3
+        con = sqlite3.connect(os.path.join(SCRIPT_DIR, 'translation.db'))
+        row = con.execute('SELECT git_hash, MAX(scanned_at) FROM labels').fetchone()
+        con.close()
+        return (row[0] or '?', row[1] or '?') if row else ('?', '?')
+    except Exception:
+        return ('?', '?')
+
+
+def load_labels(scan):
+    """Read the derived label state.
+
+    NOTE `--json` alone is not parseable: project_state prints its scan summary to
+    stdout ahead of the JSON, so the document starts with `labels: 3790 ...`. Always
+    pair it with `--no-scan`, and do any refreshing as a separate explicit step —
+    which also keeps the default path read-only. This tool must not mutate the
+    tracked translation.db just because someone asked for a report.
+    """
+    if scan:
+        res = subprocess.run([sys.executable, os.path.join(SCRIPT_DIR, 'update_label_db')],
+                             capture_output=True, text=True)
+        if res.returncode != 0:
+            sys.stderr.write(res.stderr or res.stdout)
+            sys.exit('update_label_db failed')
+    res = subprocess.run([sys.executable, PROJECT_STATE, '--json', '--no-scan'],
+                         capture_output=True, text=True)
+    if res.returncode != 0:
+        sys.stderr.write(res.stderr or res.stdout)
+        sys.exit('project_state --json --no-scan failed')
+    return json.loads(res.stdout)
+
+
+def scan_annotations():
+    """Walk dos_port/src the way lint_pret_labels does, collecting annotations."""
+    found = []
+    for dirpath, dirnames, filenames in os.walk(SRC_ROOT):
+        dirnames.sort()
+        for fn in sorted(filenames):
+            if not fn.endswith('.asm'):
+                continue
+            path = os.path.join(dirpath, fn)
+            rel = os.path.relpath(path, REPO_ROOT).replace('\\', '/')
+            with open(path, encoding='utf-8', errors='replace') as fh:
+                for line_no, text in enumerate(fh, 1):
+                    parsed = parse_annotation(text)
+                    if not parsed:
+                        continue
+                    kind, fields, errors = parsed
+                    found.append({'kind': kind, 'fields': fields,
+                                  'errors': errors, 'file': rel, 'line': line_no})
+    return found
+
+
+def build_report(scan):
+    labels = load_labels(scan)
+    annots = scan_annotations()
+    stamp_hash, stamp_at = db_stamp()
+
+    for l in labels:
+        l['status'] = PROVIDER_TYPE_TO_STATUS.get(l['provider_type'], l['provider_type'])
+
+    by_status = collections.Counter(l['status'] for l in labels)
+    total = len(labels)
+    linked = sum(1 for l in labels if l.get('linkage') == 'linked')
+
+    lines = [
+        '# Translation Progress', '',
+        '_Generated by `dos_port/tools/gen_progress_report`. Do not hand-edit —'
+        ' edit the generator._', '',
+        f'_Last generated: {datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")}_',
+        '',
+        f'_Label rows come from the `translation.db` scan of `{stamp_hash}`'
+        f' at {stamp_at}. If that commit is not near HEAD, the label tables below'
+        ' are older than the tree — re-run with `--scan`. The annotation ledger is'
+        ' always read live from `dos_port/src`._',
+        '',
+        '> **Derived from the tree, not from a status table anyone maintains by hand.**',
+        '> Label rows come from `project_state` over the scanned label DB — a scan of'
+        ' the sources plus GNU Make\'s own answer about which of them link. The'
+        " annotation ledger is parsed with `lint_pret_labels`'s own parser, live from"
+        ' `dos_port/src`. Nothing here advances because someone filed a status, so'
+        ' re-running the tool is all it takes to move the numbers.',
+        '>',
+        '> **What `translated` means here:** a non-stub definition exists at the'
+        " label's mirrored path. It does **not** mean linked, executed,"
+        ' golden-matched or visually observed — those are distinct evidence. The'
+        ' golden suite (`make fidelity-full`) is what speaks to behaviour; this'
+        ' file is an inventory.',
+        '',
+    ]
+
+    # ── Summary ──────────────────────────────────────────────────────────────
     lines += ['## Summary', '']
+    rows = [[s, by_status.get(s, 0), pct(by_status.get(s, 0), total)]
+            for s in STATUS_ORDER if by_status.get(s)]
+    other = {k: v for k, v in by_status.items() if k not in STATUS_ORDER}
+    for k in sorted(other):
+        rows.append([k, other[k], pct(other[k], total)])
+    rows.append(['**total pret labels**', total, '100%'])
+    lines += [md_table(['status', 'labels', 'share'], rows), '']
+    lines += [f'_{linked} of those labels have a provider the current build links._'
+              ' Port-only labels (routines with no pret counterpart — HAL boundaries,'
+              ' debug harnesses) are deliberately excluded: they are not pret coverage,'
+              ' so counting them would inflate every number here.', '']
+
+    # ── Per-subsystem ────────────────────────────────────────────────────────
+    lines += ['## By pret subsystem', '',
+              '_Sorted by how much is left. `%` is translated / total._', '',
+              '> **Blind spot, stated so nobody reads it as a zero:** the label scanner'
+              ' models pret `home/` and `engine/` only. pret `audio/`, `data/` and'
+              ' `scripts/` have no rows here at all — their absence from this table is'
+              ' the scanner\'s scope, not evidence that they are done or that they are'
+              ' empty. (`scripts/` labels do live in the DB\'s separate'
+              ' `script_labels` provenance table, which carries no status.)', '']
+    per = collections.defaultdict(collections.Counter)
+    for l in labels:
+        per[subsystem_of(l.get('pret_file'))][l['status']] += 1
+    present = [s for s in STATUS_ORDER if any(c.get(s) for c in per.values())]
     rows = []
-    for cat in sorted(summary):
-        counts = summary[cat]
-        total = sum(counts.values())
-        rows.append([cat] + [counts.get(s, 0) for s in present] + [total])
-    # totals row
-    tot = status['totals']
-    rows.append(['**all**'] + [sum(summary[c].get(s, 0) for c in summary) for s in present]
-                + [sum(tot.values())])
-    lines += [md_table(['category'] + present + ['total'], rows), '']
+    for sub in sorted(per, key=lambda s: (-per[s].get('missing', 0), s)):
+        c = per[sub]
+        tot = sum(c.values())
+        rows.append([sub] + [c.get(s, 0) for s in present] + [tot,
+                    pct(c.get('translated', 0), tot)])
+    lines += [md_table(['subsystem'] + present + ['total', '%'], rows), '']
 
-    # ── Per-map script translation ───────────────────────────────────────────
-    scripts = [f for f in allfns if f['category'] == 'script']
-    lines += ['## Script translation (per map)', '']
-    if not scripts:
-        lines += ['_No `script`-category rows yet. Run `build_index` to index '
-                  '`scripts/`._', '']
+    # ── Annotation ledger ────────────────────────────────────────────────────
+    lines += ['## Sanctioned divergences and known defects', '',
+              '_Every structured `DEVIATION` / `BUG` / `GLITCH` / `STUB` annotation in'
+              ' `dos_port/src`, parsed by the linter. This is the queryable "why", and'
+              ' it travels with the code — there is deliberately no hand-kept log._', '']
+    if not annots:
+        lines += ['_None found._', '']
     else:
-        by_map = {}
-        for f in scripts:
-            by_map.setdefault(f['source_file'], {}).setdefault(f['status'], 0)
-            by_map[f['source_file']][f['status']] += 1
-        sp_present = [s for s in STATUS_ORDER if any(s in m for m in by_map.values())]
-        rows = []
-        for src in sorted(by_map):
-            counts = by_map[src]
-            done = counts.get('verified', 0) + counts.get('wired', 0) \
-                + counts.get('translated', 0) + counts.get('complete', 0)
-            total = sum(counts.values())
-            name = src[len('scripts/'):] if src.startswith('scripts/') else src
-            rows.append([name, f'{done}/{total}']
-                        + [counts.get(s, 0) for s in sp_present])
-        lines += [md_table(['map', 'done'] + sp_present, rows), '']
+        kc = collections.Counter((a['kind'], a['fields'].get('class', '?')) for a in annots)
+        rows = [[k, c, n] for (k, c), n in sorted(kc.items())]
+        rows.append(['**all**', '', len(annots)])
+        lines += [md_table(['kind', 'class', 'count'], rows), '']
 
-    # ── Outstanding stubs by kind ────────────────────────────────────────────
-    lines += ['## Outstanding stubs', '']
-    unresolved = [s for s in stubs if not s['resolved']]
-    if not unresolved:
-        lines += ['_None recorded._', '']
-    else:
-        by_kind = {}
-        for s in unresolved:
-            by_kind.setdefault(s['kind'], []).append(s)
-        for kind in sorted(by_kind):
-            items = by_kind[kind]
-            lines += [f'### {kind} ({len(items)})', '']
-            for s in sorted(items, key=lambda x: x['name']):
-                where = s.get('source_file') or ''
-                note = f" — {s['notes']}" if s.get('notes') else ''
-                lines.append(f"- `{s['name']}` ({where}){note}")
-            lines.append('')
+        malformed = [a for a in annots if a['errors']]
+        if malformed:
+            lines += [f'**{len(malformed)} malformed annotation(s)** — these are'
+                      ' `lint_pret_labels` violations, not style nits:', '']
+            lines += [f"- `{a['file']}:{a['line']}` — {'; '.join(a['errors'])}"
+                      for a in malformed] + ['']
 
-    return '\n'.join(lines).rstrip() + '\n'
+        for kind, title in (('BUG', 'Known bugs'), ('GLITCH', 'Preserved glitches')):
+            sel = [a for a in annots if a['kind'] == kind]
+            if not sel:
+                continue
+            lines += [f'### {title} ({len(sel)})', '']
+            lines += [md_table(['site', 'class', 'behavior'],
+                               [[f"`{a['file']}:{a['line']}`",
+                                 a['fields'].get('class', '?'),
+                                 a['fields'].get('behavior', '?')] for a in sel]), '']
+
+        stubs = [a for a in annots if a['kind'] == 'STUB']
+        if stubs:
+            lines += [f'### Annotated stubs ({len(stubs)})', '',
+                      '_Link-time stand-ins carrying a `STUB{...}` annotation. This'
+                      ' count is NOT the `stub` row in the summary above and is not'
+                      " expected to match it: that row counts pret labels whose"
+                      ' provider is a `*_stubs.asm` body, while this counts annotation'
+                      ' SITES, and one site can cover several labels. The two are'
+                      ' already reconciled where it matters — `lint_pret_labels` checks'
+                      " every STUB annotation's `label` field against the scanned"
+                      ' status and reports a violation if they disagree._', '']
+            lines += [md_table(['label', 'site', 'lifetime'],
+                               [[f"`{a['fields'].get('label', '?')}`",
+                                 f"`{a['file']}:{a['line']}`",
+                                 a['fields'].get('lifetime', '?')] for a in stubs]), '']
+
+    lines += ['', '---', '',
+              '_To reproduce: `dos_port/tools/gen_progress_report`. For a single'
+              " label's provider, linkage and callers, use"
+              ' `dos_port/tools/project_state <Label>`._', '']
+    return '\n'.join(lines) + '\n'
 
 
 def main():
-    ap = argparse.ArgumentParser(description=__doc__,
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument('--stdout', action='store_true', help='print instead of writing file')
+    ap = argparse.ArgumentParser()
+    ap.add_argument('--stdout', action='store_true',
+                    help='print instead of writing docs/translation_progress.md')
+    ap.add_argument('--scan', action='store_true',
+                    help='refresh translation.db first (writes the tracked DB); '
+                         'default is read-only and uses it as-is')
+    ap.add_argument('--no-scan', action='store_true',
+                    help='accepted for compatibility; this is already the default')
     args = ap.parse_args()
 
-    report = build_report()
+    report = build_report(args.scan)
     if args.stdout:
         sys.stdout.write(report)
     else:
-        os.makedirs(os.path.dirname(OUT_PATH), exist_ok=True)
         with open(OUT_PATH, 'w', encoding='utf-8') as fh:
             fh.write(report)
         print(f'Wrote {os.path.relpath(OUT_PATH, REPO_ROOT)}')
