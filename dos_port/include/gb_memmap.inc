@@ -830,6 +830,14 @@ H_JOY5                   equ 0xFFB5     ; hJoy5 — JoypadLowSensitivity output 
 H_JOY6                   equ 0xFFB6     ; hJoy6 — low-sens flag: 0 = suppress repeat while A/B held
 H_JOY7                   equ 0xFFB7     ; hJoy7 — low-sens flag: 0 = newly-pressed only, 1 = held+delay
 
+; The two joypad bytes that live OUTSIDE that run, up with hWhoseTurn ($FFF3).
+; Addresses read straight out of pokeyellow.sym (00:fff5, 00:fff8) — the port's
+; HRAM map is uniformly +$0A from a naive walk of ram/hram.asm, so these are NOT
+; derived by counting. Added in chunk 18, when src/engine/joypad.asm was repaired
+; into live source: pret's ReadJoypad_ and _Joypad are the only readers.
+H_JOY_INPUT              equ 0xFFF5     ; hJoyInput — raw poll result (ReadJoypad_ output)
+H_DISABLE_JOYPAD_POLLING equ 0xFFF8     ; hDisableJoypadPolling — nonzero: ReadJoypad_ returns early
+
 ; Sprite-engine HRAM temporaries (PrepareOAMData / _UpdateSprites) — sym-verified.
 H_SPRITE_OFFSET2             equ 0xFF8F ; hSpriteOffset2 (current slot offset in PrepareOAMData loop)
 H_OAM_BUFFER_OFFSET          equ 0xFF90 ; hOAMBufferOffset (write cursor into wShadowOAM)

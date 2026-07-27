@@ -1358,9 +1358,11 @@ def pick_provider(defs, mirror, built):
     2. A definition in a file the config does not assemble is dead code, and
        must never out-rank a live one — not even when the dead file sits at the
        mirror path. That inversion is why this is a function with a test:
-       DiscardButtonPresses is defined both in the dead src/engine/joypad.asm
-       (a relic of the rejected faithful-input model, in no SRCS list) and in
-       the live src/input/joypad.asm. The dead file IS the mirror path, so the
+       DiscardButtonPresses was defined both in the then-dead
+       src/engine/joypad.asm (a relic of the rejected faithful-input model, in
+       no SRCS list) and in the live src/input/joypad.asm. (Chunk 18 repaired
+       and linked that file and moved the label into it, so this particular
+       pair is no longer live — the preference it forced still is.) The dead file IS the mirror path, so the
        old unconditional `mirror in nonstub` test reported the label
        `translated` at a provider that does not link, while the live definition
        stayed relocated — which made its registry row satisfy the retirement

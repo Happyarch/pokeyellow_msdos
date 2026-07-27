@@ -91,8 +91,6 @@ H_JOY_RELEASED  equ 0xFFB2  ; hJoyReleased — buttons released this frame
 global joypad_init
 global joypad_restore
 global joypad_update
-global DiscardButtonPresses ; pret engine/joypad.asm — extracted from the inlined
-                            ; `.discard` edge-layer path; see its header note
 global pad_dpad             ; byte: D-pad held state (1 = pressed)
 global pad_buttons          ; byte: button held state (1 = pressed)
 global pad_quit             ; byte: nonzero once Esc is pressed
@@ -100,6 +98,18 @@ global pad_reset            ; byte: nonzero once the A+B+Select+Start combo fire
 %ifdef DEBUG_NOCLIP
 global pad_noclip           ; byte: 1 = noclip active (W toggles)
 %endif
+
+; ---------------------------------------------------------------------------
+; Imported symbols
+; ---------------------------------------------------------------------------
+; DiscardButtonPresses lived HERE until chunk 18, because its pret mirror file was
+; unbuildable; `.discard` below calls it. Provenance worth keeping: it was once
+; INLINED into joypad_update as the local label `.discard`, which made the label DB
+; report a confident WRONG provider (the then-dead src/engine/joypad.asm), reading
+; as "unported". Extracting it into a real global was the fix, and the picker bug
+; behind the bad report is fixed too — memory label-db-wrong-provider-on-inlined-
+; routines. Chunk 18 then repaired the mirror and moved the routine home.
+extern DiscardButtonPresses ; src/engine/joypad.asm (returns AL = 0)
 
 ; ---------------------------------------------------------------------------
 ; BSS
@@ -430,38 +440,3 @@ joypad_update:
     pop eax
     ret
 
-; ---------------------------------------------------------------------------
-; DiscardButtonPresses — pret engine/joypad.asm:DiscardButtonPresses
-;
-; RELOCATED from its pret mirror path — the body is faithful, only its FILE moved, so
-; this carries no DEVIATION annotation; the move is registered in
-; tools/pret_label_allowlist.json (relocated_labels + the dup_def suppression).
-; This lives here, in the LIVE input HAL, rather than in its pret-mirror file
-; src/engine/joypad.asm — that file is the relic of the REJECTED faithful-input
-; model (_Joypad/ReadJoypad_/TrySoftReset), is intentionally absent from the
-; Makefile, and cannot link (it ends in `jmp Joypad`, which the port never
-; defines). See the port-input-model DEVIATION note at src/home/start_menu.asm:28:
-; pret's `call Joypad` has no port counterpart because joypad_update polls from
-; the DelayFrame pipeline instead. That deviation is UNCHANGED by this routine.
-;
-; HISTORY / TOOLING TRAP (overworld-events Stage 4): this body was already live,
-; INLINED into joypad_update's edge layer as the local label `.discard` — so the
-; label DB reported `DiscardButtonPresses  unlisted  provider=src/engine/joypad.asm`,
-; a CONFIDENT WRONG PROVIDER pointing at the dead file, which reads as "unported".
-; The two obvious reactions to that line are both wrong: linking the dead file
-; re-introduces the rejected input model (and does not link), and hand-writing a
-; second copy creates two realizations of one pret label. Extracting the inlined
-; body — one realization, pret's label callable again — is the fix. `.discard` now
-; calls this. Recorded in stigmergy memory
-; `label-db-wrong-provider-on-inlined-routines`.
-;
-; CALLER: DoBoulderDustAnimation (src/engine/overworld/push_boulder.asm), which
-; relies on pret's AL = 0 on return to zero wJoyIgnore.
-; Out: AL = 0. Clobbers AL only.
-; ---------------------------------------------------------------------------
-DiscardButtonPresses:
-    xor al, al
-    mov [ebp + H_JOY_HELD], al
-    mov [ebp + H_JOY_PRESSED], al
-    mov [ebp + H_JOY_RELEASED], al
-    ret

@@ -237,12 +237,14 @@ HOME_SRCS := \
     src/home/copy_string.asm \
     src/home/give.asm \
     src/home/oam.asm \
+    src/home/joypad.asm \
     src/home/joypad2.asm \
     src/home/inventory.asm
 
 HAL_SRCS := \
     src/ppu/ppu.asm \
-    src/input/joypad.asm
+    src/input/joypad.asm \
+    src/engine/joypad.asm
 
 # Save HAL — .dsv file I/O (menus S7). DsvFileExists/DsvWriteSave/DsvReadSave;
 # the SRAM-banking seam every pret save/load routine collapses onto.
@@ -1539,7 +1541,8 @@ ITEMS_CHECK_SRCS := \
 # boulder bullet): the boulder push + its dust animation are live. What unblocked
 # them: AdjustOAMBlock{X,Y}Pos(2) ported into their pret home
 # src/engine/battle/animations.asm, IsSpriteInFrontOfPlayer ported into
-# overworld.asm, DiscardButtonPresses extracted into src/input/joypad.asm, and
+# overworld.asm, DiscardButtonPresses extracted into src/input/joypad.asm (and
+# moved on to src/engine/joypad.asm in chunk 18, when that file was repaired), and
 # WriteOAMBlock + SaveScreenTilesToBuffer2/LoadScreenTilesFromBuffer2 now linked
 # (the latter pair via the vcopy.asm promotion in Stage 3 — the old note claiming
 # they blocked cut.asm was stale).

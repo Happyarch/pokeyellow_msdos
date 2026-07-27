@@ -916,8 +916,8 @@ class Probe(unittest.TestCase):
 class ProviderPicker(unittest.TestCase):
     """A dead file must never out-rank a live definition as a label's provider.
 
-    Regression fixtures for the DiscardButtonPresses hazard: the dead
-    src/engine/joypad.asm sits at the pret-mirror path and beat the live
+    Regression fixtures for the DiscardButtonPresses hazard: the then-dead
+    src/engine/joypad.asm sat at the pret-mirror path and beat the live
     src/input/joypad.asm, so the label reported `translated` at a provider that
     does not link while the live definition stayed relocated — which made its
     registry row pass the relocation-retirement test. A bulk retirement would

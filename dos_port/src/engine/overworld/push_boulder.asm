@@ -87,9 +87,7 @@ extern GetSpriteMovementByte2Pointer ; src/home/map_objects.asm (reads H_CURRENT
 extern MoveSprite                   ; pathfinding.asm (In: EDI = flat movement-data ptr)
 extern CheckForCollisionWhenPushingBoulder ; player_state.asm (pret predef; banking elided)
 extern PlaySound                    ; home/audio.asm
-extern DiscardButtonPresses         ; src/input/joypad.asm (returns AL = 0). RELOCATED from its
-                                    ; pret home engine/joypad.asm, which is DEAD/unlisted — see
-                                    ; that routine's header for why.
+extern DiscardButtonPresses         ; src/engine/joypad.asm (returns AL = 0)
 extern AnimateBoulderDust           ; src/engine/overworld/dust_smoke.asm — pret callfar target
 
 section .text

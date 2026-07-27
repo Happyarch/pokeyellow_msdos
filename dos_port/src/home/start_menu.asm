@@ -26,9 +26,9 @@
 ;    it is kept because nothing forces it out, and dropping it would silently
 ;    break the first sub-menu that does want the buffer back.
 ;  * DEVIATION(port-input-model): pret's `call Joypad` has no port counterpart —
-;    Joypad is `missing` (an INT 9h ISR latches H_JOY_* and joypad_update runs
-;    inside DelayFrame, so DelayFrame *is* the poll; there is nothing synchronous
-;    to call). The release-spin is also widened from pret's hJoyPressed/A to
+;    Joypad exists since chunk 18 (src/home/joypad.asm) but has NO caller: an
+;    INT 9h ISR latches H_JOY_* and joypad_update runs inside DelayFrame, so
+;    DelayFrame *is* the poll and there is nothing synchronous to call. The release-spin is also widened from pret's hJoyPressed/A to
 ;    H_JOY_HELD/A|B|START because OverworldLoop reads H_JOY_HELD, not the edge
 ;    (overworld.asm:904 — H_JOY_PRESSED is always cleared by the time it looks):
 ;    a still-held START would reopen the menu on the very next iteration.
@@ -212,8 +212,8 @@ RedisplayStartMenu_DoNotDrawStartMenu:
 CloseStartMenu:
     ; DEVIATION{class=HAL; pret=home/start_menu.asm:CloseStartMenu; behavior=wait through DelayFrame for A, B, and START release instead of directly polling Joypad for A release; evidence=pret CloseStartMenu loop plus port frame-driven joypad state and held-key overworld input; lifetime=permanent input HAL boundary}
     ; pret spins `call Joypad / bit B_PAD_A,
-    ; [hJoyPressed]` until the closing press clears. Joypad is `missing` in the
-    ; port — DelayFrame runs joypad_update, so it IS the poll — and OverworldLoop
+    ; [hJoyPressed]` until the closing press clears. The port never calls Joypad
+    ; — DelayFrame runs joypad_update, so it IS the poll — and OverworldLoop
     ; reads H_JOY_HELD rather than the edge (overworld.asm:904), so B/START must
     ; be waited out too or a still-held START reopens the menu immediately. See
     ; the header.

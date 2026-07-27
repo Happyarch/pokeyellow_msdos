@@ -331,8 +331,9 @@ MainMenu:
     ; (src/input/joypad.asm), which the DelayFrame pipeline runs once per frame. So
     ; `call DelayFrame` IS the poll here (the start_menu.asm / list_menu.asm
     ; precedent), and the H_JOY_* bytes it refreshes are the same ones pret reads.
-    ; The three clears are kept verbatim. (The faithful engine/joypad.asm translation
-    ; exists as a cross-reference but is deliberately not in the build.)
+    ; The three clears are kept verbatim. (The faithful engine/joypad.asm
+    ; translation is linked as of chunk 18, but nothing calls its _Joypad — it is
+    ; a cross-reference, not the port's poll.)
     mov byte [ebp + H_JOY_PRESSED], 0
     mov byte [ebp + H_JOY_RELEASED], 0
     mov byte [ebp + H_JOY_HELD], 0
