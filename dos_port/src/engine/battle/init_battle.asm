@@ -96,7 +96,7 @@ extern LoadFrontSpriteByMonIndex         ; src/home/pokemon.asm — enemy front 
 extern HasMonFainted                  ; engine/battle/core.asm — ZF=1 → fainted
 extern FlagAction                        ; flag_action.asm — ESI=array, CL=bit, BH=action
 extern LoadBattleMonFromParty         ; engine/battle/core.asm — build wBattleMon* + stat mods
-extern DrawPlayerRedBackPic_Stub         ; home/pics.asm — player trainer (Red) back pic
+extern LoadPlayerBackPic         ; home/pics.asm — player trainer (Red) back pic
 extern SlideBattlePicsIn                 ; home/pics.asm — silhouette slide-in
 extern SaveBattleScreen                  ; src/home/tilemap.asm — alias of the Buffer1 pair
 extern DrawBattlePokeballs               ; pokeballs.asm — party-status ball row
@@ -105,7 +105,7 @@ extern HideBattlePokeballs               ; pokeballs.asm
 extern MainInBattleLoop                  ; core.asm — the whole battle loop
 extern EndOfBattle                       ; end_of_battle.asm — post-battle (EXP/evo/reset)
 extern EndBattleScreen                   ; battle_menu.asm — clean terminal
-global LoadMonBackPic             ; generic player send-out back pic (retires DrawPlayerBackPic_Stub)
+global LoadMonBackPic             ; generic player send-out back pic (retires LoadEmbeddedBackPicFallback)
 global CopyUncompressedPicToHL          ; shared flip-aware 7×7 tilemap placement
 
 InitBattle:
@@ -151,7 +151,7 @@ InitBattle:
     ; (re-armed from the tileset by LoadTilesetHeader on map re-entry) and H_SCX/H_SCY
     ; (recomputed from player position), NOTHING on the same-map post-battle return
     ; re-derives this pointer: LoadMapData explicitly does NOT (overworld.asm:2278 — the
-    ; derivation lives in LoadWarpDestination, which the post-battle EnterMap skips because
+    ; derivation lives in LoadDestinationMapData, which the post-battle EnterMap skips because
     ; EndOfBattle set wDestinationWarpID=$FF "don't reposition"). So render_bg would stay on
     ; its flat-canvas path (ppu.asm:188 — zero ptr ⇒ decode W_TILEMAP directly) and paint
     ; stale W_TILEMAP = solid grass. Restored at the _InitBattleCommon tail (same map + same
@@ -277,7 +277,7 @@ _InitBattleCommon:
     call SetPal_Battle
 
     ; --- intro scene (proven DEBUG_BATTLE_LIVE order) ---
-    call DrawPlayerRedBackPic_Stub             ; player trainer (Red) back pic — fixed sprite
+    call LoadPlayerBackPic             ; player trainer (Red) back pic — fixed sprite
     call SlideBattlePicsIn                      ; silhouette slide-in
     call DrawBattleIntroBox                      ; box + "Wild <nick> appeared!" + enemy HUD
     call SaveBattleScreen                        ; snapshot for menu re-entry
@@ -424,7 +424,7 @@ CopyUncompressedPicToTilemap:
 
 ; ---------------------------------------------------------------------------
 ; LoadMonBackPic — decode the SENT-OUT player mon's back sprite to vBackPic ($9310).
-; The generic replacement for DrawPlayerBackPic_Stub (which hardcoded PIKACHU).
+; The generic replacement for LoadEmbeddedBackPicFallback (which hardcoded PIKACHU).
 ; pret: engine/battle/core.asm LoadMonBackPic — sets wCurPartySpecies from
 ; wBattleMonSpecies2, UncompressMonSprite from the mon header's BACK-sprite pointer,
 ; ScaleSpriteByTwo, InterlaceMergeSpriteBuffers → vBackPic. The port has no header
@@ -457,7 +457,7 @@ LoadMonBackPic:
     jmp LoadMonBackPicToVRAM                    ; decode → 2x scale → merge to VRAM
 %else
     ; no MonBackPics table in a no-data build: fall back to the embedded stub pic.
-    jmp DrawPlayerBackPic_Stub
+    jmp LoadEmbeddedBackPicFallback
 %endif
 
 ; ---------------------------------------------------------------------------

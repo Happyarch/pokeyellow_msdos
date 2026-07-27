@@ -55,8 +55,8 @@ PAD_ALL             equ 0xFF
 ; (OW-A.14 destub 2026-07-09); the former hand-`equ 0xB6` placeholder was wrong.
 
 ; Standing tile (pret lda_coord 8,9). In the 40-wide port tilemap the player's feet
-; are at (PLAYER_STANDING_ROW, PLAYER_STANDING_COL); same tile GetTileInFrontOfPlayer
-; uses as its base (overworld.asm).
+; are at (PLAYER_STANDING_ROW, PLAYER_STANDING_COL); same tile
+; _GetTileAndCoordsInFrontOfPlayer uses as its base (player_state.asm).
 STANDING_TILE_OFF   equ W_TILEMAP + PLAYER_STANDING_ROW * SCREEN_TILES_W + PLAYER_STANDING_COL
 
 global HandleLedges
@@ -79,9 +79,9 @@ section .text
 ; In:  ESI = flat host ptr to the directional tile-pair table (TilePairCollisionsLand
 ;            or ...Water); W_TILE_IN_FRONT_OF_PLAYER already set by the caller.
 ;            (pret re-runs GetTileAndCoordsInFrontOfPlayer here; the port's caller,
-;            CollisionCheckOnLand, sets it via GetTileInFrontOfPlayer immediately
-;            before — so this port keeps the value rather than re-deriving it, which
-;            avoids exporting GetTileInFrontOfPlayer out of overworld.asm.)
+;            CollisionCheckOnLand, sets it via _GetTileAndCoordsInFrontOfPlayer
+;            immediately before — so this port keeps the value rather than
+;            re-deriving it.)
 ; Out: CF = 1 if an illegal tile-pair boundary is crossed (movement blocked).
 ;      May arm a ledge hop (HandleLedges sets BIT_LEDGE_OR_FISHING + simulated joypad);
 ;      in that case CF = 0 (no tile-pair collision) and the caller allows the move.

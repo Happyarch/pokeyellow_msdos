@@ -126,13 +126,13 @@ extern DumpBackbuffer                     ; src/debug/debug_dump.asm
 extern DumpSeamLog                        ; src/debug/debug_dump.asm
 extern EnterMapAnim                       ; src/engine/overworld/player_animations.asm
 extern GBFadeOutToBlack                   ; src/home/fade.asm
-extern GetTileInFrontOfPlayer             ; src/engine/overworld/overworld.asm
+extern _GetTileAndCoordsInFrontOfPlayer   ; src/engine/overworld/player_state.asm (non-predef entry)
 extern IsNPCAtTargetBlock                 ; src/engine/overworld/map_sprites.asm
 extern IsNextTileShoreOrWater             ; src/engine/items/item_effects.asm
 extern IsPlayerStandingOnDoorTileOrWarpTile ; src/engine/overworld/player_state.asm
 extern IsSurfingPikachuInParty            ; src/engine/overworld/overworld_stubs.asm
 extern IsTilePassable                     ; src/home/copy2.asm
-extern LoadWarpDestination                ; src/engine/overworld/overworld.asm
+extern LoadDestinationMapData                ; src/engine/overworld/overworld.asm
 extern MapEntryAfterBattle                ; src/engine/overworld/overworld_stubs.asm
 extern PrepareForSpecialWarp              ; src/engine/overworld/special_warps.asm
 extern PrepareNewGameDebug                ; src/engine/debug/debug_party.asm
@@ -967,7 +967,7 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     jnc .startWalk
 
     ; Blocked. Collision-exit path (pret: bit BIT_STANDING_ON_WARP / ExtraWarpCheck).
-    ; Only attempt exit if player IS on a warp tile (set at spawn by LoadWarpDestination
+    ; Only attempt exit if player IS on a warp tile (set at spawn by LoadDestinationMapData
     ; or after a step by .moveAhead). BIT_EXITING_DOOR is NOT checked here — pret does
     ; not suppress collision-exit during the auto-walk window.
     test byte [ebp + W_MOVEMENT_FLAGS], (1 << BIT_STANDING_ON_WARP)
@@ -1092,11 +1092,11 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     mov word [ebp + W_MAP_VIEW_VRAM_POINTER], GB_TILEMAP0
     ; pret WarpFound2 plays the map-change jingle here (:477/498/510), BEFORE the
     ; destination is loaded, so it reads the SOURCE map's tileset + door tile. Must
-    ; precede LoadWarpDestination (which calls LoadMapHeader → destination tileset/
+    ; precede LoadDestinationMapData (which calls LoadMapHeader → destination tileset/
     ; tilemap + music). OW-A.14. Warp-pad/fly skip branch is deferred, so the single
     ; call here matches pret's 3 non-skip branches.
     call PlayMapChangeSound
-    call LoadWarpDestination
+    call LoadDestinationMapData
     call InitMapSprites                        ; populate NPC slots for the new map
     ; pret: home/overworld.asm:515 (WarpFound2.indoorMaps) — clear BIT_EXITING_DOOR,
     ; then set BIT_STANDING_ON_DOOR to trigger RunNPCMovementScript→PlayerStepOutFromDoor
@@ -1107,7 +1107,7 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     call IgnoreInputForHalfSecond
     ; OW-A.4(b): re-enter EnterMap on every warp, faithful to pret WarpFound2.done
     ; (home/overworld.asm:517, `jp EnterMap`). The pre-work above (wCurMap/wLastMap,
-    ; LoadWarpDestination, view/scroll reset, door flags) mirrors WarpFound2's body;
+    ; LoadDestinationMapData, view/scroll reset, door flags) mirrors WarpFound2's body;
     ; EnterMap then re-runs the full reset ladder — wJoyIgnore gate, LoadMapData
     ; (re-loads header/blocks/view/sprites for the new map), ClearVariablesOnEnterMap,
     ; the fly/dungeon-warp & battle-return resets, UpdateSprites, CUR_MAP_LOADED_1/2 —
@@ -2159,7 +2159,15 @@ CollisionCheckOnLand:
     ; crossings, so the viewport can be stale within a block (YBC/XBC changed but wTileMap
     ; not rebuilt). Rebuild here to apply the current sub-block offset before the tile read.
     call LoadCurrentMapView
-    call GetTileInFrontOfPlayer                    ; CL = tile in front
+    ; pret: predef GetTileAndCoordsInFrontOfPlayer. Call the NON-predef entry
+    ; directly -- the predef wrapper runs GetPredefRegisters, which would overwrite
+    ; ESI/EBX from stale wPredefHL/wPredefBC (see memory flagactionpredef-clobbers-regs).
+    ; EDX is preserved because the OVERWORLD_LEDGES block below passes DH (the tile the
+    ; player stands on) to CheckForJumpingAndTilePairCollisions; the faithful routine
+    ; returns the FRONT coords in DH/DL and would otherwise destroy it.
+    push edx
+    call _GetTileAndCoordsInFrontOfPlayer          ; CL = tile in front
+    pop edx
 %ifdef OVERWORLD_LEDGES
     ; M7.3 hook — pret home/overworld.asm:CollisionCheckOnLand (.noSpriteCollision):
     ;   ld hl, TilePairCollisionsLand / call CheckForJumpingAndTilePairCollisions
@@ -2222,9 +2230,9 @@ CollisionCheckOnLand:
 ; In:  ESI = flat host ptr to the directional tile-pair table (TilePairCollisionsLand
 ;            or ...Water); W_TILE_IN_FRONT_OF_PLAYER already set by the caller.
 ;            (pret re-runs GetTileAndCoordsInFrontOfPlayer here; the port's caller,
-;            CollisionCheckOnLand, sets it via GetTileInFrontOfPlayer immediately
-;            before — so this port keeps the value rather than re-deriving it, which
-;            avoids exporting GetTileInFrontOfPlayer out of overworld.asm.)
+;            CollisionCheckOnLand, sets it via _GetTileAndCoordsInFrontOfPlayer
+;            immediately before — so this port keeps the value rather than
+;            re-deriving it.)
 ; Out: CF = 1 if an illegal tile-pair boundary is crossed (movement blocked).
 ;      May arm a ledge hop (HandleLedges sets BIT_LEDGE_OR_FISHING + simulated joypad);
 ;      in that case CF = 0 (no tile-pair collision) and the caller allows the move.
@@ -2546,8 +2554,8 @@ GetSimulatedInput:
 ;
 ; PORT (established divergence, same as CollisionCheckOnLand): pret's
 ; `predef GetTileAndCoordsInFrontOfPlayer` is realized as LoadCurrentMapView +
-; GetTileInFrontOfPlayer (the port's simplified front-tile read; the coord
-; side-outputs are dropped — see GetTileInFrontOfPlayer's DEFERRED note).
+; a direct call to the non-predef entry _GetTileAndCoordsInFrontOfPlayer (the
+; predef wrapper would clobber ESI/EBX via GetPredefRegisters).
 ; Register safety mirrors CollisionCheckOnLand: EAX/ECX/ESI saved; DL is
 ; (re)written with W_PLAYER_DIRECTION, the same value callers already hold.
 ; ---------------------------------------------------------------------------
@@ -2576,7 +2584,11 @@ CollisionCheckOnWater:
     ; pret :1676 predef GetTileAndCoordsInFrontOfPlayer → port idiom (see header):
     ; rebuild the viewport (stale within a block), then read the front tile.
     call LoadCurrentMapView
-    call GetTileInFrontOfPlayer                    ; CL = tile → W_TILE_IN_FRONT_OF_PLAYER
+    ; Non-predef entry on purpose (predef wrapper would clobber ESI/EBX via
+    ; GetPredefRegisters). EDX is dead from here to the end of the routine, so the
+    ; faithful routine's DH/DL front-coord writes are harmless -- and match pret,
+    ; whose predef call clobbers DE here too.
+    call _GetTileAndCoordsInFrontOfPlayer          ; CL = tile → W_TILE_IN_FRONT_OF_PLAYER
     call IsNextTileShoreOrWater                    ; CF=1 → shore/water ahead
     jc .noCollision                                ; keep surfing
     movzx ecx, byte [ebp + W_TILE_IN_FRONT_OF_PLAYER] ; ld a,[wTileInFrontOfPlayer] / ld c,a
@@ -3321,7 +3333,7 @@ global OverworldLoopLessDelay
 ; per-map view-pointer table; it reads Y/X directly out of the already-loaded
 ; W_WARP_ENTRIES (Y, X, dest_warp_id, dest_map_id per entry — see the
 ; `warp_event` macro / CheckWarpTile), and leaves wCurrentTileBlockMapViewPointer
-; to LoadWarpDestination's explicit stride-math recompute, which replaces
+; to LoadDestinationMapData's explicit stride-math recompute, which replaces
 ; pret's ROM view-pointer lookup with an equivalent runtime computation.
 ; In:  W_DESTINATION_WARP_ID = 0-based warp index (destination map's table)
 ; Out: W_Y_COORD, W_X_COORD set. Preserves all other registers/flags.

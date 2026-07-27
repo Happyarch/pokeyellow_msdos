@@ -1388,6 +1388,13 @@ GB_SRAM                      equ 0xA000
 sSpriteBuffer0               equ 0xA000   ; SPRITEBUFFERSIZE
 sSpriteBuffer1               equ 0xA188   ; SPRITEBUFFERSIZE (must be contiguous with buffer2:
 sSpriteBuffer2               equ 0xA310   ;   the decompressor clears 2*SPRITEBUFFERSIZE from buffer1)
+; PIC_STAGE — port-only GB scratch holding the COMPRESSED pic stream that
+; UncompressSpriteData reads via wSpriteInputPtr. Sits immediately above
+; sSpriteBuffer2's end ($A310 + $188 = $A498), inside the port-free SRAM window.
+; Canonical here rather than %define'd per-file: src/home/pics.asm and
+; src/engine/battle/core.asm (LoadPlayerBackPic) both need it, and a duplicated
+; address constant is the shadowing-equ trap that has cost this project two bugs.
+PIC_STAGE                    equ 0xA4A0
 
 ; Connection-strip headers (each 11 bytes: map, strip-src, strip-dst, length, map-width, Y-align, X-align, view-ptr)
 W_NORTH_CONNECTED_MAP        equ 0xD370 ; wNorthConnectedMap ($FF = none)

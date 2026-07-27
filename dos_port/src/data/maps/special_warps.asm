@@ -9,7 +9,7 @@
 ; The fly_warp / special_warp_spec / fly_warp_spec macros mirror pret's
 ; (defined in-file there too). fly_warp builds on `event_displacement`
 ; (include/coords.inc), re-derived 2026-07-10 against the port's runtime
-; view-pointer formula (overworld.asm:LoadWarpDestination) — see the macro's
+; view-pointer formula (overworld.asm:LoadDestinationMapData) — see the macro's
 ; header comment for the lockstep rule.
 ;
 ; PROJ divergence (flat pointer width): pret's fly_warp_spec emits

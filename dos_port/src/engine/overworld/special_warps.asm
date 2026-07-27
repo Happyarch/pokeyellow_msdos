@@ -14,7 +14,7 @@
 ; wCurrentTileBlockMapViewPointer&co. The former blocker — `event_displacement`
 ; carried pret's border-3 stride and a `dd` emission — is resolved: the macro
 ; (include/coords.inc) is re-derived against the port's own runtime
-; view-pointer formula (overworld.asm:LoadWarpDestination) as a pure function
+; view-pointer formula (overworld.asm:LoadDestinationMapData) as a pure function
 ; of MAP_BORDER / SCREEN_BLOCK_*, emitting the 2-byte GB-space pointer the
 ; field actually holds. So the fly_warp payload keeps pret's exact 6-byte
 ; entry layout, and wDungeonWarpDataEntrySize=6 plus both copy loops port

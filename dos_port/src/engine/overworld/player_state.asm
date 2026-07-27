@@ -15,16 +15,14 @@
 ;                                 IsSSAnneBowWarpTileInFrontOfPlayer
 ;                                 below for the standalone equivalent pret ships
 ;                                 as a fallthrough target of that routine.
-;   GetTileInFrontOfPlayer     -> src/engine/overworld/overworld.asm (simplified
-;                                 translation of _GetTileAndCoordsInFrontOfPlayer's
-;                                 tile-read half only, used by CollisionCheckOnLand
-;                                 et al). NOT modified here. This file's
-;                                 GetTileAndCoordsInFrontOfPlayer /
-;                                 _GetTileAndCoordsInFrontOfPlayer are NEW
-;                                 routines that reproduce pret's full behaviour
-;                                 (tile read + D/E map-coord output), using the
-;                                 IDENTICAL projected tile-read addresses as the
-;                                 existing GetTileInFrontOfPlayer (verified below).
+;   GetTileInFrontOfPlayer     -> DELETED 2026-07-27. It was a port-only forked
+;                                 name carrying a simplified copy of
+;                                 _GetTileAndCoordsInFrontOfPlayer's tile-read half
+;                                 in src/engine/overworld/overworld.asm. The two
+;                                 used IDENTICAL projected tile-read addresses, so
+;                                 the fork was pure duplication; its callers
+;                                 (CollisionCheckOnLand et al) now call this file's
+;                                 _GetTileAndCoordsInFrontOfPlayer directly.
 ;   ForceBikeOrSurf            -> src/engine/overworld/player_gfx.asm (global,
 ;                                 but currently HOME_CHECK_SRCS / check-only —
 ;                                 see the CLOSURE note on CheckForceBikeOrSurf).
@@ -327,10 +325,9 @@ IsPlayerFacingEdgeOfMap:
 ; ; PROJ: this routine reads the already-populated wTileInFrontOfPlayer instead
 ; of re-fetching it. pret's version opens with `call _GetTileAndCoordsInFrontOfPlayer`
 ; to (re)populate wTileInFrontOfPlayer; the port relies on CollisionCheckOnLand's
-; GetTileInFrontOfPlayer call, which runs immediately before ExtraWarpCheck on the
-; collision-exit path (the only caller today), so the var is guaranteed fresh here.
-; Reading the WRAM var is equivalent at this call site and avoids re-exporting the
-; file-local GetTileInFrontOfPlayer. If a second caller is ever added that does NOT
+; _GetTileAndCoordsInFrontOfPlayer call, which runs immediately before ExtraWarpCheck
+; on the collision-exit path (the only caller today), so the var is fresh here.
+; Reading the WRAM var is equivalent at this call site. If a second caller is ever added that does NOT
 ; pre-populate wTileInFrontOfPlayer, restore the pret _GetTileAndCoordsInFrontOfPlayer
 ; prime here first.
 ;
@@ -391,7 +388,7 @@ IsSSAnneBowWarpTileInFrontOfPlayer:
 ;
 ; PROJ: pret's `lda_coord 8, 9` reads the tile the player is STANDING on (its
 ; own standing tile, not a "tile in front" projection) — same address as the
-; existing GetTileInFrontOfPlayer's precedent for the player's feet:
+; the deleted GetTileInFrontOfPlayer fork's precedent for the player's feet:
 ; W_TILEMAP + PLAYER_STANDING_ROW*40 + PLAYER_STANDING_COL (row17,col24).
 ; ---------------------------------------------------------------------------
 IsPlayerStandingOnDoorTileOrWarpTile:
@@ -502,13 +499,13 @@ PrintSafariZoneSteps:
 ;
 ; ══════ COORDINATE PROJECTION (read the ticket header twice) ══════
 ; The tile-read addresses below are IDENTICAL to the existing
-; GetTileInFrontOfPlayer (src/engine/overworld/overworld.asm ~L1888):
+; the deleted GetTileInFrontOfPlayer fork (formerly src/engine/overworld/overworld.asm):
 ;   Down  -> W_TILEMAP + (PLAYER_STANDING_ROW+2)*40 + PLAYER_STANDING_COL  (row19,col24)
 ;   Up    -> W_TILEMAP + (PLAYER_STANDING_ROW-2)*40 + PLAYER_STANDING_COL  (row15,col24)
 ;   Left  -> W_TILEMAP + PLAYER_STANDING_ROW*40 + (PLAYER_STANDING_COL-2)  (row17,col22)
 ;   Right -> W_TILEMAP + PLAYER_STANDING_ROW*40 + (PLAYER_STANDING_COL+2)  (row17,col26)
 ; This routine ADDS the D/E (DH/DL) map-coordinate output pret's version also
-; produces (±1 to wYCoord/wXCoord per facing) — GetTileInFrontOfPlayer does not
+; produces (±1 to wYCoord/wXCoord per facing) — the deleted fork did not
 ; compute this half, hence this new routine rather than modifying it.
 ;
 ; GetTileAndCoordsInFrontOfPlayer is the `predef`-callable entry (pret restores

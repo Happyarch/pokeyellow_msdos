@@ -108,7 +108,7 @@ extern ReloadWalkingTilePatterns    ; src/engine/overworld/map_sprites.asm
 %ifdef NEED_SEED_IDENTITY
 %endif
 ; SeamReseatView: any harness that hand-seeds wYCoord/wXCoord must derive the view
-; pointer itself (LoadMapData doesn't — that lives in LoadWarpDestination).
+; pointer itself (LoadMapData doesn't — that lives in LoadDestinationMapData).
 %ifdef DEBUG_SEAM
 %define NEED_SEAM_RESEAT
 %endif
@@ -204,7 +204,7 @@ global EnterMapBoot
 ; IsSpriteInFrontOfPlayer / IsSpriteInFrontOfPlayer2 moved to their pret mirror,
 ; src/home/overworld.asm (menu-intro review + R-002 retirement, 2026-07-23).
 global CheckWarpTile
-global LoadWarpDestination
+global LoadDestinationMapData
 ; LoadPlayerSpriteGraphics moved to engine/overworld/player_gfx.asm (wild-live
 ; promotion) — the scaffold here is retired; player_sprite is exported to it.
 global player_sprite                       ; pret RedSprite; consumed by player_gfx.asm
@@ -241,7 +241,7 @@ PALLET_TOWN_BORDER_BLOCK    equ 0x0B   ; border block from PalletTown_Object
 TILESET_BANK_FLAT           equ 0x01   ; ignored in flat model (TODO-HW: ROM banking)
 
 ; wCurrentTileBlockMapViewPointer for the Pallet Town spawn (wXCoord/wYCoord = 8,8;
-; see EnterMap). Same derivation LoadWarpDestination uses, specialized to that coord:
+; see EnterMap). Same derivation LoadDestinationMapData uses, specialized to that coord:
 ;   stride   = PALLET_TOWN_WIDTH + 2*MAP_BORDER
 ;   view_row = (8>>1) + MAP_BORDER - SCREEN_BLOCK_HEIGHT/2 = 4 + MAP_BORDER - 4 = MAP_BORDER
 ;   view_col = (8>>1) + MAP_BORDER - SCREEN_BLOCK_WIDTH/2  = 4 + MAP_BORDER - 6 = MAP_BORDER - 2
@@ -740,9 +740,9 @@ section .text
 ; SeamReseatView — DEBUG harnesses only (DEBUG_SEAM, DEBUG_SIGNTEXT). Port-only
 ; debug helper, no pret counterpart.
 ; LoadMapData loads the header + block map but does NOT derive the view pointer
-; (that lives in LoadWarpDestination). A harness that spawns on an arbitrary map
+; (that lives in LoadDestinationMapData). A harness that spawns on an arbitrary map
 ; must therefore recompute it from the seeded coordinates, using the same formula
-; LoadWarpDestination does, and re-run LoadCurrentMapView to repaint the surface.
+; LoadDestinationMapData does, and re-run LoadCurrentMapView to repaint the surface.
 ; ---------------------------------------------------------------------------
 SeamReseatView:
     push eax
@@ -778,7 +778,7 @@ SeamReseatView:
     ; PREVIOUS map's tiles (or zeros) and the player is walled in on the spawn
     ; tile — a harness artifact that looks exactly like a map bug.
     call RefreshCollisionTileMap
-    ; Seed BIT_STANDING_ON_WARP exactly as LoadWarpDestination does, or a spawn
+    ; Seed BIT_STANDING_ON_WARP exactly as LoadDestinationMapData does, or a spawn
     ; that lands on a warp tile (every map-edge gate spawn does) can never take
     ; the collision-exit path — an artifact that would make the harness disagree
     ; with the live game.
@@ -840,54 +840,16 @@ DoSignInteraction:
     ret
 
 ; ---------------------------------------------------------------------------
-; GetTileInFrontOfPlayer — simplified translation.
-; Pret ref: engine/overworld/player_state.asm:_GetTileAndCoordsInFrontOfPlayer
+; GetTileInFrontOfPlayer (port-only fork) was DELETED 2026-07-27.
 ;
-; Reads the tile the player faces from wTileMap at the fixed screen coordinate
-; pret uses for each facing (the player is always centered). Stores it in
-; wTileInFrontOfPlayer and returns it in CL.
-;
-; DEFERRED side-outputs: pret's _GetTileAndCoordsInFrontOfPlayer also returns the
-; TARGET tile's map coordinates in D = wYCoord±1 and E = wXCoord±1 (facing-adjusted).
-; Those are consumed by SignLoop (sign reading via IsSpriteOrSignInFrontOfPlayer,
-; home/overworld.asm:1069) and the hidden-event coord scan — neither of which is
-; live yet. The one current caller (CollisionCheckOnLand) needs only the tile, so
-; the D/E outputs are intentionally dropped. When sign/hidden-event front-coord
-; matching lands it must either derive the front coords itself from wYCoord/wXCoord
-; + facing, or this routine be extended to emit them (see the note in player_state.asm
-; that the port's dependents pre-read wTileInFrontOfPlayer and self-derive coords).
+; It duplicated pret's _GetTileAndCoordsInFrontOfPlayer byte-for-byte in its tile
+; read -- same four W_TILEMAP offset expressions, same W_TILE_IN_FRONT_OF_PLAYER
+; store -- differing only by omitting the DH/DL front-coord outputs. That faithful
+; routine is translated and linked at src/engine/overworld/player_state.asm, so two
+; copies of one facing->offset table were live and could silently diverge.
+; Both former callers (src/home/overworld.asm CollisionCheckOnLand and the surf
+; collision path) now call _GetTileAndCoordsInFrontOfPlayer directly.
 ; ---------------------------------------------------------------------------
-GetTileInFrontOfPlayer:
-    ; Pret ref: engine/overworld/player_state.asm:_GetTileAndCoordsInFrontOfPlayer
-    ;   lda_coord c, r  = W_TILEMAP + r*20 + c  (pret 20-wide tilemap)
-    ; DOS tilemap is 40 wide; player standing tile = PLAYER_STANDING_ROW=17,
-    ; PLAYER_STANDING_COL=24. Fronts are ±2 rows/cols from the standing tile.
-    ;
-    ;   Down  (row+2, col+0) = (19, 24)
-    ;   Up    (row-2, col+0) = (15, 24)
-    ;   Left  (row+0, col-2) = (17, 22)
-    ;   Right (row+0, col+2) = (17, 26)
-    mov al, [ebp + W_SPRITE_PLAYER_FACING_DIR]
-    cmp al, SPRITE_FACING_DOWN
-    jne .notDown
-    mov esi, W_TILEMAP + (PLAYER_STANDING_ROW + 2) * SCREEN_TILES_W + PLAYER_STANDING_COL
-    jmp .read
-.notDown:
-    cmp al, SPRITE_FACING_UP
-    jne .notUp
-    mov esi, W_TILEMAP + (PLAYER_STANDING_ROW - 2) * SCREEN_TILES_W + PLAYER_STANDING_COL
-    jmp .read
-.notUp:
-    cmp al, SPRITE_FACING_LEFT
-    jne .notLeft
-    mov esi, W_TILEMAP + PLAYER_STANDING_ROW * SCREEN_TILES_W + (PLAYER_STANDING_COL - 2)
-    jmp .read
-.notLeft:
-    mov esi, W_TILEMAP + PLAYER_STANDING_ROW * SCREEN_TILES_W + (PLAYER_STANDING_COL + 2)
-.read:
-    movzx ecx, byte [ebp + esi]
-    mov [ebp + W_TILE_IN_FRONT_OF_PLAYER], cl
-    ret
 
 ; ---------------------------------------------------------------------------
 ; Home object-loader (pret home/overworld.asm:2137-2274). OW-A.2 P3b.
@@ -958,7 +920,16 @@ CheckWarpTile:
     ret
 
 ; ---------------------------------------------------------------------------
-; LoadWarpDestination — load the destination map after a warp transition.
+; LoadDestinationMapData — load the destination map after a warp transition.
+;
+; PORT-ONLY orchestrator: no pret counterpart. Renamed from LoadWarpDestination on
+; 2026-07-27 because that name shadowed pret's real, unrelated, and separately
+; translated home/overworld.asm:LoadDestinationWarpPosition (which copies a 4-byte
+; warp-position record into wCurrentTileBlockMapViewPointer). The two do entirely
+; different jobs, and the near-identical names made greps and call-graph reading
+; ambiguous.
+;
+; DEVIATION{class=banking; pret=home/overworld.asm:LoadMapData; behavior=one port routine performs the destination map header load, indoor .blk staging into a shared EBP window, tileset pattern load and view-pointer derivation that pret spreads across LoadMapData plus its bank-switched callees; evidence=the port has no ROM banking so pret's per-bank load sequence has no counterpart and indoor maps must share INDOOR_BLK_GBADDR rather than living at distinct bank addresses; lifetime=permanent, the flat memory model is by design}
 ; Preconditions: W_CUR_MAP = destination map ID already set by caller;
 ;                W_DESTINATION_WARP_ID = 0-based index into that map's warp
 ;                table, used to resolve the player spawn coords.
@@ -980,7 +951,7 @@ CheckWarpTile:
 ; The wCurMap/wLastMap update + BIT_STANDING_ON_DOOR + IgnoreInputForHalfSecond +
 ; jp EnterMap half of WarpFound2 lives in OverworldLoop.warpTransition (OW-A.4(b)).
 ; ---------------------------------------------------------------------------
-LoadWarpDestination:
+LoadDestinationMapData:
     push eax
     push ebx
     push ecx
@@ -1160,7 +1131,6 @@ global TilesetCollPtrs
 
 ; --- consumed by the relocated pret home/overworld.asm routines ---
 global DoSignInteraction
-global GetTileInFrontOfPlayer
 global SeamReseatView
 global WalkSpeedSample
 global seam_reseat

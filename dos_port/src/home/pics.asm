@@ -4,8 +4,13 @@
 ;   UncompressMonSprite, LoadMonFrontSprite, LoadUncompressedSpriteData,
 ;   AlignSpriteDataCentered, ZeroSpriteBuffer, InterlaceMergeSpriteBuffers.
 ; (Everything else here is PORT-ONLY: LoadMonPicToVRAM, LoadMonBackPicToVRAM,
-; PlacePicTilemap, RefreshMonFrontRepaintPalette, SlideBattlePicsIn and the four
-; Draw*Pic_Stub entries.)
+; PlacePicTilemap, RefreshMonFrontRepaintPalette, SlideBattlePicsIn, and the
+; embedded-pic loaders DebugLoadEmbeddedEnemyFrontPic / DebugLoadEmbeddedTrainerPic
+; / LoadEmbeddedBackPicFallback. Those three carried forked "Draw*Pic_Stub" names
+; until 2026-07-27: they are not stubs (they have real bodies and never lived in a
+; *_stubs.asm), so the suffix asserted a convention they did not follow. The fourth,
+; DrawPlayerRedBackPic_Stub, was pret engine/battle/core.asm:LoadPlayerBackPic all
+; along and MOVED to src/engine/battle/core.asm under its pret name.)
 ;
 ; FOUR pret labels this file used to carry MOVED OUT in the s16 mirror repair,
 ; because they belong to other pret files:
@@ -41,7 +46,6 @@ bits 32
 %define FW         SCREEN_TILES_W       ; 40 — W_TILEMAP stride
 %define T_SP       0x7F                 ; blank/space tile (canvas clear)
 %define PIC_SIZE   (7 * 7)              ; 49 tiles in the centered 7x7 sprite buffer
-%define PIC_STAGE  0xA4A0               ; GB scratch for the compressed input stream
                                         ; (free SRAM just past sSpriteBuffer2 $A498)
 
 extern ScaleSpriteByTwo           ; src/engine/battle/scale_sprites.asm
@@ -62,12 +66,12 @@ global LoadMonFrontSprite
 global UncompressMonSprite
 global RefreshMonFrontRepaintPalette
 
-; --- debug-harness-only stubs (DEBUG_BATTLE / debug_dump.asm); superseded by the
-;     dispatch above once the MonFrontPics table is staged — see M6.3 SUMMARY ---
-global DrawEnemyFrontPic_Stub
-global DrawPlayerBackPic_Stub
-global DrawPlayerRedBackPic_Stub
-global DrawBugCatcherPic_Stub
+; --- embedded-pic loaders. DebugLoadEmbedded* are debug-harness-only (debug_dump.asm);
+;     LoadEmbeddedBackPicFallback is the no-MON_FRONT_PICS build fallback. None is a
+;     stub in the *_stubs.asm sense -- see each routine's header ---
+global DebugLoadEmbeddedEnemyFrontPic
+global LoadEmbeddedBackPicFallback
+global DebugLoadEmbeddedTrainerPic
 
 ; MonFrontPics: Tier-1 GENERATED table (dex order, 151 records of {dd flatptr, dd len})
 ; pointing at the incbin'd compressed front .pic blobs. Build with -D MON_FRONT_PICS
@@ -467,13 +471,18 @@ UncompressMonSprite:
     jmp UncompressSpriteData                   ; -> buffer1 = chunk1, buffer2 = chunk2
 
 ; ---------------------------------------------------------------------------
-; DrawEnemyFrontPic_Stub — STAGE-1c TEST STOPGAP. Stages an embedded pic, decodes
-; + merges it to VRAM $9000, and places it top-right on the battle canvas.
-; The real path (Stage 2/3) reads the enemy species -> a pic-pointer table and
-; loads the matching pic; this hard-codes one mon so the decode/merge/placement
-; can be visually gated now. Called from the DEBUG_BATTLE harness, not InitBattle.
+; DebugLoadEmbeddedEnemyFrontPic — DEBUG-HARNESS ONLY. Stages an embedded pic,
+; decodes + merges it to VRAM $9000 for the battle canvas. Hard-codes one mon
+; (PIDGEY) so the decode/merge/placement can be visually gated. The production
+; path is LoadMonFrontSprite / LoadFrontSpriteByMonIndex via the generated
+; MonFrontPics table; this is reached only from src/debug/debug_dump.asm.
+;
+; Port-only by design: it is deliberately UNFAITHFUL (one hardcoded species), so
+; it takes a descriptive port-only name rather than a pret label. It is not a STUB
+; under the stub convention -- it stands in for nothing at link time and no pret
+; label resolves to it.
 ; ---------------------------------------------------------------------------
-DrawEnemyFrontPic_Stub:
+DebugLoadEmbeddedEnemyFrontPic:
     mov esi, embedded_pic              ; stage compressed stream into GB space
     lea edi, [ebp + PIC_STAGE]
     mov ecx, embedded_pic_len
@@ -486,11 +495,13 @@ DrawEnemyFrontPic_Stub:
     ret
 
 ; ---------------------------------------------------------------------------
-; DrawPlayerBackPic_Stub — STAGE-1c TEST STOPGAP (see DrawEnemyFrontPic_Stub).
-; Stages an embedded back pic, decodes + scales + merges it to VRAM $9310, and
-; places it bottom-left. Real path (Stage 2/3): from the player's party species.
+; LoadEmbeddedBackPicFallback — no-data-build fallback + debug harness. Stages the
+; embedded PIKACHU back pic, decodes + 2x-scales + merges it to VRAM $9310.
+;
+; DEVIATION{class=temporary; pret=engine/battle/init_battle.asm:LoadMonBackPic; behavior=returns one hardcoded species back pic instead of the sent-out mon's, reached only as LoadMonBackPic's fallback in a build assembled without MON_FRONT_PICS; evidence=src/engine/battle/init_battle.asm LoadMonBackPic reaches this solely from the %else of %ifdef MON_FRONT_PICS and dos_port/Makefile line 26 defines MON_FRONT_PICS unconditionally so the shipping build never takes it; lifetime=retires when the no-data build configuration is dropped}
+; Port-only label, so this is a DEVIATION not a STUB -- a STUB annotation must name a pret label it stands in for at link time, and nothing resolves to this name.
 ; ---------------------------------------------------------------------------
-DrawPlayerBackPic_Stub:
+LoadEmbeddedBackPicFallback:
     mov esi, embedded_backpic
     lea edi, [ebp + PIC_STAGE]
     mov ecx, embedded_backpic_len
@@ -501,29 +512,19 @@ DrawPlayerBackPic_Stub:
     call LoadMonBackPicToVRAM              ; decode → VRAM only; the slide-in places it
     ret
 
-; ---------------------------------------------------------------------------
-; DrawPlayerRedBackPic_Stub — decode the PLAYER (Red/Yellow) back sprite to the
-; player pic VRAM ($31). This is the sprite that slides in on the player's side at
-; battle start (pret LoadPlayerBackPic → RedPicBack); the mon's back pic replaces it
-; only after the player sends a mon out. Scaled like a mon back (LoadMonBackPicToVRAM).
-; ---------------------------------------------------------------------------
-DrawPlayerRedBackPic_Stub:
-    mov esi, embedded_redback
-    lea edi, [ebp + PIC_STAGE]
-    mov ecx, embedded_redback_len
-    rep movsb
-    mov word [ebp + wSpriteInputPtr], PIC_STAGE
-    mov byte [ebp + wSpriteFlipped], 0
-    mov edx, GB_VCHARS2 + 0x31 * 16        ; VRAM $9310 -> tile ID $31
-    call LoadMonBackPicToVRAM
-    ret
 
 ; ---------------------------------------------------------------------------
-; DrawBugCatcherPic_Stub — decode the Bug Catcher trainer sprite (7x7 front-style,
-; not scaled) to the enemy pic VRAM ($00), for the trainer-battle test. The real
-; path indexes TrainerPicPointers[class-1] (generated) — Stage 4.
+; DebugLoadEmbeddedTrainerPic — DEBUG-HARNESS ONLY. Decodes the Bug Catcher trainer
+; sprite (7x7 front-style, not scaled) to the enemy pic VRAM ($00) for the
+; trainer-battle test. The production path is pret _LoadTrainerPic indexing the
+; generated TrainerPicPointers[class-1]; this is reached only from
+; src/debug/debug_dump.asm.
+;
+; Port-only by design: deliberately UNFAITHFUL (one hardcoded trainer class), so it
+; takes a descriptive port-only name rather than pret's _LoadTrainerPic. Not a STUB
+; -- it stands in for nothing at link time.
 ; ---------------------------------------------------------------------------
-DrawBugCatcherPic_Stub:
+DebugLoadEmbeddedTrainerPic:
     mov esi, embedded_bugcatcher
     lea edi, [ebp + PIC_STAGE]
     mov ecx, embedded_bugcatcher_len
@@ -621,9 +622,6 @@ embedded_pic_len equ $ - embedded_pic
 embedded_backpic:
     incbin "../gfx/pokemon/back/pikachub.pic"
 embedded_backpic_len equ $ - embedded_backpic
-embedded_redback:
-    incbin "../gfx/player/redb.pic"            ; player (Red/Yellow) back sprite
-embedded_redback_len equ $ - embedded_redback
 embedded_bugcatcher:
     incbin "../gfx/trainers/bugcatcher.pic"    ; Bug Catcher trainer (test-trainer sprite)
 embedded_bugcatcher_len equ $ - embedded_bugcatcher

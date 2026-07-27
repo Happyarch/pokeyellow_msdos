@@ -5215,6 +5215,8 @@ section .text
 global DrawEnemyHUDAndHPBar
 global DrawPlayerHUDAndHPBar
 global DrawHUDsAndHPBars
+global LoadPlayerBackPic
+extern LoadMonBackPicToVRAM            ; src/home/pics.asm — decode + 2x scale + merge
 global TryRunningFromBattle
 extern DrawEnemyHUD                    ; battle_hud.asm — enemy name+level+HP bar+frame
 extern DrawPlayerHUD                   ; battle_hud.asm — player name+level+HP bar+frame
@@ -5287,6 +5289,46 @@ DrawPlayerHUDAndHPBar:
 ; DrawHUDsAndHPBars (pret name) — alias to the centered-canvas HUD draw helper.
 DrawHUDsAndHPBars:
     jmp DrawBattleHUDs
+
+; ---------------------------------------------------------------------------
+; LoadPlayerBackPic — decode the PLAYER (Red/Yellow) back sprite to vBackPic
+; ($9310, signed tile ID $31). This is the sprite that slides in on the player's
+; side at battle start; the sent-out mon's back pic (LoadMonBackPic) replaces it
+; only once the player sends a mon out. Scaled like a mon back pic.
+;
+; Faithful to pret engine/battle/core.asm:LoadPlayerBackPic, which likewise loads
+; the fixed RedPicBack blob — this is NOT a species-dependent path, so the embedded
+; blob below is the correct permanent implementation, not a stand-in. It carried
+; the forked name DrawPlayerRedBackPic_Stub until 2026-07-27, which misread as
+; temporary scaffolding while being live production code in the battle intro
+; (src/engine/battle/init_battle.asm).
+;
+; DEVIATION{class=banking; pret=engine/battle/core.asm:LoadPlayerBackPic; behavior=the pic source is an incbin of gfx/player/redb.pic in .data instead of a ROM-bank pointer plus bank switch, and the OpenSRAM and CloseSRAM bracket around the sprite buffers is dropped; evidence=the port has no ROM banking so pret's ld de RedPicBack plus BANK load has no counterpart, and the port's SRAM window at GB_SRAM is always mapped so the open and close calls are no-ops; lifetime=permanent, the flat memory model is by design}
+; DEVIATION{class=projection; pret=engine/battle/core.asm:LoadPlayerBackPic; behavior=this routine only decodes to vBackPic, whereas pret also runs ScaleSpriteByTwo, InterlaceMergeSpriteBuffers and predef CopyUncompressedPicToTilemap plus the hStartTileID and hOAMTile setup to place the pic; evidence=the port folds decode plus 2x scale plus merge into LoadMonBackPicToVRAM and defers tilemap placement to SlideBattlePicsIn, which composites both battle pics onto the 40x25 canvas at projected coordinates; lifetime=permanent, the widescreen canvas composition is by design}
+; NOTE: the OldManPicBack and ProfOakPicBack alternates pret selects here are not
+; wired yet -- those ride the old-man tutorial and Oak battle paths.
+;
+; In:  EBP = GB memory base.  Out: vBackPic filled.  Clobbers: EAX, ECX, EDX, ESI, EDI.
+; ---------------------------------------------------------------------------
+LoadPlayerBackPic:
+    mov esi, RedPicBack
+    lea edi, [ebp + PIC_STAGE]
+    mov ecx, RedPicBack_len
+    rep movsb
+    mov word [ebp + wSpriteInputPtr], PIC_STAGE
+    mov byte [ebp + wSpriteFlipped], 0
+    mov edx, GB_VCHARS2 + 0x31 * 16        ; vBackPic -> signed tile ID $31
+    jmp LoadMonBackPicToVRAM               ; decode -> 2x scale -> merge to VRAM
+
+section .data
+align 4
+; RedPicBack — pret gfx/pics.asm:RedPicBack (INCBIN "gfx/player/redb.pic").
+; Kept with its only consumer; gfx/ has no mirrored port file.
+RedPicBack:
+    incbin "../gfx/player/redb.pic"        ; player (Red/Yellow) back sprite
+RedPicBack_len equ $ - RedPicBack
+
+section .text
 
 ; ===========================================================================
 ; TryRunningFromBattle — faithful pret escape-odds (engine/battle/core.asm).

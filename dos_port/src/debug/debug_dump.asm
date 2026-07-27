@@ -1,5 +1,7 @@
 ; debug_dump.asm — runtime ground-truth memory dump (debug builds only).
 ;
+; DEVIATION{class=HAL; pret=home/vblank.asm:VBlank; behavior=debug-only routines exfiltrate emulated GB memory and the back buffer to host files and drive scripted input, none of which exists in the Game Boy; evidence=this translation unit is assembled only into DEBUG_ harness builds and its labels are port-only diagnostics with no pret counterpart, writing via DPMI INT 31h AX=0300h because a protected-mode int 21h pointer is not translated under CWSDPMI; lifetime=permanent, the debug harness is port infrastructure not game code}
+;
 ; Exfiltrates selected windows of emulated GB memory to a host file ("DUMP.BIN")
 ; so they can be hexdumped on the host. This bypasses the PPU/palette/blit
 ; entirely — the values written are the literal bytes in the GB address space,
@@ -110,10 +112,10 @@ extern LoadTextBoxTilePatterns
 extern InitBattle
 extern DrawBattleIntroBox
 extern SlideBattlePicsIn
-extern DrawEnemyFrontPic_Stub
-extern DrawPlayerRedBackPic_Stub
-extern DrawBugCatcherPic_Stub
-extern DrawPlayerBackPic_Stub
+extern DebugLoadEmbeddedEnemyFrontPic
+extern LoadPlayerBackPic
+extern DebugLoadEmbeddedTrainerPic
+extern LoadEmbeddedBackPicFallback
 extern DrawBattleMenu
 extern MainInBattleLoop          ; core.asm — faithful battle loop (replaces bespoke DisplayBattleMenu loop)
 extern MoveSelectionMenu         ; core.asm — the FIGHT sub-menu (DEBUG_MOVEMENU)
@@ -1228,7 +1230,7 @@ RunBattleTest:
     mov [ebp + wCurPartySpecies], al
     mov esi, W_TILEMAP + 12         ; hlcoord 12,0 (stride 40)
     call LoadFrontSpriteByMonIndex  ; real enemy front pic (not the stub)
-    call DrawPlayerRedBackPic_Stub
+    call LoadPlayerBackPic
     call SlideBattlePicsIn
     call DrawBattleIntroBox
     call SaveBattleScreen
@@ -1613,11 +1615,11 @@ RunBattleTest:
     ; player party variety: mon1 fainted, mon2 statused (PrepareNewGameDebug seeded healthy)
     mov word [ebp + wPartyMons + 1*PARTYMON_STRUCT_LENGTH + MON_HP], 0
     mov byte [ebp + wPartyMons + 2*PARTYMON_STRUCT_LENGTH + MON_STATUS], 0x08
-    call DrawBugCatcherPic_Stub     ; decode Bug Catcher trainer sprite → enemy VRAM
+    call DebugLoadEmbeddedTrainerPic     ; decode Bug Catcher trainer sprite → enemy VRAM
 %else
-    call DrawEnemyFrontPic_Stub     ; decode enemy (wild mon) front pic → VRAM
+    call DebugLoadEmbeddedEnemyFrontPic     ; decode enemy (wild mon) front pic → VRAM
 %endif
-    call DrawPlayerRedBackPic_Stub  ; decode player trainer (Red) back pic → VRAM (slides in)
+    call LoadPlayerBackPic  ; decode player trainer (Red) back pic → VRAM (slides in)
     call SlideBattlePicsIn          ; faithful silhouette slide-in (darkened)
     call DrawBattleIntroBox         ; box + "Wild <nick> appeared!" + enemy HUD
     call SaveBattleScreen           ; snapshot the clean screen (restored on menu re-entry)
@@ -1666,13 +1668,13 @@ RunBattleTest:
     ; no throw/grow animation — Yellow special); every other mon gets the ball-throw +
     ; grow (AnimateSendingOutMon, more involved). TODO(send-out): trainer slide-out +
     ; Pikachu slide-in (easy) / ball+grow for others. For now: straight VRAM swap.
-    call DrawPlayerBackPic_Stub     ; decode PIKACHU back pic → VRAM $31 (same tilemap block)
+    call LoadEmbeddedBackPicFallback     ; decode PIKACHU back pic → VRAM $31 (same tilemap block)
 %ifdef DEBUG_BATTLE_TRAINER
     ; enemy send-out: the TRAINER sends out its first mon, so the trainer sprite is
     ; replaced by the enemy mon's front pic (decode over VRAM $00, same tilemap block);
     ; DisplayBattleMenu's DrawBattleHUDs then draws the enemy HP bar (was suppressed for
     ; the trainer intro). TODO(send-out): trainer slide-out + the real enemy-mon throw.
-    call DrawEnemyFrontPic_Stub     ; enemy mon (PIDGEY) front → VRAM $00 (replaces Bug Catcher)
+    call DebugLoadEmbeddedEnemyFrontPic     ; enemy mon (PIDGEY) front → VRAM $00 (replaces Bug Catcher)
 %endif
     ; Stage 3 (victory EXP): seed the defeated enemy's base stats + base exp (PIDGEY:
     ; HP40/Atk45/Def40/Spd56/Spc35, base exp 55) for GainExperience's stat-exp + EXP

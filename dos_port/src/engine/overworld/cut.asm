@@ -333,7 +333,7 @@ BoulderDustAnimationOffsets:
 ; And pret's row/col offsets 1/2/3 address the player's block RELATIVE TO THE VIEW
 ; ORIGIN, which for pret's 6x5-block view is (row 2, col 2). The port's view is
 ; 12x9 blocks and its camera is centred by construction of view_col/view_row
-; (LoadWarpDestination / coords.inc: view_col = (x>>1) + MAP_BORDER - SCREEN_BLOCK_WIDTH/2,
+; (LoadDestinationMapData / coords.inc: view_col = (x>>1) + MAP_BORDER - SCREEN_BLOCK_WIDTH/2,
 ; so the player's block sits at relative (SCREEN_BLOCK_HEIGHT/2, SCREEN_BLOCK_WIDTH/2)
 ; = (4, 6)). Both are therefore expressed via the constants, not copied.
 ;   rows above/centre/below = SCREEN_BLOCK_HEIGHT/2 - 1 .. + 1   (3/4/5)
