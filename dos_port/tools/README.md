@@ -65,8 +65,25 @@ detailed usage lives (invoke it, don't guess flags from `--help` alone).
 | `dosbox_mcp/`, `mgba_mcp/`, `run_with_mcp.sh`, `run_mgba_mcp.sh`, `build_dosbox_mcp.sh`, `build_mgba.sh` | Live symbolic debugging (DOSBox-X port side / mGBA golden side) | `build-and-debug` |
 | `audio/audition.py` | Host-side MIDI audition (fastest way to hear a track) | `build-and-debug` |
 | `faithdiff`, `label_status`, `lint_pret_labels`, `update_label_db`, `fidelity_gate` | Pret-fidelity gate: label DB, per-routine diff, pre-commit check | `faithfulness-review` |
+| `dependency_graph.py` | Interactive, canvas-rendered pret/DOS dependency viewer backed read-only by `translation.db` | `build-and-debug` |
 | `gen_progress_report`, `project_state`, `buildprobe.py` | Derived project state → `docs/translation_progress.md`: per-subsystem pret-label coverage plus the `DEVIATION`/`BUG`/`GLITCH`/`STUB` ledger. Read-only by default (`--scan` refreshes the DB first). Extensionless by convention — a report tool, not one of the `generators/` scripts | not yet owned by a skill; each has a `Usage:`/docstring block — read that first |
 | `build_index`, `work_queue`, `process_placements` | The hand-maintained translation work queue (`functions`/`stubs`/`translation_log` tables). **Its statuses were abandoned and it now has no reader** — `gen_progress_report` was moved off it 2026-07-27 because it reported 97 `translated` against the label DB's 1673. Retire-or-revive is an open call in `docs/current_plan_doc_staleness.md`; do not cite it as coverage | as above |
 
 `tests/`, `test_label_db.py`, `validate_scenarios.py` are regression suites,
 not tools you run for output — see their own headers.
+
+### Dependency graph viewer
+
+Run `python3 dos_port/tools/dependency_graph.py`. It opens a loopback-only local
+page on an automatically selected port; pass `--no-browser` to print the URL
+without opening it. `--db PATH` selects a fixture or alternate database.
+`--scan` derives a fresh database in a temporary directory and never rewrites
+the tracked `translation.db`. `--host` and `--port` override the listener.
+
+The pret and DOS tabs deliberately have different scopes. Pret shows every
+modeled pret label and unknown referenced endpoints. DOS shows the complete
+modeled pret universe (including unported/isolated routines), port-only labels,
+and unknown endpoints. The names-only `script_labels` table and unmodeled
+audio/data areas remain outside coverage and the UI says so explicitly.
+The DB also cannot infer `dd Label` dispatch-table or address-taken edges, so
+an absent edge is never evidence that an ISR or jump-table handler is unexecuted.

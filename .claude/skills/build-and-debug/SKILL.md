@@ -460,6 +460,30 @@ tools/unnamed.py pkmn.sym
 tools/unnamed.py -r src pkmn.sym    # only symbols under src/
 ```
 
+### Interactive dependency graph
+
+`tools/dependency_graph.py` is the zero-install browser viewer for the modeled
+pret and DOS-port call graphs in `tools/translation.db`:
+
+```sh
+python3 dos_port/tools/dependency_graph.py
+python3 dos_port/tools/dependency_graph.py --no-browser
+python3 dos_port/tools/dependency_graph.py --scan --no-browser
+```
+
+Normal operation opens the database read-only. `--scan` runs
+`update_label_db --db` into a temporary directory, so it never rewrites the
+tracked database. The UI includes isolated/unported routines, unknown call
+endpoints, annotation badges, filters/search, neighborhood selection, and
+canvas pan/zoom. Its two scopes are intentional: pret excludes port-only-only
+rows, while DOS includes all modeled pret labels plus port-only labels. As with
+the label DB itself, names-only `script_labels` and unmodeled audio/data are not
+dependency coverage.
+The call scanner also has no edge for `dd Label` dispatch tables or other
+address-taken targets. Both ISRs and jump-table handlers can therefore execute
+while appearing disconnected; the viewer states this caveat and must never be
+used as proof of unreachability.
+
 ## Asset-authoring tools (palettes, overworld maps, UI layout)
 
 Interactive pygame editors that write hand-authored **sidecar JSON**, which a
