@@ -48,6 +48,7 @@ mid-session directives from the maintainer.
 | `72f19bdf` | docs: retired the stale "`src/engine/joypad.asm` is dead" claims (the s19 deferral) |
 | `1ceae0aa` | regenerated `docs/translation_progress.md` |
 | `3058bca9` | **rewrote `gen_progress_report`** onto derived state instead of the abandoned `work_queue` |
+| `95707057` | **dissolved `include/m1_3_pending_symbols.inc`** — the last scaffold — and fixed the colliding placeholder HRAM slot it had left behind |
 
 Gates: `make fidelity-full` **MAKE_EXIT=0, exactly 33 PASS, 0 FAIL**; `static_gate`
 PASS on every commit; `lint_pret_labels` 0 violations, 4 suppressed. Label DB
@@ -56,32 +57,53 @@ translated 1673, 258 linked sources.
 
 ---
 
-## 3. The scaffold dissolution, and the one thing worth carrying
+## 3. Both scaffolds are gone — and each was hiding a defect
 
-`m8_2_pending_symbols.inc` carried its own exit condition since M8.2. It is gone;
-**`m1_3_pending_symbols.inc` is the last one standing** and should go the same way.
-Recipe, landmines and the full method: memory
-**`pending-symbols-scaffolds-and-shadowing-equs`**.
+`m8_2_pending_symbols.inc` (`13a015fb`) and `m1_3_pending_symbols.inc` (`95707057`)
+both carried their own exit condition in their headers, and both had rotted in place
+for months. **No pending-symbol include remains.** Recipe, landmines and the full
+method: memory **`pending-symbols-scaffolds-and-shadowing-equs`**.
 
-Two things from it belong in front of you:
+**m1_3 was hiding a real latent defect.** It defined
+`hSavedMapTextPtr equ 0xFF8E ; PLACEHOLDER (2 bytes)` with a comment asking the root
+to allocate a real pair — nobody ever did. As two bytes it ran to `0xFF8F` =
+`H_SPRITE_OFFSET2`, which `PrepareOAMData` writes **once per sprite, every frame**,
+from the vblank pipeline. So the saved pointer's high byte was overwritten between
+any save and its restore, handing `ChangeBox` a corrupt `wCurMapTextPtr` across
+`SaveGameData`. Both routines are linked with a live caller; the flow sits behind the
+Bill's-PC stubs, so it was latent, never observed. Fixed by taking pret's own address
+(`0xFFEC`, golden `00:ffec`), which was free.
 
-1. **The shadowing-equ trap.** The scaffold defined `wMapSpriteExtraData equ 0xD503`
-   — pret's WRAM address — while the port's real array is flat `.bss` carrying the
-   same pret name as a label. Any file including the scaffold bound the pret name to
-   emulated WRAM **the port never writes**: assembles, links, reads plausible zeros.
-   It cost two real bugs (`EngageMapTrainer`, caught by the route3_sight golden;
-   `PickUpItem`, same shape). It had zero users, so it was **deleted rather than
-   migrated** — the pret name now reaches the real label. *If you ever see a pret
-   data name defined both as an address and as a label, that is a bug, not a style
-   issue.*
+*Treat `PLACEHOLDER` / `TODO(root)` / `ROOT must allocate` on an address definition as
+a defect report — it means an address nobody has checked.*
+
+Two more things from that memory belong in front of you:
+
+1. **The shadowing-equ trap, found TWICE.** m8_2 defined
+   `wMapSpriteExtraData equ 0xD503` — pret's WRAM address — while the port's real
+   array is flat `.bss` carrying the same pret name as a label. Any file including the
+   scaffold bound the pret name to emulated WRAM **the port never writes**: assembles,
+   links, reads plausible zeros. It cost two real bugs (`EngageMapTrainer`, caught by
+   the route3_sight golden; `PickUpItem`, same shape). m1_3 held the **sibling array's**
+   identical trap, `wMapSpriteData equ 0xD4E3` — no user, so it never bit, but it was
+   one `%include` away. Both were **deleted rather than migrated**. *If you ever see a
+   pret data name defined both as an address and as a label, that is a bug, not a
+   style issue.*
 
 2. **How a "pure refactor" gets verified.** `PKMN.EXE`'s md5 *did* change, which is
    exactly where such a claim normally gets explained away. Don't. Prove build
-   determinism first, then compare **section bytes** (`.text`/`.data` byte-identical),
-   the **defined** symbol table (12809, none added/dropped/moved), and the
-   **absolute** symbol table separately — the diff was there, 5208 → 5207, exactly the
-   one intended removal, no value changed. `equ`s live in the COFF symbol table, so a
-   file hash cannot tell metadata from behaviour. The decomposition can.
+   determinism first, then compare **section bytes**, the **defined** symbol table,
+   and the **absolute** symbol table separately. For m8_2 the whole diff was absolute:
+   5208 → 5207, the one intended removal, no value changed. For m1_3 `.text` changed
+   too — by **exactly 4 bytes**, and they were exactly the 4 predicted HRAM operands
+   (`8e→ec`, `8f→ed`, twice). `equ`s live in the COFF symbol table, so a file hash
+   cannot tell metadata from behaviour. The decomposition can. *A byte count matching
+   your prediction is evidence only if the bytes are also where you predicted.*
+
+3. **An HRAM free-list from `gb_memmap.inc` alone is WRONG.** `trainer_sight.asm`
+   defines four HRAM bytes locally at `0xFF82-0xFF85`, so the header-only scan reports
+   them free. Scan the whole tree before allocating any HRAM slot — a header-only scan
+   is how the placeholder above became a bug in the first place.
 
 Also verified rather than trusted, because a comment asserted it: NASM accepts an
 `equ` repeated at the **same** value and hard-errors on a different one.
