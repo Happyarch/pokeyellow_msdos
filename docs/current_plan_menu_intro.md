@@ -1086,14 +1086,17 @@ byte-identical.
 `faithdiff DisplayTitleScreen` is otherwise unchanged from its pre-existing
 bespoke-title divergences (the `MainMenu` → `OakSpeech`/`EnterMapBoot` shortcut
 is A3's to remove). One **pre-existing, unrelated** `--strict-claims` violation
-remains: a stale `extern HiddenEventMaps` in `home/hidden_events.asm`.
+remains: a stale `extern HiddenEventMaps` in `home/hidden_events.asm` (that
+extern now lives in `src/engine/overworld/hidden_events.asm` — the s16 mirror
+repair split the two engine-side labels out of the home file).
 
 ### Stale-claim sweep done in passing (A2.1/A2.2)
 
 `--strict-claims` is back to **zero tree-wide**, the property CLAUDE.md
 documents.
 
-- **`extern HiddenEventMaps`** (`src/home/hidden_events.asm`) named
+- **`extern HiddenEventMaps`** (then `src/home/hidden_events.asm`, now
+  `src/engine/overworld/hidden_events.asm`) named
   `src/data/hidden_events_data.asm`, which does not literally define it — the
   symbol is in the generated `assets/hidden_events.inc` that file `%include`s,
   and the linter does not follow includes. Comment now names the defining `.inc`
