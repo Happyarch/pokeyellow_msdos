@@ -484,6 +484,34 @@ address-taken targets. Both ISRs and jump-table handlers can therefore execute
 while appearing disconnected; the viewer states this caveat and must never be
 used as proof of unreachability.
 
+**Agent-facing JSON API:** the same server exposes its complete derived model as
+machine-readable JSON. When an agent needs graph context beyond the focused
+`label_status --callers/--callees` output, start it on a known loopback port and
+query these endpoints:
+
+```sh
+python3 dos_port/tools/dependency_graph.py --no-browser --port 8766
+curl http://127.0.0.1:8766/api/graph/pret
+curl http://127.0.0.1:8766/api/graph/port
+curl http://127.0.0.1:8766/api/meta
+```
+
+- `/api/graph/pret` — every modeled pret label plus unknown referenced
+  endpoints; excludes rows that exist only on the port side.
+- `/api/graph/port` — the complete modeled pret universe (including unported
+  and isolated labels), port-only labels, and unknown referenced endpoints.
+- `/api/meta` — DB path/stamp/commit, HEAD mismatch and source-dirty warnings,
+  plus decomposed label-status counts.
+
+Each graph response has top-level `nodes`, `edges`, `side`, and
+`coverage_note`. A node carries its status, pret/port/stub paths, providers,
+structured annotations, layout position, aggregated `callers`, and aggregated
+`callees`. An edge carries `caller`, `callee`, call `kinds`, duplicate count,
+`build_active`, and every source site (`file`, `line`, kind, active state).
+Prefer the node's already-aggregated `callers`/`callees` for a single-label
+question; use top-level `edges` for whole-graph analysis. Treat
+`coverage_note` as part of the data contract, not optional UI prose.
+
 ## Asset-authoring tools (palettes, overworld maps, UI layout)
 
 Interactive pygame editors that write hand-authored **sidecar JSON**, which a
