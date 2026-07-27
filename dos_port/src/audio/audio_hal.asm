@@ -1,4 +1,6 @@
 ; audio_hal.asm — port-only audio HAL glue (no pret counterpart; descriptive
+;
+; DEVIATION{class=HAL; pret=home/audio.asm:UpdateSound; behavior=a port-only glue layer ticks the translated pret audio engine once per DelayFrame and fans the virtual APU register block out to whichever device shim is present, instead of the engine writing the Game Boy APU registers directly; evidence=the DOS target has no APU at 0xFF10-0xFF26 so those writes land in a virtual register block this layer reads, and no pret routine spans engine tick plus device dispatch; lifetime=permanent, the audio HAL boundary is by design}
 ; names per convention).
 ;
 ; audio_tick runs once per DelayFrame, immediately after the hFrameCounter

@@ -1,5 +1,7 @@
 ; opl_shim.asm — virtual APU → OPL2/OPL3 device shim (port-only HAL layer).
 ;
+; DEVIATION{class=HAL; pret=home/audio.asm:UpdateSound; behavior=the four Game Boy channels' virtual APU registers are translated once per audio tick into OPL2 or OPL3 FM voice writes, approximating GB pulse, wave and noise with 2-op FM; evidence=the DOS sound hardware is an FM synthesizer with no GB channel equivalent so pitch, duty and envelope must be re-derived rather than copied, and this file has no pret counterpart; lifetime=permanent, the OPL device shim is a hardware boundary}
+;
 ; Once per audio tick (audio_hal.asm, after Audio1_UpdateMusic) opl_pass reads
 ; the 4 GB hardware channels' registers from the virtual APU block at
 ; [ebp+$FF10..$FF26] and mirrors them onto OPL voices 0-3 at port 388h:

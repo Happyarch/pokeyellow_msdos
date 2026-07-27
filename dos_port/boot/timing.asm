@@ -1,5 +1,7 @@
 ; timing.asm — PIT frame-rate reprogramming, tick ISR, and VBlank sync.
 ;
+; DEVIATION{class=timing; pret=home/delay.asm:DelayFrame; behavior=frame pacing comes from PIT channel 0 reprogrammed to the build's frame rate with a tick ISR, instead of the Game Boy's VBlank interrupt; evidence=the DOS target has no VBlank interrupt and the Game Boy is not exactly 60 Hz, so the divisor is an explicit Makefile TIMING choice, SGB 19506 by default, rather than a hardware-derived constant; lifetime=permanent, the timing HAL boundary is by design}
+;
 ; PIT channel 0 is reprogrammed to fire IRQ 0 at the build's frame rate (mode 3
 ; square wave). The ISR increments [tick_count] and sets [tick_flag]. The divisor
 ; is chosen by the Makefile TIMING mode (see the Makefile header): SGB default

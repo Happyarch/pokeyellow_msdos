@@ -1,5 +1,7 @@
 ; video.asm — VGA mode 13h initialisation, test pattern, and frame present.
 ;
+; DEVIATION{class=HAL; pret=home/lcd.asm:EnableLCD; behavior=display bring-up and frame presentation use VGA mode 13h and a rep movsd of the back buffer to 0xA0000, instead of enabling the Game Boy LCD controller; evidence=the DOS target has no LCD so pret's rLCDC enable sequence has no counterpart, and DS base is not linear 0 under DJGPP so framebuffer access must go through the computed vga_base; lifetime=permanent, the video HAL boundary is by design}
+;
 ; Mode 13h: 320×200, 256 indexed colors, linear framebuffer at 0xA0000.
 ; Under DPMI, INT 10h is reflected to the real-mode BIOS automatically.
 ;

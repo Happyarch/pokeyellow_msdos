@@ -1,5 +1,7 @@
 ; joypad.asm — INT 9h keyboard ISR → emulated GB joypad state.
 ;
+; DEVIATION{class=HAL; pret=home/joypad.asm:ReadJoypad; behavior=joypad state comes from an INT 9h keyboard ISR reading scancodes from port 0x60 into two pressed-state nibbles, instead of pret's rJOYP column strobe; evidence=the DOS target has no Game Boy joypad register so rJOYP has no hardware behind it, and every label in this file is a port-only ISR or key-mapping primitive with no pret counterpart; lifetime=permanent, the input HAL boundary is by design}
+;
 ; Hooks IRQ 1 (protected-mode vector 9) via DPMI, reads scancodes from port
 ; 0x60, and maintains two pressed-state nibbles in GB bit order:
 ;

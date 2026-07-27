@@ -1,4 +1,6 @@
 ; entry.asm — DPMI entry point, GB memory allocation, command-line parsing,
+;
+; DEVIATION{class=HAL; pret=home/init.asm:Init; behavior=program bring-up allocates the emulated GB address space from DPMI, normalizes the DS and SS selectors to a flat 4 GB model, parses the DOS command line and runs the frame loop, replacing the cartridge reset vector and boot sequence; evidence=the DJGPP coff-go32-exe stub enters here after DPMI setup and the selector bases are not linear 0, so EBP-relative GB memory access requires the explicit rebase this file performs; lifetime=permanent, the DPMI entry boundary is by design}
 ; and the main 60 Hz frame loop.
 ;
 ; The DJGPP coff-go32-exe stub handles DPMI setup before jumping here.

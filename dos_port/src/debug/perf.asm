@@ -1,5 +1,7 @@
 ; perf.asm — per-stage frame profiler (DEBUG_PERF builds only).
 ;
+; DEVIATION{class=timing; pret=home/delay.asm:DelayFrame; behavior=a per-stage frame profiler samples the PIT around compositor stages and writes a PERF.BIN series, adding measurement the Game Boy has no counterpart for; evidence=assembled only into DEBUG_PERF builds and read back by tools/read_perf.py, so it is absent from shipping builds; lifetime=retires if the compositor-perf instrumentation is removed}
+;
 ; The compositor-perf plan (docs/plans/compositor_perf.md) is staged
 ; "instrument first, then fix in ranked order". This is the instrument: it
 ; latches PIT channel 0 around each phase of DelayFrame and accumulates the

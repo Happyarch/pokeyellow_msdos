@@ -1,4 +1,6 @@
 ; spk_shim.asm — virtual APU → PC-speaker device shim, SFX only (port-only
+;
+; DEVIATION{class=HAL; pret=home/audio.asm:UpdateSound; behavior=only one voice of the virtual APU is realized, SFX preferred over music, because the PC speaker is a single square-wave channel with no volume control; evidence=the speaker hardware cannot mix four channels or attenuate, so channel selection replaces mixing, and this file has no pret counterpart; lifetime=permanent, the last-resort device shim is a hardware boundary}
 ; HAL layer, the last-resort device).
 ;
 ; The speaker is one square-wave voice with no volume control, so playing

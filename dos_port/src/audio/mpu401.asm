@@ -1,4 +1,6 @@
 ; mpu401.asm — MPU-401 UART driver + flat-stream MIDI sequencer (Phase B).
+;
+; DEVIATION{class=HAL; pret=home/audio.asm:UpdateSound; behavior=music is played as precompiled MIDI streams pushed to an MPU-401 UART instead of being synthesized from the GB channel registers, so on this device the translated engine's APU writes are not the sound source; evidence=an MT-32 or GM device is a note-and-program sequencer with no register-level GB equivalent, and the streams are generated ahead of time by tools/audio into assets/music_streams.inc; lifetime=permanent, the MIDI device path is a hardware boundary}
 ; Port-only module (no pret counterpart; descriptive names per convention).
 ;
 ; Plays the precompiled music streams in assets/music_streams.inc (generated

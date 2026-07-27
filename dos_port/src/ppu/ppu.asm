@@ -1,5 +1,7 @@
 ; ppu.asm — software PPU: scanline BG renderer + OAM compositor.
 ;
+; DEVIATION{class=HAL; pret=home/vblank.asm:VBlank; behavior=the Game Boy PPU is replaced by a software renderer that composites a 40x25 tile viewport into a 320x200 VGA back buffer from a decoded tile cache, instead of hardware scanning VRAM and OAM; evidence=the DOS target has no LCD controller so LCDC, SCX, SCY, BGP and OAM exist only as I O register shadows this file reads, and every routine in it is a port-only rendering primitive with no pret counterpart; lifetime=permanent, the software video HAL is the port's foundation}
+;
 ; Renders the 40×25 tile viewport directly into the 320×200 back buffer at
 ; [EBP + GB_BACKBUF], honoring the I/O register shadows:
 ;

@@ -1,5 +1,7 @@
 ; tandy_shim.asm — virtual APU → SN76489 device shim (port-only HAL layer).
 ;
+; DEVIATION{class=HAL; pret=home/audio.asm:UpdateSound; behavior=the virtual APU registers are translated into SN76489 tone and attenuator writes, mapping the GB's four channels onto three squares plus one noise generator; evidence=the SN76489 has no wave channel and a 4-bit attenuator rather than the GB's envelope hardware so volume and the wave channel must be re-derived, and this file has no pret counterpart; lifetime=permanent, the Tandy device shim is a hardware boundary}
+;
 ; The Tandy 1000's 76496 PSG is nearly the GB APU's cousin: 3 square-wave
 ; tone generators + 1 noise generator, each with a 4-bit attenuator
 ; (docs/sound/tandy_sound_reference.md; register-level detail in
