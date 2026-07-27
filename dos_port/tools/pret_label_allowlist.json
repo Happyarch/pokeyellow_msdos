@@ -23,14 +23,6 @@
       "port_file": "dos_port/src/engine/battle/move_effect_helpers.asm",
       "why": "pret home/bankswitch2.asm split across port files (draft Session H)"
     },
-    "CheckForHiddenEvent": {
-      "port_file": "dos_port/src/home/hidden_events.asm",
-      "why": "engine/overworld/hidden_events.asm engine-side section (CheckForHiddenEvent, OW-3.3) consolidated into the home-primary port file src/home/hidden_events.asm (overworld-port plan, file-layout name-collision rule)"
-    },
-    "CheckIfCoordsInFrontOfPlayerMatch": {
-      "port_file": "dos_port/src/home/hidden_events.asm",
-      "why": "engine/overworld/hidden_events.asm engine-side section (CheckForHiddenEvent, OW-3.3) consolidated into the home-primary port file src/home/hidden_events.asm (overworld-port plan, file-layout name-collision rule)"
-    },
     "EndNPCMovementScript": {
       "port_file": "dos_port/src/engine/overworld/auto_movement.asm",
       "why": "pret home/npc_movement.asm wrapper (farjp _EndNPCMovementScript); the port has no home/npc_movement.asm mirror, so the trivial banking-elided jump is co-located with its target _EndNPCMovementScript in auto_movement.asm (OW-2.3)"
@@ -99,22 +91,6 @@
       "port_file": "dos_port/src/engine/menus/pokedex.asm",
       "why": "Scanner-reviewed 2026-07-15: LoadPokedexTilePatterns from pret engine/gfx/load_pokedex_tiles.asm has its selected single non-stub definition at dos_port/src/engine/menus/pokedex.asm; preserve this per-label split."
     },
-    "PlayerJumpingYScreenCoords": {
-      "port_file": "dos_port/src/engine/overworld/ledges.asm",
-      "why": "Scanner-reviewed 2026-07-15: PlayerJumpingYScreenCoords from pret engine/overworld/player_animations.asm has its selected single non-stub definition at dos_port/src/engine/overworld/ledges.asm; preserve this per-label split."
-    },
-    "_HandleMidJump": {
-      "port_file": "dos_port/src/engine/overworld/ledges.asm",
-      "why": "Scanner-reviewed 2026-07-15: _HandleMidJump from pret engine/overworld/player_animations.asm has its selected single non-stub definition at dos_port/src/engine/overworld/ledges.asm; preserve this per-label split."
-    },
-    "IsPlayerFacingEdgeOfMap": {
-      "port_file": "dos_port/src/engine/overworld/warp_check.asm",
-      "why": "Scanner-reviewed 2026-07-15: IsPlayerFacingEdgeOfMap from pret engine/overworld/player_state.asm has its selected single non-stub definition at dos_port/src/engine/overworld/warp_check.asm; preserve this per-label split."
-    },
-    "IsWarpTileInFrontOfPlayer": {
-      "port_file": "dos_port/src/engine/overworld/warp_check.asm",
-      "why": "Scanner-reviewed 2026-07-15: IsWarpTileInFrontOfPlayer from pret engine/overworld/player_state.asm has its selected single non-stub definition at dos_port/src/engine/overworld/warp_check.asm; preserve this per-label split."
-    },
     "DetectCollisionBetweenSprites": {
       "port_file": "dos_port/src/engine/overworld/movement.asm",
       "why": "Scanner-reviewed 2026-07-15: DetectCollisionBetweenSprites from pret engine/overworld/sprite_collisions.asm has its selected single non-stub definition at dos_port/src/engine/overworld/movement.asm; preserve this per-label split."
@@ -130,18 +106,6 @@
     "_UpdateSprites": {
       "port_file": "dos_port/src/engine/overworld/movement.asm",
       "why": "Scanner-reviewed 2026-07-15: _UpdateSprites from pret engine/overworld/sprite_collisions.asm has its selected single non-stub definition at dos_port/src/engine/overworld/movement.asm; preserve this per-label split."
-    },
-    "ResetPikachuOverworldStateFlag2": {
-      "port_file": "dos_port/src/engine/overworld/pikachu.asm",
-      "why": "Scanner-reviewed 2026-07-15: ResetPikachuOverworldStateFlag2 from pret engine/pikachu/pikachu_follow.asm has its selected single non-stub definition at dos_port/src/engine/overworld/pikachu.asm; preserve this per-label split."
-    },
-    "ShouldPikachuSpawn": {
-      "port_file": "dos_port/src/engine/overworld/pikachu.asm",
-      "why": "Scanner-reviewed 2026-07-15: ShouldPikachuSpawn from pret engine/pikachu/pikachu_follow.asm has its selected single non-stub definition at dos_port/src/engine/overworld/pikachu.asm; preserve this per-label split."
-    },
-    "TrySpawnPikachu": {
-      "port_file": "dos_port/src/engine/overworld/pikachu.asm",
-      "why": "Scanner-reviewed 2026-07-15: TrySpawnPikachu from pret engine/pikachu/pikachu_follow.asm has its selected single non-stub definition at dos_port/src/engine/overworld/pikachu.asm; preserve this per-label split."
     },
     "DelayFrames": {
       "port_file": "dos_port/src/video/frame.asm",
