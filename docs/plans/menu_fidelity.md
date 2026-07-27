@@ -2033,14 +2033,21 @@ release build), so it is left as-is rather than routed through the generator. Re
 mistaken for precedent.
 
 ### SANCTIONED (tagged at the site)
-- **`call DelayFrame` in place of pret's `call Joypad`** (`.inputLoop`) — DEVIATION(joypad-HAL). The
-  port has no `Joypad` routine **by design**, and this was verified rather than assumed: an INT 9h
-  keyboard ISR latches the pad, and the whole of pret's `_Joypad` edge/mask layer (hJoyLast/Pressed/
-  Released/Held, `wJoyIgnore`, `BIT_DISABLE_JOYPAD`, the soft-reset combo) is reimplemented inside
-  `src/input/joypad.asm:joypad_update`, which `DelayFrame` runs once per frame. So `DelayFrame` **is**
-  the poll, and the `H_JOY_*` bytes it refreshes are the ones pret reads back. (`src/engine/joypad.asm`
-  holds a faithful `_Joypad` translation that is deliberately *not* in the build; its own header says
-  so, and the Makefile confirms it.) The three `hJoy*` clears above the call are kept verbatim.
+- **`call DelayFrame` in place of pret's `call Joypad`** (`.inputLoop`) — DEVIATION(joypad-HAL). An
+  INT 9h keyboard ISR latches the pad, and the whole of pret's `_Joypad` edge/mask layer
+  (hJoyLast/Pressed/Released/Held, `wJoyIgnore`, `BIT_DISABLE_JOYPAD`, the soft-reset combo) is
+  reimplemented inside `src/input/joypad.asm:joypad_update`, which `DelayFrame` runs once per frame.
+  So `DelayFrame` **is** the poll, and the `H_JOY_*` bytes it refreshes are the ones pret reads back.
+  The deviation stands unchanged; only its *reason* has been re-measured.
+  **CORRECTED 2026-07-27 (`33fc5137`, chunk 18).** This entry used to say "the port has no `Joypad`
+  routine **by design** … `src/engine/joypad.asm` holds a faithful `_Joypad` translation that is
+  deliberately *not* in the build; its own header says so, and the Makefile confirms it." Both halves
+  are now false: `src/engine/joypad.asm` was repaired and IS in the build (`Makefile` HAL SRCS), and
+  `src/home/joypad.asm` defines `Joypad`/`ReadJoypad`. What is true is that the five routines form a
+  **closed cluster with no live entry point** — `Joypad`→`_Joypad`, `ReadJoypad`→`ReadJoypad_`, and
+  `TrySoftReset`→`Joypad`, with nothing outside calling in. They are linked dead bytes. So the port
+  still has no *synchronous* poll to call here, which is what the deviation actually rests on.
+  The three `hJoy*` clears above the call are kept verbatim.
 - **`CheckForPlayerNameInSRAM` → `call DsvFileExists`** — TODO-HW: SRAM. The port has no cart SRAM;
   the routine's entire observable contract is CF (`scf` = a save exists), and `DsvFileExists` returns
   CF=1 when `POKEMON.DSV` is present, so `MainMenu`'s `jr nc` reads exactly what pret's does.

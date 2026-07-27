@@ -796,6 +796,9 @@ harness, and committed each package alone.
   build): `src/engine/predefs.asm` (undefined `PredefPointers` table), `src/engine/joypad.asm`
   (superseded by HAL `src/input/joypad.asm`; ends in undefined `Joypad`),
   `src/engine/menus/swap_items.asm` (undefined `DisplayListMenuIDLoop`; Wave 4 M4.2 wires it in).
+  *(Status as of 2026-07-27: of those three, only `src/engine/predefs.asm` is still out of
+  the build. `swap_items.asm` was linked by M4.2 as planned, and `src/engine/joypad.asm` was
+  repaired and linked by `33fc5137` — see the chunk-18 entry at the end of this log.)*
   Deferred to M5.2: the duplicate `AddPartyMon_WriteMovePP` global (only bites when `add_mon.asm`
   is linked, which it isn't yet). Result: `make -C dos_port` links `PKMN.EXE`; `make check` clean.
 
@@ -2065,8 +2068,13 @@ Highly optimized struct verification for `IsThisPartyMonStarterPikachu` and `IsT
 ## Joypad Input Handling (_Joypad / ReadJoypad_)
 
 - **Source:** `engine/joypad.asm`
-- **Translated:** `dos_port/engine/joypad.asm`
+- **Translated:** `dos_port/src/engine/joypad.asm` (the path this entry gave,
+  `dos_port/engine/joypad.asm`, was never a real path — corrected 2026-07-27)
 - **Date:** 2026-06-18
+- **Status (2026-07-27, `33fc5137`):** this file sat UNLINKED and unassemblable for
+  most of its life — nobody had run nasm on it, and it held three independent walls
+  of errors. Chunk 18 repaired all three and put it in the build. It is linked but
+  has no live caller; the live input path is `src/input/joypad.asm` + the INT 9h ISR.
 - **H-flag:** Not involved.
 - **Bug tags:** None.
 
@@ -5584,7 +5592,15 @@ already live, **inlined** into `joypad_update`'s edge layer as the local label
 calls (clobbering AL is safe — `.done` pops EAX), relying on pret's AL=0 return to zero
 `wJoyIgnore`. It lives in the live input HAL, not its pret mirror `src/engine/joypad.asm`
 — that file is DEAD (in no SRCS list, and unlinkable: it ends in `jmp Joypad`, undefined
-in the port) and is the relic of the rejected faithful-input model. The port-input-model
+in the port) and is the relic of the rejected faithful-input model.
+**[SUPERSEDED 2026-07-27 by `33fc5137` — the two sentences above are no longer true.**
+`src/engine/joypad.asm` was repaired (%include path, pret-lowercase HRAM operands, and the
+undefined `jmp Joypad` target) and IS in the build; `DiscardButtonPresses` was moved out of
+the HAL into it, which is its pret mirror. `src/home/joypad.asm` now defines the missing
+`Joypad`/`ReadJoypad` trampolines. The five routines are linked but form a closed cluster
+with no live entry point, so the **input path itself is unchanged** — the ISR + `DelayFrame`
+still is the poll.**]
+The port-input-model
 DEVIATION (pret's `call Joypad` has no counterpart; the ISR polls from the DelayFrame
 pipeline) is unchanged. **Tooling trap:** `project_state` reported this label as
 `unlisted, provider=src/engine/joypad.asm` — a confident wrong provider pointing at the

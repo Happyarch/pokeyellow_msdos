@@ -178,11 +178,17 @@ differential harness can — and it's the only check that also validates the
   probes failed purely on this sequencing, not on any game limitation.
 - `[x]` **Three real defects caught by these goldens**, all fixed:
   1. **`EngageMapTrainer` read a WRAM address nothing writes.**
-     `m8_2_pending_symbols.inc` defines `wMapSpriteExtraData equ 0xD503` (pret's
+     `m8_2_pending_symbols.inc` defined `wMapSpriteExtraData equ 0xD503` (pret's
      WRAM home) while the port's actual array is flat `.bss`, written by
      `LoadSprite`. So the routine read unwritten emulated RAM and the engaged
      trainer's class/set came back `$00/$00`. Fixed by externing the sanctioned
      flat alias `map_sprite_extra_data` (pret name stays primary on the array).
+     **The shadow itself is gone as of 2026-07-27:** that scaffold was dissolved
+     into `gb_memmap.inc`/`gb_constants.inc` and the `0xD503` equ was deliberately
+     *not* carried over, so the pret name now resolves to the real `.bss` label.
+     The alias remains in the code (same address); what can no longer happen is a
+     new reader silently binding the pret name to unwritten emulated RAM. `PickUpItem`
+     had caught the identical defect, which is why the equ was retired rather than moved.
   2. **Every trainer's class byte in the generated map-object binaries was 0.**
      `gen_map_headers.py` resolved `object_event`'s trainer-class argument
      against an *empty* dict, so all 470 `OPP_*` names fell through

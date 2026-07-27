@@ -392,6 +392,15 @@ faithdiff gap, distinct from relocation/decomposition: the call site never moved
 routine was not split — it stopped existing as a callable symbol while its body lived on
 inside a differently-named host.
 
+**Update 2026-07-27 (`33fc5137`): the "wrong provider" is now the RIGHT one, and the
+trap it illustrates is gone at this site.** `src/engine/joypad.asm` is no longer dead —
+it was repaired (%include path, pret-lowercase HRAM operands, the undefined `jmp Joypad`
+target) and put in the build, and `DiscardButtonPresses` was moved out of
+`src/input/joypad.asm` into it, which is its pret mirror. So `provider=src/engine/joypad.asm`
+is now correct. **The generic lesson still holds** and is what this section is for: the
+provider picker reported a confident path with no build check behind it, and the reader
+supplied the "therefore unported" conclusion. Keep reading it as a lead, not a verdict.
+
 **Evidence — what is and is not proven.** `make -C dos_port` links all five promoted
 objects; `lint_pret_labels` 0 violations (6 suppressed; the `IsSpriteInFrontOfPlayer{,2}`
 mirror + `DiscardButtonPresses` relocation/dup_def are allowlisted with retirement

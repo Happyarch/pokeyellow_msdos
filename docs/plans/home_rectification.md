@@ -81,6 +81,10 @@ flags where the *effect* still diverges.
     jumps to undefined `Joypad`); **`src/engine/pokemon/add_mon.asm` unlinked**
     (`_MoveMon`/`_AddEnemyMonToPlayerParty` blocked by a duplicate
     `AddPartyMon_WriteMovePP` global).
+    *(This audit is from 2026-07-01 and all three have since been resolved:
+    `swap_items.asm` and `add_mon.asm` are linked, and `src/engine/joypad.asm` was
+    repaired and linked 2026-07-27 by `33fc5137` — its `jmp Joypad` now has a target
+    in the new `src/home/joypad.asm` mirror. Kept as the record of the audit.)*
 
 ### A.1 Per-file grade summary
 
