@@ -360,8 +360,17 @@ Plans that exist today and have **no entry below** — go to the files themselve
 (NPC implementation is complete and archived at `docs/plans/npc_implementation.md`.
 The move data layer is complete and archived at `docs/plans/moves.md`.)
 
-## Save File Notes (Phase 5 — Not Yet Implemented)
+## Save File Notes (`.dsv` is live; `.sav` conversion is Phase 5)
 
 - GB `.sav`: raw 32 KB SRAM dump (MBC5+RAM+BATTERY)
-- DOS `.dsv`: `DOSV` magic + version byte + 2-byte checksum + 32 KB SRAM data
-- Converter: `dos_port/tools/saveconv.py` (stub until Phase 5 when save format is stable)
+- DOS `.dsv`: **version 1 is real and shipping** — `src/save/dsv_io.asm` writes
+  and reads it. 7-byte header (`DOSV` magic, version byte, 16-bit LE **additive**
+  checksum — `sum(payload) & 0xFFFF`, *not* a CRC) + a 3978-byte payload; 3985
+  bytes total. That payload is **not** a 32 KB SRAM image (this line used to
+  claim it was): it is only the WRAM blocks pret's `SaveMainData` /
+  `SaveCurrentBoxData` / `SavePartyAndDexData` serialize, so there are no
+  other-box or HoF banks. A faithful-SRAM format bumps the version byte, which
+  `dsv_io` already gates on.
+- Converter: `dos_port/tools/saveconv.py` — `--verify`/`--info FILE` validates a
+  `.dsv` header + checksum today (same checks as `DsvReadSave`); `.sav` ↔ `.dsv`
+  **conversion stays a stub** until Phase 5, when the faithful format is stable.

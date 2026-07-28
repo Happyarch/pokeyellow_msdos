@@ -61,7 +61,7 @@ detailed usage lives (invoke it, don't guess flags from `--help` alone).
 | `audit_memmap.py` | Blast-radius audit of the emulated GB address space | `build-and-debug` |
 | `unnamed.py` | Find unnamed symbols in a `.sym` file | `build-and-debug` |
 | `golden_diff.py`, `goldencheck.sh` | Fidelity differ / one-scenario check-and-diff | `build-and-debug` |
-| `saveconv.py` | `.sav` ↔ `.dsv` converter — **STUB, not implemented yet** | `build-and-debug` |
+| `saveconv.py` | `--verify`/`--info FILE` validates a `.dsv` (size/magic/version/checksum). `.sav` ↔ `.dsv` **conversion is still a STUB** | `build-and-debug` |
 | `dosbox_mcp/`, `mgba_mcp/`, `run_with_mcp.sh`, `run_mgba_mcp.sh`, `build_dosbox_mcp.sh`, `build_mgba.sh` | Live symbolic debugging (DOSBox-X port side / mGBA golden side) | `build-and-debug` |
 | `audio/audition.py` | Host-side MIDI audition (fastest way to hear a track) | `build-and-debug` |
 | `faithdiff`, `label_status`, `lint_pret_labels`, `update_label_db`, `fidelity_gate` | Pret-fidelity gate: label DB, per-routine diff, pre-commit check | `faithfulness-review` |
