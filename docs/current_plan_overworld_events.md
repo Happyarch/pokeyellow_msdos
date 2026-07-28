@@ -169,6 +169,17 @@ allowance for it. The ordinary map-text branch reads the generated flat
 `w_map_text_table_ptr` rows, while the `TEXT_PREDEF` branch still uses
 `wCurMapTextPtr` so `PrintPredefTextID` keeps the pret pointer-table path.
 
+> **UPDATE 2026-07-28 — that TEXT_PREDEF branch does not work, and cannot as
+> written.** It is a faithful 16-bit GB-address-space pointer walk, but the port's
+> text streams are flat program-image data and `SetMapTextPointer` stores only the
+> low 16 bits of `ESI`. Nothing exercises it today (`PrintPredefTextID` is
+> unlinked, so nothing sets `BIT_TEXT_PREDEF`), which is why it has never
+> surfaced. Do **not** unblock it by supplying a flat `dd` `TextPredefs` table —
+> that links cleanly and is runtime garbage. Owner:
+> `docs/current_plan_predef_text.md`. Related fix already landed: `5f7aebff`
+> corrected `.readFirstByte`, which was reading the ordinary path's *flat* `ESI`
+> as `[ebp + esi]`.
+
 Pallet's local text shim is retired. `PalletTownOakHeyWaitScript`,
 `PalletTownOakGreetsPlayerScript`, and `PalletTownAfterPikachuBattleScript` call
 the shared dispatcher directly. `gen_npc_dialogs.py` now emits rows through the
