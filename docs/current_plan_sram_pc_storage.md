@@ -231,7 +231,13 @@ fixture on the first run (the ROM stages decompressed pics in `sSpriteBuffer0`,
 so bank 0 came back changed). A golden run must never mutate its own input.
 
 ### Stage 6 — sweep  *(maintainers)*
-- [ ] Retire every `TODO-HW: SRAM`; close M-106 / M-107 at their sites.
+- [x] Retire every `TODO-HW: SRAM`; close M-106 / M-107 at their sites.
+      Measured 2026-07-28: `grep -rn 'TODO-HW: SRAM' dos_port/src/` returns **0**,
+      and neither M-106 nor M-107 has a remaining site in `dos_port/src` (only
+      this plan's own prose mentions them). Both were retired by stage 4's real
+      implementations — `sTileAnimations` is a real SRAM byte again
+      (`src/engine/menus/save.asm:459,667`) and `CheckPreviousSaveFile` reads the
+      real saved player ID. Re-measure rather than quoting this line.
 - [x] **The box DATA half is covered.** `save_boxes_load` (id 36, full tier)
       compares a scenario-local `wBoxData` region against mGBA after loading
       `tests/fixtures/yellow_boxes_full.sav` (all 12 boxes at 20 mons, built by
