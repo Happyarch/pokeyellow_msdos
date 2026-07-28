@@ -48,7 +48,12 @@ on:
   workflow_dispatch:
 
 env:
-  rgbds_version: v1.0.1
+  # Tracks .rgbds-version (1.0.2 as of upstream 0a085154, whose main.yml pins the
+  # v1.0.2+hotfix tag — the tag exists in gbdev/rgbds, checked 2026-07-28).
+  # Measured the same day: the merged pret tree still builds byte-exact against
+  # roms.sha1 (pokeyellow.gbc = cc7d0326…) with rgbasm v1.0.1, so this bump tracks
+  # the spec tree rather than fixing a break.
+  rgbds_version: v1.0.2+hotfix
 
 jobs:
   static-gate:

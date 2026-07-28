@@ -257,7 +257,7 @@ UpdateCurrentAnimatedObjectFrame:
     inc edx                                   ; inc de
     call SetCurrentAnimatedObjectOAMAttributes ; AL = merged attr byte
     mov bl, al                                ; ld b, a
-    mov al, [ebp + wc634]                     ; ld a, [wc634]
+    mov al, [ebp + wYellowIntroCurrentScene]  ; ld a, [wYellowIntroCurrentScene]
     cmp al, 0x7                               ; cp $7
     mov al, bl                                ; ld a, b
     je .skip_load                             ; jr z, .skip_load  (scene 7: don't write attr)

@@ -153,7 +153,9 @@ It is now closed the same way:
 - **`aux_misplaced`** — the placement rule, and it is deliberately per-dir
   because the port's conventions differ:
   - `audio/` mirrors pret's path exactly (`dos_port/src/audio/<file>.asm`) —
-    measured 21/21 conformant, so this ratchets a convention that already holds.
+    measured 22/22 conformant (2026-07-28, after upstream moved
+    `PlayPikachuSoundClip` from `engine/pikachu/` into `audio/`), so this
+    ratchets a convention that already holds.
   - `data/` is grouped by SUBSYSTEM in the port (`battle_data.asm`,
     `item_data.asm`, `pokemon_data.asm`), not by pret path, so a path mirror
     would be wrong. The checkable invariant is that the label lives in the data

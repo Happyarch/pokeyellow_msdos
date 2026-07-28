@@ -1149,13 +1149,15 @@ wCurrentAnimatedObjectYOffset   equ 0xF6C7 ; db
 wAnimatedObjectGlobalYOffset    equ 0xF6C8 ; db
 wAnimatedObjectGlobalXOffset    equ 0xF6C9 ; db
 ; Yellow-intro scene state (menu-intro B3 will grow this; the engine already
-; reads wYellowIntroCurrentScene, pret alias wc634, in UpdateCurrentAnimated-
-; ObjectFrame: cp $7 skips the per-OBJ attribute write during scene 7).
+; reads wYellowIntroCurrentScene in UpdateCurrentAnimatedObjectFrame: cp $7
+; skips the per-OBJ attribute write during scene 7).
 ; RELOCATED: pret 0xC634 is inside the port's extended wTileMap too.
-wYellowIntroCurrentScene        equ 0xF6CA ; db (= wc634)
-wc634                           equ 0xF6CA ; alias
-wYellowIntroSceneTimer          equ 0xF6CB ; db (= wc635)
-wc635                           equ 0xF6CB ; alias
+; pret's old wc634/wc635 aliases are gone as of upstream 51cb4a12, which also
+; unions these two bytes with wSurfingMinigameMusicTempoEnabled /
+; wSurfingMinigameCloudScrollFraction — not modelled here, the port has no
+; surfing minigame yet.
+wYellowIntroCurrentScene        equ 0xF6CA ; db
+wYellowIntroSceneTimer          equ 0xF6CB ; db
 ; saved struct base of the scene's current animated object (2 bytes; RELOCATED
 ; with the rest of the intro scene state). Free echo gap 0xF6CC-0xF6FF (before
 ; the anim-data blob at 0xF700).

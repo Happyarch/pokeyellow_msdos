@@ -267,7 +267,7 @@ AUDIO_SRCS := \
     src/audio/mpu401.asm \
     src/audio/sb_pcm.asm \
     src/audio/spk_pcm.asm \
-    src/engine/pikachu/pikachu_pcm.asm \
+    src/audio/pikachu_pcm.asm \
     src/audio/engine_1.asm \
     src/audio/engine_2.asm \
     src/audio/engine_3.asm \
@@ -1888,7 +1888,7 @@ src/audio/opl_enh.o: assets/enh_streams.inc assets/audio_constants.inc
 src/audio/tandy_shim.o: assets/tandy_tables.inc
 src/audio/mpu401.o: assets/music_streams.inc assets/mt32_sysex.inc \
                     assets/audio_constants.inc
-src/engine/pikachu/pikachu_pcm.o: assets/pika_pcm.inc assets/pika_pcm.bin
+src/audio/pikachu_pcm.o: assets/pika_pcm.inc assets/pika_pcm.bin
 
 # Pikachu voice clips (Phase C): pret's 1-bit 22 kHz streams -> low-pass-
 # filtered 8-bit PCM blob + pointer table for sb_pcm/spk_pcm.

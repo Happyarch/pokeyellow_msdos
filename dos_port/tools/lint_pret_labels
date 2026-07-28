@@ -378,7 +378,7 @@ def main():
     # the mirror rule nor faithdiff can fire on it. aux_labels (names only, see
     # scan_pret_aux) restores provenance. Placement expectations differ per dir:
     #   audio/ — the port mirrors pret's path exactly (dos_port/src/audio/x.asm),
-    #            measured 21/21 conformant, so this ratchets a convention that
+    #            measured 22/22 conformant 2026-07-28, so this ratchets a convention that
     #            already holds rather than importing debt.
     #   data/  — the port groups by SUBSYSTEM (battle_data.asm, item_data.asm,
     #            pokemon_data.asm), not by pret path, so a path mirror would be

@@ -12,13 +12,15 @@ preserved), and rounds to 8-bit unsigned centered on 0x80.
 
 Outputs (both Tier-1 generated, DO NOT EDIT BY HAND):
   assets/pika_pcm.bin — all 42 clips concatenated
-  assets/pika_pcm.inc — PikachuCriesPointerTable (pret name; port format:
+  assets/pika_pcm.inc — PikachuCriesPointerTable (pret name, from
+                        audio/pikachu_cries_pointers.asm; port format:
                         dd ptr, dd sample count) + per-clip PikachuCryN
                         labels over one incbin
 
 Consumers: src/audio/sb_pcm.asm (DSP direct mode), src/audio/spk_pcm.asm
-(PIT ch2 PWM), dispatched by PlayPikachuSoundClip
-(src/engine/pikachu/pikachu_pcm.asm).
+(PIT ch2 PWM), dispatched by PlayPikachuSoundClip (src/audio/pikachu_pcm.asm,
+pret audio/pikachu_pcm.asm — both moved out of engine/pikachu/ by upstream
+bd1b695b).
 """
 
 from pathlib import Path

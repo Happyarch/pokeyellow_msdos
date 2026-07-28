@@ -69,7 +69,7 @@ extern JoypadLowSensitivity     ; src/home/joypad2.asm
 extern PlaySound                ; src/home/audio.asm — AL = sound id
 extern StopAllMusic             ; src/home/audio.asm
 extern WaitForSoundToFinish     ; src/home/delay.asm
-extern PlayPikachuSoundClip     ; src/engine/pikachu/pikachu_pcm.asm — DL = clip index (pret: E)
+extern PlayPikachuSoundClip     ; src/audio/pikachu_pcm.asm — DL = clip index (pret: E)
 extern RunPaletteCommand        ; src/home/palettes.asm — BH = palette command
 extern UpdateCGBPal_OBP0        ; src/home/cgb_palettes.asm
 extern GBPalWhiteOutWithDelay3  ; src/home/palettes.asm

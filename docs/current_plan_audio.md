@@ -126,7 +126,8 @@ Changed:
   frequency/tempo modifiers from `data/pokemon/cries.asm` applied at runtime — they
   work for free through the translated engine + shim.
 - **Pikachu's 42 digitized cries are a separate path**: `PlayPikachuSoundClip`
-  (`engine/pikachu/pikachu_pcm.asm`, inner loop in `home/pikachu_cries.asm`) streams
+  (`audio/pikachu_pcm.asm` since upstream bd1b695b, was `engine/pikachu/pikachu_pcm.asm`;
+  inner loop in `home/pikachu_cries.asm`) streams
   raw PCM through the wave-channel DAC with interrupts off, keying off each sample
   byte's high bit — effectively 1-bit playback that monopolizes the CPU. Clean `.wav`
   copies exist beside the `.pcm` sources in `audio/pikachu_cries/`.
@@ -511,7 +512,7 @@ the two-model workflow (Gemini distills, Claude writes the skill files).
   - `[x]` `spk_pcm.asm`: RealSound-style PWM — ch2 mode 0 lobyte-only, count
         ∝ inverted sample, carrier at 2× sample rate (~22 kHz, above
         hearing), gate restored + ch2 back to mode 3 after.
-  - `[x]` `PlayPikachuSoundClip` (src/engine/pikachu/pikachu_pcm.asm, pret
+  - `[x]` `PlayPikachuSoundClip` (src/audio/pikachu_pcm.asm, pret
         label; DL = clip index): 3-frame lead-in, bounds check, dispatch
         g_sb_present → sb_pcm / else spk_pcm (engine offline → silent skip),
         clears CHAN5-8 sound IDs after, like pret. Blocking cli playback is

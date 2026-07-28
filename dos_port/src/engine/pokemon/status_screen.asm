@@ -105,7 +105,7 @@ extern LoadFlippedFrontSpriteByMonIndex              ; src/home/pokemon.asm — 
 extern g_bg_whiteout                                 ; ppu/ppu.asm — full-screen BG whiteout flag
 extern IsThisPartyMonStarterPikachu                  ; engine/pikachu/pikachu_status.asm (CF = starter)
 extern IsThisBoxMonStarterPikachu                    ; engine/pikachu/pikachu_status.asm
-extern PlayPikachuSoundClip                          ; engine/pikachu/pikachu_pcm.asm (DL = clip index)
+extern PlayPikachuSoundClip                          ; audio/pikachu_pcm.asm (DL = clip index)
 extern WaitForTextScrollButtonPress   ; src/home/joypad2.asm
 extern spr_oam_valid                                 ; ppu.asm — render_sprites active-entry count
 extern Delay3

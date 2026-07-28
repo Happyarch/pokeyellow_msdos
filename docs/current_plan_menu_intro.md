@@ -1193,7 +1193,9 @@ B2 must not create a `PlayIntroScene` stub.
 >
 > **WRAM (B1.1):** relocated to free echo RAM at **0xF600** (202 B; pret's 0xC508
 > union branch is swallowed by the port's extended 40×25 wTileMap). All members +
-> `wYellowIntroCurrentScene`/`wc634` have symbols; `audit_memmap.py` clean.
+> `wYellowIntroCurrentScene` have symbols; `audit_memmap.py` clean. (The old
+> `wc634`/`wc635` aliases were dropped 2026-07-28 — upstream 51cb4a12 retired
+> those pret names.)
 > **Remaining B1:** the sine data + the deterministic lifecycle/edge-crossing test
 > harness (B1.3); the per-frame projected-OAM publish is the same
 > `PublishProjectedOAM`(80,24) pattern B2 proved (`publish_splash_oam`), wired by
@@ -1203,7 +1205,8 @@ B2 must not create a `PlayIntroScene` stub.
 
 - [x] Port `engine/gfx/animated_objects.asm` with exact labels. *(9f39c54f, 14/14)*
 - [x] Inventory required WRAM and HRAM. *(B1.1 — no HRAM; WRAM block enumerated)*
-- [x] Add exact aliases or correctly sized regions. *(0xF600 block + wc634)*
+- [x] Add exact aliases or correctly sized regions. *(0xF600 block +
+      wYellowIntroCurrentScene; pret's wc634 alias retired upstream 51cb4a12)*
 - [x] Run `audit_memmap.py` after memory-map changes. *(clean, 47 regions)*
 - [~] Generate immutable frame, spawn, OAM, and sine data. *(frame/OAM/spawn DONE — 73f95c3c as a merged blob; 2026-07-24 R-005..R-007 retirement split it into the pret mirrors src/data/sprite_anims/intro_frames.asm + intro_oam.asm with the spawn table home in engine/movie/intro_yellow.asm, composed flat→GB at 0xF700 by CopyYellowIntroAnimatedObjectData; SINE rides B3 — it lives in the scene callbacks, not the object tables)*
 - [x] Keep code-address tables in `.asm`. *(jumptable = flat `dd Label`, per the DEVIATION)*

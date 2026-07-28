@@ -123,7 +123,7 @@ Init:
     mov byte [ebp + IO_STAT],             al
     mov byte [ebp + H_SCX],              al
     mov byte [ebp + H_SCY],              al
-    ; wc0f3 / wc0f3+1 — zeroed by the WRAM0 clear above
+    ; wUnusedAudioCounter / +1 (pret's old wc0f3) — zeroed by the WRAM0 clear above
 
     mov byte [ebp + GB_IE], IE_DEFAULT_VAL
 

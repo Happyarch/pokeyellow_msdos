@@ -1,4 +1,14 @@
-; pikachu_pcm.asm — Pikachu's digitized voice (pret engine/pikachu/pikachu_pcm.asm).
+; pikachu_pcm.asm — Pikachu's digitized voice (pret audio/pikachu_pcm.asm).
+;
+; Moved here from src/engine/pikachu/ to follow pret, which relocated the routine
+; out of engine/pikachu/ into audio/ (upstream bd1b695b, "Identify and refactor
+; Pikachu PCM cry code and data"); PikachuCriesPointerTable went with it, into
+; pret audio/pikachu_cries_pointers.asm — the port's copy is generated Tier-1
+; data in assets/pika_pcm.inc. src/audio/ deliberately mixes pret mirrors
+; (engine_1..4.asm, poke_flute.asm) with the port's bespoke multi-device HAL
+; (audio_hal, sb_pcm, opl_shim, mpu401, spk_*, tandy_shim); this file is a pret
+; mirror whose body is a port-only device dispatch, and pika_dbg_snapshot below
+; is port-only debug state that travels with it.
 ;
 ; On the GB, PlayPikachuSoundClip hijacked the wave channel's DAC with
 ; interrupts off and streamed a 1-bit clip through rAUD3LEVEL

@@ -116,8 +116,10 @@ runtime evidence.
 `status` column does NOT support it.** `update_label_db` models pret `home/` +
 `engine/` only, so a faithful pret label from `audio/`, `data/`, `gfx/`, `ram/`
 or `scripts/` is recorded `port_only` *by elimination* — nobody determined it was
-bespoke. Measured 2026-07-27: 90 of 429 `port_only` rows were real pret labels
-(data 41, audio 21, scripts 16, gfx 10, ram 2). Cite the `aux_labels` /
+bespoke. Measured 2026-07-28 (after the upstream pret merge 46b8e169): 91 of 428
+`port_only` rows were real pret labels (data 41, audio 22, scripts 16, gfx 10,
+ram 2) — audio gained `PlayPikachuSoundClip`, which upstream moved out of
+`engine/pikachu/` into `audio/`. Cite the `aux_labels` /
 `script_labels` provenance tables, or the dependency graph's `display_status`
 (`pret-unmodeled`) and `aux_pret_file`. A label is genuinely port-only only when
 `display_status == "port_only"` AND `aux_pret_file` is null. Calling a pret
