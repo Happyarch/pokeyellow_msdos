@@ -8,11 +8,21 @@
 > regression to fix now. Do not quote a finding count from this file, CLAUDE.md, a
 > skill or a memory as evidence that a class is clean — re-measure it.
 
-**Status:** stages 1-5 complete. Stages 1-4 came from PR #2 (external agent);
-stage 5 (the `.dsv` v2 disk boundary) and the review fixes landed with the merge.
-Stage 6 — the box golden scenarios and the `TODO-HW` sweep — is open and
-maintainer-owned. Measured against the linked build; see the merge commit for the
-gate output.
+**Status:** stages 1-5 and 8 complete; stage 7 partially (the two unconditional
+wins; the profiling and every trade that depends on it are still open). Stages 1-4
+came from PR #2 (external agent); stage 5 (the `.dsv` v2 disk boundary) and the
+review fixes landed with the merge. Stage 6 — the box golden scenarios and the
+`TODO-HW` sweep — is open and maintainer-owned, and **stage 8 did not shrink it**
+(see the correction under stage 8). Measured against the linked build; see the
+merge commit for the gate output.
+
+**A pre-existing harness hazard was closed on the way** (it had to be, before any
+save-reading scenario could be trusted): `goldencheck.sh` purged `GBSTATE.BIN`,
+`DUMP.BIN` and `FRAME.BIN` from the scratch image but **not `POKEMON.DSV`**, while
+`make image` deliberately preserves a save already inside `PKMN.IMG`. A `.dsv`
+written by an earlier run therefore rode into every later run — the F-11
+false-pass class, on the input side. It is now purged too, and a scenario that
+wants one declares `seed_save` and gets a freshly converted copy.
 
 **Ownership.** Stages 1-4 (everything in memory) are implemented by an **external
 agent working outside this repo's harness** — it has no stigmergy, and may not be
@@ -141,32 +151,83 @@ across a save/load. That is an expected intermediate — declare it, do not pape
       fails the version check and falls into the existing absent/corrupt-save branch.
       Delete v1's payload-block machinery and `saveconv.py`'s v1 constants.
 
-### Stage 7 — disk I/O efficiency  *(maintainers, next session)*
+### Stage 7 — disk I/O efficiency  *(maintainers; partially done)*
 
 What stage 5 shipped is correct but naive, and deliberately so — it was written to
-unblock the merge, not to be fast. Every `SramStoreImage` allocates a ~33 KiB
-conventional DOS buffer via DPMI 0100h, gathers all 32 KiB, checksums all 32 KiB,
-then CREATEs the file (INT 21h AH=3Ch truncates) and rewrites it whole. On a
+unblock the merge, not to be fast. Every `SramStoreImage` allocated a ~33 KiB
+conventional DOS buffer via DPMI 0100h, gathered all 32 KiB, checksummed all 32 KiB,
+then CREATEd the file (INT 21h AH=3Ch truncates) and rewrote it whole. On a
 period HDD that is a full-image write per save.
 
-- [ ] Profile it first — nothing here has been measured, and the naive version may
-      be fine at 32 KiB.
-- [ ] Keep the DOS buffer (and possibly the file handle) alive across calls
-      instead of alloc/free per save.
-- [ ] Track dirty banks and seek (AH=42h) + write only those. Bank 2/3 change only
-      on a box swap; bank 0 changes on nothing the player does.
-- [ ] Maintain a running checksum rather than a full-image pass.
+- [ ] **Profile it first — STILL NOT DONE.** No number has been measured. The two
+      items ticked below were taken because they are unconditionally less work per
+      save, not because a measurement ranked them; everything still open below is
+      a trade that needs one. Instrumenting this needs a new `perf.asm` stage
+      (today it profiles `DelayFrame` phases only) plus a `read_perf.py` name.
+- [x] Keep the DOS buffer alive across calls instead of alloc/free per save.
+      `dsv_alloc`/`dsv_free`/`dsv_stage_filename` are now one idempotent
+      `dsv_ensure_buffer`: the size is a build-time constant and the filename never
+      changes, so neither was ever per-call. `dsv_sel` is the allocated sentinel
+      (DPMI 0100h never returns the null selector). No teardown — DOS reclaims
+      DPMI memory at `AH=4Ch`.
+- [x] Gather/scatter the 32 KiB with `rep movsd` instead of `rep movsb` (both
+      region lengths are dword multiples; a byte tail is kept for safety).
+- [x] Record the store outcome. `SramStoreImage` always returned CF and **no
+      caller ever read it** — `SaveGameData`, `ClearAllSRAMBanks` and boot all
+      ignore it, so the save menu printed "GAME SAVED!" after a failed write. The
+      port-only `g_sram_store_failed` now records it. It is deliberately NOT
+      surfaced to the player: pret has no failure text or branch, so a message
+      would be invented UI plus a new generated text asset. Left open on purpose.
+- [ ] The file handle. Holding it open avoids the per-save `AH=3Ch` create, but
+      DOS may not flush the directory entry until close, so a crash loses the save;
+      the honest shape is open-once + `AH=42h` LSEEK 0 + write + `AH=68h` commit,
+      and the commit costs back most of what the held handle saved. **Needs the
+      measurement.** Note `AH=42h` does not exist anywhere in the port today.
+- [ ] Track dirty banks and write only those. Bank 2/3 change only on a box swap;
+      bank 0 on nothing the player does. **Deliberately not done:** the header
+      checksum spans the whole payload, so a partial write still forces a full
+      32 KiB checksum pass unless the checksum is also made incremental — which
+      means keeping per-bank running sums correct against every SRAM write in the
+      tree. Large, easy to desync, for at most a few KiB of avoided write.
 - [ ] Decide whether a torn write mid-save is worth guarding (write-to-temp +
       rename), or whether the header checksum already makes it detectable.
+      (Detectable is not recoverable — this is a durability call, not an
+      efficiency one.)
 
-### Stage 8 — real-save seeding  *(maintainers, opportunistic)*
+### Stage 8 — real-save seeding  *(maintainers)*  — DONE
 
-- [ ] Implement `saveconv.py --to-dos` / `--to-gb`. Under v2 this is a header
-      prepend + checksum and a header strip respectively — the WRAM-layout
-      translation that made it a "Phase 5" item no longer exists.
-- [ ] Use a real Pokémon Yellow `.sav` as golden seed data. It fills the box banks,
-      which no debug seeder currently does, so it is the cheapest route to
-      meaningful box coverage.
+- [x] `saveconv.py --to-dos` / `--to-gb`. Under v2 this is a header prepend +
+      checksum and a header strip respectively. Both share one `validate_dsv`
+      with `--verify`, so the three can never disagree about what a loadable file
+      is; the round trip is byte-identical.
+- [x] Real `.sav` as golden seed data → the `save_real_load` scenario (id 35,
+      full tier, datastruct). Fixture `dos_port/tests/fixtures/yellow_100.sav`
+      (+ `.sha1`, + README). `goldencheck.sh` converts it per run and stages it as
+      `POKEMON.DSV`; mGBA attaches the same image as the cartridge battery.
+
+**The premise this stage was written on was WRONG, and the correction matters.**
+It claimed a real `.sav` "fills the box banks". *** Measured: it does not. ***
+In the acquired save, stored boxes 1-9 and 11-12 hold **zero** mons and box 10
+holds **one**; the 19 mons are in the *current* box, which lives in **bank 1**
+(`sCurBoxData`), not banks 2/3. The dump carries no `wBoxData` region either.
+So this scenario is strong main-data/party/Pokedex coverage and it exercises the
+bank-2/3 *checksum* paths, but **it is not box-tier coverage and it does not
+retire stage 6's deposit/withdraw scenario.**
+
+What it does prove that `continue_seed` cannot: `continue_seed` is a closed loop
+(the port seeds, saves, clobbers, reloads), and a closed loop cannot see an error
+it makes symmetrically — a field written at the wrong offset is read back from
+the same wrong offset and matches itself. `save_real_load` starts from data the
+port never authored, so those errors diverge. Verified by negative control: with
+`wPlayerMoney` changed by one BCD digit and the main-data checksum repaired (so
+the save still loads cleanly), the scenario fails with
+`wPlayerMoney +0: want $99 | got $88`.
+
+**Trap for anyone touching the golden script:** `emu:loadSaveFile(path,
+temporary)` must pass `temporary = TRUE`. With `false` mGBA adopts the file as
+the live battery and writes SRAM back on exit — it silently rewrote the committed
+fixture on the first run (the ROM stages decompressed pics in `sSpriteBuffer0`,
+so bank 0 came back changed). A golden run must never mutate its own input.
 
 ### Stage 6 — sweep  *(maintainers)*
 - [ ] Retire every `TODO-HW: SRAM`; close M-106 / M-107 at their sites.

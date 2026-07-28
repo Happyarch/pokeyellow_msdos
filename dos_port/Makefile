@@ -1082,6 +1082,16 @@ NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_CONTINUE_SEED
 NASMFLAGS += -D SKIP_TITLE
 endif
+# save_real_load gate: boot loads a REAL cartridge .sav staged as POKEMON.DSV by
+# goldencheck.sh, then the gate clobbers the live save WRAM and reloads it via
+# TryLoadSaveFile. Unlike continue_seed the data originates outside the port, so
+# this catches offset/byte-order errors a self-round-trip cannot.
+# make image DEBUG_REAL_SAVE=1
+ifdef DEBUG_REAL_SAVE
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_REAL_SAVE
+NASMFLAGS += -D SKIP_TITLE
+endif
 # Oak-pic pixel harness (menu-intro A4.1): display Prof. Oak on the centred
 # cinematic surface and dump FRAME.BIN. make image DEBUG_OAKPIC=1
 ifdef DEBUG_OAKPIC

@@ -42,6 +42,14 @@
 ; with the buffer's real-mode segment in DS. dsv_io keeps its own copy of that
 ; dance because debug_dump.asm is a debug-only translation unit while this file
 ; links in every build.
+;
+; The buffer is allocated ONCE (dsv_ensure_buffer) and kept for the life of the
+; process, rather than alloc/freed around each call: its size is a build-time
+; constant and the filename never changes, so nothing about it was ever per-call.
+; The image is still written whole — the header checksum spans the entire payload,
+; so a partial write would still need a full-payload checksum pass, and at 32 KiB
+; that trade has not been shown to pay. Do not add dirty-bank tracking without a
+; measurement that justifies it.
 ; DEVIATION{class=HAL; pret=engine/menus/save.asm:SaveGameData; behavior=persist the emulated SRAM banks to a DOS file through DPMI real-mode INT 21h instead of relying on cartridge battery backup; evidence=pret SRAM writes survive in battery-backed cartridge RAM while the port's banks are ordinary DPMI memory that dies with the process; lifetime=permanent DOS storage HAL boundary}
 ;
 ; Exports (all: In EBP = GB memory base; preserve EBP; ES = flat DS invariant):
@@ -65,6 +73,7 @@ extern ds_base
 global SramLoadImage
 global SramStoreImage
 global DsvFileExists
+global g_sram_store_failed
 
 ; --- DPMI real-mode call structure field offsets (DPMI 0.9 spec) ---
 RMCS_EBX     equ 0x10
@@ -113,6 +122,18 @@ dsv_sel:     resw 1                 ; PM selector of DOS buffer
 dsv_flat:    resd 1                 ; DS-relative (flat) offset of DOS buffer
 dsv_handle:  resw 1
 
+; Outcome of the most recent SramStoreImage: 0 = wrote the image, 1 = did not.
+;
+; SramStoreImage has always returned CF, and NO caller has ever read it —
+; SaveGameData and ClearAllSRAMBanks both ignore it and the save menu prints
+; "GAME SAVED!" regardless, so a full disk or a DPMI failure was completely
+; invisible. Recording it here makes it inspectable in a memory dump and
+; assertable by a scenario, without adding a failure path to a pret-labeled
+; routine: pret has no "save failed" text or branch, so surfacing this to the
+; PLAYER would mean inventing UI the disassembly does not have. That is left
+; open deliberately; this flag is what a future UI (or a golden) would read.
+g_sram_store_failed: resb 1
+
 ; ---------------------------------------------------------------------------
 section .text
 
@@ -124,9 +145,8 @@ SramStoreImage:
     push ebx
     push esi
     push edi
-    call dsv_alloc
+    call dsv_ensure_buffer
     jc .fail
-    call dsv_stage_filename
 
     ; --- build header at CONTENTS_OFF ---
     mov edi, [dsv_flat]
@@ -138,13 +158,18 @@ SramStoreImage:
     ; --- gather the SRAM regions into the payload (edi = payload dest cursor) ---
     add edi, HDR_SIZE
     mov esi, sram_regions
-    mov edx, NUM_REGIONS                      ; region counter (ecx is the movsb length)
+    mov edx, NUM_REGIONS                      ; region counter (ecx is the movs length)
 .gather:
     mov eax, [esi]                            ; gb offset
     mov ecx, [esi + 4]                        ; length
     push esi
     lea esi, [ebp + eax]                      ; flat SRAM src
-    rep movsb                                 ; DS:ESI(SRAM) -> ES:EDI(buffer)
+    push ecx
+    shr ecx, 2
+    rep movsd                                 ; DS:ESI(SRAM) -> ES:EDI(buffer), dword bulk
+    pop ecx
+    and ecx, 3
+    rep movsb                                 ; tail; no current region needs it
     pop esi
     add esi, 8
     dec edx
@@ -163,7 +188,7 @@ SramStoreImage:
     mov [rmcs + RMCS_DS], ax
     call dsv_sim_int21
     test byte [rmcs + RMCS_FLAGS], 1
-    jnz .freefail
+    jnz .fail
     mov ax, [rmcs + RMCS_EAX]
     mov [dsv_handle], ax
 
@@ -185,19 +210,18 @@ SramStoreImage:
     call dsv_close
 
     test bx, 1                                ; write CF
-    jnz .freefail
+    jnz .fail
     cmp cx, CONTENTS_TOTAL                     ; all bytes written?
-    jne .freefail
+    jne .fail
 
-    call dsv_free
+    mov byte [g_sram_store_failed], 0
     pop edi
     pop esi
     pop ebx
     clc
     ret
-.freefail:
-    call dsv_free
 .fail:
+    mov byte [g_sram_store_failed], 1
     pop edi
     pop esi
     pop ebx
@@ -214,12 +238,11 @@ SramLoadImage:
     push ebx
     push esi
     push edi
-    call dsv_alloc
+    call dsv_ensure_buffer
     jc .fail
-    call dsv_stage_filename
 
     call dsv_open                             ; CF=1 on absent
-    jc .freefail
+    jc .fail
 
     ; read CONTENTS_TOTAL bytes into buffer @ CONTENTS_OFF (INT 21h AH=3Fh)
     call dsv_zero_rmcs
@@ -235,22 +258,22 @@ SramLoadImage:
     mov cx, [rmcs + RMCS_EAX]                  ; bytes actually read
     call dsv_close
     test bx, 1
-    jnz .freefail
+    jnz .fail
     cmp cx, CONTENTS_TOTAL                     ; full file?
-    jne .freefail
+    jne .fail
 
     ; --- validate header ---
     mov edi, [dsv_flat]
     add edi, CONTENTS_OFF
     cmp dword [edi], DSV_MAGIC
-    jne .freefail
+    jne .fail
     cmp byte [edi + 4], DSV_VERSION            ; a v1 file fails here, by design
-    jne .freefail
+    jne .fail
     ; verify checksum
     call dsv_checksum                          ; AX = recomputed sum
     mov edi, [dsv_flat]
     cmp [edi + CONTENTS_OFF + 5], ax
-    jne .freefail
+    jne .fail
 
     ; --- scatter the validated image into the SRAM banks ---
     mov esi, [dsv_flat]
@@ -261,19 +284,21 @@ SramLoadImage:
     mov eax, [ebx]                             ; gb offset
     mov ecx, [ebx + 4]                         ; length
     lea edi, [ebp + eax]
-    rep movsb                                  ; DS:ESI(buffer) -> ES:EDI(SRAM)
+    push ecx
+    shr ecx, 2
+    rep movsd                                  ; DS:ESI(buffer) -> ES:EDI(SRAM), dword bulk
+    pop ecx
+    and ecx, 3
+    rep movsb                                  ; tail; no current region needs it
     add ebx, 8
     dec edx
     jnz .scatter
 
-    call dsv_free
     pop edi
     pop esi
     pop ebx
     clc
     ret
-.freefail:
-    call dsv_free
 .fail:
     pop edi
     pop esi
@@ -292,11 +317,10 @@ DsvFileExists:
     push ebx
     push esi
     push edi
-    call dsv_alloc
+    call dsv_ensure_buffer
     jc .notfound
-    call dsv_stage_filename
     call dsv_open
-    jc .freenotfound
+    jc .notfound
 
     ; read the 7-byte header
     call dsv_zero_rmcs
@@ -312,25 +336,22 @@ DsvFileExists:
     mov cx, [rmcs + RMCS_EAX]
     call dsv_close
     test bx, 1
-    jnz .freenotfound
+    jnz .notfound
     cmp cx, HDR_SIZE
-    jne .freenotfound
+    jne .notfound
     mov edi, [dsv_flat]
     add edi, CONTENTS_OFF
     cmp dword [edi], DSV_MAGIC
-    jne .freenotfound
+    jne .notfound
     cmp byte [edi + 4], DSV_VERSION
-    jne .freenotfound
+    jne .notfound
 
-    call dsv_free
     pop edi
     pop esi
     pop ebx
     mov al, 1
     stc                                        ; found
     ret
-.freenotfound:
-    call dsv_free
 .notfound:
     pop edi
     pop esi
@@ -343,9 +364,21 @@ DsvFileExists:
 ; Helpers (internal; preserve EBP; may clobber EAX/ECX/EDX/ESI/EDI as noted).
 ; ---------------------------------------------------------------------------
 
-; dsv_alloc — DPMI fn 0100h: allocate the conventional DOS buffer.
-; Out: dsv_seg/dsv_sel/dsv_flat set. CF=1 on failure. Clobbers EAX/EBX/EDX.
-dsv_alloc:
+; dsv_ensure_buffer — DPMI fn 0100h: allocate the conventional DOS buffer ONCE
+; and stage the filename in it.
+; Out: dsv_seg/dsv_sel/dsv_flat set. CF=1 on failure. Clobbers EAX/EBX/ECX/EDX/ESI/EDI.
+;
+; The buffer used to be allocated and freed around every call, which meant a
+; ~33 KiB conventional-memory alloc/free pair on each save. Nothing about it is
+; per-call: the size is a build-time constant and the filename never changes, so
+; both are done once and cached. dsv_sel is the "already allocated" sentinel —
+; DPMI 0100h never returns the null selector, and .bss starts zeroed.
+;
+; There is deliberately no teardown path: the buffer lives as long as the
+; process, and DOS reclaims every DPMI allocation at AH=4Ch exit.
+dsv_ensure_buffer:
+    cmp word [dsv_sel], 0
+    jne .have
     mov ax, 0x0100
     mov bx, DSV_BUF_PARAS                      ; derived from CONTENTS_TOTAL
     int 0x31
@@ -356,26 +389,16 @@ dsv_alloc:
     shl eax, 4                                 ; linear = seg * 16
     sub eax, [ds_base]                         ; flat (DS-relative under 4 GB limit)
     mov [dsv_flat], eax
+    ; stage "POKEMON.DSV\0" at buffer offset 0; every INT 21h below points DS:DX there
+    mov esi, dsv_fname
+    mov edi, eax
+    mov ecx, 12                                ; "POKEMON.DSV" + NUL
+    rep movsb
+.have:
     clc
     ret
 .fail:
     stc
-    ret
-
-; dsv_free — DPMI fn 0101h: free the DOS buffer. Clobbers EAX/EDX.
-dsv_free:
-    mov ax, 0x0101
-    mov dx, [dsv_sel]
-    int 0x31
-    ret
-
-; dsv_stage_filename — copy "POKEMON.DSV\0" to DOS buffer offset 0.
-; Clobbers ESI/EDI/ECX.
-dsv_stage_filename:
-    mov esi, dsv_fname
-    mov edi, [dsv_flat]
-    mov ecx, 12                                ; "POKEMON.DSV" + NUL
-    rep movsb
     ret
 
 ; dsv_open — INT 21h AH=3Dh AL=0 (open read-only). Filename @ buffer offset 0.

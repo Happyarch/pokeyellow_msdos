@@ -17,6 +17,10 @@
 *.wav binary
 *.blk binary
 *.pic binary
+# Game Boy battery saves committed as golden test fixtures. Without this the
+# `* text eol=lf` rule above treats them as text and rewrites CRLF byte pairs on
+# checkout, silently corrupting a 32 KiB SRAM image (and its checksums).
+*.sav binary
 
 # Declare files that will always have CRLF line endings on checkout.
 *.patch.template text eol=crlf linguist-language=INI

@@ -27,9 +27,32 @@ cp PKMN.IMG "$SCRATCH/pkmn.img"
 # F-11: a stale GBSTATE.BIN baked into PKMN.IMG from an earlier build would be mcopy'd
 # out by a run that crashed before dumping, and the scenario would diff the OLD state —
 # reporting a pass (or a bogus failure) for a run that produced nothing. Delete first.
-for f in GBSTATE.BIN DUMP.BIN FRAME.BIN; do
+#
+# POKEMON.DSV is the same hazard on the INPUT side, and it is the more dangerous
+# one: `make image` deliberately PRESERVES a save already inside PKMN.IMG (so a
+# real play session survives a rebuild), so a .dsv written by an earlier run —
+# a different scenario's, or an older build's — silently rides into this run and
+# any save-reading scenario loads it. That is a pass on data the run never
+# produced. Always delete it; scenarios that need one declare it below, and get
+# a freshly converted copy.
+for f in GBSTATE.BIN DUMP.BIN FRAME.BIN POKEMON.DSV; do
     mdel -i "$SCRATCH/pkmn.img@@1048576" "::$f" 2>/dev/null || true
 done
+
+# A scenario may declare a seed save (a raw GB .sav fixture). Convert it to the
+# port's .dsv container and stage it as POKEMON.DSV, which SramLoadImage reads at
+# boot. Converting per run rather than committing the .dsv keeps saveconv.py on
+# the tested path and stops the two artifacts drifting apart.
+SEED_SAV="$(python3 tools/golden_diff.py "$SCENARIO" --seed-save)"
+if [ -n "$SEED_SAV" ]; then
+    [ -f "$SEED_SAV" ] || { echo "goldencheck: seed save not found: $SEED_SAV"; exit 2; }
+    python3 tools/saveconv.py --to-dos "$SEED_SAV" "$SCRATCH/POKEMON.DSV" \
+        >"$SCRATCH/saveconv.log" 2>&1 || {
+        cat "$SCRATCH/saveconv.log"; echo "goldencheck: seed save conversion failed"; exit 2; }
+    mcopy -o -i "$SCRATCH/pkmn.img@@1048576" "$SCRATCH/POKEMON.DSV" ::POKEMON.DSV || {
+        echo "goldencheck: could not stage POKEMON.DSV into the image"; exit 2; }
+    echo "== goldencheck $SCENARIO: seeded POKEMON.DSV from $SEED_SAV"
+fi
 sed "s|^imgmount c PKMN.IMG|imgmount c $SCRATCH/pkmn.img|; s|^PKMN.EXE\$|PKMN.EXE\nexit|" \
     dosbox-x.conf >"$SCRATCH/run.conf"
 

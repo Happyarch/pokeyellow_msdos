@@ -115,6 +115,11 @@ opencode.json
 *.sn*
 *.sa*
 *.sg1
+# ...except committed test fixtures. dos_port/tests/fixtures holds real GB saves
+# used as golden seed data (save_real_load stages one as POKEMON.DSV), so they
+# have to be tracked. The rules above are for saves produced by RUNNING the port
+# or an emulator, which must stay untracked.
+!dos_port/tests/fixtures/**
 
 # ARR score transcriptions
 docs/references/pokemon_score_transcriptions/

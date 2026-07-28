@@ -46,7 +46,7 @@ dos_port/
     render_frame.py        ← render FRAME.BIN back-buffer dump to PNG
     colorize.py            ← palette CLI (--gen/--verify/--edit/--export-png/
                              --import-png); colors/editor.py is the pygame editor
-    saveconv.py            ← GB .sav ↔ DOS .dsv converter — STUB, Phase 5
+    saveconv.py            ← GB .sav ↔ DOS .dsv converter (--verify/--to-dos/--to-gb)
     dosbox_mcp/            ← MCP server for live LLM-driven DOSBox-X debugging
     dosbox-x/              ← dosbox-x fork SUBMODULE (Happyarch/dosbox-x, branch
                              mcp-debug: MCP socket bridge + SYMF symbol table)
@@ -579,19 +579,24 @@ into `assets/ui_layout_<subsystem>.inc`. `ui_layout/seed_from_battle.py` /
 existing battle layout / from pret's `TextBoxCoordTable` — run once when adding
 a new subsystem's sidecar, not part of the normal edit loop.
 
-**Save converter:** `tools/saveconv.py`'s `.sav`↔`.dsv` **conversion is still a
-stub** (Phase 5) — `--to-dos`/`--to-gb` and a bare invocation both print the
-not-implemented notice and exit 1. The `.dsv` format it will target is already
-real and documented in its own header (`src/save/dsv_io.asm` writes/reads
-version-1 files), and one read-only mode is implemented against it:
+**Save converter:** `tools/saveconv.py` is complete — no stub paths remain.
+The `.dsv` format is documented in `src/save/dsv_io.asm`'s own header (**version
+2**: a 7-byte header + a 32768-byte payload that IS the raw SRAM image in real
+`.sav` bank order, 32775 total).
 
 ```sh
-tools/saveconv.py --verify POKEMON.DSV   # --info is an alias
+tools/saveconv.py --verify POKEMON.DSV        # --info is an alias
+tools/saveconv.py --to-dos  in.sav  out.dsv   # prepend the header + checksum
+tools/saveconv.py --to-gb   in.dsv  out.sav   # validate, then strip the header
 ```
 
-It applies exactly the checks `dsv_io.asm:DsvReadSave` makes before scattering a
-file into WRAM — total size 3985, `DOSV` magic, version byte, and the 16-bit
-LE **additive** payload checksum (`sum(payload) & 0xFFFF`, not a CRC) — so a
+Because the v2 payload IS a raw `.sav`, conversion is a header prepend/strip and
+the round trip is byte-identical. All three modes share one `validate_dsv()`, so
+they cannot disagree about what a loadable file is.
+
+It applies exactly the checks `dsv_io.asm:SramLoadImage` makes before scattering a
+file into the SRAM banks — total size 32775, `DOSV` magic, version byte, and the
+16-bit LE **additive** payload checksum (`sum(payload) & 0xFFFF`, not a CRC) — so a
 file it accepts is one the port will load, and a file it rejects is one the port
 drops into its corrupt-save branch. Exit 0 + a summary on success; exit 1 with
 the expected-vs-found value on the first mismatch. The 3978-byte payload stays

@@ -375,7 +375,9 @@ The move data layer is complete and archived at `docs/plans/moves.md`.)
 - **v1 is retired with no migration path** (five WRAM blocks, 3985 bytes). It
   predates SRAM emulation; a v1 file fails the version check and reads as "no
   save". Do not write a reader for it.
-- Converter: `dos_port/tools/saveconv.py` — `--verify`/`--info FILE` validates a
-  `.dsv` header + checksum today (the same checks `SramLoadImage` makes);
-  `.sav` ↔ `.dsv` **conversion stays a stub**, but is now a header strip plus a
-  checksum recompute rather than a WRAM-layout translation.
+- Converter: `dos_port/tools/saveconv.py` — complete. `--verify`/`--info FILE`
+  validates a `.dsv` header + checksum (the same checks `SramLoadImage` makes);
+  `--to-dos IN.sav OUT.dsv` and `--to-gb IN.dsv OUT.sav` convert, which under v2
+  is a header prepend/strip plus a checksum recompute rather than a WRAM-layout
+  translation. The round trip is byte-identical, and `goldencheck.sh` runs
+  `--to-dos` on every `save_real_load` run, so a regression fails a golden.

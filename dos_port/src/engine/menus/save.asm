@@ -210,6 +210,60 @@ RunContinueSeedTest:
     jmp .hang
 %endif
 
+%ifdef DEBUG_REAL_SAVE
+; ---------------------------------------------------------------------------
+; RunRealSaveTest — save_real_load gate.
+;
+; The counterpart to RunContinueSeedTest, with a REAL cartridge save in place of
+; the synthetic seed. goldencheck.sh converts tests/fixtures/yellow_100.sav into
+; POKEMON.DSV and stages it in the disk image, so by the time this runs boot has
+; already scattered that 32 KiB image into the resident SRAM banks
+; (entry.asm -> SramLoadImage). Nothing here writes a save: the whole point is
+; that the data originates OUTSIDE the port, on a real Game Boy.
+;
+; That makes it a different proof from continue_seed, which can only show the
+; port round-trips its own bytes. This shows the port reads a save a real
+; cartridge wrote -- a full 6-mon party, 151/151 Pokedex, a populated current
+; box -- and lands every field where pret puts it. A byte-order or offset error
+; that continue_seed cannot see (because it would be made and unmade
+; symmetrically) diverges here against the mGBA golden.
+;
+; The stored boxes in the fixture are near-empty, so this is NOT box-bank
+; coverage; the stage-6 deposit/withdraw scenario is still required.
+;
+; In: EBP = GB base. Called from EnterMap (SKIP_TITLE boot).
+; ---------------------------------------------------------------------------
+extern DumpBackbuffer               ; debug/debug_dump.asm
+global RunRealSaveTest
+
+RunRealSaveTest:
+    ; 1. Clobber the WRAM the save owns. Boot loaded the fixture into the SRAM
+    ;    banks, not into WRAM, but zeroing first is what makes the dump below
+    ;    provably the product of the load rather than of anything earlier.
+    lea edi, [ebp + wPlayerName]
+    mov ecx, NAME_LENGTH
+    xor al, al
+    rep stosb
+    lea edi, [ebp + wMainDataStart]
+    mov ecx, wMainDataEnd - wMainDataStart
+    rep stosb
+    lea edi, [ebp + wBoxDataStart]
+    mov ecx, wBoxDataEnd - wBoxDataStart
+    rep stosb
+    lea edi, [ebp + wPartyDataStart]
+    mov ecx, wPartyDataEnd - wPartyDataStart
+    rep stosb
+
+    ; 2. Load it the way CONTINUE does: TryLoadSaveFile reads the resident SRAM
+    ;    banks and verifies the checksums the real cartridge wrote.
+    call TryLoadSaveFile
+
+    ; 3. Photograph the loaded WRAM.
+    call DumpBackbuffer                 ; never returns
+.hang:
+    jmp .hang
+%endif
+
 ; ---------------------------------------------------------------------------
 ; charmap glyphs (constants/charmap.asm). NOT GB-memory symbols.
 CHAR_TERM  equ 0x50             ; '@'

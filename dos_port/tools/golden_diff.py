@@ -652,6 +652,20 @@ SCENARIOS = {
         "flags": "DEBUG_CONTINUE_SEED=1",
         "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
     },
+    "save_real_load": {
+        "class": "datastruct",
+        # continue_seed with a REAL cartridge save instead of the synthetic seed.
+        # Both sides start from the same 32 KiB battery image -- mGBA loads the
+        # .sav directly, the port loads it as POKEMON.DSV (converted per run by
+        # goldencheck.sh) -- then both clobber the save WRAM and reload it. The
+        # data originates outside the port, so a field offset or byte order the
+        # port gets consistently wrong diverges here, where continue_seed's
+        # symmetric write-then-read would hide it. Compares WRAM only: what is
+        # pinned is the loaded game data, not the frame it happens to be on.
+        "flags": "DEBUG_REAL_SAVE=1",
+        "seed_save": "tests/fixtures/yellow_100.sav",
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
+    },
     "title_reentry": {
         # The title checkpoint reached through title -> menu -> B -> title. Same
         # config as `title`: any divergence outside the F-25 mask is leaked
@@ -1328,12 +1342,18 @@ def main():
     ap.add_argument("--goldens", default=str(Path(__file__).resolve().parent.parent / "tests/goldens"))
     ap.add_argument("--charmap", default=str(Path(__file__).resolve().parent.parent / "assets/gb_charmap.txt"))
     ap.add_argument("--flags", action="store_true", help="print the make flags for this scenario and exit")
+    ap.add_argument("--seed-save", action="store_true",
+                    help="print this scenario's seed .sav fixture path (empty if it "
+                         "declares none) and exit; goldencheck.sh stages it as POKEMON.DSV")
     ap.add_argument("--max-report", type=int, default=40, help="max mismatch lines per region")
     args = ap.parse_args()
 
     cfg = SCENARIOS[args.scenario]
     if args.flags:
         print(cfg["flags"])
+        return
+    if args.seed_save:
+        print(cfg.get("seed_save", ""))
         return
 
     if not args.gbstate:

@@ -644,6 +644,34 @@
       "verification": "CONTINUE preserves loaded state: seed+save, clobber, TryLoadSaveFile reproduces the seed; no OakSpeech/InitPlayerData2"
     },
     {
+      "name": "save_real_load",
+      "id": 35,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_REAL_SAVE=1",
+      "port_entry_gate": "DEBUG_REAL_SAVE",
+      "navigation_script": "tools/mgba_harness/scenarios/save_real_load.lua",
+      "seed_save": "tests/fixtures/yellow_100.sav",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 300,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "TryLoadSaveFile"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "A REAL cartridge .sav (6-mon party, 151/151 dex, 19-mon current box) is staged as POKEMON.DSV, the save WRAM is clobbered, and TryLoadSaveFile repopulates it; externally-authored data catches offsets a self-round-trip cannot"
+    },
+    {
       "name": "oak_intro",
       "id": 29,
       "tier": "full",

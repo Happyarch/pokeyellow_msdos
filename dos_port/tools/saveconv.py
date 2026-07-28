@@ -2,18 +2,15 @@
 """
 saveconv.py — Game Boy .sav ↔ DOS .dsv save file converter.
 
-STATUS: GB<->DOS conversion is still a STUB; only the read-only
-`--verify`/`--info` header check below is implemented. The .dsv format is REAL:
-src/save/dsv_io.asm writes/reads version-2 files. Conversion is now a much
-smaller job than it was under v1 — see the note under the format below.
-
 Usage:
     saveconv.py --verify save.dsv                 # validate header + checksum
     saveconv.py --info   save.dsv                 # alias of --verify
-
-Planned usage (Phase 5, not implemented):
     saveconv.py --to-dos  input.sav  output.dsv   # GB SRAM dump → DOS save
     saveconv.py --to-gb   input.dsv  output.sav   # DOS save → GB SRAM dump
+
+Conversion is lossless and exactly invertible: under v2 the payload IS the raw
+.sav, so --to-dos prepends the 7-byte header and --to-gb validates and strips
+it. `--to-dos X.sav Y.dsv && --to-gb Y.dsv Z.sav` reproduces X byte for byte.
 
 .dsv format — version 2 (raw SRAM image, written by src/save/dsv_io.asm):
     Offset  Size   Description
@@ -79,14 +76,27 @@ def payload_checksum(payload):
     return sum(payload) & 0xFFFF
 
 
-def verify(path):
-    """Validate one .dsv file. Prints a summary and returns on success; exits 1
-    on the first thing that does not match."""
+def read_file(path):
     try:
-        data = Path(path).read_bytes()
+        return Path(path).read_bytes()
     except OSError as exc:
         fail(path, f"cannot read file: {exc.strerror or exc}")
 
+
+def write_file(path, data):
+    try:
+        Path(path).write_bytes(data)
+    except OSError as exc:
+        fail(path, f"cannot write file: {exc.strerror or exc}")
+
+
+def validate_dsv(path, data):
+    """Run SramLoadImage's checks, in its order, over an in-memory .dsv.
+
+    Returns (payload, version, stored_checksum, computed_checksum); exits 1 on
+    the first thing that does not match. Shared by --verify and --to-gb so the
+    two can never disagree about what a loadable file is.
+    """
     # 1. Total size. Checked first so a truncated/padded file is named as such
     #    rather than surfacing as a downstream magic/checksum error.
     if len(data) != DSV_TOTAL_SIZE:
@@ -94,8 +104,8 @@ def verify(path):
         # by far the likeliest way to reach this branch, and worth naming rather
         # than leaving the reader to recognise the number.
         hint = (" — this is a raw GB .sav: the same bytes as a v2 payload, but "
-                "without the 7-byte header; conversion is the unimplemented "
-                "--to-dos path") if len(data) == SAV_SIZE else ""
+                "without the 7-byte header; convert it with --to-dos"
+                ) if len(data) == SAV_SIZE else ""
         fail(path, f"bad file size: expected {DSV_TOTAL_SIZE} bytes "
                    f"({DSV_HEADER_SIZE}-byte header + "
                    f"{DSV_PAYLOAD_SIZE}-byte version-{DOSV_VERSION} payload), "
@@ -123,6 +133,62 @@ def verify(path):
                    f"stored 0x{stored:04X} ({stored}) at offset 0x05, "
                    f"recomputed 0x{computed:04X} ({computed})")
 
+    return payload, version, stored, computed
+
+
+def build_dsv(payload):
+    """Wrap a raw 32768-byte SRAM image in the 7-byte v2 header.
+
+    The inverse of stripping it: dsv_io.asm writes exactly this layout, so a
+    file built here is one SramLoadImage accepts.
+    """
+    return (DOSV_MAGIC
+            + bytes([DOSV_VERSION])
+            + struct.pack('<H', payload_checksum(payload))
+            + payload)
+
+
+def to_dos(in_path, out_path):
+    """GB .sav → DOS .dsv: prepend the header. The payload IS the .sav."""
+    payload = read_file(in_path)
+    if len(payload) != SAV_SIZE:
+        hint = (" — this is already a .dsv; use --to-gb for the reverse"
+                ) if len(payload) == DSV_TOTAL_SIZE else ""
+        fail(in_path, f"bad file size: a raw GB .sav is {SAV_SIZE} bytes, "
+                      f"found {len(payload)}{hint}")
+
+    data = build_dsv(payload)
+    # Cheap self-check: the file we are about to write must pass the very checks
+    # the port applies before it loads one.
+    validate_dsv(out_path, data)
+    write_file(out_path, data)
+
+    stored, = struct.unpack_from('<H', data, CHECKSUM_OFFSET)
+    print(f"OK: {in_path} → {out_path}")
+    print(f"  wrote                 {len(data)} bytes "
+          f"({DSV_HEADER_SIZE} header + {len(payload)} payload)")
+    print(f"  version               {DOSV_VERSION}")
+    print(f"  checksum              0x{stored:04X} ({stored})")
+
+
+def to_gb(in_path, out_path):
+    """DOS .dsv → GB .sav: validate, then strip the header."""
+    data = read_file(in_path)
+    payload, version, stored, _ = validate_dsv(in_path, data)
+    write_file(out_path, payload)
+
+    print(f"OK: {in_path} → {out_path}")
+    print(f"  read                  {len(data)} bytes "
+          f"(valid version-{version} .dsv, checksum 0x{stored:04X})")
+    print(f"  wrote                 {len(payload)} bytes (raw GB SRAM image)")
+
+
+def verify(path):
+    """Validate one .dsv file. Prints a summary and returns on success; exits 1
+    on the first thing that does not match."""
+    data = read_file(path)
+    payload, version, stored, computed = validate_dsv(path, data)
+    magic = data[MAGIC_OFFSET:MAGIC_OFFSET + len(DOSV_MAGIC)]
     print(f"OK: {path} is a valid version-{version} .dsv save")
     print(f"  size                  {len(data)} bytes "
           f"({DSV_HEADER_SIZE} header + {len(payload)} payload)")
@@ -133,43 +199,30 @@ def verify(path):
     print(f"  checksum (recomputed) 0x{computed:04X} ({computed})")
 
 
-def stub():
-    """The unimplemented conversion path — unchanged Phase 5 stub."""
-    print("saveconv.py: NOT YET IMPLEMENTED (Phase 5 item)")
-    print("See ROADMAP.md for details.")
-    print()
-    print("Planned usage:")
-    print("  saveconv.py --to-dos  input.sav  output.dsv")
-    print("  saveconv.py --to-gb   input.dsv  output.sav")
-    sys.exit(1)
-
-
 def main():
     parser = argparse.ArgumentParser(
-        description="Inspect (and eventually convert) Pokémon Yellow save files.",
-        epilog="With no arguments, or with --to-dos/--to-gb, this prints the "
-               "Phase 5 not-implemented notice and exits 1.")
+        description="Inspect and convert Pokémon Yellow save files.",
+        epilog="With no arguments this prints usage and exits 1.")
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument('--verify', '--info', metavar='FILE', dest='verify',
                       help='validate a .dsv file (size, magic, version, '
                            'payload checksum) and print a summary; '
                            '--info is an alias')
-    # Declared only so they keep reaching the stub below. Before --verify
-    # existed main() ignored argv entirely, so `--to-dos in.sav out.dsv` printed
-    # the not-implemented notice; undeclared they would instead die as
-    # "unrecognized arguments" (exit 2). nargs='*' keeps that true for any
-    # arity, so no argparse error can pre-empt the notice.
-    mode.add_argument('--to-dos', nargs='*', metavar='PATH',
-                      help='GB SRAM dump → DOS save (NOT IMPLEMENTED)')
-    mode.add_argument('--to-gb', nargs='*', metavar='PATH',
-                      help='DOS save → GB SRAM dump (NOT IMPLEMENTED)')
+    mode.add_argument('--to-dos', nargs=2, metavar=('IN.sav', 'OUT.dsv'),
+                      help='GB SRAM dump → DOS save (prepend the v2 header)')
+    mode.add_argument('--to-gb', nargs=2, metavar=('IN.dsv', 'OUT.sav'),
+                      help='DOS save → GB SRAM dump (validate, strip the header)')
     args = parser.parse_args()
 
     if args.verify is not None:
         verify(args.verify)
-        return
-
-    stub()
+    elif args.to_dos is not None:
+        to_dos(*args.to_dos)
+    elif args.to_gb is not None:
+        to_gb(*args.to_gb)
+    else:
+        parser.print_usage()
+        sys.exit(1)
 
 
 if __name__ == '__main__':
