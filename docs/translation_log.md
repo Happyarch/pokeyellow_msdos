@@ -5740,3 +5740,46 @@ Stage 2 (linking) is blocked on a measured addressing-model gap, not on more dat
   `faithdiff DisplayTextID` unchanged; **`make fidelity-full` 33 PASS /
   `MAKE_EXIT=0`**, run twice (data tier, then again with the `.readFirstByte` fix).
   `pret_label_allowlist.json` **untouched** — the retirement was not reached.
+
+## 2026-07-28 — resident SRAM tiers for PC box storage (sram_pc_storage stages 1-4)
+
+Implemented the in-memory portion of `docs/current_plan_sram_pc_storage.md`; stage 5
+(raw `.dsv` disk boundary) and stage 6 (goldens + final sweep) remain maintainer-owned.
+
+- **SRAM layout.** `include/gb_memmap.inc` now carries pret `ram/sram.asm` labels for
+  bank 0 (`sSpriteBuffer0/1/2`, `sHallOfFame`) and resident banks 1-3 at `$22000`,
+  `$24000`, `$26000`, with `GB_TOTAL_SIZE = $28000`. `sHallOfFame` stays at pret's
+  `$A598` for future byte-comparable `.sav`/`.dsv` image work.
+- **PIC_STAGE collision resolved.** The port-only compressed-pic staging buffer moved
+  from `$A4A0` (inside pret HoF storage) to bank 0's unused tail at `$B860`. The three
+  local address definitions in battle init, trainer-card, and Oak speech were replaced
+  with the canonical `PIC_STAGE` equ.
+- **Pointer-safety invariant.** Pret `CopyData` was not widened. SRAM copies use a
+  port-only `SramCopyData32` helper local to `engine/menus/save.asm`, because extended
+  SRAM destinations above `$FFFF` cannot safely pass through DE/DX. `GetBoxSRAMLocation`
+  uses a `dd` `BoxSRAMPointerTable` and returns a full ESI pointer.
+- **Save/load realized in memory.** `LoadMainData`, `LoadCurrentBoxData`,
+  `LoadPartyAndDexData`, `SaveMainData`, `SaveCurrentBoxData`, and
+  `SavePartyAndDexData` read/write the real `s*` regions and maintain
+  `sMainDataCheckSum`. `sTileAnimations` is copied to/from `hTileAnimations`, and
+  `CheckPreviousSaveFile` now compares the saved big-endian player ID from `sMainData`
+  against live `wPlayerID` instead of assuming same-playthrough.
+- **Box tier realized in memory.** `CopyBoxToOrFromSRAM`, `EmptyAllSRAMBoxes`,
+  `EmptySRAMBoxesInBank`, `EmptySRAMBox`, `GetMonCountsForBoxesInBank`, and
+  `CalcIndividualBoxCheckSums` operate on resident `sBox1..sBox12`, preserving the
+  frozen 33-byte box structs verbatim. The current-box count still overrides the active
+  box in `GetMonCountsForAllBoxes`, matching pret's WRAM-current-box model.
+- **HoF and erase paths.** `SaveHallOfFameTeams`, `LoadHallOfFameTeams`,
+  `HallOfFame_Copy`, and `ClearAllSRAMBanks` now manipulate resident SRAM instead of
+  no-oping. `ClearAllSRAMBanks` calls the store seam after the erase.
+- **Disk seam only.** `SramLoadImage` and `SramStoreImage` are ret-stubs in
+  `src/save/save_stubs.asm`, linked through `SAVE_SRCS`; `src/save/dsv_io.asm` was not
+  edited. Boot calls `SramLoadImage` after zeroing the allocation; `SaveGameData` calls
+  `SramStoreImage` after all three save slices update resident SRAM.
+- **Verification limits.** `audit_memmap.py` passed (`1205 symbols, 78 sized regions`,
+  clean). `git diff --check` passed. `nasm` and DJGPP tools were unavailable;
+  `make -C dos_port` stopped at missing root-generated graphics
+  (`../gfx/sprites/monster.2bpp`); final `update_label_db`, strict lint, and
+  `static_gate` stopped at missing generated audio include `assets/music_streams.inc`.
+  Faithdiff was run for the touched labels and every ADDED/DROPPED call is decomposed in
+  PR #2. No DOSBox-X, mGBA, fidelity, or behavioral golden run was performed.
