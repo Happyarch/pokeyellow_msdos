@@ -79,14 +79,9 @@ AbleToPlaySlotsCheck:
 
 section .data
 
-global GameCornerCoinCaseText
-extern _GameCornerCoinCaseText
-GameCornerCoinCaseText:
-    text_far _GameCornerCoinCaseText
-    text_end
-
-global GameCornerNoCoinsText
-extern _GameCornerNoCoinsText
-GameCornerNoCoinsText:
-    text_far _GameCornerNoCoinsText
-    text_end
+; Both message streams here are Tier-1 data, now GENERATED into
+; assets/predef_text.inc (tools/generators/gen_predef_text.py) as the single
+; definition. The hand-written wrappers they replace pointed at `_GameCorner*Text`
+; far labels no file defined, so they could never have linked.
+extern GameCornerCoinCaseText            ; assets/predef_text.inc (generated)
+extern GameCornerNoCoinsText             ; assets/predef_text.inc (generated)

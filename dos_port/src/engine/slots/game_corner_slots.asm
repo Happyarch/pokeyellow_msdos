@@ -118,20 +118,12 @@ StartSlotMachine:
 
 section .data
 
-global GameCornerOutOfOrderText
-extern _GameCornerOutOfOrderText
-GameCornerOutOfOrderText:
-    text_far _GameCornerOutOfOrderText
-    text_end
-
-global GameCornerOutToLunchText
-extern _GameCornerOutToLunchText
-GameCornerOutToLunchText:
-    text_far _GameCornerOutToLunchText
-    text_end
-
-global GameCornerSomeonesKeysText
-extern _GameCornerSomeonesKeysText
-GameCornerSomeonesKeysText:
-    text_far _GameCornerSomeonesKeysText
-    text_end
+; The three GameCorner message streams pret defines here are Tier-1 data and are
+; now GENERATED into assets/predef_text.inc (tools/generators/gen_predef_text.py),
+; which is the single definition. They used to be hand-written `text_far` wrappers
+; pointing at `_GameCorner*Text` far labels that NOTHING in the tree defined, so
+; this file could not have linked as written. Externed here so the pret labels
+; still resolve to one definition each once a consumer lands.
+extern GameCornerOutOfOrderText          ; assets/predef_text.inc (generated)
+extern GameCornerOutToLunchText          ; assets/predef_text.inc (generated)
+extern GameCornerSomeonesKeysText        ; assets/predef_text.inc (generated)
