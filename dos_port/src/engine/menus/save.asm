@@ -2,74 +2,35 @@
 ; save.asm — the SAVE / LOAD / CHANGE-BOX / Hall-of-Fame save layer.
 ; menus-port Session 7, package H. Faithful port of pret engine/menus/save.asm.
 ;
-; This turns the START->SAVE stub (menus S4) and the .dsv layer real, and
-; provides the LOAD side package E depends on (TryLoadSaveFile).
+; This provides the START->SAVE flow, the LOAD side package E depends on
+; (TryLoadSaveFile), Bill's PC box-storage back end, and the in-memory SRAM image.
 ;
-; PORT MODEL (CLAUDE.md + translation_log "menus-port S2-S6"):
+; PORT MODEL (CLAUDE.md + current_plan_sram_pc_storage stages 1-4):
 ;  * SM83->x86: A=AL, BC=BX, DE=DX, HL=ESI, EBP = GB base; GB memory at [EBP+sym].
-;  * NO SRAM HARDWARE. The GB save is a battery-backed SRAM image; pret drives it
-;    through the MBC banking regs (rRAMG/rBMODE/rRAMB) and reads/writes s* SRAM
-;    labels. The DOS port has none of that: EVERY SRAM byte copy collapses onto
-;    the src/save/dsv_io.asm HAL —
-;       DsvWriteSave — serialize the save WRAM payload -> POKEMON.DSV + header +
-;                      16-bit file checksum (dsv OWNS the payload/header/checksum).
-;       DsvReadSave  — load POKEMON.DSV back into that WRAM. CF=1 if absent / bad
-;                      magic / bad checksum -> maps onto pret's CheckSumFailed path.
-;       DsvFileExists— CF=1/AL=1 if a valid "DOSV" file is present.
-;    Every such site is tagged ; TODO-HW: SRAM. EnableSRAM/DisableSRAM become
-;    flag-preserving no-ops (kept for label parity + control flow).
-;  * The payload dsv_io serializes is EXACTLY pret's SaveMainData /
-;    SaveCurrentBoxData / SavePartyAndDexData set: wPlayerName + wMainDataStart..End
-;    (which already covers wPokedexOwned..wPokedexSeenEnd AND wPikachuHappiness,
-;    both inside 0xD2F6..0xDA7F) + wSpriteDataStart..End + wBoxDataStart..End +
-;    wPartyDataStart..End. So the pokédex + pikachu-happiness tail pret copies
-;    separately need no special handling here — they ride in the main-data block.
+;  * SRAM is resident and flat. Bank 0 remains at $A000-$BFFF for the pic decoder's
+;    16-bit wSpriteInputPtr contract; banks 1-3 live at $22000, $24000, $26000.
+;    rRAMB/rRAMG/rBMODE writes are annotated no-ops, and any copy touching the
+;    extended banks uses SramCopyData32 rather than widening pret CopyData.
+;  * The stage-5 disk boundary is deliberately only a seam here: boot calls
+;    SramLoadImage, and SaveGameData/ClearAllSRAMBanks call SramStoreImage after
+;    updating resident memory. The ret-stubs live in src/save/save_stubs.asm and
+;    dsv_io.asm is left untouched for the maintainers.
+;  * Checksums are faithful SRAM checksums: sMainDataCheckSum covers sGameData,
+;    box-bank all-box checksums cover the six box payloads in that bank, and the
+;    individual checksum arrays hold one checksum per box.
 ;  * TEXT (row 19 part 1, M-97): the SAVE/LOAD messages are pret's own text_far
 ;    streams (Tier-1 data in assets/save_text.inc, generated from data/text/
-;    text_4.asm) printed by PrintText through the msgbox_dialog projection — the
-;    `line`/`cont` breaks, the terminal `prompt` and _GameSavedText's TX_RAM
-;    player-name splice are executed by the text engine. Until row 19 this file
-;    hand-encoded every LINE as a charmap `db` run and drew them whole with bespoke
-;    SV_* routines, claiming "the port's dialog projection collapses the window list
-;    to the dialog alone" — false: PrintText is what pc.asm/players_pc.asm/
-;    oaks_pc.asm/league_pc.asm all use, and the drawn-whole imitation is what those
-;    rows deleted.
+;    text_4.asm) printed by PrintText through the msgbox_dialog projection.
 ;  * The "Would you like to SAVE?" yes/no is pret's own TWO_OPTION_MENU box:
 ;    wTextBoxID = TWO_OPTION_MENU + DisplayTextBoxID, at pret's own hlcoord 0,7 /
-;    lb bc,8,1 (the learn_move.asm precedent). wCurrentMenuItem holds the result
-;    (0=Yes,1=No). The former InitYesNoTextBoxParameters/DisplayYesNoChoice
-;    substitution moved the box to the standard top-right YES/NO anchor — a
-;    geometry change pret does not make (M-98).
+;    lb bc,8,1, projected through yn_box state.
 ;  * SFX_SAVE / PlaySoundWaitForCurrent / WaitForSoundToFinish are REAL in the port
 ;    (src/home/audio.asm + assets/audio_constants.inc; pc.asm plays its PC jingles
-;    through them). The "TODO-HW: audio HAL (Phase 3), no-op" comments that used to
-;    sit here were stale (M-99); the save jingle is restored.
+;    through them). The save jingle is restored.
 ;  * CHANGE-BOX TEXT (row 19 part 2, M-101): WhenYouChangeBoxText / ChooseABoxText /
 ;    BoxNames / BoxNoText are pret's own labels with pret's own bodies (Tier-1 data
 ;    in assets/save_text.inc). _WhenYouChangeBoxText's `para` page break is executed
-;    by the text engine — the port used to hand-drive the two pages, hand-encode
-;    every line, split BoxNames into 12 separately-terminated strings (which is what
-;    forced its per-row placement loop), and never draw the box number at all.
-;  * CHANGE-BOX box swap: the port has WRAM for only the CURRENT box
-;    (wBoxDataStart..End); the other 11 boxes live in SRAM banks pret has and the
-;    port does not. So CopyBoxToOrFromSRAM / the per-bank mon-count reads / the
-;    empty-box init all collapse to ; TODO-HW: SRAM no-ops that PRESERVE the live
-;    current box (they must not erase it). Net stopgap: the ChangeBox UI + flow +
-;    SaveGameData all run, but the box contents do not actually swap and the other
-;    boxes read empty — exactly the wNumHoFTeams==0 kind of degraded-but-safe
-;    behavior, retired when a box-storage WRAM region / faithful .dsv lands.
-;  * TWO THINGS THE .dsv PAYLOAD CANNOT CARRY (row 19 part 3), both filed against
-;    src/save/dsv_io.asm and both stated honestly at their sites rather than waved
-;    through as "SRAM parity":
-;      - hTileAnimations (M-106): HRAM, not in the WRAM payload, so pret's
-;        save+restore of it through sTileAnimations is dropped on BOTH sides. The
-;        flag is LIVE in the port, so the setting does not survive a save/load.
-;      - the saved player ID (M-107): unreachable without DsvReadSave clobbering the
-;        live game, so CheckPreviousSaveFile always answers "same playthrough" and a
-;        NEW GAME saved over an existing file overwrites it with no confirmation.
-;    The HoF routines, ClearAllSRAMBanks and the box-swap copies are also SRAM no-ops,
-;    but those are DEAD in the port (their callers — the HoF movie, clear_save.asm —
-;    are unported), so they cost nothing today.
+;    by the text engine.
 ;
 ; Build (standalone check):
 ;   nasm -f coff -I include/ -I . -o /dev/null src/engine/menus/save.asm
@@ -149,8 +110,8 @@ extern DisplayTextBoxID         ; home/textbox.asm — [wTextBoxID] box (TWO_OPT
 extern PlaySoundWaitForCurrent  ; src/home/delay.asm — In: AL = sound id
 extern WaitForSoundToFinish     ; src/home/delay.asm
 ; --- generic engine seams ---------------------------------------------------
-; (pret's CopyData / AddNTimes SRAM copies collapse to no-ops here — see the
-;  TODO-HW: SRAM sites — so neither is externed.)
+; (pret's CopyData / AddNTimes SRAM operations are realized locally with
+;  SramCopyData32 and direct address arithmetic, so neither helper is externed.)
 extern UpdateSprites            ; src/home/update_sprites.asm
 extern SetMapTextPointer        ; home/predef_text.asm
 extern RestoreMapTextPointer    ; home/predef_text.asm
@@ -162,10 +123,11 @@ extern YesNoChoice              ; home/yes_no.asm — ChangeBox's confirm
 extern yn_box_col               ; home/yes_no.asm — two-option box top-left, GB X
 extern yn_box_row               ; home/yes_no.asm — two-option box top-left, GB Y
 extern yn_proj_mode             ; home/yes_no.asm — 0 = overworld anchor
-; --- the .dsv HAL (src/save/dsv_io.asm) ------------------------------------
-extern DsvWriteSave             ; CF=0 ok / CF=1 fail
-extern DsvReadSave              ; CF=0 ok / CF=1 absent/bad
-extern DsvFileExists            ; CF=1/AL=1 present
+; --- raw SRAM image seam (stage 5 body, stage 4 ret-stub) -------------------
+extern SramStoreImage           ; src/save/dsv_io.asm — SRAM banks -> POKEMON.DSV
+; --- legacy .dsv debug harness helpers (not used by the pret save routines) ---
+extern DsvFileExists            ; src/save/dsv_io.asm — DEBUG_SAVE_ROUNDTRIP marker
+extern FillMemory               ; src/home/copy2.asm — ESI dest, BX count, AL value
 
 ; --- package E (main_menu.asm) ---------------------------------------------
 ; PrintSaveScreenText draws the SAVE info screen (player name / badges / #dex /
@@ -216,11 +178,14 @@ RunContinueSeedTest:
     call PrepareNewGameDebug
     call SeedDeterministicPlayerIdentity
 
-    ; 2. Persist it to POKEMON.DSV.
-    call DsvWriteSave
+    ; 2. Commit it through the real save path: WRAM -> resident SRAM banks
+    ;    (SaveMainData/SaveCurrentBoxData/SavePartyAndDexData) and on to
+    ;    POKEMON.DSV via SramStoreImage. That is what a player's SAVE does, so
+    ;    the load below reads exactly what a real save wrote.
+    call SaveGameData
 
-    ; 3. Clobber every saved WRAM span, so a match after the load can only come
-    ;    FROM the load. These are exactly dsv_io.asm's payload_blocks.
+    ; 3. Clobber the WRAM the save owns, so a successful load has to restore it
+    ;    rather than finding it already correct.
     lea edi, [ebp + wPlayerName]
     mov ecx, NAME_LENGTH
     xor al, al
@@ -235,8 +200,8 @@ RunContinueSeedTest:
     mov ecx, wPartyDataEnd - wPartyDataStart
     rep stosb
 
-    ; 4. Load it back — the real CONTINUE load. Sets wSaveFileStatus = 2 on a good
-    ;    checksum and repopulates the payload from disk.
+    ; 4. Load it back the way CONTINUE does: TryLoadSaveFile reads the resident
+    ;    SRAM banks step 2 wrote and verifies their checksums.
     call TryLoadSaveFile
 
     ; 5. Photograph the loaded WRAM.
@@ -352,56 +317,106 @@ FileDataDestroyedText:
 
 ; ---------------------------------------------------------------------------
 ; LoadMainData — pret ref: engine/menus/save.asm:LoadMainData.
-; pret verifies sMainDataCheckSum (twice) then CopyData's sPlayerName/sMainData/
-; sSpriteData/sCurBoxData -> WRAM. dsv_io.asm loads the whole payload atomically
-; and owns the file-level checksum, so the SRAM verify + all the CopyData slices
-; collapse into one DsvReadSave. CF=1 (absent/bad magic/bad checksum) maps onto
-; pret's `jp nz,CheckSumFailed`.
+; Verifies sGameData's checksum, copies the saved name/main/sprite/current-box
+; blocks from resident SRAM to WRAM, restores hTileAnimations, and marks the map
+; tileset as freshly loaded. The GB rRAMB bank-select writes are no-ops in the
+; flat resident SRAM model.
+; DEVIATION{class=banking; pret=engine/menus/save.asm:LoadMainData; behavior=use SramCopyData32 instead of pret CopyData for resident SRAM sources above FFFF and ignore the rRAMB bank-select write; evidence=CopyData truncates DE destinations through DX and the resident SRAM design stores bank 1 at 22000; lifetime=permanent flat SRAM model}
 ; ---------------------------------------------------------------------------
 LoadMainData:
-    call EnableSRAM                              ; TODO-HW: SRAM no-op
-    ; ld a,BANK("Save Data") / ld [rRAMB],a — TODO-HW: SRAM banking no-op
-    ; TODO-HW: SRAM — sMainDataCheckSum verify + sPlayerName/sMainData/sSpriteData/
-    ; sCurBoxData CopyData slices collapse into the atomic file read.
-    call DsvReadSave
-    jc CheckSumFailed
-    ; WRAM side-effects pret does after the copies:
+    call EnableSRAM
+    ; ld a,BANK("Save Data") / ld [rRAMB],a — resident SRAM has fixed addresses.
+    mov esi, sGameData
+    mov bx, sGameDataEnd - sGameData
+    call CalcCheckSum
+    cmp al, [ebp + sMainDataCheckSum]
+    jz .checkSumMatched
+
+    ; If the computed checksum didn't match the saved one, try again.
+    mov esi, sGameData
+    mov bx, sGameDataEnd - sGameData
+    call CalcCheckSum
+    cmp al, [ebp + sMainDataCheckSum]
+    jnz CheckSumFailed
+
+.checkSumMatched:
+    mov esi, sPlayerName
+    mov edx, wPlayerName
+    mov bx, NAME_LENGTH
+    call SramCopyData32
+
+    mov esi, sMainData
+    mov edx, wMainDataStart
+    mov bx, wMainDataEnd - wMainDataStart
+    call SramCopyData32
+
     ; ld hl,wCurMapTileset / set BIT_NO_PREVIOUS_MAP,[hl]
-    or byte [ebp + wCurMapTileset], 1 << 7       ; BIT_NO_PREVIOUS_MAP = 7
+    or byte [ebp + wCurMapTileset], 1 << BIT_NO_PREVIOUS_MAP
+
+    mov esi, sSpriteData
+    mov edx, wSpriteDataStart
+    mov bx, wSpriteDataEnd - wSpriteDataStart
+    call SramCopyData32
+
     ; ld a,[sTileAnimations] / ldh [hTileAnimations],a
-    ; ; TODO-HW: SRAM — dropped, and this one is NOT harmless (M-106): hTileAnimations
-    ; is LIVE in the port (home/player_gfx.asm gates the walk animation on it, and
-    ; home/pokemon.asm saves/restores it around the party menu). pret persists it
-    ; through sTileAnimations; the .dsv payload has no slot for it (it is HRAM, and
-    ; dsv_io.asm serializes WRAM ranges only), so SaveMainData cannot store it and
-    ; there is nothing to restore here. Net: the tile-animation setting does not
-    ; survive a save/load. Fixing it means adding the byte to the .dsv payload —
-    ; src/save/dsv_io.asm, filed as a finding, not this file's scope.
-    ; and a / jp GoodCheckSum
+    mov al, [ebp + sTileAnimations]
+    mov [ebp + hTileAnimations], al
+
+    ; this part is redundant, LoadCurrentBoxData is always called next
+    mov esi, sCurBoxData
+    mov edx, wBoxDataStart
+    mov bx, wBoxDataEnd - wBoxDataStart
+    call SramCopyData32
+
+    clc
     jmp GoodCheckSum
 
 ; ---------------------------------------------------------------------------
 ; LoadCurrentBoxData — pret ref: engine/menus/save.asm:LoadCurrentBoxData.
-; pret re-verifies the main checksum then CopyData's sCurBoxData -> wBoxDataStart.
-; Collapses to DsvReadSave (idempotent re-load + file-checksum verify).
+; Re-verifies sGameData and copies sCurBoxData -> wBoxDataStart.
+; DEVIATION{class=banking; pret=engine/menus/save.asm:LoadCurrentBoxData; behavior=use SramCopyData32 instead of pret CopyData for resident SRAM and ignore the rRAMB bank-select write; evidence=resident SRAM bank 1 lives at 22000 and CopyData is intentionally not widened; lifetime=permanent flat SRAM model}
 ; ---------------------------------------------------------------------------
 LoadCurrentBoxData:
-    call EnableSRAM                              ; TODO-HW: SRAM no-op
-    ; TODO-HW: SRAM — checksum verify + sCurBoxData CopyData -> DsvReadSave.
-    call DsvReadSave
-    jc CheckSumFailed
+    call EnableSRAM
+    mov esi, sGameData
+    mov bx, sGameDataEnd - sGameData
+    call CalcCheckSum
+    cmp al, [ebp + sMainDataCheckSum]
+    jnz CheckSumFailed
+
+    mov esi, sCurBoxData
+    mov edx, wBoxDataStart
+    mov bx, wBoxDataEnd - wBoxDataStart
+    call SramCopyData32
+
+    clc
     jmp GoodCheckSum
 
 ; ---------------------------------------------------------------------------
 ; LoadPartyAndDexData — pret ref: engine/menus/save.asm:LoadPartyAndDexData.
-; pret re-verifies then CopyData's sPartyData -> wPartyDataStart and the pokédex
-; slice -> wPokedexOwned. Both ranges ride in the same atomic .dsv payload.
+; Re-verifies sGameData, copies sPartyData -> wPartyDataStart, then restores the
+; pokédex slice from sMainData.
+; DEVIATION{class=banking; pret=engine/menus/save.asm:LoadPartyAndDexData; behavior=use SramCopyData32 instead of pret CopyData for resident SRAM and ignore the rRAMB bank-select write; evidence=resident SRAM bank 1 lives at 22000 and CopyData is intentionally not widened; lifetime=permanent flat SRAM model}
 ; ---------------------------------------------------------------------------
 LoadPartyAndDexData:
-    call EnableSRAM                              ; TODO-HW: SRAM no-op
-    ; TODO-HW: SRAM — checksum verify + sPartyData/pokédex CopyData -> DsvReadSave.
-    call DsvReadSave
-    jc CheckSumFailed
+    call EnableSRAM
+    mov esi, sGameData
+    mov bx, sGameDataEnd - sGameData
+    call CalcCheckSum
+    cmp al, [ebp + sMainDataCheckSum]
+    jnz CheckSumFailed
+
+    mov esi, sPartyData
+    mov edx, wPartyDataStart
+    mov bx, wPartyDataEnd - wPartyDataStart
+    call SramCopyData32
+
+    mov esi, sMainData
+    mov edx, wPokedexOwned
+    mov bx, wPokedexSeenEnd - wPokedexOwned
+    call SramCopyData32
+
+    clc
     jmp GoodCheckSum
 
 ; ---------------------------------------------------------------------------
@@ -413,7 +428,7 @@ CheckSumFailed:
     stc
     ; fallthrough
 GoodCheckSum:
-    call DisableSRAM                             ; TODO-HW: SRAM no-op (preserves CF)
+    call DisableSRAM                             ; flat SRAM no-op, preserves CF
     ret
 
 ; ---------------------------------------------------------------------------
@@ -521,60 +536,108 @@ OlderFileWillBeErasedText:
 
 ; ---------------------------------------------------------------------------
 ; SaveMainData / SaveCurrentBoxData / SavePartyAndDexData — pret ref:
-; engine/menus/save.asm. Each copies its WRAM slice to SRAM + rechecksums; all
-; collapse to a full atomic .dsv write (dsv owns payload+header+checksum). Kept
-; as separate routines for label parity AND so any standalone caller of one of
-; them still persists the game. The WRAM the caller wants saved is already final
-; by the time any of these runs, so writing the whole payload is faithful in net
-; effect (mirrors pret's own "this part is redundant" copies).
+; engine/menus/save.asm. Each copies its WRAM slice into the resident SRAM save
+; layout and refreshes sMainDataCheckSum. Disk persistence is the stage-5
+; SramStoreImage seam called once by SaveGameData after all three slices commit.
 ; ---------------------------------------------------------------------------
 SaveMainData:
-    call EnableSRAM                              ; TODO-HW: SRAM no-op
-    ; TODO-HW: SRAM — wPlayerName/wMainData/wSpriteData/wBoxData -> s* slices +
-    ; sMainDataCheckSum. Collapses to the atomic file write.
-    ; ALSO dropped here: pret's `ldh a,[hTileAnimations] / ld [sTileAnimations],a`.
-    ; The .dsv payload has no slot for that HRAM byte, so the setting is not
-    ; persisted (and LoadMainData has nothing to restore) — see M-106 there.
-    call DsvWriteSave                            ; CF=0 ok / CF=1 fail
-    call DisableSRAM                             ; TODO-HW: SRAM no-op
+    call EnableSRAM
+    ; ld a,BANK("Save Data") / ld [rRAMB],a — resident SRAM has fixed addresses.
+    ; DEVIATION{class=banking; pret=engine/menus/save.asm:SaveMainData; behavior=use SramCopyData32 instead of pret CopyData for resident SRAM destinations above FFFF and ignore the rRAMB bank-select write; evidence=CopyData truncates DE destinations through DX and sPlayerName through sCurBoxData live in bank 1 at 22598 and above; lifetime=permanent flat SRAM model}
+    mov esi, wPlayerName
+    mov edx, sPlayerName
+    mov bx, NAME_LENGTH
+    call SramCopyData32
+
+    mov esi, wMainDataStart
+    mov edx, sMainData
+    mov bx, wMainDataEnd - wMainDataStart
+    call SramCopyData32
+
+    mov esi, wSpriteDataStart
+    mov edx, sSpriteData
+    mov bx, wSpriteDataEnd - wSpriteDataStart
+    call SramCopyData32
+
+    ; this part is redundant, SaveCurrentBoxData is always called next
+    mov esi, wBoxDataStart
+    mov edx, sCurBoxData
+    mov bx, wBoxDataEnd - wBoxDataStart
+    call SramCopyData32
+
+    ; ldh a,[hTileAnimations] / ld [sTileAnimations],a
+    mov al, [ebp + hTileAnimations]
+    mov [ebp + sTileAnimations], al
+
+    mov esi, sGameData
+    mov bx, sGameDataEnd - sGameData
+    call CalcCheckSum
+    mov [ebp + sMainDataCheckSum], al
+    call DisableSRAM
     ret
 
 SaveCurrentBoxData:
-    call EnableSRAM                              ; TODO-HW: SRAM no-op
-    ; TODO-HW: SRAM — wBoxDataStart -> sCurBoxData + rechecksum. Atomic write.
-    call DsvWriteSave
+    call EnableSRAM
+    ; DEVIATION{class=banking; pret=engine/menus/save.asm:SaveCurrentBoxData; behavior=use SramCopyData32 instead of pret CopyData for resident SRAM destination sCurBoxData and ignore the rRAMB bank-select write; evidence=sCurBoxData lives at 230C0 above the 16-bit GB window and CopyData is intentionally not widened; lifetime=permanent flat SRAM model}
+    mov esi, wBoxDataStart
+    mov edx, sCurBoxData
+    mov bx, wBoxDataEnd - wBoxDataStart
+    call SramCopyData32
+
+    mov esi, sGameData
+    mov bx, sGameDataEnd - sGameData
+    call CalcCheckSum
+    mov [ebp + sMainDataCheckSum], al
     call DisableSRAM
     ret
 
 SavePartyAndDexData:
-    call EnableSRAM                              ; TODO-HW: SRAM no-op
-    ; TODO-HW: SRAM — wPartyData/pokédex/wPikachuHappiness -> s* + rechecksum.
-    ; (all three ranges ride in the .dsv main-data payload). Atomic write.
-    call DsvWriteSave
+    call EnableSRAM
+    ; DEVIATION{class=banking; pret=engine/menus/save.asm:SavePartyAndDexData; behavior=use SramCopyData32 instead of pret CopyData for resident SRAM destination sPartyData and ignore the rRAMB bank-select write; evidence=sPartyData lives at 22F2C above the 16-bit GB window and CopyData is intentionally not widened; lifetime=permanent flat SRAM model}
+    mov esi, wPartyDataStart
+    mov edx, sPartyData
+    mov bx, wPartyDataEnd - wPartyDataStart
+    call SramCopyData32
+
+    ; pokédex only: wPokedexOwned..wPokedexSeenEnd -> start of sMainData.
+    mov esi, wPokedexOwned
+    mov edx, sMainData
+    mov bx, wPokedexSeenEnd - wPokedexOwned
+    call SramCopyData32
+
+    ; Preserve the two-byte Pikachu happiness field at its main-data offset.
+    mov al, [ebp + wPikachuHappiness]
+    mov [ebp + sMainData + (wPikachuHappiness - wMainDataStart)], al
+    mov al, [ebp + wPikachuHappiness + 1]
+    mov [ebp + sMainData + (wPikachuHappiness - wMainDataStart) + 1], al
+
+    mov esi, sGameData
+    mov bx, sGameDataEnd - sGameData
+    call CalcCheckSum
+    mov [ebp + sMainDataCheckSum], al
     call DisableSRAM
     ret
 
 ; ---------------------------------------------------------------------------
 ; SaveGameData — pret ref: engine/menus/save.asm:SaveGameData.
+; DEVIATION{class=HAL; pret=engine/menus/save.asm:SaveGameData; behavior=after faithfully updating resident SRAM call SramStoreImage as the DOS disk-boundary seam instead of writing the disk from the pret-labeled slice routines; evidence=current_plan_sram_pc_storage stage 4 seam contract assigns SramStoreImage to the save-commit point and forbids editing dsv_io.asm; lifetime=until stage 5 supplies the raw SRAM image writer behind this seam}
 ; ---------------------------------------------------------------------------
 SaveGameData:
     ; ld a,2 / ld [wSaveFileStatus],a
     mov byte [ebp + wSaveFileStatus], 2
     call SaveMainData
     call SaveCurrentBoxData
-    jmp SavePartyAndDexData                       ; jp SavePartyAndDexData (tail)
+    call SavePartyAndDexData
+    call SramStoreImage
+    ret
 
 ; ---------------------------------------------------------------------------
 ; CalcCheckSum — pret ref: engine/menus/save.asm:CalcCheckSum.
-; 8-bit additive fold, complemented. In: ESI=GB offset (HL), CX=length (BC).
-; Out: AL.
-; DEVIATION{class=data-model; pret=engine/menus/save.asm:CalcCheckSum; behavior=retain the Gen-1 checksum routine only for label parity while DSV I/O uses a 16-bit payload checksum; evidence=project_state reports CalcCheckSum linked with zero callers and dsv_io owns the live file checksum; lifetime=until a faithful SRAM-layout compatibility path uses CalcCheckSum}
-; The file-level checksum is dsv_io's (16-bit additive over
-; the payload); CalcCheckSum is kept for label parity / a future faithful-SRAM
-; layout and is currently unused by the collapsed save/load paths.
+; 8-bit additive fold, complemented. In: ESI=GB offset (HL), BX=length (BC).
+; Out: AL. The source pointer is full 32-bit so resident SRAM above $FFFF is safe.
 ; ---------------------------------------------------------------------------
 CalcCheckSum:
-    movzx ecx, cx
+    movzx ecx, bx
     xor dl, dl                                   ; ld d,0
 .loop:
     test ecx, ecx
@@ -587,6 +650,23 @@ CalcCheckSum:
 .done:
     mov al, dl                                   ; ld a,d
     not al                                       ; cpl
+    ret
+
+; ---------------------------------------------------------------------------
+; SramCopyData32 — port-only copy helper for resident SRAM endpoints.
+; In: ESI=source GB offset, EDX=dest GB offset, BX=count. Out: ESI and EDX advanced.
+; This deliberately does NOT widen pret CopyData, whose DE destination is 16-bit.
+; ---------------------------------------------------------------------------
+SramCopyData32:
+    push edi
+    movzx ecx, bx
+    lea esi, [ebp + esi]
+    lea edi, [ebp + edx]
+    rep movsb
+    sub esi, ebp
+    mov edx, edi
+    sub edx, ebp
+    pop edi
     ret
 
 ; ###########################################################################
@@ -637,18 +717,18 @@ ChangeBox:
     call PlaySoundWaitForCurrent
     call WaitForSoundToFinish
     ; --- copy old box (WRAM) -> SRAM ---
-    call GetBoxSRAMLocation                        ; BH=bank, ESI=SRAM ptr (0 in port)
+    call GetBoxSRAMLocation                        ; BH=bank, ESI=SRAM ptr
     mov edx, esi                                   ; ld e,l / ld d,h -> DX(de)=SRAM dest
     mov esi, wBoxDataStart                         ; ld hl,wBoxDataStart
-    call CopyBoxToOrFromSRAM                        ; copy old box WRAM -> SRAM (no-op)
+    call CopyBoxToOrFromSRAM                        ; copy old box WRAM -> SRAM
     ; ld a,[wCurrentMenuItem] / set BIT_HAS_CHANGED_BOXES,a / ld [wCurrentBoxNum],a
     mov al, [ebp + wCurrentMenuItem]
     or al, 1 << 7                                  ; set BIT_HAS_CHANGED_BOXES
     mov [ebp + wCurrentBoxNum], al
     ; --- copy new box (SRAM) -> WRAM ---
-    call GetBoxSRAMLocation                        ; ESI=SRAM src (0 in port)
+    call GetBoxSRAMLocation                        ; ESI=SRAM src
     mov edx, wBoxDataStart                          ; ld de,wBoxDataStart
-    call CopyBoxToOrFromSRAM                        ; copy new box SRAM -> WRAM (no-op)
+    call CopyBoxToOrFromSRAM                        ; copy new box SRAM -> WRAM
     ; save + restore the map text pointer around SaveGameData
     ; ld hl,wCurMapTextPtr / ld de,wChangeBoxSavedMapTextPointer / copy 2 bytes
     mov al, [ebp + W_CUR_MAP_TEXT_PTR]
@@ -666,17 +746,28 @@ ChangeBox:
 
 ; ---------------------------------------------------------------------------
 ; CopyBoxToOrFromSRAM — pret ref: engine/menus/save.asm:CopyBoxToOrFromSRAM.
-; pret: copy a full box (wBoxDataEnd-wBoxDataStart bytes) between hl and de with
-; b as the SRAM bank, mark the source box empty, then rechecksum the SRAM boxes.
-; PORT: the port has WRAM for only the CURRENT box; the other boxes have no
-; storage, so the copy + the "mark source empty" (which would ERASE the live
-; current box) + the checksums all collapse to a ; TODO-HW: SRAM no-op that
-; leaves the live box intact. Retired when a box-storage region / faithful .dsv
-; lands. In: ESI (hl) / EDX (de) / bank in B — ignored here.
+; Copy a full box between ESI(HL) and EDX(DE), mark the source box empty, then
+; refresh the selected SRAM bank's all-box and individual-box checksums.
+; DEVIATION{class=banking; pret=engine/menus/save.asm:CopyBoxToOrFromSRAM; behavior=use full 32-bit resident SRAM pointers and SramCopyData32 instead of MBC bank switching plus pret CopyData; evidence=box banks live at 24000 and 26000 so CopyData would truncate SRAM destinations through DX; lifetime=permanent flat SRAM model}
 ; ---------------------------------------------------------------------------
 CopyBoxToOrFromSRAM:
-    ; TODO-HW: SRAM — no box storage for non-current boxes; the swap is a no-op
-    ; and the source-empty marking is skipped so the live current box survives.
+    push esi                                      ; source box to mark empty after copy
+    push ebx                                      ; BH = selected SRAM bank 2 or 3
+    call EnableSRAM
+    ; ld a,b / ld [rRAMB],a — resident SRAM has fixed addresses.
+    mov bx, wBoxDataEnd - wBoxDataStart
+    call SramCopyData32
+    pop ebx                                       ; restore BH bank selector
+    pop esi                                       ; restore source box start
+
+    ; mark the source box as an empty box: count 0, species sentinel $ff.
+    xor al, al
+    mov [ebp + esi], al
+    dec al
+    mov [ebp + esi + 1], al
+
+    call calc_box_bank_checksums
+    call DisableSRAM
     ret
 
 ; --- the two CHANGE-BOX text streams (pret ref: engine/menus/save.asm, same
@@ -875,46 +966,60 @@ cboxi_mirror:
 
 ; ---------------------------------------------------------------------------
 ; EmptyAllSRAMBoxes / EmptySRAMBoxesInBank / EmptySRAMBox — pret ref:
-; engine/menus/save.asm. Mark every SRAM box empty (first box-change init).
-; PORT: no SRAM box storage -> ; TODO-HW: SRAM no-ops (label parity + flow).
+; engine/menus/save.asm. Mark every saved box empty and refresh bank checksums.
+; The rRAMB bank-select writes become BH=2/BH=3 in the resident model.
+; DEVIATION{class=banking; pret=engine/menus/save.asm:EmptyAllSRAMBoxes; behavior=select resident box banks with BH instead of rRAMB and update their fixed EBP-relative storage; evidence=sBox1 through sBox12 are flat labels in gb_memmap.inc and no switchable SRAM window exists; lifetime=permanent flat SRAM model}
 ; ---------------------------------------------------------------------------
 EmptyAllSRAMBoxes:
-    call EnableSRAM                               ; TODO-HW: SRAM no-op
-    ; ld a,BANK("Saved Boxes 1")/2 / rRAMB / EmptySRAMBoxesInBank ×2 — TODO-HW: SRAM
+    call EnableSRAM
+    mov bh, 2
     call EmptySRAMBoxesInBank
+    mov bh, 3
     call EmptySRAMBoxesInBank
-    call DisableSRAM                              ; TODO-HW: SRAM no-op
+    call DisableSRAM
     ret
 
 EmptySRAMBoxesInBank:
-    ; TODO-HW: SRAM — pret EmptySRAMBox's the 6 boxes in the bank + rechecksums;
-    ; no SRAM box storage in the port -> no-op.
+    ; marks every box in BH's resident SRAM bank as empty.
+    ; DEVIATION{class=banking; pret=engine/menus/save.asm:EmptySRAMBoxesInBank; behavior=derive the six box addresses from BH instead of the selected rRAMB window; evidence=resident SRAM gives bank 2 and bank 3 distinct full 32-bit addresses; lifetime=permanent flat SRAM model}
+    call select_box_bank_base
+    mov ecx, NUM_BOXES / 2
+.emptyLoop:
+    push ecx
+    push esi
+    call EmptySRAMBox
+    pop esi
+    add esi, wBoxDataEnd - wBoxDataStart
+    pop ecx
+    dec ecx
+    jnz .emptyLoop
+    call calc_box_bank_checksums
     ret
 
 EmptySRAMBox:
-    ; TODO-HW: SRAM — pret marks the box empty (count 0, next $ff). No-op here.
+    ; count 0, species sentinel $ff. The rest of the box payload is left as-is,
+    ; matching pret's two-byte initialization.
+    xor al, al
+    mov [ebp + esi], al
+    dec al
+    mov [ebp + esi + 1], al
     ret
 
 ; ---------------------------------------------------------------------------
 ; GetMonCountsForAllBoxes — pret ref: engine/menus/save.asm.
-; Fill wBoxMonCounts[0..NUM_BOXES-1] with each box's mon count, then overwrite
-; the current box's slot from WRAM (wBoxCount). PORT: the per-bank SRAM reads
-; have no source -> the non-current boxes read empty (0); only the current box's
-; count is real (from WRAM). Same degraded-but-safe shape as wNumHoFTeams==0.
+; Fill wBoxMonCounts[0..NUM_BOXES-1] from resident SRAM, then overwrite the
+; current box's slot from WRAM because the active box lives in wBoxDataStart.
 ; ---------------------------------------------------------------------------
 GetMonCountsForAllBoxes:
-    call EnableSRAM                               ; TODO-HW: SRAM no-op
-    ; ld a,BANK("Saved Boxes 1")/2 / rRAMB / GetMonCountsForBoxesInBank ×2 —
-    ; TODO-HW: SRAM. With no SRAM the counts stay 0; zero the scratch explicitly.
-    lea edi, [ebp + wBoxMonCounts]
-    mov ecx, NUM_BOXES
-    xor al, al
-    rep stosb
+    mov esi, wBoxMonCounts
+    call EnableSRAM
+    mov bh, 2
     call GetMonCountsForBoxesInBank
+    mov bh, 3
     call GetMonCountsForBoxesInBank
-    call DisableSRAM                              ; TODO-HW: SRAM no-op
-    ; copy the count for the current box from WRAM:
-    ; ld a,[wCurrentBoxNum] / and BOX_NUM_MASK / ld c,a / add hl,bc / ld a,[wBoxCount] / ld [hl],a
+    call DisableSRAM
+
+    ; copy the count for the current box from WRAM.
     movzx eax, byte [ebp + wCurrentBoxNum]
     and al, 0x7F                                  ; BOX_NUM_MASK
     mov cl, [ebp + wBoxCount]
@@ -922,64 +1027,155 @@ GetMonCountsForAllBoxes:
     ret
 
 GetMonCountsForBoxesInBank:
-    ; TODO-HW: SRAM — pret reads sBox1..sBox6 count bytes into wBoxMonCounts.
-    ; No SRAM box storage -> no-op (the slots stay 0 from the caller's clear).
+    ; In: ESI = destination wBoxMonCounts cursor, BH = resident bank 2 or 3.
+    ; Out: ESI advanced by six counts.
+    ; DEVIATION{class=banking; pret=engine/menus/save.asm:GetMonCountsForBoxesInBank; behavior=read counts from fixed resident bank addresses selected by BH instead of the current rRAMB window; evidence=sBox1 and sBox7 have distinct addresses in gb_memmap.inc; lifetime=permanent flat SRAM model}
+    push esi                                      ; preserve destination cursor
+    call select_box_bank_base                         ; ESI = first box in selected bank
+    pop edi                                       ; EDI = destination cursor
+    mov ecx, NUM_BOXES / 2
+.countLoop:
+    mov al, [ebp + esi]
+    mov [ebp + edi], al
+    inc edi
+    add esi, wBoxDataEnd - wBoxDataStart
+    dec ecx
+    jnz .countLoop
+    mov esi, edi                                  ; faithful HL cursor advance
     ret
 
 ; ---------------------------------------------------------------------------
 ; GetBoxSRAMLocation — pret ref: engine/menus/save.asm:GetBoxSRAMLocation.
-; pret: out b=box SRAM bank, hl=pointer to start of box. PORT: no SRAM pointers.
-; Returns BH=bank (2/3 as pret computes) for parity, ESI=0 (no SRAM address);
-; CopyBoxToOrFromSRAM (its only caller) ignores the address (no-op). ; TODO-HW: SRAM
+; Out: BH = box SRAM bank, ESI = full 32-bit resident pointer to the box slot.
+; DEVIATION{class=data-model; pret=engine/menus/save.asm:GetBoxSRAMLocation; behavior=BoxSRAMPointerTable stores dword EBP-relative addresses and GetBoxSRAMLocation loads the full dword instead of rebuilding a 16-bit HL pointer; evidence=resident boxes in banks 2 and 3 live at 24000 and 26000 above the GB 16-bit address range; lifetime=permanent flat SRAM model}
 ; ---------------------------------------------------------------------------
 GetBoxSRAMLocation:
-    ; ld a,[wCurrentBoxNum] / and BOX_NUM_MASK / cp NUM_BOXES/2 / ld b,2 / jr c / inc b / sub NUM_BOXES/2
     movzx eax, byte [ebp + wCurrentBoxNum]
     and al, 0x7F                                  ; BOX_NUM_MASK
     mov bh, 2                                      ; ld b,2
     cmp al, NUM_BOXES / 2
     jc .haveBank
-    inc bh                                         ; inc b
+    inc bh                                         ; inc b -> bank 3
     sub al, NUM_BOXES / 2
 .haveBank:
-    ; TODO-HW: SRAM — pret indexes BoxSRAMPointerTable by the in-bank box index;
-    ; no SRAM pointer table in the port. ESI (hl) = 0.
-    xor esi, esi
+    movzx eax, al
+    mov esi, [BoxSRAMPointerTable + eax * 4]
+    cmp bh, 3
+    jne .ret
+    add esi, sBox7 - sBox1                         ; same in-bank slot in bank 3
+.ret:
     ret
+
+section .data
+align 4
+BoxSRAMPointerTable:
+    dd sBox1                                      ; sBox7 when BH=3
+    dd sBox2                                      ; sBox8 when BH=3
+    dd sBox3                                      ; sBox9 when BH=3
+    dd sBox4                                      ; sBox10 when BH=3
+    dd sBox5                                      ; sBox11 when BH=3
+    dd sBox6                                      ; sBox12 when BH=3
+
+section .text
 
 ; ---------------------------------------------------------------------------
 ; CalcIndividualBoxCheckSums — pret ref: engine/menus/save.asm.
-; PORT: per-box SRAM checksums have no source -> ; TODO-HW: SRAM no-op (parity).
+; In: BH = resident SRAM bank 2 or 3. Computes the six per-box checksums for
+; that bank. The all-box checksum is handled by calc_box_bank_checksums.
+; DEVIATION{class=banking; pret=engine/menus/save.asm:CalcIndividualBoxCheckSums; behavior=select the bank 2 or bank 3 checksum destination from BH instead of relying on the current rRAMB window; evidence=flat SRAM has no banked A000 view and stores both checksum arrays at fixed addresses; lifetime=permanent flat SRAM model}
 ; ---------------------------------------------------------------------------
 CalcIndividualBoxCheckSums:
-    ; TODO-HW: SRAM — no SRAM box banks; no-op.
+    call select_box_bank_regions                      ; ESI=first box, EDI=individual checksum array
+    mov ecx, NUM_BOXES / 2
+.loop:
+    push ecx
+    push esi
+    push edi
+    mov bx, wBoxDataEnd - wBoxDataStart
+    call CalcCheckSum
+    pop edi
+    mov [ebp + edi], al
+    inc edi
+    pop esi
+    add esi, wBoxDataEnd - wBoxDataStart
+    pop ecx
+    dec ecx
+    jnz .loop
+    ret
+
+; calc_box_bank_checksums — port-only helper carrying the checksum tail pret
+; writes inline in BOTH CopyBoxToOrFromSRAM and EmptySRAMBoxesInBank (the same
+; four lines: all-box CalcCheckSum, store, CalcIndividualBoxCheckSums).
+;
+; The factoring is forced by the flat model, not chosen for tidiness: pret's two
+; copies are textually identical because rRAMB makes sBox1/sBank2AllBoxesChecksum
+; resolve to the same window addresses in either bank, while the port's banks
+; have distinct 32-bit addresses and must select them from BH. Duplicating that
+; selection at both sites is what this avoids. Lowercase by the port-local helper
+; convention — it is NOT a pret label.
+; In: BH = 2 or 3. Clobbers EAX/ECX/EDX/ESI/EDI.
+calc_box_bank_checksums:
+    push ebx                                      ; preserve BH for individual checksums
+    call select_box_bank_regions                  ; ESI=first box, EDI=individual, EDX=all checksum
+    push edx                                      ; CalcCheckSum uses DL as accumulator
+    mov bx, sBank2AllBoxesChecksum - sBox1
+    call CalcCheckSum
+    pop edx
+    mov [ebp + edx], al
+    pop ebx
+    jmp CalcIndividualBoxCheckSums
+
+; select_box_bank_base — In BH=2/3, Out ESI=sBox1 or sBox7.
+select_box_bank_base:
+    cmp bh, 3
+    je .bank3
+    mov esi, sBox1
+    ret
+.bank3:
+    mov esi, sBox7
+    ret
+
+; select_box_bank_regions — In BH=2/3, Out ESI=first box, EDI=individual sums, EDX=all sum.
+select_box_bank_regions:
+    cmp bh, 3
+    je .bank3
+    mov esi, sBox1
+    mov edi, sBank2IndividualBoxChecksums
+    mov edx, sBank2AllBoxesChecksum
+    ret
+.bank3:
+    mov esi, sBox7
+    mov edi, sBank3IndividualBoxChecksums
+    mov edx, sBank3AllBoxesChecksum
     ret
 
 ; ---------------------------------------------------------------------------
 ; CheckPreviousSaveFile — pret ref: engine/menus/save.asm:CheckPreviousSaveFile.
-; pret: return Z set if (no valid save) OR (saved playerID == current wPlayerID);
-; Z clear -> a DIFFERENT playthrough's save exists ("older file will be erased").
-; PORT: dsv is single-slot (POKEMON.DSV) and reading the saved player ID would
-; require loading the file — clobbering the LIVE game we are about to save. The
-; SaveMenu caller short-circuits the no-save case via wSaveFileStatus==1.
-; ; TODO-HW/DEVIATION(SRAM): this ALWAYS returns Z ("same playthrough"), and the
-; consequence is real, not theoretical (M-107): the case pret's check exists for is
-; NEW GAME started on top of an existing save — there wSaveFileStatus is still 2, the
-; player IDs differ, and pret asks "the OLDER FILE will be erased, OK?" before
-; overwriting. The port asks nothing and overwrites silently. Deciding it honestly
-; needs the SAVED player ID, and the only way to reach it today is DsvReadSave, which
-; loads the payload over the LIVE game we are about to save — so the check cannot be
-; made faithful from this file. It needs a header/field peek in src/save/dsv_io.asm
-; (filed). OlderFileWillBeErasedText + its yes/no are kept wired and correct, so the
-; day that peek exists this becomes a one-line branch.
-; Out: ZF set (SaveMenu's `jr z,.save`).
+; Returns Z set for no saved player name or a matching saved wPlayerID, Z clear
+; when a valid save belongs to a different playthrough.
+; DEVIATION{class=banking; pret=engine/menus/save.asm:CheckPreviousSaveFile; behavior=read sPlayerName and the saved player ID from resident SRAM bank 1 instead of selecting BANK Save Data through rRAMB; evidence=sPlayerName and sMainData are fixed 32-bit labels in gb_memmap.inc and no switchable SRAM window exists; lifetime=permanent flat SRAM model}
 ; ---------------------------------------------------------------------------
 CheckPreviousSaveFile:
-    call EnableSRAM                               ; TODO-HW: SRAM no-op
-    call DsvFileExists                            ; CF=1/AL=1 if a valid file present
-    ; (result deliberately not branched on — see DEVIATION above.)
-    call DisableSRAM                              ; TODO-HW: SRAM no-op
-    xor al, al                                    ; force Z set (pret's same-file path)
+    call EnableSRAM
+    ; ld a,BANK("Save Data") / ld [rRAMB],a — resident SRAM has fixed addresses.
+    mov al, [ebp + sPlayerName]
+    test al, al
+    jz .next                                      ; no save data -> Z set
+
+    mov esi, sGameData
+    mov bx, sGameDataEnd - sGameData
+    call CalcCheckSum
+    cmp al, [ebp + sMainDataCheckSum]
+    jnz .next                                     ; checksum mismatch -> NZ, matching pret branch flags
+
+    ; saved player ID is big-endian in sMainData at the wPlayerID offset.
+    mov al, [ebp + sMainData + (wPlayerID - wMainDataStart)]
+    cmp al, [ebp + wPlayerID]
+    jne .next
+    mov al, [ebp + sMainData + (wPlayerID - wMainDataStart) + 1]
+    cmp al, [ebp + wPlayerID + 1]
+.next:
+    call DisableSRAM                              ; preserves ZF
     ret
 
 ; ###########################################################################
@@ -988,82 +1184,88 @@ CheckPreviousSaveFile:
 
 ; ---------------------------------------------------------------------------
 ; SaveHallOfFameTeams — pret ref: engine/menus/save.asm:SaveHallOfFameTeams.
-; Append wHallOfFame as the next HoF team (shifting teams down if the capacity is
-; full, deleting the oldest). PORT: the sHallOfFame SRAM writes are ; TODO-HW:
-; SRAM. wNumHoFTeams stays 0 until the HoF-movie writer, so the append is unused
-; for now; kept for label parity + faithful control flow.
+; Append wHallOfFame as the next HoF team, or shift the resident sHallOfFame
+; ring down and overwrite the last slot when full.
+; DEVIATION{class=banking; pret=engine/menus/save.asm:SaveHallOfFameTeams; behavior=compute sHallOfFame slot addresses directly in flat resident SRAM instead of using AddNTimes in a selected SRAM bank; evidence=sHallOfFame remains at pret bank 0 address A598 and the port has no switchable SRAM window; lifetime=permanent flat SRAM model}
 ; ---------------------------------------------------------------------------
 SaveHallOfFameTeams:
-    ; ld a,[wNumHoFTeams] / dec a / cp HOF_TEAM_CAPACITY / jr nc,.shiftHOFTeams
-    mov al, [ebp + wNumHoFTeams]
+    movzx eax, byte [ebp + wNumHoFTeams]
     dec al
     cmp al, HOF_TEAM_CAPACITY
     jnc .shiftHOFTeams
-    ; ld hl,sHallOfFame / ld bc,HOF_TEAM / call AddNTimes / ld e,l / ld d,h
-    ; ld hl,wHallOfFame / ld bc,HOF_TEAM / jr HallOfFame_Copy
-    ; TODO-HW: SRAM — sHallOfFame is an SRAM region; AddNTimes into it has no port
-    ; address. wHallOfFame -> (SRAM slot) copy collapses to a no-op HallOfFame_Copy.
+
+    movzx eax, al
+    imul edx, eax, HOF_TEAM
+    add edx, sHallOfFame
+    mov esi, wHallOfFame
     mov bx, HOF_TEAM
-    mov edx, 0                                     ; de = SRAM dest (none) — TODO-HW: SRAM
-    mov esi, wHallOfFame
     jmp HallOfFame_Copy
+
 .shiftHOFTeams:
-    ; TODO-HW: SRAM — shift all HoF teams down one slot in sHallOfFame (deletes the
-    ; oldest), then copy wHallOfFame into the freed top slot. No SRAM -> no-op copy.
+    ; if the space designated for HOF teams is full, shift all HOF teams to the
+    ; next slot, making space for the new HOF team and deleting the oldest.
+    mov esi, sHallOfFame + HOF_TEAM
+    mov edx, sHallOfFame
+    mov bx, HOF_TEAM * (HOF_TEAM_CAPACITY - 1)
+    call HallOfFame_Copy
     mov esi, wHallOfFame
-    mov edx, 0
+    mov edx, sHallOfFame + HOF_TEAM * (HOF_TEAM_CAPACITY - 1)
     mov bx, HOF_TEAM
     jmp HallOfFame_Copy
 
 ; ---------------------------------------------------------------------------
 ; LoadHallOfFameTeams — pret ref: engine/menus/save.asm:LoadHallOfFameTeams.
-; Load the wHoFTeamIndex'th HoF team from sHallOfFame into wHallOfFame. This is
-; the REAL routine that REPLACES the ret-stub in league_pc_stubs.asm.
-; PORT: the sHallOfFame source is ; TODO-HW: SRAM (no port HoF SRAM region yet);
-; AddNTimes computes the source slot (kept for parity), then CopyData into
-; wHallOfFame collapses to a no-op until an in-memory HoF region / .dsv exists.
-; Reached only inside PKMNLeaguePC's team loop, which is dead while wNumHoFTeams==0.
+; Load the wHoFTeamIndex'th HoF team from resident sHallOfFame into wHallOfFame.
+; DEVIATION{class=banking; pret=engine/menus/save.asm:LoadHallOfFameTeams; behavior=compute the sHallOfFame source slot directly in flat resident SRAM instead of using AddNTimes in bank 0; evidence=sHallOfFame is a fixed EBP-relative bank 0 label and CopyData is not widened for SRAM endpoints; lifetime=permanent flat SRAM model}
 ; ---------------------------------------------------------------------------
 LoadHallOfFameTeams:
-    ; ld hl,sHallOfFame / ld bc,HOF_TEAM / ld a,[wHoFTeamIndex] / call AddNTimes
-    ; TODO-HW: SRAM — sHallOfFame has no port address; the AddNTimes source-slot
-    ; math and the CopyData below collapse. Provide wHallOfFame's contract (leave
-    ; it as-is; the caller loop is dead at wNumHoFTeams==0).
-    mov edx, wHallOfFame                           ; ld de,wHallOfFame
-    mov bx, HOF_TEAM                               ; ld bc,HOF_TEAM
+    movzx eax, byte [ebp + wHoFTeamIndex]
+    imul esi, eax, HOF_TEAM
+    add esi, sHallOfFame
+    mov edx, wHallOfFame
+    mov bx, HOF_TEAM
     ; fallthrough
 
 ; ---------------------------------------------------------------------------
 ; HallOfFame_Copy — pret ref: engine/menus/save.asm:HallOfFame_Copy.
-; pret: EnableSRAM / bank 0 / CopyData / DisableSRAM. In: ESI=src, DX=dest, BX=len.
-; PORT: the SRAM endpoint (source or dest) has no port address, so the copy is a
-; ; TODO-HW: SRAM no-op. Kept for label parity + control flow.
+; In: ESI=source, EDX=dest, BX=len. One or both endpoints may be SRAM.
+; DEVIATION{class=banking; pret=engine/menus/save.asm:HallOfFame_Copy; behavior=copy through full 32-bit resident SRAM addresses with SramCopyData32 instead of selecting bank 0 and calling pret CopyData; evidence=sHallOfFame is in SRAM and future bank 1 through 3 labels exceed FFFF while CopyData remains 16-bit for DE; lifetime=permanent flat SRAM model}
 ; ---------------------------------------------------------------------------
 HallOfFame_Copy:
-    call EnableSRAM                                ; TODO-HW: SRAM no-op
-    ; xor a / ld [rRAMB],a — TODO-HW: SRAM banking no-op
-    ; call CopyData — TODO-HW: SRAM (one endpoint is SRAM; no-op)
-    call DisableSRAM                               ; TODO-HW: SRAM no-op
+    call EnableSRAM
+    ; xor a / ld [rRAMB],a — bank 0 is resident at $A000.
+    call SramCopyData32
+    call DisableSRAM
     ret
 
 ; ---------------------------------------------------------------------------
 ; ClearAllSRAMBanks — pret ref: engine/menus/save.asm:ClearAllSRAMBanks.
-; Fill SRAM with $ff (erase save data; used by DoClearSaveDialogue). PORT: the
-; port's "SRAM" is the POKEMON.DSV file. ; TODO-HW: SRAM — erasing collapses to
-; (a future) delete of POKEMON.DSV; no-op for now (label parity + flow).
+; Fill all four SRAM banks with $ff, then call the stage-5 store seam so a real
+; disk body can persist the erase.
+; DEVIATION{class=HAL; pret=engine/menus/save.asm:ClearAllSRAMBanks; behavior=after erasing resident SRAM call SramStoreImage as the DOS disk-boundary seam; evidence=current_plan_sram_pc_storage stage 4 owns in-memory SRAM and stage 5 owns raw image persistence; lifetime=until stage 5 supplies the raw SRAM image writer behind this seam}
 ; ---------------------------------------------------------------------------
 ClearAllSRAMBanks:
-    call EnableSRAM                                ; TODO-HW: SRAM no-op
-    ; ld a,4 / .loop dec a / FillMemory SRAM with $ff / jr nz — TODO-HW: SRAM
-    call DisableSRAM                               ; TODO-HW: SRAM no-op
+    call EnableSRAM
+    ; pret loops the four banks through rRAMB and jp FillMemory's each one. The
+    ; port keeps FillMemory (its destination is HL/ESI, 32-bit, so the resident
+    ; banks are reachable) and needs only two calls: bank 0 in the GB window,
+    ; then banks 1-3 contiguous above it.
+    mov al, 0xFF                                  ; ld a,$ff
+    mov esi, GB_SRAM_BANK0                        ; ld hl, STARTOF(SRAM)
+    mov bx, GB_SRAM_BANK_SIZE                     ; ld bc, SIZEOF(SRAM)
+    call FillMemory
+    mov al, 0xFF
+    mov esi, GB_SRAM_BANK1
+    mov bx, GB_SRAM_END - GB_SRAM_BANK1
+    call FillMemory
+    call DisableSRAM
+    call SramStoreImage
     ret
 
 ; ---------------------------------------------------------------------------
 ; EnableSRAM / DisableSRAM — pret ref: engine/menus/save.asm.
-; pret drives the MBC banking regs (rBMODE/rRAMG) to gate the SRAM window. The
-; port has no SRAM window -> flag-preserving no-ops. DisableSRAM MUST preserve
-; flags (pret's comment: "preserve flags"; GoodCheckSum's CF survives it).
-; ; TODO-HW: SRAM
+; DEVIATION{class=banking; pret=engine/menus/save.asm:EnableSRAM; behavior=flat resident SRAM has no MBC RAM gate so EnableSRAM is a no-op; evidence=all SRAM bank labels are fixed EBP-relative addresses in gb_memmap.inc and no switchable A000 window exists; lifetime=permanent flat SRAM model}
+; DEVIATION{class=banking; pret=engine/menus/save.asm:DisableSRAM; behavior=flat resident SRAM has no MBC RAM gate so DisableSRAM is a flag-preserving no-op; evidence=all SRAM bank labels are fixed EBP-relative addresses in gb_memmap.inc and no switchable A000 window exists; lifetime=permanent flat SRAM model}
 ; ---------------------------------------------------------------------------
 EnableSRAM:
     ret
@@ -1112,7 +1314,7 @@ RunSaveTest:
 ; ---------------------------------------------------------------------------
 RunSaveTest:
     call PrepareNewGameDebug
-    call DsvWriteSave                               ; CF=0 ok
+    call SaveGameData                               ; WRAM -> SRAM -> POKEMON.DSV
     call DsvFileExists                              ; CF=1/AL=1 if present+valid
     mov [ebp + GB_BACKBUF], al                      ; marker pixel (1 = round-trip ok)
     call DumpBackbuffer

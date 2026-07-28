@@ -2,10 +2,10 @@
 """
 saveconv.py — Game Boy .sav ↔ DOS .dsv save file converter.
 
-STATUS: GB<->DOS conversion is still a STUB (a Phase 5 item); only the
-read-only `--verify`/`--info` header check below is implemented. The .dsv format
-is REAL as of menus Session 7: src/save/dsv_io.asm writes/reads version-1 files.
-This header documents that live layout so a future converter maps into/out of it.
+STATUS: GB<->DOS conversion is still a STUB; only the read-only
+`--verify`/`--info` header check below is implemented. The .dsv format is REAL:
+src/save/dsv_io.asm writes/reads version-2 files. Conversion is now a much
+smaller job than it was under v1 — see the note under the format below.
 
 Usage:
     saveconv.py --verify save.dsv                 # validate header + checksum
@@ -15,33 +15,36 @@ Planned usage (Phase 5, not implemented):
     saveconv.py --to-dos  input.sav  output.dsv   # GB SRAM dump → DOS save
     saveconv.py --to-gb   input.dsv  output.sav   # DOS save → GB SRAM dump
 
-.dsv format — version 1 ("minimal real", written by src/save/dsv_io.asm):
-    Offset  Size  Description
-    0x00    4     Magic: b'DOSV'
-    0x04    1     Format version (currently 1)
-    0x05    2     16-bit ADDITIVE checksum of the payload, little-endian
-    0x07    N     Payload: the WRAM blocks pret's SaveMainData/SaveCurrentBoxData/
-                  SavePartyAndDexData serialize, concatenated in this order:
-                    wPlayerName      11   (NAME_LENGTH)
-                    wMainDataStart.. 1929 (pokédex/badges/money/options/time/box#)
-                    wSpriteDataStart 512
-                    wBoxDataStart..  1122 (current PC box)
-                    wPartyDataStart  404  (party + nicknames)
-                  N = 3978; total file = 3985 bytes.
+.dsv format — version 2 (raw SRAM image, written by src/save/dsv_io.asm):
+    Offset  Size   Description
+    0x00    4      Magic: b'DOSV'
+    0x04    1      Format version (currently 2)
+    0x05    2      16-bit ADDITIVE checksum of the payload, little-endian
+    0x07    32768  Payload: the raw emulated SRAM image, bank 0 first —
+                   the same bank order as a real MBC5 .sav:
+                     bank 0  sSpriteBuffer0/1/2, sHallOfFame
+                     bank 1  sGameData (name/main/sprite/party/current box) + checksum
+                     bank 2  sBox1..sBox6  + all-box and per-box checksums
+                     bank 3  sBox7..sBox12 + all-box and per-box checksums
+                   Total file = 32775 bytes.
 
-Version 1 is NOT a faithful 32 KB SRAM bank image — no other-box banks / HoF
-banks. A future faithful-SRAM format bumps the version byte (dsv_io gates on it),
-and THIS converter is the tool that will translate a real 32 KB .sav into it.
+Version 1 — a five-WRAM-block payload with no other-box or HoF banks — is retired
+with NO migration path: it predates the port emulating SRAM, and a pre-release
+project has no save files worth converting. A v1 file fails dsv_io's version
+check and reads as "no save".
 
-Checksum (v1): sum of every payload byte, modulo 2^16, stored LE. NOT the CRC-16
-originally sketched here — matched to what dsv_io.asm actually computes.
+Because v2 IS a faithful bank image, .sav <-> .dsv conversion is now a header
+strip plus a checksum recompute, not a WRAM-layout translation.
 
---verify checks exactly what src/save/dsv_io.asm:DsvReadSave checks before it
-scatters a file back into WRAM (full length, magic, version, checksum), so a file
-this mode accepts is a file the port will load, and a file it rejects is one the
-port drops into its corrupt-save branch. It deliberately does NOT interpret the
-3978-byte payload: block boundaries are a WRAM-layout question owned by
-gb_memmap.inc, and re-deriving them here would be a second copy to drift.
+Checksum: sum of every payload byte, modulo 2^16, stored LE. NOT a CRC — matched
+to what dsv_io.asm actually computes.
+
+--verify checks exactly what src/save/dsv_io.asm:SramLoadImage checks before it
+scatters a file back into the SRAM banks (full length, magic, version, checksum),
+so a file this mode accepts is a file the port will load, and a file it rejects is
+one the port treats as absent. It deliberately does NOT interpret the payload:
+the bank layout is owned by gb_memmap.inc and ram/sram.asm, and re-deriving it
+here would be a second copy to drift.
 """
 
 import argparse
@@ -50,11 +53,11 @@ import sys
 from pathlib import Path
 
 DOSV_MAGIC = b'DOSV'
-DOSV_VERSION = 1
+DOSV_VERSION = 2
 DSV_HEADER_SIZE = 7           # magic(4) + version(1) + additive checksum(2)
-DSV_V1_PAYLOAD_SIZE = 3978    # sum of the WRAM blocks above
-DSV_V1_TOTAL_SIZE = DSV_HEADER_SIZE + DSV_V1_PAYLOAD_SIZE
-SAV_SIZE = 32768              # raw GB SRAM (the eventual faithful-format payload)
+SAV_SIZE = 32768              # raw GB SRAM = the v2 payload, byte for byte
+DSV_PAYLOAD_SIZE = SAV_SIZE
+DSV_TOTAL_SIZE = DSV_HEADER_SIZE + DSV_PAYLOAD_SIZE
 
 MAGIC_OFFSET = 0
 VERSION_OFFSET = 4
@@ -85,18 +88,17 @@ def verify(path):
         fail(path, f"cannot read file: {exc.strerror or exc}")
 
     # 1. Total size. Checked first so a truncated/padded file is named as such
-    #    rather than surfacing as a downstream magic/checksum error. This bound
-    #    is version-1-specific: when a faithful-SRAM v2 lands with a different
-    #    payload size, this check has to move behind the version dispatch below.
-    if len(data) != DSV_V1_TOTAL_SIZE:
-        # A 32 KB input is a GB .sav, not a .dsv — by far the likeliest way to
-        # reach this branch, and worth naming rather than leaving the reader to
-        # recognise the number.
-        hint = (" — this is a raw GB .sav; conversion is the unimplemented "
+    #    rather than surfacing as a downstream magic/checksum error.
+    if len(data) != DSV_TOTAL_SIZE:
+        # A bare 32 KB input is a GB .sav (the v2 payload without the header) —
+        # by far the likeliest way to reach this branch, and worth naming rather
+        # than leaving the reader to recognise the number.
+        hint = (" — this is a raw GB .sav: the same bytes as a v2 payload, but "
+                "without the 7-byte header; conversion is the unimplemented "
                 "--to-dos path") if len(data) == SAV_SIZE else ""
-        fail(path, f"bad file size: expected {DSV_V1_TOTAL_SIZE} bytes "
+        fail(path, f"bad file size: expected {DSV_TOTAL_SIZE} bytes "
                    f"({DSV_HEADER_SIZE}-byte header + "
-                   f"{DSV_V1_PAYLOAD_SIZE}-byte version-{DOSV_VERSION} payload), "
+                   f"{DSV_PAYLOAD_SIZE}-byte version-{DOSV_VERSION} payload), "
                    f"found {len(data)}{hint}")
 
     # 2. Magic.

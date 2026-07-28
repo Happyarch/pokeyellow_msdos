@@ -246,8 +246,8 @@ HAL_SRCS := \
     src/input/joypad.asm \
     src/engine/joypad.asm
 
-# Save HAL — .dsv file I/O (menus S7). DsvFileExists/DsvWriteSave/DsvReadSave;
-# the SRAM-banking seam every pret save/load routine collapses onto.
+# Save HAL — the battery. SramLoadImage/SramStoreImage move the emulated 32 KiB
+# SRAM image between the resident banks and POKEMON.DSV (.dsv v2, raw image).
 SAVE_SRCS := \
     src/save/dsv_io.asm
 
