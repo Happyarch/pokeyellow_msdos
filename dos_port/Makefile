@@ -1092,6 +1092,14 @@ NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_REAL_SAVE
 NASMFLAGS += -D SKIP_TITLE
 endif
+# save_boxes_load gate: as DEBUG_REAL_SAVE, but the staged save has all 12 PC
+# boxes full and the dump carries a SCENARIO-LOCAL wBoxData region (the current
+# box block), which no other scenario compares. make image DEBUG_BOX_SAVE=1
+ifdef DEBUG_BOX_SAVE
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_BOX_SAVE
+NASMFLAGS += -D SKIP_TITLE
+endif
 # Oak-pic pixel harness (menu-intro A4.1): display Prof. Oak on the centred
 # cinematic surface and dump FRAME.BIN. make image DEBUG_OAKPIC=1
 ifdef DEBUG_OAKPIC

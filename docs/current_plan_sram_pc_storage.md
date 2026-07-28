@@ -9,12 +9,13 @@
 > skill or a memory as evidence that a class is clean — re-measure it.
 
 **Status:** stages 1-5 and 8 complete; stage 7 partially (the two unconditional
-wins; the profiling and every trade that depends on it are still open). Stages 1-4
-came from PR #2 (external agent); stage 5 (the `.dsv` v2 disk boundary) and the
-review fixes landed with the merge. Stage 6 — the box golden scenarios and the
-`TODO-HW` sweep — is open and maintainer-owned, and **stage 8 did not shrink it**
-(see the correction under stage 8). Measured against the linked build; see the
-merge commit for the gate output.
+wins; the profiling and every trade that depends on it are still open); stage 6
+half done — the box **data** layout is now covered by `save_boxes_load`, the box
+**behaviour** (deposit/withdraw/change-box, and with it SRAM banks 2/3 at
+runtime) is not. Stages 1-4 came from PR #2 (external agent); stage 5 (the `.dsv`
+v2 disk boundary) and the review fixes landed with the merge. Note **stage 8 did
+not shrink stage 6** (see the correction under stage 8). Measured against the
+linked build; see the merge commit for the gate output.
 
 **A pre-existing harness hazard was closed on the way** (it had to be, before any
 save-reading scenario could be trusted): `goldencheck.sh` purged `GBSTATE.BIN`,
@@ -231,9 +232,26 @@ so bank 0 came back changed). A golden run must never mutate its own input.
 
 ### Stage 6 — sweep  *(maintainers)*
 - [ ] Retire every `TODO-HW: SRAM`; close M-106 / M-107 at their sites.
-- [ ] New goldens: a `datastruct` deposit/withdraw/release scenario and a change-box
-      round trip (deposit into box 1 → change to box 2 → change back → the mon is still
-      there). `item_potion_use` / `ball_catch` are the WRAM-mutation templates.
+- [x] **The box DATA half is covered.** `save_boxes_load` (id 36, full tier)
+      compares a scenario-local `wBoxData` region against mGBA after loading
+      `tests/fixtures/yellow_boxes_full.sav` (all 12 boxes at 20 mons, built by
+      `tools/savegen` from PKHeX.Core). That is the first byte of box data the
+      suite has ever compared: the 33-byte `box_struct` stride, the species list
+      and its `$FF` sentinel, and the 20 OT names and 20 nicknames.
+      **No golden was relayed out to do it** — `debug_dump.asm` already supports
+      scenario-local `%ifdef` regions (the `DEBUG_MAPSCRIPT_SIGHT` precedent), and
+      the differ joins by name, so the shared `dump.standard_regions` set was left
+      alone and all existing goldens are untouched.
+- [ ] **The box BEHAVIOUR half is still open, and `save_boxes_load` does NOT
+      shrink it.** A CONTINUE load copies `sCurBoxData` — bank 1 — into WRAM and
+      never reads `sBoxN`, so SRAM banks 2 and 3 remain unexercised at runtime.
+      Still needed: a `datastruct` deposit/withdraw/release scenario and a
+      change-box round trip (deposit into box 1 → change to box 2 → change back →
+      the mon is still there). `item_potion_use` / `ball_catch` are the
+      WRAM-mutation templates. Blocked in practice on the PC UI, since `ChangeBox`
+      is how banks 2/3 are reached; a debug gate calling `ChangeBox` directly is
+      the likely way in, but the golden side then needs the same path through
+      Bill's PC.
 - [ ] Update the memories and archive this plan to `docs/plans/sram_pc_storage.md`.
 
 ### The sequencing hazard

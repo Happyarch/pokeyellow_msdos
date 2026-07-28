@@ -666,6 +666,19 @@ SCENARIOS = {
         "seed_save": "tests/fixtures/yellow_100.sav",
         "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
     },
+    "save_boxes_load": {
+        "class": "datastruct",
+        # save_real_load with a full-boxes save, plus the SCENARIO-LOCAL wBoxData
+        # region (mirrored by the %ifdef DEBUG_BOX_SAVE gbregion row in
+        # debug_dump.asm). wBoxData is the one save block the suite has never
+        # compared, so the box_struct layout -- 33-byte stride, species list and
+        # its $FF sentinel, 20 OT names, 20 nicknames -- had zero coverage.
+        # Does NOT reach SRAM banks 2/3: a CONTINUE load copies sCurBoxData
+        # (bank 1) and never reads sBoxN; that needs ChangeBox and the PC UI.
+        "flags": "DEBUG_BOX_SAVE=1",
+        "seed_save": "tests/fixtures/yellow_boxes_full.sav",
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
+    },
     "title_reentry": {
         # The title checkpoint reached through title -> menu -> B -> title. Same
         # config as `title`: any divergence outside the F-25 mask is leaked

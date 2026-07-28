@@ -672,6 +672,34 @@
       "verification": "A REAL cartridge .sav (6-mon party, 151/151 dex, 19-mon current box) is staged as POKEMON.DSV, the save WRAM is clobbered, and TryLoadSaveFile repopulates it; externally-authored data catches offsets a self-round-trip cannot"
     },
     {
+      "name": "save_boxes_load",
+      "id": 36,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_BOX_SAVE=1",
+      "port_entry_gate": "DEBUG_BOX_SAVE",
+      "navigation_script": "tools/mgba_harness/scenarios/save_boxes_load.lua",
+      "seed_save": "tests/fixtures/yellow_boxes_full.sav",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 300,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "TryLoadSaveFile"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "A real save with all 12 PC boxes full is staged as POKEMON.DSV; after TryLoadSaveFile the scenario-local wBoxData region (20-mon current box, OT names, nicknames) is compared — the box_struct layout's first behavioural coverage"
+    },
+    {
       "name": "oak_intro",
       "id": 29,
       "tier": "full",

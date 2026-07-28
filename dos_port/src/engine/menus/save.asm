@@ -264,6 +264,49 @@ RunRealSaveTest:
     jmp .hang
 %endif
 
+%ifdef DEBUG_BOX_SAVE
+; ---------------------------------------------------------------------------
+; RunBoxSaveTest — save_boxes_load gate.
+;
+; Same shape as RunRealSaveTest, pointed at a save whose PC boxes are FULL
+; (tests/fixtures/yellow_boxes_full.sav: 20 mons in every one of the 12 boxes,
+; built by tools/savegen from the real save). What it adds is the wBoxData
+; comparison: the current-box block is the one save region the suite has never
+; compared, so the whole box_struct layout -- the 33-byte stride, the species
+; list and its $FF sentinel, the 20 OT names and 20 nicknames -- has had ZERO
+; coverage until now.
+;
+; SCOPE, precisely: this proves the current-box block loads correctly from an
+; externally-authored save. It does NOT exercise SRAM banks 2 and 3, because a
+; CONTINUE load copies sCurBoxData (bank 1) into WRAM and never touches sBoxN.
+; Reaching those needs ChangeBox, which needs the PC UI -- still stage 6's job.
+;
+; In: EBP = GB base. Called from EnterMap (SKIP_TITLE boot).
+; ---------------------------------------------------------------------------
+extern DumpBackbuffer               ; debug/debug_dump.asm
+global RunBoxSaveTest
+
+RunBoxSaveTest:
+    lea edi, [ebp + wPlayerName]
+    mov ecx, NAME_LENGTH
+    xor al, al
+    rep stosb
+    lea edi, [ebp + wMainDataStart]
+    mov ecx, wMainDataEnd - wMainDataStart
+    rep stosb
+    lea edi, [ebp + wBoxDataStart]
+    mov ecx, wBoxDataEnd - wBoxDataStart
+    rep stosb
+    lea edi, [ebp + wPartyDataStart]
+    mov ecx, wPartyDataEnd - wPartyDataStart
+    rep stosb
+
+    call TryLoadSaveFile
+    call DumpBackbuffer                 ; never returns
+.hang:
+    jmp .hang
+%endif
+
 ; ---------------------------------------------------------------------------
 ; charmap glyphs (constants/charmap.asm). NOT GB-memory symbols.
 CHAR_TERM  equ 0x50             ; '@'

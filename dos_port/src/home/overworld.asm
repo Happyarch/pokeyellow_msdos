@@ -146,6 +146,7 @@ extern RunCinematicMarkersTest            ; src/debug/debug_dump.asm
 extern RunContinueSeedTest                ; src/engine/menus/save.asm
 extern RunDrawBadgesTest                  ; src/engine/menus/draw_badges.asm
 extern RunRealSaveTest                    ; src/engine/menus/save.asm
+extern RunBoxSaveTest                     ; src/engine/menus/save.asm
 extern RunLeaguePCTest                    ; src/engine/menus/league_pc.asm
 extern RunLearnMoveTest                   ; src/debug/debug_dump.asm
 extern RunLinkCupsTest                    ; src/engine/menus/link_menu.asm
@@ -630,6 +631,9 @@ EnterMap:
 %endif
 %ifdef DEBUG_REAL_SAVE
     call RunRealSaveTest                    ; clobber, load the staged real .sav, dump GBSTATE, exits
+%endif
+%ifdef DEBUG_BOX_SAVE
+    call RunBoxSaveTest                     ; as above, with a full-boxes save; also dumps wBoxData
 %endif
 %ifdef DEBUG_OAKPIC
     call RunOakPicTest                      ; A4.1: display Oak pic on the surface, dump FRAME.BIN, exits

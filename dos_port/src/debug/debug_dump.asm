@@ -515,6 +515,19 @@ gbstate_regions:
     gbregion "wEnemyMon",      wEnemyMon,      BATTLEMON_STRUCT_LENGTH
     gbregion "wBattleMonNick", wBattleMonNick, NAME_LENGTH
     gbregion "wBattleMon",     wBattleMon,     BATTLEMON_STRUCT_LENGTH
+%ifdef DEBUG_BOX_SAVE
+    ; --- the loaded PC box (SRAM/PC storage plan, stage 6 data half) ---
+    ; SCENARIO-LOCAL for the same reason as the sight rows below: adding wBoxData
+    ; to the shared set would relayout every committed golden. Mirrored by
+    ; tools/mgba_harness/scenarios/save_boxes_load.lua; the differ joins by NAME
+    ; and cross-checks the address, so the two must agree.
+    ;
+    ; One span covers the whole current-box block: count, the species list + $FF
+    ; sentinel, 20 box_structs, 20 OT names and 20 nicknames. Unlike the sight
+    ; rows there is no volatile scratch inside it -- every byte is saved data, so
+    ; the enclosing block IS the tight span.
+    gbregion "wBoxData",      wBoxDataStart, wBoxDataEnd - wBoxDataStart
+%endif
 %ifdef DEBUG_MAPSCRIPT_SIGHT
     ; --- trainer sight/engage flow (map-script fidelity plan Stage 3) ---
     ; SCENARIO-LOCAL rows: adding them to the shared set above would change every
