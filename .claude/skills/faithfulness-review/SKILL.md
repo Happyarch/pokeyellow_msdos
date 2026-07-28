@@ -38,7 +38,15 @@ are a tool, not a manual procedure.
                           Use the battery for any mirror move; it decomposes the
                           diff into moved / new / dropped, hard-fails a non-
                           declaration line that appears or vanishes, and builds
-                          the `%ifdef`-only link paths you name.
+                          the `%ifdef`-only link paths you name. It also handles
+                          a move the PRET side forced (upstream relocating a
+                          routine, e.g. into `audio/`): such a label is reported
+                          as RECLASSIFIED with its old and new pret file, faithdiff
+                          is skipped for it by name, and rename destinations are
+                          derived from the diff — pass `--to FILE` when git did not
+                          record the move as a rename. Both ends rescan into a temp
+                          DB, so a stale tracked DB can no longer be captured as the
+                          baseline.
 
 Neither replaces step 3: **a green gate proves no structural or bookkeeping
 drift and NOTHING about behaviour.** Both print that caveat on every pass.

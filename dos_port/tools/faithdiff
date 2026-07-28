@@ -71,9 +71,23 @@ def strip_comment(line):
         out.append(ch)
     return ''.join(out)
 
+MISSING_FILE = object()   # distinct from None ("label not in this file")
+
+
 def extract_body(path, label):
-    """Return the routine body lines: from `label:` to the next column-0 label."""
-    lines = open(path, encoding='utf-8', errors='replace').read().splitlines()
+    """Return the routine body lines: from `label:` to the next column-0 label.
+
+    Returns MISSING_FILE when the file itself is gone. That is a real case, not
+    a defensive branch: an upstream pret merge can DELETE the file a DB row
+    still points at (upstream bd1b695b moved engine/pikachu/pikachu_pcm.asm to
+    audio/), and a stale DB then sent this straight into a FileNotFoundError
+    traceback — which fidelity_gate's move battery captured as its baseline.
+    """
+    try:
+        text = open(path, encoding='utf-8', errors='replace').read()
+    except OSError:
+        return MISSING_FILE
+    lines = text.splitlines()
     body, active = [], False
     for raw in lines:
         line = strip_comment(raw)
@@ -130,6 +144,13 @@ def diff_one(cur, label, suppress, show_all):
 
     pret_body = extract_body(os.path.join(REPO_ROOT, pret_file), label)
     port_body = extract_body(os.path.join(REPO_ROOT, port_file), label)
+    for side, path, body in (("pret", pret_file, pret_body),
+                             ("port", port_file, port_body)):
+        if body is MISSING_FILE:
+            print(f"  ERROR: the {side} file {path} does not exist. The DB is "
+                  f"stale relative to the tree (an upstream merge can move or "
+                  f"delete a pret file) — run tools/update_label_db.")
+            return 1
     if pret_body is None or port_body is None:
         print("  ERROR: body extraction failed "
               f"(pret={'ok' if pret_body else 'MISSING'}, "

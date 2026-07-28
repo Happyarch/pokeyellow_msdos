@@ -7,8 +7,8 @@ Two modes:
       The original per-change evidence chain: derive the pret labels a diff
       touched, then lint + project_state + faithdiff over them.
 
-  fidelity_gate --move-baseline DIR file...     (BEFORE you edit anything)
-  fidelity_gate --move-verify   DIR [--gates]   (after)
+  fidelity_gate --move-baseline DIR file...            (BEFORE you edit anything)
+  fidelity_gate --move-verify   DIR [--gates] [--to F] (after)
       The RELOCATION MOVE BATTERY — the per-unit verification a
       relocated-label move needs, from the `relocated-labels-grind` recipe.
 
@@ -46,6 +46,33 @@ measurement:
 
 You still have to read the enumerated declarations and confirm they are the ones
 you meant. The tool forces the decomposition into view; it does not bless it.
+
+=== A MOVE THE PRET SIDE FORCED ===
+
+An upstream pret merge can move a routine itself — 2026-07-28, upstream bd1b695b
+moved engine/pikachu/pikachu_pcm.asm to audio/pikachu_pcm.asm, and the port had
+to follow to keep lint_pret_labels' aux_misplaced rule satisfied. That move broke
+four assumptions at once and the battery reported FAIL on a correct relocation:
+
+  * the label left `labels` for `aux_labels` (update_label_db models home/ +
+    engine/ only), so a modeled-labels-only selection read it as VANISHED;
+  * faithdiff has no pret body for it, and the stale tracked DB still pointed at
+    the deleted pret file, so the baseline captured a TRACEBACK as its reference;
+  * the destination path was not in the baseline file list, so the decomposition
+    saw 69 dropped lines and 0 new ones;
+  * `translated` fell with no matching `relocated` rise, tripping a cancel rule
+    that assumed a move always converts one into the other.
+
+All four are fixed, and each fix keeps the check rather than weakening it:
+labels are selected by pret PROVENANCE (modeled | aux | script) so a
+reclassification is REPORTED with its old and new pret file instead of failing;
+both ends rescan into a temp DB so neither can read a stale one; rename
+destinations are derived from the diff (`--to` for the cases git does not see as
+a rename); and the status reconciliation now ENUMERATES every label whose status
+or file changed and attributes each one to this unit, to a pret-side move, or to
+nothing — only that last case fails. Verified end-to-end against the real move in
+a throwaway worktree, plus two adversarial probes (a one-for-one altered code
+line, and an unrelated label rename outside the unit) that both still FAIL.
 
 LIMITATION, stated plainly: the move classification is LINE-level, not
 block-level. It does not prove the moved lines are contiguous, in the same order,
@@ -150,14 +177,127 @@ def labels_in_files(files, db_path=None):
     building this — once here and once in the faithdiff capture — and both times
     it made a deliberately broken test case pass.
     """
+    return {n for n, k in unit_labels(files, db_path).items() if k == "modeled"}
+
+
+def unit_labels(files, db_path=None):
+    """name -> provenance kind for every pret-named label defined in `files`.
+
+      'modeled' — labels.pret_file is set (pret home/ + engine/). Only these can
+                  be compared by faithdiff, and only these obey the mirror rule
+                  through `labels`.
+      'aux'     — aux_labels (pret audio/, data/, gfx/, ram/): names only.
+      'script'  — script_labels (pret scripts/): names only.
+
+    The aux/script kinds exist here because update_label_db models home/+engine/
+    ONLY, so a label that upstream moves into audio/ leaves `labels` and its raw
+    status becomes port_only. Selecting on `pret_file IS NOT NULL` alone made the
+    move battery read that as "the label vanished" and fail four checks at once.
+    """
     db = sqlite3.connect(db_path or os.path.join(HERE, "translation.db"))
-    labels = set()
+    out = {}
     for path in files:
-        labels.update(r[0] for r in db.execute(
-            "SELECT DISTINCT d.name FROM port_defs d JOIN labels l ON l.name=d.name "
-            "WHERE d.file=? AND l.pret_file IS NOT NULL", (path,)))
+        for name, kind in db.execute("""
+                SELECT DISTINCT d.name,
+                       CASE WHEN l.pret_file IS NOT NULL THEN 'modeled'
+                            WHEN a.name IS NOT NULL      THEN 'aux'
+                            ELSE 'script' END
+                FROM port_defs d
+                LEFT JOIN labels l        ON l.name = d.name
+                LEFT JOIN aux_labels a    ON a.name = d.name
+                LEFT JOIN script_labels s ON s.name = d.name
+                WHERE d.file = ?
+                  AND (l.pret_file IS NOT NULL OR a.name IS NOT NULL
+                       OR s.name IS NOT NULL)""", (path,)):
+            # 'modeled' wins if a name somehow appears in both universes.
+            if out.get(name) != "modeled":
+                out[name] = kind
     db.close()
-    return labels
+    return out
+
+
+def label_provenance(names, db_path):
+    """name -> (kind, pret_file) for the snapshot, so verify can tell a PRET-SIDE
+    move (upstream changed where the label lives) from a port-side regression."""
+    db = sqlite3.connect(db_path)
+    out = {}
+    for name in names:
+        row = db.execute("SELECT pret_file FROM labels WHERE name=? AND "
+                         "pret_file IS NOT NULL", (name,)).fetchone()
+        if row:
+            out[name] = ("modeled", row[0])
+            continue
+        row = db.execute("SELECT pret_file FROM aux_labels WHERE name=?",
+                         (name,)).fetchone()
+        if row:
+            out[name] = ("aux", row[0])
+            continue
+        row = db.execute("SELECT pret_file FROM script_labels WHERE name=?",
+                         (name,)).fetchone()
+        out[name] = ("script", row[0]) if row else ("none", None)
+    db.close()
+    return out
+
+
+def label_statuses(db_path):
+    """name -> (status, pret_file) for every row in `labels`.
+
+    Stored in the baseline so the reconciliation can ENUMERATE which labels moved
+    between statuses instead of guessing from counts — counts cannot say whether
+    a delta came from the unit, from an upstream pret change, or from an
+    unrelated regression. pret_file rides along because a change to it is the
+    signature of a pret-side move.
+    """
+    db = sqlite3.connect(db_path)
+    out = {n: (s, f, p) for n, s, f, p in
+           db.execute("SELECT name, status, pret_file, port_file FROM labels")}
+    db.close()
+    return out
+
+
+def aux_universe(db_path):
+    """(aux names, script names) — the unmodeled pret dirs, for attribution."""
+    db = sqlite3.connect(db_path)
+    aux = {r[0] for r in db.execute("SELECT name FROM aux_labels")}
+    scr = {r[0] for r in db.execute("SELECT name FROM script_labels")}
+    db.close()
+    return aux, scr
+
+
+def rescan(tmpdb, why):
+    """Rebuild a throwaway translation.db from the tree.
+
+    Both ends of the battery need this. The tracked DB is whatever the last
+    person scanned — after an upstream merge it can point at pret files that no
+    longer exist, and a baseline captured through it records a faithdiff
+    traceback as the thing to compare against.
+    """
+    print(f"{BOLD}{why}{OFF} {DIM}(temp DB; tracked translation.db untouched){OFF}")
+    r = subprocess.run([os.path.join(HERE, "update_label_db"), "--db", tmpdb],
+                       cwd=ROOT, stdout=subprocess.PIPE,
+                       stderr=subprocess.STDOUT, text=True)
+    if r.returncode != 0:
+        print(r.stdout)
+    return r.returncode == 0
+
+
+def rename_targets(base, files):
+    """Destination paths of any rename whose source is one of `files`.
+
+    Without this the decomposition compares the unit's OLD paths against a tree
+    where the content lives at a NEW path, so every line reads as dropped and
+    nothing reads as new. That is not a hypothetical: it is exactly what the
+    2026-07-28 upstream-driven pikachu_pcm move produced (0 moved, 69 dropped).
+    """
+    out = subprocess.check_output(
+        ["git", "diff", "-M", "--name-status", base, "--"], cwd=ROOT, text=True)
+    targets = {}
+    src = set(files)
+    for line in out.splitlines():
+        parts = line.split("\t")
+        if parts[0].startswith("R") and len(parts) == 3 and parts[1] in src:
+            targets[parts[2]] = parts[1]
+    return targets
 
 
 # ── the relocation move battery ────────────────────────────────────────────────
@@ -222,6 +362,23 @@ def faithdiff_capture(labels, db=None):
     return p.stdout
 
 
+def filter_faithdiff(text, keep):
+    """Keep only the `=== faithdiff <label> ===` sections for `keep`.
+
+    The baseline captured a section per label modeled AT THE TIME. If one has
+    since changed universe it is no longer comparable, and leaving its section in
+    the baseline half turns a correct skip into a spurious diff.
+    """
+    sections, current = [], None
+    for line in text.splitlines():
+        m = re.match(r"^=== faithdiff ([A-Za-z_][A-Za-z0-9_]*) ===$", line)
+        if m:
+            current = m.group(1)
+        if current is None or current in keep:
+            sections.append(line)
+    return "\n".join(sections)
+
+
 def git_clean(files):
     out = subprocess.check_output(["git", "status", "--porcelain", "--", *files],
                                   cwd=ROOT, text=True)
@@ -241,26 +398,41 @@ def move_baseline(outdir, files):
               f"unit.{OFF}")
         return 1
 
-    labels = sorted(labels_in_files(files))
+    tmp = tempfile.TemporaryDirectory(prefix="fgate-db.")
+    tmpdb = os.path.join(tmp.name, "translation.db")
+    if not rescan(tmpdb, "[0/1] rescan"):
+        print(f"{RED}move-baseline: FAIL — the rescan itself failed; a snapshot "
+              f"taken through a stale DB is worse than none.{OFF}")
+        return 1
+
+    kinds = unit_labels(files, db_path=tmpdb)
+    labels = sorted(kinds)
+    modeled = sorted(n for n, k in kinds.items() if k == "modeled")
     head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT,
                                    text=True).strip()
     snap = {
         "head": head,
         "files": list(files),
         "labels": labels,
+        "label_kinds": kinds,
+        "provenance": {n: list(v) for n, v in
+                       label_provenance(labels, tmpdb).items()},
         "line_counts": {f: count_code_lines(f) for f in files},
-        "db": db_census(os.path.join(HERE, "translation.db")),
-        "shapes": label_shapes(os.path.join(HERE, "translation.db"), labels),
+        "db": db_census(tmpdb),
+        "statuses": label_statuses(tmpdb),
+        "shapes": label_shapes(tmpdb, modeled),
     }
     with open(os.path.join(outdir, "baseline.json"), "w", encoding="utf-8") as fh:
         json.dump(snap, fh, indent=2, sort_keys=True)
     with open(os.path.join(outdir, "faithdiff.txt"), "w", encoding="utf-8") as fh:
-        fh.write(faithdiff_capture(labels))
+        fh.write(faithdiff_capture(modeled, db=tmpdb))
 
     print(f"{BOLD}move-baseline{OFF} -> {outdir}")
     print(f"  HEAD           {head[:12]}")
     print(f"  files          {len(files)}")
-    print(f"  pret labels    {len(labels)}")
+    print(f"  pret labels    {len(labels)}  "
+          f"({len(modeled)} modeled, {len(labels) - len(modeled)} aux/script — "
+          f"only modeled ones can be faithdiffed)")
     print(f"  code lines     {sum(snap['line_counts'].values())}")
     print(f"  relocated      {snap['db']['labels_by_status'].get('relocated', 0)}")
     print(f"{DIM}  Now make the move, then: fidelity_gate --move-verify {outdir}{OFF}")
@@ -311,7 +483,7 @@ def enumerate_decls(counter, limit=40):
     return sum(n for _, n in items), offenders
 
 
-def move_verify(outdir, gates):
+def move_verify(outdir, gates, extra=None):
     with open(os.path.join(outdir, "baseline.json"), encoding="utf-8") as fh:
         snap = json.load(fh)
     files = snap["files"]
@@ -323,21 +495,53 @@ def move_verify(outdir, gates):
     # tracked translation.db must not be dirtied by a verification step.
     tmp = tempfile.TemporaryDirectory(prefix="fgate-db.")
     tmpdb = os.path.join(tmp.name, "translation.db")
-    print(f"{BOLD}[0/5] rescan{OFF} {DIM}(temp DB; tracked translation.db untouched){OFF}")
-    _r = subprocess.run([os.path.join(HERE, "update_label_db"), "--db", tmpdb],
-                        cwd=ROOT, stdout=subprocess.PIPE,
-                        stderr=subprocess.STDOUT, text=True)
-    if _r.returncode != 0:
-        print(_r.stdout)
+    if not rescan(tmpdb, "[0/5] rescan"):
         print(f"{RED}move-verify: FAIL — the rescan itself failed; nothing below "
               f"would be trustworthy.{OFF}")
         return 1
 
+    # A move can land the unit's content at a path the baseline never named. Look
+    # for it in the diff instead of reporting the whole file as deleted code.
+    dests = rename_targets(base, files)
+    files = list(files) + [d for d in dests if d not in files]
+    if extra:
+        files += [f for f in extra if f not in files]
+    if dests or extra:
+        print(f"{BOLD}[0b] destinations{OFF}")
+        for dst, srcname in sorted(dests.items()):
+            print(f"  {DIM}rename detected: {srcname} -> {dst}{OFF}")
+        for f in (extra or []):
+            print(f"  {DIM}added by --to: {f}{OFF}")
+        print(f"  {DIM}the decomposition below spans all {len(files)} "
+              f"file(s){OFF}")
+
     print(f"{BOLD}[1/5] label set{OFF}")
-    now_labels = sorted(labels_in_files(files, db_path=tmpdb))
-    if now_labels != snap["labels"]:
-        gone = set(snap["labels"]) - set(now_labels)
-        new = set(now_labels) - set(snap["labels"])
+    now_kinds = unit_labels(files, db_path=tmpdb)
+    now_labels = sorted(now_kinds)
+    was_kinds = snap.get("label_kinds") or {n: "modeled" for n in snap["labels"]}
+    was_prov = {n: tuple(v) for n, v in (snap.get("provenance") or {}).items()}
+    now_prov = label_provenance(now_labels, tmpdb)
+
+    gone = set(snap["labels"]) - set(now_labels)
+    new = set(now_labels) - set(snap["labels"])
+    # A label whose PRET side moved (upstream renamed the file, or moved the
+    # routine into a dir update_label_db does not model) is a reclassification,
+    # not a loss. It changes what the port must mirror; it is reported, and the
+    # checks that cannot apply to it are skipped by name rather than failed.
+    reclassified = {n: (was_prov.get(n, (was_kinds.get(n), None)), now_prov[n])
+                    for n in set(snap["labels"]) & set(now_labels)
+                    if n in was_prov and was_prov[n] != now_prov[n]}
+    if reclassified:
+        print(f"  {YELLOW}RECLASSIFIED by the pret side — not a port regression, "
+              f"but it changes what the mirror rule expects:{OFF}")
+        for n, ((wk, wf), (nk, nf)) in sorted(reclassified.items()):
+            print(f"    {n}: {wk} {wf} -> {nk} {nf}")
+            if nk in ("aux", "script"):
+                print(f"      {DIM}pret moved it out of the modeled home/+engine/ "
+                      f"universe, so faithdiff cannot compare it and its raw "
+                      f"`labels` status reads port_only. Expected port path: "
+                      f"dos_port/src/{nf}{OFF}")
+    if gone or new:
         print(f"  {RED}CHANGED — the two faithdiff runs would not compare the "
               f"same things.{OFF}")
         if gone:
@@ -345,12 +549,24 @@ def move_verify(outdir, gates):
         if new:
             print(f"    newly present:     {', '.join(sorted(new))}")
         failures.append("label set changed between baseline and verify")
-    else:
+    elif not reclassified:
         print(f"  {DIM}unchanged, {len(now_labels)} pret labels{OFF}")
 
     print(f"{BOLD}[2/5] faithdiff{OFF}")
-    before = open(os.path.join(outdir, "faithdiff.txt"), encoding="utf-8").read()
-    after = faithdiff_capture(now_labels, db=tmpdb)
+    # Only labels modeled at BOTH ends are comparable. One that changed universe
+    # has no pret body to diff on one side; running it anyway is how the baseline
+    # ended up holding a traceback.
+    comparable = sorted(n for n in now_labels
+                        if now_kinds.get(n) == "modeled"
+                        and was_kinds.get(n) == "modeled")
+    skipped = sorted(set(now_labels) - set(comparable))
+    if skipped:
+        print(f"  {DIM}not comparable (aux/script provenance — names only): "
+              f"{', '.join(skipped)}{OFF}")
+    before = filter_faithdiff(
+        open(os.path.join(outdir, "faithdiff.txt"), encoding="utf-8").read(),
+        comparable)
+    after = faithdiff_capture(comparable, db=tmpdb)
     with open(os.path.join(outdir, "faithdiff.after.txt"), "w", encoding="utf-8") as fh:
         fh.write(after)
     b, a = before.splitlines(), after.splitlines()
@@ -417,14 +633,63 @@ def move_verify(outdir, gates):
         if w != n:
             print(f"  {YELLOW}~  status {st:11s} {w:6d} -> {n:6d} "
                   f"({n - w:+d}){OFF}")
-    reloc = (now["labels_by_status"].get("relocated", 0)
-             - was["labels_by_status"].get("relocated", 0))
-    trans = (now["labels_by_status"].get("translated", 0)
-             - was["labels_by_status"].get("translated", 0))
-    if reloc + trans != 0:
-        print(f"  {RED}relocated {reloc:+d} and translated {trans:+d} do "
-              f"not cancel — a move should convert one to the other.{OFF}")
-        failures.append("relocated/translated deltas do not cancel")
+    # Counts cannot say WHERE a delta came from, and the old
+    # relocated+translated-must-cancel rule was a guess that a move always
+    # converts one into the other. It does not: when upstream moves a routine
+    # into an unmodeled pret dir, `translated` drops with no matching
+    # `relocated` rise. So enumerate the labels that actually changed status and
+    # attribute each one; fail only on a change nothing accounts for.
+    was_status = snap.get("statuses")
+    if was_status is None:
+        print(f"  {YELLOW}baseline predates per-label status capture — "
+              f"reconciliation limited to the counts above{OFF}")
+    else:
+        now_status = label_statuses(tmpdb)
+        aux_names, script_names = aux_universe(tmpdb)
+        unit = set(now_labels) | set(snap["labels"])
+        def unpack(v):
+            if isinstance(v, (list, tuple)):
+                return tuple(v) + (None,) * (3 - len(v))
+            return (v, None, None)
+
+        changed = []
+        for name in sorted(set(was_status) | set(now_status)):
+            ws, wf, wp = unpack(was_status.get(name))
+            ns, nf, np_ = unpack(now_status.get(name))
+            if (ws, wf, wp) != (ns, nf, np_):
+                changed.append((name, ws, wf, wp, ns, nf, np_))
+        unexplained = []
+        fileset = set(files)
+        for name, ws, wf, wp, ns, nf, np_ in changed:
+            if name in reclassified or name in unit or wp in fileset or np_ in fileset:
+                why = ("pret-side reclassification (this unit)"
+                       if name in reclassified else "in this unit")
+            elif ws is None and nf:
+                why = "new pret label (upstream)"
+            elif wf and nf and wf != nf:
+                why = f"pret-side move {wf} -> {nf}"
+            elif ns is None and (name in aux_names or name in script_names):
+                why = "pret-side reclassification (left the modeled universe)"
+            elif ns is None and ws is not None and wf is None:
+                why = "port-only row dropped"
+                unexplained.append((name, ws, ns))
+                continue
+            else:
+                why = None
+            if why is None:
+                unexplained.append((name, ws, ns))
+            else:
+                what = (f"{ws} -> {ns}" if ws != ns
+                        else f"{ws}, port file {wp} -> {np_}")
+                print(f"  {DIM}~  {name}: {what}  [{why}]{OFF}")
+        for name, w, n in unexplained:
+            print(f"  {RED}~  {name}: {w} -> {n}  [UNEXPLAINED — not in this "
+                  f"unit and not a pret-side move]{OFF}")
+        if unexplained:
+            failures.append(f"{len(unexplained)} label status change(s) not "
+                            f"attributable to this unit")
+        elif not changed:
+            print(f"  {DIM}no label changed status{OFF}")
     print(f"  {DIM}every nonzero delta above must be decomposable — "
           f"say what each one is made of in the commit message{OFF}")
 
@@ -512,6 +777,11 @@ def main():
                          "files. There are 104 gates in the Makefile; building all "
                          "of them is impractical, so pick the ones whose code "
                          "paths the unit touches.")
+    ap.add_argument("--to", metavar="FILE", action="append",
+                    help="with --move-verify, an extra destination path the unit's "
+                         "content landed at. Rename destinations are detected "
+                         "automatically; use this when git did not see the move as "
+                         "a rename (heavy edits, or one file split across several).")
     ap.add_argument("files", nargs="*")
     args = ap.parse_args()
 
@@ -522,7 +792,7 @@ def main():
             ap.error("--move-baseline needs the file list the unit will touch")
         raise SystemExit(move_baseline(args.move_baseline, args.files))
     if args.move_verify:
-        raise SystemExit(move_verify(args.move_verify, args.gates))
+        raise SystemExit(move_verify(args.move_verify, args.gates, args.to))
 
     files = args.files or changed_files(args.base)
     rc = run([os.path.join(HERE, "lint_pret_labels")])
