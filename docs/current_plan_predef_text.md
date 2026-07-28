@@ -178,14 +178,34 @@ gated behind the unported Bill's PC menu UI — a tracked deferred tail in
 
 ---
 
-## Adjacent finding, deliberately not fixed here
+## Adjacent finding — FIXED (`5f7aebff`)
 
-`.readFirstByte` in `src/home/text_script.asm` reads the stream's first byte as
+`.readFirstByte` in `src/home/text_script.asm` read the stream's first byte as
 `movzx eax, byte [ebp + esi]` — **EBP-relative** — but on the ordinary map path
-`ESI` is already a **flat** pointer from `w_map_text_table_ptr`. That read lands
+`ESI` is already a **flat** pointer from `w_map_text_table_ptr`. That read landed
 at `ebp + flat_addr`, far outside the ~96 KB GB allocation, so the `TX_SCRIPT_*`
-dispatch below it compares against an unrelated byte. It is masked in practice
-because the garbage rarely equals a `TX_SCRIPT_*` constant and
-`PrintText_NoCreatingTextBox` then receives the correct flat `ESI` — i.e. every
-golden scenario passes *through* the bug. Worth its own investigation and a
-`regression-` memory; not touched inside a data-tier commit.
+dispatch below it compared an unrelated byte. Masked because the garbage rarely
+equals a `TX_SCRIPT_*` constant and `PrintText_NoCreatingTextBox` then receives
+the correct flat `ESI` — every golden scenario passed *through* the bug. The live
+risk was a nondeterministic misdispatch: a stray `0xFE`/`0xFF` at that address
+would have jumped an ordinary sign into `DisplayPokemartDialogue`.
+
+Fixed by reading `[esi]`, and by making `.lookupGbPointerTable` name its GB-space
+result flat (`lea esi, [ebp + esi]`, the `PrintTextStaged` idiom) so both entry
+paths reach `.readFirstByte` with one convention.
+
+Checked before changing rather than assuming the dict was dead: across all 410
+generated `assets/*.inc`, **no text stream begins with a `TX_SCRIPT_*` byte**
+(1427 begin with `0x00` = TX_START); the only 10 blobs that do are graphics and
+layout tables unreachable from the map text table. The port dispatches real
+script entries through the size sentinel (`0xFFFFFFFF` / `0xFFFFFFFE`) that
+`.gotTextPtr` tests first, not through pret's first-byte dict. So the corrected
+read makes the dict deterministically not fire on the ordinary path, where it
+previously did not fire only by luck.
+
+Note for whoever does Stage 2: the `TX_SCRIPT_*` dict targets
+(`DisplayPokemartDialogue` and friends) still treat `ESI` as a **GB-relative**
+text pointer (`inc esi` then `LoadItemList`, which reads `[ebp+esi]`). That
+inconsistency is pre-existing, unreachable today, and left alone — those service
+bodies are structured stubs. It must be resolved if Option A ever makes the dict
+reachable.
