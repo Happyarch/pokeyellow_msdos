@@ -193,11 +193,24 @@ and save-commit points. Until stage 5 lands they are ret-stubs in a new
    stages a compressed mon pic there (`src/home/pics.asm:466`, "free SRAM just past
    sSpriteBuffer2 `$A498`"), copying a variable-length stream. pret's bank 0 is
    `sSpriteBuffer0/1/2`, then `ds $100`, then `sHallOfFame` at `$A598` — only **248
-   bytes** of headroom, which compressed front pics routinely exceed. Placing
-   `sHallOfFame` at pret's offset therefore creates a live corruption path, dormant only
-   because HoF is unported. Fix by relocating the port-only `PIC_STAGE` scratch within
-   the 16-bit window (recommended) or by placing `sHallOfFame` above the staging area
-   with a `class=data-model` DEVIATION. **Maintainer sign-off required either way.**
+   bytes** of headroom. **Measured 2026-07-28 across all 350 `.pic` blobs (front, back,
+   trainers): the largest is 599 bytes** (`kangaskhan`, `charizard`), so the staged
+   stream overruns into `sHallOfFame` by up to 351 bytes. Placing `sHallOfFame` at
+   pret's offset therefore creates a live corruption path, dormant only because HoF is
+   unported.
+
+   **Relocate the port-only `PIC_STAGE` scratch — that is the strictly more faithful
+   option**, because `PIC_STAGE` is a port invention (pret has no staging buffer; it
+   decompresses straight out of banked ROM, which the port flattened) while
+   `sHallOfFame` is a real pret symbol at a real pret offset. Moving the pret symbol
+   would also break byte-comparability of the future 32 KB image against a real GB
+   `.sav`, which `saveconv.py`'s Phase-5 `.sav` ↔ `.dsv` conversion depends on — it
+   would need a fixup table forever. Recommended home: bank 0's dead tail after
+   `sHallOfFame`, which ends at `$B858`, leaving **1960 free bytes to `$BFFF`** —
+   e.g. `PIC_STAGE = $B860`, 1952 bytes of headroom against a 599-byte worst case.
+   Annotate that the port parks scratch in bank 0's unused tail, and note that those
+   bytes ride along in the SRAM image as harmless garbage (the region is unused in a
+   real `.sav` too). **Maintainer sign-off still required.**
 7. **`PIC_STAGE` is a duplicated literal** — `%define`d separately in
    `src/engine/battle/init_battle.asm:47`, `src/engine/menus/start_sub_menus.asm:204`,
    `src/engine/movie/oak_speech/oak_speech.asm:93`. Fold it into one `gb_memmap.inc`
@@ -344,6 +357,7 @@ Record every gate's status to a file (never read it through a pipe).
 ## 9. Open decisions
 
 - Seam entry-point names (`SramLoadImage` / `SramStoreImage` are working names).
-- **`PIC_STAGE` vs `sHallOfFame` (challenge 6)** — relocate the port scratch
-  (recommended) or move `sHallOfFame` off pret's offset with a `class=data-model`
-  DEVIATION. Needed before stage 1 writes bank 0's `equ`s.
+- **`PIC_STAGE` vs `sHallOfFame` (challenge 6)** — recommendation, with the measurement
+  behind it, is to relocate the port-only scratch to bank 0's dead tail
+  (`PIC_STAGE = $B860`) and leave `sHallOfFame` at pret's `$A598`. Needs maintainer
+  sign-off before stage 1 writes bank 0's `equ`s.
