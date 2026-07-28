@@ -140,7 +140,11 @@ def parse_body(lines, cm, mem, far_db):
         if m:
             out += [TX_NUM] + addr(m.group(1)) + [((int(m.group(2)) & 0xF) << 4) | (int(m.group(3)) & 0xF)]
             continue
-        m = re.match(r'text_far\s+(_\w+)', s)
+        # The far target is USUALLY `_Name`, but the leading underscore is a pret
+        # convention, not a rule: TMNotebookText (school_notebooks.asm) and other
+        # predef-text targets have none. Matching only `_\w+` silently dropped
+        # those wrappers as "unhandled text line".
+        m = re.match(r'text_far\s+(\w+)', s)
         if m:
             far = m.group(1)
             if far not in far_db:
@@ -161,12 +165,20 @@ def parse_body(lines, cm, mem, far_db):
         # tolerated no-ops in our model:
         # The sound commands ($0B, $0E+) are emitted faithfully; the port's
         # TextCommandProcessor currently skips them (TODO-HW: audio in text streams).
+        # Opcode values read out of macros/scripts/text.asm, not derived.
+        # sound_pokedex_rating/_get_item_1_duplicate/_get_item_2/_get_key_item were
+        # absent until the predef-text port needed $10 (FoundHiddenCoinsText,
+        # DroppedHiddenCoinsText); an absent one raises "unhandled text line" and
+        # the caller drops the whole wrapper, so a gap here silently loses streams.
         if s in ("text_promptbutton", "text_waitbutton", "text_scroll", "text_low", "text_pause",
-                 "sound_get_item_1", "sound_level_up",
+                 "sound_get_item_1", "sound_level_up", "sound_pokedex_rating",
+                 "sound_get_item_1_duplicate", "sound_get_item_2", "sound_get_key_item",
                  "sound_caught_mon", "sound_dex_page_added", "sound_cry_pikachu"):
             out.append({"text_promptbutton": 0x06, "text_waitbutton": 0x0D,
                         "text_scroll": 0x07, "text_low": 0x05, "text_pause": 0x0A,
                         "sound_get_item_1": 0x0B, "sound_level_up": 0x0B,
+                        "sound_pokedex_rating": 0x0E, "sound_get_item_1_duplicate": 0x0F,
+                        "sound_get_item_2": 0x10, "sound_get_key_item": 0x11,
                         "sound_caught_mon": 0x12, "sound_dex_page_added": 0x13,
                         "sound_cry_pikachu": 0x14}[s]); continue
         if s == "text_asm":
