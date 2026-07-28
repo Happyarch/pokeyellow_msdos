@@ -8,7 +8,11 @@
 > regression to fix now. Do not quote a finding count from this file, CLAUDE.md, a
 > skill or a memory as evidence that a class is clean — re-measure it.
 
-**Status:** stages 1-4 implemented on `arena/019fa73c-pokeyellow-msdos`; stage 5 disk bodies and stage 6 goldens plus sweep remain maintainer-owned. Verification in this environment is limited, see the PR notes. Original measurements were against the linked build at HEAD `76115615` (2026-07-28).
+**Status:** stages 1-5 complete. Stages 1-4 came from PR #2 (external agent);
+stage 5 (the `.dsv` v2 disk boundary) and the review fixes landed with the merge.
+Stage 6 — the box golden scenarios and the `TODO-HW` sweep — is open and
+maintainer-owned. Measured against the linked build; see the merge commit for the
+gate output.
 
 **Ownership.** Stages 1-4 (everything in memory) are implemented by an **external
 agent working outside this repo's harness** — it has no stigmergy, and may not be
@@ -132,8 +136,8 @@ across a save/load. That is an expected intermediate — declare it, do not pape
 - [x] Call the two seam entry points (below) at the boot and save-commit points.
 
 ### Stage 5 — disk boundary  *(maintainers)*
-- [ ] `.dsv` v2 = raw 32 KB SRAM image; load at boot, store on save.
-- [ ] Bump `DSV_VERSION`; **no v1 migration** — pre-release project, a v1 file simply
+- [x] `.dsv` v2 = raw 32 KB SRAM image; load at boot, store on save.
+- [x] Bump `DSV_VERSION`; **no v1 migration** — pre-release project, a v1 file simply
       fails the version check and falls into the existing absent/corrupt-save branch.
       Delete v1's payload-block machinery and `saveconv.py`'s v1 constants.
 

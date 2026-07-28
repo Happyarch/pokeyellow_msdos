@@ -124,10 +124,10 @@ extern yn_box_col               ; home/yes_no.asm — two-option box top-left, G
 extern yn_box_row               ; home/yes_no.asm — two-option box top-left, GB Y
 extern yn_proj_mode             ; home/yes_no.asm — 0 = overworld anchor
 ; --- raw SRAM image seam (stage 5 body, stage 4 ret-stub) -------------------
-extern SramStoreImage           ; src/save/save_stubs.asm — stage 5 raw SRAM-image store seam
+extern SramStoreImage           ; src/save/dsv_io.asm — SRAM banks -> POKEMON.DSV
 ; --- legacy .dsv debug harness helpers (not used by the pret save routines) ---
-extern DsvWriteSave             ; src/save/dsv_io.asm — legacy DEBUG_* save seeding
-extern DsvFileExists            ; src/save/dsv_io.asm — legacy DEBUG_SAVE_ROUNDTRIP marker
+extern DsvFileExists            ; src/save/dsv_io.asm — DEBUG_SAVE_ROUNDTRIP marker
+extern FillMemory               ; src/home/copy2.asm — ESI dest, BX count, AL value
 
 ; --- package E (main_menu.asm) ---------------------------------------------
 ; PrintSaveScreenText draws the SAVE info screen (player name / badges / #dex /
@@ -178,12 +178,14 @@ RunContinueSeedTest:
     call PrepareNewGameDebug
     call SeedDeterministicPlayerIdentity
 
-    ; 2. Legacy disk seed. Stage 4 no longer loads through dsv_io, so this DEBUG
-    ;    harness is expected to be repaired with the stage-5 SramLoadImage body.
-    call DsvWriteSave
+    ; 2. Commit it through the real save path: WRAM -> resident SRAM banks
+    ;    (SaveMainData/SaveCurrentBoxData/SavePartyAndDexData) and on to
+    ;    POKEMON.DSV via SramStoreImage. That is what a player's SAVE does, so
+    ;    the load below reads exactly what a real save wrote.
+    call SaveGameData
 
-    ; 3. Clobber the old v1 saved WRAM spans. This remains a stale stage-5
-    ;    harness until raw SRAM image I/O exists.
+    ; 3. Clobber the WRAM the save owns, so a successful load has to restore it
+    ;    rather than finding it already correct.
     lea edi, [ebp + wPlayerName]
     mov ecx, NAME_LENGTH
     xor al, al
@@ -198,8 +200,8 @@ RunContinueSeedTest:
     mov ecx, wPartyDataEnd - wPartyDataStart
     rep stosb
 
-    ; 4. Load it back through the current TryLoadSaveFile path. Without a stage-5
-    ;    SramLoadImage body this will not read the legacy DSV seed above.
+    ; 4. Load it back the way CONTINUE does: TryLoadSaveFile reads the resident
+    ;    SRAM banks step 2 wrote and verifies their checksums.
     call TryLoadSaveFile
 
     ; 5. Photograph the loaded WRAM.
@@ -764,7 +766,7 @@ CopyBoxToOrFromSRAM:
     dec al
     mov [ebp + esi + 1], al
 
-    call CalcBoxBankCheckSums
+    call calc_box_bank_checksums
     call DisableSRAM
     ret
 
@@ -980,7 +982,7 @@ EmptyAllSRAMBoxes:
 EmptySRAMBoxesInBank:
     ; marks every box in BH's resident SRAM bank as empty.
     ; DEVIATION{class=banking; pret=engine/menus/save.asm:EmptySRAMBoxesInBank; behavior=derive the six box addresses from BH instead of the selected rRAMB window; evidence=resident SRAM gives bank 2 and bank 3 distinct full 32-bit addresses; lifetime=permanent flat SRAM model}
-    call SelectBoxBankBase
+    call select_box_bank_base
     mov ecx, NUM_BOXES / 2
 .emptyLoop:
     push ecx
@@ -991,7 +993,7 @@ EmptySRAMBoxesInBank:
     pop ecx
     dec ecx
     jnz .emptyLoop
-    call CalcBoxBankCheckSums
+    call calc_box_bank_checksums
     ret
 
 EmptySRAMBox:
@@ -1029,7 +1031,7 @@ GetMonCountsForBoxesInBank:
     ; Out: ESI advanced by six counts.
     ; DEVIATION{class=banking; pret=engine/menus/save.asm:GetMonCountsForBoxesInBank; behavior=read counts from fixed resident bank addresses selected by BH instead of the current rRAMB window; evidence=sBox1 and sBox7 have distinct addresses in gb_memmap.inc; lifetime=permanent flat SRAM model}
     push esi                                      ; preserve destination cursor
-    call SelectBoxBankBase                         ; ESI = first box in selected bank
+    call select_box_bank_base                         ; ESI = first box in selected bank
     pop edi                                       ; EDI = destination cursor
     mov ecx, NUM_BOXES / 2
 .countLoop:
@@ -1079,11 +1081,11 @@ section .text
 ; ---------------------------------------------------------------------------
 ; CalcIndividualBoxCheckSums — pret ref: engine/menus/save.asm.
 ; In: BH = resident SRAM bank 2 or 3. Computes the six per-box checksums for
-; that bank. The all-box checksum is handled by CalcBoxBankCheckSums.
+; that bank. The all-box checksum is handled by calc_box_bank_checksums.
 ; DEVIATION{class=banking; pret=engine/menus/save.asm:CalcIndividualBoxCheckSums; behavior=select the bank 2 or bank 3 checksum destination from BH instead of relying on the current rRAMB window; evidence=flat SRAM has no banked A000 view and stores both checksum arrays at fixed addresses; lifetime=permanent flat SRAM model}
 ; ---------------------------------------------------------------------------
 CalcIndividualBoxCheckSums:
-    call SelectBoxBankRegions                      ; ESI=first box, EDI=individual checksum array
+    call select_box_bank_regions                      ; ESI=first box, EDI=individual checksum array
     mov ecx, NUM_BOXES / 2
 .loop:
     push ecx
@@ -1101,11 +1103,20 @@ CalcIndividualBoxCheckSums:
     jnz .loop
     ret
 
-; CalcBoxBankCheckSums — port-only helper mirroring the checksum tail of
-; CopyBoxToOrFromSRAM and EmptySRAMBoxesInBank. In: BH = 2 or 3.
-CalcBoxBankCheckSums:
+; calc_box_bank_checksums — port-only helper carrying the checksum tail pret
+; writes inline in BOTH CopyBoxToOrFromSRAM and EmptySRAMBoxesInBank (the same
+; four lines: all-box CalcCheckSum, store, CalcIndividualBoxCheckSums).
+;
+; The factoring is forced by the flat model, not chosen for tidiness: pret's two
+; copies are textually identical because rRAMB makes sBox1/sBank2AllBoxesChecksum
+; resolve to the same window addresses in either bank, while the port's banks
+; have distinct 32-bit addresses and must select them from BH. Duplicating that
+; selection at both sites is what this avoids. Lowercase by the port-local helper
+; convention — it is NOT a pret label.
+; In: BH = 2 or 3. Clobbers EAX/ECX/EDX/ESI/EDI.
+calc_box_bank_checksums:
     push ebx                                      ; preserve BH for individual checksums
-    call SelectBoxBankRegions                      ; ESI=first box, EDI=individual, EDX=all checksum
+    call select_box_bank_regions                  ; ESI=first box, EDI=individual, EDX=all checksum
     push edx                                      ; CalcCheckSum uses DL as accumulator
     mov bx, sBank2AllBoxesChecksum - sBox1
     call CalcCheckSum
@@ -1114,8 +1125,8 @@ CalcBoxBankCheckSums:
     pop ebx
     jmp CalcIndividualBoxCheckSums
 
-; SelectBoxBankBase — In BH=2/3, Out ESI=sBox1 or sBox7.
-SelectBoxBankBase:
+; select_box_bank_base — In BH=2/3, Out ESI=sBox1 or sBox7.
+select_box_bank_base:
     cmp bh, 3
     je .bank3
     mov esi, sBox1
@@ -1124,8 +1135,8 @@ SelectBoxBankBase:
     mov esi, sBox7
     ret
 
-; SelectBoxBankRegions — In BH=2/3, Out ESI=first box, EDI=individual sums, EDX=all sum.
-SelectBoxBankRegions:
+; select_box_bank_regions — In BH=2/3, Out ESI=first box, EDI=individual sums, EDX=all sum.
+select_box_bank_regions:
     cmp bh, 3
     je .bank3
     mov esi, sBox1
@@ -1235,13 +1246,18 @@ HallOfFame_Copy:
 ; ---------------------------------------------------------------------------
 ClearAllSRAMBanks:
     call EnableSRAM
+    ; pret loops the four banks through rRAMB and jp FillMemory's each one. The
+    ; port keeps FillMemory (its destination is HL/ESI, 32-bit, so the resident
+    ; banks are reachable) and needs only two calls: bank 0 in the GB window,
+    ; then banks 1-3 contiguous above it.
+    mov al, 0xFF                                  ; ld a,$ff
+    mov esi, GB_SRAM_BANK0                        ; ld hl, STARTOF(SRAM)
+    mov bx, GB_SRAM_BANK_SIZE                     ; ld bc, SIZEOF(SRAM)
+    call FillMemory
     mov al, 0xFF
-    lea edi, [ebp + GB_SRAM_BANK0]
-    mov ecx, 0x2000
-    rep stosb
-    lea edi, [ebp + GB_SRAM_BANK1]
-    mov ecx, GB_SRAM_END - GB_SRAM_BANK1
-    rep stosb
+    mov esi, GB_SRAM_BANK1
+    mov bx, GB_SRAM_END - GB_SRAM_BANK1
+    call FillMemory
     call DisableSRAM
     call SramStoreImage
     ret
@@ -1298,7 +1314,7 @@ RunSaveTest:
 ; ---------------------------------------------------------------------------
 RunSaveTest:
     call PrepareNewGameDebug
-    call DsvWriteSave                               ; CF=0 ok
+    call SaveGameData                               ; WRAM -> SRAM -> POKEMON.DSV
     call DsvFileExists                              ; CF=1/AL=1 if present+valid
     mov [ebp + GB_BACKBUF], al                      ; marker pixel (1 = round-trip ok)
     call DumpBackbuffer

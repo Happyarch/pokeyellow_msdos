@@ -1392,6 +1392,7 @@ wSpriteDecodeTable1Ptr       equ 0xD0B2   ; dw
 ; image is assembled from bank 0 at $A000 plus banks 1-3 at $22000..$27FFF.
 GB_SRAM                      equ 0xA000
 GB_SRAM_BANK0                equ 0xA000
+GB_SRAM_BANK_SIZE            equ 0x2000   ; one MBC5 SRAM bank
 GB_SRAM_BANK1                equ 0x22000
 GB_SRAM_BANK2                equ 0x24000
 GB_SRAM_BANK3                equ 0x26000

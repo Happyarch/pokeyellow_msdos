@@ -34,7 +34,7 @@ extern joypad_init       ; src/input/joypad.asm
 extern joypad_restore    ; src/input/joypad.asm
 extern audio_init        ; src/audio/audio_hal.asm
 extern audio_shutdown    ; src/audio/audio_hal.asm
-extern SramLoadImage     ; src/save/save_stubs.asm — stage 5 raw SRAM-image load seam
+extern SramLoadImage     ; src/save/dsv_io.asm — POKEMON.DSV -> SRAM banks at boot
 extern g_cfg_nosound     ; src/audio/audio_hal.asm — set by /NOSOUND
 extern g_cfg_midi        ; src/audio/mpu401.asm — /MT32 = 1, /GM = 2
 extern g_cfg_shim        ; src/audio/audio_hal.asm — /TANDY = 2, /SPK = 3

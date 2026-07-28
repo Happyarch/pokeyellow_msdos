@@ -695,7 +695,7 @@ extern DumpBackbuffer      ; debug/debug_dump.asm — FRAME.BIN + exit (main_men
 %ifdef DEBUG_MAINMENU
 global RunMainMenuTest
 extern PrepareNewGameDebug      ; debug/debug_party.asm — seed a debug party
-extern DsvWriteSave             ; save/dsv_io.asm — serialize save → POKEMON.DSV
+extern SaveGameData             ; engine/menus/save.asm — WRAM -> SRAM -> POKEMON.DSV
 extern ClearSprites             ; gfx/sprites.asm
 extern DumpBackbuffer           ; debug/debug_dump.asm — writes FRAME.BIN + exits
 
@@ -712,7 +712,7 @@ RunMainMenuTest:
     mov byte [ebp + wPokedexOwned + 1], 0x0F
     mov byte [ebp + wPlayTimeHours], 5
     mov byte [ebp + wPlayTimeMinutes], 30
-    call DsvWriteSave                           ; legacy DEBUG harness seed
+    call SaveGameData                           ; DEBUG harness seed (real save path)
 
     ; font + text-box tiles into vFont
     or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)

@@ -246,12 +246,10 @@ HAL_SRCS := \
     src/input/joypad.asm \
     src/engine/joypad.asm
 
-# Save HAL — legacy .dsv v1 I/O plus stage-5 raw SRAM image seams.
-# SramLoadImage/SramStoreImage are ret-stubs until the maintainers land the v2
-# disk boundary; dsv_io.asm stays linked for legacy debug harnesses.
+# Save HAL — the battery. SramLoadImage/SramStoreImage move the emulated 32 KiB
+# SRAM image between the resident banks and POKEMON.DSV (.dsv v2, raw image).
 SAVE_SRCS := \
-    src/save/dsv_io.asm \
-    src/save/save_stubs.asm
+    src/save/dsv_io.asm
 
 # Audio subsystem (docs/current_plan_audio.md Phase A). The translated pret
 # engine writes the virtual APU block at [ebp+rAUD*]; the DelayFrame tick +

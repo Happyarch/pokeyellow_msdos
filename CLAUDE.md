@@ -182,7 +182,14 @@ to track now live in `docs/current_plan_backlog.md` (memory
 `todo-md-deleted-orphaned-trackers` records what moved and why).
 Phase 1 delivered the BG tile decoder + tilemap renderer with SCX/SCY scrolling
 (`src/ppu/ppu.asm`) and the keyboard → joypad ISR (`src/input/joypad.asm`);
-window layer, OAM sprites, and the save system remain open there.
+window layer and OAM sprites remain open there. The save system is now real: the
+port emulates all four **SRAM banks resident** (bank 0 at `$A000`, banks 1-3 at
+`$22000-$27FFF`, `class=banking` deviation, same flat model as ROM), pret's
+save/load/box routines read and write the real `s*` addresses, and
+`src/save/dsv_io.asm` persists the whole 32 KiB image as `.dsv` **v2**
+(`SramLoadImage` at boot, `SramStoreImage` at each save commit). What is still
+open is the PC **UI** and the box golden scenarios —
+`docs/current_plan_sram_pc_storage.md` stage 6.
 
 Phase 2 so far: `Init`/`ClearVram`/`StopAllSounds` (`src/home/init.asm`),
 supporting home routines (`src/home/copy.asm`, `src/home/lcd.asm`,

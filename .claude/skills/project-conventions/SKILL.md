@@ -360,17 +360,22 @@ Plans that exist today and have **no entry below** — go to the files themselve
 (NPC implementation is complete and archived at `docs/plans/npc_implementation.md`.
 The move data layer is complete and archived at `docs/plans/moves.md`.)
 
-## Save File Notes (`.dsv` is live; `.sav` conversion is Phase 5)
+## Save File Notes (`.dsv` v2 is live; `.sav` conversion is still a stub)
 
 - GB `.sav`: raw 32 KB SRAM dump (MBC5+RAM+BATTERY)
-- DOS `.dsv`: **version 1 is real and shipping** — `src/save/dsv_io.asm` writes
+- DOS `.dsv`: **version 2 is real and shipping** — `src/save/dsv_io.asm` writes
   and reads it. 7-byte header (`DOSV` magic, version byte, 16-bit LE **additive**
-  checksum — `sum(payload) & 0xFFFF`, *not* a CRC) + a 3978-byte payload; 3985
-  bytes total. That payload is **not** a 32 KB SRAM image (this line used to
-  claim it was): it is only the WRAM blocks pret's `SaveMainData` /
-  `SaveCurrentBoxData` / `SavePartyAndDexData` serialize, so there are no
-  other-box or HoF banks. A faithful-SRAM format bumps the version byte, which
-  `dsv_io` already gates on.
+  checksum — `sum(payload) & 0xFFFF`, *not* a CRC) + a **32768-byte payload that
+  IS the raw SRAM image**, bank 0 first, in the same bank order as a real `.sav`;
+  32775 bytes total. The port emulates all four SRAM banks resident in memory
+  (bank 0 at `$A000`, banks 1-3 at `$22000`), so the two entry points are
+  `SramLoadImage` (POKEMON.DSV → banks, once at boot) and `SramStoreImage`
+  (banks → POKEMON.DSV, at each save-commit point). A corrupt or absent file
+  leaves the banks untouched, which reads as a fresh cartridge.
+- **v1 is retired with no migration path** (five WRAM blocks, 3985 bytes). It
+  predates SRAM emulation; a v1 file fails the version check and reads as "no
+  save". Do not write a reader for it.
 - Converter: `dos_port/tools/saveconv.py` — `--verify`/`--info FILE` validates a
-  `.dsv` header + checksum today (same checks as `DsvReadSave`); `.sav` ↔ `.dsv`
-  **conversion stays a stub** until Phase 5, when the faithful format is stable.
+  `.dsv` header + checksum today (the same checks `SramLoadImage` makes);
+  `.sav` ↔ `.dsv` **conversion stays a stub**, but is now a header strip plus a
+  checksum recompute rather than a WRAM-layout translation.
