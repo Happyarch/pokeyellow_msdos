@@ -8,8 +8,7 @@
 > regression to fix now. Do not quote a finding count from this file, CLAUDE.md, a
 > skill or a memory as evidence that a class is clean — re-measure it.
 
-**Status:** not started. Measured against the linked build at HEAD `76115615`
-(2026-07-28).
+**Status:** stages 1-4 implemented on `arena/019fa73c-pokeyellow-msdos`; stage 5 disk bodies and stage 6 goldens plus sweep remain maintainer-owned. Verification in this environment is limited, see the PR notes. Original measurements were against the linked build at HEAD `76115615` (2026-07-28).
 
 **Ownership.** Stages 1-4 (everything in memory) are implemented by an **external
 agent working outside this repo's harness** — it has no stigmergy, and may not be
@@ -27,7 +26,9 @@ eleven in SRAM banks the port does not emulate. Maintainer direction is to **emu
 all GB RAM** (ROM banking stays flat), so "implement the PC logic" and "emulate SRAM"
 are one program and the PC is its first consumer.
 
-## 2. What exists today
+## 2. Pre-implementation baseline
+
+This section records the measured state before stages 1-4 landed on the arena branch.
 
 **WRAM: fully emulated.** `boot/entry.asm:204 alloc_gb_memory` DPMI-allocates the whole
 GB address space, zeroes it, and parks the base in EBP. `GB_TOTAL_SIZE` (`entry.asm:24`)
@@ -97,38 +98,38 @@ Fallback, only if the pointer audit in §5 turns out incomplete: active bank in 
 ## 4. Stages
 
 ### Stage 1 — SRAM address space  *(external)*
-- [ ] `equ`s for all four banks under **pret's own label names**, derived from
+- [x] `equ`s for all four banks under **pret's own label names**, derived from
       `ram/sram.asm` + `layout.link:248-255`.
-- [ ] Grow `GB_TOTAL_SIZE`; fix its stale inline comment.
-- [ ] Teach `dos_port/tools/audit_memmap.py` the extended region — it currently audits
+- [x] Grow `GB_TOTAL_SIZE`; fix its stale inline comment.
+- [x] Teach `dos_port/tools/audit_memmap.py` the extended region — it currently audits
       only `val <= 0xFFFF` (`audit_memmap.py:91`), so the new banks would be unaudited.
-- [ ] Resolve the `PIC_STAGE` / `sHallOfFame` collision (challenge 6) and fold
+- [x] Resolve the `PIC_STAGE` / `sHallOfFame` collision (challenge 6) and fold
       `PIC_STAGE`'s three duplicated literals into one `gb_memmap.inc` entry.
 
 ### Stage 2 — pointer-safety substrate  *(external)*
-- [ ] Port-only 32-bit-safe copy helper for SRAM destinations (do **not** widen
+- [x] Port-only 32-bit-safe copy helper for SRAM destinations (do **not** widen
       `CopyData`).
-- [ ] `BoxSRAMPointerTable` as `dd` + full-dword load in `GetBoxSRAMLocation`.
-- [ ] Adopt and document the invariant: no address above `$FFFF` is passed to a
+- [x] `BoxSRAMPointerTable` as `dd` + full-dword load in `GetBoxSRAMLocation`.
+- [x] Adopt and document the invariant: no address above `$FFFF` is passed to a
       pret-labeled home helper.
 
 ### Stage 3 — box tier  *(external; safe to merge alone)*
-- [ ] `GetBoxSRAMLocation`, `CopyBoxToOrFromSRAM`, `EmptyAllSRAMBoxes`,
+- [x] `GetBoxSRAMLocation`, `CopyBoxToOrFromSRAM`, `EmptyAllSRAMBoxes`,
       `EmptySRAMBoxesInBank`, `EmptySRAMBox`, `GetMonCountsForBoxesInBank`.
-- [ ] Faithful all-box / per-box checksums (`CalcCheckSum`,
+- [x] Faithful all-box / per-box checksums (`CalcCheckSum`,
       `CalcIndividualBoxCheckSums` already exist and are 32-bit safe).
-- [ ] Box-full / per-box count semantics checked against pret (challenge 19).
+- [x] Box-full / per-box count semantics checked against pret (challenge 19).
 
 After stage 3 boxes swap for real in-session; only the **current** box still persists
 across a save/load. That is an expected intermediate — declare it, do not paper over it.
 
 ### Stage 4 — in-memory save realization  *(external; merges WITH stage 5)*
-- [ ] `SaveMainData` / `SaveCurrentBoxData` / `SavePartyAndDexData` / `LoadSAVToReRAM`
+- [x] `SaveMainData` / `SaveCurrentBoxData` / `SavePartyAndDexData` / load routines
       read and write the real `s*` regions instead of calling the `.dsv` HAL.
-- [ ] `CheckForPlayerNameInSRAM` becomes pret's real `sPlayerName` scan.
-- [ ] `CheckPreviousSaveFile` (retires M-107), `sTileAnimations` (retires M-106).
-- [ ] `ClearAllSRAMBanks`, `SaveHallOfFameTeams` become correct rather than no-ops.
-- [ ] Call the two seam entry points (below) at the boot and save-commit points.
+- [x] `CheckForPlayerNameInSRAM` becomes pret's real `sPlayerName` scan.
+- [x] `CheckPreviousSaveFile` (retires M-107), `sTileAnimations` (retires M-106).
+- [x] `ClearAllSRAMBanks`, `SaveHallOfFameTeams` become correct rather than no-ops.
+- [x] Call the two seam entry points (below) at the boot and save-commit points.
 
 ### Stage 5 — disk boundary  *(maintainers)*
 - [ ] `.dsv` v2 = raw 32 KB SRAM image; load at boot, store on save.
@@ -354,10 +355,7 @@ Record every gate's status to a file (never read it through a pipe).
   `dos_port/tools/saveconv.py --verify` on a fresh v2 file.
 - **Stage 6:** the two new box scenarios above, committed as goldens.
 
-## 9. Open decisions
+## 9. Decisions landed for stages 1-4
 
-- Seam entry-point names (`SramLoadImage` / `SramStoreImage` are working names).
-- **`PIC_STAGE` vs `sHallOfFame` (challenge 6)** — recommendation, with the measurement
-  behind it, is to relocate the port-only scratch to bank 0's dead tail
-  (`PIC_STAGE = $B860`) and leave `sHallOfFame` at pret's `$A598`. Needs maintainer
-  sign-off before stage 1 writes bank 0's `equ`s.
+- Seam entry-point names are `SramLoadImage` / `SramStoreImage`.
+- **`PIC_STAGE` vs `sHallOfFame` (challenge 6)** is decided: `PIC_STAGE = $B860` in bank 0's dead tail, and `sHallOfFame` stays at pret's `$A598`.

@@ -44,8 +44,6 @@ bits 32
 
 %define FW    SCREEN_TILES_W           ; 40 — canvas stride (full widescreen)
 
-%define PIC_STAGE  0xA4A0                    ; GB scratch for the compressed input stream
-                                              ; (copied from src/home/pics.asm, which still uses it)
 
 ; Bottom dialog box — geometry from the generated battle UI layout (Tier 1,
 ; assets/ui_layout_battle.inc; edit via tools/ui_layout/battle.py). The old

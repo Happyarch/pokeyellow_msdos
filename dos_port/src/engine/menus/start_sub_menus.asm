@@ -200,8 +200,7 @@ NUM_MONEY_SIGN     equ 1 << BIT_MONEY_SIGN
 NUM_LEFT_ALIGN     equ 1 << BIT_LEFT_ALIGN
 NUM_LEADING_ZERO   equ 1 << BIT_LEADING_ZEROES
 ; PROJ menus: front pic → VRAM $9000 (GB_VCHARS2), the verified battle/dex front-pic
-; dest; PIC_STAGE staging matches gfx/pics.asm.
-PIC_STAGE_GB equ 0xA4A0              ; GB scratch for the compressed input stream (pics.asm)
+; dest; PIC_STAGE staging is the canonical GB scratch in gb_memmap.inc.
 PLAYER_PIC_LEN equ 255              ; red.pic byte length (gfx/player/red.pic)
 
 ; trainer-card tile graphics (Tier-1, tools/generators/gen_trainer_card_tiles.py;
@@ -947,12 +946,12 @@ TrainerInfo_FarCopyData:
 TrainerInfo_DisplayPlayerPic:
     ; stage the compressed pic into GB scratch (pics.asm PIC_STAGE contract)
     mov esi, PlayerPicFront
-    lea edi, [ebp + PIC_STAGE_GB]
+    lea edi, [ebp + PIC_STAGE]
     mov ecx, PLAYER_PIC_LEN
     rep movsb
-    mov word [ebp + wSpriteInputPtr], PIC_STAGE_GB
+    mov word [ebp + wSpriteInputPtr], PIC_STAGE
     mov byte [ebp + wSpriteFlipped], 0
-    mov al, [ebp + PIC_STAGE_GB]                 ; dims byte (0x77 = 7×7)
+    mov al, [ebp + PIC_STAGE]                 ; dims byte (0x77 = 7×7)
     mov edx, GB_VCHARS2                           ; decode/merge dest
     call LoadMonPicToVRAM
     ; place the tilemap upper-right: column-major, id = col*7 + row, from TC_HL(15,1),

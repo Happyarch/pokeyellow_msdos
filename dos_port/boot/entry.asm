@@ -20,8 +20,9 @@ bits 32
 %include "gb_memmap.inc"
 %include "gb_macros.inc"
 
-; Total GB allocation: 64 KB address space + 8 KB CGB VRAM1 + back buffer
-GB_TOTAL_SIZE   equ GB_BACKBUF + GB_BACKBUF_SIZE    ; 0x17A00 (96768 bytes)
+; Total emulated allocation: 64 KB GB window + 8 KB CGB VRAM1 + 320x200
+; back buffer + resident SRAM banks 1-3 at $22000..$27FFF.
+GB_TOTAL_SIZE   equ GB_SRAM_END                    ; 0x28000 (160 KiB)
 
 ; ---------------------------------------------------------------------------
 ; External symbols from other boot modules
@@ -33,6 +34,7 @@ extern joypad_init       ; src/input/joypad.asm
 extern joypad_restore    ; src/input/joypad.asm
 extern audio_init        ; src/audio/audio_hal.asm
 extern audio_shutdown    ; src/audio/audio_hal.asm
+extern SramLoadImage     ; src/save/save_stubs.asm — stage 5 raw SRAM-image load seam
 extern g_cfg_nosound     ; src/audio/audio_hal.asm — set by /NOSOUND
 extern g_cfg_midi        ; src/audio/mpu401.asm — /MT32 = 1, /GM = 2
 extern g_cfg_shim        ; src/audio/audio_hal.asm — /TANDY = 2, /SPK = 3
@@ -102,6 +104,9 @@ start:
     mov ecx, GB_TOTAL_SIZE / 4
     xor eax, eax
     rep stosd
+
+    ; DEVIATION{class=HAL; pret=engine/menus/save.asm:TryLoadSaveFile; behavior=boot loads the raw resident SRAM image through a DOS HAL seam before any save routine reads sPlayerName or sGameData; evidence=current_plan_sram_pc_storage stage 4 seam contract names SramLoadImage and stage 5 owns the disk body; lifetime=until the disk boundary is implemented and this remains the permanent HAL call site}
+    call SramLoadImage      ; stage 5 body overlays bank 0 plus banks 1-3, stub returns now
 
     call video_init          ; set VGA mode 13h
     call pit_init            ; reprogram PIT to ~60 Hz, install tick ISR

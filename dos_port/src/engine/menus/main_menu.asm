@@ -167,7 +167,6 @@ extern UpdateSprites            ; src/home/update_sprites.asm
 extern GBPalWhiteOutWithDelay3  ; src/home/palettes.asm
 extern ResetPlayerSpriteData    ; reset_player_sprite.asm
 extern EnterMapBoot             ; overworld.asm — one-time overworld boot glue → EnterMap
-extern DsvFileExists            ; save/dsv_io.asm — CF=1/AL=1 if POKEMON.DSV present
 extern DisplayOptionMenu_       ; options.asm (package D)
 
 ; --- seams provided by other packages / root at integration (reported) ---
@@ -567,14 +566,25 @@ DisplayOptionMenu:
     ret
 
 ; ===========================================================================
-; CheckForPlayerNameInSRAM — pret ref: main_menu.asm:CheckForPlayerNameInSRAM.
-; TODO-HW: SRAM banking — pret enables SRAM (rRAMG/rBMODE/rRAMB) and scans
-; sPlayerName for '@' (found → scf). The port has no SRAM: the whole routine
-; collapses to a POKEMON.DSV presence check. DsvFileExists returns CF=1 on
-; "found", preserving pret's scf found-path polarity into the caller's `jr nc`.
+; CheckForPlayerNameInSRAM — pret ref: engine/menus/main_menu.asm:CheckForPlayerNameInSRAM.
+; Scan resident sPlayerName for '@'. Found returns CF=1 exactly like pret's scf
+; path, not a DOS file-presence check.
+; DEVIATION{class=banking; pret=engine/menus/main_menu.asm:CheckForPlayerNameInSRAM; behavior=scan the flat resident sPlayerName address and ignore the rRAMG rBMODE rRAMB hardware gate writes; evidence=sPlayerName lives at fixed EBP-relative address 22598 after SramLoadImage overlays SRAM and the port has no switchable SRAM window; lifetime=permanent flat SRAM model}
 ; ===========================================================================
 CheckForPlayerNameInSRAM:
-    call DsvFileExists
+    mov ecx, NAME_LENGTH
+    mov esi, sPlayerName
+.loop:
+    mov al, [ebp + esi]
+    inc esi
+    cmp al, CHAR_TERMINATOR
+    je .found
+    dec ecx
+    jnz .loop
+    clc
+    ret
+.found:
+    stc
     ret
 
 ; ===========================================================================
@@ -702,7 +712,7 @@ RunMainMenuTest:
     mov byte [ebp + wPokedexOwned + 1], 0x0F
     mov byte [ebp + wPlayTimeHours], 5
     mov byte [ebp + wPlayTimeMinutes], 30
-    call DsvWriteSave                           ; make DsvFileExists true
+    call DsvWriteSave                           ; legacy DEBUG harness seed
 
     ; font + text-box tiles into vFont
     or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)

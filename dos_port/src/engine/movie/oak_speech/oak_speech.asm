@@ -89,8 +89,7 @@ global FadeInIntroPic
 global PrepareOakSpeech
 global MovePicLeft
 
-; The GB scratch the pic decoder addresses its input through (home/pics.asm).
-%define PIC_STAGE_GB  0xA4A0
+; The GB scratch the pic decoder addresses its input through (gb_memmap.inc).
 
 ; Projected 7×7 placement corners (pret coord + UI_OAK_SPEECH origin), as flat
 ; GB tilemap addresses. Centred = hlcoord(6,4); upper-right = hlcoord(15,1).
@@ -463,11 +462,11 @@ IntroDisplayPicCenteredOrUpperRight:
     ; Stage the compressed stream into GB scratch — the decoder reads it through
     ; a 16-bit GB pointer (wSpriteInputPtr), and the source lives in the program
     ; image (pics.asm PIC_STAGE contract, same as LoadFrontSpriteByMonIndex).
-    lea edi, [ebp + PIC_STAGE_GB]
+    lea edi, [ebp + PIC_STAGE]
     rep movsb                             ; ESI (flat src) -> PIC_STAGE, ECX bytes
-    mov word [ebp + wSpriteInputPtr], PIC_STAGE_GB
+    mov word [ebp + wSpriteInputPtr], PIC_STAGE
     mov byte [ebp + wSpriteFlipped], 0
-    mov al, [ebp + PIC_STAGE_GB]          ; dimensions byte (hi=H, lo=W tiles)
+    mov al, [ebp + PIC_STAGE]          ; dimensions byte (hi=H, lo=W tiles)
     mov edx, GB_VCHARS2                    ; merge dest = vFrontPic ($9000, signed tile $00)
     call LoadMonPicToVRAM                 ; decode + centre + merge + arm tilecache
 

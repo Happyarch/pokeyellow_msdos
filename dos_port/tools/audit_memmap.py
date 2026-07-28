@@ -7,7 +7,7 @@ user-visible crash at a time (wTileMapBackup2 clobber, header blob over the
 indoor .blk slot AND over VRAM). This tool makes that class of bug a check:
 
   1. Parse every `NAME equ 0x....` in include/gb_memmap.inc and
-     assets/rom_window.inc (GB-space addresses only).
+     assets/rom_window.inc, including resident SRAM offsets above the 16-bit GB window.
   2. Attach an EXTENT to every region whose size is machine-knowable:
      - `<NAME>_SIZE` / `<NAME>_SLOT_SIZE` equ pairs (incl. the generated
        per-map .blk sizes in rom_window.inc),
@@ -22,7 +22,8 @@ indoor .blk slot AND over VRAM). This tool makes that class of bug a check:
 Aliasing is legal in pret WRAM (unions like hDividend/hQuotient are original
 game design), so checks are limited to PORT-INVENTED space where aliasing is
 never intentional: the ROM window ($0100-$7FFF), the echo-RAM custom layout
-($E000-$FDFF), and the curated WRAM scratch buffers. A finding therefore means
+($E000-$FDFF), the resident SRAM extension ($22000-$27FFF), and the curated
+WRAM scratch buffers. A finding therefore means
 "someone moved/grew a region without re-checking its neighbours".
 
 Known-legal aliases go in ALIASES; add a comment saying why.
@@ -54,6 +55,10 @@ CURATED_SIZES = {
     "GB_OAM":              160,
 }
 
+EXTENDED_SRAM_START = 0x22000
+EXTENDED_SRAM_END = 0x28000
+
+
 # Symbols that legally share/alias an extent (why matters — keep the comments).
 ALIASES = {
     "W_TILEMAP_BACKUP",        # == W_SURROUNDING_TILES by design (pret union)
@@ -76,7 +81,11 @@ ALIASES = {
 
 # Region markers: address-space landmarks, not buffers — never treated as
 # points *inside* another extent, and never given extents themselves.
-MARKERS = {"GB_WRAM0", "GB_ECHO", "GB_IO", "GB_HRAM", "GB_VRAM0"}
+MARKERS = {
+    "GB_WRAM0", "GB_ECHO", "GB_IO", "GB_HRAM", "GB_VRAM0",
+    "GB_SRAM", "GB_SRAM_BANK0", "GB_SRAM_BANK1", "GB_SRAM_BANK2",
+    "GB_SRAM_BANK3", "GB_SRAM_END", "sGameData", "sGameDataEnd",
+}
 
 
 def parse_symbols():
@@ -88,8 +97,7 @@ def parse_symbols():
             m = EQU_RE.match(line)
             if m:
                 name, val = m.group(1), int(m.group(2), 16)
-                if val <= 0xFFFF:
-                    syms.setdefault(name, val)   # first def wins (guarded incs)
+                syms.setdefault(name, val)   # first def wins (guarded incs)
     return syms
 
 
@@ -129,9 +137,12 @@ def main():
                     f"OVERLAP: {n1} [{s1:#06x},{e1:#06x}) and {n2} [{s2:#06x},{e2:#06x})")
 
     # 2. point symbol inside a foreign extent — only in port-invented space:
-    #    ROM window and echo RAM. pret WRAM ($C000-$DFFF) unions are legal.
+    #    ROM window, echo RAM, and the flat resident SRAM extension.
+    #    pret WRAM ($C000-$DFFF) unions are legal.
     def port_invented(a):
-        return 0x0100 <= a < 0x8000 or 0xE000 <= a < 0xFE00
+        return (0x0100 <= a < 0x8000
+                or 0xE000 <= a < 0xFE00
+                or EXTENDED_SRAM_START <= a < EXTENDED_SRAM_END)
 
     ext_names = {n for n, _, _ in extents}
     for name, addr in sorted(syms.items(), key=lambda kv: kv[1]):

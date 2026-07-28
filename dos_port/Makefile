@@ -246,10 +246,12 @@ HAL_SRCS := \
     src/input/joypad.asm \
     src/engine/joypad.asm
 
-# Save HAL — .dsv file I/O (menus S7). DsvFileExists/DsvWriteSave/DsvReadSave;
-# the SRAM-banking seam every pret save/load routine collapses onto.
+# Save HAL — legacy .dsv v1 I/O plus stage-5 raw SRAM image seams.
+# SramLoadImage/SramStoreImage are ret-stubs until the maintainers land the v2
+# disk boundary; dsv_io.asm stays linked for legacy debug harnesses.
 SAVE_SRCS := \
-    src/save/dsv_io.asm
+    src/save/dsv_io.asm \
+    src/save/save_stubs.asm
 
 # Audio subsystem (docs/current_plan_audio.md Phase A). The translated pret
 # engine writes the virtual APU block at [ebp+rAUD*]; the DelayFrame tick +

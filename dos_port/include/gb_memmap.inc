@@ -1,6 +1,6 @@
 ; gb_memmap.inc — EBP-relative offsets for the emulated Game Boy address space.
 ; Source of truth: constants/hardware.inc and the GB memory map specification.
-; All offsets are relative to EBP (the base of the 72 KB DPMI allocation).
+; All offsets are relative to EBP (the base of the DPMI allocation sized by GB_TOTAL_SIZE in boot/entry.asm).
 ; See docs/references/pandocs/Memory_Map.md for the authoritative address table.
 
 %ifndef GB_MEMMAP_INC
@@ -1384,19 +1384,89 @@ wSpriteOutputPtrCached       equ 0xD0AE   ; dw
 wSpriteDecodeTable0Ptr       equ 0xD0B0   ; dw
 wSpriteDecodeTable1Ptr       equ 0xD0B2   ; dw
 
-; Sprite buffers — pret "Sprite Buffers" SRAM section (sSpriteBuffer0/1/2, each
-; SPRITEBUFFERSIZE=0x188). SRAM ($A000-$BFFF) is free in the port (save = Phase 5).
+; Sprite buffers + save SRAM — pret ram/sram.asm, with port-resident banks.
+; DEVIATION{class=banking; pret=ram/sram.asm:sGameData; behavior=SRAM banks 1 through 3 are resident at fixed EBP-relative offsets above the GB window rather than switched through A000-BFFF; evidence=current_plan_sram_pc_storage resident SRAM design and audited CopyData destination truncation require full 32-bit SRAM addresses; lifetime=permanent flat SRAM model}
+; Bank 0 stays in the hardware SRAM window because the pic decoder stores its input
+; pointer in the 2-byte GB slot wSpriteInputPtr. Banks 1-3 are contiguous after
+; the back buffer at the next 0x1000-aligned address, so the eventual 32 KiB disk
+; image is assembled from bank 0 at $A000 plus banks 1-3 at $22000..$27FFF.
 GB_SRAM                      equ 0xA000
-sSpriteBuffer0               equ 0xA000   ; SPRITEBUFFERSIZE
-sSpriteBuffer1               equ 0xA188   ; SPRITEBUFFERSIZE (must be contiguous with buffer2:
-sSpriteBuffer2               equ 0xA310   ;   the decompressor clears 2*SPRITEBUFFERSIZE from buffer1)
+GB_SRAM_BANK0                equ 0xA000
+GB_SRAM_BANK1                equ 0x22000
+GB_SRAM_BANK2                equ 0x24000
+GB_SRAM_BANK3                equ 0x26000
+GB_SRAM_END                  equ 0x28000
+
+; Bank 0: ram/sram.asm "Sprite Buffers".
+sSpriteBuffer0               equ 0xA000
+sSpriteBuffer0_SIZE          equ 0x0188
+sSpriteBuffer1               equ 0xA188
+sSpriteBuffer1_SIZE          equ 0x0188
+sSpriteBuffer2               equ 0xA310
+sSpriteBuffer2_SIZE          equ 0x0188
+sHallOfFame                  equ 0xA598   ; after ds $100 following sSpriteBuffer2
+sHallOfFame_SIZE             equ 0x12C0   ; HOF_TEAM * HOF_TEAM_CAPACITY = 96 * 50
+
 ; PIC_STAGE — port-only GB scratch holding the COMPRESSED pic stream that
-; UncompressSpriteData reads via wSpriteInputPtr. Sits immediately above
-; sSpriteBuffer2's end ($A310 + $188 = $A498), inside the port-free SRAM window.
-; Canonical here rather than %define'd per-file: src/home/pics.asm and
-; src/engine/battle/core.asm (LoadPlayerBackPic) both need it, and a duplicated
-; address constant is the shadowing-equ trap that has cost this project two bugs.
-PIC_STAGE                    equ 0xA4A0
+; UncompressSpriteData reads via wSpriteInputPtr.
+; DEVIATION{class=data-model; pret=home/uncompress.asm:UncompressSpriteData; behavior=port-only compressed-pic scratch lives in bank 0 unused tail at B860 instead of the old A4A0 slot that overlapped sHallOfFame; evidence=ram/sram.asm puts sHallOfFame at A598 through B858 and current_plan_sram_pc_storage measured the largest compressed pic as 599 bytes; lifetime=until the pic decoder no longer stages through the 16-bit wSpriteInputPtr}
+; The bytes are unused by a real save and ride along in the future raw SRAM image
+; as harmless garbage. Headroom: $B860..$BFFF = 1952 bytes.
+PIC_STAGE                    equ 0xB860
+PIC_STAGE_SIZE               equ 0x07A0
+
+; Bank 1: ram/sram.asm "Save Data" at SRAM bank 1, with the leading ds $598.
+sGameData                    equ 0x22598
+sPlayerName                  equ 0x22598
+sPlayerName_SIZE             equ 0x000B
+sMainData                    equ 0x225A3
+sMainData_SIZE               equ 0x0789
+sSpriteData                  equ 0x22D2C
+sSpriteData_SIZE             equ 0x0200
+sPartyData                   equ 0x22F2C
+sPartyData_SIZE              equ 0x0194
+sCurBoxData                  equ 0x230C0
+sCurBoxData_SIZE             equ 0x0462
+sTileAnimations              equ 0x23522
+sTileAnimations_SIZE         equ 0x0001
+sGameDataEnd                 equ 0x23523
+sMainDataCheckSum            equ 0x23523
+sMainDataCheckSum_SIZE       equ 0x0001
+
+; Banks 2 and 3: ram/sram.asm "Saved Boxes 1" / "Saved Boxes 2".
+sBox1                        equ 0x24000
+sBox1_SIZE                   equ 0x0462
+sBox2                        equ 0x24462
+sBox2_SIZE                   equ 0x0462
+sBox3                        equ 0x248C4
+sBox3_SIZE                   equ 0x0462
+sBox4                        equ 0x24D26
+sBox4_SIZE                   equ 0x0462
+sBox5                        equ 0x25188
+sBox5_SIZE                   equ 0x0462
+sBox6                        equ 0x255EA
+sBox6_SIZE                   equ 0x0462
+sBank2AllBoxesChecksum       equ 0x25A4C
+sBank2AllBoxesChecksum_SIZE  equ 0x0001
+sBank2IndividualBoxChecksums equ 0x25A4D
+sBank2IndividualBoxChecksums_SIZE equ 0x0006
+
+sBox7                        equ 0x26000
+sBox7_SIZE                   equ 0x0462
+sBox8                        equ 0x26462
+sBox8_SIZE                   equ 0x0462
+sBox9                        equ 0x268C4
+sBox9_SIZE                   equ 0x0462
+sBox10                       equ 0x26D26
+sBox10_SIZE                  equ 0x0462
+sBox11                       equ 0x27188
+sBox11_SIZE                  equ 0x0462
+sBox12                       equ 0x275EA
+sBox12_SIZE                  equ 0x0462
+sBank3AllBoxesChecksum       equ 0x27A4C
+sBank3AllBoxesChecksum_SIZE  equ 0x0001
+sBank3IndividualBoxChecksums equ 0x27A4D
+sBank3IndividualBoxChecksums_SIZE equ 0x0006
 
 ; Connection-strip headers (each 11 bytes: map, strip-src, strip-dst, length, map-width, Y-align, X-align, view-ptr)
 W_NORTH_CONNECTED_MAP        equ 0xD370 ; wNorthConnectedMap ($FF = none)
@@ -1638,7 +1708,7 @@ MAP_NO_CONNECTION         equ 0xFF       ; sentinel: no connected map in this di
 GB_IE           equ 0xFFFF
 
 ; VRAM bank 1 (CGB only) — placed at offset $10000 (past the 64 KB GB window)
-; The allocation in entry.asm requests 72 KB (0x12000) to cover this.
+; The allocation in entry.asm covers this plus the back buffer and resident SRAM banks.
 ; CGB tile attribute data and extra tile graphics live here.
 GB_VRAM1        equ 0x10000
 GB_VRAM1_SIZE   equ 0x2000     ; 8 KB
