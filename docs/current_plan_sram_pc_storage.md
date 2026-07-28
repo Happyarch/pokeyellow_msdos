@@ -141,6 +141,33 @@ across a save/load. That is an expected intermediate — declare it, do not pape
       fails the version check and falls into the existing absent/corrupt-save branch.
       Delete v1's payload-block machinery and `saveconv.py`'s v1 constants.
 
+### Stage 7 — disk I/O efficiency  *(maintainers, next session)*
+
+What stage 5 shipped is correct but naive, and deliberately so — it was written to
+unblock the merge, not to be fast. Every `SramStoreImage` allocates a ~33 KiB
+conventional DOS buffer via DPMI 0100h, gathers all 32 KiB, checksums all 32 KiB,
+then CREATEs the file (INT 21h AH=3Ch truncates) and rewrites it whole. On a
+period HDD that is a full-image write per save.
+
+- [ ] Profile it first — nothing here has been measured, and the naive version may
+      be fine at 32 KiB.
+- [ ] Keep the DOS buffer (and possibly the file handle) alive across calls
+      instead of alloc/free per save.
+- [ ] Track dirty banks and seek (AH=42h) + write only those. Bank 2/3 change only
+      on a box swap; bank 0 changes on nothing the player does.
+- [ ] Maintain a running checksum rather than a full-image pass.
+- [ ] Decide whether a torn write mid-save is worth guarding (write-to-temp +
+      rename), or whether the header checksum already makes it detectable.
+
+### Stage 8 — real-save seeding  *(maintainers, opportunistic)*
+
+- [ ] Implement `saveconv.py --to-dos` / `--to-gb`. Under v2 this is a header
+      prepend + checksum and a header strip respectively — the WRAM-layout
+      translation that made it a "Phase 5" item no longer exists.
+- [ ] Use a real Pokémon Yellow `.sav` as golden seed data. It fills the box banks,
+      which no debug seeder currently does, so it is the cheapest route to
+      meaningful box coverage.
+
 ### Stage 6 — sweep  *(maintainers)*
 - [ ] Retire every `TODO-HW: SRAM`; close M-106 / M-107 at their sites.
 - [ ] New goldens: a `datastruct` deposit/withdraw/release scenario and a change-box
