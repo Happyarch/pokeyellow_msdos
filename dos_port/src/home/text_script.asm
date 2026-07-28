@@ -199,9 +199,21 @@ DisplayTextID:
     and esi, 0xFFFF                       ; faithful 16-bit GB-pointer wrap
     ; hl = [hl] (LE 16-bit pointer to the text stream)
     movzx esi, word [ebp + esi]
+    ; Name the GB-space stream as a FLAT pointer, so both paths reach
+    ; .readFirstByte with the same convention (the PrintTextStaged idiom in
+    ; src/home/window.asm). Everything downstream — the dict reads below and
+    ; PrintText_NoCreatingTextBox — is documented flat.
+    lea esi, [ebp + esi]
 .readFirstByte:
-    ; ld a,[hl] — a = first byte of text
-    movzx eax, byte [ebp + esi]
+    ; ld a,[hl] — a = first byte of text.
+    ; ESI IS FLAT HERE ON BOTH PATHS. This read was `[ebp + esi]`, which on the
+    ; ordinary map path double-biased an already-flat pointer from
+    ; w_map_text_table_ptr and landed outside the ~96 KB GB allocation, so the
+    ; TX_SCRIPT_* dispatch below compared an arbitrary byte. It was masked
+    ; because that garbage rarely equals a TX_SCRIPT_* constant and
+    ; PrintText_NoCreatingTextBox then received the correct flat ESI — i.e. the
+    ; whole golden suite passed THROUGH the bug rather than over it.
+    movzx eax, byte [esi]
 
     ; ── check first byte of text for special cases (pret `dict`/`dict2`) ──
     ; dict  TX_SCRIPT_MART,             DisplayPokemartDialogue
