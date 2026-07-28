@@ -579,10 +579,24 @@ into `assets/ui_layout_<subsystem>.inc`. `ui_layout/seed_from_battle.py` /
 existing battle layout / from pret's `TextBoxCoordTable` — run once when adding
 a new subsystem's sidecar, not part of the normal edit loop.
 
-**Save converter:** `tools/saveconv.py` is a **stub** — `.sav`↔`.dsv`
-conversion is not implemented yet (Phase 5). The `.dsv` format it will target
-is already real and documented in its own header (`src/save/dsv_io.asm` writes/
-reads version-1 files).
+**Save converter:** `tools/saveconv.py`'s `.sav`↔`.dsv` **conversion is still a
+stub** (Phase 5) — `--to-dos`/`--to-gb` and a bare invocation both print the
+not-implemented notice and exit 1. The `.dsv` format it will target is already
+real and documented in its own header (`src/save/dsv_io.asm` writes/reads
+version-1 files), and one read-only mode is implemented against it:
+
+```sh
+tools/saveconv.py --verify POKEMON.DSV   # --info is an alias
+```
+
+It applies exactly the checks `dsv_io.asm:DsvReadSave` makes before scattering a
+file into WRAM — total size 3985, `DOSV` magic, version byte, and the 16-bit
+LE **additive** payload checksum (`sum(payload) & 0xFFFF`, not a CRC) — so a
+file it accepts is one the port will load, and a file it rejects is one the port
+drops into its corrupt-save branch. Exit 0 + a summary on success; exit 1 with
+the expected-vs-found value on the first mismatch. The 3978-byte payload stays
+opaque: those block boundaries belong to `gb_memmap.inc`, and a second copy here
+would drift.
 
 ## Auditioning music (listen to a track — do NOT tailspin into rebuilds)
 
