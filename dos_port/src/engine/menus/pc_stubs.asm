@@ -1,11 +1,10 @@
-; pc_stubs.asm — integration-spine seam stubs for the PC main menu (menus-port
-; Session 9). PCMainMenu (pc.asm) reaches two routines that pret files under
-; engine/pokemon/bills_pc.asm, which docs/current_plan_pokemon_behavior.md
-; (Stage 6, still open) owns: the menus plan out-of-scope rule is "stub the
-; seams, never touch its files." These honest stubs let the faithful PCMainMenu
-; control flow link and be exercised today; each is DELETED when its real routine
-; lands in bills_pc.asm (the league_pc_stubs.asm / main_menu_stubs.asm pattern —
-; the duplicate global forces removal, exactly as "real X replaced stub" in S7).
+; pc_stubs.asm — integration-spine seam stub for the PC main menu (menus-port
+; Session 9). PCMainMenu (pc.asm) reaches one remaining routine that pret files
+; under engine/pokemon/bills_pc.asm. The DisplayPCMainMenu stub this file also
+; held is RETIRED — the real routine lives in engine/pokemon/bills_pc.asm now.
+; This stub is DELETED when the real BillsPC_ lands there too (the
+; league_pc_stubs.asm / main_menu_stubs.asm pattern — the duplicate global
+; forces removal, exactly as "real X replaced stub" in S7).
 ;
 ; Register map: A→AL, HL→ESI, BC→BX, DE→DX; GB mem = [ebp+SYM] (gb_memmap.inc).
 
@@ -14,28 +13,6 @@ bits 32
 %include "gb_memmap.inc"
 
 section .text
-
-; STUB{class=stub; label=DisplayPCMainMenu; pret=engine/pokemon/bills_pc.asm:DisplayPCMainMenu; behavior=initialize only the pre-Pokedex menu variables without drawing the PC main-menu box; evidence=project_state:DisplayPCMainMenu reports linked stub; lifetime=until the Bill's PC UI is ported}
-; DisplayPCMainMenu (pret engine/pokemon/bills_pc.asm)
-; draws the BILL's/player's/OAK's/league/LOG-OFF box (event-gated, TextBoxBorder +
-; PlaceString) and arms the menu vars. The real routine is pokemon_behavior Stage 6.
-; The stub does NOT draw the box (that is the pokemon_behavior work), but it arms
-; the menu vars so PCMainMenu's [wMaxMenuItem]/[wCurrentMenuItem] dispatch and
-; HandleMenuInput run on defined state rather than garbage. wMaxMenuItem = 2 is
-; pret's pre-Pokédex layout (BILL's / player's / LOG OFF). Delete when the real
-; DisplayPCMainMenu lands.
-global DisplayPCMainMenu
-DisplayPCMainMenu:
-    xor al, al
-    mov [ebp + hAutoBGTransferEnabled], al
-    mov byte [ebp + wMaxMenuItem], 2
-    mov byte [ebp + wTopMenuItemY], 2
-    mov byte [ebp + wTopMenuItemX], 1
-    mov byte [ebp + wCurrentMenuItem], 0
-    mov byte [ebp + wLastMenuItem], 0
-    mov byte [ebp + wMenuWatchedKeys], PAD_A | PAD_B
-    mov byte [ebp + hAutoBGTransferEnabled], 1
-    ret
 
 ; STUB{class=stub; label=BillsPC_; pret=engine/pokemon/bills_pc.asm:BillsPC_; behavior=return immediately instead of running the storage-box UI; evidence=project_state:BillsPC_ reports linked ret stub; lifetime=until the Bill's PC UI is ported}
 ; BillsPC_ (pret engine/pokemon/bills_pc.asm) is

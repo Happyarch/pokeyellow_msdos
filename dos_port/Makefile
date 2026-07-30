@@ -1024,7 +1024,18 @@ ifdef DEBUG_PC
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_PC
 NASMFLAGS += -D SKIP_TITLE
-NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_QUIET -D AUTOKEY_DUMP_FRAME=90
+# Default: no presses, photograph the open TurnedOnPC1Text dialog at frame 90.
+# PC_APRESS=1 swaps in the A-press train so the flow advances past the dialog —
+# how the real DisplayPCMainMenu box gets photographed (it is drawn only after
+# the prompt is answered). AUTOKEY_DUMP_FRAME is overridable (M-120 class: the
+# hardcoded -D beat the command line here too).
+ifdef PC_APRESS
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_APRESS
+else
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_QUIET
+endif
+AUTOKEY_DUMP_FRAME ?= 90
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 endif
 # League-PC gate (menu-fidelity row 17 part 4): boot to overworld, call PKMNLeaguePC.
 # It PrintTexts AccessedHoFPCText and blocks in the stream's page-break prompt; with
@@ -1485,6 +1496,7 @@ FRONTEND_SRCS := \
     src/engine/battle/print_type.asm \
     src/engine/battle/load_enemy_moves.asm \
     src/engine/battle/pokeballs.asm \
+    src/engine/battle/draw_hud_pokeball_gfx.asm \
     src/data/trainer_pics.asm \
     src/data/mon_pics.asm \
     src/engine/battle/battle_stubs.asm \

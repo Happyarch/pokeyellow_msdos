@@ -62,8 +62,9 @@ global AccessedBillsPCText
 global AccessedSomeonesPCText
 global AccessedMyPCText
 
-extern DisplayPCMainMenu             ; pc_stubs.asm SEAM (pokemon_behavior S6)
+extern DisplayPCMainMenu             ; engine/pokemon/bills_pc.asm (real, draws + arms)
 extern BillsPC_                      ; pc_stubs.asm SEAM (pokemon_behavior S6)
+extern menu_redraw_cb                ; home/window.asm — armed by DisplayPCMainMenu
 extern PlayerPC                      ; engine/menus/players_pc.asm
 extern OpenOaksPC                    ; engine/menus/oaks_pc.asm
 extern PKMNLeaguePC                  ; engine/menus/league_pc.asm
@@ -125,9 +126,11 @@ ActivatePC:
 ; layout ([wMaxMenuItem]) and selection ([wCurrentMenuItem]).
 ; ---------------------------------------------------------------------------
 PCMainMenu:
-    call DisplayPCMainMenu                    ; farcall — SEAM (draws menu, sets wMaxMenuItem)
+    call DisplayPCMainMenu                    ; farcall (draws menu window, sets wMaxMenuItem)
     or byte [ebp + wMiscFlags], (1 << BIT_NO_MENU_BUTTON_SOUND)  ; set BIT_NO_MENU_BUTTON_SOUND, [hl]
     call HandleMenuInput
+    ; DEVIATION{class=projection; pret=engine/menus/pc.asm:PCMainMenu; behavior=disarm the per-frame cursor-mirror callback DisplayPCMainMenu armed for HandleMenuInput; evidence=port menu_redraw_cb is global mutable state and a later screen's HandleMenuInput would replay this scratch, the players_pc.asm PlayerPCMenu precedent; lifetime=permanent window-compositor boundary}
+    mov dword [menu_redraw_cb], 0
     test al, PAD_B                            ; bit B_PAD_B, a
     jnz LogOff                                ; jp nz, LogOff
     mov al, [ebp + wMaxMenuItem]
@@ -214,6 +217,8 @@ LogOff:
     mov al, SFX_TURN_OFF_PC
     call PlaySound
     call WaitForSoundToFinish
+    ; DEVIATION{class=projection; pret=engine/menus/pc.asm:LogOff; behavior=drop the PC main-menu window descriptor on the B-press exit path; evidence=every other PCMainMenu exit sheds it through a dialog set_single_window or a sub-screen teardown while LogOff prints nothing, the ExitPlayerPC hide_window precedent; lifetime=permanent window-compositor boundary}
+    call hide_window
     and byte [ebp + wMiscFlags], (~(1 << BIT_USING_GENERIC_PC)) & 0xFF       ; res BIT_USING_GENERIC_PC, [hl]
     and byte [ebp + wMiscFlags], (~(1 << BIT_NO_MENU_BUTTON_SOUND)) & 0xFF   ; res BIT_NO_MENU_BUTTON_SOUND, [hl]
     ret

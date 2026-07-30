@@ -14,6 +14,8 @@ bits 32
 %include "gb_constants.inc"
 
 global LoadPokedexTilePatterns
+extern PokeballTileGraphics         ; engine/battle/draw_hud_pokeball_gfx.asm (its
+                                    ; pret mirror); tile 0 is the caught marker
 
 extern LoadHpBarAndStatusTilePatterns  ; src/home/load_font.asm
 extern g_tilecache_dirty               ; src/ppu/ppu.asm
