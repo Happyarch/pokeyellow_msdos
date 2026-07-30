@@ -32,3 +32,15 @@ section .text
 global PrintPokedexEntry
 PrintPokedexEntry:
     ret
+
+; STUB{class=stub; label=PrintPCBox; pret=engine/printer/printer.asm:PrintPCBox; behavior=return immediately instead of printing the current box over the GB Printer serial link; evidence=no other PrintPCBox definition under dos_port/src and no serial HAL exists, caller BillsPCPrintBox reads no flags or registers back; lifetime=until a serial HAL exists (Phase 4) and a printer plan owns the module}
+; PrintPCBox (pret engine/printer/printer.asm) drives the whole printer session:
+; box-empty check, sprite/interrupt save, Printer_PlayPrinterMusic, the
+; page-draw loop (PrintPCBox_DrawPage1..4) and the serial transfer. Same
+; contract argument as PrintPokedexEntry above: pret's caller (BillsPCPrintBox)
+; is `callfar PrintPCBox` then an unconditional `jp BillsPCMenu`, so an
+; immediate return is exactly "PRNT with no printer attached" and misleads no
+; caller.
+global PrintPCBox
+PrintPCBox:
+    ret

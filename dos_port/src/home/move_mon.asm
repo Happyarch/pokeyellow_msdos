@@ -1,11 +1,14 @@
 ; move_mon.asm — mirror of pret home/move_mon.asm.
 ;
-; Holds four of that file's seven pret labels, in pret order:
-;   CopyDataUntil, AddPartyMon, CalcStats, CalcStat
+; Holds six of that file's seven pret labels, in pret order:
+;   CopyDataUntil, RemovePokemon, AddPartyMon, CalcStats, CalcStat, MoveMon
 ; CopyDataUntil arrived from src/home/copy_data.asm in the mirror repair; the file
 ; was measured already pret-ordered, so it was prepended and the whole file still is.
-; The other three — RemovePokemon, AddEnemyMonToPlayerParty and MoveMon — are
-; unported (status `missing`, no port definition anywhere).
+; RemovePokemon/MoveMon are the home wrappers over the long-linked _RemovePokemon/
+; _MoveMon engine bodies (pret jpfar / homecall_sf; flat model -> plain jmp, which
+; also trivially preserves _MoveMon's CF the way homecall_sf exists to do).
+; AddEnemyMonToPlayerParty remains unported (status `missing`, no port definition
+; anywhere).
 ;
 ; Stat formula (per stat): (((Base + IV) * 2 + ceil(sqrt(statExp))/4) * Level)/100
 ;   then + Level + 10 for HP, or + 5 for the others; capped at MAX_STAT_VALUE (999).
@@ -30,6 +33,10 @@ global CalcStat
 global AddPartyMon
 extern _AddPartyMon
 global CopyDataUntil
+global RemovePokemon
+extern _RemovePokemon              ; src/engine/pokemon/remove_mon.asm
+global MoveMon
+extern _MoveMon                    ; src/engine/pokemon/add_mon.asm
 
 MAX_STAT_HIGH   equ (MAX_STAT_VALUE >> 8) & 0xFF    ; HIGH(999) = 0x03
 MAX_STAT_LOW    equ MAX_STAT_VALUE & 0xFF            ; LOW(999)  = 0xE7
@@ -56,6 +63,15 @@ CopyDataUntil:
     cmp si, bx
     jne CopyDataUntil
     ret
+
+; ---------------------------------------------------------------------------
+; RemovePokemon — home wrapper: remove a mon from the party or the current box.
+; wWhichPokemon picks the mon; [wRemoveMonFromBox] == 0 = party, != 0 = box.
+; pret: `jpfar _RemovePokemon` — a tail jump through the bank switch; the flat
+; model keeps the tail jump and drops only the banking.
+; ---------------------------------------------------------------------------
+RemovePokemon:
+    jmp _RemovePokemon
 
 ; ---------------------------------------------------------------------------
 ; AddPartyMon — home wrapper around _AddPartyMon (pret home/move_mon.asm).
@@ -275,3 +291,13 @@ CalcStat:
     pop edx
     pop esi
     ret
+
+; ---------------------------------------------------------------------------
+; MoveMon — home wrapper around _MoveMon (party<->box mover; reads
+; wMoveMonType, returns CF set on failure). pret: `homecall_sf _MoveMon` +
+; ret — the flag-SAVING banked call, because every caller reads _MoveMon's CF
+; after the bank restore. The flat model's tail jump passes CF through
+; untouched, which is the entire point of the _sf variant.
+; ---------------------------------------------------------------------------
+MoveMon:
+    jmp _MoveMon

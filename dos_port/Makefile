@@ -1942,7 +1942,7 @@ assets/gb_charmap.txt:
 assets/menu_strings.inc assets/menu_text.inc assets/trainer_card_strings.inc \
         assets/party_menu_strings.inc assets/home_pokemon_strings.inc \
         assets/options_strings.inc assets/naming_strings.inc \
-        assets/pokedex_strings.inc: \
+        assets/pokedex_strings.inc assets/bills_pc_text.inc: \
         assets/gb_charmap.txt tools/generators/gen_menu_strings.py \
         tools/generators/gb_text.py tools/generators/gen_battle_text.py
 	python3 tools/generators/gen_menu_strings.py
@@ -2368,6 +2368,7 @@ assets: assets/scenario_registry.inc \
         assets/moves.inc assets/evos_moves.inc assets/monster_names.inc \
         assets/items.inc assets/item_text.inc assets/gb_charmap.txt assets/menu_strings.inc \
         assets/naming_strings.inc assets/pokedex_strings.inc \
+        assets/bills_pc_text.inc \
         assets/status_strings.inc assets/textbox_strings.inc assets/menu_text.inc \
 		$(RUNTIME_STRING_ASSETS) \
         assets/list_menu_strings.inc assets/yes_no_strings.inc \

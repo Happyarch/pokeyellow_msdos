@@ -591,6 +591,42 @@
    "pret_ref": "docs/ui_projection.md",
    "anchor_source": "inferred",
    "notes": "full 20x18 composite of 3 boxes: View/Rules (hlcoord 0,0 lb 4,5 ->7x6), cup list (hlcoord 8,0 lb 8,10 ->12x10, cursor Y=2,X=9), rules panel (hlcoord 0,10 lb 6,18 ->20x8); own mirror -> GB_TILEMAP1"
+  },
+  {
+   "id": "PC_MAIN_MENU",
+   "kind": "textbox",
+   "gb_x": 0,
+   "gb_y": 0,
+   "gb_w": 16,
+   "gb_h": 12,
+   "anchor_x": "center",
+   "anchor_y": "top",
+   "movable": true,
+   "resizable": true,
+   "min_w": 3,
+   "min_h": 3,
+   "source": "; PROJ bills_pc.asm (DisplayPCMainMenu)",
+   "pret_ref": "docs/ui_projection.md",
+   "anchor_source": "inferred",
+   "notes": "generic-PC selector over the live overworld; pret hlcoord 0,0 TextBoxBorder lb bc,{6|8|10},14 -> 16x{8|10|12}; sized to the tallest (league) variant, drawn at the actual event-gated height with unused scratch rows blanked. Same basis as UI_PLAYERS_PC_MENU."
+  },
+  {
+   "id": "BILLS_PC",
+   "kind": "window",
+   "gb_x": 0,
+   "gb_y": 0,
+   "gb_w": 20,
+   "gb_h": 18,
+   "anchor_x": "center",
+   "anchor_y": "top",
+   "movable": true,
+   "resizable": false,
+   "min_w": 3,
+   "min_h": 3,
+   "source": "; PROJ bills_pc.asm (BillsPCMenu)",
+   "pret_ref": "docs/ui_projection.md",
+   "anchor_source": "inferred",
+   "notes": "full 20x18 GB-screen takeover (menu box 0,0 14x14 + message strip 0,12 20x6 + BOX No. 9,14 11x4 + deposit/withdraw submenu 9,10 11x8 all live in one scratch); every pret coordinate lands 1:1. Own mirror like UI_NAMING_SCREEN."
   }
  ]
 }

@@ -206,6 +206,7 @@ wPPRestoreItem         equ 0xCD3D   ; which Ether/Elixer item is being used
 wWereAnyMonsAsleep     equ 0xCD3D   ; Poke Flute: set if a party mon woke (aliased)
 wChargeMoveNum         equ 0xCD3D   ; charge move number (aliased union lane)
 wDexMaxSeenMon         equ 0xCD3D   ; pokedex.asm: highest seen dex # (aliased union lane, S8)
+wBoxNumString          equ 0xCD3D   ; bills_pc.asm: 3-byte "##"/spaces box-number text spliced into MonWasStoredText (aliased union lane, pret ram/wram.asm:809)
 wMaxPP                 equ 0xD11D   ; max PP of the move being PP-restored
 ; --- item-use dispatch state (engine/items/item_effects.asm:UseItem_) ---
 wPseudoItemID          equ 0xD151   ; nonzero = a move/field action is impersonating

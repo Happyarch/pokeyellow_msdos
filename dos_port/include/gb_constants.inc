@@ -213,6 +213,7 @@ PIKAHAPPY_LEVELUP      equ 1       ; constants/pikachu_emotion_constants.asm
 PIKAHAPPY_USEDITEM     equ 2       ; (ItemUseMedicine: a non-vitamin item was used on a mon)
 PIKAHAPPY_USEDXITEM    equ 3       ; (X Accuracy / X Attack&co / Dire Hit / Guard Spec)
 PIKAHAPPY_USEDTMHM     equ 5       ; (ItemUseTMHM: a TM/HM was taught to a party mon)
+PIKAHAPPY_DEPOSITED    equ 7       ; (BillsPCDeposit: starter Pikachu was boxed)
 STATUS_SCREEN_STATS_BOX equ 0      ; constants/menu_constants.asm (PrintStatsBox d=0 → status-screen box)
 LEVEL_UP_STATS_BOX     equ 1       ; constants/menu_constants.asm (STATUS_SCREEN=0)
 SET_PAL_BATTLE         equ 0x01    ; constants/palette_constants.asm (RunPaletteCommand id)
