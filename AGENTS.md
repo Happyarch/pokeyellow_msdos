@@ -166,7 +166,14 @@ to track now live in `docs/current_plan_backlog.md` (memory
 `todo-md-deleted-orphaned-trackers` records what moved and why).
 Phase 1 delivered the BG tile decoder + tilemap renderer with SCX/SCY scrolling
 (`src/ppu/ppu.asm`) and the keyboard → joypad ISR (`src/input/joypad.asm`);
-window layer, OAM sprites, and the save system remain open there.
+window layer and OAM sprites remain open there. The save system is real: all
+four SRAM banks resident (flat, `class=banking`), `.dsv` v2 persistence
+(`src/save/dsv_io.asm`), the Bill's PC box UI as the faithful pret mirror
+(`src/engine/pokemon/bills_pc.asm`), and the whole tier golden-gated
+(`bills_pc_ops` + `box_change_roundtrip` — the latter is the only runtime path
+into SRAM banks 2/3). The sram plan is archived at
+`docs/plans/sram_pc_storage.md`; its one open flag is the torn-write-guard
+acceptance awaiting maintainer sign-off (stage 7).
 
 Phase 2 so far: `Init`/`ClearVram`/`StopAllSounds` (`src/home/init.asm`),
 supporting home routines (`src/home/copy.asm`, `src/home/lcd.asm`,

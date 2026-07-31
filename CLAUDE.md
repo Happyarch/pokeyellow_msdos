@@ -187,9 +187,13 @@ port emulates all four **SRAM banks resident** (bank 0 at `$A000`, banks 1-3 at
 `$22000-$27FFF`, `class=banking` deviation, same flat model as ROM), pret's
 save/load/box routines read and write the real `s*` addresses, and
 `src/save/dsv_io.asm` persists the whole 32 KiB image as `.dsv` **v2**
-(`SramLoadImage` at boot, `SramStoreImage` at each save commit). What is still
-open is the PC **UI** and the box golden scenarios —
-`docs/current_plan_sram_pc_storage.md` stage 6.
+(`SramLoadImage` at boot, `SramStoreImage` at each save commit). The Bill's PC
+box UI is the faithful pret mirror (`src/engine/pokemon/bills_pc.asm`), and the
+whole tier is golden-gated: `bills_pc_ops` (deposit/withdraw/release through
+the real UI on both sides) and `box_change_roundtrip` (the change-box round
+trip — the only runtime path into SRAM banks 2/3). The sram plan is archived
+at `docs/plans/sram_pc_storage.md`; its one open flag is the torn-write-guard
+acceptance awaiting maintainer sign-off (stage 7).
 
 Phase 2 so far: `Init`/`ClearVram`/`StopAllSounds` (`src/home/init.asm`),
 supporting home routines (`src/home/copy.asm`, `src/home/lcd.asm`,

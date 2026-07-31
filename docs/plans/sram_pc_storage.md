@@ -8,14 +8,13 @@
 > regression to fix now. Do not quote a finding count from this file, CLAUDE.md, a
 > skill or a memory as evidence that a class is clean — re-measure it.
 
-**Status:** stages 1-5 and 8 complete; stage 7 partially (the two unconditional
-wins; the profiling and every trade that depends on it are still open); stage 6
-half done — the box **data** layout is now covered by `save_boxes_load`, the box
-**behaviour** (deposit/withdraw/change-box, and with it SRAM banks 2/3 at
-runtime) is not. Stages 1-4 came from PR #2 (external agent); stage 5 (the `.dsv`
-v2 disk boundary) and the review fixes landed with the merge. Note **stage 8 did
-not shrink stage 6** (see the correction under stage 8). Measured against the
-linked build; see the merge commit for the gate output.
+**Status: COMPLETE (archived 2026-07-31).** All stages closed. Stages 1-4 came
+from PR #2 (external agent); stage 5 (the `.dsv` v2 disk boundary) landed with
+the merge; stage 8 (real-save seeding) 2026-07-28; stage 6 finished across the
+Bill's PC sweep C1-C5 (a2ea6550, be175e0d, 0c9afce5, 6a3f76c4, c0b34720) and
+stage 7's profiling + trade decisions in C6 (052fe406). The one open flag left
+behind: the torn-write-guard acceptance under stage 7 awaits maintainer
+sign-off (durability call, alternative priced at ~8.7 ms/save).
 
 **A pre-existing harness hazard was closed on the way** (it had to be, before any
 save-reading scenario could be trusted): `goldencheck.sh` purged `GBSTATE.BIN`,
@@ -299,17 +298,28 @@ so bank 0 came back changed). A golden run must never mutate its own input.
       scenario-local `%ifdef` regions (the `DEBUG_MAPSCRIPT_SIGHT` precedent), and
       the differ joins by name, so the shared `dump.standard_regions` set was left
       alone and all existing goldens are untouched.
-- [ ] **The box BEHAVIOUR half is still open, and `save_boxes_load` does NOT
-      shrink it.** A CONTINUE load copies `sCurBoxData` — bank 1 — into WRAM and
-      never reads `sBoxN`, so SRAM banks 2 and 3 remain unexercised at runtime.
-      Still needed: a `datastruct` deposit/withdraw/release scenario and a
-      change-box round trip (deposit into box 1 → change to box 2 → change back →
-      the mon is still there). `item_potion_use` / `ball_catch` are the
-      WRAM-mutation templates. Blocked in practice on the PC UI, since `ChangeBox`
-      is how banks 2/3 are reached; a debug gate calling `ChangeBox` directly is
-      the likely way in, but the golden side then needs the same path through
-      Bill's PC.
-- [ ] Update the memories and archive this plan to `docs/plans/sram_pc_storage.md`.
+- [x] **The box BEHAVIOUR half is covered (C1-C5, commits a2ea6550..c0b34720,
+      2026-07-31).** The blocker fell first: the whole Bill's PC UI is now the
+      faithful pret mirror (`src/engine/pokemon/bills_pc.asm`, C1-C3 — the
+      port-only `BillsPC*Logic` fork trio is deleted, `pc_stubs.asm` retired).
+      Then the two goldens landed:
+      - `bills_pc_ops` (id 37, C4 = 6a3f76c4): deposit PERSIAN → deposit
+        JIGGLYPUFF → withdraw PERSIAN (44B→33B→44B round trip + stat
+        recompute) → release JIGGLYPUFF, through the REAL UI on both sides
+        (port: DEBUG_BILLSPC/AUTOKEY_BILLSPC; golden: a walk to the Viridian
+        Center PC via lib/pc.lua's re-planning navigator). Its first run
+        caught a real bug: `wLoadedMonBoxLevel` equ was `0xCFB3`
+        (wLoadedMon+28 = DV byte 2) instead of `0xCF9A` (+3), so the PC list
+        printed a DV byte as the box level.
+      - `box_change_roundtrip` (id 38, C5 = c0b34720): deposit PERSIAN →
+        CHANGE BOX to BOX12 (first change runs `EmptyAllSRAMBoxes`; bank-3
+        traffic both ways + a real `SaveGameData`) → back to BOX 1. PERSIAN
+        surviving in the final `wBoxData` proves the bank-2 store AND load;
+        `wCurrentBoxNum` = `$80` on both sides. **SRAM banks 2/3 are now
+        exercised and golden-gated at runtime** — the last unexercised piece
+        of the resident-SRAM model.
+- [x] Update the memories and archive this plan to `docs/plans/sram_pc_storage.md`.
+      (C7 — this edit is part of that commit.)
 
 ### The sequencing hazard
 Stage 4 stops the pret save routines from reaching disk. `continue_seed` is a

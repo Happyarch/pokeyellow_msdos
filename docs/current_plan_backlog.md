@@ -198,11 +198,13 @@ From `docs/plans/battle_ui.md`. The battle scene is still GB-centred on the
 
 ## Menus / screens
 
-### 11. Bill's PC full UI
-From `docs/plans/pokemon_behavior.md`. `BillsPCDepositLogic` /
-`BillsPCWithdrawLogic` / `BillsPCReleaseLogic` exist in
-`src/engine/pokemon/bills_pc.asm`, which is **check-only — assembled but not
-linked**. The logic is written; the UI that would reach it is not.
+### 11. Bill's PC full UI — DONE 2026-07-31 (sram plan C1-C5, a2ea6550..c0b34720)
+From `docs/plans/pokemon_behavior.md`. Closed: the whole Bill's PC UI is the
+faithful pret mirror in `src/engine/pokemon/bills_pc.asm`, LINKED, and driven
+end-to-end by two goldens (`bills_pc_ops` id 37, `box_change_roundtrip` id 38).
+The port-only `BillsPC*Logic` fork names this item used to cite are DELETED —
+the pret-labeled `BillsPCDeposit`/`BillsPCWithdraw`/`BillsPCRelease` bodies
+replaced them. See `docs/plans/sram_pc_storage.md` stage 6.
 
 ### 12. Status screen: front pic, cry, and the STATS wire-up
 From `docs/plans/pokemon_behavior.md`.
