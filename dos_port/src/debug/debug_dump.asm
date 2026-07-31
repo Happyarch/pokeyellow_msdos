@@ -2844,6 +2844,67 @@ autokey_script:
     dd 1700 + BPC_AKS, 1710 + BPC_AKS, PAD_B    ; SEE YA (ExitBillsPC) → harness hang loop
     dd 1780 + BPC_AKS, 1790 + BPC_AKS, PAD_B    ; spare — harmless in the hang loop
     dd  -1,  -1, 0
+%elifdef AUTOKEY_BILLSPC_CHANGE
+    ; sram-plan stage 6 (DEBUG_BILLSPC_CHANGEBOX): the change-box round trip —
+    ; the ONLY runtime path into SRAM banks 2/3.
+    ;   deposit PERSIAN → CHANGE BOX → YES (first change runs EmptyAllSRAMBoxes,
+    ;   banks 2+3 init) → BOX12 (11×DOWN, A — bank-3 traffic both ways +
+    ;   SaveGameData) → CHANGE BOX back to BOX 1 → SEE YA
+    ; PERSIAN surviving in the final wBoxData proves the bank-2 store AND load;
+    ; wCurrentBoxNum must read $80 (box 0 | BIT_HAS_CHANGED_BOXES).
+    ; Cadence: the AUTOKEY_BILLSPC 60-frame/10-hold rhythm. Press budget for
+    ; _WhenYouChangeBoxText (data/text/text_4.asm): cont + para = TWO presses,
+    ; its `done` leaves the box up for YesNoChoice. ChangeBox's SaveGameData
+    ; needs NO press (NowSavingText); the 240-frame quiet gaps after each box
+    ; pick cover SFX_SAVE + WaitForSoundToFinish + the .dsv store.
+    ; After ChangeBox returns, BillsPCMenu re-enters with wParentMenuItem = 3,
+    ; so the second CHANGE BOX needs only an A.
+%ifdef BILLSPC_ATTACH_DELAY
+%assign BPC_AKS BILLSPC_ATTACH_DELAY    ; RunBillsPCTest idles this many frames
+%else
+%assign BPC_AKS 0
+%endif
+    dd   40 + BPC_AKS,   50 + BPC_AKS, PAD_DOWN ; menu 0→1 (DEPOSIT)
+    dd  100 + BPC_AKS,  110 + BPC_AKS, PAD_A    ; open the party mon list
+    dd  160 + BPC_AKS,  170 + BPC_AKS, PAD_DOWN ; list 0→1 (PERSIAN)
+    dd  220 + BPC_AKS,  230 + BPC_AKS, PAD_A    ; select PERSIAN → DEPOSIT/STATS/CANCEL
+    dd  280 + BPC_AKS,  290 + BPC_AKS, PAD_A    ; DEPOSIT → "PERSIAN was stored in BOX 1."
+    dd  360 + BPC_AKS,  370 + BPC_AKS, PAD_A    ; dismiss (prompt) → BillsPCMenu (cursor 1)
+    dd  440 + BPC_AKS,  450 + BPC_AKS, PAD_DOWN ; menu 1→2 (RELEASE)
+    dd  500 + BPC_AKS,  510 + BPC_AKS, PAD_DOWN ; menu 2→3 (CHANGE BOX)
+    dd  560 + BPC_AKS,  570 + BPC_AKS, PAD_A    ; CHANGE BOX → "When you change a..."
+    dd  640 + BPC_AKS,  650 + BPC_AKS, PAD_A    ; cont: "will be saved."
+    dd  700 + BPC_AKS,  710 + BPC_AKS, PAD_A    ; para: "Is that okay?" → YES/NO box
+    dd  760 + BPC_AKS,  770 + BPC_AKS, PAD_A    ; YES → EmptyAllSRAMBoxes → box menu (BOX 1)
+%assign BPC_I 0
+%rep 11
+    dd  820 + BPC_I * 60 + BPC_AKS, 830 + BPC_I * 60 + BPC_AKS, PAD_DOWN ; → BOX12
+%assign BPC_I BPC_I + 1
+%endrep
+    dd 1540 + BPC_AKS, 1550 + BPC_AKS, PAD_A    ; pick BOX12 → save + swap (banks 2→3)
+    ; Second CHANGE BOX — measured, NOT symmetric with the first. Two traps
+    ; (FRAME.BIN bisects at 1860/2060/2160):
+    ;  1. A 10-frame opener hold can DOUBLE-CONSUME (select + the text's cont
+    ;     wait reads the still-held A — the dialog box is already drawn this
+    ;     time, so page 1 prints before the hold releases). 4-frame hold.
+    ;  2. The first pick's SaveGameData (.dsv write, host disk I/O) jitters
+    ;     the frame timeline by a few frames run-to-run, so a press near a
+    ;     wait boundary lands in DIFFERENT states across otherwise-identical
+    ;     runs. Every gap here is >= 120 frames so the jitter cannot reorder
+    ;     press vs wait.
+    dd 1840 + BPC_AKS, 1844 + BPC_AKS, PAD_A    ; CHANGE BOX (short hold — trap 1)
+    dd 1960 + BPC_AKS, 1964 + BPC_AKS, PAD_A    ; cont: "will be saved."
+    dd 2080 + BPC_AKS, 2084 + BPC_AKS, PAD_A    ; para: "Is that okay?" → YES/NO box
+    dd 2200 + BPC_AKS, 2210 + BPC_AKS, PAD_A    ; YES → box menu (cursor BOX12)
+%assign BPC_I 0
+%rep 11
+    dd 2320 + BPC_I * 60 + BPC_AKS, 2330 + BPC_I * 60 + BPC_AKS, PAD_UP ; → BOX 1
+%assign BPC_I BPC_I + 1
+%endrep
+    dd 3040 + BPC_AKS, 3050 + BPC_AKS, PAD_A    ; pick BOX 1 → save + swap back (bank 2)
+    dd 3340 + BPC_AKS, 3350 + BPC_AKS, PAD_B    ; SEE YA (ExitBillsPC) → harness hang loop
+    dd 3420 + BPC_AKS, 3430 + BPC_AKS, PAD_B    ; spare — harmless in the hang loop
+    dd  -1,  -1, 0
 %elifdef AUTOKEY_FLY
     ; overworld-events Stage 4 (DEBUG_AUTOKEY AUTOKEY_FLY): drive the real FLY path
     ; end-to-end so the town-map destination selection warps and ARRIVES, not just

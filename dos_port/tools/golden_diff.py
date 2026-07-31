@@ -694,6 +694,19 @@ SCENARIOS = {
         "flags": "DEBUG_BILLSPC=1",
         "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
     },
+    "box_change_roundtrip": {
+        "class": "datastruct",
+        # The change-box round trip -- the only runtime path into SRAM banks
+        # 2/3: deposit PERSIAN, CHANGE BOX to BOX12 (the first change runs
+        # EmptyAllSRAMBoxes, then bank-3 traffic both ways + a real
+        # SaveGameData), CHANGE BOX back to BOX 1. PERSIAN surviving in the
+        # final wBoxData proves the bank-2 store AND load. Adds the
+        # SCENARIO-LOCAL wBoxData + wCurrentBoxNum regions (mirrored by the
+        # %ifdef DEBUG_BILLSPC_CHANGEBOX gbregion rows); wCurrentBoxNum must
+        # be $80 = box 0 | BIT_HAS_CHANGED_BOXES on both sides.
+        "flags": "DEBUG_BILLSPC_CHANGEBOX=1",
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
+    },
     "title_reentry": {
         # The title checkpoint reached through title -> menu -> B -> title. Same
         # config as `title`: any divergence outside the F-25 mask is leaked

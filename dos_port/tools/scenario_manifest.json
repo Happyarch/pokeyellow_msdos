@@ -729,6 +729,35 @@
       "verification": "The real Bill's PC UI runs deposit PERSIAN / deposit JIGGLYPUFF / withdraw PERSIAN / release JIGGLYPUFF end-to-end (party↔box 44B↔33B round trip + stat recompute); the scenario-local wBoxData region pins the box count/sentinel bookkeeping and shift residue"
     },
     {
+      "name": "box_change_roundtrip",
+      "id": 38,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_BILLSPC_CHANGEBOX=1",
+      "port_entry_gate": "DEBUG_BILLSPC_CHANGEBOX",
+      "navigation_script": "tools/mgba_harness/scenarios/box_change_roundtrip.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 300,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "ChangeBox",
+        "CopyBoxToOrFromSRAM",
+        "EmptyAllSRAMBoxes"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "deposit PERSIAN, CHANGE BOX to BOX12 (first change runs EmptyAllSRAMBoxes; bank-3 traffic + real SaveGameData), CHANGE BOX back to BOX 1 — the only runtime exercise of SRAM banks 2/3; PERSIAN surviving in wBoxData proves the bank-2 store AND load, wCurrentBoxNum = $80"
+    },
+    {
       "name": "oak_intro",
       "id": 29,
       "tier": "full",
