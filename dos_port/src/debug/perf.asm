@@ -62,6 +62,16 @@ PERF_STAGES    equ 9           ; keep in sync with tools/read_perf.py STAGE_NAME
 ; recorded, and the host derives the distribution.
 PERF_MAX_FRAMES equ 1024       ; series cap; scenarios run 300-400 frames
 
+; One-shot EVENT recorder (PERF.BIN v3 tail) — for spans that happen a handful
+; of times per run rather than every frame (the save-commit sub-spans, sram
+; plan stage 7). One event = one perf_evt_begin .. perf_evt_commit bracket,
+; recording up to PERF_EVT_SPANS lap deltas. Deliberately SEPARATE state from
+; perf_mark's prev-sample pair: a save commit happens in the middle of a
+; measured frame, and sharing the baseline would corrupt the frame's own
+; stage attribution.
+PERF_EVT_MAX   equ 64          ; events kept; RunSavePerfTest records 32
+PERF_EVT_SPANS equ 4           ; keep in sync with tools/read_perf.py EVT_SPAN_NAMES
+
 ; DPMI real-mode call structure field offsets (DPMI 0.9 spec)
 RMCS_EBX     equ 0x10
 RMCS_EDX     equ 0x14
@@ -77,6 +87,9 @@ extern tick_count              ; timing.asm — PIT ISR frame counter
 global perf_frame_begin
 global perf_mark
 global perf_frame_end
+global perf_evt_begin
+global perf_evt_lap
+global perf_evt_commit
 global DumpPerf
 
 ; ---------------------------------------------------------------------------
@@ -96,6 +109,10 @@ perf_acc:        resd PERF_STAGES   ; total PIT counts per stage
 perf_max:        resd PERF_STAGES   ; worst single frame per stage
 perf_cur:        resd PERF_STAGES   ; this frame's counts (folded into max at frame end)
 perf_series:     resd PERF_MAX_FRAMES ; per-frame WORK totals, PIT counts (v2 tail)
+evt_prev_cnt:    resd 1        ; event recorder's OWN baseline (see PERF_EVT_MAX note)
+evt_prev_tick:   resd 1
+evt_count:       resd 1        ; committed events
+evt_records:     resd PERF_EVT_MAX * PERF_EVT_SPANS ; per-event sub-span PIT counts
 rmcs:            resb RMCS_SIZE
 dos_seg:         resw 1
 dos_sel:         resw 1
@@ -215,6 +232,70 @@ perf_frame_end:
     ret
 
 ; ---------------------------------------------------------------------------
+; perf_evt_begin — open an event: arm the event recorder's own baseline.
+; All registers/flags preserved.
+; ---------------------------------------------------------------------------
+perf_evt_begin:
+    pushfd
+    pushad
+    call perf_sample
+    mov [evt_prev_cnt], eax
+    mov [evt_prev_tick], edx
+    popad
+    popfd
+    ret
+
+; ---------------------------------------------------------------------------
+; perf_evt_lap — attribute the time since the previous evt sample to sub-span
+; EAX (0..PERF_EVT_SPANS-1) of the CURRENT (uncommitted) event, and re-arm.
+; Adds (records are BSS-zeroed and used once), so a re-lapped span accumulates.
+; All registers/flags preserved — callers carry live CF/status across laps.
+; ---------------------------------------------------------------------------
+perf_evt_lap:
+    pushfd
+    pushad
+    mov ebx, eax                   ; EBX = sub-span index
+    call perf_sample               ; EAX = counter, EDX = tick_count
+
+    mov ecx, edx
+    sub ecx, [evt_prev_tick]
+    imul ecx, ecx, PIT_DIVISOR
+    mov esi, [evt_prev_cnt]
+    sub esi, eax                   ; counter counts DOWN → prev - now
+    add ecx, esi
+    jns .have_delta
+    add ecx, PIT_DIVISOR           ; counter wrapped before the ISR ran
+.have_delta:
+    mov esi, [evt_count]
+    cmp esi, PERF_EVT_MAX
+    jae .full                      ; recorder full: keep timing, drop the sample
+%if PERF_EVT_SPANS != 4
+%error "perf_evt_lap's record stride (shl 4) assumes PERF_EVT_SPANS == 4"
+%endif
+    shl esi, 4                     ; event index × 16 B (PERF_EVT_SPANS dwords)
+    lea esi, [evt_records + esi + ebx*4]
+    add [esi], ecx
+.full:
+    mov [evt_prev_cnt], eax
+    mov [evt_prev_tick], edx
+    popad
+    popfd
+    ret
+
+; ---------------------------------------------------------------------------
+; perf_evt_commit — close the current event (its laps are in place).
+; All registers/flags preserved.
+; ---------------------------------------------------------------------------
+perf_evt_commit:
+    pushfd
+    cmp dword [evt_count], PERF_EVT_MAX
+    jae .capped
+    inc dword [evt_count]
+.capped:
+    popfd
+    ret
+
+; ---------------------------------------------------------------------------
 ; DumpPerf — write PERF.BIN, then exit.
 ;
 ; Same channel as debug_dump.asm: a conventional DOS buffer (DPMI fn 0100h) +
@@ -229,19 +310,22 @@ perf_frame_end:
 ;   0x10  PIT divisor
 ;   0x14  perf_acc[stage]  — total PIT counts
 ;   ...   perf_max[stage]  — worst single frame, PIT counts
-;   ...   series count     — v2 only: min(frames, PERF_MAX_FRAMES)
-;   ...   perf_series[]    — v2 only: per-frame WORK totals, PIT counts
+;   ...   series count     — v2+: min(frames, PERF_MAX_FRAMES)
+;   ...   perf_series[]    — v2+: per-frame WORK totals, PIT counts
+;   ...   event count      — v3 only: committed perf_evt events
+;   ...   evt_records[]    — v3 only: count × PERF_EVT_SPANS dwords, PIT counts
 ;
-; v2 keeps the v1 header and accumulator layout byte-identical and only appends
-; the series, so a v1 reader's offsets stay valid.
+; Each version keeps the previous layout byte-identical and only appends, so
+; older readers' offsets stay valid.
 ; Never returns.
 ; ---------------------------------------------------------------------------
 PERF_FIXED_SIZE equ 0x14 + PERF_STAGES * 8
 
 DumpPerf:
     mov ax, 0x0100
-    ; 0x10 filename + fixed body + 4 + 1024*4 = ~4.2 KB → 0x150 paras (5376 B)
-    mov bx, 0x150
+    ; 0x10 filename + fixed body + 4+1024*4 series + 4+64*16 events ≈ 5.3 KB
+    ; → 0x180 paras (6144 B)
+    mov bx, 0x180
     int 0x31
     jc .exit
     mov [dos_seg], ax
@@ -262,7 +346,7 @@ DumpPerf:
     add edi, 0x10
     mov esi, perf_magic
     movsd                          ; "PERF"
-    mov eax, 2
+    mov eax, 3
     stosd                          ; version
     mov eax, PERF_STAGES
     stosd
@@ -290,6 +374,17 @@ DumpPerf:
     rep movsd
     pop ecx
     lea eax, [ecx*4 + (PERF_FIXED_SIZE + 4)]
+
+    ; v3 tail: event count, then count × PERF_EVT_SPANS sub-span dwords
+    mov edx, [evt_count]
+    push eax
+    mov eax, edx
+    stosd                          ; event count
+    pop eax
+    lea ecx, [edx*4]               ; events × PERF_EVT_SPANS(4) dwords
+    mov esi, evt_records
+    lea eax, [eax + 4 + ecx*4]     ; body += evt_count dword + records bytes
+    rep movsd
     mov [perf_body_size], eax
 
     ; create

@@ -40,7 +40,7 @@ def load(path):
     if data[:4] != b"PERF":
         sys.exit(f"{path}: not a PERF.BIN (bad magic {data[:4]!r})")
     version, stages, frames, divisor = struct.unpack_from("<4I", data, 4)
-    if version not in (1, 2):
+    if version not in (1, 2, 3):
         sys.exit(f"{path}: unsupported PERF.BIN version {version}")
     acc = struct.unpack_from(f"<{stages}I", data, 0x14)
     mx = struct.unpack_from(f"<{stages}I", data, 0x14 + stages * 4)
@@ -49,13 +49,58 @@ def load(path):
     # maxima cannot express a distribution, and two opposing stage regressions
     # cancel in a mean.
     series = []
+    events = []
     if version >= 2:
         off = 0x14 + stages * 8
         (count,) = struct.unpack_from("<I", data, off)
         series = list(struct.unpack_from(f"<{count}I", data, off + 4))
+        off += 4 + count * 4
+        # v3 appends one-shot EVENT records (the stage-7 save-commit
+        # sub-spans): event count, then count x EVT_SPANS dwords.
+        if version >= 3:
+            (ecount,) = struct.unpack_from("<I", data, off)
+            flat = struct.unpack_from(f"<{ecount * len(EVT_SPAN_NAMES)}I",
+                                      data, off + 4)
+            n = len(EVT_SPAN_NAMES)
+            events = [flat[i * n:(i + 1) * n] for i in range(ecount)]
     return {"frames": frames, "divisor": divisor, "acc": acc, "max": mx,
             "stages": stages, "version": version, "series": series,
-            "path": str(path)}
+            "events": events, "path": str(path)}
+
+
+# Must match PERF_EVT_SPANS + the lap sites in src/engine/menus/save.asm and
+# src/save/dsv_io.asm (sram plan stage 7 save-commit sub-spans).
+EVT_SPAN_NAMES = [
+    "(a) WRAM→SRAM slices+cksums",
+    "(b) gather + image checksum",
+    "(c) AH=3Ch create",
+    "(d) AH=40h write + close",
+]
+
+
+def event_report(p):
+    """Per-sub-span median/max table over the v3 event records."""
+    events = p.get("events") or []
+    if not events:
+        return
+    print()
+    print(f"save-commit events ({len(events)} recorded)")
+    header = (f"{'sub-span':<32}{'median ms':>12}{'max ms':>10}"
+              f"{'% of total':>12}")
+    print("-" * len(header))
+    n = len(EVT_SPAN_NAMES)
+    med_total = 0.0
+    meds = []
+    for i in range(n):
+        vals = sorted(ms(e[i]) for e in events)
+        meds.append((pct(vals, 0.50), vals[-1]))
+        med_total += meds[-1][0]
+    for i, name in enumerate(EVT_SPAN_NAMES):
+        med, mx = meds[i]
+        share = 100.0 * med / med_total if med_total else 0.0
+        print(f"{name:<32}{med:>12.3f}{mx:>10.3f}{share:>11.1f}%")
+    print("-" * len(header))
+    print(f"{'TOTAL (median)':<32}{med_total:>12.3f}")
 
 
 def pct(sorted_vals, q):
@@ -158,6 +203,7 @@ def report(p, base=None, start=0):
     print("-" * width)
     if st["misses"]:
         print(f"*** {st['misses']} frame(s) exceeded the budget.")
+    event_report(p)
 
 
 def main():

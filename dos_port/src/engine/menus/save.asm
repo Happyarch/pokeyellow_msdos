@@ -125,6 +125,12 @@ extern yn_box_row               ; home/yes_no.asm — two-option box top-left, G
 extern yn_proj_mode             ; home/yes_no.asm — 0 = overworld anchor
 ; --- raw SRAM image seam (stage 5 body, stage 4 ret-stub) -------------------
 extern SramStoreImage           ; src/save/dsv_io.asm — SRAM banks -> POKEMON.DSV
+%ifdef DEBUG_PERF
+; stage-7 save-commit sub-span recorder (src/debug/perf.asm, PERF.BIN v3)
+extern perf_evt_begin
+extern perf_evt_lap
+extern perf_evt_commit
+%endif
 ; --- legacy .dsv debug harness helpers (not used by the pret save routines) ---
 extern DsvFileExists            ; src/save/dsv_io.asm — DEBUG_SAVE_ROUNDTRIP marker
 extern FillMemory               ; src/home/copy2.asm — ESI dest, BX count, AL value
@@ -722,10 +728,22 @@ SavePartyAndDexData:
 SaveGameData:
     ; ld a,2 / ld [wSaveFileStatus],a
     mov byte [ebp + wSaveFileStatus], 2
+%ifdef DEBUG_PERF
+    ; Save-commit sub-span (a): WRAM→SRAM slices + checksums (stage-7
+    ; profiling; measurement plumbing only, absent from shipping builds).
+    call perf_evt_begin
+%endif
     call SaveMainData
     call SaveCurrentBoxData
     call SavePartyAndDexData
+%ifdef DEBUG_PERF
+    xor eax, eax                   ; sub-span 0 = (a)
+    call perf_evt_lap
+%endif
     call SramStoreImage
+%ifdef DEBUG_PERF
+    call perf_evt_commit           ; (b)/(c)/(d) lapped inside SramStoreImage
+%endif
     ret
 
 ; ---------------------------------------------------------------------------
@@ -1435,4 +1453,30 @@ RunSaveTest:
     call SaveMenu
 .hang:
     jmp .hang
+%elifdef DEBUG_SAVEPERF
+; ---------------------------------------------------------------------------
+; RunSavePerfTest — sram plan stage 7: measure the save-commit cost. Seeds a
+; new game, then runs 32 back-to-back real SaveGameData commits (each one is a
+; full WRAM→SRAM update + a whole POKEMON.DSV rewrite), one DelayFrame apart so
+; the event recorder's PIT deltas are cleanly separated from frame pacing. The
+; DEBUG_PERF event recorder (perf.asm) laps sub-spans (a)-(d) inside
+; SaveGameData/SramStoreImage; DumpPerf then writes PERF.BIN v3 and exits.
+; Measurement harness only — NO golden scenario, no manifest entry.
+; In: EBP = GB base. Called from EnterMap after the overworld is set up.
+; ---------------------------------------------------------------------------
+extern DumpPerf                 ; src/debug/perf.asm — writes PERF.BIN, exits
+extern PrepareNewGameDebug      ; engine/debug/debug_party.asm
+global RunSavePerfTest
+SAVEPERF_COMMITS equ 32
+RunSavePerfTest:
+    call PrepareNewGameDebug                        ; seed party+bag+badges
+    mov ecx, SAVEPERF_COMMITS
+.commit:
+    push ecx
+    call SaveGameData
+    call DelayFrame
+    pop ecx
+    dec ecx
+    jnz .commit
+    jmp DumpPerf                                    ; never returns
 %endif

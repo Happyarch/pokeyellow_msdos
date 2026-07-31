@@ -8,6 +8,9 @@
  "calls": {
   "DelayFrame": "port frame-pipeline plumbing (present/OAM-DMA per frame); pret's DelayFrame placement differs across the video boundary",
   "DumpBackbuffer": "DEBUG_* harness dump hook, %ifdef-gated, not game logic",
+  "perf_evt_begin": "DEBUG_PERF event-recorder hook (perf.asm timing DEVIATION), %ifdef-gated, not game logic",
+  "perf_evt_lap": "DEBUG_PERF event-recorder hook (perf.asm timing DEVIATION), %ifdef-gated, not game logic",
+  "perf_evt_commit": "DEBUG_PERF event-recorder hook (perf.asm timing DEVIATION), %ifdef-gated, not game logic",
   "hide_window": "port window-compositor HAL boundary (GB hides the window via LCDC writes — TODO-HW)",
   "Bankswitch": "GB ROM banking does not exist in the flat 32-bit port"
  },

@@ -69,6 +69,10 @@ bits 32
 %include "gb_constants.inc"
 
 extern ds_base
+%ifdef DEBUG_PERF
+; stage-7 save-commit sub-span recorder (src/debug/perf.asm, PERF.BIN v3)
+extern perf_evt_lap
+%endif
 
 global SramLoadImage
 global SramStoreImage
@@ -179,6 +183,10 @@ SramStoreImage:
     call dsv_checksum                         ; AX = checksum
     mov edi, [dsv_flat]
     mov [edi + CONTENTS_OFF + 5], ax
+%ifdef DEBUG_PERF
+    mov eax, 1                                ; sub-span (b): gather + checksum
+    call perf_evt_lap                         ; (regs/flags preserved)
+%endif
 
     ; --- create POKEMON.DSV (INT 21h AH=3Ch, CX=0, DS:DX->filename@0) ---
     call dsv_zero_rmcs
@@ -191,6 +199,10 @@ SramStoreImage:
     jnz .fail
     mov ax, [rmcs + RMCS_EAX]
     mov [dsv_handle], ax
+%ifdef DEBUG_PERF
+    mov eax, 2                                ; sub-span (c): AH=3Ch create
+    call perf_evt_lap
+%endif
 
     ; --- write contents (INT 21h AH=40h) ---
     call dsv_zero_rmcs
@@ -208,6 +220,10 @@ SramStoreImage:
 
     ; --- close (INT 21h AH=3Eh) ---
     call dsv_close
+%ifdef DEBUG_PERF
+    mov eax, 3                                ; sub-span (d): AH=40h write + close
+    call perf_evt_lap                         ; preserves BX/CX write status
+%endif
 
     test bx, 1                                ; write CF
     jnz .fail

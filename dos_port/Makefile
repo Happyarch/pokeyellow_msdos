@@ -1485,6 +1485,21 @@ NASMFLAGS += -D DEBUG_PERF_FRAMES=$(DEBUG_PERF_FRAMES)
 endif
 endif
 
+# Save-commit measurement harness (sram plan stage 7): seeded new game, 32
+# back-to-back real SaveGameData commits with the DEBUG_PERF event recorder
+# lapping the four sub-spans, then DumpPerf writes PERF.BIN v3 and exits.
+# Decode with tools/read_perf.py. Measurement only — no golden scenario.
+#   make DEBUG_SAVEPERF=1
+ifdef DEBUG_SAVEPERF
+# (no DEBUG_SEED_PARTY: RunSavePerfTest calls PrepareNewGameDebug itself, the
+# RunSaveTest pattern — the dispatch seed would double-seed.)
+NASMFLAGS += -D DEBUG_SAVEPERF -D SKIP_TITLE
+ifndef DEBUG_PERF
+GAME_SRCS += src/debug/perf.asm
+NASMFLAGS += -D DEBUG_PERF
+endif
+endif
+
 # Test harness for event-gated dialog: force EVENT_GOT_POKEBALLS_FROM_OAK at map
 # load so PalletTownOakText shows its "set" branch. make SKIP_TITLE=1 DEBUG_OAK_EVENT=1
 ifdef DEBUG_OAK_EVENT

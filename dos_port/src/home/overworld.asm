@@ -168,6 +168,7 @@ extern RunPartyMenuTest                   ; src/debug/debug_dump.asm
 extern RunPlayersPCTest                   ; src/engine/menus/players_pc.asm
 extern RunPokedexEntryTest                ; src/engine/menus/pokedex.asm
 extern RunPokedexTest                     ; src/engine/menus/pokedex.asm
+extern RunSavePerfTest                    ; src/engine/menus/save.asm (DEBUG_SAVEPERF)
 extern RunSaveTest                        ; src/engine/menus/save.asm
 extern RunSplashTest                      ; src/engine/movie/splash.asm
 extern RunStatusScreenTest                ; src/debug/debug_dump.asm
@@ -626,6 +627,9 @@ EnterMap:
 %endif
 %ifdef DEBUG_SAVE
     call RunSaveTest                        ; seed party, run SaveGameData, dump "saved!" FRAME.BIN, exits
+%endif
+%ifdef DEBUG_SAVEPERF
+    call RunSavePerfTest                    ; stage-7: 32 real save commits, DumpPerf writes PERF.BIN v3, exits
 %endif
 %ifdef DEBUG_CONTINUE_SEED
     call RunContinueSeedTest                ; A3: seed+save, clobber, CONTINUE-load, dump GBSTATE, exits

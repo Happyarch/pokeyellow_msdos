@@ -160,11 +160,55 @@ conventional DOS buffer via DPMI 0100h, gathered all 32 KiB, checksummed all 32 
 then CREATEd the file (INT 21h AH=3Ch truncates) and rewrote it whole. On a
 period HDD that is a full-image write per save.
 
-- [ ] **Profile it first — STILL NOT DONE.** No number has been measured. The two
-      items ticked below were taken because they are unconditionally less work per
-      save, not because a measurement ranked them; everything still open below is
-      a trade that needs one. Instrumenting this needs a new `perf.asm` stage
-      (today it profiles `DelayFrame` phases only) plus a `read_perf.py` name.
+- [x] **Profile it first — DONE (C6, 2026-07-31).** Instrumented as a one-shot
+      EVENT recorder in `perf.asm` (own baseline state, separate from
+      `perf_mark`'s), lap sites under `%ifdef DEBUG_PERF` in
+      `SaveGameData`/`SramStoreImage`, PERF.BIN **v3** (v2 + appended event
+      records), decoded by `read_perf.py`'s save-commit table. Driver:
+      `make DEBUG_SAVEPERF=1` → `RunSavePerfTest` (save.asm) = seeded new game
+      + 32 back-to-back real `SaveGameData` commits + `DumpPerf`.
+
+      **Measured (median over 32 commits, ms; DOSBox-X):**
+
+      | sub-span                        | 23880 cyc (386SX-20) | 60000 cyc (486-class) |
+      |---------------------------------|----------------------|-----------------------|
+      | (a) WRAM→SRAM slices + cksums   | 7.566 (24.5%)        | 3.012 (17.3%)         |
+      | (b) gather + image checksum     | 14.618 (47.3%)       | 5.815 (33.4%)         |
+      | (c) AH=3Ch create               | 0.555 (1.8%)         | 0.520 (3.0%)          |
+      | (d) AH=40h write + close        | 8.135 (26.3%)        | 8.049 (46.3%)         |
+      | **whole commit**                | **30.87**            | **17.40**             |
+
+      The decomposition behaves as the caveat predicted: (a)/(b) scale ~2.5×
+      with the cycle setting (CPU-bound), (c)/(d) barely move (host-side disk
+      emulation) — so the disk numbers are lower bounds for real iron, the
+      CPU shares transfer directly. A whole save commit costs ~2 frames at
+      the 386SX baseline; it happens only at explicit save points, so there
+      is no frame-budget interaction.
+
+      **Decision rules, stated BEFORE the numbers existed** (so the measurement
+      cannot be argued into whatever conclusion is convenient afterwards).
+      Sub-spans measured per save commit: (a) WRAM→SRAM slices + checksums
+      (`SaveGameData` up to `SramStoreImage`), (b) gather + image checksum
+      (`SramStoreImage` interior), (c) `AH=3Ch` create, (d) `AH=40h` write +
+      close. Captured at two DOSBox-X cycle settings; caveat: DOSBox-X models
+      CPU cost, not period HDD latency — the absolute disk numbers transfer to
+      real iron only as lower bounds, the CPU-side shares transfer directly.
+      1. **Held handle + `AH=42h` LSEEK + `AH=68h` commit** replaces the
+         per-save create ONLY IF (c) > ~10% of the store total (b)+(c)+(d) at
+         both cycle settings; otherwise REJECT — the commit call costs back
+         most of the saved create, and `AH=42h` exists nowhere in the port.
+      2. **Dirty-bank tracking**: REJECT regardless of the numbers — the (b)
+         vs (d) split only formalizes why: the whole-payload header checksum
+         forces the full 32 KiB pass whether or not the write shrinks, so the
+         saving is bounded by (d) minus its floor, at the price of per-bank
+         running checksums that every SRAM write in the tree must keep
+         correct.
+      3. **Torn-write guard (write-temp + rename)**: record the measured
+         price (≈ one extra (c) + one extra (d)) and the verdict "torn write
+         is DETECTABLE (header checksum → corrupt-save branch = fresh
+         cartridge) but NOT RECOVERABLE; accepted as-is" — flagged for
+         maintainer sign-off in the archived plan. This is a durability call;
+         the measurement only prices the alternative.
 - [x] Keep the DOS buffer alive across calls instead of alloc/free per save.
       `dsv_alloc`/`dsv_free`/`dsv_stage_filename` are now one idempotent
       `dsv_ensure_buffer`: the size is a build-time constant and the filename never
@@ -179,21 +223,28 @@ period HDD that is a full-image write per save.
       port-only `g_sram_store_failed` now records it. It is deliberately NOT
       surfaced to the player: pret has no failure text or branch, so a message
       would be invented UI plus a new generated text asset. Left open on purpose.
-- [ ] The file handle. Holding it open avoids the per-save `AH=3Ch` create, but
-      DOS may not flush the directory entry until close, so a crash loses the save;
-      the honest shape is open-once + `AH=42h` LSEEK 0 + write + `AH=68h` commit,
-      and the commit costs back most of what the held handle saved. **Needs the
-      measurement.** Note `AH=42h` does not exist anywhere in the port today.
-- [ ] Track dirty banks and write only those. Bank 2/3 change only on a box swap;
-      bank 0 on nothing the player does. **Deliberately not done:** the header
-      checksum spans the whole payload, so a partial write still forces a full
-      32 KiB checksum pass unless the checksum is also made incremental — which
-      means keeping per-bank running sums correct against every SRAM write in the
-      tree. Large, easy to desync, for at most a few KiB of avoided write.
-- [ ] Decide whether a torn write mid-save is worth guarding (write-to-temp +
-      rename), or whether the header checksum already makes it detectable.
-      (Detectable is not recoverable — this is a durability call, not an
-      efficiency one.)
+- [x] The file handle — **REJECTED by rule 1 (C6).** (c) is 2.4% of the store
+      total (b)+(c)+(d) at 23880 cycles and 3.6% at 60000 — both far under the
+      ~10% threshold the rule pre-committed to. The create is nearly free; a
+      held handle + `AH=42h` LSEEK + `AH=68h` commit would add a new INT 21h
+      surface to save at most half a millisecond, and the commit call would
+      cost most of it back. Closed.
+- [x] Track dirty banks — **REJECTED by rule 2 (C6),** as pre-argued. The
+      measured split formalizes it: (b), the whole-payload checksum pass the
+      header format forces regardless of write size, is the LARGEST CPU span
+      (47.3% / 33.4% of the store), so shrinking (d) cannot shrink the commit
+      below the full-image pass. Incremental per-bank checksums (the only way
+      out) would have to stay correct against every SRAM write in the tree —
+      rejected as large, easy to desync, and bounded by a few ms. Closed.
+- [x] Torn-write guard — **verdict recorded (C6): torn write is DETECTABLE
+      (header checksum fails → `SramLoadImage` corrupt-save branch = reads as
+      a fresh cartridge) but NOT RECOVERABLE; accepted as-is.** The measured
+      price of the write-temp + rename alternative ≈ one extra (c)+(d) ≈
+      8.7 ms/save (disk-bound, cycle-invariant) plus a rename INT 21h call
+      that exists nowhere in the port today. ⚠ FLAGGED FOR MAINTAINER
+      SIGN-OFF: this is a durability call, not an efficiency one — the
+      measurement only priced the alternative; the acceptance is the
+      maintainer's to overturn.
 
 ### Stage 8 — real-save seeding  *(maintainers)*  — DONE
 
