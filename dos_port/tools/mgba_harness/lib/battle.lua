@@ -23,6 +23,8 @@ local EVENT_FOLLOWED_OAK_INTO_LAB = 0 -- constants/event_constants.asm
 -- and up to the Route 1 boundary. Route notes: bedroom → 1F → Pallet Town is
 -- sign_pallet's proven route; Pallet's north opening to Route 1 is the x=10
 -- column (the gap in the tree border above the map's central path).
+-- Exported (battle.walk_to_route1): lib/pc.lua reuses this leg for the
+-- Viridian Pokémon Center PC scenarios (bills_pc_ops / box_change_roundtrip).
 local function walk_to_route1(sym)
 	navigate.walk("RIGHT", 1)
 	navigate.walk("UP", 5)
@@ -46,6 +48,7 @@ local function walk_to_route1(sym)
 	local y2, x2 = navigate.coords()
 	scenario.log(("battle: on Route 1 at (%d,%d)"):format(y2, x2))
 end
+battle.walk_to_route1 = walk_to_route1
 
 -- Hold UP through the Route 1 grass until a battle triggers, sidestepping when
 -- blocked (ledges/trees stall the walk: coords stop changing while UP is held).

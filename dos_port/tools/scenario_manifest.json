@@ -700,6 +700,35 @@
       "verification": "A real save with all 12 PC boxes full is staged as POKEMON.DSV; after TryLoadSaveFile the scenario-local wBoxData region (20-mon current box, OT names, nicknames) is compared — the box_struct layout's first behavioural coverage"
     },
     {
+      "name": "bills_pc_ops",
+      "id": 37,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_BILLSPC=1",
+      "port_entry_gate": "DEBUG_BILLSPC",
+      "navigation_script": "tools/mgba_harness/scenarios/bills_pc_ops.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 300,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "BillsPCDeposit",
+        "BillsPCWithdraw",
+        "BillsPCRelease"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "The real Bill's PC UI runs deposit PERSIAN / deposit JIGGLYPUFF / withdraw PERSIAN / release JIGGLYPUFF end-to-end (party↔box 44B↔33B round trip + stat recompute); the scenario-local wBoxData region pins the box count/sentinel bookkeeping and shift residue"
+    },
+    {
       "name": "oak_intro",
       "id": 29,
       "tier": "full",

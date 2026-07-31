@@ -1895,7 +1895,11 @@ wListPointer                  equ 0xCF8A ; dw — source list for DisplayListMen
 wCurListMenuItem              equ 0xCF90 ; = wCurItem — id of highlighted list entry
 wPrintItemPrices              equ 0xCF92 ; list menu: append item price column
 wListMenuID                   equ 0xCF93 ; ITEMLISTMENU / MOVESLISTMENU / PRICED / PC-box
-wLoadedMonBoxLevel            equ 0xCFB3 ; PC-box level (list_menu PC path; confirm vs wLoadedMon)
+wLoadedMonBoxLevel            equ 0xCF9A ; wLoadedMon + 3 (box_struct BoxLevel; pret sym cf9a).
+                                         ; Was 0xCFB3 (= wLoadedMon + 28, DV byte 2) until the
+                                         ; bills_pc_ops golden caught the PC list printing a DV
+                                         ; byte as the box level (want $0F got $76 at wLoadedMon
+                                         ; level after the release-list entry print).
 wLoadedMonLevel               equ 0xCFB8 ; loaded-mon level
 wIsKeyItem                    equ 0xD123 ; set by IsKeyItem_ (list menu / toss)
 wTextBoxID                    equ 0xD124 ; DisplayTextBoxID dispatcher selector

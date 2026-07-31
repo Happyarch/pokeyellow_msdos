@@ -679,6 +679,21 @@ SCENARIOS = {
         "seed_save": "tests/fixtures/yellow_boxes_full.sav",
         "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
     },
+    "bills_pc_ops": {
+        "class": "datastruct",
+        # The Bill's PC box flows through the REAL UI on both sides: deposit
+        # PERSIAN, deposit JIGGLYPUFF, withdraw PERSIAN (party 44B -> box 33B ->
+        # party 44B round trip + stat recompute), release JIGGLYPUFF, B out.
+        # The port gate (RunBillsPCTest + AUTOKEY_BILLSPC) opens BillsPC_ as a
+        # generic-PC guest; the golden walks to the Viridian Center PC and
+        # enters via "SOMEONE's PC" -- the same GB code path with the same two
+        # wMiscFlags bits set. Adds the SCENARIO-LOCAL wBoxData region
+        # (mirrored by the %ifdef DEBUG_BILLSPC gbregion row): the box starts
+        # and ends empty, so what it pins is the count/sentinel bookkeeping
+        # and the deterministic shift residue the flows leave behind.
+        "flags": "DEBUG_BILLSPC=1",
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
+    },
     "title_reentry": {
         # The title checkpoint reached through title -> menu -> B -> title. Same
         # config as `title`: any divergence outside the F-25 mask is leaked
