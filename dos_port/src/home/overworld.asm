@@ -147,6 +147,7 @@ extern RunContinueSeedTest                ; src/engine/menus/save.asm
 extern RunDrawBadgesTest                  ; src/engine/menus/draw_badges.asm
 extern RunRealSaveTest                    ; src/engine/menus/save.asm
 extern RunBoxSaveTest                     ; src/engine/menus/save.asm
+extern RunBillsPCTest                     ; src/engine/pokemon/bills_pc.asm
 extern RunLeaguePCTest                    ; src/engine/menus/league_pc.asm
 extern RunLearnMoveTest                   ; src/debug/debug_dump.asm
 extern RunLinkCupsTest                    ; src/engine/menus/link_menu.asm
@@ -634,6 +635,12 @@ EnterMap:
 %endif
 %ifdef DEBUG_BOX_SAVE
     call RunBoxSaveTest                     ; as above, with a full-boxes save; also dumps wBoxData
+%endif
+%ifdef DEBUG_BILLSPC
+    call RunBillsPCTest                     ; sram stage 6: scripted joypad drives the real Bill's PC box UI; AutoKeyDrive dumps
+%endif
+%ifdef DEBUG_BILLSPC_CHANGEBOX
+    call RunBillsPCTest                     ; as above, with the change-box round-trip script (banks 2/3)
 %endif
 %ifdef DEBUG_OAKPIC
     call RunOakPicTest                      ; A4.1: display Oak pic on the surface, dump FRAME.BIN, exits

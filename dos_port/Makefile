@@ -334,7 +334,6 @@ GAME_SRCS := \
     src/engine/menus/text_box.asm \
     src/engine/menus/draw_badges.asm \
     src/engine/menus/pc.asm \
-    src/engine/menus/pc_stubs.asm \
     src/engine/menus/oaks_pc.asm \
     src/engine/menus/oaks_pc_stubs.asm \
     src/engine/menus/league_pc.asm \
@@ -798,6 +797,28 @@ endif
 # AUTOKEY_DUMP_FRAME passed on the command line was silently ignored. Overridable now.
 AUTOKEY_DUMP_FRAME ?= 999999
 NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
+# Bill's-PC box-behaviour gate (sram plan stage 6): seeded party, RunBillsPCTest
+# opens BillsPC_ directly as a generic-PC guest, and the AUTOKEY_BILLSPC script
+# drives deposit(PERSIAN) → deposit(JIGGLYPUFF) → withdraw(PERSIAN) →
+# release(JIGGLYPUFF) → SEE YA through the real UI, then AutoKeyDrive dumps
+# FRAME.BIN + GBSTATE.BIN. make DEBUG_BILLSPC=1 [AUTOKEY_DUMP_FRAME=n]
+ifdef DEBUG_BILLSPC
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_BILLSPC -D DEBUG_SEED_PARTY -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_BILLSPC
+AUTOKEY_DUMP_FRAME ?= 1900
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+# BILLSPC_ATTACH_DELAY=<frames>: RunBillsPCTest idles that long before the flow
+# so a debugger can attach; the autokey script shifts itself by the same amount
+# (1800 ≈ 30 s). Debug aid only — never set for a golden run.
+ifdef BILLSPC_ATTACH_DELAY
+NASMFLAGS += -D BILLSPC_ATTACH_DELAY=$(BILLSPC_ATTACH_DELAY)
+endif
+# BILLSPC_MENU_PROBE=1 adds the wMenuState diagnosis region to GBSTATE.BIN.
+ifdef BILLSPC_MENU_PROBE
+NASMFLAGS += -D BILLSPC_MENU_PROBE
+endif
 endif
 ifdef DEBUG_ITEMUSE
 NEED_DEBUG_DUMP := 1

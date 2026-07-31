@@ -528,6 +528,31 @@ gbstate_regions:
     ; the enclosing block IS the tight span.
     gbregion "wBoxData",      wBoxDataStart, wBoxDataEnd - wBoxDataStart
 %endif
+%ifdef DEBUG_BILLSPC
+    ; --- Bill's PC box-behaviour flow (sram plan stage 6) ---
+    ; SCENARIO-LOCAL row (the DEBUG_BOX_SAVE precedent above): the whole
+    ; current-box block after deposit/deposit/withdraw/release — count, species
+    ; list + $FF sentinel, box_structs, OT names, nicknames, incl. the shifted
+    ; residue _RemovePokemon leaves. tools/mgba_harness/scenarios/
+    ; bills_pc_ops.lua mirrors it by name.
+    gbregion "wBoxData",      wBoxDataStart, wBoxDataEnd - wBoxDataStart
+%ifdef BILLSPC_MENU_PROBE
+    ; Harness-diagnosis probe, NOT part of the golden: the whole HandleMenuInput
+    ; state block (wTopMenuItemY..wMenuWatchMovingOutOfBounds), dumped mid-flow
+    ; to see what a stuck menu is actually watching. Build with
+    ; BILLSPC_MENU_PROBE=1; never enabled for a scenario run.
+    gbregion "wMenuState",    wTopMenuItemY, 0x14
+    gbregion "hJoyProbe",     H_JOY_PRESSED, 5   ; FFB3 pressed/held/joy5/joy6/joy7
+%endif
+%endif
+%ifdef DEBUG_BILLSPC_CHANGEBOX
+    ; --- change-box round trip (sram plan stage 6, SRAM banks 2/3) ---
+    ; wBoxData proves the mon survived WRAM → sBox1 (bank 2) → WRAM through the
+    ; BOX12 detour (bank 3); wCurrentBoxNum sits in wMainData (not a standard
+    ; region) and must read back $80 = box 0 | BIT_HAS_CHANGED_BOXES.
+    gbregion "wBoxData",      wBoxDataStart, wBoxDataEnd - wBoxDataStart
+    gbregion "wCurrentBoxNum", wCurrentBoxNum, 1
+%endif
 %ifdef DEBUG_MAPSCRIPT_SIGHT
     ; --- trainer sight/engage flow (map-script fidelity plan Stage 3) ---
     ; SCENARIO-LOCAL rows: adding them to the shared set above would change every
@@ -2765,6 +2790,59 @@ autokey_script:
     dd 540, 546, PAD_A          ; USE
     dd 600, 606, PAD_A          ; party menu: mon 1 (healthy → refusal)
     dd 660, 666, PAD_A          ; dismiss the refusal
+    dd  -1,  -1, 0
+%elifdef AUTOKEY_BILLSPC
+    ; sram-plan stage 6 (DEBUG_BILLSPC): drive the real Bill's PC box UI.
+    ; RunBillsPCTest opened BillsPC_ as a generic-PC guest, so the six-entry
+    ; menu (0 WITHDRAW / 1 DEPOSIT / 2 RELEASE / 3 CHANGE BOX / 4 PRINT BOX /
+    ; 5 SEE YA!) is up almost immediately. Seeded party order (debug_party.asm):
+    ; 0 SNORLAX, 1 PERSIAN, 2 JIGGLYPUFF, 3 STARTER_PIKACHU, 4 CHARIZARD,
+    ; 5 LAPRAS — the script only ever touches PERSIAN and JIGGLYPUFF, so no
+    ; starter-Pikachu branch fires on either side of the golden.
+    ;   deposit PERSIAN → deposit JIGGLYPUFF → withdraw PERSIAN (the
+    ;   44B→33B→44B round trip + stat recompute) → release JIGGLYPUFF → SEE YA
+    ; Cadence: one input per 60 frames, 10-frame holds (edge-triggered, and well
+    ; under JoypadLowSensitivity's repeat delay). The first cut used 30-40-frame
+    ; gaps and the mon list ate one A mid-settle, shifting every later press one
+    ; state over (PERSIAN got released instead of JIGGLYPUFF). The tail uses B —
+    ; B answers prompts AND exits the menu, so the flow converges whether or not
+    ; OnceReleasedText carries its own prompt before the YES/NO box.
+%ifdef BILLSPC_ATTACH_DELAY
+%assign BPC_AKS BILLSPC_ATTACH_DELAY    ; RunBillsPCTest idles this many frames
+%else
+%assign BPC_AKS 0
+%endif
+    ; Press budget per message (measured from the generated streams — see
+    ; bills_pc_text.inc): _MonWasStoredText = 1 (prompt); _MonIsTakenOutText and
+    ; _MonWasReleasedText = 2 (cont + prompt); _OnceReleasedText = 1 (cont; its
+    ; `done` leaves the box up for the YES/NO choice).
+    dd   40 + BPC_AKS,   50 + BPC_AKS, PAD_DOWN ; menu 0→1 (DEPOSIT)
+    dd  100 + BPC_AKS,  110 + BPC_AKS, PAD_A    ; open the party mon list
+    dd  160 + BPC_AKS,  170 + BPC_AKS, PAD_DOWN ; list 0→1 (PERSIAN)
+    dd  220 + BPC_AKS,  230 + BPC_AKS, PAD_A    ; select PERSIAN → DEPOSIT/STATS/CANCEL
+    dd  280 + BPC_AKS,  290 + BPC_AKS, PAD_A    ; DEPOSIT → "PERSIAN was stored in BOX 1."
+    dd  360 + BPC_AKS,  370 + BPC_AKS, PAD_A    ; dismiss (prompt) → BillsPCMenu
+    dd  440 + BPC_AKS,  450 + BPC_AKS, PAD_A    ; open the party mon list again
+    dd  500 + BPC_AKS,  510 + BPC_AKS, PAD_DOWN ; list 0→1 (JIGGLYPUFF)
+    dd  560 + BPC_AKS,  570 + BPC_AKS, PAD_A    ; select JIGGLYPUFF → submenu
+    dd  620 + BPC_AKS,  630 + BPC_AKS, PAD_A    ; DEPOSIT → stored message
+    dd  700 + BPC_AKS,  710 + BPC_AKS, PAD_A    ; dismiss (prompt) → BillsPCMenu
+    dd  780 + BPC_AKS,  790 + BPC_AKS, PAD_UP   ; menu 1→0 (WITHDRAW)
+    dd  840 + BPC_AKS,  850 + BPC_AKS, PAD_A    ; open the box mon list (PERSIAN 0, JIGGLYPUFF 1)
+    dd  900 + BPC_AKS,  910 + BPC_AKS, PAD_A    ; select PERSIAN → WITHDRAW/STATS/CANCEL
+    dd  960 + BPC_AKS,  970 + BPC_AKS, PAD_A    ; WITHDRAW → "PERSIAN is / taken out." (cont)
+    dd 1040 + BPC_AKS, 1050 + BPC_AKS, PAD_A    ; scroll "Got PERSIAN." (cont)
+    dd 1100 + BPC_AKS, 1110 + BPC_AKS, PAD_A    ; dismiss (prompt) → BillsPCMenu (cursor 0)
+    dd 1180 + BPC_AKS, 1190 + BPC_AKS, PAD_DOWN ; menu 0→1
+    dd 1240 + BPC_AKS, 1250 + BPC_AKS, PAD_DOWN ; menu 1→2 (RELEASE)
+    dd 1300 + BPC_AKS, 1310 + BPC_AKS, PAD_A    ; open the box mon list (JIGGLYPUFF at 0)
+    dd 1360 + BPC_AKS, 1370 + BPC_AKS, PAD_A    ; select JIGGLYPUFF → "Once released..." (cont)
+    dd 1420 + BPC_AKS, 1430 + BPC_AKS, PAD_A    ; scroll to "OK?" → YES/NO box
+    dd 1480 + BPC_AKS, 1490 + BPC_AKS, PAD_A    ; YES → "JIGGLYPUFF was / released." (cont)
+    dd 1560 + BPC_AKS, 1570 + BPC_AKS, PAD_A    ; scroll "Bye JIGGLYPUFF!" (cont)
+    dd 1620 + BPC_AKS, 1630 + BPC_AKS, PAD_A    ; dismiss (prompt) → BillsPCMenu
+    dd 1700 + BPC_AKS, 1710 + BPC_AKS, PAD_B    ; SEE YA (ExitBillsPC) → harness hang loop
+    dd 1780 + BPC_AKS, 1790 + BPC_AKS, PAD_B    ; spare — harmless in the hang loop
     dd  -1,  -1, 0
 %elifdef AUTOKEY_FLY
     ; overworld-events Stage 4 (DEBUG_AUTOKEY AUTOKEY_FLY): drive the real FLY path

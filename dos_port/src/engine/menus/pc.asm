@@ -4,13 +4,11 @@
 ;   .playersPC → PlayerPC       (players_pc.asm)
 ;   OaksPC     → OpenOaksPC     (oaks_pc.asm)
 ;   PKMNLeague → PKMNLeaguePC   (league_pc.asm)
-;   BillsPC    → BillsPC_       (SEAM STUB — pokemon_behavior Stage 6 owns the
-;                                real box UI; DisplayPCMainMenu is the same seam)
+;   BillsPC    → BillsPC_       (engine/pokemon/bills_pc.asm — the real box UI)
 ; plus RemoveItemByID, which pret files here.
 ;
-; SEAMS (pc_stubs.asm; deleted when pokemon_behavior Stage 6 lands them):
-;   DisplayPCMainMenu — draws the PC main menu box + arms the menu vars.
-;   BillsPC_          — Bill's #MON-storage box UI.
+; The DisplayPCMainMenu / BillsPC_ seam stubs (pc_stubs.asm) are RETIRED — both
+; real routines live in engine/pokemon/bills_pc.asm and the stub file is gone.
 ;
 ; HISTORY / CORRECTED CLAIMS (menu-fidelity row 17 part 1). The header this
 ; replaces asserted three things, all of them false, and each one had cost the
@@ -63,7 +61,7 @@ global AccessedSomeonesPCText
 global AccessedMyPCText
 
 extern DisplayPCMainMenu             ; engine/pokemon/bills_pc.asm (real, draws + arms)
-extern BillsPC_                      ; pc_stubs.asm SEAM (pokemon_behavior S6)
+extern BillsPC_                      ; engine/pokemon/bills_pc.asm (real box UI)
 extern menu_redraw_cb                ; home/window.asm — armed by DisplayPCMainMenu
 extern PlayerPC                      ; engine/menus/players_pc.asm
 extern OpenOaksPC                    ; engine/menus/oaks_pc.asm
