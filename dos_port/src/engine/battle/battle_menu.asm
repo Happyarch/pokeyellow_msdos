@@ -174,6 +174,23 @@ EndBattleScreen:
 ; BattleItemMenu / BattlePartyMenu — deferred in-battle sub-UIs (bag / party-switch).
 ; pret runs the bag / party menu here; until those are wired, they are no-ops (core.asm
 ; re-shows DisplayBattleMenu after). TODO(faithful): ITEM → bag use, PKMN → switch.
+;
+; CONVENTION DEBT, and it cannot be discharged from here (measured 2026-08-01).
+; These are ret-only stand-ins living in a source-mirror file, which the stub
+; convention forbids -- but moving them to battle_stubs.asm under THESE names does
+; not work either: lint_pret_labels rejects a STUB annotation whose label has
+; generated status port_only ("malformed STUB: ... has generated status port_only"),
+; which is the "never fork a stub name" rule enforced mechanically. The pret
+; counterparts are exact:
+;   BattleItemMenu  <- engine/battle/core.asm:BagWasSelected, plus the link-battle
+;                      and safari-bait preamble above it (pret core.asm:2270-2300)
+;   BattlePartyMenu <- the TAIL of engine/battle/core.asm:PartyMenuOrRockOrRun from
+;                      pret core.asm:2409 (safari ROCK, then .partyMenuWasSelected).
+;                      Only the tail: that routine's head, the dec-a run check, is
+;                      already translated inline in DisplayBattleMenu (.partyMenuOrRun).
+; So the fix is a rename to the pret labels at the call sites, which belongs to the
+; battle-completion plan -- items 2a (voluntary switch) and 2c (in-battle bag) name
+; these routines and own their real bodies. Do it there, not in a sweep.
 BattleItemMenu:
 BattlePartyMenu:
     ret
@@ -339,6 +356,8 @@ FindMoveName:
 ; DoEnemyAttackDamage — run the faithful Gen-1 damage pipeline for the enemy's selected
 ; move and subtract wDamage from the player mon's HP (floored). Used only by the static
 ; DEBUG_BATTLE_ENEMYHIT WRAM-dump harness; the live battle resolves moves via core.asm.
+;
+; DEVIATION{class=temporary; pret=engine/battle/core.asm:EnemyCalcMoveDamage; behavior=a harness-only entry point drives the same damage pipeline pret runs inside EnemyCalcMoveDamage and applies the result, so a dump can be taken at a known point without stepping the whole turn loop; evidence=label_status reports its only caller as RunBattleTest in src/debug/debug_dump.asm and the port already translates EnemyCalcMoveDamage faithfully in the core.asm mirror at line 2090, so this duplicates a pret routine under a port name and exists only for the harness, it is not a second implementation of the live path; lifetime=retire by pointing the DEBUG_BATTLE_ENEMYHIT harness at EnemyCalcMoveDamage, tracked as a battle-completion cleanup}
 DoEnemyAttackDamage:
     mov byte [ebp + hWhoseTurn], 1
     call GetCurrentMove
