@@ -17,6 +17,8 @@
 ; bits of amplitude resolution — comfortably above the 1-bit source
 ; material. The pulse range is derived from the pacing step at run time, so
 ; a rate change in gen_pika_pcm.py needs no edit here.
+;
+; DEVIATION{class=HAL; pret=home/pikachu_cries.asm:PlayPikachuPCM; behavior=a digitized clip is reproduced by pulse-width modulating PIT channel 2 into the PC speaker at twice the sample rate, so amplitude is carried by duty cycle and recovered by the speaker cone's own low-pass, instead of being streamed through the Game Boy wave channel's DAC; evidence=the speaker is a 1-bit gate with no amplitude control at all, so PWM is the only way to get the roughly 5.75 bits this needs, and no pret routine has a PIT or speaker counterpart; lifetime=permanent, the last-resort PCM device shim is a hardware boundary}
 
 bits 32
 

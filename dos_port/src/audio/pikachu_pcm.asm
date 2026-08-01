@@ -110,6 +110,8 @@ PlayPikachuSoundClip:
 ;   $D240    last clip index      $D241 device (0 none, 1 SB, 2 speaker)
 ;   $D242-45 dd samples played
 ; In: EBP = GB memory base. Clobbers EAX.
+;
+; DEVIATION{class=HAL; pret=audio/pikachu_pcm.asm:PlayPikachuSoundClip; behavior=a port-only helper publishes which clip played, which device took it and how many samples it fed into a GB debug scratch window, state the Game Boy version has no equivalent of because it had no device choice; evidence=its only caller is RunAudioTest in src/debug/debug_dump.asm which is assembled into DEBUG_ harness builds only, and the device fields it reports exist solely because the port dispatches PCM across sb_pcm and spk_pcm; lifetime=retires with the DEBUG_AUDIO harness}
 ; ---------------------------------------------------------------------------
 pika_dbg_snapshot:
     mov al, [pika_dbg_clip]

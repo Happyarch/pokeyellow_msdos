@@ -21,6 +21,8 @@
 ; All DSP handshake polls are bounded — a wedged DSP aborts the clip, never
 ; hangs. Interrupts are off for the duration (tick_count stands still, like
 ; the GB's frozen VBlank).
+;
+; DEVIATION{class=HAL; pret=home/pikachu_cries.asm:PlayPikachuPCM; behavior=a digitized clip is fed to a Sound Blaster DSP one sample at a time in direct mode and paced by latching PIT channel 0, instead of being streamed as 1-bit samples through the Game Boy wave channel's DAC via rAUD3LEVEL; evidence=the DOS target has no wave channel and its DSP takes 8-bit PCM bytes rather than a DAC level, so both the output path and the timebase must be re-derived, and no pret routine has a DSP or PIT counterpart, the blocking interrupts-off structure is what pret does keep; lifetime=permanent, the PCM device shim is a hardware boundary}
 
 bits 32
 

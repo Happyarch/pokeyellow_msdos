@@ -21,6 +21,8 @@
 ;
 ; NOTE: port-only HAL/projection glue, not a pret translation. Routines carry
 ; descriptive port names because they have no pret counterpart.
+;
+; DEVIATION{class=projection; pret=engine/movie/intro.asm:PlayIntro; behavior=every cinematic screen is composed onto an exact 160x144 GB-sized surface centred in the port's 320x200 canvas with a colour-zero matte around it, instead of filling the canvas the way overworld screens do, and this module owns the shared stride-40 to stride-32 mirror, matte publication, hSCX hSCY to WIN_SRC scroll transfer and teardown; evidence=pret authors cinematic framing, slide distances, object masks and screen-edge timing against the 160x144 LCD, so widening the viewport would either expose artwork pret deliberately keeps offscreen or require inventing staging, and no pret routine spans surface entry plus matte plus scroll transfer; lifetime=permanent, the cinematic presentation boundary is by design and is documented once here rather than per scene}
 
 bits 32
 
