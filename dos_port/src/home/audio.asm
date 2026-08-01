@@ -215,11 +215,15 @@ StopAllMusic:
     mov [ebp + wNewSoundID], al
 ; plays music specified by a. If value is $ff, music is stopped
 PlaySound:
-    ; TEMPORARY SCAFFOLD (retired by Task 5 audio_init): until the DelayFrame
-    ; audio tick is installed, a started sound would never advance or end, so
-    ; wChannelSoundIDs would stay non-zero forever and WaitForSoundToFinish
-    ; would spin for good. Swallow requests while the engine is offline,
-    ; keeping wNewSoundID consistent with "nothing playing".
+    ; PORT GUARD — no longer the Task-5 scaffold this comment used to describe:
+    ; the DelayFrame audio tick IS installed (src/home/vblank.asm, self-gated on
+    ; the same flag), and audio_init sets the flag to 1 on success but to 0 when
+    ; the host has no usable sound device (src/audio/audio_hal.asm). In that
+    ; second case nothing advances wChannelSoundIDs, so a started sound would
+    ; stay non-zero forever and WaitForSoundToFinish would spin for good.
+    ; Swallow requests while offline, keeping wNewSoundID consistent with
+    ; "nothing playing".
+    ; DEVIATION{class=HAL; pret=home/audio.asm:PlaySound; behavior=a sound request is swallowed and wNewSoundID forced to zero whenever the port has no initialized audio device, instead of always being handed to the engine as pret does; evidence=audio_hal.asm audio_init sets this flag to 1 on success and 0 when no device is found, and the DelayFrame audio tick that clears wChannelSoundIDs self-gates on the same flag, so without the guard WaitForSoundToFinish would spin forever on a machine with no sound card, a state the Game Boy cannot be in because its APU is always present; lifetime=permanent while the port supports running with no sound device}
     cmp byte [g_audio_engine_online], 0
     jnz .engineOnline
     mov byte [ebp + wNewSoundID], 0

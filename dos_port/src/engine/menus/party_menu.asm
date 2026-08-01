@@ -166,6 +166,7 @@ PartyMenuMessagePointers:
 ; PartyMenuMirror carries the finished box to the window layer, as it already does
 ; for every other cell of this screen.
 ; ; PROJ menus: GB(0,12) 20×6 — same cells as pret; the projection is the window.
+; DEVIATION{class=projection; pret=engine/menus/party_menu.asm:RedrawPartyMenu_; behavior=the party screen owns a private message-box projection record, stride-20 into its own scratch with no window of its own and with PROMPT waiting locally, rather than sharing the overworld or battle dialog path; evidence=the shared records are each wrong here for a measured reason, the overworld record publishes a window that would displace this screen's two party windows and the core.asm centered record draws stride-40 into a canvas g_bg_whiteout stops the port compositing, and the cells it targets, GB 0,12 for 20x6, are the same ones pret uses so only the delivery mechanism differs; lifetime=permanent window-compositor boundary}
 global msgbox_party
 msgbox_party:
     dd GBSCR_W                              ; MB_STRIDE       — the stride-20 scratch
@@ -426,6 +427,8 @@ RedrawPartyMenu_:
 ; alternative — hold it for the screen's lifetime — would have to be un-held by the
 ; screen's exit path, which lives in another file. Scoping it to the call keeps the
 ; whole projection decision inside the screen that makes it.)
+;
+; DEVIATION{class=projection; pret=engine/menus/party_menu.asm:RedrawPartyMenu_; behavior=pret's bare call PrintText is wrapped so the global text-projection record is pointed at this screen's scratch for the duration of the call and restored to the overworld default afterwards; evidence=text_msgbox is global mutable state in the port because dialog geometry comes from a projection record rather than fixed hlcoord literals, so leaving it pointed here would re-project the next overworld dialog into a scratch nothing mirrors, and scoping it to the call keeps the decision in the screen that makes it instead of in the exit path in another file; lifetime=permanent window-compositor boundary}
 ; ---------------------------------------------------------------------------
 PartyMenuPrintText:
     mov dword [text_msgbox], msgbox_party
@@ -529,6 +532,8 @@ ShowPartyMenuWindows:
 ; PartyMenuMirror — blit the stride-20 scratch rows 0-17 → GB_TILEMAP1 rows
 ; 0-17 (the two party windows' source). The port's stand-in for pret's
 ; hAutoBGTransferEnabled VBlank transfer. Preserves all registers.
+;
+; DEVIATION{class=projection; pret=engine/menus/party_menu.asm:RedrawPartyMenu_; behavior=this screen's cells are drawn into a private stride-20 scratch and carried to the window layer's source tilemap by an explicit blit, instead of pret's hAutoBGTransferEnabled VBlank transfer moving the live tilemap to VRAM; evidence=the port composites the party screen as two windows whose source is GB_TILEMAP1 rather than scanning a single 20x18 tilemap, and the canvas is stride 40 so a pret-authored stride-20 write lands on the wrong row without an explicit carry, there is no VBlank tilemap DMA in the software renderer for the transfer to hook; lifetime=permanent window-compositor boundary}
 ; ---------------------------------------------------------------------------
 PartyMenuMirror:
     pushad

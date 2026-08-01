@@ -47,6 +47,8 @@ section .text
 ; the raw OAM Y/X (DOS = OAM_Y − 16, OAM_X − 8 — the standard GB OAM offset) and
 ; publishes the entry count. Used by the battle pokéball row (the only OAM in the
 ; OAM-disabled battle screen). In: ECX = entry count; EBP = GB base.
+;
+; DEVIATION{class=HAL; pret=engine/gfx/sprite_oam.asm:PrepareOAMData; behavior=a port-only entry point publishes raw hand-written $FE00 entries to the software renderer by filling its DOS position tables and entry count, bypassing the wSpriteStateData walk that PrepareOAMData does; evidence=render_sprites positions from spr_dos_sx spr_dos_sy rather than reading OAM X and Y, so a screen that writes OAM directly, the battle pokeball row, would otherwise draw nothing, and on the Game Boy the hardware needs no such publication because it scans $FE00 itself; lifetime=permanent, the OBJ side of the software video HAL}
 ; ---------------------------------------------------------------------------
 PrepareStaticOAM:
     mov [spr_oam_valid], ecx
@@ -92,6 +94,8 @@ PrepareStaticOAM:
 ;      first ECX entries; spr_oam_valid = ECX. Entries beyond ECX are not drawn.
 ;      Clip rectangle and z-order are left to the calling screen.
 ; Registers: ALL preserved (pushad/popad); flags clobbered.
+;
+; DEVIATION{class=projection; pret=engine/gfx/sprite_oam.asm:PrepareOAMData; behavior=a port-only entry point publishes a cinematic screen's OAM records at a fixed pixel offset into the canvas, translating GB screen coordinates onto the centred 160x144 surface while copying all 160 canonical bytes through unchanged; evidence=cinematic screens compose onto the offset surface movie_projection.asm owns, so OBJ have to be displaced by the same 80,24 origin as the BG or they would land in the matte, and the offset is applied to the renderer position tables rather than to the OAM bytes so pret-authored coordinates stay byte-faithful for anything that reads them back, offscreen entries are deliberately not culled so per-pixel edge clipping still matches hardware; lifetime=permanent, part of the cinematic presentation boundary documented in movie_projection.asm}
 ; ---------------------------------------------------------------------------
 PublishProjectedOAM:
     pushad

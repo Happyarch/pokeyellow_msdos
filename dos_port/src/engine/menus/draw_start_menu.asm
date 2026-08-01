@@ -179,6 +179,8 @@ StartMenuShowWindow:
 ; sm_canvas_mirror — copy the box rect from the canvas (stride 40, at
 ; UI_START_MENU_(COL,ROW)) to GB_TILEMAP1 rows SM_SROW.. cols 0..9. Preserves
 ; all registers (doubles as menu_redraw_cb inside HandleMenuInput).
+;
+; DEVIATION{class=projection; pret=engine/menus/draw_start_menu.asm:DrawStartMenu; behavior=the drawn box rect is carried from the stride-40 canvas into the window layer's source tilemap by an explicit blit that also re-runs per HandleMenuInput frame, where pret leaves the box in the live tilemap for the hardware to scan; evidence=the start menu composites as a window over the live overworld map so its source is GB_TILEMAP1 not the canvas, and the port's software renderer has no VBlank tilemap transfer for the redraw to ride on, which is why the same routine is also installed as menu_redraw_cb; lifetime=permanent window-compositor boundary}
 ; ---------------------------------------------------------------------------
 sm_canvas_mirror:
     pushad

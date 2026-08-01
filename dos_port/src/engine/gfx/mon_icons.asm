@@ -145,6 +145,8 @@ section .text
 ; canvas for the screen that owns the icons. Pass the window anchor's
 ; UI_*_WX - 7 / UI_*_WY (docs/ui_projection.md); (0,0) = GB-absolute.
 ; In: EAX = canvas X, EBX = canvas Y. Preserves all registers.
+;
+; DEVIATION{class=projection; pret=engine/gfx/mon_icons.asm:WriteMonPartySpriteOAMBySpecies; behavior=the owning screen first tells this module where Game Boy screen 0,0 sits on the 320x200 canvas, a handshake pret has no counterpart for; evidence=party and naming screens draw inside a projected window whose anchor comes from the generated UI layout, so icon OAM authored in GB coordinates has to be displaced by that window's origin or the icons would render at canvas-absolute positions and miss their rows, and 0,0 still means GB-absolute so a full-screen caller needs no change; lifetime=permanent window-compositor boundary}
 ; ---------------------------------------------------------------------------
 SetMonPartySpriteOrigin:
     mov [mps_org_x], eax
@@ -158,6 +160,8 @@ SetMonPartySpriteOrigin:
 ; (spr_dos_sy/sx = OAM Y - 16 / OAM X - 8, plus the screen's origin), and sets
 ; spr_oam_valid. Entries past the party count are zero (ClearSprites), so their
 ; Y - 16 = -16 culls them. Preserves all registers.
+;
+; DEVIATION{class=HAL; pret=engine/gfx/mon_icons.asm:WriteMonPartySpriteOAM; behavior=an explicit publication step copies the icon shadow OAM to $FE00 and derives the canvas positions the software renderer draws from, adding the screen origin on the way, where pret's writers simply leave the entries in shadow OAM for the hardware DMA; evidence=render_sprites positions from spr_dos_sx spr_dos_sy and takes only tile and attr from $FE00, so icons written but never published draw nothing at all, and entries past the party count stay zeroed so their Y minus 16 culls them exactly as an offscreen GB OBJ would; lifetime=permanent, the OBJ side of the software video HAL}
 ; ---------------------------------------------------------------------------
 CommitMonPartySpriteOAM:
     pushad

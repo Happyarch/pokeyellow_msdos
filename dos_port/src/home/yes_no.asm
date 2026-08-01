@@ -56,6 +56,8 @@ section .bss
 ; hlcoord/lb bc at the entry points. Written by the entry points below and by
 ; coord-supplying callers (save.asm); read by DisplayTwoOptionMenu
 ; (engine/menus/text_box.asm).
+;
+; DEVIATION{class=projection; pret=home/yes_no.asm:InitYesNoTextBoxParameters; behavior=the two-option box top-left and its anchor mode are carried in three port-owned globals that DisplayTwoOptionMenu reads, instead of pret's hlcoord X Y plus lb bc register triple handed to DisplayTextBoxID; evidence=the port publishes the box as a projected window on a 40x25 canvas rather than drawing it into the live 20x18 tilemap, so the coordinates must survive past the register-passing call boundary and be re-anchored per mode, and callers that supply their own coords, engine/menus/save.asm SaveTheGame_YesOrNo, write these directly which is why they are global; lifetime=permanent window-compositor boundary}
 ; ---------------------------------------------------------------------------
 yn_box_col:     resd 1          ; box top-left GB column  (pret hlcoord X)
 yn_box_row:     resd 1          ; box top-left GB row     (pret hlcoord Y)
