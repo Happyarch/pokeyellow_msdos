@@ -50,10 +50,17 @@ work is Itemfinder, the three fishing rods, PP Up/PP restoration, Surfboard,
 and the final stub-retirement sweep. Archive this file to
 `docs/plans/items.md` when those items are complete.
 
-This status was refreshed 2026-07-15 against the linked build,
-`dos_port/tools/project_state`, the 19-scenario fidelity manifest, and the
-operational evidence policy in `AGENTS.md`. Older completion narratives and
-resolved blockers remain in git history rather than being maintained here.
+This status was re-measured 2026-08-02 against the tree at `3fad3249`, per the
+maintainer directive to re-derive open items from generated state rather than
+carry forward prior narrative — this is a re-measurement pass, not new work.
+Every stale claim it found had made this plan look MORE blocked than the tree
+actually is (see the Fishing rods, Surfboard, and DisplayTextID entries below);
+none understated remaining work. Re-measured against the linked build,
+`dos_port/tools/project_state`, the 37-scenario fidelity manifest
+(`dos_port/tools/scenario_manifest.json` — cite the file, not this number, next
+time), and the operational evidence policy in `AGENTS.md`. Older completion
+narratives and resolved blockers remain in git history rather than being
+maintained here.
 
 ## Standing rules
 
@@ -101,8 +108,9 @@ resolved blockers remain in git history rather than being maintained here.
       now generated (`tools/generators/gen_hidden_item_coords.py` →
       `assets/hidden_item_coords.inc`, linked via `src/data/hidden_events_data.asm`).
       `src/engine/items/itemfinder.asm` (`HiddenItemNear`/`Sub5ClampTo0`) is
-      linked (`ITEMS_SRCS`); `IsInRestOfArray` was promoted with `vcopy.asm` into
-      `HOME_SRCS`. `ItemUseItemfinder` moved from the `item_use_stubs.asm`
+      linked (`ITEMS_SRCS`); `IsInRestOfArray` was promoted into `HOME_SRCS` (it
+      has since moved from the `vcopy.asm` util bucket to its pret mirror
+      `src/home/array2.asm`). `ItemUseItemfinder` moved from the `item_use_stubs.asm`
       ret-stub to a real body in `item_effects.asm` (`farcall HiddenItemNear` →
       flat `call`; `jp PrintText` → the `iu_print_text` overworld tail;
       `ItemfinderFound{Item,Nothing}Text` were already generated). Build clean,
@@ -116,9 +124,30 @@ resolved blockers remain in git history rather than being maintained here.
 - [ ] **Fishing rods.** This is ready item-layer work, not an external blocker:
       `FishingAnim` is linked and `ReadSuperRodData` is check-only. Promote
       `super_rod.asm`, port `FishingInit` plus the Old/Good/Super Rod handlers,
-      and exercise no-bite and bite branches. The linked `EmotionBubble`
-      stand-in only omits the cosmetic "!" bubble; its real translated body is
-      still check-only with the trainer-engine closure.
+      and exercise no-bite and bite branches. `EmotionBubble` is NOT a blocker: the
+      faithful body is linked at its pret mirror
+      (`src/engine/overworld/emotion_bubbles.asm`) and the `overworld_stubs.asm`
+      ret-stub was retired by the M8.2 promotion 2026-07-24, so a bite draws the
+      real "!" bubble. The genuine open dependency is `LoadAnimSpriteGfx`: see
+      the header-layout defect below.
+
+      **Header-layout defect on the already-linked `FishingAnim` path
+      (measured 2026-08-02, not previously recorded).** `FishingAnim`
+      (`src/engine/overworld/player_animations.asm:686-687`) calls
+      `LoadAnimSpriteGfx` with `RedFishingTiles`, but the two disagree on the
+      header shape: the linked `LoadAnimSpriteGfx`
+      (`src/engine/gfx/mon_icons.asm:295-309`) reads 12-byte entries
+      (`MON_ICON_HDR_SIZE equ 12`, fields at +0/+4/+8), while `RedFishingTiles`
+      (`player_animations.asm:772-788`) is 8 bytes per entry
+      (`dd ptr / db count / db bank / dw vram_off`). The same call also passes
+      the entry count in `AL` (`mov al, 0x4`) where the callee consumes `EAX`
+      (`mov [las_left], eax`), so the loop bound is whatever was in the upper
+      24 bits. Both must be fixed before a rod can be used; the port's own
+      `; UNPORTED` comment at `:687` and the "Check-only (HOME_CHECK_SRCS)"
+      note at `:35-38` are stale (the file is in `GAME_SRCS`, Makefile:354) and
+      were hiding this. A related `wRodResponse` memmap-promotion note for this
+      same handler family is tracked in `docs/current_plan_backlog.md`, not
+      here.
 
 - [ ] **PP Up and PP restoration.** This is ready item-layer work. The battle
       menu audit replaced the old battle-only move picker with pret-shaped
@@ -129,18 +158,34 @@ resolved blockers remain in git history rather than being maintained here.
       battle menu, not this type-2 item path, so the item flow needs its own
       must-hit evidence.
 
-- [ ] **Surfboard.** `ItemUseSurfboard` remains a linked ret-stub. Generated
-      state reports `IsSpriteInFrontOfPlayer2` and `SurfingAttemptFailed`
-      missing, while `IsSurfingAllowed`, shore/water detection, tile-pair
-      collision, passability, walking graphics, and simulated joypad support
-      are present. Overworld-events supplies `IsSpriteInFrontOfPlayer2` and the
-      normal-loop forced-step contract; this plan ports `SurfingAttemptFailed`
-      with `ItemUseSurfboard`, including mount and dismount. Verify both
-      directions through the real movement loop. See `docs/items_blockers.md`
-      → Surfboard.
+- [ ] **Surfboard.** `ItemUseSurfboard` remains a linked ret-stub and
+      `SurfingAttemptFailed` is the only missing dependency. Re-measured
+      2026-08-02: `IsSpriteInFrontOfPlayer2` is DONE — `implementation /
+      linked / statically-reached-from-start`, provider
+      `src/home/overworld.asm`, 2 callers (`IsSpriteOrSignInFrontOfPlayer`,
+      `IsSpriteInFrontOfPlayer`) — delivered by the overworld-events boulder
+      work 2026-07-16; the earlier "missing" reading here predated it.
+      `IsSurfingAllowed`, shore/water detection, tile-pair collision,
+      passability, walking graphics and simulated-joypad support are all
+      linked, and so is the whole water-collision loop
+      (`CollisionCheckOnWater`, `ForceBikeOrSurf`,
+      `LoadSurfingPlayerSpriteGraphics`, `CheckForJumpingAndTilePairCollisions`
+      — all linked and statically reached). This plan ports
+      `SurfingAttemptFailed` with `ItemUseSurfboard`, including mount and
+      dismount; overworld-events still owns normal-loop consumption of the
+      simulated forward step. Verify both directions through the real movement
+      loop. The mount/dismount runtime scenario belongs here — it is also the
+      first coverage of the overworld-owned `CollisionCheckOnWater` /
+      `LoadSurfingPlayerSpriteGraphics` path, so do not write it twice. See
+      `docs/items_blockers.md` → Surfboard.
 
 - [ ] **Stage 12 — stub and claim retirement.** Empty
-      `src/engine/items/item_use_stubs.asm`; run `label_status --callers` for
+      `src/engine/items/item_use_stubs.asm` — measured 2026-08-02, that file
+      holds exactly six labels aliased onto one `ret`: `ItemUseSurfboard`,
+      `ItemUse{Old,Good,Super}Rod`, `ItemUsePPUp`, `ItemUsePPRestore`; its
+      `TODO(safari, battle plan): ItemUseBait / ItemUseRock` line is stale
+      (both are real linked bodies in `item_effects.asm`). Run
+      `label_status --callers` for
       every retired provider; update the label DB; run the strict/default label
       lint and `fidelity_gate`; sweep related `STUB`, `TODO`, extern-provider,
       allowlist, plan, skill, and stigmergy claims; then archive this plan.
@@ -150,10 +195,17 @@ resolved blockers remain in git history rather than being maintained here.
 These do not block implementing the remaining item bodies, but they prevent
 some completed effects from being fully reachable or faithful end to end:
 
-- `DisplayTextID` has a translated check-only implementation and a linked
-  ret-stub. Repel step counting and encounter suppression work, but the
-  "REPEL's effect wore off" message cannot display until overworld-events
-  Stage 2 links the real dispatcher.
+- `DisplayTextID` is DONE (re-measured 2026-08-02): `implementation / linked /
+  statically-reached-from-start`, provider `src/home/text_script.asm`; the
+  `home_stubs` ret-stub is gone and the check-only reading is stale (see the
+  reachability note in `src/engine/menus/display_text_id_init.asm:12-21`).
+  The whole Repel-expiry path links —
+  `TryDoWildEncounter` (`src/engine/battle/wild_encounters.asm:142-147`) sets
+  `TEXT_REPEL_WORE_OFF` and calls `DisplayTextID`, which dispatches to
+  `DisplayRepelWoreOffText` (`src/home/text_script.asm:155-157, 437-444`).
+  What remains is coverage only: no manifest scenario hits `TryDoWildEncounter`,
+  so the message is linked-but-unwitnessed. Overworld-events Stage 2 still owns
+  that scenario.
 - `BattleItemMenu` is a linked ret-only helper. Balls and battle-item effects
   have direct state coverage, but `ball_catch` enters through `UseItem` and
   bypasses that menu. The live battle ITEM button cannot reach the dispatcher

@@ -3085,7 +3085,7 @@ global IsSpriteInFrontOfPlayer2              ; long-range entry — counter bran
 ; therefore keeps pret's name on this half and IsNPCAtTargetBlock's on the other.
 ;
 ; CONSUMERS: TryPushingBoulder (push_boulder.asm), and the
-; IsSpriteOrSignInFrontOfPlayer head above (counter branch → the -2 entry,
+; IsSpriteOrSignInFrontOfPlayer head (counter branch → the -2 entry,
 ; no-counter fallthrough → the normal entry). ItemUseSurfboard's -2 check at
 ; pret engine/items/item_effects.asm:725 is still open (Stage 4 Surf bullet,
 ; which lists "supply IsSpriteInFrontOfPlayer2" as its dependency).
@@ -3102,7 +3102,7 @@ global IsSpriteInFrontOfPlayer2              ; long-range entry — counter bran
 ; ---------------------------------------------------------------------------
 ; IsSpriteOrSignInFrontOfPlayer — pret home/overworld.asm:IsSpriteOrSignInFrontOfPlayer.
 ; The A-press interaction head: sign lookup first, then the counter-tile
-; talking-range extension, then FALLS THROUGH into the sprite scan below —
+; talking-range extension, then FALLS THROUGH into the sprite scan —
 ; pret has no ret between the counter loop and IsSpriteInFrontOfPlayer, and
 ; that fallthrough is load-bearing: do not insert anything between them.
 ;

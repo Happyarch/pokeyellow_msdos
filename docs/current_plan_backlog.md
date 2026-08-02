@@ -334,6 +334,126 @@ real live callers — it needs its own reviewed change, not an unattended pass.
 Source: `docs/current_plan_bug_tagging.md` (~`:264-272`); update that citation if
 that plan is ever archived.
 
+### 24. Two real defects on the fishing path (`LoadAnimSpriteGfx`)
+Filed 2026-08-02 by the plan re-measurement. **Code defects, not bookkeeping**, and
+they were invisible because two comments lie about the file.
+
+The already-linked `FishingAnim` calls `LoadAnimSpriteGfx`
+(`src/engine/gfx/mon_icons.asm`) with:
+1. a **header-layout mismatch** — the callee reads the 12-byte party-icon header
+   shape (`MON_ICON_HDR_SIZE`, documented at `mon_icons.asm:70-74` as a deliberate
+   port divergence from pret's 6-byte header); the fishing caller supplies an
+   8-byte layout;
+2. the **count passed in `AL` where the callee reads `EAX`**.
+
+Concealed by a stale `; UNPORTED` comment and a stale "Check-only
+(HOME_CHECK_SRCS)" file header — the file is in `GAME_SRCS`.
+
+**Owner is genuinely ambiguous** and that is why it is here rather than in a plan:
+`LoadAnimSpriteGfx` has 3 callers and its 12-byte shape is the *party-icon* shape,
+so a fix for fishing must not break the icon path (archived context:
+`docs/plans/party_icons_oam.md`). Whoever takes it owns both paths, and it wants a
+scenario covering each.
+
+### 25. Promote `wRodResponse` to `include/gb_memmap.inc` (0xCD3D)
+Filed 2026-08-02. Currently a `%ifndef` **local shadow** at
+`src/engine/overworld/player_animations.asm:116-118`. The fishing-rod handlers
+(`docs/current_plan_items.md`) are the second consumer, so porting them without
+this promotion either adds a second shadow or forces the promotion mid-change —
+and `3fad3249` drove the `local_shadow` class from 21 to **0**, so it would be a
+fresh strict-claims regression on a class cleared the same day.
+
+`wRodResponse` unions with `wPPRestoreItem` (`gb_memmap.inc:205`) and the
+`wFlyAnimUsingCoordList` / `wPlayerSpin*` scratch, all at 0xCD3D — the promotion
+must carry that union comment forward or it silently aliases.
+
+### 26. `project_state` and `label_status` disagree on caller counts
+Filed 2026-08-02. Measured for `DisplayTextID`: `project_state --no-scan` reports
+**5** callers; `label_status --callers` lists **7 call sites / 6 unique**
+(`PalletTownAfterPikachuBattleScript` calls it twice). So the two disagree even
+after collapsing duplicates — one undercounts by one.
+
+`ModifyPikachuHappiness` *does* decompose cleanly (8 unique vs 9 sites), so the
+rule "`project_state` counts unique callers" holds there and fails here. That is
+the bad shape: a discrepancy that looks like a known rounding rule until you check.
+
+This matters because the Evidence Policy **requires** plans to cite these columns.
+Reconcile them, or document precisely what each counts.
+
+### 27. No `gen_trainer_headers.py` — blocks the `TrainerFlagAction` cleanup
+Filed 2026-08-02 (from battle-completion X4; boundary between that plan and
+overworld-events, placed here so neither drops it).
+`src/home/trainers.asm:53-58` files a "ROOT FOLLOW-UP": once trainer-header DATA
+exists, delete `npc_beaten_flags` and route `map_sprites.asm`'s
+`CheckTrainerSight` / `TrainerEncounterFlow` beaten-gate through
+`TrainerFlagAction`. It is gated on a generator that **does not exist** —
+`ls dos_port/tools/generators/` shows no trainer-header generator. Tier-1 data
+work touching map scripts.
+
+### 28. Stale in-code prose found during the 2026-08-02 re-measurement
+All found by reading files in full rather than grep windows — which is the point:
+none of these is visible in a match window.
+
+**FIXED 2026-08-02** (same commit as the re-measurement):
+- `src/home/overworld.asm` — two orphaned doc headers sit ~1000 lines from the
+  routines they document, and their internal directions had become **inverted**
+  ("the head **above**", "falls through into the sprite scan **below**" — both
+  pointed the wrong way after the relocation). Direction words removed; the
+  content is correct and load-bearing (it is where the Surf `DH` contract is
+  recorded), so it was fixed in place rather than moved.
+- `src/home/map_objects.asm:118-121` — called `BillsPC_` a menu stub; it has had
+  a real body since `0c9afce5` (2026-07-31) with two goldens.
+- `src/home/run_map_script.asm:1-37` — a 37-line header documenting `RunMapScript`
+  in a file that now holds only `DefaultMapScript` (the routine moved to
+  `src/home/overworld.asm`). Header re-pointed; the prose kept, since it is
+  accurate about the routine, just filed under the wrong roof.
+- `docs/items_blockers.md:17` cited `tools/gen_hidden_item_coords.py`; the real
+  path is `tools/generators/gen_hidden_item_coords.py`.
+
+**STILL OPEN** — fold into whichever change next touches the file:
+- `end_of_battle.asm` — Pay Day `TODO-HW` comment is stale in two ways.
+- `battle_exp_stubs.asm` — the LATENT-COLLISION header paragraph (l.13-18) is
+  contradicted by its own l.47-50.
+- `src/engine/gfx/mon_icons.asm` — the `; UNPORTED` comment and the "Check-only
+  (HOME_CHECK_SRCS)" header; the file is in `GAME_SRCS`. These two are what hid
+  the defects in #24, so fix them with that work, not before.
+
+### 29. Overworld-events tails with no good home in that plan
+Filed 2026-08-02 from the overworld re-measurement, to keep its Stage bullets honest:
+- **`CableClubNPC`** — its own `STUB{}` says `lifetime=until Phase 4 cable/link
+  behavior lands`. It sits inside a Phase-2 bullet that therefore cannot close.
+- **`CeladonPrizeMenu` / prize service** — the only one of that five-way bullet
+  whose consumer is a Game Corner map Stage 5 will not reach for many batches, and
+  the only one measuring 0 callers. Low value staying coupled to
+  vending/Safari/Pikachu.
+- **`ShowTextStream` auto-advance mismatch** — a real behavioural divergence from
+  pret with a named symptom (Oak's "Hey! Wait!"), currently narrative inside a
+  handoff with no bullet anywhere.
+- **`LoadHoppingShadowOAM`** (`overworld_stubs.asm:93-107`, stub/linked/1 caller/
+  reached) — the cosmetic half of the ledge work; its TODO needs `PrepareOAMData`
+  to grow shadow-OAM slots, a compositor change. Pair with the ledge-hop bullet.
+
+### 30. Build-gate trap: `DEBUG_OAKINTRO` vs `DEBUG_OAK_INTRO`
+Filed 2026-08-02. **Two different build gates one underscore apart, in the same
+Makefile**, driving two different scenarios:
+- `DEBUG_OAKINTRO` (`Makefile:1168`) → `RunOakSpeechCheckpoint` — Prof. Oak's
+  *opening speech*. This is golden scenario id 29, named `oak_intro`, owned by
+  `docs/current_plan_menu_intro.md`.
+- `DEBUG_OAK_INTRO` (`Makefile:649`) → `RunOakIntroTest`
+  (`src/home/overworld.asm:385`, `src/debug/debug_dump.asm:207`) — the **Pallet
+  overworld** Oak cutscene, owned by `docs/current_plan_overworld_events.md`.
+  **It appears in no manifest row**, so it has no golden coverage.
+
+The overworld plan recorded its scenario as "ENABLED and PASSING" on the strength
+of the *name* `oak_intro` existing in the manifest. It was reading the other
+plan's scenario. The `.disabled` scaffold was deleted, not re-enabled (`7338860c`,
+whose own message says so).
+
+Rename one of the gates, or at minimum never reuse a scenario name across plans —
+any new Pallet cutscene golden needs a distinct name (`pallet_oak_cutscene`).
+**A false coverage claim is worse than a missing one:** it retires the very
+scenario that would have caught the regression.
+
 ---
 
 ## Battle

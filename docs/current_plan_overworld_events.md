@@ -61,6 +61,14 @@ been AGENTS-only since 2026-07-14, so Claude Code sessions never saw it; see
 stigmergy `claude-md-agents-md-are-separate-files-that-drift`). Superseded execution
 narratives remain in git history instead of being maintained here.
 
+**Re-stamped 2026-08-02**: a maintainer-directed re-measurement against generated
+state (`project_state --no-scan`, `label_status --callers`, `faithdiff`, the
+scenario manifest, and stigmergy) reconciled every open item and corrected two
+over-claims (Stage 1 Oak-intro "SUPERSEDED"/Fly commit status — both false in the
+"already done" direction) plus several stale sub-claims (`BillsPC_`, the Surf
+bullet's file path and caller count, `RunMapScript`'s location, the fidelity
+table). This was NOT new work — no build, rescan, or gate was run.
+
 **Evidence caveat carried forward:** several Stage 3/4 bullets are `[x]` with their
 must-hit runtime scenarios openly deferred, because nothing in the current build
 state can reach them (no item ball, no ITEMFINDER, no Strength, no boulder map).
@@ -96,9 +104,13 @@ bullet names what still owes evidence and when it lands. Do not upgrade those to
 - [x] Event flags, generated event constants, generated map text tables,
       `ShowTextStream`, `RunMapScript`, `CallFunctionInTable`, and the default
       per-map no-op dispatch are linked.
-- [x] Pallet Town has the first linked `_Script`/`text_asm` skeleton and is the
-      only map registered with a non-default script. Its Oak cutscene states
-      0–8 now have Stage 1 code; state 9 remains the no-op tail.
+- [x] Pallet Town has the first linked `_Script`/`text_asm` skeleton. Its Oak
+      cutscene states 0–8 now have Stage 1 code; state 9 remains the no-op tail.
+      It is no longer the only registered map: `assets/map_scripts.inc` has 4
+      non-default rows of 249 — PALLET_TOWN plus ROUTE_3/ROUTE_6/ROUTE_11, which
+      run the generic data-driven `TrainerMapScript` landed by the archived
+      `docs/plans/map_script_fidelity.md` (COMPLETE 2026-07-24). Stage 5 should
+      register new maps through `gen_map_script_tables.py`, not per-map skeletons.
 - [x] Scripted NPC movement, pathfinding, `MoveSprite`, simulated joypad support,
       and the per-map movement-script table are linked. They are infrastructure,
       not evidence that a story cutscene has executed.
@@ -134,12 +146,18 @@ bullet names what still owes evidence and when it lands. Do not upgrade those to
       compares event/script variables plus the rendered scene. Stage 1 preserved
       a disabled scaffold, but the active golden is still
       open because the generated mGBA WRAM state was not valid evidence.
-      **SUPERSEDED: the scenario is ENABLED and PASSING.** It is
-      `tools/mgba_harness/scenarios/oak_intro.lua` (no `.disabled` suffix), an
-      active row in `tools/scenario_manifest.json` with committed goldens at
-      `tests/goldens/oak_intro.{json,bin}`, and it PASSES in `fidelity-full`.
-      `disabled_scenarios` is now an empty list. Use
-      live DOSBox-X only for continuous choreography not captured by the dump.
+      **RETRACTED 2026-08-02 — the previous "SUPERSEDED: the scenario is ENABLED
+      and PASSING" note was a NAME COLLISION, and this bullet is still open.**
+      The Pallet scaffold `oak_intro.lua.disabled` was DELETED, not re-enabled:
+      `7338860c` ("menu-intro A4") added a different `oak_intro.lua` and its own
+      commit message says it "removed the stale oak_intro.lua.disabled (navigated
+      the Pallet overworld Oak event, a different thing)". The active row id 29
+      gates on `DEBUG_OAKINTRO` (→ `RunOakSpeechCheckpoint`, Prof. Oak's opening
+      speech) with `must_hit = OakSpeech / PrepareOakSpeech / FadeInIntroPic /
+      DisplayPicCenteredOrUpperRight` — no Pallet script state, no scripted-movement
+      consumer. This plan's hook is the SEPARATE `DEBUG_OAK_INTRO` →
+      `RunOakIntroTest` (`src/home/overworld.asm:385`, `Makefile:649`), still
+      unregistered. A new scenario is owed, under a name that does not collide.
 
 ## Stage 2 — `DisplayTextID` and overworld service dialogs
 
@@ -173,10 +191,11 @@ Stage 2 touches text/input waits.
 The Oak intro test hook is deliberately retained but not registered as active
 golden evidence. `DEBUG_OAK_INTRO` still builds and calls `RunOakIntroTest`, and
 the attempted mGBA scenario was preserved as a
-`.disabled` scaffold. **SUPERSEDED — that re-enabling has happened:** the file is
-`tools/mgba_harness/scenarios/oak_intro.lua`, the manifest row is active, the
-golden is committed and the scenario PASSES. `goldens-verify` executes every active
-`*.lua` scenario.
+`.disabled` scaffold. **That re-enabling did NOT happen** — see the retraction on
+the Stage 1 scenario bullet above: the scaffold was deleted and its filename reused
+by the menu-intro plan for the Prof. Oak *opening speech* golden. `DEBUG_OAK_INTRO`
+/ `RunOakIntroTest` are still live and still unregistered. `goldens-verify` executes
+every active `*.lua` scenario.
 
 `project_state DisplayTextID` reports the translated implementation linked, and
 `label_status --callers DisplayTextID` reports the real `text_script.asm`
@@ -242,7 +261,9 @@ and add a must-hit runtime scenario for the behavior.
       Pokémon Center PC shell. Verify party healing and the rendered dialog,
       not merely entry into the menu.
 - [x] Enable the guarded PC script dispatch only after checking current targets:
-      `PlayerPC` and `ActivatePC` are linked, `BillsPC_` is a linked stub, and
+      `PlayerPC` and `ActivatePC` are linked; `BillsPC_` is now a REAL implementation
+      (`src/engine/pokemon/bills_pc.asm`, commit `0c9afce5`, covered by the
+      `bills_pc_ops` and `box_change_roundtrip` goldens), and
       `CeladonPrizeMenu` now has a structured menu stub. `M72_OVERWORLD_TEXTSCRIPTS`
       is retired; genuinely unavailable services are structured subsystem stubs
       rather than hidden behind the blanket guard.
@@ -372,11 +393,21 @@ owe the boulder and cut cutscenes their first actual execution.
       LEAVE animation, and the wide-canvas bird trajectory all work live. **The
       ARRIVAL still page-faults** in the `DEBUG_SEED_PARTY` harness — NOT met, and
       suspected to be a debug-seed/new-game (title-screen) player-state artifact
-      rather than a Fly-logic bug. See the Fly-bullet handoff below. Uncommitted;
-      commit deferred until arrival verifies (needs the real title→new-game route).
+      rather than a Fly-logic bug. See the Fly-bullet handoff below.
+      **CORRECTED 2026-08-02: it is COMMITTED** — the wiring landed in `b3b31345`
+      (2026-07-25, swept in by a pathspec commit) and the page-fault fix in `64400890`
+      (2026-07-26). The "commit only after arrival verifies" gate was never honoured, so
+      this code is in every green run since and NOTHING in the 37-row manifest exercises
+      Fly, Teleport, Dig or any warp. A warp/Fly scenario is the retirement. See stigmergy
+      `overworld-events-stage4-fly-arrival-open` (v3).
 - [ ] **Surf:** ~~supply `IsSpriteInFrontOfPlayer2`~~ (DONE — the boulder bullet ported
-      it as the long-range entry point of `IsSpriteInFrontOfPlayer`, in
-      `src/engine/overworld/overworld.asm`; it is `linked` but has no caller yet.
+      it as the long-range entry point of `IsSpriteInFrontOfPlayer`; it now lives in
+      `src/home/overworld.asm` (moved there by the mirror-consolidation relocation
+      chunks) and measures `implementation / linked / 2 callers /
+      statically-reached-from-start` — it already EXECUTES on the A-press counter-tile
+      branch (`IsSpriteOrSignInFrontOfPlayer` `je` at :2024, plus the
+      `IsSpriteInFrontOfPlayer` fallthrough at :2030). What is still missing is the
+      SURF consumer, not the routine.
       pret's consumer is `ItemUseSurfboard` at `engine/items/item_effects.asm:725`,
       which sets `d` = the long talking range before calling it — under the port's
       register map that is **DH**, and the count/pointer contract is on the routine's
@@ -391,6 +422,18 @@ owe the boulder and cut cutscenes their first actual execution.
       arms the state; it is not proof that a boulder moved.
       **Linked and wired; the push/blocked-push must-hit is NOT met — see the
       Stage 4 boulder handoff below for exactly what is and is not proven.**
+- [ ] **Ledges:** restore `call HandleMidJump` in `OverworldLoopLessDelay` at pret's
+      position (`home/overworld.asm:49`, after `LoadGBPal`, before the `wWalkCounter`
+      test) and add a ledge-hop golden. Measured 2026-08-02: `HandleMidJump` has
+      **0 port callers**, `faithdiff OverworldLoopLessDelay` reports it DROPPED, so
+      `_HandleMidJump`'s teardown never runs and `BIT_LEDGE_OR_FISHING` sticks set
+      after the first hop — permanently gating collision
+      (`CheckForJumpingAndTilePairCollisions`), OBJ (`sprite_oam.asm`) and emotion
+      bubbles. Tagged in code: `BUG{class=temporary}` at
+      `dos_port/src/home/overworld.asm:3124`. Memory
+      `regression-overworld-ledge-hop-never-advanced` (OPEN). The scenario is the
+      retirement for that memory, and it must land BEFORE the call is restored —
+      nothing can verify the fix today.
 
 ### Stage 4 boulder-bullet handoff — 2026-07-16
 
@@ -398,8 +441,9 @@ owe the boulder and cut cutscenes their first actual execution.
 `HOME_CHECK_SRCS` → `GAME_SRCS`, and `home/oam.asm` → `HOME_SRCS`. Four blockers were
 resolved to get there:
 1. `IsSpriteInFrontOfPlayer` (+ the `IsSpriteInFrontOfPlayer2` entry point) was
-   `missing`; ported into `src/engine/overworld/overworld.asm` beside
-   `IsSpriteOrSignInFrontOfPlayer`, the sign branch of the same pret routine.
+   `missing`; ported beside `IsSpriteOrSignInFrontOfPlayer` (both now in
+   `src/home/overworld.asm` after the mirror consolidation; originally
+   `src/engine/overworld/overworld.asm`), the sign branch of the same pret routine.
 2. `AdjustOAMBlock{X,Y}Pos(2)` were `missing`; ported into their pret home
    `src/engine/battle/animations.asm` (shared by cut + boulder dust). The Y variant
    carries pret's `BUG{}` — it writes 160 to the PREVIOUS OAM entry's attribute.
@@ -526,7 +570,9 @@ start --call--> Init --jmp--> EnterMapBoot --FALL--> EnterMap --FALL--> Overworl
 ```
 
 (`overworld.asm:427` "fall into EnterMap", `:939` "fall through to OverworldLoop",
-`:969` "OverworldLoop falls through into OverworldLoopLessDelay (pret)"). The BFS
+`:969` "OverworldLoop falls through into OverworldLoopLessDelay (pret)"; line numbers
+as of 2026-07-16 — measured 2026-08-02, the file has since been reorganised:
+`EnterMap:214`, `OverworldLoop:799`, `OverworldLoopLessDelay:816`). The BFS
 reaches `EnterMapBoot`, follows its explicit `call`s, and dies at the fall-through:
 `EnterMapBoot` reachable, `EnterMap` — the very next instruction — not. Measured over
 the live DB: 385 labels reachable; adding just that ONE edge → 948; adding all three
@@ -623,7 +669,13 @@ same class will recur:**
    `SaveScreenTilesToBuffer2`/`LoadScreenTilesFromBuffer2` blocked `cut.asm`; Stage 3's
    `vcopy.asm` promotion had already linked them).
 2. `docs/plans/current_plan_script_engine.md` located `RunMapScript` at
-   `src/engine/overworld/run_map_script.asm`; it is at `src/home/run_map_script.asm`.
+   `src/engine/overworld/run_map_script.asm`; this plan then corrected that to
+   `src/home/run_map_script.asm`, and **that is now stale too** — measured
+   2026-08-02, `project_state RunMapScript` reports
+   `dos_port/src/home/overworld.asm` (its pret mirror). `src/home/run_map_script.asm`
+   still exists but now defines only `DefaultMapScript`, and its file header still
+   describes RunMapScript as if the body were there. Two corrections in a row got the
+   path wrong: read the provider, do not copy it from prose.
 3. `project_state DiscardButtonPresses` still names a DEAD file as provider (see the
    tooling trap above). **Rerun `project_state` per this plan's standing rules, but when
    a provider looks wrong, check the file's own header and the Makefile lists before
@@ -638,9 +690,9 @@ pickup success/bag-full and itemfinder near/nothing. None are reachable in the c
 build state; all are honest deferrals, not claimed coverage. The one piece of *executable*
 evidence identified but not yet built is the `DEBUG_CUT` refusal-path harness (see the
 Cut handoff).
-### Stage 4 Fly-bullet handoff — 2026-07-17 (arrival OPEN, changes UNCOMMITTED)
+### Stage 4 Fly-bullet handoff — 2026-07-17 (arrival OPEN; changes COMMITTED 2026-07-25/26 — see the bullet)
 
-**What landed (in the working tree, gate-green, NOT committed).** `ChooseFlyDestination`
+**What landed (gate-green; committed in `b3b31345` + `64400890`, not at the time this was written).** `ChooseFlyDestination`
 ported into `dos_port/src/home/reload_tiles.asm` (res `BIT_NO_BATTLES`, tail-`jmp
 LoadTownMap_Fly` — a `farjp`→flat banking DEVIATION); `.canFly` tail restored in
 `start_sub_menus.asm` (`call ChooseFlyDestination` / test `BIT_FLY_WARP` / `LoadFontTilePatterns`+
@@ -730,15 +782,19 @@ additions are the right fix or should be reverted. `PrepareForSpecialWarp`/`Spec
 
 ## Fidelity and acceptance
 
-The current manifest supplies two overworld-facing core scenarios:
+The current manifest supplies two overworld-facing core scenarios, plus three
+`full`-tier scenarios covering the generic map-script trainer engagement:
 
 | Scenario | Must-hit evidence | What it proves |
 |---|---|---|
 | `overworld_pallet` | `LoadCurrentMapView`, `DumpBackbuffer` | deterministic Pallet map/render state |
 | `sign_pallet` | `DisplaySignText` | streamed sign dialog, tile/VRAM/OAM/WRAM projection |
+| `route3_sight` / `route6_sight` / `route11_sight` (tier `full`, wram-only) | `TrainerMapScript`, `CheckFightingMapTrainers` | the generic map-script trainer-engagement STATE on three registered maps |
 
-Neither scenario proves Oak's cutscene, service menus, hidden events, pickups,
-field moves, trainer/story scripts, or later maps.
+None of these proves Oak's Pallet cutscene, service menus, hidden events, pickups,
+field moves (Cut/Fly/Dig/Teleport/Flash/Softboiled/Strength), any warp, ledges, or
+later map stories. `oak_intro` in the manifest is the menu-intro plan's Prof. Oak
+OPENING SPEECH, not this plan's Pallet cutscene.
 
 For each remaining capability:
 

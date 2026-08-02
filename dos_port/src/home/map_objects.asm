@@ -117,8 +117,11 @@ DecodeArrowMovementRLE:
 ; home/text_script.asm's `dict` table names).
 ; Tier-2 dispatch stubs: they bankswitch (no-op under flat memory) and jump into a bank
 ; routine (PlayerPC / BillsPC_ / CeladonPrizeMenu / ActivatePC), then fall into
-; HoldTextDisplayOpen. PlayerPC and ActivatePC are linked; BillsPC_ and
-; CeladonPrizeMenu resolve through structured menu stubs until their real UIs land.
+; HoldTextDisplayOpen. PlayerPC, ActivatePC and BillsPC_ are linked -- BillsPC_ has
+; had a real body in src/engine/pokemon/bills_pc.asm since 0c9afce5 (2026-07-31),
+; gated by the bills_pc_ops and box_change_roundtrip goldens; this comment called it
+; a stub until 2026-08-02. CeladonPrizeMenu still resolves through a structured menu
+; stub until its real UI lands.
 ;
 ;   TextScript_ItemStoragePC   -> PlayerPC        (SaveScreenTilesToBuffer2 first)
 ;   TextScript_BillsPC         -> BillsPC_        (SaveScreenTilesToBuffer2 first)

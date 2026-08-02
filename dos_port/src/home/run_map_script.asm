@@ -1,4 +1,11 @@
-; run_map_script.asm — RunMapScript (script engine, Stage 5).
+; run_map_script.asm — DefaultMapScript (script engine, Stage 5).
+;
+; *** WHAT THIS FILE ACTUALLY CONTAINS (corrected 2026-08-02): DefaultMapScript,
+; *** and nothing else. RunMapScript itself now lives in src/home/overworld.asm,
+; *** its pret mirror. Everything below describing RunMapScript's behaviour is
+; *** retained because it is accurate and load-bearing documentation OF THAT
+; *** ROUTINE — but read it there. This header described a routine the file no
+; *** longer held, which is how a reader ends up editing the wrong copy.
 ;
 ; Faithful translation of home/overworld.asm:RunMapScript (the per-frame map-script
 ; dispatcher). CallFunctionInTable used to live here too, attributed to a
