@@ -43,7 +43,6 @@ bits 32
 %include "assets/ui_layout_menus.inc"
 
 global DrawBadges
-global GymLeaderFaceAndBadgeTileGraphics ; defined in assets/badge_tiles.inc (below)
 global LoadBadgeTiles
 
 extern CopyData                      ; home/copy.asm — ESI src off, EDX dst off, BX count

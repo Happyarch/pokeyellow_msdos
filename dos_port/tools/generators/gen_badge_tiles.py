@@ -29,6 +29,8 @@ Requires nothing beyond the stdlib. Run from the repo root:
 import re
 from pathlib import Path
 
+from gen_globals import insert_globals
+
 ROOT = Path(__file__).resolve().parents[3]
 SRC = ROOT / "gfx" / "trainer_card" / "badges.2bpp"
 DST = ROOT / "dos_port" / "assets" / "badge_tiles.inc"
@@ -80,6 +82,7 @@ def main():
         out.append("    db " + ", ".join(f"0x{b:02X}" for b in row))
     out.append("")
 
+    insert_globals(out, ["GymLeaderFaceAndBadgeTileGraphics"], anchor=None)
     DST.parent.mkdir(parents=True, exist_ok=True)
     DST.write_text("\n".join(out) + "\n")
     print(f"wrote {DST}: {count} tiles ({len(data)} bytes)")

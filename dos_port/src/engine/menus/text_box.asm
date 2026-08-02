@@ -53,7 +53,6 @@ global DisplayMoneyBox
 global DoBuySellQuitMenu
 global DisplayFieldMoveMonMenu
 global GetMonFieldMoves
-global PokemonMenuEntries               ; S5 rebases party_menu's pop-up onto this
 global DisplayTwoOptionMenu             ; the ONE two-option impl (pret mirror)
 
 extern DisplayTextBoxID                 ; home/textbox.asm — pret home wrapper

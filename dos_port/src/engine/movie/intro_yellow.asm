@@ -1383,8 +1383,10 @@ YellowIntroFlyingSpeedBarData:
 ; --- Yellow-intro gfx (B3.2b, gen_intro_gfx_inc.py; verified byte-exact vs the
 ; pret gfx/intro/*.2bpp). Loaded to VRAM by InitYellowIntroGFXAndMusic (B3.2c);
 ; the tilemaps are placed by scene 10. Flat program-image data. ---
-global YellowIntroGraphics1, YellowIntroGraphics2, YellowIntroCloudGFX
-global Unkn_f9b6e, Unkn_f9be6, Unkn_f9bf2
+global YellowIntroGraphics1, YellowIntroGraphics2
+; YellowIntroCloudGFX and Unkn_f9b6e/be6/bf2 are declared `global` by their own
+; generated .inc now (gen_intro_gfx_inc.py via gen_globals.insert_globals) — the
+; file that DEFINES a label declares it, which is what clears [local_shadow].
 %include "assets/yellow_intro_1_2bpp.inc"       ; YellowIntroGraphics1 (128 tiles)
 %include "assets/yellow_intro_2_2bpp.inc"       ; YellowIntroGraphics2 (256 tiles)
 %include "assets/yellow_intro_clouds_2bpp.inc"  ; YellowIntroCloudGFX (8 tiles)

@@ -71,7 +71,6 @@ global ExitPlayerPC
 global PlayerPCDeposit
 global PlayerPCWithdraw
 global PlayerPCToss
-global PlayersPCMenuEntries
 global TurnedOnPC2Text
 global WhatDoYouWantText
 global WhatToDepositText

@@ -229,19 +229,21 @@ DisplayTitleScreen.TitleScreenPokemonLogoYScrolls:
 ; padded-to-11 version as wrong. See tools/generators/gen_debug_boot_names.py.
 %include "assets/debug_boot_names.inc"   ; DebugNewGame{Player,Rival}Name + DebugNameTail
 
-; Copyright-screen tile-index layout — a byte-exact mirror of pret title.asm's own
-; hand-authored CopyrightTextString (`db $60,$61,... / next ... / db "@"`). Three lines
-; of copyright-logo/font tile indices ($60-$7f); $4E = newline ("next"), $50 = end
-; ("@"). Placed at surface coord (2,7) by LoadCopyrightTiles via PlaceString.
-; NOT two-tier debt: these are indices into the NintendoCopyrightLogoGraphics graphic
-; + font_extra, NOT gb_text-encodable glyphs — pret itself writes them as inline raw
-; `db` bytes (gb_text.encode cannot map them), so the faithful port reproduces pret's
-; exact bytes rather than inventing a bespoke encoder for a single custom-logo asset.
-global CopyrightTextString
-CopyrightTextString:
-    db 0x60,0x61,0x62,0x63,0x61,0x62,0x7c,0x7f,0x65,0x66,0x67,0x68,0x69,0x6a, 0x4E             ; ©1995-1999  Nintendo
-    db 0x60,0x61,0x62,0x63,0x61,0x62,0x7c,0x7f,0x6b,0x6c,0x6d,0x6e,0x6f,0x70,0x71,0x72, 0x4E    ; ©1995-1999  Creatures inc.
-    db 0x60,0x61,0x62,0x63,0x61,0x62,0x7c,0x7f,0x73,0x74,0x75,0x76,0x77,0x78,0x79,0x7a,0x7b, 0x50 ; ©1995-1999  GAME FREAK inc.
+; Copyright-screen tile-index layout — CopyrightTextString, pret title.asm.
+; Three lines of copyright-logo/font tile indices ($60-$7F); $4E = newline
+; ("next"), $50 = end ("@"). Placed at surface coord (2,7) by LoadCopyrightTiles
+; via PlaceString.
+;
+; These are tile INDICES into NintendoCopyrightLogoGraphics + font_extra, not
+; gb_text-encodable glyphs, and pret writes them raw too — the comment that used
+; to stand here argued from that they were therefore not two-tier debt. Half
+; right: there is no charmap encoding to do. But the bytes are still a
+; deterministic function of pret's engine/movie/title.asm, so as of 2026-08-02
+; they are DERIVED rather than hand-typed (tools/generators/gen_static_tables.py
+; -> assets/copyright_text.inc), which is what clears [hand_encoded_text] and
+; removes the transcription risk. Verified byte-identical to the 50 bytes this
+; file used to carry.
+%include "assets/copyright_text.inc"
 
 ; The © / GAME FREAK / Nine tile graphics (generated flat assets). pret keeps
 ; these in gfx data banks (NintendoCopyrightLogoGraphics / GameFreakLogoGraphics

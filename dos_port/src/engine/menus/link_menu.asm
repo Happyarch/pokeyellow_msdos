@@ -141,12 +141,6 @@ global asm_f547f
 global LinkMenu
 global PointerTable_f5488
 global PointerTable_f56ee
-global Text_f56f4
-global Text_f5728
-global Text_f575b
-global Text_f5791
-global Text_f579c
-global TradeCenterText
 global TextTerminator_f5a16
 ; --- Colosseum*Text — pret's text_far WRAPPERS (data). I2 prints these. -----
 global Colosseum3MonsText

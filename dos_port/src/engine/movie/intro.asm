@@ -200,5 +200,4 @@ align 4
 ; GameFreakIntro — the Game Freak logo tile graphics (pret intro.asm INCBIN;
 ; gamefreak_presents + gamefreak_logo + a blank tile). Loaded to vChars1 by
 ; PlayShootingStar. Flat program-image data.
-global GameFreakIntro
 %include "assets/gamefreak_intro_2bpp.inc"   ; GameFreakIntro + GAMEFREAKINTRO_TILES

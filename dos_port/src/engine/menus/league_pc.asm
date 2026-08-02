@@ -48,7 +48,6 @@ global PKMNLeaguePC
 global LeaguePCShowTeam
 global LeaguePCShowMon
 global AccessedHoFPCText
-global HallOfFameNoText         ; body generated into assets/league_pc_text.inc
 
 extern PrintText                ; home/window.asm — In: ESI = text stream
 extern text_msgbox              ; home/text.asm — the active msgbox projection

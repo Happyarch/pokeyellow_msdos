@@ -76,8 +76,6 @@ global DisplayChangeBoxMenu
 ; --- CHANGE-BOX strings (pret labels; bodies in assets/save_text.inc) ---------
 global WhenYouChangeBoxText
 global ChooseABoxText
-global BoxNames
-global BoxNoText
 global EmptyAllSRAMBoxes
 global EmptySRAMBoxesInBank
 global EmptySRAMBox

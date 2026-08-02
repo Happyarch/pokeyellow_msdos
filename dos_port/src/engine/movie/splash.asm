@@ -285,7 +285,6 @@ align 4
 
 ; Falling-star tile graphic (pret engine/movie/splash.asm INCBIN). GameFreakIntro
 ; moved to intro.asm (pret intro.asm); CopyrightTextString moved to title.asm.
-global FallingStar
 %include "assets/falling_star_2bpp.inc"      ; FallingStar
 
 ; --- OAM tables (pret engine/movie/splash.asm, dbsprite verbatim) ---

@@ -34,6 +34,8 @@ import os
 import sys
 from pathlib import Path
 
+from gen_globals import insert_globals
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import gb_text  # noqa: E402
 import gen_battle_text  # noqa: E402  (reuse its pret data/text parser)
@@ -588,6 +590,7 @@ def main() -> int:
         ]
         ppout.append(f"{label}:\n" + "\n".join(rows))
     ppout.append("")
+    insert_globals(ppout, ['PlayersPCMenuEntries'])
     ppdst = ASSETS / "players_pc_text.inc"
     ppdst.write_text("\n".join(ppout))
     print(f"wrote {ppdst} ({len(PLAYERS_PC)} labels + {len(PLAYERS_PC_FAR)} far)")
@@ -644,6 +647,7 @@ def main() -> int:
         ]
         lout.append(f"{label}:\n" + "\n".join(rows))
     lout.append("")
+    insert_globals(lout, ['HallOfFameNoText'])
     ldst = ASSETS / "league_pc_text.inc"
     ldst.write_text("\n".join(lout))
     print(f"wrote {ldst} ({len(LEAGUE_PC)} labels + {len(LEAGUE_PC_FAR)} far)")
@@ -676,6 +680,7 @@ def main() -> int:
         ]
         mout.append(f"{label}:\n" + "\n".join(rows))
     mout.append("")
+    insert_globals(mout, ['ContinueText', 'NewGameText', 'SaveScreenInfoText'])
     mdst = ASSETS / "main_menu_text.inc"
     mdst.write_text("\n".join(mout))
     print(f"wrote {mdst} ({len(MAIN_MENU)} labels + {len(MAIN_MENU_FAR)} far)")
@@ -708,6 +713,7 @@ def main() -> int:
         b = encode_parts(parts)
         sout.append(f"{label}: db " + ", ".join(f"0x{x:02X}" for x in b))
     sout.append("")
+    insert_globals(sout, ['BoxNames', 'BoxNoText'])
     sdst = ASSETS / "save_text.inc"
     sdst.write_text("\n".join(sout))
     print(f"wrote {sdst} ({len(SAVE_FAR)} far labels, {len(SAVE_STRINGS)} strings)")
@@ -745,6 +751,7 @@ def main() -> int:
         ]
         kout.append(f"{label}:\n" + "\n".join(rows))
     kout.append("")
+    insert_globals(kout, ['Text_f56f4', 'Text_f5728', 'Text_f575b', 'Text_f5791', 'Text_f579c', 'TradeCenterText'])
     kdst = ASSETS / "link_text.inc"
     kdst.write_text("\n".join(kout))
     print(f"wrote {kdst} ({len(LINK_STRINGS)} labels + {len(LINK_FAR)} far)")

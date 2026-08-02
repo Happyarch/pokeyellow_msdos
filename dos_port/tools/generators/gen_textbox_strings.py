@@ -28,6 +28,8 @@ import os
 import sys
 from pathlib import Path
 
+from gen_globals import insert_globals
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import gb_text  # noqa: E402
 
@@ -122,6 +124,7 @@ def main() -> int:
         lines.append("")
 
     ASSETS.mkdir(parents=True, exist_ok=True)
+    insert_globals(lines, ['PokemonMenuEntries'])
     dst = ASSETS / "textbox_strings.inc"
     dst.write_text("\n".join(lines))
     print(f"wrote {dst} ({len(STRINGS)} labels)")

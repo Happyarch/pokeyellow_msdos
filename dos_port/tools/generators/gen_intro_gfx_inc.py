@@ -8,6 +8,8 @@ png_to_2bpp core is shared with gen_title_gfx_inc.py and is verified byte-exact
 against the committed gfx/intro/*.2bpp binaries.
 """
 from pathlib import Path
+
+from gen_globals import insert_globals
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -25,13 +27,16 @@ def _db_lines(data: bytes) -> list[str]:
             for i in range(0, len(data), 16)]
 
 
-def write_2bpp(dst: Path, label: str, data: bytes, comment: str):
+def write_2bpp(dst: Path, label: str, data: bytes, comment: str,
+               make_global: bool = False):
     n = len(data) // 16
     lines = [HDR.format(n=dst.name), f"; {comment}", "", f"{label}:"]
     lines += _db_lines(data)
     lines += [f"{label}End:",
               f"{label.upper()}_SIZE equ {label}End - {label}",
               f"{label.upper()}_TILES equ {n}", ""]
+    if make_global:
+        insert_globals(lines, [label], anchor=None)
     dst.write_text("\n".join(lines) + "\n")
     print(f"  wrote {dst.name} ({len(data)} B, {n} tiles)")
 
@@ -46,6 +51,7 @@ def write_tilemaps(dst: Path, entries):
         lines += [f"; {w}x{h}", f"{label}:"]
         lines += _db_lines(data)
         lines += [f"{label}End:", ""]
+    insert_globals(lines, [e[0] for e in entries], anchor=None)
     dst.write_text("\n".join(lines) + "\n")
     print(f"  wrote {dst.name} ({len(entries)} tilemaps)")
 
@@ -58,7 +64,7 @@ def main():
     write_2bpp(ASSETS / "yellow_intro_2_2bpp.inc", "YellowIntroGraphics2",
                png_to_2bpp(GFX / "yellow_intro_2.png"), "intro tile sheet 2 -> vChars0")
     write_2bpp(ASSETS / "yellow_intro_clouds_2bpp.inc", "YellowIntroCloudGFX",
-               png_to_2bpp(GFX / "clouds.png"), "cloud tiles")
+               png_to_2bpp(GFX / "clouds.png"), "cloud tiles", make_global=True)
     write_tilemaps(ASSETS / "yellow_intro_tilemaps.inc", [
         ("Unkn_f9b6e", "unknown_f9b6e.tilemap", 20, 6),
         ("Unkn_f9be6", "unknown_f9be6.tilemap", 4, 3),

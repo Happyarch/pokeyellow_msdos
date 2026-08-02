@@ -137,9 +137,6 @@ global PrintPlayTime
 global DisplayOptionMenu
 global CheckForPlayerNameInSRAM
 global NotEnoughMemoryText
-global ContinueText                     ; body in assets/main_menu_text.inc
-global NewGameText                      ;   (the `global` is what keeps the label
-global SaveScreenInfoText               ;    tracked in tools/translation.db)
 
 ; --- ported infra (text / numbers / menu driver / compositor / frame / boot) ---
 extern TextBoxBorder            ; text.asm — ESI=top-left, BL=int_w, BH=int_h
