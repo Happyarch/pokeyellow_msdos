@@ -56,7 +56,82 @@ fi
 # to `git show :path` without changing that too, or the gate and the hook will
 # disagree the moment someone stages and then edits.)
 GATEFLAGS=
+
+# ADDITIONS ARE BLOCKED OUTRIGHT (maintainer directive, 2026-08-02).
+#
+# The tolerance below was built for RETIREMENT — rows leaving the registry —
+# and it did not distinguish direction. That left a hole: an agent could ADD a
+# row and land it inside the very commit the tolerance was meant to cover, so
+# growth of the registry could reach master without the maintainer ever seeing
+# it. The rule is: if I did not sanction it, it does not exist.
+#
+# So compare the registry's KEY SET against HEAD before anything else. Any key
+# that appears and was not there before — in relocated_labels, relocated_files,
+# structural_findings or suppress — refuses the commit, staged or not. Shrinking
+# and edits to an existing row's text still take the tolerance path below.
 if ! git diff --cached --quiet -- "$root/dos_port/tools/pret_label_allowlist.json"; then
+    added=$(python3 - "$root" <<'PY'
+import json, subprocess, sys
+root = sys.argv[1]
+rel = "dos_port/tools/pret_label_allowlist.json"
+SECTIONS = ("relocated_labels", "relocated_files", "structural_findings", "suppress")
+
+def keyset(where):
+    try:
+        if where == "HEAD":
+            raw = subprocess.run(["git", "-C", root, "show", "HEAD:" + rel],
+                                 capture_output=True, check=True).stdout
+        else:
+            with open(root + "/" + rel, "rb") as fh:
+                raw = fh.read()
+        doc = json.loads(raw)
+    except Exception:
+        return None
+    out = set()
+    for sec in SECTIONS:
+        val = doc.get(sec)
+        if isinstance(val, dict):
+            out |= {sec + "::" + k for k in val}
+        elif isinstance(val, list):
+            out |= {sec + "::" + str(x) for x in val}
+    return out
+
+before, after = keyset("HEAD"), keyset("worktree")
+# Unreadable either side: say so rather than silently passing. A registry we
+# cannot parse is not a registry we can claim is unchanged.
+if before is None or after is None:
+    print("UNREADABLE")
+else:
+    for k in sorted(after - before):
+        print(k)
+PY
+)
+    if [ "$added" = "UNREADABLE" ]; then
+        echo "pre-commit: could not parse pret_label_allowlist.json at HEAD and/or in the" >&2
+        echo "pre-commit: worktree, so the no-additions check could not run. Refusing." >&2
+        exit 1
+    fi
+    if [ -n "$added" ]; then
+        cat >&2 <<EOF
+
+pre-commit: REGISTRY ADDITION BLOCKED. The commit was not created.
+
+These entries are new in dos_port/tools/pret_label_allowlist.json since HEAD:
+
+$(echo "$added" | sed 's/^/    /')
+
+New relocations are FORBIDDEN and the registry is not precedent. An agent may
+not add, expand or reinterpret it to make its own work pass. If the linter says
+\`mirror\`, move the complete routine to dos_port/src/<pret path> instead.
+
+Only the maintainer can sanction an addition, and that approval is recorded
+outside this worktree. Do not set the approval yourself, and do not
+--no-verify past this one: an unsanctioned row is exactly the thing this
+check exists to stop.
+EOF
+        exit 1
+    fi
+
     GATEFLAGS=--allow-unapproved-registry
     allowlist_sha=$(sha256sum "$root/dos_port/tools/pret_label_allowlist.json" | cut -d' ' -f1)
     rows=$(python3 -c 'import json,sys; print(len(json.load(open(sys.argv[1]))["relocated_labels"]))' \
