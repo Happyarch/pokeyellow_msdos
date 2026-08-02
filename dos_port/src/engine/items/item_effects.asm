@@ -584,6 +584,115 @@ IsNextTileShoreOrWater:
 .done:
     ret
 
+; === ItemUseSurfboard — mount and dismount (items-plan Stage 11) ============
+;
+; Source: engine/items/item_effects.asm:700-777 (pret). One body serves both
+; directions: wWalkBikeSurfState == 2 means "already surfing", so the item tries to
+; get OFF; anything else tries to get ON.
+;
+; PORT DEVIATIONS (this block; the file's earlier ones still apply)
+; 15. pret's `jp PrintText` tails become the item layer's iu_print_text (overworld
+;     dialog projection), taking the flat stream out of each generated <Label>_ref
+;     pair — the same substitution every other overworld ItemUse* text tail in this
+;     file already documents.
+;
+; The forced step is pret's own mechanism, not a port invention:
+; .makePlayerMoveForward queues ONE simulated D-pad press in the
+; wSimulatedJoypadStates* block and the normal overworld loop consumes it, which is
+; how the player slides onto/off the water tile. Overworld-events owns that
+; consumer; this routine only arms it.
+;
+; NOTE on `res BIT_FACE_PLAYER, [hl]` below — the reason
+; IsSpriteInFrontOfPlayer2's 8-bit L wrap in src/home/overworld.asm is
+; load-bearing. pret dereferences hl on BOTH exits of that call: on the found path
+; hl is the blocking sprite's MOVEMENTSTATUS byte (clearing the bit the routine just
+; set, so the NPC does not turn), and on the not-found path L has wrapped $F0+$10 to
+; $00, so hl is $C100 — the PLAYER's slot — and the write lands there instead. Both
+; are pret behaviour and both are reproduced.
+
+extern CheckForTilePairCollisions   ; home/overworld.asm — CF = collision
+extern IsTilePassable               ; home/copy2.asm — CF clear = passable
+extern LoadWalkingPlayerSpriteGraphics ; home/overworld.asm
+extern PlayDefaultMusic             ; home/audio.asm
+extern TilePairCollisionsWater      ; src/data/tileset_data.asm
+extern IsSpriteInFrontOfPlayer2     ; home/overworld.asm — CF = sprite found, ESI = its byte
+extern SurfingGotOnText_ref             ; assets/item_text.inc
+extern SurfingNoPlaceToGetOffText_ref   ; assets/item_text.inc
+extern NoSurfingHereText_ref            ; assets/item_text.inc (SurfingAttemptFailed)
+
+global ItemUseSurfboard
+ItemUseSurfboard:
+    mov al, [ebp + wWalkBikeSurfState]
+    mov [ebp + wWalkBikeSurfStateCopy], al
+    cmp al, 2                           ; is the player already surfing?
+    je .tryToStopSurfing
+; try to Surf
+    call IsNextTileShoreOrWater
+    jnc SurfingAttemptFailed            ; jp nc
+    mov esi, TilePairCollisionsWater
+    call CheckForTilePairCollisions
+    jc SurfingAttemptFailed             ; jp c
+; surfing
+    call .makePlayerMoveForward
+    or byte [ebp + wStatusFlags5], (1 << BIT_SCRIPTED_MOVEMENT_STATE)
+    mov byte [ebp + wWalkBikeSurfState], 2  ; change the player state to surfing
+    call PlayDefaultMusic               ; play the surfing music
+    mov esi, [SurfingGotOnText_ref]
+    jmp iu_print_text                   ; jp PrintText
+
+.tryToStopSurfing:
+    mov byte [ebp + H_SPRITE_INDEX], 0  ; xor a / ldh [hSpriteIndex], a
+    mov dh, 16                          ; ld d, 16 — talking range in pixels
+    call IsSpriteInFrontOfPlayer2
+    ; res BIT_FACE_PLAYER, [hl] — unconditional in pret, on both exits (see the
+    ; block header). ESI is whatever IsSpriteInFrontOfPlayer2 left, which now
+    ; matches pret's hl on each path.
+    and byte [ebp + esi], (~(1 << BIT_FACE_PLAYER)) & 0xFF
+    mov al, [ebp + H_SPRITE_INDEX]
+    test al, al                         ; is there a sprite in the way?
+    jnz .cannotStopSurfing
+    mov esi, TilePairCollisionsWater
+    call CheckForTilePairCollisions
+    jc .cannotStopSurfing
+    mov al, [ebp + W_TILE_IN_FRONT_OF_PLAYER]
+    mov bl, al                          ; ld c, a
+    call IsTilePassable
+    jnc .stopSurfing                    ; jr nc
+.cannotStopSurfing:
+    mov esi, [SurfingNoPlaceToGetOffText_ref]
+    jmp iu_print_text                   ; jp PrintText
+
+.stopSurfing:
+    call .makePlayerMoveForward
+    mov byte [ebp + wPikachuSpawnState], 0x3
+    or byte [ebp + wPikachuOverworldStateFlags], (1 << 5)
+    or byte [ebp + wStatusFlags5], (1 << BIT_SCRIPTED_MOVEMENT_STATE)
+    mov byte [ebp + wWalkBikeSurfState], 0  ; change the player state to walking
+    mov byte [ebp + wJoyIgnore], 0xFF       ; pret: xor a / ... / dec a — $FF
+    call PlayDefaultMusic               ; play the walking music
+    call GBPalWhiteOutWithDelay3
+    jmp LoadWalkingPlayerSpriteGraphics ; jp
+
+; uses a simulated button press to make the player move forward
+.makePlayerMoveForward:
+    mov al, [ebp + W_PLAYER_DIRECTION]  ; direction the player is going
+    mov bh, PAD_UP                      ; ld b, PAD_UP
+    test al, 1 << PLAYER_DIR_BIT_UP
+    jnz .storeSimulatedButtonPress
+    mov bh, PAD_DOWN
+    test al, 1 << PLAYER_DIR_BIT_DOWN
+    jnz .storeSimulatedButtonPress
+    mov bh, PAD_LEFT
+    test al, 1 << PLAYER_DIR_BIT_LEFT
+    jnz .storeSimulatedButtonPress
+    mov bh, PAD_RIGHT
+.storeSimulatedButtonPress:
+    mov al, bh                          ; ld a, b
+    mov [ebp + W_SIMULATED_JOYPAD_STATES_END], al
+    mov byte [ebp + W_UNUSED_SIMULATED_JOYPAD_STATES_MASK], 0   ; xor a / ld [..], a
+    mov byte [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], 1         ; inc a / ld [..], a
+    ret
+
 ; ---------------------------------------------------------------------------
 ; RestoreBonusPP — re-apply each PP-Up bonus to the PP slots of the mon at
 ; [wWhichPokemon]. Pret ref: engine/items/item_effects.asm:RestoreBonusPP.
@@ -777,12 +886,12 @@ extern HiddenItemNear       ; CF set if an unobtained hidden item is nearby
 ; ItemUsePokeFlute, ItemUseTMHM) and their externs were never retired — the stub
 ; convention's "repoint the extern comments when the real routine lands" step. NASM 3.x
 ; tolerated extern-then-define; 2.16 rejects it, which is what surfaced this.
-extern ItemUseSurfboard
 extern ItemUseOldRod
 extern ItemUseGoodRod
 extern ItemUseSuperRod
-; (ItemUsePPUp / ItemUsePPRestore left this list 2026-08-02 — real bodies now sit
-;  lower in this file, so an extern here would collide with their `global`.)
+; (ItemUsePPUp / ItemUsePPRestore / ItemUseSurfboard left this list 2026-08-02 —
+;  real bodies now sit in this file, so an extern here would collide with their
+;  `global`.)
 
 section .data
 align 4
@@ -1437,6 +1546,15 @@ Func_e4bf:
     mov byte [ebp + wActionResultOrTookBattleTurn], 2
     mov esi, [DontHavePokemonText_ref]
     jmp iu_print_text                   ; jp PrintText
+
+; pret ref: engine/items/item_effects.asm:SurfingAttemptFailed — `ld hl,
+; NoSurfingHereText`, then FALL THROUGH into ItemUseFailed. Kept as a fall-through
+; here too, which is why it sits immediately above ItemUseFailed and not with the
+; other ItemUse*-failure entry points (they all `jmp` instead).
+global SurfingAttemptFailed
+SurfingAttemptFailed:
+    mov esi, [NoSurfingHereText_ref]
+    ; falls through into ItemUseFailed, as in pret
 
 ; In: ESI = flat text stream (as pret's hl).
 ItemUseFailed:

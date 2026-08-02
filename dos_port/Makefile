@@ -822,6 +822,24 @@ AUTOKEY_DUMP_FRAME ?= 999999
 NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 endif
 
+# Surfboard gate (items-plan Stage 11): spawn on the Pallet Town shore, seed a
+# SURFBOARD into bag slot 0, then FALL THROUGH into the real OverworldLoop and let
+# AUTOKEY_SURF's scripted joypad drive mount and dismount with live collision.
+# AutoKeyDrive dumps FRAME.BIN + GBSTATE.BIN at AUTOKEY_DUMP_FRAME.
+# make DEBUG_SURF=1 [AUTOKEY_DUMP_FRAME=1350]
+ifdef DEBUG_SURF
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_SURF -D DEBUG_SEED_PARTY -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_SURF
+ifdef SURF_ITEM_ID
+NASMFLAGS += -D SURF_ITEM_ID=$(SURF_ITEM_ID)
+endif
+# The scripted round trip ends at frame 1120 (the USE that dismounts); dump
+# once it has settled, with the bag still open — see the AUTOKEY_SURF note.
+AUTOKEY_DUMP_FRAME ?= 1220
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
+
 # Bill's-PC box-behaviour gate (sram plan stage 6): seeded party, RunBillsPCTest
 # opens BillsPC_ directly as a generic-PC guest, and the AUTOKEY_BILLSPC script
 # drives deposit(PERSIAN) → deposit(JIGGLYPUFF) → withdraw(PERSIAN) →

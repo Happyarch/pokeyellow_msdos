@@ -476,6 +476,37 @@ SCENARIOS = {
         "flags": "DEBUG_ITEMSTONE=1",
         "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
     },
+    "surf_round_trip": {
+        # SURFBOARD mount at Pallet (14,5) -> simulated step onto the water (15,5) ->
+        # one surf step onto the shore tile (15,4) -> SURFBOARD dismount. Both
+        # directions through the live overworld loop; the suite's only coverage of
+        # ItemUseSurfboard and of CollisionCheckOnWater.
+        "class": "datastruct",
+        "flags": "DEBUG_SURF=1",
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
+        # Both masks are the ones the *_sight scenarios already carry, for the same
+        # two reasons, and both are boot-path artifacts rather than surf behaviour.
+        # Everything the surf flow actually writes — wWalkBikeSurf(Copy),
+        # wStatusFlags5, wTileInFront, wPlayerDir, wSimJoypad(End), wJoyIgnore,
+        # wPikachuSurf, and wCurMap/wYCoord/wXCoord — is compared unmasked.
+        "wram_masks": {
+            "wPlayerMapPos": [
+                ((1, 2), "wCurrentTileBlockMapViewPointer: the port's MAP_BORDER is 7, "
+                         "not pret's 3 (include/gb_memmap.inc), so the same player "
+                         "position yields a different pointer into a differently-sized "
+                         "wOverworldMap. wCurMap at +0 and wYCoord/wXCoord at +3/+4 ARE "
+                         "compared, and they are what pins the player to (15,4)."),
+            ],
+            "wStatusFlags5to7": [
+                ((2, 2), "wStatusFlags6 BIT_GAME_TIMER_COUNTING: the golden has been "
+                         "playing since the new game, the port gate boots straight into "
+                         "the map with SKIP_TITLE and never starts the play-time "
+                         "counter. wStatusFlags5 at +0 — which carries "
+                         "BIT_SCRIPTED_MOVEMENT_STATE, the bit both surf branches set — "
+                         "IS compared, as is wStatusFlags7 at +3."),
+            ],
+        },
+    },
     "item_pp_restore": {
         # ETHER used on party mon 0's move slot 0 (pre-drained to 1 PP) through the
         # real UseItem dispatcher: party menu -> type-2 move menu -> +10 PP ->

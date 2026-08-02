@@ -105,6 +105,10 @@ extern LoadTextBoxTilePatterns
 extern UseItem                  ; home/item.asm — the pret home wrapper for UseItem_
 global RunPPRestoreTest
 %endif
+%ifdef DEBUG_SURF
+extern PrepareNewGameDebug
+global RunSurfTestSeed
+%endif
 %ifdef DEBUG_ITEMSTONE
 extern PrepareNewGameDebug
 extern LoadFontTilePatterns
@@ -580,6 +584,24 @@ gbstate_regions:
     ; The persistent per-map script bytes, incl. w<Map>CurScript for the map under
     ; test — the byte TrainerMapScript reads and writes back.
     gbregion "wGameProgressFlags", wPalletTownCurScript - 1, 0x30
+%endif
+%ifdef DEBUG_SURF
+    ; Surfboard scenario (items-plan Stage 11). Same rule as the sight rows above:
+    ; scenario-local, mirrored by tools/mgba_harness/scenarios/surf_round_trip.lua,
+    ; joined by NAME. These are the bytes the mount/dismount flow actually moves —
+    ; none of them is in dump.standard_regions, so without this list the scenario
+    ; would compare a party and a bag that the flow never touches and pass while
+    ; proving nothing.
+    gbregion "wPlayerMapPos",    wCurMap, 5                ; wCurMap .. wXCoord
+    gbregion "wWalkBikeSurf",    wWalkBikeSurfState, 1     ; 0 walk, 1 bike, 2 surf
+    gbregion "wWalkBikeSurfCopy", wWalkBikeSurfStateCopy, 1
+    gbregion "wStatusFlags5to7", wStatusFlags5, 4          ; BIT_SCRIPTED_MOVEMENT_STATE
+    gbregion "wTileInFront",     W_TILE_IN_FRONT_OF_PLAYER, 1
+    gbregion "wPlayerDir",       W_PLAYER_DIRECTION, 1
+    gbregion "wSimJoypad",       W_SIMULATED_JOYPAD_STATES_INDEX, 2 ; index + unused mask
+    gbregion "wSimJoypadEnd",    W_SIMULATED_JOYPAD_STATES_END, 1
+    gbregion "wJoyIgnore",       wJoyIgnore, 1
+    gbregion "wPikachuSurf",     wPikachuOverworldStateFlags, 2 ; flags + spawn state
 %endif
 gbstate_regions_end:
 
@@ -1057,6 +1079,40 @@ RunPPRestoreTest:
     mov byte [ebp + wPartyMon1 + ITEMPP_MON * PARTYMON_STRUCT_LENGTH + MON_PP], ITEMPP_DRAIN
     call UseItem
     call DebugDumpMemory                    ; DUMP.BIN + GBSTATE.BIN, then exit
+%endif
+
+%ifdef DEBUG_SURF
+; ---------------------------------------------------------------------------
+; RunSurfTestSeed — items-plan Stage 11 Surfboard gate. Unlike every other
+; RunXxxTest in this file this one SEEDS AND RETURNS: EnterMap falls straight
+; through into the real OverworldLoop afterwards, and AUTOKEY_SURF's scripted
+; joypad drives the whole flow from there with LIVE collision. That is deliberate
+; — the acceptance this gate owes is "both directions through the real movement
+; loop", which a synthetic `call UseItem` cannot give.
+;
+; What it seeds: the debug party/bag/dex (so the START menu has the same shape the
+; other bag scenarios navigate), then bag slot 0 = SURFBOARD qty 1.
+; The spawn tile is seeded earlier, in EnterMap — see the DEBUG_SURF block in
+; src/home/overworld.asm for the measured Pallet Town tile map.
+;
+; NOTE: nothing here seeds wTileInFrontOfPlayer. It must not: ItemUseSurfboard
+; reads that byte STALE (it never recomputes it), so the scripted joypad's first
+; press is a DOWN bump into the water, whose collision check is what populates it.
+; Seeding it would hide exactly the coupling this scenario exists to cover.
+; In: EBP = GB memory base.  Returns.
+; ---------------------------------------------------------------------------
+%ifndef SURF_ITEM_ID
+%define SURF_ITEM_ID 0x07               ; SURFBOARD
+%endif
+RunSurfTestSeed:
+    mov byte [ebp + wPartyCount], 0
+    mov byte [ebp + wPartySpecies], 0xFF
+    mov byte [ebp + wNumBagItems], 0
+    mov byte [ebp + wBagItems], 0xFF
+    call PrepareNewGameDebug
+    mov byte [ebp + wBagItems + 0], SURF_ITEM_ID
+    mov byte [ebp + wBagItems + 1], 1
+    ret
 %endif
 
 %ifdef DEBUG_TEXTBOXID
@@ -2849,6 +2905,87 @@ autokey_script:
     dd 600, 606, PAD_A          ; party menu: mon 1 (healthy → refusal)
     dd 660, 666, PAD_A          ; dismiss the refusal
     dd  -1,  -1, 0
+%elifdef AUTOKEY_SURF
+    ; items-plan Stage 11 (DEBUG_SURF): drive the real overworld loop through a
+    ; complete surf round trip. The player spawns at Pallet (14,5) facing the water.
+    ;   DOWN                : bump into the water. Blocked by CollisionCheckOnLand,
+    ;                         but the check POPULATES wTileInFrontOfPlayer, which is
+    ;                         what ItemUseSurfboard reads (it never recomputes it).
+    ;   START -> DOWN DOWN -> A : open the START menu, pick ITEM
+    ;   A -> A              : bag slot 0 (SURFBOARD) -> USE
+    ;   A                   : dismiss "RED got on / ?????!" — mount done
+    ;   B -> B              : close the bag, close the START menu. MEASURED, not
+    ;                         assumed: at frame 480 the mount text is up over the
+    ;                         overworld, and by 620 the BAG LIST HAS REDRAWN — using
+    ;                         an item returns to the item list, it does not drop you
+    ;                         into the overworld. The first cut of this script omitted
+    ;                         these two B presses, so the second pass's START/DOWN
+    ;                         presses went into the still-open bag and moved its
+    ;                         cursor instead. The simulated DOWN step armed by
+    ;                         .makePlayerMoveForward only runs once the overworld loop
+    ;                         is running again, i.e. after these.
+    ;   LEFT                : ONE surf step onto the SHORE tile (15,4). The shore tile
+    ;                         KEEPS the surf state (IsNextTileShoreOrWater returns
+    ;                         carry for $32), which is the only way to end up surfing
+    ;                         while adjacent to passable land — moving toward plain
+    ;                         land auto-dismounts in CollisionCheckOnWater.
+    ;                         HOLD LENGTH IS LOAD-BEARING: measured at ~17 frames per
+    ;                         surf step, so the first cut's 70-frame hold walked four
+    ;                         steps to x=1 and auto-dismounted on the way (GBSTATE at
+    ;                         frame 900 read x=1, wWalkBikeSurfState=0). 12 frames is
+    ;                         one step.
+    ;   A                   : interaction check against the land tile ahead. This is
+    ;                         what makes the DISMOUNT branch reachable at all:
+    ;                         ItemUseSurfboard reads wTileInFrontOfPlayer STALE, and
+    ;                         after the step onto (15,4) that byte still holds $32
+    ;                         (the shore tile just moved onto), which IsTilePassable
+    ;                         rejects -> "no place to get off". Pressing A runs
+    ;                         GetTileAndCoordsInFrontOfPlayer, refreshing it to
+    ;                         (15,3) = $2C, which IS in Overworld_Coll. There is no
+    ;                         sign or NPC there, so the press does nothing else.
+    ;   START -> A -> A -> A : bag again -> SURFBOARD -> USE = DISMOUNT. NOTE the
+    ;                         missing DOWNs: the START menu REMEMBERS its cursor, so
+    ;                         it reopens already on ITEM. Measured — the first cut
+    ;                         repeated the two DOWNs and landed on SAVE (index 2 + 2
+    ;                         = 4), and frame 1220 photographed "Would you like to
+    ;                         SAVE the game?" instead of the bag.
+    ;   ...and STOP THERE — the dismount prints nothing.
+    ;
+    ; WHY THE SCRIPT ENDS WITH THE BAG STILL OPEN. The dismount arms a simulated
+    ; LEFT step the same way the mount arms a simulated DOWN, but it ALSO sets
+    ; wJoyIgnore = $FF, and the port has no JoypadOverworld yet, so nothing clears
+    ; that byte, and with the menus closed the armed step is never consumed: measured,
+    ; the port sits at (15,4) with wSimulatedJoypadStatesIndex = 1 and
+    ; wJoyIgnore = $FF at frames 1180, 1440 AND 1800 — stuck, not slow. What the real
+    ; game does there was not measured, and the simulated-input consumer is
+    ; overworld-events' to own either way, so the scenario stops with the bag still
+    ; open: both sides then have the step armed and unconsumed, and the compared bytes
+    ; are exactly what ItemUseSurfboard itself wrote. The MOUNT's step IS consumed on
+    ; both sides and is compared. Tracked in docs/current_plan_backlog.md.
+    ; Cadence: 60-frame gaps with 10-frame holds — the spacing AUTOKEY_BILLSPC
+    ; settled on after tighter gaps had presses eaten mid-draw.
+    dd   60,   70, PAD_DOWN     ; bump: populate wTileInFrontOfPlayer
+    dd  150,  160, PAD_START
+    dd  210,  220, PAD_DOWN     ; POKéDEX -> POKéMON
+    dd  270,  280, PAD_DOWN     ; -> ITEM
+    dd  330,  340, PAD_A        ; ITEM
+    dd  390,  400, PAD_A        ; SURFBOARD -> USE/TOSS
+    dd  450,  460, PAD_A        ; USE -> mount
+    dd  530,  540, PAD_A        ; dismiss "RED got on / ?????!"
+    dd  600,  610, PAD_B        ; close the bag
+    dd  660,  670, PAD_B        ; close the START menu -> overworld; the armed
+                                ; simulated DOWN step runs here
+    dd  780,  792, PAD_LEFT     ; ONE surf step onto the shore tile (15,4)
+    dd  860,  870, PAD_A        ; refresh wTileInFrontOfPlayer to (15,3) = $2C
+    dd  930,  940, PAD_START
+    dd  990, 1000, PAD_A        ; ITEM (cursor already there — see the note above)
+    dd 1050, 1060, PAD_A        ; SURFBOARD -> USE/TOSS
+    dd 1110, 1120, PAD_A        ; USE -> dismount. The script ENDS here: .stopSurfing
+                                ; prints no message (the only dismount text,
+                                ; SurfingNoPlaceToGetOffText, is the failure branch),
+                                ; so there is nothing to dismiss and a stray A would
+                                ; just reopen the USE/TOSS box.
+    dd   -1,   -1, 0
 %elifdef AUTOKEY_BILLSPC
     ; sram-plan stage 6 (DEBUG_BILLSPC): drive the real Bill's PC box UI.
     ; RunBillsPCTest opened BillsPC_ as a generic-PC guest, so the six-entry

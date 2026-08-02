@@ -1244,6 +1244,11 @@ W_SIMULATED_JOYPAD_STATES_END equ 0xCCD3 ; wSimulatedJoypadStatesEnd — PAD_* b
                                           ;  wNPCMovementDirections so MoveSprite zeroed step[0] — OW-2.2 fix)
 W_SIMULATED_JOYPAD_STATES_INDEX equ 0xCD38 ; wSimulatedJoypadStatesIndex — steps remaining (0=done)
                                           ; (golden 00:cd38; was wrongly 0xCC84 — inside wNPCMovementDirections)
+W_UNUSED_SIMULATED_JOYPAD_STATES_MASK equ 0xCD39 ; wUnusedSimulatedJoypadStatesMask (golden 00:cd39)
+                                          ; Written (zeroed) by ItemUseSurfboard's .makePlayerMoveForward and
+                                          ; never read — "Unused" is pret's own name for it, not a port note.
+                                          ; Kept because the write is part of the routine's WRAM footprint and
+                                          ; the golden compares it.
 W_IGNORE_INPUT_COUNTER       equ 0xD139 ; wIgnoreInputCounter — counts down 30→0; clears BIT_DISABLE_JOYPAD
 
 ; Current-map script flags

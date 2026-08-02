@@ -144,6 +144,7 @@ HYPER_POTION            equ 0x12
 FULL_HEAL               equ 0x34
 REVIVE                  equ 0x35
 MAX_REVIVE              equ 0x36
+SURFBOARD               equ 0x07    ; ItemUseSurfboard (the SURF field-move item)
 ; The PP family is a contiguous run in pret constants/item_constants.asm — the
 ; adjacency is load-bearing: ItemUsePPRestore's .useElixir decrements the item id
 ; TWICE so ELIXER becomes ETHER and MAX_ELIXER becomes MAX_ETHER.

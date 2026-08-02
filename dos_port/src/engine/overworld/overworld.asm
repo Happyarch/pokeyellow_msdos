@@ -121,6 +121,9 @@ extern ReloadWalkingTilePatterns    ; src/engine/overworld/map_sprites.asm
 %ifdef DEBUG_MAPSCRIPT_SIGHT
 %define NEED_SEAM_RESEAT
 %endif
+%ifdef DEBUG_SURF
+%define NEED_SEAM_RESEAT
+%endif
 %ifdef DEBUG_BAGMENU_LIVE
 %endif
 %ifdef DEBUG_SEED_PARTY

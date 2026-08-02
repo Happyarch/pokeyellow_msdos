@@ -15,6 +15,8 @@
 ;    Escape Rope needed HandleFlyWarpOrDungeonWarp, ported 2026-07-13 — blocker B1 cleared.)
 ;   (ItemUsePPUp / ItemUsePPRestore landed in item_effects.asm 2026-08-02 —
 ;    items-plan Stage 11 PP family; stubs retired.)
+;   (ItemUseSurfboard landed in item_effects.asm 2026-08-02 alongside
+;    SurfingAttemptFailed — items-plan Stage 11 Surfboard; stub retired.)
 ;   (Bicycle / CoinCase / OaksParcel / Pokedex / PokeFlute / CardKey landed in
 ;    item_effects.asm — stubs retired)
 ;   (ItemUseItemfinder landed in item_effects.asm 2026-07-16 — overworld-events
@@ -32,12 +34,10 @@ bits 32
 
 section .text
 
-global ItemUseSurfboard
 global ItemUseOldRod
 global ItemUseGoodRod
 global ItemUseSuperRod
 
-ItemUseSurfboard:
 ItemUseOldRod:
 ItemUseGoodRod:
 ItemUseSuperRod:

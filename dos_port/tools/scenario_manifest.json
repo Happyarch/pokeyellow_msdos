@@ -1135,6 +1135,33 @@
         "masks": "golden_diff.SCENARIOS"
       },
       "verification": "synthetic-port-gate plus real-navigation golden; state verification, not UI verification"
+    },
+    {
+      "name": "surf_round_trip",
+      "id": 40,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_SURF=1",
+      "port_entry_gate": "DEBUG_SURF",
+      "navigation_script": "tools/mgba_harness/scenarios/surf_round_trip.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "ItemUseSurfboard"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "scripted-joypad port gate plus real-navigation golden, both driving the live overworld loop; state verification, not UI verification"
     }
   ],
   "disabled_scenarios": []

@@ -168,6 +168,7 @@ extern RunPartyMenuTest                   ; src/debug/debug_dump.asm
 extern RunPlayersPCTest                   ; src/engine/menus/players_pc.asm
 extern RunPokedexEntryTest                ; src/engine/menus/pokedex.asm
 extern RunPPRestoreTest                   ; src/debug/debug_dump.asm
+extern RunSurfTestSeed                    ; src/debug/debug_dump.asm
 extern RunPokedexTest                     ; src/engine/menus/pokedex.asm
 extern RunSavePerfTest                    ; src/engine/menus/save.asm (DEBUG_SAVEPERF)
 extern RunSaveTest                        ; src/engine/menus/save.asm
@@ -303,6 +304,26 @@ EnterMap:
     mov byte [ebp + W_CUR_MAP], MAPSCRIPT_MAP
     mov byte [ebp + W_Y_COORD], MAPSCRIPT_Y
     mov byte [ebp + W_X_COORD], MAPSCRIPT_X
+    mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF  ; "not a warp arrival" (see DEBUG_SEAM)
+%endif
+%ifdef DEBUG_SURF
+    ; Surfboard gate (items-plan Stage 11): spawn on the Pallet Town shore tile that
+    ; faces open water, so the scripted joypad can drive the REAL overworld loop
+    ; through mount and dismount. Measured off the pret map data rather than guessed
+    ; (maps/PalletTown.blk + gfx/blocksets/overworld.bst, OVERWORLD tileset):
+    ;   (14,5) = $33  land, in Overworld_Coll  <- the player spawns here facing DOWN
+    ;   (15,5) = $14  water                    <- mount target
+    ;   (15,4) = $32  SHORE (in ShoreTiles)    <- surf LEFT onto it, still surfing
+    ;   (15,3) = $2C  land, in Overworld_Coll  <- dismount target
+    ; The shore tile is what makes a genuine dismount reachable at all:
+    ; CollisionCheckOnWater auto-dismounts the moment the player moves toward
+    ; passable LAND, so the only way to be surfing while FACING land is to be
+    ; standing on a shore tile — IsNextTileShoreOrWater keeps the surf state on the
+    ; way in. Seeded BEFORE LoadMapData, which reads the coords (same rule as
+    ; DEBUG_SEAM / DEBUG_MAPSCRIPT_SIGHT).
+    mov byte [ebp + W_CUR_MAP], PALLET_TOWN
+    mov byte [ebp + W_Y_COORD], 14
+    mov byte [ebp + W_X_COORD], 5
     mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF  ; "not a warp arrival" (see DEBUG_SEAM)
 %endif
 %ifdef DEBUG_PALLET_OAK
@@ -783,6 +804,19 @@ EnterMap:
     call SeedDeterministicPlayerIdentity     ; "RED" / id 0 — the golden's identity
     call SeamReseatView                      ; view ptr + block coords + collision mirror
     call RunMapScriptSightTest               ; dumps GBSTATE + FRAME and exits
+%endif
+%ifdef DEBUG_SURF
+    ; Placed at the end of EnterMap for the same reason DEBUG_MAPSCRIPT_SIGHT is:
+    ; everything above is part of entering the map, and this gate then FALLS THROUGH
+    ; into the real OverworldLoop rather than running a synthetic harness. The whole
+    ; flow — the bump that populates wTileInFrontOfPlayer, the bag, both item uses,
+    ; and the two simulated forward steps — is driven by AUTOKEY_SURF's scripted
+    ; joypad through the live loop, with LIVE collision. AutoKeyDrive writes
+    ; FRAME.BIN + GBSTATE.BIN at AUTOKEY_DUMP_FRAME.
+    ; LoadMapData does not derive the view pointer for a hand-seeded spawn.
+    call SeedDeterministicPlayerIdentity
+    call SeamReseatView
+    call RunSurfTestSeed                     ; party + bag + SURFBOARD; RETURNS
 %endif
 
     ; fall through to OverworldLoop
@@ -2080,9 +2114,24 @@ IsSpriteInFrontOfPlayer2:
 .nextSprite:
     pop esi
     ; pret does this as `ld a,l / add SPRITESTATEDATA1_LENGTH / ld l,a` — 8-bit math
-    ; on L alone. Equivalent here: the scan runs slots 1-15 ($C110..$C1F0), so L never
-    ; wraps before the counter ends the loop.
-    add esi, SPRITESTATEDATA1_LENGTH
+    ; on L ALONE, and the wrap on the LAST iteration is load-bearing, so it is
+    ; reproduced literally here (`add al, imm` leaves the upper 24 bits of EAX alone,
+    ; exactly as `ld l,a` leaves H alone).
+    ;
+    ; The scan walks slots 1-15, $C110..$C1F0, and the add fires once more after slot
+    ; 15: L goes $F0 + $10 = $00, so the NOT-FOUND exit returns hl = $C100 — the
+    ; PLAYER's slot base — not $C200. A flat `add esi, SPRITESTATEDATA1_LENGTH`
+    ; returns $C200 (wSpriteStateData2) instead, and that is not a harmless
+    ; difference: pret's ItemUseSurfboard dereferences hl on BOTH exits
+    ; (`res BIT_FACE_PLAYER, [hl]` immediately after the call), so the flat form
+    ; would clear a bit in the wrong byte on every "no sprite in the way" dismount.
+    ; The previous comment here claimed "L never wraps before the counter ends the
+    ; loop"; it wraps precisely on the exit that matters. Neither existing caller
+    ; (IsSpriteInFrontOfPlayer, IsSpriteOrSignInFrontOfPlayer) reads hl, so this
+    ; repair changes no live behaviour — it makes the new consumer correct.
+    mov eax, esi
+    add al, SPRITESTATEDATA1_LENGTH  ; 8-bit: wraps within L, keeps H
+    mov esi, eax
     inc dl
     dec dh                           ; sets the ZF the loop branch reads
     jnz .spriteLoop
