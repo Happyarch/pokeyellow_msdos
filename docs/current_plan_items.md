@@ -46,8 +46,9 @@
 > been wrong before. Re-measure it.
 
 Status: **Stages 1–10 and most of Stage 11 are complete.** The remaining item
-work is Itemfinder, the three fishing rods, PP Up/PP restoration, Surfboard,
-and the final stub-retirement sweep. Archive this file to
+work is the three fishing rods and the final stub-retirement sweep. PP Up / PP
+restoration and the Surfboard LANDED 2026-08-02 (see their entries below);
+Itemfinder landed 2026-07-16 and owes only runtime evidence. Archive this file to
 `docs/plans/items.md` when those items are complete.
 
 This status was re-measured 2026-08-02 against the tree at `3fad3249`, per the
@@ -149,40 +150,58 @@ maintained here.
       same handler family is tracked in `docs/current_plan_backlog.md`, not
       here.
 
-- [ ] **PP Up and PP restoration.** This is ready item-layer work. The battle
-      menu audit replaced the old battle-only move picker with pret-shaped
-      `MoveSelectionMenu`/`SelectMenuItem`, including `wMoveMenuType = 2` and
-      the party-mon relearn menu. Port `ItemUsePPUp` and `ItemUsePPRestore`,
-      retire both stubs, and preserve/tag pret's Max Ether/Max Elixer PP-Up-bit
-      no-effect bug. Existing `move_selection` coverage exercises the regular
-      battle menu, not this type-2 item path, so the item flow needs its own
-      must-hit evidence.
+- [x] **PP Up and PP restoration — DONE 2026-08-02.** `ItemUsePPUp` and
+      `ItemUsePPRestore` are translated faithfully from pret
+      `engine/items/item_effects.asm:2170-2390` into their mirror
+      `src/engine/items/item_effects.asm`; both ret-stubs are deleted from
+      `item_use_stubs.asm`. Measured before starting and confirmed: all 14 call
+      targets translated and linked, all 5 text streams already generated into
+      `assets/item_text.inc`, every WRAM alias present — the item had zero
+      external blockers, as the 2026-08-02 re-measurement predicted.
+      pret's Max Ether / Max Elixer PP-Up-bit no-effect bug is preserved and
+      tagged `BUG{class=data-model; ...}` with a `%if BUG_FIX_LEVEL >= 2` mask.
+      Also deleted: `RestorePPAmount`, a port-only forked partial of
+      `ItemUsePPRestore.restorePP` with zero callers, written during the Stage-3
+      effect-core pass — exactly the forked-name duplication the
+      Preserve-pret-Labels rule exists to prevent.
+      **Coverage:** new golden scenario `item_pp_restore` (id 39, tier full,
+      datastruct), port gate `DEBUG_ITEMPP` → `RunPPRestoreTest`. It was required:
+      `move_selection` drives the REGULAR battle move menu (`wMoveMenuType` 0) and
+      nothing in the suite reached `wMoveMenuType` 2. Decomposed rather than
+      trusting the PASS — golden and port agree that mon 0's move-slot-0 PP goes
+      1 → 11 and `wNumBagItems` goes 16 → 15 with the ETHER consumed.
 
-- [ ] **Surfboard.** `ItemUseSurfboard` remains a linked ret-stub and
-      `SurfingAttemptFailed` is the only missing dependency. Re-measured
-      2026-08-02: `IsSpriteInFrontOfPlayer2` is DONE — `implementation /
-      linked / statically-reached-from-start`, provider
-      `src/home/overworld.asm`, 2 callers (`IsSpriteOrSignInFrontOfPlayer`,
-      `IsSpriteInFrontOfPlayer`) — delivered by the overworld-events boulder
-      work 2026-07-16; the earlier "missing" reading here predated it.
-      `IsSurfingAllowed`, shore/water detection, tile-pair collision,
-      passability, walking graphics and simulated-joypad support are all
-      linked, and so is the whole water-collision loop
-      (`CollisionCheckOnWater`, `ForceBikeOrSurf`,
-      `LoadSurfingPlayerSpriteGraphics`, `CheckForJumpingAndTilePairCollisions`
-      — all linked and statically reached). This plan ports
-      `SurfingAttemptFailed` with `ItemUseSurfboard`, including mount and
-      dismount; overworld-events still owns normal-loop consumption of the
-      simulated forward step. Verify both directions through the real movement
-      loop. The mount/dismount runtime scenario belongs here — it is also the
-      first coverage of the overworld-owned `CollisionCheckOnWater` /
-      `LoadSurfingPlayerSpriteGraphics` path, so do not write it twice. See
-      `docs/items_blockers.md` → Surfboard.
+- [x] **Surfboard — DONE 2026-08-02.** `ItemUseSurfboard` (pret
+      `engine/items/item_effects.asm:700-777`) is translated with mount, dismount
+      and the "no place to get off" refusal, alongside `SurfingAttemptFailed`,
+      which was the only `missing` dependency; the stub is deleted.
+      `IsSpriteInFrontOfPlayer2` was NOT re-ported — it landed 2026-07-16 with the
+      overworld-events boulder work — but it needed a **repair**: pret advances the
+      slot pointer with 8-bit math on `L` alone, so the not-found exit wraps to
+      `$C100` (the player's slot), while the port's flat `add` returned `$C200`.
+      Latent until now, because `ItemUseSurfboard` is the first caller that
+      dereferences `hl` on BOTH exits (`res BIT_FACE_PLAYER, [hl]`). Neither
+      existing caller reads `hl`, so no live behaviour changed.
+      **Coverage:** new golden scenario `surf_round_trip` (id 40, tier full,
+      datastruct), port gate `DEBUG_SURF` + `AUTOKEY_SURF` driving the LIVE
+      overworld loop with live collision on both sides. It is also the suite's
+      first coverage of `CollisionCheckOnWater` and the surf state machine —
+      written once, here, as this plan required. Tile layout measured off
+      `maps/PalletTown.blk` + `gfx/blocksets/overworld.bst`: the shore tile
+      `(15,4) = $32` is load-bearing, because `CollisionCheckOnWater` auto-dismounts
+      the instant the player moves toward passable land, and `ItemUseSurfboard`
+      reads `wTileInFrontOfPlayer` STALE.
+      **Known open, filed as backlog #33:** with the menus closed the port does not
+      consume the dismount's armed simulated step (`wJoyIgnore` stays `$FF`; there
+      is no `JoypadOverworld` to clear it). That consumer is overworld-events', so
+      the scenario dumps with the bag still open, where both sides have the step
+      armed and unconsumed.
 
 - [ ] **Stage 12 — stub and claim retirement.** Empty
       `src/engine/items/item_use_stubs.asm` — measured 2026-08-02, that file
-      holds exactly six labels aliased onto one `ret`: `ItemUseSurfboard`,
-      `ItemUse{Old,Good,Super}Rod`, `ItemUsePPUp`, `ItemUsePPRestore`; its
+      held six labels aliased onto one `ret`; three of those retired on
+      2026-08-02 (`ItemUsePPUp`, `ItemUsePPRestore`, `ItemUseSurfboard`), leaving
+      `ItemUse{Old,Good,Super}Rod`. Its
       `TODO(safari, battle plan): ItemUseBait / ItemUseRock` line is stale
       (both are real linked bodies in `item_effects.asm`). Run
       `label_status --callers` for
@@ -233,6 +252,8 @@ The scenario manifest currently supplies these item-facing comparisons:
 | `item_stone_evolve` | full / datastruct | `RunStoneTest` | evolution-stone post-flow WRAM state |
 | `item_potion_use` | full / datastruct | `UseItem` | medicine post-flow WRAM state |
 | `ball_catch` | full / datastruct | `RunBattleTest`, `UseItem` | capture post-flow WRAM state |
+| `item_pp_restore` | full / datastruct | `ItemUsePPRestore` | ETHER restores move-slot-0 PP 1 → 11, item consumed |
+| `surf_round_trip` | full / datastruct | `ItemUseSurfboard` | mount, one surf step, dismount through the live loop |
 
 Datastruct scenarios intentionally skip tilemap, VRAM, and OAM; they are not UI
 proof. `bag_menu`, `battle_menu`, and `move_selection` protect their named

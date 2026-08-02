@@ -120,7 +120,9 @@ Acceptance criteria:
       linked implementation in `src/engine/items/item_effects.asm`, reached from
       `UseItem` in `src/home/item.asm`. What remains is a handful of individual
       *handlers* still ret-stubs in `item_use_stubs.asm`, tracked in
-      `docs/current_plan_items.md`, not the dispatch itself.)
+      `docs/current_plan_items.md`, not the dispatch itself. Narrowed further
+      2026-08-02: PP Up / PP restoration and the Surfboard landed, so the only
+      open item-handler family is the three fishing rods.)
 - [x] New-game data init (`InitPlayerData2` — party/box/bag terminators + money/ID)
 
 **Remaining before Phase 2 closes — query it, do not read a list here.**

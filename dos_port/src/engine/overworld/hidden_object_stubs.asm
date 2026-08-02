@@ -140,9 +140,10 @@ PrintBenchGuyText:
 global PrintIndigoPlateauHQText
 PrintIndigoPlateauHQText:
     ret
-global PrintRedSNESText
-PrintRedSNESText:
-    ret
+; PrintRedSNESText — RETIRED 2026-08-02 (predef-text plan). The real faithful body
+; is LINKED at its pret mirror src/engine/events/hidden_events/reds_room.asm; it is
+; the port's first real end-to-end predef-text call site (tx_pre_jump
+; RedBedroomSNESText -> PrintPredefTextID).
 global PrintBookcaseText
 PrintBookcaseText:
     ret

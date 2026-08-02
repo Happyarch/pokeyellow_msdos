@@ -169,6 +169,7 @@ extern RunPlayersPCTest                   ; src/engine/menus/players_pc.asm
 extern RunPokedexEntryTest                ; src/engine/menus/pokedex.asm
 extern RunPPRestoreTest                   ; src/debug/debug_dump.asm
 extern RunSurfTestSeed                    ; src/debug/debug_dump.asm
+extern CheckForHiddenEventOrBookshelfOrCardKeyDoor ; src/home/hidden_events.asm
 extern RunPokedexTest                     ; src/engine/menus/pokedex.asm
 extern RunSavePerfTest                    ; src/engine/menus/save.asm (DEBUG_SAVEPERF)
 extern RunSaveTest                        ; src/engine/menus/save.asm
@@ -291,6 +292,18 @@ EnterMap:
     mov byte [ebp + W_CUR_MAP], SIGNTEXT_MAP   ; default PALLET_TOWN
     mov byte [ebp + W_Y_COORD], SIGNTEXT_Y
     mov byte [ebp + W_X_COORD], SIGNTEXT_X
+    mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF  ; "not a warp arrival" (see DEBUG_SEAM)
+%endif
+%ifdef DEBUG_PREDEFTEXT
+    ; Predef-text gate (predef-text plan Stage 2 acceptance). Stand ON the SNES tile
+    ; in Red's bedroom. pret: `hidden_event 3, 5, PrintRedSNESText, ANY_FACING`
+    ; (data/events/hidden_events.asm), which the port's generator emits as
+    ; `db 5, 3` = y 5, x 3 (assets/hidden_events.inc, HiddenEventsFor_REDS_HOUSE_2F).
+    ; ANY_FACING, so no facing is seeded.
+    ; Seeded BEFORE LoadMapData, which reads the coords (same rule as DEBUG_SEAM).
+    mov byte [ebp + W_CUR_MAP], REDS_HOUSE_2F
+    mov byte [ebp + W_Y_COORD], 5
+    mov byte [ebp + W_X_COORD], 3
     mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF  ; "not a warp arrival" (see DEBUG_SEAM)
 %endif
 %ifdef DEBUG_MAPSCRIPT_SIGHT
@@ -804,6 +817,24 @@ EnterMap:
     call SeedDeterministicPlayerIdentity     ; "RED" / id 0 — the golden's identity
     call SeamReseatView                      ; view ptr + block coords + collision mirror
     call RunMapScriptSightTest               ; dumps GBSTATE + FRAME and exits
+%endif
+%ifdef DEBUG_PREDEFTEXT
+    ; The coords were seeded before LoadMapData; LoadMapData does not derive the view
+    ; pointer for a hand-seeded spawn, so do that first.
+    call SeedDeterministicPlayerIdentity     ; "RED" / id 0 — the golden's identity
+    call SeamReseatView
+    ; Run the REAL A-press hidden-event dispatch, not a bespoke "print this predef"
+    ; shortcut — the whole point is that the text reaches the screen through
+    ; CheckForHiddenEventOrBookshelfOrCardKeyDoor -> PrintRedSNESText ->
+    ; PrintPredefTextID -> DisplayTextID's TEXT_PREDEF branch -> the flat TextPredefs
+    ; row -> the generated RedBedroomSNESText stream. That chain is the acceptance
+    ; this plan owes for editing DisplayTextID.
+    call CheckForHiddenEventOrBookshelfOrCardKeyDoor
+    ; The dialog waits for A. AUTOKEY_QUIET presses nothing, so the message stays on
+    ; screen and AutoKeyDrive photographs it at AUTOKEY_DUMP_FRAME.
+.predeftext_wait:
+    call DelayFrame
+    jmp .predeftext_wait
 %endif
 %ifdef DEBUG_SURF
     ; Placed at the end of EnterMap for the same reason DEBUG_MAPSCRIPT_SIGHT is:

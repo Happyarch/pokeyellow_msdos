@@ -35,36 +35,26 @@ outcomes ("near"/"nothing", without mutating the obtained-item flag during a tes
 still owes evidence — ITEMFINDER is not obtainable in the current build, so it
 lands with the first reachable hidden-item map.
 
-### Surfboard — item and overworld dependencies are split
+### Surfboard — RESOLVED 2026-08-02
 
-**Generated state:** `project_state` reports `ItemUseSurfboard` as a linked
-stub and reports `SurfingAttemptFailed` missing. `IsSpriteInFrontOfPlayer2` is
-DONE — re-measured 2026-08-02: `implementation / linked /
-statically-reached-from-start`, provider `src/home/overworld.asm`, 2 callers —
-delivered by the overworld-events boulder work 2026-07-16; this file's earlier
-"missing" reading predated it and is corrected here (see
-`docs/current_plan_items.md` for the single canonical statement of this
-closure). It reports `IsSurfingAllowed`, `IsNextTileShoreOrWater`,
-`CheckForTilePairCollisions`, `IsTilePassable`, and
-`LoadWalkingPlayerSpriteGraphics` implemented/relocated and linked. The
-simulated-input machinery also exists (in `src/home/map_objects.asm` since
-2026-07-26; it was `src/home/simulate_joypad.asm`, now deleted).
+`ItemUseSurfboard` and `SurfingAttemptFailed` are both real linked bodies in
+`src/engine/items/item_effects.asm`; the `item_use_stubs.asm` ret-stub is gone.
+Mount, dismount and the "no place to get off" refusal are all ported, and the
+golden scenario `surf_round_trip` (id 40) drives mount and dismount through the
+LIVE overworld loop with live collision on both sides — which is also the first
+coverage of the overworld-owned `CollisionCheckOnWater` /
+`LoadSurfingPlayerSpriteGraphics` path, written once as this ledger required.
 
-**Owner split:** overworld-events owns the pret
-`IsSpriteInFrontOfPlayer2` query and normal-loop consumption of the simulated
-forward step. The items plan owns pret's `ItemUseSurfboard` and
-`SurfingAttemptFailed`, including mount, dismount, failure text, music,
-graphics, state writes, and arming the forced step.
+`IsSpriteInFrontOfPlayer2` was already DONE (2026-07-16) and was not re-ported,
+but it did need a repair: its not-found exit returned `$C200` where pret's 8-bit
+`L` wrap returns `$C100`. `ItemUseSurfboard` is the first caller to dereference
+`hl` on both exits, so the bug was latent until now.
 
-**Unblocked when:** `IsSpriteInFrontOfPlayer2`'s faithful provider condition is
-already met (see above); the remaining condition is that the simulated forward
-step be consumed by the normal overworld loop, and the items workstream can
-land `SurfingAttemptFailed` alongside the handler. Joint acceptance must hit
-mount, dismount, and failure paths, and must observe the resulting
-`wWalkBikeSurfState`, graphics, collision, and forced movement rather than
-stopping after the item code arms state. The mount/dismount runtime scenario
-also provides first coverage of the overworld-owned `CollisionCheckOnWater` /
-`LoadSurfingPlayerSpriteGraphics` path — write it once, in the items plan.
+**Remaining tail (not a blocker, and not this plan's):** the dismount arms a
+simulated forward step that the port never consumes, because `.stopSurfing` sets
+`wJoyIgnore` = `$FF` and there is no `JoypadOverworld` to clear it. Measured stuck
+at frames 1180 / 1440 / 1800. Owned by overworld-events; tracked as
+`docs/current_plan_backlog.md` #33.
 
 ## Blocks end-to-end reachability or fidelity
 
@@ -129,10 +119,14 @@ The existing `battle_menu` golden does not exercise this sub-flow.
 These are active item tasks, not blockers:
 
 - **Fishing rods:** promote the check-only `ReadSuperRodData` provider and port
-  the three handlers plus `FishingInit`.
-- **PP items:** the linked `MoveSelectionMenu` and `SelectMenuItem` now include
-  the type-2 party-mon/relearn path. Port `ItemUsePPUp` and
-  `ItemUsePPRestore`; do not cite the former battle-only menu as a blocker.
+  the three handlers plus `FishingInit`. Still open, and still gated on the two
+  real `LoadAnimSpriteGfx` defects below (backlog #24) plus the `wRodResponse`
+  promotion (#25) — this is now the ONLY open item-handler family.
+- **PP items: DONE 2026-08-02.** `ItemUsePPUp` and `ItemUsePPRestore` are real
+  linked bodies in `src/engine/items/item_effects.asm`, both stubs retired, with
+  golden scenario `item_pp_restore` (id 39) covering the type-2 move-menu path
+  that no existing scenario reached. The re-measurement was right that this had
+  zero external blockers.
 
 Any future blocker entry must include the generated/repository evidence, the
 owning plan, the exact interface that clears it, and must-hit acceptance. Do

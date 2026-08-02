@@ -547,6 +547,77 @@ From `docs/plans/menus.md`.
 ### 18. Hidden-event / overworld-events Stage 3 lint tail
 Memory: `overworld-events-stage3-hidden-events-linked`.
 
+### 31. Predef text has no reachable must-hit scenario: interiors are not resident
+Filed 2026-08-02 by the predef-text implementation (Option A). The flat side-table
+landed and `PrintPredefTextID` / `TextPredefs` / `predef_text_data.asm` all LINK,
+but the plan's required acceptance — a must-hit scenario driving a predef text —
+**could not be built, and the reason is external to that plan.**
+
+**Symptom.** The port renders a blank room with no furniture and no dialog box
+when booted onto `REDS_HOUSE_2F`.
+
+**Repro.** `dos_port/tools/run_headless.sh "DEBUG_PREDEFTEXT=1" /tmp/pd` then
+`python3 dos_port/tools/render_frame.py /tmp/pd/FRAME.BIN /tmp/pd/f.png`. The gate
+seeds the SNES tile (`y 5, x 3` on `REDS_HOUSE_2F`, from
+`assets/hidden_events.inc:HiddenEventsFor_REDS_HOUSE_2F`) and runs the real
+`CheckForHiddenEventOrBookshelfOrCardKeyDoor` dispatch.
+
+**Evidence.** `include/gb_memmap.inc` documents the resident `.blk` set as
+`OW_<MAP>_BLK_GBADDR` — "resident **outdoor** .blk". No interior map data is
+embedded. And every predef-text hidden event is on an interior map: grep
+`assets/hidden_events.inc` — Red's house, Blue's house, Oak's lab, the pokécentres
+and the gyms. So there is currently **no map the port can render on which any
+predef text is reachable**, and that is a map-data gap, not a text-engine gap.
+
+**What this blocks.** The predef path stays runtime-unreachable, so the
+implementation carries regression evidence only (`fidelity-full`), never feature
+evidence. It also blocks retiring the last 2 `pret_label_allowlist.json` rows,
+which are sequenced *after* acceptance — see the relocation-debt pointer below.
+
+**What unblocks it.** Either resident interior `.blk` data (item 16's map-data
+extension is the neighbouring work), or a reachable outdoor predef entry. The
+`DEBUG_PREDEFTEXT` gate and `src/engine/events/hidden_events/reds_room.asm` are
+already in place and correct; only the map data is missing.
+
+### 32. `tx_pre_jump` cannot be a macro at a routine tail
+Filed 2026-08-02. pret has `tx_pre_jump` (macros/predef.asm); `include/predef.inc`
+deliberately does **not**, and the jump form is spelled `tx_pre_id X` + `jmp
+PrintPredefTextID` at the call site instead. `update_label_db`'s build-graph
+scanner decides fall-through at a routine boundary and refuses to guess for a
+macro whose expansion jumps out ("boundary decided by macro tx_pre_jump, whose
+expansion is not proven to return control"). Repro: restore the macro, use it as
+the last statement of a routine, run `dos_port/tools/static_gate` — the scan
+fails, not the lint. Not a defect, but it costs one line against pret at every
+future predef call site, so it is recorded rather than rediscovered. If the
+scanner ever grows proven macro summaries, the macro can come back.
+
+### 33. The Surfboard dismount's simulated step is never consumed
+Filed 2026-08-02 by the Surfboard work (items plan Stage 11).
+
+**Symptom.** After `ItemUseSurfboard`'s `.stopSurfing` branch runs, the player
+never takes the forward step it arms — they stay on the tile they dismounted on.
+
+**Repro.** `dos_port/tools/run_headless.sh "DEBUG_SURF=1 AUTOKEY_DUMP_FRAME=1800"`
+with the `AUTOKEY_SURF` script extended to close the bag and the START menu after
+the dismount (two `PAD_B` taps).
+
+**Evidence.** GBSTATE at frames 1180, 1440 AND 1800 all read the identical state:
+player at `(15,4)`, `wSimulatedJoypadStatesIndex` = 1, `wSimulatedJoypadStatesEnd`
+= `$20` (PAD_LEFT), `wJoyIgnore` = `$FF`. It is stuck, not slow. `.stopSurfing`
+sets `wJoyIgnore` = `$FF` (the mount path does not, and the mount's step IS
+consumed on both sides), and the port has no `JoypadOverworld` to clear it —
+the same gap `overworld-events-stage4-boulder-linked` records as "STILL OPEN: no
+JoypadOverworld".
+
+**Not asserted:** what the real game does after the menus close was not measured,
+so the golden asserts nothing either way. `surf_round_trip` deliberately dumps
+with the bag still open, where both sides have the step armed and unconsumed, so
+the scenario compares exactly what `ItemUseSurfboard` wrote.
+
+**Owner:** overworld-events — the simulated-input consumer is theirs, not the
+items plan's. The items plan's own acceptance (mount + dismount state through the
+live loop) is met.
+
 ---
 
 ## Relocation debt (has a live owner — pointer only)
@@ -567,7 +638,22 @@ Current registry, measured (`python3 -c "import json; …"` over the file):
 
 Tracked in stigmergy memories `relocated-labels-grind` and
 `registry-approval-state`, not here; this pointer exists so the item is findable
-from the same index as everything else. The last 2 rows are blocked on the predef
-text work — see `docs/current_plan_predef_text.md`. **New relocations are
+from the same index as everything else.
+
+**UPDATE 2026-08-02: the two rows are now STALE, and retiring them is a
+maintainer action.** They name
+`port_file: dos_port/src/home/map_text_pointer.asm`, and that file is DELETED —
+`SetMapTextPointer` / `RestoreMapTextPointer` moved back into their pret mirror
+`src/home/predef_text.asm` with the predef-text work. That move was not cosmetic:
+pret's `PrintPredefTextID` has no `ret` and falls through into
+`RestoreMapTextPointer`, so with the pair in another object the file's `.text`
+ended in a routine running off its own end — harmless while it was check-only, a
+live cross-file fall-through the moment it linked, and `update_label_db`'s
+boundary scan refused to model it. `update_label_db` now reports **`relocated` = 0**
+(the status no longer appears in its label line at all). The rows are left in
+place because retiring them re-hashes a registry that is content-hash locked
+outside the worktree in two places (git config + the GitHub repo variable) — the
+bless is the maintainer's, not an agent's — and because the plan sequences the
+retirement after acceptance, which is blocked by item 31 above. **New relocations are
 forbidden and registry ADDITIONS are refused outright by `.githooks/pre-commit`
 since `3f1b12be`.**

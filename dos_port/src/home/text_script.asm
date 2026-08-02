@@ -62,6 +62,7 @@ extern UpdateSprites                    ; src/home/update_sprites.asm — final 
 extern LoadGBPal                        ; palettes/fade (Wave 10)
 extern BankswitchCommon                 ; home/bankswitch2.asm (no-op flat)
 extern w_map_text_table_ptr             ; map_sprites.asm — flat ptr to current map TextTable
+extern w_predef_text_table_ptr           ; home/predef_text.asm — port-only flat ptr to TextPredefs
 extern wMapSpriteData                   ; map_sprites.asm — flat [movbyte2,textid] per slot
 extern DisplayStartMenu
 extern TalkToPikachu                    ; callfar (engine/pikachu)
@@ -125,11 +126,22 @@ DisplayTextID:
     test edi, edi
     jnz .loadPredefTextPtr
     mov esi, [w_map_text_table_ptr]
+    jmp .checkTextTable
+.loadPredefTextPtr:
+    ; TEXT_PREDEF: read the port-only FLAT table pointer published by
+    ; PrintPredefTextID, NOT `movzx esi, word [ebp + wCurMapTextPtr]`. That GB walk
+    ; was the Option-A blocker: TextPredefs and its streams are flat program-image
+    ; data, so truncating the table address to 16 bits and dereferencing it as
+    ; [ebp + offset] read unrelated bytes inside the GB allocation — silent
+    ; corruption, and no static gate could catch it. wCurMapTextPtr is still written
+    ; and restored byte-faithfully by Set/RestoreMapTextPointer; it is simply no
+    ; longer the thing this branch dereferences. See the DEVIATION in
+    ; src/home/predef_text.asm.
+    mov esi, [w_predef_text_table_ptr]
+.checkTextTable:
     test esi, esi
     jnz .haveTextTable
     jmp AfterDisplayingTextID
-.loadPredefTextPtr:
-    movzx esi, word [ebp + wCurMapTextPtr]
 .haveTextTable:
 
     ; ld d,$00 / ldh a,[hTextID] / ld [wSpriteIndex],a
@@ -180,8 +192,13 @@ DisplayTextID:
     ; dec a ; ld e,a ; ld d,0 ; add hl,de ; add hl,de ; ld a,[hli]; ld h,[hl]; ld l,a
     dec al
     movzx edx, al                        ; de = (textID-1), d=0
-    test edi, edi
-    jnz .lookupGbPointerTable
+    ; ONE lookup for BOTH tables. The predef table now uses the same flat
+    ; {dd stream, dd size} rows as the per-map table (Option A, 2026-08-02), so the
+    ; old `.lookupGbPointerTable` GB-address-space walk — hl += 2*(id-1), wrap to 16
+    ; bits, movzx from [ebp+esi] — is GONE rather than left unreachable. It was only
+    ; ever correct for streams living inside the GB allocation, and the port has
+    ; none. EDI still selects which TABLE was loaded above; it no longer selects a
+    ; lookup shape.
     lea edx, [edx * 8]                   ; flat rows are {dd stream, dd size}
     mov ebx, [esi + edx + 4]             ; 0xFFFFFFFF marks text_asm script entry
     mov esi, [esi + edx]                 ; flat pointer to TX stream
@@ -193,17 +210,6 @@ DisplayTextID:
     jne .readFirstByte
     call esi                             ; text_asm routine owns its own text stream
     jmp AfterDisplayingTextID
-.lookupGbPointerTable:
-    add esi, edx
-    add esi, edx                         ; hl += 2*(textID-1)  (word index into pointer table)
-    and esi, 0xFFFF                       ; faithful 16-bit GB-pointer wrap
-    ; hl = [hl] (LE 16-bit pointer to the text stream)
-    movzx esi, word [ebp + esi]
-    ; Name the GB-space stream as a FLAT pointer, so both paths reach
-    ; .readFirstByte with the same convention (the PrintTextStaged idiom in
-    ; src/home/window.asm). Everything downstream — the dict reads below and
-    ; PrintText_NoCreatingTextBox — is documented flat.
-    lea esi, [ebp + esi]
 .readFirstByte:
     ; ld a,[hl] — a = first byte of text.
     ; ESI IS FLAT HERE ON BOTH PATHS. This read was `[ebp + esi]`, which on the

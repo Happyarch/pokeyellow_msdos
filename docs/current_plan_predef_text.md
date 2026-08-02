@@ -215,6 +215,51 @@ golden-gated by `bills_pc_ops` (id 37) and `box_change_roundtrip` (id 38).
 Those three entries are therefore portable now, not stub candidates. Re-derive
 the real stub group from generated state before writing any `STUB{}`.
 
+## Stage 2 — IMPLEMENTED 2026-08-02, ACCEPTANCE BLOCKED
+
+Everything Option A asked for is built, linked and gate-clean. The one thing that
+is NOT done is the acceptance, and it is blocked by something outside this plan —
+read the last box before concluding this plan is finished.
+
+What landed:
+- `TextPredefs` is a flat 68-row `{dd stream, dd size}` table — the SAME row shape
+  the ordinary map text table uses — in `src/data/predef_text_data.asm`. Note the
+  plan text above said "in `src/home/predef_text.asm`"; that would have ADDED an
+  `aux_misplaced` finding, because pret files the table under `data/`. It lives in
+  the data layer for exactly the reason `MoveEffectPointerTable` does: hand-written
+  (17 rows name PORT routines, so no generator can derive it) yet filed as data.
+- `PrintPredefTextID` publishes a port-only flat `w_predef_text_table_ptr`, the
+  `w_map_text_table_ptr` precedent. `wCurMapTextPtr`, `SetMapTextPointer` and
+  `RestoreMapTextPointer` are byte-faithful and untouched, so `ChangeBox` is
+  unaffected. Tagged `DEVIATION{class=projection; ...}`.
+- `DisplayTextID`'s TEXT_PREDEF branch reads the flat table. The 16-bit GB pointer
+  walk (`.lookupGbPointerTable`) is DELETED, not left unreachable — both tables now
+  share one lookup.
+- The generator emits `<Label>_len` (so the table's byte counts are exact and not
+  hand-duplicated) and a separate `assets/predef_text_ids.inc` with all 68
+  `<Label>_id` constants. The ids have to be generated: pret computes them at the
+  call site as `(Label_id - TextPredefs) / 2 + 1`, and the port cannot, because
+  `TextPredefs` is in another object file and NASM/COFF carries no cross-object
+  `equ` — the same limitation that blocks `MapHeaderPointers`.
+- `include/predef.inc` carries pret's `tx_pre_id` / `tx_pre`. Deliberately NOT
+  `tx_pre_jump` — see backlog #32.
+- The 17 non-data entries are ret-stubs in
+  `src/engine/events/hidden_events/hidden_events_stubs.asm`, each with its pret
+  ref, its reachability in the live build, a `TODO(<batch>)` retirement line and a
+  machine-parsed `STUB{}` annotation.
+- `PrintRedSNESText` is ported to its pret mirror
+  `src/engine/events/hidden_events/reds_room.asm` and its `hidden_object_stubs.asm`
+  ret-stub retired — the port's first real end-to-end predef call site.
+
+**A real bug fell out of the merge, and it is worth recording.** pret's
+`PrintPredefTextID` has no `ret`: it FALLS THROUGH into `RestoreMapTextPointer`.
+With that pair relocated to `map_text_pointer.asm`, this file's `.text` ended in a
+routine running off its own end — harmless while the file was check-only, a live
+cross-file fall-through the moment it linked. `update_label_db`'s boundary scan
+refused to model it and said so. Merging the pair back (and deleting
+`map_text_pointer.asm`) is the fix, so that relocation retirement was required for
+correctness, not tidiness.
+
 - [x] Decide Option A vs B (maintainer call — it changes a live home routine).
       **DECIDED 2026-08-02: Option A**, the flat side-table mirroring the
       `w_map_text_table_ptr` precedent. Option B is rejected and closed.
@@ -222,16 +267,38 @@ the real stub group from generated state before writing any `STUB{}`.
       a new must-hit scenario covering a predef text — the suite as it stands
       (37/37, measured 2026-08-02) does not exercise this path, so a green run
       without that new scenario proves nothing about the change.
-- [ ] Port or stub the 14 `text_asm` + 3 `script_*` entries.
-- [ ] Build the 68-entry `TextPredefs` table in `src/home/predef_text.asm`.
-- [ ] Promote `predef_text.asm` out of `HOME_CHECK_SRCS`; promote
-      `predef_text_data.asm` out of `DATA_CHECK_SRCS`.
-- [ ] Merge `SetMapTextPointer`/`RestoreMapTextPointer` back from
-      `map_text_pointer.asm` (use `fidelity_gate --move-baseline` / `--move-verify`),
-      delete that file, free its Makefile slot.
-- [ ] Retire the last 2 `pret_label_allowlist.json` rows — **last**, in its own
-      commit, per the sequencing rule in `relocated-labels-grind`; then hand the
-      measured hash to the maintainer for the two-sided bless.
+- [x] Port or stub the 14 `text_asm` + 3 `script_*` entries. All 17 stubbed; all
+      17 measured `missing`, in pret's `engine/events/hidden_events/` subsystem.
+- [x] Build the 68-entry `TextPredefs` table — in `src/data/predef_text_data.asm`,
+      not `src/home/predef_text.asm`; see the note above.
+- [x] Promote `predef_text.asm` out of `HOME_CHECK_SRCS`; promote
+      `predef_text_data.asm` out of `DATA_CHECK_SRCS` (that list is now empty).
+- [x] Merge `SetMapTextPointer`/`RestoreMapTextPointer` back from
+      `map_text_pointer.asm`, delete that file, free its Makefile slot.
+      **The move battery could not be used as written:** `--move-baseline` refuses
+      to snapshot through a failing rescan, and the rescan was failing on the very
+      fall-through this merge fixes ("a snapshot taken through a stale DB is worse
+      than none" — correct behaviour by the tool). Evidence is therefore the post-
+      merge chain instead: `faithdiff` on both labels, `static_gate` PASS with
+      `relocated` now **0**, and the full golden suite.
+- [ ] **BLOCKED — the required must-hit predef scenario cannot be built yet.**
+      The port has no resident interior map data (`include/gb_memmap.inc`: the
+      `OW_<MAP>_BLK_GBADDR` set is "resident **outdoor** .blk"), and EVERY predef
+      hidden event is on an interior map — Red's house, Blue's house, Oak's lab,
+      the pokécentres, the gyms. So no predef text is reachable on any map the port
+      can currently render. The `DEBUG_PREDEFTEXT` gate is written and correct
+      (it seeds the SNES tile and runs the real dispatch); it renders a blank room.
+      Filed as `docs/current_plan_backlog.md` #31. Until this clears, the predef
+      path is runtime-unreachable and the change carries **regression evidence
+      only** — never feature evidence.
+- [ ] Retire the last 2 `pret_label_allowlist.json` rows — **last**, after the
+      acceptance above, per the sequencing rule in `relocated-labels-grind`; then
+      hand the measured hash to the maintainer for the two-sided bless.
+      **They are now STALE and provably retirable**: both name
+      `dos_port/src/home/map_text_pointer.asm`, which is deleted, and
+      `update_label_db` reports `relocated` = 0. Left in place deliberately —
+      the registry is content-hash locked outside the worktree in two places, so
+      the re-bless is the maintainer's call, not an agent's.
 
 ---
 
