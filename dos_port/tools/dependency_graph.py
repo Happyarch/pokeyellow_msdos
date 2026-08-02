@@ -25,8 +25,10 @@ build_graph() corrects for this by joining the names-only `aux_labels` and
     *** A node is genuinely port-only only when display_status == "port_only"
         AND aux_pret_file is null. ***
 
-Measured 2026-07-27: 90 pret-unmodeled vs 337 genuinely port-only, so reading
-raw `status` overstates the port's divergence by ~90 labels.
+Measured 2026-08-02: 91 pret-unmodeled vs 342 genuinely port-only (433 rows
+carry status `port_only`), so reading raw `status` overstates the port's
+divergence by ~91 labels. Re-measure rather than quoting this line -- it read
+"90 vs 337" from 2026-07-27 until the data moved underneath it.
 
 Provenance is names-only by design: pret-unmodeled nodes carry no status and no
 call-graph edges. Absence of edges on them is not evidence of anything -- and

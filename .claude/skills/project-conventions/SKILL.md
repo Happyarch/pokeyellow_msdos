@@ -65,25 +65,52 @@ only (`/FIXCRIT`), `2` = all (`/FIXALL`); the Makefile passes `-D BUG_FIX_LEVEL=
 `--strict-claims` flags each one as `legacy_annotation` ("requires evidence-backed
 migration").
 
-**`--strict-claims` reported zero `legacy_annotation` violations tree-wide when
-last measured (2026-07-25; 132 `DEVIATION{}`, 44 `BUG{}`, 13 `GLITCH{}`,
-22 `STUB{}`).** Treat that as a measurement with a date on it, not an invariant:
-it had silently drifted to 2 before this line was corrected, because plain
-`lint_pret_labels` does not gate on this class — only `--strict-claims` does, and
-nothing runs it automatically. **Re-run the check; do not quote this paragraph as
-evidence.** The handful of `BUG(critical)`-looking strings that survive are *prose
-references inside comment text* ("cataloged BUG(critical) with…", "see the two
-BUG(cosmetic) blocks below") — not annotations, and not a precedent. Writing a
-free-form one now is a regression that `--strict-claims` will report.
+**Do not quote a count from this file — measure it.** The structured-annotation
+population moves every session:
+
+```
+# structured annotations, by kind
+for k in DEVIATION BUG GLITCH STUB; do
+    printf '%s: %s\n' "$k" "$(grep -rohE "; ?${k}\{" dos_port/src | wc -l)"
+done
+# the legacy-format gate (never bare — a bare run rewrites translation.db)
+dos_port/tools/lint_pret_labels --no-scan --strict-claims
+```
+
+Measured 2026-08-02: `--strict-claims` reports **zero** `legacy_annotation`
+(also zero `hand_encoded_text` / `local_shadow` / `stale_provider`, cleared by
+`a3804828` and `3fad3249`), with 192 `DEVIATION{}`, 46 `BUG{}`, 10 `GLITCH{}`,
+21 `STUB{}` under `dos_port/src`. The previous version of this line said
+132/44/13/22 as of 2026-07-25 — every one of those four numbers had moved,
+including two that went DOWN, which is exactly why a count in prose is not
+evidence.
+
+Treat any figure here as a measurement with a date on it, not an invariant: the
+zero had silently drifted to 2 before this line was first corrected, because
+plain `lint_pret_labels` does not gate on this class — only `--strict-claims`
+does. `static_gate` (and therefore `.githooks/pre-commit`) now runs BOTH modes,
+so the class is automatically ratcheted; it is still not gated to zero by
+anything but this rule. **Re-run the check; do not quote this paragraph as
+evidence.** Three `BUG(critical)`/`BUG(cosmetic)`-looking strings survive and are
+*prose references inside comment text* (`src/home/names2.asm:49`,
+`src/engine/pokemon/experience.asm:136`,
+`src/engine/battle/move_effects/transform.asm:14`) — not annotations, and not a
+precedent. Writing a free-form one now is a regression that `--strict-claims`
+will report.
 
 ## Stub Conventions (all stubs live in a subsystem `*_stubs.asm`)
 
 When a routine must exist at link time but its real body is deferred, the stub
 does **not** go in the `.asm` that mirrors its pret source file — it goes in the
 **subsystem stub file**, `src/<area>/<area>_stubs.asm` (e.g.
-`overworld_stubs.asm`, `core_stubs.asm`, `pc_stubs.asm`, `main_menu_stubs.asm`,
-`battle_exp_stubs.asm`). This keeps every stand-in greppable in one place per
-subsystem, so retiring stubs later is a bounded search, not a tree-wide hunt.
+`src/engine/overworld/overworld_stubs.asm`, `src/engine/battle/core_stubs.asm`,
+`src/engine/menus/main_menu_stubs.asm`, `src/home/home_stubs.asm`). This keeps
+every stand-in greppable in one place per subsystem, so retiring stubs later is
+a bounded search, not a tree-wide hunt.
+
+Get the live set with `find dos_port/src -name '*_stubs.asm'` rather than
+trusting a list here — the set shrinks as stubs retire (`pc_stubs.asm`, which
+this paragraph named for months, was deleted in `0c9afce5`).
 
 **Rules:**
 1. **Keep the pret label.** The stub carries the exact pret routine name (see
@@ -118,6 +145,9 @@ subsystem, so retiring stubs later is a bounded search, not a tree-wide hunt.
    non-ret-only stub, a duplicate def, or a stale extern comment immediately
    (the DB is rescan-derived, so a skipped rescan self-heals — but the linter
    run is what catches the violation *before* it's committed).
+   Both of those WRITE the tracked `translation.db`, so they are a serialized
+   resource: never run them while another agent is building or rescanning. To
+   read findings without touching the DB, use `lint_pret_labels --no-scan`.
 
 ## Data vs. code: the two-tier rule (regen must never clobber anything)
 
@@ -133,17 +163,37 @@ some entries need bespoke, hand-authored logic. Keep that logic safe from
   hand-authored information** — rerunning is idempotent and cannot lose anything.
 - **Tier 2 — code, human-owned: `.asm`.** All per-entry *behavior*: move-effect
   handlers (`src/engine/battle/move_effects/*.asm`), predicates/dispatchers
-  (`move_category.asm`, `field_moves.asm`, `home/names.asm`), item effects, etc.
+  (`src/engine/battle/move_category.asm`, `src/home/names.asm`), item effects
+  (`src/engine/items/item_effects.asm`), etc.
+
+  **The test is behavior, not subject matter.** `field_moves.asm` used to be
+  cited here as Tier 2 and it was wrong: it holds only the generated
+  `FieldMoveDisplayData` / `FieldMoveNames` tables, so commit `a3804828` moved it
+  to `dos_port/src/data/field_moves.asm` as the Tier-1 data it always was. A file
+  that is "about" moves is not thereby code. Ask whether it *decides* anything.
 
 **Hard rules:**
 1. **Generators write only `assets/*.inc`. They never emit `.asm`.** So
    `make assets` physically cannot touch Tier 2.
 2. **`.asm` is never machine-generated.** Every move/item-specific decision,
    `BUG`/`GLITCH` guard, and quirk lives there.
-3. The two tiers link **by id/index, never by inlining** — e.g. a future
-   `MoveEffectPointerTable` is a hand-written `dd` table in `.asm`, keyed by the
-   effect byte that comes from the generated data table. Adding bespoke logic =
-   write/point a handler in code; it does not touch the data.
+3. The two tiers link **by id/index, never by inlining** — the worked example is
+   `MoveEffectPointerTable`, which exists today at
+   `dos_port/src/data/move_effect_pointers.asm`: a hand-written 86-entry `dd`
+   table keyed by the effect byte that comes from the generated data table.
+   Adding bespoke logic = write/point a handler in code; it does not touch the
+   data.
+
+   **It is hand-written *and* lives in the data layer, and that is not a
+   contradiction.** No generator can derive it, because its rows are PORT
+   function names (unported handlers point at the `UnportedMoveEffect` ret-stub
+   beside the dispatcher in `src/engine/battle/effects.asm`) — but pret files the
+   same table under `data/moves/effects_pointers.asm`, and the linter's
+   `aux_misplaced` rule asks only that a pret `data/` label live under
+   `dos_port/src/data/` **or** a generated `assets/*.inc`. A hand-written
+   dispatch table in the data layer satisfies both. It moved there in `a3804828`;
+   pret's `dw` (bank-relative) becomes `dd` (flat DPMI linear), and it sits in
+   `section .data` since it is only ever `lea`'d, never executed.
 4. **If a data value must deviate from the pret source** (a fix, or a value pret
    doesn't carry), do **not** hand-patch the `.inc`. Either (a) teach the
    generator the override — ideally reading an explicit sidecar list so it's
@@ -177,10 +227,21 @@ header, `%include`d by the `.asm` and wired into the Makefile `assets` target.
 - **Pointer/address tables are NOT strings** — a `dw`/`dd` table of WRAM offsets or
   routine addresses (e.g. `OTPointers`, a jump table) is code (Tier 2), hand-written
   in the `.asm`. The rule is about *encoded glyph runs*, not every `db`/`dw`.
-- **Legacy hand-encoded strings exist** (`party_menu.asm`, `bag_menu.asm`,
-  `home/names.asm`, older battle labels) — they predate the generator pattern and
-  are a known debt, **not** a precedent. Do not add more; migrate opportunistically
-  when you touch one. Note the worktree caveat: the generator needs the
+- **The legacy hand-encoded backlog is CLEARED — there is no precedent left to
+  point at.** This bullet used to name `party_menu.asm`, `bag_menu.asm`,
+  `home/names.asm` and "older battle labels" as accepted debt; measured
+  2026-08-02, `party_menu.asm` and `home/names.asm` carry no charmap byte runs
+  and there is no `bag_menu.asm` in the tree at all. `3fad3249` took
+  `hand_encoded_text` **3 → 0** (the last holdout was `CopyrightTextString` in
+  `src/engine/movie/title.asm`, now derived by `gen_static_tables.py` into
+  `assets/copyright_text.inc`). Anything you add now is the *first* violation,
+  not the next one. Re-measure with
+  `dos_port/tools/lint_pret_labels --no-scan --strict-claims`, and note the
+  detector is deliberately conservative — it needs a `db` run with a `>= $7F`
+  byte **plus** either a quoted string in the trailing comment or a `*Text*`-ish
+  label, so a hand-encoded run with no comment can still slip past it. The rule
+  binds you, not just the linter.
+- Worktree caveat for the generator: it needs the
   `unicode_converter` submodule (seed it from the primary clone); the generated
   `.inc` is gitignored and regenerated by `make assets`.
 
@@ -222,9 +283,28 @@ generator cannot produce: what a plan is for, what its lessons were, and which o
 its tails were deferred and to where.
 
 Read it for that narrative, never for "what is active". It was last reconciled
-against the generator on **2026-07-26**; entries marked *COMPLETE & archived*
+against the generator on **2026-08-02**; entries marked *COMPLETE & archived*
 are history kept for their lessons. When this section and the generator disagree
 about existence, the generator wins and this section is the bug.
+
+One generator caveat worth knowing before you trust its output: it counts only
+checkbox lines (`- [ ]` and the backtick form `` - `[ ]` ``), so a plan written
+as prose or numbered headings reports `0 completed / 0 open` regardless of its
+real state. `current_plan_backlog.md` reads 0/0 while holding 18 numbered items
+(several already marked DONE/FIXED in place) plus a relocation-debt pointer;
+`_bug_tagging` and `_doc_staleness` read 0/0 too. **"0/0" means
+"unparsed", not "empty"** — open the file. (The glob is `current_plan*.md`, not
+`current_plan_*.md`, deliberately, so the plural
+`docs/current_plans_remaster_Music_Cities1.md` is included.)
+
+**A deferred tail is probably NOT untracked.** Several entries below used to end
+"currently untracked"; most of those now live as numbered items in
+`docs/current_plan_backlog.md` — CI wiring, the `battle_menu` golden spec,
+battle-UI session B6, the status-screen front-pic/cry/STATS wire, the
+`LoadPokedexTilePatterns` tileset, the window-compositor gap, interactive
+navigation sweeps, the cable-club warp seam, the faithdiff relocation blind
+spot, and the pret-tree contamination decision. Grep that file before repeating
+the claim.
 
 **A plan with no entry below is normal — go to the file itself.** There is
 deliberately no list of those here: one used to sit at this spot and it drifted
@@ -251,11 +331,15 @@ dos_port/tools/project_state --plans
   harness-facing ones are imported by the fidelity-expansion plan above.
 - **Fidelity harness — COMPLETE & archived** at `docs/plans/fidelity_harness.md`
   (2026-07-07, branch `fidelity_harness`): mGBA golden differential testing
-  (`make fidelity` / `goldencheck`, 6 scenarios, mgba-mcp bridge) + static tooling
-  (`update_label_db` / `lint_pret_labels` / `faithdiff` / `label_status`, the
-  `faithfulness-review` skill), plus the dosbox-x unattended-quit fix. Deferred
-  tails (battle_menu golden spec, CI wiring, FormatMovesString relocation,
-  allowlist review, pret-tree contamination decision) — currently untracked.
+  (`make fidelity` / `goldencheck`, 6 scenarios *at the time* — the suite is 37
+  today, see `SCENARIOS` in `tools/golden_diff.py`; mgba-mcp bridge) + static
+  tooling (`update_label_db` / `lint_pret_labels` / `faithdiff` / `label_status`,
+  the `faithfulness-review` skill), plus the dosbox-x unattended-quit fix.
+  Its deferred tails are now **tracked in `docs/current_plan_backlog.md`**:
+  battle_menu golden spec (#9), CI wiring (#4, static tier DONE 2026-07-26 —
+  `static_gate` + `.githooks/pre-commit` + a GitHub workflow), the relocation
+  debt including `FormatMovesString` (the "Relocation debt" pointer section) and
+  the pret-tree contamination decision (#5, premise contradicted, re-check).
 - **Compositor performance — COMPLETE & archived** at
   `docs/plans/compositor_perf.md` (2026-07-12). The port was running at ~half
   speed (31–34 ms/frame against a 16.348 ms budget); it now lands every frame
@@ -275,11 +359,24 @@ dos_port/tools/project_state --plans
 - `docs/current_plan_audio.md` — **audio subsystem (Phase 3)**, architecture settled
   2026-07-05: faithful pret engine translation driving a virtual APU + per-device
   shims (OPL3/SB Pro floor, Tandy, PC speaker), MT-32-flagship MIDI path via
-  precompiled streams, Pikachu PCM via DSP direct mode / speaker PWM. Phases A–D;
-  Phase A (engine + OPL) not started.
+  precompiled streams, Pikachu PCM via DSP direct mode / speaker PWM. Phases A–E.
+  **The engine is LIVE and linked** — do not repeat the old "Phase A not started"
+  line from this entry, which was false: `AUDIO_SRCS` in `dos_port/Makefile`
+  links `audio_hal`, `opl_shim`, `opl_enh`, `tandy_shim`, `spk_shim`, `mpu401`,
+  `sb_pcm`, `spk_pcm`, `pikachu_pcm`, `engine_1..4` and friends. Status as of
+  2026-08-02, from the plan's own boxes: **C (Pikachu PCM) and D (Tandy +
+  speaker SFX + polish) are `[x]`, DONE 2026-07-07**; **B (MIDI/MT-32) is `[~]`,
+  infrastructure complete**; **A is `[ ]` at the top level but every substantive
+  sub-item under it is `[x]`** (OPL3 reference, `pret_audio.py`, `gen_audio_data.py`
+  + ROM byte-compare, the `home/audio.asm` gateway and engine translation, the
+  `DelayFrame` tick hook, `opl_shim` + `gen_opl_patches.py`, `BLASTER` detection)
+  — only the stub-retirement tail is `[~]`. Read the boxes, not the parent.
+  Phase E is the LLM music arranger (the `score-analysis` / `music-theory` /
+  `audio-enhance-*` skill set).
 - **script engine — not active, but the plan file EXISTS. Read it.** There is no
-  `docs/current_plan_script_engine.md` — that path was deleted in `eb17e64d`
-  (2026-07-12). **This entry used to add "and never archived, so do not go
+  `docs/current_plan_script_engine.md` — `eb17e64d` (2026-07-12) recorded it as a
+  RENAME (`R098`) into `docs/plans/`, which is why a delete-log search comes up
+  empty. **This entry used to add "and never archived, so do not go
   looking in `docs/plans/` either"; that was MEASURED FALSE (2026-07-26) and is
   the exact opposite of the truth.** The plan is archived at
   **`docs/plans/current_plan_script_engine.md`** — note it kept its
@@ -292,19 +389,30 @@ dos_port/tools/project_state --plans
 - **Overworld port — COMPLETE & archived** at `docs/plans/overworld_port.md`
   (there is no `docs/current_plan_overworld_port.md`) — **full faithful port of pret
   `engine/overworld/`** (staged swarm+solo; branch `overworld-port` cut after the
-  battle-swarm merge). **Now also owns the menu live-render defect** (VRAM
-  tile-slot management: vChars2 `$79–$7F` box tiles + vFont `$80+` font/walk
-  time-share) — see its "Cross-cutting defect" note + Stage 8 verification item,
-  and memory `menu-corruption-vram-tileslots`. Whether that cross-cutting VRAM
-  tile-slot defect was closed with the plan or outlived it is NOT recorded here —
-  check the archived plan and the memory before assuming either way.
+  battle-swarm merge). **It also owns the menu live-render defect** — see its
+  "Cross-cutting defect" section (heading now: *menu box-draw geometry + window
+  compositor*) and the Stage 8 verification item.
+  **The VRAM tile-slot explanation for that defect is DISPROVEN, and this entry
+  used to repeat it.** Per the 2026-07-05 correction in the plan: the `$79–$7F`
+  box/border tiles are byte-identical between `font_extra.2bpp` and
+  `font_battle_extra.2bpp`, so `LoadHpBarAndStatusTilePatterns` rewrites them
+  with the same bytes and corrupts nothing; the corruption fires on the *first*
+  menu, with no battle needed. The real defect is menu-engine box-draw geometry
+  plus the canvas↔window compositor, refiled as ticket **OW-A.13**; the
+  compositor half is `docs/current_plan_backlog.md` #14. There is **no stigmergy
+  memory `menu-corruption-vram-tileslots`** — that citation was dead; the live
+  memory for the neighbouring invariant is `compositor-perf-invariants`.
   (The Pokémon **data/stats** layer — party structs, base stats, `CalcStats`,
   experience/leveling, `AddPartyMon`, learnset/moves, names — is **complete**; its
   plan `docs/plans/pokemon_engine.md` is archived DEAD. The **behavior/UI** layer —
   evolution/`EvolveMon`, `learn_move`, status-screen pages 1&2, post-battle wire —
   is **complete and archived** at `docs/plans/pokemon_behavior.md` (2026-07-04);
-  its deferred tails — status-screen front-pic/cry/STATS-wire, Bill's PC full UI —
-  are currently untracked.)
+  its deferred tails are in `docs/current_plan_backlog.md`: status-screen
+  front-pic/cry/STATS-wire is **#12, still open**; Bill's PC full UI is **#11,
+  DONE 2026-07-31** — the whole UI is the faithful pret mirror
+  `src/engine/pokemon/bills_pc.asm`, linked and driven by the `bills_pc_ops` and
+  `box_change_roundtrip` goldens, and the port-only `BillsPC*Logic` fork names
+  are deleted.)
 - **Party mon icons — COMPLETE & archived** at `docs/plans/party_icons_oam.md`
   (2026-07-12, `f8863164` + `12dfdbe2`). The BG-tile icon hack is gone: icons are OBJ
   through pret's `engine/gfx/mon_icons.asm`, in the party menu and the naming screen.
@@ -319,17 +427,22 @@ dos_port/tools/project_state --plans
   OBJ-over-window z-order (the port otherwise composites the window layer last, so the
   overworld dialog box occludes NPCs). A screen whose window IS the screen and whose
   OBJ sit on top of it raises it with its window; anything else leaves it alone.
-- `docs/current_plan_items.md` — item/bag layer (sequenced after pokemon, before
-  battle; its `party_icons_oam` prerequisite is now **done**). Inventory bookkeeping (add/remove)
-  + TOSS done; item USE dispatch (`UseItem_`/`ItemUsePtrTable`) deferred
-  (battle/UI-coupled).
+- `docs/current_plan_items.md` — item/bag layer, retitled "finish the remaining
+  USE handlers" (7 done / 4 open at 2026-08-02). **Item USE dispatch is NOT
+  deferred any more** — that was this entry's stale claim. `UseItem_` and
+  `ItemUsePtrTable` are translated in `src/engine/items/item_effects.asm` and
+  reached from `UseItem` in `src/home/item.asm`; medicine, balls, TM/HM, Bicycle,
+  Coin Case, Oak's Parcel, Pokédex, Poké Flute, Town Map, Card Key, Escape Rope
+  and Itemfinder are all `[x]`. Genuinely open: **fishing rods, PP Up / PP
+  restoration, Surfboard** (`ItemUseSurfboard` is still a linked ret-stub), and
+  the stage-12 stub/claim retirement sweep.
 - **Battle-UI layout pipeline — PIPELINE COMPLETE & archived** at
   `docs/plans/battle_ui.md` (2026-07-12, branch `menus-port`). Sessions A1-B5 done:
   `tools/gfx_core/` extracted, every hardcoded battle coordinate migrated into the
   `ui_layout_battle_sidecar.json` -> `assets/ui_layout_battle.inc` pipeline, editor
   hardened. **Session B6 (the human-in-the-loop widescreen redesign) is on the back
   burner at the user's direction** -- it needs a scheduling decision, not
-  engineering. Currently untracked ("Deferred tail from the battle-UI plan").
+  engineering. Tracked as **#10 in `docs/current_plan_backlog.md`**.
 - `docs/current_plan_map_tool.md` — **overworld map tool** (viewer → border-ring
   authoring → clamp retirement → block painting), built on `gfx_core`. Needed only
   battle-UI Session A2 (landed 2026-07-02) — **not** blocked by that plan's
@@ -338,12 +451,15 @@ dos_port/tools/project_state --plans
   `docs/plans/menus.md` (2026-07-04, branch `menus-port`). All 10 sessions landed
   (layout pipeline/editor, faithful `DisplayTextBoxID_`, generic drivers wired,
   start/bag/party realigned, leaf-screen swarm: PCs/pokédex/naming/options/save/
-  link). The "menu boxes corrupt live but fine in harness" issue is **not** a menu
-  bug — it's the overworld VRAM tile-slot defect (see the archived
-  `docs/plans/overworld_port.md` entry above).
-  Menu-input lethargy fixed in `JoypadLowSensitivity` (2026-07-04). Non-VRAM tails
-  (window-compositor gap, `LoadPokedexTilePatterns` tileset, interactive sweeps,
-  cable-club warp seam) — currently untracked.
+  link). The "menu boxes corrupt live but fine in harness" issue is filed on the
+  archived `docs/plans/overworld_port.md` as ticket **OW-A.13** — but note it is
+  **NOT** a VRAM tile-slot defect (that hypothesis was disproven 2026-07-05; see
+  the overworld-port entry above). It is menu box-draw geometry plus the
+  canvas↔window compositor, which is partly a menu-side bug after all.
+  Menu-input lethargy fixed in `JoypadLowSensitivity` (2026-07-04). Other
+  tails are tracked in `docs/current_plan_backlog.md`: `LoadPokedexTilePatterns`
+  tileset (#13), window-compositor gap (#14), interactive navigation sweeps
+  (#15), cable-club warp seam (#17).
 - **RGBDS macro port — COMPLETE & archived** at `docs/plans/macros.md`
   (there is no `docs/current_plan_macros.md`; it landed in `a7822644`) — **port
   pret's portable RGBDS macros** to real
@@ -351,22 +467,36 @@ dos_port/tools/project_state --plans
   helpers, text-command macros), "add macros only" (no call-site retrofit),
   checkbox-tracked across chunked stages. Excludes redundant-by-design banking
   macros, generator-owned data macros, and engine-blocked audio/gfx-anim/script
-  templates. Stage 1 (plan doc) done; coords chunk (A1) is next but hinges on the
-  context-dependent tilemap stride (global `SCREEN_WIDTH=40` vs text.asm's
-  stride-20 / runtime `text_row_stride`).
+  templates. **The coords chunk shipped** — `a7822644` ("Translate RGBDS macros:
+  coords, data, events, gfx, text") landed `include/coords.inc`,
+  `data_macros.inc`, `events.inc`, `gfx_macros.inc`, `gb_text.inc`; the old
+  "Stage 1 done, coords chunk A1 is next" line here was stale. The archived plan
+  still carries 16 unchecked boxes against 2 checked, so treat "archived" as
+  "stopped", not "every box ticked" — the remaining chunks were dropped, not
+  done. Its live caveat: the tilemap stride is context-dependent (global
+  `SCREEN_WIDTH=40` vs text.asm's stride-20 / runtime `text_row_stride`), so a
+  coords macro is only correct against the stride its call site uses.
 - **Battle engine** — the backend plan (`battle_engine`) is **complete** and the
   front-end alignment plan (`battle_pret_alignment`) was **superseded by the battle
   swarm** (Masters A/B/C, archived at `docs/archive/battle_swarm_*`, merged to
   `master`); both plans are archived under `docs/plans/`. A live wild battle plays
   end-to-end (menu, move select, speed-ordered turns, damage, faint, EXP/level-up,
-  RUN). **Remaining battle work is tracked in the ledger `docs/archive/battle_audit_findings.md`**
-  (archived; the root-level path this line used to give was dangling)
-  (open fidelity findings + not-yet-linked routines), not in a `current_plan_*` file.
+  RUN). **Remaining battle work HAS an active plan again:**
+  `docs/current_plan_battle_completion.md` (4 done / 32 open at 2026-08-02) —
+  this entry previously asserted "not in a `current_plan_*` file", which is
+  false. The older ledger `docs/archive/battle_audit_findings.md` is still there
+  for open fidelity findings, but it is **archived and partly stale — verify
+  before acting on it.** Two of its Tier-4 claims are measurably wrong:
+  trainer-AI move selection is not dead code (`label_status --callers
+  AIEnemyTrainerChooseMoves` shows `SelectEnemyMove` calling it from
+  `src/engine/battle/core.asm`), and `ReadTrainer` does compute prize money
+  (`src/engine/battle/read_trainer_party.asm` calls `AddBCD` directly in place of
+  pret's `predef AddBCDPredef`). Prefer the active plan.
 
 (NPC implementation is complete and archived at `docs/plans/npc_implementation.md`.
 The move data layer is complete and archived at `docs/plans/moves.md`.)
 
-## Save File Notes (`.dsv` v2 is live; `.sav` conversion is still a stub)
+## Save File Notes (`.dsv` v2 is live; `saveconv.py` is complete)
 
 - GB `.sav`: raw 32 KB SRAM dump (MBC5+RAM+BATTERY)
 - DOS `.dsv`: **version 2 is real and shipping** — `src/save/dsv_io.asm` writes

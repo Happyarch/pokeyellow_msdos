@@ -1,4 +1,28 @@
-# Plan: Native-width BG renderer (Stage A Complete), border + connections (Stage B Current)
+# Plan (archived): Native-width BG renderer, border + connections
+
+> ## ✅ CLOSED 2026-08-02 — primary goals done; ignore the unticked boxes
+>
+> Maintainer assessment, 2026-08-02: *"the plan is basically done for its primary
+> goals (many of which were superseded in future plans that were already finished
+> anyway)."*
+>
+> **This is an assessment, not a re-measurement.** The 13-done / 12-open
+> checkboxes below were never reconciled, and the title used to say "Stage B
+> Current" — so the file reads as live work. It is not. Stage A (the native-width
+> surface renderer replacing the 256px torus) shipped and is described as current
+> architecture in `CLAUDE.md`. Stage B's headline ask — enlarging `MAP_BORDER` so
+> the centred viewport cannot read past the map — also landed: `MAP_BORDER` is
+> **7** (`dos_port/include/gb_memmap.inc`), raised from 6 by the E/W-seam fix.
+>
+> **If you need the genuinely remaining piece**, it is the map-data extension that
+> retires the two out-of-map clamps — tracked as item 16 in
+> `docs/current_plan_backlog.md`, which is where that work lives now. Do not
+> resume this file top-down.
+>
+> Kept for its Stage A design record and its Stage C connection-geometry analysis.
+
+*Original title: "Native-width BG renderer (Stage A Complete), border +
+connections (Stage B Current)".*
 
 ## Context
 

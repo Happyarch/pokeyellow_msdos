@@ -1,22 +1,54 @@
-<!-- deliberated: UNVALIDATED — max rounds (3) reached with 4 finding(s) outstanding.
-     This specification was NOT passed by the adversary. -->
+<!-- deliberated: REVIEW LOOP HALTED AT ROUND CAP — an experimental multi-model
+     adversarial review (three models cycling roles) hit its round limit (3
+     rounds) with 4 finding(s) still outstanding and unreviewed. The maintainer
+     stopped the loop there. This is a round-cap exit, NOT a rejection: the
+     content is believed sound, but the 4 findings have not been checked off
+     and this spec has not been through a completed adversarial pass. Treat the
+     4 outstanding findings as open items to verify before treating the spec as
+     final. -->
 
 # Cities1 Remaster Specification
 
-> **Gate — re-run the STRICT linter, every time (rule change 2026-07-25).**
-> `dos_port/tools/lint_pret_labels` on its own is NOT sufficient and never was.
-> It does not gate on `legacy_annotation`, `stale_provider`, `local_shadow` or
-> `hand_encoded_text` — only `dos_port/tools/lint_pret_labels --strict-claims`
-> reports those, and nothing runs it for you.
+> **Gate — the linter is MANDATORY. Rewritten 2026-08-02 against the tooling
+> that actually exists; the version this replaces predated `static_gate` and
+> told you "nothing runs it for you", which stopped being true on 2026-07-26.**
 >
-> For every commit made under this plan:
-> 1. Record the strict finding counts **before** you start, per class.
-> 2. Run **both** `lint_pret_labels` and `lint_pret_labels --strict-claims`
->    before committing.
-> 3. Compare per class. A class that grew is your regression to fix now, not
->    the next agent's to discover. Moving a routine between files silently
->    invalidates `extern` provider comments elsewhere in the tree, and that
->    collateral is visible **only** under `--strict-claims`.
+> **What runs automatically.** `dos_port/tools/static_gate` runs BOTH linter
+> modes plus `test_label_db.py` and `validate_scenarios.py`, and it is invoked
+> by `.githooks/pre-commit` (installed here: `core.hooksPath=.githooks`). It
+> fires whenever anything under `dos_port/` is staged. It is a per-class
+> RATCHET against a checked-in baseline: it fails a class that GREW.
+>
+> **What that does NOT mean.** A class sitting at baseline is not sanctioned —
+> it is unfixed debt that merely has not gotten worse. `dos_port/tools/lint_pret_labels`
+> **must exit 0**; it does not today — a small number of known, unsanctioned
+> findings remain (`aux_misplaced` under plain `lint_pret_labels`;
+> `--strict-claims` can add `hand_encoded_text` / `local_shadow` on top). None
+> of those was ever approved by the maintainer, and the counts move as agents
+> clear debt — **run `dos_port/tools/lint_pret_labels --no-scan` and
+> `--no-scan --strict-claims` yourself** rather than trusting a number written
+> here. Do not cite "at baseline" as permission to leave a class non-zero, and
+> do not rewrite the rule to match the breakage.
+>
+> **For every commit made under this plan:**
+> 1. Record the per-class counts from BOTH `lint_pret_labels` and
+>    `lint_pret_labels --strict-claims` **before** you start.
+> 2. Run both again before committing and compare per class. A class that grew
+>    is your regression to fix now, not the next agent's to discover. Moving a
+>    routine between files silently invalidates `extern` provider comments
+>    elsewhere in the tree — collateral visible **only** under `--strict-claims`.
+> 3. A green static gate proves **no structural or bookkeeping drift and nothing
+>    about behaviour.** If the change can move a pixel or a WRAM byte, run
+>    `make -C dos_port fidelity` (core) or `fidelity-full`, and add a must-hit
+>    scenario when no existing one can witness the change.
+>
+> **The allowlist is not yours to grow.** `dos_port/tools/pret_label_allowlist.json`
+> is hash-locked legacy debt, not precedent. New relocations are FORBIDDEN. An
+> agent may not add, expand or reinterpret it — including `structural_findings`
+> and `suppress` — to make its own work pass. **Any ADDITION requires explicit
+> maintainer sign-off and cannot be committed without it**; the pre-commit hook
+> refuses added keys outright and names them. If the linter says `mirror`, move
+> the complete routine to `dos_port/src/<pret path>` instead.
 >
 > Do not quote a finding count from this file, CLAUDE.md, AGENTS.md, a skill, or
 > a stigmergy memory as evidence that a class is clean — every one of those has

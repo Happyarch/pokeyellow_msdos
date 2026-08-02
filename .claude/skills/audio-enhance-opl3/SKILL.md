@@ -27,9 +27,10 @@ principle).
 ### Voice budget
 - OPL3 has 18 FM voices total
 - The APU shim uses 4 (music) + up to 4 (SFX) — note `/SFXOVERLAP` is **not
-  implemented yet**: `src/audio/opl_enh.asm:12` records it as "still deferred —
-  will contend here when it lands". Budget as if it will land, but do not go
-  looking for the flag.
+  implemented yet**: `src/audio/opl_enh.asm:14` records it as "still deferred —
+  will contend here when it lands" (re-check the line number if the file's
+  header comment changes length; the claim itself is current). Budget as if
+  it will land, but do not go looking for the flag.
 - **~10 spare voices** for your enhancements
 - Budget per song: **4–6 tier-1 voices** (leave headroom for SFX overlap
   and tier 2–3 on MT-32)
@@ -153,11 +154,13 @@ nature; the OPL3 voice budget (polyphony) still counts them.
 3. **Forgetting that OPL3 is the audition target** — test in OPL3
    emulation first, not MT-32. If it doesn't sound good on FM, it
    doesn't ship.
-4. **Writing parts that only work with reverb** — OPL3 has no reverb.
-   If a part needs reverb to sound good, it belongs in tier 2–3.
-5. **Exceeding voice budget** — the compiler drops lowest-tier channels
-   first when polyphony is exceeded, but if you stay within budget,
-   nothing gets dropped.
+4. **Writing voices that only work with reverb** — OPL3 has no reverb.
+   If a voice needs reverb to sound good, it belongs in tier 2–3.
+5. **Exceeding voice budget** — when the added channels exceed the free
+   melodic parts, the compiler drops whole layers **highest tier number
+   (lowest priority) first** (`gb_to_midi.py:enhancement_tracks`), so
+   tier-1 is the last to go — but if you stay within budget, nothing
+   gets dropped.
 
 ---
 

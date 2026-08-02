@@ -17,15 +17,29 @@ instead of a severity.
 
 **translation.db / allowlist hygiene (plan doc Phase A step 5):** `update_label_db`
 + `lint_pret_labels` ran after every batch this task — 0 violations throughout.
-Separately swept `dos_port/tools/pret_label_allowlist.json` (56 `relocated_files`,
-261 `relocated_labels`, 7 `suppress` entries) for staleness: every `port_file`
-reference resolves to a real file (no broken relocations), and the 7 `suppress`
-entries' "known interim" claims were spot-checked against current `Makefile`
-state (e.g. the `FormatMovesString` dup_def entry claims `misc.asm` is still
-check-only — confirmed, still excluded from `LINK_SRCS`). No new doubts to
-report; the file's own header already carries a standing
-`"DRAFT (Session H 2026-07-07)... Flagged for user review"` note predating this
-task, which this pass didn't need to add to.
+Separately swept `dos_port/tools/pret_label_allowlist.json` for staleness: every
+`port_file` reference resolves to a real file (no broken relocations), and the
+`suppress` entries' "known interim" claims were spot-checked against current
+`Makefile` state (e.g. the `FormatMovesString` dup_def entry claims `misc.asm`
+is still check-only — confirmed, still excluded from `LINK_SRCS`). No new
+doubts to report.
+
+**Correction (2026-08-02):** the paragraph above previously quoted the
+allowlist's header as a standing `"DRAFT (Session H 2026-07-07)... Flagged for
+user review"` note and cited counts of 56 `relocated_files` / 261
+`relocated_labels` / 7 `suppress`. Neither is current. The file's `_comment`
+header no longer contains any "DRAFT"/"Flagged for user review" text — it now
+reads as a standing legacy-debt notice ("relocated_files / relocated_labels are
+a LEGACY-DEBT inventory, not permission or precedent. NEW RELOCATIONS ARE
+FORBIDDEN.", "Agents may not add entries ... registry edits may only
+retire/reclassify debt and the exact file hash is approved outside the
+worktree."). Measured 2026-08-02 via
+`python3 -c "import json; d=json.load(open('dos_port/tools/pret_label_allowlist.json')); print(len(d['relocated_labels']), len(d['suppress']), len(d['structural_findings']), len(d['relocated_files']))"`:
+`relocated_labels` **2**, `suppress` **4**, `structural_findings` **0**,
+`relocated_files` **0**. `sha256sum dos_port/tools/pret_label_allowlist.json`
+gives prefix `604994cf`, which **matches** the git config
+`pokeyellow.pretallowlistapprovedsha256` — i.e. this is the maintainer-blessed
+registry state, not a pending draft awaiting review.
 
 ---
 
@@ -106,9 +120,9 @@ All 7 are **pending port**. `src/engine/overworld/pikachu.asm` + `src/engine/pik
 
 | Name | Category | Severity + reasoning | Ported? | Routine | Tagged? |
 |---|---|---|---|---|---|
-| Item Underflow / Dry Underflow | GLITCH (YES ACE) | GLITCH | Yes (translated, **not linked** — see Tagged? note) | `src/engine/menus/swap_items.asm:HandleItemListSwapping` (`.swapSameItemType`) | Yes (newly tagged this pass) — found the exact root cause: an unclamped 8-bit `add al,bl` before the `cmp al,100` overflow check, identical to pret's own 8-bit arithmetic. File header states `DisplayListMenuIDLoop`/`HandleItemListSwapping` have "No live caller" yet (check-only), so this path is translated but dormant, not reachable, in the current build. |
+| Item Underflow / Dry Underflow | GLITCH (YES ACE) | GLITCH | Yes (translated **and linked** — see Tagged? note) | `src/engine/menus/swap_items.asm:HandleItemListSwapping` (`.swapSameItemType`) | Yes (newly tagged this pass) — found the exact root cause: an unclamped 8-bit `add al,bl` before the `cmp al,100` overflow check, identical to pret's own 8-bit arithmetic. **Correction (2026-08-02):** this row previously claimed the file header stated `DisplayListMenuIDLoop`/`HandleItemListSwapping` had "No live caller" (check-only), making the path dormant. That claim is stale: `swap_items.asm`'s own header now says "LINK status: LIVE. This file is in GAME_SRCS (Makefile), `nm` shows `T HandleItemListSwapping`, and its only caller — list_menu.asm's SELECT branch — is linked too" and explicitly flags the old "no live caller"/check-only claim as corrected stale info (menu-fidelity row 12 / M-47). Confirmed independently: both `src/engine/menus/swap_items.asm` (`GAME_SRCS`) and `src/home/list_menu.asm` (`HOME_SRCS`) are listed in `dos_port/Makefile`. So this path is reachable whenever the bag list menu is open, not dormant. |
 | ws# #m# (Yellow ACE glitch item) | GLITCH (YES ACE) | GLITCH | **No** | Requires (a) the item-underflow chain to be reachable (currently dormant — see above) and (b) a generic item-use effect dispatch for out-of-range item ids; no `ItemUsePtrTable`/`UseItem_` dispatch exists (`docs/current_plan_items.md` confirms: "item USE dispatch...deferred") | Pending port |
-| Expanded Item Pack | GLITCH (YES ACE) | GLITCH | **No** (dormant, same mechanism) | Shares `swap_items.asm`'s dormant list-menu driver; `SanitizeInventory` (`inventory.asm`, `BUG_FIX_LEVEL>=1`) already clamps bag/PC count to hardcoded capacity when that code path IS exercised via `AddItemToInventory_`/`RemoveItemFromInventory_`, but this is a separate mechanism (over-capacity list access via the swap UI, not the add/remove path) | Not independently tagged — tracks the Item Underflow entry above; revisit once `HandleItemListSwapping` is linked |
+| Expanded Item Pack | GLITCH (YES ACE) | GLITCH | **No** (mechanism is live, not dormant — see correction) | Shares `swap_items.asm`'s list-menu driver, which is linked (see Item Underflow entry above, corrected 2026-08-02 — it is not dormant); `SanitizeInventory` (`inventory.asm`, `BUG_FIX_LEVEL>=1`) already clamps bag/PC count to hardcoded capacity when that code path IS exercised via `AddItemToInventory_`/`RemoveItemFromInventory_`, but this is a separate mechanism (over-capacity list access via the swap UI, not the add/remove path) | Not independently tagged — tracks the Item Underflow entry above |
 | Text Pointer Manipulation / Mart Pwner / LWA | GLITCH (YES ACE) | GLITCH | **No** | Requires the shop/mart buy screen (unterminated glitch-item name overflowing a text buffer); no `mart`/`buy`-named file exists anywhere in `dos_port/src` | Pending port |
 | LOL Glitch | GLITCH (YES ACE) | GLITCH | **No** | Same — no mart/buy screen | Pending port |
 | Item slot $FF | BUG(critical), ACE: Indirect | critical | **No** | Catalogue describes reading a pointer from position 255 of an item-effect pointer table past `wItems`; no `ItemUsePtrTable`-equivalent generic item-use dispatch exists yet (individual effect helpers in `item_effects.asm` are called directly, not through an index-256 pointer table) | Pending port |

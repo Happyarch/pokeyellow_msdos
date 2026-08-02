@@ -53,12 +53,17 @@ ROOT = Path(PORT).parent
 
 def active_plans():
     records = []
-    for path in sorted((ROOT / 'docs').glob('current_plan_*.md')):
+    # 'current_plan*' not 'current_plan_*': docs/current_plans_remaster_Music_Cities1.md
+    # uses the plural, and the narrower glob silently hid it. It escaped the
+    # 880bbf94 gate-header rewrite because that sweep drove off this list.
+    for path in sorted((ROOT / 'docs').glob('current_plan*.md')):
         text = path.read_text(encoding='utf-8', errors='replace')
         title = next((line[2:].strip() for line in text.splitlines()
                       if line.startswith('# ')), path.stem)
-        done = len(re.findall(r'^\s*- \[x\]', text, re.M | re.I))
-        open_items = len(re.findall(r'^\s*- \[ \]', text, re.M))
+        # The backtick form (- `[x]`) is in live use — current_plan_audio.md is
+        # written entirely that way and reported 0/0 until this was widened.
+        done = len(re.findall(r'^\s*- `?\[x\]', text, re.M | re.I))
+        open_items = len(re.findall(r'^\s*- `?\[ \]', text, re.M))
         records.append({'path': str(path.relative_to(ROOT)), 'title': title,
                         'completed': done, 'open': open_items})
     return records

@@ -1,6 +1,12 @@
 # Current Plan: Full `engine/overworld/` Port
 
-**Status:** Stage 0 in progress (this document written 2026-07-01).
+**Status:** ✅ **COMPLETE — ARCHIVED.** (Header corrected 2026-08-02: this line
+read "Stage 0 in progress" for the entire life of the archived file, which is how
+an archived plan ends up advertising itself as active work. The plan is done; it
+lives in `docs/plans/` — the archive — and does not appear in
+`dos_port/tools/project_state --plans`, which is the authority on what is active.)
+Original header, for the record: "Stage 0 in progress (this document written
+2026-07-01)."
 **Branch:** work lands directly on **`master`** — everything was folded into master
 (user-confirmed 2026-07-09); the earlier `overworld-port` branch plan was dropped.
 

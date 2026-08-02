@@ -1,4 +1,35 @@
-# Current Plan: Documentation Staleness Sweep (interactive seed)
+# Plan (archived): Documentation Staleness Sweep (interactive seed)
+
+> ## ✅ EXECUTED AND CLOSED 2026-08-02 — archived to `docs/plans/doc_staleness.md`
+>
+> The interactive session this file was written to seed **happened**, with the
+> maintainer, on 2026-08-02, immediately after the feature freeze was declared
+> over. Every row below was re-measured rather than trusted, which mattered: **6
+> of the 11 live rows had already been fixed** by other work and would have sent
+> the sweep chasing resolved problems.
+>
+> **Rows that were already fixed** (retired, not actioned): the CLAUDE.md
+> open-items list; the `project-conventions` active-plans list; the
+> `battle_audit_findings` Tier-4 claims; the `battle_exp_stubs.asm` header; the
+> `current_plan_script_engine.md` superseded banner; the allowlist DRAFT header.
+>
+> **Rows that were still true and were fixed in the sweep:** `map_tool`'s
+> "MAP_BORDER is already 6"; `translation_progress.md`'s stale scan commit (62
+> behind HEAD); the `translation.db` `stubs` table (retired with the whole dead
+> `work_queue` tier); the audio plan's muddled phase status.
+>
+> **What this file got wrong about itself.** It listed the allowlist as having 7
+> `suppress` entries (measured: 4) and framed several rows as open that were not.
+> A staleness inventory is itself a hand-maintained duplicate — the exact thing
+> the governing rule below says to delete rather than correct — and it rotted the
+> same way its own contents did. **That is the argument against writing another
+> one.** The replacement is not a new inventory file: it is
+> `dos_port/tools/project_state --plans` plus the generated state, and the
+> standing rule that agent-facing docs point at generators instead of copying
+> them.
+>
+> Findings from the sweep that outlived it are filed as numbered items in
+> `docs/current_plan_backlog.md` (#6, #19–#23), not here.
 
 > **Gate — the linter is MANDATORY. Rewritten 2026-08-02 against the tooling
 > that actually exists; the version this replaces predated `static_gate` and
@@ -12,11 +43,14 @@
 >
 > **What that does NOT mean.** A class sitting at baseline is not sanctioned —
 > it is unfixed debt that merely has not gotten worse. `dos_port/tools/lint_pret_labels`
-> **must exit 0**; measured 2026-08-02 it exits 1 with 14 `aux_misplaced`, and
-> `--strict-claims` adds 3 `hand_encoded_text` + 21 `local_shadow`. None of
-> those was ever approved by the maintainer. Do not cite "at baseline" as
-> permission to leave a class non-zero, and do not rewrite the rule to match
-> the breakage.
+> **must exit 0**; it does not today — a small number of known, unsanctioned
+> findings remain (`aux_misplaced` under plain `lint_pret_labels`;
+> `--strict-claims` can add `hand_encoded_text` / `local_shadow` on top). None
+> of those was ever approved by the maintainer, and the counts move as agents
+> clear debt — **run `dos_port/tools/lint_pret_labels --no-scan` and
+> `--no-scan --strict-claims` yourself** rather than trusting a number written
+> here. Do not cite "at baseline" as permission to leave a class non-zero, and
+> do not rewrite the rule to match the breakage.
 >
 > **For every commit made under this plan:**
 > 1. Record the per-class counts from BOTH `lint_pret_labels` and
@@ -143,10 +177,15 @@ derivable. When fixing a row, prefer deleting the duplicate over correcting it.
   face. Still deliberately NOT wired into a Make target or a hook: it is a narrative
   document, and a report that regenerates itself in every commit becomes diff noise
   nobody reads. On-demand, and at plan-archival time.
-  **Open follow-up for the maintainer:** the `work_queue` pipeline (and its
-  `functions` / `stubs` / `translation_log` tables) now has no reader. Retire it, or
-  deliberately revive it — but it is currently dead weight that duplicates the label
-  DB, which is derived from the tree and cannot rot this way.
+  ~~**Open follow-up for the maintainer:** the `work_queue` pipeline … retire it,
+  or deliberately revive it.~~ **ANSWERED 2026-08-02: RETIRED.** The maintainer
+  chose delete. The `functions` / `stubs` / `translation_log` tables were dropped
+  from `translation.db` and their three remaining readers —
+  `dos_port/tools/build_index`, `work_queue`, `process_placements` — were deleted
+  with them, after verifying no invocation from the Makefile, `.githooks` or
+  `.github`, and that `update_label_db` never recreates those tables. Verified
+  after: `pytest tools/test_label_db.py` 81 passed, `static_gate` PASS. Recorded
+  as backlog item #20; recoverable from git.
 - **pret_label_allowlist.json:** do the deferred review of the 7 `suppress`
   entries + DRAFT header now, or explicitly re-defer with a dated note?
 - **Sweep mechanics:** one commit per doc or one sweep commit? Which branch?

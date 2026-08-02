@@ -116,9 +116,9 @@ runtime evidence.
 `status` column does NOT support it.** `update_label_db` models pret `home/` +
 `engine/` only, so a faithful pret label from `audio/`, `data/`, `gfx/`, `ram/`
 or `scripts/` is recorded `port_only` *by elimination* — nobody determined it was
-bespoke. Measured 2026-07-28 (after the upstream pret merge 46b8e169): 91 of 428
-`port_only` rows were real pret labels (data 41, audio 22, scripts 16, gfx 10,
-ram 2) — audio gained `PlayPikachuSoundClip`, which upstream moved out of
+bespoke. Measured 2026-08-02: 91 of 433 `port_only` rows were real pret labels
+(data 41, audio 22, scripts 16, gfx 10, ram 2) — audio includes
+`PlayPikachuSoundClip`, which the upstream pret merge 46b8e169 moved out of
 `engine/pikachu/` into `audio/`. Cite the `aux_labels` /
 `script_labels` provenance tables, or the dependency graph's `display_status`
 (`pret-unmodeled`) and `aux_pret_file`. A label is genuinely port-only only when
@@ -180,9 +180,20 @@ detail lives in the active `docs/current_plan_*.md` set (generated inventory:
 2026-07-25 as stale beyond salvage — do not cite it. The deferred tails it used
 to track now live in `docs/current_plan_backlog.md` (memory
 `todo-md-deleted-orphaned-trackers` records what moved and why).
+
+**The July 2026 feature freeze ENDED 2026-08-02** (maintainer decision). It ran
+early July → 2026-08-02 and bought the correctness tooling this file keeps
+pointing at: the `translation.db` label database and its `aux_labels` /
+`script_labels` provenance tables, `static_gate` + `fidelity_gate`, and the
+37-scenario golden suite (`dos_port/tools/scenario_manifest.json`). That goal is
+met; the current objective is **completing the port**. Open work is not listed
+here — run `dos_port/tools/project_state --plans`.
+
 Phase 1 delivered the BG tile decoder + tilemap renderer with SCX/SCY scrolling
-(`src/ppu/ppu.asm`) and the keyboard → joypad ISR (`src/input/joypad.asm`);
-window layer and OAM sprites remain open there. The save system is now real: the
+(`src/ppu/ppu.asm`) and the keyboard → joypad ISR (`src/input/joypad.asm`); the
+window layer and OAM sprite compositing landed on top of it later in Phase 2
+(`render_window` / `render_sprites`, both in `src/ppu/ppu.asm`, driven from
+`src/home/vblank.asm`). The save system is now real: the
 port emulates all four **SRAM banks resident** (bank 0 at `$A000`, banks 1-3 at
 `$22000-$27FFF`, `class=banking` deviation, same flat model as ROM), pret's
 save/load/box routines read and write the real `s*` addresses, and
@@ -197,7 +208,8 @@ acceptance awaiting maintainer sign-off (stage 7).
 
 Phase 2 so far: `Init`/`ClearVram`/`StopAllSounds` (`src/home/init.asm`),
 supporting home routines (`src/home/copy.asm`, `src/home/lcd.asm`,
-`src/video/frame.asm`, `src/home/clear_sprites.asm`), and a text/font engine
+`src/home/vblank.asm` (`DelayFrame`), `src/home/delay.asm` (`DelayFrames`),
+`src/home/clear_sprites.asm`), and a text/font engine
 (`src/home/load_font.asm` 1bpp→2bpp expansion from `gfx/font/font.png`,
 `src/home/text.asm` PlaceString/TextBoxBorder). The overworld map loader/renderer
 (pret mirror `src/home/overworld.asm`; `src/engine/overworld/overworld.asm` keeps
@@ -232,7 +244,7 @@ engine**: `PrepareOAMData` (`src/engine/gfx/sprite_oam.asm`) builds shadow OAM f
 priority, OBP→CGB palette mapping, `$80+` tile path), and `UpdateSprites`
 (`src/engine/overworld/movement.asm`, with `UpdatePlayerSprite`/`Func_4e32`/`Func_5274`)
 advances the player's facing and walk-frame leg animation each `OverworldLoop`
-iteration. `frame.asm:update_oam` runs `PrepareOAMData` and DMA-copies shadow OAM
+iteration. `vblank.asm:update_oam` runs `PrepareOAMData` and DMA-copies shadow OAM
 → `$FE00` in the `DelayFrame` pipeline (gated on `wUpdateSpritesEnabled`).
 `LoadPlayerSpriteGraphics` loads Red's standing tiles to `$8000` and walking
 tiles to `$8800` (the VRAM layout the engine indexes; walking tiles time-share
@@ -416,14 +428,22 @@ commit: `dos_port/tools/faithdiff <Label>` (justify every unsuppressed
 added/dropped call in the commit message) and `dos_port/tools/lint_pret_labels`
 (must exit 0). Workflow + tools → skill **`faithfulness-review`**.
 
-**The tree does not currently satisfy that rule, and that is a DEFECT, not a
-new normal.** Measured 2026-08-02: `lint_pret_labels` exits 1 with 14
-`aux_misplaced` findings, and `--strict-claims` adds 3 `hand_encoded_text` + 21
-`local_shadow`. These are unsanctioned leftovers — none was ever approved by
-the maintainer — and the standing instruction is to drive them to zero, not to
-accept them. `static_gate`'s per-class baseline stops them GROWING; it does not
-sanction them, and an agent must not cite "at baseline" as permission to leave
-a class non-zero. Re-measure rather than quoting these counts.
+**That lint debt has been driven down to a single remaining finding, and it is
+the only one.** `lint_pret_labels` reports one `aux_misplaced`,
+`MapHeaderPointers` in `dos_port/src/engine/overworld/overworld.asm`; every other
+class — including the `--strict-claims` classes `hand_encoded_text` and
+`local_shadow` — is at zero. That one finding is documented **at its site** (the
+comment block above its `global`): the table cannot move to the data layer because
+`assets/map_headers.inc` also defines pointer rows aimed at non-global blob labels
+from `assets/extra_includes.inc`, and those blobs are welded to the code in that
+file through assembly-time size `equ`s, which a NASM `equ` cannot carry across an
+object file. Clearing it needs a real refactor, so it is deliberately left OPEN
+and explicitly **not** suppressed or allowlisted. Nothing here relaxes the rule:
+the standing instruction is still that `lint_pret_labels` must exit 0 and every
+class must be driven to zero. `static_gate`'s per-class baseline stops a class
+GROWING; it does not sanction it, and an agent must not cite "at baseline" as
+permission to leave a class non-zero. Re-measure rather than trusting this
+paragraph.
 
 **Two automated gates back this up, and one of them runs whether you remember it
 or not.** `dos_port/tools/static_gate` is a whole-tree ratchet over a checked-in

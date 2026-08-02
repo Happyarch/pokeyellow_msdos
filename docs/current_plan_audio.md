@@ -12,11 +12,14 @@
 >
 > **What that does NOT mean.** A class sitting at baseline is not sanctioned —
 > it is unfixed debt that merely has not gotten worse. `dos_port/tools/lint_pret_labels`
-> **must exit 0**; measured 2026-08-02 it exits 1 with 14 `aux_misplaced`, and
-> `--strict-claims` adds 3 `hand_encoded_text` + 21 `local_shadow`. None of
-> those was ever approved by the maintainer. Do not cite "at baseline" as
-> permission to leave a class non-zero, and do not rewrite the rule to match
-> the breakage.
+> **must exit 0**; it does not today — a small number of known, unsanctioned
+> findings remain (`aux_misplaced` under plain `lint_pret_labels`;
+> `--strict-claims` can add `hand_encoded_text` / `local_shadow` on top). None
+> of those was ever approved by the maintainer, and the counts move as agents
+> clear debt — **run `dos_port/tools/lint_pret_labels --no-scan` and
+> `--no-scan --strict-claims` yourself** rather than trusting a number written
+> here. Do not cite "at baseline" as permission to leave a class non-zero, and
+> do not rewrite the rule to match the breakage.
 >
 > **For every commit made under this plan:**
 > 1. Record the per-class counts from BOTH `lint_pret_labels` and
@@ -44,16 +47,37 @@
 
 Worktree: `/mnt/sdb1/Code/Active Code/pokeyellow_msdos-audio` (branch `audio`).
 
-Status: **implemented and merged to master (2026-07-07)** — phases A–E. The engine,
-the virtual APU, and the OPL3 / MT-32+GM / Tandy / PC-speaker shims are live and
-linked; music plays in-game and `DEBUG_AUDIO TRACK=` auditions it. The task list below
-is maintained at the sub-item level; the top-level phase bullets were never re-ticked,
-so read the `[x]`s, not the phase headers.
+Status (re-derived from the task-list checkboxes below, verified against the file
+2026-08-02 — do not re-copy this line without re-checking the checkboxes, they are
+the source of truth): the engine, the virtual APU, and all four device shims
+(OPL3 / MT-32+GM / Tandy / PC-speaker) are translated, linked, and playing in-game;
+`DEBUG_AUDIO TRACK=` auditions any track on any device. Per phase:
+- **Phase A — `[ ]`** (engine + OPL): every sub-item is done except one deferred
+  call-site sweep; its audible milestone was reached 2026-07-06.
+- **Phase B — `[~]`** (MIDI/MT-32): infrastructure complete 2026-07-07; remaining
+  work is by-ear tuning via the audition loop, not implementation.
+- **Phase C — `[x]`** (Pikachu PCM): done 2026-07-07, both device paths
+  user-confirmed audible.
+- **Phase D — `[x]`** (Tandy + speaker SFX + polish): done 2026-07-07, both new
+  device paths user-confirmed audible; only an optional DMA upgrade is deferred.
+- **Phase E — `[ ]`** (LLM music arranger): all tooling/infrastructure is done
+  (schema, `music_analysis.py`, `yaml_lint.py`, the enhancement merge, the OPL
+  enhancement player, the skills) and one song (`Music_PalletTown`) has a
+  hand-crafted, user-auditioned tier-1 layer — but the actual per-song
+  arrangement pass is otherwise unstarted: ~44 of ~45 remaining songs have no
+  enhancement YAML yet. This is the bulk of the remaining work in this plan.
 
-*(This line read "**planned** (implementation not started)" until 2026-07-13 — long
-after the subsystem shipped. It is the source of the false "no audio HAL / Phase 3"
-blocker that the `PlayCry`/`GetCryData` stubs then repeated. See menu-fidelity ledger
-M-32.)*
+So "implemented" is true of the **engine and every device shim** (A–D's
+substance), not of the **per-track arrangement content** Phase E exists to
+produce — read the phase checkboxes above, not a single "shipped" headline, for
+what is actually left.
+
+*(This status line previously read "planned (implementation not started)" until
+2026-07-13 — long after the subsystem shipped. It was then corrected to
+"implemented and merged to master — phases A–E", which overcorrected the other
+way by implying every phase was complete when A and E were not. It is the source
+of the false "no audio HAL / Phase 3" blocker that the `PlayCry`/`GetCryData`
+stubs then repeated. See menu-fidelity ledger M-32.)*
 
 Remaining: per-track arrangements (~45 songs), and **mon cries** — which are two ret-stub
 translations (`GetCryData`, `PlayCry`), not an audio-driver design problem: `CryData` is
@@ -176,7 +200,9 @@ Changed:
   pret label call sites, which are stable by project convention regardless of how
   files get reorganized.
 - Timing: PIT ch0 IRQ0 `tick_isr` (`boot/timing.asm`) at ~61.17 Hz; the per-frame
-  pipeline is `DelayFrame` (`src/video/frame.asm`) — the audio tick hooks there,
+  pipeline is `DelayFrame` (`src/home/vblank.asm` — the old `src/video/frame.asm`
+  was split into `src/home/vblank.asm` + `src/home/delay.asm` in `0bddffcb` and
+  the directory deleted; path corrected 2026-08-02) — the audio tick hooks there,
   right after `wait_pit_tick`.
 - Hardware-IRQ pattern to copy (`boot/timing.asm`, `src/input/joypad.asm`): DPMI fn
   0204h/0205h install, `[cs:isr_ds]` DS recovery, EOI `out 0x20, 0x20`, restore in

@@ -116,7 +116,9 @@ Enhancement voices are assigned to channels by the compiler. The base
 GB music uses **3 melodic parts + the rhythm part** (`gb_to_midi.py`:
 GB ch1/2/3 → melodic, noise ch4 → channel 10 drums), leaving **5
 melodic parts** for tier 1 + tier 2–3 combined. If the total exceeds
-the 8 melodic parts, the compiler drops lowest-tier channels.
+the 8 melodic parts, the compiler drops whole layers **highest tier
+number (lowest priority) first** — tier 3 before tier 2 before tier 1
+(`gb_to_midi.py:enhancement_tracks`).
 
 ---
 

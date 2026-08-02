@@ -173,4 +173,3 @@ from the directory listing + each file's `#` heading if files change.
 | Victory! Trainer | victory_trainer.md | High register |
 | Victory! Wild Pokémon | victory_wild_pokemon.md | |
 | Viridian Forest | viridian_forest.md | |
-| Conclusion | conclusion.md | |

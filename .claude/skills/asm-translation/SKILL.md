@@ -111,11 +111,22 @@ little-endian order.
 - Back buffer: **320×200 native** (64,000 B) at `[EBP + GB_BACKBUF]` — the software
   PPU composites at the port's extended viewport size, not the GB's 160×144, and
   `present` is a straight 1:1 `rep movsd` to `[vga_base]` (no scaling blit).
-- Palette: 256-entry VGA (6-bit RGB via ports 0x3C8/0x3C9); layout TBD Phase 5.
-  The current 4-shade DMG-green ramp (`dmg_palette` in `boot/video.asm`) is a
-  **debug placeholder** — do not treat it as final. Phase 5 will translate the
-  original **GBC** colors into the VGA palette (Yellow is CGB-enhanced; pull
-  from the CGB palette data, not an expanded DMG ramp).
+- Palette: 256-entry VGA (6-bit RGB via ports 0x3C8/0x3C9). **The GBC colors are
+  live — the old global 4-shade DMG-green ramp is gone.** `commit_palette`
+  (`boot/video.asm`) maps the 8 BG + 8 OBJ CGB-style slot palettes through
+  `IO_BGP`/`IO_OBP0`/`IO_OBP1` into the DAC, reading `bg_slot_pal` /
+  `obj_slot_pal` / `pal_rgb_table` (published by `src/home/palettes.asm`, data
+  generated into `assets/colors/palettes.inc` by
+  `tools/generators/gen_palettes.py`). It early-outs unless `g_pal_dirty` or one
+  of the three DMG palette registers changed, so **a routine that rewrites slot
+  palettes must arm `g_pal_dirty`**.
+  There is no `dmg_palette` symbol; `boot/video.asm` still carries a
+  `test_palette` used only by `video_init`'s DAC self-test. The colorization plan
+  is complete and archived at `docs/plans/colorization.md` (2026-07-13, stages
+  R1-R3 done). Residual `; TODO-HW: palette/fade (Phase 5)` comments in
+  `src/home/overworld.asm` and `src/engine/overworld/overworld.asm` refer to the
+  **fade** routines (`GBFadeOutToBlack` &c.), which are still deferred — not to
+  the palette data.
 
 ### Writing VRAM tile data: `CopyVideoData`, or arm `g_tilecache_dirty` yourself
 
@@ -145,10 +156,11 @@ When you translate a pret routine that writes tile data (`CopyVideoData`,
   raw VRAM, no cache involvement" is stale; `LoadPokeballGfx` carried exactly that
   comment and was silently drawing stale ball tiles (`33e21fd2`).
 - **Parking graphics in vTileset?** Tiles `$03` (flower) and `$14` (water) are
-  RESERVED — `UpdateMovingBgTiles` rewrites them in place whenever
-  `hTileAnimations` is nonzero, and will scribble over anything you leave there
-  (`ANIM_FLOWER_TILE_ID` / `ANIM_WATER_TILE_ID` in `gb_memmap.inc`). This ate the
-  party-menu mon icons.
+  RESERVED — `UpdateMovingBgTiles` (`src/home/vcopy.asm`) rewrites them in place
+  whenever `hTileAnimations` is nonzero, and will scribble over anything you
+  leave there (`ANIM_FLOWER_TILE_ID` / `ANIM_WATER_TILE_ID` in `gb_memmap.inc`;
+  the addresses are vChars2 `$9030` and `$9140`). This ate the party-menu mon
+  icons (`be6500bc`).
 
 Note the pixel harness will **not** catch a missing flag on its own: a scenario
 passes if some *other* load happens to arm the cache in the same frame. Reason
@@ -160,7 +172,10 @@ about the write, don't rely on `pixelcheck.sh` alone.
   Boy's ~+2.4% SNES-clock speed-up); `TIMING=DMG` = 59.7275 Hz (19977, real
   handheld); `TIMING=PC` = 60 Hz (19886); or `TIMING_HZ=`/`TIMING_DIVISOR=` custom.
   `timing.asm` reads `-D PIT_DIVISOR=`.
-- Frame loop: `wait_vblank → wait_pit_tick → update → render → present`
+- Frame loop: `wait_vblank → wait_pit_tick → update → render → present`, driven
+  from `DelayFrame` in **`src/home/vblank.asm`** (with `src/home/delay.asm`).
+  The old `src/video/frame.asm` was split into those two and the directory
+  deleted (`0bddffcb`) — there is no `dos_port/src/video/`.
 - VBlank detection: port 0x3DA bit 3 (VSync active high)
 - No cycle-counted delay loops
 
@@ -169,9 +184,20 @@ about the write, don't rely on `pixelcheck.sh` alone.
 boundaries. Emit a `; TODO-HW:` comment describing what the original code does:
 
 - `$FF40–$FF4B` (LCDC, STAT, SCX/SCY, palettes, OAM DMA) → software renderer
-- `$FF01/$FF02` (serial SB/SC) → `; TODO-HW: network HAL` (Phase 4)
+- `$FF01/$FF02` (serial SB/SC) → still `; TODO-HW: network HAL` (Phase 4);
+  `IO_SB`/`IO_SC` in `gb_memmap.inc` carry that tag, and the stand-ins live in
+  `src/home/serial_stubs.asm`
 - `$FF04–$FF07` (timer) → PIT-based main loop, not translated
-- `$FF10–$FF26` (APU) → `; TODO-HW: audio HAL` (Phase 3)
+- `$FF10–$FF26` + `$FF30–$FF3F` (APU / wave RAM) — **NOT a TODO-HW boundary any
+  more.** These are a **virtual APU**: the registers live in emulated GB memory
+  under their pret names (`rAUD1SWEEP` … `rAUDENA`, `_AUD3WAVERAM`, see
+  `gb_memmap.inc`), the translated engine (`src/audio/engine_1..4.asm`) writes
+  them exactly as the SM83 did, and the per-device shim (`src/audio/audio_hal.asm`
+  → `opl_shim` / `tandy_shim` / `spk_shim` / `mpu401`) reads them once per
+  `audio_tick`. Translate APU writes **literally**; do not emit `; TODO-HW`.
+  (The shim consumes the NRx4 bit-7 "restart" and clears it — the engine never
+  reads it back.) Only `IO_APU_BASE` still carries a legacy TODO-HW comment in
+  `gb_memmap.inc`; it is stale, not guidance.
 
 ## RST Vectors
 `RST $00`–`$38` become regular labeled `CALL` targets, not interrupt-style dispatch.
@@ -189,11 +215,24 @@ for block fills/copies.
    so you know up front what to `extern` (and from where) vs what needs a stub
    per the `project-conventions` stub rules. (DB stale? `tools/update_label_db`.)
 3. Create `dos_port/src/<mirrored path>/<filename>.asm`.
-4. Translate following the register map. Use `%include "dos_port/include/gb_memmap.inc"`.
+4. Translate following the register map. Include by **bare filename** —
+   `%include "gb_memmap.inc"` — because the Makefile assembles with
+   `-I include/ -I .` from `dos_port/`. A path-qualified
+   `%include "dos_port/include/gb_memmap.inc"` does not resolve.
 5. Emit `; TODO-HW:` for any I/O boundary hit.
-6. Emit `; BUG(level):` for any known bug (check `docs/bugs_and_glitches.md`).
-7. Add an entry to `docs/translation_log.md`.
-8. Verify assembly: `nasm -f coff -o /dev/null <file>`.
+6. For any known bug (check `docs/bugs_and_glitches.md`), emit the **structured**
+   annotation — `; BUG{class=…; pret=…; behavior=…; evidence=…; lifetime=…}` —
+   paired with its `%if BUG_FIX_LEVEL >= N` block. **The free-form
+   `; BUG(level):` form is DEAD**: `lint_pret_labels --strict-claims` reports it
+   as `legacy_annotation`, and the tree-wide count is currently zero. Writing one
+   is a regression. Schema → skill `project-conventions`.
+7. Add an entry to `docs/translation_log.md` (narrative log; not gated by any
+   tool, and commits do drift from it — write the entry, don't read it as
+   authority).
+8. Verify assembly from `dos_port/`:
+   `nasm -f coff -I include/ -I . -D BUG_FIX_LEVEL=0 -o /dev/null <file>`.
+   Both the `-I` flags and `-D BUG_FIX_LEVEL=` are required — the Makefile
+   supplies them, and a bare `nasm` fails on any `%if BUG_FIX_LEVEL` block.
 9. Run the fidelity gate (skill `faithfulness-review`): `tools/faithdiff <Label>`
    + `tools/lint_pret_labels`; then `tools/update_label_db` so the label DB
    reflects the new translation/stubs (rescan-derived — skipping is

@@ -2,10 +2,14 @@
 # Launch the MCP-patched DOSBox-X with PKMN.EXE + start the MCP server.
 #
 # Usage:
-#   tools/run_with_mcp.sh [extra make flags for PKMN.EXE build]
+#   tools/run_with_mcp.sh
 #
 # Steps:
-#   1. Build PKMN.EXE (SKIP_TITLE=1 by default for fast boot to overworld)
+#   1. This script does NOT build. Build PKMN.EXE yourself first (e.g.
+#      `make -C dos_port SKIP_TITLE=1`); this script launches whatever binary
+#      is already there. It also takes no make flags -- the "[extra make flags]"
+#      usage line and the "1. Build PKMN.EXE" step documented here until
+#      2026-08-02 described behaviour this script has never had.
 #   2. Launch tools/dosbox-x-mcp/dosbox-x with a dosbox-x.conf that enables
 #      the heavy debugger and the MCP socket.
 #   3. Print instructions to connect Claude Code.

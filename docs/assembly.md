@@ -12,16 +12,16 @@ with `dos_port/Makefile` and `dos_port/include/gb_memmap.inc`.
 | `nasm` | `nasm` (apt) | Assembles `.asm` → `.o` (COFF format) |
 | `i386-pc-msdosdjgpp-ld` | `binutils-djgpp` (apt) | Links `.o` → DJGPP coff-go32-exe |
 | `python3` | system | Asset generators (`dos_port/tools/`) |
-| `rgbasm` / `rgbgfx` / `rgblink` | **rgbds 1.0.1 — build from source** (not in apt) | Renders `gfx/tilesets/*.png` → `*.2bpp`; required by `gen_all_assets.py` |
+| `rgbasm` / `rgbgfx` / `rgblink` | **rgbds 1.0.2** — Arch: official repo package (`pacman -S rgbds`); bare containers: build from source (not in apt) | Renders `gfx/tilesets/*.png` → `*.2bpp`; required by `gen_all_assets.py` |
 | `dosbox-x` | `dosbox-x` (apt on recent Ubuntu) or AUR / source | Testing (must be DOSBox-X, not DOSBox) |
 | CWSDPMI.EXE / HDPMI32.EXE | external — **not in repo** | DPMI host; required to **run** `PKMN.EXE`, not to build it |
 
 > **Local (Arch Linux) vs. web-session agents:** the maintainer's **local Arch
-> Linux** machine already has the full toolchain installed (nasm, binutils-djgpp,
-> rgbds, dosbox-x, a DPMI host), so local builds just work — skip the bootstrap.
-> The apt / build-from-source / DPMI-host steps in this file are for **web /
-> cloud session agents**, whose containers start bare and must set everything up
-> from scratch.
+> Linux** machine already has the full toolchain installed as system packages
+> (nasm, binutils-djgpp, rgbds 1.0.2, dosbox-x, a DPMI host), so local builds
+> just work — skip the bootstrap. The apt / build-from-source / DPMI-host steps
+> in this file are for **web / cloud session agents**, whose containers start
+> bare and must set everything up from scratch.
 
 Install the apt-provided tools on Debian/Ubuntu (web-session containers):
 ```sh
@@ -32,7 +32,10 @@ and are already present on the maintainer's box.
 
 > **Agent note (read before a clean build — web sessions only):** in a bare
 > container, `rgbds` is **not** an apt package — it must be built from source
-> pinned to **v1.0.1** (see `.rgbds-version` / README). And `PKMN.EXE` is a DJGPP
+> pinned to **v1.0.2** (see `.rgbds-version` / README). On the maintainer's
+> Arch Linux box it is a normal repo package (`pacman -S rgbds`), not a
+> from-source build — this bootstrap only applies to bare cloud containers.
+> And `PKMN.EXE` is a DJGPP
 > coff-go32 binary that needs a **real-mode DPMI host** (CWSDPMI.EXE or
 > HDPMI32.EXE) present in the run directory — the repo ships neither, so a fresh
 > checkout can *build* but not *run* until you supply one. Full bootstrap below.
@@ -61,12 +64,12 @@ file 'assets/..._gfx.inc'` / `'..._coll.inc'`. Those come from
 Do this once, in order:
 
 ```sh
-# 0. apt tools (see table). rgbds is NOT apt — build v1.0.1 from source:
+# 0. apt tools (see table). rgbds is NOT apt — build v1.0.2 from source:
 #    needs: bison flex pkg-config libpng-dev build-essential
 sudo apt install -y nasm binutils-djgpp bison flex pkg-config libpng-dev build-essential
-# fetch rgbds source v1.0.1 (tarball or git), then:
-( cd /path/to/rgbds-1.0.1 && make -j && sudo make install PREFIX=/usr/local )
-rgbasm --version          # must report v1.0.1
+# fetch rgbds source v1.0.2 (tarball or git), then:
+( cd /path/to/rgbds-1.0.2 && make -j && sudo make install PREFIX=/usr/local )
+rgbasm --version          # must report v1.0.2
 
 # 1. Repo ROOT: render tileset PNGs → gfx/tilesets/*.2bpp (rgbgfx).
 #    The final ROM link (pokeyellow.gbc) may FAIL on a layout/WRAM-overflow
@@ -143,7 +146,12 @@ it scales movement/animation (and later audio pitch) uniformly. Verify with
 ### Debug harness flags
 
 These force deterministic execution paths and write output files (`FRAME.BIN` /
-`DUMP.BIN`) then exit. All imply `SKIP_TITLE`.
+`DUMP.BIN` / `PERF.BIN`) then usually exit. Most imply `SKIP_TITLE`; exceptions
+are called out below. This table is the small set of general-purpose debug
+flags most useful for manual/day-to-day debugging — it is **not** an exhaustive
+list of every `DEBUG_*` golden-scenario harness flag in `dos_port/Makefile`
+(there are well over a hundred, one per golden fixture); see the
+`build-and-debug` skill for the full scenario-harness catalogue.
 
 | Flag | Effect | Output |
 |------|--------|--------|
@@ -154,13 +162,18 @@ These force deterministic execution paths and write output files (`FRAME.BIN` /
 | `DEBUG_WALK_STEPS=N` | Number of steps for `DEBUG_WALK_NORTH` (default: 8) | — |
 | `DEBUG_WALKSPEED=1` | Boots normally; records ticks-per-tile of real keyboard walking, dumps on **Esc** | `DUMP.BIN` |
 | `DEBUG_NOCLIP=1` | Press **W** in-game to toggle walk-through-walls | — |
+| `DEBUG_AUDIO=1` | Start BGM through the real audio gateway at boot, tick the engine, dump audio RAM + virtual APU state then exit. With the `/LOOP` exe flag (`dos_port/run DEBUG_AUDIO=1 /LOOP`) it plays the song forever instead of dumping. `TRACK=<MUSIC_* constant>` picks the song (default `MUSIC_GAME_CORNER`) | `DUMP.BIN` |
+| `DEBUG_PERF=1` | Compositor profiler: latch PIT channel 0 around each `DelayFrame` stage, accumulate per-stage totals + worst frame. **Does NOT imply `SKIP_TITLE`** — meant to run in any real scenario; play normally and press **Esc** to dump, or add `DEBUG_PERF_FRAMES=N` to auto-dump and exit after N frames. Decode with `tools/read_perf.py` | `PERF.BIN` |
+| `DEBUG_SAVE_ROUNDTRIP=1` | Sub-flag of `DEBUG_SAVE`: write the `.dsv`, then verify it round-trips (`DsvWriteSave` → `DsvFileExists`) instead of the plain `DEBUG_SAVE` marker | `DUMP.BIN` |
 
 `DEBUG_WALKSPEED` is interactive (not exit-on-dump): walk with the arrows, press
 **Esc** to write `DUMP.BIN` at `$D1E0` (first/last tick, tiles, min Δ). Decode:
 `avg ticks/tile = (last-first)/(tiles-1)`; 16 = faithful cadence (rate-invariant).
 
 `DEBUG_DUMP`, `DEBUG_TRANSITION`, `DEBUG_WALK_NORTH`, and `DEBUG_WALKSPEED` also
-link in `src/debug/debug_dump.asm`. `DEBUG_NOCLIP` does not imply `SKIP_TITLE`.
+link in `src/debug/debug_dump.asm`. `DEBUG_NOCLIP` and `DEBUG_PERF` do not imply
+`SKIP_TITLE`. `DEBUG_PERF` links in `src/debug/perf.asm` instead of
+`debug_dump.asm`.
 
 Typical debug loop:
 ```sh
@@ -195,7 +208,7 @@ Generators:
 | `dos_port/tools/generators/gen_map_headers.py` | `map_headers.inc`, `extra_includes.inc` | `constants/map_constants.asm`, `data/maps/headers/*.asm`, `data/maps/objects/*.asm` |
 
 `gen_all_assets.py` requires the tilesets to have been rendered to `.2bpp` first
-(`make` at the repo root with rgbds 1.0.1 installed).
+(`make` at the repo root with rgbds 1.0.2 installed).
 
 ---
 
@@ -224,7 +237,7 @@ destination map's warp table).
 ## Single-File Syntax Check
 
 ```sh
-nasm -f coff -o /dev/null dos_port/src/util/fill_memory.asm
+nasm -f coff -I dos_port/include/ -I dos_port/ -O0 -o /dev/null dos_port/src/home/copy2.asm
 ```
 
 ---

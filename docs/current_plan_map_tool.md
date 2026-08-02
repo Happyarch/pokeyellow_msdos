@@ -12,11 +12,14 @@
 >
 > **What that does NOT mean.** A class sitting at baseline is not sanctioned —
 > it is unfixed debt that merely has not gotten worse. `dos_port/tools/lint_pret_labels`
-> **must exit 0**; measured 2026-08-02 it exits 1 with 14 `aux_misplaced`, and
-> `--strict-claims` adds 3 `hand_encoded_text` + 21 `local_shadow`. None of
-> those was ever approved by the maintainer. Do not cite "at baseline" as
-> permission to leave a class non-zero, and do not rewrite the rule to match
-> the breakage.
+> **must exit 0**; it does not today — a small number of known, unsanctioned
+> findings remain (`aux_misplaced` under plain `lint_pret_labels`;
+> `--strict-claims` can add `hand_encoded_text` / `local_shadow` on top). None
+> of those was ever approved by the maintainer, and the counts move as agents
+> clear debt — **run `dos_port/tools/lint_pret_labels --no-scan` and
+> `--no-scan --strict-claims` yourself** rather than trusting a number written
+> here. Do not cite "at baseline" as permission to leave a class non-zero, and
+> do not rewrite the rule to match the breakage.
 >
 > **For every commit made under this plan:**
 > 1. Record the per-class counts from BOTH `lint_pret_labels` and
@@ -68,13 +71,26 @@ checkboxes updated → commit.
 
 ## Verified constraints
 
-- **MAP_BORDER is already 6** (`gb_memmap.inc:943`, `gen_map_headers.py`
-  BORDER=6). Worst-case maps ROUTE_17/ROUTE_23 (10×72 blocks) occupy
-  (10+12)×(72+12) = 1848 of the 2048-byte `wOverworldMap`, and
-  `W_TILEMAP_BACKUP2` sits immediately after at $F000 — **the buffer cannot
-  grow in place**. Border-extension is therefore an *authoring* problem (fill
-  the existing 6-block ring with designed blocks), NOT a border-growth
-  problem. Border growth = contingency only (WRAM shuffle, own session).
+- **MAP_BORDER is 7, not 6** (verified against `dos_port/include/gb_memmap.inc`,
+  which documents `wOverworldMap` at 2304 B ($900), `MAP_BORDER equ 7`). This
+  entry previously said "MAP_BORDER is already 6" citing `gb_memmap.inc:943` /
+  `gen_map_headers.py BORDER=6` — that was measured true at some earlier point
+  but is stale now.
+  **FLAG — the rest of this bullet's arithmetic is built on the old border=6
+  value and has NOT been re-derived at 7; do not trust it without redoing the
+  math.** At border 6 the worst-case-map footprint was computed as
+  (10+12)×(72+12) = 1848 bytes against a 2048-byte buffer, with
+  `W_TILEMAP_BACKUP2` "immediately after at $F000" and the buffer said to be
+  unable to "grow in place". At border 7 that footprint recomputes to
+  (10+14)×(72+14) = 2064 bytes, which *already* overflowed the old 2048-byte
+  buffer — and `gb_memmap.inc` shows the buffer **did** grow in place, to 2304 B,
+  with `wTileMapBackup2` relocated from $F000 to $F100 to make room (its own
+  comment: "Growing MAP_BORDER 6→7 pushed wOverworldMapEnd from $F000 to $F100
+  and silently clobbered wTileMapBackup2's first 256 bytes until it was moved
+  here"). So the premise "the buffer cannot grow in place" is contradicted by
+  what the tree already did. Whether this bullet's authoring-vs-border-growth
+  conclusion still holds needs to be re-derived at border=7 by whoever picks
+  this plan up next — not rewritten here.
 - Map render pipeline: block ID → 4×4 tile IDs (`.bst`, 16 B/block) → 8×8
   2bpp tiles → 32×32 px/block. Runtime composes: border-block fill →
   connection strips (from `CONNECTIONS`/`get_connection()`) → real .blk rows.

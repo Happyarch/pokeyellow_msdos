@@ -1,10 +1,43 @@
 # Pokémon Yellow DOS Port — Development Roadmap
 
-High-level phase view. Live status/scope lives in `CLAUDE.md` ("Current Phase" +
-"Currently active plans") and `docs/(current_)plan_*.md` (deferred tails with no
-other owner: `docs/current_plan_backlog.md`); this file is
-the coarse map. **Current focus: Phase 2 (game loop) — substantially playable;
-remaining work is the faithful `engine/overworld/` reimpl + scripting.**
+High-level phase view — the coarse map only. Live status/scope lives in
+`CLAUDE.md` ("Current Phase") and in the active plan set. **Do not maintain a
+plan list by hand anywhere; generate it:**
+
+```sh
+dos_port/tools/project_state --plans     # the authoritative plan inventory
+```
+
+That currently emits 11 `docs/current_plan*.md` / `docs/current_plans*.md`
+entries with per-plan completed/open checkbox counts. Deferred tails with no
+other owner live in `docs/current_plan_backlog.md`. Files under `docs/plans/`
+are the **archive** — completed or superseded plans kept for provenance; they
+are not the work queue.
+
+**Current focus: Phase 2 (game loop).**
+
+### Feature freeze, early July 2026 → 2026-08-02 (ENDED)
+
+Between early July and 2026-08-02 the project ran a deliberate feature freeze:
+no new gameplay, only correctness, fidelity tooling and maintainability. What it
+produced, and what a reader should expect to find as a result:
+
+- **`dos_port/tools/static_gate`** — a whole-tree static ratchet over a
+  checked-in per-class baseline (`tools/static_gate_baseline.json`), running
+  both `lint_pret_labels` modes, `pytest tools/test_label_db.py` and
+  `validate_scenarios.py`. It is invoked automatically by `.githooks/pre-commit`
+  (install: `make -C dos_port install-hooks`).
+- **`dos_port/tools/fidelity_gate`** — the per-change, per-label evidence chain,
+  including the relocation move battery.
+- **The golden fidelity harness matured** — `dos_port/tools/scenario_manifest.json`
+  holds 37 scenarios (16 `core`, 37 `full`), with an empty `disabled_scenarios`
+  list.
+- **Structured annotations replaced free-form ones** — `DEVIATION` / `BUG` /
+  `GLITCH` / `STUB` in the machine-parsed `{class=…; pret=…; …}` form.
+- **Lint debt driven down to a single documented `aux_misplaced` finding**
+  (commits `a3804828`, `3fad3249`, 2026-08-02).
+
+The freeze is over; feature work on finishing the port resumes.
 
 ---
 
@@ -13,7 +46,9 @@ remaining work is the faithful `engine/overworld/` reimpl + scripting.**
 **Goal:** Prove the translation toolchain end-to-end before writing any game logic.
 
 Acceptance criteria:
-- Reference ROM builds cleanly and SHA1-verifies (`make compare` with rgbds 1.0.1)
+- Reference ROM builds cleanly and SHA1-verifies (`make compare` with rgbds
+  **1.0.2** — pinned in `.rgbds-version`; the installed toolchain reports
+  `rgbasm v1.0.2+hotfix`)
 - DOS skeleton: mode 13h initializes, test pattern visible, PIT tick counter increments on screen
 - `dos_port/include/gb_memmap.inc` defined with all offsets from `constants/hardware.inc`
 - First routine translated (`FillMemory`) with translation log entry
@@ -22,15 +57,28 @@ Acceptance criteria:
 
 ---
 
-## Phase 1: Core Infrastructure — ✅ COMPLETE (save = minimal)
+## Phase 1: Core Infrastructure — ✅ COMPLETE
 
 **Goal:** The game loop runs with emulated memory, working input, and a basic renderer.
 
 **Status:** GB memory model, software PPU (BG + native-width renderer + OAM sprites +
-window compositor), and joypad all live. Save is a **minimal real `.dsv`**
-(`src/save/dsv_io.asm`, menus S7) — the full SRAM-compatible format is Phase 5.
+window compositor), and joypad all live.
 `BUG_FIX_LEVEL`/`/FIXCRIT`/`/FIXALL` in effect (e.g. the inventory-terminator guard,
 2026-07-04).
+
+**Save is complete and SRAM-compatible — this is no longer a Phase 5 item.**
+All four SRAM banks are emulated **resident** (bank 0 at `$A000`, banks 1–3 at
+`$22000-$27FFF`; `class=banking` deviation, the same flat model as the ROM), and
+pret's save/load/box routines read and write the real `s*` addresses.
+`dos_port/src/save/dsv_io.asm` persists the whole 32 KiB image as **`.dsv` v2**
+(`DSV_VERSION = 2`): 32775 bytes = a 7-byte header (`DOSV` magic 4 + version 1 +
+checksum 2) followed by the raw 32768-byte SRAM image, bank 0 first.
+`SramLoadImage` runs at boot, `SramStoreImage` at every save commit. The Bill's
+PC box UI is a faithful pret mirror
+(`dos_port/src/engine/pokemon/bills_pc.asm`) and the tier is golden-gated by the
+`bills_pc_ops` and `box_change_roundtrip` scenarios. Plan archived at
+`docs/plans/sram_pc_storage.md`; its one open flag is the torn-write-guard
+acceptance awaiting maintainer sign-off.
 
 Acceptance criteria:
 - GB memory model live: 72 KB DPMI allocation, EBP-relative access working
@@ -40,7 +88,8 @@ Acceptance criteria:
   - OAM/sprite renderer (40 sprites, 8×8 and 8×16, priority)
   - Window layer
 - Joypad: DOS keyboard/INT 9h → emulated JOYP register
-- Save/load: DOS file I/O (INT 21h) replacing SRAM; `.dsv` format defined
+- Save/load: DOS file I/O (INT 21h) behind resident emulated SRAM; `.dsv` v2
+  format defined and shipping
 - All critical bugs categorized (`/FIXCRIT` flag has meaningful effect)
 
 ---
@@ -66,41 +115,81 @@ Acceptance criteria:
       (`docs/plans/menus.md`, complete 2026-07-04)
 - [x] Pokémon data/stats + behavior/UI (evolution, learn-move, status screen,
       post-battle) — `docs/plans/pokemon_engine.md`, `docs/plans/pokemon_behavior.md`
-- [x] Items/bag layer (add/remove/TOSS; USE dispatch deferred)
+- [x] Items/bag layer — add/remove/TOSS **and** the USE dispatch. (This line read
+      "USE dispatch deferred" until 2026-08-02; measured false — `UseItem_` is a
+      linked implementation in `src/engine/items/item_effects.asm`, reached from
+      `UseItem` in `src/home/item.asm`. What remains is a handful of individual
+      *handlers* still ret-stubs in `item_use_stubs.asm`, tracked in
+      `docs/current_plan_items.md`, not the dispatch itself.)
 - [x] New-game data init (`InitPlayerData2` — party/box/bag terminators + money/ID)
 
-**Remaining before Phase 2 closes:**
-- Faithful full `engine/overworld/` reimpl (`docs/plans/overworld_port.md` (archived)) —
-  scripted NPC movement, cut/boulder/fly/etc., and the **VRAM tile-slot management
-  fix** that resolves the live menu-box corruption. This is the main open item.
-- Scripting engine (`docs/current_plan_overworld_events.md` (the script work folded into it)): per-map `_Script`
-  machines, Oak walk-up cutscene, mart/pokécenter/PC scripts.
-- Deferred UI/menu tails and item USE dispatch (see
-  `docs/current_plan_backlog.md` and `docs/current_plan_items.md`).
+**Remaining before Phase 2 closes — query it, do not read a list here.**
+
+This section used to enumerate four open items. Every one of them was wrong by
+2026-08-02, in a different direction, so the list is gone rather than corrected —
+the same call already made in `CLAUDE.md`'s Current Phase, for the same reason.
+What it claimed and what was measured:
+
+| Old claim | Measured 2026-08-02 |
+|---|---|
+| "Faithful full `engine/overworld/` reimpl … the main open item" | That plan is **complete and archived** (`docs/plans/overworld_port.md`) |
+| "scripted NPC movement" still open | **Done** |
+| "the **VRAM tile-slot management fix** that resolves the live menu-box corruption" | The VRAM tile-slot *explanation* was **disproven in the plan itself** on 2026-07-05 and refiled as ticket OW-A.13 (`docs/plans/overworld_port.md:153`: "the original (incorrect) analysis is kept below for the record"). It also cited stigmergy memory `menu-corruption-vram-tileslots`, **which does not exist**. Whether any menu-box defect is still live needs re-measuring, not repeating |
+| "item USE dispatch" deferred | **False** — see the items bullet above |
+
+**To find what is actually open:**
+```sh
+dos_port/tools/project_state --plans          # every active plan + open counts
+dos_port/tools/label_status --callers <Label> # is a given routine linked/reached
+```
+then read the owning `docs/current_plan_*.md`. The live Phase-2 plans are
+`current_plan_overworld_events.md`, `current_plan_items.md`,
+`current_plan_battle_completion.md` and `current_plan_menu_intro.md`; deferred
+tails with no other owner are in `docs/current_plan_backlog.md`.
+
+⚠ **Those first three carry a maintainer directive (2026-08-02): re-measure
+before executing.** Their open-item lists come from a 2026-07-12 hand survey done
+*before* the analysis tooling existed, and at least one confirmed stale claim
+survives in them. Do that pass first; do not work them top-down.
 
 ---
 
-## Phase 3: Audio
+## Phase 3: Audio — ✅ ARCHITECTURE COMPLETE; open work is per-track arrangement
 
 **Goal:** Full audio support across supported sound cards.
 
-Sound HAL abstraction layer defined first; drivers plugged in behind it.
+**Status.** The sound HAL landed as `dos_port/src/audio/audio_hal.asm` (a `.asm`,
+not an `.inc`) with the per-device shims beside it: `opl_shim.asm`,
+`tandy_shim.asm`, `spk_shim.asm`, `mpu401.asm`, `sb_pcm.asm` (plus `spk_pcm.asm`
+and the `opl_enh.asm` enhancement layer). The pret audio engine is translated and
+live in the build (`engine_1..4.asm`, `low_health_alarm.asm`, `poke_flute.asm`,
+`play_battle_music.asm`, `pikachu_pcm.asm`, `alternate_tempo.asm`,
+`pokedex_rating_sfx.asm`). Per `docs/current_plan_audio.md`, phases A–E are
+implemented and merged to master; **Phase C (Pikachu PCM) and Phase D (Tandy +
+speaker SFX + polish) both completed 2026-07-07**, and Phase B's MIDI/MT-32
+infrastructure is complete with only by-ear tuning outstanding.
 
-| Driver | Priority | Notes |
-|--------|----------|-------|
-| Sound Blaster 16 | High | Primary target; CT1341 DSP programming |
-| General MIDI | High | Via MPU-401 UART mode (INT 33h or direct port) |
-| Roland MT-32 | Medium | SysEx via MIDI; LA synthesis parameters |
-| AdLib/OPL2 | Medium | Fallback for machines without SB16 |
-| Tandy 3-voice | Low | Optional; Tandy 1000 compatibility |
-| PC Speaker | Low | Beeper fallback |
+Device selection at runtime is via `PKMN.EXE` flags (see `dos_port/boot/entry.asm`
+`parse_cmdline`): `/NOSOUND /MT32 /GM /TANDY /SPK /NOENH`.
 
-Acceptance criteria:
-- HAL interface defined — LANDED as `dos_port/src/audio/audio_hal.asm` (not an
-  `.inc`), with the per-device shims beside it (`opl_shim`, `tandy_shim`,
-  `spk_shim`, `mpu401`, `sb_pcm`)
-- At least SB16 and General MIDI drivers functional
-- All GB APU channels (pulse 1/2, wave, noise) mapped to target sound card
+| Driver | Notes |
+|--------|-------|
+| Sound Blaster / OPL | `opl_shim.asm` + `sb_pcm.asm` — the default path |
+| General MIDI | `mpu401.asm`, UART mode (`/GM`) |
+| Roland MT-32 | `mpu401.asm` + `assets/mt32_sysex.inc` (`/MT32`) |
+| Tandy 3-voice | `tandy_shim.asm` + `assets/tandy_tables.inc` (`/TANDY`) |
+| PC Speaker | `spk_shim.asm` / `spk_pcm.asm` (`/SPK`) |
+
+**Remaining Phase 3 work — content, not architecture:**
+- Per-track LLM arrangement passes (Phase E): OPL3 tier-1, then MT-32/GM
+  tier 2–3, auditioned per song. See `docs/current_plan_audio.md` and the
+  `score-analysis` / `music-theory` / `audio-enhance-*` skills.
+- MT-32 by-ear patch tuning through the audition loop (Phase B tail).
+- Deferred: upgrading `sb_pcm` to auto-init DMA.
+
+Query the live open-item list rather than trusting this list:
+`dos_port/tools/project_state --plans` (as of writing: `current_plan_audio.md`
+30 completed / 4 open).
 
 ---
 
@@ -114,25 +203,41 @@ Transport selection (decide during implementation):
 - Packet-driver TCP/IP (WATTCP or mTCP)
 
 Acceptance criteria:
-- Link cable I/O HAL defined replacing `; TODO-HW: network HAL` stubs (no file
-  exists yet — `serial_hal.inc` is a proposed name, not a path)
+- Link cable I/O HAL defined, replacing the `; TODO-HW: network HAL` stubs. Those
+  stubs live in `dos_port/src/home/serial_stubs.asm`; the call sites carrying the
+  tag are in `src/engine/menus/link_menu.asm`, `src/engine/pokemon/bills_pc.asm`
+  and `src/engine/battle/end_of_battle.asm`. There is no HAL file yet —
+  `serial_hal.inc` is a proposed name, not a path.
 - Pokémon trade verified between two instances
 - Link battle verified between two instances
 
 ---
 
-## Phase 5: Polish & Save Compatibility
+## Phase 5: Polish & Save Compatibility — 🔨 PARTIALLY LANDED
 
 **Goal:** Shippable quality; saves interoperate with the original Game Boy version.
 
+**The save-compatibility half is already done** (see Phase 1 and the converter
+criterion below); what is left here is polish and packaging.
+
 Acceptance criteria:
-- Full colorization: all assets processed through `tools/colorize.py`, palette layout finalized
-- Fullscreen scaling options: 2× nearest-neighbor (default), integer scale options
-- Save file converter: `tools/saveconv.py` — bidirectional GB `.sav` ↔ DOS `.dsv`
-  - **Note:** Converter only implemented after DOS save format is stable (end of Phase 5)
-  - GB `.sav`: raw 32 KB SRAM dump (MBC5+RAM+BATTERY)
-  - DOS `.dsv`: same data + 4-byte header (`DOSV` magic, version byte, 2-byte checksum)
-- Packaging: documentation, DOSBox config example, 86Box config example
+- [x] Save file converter: `dos_port/tools/saveconv.py` — **DONE**. Bidirectional
+      GB `.sav` ↔ DOS `.dsv` with `--verify` / `--info` / `--to-dos` / `--to-gb`;
+      no stubs. It is load-bearing, not shelfware: `dos_port/tools/goldencheck.sh`
+      calls `--to-dos` to build the seed save on every `save_real_load`-class run,
+      which keeps the converter honest against the shipping format.
+      - GB `.sav`: raw 32768-byte SRAM dump (MBC5+RAM+BATTERY)
+      - DOS `.dsv` v2: 32775 bytes — a 7-byte header (`DOSV` magic 4 + version
+        byte + 2-byte payload checksum) followed by that same 32768-byte image
+- [~] Full colorization: the tool + pipeline are complete and archived
+      (`docs/plans/colorization.md`, "complete — archived 2026-07-13";
+      `dos_port/tools/colorize.py`, `assets/colors/palettes.{json,inc}`, runtime
+      stages R1–R3 all ticked). Remaining Phase 5 work is per-asset palette
+      authoring, not tooling.
+- [ ] Fullscreen scaling options: 2× nearest-neighbor (default), integer scale options
+- [ ] Packaging: documentation, DOSBox config example (a working one already
+      exists at `dos_port/dosbox-x.conf`, used by `dos_port/run`), 86Box config
+      example
 
 ---
 
@@ -140,18 +245,33 @@ Acceptance criteria:
 
 **Goal:** All known glitches preserved and documented; dangerous glitches safely isolated.
 
-Bug categorization (from `docs/bugs_and_glitches.md`):
+Bug categorization: the working inventory is **`docs/bug_categorization.md`**
+(tracked by `docs/current_plan_bug_tagging.md`); `docs/bugs_and_glitches.md` is
+the small upstream-pret list, not the full catalogue.
 - **Critical**: buffer overflows, OOB writes, save corruption, arbitrary code execution paths
 - **Cosmetic**: wrong text, minor visual/behavioral differences
 - **Intentional glitch**: MissingNo, item duplication, item slot $FF, ACE routes
 
 Acceptance criteria:
-- Every bug in `docs/bugs_and_glitches.md` tagged with `; BUG(level):` in the translated source
-- `/FIXCRIT` and `/FIXALL` flags produce correct behavior
-- Startup warning emitted when running with critical glitches enabled on bare hardware
-  (detect via DPMI host ID string, INT 31h fn 0400h)
-- `docs/glitch_safety.md` finalized with per-glitch safety notes
-- Stretch goal: launcher script that starts 86Box/DOSBox automatically for ACE glitch mode
+- [~] Every catalogued bug tagged at its site in the translated source using the
+      **machine-parsed** annotation form
+      `; BUG{class=…; pret=…; behavior=…; evidence=…; lifetime=…}` (and
+      `GLITCH{…}` / `DEVIATION{…}` / `STUB{…}`). **The old free-form
+      `; BUG(level):` syntax is dead — do not write it.** Tagging is well under
+      way, not finished: `dos_port/src` currently carries 46 `BUG{`, 10
+      `GLITCH{`, 192 `DEVIATION{` and 21 `STUB{` annotations (grep counts,
+      2026-08-02 — re-measure rather than quoting these). Progress and the
+      remaining sweep live in `docs/current_plan_bug_tagging.md`.
+- [x] `/FIXCRIT` (level 1) and `/FIXALL` (level 2) parsed at runtime and gating
+      `BUG_FIX_LEVEL` blocks (`dos_port/include/gb_macros.inc`,
+      `dos_port/boot/entry.asm` `parse_cmdline`)
+- [ ] Startup warning emitted when running with critical glitches enabled on bare
+      hardware (detect via DPMI host ID string, INT 31h fn 0400h)
+- [~] `docs/glitch_safety.md` exists; finalize with per-glitch safety notes
+- [~] Stretch goal: launcher script for glitch/ACE mode. `dos_port/run` already
+      launches DOSBox-X against the isolated `PKMN.IMG` (the host filesystem is
+      never mounted, so an OOB disk write at any `BUG_FIX_LEVEL` can only corrupt
+      the image); an 86Box equivalent does not exist.
 
 ---
 

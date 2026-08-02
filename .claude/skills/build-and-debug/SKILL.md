@@ -1,6 +1,6 @@
 ---
 name: build-and-debug
-description: Build, run, and debug reference for the Pokémon Yellow DOS port. Invoke when building or running the port, regenerating assets, configuring/launching DOSBox-X, debugging emulated GB memory (DUMP.BIN / FRAME.BIN dumps instead of screenshots), running the golden fidelity harness (mGBA ground truth vs DOSBox-X port), auditioning music (host-side audition.py vs in-DOS DEBUG_AUDIO TRACK= loop), or using a dos_port/tools/ dev tool (colorize.py + colors/editor.py, map_editor/editor.py, ui_layout/editor.py, read_perf.py, read_seamlog.py, audit_memmap.py, unnamed.py, saveconv.py). Also holds the repo layout map and the key reference URLs. Triggers: "build the port", "make -C dos_port", "SKIP_TITLE", "make assets", "regenerate assets", "DEBUG_DUMP / DEBUG_TRANSITION / DEBUG_WALK_NORTH", "FRAME.BIN", "render_frame.py", "DOSBox-X config", "linker section / .rodata / orphan section", "goldencheck / make fidelity / make goldens", "GBSTATE.BIN", "golden scenario / mGBA harness / mgba-mcp", "audition / listen to / play <track> music", "DEBUG_AUDIO / TRACK= / audition.py / MUNT", "where is <file> in the repo", "Pan Docs / DPMI spec / RBIL", "colorize.py / palette editor / repaint PNG", "map_editor / overworld map tool", "ui_layout editor / layout sidecar", "PERF.BIN / read_perf.py", "SEAMLOG.BIN / read_seamlog.py", "audit_memmap.py", "unnamed.py / unnamed symbols", "saveconv.py / .sav .dsv".
+description: Build, run, and debug reference for the Pokémon Yellow DOS port. Invoke when building or running the port, regenerating assets, configuring/launching DOSBox-X, debugging emulated GB memory (DUMP.BIN / FRAME.BIN dumps instead of screenshots), running the golden fidelity harness (mGBA ground truth vs DOSBox-X port), auditioning music (host-side audition.py vs in-DOS DEBUG_AUDIO TRACK= loop), or using a dos_port/tools/ dev tool (colorize.py + colors/editor.py, map_editor/editor.py, ui_layout/editor.py, read_perf.py, read_seamlog.py, audit_memmap.py, unnamed.py, saveconv.py). Also holds the repo layout map and the key reference URLs. Triggers: "build the port", "make -C dos_port", "SKIP_TITLE", "make assets", "regenerate assets", "DEBUG_DUMP / DEBUG_TRANSITION / DEBUG_WALK_NORTH", "FRAME.BIN", "render_frame.py", "DOSBox-X config", "linker section / .rodata / orphan section", "goldencheck / make fidelity / make goldens", "GBSTATE.BIN", "golden scenario / scenario_manifest.json / mGBA harness / mgba-mcp", "run_headless.sh / headless run / PKMN.IMG / mcopy", "static_gate / pre-commit hook / CI", "audition / listen to / play <track> music", "DEBUG_AUDIO / TRACK= / audition.py / MUNT", "where is <file> in the repo", "Pan Docs / DPMI spec / RBIL", "colorize.py / palette editor / repaint PNG", "map_editor / overworld map tool", "ui_layout editor / layout sidecar", "PERF.BIN / read_perf.py", "SEAMLOG.BIN / read_seamlog.py", "audit_memmap.py", "unnamed.py / unnamed symbols", "saveconv.py / .sav .dsv".
 ---
 
 # Build & Debug Reference
@@ -37,16 +37,26 @@ dos_port/
   tools/
     README.md              ← wayfinding map of this directory (generators vs
                              human-facing tools vs shared libraries)
-    generators/            ← every gen_*.py Tier-1 asset generator (68 files at
-                             2026-07-26,
-                             invoked by `make assets`, not run standalone —
-                             see gen_all_assets.py / gen_map_headers.py / etc.)
+    generators/            ← every gen_*.py Tier-1 asset generator (do not quote a
+                             count — measure it:
+                               ls dos_port/tools/generators/gen_*.py | wc -l
+                             70 at 2026-08-02; invoked by `make assets`, not run
+                             standalone — see gen_all_assets.py / gen_map_headers.py)
                              + gb_text.py (charmap-encode helper) + gen_symfile.py
                              (PKMN.EXE COFF symtab → pkmn.sym, runs at every link)
     render_frame.py        ← render FRAME.BIN back-buffer dump to PNG
     colorize.py            ← palette CLI (--gen/--verify/--edit/--export-png/
                              --import-png); colors/editor.py is the pygame editor
-    saveconv.py            ← GB .sav ↔ DOS .dsv converter (--verify/--to-dos/--to-gb)
+    saveconv.py            ← GB .sav ↔ DOS .dsv converter (--verify|--info/
+                             --to-dos/--to-gb)
+    static_gate            ← whole-tree lint ratchet; run by .githooks/pre-commit
+    fidelity_gate          ← per-change, per-label fidelity chain (+ move battery)
+    run_headless.sh        ← build a DEBUG_* image, run it headless, extract every
+                             dump it produced (the scripted form of the manual
+                             recipe below; no golden diff)
+    scenario_manifest.json ← the golden-scenario registry (source of truth for the
+                             core/full tiers; generators/gen_scenario_registry.py
+                             projects it)
     dosbox_mcp/            ← MCP server for live LLM-driven DOSBox-X debugging
     dosbox-x/              ← dosbox-x fork SUBMODULE (Happyarch/dosbox-x, branch
                              mcp-debug: MCP socket bridge + SYMF symbol table)
@@ -109,15 +119,22 @@ Output EXE is **`dos_port/PKMN.EXE`** — DOS 8.3 name required for DOSBox-X `-c
 > toolchain + assets; this note is only for bare web/cloud session containers.)
 > A bare `make -C dos_port` fails with `unable to open include file
 > 'assets/..._gfx.inc'` because the generated assets and tileset `.2bpp` graphics
-> aren't committed. Bootstrap order: build **rgbds 1.0.1 from source** (not an apt
-> package) → `make` at repo root to render the `.2bpp` (its final `pokeyellow.gbc`
-> link may fail — that's fine, the graphics are made first) → `make -C dos_port
-> assets` → `make -C dos_port`. **Running** the EXE additionally needs a DPMI host
-> (CWSDPMI.EXE / HDPMI32.EXE) the repo doesn't ship. Full step-by-step:
-> [docs/assembly.md](../../docs/assembly.md) → "Fresh-Clone Bootstrap".
+> aren't committed. Bootstrap order: get **rgbds at the version in `.rgbds-version`**
+> (**1.0.2**; upstream tag `v1.0.2+hotfix` — on Arch it is the system package
+> `rgbds`, and `.github/workflows/dos-port.yml` checks out that tag from
+> `gbdev/rgbds`; on a bare Debian/Ubuntu container it is not an apt package and
+> must be built from that tag) → `make` at repo root to render the `.2bpp` (its
+> final `pokeyellow.gbc` link may fail — that's fine, the graphics are made first)
+> → `make -C dos_port assets` → `make -C dos_port`. Also `git submodule update
+> --init --recursive`: `dos_port/tools/unicode_converter` is a submodule that
+> `gen_menu_strings.py` imports, and `make assets` needs Pillow. **Running** the
+> EXE additionally needs a DPMI host (CWSDPMI.EXE / HDPMI32.EXE) the repo doesn't
+> ship. Full step-by-step: [docs/assembly.md](../../docs/assembly.md) →
+> "Fresh-Clone Bootstrap" (that doc still says 1.0.1 in places — `.rgbds-version`
+> wins).
 
 ```sh
-# Reference ROM (requires rgbds 1.0.1)
+# Reference ROM (requires rgbds per .rgbds-version — 1.0.2 at 2026-08-02)
 make compare
 
 # DOS port (canonical; scripts below are wrappers)
@@ -144,9 +161,23 @@ automatically by `dos_port/run`. It overrides the user's system config for:
 - `cputype = 386_prefetch`
 - `cycles = fixed 23880` (386SX ~20 MHz baseline)
 - `memory io optimization 1 = false` (VGA writes broken if true)
-- `[autoexec]`: `mount c .` + launch `PKMN.EXE`
+- `[autoexec]`: `imgmount c PKMN.IMG -t hdd -fs fat` + `c:` + `PKMN.EXE`. C: is the
+  **isolated FAT image**, not the host directory — the host filesystem is never
+  mounted, so saves and any OOB disk writes stay inside `PKMN.IMG`. Files the game
+  writes (`FRAME.BIN`, `DUMP.BIN`, `GBSTATE.BIN`, `POKEMON.DSV`) must be `mcopy`ed
+  out. `dos_port/run` refuses to start if a live session already holds the image.
 
 **Note:** All testing and debugging must occur on **DOSBox-X**, not standard DOSBox. Standard DOSBox lacks the accuracy and debugger features required for this port.
+
+**Automated gates (they run whether you remember them or not).**
+`make -C dos_port install-hooks` points `core.hooksPath` at tracked `.githooks/`,
+whose `pre-commit` runs `make -C dos_port static_gate` on any commit staging
+something under `dos_port/` (and blocks *additions* to
+`tools/pret_label_allowlist.json` outright). `.github/workflows/dos-port.yml`
+runs the same static tier in CI (root `make`, `make -C dos_port assets`,
+`make -C dos_port check`, `tools/static_gate`). **Neither proves behaviour** —
+`fidelity` / `fidelity-full` / `goldens-verify` need DOSBox-X, mGBA and the golden
+ROM and stay local and manual.
 
 **Never hand-edit generated `assets/*.inc` files.** Fix the generator and re-run
 `make assets`. The `MapHeaderPointers` table is computed at generation time — a
@@ -163,17 +194,22 @@ bug. Get ground truth from memory instead.
 ### Memory dump to a host file (primary, automatable)
 
 `src/debug/debug_dump.asm` exfiltrates chosen windows of emulated GB memory to
-`DUMP.BIN` (the dos_port dir / DOSBox-X C:), with **no PPU/palette/blit
+`DUMP.BIN` (DOSBox-X C:, i.e. inside `PKMN.IMG`), with **no PPU/palette/blit
 confound** — the literal bytes at `[EBP + addr]`. It writes the file via DPMI
 "Simulate Real Mode Interrupt" (INT 31h/0300h) into a conventional DOS buffer
 (plain `int 21h` pointer args are NOT auto-translated under CWSDPMI), then
 exits. Edit the `windows:` table to pick addresses.
 
 ```sh
-make clean && make SKIP_TITLE=1 DEBUG_DUMP=1
-dosbox-x -defaultdir "$PWD" -c 'mount c "'"$PWD"'"' -c c: -c PKMN.EXE -c exit
-# then hexdump DUMP.BIN on the host (9 × 64-byte windows, in table order)
+# Scripted (preferred): builds the image, runs headless off a COPY, extracts
+# whatever dumps appeared, prints the output dir.
+dos_port/tools/run_headless.sh "DEBUG_DUMP=1" /tmp/probe
+# then hexdump /tmp/probe/DUMP.BIN on the host (windows in table order)
 ```
+
+Do it by hand only if you need a non-standard config — and then follow the
+"Fully headless recipe" below, because C: is the `PKMN.IMG` image and the file
+will not appear in `dos_port/` on its own.
 
 This is how the `.rodata` bug was localized: header vars and the `rep stosb`
 border-fill were correct in the dump, but the whole `$4000`-asset window and
@@ -192,9 +228,10 @@ symbol-annotated disassembly, and paused-frame PNG dumps.
 
 **Symbols are always fresh and include NASM local labels.** The link rule
 generates `pkmn.sym` from PKMN.EXE's own COFF symbol table
-(`tools/generators/gen_symfile.py` — 12729 symbols at the 2026-07-26 link, e.g.
-`_AdvancePlayerSprite.scroll`; the count is printed by every link, so read it there
-rather than trusting this line).
+(`tools/generators/gen_symfile.py` — 12885 symbols in the `pkmn.sym` on disk at
+2026-08-02, e.g. `_AdvancePlayerSprite.scroll`; gen_symfile prints
+`N symbols` to stderr at every link, so read it there rather than trusting
+this line, or `wc -l < dos_port/pkmn.sym`).
 The server stats the file on every resolution and reloads transparently, so a
 mid-session rebuild can NOT leave stale addresses (the old pkmn.map staleness
 bug class is dead); if PKMN.EXE is newer than pkmn.sym it errors loudly
@@ -278,7 +315,9 @@ That worktree is still a HARD requirement of `make goldens` / `goldens-verify`
 (they resolve pret symbols against it), but the old reason given here — "the
 branch tree's pret sources are contaminated" — is STALE: the pret tree was
 restored to upstream in `ea26854a`, and `make compare` in-tree prints
-`pokeyellow.gbc: OK` against `roms.sha1` (re-verified 2026-07-26). Keep the
+`pokeyellow.gbc: OK` against `roms.sha1` (`cc7d0326…`; re-verified 2026-07-26,
+and again 2026-07-28 after the upstream pret merge — see the measurement block
+at the top of `.github/workflows/dos-port.yml`). Keep the
 worktree; stop believing the in-tree pret sources are broken. See memory
 `pret-tree-contaminated-golden-worktree` — through deterministic
 Lua scenarios (`tools/mgba_harness/scenarios/*.lua`: boot → seeded party →
@@ -310,15 +349,18 @@ render state is not the evidence.
 make -C dos_port goldencheck SCENARIO=status_p1
 
 # Core pre-commit tier: representative status/start/overworld/party/bag/text/
-# datastruct/battle/menu coverage (16 scenarios as of 2026-07-26 — do not quote
+# datastruct/battle/menu coverage (16 scenarios as of 2026-08-02 — do not quote
 # this number, it grows; measure with
 #   python3 tools/generators/gen_scenario_registry.py --names core | wc -w)
 make -C dos_port fidelity
 
-# Full active suite (33 scenarios as of 2026-07-26; this line said 19 for a long
-# time): core plus long-tail status, item, battle, menu/dex, cinematic and
-# map-script-sight scenarios. Same rule — measure, do not quote:
+# Full active suite (= core + the long tail, so it is the WHOLE registry:
+# 37 scenarios as of 2026-08-02; this line said 19, then 33, both wrong by the
+# time they were read). Same rule — measure, do not quote:
 #   python3 tools/generators/gen_scenario_registry.py --names full | wc -w
+# The registry itself is tools/scenario_manifest.json (each entry carries its
+# tier, DEBUG_* build flags, Lua script, dump contract and must_hit list);
+# `disabled_scenarios` is the retirement list, empty at 2026-08-02.
 make -C dos_port fidelity-full
 
 # Regenerate every Lua golden into a temp dir and diff against committed
@@ -344,16 +386,33 @@ Rules and gotchas:
   is required pre-commit → skill **`faithfulness-review`** (gate step 3).
 - `goldencheck.sh` already runs against a **copy** of `PKMN.IMG` in a scratch
   dir, so it's immune to the live-session image-contention trap (below), and
-  the NASMFLAGS stamp rebuilds the `DEBUG_*` objects automatically.
+  the NASMFLAGS stamp rebuilds the `DEBUG_*` objects automatically. It also
+  `mdel`s `GBSTATE.BIN`/`DUMP.BIN`/`FRAME.BIN` **and `POKEMON.DSV`** out of the
+  copy before running (fixed 2026-07-28): `make image` deliberately preserves a
+  save already inside `PKMN.IMG`, so a `.dsv` left by an earlier run would be
+  read at boot by `SramLoadImage` and silently change what the scenario sees.
+  When a scenario declares a seed save, goldencheck converts it with
+  `saveconv.py --to-dos` and stages it as `POKEMON.DSV`.
+- **`run_headless.sh` purges only the three dump files, not `POKEMON.DSV`** — a
+  deliberate asymmetry (it has no scenario contract to seed from), so a probe run
+  can inherit whatever save the image already holds. `mdel` it yourself if the
+  gate you are probing touches SRAM.
 - Scenarios are deterministic (fixed seeds, state-aware navigation): two
   consecutive `make goldens` runs must produce byte-identical `.bin` files.
   A golden that changed without a scenario/pret change is a red flag.
 - `make -C dos_port goldens-verify` is the drift check for committed goldens:
   it regenerates all Lua scenarios into a temp directory using the same pinned
-  ROM/symbols and fails on any `.bin` or `.json` difference.
-- New scenario = new Lua file in `tools/mgba_harness/scenarios/` + a
-  `SCENARIOS` entry in `golden_diff.py` + a `DEBUG_*` harness in the port that
-  reaches the same screen and calls `DumpGBState` with a new scenario id.
+  ROM/symbols and fails on any `.bin` or `.json` difference. It skips
+  `*_trace.lua` (timing-trace recorders with no committed golden) and it is the
+  only target that also covers legacy scenarios not in the manifest tiers.
+- New scenario = new Lua file in `tools/mgba_harness/scenarios/` + an entry in
+  **`tools/scenario_manifest.json`** (name, id, tier, `build_flags`,
+  `port_entry_gate`, dump contract, `must_hit`) + a `SCENARIOS` entry in
+  `golden_diff.py` + a `DEBUG_*` harness in the port that reaches the same screen
+  and calls `DumpGBState` with the new scenario id. `tools/validate_scenarios.py`
+  cross-checks the manifest against the generated
+  `assets/scenario_registry.inc` and is step 5 of `tools/static_gate`, so a
+  half-registered scenario fails the pre-commit hook.
 
 **Live differential debugging (mgba-mcp):** `tools/run_mgba_mcp.sh` launches
 the golden ROM under the Lua runner with a resident agent
@@ -372,8 +431,11 @@ pixels. The agent blocks the emulator between commands; `run_frames` /
 buffer (`GB_BACKBUF`, 320×200 = 64000 raw palette-indexed bytes) to `FRAME.BIN`,
 then exits — the **exact pixels DOSBox-X rendered**, with no compositor in the
 loop (host Wayland/XWayland screenshot tools are unreliable across displays).
-Render `FRAME.BIN` on the host with `dos_port/tools/render_frame.py FRAME.BIN out.png`
-(values 0–3 = DMG shades, 4–11 = sprite pixels), then view the PNG.
+Render `FRAME.BIN` on the host with `dos_port/tools/render_frame.py FRAME.BIN out.png
+[PAL.BIN]`, then view the PNG. Without a `PAL.BIN` it uses a **conspicuous debug
+palette** (0–3 = DMG shades, higher indices deliberately garish so anything out of
+range is obvious); pass `PAL.BIN` (or leave it beside `FRAME.BIN`) to render with
+the exact live VGA DAC state instead — do that before judging actual colours.
 Driven by deterministic, input-free `%ifdef` harnesses in `EnterMap`:
 `DEBUG_TRANSITION` (force a north crossing; add `DEBUG_BASELINE=1` — both via the
 Makefile — for pristine Pallet Town) and `DEBUG_WALK_NORTH` (drive the real
@@ -391,7 +453,25 @@ This is how the 2026-06-15 viewport diagnosis, the 2026-06-16 out-of-map clamp
 fix, and the 2026-07-06 OW-A.13 menu-corruption A/Bs were made. Prefer this to
 screenshots for ground truth.
 
-**Fully headless recipe (agent-runnable, verified 2026-07-06):**
+**That list is a sample, not the roster.** There are ~110 `DEBUG_*` make
+variables (battle, item, menu, naming, cinematic, save, seam, assertion and
+map-script families among them). Never conclude a gate doesn't exist from this
+page — enumerate them:
+
+```sh
+grep -ohE 'DEBUG_[A-Z0-9_]+' dos_port/Makefile | sort -u
+```
+
+and read the flag's block in `dos_port/Makefile` for what it seeds. Golden
+scenarios name theirs in `tools/scenario_manifest.json` (`build_flags` /
+`port_entry_gate`).
+
+**Fully headless recipe.** `dos_port/tools/run_headless.sh "<MAKE FLAGS>" [outdir]`
+already implements steps 1–6 below (scratch copy of the image, stale-dump purge,
+scratch conf with the appended `exit`, dummy SDL drivers, 150 s timeout, mcopy of
+every dump produced) and prints the output directory. Use it. The manual steps
+are here so you can debug the script or vary the config; they were verified
+2026-07-06:
 
 1. **Stale objects.** `-D` define changes are handled: every `.o` depends on
    the `NASMFLAGS` stamp (`.nasmflags.stamp`), so changing `DEBUG_*`/`TRACK=`
@@ -428,7 +508,9 @@ there FRAME.BIN lands directly on disk — no mcopy.)
 
 ### Visual capture
 
-`./test_render.sh [out.png]` does a clean `SKIP_TITLE=1` build, launches
+`dos_port/test_render [out.png]` (the file has **no `.sh` extension** — an
+earlier version of this page said `./test_render.sh`, which does not exist)
+does a clean `SKIP_TITLE=1` build, launches
 DOSBox-X, waits, screenshots (spectacle → import fallback), and force-kills.
 Good for confirming a final render once the data is known-correct. Note: under a
 Wayland session the compositor screenshot may grab the wrong window — the
@@ -483,8 +565,12 @@ label model covers pret `home/` + `engine/` only, so a faithful pret label from
 `audio/`, `data/`, `gfx/`, `ram/` or `scripts/` lands in `status = port_only` BY
 ELIMINATION. The graph resolves that against the `aux_labels` / `script_labels`
 provenance tables and shows those nodes as **`pret-unmodeled`**, with
-`aux_pret_file` / `aux_pret_dir` naming the real pret origin. Measured 2026-07-27:
-90 `pret-unmodeled` vs 337 genuinely port-only. A node is only genuinely
+`aux_pret_file` / `aux_pret_dir` naming the real pret origin. Measured 2026-08-02
+against the tracked `tools/translation.db`: 433 rows carry `status='port_only'`,
+of which **91 are `pret-unmodeled`** and **342 genuinely port-only**
+(`dependency_graph.py --help` still prints the 2026-07-27 figures 90/337 — that
+docstring lags; the DB is the authority, and `/api/meta` returns the live
+decomposition). A node is only genuinely
 port-only when `display_status == "port_only"` AND `aux_pret_file` is null.
 Provenance is names-only: those nodes still carry no status and no call-graph
 edges, so absent edges on them prove nothing.
@@ -553,7 +639,9 @@ recolour the whole background). Every palette starts from pret's CGB colours
 **auto-mapped to VGA six-bit** (`round(v*63/31)` in `parse_cgb_base_palettes`);
 the sidecar (`pal_overrides`) holds only manual deltas, so an untouched palette
 shows "auto" and the generated `palettes.inc` is the automap unless you tweak it
-(there are currently zero overrides — the pipeline is already ~100% automated).
+(re-measured 2026-08-02: `pal_overrides` in `assets/colors/palettes.json` is still
+empty — the pipeline is fully automated. Check with
+`python3 -c "import json;print(len(json.load(open('dos_port/assets/colors/palettes.json'))['pal_overrides']))"`).
 **In mon mode the preview palette follows the species** — each mon renders in its
 own `MonsterPalettes` family (base unless overridden), so cycling species shows
 real per-species colours (Bulbasaur green, Charizard red, …) rather than whatever
@@ -599,9 +687,11 @@ file into the SRAM banks — total size 32775, `DOSV` magic, version byte, and t
 16-bit LE **additive** payload checksum (`sum(payload) & 0xFFFF`, not a CRC) — so a
 file it accepts is one the port will load, and a file it rejects is one the port
 drops into its corrupt-save branch. Exit 0 + a summary on success; exit 1 with
-the expected-vs-found value on the first mismatch. The 3978-byte payload stays
-opaque: those block boundaries belong to `gb_memmap.inc`, and a second copy here
-would drift.
+the expected-vs-found value on the first mismatch. The 32768-byte payload stays
+opaque — it is the raw four-bank SRAM image (`4 * GB_SRAM_BANK_SIZE`), and its
+internal block boundaries belong to `gb_memmap.inc`; a second copy here would
+drift. (A **v1** file — the retired WRAM-block payload — fails the version byte
+by design; there is no migration path.)
 
 ## Auditioning music (listen to a track — do NOT tailspin into rebuilds)
 
@@ -613,11 +703,17 @@ generated `assets/midi/<target>/<Song>.mid` straight to an ALSA synth:
 
 ```sh
 mt32emu-qt &                                        # MUNT, for --target mt32
-tools/audio/audition.py Music_Celadon               # MT-32 (setup SysEx prepended)
+tools/audio/audition.py Music_Celadon               # --target mt32 is the default
 tools/audio/audition.py --target gm Music_Celadon   # fluidsynth / any GM synth
+tools/audio/audition.py --port 128:0 Music_Celadon  # pin the ALSA port
 ```
 
-Edit `tools/audio/mt32/timbres.yaml` / `overrides/*.yaml` / enhancement YAMLs →
+The MT-32 setup SysEx is **off by default** (`--setup` opts in): standalone
+mt32emu-qt mishandles that System Area write on its live input and shifts part
+routing. For the real boot upload use `dos_port/run-mt32`.
+
+Edit `tools/audio/mt32/timbres.yaml` / `tools/audio/overrides/*.yaml` /
+`tools/audio/enhancements/*.yaml` →
 `make assets` → re-run audition.py → listen. That's the whole loop.
 
 **2. In-DOS (end-to-end, real drivers)** — only when verifying the actual
@@ -651,9 +747,11 @@ exits — that's the byte-verification mode, not the listening mode.
   ```
   (`mpu401.o` depends on `music_streams.inc` in the Makefile, so the rebuild
   picks the regen up automatically.)
-- A song with no `enhancements/<Song>.yaml` (most of them, currently — only
-  GameCorner and PalletTown have tier-1 layers) sounds identical with or
-  without any of this: enhanced == plain until a YAML exists.
+- A song with no `tools/audio/enhancements/<Song>.yaml` sounds identical with or
+  without any of this: enhanced == plain until a YAML exists. Which songs have
+  one changes — list it, don't recall it
+  (`ls dos_port/tools/audio/enhancements/*.yaml`). At 2026-08-02 there are five:
+  CinnabarMansion, GameCorner, GymLeaderBattle, Lavender, PalletTown.
 
 Anti-patterns (both caused a real lost session, 2026-07-07):
 - Rebuilding PKMN.EXE / booting DOSBox-X repeatedly to hear a YAML tweak —
@@ -664,9 +762,11 @@ Anti-patterns (both caused a real lost session, 2026-07-07):
   It is a costly detour, NOT the unrecoverable one this line used to claim: the
   older text said the pret tree "is contaminated and can NOT rebuild them
   end-to-end (`make yellow` fails)", which stopped being true at `ea26854a` —
-  `make compare` passes in-tree today (verified 2026-07-26). `make -C dos_port
-  clean` remains the safe one: only `.o`s, `PKMN.EXE`, and the flags stamp —
-  never assets. Requires rgbds 1.0.1 to redo the root build.
+  `make compare` passes in-tree today (verified 2026-07-26, re-verified
+  2026-07-28 post-merge). `make -C dos_port clean` remains the safe one: only
+  `$(ALL_OBJS)`, `PKMN.EXE`, the `.nasmflags` stamp and `pkmn.sym` — never
+  assets, and **not** `PKMN.IMG` (that is `make clean-image`). Redoing the root
+  build needs rgbds at `.rgbds-version` (1.0.2).
 
 ## Key Reference URLs
 

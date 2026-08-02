@@ -1,4 +1,46 @@
-# current_plan_macros — Port pret RGBDS macros to the DOS port
+# Plan (archived): Port pret RGBDS macros to the DOS port
+
+> ## ✅ SUBSTANTIALLY COMPLETE — the boxes below were never ticked, the work landed
+>
+> Reconciled 2026-08-02. This file shows **2 done / 16 open**, which is
+> bookkeeping that fell off, not work that stopped. The macros landed in
+> `a7822644`. Spot-checked 15 of the named macros against `dos_port/include/`:
+>
+> | Macro | Lives in |
+> |---|---|
+> | `coord`, `hlcoord`, `dwcoord`, `validate_coords`, `owcoord` | `coords.inc` |
+> | `dbw`, `dn`, `bcd2` | `data_macros.inc` |
+> | `CheckAndSetEvent`, `SetEvents` | `events.inc` |
+> | `RGB`, `lb` | `gfx_macros.inc` |
+> | `text_start`, `text_bcd` | `gb_text.inc` |
+> | `const_def` | absent — **deliberately, see below** |
+>
+> 14 of 15 present. Treat the unticked boxes as unreliable in the *pessimistic*
+> direction; if you need a specific macro, `grep '%macro <name>' dos_port/include/`
+> rather than reading a checkbox here.
+>
+> **`const_def` is not a gap.** Stage 8 is labelled *"optional, low priority"* and
+> says "**port only if/when a hand-written enum/table actually needs them**" — a
+> conditional item whose condition never fired, and cannot.
+>
+> `const_def`/`const` (`macros/const.asm`) maintain a counter and emit ordinary
+> constants from it: `const` expands to `DEF \1 EQU const_value` plus
+> `DEF const_value += const_inc`. The port has no consumer, because its constants
+> arrive from pret with the values **already resolved** — plain `equ`s in
+> `dos_port/include/gb_constants.inc` and `assets/*.inc`.
+>
+> Adopting a local counter would also be unsafe. Species ids and their kin index
+> `MonsterNames`, `CryData` and `EvosMovesPointerTable`, and reach save files, so
+> they must match pret's numbering exactly. A counter silently renumbers every
+> entry after an insertion; emitting resolved values turns any divergence from
+> pret into a visible diff instead.
+>
+> **Do not read "the macros exist but few call sites use them" as incompleteness.**
+> This plan's scope was explicitly *"add macros only — do not retrofit the existing
+> hand-computed call sites"*, so new code adopting them gradually **is** the
+> intended end state.
+
+*Original title: `current_plan_macros — Port pret RGBDS macros to the DOS port`.*
 
 Multi-session, chunked, checkbox-tracked. **"Add macros only"** — define each macro
 as a real NASM `%macro`; do **not** retrofit the existing hand-computed call sites

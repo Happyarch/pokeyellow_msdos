@@ -22,7 +22,7 @@ the original disassembly.
 
 ## Building the Reference ROM
 
-Requires [rgbds 1.0.1](https://github.com/gbdev/rgbds/releases/tag/v1.0.1).
+Requires [rgbds 1.0.2](https://github.com/gbdev/rgbds/releases/tag/v1.0.2).
 
 ```sh
 make compare

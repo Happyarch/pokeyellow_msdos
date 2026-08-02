@@ -1739,8 +1739,12 @@ IO_TIMA         equ 0xFF05     ; rTIMA — TODO-HW: not emulated
 IO_TMA          equ 0xFF06     ; rTMA  — TODO-HW: not emulated
 IO_TAC          equ 0xFF07     ; rTAC  — TODO-HW: not emulated
 
-; Audio ($FF10–$FF26) — not yet implemented
-IO_APU_BASE     equ 0xFF10     ; rAUD1SWEEP — TODO-HW: audio HAL (Phase 3)
+; Audio ($FF10–$FF26) — LIVE. See the "Virtual APU" block above: the GB sound
+; registers live in emulated GB memory and the device shim reads them once per
+; tick. Translate APU writes literally; do NOT emit a TODO-HW for them.
+; (The "not yet implemented" header and the TODO-HW tag below were stale from
+; the Phase-3 audio landing until 2026-08-02.)
+IO_APU_BASE     equ 0xFF10     ; rAUD1SWEEP
 
 ; LCD Control ($FF40) — read by software renderer
 IO_LCDC         equ 0xFF40     ; rLCDC — TODO-HW: renderer reads this

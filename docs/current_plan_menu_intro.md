@@ -19,11 +19,14 @@
 >
 > **What that does NOT mean.** A class sitting at baseline is not sanctioned —
 > it is unfixed debt that merely has not gotten worse. `dos_port/tools/lint_pret_labels`
-> **must exit 0**; measured 2026-08-02 it exits 1 with 14 `aux_misplaced`, and
-> `--strict-claims` adds 3 `hand_encoded_text` + 21 `local_shadow`. None of
-> those was ever approved by the maintainer. Do not cite "at baseline" as
-> permission to leave a class non-zero, and do not rewrite the rule to match
-> the breakage.
+> **must exit 0**; it does not today — a small number of known, unsanctioned
+> findings remain (`aux_misplaced` under plain `lint_pret_labels`;
+> `--strict-claims` can add `hand_encoded_text` / `local_shadow` on top). None
+> of those was ever approved by the maintainer, and the counts move as agents
+> clear debt — **run `dos_port/tools/lint_pret_labels --no-scan` and
+> `--no-scan --strict-claims` yourself** rather than trusting a number written
+> here. Do not cite "at baseline" as permission to leave a class non-zero, and
+> do not rewrite the rule to match the breakage.
 >
 > **For every commit made under this plan:**
 > 1. Record the per-class counts from BOTH `lint_pret_labels` and

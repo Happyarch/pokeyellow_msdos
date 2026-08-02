@@ -21,14 +21,36 @@ are a tool, not a manual procedure.
 
     tools/static_gate     WHOLE-TREE structural ratchet against the checked-in
                           per-class baseline (tools/static_gate_baseline.json).
-                          No arguments. **Invoked by .githooks/pre-commit**, so it
+                          No arguments in normal use (the flags are
+                          --update-baseline / --allow-unapproved-registry /
+                          --no-scan / --write-db).
+                          **Invoked by .githooks/pre-commit**, so it
                           runs whether or not you remember it — install with
-                          `make -C dos_port install-hooks`. It runs both
+                          `make -C dos_port install-hooks`. It rescans the label
+                          DB (`update_label_db`) and then runs BOTH
                           lint_pret_labels modes, the label-DB pytest suite, and
                           validate_scenarios.py. THE RATCHET GOES BOTH WAYS: a
                           class that shrank fails too, until the baseline is
-                          lowered deliberately with a stated reason.
-                          It exits 0 when nothing under `dos_port/` is staged.
+                          lowered deliberately (`--update-baseline`) with a
+                          stated reason.
+                          Because it rescans (and is reached through `make -C
+                          dos_port static_gate`), it is a SERIALIZED resource —
+                          never run it concurrently with another agent's build
+                          or rescan.
+                          The `.githooks/pre-commit` wrapper — not static_gate
+                          itself — is what exits 0 when nothing under
+                          `dos_port/` is staged. That same wrapper **BLOCKS
+                          OUTRIGHT any key ADDED to
+                          `tools/pret_label_allowlist.json`** (in
+                          `relocated_labels`, `relocated_files`,
+                          `structural_findings` or `suppress`), staged or not,
+                          and refuses the commit — maintainer directive,
+                          2026-08-02, commit `3f1b12be`. Only REMOVALS and edits
+                          to an existing row take the tolerance path (staging the
+                          allowlist downgrades `registry_approval` to INFO for
+                          that one commit; the hook prints the new SHA-256 for
+                          the maintainer, and agents must not set
+                          `pokeyellow.pretAllowlistApprovedSha256` themselves).
     tools/fidelity_gate   PER-CHANGE, PER-LABEL: derives the pret labels a diff
                           touched and runs lint / project_state / faithdiff over
                           them — the automated form of steps 1-2 below. It ALSO
@@ -52,6 +74,20 @@ Neither replaces step 3: **a green gate proves no structural or bookkeeping
 drift and NOTHING about behaviour.** Both print that caveat on every pass.
 Design notes, non-vacuity proofs and traps: stigmergy memory
 `static-gate-and-ci-wiring`.
+
+**The tree does not currently exit 0, and that is a DEFECT, not a new normal.**
+Measured 2026-08-02: `lint_pret_labels --no-scan` exits **1** with a single
+`aux_misplaced` finding (`MapHeaderPointers`, see below); `--no-scan
+--strict-claims` adds nothing (`legacy_annotation`, `hand_encoded_text`,
+`local_shadow` and `stale_provider` were all cleared by `a3804828` and
+`3fad3249`). Re-measure rather than quoting those numbers, and **read the exit
+status from a file** — `lint_pret_labels | tail` reports `tail`'s status, so a
+failing gate reads as a pass.
+
+Registry composition, same date: `relocated_labels` **2**, `suppress` **4**,
+`structural_findings` **0**, `relocated_files` **0**; sha256 prefix `604994cf`,
+matching `git config --get pokeyellow.pretallowlistapprovedsha256`. Re-measure
+with `python3 -c 'import json;d=json.load(open("dos_port/tools/pret_label_allowlist.json"));print({k:len(v) for k,v in d.items() if k!="_comment"})'`.
 
 ## The gate (run before committing a change that touches a pret-labeled routine)
 
@@ -94,8 +130,11 @@ Design notes, non-vacuity proofs and traps: stigmergy memory
      `tools/faithdiff_suppress.json` — add there only symbols that are expected
      on one side of *every* routine, with a why. Routine-specific divergence
      never goes in the suppression file; it goes in the commit message.
-2. **`tools/lint_pret_labels`** — must exit 0 before committing. It rescans the
-   tree (so it sees your change) and enforces: pret-named globals live in the
+2. **`tools/lint_pret_labels`** — must exit 0 before committing. A bare run
+   **rescans and rewrites the tracked `translation.db` in place**; pass
+   `--no-scan` when you only want findings against the existing DB (and always
+   when another agent may be building or rescanning). It enforces: pret-named
+   globals live in the
    path-mirrored file or a `*_stubs.asm`; and — for names taken from pret
    `scripts/*.asm`, which have **no** call-graph/status model — the provenance
    rules `script_collision` / `script_misplaced` (see "Map scripts" below). A `mirror` finding means move the
@@ -169,18 +208,34 @@ It is now closed the same way:
     would be wrong. The checkable invariant is that the label lives in the data
     layer at all — under `dos_port/src/data/` or a generated `assets/*.inc`. A
     pret data table buried in `engine/` or `home/` code is hand-copied Tier-1
-    data that `make assets` cannot protect. **Baseline 14** (pre-existing debt:
-    `LedgeTiles`, `TilePairCollisions{Land,Water}`, `CardKeyTable1-3`,
-    `BikeRidingTilesets`, `MapHeaderPointers`, `MapSongBanks`, …) — ratchet it
-    down, never up.
+    data that `make assets` cannot protect. **Baseline 1** as of 2026-08-02
+    (`tools/static_gate_baseline.json`, both the `lint` and `strict` sections)
+    — commit `a3804828` cleared 13 of the original 14 (`LedgeTiles`,
+    `TilePairCollisions{Land,Water}`, `CardKeyTable1-3`, `BikeRidingTilesets`,
+    `MapSongBanks`, …) into `dos_port/src/data/`. Re-measure with
+    `dos_port/tools/lint_pret_labels --no-scan`; ratchet it down, never up.
+
+    The one remaining finding is **`MapHeaderPointers`** in
+    `dos_port/src/engine/overworld/overworld.asm` (~line 1125-1141). It is
+    documented at its site as structurally blocked, not waived: the generated
+    `assets/map_headers.inc` also defines the tileset gfx/blocks/collision
+    pointer tables, whose rows reference non-`global` blob labels from
+    `assets/extra_includes.inc`, and those blobs publish size `equ`s that the
+    code in that same file consumes as assembly-time immediates — a NASM `equ`
+    cannot cross an object file. Clearing it needs a real refactor. It is
+    deliberately left OPEN and unsuppressed; do not "fix" it with a registry
+    entry.
   - `gfx/` and `ram/` are exempt: `gfx/` is generated assets and `ram/` names are
     WRAM addresses owned by `gb_memmap.inc`, so neither has a port mirror.
 
 **`route3_sight` is the worked example, and it earned its keep on run one:** it
 caught `EngageMapTrainer` reading a WRAM address the port never writes (the
 port's `wMapSpriteExtraData` is a flat `.bss` array, but
-`m8_2_pending_symbols.inc` binds the pret name to pret's WRAM address `$D503` —
-so a file including that `.inc` cannot reach the array by its pret name), and it
+the then-existing `m8_2_pending_symbols.inc` bound the pret name to pret's WRAM
+address `$D503`, so a file including that `.inc` could not reach the array by its
+pret name — that `.inc` was dissolved into `include/gb_memmap.inc` +
+`gb_constants.inc` and deleted in `13a015fb`, so check those two for the binding
+today), and it
 caught every trainer's class byte being `0` in the generated map-object binaries
 (`gen_map_headers.py` resolved `OPP_*` against an empty table and swallowed 470
 "unknown constant, using 0x00" warnings). Neither is visible to any static check.

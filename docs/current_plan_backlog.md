@@ -12,11 +12,14 @@
 >
 > **What that does NOT mean.** A class sitting at baseline is not sanctioned —
 > it is unfixed debt that merely has not gotten worse. `dos_port/tools/lint_pret_labels`
-> **must exit 0**; measured 2026-08-02 it exits 1 with 14 `aux_misplaced`, and
-> `--strict-claims` adds 3 `hand_encoded_text` + 21 `local_shadow`. None of
-> those was ever approved by the maintainer. Do not cite "at baseline" as
-> permission to leave a class non-zero, and do not rewrite the rule to match
-> the breakage.
+> **must exit 0**; it does not today — a small number of known, unsanctioned
+> findings remain (`aux_misplaced` under plain `lint_pret_labels`;
+> `--strict-claims` can add `hand_encoded_text` / `local_shadow` on top). None
+> of those was ever approved by the maintainer, and the counts move as agents
+> clear debt — **run `dos_port/tools/lint_pret_labels --no-scan` and
+> `--no-scan --strict-claims` yourself** rather than trusting a number written
+> here. Do not cite "at baseline" as permission to leave a class non-zero, and
+> do not rewrite the rule to match the breakage.
 >
 > **For every commit made under this plan:**
 > 1. Record the per-class counts from BOTH `lint_pret_labels` and
@@ -112,7 +115,9 @@ baseline (`tools/static_gate_baseline.json`), the `test_label_db.py` suite, and
 class that grows is a regression, and a class that shrinks fails too until the
 baseline is lowered deliberately with `--update-baseline`, so an improvement
 cannot silently reverse later. Surfaces:
-- `make -C dos_port gate`
+- `make -C dos_port static_gate` (the target is `static_gate`; there is no
+  `gate` target — corrected 2026-08-02, verified against `dos_port/Makefile:2615`
+  and the `.PHONY` line at `:1721`)
 - `.githooks/pre-commit` + `make -C dos_port install-hooks` (opt-in, sets
   `core.hooksPath`; no-ops when nothing under `dos_port/` is staged; bypass with
   `git commit --no-verify`). **Install it only after the registry is blessed**,
@@ -124,9 +129,15 @@ cannot silently reverse later. Surfaces:
 outside the worktree so no commit can forge it, which means a fresh CI clone
 cannot have it. The workflow restores it from the repository variable
 `PRET_ALLOWLIST_APPROVED_SHA256` (maintainer-settable, not writable by a pull
-request). **That variable is not set yet** — until it is, CI runs with
-`--allow-unapproved-registry` and reports the class as INFO. Closing that is a
-one-line maintainer action.
+request). **UPDATE 2026-08-02: that variable WAS set on 2026-07-28** and the
+approval branch is enforced, not INFO — see memories `registry-approval-state`
+("git config MATCHES and the GitHub repo variable now MATCHES too — BLESSED
+both sides") and `ci-dos-port-workflow-first-green` (run 30315835274 shows the
+approval branch executing and the class passing). The workflow still carries the
+`--allow-unapproved-registry` fallback at `.github/workflows/dos-port.yml:137-141`
+for the unset case. That is a GitHub-side fact this note cannot verify from the
+worktree — re-check it there rather than trusting this paragraph. **The hash now
+lives in two places; a re-bless must update both.**
 
 **Still manual, on purpose.** `make fidelity` / `fidelity-full` /
 `goldens-verify` need DOSBox-X, mGBA and a golden ROM. Putting a multi-minute
@@ -155,10 +166,26 @@ But the stated *reason* for the split no longer holds, so the decision should be
 re-taken on current evidence rather than inherited. Whoever takes it: start by
 re-running the measurement above, do not quote this paragraph.
 
-### 6. `project_state --plans` glob misses `current_plans_*`
-Memory: `strict-claims-gate-and-tooling-baselines`. The generated plan inventory
-silently omits `docs/current_plans_remaster_Music_Cities1.md` (note the plural).
-One-line fix; matters because CLAUDE.md points at that tool as the authority.
+### 6. `project_state --plans` blind spots — **FIXED 2026-08-02**
+Memory: `project-state-plans-glob-and-checkbox-blindspots` (supersedes the note
+in `strict-claims-gate-and-tooling-baselines`). There were **two** bugs, not the
+one this item recorded:
+- **Glob.** `glob('current_plan_*.md')` required the trailing underscore, so
+  `docs/current_plans_remaster_Music_Cities1.md` (plural) was invisible. This is
+  the one this item knew about.
+- **Checkbox regex.** `r'^\s*- \[x\]'` missed the backticked ``- `[x]` `` form.
+  `docs/current_plan_audio.md` is written entirely that way and reported **0/0**
+  while really being 30 done / 4 open. Nobody had noticed.
+Both widened in `dos_port/tools/project_state:54-63`. Measured after: 11 plans
+listed (was 10), audio reads 30/4.
+
+**Why it mattered more than a one-line fix.** The glob drove commit `880bbf94`,
+the sweep that rewrote every plan's obsolete gate header — so the music spec was
+skipped and kept a header whose central claim ("nothing runs it for you") had
+been false since 2026-07-26. Standing lesson: when a hand-maintained inventory is
+deleted in favour of a generator, that generator's COVERAGE becomes a correctness
+property of the docs. `ls docs/current_plan*.md | wc -l` against its row count is
+the five-second check that catches this.
 
 ### 7. Two stale tests in `tools/test_label_db.py` — **FIXED 2026-07-26**
 Both were rewritten to the current structure rather than deleted, because both
@@ -177,9 +204,135 @@ failed** on a clean tree.
   genuine fallthrough edges are still asserted as fallthrough.
 All four new assertions were probed for non-vacuity: each was made to fail by
 violating exactly its own condition.
-**Residual, and it is item 4's problem, not this one's: nothing runs this pytest
-suite automatically either.** It went red for an unknown number of sessions
-precisely because no gate looks at it.
+~~**Residual, and it is item 4's problem, not this one's: nothing runs this
+pytest suite automatically either.**~~ **CORRECTED 2026-08-02 — that residual is
+no longer true and has not been for a while.** `dos_port/tools/static_gate` runs
+`pytest tools/test_label_db.py` as step **4 of 5** (`static_gate:198-205`), and
+`.githooks/pre-commit` invokes the gate, so the suite now runs on every commit
+that stages anything under `dos_port/`. Measured this session: 81 passed, 53
+subtests. The historical point stands and is worth keeping: it went red for an
+unknown number of sessions precisely because, at that time, no gate looked at it.
+
+### 19. `MapHeaderPointers` — the last `aux_misplaced` finding
+Filed 2026-08-02. This is the **single remaining `lint_pret_labels` violation**,
+and the standing rule is that the linter must exit 0 — so it is real open work,
+not accepted state. It is deliberately **not** suppressed and **not** allowlisted.
+
+`MapHeaderPointers` is a pret `data/maps/map_header_pointers.asm` table living in
+`dos_port/src/engine/overworld/overworld.asm` (~`:1141`). The 2026-08-02 sweep
+(`a3804828`) moved 13 of the 14 sibling tables to the data layer and could not
+move this one. The blocker is structural, and the reason is documented in full at
+the site (read the comment block above the `global`):
+1. `assets/map_headers.inc` also defines `TilesetGfxPtrs`/`GfxSizes`/`BlocksPtrs`/
+   `BlocksSizes`/`CollPtrs`, whose rows point at blob labels defined by
+   `assets/extra_includes.inc` that are **not** `global`. Splitting the table from
+   those blobs breaks the link.
+2. Those blobs are welded to the code in that file through assembly-time size
+   `equ`s (`OVERWORLD_BLOCKS_SIZE` and friends), and **a NASM `equ` cannot cross an
+   object file**. Same constraint already documented for the pokedex tile blob.
+
+So clearing it needs a real refactor, one of: publish the blob sizes as linkable
+data words and change the consuming code to load them rather than assemble them
+in; or relocate the whole asset region together with its consumers. **Scoped
+work, no plan file owns it** — that gap is why this entry exists.
+
+### 20. The `work_queue` pipeline — **RETIRED 2026-08-02, CLOSED**
+Maintainer decision: delete. Done in the same commit as this note.
+
+Removed: the `stubs` (2 rows), `functions` (7127) and `translation_log` (200)
+tables from `dos_port/tools/translation.db`, **and** the three scripts that were
+their only remaining readers — `dos_port/tools/build_index`, `work_queue`,
+`process_placements`. Verified before deleting: no invocation from the Makefile,
+`.githooks` or `.github`; `update_label_db`'s own docstring confirms it never
+touched those tables, so a rescan does not recreate them. Verified after:
+`pytest tools/test_label_db.py` 81 passed, `static_gate` PASS.
+
+**Why it died, because the pattern is the point.** Its statuses only advanced when
+an agent remembered to run `work_queue complete`/`wired`/`verified`. That
+bookkeeping was abandoned, and by the end it reported 97 `translated` against the
+label DB's 1673 — a hand-maintained index of a tree that had moved on without it.
+`gen_progress_report` was rewired onto the label DB on 2026-07-27, after which
+nothing read it at all.
+
+**Do not build another one.** The replacement is not a better queue; it is
+`translation.db`'s label tables, which are *derived by rescanning the tree* and so
+cannot drift from it. Recoverable from git if ever wanted.
+
+### 21. Native-width BG renderer plan — **CLOSED 2026-08-02, no action**
+Maintainer assessment: *"the plan is basically done for its primary goals (many of
+which were superseded in future plans that were already finished anyway)."*
+Recorded as an assessment, **not a measurement** — nobody re-derived the 12 open
+boxes, and the maintainer said "as far as I'm aware." A banner saying so is now on
+the plan itself, so the next agent finds the answer instead of re-raising this.
+
+Kept below as the record of *how* it stayed invisible, because that part is
+reusable. Original finding:
+
+`docs/plans/Native-width BG renderer (retire the 256px torus)_current.md` has
+**13 done / 12 open** checkboxes. Its own title reads "(Stage A Complete), border
++ connections (**Stage B Current**)"; Stage B is "Enlarge `MAP_BORDER` so the
+centered viewport never reads past the map (CURRENT)" and Stage C is a live SPEC.
+
+That is active work, but it is unfindable three ways over:
+- it sits in `docs/plans/`, which is the **archive**, not the queue;
+- its filename follows no convention (spaces, parentheses, a `_current` suffix),
+  so `project_state --plans` — which globs `docs/current_plan*.md` — cannot see
+  it even now that the glob is fixed;
+- consequently it was skipped by the `880bbf94` gate-header sweep too.
+
+It also **overlaps item 16** (the two out-of-map clamps + map-data extension) and
+is partly overtaken by events: `MAP_BORDER` is already 7, which is some of what
+Stage B asks for. So the open count is not trustworthy either — the file needs
+re-measuring, not just moving.
+
+~~The decision: promote it, or fold the remainder into item 16.~~ **Answered
+2026-08-02: neither — it is done, see the banner above.**
+
+**The reusable lesson, which is why this entry survives its own closure:** a plan
+can be invisible to every inventory at once — wrong directory, non-conforming
+filename, and therefore skipped by the tooling-driven sweeps too. The filename
+convention is not cosmetic; it is what makes a plan findable. `project_state
+--plans` globs `docs/current_plan*.md` and nothing else.
+
+### 23. `docs/plans/macros.md` unticked boxes — **CLOSED 2026-08-02**
+Reconciled and banner added to the plan. Maintainer's read ("probably wasn't
+[finished as bookkeeping] and just fell off") is confirmed by measurement, not
+just accepted: **14 of 15** spot-checked macros exist in `dos_port/include/`
+(`coord`/`hlcoord`/`dwcoord`/`validate_coords`/`owcoord`, `dbw`/`dn`/`bcd2`,
+`CheckAndSetEvent`/`SetEvents`, `RGB`/`lb`, `text_start`/`text_bcd`).
+
+The 15th, **`const_def`, is absent by design and needs no work item.** Its Stage 8
+is marked "optional, low priority — port only if/when a hand-written enum/table
+actually needs them", and nothing ever did.
+
+`const_def`/`const` (`macros/const.asm`) keep a counter and emit constants from
+it. The port has no consumer: its constants arrive from pret already resolved, as
+plain `equ`s. A local counter would also be unsafe — species ids index
+`MonsterNames`/`CryData`/`EvosMovesPointerTable` and reach save files, so they
+must match pret exactly, and a counter renumbers everything after an insertion
+silently. Original finding kept below.
+
+The plan is in the archive showing **2 done / 16 open**. The work appears to have
+actually landed in `a7822644`: `dos_port/include/` now contains `coords.inc`,
+`data_macros.inc`, `events.inc`, `gfx_macros.inc` and `gb_text.inc` — the exact
+chunks the open boxes describe. So this looks like *bookkeeping never done*, not
+work abandoned; the archived plan's own narrative ("Stage 1 done; coords chunk A1
+is next") was still being quoted as current in the `project-conventions` skill
+until 2026-08-02.
+
+Reconcile the boxes against what is actually in `include/` and either tick them
+or state plainly which chunks were dropped and why. Note the plan's scope was
+deliberately "add macros only, do not retrofit call sites" — so "the macros exist
+but nothing uses them" is the *expected* end state, not evidence of incompleteness.
+
+### 22. Save round-trip test upgrade (deferred from `bug_tagging`)
+Promote `DEBUG_SAVE_ROUNDTRIP` in `RunSaveTest` from a file-exists smoke test to a
+full seeded-state round-trip diff: seed party → `SaveGameData` → wipe WRAM →
+`TryLoadSaveFile` → `DumpGBState`, then compare `GBSTATE.BIN` host-side. This is
+new test-harness code, not a tagging task, and it touches `save.asm`, which has
+real live callers — it needs its own reviewed change, not an unattended pass.
+Source: `docs/current_plan_bug_tagging.md` (~`:264-272`); update that citation if
+that plan is ever archived.
 
 ---
 
@@ -266,9 +419,22 @@ Memory: `overworld-events-stage3-hidden-events-linked`.
 ## Relocation debt (has a live owner — pointer only)
 
 The legacy relocation inventory in `dos_port/tools/pret_label_allowlist.json`
-stands at **148 rows**. It is tracked in stigmergy memory
-`relocated-labels-grind`, not here; this pointer exists so the item is findable
-from the same index as everything else. 18 rows of the pret `core.asm` cluster
-remain from session 8, including `LoadHudTilePatterns`, which is blocked on
-splitting `gen_battle_hud_inc.py` into separate battle_hud and ptile blobs
-(you cannot do assembly-time arithmetic on an extern).
+stands at **2 rows** — measured 2026-08-02, and the grind that got it there is
+done. ~~148 rows … 18 rows of the pret `core.asm` cluster remain from session 8,
+including `LoadHudTilePatterns`, blocked on splitting `gen_battle_hud_inc.py`~~ —
+**all of that is discharged**; the `core.asm` cluster and `LoadHudTilePatterns`
+were retired during the grind. This paragraph read "148 rows" until 2026-08-02,
+which is a 74× overstatement of the remaining debt and exactly the kind of stale
+headline that makes a backlog untrustworthy.
+
+Current registry, measured (`python3 -c "import json; …"` over the file):
+`relocated_labels` **2**, `suppress` **4**, `structural_findings` **0**,
+`relocated_files` **0**; sha256 prefix `604994cf`, matching git config
+`pokeyellow.pretallowlistapprovedsha256` — i.e. maintainer-blessed.
+
+Tracked in stigmergy memories `relocated-labels-grind` and
+`registry-approval-state`, not here; this pointer exists so the item is findable
+from the same index as everything else. The last 2 rows are blocked on the predef
+text work — see `docs/current_plan_predef_text.md`. **New relocations are
+forbidden and registry ADDITIONS are refused outright by `.githooks/pre-commit`
+since `3f1b12be`.**
