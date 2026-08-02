@@ -304,7 +304,7 @@ EnterMap:
     mov byte [ebp + W_X_COORD], MAPSCRIPT_X
     mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF  ; "not a warp arrival" (see DEBUG_SEAM)
 %endif
-%ifdef DEBUG_OAK_INTRO
+%ifdef DEBUG_PALLET_OAK
     ; Oak-intro state gate: start on the Pallet north-exit tile that triggers
     ; PalletTownDefaultScript, then let RunOakIntroTest drive the stage boundary.
     mov byte [ebp + W_CUR_MAP], 0x00          ; PALLET_TOWN
@@ -380,7 +380,7 @@ EnterMap:
     call DumpBackbuffer                   ; FRAME.BIN: the final screen — then exits
 %endif ; DEBUG_SEAM_LIVE
 %endif ; DEBUG_SEAM
-%ifdef DEBUG_OAK_INTRO
+%ifdef DEBUG_PALLET_OAK
     call SeamReseatView
     call RunOakIntroTest                      ; dumps GBSTATE+FRAME and exits
 %endif

@@ -449,10 +449,23 @@ of the *name* `oak_intro` existing in the manifest. It was reading the other
 plan's scenario. The `.disabled` scaffold was deleted, not re-enabled (`7338860c`,
 whose own message says so).
 
-Rename one of the gates, or at minimum never reuse a scenario name across plans —
-any new Pallet cutscene golden needs a distinct name (`pallet_oak_cutscene`).
+**COLLISION FIXED 2026-08-02.** `DEBUG_OAK_INTRO` was renamed to
+**`DEBUG_PALLET_OAK`** across all 10 sites (Makefile, `src/home/overworld.asm`,
+`src/engine/overworld/overworld.asm`, `src/debug/debug_dump.asm`, and a
+`test_label_db.py` fixture). `DEBUG_OAKINTRO` was deliberately left alone — it is
+load-bearing, referenced by `scenario_manifest.json`, `golden_diff.py`,
+`pixelcheck.sh` and `oak_intro.lua`. The Makefile site now carries the full
+explanation so the two cannot be confused again. Verified: both gated and default
+builds exit 0, 12843 symbols unchanged, `static_gate` PASS, `fidelity` 16/16.
+
+**STILL OPEN — the coverage gap itself.** Renaming the gate removed the trap, not
+the hole: `DEBUG_PALLET_OAK` is registered in **no manifest row**, so the Pallet
+Oak cutscene still has zero golden coverage. A new scenario needs a distinct name
+(`pallet_oak_cutscene`), never a reuse of `oak_intro`.
+
 **A false coverage claim is worse than a missing one:** it retires the very
-scenario that would have caught the regression.
+scenario that would have caught the regression. That is what happened here — the
+plan stopped asking for coverage because it believed it already had some.
 
 ---
 

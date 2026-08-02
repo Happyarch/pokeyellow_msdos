@@ -145,7 +145,7 @@ D:
         # Definitions stay config-independent source facts (scan_port); the
         # GRAPH must not see a label the build never assembles.
         cf = self.classify("""
-%ifdef DEBUG_OAK_INTRO
+%ifdef DEBUG_PALLET_OAK
 RunOakIntroTest:
     ret
 %endif

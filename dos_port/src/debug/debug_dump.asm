@@ -197,7 +197,7 @@ extern enh_dbg_snapshot
 extern g_cfg_musicloop            ; src/audio/audio_hal.asm — /LOOP
 global RunAudioTest
 %endif
-%ifdef DEBUG_OAK_INTRO
+%ifdef DEBUG_PALLET_OAK
 extern PalletTownDefaultScript
 extern PalletTownPikachuBattleScript
 extern PalletTownOakNotSafeComeWithMeScript
@@ -208,7 +208,7 @@ global RunOakIntroTest
 %endif
 %ifdef DEBUG_MAPSCRIPT_SIGHT
 extern RunMapScript
-%ifndef DEBUG_OAK_INTRO
+%ifndef DEBUG_PALLET_OAK
 extern UpdateSprites
 extern DelayFrame
 %endif
@@ -410,7 +410,7 @@ RunMapScriptSightTest:
     jmp DumpBackbuffer
 %endif
 
-%ifdef DEBUG_OAK_INTRO
+%ifdef DEBUG_PALLET_OAK
 section .text
 
 ; ---------------------------------------------------------------------------

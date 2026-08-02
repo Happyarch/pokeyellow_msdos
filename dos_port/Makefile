@@ -17,6 +17,55 @@ OBJDUMP := i586-pc-msdosdjgpp-objdump
 
 NASMFLAGS := -f coff -I include/ -I . -O0
 
+# ---------------------------------------------------------------------------
+# Gate macros — the four shapes that 50 of this file's `ifdef` blocks repeated
+# verbatim (deduplicated 2026-08-02; the file lost ~150 lines of copy-paste and
+# not one flag changed — equivalence was proved by expanding NASMFLAGS for all
+# 111 DEBUG_* gates before and after and diffing).
+#
+# Use one of these when a gate fits exactly. If a gate needs anything else —
+# an extra -D, a nested ifdef, a default value — write the block out longhand
+# rather than growing a fifth macro or bending one of these. The per-gate
+# comments above each call are the documentation; keep writing them.
+#
+#   dump_gate   NEED_DEBUG_DUMP + -D NAME + -D SKIP_TITLE   (the harness shape)
+#   flag_gate   -D NAME                                     (bare passthrough)
+#   value_gate  -D NAME=$(NAME)                             (value passthrough)
+#   battle_gate DEBUG_BATTLE + -D NAME                      (battle sub-gate)
+#
+# `$(eval $(call dump_gate,DEBUG_FOO))` is exactly:
+#   ifdef DEBUG_FOO / NEED_DEBUG_DUMP := 1 / NASMFLAGS += -D DEBUG_FOO
+#   NASMFLAGS += -D SKIP_TITLE / endif
+# Order still matters: NASMFLAGS accumulates in file order, so a call sits
+# where its longhand block sat.
+define dump_gate
+ifdef $(1)
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D $(1)
+NASMFLAGS += -D SKIP_TITLE
+endif
+endef
+
+define flag_gate
+ifdef $(1)
+NASMFLAGS += -D $(1)
+endif
+endef
+
+define value_gate
+ifdef $(1)
+NASMFLAGS += -D $(1)=$($(1))
+endif
+endef
+
+define battle_gate
+ifdef $(1)
+DEBUG_BATTLE := 1
+NASMFLAGS += -D $(1)
+endif
+endef
+# ---------------------------------------------------------------------------
+
 # Bug fix level (0=none, 1=critical, 2=all). Override: make BUG_FIX_LEVEL=1
 BUG_FIX_LEVEL ?= 0
 NASMFLAGS += -D BUG_FIX_LEVEL=$(BUG_FIX_LEVEL)
@@ -64,9 +113,7 @@ endif
 NASMFLAGS += -D PIT_DIVISOR=$(PIT_DIVISOR)
 
 # Test flag: skip title screen, go straight to overworld. make SKIP_TITLE=1
-ifdef SKIP_TITLE
-NASMFLAGS += -D SKIP_TITLE
-endif
+$(eval $(call flag_gate,SKIP_TITLE))
 
 # Default player / rival names for debug / SKIP_TITLE builds (title screen is
 # bypassed, so these WRAM fields would otherwise be garbage). The engine's debug
@@ -85,49 +132,31 @@ DEBUG_ASSERT_SCRATCH := 1
 DEBUG_ASSERT_LIFECYCLE := 1
 DEBUG_ASSERT_REENTRANCY := 1
 endif
-ifdef DEBUG_ASSERT_PROJECTION
-NASMFLAGS += -D DEBUG_ASSERT_PROJECTION
-endif
-ifdef DEBUG_ASSERT_SCRATCH
-NASMFLAGS += -D DEBUG_ASSERT_SCRATCH
-endif
-ifdef DEBUG_ASSERT_LIFECYCLE
-NASMFLAGS += -D DEBUG_ASSERT_LIFECYCLE
-endif
-ifdef DEBUG_ASSERT_REENTRANCY
-NASMFLAGS += -D DEBUG_ASSERT_REENTRANCY
-endif
+$(eval $(call flag_gate,DEBUG_ASSERT_PROJECTION))
+$(eval $(call flag_gate,DEBUG_ASSERT_SCRATCH))
+$(eval $(call flag_gate,DEBUG_ASSERT_LIFECYCLE))
+$(eval $(call flag_gate,DEBUG_ASSERT_REENTRANCY))
 
 # Debug flag: dump GB memory windows to DUMP.BIN then exit. make DEBUG_DUMP=1
 # (implies SKIP_TITLE path reaching the overworld). See src/debug/debug_dump.asm.
-ifdef DEBUG_DUMP
-NASMFLAGS += -D DEBUG_DUMP
-endif
+$(eval $(call flag_gate,DEBUG_DUMP))
 
 # Debug flag: force a north map transition (Pallet Town -> Route 1) at boot so the
 # post-crossing render can be screenshotted without keyboard input. make DEBUG_TRANSITION=1
-ifdef DEBUG_TRANSITION
-NASMFLAGS += -D DEBUG_TRANSITION
-endif
+$(eval $(call flag_gate,DEBUG_TRANSITION))
 
 # Sub-flag of DEBUG_TRANSITION: skip the CheckMapConnections crossing so the
 # DEBUG_TRANSITION reload path dumps a pristine (non-transitioned) current map.
 # Use to capture a baseline frame for comparison. make DEBUG_TRANSITION=1 DEBUG_BASELINE=1
-ifdef DEBUG_BASELINE
-NASMFLAGS += -D DEBUG_BASELINE
-endif
+$(eval $(call flag_gate,DEBUG_BASELINE))
 
 # Debug flag: simulate a northward walk to the map edge then dump FRAME.BIN, to
 # inspect where the transition triggers relative to the visible edge.
 # make DEBUG_WALK_NORTH=1 (optionally DEBUG_WALK_STEPS=N via NASM define).
-ifdef DEBUG_WALK_NORTH
-NASMFLAGS += -D DEBUG_WALK_NORTH
-endif
+$(eval $(call flag_gate,DEBUG_WALK_NORTH))
 
 # Number of north steps for DEBUG_WALK_NORTH (default 8 in overworld.asm).
-ifdef DEBUG_WALK_STEPS
-NASMFLAGS += -D DEBUG_WALK_STEPS=$(DEBUG_WALK_STEPS)
-endif
+$(eval $(call value_gate,DEBUG_WALK_STEPS))
 
 # Seam-crossing trace: spawn beside a map connection, walk into it with the real
 # movement primitives, sample state every frame to SEAMLOG.BIN (+ FRAME.BIN), exit.
@@ -154,21 +183,11 @@ NASMFLAGS += -D DEBUG_SEAM_Y=$(DEBUG_START_Y)
 endif
 NEED_DEBUG_DUMP := 1
 endif
-ifdef DEBUG_SEAM_MAP
-NASMFLAGS += -D DEBUG_SEAM_MAP=$(DEBUG_SEAM_MAP)
-endif
-ifdef DEBUG_SEAM_X
-NASMFLAGS += -D DEBUG_SEAM_X=$(DEBUG_SEAM_X)
-endif
-ifdef DEBUG_SEAM_Y
-NASMFLAGS += -D DEBUG_SEAM_Y=$(DEBUG_SEAM_Y)
-endif
-ifdef DEBUG_SEAM_STEPS
-NASMFLAGS += -D DEBUG_SEAM_STEPS=$(DEBUG_SEAM_STEPS)
-endif
-ifdef DEBUG_SEAM_DIR
-NASMFLAGS += -D DEBUG_SEAM_DIR=$(DEBUG_SEAM_DIR)
-endif
+$(eval $(call value_gate,DEBUG_SEAM_MAP))
+$(eval $(call value_gate,DEBUG_SEAM_X))
+$(eval $(call value_gate,DEBUG_SEAM_Y))
+$(eval $(call value_gate,DEBUG_SEAM_STEPS))
+$(eval $(call value_gate,DEBUG_SEAM_DIR))
 
 # Interactive variant: seed the spawn, then hand control to the real OverworldLoop
 # (collision LIVE, keyboard driven). Every frame is sampled into a 2048-frame ring;
@@ -184,17 +203,13 @@ endif
 # re-set on every EnterMap. Fully normal boot otherwise (title screen intact,
 # no other DEBUG_* implied); trainer/forced battles unaffected.
 # make DEBUG_NO_WILD=1
-ifdef DEBUG_NO_WILD
-NASMFLAGS += -D DEBUG_NO_WILD
-endif
+$(eval $(call flag_gate,DEBUG_NO_WILD))
 
 # Debug noclip: press W in-game to toggle walk-through-walls (disables collision).
 # Useful for testing warps, map edges, and OOB behaviour without normal movement.
 # Does NOT imply SKIP_TITLE — works at any point in the game.
 # make SKIP_TITLE=1 DEBUG_NOCLIP=1
-ifdef DEBUG_NOCLIP
-NASMFLAGS += -D DEBUG_NOCLIP
-endif
+$(eval $(call flag_gate,DEBUG_NOCLIP))
 
 LDFLAGS := -T link.ld
 
@@ -502,27 +517,13 @@ endif
 # and dump the tick_count delta to DUMP.BIN ($D1E0). delta < count proves the loop
 # free-runs faster than 60 Hz (the "walks too fast" regression). make DEBUG_WALKSPEED=1
 # Optional: DEBUG_WALKSPEED_FRAMES=N (default 180).
-ifdef DEBUG_WALKSPEED
-NEED_DEBUG_DUMP := 1
-NASMFLAGS += -D DEBUG_WALKSPEED
-NASMFLAGS += -D SKIP_TITLE
-endif
-ifdef DEBUG_WALKSPEED_FRAMES
-NASMFLAGS += -D DEBUG_WALKSPEED_FRAMES=$(DEBUG_WALKSPEED_FRAMES)
-endif
-ifdef DEBUG_DIALOG
-NEED_DEBUG_DUMP := 1
-NASMFLAGS += -D DEBUG_DIALOG
-NASMFLAGS += -D SKIP_TITLE
-endif
+$(eval $(call dump_gate,DEBUG_WALKSPEED))
+$(eval $(call value_gate,DEBUG_WALKSPEED_FRAMES))
+$(eval $(call dump_gate,DEBUG_DIALOG))
 # Diagnostic: log every NPC walk-decision (dest tile, true tile, player view
 # state) to NPCLOG.BIN while a scripted player walk runs in Pallet Town.
 # Used to verify the walking-NPC wall-clipping bug. make DEBUG_NPC_WALK=1
-ifdef DEBUG_NPC_WALK
-NEED_DEBUG_DUMP := 1
-NASMFLAGS += -D DEBUG_NPC_WALK
-NASMFLAGS += -D SKIP_TITLE
-endif
+$(eval $(call dump_gate,DEBUG_NPC_WALK))
 # Audio-engine gate: start BGM through the real gateway at boot, tick the
 # engine, dump audio RAM + virtual APU to DUMP.BIN, exit. With the /LOOP exe
 # flag (dos_port/run DEBUG_AUDIO=1 /LOOP) it instead plays the song forever.
@@ -538,18 +539,10 @@ endif
 endif
 # CalcStats gate: compute known Bulbasaur stats at boot, dump DUMP.BIN, exit.
 # make DEBUG_CALCSTATS=1
-ifdef DEBUG_CALCSTATS
-NEED_DEBUG_DUMP := 1
-NASMFLAGS += -D DEBUG_CALCSTATS
-NASMFLAGS += -D SKIP_TITLE
-endif
+$(eval $(call dump_gate,DEBUG_CALCSTATS))
 # Start-menu gate: boot to overworld, force the START menu open, render one frame,
 # dump FRAME.BIN, exit. make DEBUG_STARTMENU=1
-ifdef DEBUG_STARTMENU
-NEED_DEBUG_DUMP := 1
-NASMFLAGS += -D DEBUG_STARTMENU
-NASMFLAGS += -D SKIP_TITLE
-endif
+$(eval $(call dump_gate,DEBUG_STARTMENU))
 # Sign-text gate (fidelity plan Stage 1b — the streamed-text golden): spawn beside the
 # Pallet Town sign facing it, run the real A-press dispatch
 # (IsSpriteOrSignInFrontOfPlayer -> SignLoop -> DisplaySignText -> ShowTextStream),
@@ -644,21 +637,27 @@ NASMFLAGS += -D MAPSCRIPT_MAP=$(MAPSCRIPT_MAP) -D MAPSCRIPT_Y=$(MAPSCRIPT_Y) \
              -D MAPSCRIPT_SIGHT_FRAMES=$(MAPSCRIPT_SIGHT_FRAMES)
 endif
 
-# Oak intro state gate: seed Pallet's north-exit trigger, execute the Pallet
+# Pallet Oak cutscene gate: seed Pallet's north-exit trigger, execute the Pallet
 # state-machine/battle-seed boundary deterministically, and dump GBSTATE+FRAME.
-ifdef DEBUG_OAK_INTRO
-NEED_DEBUG_DUMP := 1
-NASMFLAGS += -D DEBUG_OAK_INTRO
-NASMFLAGS += -D SKIP_TITLE
-endif
+# Drives RunOakIntroTest (src/debug/debug_dump.asm).
+#
+# RENAMED 2026-08-02 from DEBUG_OAK_INTRO. It sat one underscore away from
+# DEBUG_OAKINTRO below (~line 1106), which is an entirely different gate: that
+# one drives RunOakSpeechCheckpoint — Prof. Oak's OPENING SPEECH — and is the
+# registered golden scenario `oak_intro` (id 29, scenario_manifest.json), owned
+# by docs/current_plan_menu_intro.md.
+#
+# The near-collision was not hypothetical: docs/current_plan_overworld_events.md
+# recorded THIS cutscene as covered by a passing golden, having matched on the
+# scenario NAME. It was reading the other gate's scenario. This gate is still
+# registered in no manifest row, so the Pallet cutscene has NO golden coverage —
+# tracked as item #30 in docs/current_plan_backlog.md. A new golden here needs a
+# distinct name (e.g. pallet_oak_cutscene), not a reuse of `oak_intro`.
+$(eval $(call dump_gate,DEBUG_PALLET_OAK))
 # Party-seed gate: run the debug new-game seed (party + bag + Pokédex) at boot,
 # dump party/bag WRAM to DUMP.BIN, exit. Verifies the pokemon/items engine runs
 # inside the real binary. make DEBUG_PARTY=1
-ifdef DEBUG_PARTY
-NEED_DEBUG_DUMP := 1
-NASMFLAGS += -D DEBUG_PARTY
-NASMFLAGS += -D SKIP_TITLE
-endif
+$(eval $(call dump_gate,DEBUG_PARTY))
 # Bag-menu gate: seed the bag, open the bag (ITEM) screen over the overworld,
 # park in the real HandleMenuInput loop, and let AutoKeyDrive dump a pinned
 # MORE-arrow blink phase. make DEBUG_BAGMENU=1 [BAGMENU_DUMP_FRAME=n]
@@ -671,9 +670,7 @@ NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_QUIET -D AUTOKEY_DUMP_FRAME=$(BAGMENU_D
 endif
 # Empty-inventory variant of the bag-menu gate (list = just CANCEL — the live
 # worst-case border-corruption repro). make DEBUG_BAGMENU=1 DEBUG_BAGMENU_EMPTY=1
-ifdef DEBUG_BAGMENU_EMPTY
-NASMFLAGS += -D DEBUG_BAGMENU_EMPTY
-endif
+$(eval $(call flag_gate,DEBUG_BAGMENU_EMPTY))
 # Live, interactive bag test: seed a full bag + money and boot to the overworld;
 # open the bag via START -> ITEM to drive the list / toss / YES-NO confirm by hand.
 # make DEBUG_BAGMENU_LIVE=1 (then dos_port/run, or build + launch DOSBox-X).
@@ -748,9 +745,7 @@ NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 endif
 # Length of the AUTOKEY_APRESS button train (any AUTOKEY_APRESS gate), for a flow
 # that raises more button waits than the 300-press default covers.
-ifdef AUTOKEY_APRESS_COUNT
-NASMFLAGS += -D AUTOKEY_APRESS_COUNT=$(AUTOKEY_APRESS_COUNT)
-endif
+$(eval $(call value_gate,AUTOKEY_APRESS_COUNT))
 # Items-plan Stage 7 gate: teach the TM/HM in ITEMTM_ID (default TM06 TOXIC) to party
 # slot ITEMTM_MON, headless, capturing the result to DUMP.BIN. AUTOKEY answers the
 # yes/no box, the party menu and the messages.
@@ -857,9 +852,7 @@ endif
 # the full path (title -> main menu -> NEW GAME -> overworld with a seeded party)
 # so you can reach the stats screen the real way (START -> POKéMON -> mon -> STATS).
 # make DEBUG_SEED_PARTY=1 (then dos_port/run).
-ifdef DEBUG_SEED_PARTY
-NASMFLAGS += -D DEBUG_SEED_PARTY
-endif
+$(eval $(call flag_gate,DEBUG_SEED_PARTY))
 # Scripted-joypad harness: seeded party + SKIP_TITLE + AutoKeyDrive replaying a
 # button sequence (src/home/vblank.asm), so a keyboard-only live path (overworld -> START ->
 # submenu) runs headless. make DEBUG_AUTOKEY=1
@@ -911,15 +904,11 @@ endif
 endif
 # Party-menu gate: seed the party, open the POKéMON screen over the overworld,
 # render one frame, dump FRAME.BIN, exit. make DEBUG_PARTYMENU=1
-ifdef DEBUG_PARTYMENU
-NEED_DEBUG_DUMP := 1
-NASMFLAGS += -D DEBUG_PARTYMENU
-NASMFLAGS += -D SKIP_TITLE
-endif
+$(eval $(call dump_gate,DEBUG_PARTYMENU))
 # Text-box gate (menus S2): boot to overworld, switch to the flat canvas, draw
 # the DisplayTextBoxID box with the given wTextBoxID, dump FRAME.BIN, exit.
 # make DEBUG_TEXTBOXID=<id>  (id = hex/dec NASM literal, e.g. 0x01, 0x13)
-# Text-engine oracle (docs/current_plan_text_engine.md Stage 0): run ONE probe
+# Text-engine oracle (docs/plans/text_engine.md Stage 0): run ONE probe
 # stream through the real PrintText in the overworld dialog window, dump FRAME.BIN,
 # exit. One case per TX_* command — no golden covers streamed text, so this is the
 # only oracle the text engine has.
@@ -967,19 +956,11 @@ endif
 # set, load the badge tiles, draw the 4x2 grid + window it, dump FRAME.BIN, exit.
 # The harness seeds wObtainedBadges itself, so no debug_party seed is needed.
 # make SKIP_TITLE=1 DEBUG_DRAWBADGES=1
-ifdef DEBUG_DRAWBADGES
-NEED_DEBUG_DUMP := 1
-NASMFLAGS += -D DEBUG_DRAWBADGES
-NASMFLAGS += -D SKIP_TITLE
-endif
+$(eval $(call dump_gate,DEBUG_DRAWBADGES))
 # Trainer-card gate (menus S9): boot to overworld, seed name/money/time/badges,
 # draw the full TRAINER CARD (DrawTrainerInfo + DrawBadges + pic), composite it,
 # dump FRAME.BIN, exit. make SKIP_TITLE=1 DEBUG_TRAINERCARD=1
-ifdef DEBUG_TRAINERCARD
-NEED_DEBUG_DUMP := 1
-NASMFLAGS += -D DEBUG_TRAINERCARD
-NASMFLAGS += -D SKIP_TITLE
-endif
+$(eval $(call dump_gate,DEBUG_TRAINERCARD))
 # Cinematic projection/clipping/wrap marker harness (menu-intro A1.6). Builds the
 # synthetic marker surface, applies MARKER_SX/MARKER_SY as fine source offsets,
 # dumps FRAME.BIN, exits. This is the ONLY evidence that distinguishes correct
@@ -1092,27 +1073,15 @@ endif
 # Options gate (menus S6 package D): boot to overworld, open the OPTION menu via
 # InitOptionsMenu (full-screen takeover), draw the cursor, dump FRAME.BIN, exit.
 # make SKIP_TITLE=1 DEBUG_OPTIONS=1
-ifdef DEBUG_OPTIONS
-NEED_DEBUG_DUMP := 1
-NASMFLAGS += -D DEBUG_OPTIONS
-NASMFLAGS += -D SKIP_TITLE
-endif
+$(eval $(call dump_gate,DEBUG_OPTIONS))
 # Player's-PC gate (menus S6 package F): boot to overworld, seed party+bag+box,
 # open PlayerPC as a generic PC; the parent-menu hook dumps FRAME.BIN, exits.
 # make SKIP_TITLE=1 DEBUG_PLAYERSPC=1
-ifdef DEBUG_PLAYERSPC
-NEED_DEBUG_DUMP := 1
-NASMFLAGS += -D DEBUG_PLAYERSPC
-NASMFLAGS += -D SKIP_TITLE
-endif
+$(eval $(call dump_gate,DEBUG_PLAYERSPC))
 # Main-menu gate (menus S7 package E): boot to overworld, seed a save (party +
 # name/badges/dex/time + DsvWriteSave), draw the CONTINUE/NEW GAME box + info
 # panel, dump FRAME.BIN, exit. make SKIP_TITLE=1 DEBUG_MAINMENU=1
-ifdef DEBUG_MAINMENU
-NEED_DEBUG_DUMP := 1
-NASMFLAGS += -D DEBUG_MAINMENU
-NASMFLAGS += -D SKIP_TITLE
-endif
+$(eval $(call dump_gate,DEBUG_MAINMENU))
 # Save gate (menus S7 package H): boot to overworld, seed party+bag+badges, run
 # SaveGameData through the confirm (auto-YES), dump the "saved!" FRAME.BIN, exit.
 # DEBUG_SAVE_ROUNDTRIP dumps a DsvWriteSave->DsvFileExists marker instead.
@@ -1130,36 +1099,20 @@ endif
 # continue_seed gate (menu-intro A3): seed a deterministic save, clobber the live
 # save WRAM, load it back via TryLoadSaveFile (the CONTINUE load), dump GBSTATE.
 # make image DEBUG_CONTINUE_SEED=1
-ifdef DEBUG_CONTINUE_SEED
-NEED_DEBUG_DUMP := 1
-NASMFLAGS += -D DEBUG_CONTINUE_SEED
-NASMFLAGS += -D SKIP_TITLE
-endif
+$(eval $(call dump_gate,DEBUG_CONTINUE_SEED))
 # save_real_load gate: boot loads a REAL cartridge .sav staged as POKEMON.DSV by
 # goldencheck.sh, then the gate clobbers the live save WRAM and reloads it via
 # TryLoadSaveFile. Unlike continue_seed the data originates outside the port, so
 # this catches offset/byte-order errors a self-round-trip cannot.
 # make image DEBUG_REAL_SAVE=1
-ifdef DEBUG_REAL_SAVE
-NEED_DEBUG_DUMP := 1
-NASMFLAGS += -D DEBUG_REAL_SAVE
-NASMFLAGS += -D SKIP_TITLE
-endif
+$(eval $(call dump_gate,DEBUG_REAL_SAVE))
 # save_boxes_load gate: as DEBUG_REAL_SAVE, but the staged save has all 12 PC
 # boxes full and the dump carries a SCENARIO-LOCAL wBoxData region (the current
 # box block), which no other scenario compares. make image DEBUG_BOX_SAVE=1
-ifdef DEBUG_BOX_SAVE
-NEED_DEBUG_DUMP := 1
-NASMFLAGS += -D DEBUG_BOX_SAVE
-NASMFLAGS += -D SKIP_TITLE
-endif
+$(eval $(call dump_gate,DEBUG_BOX_SAVE))
 # Oak-pic pixel harness (menu-intro A4.1): display Prof. Oak on the centred
 # cinematic surface and dump FRAME.BIN. make image DEBUG_OAKPIC=1
-ifdef DEBUG_OAKPIC
-NEED_DEBUG_DUMP := 1
-NASMFLAGS += -D DEBUG_OAKPIC
-NASMFLAGS += -D SKIP_TITLE
-endif
+$(eval $(call dump_gate,DEBUG_OAKPIC))
 # oak_intro checkpoint harness (menu-intro A4.3/A4.5): drive Oak pic + fade +
 # PrintText(OakSpeechText1) into the surface canvas (msgbox_oak_speech), letting the
 # text type page 1 and park at the <PARA> ▼-wait, then AUTOKEY_QUIET photographs the
@@ -1313,11 +1266,7 @@ endif
 # Naming-screen gate (menus S7 package C): boot to overworld, open the PLAYER
 # naming screen, draw the uppercase letter grid, dump FRAME.BIN, exit.
 # make SKIP_TITLE=1 DEBUG_NAMINGSCREEN=1
-ifdef DEBUG_NAMINGSCREEN
-NEED_DEBUG_DUMP := 1
-NASMFLAGS += -D DEBUG_NAMINGSCREEN
-NASMFLAGS += -D SKIP_TITLE
-endif
+$(eval $(call dump_gate,DEBUG_NAMINGSCREEN))
 # Pokédex gates (menus S8 package G). G1: seed seen/owned, draw CONTENTS list.
 # G2: open RHYDON dex data page (front pic + HT/WT). Dump FRAME.BIN, exit.
 # make SKIP_TITLE=1 DEBUG_G1=1  /  DEBUG_G2=1
@@ -1373,20 +1322,13 @@ NASMFLAGS += -D DEBUG_I1
 NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_QUIET -D AUTOKEY_DUMP_FRAME=90
 NASMFLAGS += -D SKIP_TITLE
 endif
-ifdef DEBUG_I2
-NEED_DEBUG_DUMP := 1
-NASMFLAGS += -D DEBUG_I2
-NASMFLAGS += -D SKIP_TITLE
-endif
+$(eval $(call dump_gate,DEBUG_I2))
 # Battle golden gate (fidelity plan Stage 2): the REAL loaders (InitBattle →
 # LoadEnemyMonData → LoadBattleMonFromParty) + the convergence-spec DV overwrite
 # replace DEBUG_BATTLE's synthetic seed. Combine with DEBUG_BATTLE_INTRO /
 # DEBUG_BATTLE_MENU / DEBUG_MOVEMENU to pick the dump point (the goldens are
 # battle_intro / battle_menu / move_selection).
-ifdef DEBUG_BATTLE_GOLDEN
-DEBUG_BATTLE := 1
-NASMFLAGS += -D DEBUG_BATTLE_GOLDEN
-endif
+$(eval $(call battle_gate,DEBUG_BATTLE_GOLDEN))
 # Battle-menu photograph (golden battle_menu): the real DisplayBattleMenu draws
 # HUDs + boxes + the ▶ cursor and parks in HandleMenuInput; AUTOKEY_QUIET
 # photographs it at AUTOKEY_DUMP_FRAME.
@@ -1400,27 +1342,15 @@ endif
 # Live battle view: same setup as DEBUG_BATTLE but holds the screen (loops
 # DelayFrame) so you can visually inspect it instead of dumping+exiting. Esc quits.
 # make DEBUG_BATTLE_LIVE=1 (then dos_port/run).
-ifdef DEBUG_BATTLE_LIVE
-DEBUG_BATTLE := 1
-NASMFLAGS += -D DEBUG_BATTLE_LIVE
-endif
+$(eval $(call battle_gate,DEBUG_BATTLE_LIVE))
 # Scripted enemy-hit ground-truth (Stage 2b): run one enemy attack with no input
 # waits, then dump battle WRAM to DUMP.BIN. make DEBUG_BATTLE_ENEMYHIT=1
-ifdef DEBUG_BATTLE_ENEMYHIT
-DEBUG_BATTLE := 1
-NASMFLAGS += -D DEBUG_BATTLE_ENEMYHIT
-endif
+$(eval $(call battle_gate,DEBUG_BATTLE_ENEMYHIT))
 # Battle intro screen dump (scene + "Wild <nick> appeared!", no menu) → FRAME.BIN.
-ifdef DEBUG_BATTLE_INTRO
-DEBUG_BATTLE := 1
-NASMFLAGS += -D DEBUG_BATTLE_INTRO
-endif
+$(eval $(call battle_gate,DEBUG_BATTLE_INTRO))
 # Bug Catcher trainer test: seeds a trainer battle (enemy = trainer + ball row +
 # party-status variety). Combine with DEBUG_BATTLE_INTRO (dump) or DEBUG_BATTLE_LIVE.
-ifdef DEBUG_BATTLE_TRAINER
-DEBUG_BATTLE := 1
-NASMFLAGS += -D DEBUG_BATTLE_TRAINER
-endif
+$(eval $(call battle_gate,DEBUG_BATTLE_TRAINER))
 # Move-selection menu (menu-fidelity row 22): seed the DEBUG_BATTLE party, then run
 # pret's MoveSelectionMenu — the move list, the cursor and the TYPE/PP box (PrintMenuItem).
 # The menu blocks on input, so AUTOKEY_QUIET drives DelayFrame and photographs the screen
@@ -1438,25 +1368,15 @@ NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 endif
 # Battle gate (Wave 2): seed party + a wild enemy, enter battle (InitBattle),
 # render one frame, dump FRAME.BIN, exit. make DEBUG_BATTLE=1
-ifdef DEBUG_BATTLE
-NEED_DEBUG_DUMP := 1
-NASMFLAGS += -D DEBUG_BATTLE
-NASMFLAGS += -D SKIP_TITLE
-endif
+$(eval $(call dump_gate,DEBUG_BATTLE))
 # Level-up move-learn gate (current_plan_pokemon_behavior Stage 3): force
 # STARTER_PIKACHU (party slot 3) 5->6, call LearnMoveFromLevelUp directly (no
 # battle/input needed), render one frame, dump FRAME.BIN, exit. make DEBUG_LEARNMOVE=1
-ifdef DEBUG_LEARNMOVE
-NEED_DEBUG_DUMP := 1
-NASMFLAGS += -D DEBUG_LEARNMOVE
-NASMFLAGS += -D SKIP_TITLE
-endif
+$(eval $(call dump_gate,DEBUG_LEARNMOVE))
 # Sub-flag of DEBUG_LEARNMOVE: fill all 4 move slots first, so the deferred
 # all-slots-full (AbandonLearning) branch renders instead of the common path.
 # make DEBUG_LEARNMOVE=1 DEBUG_LEARNMOVE_FULL=1
-ifdef DEBUG_LEARNMOVE_FULL
-NASMFLAGS += -D DEBUG_LEARNMOVE_FULL
-endif
+$(eval $(call flag_gate,DEBUG_LEARNMOVE_FULL))
 # Status-screen gate: seed the party, open the status/summary screen (page 1) for
 # STARTER_PIKACHU (party slot 3), render one frame, dump FRAME.BIN, exit.
 # make DEBUG_STATUS=1
@@ -1466,11 +1386,7 @@ ifdef DEBUG_STATUS_PAGE2
 DEBUG_STATUS := 1
 NASMFLAGS += -D DEBUG_STATUS_PAGE2
 endif
-ifdef DEBUG_STATUS
-NEED_DEBUG_DUMP := 1
-NASMFLAGS += -D DEBUG_STATUS
-NASMFLAGS += -D SKIP_TITLE
-endif
+$(eval $(call dump_gate,DEBUG_STATUS))
 ifdef NEED_DEBUG_DUMP
 GAME_SRCS += src/debug/debug_dump.asm
 endif
@@ -1506,9 +1422,7 @@ endif
 
 # Test harness for event-gated dialog: force EVENT_GOT_POKEBALLS_FROM_OAK at map
 # load so PalletTownOakText shows its "set" branch. make SKIP_TITLE=1 DEBUG_OAK_EVENT=1
-ifdef DEBUG_OAK_EVENT
-NASMFLAGS += -D DEBUG_OAK_EVENT
-endif
+$(eval $(call flag_gate,DEBUG_OAK_EVENT))
 
 # LINK_SRCS = what actually goes into PKMN.EXE. BATTLE_SRCS is deliberately
 # excluded: the battle backend depends on deferred UI/effect routines and does
@@ -2057,7 +1971,7 @@ assets/list_menu_strings.inc: assets/gb_charmap.txt tools/generators/gen_list_me
 assets/yes_no_strings.inc: assets/gb_charmap.txt tools/generators/gen_yes_no_strings.py tools/generators/gb_text.py
 	python3 tools/generators/gen_yes_no_strings.py
 
-# Text-engine oracle probe streams (DEBUG_TEXT). See docs/current_plan_text_engine.md.
+# Text-engine oracle probe streams (DEBUG_TEXT). See docs/plans/text_engine.md.
 assets/text_oracle.inc: assets/gb_charmap.txt tools/generators/gen_text_oracle.py tools/generators/gb_text.py
 	python3 tools/generators/gen_text_oracle.py
 
@@ -2384,7 +2298,7 @@ src/engine/menus/display_text_id_init.o: assets/event_constants.inc
 
 # UI layout geometry — projected menu-window coordinates. The sidecar JSON is
 # hand-positioned via tools/ui_layout/editor.py (never hand-edited as text);
-# the .inc is Tier-1 machine output keyed by element ID (docs/current_plan_menus.md).
+# the .inc is Tier-1 machine output keyed by element ID (docs/plans/menus.md).
 assets/ui_layout_menus.inc: assets/ui_layout_menus_sidecar.json \
 		tools/generators/gen_ui_layout.py tools/ui_layout/canvas.py tools/ui_layout/schema.py
 	python3 tools/generators/gen_ui_layout.py menus

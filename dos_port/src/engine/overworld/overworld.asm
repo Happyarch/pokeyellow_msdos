@@ -76,7 +76,7 @@ extern ReloadWalkingTilePatterns    ; src/engine/overworld/map_sprites.asm
 %elifdef DEBUG_DIALOG
 %elifdef DEBUG_SIGNTEXT
 %endif
-%ifdef DEBUG_OAK_INTRO
+%ifdef DEBUG_PALLET_OAK
 %endif
 %ifdef DEBUG_MAPSCRIPT_SIGHT
 %endif
@@ -99,7 +99,7 @@ extern ReloadWalkingTilePatterns    ; src/engine/overworld/map_sprites.asm
 %ifdef DEBUG_SIGNTEXT
 %define NEED_SEED_IDENTITY
 %endif
-%ifdef DEBUG_OAK_INTRO
+%ifdef DEBUG_PALLET_OAK
 %define NEED_SEED_IDENTITY
 %endif
 %ifdef DEBUG_MAPSCRIPT_SIGHT
@@ -115,7 +115,7 @@ extern ReloadWalkingTilePatterns    ; src/engine/overworld/map_sprites.asm
 %ifdef DEBUG_SIGNTEXT
 %define NEED_SEAM_RESEAT
 %endif
-%ifdef DEBUG_OAK_INTRO
+%ifdef DEBUG_PALLET_OAK
 %define NEED_SEAM_RESEAT
 %endif
 %ifdef DEBUG_MAPSCRIPT_SIGHT
