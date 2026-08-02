@@ -1,12 +1,10 @@
 {
   "lint": {
-    "aux_misplaced": 14,
-    "registry_approval": 0
+    "aux_misplaced": 1
   },
   "strict": {
-    "aux_misplaced": 14,
+    "aux_misplaced": 1,
     "hand_encoded_text": 3,
-    "local_shadow": 21,
-    "registry_approval": 0
+    "local_shadow": 21
   }
 }

@@ -3215,45 +3215,18 @@ Route16SnorlaxFluteCoords:
     db 10, 25                           ; one space West of Snorlax
     db 0xFF                             ; end
 
-; pret: data/events/card_key_coords.asm, INCLUDEd inside item_effects.asm — so it
-; stays here, beside its only reader. Format: map id, Y, X, gate id. Map ids come
-; from the generated assets/map_dims.inc (Tier-1), never hand-encoded.
+; pret: data/events/card_key_coords.asm. The three tables used to be hand-typed
+; `db` rows HERE, beside their only reader. Moved 2026-08-02 to
+; src/data/card_key_data.asm and generated into assets/card_key_coords.inc by
+; tools/generators/gen_static_tables.py — lint_pret_labels reported all three as
+; [aux_misplaced] (a pret data/ label belongs in the data layer), and they were a
+; hand transcription rather than a derived copy. Bytes unchanged.
 ; pret's own header: "probably supposed to be door locations in Silph Co., but they
 ; are unused. The reason there are 3 tables is unknown." They are unreachable in the
 ; real game too — see the BUG note in ItemUseCardKey.
-global CardKeyTable1
-CardKeyTable1:
-    db  SILPH_CO_2F, 0x04, 0x04, 0
-    db  SILPH_CO_2F, 0x04, 0x05, 1
-    db  SILPH_CO_4F, 0x0C, 0x04, 2
-    db  SILPH_CO_4F, 0x0C, 0x05, 3
-    db  SILPH_CO_7F, 0x06, 0x0A, 4
-    db  SILPH_CO_7F, 0x06, 0x0B, 5
-    db  SILPH_CO_9F, 0x04, 0x12, 6
-    db  SILPH_CO_9F, 0x04, 0x13, 7
-    db SILPH_CO_10F, 0x08, 0x0A, 8
-    db SILPH_CO_10F, 0x08, 0x0B, 9
-    db 0xFF                             ; end
-
-global CardKeyTable2
-CardKeyTable2:
-    db SILPH_CO_3F, 0x08, 0x09, 10
-    db SILPH_CO_3F, 0x09, 0x09, 11
-    db SILPH_CO_5F, 0x04, 0x07, 12
-    db SILPH_CO_5F, 0x05, 0x07, 13
-    db SILPH_CO_6F, 0x0C, 0x05, 14
-    db SILPH_CO_6F, 0x0D, 0x05, 15
-    db SILPH_CO_8F, 0x08, 0x07, 16
-    db SILPH_CO_8F, 0x09, 0x07, 17
-    db SILPH_CO_9F, 0x08, 0x03, 18
-    db SILPH_CO_9F, 0x09, 0x03, 19
-    db 0xFF                             ; end
-
-global CardKeyTable3
-CardKeyTable3:
-    db SILPH_CO_11F, 0x08, 0x09, 20
-    db SILPH_CO_11F, 0x09, 0x09, 21
-    db 0xFF                             ; end
+extern CardKeyTable1                    ; src/data/card_key_data.asm
+extern CardKeyTable2                    ; src/data/card_key_data.asm
+extern CardKeyTable3                    ; src/data/card_key_data.asm
 
 section .text
 

@@ -103,8 +103,6 @@ extern player_sprite                ; == RedSprite (walking)
 
 
 ; called by the routines that moved to src/home/overworld.asm
-global BikeRidingTilesets
-
 section .text
 
 ; ---------------------------------------------------------------------------
@@ -180,17 +178,14 @@ section .text
 ; ---------------------------------------------------------------------------
 
 ; ---------------------------------------------------------------------------
-; BikeRidingTilesets — data/tilesets/bike_riding_tilesets.asm (pret embeds it
-; right after IsBikeRidingAllowed). $FF-terminated tileset-id list.
+; BikeRidingTilesets — data/tilesets/bike_riding_tilesets.asm. pret embeds it
+; right after IsBikeRidingAllowed, and the port did the same until 2026-08-02,
+; when lint_pret_labels' [aux_misplaced] rule was cleared: a pret data/ label
+; must live in the data layer. It is now generated into assets/tileset_tables.inc
+; by tools/generators/gen_static_tables.py and hosted by src/data/tileset_data.asm.
+; Bytes unchanged.
 ; ---------------------------------------------------------------------------
-section .data
-BikeRidingTilesets:
-    db OVERWORLD
-    db FOREST
-    db UNDERGROUND
-    db SHIP_PORT
-    db CAVERN
-    db 0xFF                                  ; end
+extern BikeRidingTilesets               ; src/data/tileset_data.asm
 
 ; ---------------------------------------------------------------------------
 ; Alternate player sprite sheets — pret gfx/sprites.asm:35,74,87

@@ -208,9 +208,11 @@ section .data
 ; (M-77) — again byte-identical to the literals they replace.
 %include "assets/pokedex_strings.inc"
 
-; PokedexEntryPointers + the 151 entry blobs (flat .data, charmap-encoded).
-global PokedexEntryPointers          ; link_menu.asm (PetitCup) externs it
-%include "assets/dex_entries.inc"
+; PokedexEntryPointers + the 151 entry blobs used to be %included HERE. Moved
+; 2026-08-02 to src/data/pokemon/dex_entries.asm — it is a pret data/pokemon/
+; table, and [aux_misplaced] requires a pret data/ label to live in the data
+; layer, not in the menu engine that reads it. Bytes unchanged; same asset.
+extern PokedexEntryPointers          ; src/data/pokemon/dex_entries.asm
 
 ; ===========================================================================
 section .bss

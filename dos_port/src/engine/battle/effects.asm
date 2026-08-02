@@ -186,6 +186,7 @@ global StatModifierDownEffect
 ; ===========================================================================
 ; SleepEffect — inflict SLEEP (1-7 turn counter) on the target.
 ; ===========================================================================
+global SleepEffect
 SleepEffect:
     mov edx, wEnemyMonStatus            ; de = target status (player's turn → enemy)
     mov ebx, wEnemyBattleStatus2        ; bc = target battle status 2 (recharge flag lives here)
@@ -261,6 +262,7 @@ SleepEffect:
 ; main POISON_EFFECT (accuracy-tested). Misses if the target has a substitute,
 ; is already statused, or is a Poison-type.
 ; ===========================================================================
+global PoisonEffect
 PoisonEffect:
     mov esi, wEnemyMonStatus            ; hl = target status (player's turn → enemy)
     mov edx, wPlayerMoveEffect          ; de = move effect
@@ -366,6 +368,7 @@ PoisonEffect:
 ; general post-move-effect flow (EXPLODE_EFFECT is special-cased there to
 ; always apply even on a miss).
 ; ===========================================================================
+global ExplodeEffect
 ExplodeEffect:
     mov esi, wBattleMonHP               ; hl = wBattleMonHP (player's own mon)
     mov edx, wPlayerBattleStatus2       ; de = wPlayerBattleStatus2
@@ -394,6 +397,7 @@ ExplodeEffect:
 ; instead, which may thaw a frozen target against a Fire-type move), or shares
 ; a type with the move (e.g. an Electric move can't paralyze an Electric-type).
 ; ===========================================================================
+global FreezeBurnParalyzeEffect
 FreezeBurnParalyzeEffect:
     mov byte [ebp + wAnimationType], 0  ; xor a / ld [wAnimationType],a
     call CheckTargetSubstitute
@@ -1024,6 +1028,7 @@ PrintStatText:
 ;       add XSTATITEM_ANIM
 ;       jp PlayBattleAnimation2
 ; ===========================================================================
+global BideEffect
 BideEffect:
     mov esi, wPlayerBattleStatus1       ; ld hl, wPlayerBattleStatus1
     mov edx, wPlayerBideAccumulatedDamage ; ld de, wPlayerBideAccumulatedDamage
@@ -1080,6 +1085,7 @@ BideEffect:
 ; caller is returned to by PlayBattleAnimation2's own ret, exactly as in pret).
 ; Clobbers: AL, ESI, EDX.
 ; ===========================================================================
+global ThrashPetalDanceEffect
 ThrashPetalDanceEffect:
     mov esi, wPlayerBattleStatus1       ; ld hl, wPlayerBattleStatus1
     mov edx, wPlayerNumAttacksLeft      ; ld de, wPlayerNumAttacksLeft
@@ -1107,6 +1113,7 @@ ThrashPetalDanceEffect:
 ; always "doesn't affect" / "fails" (no trainer mon ever flees or switches via
 ; this effect) after the standard 50-frame delay.
 ; ===========================================================================
+global SwitchAndTeleportEffect
 SwitchAndTeleportEffect:
     mov al, [ebp + hWhoseTurn]
     and al, al
@@ -1236,6 +1243,7 @@ SwitchAndTeleportEffect:
 ; pret: HL = wXxxBattleStatus1 (re-entry-guard byte), DE = wXxxNumAttacksLeft,
 ; BC = wXxxNumHits, selected by hWhoseTurn. Translated: ESI/EDX/ECX respectively.
 ; ===========================================================================
+global TwoToFiveAttacksEffect
 TwoToFiveAttacksEffect:
     mov esi, wPlayerBattleStatus1       ; hl = wPlayerBattleStatus1
     mov edx, wPlayerNumAttacksLeft      ; de = wPlayerNumAttacksLeft
@@ -1303,6 +1311,7 @@ TwoToFiveAttacksEffect:
 ; FLINCHED on the move's target. A substitute on the target blocks the effect
 ; entirely (silent — `ret nz`, no text, matching pret).
 ; ===========================================================================
+global FlinchSideEffect
 FlinchSideEffect:
     call CheckTargetSubstitute
     jnz .ret                            ; ret nz — substitute up, stay silent
@@ -1337,6 +1346,7 @@ FlinchSideEffect:
 ; ===========================================================================
 ; ChargeEffect — pret engine/battle/effects.asm:ChargeEffect.
 ; ===========================================================================
+global ChargeEffect
 ChargeEffect:
     mov esi, wPlayerBattleStatus1       ; ld hl, wPlayerBattleStatus1
     mov edx, wPlayerMoveEffect          ; ld de, wPlayerMoveEffect
@@ -1454,6 +1464,7 @@ ChargeMoveEffectText:
 ; in JumpMoveEffect), not something this handler can or should "fix" — translated
 ; verbatim.
 ; ===========================================================================
+global TrappingEffect
 TrappingEffect:
     mov esi, wPlayerBattleStatus1       ; hl = wPlayerBattleStatus1
     mov edx, wPlayerNumAttacksLeft      ; de = wPlayerNumAttacksLeft
@@ -1478,6 +1489,7 @@ TrappingEffect:
     mov [ebp + edx], al
 .ret:
     ret
+global ConfusionSideEffect
 ConfusionSideEffect:
     call BattleRandom
     cmp al, 10 * 0xFF / 100             ; cp 10 percent — chance of confusion
@@ -1491,6 +1503,7 @@ ConfusionSideEffect:
 ; accuracy test, then the shared success path. Fails (silently, after the checks)
 ; on substitute / miss; "But it failed!" if the target is already confused.
 ; ===========================================================================
+global ConfusionEffect
 ConfusionEffect:
     call CheckTargetSubstitute
     jnz ConfusionEffectFailed           ; jr nz, ConfusionEffectFailed
@@ -1568,6 +1581,7 @@ global ClearHyperBeam
 ; Out: NEEDS_TO_RECHARGE bit set on that side's battle-status-2 byte.
 ; Clobbers: AL, ESI.
 ; ===========================================================================
+global HyperBeamEffect
 HyperBeamEffect:
     mov esi, wPlayerBattleStatus2       ; ld hl, wPlayerBattleStatus2
     mov al, [ebp + hWhoseTurn]          ; ldh a, [hWhoseTurn]
@@ -1617,6 +1631,7 @@ global ConditionalPrintButItFailed
 ;       set USING_RAGE, [hl] ; mon is now in "rage" mode
 ;       ret
 ; ===========================================================================
+global RageEffect
 RageEffect:
     mov esi, wPlayerBattleStatus2       ; ld hl, wPlayerBattleStatus2
     mov al, [ebp + hWhoseTurn]          ; ldh a, [hWhoseTurn]
@@ -1631,6 +1646,7 @@ RageEffect:
 ; slot for the remainder of the battle. Accuracy-tested (MoveHitTest); misses
 ; outright if the target is INVULNERABLE (charging Fly/Dig).
 ; ===========================================================================
+global MimicEffect
 MimicEffect:
     mov bl, 50                          ; ld c, 50
     call DelayFrames
@@ -1725,6 +1741,7 @@ MimicEffect:
 ; Plays the move's subanimation, then unconditionally prints "But nothing
 ; happened!" through pret's PrintNoEffectText (pret line 1451, below).
 ; ===========================================================================
+global SplashEffect
 SplashEffect:
     call PlayCurrentMoveAnimation
     jmp PrintNoEffectText
@@ -1740,6 +1757,7 @@ SplashEffect:
 ; a substitute check here, matching pret. pret ref: engine/battle/core.asm:
 ; MoveHitTest (the only substitute gate in this call path).
 ; ===========================================================================
+global DisableEffect
 DisableEffect:
     call MoveHitTest
     mov al, [ebp + wMoveMissed]
@@ -1890,7 +1908,6 @@ CheckTargetSubstitute:
 ; pret table uses dw (16-bit ROM-bank pointers); here dd (32-bit flat).
 ; Entries with NULL in pret, and all unported handlers, use UnportedMoveEffect.
 ; ---------------------------------------------------------------------------
-global MoveEffectPointerTable
 UnportedMoveEffect:
     ret
 
@@ -1905,98 +1922,12 @@ UnportedMoveEffect:
 ; Exits: BH = 1 (B = 1 in SM83 → faithful to pret "ld b, $1" after the jpfar)
 ; ---------------------------------------------------------------------------
 global JumpMoveEffect
-MoveEffectPointerTable:
-    dd SleepEffect             ; $01 EFFECT_01            — Sleep (Sing/Hypnosis etc.)
-    dd PoisonEffect            ; $02 [S4 reference handler]
-    dd DrainHPEffect_        ; $03 DRAIN_HP_EFFECT
-    dd FreezeBurnParalyzeEffect ; $04 BURN_SIDE_EFFECT1    — Burn 10%
-    dd FreezeBurnParalyzeEffect ; $05 FREEZE_SIDE_EFFECT1  — Freeze 10%
-    dd FreezeBurnParalyzeEffect ; $06 PARALYZE_SIDE_EFFECT1 — Paralyze 10%
-    dd ExplodeEffect        ; $07 EXPLODE_EFFECT
-    dd DrainHPEffect_        ; $08 DREAM_EATER_EFFECT
-    dd UnportedMoveEffect       ; $09 MIRROR_MOVE_EFFECT   — NULL in pret
-    dd StatModifierUpEffect     ; $0A ATTACK_UP1_EFFECT
-    dd StatModifierUpEffect     ; $0B DEFENSE_UP1_EFFECT
-    dd StatModifierUpEffect     ; $0C SPEED_UP1_EFFECT
-    dd StatModifierUpEffect     ; $0D SPECIAL_UP1_EFFECT
-    dd StatModifierUpEffect     ; $0E ACCURACY_UP1_EFFECT
-    dd StatModifierUpEffect     ; $0F EVASION_UP1_EFFECT
-    dd PayDayEffect_         ; $10 PAY_DAY_EFFECT
-    dd UnportedMoveEffect       ; $11 SWIFT_EFFECT         — NULL in pret
-    dd StatModifierDownEffect   ; $12 ATTACK_DOWN1_EFFECT
-    dd StatModifierDownEffect   ; $13 DEFENSE_DOWN1_EFFECT
-    dd StatModifierDownEffect   ; $14 SPEED_DOWN1_EFFECT
-    dd StatModifierDownEffect   ; $15 SPECIAL_DOWN1_EFFECT
-    dd StatModifierDownEffect   ; $16 ACCURACY_DOWN1_EFFECT
-    dd StatModifierDownEffect   ; $17 EVASION_DOWN1_EFFECT
-    dd ConversionEffect_     ; $18 CONVERSION_EFFECT
-    dd HazeEffect_           ; $19 HAZE_EFFECT
-    dd BideEffect           ; $1A BIDE_EFFECT
-    dd ThrashPetalDanceEffect; $1B THRASH_PETAL_DANCE_EFFECT
-    dd SwitchAndTeleportEffect; $1C SWITCH_AND_TELEPORT_EFFECT
-    dd TwoToFiveAttacksEffect; $1D TWO_TO_FIVE_ATTACKS_EFFECT
-    dd TwoToFiveAttacksEffect; $1E EFFECT_1E (unused)
-    dd FlinchSideEffect        ; $1F FLINCH_SIDE_EFFECT1  — Flinch 10%
-    dd SleepEffect             ; $20 SLEEP_EFFECT         — Sleep
-    dd PoisonEffect            ; $21 [S4 reference handler]
-    dd FreezeBurnParalyzeEffect ; $22 BURN_SIDE_EFFECT2    — Burn 30%
-    dd FreezeBurnParalyzeEffect ; $23 FREEZE_SIDE_EFFECT2  — Freeze 30%
-    dd FreezeBurnParalyzeEffect ; $24 PARALYZE_SIDE_EFFECT2 — Paralyze 30%
-    dd FlinchSideEffect        ; $25 FLINCH_SIDE_EFFECT2  — Flinch 30%
-    dd OneHitKOEffect_       ; $26 OHKO_EFFECT
-    dd ChargeEffect         ; $27 CHARGE_EFFECT
-    dd UnportedMoveEffect       ; $28 SUPER_FANG_EFFECT    — NULL in pret
-    dd UnportedMoveEffect       ; $29 SPECIAL_DAMAGE_EFFECT — NULL in pret (Seismic Toss etc.)
-    dd TrappingEffect       ; $2A TRAPPING_EFFECT
-    dd ChargeEffect         ; $2B FLY_EFFECT
-    dd TwoToFiveAttacksEffect; $2C ATTACK_TWICE_EFFECT
-    dd UnportedMoveEffect       ; $2D JUMP_KICK_EFFECT     — NULL in pret
-    dd MistEffect_           ; $2E MIST_EFFECT
-    dd FocusEnergyEffect_    ; $2F FOCUS_ENERGY_EFFECT
-    dd RecoilEffect_           ; $30 RECOIL_EFFECT
-    dd ConfusionEffect         ; $31 CONFUSION_EFFECT     — Confuse Ray / Supersonic
-    dd StatModifierUpEffect     ; $32 ATTACK_UP2_EFFECT
-    dd StatModifierUpEffect     ; $33 DEFENSE_UP2_EFFECT
-    dd StatModifierUpEffect     ; $34 SPEED_UP2_EFFECT
-    dd StatModifierUpEffect     ; $35 SPECIAL_UP2_EFFECT
-    dd StatModifierUpEffect     ; $36 ACCURACY_UP2_EFFECT
-    dd StatModifierUpEffect     ; $37 EVASION_UP2_EFFECT
-    dd HealEffect_             ; $38 HEAL_EFFECT          — Recover/Softboiled/Rest
-    dd TransformEffect_         ; $39 TRANSFORM_EFFECT
-    dd StatModifierDownEffect   ; $3A ATTACK_DOWN2_EFFECT
-    dd StatModifierDownEffect   ; $3B DEFENSE_DOWN2_EFFECT
-    dd StatModifierDownEffect   ; $3C SPEED_DOWN2_EFFECT
-    dd StatModifierDownEffect   ; $3D SPECIAL_DOWN2_EFFECT
-    dd StatModifierDownEffect   ; $3E ACCURACY_DOWN2_EFFECT
-    dd StatModifierDownEffect   ; $3F EVASION_DOWN2_EFFECT
-    dd ReflectLightScreenEffect_ ; $40 LIGHT_SCREEN_EFFECT
-    dd ReflectLightScreenEffect_ ; $41 REFLECT_EFFECT
-    dd PoisonEffect            ; $42 [S4 reference handler]
-    dd ParalyzeEffect_       ; $43 PARALYZE_EFFECT
-    dd StatModifierDownEffect   ; $44 ATTACK_DOWN_SIDE_EFFECT
-    dd StatModifierDownEffect   ; $45 DEFENSE_DOWN_SIDE_EFFECT
-    dd StatModifierDownEffect   ; $46 SPEED_DOWN_SIDE_EFFECT
-    dd StatModifierDownEffect   ; $47 SPECIAL_DOWN_SIDE_EFFECT
-    dd StatModifierDownEffect   ; $48 (unused, const_skip) — pret: StatModifierDownEffect
-    dd StatModifierDownEffect   ; $49 (unused, const_skip) — pret: StatModifierDownEffect
-    dd StatModifierDownEffect   ; $4A (unused, const_skip) — pret: StatModifierDownEffect
-    dd StatModifierDownEffect   ; $4B (unused, const_skip) — pret: StatModifierDownEffect
-    dd ConfusionSideEffect     ; $4C CONFUSION_SIDE_EFFECT — Confusion's 10% side effect
-    dd TwoToFiveAttacksEffect; $4D TWINEEDLE_EFFECT
-    dd UnportedMoveEffect       ; $4E (unused, const_skip) — NULL in pret
-    dd SubstituteEffect_     ; $4F SUBSTITUTE_EFFECT
-    dd HyperBeamEffect      ; $50 HYPER_BEAM_EFFECT
-    dd RageEffect           ; $51 RAGE_EFFECT
-    dd MimicEffect          ; $52 MIMIC_EFFECT
-    dd UnportedMoveEffect       ; $53 METRONOME_EFFECT     — NULL in pret
-    dd LeechSeedEffect_      ; $54 LEECH_SEED_EFFECT
-    dd SplashEffect            ; $55 SPLASH_EFFECT        — Splash ("But nothing happened!")
-    dd DisableEffect        ; $56 DISABLE_EFFECT
-MoveEffectPointerTableEnd:
-
-; Arity assertion: NUM_MOVE_EFFECTS = $56 = 86 entries ($01..$56, indexed by effect-1).
-; NASM evaluates this label-difference at assembly time (both labels in same section).
-%define _MEPT_ENTRIES ((MoveEffectPointerTableEnd - MoveEffectPointerTable) / 4)
-%if _MEPT_ENTRIES != 86
-%fatal "MoveEffectPointerTable arity error: expected 86 entries ($01..$56), got " %+ _MEPT_ENTRIES
-%endif
+; MoveEffectPointerTable moved 2026-08-02 to src/data/move_effect_pointers.asm.
+; It is a pret data/moves/effects_pointers.asm table and lint_pret_labels reported
+; it [aux_misplaced]. pret files this dispatch table under data/ too, even though
+; its rows are code pointers, so following pret's own placement cleared the finding
+; without needing an exception. It is still HAND-WRITTEN (Tier 2 authorship, data
+; layer placement) — no generator can derive port function names from pret.
+; The 86-entry arity assertion travelled with it; it is a label difference and
+; must stay in the same translation unit as the table.
+extern MoveEffectPointerTable          ; src/data/move_effect_pointers.asm

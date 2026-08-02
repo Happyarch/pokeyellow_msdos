@@ -1069,9 +1069,12 @@ LoadDestinationMapData:
 
 section .rodata
 
-; per-map (music id, music ROM bank), indexed by map id — pret data/maps/songs.asm
-global MapSongBanks                       ; LoadMapData map music (relocated)
-%include "assets/map_songs.inc"
+; MapSongBanks (pret data/maps/songs.asm) used to be %included HERE. Moved
+; 2026-08-02 to src/data/maps/map_songs.asm to clear its [aux_misplaced]
+; finding — a pret data/ label belongs in the data layer. It was separable
+; because map_songs.inc defines only that table, carries no `equ`, and
+; references nothing else. Bytes unchanged.
+extern MapSongBanks                       ; src/data/maps/map_songs.asm
 
 ; authored border-ring blocks (map-tool C3; see ApplyMapBorderOverrides)
 %include "assets/map_border_overrides.inc"
@@ -1118,6 +1121,23 @@ global OVERWORLD_BLOCKS_SIZE             ; DrawTileBlock block-ID clamp (relocat
 %include "assets/player_sprite.inc"
 ; npc_*_still.inc files removed — LoadNPCSpriteTiles reads both still and walk
 ; halves from the full 384-byte sheet in npc_sprite_data_table.inc.
+; *** MapHeaderPointers is a pret data/maps/map_header_pointers.asm table and
+; *** `lint_pret_labels` reports it as [aux_misplaced]. It could NOT be moved to
+; *** the data layer in the 2026-08-02 sweep that moved MapSongBanks out, and the
+; *** reason is structural, not effort:
+;   1. assets/map_headers.inc also defines TilesetGfxPtrs/GfxSizes/BlocksPtrs/
+;      BlocksSizes/CollPtrs, whose rows point at reds_house_gfx, pokecenter_gfx,
+;      forest_gfx ... — labels defined by assets/extra_includes.inc and NOT global.
+;      Splitting the table from those blobs breaks the link.
+;   2. extra_includes.inc's blobs are in turn welded to the CODE in this file:
+;      it consumes size `equ`s (OVERWORLD_BLOCKS_SIZE and friends) as assembly-time
+;      immediates, and a NASM `equ` cannot cross an object file. This is the same
+;      constraint already documented for the pokedex tile blob, which had to travel
+;      with its routine for exactly this reason.
+; Clearing this finding therefore needs a real refactor — either publish the blob
+; sizes as linkable data words and change the consuming code to load them, or move
+; the whole asset region and its consumers together. That is a scoped piece of work,
+; NOT a suppression, and it is deliberately left open rather than waived.
 global MapHeaderPointers                  ; LoadMapHeader (relocated to src/home/overworld.asm)
 ; per-tileset gfx/blockset/collision pointer + size tables, also from
 ; assets/map_headers.inc — read by LoadTilesetHeader, which lives in its own pret

@@ -41,6 +41,11 @@ bits 32
 %include "gb_macros.inc"
 %include "assets/audio_constants.inc"   ; SFX_LEDGE (real id; audio engine is live)
 
+; Tileset tables moved to the data layer 2026-08-02 (see the note at EOF).
+extern TilePairCollisionsLand           ; src/data/tileset_data.asm
+extern TilePairCollisionsWater          ; src/data/tileset_data.asm
+extern LedgeTiles                       ; src/data/tileset_data.asm
+
 ; --- Tileset ids (constants/tileset_constants.asm; not in gb_memmap.inc) -----
 OVERWORLD           equ 0
 CAVERN              equ 17
@@ -60,10 +65,6 @@ PAD_ALL             equ 0xFF
 STANDING_TILE_OFF   equ W_TILEMAP + PLAYER_STANDING_ROW * SCREEN_TILES_W + PLAYER_STANDING_COL
 
 global HandleLedges
-global TilePairCollisionsLand
-global TilePairCollisionsWater
-global LedgeTiles
-
 extern StartSimulatingJoypadStates    ; src/home/map_objects.asm (linked)
 extern PlaySound                      ; src/home/audio.asm (real gateway, linked)
 ; LoadHoppingShadowOAM stub lives in overworld_stubs.asm (stub convention: a stub never
@@ -184,46 +185,12 @@ HandleLedges:
 ; animation only while BIT_LEDGE_OR_FISHING is set.
 ; ---------------------------------------------------------------------------
 
-; ===========================================================================
-; Embedded data (pret data/tilesets/*.asm). Held in .data (flat host pointers).
-; Kept inline here as this is the only consumer; a future pass may promote these
-; to a generated assets/*.inc under the two-tier rule (they are pure static tables).
-; ===========================================================================
-section .data
-
-; data/tilesets/pair_collision_tile_ids.asm
-; FORMAT: tileset id, tile 1, tile 2. Terminated by $FF. The player may not cross
-; between tile 1 and tile 2 (simulates elevation differences).
-TilePairCollisionsLand:
-    db CAVERN, 0x20, 0x05
-    db CAVERN, 0x41, 0x05
-    db FOREST, 0x30, 0x2E
-    db CAVERN, 0x2A, 0x05
-    db CAVERN, 0x05, 0x21
-    db FOREST, 0x52, 0x2E
-    db FOREST, 0x55, 0x2E
-    db FOREST, 0x56, 0x2E
-    db FOREST, 0x20, 0x2E
-    db FOREST, 0x5E, 0x2E
-    db FOREST, 0x5F, 0x2E
-    db 0xFF                                         ; end
-
-TilePairCollisionsWater:
-    db FOREST, 0x14, 0x2E
-    db FOREST, 0x48, 0x2E
-    db CAVERN, 0x14, 0x05
-    db 0xFF                                         ; end
-
-; data/tilesets/ledge_tiles.asm
-; FORMAT: player facing, tile player standing on, ledge tile, input required.
-; Terminated by $FF.
-LedgeTiles:
-    db SPRITE_FACING_DOWN,  0x2C, 0x37, PAD_DOWN
-    db SPRITE_FACING_DOWN,  0x39, 0x36, PAD_DOWN
-    db SPRITE_FACING_DOWN,  0x39, 0x37, PAD_DOWN
-    db SPRITE_FACING_LEFT,  0x2C, 0x27, PAD_LEFT
-    db SPRITE_FACING_LEFT,  0x39, 0x27, PAD_LEFT
-    db SPRITE_FACING_RIGHT, 0x2C, 0x0D, PAD_RIGHT
-    db SPRITE_FACING_RIGHT, 0x2C, 0x1D, PAD_RIGHT
-    db SPRITE_FACING_RIGHT, 0x39, 0x0D, PAD_RIGHT
-    db 0xFF                                         ; end
+; Embedded data (pret data/tilesets/*.asm) USED TO LIVE HERE.
+;
+; TilePairCollisionsLand / TilePairCollisionsWater / LedgeTiles moved 2026-08-02
+; to src/data/tileset_data.asm and are now GENERATED into assets/tileset_tables.inc
+; by tools/generators/gen_static_tables.py. They were reported [aux_misplaced]
+; (a pret data/ label must live in the data layer), and they had additionally
+; been hand-transcribed from pret rather than generated. The header that stood
+; here predicted exactly this move: "a future pass may promote these to a
+; generated assets/*.inc under the two-tier rule". Bytes unchanged.

@@ -63,7 +63,7 @@ extern DelayFrame                    ; src/home/vblank.asm
 extern JoypadLowSensitivity          ; src/home/joypad2.asm — writes hJoy5
 extern BankswitchCommon              ; home/bankswitch2.asm — AL = bank (flat no-op)
 extern GetTileAndCoordsInFrontOfPlayer ; engine/overworld/player_state.asm (predef
-extern BikeRidingTilesets                    ; src/home/player_gfx.asm
+extern BikeRidingTilesets                    ; src/data/tileset_data.asm
 extern DoBoulderDustAnimation       ; src/engine/overworld/push_boulder.asm
 extern HandleLedges                    ; src/engine/overworld/ledges.asm
 extern IsPlayerCharacterBeingControlledByGame ; src/home/npc_movement.asm (real, linked — OW-A.6)
@@ -106,7 +106,7 @@ extern wMapSpriteData                     ; src/engine/overworld/map_sprites.asm
 extern wMapSpriteExtraData                ; src/engine/overworld/map_sprites.asm
 extern w_map_text_table_ptr               ; src/engine/overworld/map_sprites.asm
 extern MapHeaderPointers            ; src/engine/overworld/overworld.asm (assets/map_headers.inc)
-extern MapSongBanks                 ; src/engine/overworld/overworld.asm (assets/map_songs.inc)
+extern MapSongBanks                 ; src/data/maps/map_songs.asm (assets/map_songs.inc)
 extern OVERWORLD_BLOCKS_SIZE        ; src/engine/overworld/overworld.asm (assets/overworld_blocks.inc)
 
 ; --- relocated from src/engine/overworld/overworld.asm (unit 6b) ---
@@ -185,7 +185,7 @@ extern SeedDeterministicPlayerIdentity    ; src/engine/debug/debug_party.asm
 extern SpecialEnterMap                    ; src/engine/menus/main_menu.asm
 extern StopAllMusic                       ; src/home/audio.asm
 extern StopAllSounds                      ; src/home/init.asm
-extern TilePairCollisionsWater            ; src/engine/overworld/ledges.asm
+extern TilePairCollisionsWater            ; src/data/tileset_data.asm
 extern TrainerEncounterFlow               ; src/engine/overworld/map_sprites.asm
 extern UpdateSprites                      ; src/home/update_sprites.asm
 extern WalkSpeedSample                    ; src/engine/overworld/overworld.asm
