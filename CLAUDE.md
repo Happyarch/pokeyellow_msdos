@@ -413,18 +413,17 @@ generator pattern → skill **`project-conventions`**.
 
 Any change touching a pret-labeled routine must pass the fidelity gate before
 commit: `dos_port/tools/faithdiff <Label>` (justify every unsuppressed
-added/dropped call in the commit message) and `dos_port/tools/lint_pret_labels`.
-Workflow + tools → skill **`faithfulness-review`**.
+added/dropped call in the commit message) and `dos_port/tools/lint_pret_labels`
+(must exit 0). Workflow + tools → skill **`faithfulness-review`**.
 
-**`lint_pret_labels` does NOT currently exit 0, and that is expected — do not
-"fix" it.** This rule used to demand exit 0; corrected 2026-08-02. The tree
-carries baselined pre-existing debt (measured 2026-08-02: 14 `aux_misplaced`
-plain, and under `--strict-claims` a further 3 `hand_encoded_text` + 21
-`local_shadow`), so the linter exits 1 on a perfectly healthy tree. **The gate
-you must not regress is `dos_port/tools/static_gate`**, which ratchets each
-class against a checked-in baseline and exits 0 only when nothing grew. Read
-the linter per class, compare to baseline, and never quote these counts as
-current — re-measure.
+**The tree does not currently satisfy that rule, and that is a DEFECT, not a
+new normal.** Measured 2026-08-02: `lint_pret_labels` exits 1 with 14
+`aux_misplaced` findings, and `--strict-claims` adds 3 `hand_encoded_text` + 21
+`local_shadow`. These are unsanctioned leftovers — none was ever approved by
+the maintainer — and the standing instruction is to drive them to zero, not to
+accept them. `static_gate`'s per-class baseline stops them GROWING; it does not
+sanction them, and an agent must not cite "at baseline" as permission to leave
+a class non-zero. Re-measure rather than quoting these counts.
 
 **Two automated gates back this up, and one of them runs whether you remember it
 or not.** `dos_port/tools/static_gate` is a whole-tree ratchet over a checked-in
