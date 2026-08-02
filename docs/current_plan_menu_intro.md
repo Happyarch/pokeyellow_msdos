@@ -7,20 +7,43 @@
 
 # Menu Intro + Full Boot Cinematic
 
-> **Gate — re-run the STRICT linter, every time (rule change 2026-07-25).**
-> `dos_port/tools/lint_pret_labels` on its own is NOT sufficient and never was.
-> It does not gate on `legacy_annotation`, `stale_provider`, `local_shadow` or
-> `hand_encoded_text` — only `dos_port/tools/lint_pret_labels --strict-claims`
-> reports those, and nothing runs it for you.
+> **Gate — the linter is MANDATORY. Rewritten 2026-08-02 against the tooling
+> that actually exists; the version this replaces predated `static_gate` and
+> told you "nothing runs it for you", which stopped being true on 2026-07-26.**
 >
-> For every commit made under this plan:
-> 1. Record the strict finding counts **before** you start, per class.
-> 2. Run **both** `lint_pret_labels` and `lint_pret_labels --strict-claims`
->    before committing.
-> 3. Compare per class. A class that grew is your regression to fix now, not
->    the next agent's to discover. Moving a routine between files silently
->    invalidates `extern` provider comments elsewhere in the tree, and that
->    collateral is visible **only** under `--strict-claims`.
+> **What runs automatically.** `dos_port/tools/static_gate` runs BOTH linter
+> modes plus `test_label_db.py` and `validate_scenarios.py`, and it is invoked
+> by `.githooks/pre-commit` (installed here: `core.hooksPath=.githooks`). It
+> fires whenever anything under `dos_port/` is staged. It is a per-class
+> RATCHET against a checked-in baseline: it fails a class that GREW.
+>
+> **What that does NOT mean.** A class sitting at baseline is not sanctioned —
+> it is unfixed debt that merely has not gotten worse. `dos_port/tools/lint_pret_labels`
+> **must exit 0**; measured 2026-08-02 it exits 1 with 14 `aux_misplaced`, and
+> `--strict-claims` adds 3 `hand_encoded_text` + 21 `local_shadow`. None of
+> those was ever approved by the maintainer. Do not cite "at baseline" as
+> permission to leave a class non-zero, and do not rewrite the rule to match
+> the breakage.
+>
+> **For every commit made under this plan:**
+> 1. Record the per-class counts from BOTH `lint_pret_labels` and
+>    `lint_pret_labels --strict-claims` **before** you start.
+> 2. Run both again before committing and compare per class. A class that grew
+>    is your regression to fix now, not the next agent's to discover. Moving a
+>    routine between files silently invalidates `extern` provider comments
+>    elsewhere in the tree — collateral visible **only** under `--strict-claims`.
+> 3. A green static gate proves **no structural or bookkeeping drift and nothing
+>    about behaviour.** If the change can move a pixel or a WRAM byte, run
+>    `make -C dos_port fidelity` (core) or `fidelity-full`, and add a must-hit
+>    scenario when no existing one can witness the change.
+>
+> **The allowlist is not yours to grow.** `dos_port/tools/pret_label_allowlist.json`
+> is hash-locked legacy debt, not precedent. New relocations are FORBIDDEN. An
+> agent may not add, expand or reinterpret it — including `structural_findings`
+> and `suppress` — to make its own work pass. **Any ADDITION requires explicit
+> maintainer sign-off and cannot be committed without it**; the pre-commit hook
+> refuses added keys outright and names them. If the linter says `mirror`, move
+> the complete routine to `dos_port/src/<pret path>` instead.
 >
 > Do not quote a finding count from this file, CLAUDE.md, AGENTS.md, a skill, or
 > a stigmergy memory as evidence that a class is clean — every one of those has
