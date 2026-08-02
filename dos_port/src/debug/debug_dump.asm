@@ -98,6 +98,13 @@ extern LoadTextBoxTilePatterns
 extern UseItem                  ; home/item.asm — the pret home wrapper for UseItem_
 global RunTMHMTest
 %endif
+%ifdef DEBUG_ITEMPP
+extern PrepareNewGameDebug
+extern LoadFontTilePatterns
+extern LoadTextBoxTilePatterns
+extern UseItem                  ; home/item.asm — the pret home wrapper for UseItem_
+global RunPPRestoreTest
+%endif
 %ifdef DEBUG_ITEMSTONE
 extern PrepareNewGameDebug
 extern LoadFontTilePatterns
@@ -999,6 +1006,57 @@ RunTMHMTest:
 %endif
     call UseItem
     call DebugDumpMemory                    ; DUMP.BIN (the windows: table below) + exit
+%endif
+
+%ifdef DEBUG_ITEMPP
+; ---------------------------------------------------------------------------
+; RunPPRestoreTest — items-plan Stage 11 PP-family gate. Seeds the party + bag,
+; drops the PP item under test into bag slot 0, drains one move's PP so the
+; restore has an observable effect, and drives the real UseItem dispatcher at it.
+; The bag UI is bypassed exactly as DEBUG_ITEMTM bypasses it: wCurItem = the item,
+; wWhichPokemon = its BAG SLOT (RemoveUsedItem removes by index). AUTOKEY_APRESS
+; answers the party menu, the move menu (wMoveMenuType = 2) and the messages.
+;
+; This is the only gate that reaches ItemUsePPRestore at all — `move_selection`
+; exercises the REGULAR battle move menu (wMoveMenuType = 0), never the type-2
+; item path, so no pre-existing scenario can witness this handler.
+;
+; Overrides: ITEMPP_ID (item id), ITEMPP_MON (party slot), ITEMPP_DRAIN (the PP
+; byte written into the target move slot before the item is used).
+; Never returns — DebugDumpMemory writes DUMP.BIN + GBSTATE.BIN and exits.
+; In: EBP = GB memory base.
+; ---------------------------------------------------------------------------
+%ifndef ITEMPP_ID
+%define ITEMPP_ID 0x50                  ; ETHER — +10 PP to the chosen move
+%endif
+%ifndef ITEMPP_MON
+%define ITEMPP_MON 0
+%endif
+%ifndef ITEMPP_DRAIN
+%define ITEMPP_DRAIN 1                  ; move slot 0 left with 1 PP, no PP-Up bits
+%endif
+RunPPRestoreTest:
+    mov byte [ebp + wPartyCount], 0
+    mov byte [ebp + wPartySpecies], 0xFF
+    mov byte [ebp + wNumBagItems], 0
+    mov byte [ebp + wBagItems], 0xFF
+    call PrepareNewGameDebug
+    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    call LoadFontTilePatterns
+    call LoadTextBoxTilePatterns
+    ; Bag slot 0 becomes the PP item under test (qty 1), so RemoveUsedItem's
+    ; consume decision is visible in wNumBagItems / the first pair.
+    mov byte [ebp + wBagItems + 0], ITEMPP_ID
+    mov byte [ebp + wBagItems + 1], 1
+    mov byte [ebp + wWhichPokemon], 0       ; the BAG slot, not the party slot
+    mov byte [ebp + wCurItem], ITEMPP_ID
+    ; Drain move slot 0's PP. Without this the mon is already at full PP and
+    ; .restorePP returns "no effect" — a real branch, but not the one under test.
+    ; The PP-Up bits are deliberately left clear so ETHER's +10 is unambiguous and
+    ; the Max-Ether BUG{} path is not entangled with this gate.
+    mov byte [ebp + wPartyMon1 + ITEMPP_MON * PARTYMON_STRUCT_LENGTH + MON_PP], ITEMPP_DRAIN
+    call UseItem
+    call DebugDumpMemory                    ; DUMP.BIN + GBSTATE.BIN, then exit
 %endif
 
 %ifdef DEBUG_TEXTBOXID

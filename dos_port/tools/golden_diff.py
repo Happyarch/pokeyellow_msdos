@@ -476,6 +476,14 @@ SCENARIOS = {
         "flags": "DEBUG_ITEMSTONE=1",
         "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
     },
+    "item_pp_restore": {
+        # ETHER used on party mon 0's move slot 0 (pre-drained to 1 PP) through the
+        # real UseItem dispatcher: party menu -> type-2 move menu -> +10 PP ->
+        # item consumed. The only scenario that reaches ItemUsePPRestore at all.
+        "class": "datastruct",
+        "flags": "DEBUG_ITEMPP=1",
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
+    },
     "route3_sight": {"class": "datastruct",
                        "flags": "DEBUG_MAPSCRIPT_SIGHT_R3=1",
                        **_MAP_SIGHT_COMMON},

@@ -144,7 +144,14 @@ HYPER_POTION            equ 0x12
 FULL_HEAL               equ 0x34
 REVIVE                  equ 0x35
 MAX_REVIVE              equ 0x36
+; The PP family is a contiguous run in pret constants/item_constants.asm — the
+; adjacency is load-bearing: ItemUsePPRestore's .useElixir decrements the item id
+; TWICE so ELIXER becomes ETHER and MAX_ELIXER becomes MAX_ETHER.
+PP_UP                   equ 0x4F
+ETHER                   equ 0x50
 MAX_ETHER               equ 0x51
+ELIXER                  equ 0x52
+MAX_ELIXER              equ 0x53
 
 ; --- move PP byte fields (constants/battle_constants.asm) ---
 PP_UP_MASK              equ 0xC0    ; %11000000, PP Ups applied

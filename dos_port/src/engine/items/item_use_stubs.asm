@@ -13,8 +13,8 @@
 ;
 ;   (the Repel family + ItemUseEscapeRope landed in item_effects.asm — stubs retired.
 ;    Escape Rope needed HandleFlyWarpOrDungeonWarp, ported 2026-07-13 — blocker B1 cleared.)
-; TODO(items-plan Stage 11): ItemUseSurfboard / ItemUsePPUp /
-;                            ItemUsePPRestore
+;   (ItemUsePPUp / ItemUsePPRestore landed in item_effects.asm 2026-08-02 —
+;    items-plan Stage 11 PP family; stubs retired.)
 ;   (Bicycle / CoinCase / OaksParcel / Pokedex / PokeFlute / CardKey landed in
 ;    item_effects.asm — stubs retired)
 ;   (ItemUseItemfinder landed in item_effects.asm 2026-07-16 — overworld-events
@@ -36,13 +36,9 @@ global ItemUseSurfboard
 global ItemUseOldRod
 global ItemUseGoodRod
 global ItemUseSuperRod
-global ItemUsePPUp
-global ItemUsePPRestore
 
 ItemUseSurfboard:
 ItemUseOldRod:
 ItemUseGoodRod:
 ItemUseSuperRod:
-ItemUsePPUp:
-ItemUsePPRestore:
     ret

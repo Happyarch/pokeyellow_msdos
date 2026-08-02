@@ -167,6 +167,7 @@ extern RunPCTest                          ; src/engine/menus/pc.asm
 extern RunPartyMenuTest                   ; src/debug/debug_dump.asm
 extern RunPlayersPCTest                   ; src/engine/menus/players_pc.asm
 extern RunPokedexEntryTest                ; src/engine/menus/pokedex.asm
+extern RunPPRestoreTest                   ; src/debug/debug_dump.asm
 extern RunPokedexTest                     ; src/engine/menus/pokedex.asm
 extern RunSavePerfTest                    ; src/engine/menus/save.asm (DEBUG_SAVEPERF)
 extern RunSaveTest                        ; src/engine/menus/save.asm
@@ -576,6 +577,9 @@ EnterMap:
 %endif
 %ifdef DEBUG_ITEMTM
     call RunTMHMTest
+%endif
+%ifdef DEBUG_ITEMPP
+    call RunPPRestoreTest                  ; items-plan Stage 11: use a PP item, dump, exit
 %endif
 %ifdef DEBUG_ITEMSTONE
     call RunStoneTest                       ; items-plan Stage 8: use a stone, dump, exit

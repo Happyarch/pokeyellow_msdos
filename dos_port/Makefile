@@ -797,6 +797,31 @@ endif
 AUTOKEY_DUMP_FRAME ?= 999999
 NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 endif
+
+# PP-family gate (items-plan Stage 11): seeded party + bag, RunPPRestoreTest drains
+# one move's PP and drives the real UseItem dispatcher at a PP item, so
+# ItemUsePPRestore runs its party menu -> type-2 move menu -> restore -> consume
+# chain. AUTOKEY_APRESS answers both menus and every message.
+# make DEBUG_ITEMPP=1 [ITEMPP_ID=0x51 ITEMPP_MON=0 ITEMPP_DRAIN=1]
+ifdef DEBUG_ITEMPP
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_ITEMPP -D DEBUG_SEED_PARTY -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_APRESS
+ifdef ITEMPP_ID
+NASMFLAGS += -D ITEMPP_ID=$(ITEMPP_ID)
+endif
+ifdef ITEMPP_MON
+NASMFLAGS += -D ITEMPP_MON=$(ITEMPP_MON)
+endif
+ifdef ITEMPP_DRAIN
+NASMFLAGS += -D ITEMPP_DRAIN=$(ITEMPP_DRAIN)
+endif
+# Same reason as DEBUG_ITEMTM above: AutoKeyDrive's own FRAME.BIN dump exits the
+# program, so it must stay clear of this gate's DebugDumpMemory capture.
+AUTOKEY_DUMP_FRAME ?= 999999
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
+
 # Bill's-PC box-behaviour gate (sram plan stage 6): seeded party, RunBillsPCTest
 # opens BillsPC_ directly as a generic-PC guest, and the AUTOKEY_BILLSPC script
 # drives deposit(PERSIAN) → deposit(JIGGLYPUFF) → withdraw(PERSIAN) →

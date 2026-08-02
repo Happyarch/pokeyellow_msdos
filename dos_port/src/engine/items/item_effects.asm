@@ -7,7 +7,6 @@
 ; pointer and amount; we return CF for had-effect / no-effect.
 ;
 ;   WakeUpEntireParty  — Poke Flute: clear SLP for every party mon, flag wakes.
-;   RestorePPAmount    — Ether/Max Ether/Elixer: raise a move's current PP.
 ;   ApplyHealingItem   — Potion/Revive family: add HP, clamp to (half) max HP.
 ;   CureStatusAilment  — Antidote/.../Full Heal: clear a status flag if present.
 ;   ApplyVitamin       — HP Up/.../Calcium: add 2560 stat exp (capped at 25600).
@@ -33,7 +32,6 @@ bits 32
 %include "events.inc"                   ; CheckEvent over W_EVENT_FLAGS
 
 global WakeUpEntireParty
-global RestorePPAmount
 global ApplyHealingItem
 global CureStatusAilment
 global ApplyVitamin
@@ -76,45 +74,12 @@ WakeUpEntireParty:
     jnz .loop
     ret
 
-; ---------------------------------------------------------------------------
-; RestorePPAmount — restore PP of one move (Ether/Max Ether/Elixer/Max Elixer).
-; In:  ESI (hl)        = the move's PP byte
-;      [wMaxPP]        = the move's max PP
-;      [wPPRestoreItem] = item id (MAX_ETHER fully restores)
-; Faithfully reproduces the original Max-Ether/Max-Elixer bug: the full-restore
-; path doesn't mask the PP-Up bits, so a maxed-PP move with PP Ups applied is
-; not detected as "no effect".
-; ---------------------------------------------------------------------------
-RestorePPAmount:
-    mov al, [ebp + wMaxPP]
-    mov bl, al                       ; b (here bl) = max PP
-    mov al, [ebp + wPPRestoreItem]
-    cmp al, MAX_ETHER
-    jz .fullyRestorePP
-
-    mov al, [ebp + esi]
-    and al, PP_MASK
-    cmp al, bl                       ; already at max PP?
-    jz .ret
-    add al, 10                       ; +10 PP
-    cmp al, bl                       ; meets/exceeds max?
-    jnc .storeNewAmount              ; if so leave bl = max
-    mov bl, al                       ; else new amount is the cap
-.storeNewAmount:
-    mov al, [ebp + esi]
-    and al, PP_UP_MASK               ; keep the PP-Up bits
-    add al, bl
-    mov [ebp + esi], al
-.ret:
-    ret
-
-.fullyRestorePP:
-    ; BUG{class=data-model; pret=engine/items/item_effects.asm:ItemUsePPRestore; behavior=Max Ether and Max Elixer no-effect detection compares PP-Up bits as PP; evidence=pret .fullyRestorePP source comment and unmasked compare; lifetime=permanent Gen-1 behavior}
-    ; The upper two PP-Up bits are not masked here (pret behavior).
-    mov al, [ebp + esi]
-    cmp al, bl
-    jz .ret
-    jmp .storeNewAmount
+; RestorePPAmount was here: a port-only forked partial of pret's
+; ItemUsePPRestore.restorePP, written during the Stage-3 effect-core pass when the
+; handler itself was a ret-stub. It never acquired a caller. The faithful body
+; landed 2026-08-02 as ItemUsePPRestore.restorePP further down this file (with the
+; Max Ether/Max Elixer BUG{} annotation and the pret register map — pret's `b` is
+; BH, not the BL this used), so the fork is deleted rather than left to shadow it.
 
 ; ---------------------------------------------------------------------------
 ; ApplyHealingItem — add HP to a mon and clamp to its max HP (potions/revives).
@@ -816,8 +781,8 @@ extern ItemUseSurfboard
 extern ItemUseOldRod
 extern ItemUseGoodRod
 extern ItemUseSuperRod
-extern ItemUsePPUp
-extern ItemUsePPRestore
+; (ItemUsePPUp / ItemUsePPRestore left this list 2026-08-02 — real bodies now sit
+;  lower in this file, so an extern here would collide with their `global`.)
 
 section .data
 align 4
@@ -2294,6 +2259,249 @@ section .data
 iu_ball_emptyString: db 0x50
 
 section .text
+
+; === ItemUsePPUp / ItemUsePPRestore — the PP family (items-plan Stage 11) ===
+;
+; Source: engine/items/item_effects.asm:2170-2390 (pret) — ItemUsePPUp falls
+; through into ItemUsePPRestore, which serves PP_UP, ETHER, MAX_ETHER, ELIXER and
+; MAX_ELIXER off one body, discriminating on [wPPRestoreItem].
+;
+; PORT DEVIATIONS (this block; the file's earlier ones still apply)
+; 12. `callfar MoveSelectionMenu` → a flat `call` (no bank dispatch), as with every
+;     other callfar in this file. The port's MoveSelectionMenu keeps pret's
+;     contract: ZF=1 if a move was chosen, ZF=0 if the player backed out.
+; 13. Text goes through iu_print_text (the item layer's overworld printer), taking
+;     the flat stream pointer out of each generated <Label>_ref pair rather than
+;     pret's `ld hl, Label`. Same choice as ItemUseTMHM, which is the closest
+;     analogue: both print while the party menu owns the screen.
+; 14. pret's GetMoveName publishes `de = wNameBuffer` and preserves `hl`; the port's
+;     is a tail `jmp GetName` that does neither, so CopyToStringBuffer's EDX is set
+;     at the call site (as ItemUseTMHM already does). ESI is protected by pret's own
+;     push/pop around the same span, so no extra save is needed.
+;
+; FLAG-PRESERVATION NOTE, load-bearing: pret writes `ld a, 0` (not `xor a`) into
+; wPlayerMoveListIndex after MoveSelectionMenu precisely so the menu's Z flag
+; survives to the `jr nz, .chooseMon` two instructions later. The port's
+; `mov byte [..], 0` is the faithful equivalent — x86 `mov` sets no flags. Do not
+; "simplify" it to `xor`/`and`, which would clobber ZF and strand the player in the
+; move menu.
+;
+; wUsingPPUp / wMaxPP / wNamedObjectIndex are all $D11D — one union byte, exactly as
+; in pret's wram.asm. Storing the move id for GetMoveName and later storing the
+; "1 PP Up used" marker use the same address at different times, on purpose.
+
+extern DisplayPartyMenu             ; home/pokemon.asm — CF = 1 → player canceled
+extern MoveSelectionMenu            ; engine/battle/core.asm (callfar) — ZF = move chosen
+extern GetMoveName                  ; home/names.asm — [wNamedObjectIndex] → wNameBuffer
+extern CopyToStringBuffer           ; home/copy_string.asm — EDX = src
+extern RunDefaultPaletteCommand     ; home/palettes.asm
+extern GBPalWhiteOut                ; home/palettes.asm
+extern RaisePPWhichTechniqueText_ref     ; assets/item_text.inc
+extern RestorePPWhichTechniqueText_ref   ; assets/item_text.inc
+extern PPMaxedOutText_ref                ; assets/item_text.inc
+extern PPIncreasedText_ref               ; assets/item_text.inc
+extern PPRestoredText_ref                ; assets/item_text.inc
+
+global ItemUsePPUp
+global ItemUsePPRestore
+
+ItemUsePPUp:
+    mov al, [ebp + wIsInBattle]
+    and al, al
+    jnz ItemUseNotTime                  ; jp nz — PP Ups are field-only
+    ; falls through into ItemUsePPRestore, as in pret
+
+ItemUsePPRestore:
+    movzx eax, byte [ebp + wWhichPokemon]
+    push eax                            ; push af — the BAG list index
+    mov al, [ebp + wCurItem]
+    mov [ebp + wPPRestoreItem], al
+.chooseMon:
+    mov byte [ebp + wUpdateSpritesEnabled], 0       ; xor a / ld [..], a
+    mov byte [ebp + wPartyMenuTypeOrMessageID], USE_ITEM_PARTY_MENU
+    call DisplayPartyMenu
+    jnc .chooseMove                     ; jr nc
+    jmp .itemNotUsed                    ; jp
+
+.chooseMove:
+    mov al, [ebp + wIsInBattle]
+    and al, al
+    jz .usePPItem
+    mov al, [ebp + wWhichPokemon]
+    mov bh, al                          ; ld b, a
+    mov al, [ebp + wPlayerMonNumber]
+    cmp al, bh
+    jne .usePPItem
+    mov al, [ebp + wPlayerBattleStatus3]
+    test al, 1 << TRANSFORMED
+    jz .usePPItem
+    call ItemUseNotTime                 ; a Transformed mon's moves aren't its own
+    jmp .itemNotUsed
+
+.usePPItem:
+    mov al, [ebp + wPPRestoreItem]
+    cmp al, ELIXER
+    jae .useElixir                      ; jp nc — Elixer or Max Elixer
+    mov byte [ebp + wMoveMenuType], 0x02        ; the relearn/PP-item move menu
+    mov esi, [RaisePPWhichTechniqueText_ref]
+    mov al, [ebp + wPPRestoreItem]
+    cmp al, ETHER                       ; is it a PP Up?
+    jb .printWhichTechniqueMessage      ; jr c — if so, print the "raise PP" message
+    mov esi, [RestorePPWhichTechniqueText_ref]  ; otherwise the "restore PP" one
+.printWhichTechniqueMessage:
+    call iu_print_text                  ; call PrintText
+    mov byte [ebp + wPlayerMoveListIndex], 0    ; xor a / ld [..], a
+    call MoveSelectionMenu              ; callfar — ZF = 1 → a move was chosen
+    mov byte [ebp + wPlayerMoveListIndex], 0    ; pret `ld a, 0`: flag-preserving
+    jnz .chooseMon                      ; jr nz — backed out of the move menu
+    mov esi, wPartyMon1Moves
+    mov bx, PARTYMON_STRUCT_LENGTH
+    call GetSelectedMoveOffset
+    push esi                            ; push hl
+    mov al, [ebp + esi]                 ; the selected move's id
+    mov [ebp + wNamedObjectIndex], al
+    call GetMoveName
+    mov edx, wNameBuffer                ; port: GetMoveName does not publish DE
+    call CopyToStringBuffer
+    pop esi                             ; pop hl
+    mov al, [ebp + wPPRestoreItem]
+    cmp al, ETHER
+    jae .useEther                       ; jr nc — Ether or Max Ether
+
+; use PP Up
+    add esi, MON_PP - MON_MOVES         ; ld bc, MON_PP - MON_MOVES / add hl, bc
+    mov al, [ebp + esi]                 ; move PP
+    cmp al, 3 << 6                      ; have 3 PP Ups already been used?
+    jb .PPNotMaxedOut                   ; jr c
+    mov esi, [PPMaxedOutText_ref]
+    call iu_print_text
+    jmp .chooseMove
+
+.PPNotMaxedOut:
+    mov al, [ebp + esi]
+    add al, 1 << 6                      ; increase the PP Up count by 1
+    mov [ebp + esi], al
+    mov byte [ebp + wUsingPPUp], 1      ; 1 PP Up used
+    call RestoreBonusPP                 ; add the bonus PP to current PP
+    mov al, SFX_HEAL_AILMENT
+    call PlaySound
+    mov esi, [PPIncreasedText_ref]
+    call iu_print_text
+.done:
+    pop eax                             ; pop af
+    mov [ebp + wWhichPokemon], al       ; restore the BAG list index
+    call GBPalWhiteOut
+    call RunDefaultPaletteCommand
+    jmp RemoveUsedItem                  ; jp RemoveUsedItem
+
+.afterRestoringPP:                      ; after using a (Max) Ether/Elixir
+    mov al, [ebp + wWhichPokemon]
+    mov bh, al                          ; ld b, a
+    mov al, [ebp + wPlayerMonNumber]
+    cmp al, bh                          ; is that mon the one active in battle?
+    jne .skipUpdatingInBattleData
+    mov esi, wPartyMon1PP
+    mov bx, PARTYMON_STRUCT_LENGTH      ; clobbers BH, as pret's `ld bc` clobbers b —
+    call AddNTimes                      ; AL still holds the party index for AddNTimes
+    mov edx, wBattleMonPP
+    mov bx, NUM_MOVES
+    call CopyData                       ; copy party data to in-battle data
+.skipUpdatingInBattleData:
+    mov al, SFX_HEAL_AILMENT
+    call PlaySound
+    mov esi, [PPRestoredText_ref]
+    call iu_print_text
+    jmp .done                           ; jr .done
+
+.useEther:
+    call .restorePP
+    jnz .afterRestoringPP               ; jr nz — some PP was restored
+    jmp .noEffect                       ; jp
+
+; ---------------------------------------------------------------------------
+; .restorePP — unsets ZF if PP was restored, sets ZF if not.
+; The returned ZF comes from the `cmp`s below and from the final `add al, bh`;
+; `mov [ebp + esi], al` sets no flags, exactly as pret's `ld [hl], a` does not.
+; ---------------------------------------------------------------------------
+.restorePP:
+    mov byte [ebp + wMonDataLocation], 0        ; xor a — PLAYER_PARTY_DATA
+    call GetMaxPP
+    mov esi, wPartyMon1Moves
+    mov bx, PARTYMON_STRUCT_LENGTH
+    call GetSelectedMoveOffset
+    add esi, MON_PP - MON_MOVES         ; ESI now points at the move's PP byte
+    mov al, [ebp + wMaxPP]
+    mov bh, al                          ; ld b, a
+    mov al, [ebp + wPPRestoreItem]
+    cmp al, MAX_ETHER
+    je .fullyRestorePP                  ; jr z
+    mov al, [ebp + esi]                 ; move PP
+    and al, PP_MASK
+    cmp al, bh                          ; does current PP equal max PP?
+    jz .restorePPDone                   ; ret z — if so, return
+    add al, 10                          ; increase current PP by 10
+; BH holds the max PP amount and will hold the new PP amount. If the new amount
+; meets or exceeds the max, cap it by leaving BH unchanged; otherwise store the
+; new amount in BH.
+    cmp al, bh                          ; does the new amount meet or exceed the max?
+    jae .storeNewAmount                 ; jr nc
+    mov bh, al
+.storeNewAmount:
+    mov al, [ebp + esi]                 ; move PP
+    and al, PP_UP_MASK
+    add al, bh
+    mov [ebp + esi], al
+.restorePPDone:
+    ret
+
+; BUG{class=data-model; pret=engine/items/item_effects.asm:ItemUsePPRestore; behavior=Max Ether and Max Elixer do not mask the PP-Up count bits before comparing current PP against max PP, so a move that has had any PP Up used on it is never detected as already at full PP and the item is consumed for no effect; evidence=pret .fullyRestorePP reads the raw PP byte where every other path masks with PP_MASK, and its own source comment names the missing mask; lifetime=permanent Gen-1 behavior unless BUG_FIX_LEVEL >= 2}
+.fullyRestorePP:
+    mov al, [ebp + esi]                 ; move PP
+%if BUG_FIX_LEVEL >= 2
+    and al, PP_MASK                     ; drop the PP-Up count bits before comparing
+%endif
+    cmp al, bh                          ; does current PP equal max PP?
+    jz .restorePPDone                   ; ret z
+    jmp .storeNewAmount                 ; jr .storeNewAmount
+
+.useElixir:
+; decrement the item id twice so ELIXER becomes ETHER and MAX_ELIXER becomes MAX_ETHER
+    dec byte [ebp + wPPRestoreItem]
+    dec byte [ebp + wPPRestoreItem]
+    ; pret: `ld hl, wCurrentMenuItem / ld [hli], a / ld [hl], a` — wCurrentMenuItem
+    ; and wTileBehindCursor are adjacent ($CC26/$CC27), so this zeroes both: the
+    ; move index and the counter of moves that had their PP restored.
+    mov byte [ebp + wCurrentMenuItem], 0
+    mov byte [ebp + wTileBehindCursor], 0
+    mov bh, 4                           ; ld b, 4
+; loop through each move and restore PP
+.elixirLoop:
+    push ebx                            ; push bc
+    mov esi, wPartyMon1Moves
+    mov bx, PARTYMON_STRUCT_LENGTH
+    call GetSelectedMoveOffset
+    mov al, [ebp + esi]
+    and al, al                          ; does the current slot have a move?
+    jz .nextMove
+    call .restorePP
+    jz .nextMove
+    inc byte [ebp + wTileBehindCursor]  ; some PP was restored
+.nextMove:
+    inc byte [ebp + wCurrentMenuItem]
+    pop ebx                             ; pop bc
+    dec bh
+    jnz .elixirLoop
+    mov al, [ebp + wTileBehindCursor]
+    and al, al                          ; did any moves have their PP restored?
+    jnz .afterRestoringPP               ; jp nz
+.noEffect:
+    call ItemUseNoEffect
+.itemNotUsed:
+    call GBPalWhiteOut
+    call RunDefaultPaletteCommand
+    pop eax                             ; pop af — discard the saved BAG index
+    mov byte [ebp + wActionResultOrTookBattleTurn], 0   ; xor a — item use failed
+    ret
 
 ; === ItemUseTMHM — teaching a TM/HM (items-plan Stage 7) ====================
 ;
