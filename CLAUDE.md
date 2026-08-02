@@ -245,10 +245,20 @@ object binary, and the sprite-set TILE loading is the separate
 and runs `PrintText` with per-character reveal and multi-page scroll; player-NPC
 collision is enforced by `IsNPCAtTargetBlock` in `CollisionCheckOnLand`; NPC
 wall-blocking uses MAPY/MAPX-based tile lookup in `GetTileSpriteStandsOn`.
-Open Phase 2 items: scripted NPC movement, trainer battle engine, random encounter
-trigger, battle engine. Battle fidelity specifically is tracked in
-`docs/archive/battle_audit_findings.md` (it was archived; the old root-level path
-this line used to give had been dangling).
+**Open Phase 2 items are NOT enumerated here — query them** (rule adopted
+2026-08-02). This paragraph used to list "scripted NPC movement, trainer battle
+engine, random encounter trigger, battle engine"; by 2026-08-02 scripted NPC
+movement was done, wild encounters and the wild battle were live, and trainer
+battles were coded-but-gated — so every item on it was wrong in a different
+direction. A hand-kept open-items list in the always-loaded file is exactly the
+failure mode that killed `TODO.md`. Run `dos_port/tools/project_state --plans`
+for the plan inventory and read the owning `docs/current_plan_*.md`; use
+`dos_port/tools/label_status --callers` and the dependency graph for what is
+actually linked and reached. Battle fidelity has an archived audit at
+`docs/archive/battle_audit_findings.md` — historical, and its Tier-4 claims are
+known stale (it calls trainer-AI move selection dead code when it is linked and
+live, and `ReadTrainer` prize money missing when `AddBCD` awards it in
+`faint_sendout.asm`).
 
 `render_bg` (`src/ppu/ppu.asm`) is a **native-width surface renderer**: it decodes
 tile IDs into a 48×36-tile (384×288 px) surface using the existing `tile_cache`
@@ -403,8 +413,18 @@ generator pattern → skill **`project-conventions`**.
 
 Any change touching a pret-labeled routine must pass the fidelity gate before
 commit: `dos_port/tools/faithdiff <Label>` (justify every unsuppressed
-added/dropped call in the commit message) and `dos_port/tools/lint_pret_labels`
-(must exit 0). Workflow + tools → skill **`faithfulness-review`**.
+added/dropped call in the commit message) and `dos_port/tools/lint_pret_labels`.
+Workflow + tools → skill **`faithfulness-review`**.
+
+**`lint_pret_labels` does NOT currently exit 0, and that is expected — do not
+"fix" it.** This rule used to demand exit 0; corrected 2026-08-02. The tree
+carries baselined pre-existing debt (measured 2026-08-02: 14 `aux_misplaced`
+plain, and under `--strict-claims` a further 3 `hand_encoded_text` + 21
+`local_shadow`), so the linter exits 1 on a perfectly healthy tree. **The gate
+you must not regress is `dos_port/tools/static_gate`**, which ratchets each
+class against a checked-in baseline and exits 0 only when nothing grew. Read
+the linter per class, compare to baseline, and never quote these counts as
+current — re-measure.
 
 **Two automated gates back this up, and one of them runs whether you remember it
 or not.** `dos_port/tools/static_gate` is a whole-tree ratchet over a checked-in

@@ -226,10 +226,16 @@ against the generator on **2026-07-26**; entries marked *COMPLETE & archived*
 are history kept for their lessons. When this section and the generator disagree
 about existence, the generator wins and this section is the bug.
 
-Plans that exist today and have **no entry below** — go to the files themselves:
-`docs/current_plan_battle_completion.md`, `docs/current_plan_bug_tagging.md`,
-`docs/current_plan_doc_staleness.md`, `docs/current_plan_menu_intro.md`,
-`docs/current_plan_overworld_events.md`.
+**A plan with no entry below is normal — go to the file itself.** There is
+deliberately no list of those here: one used to sit at this spot and it drifted
+within days (it named five plans and had already lost
+`docs/current_plan_predef_text.md` entirely by 2026-08-02). Deleted under the
+generated-is-authoritative rule adopted 2026-08-02. To find a plan that has no
+narrative entry, diff the generator's output against the headings below:
+
+```
+dos_port/tools/project_state --plans
+```
 - **Fidelity-harness expansion — COMPLETE & archived** at
   `docs/plans/fidelity_expansion.md` (2026-07-15). It expanded the golden harness from the
   original rendered-screen tier into GBSTATE v2 WRAM datastruct comparison, streamed text,

@@ -134,7 +134,7 @@ sidesteps this with a **port-only flat side channel** — `w_map_text_table_ptr`
 flat `{dd stream, dd size}` rows — which is exactly the shape the predef path
 needs.
 
-### Option A (recommended) — give the predef path its own flat table
+### Option A — give the predef path its own flat table  ✅ **CHOSEN (maintainer, 2026-08-02)**
 
 Mirror what the ordinary map path already does, as a
 `DEVIATION{class=projection; ...}`:
@@ -150,21 +150,33 @@ Mirror what the ordinary map path already does, as a
 Cost: touches `DisplayTextID`, which is live and golden-covered. Needs the full
 fidelity suite plus a new must-hit scenario for a predef text.
 
-### Option B — keep it faithful, copy streams into GB space
+### Option B — keep it faithful, copy streams into GB space  ❌ **REJECTED (maintainer, 2026-08-02)**
 
-Rejected unless someone finds a reason: there is no ROM-ish region in the port's
-GB map to hold 51 streams, and it would mean a runtime copy for every predef
-text.
+Rejected: there is no ROM-ish region in the port's GB map to hold 51 streams,
+and it would mean a runtime copy for every predef text. Do not revisit without
+new evidence that changes one of those two facts.
 
 ### Prerequisite either way
 
 The 14 `text_asm` labels and 3 `script_*` markers still need Tier-2 bodies (or
 documented `STUB{}`s in the owning subsystem) before the table is complete.
-`OpenBillsPCText` / `BillsHousePokemonList` / `BillsHouseInitiatedText` are
-gated behind the unported Bill's PC menu UI — a tracked deferred tail in
-`docs/plans/pokemon_behavior.md` — and are the natural stub group.
 
-- [ ] Decide Option A vs B (maintainer call — it changes a live home routine).
+**Re-measured 2026-08-02:** this paragraph used to call `OpenBillsPCText` /
+`BillsHousePokemonList` / `BillsHouseInitiatedText` "gated behind the unported
+Bill's PC menu UI" and name them the natural stub group. **That is no longer
+true** — the faithful Bill's PC box UI landed 2026-07-31
+(`a2ea6550..0c9afce5`), lives at `src/engine/pokemon/bills_pc.asm`, and is
+golden-gated by `bills_pc_ops` (id 37) and `box_change_roundtrip` (id 38).
+Those three entries are therefore portable now, not stub candidates. Re-derive
+the real stub group from generated state before writing any `STUB{}`.
+
+- [x] Decide Option A vs B (maintainer call — it changes a live home routine).
+      **DECIDED 2026-08-02: Option A**, the flat side-table mirroring the
+      `w_map_text_table_ptr` precedent. Option B is rejected and closed.
+      Acceptance for the `DisplayTextID` edit: full fidelity suite green **plus**
+      a new must-hit scenario covering a predef text — the suite as it stands
+      (37/37, measured 2026-08-02) does not exercise this path, so a green run
+      without that new scenario proves nothing about the change.
 - [ ] Port or stub the 14 `text_asm` + 3 `script_*` entries.
 - [ ] Build the 68-entry `TextPredefs` table in `src/home/predef_text.asm`.
 - [ ] Promote `predef_text.asm` out of `HOME_CHECK_SRCS`; promote

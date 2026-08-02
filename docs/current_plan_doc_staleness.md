@@ -66,12 +66,26 @@ backlog file.
   to `docs/current_plan_backlog.md`.** The "Known Regressions" log section went
   with it; nothing has re-homed it, so if a regression log is still wanted that
   is a live open question.
-- **CLAUDE.md "Current Phase":** rewrite now to match reality, and should it
-  keep enumerating open items at all (vs pointing at `current_plan_*.md` and a
-  slimmed TODO)?
-- **project-conventions skill active-plans list:** update in place, or stop
-  maintaining a duplicate list in the skill entirely (scan
-  `docs/current_plan_*.md` being the convention already)?
+- ~~**CLAUDE.md "Current Phase":** rewrite now to match reality, and should it
+  keep enumerating open items at all?~~ **ANSWERED 2026-08-02: stop
+  enumerating.** The open-items sentence is replaced (in both CLAUDE.md and
+  AGENTS.md) by a pointer at `project_state --plans` + `label_status
+  --callers`, with a note recording that all four items on the old list were
+  wrong in different directions. The technical prose around it — MAP_BORDER,
+  the two out-of-map clamps, the OBJ/window Z-order inversion — **stays**: it
+  is context no generator produces.
+- ~~**project-conventions skill active-plans list:** update in place, or stop
+  maintaining a duplicate?~~ **ANSWERED 2026-08-02: stop.** The "plans with no
+  entry below" list is deleted; the section keeps only per-plan narrative and
+  defers existence questions to the generator. It had already lost
+  `current_plan_predef_text.md`, which appeared in neither the list nor the
+  entries — measured 2026-08-02.
+
+**Governing rule adopted 2026-08-02 (applies beyond the rows above):** where
+the tooling can generate an inventory, agent-facing docs point at the generator
+instead of duplicating it. Every confirmed row in the table above is an
+instance of the same failure — a hand-maintained duplicate of something
+derivable. When fixing a row, prefer deleting the duplicate over correcting it.
 - **Archived docs** (`battle_audit_findings.md` Tier-4 claims): add a
   "superseded — see X" banner at the top, annotate the specific rows, or leave
   archives frozen as historical record?

@@ -12,9 +12,13 @@
 from PR #2 (external agent); stage 5 (the `.dsv` v2 disk boundary) landed with
 the merge; stage 8 (real-save seeding) 2026-07-28; stage 6 finished across the
 Bill's PC sweep C1-C5 (a2ea6550, be175e0d, 0c9afce5, 6a3f76c4, c0b34720) and
-stage 7's profiling + trade decisions in C6 (052fe406). The one open flag left
-behind: the torn-write-guard acceptance under stage 7 awaits maintainer
-sign-off (durability call, alternative priced at ~8.7 ms/save).
+stage 7's profiling + trade decisions in C6 (052fe406).
+
+**The last open flag is now resolved, and it resolved AGAINST the recorded
+acceptance.** The torn-write guard went to the maintainer on 2026-08-02 and the
+verdict is **IMPLEMENT THE GUARD** — write-temp + atomic rename, at the measured
+~8.7 ms/save. See "Stage 7 — torn-write guard" below. This plan stays archived;
+the guard is tracked as new work, not as a reopened stage.
 
 **A pre-existing harness hazard was closed on the way** (it had to be, before any
 save-reading scenario could be trusted): `goldencheck.sh` purged `GBSTATE.BIN`,
@@ -235,15 +239,39 @@ period HDD that is a full-image write per save.
       below the full-image pass. Incremental per-bank checksums (the only way
       out) would have to stay correct against every SRAM write in the tree —
       rejected as large, easy to desync, and bounded by a few ms. Closed.
-- [x] Torn-write guard — **verdict recorded (C6): torn write is DETECTABLE
-      (header checksum fails → `SramLoadImage` corrupt-save branch = reads as
-      a fresh cartridge) but NOT RECOVERABLE; accepted as-is.** The measured
-      price of the write-temp + rename alternative ≈ one extra (c)+(d) ≈
-      8.7 ms/save (disk-bound, cycle-invariant) plus a rename INT 21h call
-      that exists nowhere in the port today. ⚠ FLAGGED FOR MAINTAINER
-      SIGN-OFF: this is a durability call, not an efficiency one — the
-      measurement only priced the alternative; the acceptance is the
-      maintainer's to overturn.
+- [x] Torn-write guard — **C6 recorded "accepted as-is"; the maintainer
+      OVERTURNED that on 2026-08-02. The guard is APPROVED for implementation.**
+
+      What C6 measured, and it still stands: a torn write is DETECTABLE (header
+      checksum fails → `SramLoadImage` corrupt-save branch) but NOT RECOVERABLE
+      — the save reads as a fresh cartridge, so an interrupted write silently
+      destroys the playthrough with no message. The write-temp + rename
+      alternative costs ≈ one extra (c)+(d) ≈ 8.7 ms/save (disk-bound,
+      cycle-invariant) plus a rename INT 21h call that exists nowhere in the
+      port today.
+
+      **Decision (maintainer, 2026-08-02): pay the 8.7 ms.** Silent loss of a
+      playthrough is not an acceptable failure mode even though the real
+      cartridge has no guard either — this is a deliberate divergence in the
+      player's favour and must carry a `DEVIATION{class=HAL; ...}` recording
+      that pret/hardware has no counterpart.
+
+      Implementation notes for whoever takes it:
+      - `SramStoreImage` (`src/save/dsv_io.asm`) writes to a temp name, then
+        renames over `POKEMON.DSV`. INT 21h `AH=56h` (RENAME) is the new DOS
+        surface; nothing in the port calls it today, so it needs the same
+        error-path treatment as the existing create/write calls.
+      - `g_sram_store_failed` already records store outcome and is deliberately
+        NOT surfaced to the player. **That stays true** — the maintainer chose
+        the guard alone, explicitly NOT the "tell the player" variant, because
+        failure UI would mean inventing a screen and a generated text asset
+        with no pret counterpart.
+      - Acceptance: the existing save goldens (`save_real_load` 35,
+        `save_boxes_load` 36, `bills_pc_ops` 37, `box_change_roundtrip` 38)
+        must stay green, **and** the interrupted-write case needs its own
+        coverage — none of those four exercise a torn write, so they cannot
+        witness this change. A green suite without new coverage proves only
+        that the guard did not break the happy path.
 
 ### Stage 8 — real-save seeding  *(maintainers)*  — DONE
 
