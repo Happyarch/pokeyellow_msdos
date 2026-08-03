@@ -10,16 +10,7 @@
   ],
   "structural_findings": {},
   "relocated_files": {},
-  "relocated_labels": {
-    "RestoreMapTextPointer": {
-      "port_file": "dos_port/src/home/map_text_pointer.asm",
-      "why": "Scanner-reviewed 2026-07-15: RestoreMapTextPointer from pret home/predef_text.asm has its selected single non-stub definition at dos_port/src/home/map_text_pointer.asm; preserve this per-label split."
-    },
-    "SetMapTextPointer": {
-      "port_file": "dos_port/src/home/map_text_pointer.asm",
-      "why": "Scanner-reviewed 2026-07-15: SetMapTextPointer from pret home/predef_text.asm has its selected single non-stub definition at dos_port/src/home/map_text_pointer.asm; preserve this per-label split."
-    }
-  },
+  "relocated_labels": {},
   "suppress": [
     {
       "rule": "non_ret_stub",
