@@ -48,8 +48,16 @@
 Goal: link `dos_port/src/home/predef_text.asm`, the last file the relocation
 grind left blocked (stigmergy `relocated-labels-grind`), and with it retire the
 final two `pret_label_allowlist.json` relocation rows
-(`SetMapTextPointer` / `RestoreMapTextPointer`, currently split out into
-`src/home/map_text_pointer.asm` so the SAVE flow's `ChangeBox` can link them).
+(`SetMapTextPointer` / `RestoreMapTextPointer`, which were split out into
+`src/home/map_text_pointer.asm` so the SAVE flow's `ChangeBox` could link them).
+
+**Both halves of that goal are DONE.** `predef_text.asm` links (`ed82955a`) and
+the two rows are retired (`d54a32e4`, blessed both places) — the relocation
+registry is empty and `relocated` is 0 by DB count. What remains open in this
+plan is the **acceptance**: no must-hit predef scenario can be built while the
+port has no resident interior map data, so the path is runtime-unreachable and
+the change carries regression evidence only. That is backlog #31, and it is the
+only thing standing between this plan and archival.
 
 Stage 1 (the data tier) is **done**. Stage 2 is **blocked on a measured
 addressing-model gap**, described below — it is not more data entry.
@@ -291,14 +299,29 @@ correctness, not tidiness.
       Filed as `docs/current_plan_backlog.md` #31. Until this clears, the predef
       path is runtime-unreachable and the change carries **regression evidence
       only** — never feature evidence.
-- [ ] Retire the last 2 `pret_label_allowlist.json` rows — **last**, after the
-      acceptance above, per the sequencing rule in `relocated-labels-grind`; then
-      hand the measured hash to the maintainer for the two-sided bless.
-      **They are now STALE and provably retirable**: both name
-      `dos_port/src/home/map_text_pointer.asm`, which is deleted, and
-      `update_label_db` reports `relocated` = 0. Left in place deliberately —
-      the registry is content-hash locked outside the worktree in two places, so
-      the re-bless is the maintainer's call, not an agent's.
+- [x] Retire the last 2 `pret_label_allowlist.json` rows — **DONE 2026-08-03,
+      commit `d54a32e4`.** `relocated_labels`, `relocated_files` and
+      `structural_findings` are all `{}`; the legacy relocation registry is at
+      **zero rows**, 348 -> 0 across the whole campaign.
+      **Deliberately taken OUT of the planned order, at the maintainer's
+      direction.** The sequencing rule says retire after the acceptance above,
+      and that acceptance is still BLOCKED — but the rows were provably stale
+      (both named the deleted `dos_port/src/home/map_text_pointer.asm` while
+      `update_label_db` reported `relocated` = 0), so the retirement no longer
+      depended on the predef work landing. It was a pure 2-key JSON delete with
+      no code change.
+      `git diff --numstat` read **`1 10`, not the `0 8`** the handoff predicted:
+      emptying the last dict collapses its braces, so the campaign's
+      `0 <4*rows>` rule reads `1 <4*rows+2>` on a dict going to empty.
+      Gates: `static_gate` FAIL on the expected transient `registry_approval`
+      only, then PASS once blessed; `aux_misplaced` stayed at its baseline 1;
+      pytest 81 passed; 39 scenarios consistent. The runtime tier was **not**
+      run and does not apply — the commit changes one JSON sidecar read only by
+      the linter, so it cannot move a pixel or a WRAM byte.
+      The maintainer blessed **both** halves the same session; all three of file,
+      `git config` and the CI repo variable measure
+      `9459552060a730318cf83c0d1ed73f989c5fb914f8c1340fb919f1a1c72b54aa`.
+      See `registry-approval-state` and `relocated-labels-grind`.
 
 ---
 
