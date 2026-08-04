@@ -1181,6 +1181,16 @@ CheckTrainerSight:
 ;
 ; Reads w_trainer_enc_slot for the engaging trainer's slot offset.
 ; All registers preserved (pushad/popad).
+;
+; STAGE 1b (2026-08-04): this pair is now REACHED ONLY ON UNWIRED MAPS. Its
+; caller in OverworldLoopLessDelay (src/home/overworld.asm) skips it whenever
+; MapScriptPointers[wCurMap] is TrainerMapScript, so on a wired map the faithful
+; pret flow (the map's _Script -> CheckFightingMapTrainers ->
+; DisplayEnemyTrainerTextAndStartBattle) is the only sight path, as on the GB.
+; That gate — not this routine — carries the DEVIATION that retires when the
+; overworld-events Stage 5a rollout finishes wiring the remaining maps; at that
+; point this routine and CheckTrainerSight become dead and should be DELETED
+; rather than left linked.
 ; ---------------------------------------------------------------------------
 TrainerEncounterFlow:
     pushad
@@ -1249,9 +1259,16 @@ TrainerEncounterFlow:
     ; which M8.2 (trainer-header engine) will provide via wSpriteIndex.
     ; StartTrainerBattle SEEDS the battle parameters (wCurOpponent / wTrainerClass /
     ; wTrainerNo) and returns. It does NOT run the battle: OverworldLoop's
-    ; wCurOpponent poll enters it, and the incremented wCurMapScript makes the next
-    ; RunMapScript dispatch EndTrainerBattle (Route3_ScriptPointers index 2). That is
+    ; wCurOpponent poll enters it, and the incremented wCurMapScript would make the
+    ; next RunMapScript dispatch EndTrainerBattle (script-pointer index 2). That is
     ; why no EndTrainerBattle call follows this one — see the DEVIATION below.
+    ; STAGE 1b CORRECTION (2026-08-04): that cleanup hand-off is now UNREACHABLE
+    ; FROM HERE. The gate in OverworldLoopLessDelay means this flow runs only on
+    ; maps NOT dispatched to TrainerMapScript, and on exactly those maps
+    ; MapScriptPointers[wCurMap] is DefaultMapScript (or a non-trainer script), so
+    ; the incremented wCurMapScript indexes a table RunMapScript never reaches.
+    ; The residual below is therefore unconditional on this path, not conditional
+    ; on wiring as it was when this comment was first written.
     movzx eax, byte [w_trainer_enc_slot]   ; slot byte offset (0x10-0xF0)
     shr al, 4                              ; slot number (1-15)
     dec al                                 ; 0-based slot index
@@ -1262,7 +1279,7 @@ TrainerEncounterFlow:
     mov cl, [wMapSpriteExtraData + eax + 1] ; trainer set
     mov [ebp + wEngagedTrainerSet], cl
     call StartTrainerBattle
-    ; DEVIATION{class=temporary; pret=home/trainers.asm:EndTrainerBattle; behavior=this bespoke encounter flow does not call EndTrainerBattle, so post-battle cleanup happens only on maps whose script table is wired and reaches index 2; evidence=StartTrainerBattle increments wCurMapScript and Route3_ScriptPointers index 2 is EndTrainerBattle in the generated assets/map_script_tables.inc, so a wired map runs it from the next RunMapScript, while an unwired map leaves BIT_PRINT_END_BATTLE_TEXT and wCurMapScript set; lifetime=until TrainerEncounterFlow is retired into the map-script trainer flow and every trainer map is wired, owned by docs/current_plan_overworld_events.md}
+    ; DEVIATION{class=temporary; pret=home/trainers.asm:EndTrainerBattle; behavior=a battle entered through this bespoke flow never runs EndTrainerBattle, so BIT_PRINT_END_BATTLE_TEXT and wCurMapScript stay set after it and the trainer is not flagged beaten by the pret path; evidence=the Stage 1b gate in OverworldLoopLessDelay reaches this routine only when MapScriptPointers[wCurMap] is not TrainerMapScript, and on those maps the generated assets/map_scripts.inc dispatches DefaultMapScript or a non-trainer script, so the wCurMapScript increment StartTrainerBattle makes indexes a script-pointer table RunMapScript never dispatches; lifetime=deleted together with CheckTrainerSight, TrainerEncounterFlow and the gate itself when Stage 5a wiring completes and all standard trainer maps are wired, owned by docs/current_plan_overworld_events.md}
     ; -------------------------------------------------------------------------
     call hide_window                    ; count=0 (nothing drawn); parks H_WY off-screen
     and byte [ebp + W_FONT_LOADED], ~(1 << BIT_FONT_LOADED)

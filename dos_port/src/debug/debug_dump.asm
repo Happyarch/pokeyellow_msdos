@@ -414,15 +414,24 @@ section .text
 ; the only end-to-end check that assets/trainer_headers.inc is RIGHT and not just
 ; well-formed.
 ;
-; WHY THIS LOOP AND NOT OverworldLoop: the port currently runs TWO sight paths.
-; RunMapScript reaches the faithful one (the map's _Script ->
-; CheckFightingMapTrainers, pret's own mechanism, which pret reaches from
-; JoypadOverworld); OverworldLoopLessDelay then ALSO calls the port-only bespoke
-; CheckTrainerSight/TrainerEncounterFlow pair from map_sprites.asm, which pret has
-; no counterpart for. Entering the full loop would engage the trainer twice and
-; could never match ground truth. Retiring the bespoke hook is a separate
-; behavior-change task, and this scenario is its prerequisite: it pins the
-; faithful path's state first.
+; WHY THIS LOOP AND NOT OverworldLoop — UPDATED 2026-08-04 (Stage 1b). The
+; original reason is GONE: the port used to run TWO sight paths on a wired map
+; (RunMapScript's faithful _Script -> CheckFightingMapTrainers, plus the
+; port-only CheckTrainerSight/TrainerEncounterFlow pair called from
+; OverworldLoopLessDelay), so entering the full loop engaged the trainer twice
+; and could never match ground truth. That bespoke hook is now GATED OFF on
+; every map dispatched to TrainerMapScript, which is every map these sight
+; scenarios use — see the DEVIATION at the gate site in src/home/overworld.asm.
+; The retirement this comment used to describe as a pending task HAS HAPPENED,
+; and the continuous scenario it was a prerequisite for is trainer_battle_route
+; (RunTrainerRouteTest below), which DOES drive the real OverworldLoop.
+;
+; This scenario deliberately keeps its tighter loop anyway: it is the focused
+; per-map check that assets/trainer_headers.inc is right, and driving
+; RunMapScript directly keeps its compared surface free of the joypad, walking
+; and battle state a full-loop run necessarily moves. Seven maps share it, and a
+; focused gate that fails for one reason is worth more than seven copies of the
+; continuous one.
 ;
 ; In: EBP = GB memory base, map loaded, player seeded in the trainer's view range.
 ; Never returns (DumpBackbuffer writes GBSTATE.BIN + FRAME.BIN, then exits).

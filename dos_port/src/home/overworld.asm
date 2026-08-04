@@ -70,6 +70,7 @@ extern IsPlayerCharacterBeingControlledByGame ; src/home/npc_movement.asm (real,
 extern IsPlayerFacingEdgeOfMap                    ; src/engine/overworld/player_state.asm
 extern IsWarpTileInFrontOfPlayer                    ; src/engine/overworld/player_state.asm
 extern MapScriptPointers                  ; assets/map_scripts.inc
+extern TrainerMapScript                   ; src/scripts/trainer_map_script.asm (Stage 1b sight gate)
 extern PlayDefaultMusic             ; src/home/audio.asm (real gateway)
 extern RedBikeSprite                    ; src/home/player_gfx.asm
 extern RunNPCMovementScript         ; src/home/npc_movement.asm
@@ -989,7 +990,26 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     test byte [ebp + W_STATUS_FLAGS_6], (1 << BIT_FLY_WARP) | (1 << BIT_DUNGEON_WARP)
     jnz HandleFlyWarpOrDungeonWarp           ; jp nz (tail — SpecialEnterMap re-enters the loop)
 
-    ; Check trainer sight lines before reading joypad (pret: CheckTrainerSightLine).
+    ; --- Stage 1b: the bespoke sight path is now GATED OFF where the faithful
+    ; one is wired. pret has no CheckTrainerSight/TrainerEncounterFlow; its only
+    ; trainer-sight mechanism is the map's own _Script -> CheckFightingMapTrainers,
+    ; which the port reaches from RunMapScript (this file, OverworldLoop) and
+    ; which seeds wCurOpponent for the battle-entry poll there. On a map wired to
+    ; TrainerMapScript BOTH paths were armed, and the bespoke one won the race
+    ; (its own distance<=4 test vs the header's view range), so the faithful path
+    ; could never be observed in a continuous run. The predicate is DATA-DRIVEN
+    ; against the generated dispatch table rather than a hand-kept map list, so
+    ; each map the overworld-events rollout wires shrinks this hook's domain with
+    ; no edit here. It keys on TrainerMapScript specifically, NOT merely
+    ; "!= DefaultMapScript": PALLET_TOWN has a non-default _Script that is not a
+    ; trainer script, and a "any non-default script" test would silently strip
+    ; sight handling from any such map that did have trainers.
+    ; DEVIATION{class=temporary; pret=home/overworld.asm:OverworldLoopLessDelay; behavior=on maps not yet wired to TrainerMapScript the port still runs the port-only CheckTrainerSight and TrainerEncounterFlow pair after the fly/dungeon-warp test, which pret has no counterpart for; evidence=MapScriptPointers in the generated assets/map_scripts.inc dispatches only ROUTE_3/4/6/8/9/10/11 to TrainerMapScript, so on every other map MapScriptPointers[wCurMap] is DefaultMapScript or a non-trainer script and the faithful CheckFightingMapTrainers flow is unreachable — deleting the hook outright would remove trainer engagement on those maps entirely; lifetime=deleted when Stage 5a wiring completes and all standard trainer maps are wired, owned by docs/current_plan_overworld_events.md}
+    movzx ecx, byte [ebp + W_CUR_MAP]
+    cmp dword [MapScriptPointers + ecx*4], TrainerMapScript
+    je .noTrainerSight                       ; faithful map-script path owns this map
+    ; Flags: the cmp above is consumed by the je; CheckTrainerSight sets its own
+    ; CF after popad, so the jnc below still reads ITS result, not this test's.
     call CheckTrainerSight
     jnc .noTrainerSight
     call TrainerEncounterFlow
