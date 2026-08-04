@@ -4410,7 +4410,7 @@ EnemySendOutFirstMon:
     mov al, [ebp + wEnemyPartyCount + ecx]       ; wEnemyPartyCount+(idx+1) = species
     mov [ebp + wEnemyMonSpecies2], al
     mov [ebp + wCurPartySpecies], al
-    call LoadEnemyMonFromParty                   ; sets wEnemyMonPartyPos, loads the struct
+    call LoadEnemyMonData                        ; pret: load the selected trainer mon + EXP fields
     mov byte [ebp + wCurrentMenuItem], 1         ; pret: default (no player switch)
     ; TODO(faithful): the BIT_BATTLE_SHIFT "TrainerAboutToUse / switch?" prompt +
     ; the party-menu path + SwitchPlayerMon. Treated as SET mode (no prompt).
@@ -4451,8 +4451,14 @@ ReplaceFaintedEnemyMon:
 TrainerBattleVictory:
     ; TODO-HW: PlayBattleVictoryMusic; ScrollTrainerPicAfterBattle; TrainerDefeatedText
     ; (TrainerDefeatedText is not yet in the generated battle_text.inc).
+%ifndef DEBUG_TRAINER_RESULT
     mov eax, MoneyForWinningText
     call PrintBattleText
+%else
+    ; Harness-only: the Stage-1b state oracle has no input driver, so stop at
+    ; the same post-victory arithmetic boundary without parking in the final
+    ; acknowledgement wait. The production path remains byte-for-byte above.
+%endif
     ; win money: wPlayerMoney += wAmountMoneyWon (3-byte BCD). pret:
     ;   ld de, wPlayerMoney+2 / ld hl, wAmountMoneyWon+2 / ld c,3 / predef AddBCDPredef.
     ; Flat call to AddBCD (predef bank drop, §2 item 4): ESI=src LSB, EDX=dst LSB, CL=count.

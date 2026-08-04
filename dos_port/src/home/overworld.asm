@@ -922,6 +922,17 @@ OverworldLoop:
     ; pret reaches RunMapScript via JoypadOverworld, which the port does not have —
     ; that remaining deviation is documented on RunMapScript itself.
     call RunMapScript                            ; per-frame map _Script (default no-op; Pallet event-gate)
+    ; Trainer-blackout return, preserving pret home/overworld.asm:AllPokemonFainted:
+    ;   wIsInBattle=$ff -> RunMapScript (EndTrainerBattle) -> HandleBlackOut.
+    ; The port starts InitBattle from inside the first RunMapScript call, so the
+    ; post-battle sentinel is only visible after that call returns. Run the now-
+    ; advanced script once more before blacking out; on standard trainer maps it
+    ; is EndTrainerBattle, which clears the script without setting the beaten flag.
+    cmp byte [ebp + wIsInBattle], 0xff
+    jne .mapScriptComplete
+    call RunMapScript
+    jmp HandleBlackOut
+.mapScriptComplete:
     ; wIgnoreInputCounter countdown now runs faithfully via CountDownIgnoreInputBitReset
     ; (called by TrackPlayTime inside DelayFrame, Wave-2/M2.1). The old inline block that
     ; lived here decremented an extra time per loop (double-decrement) and only cleared
@@ -3541,5 +3552,4 @@ LoadDestinationWarpPosition:
     pop esi
     pop eax
     ret
-
 

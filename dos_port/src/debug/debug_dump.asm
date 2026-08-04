@@ -160,6 +160,22 @@ extern DelayFrame
 %ifdef DEBUG_TRAINER_INIT
 extern StartTrainerBattle
 %endif
+%ifdef DEBUG_TRAINER_RESULT
+extern StartTrainerBattle
+%endif
+%ifdef DEBUG_TRAINER_RESULT
+extern StoreTrainerHeaderPointer
+extern ReadTrainerHeaderInfo
+extern EndTrainerBattle
+extern FinalizeTrainerBattleOutcome
+extern Route3TrainerHeader0
+extern ExecutePlayerMove
+extern GainExperience
+extern TrainerBattleVictory
+extern ExecuteEnemyMove
+extern HandlePlayerBlackOut
+extern ResetStatusAndHalveMoneyOnBlackout
+%endif
 %ifdef DEBUG_BATTLE_GOLDEN
 ; --- Stage 2 golden gate: the REAL loaders replace the synthetic seed ---
 extern LoadEnemyMonData               ; engine/battle/core.asm — real wild loader
@@ -549,6 +565,13 @@ gbstate_regions:
     ; share an RNG stream; roster identity, levels, active selection, prize
     ; metadata, AI reset, battle type and name prefix are exact.
     gbregion "trainerInit",      wBuffer,        30
+%endif
+%ifdef DEBUG_TRAINER_RESULT
+    ; Compact terminal-state projection for the guarded trainer win/loss pair.
+    ; Random trainer DVs/stats and transient presentation scratch are excluded;
+    ; the result, money, persistent event/script state, HP/EXP and cleanup state
+    ; are exact and shared by the real-navigation golden.
+    gbregion "trainerResult",    wBuffer,        24
 %endif
 %ifdef DEBUG_BOX_SAVE
     ; --- the loaded PC box (SRAM/PC storage plan, stage 6 data half) ---
@@ -1477,6 +1500,141 @@ RunBattleTest:
     mov ecx, 4
     rep movsb
     call DebugDumpMemory
+%elifdef DEBUG_TRAINER_RESULT
+    ; Stage 1b terminal-state oracle. Both variants enter StartTrainerBattle
+    ; through the production guard, load Route 3's real generated trainer party,
+    ; and stop after both active battlers are selected. The harness then drives
+    ; one deterministic terminal turn through the same execute/faint routines as
+    ; the live loop, followed by EndOfBattle and EndTrainerBattle.
+    mov byte [ebp + wPartyCount], 0
+    mov byte [ebp + wPartySpecies], 0xff
+    mov byte [ebp + wNumBagItems], 0
+    mov byte [ebp + wBagItems], 0xff
+    call PrepareNewGameDebug
+
+    ; Route 3 standard-script state and first trainer header. The generated
+    ; header binds flag bit 2 in event byte $D7C2.
+    and byte [ebp + 0xD7C2], ~(1 << 2) & 0xff
+    mov byte [ebp + 0xD5F7], 1          ; wRoute3CurScript: start-battle handler
+    mov byte [ebp + wCurMapScript], 1
+    mov byte [ebp + wSpriteIndex], 1
+    mov esi, Route3TrainerHeader0
+    call StoreTrainerHeaderPointer
+    xor eax, eax
+    call ReadTrainerHeaderInfo           ; publish wTrainerHeaderFlagBit
+    mov byte [ebp + wEngagedTrainerClass], OPP_ID_OFFSET + 2
+    mov byte [ebp + wEngagedTrainerSet], 4
+    call StartTrainerBattle              ; DEBUG_TRAINER_RESULT returns pre-presentation
+
+%ifdef DEBUG_TRAINER_WIN
+    ; Collapse the loaded roster to its active first mon and give it 1 HP. The
+    ; debug party's L80 SNORLAX uses STRENGTH, whose minimum roll overkills it.
+    mov byte [ebp + wEnemyPartyCount], 1
+    mov byte [ebp + wEnemyMonPartyPos], 0
+    mov word [ebp + wEnemyMonHP], 0x0100
+    mov word [ebp + wEnemyMon1HP], 0x0100
+    mov byte [ebp + wPlayerMoveListIndex], 3
+    mov byte [ebp + wPlayerSelectedMove], STRENGTH
+    mov byte [ebp + wPartyGainExpFlags], 1
+    mov byte [ebp + wPartyFoughtCurrentEnemyFlags], 1
+    mov byte [ebp + wBoostExpByExpAll], 0
+    mov byte [ebp + wActionResultOrTookBattleTurn], 0
+    call ExecutePlayerMove
+    mov al, [ebp + wEnemyMonHP]
+    or al, [ebp + wEnemyMonHP + 1]
+    jnz .trainerResultFail
+    mov word [ebp + wEnemyMon1HP], 0     ; terminal party state the faint path publishes
+    call GainExperience                  ; deterministic EXP/stat-EXP result, presentation debug-skipped
+    call TrainerBattleVictory            ; prize/result leaf, text wait debug-skipped
+    mov byte [stage + 0], 0              ; outcome: win
+%elifdef DEBUG_TRAINER_LOSS
+    ; Exactly one party mon remains at 1 HP. Pin every enemy move to GUST, so
+    ; any successful damage roll blacks out the party before it can act.
+    mov byte [ebp + wPartyCount], 1
+    mov word [ebp + wPartyMon1HP], 0x0100
+    mov word [ebp + wBattleMonHP], 0x0100
+    mov word [ebp + wEnemyMonHP], 0x1e00
+    mov word [ebp + wEnemyMon1HP], 0x1e00
+    mov byte [ebp + wEnemyMonMoves + 0], GUST
+    mov byte [ebp + wEnemyMonMoves + 1], GUST
+    mov byte [ebp + wEnemyMonMoves + 2], GUST
+    mov byte [ebp + wEnemyMonMoves + 3], GUST
+    mov byte [ebp + wEnemySelectedMove], GUST
+    mov byte [ebp + wEnemyMoveListIndex], 0
+    mov byte [ebp + wActionResultOrTookBattleTurn], 0
+    call ExecuteEnemyMove
+    mov al, [ebp + wBattleMonHP]
+    or al, [ebp + wBattleMonHP + 1]
+    jnz .trainerResultFail
+    mov word [ebp + wPartyMon1HP], 0     ; terminal party state RemoveFaintedPlayerMon publishes
+    mov byte [ebp + wBattleResult], 1
+    call HandlePlayerBlackOut            ; terminal loss leaf
+    mov byte [stage + 0], 1              ; outcome: loss
+%else
+%error DEBUG_TRAINER_RESULT needs DEBUG_TRAINER_WIN or DEBUG_TRAINER_LOSS
+%endif
+
+    mov al, [ebp + wBattleResult]
+    mov [stage + 1], al                  ; preserve result before blackout cleanup
+    call EndOfBattle
+    call FinalizeTrainerBattleOutcome    ; loss publishes wIsInBattle=$ff
+    call EndTrainerBattle                ; win sets flag, loss skips it; both reset script
+    mov al, [ebp + wCurMapScript]
+    mov [ebp + 0xD5F7], al               ; ExecuteCurMapScriptInTable write-back
+%ifdef DEBUG_TRAINER_LOSS
+    call ResetStatusAndHalveMoneyOnBlackout
+%endif
+
+    lea edi, [ebp + wBuffer]
+    mov al, [stage + 0]
+    stosb
+    mov al, [stage + 1]
+    stosb
+    mov al, [ebp + wIsInBattle]
+    stosb
+    mov al, [ebp + wCurMapScript]
+    stosb
+    mov al, [ebp + 0xD5F7]
+    stosb
+    mov al, [ebp + 0xD7C2]
+    stosb
+    mov al, [ebp + wMiscFlags]
+    stosb
+    lea esi, [ebp + wPlayerMoney]
+    mov ecx, 3
+    rep movsb
+    mov al, [ebp + wEnemyPartyCount]
+    stosb
+    mov al, [ebp + wEnemyMonPartyPos]
+    stosb
+    mov al, [ebp + wEnemyMonHP]
+    stosb
+    mov al, [ebp + wEnemyMonHP + 1]
+    stosb
+    mov al, [ebp + wEnemyMon1HP]
+    stosb
+    mov al, [ebp + wEnemyMon1HP + 1]
+    stosb
+    mov al, [ebp + wPartyCount]
+    stosb
+    mov al, [ebp + wPartyMon1HP]
+    stosb
+    mov al, [ebp + wPartyMon1HP + 1]
+    stosb
+    lea esi, [ebp + wPartyMon1 + MON_EXP]
+    mov ecx, 3
+    rep movsb
+    mov al, [ebp + wBattleType]
+    stosb
+    mov al, [ebp + wCurOpponent]
+    stosb
+    call DebugDumpMemory
+
+.trainerResultFail:
+    mov byte [ebp + W_TILEMAP], 0xee
+    call DelayFrame
+    call DumpBackbuffer
+    jmp .trainerResultFail
 %elifdef DEBUG_BATTLE_GOLDEN
     ; ------------------------------------------------------------------
     ; Fidelity-plan Stage 2 golden gate — the REAL loaders + the battle

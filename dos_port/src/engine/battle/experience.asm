@@ -345,7 +345,9 @@ GainExperience:
     mov al, [ebp + wWhichPokemon]
     mov esi, wPartyMonNicks
     call GetPartyMonName            ; REAL (home/pokemon.asm); front end also reads the party nick directly
+%ifndef DEBUG_TRAINER_RESULT
     call ShowGainedExpText          ; front end: "<nick> gained N EXP. Points!" (+ wait)
+%endif
     xor al, al
     mov [ebp + wMonDataLocation], al
     call LoadMonData                ; REAL (src/home/pokemon.asm wrapper) — populates wLoadedMon

@@ -1288,6 +1288,78 @@
         "masks": "golden_diff.SCENARIOS"
       },
       "verification": "real Route 3 trainer-sight entry on pret versus StartTrainerBattle on the port, stopped after roster load and first-mon selection; deterministic trainer initialization state only, not trainer presentation or battle completion"
+    },
+    {
+      "name": "trainer_battle_win",
+      "id": 45,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_TRAINER_WIN=1",
+      "port_entry_gate": "DEBUG_TRAINER_WIN",
+      "navigation_script": "tools/mgba_harness/scenarios/trainer_battle_win.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "StartTrainerBattle",
+        "InitBattle",
+        "GetTrainerInformation",
+        "ReadTrainer",
+        "ExecutePlayerMove",
+        "GainExperience",
+        "TrainerBattleVictory",
+        "EndOfBattle",
+        "FinalizeTrainerBattleOutcome",
+        "EndTrainerBattle"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "real Route 3 trainer win on pret versus guarded production initialization plus deterministic terminal turn on the port; state verification of prize/result, persistent beaten flag, map-script reset, HP and EXP, not presentation"
+    },
+    {
+      "name": "trainer_battle_loss",
+      "id": 46,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_TRAINER_LOSS=1",
+      "port_entry_gate": "DEBUG_TRAINER_LOSS",
+      "navigation_script": "tools/mgba_harness/scenarios/trainer_battle_loss.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "StartTrainerBattle",
+        "InitBattle",
+        "GetTrainerInformation",
+        "ReadTrainer",
+        "ExecuteEnemyMove",
+        "HandlePlayerBlackOut",
+        "EndOfBattle",
+        "FinalizeTrainerBattleOutcome",
+        "EndTrainerBattle",
+        "ResetStatusAndHalveMoneyOnBlackout"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "real Route 3 trainer blackout on pret versus guarded production initialization plus deterministic terminal loss on the port; state verification that the trainer flag stays clear while script, money and party cleanup match, not presentation"
     }
   ],
   "disabled_scenarios": []

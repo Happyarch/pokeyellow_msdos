@@ -268,8 +268,11 @@ restored `InitBattle` dispatcher. `InitBattleCommon` calls the linked
 `GetTrainerInformation`, `ReadTrainer`, and `_LoadTrainerPic` implementations,
 then `_InitBattleCommon` selects the first enemy party mon. Scenario
 `trainer_battle_init` proves that initialization state against a real Route 3
-sight trainer. The paired `EndTrainerBattle` call and production trainer handoff
-remain behind `TRAINER_BATTLE_LIVE`; no scenario yet proves a win/loss and return.
+sight trainer. The paired `trainer_battle_win` / `trainer_battle_loss` scenarios
+now prove terminal WRAM, event/script, prize/blackout, and return-state parity.
+The production trainer handoff remains behind `TRAINER_BATTLE_LIVE` until the
+continuous presentation/turn-loop/overworld choreography is exercised; the new
+result gates deliberately stop after initialization and drive one terminal turn.
 
 - [x] **1a. Trainer initialization.** Restore pret's wild/trainer split under
       `InitBattleCommon`/`InitWildBattle`/`_InitBattleCommon`; promote and call
@@ -302,13 +305,28 @@ remain behind `TRAINER_BATTLE_LIVE`; no scenario yet proves a win/loss and retur
       was stale: `tools/generators/gen_trainer_headers.py` exists and emits the
       linked trainer-header tables. Re-measure the remaining
       `npc_beaten_flags`/`TrainerFlagAction` ownership before changing it.
-- [ ] **1c. Victory-dependent trainer flags.** Move beaten/event writes to the
+
+      Measured 2026-08-04: the guarded result bridge now mirrors pret's outer
+      `AllPokemonFainted` decision after `EndOfBattle`. A win runs
+      `EndTrainerBattle`, sets Route 3 event bit 2, resets both script indices,
+      awards `$000100`, and gives the active mon 112 EXP plus the exact five
+      stat-EXP increments. A loss publishes `wIsInBattle=$ff`, runs
+      `EndTrainerBattle` without setting the event, resets the scripts, then
+      heals the party and halves `$999999` to `$499999`. What remains for 1b is
+      the continuous guarded route through presentation and the turn loop,
+      followed by removal of the compile-time guard. The default build,
+      `static_gate`, all 45 `fidelity-full` scenarios, and `goldens-verify` pass.
+- [x] **1c. Victory-dependent trainer flags.** Move beaten/event writes to the
       verified post-victory result path. A loss, blackout, or aborted battle must
       leave the trainer armed; victory must advance the script, persist the flag,
       and expose the correct post-battle text. Depends on
       `docs/current_plan_overworld_events.md` populating `wToggleableObjectList`
       (`EndTrainerBattle`'s sprite-removal `DEVIATION{class=data-model}` cannot
       close until that builder exists).
+
+      Proven by scenarios 45/46: the same generated Route 3 header is used on
+      both sides; only the victory result sets its persistent bit. The loss path
+      reaches the `$ff` early exit before `TrainerFlagAction`.
 - [ ] **1d. Trainer presentation and exit.** Generate class-specific end-battle
       streams (the `text_far`/`text_asm` continuation truncation is already
       retired — TX_ASM has real dispatch, TX_FAR its flat splice, and
@@ -321,11 +339,16 @@ remain behind `TRAINER_BATTLE_LIVE`; no scenario yet proves a win/loss and retur
 - [ ] **1e. AI execution leaves.** Complete `SwitchEnemyMon` through withdrawal,
       `EnemySendOut`, and its return flags; complete AI item text/effect/HP-bar
       paths without duplicating item-owned player handlers.
-- [ ] Add deterministic trainer win and loss scenarios. Must-hit lists must name
+- [x] Add deterministic trainer win and loss scenarios. Must-hit lists must name
       trainer initialization, party loading, battle entry, result handling, and
       the flag/script consumer. Compare party/enemy state, money, event/script
       state, and the rendered battle/exit surfaces; use a live sightline walk only
       for continuous choreography.
+
+      Scenarios 45/46 use a live Route 3 sightline on pret and the guarded
+      production initializer plus a deterministic final turn on the port. They
+      compare WRAM state only; rendered battle/exit surfaces remain owned by 1d
+      and the continuous 1b scenario rather than being claimed here.
 
 ## Stage 2 — complete the PKMN and ITEM battle subflows
 

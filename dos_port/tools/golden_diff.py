@@ -747,6 +747,33 @@ SCENARIOS = {
         }),
         "wram_masks": dict(_BATTLE_WRAM_MASKS),
     },
+    "trainer_battle_win": {
+        # Real Route 3 navigation on the golden side versus the guarded direct
+        # terminal-turn gate on the port. Post-battle scratch is not live state;
+        # trainerResult pins the exact result/money/event/script/HP/EXP contract.
+        "class": "datastruct",
+        "flags": "DEBUG_TRAINER_WIN=1",
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP, **{
+            "wLoadedMon": "post-battle loader scratch: the real navigation path and "
+                          "the guarded terminal-turn gate leave different last-loaded "
+                          "mons; persistent party EXP/stat-EXP is compared directly and "
+                          "again in trainerResult",
+        }),
+        "wram_masks": dict(_BATTLE_WRAM_MASKS),
+    },
+    "trainer_battle_loss": {
+        # Same paired design as trainer_battle_win. This side additionally
+        # proves blackout money/heal cleanup while the event bit remains clear.
+        "class": "datastruct",
+        "flags": "DEBUG_TRAINER_LOSS=1",
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP, **{
+            "wLoadedMon": "post-battle loader scratch: the real navigation path and "
+                          "the guarded terminal-turn gate leave different last-loaded "
+                          "mons; persistent party HP is compared directly and again in "
+                          "trainerResult",
+        }),
+        "wram_masks": dict(_BATTLE_WRAM_MASKS),
+    },
     "battle_damage": {
         # The two emulators intentionally do not share an RNG stream. Their
         # damage bytes therefore need not be equal; validate each record

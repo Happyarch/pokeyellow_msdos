@@ -23,6 +23,36 @@ if it took none. This is the swarm's divergence audit trail.
 
 ---
 
+## Battle Stage 1b/1c — trainer terminal result and overworld return
+
+- Date: 2026-08-04
+- Source: `home/trainers.asm` (`StartTrainerBattle`, `EndTrainerBattle`),
+  `home/overworld.asm` (`AllPokemonFainted` / `OverworldLoop`), and
+  `engine/battle/core.asm` (`EnemySendOutFirstMon`, `TrainerBattleVictory`).
+- Translated: matching files under `dos_port/src/`; the port-only
+  `FinalizeTrainerBattleOutcome` bridge carries pret's outer all-fainted test
+  across the port's map-script-owned battle call.
+- H-flag: involved. `AnyPartyAlive` returns its boolean in DH, while the loss
+  sentinel is published explicitly as `$ff`; `EndTrainerBattle` consumes the
+  sentinel before its victory-only `TrainerFlagAction` path.
+- Divergences: `TRAINER_BATTLE_LIVE` remains a temporary compile-time boundary;
+  the two result oracles skip blocking presentation waits but execute the real
+  arithmetic, cleanup, event, and script consumers. Production presentation is
+  unchanged and remains Stage 1d.
+- Notes: the win oracle exposed a pre-existing mistranslation in
+  `EnemySendOutFirstMon`: the port called `LoadEnemyMonFromParty`, while pret
+  calls `LoadEnemyMonData`. Restoring the pret call also loads catch-rate/base-EXP
+  data, changing the guarded win from zero EXP to the golden's 112 EXP and exact
+  stat-EXP increments. A trainer loss now advances to `EndTrainerBattle` before
+  blackout, but its `$ff` sentinel prevents the beaten flag from being set.
+- Runtime evidence: full-tier scenarios `trainer_battle_win` (id 45) and
+  `trainer_battle_loss` (id 46) enter a real Route 3 sight trainer on mGBA and
+  compare deterministic terminal WRAM against DOS. Both targeted goldenchecks
+  pass; `battle_faint` also remains green after restoring `LoadEnemyMonData`.
+  The 45-scenario `fidelity-full` suite and whole-set `goldens-verify` both pass.
+
+---
+
 ## Battle Stage 1a — trainer initialization
 
 - Date: 2026-08-04

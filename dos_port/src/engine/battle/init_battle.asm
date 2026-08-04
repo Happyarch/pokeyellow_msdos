@@ -350,6 +350,14 @@ _InitBattleCommon:
     call FlagAction
     call LoadBattleMonFromParty                ; wBattleMon* + player stat mods = $7
 
+%ifdef DEBUG_TRAINER_RESULT
+    ; Trainer-result state oracles start after both active battlers are loaded,
+    ; then drive only the deterministic terminal turn. Presentation and the
+    ; interactive menu loop remain outside these guarded state checkpoints.
+    stc
+    ret
+%endif
+
     ; R1: species and initial HP-bar colors are now final, so bind the generated
     ; battle tile slots before the first cache rebuild/slide frame.
     call SetPal_Battle

@@ -1467,6 +1467,20 @@ DEBUG_BATTLE := 1
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_TRAINER_INIT -D TRAINER_BATTLE_LIVE -D SKIP_TITLE
 endif
+# Trainer terminal-state oracles: initialize Route 3's generated trainer party,
+# drive one deterministic final turn, then exercise EndOfBattle + the map-script
+# result consumer. These remain guarded evidence; they do not enable trainer
+# battles in the production build.
+ifdef DEBUG_TRAINER_WIN
+DEBUG_BATTLE := 1
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_TRAINER_RESULT -D DEBUG_TRAINER_WIN -D TRAINER_BATTLE_LIVE -D SKIP_TITLE
+endif
+ifdef DEBUG_TRAINER_LOSS
+DEBUG_BATTLE := 1
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_TRAINER_RESULT -D DEBUG_TRAINER_LOSS -D TRAINER_BATTLE_LIVE -D SKIP_TITLE
+endif
 # Move-selection menu (menu-fidelity row 22): seed the DEBUG_BATTLE party, then run
 # pret's MoveSelectionMenu — the move list, the cursor and the TYPE/PP box (PrintMenuItem).
 # The menu blocks on input, so AUTOKEY_QUIET drives DelayFrame and photographs the screen

@@ -113,6 +113,7 @@ extern msgbox_dialog            ; src/home/text.asm — overworld dialog project
 extern text_msgbox              ; src/home/text.asm — active msgbox projection (msgbox.inc)
 %ifdef TRAINER_BATTLE_LIVE
 extern InitBattle               ; src/engine/battle/init_battle.asm (wild/trainer dispatcher)
+extern AnyPartyAlive            ; src/engine/battle/core.asm — post-battle blackout test
 %endif
 
 ; ----------------------------------------------------------------------------
@@ -142,6 +143,7 @@ global PrintEndBattleText
 global GetSavedEndBattleTextPointer
 global PlayTrainerMusic
 global w_trainer_header_ptr
+global FinalizeTrainerBattleOutcome
 
 ; ============================================================================
 section .bss
@@ -392,6 +394,28 @@ StartTrainerBattle:
     inc byte [ebp + wCurMapScript]
 %ifdef TRAINER_BATTLE_LIVE
     call InitBattle
+    call FinalizeTrainerBattleOutcome
+%endif
+    ret
+
+; ---------------------------------------------------------------------------
+; FinalizeTrainerBattleOutcome — port-only bridge for pret's outer overworld
+; AllPokemonFainted check. InitBattle/EndOfBattle clears wIsInBattle on return,
+; while pret's caller immediately tests the party and writes $ff before running
+; the current map script (EndTrainerBattle) and HandleBlackOut. The port enters
+; InitBattle from inside that map script, so publish the same sentinel here for
+; OverworldLoop's matching post-RunMapScript consumer.
+;
+; Kept as a callable helper so the guarded trainer-result harness exercises the
+; exact production decision after its synthetic final turn.
+; ---------------------------------------------------------------------------
+FinalizeTrainerBattleOutcome:
+%ifdef TRAINER_BATTLE_LIVE
+    call AnyPartyAlive
+    test dh, dh
+    jnz .done
+    mov byte [ebp + wIsInBattle], 0xff
+.done:
 %endif
     ret
 
