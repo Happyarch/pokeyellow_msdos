@@ -6,10 +6,7 @@
       ],
       "command": "python3",
       "env": {
-        "DOSBOX_MCP_DIR": "dos_port",
-        "DOSBOX_MCP_SOCKET": "/tmp/dosbox-mcp.sock",
-        "GB_MEMMAP_INC": "dos_port/include/gb_memmap.inc",
-        "PKMN_MAP": "dos_port/pkmn.map"
+        "DOSBOX_MCP_SOCKET": "/tmp/dosbox-mcp.sock"
       }
     },
     "stigmergy": {

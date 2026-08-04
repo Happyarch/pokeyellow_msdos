@@ -40,14 +40,37 @@ stays *pending* and wait_break() collects it.
 Usage (started by run_with_mcp.sh or Claude Code MCP config):
   python3 tools/dosbox_mcp/server.py
 
+Which BUILD the symbols come from (launcher handshake, 2026-08-04):
+  This server is long-lived and is started by Claude Code from whatever
+  checkout it was registered in — which is NOT necessarily the checkout whose
+  PKMN.EXE the emulator is running.  A worker debugging a git-worktree build
+  used to get its breakpoint addresses from the MAIN checkout's pkmn.sym:
+  right symbol name, plausible address, breakpoint never fires.
+  run_with_mcp.sh therefore writes a handshake file (default
+  /tmp/dosbox-mcp.launch, beside the socket) recording the absolute dos_port/
+  directory of the build it launched, and the paths below are re-derived from
+  it at every use — the server outlives launches, so the handshake is re-read
+  on mtime change rather than cached from startup.
+  Precedence per path: explicit environment override > handshake > this
+  server file's own checkout (the historical behaviour, unchanged when no
+  handshake exists).
+
 Environment:
   DOSBOX_MCP_SOCKET  path to Unix socket  (default /tmp/dosbox-mcp.sock)
-  PKMN_SYM           path to pkmn.sym     (default dos_port/pkmn.sym)
-  PKMN_EXE           path to PKMN.EXE     (default dos_port/PKMN.EXE;
+  DOSBOX_MCP_LAUNCH  path to the launcher handshake file
+                     (default /tmp/dosbox-mcp.launch)
+  PKMN_SYM           path to pkmn.sym      (overrides the handshake)
+  PKMN_EXE           path to PKMN.EXE      (overrides the handshake;
                      freshness cross-check for pkmn.sym)
-  GB_MEMMAP_INC      path to gb_memmap.inc
+  GB_MEMMAP_INC      path to gb_memmap.inc (overrides the handshake)
   DOSBOX_MCP_DIR     directory where MEMDUMP.BIN / FRAME.BIN are written
-                     (default: same dir as PKMN.EXE, typically dos_port/)
+                     (overrides the handshake; this is the emulator's CWD, so
+                     it belongs to the launched build, not to this server)
+  A relative path in any of these is resolved against this server file's own
+  repository root, never the server process CWD: MCP registrations carry
+  relative paths ('dos_port/pkmn.sym') and the CWD is not guaranteed to be a
+  checkout at all.  Setting any of them pins that path across launches — for
+  a worktree session prefer the handshake and leave them unset.
 """
 
 import os
@@ -56,7 +79,7 @@ import json
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Optional
+from typing import NamedTuple, Optional
 
 # Allow running from repo root or tools/ dir
 _HERE = Path(__file__).parent
@@ -72,25 +95,133 @@ from mcp.server.fastmcp import FastMCP
 # Configuration
 # ---------------------------------------------------------------------------
 
-SOCK_PATH  = os.environ.get('DOSBOX_MCP_SOCKET', '/tmp/dosbox-mcp.sock')
-SYM_FILE   = os.environ.get('PKMN_SYM',    str(_REPO / 'dos_port' / 'pkmn.sym'))
-EXE_FILE   = os.environ.get('PKMN_EXE',    str(_REPO / 'dos_port' / 'PKMN.EXE'))
-MEMMAP_INC = os.environ.get('GB_MEMMAP_INC', str(_REPO / 'dos_port' / 'include' / 'gb_memmap.inc'))
-DUMP_DIR   = os.environ.get('DOSBOX_MCP_DIR', str(_REPO / 'dos_port'))
-RENDER_PY  = str(_REPO / 'dos_port' / 'tools' / 'render_frame.py')
+SOCK_PATH   = os.environ.get('DOSBOX_MCP_SOCKET', '/tmp/dosbox-mcp.sock')
+LAUNCH_FILE = os.environ.get('DOSBOX_MCP_LAUNCH', '/tmp/dosbox-mcp.launch')
+
+# dos_port/ of the checkout this server file itself lives in — the fallback
+# used when no launcher handshake exists (pre-2026-08-04 behaviour, verbatim).
+FALLBACK_DOSPORT = str(_REPO / 'dos_port')
 
 GB_BACKBUF      = 0x12000   # back buffer offset in GB space (gb_memmap.inc)
 GB_BACKBUF_SIZE = 64000     # 320 × 200
+
+
+class BuildPaths(NamedTuple):
+    """Every path this server derives from a *build*, not from itself."""
+    dosport:   str   # the dos_port/ dir of the build being debugged
+    sym:       str   # pkmn.sym            (symbol resolution)
+    exe:       str   # PKMN.EXE            (freshness cross-check for sym)
+    memmap:    str   # include/gb_memmap.inc (GB constant names)
+    dump_dir:  str   # where the emulator drops MEMDUMP.BIN / FRAME.BIN
+    render_py: str   # tools/render_frame.py
+
+
+def _abs_path(path: str, root=None) -> str:
+    """Resolve a configured path; a relative one is anchored at the repo root,
+    never at the server process CWD (MCP registrations pass 'dos_port/...')."""
+    p = Path(path).expanduser()
+    if p.is_absolute():
+        return str(p)
+    return str(Path(root if root is not None else _REPO) / p)
+
+
+def read_launch_dosport(launch_file: str) -> Optional[str]:
+    """Return the dos_port/ directory recorded by run_with_mcp.sh, or None.
+
+    Format is KEY=VALUE lines; only DOSPORT is load-bearing here.  Absent,
+    unreadable, malformed, or pointing at a directory that no longer exists
+    all return None so the caller falls back — a stale handshake must degrade
+    to the old behaviour, never take the server down."""
+    try:
+        with open(launch_file) as f:
+            text = f.read()
+    except OSError:
+        return None
+    for line in text.splitlines():
+        key, sep, val = line.partition('=')
+        if sep and key.strip() == 'DOSPORT':
+            val = val.strip()
+            return val if val and os.path.isdir(val) else None
+    return None
+
+
+def derive_paths(launch_file: str = None, fallback_dosport: str = None,
+                 env=None) -> BuildPaths:
+    """Pure path derivation: env override > handshake > fallback checkout.
+
+    Kept side-effect-free and parameterised so it can be tested offline."""
+    launch_file = LAUNCH_FILE if launch_file is None else launch_file
+    fallback = FALLBACK_DOSPORT if fallback_dosport is None else fallback_dosport
+    env = os.environ if env is None else env
+    dosport = read_launch_dosport(launch_file) or fallback
+    d = Path(dosport)
+
+    def pick(var: str, default: Path) -> str:
+        v = env.get(var)
+        return _abs_path(v) if v else str(default)
+
+    return BuildPaths(
+        dosport=str(d),
+        sym=pick('PKMN_SYM', d / 'pkmn.sym'),
+        exe=pick('PKMN_EXE', d / 'PKMN.EXE'),
+        memmap=pick('GB_MEMMAP_INC', d / 'include' / 'gb_memmap.inc'),
+        dump_dir=pick('DOSBOX_MCP_DIR', d),
+        render_py=str(d / 'tools' / 'render_frame.py'),
+    )
 
 # ---------------------------------------------------------------------------
 # Singletons / state
 # ---------------------------------------------------------------------------
 
-_syms = SymbolMap(SYM_FILE, MEMMAP_INC, EXE_FILE)
 _client = DebugSocketClient(SOCK_PATH, timeout=120.0)
 
-# pkmn.sym stamp last pushed into the debugger via SYMF (None = never)
+# (path, mtime, size) of the pkmn.sym last pushed into the debugger via SYMF
+# (None = never).  The path is part of the stamp so switching builds re-pushes.
 _symf_pushed_stamp = None
+
+# Handshake-derived paths, re-derived whenever the handshake file changes.
+_paths_cache: Optional[BuildPaths] = None
+_paths_stamp: Optional[tuple] = None
+_paths_valid = False
+
+# One SymbolMap per distinct build (each keeps its own freshness stamps).
+_sym_maps: dict[tuple, SymbolMap] = {}
+
+
+def _stat_stamp(path: str) -> Optional[tuple]:
+    try:
+        st = os.stat(path)
+    except OSError:
+        return None
+    return (st.st_mtime, st.st_size)
+
+
+def _paths() -> BuildPaths:
+    """Current build's paths.  Cheap (one stat) but never stale: a launch that
+    happens after this server started still redirects every later lookup."""
+    global _paths_cache, _paths_stamp, _paths_valid
+    stamp = _stat_stamp(LAUNCH_FILE)
+    if not _paths_valid or stamp != _paths_stamp:
+        _paths_cache = derive_paths()
+        _paths_stamp = stamp
+        _paths_valid = True
+    return _paths_cache
+
+
+def _symbols() -> SymbolMap:
+    """SymbolMap for the build currently being debugged.  SymbolMap itself
+    stats pkmn.sym per query and raises StaleSymbolsError when PKMN.EXE is
+    newer; this adds the PATH half of that freshness discipline, and the EXE
+    it compares against always comes from the same derived directory."""
+    global _symf_pushed_stamp
+    p = _paths()
+    key = (p.sym, p.memmap, p.exe)
+    sm = _sym_maps.get(key)
+    if sm is None:
+        sm = SymbolMap(p.sym, p.memmap, p.exe)
+        _sym_maps[key] = sm
+        _symf_pushed_stamp = None    # different build → re-push SYMF
+    return sm
 
 # Execution state as best the client can track it:
 #   'unknown' — just launched / reconnected; game may be free-running
@@ -190,13 +321,13 @@ def _resolve_gb_offset(offset_or_name: str) -> Optional[int]:
     if offset_or_name.startswith('0x') or all(
             c in '0123456789abcdefABCDEF' for c in offset_or_name):
         return int(offset_or_name, 16)
-    return _syms.gb_offset(offset_or_name)
+    return _symbols().gb_offset(offset_or_name)
 
 
 def _where_str(eip: int) -> str:
     """'OverworldLoop+0x12' for a program VMA, or '' when unresolvable."""
     try:
-        near = _syms.nearest(eip, code_only=True)
+        near = _symbols().nearest(eip, code_only=True)
     except StaleSymbolsError:
         return ''
     if near is None:
@@ -220,14 +351,14 @@ def _push_symf() -> str:
     ncurses UI resolves names too. Idempotent per sym-file stamp; call only
     while paused. Returns a status string ('' on the no-op path)."""
     global _symf_pushed_stamp
-    try:
-        stamp = os.stat(SYM_FILE)
-        stamp = (stamp.st_mtime, stamp.st_size)
-    except OSError:
-        return f"NOTE: {SYM_FILE} missing — debugger-side symbols not loaded."
+    sym_file = _paths().sym
+    st = _stat_stamp(sym_file)
+    if st is None:
+        return f"NOTE: {sym_file} missing — debugger-side symbols not loaded."
+    stamp = (sym_file,) + st
     if stamp == _symf_pushed_stamp:
         return ''
-    out = _cmd(f'SYMF "{SYM_FILE}"', timeout=30.0)
+    out = _cmd(f'SYMF "{sym_file}"', timeout=30.0)
     if 'loaded' in out:
         _symf_pushed_stamp = stamp
         return out.strip()
@@ -239,9 +370,10 @@ def _memdump(seg_offset: int, length: int) -> bytes | str:
     """MEMDUMPBIN via the game DS selector; returns bytes or error string."""
     out = _cmd(f'MEMDUMPBIN {_q(_cached_ds)}:{_q(seg_offset)} {_q(length)}',
                timeout=60.0)
-    dump_path = Path(DUMP_DIR) / 'MEMDUMP.BIN'
+    dump_dir = _paths().dump_dir
+    dump_path = Path(dump_dir) / 'MEMDUMP.BIN'
     if not dump_path.exists():
-        return f"ERROR: MEMDUMP.BIN not found in {DUMP_DIR}. Debugger output:\n{out}"
+        return f"ERROR: MEMDUMP.BIN not found in {dump_dir}. Debugger output:\n{out}"
     data = dump_path.read_bytes()[:length]
     dump_path.unlink()  # clean up for next call
     return data
@@ -353,7 +485,7 @@ def lookup_symbol(name: str) -> str:
     try:
         if name.startswith('gb:'):
             gb_name = name[3:]
-            off = _syms.gb_offset(gb_name)
+            off = _symbols().gb_offset(gb_name)
             if off is None:
                 return f"Not found in gb_memmap.inc: {gb_name}"
             extra = ''
@@ -362,9 +494,9 @@ def lookup_symbol(name: str) -> str:
                 if _cached_ds_base is not None:
                     extra += f", linear=0x{_cached_ds_base + _cached_ebp + off:08X}"
             return f"{gb_name}: GB offset=0x{off:04X}{extra}"
-        addr = _syms.resolve(name)
+        addr = _symbols().resolve(name)
         if addr is None:
-            matches = _syms.search(name)
+            matches = _symbols().search(name)
             if matches:
                 lines = [f"{n}: 0x{a:08X}" for n, a in matches[:10]]
                 return "Partial matches:\n" + "\n".join(lines)
@@ -383,7 +515,7 @@ def search_symbols(pattern: str) -> str:
     Example: search_symbols("Overworld") or search_symbols("^Load")
     """
     try:
-        matches = _syms.search(pattern)[:20]
+        matches = _symbols().search(pattern)[:20]
     except StaleSymbolsError as e:
         return f"ERROR: {e}"
     if not matches:
@@ -422,7 +554,7 @@ def load_debugger_symbols() -> str:
     if err:
         return err
     out = _push_symf()
-    return out if out else f"Debugger symbol table already current ({SYM_FILE})."
+    return out if out else f"Debugger symbol table already current ({_paths().sym})."
 
 
 @mcp.tool()
@@ -436,7 +568,7 @@ def set_breakpoint(symbol_or_addr: str) -> str:
     if err:
         return err
     try:
-        addr = _syms.resolve(symbol_or_addr)
+        addr = _symbols().resolve(symbol_or_addr)
     except StaleSymbolsError as e:
         return f"ERROR: {e}"
     if addr is None:
@@ -560,7 +692,7 @@ def x86_read(addr: str, length: int) -> str:
     if err:
         return err
     try:
-        vma = _syms.resolve(addr)
+        vma = _symbols().resolve(addr)
     except StaleSymbolsError as e:
         return f"ERROR: {e}"
     if vma is None:
@@ -585,10 +717,11 @@ def dump_frame(output_png: str = '/tmp/dosbox_frame.png') -> str:
     data = _memdump(_cached_ebp + GB_BACKBUF, GB_BACKBUF_SIZE)
     if isinstance(data, str):
         return data
-    frame_dst = Path(DUMP_DIR) / 'FRAME.BIN'
+    paths = _paths()
+    frame_dst = Path(paths.dump_dir) / 'FRAME.BIN'
     frame_dst.write_bytes(data)
     result = subprocess.run(
-        [sys.executable, RENDER_PY, str(frame_dst), output_png],
+        [sys.executable, paths.render_py, str(frame_dst), output_png],
         capture_output=True, text=True
     )
     frame_dst.unlink(missing_ok=True)
@@ -684,7 +817,7 @@ def disassemble(symbol_or_addr: str, count: int = 10) -> str:
     if err:
         return err
     try:
-        addr = _syms.resolve(symbol_or_addr)
+        addr = _symbols().resolve(symbol_or_addr)
     except StaleSymbolsError as e:
         return f"ERROR: {e}"
     if addr is None:
@@ -717,7 +850,7 @@ def _annotate_disasm(lines: list[str]) -> list[str]:
         m = addr_re.match(line)
         if m:
             try:
-                near = _syms.nearest(int(m.group(1), 16), code_only=True)
+                near = _symbols().nearest(int(m.group(1), 16), code_only=True)
             except StaleSymbolsError:
                 near = None
             if near and near[1] == 0:
