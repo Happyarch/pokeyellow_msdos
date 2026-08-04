@@ -257,7 +257,8 @@ Verification: the four focused oracle tests pass, `static_gate` passes all five
 checks with 42 scenarios consistent, and the 16-scenario core fidelity tier
 passes. A second pristine-ROM generation reproduced both golden files byte for
 byte. `fidelity_gate` reports no changed pret label definitions but exits 1 on
-the standing `MapHeaderPointers` lint finding. The broader `tools/tests` run is
+the then-standing `MapHeaderPointers` lint finding (cleared 2026-08-04,
+719d997d — the tree now lints at zero). The broader `tools/tests` run is
 not a clean project gate (31 passed / 14 existing failures: stale generator
 paths, the same lint debt, and an older datastruct-description assertion).
 
@@ -295,7 +296,8 @@ result gates deliberately stop after initialization and drive one terminal turn.
       The default build, `static_gate`, and all 43 `fidelity-full` scenarios
       pass; an independent mGBA rerun reproduced the 7,326-byte golden and its
       sidecar byte-for-byte at frame 5805. `fidelity_gate` exits 1 on the
-      standing `MapHeaderPointers` lint finding and the pre-existing
+      then-standing `MapHeaderPointers` lint finding (cleared 2026-08-04,
+      719d997d) and the pre-existing
       unsuppressed inventories exposed by touching the large overworld/battle
       mirror files; that result is recorded, not reported as green.
 - [ ] **1b. Retire `TRAINER_BATTLE_LIVE`.** Exercise the trainer route under the

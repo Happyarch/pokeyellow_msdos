@@ -10,10 +10,10 @@
 ; bit-identical and this is a pure relocation.
 ;
 ; Self-contained on purpose: map_songs.inc defines only MapSongBanks and its
-; _END marker, carries no `equ`, and references no label from another asset. That
-; is what made it separable, and it is why MapHeaderPointers could NOT follow it
-; out of overworld.asm in the same pass — see that file's note at the
-; assets/map_headers.inc include.
+; _END marker, carries no `equ`, and references no label from another asset.
+; That is what made it separable in the 2026-08-02 pass. MapHeaderPointers
+; followed 2026-08-04 (719d997d) once its "equ cannot cross an object file"
+; blocker was measured false — see map_headers.asm beside this file.
 ;
 ; Consumer: LoadMapData's map-music path (the relocated pret home/overworld.asm
 ; routines) externs MapSongBanks.
