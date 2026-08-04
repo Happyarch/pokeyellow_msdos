@@ -213,28 +213,24 @@ that stages anything under `dos_port/`. Measured this session: 81 passed, 53
 subtests. The historical point stands and is worth keeping: it went red for an
 unknown number of sessions precisely because, at that time, no gate looked at it.
 
-### 19. `MapHeaderPointers` — the last `aux_misplaced` finding
-Filed 2026-08-02. This is the **single remaining `lint_pret_labels` violation**,
-and the standing rule is that the linter must exit 0 — so it is real open work,
-not accepted state. It is deliberately **not** suppressed and **not** allowlisted.
+### 19. `MapHeaderPointers` — the last `aux_misplaced` finding — **DONE 2026-08-04, CLOSED**
+Filed 2026-08-02; **closed 2026-08-04**: the whole map-header region (tables +
+`extra_includes.inc` blobs) relocated to `dos_port/src/data/maps/map_headers.asm`
+and `lint_pret_labels` now exits 0 with **zero findings tree-wide** (baseline
+`{}`).
 
-`MapHeaderPointers` is a pret `data/maps/map_header_pointers.asm` table living in
-`dos_port/src/engine/overworld/overworld.asm` (~`:1141`). The 2026-08-02 sweep
-(`a3804828`) moved 13 of the 14 sibling tables to the data layer and could not
-move this one. The blocker is structural, and the reason is documented in full at
-the site (read the comment block above the `global`):
-1. `assets/map_headers.inc` also defines `TilesetGfxPtrs`/`GfxSizes`/`BlocksPtrs`/
-   `BlocksSizes`/`CollPtrs`, whose rows point at blob labels defined by
-   `assets/extra_includes.inc` that are **not** `global`. Splitting the table from
-   those blobs breaks the link.
-2. Those blobs are welded to the code in that file through assembly-time size
-   `equ`s (`OVERWORLD_BLOCKS_SIZE` and friends), and **a NASM `equ` cannot cross an
-   object file**. Same constraint already documented for the pokedex tile blob.
-
-So clearing it needs a real refactor, one of: publish the blob sizes as linkable
-data words and change the consuming code to load them rather than assemble them
-in; or relocate the whole asset region together with its consumers. **Scoped
-work, no plan file owns it** — that gap is why this entry exists.
+**The recorded blocker was disproven, which is what unblocked the move.** This
+entry (and the old site comment) claimed "a NASM `equ` cannot cross an object
+file". Measured false: NASM/COFF emits a `global`'d `equ` as an absolute external
+symbol, and every **linear** use (`mov ecx, SYM`, `dd SYM`, `cmp reg, K + SYM`)
+resolves through an ordinary `dir32` relocation — `home/overworld.asm` had been
+consuming `OVERWORLD_BLOCKS_SIZE` cross-object that way all along. The genuine
+limitation is only **non-linear assembly-time arithmetic** on an external symbol
+(division, `%if`, `times` counts) — that is what welds the pokedex tile blob to
+its routine (`POKEDEX_TILE_GFX_SIZE / 4`). No use in the map region was
+non-linear, so the region moved whole; globals are declared generator-side in the
+defining `.inc`s (`gen_map_headers.py` / `gen_all_assets.py`), per the
+`gen_globals.py` rule.
 
 ### 20. The `work_queue` pipeline — **RETIRED 2026-08-02, CLOSED**
 Maintainer decision: delete. Done in the same commit as this note.

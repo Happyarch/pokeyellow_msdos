@@ -170,6 +170,17 @@ prior agent work, local conventions, or non-obvious constraints. Search with
 durable decision; treat hits as leads to verify against repository/runtime
 evidence, not as final authority.
 
+Stigmergy has two memory layers. **Memories** are the semantic layer — short,
+current claims, searched with `memory_search`. **Episodes** are the episodic
+layer — immutable "what happened" records (sessions, investigations, failures
+and dead ends), written with `episode_record` and searched with `episode_list`;
+`memory_search` does NOT search them, so check `episode_list` too when
+reconstructing project history or a prior session's reasoning. End a
+substantive session with `episode_record`, grounding the memories it produced
+(`memory_keys` + a note), and chain follow-ups with continues/corrects instead
+of rewriting history. Keep memories as claims; the narrative belongs in the
+episode.
+
 ---
 
 ## Current Phase
@@ -428,20 +439,19 @@ commit: `dos_port/tools/faithdiff <Label>` (justify every unsuppressed
 added/dropped call in the commit message) and `dos_port/tools/lint_pret_labels`
 (must exit 0). Workflow + tools → skill **`faithfulness-review`**.
 
-**That lint debt has been driven down to a single remaining finding, and it is
-the only one.** `lint_pret_labels` reports one `aux_misplaced`,
-`MapHeaderPointers` in `dos_port/src/engine/overworld/overworld.asm`; every other
-class — including the `--strict-claims` classes `hand_encoded_text` and
-`local_shadow` — is at zero. That one finding is documented **at its site** (the
-comment block above its `global`): the table cannot move to the data layer because
-`assets/map_headers.inc` also defines pointer rows aimed at non-global blob labels
-from `assets/extra_includes.inc`, and those blobs are welded to the code in that
-file through assembly-time size `equ`s, which a NASM `equ` cannot carry across an
-object file. Clearing it needs a real refactor, so it is deliberately left OPEN
-and explicitly **not** suppressed or allowlisted. Nothing here relaxes the rule:
-the standing instruction is still that `lint_pret_labels` must exit 0 and every
-class must be driven to zero. `static_gate`'s per-class baseline stops a class
-GROWING; it does not sanction it, and an agent must not cite "at baseline" as
+**That lint debt is CLEARED — zero findings tree-wide, in both modes.** Measured
+2026-08-04: `lint_pret_labels` and `--strict-claims` each report 0 violations and
+the `static_gate` baseline is empty (`{}`). The last finding — `MapHeaderPointers`
+`aux_misplaced` — closed when the whole map-header region relocated to
+`dos_port/src/data/maps/map_headers.asm`. Its recorded blocker ("a NASM `equ`
+cannot cross an object file") was measured FALSE: a `global`'d `equ` is an
+absolute external symbol and every *linear* use relocates via `dir32`; only
+non-linear assembly-time arithmetic on an external (division, `%if`, `times`)
+is genuinely impossible — that is what still welds the pokedex tile blob
+(`POKEDEX_TILE_GFX_SIZE / 4`) to its routine. Do not re-cite the disproven
+claim. Nothing here relaxes the rule: `lint_pret_labels` must exit 0 and every
+class must stay at zero. `static_gate`'s per-class baseline stops a class
+GROWING; it does not sanction one, and an agent must not cite "at baseline" as
 permission to leave a class non-zero. Re-measure rather than trusting this
 paragraph.
 

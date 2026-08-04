@@ -109,7 +109,7 @@ extern UpdateSprites                ; src/home/update_sprites.asm
 extern UpdateCGBPal_OBP1            ; home/cgb_palettes.asm
 extern CopyVideoData                ; src/home/copy2.asm (ESI=VRAM dest, EDX=flat src, BL=count)
 extern WriteOAMBlock                ; src/home/oam.asm (AL=block, EDX=flat src, BH=Y, BL=X)
-extern overworld_gfx                ; src/engine/overworld/overworld.asm (overworld tileset gfx)
+extern overworld_gfx                ; assets/overworld_gfx.inc (overworld.asm TU, overworld tileset gfx)
 extern msgbox_dialog                    ; src/home/text.asm — overworld dialog projection
 extern text_msgbox                      ; src/home/text.asm — active msgbox projection (msgbox.inc)
 ; --- party-menu compositor teardown (see the projection at .canCut) ---

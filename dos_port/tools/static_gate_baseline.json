@@ -1,8 +1,4 @@
 {
-  "lint": {
-    "aux_misplaced": 1
-  },
-  "strict": {
-    "aux_misplaced": 1
-  }
+  "lint": {},
+  "strict": {}
 }

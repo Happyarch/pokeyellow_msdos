@@ -38,8 +38,10 @@ This data IS consumed as of 2026-08-02: src/home/predef_text.asm links, and the
 68-row TextPredefs table in src/data/predef_text_data.asm builds its rows from the
 `<Label>_len` constants below. The output also carries all 68 `<Label>_id`
 constants, because pret computes a predef id at the call site as
-(Label_id - TextPredefs) / 2 + 1 and the port cannot — TextPredefs is in another
-object file and NASM/COFF carries no cross-object `equ`.
+(Label_id - TextPredefs) / 2 + 1 and the port cannot — the / 2 is NON-LINEAR
+arithmetic on a symbol from another object file, which no COFF relocation can
+express. (Cross-object `equ`s as such DO work for linear uses — dir32 — as the
+2026-08-04 MapHeaderPointers relocation proved; only the division is blocked.)
 
 DO NOT EDIT the output by hand — re-run this generator. Run from repo root or
 dos_port/.
@@ -221,8 +223,9 @@ def main() -> int:
     # carries `section .data` and 51 globals, so a caller that only wants an id
     # cannot include it without duplicating every stream into a second object.
     # pret computes the id at the call site as (Label_id - TextPredefs) / 2 + 1
-    # (macros/predef.asm:tx_pre_id); the port cannot, because TextPredefs is in
-    # another object file and NASM/COFF carries no cross-object `equ`. So the ids
+    # (macros/predef.asm:tx_pre_id); the port cannot, because the / 2 is
+    # non-linear arithmetic on a cross-object symbol, which no COFF relocation
+    # expresses (linear cross-object equ uses DO relocate — dir32). So the ids
     # are assembly-time constants instead — pure pret-derived order, nothing
     # hand-authored. include/predef.inc's tx_pre_id macro reads them.
     ids = [

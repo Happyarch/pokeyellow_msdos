@@ -374,6 +374,7 @@ GAME_SRCS := \
     src/engine/overworld/clear_variables.asm \
     src/data/wild_data.asm \
     src/data/maps/map_songs.asm \
+    src/data/maps/map_headers.asm \
     src/data/tileset_data.asm \
     src/engine/overworld/wild_mons.asm \
     src/home/hidden_events.asm \
@@ -1882,7 +1883,10 @@ assets/map_songs.inc: tools/generators/gen_map_songs.py
 src/engine/overworld/overworld.o: \
     assets/overworld_gfx.inc \
     assets/overworld_blocks.inc \
-    assets/pallet_town_blk.inc \
+    assets/pallet_town_blk.inc
+
+# Map header region TU (pret data/maps) — hosts the generated tables + blobs
+src/data/maps/map_headers.o: \
     assets/map_headers.inc \
     assets/extra_includes.inc
 

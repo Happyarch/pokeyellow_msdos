@@ -247,8 +247,10 @@ What landed:
   hand-duplicated) and a separate `assets/predef_text_ids.inc` with all 68
   `<Label>_id` constants. The ids have to be generated: pret computes them at the
   call site as `(Label_id - TextPredefs) / 2 + 1`, and the port cannot, because
-  `TextPredefs` is in another object file and NASM/COFF carries no cross-object
-  `equ` — the same limitation that blocks `MapHeaderPointers`.
+  the `/ 2` is non-linear arithmetic on a cross-object symbol, which no COFF
+  relocation can express. (Precision fix 2026-08-04: cross-object `equ`s as such
+  DO work — linear uses relocate via `dir32`, which is how the `MapHeaderPointers`
+  region was ultimately relocated. Only the non-linear arithmetic here is blocked.)
 - `include/predef.inc` carries pret's `tx_pre_id` / `tx_pre`. Deliberately NOT
   `tx_pre_jump` — see backlog #32.
 - The 17 non-data entries are ret-stubs in

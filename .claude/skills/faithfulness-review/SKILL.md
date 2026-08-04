@@ -75,14 +75,15 @@ drift and NOTHING about behaviour.** Both print that caveat on every pass.
 Design notes, non-vacuity proofs and traps: stigmergy memory
 `static-gate-and-ci-wiring`.
 
-**The tree does not currently exit 0, and that is a DEFECT, not a new normal.**
-Measured 2026-08-02: `lint_pret_labels --no-scan` exits **1** with a single
-`aux_misplaced` finding (`MapHeaderPointers`, see below); `--no-scan
---strict-claims` adds nothing (`legacy_annotation`, `hand_encoded_text`,
-`local_shadow` and `stale_provider` were all cleared by `a3804828` and
-`3fad3249`). Re-measure rather than quoting those numbers, and **read the exit
-status from a file** — `lint_pret_labels | tail` reports `tail`'s status, so a
-failing gate reads as a pass.
+**The tree exits 0 in both modes — keep it that way.** Measured 2026-08-04:
+`lint_pret_labels --no-scan` and `--no-scan --strict-claims` each report **0
+violations** and the `static_gate` baseline is empty (`{}`). The last finding
+(`MapHeaderPointers` `aux_misplaced`) closed when the map-header region
+relocated to `dos_port/src/data/maps/map_headers.asm`; `legacy_annotation`,
+`hand_encoded_text`, `local_shadow` and `stale_provider` were cleared earlier
+by `a3804828` and `3fad3249`. Re-measure rather than quoting those numbers, and
+**read the exit status from a file** — `lint_pret_labels | tail` reports
+`tail`'s status, so a failing gate reads as a pass.
 
 Registry composition, same date: `relocated_labels` **2**, `suppress` **4**,
 `structural_findings` **0**, `relocated_files` **0**; sha256 prefix `604994cf`,
@@ -208,23 +209,19 @@ It is now closed the same way:
     would be wrong. The checkable invariant is that the label lives in the data
     layer at all — under `dos_port/src/data/` or a generated `assets/*.inc`. A
     pret data table buried in `engine/` or `home/` code is hand-copied Tier-1
-    data that `make assets` cannot protect. **Baseline 1** as of 2026-08-02
-    (`tools/static_gate_baseline.json`, both the `lint` and `strict` sections)
-    — commit `a3804828` cleared 13 of the original 14 (`LedgeTiles`,
+    data that `make assets` cannot protect. **Baseline 0** as of 2026-08-04
+    (`tools/static_gate_baseline.json` is empty, both sections) — commit
+    `a3804828` cleared 13 of the original 14 (`LedgeTiles`,
     `TilePairCollisions{Land,Water}`, `CardKeyTable1-3`, `BikeRidingTilesets`,
-    `MapSongBanks`, …) into `dos_port/src/data/`. Re-measure with
-    `dos_port/tools/lint_pret_labels --no-scan`; ratchet it down, never up.
-
-    The one remaining finding is **`MapHeaderPointers`** in
-    `dos_port/src/engine/overworld/overworld.asm` (~line 1125-1141). It is
-    documented at its site as structurally blocked, not waived: the generated
-    `assets/map_headers.inc` also defines the tileset gfx/blocks/collision
-    pointer tables, whose rows reference non-`global` blob labels from
-    `assets/extra_includes.inc`, and those blobs publish size `equ`s that the
-    code in that same file consumes as assembly-time immediates — a NASM `equ`
-    cannot cross an object file. Clearing it needs a real refactor. It is
-    deliberately left OPEN and unsuppressed; do not "fix" it with a registry
-    entry.
+    `MapSongBanks`, …) into `dos_port/src/data/`, and the last one
+    (`MapHeaderPointers`) followed 2026-08-04 when the whole map-header region
+    relocated to `dos_port/src/data/maps/map_headers.asm`. Its recorded blocker
+    — "a NASM `equ` cannot cross an object file" — was measured FALSE: linear
+    uses of a `global`'d `equ` relocate via `dir32`; only non-linear
+    assembly-time arithmetic on an external (division, `%if`, `times`) is
+    impossible, which is what still welds the pokedex tile blob
+    (`POKEDEX_TILE_GFX_SIZE / 4`) to its routine. Re-measure with
+    `dos_port/tools/lint_pret_labels --no-scan`; the class stays at zero.
   - `gfx/` and `ram/` are exempt: `gfx/` is generated assets and `ram/` names are
     WRAM addresses owned by `gb_memmap.inc`, so neither has a port mirror.
 

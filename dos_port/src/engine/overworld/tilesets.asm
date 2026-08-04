@@ -33,11 +33,11 @@ extern LoadDestinationWarpPosition        ; src/home/overworld.asm
 extern g_tilecache_dirty                  ; src/ppu/ppu.asm
 ; generated Tier-1 tileset pointer/size tables — assets/map_headers.inc,
 ; %included by (and exported from) src/engine/overworld/overworld.asm
-extern TilesetGfxPtrs                     ; src/engine/overworld/overworld.asm
-extern TilesetGfxSizes                    ; src/engine/overworld/overworld.asm
-extern TilesetBlocksPtrs                  ; src/engine/overworld/overworld.asm
-extern TilesetBlocksSizes                 ; src/engine/overworld/overworld.asm
-extern TilesetCollPtrs                    ; src/engine/overworld/overworld.asm
+extern TilesetGfxPtrs                     ; assets/map_headers.inc (map_headers.asm TU)
+extern TilesetGfxSizes                    ; assets/map_headers.inc (map_headers.asm TU)
+extern TilesetBlocksPtrs                  ; assets/map_headers.inc (map_headers.asm TU)
+extern TilesetBlocksSizes                 ; assets/map_headers.inc (map_headers.asm TU)
+extern TilesetCollPtrs                    ; assets/map_headers.inc (map_headers.asm TU)
 
 section .text
 

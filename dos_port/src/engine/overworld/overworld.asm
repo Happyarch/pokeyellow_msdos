@@ -1093,10 +1093,11 @@ extern MapSongBanks                       ; src/data/maps/map_songs.asm
 
 ; authored border-ring blocks (map-tool C3; see ApplyMapBorderOverrides)
 %include "assets/map_border_overrides.inc"
-global overworld_gfx                     ; exported for cut.asm (InitCutAnimOAM tree tiles $2d/$3d)
-
+; overworld_gfx / OVERWORLD_*_SIZE globals are declared inside the generated
+; .inc files themselves (gen_all_assets.py, the gen_globals.py rule) — consumers:
+; cut.asm (InitCutAnimOAM tree tiles), home/overworld.asm (DrawTileBlock clamp),
+; and the Tileset* dispatch tables in src/data/maps/map_headers.asm.
 %include "assets/overworld_gfx.inc"
-global OVERWORLD_BLOCKS_SIZE             ; DrawTileBlock block-ID clamp (relocated)
 %include "assets/overworld_blocks.inc"
 %include "assets/pallet_town_blk.inc"
 %include "assets/route1_blk.inc"
@@ -1136,33 +1137,24 @@ global OVERWORLD_BLOCKS_SIZE             ; DrawTileBlock block-ID clamp (relocat
 %include "assets/player_sprite.inc"
 ; npc_*_still.inc files removed — LoadNPCSpriteTiles reads both still and walk
 ; halves from the full 384-byte sheet in npc_sprite_data_table.inc.
-; *** MapHeaderPointers is a pret data/maps/map_header_pointers.asm table and
-; *** `lint_pret_labels` reports it as [aux_misplaced]. It could NOT be moved to
-; *** the data layer in the 2026-08-02 sweep that moved MapSongBanks out, and the
-; *** reason is structural, not effort:
-;   1. assets/map_headers.inc also defines TilesetGfxPtrs/GfxSizes/BlocksPtrs/
-;      BlocksSizes/CollPtrs, whose rows point at reds_house_gfx, pokecenter_gfx,
-;      forest_gfx ... — labels defined by assets/extra_includes.inc and NOT global.
-;      Splitting the table from those blobs breaks the link.
-;   2. extra_includes.inc's blobs are in turn welded to the CODE in this file:
-;      it consumes size `equ`s (OVERWORLD_BLOCKS_SIZE and friends) as assembly-time
-;      immediates, and a NASM `equ` cannot cross an object file. This is the same
-;      constraint already documented for the pokedex tile blob, which had to travel
-;      with its routine for exactly this reason.
-; Clearing this finding therefore needs a real refactor — either publish the blob
-; sizes as linkable data words and change the consuming code to load them, or move
-; the whole asset region and its consumers together. That is a scoped piece of work,
-; NOT a suppression, and it is deliberately left open rather than waived.
-global MapHeaderPointers                  ; LoadMapHeader (relocated to src/home/overworld.asm)
-; per-tileset gfx/blockset/collision pointer + size tables, also from
-; assets/map_headers.inc — read by LoadTilesetHeader, which lives in its own pret
-; mirror (src/engine/overworld/tilesets.asm). This file owns the generated blob,
-; so it exports the four-plus-one symbols rather than the mirror re-%including it.
-global TilesetGfxPtrs
-global TilesetGfxSizes
-global TilesetBlocksPtrs
-global TilesetBlocksSizes
-global TilesetCollPtrs
+; MapHeaderPointers (pret data/maps/map_header_pointers.asm), the Tileset*
+; dispatch tables, IndoorMapBlk* tables, the map_headers_data blob and the
+; extra_includes.inc asset region used to be %included HERE. Moved 2026-08-04
+; to src/data/maps/map_headers.asm to clear the last [aux_misplaced] finding —
+; a pret data/ label belongs in the data layer. The old in-place note claimed a
+; NASM `equ` cannot cross an object file; that was DISPROVEN (linear uses of an
+; external absolute symbol relocate via dir32 — see the new TU's header), so the
+; region relocated whole. Bytes unchanged; this TU keeps only the OVERWORLD
+; tileset triple above and the outdoor blk blobs its own code loads.
+extern MapHeaderPointers                  ; assets/map_headers.inc (map_headers.asm TU) — LoadMapHeader
+extern map_headers_data                   ; assets/map_headers.inc (map_headers.asm TU) — LoadOverworldAssets
+extern MAP_HEADERS_DATA_SIZE              ; assets/map_headers.inc (map_headers.asm TU) — LoadOverworldAssets
+extern IndoorMapBlkPtrs                   ; assets/map_headers.inc (map_headers.asm TU) — indoor blk loader
+extern IndoorMapBlkSizes                  ; assets/map_headers.inc (map_headers.asm TU) — indoor blk loader
+extern route23_blk                        ; assets/route23_blk.inc (map_headers.asm TU, via extra_includes.inc)
+extern ROUTE23_BLK_SIZE                   ; assets/route23_blk.inc (map_headers.asm TU, via extra_includes.inc)
+extern indigo_plateau_blk                 ; assets/indigo_plateau_blk.inc (map_headers.asm TU, via extra_includes.inc)
+extern INDIGO_PLATEAU_BLK_SIZE            ; assets/indigo_plateau_blk.inc (map_headers.asm TU, via extra_includes.inc)
 
 ; --- consumed by the relocated pret home/overworld.asm routines ---
 global DoSignInteraction
@@ -1170,6 +1162,4 @@ global SeamReseatView
 global WalkSpeedSample
 global seam_reseat
 global seam_seeded
-%include "assets/map_headers.inc"
-%include "assets/extra_includes.inc"
 

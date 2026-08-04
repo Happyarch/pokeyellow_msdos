@@ -104,9 +104,9 @@ extern hide_window                        ; src/ppu/ppu.asm
 extern wMapSpriteData                     ; src/engine/overworld/map_sprites.asm
 extern wMapSpriteExtraData                ; src/engine/overworld/map_sprites.asm
 extern w_map_text_table_ptr               ; src/engine/overworld/map_sprites.asm
-extern MapHeaderPointers            ; src/engine/overworld/overworld.asm (assets/map_headers.inc)
+extern MapHeaderPointers            ; assets/map_headers.inc (map_headers.asm TU)
 extern MapSongBanks                 ; src/data/maps/map_songs.asm (assets/map_songs.inc)
-extern OVERWORLD_BLOCKS_SIZE        ; src/engine/overworld/overworld.asm (assets/overworld_blocks.inc)
+extern OVERWORLD_BLOCKS_SIZE        ; assets/overworld_blocks.inc (overworld.asm TU)
 
 ; --- relocated from src/engine/overworld/overworld.asm (unit 6b) ---
 extern AnyPartyAlive                      ; src/engine/battle/core.asm
