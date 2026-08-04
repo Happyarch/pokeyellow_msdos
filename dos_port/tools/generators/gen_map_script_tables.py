@@ -67,6 +67,23 @@ WIRED_MAPS = {
     "ROUTE_3": "route3_sight",
     "ROUTE_6": "route6_sight",
     "ROUTE_11": "route11_sight",
+    # Batch 2 (overworld-events Stage 5). Each sight tile was chosen for the
+    # BRANCH it adds, not for convenience — the first three cover only RIGHT- and
+    # DOWN-facing trainers on short, wide maps with a def_trainers start bit of 2
+    # or 1 and a small y:
+    "ROUTE_4": "route4_sight",    # def_trainers 2: the header's flag bit doubles
+                                  # as the 1-based OBJECT index (home/trainers.asm
+                                  # CheckForEngagingTrainers stores it into
+                                  # wSpriteIndex), so this is the only wired map
+                                  # whose header0 is not object 1
+    "ROUTE_8": "route8_sight",    # UP-facing trainer — TrainerEngage's .linedUpX
+                                  # branch upward, the mirror of route11's DOWN
+    "ROUTE_9": "route9_sight",    # LEFT-facing trainer — the horizontal branch in
+                                  # the direction none of the others take
+    "ROUTE_10": "route10_sight",  # tall map (10 blocks wide, 36 high) with the
+                                  # sight tile at y=55: the view-pointer formula's
+                                  # (width + 6) * (y >> 1) term at a magnitude the
+                                  # other six never reach (their y is 3..16)
 }
 
 

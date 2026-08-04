@@ -1142,6 +1142,118 @@
       "verification": "deterministic map-script trainer engagement state; state verification, not UI verification"
     },
     {
+      "name": "route4_sight",
+      "id": 47,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_MAPSCRIPT_SIGHT_R4=1",
+      "port_entry_gate": "DEBUG_MAPSCRIPT_SIGHT_R4",
+      "navigation_script": "tools/mgba_harness/scenarios/route4_sight.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "TrainerMapScript",
+        "CheckFightingMapTrainers"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "deterministic map-script trainer engagement state; state verification, not UI verification"
+    },
+    {
+      "name": "route8_sight",
+      "id": 48,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_MAPSCRIPT_SIGHT_R8=1",
+      "port_entry_gate": "DEBUG_MAPSCRIPT_SIGHT_R8",
+      "navigation_script": "tools/mgba_harness/scenarios/route8_sight.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "TrainerMapScript",
+        "CheckFightingMapTrainers"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "deterministic map-script trainer engagement state; state verification, not UI verification"
+    },
+    {
+      "name": "route9_sight",
+      "id": 49,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_MAPSCRIPT_SIGHT_R9=1",
+      "port_entry_gate": "DEBUG_MAPSCRIPT_SIGHT_R9",
+      "navigation_script": "tools/mgba_harness/scenarios/route9_sight.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "TrainerMapScript",
+        "CheckFightingMapTrainers"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "deterministic map-script trainer engagement state; state verification, not UI verification"
+    },
+    {
+      "name": "route10_sight",
+      "id": 50,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_MAPSCRIPT_SIGHT_R10=1",
+      "port_entry_gate": "DEBUG_MAPSCRIPT_SIGHT_R10",
+      "navigation_script": "tools/mgba_harness/scenarios/route10_sight.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "TrainerMapScript",
+        "CheckFightingMapTrainers"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "deterministic map-script trainer engagement state; state verification, not UI verification"
+    },
+    {
       "name": "item_pp_restore",
       "id": 39,
       "tier": "full",

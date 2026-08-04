@@ -603,7 +603,33 @@ endif
 #   R11 ROUTE_11 (0x16) — ROUTE11_GAMBLER1   (x=10,y=14) faces DOWN, view 3: VERTICAL
 #                         sight, which takes TrainerEngage's other branch (linedUpX,
 #                         screenX == $40) — untested by the two horizontal ones.
-#   make DEBUG_MAPSCRIPT_SIGHT_R3=1   (or _R6 / _R11)
+# Batch 2 (overworld-events Stage 5) continues on the same principle — each adds a
+# branch or a magnitude the first three never reach:
+#   R4  ROUTE_4  (0x0F) — ROUTE4_COOLTRAINER_F2 (x=63,y=3) faces RIGHT, view 3, on
+#                         the WIDEST map in the set (45 blocks = 90 tiles). The sight
+#                         tile is x=65, where the view pointer's (x >> 1) term and the
+#                         sprite screen-X projection are an order of magnitude past
+#                         every other gate (their x is 2..13) — the horizontal twin of
+#                         R10's large-y case. Route 4 also has exactly ONE trainer
+#                         header, so no other trainer can mask a failure by engaging
+#                         in its place.
+#                         NOT its rationale, though an earlier draft of this comment
+#                         said so: `def_trainers 2` (header0 == object 2 rather than
+#                         object 1) is NOT unique to Route 4 — scripts/Route3.asm
+#                         declares it too, so R3 already covered that pairing. The
+#                         goldens agree: both stamp wTrainerFlagBit = 2.
+#   R8  ROUTE_8  (0x13) — ROUTE8_GAMBLER1 (x=13,y=9) faces UP, view 4, header 1:
+#                         VERTICAL sight UPWARD, the mirror of R11's downward case,
+#                         and header 1 rather than 0 or 2.
+#   R9  ROUTE_9  (0x14) — ROUTE9_COOLTRAINER_F1 (x=13,y=10) faces LEFT, view 3:
+#                         horizontal sight in the direction no other gate takes
+#                         (R3 and R6 are both RIGHT).
+#   R10 ROUTE_10 (0x15) — ROUTE10_HIKER1 (x=3,y=57) faces UP, view 3, on a TALL map
+#                         (10 blocks wide, 36 high). The sight tile is y=55, where
+#                         the view-pointer formula's (width + 6) * (y >> 1) term is
+#                         an order of magnitude larger than on any other gate (whose
+#                         y is 3..16) — the arithmetic none of the others exercises.
+#   make DEBUG_MAPSCRIPT_SIGHT_R3=1   (or _R6 / _R11 / _R4 / _R8 / _R9 / _R10)
 ifdef DEBUG_MAPSCRIPT_SIGHT_R3
 DEBUG_MAPSCRIPT_SIGHT := 1
 NASMFLAGS += -D DEBUG_MAPSCRIPT_SIGHT_R3
@@ -624,6 +650,34 @@ NASMFLAGS += -D DEBUG_MAPSCRIPT_SIGHT_R11
 MAPSCRIPT_MAP ?= 0x16
 MAPSCRIPT_Y   ?= 16
 MAPSCRIPT_X   ?= 10
+endif
+ifdef DEBUG_MAPSCRIPT_SIGHT_R4
+DEBUG_MAPSCRIPT_SIGHT := 1
+NASMFLAGS += -D DEBUG_MAPSCRIPT_SIGHT_R4
+MAPSCRIPT_MAP ?= 0x0F
+MAPSCRIPT_Y   ?= 3
+MAPSCRIPT_X   ?= 65
+endif
+ifdef DEBUG_MAPSCRIPT_SIGHT_R8
+DEBUG_MAPSCRIPT_SIGHT := 1
+NASMFLAGS += -D DEBUG_MAPSCRIPT_SIGHT_R8
+MAPSCRIPT_MAP ?= 0x13
+MAPSCRIPT_Y   ?= 7
+MAPSCRIPT_X   ?= 13
+endif
+ifdef DEBUG_MAPSCRIPT_SIGHT_R9
+DEBUG_MAPSCRIPT_SIGHT := 1
+NASMFLAGS += -D DEBUG_MAPSCRIPT_SIGHT_R9
+MAPSCRIPT_MAP ?= 0x14
+MAPSCRIPT_Y   ?= 10
+MAPSCRIPT_X   ?= 11
+endif
+ifdef DEBUG_MAPSCRIPT_SIGHT_R10
+DEBUG_MAPSCRIPT_SIGHT := 1
+NASMFLAGS += -D DEBUG_MAPSCRIPT_SIGHT_R10
+MAPSCRIPT_MAP ?= 0x15
+MAPSCRIPT_Y   ?= 55
+MAPSCRIPT_X   ?= 3
 endif
 ifdef DEBUG_MAPSCRIPT_SIGHT
 NEED_DEBUG_DUMP := 1
