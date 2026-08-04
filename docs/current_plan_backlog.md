@@ -334,7 +334,16 @@ real live callers — it needs its own reviewed change, not an unattended pass.
 Source: `docs/current_plan_bug_tagging.md` (~`:264-272`); update that citation if
 that plan is ever archived.
 
-### 24. Two real defects on the fishing path (`LoadAnimSpriteGfx`)
+### 24. Two real defects on the fishing path (`LoadAnimSpriteGfx`) — DONE 2026-08-03
+**FIXED with the fishing-rod port (see the commit that closed the items-plan
+fishing bullet): caller-side.** `RedFishingTiles` reshaped to the port's
+12-byte header and the count passed in full `EAX`; `LoadAnimSpriteGfx` and the
+party-icon path untouched (its 12-byte shape is now documented as shared by
+both consumers). Scenario per path: `fish_old_rod` (id 42) exercises the
+fishing load, `party_menu` (id 5) remains the icon-path witness. The two lying
+comments (`; UNPORTED`, "Check-only (HOME_CHECK_SRCS)") are corrected. Original
+finding follows.
+
 Filed 2026-08-02 by the plan re-measurement. **Code defects, not bookkeeping**, and
 they were invisible because two comments lie about the file.
 
@@ -355,7 +364,14 @@ so a fix for fishing must not break the icon path (archived context:
 `docs/plans/party_icons_oam.md`). Whoever takes it owns both paths, and it wants a
 scenario covering each.
 
-### 25. Promote `wRodResponse` to `include/gb_memmap.inc` (0xCD3D)
+### 25. Promote `wRodResponse` to `include/gb_memmap.inc` (0xCD3D) — DONE 2026-08-03
+**FIXED with the fishing-rod port, BEFORE the handlers as filed:** the equ now
+sits in `gb_memmap.inc`'s 0xCD3D union block with the union comment carried
+(wPPRestoreItem / wFlyAnimUsingCoordList / the pret wPlayerSpin* scratch), the
+`player_animations.asm` `%ifndef` shadow is deleted, and
+`lint_pret_labels --strict-claims` still reports zero `local_shadow`. Original
+finding follows.
+
 Filed 2026-08-02. Currently a `%ifndef` **local shadow** at
 `src/engine/overworld/player_animations.asm:116-118`. The fishing-rod handlers
 (`docs/current_plan_items.md`) are the second consumer, so porting them without

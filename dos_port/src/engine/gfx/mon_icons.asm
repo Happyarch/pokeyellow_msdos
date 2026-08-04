@@ -288,7 +288,10 @@ LoadMonPartySpriteGfx:
 ; ---------------------------------------------------------------------------
 ; LoadAnimSpriteGfx — pret ref: mon_icons.asm:LoadAnimSpriteGfx.
 ; Load animated sprite tile patterns into VRAM. ESI (hl) = a header array, EAX (a)
-; = the number of headers. Each header is CopyVideoData's arguments.
+; = the number of headers — FULL EAX, not AL. Each header is CopyVideoData's
+; arguments in the port's 12-byte shape (MON_ICON_HDR_SIZE above). Consumers:
+; the two party-icon loaders below and FishingAnim's RedFishingTiles
+; (player_animations.asm), which conforms to the same shape (backlog #24).
 ; Preserves all registers. (VRAM tile writes go through CopyVideoData, which arms
 ; g_tilecache_dirty — the compositor decodes OBJ tiles from tile_cache too.)
 ; ---------------------------------------------------------------------------

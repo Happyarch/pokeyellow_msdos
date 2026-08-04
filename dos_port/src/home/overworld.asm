@@ -168,6 +168,7 @@ extern RunPartyMenuTest                   ; src/debug/debug_dump.asm
 extern RunPlayersPCTest                   ; src/engine/menus/players_pc.asm
 extern RunPokedexEntryTest                ; src/engine/menus/pokedex.asm
 extern RunPPRestoreTest                   ; src/debug/debug_dump.asm
+extern RunFishTestSeed                    ; src/debug/debug_dump.asm
 extern RunLedgeTestSeed                   ; src/debug/debug_dump.asm
 extern RunSurfTestSeed                    ; src/debug/debug_dump.asm
 extern CheckForHiddenEventOrBookshelfOrCardKeyDoor ; src/home/hidden_events.asm
@@ -335,6 +336,18 @@ EnterMap:
     ; standing on a shore tile — IsNextTileShoreOrWater keeps the surf state on the
     ; way in. Seeded BEFORE LoadMapData, which reads the coords (same rule as
     ; DEBUG_SEAM / DEBUG_MAPSCRIPT_SIGHT).
+    mov byte [ebp + W_CUR_MAP], PALLET_TOWN
+    mov byte [ebp + W_Y_COORD], 14
+    mov byte [ebp + W_X_COORD], 5
+    mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF  ; "not a warp arrival" (see DEBUG_SEAM)
+%endif
+%ifdef DEBUG_FISH
+    ; Fishing gate (items-plan Stage 11): the DEBUG_SURF spawn — Pallet (14,5),
+    ; the $33 land tile facing the water tile (15,5) = $14 (see the measured
+    ; tile map in the DEBUG_SURF block below). Nothing seeds
+    ; wTileInFrontOfPlayer: the first USE runs against its boot value 0 (the
+    ; FishingInit-failure branch), the bump before the second USE populates it
+    ; with the water tile through the real collision check.
     mov byte [ebp + W_CUR_MAP], PALLET_TOWN
     mov byte [ebp + W_Y_COORD], 14
     mov byte [ebp + W_X_COORD], 5
@@ -877,6 +890,13 @@ EnterMap:
     call SeedDeterministicPlayerIdentity
     call SeamReseatView
     call RunLedgeTestSeed                    ; debug party, empty bag; RETURNS
+%endif
+%ifdef DEBUG_FISH
+    ; Same shape as DEBUG_SURF above: seed, then FALL THROUGH into the real
+    ; OverworldLoop. AUTOKEY_FISH drives both rod uses through the live bag UI.
+    call SeedDeterministicPlayerIdentity
+    call SeamReseatView
+    call RunFishTestSeed                     ; party + bag + OLD ROD; RETURNS
 %endif
 
     ; fall through to OverworldLoop

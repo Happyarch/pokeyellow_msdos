@@ -766,9 +766,9 @@ RestoreBonusPP:
 ; shared tails at 2396-2600 (UnusableItem, RemoveUsedItem, ItemUseNoEffect,
 ; ItemUseNotTime, ItemUseNotYoursToUse, Func_e4bf, ItemUseFailed).
 ;
-; The remaining ItemUse* families (balls, TM/HM, evo stones, repels, battle
-; items, key items, rods) are ret-stubs in item_use_stubs.asm — see
-; docs/current_plan_items.md stages 6-11.
+; Every ItemUse* family now has a real body (the rods landed 2026-08-03 and
+; retired item_use_stubs.asm, deleted empty — it had already shrunk to the
+; three rod ret-stubs).
 ;
 ; Register map (CLAUDE.md): a=AL, b=BH, c=BL, d=DH, e=DL, hl=ESI, de=EDX,
 ; bc=EBX; GB memory at [EBP + addr]. GB data (HP, max HP, stat exp) is
@@ -878,20 +878,14 @@ extern ItemfinderFoundNothingText_ref   ; assets/item_text.inc
 ; --- itemfinder near-check (src/engine/items/itemfinder.asm, Stage 3 bullet 2) ---
 extern HiddenItemNear       ; CF set if an unobtained hidden item is nearby
 
-; --- the STILL-deferred ItemUse* families (item_use_stubs.asm) ---
-; Only the ones that remain ret-stubs belong here. The rest of this family has since
-; been implemented LOWER IN THIS FILE (ItemUseBicycle, ItemUsePokedex, ItemUseEvoStone,
-; ItemUseEscapeRope, ItemUseRepel/SuperRepel/MaxRepel, ItemUseXAccuracy, ItemUsePokeDoll,
-; ItemUseGuardSpec, ItemUseDireHit, ItemUseXStat, ItemUseCoinCase, ItemUseOaksParcel,
-; ItemUsePokeFlute, ItemUseTMHM) and their externs were never retired — the stub
-; convention's "repoint the extern comments when the real routine lands" step. NASM 3.x
-; tolerated extern-then-define; 2.16 rejects it, which is what surfaced this.
-extern ItemUseOldRod
-extern ItemUseGoodRod
-extern ItemUseSuperRod
-; (ItemUsePPUp / ItemUsePPRestore / ItemUseSurfboard left this list 2026-08-02 —
-;  real bodies now sit in this file, so an extern here would collide with their
-;  `global`.)
+; The ItemUse* stub-extern list that used to sit here is EMPTY: every family is
+; implemented lower in this file, item_use_stubs.asm is deleted, and an extern
+; for an in-file label would collide with its `global` (NASM 2.16 rejects
+; extern-then-define). The rods were the last to leave, 2026-08-03.
+
+; --- fishing (2026-08-03; Random is extern'd with the ball family below) ---
+extern FishingAnim          ; src/engine/overworld/player_animations.asm — pret farcall
+extern ReadSuperRodData     ; src/engine/items/super_rod.asm — pret callfar; out DX (dh=level, dl=species)
 
 section .data
 align 4
@@ -3127,6 +3121,129 @@ ItemUseCoinCase:
     jnz ItemUseNotTime
     mov esi, [CoinCaseNumCoinsText_ref] ; TX_BCD reads wPlayerCoins
     jmp iu_print_text                   ; pret: jp PrintText
+
+; ---------------------------------------------------------------------------
+; Fishing rods — pret engine/items/item_effects.asm:2026-2140 (ItemUseOldRod /
+; ItemUseGoodRod / ItemUseSuperRod / RodResponse / DoNotGenerateFishingEncounter
+; / FishingInit), ported 2026-08-03 (items plan Stage 11).
+;
+; Register map: b→BH (level), c→BL (species), a→AL. wRodResponse: 0 = no bite,
+; 1 = bite, 2 = no fish in this map (include/gb_memmap.inc 0xCD3D union lane).
+; pret's `farcall FishingAnim` / `callfar ReadSuperRodData` are flat calls (no
+; banks). GoodRodMons is generated (assets/good_rod.inc, level-first rows) and
+; included at pret's position below.
+; ---------------------------------------------------------------------------
+global ItemUseOldRod
+ItemUseOldRod:
+    call FishingInit
+    jc ItemUseNotTime                       ; jp c
+    mov bh, 5                               ; lb bc, 5, MAGIKARP (b = level)
+    mov bl, MAGIKARP                        ; c = species
+    mov al, 0x1                             ; set bite
+    jmp RodResponse                         ; jr RodResponse
+
+global ItemUseGoodRod
+ItemUseGoodRod:
+    call FishingInit
+    jc ItemUseNotTime                       ; jp c
+.RandomLoop:
+    call Random
+    shr al, 1                               ; srl a — CF = bit 0
+    jc .SetBite                             ; carry → no bite (rla/xor tail flips it)
+    and al, 0x03                            ; and %11
+    cmp al, 2
+    jae .RandomLoop                         ; jr nc — only 0/1 pick a mon
+    ; choose which monster appears (GoodRodMons rows are level, species)
+    mov esi, GoodRodMons                    ; ld hl, GoodRodMons (flat)
+    add al, al                              ; add a — 2 bytes per row
+    movzx ecx, al
+    add esi, ecx                            ; add hl, bc
+    mov bh, [esi]                           ; ld b, [hl] (level)
+    inc esi
+    mov bl, [esi]                           ; ld c, [hl] (species)
+    and al, al                              ; and a — clear CF for the tail
+.SetBite:
+    ; pret: ld a, 0 / rla / xor 1 — AL = CF, flipped: carry path → 0 (no bite),
+    ; mon-picked path (CF cleared) → 1 (bite). setc is the flag-faithful rla here.
+    setc al
+    xor al, 1
+    jmp RodResponse                         ; jr RodResponse
+
+section .data
+; pret INCLUDEs data/wild/good_rod.asm at exactly this spot; generated Tier-1.
+%include "assets/good_rod.inc"
+section .text
+
+global ItemUseSuperRod
+ItemUseSuperRod:
+    call FishingInit
+    jc ItemUseNotTime                       ; jp c
+    call ReadSuperRodData                   ; callfar — DX = (dh level, dl species) or 0
+    mov bl, dl                              ; ld c, e
+    mov bh, dh                              ; ld b, d
+    mov byte [ebp + wRodResponse], 0x2
+    mov al, bl                              ; ld a, c
+    and al, al                              ; are there fish in the map?
+    jz DoNotGenerateFishingEncounter        ; if not, do not generate an encounter
+    mov byte [ebp + wRodResponse], 0x1
+    call Random
+    and al, 0x1
+    jnz RodResponse                         ; AL = 1 → bite
+    xor al, al
+    mov [ebp + wRodResponse], al            ; no bite
+    jmp DoNotGenerateFishingEncounter       ; jr
+
+RodResponse:
+    mov [ebp + wRodResponse], al
+
+    dec al                                  ; is there a bite?
+    jnz DoNotGenerateFishingEncounter
+    ; if yes, store level and species data
+    mov byte [ebp + wMoveMissed], 1
+    mov [ebp + wCurEnemyLevel], bh          ; ld a, b (level)
+    mov [ebp + wCurOpponent], bl            ; ld a, c (species)
+
+DoNotGenerateFishingEncounter:
+    ; pret: push af/push hl around FishingAnim with wWalkBikeSurfState forced 0 —
+    ; the animation must render the WALKING player graphics.
+    mov al, [ebp + wWalkBikeSurfState]
+    push eax
+    mov byte [ebp + wWalkBikeSurfState], 0
+    call FishingAnim                        ; farcall
+    pop eax
+    mov [ebp + wWalkBikeSurfState], al
+    ret
+
+; checks if fishing is possible and if so, runs initialization code common to all rods
+; unsets carry if fishing is possible, sets carry if not
+global FishingInit
+FishingInit:
+    mov al, [ebp + wIsInBattle]
+    and al, al
+    jz .notInBattle
+    stc                                     ; can't fish during battle
+    ret
+
+.notInBattle:
+    call IsNextTileShoreOrWater             ; CF=1 → shore/water ahead
+    jnc .cannotFish
+    cmp byte [ebp + wWalkBikeSurfState], 2  ; Surfing?
+    je .cannotFish
+    call ItemUseReloadOverworldData
+    mov esi, [ItemUseText00_ref]            ; "<PLAYER> used <ITEM>!"
+    call iu_print_text                      ; pret: call PrintText
+    mov al, SFX_HEAL_AILMENT
+    call PlaySound
+    mov byte [ebp + wPikachuEmotionModifier], 0x2
+    mov byte [ebp + wPikachuMood], 0x81
+    mov bl, 80                              ; ld c, 80 (DelayFrames: BL = count)
+    call DelayFrames
+    clc                                     ; and a — fishing is possible
+    ret
+
+.cannotFish:
+    stc                                     ; can't fish when surfing / no water
+    ret
 
 global ItemUseOaksParcel
 ItemUseOaksParcel:

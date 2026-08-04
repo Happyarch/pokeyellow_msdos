@@ -463,7 +463,7 @@ ITEMS_SRCS := \
     src/engine/items/town_map.asm \
     src/engine/items/tms.asm \
     src/engine/items/tmhm.asm \
-    src/engine/items/item_use_stubs.asm \
+    src/engine/items/super_rod.asm \
     src/home/item_price.asm \
     src/engine/items/tm_prices.asm \
     src/home/compare.asm \
@@ -880,6 +880,21 @@ endif
 ifdef DEBUG_LEDGE_TRACE
 NASMFLAGS += -D DEBUG_LEDGE_TRACE
 endif
+endif
+
+# Fishing-rod gate (items-plan Stage 11): spawn on the Pallet Town shore (the
+# DEBUG_SURF tile map), seed an OLD ROD into bag slot 0, then FALL THROUGH into
+# the real OverworldLoop. AUTOKEY_FISH drives one FishingInit FAILURE (front
+# tile still 0 = not water) and then the deterministic OLD ROD bite (no RNG:
+# MAGIKARP lv 5) through the live bag UI. Dump lands with the bag still open —
+# wCurOpponent is armed and closing the menus would start the wild battle.
+# make DEBUG_FISH=1 [AUTOKEY_DUMP_FRAME=2000]
+ifdef DEBUG_FISH
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_FISH -D DEBUG_SEED_PARTY -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_FISH
+AUTOKEY_DUMP_FRAME ?= 2000
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 endif
 
 # Bill's-PC box-behaviour gate (sram plan stage 6): seeded party, RunBillsPCTest
@@ -2428,12 +2443,14 @@ assets/wild_data.inc:
 
 src/data/wild_data.o: assets/wild_data.inc
 
-# Super Rod fishing slots (generated from data/wild/super_rod.asm; internal-index
-# species). Embedded directly by super_rod.asm.
-assets/super_rod.inc:
+# Super Rod fishing slots + Good Rod pair (generated from data/wild/
+# {super_rod,good_rod}.asm; internal-index species). super_rod.inc is embedded
+# by super_rod.asm, good_rod.inc by item_effects.asm (ItemUseGoodRod).
+assets/super_rod.inc assets/good_rod.inc &:
 	python3 tools/generators/gen_super_rod.py
 
 src/engine/items/super_rod.o: assets/super_rod.inc
+src/engine/items/item_effects.o: assets/good_rod.inc
 
 # Town-map data + graphics (generated from data/maps/{town_map_entries,
 # town_map_order,names}.asm + gfx/town_map/). Consumed by town_map.asm.
@@ -2479,7 +2496,8 @@ assets: assets/scenario_registry.inc \
         assets/debug_boot_names.inc \
         assets/battle_hud_2bpp.inc assets/ptile_2bpp.inc \
         assets/trainer_pics.inc \
-        assets/super_rod.inc assets/town_map_data.inc assets/town_map_gfx.inc \
+        assets/super_rod.inc assets/good_rod.inc \
+        assets/town_map_data.inc assets/town_map_gfx.inc \
         assets/ui_layout_menus.inc assets/ui_layout_battle.inc \
         assets/ui_layout_intro.inc \
         assets/map_border_overrides.inc assets/badge_tiles.inc \

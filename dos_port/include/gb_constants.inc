@@ -93,6 +93,7 @@ MON_SPC                 equ 0x2A
 PARTYMON_STRUCT_LENGTH  equ 0x2C    ; 44
 
 STARTER_PIKACHU         equ 84      ; = PIKACHU internal index ($54); pikachu_status
+MAGIKARP                equ 0x85    ; internal index (constants/pokemon_constants.asm); ItemUseOldRod's fixed catch
 
 ; --- Moves table record (data/moves/moves.asm; gen_moves.py) ---
 MOVE_LENGTH             equ 6
@@ -145,6 +146,9 @@ FULL_HEAL               equ 0x34
 REVIVE                  equ 0x35
 MAX_REVIVE              equ 0x36
 SURFBOARD               equ 0x07    ; ItemUseSurfboard (the SURF field-move item)
+OLD_ROD                 equ 0x4C    ; constants/item_constants.asm — fishing rods
+GOOD_ROD                equ 0x4D
+SUPER_ROD               equ 0x4E
 ; The PP family is a contiguous run in pret constants/item_constants.asm — the
 ; adjacency is load-bearing: ItemUsePPRestore's .useElixir decrements the item id
 ; TWICE so ELIXER becomes ETHER and MAX_ELIXER becomes MAX_ETHER.

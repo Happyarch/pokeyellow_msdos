@@ -539,6 +539,36 @@ SCENARIOS = {
             ],
         },
     },
+    "fish_old_rod": {
+        # OLD ROD on the Pallet shore through the live bag UI: one FishingInit
+        # failure (seeded non-water front tile -> ItemUseNotTime), then the
+        # deterministic bite — ItemUseOldRod has no RNG (MAGIKARP lv 5). The
+        # suite's only fishing coverage; Good/Super Rod share the whole
+        # FishingInit/RodResponse/FishingAnim skeleton but their picks are
+        # RNG-gated (free-running GB RNG differs across sides), so this is the
+        # family's deterministic representative. Dumped with the bag open —
+        # wCurOpponent is armed and closing the menus would start the battle.
+        "class": "datastruct",
+        "flags": "DEBUG_FISH=1",
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
+        # The surf/sight boot-path masks, same two justifications.
+        "wram_masks": {
+            "wPlayerMapPos": [
+                ((1, 2), "wCurrentTileBlockMapViewPointer: the port's MAP_BORDER is 7, "
+                         "not pret's 3 (include/gb_memmap.inc), so the same player "
+                         "position yields a different pointer into a differently-sized "
+                         "wOverworldMap. wCurMap at +0 and wYCoord/wXCoord at +3/+4 ARE "
+                         "compared, and they pin the player to (14,5)."),
+            ],
+            "wStatusFlags5to7": [
+                ((2, 2), "wStatusFlags6 BIT_GAME_TIMER_COUNTING: the golden has been "
+                         "playing since the new game, the port gate boots straight into "
+                         "the map with SKIP_TITLE and never starts the play-time "
+                         "counter. wStatusFlags5 at +0 and wStatusFlags7 at +3 ARE "
+                         "compared."),
+            ],
+        },
+    },
     "item_pp_restore": {
         # ETHER used on party mon 0's move slot 0 (pre-drained to 1 PP) through the
         # real UseItem dispatcher: party menu -> type-2 move menu -> +10 PP ->

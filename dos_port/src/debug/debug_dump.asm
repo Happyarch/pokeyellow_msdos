@@ -113,6 +113,10 @@ global RunSurfTestSeed
 extern PrepareNewGameDebug
 global RunLedgeTestSeed
 %endif
+%ifdef DEBUG_FISH
+extern PrepareNewGameDebug
+global RunFishTestSeed
+%endif
 %ifdef DEBUG_ITEMSTONE
 extern PrepareNewGameDebug
 extern LoadFontTilePatterns
@@ -625,6 +629,23 @@ gbstate_regions:
 %ifdef DEBUG_LEDGE_TRACE
     gbregion "ledgeTrace",       0x26000, 0x1000           ; HandleMidJump call ring (debug aid)
 %endif
+%endif
+%ifdef DEBUG_FISH
+    ; Fishing-rod scenario (items-plan Stage 11). Same rule as the rows above:
+    ; scenario-local, mirrored by tools/mgba_harness/scenarios/fish_old_rod.lua,
+    ; joined by NAME. These are the bytes the rod flow writes: the response
+    ; lane, the armed encounter, and the wWalkBikeSurfState round trip
+    ; DoNotGenerateFishingEncounter performs around FishingAnim.
+    gbregion "wPlayerMapPos",    wCurMap, 5                ; wCurMap .. wXCoord
+    gbregion "wRodResponse",     wRodResponse, 1           ; 1 = bite
+    gbregion "wCurOpponent",     wCurOpponent, 1           ; MAGIKARP armed
+    gbregion "wCurEnemyLevel",   wCurEnemyLevel, 1         ; 5
+    gbregion "wMoveMissed",      wMoveMissed, 1            ; 1 (bite path)
+    gbregion "wWalkBikeSurf",    wWalkBikeSurfState, 1     ; restored 0 after anim
+    gbregion "wWalkBikeSurfCopy", wWalkBikeSurfStateCopy, 1
+    gbregion "wTileInFront",     W_TILE_IN_FRONT_OF_PLAYER, 1 ; $14 after the bump
+    gbregion "wMovementFlags",   W_MOVEMENT_FLAGS, 1       ; BIT_LEDGE_OR_FISHING cleared
+    gbregion "wStatusFlags5to7", wStatusFlags5, 4
 %endif
 gbstate_regions_end:
 
@@ -1154,6 +1175,27 @@ RunLedgeTestSeed:
     mov byte [ebp + wNumBagItems], 0
     mov byte [ebp + wBagItems], 0xFF
     call PrepareNewGameDebug
+    ret
+%endif
+
+%ifdef DEBUG_FISH
+; ---------------------------------------------------------------------------
+; RunFishTestSeed — fishing-rod gate (items-plan Stage 11). Like
+; RunSurfTestSeed, SEEDS AND RETURNS: EnterMap falls through into the real
+; OverworldLoop and AUTOKEY_FISH drives both rod uses with live collision.
+; Seeds the debug party + bag, then bag slot 0 = OLD ROD qty 1.
+; Deliberately does NOT touch wTileInFrontOfPlayer (see the DEBUG_FISH block
+; in src/home/overworld.asm — its boot value 0 IS the failure branch's input).
+; In: EBP = GB memory base.  Returns.
+; ---------------------------------------------------------------------------
+RunFishTestSeed:
+    mov byte [ebp + wPartyCount], 0
+    mov byte [ebp + wPartySpecies], 0xFF
+    mov byte [ebp + wNumBagItems], 0
+    mov byte [ebp + wBagItems], 0xFF
+    call PrepareNewGameDebug
+    mov byte [ebp + wBagItems + 0], OLD_ROD
+    mov byte [ebp + wBagItems + 1], 1
     ret
 %endif
 
@@ -3049,6 +3091,64 @@ autokey_script:
 %endif
     dd   60 + AK_LEDGE_SHIFT,   72 + AK_LEDGE_SHIFT, PAD_DOWN ; arm the hop; the loop plays it out
     dd  300 + AK_LEDGE_SHIFT,  312 + AK_LEDGE_SHIFT, PAD_DOWN ; post-teardown step — proves input is back
+    dd   -1,   -1, 0
+%elifdef AUTOKEY_FISH
+    ; items-plan Stage 11 (DEBUG_FISH): two OLD ROD uses through the real bag UI.
+    ; Spawn is the DEBUG_SURF tile — Pallet (14,5) facing the water at (15,5).
+    ;
+    ; USE 1 — FishingInit FAILURE. wTileInFrontOfPlayer still holds its boot
+    ; value 0 (nothing has bumped yet), IsNextTileShoreOrWater rejects it, and
+    ; the handler takes `jp c, ItemUseNotTime` ("OAK: <PLAYER>! This isn't the
+    ; time to use that!" — prompt, needs an A).
+    ;   START -> DOWN DOWN -> A : open the START menu, pick ITEM
+    ;   A -> A                  : bag slot 0 (OLD ROD) -> USE/TOSS -> USE
+    ;   A                       : dismiss the NotTime prompt -> back in the bag
+    ;   B -> B                  : close the bag, close the START menu
+    ; USE 2 — the deterministic bite (ItemUseOldRod has NO RNG: MAGIKARP lv 5).
+    ;   DOWN                    : bump into the water — the collision check
+    ;                             populates wTileInFrontOfPlayer = $14 (the same
+    ;                             stale-byte contract AUTOKEY_SURF pins)
+    ;   START -> A              : reopen; the START menu remembers ITEM
+    ;   A -> A                  : OLD ROD -> USE/TOSS -> USE. FishingInit prints
+    ;                             "used OLD ROD!" (text_end, no prompt), delays
+    ;                             80f; FishingAnim: 10f + rod gfx + 100f wait +
+    ;                             shake + the real "!" EmotionBubble, then
+    ;                             ItsABiteText prompts.
+    ;   A (late)                : dismiss ItsABiteText -> back in the bag
+    ; ...and STOP with the bag open: wCurOpponent is armed, closing the menus
+    ; would start the wild battle (owned by the battle scenarios).
+    ; Cadence: 60-frame gaps, 10-frame holds (the AUTOKEY_SURF spacing).
+    ; The UP turn mirrors the golden: on GB the START press refreshes
+    ; wTileInFrontOfPlayer for the CURRENT facing (pret .displayDialogue), so
+    ; the golden must not face the water during the failure use. The port's
+    ; byte just holds boot-0 (same outcome). 2-FRAME hold: (13,5) is passable
+    ; (measured — a 6-frame hold outlived the turn-delay and walked), so the
+    ; press must be a pure turn tap.
+    dd   60,   62, PAD_UP       ; turn-only: face away from the water
+    dd  130,  140, PAD_START
+    dd  190,  200, PAD_DOWN     ; POKéDEX -> POKéMON
+    dd  250,  260, PAD_DOWN     ; -> ITEM
+    dd  310,  320, PAD_A        ; ITEM
+    dd  370,  380, PAD_A        ; OLD ROD -> USE/TOSS
+    dd  430,  440, PAD_A        ; USE -> FishingInit fails (front tile not water)
+    ; ItemUseNotTimeText is THREE lines (text/line/cont) — a mid-text ▼ page
+    ; plus the final prompt = TWO A presses. The first cut sent one, so the B
+    ; pair below was eaten by the dialog + bag and the START menu was still
+    ; open when the DOWN taps arrived (measured: FRAME.BIN at 480/1900).
+    dd  510,  520, PAD_A        ; advance the ▼ page
+    dd  580,  590, PAD_A        ; dismiss the final prompt -> bag redraws
+    dd  650,  660, PAD_B        ; close the bag
+    dd  710,  720, PAD_B        ; close the START menu
+    dd  780,  786, PAD_DOWN     ; turn back + first blocked bump (6f hold: the
+                                ; turn consumes iteration 1, the held press then
+                                ; bumps the water and writes $14)
+    dd  850,  860, PAD_DOWN     ; second bump — belt and braces
+    dd  920,  930, PAD_START
+    dd  980,  990, PAD_A        ; ITEM (cursor remembered)
+    dd 1040, 1050, PAD_A        ; OLD ROD -> USE/TOSS
+    dd 1100, 1110, PAD_A        ; USE -> "used OLD ROD!" + 80f + FishingAnim
+    dd 1650, 1660, PAD_A        ; dismiss ItsABiteText (after ~100f wait + shake
+                                ; + bubble; generous — the prompt blinks until A)
     dd   -1,   -1, 0
 %elifdef AUTOKEY_BILLSPC
     ; sram-plan stage 6 (DEBUG_BILLSPC): drive the real Bill's PC box UI.

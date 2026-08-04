@@ -32,10 +32,12 @@
 ; s16 mirror repair; see the banner at the end of this file. (This line used to
 ; say they stay in ledges.asm "per ticket" — the mirror rule overrides that.)
 ;
-; Check-only (HOME_CHECK_SRCS): externs the unported StopMusic (home/overworld.asm)
-; and LoadAnimSpriteGfx (battle-animation gfx loader). BirdSprite + fishing tiles
-; are incbin'd here and allowlisted INTERIM (retire + extern when gfx/sprites.asm
-; / gfx/fishing.asm land).
+; LINKED (GAME_SRCS, Makefile). This header claimed "Check-only
+; (HOME_CHECK_SRCS)" long after promotion, and called StopMusic and
+; LoadAnimSpriteGfx "unported" — both are translated and linked (measured
+; 2026-08-03; the stale pair concealed the backlog-#24 fishing defects).
+; BirdSprite + fishing tiles are incbin'd here INTERIM (retire + extern when
+; gfx/sprites.asm / gfx/fishing.asm land).
 ;
 ; Build (check): nasm -f coff -I include/ -I . -o /dev/null \
 ;                     src/engine/overworld/player_animations.asm
@@ -112,9 +114,6 @@ wStatusFlags7                      equ 0xD732 ; golden 00:d732
 %endif
 %ifndef wMovementFlags
 wMovementFlags                     equ 0xD735 ; golden 00:d735
-%endif
-%ifndef wRodResponse
-wRodResponse                       equ 0xCD3D ; golden 00:cd3d
 %endif
 %ifndef wOnSGB
 wOnSGB                             equ 0xCF1A ; golden 00:cf1a
@@ -230,12 +229,12 @@ extern Func_1510                  ; src/home/pikachu.asm — was misattributed t
 extern LoadPlayerSpriteGraphics   ; engine/overworld/overworld.asm
 extern PlaySound                  ; home/audio.asm (LIVE)
 extern PlayDefaultMusic           ; home/audio.asm (LIVE)
-extern StopMusic                  ; UNPORTED (pret home/overworld.asm) — fade+StopAllMusic+StopAllSounds
+extern StopMusic                  ; src/home/overworld.asm (translated, linked)
 extern CopyData                   ; home/copy.asm (WRAM->WRAM)
 extern CopyVideoData              ; home/copy2.asm (ESI=VRAM dest, EDX=flat src, BL=count)
 extern LoadFontTilePatterns       ; gfx/load_font.asm
 extern PrintText                  ; src/home/window.asm (ESI=flat text stream)
-extern LoadAnimSpriteGfx          ; UNPORTED (battle-animation sprite-gfx loader)
+extern LoadAnimSpriteGfx          ; src/engine/gfx/mon_icons.asm (linked) — EAX = count, ESI = 12-byte headers
 extern EmotionBubble              ; src/engine/overworld/emotion_bubbles.asm (pret: predef)
 extern player_sprite              ; engine/overworld/player_gfx.asm — == RedSprite (flat)
 extern msgbox_dialog                    ; src/home/text.asm — overworld dialog projection
@@ -682,9 +681,14 @@ FishingAnim:
     mov bl, 12                                 ; ld c, 12
     mov esi, vNPCSprites                        ; ld hl, vNPCSprites (VRAM dest)
     call CopyVideoData
-    mov al, 0x4
+    ; pret: ld a, 4 / ld hl, RedFishingTiles / call LoadAnimSpriteGfx.
+    ; LoadAnimSpriteGfx (mon_icons.asm) consumes the count in FULL EAX and reads
+    ; the port's 12-byte header shape — both fixed 2026-08-03 (backlog #24: this
+    ; call passed AL with garbage upper bits against 8-byte entries, concealed by
+    ; a stale `; UNPORTED` here and a stale check-only file header).
+    mov eax, 4
     mov esi, RedFishingTiles                    ; ld hl, RedFishingTiles (flat table)
-    call LoadAnimSpriteGfx                      ; UNPORTED
+    call LoadAnimSpriteGfx                      ; engine/gfx/mon_icons.asm (linked)
     ; FishingRodOAM[imageindex] (flat ROM) -> wShadowOAMSprite39 (WRAM): inline
     ; flat->WRAM copy replaces the flat-source CopyData.
     movzx ecx, byte [ebp + wSpritePlayerStateData1ImageIndex] ; c = image index
@@ -766,26 +770,18 @@ FishingRodOAM:
     dbsprite  8, 10,  0,  0, 0xfe, 0         ; left
     dbsprite 11, 10,  0,  0, 0xfe, OAM_XFLIP ; right
 
-; fishing_gfx label,count,vtile: pret `dw label`->`dd` (flat), so entries are
-; 8 bytes: dd ptr, db count, db bank, dw (vNPCSprites tile N) VRAM offset. The
-; consumer LoadAnimSpriteGfx (UNPORTED) must match this flattened layout.
+; fishing_gfx label,count,vtile — pret data shape is {dw gfx, db count, db bank,
+; dw vSprites dest} (6 bytes). The port uses LoadAnimSpriteGfx's flat 12-byte
+; header (mon_icons.asm MON_ICON_HDR_SIZE, the documented port divergence at its
+; MonPartySpritePointers table): {dd flat src, dd tile count, dd dest GB VRAM
+; offset} — bank byte dropped (flat model). Reshaped 2026-08-03 (backlog #24:
+; these were 8-byte entries the 12-byte consumer walked out of step).
+align 4
 RedFishingTiles:
-    dd RedFishingTilesFront
-    db 2
-    db 0
-    dw vNPCSprites + 0x02 * TILE_SIZE
-    dd RedFishingTilesBack
-    db 2
-    db 0
-    dw vNPCSprites + 0x06 * TILE_SIZE
-    dd RedFishingTilesSide
-    db 2
-    db 0
-    dw vNPCSprites + 0x0a * TILE_SIZE
-    dd RedFishingRodTiles
-    db 3
-    db 0
-    dw vNPCSprites + 0xfd * TILE_SIZE
+    dd RedFishingTilesFront, 2, vNPCSprites + 0x02 * TILE_SIZE
+    dd RedFishingTilesBack,  2, vNPCSprites + 0x06 * TILE_SIZE
+    dd RedFishingTilesSide,  2, vNPCSprites + 0x0a * TILE_SIZE
+    dd RedFishingRodTiles,   3, vNPCSprites + 0xfd * TILE_SIZE
 
 ; --- embedded graphics (INTERIM: allowlisted; retire + extern when
 ;     gfx/sprites.asm / gfx/fishing.asm land) ---

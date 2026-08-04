@@ -104,24 +104,23 @@ The existing `battle_menu` golden does not exercise this sub-flow.
 - **Snorlax encounters:** Poké Flute owns setting the Route 12/16 fight events;
   overworld-events owns the map-script consumers that turn those events into
   encounters.
-- **Fishing header-layout defect:** `FishingAnim` is linked and makes rods
-  implementable now (its `EmotionBubble` call is fully resolved — linked at
-  its pret mirror since the 2026-07-24 M8.2 promotion, not a blocker). The
-  real open dependency, measured 2026-08-02 and not previously recorded here,
-  is a header-shape mismatch between `FishingAnim`'s call to
-  `LoadAnimSpriteGfx` and `RedFishingTiles`'s layout; see
-  `docs/current_plan_items.md` → Fishing rods for the full detail. A related
-  `wRodResponse` memmap-promotion note for the same handler family is tracked
-  in `docs/current_plan_backlog.md`.
+- **Fishing header-layout defect — RESOLVED 2026-08-03** with the fishing-rod
+  port: `RedFishingTiles` reshaped to `LoadAnimSpriteGfx`'s 12-byte header and
+  the count passed in full `EAX` (backlog #24, caller-side fix — party icons
+  untouched); `wRodResponse` promoted to `gb_memmap.inc` (#25). Golden
+  `fish_old_rod` (id 42) exercises the fixed path.
 
 ## Cleared prerequisites now owned by the items plan
 
 These are active item tasks, not blockers:
 
-- **Fishing rods:** promote the check-only `ReadSuperRodData` provider and port
-  the three handlers plus `FishingInit`. Still open, and still gated on the two
-  real `LoadAnimSpriteGfx` defects below (backlog #24) plus the `wRodResponse`
-  promotion (#25) — this is now the ONLY open item-handler family.
+- **Fishing rods: DONE 2026-08-03.** The three handlers + `FishingInit` /
+  `RodResponse` are real bodies in `src/engine/items/item_effects.asm`,
+  `super_rod.asm` is linked (`ITEMS_SRCS`), `GoodRodMons` is generated, and the
+  rod stubs' retirement deleted `item_use_stubs.asm` outright — NO item-handler
+  family remains stubbed. Golden `fish_old_rod` (id 42) covers the
+  deterministic branches; the Good/Super picks are RNG-gated cross-side and
+  share the same skeleton.
 - **PP items: DONE 2026-08-02.** `ItemUsePPUp` and `ItemUsePPRestore` are real
   linked bodies in `src/engine/items/item_effects.asm`, both stubs retired, with
   golden scenario `item_pp_restore` (id 39) covering the type-2 move-menu path

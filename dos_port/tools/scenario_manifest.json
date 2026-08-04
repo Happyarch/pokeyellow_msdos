@@ -1191,6 +1191,38 @@
         "masks": "golden_diff.SCENARIOS"
       },
       "verification": "scripted-joypad port gate plus real-navigation golden, both driving the live overworld loop through a Route 1 ledge hop and a post-teardown step; state verification, not UI verification"
+    },
+    {
+      "name": "fish_old_rod",
+      "id": 42,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_FISH=1",
+      "port_entry_gate": "DEBUG_FISH",
+      "navigation_script": "tools/mgba_harness/scenarios/fish_old_rod.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "ItemUseOldRod",
+        "FishingInit",
+        "RodResponse",
+        "FishingAnim",
+        "LoadAnimSpriteGfx",
+        "ItemUseNotTime"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "scripted-joypad port gate plus real-navigation golden, both driving the live bag UI on the Pallet shore through one FishingInit failure and the deterministic OLD ROD bite; state verification, not UI verification. Good/Super Rod share this skeleton; their bite picks are RNG-gated and not cross-side deterministic."
     }
   ],
   "disabled_scenarios": []

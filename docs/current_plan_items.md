@@ -122,33 +122,34 @@ maintained here.
       (both outcomes, without mutating the found flag) lands with the first
       reachable hidden-item map. See `docs/items_blockers.md` → Itemfinder.
 
-- [ ] **Fishing rods.** This is ready item-layer work, not an external blocker:
-      `FishingAnim` is linked and `ReadSuperRodData` is check-only. Promote
-      `super_rod.asm`, port `FishingInit` plus the Old/Good/Super Rod handlers,
-      and exercise no-bite and bite branches. `EmotionBubble` is NOT a blocker: the
-      faithful body is linked at its pret mirror
-      (`src/engine/overworld/emotion_bubbles.asm`) and the `overworld_stubs.asm`
-      ret-stub was retired by the M8.2 promotion 2026-07-24, so a bite draws the
-      real "!" bubble. The genuine open dependency is `LoadAnimSpriteGfx`: see
-      the header-layout defect below.
+- [x] **Fishing rods — DONE 2026-08-03.** `ItemUseOldRod` / `ItemUseGoodRod` /
+      `ItemUseSuperRod` / `RodResponse` / `DoNotGenerateFishingEncounter` /
+      `FishingInit` translated faithfully from pret
+      `engine/items/item_effects.asm:2026-2140` into their mirror;
+      `super_rod.asm` promoted from `ITEMS_CHECK_SRCS` to `ITEMS_SRCS`;
+      `GoodRodMons` generated (`gen_super_rod.py` → `assets/good_rod.inc`,
+      level-first rows, included at pret's position). The rod ret-stubs were
+      the LAST content of `item_use_stubs.asm`, which is deleted — every
+      ItemUse* family now has a real body. Backlog #24's two defects on the
+      `LoadAnimSpriteGfx` path are fixed caller-side (`RedFishingTiles`
+      reshaped to the port's 12-byte header, count passed in full `EAX`), so
+      the party-icon path is untouched (`party_menu` golden stays its
+      witness). Backlog #25's `wRodResponse` promotion to `gb_memmap.inc`
+      0xCD3D (union comment carried) landed first, as filed.
 
-      **Header-layout defect on the already-linked `FishingAnim` path
-      (measured 2026-08-02, not previously recorded).** `FishingAnim`
-      (`src/engine/overworld/player_animations.asm:686-687`) calls
-      `LoadAnimSpriteGfx` with `RedFishingTiles`, but the two disagree on the
-      header shape: the linked `LoadAnimSpriteGfx`
-      (`src/engine/gfx/mon_icons.asm:295-309`) reads 12-byte entries
-      (`MON_ICON_HDR_SIZE equ 12`, fields at +0/+4/+8), while `RedFishingTiles`
-      (`player_animations.asm:772-788`) is 8 bytes per entry
-      (`dd ptr / db count / db bank / dw vram_off`). The same call also passes
-      the entry count in `AL` (`mov al, 0x4`) where the callee consumes `EAX`
-      (`mov [las_left], eax`), so the loop bound is whatever was in the upper
-      24 bits. Both must be fixed before a rod can be used; the port's own
-      `; UNPORTED` comment at `:687` and the "Check-only (HOME_CHECK_SRCS)"
-      note at `:35-38` are stale (the file is in `GAME_SRCS`, Makefile:354) and
-      were hiding this. A related `wRodResponse` memmap-promotion note for this
-      same handler family is tracked in `docs/current_plan_backlog.md`, not
-      here.
+      Runtime evidence: golden scenario **fish_old_rod** (id 42, datastruct)
+      drives one `FishingInit` failure (`ItemUseNotTime`) and the
+      deterministic OLD ROD bite (MAGIKARP lv 5 armed in
+      `wCurOpponent`/`wCurEnemyLevel`, `wRodResponse`=1) through the live bag
+      UI on both sides. The Good/Super Rod picks are RNG-gated (free-running
+      GB RNG differs across sides) and are deliberately NOT golden-compared —
+      they share the whole `FishingInit`/`RodResponse`/`FishingAnim` skeleton
+      the scenario pins. The scenario also caught a faithfulness gap kept as
+      a known deviation: pret's START-press path refreshes
+      `wTileInFrontOfPlayer` (`.displayDialogue`), the port's does not — the
+      scenario works around it by facing away from the water for the failure
+      use (both sides then agree for opposite reasons; see
+      `fish_old_rod.lua`'s header).
 
 - [x] **PP Up and PP restoration — DONE 2026-08-02.** `ItemUsePPUp` and
       `ItemUsePPRestore` are translated faithfully from pret
