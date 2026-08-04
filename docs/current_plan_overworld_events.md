@@ -891,6 +891,14 @@ silently drift; regenerate rather than trusting it:
          `ForceBikeDown` writes `PAD_DOWN` to `hJoyHeld` inside the
          `JoypadOverworld` seam. Whichever writes last wins, which is a property
          of the frame pipeline rather than of either feature's intent.
+         **They GATE each other, not merely race — design to this, not to "last
+         writer wins".** `ForceBikeDown`'s third guard is "no D-pad, A or B
+         held", and the AUTOKEY cadence presses exactly B and A. So on the frames
+         the cadence covers, its own presses SUPPRESS `ForceBikeDown` outright;
+         on the frames between, `ForceBikeDown` fires. The resulting behaviour is
+         a function of CADENCE PHASE, which is a materially harder problem than a
+         write-ordering race and cannot be reasoned about from either routine in
+         isolation. MEASURE it; do not derive it.
       2. **Their "a stray press lands somewhere harmless" argument does NOT
          transfer.** It holds on ROUTE_3 only because nothing else touches the
          pad there. RE-TUNE the cadence for ROUTE_17; do not copy their frame
