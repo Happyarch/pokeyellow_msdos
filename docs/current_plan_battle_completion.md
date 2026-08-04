@@ -366,22 +366,31 @@ result gates deliberately stop after initialization and drive one terminal turn.
       trainer map nothing now reaches `EndTrainerBattle`, leaving
       `BIT_PRINT_END_BATTLE_TEXT` and `wCurMapScript` set.
 
-      **Deliberately NOT ticked — exactly what remains.**
-      1. Three inert `-D TRAINER_BATTLE_LIVE` defines survive in
-         `dos_port/Makefile`'s `DEBUG_TRAINER_{INIT,WIN,LOSS}` blocks. No
-         `%ifdef` consumes the macro any more, so they are no-ops and the build
-         is correct either way — but the guard is not textually gone. The
-         Makefile was held by the concurrent overworld-events session for this
-         whole batch; removing the three defines is a follow-up, owned here.
-      2. No continuous overworld→battle→return scenario exists yet. 44/45/46
+      **`TRAINER_BATTLE_LIVE` IS NOW FULLY GONE.** The three inert
+      `-D TRAINER_BATTLE_LIVE` defines in `dos_port/Makefile`'s
+      `DEBUG_TRAINER_{INIT,WIN,LOSS}` blocks were deleted once the
+      overworld-events session released its claim on the Makefile. Nothing in
+      `dos_port/{src,Makefile,tools}` references the macro except three
+      past-tense comments describing its retirement. Re-verified after the
+      deletion: default build 0, `trainer_battle_{init,win,loss}` all PASS
+      again (their `NASMFLAGS` changed, so they were rebuilt and re-run), lint
+      and `--strict-claims` both still 0.
+
+      **Deliberately still NOT ticked — exactly what remains.**
+      1. No continuous overworld→battle→return scenario exists yet. 44/45/46
          remain synthetic gates that stop after initialization or after one
          deterministic turn, so the live presentation/turn-loop/return
          choreography is still unproven. That scenario is what should carry the
          eventual tick.
-      3. `npc_beaten_flags` → `TrainerFlagAction` convergence is OWNED BY
+      2. `npc_beaten_flags` → `TrainerFlagAction` convergence is OWNED BY
          `docs/current_plan_overworld_events.md` (agreed by mail 2026-08-04, both
          roots) — not this plan's to close, and it is what retires the new
-         `TrainerEncounterFlow` DEVIATION.
+         `TrainerEncounterFlow` DEVIATION. That residual shrinks per wired map:
+         on an unwired map `MapScriptPointers[wCurMap]` is the no-op
+         `DefaultMapScript`, so the three-entry table is unreachable and
+         post-battle cleanup cannot run. WIRED_MAPS is ROUTE_3/6/11 plus
+         ROUTE_4/8/9/10 once the overworld-events batch merges — 7 of 17
+         standard-shape maps, 10 still table-only.
 - [x] **1c. Victory-dependent trainer flags.** Move beaten/event writes to the
       verified post-victory result path. A loss, blackout, or aborted battle must
       leave the trainer armed; victory must advance the script, persist the flag,

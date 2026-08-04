@@ -1466,21 +1466,25 @@ $(eval $(call battle_gate,DEBUG_BATTLE_TRAINER))
 ifdef DEBUG_TRAINER_INIT
 DEBUG_BATTLE := 1
 NEED_DEBUG_DUMP := 1
-NASMFLAGS += -D DEBUG_TRAINER_INIT -D TRAINER_BATTLE_LIVE -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_TRAINER_INIT -D SKIP_TITLE
 endif
 # Trainer terminal-state oracles: initialize Route 3's generated trainer party,
 # drive one deterministic final turn, then exercise EndOfBattle + the map-script
-# result consumer. These remain guarded evidence; they do not enable trainer
-# battles in the production build.
+# result consumer. These are deterministic state checkpoints, not the production
+# route: they stand in for OverworldLoop's wCurOpponent poll by calling InitBattle
+# directly, and stop before presentation and the interactive turn loop.
+# (The -D TRAINER_BATTLE_LIVE these three blocks used to carry is GONE as of the
+# Stage 1b reconciliation: trainer battles are live in the default build, entered
+# by OverworldLoop's poll, and no %ifdef consumes that macro any more.)
 ifdef DEBUG_TRAINER_WIN
 DEBUG_BATTLE := 1
 NEED_DEBUG_DUMP := 1
-NASMFLAGS += -D DEBUG_TRAINER_RESULT -D DEBUG_TRAINER_WIN -D TRAINER_BATTLE_LIVE -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_TRAINER_RESULT -D DEBUG_TRAINER_WIN -D SKIP_TITLE
 endif
 ifdef DEBUG_TRAINER_LOSS
 DEBUG_BATTLE := 1
 NEED_DEBUG_DUMP := 1
-NASMFLAGS += -D DEBUG_TRAINER_RESULT -D DEBUG_TRAINER_LOSS -D TRAINER_BATTLE_LIVE -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_TRAINER_RESULT -D DEBUG_TRAINER_LOSS -D SKIP_TITLE
 endif
 # Move-selection menu (menu-fidelity row 22): seed the DEBUG_BATTLE party, then run
 # pret's MoveSelectionMenu — the move list, the cursor and the TYPE/PP box (PrintMenuItem).
