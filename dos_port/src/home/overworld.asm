@@ -922,16 +922,33 @@ OverworldLoop:
     ; pret reaches RunMapScript via JoypadOverworld, which the port does not have —
     ; that remaining deviation is documented on RunMapScript itself.
     call RunMapScript                            ; per-frame map _Script (default no-op; Pallet event-gate)
-    ; Trainer-blackout return, preserving pret home/overworld.asm:AllPokemonFainted:
-    ;   wIsInBattle=$ff -> RunMapScript (EndTrainerBattle) -> HandleBlackOut.
-    ; The port starts InitBattle from inside the first RunMapScript call, so the
-    ; post-battle sentinel is only visible after that call returns. Run the now-
-    ; advanced script once more before blacking out; on standard trainer maps it
-    ; is EndTrainerBattle, which clears the script without setting the beaten flag.
-    cmp byte [ebp + wIsInBattle], 0xff
-    jne .mapScriptComplete
-    call RunMapScript
-    jmp HandleBlackOut
+
+    ; --- Stage 1b: pret's battle-entry poll (home/overworld.asm:65-67) ---
+    ; pret runs this immediately after JoypadOverworld, which is where its
+    ; RunMapScript lives; the port calls RunMapScript directly, so the check sits
+    ; at the same seam.  The trainer script chain
+    ; (CheckFightingMapTrainers -> DisplayEnemyTrainerTextAndStartBattle ->
+    ; StartTrainerBattle) does not run the battle itself: it SEEDS wCurOpponent
+    ; and returns, and this poll is what turns that seed into a battle.
+    ;   pret: ld a, [wCurOpponent] / and a / jp nz, .newBattle
+    ; NewBattle -> InitBattle -> InitOpponent (wCurOpponent >= OPP_ID_OFFSET =
+    ; trainer), and EndOfBattle.resetVariables clears wCurOpponent on the way out,
+    ; so this cannot re-enter.  CF=1 means a battle ran: take pret's shared
+    ; .battleOccurred tail (BIT_TALKED_TO_TRAINER/BIT_TRAINER_BATTLE reset,
+    ; AnyPartyAlive -> AllPokemonFainted -> HandleBlackOut, then EnterMap).
+    ;
+    ; This poll REPLACES the old wIsInBattle==$ff scaffold that stood here. That
+    ; block existed only because StartTrainerBattle used to call InitBattle
+    ; inline (the retired TRAINER_BATTLE_LIVE guard), which made the post-battle
+    ; sentinel visible on return from RunMapScript and needed a second
+    ; RunMapScript to reach EndTrainerBattle. The battle no longer runs inside
+    ; RunMapScript, so the sentinel can no longer be set here: blackout is now
+    ; reached the way pret reaches it, through .battleOccurred's AnyPartyAlive.
+    cmp byte [ebp + wCurOpponent], 0
+    je .noPendingOpponent
+    call NewBattle                               ; CF=1 → a battle occurred
+    jc OverworldLoopLessDelay.battleOccurred
+.noPendingOpponent:
 .mapScriptComplete:
     ; wIgnoreInputCounter countdown now runs faithfully via CountDownIgnoreInputBitReset
     ; (called by TrackPlayTime inside DelayFrame, Wave-2/M2.1). The old inline block that

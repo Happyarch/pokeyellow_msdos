@@ -300,7 +300,7 @@ result gates deliberately stop after initialization and drive one terminal turn.
       719d997d) and the pre-existing
       unsuppressed inventories exposed by touching the large overworld/battle
       mirror files; that result is recorded, not reported as green.
-- [ ] **1b. Retire `TRAINER_BATTLE_LIVE`.** Exercise the trainer route under the
+- [~] **1b. Retire `TRAINER_BATTLE_LIVE`.** Exercise the trainer route under the
       guard, then remove the guard rather than leaving two build behaviors.
       Reconcile `StartTrainerBattle`/`EndTrainerBattle` and `wCurMapScript` with
       the overworld plan's script state machine. The earlier generator blocker
@@ -318,6 +318,70 @@ result gates deliberately stop after initialization and drive one terminal turn.
       the continuous guarded route through presentation and the turn loop,
       followed by removal of the compile-time guard. The default build,
       `static_gate`, all 45 `fidelity-full` scenarios, and `goldens-verify` pass.
+
+      **Measured 2026-08-04 (second pass): 1b was never a guard deletion — it was
+      a missing pret branch.** `grep wCurOpponent dos_port/src/home/overworld.asm`
+      returned NOTHING: pret's battle-entry poll (`home/overworld.asm:65-67`,
+      `ld a,[wCurOpponent] / and a / jp nz,.newBattle`, run immediately after
+      `JoypadOverworld`'s `RunMapScript`) had never been ported. pret's
+      `StartTrainerBattle` does **not** call `InitBattle` — it seeds
+      `wCurOpponent` via `InitBattleEnemyParameters`, increments `wCurMapScript`
+      and returns; the LOOP enters the battle. With no poll nothing could ever
+      enter a trainer battle, so the port had made `StartTrainerBattle` call
+      `InitBattle` + `FinalizeTrainerBattleOutcome` itself behind the guard —
+      two calls pret does not make. Unguarding them would have cemented that
+      divergence permanently instead of retiring it.
+
+      Landed instead: the missing poll was ported into `OverworldLoop`
+      (`src/home/overworld.asm`), both added calls were deleted from
+      `StartTrainerBattle`, and the premature `call EndTrainerBattle` in
+      `map_sprites.asm:TrainerEncounterFlow` was removed — post-battle cleanup
+      now flows the pret way, through `wCurMapScript` → `RunMapScript` →
+      `<Map>_ScriptPointers[2]` (`EndTrainerBattle` for every wired map;
+      confirmed present for ROUTE_3 in the generated
+      `assets/map_script_tables.inc`). `FinalizeTrainerBattleOutcome` survives
+      only as the oracles' stand-in for the loop tail, since `OverworldLoop`'s
+      own `.battleOccurred` (`AnyPartyAlive` → `AllPokemonFainted` →
+      `HandleBlackOut`) was already a faithful port of the same pret logic.
+
+      Evidence: `faithdiff StartTrainerBattle` reports
+      `calls: 1 pret / 1 port (1 matched)` — previously 3 port calls with 2
+      ADDED. Scenarios 44/45/46 (`trainer_battle_init` / `_win` / `_loss`) each
+      still PASS against mGBA after the restructure, which is the load-bearing
+      result rather than a regression tick: the roster species/levels and
+      active-selection bytes they compare can only be populated by `InitBattle`
+      → `ReadTrainer` → `EnemySendOutFirstMon`. `lint_pret_labels` and
+      `--strict-claims` both stayed at 0 violations (the pre-work baseline was
+      also 0/0, so any finding would have been this batch's).
+
+      Annotation sweep in the same change: the `DEVIATION{class=temporary}`
+      null-header skip inside `EndTrainerBattle` was **retired** — its premise
+      ("TrainerEncounterFlow reaches EndTrainerBattle without calling
+      `StoreTrainerHeaderPointer`") is false now that call is gone, and every
+      remaining caller stores a non-null header first (map scripts via
+      `ExecuteCurMapScriptInTable`, which also refuses to dispatch a map whose
+      headers slot is 0; the `DEBUG_TRAINER_RESULT` oracle directly). pret's
+      unconditional shape is restored. A NEW `DEVIATION{class=temporary}` at the
+      `TrainerEncounterFlow` site records the converse residual: on an UNWIRED
+      trainer map nothing now reaches `EndTrainerBattle`, leaving
+      `BIT_PRINT_END_BATTLE_TEXT` and `wCurMapScript` set.
+
+      **Deliberately NOT ticked — exactly what remains.**
+      1. Three inert `-D TRAINER_BATTLE_LIVE` defines survive in
+         `dos_port/Makefile`'s `DEBUG_TRAINER_{INIT,WIN,LOSS}` blocks. No
+         `%ifdef` consumes the macro any more, so they are no-ops and the build
+         is correct either way — but the guard is not textually gone. The
+         Makefile was held by the concurrent overworld-events session for this
+         whole batch; removing the three defines is a follow-up, owned here.
+      2. No continuous overworld→battle→return scenario exists yet. 44/45/46
+         remain synthetic gates that stop after initialization or after one
+         deterministic turn, so the live presentation/turn-loop/return
+         choreography is still unproven. That scenario is what should carry the
+         eventual tick.
+      3. `npc_beaten_flags` → `TrainerFlagAction` convergence is OWNED BY
+         `docs/current_plan_overworld_events.md` (agreed by mail 2026-08-04, both
+         roots) — not this plan's to close, and it is what retires the new
+         `TrainerEncounterFlow` DEVIATION.
 - [x] **1c. Victory-dependent trainer flags.** Move beaten/event writes to the
       verified post-victory result path. A loss, blackout, or aborted battle must
       leave the trainer armed; victory must advance the script, persist the flag,

@@ -35,10 +35,22 @@ if it took none. This is the swarm's divergence audit trail.
 - H-flag: involved. `AnyPartyAlive` returns its boolean in DH, while the loss
   sentinel is published explicitly as `$ff`; `EndTrainerBattle` consumes the
   sentinel before its victory-only `TrainerFlagAction` path.
-- Divergences: `TRAINER_BATTLE_LIVE` remains a temporary compile-time boundary;
-  the two result oracles skip blocking presentation waits but execute the real
-  arithmetic, cleanup, event, and script consumers. Production presentation is
-  unchanged and remains Stage 1d.
+- Divergences: the two result oracles skip blocking presentation waits but
+  execute the real arithmetic, cleanup, event, and script consumers. Production
+  presentation is unchanged and remains Stage 1d.
+  **`TRAINER_BATTLE_LIVE` is RETIRED** as of the Stage 1b reconciliation later
+  the same day — no `%ifdef` consumes it any more (three inert `-D` defines
+  remain in the Makefile pending a follow-up). It had been hiding a MISSING PRET
+  BRANCH rather than gating a finished one: the port had never ported
+  `OverworldLoop`'s battle-entry poll (pret `home/overworld.asm:65-67`,
+  `ld a,[wCurOpponent] / and a / jp nz,.newBattle`), so nothing could enter a
+  trainer battle and `StartTrainerBattle` had been made to call `InitBattle` +
+  `FinalizeTrainerBattleOutcome` itself — two calls pret does not make. The poll
+  is now ported and both calls deleted; `faithdiff StartTrainerBattle` reports
+  `calls: 1 pret / 1 port (1 matched)`, down from 3 port calls with 2 ADDED.
+  `FinalizeTrainerBattleOutcome` survives only as the oracles' stand-in for
+  `OverworldLoop.battleOccurred`, which was already the faithful port of the
+  same pret logic.
 - Notes: the win oracle exposed a pre-existing mistranslation in
   `EnemySendOutFirstMon`: the port called `LoadEnemyMonFromParty`, while pret
   calls `LoadEnemyMonData`. Restoring the pret call also loads catch-rate/base-EXP

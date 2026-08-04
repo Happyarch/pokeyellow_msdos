@@ -81,15 +81,13 @@ global wMapSpriteExtraData       ; M8.1: per-NPC [class,set] cache (pret wMapSpr
 global wMapSpriteData            ; OW-A.2: [movement byte 2, masked text id] per slot (pret wMapSpriteData)
 
 ; M8.1 sight->battle wiring — the trainer battle-entry these overworld routines call.
-; StartTrainerBattle seeds wCurOpponent/wTrainerClass/wTrainerNo from the engaged
-; trainer's cached class/set (and, under -D TRAINER_BATTLE_LIVE, calls InitBattle).
+; StartTrainerBattle SEEDS wCurOpponent/wTrainerClass/wTrainerNo from the engaged
+; trainer's cached class/set and returns; OverworldLoop's wCurOpponent poll is what
+; enters the battle (Stage 1b — see the BATTLE ENTRY note in home/trainers.asm).
 extern StartTrainerBattle              ; home/trainers.asm (pret mirror)
 ; Generic trainer talk hook (map-script fidelity plan Stage 2): pret's per-map
 ; `ld hl, <Map>TrainerHeaderN / call TalkToTrainer / jp TextScriptEnd`, kept once.
 extern TrainerTalkHook                 ; src/scripts/trainer_map_script.asm
-%ifdef TRAINER_BATTLE_LIVE
-extern EndTrainerBattle                ; home/trainers.asm (pret mirror)
-%endif
 
 ; ---------------------------------------------------------------------------
 ; Constants
@@ -1249,10 +1247,11 @@ TrainerEncounterFlow:
     ; off to StartTrainerBattle (the pret home/trainers.asm battle-entry).  This
     ; inline read of wMapSpriteExtraData is a stopgap for pret EngageMapTrainer,
     ; which M8.2 (trainer-header engine) will provide via wSpriteIndex.
-    ; StartTrainerBattle only SEEDS parameters by default (wCurOpponent /
-    ; wTrainerClass / wTrainerNo); the live `call InitBattle` is gated behind
-    ; -D TRAINER_BATTLE_LIVE because the port InitBattle is still wild-only
-    ; (no ReadTrainer / trainer-party / trainer-pic path yet — see SUMMARY).
+    ; StartTrainerBattle SEEDS the battle parameters (wCurOpponent / wTrainerClass /
+    ; wTrainerNo) and returns. It does NOT run the battle: OverworldLoop's
+    ; wCurOpponent poll enters it, and the incremented wCurMapScript makes the next
+    ; RunMapScript dispatch EndTrainerBattle (Route3_ScriptPointers index 2). That is
+    ; why no EndTrainerBattle call follows this one — see the DEVIATION below.
     movzx eax, byte [w_trainer_enc_slot]   ; slot byte offset (0x10-0xF0)
     shr al, 4                              ; slot number (1-15)
     dec al                                 ; 0-based slot index
@@ -1263,9 +1262,7 @@ TrainerEncounterFlow:
     mov cl, [wMapSpriteExtraData + eax + 1] ; trainer set
     mov [ebp + wEngagedTrainerSet], cl
     call StartTrainerBattle
-%ifdef TRAINER_BATTLE_LIVE
-    call EndTrainerBattle
-%endif
+    ; DEVIATION{class=temporary; pret=home/trainers.asm:EndTrainerBattle; behavior=this bespoke encounter flow does not call EndTrainerBattle, so post-battle cleanup happens only on maps whose script table is wired and reaches index 2; evidence=StartTrainerBattle increments wCurMapScript and Route3_ScriptPointers index 2 is EndTrainerBattle in the generated assets/map_script_tables.inc, so a wired map runs it from the next RunMapScript, while an unwired map leaves BIT_PRINT_END_BATTLE_TEXT and wCurMapScript set; lifetime=until TrainerEncounterFlow is retired into the map-script trainer flow and every trainer map is wired, owned by docs/current_plan_overworld_events.md}
     ; -------------------------------------------------------------------------
     call hide_window                    ; count=0 (nothing drawn); parks H_WY off-screen
     and byte [ebp + W_FONT_LOADED], ~(1 << BIT_FONT_LOADED)

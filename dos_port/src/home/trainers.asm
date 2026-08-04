@@ -57,11 +57,28 @@
 ; npc_beaten_flags and route map_sprites.asm's CheckTrainerSight / TrainerEncounterFlow
 ; beaten-gate through TrainerFlagAction(FLAG_TEST/FLAG_SET).
 ;
-; LIVE GATE: InitBattle now has a measured trainer-data path (class metadata,
-; ReadTrainer roster, production trainer picture, first active mon and AI state),
-; but the complete win/loss/return contract is not yet golden-proven. Therefore
-; StartTrainerBattle keeps the TRAINER_BATTLE_LIVE handoff until Stage 1b/1c;
-; DEBUG_TRAINER_INIT enables it only for the deterministic initialization gate.
+; ----------------------------------------------------------------------------
+; BATTLE ENTRY — StartTrainerBattle does NOT run the battle (Stage 1b).
+; ----------------------------------------------------------------------------
+; pret's StartTrainerBattle only SEEDS: InitBattleEnemyParameters writes
+; wCurOpponent, the status bits are set, wCurMapScript is incremented, and it
+; returns.  The battle is entered by the OVERWORLD LOOP, which polls the seed:
+;
+;   OverworldLoop -> RunMapScript (the trainer script chain ending in
+;   StartTrainerBattle) -> `ld a,[wCurOpponent] / and a / jp nz, .newBattle`
+;   -> NewBattle -> InitBattle -> InitOpponent (wCurOpponent >= OPP_ID_OFFSET)
+;
+; and the post-battle tail (.battleOccurred: AnyPartyAlive -> AllPokemonFainted
+; -> HandleBlackOut) is likewise the loop's, not this file's.
+;
+; Until Stage 1b the port had NO wCurOpponent dispatch in OverworldLoop at all,
+; so nothing could ever enter a trainer battle; the old TRAINER_BATTLE_LIVE
+; guard papered over that by calling InitBattle + FinalizeTrainerBattleOutcome
+; from inside StartTrainerBattle — two calls pret does not make, which faithdiff
+; would have reported as ADDED for as long as they lived.  Stage 1b ported the
+; missing dispatch (src/home/overworld.asm) and deleted both calls, which
+; retired the guard as a consequence rather than as the goal.  Do not
+; re-introduce a battle call here: it belongs to the loop.
 ;
 ; Build (check): nasm -f coff -I include/ -I . -o /dev/null src/home/trainers.asm
 
@@ -111,10 +128,9 @@ extern HideObject               ; src/engine/overworld/toggleable_objects.asm
 extern IsInArray                ; src/home/array2.asm (flat [ESI] reads; pass lea esi,[ebp+..] for WRAM)
 extern msgbox_dialog            ; src/home/text.asm — overworld dialog projection
 extern text_msgbox              ; src/home/text.asm — active msgbox projection (msgbox.inc)
-%ifdef TRAINER_BATTLE_LIVE
-extern InitBattle               ; src/engine/battle/init_battle.asm (wild/trainer dispatcher)
 extern AnyPartyAlive            ; src/engine/battle/core.asm — post-battle blackout test
-%endif
+                                ; (FinalizeTrainerBattleOutcome only; StartTrainerBattle no
+                                ;  longer references InitBattle — see the BATTLE ENTRY note)
 
 ; ----------------------------------------------------------------------------
 ; Globals (pret home/trainers.asm labels, in pret order)
@@ -378,24 +394,19 @@ DisplayEnemyTrainerTextAndStartBattle:
 
 ; ---------------------------------------------------------------------------
 ; StartTrainerBattle — enter a trainer battle.  Pret ref: home/trainers.asm:172.
-; Seeds enemy params, marks the trainer-battle status bits, then (gated) enters
-; the trainer-aware battle dispatcher. See the LIVE GATE note above.
+; Seeds enemy params and marks the trainer-battle status bits, then RETURNS —
+; it does not itself run the battle.  See the BATTLE ENTRY note in the header.
 ; ---------------------------------------------------------------------------
 StartTrainerBattle:
     mov byte [ebp + W_JOY_IGNORE], 0        ; xor a; ld [wJoyIgnore], a
-    call InitBattleEnemyParameters
+    call InitBattleEnemyParameters          ; seeds wCurOpponent (the battle-entry trigger)
     ; ld hl, wStatusFlags3 / set BIT_TALKED_TO_TRAINER / set BIT_PRINT_END_BATTLE_TEXT
     or byte [ebp + W_STATUS_FLAGS_3], (1 << BIT_TALKED_TO_TRAINER) | (1 << BIT_PRINT_END_BATTLE_TEXT)
     ; ld hl, wStatusFlags4 / set BIT_UNKNOWN_4_1
     or byte [ebp + W_STATUS_FLAGS_4], (1 << BIT_UNKNOWN_4_1)
-    ; pret: ld hl, wCurMapScript / inc [hl] — next script fn is usually EndTrainerBattle.
-    ; (M8.2: restored — wCurMapScript is golden-resolved to 0xDA38; the old M8.1 TODO
-    ; predated the symbol. Nothing in the live build starts a trainer battle yet.)
+    ; pret: ld hl, wCurMapScript / inc [hl] — next script fn is usually EndTrainerBattle,
+    ; dispatched by a LATER RunMapScript once the battle has returned.
     inc byte [ebp + wCurMapScript]
-%ifdef TRAINER_BATTLE_LIVE
-    call InitBattle
-    call FinalizeTrainerBattleOutcome
-%endif
     ret
 
 ; ---------------------------------------------------------------------------
@@ -406,17 +417,21 @@ StartTrainerBattle:
 ; InitBattle from inside that map script, so publish the same sentinel here for
 ; OverworldLoop's matching post-RunMapScript consumer.
 ;
-; Kept as a callable helper so the guarded trainer-result harness exercises the
-; exact production decision after its synthetic final turn.
+; Kept as a callable helper so the trainer-result harness exercises the exact
+; production decision after its synthetic final turn.
+;
+; NOT on the production path any more. The live route reaches the identical pret
+; logic through OverworldLoop's own .battleOccurred tail (src/home/overworld.asm:
+; AnyPartyAlive -> AllPokemonFainted), which is where pret puts it. This routine
+; survives only as the DEBUG_TRAINER_RESULT harness's stand-in for that tail,
+; because those oracles never run the overworld loop.
 ; ---------------------------------------------------------------------------
 FinalizeTrainerBattleOutcome:
-%ifdef TRAINER_BATTLE_LIVE
     call AnyPartyAlive
     test dh, dh
     jnz .done
     mov byte [ebp + wIsInBattle], 0xff
 .done:
-%endif
     ret
 
 ; ---------------------------------------------------------------------------
@@ -437,9 +452,15 @@ EndTrainerBattle:
     mov al, [ebp + wIsInBattle]
     cmp al, 0xff
     jz ResetButtonPressedAndMapScript       ; pret: jp z
-    ; DEVIATION{class=temporary; pret=home/trainers.asm:EndTrainerBattle; behavior=skip the beaten-flag set and sprite removal when no trainer header was ever stored; evidence=the bespoke map_sprites.asm TrainerEncounterFlow (TRAINER_BATTLE_LIVE) reaches EndTrainerBattle without calling StoreTrainerHeaderPointer so ReadTrainerHeaderInfo would dereference a null flat base and FlagAction would write at a garbage EBP offset, while pret map scripts guarantee wTrainerHeaderPtr is valid here; lifetime=until gen_trainer_headers lands and the map-script trainer flow replaces TrainerEncounterFlow}
-    cmp dword [w_trainer_header_ptr], 0
-    je .skipRemoveSprite
+    ; Stage 1b RETIRED the null-header-pointer skip that used to sit here. Its
+    ; premise — "TrainerEncounterFlow reaches EndTrainerBattle without calling
+    ; StoreTrainerHeaderPointer" — is false as of Stage 1b: that bespoke call is
+    ; gone, and every remaining path stores a non-null header first.
+    ;   * map script tables -> TrainerMapScript -> ExecuteCurMapScriptInTable ->
+    ;     StoreTrainerHeaderPointer, and TrainerMapScript refuses to dispatch a
+    ;     map whose MapScriptParams headers slot is 0.
+    ;   * the DEBUG_TRAINER_RESULT oracle calls StoreTrainerHeaderPointer itself.
+    ; So pret's unconditional shape is restored below.
     ; flag the trainer as fought (persistent wEventFlags bit via the header)
     mov al, 2
     call ReadTrainerHeaderInfo              ; sel 2: ESI = flag_ptr (GB WRAM offset)
