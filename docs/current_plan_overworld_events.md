@@ -877,6 +877,36 @@ silently drift; regenerate rather than trusting it:
       The lesson generalises and is worth stating: **a diagnosis that names a real
       missing routine is not finished until you also check that the failing
       scenario could observe the fix.** Two golden runs were spent proving that.
+
+      **Design notes for the ROUTE_17 witness scenario, before anyone builds it.**
+      The retirement path (merge session, 2026-08-04) is to parameterize
+      battle-completion's `DEBUG_TRAINER_ROUTE` harness shape — it drives the real
+      `OverworldLoop`, which is exactly what the sight harness cannot — rather
+      than designing a new one. Four constraints, all supplied by
+      battle-completion from their own measurements:
+      1. **TWO WRITERS ON THE JOYPAD STATE, every frame, on this one map.**
+         `AUTOKEY_TRAINER_ROUTE` emits a repeating B,B,A cadence every 90 frames
+         from frame 240, and `AutoKeyDrive` overrides `hJoyHeld`/`hJoyPressed`
+         each frame from `vblank.asm`, right after `joypad_update`.
+         `ForceBikeDown` writes `PAD_DOWN` to `hJoyHeld` inside the
+         `JoypadOverworld` seam. Whichever writes last wins, which is a property
+         of the frame pipeline rather than of either feature's intent.
+      2. **Their "a stray press lands somewhere harmless" argument does NOT
+         transfer.** It holds on ROUTE_3 only because nothing else touches the
+         pad there. RE-TUNE the cadence for ROUTE_17; do not copy their frame
+         numbers.
+      3. **The overlap is precise, not incidental.** `ForceBikeDown`'s active
+         window — no trainer battle flagged — is exactly the window the harness
+         spends walking into the sight line.
+      4. **The dependency is on their FIX, not merely their merge.** That harness
+         shape walks straight into the pre-battle text box, which is the
+         page-fault site (`regression-battle-live-trainer-entry-exits`,
+         `TextBoxBorder.fill_chars`). Their fix rides with their scenario, so a
+         post-merge master should carry it — but VERIFY it is in the range you
+         merge back before building the variant, or a day-one fault will look
+         like a bug in this plan's `ForceBikeDown`.
+      If the variant behaves strangely, suspect constraint 1 BEFORE suspecting
+      the `ForceBikeDown` port.
       **Watch item for whoever cuts a ROUTE_17 RUNTIME scenario:** once
       `ForceBikeDown` is live, input on that map is not solely the harness's —
       the routine overwrites `hJoyHeld` with `PAD_DOWN` every frame that no
