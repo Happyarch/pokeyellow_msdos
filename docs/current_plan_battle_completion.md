@@ -263,27 +263,45 @@ paths, the same lint debt, and an older datastruct-description assertion).
 
 ## Stage 1 — make trainer battles live
 
-Current evidence: `_InitBattleCommon` is linked and called by the wild-encounter
-path; its body is wild-only. `GetTrainerInformation` is a check-only
-implementation at its pret mirror with no port callers, while `ReadTrainer` is
-linked with no port callers. `StartTrainerBattle` is linked, but its `InitBattle` call and the paired
-`EndTrainerBattle` call remain behind `TRAINER_BATTLE_LIVE`. The default
-`TrainerEncounterFlow` marks its local beaten bit after the guarded handoff.
+Current evidence: `NewBattle` and guarded `StartTrainerBattle` both enter the
+restored `InitBattle` dispatcher. `InitBattleCommon` calls the linked
+`GetTrainerInformation`, `ReadTrainer`, and `_LoadTrainerPic` implementations,
+then `_InitBattleCommon` selects the first enemy party mon. Scenario
+`trainer_battle_init` proves that initialization state against a real Route 3
+sight trainer. The paired `EndTrainerBattle` call and production trainer handoff
+remain behind `TRAINER_BATTLE_LIVE`; no scenario yet proves a win/loss and return.
 
-- [ ] **1a. Trainer initialization.** Restore pret's wild/trainer split under
+- [x] **1a. Trainer initialization.** Restore pret's wild/trainer split under
       `InitBattleCommon`/`InitWildBattle`/`_InitBattleCommon`; promote and call
       `GetTrainerInformation`, call `ReadTrainer`, load the trainer picture and
       first party mon, initialize trainer AI/battle state, and preserve the
       scripted-battle inputs. The port has no battle transition at all today
       (Stage 5 measures every transition label `missing`); if one is added as a
       placeholder, tie it explicitly to Stage 5.
+
+      Measured 2026-08-04: full-tier scenario 44 enters pret through Route 3's
+      real `CheckFightingMapTrainers`/trainer-sight flow and enters the port
+      through guarded `StartTrainerBattle`. Its 30-byte deterministic projection
+      matches exactly: opponent/class/set, three-species roster and levels,
+      active enemy selection, `$ff` AI reset, base/prize money, trainer battle
+      kind, and trainer-name prefix. RNG-derived DVs/stats and presentation are
+      explicitly outside this checkpoint. `label_status --callers` confirms the
+      linked chain `StartTrainerBattle -> InitBattle -> InitBattleCommon ->
+      {GetTrainerInformation, ReadTrainer, _LoadTrainerPic} ->
+      _InitBattleCommon -> EnemySendOutFirstMon -> LoadEnemyMonFromParty`.
+      The default build, `static_gate`, and all 43 `fidelity-full` scenarios
+      pass; an independent mGBA rerun reproduced the 7,326-byte golden and its
+      sidecar byte-for-byte at frame 5805. `fidelity_gate` exits 1 on the
+      standing `MapHeaderPointers` lint finding and the pre-existing
+      unsuppressed inventories exposed by touching the large overworld/battle
+      mirror files; that result is recorded, not reported as green.
 - [ ] **1b. Retire `TRAINER_BATTLE_LIVE`.** Exercise the trainer route under the
       guard, then remove the guard rather than leaving two build behaviors.
       Reconcile `StartTrainerBattle`/`EndTrainerBattle` and `wCurMapScript` with
-      the overworld plan's script state machine. The `npc_beaten_flags` →
-      `TrainerFlagAction` migration this touches is gated on a trainer-header
-      data generator (`gen_trainer_headers.py`) that does not exist yet; that
-      generator is tracked in `docs/current_plan_backlog.md`, not here.
+      the overworld plan's script state machine. The earlier generator blocker
+      was stale: `tools/generators/gen_trainer_headers.py` exists and emits the
+      linked trainer-header tables. Re-measure the remaining
+      `npc_beaten_flags`/`TrainerFlagAction` ownership before changing it.
 - [ ] **1c. Victory-dependent trainer flags.** Move beaten/event writes to the
       verified post-victory result path. A loss, blackout, or aborted battle must
       leave the trainer armed; victory must advance the script, persist the flag,

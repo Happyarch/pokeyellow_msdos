@@ -238,6 +238,7 @@ wBattleAndStartSavedMenuItem equ 0xCC2D ; remembered battle/START cursor (reset 
 ; deferrals, now resolved against pokeyellow.sym (symbols branch).
 wLoadedMon         equ 0xCF97   ; LoadMonData_ destination (party_struct)
 wEnemyPartyCount   equ 0xD89B
+wLinkEnemyTrainerName equ 0xD886
 wEnemyPartySpecies equ 0xD89C   ; PARTY_LENGTH+1 species + $FF sentinel
 wEnemyMons         equ 0xD8A3
 wDayCareMon        equ 0xDA5E   ; box_struct (wDayCareMonSpecies = first byte)
@@ -411,6 +412,7 @@ wBattleMonSpecial      equ 0xD02A
 wBattleMonPP           equ 0xD02C   ; 4 bytes
 
 wTrainerClass          equ 0xD030
+wTrainerName           equ 0xD049
 wForcePlayerToChooseMon equ 0xD11E  ; set on failed escape; read by multi-mon switch-in (pret wram.asm:1781)
 wNumRunAttempts        equ 0xD11F   ; run-from-battle attempt count (escape-odds boost)
 wIsInBattle            equ 0xD056   ; 0 none, 1 wild, 2 trainer ($FF = lost)
@@ -1569,6 +1571,7 @@ BIT_TRAINER_BATTLE           equ 3 ; wStatusFlags7 bit 3 — current battle is a
 BIT_NO_BATTLES               equ 4 ; wStatusFlags4 bit 4 — suppress wild battles
 BIT_BATTLE_OVER_OR_BLACKOUT  equ 5 ; wStatusFlags4 bit 5 — set on battle/blackout return
 BIT_FLY_OR_DUNGEON_WARP      equ 2 ; wStatusFlags6 bit 2 — entered via Fly OR dungeon warp
+BIT_DEBUG_MODE               equ 1 ; wStatusFlags6 bit 1 — debug-mode encounter override
 BIT_FLY_WARP                 equ 3 ; wStatusFlags6 bit 3 — entered via Fly warp (dup: items/town_map.asm)
 BIT_DUNGEON_WARP             equ 4 ; wStatusFlags6 bit 4 — entered via dungeon warp
 BIT_ESCAPE_WARP              equ 6 ; wStatusFlags6 bit 6 — Escape Rope / blackout warp

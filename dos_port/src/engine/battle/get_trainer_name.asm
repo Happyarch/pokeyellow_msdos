@@ -5,8 +5,6 @@ section .text
 
 global GetTrainerName_
 
-extern wLinkEnemyTrainerName
-extern wTrainerName
 extern TrainerNames
 extern GetName
 extern CopyData

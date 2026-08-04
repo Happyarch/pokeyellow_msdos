@@ -729,6 +729,24 @@ SCENARIOS = {
             ],
         }),
     },
+    "trainer_battle_init": {
+        # The two sides reach the same InitBattleCommon checkpoint through
+        # different outer presentation paths. The scenario-local trainerInit
+        # region pins every deterministic trainer field; random DVs/derived
+        # stats and player send-out scratch are intentionally outside it.
+        "class": "datastruct",
+        "flags": "DEBUG_TRAINER_INIT=1",
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP, **{
+            "wLoadedMon": "trainer initialization checkpoint: the live pret map-script "
+                          "path dumps as soon as wEnemyMon is selected, before its "
+                          "temporary wLoadedMon staging survives to the frame boundary; "
+                          "the direct port gate returns from EnemySendOutFirstMon with "
+                          "that staging still populated. The deterministic roster and "
+                          "selected active-mon fields are compared in trainerInit; "
+                          "RNG-derived mon bytes are deliberately excluded.",
+        }),
+        "wram_masks": dict(_BATTLE_WRAM_MASKS),
+    },
     "battle_damage": {
         # The two emulators intentionally do not share an RNG stream. Their
         # damage bytes therefore need not be equal; validate each record

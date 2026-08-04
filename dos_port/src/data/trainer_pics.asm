@@ -12,6 +12,7 @@
 bits 32
 
 global TrainerPicPointers
+global TrainerPicLengths
 global TrainerBaseMoney
 global PlayerPicFront
 global PlayerPicBack
@@ -23,6 +24,9 @@ global ShrinkPic2
 ; export the cutscene references, aliased onto the generated bodies.
 global ProfOakPic
 global Rival1Pic
+global JessieJamesPic
+global JessieJamesPicLength
+global PlayerPicFrontLength
 ; pret calls the player's intro front pic RedPicFront (gfx/player/red.pic); the port
 ; generates the same asset as PlayerPicFront. Keep pret's label alongside it so the
 ; Oak-speech cutscene stays cross-referenceable (CLAUDE.md preserve-pret-labels).
@@ -34,4 +38,5 @@ align 4
 
 ProfOakPic equ trnpic_prof_oak
 Rival1Pic  equ trnpic_rival1
+JessieJamesPic equ trnpic_jessiejames
 RedPicFront equ PlayerPicFront

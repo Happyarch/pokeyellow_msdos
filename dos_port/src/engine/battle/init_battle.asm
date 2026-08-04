@@ -67,8 +67,14 @@ saved_ow_view_ptr: dw 0
 section .text
 
 global InitBattle
+global InitOpponent
+global DetermineWildOpponent
+global InitBattleCanvas
+global InitBattleCommon
+global InitWildBattle
 global DrawBattleIntroBox
 global _InitBattleCommon
+global _LoadTrainerPic
 global CopyUncompressedPicToTilemap    ; predef target; OakSpeech pic display (A4)
 
 extern MonBackPics                ; dex-ordered back sprites (LoadMonBackPic); same gen/gate
@@ -90,6 +96,7 @@ extern SetPal_Battle                    ; engine/gfx/palettes.asm
 extern LoadFontTilePatterns              ; home/load_font.asm
 extern LoadTextBoxTilePatterns           ; home/load_font.asm
 extern LoadEnemyMonData               ; engine/battle/core.asm — build wEnemyMon*
+extern EnemySendOutFirstMon           ; engine/battle/core.asm — select/reset first trainer mon
 extern LoadFrontSpriteByMonIndex         ; src/home/pokemon.asm — enemy front pic (generic)
 extern HasMonFainted                  ; engine/battle/core.asm — ZF=1 → fainted
 extern FlagAction                        ; flag_action.asm — ESI=array, CL=bit, BH=action
@@ -103,10 +110,90 @@ extern HideBattlePokeballs               ; pokeballs.asm
 extern MainInBattleLoop                  ; core.asm — the whole battle loop
 extern EndOfBattle                       ; end_of_battle.asm — post-battle (EXP/evo/reset)
 extern EndBattleScreen                   ; battle_menu.asm — clean terminal
+extern GetTrainerInformation             ; src/home/trainers2.asm — name/pic/prize metadata
+extern ReadTrainer                       ; read_trainer_party.asm — generated roster -> enemy party
+extern trainer_pic_ptr                   ; src/home/trainers2.asm — flat picture pointer
+extern trainer_pic_len                   ; src/home/trainers2.asm — matching compressed byte length
+extern LoadMonPicToVRAM                  ; src/home/pics.asm — staged compressed pic -> vFrontPic
+extern DrawEmptyDialogBox                ; battle_menu.asm — trainer intro placeholder surface
+extern TryDoWildEncounter                ; wild_encounters.asm — ZF=1 when a roster was selected
 global LoadMonBackPic             ; generic player send-out back pic (retires LoadEmbeddedBackPicFallback)
 global CopyUncompressedPicToHL          ; shared flip-aware 7×7 tilemap placement
 
+; ---------------------------------------------------------------------------
+; InitBattle — pret-facing battle dispatcher.
+;
+; The old port body under this label was only the widescreen canvas setup. That
+; made StartTrainerBattle return from a blank screen without reading the trainer
+; roster. Keep that native setup as InitBattleCanvas and restore InitBattle's
+; opponent dispatch contract here.
+; ---------------------------------------------------------------------------
 InitBattle:
+    mov al, [ebp + wCurOpponent]
+    test al, al
+    jz DetermineWildOpponent
+
+InitOpponent:
+    mov al, [ebp + wCurOpponent]
+    mov [ebp + wCurPartySpecies], al
+    mov [ebp + wEnemyMonSpecies2], al
+    jmp InitBattleCommon
+
+DetermineWildOpponent:
+    test byte [ebp + wStatusFlags6], (1 << BIT_DEBUG_MODE)
+    jz .notDebugMode
+    test byte [ebp + hJoyHeld], PAD_B
+    jnz .noBattle
+.notDebugMode:
+    cmp byte [ebp + wNumberOfNoRandomBattleStepsLeft], 0
+    jne .noBattle
+    call TryDoWildEncounter
+    jnz .noBattle
+    jmp InitWildBattle
+.noBattle:
+    clc
+    ret
+
+InitBattleCommon:
+    mov al, [ebp + wEnemyMonSpecies2]
+    cmp al, OPP_ID_OFFSET
+    jb InitWildBattle
+    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    call LoadFontTilePatterns
+    call LoadTextBoxTilePatterns
+    call InitBattleCanvas
+    mov al, [ebp + wEnemyMonSpecies2]
+    sub al, OPP_ID_OFFSET
+    mov [ebp + wTrainerClass], al
+    call GetTrainerInformation
+    call ReadTrainer
+    call _LoadTrainerPic
+    mov byte [ebp + wEnemyMonSpecies2], 0
+    mov byte [ebp + wAICount], 0xFF
+    mov byte [ebp + wEnemyMonPartyPos], 0xFF
+    mov byte [ebp + wIsInBattle], 2
+    jmp _InitBattleCommon
+
+InitWildBattle:
+    mov byte [ebp + wIsInBattle], 1
+    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    call LoadFontTilePatterns
+    call LoadTextBoxTilePatterns
+    call InitBattleCanvas
+    call LoadEnemyMonData
+    mov al, [ebp + wEnemyMonSpecies2]
+    mov [ebp + wCurPartySpecies], al
+    mov esi, W_TILEMAP + 12
+    call LoadFrontSpriteByMonIndex
+    mov byte [ebp + wTrainerClass], 0
+    jmp _InitBattleCommon
+
+; ---------------------------------------------------------------------------
+; InitBattleCanvas — port-only 40x25 battle surface setup formerly published as
+; InitBattle. Debug gates call this directly; live wild/trainer entry reaches it
+; through _InitBattleCommon after the pret-facing dispatch above.
+; ---------------------------------------------------------------------------
+InitBattleCanvas:
     ; The battle projects the GB viewport into the full 40-wide W_TILEMAP canvas, so
     ; the ONE text engine renders at stride 40 here (the overworld leaves it at 20).
     ; TODO: a clean overworld exit must restore text_row_stride to 20 (Stage 3).
@@ -116,7 +203,6 @@ InitBattle:
     ; uses/menu exits for the whole battle; only a new battle clears it). It sits
     ; outside InitBattleVariables' clear block, so clear it explicitly here.
     mov byte [ebp + wPlayerMoveListIndex], 0
-    mov byte [ebp + wIsInBattle], 1          ; wild battle (placeholder)
     ; Text-delay config for battle dialog (faithful to pret): set BIT_FAST_TEXT_DELAY so
     ; PrintLetterDelay reads the wOptions speed, and ensure BIT_TEXT_DELAY is OFF. The
     ; delay is enabled ONLY while a dialog MESSAGE prints (like TextCommandProcessor) —
@@ -192,9 +278,9 @@ InitBattle:
 ; ---------------------------------------------------------------------------
 ; _InitBattleCommon — the real overworld→battle orchestration.
 ;
-; This is the routine the overworld's NewBattle path calls to actually RUN a wild
-; battle (previously it called only the InitBattle canvas scaffold, which set the
-; screen up and returned instantly — the "grass + instant return" defect).
+; This is the shared tail reached after InitBattleCommon or InitWildBattle has
+; initialized the opponent. NewBattle enters through InitBattle, preserving the
+; pret dispatcher labels instead of calling this tail directly.
 ;
 ; pret splits this across InitBattle→InitWildBattle→_InitBattleCommon→StartBattle
 ; (engine/battle/{init_battle,core}.asm). The port collapses the visual half of
@@ -204,7 +290,7 @@ InitBattle:
 ; data loaders (LoadEnemyMonData / LoadBattleMonFromParty) instead of debug seeds.
 ;
 ; Faithful order (pret InitWildBattle then StartBattle.playerSendOutFirstMon):
-;   InitBattle canvas → LoadEnemyMonData → enemy front pic → pick first-alive party
+;   opponent-specific init → enemy front pic → pick first-alive party
 ;   mon → LoadBattleMonFromParty → intro (Red back pic, slide-in, box, pokéballs) →
 ;   send-out pic → MainInBattleLoop → EndOfBattle → restore overworld stride.
 ;
@@ -212,27 +298,21 @@ InitBattle:
 ;     opponent). Out: CF=1 (a battle occurred), matching pret _InitBattleCommon's scf.
 ; ---------------------------------------------------------------------------
 _InitBattleCommon:
-    ; --- font + text-box tiles the box/HUD need (harness-proven prerequisite) ---
-    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
-    call LoadFontTilePatterns
-    call LoadTextBoxTilePatterns
+    cmp byte [ebp + wIsInBattle], 2
+    jne .enemyInitialized
+    ; StartBattle performs this selection upstream. The port's shared battle
+    ; flow is collapsed here, so select the trainer's first mon at the same
+    ; boundary before player send-out and presentation.
+    call EnemySendOutFirstMon
+%ifdef DEBUG_TRAINER_INIT
+    ; Harness stop: StartTrainerBattle has now crossed every Stage-1a data leaf
+    ; and selected the first active mon. Presentation and the turn loop are
+    ; intentionally not entered so the dump instant is deterministic.
+    stc
+    ret
+%endif
 
-    ; --- canvas + battle-var init (port InitBattle: InitBattleVariables, HUD tiles,
-    ;     wIsInBattle=1, stride 40, blank W_TILEMAP). Matches pret's InitBattleVariables-
-    ;     first ordering; InitBattleVariables does not touch wEnemyMon*. ---
-    call InitBattle
-
-    ; --- pret InitWildBattle: build the wild enemy mon (wIsInBattle already 1) ---
-    call LoadEnemyMonData                    ; wEnemyMon* from wEnemyMonSpecies2 + level
-
-    ; --- enemy front pic (pret: LoadMonFrontSprite→vFrontPic + CopyUncompressedPicToTilemap
-    ;     at hlcoord 12,0). Port LoadFrontSpriteByMonIndex does both halves from
-    ;     wCurPartySpecies. LoadEnemyMonData already leaves it = enemy species, but re-set
-    ;     it explicitly for clarity (it is about to be overwritten by the player scan). ---
-    mov al, [ebp + wEnemyMonSpecies2]
-    mov [ebp + wCurPartySpecies], al
-    mov esi, W_TILEMAP + 12                   ; hlcoord 12,0 (stride 40)
-    call LoadFrontSpriteByMonIndex
+.enemyInitialized:
 
     ; --- player send-out (pret StartBattle.playerSendOutFirstMon): first non-fainted mon ---
     ; PROJ(port safety): pret's StartBattle runs AnyPartyAlive→HandlePlayerBlackOut before
@@ -277,11 +357,28 @@ _InitBattleCommon:
     ; --- intro scene (proven DEBUG_BATTLE_LIVE order) ---
     call LoadPlayerBackPic             ; player trainer (Red) back pic — fixed sprite
     call SlideBattlePicsIn                      ; silhouette slide-in
-    call DrawBattleIntroBox                      ; box + "Wild <nick> appeared!" + enemy HUD
+    cmp byte [ebp + wIsInBattle], 2
+    jne .drawWildIntro
+    ; DEVIATION{class=temporary; pret=engine/battle/common_text.asm:PrintBeginningBattleText; behavior=trainer initialization draws a blank dialog surface before the party-ball rows instead of the class-specific wants-to-fight stream; evidence=Stage 1a proves trainer data and first-mon initialization while common_text.asm TrainerWantsToFightText remains missing; lifetime=Stage 1d trainer presentation}
+    call DrawEmptyDialogBox
+    jmp .introDrawn
+.drawWildIntro:
+    call DrawBattleIntroBox                      ; box + "Wild <nick> appeared!"
+.introDrawn:
     call SaveBattleScreen                        ; snapshot for menu re-entry
     call DrawBattlePokeballs                      ; party-status ball row
     call WaitForAPress
     call HideBattlePokeballs
+    cmp byte [ebp + wIsInBattle], 2
+    jne .enemyFrontReady
+    ; EnemySendOutFirstMon selected/loaded the first trainer mon before the
+    ; trainer intro. Replace the trainer picture with that mon now; Stage 1d
+    ; owns the omitted throw/cry animation and text.
+    mov al, [ebp + wEnemyMonSpecies2]
+    mov [ebp + wCurPartySpecies], al
+    mov esi, W_TILEMAP + 12
+    call LoadFrontSpriteByMonIndex
+.enemyFrontReady:
     ; send-out: decode the actual sent-out mon's back sprite (generic, MonBackPics-indexed
     ; from wBattleMonSpecies2) → vBackPic. pret LoadMonBackPic, now below in this file.
     call LoadMonBackPic
@@ -318,6 +415,24 @@ _InitBattleCommon:
     mov dword [text_msgbox], msgbox_dialog
     stc                                          ; pret _InitBattleCommon: scf
     ret
+
+; ---------------------------------------------------------------------------
+; _LoadTrainerPic — production trainer-picture loader.
+; pret: engine/battle/init_battle.asm:_LoadTrainerPic
+;
+; The generated parallel length table supplies the exact compressed byte count
+; needed to stage the flat stream in GB scratch before using the shared decoder.
+; ---------------------------------------------------------------------------
+_LoadTrainerPic:
+    movzx ecx, word [trainer_pic_len]
+    mov esi, [trainer_pic_ptr]
+    lea edi, [ebp + PIC_STAGE]
+    rep movsb
+    mov word [ebp + wSpriteInputPtr], PIC_STAGE
+    mov byte [ebp + wSpriteFlipped], 0
+    mov al, [ebp + PIC_STAGE]
+    mov edx, GB_VCHARS2
+    jmp LoadMonPicToVRAM
 
 ; ---------------------------------------------------------------------------
 ; DrawBattleIntroBox — draw the bottom dialog box + "Wild <nick> appeared!" intro

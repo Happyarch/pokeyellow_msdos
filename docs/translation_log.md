@@ -23,6 +23,34 @@ if it took none. This is the swarm's divergence audit trail.
 
 ---
 
+## Battle Stage 1a — trainer initialization
+
+- Date: 2026-08-04
+- Source: `engine/battle/init_battle.asm` (`InitBattle`, `InitOpponent`,
+  `DetermineWildOpponent`, `InitBattleCommon`, `InitWildBattle`,
+  `_InitBattleCommon`, `_LoadTrainerPic`), `home/trainers2.asm`, and
+  `engine/battle/get_trainer_name.asm`.
+- Translated: matching files under `dos_port/src/`; trainer metadata and names
+  were promoted from check-only into the linked frontend set.
+- H-flag: not involved. ZF from `TryDoWildEncounter` and CF on the
+  battle/no-battle return are preserved explicitly.
+- Divergences: the native 40x25 canvas and flat sprite decoder replace the GB
+  transition/banked decompression calls; trainer presentation remains the
+  structured Stage-1d temporary deviation already annotated at the call site.
+- Notes: the restored label structure routes `NewBattle` and guarded
+  `StartTrainerBattle` through `InitBattle`; trainer initialization reads the
+  generated roster, generated picture pointer/length data, prize metadata and
+  name, then selects the first active enemy via `EnemySendOutFirstMon`.
+  Generator coverage was extended to the separate Jessie/James picture. The
+  port-only flat trainer-picture pointer moved out of WRAM because its former
+  dword at `$D048` overlapped pret `wTrainerName` at `$D049`.
+- Runtime evidence: new full-tier scenario `trainer_battle_init` (id 44) compares
+  a real Route 3 BUG CATCHER set 4 against the guarded port entry. Its compact
+  deterministic initialization projection matches; DVs/stats, presentation,
+  battle completion and overworld return are not claimed.
+
+---
+
 ## overworld-port Stages 2–7 — per-ticket notes live in the plan doc (pointer entry)
 
 - Date: 2026-07-10 (OW-7.3 completeness sweep)

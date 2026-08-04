@@ -128,7 +128,7 @@ global RunStoneTest
 extern PrepareNewGameDebug
 extern LoadFontTilePatterns
 extern LoadTextBoxTilePatterns
-extern InitBattle
+extern InitBattleCanvas
 extern DrawBattleIntroBox
 extern SlideBattlePicsIn
 extern DebugLoadEmbeddedEnemyFrontPic
@@ -157,6 +157,9 @@ extern CalculateDamage                ; engine/battle/core.asm (ZF if 0 BP)
 extern AdjustDamageForMoveType        ; engine/battle/core.asm
 extern RandomizeDamage                ; engine/battle/core.asm
 extern DelayFrame
+%ifdef DEBUG_TRAINER_INIT
+extern StartTrainerBattle
+%endif
 %ifdef DEBUG_BATTLE_GOLDEN
 ; --- Stage 2 golden gate: the REAL loaders replace the synthetic seed ---
 extern LoadEnemyMonData               ; engine/battle/core.asm — real wild loader
@@ -187,7 +190,7 @@ global RunBattleTest
 extern PrepareNewGameDebug
 extern LoadFontTilePatterns
 extern LoadTextBoxTilePatterns
-extern InitBattle
+extern InitBattleCanvas
 extern LearnMoveFromLevelUp
 extern DelayFrame
 global RunLearnMoveTest
@@ -539,6 +542,13 @@ gbstate_regions:
     ; The semantic differ validates each side against the legal Gen-1 damage
     ; set instead of asking unrelated RNG streams to produce the same byte.
     gbregion "damageOracle",    wBuffer,        30
+%endif
+%ifdef DEBUG_TRAINER_INIT
+    ; Compact deterministic projection of trainer initialization. Enemy DVs and
+    ; derived stats are intentionally excluded because the emulators do not
+    ; share an RNG stream; roster identity, levels, active selection, prize
+    ; metadata, AI reset, battle type and name prefix are exact.
+    gbregion "trainerInit",      wBuffer,        30
 %endif
 %ifdef DEBUG_BOX_SAVE
     ; --- the loaded PC box (SRAM/PC storage plan, stage 6 data half) ---
@@ -1416,7 +1426,58 @@ RunListMenuTest:
 ; Stage-0.5 gate: proves the centered battle render mode. In: EBP = GB base.
 ; ---------------------------------------------------------------------------
 RunBattleTest:
-%ifdef DEBUG_BATTLE_GOLDEN
+%ifdef DEBUG_TRAINER_INIT
+    mov byte [ebp + wPartyCount], 0
+    mov byte [ebp + wPartySpecies], 0xFF
+    mov byte [ebp + wNumBagItems], 0
+    mov byte [ebp + wBagItems], 0xFF
+    call PrepareNewGameDebug
+    ; Route 3's first sight trainer: BUG CATCHER, roster 4.
+    mov byte [ebp + wEngagedTrainerClass], OPP_ID_OFFSET + 2
+    mov byte [ebp + wEngagedTrainerSet], 4
+    call StartTrainerBattle
+
+    lea edi, [ebp + wBuffer]
+    mov al, [ebp + wCurOpponent]
+    stosb
+    mov al, [ebp + wTrainerClass]
+    stosb
+    mov al, [ebp + wTrainerNo]
+    stosb
+    mov al, [ebp + wEnemyPartyCount]
+    stosb
+    lea esi, [ebp + wEnemyPartySpecies]
+    mov ecx, PARTY_LENGTH
+    rep movsb
+    mov esi, wEnemyMons + MON_LEVEL
+    mov ecx, PARTY_LENGTH
+.trainerLevels:
+    mov al, [ebp + esi]
+    stosb
+    add esi, PARTYMON_STRUCT_LENGTH
+    dec ecx
+    jnz .trainerLevels
+    mov al, [ebp + wEnemyMonPartyPos]
+    stosb
+    mov al, [ebp + wEnemyMonSpecies]
+    stosb
+    mov al, [ebp + wEnemyMonLevel]
+    stosb
+    mov al, [ebp + wAICount]
+    stosb
+    lea esi, [ebp + wAmountMoneyWon]
+    mov ecx, 3
+    rep movsb
+    lea esi, [ebp + wTrainerBaseMoney]
+    mov ecx, 2
+    rep movsb
+    mov al, [ebp + wIsInBattle]
+    stosb
+    lea esi, [ebp + wTrainerName]
+    mov ecx, 4
+    rep movsb
+    call DebugDumpMemory
+%elifdef DEBUG_BATTLE_GOLDEN
     ; ------------------------------------------------------------------
     ; Fidelity-plan Stage 2 golden gate — the REAL loaders + the battle
     ; convergence spec, twin of the mGBA scenarios (battle_intro /
@@ -1441,7 +1502,8 @@ RunBattleTest:
     or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     call LoadTextBoxTilePatterns
-    call InitBattle                 ; canvas + InitBattleVariables (wIsInBattle=1)
+    call InitBattleCanvas           ; canvas + InitBattleVariables
+    mov byte [ebp + wIsInBattle], 1 ; gate models a wild battle; live init owns this normally
     call LoadEnemyMonData           ; REAL loader — rolls DVs via BattleRandom
     ; --- spec-DV overwrite + stat recompute (seed.enemy's twin) ---
     mov byte [ebp + wEnemyMonDVs], 0x98
@@ -1975,7 +2037,7 @@ RunBattleTest:
     or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     call LoadTextBoxTilePatterns
-    call InitBattle                 ; setup + clear canvas (no box/HUD yet)
+    call InitBattleCanvas           ; setup + clear canvas (no box/HUD yet)
 %ifdef DEBUG_BATTLE_TRAINER
     ; --- Bug Catcher trainer test: trainer battle (enemy = trainer + ball row, not a
     ; wild mon), with party-status variety to exercise ok/fainted/status/empty balls. ---
@@ -1993,6 +2055,7 @@ RunBattleTest:
     mov byte [ebp + wPartyMons + 2*PARTYMON_STRUCT_LENGTH + MON_STATUS], 0x08
     call DebugLoadEmbeddedTrainerPic     ; decode Bug Catcher trainer sprite → enemy VRAM
 %else
+    mov byte [ebp + wIsInBattle], 1
     call DebugLoadEmbeddedEnemyFrontPic     ; decode enemy (wild mon) front pic → VRAM
 %endif
     call LoadPlayerBackPic  ; decode player trainer (Red) back pic → VRAM (slides in)
@@ -2164,7 +2227,7 @@ RunLearnMoveTest:
     call LoadFontTilePatterns
     call LoadTextBoxTilePatterns
     mov byte [ebp + wIsInBattle], 1
-    call InitBattle                 ; battle-mode canvas (clears screen, no HUD/box yet)
+    call InitBattleCanvas           ; battle-mode canvas (clears screen, no HUD/box yet)
 
 %ifdef DEBUG_LEARNMOVE_FULL
     ; Sub-flag: fill all 4 slots so the all-slots-full (AbandonLearning) branch

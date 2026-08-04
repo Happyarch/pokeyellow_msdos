@@ -479,7 +479,6 @@ ITEMS_SRCS := \
 # FormatMovesString). Every file here still assembles (make check) and the pure-math
 # routines are native-ELF-harness validated.
 BATTLE_SRCS := \
-    src/engine/battle/get_trainer_name.asm \
     src/engine/battle/misc.asm \
     src/engine/battle/move_category.asm
 # wild_encounters.asm MOVED to GAME_SRCS (wild-live promotion): TryDoWildEncounter
@@ -1461,6 +1460,13 @@ $(eval $(call battle_gate,DEBUG_BATTLE_INTRO))
 # Bug Catcher trainer test: seeds a trainer battle (enemy = trainer + ball row +
 # party-status variety). Combine with DEBUG_BATTLE_INTRO (dump) or DEBUG_BATTLE_LIVE.
 $(eval $(call battle_gate,DEBUG_BATTLE_TRAINER))
+# Trainer initialization oracle: enter through StartTrainerBattle with Route 3's
+# first BUG CATCHER and stop after the roster's first live mon is active.
+ifdef DEBUG_TRAINER_INIT
+DEBUG_BATTLE := 1
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_TRAINER_INIT -D TRAINER_BATTLE_LIVE -D SKIP_TITLE
+endif
 # Move-selection menu (menu-fidelity row 22): seed the DEBUG_BATTLE party, then run
 # pret's MoveSelectionMenu — the move list, the cursor and the TYPE/PP box (PrintMenuItem).
 # The menu blocks on input, so AUTOKEY_QUIET drives DelayFrame and photographs the screen
@@ -1543,6 +1549,7 @@ $(eval $(call flag_gate,DEBUG_OAK_EVENT))
 FRONTEND_SRCS := \
     src/engine/battle/init_battle_variables.asm \
     src/engine/battle/init_battle.asm \
+    src/engine/battle/get_trainer_name.asm \
     src/engine/battle/battle_hud.asm \
     src/engine/battle/scale_sprites.asm \
     src/engine/battle/battle_menu.asm \
@@ -1587,6 +1594,7 @@ FRONTEND_SRCS := \
     src/engine/battle/experience.asm \
     src/engine/battle/battle_exp_stubs.asm \
     src/home/trainers.asm \
+    src/home/trainers2.asm \
     src/engine/overworld/trainer_sight.asm \
     src/engine/overworld/emotion_bubbles.asm \
     src/engine/battle/trainer_ai.asm \
@@ -1658,8 +1666,7 @@ ITEMS_CHECK_SRCS := \
 # WriteOAMBlock + SaveScreenTilesToBuffer2/LoadScreenTilesFromBuffer2 now linked
 # (the latter pair via the vcopy.asm promotion in Stage 3 — the old note claiming
 # they blocked cut.asm was stale).
-HOME_CHECK_SRCS := \
-    src/home/trainers2.asm
+HOME_CHECK_SRCS :=
 # predef_text.asm LEFT this list 2026-08-02: PrintPredefTextID now publishes a
 # port-only flat table pointer (Option A) and links in HOME_SRCS.
 

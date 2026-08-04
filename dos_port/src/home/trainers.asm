@@ -57,14 +57,11 @@
 ; npc_beaten_flags and route map_sprites.asm's CheckTrainerSight / TrainerEncounterFlow
 ; beaten-gate through TrainerFlagAction(FLAG_TEST/FLAG_SET).
 ;
-; LIVE GATE (unchanged from M8.1): the port's InitBattle
-; (src/engine/battle/init_battle.asm) is a WILD-ONLY screen setup — it has NO
-; trainer path (no ReadTrainer, no trainer party load, no trainer pic). So
-; StartTrainerBattle only SEEDS the battle parameters by default; the actual
-; `call InitBattle` is compiled only under -D TRAINER_BATTLE_LIVE.  Everything
-; else in this file is LINKED but has no live driver until the trainer-header
-; data generator (gen_trainer_headers.py) lands and map scripts pass header
-; tables: linked, not executed.
+; LIVE GATE: InitBattle now has a measured trainer-data path (class metadata,
+; ReadTrainer roster, production trainer picture, first active mon and AI state),
+; but the complete win/loss/return contract is not yet golden-proven. Therefore
+; StartTrainerBattle keeps the TRAINER_BATTLE_LIVE handoff until Stage 1b/1c;
+; DEBUG_TRAINER_INIT enables it only for the deterministic initialization gate.
 ;
 ; Build (check): nasm -f coff -I include/ -I . -o /dev/null src/home/trainers.asm
 
@@ -115,7 +112,7 @@ extern IsInArray                ; src/home/array2.asm (flat [ESI] reads; pass le
 extern msgbox_dialog            ; src/home/text.asm — overworld dialog projection
 extern text_msgbox              ; src/home/text.asm — active msgbox projection (msgbox.inc)
 %ifdef TRAINER_BATTLE_LIVE
-extern InitBattle               ; src/engine/battle/init_battle.asm (wild-only setup)
+extern InitBattle               ; src/engine/battle/init_battle.asm (wild/trainer dispatcher)
 %endif
 
 ; ----------------------------------------------------------------------------
@@ -380,7 +377,7 @@ DisplayEnemyTrainerTextAndStartBattle:
 ; ---------------------------------------------------------------------------
 ; StartTrainerBattle — enter a trainer battle.  Pret ref: home/trainers.asm:172.
 ; Seeds enemy params, marks the trainer-battle status bits, then (gated) enters
-; the battle screen.  See the LIVE GATE note at the top of this file.
+; the trainer-aware battle dispatcher. See the LIVE GATE note above.
 ; ---------------------------------------------------------------------------
 StartTrainerBattle:
     mov byte [ebp + W_JOY_IGNORE], 0        ; xor a; ld [wJoyIgnore], a
@@ -394,8 +391,7 @@ StartTrainerBattle:
     ; predated the symbol. Nothing in the live build starts a trainer battle yet.)
     inc byte [ebp + wCurMapScript]
 %ifdef TRAINER_BATTLE_LIVE
-    call InitBattle                         ; port InitBattle = wild-only screen setup (see gate note)
-    mov byte [ebp + wIsInBattle], 2         ; trainer battle (pret InitBattle sets this; port sets 1)
+    call InitBattle
 %endif
     ret
 

@@ -5,8 +5,9 @@
 ; grind, 2026-07-24). Labels in pret's in-file order: GetTrainerInformation,
 ; IsFightingJessieJames, GetTrainerName. No fallthroughs (matches pret).
 ;
-; STATUS: CHECK-ONLY (Makefile HOME_CHECK_SRCS) — nothing calls these at runtime
-; until the M8.2 trainer-header engine wires the battle front-end.
+; STATUS: LINKED. InitBattle's trainer branch calls GetTrainerInformation before
+; ReadTrainer so the class name, production picture pointer, and prize base are
+; ready before the first enemy party mon is selected.
 ;
 ; Register map (CLAUDE.md): A=AL, BC=BX, DE=DX, HL=ESI, EBP = GB base.
 ;
@@ -19,13 +20,25 @@ bits 32
 
 extern GetTrainerName_          ; src/engine/battle/get_trainer_name.asm
 extern TrainerPicPointers       ; src/data/trainer_pics.asm  (flat dd, index=class-1)
+extern TrainerPicLengths        ; src/data/trainer_pics.asm  (word lengths, index=class-1)
 extern TrainerBaseMoney         ; src/data/trainer_pics.asm  (bcd3 per class, index=class-1)
 extern PlayerPicFront           ; src/data/trainer_pics.asm  (== pret RedPicFront)
-extern JessieJamesPic           ; TODO(M8.2 follow-up): Tier-1 pic not in port TrainerPicPointers
+extern PlayerPicFrontLength     ; src/data/trainer_pics.asm  (compressed-byte length word)
+extern JessieJamesPic           ; src/data/trainer_pics.asm — generated Jessie/James picture
+extern JessieJamesPicLength     ; src/data/trainer_pics.asm — compressed-byte length word
 
 global GetTrainerInformation
 global IsFightingJessieJames
 global GetTrainerName
+global trainer_pic_ptr
+global trainer_pic_len
+
+section .bss
+align 4
+; Port-only flat replacement for pret's 16-bit wTrainerPicPointer. Keeping a
+; dword at the pret address would overlap wTrainerName at $D049.
+trainer_pic_ptr: resd 1
+trainer_pic_len: resw 1
 
 section .text
 
@@ -43,9 +56,11 @@ GetTrainerInformation:
     ; class index = wTrainerClass - 1
     movzx eax, byte [ebp + wTrainerClass]
     dec eax
-    ; wTrainerPicPointer (flat dword) = TrainerPicPointers[idx]
+    ; port flat trainer picture pointer = TrainerPicPointers[idx]
     mov edi, [TrainerPicPointers + eax*4]
-    mov [ebp + wTrainerPicPointer], edi
+    mov [trainer_pic_ptr], edi
+    mov dx, [TrainerPicLengths + eax*2]
+    mov [trainer_pic_len], dx
     ; wTrainerBaseMoney (2-byte dw, pret ram/wram.asm:1400 `wTrainerBaseMoney:: dw`)
     ; = the TOP 2 BCD bytes of this class's bcd3 base money. OW-A.9: pret
     ; GetTrainerInformation (home/trainers2.asm) copies exactly 2 bytes — the low BCD
@@ -63,7 +78,9 @@ GetTrainerInformation:
     ret
 .linkBattle:
     mov edi, PlayerPicFront         ; pret RedPicFront
-    mov [ebp + wTrainerPicPointer], edi
+    mov [trainer_pic_ptr], edi
+    mov dx, [PlayerPicFrontLength]
+    mov [trainer_pic_len], dx
     ret
 
 ; ----------------------------------------------------------------------------
@@ -78,8 +95,10 @@ IsFightingJessieJames:
     cmp al, 0x2a
     jb .ret                         ; below the Jessie&James range
     ; both the <$2e and >=$2e pret branches use JessieJamesPic (the second is a no-op dup)
-    mov edi, JessieJamesPic         ; TODO(M8.2 follow-up): pic not in port table yet
-    mov [ebp + wTrainerPicPointer], edi
+    mov edi, JessieJamesPic
+    mov [trainer_pic_ptr], edi
+    mov dx, [JessieJamesPicLength]
+    mov [trainer_pic_len], dx
 .ret:
     ret
 

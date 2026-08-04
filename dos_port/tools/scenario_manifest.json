@@ -1255,6 +1255,39 @@
         "masks": "golden_diff.SCENARIOS"
       },
       "verification": "scripted-joypad port gate plus real-navigation golden, both driving the live bag UI on the Pallet shore through one FishingInit failure and the deterministic OLD ROD bite; state verification, not UI verification. Good/Super Rod share this skeleton; their bite picks are RNG-gated and not cross-side deterministic."
+    },
+    {
+      "name": "trainer_battle_init",
+      "id": 44,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_TRAINER_INIT=1",
+      "port_entry_gate": "DEBUG_TRAINER_INIT",
+      "navigation_script": "tools/mgba_harness/scenarios/trainer_battle_init.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "StartTrainerBattle",
+        "InitBattle",
+        "GetTrainerInformation",
+        "ReadTrainer",
+        "_LoadTrainerPic",
+        "EnemySendOutFirstMon",
+        "LoadEnemyMonFromParty"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "real Route 3 trainer-sight entry on pret versus StartTrainerBattle on the port, stopped after roster load and first-mon selection; deterministic trainer initialization state only, not trainer presentation or battle completion"
     }
   ],
   "disabled_scenarios": []

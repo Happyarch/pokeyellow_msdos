@@ -75,10 +75,9 @@ extern RedBikeSprite                    ; src/home/player_gfx.asm
 extern RunNPCMovementScript         ; src/home/npc_movement.asm
 extern SeelSprite                    ; src/home/player_gfx.asm
 extern SurfingPikachuSprite                    ; src/home/player_gfx.asm
-extern TryDoWildEncounter                    ; engine/battle/wild_encounters.asm (LINKED)
 extern TryPushingBoulder            ; src/engine/overworld/push_boulder.asm
 extern _HandleMidJump                    ; src/engine/overworld/player_animations.asm
-extern _InitBattleCommon                     ; init_battle.asm — full wild-battle orchestration
+extern InitBattle                     ; engine/battle/init_battle.asm — opponent dispatch + full battle
 extern g_tilecache_dirty            ; src/ppu/ppu.asm — arm tile-cache re-decode
 extern player_sprite                ; == RedSprite (walking)
 
@@ -1386,29 +1385,13 @@ NewBattle:
     jnz .noBattle                             ; player under game control — no battle
     test byte [ebp + W_STATUS_FLAGS_4], (1 << BIT_NO_BATTLES)
     jnz .noBattle                             ; battles suppressed — no battle
-    ; --- pret InitBattle / DetermineWildOpponent gate (engine/battle/init_battle.asm) ---
-    mov al, [ebp + wCurOpponent]
-    test al, al
-    jnz .forcedOpponent                       ; wCurOpponent != 0 => forced (InitOpponent)
-    ; DetermineWildOpponent:
-    mov al, [ebp + wNumberOfNoRandomBattleStepsLeft]
-    test al, al
-    jnz .noBattle                             ; ret nz — still in no-battle window
-    call TryDoWildEncounter                    ; ZF set => encounter, ZF clear => none
-    jnz .noBattle                             ; ret nz — no wild encounter this step
-    jmp .startBattle
-.forcedOpponent:
-    mov [ebp + wCurPartySpecies], al          ; InitOpponent: wCurPartySpecies = opponent
-    mov [ebp + wEnemyMonSpecies2], al
-.startBattle:
-    call _InitBattleCommon                      ; run the real battle (data + intro + loop)
-    ; _InitBattleCommon returns CF=1 (pret _InitBattleCommon: scf). The post-battle
+    call InitBattle                            ; returns CF=1 only when a battle ran
+    ; _InitBattleCommon's tail returns CF=1. The post-battle
     ; re-entry (pret .battleOccurred → AnyPartyAlive → EnterMap full map reload) is built
     ; into OverworldLoop (overworld.asm), which the CF=1 return below drives.
-    stc                                        ; scf — a battle occurred (belt-and-braces)
     ret
 .noBattle:
-    clc                                        ; and a — CF=0, no battle
+    clc
     ret
 
 
@@ -3558,7 +3541,5 @@ LoadDestinationWarpPosition:
     pop esi
     pop eax
     ret
-
-
 
 
