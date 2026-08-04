@@ -115,14 +115,11 @@ Acceptance criteria:
       (`docs/plans/menus.md`, complete 2026-07-04)
 - [x] Pokémon data/stats + behavior/UI (evolution, learn-move, status screen,
       post-battle) — `docs/plans/pokemon_engine.md`, `docs/plans/pokemon_behavior.md`
-- [x] Items/bag layer — add/remove/TOSS **and** the USE dispatch. (This line read
-      "USE dispatch deferred" until 2026-08-02; measured false — `UseItem_` is a
-      linked implementation in `src/engine/items/item_effects.asm`, reached from
-      `UseItem` in `src/home/item.asm`. What remains is a handful of individual
-      *handlers* still ret-stubs in `item_use_stubs.asm`, tracked in
-      `docs/current_plan_items.md`, not the dispatch itself. Narrowed further
-      2026-08-02: PP Up / PP restoration and the Surfboard landed, so the only
-      open item-handler family is the three fishing rods.)
+- [x] Items/bag layer — add/remove/TOSS, USE dispatch, and every item-handler
+      family. `UseItem_` and `ItemUsePtrTable` are translated in
+      `src/engine/items/item_effects.asm`; the last handler family, fishing rods,
+      landed in `fe91b329`, deleting `item_use_stubs.asm`. Completed plan:
+      `docs/plans/items.md`.
 - [x] New-game data init (`InitPlayerData2` — party/box/bag terminators + money/ID)
 
 **Remaining before Phase 2 closes — query it, do not read a list here.**

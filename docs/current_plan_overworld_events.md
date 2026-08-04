@@ -90,9 +90,9 @@ bullet names what still owes evidence and when it lands. Do not upgrade those to
 - For changed pret code, run `dos_port/tools/fidelity_gate --base <base>`.
   A clean result means only "no detected structural divergence"; each behavior
   change also needs a must-hit runtime scenario proving that path executed.
-- `docs/current_plan_items.md` owns `ItemUse*` bodies and item-subsystem helpers,
-  including `ItemUseSurfboard`, `SurfingAttemptFailed`, `ItemUseItemfinder`, and
-  `HiddenItemNear`. This plan owns map/event data and dispatch,
+- The completed items plan (`docs/plans/items.md`) delivered `ItemUse*` bodies
+  and item-subsystem helpers, including `ItemUseSurfboard`,
+  `SurfingAttemptFailed`, `ItemUseItemfinder`, and `HiddenItemNear`. This plan owns map/event data and dispatch,
   `IsSpriteInFrontOfPlayer2`, movement consumers, and story-script consumers.
   `docs/current_plan_battle_completion.md` Stage 1 owns trainer-battle
   activation/exit and victory-dependent beaten flags; Stage 4 owns special
@@ -335,7 +335,7 @@ generates `assets/hidden_item_coords.inc` (`HiddenItemCoords`, 55 rows, `db map,
 + `db -1`; pret's `hidden_item` macro swaps the source x,y so the stored order is
 map,y,x — HiddenItemNear reads d=y, e=x). It is `%include`d by
 `src/data/hidden_events_data.asm` and reuses `gen_hidden_events.parse_map_ids`.
-The itemfinder half is a **cross-cut into `docs/current_plan_items.md`** (recorded
+The itemfinder half was a **cross-cut into `docs/plans/items.md`** (recorded
 there): `src/engine/items/itemfinder.asm` (`HiddenItemNear`/`Sub5ClampTo0`) is now
 linked (`ITEMS_SRCS`); `IsInRestOfArray` was promoted with `vcopy.asm` from
 `HOME_CHECK_SRCS` to `HOME_SRCS`; and `ItemUseItemfinder` moved from the

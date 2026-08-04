@@ -1,13 +1,9 @@
-# Items-layer dependency ledger
+# Completed items-layer dependency ledger
 
-Current open dependencies for `docs/current_plan_items.md`, re-measured
-2026-08-02 against the tree at `3fad3249` (linked build and generated project
-state), per the maintainer directive to re-derive open items from generated
-state. Every stale claim this pass found had made the plan look MORE blocked
-than the tree actually is (Surfboard and fishing are both closer to done than
-this file said) — none understated remaining work. This is an
-open-only ledger: resolved B1/B2/B4/B7/B8 history remains in git and archived
-plans, not in the active handoff.
+Dependency ledger re-measured 2026-08-02 against the tree at `3fad3249`, then
+closed with the last fishing implementation in `fe91b329`. The completed plan
+is archived at `docs/plans/items.md`. Remaining tails below explicitly belong to
+other subsystems; this file is historical evidence, not an active handoff.
 
 Verification terms are deliberate. `defined`, `linked`, `executed`, and
 `golden-matched` are different claims. Re-run the cited generated commands
@@ -110,9 +106,9 @@ The existing `battle_menu` golden does not exercise this sub-flow.
   untouched); `wRodResponse` promoted to `gb_memmap.inc` (#25). Golden
   `fish_old_rod` (id 42) exercises the fixed path.
 
-## Cleared prerequisites now owned by the items plan
+## Cleared prerequisites delivered by the items plan
 
-These are active item tasks, not blockers:
+These item tasks are complete:
 
 - **Fishing rods: DONE 2026-08-03.** The three handlers + `FishingInit` /
   `RodResponse` are real bodies in `src/engine/items/item_effects.asm`,

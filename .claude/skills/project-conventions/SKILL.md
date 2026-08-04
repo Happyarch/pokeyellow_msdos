@@ -427,15 +427,12 @@ dos_port/tools/project_state --plans
   OBJ-over-window z-order (the port otherwise composites the window layer last, so the
   overworld dialog box occludes NPCs). A screen whose window IS the screen and whose
   OBJ sit on top of it raises it with its window; anything else leaves it alone.
-- `docs/current_plan_items.md` — item/bag layer, retitled "finish the remaining
-  USE handlers" (7 done / 4 open at 2026-08-02). **Item USE dispatch is NOT
-  deferred any more** — that was this entry's stale claim. `UseItem_` and
-  `ItemUsePtrTable` are translated in `src/engine/items/item_effects.asm` and
-  reached from `UseItem` in `src/home/item.asm`; medicine, balls, TM/HM, Bicycle,
-  Coin Case, Oak's Parcel, Pokédex, Poké Flute, Town Map, Card Key, Escape Rope
-  and Itemfinder are all `[x]`. Genuinely open: **fishing rods, PP Up / PP
-  restoration, Surfboard** (`ItemUseSurfboard` is still a linked ret-stub), and
-  the stage-12 stub/claim retirement sweep.
+- **Items/bag layer — COMPLETE & archived** at `docs/plans/items.md`
+  (2026-08-03). `UseItem_`, `ItemUsePtrTable`, and every item-handler family are
+  translated in `src/engine/items/item_effects.asm`; fishing rods were the last
+  family (`fe91b329`) and their retirement deleted `item_use_stubs.asm`. Runtime
+  tails owned by other systems remain in their plans or backlog, notably the
+  in-battle ITEM menu and the Surfboard dismount's simulated-input consumer.
 - **Battle-UI layout pipeline — PIPELINE COMPLETE & archived** at
   `docs/plans/battle_ui.md` (2026-07-12, branch `menus-port`). Sessions A1-B5 done:
   `tools/gfx_core/` extracted, every hardcoded battle coordinate migrated into the

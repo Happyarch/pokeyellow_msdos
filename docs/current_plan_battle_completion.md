@@ -89,9 +89,10 @@ caller count, and the shared `BattlePartyMenu`/`BattleItemMenu` `ret` body.
   clean result means only "no detected structural divergence"; each behavior
   change also needs a deterministic scenario whose must-hit list proves the
   changed path executed.
-- `docs/current_plan_items.md` owns `UseItem_`, `ItemUsePtrTable`, every
-  `ItemUse*` body, and item-subsystem helpers. This plan owns `BattleItemMenu`,
-  battle-context routing, turn consumption, switches, and battle-loop consumers.
+- The completed items plan (`docs/plans/items.md`) delivered `UseItem_`,
+  `ItemUsePtrTable`, every `ItemUse*` body, and item-subsystem helpers. This plan
+  owns `BattleItemMenu`, battle-context routing, turn consumption, switches, and
+  battle-loop consumers.
 - `docs/current_plan_overworld_events.md` owns map/event data and dispatch,
   story scripts, battle-state seeding, and overworld result consumers. This plan
   owns trainer-battle activation/exit semantics and special battle-type behavior.

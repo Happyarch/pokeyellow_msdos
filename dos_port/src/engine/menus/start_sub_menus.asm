@@ -26,9 +26,8 @@
 ; ChooseFlyDestination (home/reload_tiles.asm → the linked Town Map fly-target UI,
 ; src/engine/items/town_map.asm) and its armed BIT_FLY_WARP is consumed by
 ; OverworldLoop → HandleFlyWarpOrDungeonWarp (overworld-events Stage 4). CUT
-; (.cut) calls UsedCut for real. SURF reaches UseItem, whose ItemUseSurfboard is a
-; ret-stub owned by docs/current_plan_items.md, so it lands on pret's own refusal
-; path rather than a port no-op.
+; (.cut) calls UsedCut for real. SURF reaches the real ItemUseSurfboard through
+; UseItem; success returns to the map and refusal resumes the party menu.
 ;
 ; Field-move pop-up (port model): DisplayTextBoxID(FIELD_MOVE_MON_MENU) draws
 ; the box on the 40-wide canvas at the UI_FIELD_MOVE_MON_MENU anchor (S2's
@@ -463,12 +462,8 @@ StartMenu_Pokemon:
     mov al, SURFBOARD
     mov [ebp + wCurItem], al
     mov [ebp + wPseudoItemID], al
-    call UseItem                        ; ItemUseSurfboard — a ret-stub today
-                                        ; (item_use_stubs.asm), so this returns
-                                        ; wActionResultOrTookBattleTurn = 0 and falls
-                                        ; to .reloadNormalSprite: pret's own "the
-                                        ; surfboard was refused" path. Correct shape,
-                                        ; no surfing until that stub is retired.
+    call UseItem                        ; ItemUseSurfboard sets the action result;
+                                        ; refusal returns through .reloadNormalSprite.
     mov al, [ebp + wActionResultOrTookBattleTurn]
     test al, al
     jz .reloadNormalSprite

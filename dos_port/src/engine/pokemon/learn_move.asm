@@ -9,11 +9,9 @@
 ; worktree (DisplayTextBoxID is now the real home/textbox.asm dispatcher, merged
 ; from menus-port — the former learn_move_stubs.asm placeholder has been deleted).
 ;
-; Callers: LearnMoveFromLevelUp (src/engine/pokemon/evos_moves.asm) — battle level-up
-; move learning. The item-use (Rare Candy) path is not wired: item_effects.asm's
-; RareCandyLevelUp is intentionally UI-free (see its header) and has no caller yet
-; (UseItem_/ItemUsePtrTable dispatch is deferred — docs/current_plan_items.md), so
-; there is nothing to wire it into today.
+; Callers include LearnMoveFromLevelUp (src/engine/pokemon/evos_moves.asm) for
+; battle level-ups and ItemUseMedicine's live Rare Candy flow, which recalculates
+; stats and calls LearnMoveFromLevelUp before consuming the item.
 ;
 ; -----------------------------------------------------------------------
 ; DisplayTextBoxID (pret home/textbox.asm, TWO_OPTION_MENU dispatch) drives the

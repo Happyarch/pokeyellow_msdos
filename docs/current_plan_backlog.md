@@ -374,7 +374,7 @@ finding follows.
 
 Filed 2026-08-02. Currently a `%ifndef` **local shadow** at
 `src/engine/overworld/player_animations.asm:116-118`. The fishing-rod handlers
-(`docs/current_plan_items.md`) are the second consumer, so porting them without
+(`docs/plans/items.md`) are the second consumer, so porting them without
 this promotion either adds a second shadow or forces the promotion mid-change —
 and `3fad3249` drove the `local_shadow` class from 21 to **0**, so it would be a
 fresh strict-claims regression on a class cleared the same day.

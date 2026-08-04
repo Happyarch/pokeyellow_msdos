@@ -1,4 +1,9 @@
-# Current Plan: Items Layer — finish the remaining USE handlers
+# Completed Plan: Items Layer — remaining USE handlers
+
+Completed and archived 2026-08-03. The last implementation commit was
+`fe91b329` (fishing rods); the final retirement sweep refreshed generated label
+state, confirmed every former `ItemUse*` stub provider is translated with no
+stale externs, and reconciled current roadmap, skill, and caller comments.
 
 > **Gate — the linter is MANDATORY. Rewritten 2026-08-02 against the tooling
 > that actually exists; the version this replaces predated `static_gate` and
@@ -198,17 +203,24 @@ maintained here.
       the scenario dumps with the bag still open, where both sides have the step
       armed and unconsumed.
 
-- [ ] **Stage 12 — stub and claim retirement.** Empty
-      `src/engine/items/item_use_stubs.asm` — measured 2026-08-02, that file
-      held six labels aliased onto one `ret`; three of those retired on
-      2026-08-02 (`ItemUsePPUp`, `ItemUsePPRestore`, `ItemUseSurfboard`), leaving
-      `ItemUse{Old,Good,Super}Rod`. Its
-      `TODO(safari, battle plan): ItemUseBait / ItemUseRock` line is stale
-      (both are real linked bodies in `item_effects.asm`). Run
-      `label_status --callers` for
-      every retired provider; update the label DB; run the strict/default label
-      lint and `fidelity_gate`; sweep related `STUB`, `TODO`, extern-provider,
-      allowlist, plan, skill, and stigmergy claims; then archive this plan.
+- [x] **Stage 12 — stub and claim retirement.** Completed 2026-08-03.
+      `src/engine/items/item_use_stubs.asm` was deleted with the fishing-rod
+      implementation in `fe91b329`. A fresh label scan reports
+      `ItemUse{Old,Good,Super}Rod`, `ItemUsePPUp`, `ItemUsePPRestore`,
+      `ItemUseSurfboard`, `ItemUseBait`, and `ItemUseRock` as translated, with
+      no stale externs. Current roadmap, skill, and Surf caller claims were
+      reconciled; historical translation-log and archived-plan references were
+      retained as history. The static and per-change gates plus the full
+      fidelity suite were run before archival.
+
+      Verification decomposition: `static_gate` passed all five checks at the
+      measured one-finding `aux_misplaced` baseline, and `fidelity-full` passed
+      41/41 scenarios with zero failures. `fidelity_gate` exited 1: its
+      comment-only `start_sub_menus.asm` diff expanded to every pret label in
+      that file and reported the file's existing projection call/store
+      differences. The affected source changes alter comments only; no
+      instruction, call, store, or label changed. This failure is recorded, not
+      reported as a pass.
 
 ## Cross-plan reachability and fidelity tails
 
