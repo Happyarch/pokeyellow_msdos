@@ -574,12 +574,53 @@ seeds the SNES tile (`y 5, x 3` on `REDS_HOUSE_2F`, from
 `assets/hidden_events.inc:HiddenEventsFor_REDS_HOUSE_2F`) and runs the real
 `CheckForHiddenEventOrBookshelfOrCardKeyDoor` dispatch.
 
-**Evidence.** `include/gb_memmap.inc` documents the resident `.blk` set as
-`OW_<MAP>_BLK_GBADDR` — "resident **outdoor** .blk". No interior map data is
-embedded. And every predef-text hidden event is on an interior map: grep
-`assets/hidden_events.inc` — Red's house, Blue's house, Oak's lab, the pokécentres
-and the gyms. So there is currently **no map the port can render on which any
-predef text is reachable**, and that is a map-data gap, not a text-engine gap.
+**Evidence — CORRECTED 2026-08-04. The original diagnosis below was measured
+FALSE; the symptom is real but the cause was misidentified.**
+
+> **Previously stated (2026-08-02):** "`include/gb_memmap.inc` documents the
+> resident `.blk` set as `OW_<MAP>_BLK_GBADDR` — 'resident **outdoor** .blk'. No
+> interior map data is embedded. […] that is a map-data gap, not a text-engine
+> gap."
+>
+> **Measured false 2026-08-04** (overworld-events, while scoping the last three
+> standard trainer maps). Interior `.blk` data **is** embedded. In
+> `dos_port/assets/map_headers.inc`'s indoor dispatch table: **399** real
+> `dd <map>_blk` entries against **25** `dd null_indoor_blk` (copies and
+> `UNUSED_MAP_*` only). `REDS_HOUSE_2F` — the very map this item reports as
+> blank — has real `.blk` data (`0x26 -> reds_house2_f_blk`), a real size entry
+> and a real header. The shared-slot worry is empty too: `INDOOR_BLK_SIZE` is
+> 512 bytes, `REDS_HOUSE_2F` is 4×4 = 16 B, and the count of non-outdoor maps
+> whose `w*h` exceeds the slot is **zero** (largest is `VIRIDIAN_FOREST` at
+> 17×24 = 408 B).
+
+**The actual blocker is TILESET residency.**
+`tools/generators/gen_overworld_assets.py` embeds exactly one tileset —
+`gfx/tilesets/overworld.2bpp` — plus one blockset and one collision list. pret
+ships 20 tilesets (`ls gfx/tilesets/*.2bpp`); the port embeds 1. `OW_GFX_SIZE`
+(0x600) and `OW_BLOCKS_SIZE` (0x900) are sized for the *largest* tileset and
+blockset, so the address space is reserved and only the overworld data is ever
+generated into it. Per `data/maps/headers/`, `REDS_HOUSE_2F` needs the
+`REDS_HOUSE_2` tileset; the outdoor routes are all `OVERWORLD`, which is exactly
+why they render and every `route*_sight` golden passes.
+
+**Why the symptom reads as missing map data when it is not** — this is the
+mechanism that produced the misdiagnosis, so it is recorded to prevent the next
+one. Re-running this item's own repro, `FRAME.BIN` holds **5 distinct palette
+indices, not 1**, and the render shows a correctly proportioned 4×4-block room
+with the player sprite in it and no furniture. The room's *dimensions are right*,
+which is only possible if the `.blk` was found and used. What is wrong is that
+every block draws flat: the `.blk` supplies block IDs, the resident **overworld**
+blockset does not contain them, so they fall out of range and hit the
+`DrawTileBlock` block-ID clamp (CLAUDE.md, "Temporary scaffold — two out-of-map
+clamps"), which clamps to block 0. **The clamp that exists to prevent rendering
+garbage is what turns "wrong tileset" into an innocuous-looking empty room.**
+Full record, including what was deliberately *not* measured, in the stigmergy
+memory `interior-maps-blocked-by-tileset-residency-not-blk`.
+
+Every predef-text hidden event is still on an interior map (grep
+`assets/hidden_events.inc` — Red's house, Blue's house, Oak's lab, the
+pokécentres and the gyms), so the conclusion that **no map the port can render
+today makes a predef text reachable** still holds. Only the reason changed.
 
 **What this blocks.** The predef path stays runtime-unreachable, so the
 implementation carries regression evidence only (`fidelity-full`), never feature
@@ -589,10 +630,32 @@ direction and landed 2026-08-03 in `d54a32e4` — see the relocation-debt pointe
 below.) The owning plan archived 2026-08-04 at `docs/plans/predef_text.md`; this
 item is now the sole live tracker for the acceptance tail.
 
-**What unblocks it.** Either resident interior `.blk` data (item 16's map-data
-extension is the neighbouring work), or a reachable outdoor predef entry. The
-`DEBUG_PREDEFTEXT` gate and `src/engine/events/hidden_events/reds_room.asm` are
-already in place and correct; only the map data is missing.
+**What unblocks it — REVISED 2026-08-04 to match the corrected cause.** Either
+**per-tileset gfx + blockset + collision residency**, with a way to select them
+per map, or a reachable outdoor predef entry. The `DEBUG_PREDEFTEXT` gate and
+`src/engine/events/hidden_events/reds_room.asm` remain in place and correct, and
+the interior `.blk` data is already there — what is missing is the tileset the
+map's blocks index into.
+
+> The previous wording said "either resident interior `.blk` data (item 16's
+> map-data extension is the neighbouring work) […] only the map data is missing".
+> The `.blk` half is **already done**, so item 16 is no longer the neighbouring
+> work for this item.
+
+**This is a shared prerequisite, not a predef-text one.** The same tileset-residency
+work also unblocks the last three standard-shape trainer maps
+(`CERULEAN_CAVE_B1F` = `CAVERN`, `POWER_PLANT` = `FACILITY`, `VIRIDIAN_FOREST` =
+`FOREST` — the tail of `docs/current_plan_overworld_events.md` Stage 5a) and every
+Stage 5b story leg that enters a building. Flagged to the maintainer 2026-08-04 as
+a candidate workstream of its own; it is **not** staged, and no plan currently
+owns it.
+
+**Open design questions, deliberately unanswered** — these are where such a batch
+would start, and none has been measured: how much address space 20 tilesets need;
+whether `OW_GFX`/`OW_BLOCKS` should become per-tileset resident blobs or a
+swappable slot like the indoor `.blk` one; what `LoadTilesetHeader` currently does
+when handed a non-overworld tileset id; and whether the `FOREST`/`FACILITY`/
+`CAVERN` collision lists differ in ways `CollisionCheckOnLand` cares about.
 
 ### 32. `tx_pre_jump` cannot be a macro at a routine tail
 Filed 2026-08-02. pret has `tx_pre_jump` (macros/predef.asm); `include/predef.inc`

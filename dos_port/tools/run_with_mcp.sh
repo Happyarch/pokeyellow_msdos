@@ -10,9 +10,12 @@
 #      is already there. It also takes no make flags -- the "[extra make flags]"
 #      usage line and the "1. Build PKMN.EXE" step documented here until
 #      2026-08-02 described behaviour this script has never had.
-#   2. Launch tools/dosbox-x-mcp/dosbox-x with a dosbox-x.conf that enables
+#   2. Write the launch handshake (/tmp/dosbox-mcp.launch) recording WHICH
+#      build is being launched, so the long-lived MCP server resolves symbols
+#      against this checkout instead of the one it was started in.
+#   3. Launch tools/dosbox-x-mcp/dosbox-x with a dosbox-x.conf that enables
 #      the heavy debugger and the MCP socket.
-#   3. Print instructions to connect Claude Code.
+#   4. Print instructions to connect Claude Code.
 #
 # The MCP server (tools/dosbox_mcp/server.py) is registered via
 # .claude/settings.json and started automatically by Claude Code.
@@ -27,6 +30,7 @@ DOSPORT="$(cd "$SCRIPT_DIR/.." && pwd)"
 # mcp-debug), deliberately named so it never collides with the system dosbox-x.
 BINARY="${SCRIPT_DIR}/dosbox-x-mcp/dosbox-x-mcp"
 SOCK_PATH="/tmp/dosbox-mcp.sock"
+LAUNCH_FILE="${DOSBOX_MCP_LAUNCH:-/tmp/dosbox-mcp.launch}"
 
 if [ ! -x "$BINARY" ]; then
     echo "ERROR: patched binary not found at $BINARY"
@@ -70,9 +74,28 @@ c:
 PKMN.EXE
 EOF
 
+# Launch handshake — tells the MCP server WHICH BUILD it is now debugging.
+# The server (tools/dosbox_mcp/server.py) is long-lived and started by Claude
+# Code from whatever checkout it was registered in; without this it resolved
+# pkmn.sym from ITS OWN directory, so a worktree build got main-checkout
+# addresses (right symbol name, plausible address, breakpoint never fires).
+# This script is the only party that knows the answer, so it records it here.
+# Written atomically (temp + mv) because the server re-reads it on mtime
+# change and must never see a half-written path.
+cat > "${LAUNCH_FILE}.$$" <<EOF
+# Written by run_with_mcp.sh — the build the emulator is currently running.
+# Consumed by tools/dosbox_mcp/server.py (KEY=VALUE, DOSPORT is load-bearing).
+DOSPORT=${DOSPORT}
+REPO=${REPO_ROOT}
+SOCKET=${SOCK_PATH}
+LAUNCH_PID=$$
+EOF
+mv -f "${LAUNCH_FILE}.$$" "${LAUNCH_FILE}"
+
 echo ""
 echo "Starting MCP-patched DOSBox-X..."
 echo "  Socket:  ${SOCK_PATH}"
+echo "  Build:   ${DOSPORT}  (recorded in ${LAUNCH_FILE})"
 echo "  Binary:  ${BINARY}"
 echo "  PKMN.EXE boots and free-runs; pause it from MCP to set breakpoints."
 echo ""
