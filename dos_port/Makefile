@@ -694,6 +694,40 @@ NASMFLAGS += -D MAPSCRIPT_MAP=$(MAPSCRIPT_MAP) -D MAPSCRIPT_Y=$(MAPSCRIPT_Y) \
              -D MAPSCRIPT_SIGHT_FRAMES=$(MAPSCRIPT_SIGHT_FRAMES)
 endif
 
+# Continuous trainer-route gate (battle plan Stage 1b) — golden scenario
+# `trainer_battle_route`, id 51. Spawns on Route 3 inside ROUTE3_YOUNGSTER1's
+# sight line and then FALLS THROUGH into the real OverworldLoop: the map script
+# engages, StartTrainerBattle seeds wCurOpponent, the loop's own battle-entry
+# poll turns that into the battle, AUTOKEY_TRAINER_ROUTE answers the live menus,
+# and .battleOccurred returns to the map where EndTrainerBattle runs at script
+# index 2. This is the ONLY scenario in which the port's real loop drives a
+# trainer battle end to end — 44/45/46 call StartTrainerBattle and InitBattle
+# from a harness and never run the loop.
+#
+# Placed AFTER the generic DEBUG_MAPSCRIPT_SIGHT block deliberately: this gate
+# sets no MAPSCRIPT_* variable (it seeds its spawn directly in the EnterMap block
+# in src/home/overworld.asm), so it takes no part in that block's `?=`
+# first-set-wins chain and cannot perturb the sight scenarios' defaults.
+# make DEBUG_TRAINER_ROUTE=1 [AUTOKEY_DUMP_FRAME=1500]
+ifdef DEBUG_TRAINER_ROUTE
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_TRAINER_ROUTE -D DEBUG_SEED_PARTY -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_TRAINER_ROUTE
+# MEASURED against the mGBA reference run: engagement lands ~frame 400 after map
+# entry, the battle starts ~800, and the three roster mons take until ~6100 more
+# frames to fall, after which the return choreography runs. The autokey cadence
+# covers 240..18240; dump well after the battle has closed and the overworld has
+# settled. This is deliberately generous — the dump is a fixed frame, so it must
+# be later than the SLOWEST plausible battle, not the typical one.
+AUTOKEY_DUMP_FRAME ?= 15000
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+# AK_ROUTE_SHIFT=<frames>: shift the whole autokey script (debugger-attach aid,
+# same role as AK_LEDGE_SHIFT). Never set for a golden run.
+ifdef AK_ROUTE_SHIFT
+NASMFLAGS += -D AK_ROUTE_SHIFT=$(AK_ROUTE_SHIFT)
+endif
+endif
+
 # Pallet Oak cutscene gate: seed Pallet's north-exit trigger, execute the Pallet
 # state-machine/battle-seed boundary deterministically, and dump GBSTATE+FRAME.
 # Drives RunOakIntroTest (src/debug/debug_dump.asm).

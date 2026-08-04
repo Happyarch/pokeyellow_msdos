@@ -171,6 +171,7 @@ extern RunPPRestoreTest                   ; src/debug/debug_dump.asm
 extern RunFishTestSeed                    ; src/debug/debug_dump.asm
 extern RunLedgeTestSeed                   ; src/debug/debug_dump.asm
 extern RunSurfTestSeed                    ; src/debug/debug_dump.asm
+extern RunTrainerRouteTestSeed            ; src/debug/debug_dump.asm (Stage 1b continuous gate)
 extern CheckForHiddenEventOrBookshelfOrCardKeyDoor ; src/home/hidden_events.asm
 extern RunPokedexTest                     ; src/engine/menus/pokedex.asm
 extern RunSavePerfTest                    ; src/engine/menus/save.asm (DEBUG_SAVEPERF)
@@ -319,6 +320,25 @@ EnterMap:
     mov byte [ebp + W_CUR_MAP], MAPSCRIPT_MAP
     mov byte [ebp + W_Y_COORD], MAPSCRIPT_Y
     mov byte [ebp + W_X_COORD], MAPSCRIPT_X
+    mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF  ; "not a warp arrival" (see DEBUG_SEAM)
+%endif
+%ifdef DEBUG_TRAINER_ROUTE
+    ; Continuous trainer-route gate (battle plan Stage 1b): the scenario that drives
+    ; the REAL OverworldLoop all the way through sight -> battle -> return, which is
+    ; exactly what 44/45/46 cannot do (they call StartTrainerBattle and InitBattle
+    ; from a harness and never run the loop at all).
+    ;
+    ; Deliberately the SAME spawn as DEBUG_MAPSCRIPT_SIGHT above: Route 3 (Y=6,
+    ; X=12), already inside ROUTE3_YOUNGSTER1's line of sight. Reusing a spawn that
+    ; seven sight goldens already exercise keeps ENTRY out of the variable set — the
+    ; loop choreography is what is under test. Walking in from an out-of-sight tile
+    ; would additionally depend on the passability of Route 3 tiles nobody has
+    ; measured, and a failure there would be indistinguishable from a choreography
+    ; failure.
+    ; Seeded BEFORE LoadMapData, which reads the coords (same rule as DEBUG_SEAM).
+    mov byte [ebp + W_CUR_MAP], ROUTE_3
+    mov byte [ebp + W_Y_COORD], 6
+    mov byte [ebp + W_X_COORD], 12
     mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF  ; "not a warp arrival" (see DEBUG_SEAM)
 %endif
 %ifdef DEBUG_SURF
@@ -897,6 +917,20 @@ EnterMap:
     call SeedDeterministicPlayerIdentity
     call SeamReseatView
     call RunFishTestSeed                     ; party + bag + OLD ROD; RETURNS
+%endif
+%ifdef DEBUG_TRAINER_ROUTE
+    ; Same shape as DEBUG_SURF/LEDGE/FISH above: seed, then FALL THROUGH into the
+    ; real OverworldLoop. Nothing else drives this scenario — the loop does it all:
+    ; RunMapScript reaches Route 3's TrainerMapScript, CheckFightingMapTrainers
+    ; engages the youngster on its own, DisplayEnemyTrainerTextAndStartBattle runs
+    ; StartTrainerBattle which seeds wCurOpponent, the loop's own battle-entry poll
+    ; turns that into InitBattle, AUTOKEY_TRAINER_ROUTE answers the battle menus,
+    ; and .battleOccurred returns to the map where the next RunMapScript dispatches
+    ; EndTrainerBattle at script index 2. The bespoke sight hook cannot interfere:
+    ; ROUTE_3 dispatches to TrainerMapScript, so the Stage 1b gate skips it.
+    call SeedDeterministicPlayerIdentity
+    call SeamReseatView
+    call RunTrainerRouteTestSeed             ; debug party, empty bag; RETURNS
 %endif
 
     ; fall through to OverworldLoop

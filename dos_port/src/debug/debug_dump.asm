@@ -117,6 +117,12 @@ global RunLedgeTestSeed
 extern PrepareNewGameDebug
 global RunFishTestSeed
 %endif
+%ifdef DEBUG_TRAINER_ROUTE
+%ifndef DEBUG_FISH
+extern PrepareNewGameDebug
+%endif
+global RunTrainerRouteTestSeed
+%endif
 %ifdef DEBUG_ITEMSTONE
 extern PrepareNewGameDebug
 extern LoadFontTilePatterns
@@ -698,6 +704,45 @@ gbstate_regions:
     gbregion "wMovementFlags",   W_MOVEMENT_FLAGS, 1       ; BIT_LEDGE_OR_FISHING cleared
     gbregion "wStatusFlags5to7", wStatusFlags5, 4
 %endif
+%ifdef DEBUG_TRAINER_ROUTE
+    ; Continuous trainer-route scenario (battle plan Stage 1b). Same rule as the
+    ; rows above: scenario-local, mirrored by
+    ; tools/mgba_harness/scenarios/trainer_battle_route.lua, joined by NAME.
+    ;
+    ; THE SURFACE IS CHOREOGRAPHY + REWARDS, NOT ARITHMETIC (merge-session ruling,
+    ; mail thread 25). Damage and HP are deliberately absent: pinning them would
+    ; require RNG lockstep between mGBA and the port through live menu timing, and
+    ; per-turn damage math is already covered by 45/46's deterministic-turn design.
+    ; The two reward bytes ARE pinned because they depend only on the defeated
+    ; mons' species/level and the trainer class payout — zero RNG — and without
+    ; them a run whose battle executed but rewarded wrongly would pass on
+    ; choreography alone.
+    ;
+    ; wBattleResult / wIsInBattle / wCurOpponent: the battle ran and CLOSED. In
+    ; particular wCurOpponent must be back to 0 — EndOfBattle.resetVariables clears
+    ; it, and if it did not the loop's battle-entry poll would re-enter forever.
+    gbregion "wBattleOutcome",   wBattleResult, 1
+    gbregion "wIsInBattle",      wIsInBattle, 1
+    gbregion "wCurOpponent",     wCurOpponent, 1
+    ; The script state machine: wCurMapScript and Route 3's persistent script byte
+    ; must both be back to 0 after EndTrainerBattle, and the trainer's persistent
+    ; beaten bit (event byte $D7C2 bit 2) must be SET by the victory path.
+    gbregion "wCurMapScript",    wCurMapScript, 1
+    gbregion "wRoute3Script",    0xD5F7, 1
+    gbregion "wRoute3Event",     0xD7C2, 1
+    ; .battleOccurred's own flag work — the tail that only the real loop runs.
+    gbregion "wStatusFlags3",    W_STATUS_FLAGS_3, 1       ; BIT_TALKED_TO_TRAINER cleared
+    gbregion "wStatusFlags4",    W_STATUS_FLAGS_4, 1       ; BIT_BATTLE_OVER_OR_BLACKOUT set
+    gbregion "wStatusFlags7",    W_STATUS_FLAGS_7, 1       ; BIT_TRAINER_BATTLE cleared
+    ; Where the player ended up: the return re-enters the map, so map and coords
+    ; must be the Route 3 spawn again, not a warp or a reload artifact.
+    gbregion "wPlayerMapPos",    wCurMap, 5                ; wCurMap .. wXCoord
+    ; The zero-RNG reward bytes.
+    gbregion "wPlayerMoney",     wPlayerMoney, 3           ; BCD, prize added by AddBCD
+    ; wPartyMon1Exp has no port symbol; build it from the struct base + offset the
+    ; way wDayCareMonExp does in gb_memmap.inc. 3 bytes, BIG-ENDIAN (GB order).
+    gbregion "wPartyMon1Exp",    wPartyMons + MON_EXP, 3   ; EXP gained by the lead
+%endif
 gbstate_regions_end:
 
 GBSTATE_DIR_SIZE     equ gbstate_regions_end - gbstate_regions
@@ -1247,6 +1292,55 @@ RunFishTestSeed:
     call PrepareNewGameDebug
     mov byte [ebp + wBagItems + 0], OLD_ROD
     mov byte [ebp + wBagItems + 1], 1
+    ret
+%endif
+
+%ifdef DEBUG_TRAINER_ROUTE
+; ---------------------------------------------------------------------------
+; RunTrainerRouteTestSeed — continuous trainer-route gate (battle plan Stage 1b).
+;
+; Like RunLedgeTestSeed, this SEEDS AND RETURNS: EnterMap falls through into the
+; real OverworldLoop and AUTOKEY_TRAINER_ROUTE answers the menus. Nothing here
+; touches the battle — that is the whole point of this scenario, and the reason
+; it is the one that can carry the Stage 1b tick.
+;
+; WHAT MAKES IT DIFFERENT FROM 44/45/46. Those three call StartTrainerBattle and
+; InitBattle directly from RunBattleTest and never run OverworldLoop at all, so
+; the live sight -> presentation -> turn-loop -> return choreography stayed
+; unproven no matter how many of them passed. Here the loop does all of it:
+; RunMapScript -> Route 3's TrainerMapScript -> CheckFightingMapTrainers engages
+; -> DisplayEnemyTrainerTextAndStartBattle -> StartTrainerBattle seeds
+; wCurOpponent -> the loop's own battle-entry poll -> NewBattle/InitBattle ->
+; ... -> .battleOccurred -> the next RunMapScript dispatches EndTrainerBattle at
+; script index 2.
+;
+; Seeds the debug party (standard-region parity with the golden's
+; seed.debug_new_game) and an empty bag — this flow uses no items, and a bag item
+; would only add a way for the two sides to diverge.  Spawn coords are seeded
+; earlier, in EnterMap (see the DEBUG_TRAINER_ROUTE block in
+; src/home/overworld.asm for why it reuses the sight scenarios' tile).
+;
+; DETERMINISM NOTE: the enemy HP is deliberately NOT collapsed the way 45/46
+; collapse it. A continuous run has no harness to reach in and do that, and
+; pinning damage would require RNG lockstep between mGBA and the port through
+; live menu timing. The compared surface is choreography plus the two zero-RNG
+; reward bytes (party EXP, player money) — see the scenario's golden_diff entry.
+;
+; In: EBP = GB memory base.  Returns.
+; ---------------------------------------------------------------------------
+RunTrainerRouteTestSeed:
+    mov byte [ebp + wPartyCount], 0
+    mov byte [ebp + wPartySpecies], 0xFF
+    mov byte [ebp + wNumBagItems], 0
+    mov byte [ebp + wBagItems], 0xFF
+    call PrepareNewGameDebug
+    ; Arm Route 3's first sight trainer the way a fresh arrival would: persistent
+    ; beaten bit clear, map script at its DEFAULT handler. The trainer itself comes
+    ; from the generated map data, not from here — that is what makes this an
+    ; end-to-end check of assets/trainer_headers.inc rather than of a seeded state.
+    and byte [ebp + 0xD7C2], ~(1 << 2) & 0xff   ; Route 3 trainer 0 beaten flag
+    mov byte [ebp + 0xD5F7], 0                  ; wRoute3CurScript = DEFAULT (0)
+    mov byte [ebp + wCurMapScript], 0
     ret
 %endif
 
@@ -3474,6 +3568,66 @@ autokey_script:
 %endif
     dd   60 + AK_LEDGE_SHIFT,   72 + AK_LEDGE_SHIFT, PAD_DOWN ; arm the hop; the loop plays it out
     dd  300 + AK_LEDGE_SHIFT,  312 + AK_LEDGE_SHIFT, PAD_DOWN ; post-teardown step — proves input is back
+    dd   -1,   -1, 0
+%elifdef AUTOKEY_TRAINER_ROUTE
+    ; Continuous trainer route (DEBUG_TRAINER_ROUTE, battle plan Stage 1b).
+    ;
+    ; This script does NOT drive the encounter — the map script does, on its own,
+    ; from the first frame, because the player spawns inside the youngster's line
+    ; of sight. All this script does is ANSWER: the pre-battle text, the battle
+    ; menu, the move menu, and the end-of-battle text. That division is the point
+    ; of the scenario: every state transition is the game's, not the harness's.
+    ;
+    ; The engage sequence before the player can act is long — emotion bubble,
+    ; TrainerWalkUpToPlayer's step, the pre-battle text stream, then the battle
+    ; intro and send-out — so the presses are spread wide and repeated rather than
+    ; timed to individual screens. A press that lands on nothing is harmless here:
+    ; A on the overworld with no dialog opens nothing (the spawn tile faces no
+    ; sign or NPC), and A on a text prompt just advances it.
+    ;
+    ; FIGHT is the battle menu's default cursor position, so A selects it without
+    ; any D-pad movement; the move menu then opens on move slot 0. The debug
+    ; party's lead is the L80 mon whose STRENGTH one-shots this trainer's roster
+    ; (the same contract 45/46 rely on), and wPlayerMoveListIndex is left at its
+    ; natural default rather than forced — the point is to prove the live menu
+    ; path works, and any of the lead's moves overkills a Route 3 bug catcher.
+    ;
+    ; Cadence: 10-frame holds with wide gaps (the AUTOKEY_SURF/FISH spacing).
+    ; Three roster mons means three FIGHT+move cycles plus their send-out text.
+    ; AK_ROUTE_SHIFT delays the whole script (debug-attach aid, like
+    ; AK_LEDGE_SHIFT) — never set for a golden run.
+%ifndef AK_ROUTE_SHIFT
+%define AK_ROUTE_SHIFT 0
+%endif
+    ; MEASURED 2026-08-04 on the golden side, and it applies identically here: a
+    ; live trainer battle CANNOT be driven by pressing A alone. When the trainer
+    ; sends out its next mon, Gen 1 asks "will <PLAYER> change POKEMON?" YES/NO,
+    ; and an A press answers YES and parks in the party menu. The mGBA run that
+    ; did that killed the first roster mon and then sat in the party menu for
+    ; 29000 frames until the frame cap. B is the key that gets back to the battle
+    ; menu from anywhere: it advances ordinary text AND answers NO.
+    ;
+    ; The golden side can watch the tilemap and react; AutoKeyDrive is
+    ; frame-scheduled and cannot. So instead of a fixed press list timed to
+    ; individual screens -- which cannot survive a battle whose length varies with
+    ; the damage rolls -- this emits a REPEATING B,B,A cadence for the whole run.
+    ; Two B presses clear whatever prompt is up (including the switch question),
+    ; then one A makes the selection the battle menu is sitting on (FIGHT, then
+    ; the move). The cycle repeats often enough that a turn always makes progress
+    ; and a stray press lands somewhere harmless.
+    ;
+    ; 90-frame cycle from frame 240; AK_ROUTE_CYCLES covers the whole battle with
+    ; margin (the mGBA reference run finished its battle by frame ~12000).
+%ifndef AK_ROUTE_CYCLES
+%define AK_ROUTE_CYCLES 200
+%endif
+%assign ak_i 0
+%rep AK_ROUTE_CYCLES
+    dd 240 + AK_ROUTE_SHIFT + ak_i * 90,      248 + AK_ROUTE_SHIFT + ak_i * 90, PAD_B
+    dd 270 + AK_ROUTE_SHIFT + ak_i * 90,      278 + AK_ROUTE_SHIFT + ak_i * 90, PAD_B
+    dd 300 + AK_ROUTE_SHIFT + ak_i * 90,      308 + AK_ROUTE_SHIFT + ak_i * 90, PAD_A
+%assign ak_i ak_i + 1
+%endrep
     dd   -1,   -1, 0
 %elifdef AUTOKEY_FISH
     ; items-plan Stage 11 (DEBUG_FISH): two OLD ROD uses through the real bag UI.
