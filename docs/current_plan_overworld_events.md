@@ -891,14 +891,22 @@ silently drift; regenerate rather than trusting it:
          `ForceBikeDown` writes `PAD_DOWN` to `hJoyHeld` inside the
          `JoypadOverworld` seam. Whichever writes last wins, which is a property
          of the frame pipeline rather than of either feature's intent.
-         **They GATE each other, not merely race — design to this, not to "last
-         writer wins".** `ForceBikeDown`'s third guard is "no D-pad, A or B
-         held", and the AUTOKEY cadence presses exactly B and A. So on the frames
-         the cadence covers, its own presses SUPPRESS `ForceBikeDown` outright;
-         on the frames between, `ForceBikeDown` fires. The resulting behaviour is
-         a function of CADENCE PHASE, which is a materially harder problem than a
-         write-ordering race and cannot be reasoned about from either routine in
-         isolation. MEASURE it; do not derive it.
+         **They probably GATE each other rather than merely racing — but this is
+         REASONED, NOT MEASURED, and must not be designed to as fact.**
+         `ForceBikeDown`'s third guard is "no D-pad, A or B held", and the AUTOKEY
+         cadence presses exactly B and A, so on the frames the cadence covers its
+         presses would SUPPRESS `ForceBikeDown` outright, and on the frames
+         between it would fire — making the behaviour a function of CADENCE
+         PHASE, a materially harder problem than a write-ordering race.
+         **Provenance, because it matters here:** battle-completion derived this
+         from the guard set and stated explicitly that they had NOT measured it.
+         Cadence phase, frame ordering, and the exact point at which the guard is
+         evaluated all affect the outcome, and the two candidate models
+         ("last writer wins" and "they gate each other") predict different
+         behaviour. So the honest position is that BOTH models are unverified.
+         **MEASURE the interaction before designing the witness scenario to
+         either one** — that measurement is part of building it, not a
+         precondition someone else owes.
       2. **Their "a stray press lands somewhere harmless" argument does NOT
          transfer.** It holds on ROUTE_3 only because nothing else touches the
          pad there. RE-TUNE the cadence for ROUTE_17; do not copy their frame
