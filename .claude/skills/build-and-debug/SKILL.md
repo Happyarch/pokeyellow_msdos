@@ -413,6 +413,33 @@ Rules and gotchas:
   cross-checks the manifest against the generated
   `assets/scenario_registry.inc` and is step 5 of `tools/static_gate`, so a
   half-registered scenario fails the pre-commit hook.
+- **State what code path the scenario actually ENTERS, and confirm it reaches the
+  routine under test.** Everything above is about REGISTERING a scenario; none of
+  it says the scenario can OBSERVE its target. **A scenario that runs, passes, and
+  never enters the code it is supposed to prove is a FALSE WITNESS**, and it fails
+  in the most dangerous direction: green. Registration checks, `must_hit`, and a
+  clean `goldencheck` will not catch it — `must_hit` names symbols the *harness*
+  reaches, which is not the same as the routine your change touched.
+  Two independent instances in one cycle (2026-08-04), both in the map-script
+  sight family, hours apart:
+  * `route17_sight` was built as the acceptance gate for `ForceBikeDown`. It can
+    NEVER witness it: `RunMapScriptSightTest` runs
+    `UpdateSprites → RunMapScript → DelayFrame` and, by its own documented design,
+    never enters `OverworldLoopLessDelay` — so it never reaches the joypad path
+    the routine lives in. Porting the routine left the golden's two divergences
+    byte-for-byte identical.
+  * A `MAPSCRIPT_SIGHT_FRAMES=600` run (vs the default 120) was taken as evidence
+    the faithful path was healthy. Both runs exited 0 and dumped cleanly, but the
+    two dumps were BYTE-IDENTICAL, so all 480 extra dispatches took an early `ret`
+    and never entered the code under test.
+  The cheap checks that catch it: name the entry point the harness actually calls
+  and trace it to your routine; and when a knob is supposed to change behaviour
+  (more frames, a different gate), DIFF THE TWO DUMPS — identical output means the
+  knob did nothing, which two exit-0s will happily hide.
+  Where a scenario's reach is genuinely limited, write the limit down next to the
+  scenario rather than leaving it inferable — `docs/current_plan_overworld_events.md`
+  has a "What the `route*_sight` goldens do NOT cover" subsection doing exactly
+  this, and it exists because the limits were discovered the expensive way.
 
 **Live differential debugging (mgba-mcp):** `tools/run_mgba_mcp.sh` launches
 the golden ROM under the Lua runner with a resident agent
