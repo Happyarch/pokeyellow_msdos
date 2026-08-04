@@ -129,6 +129,9 @@ extern PrepareNewGameDebug
 extern LoadFontTilePatterns
 extern LoadTextBoxTilePatterns
 extern InitBattleCanvas
+extern InitBattle                ; init_battle.asm — the pret wild/trainer dispatcher.
+                                 ; The trainer oracles call it directly to stand in for
+                                 ; OverworldLoop's wCurOpponent poll (Stage 1b).
 extern DrawBattleIntroBox
 extern SlideBattlePicsIn
 extern DebugLoadEmbeddedEnemyFrontPic
@@ -1458,7 +1461,13 @@ RunBattleTest:
     ; Route 3's first sight trainer: BUG CATCHER, roster 4.
     mov byte [ebp + wEngagedTrainerClass], OPP_ID_OFFSET + 2
     mov byte [ebp + wEngagedTrainerSet], 4
-    call StartTrainerBattle
+    call StartTrainerBattle              ; seeds wCurOpponent, then returns
+    ; Stage 1b: StartTrainerBattle no longer runs the battle — OverworldLoop's
+    ; wCurOpponent poll does (src/home/overworld.asm). This harness never runs
+    ; that loop, so it stands in for the poll with the same call the loop makes
+    ; through NewBattle. _InitBattleCommon's DEBUG_TRAINER_INIT stop still ends
+    ; it right after the first active enemy mon is selected.
+    call InitBattle
 
     lea edi, [ebp + wBuffer]
     mov al, [ebp + wCurOpponent]
@@ -1524,7 +1533,11 @@ RunBattleTest:
     call ReadTrainerHeaderInfo           ; publish wTrainerHeaderFlagBit
     mov byte [ebp + wEngagedTrainerClass], OPP_ID_OFFSET + 2
     mov byte [ebp + wEngagedTrainerSet], 4
-    call StartTrainerBattle              ; DEBUG_TRAINER_RESULT returns pre-presentation
+    call StartTrainerBattle              ; seeds wCurOpponent, then returns
+    ; Stage 1b: stand in for OverworldLoop's wCurOpponent poll (see the
+    ; DEBUG_TRAINER_INIT note above). _InitBattleCommon's DEBUG_TRAINER_RESULT
+    ; stop returns pre-presentation, once both active battlers are loaded.
+    call InitBattle
 
 %ifdef DEBUG_TRAINER_WIN
     ; Collapse the loaded roster to its active first mon and give it 1 HP. The
