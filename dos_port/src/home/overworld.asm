@@ -168,6 +168,7 @@ extern RunPartyMenuTest                   ; src/debug/debug_dump.asm
 extern RunPlayersPCTest                   ; src/engine/menus/players_pc.asm
 extern RunPokedexEntryTest                ; src/engine/menus/pokedex.asm
 extern RunPPRestoreTest                   ; src/debug/debug_dump.asm
+extern RunLedgeTestSeed                   ; src/debug/debug_dump.asm
 extern RunSurfTestSeed                    ; src/debug/debug_dump.asm
 extern CheckForHiddenEventOrBookshelfOrCardKeyDoor ; src/home/hidden_events.asm
 extern RunPokedexTest                     ; src/engine/menus/pokedex.asm
@@ -337,6 +338,23 @@ EnterMap:
     mov byte [ebp + W_CUR_MAP], PALLET_TOWN
     mov byte [ebp + W_Y_COORD], 14
     mov byte [ebp + W_X_COORD], 5
+    mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF  ; "not a warp arrival" (see DEBUG_SEAM)
+%endif
+%ifdef DEBUG_LEDGE
+    ; Ledge-hop gate (regression-overworld-ledge-hop-never-advanced): spawn on
+    ; Route 1 one step above a south-facing ledge. Measured off the pret map data
+    ; (maps/Route1.blk + gfx/blocksets/overworld.bst, OVERWORLD tileset):
+    ;   (8,7)  = $2C  land, standing tile of the LedgeTiles ($2C,$37) row
+    ;   (9,7)  = $37  the ledge tile itself (impassable on foot)
+    ;   (10,7) = $2C  landing tile after the two-step hop
+    ;   (11,7) = $2C  target of the post-teardown DOWN step
+    ; Column 7 avoids both Route 1 NPCs (YOUNGSTER1 wanders UP_DOWN in column 5,
+    ; YOUNGSTER2 LEFT_RIGHT on row 13) and the path has no grass tile, so no RNG
+    ; can diverge the two sides. Seeded BEFORE LoadMapData (same rule as
+    ; DEBUG_SEAM / DEBUG_SURF).
+    mov byte [ebp + W_CUR_MAP], ROUTE_1
+    mov byte [ebp + W_Y_COORD], 8
+    mov byte [ebp + W_X_COORD], 7
     mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF  ; "not a warp arrival" (see DEBUG_SEAM)
 %endif
 %ifdef DEBUG_PALLET_OAK
@@ -849,6 +867,17 @@ EnterMap:
     call SeamReseatView
     call RunSurfTestSeed                     ; party + bag + SURFBOARD; RETURNS
 %endif
+%ifdef DEBUG_LEDGE
+    ; Same shape as DEBUG_SURF above: seed, then FALL THROUGH into the real
+    ; OverworldLoop. AUTOKEY_LEDGE's scripted joypad arms the hop with a real
+    ; DOWN press against live collision (CollisionCheckOnLand → HandleLedges),
+    ; the two simulated steps run through AreInputsSimulated, HandleMidJump
+    ; advances and tears the hop down, and a second DOWN takes a normal step —
+    ; the byte that proves the teardown ran.
+    call SeedDeterministicPlayerIdentity
+    call SeamReseatView
+    call RunLedgeTestSeed                    ; debug party, empty bag; RETURNS
+%endif
 
     ; fall through to OverworldLoop
 
@@ -884,6 +913,14 @@ OverworldLoop:
     ; --- OverworldLoop falls through into OverworldLoopLessDelay (pret) ---
 OverworldLoopLessDelay:                      ; pret: home/overworld.asm:OverworldLoopLessDelay
     call DelayFrame
+    ; pret: call HandleMidJump (home/overworld.asm:49) — advances the ledge-hop
+    ; arc and, when it finishes, tears down BIT_LEDGE_OR_FISHING /
+    ; BIT_SCRIPTED_MOVEMENT_STATE / wJoyIgnore. pret's IsSurfingPikachuInParty and
+    ; LoadGBPal sit between DelayFrame and this call; both are dropped separately
+    ; (Pikachu-follower and palette-fade paths), so this call follows DelayFrame
+    ; directly. No live ZF/CF crosses it: the wWalkCounter cmp below produces its
+    ; own flags.
+    call HandleMidJump
 
     cmp byte [ebp + W_WALK_COUNTER], 0
     jne .moveAhead                           ; still mid-step → keep walking
@@ -913,11 +950,12 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
 .noTrainerSight:
 
     ; Simulated joypad state overrides real input (pret: AreInputsSimulated).
-    ; BIT_SCRIPTED_MOVEMENT_STATE is armed by PlayerStepOutFromDoor (via
-    ; StartSimulatingJoypadStates). AreInputsSimulated (simulate_joypad.asm) pops the
-    ; next queued PAD_* byte into H_JOY_HELD while scripted movement is active and
-    ; leaves real input untouched otherwise; the door step's flag is then consumed at
-    ; .handleDirection below (one-step buffer). H_JOY_HELD is used for A (not
+    ; BIT_SCRIPTED_MOVEMENT_STATE is armed by StartSimulatingJoypadStates
+    ; (PlayerStepOutFromDoor's single step, HandleLedges' two hop steps, …).
+    ; AreInputsSimulated (this file) pops the next queued PAD_* byte into
+    ; H_JOY_HELD while scripted movement is active and leaves real input
+    ; untouched otherwise; the flag drains in its .doneSimulating when the
+    ; queue empties (pret semantics — never consumed per-step). H_JOY_HELD is used for A (not
     ; H_JOY_PRESSED): joypad_update runs twice per OverworldLoop idle iteration (one
     ; per DelayFrame), so H_JOY_PRESSED is always cleared before we read it.
     ; Re-trigger after dialog dismiss is prevented by .waitAReleased below.
@@ -1014,12 +1052,17 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     mov [ebp + W_SPRITE_PLAYER_FACING_DIR], dh
 
     ; pret: bit BIT_SCRIPTED_MOVEMENT_STATE, a / jr nz, .noDirectionChange
-    ; Scripted movement (door auto-walk) bypasses the 180° turn-delay entirely.
+    ; Scripted movement bypasses the 180° turn-delay. The bit is NOT consumed
+    ; here — pret clears it only in AreInputsSimulated's .doneSimulating (queue
+    ; drained past 0) or in a flow's own teardown (_HandleMidJump). The port
+    ; used to clear it here as a "one-step door buffer", which broke every
+    ; multi-step simulation: the ledge hop queues TWO steps, and the early clear
+    ; froze the second one in the queue (wSimulatedJoypadStatesIndex stuck at 1,
+    ; measured by the DEBUG_LEDGE_TRACE ring; the ledge_hop golden catches it).
+    ; The door's single step still drains naturally: its pop leaves index 0 and
+    ; the next AreInputsSimulated call takes .doneSimulating.
     test byte [ebp + W_STATUS_FLAGS_5], (1 << BIT_SCRIPTED_MOVEMENT_STATE)
-    jz .notScripted
-    and byte [ebp + W_STATUS_FLAGS_5], ~(1 << BIT_SCRIPTED_MOVEMENT_STATE)
-    jmp .walkStart
-.notScripted:
+    jnz .walkStart
 
     ; Turn delay (pret: wCheckFor180DegreeTurn / wPlayerLastStopDirection).
     ; First press after idle with a NEW direction: update facing but don't walk.
@@ -2224,13 +2267,7 @@ SignLoop:
 ; NPC occupies that block (IsNPCAtTargetBlock).  CF=1 if movement is blocked.
 ; ---------------------------------------------------------------------------
 CollisionCheckOnLand:
-%ifdef OVERWORLD_LEDGES
-    ; M7.3 ledge-hop + tile-pair collisions live in src/engine/overworld/ledges.asm
-    ; (CHECK-only by default; see Makefile). Referenced only under this flag, so the
-    ; default build neither links ledges.asm nor alters land-collision behavior.
-    extern CheckForJumpingAndTilePairCollisions
-    extern TilePairCollisionsLand
-%endif
+    extern TilePairCollisionsLand          ; src/data/tileset_data.asm
 %ifdef DEBUG_NOCLIP
     cmp byte [pad_noclip], 0
     jne .passable                 ; noclip active: always passable
@@ -2238,10 +2275,16 @@ CollisionCheckOnLand:
     push eax
     push ecx
     push esi
+    ; pret: `bit BIT_LEDGE_OR_FISHING / jr nz, .noCollision` — FIRST check, before
+    ; everything. Mid-hop, the two simulated presses cross the impassable ledge
+    ; tile through this allow; it is NOT reached on the press that arms the hop
+    ; (the flag is set mid-check, below, and that press is then blocked by
+    ; IsTilePassable — see the note at the tile-pair scan).
+    test byte [ebp + W_MOVEMENT_FLAGS], (1 << BIT_LEDGE_OR_FISHING)
+    jnz .noCollision                               ; jumping a ledge → always passable
     ; pret home/overworld.asm:1223-1225 — no collisions while the game is scripting the
-    ; player's movement (wSimulatedJoypadStatesIndex != 0). Inert today: nothing sets the
-    ; index until scripted NPC/cutscene movement lands (Stage 2), so this always falls
-    ; through. Restored for faithfulness / to be correct once that path is live.
+    ; player's movement (wSimulatedJoypadStatesIndex != 0). Live since the ledge hop's
+    ; simulated steps (and door step-out) run through here.
     cmp byte [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], 0
     jne .noCollision                               ; scripted movement → always passable
     ; pret :1226-1231 — quick sprite reject. The accumulated collision-direction bits in
@@ -2265,21 +2308,29 @@ CollisionCheckOnLand:
     ; pret: predef GetTileAndCoordsInFrontOfPlayer. Call the NON-predef entry
     ; directly -- the predef wrapper runs GetPredefRegisters, which would overwrite
     ; ESI/EBX from stale wPredefHL/wPredefBC (see memory flagactionpredef-clobbers-regs).
-    ; EDX is preserved because the OVERWORLD_LEDGES block below passes DH (the tile the
+    ; EDX is preserved because the ledge block below passes DH (the tile the
     ; player stands on) to CheckForJumpingAndTilePairCollisions; the faithful routine
     ; returns the FRONT coords in DH/DL and would otherwise destroy it.
     push edx
     call _GetTileAndCoordsInFrontOfPlayer          ; CL = tile in front
     pop edx
-%ifdef OVERWORLD_LEDGES
-    ; M7.3 hook — pret home/overworld.asm:CollisionCheckOnLand (.noSpriteCollision):
+    ; pret home/overworld.asm:CollisionCheckOnLand (.noSpriteCollision):
     ;   ld hl, TilePairCollisionsLand / call CheckForJumpingAndTilePairCollisions
-    ;   jr c, .collision   — an illegal tile-pair (elevation-seam) boundary blocks;
-    ; plus the top-of-function `bit BIT_LEDGE_OR_FISHING, a / jr nz .noCollision`:
-    ; once a ledge hop is armed the move is allowed (the hop carries the player).
-    ; Faithful gate: in the OVERWORLD tileset with no matching ledge tile HandleLedges
-    ; sets no state, and TilePairCollisionsLand holds only CAVERN/FOREST entries, so
-    ; the scan returns CF=0 — this block is inert and behavior is byte-identical.
+    ;   jr c, .collision   — an illegal tile-pair (elevation-seam) boundary blocks.
+    ; This block sat behind %ifdef OVERWORLD_LEDGES from the M7.3 check-only era
+    ; until 2026-08-03 — the define existed in no build, so land collision never
+    ; armed a hop (part of regression-overworld-ledge-hop-never-advanced; the
+    ; ledge_hop golden gates it now).
+    ;
+    ; NOTE pret falls THROUGH to CheckTilePassable even when HandleLedges just
+    ; armed a hop: the front tile is the ledge tile ($37 &c.), IsTilePassable
+    ; rejects it, and the ARMING press is blocked — the hop's two tiles are then
+    ; walked entirely by the two simulated presses, which pass through the
+    ; BIT_LEDGE_OR_FISHING allow at the TOP of this routine (pret's position).
+    ; Measured on mGBA: wSimulatedJoypadStatesIndex 2→1→0, y 8→9→10. An earlier
+    ; cut short-circuited to .noCollision HERE instead, letting the arming press
+    ; step too — hop still 2 tiles (real+sim) but index left at 1; the ledge_hop
+    ; golden caught it.
     push ebx                                       ; CheckForTilePairCollisions uses BL
     push edx                                       ; ...and DH (tile player stands on)
     mov esi, TilePairCollisionsLand                ; flat host ptr to the tile-pair table
@@ -2287,10 +2338,7 @@ CollisionCheckOnLand:
     pop edx
     pop ebx
     jc .blocked                                    ; illegal tile-pair boundary → blocked
-    test byte [ebp + W_MOVEMENT_FLAGS], (1 << BIT_LEDGE_OR_FISHING)
-    jnz .noCollision                               ; ledge hop armed → allow the move
     movzx ecx, byte [ebp + W_TILE_IN_FRONT_OF_PLAYER] ; restore CL (HandleLedges clobbered ECX)
-%endif
     call IsTilePassable                            ; CF = 1 if not passable
     jc .blocked                                    ; tile impassable → blocked
     ; IsNPCAtTargetBlock is the port's BESPOKE replacement for pret's IsSpriteInFrontOfPlayer
@@ -2679,7 +2727,7 @@ CollisionCheckOnWater:
     ; same save set as CollisionCheckOnLand's land hook.
     push ebx
     push edx
-    mov esi, TilePairCollisionsWater               ; flat host ptr (ledges.asm)
+    mov esi, TilePairCollisionsWater               ; flat host ptr (src/data/tileset_data.asm)
     call CheckForJumpingAndTilePairCollisions
     pop edx
     pop ebx
@@ -3205,8 +3253,41 @@ global IsSpriteInFrontOfPlayer2              ; long-range entry — counter bran
 ForceBikeOrSurf:
     call LoadPlayerSpriteGraphics
     jmp PlayDefaultMusic                     ; pret: jp PlayDefaultMusic (tail call)
-; BUG{class=temporary; pret=home/overworld.asm:OverworldLoopLessDelay; behavior=nothing calls HandleMidJump so a ledge hop is never advanced or torn down, leaving BIT_LEDGE_OR_FISHING set forever after the first hop and permanently gating collision (CheckForJumpingAndTilePairCollisions ret nz), OBJ (sprite_oam.asm) and emotion bubbles; evidence=pret home/overworld.asm:49 has `call HandleMidJump` inside OverworldLoopLessDelay and tools/faithdiff OverworldLoopLessDelay reports DROPPED HandleMidJump (call), while label_status --callers HandleMidJump reports zero port callers and _HandleMidJump is the only routine that clears the flag on the ledge path; lifetime=until the call is restored in OverworldLoopLessDelay and a ledge-hop golden scenario covers it}
+; HandleMidJump — pret home/overworld.asm:HandleMidJump. Called once per
+; OverworldLoopLessDelay iteration; no-op unless a ledge hop (or fishing
+; sequence) armed BIT_LEDGE_OR_FISHING.
 HandleMidJump:
+%ifdef DEBUG_LEDGE_TRACE
+    ; Per-call trace ring in SRAM bank 3 ($26000, untouched by this scenario):
+    ; [26000] = LE16 write index, entries of 8 bytes from $26010.
+    ; Debug aid for the ledge_hop harness only — never in a golden build.
+    push eax
+    push esi
+    movzx esi, word [ebp + 0x26000]
+    cmp esi, 0x3F0
+    jae .trace_done
+    inc word [ebp + 0x26000]
+    shl esi, 3
+    add esi, 0x26010
+    mov al, [ebp + W_WALK_COUNTER]
+    mov [ebp + esi + 0], al
+    mov al, [ebp + W_SIMULATED_JOYPAD_STATES_INDEX]
+    mov [ebp + esi + 1], al
+    mov al, [ebp + W_MOVEMENT_FLAGS]
+    mov [ebp + esi + 2], al
+    mov al, [ebp + W_Y_COORD]
+    mov [ebp + esi + 3], al
+    mov al, [ebp + W_JOY_IGNORE]
+    mov [ebp + esi + 4], al
+    mov al, [ebp + W_STATUS_FLAGS_5]
+    mov [ebp + esi + 5], al
+    mov al, [ebp + H_JOY_HELD]
+    mov [ebp + esi + 6], al
+    mov byte [ebp + esi + 7], 0
+.trace_done:
+    pop esi
+    pop eax
+%endif
     test byte [ebp + W_MOVEMENT_FLAGS], (1 << BIT_LEDGE_OR_FISHING)
     jz  .ret
     call _HandleMidJump

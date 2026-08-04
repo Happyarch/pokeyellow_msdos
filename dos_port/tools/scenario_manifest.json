@@ -1162,6 +1162,35 @@
         "masks": "golden_diff.SCENARIOS"
       },
       "verification": "scripted-joypad port gate plus real-navigation golden, both driving the live overworld loop; state verification, not UI verification"
+    },
+    {
+      "name": "ledge_hop",
+      "id": 41,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_LEDGE=1",
+      "port_entry_gate": "DEBUG_LEDGE",
+      "navigation_script": "tools/mgba_harness/scenarios/ledge_hop.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "HandleLedges",
+        "HandleMidJump",
+        "_HandleMidJump"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "scripted-joypad port gate plus real-navigation golden, both driving the live overworld loop through a Route 1 ledge hop and a post-teardown step; state verification, not UI verification"
     }
   ],
   "disabled_scenarios": []

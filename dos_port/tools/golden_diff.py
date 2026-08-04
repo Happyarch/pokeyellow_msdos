@@ -507,6 +507,38 @@ SCENARIOS = {
             ],
         },
     },
+    "ledge_hop": {
+        # Route 1 ledge hop through the live overworld loop: a real DOWN press at
+        # (8,7) arms the hop (HandleLedges), the two simulated steps land on
+        # (10,7), HandleMidJump's teardown clears BIT_LEDGE_OR_FISHING /
+        # BIT_SCRIPTED_MOVEMENT_STATE / wJoyIgnore, and a second DOWN takes a
+        # normal step to (11,7). The suite's only ledge coverage
+        # (regression-overworld-ledge-hop-never-advanced).
+        "class": "datastruct",
+        "flags": "DEBUG_LEDGE=1",
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
+        # Same two masks as surf_round_trip, for the same two boot-path reasons.
+        # Everything the ledge flow writes — wMovementFlags, wStatusFlags5,
+        # wSimJoypad(End), wJoyIgnore, wPlayerDir, wWalkCounter and
+        # wCurMap/wYCoord/wXCoord — is compared unmasked.
+        "wram_masks": {
+            "wPlayerMapPos": [
+                ((1, 2), "wCurrentTileBlockMapViewPointer: the port's MAP_BORDER is 7, "
+                         "not pret's 3 (include/gb_memmap.inc), so the same player "
+                         "position yields a different pointer into a differently-sized "
+                         "wOverworldMap. wCurMap at +0 and wYCoord/wXCoord at +3/+4 ARE "
+                         "compared, and they are what pins the player to (11,7)."),
+            ],
+            "wStatusFlags5to7": [
+                ((2, 2), "wStatusFlags6 BIT_GAME_TIMER_COUNTING: the golden has been "
+                         "playing since the new game, the port gate boots straight into "
+                         "the map with SKIP_TITLE and never starts the play-time "
+                         "counter. wStatusFlags5 at +0 — which carries "
+                         "BIT_SCRIPTED_MOVEMENT_STATE, the bit the hop sets and the "
+                         "teardown clears — IS compared, as is wStatusFlags7 at +3."),
+            ],
+        },
+    },
     "item_pp_restore": {
         # ETHER used on party mon 0's move slot 0 (pre-drained to 1 PP) through the
         # real UseItem dispatcher: party menu -> type-2 move menu -> +10 PP ->

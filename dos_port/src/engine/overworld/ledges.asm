@@ -26,10 +26,9 @@
 ; CollisionCheckOnLand. (It was originally check-only, reached only under
 ; -D OVERWORLD_LEDGES; that gate is gone.)
 ;
-; This header used to add "and HandleMidJump from the overworld frame loop".
-; MEASURED FALSE (s16): HandleMidJump has ZERO callers tree-wide, so the hop is
-; armed here but never advanced or torn down. See the BUG{} on HandleMidJump in
-; src/home/overworld.asm.
+; HandleMidJump is called from OverworldLoopLessDelay (src/home/overworld.asm),
+; restored at pret's position after being a dropped call from s16 to 2026-08-03
+; (regression-overworld-ledge-hop-never-advanced; gated by the ledge_hop golden).
 ;
 ; Build (check): nasm -f coff -I include/ -I . -o ledges.o \
 ;                     src/engine/overworld/ledges.asm

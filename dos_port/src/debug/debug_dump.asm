@@ -109,6 +109,10 @@ global RunPPRestoreTest
 extern PrepareNewGameDebug
 global RunSurfTestSeed
 %endif
+%ifdef DEBUG_LEDGE
+extern PrepareNewGameDebug
+global RunLedgeTestSeed
+%endif
 %ifdef DEBUG_ITEMSTONE
 extern PrepareNewGameDebug
 extern LoadFontTilePatterns
@@ -602,6 +606,25 @@ gbstate_regions:
     gbregion "wSimJoypadEnd",    W_SIMULATED_JOYPAD_STATES_END, 1
     gbregion "wJoyIgnore",       wJoyIgnore, 1
     gbregion "wPikachuSurf",     wPikachuOverworldStateFlags, 2 ; flags + spawn state
+%endif
+%ifdef DEBUG_LEDGE
+    ; Ledge-hop scenario (regression-overworld-ledge-hop-never-advanced). Same
+    ; rule as the sight/surf rows above: scenario-local, mirrored by
+    ; tools/mgba_harness/scenarios/ledge_hop.lua, joined by NAME. These are the
+    ; bytes HandleLedges arms and _HandleMidJump tears down; the post-teardown
+    ; DOWN step is what moves wYCoord to 11 — if the teardown never runs, the
+    ; step is eaten (wJoyIgnore stays $FF) and every one of these mismatches.
+    gbregion "wPlayerMapPos",    wCurMap, 5                ; wCurMap .. wXCoord
+    gbregion "wMovementFlags",   W_MOVEMENT_FLAGS, 1       ; BIT_LEDGE_OR_FISHING clear
+    gbregion "wStatusFlags5to7", wStatusFlags5, 4          ; BIT_SCRIPTED_MOVEMENT_STATE clear
+    gbregion "wSimJoypad",       W_SIMULATED_JOYPAD_STATES_INDEX, 2 ; index + unused mask
+    gbregion "wSimJoypadEnd",    W_SIMULATED_JOYPAD_STATES_END, 2   ; both queued hop bytes
+    gbregion "wJoyIgnore",       wJoyIgnore, 1             ; cleared by the teardown
+    gbregion "wPlayerDir",       W_PLAYER_DIRECTION, 1
+    gbregion "wWalkCounter",     W_WALK_COUNTER, 1         ; 0 = all motion finished
+%ifdef DEBUG_LEDGE_TRACE
+    gbregion "ledgeTrace",       0x26000, 0x1000           ; HandleMidJump call ring (debug aid)
+%endif
 %endif
 gbstate_regions_end:
 
@@ -1112,6 +1135,25 @@ RunSurfTestSeed:
     call PrepareNewGameDebug
     mov byte [ebp + wBagItems + 0], SURF_ITEM_ID
     mov byte [ebp + wBagItems + 1], 1
+    ret
+%endif
+
+%ifdef DEBUG_LEDGE
+; ---------------------------------------------------------------------------
+; RunLedgeTestSeed — ledge-hop gate. Like RunSurfTestSeed, this SEEDS AND
+; RETURNS: EnterMap falls through into the real OverworldLoop and AUTOKEY_LEDGE
+; drives the hop with live collision. Seeds the debug party (standard-region
+; parity with the golden's seed.debug_new_game) and an empty bag — the ledge
+; flow uses no items. Spawn coords are seeded earlier, in EnterMap (see the
+; DEBUG_LEDGE block in src/home/overworld.asm for the measured Route 1 tiles).
+; In: EBP = GB memory base.  Returns.
+; ---------------------------------------------------------------------------
+RunLedgeTestSeed:
+    mov byte [ebp + wPartyCount], 0
+    mov byte [ebp + wPartySpecies], 0xFF
+    mov byte [ebp + wNumBagItems], 0
+    mov byte [ebp + wBagItems], 0xFF
+    call PrepareNewGameDebug
     ret
 %endif
 
@@ -2985,6 +3027,28 @@ autokey_script:
                                 ; SurfingNoPlaceToGetOffText, is the failure branch),
                                 ; so there is nothing to dismiss and a stray A would
                                 ; just reopen the USE/TOSS box.
+    dd   -1,   -1, 0
+%elifdef AUTOKEY_LEDGE
+    ; Ledge-hop round trip (regression-overworld-ledge-hop-never-advanced): the
+    ; player spawns at Route 1 (8,7), standing tile $2C, ledge tile $37 below.
+    ;   DOWN  : real press into the ledge. CollisionCheckOnLand →
+    ;           CheckForJumpingAndTilePairCollisions → HandleLedges arms the hop
+    ;           (BIT_LEDGE_OR_FISHING, wJoyIgnore=$FF, two simulated DOWN steps).
+    ;           The hop then runs itself: AreInputsSimulated feeds the steps,
+    ;           HandleMidJump advances the 16-entry arc each loop iteration and
+    ;           tears everything down when the second step lands on (10,7).
+    ;           Two steps ≈ 32 frames + Delay3 — done well before frame 240.
+    ;   DOWN  : post-teardown NORMAL step to (11,7). This is the detector: with
+    ;           the teardown missing (the regression), wJoyIgnore is still $FF,
+    ;           the press is swallowed, and wYCoord stays 10 ≠ the golden's 11.
+    ; 12-frame holds (one walk step; same measurement as AUTOKEY_SURF's LEFT).
+    ; AK_LEDGE_SHIFT delays the whole script (debug-attach aid, like
+    ; BILLSPC_ATTACH_DELAY) — never set for a golden run.
+%ifndef AK_LEDGE_SHIFT
+%define AK_LEDGE_SHIFT 0
+%endif
+    dd   60 + AK_LEDGE_SHIFT,   72 + AK_LEDGE_SHIFT, PAD_DOWN ; arm the hop; the loop plays it out
+    dd  300 + AK_LEDGE_SHIFT,  312 + AK_LEDGE_SHIFT, PAD_DOWN ; post-teardown step — proves input is back
     dd   -1,   -1, 0
 %elifdef AUTOKEY_BILLSPC
     ; sram-plan stage 6 (DEBUG_BILLSPC): drive the real Bill's PC box UI.

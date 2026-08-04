@@ -856,6 +856,32 @@ AUTOKEY_DUMP_FRAME ?= 1220
 NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 endif
 
+# Ledge-hop gate (regression-overworld-ledge-hop-never-advanced): spawn on Route 1
+# one step above a south-facing ledge, seed the debug party, then FALL THROUGH into
+# the real OverworldLoop. AUTOKEY_LEDGE presses DOWN to arm the hop (HandleLedges),
+# the two simulated steps + HandleMidJump teardown run through the live loop, and a
+# second DOWN proves input/collision work again after the teardown.
+# make DEBUG_LEDGE=1 [AUTOKEY_DUMP_FRAME=420]
+ifdef DEBUG_LEDGE
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_LEDGE -D DEBUG_SEED_PARTY -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_LEDGE
+# Arm press at 60, hop (2 simulated steps + teardown) done well before 240, the
+# post-teardown step at 300; dump after everything settles.
+AUTOKEY_DUMP_FRAME ?= 420
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+# AK_LEDGE_SHIFT=<frames>: shift the whole autokey script (debugger-attach aid).
+# Never set for a golden run.
+ifdef AK_LEDGE_SHIFT
+NASMFLAGS += -D AK_LEDGE_SHIFT=$(AK_LEDGE_SHIFT)
+endif
+# DEBUG_LEDGE_TRACE=1: per-call HandleMidJump state ring in SRAM bank 3, added
+# to GBSTATE.BIN as "ledgeTrace". Debug aid only — never set for a golden run.
+ifdef DEBUG_LEDGE_TRACE
+NASMFLAGS += -D DEBUG_LEDGE_TRACE
+endif
+endif
+
 # Bill's-PC box-behaviour gate (sram plan stage 6): seeded party, RunBillsPCTest
 # opens BillsPC_ directly as a generic-PC guest, and the AUTOKEY_BILLSPC script
 # drives deposit(PERSIAN) → deposit(JIGGLYPUFF) → withdraw(PERSIAN) →

@@ -1,0 +1,153 @@
+{
+  "description": "Route 1 ledge hop: DOWN at (8,7) arms the hop over the $37 ledge tile, the two simulated steps land on (10,7), HandleMidJump tears the state down, and a post-teardown DOWN step reaches (11,7)",
+  "frame": 5266,
+  "regions": [
+    {
+      "file_offset": 0,
+      "gb_addr": "0xC3A0",
+      "name": "wTileMap",
+      "size": 360
+    },
+    {
+      "file_offset": 360,
+      "gb_addr": "0x8000",
+      "name": "vram_tiles",
+      "size": 6144
+    },
+    {
+      "file_offset": 6504,
+      "gb_addr": "0xFE00",
+      "name": "oam",
+      "size": 160
+    },
+    {
+      "file_offset": 6664,
+      "gb_addr": "0xD157",
+      "name": "wPlayerName",
+      "size": 11
+    },
+    {
+      "file_offset": 6675,
+      "gb_addr": "0xD162",
+      "name": "wPartyData",
+      "size": 404
+    },
+    {
+      "file_offset": 7079,
+      "gb_addr": "0xD2F6",
+      "name": "wPokedex",
+      "size": 38
+    },
+    {
+      "file_offset": 7117,
+      "gb_addr": "0xD31C",
+      "name": "wBagItems",
+      "size": 42
+    },
+    {
+      "file_offset": 7159,
+      "gb_addr": "0xD346",
+      "name": "wPlayerMoney",
+      "size": 3
+    },
+    {
+      "file_offset": 7162,
+      "gb_addr": "0xD354",
+      "name": "wOptionsBlock",
+      "size": 4
+    },
+    {
+      "file_offset": 7166,
+      "gb_addr": "0xD358",
+      "name": "wPlayerID",
+      "size": 2
+    },
+    {
+      "file_offset": 7168,
+      "gb_addr": "0xCF97",
+      "name": "wLoadedMon",
+      "size": 44
+    },
+    {
+      "file_offset": 7212,
+      "gb_addr": "0xD056",
+      "name": "wBattleFlags",
+      "size": 4
+    },
+    {
+      "file_offset": 7216,
+      "gb_addr": "0xCFD9",
+      "name": "wEnemyMonNick",
+      "size": 11
+    },
+    {
+      "file_offset": 7227,
+      "gb_addr": "0xCFE4",
+      "name": "wEnemyMon",
+      "size": 29
+    },
+    {
+      "file_offset": 7256,
+      "gb_addr": "0xD008",
+      "name": "wBattleMonNick",
+      "size": 11
+    },
+    {
+      "file_offset": 7267,
+      "gb_addr": "0xD013",
+      "name": "wBattleMon",
+      "size": 29
+    },
+    {
+      "file_offset": 7296,
+      "gb_addr": "0xD35D",
+      "name": "wPlayerMapPos",
+      "size": 5
+    },
+    {
+      "file_offset": 7301,
+      "gb_addr": "0xD735",
+      "name": "wMovementFlags",
+      "size": 1
+    },
+    {
+      "file_offset": 7302,
+      "gb_addr": "0xD72F",
+      "name": "wStatusFlags5to7",
+      "size": 4
+    },
+    {
+      "file_offset": 7306,
+      "gb_addr": "0xCD38",
+      "name": "wSimJoypad",
+      "size": 2
+    },
+    {
+      "file_offset": 7308,
+      "gb_addr": "0xCCD3",
+      "name": "wSimJoypadEnd",
+      "size": 2
+    },
+    {
+      "file_offset": 7310,
+      "gb_addr": "0xCD6B",
+      "name": "wJoyIgnore",
+      "size": 1
+    },
+    {
+      "file_offset": 7311,
+      "gb_addr": "0xD529",
+      "name": "wPlayerDir",
+      "size": 1
+    },
+    {
+      "file_offset": 7312,
+      "gb_addr": "0xCFC4",
+      "name": "wWalkCounter",
+      "size": 1
+    }
+  ],
+  "rom_title": "POKEMON YEL",
+  "scenario": "ledge_hop",
+  "total_size": 7313
+}
