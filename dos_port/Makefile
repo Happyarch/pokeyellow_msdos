@@ -700,11 +700,14 @@ endif
 #                         CheckSpriteCanSeePlayer is cp b / jr nc — inclusive — so
 #                         distance == range must engage; a strict > passes all seven
 #                         older gates and fails only this one.
-#   (There is no R17 stanza. ROUTE_17 was wired and BACKED OUT: its golden failed
-#    goldencheck on wYCoord and wTrainerScreenY, one tile each, because pret's
-#    ForceBikeDown simulates a DOWN press every frame on Cycling Road and the port
-#    is missing that routine entirely. See gen_map_script_tables.py's ROUTE_17
-#    comment for the full measurement. Re-add with y=120, x=10 once it is ported.)
+#   R17 ROUTE_17 (0x1C) — ROUTE17_BIKER10 (x=10,y=118) faces DOWN, view 4, header 9,
+#                         on the game's TALLEST map (10 blocks wide, 72 high). The
+#                         view-pointer term (width + 6) * (y >> 1) is 960 here,
+#                         against 560 at R21 and 432 at R10. ALSO the acceptance
+#                         gate for ForceBikeDown: this map auto-scrolls south, so
+#                         the seeded tile is y=120 and the engaging position is
+#                         y=121. Backed out in batch 3 when the port lacked
+#                         ForceBikeDown; re-added in batch 4 with it.
 #   R18 ROUTE_18 (0x1D) — ROUTE18_COOLTRAINER_M3 (x=42,y=13) faces LEFT, view 4,
 #                         header 2 of a THREE-header table — the shortest of the
 #                         seventeen. With R13's last-of-ten this brackets the table
@@ -719,7 +722,7 @@ endif
 #                         R6's branch. It does NOT prove the scan stops after a match:
 #                         the zero-range headers behind the match would engage nobody
 #                         even if it ran on, so that state is unobservable here.
-#   make DEBUG_MAPSCRIPT_SIGHT_R13=1  (or _R14 / _R15 / _R18 / _R19 / _R21)
+#   make DEBUG_MAPSCRIPT_SIGHT_R13=1  (or _R14 / _R15 / _R17 / _R18 / _R19 / _R21)
 ifdef DEBUG_MAPSCRIPT_SIGHT_R13
 DEBUG_MAPSCRIPT_SIGHT := 1
 NASMFLAGS += -D DEBUG_MAPSCRIPT_SIGHT_R13
