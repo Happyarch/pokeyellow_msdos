@@ -106,11 +106,16 @@ bullet names what still owes evidence and when it lands. Do not upgrade those to
       per-map no-op dispatch are linked.
 - [x] Pallet Town has the first linked `_Script`/`text_asm` skeleton. Its Oak
       cutscene states 0–8 now have Stage 1 code; state 9 remains the no-op tail.
-      It is no longer the only registered map: `assets/map_scripts.inc` has 4
-      non-default rows of 249 — PALLET_TOWN plus ROUTE_3/ROUTE_6/ROUTE_11, which
+      It is no longer the only registered map: `assets/map_scripts.inc` has
+      **8** non-default rows of 249 — PALLET_TOWN plus
+      ROUTE_3/ROUTE_6/ROUTE_11 and, as of 2026-08-04,
+      ROUTE_4/ROUTE_8/ROUTE_9/ROUTE_10 — which
       run the generic data-driven `TrainerMapScript` landed by the archived
       `docs/plans/map_script_fidelity.md` (COMPLETE 2026-07-24). Stage 5 should
       register new maps through `gen_map_script_tables.py`, not per-map skeletons.
+      Do not quote that count either: it is `len(WIRED_MAPS) + len(SCRIPT_OVERRIDES)`
+      and the generators print it —
+      `python3 dos_port/tools/generators/gen_map_scripts.py`.
 - [x] Scripted NPC movement, pathfinding, `MoveSprite`, simulated joypad support,
       and the per-map movement-script table are linked. They are infrastructure,
       not evidence that a story cutscene has executed.
@@ -155,9 +160,15 @@ bullet names what still owes evidence and when it lands. Do not upgrade those to
       gates on `DEBUG_OAKINTRO` (→ `RunOakSpeechCheckpoint`, Prof. Oak's opening
       speech) with `must_hit = OakSpeech / PrepareOakSpeech / FadeInIntroPic /
       DisplayPicCenteredOrUpperRight` — no Pallet script state, no scripted-movement
-      consumer. This plan's hook is the SEPARATE `DEBUG_OAK_INTRO` →
-      `RunOakIntroTest` (`src/home/overworld.asm:385`, `Makefile:649`), still
+      consumer. This plan's hook is the SEPARATE gate → `RunOakIntroTest`, still
       unregistered. A new scenario is owed, under a name that does not collide.
+      **The gate was RENAMED 2026-08-02 and is now `DEBUG_PALLET_OAK`, not
+      `DEBUG_OAK_INTRO`** — measured 2026-08-04 in the tree:
+      `dos_port/Makefile:659` is `$(eval $(call dump_gate,DEBUG_PALLET_OAK))`, its
+      harness body is `RunOakIntroTest` (`src/debug/debug_dump.asm:452-486`), and
+      `DEBUG_OAK_INTRO` appears nowhere in the Makefile. The rename IS the fix for
+      the one-underscore collision this bullet describes; `make DEBUG_OAK_INTRO=1`
+      now silently builds a normal image.
 
 ## Stage 2 — `DisplayTextID` and overworld service dialogs
 
@@ -189,13 +200,17 @@ arming the simulated one-step PAD_DOWN sequence and relies on
 Stage 2 touches text/input waits.
 
 The Oak intro test hook is deliberately retained but not registered as active
-golden evidence. `DEBUG_OAK_INTRO` still builds and calls `RunOakIntroTest`, and
+golden evidence. The gate still builds and calls `RunOakIntroTest`, and
 the attempted mGBA scenario was preserved as a
 `.disabled` scaffold. **That re-enabling did NOT happen** — see the retraction on
 the Stage 1 scenario bullet above: the scaffold was deleted and its filename reused
-by the menu-intro plan for the Prof. Oak *opening speech* golden. `DEBUG_OAK_INTRO`
+by the menu-intro plan for the Prof. Oak *opening speech* golden. The gate
 / `RunOakIntroTest` are still live and still unregistered. `goldens-verify` executes
 every active `*.lua` scenario.
+
+**The gate's NAME here is stale: it is `DEBUG_PALLET_OAK` as of 2026-08-02, not
+`DEBUG_OAK_INTRO`** (see the Stage 1 bullet above for the measurement). Every
+`DEBUG_OAK_INTRO` in this section is history, not a command you can run.
 
 `project_state DisplayTextID` reports the translated implementation linked, and
 `label_status --callers DisplayTextID` reports the real `text_script.asm`
@@ -221,7 +236,10 @@ allowance for it. The ordinary map-text branch reads the generated flat
 > unlinked, so nothing sets `BIT_TEXT_PREDEF`), which is why it has never
 > surfaced. Do **not** unblock it by supplying a flat `dd` `TextPredefs` table —
 > that links cleanly and is runtime garbage. Owner:
-> `docs/current_plan_predef_text.md`. Related fix already landed: `5f7aebff`
+> `docs/plans/predef_text.md` (ARCHIVED 2026-08-04 by `ea5c81a8` — every
+> implementation box was done and gate-clean; its one open box, the must-hit predef
+> scenario, is blocked on absent interior map data and is now tracked solely by
+> `docs/current_plan_backlog.md` #31). Related fix already landed: `5f7aebff`
 > corrected `.readFirstByte`, which was reading the ordinary path's *flat* `ESI`
 > as `[ebp + esi]`.
 
@@ -422,18 +440,31 @@ owe the boulder and cut cutscenes their first actual execution.
       arms the state; it is not proof that a boulder moved.
       **Linked and wired; the push/blocked-push must-hit is NOT met — see the
       Stage 4 boulder handoff below for exactly what is and is not proven.**
-- [ ] **Ledges:** restore `call HandleMidJump` in `OverworldLoopLessDelay` at pret's
-      position (`home/overworld.asm:49`, after `LoadGBPal`, before the `wWalkCounter`
-      test) and add a ledge-hop golden. Measured 2026-08-02: `HandleMidJump` has
-      **0 port callers**, `faithdiff OverworldLoopLessDelay` reports it DROPPED, so
-      `_HandleMidJump`'s teardown never runs and `BIT_LEDGE_OR_FISHING` sticks set
-      after the first hop — permanently gating collision
-      (`CheckForJumpingAndTilePairCollisions`), OBJ (`sprite_oam.asm`) and emotion
-      bubbles. Tagged in code: `BUG{class=temporary}` at
-      `dos_port/src/home/overworld.asm:3124`. Memory
-      `regression-overworld-ledge-hop-never-advanced` (OPEN). The scenario is the
-      retirement for that memory, and it must land BEFORE the call is restored —
-      nothing can verify the fix today.
+- [x] **Ledges: DONE 2026-08-03 (`3f0afc9e`), gated by the `ledge_hop` golden
+      (id 41, tier `full`, class `datastruct`).** Re-verified in-tree 2026-08-04:
+      `call HandleMidJump` is live at `dos_port/src/home/overworld.asm:953`, and
+      the manifest row `ledge_hop` carries
+      `must_hit = HandleLedges / HandleMidJump / _HandleMidJump` with
+      `build_flags = DEBUG_LEDGE=1`. Repro: `make -C dos_port goldencheck
+      SCENARIO=ledge_hop`.
+      **The fix was THREE defects, not the one this bullet recorded** — the other
+      two were found BY the scenario, which is the argument for the
+      "no scenario, no wire" rule in miniature:
+      1. the dropped `call HandleMidJump` (the only one predicted here);
+      2. `CollisionCheckOnLand`'s whole
+         `CheckForJumpingAndTilePairCollisions`/`HandleLedges` block sat behind
+         `%ifdef OVERWORLD_LEDGES`, **defined in no build**, so on land the hop
+         never even ARMED (its comment blamed an unlinked `ledges.asm` — which
+         was in `GAME_SRCS` all along: the confident-comment defect class again);
+      3. the port consumed `BIT_SCRIPTED_MOVEMENT_STATE` after ONE scripted step,
+         freezing the hop's second queued press; pret drains it only in
+         `AreInputsSimulated.doneSimulating`.
+      The `BUG{class=temporary}` tag this bullet cited is deleted. Memory
+      `regression-overworld-ledge-hop-never-advanced` is closed FIXED; the golden
+      suite, not prose, is the currency mechanism from here.
+      Residual cosmetic tail (NOT this bullet, and not claimed done): the hop ARC
+      is not drawn and `LoadHoppingShadowOAM` is still a ret-stub — compositor
+      work, tracked as `docs/current_plan_backlog.md` #29's last bullet.
 
 ### Stage 4 boulder-bullet handoff — 2026-07-16
 
@@ -751,6 +782,68 @@ additions are the right fix or should be reverted. `PrepareForSpecialWarp`/`Spec
 
 ## Stage 5 — story-ordered map rollout
 
+### Stage 5a — the `TrainerMapScript` driver rollout (standard maps)
+
+A "standard trainer map" is one whose entire script layer is pret's seven-instruction
+boilerplate plus a three-entry pointer table. Seventeen maps are exactly that, and
+they do NOT get per-map assembly: they get a `WIRED_MAPS` row in
+`tools/generators/gen_map_script_tables.py`, which emits their `MapScriptParams`
+block and points `MapScriptPointers[wCurMap]` at the shared driver. **One golden
+scenario per map is mandatory** — "no scenario, no wire" (`faithfulness-review`
+skill). The generator prints the unwired remainder on every run, so this list cannot
+silently drift; regenerate rather than trusting it:
+`python3 dos_port/tools/generators/gen_map_script_tables.py`.
+
+- [x] **ROUTE_3, ROUTE_6, ROUTE_11** — `route3_sight` / `route6_sight` /
+      `route11_sight` (ids 30/31/32). Landed by the archived
+      `docs/plans/map_script_fidelity.md`, 2026-07-24.
+- [x] **ROUTE_4, ROUTE_8, ROUTE_9, ROUTE_10** — `route4_sight` / `route8_sight` /
+      `route9_sight` / `route10_sight` (ids 47/48/49/50), 2026-08-04. Sight tiles
+      chosen for the branch or magnitude each adds, not for convenience:
+      R9 is the first LEFT-facing trainer and R8 the first UP-facing one (R3/R6 are
+      RIGHT, R11 is DOWN, so both signs of both axes are now covered in
+      `CheckSpriteCanSeePlayer`); R10 is the first TALL map (10x36) with the sight
+      tile at y=55; R4 is the widest (45 blocks) with the sight tile at x=65.
+      Each golden was decomposed rather than accepted on a pass: all four stamp the
+      trainer class, roster index and `wTrainerEngageDistance` (= view range << 4)
+      that pret's own `object_event` row and trainer header declare.
+- [ ] **The remaining ten standard maps:** CERULEAN_CAVE_B1F, POWER_PLANT,
+      ROUTE_13, ROUTE_14, ROUTE_15, ROUTE_17, ROUTE_18, ROUTE_19, ROUTE_21,
+      VIRIDIAN_FOREST. The seven outdoor routes among them are the cheap ones —
+      their `.blk` is permanently resident (`gen_map_headers.py OUTDOOR_BLK_MAPS`),
+      which is what makes the script-warp harness work. The three interiors
+      (CERULEAN_CAVE_B1F, POWER_PLANT, VIRIDIAN_FOREST) share the single indoor
+      `.blk` slot and may hit the same absent-interior-map-data blocker as
+      `docs/current_plan_backlog.md` #31 — check before promising them.
+      **CERULEAN_CAVE_B1F and POWER_PLANT carry a second, independent blocker:
+      the truncated-tail decision.** `gen_trainer_headers.py` cannot represent a
+      `text_asm` tail with side effects in a data stream, and it truncates seven of
+      them (it prints each one on every run). Measured 2026-08-04, they belong to
+      six maps — CeruleanCaveB1F (Mewtwo `PlayCry`), PowerPlant (Zapdos `PlayCry`),
+      VictoryRoad2F (Moltres `PlayCry`), LancesRoom (`SetEvent EVENT_BEAT_LANCE`),
+      RocketHideoutB1F, RocketHideoutB4F — and **only those first two are
+      standard-shape**, so they are the only truncated-tail maps the driver can
+      ever reach. Wiring either one owes the truncated-tail retirement decision:
+      either the trainer-header generator gains an optional per-header
+      "post-end-battle event" field consumed after `PrintEndBattleText`, or those
+      maps get bespoke hand-ports. (The archived `docs/plans/map_script_fidelity.md`
+      sketched both options and expected the trigger to be "Rocket Hideout / Lance".
+      Read that as the historical record it is, not as a live pointer: those maps
+      are bespoke, so `WIRED_MAPS` cannot reach them, and the decision falls to this
+      plan the first time CERULEAN_CAVE_B1F or POWER_PLANT is wired.)
+      **None of R4/R8/R9/R10 carries a truncated tail**, so this batch does not owe it.
+- [ ] **The four near-miss maps** (FightingDojo, Route12, Route16, Route24) have the
+      skeleton body but 4- or 5-entry pointer tables, so the driver would need a
+      per-map tail. They are driver-EXTENSION candidates, not wiring candidates —
+      do not force them into `WIRED_MAPS`.
+
+Wiring a map is not only script dispatch: while `TRAINER_BATTLE_LIVE` is retired
+(battle-completion Stage 1b), `EndTrainerBattle`'s post-battle cleanup runs ONLY
+through a wired map's script table, so every map wired here retires a slice of that
+plan's temporary post-battle-state-leak DEVIATION.
+
+### Stage 5b — story legs (bespoke scripts)
+
 - [ ] **Pallet/Viridian:** Oak's Lab starter/rival flow, Route 1, Viridian City
       and Mart, and Oak's Parcel round trip.
 - [ ] **Forest/Pewter:** Viridian Forest, Pewter City/Gym, Route 2, gates, and
@@ -789,11 +882,18 @@ The current manifest supplies two overworld-facing core scenarios, plus three
 |---|---|---|
 | `overworld_pallet` | `LoadCurrentMapView`, `DumpBackbuffer` | deterministic Pallet map/render state |
 | `sign_pallet` | `DisplaySignText` | streamed sign dialog, tile/VRAM/OAM/WRAM projection |
-| `route3_sight` / `route6_sight` / `route11_sight` (tier `full`, wram-only) | `TrainerMapScript`, `CheckFightingMapTrainers` | the generic map-script trainer-engagement STATE on three registered maps |
+| `route3_sight` / `route6_sight` / `route11_sight` / `route4_sight` / `route8_sight` / `route9_sight` / `route10_sight` (tier `full`, wram-only) | `TrainerMapScript`, `CheckFightingMapTrainers` | the generic map-script trainer-engagement STATE on seven registered maps, covering both signs of both sight axes |
+| `ledge_hop` (tier `full`, wram-only) | `HandleLedges`, `HandleMidJump`, `_HandleMidJump` | the Route 1 ledge hop + its state teardown, through the LIVE `OverworldLoop` on both sides |
+
+**Do not read this table as the roster — it is a hand-maintained excerpt and has
+been stale before.** The manifest is the authority; measure it:
+`python3 dos_port/tools/generators/gen_scenario_registry.py --names full`.
 
 None of these proves Oak's Pallet cutscene, service menus, hidden events, pickups,
-field moves (Cut/Fly/Dig/Teleport/Flash/Softboiled/Strength), any warp, ledges, or
-later map stories. `oak_intro` in the manifest is the menu-intro plan's Prof. Oak
+field moves (Cut/Fly/Dig/Teleport/Flash/Softboiled/Strength), any warp, or
+later map stories. **Ledges WERE on that list until 2026-08-03 and are not any
+more** — `ledge_hop` (id 41) covers them; see the Stage 4 ledges bullet.
+`oak_intro` in the manifest is the menu-intro plan's Prof. Oak
 OPENING SPEECH, not this plan's Pallet cutscene.
 
 For each remaining capability:

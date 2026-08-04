@@ -590,6 +590,18 @@ SCENARIOS = {
     "route11_sight": {"class": "datastruct",
                        "flags": "DEBUG_MAPSCRIPT_SIGHT_R11=1",
                        **_MAP_SIGHT_COMMON},
+    "route4_sight": {"class": "datastruct",
+                       "flags": "DEBUG_MAPSCRIPT_SIGHT_R4=1",
+                       **_MAP_SIGHT_COMMON},
+    "route8_sight": {"class": "datastruct",
+                       "flags": "DEBUG_MAPSCRIPT_SIGHT_R8=1",
+                       **_MAP_SIGHT_COMMON},
+    "route9_sight": {"class": "datastruct",
+                       "flags": "DEBUG_MAPSCRIPT_SIGHT_R9=1",
+                       **_MAP_SIGHT_COMMON},
+    "route10_sight": {"class": "datastruct",
+                       "flags": "DEBUG_MAPSCRIPT_SIGHT_R10=1",
+                       **_MAP_SIGHT_COMMON},
     "item_potion_use": {
         # frame 700 = the gate's AUTOKEY_ITEMUSE script done (POTION heal +
         # ANTIDOTE refusal), bag list reopened — the WRAM state is settled there
