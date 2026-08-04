@@ -996,6 +996,15 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     jmp OverworldLoop
 .noTrainerSight:
 
+    ; Cycling Road auto-scroll (pret home/overworld.asm, JoypadOverworld's third
+    ; call: Joypad -> ForceBikeDown -> AreInputsSimulated). The port has no
+    ; JoypadOverworld — see RunMapScript's DEVIATION — so the call sits at the
+    ; same SEAM instead: real input has been sampled by joypad_update, and
+    ; AreInputsSimulated (which overrides hJoyHeld for scripted movement) runs
+    ; immediately after, exactly as in pret. Order matters: ForceBikeDown must
+    ; not clobber a simulated step, and pret guarantees that by running first.
+    call ForceBikeDown
+
     ; Simulated joypad state overrides real input (pret: AreInputsSimulated).
     ; BIT_SCRIPTED_MOVEMENT_STATE is armed by StartSimulatingJoypadStates
     ; (PlayerStepOutFromDoor's single step, HandleLedges' two hop steps, …).
@@ -2663,6 +2672,37 @@ DrawTileBlock:
 
     pop edx
     pop ecx
+    ret
+
+; ---------------------------------------------------------------------------
+; ForceBikeDown — on Cycling Road, simulate a DOWN press when the player is not
+; pressing anything and no trainer battle is flagged. This is what makes ROUTE_17
+; auto-scroll south.
+;
+; DESPITE THE NAME, NO BIKE IS REQUIRED. The routine tests only wStatusFlags7,
+; wCurMap and hJoyHeld — it never reads wWalkBikeSurfState. The bike-gated
+; Cycling Road path is a DIFFERENT routine (pret home/overworld.asm ~line 350,
+; the bike-speed extra-step, guarded by wWalkBikeSurfState == 1). Grepping
+; ROUTE_17 in pret finds both; this is the one called from JoypadOverworld.
+;
+; pret: home/overworld.asm:ForceBikeDown
+; In:  wStatusFlags7, wCurMap, hJoyHeld
+; Out: hJoyHeld = PAD_DOWN when all three guards pass; otherwise untouched
+; Clobbers: AL, flags
+; ---------------------------------------------------------------------------
+ForceBikeDown:
+    test byte [ebp + W_STATUS_FLAGS_7], (1 << BIT_TRAINER_BATTLE)
+    jnz .ret                                  ; ld a,[wStatusFlags7] / bit BIT_TRAINER_BATTLE,a / ret nz
+    cmp byte [ebp + wCurMap], ROUTE_17        ; ld a,[wCurMap] / cp ROUTE_17
+    jne .ret                                  ; ret nz
+    ; pret: ldh a,[hJoyHeld] / and PAD_CTRL_PAD | PAD_B | PAD_A / ret nz
+    ; Any D-pad direction or A/B held means the player is steering — leave input
+    ; alone. SELECT and START are deliberately NOT in the mask, so they do not
+    ; suppress the auto-scroll; that is pret's behaviour, not an oversight.
+    test byte [ebp + H_JOY_HELD], (PAD_CTRL_PAD | PAD_B | PAD_A)
+    jnz .ret
+    mov byte [ebp + H_JOY_HELD], PAD_DOWN     ; ld a,PAD_DOWN / ldh [hJoyHeld],a
+.ret:
     ret
 
 ; ---------------------------------------------------------------------------

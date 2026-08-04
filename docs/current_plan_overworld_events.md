@@ -849,19 +849,34 @@ silently drift; regenerate rather than trusting it:
       only thing that could ever have surfaced it.
       **The sight logic itself was correct** — the port engaged the intended
       trainer with the matching class, roster and engage distance; the two
-      divergent fields are both positional. So the follow-up is narrow: port
-      `ForceBikeDown` into `src/home/overworld.asm` at its pret call site in
-      `JoypadOverworld`, then re-add the wire with the recorded sight tile
-      (y=120, x=10, ROUTE17_BIKER10, header 9, view 4, DOWN) and
-      `route17_sight` as its acceptance gate. That change touches a shared hot
-      file and alters `JoypadOverworld` for every map (guarded by `cp ROUTE_17`,
-      which must be measured and not assumed inert), so it belongs in its own
-      batch with a full fidelity run, not as a rider on a routes batch.
-      Scheduled as **batch 4** (merge session, 2026-08-04), sequenced AFTER
-      battle-completion's in-flight `src/home/overworld.asm` work lands, with
-      `faithdiff` owed on **both** `ForceBikeDown` and `JoypadOverworld` (the
-      caller changes for every map), and closing
-      `regression-overworld-forcebikedown-missing` in the same commit.
+      divergent fields are both positional.
+      **BATCH 4 PORTED `ForceBikeDown` AND ROUTE_17 STILL DOES NOT PASS — the
+      batch-3 diagnosis was right but incomplete.** `ForceBikeDown` is now
+      translated in `src/home/overworld.asm`, called at pret's seam (its order is
+      `Joypad` → `ForceBikeDown` → `AreInputsSimulated`; the port has no
+      `JoypadOverworld`, so it sits immediately before the existing
+      `call AreInputsSimulated`). It is faithful — `faithdiff ForceBikeDown` is
+      clean at 0/0 calls and 1/1 stores, and `faithdiff OverworldLoopLessDelay`
+      decomposed against its pre-change baseline shows port calls 35 → 36 with
+      `+ ADDED ForceBikeDown` as the ONLY new line. ROUTE_17 was then re-wired and
+      its golden regenerated, and goldencheck returned **the identical two
+      divergences, byte for byte**.
+      The blocker is the HARNESS, not the routine. `RunMapScriptSightTest`
+      (`src/debug/debug_dump.asm`) runs `UpdateSprites` → `RunMapScript` →
+      `DelayFrame` and, by its own documented design, **never enters
+      `OverworldLoopLessDelay`** — so it never reaches the joypad path
+      `ForceBikeDown` lives in. Ground truth runs the real loop and takes the
+      forced step; the sight harness cannot. **`route17_sight` can therefore never
+      witness `ForceBikeDown`, and ROUTE_17 cannot be wired with a passing sight
+      golden while the harness has that shape.**
+      What is owed instead is a scenario driving the REAL `OverworldLoop` on
+      ROUTE_17 — the shape battle-completion's continuous trainer-route scenario
+      already uses. Until then `ForceBikeDown` carries regression evidence only
+      (`fidelity-full`) and `regression-overworld-forcebikedown-missing` stays
+      OPEN; do not close it on the strength of the port alone.
+      The lesson generalises and is worth stating: **a diagnosis that names a real
+      missing routine is not finished until you also check that the failing
+      scenario could observe the fix.** Two golden runs were spent proving that.
       **Watch item for whoever cuts a ROUTE_17 RUNTIME scenario:** once
       `ForceBikeDown` is live, input on that map is not solely the harness's —
       the routine overwrites `hJoyHeld` with `PAD_DOWN` every frame that no
@@ -870,12 +885,31 @@ silently drift; regenerate rather than trusting it:
       scenario exists; `route17_sight` itself is unaffected because it drives
       `RunMapScript` and never runs the joypad path.
 - [ ] **The remaining three standard maps:** CERULEAN_CAVE_B1F, POWER_PLANT,
-      VIRIDIAN_FOREST. These three are all INTERIORS, which is why they are what
-      is left: the outdoor routes' `.blk` is permanently resident
-      (`gen_map_headers.py OUTDOOR_BLK_MAPS`), which is what makes the
-      script-warp harness work, while these three share the single indoor `.blk`
-      slot and may hit the same absent-interior-map-data blocker as
-      `docs/current_plan_backlog.md` #31 — check before promising them.
+      VIRIDIAN_FOREST. **BLOCKED, and the blocker was MEASURED 2026-08-04 — it is
+      TILESET residency, not map data.** An earlier draft of this bullet said they
+      "share the single indoor `.blk` slot and may hit the same
+      absent-interior-map-data blocker as `docs/current_plan_backlog.md` #31".
+      Both halves of that are false: interior `.blk` data IS embedded (399 real
+      entries against 25 nulls in `assets/map_headers.inc`'s indoor dispatch
+      table, including all three of these maps), and the 512-byte
+      `INDOOR_BLK_SIZE` slot constrains nothing (largest non-outdoor map is
+      VIRIDIAN_FOREST at 17×24 = 408 B; **zero** non-outdoor maps exceed it).
+      What is actually missing: `gen_overworld_assets.py` embeds exactly ONE of
+      pret's 20 tilesets (`overworld.2bpp`) plus one blockset and one collision
+      list. These three need `CAVERN`, `FACILITY` and `FOREST` respectively; the
+      thirteen wired routes are all `OVERWORLD`, which is precisely why they
+      render and their goldens pass. Without the right blockset, a map's block IDs
+      fall out of range and hit the `DrawTileBlock` clamp to block 0 — a
+      correctly-sized but flat room, which is how this got misdiagnosed as missing
+      map data. Backlog #31 is corrected; the full record, including what was
+      deliberately not measured, is in the stigmergy memory
+      `interior-maps-blocked-by-tileset-residency-not-blk`.
+      **Do not attempt these three expecting a `.blk` problem.** The sight-golden
+      harness is fine and they would be wired exactly like the other thirteen;
+      only the tileset work stands in the way. That work is a shared prerequisite
+      (it also unblocks #31's predef acceptance and every Stage 5b leg that enters
+      a building), is NOT staged, and no plan owns it — flagged to the maintainer
+      2026-08-04 as a candidate workstream.
       **CERULEAN_CAVE_B1F and POWER_PLANT carry a second, independent blocker:
       the truncated-tail decision.** `gen_trainer_headers.py` cannot represent a
       `text_asm` tail with side effects in a data stream, and it truncates seven of
