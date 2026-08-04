@@ -288,9 +288,20 @@ the ncurses UI by hand right after a rebuild).
   selector is literally `"AF"`, which unquoted parses as the adjust flag (0).
   (Symbol names are exempt: identifiers that aren't registers/flags/hex fall
   through to the SYMF table, case-insensitively.)
+- **Symbols from the wrong BUILD.** The server is long-lived and resolves
+  pkmn.sym from the build `run_with_mcp.sh` last launched — recorded in the
+  `/tmp/dosbox-mcp.launch` handshake, which the server re-reads on change (so
+  a worktree launch redirects a server started in the main checkout, from its
+  next symbol lookup on). Two ways to still get foreign addresses: a server
+  started before this fix landed (restart it), or a `PKMN_SYM`/`PKMN_EXE`/
+  `DOSBOX_MCP_DIR` env override in the MCP registration, which by design wins
+  over the handshake and pins the path. Verify:
+  `awk '$3=="PrintText"{print $1}' dos_port/pkmn.sym` in *your* worktree
+  against the address `set_breakpoint`/`lookup_symbol` reports — a mismatch is
+  a build mismatch, not a bad symbol.
 
 **Failure heuristic:** a breakpoint that never fires, or reads returning all
-zeros, means one of the three items above — **not** a broken socket. Check
+zeros, means one of the four items above — **not** a broken socket. Check
 them first.
 
 **⚠ NEVER `pkill -f dosbox`** — the pattern also matches
