@@ -915,6 +915,29 @@ silently drift; regenerate rather than trusting it:
          like a bug in this plan's `ForceBikeDown`.
       If the variant behaves strangely, suspect constraint 1 BEFORE suspecting
       the `ForceBikeDown` port.
+
+      **A MASK WAS OFFERED FOR ROUTE_17 AND DECLINED — do not quietly take it
+      later.** The mask policy legitimately covers a divergence owned by an open
+      finding (put the finding id in the why-string, so retiring the finding
+      deletes its masks), and the merge session offered exactly that: mask
+      `wYCoord` and `wTrainerScreenY` citing
+      `regression-overworld-forcebikedown-missing`, wiring ROUTE_17 to reach
+      14 of 17. Declined, and the reason is specific rather than squeamish:
+      **`wTrainerScreenY` is the one field that would reveal a view-pointer error
+      at y=120, and magnitude is the entire reason ROUTE_17 was chosen** — its
+      `(width + 6) * (y >> 1)` term is 960, against 560 at `route21_sight` and
+      432 at `route10_sight`, with every other gate under 50. Masking it leaves
+      the only scenario on that map unable to verify the property the wire exists
+      to test. The counter-argument ("it would prove engagement, which is all the
+      other 13 prove anyway") does not hold: the other 13 prove engagement with
+      UNMASKED position fields, so a view-pointer regression on any of them still
+      fails the suite. ROUTE_17 would have been the sole blinded gate, precisely
+      where the arithmetic is most stressed.
+      **The boundary this draws, which is the reusable part:** take the mask when
+      the divergent field is one the scenario was NOT built to test; refuse it
+      when the divergent field IS the scenario's reason for existing. A 14th wire
+      bought by blinding the most demanding gate is worth less than 13 wires and
+      an honest hole.
       **Watch item for whoever cuts a ROUTE_17 RUNTIME scenario:** once
       `ForceBikeDown` is live, input on that map is not solely the harness's —
       the routine overwrites `hJoyHeld` with `PAD_DOWN` every frame that no
