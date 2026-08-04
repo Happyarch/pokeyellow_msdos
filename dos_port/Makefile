@@ -679,6 +679,89 @@ MAPSCRIPT_MAP ?= 0x15
 MAPSCRIPT_Y   ?= 55
 MAPSCRIPT_X   ?= 3
 endif
+# Batch 3 (overworld-events Stage 5a) — the seven OUTDOOR maps of the standard-shape
+# remainder. Batch 2 had already covered every facing, so these gates were chosen for
+# what a facing cannot test: the table walk, the range boundary, and magnitude.
+#   R13 ROUTE_13 (0x18) — ROUTE13_COOLTRAINER_M3 (x=7,y=13) faces UP, view 4,
+#                         HEADER 9: the last entry of a ten-header table, so the scan
+#                         reaches offset 9 * TH_SIZE (198) and must stop at the db -1.
+#                         Every older gate engages a header at index 0..4.
+#   R14 ROUTE_14 (0x19) — ROUTE14_BIKER2 (x=4,y=30) faces RIGHT, view 4, header 7.
+#                         The ONLY tile in the batch whose scan reaches a RANGE
+#                         rejection: header 5 (x=6,y=49, UP, view 4) shares the
+#                         player's column and faces them, and is rejected on distance
+#                         alone (19 vs 4) two entries before the match. Every other
+#                         gate's pre-match rejections are all lined-up rejections, so
+#                         a port ignoring range still engages the right trainer there;
+#                         here it engages the WRONG one and the golden records it.
+#   R15 ROUTE_15 (0x1A) — ROUTE15_COOLTRAINER_F2 (x=53,y=10) faces LEFT, view 3,
+#                         header 1, with the player at EXACTLY the view range (3
+#                         tiles) rather than the 2 every other gate uses.
+#                         CheckSpriteCanSeePlayer is cp b / jr nc — inclusive — so
+#                         distance == range must engage; a strict > passes all seven
+#                         older gates and fails only this one.
+#   (There is no R17 stanza. ROUTE_17 was wired and BACKED OUT: its golden failed
+#    goldencheck on wYCoord and wTrainerScreenY, one tile each, because pret's
+#    ForceBikeDown simulates a DOWN press every frame on Cycling Road and the port
+#    is missing that routine entirely. See gen_map_script_tables.py's ROUTE_17
+#    comment for the full measurement. Re-add with y=120, x=10 once it is ported.)
+#   R18 ROUTE_18 (0x1D) — ROUTE18_COOLTRAINER_M3 (x=42,y=13) faces LEFT, view 4,
+#                         header 2 of a THREE-header table — the shortest of the
+#                         seventeen. With R13's last-of-ten this brackets the table
+#                         walk at both extremes.
+#   R19 ROUTE_19 (0x1E) — ROUTE19_SWIMMER1 (x=13,y=25) faces LEFT, view 3, header 2.
+#                         Breadth, plus the RIGHT map edge (x=11 of a 20-tile width);
+#                         R6 covers the left edge at x=2.
+#   R21 ROUTE_21 (0x20) — ROUTE21_SWIMMER4 (x=5,y=71) faces RIGHT, view 4, header 5.
+#                         The weakest gate of the seven, recorded as such: breadth
+#                         ("no scenario, no wire") plus magnitude (y=71 -> a 560
+#                         view-pointer term). Its leading view-range-0 headers repeat
+#                         R6's branch. It does NOT prove the scan stops after a match:
+#                         the zero-range headers behind the match would engage nobody
+#                         even if it ran on, so that state is unobservable here.
+#   make DEBUG_MAPSCRIPT_SIGHT_R13=1  (or _R14 / _R15 / _R18 / _R19 / _R21)
+ifdef DEBUG_MAPSCRIPT_SIGHT_R13
+DEBUG_MAPSCRIPT_SIGHT := 1
+NASMFLAGS += -D DEBUG_MAPSCRIPT_SIGHT_R13
+MAPSCRIPT_MAP ?= 0x18
+MAPSCRIPT_Y   ?= 11
+MAPSCRIPT_X   ?= 7
+endif
+ifdef DEBUG_MAPSCRIPT_SIGHT_R14
+DEBUG_MAPSCRIPT_SIGHT := 1
+NASMFLAGS += -D DEBUG_MAPSCRIPT_SIGHT_R14
+MAPSCRIPT_MAP ?= 0x19
+MAPSCRIPT_Y   ?= 30
+MAPSCRIPT_X   ?= 6
+endif
+ifdef DEBUG_MAPSCRIPT_SIGHT_R15
+DEBUG_MAPSCRIPT_SIGHT := 1
+NASMFLAGS += -D DEBUG_MAPSCRIPT_SIGHT_R15
+MAPSCRIPT_MAP ?= 0x1A
+MAPSCRIPT_Y   ?= 10
+MAPSCRIPT_X   ?= 50
+endif
+ifdef DEBUG_MAPSCRIPT_SIGHT_R18
+DEBUG_MAPSCRIPT_SIGHT := 1
+NASMFLAGS += -D DEBUG_MAPSCRIPT_SIGHT_R18
+MAPSCRIPT_MAP ?= 0x1D
+MAPSCRIPT_Y   ?= 13
+MAPSCRIPT_X   ?= 40
+endif
+ifdef DEBUG_MAPSCRIPT_SIGHT_R19
+DEBUG_MAPSCRIPT_SIGHT := 1
+NASMFLAGS += -D DEBUG_MAPSCRIPT_SIGHT_R19
+MAPSCRIPT_MAP ?= 0x1E
+MAPSCRIPT_Y   ?= 25
+MAPSCRIPT_X   ?= 11
+endif
+ifdef DEBUG_MAPSCRIPT_SIGHT_R21
+DEBUG_MAPSCRIPT_SIGHT := 1
+NASMFLAGS += -D DEBUG_MAPSCRIPT_SIGHT_R21
+MAPSCRIPT_MAP ?= 0x20
+MAPSCRIPT_Y   ?= 71
+MAPSCRIPT_X   ?= 7
+endif
 ifdef DEBUG_MAPSCRIPT_SIGHT
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_MAPSCRIPT_SIGHT
