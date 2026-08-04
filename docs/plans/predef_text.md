@@ -1,5 +1,13 @@
 # Current plan — predef text (`TextPredefs` / `PrintPredefTextID`)
 
+> **ARCHIVED 2026-08-04.** All implementation work is done and gate-clean
+> (10 of 11 boxes; the campaign's registry retirement landed out-of-order in
+> `d54a32e4`, maintainer-blessed). The single open box — the must-hit predef
+> acceptance scenario — is blocked outside this plan (no resident interior map
+> data) and is tracked as **`docs/current_plan_backlog.md` #31**, which owns
+> the repro, the unblock conditions, and the "regression evidence only" caveat
+> until it clears. Nothing else remained for this plan to coordinate.
+
 > **Gate — the linter is MANDATORY. Rewritten 2026-08-02 against the tooling
 > that actually exists; the version this replaces predated `static_gate` and
 > told you "nothing runs it for you", which stopped being true on 2026-07-26.**
@@ -291,7 +299,8 @@ correctness, not tidiness.
       than none" — correct behaviour by the tool). Evidence is therefore the post-
       merge chain instead: `faithdiff` on both labels, `static_gate` PASS with
       `relocated` now **0**, and the full golden suite.
-- [ ] **BLOCKED — the required must-hit predef scenario cannot be built yet.**
+- [ ] **DEFERRED at archival (2026-08-04) → `docs/current_plan_backlog.md` #31.
+      BLOCKED — the required must-hit predef scenario cannot be built yet.**
       The port has no resident interior map data (`include/gb_memmap.inc`: the
       `OW_<MAP>_BLK_GBADDR` set is "resident **outdoor** .blk"), and EVERY predef
       hidden event is on an interior map — Red's house, Blue's house, Oak's lab,

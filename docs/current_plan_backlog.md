@@ -583,8 +583,11 @@ predef text is reachable**, and that is a map-data gap, not a text-engine gap.
 
 **What this blocks.** The predef path stays runtime-unreachable, so the
 implementation carries regression evidence only (`fidelity-full`), never feature
-evidence. It also blocks retiring the last 2 `pret_label_allowlist.json` rows,
-which are sequenced *after* acceptance — see the relocation-debt pointer below.
+evidence. (It used to also gate retiring the last 2 `pret_label_allowlist.json`
+rows; that retirement was taken OUT of the planned order at the maintainer's
+direction and landed 2026-08-03 in `d54a32e4` — see the relocation-debt pointer
+below.) The owning plan archived 2026-08-04 at `docs/plans/predef_text.md`; this
+item is now the sole live tracker for the acceptance tail.
 
 **What unblocks it.** Either resident interior `.blk` data (item 16's map-data
 extension is the neighbouring work), or a reachable outdoor predef entry. The
@@ -662,10 +665,17 @@ pret's `PrintPredefTextID` has no `ret` and falls through into
 ended in a routine running off its own end — harmless while it was check-only, a
 live cross-file fall-through the moment it linked, and `update_label_db`'s
 boundary scan refused to model it. `update_label_db` now reports **`relocated` = 0**
-(the status no longer appears in its label line at all). The rows are left in
-place because retiring them re-hashes a registry that is content-hash locked
-outside the worktree in two places (git config + the GitHub repo variable) — the
-bless is the maintainer's, not an agent's — and because the plan sequences the
-retirement after acceptance, which is blocked by item 31 above. **New relocations are
+(the status no longer appears in its label line at all).
+
+**UPDATE 2026-08-03: RETIRED.** The two stale rows were deleted in `d54a32e4`,
+taken out of the planned retire-after-acceptance order at the maintainer's
+direction (they were provably stale — both named the deleted
+`map_text_pointer.asm` while `relocated` measured 0 — so the retirement no
+longer depended on the predef acceptance, which remains item 31's). The
+maintainer blessed both hash locks the same session; `relocated_labels`,
+`relocated_files` and `structural_findings` are all `{}` — the registry is at
+zero rows, 348 → 0 across the campaign. Full record: stigmergy
+`relocated-labels-grind` and the archived `docs/plans/predef_text.md`.
+**New relocations are
 forbidden and registry ADDITIONS are refused outright by `.githooks/pre-commit`
 since `3f1b12be`.**
