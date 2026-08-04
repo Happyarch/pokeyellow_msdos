@@ -807,13 +807,74 @@ silently drift; regenerate rather than trusting it:
       Each golden was decomposed rather than accepted on a pass: all four stamp the
       trainer class, roster index and `wTrainerEngageDistance` (= view range << 4)
       that pret's own `object_event` row and trainer header declare.
-- [ ] **The remaining ten standard maps:** CERULEAN_CAVE_B1F, POWER_PLANT,
-      ROUTE_13, ROUTE_14, ROUTE_15, ROUTE_17, ROUTE_18, ROUTE_19, ROUTE_21,
-      VIRIDIAN_FOREST. The seven outdoor routes among them are the cheap ones —
-      their `.blk` is permanently resident (`gen_map_headers.py OUTDOOR_BLK_MAPS`),
-      which is what makes the script-warp harness work. The three interiors
-      (CERULEAN_CAVE_B1F, POWER_PLANT, VIRIDIAN_FOREST) share the single indoor
-      `.blk` slot and may hit the same absent-interior-map-data blocker as
+- [x] **ROUTE_13, ROUTE_14, ROUTE_15, ROUTE_18, ROUTE_19, ROUTE_21** —
+      `route13_sight` / `route14_sight` / `route15_sight` / `route18_sight` /
+      `route19_sight` / `route21_sight` (ids 52/53/54/56/57/58), 2026-08-04.
+      Wired count 7 → 13 of 17. Batch 2 had already covered every FACING, so
+      these tiles were chosen for what a facing cannot reach:
+      **R13** engages header 9, the last entry of a ten-header table (the scan
+      must reach offset `9 * TH_SIZE` = 198 and stop at the `db -1`), and **R18**
+      the last of a three-header table — the shortest of the seventeen — so the
+      two together bracket the table walk at both extremes;
+      **R14** is the only tile in the batch whose scan reaches a *range*
+      rejection (header 5 shares the player's column and faces them, thrown out
+      on distance 19 vs view 4) two entries before the real match, so a port
+      ignoring range engages the WRONG trainer rather than nobody — everywhere
+      else every pre-match rejection is a lined-up rejection;
+      **R15** engages at EXACTLY the view range (3 tiles, view 3) rather than the
+      2 tiles every other gate uses, pinning `CheckSpriteCanSeePlayer`'s
+      `cp b` / `jr nc` as inclusive;
+      **R19** adds the right map edge, and **R21** breadth plus magnitude
+      (y=71 → a 560 view-pointer term). R21 is the weakest of the six and is
+      recorded as such in its own scenario file.
+      Each golden was DECOMPOSED, not accepted on a pass: for all six, the
+      expectations were read out of `data/maps/objects/<Map>.asm` and
+      `scripts/<Map>.asm` programmatically, and the trainer class, roster index,
+      `wTrainerEngageDistance` (= view range << 4), `wTrainerFlagBit` and
+      `wSpriteIndex` in the dump match the pret `object_event` row and the
+      1-based object index the header's start bit selects.
+- [ ] **ROUTE_17 — wired, BACKED OUT, and blocked on a newly measured port gap:
+      `ForceBikeDown` is missing.** This is not a scoping decision; the wire was
+      made, the golden generated from the sha1-verified ROM, and `goldencheck`
+      FAILED with two divergences — `wYCoord` ($79 golden vs $78 port) and
+      `wTrainerScreenY` ($0C vs $1C), each exactly one tile (16 px) and mutually
+      consistent. Cause, measured: pret's `ForceBikeDown` (`home/overworld.asm`,
+      called unconditionally from `JoypadOverworld`) simulates a DOWN press every
+      frame on ROUTE_17 whenever no trainer battle is flagged and no button is
+      held — **no bike is required despite the name**; the bike-gated Cycling
+      Road code at `home/overworld.asm:350` is a different routine and was ruled
+      out first. Ground truth therefore takes one forced southward step before
+      engaging. `dos_port/tools/label_status ForceBikeDown` reports `missing`,
+      and ROUTE_17 is the ONLY map the routine applies to, so this wire is the
+      only thing that could ever have surfaced it.
+      **The sight logic itself was correct** — the port engaged the intended
+      trainer with the matching class, roster and engage distance; the two
+      divergent fields are both positional. So the follow-up is narrow: port
+      `ForceBikeDown` into `src/home/overworld.asm` at its pret call site in
+      `JoypadOverworld`, then re-add the wire with the recorded sight tile
+      (y=120, x=10, ROUTE17_BIKER10, header 9, view 4, DOWN) and
+      `route17_sight` as its acceptance gate. That change touches a shared hot
+      file and alters `JoypadOverworld` for every map (guarded by `cp ROUTE_17`,
+      which must be measured and not assumed inert), so it belongs in its own
+      batch with a full fidelity run, not as a rider on a routes batch.
+      Scheduled as **batch 4** (merge session, 2026-08-04), sequenced AFTER
+      battle-completion's in-flight `src/home/overworld.asm` work lands, with
+      `faithdiff` owed on **both** `ForceBikeDown` and `JoypadOverworld` (the
+      caller changes for every map), and closing
+      `regression-overworld-forcebikedown-missing` in the same commit.
+      **Watch item for whoever cuts a ROUTE_17 RUNTIME scenario:** once
+      `ForceBikeDown` is live, input on that map is not solely the harness's —
+      the routine overwrites `hJoyHeld` with `PAD_DOWN` every frame that no
+      trainer battle is flagged and no button is held, so it will fight any
+      AUTOKEY-style scripted-input machinery. Nothing to do until such a
+      scenario exists; `route17_sight` itself is unaffected because it drives
+      `RunMapScript` and never runs the joypad path.
+- [ ] **The remaining three standard maps:** CERULEAN_CAVE_B1F, POWER_PLANT,
+      VIRIDIAN_FOREST. These three are all INTERIORS, which is why they are what
+      is left: the outdoor routes' `.blk` is permanently resident
+      (`gen_map_headers.py OUTDOOR_BLK_MAPS`), which is what makes the
+      script-warp harness work, while these three share the single indoor `.blk`
+      slot and may hit the same absent-interior-map-data blocker as
       `docs/current_plan_backlog.md` #31 — check before promising them.
       **CERULEAN_CAVE_B1F and POWER_PLANT carry a second, independent blocker:
       the truncated-tail decision.** `gen_trainer_headers.py` cannot represent a
@@ -841,6 +902,47 @@ Wiring a map is not only script dispatch: while `TRAINER_BATTLE_LIVE` is retired
 (battle-completion Stage 1b), `EndTrainerBattle`'s post-battle cleanup runs ONLY
 through a wired map's script table, so every map wired here retires a slice of that
 plan's temporary post-battle-state-leak DEVIATION.
+
+#### Stage 5a tail — retire the bespoke trainer-sight hook
+
+- [ ] **When Stage 5a wiring completes and every standard trainer map dispatches
+      to `TrainerMapScript`, delete the sight gate in `OverworldLoopLessDelay`
+      (`src/home/overworld.asm`) together with `CheckTrainerSight` and
+      `TrainerEncounterFlow` (`src/engine/overworld/map_sprites.asm`) and both of
+      their `DEVIATION`s.** At that point all three are dead code, and leaving
+      them linked is itself the divergence this plan exists to remove.
+
+      **Why this item is here rather than in the battle plan.** The port-only
+      `CheckTrainerSight` → `TrainerEncounterFlow` pair is a second, bespoke sight
+      path that predates the driver. On a wired map BOTH sight paths were armed and
+      the bespoke one won the race (its own `distance <= 4` test beats a header view
+      range of 2), which blocked battle-completion Stage 1b from building a
+      continuous overworld→battle→return scenario through the real `OverworldLoop`.
+      The merge session arbitrated it (2026-08-04): battle-work implements the
+      *gating* now, this plan owns the *retirement*, and both `DEVIATION` lifetimes
+      written into `map_sprites.asm` name this file as owner.
+
+      **What battle-work landed** (commit `f36dd6bf` on `battle-work`): the bespoke
+      hook is skipped when `MapScriptPointers[wCurMap] == TrainerMapScript`, and
+      still runs everywhere else. The predicate keys on `TrainerMapScript`
+      specifically and NOT on `!= DefaultMapScript` — `PALLET_TOWN` already has a
+      non-default, non-trainer script, and Stage 5b below adds many more, every one
+      of which the naive predicate would have silently switched the hook off on.
+
+      **The coupling to watch, because this plan is what can break it.** The gate is
+      data-driven off the very table `WIRED_MAPS` emits, so each wire shrinks the
+      hook's domain with no edit on either side and no hand-kept list. That holds
+      only while "wired" means "points at `TrainerMapScript`". If a future map here
+      needs a *different* script entry point while still carrying trainer headers —
+      a plausible Stage 5b shape — the gate stops covering it, and this plan must
+      tell battle-work **before** that lands rather than leaving the predicate
+      quietly wrong.
+
+      **Do not read the seven (now fourteen) `route*_sight` goldens as evidence that
+      the gate works.** They drive `RunMapScript` directly, not `OverworldLoop`,
+      which is exactly why they are insensitive to the gate. They are a necessary
+      regression floor for the retirement, not sufficient proof of it; the witness is
+      battle-completion's continuous scenario.
 
 ### Stage 5b — story legs (bespoke scripts)
 
@@ -882,12 +984,30 @@ The current manifest supplies two overworld-facing core scenarios, plus three
 |---|---|---|
 | `overworld_pallet` | `LoadCurrentMapView`, `DumpBackbuffer` | deterministic Pallet map/render state |
 | `sign_pallet` | `DisplaySignText` | streamed sign dialog, tile/VRAM/OAM/WRAM projection |
-| `route3_sight` / `route6_sight` / `route11_sight` / `route4_sight` / `route8_sight` / `route9_sight` / `route10_sight` (tier `full`, wram-only) | `TrainerMapScript`, `CheckFightingMapTrainers` | the generic map-script trainer-engagement STATE on seven registered maps, covering both signs of both sight axes |
+| `route3_sight` / `route6_sight` / `route11_sight` / `route4_sight` / `route8_sight` / `route9_sight` / `route10_sight` / `route13_sight` / `route14_sight` / `route15_sight` / `route18_sight` / `route19_sight` / `route21_sight` (tier `full`, wram-only) | `TrainerMapScript`, `CheckFightingMapTrainers` | the generic map-script trainer-engagement STATE on THIRTEEN registered maps: both signs of both sight axes, both ends of the header-table walk, a range rejection reached before the match, and engagement at exactly the view range |
 | `ledge_hop` (tier `full`, wram-only) | `HandleLedges`, `HandleMidJump`, `_HandleMidJump` | the Route 1 ledge hop + its state teardown, through the LIVE `OverworldLoop` on both sides |
 
 **Do not read this table as the roster — it is a hand-maintained excerpt and has
 been stale before.** The manifest is the authority; measure it:
 `python3 dos_port/tools/generators/gen_scenario_registry.py --names full`.
+
+**What the `route*_sight` goldens do NOT cover — two limits, both established by
+cross-worker measurement 2026-08-04, and neither visible from a green run:**
+
+1. **They stop AT engagement.** Each asserts only that `w<Map>CurScript` left 0,
+   i.e. that `CheckFightingMapTrainers` engaged someone, and dumps there. They
+   never advance to script index 1, so everything downstream —
+   `DisplayEnemyTrainerTextAndStartBattle`, `StartTrainerBattle`, battle entry —
+   is untested by them. This is not hypothetical: battle-completion's continuous
+   scenario measured the port exiting silently between frames 300 and 400 on
+   exactly that stretch on ROUTE_3 (`regression-battle-live-trainer-entry-exits`),
+   a defect all thirteen sight goldens stay green over. **A green sight golden
+   means that map's trainer ENGAGEMENT state matches, not that its trainer flow
+   works end to end.**
+2. **They drive `RunMapScript` directly, not `OverworldLoop`.** That is what makes
+   them insensitive to battle-completion's bespoke-sight gate, and therefore what
+   makes them a regression FLOOR for that gate rather than a witness of it. The
+   witness is that plan's continuous scenario.
 
 None of these proves Oak's Pallet cutscene, service menus, hidden events, pickups,
 field moves (Cut/Fly/Dig/Teleport/Flash/Softboiled/Strength), any warp, or
