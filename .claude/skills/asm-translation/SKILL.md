@@ -52,6 +52,57 @@ routines (see the `lea esi,[esi+1]`-instead-of-`inc` fix in `pikachu_status.asm`
   table above; most routines don't touch them, but DAA/CPL paths do.
 - Related: multi-byte GB values are **big-endian** — see "Data Endianness" below.
 
+## Preserve Counter WIDTH — a widened loop counter loses its bound
+
+**This is the same family as the flag rule above, and it is the single most
+repeated translation defect in this project** (maintainer-observed, 2026-08-04:
+"counter and loop bugs going from 8 bit to 16 bit or 32 bit has happened in this
+project more than I'd like to admit"). Read it before translating any `dec c` /
+`dec b` loop.
+
+pret writes `dec c / jr nz`. Entered with **C = 0** that runs **256** times and
+stops — a bounded, survivable glitch. The bound comes from the **register
+width**, not from any instruction. Translate it to `movzx ecx, bl` + `dec ecx /
+jnz` and the same input runs **~4 billion** times, walks the write pointer off
+the end of the DPMI allocation, and **page-faults**. Same opcodes, same
+semantics, catastrophically different blast radius.
+
+**Why this keeps getting through review — the guard is not in the source.** The
+original author never wrote a zero-check because the hardware *was* the check, so
+there is nothing textual to carry across. `movzx ecx, bl` + `dec ecx / jnz` is a
+correct-looking translation and is genuinely correct for every input except the
+boundary one. Unlike a flag bug, there is no misplaced `inc` to spot in the diff.
+The failure is also **displaced**: it surfaces as a page fault whose faulting
+routine is the loop, while the actual defect is a *caller* passing a zero count.
+
+**The rule.** When translating a pret loop whose counter comes from an 8-bit
+register, ask explicitly: *can this count be 0 on entry?*
+- If yes — or if you cannot prove no — add a zero-guard (`test ecx,ecx / jz
+  .done`, or `jecxz`). A guard that reproduces the 8-bit wrap's boundedness is
+  **faithful**, not defensive padding.
+- Record the answer in a comment when it is non-obvious, so the next reader does
+  not have to re-derive it.
+
+**The masking trap — do not skip this.** Adding a zero-guard to a loop whose
+caller passes a bad count converts a loud page fault into a *silently mis-drawn
+screen*, which is strictly harder to find. Guard the loop **and** fix the caller;
+never let the guard close the investigation.
+
+Worked instance and the exposure audit: memory
+`bug-class-gb-counter-widened-to-32-bit`. First fully root-caused case was
+`TextBoxBorder.fill_chars` (`src/home/text.asm`), which page-faulted on a zero
+interior box width. Find candidate sites with (**quote the glob — zsh errors on
+an unmatched one and the command does not run at all**):
+
+```sh
+grep -rn --include='*.asm' -E "movzx (ecx|ebx|edx), (bl|bh|cl|ch|dl|dh|al|ah)\b" src/
+grep -rn --include='*.asm' -A1 -E "^\s*dec ecx\s*$" src/ | grep jnz
+```
+
+Those greps report **exposure, not defects** — most counts are provably non-zero
+by construction. Each hit needs the can-it-be-zero question answered on its own;
+do not report the raw counts as a bug tally.
+
 ## Memory Model
 
 `EBP` = base of a ~96 KB DPMI allocation (64 KB GB space + 8 KB CGB VRAM bank 1
