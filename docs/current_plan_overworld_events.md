@@ -155,9 +155,15 @@ bullet names what still owes evidence and when it lands. Do not upgrade those to
       gates on `DEBUG_OAKINTRO` (→ `RunOakSpeechCheckpoint`, Prof. Oak's opening
       speech) with `must_hit = OakSpeech / PrepareOakSpeech / FadeInIntroPic /
       DisplayPicCenteredOrUpperRight` — no Pallet script state, no scripted-movement
-      consumer. This plan's hook is the SEPARATE `DEBUG_OAK_INTRO` →
-      `RunOakIntroTest` (`src/home/overworld.asm:385`, `Makefile:649`), still
+      consumer. This plan's hook is the SEPARATE gate → `RunOakIntroTest`, still
       unregistered. A new scenario is owed, under a name that does not collide.
+      **The gate was RENAMED 2026-08-02 and is now `DEBUG_PALLET_OAK`, not
+      `DEBUG_OAK_INTRO`** — measured 2026-08-04 in the tree:
+      `dos_port/Makefile:659` is `$(eval $(call dump_gate,DEBUG_PALLET_OAK))`, its
+      harness body is `RunOakIntroTest` (`src/debug/debug_dump.asm:452-486`), and
+      `DEBUG_OAK_INTRO` appears nowhere in the Makefile. The rename IS the fix for
+      the one-underscore collision this bullet describes; `make DEBUG_OAK_INTRO=1`
+      now silently builds a normal image.
 
 ## Stage 2 — `DisplayTextID` and overworld service dialogs
 
@@ -189,13 +195,17 @@ arming the simulated one-step PAD_DOWN sequence and relies on
 Stage 2 touches text/input waits.
 
 The Oak intro test hook is deliberately retained but not registered as active
-golden evidence. `DEBUG_OAK_INTRO` still builds and calls `RunOakIntroTest`, and
+golden evidence. The gate still builds and calls `RunOakIntroTest`, and
 the attempted mGBA scenario was preserved as a
 `.disabled` scaffold. **That re-enabling did NOT happen** — see the retraction on
 the Stage 1 scenario bullet above: the scaffold was deleted and its filename reused
-by the menu-intro plan for the Prof. Oak *opening speech* golden. `DEBUG_OAK_INTRO`
+by the menu-intro plan for the Prof. Oak *opening speech* golden. The gate
 / `RunOakIntroTest` are still live and still unregistered. `goldens-verify` executes
 every active `*.lua` scenario.
+
+**The gate's NAME here is stale: it is `DEBUG_PALLET_OAK` as of 2026-08-02, not
+`DEBUG_OAK_INTRO`** (see the Stage 1 bullet above for the measurement). Every
+`DEBUG_OAK_INTRO` in this section is history, not a command you can run.
 
 `project_state DisplayTextID` reports the translated implementation linked, and
 `label_status --callers DisplayTextID` reports the real `text_script.asm`
@@ -422,18 +432,31 @@ owe the boulder and cut cutscenes their first actual execution.
       arms the state; it is not proof that a boulder moved.
       **Linked and wired; the push/blocked-push must-hit is NOT met — see the
       Stage 4 boulder handoff below for exactly what is and is not proven.**
-- [ ] **Ledges:** restore `call HandleMidJump` in `OverworldLoopLessDelay` at pret's
-      position (`home/overworld.asm:49`, after `LoadGBPal`, before the `wWalkCounter`
-      test) and add a ledge-hop golden. Measured 2026-08-02: `HandleMidJump` has
-      **0 port callers**, `faithdiff OverworldLoopLessDelay` reports it DROPPED, so
-      `_HandleMidJump`'s teardown never runs and `BIT_LEDGE_OR_FISHING` sticks set
-      after the first hop — permanently gating collision
-      (`CheckForJumpingAndTilePairCollisions`), OBJ (`sprite_oam.asm`) and emotion
-      bubbles. Tagged in code: `BUG{class=temporary}` at
-      `dos_port/src/home/overworld.asm:3124`. Memory
-      `regression-overworld-ledge-hop-never-advanced` (OPEN). The scenario is the
-      retirement for that memory, and it must land BEFORE the call is restored —
-      nothing can verify the fix today.
+- [x] **Ledges: DONE 2026-08-03 (`3f0afc9e`), gated by the `ledge_hop` golden
+      (id 41, tier `full`, class `datastruct`).** Re-verified in-tree 2026-08-04:
+      `call HandleMidJump` is live at `dos_port/src/home/overworld.asm:953`, and
+      the manifest row `ledge_hop` carries
+      `must_hit = HandleLedges / HandleMidJump / _HandleMidJump` with
+      `build_flags = DEBUG_LEDGE=1`. Repro: `make -C dos_port goldencheck
+      SCENARIO=ledge_hop`.
+      **The fix was THREE defects, not the one this bullet recorded** — the other
+      two were found BY the scenario, which is the argument for the
+      "no scenario, no wire" rule in miniature:
+      1. the dropped `call HandleMidJump` (the only one predicted here);
+      2. `CollisionCheckOnLand`'s whole
+         `CheckForJumpingAndTilePairCollisions`/`HandleLedges` block sat behind
+         `%ifdef OVERWORLD_LEDGES`, **defined in no build**, so on land the hop
+         never even ARMED (its comment blamed an unlinked `ledges.asm` — which
+         was in `GAME_SRCS` all along: the confident-comment defect class again);
+      3. the port consumed `BIT_SCRIPTED_MOVEMENT_STATE` after ONE scripted step,
+         freezing the hop's second queued press; pret drains it only in
+         `AreInputsSimulated.doneSimulating`.
+      The `BUG{class=temporary}` tag this bullet cited is deleted. Memory
+      `regression-overworld-ledge-hop-never-advanced` is closed FIXED; the golden
+      suite, not prose, is the currency mechanism from here.
+      Residual cosmetic tail (NOT this bullet, and not claimed done): the hop ARC
+      is not drawn and `LoadHoppingShadowOAM` is still a ret-stub — compositor
+      work, tracked as `docs/current_plan_backlog.md` #29's last bullet.
 
 ### Stage 4 boulder-bullet handoff — 2026-07-16
 
@@ -790,10 +813,17 @@ The current manifest supplies two overworld-facing core scenarios, plus three
 | `overworld_pallet` | `LoadCurrentMapView`, `DumpBackbuffer` | deterministic Pallet map/render state |
 | `sign_pallet` | `DisplaySignText` | streamed sign dialog, tile/VRAM/OAM/WRAM projection |
 | `route3_sight` / `route6_sight` / `route11_sight` (tier `full`, wram-only) | `TrainerMapScript`, `CheckFightingMapTrainers` | the generic map-script trainer-engagement STATE on three registered maps |
+| `ledge_hop` (tier `full`, wram-only) | `HandleLedges`, `HandleMidJump`, `_HandleMidJump` | the Route 1 ledge hop + its state teardown, through the LIVE `OverworldLoop` on both sides |
+
+**Do not read this table as the roster — it is a hand-maintained excerpt and has
+been stale before.** The manifest is the authority; measure it:
+`python3 dos_port/tools/generators/gen_scenario_registry.py --names full`.
 
 None of these proves Oak's Pallet cutscene, service menus, hidden events, pickups,
-field moves (Cut/Fly/Dig/Teleport/Flash/Softboiled/Strength), any warp, ledges, or
-later map stories. `oak_intro` in the manifest is the menu-intro plan's Prof. Oak
+field moves (Cut/Fly/Dig/Teleport/Flash/Softboiled/Strength), any warp, or
+later map stories. **Ledges WERE on that list until 2026-08-03 and are not any
+more** — `ledge_hop` (id 41) covers them; see the Stage 4 ledges bullet.
+`oak_intro` in the manifest is the menu-intro plan's Prof. Oak
 OPENING SPEECH, not this plan's Pallet cutscene.
 
 For each remaining capability:
