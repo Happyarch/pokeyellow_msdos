@@ -1113,7 +1113,7 @@ ExecutePlayerMove:
     mov al, [ebp + wActionResultOrTookBattleTurn]
     and al, al
     jnz ExecutePlayerMoveDone           ; already acted (item/run/switch)
-    call PrintGhostText                 ; pret 3260 (stub: not ghost → ZF=0)
+    call PrintGhostText                 ; pret 3260 (real; non-ghost returns ZF=0)
     jz  ExecutePlayerMoveDone           ; jp z — ghost can't attack
     call CheckPlayerStatusConditions    ; pret 3262
     jnz .playerHasNoSpecialCondition
@@ -1156,7 +1156,7 @@ PlayerCalcMoveDamage:                   ; pret 3305 — Thrash continuation
     call IsInArray
     jc  .moveHitTest
     call CriticalHitTest
-    call HandleCounterMove              ; pret 3312 (stub: not counter → ZF=0)
+    call HandleCounterMove              ; pret 3312 (real; non-counter returns ZF=0)
     jz  HandleIfPlayerMoveMissed        ; jr z
     call GetDamageVarsForPlayerAttack
     call CalculateDamage
@@ -1212,14 +1212,14 @@ MirrorMoveCheck:                        ; pret 3369
     mov al, [ebp + wPlayerMoveEffect]
     cmp al, MIRROR_MOVE_EFFECT
     jne .metronomeCheck
-    call MirrorMoveCopyMove             ; (stub: fail → ZF=1)
+    call MirrorMoveCopyMove             ; real; failure returns ZF=1
     jz  ExecutePlayerMoveDone
     mov byte [ebp + wMonIsDisobedient], 0
     jmp CheckIfPlayerNeedsToChargeUp
 .metronomeCheck:
     cmp al, METRONOME_EFFECT
     jne .mirrorNext
-    call MetronomePickMove              ; (stub: clears effect to break the re-entry loop)
+    call MetronomePickMove              ; real random move selection
     jmp CheckIfPlayerNeedsToChargeUp
 .mirrorNext:
     mov al, [ebp + wPlayerMoveEffect]   ; ResidualEffects2 → run effect after damage, done
@@ -1237,8 +1237,8 @@ MirrorMoveCheck:                        ; pret 3369
     jmp ExecutePlayerMoveDone
 .moveDidNotMiss:
     call ApplyAttackToEnemyPokemon
-    call PrintCriticalOHKOText          ; (stub)
-    call DisplayEffectiveness           ; (stub; pret callfar)
+    call PrintCriticalOHKOText          ; real battle text path
+    call DisplayEffectiveness           ; real display_effectiveness.asm path
     mov byte [ebp + wMoveDidntMiss], 1
 .notDone:
     mov al, [ebp + wPlayerMoveEffect]   ; AlwaysHappenSideEffects → run after damage, not done
@@ -2054,7 +2054,7 @@ ExecuteEnemyMove:
     mov byte [ebp + wMonIsDisobedient], 0
     mov byte [ebp + wMoveDidntMiss], 0
     mov byte [ebp + wDamageMultipliers], EFFECTIVE
-    call PrintGhostText                 ; (stub: not ghost → ZF=0)
+    call PrintGhostText                 ; real; non-ghost returns ZF=0
     jz  ExecuteEnemyMoveDone
     inc byte [ebp + wAILayer2Encouragement]  ; pret core.asm:5656-5657 — read by AIMoveChoiceModification2
     call CheckEnemyStatusConditions
@@ -2094,7 +2094,7 @@ EnemyCalcMoveDamage:                    ; pret 5706 — Thrash continuation
     call IsInArray
     jc  .eMoveHitTest
     call CriticalHitTest
-    call HandleCounterMove              ; (stub: not counter → ZF=0)
+    call HandleCounterMove              ; real; non-counter returns ZF=0
     jz  HandleIfEnemyMoveMissed
     call GetDamageVarsForEnemyAttack
     call CalculateDamage
@@ -2150,14 +2150,14 @@ EnemyCheckIfMirrorMoveEffect:           ; pret 5782
     mov al, [ebp + wEnemyMoveEffect]
     cmp al, MIRROR_MOVE_EFFECT
     jne .metronomeCheck
-    call MirrorMoveCopyMove
+    call MirrorMoveCopyMove             ; real; failure returns ZF=1
     jz  ExecuteEnemyMoveDone
     mov byte [ebp + wMonIsDisobedient], 0
     jmp CheckIfEnemyNeedsToChargeUp
 .metronomeCheck:
     cmp al, METRONOME_EFFECT
     jne .mirrorNext
-    call MetronomePickMove
+    call MetronomePickMove              ; real random move selection
     jmp CheckIfEnemyNeedsToChargeUp
 .mirrorNext:
     mov al, [ebp + wEnemyMoveEffect]
@@ -2175,8 +2175,8 @@ EnemyCheckIfMirrorMoveEffect:           ; pret 5782
     jmp ExecuteEnemyMoveDone
 .eMoveDidNotMiss:
     call ApplyAttackToPlayerPokemon     ; player HP -= wDamage (floored)
-    call PrintCriticalOHKOText          ; (stub)
-    call DisplayEffectiveness           ; (stub)
+    call PrintCriticalOHKOText          ; real battle text path
+    call DisplayEffectiveness           ; real display_effectiveness.asm path
     mov byte [ebp + wMoveDidntMiss], 1
 .eNotDone:
     mov al, [ebp + wEnemyMoveEffect]

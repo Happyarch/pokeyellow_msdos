@@ -462,7 +462,8 @@ GainExperience:
     call CopyData                   ; FIX: was EDI, must be EDX for copy.asm
 
 .recalcStatChanges:
-    ; Recalculate modified stats for the battle mon (deferred — Wave 2 stubs).
+    ; CalculateModifiedStats is still a stub. The burn/paralysis, badge-boost,
+    ; HUD and screen-buffer targets below are real linked providers.
     xor al, al
     mov [ebp + wCalculateWhoseStats], al   ; 0 = player's mon
     mov esi, CalculateModifiedStats
@@ -651,16 +652,14 @@ BoostExp:
 ; SM83: `ld b, BANK(BattleCore); jp Bankswitch` — dispatches to a BattleCore
 ; function via HL (the function pointer passed by the caller in pret).
 ; x86 flat model: bankswitching is a no-op; ESI holds the function pointer
-; directly.  Wave 2 will flesh out each BattleCore target (CalculateModifiedStats,
-; etc.) as real symbol bodies.  Until then, stubs return immediately so the
-; level-up path assembles and links without the front-end.
+; directly. CalculateModifiedStats remains the one stub target on this sequence;
+; the penalties, badge boost, HUD and screen helpers are real.
 ;
 ; pret ref: engine/battle/experience.asm:CallBattleCore
 ; ---------------------------------------------------------------------------
 CallBattleCore:
     ; In the flat x86 model, call the function whose address is in ESI.
-    ; TODO-HW: When Wave 2 provides real bodies for CalculateModifiedStats et al.,
-    ; this stays as-is — they'll link in normally.
+    ; The eventual CalculateModifiedStats body links through this unchanged.
     call esi
     ret
 

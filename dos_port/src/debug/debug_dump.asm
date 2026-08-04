@@ -1644,8 +1644,9 @@ RunBattleTest:
     ;
     ; WHY THE PARTY IS RESHAPED. Routing to the black-out branch requires
     ; AnyPartyAlive to fail (core.asm:985-988); any surviving mon instead
-    ; reaches DoUseNextMonDialogue + ChooseNextMon, an INTERACTIVE party
-    ; menu, which is both a port stub and untimeable against a golden. So
+    ; reaches DoUseNextMonDialogue + ChooseNextMon. Their current port bodies
+    ; auto-answer and auto-select instead of driving the interactive party menu,
+    ; and that partial flow is not this scenario's subject. So
     ; exactly one mon is left alive. It is party slot 3, STARTER_PIKACHU
     ; L5 (tools/mgba_harness/lib/seed.lua DEBUG_PARTY[4]), not slot 0:
     ; the send-out scan takes the first ALIVE mon, so zeroing 0-2 selects

@@ -117,6 +117,127 @@ caller count, and the shared `BattlePartyMenu`/`BattleItemMenu` `ret` body.
       service spine have translated providers. Several are not on an executed
       default-build trainer route yet; linkage is not execution evidence.
 
+## Measured accuracy survey — 2026-08-03
+
+This survey is the sequencing gate requested before executing the plan. It uses
+the label DB stamped at `93ef2363`, the 41-row scenario manifest, each stub's
+port callers, and the actual `DEBUG_BATTLE_*` gates. Raw status, static
+reachability, and archived audit prose are not execution evidence.
+
+### Inventory decomposition
+
+The modeled `engine/battle*` inventory is **384 translated / 283 missing / 13
+stubs** (680 labels). The 283 missing labels decompose as follows; this is a
+file inventory, not 283 independent missing features:
+
+| pret file | missing | What the count mostly represents |
+|---|---:|---|
+| `animations.asm` | 135 | Stage 6 animation interpreter/data transforms |
+| `battle_transitions.asm` | 37 | Stage 5 transitions |
+| `core.asm` | 33 | menus, trainer presentation, link paths, wrappers and helpers |
+| `common_text.asm` | 21 | presentation text |
+| `effects.asm` | 17 | bank wrappers/text plus animation entry points |
+| `draw_hud_pokeball_gfx.asm` | 14 | HUD graphics loader/presentation |
+| `used_move_text.asm` | 6 | used-move text variants |
+| `init_battle.asm` | 6 | pret wild/trainer orchestration labels collapsed by the port |
+| `safari_zone.asm` | 3 | Safari presentation/flow |
+| `ghost_marowak_anim.asm` | 2 | special-battle animation |
+| `scroll_draw_trainer_pic.asm` | 2 | trainer presentation |
+| `trainer_ai.asm` | 2 | AI item/withdraw text |
+| `unused_stats_functions.asm` | 2 | selected-stat double/halve helpers |
+| three one-label files | 3 | link versus text, Conversion bank wrapper, Pikachu entrance |
+
+Raw `missing` overstates absent behavior where the port collapsed, inlined, or
+split pret structure. Examples: the wild path lives in `_InitBattleCommon` while
+`InitBattleCommon`/`InitWildBattle`/`StartBattle` remain missing, and several
+`effects.asm` bank wrappers dispatch to translated `move_effects/*` bodies.
+Every missing label still needs a label-by-label disposition when its stage is
+taken; this table must not be used to waive one.
+
+### Runtime coverage lower bound
+
+Only **4 of 41** scenarios are battle scenarios: `battle_intro`, `battle_menu`,
+`battle_faint`, and `battle_blackout`. Their manifest `must_hit` lists contain
+12 unique labels, of which `RunBattleTest` is port-only. Cross-checking the
+remaining 11 against the compiled debug gates confirms direct calls or the
+named faint chain:
+
+`DisplayBattleMenu`, `ExecutePlayerMove`, `HandleEnemyMonFainted`,
+`FaintEnemyPokemon`, `GainExperience`, `ExecuteEnemyMove`,
+`HandlePlayerMonFainted`, `RemoveFaintedPlayerMon`,
+`ReadPlayerMonCurHPAndStatus`, `AnyPartyAlive`, and `HandlePlayerBlackOut`.
+
+Two stubs are additionally unavoidable before later observed landmarks:
+`SlideDownFaintedMonPic` and `PrintEmptyString`. Thus **13 modeled pret battle
+labels have direct or order-proven scenario execution evidence**. This is a
+lower bound, not a claim that the other 667 labels do not execute: the manifest
+does not instrument arbitrary callees, and static `not-proven-reached` cannot
+prove a negative.
+
+Both turn scenarios are synthetic entry gates. They preset the selected move
+and call the execute/faint routines directly; neither drives `MainInBattleLoop`,
+`SelectEnemyMove`, the in-battle ITEM/PKMN menus, trainer initialization, trainer
+victory, or battle return. Most importantly, `battle_faint` deliberately uses a
+guaranteed overkill and **does not compare the damage value** because the two
+emulators have different RNG streams. It proves the turn/KO/EXP bookkeeping,
+not numerical damage accuracy.
+
+### The 13 stubs, settled against callers
+
+| Group | Labels | Caller/coverage conclusion |
+|---|---|---|
+| animation (9) | four substitute/transform animations, four `Play*Animation*` dispatchers, `SlideDownFaintedMonPic` | `SlideDownFaintedMonPic` executes in both faint scenarios. The other eight have callers but no scenario proves their effect branches. Stage 6 owns them. |
+| display state (1) | `PrintEmptyString` | Executes in `battle_faint` before the must-hit `GainExperience`; it is a live no-op stub, not dormant. |
+| trainer presentation (1) | `SaveTrainerName` | Called only from trainer end-text flow; no trainer scenario proves it. Stage 1d owns it. |
+| level-up mechanics (1) | `CalculateModifiedStats` | Indirectly called by `GainExperience` only when the active battler levels. `battle_faint` gains 102 EXP at level 80 and does not enter that branch. It is not on the ordinary damage path. |
+| status-item mechanics (1) | `DoubleOrHalveSelectedStats` | Called after curing the active battler so selected Reflect/Light Screen stats can be restored. No in-battle ITEM route exists, so no scenario proves it. This is not the badge boost; the separately called `ApplyBadgeStatBoosts` is real and linked. |
+
+The generated 13 also omit two convention debts: `CheckNumAttacksLeft` is a
+bare `ret` inside `core.asm` but is classified `implementation`, and the
+port-only `BattleItemMenu`/`BattlePartyMenu` names are adjacent ret-only helpers
+rather than pret-labeled stubs. Stages 3a and 2a/2c already own those cases.
+
+### Damage-path result and corrected over-claims
+
+A recursive linked-call closure from `ExecutePlayerMove` reaches 62 translated
+battle labels and three animation stubs; the enemy closure reaches 59 translated
+labels and the same three animation stubs. Neither closure reaches
+`CalculateModifiedStats` or `DoubleOrHalveSelectedStats`. This supports a
+targeted completion strategy, not a battle-core rebuild, but it does **not**
+validate arithmetic.
+
+`faithdiff` is clean for `CriticalHitTest` and `HandleCounterMove`. The remaining
+damage routines report conditional-jump lowering and explicit-store differences;
+`EnemyCalcMoveDamage` also replaces pret's enemy-specific hit-test/level-swap
+shape with shared `MoveHitTest` plus `GetDamageVarsForEnemyAttack`. Those are
+review targets for a numerical oracle, not proof of a defect.
+
+The explicit over-claim audit found and corrected current source comments that
+still called `PrintGhostText`, `HandleCounterMove`, `MirrorMoveCopyMove`,
+`MetronomePickMove`, `PrintCriticalOHKOText`, and `DisplayEffectiveness` stubs;
+all six are linked implementations. The archived audit's trainer-AI and prize
+money claims remain false: `SelectEnemyMove` calls
+`AIEnemyTrainerChooseMoves`, and `AddBCD` has the payout callers. Neither has
+trainer-scenario execution evidence.
+
+### Sequencing decision produced by the survey
+
+Do **not** rebuild battle core, and do not implement the two stat stubs merely to
+make existing damage claims sound stronger: they are off the ordinary turn path.
+First add a deterministic numerical damage oracle covering one non-KO player hit
+and one non-KO enemy hit, including base formula, STAB/type, crit/no-crit and the
+random factor without assuming shared RNG state. If that oracle passes, proceed
+to Stage 1 trainer wiring and its win/loss/return scenarios. Stage 2c then makes
+`DoubleOrHalveSelectedStats` observable; a deterministic active-battler level-up
+scenario makes `CalculateModifiedStats` observable.
+
+Survey-edit verification: `static_gate` passed all five checks and
+`fidelity-full` passed 41/41 scenarios. `fidelity_gate` exited 1: its changed-file
+selection expanded the comment-only edits in `core.asm` and `experience.asm` to
+every pret label in those files, exposing their existing unsuppressed faithdiff
+inventory. No instruction, label, call, or store changed in this survey commit;
+the failed structural result remains recorded rather than reported as a pass.
+
 ## Stage 1 — make trainer battles live
 
 Current evidence: `_InitBattleCommon` is linked and called by the wild-encounter

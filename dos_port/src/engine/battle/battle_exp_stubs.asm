@@ -1,14 +1,11 @@
 ; battle_exp_stubs.asm — link-only stubs for GainExperience's deferred UI/display
-; externs (Wave 2, Stage 3). The validated EXP/stat/level MATH in experience.asm
-; (GainExperience) is wired live on the victory path, but its presentation tail —
-; the per-mon "gained EXP" / "grew to level N" text, the level-up stats box, move
-; learning, and the in-battle modified-stat recompute — is the bespoke front end's
-; job and is still deferred. These symbols are only *referenced* (never reached at
-; runtime in a way that matters post-victory: the level-up DATA is updated by the
-; real CalcStats inside GainExperience; only the on-screen display is skipped), so a
-; bare `ret` satisfies the linker and leaves the data correct. The front end shows
-; the gained-EXP text itself (battle_menu.asm:BattleWonGiveExp, reading
-; wExpAmountGained).
+; externs (Wave 2, Stage 3). The EXP/stat/level data update in GainExperience is
+; live, but these no-op providers are not uniformly cosmetic:
+; CalculateModifiedStats affects the active battle-mon stats after a level-up,
+; and DoubleOrHalveSelectedStats restores selected Reflect/Light Screen stats
+; after an in-battle status cure. Current scenarios do not enter either branch.
+; PrintEmptyString is presentation-only but executes on the faint path. See the
+; measured stub table in docs/current_plan_battle_completion.md.
 ;
 ; LATENT COLLISION (intentional, documented): ApplyBadgeStatBoosts (badge_boosts.asm),
 ; ApplyBurnAndParalysisPenaltiesToPlayer (status_penalties.asm) and LearnMoveFromLevelUp
@@ -32,8 +29,8 @@ global CalculateModifiedStats
 ; ItemUseMedicine (engine/items/item_use.asm): the first whenever a fainted mon is
 ; revived or a mon levels up (Yellow re-places the overworld Pikachu), the second
 ; when a Full Heal cures the ACTIVE battler (the in-battle stat copy must re-apply
-; the Reflect/Light Screen doubling). Both are display/battle-state refinements on
-; top of already-correct party data, so a `ret` is safe today.
+; the Reflect/Light Screen doubling). The latter is a mechanics deferral, not a
+; display-only no-op; it stays unreachable until the in-battle ITEM menu lands.
 ; TODO(pikachu):     RespawnOverworldPikachu — with the Yellow Pikachu-follow engine.
 ; TODO(battle plan): DoubleOrHalveSelectedStats — with the in-battle ITEM menu
 ;                    (until then no item can be used mid-battle, so it is unreachable).
