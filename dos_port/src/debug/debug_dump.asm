@@ -152,6 +152,7 @@ extern LoadWildMonMoves
 extern SelectEnemyMove
 extern GetCurrentMove                 ; engine/battle/core.asm — move record -> wPlayerMove*/wEnemyMove*
 extern GetDamageVarsForPlayerAttack   ; engine/battle/core.asm
+extern GetDamageVarsForEnemyAttack    ; engine/battle/core.asm
 extern CalculateDamage                ; engine/battle/core.asm (ZF if 0 BP)
 extern AdjustDamageForMoveType        ; engine/battle/core.asm
 extern RandomizeDamage                ; engine/battle/core.asm
@@ -534,6 +535,11 @@ gbstate_regions:
     gbregion "wEnemyMon",      wEnemyMon,      BATTLEMON_STRUCT_LENGTH
     gbregion "wBattleMonNick", wBattleMonNick, NAME_LENGTH
     gbregion "wBattleMon",     wBattleMon,     BATTLEMON_STRUCT_LENGTH
+%ifdef DEBUG_BATTLE_DAMAGE
+    ; The semantic differ validates each side against the legal Gen-1 damage
+    ; set instead of asking unrelated RNG streams to produce the same byte.
+    gbregion "damageOracle",    wBuffer,        30
+%endif
 %ifdef DEBUG_BOX_SAVE
     ; --- the loaded PC box (SRAM/PC storage plan, stage 6 data half) ---
     ; SCENARIO-LOCAL for the same reason as the sight rows below: adding wBoxData
@@ -1483,21 +1489,32 @@ RunBattleTest:
     jmp .goldenintrohang
 %else
     ; --- send-out (the golden pressed A on "appeared!"): the pokéballs give
-    ; way and the first alive party mon — slot 0, the whole debug party is
-    ; healthy — is loaded by the REAL LoadBattleMonFromParty; its back pic
+    ; way and the selected alive party mon is loaded by the REAL
+    ; LoadBattleMonFromParty; its back pic
     ; replaces Red's. Mirrors _InitBattleCommon's scan outcome + the
     ; pret StartBattle EXP/fought flag sets. ---
     call HideBattlePokeballs
+%ifdef DEBUG_BATTLE_DAMAGE
+    mov byte [ebp + wWhichPokemon], 3
+    mov byte [ebp + wPlayerMonNumber], 3
+    mov al, [ebp + wPartySpecies + 3]
+    mov cl, 3
+%else
     mov byte [ebp + wWhichPokemon], 0
     mov byte [ebp + wPlayerMonNumber], 0
     mov al, [ebp + wPartySpecies]
+    mov cl, 0
+%endif
     mov [ebp + wCurPartySpecies], al
     mov [ebp + wBattleMonSpecies2], al
-    mov cl, 0
     mov bh, FLAG_SET
     mov esi, wPartyGainExpFlags
     call FlagAction
+%ifdef DEBUG_BATTLE_DAMAGE
+    mov cl, 3
+%else
     mov cl, 0
+%endif
     mov bh, FLAG_SET
     mov esi, wPartyFoughtCurrentEnemyFlags
     call FlagAction
@@ -1564,6 +1581,128 @@ RunBattleTest:
     mov byte [ebp + wBattleResult], 2
     call EndOfBattle
     call DebugDumpMemory                ; GBSTATE.BIN (id 20) + DUMP.BIN + exit
+%elifdef DEBUG_BATTLE_DAMAGE
+    ; Numerical damage oracle. The emulators run the real numerical pipelines
+    ; but keep independent RNG streams, so select semantic cases rather than
+    ; equal rolls: non-critical Pikachu THUNDERSHOCK (STAB + 2x) and critical
+    ; Pidgey SLASH (STAB + neutral). The mGBA twin reaches these through real
+    ; non-lethal turns; this gate calls the numerical spine directly so text
+    ; and animation waits cannot dominate a headless arithmetic check.
+    ; Each 15-byte record staged at wBuffer is: crit, damage, move, power,
+    ; move type, attacker species/level/attack/type1/type2, defender species,
+    ; a combined stat-high guard, then defense/type1/type2. This fixed matchup
+    ; keeps both stats and damage below 256.
+    call LoadScreenTilesFromBuffer1
+    call DrawHUDsAndHPBars
+    mov byte [ebp + wBattleMonMoves], 0x54       ; THUNDERSHOCK
+    mov byte [ebp + wBattleMonPP], 30
+    mov byte [ebp + wEnemyMonMoves + 0], SLASH
+    mov byte [ebp + wEnemyMonMoves + 1], SLASH
+    mov byte [ebp + wEnemyMonMoves + 2], SLASH
+    mov byte [ebp + wEnemyMonMoves + 3], SLASH
+
+    ; Player half: load the real move record, then run the exact numerical
+    ; sequence ExecutePlayerMove uses after hit/critical resolution.
+    mov byte [ebp + hWhoseTurn], 0
+    mov byte [ebp + wPlayerSelectedMove], 0x54  ; THUNDERSHOCK
+    call GetCurrentMove
+    mov byte [ebp + wCriticalHitOrOHKO], 0
+    call GetDamageVarsForPlayerAttack
+    call CalculateDamage
+    call AdjustDamageForMoveType
+    call RandomizeDamage
+    cmp byte [ebp + wDamage], 0
+    jne near .damageOracleFail
+    cmp byte [ebp + wDamage + 1], 0
+    je near .damageOracleFail
+    mov al, [ebp + wCriticalHitOrOHKO]
+    mov [stage + 0], al
+    mov al, [ebp + wDamage + 1]
+    mov [stage + 1], al
+    mov al, [ebp + wPlayerSelectedMove]
+    mov [stage + 2], al
+    mov al, [ebp + wPlayerMovePower]
+    mov [stage + 3], al
+    mov al, [ebp + wPlayerMoveType]
+    mov [stage + 4], al
+    mov al, [ebp + wBattleMonSpecies]
+    mov [stage + 5], al
+    mov al, [ebp + wBattleMonLevel]
+    mov [stage + 6], al
+    mov al, [ebp + wBattleMonSpecial + 1]
+    mov [stage + 7], al
+    mov al, [ebp + wBattleMonType1]
+    mov [stage + 8], al
+    mov al, [ebp + wBattleMonType2]
+    mov [stage + 9], al
+    mov al, [ebp + wEnemyMonSpecies]
+    mov [stage + 10], al
+    mov al, [ebp + wBattleMonSpecial]
+    or al, [ebp + wEnemyMonSpecial]
+    mov [stage + 11], al
+    mov al, [ebp + wEnemyMonSpecial + 1]
+    mov [stage + 12], al
+    mov al, [ebp + wEnemyMonType1]
+    mov [stage + 13], al
+    mov al, [ebp + wEnemyMonType2]
+    mov [stage + 14], al
+
+    ; Enemy half: same numerical spine, with the already-resolved crit flag set.
+    mov byte [ebp + hWhoseTurn], 1
+    mov byte [ebp + wEnemySelectedMove], SLASH
+    call GetCurrentMove
+    mov byte [ebp + wCriticalHitOrOHKO], 1
+    call GetDamageVarsForEnemyAttack
+    call CalculateDamage
+    call AdjustDamageForMoveType
+    call RandomizeDamage
+    cmp byte [ebp + wDamage], 0
+    jne near .damageOracleFail
+    cmp byte [ebp + wDamage + 1], 0
+    je near .damageOracleFail
+    mov al, [ebp + wCriticalHitOrOHKO]
+    mov [stage + 15], al
+    mov al, [ebp + wDamage + 1]
+    mov [stage + 16], al
+    mov al, [ebp + wEnemySelectedMove]
+    mov [stage + 17], al
+    mov al, [ebp + wEnemyMovePower]
+    mov [stage + 18], al
+    mov al, [ebp + wEnemyMoveType]
+    mov [stage + 19], al
+    mov al, [ebp + wEnemyMonSpecies]
+    mov [stage + 20], al
+    mov al, [ebp + wEnemyMonLevel]
+    mov [stage + 21], al
+    mov al, [ebp + wEnemyMonAttack + 1]
+    mov [stage + 22], al
+    mov al, [ebp + wEnemyMonType1]
+    mov [stage + 23], al
+    mov al, [ebp + wEnemyMonType2]
+    mov [stage + 24], al
+    mov al, [ebp + wBattleMonSpecies]
+    mov [stage + 25], al
+    mov al, [ebp + wEnemyMonAttack]
+    or al, [ebp + wPartyMon1Defense + 3 * PARTYMON_STRUCT_LENGTH]
+    mov [stage + 26], al
+    mov al, [ebp + wPartyMon1Defense + 3 * PARTYMON_STRUCT_LENGTH + 1]
+    mov [stage + 27], al
+    mov al, [ebp + wBattleMonType1]
+    mov [stage + 28], al
+    mov al, [ebp + wBattleMonType2]
+    mov [stage + 29], al
+
+    mov esi, stage
+    lea edi, [ebp + wBuffer]
+    mov ecx, 30
+    rep movsb
+    call DebugDumpMemory
+
+.damageOracleFail:
+    mov byte [ebp + W_TILEMAP], 0xEE
+    call DelayFrame
+    call DumpBackbuffer
+    jmp .damageOracleFail
 %elifdef DEBUG_BATTLE_FAINT
     ; ------------------------------------------------------------------
     ; battle_faint golden gate — the FIRST harness in which a battle turn

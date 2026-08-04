@@ -238,6 +238,29 @@ every pret label in those files, exposing their existing unsuppressed faithdiff
 inventory. No instruction, label, call, or store changed in this survey commit;
 the failed structural result remains recorded rather than reported as a pass.
 
+### Numerical oracle result — 2026-08-03
+
+`battle_damage` is now scenario 43 and the fifth battle scenario. Its mGBA side
+drives real non-lethal turns until it observes a non-critical Pikachu
+THUNDERSHOCK and a critical Pidgey SLASH. The port gate calls the corresponding
+player/enemy numerical spines directly. Both stage the effective formula inputs;
+`golden_diff.py` requires those inputs to match and validates each independently
+against every legal Gen-1 random factor (217..255), so unrelated RNG streams are
+not treated as equal-roll evidence.
+
+Measured result: the player hit was mGBA 10 / DOS 12, both inside the legal
+10..12 set; the enemy critical hit was mGBA 57 / DOS 60, both inside the legal
+51..61 set. All inputs matched. `goldencheck SCENARIO=battle_damage` passed.
+This clears the survey's sequencing gate: **Stage 1 trainer wiring is next**.
+
+Verification: the four focused oracle tests pass, `static_gate` passes all five
+checks with 42 scenarios consistent, and the 16-scenario core fidelity tier
+passes. A second pristine-ROM generation reproduced both golden files byte for
+byte. `fidelity_gate` reports no changed pret label definitions but exits 1 on
+the standing `MapHeaderPointers` lint finding. The broader `tools/tests` run is
+not a clean project gate (31 passed / 14 existing failures: stale generator
+paths, the same lint debt, and an older datastruct-description assertion).
+
 ## Stage 1 — make trainer battles live
 
 Current evidence: `_InitBattleCommon` is linked and called by the wild-encounter

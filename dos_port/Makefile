@@ -746,6 +746,16 @@ NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_APRESS -D DEBUG_SEED_PARTY
 AUTOKEY_DUMP_FRAME ?= 999999
 NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 endif
+# Numerical damage oracle: player/enemy numerical spines stage their effective
+# formula inputs and independently sampled damage rolls for semantic checking.
+# make DEBUG_BATTLE_DAMAGE=1
+ifdef DEBUG_BATTLE_DAMAGE
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_BATTLE_DAMAGE -D DEBUG_BATTLE_GOLDEN -D DEBUG_BATTLE -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_APRESS -D DEBUG_SEED_PARTY
+AUTOKEY_DUMP_FRAME ?= 999999
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
 # Length of the AUTOKEY_APRESS button train (any AUTOKEY_APRESS gate), for a flow
 # that raises more button waits than the 300-press default covers.
 $(eval $(call value_gate,AUTOKEY_APRESS_COUNT))

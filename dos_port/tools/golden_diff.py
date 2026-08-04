@@ -53,6 +53,7 @@ SCENARIO_MANIFEST = Path(__file__).with_name("scenario_manifest.json")
 PORT_TILEMAP_SIZE = PORT_CANVAS_W * PORT_CANVAS_H
 VRAM_SIZE = 0x1800
 OAM_SIZE = 160
+DAMAGE_ORACLE_RECORD_SIZE = 15
 
 # Regions handled by the dedicated video comparators; everything else in the
 # dump is WRAM game data, compared byte-for-byte by compare_wram().
@@ -114,6 +115,9 @@ _NONBATTLE_WRAM_SKIP = {
 # compare ONLY the WRAM regions; the three video comparators are skipped with the
 # class-level justification below (reported like a mask, so the skip is visible
 # in every run's output, never silent).
+# Class "semantic" also skips the video comparators, then validates its named
+# evidence region with scenario-specific rules instead of byte equality. It is
+# for outputs such as damage whose legal value depends on an independent RNG.
 DATASTRUCT_CLASS_WHY = (
     "datastruct class: the dump point is a post-flow WRAM gate — the screen holds a "
     "transient message/menu frame whose exact tilemap/vram/oam state is timing-coupled "
@@ -724,6 +728,13 @@ SCENARIOS = {
                            "four stat words."),
             ],
         }),
+    },
+    "battle_damage": {
+        # The two emulators intentionally do not share an RNG stream. Their
+        # damage bytes therefore need not be equal; validate each record
+        # independently against the complete legal Gen-1 roll set instead.
+        "class": "semantic",
+        "flags": "DEBUG_BATTLE_DAMAGE=1",
     },
     # --- Stage 3: full-screen takeover menus. Both port screens draw W_TILEMAP
     # as a GB-shaped STRIDE-20 scratch (options.asm GBSCR_W / start_sub_menus.asm
@@ -1477,6 +1488,88 @@ def compare_wram(golden, port, cfg, max_report):
     return failures, masked_hits
 
 
+def gen1_damage_rolls(record, effectiveness):
+    """Return every legal RandomizeDamage result for one 15-byte oracle record."""
+    crit, _damage, _move, power, move_type, _attacker, level, attack, type1, type2, \
+        _defender, stat_high, defense, _def_type1, _def_type2 = record
+    if stat_high:
+        raise ValueError(f"attack/defense high-byte guard is {stat_high:#04x}, expected zero")
+    if not power or not attack or not defense:
+        raise ValueError("power, attack and defense must all be nonzero")
+    effective_level = ((level * 2) & 0xff) if crit else level
+    damage = (((effective_level * 2) // 5 + 2) * power * attack) // defense
+    damage = damage // 50 + 2
+    if move_type in (type1, type2):
+        damage += damage // 2
+    damage = damage * effectiveness // 10
+    if damage < 2:
+        return {damage}
+    return {damage * factor // 255 for factor in range(217, 256)}
+
+
+def validate_damage_oracle(golden_regions, port_regions):
+    """Validate independent emulator rolls against the canonical Gen-1 formula."""
+    lines = []
+    if "damageOracle" not in golden_regions or "damageOracle" not in port_regions:
+        return ["damageOracle region is missing on one or both sides"]
+    golden = golden_regions["damageOracle"]["data"]
+    port = port_regions["damageOracle"]["data"]
+    if len(golden) != 2 * DAMAGE_ORACLE_RECORD_SIZE or len(port) != len(golden):
+        return [f"damageOracle must be 30 bytes on both sides (golden={len(golden)}, "
+                f"port={len(port)})"]
+
+    expected = (
+        ("player", 0, 0x54, 40, 0x17, 0x54, 5, 11, 0x17, 0x17,
+         0x24, 15, 0x00, 0x02, 20),
+        ("enemy", 1, 0xA3, 70, 0x00, 0x24, 13, 19, 0x00, 0x02,
+         0x54, 8, 0x17, 0x17, 10),
+    )
+    for index, spec in enumerate(expected):
+        name, crit, move, power, move_type, attacker, level, attack, type1, type2, \
+            defender, defense, def_type1, def_type2, effectiveness = spec
+        lo = index * DAMAGE_ORACLE_RECORD_SIZE
+        grecord = tuple(golden[lo:lo + DAMAGE_ORACLE_RECORD_SIZE])
+        precord = tuple(port[lo:lo + DAMAGE_ORACLE_RECORD_SIZE])
+        # Damage is independently sampled. Every other byte describes the
+        # actual inputs and must converge before semantic validation is useful.
+        gmeta = grecord[:1] + grecord[2:]
+        pmeta = precord[:1] + precord[2:]
+        if gmeta != pmeta:
+            lines.append(f"{name} inputs differ: golden={gmeta} port={pmeta}")
+            continue
+        checks = {
+            "crit": (grecord[0], crit), "move": (grecord[2], move),
+            "power": (grecord[3], power), "move type": (grecord[4], move_type),
+            "attacker": (grecord[5], attacker), "level": (grecord[6], level),
+            "attack": (grecord[7], attack),
+            "attacker type1": (grecord[8], type1),
+            "attacker type2": (grecord[9], type2),
+            "defender": (grecord[10], defender),
+            "stat high guard": (grecord[11], 0),
+            "defense": (grecord[12], defense),
+            "defender type1": (grecord[13], def_type1),
+            "defender type2": (grecord[14], def_type2),
+        }
+        wrong = [f"{field}={got:#04x}, expected {want:#04x}"
+                 for field, (got, want) in checks.items() if got != want]
+        if wrong:
+            lines.append(f"{name} record shape: " + "; ".join(wrong))
+            continue
+        try:
+            legal = gen1_damage_rolls(grecord, effectiveness)
+        except ValueError as exc:
+            lines.append(f"{name} record: {exc}")
+            continue
+        for side, record in (("golden", grecord), ("port", precord)):
+            if record[1] not in legal:
+                lines.append(f"{name} {side} damage {record[1]} is outside legal "
+                             f"rolls {min(legal)}..{max(legal)} ({sorted(legal)})")
+        if not any(line.startswith(name) for line in lines):
+            print(f"  {name}: golden={grecord[1]} port={precord[1]}, "
+                  f"legal={min(legal)}..{max(legal)}, inputs match")
+    return lines
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("scenario", choices=sorted(SCENARIOS))
@@ -1527,13 +1620,15 @@ def main():
     failures = 0
     masked_hits = []
 
-    if cfg.get("class") == "datastruct":
+    if cfg.get("class") in ("datastruct", "semantic"):
         # Class-level skip: the video comparators do not run at all. Reported
         # through the masked-divergence channel so the skip is loud in every run.
-        print("TILEMAP: SKIPPED (datastruct class)")
-        print("VRAM: SKIPPED (datastruct class)")
-        print("OAM: SKIPPED (datastruct class)")
-        masked_hits.append(f"tilemap/vram/oam (whole regions): {DATASTRUCT_CLASS_WHY}")
+        scenario_class = cfg["class"]
+        print(f"TILEMAP: SKIPPED ({scenario_class} class)")
+        print(f"VRAM: SKIPPED ({scenario_class} class)")
+        print(f"OAM: SKIPPED ({scenario_class} class)")
+        if scenario_class == "datastruct":
+            masked_hits.append(f"tilemap/vram/oam (whole regions): {DATASTRUCT_CLASS_WHY}")
     else:
         # --- tilemap: 20x18 subwindow at (col,row), minus projected UI rects ---
         col0, row0 = cfg["window"]
@@ -1641,11 +1736,21 @@ def main():
         else:
             print("OAM: OK (40 entries)")
 
-    # --- wram: every non-video region, field-aware ---
-    wram_failures, wram_masked = compare_wram(
-        golden_regions, port_regions, cfg, args.max_report)
-    failures += wram_failures
-    masked_hits.extend(wram_masked)
+    # --- wram: byte comparison, or scenario-specific semantic evidence ---
+    if cfg.get("class") == "semantic":
+        oracle_lines = validate_damage_oracle(golden_regions, port_regions)
+        if oracle_lines:
+            failures += len(oracle_lines)
+            print(f"DAMAGE ORACLE: {len(oracle_lines)} failure(s):")
+            for line in oracle_lines:
+                print(f"  {line}")
+        else:
+            print("DAMAGE ORACLE: OK (independent rolls satisfy Gen-1 arithmetic)")
+    else:
+        wram_failures, wram_masked = compare_wram(
+            golden_regions, port_regions, cfg, args.max_report)
+        failures += wram_failures
+        masked_hits.extend(wram_masked)
 
     if masked_hits:
         print(f"masked (justified) divergences hit: {len(masked_hits)}")

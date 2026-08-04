@@ -478,6 +478,38 @@
       "verification": "synthetic-port-gate plus real-navigation golden; state verification, not UI verification. The other half of battle_faint's coverage: battle_faint kills the ENEMY, this one kills the PLAYER, so RemoveFaintedPlayerMon and HandlePlayerBlackOut execute for the first time. Building it found a real defect: ReadPlayerMonCurHPAndStatus was a no-op, so the fainted mon's 0 HP never reached the party and the battle looped faint->resend forever"
     },
     {
+      "name": "battle_damage",
+      "id": 43,
+      "tier": "full",
+      "scenario_class": "semantic",
+      "build_flags": "DEBUG_BATTLE_DAMAGE=1",
+      "port_entry_gate": "DEBUG_BATTLE_DAMAGE",
+      "navigation_script": "tools/mgba_harness/scenarios/battle_damage.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "RunBattleTest",
+        "GetDamageVarsForPlayerAttack",
+        "GetDamageVarsForEnemyAttack",
+        "CalculateDamage",
+        "AdjustDamageForMoveType",
+        "RandomizeDamage"
+      ],
+      "comparison": {
+        "regions": [
+          "damageOracle"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "semantic numerical oracle: a non-critical Pikachu THUNDERSHOCK and a critical PIDGEY SLASH are non-lethal; each emulator's independently sampled result must match the canonical Gen-1 base, STAB, type-effectiveness and 217..255 random-factor arithmetic"
+    },
+    {
       "name": "options_menu",
       "id": 8,
       "tier": "core",
