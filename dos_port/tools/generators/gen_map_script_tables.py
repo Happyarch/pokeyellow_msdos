@@ -84,6 +84,59 @@ WIRED_MAPS = {
                                   # sight tile at y=55: the view-pointer formula's
                                   # (width + 6) * (y >> 1) term at a magnitude the
                                   # other six never reach (their y is 3..16)
+    # Batch 3 (overworld-events Stage 5a) — the seven OUTDOOR maps of the
+    # ten-map standard-shape remainder. The three interiors (CERULEAN_CAVE_B1F,
+    # POWER_PLANT, VIRIDIAN_FOREST) are deliberately NOT here: they share the
+    # single indoor .blk slot, and the first two additionally owe the
+    # truncated-tail retirement decision. Batch 2 had already covered every
+    # FACING, so these were chosen for the TABLE WALK, the RANGE BOUNDARY and
+    # the view-pointer MAGNITUDE instead — the three things a facing cannot test:
+    "ROUTE_13": "route13_sight",  # header 9 — the LAST entry of a 10-header
+                                  # table, so the scan must reach offset
+                                  # 9 * TH_SIZE (198) and stop at the db -1
+                                  # terminator. Every earlier golden engages a
+                                  # header at index 0..4
+    "ROUTE_14": "route14_sight",  # the only tile in the batch where the scan
+                                  # reaches a RANGE rejection: header 5 shares
+                                  # the player's column and faces them, and is
+                                  # thrown out on distance alone (19 vs view 4)
+                                  # two entries before the real match at header
+                                  # 7. Everywhere else every pre-match rejection
+                                  # is a lined-up rejection, so a port ignoring
+                                  # range still engages the right trainer
+    "ROUTE_15": "route15_sight",  # BOUNDARY: the player sits at exactly the
+                                  # view range (3 tiles from a view-3 trainer),
+                                  # not the 2 tiles every other gate uses.
+                                  # CheckSpriteCanSeePlayer is cp b / jr nc, so
+                                  # distance == range MUST engage; a port using
+                                  # a strict > would pass all seven older gates
+                                  # and fail only this one
+    # ROUTE_17 IS DELIBERATELY ABSENT — do not "finish the set" by adding it.
+    # It was wired, its golden was generated, and goldencheck FAILED with two
+    # divergences (wYCoord and wTrainerScreenY, each exactly one tile). Cause,
+    # measured rather than guessed: pret's ForceBikeDown (home/overworld.asm,
+    # called unconditionally from JoypadOverworld) simulates a DOWN press every
+    # frame on ROUTE_17 while no trainer battle is flagged and no button is
+    # held — no bike required, despite the name. Ground truth therefore takes a
+    # forced southward step before engaging; the port does not, because
+    # ForceBikeDown is `missing` in the label DB (tools/label_status
+    # ForceBikeDown). ROUTE_17 is the ONLY map the routine applies to, so this
+    # wire is the only thing that could ever have surfaced it. The sight logic
+    # itself was fine: the port engaged the right trainer with the right class,
+    # roster and engage distance. Re-wire once ForceBikeDown is ported, using
+    # the recorded sight tile (y=120, x=10, ROUTE17_BIKER10, header 9).
+    "ROUTE_18": "route18_sight",  # the SHORTEST header table (3 entries), last
+                                  # header. With ROUTE_13's last-of-10 this
+                                  # brackets the table walk at both extremes
+    "ROUTE_19": "route19_sight",  # breadth, plus a sight tile near the RIGHT
+                                  # map edge (x=11 of a 10-block/20-tile width);
+                                  # route6 covers the left edge at x=2
+    "ROUTE_21": "route21_sight",  # the weakest of the seven, deliberately
+                                  # recorded as such: breadth ("no scenario, no
+                                  # wire") plus magnitude (y=71 -> a 560 view
+                                  # -pointer term). Its leading view-range-0
+                                  # headers repeat route6's branch rather than
+                                  # adding one
 }
 
 
