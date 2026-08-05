@@ -3610,22 +3610,86 @@ autokey_script:
     ; The golden side can watch the tilemap and react; AutoKeyDrive is
     ; frame-scheduled and cannot. So instead of a fixed press list timed to
     ; individual screens -- which cannot survive a battle whose length varies with
-    ; the damage rolls -- this emits a REPEATING B,B,A cadence for the whole run.
-    ; Two B presses clear whatever prompt is up (including the switch question),
-    ; then one A makes the selection the battle menu is sitting on (FIGHT, then
-    ; the move). The cycle repeats often enough that a turn always makes progress
-    ; and a stray press lands somewhere harmless.
+    ; the damage rolls -- this emits a REPEATING B,A,A cadence for the whole run.
+    ; One B clears whatever prompt is up (including the switch question), then TWO
+    ; A presses make the two selections a turn actually costs.
+    ;
+    ; *** THE CADENCE WAS B,B,A AND IT DEADLOCKED. Do not "simplify" it back. ***
+    ; MEASURED 2026-08-05 (FRAME.BIN at AUTOKEY_DUMP_FRAME=15000): the port sat in
+    ; the MOVE menu with 0 EXP gained, 0 PP spent and wIsInBattle still $02 at the
+    ; dump. Reaching a move costs TWO A presses -- A on the battle menu opens the
+    ; move menu, A on the move menu commits -- but B,B,A supplies only one per
+    ; 90-frame cycle. The A opened the move menu and the NEXT cycle's B cancelled
+    ; it 30 frames later, forever: the battle never took a turn. The old comment
+    ; here asserted one A made "the selection the battle menu is sitting on (FIGHT,
+    ; then the move)", which silently treats two menu levels as one.
+    ; The cycle repeats often enough that a turn always makes progress and a stray
+    ; press lands somewhere harmless.
     ;
     ; 90-frame cycle from frame 240; AK_ROUTE_CYCLES covers the whole battle with
     ; margin (the mGBA reference run finished its battle by frame ~12000).
-%ifndef AK_ROUTE_CYCLES
-%define AK_ROUTE_CYCLES 200
+    ; *** THE PORT MUST SELECT THE SAME MOVE THE GOLDEN DOES. ***
+    ; MEASURED 2026-08-05: the golden's Lua picks FIGHT then STRENGTH BY NAME
+    ; (trainer_battle_route.lua: navigate.choose(STRENGTH)); a frame-scheduled
+    ; autokey cannot read the tilemap, so plain A took the move menu's default,
+    ; slot 0 = FLY. FLY is a two-turn charge move ("SNORLAX FLEW UP HIGH!" in the
+    ; frame-15000 capture), so the battle crawled -- and because PP is part of the
+    ; compared surface, port PP1 vs golden PP4 could never agree anyway.
+    ; STRENGTH is move index 3 in the debug party (the same contract scenarios
+    ; 45/46 encode by seeding wPlayerMoveListIndex = 3).
+    ;
+    ; PHASE 1 (below) adds DOWN,DOWN,DOWN before the committing A, which walks the
+    ; move cursor to slot 3. Two facts make that robust rather than fragile:
+    ;   * the cursor PERSISTS across turns -- MoveSelectionMenu seeds
+    ;     wCurrentMenuItem from wPlayerMoveListIndex + 1 -- so once turn 1 commits
+    ;     STRENGTH, every later move menu already opens on it; and
+    ;   * the move menu does NOT wrap (HandleMenuInput clears wMenuWrappingEnabled
+    ;     on every exit, src/home/window.asm; only the party menu sets it), so DOWN
+    ;     at the last item is a no-op and DOWN x3 is IDEMPOTENT.
+    ; InitBattle resets wPlayerMoveListIndex to 0 (init_battle.asm), which is why
+    ; the index cannot simply be seeded at scenario setup the way 45/46 seed it.
+    ;
+    ; PHASE 2 drops the D-pad entirely. This is deliberate and load-bearing: after
+    ; the battle the player is back on the overworld, where a DOWN press WALKS HIM,
+    ; and wPlayerMapPos is a compared field. Phase 1 is bounded to the early frames
+    ; that contain turn 1; phase 2 carries the rest of the battle on B,A,A.
+    ; *** KEEP PHASE 1 SHORT. A D-PAD PRESS AFTER THE BATTLE RE-SEEDS THE RUN. ***
+    ; MEASURED 2026-08-05: with phase 1 running to frame 4560, the frame-15000 dump
+    ; came back with EXP at its seeded 640000, PP back at full, HP full and
+    ; wRoute3Event cleared -- which reads like a lost battle and is not one. Once
+    ; the battle ends the player is back on the overworld, the leftover DOWN presses
+    ; WALK him, and a map transition re-enters EnterMap -> RunTrainerRouteTestSeed,
+    ; which re-seeds the party and clears the very flags the scenario is there to
+    ; prove. The battle itself was fine: the frame-900 capture shows
+    ; "SNORLAX USED STRENGTH!".
+    ; So phase 1 covers turn 1 ONLY. The cursor persists from there (see above), so
+    ; nothing later needs the D-pad.
+%ifndef AK_ROUTE_DOWN_CYCLES
+%define AK_ROUTE_DOWN_CYCLES 6
 %endif
+%ifndef AK_ROUTE_CYCLES
+%define AK_ROUTE_CYCLES 180
+%endif
+    ; Phase 1: 180-frame cycles from 240 -> 240 + 6*180 = 1320. Turn 1's move menu
+    ; is reached well inside this (STRENGTH was committed by frame 900, cycle 3).
+%define AK_ROUTE_P2 (240 + AK_ROUTE_DOWN_CYCLES * 180)
+%assign ak_i 0
+%rep AK_ROUTE_DOWN_CYCLES
+    dd 240 + AK_ROUTE_SHIFT + ak_i * 180,     248 + AK_ROUTE_SHIFT + ak_i * 180, PAD_B
+    dd 270 + AK_ROUTE_SHIFT + ak_i * 180,     278 + AK_ROUTE_SHIFT + ak_i * 180, PAD_A
+    dd 300 + AK_ROUTE_SHIFT + ak_i * 180,     308 + AK_ROUTE_SHIFT + ak_i * 180, PAD_DOWN
+    dd 330 + AK_ROUTE_SHIFT + ak_i * 180,     338 + AK_ROUTE_SHIFT + ak_i * 180, PAD_DOWN
+    dd 360 + AK_ROUTE_SHIFT + ak_i * 180,     368 + AK_ROUTE_SHIFT + ak_i * 180, PAD_DOWN
+    dd 390 + AK_ROUTE_SHIFT + ak_i * 180,     398 + AK_ROUTE_SHIFT + ak_i * 180, PAD_A
+%assign ak_i ak_i + 1
+%endrep
+    ; Phase 2: 90-frame B,A,A cycles from AK_ROUTE_P2 (1320) -> 1320 + 180*90 = 17520.
+    ; No D-pad here, deliberately -- see the re-seed note above.
 %assign ak_i 0
 %rep AK_ROUTE_CYCLES
-    dd 240 + AK_ROUTE_SHIFT + ak_i * 90,      248 + AK_ROUTE_SHIFT + ak_i * 90, PAD_B
-    dd 270 + AK_ROUTE_SHIFT + ak_i * 90,      278 + AK_ROUTE_SHIFT + ak_i * 90, PAD_B
-    dd 300 + AK_ROUTE_SHIFT + ak_i * 90,      308 + AK_ROUTE_SHIFT + ak_i * 90, PAD_A
+    dd AK_ROUTE_P2 +  0 + AK_ROUTE_SHIFT + ak_i * 90, AK_ROUTE_P2 +  8 + AK_ROUTE_SHIFT + ak_i * 90, PAD_B
+    dd AK_ROUTE_P2 + 30 + AK_ROUTE_SHIFT + ak_i * 90, AK_ROUTE_P2 + 38 + AK_ROUTE_SHIFT + ak_i * 90, PAD_A
+    dd AK_ROUTE_P2 + 60 + AK_ROUTE_SHIFT + ak_i * 90, AK_ROUTE_P2 + 68 + AK_ROUTE_SHIFT + ak_i * 90, PAD_A
 %assign ak_i ak_i + 1
 %endrep
     dd   -1,   -1, 0

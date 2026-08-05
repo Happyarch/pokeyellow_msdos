@@ -1655,6 +1655,9 @@ def main():
     ap.add_argument("--seed-save", action="store_true",
                     help="print this scenario's seed .sav fixture path (empty if it "
                          "declares none) and exit; goldencheck.sh stages it as POKEMON.DSV")
+    ap.add_argument("--timeout", action="store_true",
+                    help="print this scenario's headless-run timeout in seconds "
+                         "(manifest dump.timeout_seconds, default 150) and exit")
     ap.add_argument("--max-report", type=int, default=40, help="max mismatch lines per region")
     args = ap.parse_args()
 
@@ -1664,6 +1667,20 @@ def main():
         return
     if args.seed_save:
         print(cfg.get("seed_save", ""))
+        return
+    if args.timeout:
+        # Every manifest entry declares dump.timeout_seconds, and until now nothing
+        # read it — goldencheck.sh hardcoded 150. That silently caps how long a
+        # scenario may run, and a scenario that needs longer fails as
+        # "no GBSTATE.BIN in image — run crashed before the dump?" with no crash,
+        # which is a genuinely misleading diagnosis. trainer_battle_route is the
+        # first scenario to exceed it (a live 3-mon trainer battle driven through
+        # the real overworld loop). Read the declared value; keep 150 as the
+        # default so no existing scenario changes behaviour.
+        entry = {item["name"]: item for item in
+                 json.loads(SCENARIO_MANIFEST.read_text(encoding="utf-8"))["scenarios"]
+                 }.get(args.scenario, {})
+        print(int(entry.get("dump", {}).get("timeout_seconds", 150)))
         return
 
     if not args.gbstate:

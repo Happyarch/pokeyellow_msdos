@@ -40,8 +40,16 @@ done
 sed "s|^imgmount c PKMN.IMG|imgmount c $SCRATCH/pkmn.img|; s|^PKMN.EXE\$|PKMN.EXE\nexit|" \
     dosbox-x.conf >"$SCRATCH/run.conf"
 
-echo "== run_headless: headless DOSBox-X run" >&2
-SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy timeout -s KILL 150 \
+# Headless-run budget. This has no scenario contract to read a timeout from (that
+# is goldencheck.sh's job, via golden_diff.py --timeout), so it takes an env
+# override instead. Default stays 150 so no existing probe changes behaviour.
+# A probe that needs longer — a whole trainer battle at AUTOKEY_DUMP_FRAME=15000
+# is ~600s — otherwise dies with its dumps missing, which reads as a crash and is
+# not one. Same trap goldencheck.sh carried; see goldencheck-timeout-looks-like-a-crash.
+RUN_TIMEOUT="${RUN_TIMEOUT:-150}"
+
+echo "== run_headless: headless DOSBox-X run (timeout ${RUN_TIMEOUT}s)" >&2
+SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy timeout -s KILL "$RUN_TIMEOUT" \
     dosbox-x -defaultdir "$HERE" -defaultconf -conf "$SCRATCH/run.conf" \
     >"$SCRATCH/dosbox.log" 2>&1 || true
 

@@ -64,6 +64,7 @@ extern BankswitchCommon                 ; home/bankswitch2.asm (no-op flat)
 extern w_map_text_table_ptr             ; map_sprites.asm — flat ptr to current map TextTable
 extern w_predef_text_table_ptr           ; home/predef_text.asm — port-only flat ptr to TextPredefs
 extern wMapSpriteData                   ; map_sprites.asm — flat [movbyte2,textid] per slot
+extern TrainerTalkHook                  ; src/scripts/trainer_map_script.asm — TEXT_ENTRY_TRAINER_TALK
 extern DisplayStartMenu
 extern TalkToPikachu                    ; callfar (engine/pikachu)
 extern PrintSafariGameOverText          ; callfar (engine/safari)
@@ -207,8 +208,31 @@ DisplayTextID:
     jmp AfterDisplayingTextID
 .gotTextPtr:
     cmp ebx, 0xFFFFFFFF
-    jne .readFirstByte
+    jne .notScriptEntry
     call esi                             ; text_asm routine owns its own text stream
+    jmp AfterDisplayingTextID
+.notScriptEntry:
+    ; 0xFFFFFFFE TRAINER TALK — the pointer is a TRAINER HEADER, not a stream and
+    ; not a routine. CheckNPCInteraction's dispatch
+    ; (src/engine/overworld/map_sprites.asm) has always handled this discriminator;
+    ; DisplayTextID tested ONLY 0xFFFFFFFF and fell through to .readFirstByte, so a
+    ; trainer row printed the HEADER BYTES as a text stream.
+    ;
+    ; MEASURED 2026-08-05, and it is the root cause of BOTH open symptoms: the
+    ; garbage pre-battle/NPC text, and the TextBoxBorder page fault filed as
+    ; regression-battle-live-trainer-entry-exits. Route3TrainerHeader2 begins
+    ; `db 0x04, 0x20` + `dd 0xD7C2` = bytes 04 20 C2 D7 00. Walked as text, 0x04 IS
+    ; TX_BOX, whose operands then read addr_lo=$20, addr_hi=$C2 -> ESI=$C220 and
+    ; height=$D7, width=$00 -> EBX=$D700 — byte for byte the registers in that
+    ; fault report. This is the caller the bug-class memory said to find; the
+    ; TextBoxBorder counter-width fix bounded the blast radius but could not, and
+    ; must not, be read as fixing this.
+    ;
+    ; This is the trainer path DisplayEnemyTrainerTextAndStartBattle takes:
+    ; it calls DisplayTextID with the trainer's sprite index.
+    cmp ebx, 0xFFFFFFFE
+    jne .readFirstByte
+    call TrainerTalkHook                 ; ESI = flat trainer-header ptr (pret: ld hl)
     jmp AfterDisplayingTextID
 .readFirstByte:
     ; ld a,[hl] — a = first byte of text.

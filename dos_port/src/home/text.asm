@@ -268,6 +268,23 @@ TextBoxBorder:
     jmp .assert_bad_stride
 .assert_stride_done:
 %endif
+%ifdef DEBUG_ASSERT_BOXDIMS
+    ; DIAGNOSTIC (not a fix): catch a DEGENERATE box before it draws. A zero width
+    ; or height is bounded now (the 8-bit counters below wrap at 256, as on the GB)
+    ; but it still SPLATTERS 256 bytes of whatever sits after the box origin, which
+    ; presents as unrelated corruption elsewhere — garbled names, stale sprites, a
+    ; flag that will not stick. Build with -D DEBUG_ASSERT_BOXDIMS to find the
+    ; caller: this parks in a tight loop with ESI = box origin and EBX = the dims,
+    ; so a break here names the culprit instead of guessing from the damage.
+    test bl, bl
+    jz .assert_bad_dims
+    test bh, bh
+    jnz .assert_dims_ok
+.assert_bad_dims:
+    int3
+    jmp .assert_bad_dims
+.assert_dims_ok:
+%endif
     push esi
     push ebx
 
@@ -290,7 +307,10 @@ TextBoxBorder:
     pop eax
     mov byte [edi + ecx + 1], BOX_V
     add edi, [text_row_stride]
-    dec edx
+    ; 8-BIT counter, deliberately: pret is `dec b / jr nz` on the 8-bit B, so an
+    ; entry height of 0 draws 256 rows and STOPS. `dec edx` would run ~4 billion
+    ; times and walk off the allocation. See the "Preserve Counter WIDTH" rule.
+    dec dl
     jnz .mid
 
     ; bottom row: box_bl + box_h*width + box_br
@@ -317,7 +337,14 @@ TextBoxBorder:
 .fc_loop:
     mov [edi], al
     inc edi
-    dec ecx
+    ; 8-BIT counter, deliberately — this is the pret bound, not a defensive guard.
+    ; pret's .PlaceChars is `ld d, c / dec d / jr nz`: D is 8 bits, so an entry
+    ; width of 0 places 256 chars and STOPS. The bound lives in the register
+    ; WIDTH, so it has no instruction to translate and was silently dropped when
+    ; this was `dec ecx` — that ran ~4 billion times and page-faulted off the end
+    ; of the DPMI allocation. A `test ecx,ecx / jz` guard would NOT be equivalent:
+    ; it writes 0 chars where the GB writes 256. CL wraps exactly as D does.
+    dec cl
     jnz .fc_loop
     pop edi
     pop ecx
