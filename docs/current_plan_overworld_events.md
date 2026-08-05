@@ -885,17 +885,25 @@ silently drift; regenerate rather than trusting it:
       than designing a new one. Four constraints, all supplied by
       battle-completion from their own measurements:
       1. **TWO WRITERS ON THE JOYPAD STATE, every frame, on this one map.**
-         `AUTOKEY_TRAINER_ROUTE` emits a repeating B,B,A cadence every 90 frames
-         from frame 240, and `AutoKeyDrive` overrides `hJoyHeld`/`hJoyPressed`
+         `AUTOKEY_TRAINER_ROUTE` emits a repeating press cadence, and
+         `AutoKeyDrive` overrides `hJoyHeld`/`hJoyPressed`
          each frame from `vblank.asm`, right after `joypad_update`.
          `ForceBikeDown` writes `PAD_DOWN` to `hJoyHeld` inside the
          `JoypadOverworld` seam. Whichever writes last wins, which is a property
          of the frame pipeline rather than of either feature's intent.
+         **CADENCE UPDATED 2026-08-05 (`fefdf0ab`) — re-derive, don't reuse this
+         bullet's old analysis.** The cadence this bullet was written against
+         (B,B,A / then B,A,A every 90 frames) is retired; it is now ONE
+         120-frame cycle of A, DOWN×3, A with **no B at all**, and the D-pad
+         presses are STATE-GATED inside `AutoKeyDrive` (stripped unless
+         `wIsInBattle == 2` and the move menu's cursor coords are live) — so on
+         the OVERWORLD only the A presses ever reach `hJoyHeld`. That changes
+         the interaction surface: `ForceBikeDown`'s "no D-pad, A or B held"
+         guard now contends with A alone on covered frames.
          **They probably GATE each other rather than merely racing — but this is
          REASONED, NOT MEASURED, and must not be designed to as fact.**
-         `ForceBikeDown`'s third guard is "no D-pad, A or B held", and the AUTOKEY
-         cadence presses exactly B and A, so on the frames the cadence covers its
-         presses would SUPPRESS `ForceBikeDown` outright, and on the frames
+         On the frames the cadence covers, its presses would SUPPRESS
+         `ForceBikeDown` outright, and on the frames
          between it would fire — making the behaviour a function of CADENCE
          PHASE, a materially harder problem than a write-ordering race.
          **Provenance, because it matters here:** battle-completion derived this
@@ -1045,7 +1053,9 @@ plan's temporary post-battle-state-leak DEVIATION.
       the gate works.** They drive `RunMapScript` directly, not `OverworldLoop`,
       which is exactly why they are insensitive to the gate. They are a necessary
       regression floor for the retirement, not sufficient proof of it; the witness is
-      battle-completion's continuous scenario.
+      battle-completion's continuous scenario — **which exists and is GREEN as of
+      2026-08-05: `trainer_battle_route` (id 51), registered on master
+      (`ee5ba354`), drives the real `OverworldLoop` end to end on ROUTE_3.**
 
 ### Stage 5b — story legs (bespoke scripts)
 
@@ -1054,7 +1064,9 @@ plan's temporary post-battle-state-leak DEVIATION.
 - [ ] **Forest/Pewter:** Viridian Forest, Pewter City/Gym, Route 2, gates, and
       museum/gym scripted movement. Requires trainer battles to be live without
       `TRAINER_BATTLE_LIVE` and to set beaten flags only after victory
-      (battle-completion Stage 1).
+      (battle-completion Stage 1). **Prerequisite MET 2026-08-05:** live trainer
+      battles set the beaten flag on the real loop path, gated by scenario 51
+      (`trainer_battle_route`, `fefdf0ab` + `ee5ba354`).
 - [ ] **Mt. Moon/Cerulean:** Mt. Moon, Cerulean, Nugget Bridge, and Bill.
 - [ ] Continue in story order through Vermilion/S.S. Anne, Rock
       Tunnel/Lavender, Celadon, Fuchsia/Safari, Saffron/Silph, Cinnabar,

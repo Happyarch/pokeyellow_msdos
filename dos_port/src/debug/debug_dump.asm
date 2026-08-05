@@ -3616,6 +3616,14 @@ autokey_script:
 %elifdef AUTOKEY_TRAINER_ROUTE
     ; Continuous trainer route (DEBUG_TRAINER_ROUTE, battle plan Stage 1b).
     ;
+    ; *** READ ORDER (2026-08-05): the prose between here and the "CADENCE
+    ; REDESIGN" banner below documents the RETIRED two-phase designs (B,B,A;
+    ; B,A,A + bounded DOWN phase) and their measured deadlocks. It is kept as
+    ; the record of WHY the current design is shaped the way it is — its
+    ; directives (e.g. "KEEP PHASE 1 SHORT") no longer apply. The CURRENT
+    ; cadence and its rules live at the banner; the D-pad state gate lives at
+    ; AutoKeyDrive.apply. ***
+    ;
     ; This script does NOT drive the encounter — the map script does, on its own,
     ; from the first frame, because the player spawns inside the youngster's line
     ; of sight. All this script does is ANSWER: the pre-battle text, the battle

@@ -402,6 +402,16 @@ exists, delete `npc_beaten_flags` and route `map_sprites.asm`'s
 `ls dos_port/tools/generators/` shows no trainer-header generator. Tier-1 data
 work touching map scripts.
 
+**CORRECTION 2026-08-05: the generator premise is stale.**
+`tools/generators/gen_trainer_headers.py` EXISTS and emits the linked
+trainer-header tables (it is what the whole map-script sight family and
+scenario 51 run on). What remains of this item is only its TAIL — the
+`npc_beaten_flags` → `TrainerFlagAction` convergence (`npc_beaten_flags` is
+still written in `map_sprites.asm:225`), which is OWNED by
+`docs/current_plan_overworld_events.md` Stage 5a (arbitration 2026-08-04,
+threads 19/20) and shrinks per wired map. Keep the item for the tail; do not
+re-cite the "no generator" premise.
+
 ### 28. Stale in-code prose found during the 2026-08-02 re-measurement
 All found by reading files in full rather than grep windows — which is the point:
 none of these is visible in a match window.

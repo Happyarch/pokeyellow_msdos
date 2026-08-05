@@ -23,6 +23,35 @@ if it took none. This is the swarm's divergence audit trail.
 
 ---
 
+## Battle Stage 1b close — EnemySendOutFirstMon send-out tail restored; scenario 51 green
+
+- Date: 2026-08-05 (`fefdf0ab` fixes, `ee5ba354` registration)
+- Source: `engine/battle/core.asm` (`EnemySendOutFirstMon` `.next4` tail).
+- Translated: `dos_port/src/engine/battle/core.asm`.
+- H-flag: not involved.
+- Bug tags: none.
+- Divergences: `AnimateSendingOutMon` + `PlayCry` stay ANIMATION=OFF;
+  pret's `GetMonHeader` + `LoadMonFrontSprite` + `CopyUncompressedPicToHL`
+  chain is realized as the port's `LoadFrontSpriteByMonIndex` fold (the same
+  sanctioned flat-model projection the battle intro's `.enemyFrontReady`
+  uses); `PrintText` is the battle variant `PrintBattleText`. The switch
+  prompt (`TrainerAboutToUseText` / `DisplayPartyMenu` path) remains deferred
+  (`wCurrentMenuItem` forced to 1, as before).
+- Notes: the previous `.next4` elided pret's ENTIRE tail under one
+  ANIMATION=OFF comment, which shipped two live defects: the enemy front pic
+  never changed on send-out (Weedle wore Caterpie's sprite) and the missing
+  `ClearScreenArea(0,0,4,11)` left the longer previous name's tail glyphs
+  under the shorter new one ("WEEDLEIE" — read as corrupted names; the nick
+  buffers were byte-clean throughout). Lesson: an ANIMATION=OFF elision must
+  be scoped to the ANIMATION calls, not the whole pret block they sit in.
+  The trainer-beaten-flag "bug" fixed the same day was pure harness
+  (DEBUG_TRAINER_ROUTE's two EnterMap seed hooks re-running post-battle) —
+  no game-side translation change was needed for it. Runtime evidence:
+  `trainer_battle_route` (id 51) PASS + registered; 44/45/46 re-run PASS;
+  `make fidelity` 16/16.
+
+---
+
 ## Battle Stage 1b/1c — trainer terminal result and overworld return
 
 - Date: 2026-08-04
