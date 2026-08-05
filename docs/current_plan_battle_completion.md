@@ -377,11 +377,23 @@ result gates deliberately stop after initialization and drive one terminal turn.
       and `--strict-claims` both still 0.
 
       **Deliberately still NOT ticked — exactly what remains.**
-      1. No continuous overworld→battle→return scenario exists yet. 44/45/46
-         remain synthetic gates that stop after initialization or after one
-         deterministic turn, so the live presentation/turn-loop/return
-         choreography is still unproven. That scenario is what should carry the
-         eventual tick.
+      1. ~~No continuous overworld→battle→return scenario exists yet.~~
+         **UPDATED 2026-08-05: it EXISTS but does NOT PASS, and is deliberately
+         NOT registered.** `trainer_battle_route` (id 51) is built — mGBA golden
+         green, port harness driving the real `OverworldLoop` — and its
+         registration (manifest row, `golden_diff` entry, `.lua`, both goldens)
+         is parked on branch **`battle-work`, commit `388f3c82`**, off master on
+         purpose: registering a red scenario is the false-coverage state the
+         manifest exists to prevent. The port side now runs end to end with no
+         page fault and earns real EXP/stat-exp, but at the dump frame it is
+         still mid-battle and the trainer-beaten flag never sticks. It remains
+         what should carry the eventual tick. 44/45/46 are unchanged and remain
+         synthetic gates that stop after initialization or one deterministic
+         turn — and note they prove victory flagging on the ORACLE path only,
+         never the live one (they never run `OverworldLoop`).
+         Live state, blockers and every measured trap:
+         memory `battle-stage1b-continuous-scenario`; the flag defect:
+         `regression-battle-trainer-post-battle-and-hud`.
       2. `npc_beaten_flags` → `TrainerFlagAction` convergence is OWNED BY
          `docs/current_plan_overworld_events.md` (agreed by mail 2026-08-04, both
          roots) — not this plan's to close, and it is what retires the new
