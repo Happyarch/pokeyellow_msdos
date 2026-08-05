@@ -75,13 +75,25 @@ boundary one. Unlike a flag bug, there is no misplaced `inc` to spot in the diff
 The failure is also **displaced**: it surfaces as a page fault whose faulting
 routine is the loop, while the actual defect is a *caller* passing a zero count.
 
-**The rule.** When translating a pret loop whose counter comes from an 8-bit
-register, ask explicitly: *can this count be 0 on entry?*
-- If yes — or if you cannot prove no — add a zero-guard (`test ecx,ecx / jz
-  .done`, or `jecxz`). A guard that reproduces the 8-bit wrap's boundedness is
-  **faithful**, not defensive padding.
+**The rule — keep the counter 8 bits wide.** When translating a pret loop whose
+counter comes from an 8-bit register, ask explicitly: *can this count be 0 on
+entry?*
+- If yes — or if you cannot prove no — **use the 8-bit register**: `dec cl` /
+  `dec dl`, not `dec ecx` / `dec edx`. That IS pret's bound, reproduced exactly,
+  and it needs no `DEVIATION` annotation because nothing diverges.
 - Record the answer in a comment when it is non-obvious, so the next reader does
   not have to re-derive it.
+
+**⚠ A ZERO-GUARD IS NOT EQUIVALENT — this page said it was, and it was wrong.**
+`test ecx,ecx / jz .done` writes **0** items where the GB writes **256**. That is
+a real behavioural divergence, and one you would then owe a `DEVIATION` for. The
+earlier advice here ("a guard that reproduces the 8-bit wrap's boundedness is
+faithful") conflated *bounded* with *faithful*: a guard is bounded but it is a
+different program. MEASURED on `TextBoxBorder` 2026-08-05 — pret's `.PlaceChars`
+is `ld d, c / dec d / jr nz`, so width 0 places 256 chars and stops. The fix that
+landed (`dd68f32d`) is `dec cl`, not a guard.
+Use a guard only where you have decided the GB's degenerate behaviour is itself
+undesirable — and then say so in a `DEVIATION`, because it is one.
 
 **The masking trap — do not skip this.** Adding a zero-guard to a loop whose
 caller passes a bad count converts a loud page fault into a *silently mis-drawn

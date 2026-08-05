@@ -64,7 +64,12 @@ CableClub_TextBoxBorder:
     call CableClub_DrawHorizontalLine
     mov byte [edi + ecx + 1], 0x77  ; border right vertical line tile
     add edi, [text_row_stride]
-    dec edx
+    ; 8-BIT counter: pret is `dec b / jr nz` (engine/link/cable_club.asm:965), so a
+    ; zero height draws 256 rows and STOPS. See the "Preserve Counter WIDTH" rule.
+    ; Not a live defect — every caller passes a literal (lb bc, 2, 12 / 2, 18) — but
+    ; the bound belongs in the code, not in the call sites. Same shape as
+    ; TextBoxBorder, which DID fault (dd68f32d).
+    dec dl
     jnz .loop
 
     ; bottom row: $7c + $76*width + $7d
@@ -89,7 +94,10 @@ CableClub_DrawHorizontalLine:
 .dl_loop:
     mov [edi], al
     inc edi
-    dec ecx
+    ; 8-BIT counter — pret's CableClub_DrawHorizontalLine counts in an 8-bit
+    ; register, so a zero width places 256 and stops rather than running ~4 billion
+    ; times off the end of the allocation. See "Preserve Counter WIDTH".
+    dec cl
     jnz .dl_loop
     pop edi
     pop ecx
