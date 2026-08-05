@@ -804,6 +804,44 @@ SCENARIOS = {
         }),
         "wram_masks": dict(_BATTLE_WRAM_MASKS),
     },
+    "trainer_battle_route": {
+        # The CONTINUOUS overworld -> battle -> return scenario (battle plan
+        # Stage 1b). Unlike 44/45/46, which call StartTrainerBattle and
+        # InitBattle from a harness, here the port's REAL OverworldLoop drives
+        # everything: map-script sight engagement, entry through the loop's own
+        # wCurOpponent poll, the live battle menus, and the .battleOccurred
+        # return that dispatches EndTrainerBattle.
+        #
+        # WHY NO DAMAGE/HP IN THE SURFACE (merge-session ruling, mail thread 25):
+        # the two emulators do not share an RNG stream, and a continuous run has
+        # no harness able to collapse enemy HP the way 45/46 do, so pinning
+        # damage would require RNG lockstep through live menu timing. Per-turn
+        # damage math is already covered by battle_faint and 45/46. What IS
+        # pinned, via the scenario-local regions both sides emit, is the
+        # choreography plus the two ZERO-RNG reward bytes (player money BCD and
+        # the lead mon's EXP) — those depend only on the defeated mons'
+        # species/level and the trainer class payout, so they cost nothing in
+        # determinism and they catch the "battle ran and returned but rewarded
+        # wrongly" case that pure choreography would wave through.
+        "class": "datastruct",
+        "flags": "DEBUG_TRAINER_ROUTE=1",
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP, **{
+            "wLoadedMon": "post-battle loader scratch: the two sides fight the "
+                          "roster over a different number of RNG-dependent turns, "
+                          "so the last-loaded mon differs; the persistent party "
+                          "state that matters is compared directly instead",
+        }),
+        "wram_masks": dict(_BATTLE_WRAM_MASKS, **{
+            "wPlayerMapPos": [
+                ((1, 2), "wCurrentTileBlockMapViewPointer: the port's MAP_BORDER is 7, "
+                         "not pret's 3 (include/gb_memmap.inc), so the post-battle "
+                         "EnterMap re-derives a different pointer into a "
+                         "differently-sized wOverworldMap — the same sanctioned "
+                         "divergence _MAP_SIGHT_COMMON masks. wCurMap and "
+                         "wYCoord/wXCoord on either side of it ARE compared."),
+            ],
+        }),
+    },
     "battle_damage": {
         # The two emulators intentionally do not share an RNG stream. Their
         # damage bytes therefore need not be equal; validate each record
