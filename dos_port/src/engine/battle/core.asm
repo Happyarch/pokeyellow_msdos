@@ -224,6 +224,8 @@ extern GainExperience                  ; experience.asm — EXP award + level-up
 ; --- pulled in with the session-8 consolidated bodies ---
 extern Moves                           ; src/data/pokemon_data.asm — flat move-record table
 extern GetMonHeader                    ; home/pokemon.asm — loads wMonHeader from wCurSpecies
+extern LoadFrontSpriteByMonIndex       ; home/pokemon.asm — decode front pic + place 7x7 at ESI
+extern TrainerSentOutText              ; assets/battle_text.inc (battle_menu.asm carries the blob)
 extern CalcStats                       ; home/move_mon.asm — EDX=dest, ESI=EV base, BH=useEVs
 extern GetMonName                      ; home/names.asm — wNamedObjectIndex -> wNameBuffer
 extern WriteMonMoves                   ; evos_moves.asm — level-up moveset (predef: wPredefDE)
@@ -4416,11 +4418,33 @@ EnemySendOutFirstMon:
     ; the party-menu path + SwitchPlayerMon. Treated as SET mode (no prompt).
 .next4:
     call ClearSprites
+    ; pret: hlcoord 0,0 / lb bc, 4, 11 / call ClearScreenArea — wipe the enemy
+    ; name/HUD corner before the redraw (the new mon's name can be shorter).
+    mov esi, BCOORD(0, 0)
+    mov bh, 4                                     ; height
+    mov bl, 11                                    ; width
+    call ClearScreenArea
     ; FIXED: pret is `ld b, SET_PAL_BATTLE / call RunPaletteCommand`; the port set B
     ; not at all and dispatched on junk. See faint_switch.asm. Ledger M-72.
     mov bh, SET_PAL_BATTLE                        ; ld b, SET_PAL_BATTLE
     call RunPaletteCommand
-    ; ANIMATION=OFF: TrainerSentOutText + LoadMonFrontSprite + AnimateSendingOutMon + PlayCry.
+    ; pret: GBPalNormal (palette fade path) — Phase-5 deferral, unchanged.
+    ; pret: ld hl, TrainerSentOutText / call PrintText
+    mov eax, TrainerSentOutText
+    call PrintBattleText
+    ; pret: wEnemyMonSpecies2 -> wCurPartySpecies/wCurSpecies, GetMonHeader,
+    ; LoadMonFrontSprite -> vFrontPic, then the tilemap placement. The port folds
+    ; decode + placement into LoadFrontSpriteByMonIndex — the SAME path the battle
+    ; intro takes for the first mon (init_battle.asm .enemyFrontReady), which is
+    ; what makes the send-out pic actually change (it was elided before: Weedle
+    ; kept wearing Caterpie's sprite — regression-battle-trainer-post-battle-and-hud
+    ; symptom 2).
+    mov al, [ebp + wEnemyMonSpecies2]
+    mov [ebp + wCurPartySpecies], al
+    mov [ebp + wCurSpecies], al
+    mov esi, W_TILEMAP + 12                        ; intro's enemy-pic anchor
+    call LoadFrontSpriteByMonIndex
+    ; ANIMATION=OFF: AnimateSendingOutMon + PlayCry.
     call DrawHUDsAndHPBars                         ; ~ DrawEnemyHUDAndHPBar
     ; pret: `ld a,[wCurrentMenuItem]; and a; ret nz` — always nz here (we never prompt
     ; for a player switch), so the SwitchPlayerMon tail is unreachable and deferred.

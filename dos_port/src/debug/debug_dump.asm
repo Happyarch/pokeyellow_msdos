@@ -1329,6 +1329,19 @@ RunFishTestSeed:
 ; In: EBP = GB memory base.  Returns.
 ; ---------------------------------------------------------------------------
 RunTrainerRouteTestSeed:
+    ; *** SEED ONCE. *** EnterMap re-runs this hook on EVERY map re-entry, and the
+    ; post-battle path is one: pret's .battleOccurred tail ends `jp EnterMap`, and
+    ; only AFTER that re-entry does RunMapScript dispatch script index 2 ->
+    ; EndTrainerBattle to set the persistent beaten bit. An unguarded re-seed here
+    ; clears $D7C2 bit 2 and zeroes both script bytes at exactly that moment, so
+    ; EndTrainerBattle never runs, the trainer re-engages, and the scenario reads
+    ; as "the beaten flag never sticks" — the maintainer-observed infinite battle
+    ; loop (regression-battle-trainer-post-battle-and-hud symptom 1) reproduced by
+    ; the HARNESS, not the game. Same class as the AUTOKEY phase-1 re-seed trap
+    ; recorded on the cadence table.
+    cmp byte [trainer_route_seeded], 0
+    jne .alreadySeeded
+    mov byte [trainer_route_seeded], 1
     mov byte [ebp + wPartyCount], 0
     mov byte [ebp + wPartySpecies], 0xFF
     mov byte [ebp + wNumBagItems], 0
@@ -1341,7 +1354,12 @@ RunTrainerRouteTestSeed:
     and byte [ebp + 0xD7C2], ~(1 << 2) & 0xff   ; Route 3 trainer 0 beaten flag
     mov byte [ebp + 0xD5F7], 0                  ; wRoute3CurScript = DEFAULT (0)
     mov byte [ebp + wCurMapScript], 0
+.alreadySeeded:
     ret
+
+section .bss
+trainer_route_seeded: resb 1                    ; 0 = seed on first EnterMap only
+section .text
 %endif
 
 %ifdef DEBUG_TEXTBOXID
@@ -3322,6 +3340,32 @@ AutoKeyDrive:
     add esi, 12
     jmp .scan
 .apply:
+%ifdef AUTOKEY_TRAINER_ROUTE
+    ; *** STATE-GATED D-PAD (measured 2026-08-05, two stalled 26000-frame runs). ***
+    ; A frame-scheduled D-pad press lands in whatever UI is up. One DOWN that hits
+    ; the BATTLE menu (not the move menu) moves its cursor FIGHT -> ITEM, the menu
+    ; REMEMBERS it (wBattleAndStartSavedMenuItem), and a D-pad-free press loop can
+    ; never move it back: A opens the empty bag, B closes it, forever — the battle
+    ; stalls mid-roster at full enemy HP (FRAME.BIN shows the menu parked on ITEM).
+    ; The whole point of the DOWNs is the MOVE menu, so let them through ONLY while
+    ; it is actually open: in a battle AND the cursor block holds MoveSelectionMenu's
+    ; projected coords (.menuset: Y = $C+3 = $0F, X = 5+10 = $0F). Everywhere else —
+    ; battle menu, text, and especially the post-battle overworld, where a DOWN
+    ; WALKS the player and moves compared coords — they are stripped. The harness
+    ; may read WRAM: it is the scenario driver, not game logic, and this keeps the
+    ; PRESS SCHEDULE fixed while making its effect state-safe.
+    test dl, PAD_UP | PAD_DOWN | PAD_LEFT | PAD_RIGHT
+    jz .padOk
+    cmp byte [ebp + wIsInBattle], 2
+    jne .stripPad
+    cmp byte [ebp + wTopMenuItemY], 0x0F
+    jne .stripPad
+    cmp byte [ebp + wTopMenuItemX], 0x0F
+    je .padOk
+.stripPad:
+    and dl, ~(PAD_UP | PAD_DOWN | PAD_LEFT | PAD_RIGHT) & 0xFF
+.padOk:
+%endif
     mov al, [autokey_prev]
     not al
     and al, dl                          ; pressed = held & ~prev
@@ -3664,32 +3708,47 @@ autokey_script:
     ; "SNORLAX USED STRENGTH!".
     ; So phase 1 covers turn 1 ONLY. The cursor persists from there (see above), so
     ; nothing later needs the D-pad.
-%ifndef AK_ROUTE_DOWN_CYCLES
-%define AK_ROUTE_DOWN_CYCLES 6
-%endif
+    ; *** CADENCE REDESIGN 2026-08-05 — ONE uniform cycle, NO B, gated D-pad. ***
+    ; The two-phase design above this comment (bounded DOWN phase + B,A,A tail) is
+    ; retired after two measured deterministic stalls:
+    ;   * run 1 (26000f): stalled on roster mon 3, enemy at FULL HP, FLY charge
+    ;     text on screen — turn-1 alignment had missed the move menu, the cursor
+    ;     opened on slot 0 = FLY every turn.
+    ;   * run 2 (26000f, after the send-out text/pic fix shifted frame counts):
+    ;     stalled on mon 2 with the BATTLE menu parked on ITEM — a phase-1 DOWN
+    ;     had hit the battle menu, and the D-pad-free tail could never move the
+    ;     remembered cursor back to FIGHT (A opened the empty bag, B closed it,
+    ;     forever).
+    ; Two structural changes kill both stall classes:
+    ;   1. NO B PRESSES. B exists to answer the golden side's "will <PLAYER>
+    ;      change POKEMON?" prompt — but the golden is Lua-driven, not autokey,
+    ;      and the PORT never shows that prompt (EnemySendOutFirstMon forces
+    ;      wCurrentMenuItem=1, the switch flow is deferred). The port-side B's
+    ;      only real effect was CANCELLING a just-opened move menu whenever the
+    ;      cycle phase-locked with the battle rhythm (the same family as the
+    ;      measured B,B,A deadlock above). With no cancel key in the script, menu
+    ;      progress is monotone.
+    ;   2. D-PAD IN EVERY CYCLE, GATED BY STATE. AutoKeyDrive.apply strips D-pad
+    ;      bits unless the MOVE menu is actually open (wIsInBattle==2 and the
+    ;      cursor block holds .menuset's projected Y/X = $0F/$0F — see the gate).
+    ;      So the DOWNs fire exactly when they mean something (walking the cursor
+    ;      to STRENGTH, idempotent at the list bottom, wPlayerMoveListIndex
+    ;      persists the slot across turns), and NEVER hit the battle menu or walk
+    ;      the player after the battle. The old phase-1 bound existed only for
+    ;      the post-battle walk hazard; the gate retires it, so every cycle can
+    ;      carry the DOWNs and turn-1 alignment stops being luck.
+    ; Cycle (120 frames): A@0 (advance text / open FIGHT / commit move),
+    ; DOWN@30/48/66 (gated), A@96 (commit when the menu opened mid-cycle).
 %ifndef AK_ROUTE_CYCLES
-%define AK_ROUTE_CYCLES 180
+%define AK_ROUTE_CYCLES 220             ; 240 + 220*120 = 26640 — past the default dump
 %endif
-    ; Phase 1: 180-frame cycles from 240 -> 240 + 6*180 = 1320. Turn 1's move menu
-    ; is reached well inside this (STRENGTH was committed by frame 900, cycle 3).
-%define AK_ROUTE_P2 (240 + AK_ROUTE_DOWN_CYCLES * 180)
-%assign ak_i 0
-%rep AK_ROUTE_DOWN_CYCLES
-    dd 240 + AK_ROUTE_SHIFT + ak_i * 180,     248 + AK_ROUTE_SHIFT + ak_i * 180, PAD_B
-    dd 270 + AK_ROUTE_SHIFT + ak_i * 180,     278 + AK_ROUTE_SHIFT + ak_i * 180, PAD_A
-    dd 300 + AK_ROUTE_SHIFT + ak_i * 180,     308 + AK_ROUTE_SHIFT + ak_i * 180, PAD_DOWN
-    dd 330 + AK_ROUTE_SHIFT + ak_i * 180,     338 + AK_ROUTE_SHIFT + ak_i * 180, PAD_DOWN
-    dd 360 + AK_ROUTE_SHIFT + ak_i * 180,     368 + AK_ROUTE_SHIFT + ak_i * 180, PAD_DOWN
-    dd 390 + AK_ROUTE_SHIFT + ak_i * 180,     398 + AK_ROUTE_SHIFT + ak_i * 180, PAD_A
-%assign ak_i ak_i + 1
-%endrep
-    ; Phase 2: 90-frame B,A,A cycles from AK_ROUTE_P2 (1320) -> 1320 + 180*90 = 17520.
-    ; No D-pad here, deliberately -- see the re-seed note above.
 %assign ak_i 0
 %rep AK_ROUTE_CYCLES
-    dd AK_ROUTE_P2 +  0 + AK_ROUTE_SHIFT + ak_i * 90, AK_ROUTE_P2 +  8 + AK_ROUTE_SHIFT + ak_i * 90, PAD_B
-    dd AK_ROUTE_P2 + 30 + AK_ROUTE_SHIFT + ak_i * 90, AK_ROUTE_P2 + 38 + AK_ROUTE_SHIFT + ak_i * 90, PAD_A
-    dd AK_ROUTE_P2 + 60 + AK_ROUTE_SHIFT + ak_i * 90, AK_ROUTE_P2 + 68 + AK_ROUTE_SHIFT + ak_i * 90, PAD_A
+    dd 240 + AK_ROUTE_SHIFT + ak_i * 120, 248 + AK_ROUTE_SHIFT + ak_i * 120, PAD_A
+    dd 270 + AK_ROUTE_SHIFT + ak_i * 120, 278 + AK_ROUTE_SHIFT + ak_i * 120, PAD_DOWN
+    dd 288 + AK_ROUTE_SHIFT + ak_i * 120, 296 + AK_ROUTE_SHIFT + ak_i * 120, PAD_DOWN
+    dd 306 + AK_ROUTE_SHIFT + ak_i * 120, 314 + AK_ROUTE_SHIFT + ak_i * 120, PAD_DOWN
+    dd 336 + AK_ROUTE_SHIFT + ak_i * 120, 344 + AK_ROUTE_SHIFT + ak_i * 120, PAD_A
 %assign ak_i ak_i + 1
 %endrep
     dd   -1,   -1, 0

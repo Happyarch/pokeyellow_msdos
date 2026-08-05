@@ -640,15 +640,28 @@ EnterMap:
     call PrepareNewGameDebug               ; seed party + bag + money (returns)
 %endif
 %ifdef DEBUG_SEED_PARTY
+%ifndef DEBUG_TRAINER_ROUTE
     ; Plain playable build with a seeded party: seed a full party + bag + money,
     ; then fall through to the normal OverworldLoop. No frame dump, no exit — reach
     ; the stats screen the real way (START → POKéMON → a mon → STATS), so the render
     ; runs through the faithful .choseStats path (ClearSprites etc.), not the harness.
+    ;
+    ; *** EXCLUDED under DEBUG_TRAINER_ROUTE (measured 2026-08-05). *** This block
+    ; runs on EVERY EnterMap pass, and the trainer-route scenario's post-battle
+    ; return IS an EnterMap (pret .battleOccurred ends `jp EnterMap`). With it
+    ; active, PrepareNewGameDebug re-ran here after the battle and REBUILT the
+    ; party — caught live via a D179 watchpoint: EnterMap+0x49 ->
+    ; PrepareNewGameDebug -> SetDebugNewGameParty -> _AddPartyMon writing the
+    ; seed EXP over the earned +335, which erased every reward the scenario
+    ; compares (EXP, stat exp, PP) while the beaten flag stayed correctly set.
+    ; That scenario's party seed is RunTrainerRouteTestSeed (debug_dump.asm),
+    ; which runs ONCE under its own guard and calls PrepareNewGameDebug itself.
     mov byte [ebp + 0xD162], 0             ; wPartyCount = 0
     mov byte [ebp + 0xD163], 0xFF          ; wPartySpecies sentinel
     mov byte [ebp + 0xD31C], 0             ; wNumBagItems = 0
     mov byte [ebp + 0xD31D], 0xFF          ; wBagItems sentinel
     call PrepareNewGameDebug               ; seed party + bag + money (returns)
+%endif
 %endif
 %ifdef DEBUG_ITEMUSE
     ; Item-USE gate (items-plan Stage 5): the seeded party is at full HP, so knock

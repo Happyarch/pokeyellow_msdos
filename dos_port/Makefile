@@ -131,11 +131,13 @@ DEBUG_ASSERT_PROJECTION := 1
 DEBUG_ASSERT_SCRATCH := 1
 DEBUG_ASSERT_LIFECYCLE := 1
 DEBUG_ASSERT_REENTRANCY := 1
+DEBUG_ASSERT_BOXDIMS := 1
 endif
 $(eval $(call flag_gate,DEBUG_ASSERT_PROJECTION))
 $(eval $(call flag_gate,DEBUG_ASSERT_SCRATCH))
 $(eval $(call flag_gate,DEBUG_ASSERT_LIFECYCLE))
 $(eval $(call flag_gate,DEBUG_ASSERT_REENTRANCY))
+$(eval $(call flag_gate,DEBUG_ASSERT_BOXDIMS))
 
 # Debug flag: dump GB memory windows to DUMP.BIN then exit. make DEBUG_DUMP=1
 # (implies SKIP_TITLE path reaching the overworld). See src/debug/debug_dump.asm.
@@ -811,6 +813,13 @@ NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 # same role as AK_LEDGE_SHIFT). Never set for a golden run.
 ifdef AK_ROUTE_SHIFT
 NASMFLAGS += -D AK_ROUTE_SHIFT=$(AK_ROUTE_SHIFT)
+endif
+# AK_ROUTE_CYCLES=<n>: number of 120-frame A,DOWNx3,A cycles (default 220 in
+# debug_dump.asm, covering frames 240..26640; the DOWNs are state-gated to the
+# move menu by AutoKeyDrive). A dump frame past that end needs this raised too,
+# or the battle stalls unanswered once the presses run out.
+ifdef AK_ROUTE_CYCLES
+NASMFLAGS += -D AK_ROUTE_CYCLES=$(AK_ROUTE_CYCLES)
 endif
 endif
 
