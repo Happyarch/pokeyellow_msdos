@@ -1640,6 +1640,42 @@
         "masks": "golden_diff.SCENARIOS"
       },
       "verification": "real Route 3 trainer blackout on pret versus guarded production initialization plus deterministic terminal loss on the port; state verification that the trainer flag stays clear while script, money and party cleanup match, not presentation"
+    },
+    {
+      "name": "trainer_battle_route",
+      "id": 51,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_TRAINER_ROUTE=1",
+      "port_entry_gate": "DEBUG_TRAINER_ROUTE",
+      "navigation_script": "tools/mgba_harness/scenarios/trainer_battle_route.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 600,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "OverworldLoop",
+        "RunMapScript",
+        "TrainerMapScript",
+        "CheckFightingMapTrainers",
+        "DisplayEnemyTrainerTextAndStartBattle",
+        "StartTrainerBattle",
+        "NewBattle",
+        "InitBattle",
+        "EndOfBattle",
+        "EndTrainerBattle"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "the CONTINUOUS overworld->battle->return scenario, and the only one in which the port's real OverworldLoop drives a trainer battle end to end: sight engagement by the map script, entry through the loop's own wCurOpponent poll, the live battle menus, and the .battleOccurred return that dispatches EndTrainerBattle. 44/45/46 call StartTrainerBattle and InitBattle from a harness and never run the loop, so none of them can prove this. Compared surface is choreography (battle result, wIsInBattle, wCurOpponent cleared, map-script indices, the persistent beaten flag, the .battleOccurred status-flag work, map and coords) plus the two zero-RNG reward bytes (player money BCD, lead mon EXP). Damage and HP are deliberately NOT compared: pinning them would require RNG lockstep through live menu timing, and per-turn damage math is already covered by battle_faint and 45/46"
     }
   ],
   "disabled_scenarios": []

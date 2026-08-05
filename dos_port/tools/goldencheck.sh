@@ -56,8 +56,15 @@ fi
 sed "s|^imgmount c PKMN.IMG|imgmount c $SCRATCH/pkmn.img|; s|^PKMN.EXE\$|PKMN.EXE\nexit|" \
     dosbox-x.conf >"$SCRATCH/run.conf"
 
-echo "== goldencheck $SCENARIO: headless DOSBox-X run"
-SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy timeout -s KILL 150 \
+# Per-scenario headless-run budget. Every manifest entry declares
+# dump.timeout_seconds and nothing read it — this was hardcoded 150, so a scenario
+# needing longer died as "no GBSTATE.BIN in image — run crashed before the dump?",
+# which reads like a crash and is not one. Default stays 150, so no existing
+# scenario changes behaviour.
+RUN_TIMEOUT="$(python3 tools/golden_diff.py "$SCENARIO" --timeout)"
+
+echo "== goldencheck $SCENARIO: headless DOSBox-X run (timeout ${RUN_TIMEOUT}s)"
+SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy timeout -s KILL "$RUN_TIMEOUT" \
     dosbox-x -defaultdir "$HERE" -defaultconf -conf "$SCRATCH/run.conf" \
     >"$SCRATCH/dosbox.log" 2>&1 || true
 

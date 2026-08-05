@@ -804,6 +804,35 @@ SCENARIOS = {
         }),
         "wram_masks": dict(_BATTLE_WRAM_MASKS),
     },
+    "trainer_battle_route": {
+        # The CONTINUOUS overworld -> battle -> return scenario (battle plan
+        # Stage 1b). Unlike 44/45/46, which call StartTrainerBattle and
+        # InitBattle from a harness, here the port's REAL OverworldLoop drives
+        # everything: map-script sight engagement, entry through the loop's own
+        # wCurOpponent poll, the live battle menus, and the .battleOccurred
+        # return that dispatches EndTrainerBattle.
+        #
+        # WHY NO DAMAGE/HP IN THE SURFACE (merge-session ruling, mail thread 25):
+        # the two emulators do not share an RNG stream, and a continuous run has
+        # no harness able to collapse enemy HP the way 45/46 do, so pinning
+        # damage would require RNG lockstep through live menu timing. Per-turn
+        # damage math is already covered by battle_faint and 45/46. What IS
+        # pinned, via the scenario-local regions both sides emit, is the
+        # choreography plus the two ZERO-RNG reward bytes (player money BCD and
+        # the lead mon's EXP) — those depend only on the defeated mons'
+        # species/level and the trainer class payout, so they cost nothing in
+        # determinism and they catch the "battle ran and returned but rewarded
+        # wrongly" case that pure choreography would wave through.
+        "class": "datastruct",
+        "flags": "DEBUG_TRAINER_ROUTE=1",
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP, **{
+            "wLoadedMon": "post-battle loader scratch: the two sides fight the "
+                          "roster over a different number of RNG-dependent turns, "
+                          "so the last-loaded mon differs; the persistent party "
+                          "state that matters is compared directly instead",
+        }),
+        "wram_masks": dict(_BATTLE_WRAM_MASKS),
+    },
     "battle_damage": {
         # The two emulators intentionally do not share an RNG stream. Their
         # damage bytes therefore need not be equal; validate each record
@@ -1655,6 +1684,9 @@ def main():
     ap.add_argument("--seed-save", action="store_true",
                     help="print this scenario's seed .sav fixture path (empty if it "
                          "declares none) and exit; goldencheck.sh stages it as POKEMON.DSV")
+    ap.add_argument("--timeout", action="store_true",
+                    help="print this scenario's headless-run timeout in seconds "
+                         "(manifest dump.timeout_seconds, default 150) and exit")
     ap.add_argument("--max-report", type=int, default=40, help="max mismatch lines per region")
     args = ap.parse_args()
 
@@ -1664,6 +1696,20 @@ def main():
         return
     if args.seed_save:
         print(cfg.get("seed_save", ""))
+        return
+    if args.timeout:
+        # Every manifest entry declares dump.timeout_seconds, and until now nothing
+        # read it — goldencheck.sh hardcoded 150. That silently caps how long a
+        # scenario may run, and a scenario that needs longer fails as
+        # "no GBSTATE.BIN in image — run crashed before the dump?" with no crash,
+        # which is a genuinely misleading diagnosis. trainer_battle_route is the
+        # first scenario to exceed it (a live 3-mon trainer battle driven through
+        # the real overworld loop). Read the declared value; keep 150 as the
+        # default so no existing scenario changes behaviour.
+        entry = {item["name"]: item for item in
+                 json.loads(SCENARIO_MANIFEST.read_text(encoding="utf-8"))["scenarios"]
+                 }.get(args.scenario, {})
+        print(int(entry.get("dump", {}).get("timeout_seconds", 150)))
         return
 
     if not args.gbstate:
