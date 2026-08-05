@@ -142,6 +142,16 @@ file found afterwards is definitionally fresh. Both also operate on a **copy** o
 The old Xvfb + ImageMagick screenshot recipe this document used to carry is
 retired for exactly this reason. Do not reintroduce it.
 
+**That retirement covers HOST-SIDE screen grabbing as a harness result, not
+pictures in general.** A host screenshot utility captures whatever window the
+compositor hands it, which is how it produced false results — and on this
+machine `import`/`spectacle` capture nothing at all under Wayland (measured
+2026-08-05). Live interactive debugging has a supported in-emulator alternative:
+dosbox-mcp's `screenshot` tool, which captures inside DOSBox-X, cannot grab the
+wrong window, and is the only way to read a DPMI page-fault register dump (DOS
+console text that no `FRAME.BIN` contains). It is a debugging aid, never a gate:
+golden scenarios still compare bytes, never images.
+
 ---
 
 ## Static tier — runs whether you remember it or not

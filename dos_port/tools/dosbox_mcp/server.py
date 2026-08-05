@@ -36,6 +36,12 @@ free-runs, exactly one thing works: the BREAK request (pause_exec), whose
 reply is produced by the next debugger entry.  After a RUN, the reply
 arrives when a breakpoint hits — if a tool times out waiting, the response
 stays *pending* and wait_break() collects it.
+  BREAK when the emulator is ALREADY stopped used to hang for the full
+  timeout (the request is serviced by Normal_Loop, which is not running) and
+  then report a possibly-wedged emulator.  The fork now answers it
+  immediately with a byte-identical notification, so a client that cannot
+  know the current state — a restarted server, a screenshot after a crash —
+  is no longer punished for guessing.
 
 Usage (started by run_with_mcp.sh or Claude Code MCP config):
   python3 tools/dosbox_mcp/server.py
@@ -415,6 +421,10 @@ def pause_exec() -> str:
     Pause a free-running game (like hitting the debugger hotkey): breaks into
     the debugger at the current instruction. Use this right after launching
     DOSBox-X, before setting breakpoints. No-op if already paused.
+
+    Safe to call when this server does not know the state (e.g. it was
+    restarted while the emulator sat paused): the fork answers a BREAK it is
+    already stopped for immediately, instead of the old full-timeout hang.
     """
     global _state
     if _state == 'paused':
@@ -710,6 +720,13 @@ def dump_frame(output_png: str = '/tmp/dosbox_frame.png') -> str:
     Dump the current software-PPU back buffer (320×200) to a PNG and return
     its path. Requires the game to be paused. The PNG uses the DMG-green
     palette (values 0-3) plus sprite overlay colors.
+
+    NOT a screenshot — it renders the GAME's back buffer read out of emulated
+    GB memory, so it needs PKMN.EXE alive and its selectors resolvable, and it
+    shows only what the software PPU composed. Use it to inspect what the game
+    BELIEVES it drew (it is free of any VGA/DAC/scaler confound). For what the
+    display is actually showing — DOS console text, a DPMI page-fault register
+    dump, a crashed or not-yet-started guest — use screenshot() instead.
     """
     err = _game_ctx()
     if err:
@@ -728,6 +745,111 @@ def dump_frame(output_png: str = '/tmp/dosbox_frame.png') -> str:
     if result.returncode != 0:
         return f"render_frame.py failed:\n{result.stderr}"
     return f"Frame rendered to {output_png}"
+
+
+@mcp.tool()
+def screenshot(output_png: str = '/tmp/dosbox_screenshot.png') -> str:
+    """
+    Capture the VIDEO OUTPUT of DOSBox-X to a PNG and return its path — a real
+    screenshot of whatever the emulated display is showing, right now.
+
+    screenshot() vs dump_frame() — pick deliberately:
+      * screenshot() captures the DISPLAY. It depends on nothing about the
+        guest program: no selectors, no symbols, no live PKMN.EXE. It is the
+        ONLY way to see DOS console text, the DPMI page-fault register dump a
+        crash prints, BIOS/boot output, or the screen left behind after
+        PKMN.EXE died — the moments a picture is worth the most.
+      * dump_frame() captures the GAME's software-PPU back buffer out of
+        emulated GB memory (320x200). It requires the game paused and alive,
+        and shows only what the PPU composed — nothing else on screen.
+    Suspicious about game state? Either works, and screenshot() is the one
+    that still works when things have gone wrong.
+
+    The capture is synchronous on the emulator side (it writes the last
+    rendered frame out immediately rather than arming the next one), so the
+    file exists before this returns — a path here is a path on disk. Pass
+    output_png='' to keep the emulator's own capture file and just be told
+    where it is.
+
+    Requires the emulation thread to be in the debugger loop, which is how
+    every command other than BREAK is serviced: if the game is free-running
+    this pauses it first (and says so). Resume with continue_exec().
+
+    Which of DOSBox-X's two captures you get: this is the "Save screenshot"
+    kind (CAPTURE_IMAGE, the render source + render palette). DOSBox-X's
+    separate "Save raw screenshot" (CAPTURE_RAWIMAGE, native VGA geometry,
+    true DAC palette, rPAL chunk) is accumulated across a whole frame by the
+    scanline handlers and finished on a later vertical retrace — none of which
+    occurs while emulation is stopped in the debugger, so it cannot be driven
+    from here at all. For mode 13h and DOS text the two show the same content;
+    if you specifically need raw DAC values, use the mapper hotkey with the
+    emulator running.
+    """
+    global _state
+
+    if _client.has_pending():
+        return ("ERROR: a previous command's response is still pending — "
+                "call wait_break() to collect it before taking a screenshot.")
+    if _state == 'running':
+        return ("ERROR: a RUN is waiting for a breakpoint. Call wait_break() "
+                "first, or pause_exec() if you want to interrupt it.")
+
+    paused_here = False
+    if _state != 'paused':
+        out = pause_exec()
+        if out.startswith('ERROR'):
+            return out
+        paused_here = True
+
+    try:
+        out = _cmd('SCREENSHOT', timeout=60.0)
+    except (ResponseTimeout, PendingResponse) as e:
+        return f"ERROR: {e}"
+
+    # Reply grammar (see the SCREENSHOT command in the fork's debug.cpp):
+    #   SCREENSHOT SRC <w>x<h> bpp=<n>   informational, always precedes
+    #   SCREENSHOT ERROR <reason>        nothing written
+    #   SCREENSHOT <absolute path>       written, and stat()ed by the emulator
+    src = None
+    srcinfo = ''
+    for line in out.splitlines():
+        line = line.strip()
+        if not line.startswith('SCREENSHOT '):
+            continue
+        rest = line[len('SCREENSHOT '):].strip()
+        if rest.startswith('SRC '):
+            srcinfo = f" [render source {rest[4:]}]"
+            continue
+        if rest.startswith('ERROR'):
+            return f"ERROR: emulator refused the capture: {rest}"
+        if rest.startswith('ARMED'):
+            continue
+        src = rest
+        break
+    if src is None:
+        return ("ERROR: no SCREENSHOT reply — this dosbox-x-mcp binary predates "
+                "the SCREENSHOT command. Rebuild it: "
+                "dos_port/tools/build_dosbox_mcp.sh (and relaunch the emulator; "
+                "a rebuild does not upgrade an already-running one).\n"
+                f"Debugger output was:\n{out.strip()}")
+    if not os.path.isfile(src):
+        return (f"ERROR: the emulator reported {src} but it is not on this "
+                "filesystem — is DOSBox-X running on another host/container?")
+
+    note = " (game was free-running; it is now PAUSED — continue_exec() to resume)" \
+        if paused_here else ""
+    note += srcinfo
+
+    if not output_png:
+        return f"Screenshot written to {src}{note}"
+    try:
+        dst = Path(_abs_path(output_png))
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(src, dst)
+    except OSError as e:
+        return (f"Screenshot written to {src}, but copying it to {output_png} "
+                f"failed: {e}{note}")
+    return f"Screenshot written to {dst} (emulator capture: {src}){note}"
 
 
 @mcp.tool()

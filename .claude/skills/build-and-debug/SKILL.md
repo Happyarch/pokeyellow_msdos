@@ -1,6 +1,6 @@
 ---
 name: build-and-debug
-description: Build, run, and debug reference for the Pokémon Yellow DOS port. Invoke when building or running the port, regenerating assets, configuring/launching DOSBox-X, debugging emulated GB memory (DUMP.BIN / FRAME.BIN dumps instead of screenshots), running the golden fidelity harness (mGBA ground truth vs DOSBox-X port), auditioning music (host-side audition.py vs in-DOS DEBUG_AUDIO TRACK= loop), or using a dos_port/tools/ dev tool (colorize.py + colors/editor.py, map_editor/editor.py, ui_layout/editor.py, read_perf.py, read_seamlog.py, audit_memmap.py, unnamed.py, saveconv.py). Also holds the repo layout map and the key reference URLs. Triggers: "build the port", "make -C dos_port", "SKIP_TITLE", "make assets", "regenerate assets", "DEBUG_DUMP / DEBUG_TRANSITION / DEBUG_WALK_NORTH", "FRAME.BIN", "render_frame.py", "DOSBox-X config", "linker section / .rodata / orphan section", "goldencheck / make fidelity / make goldens", "GBSTATE.BIN", "golden scenario / scenario_manifest.json / mGBA harness / mgba-mcp", "run_headless.sh / headless run / PKMN.IMG / mcopy", "static_gate / pre-commit hook / CI", "audition / listen to / play <track> music", "DEBUG_AUDIO / TRACK= / audition.py / MUNT", "where is <file> in the repo", "Pan Docs / DPMI spec / RBIL", "colorize.py / palette editor / repaint PNG", "map_editor / overworld map tool", "ui_layout editor / layout sidecar", "PERF.BIN / read_perf.py", "SEAMLOG.BIN / read_seamlog.py", "audit_memmap.py", "unnamed.py / unnamed symbols", "saveconv.py / .sav .dsv".
+description: Build, run, and debug reference for the Pokémon Yellow DOS port. Invoke when building or running the port, regenerating assets, configuring/launching DOSBox-X, debugging emulated GB memory (DUMP.BIN / FRAME.BIN dumps, or the live dosbox-mcp screenshot / dump_frame tools), running the golden fidelity harness (mGBA ground truth vs DOSBox-X port), auditioning music (host-side audition.py vs in-DOS DEBUG_AUDIO TRACK= loop), or using a dos_port/tools/ dev tool (colorize.py + colors/editor.py, map_editor/editor.py, ui_layout/editor.py, read_perf.py, read_seamlog.py, audit_memmap.py, unnamed.py, saveconv.py). Also holds the repo layout map and the key reference URLs. Triggers: "build the port", "make -C dos_port", "SKIP_TITLE", "make assets", "regenerate assets", "DEBUG_DUMP / DEBUG_TRANSITION / DEBUG_WALK_NORTH", "FRAME.BIN", "render_frame.py", "DOSBox-X config", "linker section / .rodata / orphan section", "goldencheck / make fidelity / make goldens", "GBSTATE.BIN", "golden scenario / scenario_manifest.json / mGBA harness / mgba-mcp", "run_headless.sh / headless run / PKMN.IMG / mcopy", "static_gate / pre-commit hook / CI", "audition / listen to / play <track> music", "DEBUG_AUDIO / TRACK= / audition.py / MUNT", "where is <file> in the repo", "Pan Docs / DPMI spec / RBIL", "colorize.py / palette editor / repaint PNG", "map_editor / overworld map tool", "ui_layout editor / layout sidecar", "PERF.BIN / read_perf.py", "SEAMLOG.BIN / read_seamlog.py", "audit_memmap.py", "unnamed.py / unnamed symbols", "saveconv.py / .sav .dsv", "screenshot / take a picture of the screen", "page fault / DPMI register dump / what is on screen", "raw screenshot".
 ---
 
 # Build & Debug Reference
@@ -191,6 +191,13 @@ The screen is a software PPU render: many distinct bugs collapse to the same
 screenshots and toggling tiles** — that loop ate two sessions on the `.rodata`
 bug. Get ground truth from memory instead.
 
+That is about *diagnosing a render bug by iterating on pixels*, and it stands.
+It is NOT a ban on looking at the screen: a picture is the fastest way to answer
+"which screen am I even on", and it is the ONLY way to read a **DPMI page-fault
+register dump**, which is DOS console text that no memory dump and no
+`FRAME.BIN` can reach. Take one with dosbox-mcp's `screenshot` (see below), then
+go to memory for the *why*.
+
 ### Memory dump to a host file (primary, automatable)
 
 `src/debug/debug_dump.asm` exfiltrates chosen windows of emulated GB memory to
@@ -266,13 +273,54 @@ and a paused emulator can't service the socket BREAK request).
    thread in `cond_wait`);
 5. `where()` — "which routine am I in": nearest code symbol at/below EIP.
 
-Then `gb_read`/`x86_read`/`get_registers`/`dump_frame` inspect the paused
-emulator (`dump_frame` renders the back buffer to PNG). `disassemble` is
+Then `gb_read`/`x86_read`/`get_registers`/`dump_frame`/`screenshot` inspect the
+paused emulator. `disassemble` is
 non-destructive (reads bytes, runs host `ndisasm`; does NOT write EIP) and is
 symbol-annotated: label lines at symbol boundaries, `; Symbol+0x..` on
 call/jmp targets. `lookup_symbol`/`search_symbols` resolve pkmn.sym names;
 `load_debugger_symbols()` re-pushes SYMF explicitly (only needed when driving
 the ncurses UI by hand right after a rebuild).
+
+**`dump_frame` vs `screenshot` — two different pictures. Pick deliberately:**
+
+| | `dump_frame` | `screenshot` |
+|---|---|---|
+| what it shows | the GAME's software-PPU back buffer (`GB_BACKBUF`, 320×200), read out of emulated GB memory | the emulated DISPLAY: whatever DOSBox-X is putting on screen |
+| needs the game alive? | YES — needs `_game_ctx()`: paused, in pmode, selectors resolvable | NO — no selectors, no symbols, no live PKMN.EXE |
+| after a crash | fails outright | still works, and this is the point |
+| colours | `render_frame.py`'s conspicuous debug palette unless a `PAL.BIN` is supplied | the emulator's real output |
+
+`screenshot(output_png=…)` is therefore the ONLY way to see **DOS console
+text** — including the **DPMI page-fault register dump** a real fault prints
+(`Page Fault cr2=… at eip=…` + registers), BIOS/boot output, and the screen a
+dead PKMN.EXE left behind. The headless dump pipeline captures none of that,
+and `dump_frame` structurally cannot. Use `dump_frame` when the question is
+"what did the PPU compose" (no VGA/DAC/scaler confound); use `screenshot` when
+the question is "what is actually on screen", or when anything has gone wrong.
+
+`screenshot` pauses a free-running emulator first (and says so — resume with
+`continue_exec()`), because the bridge only services commands from the debugger
+loop. The capture is synchronous: the emulator writes the last rendered frame
+out immediately and `stat`s it, so a path in the reply is a file on disk. It
+also reports the render-source geometry (`[render source 320x400 bpp=32]` for
+mode 13h, `720x400` for 80×25 text) — a cheap check that you got the screen you
+expected.
+
+**DOSBox-X's two captures are not the same thing, and only one is available
+here.** `screenshot` is the "Save screenshot" kind (`CAPTURE_IMAGE`: the render
+source + render palette). DOSBox-X's separate **"Save raw screenshot"**
+(`CAPTURE_RAWIMAGE`: native VGA geometry, true DAC palette, `rPAL` chunk) is
+accumulated across a whole frame by the scanline handlers and finished on a
+later vertical retrace — none of which happens while emulation is stopped in the
+debugger, so it cannot be driven from the bridge at all. `dbg_command
+("SCREENSHOT RAW")` says exactly that rather than silently substituting the
+other kind. For mode 13h and DOS text the two show the same content; if you need
+raw DAC values, use the mapper hotkey with the emulator running.
+
+Files land in the emulator's capture dir (`run_with_mcp.sh` pins
+`captures=/tmp/dosbox-mcp-capture`, overridable with `DOSBOX_MCP_CAPTURE_DIR`),
+and `screenshot` copies to `output_png` on top of that; pass `output_png=''` to
+skip the copy.
 
 **Semantics that bit us (the "silent success" folly):**
 - `set_breakpoint` sends `BP <cs>:<offset>` — a real execution breakpoint
@@ -553,6 +601,14 @@ DOSBox-X, waits, screenshots (spectacle → import fallback), and force-kills.
 Good for confirming a final render once the data is known-correct. Note: under a
 Wayland session the compositor screenshot may grab the wrong window — the
 `FRAME.BIN` route above is more reliable.
+
+**Prefer dosbox-mcp's `screenshot` tool to any host-side screenshot utility.**
+It captures inside the emulator, so it cannot grab the wrong window, needs no
+compositor cooperation, and works headless. Verified 2026-08-05 on this machine:
+`import`/`spectacle` both failed to capture anything under the local
+Wayland/XWayland session, while `screenshot` produced correct PNGs of both a
+mode-13h game screen and an 80×25 DOS text screen. See "`dump_frame` vs
+`screenshot`" above.
 
 ### Other dump decoders and static audits
 
