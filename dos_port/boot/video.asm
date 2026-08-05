@@ -40,6 +40,12 @@ vga_base:   resd 1       ; DS-relative address of the VGA framebuffer
 pal_bgp_shadow: resb 1
 pal_obp0_shadow: resb 1
 pal_obp1_shadow: resb 1
+alignb 4
+; commit_palette's colour pointer. It cannot live in a register: `out dx, al`
+; forces the byte through AL, and every general register's low byte aliases the
+; register itself — holding the pointer in EAX (or EBX, which is the slot counter)
+; is what produced the G/B corruption this temp exists to prevent.
+pal_addr_tmp: resd 1
 
 ; ---------------------------------------------------------------------------
 ; Data
@@ -221,10 +227,25 @@ commit_palette:
     and eax, 3
     lea eax, [eax + eax*2]
     add eax, esi
+    ; *** AL IS THE LOW BYTE OF EAX. Keep the pointer somewhere else. ***
+    ; This was `mov al,[eax] / out / mov al,[eax+1] / out / mov al,[eax+2]`, and the
+    ; FIRST load destroyed the pointer it was still being indexed from — so R (read
+    ; before the clobber) was always right and G/B were fetched from a cascading
+    ; garbage address. That is the whole palette corruption: measured 2026-08-05,
+    ; Pallet Town rendered (63,35,0)(47,63,63)(22,0,0)(6,0,0) where PAL_PALLET is
+    ; (63,63,63)(47,35,63)(22,47,63)(6,6,6) — every RED correct, every GREEN/BLUE
+    ; wrong. Predicted and observed agreed byte-for-byte on two entries.
+    ; DumpPalette (src/debug/debug_dump.asm) loads via EDX + stosb and has never had
+    ; this bug, which is exactly why PAL.BIN reported correct colours while the
+    ; screen did not — do not "reconcile" them by trusting the dump.
+    ; EBX is the slot counter, so the pointer goes to memory, not a register.
+    mov [pal_addr_tmp], eax
     mov al, [eax]
     out dx, al
+    mov eax, [pal_addr_tmp]
     mov al, [eax + 1]
     out dx, al
+    mov eax, [pal_addr_tmp]
     mov al, [eax + 2]
     out dx, al
     shr edi, 2
@@ -249,10 +270,14 @@ commit_palette:
     and eax, 3
     lea eax, [eax + eax*2]
     add eax, esi
+    ; Same AL/EAX aliasing fix as .bg_color above — see the note there.
+    mov [pal_addr_tmp], eax
     mov al, [eax]                  ; R
     out dx, al
+    mov eax, [pal_addr_tmp]
     mov al, [eax + 1]              ; G
     out dx, al
+    mov eax, [pal_addr_tmp]
     mov al, [eax + 2]              ; B
     out dx, al
     shr edi, 2
