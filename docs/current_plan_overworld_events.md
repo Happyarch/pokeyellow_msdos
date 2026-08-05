@@ -877,6 +877,75 @@ silently drift; regenerate rather than trusting it:
       The lesson generalises and is worth stating: **a diagnosis that names a real
       missing routine is not finished until you also check that the failing
       scenario could observe the fix.** Two golden runs were spent proving that.
+
+      **Design notes for the ROUTE_17 witness scenario, before anyone builds it.**
+      The retirement path (merge session, 2026-08-04) is to parameterize
+      battle-completion's `DEBUG_TRAINER_ROUTE` harness shape — it drives the real
+      `OverworldLoop`, which is exactly what the sight harness cannot — rather
+      than designing a new one. Four constraints, all supplied by
+      battle-completion from their own measurements:
+      1. **TWO WRITERS ON THE JOYPAD STATE, every frame, on this one map.**
+         `AUTOKEY_TRAINER_ROUTE` emits a repeating B,B,A cadence every 90 frames
+         from frame 240, and `AutoKeyDrive` overrides `hJoyHeld`/`hJoyPressed`
+         each frame from `vblank.asm`, right after `joypad_update`.
+         `ForceBikeDown` writes `PAD_DOWN` to `hJoyHeld` inside the
+         `JoypadOverworld` seam. Whichever writes last wins, which is a property
+         of the frame pipeline rather than of either feature's intent.
+         **They probably GATE each other rather than merely racing — but this is
+         REASONED, NOT MEASURED, and must not be designed to as fact.**
+         `ForceBikeDown`'s third guard is "no D-pad, A or B held", and the AUTOKEY
+         cadence presses exactly B and A, so on the frames the cadence covers its
+         presses would SUPPRESS `ForceBikeDown` outright, and on the frames
+         between it would fire — making the behaviour a function of CADENCE
+         PHASE, a materially harder problem than a write-ordering race.
+         **Provenance, because it matters here:** battle-completion derived this
+         from the guard set and stated explicitly that they had NOT measured it.
+         Cadence phase, frame ordering, and the exact point at which the guard is
+         evaluated all affect the outcome, and the two candidate models
+         ("last writer wins" and "they gate each other") predict different
+         behaviour. So the honest position is that BOTH models are unverified.
+         **MEASURE the interaction before designing the witness scenario to
+         either one** — that measurement is part of building it, not a
+         precondition someone else owes.
+      2. **Their "a stray press lands somewhere harmless" argument does NOT
+         transfer.** It holds on ROUTE_3 only because nothing else touches the
+         pad there. RE-TUNE the cadence for ROUTE_17; do not copy their frame
+         numbers.
+      3. **The overlap is precise, not incidental.** `ForceBikeDown`'s active
+         window — no trainer battle flagged — is exactly the window the harness
+         spends walking into the sight line.
+      4. **The dependency is on their FIX, not merely their merge.** That harness
+         shape walks straight into the pre-battle text box, which is the
+         page-fault site (`regression-battle-live-trainer-entry-exits`,
+         `TextBoxBorder.fill_chars`). Their fix rides with their scenario, so a
+         post-merge master should carry it — but VERIFY it is in the range you
+         merge back before building the variant, or a day-one fault will look
+         like a bug in this plan's `ForceBikeDown`.
+      If the variant behaves strangely, suspect constraint 1 BEFORE suspecting
+      the `ForceBikeDown` port.
+
+      **A MASK WAS OFFERED FOR ROUTE_17 AND DECLINED — do not quietly take it
+      later.** The mask policy legitimately covers a divergence owned by an open
+      finding (put the finding id in the why-string, so retiring the finding
+      deletes its masks), and the merge session offered exactly that: mask
+      `wYCoord` and `wTrainerScreenY` citing
+      `regression-overworld-forcebikedown-missing`, wiring ROUTE_17 to reach
+      14 of 17. Declined, and the reason is specific rather than squeamish:
+      **`wTrainerScreenY` is the one field that would reveal a view-pointer error
+      at y=120, and magnitude is the entire reason ROUTE_17 was chosen** — its
+      `(width + 6) * (y >> 1)` term is 960, against 560 at `route21_sight` and
+      432 at `route10_sight`, with every other gate under 50. Masking it leaves
+      the only scenario on that map unable to verify the property the wire exists
+      to test. The counter-argument ("it would prove engagement, which is all the
+      other 13 prove anyway") does not hold: the other 13 prove engagement with
+      UNMASKED position fields, so a view-pointer regression on any of them still
+      fails the suite. ROUTE_17 would have been the sole blinded gate, precisely
+      where the arithmetic is most stressed.
+      **The boundary this draws, which is the reusable part:** take the mask when
+      the divergent field is one the scenario was NOT built to test; refuse it
+      when the divergent field IS the scenario's reason for existing. A 14th wire
+      bought by blinding the most demanding gate is worth less than 13 wires and
+      an honest hole.
       **Watch item for whoever cuts a ROUTE_17 RUNTIME scenario:** once
       `ForceBikeDown` is live, input on that map is not solely the harness's —
       the routine overwrites `hJoyHeld` with `PAD_DOWN` every frame that no
