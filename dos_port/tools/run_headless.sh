@@ -34,7 +34,7 @@ cp PKMN.IMG "$SCRATCH/pkmn.img"
 # crashes before dumping would leave that stale file in the image, mcopy would pull it
 # out, and the capture would read as a clean success — a silently passing test of
 # nothing. Delete them first, so any file found below is definitionally fresh.
-for f in GBSTATE.BIN DUMP.BIN FRAME.BIN; do
+for f in GBSTATE.BIN DUMP.BIN FRAME.BIN PAL.BIN; do
     mdel -i "$SCRATCH/pkmn.img@@1048576" "::$f" 2>/dev/null || true
 done
 sed "s|^imgmount c PKMN.IMG|imgmount c $SCRATCH/pkmn.img|; s|^PKMN.EXE\$|PKMN.EXE\nexit|" \
@@ -54,7 +54,7 @@ SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy timeout -s KILL "$RUN_TIMEOUT" \
     >"$SCRATCH/dosbox.log" 2>&1 || true
 
 got=0
-for f in GBSTATE.BIN DUMP.BIN FRAME.BIN; do
+for f in GBSTATE.BIN DUMP.BIN FRAME.BIN PAL.BIN; do
     if mcopy -n -i "$SCRATCH/pkmn.img@@1048576" "::$f" "$OUT/" 2>/dev/null; then
         echo "== run_headless: extracted $f" >&2
         got=$((got + 1))
