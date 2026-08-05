@@ -70,6 +70,7 @@ extern IsPlayerCharacterBeingControlledByGame ; src/home/npc_movement.asm (real,
 extern IsPlayerFacingEdgeOfMap                    ; src/engine/overworld/player_state.asm
 extern IsWarpTileInFrontOfPlayer                    ; src/engine/overworld/player_state.asm
 extern MapScriptPointers                  ; assets/map_scripts.inc
+extern TrainerMapScript                   ; src/scripts/trainer_map_script.asm (Stage 1b sight gate)
 extern PlayDefaultMusic             ; src/home/audio.asm (real gateway)
 extern RedBikeSprite                    ; src/home/player_gfx.asm
 extern RunNPCMovementScript         ; src/home/npc_movement.asm
@@ -170,6 +171,7 @@ extern RunPPRestoreTest                   ; src/debug/debug_dump.asm
 extern RunFishTestSeed                    ; src/debug/debug_dump.asm
 extern RunLedgeTestSeed                   ; src/debug/debug_dump.asm
 extern RunSurfTestSeed                    ; src/debug/debug_dump.asm
+extern RunTrainerRouteTestSeed            ; src/debug/debug_dump.asm (Stage 1b continuous gate)
 extern CheckForHiddenEventOrBookshelfOrCardKeyDoor ; src/home/hidden_events.asm
 extern RunPokedexTest                     ; src/engine/menus/pokedex.asm
 extern RunSavePerfTest                    ; src/engine/menus/save.asm (DEBUG_SAVEPERF)
@@ -318,6 +320,25 @@ EnterMap:
     mov byte [ebp + W_CUR_MAP], MAPSCRIPT_MAP
     mov byte [ebp + W_Y_COORD], MAPSCRIPT_Y
     mov byte [ebp + W_X_COORD], MAPSCRIPT_X
+    mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF  ; "not a warp arrival" (see DEBUG_SEAM)
+%endif
+%ifdef DEBUG_TRAINER_ROUTE
+    ; Continuous trainer-route gate (battle plan Stage 1b): the scenario that drives
+    ; the REAL OverworldLoop all the way through sight -> battle -> return, which is
+    ; exactly what 44/45/46 cannot do (they call StartTrainerBattle and InitBattle
+    ; from a harness and never run the loop at all).
+    ;
+    ; Deliberately the SAME spawn as DEBUG_MAPSCRIPT_SIGHT above: Route 3 (Y=6,
+    ; X=12), already inside ROUTE3_YOUNGSTER1's line of sight. Reusing a spawn that
+    ; seven sight goldens already exercise keeps ENTRY out of the variable set — the
+    ; loop choreography is what is under test. Walking in from an out-of-sight tile
+    ; would additionally depend on the passability of Route 3 tiles nobody has
+    ; measured, and a failure there would be indistinguishable from a choreography
+    ; failure.
+    ; Seeded BEFORE LoadMapData, which reads the coords (same rule as DEBUG_SEAM).
+    mov byte [ebp + W_CUR_MAP], ROUTE_3
+    mov byte [ebp + W_Y_COORD], 6
+    mov byte [ebp + W_X_COORD], 12
     mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF  ; "not a warp arrival" (see DEBUG_SEAM)
 %endif
 %ifdef DEBUG_SURF
@@ -897,6 +918,20 @@ EnterMap:
     call SeamReseatView
     call RunFishTestSeed                     ; party + bag + OLD ROD; RETURNS
 %endif
+%ifdef DEBUG_TRAINER_ROUTE
+    ; Same shape as DEBUG_SURF/LEDGE/FISH above: seed, then FALL THROUGH into the
+    ; real OverworldLoop. Nothing else drives this scenario — the loop does it all:
+    ; RunMapScript reaches Route 3's TrainerMapScript, CheckFightingMapTrainers
+    ; engages the youngster on its own, DisplayEnemyTrainerTextAndStartBattle runs
+    ; StartTrainerBattle which seeds wCurOpponent, the loop's own battle-entry poll
+    ; turns that into InitBattle, AUTOKEY_TRAINER_ROUTE answers the battle menus,
+    ; and .battleOccurred returns to the map where the next RunMapScript dispatches
+    ; EndTrainerBattle at script index 2. The bespoke sight hook cannot interfere:
+    ; ROUTE_3 dispatches to TrainerMapScript, so the Stage 1b gate skips it.
+    call SeedDeterministicPlayerIdentity
+    call SeamReseatView
+    call RunTrainerRouteTestSeed             ; debug party, empty bag; RETURNS
+%endif
 
     ; fall through to OverworldLoop
 
@@ -989,7 +1024,26 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     test byte [ebp + W_STATUS_FLAGS_6], (1 << BIT_FLY_WARP) | (1 << BIT_DUNGEON_WARP)
     jnz HandleFlyWarpOrDungeonWarp           ; jp nz (tail — SpecialEnterMap re-enters the loop)
 
-    ; Check trainer sight lines before reading joypad (pret: CheckTrainerSightLine).
+    ; --- Stage 1b: the bespoke sight path is now GATED OFF where the faithful
+    ; one is wired. pret has no CheckTrainerSight/TrainerEncounterFlow; its only
+    ; trainer-sight mechanism is the map's own _Script -> CheckFightingMapTrainers,
+    ; which the port reaches from RunMapScript (this file, OverworldLoop) and
+    ; which seeds wCurOpponent for the battle-entry poll there. On a map wired to
+    ; TrainerMapScript BOTH paths were armed, and the bespoke one won the race
+    ; (its own distance<=4 test vs the header's view range), so the faithful path
+    ; could never be observed in a continuous run. The predicate is DATA-DRIVEN
+    ; against the generated dispatch table rather than a hand-kept map list, so
+    ; each map the overworld-events rollout wires shrinks this hook's domain with
+    ; no edit here. It keys on TrainerMapScript specifically, NOT merely
+    ; "!= DefaultMapScript": PALLET_TOWN has a non-default _Script that is not a
+    ; trainer script, and a "any non-default script" test would silently strip
+    ; sight handling from any such map that did have trainers.
+    ; DEVIATION{class=temporary; pret=home/overworld.asm:OverworldLoopLessDelay; behavior=on maps not yet wired to TrainerMapScript the port still runs the port-only CheckTrainerSight and TrainerEncounterFlow pair after the fly/dungeon-warp test, which pret has no counterpart for; evidence=MapScriptPointers in the generated assets/map_scripts.inc dispatches only a SUBSET of maps to TrainerMapScript, and that subset GROWS with the overworld-events rollout, so it is deliberately not enumerated here — measure it with grep -c 'dd TrainerMapScript' dos_port/assets/map_scripts.inc. On every map outside that subset MapScriptPointers[wCurMap] is DefaultMapScript or a non-trainer script, the faithful CheckFightingMapTrainers flow is unreachable, and deleting the hook outright would remove trainer engagement there entirely; lifetime=deleted when Stage 5a wiring completes and all standard trainer maps are wired, owned by docs/current_plan_overworld_events.md}
+    movzx ecx, byte [ebp + W_CUR_MAP]
+    cmp dword [MapScriptPointers + ecx*4], TrainerMapScript
+    je .noTrainerSight                       ; faithful map-script path owns this map
+    ; Flags: the cmp above is consumed by the je; CheckTrainerSight sets its own
+    ; CF after popad, so the jnc below still reads ITS result, not this test's.
     call CheckTrainerSight
     jnc .noTrainerSight
     call TrainerEncounterFlow

@@ -388,9 +388,23 @@ result gates deliberately stop after initialization and drive one terminal turn.
          `TrainerEncounterFlow` DEVIATION. That residual shrinks per wired map:
          on an unwired map `MapScriptPointers[wCurMap]` is the no-op
          `DefaultMapScript`, so the three-entry table is unreachable and
-         post-battle cleanup cannot run. WIRED_MAPS is ROUTE_3/6/11 plus
-         ROUTE_4/8/9/10 once the overworld-events batch merges — 7 of 17
-         standard-shape maps, 10 still table-only.
+         post-battle cleanup cannot run. That residual shrinks with every map the
+         overworld-events rollout wires, and with NO edit here — the gate's
+         predicate is data-driven off the generated dispatch table.
+
+         **Do not re-enumerate the wired set in this file.** The line that used to
+         sit here ("WIRED_MAPS is ROUTE_3/6/11 plus ROUTE_4/8/9/10 … 7 of 17
+         standard-shape maps, 10 still table-only") went false the moment the
+         overworld-events batch `11126952` wired six more — which is precisely the
+         hand-maintained-list failure mode that killed `TODO.md`. MEASURE it; the
+         generated table is the authority:
+             grep -c 'dd TrainerMapScript' dos_port/assets/map_scripts.inc
+         Dated measurement, not a maintained list — at 2026-08-04 after
+         `11126952`: 13 of 17 standard-shape maps wired. The bespoke hook is still
+         ACTIVE on CERULEAN_CAVE_B1F, POWER_PLANT and VIRIDIAN_FOREST (the three
+         interiors), on ROUTE_17 (wired then backed out, see
+         `regression-overworld-forcebikedown-missing`), and on every non-standard
+         map.
 - [x] **1c. Victory-dependent trainer flags.** Move beaten/event writes to the
       verified post-victory result path. A loss, blackout, or aborted battle must
       leave the trainer armed; victory must advance the script, persist the flag,
