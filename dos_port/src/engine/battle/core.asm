@@ -4442,7 +4442,17 @@ EnemySendOutFirstMon:
     mov al, [ebp + wEnemyMonSpecies2]
     mov [ebp + wCurPartySpecies], al
     mov [ebp + wCurSpecies], al
-    mov esi, W_TILEMAP + 12                        ; intro's enemy-pic anchor
+    ; PROJ battle: the PROJECTED enemy-pic cell, not pret's raw hlcoord 12,0.
+    ; LoadFrontSpriteByMonIndex places the 7x7 block at ESI, and nothing clears the
+    ; canvas after send-out (SlideBattlePicsIn only runs at battle entry), so a raw
+    ; GB anchor leaves a ghost pic block at rows 0-6 / cols 12-18 while the real pic
+    ; and the whole HUD sit at UI_ENEMY_PIC_* / cols 22-28. The enemy HUD is then
+    ; drawn ON TOP of that ghost, and every cell the name/level/HP text does not
+    ; cover keeps rendering pic tiles. MEASURED 2026-08-06, DEBUG_TRAINER_ROUTE dump
+    ; at frame 2000: wTileMap row 4 = `04 0B 6E F7 F6 27 2E` — pic tile ids $04/$0B/
+    ; $27/$2E flanking the ":L10" text — with the VRAM tiles byte-perfect at the
+    ; same instant, so the defect was never in the tile data.
+    mov esi, W_TILEMAP + UI_ENEMY_PIC_ROW * SCREEN_TILES_W + UI_ENEMY_PIC_COL
     call LoadFrontSpriteByMonIndex
     ; ANIMATION=OFF: AnimateSendingOutMon + PlayCry.
     call DrawHUDsAndHPBars                         ; ~ DrawEnemyHUDAndHPBar

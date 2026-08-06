@@ -384,7 +384,10 @@ _InitBattleCommon:
     ; owns the omitted throw/cry animation and text.
     mov al, [ebp + wEnemyMonSpecies2]
     mov [ebp + wCurPartySpecies], al
-    mov esi, W_TILEMAP + 12
+    ; PROJ battle: projected enemy-pic cell, not pret's raw hlcoord 12,0 — same
+    ; reason as the send-out placement in core.asm (see the comment there). This
+    ; call runs AFTER SlideBattlePicsIn, so nothing clears the canvas behind it.
+    mov esi, W_TILEMAP + UI_ENEMY_PIC_ROW * SCREEN_TILES_W + UI_ENEMY_PIC_COL
     call LoadFrontSpriteByMonIndex
 .enemyFrontReady:
     ; send-out: decode the actual sent-out mon's back sprite (generic, MonBackPics-indexed
