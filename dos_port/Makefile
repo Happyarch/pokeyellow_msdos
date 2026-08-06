@@ -1165,6 +1165,39 @@ ifdef AUTOKEY_TRAINERCARD
 NASMFLAGS += -D AUTOKEY_TRAINERCARD
 AUTOKEY_DUMP_FRAME ?= 400
 endif
+# Press NOTHING, ever — only AutoKeyDrive's AUTOKEY_DUMP_FRAME timer runs, so a
+# screen that drives itself (or parks in its own key-wait) can be photographed
+# without input. debug_dump.asm has had the AUTOKEY_QUIET script branch all along;
+# this gate never forwarded it, so `AUTOKEY_QUIET=1` was SILENTLY IGNORED and the
+# build fell through to the default START/DOWN/A script — which opens the party
+# menu and looks like a plausible result. Measured 2026-08-05.
+# make DEBUG_AUTOKEY=1 AUTOKEY_QUIET=1 [AUTOKEY_DUMP_FRAME=n]
+ifdef AUTOKEY_QUIET
+NASMFLAGS += -D AUTOKEY_QUIET
+endif
+# Long train of A presses — answer every <PROMPT>/button-wait a flow raises. Same
+# forwarding gap as AUTOKEY_QUIET above: several dedicated gates pass -D AUTOKEY_APRESS
+# themselves, but it could not be reached from a generic DEBUG_AUTOKEY build.
+# make DEBUG_AUTOKEY=1 AUTOKEY_APRESS=1 [AUTOKEY_APRESS_COUNT=n] [AUTOKEY_DUMP_FRAME=n]
+ifdef AUTOKEY_APRESS
+NASMFLAGS += -D AUTOKEY_APRESS
+endif
+# PLAYABLE trainer battle: the DEBUG_TRAINER_ROUTE spawn + seed (Route 3, in
+# ROUTE3_YOUNGSTER1's sight, party seeded by RunTrainerRouteTestSeed) with NO
+# autokey and NO frame dump, so the keyboard drives it. Use this to pilot a
+# trainer battle by hand -- NOT DEBUG_START_MAP+DEBUG_SEED_PARTY, which leaves
+# the per-EnterMap re-seed active that DEBUG_TRAINER_ROUTE excludes on purpose:
+# measured 2026-08-05, that combination wedges NewBattle (wCurOpponent stays set,
+# wIsInBattle never leaves 0) after it has already overwritten the 120 vFont
+# tiles with battle graphics, so the trainer's textbox renders as mon sprites.
+#   dos_port/run TRAINER_ROUTE_PILOT=1
+ifdef TRAINER_ROUTE_PILOT
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_TRAINER_ROUTE -D DEBUG_SEED_PARTY -D SKIP_TITLE
+endif
+ifdef AUTOKEY_APRESS_COUNT
+NASMFLAGS += -D AUTOKEY_APRESS_COUNT=$(AUTOKEY_APRESS_COUNT)
+endif
 ifdef AUTOKEY_MENU_FIRST
 NASMFLAGS += -D AUTOKEY_MENU_FIRST
 endif
