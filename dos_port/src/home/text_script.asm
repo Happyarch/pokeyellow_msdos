@@ -60,6 +60,7 @@ extern LoadCurrentMapView
 extern LoadPlayerSpriteGraphics
 extern UpdateSprites                    ; src/home/update_sprites.asm — final jp target
 extern LoadGBPal                        ; palettes/fade (Wave 10)
+extern hide_window                      ; src/ppu/ppu.asm — empty the window list (count=0)
 extern BankswitchCommon                 ; home/bankswitch2.asm (no-op flat)
 extern w_map_text_table_ptr             ; map_sprites.asm — flat ptr to current map TextTable
 extern w_predef_text_table_ptr           ; home/predef_text.asm — port-only flat ptr to TextPredefs
@@ -312,6 +313,20 @@ CloseTextDisplay:
     ; TODO-HW: software PPU window register (hWY shadow of rWY)
     mov al, 0x90
     mov [ebp + hWY], al
+    ; PORT PROJECTION of that pret store: the port's dialog box is a WINDOW
+    ; DESCRIPTOR (PrintText's dialog projection registers it via
+    ; set_single_window), so "move the window off screen" means dismissing the
+    ; descriptor — hide_window empties the list and parks H_WY at RENDER_H.
+    ; WITHOUT this, a text closed on the direct-DisplayTextID path (map scripts,
+    ; trainer engage) left its window registered forever: the walk-tile reload
+    ; below swaps the font out of vFont, and the stale window kept compositing
+    ; its $80+ glyph ids as walk-tile garbage. Invisible on the trainer path
+    ; only because the battle takes the screen immediately (ea7fe429's stale-box
+    ; diagnosis); user-visible in the Pallet Oak cutscene, whose next beat is
+    ; Oak's walk (maintainer repro 2026-08-06). CheckNPCInteraction's dialog
+    ; wrapper already made this exact call (overworld.asm .dialog_done), which
+    ; is why ordinary NPC/sign dialog never showed it.
+    call hide_window
     call DelayFrame
     call LoadGBPal
     ; xor a; ldh [hAutoBGTransferEnabled],a — disable continuous WRAM→VRAM transfer
