@@ -753,6 +753,19 @@ seam_reseat: db 0        ; derive the view ptr only for the hand-seeded spawn
 section .text
 %endif
 
+%ifdef DEBUG_TRAINER_ROUTE
+section .data
+; One-shot latch for the DEBUG_TRAINER_ROUTE spawn seed (same pattern and same
+; reason as seam_seeded above): pret's post-battle EnterMap deliberately skips
+; InitSprites (sprite data survives a battle — the player cannot have moved),
+; and an unguarded re-seed teleporting the player inside exactly that window
+; desynced every surviving NPC screen coordinate by the teleport delta
+; (measured 2026-08-06, regression-battle-second-trainer-wont-engage).
+trroute_seeded: db 0
+global trroute_seeded
+section .text
+%endif
+
 %ifdef NEED_SEAM_RESEAT
 ; ---------------------------------------------------------------------------
 ; SeamReseatView — DEBUG harnesses only (DEBUG_SEAM, DEBUG_SIGNTEXT). Port-only

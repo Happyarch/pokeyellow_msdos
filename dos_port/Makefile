@@ -821,6 +821,18 @@ endif
 ifdef AK_ROUTE_CYCLES
 NASMFLAGS += -D AK_ROUTE_CYCLES=$(AK_ROUTE_CYCLES)
 endif
+# AUTOKEY_ROUTE_WALK=1: bug-B repro walk (regression-battle-second-trainer-
+# wont-engage). Pre-battle scripted walk into ROUTE3_YOUNGSTER2's sight line
+# (needs PILOT_NEUTRAL=1 so the spawn starts OUT of sight and the battle ends
+# at a tile != the re-seed target), then a post-battle walk into
+# ROUTE3_YOUNGSTER1's true line, then stand. Run with AK_ROUTE_CYCLES=72.
+#   make DEBUG_TRAINER_ROUTE=1 PILOT_NEUTRAL=1 AUTOKEY_ROUTE_WALK=1 AK_ROUTE_CYCLES=72
+ifdef AUTOKEY_ROUTE_WALK
+NASMFLAGS += -D AUTOKEY_ROUTE_WALK
+endif
+ifdef AK_WALK_BASE
+NASMFLAGS += -D AK_WALK_BASE=$(AK_WALK_BASE)
+endif
 endif
 
 # Pallet Oak cutscene gate: seed Pallet's north-exit trigger, execute the Pallet
@@ -1242,6 +1254,17 @@ endif
 ifdef TRAINER_ROUTE_PILOT
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_TRAINER_ROUTE -D DEBUG_SEED_PARTY -D SKIP_TITLE
+endif
+# Pilot spawn clear of every Route 3 sight line (debugger-attach aid: the normal
+# spawn engages trainer 0 before a breakpoint can be armed).
+#   dos_port/run TRAINER_ROUTE_PILOT=1 PILOT_NEUTRAL=1
+# MUST stay above the NASMFLAGS stamp machinery (bottom of this file): the stamp
+# is $(file)-written at PARSE time, so an append placed after it is invisible to
+# the stamp — toggling the flag then rebuilds NOTHING and ships a stale spawn.
+# Measured 2026-08-06: the block sat after `clean:` and the built EXE carried no
+# -D PILOT_NEUTRAL while the maintainer spawned at the default in-sight tile.
+ifdef PILOT_NEUTRAL
+NASMFLAGS += -D PILOT_NEUTRAL
 endif
 # Party-menu gate: seed the party, open the POKéMON screen over the overworld,
 # render one frame, dump FRAME.BIN, exit. make DEBUG_PARTYMENU=1

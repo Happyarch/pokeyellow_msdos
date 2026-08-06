@@ -201,6 +201,9 @@ extern g_audio_engine_online              ; src/home/audio.asm
 extern pad_noclip                         ; src/input/joypad.asm
 extern seam_reseat                        ; src/engine/overworld/overworld.asm
 extern seam_seeded                        ; src/engine/overworld/overworld.asm
+%ifdef DEBUG_TRAINER_ROUTE
+extern trroute_seeded                     ; src/engine/overworld/overworld.asm (one-shot spawn seed latch)
+%endif
 extern set_single_window                  ; src/ppu/ppu.asm
 
 
@@ -364,10 +367,49 @@ EnterMap:
     ; measured, and a failure there would be indistinguishable from a choreography
     ; failure.
     ; Seeded BEFORE LoadMapData, which reads the coords (same rule as DEBUG_SEAM).
+    ;
+    ; ONE-SHOT (same latch pattern and reason as DEBUG_SEAM's seam_seeded above):
+    ; the post-battle tail is `jmp EnterMap`, and pret's battle-return EnterMap
+    ; deliberately does NOT rebuild sprite slots (LoadMapHeader skips InitSprites
+    ; on BIT_BATTLE_OVER_OR_BLACKOUT — sprite data survives a battle because the
+    ; player cannot have moved during one). An unguarded re-seed TELEPORTED the
+    ; player inside exactly that window, desyncing every surviving NPC screen
+    ; coordinate by the teleport delta; with the (separate) post-battle font
+    ; freeze bug the desync then never healed, and no trainer could engage from
+    ; his true sight line until a warp reload. Measured live + deterministically
+    ; 2026-08-06 — regression-battle-second-trainer-wont-engage.
+    cmp byte [trroute_seeded], 0
+    jne .trroute_no_seed
+    mov byte [trroute_seeded], 1
     mov byte [ebp + W_CUR_MAP], ROUTE_3
+%ifdef PILOT_NEUTRAL
+    ; Spawn OUT of every Route 3 sight line, so a hand-piloted session engages
+    ; nobody until the player walks. Verified against ALL EIGHT Route 3 trainers
+    ; (pret scripts/Route3.asm header ranges + data/maps/objects/Route3.asm,
+    ; re-measured 2026-08-06): the only lines near the spawn row are trainer 0
+    ; (10,6) RIGHT r2 -> x=11-12 at y=6 and trainer 1 (14,4) DOWN r3 -> x=14,
+    ; y=5-7; trainer 2 (16,9) LEFT r2 -> x=14-15 at y=9; trainers 3-7 all sit at
+    ; x>=19 (or x=33) and cannot reach x=13.
+    ; WHY THIS EXISTS: with the normal spawn the player is ALREADY in trainer 0's
+    ; sight, so engagement fires within a few hundred frames of boot — before an
+    ; agent can attach the debugger and arm a breakpoint. The race is unwinnable;
+    ; this removes it.
+    ; (13,8) is MAINTAINER-CHOSEN (live, 2026-08-06): an arithmetic-picked (13,6)
+    ; spawn put the player on the wrong spot when actually run, and the maintainer
+    ; directed "two tiles down". Sight check for (13,8) against all eight headers:
+    ; trainer 0 covers y=6 only, trainer 1 covers x=14 y=5-7, trainer 2 covers
+    ; y=9 x=14-15 — all clear. Two prior tiles picked from map arithmetic ALONE
+    ; were both wrong in different ways ((12,8): ledge in the walk path; (13,6):
+    ; wrong spot live), so this tile is the measured one — do not "correct" it
+    ; back from the pret data without a live run.
+    mov byte [ebp + W_Y_COORD], 8
+    mov byte [ebp + W_X_COORD], 13
+%else
     mov byte [ebp + W_Y_COORD], 6
     mov byte [ebp + W_X_COORD], 12
+%endif
     mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF  ; "not a warp arrival" (see DEBUG_SEAM)
+.trroute_no_seed:
 %endif
 %ifdef DEBUG_SURF
     ; Surfboard gate (items-plan Stage 11): spawn on the Pallet Town shore tile that

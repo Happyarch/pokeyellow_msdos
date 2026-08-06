@@ -3316,6 +3316,9 @@ RunStoneTest:
 %ifndef AUTOKEY_DUMP_FRAME
 %define AUTOKEY_DUMP_FRAME 200
 %endif
+%ifndef AK_WALK_BASE
+%define AK_WALK_BASE 9000               ; AUTOKEY_ROUTE_WALK post-battle walk start
+%endif
 global AutoKeyDrive
 AutoKeyDrive:
     pushad
@@ -3356,6 +3359,20 @@ AutoKeyDrive:
     ; PRESS SCHEDULE fixed while making its effect state-safe.
     test dl, PAD_UP | PAD_DOWN | PAD_LEFT | PAD_RIGHT
     jz .padOk
+%ifdef AUTOKEY_ROUTE_WALK
+    ; Bug-B repro gate: the repro walk uses UP/LEFT/RIGHT ONLY, and the cadence's
+    ; only D-pad key is DOWN — so on the OVERWORLD (wIsInBattle==0) strip just
+    ; the DOWN bit and pass the rest. No frame windows: this is robust against
+    ; boot-time frame drift (measured 2026-08-06: boot ate ~73-150 frames, so a
+    ; frame-windowed UP at 60 was consumed before the overworld loop was live).
+    ; In-battle frames fall through to the move-menu-only gate below unchanged,
+    ; so the cursor DOWNs keep working and a walk press cannot hit a menu.
+    cmp byte [ebp + wIsInBattle], 0
+    jne .routeWalkNo
+    and dl, ~PAD_DOWN & 0xFF            ; overworld: cadence DOWN out, walk dirs pass
+    jmp .padOk
+.routeWalkNo:
+%endif
     cmp byte [ebp + wIsInBattle], 2
     jne .stripPad
     cmp byte [ebp + wTopMenuItemY], 0x0F
@@ -3759,6 +3776,46 @@ autokey_script:
     dd 336 + AK_ROUTE_SHIFT + ak_i * 120, 344 + AK_ROUTE_SHIFT + ak_i * 120, PAD_A
 %assign ak_i ak_i + 1
 %endrep
+%ifdef AUTOKEY_ROUTE_WALK
+    ; Bug-B repro walk (2026-08-06, regression-battle-second-trainer-wont-engage).
+    ; Requires PILOT_NEUTRAL (spawn (13,8), out of every sight line) so the battle
+    ; is fought at a tile != the EnterMap re-seed target — that is what arms the
+    ; post-battle teleport that desyncs every surviving NPC screen coordinate
+    ; (InitSprites is pret-faithfully SKIPPED on battle return, so sprite state
+    ; survives; pret's invariant "the player cannot have moved" is what the
+    ; unguarded DEBUG_TRAINER_ROUTE re-seed violates).
+    ;
+    ; Pre-battle: (13,8) -> LEFT,LEFT -> (11,8) -> UP,UP -> (11,6), inside
+    ; ROUTE3_YOUNGSTER1's RIGHT sight line (x=11-12 @ y=6, range 2) — the same
+    ; tile the maintainer's live battle 1 was fought on. ROUTE MEASURED FROM THE
+    ; LIVE TILEMAP (2026-08-06): the y=8 road's only passable northern gap is
+    ; x=11 (tile $3C; x=12..16 are all tree $37), so UP from x=13 or x=14 no-ops
+    ; — two earlier schedules proved that empirically. Engagement fires on
+    ; arrival; the normal cadence answers the battle. First entry at 400 — past
+    ; the measured worst-case boot (~150 frames); the overworld DOWN-strip in
+    ; the gate makes exact placement non-critical.
+    dd  400,  412, PAD_LEFT
+    dd  520,  532, PAD_LEFT
+    dd  640,  652, PAD_UP
+    dd  760,  772, PAD_UP
+    ; Post-battle: with the one-shot seed guard the player STAYS at the battle
+    ; tile (11,6) — pret's sprites-survive-battle invariant restored — so the
+    ; second-trainer test is a straight walk EAST along the y=6 row
+    ; (maintainer-verified walkable end to end): RIGHT,RIGHT,RIGHT to (14,6),
+    ; squarely inside ROUTE3_YOUNGSTER2's DOWN sight line (x=14, y=5-7, range
+    ; 3), then STAND. Beaten trainer 0's line at (12,6) is crossed en route;
+    ; his set flag makes the scan skip him. VERDICT via dosbox-mcp breakpoints:
+    ;   * .engaging for sprite 3 promptly on arrival = bug B fixed (the
+    ;     wFontLoaded battle-exit clear keeps NPC ticks alive, coords stay
+    ;     true, no reload needed);
+    ;   * anything else = read slot 3 data1 and wFontLoaded and keep digging.
+    ; Run with AK_ROUTE_CYCLES=72 so the cadence is done (8880) before this.
+    ; (AK_WALK_BASE default lives with the other AUTOKEY defaults above
+    ;  AutoKeyDrive — the gate code uses it first, and NASM is single-pass.)
+    dd AK_WALK_BASE      , AK_WALK_BASE +  12, PAD_RIGHT
+    dd AK_WALK_BASE + 120, AK_WALK_BASE + 132, PAD_RIGHT
+    dd AK_WALK_BASE + 240, AK_WALK_BASE + 252, PAD_RIGHT
+%endif
     dd   -1,   -1, 0
 %elifdef AUTOKEY_FISH
     ; items-plan Stage 11 (DEBUG_FISH): two OLD ROD uses through the real bag UI.
