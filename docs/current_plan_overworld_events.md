@@ -1033,7 +1033,8 @@ plan's temporary post-battle-state-leak DEVIATION.
       *gating* now, this plan owns the *retirement*, and both `DEVIATION` lifetimes
       written into `map_sprites.asm` name this file as owner.
 
-      **What battle-work landed** (commit `f36dd6bf` on `battle-work`): the bespoke
+      **What the battle work landed** (commit `f36dd6bf`, now on `master` — the
+      `battle-work` branch was merged and deleted 2026-08-05, `ee8df4ea`): the bespoke
       hook is skipped when `MapScriptPointers[wCurMap] == TrainerMapScript`, and
       still runs everywhere else. The predicate keys on `TrainerMapScript`
       specifically and NOT on `!= DefaultMapScript` — `PALLET_TOWN` already has a
@@ -1046,8 +1047,10 @@ plan's temporary post-battle-state-leak DEVIATION.
       only while "wired" means "points at `TrainerMapScript`". If a future map here
       needs a *different* script entry point while still carrying trainer headers —
       a plausible Stage 5b shape — the gate stops covering it, and this plan must
-      tell battle-work **before** that lands rather than leaving the predicate
-      quietly wrong.
+      re-check the predicate in `map_sprites.asm` **before** that lands rather than
+      leaving it quietly wrong. (This used to say "tell battle-work"; there is no
+      separate battle branch any more — battle work happens on `master`, so the
+      coordination is a code check in the same tree, not a hand-off.)
 
       **Do not read the seven (now fourteen) `route*_sight` goldens as evidence that
       the gate works.** They drive `RunMapScript` directly, not `OverworldLoop`,
