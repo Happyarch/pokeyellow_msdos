@@ -1182,19 +1182,6 @@ endif
 ifdef AUTOKEY_APRESS
 NASMFLAGS += -D AUTOKEY_APRESS
 endif
-# PLAYABLE trainer battle: the DEBUG_TRAINER_ROUTE spawn + seed (Route 3, in
-# ROUTE3_YOUNGSTER1's sight, party seeded by RunTrainerRouteTestSeed) with NO
-# autokey and NO frame dump, so the keyboard drives it. Use this to pilot a
-# trainer battle by hand -- NOT DEBUG_START_MAP+DEBUG_SEED_PARTY, which leaves
-# the per-EnterMap re-seed active that DEBUG_TRAINER_ROUTE excludes on purpose:
-# measured 2026-08-05, that combination wedges NewBattle (wCurOpponent stays set,
-# wIsInBattle never leaves 0) after it has already overwritten the 120 vFont
-# tiles with battle graphics, so the trainer's textbox renders as mon sprites.
-#   dos_port/run TRAINER_ROUTE_PILOT=1
-ifdef TRAINER_ROUTE_PILOT
-NEED_DEBUG_DUMP := 1
-NASMFLAGS += -D DEBUG_TRAINER_ROUTE -D DEBUG_SEED_PARTY -D SKIP_TITLE
-endif
 ifdef AUTOKEY_APRESS_COUNT
 NASMFLAGS += -D AUTOKEY_APRESS_COUNT=$(AUTOKEY_APRESS_COUNT)
 endif
@@ -1233,6 +1220,28 @@ endif
 ifndef AUTOKEY_TITLE
 NASMFLAGS += -D SKIP_TITLE
 endif
+endif
+# PLAYABLE trainer battle: the DEBUG_TRAINER_ROUTE spawn + seed (Route 3, in
+# ROUTE3_YOUNGSTER1's sight, party seeded by RunTrainerRouteTestSeed) with NO
+# autokey and NO frame dump, so the keyboard drives it. Use this to pilot a
+# trainer battle by hand -- NOT DEBUG_START_MAP+DEBUG_SEED_PARTY, which leaves
+# the per-EnterMap re-seed active that DEBUG_TRAINER_ROUTE excludes on purpose:
+# measured 2026-08-05, that combination wedges NewBattle (wCurOpponent stays set,
+# wIsInBattle never leaves 0) after it has already overwritten the 120 vFont
+# tiles with battle graphics, so the trainer's textbox renders as mon sprites.
+#   dos_port/run TRAINER_ROUTE_PILOT=1
+#
+# THIS BLOCK MUST STAY OUTSIDE `ifdef DEBUG_AUTOKEY` (which closes just above).
+# It was added INSIDE it (aaea024e) and was therefore SILENTLY IGNORED unless
+# DEBUG_AUTOKEY happened to be set as well -- the whole point of the gate is that
+# it has no autokey. Measured 2026-08-06: the build stamp carried none of the
+# three defines and the run booted to a default Pallet Town with no party, which
+# reads as "the harness spawned me somewhere odd", not as "the flag did nothing".
+# Same failure mode as the AUTOKEY_QUIET/AUTOKEY_APRESS forwarding gaps the same
+# commit fixed.
+ifdef TRAINER_ROUTE_PILOT
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_TRAINER_ROUTE -D DEBUG_SEED_PARTY -D SKIP_TITLE
 endif
 # Party-menu gate: seed the party, open the POKéMON screen over the overworld,
 # render one frame, dump FRAME.BIN, exit. make DEBUG_PARTYMENU=1
