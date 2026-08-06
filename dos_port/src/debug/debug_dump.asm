@@ -577,6 +577,13 @@ gbstate_regions:
     ; step index + player map/coords, to localize where the intro wedges.
     gbregion "curMapCoord",   W_CUR_MAP,             5   ; wCurMap,-,-,wYCoord,wXCoord
     gbregion "palletScript",  wPalletTownCurScript,  1
+    ; follow-stall probe: the NPC-movement-script engine state PLAYER_FOLLOWS_OAK
+    ; waits on (wNPCMovementScriptPointerTableNum==0), plus the scripted-movement
+    ; status bit and Oak's slot-1 sprite data.
+    gbregion "npcMoveScript", wNPCMovementScriptPointerTableNum, 2  ; CC57 tablenum, CC58 bank
+    gbregion "npcMoveFunc",   W_NPC_MOVEMENT_SCRIPT_FUNCTION_NUM, 1 ; CF10
+    gbregion "statusFlags5",   W_STATUS_FLAGS_5,      1              ; D72F (BIT_SCRIPTED_NPC_MOVEMENT=0)
+    gbregion "oakSlot1d2",    W_SPRITE_STATE_DATA_2 + 16, 16        ; Oak slot-1 data2 (MAPY/MAPX/facing/...)
 %endif
 %ifdef DEBUG_BATTLE_DAMAGE
     ; The semantic differ validates each side against the legal Gen-1 damage
