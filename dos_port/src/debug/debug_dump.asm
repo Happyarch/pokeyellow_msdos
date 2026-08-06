@@ -572,6 +572,12 @@ gbstate_regions:
     gbregion "wEnemyMon",      wEnemyMon,      BATTLEMON_STRUCT_LENGTH
     gbregion "wBattleMonNick", wBattleMonNick, NAME_LENGTH
     gbregion "wBattleMon",     wBattleMon,     BATTLEMON_STRUCT_LENGTH
+%ifdef AUTOKEY_DUMP_ON_BATTLE
+    ; Cutscene-stall probe (Oak intro debugging, 2026-08-06): the Pallet script
+    ; step index + player map/coords, to localize where the intro wedges.
+    gbregion "curMapCoord",   W_CUR_MAP,             5   ; wCurMap,-,-,wYCoord,wXCoord
+    gbregion "palletScript",  wPalletTownCurScript,  1
+%endif
 %ifdef DEBUG_BATTLE_DAMAGE
     ; The semantic differ validates each side against the legal Gen-1 damage
     ; set instead of asking unrelated RNG streams to produce the same byte.
@@ -3328,6 +3334,24 @@ AutoKeyDrive:
     jne .noDump
     call DumpBackbuffer                 ; FRAME.BIN, then exits
 .noDump:
+%ifdef AUTOKEY_DUMP_ON_BATTLE
+    ; State-gated battle photograph (boot-drift-robust, measured 2026-08-06). A
+    ; fixed AUTOKEY_DUMP_FRAME lands wherever ~150 frames of boot drift put it, so
+    ; it cannot reliably catch the narrow intro-battle window. Instead count frames
+    ; while wCurOpponent != 0 (the intro script sets wCurOpponent alongside
+    ; wBattleType at PalletTownPikachuBattleScript, and it persists through the
+    ; battle until EndOfBattle clears it — so it catches the battle even if the
+    ; special path clears wBattleType early) and dump once, AUTOKEY_BATTLE_DUMP_DELAY
+    ; frames in — long enough for SlideBattlePicsIn + the intro box to settle.
+    cmp byte [ebp + wCurOpponent], 0
+    je .noBattleDump
+    inc dword [autokey_battle_frame]
+    mov eax, [autokey_battle_frame]
+    cmp eax, AUTOKEY_BATTLE_DUMP_DELAY
+    jne .noBattleDump
+    call DumpBackbuffer                 ; FRAME.BIN, then exits
+.noBattleDump:
+%endif
     xor edx, edx                        ; DL = held mask for this frame
     lea esi, [autokey_script]
 .scan:
@@ -3394,6 +3418,10 @@ AutoKeyDrive:
 
 section .data
 autokey_frame: dd 0
+%ifdef AUTOKEY_DUMP_ON_BATTLE
+align 4
+autokey_battle_frame: dd 0             ; frames counted while wBattleType != 0
+%endif
 autokey_prev:  db 0
 align 4
 ; START opens the menu; DOWN moves POKéDEX → POKéMON; A selects it.

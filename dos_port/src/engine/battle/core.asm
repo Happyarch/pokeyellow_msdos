@@ -428,6 +428,13 @@ DisplayBattleMenu:
     call DrawEmptyDialogBox             ; pret PrintEmptyString — blank dialog box
     call SaveScreenTilesToBuffer1
     call DrawBattleMenuBox              ; DisplayTextBoxID(BATTLE_MENU_TEMPLATE)
+    ; pret 2093-2101: the old-man tutorial and the Prof. Oak Pikachu battle run
+    ; this menu on SIMULATED input — the cursor walks itself to ITEM.
+    mov al, [ebp + wBattleType]
+    cmp al, BATTLE_TYPE_OLD_MAN
+    je .doSimulatedMenuInput
+    cmp al, BATTLE_TYPE_PIKACHU
+    je .doSimulatedMenuInput
 .handleBattleMenuInput:
     mov al, [ebp + wBattleAndStartSavedMenuItem]
     mov [ebp + wCurrentMenuItem], al
@@ -486,15 +493,54 @@ DisplayBattleMenu:
 .upperLeftMenuItemWasNotSelected:
     cmp al, 2
     jne .partyMenuOrRun
-    ; --- ITEM (bag) selected --- (deferred sub-UI; re-show the menu after)
+    ; --- ITEM (bag) selected ---
+    ; pret: jp BagWasSelected — a TAIL, so BagWasSelected's CF is
+    ; DisplayBattleMenu's CF: CF=1 after a capture ends the special battle at
+    ; the caller (StartBattle's safari-style loop / _InitBattleCommon's
+    ; .specialBattleLoop). CF=0 redisplays, exactly as before.
     call BattleItemMenu
+    jc .itemEndedBattle
     jmp DisplayBattleMenu
+.itemEndedBattle:
+    ret
 .partyMenuOrRun:
     dec al                              ; pret PartyMenuOrRockOrRun: dec a; nz → Run
     jnz BattleMenu_RunWasSelected       ; id 3 (RUN) → tail-jump (returns CF)
     ; --- PKMN (party) selected --- (deferred sub-UI; re-show the menu after)
     call BattlePartyMenu
     jmp DisplayBattleMenu
+
+.doSimulatedMenuInput:
+    ; pret 2107-2137: park the real player name in wLinkEnemyTrainerName (the
+    ; wGrassRate union — ItemUseBall's .oldManBattle later writes the name over
+    ; wGrassRate, the Missingno.-glitch write half), rename the player to the
+    ; tutorial identity so battle text reads "PROF.OAK used POKé BALL!", then
+    ; DRAW the cursor walking FIGHT -> ITEM (pret simulates the keystrokes
+    ; visually — no joypad machinery) and take the ITEM branch directly.
+    lea esi, [ebp + wPlayerName]
+    lea edi, [ebp + wLinkEnemyTrainerName]
+    mov ecx, NAME_LENGTH
+    rep movsb                           ; pret: CopyData wPlayerName -> wLinkEnemyTrainerName
+    mov esi, str_oldman_name            ; pret: ld hl, .oldManName
+    cmp byte [ebp + wBattleType], BATTLE_TYPE_OLD_MAN   ; pret: dec a / jr z
+    je .useOldManName
+    mov esi, str_profoak_name           ; pret: ld hl, .profOakName
+.useOldManName:
+    lea edi, [ebp + wPlayerName]
+    mov ecx, NAME_LENGTH
+    rep movsb                           ; pret: CopyData -> wPlayerName
+    ; the simulated keystrokes (pret hlcoord 9,14 / 9,16 = the left-column
+    ; cursor cells this menu's .leftColumn manages: FIGHT above, ITEM below)
+    mov byte [ebp + W_TILEMAP + MENU_ROW * FW + CUR_COL_L], 0xED          ; '▶' on FIGHT
+    mov bl, 20
+    call DelayFrames
+    mov byte [ebp + W_TILEMAP + MENU_ROW * FW + CUR_COL_L], T_SPACE
+    mov byte [ebp + W_TILEMAP + (MENU_ROW + 2) * FW + CUR_COL_L], 0xED    ; '▶' on ITEM
+    mov bl, 20
+    call DelayFrames
+    mov byte [ebp + W_TILEMAP + (MENU_ROW + 2) * FW + CUR_COL_L], 0xEC    ; '▷' (pret leaves the hollow cursor)
+    mov al, 2                           ; pret: ld a, $2 — select the ITEM entry
+    jmp .upperLeftMenuItemWasNotSelected
 
 ; ===========================================================================
 ; The FIGHT sub-menu: MoveSelectionMenu / SelectMenuItem / SwapMovesInMenu /
@@ -1095,6 +1141,8 @@ extern DisplayEffectiveness            ; display_effectiveness.asm (real)
 extern HideSubstituteShowMonAnim       ; core_stubs.asm (STUB)
 extern ReshowSubstituteAnim            ; core_stubs.asm (STUB)
 extern DelayFrames                     ; src/home/delay.asm
+extern str_oldman_name                 ; battle_menu.asm (assets/battle_menu_runtime_strings.inc)
+extern str_profoak_name                ; battle_menu.asm (assets/battle_menu_runtime_strings.inc)
 extern MultiHitText                    ; battle_text.inc
 
 ; Faithful port of pret engine/battle/core.asm:ExecutePlayerMove (3244). Re-entry
@@ -5345,15 +5393,25 @@ DrawHUDsAndHPBars:
 ;
 ; DEVIATION{class=banking; pret=engine/battle/core.asm:LoadPlayerBackPic; behavior=the pic source is an incbin of gfx/player/redb.pic in .data instead of a ROM-bank pointer plus bank switch, and the OpenSRAM and CloseSRAM bracket around the sprite buffers is dropped; evidence=the port has no ROM banking so pret's ld de RedPicBack plus BANK load has no counterpart, and the port's SRAM window at GB_SRAM is always mapped so the open and close calls are no-ops; lifetime=permanent, the flat memory model is by design}
 ; DEVIATION{class=projection; pret=engine/battle/core.asm:LoadPlayerBackPic; behavior=this routine only decodes to vBackPic, whereas pret also runs ScaleSpriteByTwo, InterlaceMergeSpriteBuffers and predef CopyUncompressedPicToTilemap plus the hStartTileID and hOAMTile setup to place the pic; evidence=the port folds decode plus 2x scale plus merge into LoadMonBackPicToVRAM and defers tilemap placement to SlideBattlePicsIn, which composites both battle pics onto the 40x25 canvas at projected coordinates; lifetime=permanent, the widescreen canvas composition is by design}
-; NOTE: the OldManPicBack and ProfOakPicBack alternates pret selects here are not
-; wired yet -- those ride the old-man tutorial and Oak battle paths.
-;
 ; In:  EBP = GB memory base.  Out: vBackPic filled.  Clobbers: EAX, ECX, EDX, ESI, EDI.
 ; ---------------------------------------------------------------------------
 LoadPlayerBackPic:
-    mov esi, RedPicBack
-    lea edi, [ebp + PIC_STAGE]
+    ; pret 6384-6393: wBattleType picks the back pic — OldManPicBack for the
+    ; old-man tutorial, ProfOakPicBack for the intro Pikachu battle (it is OAK
+    ; standing on the player's side of that battle), RedPicBack otherwise.
+    mov al, [ebp + wBattleType]
+    mov esi, OldManPicBack                 ; pret: ld de, OldManPicBack
+    mov ecx, OldManPicBack_len
+    cmp al, BATTLE_TYPE_OLD_MAN            ; pret: cp BATTLE_TYPE_OLD_MAN
+    je .next
+    mov esi, ProfOakPicBack                ; pret: ld de, ProfOakPicBack
+    mov ecx, ProfOakPicBack_len
+    cmp al, BATTLE_TYPE_PIKACHU            ; pret: cp BATTLE_TYPE_PIKACHU
+    je .next
+    mov esi, RedPicBack                    ; pret: ld de, RedPicBack
     mov ecx, RedPicBack_len
+.next:
+    lea edi, [ebp + PIC_STAGE]
     rep movsb
     mov word [ebp + wSpriteInputPtr], PIC_STAGE
     mov byte [ebp + wSpriteFlipped], 0
@@ -5367,6 +5425,15 @@ align 4
 RedPicBack:
     incbin "../gfx/player/redb.pic"        ; player (Red/Yellow) back sprite
 RedPicBack_len equ $ - RedPicBack
+; OldManPicBack / ProfOakPicBack — pret gfx/pics.asm:381-382 (the tutorial and
+; intro-battle stand-ins pret's LoadPlayerBackPic selects by wBattleType).
+; Same blob-with-consumer pattern and banking DEVIATION as RedPicBack above.
+OldManPicBack:
+    incbin "../gfx/battle/oldmanb.pic"     ; old-man tutorial back sprite
+OldManPicBack_len equ $ - OldManPicBack
+ProfOakPicBack:
+    incbin "../gfx/battle/prof.oakb.pic"   ; Prof. Oak back sprite (intro battle)
+ProfOakPicBack_len equ $ - ProfOakPicBack
 
 section .text
 

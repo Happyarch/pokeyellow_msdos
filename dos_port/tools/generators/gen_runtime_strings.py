@@ -30,6 +30,17 @@ FILES = {
         ("str_tolevel", ["to level ", [0x50]]),
         ("str_attack", ["ATTACK", [0x50]]), ("str_defense", ["DEFENSE", [0x50]]),
         ("str_speed", ["SPEED", [0x50]]), ("str_special", ["SPECIAL", [0x50]]),
+        # Tutorial-battle stand-in names (pret core.asm .oldManName/.profOakName,
+        # copied over wPlayerName for the simulated battle menu so battle text
+        # reads "PROF.OAK used ..."). pret db's "OLD MAN@"/"PROF.OAK@" and copies
+        # NAME_LENGTH (11) bytes — the tail bytes past the @ are incidental code
+        # in pret; the port pads with terminators instead (render-identical).
+        ("str_oldman_name", ["OLD MAN", [0x50, 0x50, 0x50, 0x50]]),
+        ("str_profoak_name", ["PROF.OAK", [0x50, 0x50, 0x50]]),
+        # Tutorial-battle one-item bag (pret SimulatedInputBattleItemList):
+        # the box shows the single POKe BALL and its x1 quantity.
+        ("str_pokeball", ["POKé BALL", [0x50]]),
+        ("str_x1", [[0xF1, 0xF7, 0x50]]),  # ×1
     ],
     "battle_core_runtime_strings.inc": [
         ("str_used_grammar", [[0x4F], "used ", [0x50]]),

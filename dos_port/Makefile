@@ -207,6 +207,26 @@ endif
 # make DEBUG_NO_WILD=1
 $(eval $(call flag_gate,DEBUG_NO_WILD))
 
+# DEBUG_SEAM_KEEP_BATTLES=1: leave BIT_NO_BATTLES CLEAR in a DEBUG_SEAM /
+# DEBUG_START_MAP spawn, for scenarios that NEED their battle (the Pallet Oak
+# Pikachu catch is silently skipped — not wedged — when the bit is set, because
+# the Pallet script does not wait on the battle state).
+$(eval $(call flag_gate,DEBUG_SEAM_KEEP_BATTLES))
+
+# AUTOKEY_DUMP_ON_BATTLE=1: photograph the intro battle screen DETERMINISTICALLY.
+# A fixed AUTOKEY_DUMP_FRAME cannot reliably catch the narrow intro-battle window
+# because boot drift (~150 frames) shifts every absolute frame. This gate dumps
+# FRAME.BIN AUTOKEY_BATTLE_DUMP_DELAY frames after wBattleType first goes non-zero
+# (the OLD_MAN / PIKACHU intro battle), so it lands mid-battle regardless of drift.
+# Pair with DEBUG_SEAM_KEEP_BATTLES=1 so the battle actually runs.
+#   make DEBUG_START_MAP=0x00 DEBUG_START_X=10 DEBUG_START_Y=0 DEBUG_AUTOKEY=1 \
+#        AUTOKEY_APRESS=1 AUTOKEY_NO_PARTY=1 DEBUG_SEAM_KEEP_BATTLES=1 \
+#        AUTOKEY_DUMP_ON_BATTLE=1 [AUTOKEY_BATTLE_DUMP_DELAY=90]
+ifdef AUTOKEY_DUMP_ON_BATTLE
+AUTOKEY_BATTLE_DUMP_DELAY ?= 90
+NASMFLAGS += -D AUTOKEY_DUMP_ON_BATTLE -D AUTOKEY_BATTLE_DUMP_DELAY=$(AUTOKEY_BATTLE_DUMP_DELAY)
+endif
+
 # Debug noclip: press W in-game to toggle walk-through-walls (disables collision).
 # Useful for testing warps, map edges, and OOB behaviour without normal movement.
 # Does NOT imply SKIP_TITLE — works at any point in the game.

@@ -735,6 +735,16 @@ IsNPCAtTargetBlock:
     movzx eax, byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_IMAGEBASEOFFSET]
     test al, al
     jz .next_slot                           ; inactive slot
+    ; Hidden toggleables are INERT (pret: a hidden object's UpdateNPCSprite
+    ; bails at the IsObjectHidden predef BEFORE publishing player-collision
+    ; bits, so a hidden sprite can neither block movement nor be talked to).
+    ; Measured 2026-08-06: without this filter the boot-hidden Oak at his
+    ; (10,4) object spot was an invisible wall on Pallet's main road.
+    mov eax, esi
+    shr eax, 4
+    dec eax                                 ; local object id (0-based)
+    call IsToggleableHidden                 ; CF=1 → hidden: skip (clobbers AL only)
+    jc .next_slot
     movzx eax, byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPY]
     cmp al, bl
     jne .next_slot
@@ -831,6 +841,15 @@ CheckNPCInteraction:
     movzx eax, byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_IMAGEBASEOFFSET]
     test al, al
     jz .next_slot
+
+    ; Hidden toggleables are INERT — same filter and rationale as
+    ; IsNPCAtTargetBlock's scan above (pret: hidden objects can't be talked to;
+    ; the A-press must fall through to signs/nothing).
+    mov eax, esi
+    shr eax, 4
+    dec eax                                 ; local object id (0-based)
+    call IsToggleableHidden                 ; CF=1 → hidden: skip (clobbers AL only)
+    jc .next_slot
 
     ; Compare MAPY and MAPX.
     movzx eax, byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPY]

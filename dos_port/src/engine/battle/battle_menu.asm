@@ -73,6 +73,8 @@ global str_speed                      ; PrintStatsBox, now engine/pokemon/status
 global str_special                    ; PrintStatsBox, now engine/pokemon/status_screen.asm
 global str_cantesc
 global str_norun1
+global str_oldman_name                ; DisplayBattleMenu .doSimulatedMenuInput (core.asm)
+global str_profoak_name               ; DisplayBattleMenu .doSimulatedMenuInput (core.asm)
 global str_norun2
 global str_norun3
 %include "assets/battle_menu_runtime_strings.inc"
@@ -128,6 +130,8 @@ extern RandomizeDamage                ; engine/battle/core.asm
 extern SaveScreenTilesToBuffer1      ; src/home/tilemap.asm
 extern LoadScreenTilesFromBuffer1    ; src/home/tilemap.asm
 extern RestoreBattleScreen           ; src/home/tilemap.asm — alias of the Buffer1 pair
+extern UseItem                       ; src/home/item.asm — In: [wCurItem]; Out: [wActionResultOrTookBattleTurn]
+extern DelayFrames                   ; src/home/delay.asm — In: BL = frame count
 
 ; DrawEmptyDialogBox — pret PrintEmptyString: redraw the outer dialog box with a BLANK
 ; interior (clears any prior message). Labels/box are instant (pret PlaceString).
@@ -171,27 +175,63 @@ EndBattleScreen:
     call DelayFrame
     ret
 
-; BattleItemMenu / BattlePartyMenu — deferred in-battle sub-UIs (bag / party-switch).
-; pret runs the bag / party menu here; until those are wired, they are no-ops (core.asm
-; re-shows DisplayBattleMenu after). TODO(faithful): ITEM → bag use, PKMN → switch.
+; BattleItemMenu — pret engine/battle/core.asm:BagWasSelected. REAL for the
+; tutorial battles (2026-08-06, battle-completion Stage 4a): pret swaps the bag
+; for SimulatedInputBattleItemList (one POKé BALL) in OLD_MAN / PIKACHU battles
+; and the simulated input throws it; the capture tail (pret
+; .checkIfMonCaptured / .returnAfterCapturingMon) clears wCapturedMonSpecies,
+; sets wBattleResult=2 and returns CF=1, which ends the special battle at the
+; caller (_InitBattleCommon .specialBattleLoop / DisplayBattleMenu's ITEM tail).
 ;
-; CONVENTION DEBT, and it cannot be discharged from here (measured 2026-08-01).
-; These are ret-only stand-ins living in a source-mirror file, which the stub
-; convention forbids -- but moving them to battle_stubs.asm under THESE names does
-; not work either: lint_pret_labels rejects a STUB annotation whose label has
-; generated status port_only ("malformed STUB: ... has generated status port_only"),
-; which is the "never fork a stub name" rule enforced mechanically. The pret
-; counterparts are exact:
-;   BattleItemMenu  <- engine/battle/core.asm:BagWasSelected, plus the link-battle
-;                      and safari-bait preamble above it (pret core.asm:2270-2300)
-;   BattlePartyMenu <- the TAIL of engine/battle/core.asm:PartyMenuOrRockOrRun from
-;                      pret core.asm:2409 (safari ROCK, then .partyMenuWasSelected).
-;                      Only the tail: that routine's head, the dec-a run check, is
-;                      already translated inline in DisplayBattleMenu (.partyMenuOrRun).
-; So the fix is a rename to the pret labels at the call sites, which belongs to the
-; battle-completion plan -- items 2a (voluntary switch) and 2c (in-battle bag) name
-; these routines and own their real bodies. Do it there, not in a sweep.
+; The NORMAL-battle branch is still the no-op (CF=0 → the menu redisplays,
+; exactly the old stub behavior); the real in-battle bag UI belongs to
+; battle-completion item 2c. The naming CONVENTION DEBT below it stands: this
+; label should become pret's BagWasSelected when 2c lands (measured 2026-08-01,
+; a stub-file move is mechanically rejected for a port_only-status name).
+;
+; DEVIATION{class=temporary; pret=engine/battle/core.asm:BagWasSelected; behavior=the tutorial-battle bag presentation is a one-line POKe BALL x1 box with a fixed dwell instead of pret's DisplayBagMenu list UI over SimulatedInputBattleItemList, the normal-battle branch remains a no-op, and pret's no-capture HUD-redraw and GBPalNormal tail is dropped; evidence=the in-battle DisplayBagMenu and DisplayListMenuID stack is unported (battle-completion item 2c) and the tutorial flow needs only the single scripted POKE BALL selection pret's simulated input always makes, while OLD_MAN and PIKACHU capture on the scripted first throw so the no-capture tail is one retrained-old-man shake away from unreachable; lifetime=battle-completion items 2c and 4b}
 BattleItemMenu:
+    mov al, [ebp + wBattleType]
+    cmp al, BATTLE_TYPE_OLD_MAN
+    je .simulatedInputBattle
+    cmp al, BATTLE_TYPE_PIKACHU
+    je .simulatedInputBattle
+    clc                                 ; normal battle: bag UI deferred (item 2c)
+    ret
+.simulatedInputBattle:
+    ; the one-item bag (pret SimulatedInputBattleItemList): show it, dwell as
+    ; the simulated cursor "selects" the ball, then use it.
+    mov dword [menu_item_step], 2 * FW
+    mov esi, W_TILEMAP + OUTER_OFF
+    mov bh, OUTER_H
+    mov bl, OUTER_W
+    call TextBoxBorder
+    mov esi, W_TILEMAP + MSG_LINE1
+    mov eax, str_pokeball
+    call PlaceString
+    mov esi, W_TILEMAP + MSG_LINE2
+    mov eax, str_x1
+    call PlaceString
+    mov bl, 30
+    call DelayFrames
+    mov byte [ebp + wCurItem], POKE_BALL
+    call UseItem                        ; -> ItemUseBall: throw, shakes, catch text
+    ; pret BagWasSelected tail (.checkIfMonCaptured):
+    mov al, [ebp + wCapturedMonSpecies]
+    test al, al
+    jz .noCapture
+    mov byte [ebp + wCapturedMonSpecies], 0
+    mov byte [ebp + wBattleResult], 2   ; pret: ld a,$2 / ld [wBattleResult],a
+    stc                                 ; pret: scf — the battle is over
+    ret
+.noCapture:
+    clc                                 ; pret: and a
+    ret
+
+; BattlePartyMenu — still the deferred no-op (battle-completion item 2a owns
+; the voluntary-switch body; pret counterpart is the TAIL of
+; PartyMenuOrRockOrRun from pret core.asm:2409 — the dec-a run check is already
+; inline in DisplayBattleMenu .partyMenuOrRun). Same naming debt as above.
 BattlePartyMenu:
     ret
 

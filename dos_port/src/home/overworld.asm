@@ -263,7 +263,17 @@ EnterMap:
     cmp byte [seam_seeded], 0
     jne .seam_no_seed
     mov byte [seam_seeded], 1
+%ifndef DEBUG_SEAM_KEEP_BATTLES
+    ; BIT_NO_BATTLES suppresses EVERY poll-driven battle — trainer and forced
+    ; battles included (the documented harness trap,
+    ; regression-harness-no-battles-flag-wedges-trainer-battle). A scenario that
+    ; NEEDS its battle (e.g. the Pallet Oak Pikachu catch — whose script does
+    ; not wait on the battle, so suppression SILENTLY skips it rather than
+    ; wedging) must pass DEBUG_SEAM_KEEP_BATTLES=1. Measured 2026-08-06: a
+    ; DEBUG_START_MAP Oak-intro run "completed" with the catch battle silently
+    ; suppressed by this very bit — a false witness for battle behavior.
     or byte [ebp + W_STATUS_FLAGS_4], (1 << BIT_NO_BATTLES)
+%endif
     mov byte [ebp + W_CUR_MAP],  DEBUG_SEAM_MAP
     mov byte [ebp + W_X_COORD],  DEBUG_SEAM_X
     mov byte [ebp + W_Y_COORD],  DEBUG_SEAM_Y

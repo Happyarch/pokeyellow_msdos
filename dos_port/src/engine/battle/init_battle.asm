@@ -108,6 +108,7 @@ extern DrawBattlePokeballs               ; pokeballs.asm — party-status ball r
 extern WaitForAPress                     ; src/home/joypad2.asm — alias of pret WaitForTextScrollButtonPress
 extern HideBattlePokeballs               ; pokeballs.asm
 extern MainInBattleLoop                  ; core.asm — the whole battle loop
+extern DisplayBattleMenu                 ; core.asm — special-battle menu loop (pret StartBattle .displaySafariZoneBattleMenu)
 extern EndOfBattle                       ; end_of_battle.asm — post-battle (EXP/evo/reset)
 extern EndBattleScreen                   ; battle_menu.asm — clean terminal
 extern GetTrainerInformation             ; src/home/trainers2.asm — name/pic/prize metadata
@@ -316,6 +317,17 @@ _InitBattleCommon:
 
 .enemyInitialized:
 
+    ; pret StartBattle .checkAnyPartyAlive / .specialBattle: BATTLE_TYPE_RUN and
+    ; BATTLE_TYPE_PIKACHU skip the all-fainted blackout check, and EVERY
+    ; non-zero wBattleType skips the player send-out entirely — the battle is
+    ; the safari-style menu loop. The intro Pikachu battle can run with an
+    ; EMPTY party (the player owns no mon yet), so nothing on this path may
+    ; touch the party arrays; the old unconditional send-out scan degraded the
+    ; Oak battle to a plain wild battle with a garbage battle mon
+    ; (battle-completion Stage 4a, regression-oak-cutscene-never-advances era).
+    cmp byte [ebp + wBattleType], 0
+    jne .specialBattleIntro
+
     ; --- player send-out (pret StartBattle.playerSendOutFirstMon): first non-fainted mon ---
     ; PROJ(port safety): pret's StartBattle runs AnyPartyAlive→HandlePlayerBlackOut before
     ; this scan, guaranteeing a live mon; the port collapsed StartBattle away, so bound the
@@ -398,6 +410,7 @@ _InitBattleCommon:
 
     ; --- the battle itself ---
     call MainInBattleLoop                       ; menu/turns/damage/faint/EXP/run
+.battleFinished:
     call EndOfBattle                             ; win: PayDay/evo/reset; then whiteout
 
     ; --- W-1 FIX: restore the overworld view pointer InitBattle zeroed (see InitBattle),
@@ -428,6 +441,24 @@ _InitBattleCommon:
     mov dword [text_msgbox], msgbox_dialog
     stc                                          ; pret _InitBattleCommon: scf
     ret
+
+    ; --- special battles (wBattleType != 0): pret StartBattle .specialBattle ---
+.specialBattleIntro:
+    ; Palette binding: the enemy species (Pikachu) is loaded; the player side
+    ; shows a trainer pic (Oak / the old man), so the player-species slot may
+    ; hold a stale id — cosmetic only, the enemy binding is what matters here.
+    call SetPal_Battle
+    call LoadPlayerBackPic             ; wBattleType-dispatched: PROF.OAK / OLD MAN pic
+    call SlideBattlePicsIn
+    call DrawBattleIntroBox            ; wild-style "Wild PIKACHU appeared!"
+    call SaveBattleScreen              ; snapshot for menu re-entry
+    ; pret shows no party-ball row and sends out no player mon in a special
+    ; battle — the trainer pic stays on the player's side for its whole length.
+.specialBattleLoop:                    ; pret StartBattle .displaySafariZoneBattleMenu
+    call DisplayBattleMenu
+    jc .battleFinished                 ; CF=1: ran, or the ball captured (wBattleResult=2)
+    ; DEVIATION{class=temporary; pret=engine/battle/core.asm:StartBattle; behavior=the safari flee roll and safari-ball-count tail pret runs between special-battle menu iterations is omitted so the loop redisplays the menu directly; evidence=OLD_MAN and PIKACHU capture on the scripted first throw (item_effects.asm ItemUseBall .oldManBattle forces it) so the tail is unreachable for them, and BATTLE_TYPE_SAFARI itself is unreachable until the Safari Zone maps and battle-completion Stage 4d land; lifetime=battle-completion Stage 4d}
+    jmp .specialBattleLoop
 
 ; ---------------------------------------------------------------------------
 ; _LoadTrainerPic — production trainer-picture loader.
