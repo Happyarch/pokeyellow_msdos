@@ -3482,6 +3482,52 @@ autokey_script:
 %endrep
     dd  510 + AUTOKEY_DOWNS * 30, 516 + AUTOKEY_DOWNS * 30, PAD_A
     dd  -1,  -1, 0
+%elifdef AUTOKEY_CONTINUE_WALK
+    ; Oak-cutscene-from-save repro (2026-08-06): FULL boot (no SKIP_TITLE),
+    ; pulse A through the title + main menu — with a save present CONTINUE is
+    ; the default item, so the pulses select and confirm it — then hold UP so
+    ; the loaded player walks north into PalletTownDefaultScript's y=0 trigger.
+    ; Run with AUTOKEY_NO_PARTY=1 (the debug party seed must not contaminate
+    ; the state the save restored) and AUTOKEY_DUMP_FRAME past the text.
+    ; START pulses first — the title advances on START (A is the cry easter
+    ; egg); then A pulses select+confirm CONTINUE on the main menu.
+%assign AK_T 60
+%rep 8
+    dd  AK_T, AK_T + 5, PAD_START
+%assign AK_T AK_T + 60
+%endrep
+%assign AK_T 600
+%rep 8
+    dd  AK_T, AK_T + 5, PAD_A
+%assign AK_T AK_T + 30
+%endrep
+%ifdef AK_CONTINUE_MENU_FIRST
+    ; Suspect-isolation leg (OW-A.13 family): cycle the START menu open/closed
+    ; after the load, BEFORE the walk — reproduces a session that browsed menus
+    ; and then triggered the Oak cutscene (font/VRAM/auto-BG state cycled).
+    dd  700,  708, PAD_START
+    dd  800,  808, PAD_B
+%endif
+    ; walk north to the treeline, then STAIRCASE east along it (single RIGHT
+    ; tap + UP hold, repeated): the first pair aligned with the x=9-11 north
+    ; gap walks north automatically, so the approach cannot overshoot (a held
+    ; RIGHT is ~11 steps and slid under the gap — measured on iteration 2).
+    dd  900, 1260, PAD_UP
+%assign AK_W 1320
+%rep 11
+    dd  AK_W,      AK_W + 12, PAD_RIGHT
+    dd  AK_W + 32, AK_W + 80, PAD_UP
+%assign AK_W AK_W + 90
+%endrep
+    dd 2350, 2800, PAD_UP
+    ; dismiss the "OAK: Hey! Wait! / Don't go out!" text (its two pages), then
+    ; idle so the cutscene's next beats (ShowObject + Oak's walk) can run before
+    ; the dump. Verifies the CloseTextDisplay hide_window fix: no stale glyph
+    ; window may survive the close, and Oak must appear.
+    dd 3600, 3612, PAD_A
+    dd 3760, 3772, PAD_A
+    dd 3920, 3932, PAD_A
+    dd  -1,  -1, 0
 %elifdef AUTOKEY_APRESS
     ; Nothing to navigate: answer every <PROMPT> / button wait the flow raises.
     ; DEBUG_ITEMBALL alone uses B so the live AskName prompt deterministically

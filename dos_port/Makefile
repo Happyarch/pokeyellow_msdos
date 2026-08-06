@@ -1206,6 +1206,15 @@ endif
 ifdef AUTOKEY_TITLE
 NASMFLAGS += -D AUTOKEY_TITLE
 endif
+# Full-boot continue-from-save walk (Oak cutscene repro): keeps the title
+# screen (see the SKIP_TITLE exemption below, shared with AUTOKEY_TITLE).
+#   make DEBUG_AUTOKEY=1 AUTOKEY_CONTINUE_WALK=1 AUTOKEY_NO_PARTY=1 AUTOKEY_DUMP_FRAME=1100
+ifdef AUTOKEY_CONTINUE_WALK
+NASMFLAGS += -D AUTOKEY_CONTINUE_WALK
+endif
+ifdef AK_CONTINUE_MENU_FIRST
+NASMFLAGS += -D AK_CONTINUE_MENU_FIRST
+endif
 # overworld-events Stage 4 Fly must-hit: drive START -> POKéMON -> SNORLAX -> FLY ->
 # Town Map -> destination, then let OverworldLoop warp+arrive. Dump defaults to 900
 # (well past arrival). make DEBUG_AUTOKEY=1 AUTOKEY_FLY=1 [AUTOKEY_DUMP_FRAME=n]
@@ -1230,7 +1239,9 @@ ifndef AUTOKEY_NO_PARTY
 NASMFLAGS += -D DEBUG_SEED_PARTY
 endif
 ifndef AUTOKEY_TITLE
+ifndef AUTOKEY_CONTINUE_WALK
 NASMFLAGS += -D SKIP_TITLE
+endif
 endif
 endif
 # PLAYABLE trainer battle: the DEBUG_TRAINER_ROUTE spawn + seed (Route 3, in
