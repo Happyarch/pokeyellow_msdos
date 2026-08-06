@@ -3955,6 +3955,23 @@ autokey_script:
     dd 330, 336, PAD_A          ; select FLY → Town Map (ChooseFlyDestination)
     dd 470, 476, PAD_A          ; select the highlighted town → arm the Fly warp
     dd  -1,  -1, 0
+%elifdef AUTOKEY_TRAINERCARD
+    ; Trainer-card ENTER **and EXIT** (the default script above can only enter a
+    ; submenu — it has a single A press). DEBUG_SEED_PARTY sets EVENT_GOT_POKEDEX
+    ; (measured: two DOWNs landed on ITEM, not the card), so the START menu is
+    ; POKéDEX / POKéMON / ITEM / <NAME> / SAVE / OPTION / EXIT and it takes THREE
+    ; DOWNs to reach the trainer card; A opens it, and the second A satisfies the
+    ; card's WaitForTextScrollButtonPress and returns to the START menu.
+    ; Photograph the RETURN, not the card: the two defects this reproduces are
+    ; both on the exit path (the overworld palette RunDefaultPaletteCommand
+    ; restores behind the box, and the ▶ cursor PlaceMenuCursor puts back).
+    dd  60,  66, PAD_START
+    dd  90,  96, PAD_DOWN
+    dd 120, 126, PAD_DOWN
+    dd 150, 156, PAD_DOWN
+    dd 180, 186, PAD_A          ; open the trainer card
+    dd 290, 296, PAD_A          ; WaitForTextScrollButtonPress -> back to START
+    dd  -1,  -1, 0
 %else
     dd  60,  66, PAD_START
 %assign AK_I 0

@@ -1862,6 +1862,12 @@ wNPCMovementScriptSpriteOffset equ 0xCF17 ; sprite offset controlled by NPC move
 wScriptedNPCWalkCounter      equ 0xCF18   ; 8→0 per scripted step
 BIT_INIT_SCRIPTED_MOVEMENT   equ 7        ; wStatusFlags4 bit 7 — scripted move initialised
 
+; wDefaultPaletteCommand (golden sym 00:cf1b) — the SET_PAL_* command that
+; RunDefaultPaletteCommand / SET_PAL_DEFAULT resolves to. pret's _RunPaletteCommand
+; substitutes it for SET_PAL_DEFAULT; SetPal_Overworld / SetPal_Battle /
+; SetPal_GameFreakIntro publish it (engine/gfx/palettes.asm).
+wDefaultPaletteCommand       equ 0xCF1B
+
 ; FindPathToPlayer / CalcPositionOfPlayerRelativeToNPC (OW-2.2, pret engine/overworld/
 ; pathfinding.asm). HRAM addresses from golden sym (pret ram/hram.asm union at 0xFF95).
 ; hNPCMovementDirections2Index / hNPCSpriteOffset / hNPCPlayerYDistance overlay 0xFF95.

@@ -55,8 +55,19 @@ section .text
 ; Native equivalent of the SGB packet dispatcher.  Palette colors live in the
 ; generated RGB table; this only selects their runtime slots and cache bands.
 _RunPaletteCommand:
+    ; pret engine/gfx/palettes.asm:_RunPaletteCommand — SET_PAL_DEFAULT is not a
+    ; palette of its own: it means "whatever screen owns the default", which
+    ; SetPal_Overworld / SetPal_Battle / SetPal_GameFreakIntro publish into
+    ; wDefaultPaletteCommand. Resolving it to SetPal_Generic instead (as this did
+    ; until 2026-08-05) meant every RunDefaultPaletteCommand caller returning to
+    ; the overworld — the trainer card, the pokédex, the naming screen, the main
+    ; menu — repainted the map in the generic palette instead of the map's own.
     cmp al, SET_PAL_DEFAULT
-    je SetPal_Generic
+    jne .not_default
+    mov al, [ebp + wDefaultPaletteCommand]  ; ld a, [wDefaultPaletteCommand]
+.not_default:
+    cmp al, SET_PAL_BATTLE                  ; pret dispatches through SetPalFunctions;
+    je SetPal_Battle                        ; SetPal_Battle builds live slots, not a row
     cmp al, SET_PAL_OVERWORLD
     je SetPal_Overworld
     cmp al, SET_PAL_SURFING_PIKACHU_MINIGAME
@@ -102,6 +113,7 @@ SetPal_Battle:
     mov ecx, 384
     rep movsb
     call RefreshMonFrontRepaintPalette   ; R2 overlay survives the baseline copy
+    mov byte [ebp + wDefaultPaletteCommand], SET_PAL_BATTLE ; ld a,SET_PAL_BATTLE / ld [wDefaultPaletteCommand],a
     mov byte [g_tilecache_dirty], 1
     mov byte [g_pal_dirty], 1
     popad
@@ -184,6 +196,9 @@ SetPal_Overworld:
     mov edi, tile_pal
     mov ecx, 384
     rep stosb
+    ; ld a, SET_PAL_OVERWORLD / ld [wDefaultPaletteCommand], a — this is what makes
+    ; a later RunDefaultPaletteCommand come back to the MAP's palette.
+    mov byte [ebp + wDefaultPaletteCommand], SET_PAL_OVERWORLD
     mov byte [g_tilecache_dirty], 1
     mov byte [g_pal_dirty], 1
     popad
@@ -209,7 +224,10 @@ SetPal_PartyMenu:               mov al, SET_PAL_PARTY_MENU
                                 jmp SetPal_Screen
 SetPal_PokemonWholeScreen:      mov al, SET_PAL_POKEMON_WHOLE_SCREEN
                                 jmp SetPal_Screen
-SetPal_GameFreakIntro:          mov al, SET_PAL_GAME_FREAK_INTRO
+                                ; pret SetPal_GameFreakIntro also publishes the
+                                ; default as SET_PAL_GENERIC.
+SetPal_GameFreakIntro:          mov byte [ebp + wDefaultPaletteCommand], SET_PAL_GENERIC
+                                mov al, SET_PAL_GAME_FREAK_INTRO
                                 jmp SetPal_Screen
 SetPal_TrainerCard:             mov al, SET_PAL_TRAINER_CARD
                                 jmp SetPal_Screen

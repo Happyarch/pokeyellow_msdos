@@ -704,13 +704,21 @@ StartMenu_TrainerInfo:
     mov [ebp + hTileAnimations], al
     call DrawTrainerInfo
     call DrawBadges                     ; predef DrawBadges
-    ; ld b, SET_PAL_TRAINER_CARD / call RunPaletteCommand — TODO-HW: palette HAL
+    ; ld b, SET_PAL_TRAINER_CARD / call RunPaletteCommand (live — palettes.asm:
+    ; _RunPaletteCommand; the old TODO-HW note here was stale)
     mov bh, SET_PAL_TRAINER_CARD
     call RunPaletteCommand
     call GBPalNormal
     call trainer_card_present           ; port: composite the 20x18 card as one window
     call WaitForTextScrollButtonPress
     call trainer_card_teardown
+    ; DrawTrainerInfo took the stride-20 scratch (TCSCR_W); hand it back to the
+    ; overworld/dialog stride BEFORE DrawStartMenu below, which sets its own
+    ; stride-40 canvas. Doing this AFTER DrawStartMenu (as it was until
+    ; 2026-08-05) left text_row_stride at 20 while the START box lived on the
+    ; 40-wide canvas, so PlaceMenuCursor's Y*stride landed the ▶ in the wrong
+    ; row — visible until the menu was closed and reopened.
+    mov dword [text_row_stride], 20
     call GBPalWhiteOut
     call LoadFontTilePatterns
     ; call LoadScreenTilesFromBuffer2 — port(window model): the START redraw below
@@ -721,7 +729,6 @@ StartMenu_TrainerInfo:
     call LoadGBPal
     pop eax                             ; pop af
     mov [ebp + hTileAnimations], al
-    mov dword [text_row_stride], 20     ; DrawTrainerInfo set stride 40 → restore
     jmp RedisplayStartMenu_DoNotDrawStartMenu
 
 ; ===========================================================================
