@@ -522,6 +522,24 @@ provider shapes below, not their runtime behavior.
       `wBattleType`, and `wCurEnemyLevel`; its Oak milestone is incomplete until
       a must-hit battle scenario proves this handoff does not degrade to a plain
       wild battle.
+      - PARTIAL (committed 5a768070, 2026-08-06): the special-battle slice is in
+        and VERIFIED via headless GBSTATE probe — the Pallet intro Pikachu battle
+        triggers, renders OAK's back pic vs Pikachu, captures on the scripted
+        throw, and exits cleanly (`_InitBattleCommon` `.specialBattleIntro`/
+        `.specialBattleLoop`, `LoadPlayerBackPic` wBattleType dispatch,
+        `DisplayBattleMenu` `.doSimulatedMenuInput`, `BattleItemMenu` one-ball
+        bag). Goldens battle_intro/battle_menu/overworld_pallet/sign_pallet PASS
+        (wBattleType-gated, no normal-battle regression). Verify harness:
+        `DEBUG_SEAM_KEEP_BATTLES=1 AUTOKEY_DUMP_ON_BATTLE=1` (gate dumps on
+        `wCurOpponent`/`wBattleType`; boot-drift-robust).
+      - STILL OPEN: (1) the must-hit Pikachu-battle golden scenario is not yet
+        authored; (2) happiness init (`ModifyPikachuHappiness`) not audited;
+        (3) DOWNSTREAM the post-battle `PLAYER_FOLLOWS_OAK` step STALLS — Oak's
+        lead-to-lab movement never completes because the battle leaves the player
+        at x=8 and `PalletMovementScript_OakMoveLeft` underflows
+        `wXCoord - 10` to a 254-step walk. Root-caused in memory
+        `regression-oak-intro-follow-stall-after-battle`. This is what still
+        blocks the Oak intro from reaching the lab end-to-end.
 - [ ] **4b. `BATTLE_TYPE_OLD_MAN`.** Implement the tutorial identity/menu and
       scripted throw behavior behind a deterministic battle scenario. The
       Viridian script and story reachability belong to overworld-events Stage 5.
