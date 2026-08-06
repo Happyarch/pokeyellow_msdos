@@ -287,11 +287,23 @@ EnterMap:
     ; battle: the trainer script still seeds wCurOpponent, NewBattle bails, and the
     ; poll retries every frame forever. Repro — TRAINER_ROUTE_PILOT=1 DEBUG_NO_WILD=1
     ; wedges on Route 3 with wIsInBattle=00 / wCurOpponent=$CA, and the trainer's
-    ; textbox renders as mon sprite tiles because vChars1 slots 128..247 hold mon
-    ; graphics instead of the font (a healthy battle leaves the font there —
-    ; 119/128 slots match). Any harness that sets this flag and then expects a
-    ; trainer battle will hit it; that is why DEBUG_START_MAP (which pulls in
-    ; DEBUG_SEAM, which sets the same bit) cannot pilot one.
+    ; textbox renders as overworld character sprites. Any harness that sets this
+    ; flag and then expects a trainer battle will hit it; that is why
+    ; DEBUG_START_MAP (which pulls in DEBUG_SEAM, which sets the same bit) cannot
+    ; pilot one.
+    ;
+    ; THE GARBLED TEXTBOX IS NOT A SECOND BUG. vFont is shared with the walk tiles,
+    ; so the post-dialog reload (CheckNPCInteraction .dialog_done ->
+    ; ReloadWalkingTilePatterns + LoadPlayerSpriteGraphics) correctly puts walk
+    ; tiles back into GB_VFONT once the trainer's text closes. The arithmetic
+    ; matches exactly: LoadPlayerSpriteGraphics writes the 12 player walking poses
+    ; to vFont tiles 0-11 (player_gfx.asm), and 9 NPC sprite slots x 12 tiles
+    ; (SpriteVRAMAddresses, 192 bytes each, + $800 into the vFont region) fill
+    ; tiles 12-119 -- 12 + 108 = the 120 measured slots, 128..247, no more and no
+    ; less. Normally the battle takes the screen over immediately and nobody sees
+    ; it; with the battle suppressed the stale text box stays on the tilemap and
+    ; its $80+ glyph ids now index walk tiles. Fix the suppressed battle and the
+    ; textbox is fine -- there is nothing to repair in the tile loading.
     or byte [ebp + W_STATUS_FLAGS_4], (1 << BIT_NO_BATTLES)
 %endif
 %ifdef DEBUG_SIGNTEXT
