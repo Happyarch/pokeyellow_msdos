@@ -275,7 +275,23 @@ EnterMap:
     ; Debug: suppress wild encounters via the game's own flag (wStatusFlags4
     ; BIT_NO_BATTLES — the same gate NewBattle already honours). Re-set on every
     ; EnterMap so it survives StartNewGame's WRAM clear on a fully normal boot
-    ; (title screen intact). Trainer/forced battles are unaffected.
+    ; (title screen intact).
+    ;
+    ; *** "Trainer/forced battles are unaffected" — THAT CLAIM WAS FALSE, measured
+    ; 2026-08-05 and corrected here. *** NewBattle tests BIT_NO_BATTLES BEFORE it
+    ; reaches InitBattle and without looking at wCurOpponent, so the flag suppresses
+    ; EVERY battle the poll drives, trainer battles included. This is faithful —
+    ; pret's NewBattle (home/overworld.asm) has the identical guard order — so the
+    ; bug was the comment, not the code.
+    ; The failure it produces is nasty because it does not look like a suppressed
+    ; battle: the trainer script still seeds wCurOpponent, NewBattle bails, and the
+    ; poll retries every frame forever. Repro — TRAINER_ROUTE_PILOT=1 DEBUG_NO_WILD=1
+    ; wedges on Route 3 with wIsInBattle=00 / wCurOpponent=$CA, and the trainer's
+    ; textbox renders as mon sprite tiles because vChars1 slots 128..247 hold mon
+    ; graphics instead of the font (a healthy battle leaves the font there —
+    ; 119/128 slots match). Any harness that sets this flag and then expects a
+    ; trainer battle will hit it; that is why DEBUG_START_MAP (which pulls in
+    ; DEBUG_SEAM, which sets the same bit) cannot pilot one.
     or byte [ebp + W_STATUS_FLAGS_4], (1 << BIT_NO_BATTLES)
 %endif
 %ifdef DEBUG_SIGNTEXT
