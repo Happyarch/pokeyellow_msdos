@@ -158,6 +158,7 @@ InitBattleCommon:
     mov al, [ebp + wEnemyMonSpecies2]
     cmp al, OPP_ID_OFFSET
     jb InitWildBattle
+    ; DEVIATION{class=projection; pret=engine/battle/init_battle.asm:InitBattleCommon; behavior=sets wFontLoaded BIT_FONT_LOADED on battle entry, which pret only ever does in DisplayTextIDInit; evidence=the port's 40x25 battle canvas loads the text font into the vFont region it time-shares with walking/NPC tiles, and the bit is the engine-wide marker for that state; lifetime=paired with the port-only clear in EndOfBattle.resetVariables (end_of_battle.asm) - the clear MUST outlive this set or every battle exits with UpdateNPCSprite's font freeze stuck on (measured 2026-08-06, regression-battle-second-trainer-wont-engage)}
     or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     call LoadTextBoxTilePatterns
@@ -176,6 +177,7 @@ InitBattleCommon:
 
 InitWildBattle:
     mov byte [ebp + wIsInBattle], 1
+    ; DEVIATION{class=projection; pret=engine/battle/init_battle.asm:InitWildBattle; behavior=sets wFontLoaded BIT_FONT_LOADED on battle entry, which pret only ever does in DisplayTextIDInit; evidence=same battle-canvas font load as InitBattleCommon above; lifetime=paired with the port-only clear in EndOfBattle.resetVariables (end_of_battle.asm), see the annotation there}
     or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     call LoadTextBoxTilePatterns

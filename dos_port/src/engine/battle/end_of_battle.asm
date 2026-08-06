@@ -100,6 +100,8 @@ EndOfBattle:
     ; arm the wild-encounter cooldown so a step doesn't immediately re-trigger
     mov esi, wStatusFlags2
     or byte [ebp + esi], (1 << BIT_WILD_ENCOUNTER_COOLDOWN)
+    ; DEVIATION{class=projection; pret=engine/battle/end_of_battle.asm:EndOfBattle; behavior=additionally clears wFontLoaded BIT_FONT_LOADED at battle teardown, which pret does not do here; evidence=the port-only battle entry (init_battle.asm InitBattleCommon and InitWildBattle) sets the bit for its 40x25 battle canvas font load - pret never sets it outside DisplayTextIDInit - and nothing on the exit path cleared it, so after every battle UpdateNPCSprite's pret-faithful font freeze kept ALL NPC ticks (facing re-assert, InitializeSpriteScreenPosition snap, movement) suspended until an unrelated text open/close cycle, measured live 2026-08-06 as wFontLoaded=01 post-battle with NPC screen coords frozen stale for 7000+ frames (regression-battle-second-trainer-wont-engage); lifetime=permanent while the battle canvas sets the bit on entry, retire together with those setters if the canvas stops sharing vFont}
+    and byte [ebp + wFontLoaded], ~(1 << BIT_FONT_LOADED) & 0xFF
     ; TODO-HW: WaitForSoundToFinish (audio HAL, Phase 3)
     call GBPalWhiteOut
     mov byte [ebp + wDestinationWarpID], 0xFF         ; don't reposition on map re-entry
