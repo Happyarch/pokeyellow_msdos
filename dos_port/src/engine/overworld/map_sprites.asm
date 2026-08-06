@@ -66,7 +66,7 @@ global ReadSpriteSheetData
 global LoadMapSpritesImageBaseOffset
 global GetSpriteImageBaseOffset
 global ResetMapTrainerState        ; port-ext per-map-load trainer state (called by wrapper)
-global ApplyToggleableHiddenGate    ; port-ext hidden-object gate (called by wrapper)
+; (ApplyToggleableHiddenGate global retired 2026-08-06 — see the tombstone below)
 global g_toggleable_flags          ; flat .bss event flags — toggleable_objects.asm Show/HideObject bts/btr it (OW-7.2)
 global CheckNPCInteraction
 global ShowTextStream
@@ -227,32 +227,15 @@ ResetMapTrainerState:
     mov byte [w_player_frozen], 0
     ret
 
-; ApplyToggleableHiddenGate (port ext) — for each populated NPC slot (1-14) whose
-; toggleable object is currently hidden, zero its PICTUREID so _InitMapSprites skips
-; it. Mirrors the bespoke loader's inline gate. IsToggleableHidden clobbers AL only.
-ApplyToggleableHiddenGate:
-    push eax
-    push esi
-    mov esi, 0x10                       ; slot 1
-.loop:
-    cmp esi, 0xF0                       ; stop after slot 14 (slot 15 = Pikachu)
-    jae .done
-    movzx eax, byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_PICTUREID]
-    test al, al
-    jz .next                           ; unused slot
-    mov eax, esi
-    shr eax, 4                          ; slot number (1-14)
-    dec eax                             ; local object id (0-based)
-    call IsToggleableHidden            ; CF=1 if hidden; preserves ESI
-    jnc .next
-    mov byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_PICTUREID], 0
-.next:
-    add esi, 0x10
-    jmp .loop
-.done:
-    pop esi
-    pop eax
-    ret
+; ApplyToggleableHiddenGate — RETIRED 2026-08-06. The destructive map-load gate
+; (zeroing a hidden toggleable's PICTUREID) made runtime ShowObject a no-op:
+; the slot no longer existed, so the revealed object could neither render nor
+; consume scripted movement until a full map reload rebuilt it — measured as
+; the Pallet Oak cutscene wedge (regression-oak-cutscene-never-advances).
+; Hiding is now pret-shaped: the slot persists and CheckSpriteAvailability
+; (engine/overworld/movement.asm) runs the per-frame IsToggleableHidden check
+; exactly where pret runs its IsObjectHidden predef, so ShowObject/HideObject
+; take effect on the next frame.
 
 ; ---------------------------------------------------------------------------
 ; _InitMapSprites — pret engine/overworld/map_sprites.asm:_InitMapSprites.

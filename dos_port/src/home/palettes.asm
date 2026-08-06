@@ -18,11 +18,12 @@
 ;   src/home/init.asm                     GBPalNormal
 ;   src/engine/menus/naming_screen.asm    RunDefaultPaletteCommand
 ;
-; InitMapSprites' two port-only private helpers (ResetMapTrainerState,
-; ApplyToggleableHiddenGate) deliberately did NOT come with it: they are overworld
-; map-sprite bookkeeping with no pret counterpart, and CLAUDE.md lets a port-only
-; helper live where its subsystem requires so long as it does not absorb a pret
-; label. They stay in map_sprites.asm and are externed below.
+; InitMapSprites' port-only private helper (ResetMapTrainerState) deliberately
+; did NOT come with it: it is overworld map-sprite bookkeeping with no pret
+; counterpart, and CLAUDE.md lets a port-only helper live where its subsystem
+; requires so long as it does not absorb a pret label. It stays in
+; map_sprites.asm and is externed below. (Its former sibling
+; ApplyToggleableHiddenGate was retired 2026-08-06 — see map_sprites.asm.)
 bits 32
 %include "gb_memmap.inc"
 
@@ -46,7 +47,6 @@ global GetHealthBarColor
 extern _RunPaletteCommand
 extern _InitMapSprites               ; src/engine/overworld/map_sprites.asm
 extern ResetMapTrainerState          ; src/engine/overworld/map_sprites.asm (port ext)
-extern ApplyToggleableHiddenGate     ; src/engine/overworld/map_sprites.asm (port ext)
 extern ClearSprites                 ; src/home/clear_sprites.asm
 extern LoadTextBoxTilePatterns      ; src/home/load_font.asm
 extern ReloadMapSpriteTilePatterns  ; src/home/reload_sprites.asm
@@ -76,9 +76,12 @@ InitMapSprites:
     ; map load + .mapTransition + post-text InitMapSprites — but NOT on the interaction
     ; stack's post-dialog reload (that path calls ReloadWalkingTilePatterns, not this).
     call ResetMapTrainerState
-    ; DIVERGENCE (port ext): hide toggleable-hidden objects before the sprite-set /
-    ; imageBaseOffset passes read PICTUREIDs, so a hidden object never gets a VRAM slot.
-    call ApplyToggleableHiddenGate
+    ; (ApplyToggleableHiddenGate call RETIRED 2026-08-06: destructively zeroing a
+    ; hidden toggleable's PICTUREID made runtime ShowObject a no-op — the Pallet
+    ; Oak cutscene wedge. Hidden objects now KEEP their slot and VRAM tiles, as
+    ; in pret, and CheckSpriteAvailability's per-frame IsToggleableHidden check
+    ; — pret's IsObjectHidden predef site — suppresses them; see
+    ; regression-oak-cutscene-never-advances.)
     call _InitMapSprites
     popad
     ret

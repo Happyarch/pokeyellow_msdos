@@ -59,6 +59,7 @@ extern Random_
 
 extern DetectCollisionBetweenSprites  ; src/engine/overworld/sprite_collisions.asm
 extern wMapSpriteData            ; map_sprites.asm — [movbyte2, textid] per slot (pret wMapSpriteData)
+extern IsToggleableHidden        ; map_sprites.asm — port name of pret's IsObjectHidden predef (CF=1 hidden)
 
 %ifdef DEBUG_NPC_WALK
 extern npc_log
@@ -767,7 +768,25 @@ Func_5033:
 ; Clobbers AL, CL, EDX, EBX, ECX.
 ; ---------------------------------------------------------------------------
 CheckSpriteAvailability:
-    ; IsObjectHidden stub: no toggleable objects yet — always visible.
+    ; pret: predef IsObjectHidden / ldh a,[hIsToggleableObjectOff] / and a /
+    ; jp nz, .spriteInvisible — the PER-FRAME hidden-object gate, and it must be
+    ; per-frame: ShowObject/HideObject flip the flag at runtime and pret's model
+    ; is that the SLOT persists while only visibility tracks the flag. The
+    ; port's IsToggleableHidden (map_sprites.asm) is the faithful equivalent of
+    ; pret's IsObjectHidden predef: AL = local object id, CF=1 = hidden
+    ; toggleable, non-toggleables never hidden, clobbers AL only.
+    ; This line was a documented "always visible" stub while hiding was done
+    ; DESTRUCTIVELY at map load (ApplyToggleableHiddenGate zeroed the slot's
+    ; PICTUREID) — which made a runtime ShowObject a no-op on a slot that no
+    ; longer existed: measured 2026-08-06 as the Pallet Oak cutscene wedge
+    ; (Oak's slot had coords+facing but PICTUREID=0, UpdateSprites skipped it,
+    ; BIT_SCRIPTED_NPC_MOVEMENT never cleared —
+    ; regression-oak-cutscene-never-advances).
+    mov eax, esi
+    shr eax, 4
+    dec eax                             ; local object id (0-based) = slot-1
+    call IsToggleableHidden             ; CF=1 → hidden toggleable
+    jc .spriteInvisible
     mov al, [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTBYTE1]
     cmp al, WALK
     jb .skipXYVisibility                 ; scripted movement: always show, skip range test
