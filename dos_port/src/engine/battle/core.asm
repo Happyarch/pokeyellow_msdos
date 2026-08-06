@@ -5262,13 +5262,13 @@ extern DrawEnemyHUD                    ; battle_hud.asm — enemy name+level+HP 
 extern DrawPlayerHUD                   ; battle_hud.asm — player name+level+HP bar+frame
 extern DrawBattleHUDs                  ; battle_hud.asm — both HUDs, pret player-then-enemy order
 extern WaitForAPress                   ; src/home/joypad2.asm — alias of pret WaitForTextScrollButtonPress
-; run-message strings from the generated assets/battle_menu_runtime_strings.inc,
-; which battle_menu.asm carries (Tier-1 data; the blob stays with its %include).
-extern str_gotaway                     ; battle_menu.asm (assets/battle_menu_runtime_strings.inc)
-extern str_cantesc                     ; battle_menu.asm (assets/battle_menu_runtime_strings.inc)
-extern str_norun1                      ; battle_menu.asm (assets/battle_menu_runtime_strings.inc)
-extern str_norun2                      ; battle_menu.asm (assets/battle_menu_runtime_strings.inc)
-extern str_norun3                      ; battle_menu.asm (assets/battle_menu_runtime_strings.inc)
+; (str_gotaway/str_cantesc/str_norun1-3 externs retired 2026-08-06: the run
+; messages now print their generated battle_text.inc streams — CantEscapeText /
+; NoRunningText / GotAwayText, local via the %include — through PrintBattleText,
+; matching pret's PrintText presentation. The runtime strings stay in
+; battle_menu_runtime_strings.inc for battle_menu.asm's own consumers.)
+extern PlaySoundWaitForCurrent         ; src/home/delay.asm — In: AL = sound id
+extern WaitForSoundToFinish            ; src/home/delay.asm
 extern StopAllMusic                    ; src/home/audio.asm
 extern PlayMusic                       ; src/home/audio.asm
 extern StatModifierUpEffect            ; src/engine/battle/effects.asm
@@ -5444,60 +5444,36 @@ TryRunningFromBattle:
     mov al, [ebp + hQuotient + 3]
     cmp al, bl
     jae .canEscape
-    ; can't escape: forfeit the turn, print "Can't escape!"
+    ; can't escape: forfeit the turn (pret core.asm:1611-1615)
     mov byte [ebp + wActionResultOrTookBattleTurn], 1
-    mov eax, str_cantesc
-    call PrintRunLine
-    mov byte [ebp + wForcePlayerToChooseMon], 1  ; pret core.asm:1620-1622
-    call SaveScreenTilesToBuffer1
-    clc
-    ret
+    mov eax, CantEscapeText              ; pret: ld hl, CantEscapeText
+    jmp .printCantEscapeOrNoRunningText  ; pret: jr .printCantEscapeOrNoRunningText
 .trainerBattle:
-    ; "No! There's no / running from a / trainer battle!" (3 lines, single-spaced).
-    or  byte [ebp + W_LETTER_PRINTING_DELAY], (1 << BIT_TEXT_DELAY)
-    mov dword [menu_item_step], FW
-    mov esi, W_TILEMAP + OUTER_OFF
-    mov bh, OUTER_H
-    mov bl, OUTER_W
-    call TextBoxBorder
-    mov esi, W_TILEMAP + DLG_INT(1)
-    mov eax, str_norun1
-    call PlaceString
-    mov esi, ebx
-    mov esi, W_TILEMAP + DLG_INT(2)
-    mov eax, str_norun2
-    call PlaceString
-    mov esi, ebx
-    mov esi, W_TILEMAP + DLG_INT(3)
-    mov eax, str_norun3
-    call PlaceString
-    mov esi, ebx
-    call WaitForAPress
+    mov eax, NoRunningText               ; pret: ld hl, NoRunningText
+.printCantEscapeOrNoRunningText:
+    ; The generated battle_text.inc streams carry pret's real text commands
+    ; (text/line/cont/prompt), so PrintBattleText gives the GB presentation:
+    ; two double-spaced rows, char-by-char reveal, button-gated <CONT> scroll.
+    ; This replaces a bespoke TextBoxBorder + 3x PlaceString block that dumped
+    ; all three lines at once, single-spaced (maintainer-reported 2026-08-06).
+    call PrintBattleText                 ; pret: call PrintText
     mov byte [ebp + wForcePlayerToChooseMon], 1  ; pret core.asm:1620-1622
     call SaveScreenTilesToBuffer1
-    clc
+    clc                                  ; pret: and a — reset carry
     ret
 .canEscape:
-    mov eax, str_gotaway
-    call PrintRunLine
-    stc
-    ret
-
-; PrintRunLine — redraw the dialog box and place a single-line run message (line 1),
-; then wait for A. In: EAX = string ptr; EBP = GB base.
-PrintRunLine:
-    push eax
-    or  byte [ebp + W_LETTER_PRINTING_DELAY], (1 << BIT_TEXT_DELAY)
-    mov dword [menu_item_step], 2 * FW
-    mov esi, W_TILEMAP + OUTER_OFF
-    mov bh, OUTER_H
-    mov bl, OUTER_W
-    call TextBoxBorder
-    pop eax
-    mov esi, W_TILEMAP + MSG_LINE1
-    call PlaceString
-    mov esi, ebx
-    call WaitForAPress
+    ; pret core.asm:1626-1645: the LINK_STATE_BATTLING exchange branch is
+    ; unreachable in the port (no link HAL — see EndOfBattle's link TODO-HW);
+    ; the non-link path sets wBattleResult=2 and plays the run SFX. The old
+    ; bespoke tail dropped wBattleResult, the SFX and SaveScreenTilesToBuffer1.
+    mov byte [ebp + wBattleResult], 2    ; pret: ld a,$2 / ld [wBattleResult],a
+    mov al, SFX_RUN
+    call PlaySoundWaitForCurrent         ; pret: call PlaySoundWaitForCurrent
+    mov eax, GotAwayText                 ; pret: ld hl, GotAwayText
+    call PrintBattleText                 ; pret: call PrintText
+    call WaitForSoundToFinish
+    call SaveScreenTilesToBuffer1
+    stc                                  ; pret: scf
     ret
 
 ; ===========================================================================
