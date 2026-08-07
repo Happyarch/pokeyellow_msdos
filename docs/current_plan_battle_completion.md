@@ -279,9 +279,8 @@ result gates deliberately stop after initialization and drive one terminal turn.
       `InitBattleCommon`/`InitWildBattle`/`_InitBattleCommon`; promote and call
       `GetTrainerInformation`, call `ReadTrainer`, load the trainer picture and
       first party mon, initialize trainer AI/battle state, and preserve the
-      scripted-battle inputs. The port has no battle transition at all today
-      (Stage 5 measures every transition label `missing`); if one is added as a
-      placeholder, tie it explicitly to Stage 5.
+      scripted-battle inputs. (Stale note removed 2026-08-07: the battle
+      transition NOW EXISTS — Stage 5's first two boxes landed in 6a849f15.)
 
       Measured 2026-08-04: full-tier scenario 44 enters pret through Route 3's
       real `CheckFightingMapTrainers`/trainer-sight flow and enters the port
@@ -557,18 +556,23 @@ provider shapes below, not their runtime behavior.
 
 ## Stage 5 — battle transitions
 
-> Detail owner: `docs/current_plan_battle_transitions.md` (full implementation plan with
-> presolved 40×25 geometry, splice spec, and verification — 2026-08-07). The items below remain
-> the umbrella requirements; execute them via that plan's stages.
+> Detail owner: `docs/plans/battle_transitions.md` (ARCHIVED 2026-08-07 — implemented and
+> landed in 6a849f15; presolved 40×25 geometry, splice spec, and verification record). Only
+> the third box below (per-transition state checkpoints) remains open, and it is owned HERE.
 
-- [ ] Port `GetBattleTransitionID_WhichDungeonMap`,
+- [x] Port `GetBattleTransitionID_WildOrTrainer`,
       `GetBattleTransitionID_CompareLevels`, `_IsDungeonMap`, the
-      `BattleTransitions` table, and the four spiral/shrink flash variants under
-      their pret labels. Map scroll/palette effects to the existing shadow
-      registers and presentation pipeline. Note there is no existing transition
-      to replace: the battle currently cuts straight to `InitBattle`.
-- [ ] Preserve and tag the documented scripted-battle transition bug from
+      `BattleTransitions` table, and all 8 animation bodies under their pret
+      labels. DONE 2026-08-07 (6a849f15): `src/engine/battle/battle_transitions.asm`
+      + `DoBattleTransitionAndInitBattleVariables` wrapper spliced at pret's two
+      init_battle sites; maintainer visually approved all 8 via
+      `DEBUG_TRANSITION_DEMO=1`; selection logic cross-checked vs reference
+      video. Detail: the transitions plan + memory `battle-transitions-landed`.
+- [x] Preserve and tag the documented scripted-battle transition bug from
       `docs/bugs_and_glitches.md` under the configured `BUG_FIX_LEVEL` policy.
+      DONE 2026-08-07 (6a849f15): BUG{class=data-model} at
+      `GetBattleTransitionID_CompareLevels` with a `BUG_FIX_LEVEL >= 2`
+      wPartyCount bound.
 - [ ] Add deterministic frame/state checkpoints for each selected transition and
       must-hit its selector plus animation body. Cover wild, trainer, dungeon,
       and scripted inputs; a final `FRAME.BIN` alone is regression evidence, not

@@ -4,7 +4,7 @@
 ; canvas per the maintainer's 2026-08-07 ruling (adjust the geometry, do not
 ; letterbox from 20×18). Every derived count is written as its FORMULA in
 ; SCREEN_WIDTH/SCREEN_HEIGHT terms — several pret literals were 20×18 dimension
-; collisions (see docs/current_plan_battle_transitions.md, all parameters
+; collisions (see docs/plans/battle_transitions.md, all parameters
 ; simulation-verified there).
 ;
 ; The wipe operates directly on W_TILEMAP (stride 40): the caller
