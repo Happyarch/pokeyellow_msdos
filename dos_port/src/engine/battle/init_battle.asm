@@ -104,6 +104,7 @@ extern LoadBattleMonFromParty         ; engine/battle/core.asm — build wBattle
 extern LoadPlayerBackPic         ; home/pics.asm — player trainer (Red) back pic
 extern SlideBattlePicsIn                 ; home/pics.asm — silhouette slide-in
 extern SaveBattleScreen                  ; src/home/tilemap.asm — alias of the Buffer1 pair
+extern DrawEnemyHUDAndHPBar              ; core.asm — wild enemy HUD (pret _InitBattleCommon)
 extern DrawBattlePokeballs               ; pokeballs.asm — party-status ball row
 extern WaitForAPress                     ; src/home/joypad2.asm — alias of pret WaitForTextScrollButtonPress
 extern HideBattlePokeballs               ; pokeballs.asm
@@ -451,7 +452,15 @@ _InitBattleCommon:
     call LoadPlayerBackPic             ; wBattleType-dispatched: PROF.OAK / OLD MAN pic
     call SlideBattlePicsIn
     call DrawBattleIntroBox            ; wild-style "Wild PIKACHU appeared!"
-    call SaveBattleScreen              ; snapshot for menu re-entry
+    ; pret _InitBattleCommon (init_battle.asm) draws the enemy HUD here for a WILD
+    ; battle (wIsInBattle==1) — and BATTLE_TYPE_PIKACHU / OLD_MAN are wild — while
+    ; DisplayBattleMenu skips DrawHUDsAndHPBars for wBattleType!=0. Drawing it before
+    ; SaveBattleScreen (== buffer1) makes it persist through DisplayBattleMenu's
+    ; LoadScreenTilesFromBuffer1. Without this the HUD gate would leave the special
+    ; battle with NO enemy HUD; with the OLD unconditional DrawHUDsAndHPBars it drew
+    ; a phantom PLAYER HUD (:L 0 / 0/ 0) that the real game never shows.
+    call DrawEnemyHUDAndHPBar          ; enemy (PIKACHU L5) HUD only — no player mon out
+    call SaveBattleScreen              ; snapshot for menu re-entry (includes the enemy HUD)
     ; pret shows no party-ball row and sends out no player mon in a special
     ; battle — the trainer pic stays on the player's side for its whole length.
 .specialBattleLoop:                    ; pret StartBattle .displaySafariZoneBattleMenu

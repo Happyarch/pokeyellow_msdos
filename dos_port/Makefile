@@ -253,6 +253,11 @@ endif
 ifdef AUTOKEY_FOLLOW_ON_FLYWARP
 NASMFLAGS += -D AUTOKEY_FOLLOW_ON_FLYWARP
 endif
+# AUTOKEY_FOLLOW_ON_OAKSTEP=1: dump the first frame Oak's scripted-step cursor
+# advances in Pallet (binary "did Oak walk?" test — no dump => Oak never moved).
+ifdef AUTOKEY_FOLLOW_ON_OAKSTEP
+NASMFLAGS += -D AUTOKEY_FOLLOW_ON_OAKSTEP
+endif
 endif
 
 # Debug noclip: press W in-game to toggle walk-through-walls (disables collision).

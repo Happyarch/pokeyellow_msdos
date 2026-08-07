@@ -610,6 +610,10 @@ gbstate_regions:
     gbregion "playerMoveDir", W_PLAYER_MOVING_DIRECTION, 1
     gbregion "walkCounter",   W_WALK_COUNTER,        1
     gbregion "statusFlags6",  W_STATUS_FLAGS_6,      1     ; BIT_FLY_WARP(3)/BIT_DUNGEON_WARP(4)
+    gbregion "oakMoveIdx",    wNPCMovementDirections2Index, 1  ; Oak's scripted-step cursor
+    gbregion "oakWalkCtr",    wScriptedNPCWalkCounter,      1
+    gbregion "spriteIdx",     wSpriteIndex,                 1
+    gbregion "npcMoveSprOff", wNPCMovementScriptSpriteOffset, 1
 %endif
 %ifdef DEBUG_BATTLE_DAMAGE
     ; The semantic differ validates each side against the legal Gen-1 damage
@@ -3390,6 +3394,15 @@ AutoKeyDrive:
     cmp byte [ebp + W_SPRITE_PLAYER_X_STEP_VECTOR], 0
     jne .doFollowDump
     jmp .noFollowDump
+%elifdef AUTOKEY_FOLLOW_ON_OAKSTEP
+    ; Binary test: does Oak's scripted-movement cursor ever advance during the
+    ; follow? If this dump never fires (run to timeout, no GBSTATE), Oak never
+    ; walked. wCurMap==PALLET(0) so it's the Pallet-side follow walk, not the lab.
+    cmp byte [ebp + W_CUR_MAP], 0
+    jne .noFollowDump
+    cmp byte [ebp + wNPCMovementDirections2Index], 0
+    jne .doFollowDump
+    jmp .noFollowDump
 %elifdef AUTOKEY_FOLLOW_ON_FLYWARP
     ; Catch the frame the fly/dungeon-warp bit arms (BIT_FLY_WARP=3, BIT_DUNGEON_WARP=4),
     ; which routes OverworldLoop -> HandleFlyWarpOrDungeonWarp -> SpecialEnterMap ->
@@ -3414,7 +3427,12 @@ AutoKeyDrive:
     ; battle until EndOfBattle clears it — so it catches the battle even if the
     ; special path clears wBattleType early) and dump once, AUTOKEY_BATTLE_DUMP_DELAY
     ; frames in — long enough for SlideBattlePicsIn + the intro box to settle.
-    cmp byte [ebp + wCurOpponent], 0
+    ; Gate on wIsInBattle (set only once InitBattle is actually running), NOT
+    ; wCurOpponent — the latter can hold a stale non-zero value early in the boot/
+    ; cutscene and fire the counter before the real battle, landing the dump on the
+    ; overworld. wIsInBattle is 1 (wild/special) or 2 (trainer) for the battle's
+    ; whole duration, so the delay counts genuine in-battle frames.
+    cmp byte [ebp + wIsInBattle], 0
     je .noBattleDump
     inc dword [autokey_battle_frame]
     mov eax, [autokey_battle_frame]

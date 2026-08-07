@@ -423,10 +423,18 @@ MainInBattleLoop:
 ; ---------------------------------------------------------------------------
 DisplayBattleMenu:
     call LoadScreenTilesFromBuffer1     ; restore saved screen
-    ; (normal battle: wBattleType == 0)
+    ; pret: ld a,[wBattleType] / and a / jr nz, .nonstandardbattle — a special
+    ; battle (OLD_MAN / PIKACHU / SAFARI, wBattleType != 0) has NO player mon out,
+    ; so it draws NEITHER HUD here (the enemy HUD it shows was drawn earlier and is
+    ; restored by LoadScreenTilesFromBuffer1 above). Drawing DrawHUDsAndHPBars
+    ; unconditionally was painting a phantom player HUD over zeroed data — the
+    ; ":L 0 / 0/ 0" box in the Oak/Pikachu intro battle.
+    cmp byte [ebp + wBattleType], 0
+    jne .nonstandardbattle
     call DrawHUDsAndHPBars
     call DrawEmptyDialogBox             ; pret PrintEmptyString — blank dialog box
     call SaveScreenTilesToBuffer1
+.nonstandardbattle:
     call DrawBattleMenuBox              ; DisplayTextBoxID(BATTLE_MENU_TEMPLATE)
     ; pret 2093-2101: the old-man tutorial and the Prof. Oak Pikachu battle run
     ; this menu on SIMULATED input — the cursor walks itself to ITEM.
