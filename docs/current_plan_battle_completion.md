@@ -557,6 +557,10 @@ provider shapes below, not their runtime behavior.
 
 ## Stage 5 — battle transitions
 
+> Detail owner: `docs/current_plan_battle_transitions.md` (full implementation plan with
+> presolved 40×25 geometry, splice spec, and verification — 2026-08-07). The items below remain
+> the umbrella requirements; execute them via that plan's stages.
+
 - [ ] Port `GetBattleTransitionID_WhichDungeonMap`,
       `GetBattleTransitionID_CompareLevels`, `_IsDungeonMap`, the
       `BattleTransitions` table, and the four spiral/shrink flash variants under
