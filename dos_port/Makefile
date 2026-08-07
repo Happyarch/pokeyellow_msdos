@@ -1927,6 +1927,7 @@ FRONTEND_SRCS := \
     src/engine/battle/animations.asm \
     src/engine/battle/used_move_text.asm \
     src/data/battle_data.asm \
+    src/data/battle_anims.asm \
     src/data/move_effect_pointers.asm \
     src/data/trainer_data.asm \
     src/data/move_grammar.asm \
@@ -2867,6 +2868,7 @@ assets: assets/scenario_registry.inc \
         assets/debug_boot_names.inc \
         assets/battle_hud_2bpp.inc assets/ptile_2bpp.inc \
         assets/battle_transition_arcs.inc \
+        assets/battle_anim_constants.inc assets/battle_anim_data.inc \
         assets/trainer_pics.inc \
         assets/super_rod.inc assets/good_rod.inc \
         assets/town_map_data.inc assets/town_map_gfx.inc \
@@ -2897,6 +2899,19 @@ assets/scenario_registry.inc: tools/scenario_manifest.json tools/generators/gen_
 # CircleData/HalfCircle tables; self-checked by an embedded Sub3 emulator).
 assets/battle_transition_arcs.inc: tools/generators/gen_battle_transition_arcs.py
 	python3 tools/generators/gen_battle_transition_arcs.py
+
+# Battle move-animation data (command streams, subanimations, frame blocks,
+# base coords, move sound table + the anim/SE constants). GB-space raw; the
+# battle-frame projection is applied by code. ROM-cross-checked when the golden
+# worktree is present. Both .incs come from one generator run.
+assets/battle_anim_constants.inc assets/battle_anim_data.inc &: \
+		tools/generators/gen_battle_anim_data.py \
+		../data/moves/animations.asm ../data/moves/sfx.asm \
+		../data/battle_anims/subanimations.asm ../data/battle_anims/frame_blocks.asm \
+		../data/battle_anims/base_coords.asm \
+		../constants/move_constants.asm ../constants/move_animation_constants.asm \
+		../constants/battle_anim_constants.asm
+	python3 tools/generators/gen_battle_anim_data.py
 
 # Standalone memory-map blast audit (also runs at the end of `make assets`):
 # overlap/containment check of every sized region in gb_memmap.inc +

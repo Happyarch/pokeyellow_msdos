@@ -152,3 +152,8 @@ section .data
 global MoveAnimationTiles1
 MoveAnimationTiles1:
     incbin "../gfx/battle/move_anim_1.2bpp"
+
+; The generated battle-animation DATA (AttackAnimationPointers, subanimations,
+; frame blocks, base coords, MoveSoundTable) lives in the data layer:
+; src/data/battle_anims.asm <- assets/battle_anim_data.inc (Tier-1,
+; gen_battle_anim_data.py). The engine externs it from there.

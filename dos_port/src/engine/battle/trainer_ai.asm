@@ -54,7 +54,7 @@ bits 32
 ; wave-1 PREP / task-3 integration). NOTE: the draft's item-ID values were wrong;
 ; the include values are the correct constants/item_constants.asm ones.
 ; ---------------------------------------------------------------------------
-XSTATITEM_ANIM          equ 0xAE
+; (XSTATITEM_ANIM now comes from gb_constants.inc -> generated battle_anim_constants.inc)
 ; percent macro: N * $FF / 100  (macros/data.asm)
 PERCENT_25              equ (25 * 255 / 100 + 1)   ; 64
 PERCENT_50              equ (50 * 255 / 100 + 1)   ; 128

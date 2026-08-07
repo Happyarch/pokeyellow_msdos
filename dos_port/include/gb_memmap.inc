@@ -532,6 +532,41 @@ wTrainerNo             equ 0xD05C
 wAmountMoneyWon        equ 0xD078   ; 3 bytes, BCD
 wAnimationID           equ 0xD07B   ; current battle-animation id (= wMenuItemOffset/wDefaultMap union)
 wFirstMonsNotOutYet    equ 0xD11C
+
+; --- battle animation engine (src/engine/battle/animations.asm) — sym-pinned vs golden ---
+; pret ram/wram.asm unions its special-effect scratch heavily; every address below is
+; the golden pokeyellow.sym value. $D089/$D08A are a shared per-effect scratch pair
+; (also wCoordAdjustmentAmount / mon-icon wAnimCounter); $CD3D is the same scratch
+; lane battle_transitions.asm parks its port-only vars on (transition runs before the
+; battle, ball shakes run inside it — lifetimes are disjoint by construction).
+wAnimSoundID           equ 0xCF07   ; move-1 sound index for current anim command; NO_MOVE-1 = none
+wAnimPalette           equ 0xCC79   ; OBP0 value staged for the animation (SGB-aware)
+wTempTilesetNumTiles   equ 0xD07C   ; tile count for LoadMoveAnimationTiles' CopyVideoData
+wBaseCoordX            equ 0xD080   ; current frame block base X (GB pixel space)
+wBaseCoordY            equ 0xD081   ; current frame block base Y (GB pixel space)
+wdef4                  equ 0xDEF4   ; DrawFrameBlock off-screen-adjust scratch (pret's address-named placeholder label, kept verbatim)
+wFBTileCounter         equ 0xD083   ; DrawFrameBlock per-entry loop counter
+wSubAnimFrameDelay     equ 0xD085   ; frames between frame blocks (command byte bits 0-5)
+wSubAnimCounter        equ 0xD086   ; remaining subentries in the current subanimation
+wNumFBTiles            equ 0xD088   ; sprite-entry count of the current frame block
+wSubAnimTransform      equ 0xD08A   ; SUBANIMTYPE_* applied by DrawFrameBlock (union wAnimCounter/wSpiralBallsBaseX)
+wSubAnimAddrPtr        equ 0xD093   ; word: address of the current subanim's pointer (big-endian pair as pret stores it)
+wSubAnimSubEntryAddr   equ 0xD095   ; word: address of the current 3-byte subentry
+wFBDestAddr            equ 0xD09B   ; word: running wShadowOAM write cursor (big-endian)
+wFBMode                equ 0xD09D   ; FRAMEBLOCKMODE_* post-frame-block behavior
+wWhichBattleAnimTileset equ 0xD09E  ; 0/1/2 -> MoveAnimationTilesPointers row
+wNumShakes             equ 0xCD3D   ; ball-shake count (low nybble of wPokeBallAnimData; transitions scratch lane union)
+wDownscaledMonSize     equ 0xCD6C   ; 0 = 5x5, 1 = 3x3 (send-out/recall downscale)
+; per-effect scratch unions at $D089 (comment-only aliases resolve to the same byte):
+wSpiralBallsBaseY          equ 0xD089
+wFallingObjectMovementByte equ 0xD089
+wFlashScreenLongCounter    equ 0xD089
+wNumShootingBalls          equ 0xD089
+wSpiralBallsBaseX          equ 0xD08A   ; (= wSubAnimTransform; effects that use it do not run inside a transformed subanim)
+wNumFallingObjects         equ 0xD08A
+%ifndef wCoordAdjustmentAmount
+wCoordAdjustmentAmount     equ 0xD089   ; AdjustOAMBlock* signed delta (was locally %ifndef-defined in animations.asm/dust_smoke.asm)
+%endif
 wEnemyMon1HP           equ 0xD8A4
 wEnemyMon1Status       equ 0xD8A7
 wEnemyMon1Moves        equ 0xD8AB

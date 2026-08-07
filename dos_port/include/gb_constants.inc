@@ -103,7 +103,7 @@ MOVE_POWER              equ 0x02
 MOVE_TYPE               equ 0x03
 MOVE_ACC                equ 0x04
 MOVE_PP                 equ 0x05
-NUM_ATTACKS             equ 165        ; total moves (constants/move_constants.asm)
+; (NUM_ATTACKS now comes from the generated battle_anim_constants.inc, included below)
 
 BANK_MoveNames          equ 0          ; flat model: ROM bank ignored (wPredefBank)
 
@@ -162,9 +162,12 @@ MAX_ELIXER              equ 0x53
 PP_UP_MASK              equ 0xC0    ; %11000000, PP Ups applied
 PP_MASK                 equ 0x3F    ; %00111111, remaining PP
 
-; --- battle-animation ids (constants/move_constants.asm — moves do double duty
-; as animation ids, so the anim enum continues past NUM_ATTACKS) ---
-TOSS_ANIM               equ 0xC1    ; toss Poké Ball (ItemUseBall / ThrowBallAtTrainerMon)
+; --- battle-animation ids + SE/subanim-type constants: GENERATED (Tier-1) ---
+; The whole anim-id tail (STATUS_AFFECTED_ANIM..BAIT_ANIM), SE_* command ids,
+; SUBANIMTYPE_*/FRAMEBLOCKMODE_*, ANIMATIONTYPE_* and NUM_* sizes come from
+; gen_battle_anim_data.py; the hand equs that used to sit scattered through this
+; file were removed when it landed (battle-animations plan Stage 1).
+%include "assets/battle_anim_constants.inc"
 
 ; --- naming-screen types (constants/menu_constants.asm) ---
 NAME_PLAYER_SCREEN      equ 0
@@ -216,9 +219,8 @@ THUNDER_STONE          equ 0x21    ; item id (constants/item_constants.asm)
 THUNDERBOLT            equ 55      ; move id (constants/move_constants.asm)
 THUNDER                equ 57      ; move id (constants/move_constants.asm)
 
-; --- move / battle-animation ids (constants/move_constants.asm) ---
+; --- move ids (constants/move_constants.asm) ---
 ABSORB                 equ 0x47    ; move #71 (Leech Seed drain anim source)
-BURN_PSN_ANIM          equ 0xBA    ; battle anim shown on burn/poison residual
 
 ; --- misc menu / event constants ---
 PIKAHAPPY_LEVELUP      equ 1       ; constants/pikachu_emotion_constants.asm
@@ -245,20 +247,7 @@ SAFARI_ZONE_CENTER_REST_HOUSE equ 0xDD
 
 ; --- trainer AI (src/engine/battle/trainer_ai.asm) ---
 EFFECT_01              equ 0x01    ; unused sleep effect (StatusAilmentMoveEffects)
-XSTATITEM_ANIM          equ 0xAE   ; constants/move_constants.asm line 188 (X Attack/Def/Speed/Special)
-XSTATITEM_DUPLICATE_ANIM equ 0xAF  ; constants/move_constants.asm line 189
-SHRINKING_SQUARE_ANIM   equ 0xB0   ; constants/move_constants.asm line 190
-SLIDE_DOWN_ANIM         equ 0xC0   ; constants/move_constants.asm line 206
-ROCK_ANIM               equ 0xC9   ; constants/move_constants.asm line 215 (Safari: throw rock)
-BAIT_ANIM               equ 0xCA   ; constants/move_constants.asm line 216 (Safari: throw bait)
-; status-condition anim ids (CheckPlayer/EnemyStatusConditions); contiguous const_def
-ANIMATIONTYPE_BLINK_ENEMY_MON_SPRITE          equ 4   ; constants/battle_anim_constants.asm
-ANIMATIONTYPE_SHAKE_SCREEN_HORIZONTALLY_LIGHT equ 5
-STATUS_AFFECTED_ANIM    equ 0xA7   ; constants/move_constants.asm line 181
-SLP_PLAYER_ANIM         equ 0xBC   ; line 202 (player sleeping)
-SLP_ANIM                equ 0xBD   ; line 203 (enemy sleeping)
-CONF_PLAYER_ANIM        equ 0xBE   ; line 204 (player confused)
-CONF_ANIM               equ 0xBF   ; line 205 (enemy confused)
+; (anim-id constants moved to the generated assets/battle_anim_constants.inc, included above)
 ; move ids referenced by move-effect handlers (constants/move_constants.asm)
 POUND                   equ 0x01
 RAZOR_WIND              equ 0x0D
@@ -315,10 +304,6 @@ MINIMIZE                equ 0x6B
 STAT_NAME_LENGTH        equ 10
 RAGE                    equ 63         ; move id (HandleBuildingRage restores it)
 TOXIC                   equ 0x5C       ; move id (PoisonEffect: badly-poison branch)
-
-; --- battle animation ids (constants/move_constants.asm; move-effect handlers) ---
-ENEMY_HUD_SHAKE_ANIM    equ 0xA9
-SHAKE_SCREEN_ANIM       equ 0xC7
 
 ; --- DisplayTextID special text IDs (constants/text_constants.asm) ---
 TEXT_MON_FAINTED        equ 0xD0

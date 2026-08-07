@@ -5882,3 +5882,39 @@ Implemented the in-memory portion of `docs/current_plan_sram_pc_storage.md`; sta
   `static_gate` stopped at missing generated audio include `assets/music_streams.inc`.
   Faithdiff was run for the touched labels and every ADDED/DROPPED call is decomposed in
   PR #2. No DOSBox-X, mGBA, fidelity, or behavioral golden run was performed.
+
+## 2026-08-07 — battle move-animation data tier (battle_animations plan, Stage 1)
+
+- **Generator.** New `tools/generators/gen_battle_anim_data.py` parses pret
+  `data/moves/animations.asm` (the `battle_anim` macro streams), the
+  `data/battle_anims/{subanimations,frame_blocks,base_coords}.asm` trio,
+  `data/moves/sfx.asm`, and the three constants files, emitting
+  `assets/battle_anim_constants.inc` (99 equs) + `assets/battle_anim_data.inc`
+  (pointer tables as flat `dd`, bodies byte-verbatim). **ROM cross-check: 569
+  bodies byte-identical** against the sha1-verified golden ROM through
+  `pokeyellow.sym` (auto-runs when the golden worktree exists; `--verify`
+  forces; CI without the worktree still generates, self-checks only).
+- **GB-space rule.** Every coordinate/delta byte is pret's GB value; the
+  battle-frame projection (+80,+24 OAM / BCOORD +10,+3 tilemap) is applied by
+  the engine at publication only (plan HAL decision — wShadowOAM must stay
+  byte-comparable because the battle goldens compare the `oam` region).
+- **pret data quirks preserved:** `FrameBlock62` header says 15 entries but the
+  ROM carries 16 (dead trailing entry — emitted, flagged in a comment);
+  `MoveSoundTable` keeps its one unlabeled row after `assert_table_length`.
+- **Carrier.** Data lands in `src/data/battle_anims.asm` (data layer —
+  `aux_misplaced` fires if the labels live in the engine file, measured before
+  moving). Engine will extern from there in Stage 2.
+- **Constants dedupe.** `gb_constants.inc` now `%include`s the generated
+  constants; its scattered hand equs (TOSS_ANIM, BURN_PSN_ANIM, XSTATITEM pair,
+  SHRINKING_SQUARE/SLIDE_DOWN/ROCK/BAIT, STATUS_AFFECTED, SLP/CONF pairs,
+  ENEMY_HUD_SHAKE, SHAKE_SCREEN, the two ANIMATIONTYPE_*, NUM_ATTACKS) and
+  `trainer_ai.asm`'s local XSTATITEM_ANIM were retired after confirming the
+  generated values are identical.
+- **WRAM.** Subanimation engine vars added to `gb_memmap.inc`, sym-pinned
+  (incl. pret's address-named `wdef4` = $DEF4 scratch; $D089/$D08A per-effect
+  unions; `wNumShakes` $CD3D — same scratch lane as the transitions' port-only
+  vars, disjoint lifetimes). `wCoordAdjustmentAmount` centralized.
+- **Verification.** `make assets` + `audit_memmap` clean (1244 symbols / 78
+  regions); full build exit 0; `update_label_db` + `lint_pret_labels` 0 in both
+  modes; core fidelity tier 16/16 PASS; battle-tier scenario sweep recorded in
+  the plan file.
