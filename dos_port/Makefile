@@ -1928,6 +1928,7 @@ FRONTEND_SRCS := \
     src/engine/battle/used_move_text.asm \
     src/data/battle_data.asm \
     src/data/battle_anims.asm \
+    src/data/battle_anim_dispatch.asm \
     src/data/move_effect_pointers.asm \
     src/data/trainer_data.asm \
     src/data/move_grammar.asm \

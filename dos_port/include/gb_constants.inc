@@ -216,8 +216,8 @@ EVOLVE_TRADE           equ 3
 ; --- link/evolution ids (evolution.asm; promoted per pokemon_behavior Stage 0) ---
 LINK_STATE_TRADING     equ 0x32    ; constants/serial_constants.asm
 THUNDER_STONE          equ 0x21    ; item id (constants/item_constants.asm)
-THUNDERBOLT            equ 55      ; move id (constants/move_constants.asm)
-THUNDER                equ 57      ; move id (constants/move_constants.asm)
+THUNDERBOLT            equ 0x55    ; move id 0x55 (constants/move_constants.asm ; 55 = hex). Was `equ 55` (=0x37): pret's hex comment misread as decimal — broke Pikachu's THUNDER/THUNDERBOLT mood boost (evos_moves.asm) and the anim-id dispatch. Fixed 2026-08-07.
+THUNDER                equ 0x57    ; move id 0x57 (constants/move_constants.asm ; 57 = hex). Was `equ 57` (=0x39, collided with SURF): pret's hex comment misread as decimal — broke Pikachu's THUNDER mood boost (evos_moves.asm). Fixed 2026-08-07.
 
 ; --- move ids (constants/move_constants.asm) ---
 ABSORB                 equ 0x47    ; move #71 (Leech Seed drain anim source)
@@ -257,6 +257,25 @@ ROAR                    equ 0x2E
 SOLARBEAM               equ 0x4C
 SKULL_BASH              equ 0x82
 SKY_ATTACK              equ 0x8F
+; move ids referenced by the battle-animation dispatch tables (SpecialEffectPointers /
+; AnimationIdSpecialEffects) and interpreter (constants/move_constants.asm hex comments):
+MEGA_PUNCH              equ 0x05
+GUILLOTINE              equ 0x0C
+MEGA_KICK               equ 0x19
+HEADBUTT                equ 0x1D
+TAIL_WHIP               equ 0x27
+GROWL                   equ 0x2D
+DISABLE                 equ 0x32
+BLIZZARD                equ 0x3B
+BUBBLEBEAM              equ 0x3D
+HYPER_BEAM              equ 0x3F
+REFLECT                 equ 0x73
+SELFDESTRUCT            equ 0x78
+AMNESIA                 equ 0x85
+SPORE                   equ 0x93
+EXPLOSION               equ 0x99
+%define REST 0x9C       ; move id 0x9C — %define, not equ: REST is a NASM-reserved token
+ROCK_SLIDE              equ 0x9D
 NUM_TRAINERS           equ 47      ; trainer_constants.asm (LANCE = 0x2F)
 
 ; --- item ids used by trainer-AI item use (constants/item_constants.asm) ---
@@ -302,7 +321,7 @@ FOREST                  equ 3
 ; --- MINIMIZE move id + stat-name length (stat-modifier effects, Stage 5) ---
 MINIMIZE                equ 0x6B
 STAT_NAME_LENGTH        equ 10
-RAGE                    equ 63         ; move id (HandleBuildingRage restores it)
+RAGE                    equ 0x63       ; move id 0x63 (HandleBuildingRage restores it; pret ; 63 = hex). Was `equ 63` (=0x3F): pret's hex comment misread as decimal — broke Rage move detection/name. Fixed 2026-08-07.
 TOXIC                   equ 0x5C       ; move id (PoisonEffect: badly-poison branch)
 
 ; --- DisplayTextID special text IDs (constants/text_constants.asm) ---

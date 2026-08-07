@@ -1,60 +1,829 @@
-; animations.asm — battle move-animation helpers.
+; animations.asm — battle move-animation engine (pret engine/battle/animations.asm).
 ;
-; PlayMoveAnimation (pret engine/battle/core.asm:6820) used to live here; the
-; mirror rule moved it to src/engine/battle/core.asm (grind session 8). What
-; remains are the pret engine/battle/animations.asm labels themselves:
+; battle_animations Stage 2 (docs/current_plan_battle_animations.md): the
+; interpreter core. This mirror now carries the command-stream interpreter that
+; walks the Tier-1 data in src/data/battle_anims.asm and paints frame blocks into
+; wShadowOAM:
+;   DrawFrameBlock, PlayAnimation, LoadSubanimation, GetSubanimationTransform1/2,
+;   LoadMoveAnimationTiles, MoveAnimation, ShareMoveAnimations, PlaySubanimation,
+;   AnimationCleanOAM, DoSpecialEffectByAnimationId, GetMoveSound, IsCryMove,
+;   PlayApplyingAttackSound, AnimationDelay10, CallWithTurnFlipped, Func_78e98,
+;   WriteLowerByteOfBGMapAndEnableBGTransfer, BattleAnimCopyTileMapToVRAM,
+;   plus the hand-written dd dispatch tables (SpecialEffectPointers /
+;   AnimationIdSpecialEffects) and the move-anim tilesets.
 ;
-;   PlayApplyingAttackAnimation  (pret animations.asm:488) — the generic
-;     "show damage" shake/blink dispatched by wAnimationType. Called by
-;     PlayMoveAnimation in BOTH the animations-on and animations-off cases.
-;   AdjustOAMBlock{X,Y}Pos / ...2 (pret animations.asm:1381-1426).
+; The special-effect / mon-pic / palette / shake handlers the tables dispatch to
+; are STUBs in core_stubs.asm (retired across Stages 3-5); the interpreter is
+; faithful without them. At Stage 2 the interpreter is LINKED but reached only by
+; the (deferred) DEBUG_ANIM_DEMO harness — the production battle path
+; (core.asm PlayMoveAnimation) is unchanged, so the battle goldens stay green
+; until the projection-publication wiring lands and is visually signed off.
 ;
-; Build: nasm -f coff -I include/ -I . -o animations.o animations.asm
-; Register map: A=AL, EBP = GB base; GB memory = [EBP+addr].
+; FLAT-POINTER MODEL (read this before touching pointer math). The Tier-1 tables
+; in src/data/battle_anims.asm are emitted `dd` (32-bit flat program-image
+; addresses), NOT pret's `dw` (16-bit GB ROM). So:
+;   * command streams / subanim bodies / frame blocks / base-coord pairs /
+;     MoveSoundTable / the dispatch tables are read FLAT ([esi]/[label+idx*N]),
+;     never [ebp+..]; pret's ld l,a/ld h,0/add hl,hl (x2) index math becomes
+;     *4 (dd) here, and the db-id+dd-ptr dispatch entries are 5 bytes (pret 3).
+;   * wShadowOAM and every WRAM scratch stay GB-space ([ebp+addr]).
+; DEVIATION{class=data-model; pret=engine/battle/animations.asm:LoadSubanimation; behavior=the subanimation and subentry cursors are held in port-local 32-bit .bss (wSubAnimAddrPtr32 / wSubAnimSubEntryAddr32) instead of the 2-byte GB WRAM slots wSubAnimAddrPtr $D093 / wSubAnimSubEntryAddr $D095; evidence=those pret slots hold 16-bit ROM pointers but the flat DPMI model needs 32-bit program-image addresses that do not fit in two WRAM bytes and would clobber the adjacent slot, and the GB slots are read only by this engine; lifetime=permanent, part of the flat-pointer port model}
+;
+; Register map: A=AL, BC=BX (B=BH, C=BL), DE=EDX, HL=ESI, EBP = GB base.
+; GB memory at [EBP+addr]; flat program-image data via [label]/[esi].
 bits 32
 
+%include "gb_macros.inc"
 %include "gb_memmap.inc"
+%include "gb_constants.inc"
+%include "assets/audio_constants.inc"    ; SFX_DAMAGE / SFX_SUPER_EFFECTIVE / SFX_NOT_VERY_EFFECTIVE
 
-global PlayApplyingAttackAnimation
-global AdjustOAMBlockXPos
-global AdjustOAMBlockXPos2
-global AdjustOAMBlockYPos
-global AdjustOAMBlockYPos2
-
-%ifndef wCoordAdjustmentAmount
-wCoordAdjustmentAmount   equ 0xD089 ; golden 00:d089
-%endif
 %ifndef OBJ_SIZE
 OBJ_SIZE                 equ 4     ; constants/hardware.inc — bytes per OAM entry
 %endif
 %ifndef SCREEN_HEIGHT_PX
 SCREEN_HEIGHT_PX         equ 144   ; constants/hardware.inc
 %endif
+%ifndef wCoordAdjustmentAmount
+wCoordAdjustmentAmount   equ 0xD089 ; golden 00:d089
+%endif
+
+; --- Tier-1 data tables (src/data/battle_anims.asm; flat dd) ---
+extern AttackAnimationPointers
+extern SubanimationPointers
+extern FrameBlockPointers
+extern FrameBlockBaseCoords
+extern MoveSoundTable
+extern SpecialEffectPointers          ; src/data/battle_anim_dispatch.asm (hand-written dd table)
+extern AnimationIdSpecialEffects      ; src/data/battle_anim_dispatch.asm (hand-written dd table)
+
+; --- home/engine backend ---
+extern WaitForSoundToFinish          ; src/home/delay.asm
+extern PlaySound                      ; src/home/audio.asm
+extern GetCryData                     ; src/home/home_stubs.asm (STUB)
+extern UpdateCGBPal_OBP0              ; src/home/cgb_palettes.asm
+extern UpdateCGBPal_OBP1              ; src/home/cgb_palettes.asm
+extern DelayFrames                    ; src/home/delay.asm — BL = frame count
+extern DelayFrame                     ; src/home/vblank.asm
+extern ClearSprites                   ; src/home/clear_sprites.asm
+extern ClearScreen                    ; src/home/copy2.asm
+extern IsInArray                      ; src/home/array2.asm — AL val, ESI base, EDX stride
+extern CopyVideoData                  ; src/home/copy2.asm — ESI dest VRAM, EDX flat src, BL tiles
+extern SaveScreenTilesToBuffer2       ; src/home/tilemap.asm
+extern LoadScreenTilesFromBuffer2     ; src/home/tilemap.asm
+extern Delay3                         ; src/home/palettes.asm
+
+; --- Stage 3-5 dispatch-target stubs (src/engine/battle/core_stubs.asm) ---
+extern SetAnimationPalette
+extern TossBallAnimation
+extern AnimationFlashScreen
+extern AnimationDarkScreenPalette
+extern AnimationResetScreenPalette
+extern AnimationShakeScreen
+extern AnimationWaterDropletsEverywhere
+extern AnimationDarkenMonPalette
+extern AnimationFlashScreenLong
+extern AnimationSlideMonUp
+extern AnimationSlideMonDown
+extern AnimationFlashMonPic
+extern AnimationSlideMonOff
+extern AnimationBlinkMon
+extern AnimationMoveMonHorizontally
+extern AnimationResetMonPosition
+extern AnimationLightScreenPalette
+extern AnimationHideMonPic
+extern AnimationSquishMonPic
+extern AnimationShootBallsUpward
+extern AnimationShootManyBallsUpward
+extern AnimationBoundUpAndDown
+extern AnimationMinimizeMon
+extern AnimationSlideMonDownAndHide
+extern AnimationTransformMon
+extern AnimationLeavesFalling
+extern AnimationPetalsFalling
+extern AnimationSlideMonHalfOff
+extern AnimationShakeEnemyHUD
+extern AnimationSpiralBallsInward
+extern AnimationFlashEnemyMonPic
+extern AnimationHideEnemyMonPic
+extern AnimationBlinkEnemyMon
+extern AnimationShowMonPic
+extern AnimationShowEnemyMonPic
+extern AnimationSlideEnemyMonOff
+extern AnimationShakeBackAndForth
+extern AnimationSubstitute
+extern AnimationWavyScreen
+extern TailWhipAnimationUnused
+extern DoGrowlSpecialEffects
+extern DoBlizzardSpecialEffects
+extern FlashScreenEveryFourFrameBlocks
+extern FlashScreenEveryEightFrameBlocks
+extern DoExplodeSpecialEffects
+extern DoRockSlideSpecialEffects
+extern TradeHidePokemon
+extern TradeShakePokeball
+extern TradeJumpPokeball
+extern DoBallTossSpecialEffects
+extern DoBallShakeSpecialEffects
+extern DoPoofSpecialEffects
+
+; --- routines this file defines ---
+global DrawFrameBlock
+global PlayAnimation
+global LoadSubanimation
+global GetSubanimationTransform1
+global GetSubanimationTransform2
+global LoadMoveAnimationTiles
+global MoveAnimation
+global ShareMoveAnimations
+global Func_78e98
+global WriteLowerByteOfBGMapAndEnableBGTransfer
+global BattleAnimCopyTileMapToVRAM
+global PlaySubanimation
+global AnimationCleanOAM
+global DoSpecialEffectByAnimationId
+global AnimationDelay10
+global CallWithTurnFlipped
+global GetMoveSound
+global IsCryMove
+global PlayApplyingAttackSound
+global MoveAnimationTilesPointers
+global MoveAnimationTiles0
+global MoveAnimationTiles2
+global MoveAnimationTiles1
+
+; --- existing globals (retained below) ---
+global PlayApplyingAttackAnimation
+global AdjustOAMBlockXPos
+global AdjustOAMBlockXPos2
+global AdjustOAMBlockYPos
+global AdjustOAMBlockYPos2
+
+; %ifndef move-anim constants that might not be in gb_constants (defensive)
+%ifndef B_OAM_XFLIP
+B_OAM_XFLIP              equ 5     ; OAM_XFLIP = 1 << 5
+%endif
 
 section .text
 
+; ===========================================================================
+; DrawFrameBlock — pret engine/battle/animations.asm:DrawFrameBlock.
+; Draws one frame block: a run of OAM entries assembled from GB-space deltas and
+; the current wBaseCoordX/Y, applying the wSubAnimTransform (HVFLIP/HFLIP/
+; COORDFLIP/none) mirrors, then paces the frame (wSubAnimFrameDelay) and either
+; cleans, resets or advances the wShadowOAM write cursor per wFBMode.
+; In:  EBX = frame block FLAT pointer (pret bc → hl; kept 32-bit here because a
+;      flat pointer does not fit in BX). All OAM writes go to [ebp + de] where de
+;      is the GB wShadowOAM cursor persisted in wFBDestAddr (big-endian word).
+; ===========================================================================
+DrawFrameBlock:
+    mov esi, ebx                             ; ld l,c / ld h,b — hl = frame block ptr (flat)
+    mov al, [esi]                            ; ld a,[hli] — tile count
+    inc esi
+    mov [ebp + wNumFBTiles], al
+    movzx edx, byte [ebp + wFBDestAddr]      ; wFBDestAddr big-endian: [+0]=high
+    shl edx, 8
+    mov dl, [ebp + wFBDestAddr + 1]          ; [+1]=low  → edx = GB wShadowOAM cursor
+    mov byte [ebp + wFBTileCounter], 0       ; xor a / ld [wFBTileCounter],a
+.loop:
+    mov al, [ebp + wFBTileCounter]
+    inc al                                   ; 8-bit (frame-block count bound)
+    mov [ebp + wFBTileCounter], al
+    mov byte [ebp + wdef4], 2                ; ld a,$2 / ld [wdef4],a
+    mov al, [ebp + wSubAnimTransform]
+    dec al
+    jz .flipHorizontalAndVertical            ; SUBANIMTYPE_HVFLIP
+    dec al
+    jz .flipHorizontalTranslateDown          ; SUBANIMTYPE_HFLIP
+    dec al
+    jz .flipBaseCoords                       ; SUBANIMTYPE_COORDFLIP
+; no transformation
+    mov al, [ebp + wBaseCoordY]
+    add al, [esi]                            ; add [hl] — Y offset (flat)
+    mov [ebp + edx], al                      ; ld [de],a — store Y
+    inc esi
+    inc edx
+    mov al, [ebp + wBaseCoordX]
+    jmp .finishCopying
+.flipBaseCoords:
+    mov al, [ebp + wBaseCoordY]
+    mov bl, al                               ; ld b,a
+    mov al, 136
+    sub al, bl                               ; flip Y base coordinate
+    add al, [esi]                            ; add [hl] Y offset
+    mov [ebp + edx], al                      ; store Y
+    inc esi
+    inc edx
+    mov al, [ebp + wBaseCoordX]
+    mov bl, al
+    mov al, 168
+    sub al, bl                               ; flip X base coordinate
+.finishCopying:
+    add al, [esi]                            ; add [hl] X offset
+    mov [ebp + edx], al                      ; store X
+    cmp al, 88
+    jb .noHalfAdjust1
+    inc byte [ebp + wdef4]
+.noHalfAdjust1:
+    inc esi
+    inc edx
+    mov al, [esi]                            ; ld a,[hli] — tile delta
+    inc esi
+    add al, 0x31                             ; base tile ID for battle animations
+    mov [ebp + edx], al                      ; store tile ID
+    inc edx
+    mov al, [esi]                            ; ld a,[hli] — attr flags
+    inc esi
+    mov bl, al                               ; ld b,a
+    mov al, [ebp + wdef4]
+    or al, bl
+    mov [ebp + edx], al                      ; store flags
+    inc edx
+    jmp .nextTile
+.flipHorizontalAndVertical:
+    mov al, [ebp + wBaseCoordY]
+    add al, [esi]                            ; Y offset
+    mov bl, al
+    mov al, 136
+    sub al, bl                               ; flip Y coordinate
+    mov [ebp + edx], al                      ; store Y
+    inc esi
+    inc edx
+    mov al, [ebp + wBaseCoordX]
+    add al, [esi]                            ; X offset
+    mov bl, al
+    mov al, 168
+    sub al, bl                               ; flip X coordinate
+    mov [ebp + edx], al                      ; store X
+    cmp al, 88
+    jb .noHalfAdjust2
+    inc byte [ebp + wdef4]
+.noHalfAdjust2:
+    inc esi
+    inc edx
+    mov al, [esi]                            ; ld a,[hli] — tile
+    inc esi
+    add al, 0x31
+    mov [ebp + edx], al                      ; store tile ID
+    inc edx
+; toggle horizontal and vertical flip
+    mov al, [esi]                            ; ld a,[hli] — flags
+    inc esi
+    and al, al
+    mov bl, OAM_YFLIP | OAM_XFLIP
+    jz .storeFlags1
+    cmp al, OAM_XFLIP
+    mov bl, OAM_YFLIP
+    jz .storeFlags1
+    cmp al, OAM_YFLIP
+    mov bl, OAM_XFLIP
+    jz .storeFlags1
+    mov bl, 0
+.storeFlags1:
+    mov al, [ebp + wdef4]
+    or al, bl
+    mov [ebp + edx], al
+    inc edx
+    jmp .nextTile
+.flipHorizontalTranslateDown:
+    mov al, [ebp + wBaseCoordY]
+    add al, [esi]
+    add al, 40                               ; translate Y coordinate downwards
+    mov [ebp + edx], al                      ; store Y
+    inc esi
+    inc edx
+    mov al, [ebp + wBaseCoordX]
+    add al, [esi]
+    mov bl, al
+    mov al, 168
+    sub al, bl                               ; flip X coordinate
+    mov [ebp + edx], al                      ; store X
+    cmp al, 88
+    jb .noHalfAdjust3
+    inc byte [ebp + wdef4]
+.noHalfAdjust3:
+    inc esi
+    inc edx
+    mov al, [esi]                            ; ld a,[hli] — tile
+    inc esi
+    add al, 0x31
+    mov [ebp + edx], al
+    inc edx
+    mov al, [esi]                            ; ld a,[hli] — flags
+    inc esi
+    test al, OAM_XFLIP                       ; bit B_OAM_XFLIP,a
+    jnz .disableHorizontalFlip
+.enableHorizontalFlip:
+    or al, OAM_XFLIP                         ; set B_OAM_XFLIP,a
+    jmp .storeFlags2
+.disableHorizontalFlip:
+    and al, ~OAM_XFLIP & 0xFF                ; res B_OAM_XFLIP,a
+.storeFlags2:
+    mov bl, al
+    mov al, [ebp + wdef4]
+    or al, bl
+    mov [ebp + edx], al
+    inc edx
+.nextTile:
+    mov al, [ebp + wFBTileCounter]
+    mov bl, al                               ; ld c,a
+    mov al, [ebp + wNumFBTiles]
+    cmp al, bl                               ; cp c
+    jne .loop                                ; more tiles?
+; after drawing tiles
+    mov al, [ebp + wFBMode]
+    cmp al, FRAMEBLOCKMODE_02
+    jz .advanceFrameBlockDestAddr            ; skip delay and don't clean OAM buffer
+    mov bl, [ebp + wSubAnimFrameDelay]       ; ld c,a → BL
+    call DelayFrames
+    mov al, [ebp + wFBMode]
+    cmp al, FRAMEBLOCKMODE_03
+    jz .advanceFrameBlockDestAddr            ; skip cleaning OAM buffer
+    cmp al, FRAMEBLOCKMODE_04
+    jz .done                                 ; skip cleaning + don't advance
+    mov al, [ebp + wAnimationID]
+    cmp al, GROWL
+    jz .resetFrameBlockDestAddr
+    call AnimationCleanOAM
+.resetFrameBlockDestAddr:
+    mov byte [ebp + wFBDestAddr + 1], (W_SHADOW_OAM & 0xFF)    ; ld a,l / ld [wFBDestAddr+1],a
+    mov byte [ebp + wFBDestAddr], (W_SHADOW_OAM >> 8)          ; ld a,h / ld [wFBDestAddr],a
+    ret
+.advanceFrameBlockDestAddr:
+    mov [ebp + wFBDestAddr + 1], dl          ; ld a,e / ld [wFBDestAddr+1],a
+    mov [ebp + wFBDestAddr], dh              ; ld a,d / ld [wFBDestAddr],a
+.done:
+    ret
 
-; ---------------------------------------------------------------------------
-; PlayApplyingAttackAnimation — pret animations.asm:488. The generic post-move effect
-; that shakes the screen / blinks the enemy pic "to show damage", dispatched by
-; wAnimationType (0 = none → return). The shake/blink themselves drive rWX / the OBJ
-; palette, which our software-PPU battle renderer doesn't expose yet, so the dispatch
-; is faithfully gated on wAnimationType but the visible shake is a marked TODO-HW.
-; Our backend does not set wAnimationType yet, so this is a faithful no-op for now.
-; In: EBP = GB base. All registers preserved.
+; ===========================================================================
+; PlayAnimation — pret animations.asm:PlayAnimation. Walk the command stream for
+; wAnimationID, playing each subanimation (with tileset/sound/palette setup) or
+; special effect in turn until the -1 terminator.
+; ===========================================================================
+PlayAnimation:
+    xor al, al
+    mov [ebp + hROMBankTemp], al             ; faithful dead write (no ROM banking; union slot)
+    mov [ebp + wSubAnimTransform], al
+    movzx eax, byte [ebp + wAnimationID]     ; get animation number
+    dec eax                                  ; id-1 = table index
+    mov esi, [AttackAnimationPointers + eax*4]   ; esi = command stream (flat)
+.animationLoop:
+    mov al, [esi]                            ; ld a,[hli]
+    inc esi
+    cmp al, 0xFF                             ; cp -1
+    jz .AnimationOver
+    cmp al, FIRST_SE_ID                      ; subanimation or special effect?
+    jb .playSubanimation                     ; jr c
+; do special effect
+    mov bl, al                               ; ld c,a — SE id
+    mov edx, SpecialEffectPointers           ; ld de, table (flat)
+.searchSpecialEffectTableLoop:
+    mov al, [edx]                            ; ld a,[de]
+    cmp al, bl                               ; cp c
+    jz .foundMatch
+    add edx, 5                               ; port entry stride (db id + dd ptr); pret 3
+    jmp .searchSpecialEffectTableLoop
+.foundMatch:
+    mov al, [esi]                            ; ld a,[hli] — sound
+    inc esi
+    cmp al, NO_MOVE - 1                       ; is there a sound to play?
+    jz .skipPlayingSound
+    mov [ebp + wAnimSoundID], al
+    push esi
+    push edx
+    call GetMoveSound
+    call PlaySound
+    pop edx
+    pop esi
+.skipPlayingSound:
+    push esi                                 ; push hl (command stream, popped at .nextAnimationCommand)
+    mov esi, [edx + 1]                        ; handler flat addr (pret inc de/ld l,a/inc de/ld h,a)
+    push dword .nextAnimationCommand
+    jmp esi                                  ; jp hl
+.playSubanimation:
+    mov bl, al                               ; ld c,a
+    and al, 0x3F                             ; %00111111
+    mov [ebp + wSubAnimFrameDelay], al
+    xor al, al
+    shl bl, 1                                ; sla c
+    rcl al, 1                                ; rla
+    shl bl, 1                                ; sla c
+    rcl al, 1                                ; rla → top 2 bits of c = tileset
+    mov [ebp + wWhichBattleAnimTileset], al
+    mov al, [esi]                            ; ld a,[hli] — sound
+    inc esi
+    mov [ebp + wAnimSoundID], al
+    movzx ecx, byte [esi]                    ; ld a,[hli] — subanimation ID
+    inc esi
+    lea ecx, [SubanimationPointers + ecx*4]  ; &entry (flat); pret stores &SubanimationPointers[id]
+    mov [wSubAnimAddrPtr32], ecx
+    push esi                                 ; push hl (command stream)
+    mov al, [ebp + IO_OBP0]                  ; ldh a,[rOBP0]
+    push eax                                 ; push af
+    mov al, [ebp + wAnimPalette]
+    mov [ebp + IO_OBP0], al                  ; ldh [rOBP0],a
+    call UpdateCGBPal_OBP0
+    call LoadMoveAnimationTiles
+    call LoadSubanimation
+    call PlaySubanimation
+    pop eax                                  ; pop af
+    mov [ebp + IO_OBP0], al                  ; ldh [rOBP0],a
+    call UpdateCGBPal_OBP0
+.nextAnimationCommand:
+    pop esi                                  ; pop hl — restore command stream ptr
+    jmp .animationLoop
+.AnimationOver:
+    ret
+
+; ===========================================================================
+; LoadSubanimation — pret animations.asm:LoadSubanimation. Read the subanim
+; header (type<<5 | count), resolve the transform for this side, and set the
+; subentry cursor (start, or end-of-list for a reversed subanimation).
+; ===========================================================================
+LoadSubanimation:
+    mov esi, [wSubAnimAddrPtr32]             ; hl = stored entry addr (flat)
+    mov edx, [esi]                           ; de = *entry = subanim body (flat)
+    mov al, [edx]                            ; ld a,[de] — header
+    mov bh, al                               ; ld b,a
+    and al, 0x1F                             ; %00011111 — frame block count
+    mov [ebp + wSubAnimCounter], al
+    mov al, bh                               ; ld a,b
+    and al, 0xE0                             ; %11100000 — type
+    cmp al, SUBANIMTYPE_ENEMY << 5
+    jnz .isNotTypeEnemy
+    call GetSubanimationTransform2
+    jmp .saveTransformation
+.isNotTypeEnemy:
+    call GetSubanimationTransform1
+.saveTransformation:
+; place the upper 3 bits of a into bits 0-2 of a before storing
+    shr al, 1                                ; srl a
+    ror al, 4                                ; swap a (nibble swap)
+    mov [ebp + wSubAnimTransform], al
+    cmp al, SUBANIMTYPE_REVERSE
+    mov esi, 0                               ; ld hl, 0 — offset accumulator
+    jnz .storeSubentryAddr
+; reversed: place initial subentry at the END of the subentry list
+    mov al, [ebp + wSubAnimCounter]
+    dec al                                   ; a = count-1 (8-bit; pret's exact bound)
+.reverseLoop:
+    add esi, 3                               ; add hl, bc (bc = 3)
+    dec al                                   ; dec a — 8-bit
+    jnz .reverseLoop
+.storeSubentryAddr:
+    inc edx                                  ; inc de → first subentry (past header)
+    add esi, edx                             ; add hl, de
+    mov [wSubAnimSubEntryAddr32], esi
+    ret
+
+; called if the subanimation type is not SUBANIMTYPE_ENEMY
+; In: AL = header type (top 3 bits). Out: AL = NORMAL(0) on player's turn else type.
+GetSubanimationTransform1:
+    mov bh, al                               ; ld b,a
+    mov al, [ebp + hWhoseTurn]
+    and al, al
+    mov al, bh                               ; ld a,b (ZF from `and` survives)
+    jnz .ret                                 ; ret nz — enemy turn keeps the type
+    xor al, al                               ; SUBANIMTYPE_NORMAL << 5
+.ret:
+    ret
+
+; called if the subanimation type is SUBANIMTYPE_ENEMY
+GetSubanimationTransform2:
+    mov al, [ebp + hWhoseTurn]
+    and al, al
+    mov al, SUBANIMTYPE_HFLIP << 5
+    jz .ret                                  ; ret z — player turn → HFLIP
+    xor al, al                               ; SUBANIMTYPE_NORMAL << 5
+.ret:
+    ret
+
+; ===========================================================================
+; LoadMoveAnimationTiles — pret animations.asm. Upload the selected move-anim
+; tileset to OBJ VRAM (vSprites tile $31) via CopyVideoData (arms the tile cache).
+; ===========================================================================
+LoadMoveAnimationTiles:
+    movzx eax, byte [ebp + wWhichBattleAnimTileset]
+    lea esi, [eax + eax*2]                    ; *3
+    shl esi, 1                                ; *6 — port entry stride (db count + dd ptr + db -1)
+    add esi, MoveAnimationTilesPointers        ; flat
+    mov al, [esi]                            ; ld a,[hli] — number of tiles
+    inc esi
+    mov [ebp + wTempTilesetNumTiles], al
+    mov edx, [esi]                           ; dd — tileset source (flat)
+    mov esi, GB_VCHARS0 + 0x31 * TILE_SIZE   ; vSprites tile $31 — dest VRAM
+    xor bh, bh                               ; BANK(MoveAnimationTiles0) — no-op in flat model
+    mov bl, [ebp + wTempTilesetNumTiles]     ; tile count → BL
+    jmp CopyVideoData
+
+; ===========================================================================
+; MoveAnimation — pret animations.asm:MoveAnimation. Entry point (pret predef) for
+; playing wAnimationID: wait for sound, set the anim palette, dispatch the Poke
+; Ball toss specially, else run the subanimation stream (or a fixed delay when
+; battle animations are disabled in the options), then the applying-attack shake.
+; ===========================================================================
+MoveAnimation:
+    push esi                                 ; push hl
+    push edx                                 ; push de
+    push ebx                                 ; push bc
+    push eax                                 ; push af
+    call WaitForSoundToFinish
+    call SetAnimationPalette
+    mov al, [ebp + wAnimationID]
+    and al, al
+    jz .animationFinished
+    cmp al, TOSS_ANIM                        ; if throwing a Poke Ball, skip regular anim
+    jnz .moveAnimation
+    push dword .animationFinished
+    jmp TossBallAnimation
+.moveAnimation:
+    mov al, [ebp + wOptions]                 ; are battle animations disabled?
+    test al, 1 << BIT_BATTLE_ANIMATION
+    jnz .animationsDisabled
+    call ShareMoveAnimations
+    call PlayAnimation
+    jmp .next
+.animationsDisabled:
+    mov bl, 30                               ; ld c,30 → BL
+    call DelayFrames
+.next:
+    call PlayApplyingAttackAnimation         ; shake/flash "to show damage"
+.animationFinished:
+    call WaitForSoundToFinish
+    mov dword [wSubAnimSubEntryAddr32], 0    ; pret clears wSubAnimSubEntryAddr; reset the flat cursor
+    xor al, al
+    mov [ebp + wUnusedMoveAnimByte], al
+    mov [ebp + wSubAnimTransform], al
+    dec al                                   ; NO_MOVE - 1
+    mov [ebp + wAnimSoundID], al
+    pop eax
+    pop ebx
+    pop edx
+    pop esi
+    ret
+
+; ===========================================================================
+; ShareMoveAnimations — pret animations.asm. On the opponent's turn, AMNESIA and
+; REST reuse the CONF_ANIM / SLP_ANIM status animations.
+; ===========================================================================
+ShareMoveAnimations:
+    mov al, [ebp + hWhoseTurn]
+    and al, al
+    jz .ret                                  ; ret z — player's turn
+    mov al, [ebp + wAnimationID]
+    cmp al, AMNESIA
+    mov bh, CONF_ANIM                        ; ld b, CONF_ANIM
+    jz .replaceAnim
+    cmp al, REST
+    mov bh, SLP_ANIM
+    jnz .ret                                 ; ret nz
+.replaceAnim:
+    mov al, bh
+    mov [ebp + wAnimationID], al
+.ret:
+    ret
+
+; ===========================================================================
+; PlayApplyingAttackAnimation — pret animations.asm:488. The generic post-move
+; effect (shake screen / blink pic "to show damage"), dispatched by
+; wAnimationType. The AnimationTypePointerTable dispatch (shake/blink) lands in
+; Stage 3; the wAnimationType==0 early-out is faithful now.
 ; ---------------------------------------------------------------------------
 PlayApplyingAttackAnimation:
     push eax
     mov al, [ebp + wAnimationType]
     and al, al
-    jz .done                            ; wAnimationType 0 → no applying animation (pret ret z)
-    ; TODO-HW: AnimationTypePointerTable dispatch (ShakeScreenVertically /
-    ; ShakeScreenHorizontally* / BlinkEnemyMonSprite). These manipulate rWX (window
-    ; scroll) and the OBJ palette to flash the pic — both need software-PPU hooks the
-    ; battle renderer doesn't have yet. Faithful structure preserved; visible shake
-    ; deferred. (pret animations.asm:506 AnimationTypePointerTable.)
+    jz .done                                 ; ret z — no applying animation
+    ; TODO-HW (battle_animations Stage 3): AnimationTypePointerTable dispatch
+    ; (ShakeScreen* / BlinkEnemyMonSprite via wAnimationType). Faithful structure
+    ; preserved; the visible shake/blink is deferred to Stage 3. (pret animations.asm:506.)
 .done:
     pop eax
+    ret
+
+; ===========================================================================
+; Func_78e98 / WriteLowerByteOfBGMapAndEnableBGTransfer — pret animations.asm.
+; Clear the BG tilemap, copy to VRAM via the auto-BG-transfer HRAM staging, and
+; restore. BG-transfer boundary: these drive hAutoBGTransferEnabled/Dest, which
+; the port's vblank BG path consumes; faithful sequencing is preserved.
+; ===========================================================================
+Func_78e98:
+    call SaveScreenTilesToBuffer2
+    mov byte [ebp + hAutoBGTransferEnabled], 0   ; xor a / ldh [hAutoBGTransferEnabled],a
+    call ClearScreen
+    mov bh, GB_TILEMAP0 >> 8                  ; ld h, HIGH(vBGMap0)
+    call WriteLowerByteOfBGMapAndEnableBGTransfer
+    call Delay3
+    mov byte [ebp + hAutoBGTransferEnabled], 0
+    call LoadScreenTilesFromBuffer2
+    mov bh, GB_TILEMAP1 >> 8                  ; ld h, HIGH(vBGMap1) → fall through
+WriteLowerByteOfBGMapAndEnableBGTransfer:
+    mov bl, GB_TILEMAP0 & 0xFF               ; ld l, LOW(vBGMap0) (0x00) → BX = hl
+    call BattleAnimCopyTileMapToVRAM
+    mov byte [ebp + hAutoBGTransferEnabled], 1
+    ret
+
+; In: BX = hl (BH=high, BL=low) of the BG map dest.
+BattleAnimCopyTileMapToVRAM:
+    mov [ebp + H_AUTO_BG_TRANSFER_DEST + 1], bh   ; ld a,h / ldh [hAutoBGTransferDest+1],a
+    mov [ebp + H_AUTO_BG_TRANSFER_DEST], bl       ; ld a,l / ldh [hAutoBGTransferDest],a
+    jmp Delay3
+
+; ===========================================================================
+; PlaySubanimation — pret animations.asm. Play each frame block of the loaded
+; subanimation: resolve frame block / base coord / mode from the 3-byte subentry,
+; draw it, run the per-animation-id special effect, then advance (or reverse) to
+; the next subentry until wSubAnimCounter runs out.
+; ===========================================================================
+PlaySubanimation:
+    mov al, [ebp + wAnimSoundID]
+    cmp al, NO_MOVE - 1
+    jz .skipPlayingSound
+    call GetMoveSound
+    call PlaySound
+.skipPlayingSound:
+    mov byte [ebp + wFBDestAddr + 1], (W_SHADOW_OAM & 0xFF)   ; wFBDestAddr = wShadowOAM (big-endian)
+    mov byte [ebp + wFBDestAddr], (W_SHADOW_OAM >> 8)
+    mov esi, [wSubAnimSubEntryAddr32]        ; hl = subentry addr (flat)
+.loop:
+    movzx ebx, byte [esi]                    ; ld c,[hl] — frame block ID; ld b,0
+    mov ebx, [FrameBlockPointers + ebx*4]    ; bc = frame block addr (flat)
+    movzx eax, byte [esi + 1]                ; base coordinate ID
+    lea edi, [FrameBlockBaseCoords + eax*2]  ; &pair (flat)
+    mov al, [edi]                            ; Y
+    mov [ebp + wBaseCoordY], al
+    mov al, [edi + 1]                        ; X
+    mov [ebp + wBaseCoordX], al
+    mov al, [esi + 2]                        ; frame block mode
+    mov [ebp + wFBMode], al
+    call DrawFrameBlock                      ; In: EBX = frame block flat ptr
+    call DoSpecialEffectByAnimationId
+    mov al, [ebp + wSubAnimCounter]
+    dec al
+    mov [ebp + wSubAnimCounter], al
+    jz .done                                 ; ret z
+    mov esi, [wSubAnimSubEntryAddr32]        ; reload (DrawFrameBlock clobbers ESI)
+    mov al, [ebp + wSubAnimTransform]
+    cmp al, SUBANIMTYPE_REVERSE
+    jz .reverse
+    add esi, 3                               ; ld bc,3 ; add hl,bc
+    jmp .storeAndLoop
+.reverse:
+    sub esi, 3                               ; ld bc,-3 ; add hl,bc
+.storeAndLoop:
+    mov [wSubAnimSubEntryAddr32], esi
+    jmp .loop
+.done:
+    ret
+
+; ===========================================================================
+; AnimationCleanOAM — pret animations.asm. Delay a frame, then clear all sprites.
+; ===========================================================================
+AnimationCleanOAM:
+    push esi
+    push edx
+    push ebx
+    push eax
+    call DelayFrame
+    call ClearSprites
+    pop eax
+    pop ebx
+    pop edx
+    pop esi
+    ret
+
+; ===========================================================================
+; DoSpecialEffectByAnimationId — pret animations.asm. After each frame block, run
+; the special-effect routine keyed by wAnimationID (if any).
+; ===========================================================================
+DoSpecialEffectByAnimationId:
+    push esi
+    push edx
+    push ebx
+    mov al, [ebp + wAnimationID]
+    mov esi, AnimationIdSpecialEffects       ; ld hl, table (flat)
+    mov edx, 5                               ; entry stride (port db id + dd ptr; pret 3)
+    call IsInArray
+    jnc .done
+    inc esi                                  ; skip id byte
+    mov esi, [esi]                           ; handler flat addr (dd)
+    push dword .done
+    jmp esi
+.done:
+    pop ebx
+    pop edx
+    pop esi
+    ret
+
+; ===========================================================================
+; AnimationDelay10 — pret animations.asm. Wait 10 frames.
+; ===========================================================================
+AnimationDelay10:
+    mov bl, 10                               ; ld c,10 → BL
+    jmp DelayFrames
+
+; ===========================================================================
+; CallWithTurnFlipped — pret animations.asm. Call a routine with hWhoseTurn
+; flipped, then restore it.  In: ESI = routine address (pret hl).
+; ===========================================================================
+CallWithTurnFlipped:
+    mov al, [ebp + hWhoseTurn]
+    push eax                                 ; push af (save turn)
+    xor al, 1
+    mov [ebp + hWhoseTurn], al
+    push dword .returnAddress
+    jmp esi                                  ; jp hl
+.returnAddress:
+    pop eax                                  ; pop af
+    mov [ebp + hWhoseTurn], al
+    ret
+
+; ===========================================================================
+; GetMoveSound / IsCryMove — pret animations.asm. Resolve the SFX (and freq/tempo
+; modifiers) for the current animation's sound id; cry moves (Growl/Roar) pull the
+; species cry instead.  In: AL = MoveSoundTable index. Out: AL = SFX id.
+; ===========================================================================
+GetMoveSound:
+    movzx ecx, al
+    lea esi, [ecx + ecx*2]                    ; index*3
+    add esi, MoveSoundTable                    ; flat
+    mov al, [esi]                            ; ld a,[hli] — base sound
+    inc esi
+    mov bh, al                               ; ld b,a
+    call IsCryMove
+    jnc .NotCryMove
+    mov al, [ebp + hWhoseTurn]
+    and al, al
+    jnz .enemyCry                            ; jr nz, .next
+    mov al, [ebp + wBattleMonSpecies]
+    jmp .Continue
+.enemyCry:
+    mov al, [ebp + wEnemyMonSpecies]
+.Continue:
+    push esi
+    call GetCryData
+    mov bh, al                               ; ld b,a
+    pop esi
+    mov al, [ebp + wFrequencyModifier]
+    add al, [esi]                            ; add [hl]
+    mov [ebp + wFrequencyModifier], al
+    inc esi
+    mov al, [ebp + wTempoModifier]
+    add al, [esi]
+    mov [ebp + wTempoModifier], al
+    jmp .done
+.NotCryMove:
+    mov al, [esi]                            ; ld a,[hli] — freq modifier
+    inc esi
+    mov [ebp + wFrequencyModifier], al
+    mov al, [esi]                            ; ld a,[hli] — tempo modifier
+    inc esi
+    mov [ebp + wTempoModifier], al
+.done:
+    mov al, bh                               ; ld a,b
+    ret
+
+IsCryMove:
+; set carry if the move animation involves playing a monster cry
+    mov al, [ebp + wAnimationID]
+    cmp al, GROWL
+    jz .CryMove
+    cmp al, ROAR
+    jz .CryMove
+    and al, al                               ; clear carry
+    ret
+.CryMove:
+    stc
+    ret
+
+; ===========================================================================
+; PlayApplyingAttackSound — pret animations.asm. Play not-very/neutral/super-
+; effective SFX (or nothing if the move was ineffective) based on wDamageMultipliers.
+; ===========================================================================
+PlayApplyingAttackSound:
+    call WaitForSoundToFinish
+    mov al, [ebp + wDamageMultipliers]
+    and al, 0x7F
+    jz .ret                                  ; ret z — ineffective, no sound
+    cmp al, 10
+    mov al, 0x20
+    mov bh, 0x30
+    mov bl, SFX_DAMAGE                       ; ld c, SFX_DAMAGE
+    jz .playSound
+    mov al, 0xE0
+    mov bh, 0xFF
+    mov bl, SFX_SUPER_EFFECTIVE
+    jnc .playSound                           ; jr nc (CF from cmp al,10)
+    mov al, 0x50
+    mov bh, 0x01
+    mov bl, SFX_NOT_VERY_EFFECTIVE
+.playSound:
+    mov [ebp + wFrequencyModifier], al
+    mov al, bh
+    mov [ebp + wTempoModifier], al
+    mov al, bl
+    jmp PlaySound
+.ret:
     ret
 
 ; ---------------------------------------------------------------------------
@@ -63,28 +832,15 @@ PlayApplyingAttackAnimation:
 ; Step a run of OAM entries along one axis by wCoordAdjustmentAmount, putting an
 ; entry off-screen once it leaves the visible area. Shared by the CUT animation
 ; (cut2.asm:AnimCut) and the Strength boulder-dust animation
-; (dust_smoke.asm:AnimateBoulderDust) — which is why these live here, in their pret
-; home file, rather than in either consumer.
-;
-; pret gives each axis two entry points, and both are kept:
-;   AdjustOAMBlockXPos  — In: EDX (de) = OAM entry ptr; copies it to ESI (ld l,e/ld h,d)
+; (dust_smoke.asm:AnimateBoulderDust).
+;   AdjustOAMBlockXPos  — In: EDX (de) = OAM entry ptr; copies it to ESI
 ;   AdjustOAMBlockXPos2 — In: ESI (hl) = OAM entry ptr (callers that already hold it)
 ; In both: BL (pret c) = entry count; wCoordAdjustmentAmount = signed delta.
 ; ESI/EDX are GB offsets into wShadowOAM — read/write as [ebp + esi].
-;
-; REGISTER CONTRACT (BL, not CL): pret's count is `c`, which the project register
-; map (BC→BX) puts in BL. cut2.asm already documents and passes BL. dust_smoke.asm
-; passed CL — a latent bug in a file that had never linked; fixed there, not
-; accommodated here, so there is ONE contract.
-;
-; PORT DEVIATION (strictly less clobber): pret's `ld de, OBJ_SIZE` at the ...2 entry
-; destroys DE to use it as the stride addend for `add hl, de`. The port adds the
-; OBJ_SIZE literal to ESI directly and leaves EDX intact. No caller depends on DE
-; being clobbered.
 ; Clobbers: AL, BH, ESI. Out: BL = 0.
 ; ---------------------------------------------------------------------------
 AdjustOAMBlockXPos:
-    mov esi, edx                     ; ld l, e / ld h, d
+    mov esi, edx                             ; ld l, e / ld h, d
 AdjustOAMBlockXPos2:
 .loop:
     mov bh, [ebp + wCoordAdjustmentAmount]   ; ld a, [wCoordAdjustmentAmount] / ld b, a
@@ -93,8 +849,7 @@ AdjustOAMBlockXPos2:
     cmp al, 168
     jb .skipPuttingEntryOffScreen            ; jr c — still on screen
 ; put off-screen if X >= 168. hl points at the X byte, so `dec hl` reaches THIS
-; entry's Y byte: writing 160 there hides the entry. (Contrast the Y routine below,
-; where the same idiom is a bug.)
+; entry's Y byte: writing 160 there hides the entry.
     dec esi
     mov al, SCREEN_HEIGHT_PX + OAM_Y_OFS     ; 160 — below the visible area
     mov [ebp + esi], al                      ; ld [hli], a
@@ -102,12 +857,12 @@ AdjustOAMBlockXPos2:
 .skipPuttingEntryOffScreen:
     mov [ebp + esi], al                      ; ld [hl], a
     add esi, OBJ_SIZE                        ; add hl, de (de = OBJ_SIZE in pret)
-    dec bl                                   ; dec c — sets the ZF the branch reads
+    dec bl                                   ; dec c
     jnz .loop
     ret
 
 AdjustOAMBlockYPos:
-    mov esi, edx                     ; ld l, e / ld h, d
+    mov esi, edx                             ; ld l, e / ld h, d
 AdjustOAMBlockYPos2:
 .loop:
     mov bh, [ebp + wCoordAdjustmentAmount]
@@ -120,9 +875,7 @@ AdjustOAMBlockYPos2:
 ; The intended effect still happens: AL is 160 when `ld [hl],a` writes this entry's
 ; Y below, hiding it. The stray write to the previous attribute is pure collateral.
 %if BUG_FIX_LEVEL >= 2
-    mov al, SCREEN_HEIGHT_PX + OAM_Y_OFS     ; fix: hide this entry (the write lands
-                                             ; at .skip below) without the stray
-                                             ; write to the previous entry
+    mov al, SCREEN_HEIGHT_PX + OAM_Y_OFS     ; fix: hide this entry without the stray write
 %else
     dec esi                                  ; THE BUG: → previous entry's attribute
     mov al, SCREEN_HEIGHT_PX + OAM_Y_OFS     ; ld a, 160
@@ -137,23 +890,43 @@ AdjustOAMBlockYPos2:
     ret
 
 ; ===========================================================================
-; MoveAnimationTiles1 — pret engine/battle/animations.asm:411. Arrived in chunk 18
-; of the relocated-label grind from src/engine/overworld/cut.asm, which used tile 6
-; of this sheet for the Cut grass-leaf and tiles 3/19 for the Game Freak splash.
-; Its pret neighbours (MoveAnimationTilesPointers, MoveAnimationTiles0/2) are all
-; `missing`, so there is no pret ordering to preserve against them; it is appended.
-; This file's own `section .text` is pinned above — the directive below is required.
+; DATA — move-animation tilesets (MoveAnimationTilesPointers is pret's own
+; engine/battle/animations.asm inline table, so it stays in this mirror). The
+; SpecialEffectPointers / AnimationIdSpecialEffects dispatch tables are pret
+; data/battle_anims/*.asm data tables and live in the data layer
+; (src/data/battle_anim_dispatch.asm) to satisfy the aux_misplaced rule, exactly
+; as MoveEffectPointerTable does.
 ; ===========================================================================
 section .data
 
-; grass-leaf tile source — pret uses MoveAnimationTiles1 tile 6 (battle move-anim
-; tiles, not yet ported); incbin the battle move-anim-1 sheet and index tile 6.
-; Also the Game Freak splash's star tiles (tiles 3 and 19) — LoadShootingStarGraphics.
-global MoveAnimationTiles1
+; move-anim tileset pointer table (pret anim_tileset db count/dw ptr/db -1; dd here)
+MoveAnimationTilesPointers:
+    db 79
+    dd MoveAnimationTiles0
+    db -1
+    db 79
+    dd MoveAnimationTiles1
+    db -1
+    db 64
+    dd MoveAnimationTiles2
+    db -1
+
+MoveAnimationTiles0:
+MoveAnimationTiles2:
+    incbin "../gfx/battle/move_anim_0.2bpp"
+
+; grass-leaf tile source — MoveAnimationTiles1 tile 6 (cut.asm) + Game Freak
+; splash stars tiles 3/19 (splash.asm LoadShootingStarGraphics).
 MoveAnimationTiles1:
     incbin "../gfx/battle/move_anim_1.2bpp"
 
 ; The generated battle-animation DATA (AttackAnimationPointers, subanimations,
 ; frame blocks, base coords, MoveSoundTable) lives in the data layer:
 ; src/data/battle_anims.asm <- assets/battle_anim_data.inc (Tier-1,
-; gen_battle_anim_data.py). The engine externs it from there.
+; gen_battle_anim_data.py). Externed above.
+
+section .bss
+align 4
+; port-local 32-bit flat cursors — see the DEVIATION at the top of this file.
+wSubAnimAddrPtr32:      resd 1   ; &SubanimationPointers[id] (pret wSubAnimAddrPtr $D093)
+wSubAnimSubEntryAddr32: resd 1   ; current 3-byte subentry addr (pret wSubAnimSubEntryAddr $D095)

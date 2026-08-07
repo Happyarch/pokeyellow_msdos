@@ -160,3 +160,265 @@ ReshowSubstituteAnim:
 global SlideDownFaintedMonPic
 SlideDownFaintedMonPic:
     ret
+
+; ===========================================================================
+; Battle-animation dispatch-target link stubs (battle_animations Stage 2).
+; The interpreter core (src/engine/battle/animations.asm) links its hand-written
+; dd tables SpecialEffectPointers / AnimationIdSpecialEffects and MoveAnimation
+; against these; each real body lands in Stages 3-5 (trade = Phase 4). Retire
+; each entry here when its owning stage ports the real routine.
+; ===========================================================================
+; --- Stage 3: screen / palette / flash / shake / wavy ---
+; STUB{class=temporary; label=SetAnimationPalette; pret=engine/battle/animations.asm:SetAnimationPalette; behavior=return without setting the OBP0/OBP1 anim palette; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 3 palette family lands}
+global SetAnimationPalette
+SetAnimationPalette:
+    ret
+
+; STUB{class=temporary; label=AnimationFlashScreen; pret=engine/battle/animations.asm:AnimationFlashScreen; behavior=return instead of flashing the screen palette; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 3 flash family lands}
+global AnimationFlashScreen
+AnimationFlashScreen:
+    ret
+
+; STUB{class=temporary; label=AnimationFlashScreenLong; pret=engine/battle/animations.asm:AnimationFlashScreenLong; behavior=return instead of the extended 48-frame palette cycle; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 3 flash family lands}
+global AnimationFlashScreenLong
+AnimationFlashScreenLong:
+    ret
+
+; STUB{class=temporary; label=AnimationDarkScreenPalette; pret=engine/battle/animations.asm:AnimationDarkScreenPalette; behavior=return instead of darkening the screen palette; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 3 palette family lands}
+global AnimationDarkScreenPalette
+AnimationDarkScreenPalette:
+    ret
+
+; STUB{class=temporary; label=AnimationDarkenMonPalette; pret=engine/battle/animations.asm:AnimationDarkenMonPalette; behavior=return instead of darkening the mon palette; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 3 palette family lands}
+global AnimationDarkenMonPalette
+AnimationDarkenMonPalette:
+    ret
+
+; STUB{class=temporary; label=AnimationLightScreenPalette; pret=engine/battle/animations.asm:AnimationLightScreenPalette; behavior=return instead of lightening the screen palette; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 3 palette family lands}
+global AnimationLightScreenPalette
+AnimationLightScreenPalette:
+    ret
+
+; STUB{class=temporary; label=AnimationResetScreenPalette; pret=engine/battle/animations.asm:AnimationResetScreenPalette; behavior=return instead of restoring the screen palette; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 3 palette family lands}
+global AnimationResetScreenPalette
+AnimationResetScreenPalette:
+    ret
+
+; STUB{class=temporary; label=AnimationFlashMonPic; pret=engine/battle/animations.asm:AnimationFlashMonPic; behavior=return instead of flashing the mon pic palette; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 3 flash family lands}
+global AnimationFlashMonPic
+AnimationFlashMonPic:
+    ret
+
+; STUB{class=temporary; label=AnimationFlashEnemyMonPic; pret=engine/battle/animations.asm:AnimationFlashEnemyMonPic; behavior=return instead of flashing the enemy mon pic palette; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 3 flash family lands}
+global AnimationFlashEnemyMonPic
+AnimationFlashEnemyMonPic:
+    ret
+
+; STUB{class=temporary; label=AnimationShakeScreen; pret=engine/battle/animations.asm:AnimationShakeScreen; behavior=return instead of the whole-canvas screen shake; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 3 shake family lands}
+global AnimationShakeScreen
+AnimationShakeScreen:
+    ret
+
+; STUB{class=temporary; label=AnimationBlinkMon; pret=engine/battle/animations.asm:AnimationBlinkMon; behavior=return instead of blinking the player mon pic; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 3 blink lands}
+global AnimationBlinkMon
+AnimationBlinkMon:
+    ret
+
+; STUB{class=temporary; label=AnimationBlinkEnemyMon; pret=engine/battle/animations.asm:AnimationBlinkEnemyMon; behavior=return instead of blinking the enemy mon pic; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 3 blink lands}
+global AnimationBlinkEnemyMon
+AnimationBlinkEnemyMon:
+    ret
+
+; STUB{class=temporary; label=AnimationWavyScreen; pret=engine/battle/animations.asm:AnimationWavyScreen; behavior=return instead of the per-row wavy screen effect; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 3 wavy HAL lands}
+global AnimationWavyScreen
+AnimationWavyScreen:
+    ret
+
+; STUB{class=temporary; label=FlashScreenEveryFourFrameBlocks; pret=engine/battle/animations.asm:FlashScreenEveryFourFrameBlocks; behavior=return instead of the periodic screen flash; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 3 flash family lands}
+global FlashScreenEveryFourFrameBlocks
+FlashScreenEveryFourFrameBlocks:
+    ret
+
+; STUB{class=temporary; label=FlashScreenEveryEightFrameBlocks; pret=engine/battle/animations.asm:FlashScreenEveryEightFrameBlocks; behavior=return instead of the periodic screen flash; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 3 flash family lands}
+global FlashScreenEveryEightFrameBlocks
+FlashScreenEveryEightFrameBlocks:
+    ret
+
+; --- Stage 4: mon-pic slides + motion + OAM particles + HUD shake ---
+; STUB{class=temporary; label=AnimationSlideMonUp; pret=engine/battle/animations.asm:AnimationSlideMonUp; behavior=return instead of sliding the mon pic up; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 mon-pic slides land}
+global AnimationSlideMonUp
+AnimationSlideMonUp:
+    ret
+
+; STUB{class=temporary; label=AnimationSlideMonDown; pret=engine/battle/animations.asm:AnimationSlideMonDown; behavior=return instead of sliding the mon pic down; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 mon-pic slides land}
+global AnimationSlideMonDown
+AnimationSlideMonDown:
+    ret
+
+; STUB{class=temporary; label=AnimationSlideMonOff; pret=engine/battle/animations.asm:AnimationSlideMonOff; behavior=return instead of sliding the mon pic off screen; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 mon-pic slides land}
+global AnimationSlideMonOff
+AnimationSlideMonOff:
+    ret
+
+; STUB{class=temporary; label=AnimationSlideMonDownAndHide; pret=engine/battle/animations.asm:AnimationSlideMonDownAndHide; behavior=return instead of sliding the mon pic down and hiding it; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 mon-pic slides land}
+global AnimationSlideMonDownAndHide
+AnimationSlideMonDownAndHide:
+    ret
+
+; STUB{class=temporary; label=AnimationSlideMonHalfOff; pret=engine/battle/animations.asm:AnimationSlideMonHalfOff; behavior=return instead of sliding the mon pic half off; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 mon-pic slides land}
+global AnimationSlideMonHalfOff
+AnimationSlideMonHalfOff:
+    ret
+
+; STUB{class=temporary; label=AnimationSlideEnemyMonOff; pret=engine/battle/animations.asm:AnimationSlideEnemyMonOff; behavior=return instead of sliding the enemy mon pic off; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 mon-pic slides land}
+global AnimationSlideEnemyMonOff
+AnimationSlideEnemyMonOff:
+    ret
+
+; STUB{class=temporary; label=AnimationHideMonPic; pret=engine/battle/animations.asm:AnimationHideMonPic; behavior=return instead of hiding the mon pic; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 hide/show helpers land}
+global AnimationHideMonPic
+AnimationHideMonPic:
+    ret
+
+; STUB{class=temporary; label=AnimationHideEnemyMonPic; pret=engine/battle/animations.asm:AnimationHideEnemyMonPic; behavior=return instead of hiding the enemy mon pic; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 hide/show helpers land}
+global AnimationHideEnemyMonPic
+AnimationHideEnemyMonPic:
+    ret
+
+; STUB{class=temporary; label=AnimationShowMonPic; pret=engine/battle/animations.asm:AnimationShowMonPic; behavior=return instead of showing the mon pic; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 hide/show helpers land}
+global AnimationShowMonPic
+AnimationShowMonPic:
+    ret
+
+; STUB{class=temporary; label=AnimationShowEnemyMonPic; pret=engine/battle/animations.asm:AnimationShowEnemyMonPic; behavior=return instead of showing the enemy mon pic; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 hide/show helpers land}
+global AnimationShowEnemyMonPic
+AnimationShowEnemyMonPic:
+    ret
+
+; STUB{class=temporary; label=AnimationMoveMonHorizontally; pret=engine/battle/animations.asm:AnimationMoveMonHorizontally; behavior=return instead of moving the mon pic horizontally; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 motion family lands}
+global AnimationMoveMonHorizontally
+AnimationMoveMonHorizontally:
+    ret
+
+; STUB{class=temporary; label=AnimationResetMonPosition; pret=engine/battle/animations.asm:AnimationResetMonPosition; behavior=return instead of resetting the mon pic position; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 motion family lands}
+global AnimationResetMonPosition
+AnimationResetMonPosition:
+    ret
+
+; STUB{class=temporary; label=AnimationSquishMonPic; pret=engine/battle/animations.asm:AnimationSquishMonPic; behavior=return instead of squishing the mon pic; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 motion family lands}
+global AnimationSquishMonPic
+AnimationSquishMonPic:
+    ret
+
+; STUB{class=temporary; label=AnimationBoundUpAndDown; pret=engine/battle/animations.asm:AnimationBoundUpAndDown; behavior=return instead of bouncing the mon pic; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 motion family lands}
+global AnimationBoundUpAndDown
+AnimationBoundUpAndDown:
+    ret
+
+; STUB{class=temporary; label=AnimationMinimizeMon; pret=engine/battle/animations.asm:AnimationMinimizeMon; behavior=return instead of the Minimize shrink; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 motion family lands}
+global AnimationMinimizeMon
+AnimationMinimizeMon:
+    ret
+
+; STUB{class=temporary; label=AnimationShakeBackAndForth; pret=engine/battle/animations.asm:AnimationShakeBackAndForth; behavior=return instead of shaking the mon pic back and forth; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 motion family lands}
+global AnimationShakeBackAndForth
+AnimationShakeBackAndForth:
+    ret
+
+; STUB{class=temporary; label=AnimationShootBallsUpward; pret=engine/battle/animations.asm:AnimationShootBallsUpward; behavior=return instead of the upward balls particles; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 particle family lands}
+global AnimationShootBallsUpward
+AnimationShootBallsUpward:
+    ret
+
+; STUB{class=temporary; label=AnimationShootManyBallsUpward; pret=engine/battle/animations.asm:AnimationShootManyBallsUpward; behavior=return instead of the many-balls particles; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 particle family lands}
+global AnimationShootManyBallsUpward
+AnimationShootManyBallsUpward:
+    ret
+
+; STUB{class=temporary; label=AnimationSpiralBallsInward; pret=engine/battle/animations.asm:AnimationSpiralBallsInward; behavior=return instead of the inward spiral balls particles; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 particle family lands}
+global AnimationSpiralBallsInward
+AnimationSpiralBallsInward:
+    ret
+
+; STUB{class=temporary; label=AnimationLeavesFalling; pret=engine/battle/animations.asm:AnimationLeavesFalling; behavior=return instead of the falling leaves particles; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 particle family lands}
+global AnimationLeavesFalling
+AnimationLeavesFalling:
+    ret
+
+; STUB{class=temporary; label=AnimationPetalsFalling; pret=engine/battle/animations.asm:AnimationPetalsFalling; behavior=return instead of the falling petals particles; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 particle family lands}
+global AnimationPetalsFalling
+AnimationPetalsFalling:
+    ret
+
+; STUB{class=temporary; label=AnimationWaterDropletsEverywhere; pret=engine/battle/animations.asm:AnimationWaterDropletsEverywhere; behavior=return instead of the water droplets particles; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 particle family lands}
+global AnimationWaterDropletsEverywhere
+AnimationWaterDropletsEverywhere:
+    ret
+
+; STUB{class=temporary; label=AnimationShakeEnemyHUD; pret=engine/battle/animations.asm:AnimationShakeEnemyHUD; behavior=return instead of shaking the enemy HUD; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 HUD shake lands}
+global AnimationShakeEnemyHUD
+AnimationShakeEnemyHUD:
+    ret
+
+; STUB{class=temporary; label=TailWhipAnimationUnused; pret=engine/battle/animations.asm:TailWhipAnimationUnused; behavior=return instead of the unused Tail Whip effect; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 particle family lands}
+global TailWhipAnimationUnused
+TailWhipAnimationUnused:
+    ret
+
+; --- Stage 5: item-path ball toss/shake/poof + per-anim SE hooks ---
+; STUB{class=temporary; label=TossBallAnimation; pret=engine/battle/animations.asm:TossBallAnimation; behavior=return instead of the Poke Ball toss animation sequence; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 5 item-path ball animations land}
+global TossBallAnimation
+TossBallAnimation:
+    ret
+
+; STUB{class=temporary; label=DoBallTossSpecialEffects; pret=engine/battle/animations.asm:DoBallTossSpecialEffects; behavior=return instead of the ball-toss per-frame special effects; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 5 item-path ball animations land}
+global DoBallTossSpecialEffects
+DoBallTossSpecialEffects:
+    ret
+
+; STUB{class=temporary; label=DoBallShakeSpecialEffects; pret=engine/battle/animations.asm:DoBallShakeSpecialEffects; behavior=return instead of the ball-shake per-frame special effects; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 5 item-path ball animations land}
+global DoBallShakeSpecialEffects
+DoBallShakeSpecialEffects:
+    ret
+
+; STUB{class=temporary; label=DoPoofSpecialEffects; pret=engine/battle/animations.asm:DoPoofSpecialEffects; behavior=return instead of the poof per-frame special effects; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 5 item-path ball animations land}
+global DoPoofSpecialEffects
+DoPoofSpecialEffects:
+    ret
+
+; STUB{class=temporary; label=DoGrowlSpecialEffects; pret=engine/battle/animations.asm:DoGrowlSpecialEffects; behavior=return instead of the Growl per-frame special effects; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 5 per-anim hooks land}
+global DoGrowlSpecialEffects
+DoGrowlSpecialEffects:
+    ret
+
+; STUB{class=temporary; label=DoRockSlideSpecialEffects; pret=engine/battle/animations.asm:DoRockSlideSpecialEffects; behavior=return instead of the Rock Slide per-frame special effects; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 5 per-anim hooks land}
+global DoRockSlideSpecialEffects
+DoRockSlideSpecialEffects:
+    ret
+
+; STUB{class=temporary; label=DoExplodeSpecialEffects; pret=engine/battle/animations.asm:DoExplodeSpecialEffects; behavior=return instead of the Explosion per-frame special effects; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 5 per-anim hooks land}
+global DoExplodeSpecialEffects
+DoExplodeSpecialEffects:
+    ret
+
+; STUB{class=temporary; label=DoBlizzardSpecialEffects; pret=engine/battle/animations.asm:DoBlizzardSpecialEffects; behavior=return instead of the Blizzard per-frame special effects; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 5 per-anim hooks land}
+global DoBlizzardSpecialEffects
+DoBlizzardSpecialEffects:
+    ret
+
+; --- Phase 4 (out of scope): trade-animation consumers ---
+; STUB{class=stub; label=TradeHidePokemon; pret=engine/battle/animations.asm:TradeHidePokemon; behavior=return instead of hiding the traded mon pic; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until the Phase 4 trade animation engine lands}
+global TradeHidePokemon
+TradeHidePokemon:
+    ret
+
+; STUB{class=stub; label=TradeShakePokeball; pret=engine/battle/animations.asm:TradeShakePokeball; behavior=return instead of shaking the trade Poke Ball; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until the Phase 4 trade animation engine lands}
+global TradeShakePokeball
+TradeShakePokeball:
+    ret
+
+; STUB{class=stub; label=TradeJumpPokeball; pret=engine/battle/animations.asm:TradeJumpPokeball; behavior=return instead of the trade Poke Ball jump; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until the Phase 4 trade animation engine lands}
+global TradeJumpPokeball
+TradeJumpPokeball:
+    ret
+

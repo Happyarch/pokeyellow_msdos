@@ -552,6 +552,7 @@ wNumFBTiles            equ 0xD088   ; sprite-entry count of the current frame bl
 wSubAnimTransform      equ 0xD08A   ; SUBANIMTYPE_* applied by DrawFrameBlock (union wAnimCounter/wSpiralBallsBaseX)
 wSubAnimAddrPtr        equ 0xD093   ; word: address of the current subanim's pointer (big-endian pair as pret stores it)
 wSubAnimSubEntryAddr   equ 0xD095   ; word: address of the current 3-byte subentry
+wUnusedMoveAnimByte    equ 0xD09A   ; golden 00:d09a — MoveAnimation write-only scratch, unread (pret ram/wram.asm:wUnusedMoveAnimByte). UNION with wTownMapSpriteBlinkingEnabled/wPartyMenuAnimMonEnabled at 0xD09A; disjoint lifetimes (battle anim vs town map / party menu).
 wFBDestAddr            equ 0xD09B   ; word: running wShadowOAM write cursor (big-endian)
 wFBMode                equ 0xD09D   ; FRAMEBLOCKMODE_* post-frame-block behavior
 wWhichBattleAnimTileset equ 0xD09E  ; 0/1/2 -> MoveAnimationTilesPointers row
@@ -828,6 +829,7 @@ H_SOFT_RESET             equ 0xFF8A     ; hSoftReset
 ; 0xFF8B is a UNION of hMapStride / hNorthSouthConnectionStripWidth / hPreviousTileset
 H_MAP_STRIDE             equ 0xFF8B     ; hMapStride (= map block row stride = width + 2*MAP_BORDER)
 H_PREVIOUS_TILESET       equ 0xFF8B     ; hPreviousTileset (HRAM union with hMapStride)
+hROMBankTemp             equ 0xFF8B     ; golden 00:ff8b — PlayAnimation writes 0, unread ("nothing reads this"); no ROM banking in the flat model. UNION with hMapStride/hItemPrice at 0xFF8B; disjoint lifetimes (battle anim entry vs map load / item price).
 ; 0xFF8C is a UNION of hMapWidth / hNorthSouthConnectedMapWidth
 H_MAP_WIDTH              equ 0xFF8C     ; hMapWidth (= wCurMapWidth, stored for row-copy inner loop)
 H_SERIAL_CONN_STATUS     equ 0xFFAA     ; hSerialConnectionStatus

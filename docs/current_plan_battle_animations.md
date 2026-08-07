@@ -6,7 +6,11 @@
 > pytest resolves — allowlist is not ours to grow, behavior changes need
 > scenarios). Not duplicated here; read it there.
 
-Status: **Stage 0 in progress** (plan created 2026-08-07). Owner: this plan.
+Status: **Stage 2a landed** (interpreter core; Stages 0-1 done). Owner: this plan.
+Stage 2 is split: **2a** (interpreter core + tables + stubs, LINKED but reached
+only by the deferred demo — production path unchanged) is committed; **2b** wires
+it into production + projection publication + the demo harness. See the Stage 2
+box below and memory `battle-animations-plan-created` (v3).
 Umbrella: `docs/current_plan_battle_completion.md` Stage 6 (6a–6e) — this file
 is the dedicated detail owner for the in-battle animation engine, the same
 relationship the archived `docs/plans/battle_transitions.md` had to Stage 5.
@@ -169,25 +173,40 @@ Two maintainer-confirmed decisions (AskUserQuestion, 2026-08-07):
 
 ### Stage 2 — interpreter core + demo harness
 
-- [ ] Port under pret labels into `src/engine/battle/animations.asm` (extend
-      the existing 154-line mirror, pret file order): `PlayAnimation`,
-      `MoveAnimation` (predef → direct call; TOSS_ANIM pre-gate special case;
-      `BIT_BATTLE_ANIMATION` option gate — the current ANIMATION=OFF behavior
-      becomes exactly the option-off route, umbrella 6d), `ShareMoveAnimations`,
+**Stage 2a (DONE, committed 2026-08-07):**
+- [x] Ported under pret labels into `src/engine/battle/animations.asm` (pret file
+      order): `PlayAnimation`, `MoveAnimation`, `ShareMoveAnimations`,
       `LoadSubanimation`, `GetSubanimationTransform1/2`, `PlaySubanimation`,
       `DrawFrameBlock` (all four `wSubAnimTransform` branches),
       `LoadMoveAnimationTiles` + `MoveAnimationTilesPointers` +
-      `MoveAnimationTiles0/2` (incbin beside existing Tiles1),
-      `AnimationCleanOAM`, `DoSpecialEffectByAnimationId`, `GetMoveSound` /
-      `IsCryMove` / `PlayApplyingAttackSound`, `Func_78e98` /
-      `BattleAnimCopyTileMapToVRAM` / `WriteLowerByteOfBGMapAndEnableBGTransfer`
-      (BG-transfer boundary → port surface mirror), `CallWithTurnFlipped`,
-      `AnimationDelay10`.
-- [ ] Retire the 4 dispatcher stubs with real bodies in the `effects.asm`
-      mirror: `PlayCurrentMoveAnimation(2)`, `PlayBattleAnimation(2)`.
-- [ ] Hand-written `dd` dispatch tables (`SpecialEffectPointers`,
-      `AnimationIdSpecialEffects`) with unimplemented `Animation*` handlers as
+      `MoveAnimationTiles0/2`, `AnimationCleanOAM`, `DoSpecialEffectByAnimationId`,
+      `GetMoveSound` / `IsCryMove` / `PlayApplyingAttackSound`, `Func_78e98` /
+      `BattleAnimCopyTileMapToVRAM` / `WriteLowerByteOfBGMapAndEnableBGTransfer`,
+      `CallWithTurnFlipped`, `AnimationDelay10`. Flat-pointer model documented in a
+      `class=data-model` DEVIATION (dd tables → ×4 index / 5-byte dispatch entries;
+      `wSubAnim*Addr` cursors in port-local `.bss`).
+- [x] Hand-written `dd` dispatch tables `SpecialEffectPointers` /
+      `AnimationIdSpecialEffects` — placed in the **data layer**
+      (`src/data/battle_anim_dispatch.asm`, FRONTEND_SRCS), NOT `animations.asm`:
+      the engine-file placement trips `aux_misplaced` (MoveEffectPointerTable
+      precedent). ~50 unimplemented `Animation*`/`Do*`/`Trade*` handlers as
       `STUB{}` entries in `core_stubs.asm` (retired across Stages 3–5).
+- [x] Gate (static): build+link 0; lint 0 both modes; faithdiff all 19 labels
+      clean-with-justification; update_label_db 0; audit_memmap clean.
+      **NOTE:** interpreter is LINKED but UNREACHED — production `PlayMoveAnimation`
+      (core.asm) is unchanged, so battle behavior is unchanged and the runtime
+      golden tier is deferred to 2b (also: mgba absent in the 2a build env).
+
+**Stage 2b (pending — production wiring + demo + visual sign-off):**
+- [ ] Retire the 4 dispatcher stubs with real bodies in the `effects.asm`
+      mirror: `PlayCurrentMoveAnimation(2)`, `PlayBattleAnimation(2)`; reconcile
+      core.asm `PlayMoveAnimation` to call the real `MoveAnimation` (predef →
+      direct call; TOSS_ANIM pre-gate; `BIT_BATTLE_ANIMATION` option gate — the
+      current ANIMATION=OFF behavior becomes exactly the option-off route). This
+      is what wires the interpreter into the live battle.
+- [ ] Projection publication: `PublishProjectedOAM(80,24)` republished after each
+      `DrawFrameBlock` mutation + `g_obj_clip = (80,24,240,168)` during playback,
+      restored at end (HAL design items 2-3).
 - [ ] `BCOORD` hoist to `include/coords.inc`; core.asm consumes the shared
       definition (no behavior change; faithdiff-neutral).
 - [ ] **`DEBUG_ANIM_DEMO=1` harness** (RunTransitionDemo shape: Makefile flag →
@@ -195,9 +214,9 @@ Two maintainer-confirmed decisions (AskUserQuestion, 2026-08-07):
       entry): seeds a wild battle, cycles a curated representative anim set;
       `ANIM=<MOVE_CONST>` make var pins one (TRACK= precedent). Loop counters
       in MEMORY, not registers (PlayAnimation clobbers everything).
-- [ ] Gate: faithdiff per label justified; lint 0; battle tier green (14/15/16/
-      20/33/34/43/44/45/46/51); demo shows an OAM-particle anim (Pound/Gust
-      class) inside the battle frame.
+- [ ] Gate: battle tier green (14/15/16/20/33/34/43/44/45/46/51); demo shows an
+      OAM-particle anim (Pound/Gust class) inside the battle frame (maintainer
+      visual sign-off).
 
 ### Stage 3 — screen/palette special effects + wAnimationType (umbrella 6d)
 
