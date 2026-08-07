@@ -5851,18 +5851,27 @@ PlayBattleVictoryMusic:
 ; an empty/uninitialised party can't spin the loop 2^32 times.
 ; --------------------------------------------------------------------------
 AnyPartyAlive:
-    movzx ecx, byte [ebp + wPartyCount]       ; e = party count
+    ; pret: ld e,[wPartyCount] / .loop: or [hl] hi / or [hl] lo / add hl,44 / dec e / jr nz.
+    ; The counter MUST stay 8 bits wide (CL, dec cl) — and there is NO zero-guard.
+    ; With an EMPTY party (wPartyCount==0) pret's `dec e / jr nz` wraps E 0->255 and
+    ; loops 256 times, OR-ing 256 mons' worth of WRAM past the party array; that span
+    ; holds nonzero bytes, so D comes back NON-ZERO = "a mon is alive" = do NOT black out.
+    ; That empty-party path is load-bearing for the Oak intro: after the Pallet Town
+    ; BATTLE_TYPE_PIKACHU battle the player still owns no mon, and .battleOccurred calls
+    ; here; a widened counter + `test/jz` zero-guard (the old "port safety") returned D=0
+    ; => AllPokemonFainted => HandleBlackOut => SpecialEnterMap => EnterMapBoot =>
+    ; SetupPlayerSprite stomped the player to (8,8), wedging PLAYER_FOLLOWS_OAK
+    ; (regression-oak-intro-follow-stall-after-battle). Reproducing pret's 8-bit wrap
+    ; both matches the disassembly and fixes the stall.
+    mov cl, [ebp + wPartyCount]               ; e = party count (0 => 256 iterations)
     xor al, al
-    test ecx, ecx
-    jz .done                                  ; port safety: empty party => all fainted
     lea esi, [ebp + wPartyMon1 + MON_HP]      ; hl = &wPartyMon1HP (0xD16B)
 .partyLoop:
     or al, [esi]                              ; HP high byte
     or al, [esi + 1]                          ; HP low byte
     add esi, PARTYMON_STRUCT_LENGTH           ; next party mon (44 bytes)
-    dec ecx
+    dec cl                                     ; pret: dec e (8-bit; 0 wraps to 255)
     jnz .partyLoop
-.done:
     mov dh, al                                ; d = OR of all HP bytes
     ret
 

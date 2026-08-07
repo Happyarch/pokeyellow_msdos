@@ -572,7 +572,16 @@ gbstate_regions:
     gbregion "wEnemyMon",      wEnemyMon,      BATTLEMON_STRUCT_LENGTH
     gbregion "wBattleMonNick", wBattleMonNick, NAME_LENGTH
     gbregion "wBattleMon",     wBattleMon,     BATTLEMON_STRUCT_LENGTH
+; The stall-probe regions compile under EITHER the battle-frame photograph
+; (AUTOKEY_DUMP_ON_BATTLE) or the state-gated follow-stall probe
+; (AUTOKEY_DUMP_ON_FOLLOW). NASM %ifdef has no OR, so fold both into one helper.
 %ifdef AUTOKEY_DUMP_ON_BATTLE
+%define AUTOKEY_STALL_PROBE
+%endif
+%ifdef AUTOKEY_DUMP_ON_FOLLOW
+%define AUTOKEY_STALL_PROBE
+%endif
+%ifdef AUTOKEY_STALL_PROBE
     ; Cutscene-stall probe (Oak intro debugging, 2026-08-06): the Pallet script
     ; step index + player map/coords, to localize where the intro wedges.
     gbregion "curMapCoord",   W_CUR_MAP,             5   ; wCurMap,-,-,wYCoord,wXCoord
@@ -584,6 +593,23 @@ gbstate_regions:
     gbregion "npcMoveFunc",   W_NPC_MOVEMENT_SCRIPT_FUNCTION_NUM, 1 ; CF10
     gbregion "statusFlags5",   W_STATUS_FLAGS_5,      1              ; D72F (BIT_SCRIPTED_NPC_MOVEMENT=0)
     gbregion "oakSlot1d2",    W_SPRITE_STATE_DATA_2 + 16, 16        ; Oak slot-1 data2 (MAPY/MAPX/facing/...)
+    ; view pointer, to check the coord<->view projection is self-consistent
+    ; (stride = mapwidth + 2*MAP_BORDER; view_col = (x>>1)+MAP_BORDER-SCREEN_BLOCK_WIDTH/2).
+    gbregion "viewPtr",       W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR, 2
+    ; who moved the player: door/warp + simulated-joypad state at the writing frame.
+    gbregion "moveFlags",     W_MOVEMENT_FLAGS,      1     ; BIT_STANDING_ON_DOOR/BIT_EXITING_DOOR
+    gbregion "destWarpId",    W_DESTINATION_WARP_ID, 1
+    gbregion "simJoyIdx",     W_SIMULATED_JOYPAD_STATES_INDEX, 1
+    gbregion "simJoyEnd",     W_SIMULATED_JOYPAD_STATES_END,   1
+    gbregion "playerStepVec", W_SPRITE_PLAYER_Y_STEP_VECTOR,   3  ; C103 Yvec, C104, C105 Xvec
+    gbregion "curMapWH",      W_CUR_MAP_HEIGHT,      2            ; height then width (blocks)
+    ; input source at the writing frame: what direction is driving the walk?
+    gbregion "joyHeld",       H_JOY_HELD,            1
+    gbregion "joyPressed",    H_JOY_PRESSED,         1
+    gbregion "joyIgnore",     W_JOY_IGNORE,          1
+    gbregion "playerMoveDir", W_PLAYER_MOVING_DIRECTION, 1
+    gbregion "walkCounter",   W_WALK_COUNTER,        1
+    gbregion "statusFlags6",  W_STATUS_FLAGS_6,      1     ; BIT_FLY_WARP(3)/BIT_DUNGEON_WARP(4)
 %endif
 %ifdef DEBUG_BATTLE_DAMAGE
     ; The semantic differ validates each side against the legal Gen-1 damage
@@ -3341,6 +3367,44 @@ AutoKeyDrive:
     jne .noDump
     call DumpBackbuffer                 ; FRAME.BIN, then exits
 .noDump:
+%ifdef AUTOKEY_DUMP_ON_FOLLOW
+    ; State-gated follow-stall probe: dump GBSTATE (+FRAME) and exit the FIRST
+    ; frame the Pallet cutscene reaches PLAYER_FOLLOWS_OAK (script 7). That is the
+    ; exact instant PalletMovementScript_OakMoveLeft reads wXCoord (steps=wXCoord-10),
+    ; so this captures the coord it underflows on without needing a fixed frame the
+    ; slow A-press battle never reaches deterministically.
+%ifndef AUTOKEY_FOLLOW_SCRIPT
+%define AUTOKEY_FOLLOW_SCRIPT 7            ; SCRIPT_PALLETTOWN_PLAYER_FOLLOWS_OAK
+%endif
+%ifdef AUTOKEY_FOLLOW_ON_YMOVE
+    ; Pinpoint the exact frame the player's map Y first leaves the north-exit row 0
+    ; (the mystery (10,0)->(8,8) teleport), capturing the full engine state.
+    cmp byte [ebp + W_Y_COORD], 0
+    jne .doFollowDump
+    jmp .noFollowDump
+%elifdef AUTOKEY_FOLLOW_ON_STEP
+    ; Pinpoint the first frame the player begins a walk step (either step vector
+    ; non-zero), to capture the joypad/direction driving the unwanted movement.
+    cmp byte [ebp + W_SPRITE_PLAYER_Y_STEP_VECTOR], 0
+    jne .doFollowDump
+    cmp byte [ebp + W_SPRITE_PLAYER_X_STEP_VECTOR], 0
+    jne .doFollowDump
+    jmp .noFollowDump
+%elifdef AUTOKEY_FOLLOW_ON_FLYWARP
+    ; Catch the frame the fly/dungeon-warp bit arms (BIT_FLY_WARP=3, BIT_DUNGEON_WARP=4),
+    ; which routes OverworldLoop -> HandleFlyWarpOrDungeonWarp -> SpecialEnterMap ->
+    ; EnterMapBoot -> SetupPlayerSprite (the hardcoded (8,8) stomp).
+    test byte [ebp + W_STATUS_FLAGS_6], (1 << 3) | (1 << 4)
+    jnz .doFollowDump
+    jmp .noFollowDump
+%else
+    cmp byte [ebp + wPalletTownCurScript], AUTOKEY_FOLLOW_SCRIPT
+    jb .noFollowDump                       ; dump the first frame we REACH the target step
+%endif
+.doFollowDump:
+    call DumpBackbuffer                 ; GBSTATE.BIN + FRAME.BIN, then exits
+.noFollowDump:
+%endif
 %ifdef AUTOKEY_DUMP_ON_BATTLE
     ; State-gated battle photograph (boot-drift-robust, measured 2026-08-06). A
     ; fixed AUTOKEY_DUMP_FRAME lands wherever ~150 frames of boot drift put it, so

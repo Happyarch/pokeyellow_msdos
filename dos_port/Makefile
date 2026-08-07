@@ -227,6 +227,34 @@ AUTOKEY_BATTLE_DUMP_DELAY ?= 90
 NASMFLAGS += -D AUTOKEY_DUMP_ON_BATTLE -D AUTOKEY_BATTLE_DUMP_DELAY=$(AUTOKEY_BATTLE_DUMP_DELAY)
 endif
 
+# AUTOKEY_DUMP_ON_FOLLOW=1: state-gated Oak follow-stall probe. Dumps GBSTATE.BIN
+# (+FRAME.BIN) and exits the FIRST frame the Pallet cutscene reaches
+# PLAYER_FOLLOWS_OAK (script 7) — the instant PalletMovementScript_OakMoveLeft
+# reads wXCoord. Robust against the slow A-press battle's frame drift (a fixed
+# AUTOKEY_DUMP_FRAME cannot reliably land there). Pair with DEBUG_SEAM_KEEP_BATTLES=1.
+#   make DEBUG_START_MAP=0x00 DEBUG_START_X=10 DEBUG_START_Y=0 DEBUG_AUTOKEY=1 \
+#        AUTOKEY_APRESS=1 AUTOKEY_NO_PARTY=1 DEBUG_SEAM_KEEP_BATTLES=1 AUTOKEY_DUMP_ON_FOLLOW=1
+ifdef AUTOKEY_DUMP_ON_FOLLOW
+NASMFLAGS += -D AUTOKEY_DUMP_ON_FOLLOW
+# AUTOKEY_FOLLOW_SCRIPT=N: dump the first frame wPalletTownCurScript >= N, to
+# bisect WHEN the cutscene coords drift (5=after-battle, 6=oak-not-safe, 7=follow).
+ifdef AUTOKEY_FOLLOW_SCRIPT
+NASMFLAGS += -D AUTOKEY_FOLLOW_SCRIPT=$(AUTOKEY_FOLLOW_SCRIPT)
+endif
+# AUTOKEY_FOLLOW_ON_YMOVE=1: dump the exact frame wYCoord first leaves row 0.
+ifdef AUTOKEY_FOLLOW_ON_YMOVE
+NASMFLAGS += -D AUTOKEY_FOLLOW_ON_YMOVE
+endif
+# AUTOKEY_FOLLOW_ON_STEP=1: dump the first frame a player step vector goes non-zero.
+ifdef AUTOKEY_FOLLOW_ON_STEP
+NASMFLAGS += -D AUTOKEY_FOLLOW_ON_STEP
+endif
+# AUTOKEY_FOLLOW_ON_FLYWARP=1: dump the first frame the fly/dungeon-warp bit arms.
+ifdef AUTOKEY_FOLLOW_ON_FLYWARP
+NASMFLAGS += -D AUTOKEY_FOLLOW_ON_FLYWARP
+endif
+endif
+
 # Debug noclip: press W in-game to toggle walk-through-walls (disables collision).
 # Useful for testing warps, map edges, and OOB behaviour without normal movement.
 # Does NOT imply SKIP_TITLE — works at any point in the game.
