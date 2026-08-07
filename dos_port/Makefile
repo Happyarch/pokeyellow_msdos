@@ -227,6 +227,17 @@ AUTOKEY_BATTLE_DUMP_DELAY ?= 90
 NASMFLAGS += -D AUTOKEY_DUMP_ON_BATTLE -D AUTOKEY_BATTLE_DUMP_DELAY=$(AUTOKEY_BATTLE_DUMP_DELAY)
 endif
 
+# DEBUG_TRANSITION_DEMO=1: interactive visual check of ALL 8 battle-transition
+# animations. Boots to the overworld (Pallet Town) and cycles ids 0..7 forever
+# over the live map view, seeding the REAL selector inputs each round so the
+# GetBattleTransitionID_* chain picks the effect. Order: DoubleCircle,
+# InwardSpiral, Circle, OutwardSpiral, HorizStripes, Shrink, VertStripes, Split.
+#   dos_port/run DEBUG_TRANSITION_DEMO=1
+ifdef DEBUG_TRANSITION_DEMO
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_TRANSITION_DEMO -D DEBUG_SEED_PARTY -D SKIP_TITLE
+endif
+
 # AUTOKEY_DUMP_ON_FOLLOW=1: state-gated Oak follow-stall probe. Dumps GBSTATE.BIN
 # (+FRAME.BIN) and exits the FIRST frame the Pallet cutscene reaches
 # PLAYER_FOLLOWS_OAK (script 7) — the instant PalletMovementScript_OakMoveLeft
@@ -1886,6 +1897,8 @@ $(eval $(call flag_gate,DEBUG_OAK_EVENT))
 FRONTEND_SRCS := \
     src/engine/battle/init_battle_variables.asm \
     src/engine/battle/init_battle.asm \
+    src/engine/battle/battle_transitions.asm \
+    src/data/maps/dungeon_maps.asm \
     src/engine/battle/get_trainer_name.asm \
     src/engine/battle/battle_hud.asm \
     src/engine/battle/scale_sprites.asm \
@@ -2467,6 +2480,7 @@ src/engine/battle/battle_menu.o: assets/battle_menu_runtime_strings.inc
 src/engine/battle/core.o: assets/battle_core_runtime_strings.inc
 src/engine/battle/display_effectiveness.o: assets/effectiveness_runtime_strings.inc
 src/engine/battle/init_battle.o: assets/battle_intro_runtime_strings.inc
+src/engine/battle/battle_transitions.o: assets/battle_transition_arcs.inc
 src/data/battle_data.o: assets/stat_mod_runtime_strings.inc
 src/engine/items/item_effects.o: assets/item_runtime_strings.inc
 src/engine/pokemon/status_ailments.o: assets/status_ailment_runtime_strings.inc
@@ -2852,6 +2866,7 @@ assets: assets/scenario_registry.inc \
         assets/default_names.inc \
         assets/debug_boot_names.inc \
         assets/battle_hud_2bpp.inc assets/ptile_2bpp.inc \
+        assets/battle_transition_arcs.inc \
         assets/trainer_pics.inc \
         assets/super_rod.inc assets/good_rod.inc \
         assets/town_map_data.inc assets/town_map_gfx.inc \
@@ -2877,6 +2892,11 @@ assets: assets/scenario_registry.inc \
 
 assets/scenario_registry.inc: tools/scenario_manifest.json tools/generators/gen_scenario_registry.py
 	python3 tools/generators/gen_scenario_registry.py
+
+# Battle-transition circle-wipe arc tables (40x25 regeneration of pret's
+# CircleData/HalfCircle tables; self-checked by an embedded Sub3 emulator).
+assets/battle_transition_arcs.inc: tools/generators/gen_battle_transition_arcs.py
+	python3 tools/generators/gen_battle_transition_arcs.py
 
 # Standalone memory-map blast audit (also runs at the end of `make assets`):
 # overlap/containment check of every sized region in gb_memmap.inc +

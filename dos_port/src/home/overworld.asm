@@ -158,6 +158,7 @@ extern RunMapScriptSightTest              ; src/debug/debug_dump.asm
 extern RunNameMenuTest                    ; src/engine/movie/oak_speech/oak_speech2.asm
 extern RunNamingScreenTest                ; src/engine/menus/naming_screen.asm
 extern RunOakIntroTest                    ; src/debug/debug_dump.asm
+extern RunTransitionDemo                  ; src/debug/debug_dump.asm (DEBUG_TRANSITION_DEMO)
 extern RunOakPicTest                      ; src/engine/movie/oak_speech/oak_speech.asm
 extern RunOakSlideTest                    ; src/engine/movie/oak_speech/oak_speech2.asm
 extern RunOakSpeechCheckpoint             ; src/engine/movie/oak_speech/oak_speech.asm
@@ -549,6 +550,9 @@ EnterMap:
 %ifdef DEBUG_PALLET_OAK
     call SeamReseatView
     call RunOakIntroTest                      ; dumps GBSTATE+FRAME and exits
+%endif
+%ifdef DEBUG_TRANSITION_DEMO
+    call RunTransitionDemo                    ; cycles all 8 battle transitions forever
 %endif
 %ifdef DEBUG_DUMP
     call DebugDumpMemory     ; dump GB memory to DUMP.BIN, then exit (debug only)

@@ -62,6 +62,7 @@ section .data
 ; W-1 FIX (docs/battle_audit_findings.md): saved overworld view pointer across the
 ; battle's flat-canvas hack. Port-only render-HAL state; see InitBattle / the
 ; _InitBattleCommon tail.
+global saved_ow_view_ptr               ; also written by DoBattleTransitionAndInitBattleVariables (core.asm)
 saved_ow_view_ptr: dw 0
 
 section .text
@@ -119,6 +120,7 @@ extern trainer_pic_len                   ; src/home/trainers2.asm — matching c
 extern LoadMonPicToVRAM                  ; src/home/pics.asm — staged compressed pic -> vFrontPic
 extern DrawEmptyDialogBox                ; battle_menu.asm — trainer intro placeholder surface
 extern TryDoWildEncounter                ; wild_encounters.asm — ZF=1 when a roster was selected
+extern DoBattleTransitionAndInitBattleVariables ; core.asm — transition + teardown (pret call sites below)
 global LoadMonBackPic             ; generic player send-out back pic (retires LoadEmbeddedBackPicFallback)
 global CopyUncompressedPicToHL          ; shared flip-aware 7×7 tilemap placement
 
@@ -160,16 +162,23 @@ InitBattleCommon:
     mov al, [ebp + wEnemyMonSpecies2]
     cmp al, OPP_ID_OFFSET
     jb InitWildBattle
-    ; DEVIATION{class=projection; pret=engine/battle/init_battle.asm:InitBattleCommon; behavior=sets wFontLoaded BIT_FONT_LOADED on battle entry, which pret only ever does in DisplayTextIDInit; evidence=the port's 40x25 battle canvas loads the text font into the vFont region it time-shares with walking/NPC tiles, and the bit is the engine-wide marker for that state; lifetime=paired with the port-only clear in EndOfBattle.resetVariables (end_of_battle.asm) - the clear MUST outlive this set or every battle exits with UpdateNPCSprite's font freeze stuck on (measured 2026-08-06, regression-battle-second-trainer-wont-engage)}
-    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
-    call LoadFontTilePatterns
-    call LoadTextBoxTilePatterns
-    call InitBattleCanvas
+    ; pret InitBattleCommon:32 — InitBattleVariables runs BEFORE the transition
+    ; (its tail is PlayBattleMusic: battle music starts over the overworld view).
+    ; Hoisted out of InitBattleCanvas, which is now post-transition teardown.
+    call InitBattleVariables
     mov al, [ebp + wEnemyMonSpecies2]
     sub al, OPP_ID_OFFSET
     mov [ebp + wTrainerClass], al
     call GetTrainerInformation
     call ReadTrainer
+    call DoBattleTransitionAndInitBattleVariables   ; pret init_battle.asm:39
+    ; --- post-transition teardown (pret loads the font inside the slide-in,
+    ;     core.asm:18-19; the port folds it here with the canvas setup) ---
+    ; DEVIATION{class=projection; pret=engine/battle/init_battle.asm:InitBattleCommon; behavior=sets wFontLoaded BIT_FONT_LOADED on battle entry, which pret only ever does in DisplayTextIDInit; evidence=the port's 40x25 battle canvas loads the text font into the vFont region it time-shares with walking/NPC tiles, and the bit is the engine-wide marker for that state; lifetime=paired with the port-only clear in EndOfBattle.resetVariables (end_of_battle.asm) - the clear MUST outlive this set or every battle exits with UpdateNPCSprite's font freeze stuck on (measured 2026-08-06, regression-battle-second-trainer-wont-engage)}
+    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    call LoadFontTilePatterns
+    call LoadTextBoxTilePatterns
+    call InitBattleCanvas
     call _LoadTrainerPic
     mov byte [ebp + wEnemyMonSpecies2], 0
     mov byte [ebp + wAICount], 0xFF
@@ -178,13 +187,18 @@ InitBattleCommon:
     jmp _InitBattleCommon
 
 InitWildBattle:
+    ; pret InitBattleCommon:32 (shared prologue; the port's DetermineWildOpponent
+    ; jumps here directly, so the hoisted call lives on both entry paths).
+    call InitBattleVariables
     mov byte [ebp + wIsInBattle], 1
+    call LoadEnemyMonData
+    call DoBattleTransitionAndInitBattleVariables   ; pret init_battle.asm:64
+    ; --- post-transition teardown (see InitBattleCommon above) ---
     ; DEVIATION{class=projection; pret=engine/battle/init_battle.asm:InitWildBattle; behavior=sets wFontLoaded BIT_FONT_LOADED on battle entry, which pret only ever does in DisplayTextIDInit; evidence=same battle-canvas font load as InitBattleCommon above; lifetime=paired with the port-only clear in EndOfBattle.resetVariables (end_of_battle.asm), see the annotation there}
     or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     call LoadTextBoxTilePatterns
     call InitBattleCanvas
-    call LoadEnemyMonData
     mov al, [ebp + wEnemyMonSpecies2]
     mov [ebp + wCurPartySpecies], al
     mov esi, W_TILEMAP + 12
@@ -202,7 +216,10 @@ InitBattleCanvas:
     ; the ONE text engine renders at stride 40 here (the overworld leaves it at 20).
     ; TODO: a clean overworld exit must restore text_row_stride to 20 (Stage 3).
     mov dword [text_row_stride], SCREEN_TILES_W   ; 40
-    call InitBattleVariables
+    ; NOTE: InitBattleVariables is no longer called here — it is hoisted to
+    ; InitBattleCommon/InitWildBattle (pret InitBattleCommon:32, before the
+    ; battle transition). The harness gates that enter via InitBattleCanvas
+    ; directly (debug_dump.asm scenarios 14/15/16) call it themselves.
     ; reset the remembered FIGHT-menu cursor (wPlayerMoveListIndex persists across move
     ; uses/menu exits for the whole battle; only a new battle clears it). It sits
     ; outside InitBattleVariables' clear block, so clear it explicitly here.
@@ -246,9 +263,16 @@ InitBattleCanvas:
     ; coords ⇒ the pre-battle value is still correct), mirroring status_screen.asm's view-ptr
     ; save/restore. The debug harnesses that call InitBattle standalone never return to the
     ; field, so the unrestored save is harmless there.
+    ; On the production path DoBattleTransitionAndInitBattleVariables has already
+    ; saved + zeroed the pointer (the wipe needs the flat canvas), so a zero here
+    ; means "already saved — do not clobber the save with 0". The direct harness
+    ; entries (scenarios 14/15/16) still take the save.
     mov ax, [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR]
+    test ax, ax
+    jz .viewPtrAlreadySaved
     mov [saved_ow_view_ptr], ax
     mov word [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], 0
+.viewPtrAlreadySaved:
     mov byte [ebp + H_SCX], 0
     mov byte [ebp + H_SCY], 0
     mov byte [ebp + IO_SCX], 0

@@ -1,5 +1,17 @@
 # Current Plan: Battle Transition Animations (overworld → battle)
 
+**STATUS 2026-08-07 (session r-f0cc803b561d): Stages 1–6 IMPLEMENTED AND LANDED; Stage 7 verification run this session.**
+`battle_transitions.asm` (all 8 effects + selectors + prologue), the core.asm wrapper, the
+init_battle.asm splice, `dungeon_maps.asm`, the arc generator + `battle_transition_arcs.inc`,
+and the WRAM vars are all in the tree. Verified: build green, `lint_pret_labels` 0 both modes,
+faithdiff justifications recorded in the landing commit, scenario 51 `trainer_battle_route`
+PASSES goldencheck with the transition on the production path, and the maintainer visually
+approved all 8 animations via the new interactive `DEBUG_TRANSITION_DEMO=1` harness
+(debug_dump.asm `RunTransitionDemo` — cycles all 8 over the live overworld; also empirically
+confirmed the §Blockers W_TILEMAP dependency: `RefreshCollisionTileMap` refreshes the snapshot
+every step on the production path). Remaining tail: per-transition state-checkpoint scenarios
+(§6 battle_completion Stage 5 umbrella) stay open.
+
 Scoped 2026-08-07 (session r-f4cc, seedlet); fully modeled + presolved 2026-08-07 (session
 r-0a1227c2f63c). Goal: port the pret battle-transition animations
 (`engine/battle/battle_transitions.asm`, 37 labels) and their wrapper

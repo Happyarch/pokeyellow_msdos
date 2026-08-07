@@ -202,6 +202,21 @@ wCurItem           equ 0xCF90   ; = wCurPartySpecies (shared "current" slot)
 wItemQuantity      equ 0xCF95
 wMaxItemQuantity   equ 0xCF96
 ; --- item-use effect scratch (engine/items/item_effects.asm) ---
+; --- battle-transition scratch (engine/battle/battle_transitions.asm) ---
+; All on the established 0xCD3D union scratch lane (modal transition, nothing
+; else on the lane is live while it runs); pret ram/wram.asm:812-827 places them
+; in the same NEXTU union.
+wBattleTransitionCircleScreenQuadrantY equ 0xCD3D ; 0 = upper half, 1 = lower half
+wBattleTransitionCircleScreenQuadrantX equ 0xCD3E ; CIRCLE_LEFT / CIRCLE_RIGHT
+wBattleTransitionCopyTilesOffset       equ 0xCD3D ; dw — offset to the next row/column to copy
+wInwardSpiralUpdateScreenCounter       equ 0xCD3D ; counts down (port: from 19) between TransferDelay3s
+wBattleTransitionSpiralDirection       equ 0xCD47 ; 0 = outward, 1 = inward (pret: union +10)
+; wOutwardSpiralTileMapPointer: pret splits the tilemap pointer over two db
+; stores (h/l). The port stores it as ONE 16-bit GB tilemap offset word (the
+; wMenuCursorLocation precedent, window.asm) at pret's address — same 2-byte
+; footprint 0xD099-0xD09A pret's `+ 1` stores use.
+wOutwardSpiralTileMapPointer           equ 0xD099
+wOutwardSpiralCurrentDirection         equ 0xD09E ; pret union slot (= wNewTileBlockID lane)
 wPPRestoreItem         equ 0xCD3D   ; which Ether/Elixer item is being used
 wWereAnyMonsAsleep     equ 0xCD3D   ; Poke Flute: set if a party mon woke (aliased)
 wChargeMoveNum         equ 0xCD3D   ; charge move number (aliased union lane)

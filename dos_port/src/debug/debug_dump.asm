@@ -135,6 +135,7 @@ extern PrepareNewGameDebug
 extern LoadFontTilePatterns
 extern LoadTextBoxTilePatterns
 extern InitBattleCanvas
+extern InitBattleVariables         ; hoisted out of InitBattleCanvas (battle transitions splice)
 extern InitBattle                ; init_battle.asm — the pret wild/trainer dispatcher.
                                  ; The trainer oracles call it directly to stand in for
                                  ; OverworldLoop's wCurOpponent poll (Stage 1b).
@@ -216,6 +217,7 @@ extern PrepareNewGameDebug
 extern LoadFontTilePatterns
 extern LoadTextBoxTilePatterns
 extern InitBattleCanvas
+extern InitBattleVariables         ; hoisted out of InitBattleCanvas (battle transitions splice)
 extern LearnMoveFromLevelUp
 extern DelayFrame
 global RunLearnMoveTest
@@ -502,6 +504,120 @@ RunOakIntroTest:
     call UpdateSprites
     call DelayFrame
     jmp DumpBackbuffer
+%endif
+
+%ifdef DEBUG_TRANSITION_DEMO
+section .text
+
+; ---------------------------------------------------------------------------
+; RunTransitionDemo — interactive visual check of ALL 8 battle transitions.
+;
+; Cycles forever over transition ids 0..7 on the live overworld view: for each
+; id it seeds the REAL selector inputs (wCurOpponent for the trainer bit,
+; wCurEnemyLevel vs the seeded Snorlax L80 for the stronger bit, wCurMap for
+; the dungeon bit), performs the same flat-canvas switch the production wrapper
+; (DoBattleTransitionAndInitBattleVariables) does, and calls BattleTransition —
+; so the prologue, the three GetBattleTransitionID_* selectors, and the
+; animation body all run exactly as in a real battle entry. Between effects it
+; restores palettes/sprites/view and pauses ~1.5 s.
+;
+; Expected order (table in battle_transitions.asm):
+;   0 DoubleCircle  1 InwardSpiral  2 Circle        3 OutwardSpiral
+;   4 HorizStripes  5 Shrink        6 VertStripes   7 Split
+; (1/3 both dispatch BattleTransition_Spiral; the level seed picks the
+; direction.)  Close the emulator to stop.
+; ---------------------------------------------------------------------------
+extern BattleTransition
+extern UpdateCGBPal_BGP
+extern UpdateCGBPal_OBP0
+extern UpdateCGBPal_OBP1
+extern DelayFrames
+extern DelayFrame
+extern RefreshCollisionTileMap
+%define BT_DEMO_DUNGEON_MAP 0x33   ; VIRIDIAN_FOREST (assets/map_dims.inc; not %included here)
+
+global RunTransitionDemo
+RunTransitionDemo:
+    call DelayFrame                     ; let the freshly drawn map publish once
+.cycle:
+    mov byte [demo_id], 0               ; transition id 0..7 (memory — every callee clobbers regs)
+.next:
+    ; --- seed the selector inputs from the id bits ---
+    mov ah, [demo_id]
+    mov al, 1                           ; wild: any id < OPP_ID_OFFSET
+    test ah, 1 << 0                     ; trainer bit
+    jz .wild
+    mov al, OPP_ID_OFFSET + 2           ; trainer: BUG CATCHER
+.wild:
+    mov [ebp + wCurOpponent], al
+    mov al, 3                           ; weaker: 3 < SnorlaxL80 + 3
+    test ah, 1 << 1                     ; stronger bit
+    jz .weak
+    mov al, 90                          ; stronger: 90 >= 80 + 3
+.weak:
+    mov [ebp + wCurEnemyLevel], al
+    mov al, [ebp + wCurMap]
+    mov [demo_saved_map], al
+    test ah, 1 << 2                     ; dungeon bit
+    jz .nodungeon
+    mov byte [ebp + wCurMap], BT_DEMO_DUNGEON_MAP
+.nodungeon:
+    mov byte [ebp + hSpriteIndex], 0    ; wild-style OAM scan (no engaged trainer)
+
+    ; --- the wrapper's flat-canvas switch (mirrors core.asm) ---
+    mov al, [ebp + IO_BGP]
+    mov [demo_saved_bgp], al
+    mov al, [ebp + IO_OBP0]
+    mov [demo_saved_obp0], al
+    mov al, [ebp + IO_OBP1]
+    mov [demo_saved_obp1], al
+    mov ax, [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR]
+    mov [demo_saved_view], ax
+    mov word [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], 0
+    mov byte [ebp + H_SCX], 0
+    mov byte [ebp + H_SCY], 0
+    mov byte [ebp + IO_SCX], 0
+    mov byte [ebp + IO_SCY], 0
+    mov byte [ebp + hTileAnimations], 0
+    call DelayFrame
+
+    call BattleTransition               ; prologue + selectors + animation
+
+    ; --- hold the black screen a moment, then restore the overworld ---
+    mov bl, 30
+    call DelayFrames
+    mov al, [demo_saved_bgp]
+    mov [ebp + IO_BGP], al
+    call UpdateCGBPal_BGP
+    mov al, [demo_saved_obp0]
+    mov [ebp + IO_OBP0], al
+    call UpdateCGBPal_OBP0
+    mov al, [demo_saved_obp1]
+    mov [ebp + IO_OBP1], al
+    call UpdateCGBPal_OBP1
+    mov al, [demo_saved_map]
+    mov [ebp + wCurMap], al
+    mov ax, [demo_saved_view]
+    mov [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], ax
+    call RefreshCollisionTileMap        ; rebuild the W_TILEMAP snapshot the wipe consumed
+    mov byte [ebp + W_UPDATE_SPRITES_ENABLED], 1
+    mov byte [ebp + wCurOpponent], 0
+    mov bl, 90                          ; ~1.5 s of restored overworld
+    call DelayFrames
+
+    inc byte [demo_id]
+    cmp byte [demo_id], 8
+    jb .next
+    jmp .cycle
+
+section .data
+demo_id:         db 0
+demo_saved_map:  db 0
+demo_saved_bgp:  db 0
+demo_saved_obp0: db 0
+demo_saved_obp1: db 0
+align 2
+demo_saved_view: dw 0
 %endif
 
 section .data
@@ -1837,7 +1953,8 @@ RunBattleTest:
     or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     call LoadTextBoxTilePatterns
-    call InitBattleCanvas           ; canvas + InitBattleVariables
+    call InitBattleVariables        ; was inside InitBattleCanvas pre-transition-splice
+    call InitBattleCanvas           ; canvas (post-transition teardown half)
     mov byte [ebp + wIsInBattle], 1 ; gate models a wild battle; live init owns this normally
     call LoadEnemyMonData           ; REAL loader — rolls DVs via BattleRandom
     ; --- spec-DV overwrite + stat recompute (seed.enemy's twin) ---
@@ -2372,6 +2489,7 @@ RunBattleTest:
     or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     call LoadTextBoxTilePatterns
+    call InitBattleVariables        ; was inside InitBattleCanvas pre-transition-splice
     call InitBattleCanvas           ; setup + clear canvas (no box/HUD yet)
 %ifdef DEBUG_BATTLE_TRAINER
     ; --- Bug Catcher trainer test: trainer battle (enemy = trainer + ball row, not a
@@ -2562,6 +2680,7 @@ RunLearnMoveTest:
     call LoadFontTilePatterns
     call LoadTextBoxTilePatterns
     mov byte [ebp + wIsInBattle], 1
+    call InitBattleVariables        ; was inside InitBattleCanvas pre-transition-splice
     call InitBattleCanvas           ; battle-mode canvas (clears screen, no HUD/box yet)
 
 %ifdef DEBUG_LEARNMOVE_FULL

@@ -1873,6 +1873,56 @@ PrintMoveIsDisabledText:
     jmp PrintText
 
 ; ---------------------------------------------------------------------------
+; DoBattleTransitionAndInitBattleVariables — pret core.asm:6333. Shows the
+; battle-transition animation over the LIVE overworld view + frozen OAM, then
+; runs pret's post-transition teardown. Called from the two pret sites in
+; init_battle.asm (after ReadTrainer / after LoadEnemyMonData).
+; ---------------------------------------------------------------------------
+extern BattleTransition                ; src/engine/battle/battle_transitions.asm
+extern saved_ow_view_ptr               ; init_battle.asm — overworld view-ptr save slot
+global DoBattleTransitionAndInitBattleVariables
+DoBattleTransitionAndInitBattleVariables:
+    ; DEVIATION{class=HAL; pret=engine/battle/core.asm:DoBattleTransitionAndInitBattleVariables; behavior=performs the port's flat-canvas switch before the transition - saves and zeroes the overworld view pointer, zeroes the fine-scroll shadows and hardware mirrors, and disables tile animations; evidence=pret's BG is already a tilemap the wipe mutates in place, while the port's render_bg takes the overworld path whenever wCurrentTileBlockMapViewPointer is nonzero and would never show W_TILEMAP writes - W_TILEMAP already holds the current view via LoadCurrentMapView; lifetime=permanent, render HAL}
+    mov ax, [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR]
+    mov [saved_ow_view_ptr], ax
+    mov word [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], 0
+    mov byte [ebp + H_SCX], 0
+    mov byte [ebp + H_SCY], 0
+    mov byte [ebp + IO_SCX], 0
+    mov byte [ebp + IO_SCY], 0
+    mov byte [ebp + hTileAnimations], 0
+    ; link battle branch — never taken in the port (wLinkState is never
+    ; LINK_STATE_BATTLING); kept faithful minus the unreachable link textbox.
+    mov al, [ebp + wLinkState]
+    cmp al, LINK_STATE_BATTLING
+    jne .next
+    mov byte [ebp + wMenuJoypadPollCount], 0
+    ; TODO-HW: network HAL — DisplayLinkBattleVersusTextBox unported (Phase 4;
+    ; this branch is unreachable until link battles exist)
+    mov byte [ebp + W_UPDATE_SPRITES_ENABLED], 1
+    call ClearScreen
+.next:
+    call DelayFrame
+    call BattleTransition                        ; pret: predef BattleTransition
+    call LoadHudAndHpBarAndStatusTilePatterns
+    mov byte [ebp + hAutoBGTransferEnabled], 1   ; vestigial (inert in the port)
+    mov byte [ebp + W_UPDATE_SPRITES_ENABLED], 0xFF
+    call ClearSprites
+    call ClearScreen
+    xor al, al
+    mov [ebp + hAutoBGTransferEnabled], al
+    mov [ebp + H_WY], al
+    mov [ebp + IO_WY], al
+    mov [ebp + hTileAnimations], al
+    mov [ebp + wPlayerStatsToDouble + 0], al     ; pret: 5 x ld [hli], a
+    mov [ebp + wPlayerStatsToDouble + 1], al
+    mov [ebp + wPlayerStatsToDouble + 2], al
+    mov [ebp + wPlayerStatsToDouble + 3], al
+    mov [ebp + wPlayerStatsToDouble + 4], al
+    mov [ebp + wPlayerDisabledMove], al
+    ret
+
+; ---------------------------------------------------------------------------
 ; SwapPlayerAndEnemyLevels — pret core.asm:6370. Bide computes its damage from the
 ; user's level, but the damage routine reads the "attacker" level; swapping puts the
 ; Bide user's level where the calc expects it (and swaps back after).
@@ -5274,8 +5324,16 @@ PrintCriticalOHKOText:
 ; LoadHudAndHpBarAndStatusTilePatterns). In: EBP = GB base. All registers preserved.
 ; ---------------------------------------------------------------------------
 section .text
+global LoadHudAndHpBarAndStatusTilePatterns
 global LoadHudTilePatterns
 extern g_tilecache_dirty               ; src/ppu/ppu.asm — tile-cache invalidation flag
+extern LoadHpBarAndStatusTilePatterns  ; src/home/load_font.asm
+
+; pret core.asm:6692 — call LoadHpBarAndStatusTilePatterns, then fall through
+; into LoadHudTilePatterns.
+LoadHudAndHpBarAndStatusTilePatterns:
+    call LoadHpBarAndStatusTilePatterns
+
 LoadHudTilePatterns:
     mov byte [g_tilecache_dirty], 1
     push eax
