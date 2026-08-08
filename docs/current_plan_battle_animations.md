@@ -380,10 +380,23 @@ Two maintainer-confirmed decisions (AskUserQuestion, 2026-08-07):
 
 ### Stage 4 — mon-pic + OAM particle families
 
-- [ ] Slides: `AnimationSlideMonUp/Down/Off`, `_AnimationSlideMonUp/Off`,
+- [~] Slides: `AnimationSlideMonUp/Down/Off`, `_AnimationSlideMonUp/Off`,
       `AnimationSlideEnemyMonOff`, `AnimationSlideMonDownAndHide`,
       `AnimationSlideMonHalfOff`; retire `SlideDownFaintedMonPic` stub (pret
       core.asm label — body lands per pret placement).
+      **Stage 4b DONE 2026-08-08 for seven of the nine:** `AnimationSlideMonUp`,
+      `_AnimationSlideMonUp`, `AnimationSlideMonDown`, `AnimationSlideMonOff`,
+      `_AnimationSlideMonOff`, `AnimationSlideEnemyMonOff`,
+      `AnimationSlideMonHalfOff` — five stubs retired, faithdiff clean on all
+      seven, lint 0 both modes, pgate 17/17 with mask-hit counts byte-identical
+      to the 4a run in every scenario.
+      New WRAM: `wSlideMonDelay` $D08A and `wSlideMonUpBottomRowLeftTile` $D09E
+      (sym-measured; both land on pret's own union bytes, reproduced not
+      introduced — see the notes in `gb_memmap.inc`).
+      STILL OPEN in this box: `AnimationSlideMonDownAndHide` (its tail calls
+      `CopyTempPicToMonPic`, which Stage 5 owns) and the `SlideDownFaintedMonPic`
+      stub (pret `core.asm`; needs `PlaceString` + a generated `SevenSpacesText`,
+      since a rendered space run is Tier-1 data and must not be hand-encoded).
 - [x] Hide/show + tilemap helpers: `AnimationHideMonPic`,
       `AnimationHideEnemyMonPic`, `AnimationShowMonPic`,
       `AnimationShowEnemyMonPic`, `ClearMonPicFromTileMap`,

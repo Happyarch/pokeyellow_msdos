@@ -183,6 +183,12 @@ AnimationFlashEnemyMonPic:
 ; RETIRED 2026-08-08 — real bodies in animations.asm (Stage 3 flash family).
 
 ; --- Stage 4: mon-pic slides + motion + OAM particles + HUD shake ---
+; AnimationSlideMonUp, AnimationSlideMonDown, AnimationSlideMonOff,
+; AnimationSlideMonHalfOff, AnimationSlideEnemyMonOff: RETIRED 2026-08-08 —
+; real bodies in animations.asm (Stage 4b), with _AnimationSlideMonUp and
+; _AnimationSlideMonOff. AnimationSlideMonDownAndHide stays stubbed below: its
+; tail calls CopyTempPicToMonPic, which is Stage 5.
+
 ; AnimationHideMonPic, AnimationHideEnemyMonPic, AnimationShowMonPic,
 ; AnimationShowEnemyMonPic, AnimationBlinkMon: RETIRED 2026-08-08 — real bodies
 ; in animations.asm (Stage 4 mon-pic tilemap helpers), along with
@@ -190,34 +196,9 @@ AnimationFlashEnemyMonPic:
 ; AnimCopyRowLeft/Right, CopyPicTiles, CopyDownscaledMonTiles,
 ; CopyTileIDs{,_NoBGTransfer} and CopyTileIDsFromList.
 
-; STUB{class=temporary; label=AnimationSlideMonUp; pret=engine/battle/animations.asm:AnimationSlideMonUp; behavior=return instead of sliding the mon pic up; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 mon-pic slides land}
-global AnimationSlideMonUp
-AnimationSlideMonUp:
-    ret
-
-; STUB{class=temporary; label=AnimationSlideMonDown; pret=engine/battle/animations.asm:AnimationSlideMonDown; behavior=return instead of sliding the mon pic down; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 mon-pic slides land}
-global AnimationSlideMonDown
-AnimationSlideMonDown:
-    ret
-
-; STUB{class=temporary; label=AnimationSlideMonOff; pret=engine/battle/animations.asm:AnimationSlideMonOff; behavior=return instead of sliding the mon pic off screen; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 mon-pic slides land}
-global AnimationSlideMonOff
-AnimationSlideMonOff:
-    ret
-
 ; STUB{class=temporary; label=AnimationSlideMonDownAndHide; pret=engine/battle/animations.asm:AnimationSlideMonDownAndHide; behavior=return instead of sliding the mon pic down and hiding it; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 mon-pic slides land}
 global AnimationSlideMonDownAndHide
 AnimationSlideMonDownAndHide:
-    ret
-
-; STUB{class=temporary; label=AnimationSlideMonHalfOff; pret=engine/battle/animations.asm:AnimationSlideMonHalfOff; behavior=return instead of sliding the mon pic half off; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 mon-pic slides land}
-global AnimationSlideMonHalfOff
-AnimationSlideMonHalfOff:
-    ret
-
-; STUB{class=temporary; label=AnimationSlideEnemyMonOff; pret=engine/battle/animations.asm:AnimationSlideEnemyMonOff; behavior=return instead of sliding the enemy mon pic off; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 mon-pic slides land}
-global AnimationSlideEnemyMonOff
-AnimationSlideEnemyMonOff:
     ret
 
 ; STUB{class=temporary; label=AnimationMoveMonHorizontally; pret=engine/battle/animations.asm:AnimationMoveMonHorizontally; behavior=return instead of moving the mon pic horizontally; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 motion family lands}

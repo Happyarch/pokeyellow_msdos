@@ -36,6 +36,7 @@ bits 32
 %include "gb_macros.inc"
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
+%define TILE_BLANK 0x7F                  ; charmap " " (same define as src/home/copy2.asm)
 %include "coords.inc"                    ; BCOORD — battle-frame tilemap projection (+10 col, +3 row)
 %include "data_macros.inc"               ; dc — pret macros/data.asm "crumbs" (FlashScreenLong* tables)
 %include "assets/audio_constants.inc"    ; SFX_DAMAGE / SFX_SUPER_EFFECTIVE / SFX_NOT_VERY_EFFECTIVE
@@ -81,6 +82,7 @@ extern DelayFrame                     ; src/home/vblank.asm
 extern ClearSprites                   ; src/home/clear_sprites.asm
 extern ClearScreen                    ; src/home/copy2.asm
 extern ClearScreenArea                ; src/home/copy2.asm — ESI dest, BH rows, BL cols
+extern CopyData                       ; src/home/copy.asm — ESI src, EDX dest, EBX count
 extern IsInArray                      ; src/home/array2.asm — AL val, ESI base, EDX stride
 extern CopyVideoData                  ; src/home/copy2.asm — ESI dest VRAM, EDX flat src, BL tiles
 extern SaveScreenTilesToBuffer2       ; src/home/tilemap.asm
@@ -1372,6 +1374,188 @@ SetAnimationBGPalette:
 ; note in src/home/vblank.asm) and render_bg reads W_TILEMAP directly — so the
 ; writes cost nothing and keep the routines byte-comparable against pret.
 ; ===========================================================================
+
+; ---------------------------------------------------------------------------
+; MON-PIC SLIDES — pret animations.asm (battle_animations Stage 4b). Same
+; projection rule as the helpers below: strides verbatim, coordinates through
+; BCOORD. All tilemap-index writes, so no g_tilecache_dirty is owed.
+; ---------------------------------------------------------------------------
+global AnimationSlideMonUp
+AnimationSlideMonUp:
+; Slides the mon's sprite upwards.
+    mov bl, 7                                ; ld c, 7
+    mov al, [ebp + hWhoseTurn]
+    test al, al
+    mov esi, BCOORD(1, 6)                    ; PROJ — pret hlcoord 1, 6
+    mov edx, BCOORD(1, 5)                    ; PROJ — pret decoord 1, 5
+    mov al, 0x30
+    jz .next                                 ; the movs above do not touch flags
+    mov esi, BCOORD(12, 1)                   ; PROJ — pret hlcoord 12, 1
+    mov edx, BCOORD(12, 0)                   ; PROJ — pret decoord 12, 0
+    mov al, 0xFF
+.next:
+    mov [ebp + wSlideMonUpBottomRowLeftTile], al
+    jmp _AnimationSlideMonUp
+
+global AnimationSlideMonDown
+AnimationSlideMonDown:
+; Slides the mon's sprite down out of the screen.
+    xor al, al                               ; TILEMAP_MON_PIC
+    call GetTileIDList
+.loop:
+    call GetMonSpriteTileMapPointerFromRowCount
+    push ebx
+    push edx
+    call CopyPicTiles
+    call Delay3
+    call AnimationHideMonPic
+    pop edx
+    pop ebx
+    dec bh                                   ; 8-bit row counter, as pret
+    jnz .loop
+    ret
+
+global AnimationSlideMonOff
+AnimationSlideMonOff:
+; Slides the mon's sprite off the screen horizontally.
+    mov dl, 8                                ; ld e, 8
+    mov al, 3
+    mov [ebp + wSlideMonDelay], al
+    jmp _AnimationSlideMonOff
+
+global AnimationSlideEnemyMonOff
+AnimationSlideEnemyMonOff:
+; Slides the enemy mon off the screen horizontally.
+    mov esi, AnimationSlideMonOff
+    jmp CallWithTurnFlipped
+
+global AnimationSlideMonHalfOff
+AnimationSlideMonHalfOff:
+; Slides the mon's sprite halfway off the screen. Used in Softboiled.
+    mov dl, 4                                ; ld e, 4
+    mov al, 4
+    mov [ebp + wSlideMonDelay], al
+    call _AnimationSlideMonOff
+    jmp Delay3
+
+global _AnimationSlideMonUp
+_AnimationSlideMonUp:
+    push edx
+    push esi
+    push ebx
+; In each iteration, slide up all rows but the top one (which is overwritten).
+    mov bh, PIC_HEIGHT - 1
+.slideLoop:
+    push ebx
+    push edx
+    push esi
+    mov ebx, PIC_WIDTH                       ; ld bc, PIC_WIDTH
+    call CopyData
+; pret pops de and hl in the SAME order it pushed them, swapping their values.
+; When CopyData is called, hl points one row below de; after the swap, adding 2
+; rows to hl restores that relationship.
+    pop edx
+    pop esi
+    add esi, SCREEN_WIDTH * 2                ; stride, not a coordinate
+    pop ebx
+    dec bh
+    jnz .slideLoop
+
+; Fill in the bottom row of the mon pic with the next row's tile IDs.
+    mov al, [ebp + hWhoseTurn]
+    test al, al
+    mov esi, BCOORD(1, 11)                   ; PROJ — pret hlcoord 1, 11
+    jz .fillNext
+    mov esi, BCOORD(12, 6)                   ; PROJ — pret hlcoord 12, 6
+.fillNext:
+    mov al, [ebp + wSlideMonUpBottomRowLeftTile]
+    inc al
+    mov [ebp + wSlideMonUpBottomRowLeftTile], al
+    mov bl, PIC_WIDTH
+.fillBottomRowLoop:
+    mov [ebp + esi], al                      ; ld [hli], a
+    inc esi
+    add al, PIC_WIDTH                        ; next column of the pic (column-major ids)
+    dec bl
+    jnz .fillBottomRowLoop
+
+    mov bl, 2
+    call DelayFrames
+    pop ebx
+    pop esi
+    pop edx
+    dec bl                                   ; 8-bit outer counter (pret dec c)
+    jnz _AnimationSlideMonUp
+    ret
+
+; Slides the mon's sprite off the screen horizontally by DL tiles, waiting
+; [wSlideMonDelay] V-blanks each time the pic slides by one tile.
+global _AnimationSlideMonOff
+_AnimationSlideMonOff:
+    mov al, [ebp + hWhoseTurn]
+    test al, al
+    jz .playerTurn
+    mov esi, BCOORD(12, 0)                   ; PROJ — pret hlcoord 12, 0
+    jmp short .next
+.playerTurn:
+    mov esi, BCOORD(0, 5)                    ; PROJ — pret hlcoord 0, 5
+.next:
+    mov dh, 8                                ; ld d, 8 — d's value is unused
+.slideLoop:                                  ; once per tile the pic slides
+    push esi
+    mov bh, 7
+.rowLoop:                                    ; once per row
+    mov bl, 8
+.tileLoop:                                   ; once per tile in the row
+    mov al, [ebp + hWhoseTurn]
+    test al, al
+    jz .playerTurn2
+    call .EnemyNextTile
+    jmp short .next2
+.playerTurn2:
+    call .PlayerNextTile
+.next2:
+    mov [ebp + esi], al                      ; ld [hli], a
+    inc esi
+    dec bl
+    jnz .tileLoop
+; pret brackets the row advance with push de / pop de because it borrows de for
+; the stride; the port adds the constant directly, so EDX is preserved.
+    add esi, SCREEN_WIDTH - 8                ; stride, not a coordinate
+    dec bh
+    jnz .rowLoop
+    mov bl, [ebp + wSlideMonDelay]
+    call DelayFrames
+    pop esi
+    dec dh
+    dec dl                                   ; loop ends on e, as pret
+    jnz .slideLoop
+    ret
+
+; Mon pic tile numbers run top to bottom, left to right in order, so adding the
+; pic height in tiles to a tile number gives the tile one column to the right
+; (and subtracting gives the reverse). If the next tile would be past the edge
+; of the pic, these two catch it and substitute a blank tile.
+.PlayerNextTile:
+    mov al, [ebp + esi]
+    add al, PIC_HEIGHT                       ; pret `add 7`
+; bugfix (pret's own note): compares against the max tile + 1, not the max tile
+    cmp al, 0x62
+    jb .playerInRange                        ; ret c
+    mov al, TILE_BLANK                       ; charmap " " — a single tile, not a string
+.playerInRange:
+    ret
+
+.EnemyNextTile:
+    mov al, [ebp + esi]
+    sub al, PIC_HEIGHT                       ; pret `sub 7`
+; Same off-by-one as above, but with no visible effect: the lower right tile is
+; in the first column to slide off the screen.
+    cmp al, 0x30
+    jb .enemyInRange
+    mov al, TILE_BLANK
+.enemyInRange:
+    ret
 
 ; ---------------------------------------------------------------------------
 ; AnimationBlinkMon / AnimationShowMonPic and the enemy-side CallWithTurnFlipped

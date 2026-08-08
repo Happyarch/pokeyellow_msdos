@@ -6320,3 +6320,50 @@ WRAM regions all OK, on the pre-existing justified mask set with no mask added.
 execution: none of the 17 scenarios plays a move animation that dispatches to
 these routines, so nothing here has yet been observed running. Runtime evidence
 is owed at the Stage 4 sign-off (`DEBUG_ANIM_DEMO=1 ANIM=…`).
+
+---
+
+## 2026-08-08 — battle animations Stage 4b: mon-pic slides
+
+pret `engine/battle/animations.asm`. Seven labels: `AnimationSlideMonUp`,
+`_AnimationSlideMonUp`, `AnimationSlideMonDown`, `AnimationSlideMonOff`,
+`_AnimationSlideMonOff`, `AnimationSlideEnemyMonOff`, `AnimationSlideMonHalfOff`.
+Five `core_stubs.asm` ret-stubs retired.
+
+Same projection rule as 4a: `hlcoord`/`decoord` origins become `BCOORD` (`; PROJ`
+tagged — (1,6)/(1,5) and (12,1)/(12,0) for the up-slide, (1,11)/(12,6) for its
+bottom-row refill, (0,5)/(12,0) for the off-slide), while every stride keeps the
+literal `SCREEN_WIDTH` — including `_AnimationSlideMonOff`'s `SCREEN_WIDTH - 8`
+row advance, which is "the rest of my row after the 8 tiles just written" and so
+is 32 here against pret's 12.
+
+Two subtleties worth recording, both pret's and both preserved:
+* `_AnimationSlideMonUp` pops `de`/`hl` in the SAME order it pushed them, which
+  SWAPS them; the following `add hl, SCREEN_WIDTH * 2` is what restores the
+  "hl is one row below de" relationship `CopyData` needs. Translated literally.
+* `_AnimationSlideMonOff`'s `.PlayerNextTile` / `.EnemyNextTile` carry pret's own
+  "bugfix" note — the range check compares against max tile **+ 1**. Kept
+  verbatim; the enemy side's identical off-by-one is invisible because the lower
+  right tile is in the first column to slide off.
+
+New WRAM, sym-measured: `wSlideMonDelay` $D08A and
+`wSlideMonUpBottomRowLeftTile` $D09E. Both land on bytes pret already unions
+(`wSubAnimTransform`/`wSpiralBallsBaseX`/`wNumFallingObjects`, and
+`wWhichBattleAnimTileset`/`wOutwardSpiralCurrentDirection`); the collisions are
+reproduced from hardware, not introduced, and the lifetimes are pret's.
+
+`_AnimationSlideMonOff`'s loop counters stay in `dh`/`dl` (pret `d`/`e`) and the
+row/tile counters in `bh`/`bl`, so every degenerate count wraps at 8 bits as on
+the GB.
+
+**Verification:** build clean; `lint_pret_labels` 0 both modes; faithdiff clean
+on all seven labels with no findings at all; `pgate.sh` 17/17 PASS, and the
+per-scenario "masked (justified) divergences hit" counts are byte-identical to
+the Stage 4a run in all 17 — i.e. the slides changed nothing the suite observes.
+**Still not execution evidence**: no scenario in the battery plays an animation
+that dispatches to a slide. Runtime evidence is owed at the Stage 4 sign-off.
+
+**Deferred out of this increment, deliberately:** `AnimationSlideMonDownAndHide`
+(tail-calls `CopyTempPicToMonPic`, a Stage 5 label) and `SlideDownFaintedMonPic`
+(pret `core.asm`; needs `PlaceString` plus a **generated** `SevenSpacesText` —
+a rendered run of space glyphs is Tier-1 data and must not be hand-encoded).
