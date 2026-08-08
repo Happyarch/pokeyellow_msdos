@@ -114,12 +114,36 @@ with `python3 -c 'import json;d=json.load(open("dos_port/tools/pret_label_allowl
    - Every unsuppressed **ADDED/DROPPED** line must be either (a) fixed, or
      (b) justified — in the **source annotation** (step 0) for anything durable, and
      restated in the commit message. The annotation is the record that survives.
-   - **Known blind spots — do not "fix" a phantom.** `faithdiff` counts `call`/`jmp`
-     to a label; it does **not** count conditional jumps (`jz`/`jne`/`jnz` to a pret
-     label read as DROPPED though the routine is reached), and it matches stores
-     **by name**, so pret's pointer-indirect writes (`set BIT_x, [hl]` where `hl` is a
-     named symbol) surface as an ADDED named store on the port side. Confirm against
-     the source before acting.
+   - **FIXED 2026-08-08 (`0f7f13b2`) — this page previously told you the opposite.**
+     `faithdiff` now counts conditional jumps on the port side: its regex is
+     `(call|jmp|j[a-z]{1,3})`, matching what `update_label_db`'s `PORT_CALL_RE`
+     always used. Until then the port side counted only `call`/`jmp` while the
+     PRET side counted `jp z,` / `jr nz,`, so a faithful translation of
+     `jp z, X` written as `je X` reported a **false `- DROPPED X`**.
+     This entry used to describe that as a "known blind spot — do not fix a
+     phantom", which is very likely why it survived: the skill legitimised the
+     bug, and two routines had their assembly contorted into `jne .skip` + `jmp`
+     to appease it before anyone questioned the tool. **If a gate flags a
+     translation you believe is faithful, suspect the gate.** Note the
+     `update_label_db` dependency-graph edges were NEVER affected — only
+     `faithdiff` was wrong.
+   - **Still true:** it matches stores **by name**, so pret's pointer-indirect
+     writes (`set BIT_x, [hl]` where `hl` is a named symbol) surface as an ADDED
+     named store on the port side, and a hardware-register write (`ldh [rBGP]`)
+     is invisible on the pret side — its store regex only matches `w`/`h`-prefixed
+     names — so the port's `[IO_BGP]` / `[IO_OBP0]` reads as ADDED. Also, an
+     indirect dispatch (`jp hl` through a `dd` table) emits no edge on either
+     side. Confirm against the source before acting.
+   - **The fix exposed 11 labels with genuine divergences the blind spot was
+     hiding** — real port `Jcc`s to routines pret does not branch to, mostly
+     pret pointer-table dispatch flattened into direct jumps
+     (`_RunPaletteCommand` → `SetPal_*`, `DisplayTextID` → 12 targets) plus
+     fall-through-vs-jump restructurings in `core.asm` / `effects.asm`. They are
+     UNTRIAGED. `fidelity_gate` chains faithdiff, so it will fail on one of these
+     if your change touches it; `static_gate` does not, so the pre-commit hook is
+     unaffected. If you hit one: it is pre-existing, not yours. Either justify it
+     in `tools/faithdiff_suppress.json` with a real why-string, or fix the
+     divergence — do not silently widen a suppression to get green.
    - **It has no model of call-site relocation, routine decomposition, or a routine
      inlined into a differently-named host.** A call that legitimately moved between
      routines shows up as disconnected ADDED/`missing`/DROPPED lines, and an inlined

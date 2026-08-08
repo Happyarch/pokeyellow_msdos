@@ -100,6 +100,29 @@ caller passes a bad count converts a loud page fault into a *silently mis-drawn
 screen*, which is strictly harder to find. Guard the loop **and** fix the caller;
 never let the guard close the investigation.
 
+**Second worked instance, and it is the OTHER shape: `DelayFrames` (`d5a24c52`,
+2026-08-08).** `TextBoxBorder` was a *widened* counter fixed by narrowing to
+`dec cl`. `DelayFrames` was the opposite — an 8-bit loop that was already correct,
+with a zero-guard *added* on top:
+
+```nasm
+DelayFrames:            ; pret: call DelayFrame / dec c / jr nz / ret
+    test bl, bl         ; <-- ADDED. 0 frames where the GB waits 256 (~4.3 s)
+    jz .done
+```
+
+Unannotated, so `lint_pret_labels` and `faithdiff` both reported it faithful. The
+fix was to delete the guard, not document it.
+
+**The diagnostic that settles these — look at the CALLERS, not the loop.** pret
+can afford a bare do-while because its callers maintain the nonzero invariant.
+Measured across all 105 `DelayFrames` call sites: 102 pass a literal non-zero,
+none passes a literal zero, and all 3 computed sites are provably non-zero — the
+clearest being `PlayerSpinInPlace`'s escape-warp variant, which counts 16 down to
+end value 0 and whose own `cp c / ret z` returns EXACTLY when the delay would
+reach zero. **So before adding a guard, go read the callers; the invariant is
+usually already there, and if it is, the guard is not defence — it is divergence.**
+
 Worked instance and the exposure audit: memory
 `bug-class-gb-counter-widened-to-32-bit`. First fully root-caused case was
 `TextBoxBorder.fill_chars` (`src/home/text.asm`), which page-faulted on a zero
@@ -246,7 +269,28 @@ about the write, don't rely on `pixelcheck.sh` alone.
 **Do not translate GB I/O register accesses directly.** These are translation
 boundaries. Emit a `; TODO-HW:` comment describing what the original code does:
 
-- `$FF40–$FF4B` (LCDC, STAT, SCX/SCY, palettes, OAM DMA) → software renderer
+- `$FF40–$FF4B` (LCDC, STAT, SCX/SCY, palettes, OAM DMA) → software renderer.
+  **But several of these are NOT boundaries any more — do not reflexively emit
+  `; TODO-HW` for the whole range** (measured 2026-08-08, battle_animations
+  Stage 3):
+  * **`rBGP`/`rOBP0`/`rOBP1` (`$FF47-49`) are LIVE.** A write to
+    `[ebp + IO_BGP]` IS the whole effect: `commit_palette` (boot/video.asm)
+    early-outs unless `g_pal_dirty` or one of the three DMG palette registers
+    changed, and it runs from `DelayFrame` via `src/home/vblank.asm`. So pret's
+    `ldh [rBGP], a` is a literal `mov [ebp + IO_BGP], al` with no HAL and no
+    TODO-HW owed — that is exactly how the whole flash/palette family
+    (`AnimationFlashScreen`, `SetAnimationBGPalette`, …) is translated.
+    `UpdateCGBPal_BGP/OBP0/OBP1` all collapse to `mov byte [g_pal_dirty], 1`.
+  * **`rSCX`/`rSCY` are live via their SHADOWS.** Write `H_SCX`/`H_SCY`, not
+    `IO_SCX`/`IO_SCY` — `commit_shadow_regs` copies shadow → register every
+    `DelayFrame`, so a direct register write is erased next frame. `render_bg`
+    takes its blit offset from them, which is how the whole-canvas screen shake
+    works.
+  * **`rLY`/`rSTAT` are INERT** — nothing in the port ever writes them. Code
+    that spins on `rSTAT & 3` for H-blank falls straight through, and a
+    `cp rLY` frame-end poll never terminates. A literal translation HANGS. Any
+    per-scanline effect needs a HAL instead (see `AnimationWavyScreen`'s per-row
+    displacement table, `g_row_xoff` in `src/ppu/ppu.asm`).
 - `$FF01/$FF02` (serial SB/SC) → still `; TODO-HW: network HAL` (Phase 4);
   `IO_SB`/`IO_SC` in `gb_memmap.inc` carry that tag, and the stand-ins live in
   `src/home/serial_stubs.asm`

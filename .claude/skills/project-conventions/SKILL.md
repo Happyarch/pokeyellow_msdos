@@ -77,13 +77,19 @@ done
 dos_port/tools/lint_pret_labels --no-scan --strict-claims
 ```
 
-Measured 2026-08-02: `--strict-claims` reports **zero** `legacy_annotation`
-(also zero `hand_encoded_text` / `local_shadow` / `stale_provider`, cleared by
-`a3804828` and `3fad3249`), with 192 `DEVIATION{}`, 46 `BUG{}`, 10 `GLITCH{}`,
-21 `STUB{}` under `dos_port/src`. The previous version of this line said
-132/44/13/22 as of 2026-07-25 — every one of those four numbers had moved,
-including two that went DOWN, which is exactly why a count in prose is not
-evidence.
+Re-measured 2026-08-08: `--strict-claims` reports **zero** `legacy_annotation`
+(also zero `hand_encoded_text` / `local_shadow` / `stale_provider`), with
+221 `DEVIATION{}`, 46 `BUG{}`, 10 `GLITCH{}`, 72 `STUB{}` under `dos_port/src`,
+across 14 `*_stubs.asm` files. The 2026-08-02 line said 192/46/10/**21**, and the
+2026-07-25 one said 132/44/13/22 — note `STUB{}` reads 21 → 72 in six days, which
+is not a real jump so much as proof that a prose count is worthless: measure it.
+
+**A live worked example of why `--strict-claims` matters, from 2026-08-08.** A
+comment reading `; DEVIATION on AnimationWavyScreen in engine/battle/...` — a
+plain PROSE CROSS-REFERENCE with no `{}` — was flagged as `legacy_annotation`,
+correctly. A line that merely *mentions* an annotation kind in the annotation
+position parses as a malformed one. If you want to point at an annotation from
+elsewhere, do not start the line with the keyword.
 
 Treat any figure here as a measurement with a date on it, not an invariant: the
 zero had silently drifted to 2 before this line was first corrected, because
@@ -440,6 +446,31 @@ dos_port/tools/project_state --plans
   hardened. **Session B6 (the human-in-the-loop widescreen redesign) is on the back
   burner at the user's direction** -- it needs a scheduling decision, not
   engineering. Tracked as **#10 in `docs/current_plan_backlog.md`**.
+- `docs/current_plan_battle_animations.md` — **in-battle move/item animations**,
+  the dedicated detail owner under `battle_completion` Stage 6. **Stages 0-3 are
+  DONE** (21 completed / 15 open at 2026-08-08); Stage 4 (mon-pic families) is
+  next, then 5 (OAM particle families) and 6 (polish + F-19 evaluation).
+  Its durable lessons, all measured:
+  * **Geometry INVERTS the transitions precedent.** Battle transitions
+    re-parameterized to the full 40x25 canvas and say "do NOT use BCOORD"; here
+    BCOORD (+10 col / +3 row) **is** the rule. Watch the `SCREEN_WIDTH` role
+    split: as a row-STRIDE it is correct verbatim on both sides (each means "my
+    tilemap's stride", 20 there / 40 here), but as a COORDINATE
+    (`5 * SCREEN_WIDTH + 1` = tile (1,5)) it must be re-derived through `BCOORD`,
+    never textually reused.
+  * **On GB the battle screen IS the window layer** (`core.asm` sets `rWY = 0` on
+    entry). That is why pret shakes via `rWX`/`rWY` and why `AnimationWavyScreen`
+    turns the window off before wobbling `rSCX`. The port draws battle on the BG
+    layer, so the equivalent whole-screen displacement is `H_SCX`/`H_SCY` — the
+    SHADOWS, because `commit_shadow_regs` overwrites the registers each
+    `DelayFrame`.
+  * **`rLY`/`rSTAT` are inert in the port**, so a literal per-scanline effect
+    HANGS. `AnimationWavyScreen` is realized as a per-row displacement HAL
+    (`g_row_xoff` / `g_row_xoff_on`, `src/ppu/ppu.asm`) following the
+    `g_obj_clip` ownership model: default is the identity, the animation arms and
+    clears it.
+  * **A BGP write needs no HAL** — `commit_palette` picks it up from
+    `DelayFrame`, so the whole flash/palette family is a literal translation.
 - `docs/current_plan_map_tool.md` — **overworld map tool** (viewer → border-ring
   authoring → clamp retirement → block painting), built on `gfx_core`. Needed only
   battle-UI Session A2 (landed 2026-07-02) — **not** blocked by that plan's

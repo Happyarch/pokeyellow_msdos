@@ -407,6 +407,35 @@ render state is not the evidence.
 # Check one scenario end-to-end (build DEBUG image → headless run → diff)
 make -C dos_port goldencheck SCENARIO=status_p1
 
+# Core pre-commit tier: representative status/start/overworld/party/bag/text/
+# datastruct/battle/menu coverage (16 scenarios as of 2026-08-02 — do not quote
+# this number, it grows; measure with
+#   python3 tools/generators/gen_scenario_registry.py --names core | wc -w)
+make -C dos_port fidelity
+
+# Full active suite (= core + the long tail, so it is the WHOLE registry:
+# 37 scenarios as of 2026-08-02; this line said 19, then 33, both wrong by the
+# time they were read). Same rule — measure, do not quote:
+#   python3 tools/generators/gen_scenario_registry.py --names full | wc -w
+# The registry itself is tools/scenario_manifest.json (each entry carries its
+# tier, DEBUG_* build flags, Lua script, dump contract and must_hit list);
+# `disabled_scenarios` is the retirement list, empty at 2026-08-02.
+make -C dos_port fidelity-full
+
+# Regenerate every Lua golden into a temp dir and diff against committed
+# tests/goldens/*.bin + *.json, including legacy scenarios such as smoke_title
+make -C dos_port goldens-verify
+
+# Regenerate the committed goldens (needs build_mgba.sh output + golden worktree;
+# sha1-gated against roms.sha1 — refuses an unverified ROM)
+make -C dos_port goldens
+
+# Pieces, for manual use:
+tools/golden_diff.py status_p1 --flags            # print the scenario's make vars
+tools/golden_diff.py status_p1 --gbstate PATH     # diff a dump you extracted yourself
+tools/mgba_harness/inspect_golden.py tests/goldens/status_p1.json  # eyeball a golden
+```
+
 ### Parallel golden gate — `tools/pgate.sh` (4.6x faster, same results)
 
 `make goldencheck` is serial: 17 scenarios take ~20 min because each one boots
@@ -449,34 +478,6 @@ BASE raised (PIT divisor *and* the VGA refresh, since `wait_vblank` would
 otherwise become the new limiter) — that changes the configuration under test and
 needs its own A/B against a known-good baseline first.
 
-# Core pre-commit tier: representative status/start/overworld/party/bag/text/
-# datastruct/battle/menu coverage (16 scenarios as of 2026-08-02 — do not quote
-# this number, it grows; measure with
-#   python3 tools/generators/gen_scenario_registry.py --names core | wc -w)
-make -C dos_port fidelity
-
-# Full active suite (= core + the long tail, so it is the WHOLE registry:
-# 37 scenarios as of 2026-08-02; this line said 19, then 33, both wrong by the
-# time they were read). Same rule — measure, do not quote:
-#   python3 tools/generators/gen_scenario_registry.py --names full | wc -w
-# The registry itself is tools/scenario_manifest.json (each entry carries its
-# tier, DEBUG_* build flags, Lua script, dump contract and must_hit list);
-# `disabled_scenarios` is the retirement list, empty at 2026-08-02.
-make -C dos_port fidelity-full
-
-# Regenerate every Lua golden into a temp dir and diff against committed
-# tests/goldens/*.bin + *.json, including legacy scenarios such as smoke_title
-make -C dos_port goldens-verify
-
-# Regenerate the committed goldens (needs build_mgba.sh output + golden worktree;
-# sha1-gated against roms.sha1 — refuses an unverified ROM)
-make -C dos_port goldens
-
-# Pieces, for manual use:
-tools/golden_diff.py status_p1 --flags            # print the scenario's make vars
-tools/golden_diff.py status_p1 --gbstate PATH     # diff a dump you extracted yourself
-tools/mgba_harness/inspect_golden.py tests/goldens/status_p1.json  # eyeball a golden
-```
 
 Rules and gotchas:
 - **Masks need written justifications.** A legitimate divergence (e.g. the
