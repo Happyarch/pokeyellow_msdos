@@ -5976,3 +5976,54 @@ Implemented the in-memory portion of `docs/current_plan_sram_pc_storage.md`; sta
   OBP0=$F0, particle pixels in DAC band 40-43 decoding white/black; maintainer
   visual LGTM on the GUST demo (white tornado, black border, faithful
   last-frame mon-tint flash).
+
+## 2026-08-08 — battle_animations Stage 3a: flash / palette special effects
+
+Ported pret `engine/battle/animations.asm`'s screen-palette family into the
+mirror `dos_port/src/engine/battle/animations.asm`, retiring eight
+`core_stubs.asm` STUBs:
+
+- `AnimationFlashScreen` (invert BGP `$1B` → white-out `$00` → restore),
+  `AnimationFlashScreenLong` + `FlashScreenLongMonochrome` /
+  `FlashScreenLongSGB` / `FlashScreenLongDelay`.
+- `SetAnimationBGPalette` and its `lb bc` callers:
+  `AnimationDarkScreenPalette` `$6F`, `AnimationDarkenMonPalette` `$F9/$F4`,
+  `AnimationResetScreenPalette` `$E4`, `AnimationLightScreenPalette` `$90`,
+  and the unreferenced `AnimationUnusedPalette1-4`.
+- The subanim-counter gated flashes `FlashScreenEveryFourFrameBlocks`,
+  `FlashScreenEveryEightFrameBlocks`, and the unreferenced `FlashScreenUnused`.
+
+**No HAL boundary is owed here.** The software PPU renders raw GB colour
+indices and `commit_palette` (boot/video.asm, reached from `DelayFrame` via
+`src/home/vblank.asm`) re-maps the DAC whenever `IO_BGP` changes, so pret's
+`ldh [rBGP], a` translates literally to `mov [ebp + IO_BGP], al`. `wOnSGB` is 1
+in this port, so the SGB column of every pair and `FlashScreenLongSGB` are the
+live paths — as on real CGB hardware.
+
+The `FlashScreenLong*` tables are pret's own inline data in its `engine/` file,
+so they stay in the mirror (same rule as `MoveAnimationTilesPointers`), built
+with the ported `dc` crumbs macro from `include/data_macros.inc` rather than
+hand-transcribed hex.
+
+**Correction to memory `battle-anim-cgb-obj-palette-model` fact 6.** The
+measured mGBA trace `BGP = 6F,1B,00 ×3 then E4` was recorded as "the
+`AnimationFlashScreenLong` cycle". It is not: decoding pret's `dc` tables gives
+`F9 FE FF FE F9 E4 90 40 00 40 90 E4` (monochrome) and
+`F8 FC FF FC F8 E4 90 40 00 40 90 E4` (SGB) — neither contains `$6F` or `$1B`.
+The trace is `AnimationDarkScreenPalette` (`$6F`) + three `AnimationFlashScreen`
+calls (`$1B`, `$00`, restore `$6F`) + `AnimationResetScreenPalette` (`$E4`) —
+the `SE_DARK_SCREEN_PALETTE` / `SE_DARK_SCREEN_FLASH` / `SE_RESET_SCREEN_PALETTE`
+stream shape that `data/moves/animations.asm` uses for Leer, Growl and Hyper
+Beam. So it validates those three routines instead, and the memory was updated.
+
+**Tooling note.** `update_label_db`'s port-side scanner recognises only `call`
+and `jmp` as call edges, so a conditional tail-jump emits none. `FlashScreenUnused`
+was first written with `je AnimationFlashScreen` for pret's `jp z,` and faithdiff
+reported all three edges DROPPED; it is now `jne <skip>` + `jmp`, same semantics
+with the edges visible to the graph.
+
+**Verification:** build clean; `lint_pret_labels` 0 violations in both modes;
+`faithdiff` clean on all eleven labels apart from the precedented
+`+ ADDED [IO_BGP]` artifact (pret's store regex matches only `w`/`h`-prefixed
+names, so `ldh [rBGP]` is invisible on the pret side — landed
+`SetAnimationPalette` shows the same shape for `[IO_OBP0/1]`).

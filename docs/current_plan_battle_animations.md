@@ -264,21 +264,56 @@ Two maintainer-confirmed decisions (AskUserQuestion, 2026-08-07):
 
 ### Stage 3 — screen/palette special effects + wAnimationType (umbrella 6d)
 
-- [ ] Flash/palette family: `AnimationFlashScreen`, `AnimationFlashScreenLong`
+- [x] Flash/palette family: `AnimationFlashScreen`, `AnimationFlashScreenLong`
       + `FlashScreenLong{Monochrome,SGB,Delay}`, `AnimationDarkScreenPalette`,
       `AnimationDarkenMonPalette`, `AnimationLightScreenPalette`,
       `AnimationResetScreenPalette`, `AnimationUnusedPalette1-4`,
       `SetAnimationBGPalette`, `FlashScreenUnused`. (`SetAnimationPalette`
-      DONE — pulled forward, 21412b32.) Colour reference for the flash cycle:
-      measured BGP sequence `6F,1B,00` ×3 then `E4`
-      (memory `battle-anim-cgb-obj-palette-model` fact 6).
+      DONE — pulled forward, 21412b32.) Also took the two subanim-counter
+      gated flashes `FlashScreenEveryFour/EightFrameBlocks`, which the
+      checklist had not named but which belong to the same family (Hyper Beam,
+      Thunderbolt, Spore dispatch to them). DONE 2026-08-08 — ten stubs
+      retired; no HAL owed (a BGP write is the whole effect, `commit_palette`
+      picks it up from `DelayFrame`).
+      **Colour reference corrected.** The measured BGP sequence `6F,1B,00` ×3
+      then `E4` is NOT `AnimationFlashScreenLong` — pret's `dc` tables decode
+      to `F9 FE FF FE F9 E4 90 40 00 40 90 E4` (monochrome) and
+      `F8 FC FF FC F8 E4 90 40 00 40 90 E4` (SGB), neither containing `$6F` or
+      `$1B`. The trace is `AnimationDarkScreenPalette` + 3×
+      `AnimationFlashScreen` + `AnimationResetScreenPalette`, so it validates
+      those three routines. Memory `battle-anim-cgb-obj-palette-model` fact 6
+      updated.
 - [ ] Shake family via whole-canvas H_SCX/H_SCY: `AnimationShakeScreen`,
       `AnimationShakeScreenVertically`, `AnimationShakeScreenHorizontallyFast`,
       `AnimationShakeScreenHorizontallySlow`, `AnimationUnusedShakeScreen`,
       `ShakeScreenVertically`, `ShakeScreenHorizontallyHeavy/Light/Slow/Slow2`;
       retire the `PredefShakeScreenHorizontally` stub (pret
       engine/gfx/screen_effects.asm — mirror placement decision at
-      implementation).
+      implementation: `dos_port/src/engine/gfx/screen_effects.asm`, per the
+      "complete body in `dos_port/src/<pret path>`" rule).
+      **Design facts established 2026-08-08 (measured, not assumed):**
+      (a) On GB the battle screen IS the window layer — `core.asm` sets
+      `rWY = 0` on battle entry, which is why pret shakes via `rWX`/`rWY` and
+      why `AnimationWavyScreen` turns the window OFF (`hWY = 144`) to expose
+      the BG before wobbling `rSCX`. In the port the battle screen is on the
+      BG layer and the window is only descriptor-driven boxes, so the
+      equivalent whole-screen displacement is `H_SCX`/`H_SCY` — the
+      maintainer's directive, confirmed reachable.
+      (b) Both pret shakes are **unidirectional from neutral**: `.MutateWX`
+      clamps a negative result to 0 before `add 7`, so `rWX` only ever spans
+      7..7+b, and `rWY` only ever spans 0..b. So the displacement never needs
+      to be negative, and the port's unsigned `movzx`-based `bg_scx`/`bg_scy`
+      is sufficient. Mapping: port `H_SCX = pret rWX - 7`, `H_SCY = pret rWY`;
+      neutral is 0 on both. Axis sense is inverted (a larger `bg_sc*` samples
+      further into the surface, moving content the opposite way from a window
+      move) — cosmetically irrelevant for a symmetric jolt, but it gets a
+      `DEVIATION{class=projection}`.
+      (c) Do NOT route the shake through `IO_SCX`/`IO_SCY` directly:
+      `commit_shadow_regs` (vblank.asm) overwrites both from `H_SCX`/`H_SCY`
+      every `DelayFrame`. Write the shadows.
+      (d) `hMutateWX`/`hMutateWY` do not exist in the port yet — add to
+      `gb_memmap.inc`. `wDisableVBlankWYUpdate` already exists (0xD09F,
+      honoured by `commit_shadow_regs`); keep pret's writes to it verbatim.
 - [ ] `BlinkEnemyMonSprite`; fill `PlayApplyingAttackAnimation`'s
       `AnimationTypePointerTable` dispatch (types 1–6) — retires its TODO-HW.
 - [ ] Per-row offset HAL in ppu.asm (default-off fast path; compositor_perf

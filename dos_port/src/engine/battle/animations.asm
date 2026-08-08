@@ -36,6 +36,7 @@ bits 32
 %include "gb_macros.inc"
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
+%include "data_macros.inc"               ; dc — pret macros/data.asm "crumbs" (FlashScreenLong* tables)
 %include "assets/audio_constants.inc"    ; SFX_DAMAGE / SFX_SUPER_EFFECTIVE / SFX_NOT_VERY_EFFECTIVE
 
 %ifndef OBJ_SIZE
@@ -63,6 +64,7 @@ extern AnimationIdSpecialEffects      ; src/data/battle_anim_dispatch.asm (hand-
 extern WaitForSoundToFinish          ; src/home/delay.asm
 extern PlaySound                      ; src/home/audio.asm
 extern GetCryData                     ; src/home/home_stubs.asm (STUB)
+extern UpdateCGBPal_BGP               ; src/home/cgb_palettes.asm
 extern UpdateCGBPal_OBP0              ; src/home/cgb_palettes.asm
 extern UpdateCGBPal_OBP1              ; src/home/cgb_palettes.asm
 extern DelayFrames                    ; src/home/delay.asm — BL = frame count
@@ -79,13 +81,8 @@ extern g_obj_clip                     ; src/ppu/ppu.asm — OBJ clip rectangle (
 
 ; --- Stage 3-5 dispatch-target stubs (src/engine/battle/core_stubs.asm) ---
 extern TossBallAnimation
-extern AnimationFlashScreen
-extern AnimationDarkScreenPalette
-extern AnimationResetScreenPalette
 extern AnimationShakeScreen
 extern AnimationWaterDropletsEverywhere
-extern AnimationDarkenMonPalette
-extern AnimationFlashScreenLong
 extern AnimationSlideMonUp
 extern AnimationSlideMonDown
 extern AnimationFlashMonPic
@@ -93,7 +90,6 @@ extern AnimationSlideMonOff
 extern AnimationBlinkMon
 extern AnimationMoveMonHorizontally
 extern AnimationResetMonPosition
-extern AnimationLightScreenPalette
 extern AnimationHideMonPic
 extern AnimationSquishMonPic
 extern AnimationShootBallsUpward
@@ -119,8 +115,6 @@ extern AnimationWavyScreen
 extern TailWhipAnimationUnused
 extern DoGrowlSpecialEffects
 extern DoBlizzardSpecialEffects
-extern FlashScreenEveryFourFrameBlocks
-extern FlashScreenEveryEightFrameBlocks
 extern DoExplodeSpecialEffects
 extern DoRockSlideSpecialEffects
 extern TradeHidePokemon
@@ -155,6 +149,25 @@ global MoveAnimationTilesPointers
 global MoveAnimationTiles0
 global MoveAnimationTiles2
 global MoveAnimationTiles1
+
+; --- Stage 3: screen / palette special effects ---
+global AnimationFlashScreen
+global AnimationFlashScreenLong
+global FlashScreenLongDelay
+global FlashScreenUnused
+global FlashScreenEveryFourFrameBlocks
+global FlashScreenEveryEightFrameBlocks
+global AnimationDarkScreenPalette
+global AnimationDarkenMonPalette
+global AnimationUnusedPalette1
+global AnimationUnusedPalette2
+global AnimationResetScreenPalette
+global AnimationUnusedPalette3
+global AnimationLightScreenPalette
+global AnimationUnusedPalette4
+global SetAnimationBGPalette
+global FlashScreenLongMonochrome
+global FlashScreenLongSGB
 
 ; --- existing globals (retained below) ---
 global PlayApplyingAttackAnimation
@@ -950,6 +963,200 @@ AdjustOAMBlockYPos2:
     ret
 
 ; ===========================================================================
+; SCREEN / PALETTE SPECIAL EFFECTS — pret animations.asm (battle_animations
+; Stage 3). Every routine here is a plain BGP write plus DelayFrames, and in
+; this port that is the WHOLE effect: the software PPU renders raw GB colour
+; indices into the back buffer and commit_palette (boot/video.asm, called from
+; DelayFrame via src/home/vblank.asm) re-maps the DAC whenever IO_BGP changes.
+; So `mov [ebp+IO_BGP], al` + UpdateCGBPal_BGP is the literal translation with
+; no HAL boundary — no ; TODO-HW is owed here.
+;
+; wOnSGB is 1 in this port (colour hardware — memory
+; battle-anim-cgb-obj-palette-model), so the SGB column of every lb bc pair and
+; FlashScreenLongSGB are the live paths, exactly as on real CGB hardware.
+;
+; GROUND TRUTH for this family (mGBA on the sha1-verified golden ROM, recorded
+; in that memory as "the AnimationFlashScreenLong cycle"): BGP goes
+; 6F,1B,00 x3 then E4. That trace is NOT AnimationFlashScreenLong — neither
+; FlashScreenLong table contains $6F or $1B (they run F8,FC,FF,FC,F8,E4,90,40,
+; 00,40,90,E4). It is AnimationDarkScreenPalette ($6F) followed by three
+; AnimationFlashScreen calls ($1B invert, $00 white-out, restore $6F) and then
+; AnimationResetScreenPalette ($E4) — i.e. the SE_DARK_SCREEN_PALETTE /
+; SE_DARK_SCREEN_FLASH / SE_RESET_SCREEN_PALETTE stream shape that
+; data/moves/animations.asm uses for Leer/Growl/Hyper Beam. So the trace
+; validates these three routines, and the memory's attribution is corrected.
+; ===========================================================================
+
+; --- subanimation-counter gated flashes (pret animations.asm:836/843/873) ---
+FlashScreenEveryEightFrameBlocks:
+    mov al, [ebp + wSubAnimCounter]
+    and al, 7                                ; is the counter a multiple of 8?
+    jnz .done                                ; call z — skip unless zero
+    call AnimationFlashScreen
+.done:
+    ret
+
+FlashScreenEveryFourFrameBlocks:
+    mov al, [ebp + wSubAnimCounter]
+    and al, 3
+    jnz .done
+    call AnimationFlashScreen
+.done:
+    ret
+
+; flashes the screen at 3 points in the subanimation — unreferenced in pret,
+; translated for completeness (pret keeps it too).
+;
+; pret's three tail-jumps are `jp z, AnimationFlashScreen`. They are spelled here
+; as `jne <skip>` + `jmp` rather than the shorter `je AnimationFlashScreen`
+; because update_label_db's port-side scanner only recognises `call` and `jmp`
+; as call edges (CALL_RE / JMP_LABEL_RE) — a conditional tail-jump emits NO edge,
+; so `je` made faithdiff report all three as DROPPED and erased them from the
+; dependency graph. Same semantics, one extra branch, edges visible to tooling.
+FlashScreenUnused:
+    mov al, [ebp + wSubAnimCounter]
+    cmp al, 14
+    jne .try9                                ; jp z, AnimationFlashScreen
+    jmp AnimationFlashScreen
+.try9:
+    cmp al, 9
+    jne .try2
+    jmp AnimationFlashScreen
+.try2:
+    cmp al, 2
+    jne .done
+    jmp AnimationFlashScreen
+.done:
+    ret
+
+; ---------------------------------------------------------------------------
+; AnimationFlashScreenLong — flashes the screen for an extended period
+; (48 frames). ESI = pret hl (flat pointer into the palette table).
+; ---------------------------------------------------------------------------
+AnimationFlashScreenLong:
+    mov byte [ebp + wFlashScreenLongCounter], 3  ; cycle through the palettes 3 times
+    mov al, [ebp + wOnSGB]
+    and al, al
+    mov esi, FlashScreenLongMonochrome           ; ld hl,.. (mov preserves flags)
+    jz .loop
+    mov esi, FlashScreenLongSGB
+.loop:
+    push esi
+.innerLoop:
+    mov al, [esi]                            ; ld a,[hli] — flat table, not [ebp+..]
+    inc esi
+    cmp al, 1
+    je .endOfPalettes
+    mov [ebp + IO_BGP], al                   ; ldh [rBGP],a
+    call UpdateCGBPal_BGP
+    call FlashScreenLongDelay
+    jmp .innerLoop
+.endOfPalettes:
+    mov al, [ebp + wFlashScreenLongCounter]
+    dec al                                   ; sets ZF for the jnz below
+    mov [ebp + wFlashScreenLongCounter], al  ; mov does not disturb ZF
+    pop esi                                  ; pop hl — likewise flag-neutral
+    jnz .loop
+    ret
+
+; causes a delay of 2 frames for the first cycle and 1 frame for the second and
+; third. Every `mov bl,` below stands in for pret's flag-neutral `ld c,`, so the
+; ZF from the preceding `cmp` survives to its `je` — see the flag-preservation
+; rule in the asm-translation skill.
+FlashScreenLongDelay:
+    mov al, [ebp + wFlashScreenLongCounter]
+    cmp al, 4                                ; never true: the counter starts at 3
+    mov bl, 4
+    je .delayFrames
+    cmp al, 3
+    mov bl, 2
+    je .delayFrames
+    cmp al, 2                                ; nothing is done with this
+    mov bl, 1
+.delayFrames:
+    jmp DelayFrames                          ; jp DelayFrames (BL = pret c)
+
+; ---------------------------------------------------------------------------
+; AnimationFlashScreen — invert the BG palette, white it out, then restore.
+; ---------------------------------------------------------------------------
+AnimationFlashScreen:
+    mov al, [ebp + IO_BGP]
+    push eax                                 ; push af — save initial palette
+    mov al, 0x1B                             ; %00011011 — 0,1,2,3 (inverted colors)
+    mov [ebp + IO_BGP], al
+    call UpdateCGBPal_BGP
+    mov bl, 2
+    call DelayFrames
+    xor al, al                               ; white out background
+    mov [ebp + IO_BGP], al
+    call UpdateCGBPal_BGP
+    mov bl, 2
+    call DelayFrames
+    pop eax                                  ; pop af
+    mov [ebp + IO_BGP], al                   ; restore initial palette
+    call UpdateCGBPal_BGP
+    ret
+
+; ---------------------------------------------------------------------------
+; The lb bc palette pairs (b = non-SGB value, c = SGB value) and their shared
+; setter. BH = pret b, BL = pret c.
+; ---------------------------------------------------------------------------
+AnimationDarkScreenPalette:
+; Changes the screen's palette to a dark palette.
+    mov bh, 0x6F
+    mov bl, 0x6F
+    jmp SetAnimationBGPalette
+
+AnimationDarkenMonPalette:
+; Darkens the mon sprite's palette.
+    mov bh, 0xF9
+    mov bl, 0xF4
+    jmp SetAnimationBGPalette
+
+AnimationUnusedPalette1:
+    mov bh, 0xFE
+    mov bl, 0xF8
+    jmp SetAnimationBGPalette
+
+AnimationUnusedPalette2:
+    mov bh, 0xFF
+    mov bl, 0xFF
+    jmp SetAnimationBGPalette
+
+AnimationResetScreenPalette:
+; Restores the screen's palette to the normal palette.
+    mov bh, 0xE4
+    mov bl, 0xE4
+    jmp SetAnimationBGPalette
+
+AnimationUnusedPalette3:
+    mov bh, 0x00
+    mov bl, 0x00
+    jmp SetAnimationBGPalette
+
+AnimationLightScreenPalette:
+; Changes the screen to use a palette with light colors.
+    mov bh, 0x90
+    mov bl, 0x90
+    jmp SetAnimationBGPalette
+
+AnimationUnusedPalette4:
+    mov bh, 0x40
+    mov bl, 0x40
+    ; falls through, as in pret
+
+SetAnimationBGPalette:
+    mov al, [ebp + wOnSGB]
+    and al, al
+    mov al, bh                               ; ld a,b — flag-neutral, ZF still from `and`
+    jz .next
+    mov al, bl                               ; ld a,c
+.next:
+    mov [ebp + IO_BGP], al                   ; ldh [rBGP],a
+    call UpdateCGBPal_BGP
+    ret
+
+; ===========================================================================
 ; DATA — move-animation tilesets (MoveAnimationTilesPointers is pret's own
 ; engine/battle/animations.asm inline table, so it stays in this mirror). The
 ; SpecialEffectPointers / AnimationIdSpecialEffects dispatch tables are pret
@@ -958,6 +1165,43 @@ AdjustOAMBlockYPos2:
 ; as MoveEffectPointerTable does.
 ; ===========================================================================
 section .data
+
+; AnimationFlashScreenLong's BG palette cycles (pret animations.asm:1034/1050).
+; These are pret's own inline tables in engine/battle/animations.asm, so they
+; stay in this mirror — same rule as MoveAnimationTilesPointers below. Read FLAT
+; (pret `ld hl,..` / `ld a,[hli]`), never through [ebp+..]. `dc` is pret's
+; crumbs macro (include/data_macros.inc), so the packed bytes are derived, not
+; hand-transcribed: monochrome F9 FE FF FE F9 E4 90 40 00 40 90 E4, SGB
+; F8 FC FF FC F8 E4 90 40 00 40 90 E4.
+FlashScreenLongMonochrome:
+    dc 3, 3, 2, 1
+    dc 3, 3, 3, 2
+    dc 3, 3, 3, 3
+    dc 3, 3, 3, 2
+    dc 3, 3, 2, 1
+    dc 3, 2, 1, 0
+    dc 2, 1, 0, 0
+    dc 1, 0, 0, 0
+    dc 0, 0, 0, 0
+    dc 1, 0, 0, 0
+    dc 2, 1, 0, 0
+    dc 3, 2, 1, 0
+    db 1 ; end
+
+FlashScreenLongSGB:
+    dc 3, 3, 2, 0
+    dc 3, 3, 3, 0
+    dc 3, 3, 3, 3
+    dc 3, 3, 3, 0
+    dc 3, 3, 2, 0
+    dc 3, 2, 1, 0
+    dc 2, 1, 0, 0
+    dc 1, 0, 0, 0
+    dc 0, 0, 0, 0
+    dc 1, 0, 0, 0
+    dc 2, 1, 0, 0
+    dc 3, 2, 1, 0
+    db 1 ; end
 
 ; move-anim tileset pointer table (pret anim_tileset db count/dw ptr/db -1; dd here)
 MoveAnimationTilesPointers:

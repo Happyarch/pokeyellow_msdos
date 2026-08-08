@@ -155,35 +155,12 @@ SlideDownFaintedMonPic:
 ; live animation particles rendered in wrong colors — maintainer-observed on
 ; the GUST demo).
 
-; STUB{class=temporary; label=AnimationFlashScreen; pret=engine/battle/animations.asm:AnimationFlashScreen; behavior=return instead of flashing the screen palette; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 3 flash family lands}
-global AnimationFlashScreen
-AnimationFlashScreen:
-    ret
-
-; STUB{class=temporary; label=AnimationFlashScreenLong; pret=engine/battle/animations.asm:AnimationFlashScreenLong; behavior=return instead of the extended 48-frame palette cycle; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 3 flash family lands}
-global AnimationFlashScreenLong
-AnimationFlashScreenLong:
-    ret
-
-; STUB{class=temporary; label=AnimationDarkScreenPalette; pret=engine/battle/animations.asm:AnimationDarkScreenPalette; behavior=return instead of darkening the screen palette; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 3 palette family lands}
-global AnimationDarkScreenPalette
-AnimationDarkScreenPalette:
-    ret
-
-; STUB{class=temporary; label=AnimationDarkenMonPalette; pret=engine/battle/animations.asm:AnimationDarkenMonPalette; behavior=return instead of darkening the mon palette; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 3 palette family lands}
-global AnimationDarkenMonPalette
-AnimationDarkenMonPalette:
-    ret
-
-; STUB{class=temporary; label=AnimationLightScreenPalette; pret=engine/battle/animations.asm:AnimationLightScreenPalette; behavior=return instead of lightening the screen palette; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 3 palette family lands}
-global AnimationLightScreenPalette
-AnimationLightScreenPalette:
-    ret
-
-; STUB{class=temporary; label=AnimationResetScreenPalette; pret=engine/battle/animations.asm:AnimationResetScreenPalette; behavior=return instead of restoring the screen palette; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 3 palette family lands}
-global AnimationResetScreenPalette
-AnimationResetScreenPalette:
-    ret
+; AnimationFlashScreen, AnimationFlashScreenLong, AnimationDarkScreenPalette,
+; AnimationDarkenMonPalette, AnimationLightScreenPalette,
+; AnimationResetScreenPalette: RETIRED 2026-08-08 — real bodies in
+; animations.asm (Stage 3 flash/palette family), together with
+; SetAnimationBGPalette, FlashScreenLongDelay, the FlashScreenLong* tables and
+; the unreferenced AnimationUnusedPalette1-4 / FlashScreenUnused.
 
 ; STUB{class=temporary; label=AnimationFlashMonPic; pret=engine/battle/animations.asm:AnimationFlashMonPic; behavior=return instead of flashing the mon pic palette; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 3 flash family lands}
 global AnimationFlashMonPic
@@ -215,15 +192,8 @@ global AnimationWavyScreen
 AnimationWavyScreen:
     ret
 
-; STUB{class=temporary; label=FlashScreenEveryFourFrameBlocks; pret=engine/battle/animations.asm:FlashScreenEveryFourFrameBlocks; behavior=return instead of the periodic screen flash; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 3 flash family lands}
-global FlashScreenEveryFourFrameBlocks
-FlashScreenEveryFourFrameBlocks:
-    ret
-
-; STUB{class=temporary; label=FlashScreenEveryEightFrameBlocks; pret=engine/battle/animations.asm:FlashScreenEveryEightFrameBlocks; behavior=return instead of the periodic screen flash; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 3 flash family lands}
-global FlashScreenEveryEightFrameBlocks
-FlashScreenEveryEightFrameBlocks:
-    ret
+; FlashScreenEveryFourFrameBlocks, FlashScreenEveryEightFrameBlocks:
+; RETIRED 2026-08-08 — real bodies in animations.asm (Stage 3 flash family).
 
 ; --- Stage 4: mon-pic slides + motion + OAM particles + HUD shake ---
 ; STUB{class=temporary; label=AnimationSlideMonUp; pret=engine/battle/animations.asm:AnimationSlideMonUp; behavior=return instead of sliding the mon pic up; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 mon-pic slides land}

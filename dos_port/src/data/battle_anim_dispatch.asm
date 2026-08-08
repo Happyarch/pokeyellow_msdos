@@ -19,14 +19,14 @@ bits 32
 
 %include "gb_constants.inc"              ; SE_* / anim-id / move-id constants
 
-; --- handler targets (core_stubs.asm STUBs, except AnimationDelay10) ---
-extern AnimationFlashScreen
-extern AnimationDarkScreenPalette
-extern AnimationResetScreenPalette
+; --- handler targets (core_stubs.asm STUBs unless marked live) ---
+extern AnimationFlashScreen               ; live — src/engine/battle/animations.asm
+extern AnimationDarkScreenPalette         ; live — src/engine/battle/animations.asm
+extern AnimationResetScreenPalette        ; live — src/engine/battle/animations.asm
 extern AnimationShakeScreen
 extern AnimationWaterDropletsEverywhere
-extern AnimationDarkenMonPalette
-extern AnimationFlashScreenLong
+extern AnimationDarkenMonPalette          ; live — src/engine/battle/animations.asm
+extern AnimationFlashScreenLong           ; live — src/engine/battle/animations.asm
 extern AnimationSlideMonUp
 extern AnimationSlideMonDown
 extern AnimationFlashMonPic
@@ -34,7 +34,7 @@ extern AnimationSlideMonOff
 extern AnimationBlinkMon
 extern AnimationMoveMonHorizontally
 extern AnimationResetMonPosition
-extern AnimationLightScreenPalette
+extern AnimationLightScreenPalette         ; live — src/engine/battle/animations.asm
 extern AnimationHideMonPic
 extern AnimationSquishMonPic
 extern AnimationShootBallsUpward
@@ -61,8 +61,8 @@ extern AnimationWavyScreen
 extern TailWhipAnimationUnused
 extern DoGrowlSpecialEffects
 extern DoBlizzardSpecialEffects
-extern FlashScreenEveryFourFrameBlocks
-extern FlashScreenEveryEightFrameBlocks
+extern FlashScreenEveryFourFrameBlocks     ; live — src/engine/battle/animations.asm
+extern FlashScreenEveryEightFrameBlocks    ; live — src/engine/battle/animations.asm
 extern DoExplodeSpecialEffects
 extern DoRockSlideSpecialEffects
 extern TradeHidePokemon
