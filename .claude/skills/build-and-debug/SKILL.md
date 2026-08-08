@@ -407,6 +407,48 @@ render state is not the evidence.
 # Check one scenario end-to-end (build DEBUG image → headless run → diff)
 make -C dos_port goldencheck SCENARIO=status_p1
 
+### Parallel golden gate — `tools/pgate.sh` (4.6x faster, same results)
+
+`make goldencheck` is serial: 17 scenarios take ~20 min because each one boots
+DOSBox for ~60-250 s. `dos_port/tools/pgate.sh` runs them SIMULTANEOUSLY against
+per-scenario tmpfs shadow copies, so wall clock becomes **the slowest single
+scenario** instead of the sum. Measured 2026-08-08 on a 96-thread host: the
+17-scenario battery went **~20 min -> 261 s, 17/17, byte-identical verdicts**.
+
+```sh
+tools/pgate.sh /tmp/out                      # the 17-scenario battery (default)
+tools/pgate.sh /tmp/out battle_menu party_menu   # explicit subset
+cat /tmp/out/results.txt                     # "<scenario> EXIT=0" per line + timings
+```
+
+Why it is safe: `goldencheck.sh` has no external path dependencies (no `../`, no
+absolute paths, no pret-golden reference), all 57 goldens are committed in-repo,
+and it invokes plain `dosbox-x` from PATH rather than the `tools/dosbox-x-mcp`
+fork — so a copy is self-contained. DOSBox at `cycles=fixed` emulates time rather
+than racing wall clock, so parallelism cannot change results; the only hazard is
+oversubscription pushing a run into the `timeout -s KILL 600`, and dosbox-x is
+effectively single-threaded so keep concurrency well under `nproc`.
+
+The copy excludes `tools/{dosbox-x,dosbox-x-mcp,mgba,mgba_build}` (1.2 G of
+debugger/emulator payload the gate never touches), `*.o`, `PKMN.EXE` and
+`PKMN.IMG` — taking the base from **1.1 G to ~97 M**, so 17 copies cost ~1.6 G
+and the whole 57-scenario registry would cost only ~5.5 G at the same wall time.
+
+**⚠ ASSET-DRIFT CAVEAT:** assets are COPIED, not regenerated (goldencheck runs
+`make image`, never `make assets`). If you changed anything under
+`tools/generators/`, run `make -C dos_port assets` in the source tree FIRST or
+the gate silently validates stale data.
+
+**Measured NEGATIVE result — do not retry it.** `cycles=max` does NOT speed these
+up: `trainer_battle_route` took 267 s at `cycles=max` vs ~250 s stock (it did
+PASS with an identical verdict, so emulated CPU speed does not change behaviour).
+The scenarios are bound by EMULATED TIME, not CPU: the port's frame loop sits in
+`wait_vblank` + `wait_pit_tick`, and DOSBox paces those emulated timers against
+wall clock however fast it executes. Real speedups would need the emulated time
+BASE raised (PIT divisor *and* the VGA refresh, since `wait_vblank` would
+otherwise become the new limiter) — that changes the configuration under test and
+needs its own A/B against a known-good baseline first.
+
 # Core pre-commit tier: representative status/start/overworld/party/bag/text/
 # datastruct/battle/menu coverage (16 scenarios as of 2026-08-02 — do not quote
 # this number, it grows; measure with
