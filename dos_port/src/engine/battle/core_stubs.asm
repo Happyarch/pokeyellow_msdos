@@ -181,6 +181,11 @@ AnimationFlashEnemyMonPic:
 ; RETIRED 2026-08-08 — real bodies in animations.asm (Stage 3 flash family).
 
 ; --- Stage 4: mon-pic slides + motion + OAM particles + HUD shake ---
+; AnimationShakeEnemyHUD: RETIRED 2026-08-08 — real body in animations.asm
+; (Stage 4g), with ShakeEnemyHUD_ShakeBG and
+; ShakeEnemyHUD_WritePlayerMonPicOAM. Its window mechanism does NOT transfer;
+; read the DEVIATIONs there before touching it.
+
 ; AnimationLeavesFalling, AnimationPetalsFalling,
 ; AnimationWaterDropletsEverywhere: RETIRED 2026-08-08 — real bodies in
 ; animations.asm (Stage 4f), with AnimationFallingObjects, the four
@@ -213,11 +218,6 @@ AnimationFlashEnemyMonPic:
 ; ClearMonPicFromTileMap, GetMonSpriteTileMapPointerFromRowCount, GetTileIDList,
 ; AnimCopyRowLeft/Right, CopyPicTiles, CopyDownscaledMonTiles,
 ; CopyTileIDs{,_NoBGTransfer} and CopyTileIDsFromList.
-
-; STUB{class=temporary; label=AnimationShakeEnemyHUD; pret=engine/battle/animations.asm:AnimationShakeEnemyHUD; behavior=return instead of shaking the enemy HUD; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 HUD shake lands}
-global AnimationShakeEnemyHUD
-AnimationShakeEnemyHUD:
-    ret
 
 ; STUB{class=temporary; label=TailWhipAnimationUnused; pret=engine/battle/animations.asm:TailWhipAnimationUnused; behavior=return instead of the unused Tail Whip effect; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 particle family lands}
 global TailWhipAnimationUnused

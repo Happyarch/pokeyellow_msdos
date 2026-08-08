@@ -447,9 +447,32 @@ Two maintainer-confirmed decisions (AskUserQuestion, 2026-08-07):
       `AnimationLeavesFalling`, `AnimationPetalsFalling`,
       `AnimationFallingObjects` + `FallingObjects_*` (6 labels + 2 data),
       `AnimationWaterDropletsEverywhere` + `_AnimationWaterDroplets`.
-- [ ] HUD shake + OAM helpers: `AnimationShakeEnemyHUD`,
+- [~] HUD shake + OAM helpers: `AnimationShakeEnemyHUD`,
       `ShakeEnemyHUD_ShakeBG`, `ShakeEnemyHUD_WritePlayerMonPicOAM`,
       `BattleAnimWriteOAMEntry`, `InitMultipleObjectsOAM`, `Func_79929`.
+      **DONE 2026-08-08 for five of the six** (`BattleAnimWriteOAMEntry` /
+      `InitMultipleObjectsOAM` in Stage 4e; the three HUD-shake labels in 4g).
+      `Func_79929` is genuinely BLOCKED: its body calls `AnimationFlashMonPic`
+      -> `ChangeMonPic`, which Stage 5 owns. Left stubbed on purpose.
+      **`AnimationShakeEnemyHUD`'s mechanism does not transfer, and this is the
+      one Stage 4 decision a reviewer should look at first.** On the GB the
+      battle screen IS the window layer, so pret slides the window down to cover
+      everything below the enemy HUD with a pixel-identical copy, lifts the back
+      pic into OAM, and jiggles `rSCX` — only the top 7 rows move. In this port
+      the battle screen is on the BG layer and the window is descriptor-driven
+      (`g_windows`), while `H_WY` is a legacy dialog-open flag whose gate
+      compares against `RENDER_H` (200), so pret's `hWY` writes of 144/56/0
+      would be meaningless at best and would confuse `sync_dialog_window` at
+      worst. **Decision (autonomous, 2026-08-08): drop the window mechanism and
+      the CGB `LoadBGMapAttributes` branches, keep every other pret call, and
+      realize the jolt through the Stage 3c per-row displacement HAL restricted
+      to the enemy-HUD rows** (canvas rows 24..79 = GB tile rows 0-6 under the
+      +3-row projection), with the back-pic OAM lift kept exactly as pret wrote
+      it so the pic still does not shake. Two `DEVIATION{class=HAL}` record it.
+      faithdiff: 11 pret / 11 port calls, 10 matched; findings are the dropped
+      `LoadBGMapAttributes` + `[hWY]`, and the added `PublishBattleAnimOAM` +
+      `ShakeEnemyHUD_SetHUDRows`. **If the maintainer disagrees, this is one
+      revertable commit.**
 - [~] Gate: faithdiff; battle tier green; demo sign-off on Razor Leaf, Surf,
       Teleport, Minimize, Sing class representatives.
       **Static + runtime halves MET 2026-08-08; the visual half is OWED.**

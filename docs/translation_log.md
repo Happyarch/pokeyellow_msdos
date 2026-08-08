@@ -6645,3 +6645,61 @@ scenario, so its tilemap/VRAM/OAM are deliberately not compared. What is
 witnessed is that the slide runs without disturbing the WRAM the flow is pinned
 on, and that `wStatusFlags5` is saved and restored correctly around it. The
 slide's *appearance* is unverified.
+
+---
+
+## 2026-08-08 — battle animations Stage 4g: enemy-HUD shake (mechanism deviates)
+
+pret `engine/battle/animations.asm`. Three labels: `AnimationShakeEnemyHUD`,
+`ShakeEnemyHUD_ShakeBG`, `ShakeEnemyHUD_WritePlayerMonPicOAM`, plus the
+port-only `ShakeEnemyHUD_SetHUDRows`. One more stub retired. **This is the
+Stage 4 change a reviewer should look at first** — it is the only one whose
+mechanism, rather than only its coordinates, diverges.
+
+**What pret does.** On the GB the battle screen IS the window layer. pret copies
+`wTileMap` into BG map 0, slides the window down to `hWY = 7*8` so it covers
+everything BELOW the enemy HUD with a pixel-identical copy, lifts the player back
+pic out of the BG into OAM (its Y range overlaps the HUD's and must not shake),
+and then jiggles `rSCX`. Only the top 7 rows — the enemy HUD — visibly move.
+
+**Why none of that transfers.** In this port the battle screen is on the BG layer
+and the window is descriptor-driven (`g_windows`, `src/ppu/ppu.asm`). `H_WY` is
+no longer a window position at all: it is a legacy dialog-open flag whose gate
+reads `H_WY == RENDER_H` (200). So pret's `hWY` writes of 144 / 56 / 0 would be
+meaningless at best and would confuse `sync_dialog_window` at worst, and the
+window cannot be made to cover the lower screen at any value. `LoadBGMapAttributes`
+is the CGB tile-attribute plane, which the port does not have — the same boundary
+`intro_yellow.asm` already documents.
+
+**The decision (autonomous, maintainer away).** Drop the window mechanism and the
+two `hOnCGB` branches; keep every other pret call; realize the jolt through the
+**per-row displacement HAL added in Stage 3c** for `AnimationWavyScreen`,
+restricted to the rows the enemy HUD occupies — canvas rows 24..79, i.e. GB tile
+rows 0..6 under the +3-row battle projection. The back-pic OAM lift is kept
+exactly as pret wrote it, so the pic still does not shake with the HUD. Net: the
+same visible result the window trick existed to produce, using a HAL the
+maintainer already signed off on. Two `DEVIATION{class=HAL}` record it, on
+`AnimationShakeEnemyHUD` and `ShakeEnemyHUD_ShakeBG`.
+
+`ShakeEnemyHUD_SetHUDRows` restores `g_row_xoff_on = 0` whenever the amplitude is
+0, so the identity fast path is re-armed at the end of the effect and the
+rectangle cannot leak into the next screen — the same ownership model
+`g_obj_clip` and the wavy screen use.
+
+**A sym check that paid for itself:** `wTempSCX` was about to be written as
+$D08A by analogy with the neighbouring animation scratch. The golden sym says
+**$CD3D**. Measured, not inferred.
+
+**faithdiff, 4 findings, all covered by the two DEVIATIONs:**
+`AnimationShakeEnemyHUD` — 11 pret / 11 port calls with 10 matched;
+`- DROPPED LoadBGMapAttributes (farcall)`, `- DROPPED [hWY]`,
+`+ ADDED PublishBattleAnimOAM (call)`. `ShakeEnemyHUD_ShakeBG` —
+`+ ADDED ShakeEnemyHUD_SetHUDRows (call)`.
+`ShakeEnemyHUD_WritePlayerMonPicOAM` — clean.
+
+**Verification:** build clean; `lint_pret_labels` 0 both modes; `audit_memmap` 79
+regions clean; `pgate.sh` 17/17 with per-scenario mask-hit counts byte-identical
+to the 4g slide run — which specifically witnesses that the per-row HAL is not
+leaking, since a stuck `g_row_xoff_on` would displace overworld rows and fail
+`overworld_pallet` / `ledge_hop`. `ANIM=GROWL` still runs clean headless.
+**Not verified:** the shake's appearance. Nobody has looked at it.

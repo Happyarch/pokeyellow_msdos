@@ -86,6 +86,8 @@ extern CopyData                       ; src/home/copy.asm — ESI src, EDX dest,
 extern FillMemory                     ; src/home/copy2.asm — ESI dest, BX count, AL value
 extern IsInArray                      ; src/home/array2.asm — AL val, ESI base, EDX stride
 extern CopyVideoData                  ; src/home/copy2.asm — ESI dest VRAM, EDX flat src, BL tiles
+extern SaveScreenTilesToBuffer1       ; src/home/tilemap.asm
+extern LoadScreenTilesFromBuffer1     ; src/home/tilemap.asm
 extern SaveScreenTilesToBuffer2       ; src/home/tilemap.asm
 extern LoadScreenTilesFromBuffer2     ; src/home/tilemap.asm
 extern Delay3                         ; src/home/palettes.asm
@@ -1909,6 +1911,161 @@ FallingObjects_InitMovementData:
 FallingObjects_InitialMovementData:
     db 0x00, 0x84, 0x06, 0x81, 0x02, 0x88, 0x01, 0x83, 0x05, 0x89
     db 0x09, 0x80, 0x07, 0x87, 0x03, 0x82, 0x04, 0x85, 0x08, 0x86
+
+; ===========================================================================
+; ENEMY-HUD SHAKE — pret animations.asm (battle_animations Stage 4g).
+;
+; This is the most hardware-entangled routine in Stage 4, so read the mechanism
+; before editing. On the GB the battle screen IS the window layer, and pret
+; exploits that: it copies wTileMap into BG map 0, slides the window down to
+; row 7*8 so the window covers everything BELOW the enemy HUD with a pixel-
+; identical copy, lifts the player back pic out of the BG into OAM (because the
+; back pic's Y range overlaps the HUD's and must not shake), and then jiggles
+; rSCX. Only the top 7 rows — the enemy HUD — visibly move.
+;
+; NONE of that transfers. In this port the battle screen is on the BG layer and
+; the window is descriptor-driven (g_windows[], src/ppu/ppu.asm); H_WY is not a
+; window position at all any more but a legacy dialog-open flag whose gate reads
+; H_WY == RENDER_H (200), so pret's hWY writes of 144 / 56 / 0 would be
+; meaningless at best and would confuse sync_dialog_window at worst. The window
+; therefore cannot be made to cover the lower screen, and pret's whole
+; cover-and-scroll trick has no counterpart.
+;
+; What DOES transfer is the visible result, via the per-row displacement HAL
+; added in Stage 3c for AnimationWavyScreen: displace exactly the canvas rows the
+; enemy HUD occupies and leave the rest at the identity. The back-pic OAM lift is
+; kept as pret wrote it, so the pic still does not shake with the HUD.
+; ===========================================================================
+
+; DEVIATION{class=HAL; pret=engine/battle/animations.asm:AnimationShakeEnemyHUD; behavior=the four hWY writes and the two hOnCGB LoadBGMapAttributes branches are omitted, so the window is never slid over the lower screen, and ShakeEnemyHUD_ShakeBG displaces only the enemy-HUD rows through the per-row HAL instead of scrolling the whole BG with rSCX; evidence=the port draws the battle screen on the BG layer while the window is descriptor-driven (g_windows in src/ppu/ppu.asm) so it cannot cover the lower screen, H_WY is a legacy dialog-open flag whose gate compares against RENDER_H rather than a window row, and the port has no CGB tile-attribute plane which is the same boundary intro_yellow.asm already documents, so restricting the displacement to the HUD rows reproduces pret's visible result that the window trick existed to produce; lifetime=permanent, a consequence of the descriptor-driven window model}
+global AnimationShakeEnemyHUD
+AnimationShakeEnemyHUD:
+; Shakes the enemy HUD.
+; Make a copy of the back pic's tile patterns in sprite tile pattern VRAM.
+    mov edx, vBackPic                        ; pret ld de, vBackPic — see note below
+    lea edx, [ebp + edx]                     ; CopyVideoData takes a FLAT source
+    mov esi, GB_VCHARS0                      ; ld hl, vSprites
+    mov ebx, PIC_SIZE                        ; BH = bank (no-op), BL = tile count
+    call CopyVideoData                       ; arms g_tilecache_dirty itself
+
+    xor al, al
+    mov [ebp + H_SCX], al                    ; shadow, not IO_SCX (commit_shadow_regs)
+
+; Copy wTileMap to BG map 0.
+    mov bx, GB_TILEMAP0                      ; ld hl, vBGMap0 (BH/BL = high/low byte)
+    call BattleAnimCopyTileMapToVRAM
+
+; Write OAM entries so the copy of the back pic shows up on screen — it must not
+; shake with the HUD, and OAM is unaffected by the row displacement.
+    call ShakeEnemyHUD_WritePlayerMonPicOAM
+
+    mov bx, GB_TILEMAP0
+    call BattleAnimCopyTileMapToVRAM
+
+; Remove the back pic from the BG map.
+    call AnimationHideMonPic
+    call PublishBattleAnimOAM
+    call Delay3
+
+; Displace the enemy-HUD rows. The window and the back-pic OAM copy are not
+; affected — the same separation pret gets from the window trick.
+    mov dh, 2                                ; lb de, 2, 8 — d = amplitude
+    mov dl, 8                                ;               e = shake count
+    call ShakeEnemyHUD_ShakeBG
+
+; Restore the original graphics.
+    call AnimationShowMonPic
+    call ClearSprites
+    call SaveScreenTilesToBuffer1
+    mov bx, GB_TILEMAP0
+    call BattleAnimCopyTileMapToVRAM
+    call LoadScreenTilesFromBuffer1
+    mov bx, GB_TILEMAP1
+    jmp BattleAnimCopyTileMapToVRAM
+
+; DEVIATION{class=HAL; pret=engine/battle/animations.asm:ShakeEnemyHUD_ShakeBG; behavior=the jolt is applied as a signed per-row X displacement over the canvas rows the enemy HUD occupies via the g_row_xoff HAL, instead of writing rSCX and relying on the window to hold the rest of the screen still; evidence=the port cannot cover the lower screen with the window so an H_SCX write would jolt the whole canvas rather than the HUD, and the per-row HAL added in Stage 3c for AnimationWavyScreen already provides exactly this with a default-off identity fast path, so the HUD band is displaced and every other row keeps the identity; lifetime=permanent, a consequence of the descriptor-driven window model}
+; In: DH = displacement amplitude (pret d), DL = number of shakes (pret e)
+global ShakeEnemyHUD_ShakeBG
+ShakeEnemyHUD_ShakeBG:
+    mov al, [ebp + H_SCX]
+    mov [ebp + wTempSCX], al
+.loop:
+    mov al, dh
+    call ShakeEnemyHUD_SetHUDRows            ; +d
+    mov bl, 2
+    call DelayFrames
+    mov al, dh
+    neg al
+    call ShakeEnemyHUD_SetHUDRows            ; -d
+    mov bl, 2
+    call DelayFrames
+    dec dl                                   ; 8-bit, as pret
+    jnz .loop
+    xor al, al
+    call ShakeEnemyHUD_SetHUDRows            ; back to the identity
+    mov al, [ebp + wTempSCX]
+    mov [ebp + H_SCX], al
+    ret
+
+; ShakeEnemyHUD_SetHUDRows — port-only. Writes signed AL into g_row_xoff for the
+; canvas rows the enemy HUD occupies and 0 everywhere else, arming/disarming the
+; HAL. HUD band = GB tile rows 0..6, i.e. canvas pixel rows (0+3)*8 .. (7+3)*8-1
+; under the battle projection (+3 tile rows). Preserves every register.
+HUD_SHAKE_ROW_FIRST equ (0 + 3) * 8          ; PROJ — GB tile row 0
+HUD_SHAKE_ROW_END   equ (7 + 3) * 8          ; PROJ — one past GB tile row 6
+ShakeEnemyHUD_SetHUDRows:
+    pushad
+    movsx ecx, al
+    xor edx, edx
+.row:
+    xor eax, eax
+    cmp edx, HUD_SHAKE_ROW_FIRST
+    jb .store
+    cmp edx, HUD_SHAKE_ROW_END
+    jae .store
+    mov eax, ecx
+.store:
+    mov [g_row_xoff + edx], al
+    inc edx
+    cmp edx, RENDER_H
+    jb .row
+    test ecx, ecx
+    setnz al
+    movzx eax, al
+    mov [g_row_xoff_on], eax                 ; identity fast path restored at 0
+    popad
+    ret
+
+global ShakeEnemyHUD_WritePlayerMonPicOAM
+ShakeEnemyHUD_WritePlayerMonPicOAM:
+; Writes the OAM entries for a copy of the player mon's pic in OAM. The top 5
+; rows are reproduced, although only 2 are actually needed.
+    mov al, 0x10
+    mov [ebp + wBaseCoordX], al
+    mov al, 0x30
+    mov [ebp + wBaseCoordY], al
+    mov esi, W_SHADOW_OAM
+    mov dh, 0                                ; ld d, 0 — tile
+    mov bl, 7                                ; ld c, 7 — columns
+.loop:
+    mov al, [ebp + wBaseCoordY]
+    mov dl, al                               ; ld e, a
+    mov bh, 5                                ; ld b, 5 — rows
+.innerLoop:
+    call BattleAnimWriteOAMEntry
+    inc dh
+    dec bh
+    jnz .innerLoop
+    dec bl
+    jz .done                                 ; ret z
+    inc dh
+    inc dh
+    mov al, [ebp + wBaseCoordX]
+    add al, 8
+    mov [ebp + wBaseCoordX], al
+    jmp .loop
+.done:
+    ret
 
 ; PublishBattleAnimOAM — port-only. The five-instruction PublishProjectedOAM
 ; call the particle routines need before every inter-frame delay, factored out
