@@ -357,8 +357,26 @@ Two maintainer-confirmed decisions (AskUserQuestion, 2026-08-07):
       It reads better than the original for two incidental reasons worth
       knowing: no H-blank timing jitter (pret's per-scanline `rSCX` writes race
       the PPU), and it covers the full 320x200 canvas rather than 160x144.
-- [ ] Gate: faithdiff; battle tier green; demo sign-off on flash (Thundershock
-      class), shake, and Psychic wave.
+- [x] Gate: faithdiff; battle tier green; demo sign-off on flash (Thundershock
+      class), shake, and Psychic wave. **MET 2026-08-08.** faithdiff clean on all
+      Stage 3 labels bar four justified findings (two `GetPredefRegisters` drops
+      from the direct-call convention, `PlayApplyingAttackAnimation`'s `jp hl`
+      indirect dispatch, and `WavyScreen_SetSCX`'s absent H-blank spin);
+      `lint_pret_labels` 0 both modes; `static_gate` PASS 5/5; 17/17 goldens.
+      Maintainer visual sign-off on all three families:
+      `ANIM=PSYWAVE` (wavy), `ANIM=GROWL` and `ANIM=HYPER_BEAM` (flash + shake).
+      **What that sign-off does and does not cover** — worth stating so nobody
+      later reads it as more than it is. GROWL/HYPER_BEAM drive their REAL
+      animation streams (`SE_DARK_SCREEN_PALETTE` / `SE_DARK_SCREEN_FLASH` /
+      `SE_RESET_SCREEN_PALETTE`, and Hyper Beam's
+      `FlashScreenEveryFourFrameBlocks`) through the production interpreter on
+      shipped Tier-1 data, so the flash family is observed end to end. The shake
+      observation proves the `AnimationTypePointerTable` dispatch and the
+      `H_SCX` displacement, but the demo harness SEEDS `wAnimationType = 3`
+      itself — that a real battle sets `wAnimationType` is established
+      statically (three writes in `effects.asm`, and `MoveAnimation` calls
+      `PlayApplyingAttackAnimation`), not observed at runtime. One inferred
+      link, evidenced; not a hole, and not full production coverage either.
 
 ### Stage 4 — mon-pic + OAM particle families
 
