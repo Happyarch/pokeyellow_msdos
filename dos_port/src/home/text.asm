@@ -981,11 +981,15 @@ PlaceNextChar:
 
 .handle_done:
     ; <DONE> ($57): end the text command stream. Restore the PlaceString stack
-    ; frame and return EDX = a FLAT-LINEAR pointer at the TX_END sentinel, so that
-    ; .cmd_start's `mov esi,edx; sub esi,ebp; inc esi` lands ESI = DONE_SENTINEL_WRAM
-    ; +1 (a GB offset whose byte is TX_END, set by text_engine_init) → TCP exits.
+    ; frame and return EDX = a FLAT pointer at the TX_END sentinel pair, so that
+    ; .cmd_start's `lea esi,[edx+1]` lands on a TX_END byte → TCP exits.
+    ; The sentinel is .data (done_sentinel_flat), NOT GB WRAM: it used to live at
+    ; GB $C0F0/$C0F1, which are pret's wAudioSavedROMBank/wFrequencyModifier —
+    ; the first GetMoveSound freq-modifier write overwrote the terminator and sent
+    ; the TCP marching through WRAM as a command stream (see memory
+    ; regression-battle-anim-interp-runtime-crash).
     pop esi                         ; restore line start
-    lea edx, [ebp + DONE_SENTINEL_WRAM]   ; flat ptr to the TX_END sentinel
+    mov edx, done_sentinel_flat     ; flat ptr to the TX_END sentinel pair
     ret
 
 .handle_prompt:
@@ -1002,7 +1006,7 @@ PlaceNextChar:
     call manual_text_scroll
 .prompt_done:
     pop esi                            ; restore line start, terminate like <DONE>
-    lea edx, [ebp + DONE_SENTINEL_WRAM]
+    mov edx, done_sentinel_flat
     ret
 
 .handle_pc:
@@ -1044,24 +1048,25 @@ PlaceNextChar:
     ret
 
 ; ---------------------------------------------------------------------------
-; text_engine_init — write TX_END sentinel to GB memory for CHAR_DONE.
+; done_sentinel_flat — the <DONE>/<PROMPT> stream terminator, in .data.
 ;
-; Must be called once at startup after EBP is established.
-; Writes two TX_END bytes at DONE_SENTINEL_WRAM so <DONE> terminates cleanly.
-; In:  EBP = GB memory base.
-; Out: all registers preserved.
+; Port-only glue (no pret counterpart): <DONE>/<PROMPT> return EDX pointing here
+; and .cmd_start's `lea esi,[edx+1]` reads the second TX_END byte flat, ending
+; the stream. History: this sentinel used to be two runtime-written bytes at GB
+; $C0F0/$C0F1 (text_engine_init) — but those are pret's wAudioSavedROMBank and
+; wFrequencyModifier, so the battle animation engine's first cry-modifier write
+; destroyed the terminator (memory regression-battle-anim-interp-runtime-crash).
+; A .data sentinel needs no init call and collides with nothing; text_engine_init
+; is retained as a no-op because title/overworld init still call it.
 ; ---------------------------------------------------------------------------
-DONE_SENTINEL_WRAM  equ GB_WRAM0 + 0x0F0   ; two bytes reserved for <DONE> sentinel
+section .data
+done_sentinel_flat: db TX_END, TX_END
+section .text
 
 global text_engine_init
 
 text_engine_init:
-    push eax
-    mov al, TX_END
-    mov byte [ebp + DONE_SENTINEL_WRAM],     al
-    mov byte [ebp + DONE_SENTINEL_WRAM + 1], al
-    pop eax
-    ret
+    ret                             ; sentinel is static .data now; nothing to init
 
 ; ---------------------------------------------------------------------------
 ; TextCommandProcessor — execute a TX_* command stream.

@@ -1655,7 +1655,7 @@ extern Music_PokeFluteInBattle    ; audio/poke_flute.asm
 extern StopAllMusic               ; home/audio.asm
 extern PlayMusic                  ; home/audio.asm
 extern Random                 ; home/random.asm — AL = next random byte
-extern PlayBattleAnimation    ; engine/battle/core_stubs.asm (ANIMATION=OFF hook)
+extern PlayBattleAnimation    ; engine/battle/effects.asm — real interpreter entry (Stage 2b)
 extern Multiply               ; home/math.asm — hMultiplicand(3) * hMultiplier → hProduct(4)
 extern IndexToPokedex         ; engine/menus/pokedex.asm — predef, wPokedexNum in place
 extern ShowPokedexData        ; engine/menus/pokedex.asm (predef)

@@ -233,7 +233,8 @@ extern WriteMonMoves                   ; evos_moves.asm — level-up moveset (pr
 extern LoadMovePPs                     ; add_mon.asm — PPs (predef: wPredefHL/DE)
 extern IndexToPokedex                  ; engine/menus/pokedex.asm — predef, wPokedexNum in place
 extern FlagAction                      ; flag_action.asm — ESI=array, CL=bit, BH=action
-extern PlayApplyingAttackAnimation     ; animations.asm — pret animations.asm:488
+extern MoveAnimation                   ; animations.asm — pret predef, direct call (Stage 2b)
+extern Func_78e98                      ; animations.asm — BG save/clear/restore around the anim
 
 ; --- pulled in with the damage pipeline (was core_damage.asm) ---
 extern Multiply                        ; home/math.asm
@@ -3329,25 +3330,10 @@ ApplyBadgeStatBoosts:
 ; regression-battle-anim-interp-runtime-crash before re-wiring.
 ; ---------------------------------------------------------------------------
 PlayMoveAnimation:
-    push eax
-    push ebx
-    mov [ebp + wAnimationID], al
-    ; TODO-HW: audio HAL — WaitForSoundToFinish (no-op until the APU HAL, Phase 3).
-    ; TODO-HW: SetAnimationPalette — our VGA palette is fixed (Phase 5), so no-op.
-    mov al, [ebp + wAnimationID]
-    and al, al
-    jz .done                            ; wAnimationID 0 → nothing to play
-    ; .moveAnimation → .animationsDisabled: a fixed 30-frame delay where the move
-    ; animation would play. TODO-HW: full subanimation engine (ShareMoveAnimations +
-    ; PlayAnimation) when the battle-animation tile/OAM stream interpreter is ported.
-    mov bl, ANIM_OFF_DELAY
-    call DelayFrames
-    ; .next: the generic applying-attack animation runs in BOTH the on and off cases.
-    call PlayApplyingAttackAnimation
-.done:
-    mov byte [ebp + wAnimationID], 0    ; .animationFinished: clear the anim id scratch
-    pop ebx
-    pop eax
+    mov [ebp + wAnimationID], al        ; ld [wAnimationID], a
+    call Delay3
+    call MoveAnimation                  ; predef MoveAnimation (direct in flat model)
+    call Func_78e98                     ; callfar Func_78e98
     ret
 
 
@@ -6385,12 +6371,9 @@ MetronomePickMove:
     xor al, al
     mov [ebp + wAnimationType], al      ; xor a / ld [wAnimationType], a
     mov al, METRONOME_MOVE              ; ld a, METRONOME
-    ; ALLOWLIST (§2 item 1): pret plays Metronome's own subanim here
+    ; pret plays Metronome's own subanim here
     ; (xor a / ld [wAnimationType],a / ld a, METRONOME / call PlayMoveAnimation).
-    ; PlayMoveAnimation in this port already implements the faithful
-    ; ANIMATION=OFF realization (fixed delay + PlayApplyingAttackAnimation), so
-    ; this call is kept exactly as pret has it — subanim -> ANIMATION=OFF
-    ; (kept faithful call), not a skip.
+    ; PlayMoveAnimation is the real interpreter as of Stage 2b — faithful call.
     call PlayMoveAnimation
     mov edx, wPlayerMoveNum             ; ld de, wPlayerMoveNum
     mov esi, wPlayerSelectedMove        ; ld hl, wPlayerSelectedMove

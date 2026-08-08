@@ -107,34 +107,15 @@ PredefShakeScreenHorizontally:
     ret
 
 ; ===========================================================================
-; Move-subanimation ret-stubs. The handlers CALL each of these (correct + required
-; — pret does); the bodies are no-ops until the in-battle animation interpreter is
-; WIRED into production. NOTE (battle_animations Stage 2b, 2026-08-08): wiring these
-; to the real MoveAnimation interpreter was attempted and REVERTED — the never-run
-; interpreter crashes when actually executed (bisected to GetMoveSound writing
-; wFrequencyModifier; repro: goldencheck battle_faint after wiring). See memory
-; regression-battle-anim-interp-runtime-crash before re-wiring.
+; Move-subanimation dispatchers: RETIRED 2026-08-08 (battle_animations Stage 2b).
+; PlayCurrentMoveAnimation(2)/PlayBattleAnimation(2)/PlayBattleAnimationGotID now
+; live as real pret bodies in effects.asm, wired to animations.asm:MoveAnimation.
+; The 2026-08-08 wiring crash was NOT in the interpreter: the port's <DONE> text
+; sentinel lived at GB $C0F0/$C0F1 = wAudioSavedROMBank/wFrequencyModifier, and
+; GetMoveSound's first-ever freq-modifier write destroyed the terminator (fixed:
+; flat .data sentinel in src/home/text.asm; see memory
+; regression-battle-anim-interp-runtime-crash).
 ; ===========================================================================
-
-; STUB{class=temporary; label=PlayCurrentMoveAnimation; pret=engine/battle/effects.asm:PlayCurrentMoveAnimation; behavior=skip the literal move VFX stream entirely instead of loading wAnimationID and running the subanimation; evidence=no move-subanimation tile/OAM-stream engine exists yet (TODO-HW), damage shake and HP drain run separately via PlayApplyingAttackAnimation/UpdateCurMonHPBar; lifetime=until the move-subanimation engine lands}
-global PlayCurrentMoveAnimation
-PlayCurrentMoveAnimation:
-    ret
-
-; STUB{class=temporary; label=PlayCurrentMoveAnimation2; pret=engine/battle/effects.asm:PlayCurrentMoveAnimation2; behavior=skip the literal move VFX stream entirely instead of loading wAnimationID and running the subanimation; evidence=no move-subanimation tile/OAM-stream engine exists yet (TODO-HW); lifetime=until the move-subanimation engine lands}
-global PlayCurrentMoveAnimation2
-PlayCurrentMoveAnimation2:
-    ret
-
-; STUB{class=temporary; label=PlayBattleAnimation; pret=engine/battle/effects.asm:PlayBattleAnimation; behavior=skip the requested battle animation (AL = anim id) instead of storing wAnimationID and playing it; evidence=no move-subanimation tile/OAM-stream engine exists yet (TODO-HW); lifetime=until the move-subanimation engine lands}
-global PlayBattleAnimation
-PlayBattleAnimation:
-    ret
-
-; STUB{class=temporary; label=PlayBattleAnimation2; pret=engine/battle/effects.asm:PlayBattleAnimation2; behavior=skip the requested battle animation instead of playing it with saved-OAM restore; evidence=no move-subanimation tile/OAM-stream engine exists yet (TODO-HW); lifetime=until the move-subanimation engine lands}
-global PlayBattleAnimation2
-PlayBattleAnimation2:
-    ret
 
 ; STUB{class=temporary; label=AnimationSubstitute; pret=engine/battle/animations.asm:AnimationSubstitute; behavior=leave the mon pic unchanged instead of slide-out plus Substitute doll draw; evidence=no Substitute pic support in the port yet, callers in substitute.asm run the faithful state changes around it; lifetime=until Substitute pic VRAM support lands}
 global AnimationSubstitute

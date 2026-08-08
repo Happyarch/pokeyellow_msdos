@@ -102,16 +102,16 @@ extern ParalyzedMayNotAttackText
 ; --- data (pret data/battle/stat_mod_names.asm, generated asset) ---
 extern StatModTextStrings               ; src/data/battle_data.asm
 
-; --- literal move-subanimation / substitute: ret-stubs in core_stubs.asm ---
-extern PlayCurrentMoveAnimation      ; core_stubs.asm (STUB)
-extern PlayCurrentMoveAnimation2     ; core_stubs.asm (STUB)
+; --- substitute show/hide: ret-stubs in core_stubs.asm ---
 extern HideSubstituteShowMonAnim     ; core_stubs.asm (STUB)
 extern ReshowSubstituteAnim          ; core_stubs.asm (STUB)
 
+; --- battle-animation interpreter (Stage 2b wiring) ---
+extern MoveAnimation                 ; animations.asm — pret predef, direct call in flat model
+extern Func_78e98                    ; animations.asm — BG save/clear/restore around the anim
+
 ; --- flat-model bank passthrough (no banks under DPMI) ---
 extern Bankswitch                    ; src/home/bankswitch2.asm
-extern PlayBattleAnimation2
-extern PlayBattleAnimation          ; core_stubs.asm (STUB)
 extern GetMoveName                  ; home/names.asm — name of move [wNamedObjectIndex]
 extern MoveWasDisabledText
 extern AddNTimes                    ; home/array.asm — ESI += EBX(stride) * AL(count)
@@ -1901,6 +1901,75 @@ CheckTargetSubstitute:
     ret
 
 ; ---------------------------------------------------------------------------
+; ---------------------------------------------------------------------------
+; PlayCurrentMoveAnimation2 / PlayBattleAnimation2 /
+; PlayCurrentMoveAnimation / PlayBattleAnimation / PlayBattleAnimationGotID
+; pret ref: engine/battle/effects.asm:1504-1560. The effect-handler entry points
+; into the battle-animation interpreter (animations.asm:MoveAnimation). pret's
+; `predef MoveAnimation` + `callfar Func_78e98` become direct calls (flat model).
+; ---------------------------------------------------------------------------
+global PlayCurrentMoveAnimation2
+global PlayBattleAnimation2
+global PlayCurrentMoveAnimation
+global PlayBattleAnimation
+global PlayBattleAnimationGotID
+
+PlayCurrentMoveAnimation2:
+; animation at MOVENUM will be played unless MOVENUM is 0
+; plays wAnimationType 3 or 6
+    mov al, [ebp + hWhoseTurn]
+    and al, al
+    mov al, [ebp + wPlayerMoveNum]
+    jz .notEnemyTurn                     ; jr z
+    mov al, [ebp + wEnemyMoveNum]
+.notEnemyTurn:
+    and al, al
+    jnz PlayBattleAnimation2             ; ret z + fallthrough
+    ret
+
+PlayBattleAnimation2:
+; play animation ID at a and animation type 6 or 3
+    mov [ebp + wAnimationID], al
+    mov al, [ebp + hWhoseTurn]
+    and al, al
+    mov al, ANIMATIONTYPE_SHAKE_SCREEN_HORIZONTALLY_SLOW_2
+    jz .storeAnimationType               ; jr z
+    mov al, ANIMATIONTYPE_SHAKE_SCREEN_HORIZONTALLY_SLOW
+.storeAnimationType:
+    mov [ebp + wAnimationType], al
+    jmp PlayBattleAnimationGotID
+
+PlayCurrentMoveAnimation:
+; animation at MOVENUM will be played unless MOVENUM is 0
+; resets wAnimationType
+    xor al, al
+    mov [ebp + wAnimationType], al
+    mov al, [ebp + hWhoseTurn]
+    and al, al
+    mov al, [ebp + wPlayerMoveNum]
+    jz .notEnemyTurn                     ; jr z
+    mov al, [ebp + wEnemyMoveNum]
+.notEnemyTurn:
+    and al, al
+    jnz PlayBattleAnimation              ; ret z + fallthrough
+    ret
+
+PlayBattleAnimation:
+; play animation ID at a and predefined animation type
+    mov [ebp + wAnimationID], al
+; fallthrough
+PlayBattleAnimationGotID:
+; play animation at wAnimationID
+    push esi                             ; push hl
+    push edx                             ; push de
+    push ebx                             ; push bc
+    call MoveAnimation                   ; predef MoveAnimation
+    call Func_78e98                      ; callfar Func_78e98
+    pop ebx                              ; pop bc
+    pop edx                              ; pop de
+    pop esi                              ; pop hl
+    ret
+
 ; MoveEffectPointerTable
 ; pret ref: data/moves/effects_pointers.asm:MoveEffectPointerTable
 ;

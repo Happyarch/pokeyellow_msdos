@@ -5918,3 +5918,33 @@ Implemented the in-memory portion of `docs/current_plan_sram_pc_storage.md`; sta
   regions); full build exit 0; `update_label_db` + `lint_pret_labels` 0 in both
   modes; core fidelity tier 16/16 PASS; battle-tier scenario sweep recorded in
   the plan file.
+
+## 2026-08-08 — battle_animations Stage 2b closure: sentinel root-cause + production wiring
+
+- **Root cause of the "interpreter crash" (regression-battle-anim-interp-runtime-crash):**
+  not in the interpreter at all. The port's `<DONE>`/`<PROMPT>` text sentinel was
+  two runtime-written TX_END bytes at GB $C0F0/$C0F1 — pret's
+  `wAudioSavedROMBank`/`wFrequencyModifier`. `GetMoveSound`'s freq-modifier store
+  (first-ever write once the interpreter went live) destroyed the terminator;
+  the next `<DONE>`-terminated text (EnemyMonFaintedText) walked the
+  TextCommandProcessor through WRAM as a command stream (TX_ASM garbage → #UD at
+  ebp+0xC235; TX_NUM zeros → PrintNumber(count=0, DE=0) marching read →
+  page fault at [ebp+0x28000]).
+- **Fix (src/home/text.asm):** sentinel is now static flat `.data`
+  (`done_sentinel_flat: db TX_END, TX_END`); `<DONE>`/`<PROMPT>` return
+  `mov edx, done_sentinel_flat`; `text_engine_init` retained as a no-op
+  (title/overworld still call it). No pret label behavior touched — the
+  sentinel is port-only glue.
+- **Wiring (Stage 2b item 1):** core.asm `PlayMoveAnimation` = faithful pret
+  body (store wAnimationID / Delay3 / MoveAnimation / Func_78e98); effects.asm
+  gains real `PlayCurrentMoveAnimation(2)` / `PlayBattleAnimation(2)` /
+  `PlayBattleAnimationGotID` bodies (pret effects.asm:1504-1560, predef/callfar
+  → direct calls); the 4 core_stubs.asm dispatcher stubs retired.
+- **Verification:** faithdiff clean on all 6 labels; `lint_pret_labels` 0 both
+  modes; battle tier 13/13 PASS with the interpreter LIVE (battle_intro, menu,
+  move_selection, damage, faint, blackout, trainer init/win/loss/route,
+  ball_catch, item_potion_use, fish_old_rod).
+- **Debug method note:** the decisive instrument was an esp-anchored bail probe
+  (`ANIM_BAIL`: save esp at MoveAnimation entry, restore + jmp to the tail) —
+  it turns any mid-animation point into a clean scenario completion so GBSTATE
+  captures become readable even for a crashing build.

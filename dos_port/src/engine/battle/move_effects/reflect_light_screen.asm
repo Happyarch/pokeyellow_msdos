@@ -38,7 +38,7 @@ section .text
 global ReflectLightScreenEffect_
 
 ; --- shared scaffold externs (§4: call, never define) ---
-extern PlayCurrentMoveAnimation      ; core_stubs.asm (STUB)
+extern PlayCurrentMoveAnimation      ; engine/battle/effects.asm — real interpreter entry (Stage 2b)
 extern PrintText                     ; src/home/window.asm — ESI = flat text stream
 extern PrintButItFailedText_         ; engine/battle/effects.asm — "But it failed!"
 extern DelayFrames                   ; src/home/delay.asm — BL = frame count
