@@ -34,14 +34,20 @@ extern CopyData                    ; home/copy.asm
 %define CUT 15
 %define STRENGTH 70
 
-%define SNORLAX 132
-%define PERSIAN 144        ; internal index (113 was wrong — that's KAKUNA; see data/pokemon/dex_order.asm)
-%define JIGGLYPUFF 100
-%define STARTER_PIKACHU 84
-%define CHARIZARD 180      ; internal index (dex_order.asm line - 2)
-%define LAPRAS 19
+%define SNORLAX 0x84
+%define PIDGEOTTO 0x96      ; internal index $96 (pret constants/pokemon_constants.asm)
+%define PERSIAN 0x90        ; internal index (113 was wrong — that's KAKUNA; see data/pokemon/dex_order.asm)
+%define JIGGLYPUFF 0x64
+%define STARTER_PIKACHU 0x54
+%define CHARIZARD 0xB4      ; internal index (dex_order.asm line - 2)
+%define LAPRAS 0x13
 
-%define RIVAL_STARTER_JOLTEON 135
+; LATENT BUG FIXED 2026-08-08: this was 135 (0x87 — a const_skip/MissingNo slot in
+; the internal index list), so the debug seed marked the rival's starter as a
+; glitch species. Jolteon's real internal index is $68 (pret pokemon_constants +
+; Bulbapedia Gen-I index list, three-way verified). No golden impact: seed.lua
+; does not mirror wRivalStarter and no compared region covers it.
+%define RIVAL_STARTER_JOLTEON 0x68
 %define NUM_POKEMON 151
 
 %define EVENT_GOT_POKEDEX 37
@@ -270,7 +276,13 @@ DebugSetPokedexOwnedScatter:
 section .data
 
 DebugNewGameParty:
+%ifdef DEBUG_ANIM_DEMO
+    ; Anim-demo reference scene (maintainer request): lead = PIDGEOTTO L20,
+    ; matching the real-game GUST reference frames (PIDGEOTTO vs ZUBAT).
+    db PIDGEOTTO, 20
+%else
     db SNORLAX, 80
+%endif
     db PERSIAN, 80
     db JIGGLYPUFF, 15
     db STARTER_PIKACHU, 5
