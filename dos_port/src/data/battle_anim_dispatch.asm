@@ -23,7 +23,7 @@ bits 32
 extern AnimationFlashScreen               ; live — src/engine/battle/animations.asm
 extern AnimationDarkScreenPalette         ; live — src/engine/battle/animations.asm
 extern AnimationResetScreenPalette        ; live — src/engine/battle/animations.asm
-extern AnimationShakeScreen
+extern AnimationShakeScreen               ; live — src/engine/battle/animations.asm
 extern AnimationWaterDropletsEverywhere
 extern AnimationDarkenMonPalette          ; live — src/engine/battle/animations.asm
 extern AnimationFlashScreenLong           ; live — src/engine/battle/animations.asm
@@ -51,7 +51,7 @@ extern AnimationSpiralBallsInward
 extern AnimationDelay10                   ; live — src/engine/battle/animations.asm
 extern AnimationFlashEnemyMonPic
 extern AnimationHideEnemyMonPic
-extern AnimationBlinkEnemyMon
+extern AnimationBlinkEnemyMon             ; live — src/engine/battle/animations.asm
 extern AnimationShowMonPic
 extern AnimationShowEnemyMonPic
 extern AnimationSlideEnemyMonOff

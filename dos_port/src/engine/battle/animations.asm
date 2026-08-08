@@ -64,6 +64,8 @@ extern AnimationIdSpecialEffects      ; src/data/battle_anim_dispatch.asm (hand-
 extern WaitForSoundToFinish          ; src/home/delay.asm
 extern PlaySound                      ; src/home/audio.asm
 extern GetCryData                     ; src/home/home_stubs.asm (STUB)
+extern PredefShakeScreenVertically     ; src/engine/gfx/screen_effects.asm
+extern PredefShakeScreenHorizontally   ; src/engine/gfx/screen_effects.asm
 extern UpdateCGBPal_BGP               ; src/home/cgb_palettes.asm
 extern UpdateCGBPal_OBP0              ; src/home/cgb_palettes.asm
 extern UpdateCGBPal_OBP1              ; src/home/cgb_palettes.asm
@@ -81,7 +83,6 @@ extern g_obj_clip                     ; src/ppu/ppu.asm — OBJ clip rectangle (
 
 ; --- Stage 3-5 dispatch-target stubs (src/engine/battle/core_stubs.asm) ---
 extern TossBallAnimation
-extern AnimationShakeScreen
 extern AnimationWaterDropletsEverywhere
 extern AnimationSlideMonUp
 extern AnimationSlideMonDown
@@ -105,7 +106,6 @@ extern AnimationShakeEnemyHUD
 extern AnimationSpiralBallsInward
 extern AnimationFlashEnemyMonPic
 extern AnimationHideEnemyMonPic
-extern AnimationBlinkEnemyMon
 extern AnimationShowMonPic
 extern AnimationShowEnemyMonPic
 extern AnimationSlideEnemyMonOff
@@ -168,6 +168,21 @@ global AnimationUnusedPalette4
 global SetAnimationBGPalette
 global FlashScreenLongMonochrome
 global FlashScreenLongSGB
+
+; --- Stage 3b: shake family + blink wrapper + applying-attack dispatch ---
+global AnimationTypePointerTable
+global ShakeScreenVertically
+global ShakeScreenHorizontallyHeavy
+global ShakeScreenHorizontallySlow
+global ShakeScreenHorizontallySlow2
+global ShakeScreenHorizontallyLight
+global BlinkEnemyMonSprite
+global AnimationShakeScreen
+global AnimationShakeScreenVertically
+global AnimationShakeScreenHorizontallyFast
+global AnimationShakeScreenHorizontallySlow
+global AnimationUnusedShakeScreen
+global AnimationBlinkEnemyMon
 
 ; --- existing globals (retained below) ---
 global PlayApplyingAttackAnimation
@@ -621,17 +636,120 @@ ShareMoveAnimations:
 ; wAnimationType. The AnimationTypePointerTable dispatch (shake/blink) lands in
 ; Stage 3; the wAnimationType==0 early-out is faithful now.
 ; ---------------------------------------------------------------------------
+; Generic animation shown after the move's individual animation. Which one
+; depends on whether the move has an additional effect and on whose turn it is.
+; pret's vc_hook line is a Virtual-Console marker with no runtime effect.
+; The TODO-HW that stood here through Stage 2 is RETIRED: the dispatch is live.
 PlayApplyingAttackAnimation:
-    push eax
     mov al, [ebp + wAnimationType]
     and al, al
     jz .done                                 ; ret z — no applying animation
-    ; TODO-HW (battle_animations Stage 3): AnimationTypePointerTable dispatch
-    ; (ShakeScreen* / BlinkEnemyMonSprite via wAnimationType). Faithful structure
-    ; preserved; the visible shake/blink is deferred to Stage 3. (pret animations.asm:506.)
+    ; pret: dec a / add a / ld c,a / ld b,0 / ld hl,Table / add hl,bc /
+    ;       ld a,[hli] / ld h,[hl] / ld l,a / jp hl  — a 2-byte dw index.
+    ; AnimationTypePointerTable is dd here (flat program-image addresses, the
+    ; file's standard model), so the index scales by 4 rather than 2.
+    movzx ecx, al
+    dec ecx                                  ; dec a — types are 1-based
+    jmp [AnimationTypePointerTable + ecx*4]  ; jp hl
 .done:
-    pop eax
     ret
+
+; ===========================================================================
+; SCREEN SHAKE + BLINK — pret animations.asm (battle_animations Stage 3b).
+;
+; The shake bodies live in the mirror src/engine/gfx/screen_effects.asm (pret
+; engine/gfx/screen_effects.asm) and displace the whole canvas through
+; H_SCX/H_SCY; read the projection note at the top of that file before touching
+; anything here. pret reaches them with `predef_jump`; the port jumps directly
+; (it has no predef dispatcher), the same convention ReadTrainer uses for AddBCD.
+; ===========================================================================
+
+ShakeScreenVertically:
+    call PlayApplyingAttackSound
+    mov bh, 8                                ; ld b,8
+    jmp AnimationShakeScreenVertically
+
+ShakeScreenHorizontallyHeavy:
+    call PlayApplyingAttackSound
+    mov bh, 8
+    jmp AnimationShakeScreenHorizontallyFast
+
+ShakeScreenHorizontallySlow:
+    mov bh, 6                                ; lb bc, 6, 2
+    mov bl, 2
+    jmp AnimationShakeScreenHorizontallySlow
+
+BlinkEnemyMonSprite:
+    call PlayApplyingAttackSound
+    jmp AnimationBlinkEnemyMon
+
+ShakeScreenHorizontallyLight:
+    call PlayApplyingAttackSound
+    mov bh, 2
+    jmp AnimationShakeScreenHorizontallyFast
+
+ShakeScreenHorizontallySlow2:
+    mov bh, 3                                ; lb bc, 3, 2
+    mov bl, 2
+    ; falls through, as in pret
+
+; ---------------------------------------------------------------------------
+; AnimationShakeScreenHorizontallySlow — BH (b) = pixels per sweep, BL (c) =
+; sweeps. Walks the canvas one pixel right per step and back again, c times.
+; This one drives the displacement itself rather than going through the predef,
+; so it carries the same projection: pret's rWX becomes the port's H_SCX.
+;
+; DEVIATION{class=projection; pret=engine/battle/animations.asm:AnimationShakeScreenHorizontallySlow; behavior=steps the BG scroll shadow H_SCX instead of the window register rWX, so the displacement is whole-canvas and its sense is inverted; evidence=the port draws the battle screen on the BG layer rather than the GB's full-screen window (rWY=0 in core.asm), and commit_shadow_regs rewrites IO_SCX from H_SCX every DelayFrame so the shadow is the only channel that survives a multi-frame effect; lifetime=permanent, part of the port's BG-layer battle-screen model}
+;
+; The `dec bh` counters stay 8-bit deliberately (pret's `dec b`): entry values
+; are 6, 3, 8 and 2, never 0, and an 8-bit decrement reproduces the GB's bound
+; exactly. Both pushes protect BL (pret c) from the `mov bl,2` delay argument.
+; ---------------------------------------------------------------------------
+AnimationShakeScreenHorizontallySlow:
+    push ebx                                 ; push bc
+    push ebx                                 ; push bc
+.loop1:
+    mov al, [ebp + H_SCX]                    ; ldh a,[rWX]
+    inc al
+    mov [ebp + H_SCX], al
+    mov bl, 2                                ; ld c,2
+    call DelayFrames
+    dec bh                                   ; dec b
+    jnz .loop1
+    pop ebx                                  ; pop bc
+.loop2:
+    mov al, [ebp + H_SCX]
+    dec al
+    mov [ebp + H_SCX], al
+    mov bl, 2
+    call DelayFrames
+    dec bh
+    jnz .loop2
+    pop ebx                                  ; pop bc
+    dec bl                                   ; dec c
+    jnz AnimationShakeScreenHorizontallySlow ; jr nz — self-recursion, as in pret
+    ret
+
+AnimationUnusedShakeScreen: ; unreferenced in pret
+; Shakes the screen for a while.
+    mov bh, 5                                ; ld b,$5
+    ; falls through, as in pret
+
+AnimationShakeScreenVertically:
+    jmp PredefShakeScreenVertically          ; pret: predef_jump
+
+AnimationShakeScreen:
+; Shakes the screen for a while. Used in Earthquake/Fissure/etc. animations.
+    mov bh, 8                                ; ld b,$8
+    ; falls through, as in pret
+
+AnimationShakeScreenHorizontallyFast:
+    jmp PredefShakeScreenHorizontally        ; pret: predef_jump
+
+AnimationBlinkEnemyMon:
+; Make the enemy mon's sprite blink on and off for a second or two.
+    mov esi, AnimationBlinkMon               ; ld hl, AnimationBlinkMon
+    jmp CallWithTurnFlipped
 
 ; ===========================================================================
 ; Func_78e98 / WriteLowerByteOfBGMapAndEnableBGTransfer — pret animations.asm.
@@ -1006,27 +1124,14 @@ FlashScreenEveryFourFrameBlocks:
 
 ; flashes the screen at 3 points in the subanimation — unreferenced in pret,
 ; translated for completeness (pret keeps it too).
-;
-; pret's three tail-jumps are `jp z, AnimationFlashScreen`. They are spelled here
-; as `jne <skip>` + `jmp` rather than the shorter `je AnimationFlashScreen`
-; because update_label_db's port-side scanner only recognises `call` and `jmp`
-; as call edges (CALL_RE / JMP_LABEL_RE) — a conditional tail-jump emits NO edge,
-; so `je` made faithdiff report all three as DROPPED and erased them from the
-; dependency graph. Same semantics, one extra branch, edges visible to tooling.
 FlashScreenUnused:
     mov al, [ebp + wSubAnimCounter]
     cmp al, 14
-    jne .try9                                ; jp z, AnimationFlashScreen
-    jmp AnimationFlashScreen
-.try9:
+    je AnimationFlashScreen                  ; jp z
     cmp al, 9
-    jne .try2
-    jmp AnimationFlashScreen
-.try2:
+    je AnimationFlashScreen
     cmp al, 2
-    jne .done
-    jmp AnimationFlashScreen
-.done:
+    je AnimationFlashScreen
     ret
 
 ; ---------------------------------------------------------------------------
@@ -1165,6 +1270,17 @@ SetAnimationBGPalette:
 ; as MoveEffectPointerTable does.
 ; ===========================================================================
 section .data
+
+; PlayApplyingAttackAnimation's dispatch (pret animations.asm:506). pret's own
+; inline table in its engine/ file, so it stays in this mirror; `dd` here rather
+; than pret's `dw`, per the flat-pointer model at the top of this file.
+AnimationTypePointerTable:
+    dd ShakeScreenVertically        ; enemy mon has used a damaging move without a side effect
+    dd ShakeScreenHorizontallyHeavy ; enemy mon has used a damaging move with a side effect
+    dd ShakeScreenHorizontallySlow  ; enemy mon has used a non-damaging move
+    dd BlinkEnemyMonSprite          ; player mon has used a damaging move without a side effect
+    dd ShakeScreenHorizontallyLight ; player mon has used a damaging move with a side effect
+    dd ShakeScreenHorizontallySlow2 ; player mon has used a non-damaging move
 
 ; AnimationFlashScreenLong's BG palette cycles (pret animations.asm:1034/1050).
 ; These are pret's own inline tables in engine/battle/animations.asm, so they

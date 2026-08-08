@@ -2047,6 +2047,19 @@ wLoadedMonStatus              equ 0xCF9B ; wLoadedMon + MON_STATUS
 hPartyMonIndex                equ 0xFF8C ; = hTextID (ram/hram.asm union)
 hSwapTemp                     equ 0xFF95 ; byte-swap scratch (overlaps hDividend lane)
 
+; --- screen-shake scratch (battle_animations Stage 3b) ----------------------
+; Addresses MEASURED against the golden ROM symbol table, not derived from the
+; port's HRAM (which root-allocates in this region — see hSwapItemID below):
+;   00:ff96 hMutateWY   00:ff97 hMutateWX   00:d09f wDisableVBlankWYUpdate
+; hMutateWY/WX sit in pret's ram/hram.asm NEXTU lane that also carries
+; hExperience ($FF96-98), so the overlap is pret's own union, not a collision:
+; the shake predefs and the experience math never run concurrently.
+hMutateWY                     equ 0xFF96 ; PredefShakeScreenVertically xor-walk state
+hMutateWX                     equ 0xFF97 ; PredefShakeScreenHorizontally xor-walk state
+; Also spelled W_DISABLE_VBLANK_WY_UPDATE locally in src/home/vblank.asm, which
+; is the consumer (commit_shadow_regs skips the WY commit when nonzero).
+wDisableVBlankWYUpdate        equ 0xD09F
+
 ; ---------------------------------------------------------------------------
 ; Menus S6 package B (draw_badges) — trainer-card badge scratch. All four sit
 ; in the big NEXTU union at ram/wram.asm:772 (badge lane at :959), so they

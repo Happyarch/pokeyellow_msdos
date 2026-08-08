@@ -1947,6 +1947,7 @@ FRONTEND_SRCS := \
     src/engine/battle/move_effects/paralyze.asm \
     src/engine/battle/decrement_pp.asm \
     src/engine/battle/animations.asm \
+    src/engine/gfx/screen_effects.asm \
     src/engine/battle/used_move_text.asm \
     src/data/battle_data.asm \
     src/data/battle_anims.asm \

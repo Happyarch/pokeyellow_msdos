@@ -5385,7 +5385,7 @@ extern DoesntAffectMonText             ; dos_port/assets/battle_text.inc
 extern AttackMissedText                ; dos_port/assets/battle_text.inc
 extern UnaffectedText                  ; dos_port/assets/battle_text.inc
 extern KeptGoingAndCrashedText         ; dos_port/assets/battle_text.inc
-extern PredefShakeScreenHorizontally   ; src/engine/battle/core_stubs.asm (STUB)
+extern PredefShakeScreenHorizontally   ; src/engine/gfx/screen_effects.asm (live since Stage 3b)
 extern AIEnemyTrainerChooseMoves       ; src/engine/battle/trainer_ai.asm — score-adjust the move weights
 global FaintEnemyPokemon
 global EndLowHealthAlarm
@@ -6208,7 +6208,13 @@ PrintMoveFailureText:
     mov esi, KeptGoingAndCrashedText    ; ld hl, KeptGoingAndCrashedText
     call PrintText
     mov bh, 4                           ; ld b, $4
-    call PredefShakeScreenHorizontally  ; predef PredefShakeScreenHorizontally (allowlist §2.4)
+    call PredefShakeScreenHorizontally  ; pret: predef PredefShakeScreenHorizontally — called
+                                        ; directly (the port has no predef dispatcher, so the
+                                        ; callee must not run GetPredefRegisters; b is passed in
+                                        ; BH above). Same convention as ReadTrainer -> AddBCD.
+                                        ; The old "(allowlist §2.4)" citation here was dangling:
+                                        ; pret_label_allowlist.json is empty in every category,
+                                        ; and a direct call is not a relocation needing one.
     mov al, [ebp + hWhoseTurn]          ; ldh a, [hWhoseTurn]
     and al, al
     jnz .enemyTurn

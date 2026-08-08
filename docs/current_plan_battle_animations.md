@@ -283,7 +283,7 @@ Two maintainer-confirmed decisions (AskUserQuestion, 2026-08-07):
       `AnimationFlashScreen` + `AnimationResetScreenPalette`, so it validates
       those three routines. Memory `battle-anim-cgb-obj-palette-model` fact 6
       updated.
-- [ ] Shake family via whole-canvas H_SCX/H_SCY: `AnimationShakeScreen`,
+- [x] Shake family via whole-canvas H_SCX/H_SCY: `AnimationShakeScreen`,
       `AnimationShakeScreenVertically`, `AnimationShakeScreenHorizontallyFast`,
       `AnimationShakeScreenHorizontallySlow`, `AnimationUnusedShakeScreen`,
       `ShakeScreenVertically`, `ShakeScreenHorizontallyHeavy/Light/Slow/Slow2`;
@@ -314,8 +314,35 @@ Two maintainer-confirmed decisions (AskUserQuestion, 2026-08-07):
       (d) `hMutateWX`/`hMutateWY` do not exist in the port yet — add to
       `gb_memmap.inc`. `wDisableVBlankWYUpdate` already exists (0xD09F,
       honoured by `commit_shadow_regs`); keep pret's writes to it verbatim.
-- [ ] `BlinkEnemyMonSprite`; fill `PlayApplyingAttackAnimation`'s
+- [x] `BlinkEnemyMonSprite`; fill `PlayApplyingAttackAnimation`'s
       `AnimationTypePointerTable` dispatch (types 1–6) — retires its TODO-HW.
+      DONE 2026-08-08. `AnimationBlinkEnemyMon` (the `CallWithTurnFlipped`
+      wrapper) is real too; **`AnimationBlinkMon` stays a STUB** because its
+      body loops over `AnimationHideMonPic` / `AnimationShowMonPic`, which are
+      themselves Stage 4 mon-pic stubs — its lifetime field now says Stage 4
+      rather than Stage 3. So blink dispatches and plays its sound but does not
+      yet hide/show the pic.
+      Two things measured while doing this, both worth keeping:
+      * **pret does NOT exit `PredefShakeScreenVertically` with `rWY = 0`.**
+        Traced at b=8, the xor-walk leaves `rWY = 1`; pret is saved by clearing
+        `wDisableVBlankWYUpdate`, which lets VBlank rewrite `rWY` from `hWY` the
+        next frame. `H_SCY` has no backing shadow — it IS what
+        `commit_shadow_regs` copies out — so the port must park it at 0
+        explicitly or the canvas stays 1px off forever. That store has no pret
+        counterpart and must not be "simplified" away.
+      * `PlayApplyingAttackAnimation`'s `jp hl` becomes `jmp [table + ecx*4]`
+        (the table is `dd`, so the index scales by 4, not pret's 2). faithdiff
+        reports `- DROPPED hl (jp)` and the six targets carry no graph edge —
+        the documented indirect-dispatch blind spot, same as
+        `SpecialEffectPointers`.
+      Two false `- DROPPED` findings during this stage (`FlashScreenUnused`,
+      `AnimationShakeScreenHorizontallySlow`) were first "fixed" by contorting
+      the assembly into `jne <skip>` + `jmp`. That was backwards: the bug was in
+      `tools/faithdiff`, whose port-side regex counted no conditional jumps while
+      its pret-side one counted `jp z,`/`jr nz,`. Tool fixed in a separate commit;
+      both routines reverted to the direct conditional form. Note the earlier
+      diagnosis blaming `update_label_db` was wrong — that scanner already
+      handled Jcc and the dependency graph never lost the edges.
 - [ ] Per-row offset HAL in ppu.asm (default-off fast path; compositor_perf
       constraints) + `AnimationWavyScreen` / `WavyScreen_SetSCX` /
       `WavyScreenLineOffsets`.

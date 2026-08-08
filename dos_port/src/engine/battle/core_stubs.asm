@@ -96,15 +96,12 @@ FormatMovesString:
 ;   HandleExplodingAnimation ................ exploding_animation.asm
 ; The stubs that used to live here are deleted.
 ; ===========================================================================
-global PredefShakeScreenHorizontally
-
-; PredefShakeScreenHorizontally — pret predef, cosmetic screen shake used by
-; PrintMoveFailureText's Jump Kick / Hi Jump Kick crash path (B = # shakes).
-; TODO-HW: real horizontal screen shake (rWX/rSCX manipulation) — deferred like
-; the rest of the ANIMATION=OFF subanimation layer. No-op is faithful for now
-; (HP bars / faints / text are all real; only the literal shake visual is off).
-PredefShakeScreenHorizontally:
-    ret
+; PredefShakeScreenHorizontally: RETIRED 2026-08-08 — real body in the mirror
+; src/engine/gfx/screen_effects.asm (battle_animations Stage 3b), which also
+; adds the previously-missing PredefShakeScreenVertically. Its TODO-HW ("real
+; horizontal screen shake, rWX/rSCX manipulation") is discharged: the shake is
+; a whole-canvas H_SCX/H_SCY displacement. PrintMoveFailureText's Jump Kick /
+; Hi Jump Kick crash path now gets a real shake.
 
 ; ===========================================================================
 ; Move-subanimation dispatchers: RETIRED 2026-08-08 (battle_animations Stage 2b).
@@ -172,19 +169,15 @@ global AnimationFlashEnemyMonPic
 AnimationFlashEnemyMonPic:
     ret
 
-; STUB{class=temporary; label=AnimationShakeScreen; pret=engine/battle/animations.asm:AnimationShakeScreen; behavior=return instead of the whole-canvas screen shake; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 3 shake family lands}
-global AnimationShakeScreen
-AnimationShakeScreen:
-    ret
+; AnimationShakeScreen, AnimationBlinkEnemyMon: RETIRED 2026-08-08 — real bodies
+; in animations.asm (Stage 3b shake family / blink wrapper chain), along with
+; AnimationShakeScreen{Vertically,HorizontallyFast,HorizontallySlow},
+; AnimationUnusedShakeScreen, the ShakeScreen* wrappers, BlinkEnemyMonSprite and
+; the AnimationTypePointerTable dispatch.
 
-; STUB{class=temporary; label=AnimationBlinkMon; pret=engine/battle/animations.asm:AnimationBlinkMon; behavior=return instead of blinking the player mon pic; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 3 blink lands}
+; STUB{class=temporary; label=AnimationBlinkMon; pret=engine/battle/animations.asm:AnimationBlinkMon; behavior=return instead of blinking the player mon pic; evidence=its body is a loop over AnimationHideMonPic and AnimationShowMonPic, both of which are themselves Stage 4 mon-pic stubs, so the real body cannot land before them, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 mon-pic hide/show lands}
 global AnimationBlinkMon
 AnimationBlinkMon:
-    ret
-
-; STUB{class=temporary; label=AnimationBlinkEnemyMon; pret=engine/battle/animations.asm:AnimationBlinkEnemyMon; behavior=return instead of blinking the enemy mon pic; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 3 blink lands}
-global AnimationBlinkEnemyMon
-AnimationBlinkEnemyMon:
     ret
 
 ; STUB{class=temporary; label=AnimationWavyScreen; pret=engine/battle/animations.asm:AnimationWavyScreen; behavior=return instead of the per-row wavy screen effect; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 3 wavy HAL lands}
