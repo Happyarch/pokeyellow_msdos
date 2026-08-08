@@ -6735,3 +6735,46 @@ Two details kept rather than tidied:
 **clean on all six, no findings**; `pgate.sh` 17/17 with per-scenario mask-hit
 counts byte-identical to the Stage 4 series. Absence-of-regression only; these
 hooks are dispatch-only and no scenario in the battery reaches them.
+
+---
+
+## 2026-08-08 — battle animations Stage 5b: ball-toss path (routines)
+
+pret `engine/battle/animations.asm`. Four labels: `TossBallAnimation`,
+`DoBallTossSpecialEffects`, `DoBallShakeSpecialEffects`, `DoPoofSpecialEffects`.
+Four stubs retired. The `TOSS_ANIM` splice into `ItemUseBall` /
+`ThrowBallAtTrainerMon` is deliberately a SEPARATE increment — it is the part
+that changes live behaviour and the `ball_catch` golden.
+
+**The `SCREEN_WIDTH` role split shows up here in its reverse form, and it is the
+one to watch.** The Ghost-Marowak dodge in `DoBallTossSpecialEffects` writes
+`hlcoord 17, 0` — a COORDINATE, so `BCOORD(17, 0)` — immediately followed by
+`ld de, 20`, which is a bare literal that is nonetheless a row STRIDE and
+therefore carries the port's **40**, not 20. Same routine, same-looking number,
+opposite treatment. (Bounds check: `AnimCopyRowRight` from column 17 writes
+columns 18 down to 12, all inside the 20-wide battle frame.)
+
+`rAUD1SWEEP` is written literally — the APU is a virtual APU in this port, not a
+`TODO-HW` boundary, so pret's channel-1 sweep write translates as-is.
+
+`and $F0` + `swap a` becomes `and al, 0xF0` + `shr al, 4`: with the low nybble
+already cleared, the swap is exactly a 4-bit right shift.
+
+**One `DEVIATION{class=data-model}`** on `DoBallShakeSpecialEffects`: its
+subanimation-restart rewind subtracts 12 from the port-local 32-bit flat cursor
+`wSubAnimSubEntryAddr32` rather than the 2-byte GB slot `wSubAnimSubEntryAddr`
+($D095), per the flat-pointer model already documented at the top of the file.
+The displacement itself is unchanged — subentries are still pret's 3 bytes each,
+so `-(4 * 3)` is verbatim.
+
+**faithdiff, 3 findings:** `+ ADDED [IO_OBP0]` and `+ ADDED [rAUD1SWEEP]` on
+`DoBallTossSpecialEffects` are the documented store blind spot (pret's
+`ldh [rOBP0]` / `ldh [rAUD1SWEEP]` are hardware-register writes its pret-side
+store regex cannot see — it matches only `w`/`h`-prefixed names);
+`- DROPPED [wSubAnimSubEntryAddr]` on `DoBallShakeSpecialEffects` is the
+data-model DEVIATION above. `TossBallAnimation` and `DoPoofSpecialEffects` clean.
+
+**Verification:** build clean; `lint_pret_labels` 0 both modes; `pgate.sh` 17/17
+with per-scenario mask-hit counts byte-identical to the 5a run — including
+`ball_catch`, which does NOT yet reach any of this, because the splice has not
+landed. That is the point of splitting the increment.

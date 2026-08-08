@@ -1913,6 +1913,163 @@ FallingObjects_InitialMovementData:
     db 0x09, 0x80, 0x07, 0x87, 0x03, 0x82, 0x04, 0x85, 0x08, 0x86
 
 ; ===========================================================================
+; BALL-TOSS PATH — pret animations.asm (battle_animations Stage 5b).
+; TossBallAnimation drives a sequence of whole animations through PlayAnimation;
+; the three Do*SpecialEffects hooks run per frame block from
+; AnimationIdSpecialEffects.
+; ===========================================================================
+
+global TossBallAnimation
+TossBallAnimation:
+    mov al, [ebp + wIsInBattle]
+    cmp al, 2
+    jz .BlockBall                            ; trainer battle — different animation
+    mov al, [ebp + wPokeBallAnimData]
+    mov bh, al                               ; ld b, a
+; upper nybble: how many animations from .PokeBallAnimations to play
+; (4 for a successful capture, 6 for a breakout)
+    and al, 0xF0
+    shr al, 4                                ; swap a / (the and $F0 already cleared the low nybble)
+    mov bl, al                               ; ld c, a
+; lower nybble: number of shakes — stored for DoBallShakeSpecialEffects
+    mov al, bh
+    and al, 0x0F
+    mov [ebp + wNumShakes], al
+
+    mov esi, .PokeBallAnimations             ; flat table
+; choose which toss animation to use
+    mov al, [ebp + wCurItem]
+    cmp al, POKE_BALL
+    mov bh, TOSS_ANIM
+    jz .done
+    cmp al, GREAT_BALL
+    mov bh, GREATTOSS_ANIM
+    jz .done
+    mov bh, ULTRATOSS_ANIM
+.done:
+    mov al, bh
+.PlayNextAnimation:
+    mov [ebp + wAnimationID], al
+    push ebx
+    push esi
+    call PlayAnimation
+    pop esi
+    mov al, [esi]                            ; ld a, [hli] — flat
+    inc esi
+    pop ebx
+    dec bl                                   ; 8-bit, as pret
+    jnz .PlayNextAnimation
+    ret
+
+.PokeBallAnimations:
+; sequence of animations that make up the Poké Ball toss
+    db POOF_ANIM, HIDEPIC_ANIM, SHAKE_ANIM, POOF_ANIM, SHOWPIC_ANIM
+
+.BlockBall:
+    mov byte [ebp + wAnimationID], TOSS_ANIM
+    call PlayAnimation
+    mov al, SFX_FAINT_THUD
+    call PlaySound
+    mov byte [ebp + wAnimationID], BLOCKBALL_ANIM
+    jmp PlayAnimation
+
+global DoBallTossSpecialEffects
+DoBallTossSpecialEffects:
+    mov al, [ebp + wCurItem]
+    cmp al, ULTRA_BALL + 1                   ; Master Ball or Ultra Ball?
+    jae .skipFlashingEffect
+.flashingEffect:                             ; flash for Master Ball / Ultra Ball
+    mov al, [ebp + IO_OBP0]                  ; ldh a, [rOBP0]
+    xor al, 0x3C                             ; %00111100 — complement colors 1 and 2
+    mov [ebp + IO_OBP0], al
+    call UpdateCGBPal_OBP0
+.skipFlashingEffect:
+    mov al, [ebp + wSubAnimCounter]
+    cmp al, 11                               ; beginning of the subanimation?
+    jnz .skipPlayingSound
+    mov al, SFX_BALL_TOSS
+    call PlaySound
+.skipPlayingSound:
+    mov al, [ebp + wIsInBattle]
+    cmp al, 2                                ; trainer battle?
+    jz .isTrainerBattle
+    mov al, [ebp + wPokeBallAnimData]
+    cmp al, 0x10                             ; is the enemy the Ghost Marowak?
+    jnz .ret
+; the Ghost Marowak dodges during the last 3 frames
+    mov al, [ebp + wSubAnimCounter]
+    cmp al, 3
+    jz .moveGhostMarowakLeft
+    cmp al, 2
+    jz .moveGhostMarowakLeft
+    cmp al, 1
+    jnz .ret
+.moveGhostMarowakLeft:
+    mov esi, BCOORD(17, 0)                   ; PROJ — pret hlcoord 17, 0
+    mov edx, SCREEN_WIDTH                    ; pret `ld de, 20` is a row STRIDE, not a
+                                             ; coordinate — it carries the port's 40
+    mov bh, 7                                ; lb bc, 7, 7
+    mov bl, 7
+.loop:
+    push esi
+    push ebx
+    call AnimCopyRowRight                    ; move row of tiles left
+    pop ebx
+    pop esi
+    add esi, edx                             ; add hl, de
+    dec bh
+    jnz .loop
+    mov byte [ebp + rAUD1SWEEP], 0x08        ; virtual APU — literal write, no HAL
+.ret:
+    ret
+.isTrainerBattle:                            ; shorten the animation by one frame
+    mov al, [ebp + wSubAnimCounter]
+    cmp al, 3
+    jnz .ret
+    dec al
+    mov [ebp + wSubAnimCounter], al
+    ret
+
+; DEVIATION{class=data-model; pret=engine/battle/animations.asm:DoBallShakeSpecialEffects; behavior=the subanimation-restart rewind subtracts 12 from the port-local 32-bit flat cursor wSubAnimSubEntryAddr32 instead of from the 2-byte GB slot wSubAnimSubEntryAddr $D095; evidence=the flat-pointer model documented at the top of this file already holds that cursor in .bss because a 32-bit program-image address does not fit in two WRAM bytes, and the subentries are still pret's 3 bytes each so the -(4*3) displacement is unchanged; lifetime=permanent, part of the flat-pointer port model}
+global DoBallShakeSpecialEffects
+DoBallShakeSpecialEffects:
+    mov al, [ebp + wSubAnimCounter]
+    cmp al, 4                                ; beginning of a shake?
+    jnz .skipPlayingSound
+; play a sound and wait 2/3 of a second
+    mov al, SFX_TINK
+    call PlaySound
+    mov bl, 40
+    call DelayFrames
+.skipPlayingSound:
+    mov al, [ebp + wSubAnimCounter]
+    dec al
+    jnz .ret                                 ; ret nz
+; end of the ball-shaking subanimation — are more shakes left?
+    mov al, [ebp + wNumShakes]
+    dec al
+    mov [ebp + wNumShakes], al
+    jz .ret                                  ; ret z
+; shakes left: restart the subanimation
+    mov esi, [wSubAnimSubEntryAddr32]
+    sub esi, 4 * 3                           ; 4 subentries, 3 bytes each
+    mov [wSubAnimSubEntryAddr32], esi
+    mov byte [ebp + wSubAnimCounter], 5      ; subentries in the shake subanim, plus one
+.ret:
+    ret
+
+; plays a sound after the second frame of the poof animation
+global DoPoofSpecialEffects
+DoPoofSpecialEffects:
+    mov al, [ebp + wSubAnimCounter]
+    cmp al, 5
+    jnz .ret
+    mov al, SFX_BALL_POOF
+    jmp PlaySound
+.ret:
+    ret
+
+; ===========================================================================
 ; PER-ANIMATION SPECIAL-EFFECT HOOKS — pret animations.asm (Stage 5a). Each is
 ; dispatched per frame block from AnimationIdSpecialEffects and keys off
 ; wSubAnimCounter.
