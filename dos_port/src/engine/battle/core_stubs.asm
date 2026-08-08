@@ -180,6 +180,10 @@ AnimationFlashEnemyMonPic:
 ; FlashScreenEveryFourFrameBlocks, FlashScreenEveryEightFrameBlocks:
 ; RETIRED 2026-08-08 — real bodies in animations.asm (Stage 3 flash family).
 
+; DoGrowlSpecialEffects, DoRockSlideSpecialEffects, DoExplodeSpecialEffects,
+; DoBlizzardSpecialEffects, TailWhipAnimationUnused: RETIRED 2026-08-08 — real
+; bodies in animations.asm (Stage 5a per-animation hooks).
+
 ; --- Stage 4: mon-pic slides + motion + OAM particles + HUD shake ---
 ; AnimationShakeEnemyHUD: RETIRED 2026-08-08 — real body in animations.asm
 ; (Stage 4g), with ShakeEnemyHUD_ShakeBG and
@@ -219,11 +223,6 @@ AnimationFlashEnemyMonPic:
 ; AnimCopyRowLeft/Right, CopyPicTiles, CopyDownscaledMonTiles,
 ; CopyTileIDs{,_NoBGTransfer} and CopyTileIDsFromList.
 
-; STUB{class=temporary; label=TailWhipAnimationUnused; pret=engine/battle/animations.asm:TailWhipAnimationUnused; behavior=return instead of the unused Tail Whip effect; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 particle family lands}
-global TailWhipAnimationUnused
-TailWhipAnimationUnused:
-    ret
-
 ; --- Stage 5: item-path ball toss/shake/poof + per-anim SE hooks ---
 ; STUB{class=temporary; label=TossBallAnimation; pret=engine/battle/animations.asm:TossBallAnimation; behavior=return instead of the Poke Ball toss animation sequence; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 5 item-path ball animations land}
 global TossBallAnimation
@@ -243,26 +242,6 @@ DoBallShakeSpecialEffects:
 ; STUB{class=temporary; label=DoPoofSpecialEffects; pret=engine/battle/animations.asm:DoPoofSpecialEffects; behavior=return instead of the poof per-frame special effects; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 5 item-path ball animations land}
 global DoPoofSpecialEffects
 DoPoofSpecialEffects:
-    ret
-
-; STUB{class=temporary; label=DoGrowlSpecialEffects; pret=engine/battle/animations.asm:DoGrowlSpecialEffects; behavior=return instead of the Growl per-frame special effects; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 5 per-anim hooks land}
-global DoGrowlSpecialEffects
-DoGrowlSpecialEffects:
-    ret
-
-; STUB{class=temporary; label=DoRockSlideSpecialEffects; pret=engine/battle/animations.asm:DoRockSlideSpecialEffects; behavior=return instead of the Rock Slide per-frame special effects; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 5 per-anim hooks land}
-global DoRockSlideSpecialEffects
-DoRockSlideSpecialEffects:
-    ret
-
-; STUB{class=temporary; label=DoExplodeSpecialEffects; pret=engine/battle/animations.asm:DoExplodeSpecialEffects; behavior=return instead of the Explosion per-frame special effects; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 5 per-anim hooks land}
-global DoExplodeSpecialEffects
-DoExplodeSpecialEffects:
-    ret
-
-; STUB{class=temporary; label=DoBlizzardSpecialEffects; pret=engine/battle/animations.asm:DoBlizzardSpecialEffects; behavior=return instead of the Blizzard per-frame special effects; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 5 per-anim hooks land}
-global DoBlizzardSpecialEffects
-DoBlizzardSpecialEffects:
     ret
 
 ; --- Phase 4 (out of scope): trade-animation consumers ---

@@ -521,11 +521,21 @@ Two maintainer-confirmed decisions (AskUserQuestion, 2026-08-07):
       `ld a, TOSS_ANIM / MoveAnimation` splice in `ItemUseBall` and
       `ThrowBallAtTrainerMon` (BLOCKBALL path); verify `BallMoveDistances1/2`
       referencing (port data only if the battle path reads them).
-- [ ] Remaining per-anim hooks: `DoGrowlSpecialEffects`,
+- [x] Remaining per-anim hooks: `DoGrowlSpecialEffects`,
       `DoRockSlideSpecialEffects`, `DoExplodeSpecialEffects`,
       `DoBlizzardSpecialEffects`, `FlashScreenEveryFourFrameBlocks`,
       `FlashScreenEveryEightFrameBlocks`, `TailWhipAnimationUnused`,
       `GetIntroMoveSound`.
+      **DONE 2026-08-08 (Stage 5a).** The two `FlashScreenEvery*` were already
+      taken in Stage 3a; the other six landed here, five stubs retired
+      (`GetIntroMoveSound` was never stubbed, only missing). faithdiff clean on
+      all six, no findings; lint 0 both modes; pgate 17/17 with mask-hit counts
+      byte-identical to the Stage 4 series.
+      Note `DoRockSlideSpecialEffects` calls both `PredefShakeScreen*` targets
+      directly with `BH` set — the port's established no-predef-dispatcher
+      convention — and `DoExplodeSpecialEffects` keeps pret's dead
+      `hlcoord 1, 5` (as `BCOORD(1,5)`), which is dead on both sides because
+      `AnimationHideMonPic` derives its own origin from `hWhoseTurn`.
 - [ ] Substitute/Transform: `AnimationSubstitute`, `AnimationTransformMon`,
       `HideSubstituteShowMonAnim`, `ReshowSubstituteAnim` (retire 4 stubs),
       `ChangeMonPic`, `CopyMonsterSpriteData`, `CopyTempPicToMonPic`; sweep the

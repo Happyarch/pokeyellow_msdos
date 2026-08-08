@@ -6703,3 +6703,35 @@ to the 4g slide run — which specifically witnesses that the per-row HAL is not
 leaking, since a stuck `g_row_xoff_on` would displace overworld rows and fail
 `overworld_pallet` / `ledge_hop`. `ANIM=GROWL` still runs clean headless.
 **Not verified:** the shake's appearance. Nobody has looked at it.
+
+---
+
+## 2026-08-08 — battle animations Stage 5a: per-animation special-effect hooks
+
+pret `engine/battle/animations.asm`. Six labels: `DoGrowlSpecialEffects`,
+`TailWhipAnimationUnused`, `DoRockSlideSpecialEffects`,
+`DoExplodeSpecialEffects`, `DoBlizzardSpecialEffects`, `GetIntroMoveSound`. Five
+stubs retired (`GetIntroMoveSound` was never stubbed, only missing). The other
+two labels in this plan box — `FlashScreenEveryFourFrameBlocks` and
+`FlashScreenEveryEightFrameBlocks` — were already taken in Stage 3a, so the box
+closes here.
+
+Each hook is dispatched per frame block from `AnimationIdSpecialEffects` and
+keys off `wSubAnimCounter`. All six are small, literal translations.
+
+Two details kept rather than tidied:
+* `DoRockSlideSpecialEffects` calls **both** `PredefShakeScreen*` targets
+  directly with `BH` set instead of going through a predef dispatcher, matching
+  the port's established convention (those routines carry their own DEVIATIONs).
+  pret's `predef` / `predef_jump` become `call` / `jmp`.
+* `DoExplodeSpecialEffects` keeps pret's `hlcoord 1, 5` as `BCOORD(1, 5)` even
+  though it is **dead on both sides** — `AnimationHideMonPic` derives its own
+  origin from `hWhoseTurn` and never reads `hl`. Preserved verbatim with a
+  comment saying so, rather than silently dropped.
+* `DoGrowlSpecialEffects`'s `dec a` / `call z` is the end-of-subanimation test
+  (counter == 1), translated as `dec al` / `jnz .done`.
+
+**Verification:** build clean; `lint_pret_labels` 0 both modes; faithdiff
+**clean on all six, no findings**; `pgate.sh` 17/17 with per-scenario mask-hit
+counts byte-identical to the Stage 4 series. Absence-of-regression only; these
+hooks are dispatch-only and no scenario in the battery reaches them.

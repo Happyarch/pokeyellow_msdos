@@ -1913,6 +1913,85 @@ FallingObjects_InitialMovementData:
     db 0x09, 0x80, 0x07, 0x87, 0x03, 0x82, 0x04, 0x85, 0x08, 0x86
 
 ; ===========================================================================
+; PER-ANIMATION SPECIAL-EFFECT HOOKS — pret animations.asm (Stage 5a). Each is
+; dispatched per frame block from AnimationIdSpecialEffects and keys off
+; wSubAnimCounter.
+; ===========================================================================
+
+global DoGrowlSpecialEffects
+DoGrowlSpecialEffects:
+    mov esi, W_SHADOW_OAM
+    mov edx, W_SHADOW_OAM + OBJ_SIZE * 4     ; wShadowOAMSprite04
+    mov ebx, OBJ_SIZE * 4
+    call CopyData                            ; copy the musical note graphic
+    mov al, [ebp + wSubAnimCounter]
+    dec al
+    jnz .done
+    call AnimationCleanOAM                   ; call z — clean up at the end
+.done:
+    ret
+
+; Associated with Tail Whip, but Tail Whip uses no subanimations (pret's note).
+global TailWhipAnimationUnused
+TailWhipAnimationUnused:
+    mov byte [ebp + wSubAnimCounter], 1
+    mov bl, 20
+    jmp DelayFrames
+
+global DoRockSlideSpecialEffects
+DoRockSlideSpecialEffects:
+    mov al, [ebp + wSubAnimCounter]
+    cmp al, 12
+    jae .done                                ; ret nc
+    cmp al, 8
+    jae .shakeScreen
+    cmp al, 1
+    jz AnimationFlashScreen                  ; end of the subanimation — flash
+.done:
+    ret
+; counter in 8..11: shake the screen horizontally and then vertically.
+; The port calls both predef targets DIRECTLY with BH set, per the established
+; no-predef-dispatcher convention (see their own DEVIATIONs in screen_effects.asm).
+.shakeScreen:
+    mov bh, 1
+    call PredefShakeScreenHorizontally
+    mov bh, 1
+    jmp PredefShakeScreenVertically          ; pret: predef_jump
+
+global DoExplodeSpecialEffects
+DoExplodeSpecialEffects:
+    mov al, [ebp + wSubAnimCounter]
+    cmp al, 1                                ; end of the subanimation?
+    jnz FlashScreenEveryFourFrameBlocks
+; if so, make the attacking pokemon disappear
+    mov esi, BCOORD(1, 5)                    ; PROJ — pret hlcoord 1, 5. Dead on both
+                                             ; sides: AnimationHideMonPic derives its
+                                             ; own origin from hWhoseTurn. Kept verbatim.
+    jmp AnimationHideMonPic
+
+; flashes the screen when the subanimation counter is 1 modulo 4
+global DoBlizzardSpecialEffects
+DoBlizzardSpecialEffects:
+    mov al, [ebp + wSubAnimCounter]
+    cmp al, 13
+    jz AnimationFlashScreen
+    cmp al, 9
+    jz AnimationFlashScreen
+    cmp al, 5
+    jz AnimationFlashScreen
+    cmp al, 1
+    jz AnimationFlashScreen
+    ret
+
+; unreferenced in pret; kept for completeness under its pret label
+global GetIntroMoveSound
+GetIntroMoveSound:
+    mov al, bh                               ; ld a, b
+    call GetMoveSound
+    mov bh, al                               ; ld b, a
+    ret
+
+; ===========================================================================
 ; ENEMY-HUD SHAKE — pret animations.asm (battle_animations Stage 4g).
 ;
 ; This is the most hardware-entangled routine in Stage 4, so read the mechanism
