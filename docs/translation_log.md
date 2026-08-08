@@ -6016,14 +6016,164 @@ the `SE_DARK_SCREEN_PALETTE` / `SE_DARK_SCREEN_FLASH` / `SE_RESET_SCREEN_PALETTE
 stream shape that `data/moves/animations.asm` uses for Leer, Growl and Hyper
 Beam. So it validates those three routines instead, and the memory was updated.
 
-**Tooling note.** `update_label_db`'s port-side scanner recognises only `call`
-and `jmp` as call edges, so a conditional tail-jump emits none. `FlashScreenUnused`
+**Tooling note (CORRECTED — see the faithdiff entry below).** `FlashScreenUnused`
 was first written with `je AnimationFlashScreen` for pret's `jp z,` and faithdiff
-reported all three edges DROPPED; it is now `jne <skip>` + `jmp`, same semantics
-with the edges visible to the graph.
+reported all three edges DROPPED, so the assembly was rewritten as
+`jne <skip>` + `jmp` to appease it. That was backwards, and the diagnosis
+recorded here at the time — "`update_label_db`'s port-side scanner recognises
+only `call` and `jmp`" — was **wrong**: `update_label_db`'s `PORT_CALL_RE`
+already matched `(call|jmp|j[a-z]{1,3})` and the dependency graph never lost the
+edges. The blind spot was `faithdiff`'s own separate copy of the regex. The tool
+is fixed and both routines are back to the direct conditional form.
 
 **Verification:** build clean; `lint_pret_labels` 0 violations in both modes;
 `faithdiff` clean on all eleven labels apart from the precedented
 `+ ADDED [IO_BGP]` artifact (pret's store regex matches only `w`/`h`-prefixed
 names, so `ldh [rBGP]` is invisible on the pret side — landed
 `SetAnimationPalette` shows the same shape for `[IO_OBP0/1]`).
+
+## 2026-08-08 — battle_animations Stage 3b: screen shake + blink + applying-attack dispatch
+
+New mirror **`dos_port/src/engine/gfx/screen_effects.asm`** (pret
+`engine/gfx/screen_effects.asm`) carrying `PredefShakeScreenVertically` — which
+the port had never had at all — and `PredefShakeScreenHorizontally`, retiring
+the latter's ret-stub and its `TODO-HW`. `ChangeBGPalColor0_4Frames`, the third
+routine in pret's file, is deliberately not ported: nothing in the port
+references it and it belongs to the overworld poison flash.
+
+In `animations.asm`: `AnimationShakeScreen`,
+`AnimationShakeScreen{Vertically,HorizontallyFast,HorizontallySlow}`,
+`AnimationUnusedShakeScreen`, the six `ShakeScreen*` wrappers,
+`BlinkEnemyMonSprite`, `AnimationBlinkEnemyMon`, and the
+`AnimationTypePointerTable` dispatch that retires
+`PlayApplyingAttackAnimation`'s `TODO-HW`.
+
+**The projection.** On GB the battle screen *is* the window layer —
+`engine/battle/core.asm` sets `rWY = 0` on battle entry — which is why pret
+shakes by mutating `rWX`/`rWY`, and why `AnimationWavyScreen` must turn the
+window off before it can wobble `rSCX`. The port draws battle on the BG layer
+and reserves the window for dialog boxes, so the equivalent whole-screen
+displacement is the BG blit offset (maintainer directive, 2026-08-07). Two facts
+made that workable and were measured rather than assumed:
+
+1. Both pret shakes are **unidirectional from neutral** — `.MutateWX` zeroes a
+   negative value *before* `add 7`, so `rWX` spans only 7..7+b and `rWY` only
+   0..b. No negative displacement is ever needed, which matters because
+   `render_bg` reads the scroll shadows with `movzx`.
+2. The write must go to `H_SCX`/`H_SCY`, not `IO_SCX`/`IO_SCY`:
+   `commit_shadow_regs` overwrites the latter from the former every
+   `DelayFrame`.
+
+Mapping: port `H_SCX = pret rWX - 7`, `H_SCY = pret rWY`; neutral 0 on both.
+Axis sense is inverted (a larger `bg_sc*` samples further into `bg_surface`),
+cosmetically irrelevant for a symmetric jolt and recorded in the three
+`DEVIATION{class=projection}` annotations.
+
+**A non-obvious store with no pret counterpart.** `PredefShakeScreenVertically`
+does *not* leave `rWY` at 0 — traced at b=8 the xor-walk exits with `rWY = 1`.
+pret survives that because clearing `wDisableVBlankWYUpdate` re-enables VBlank's
+WY commit, which rewrites `rWY` from `hWY` on the next frame. `H_SCY` has no
+backing shadow (it is itself what `commit_shadow_regs` copies out), so the port
+parks it at 0 explicitly; without that the canvas would sit one pixel off
+permanently. The comment there says so, because it reads like a redundant store.
+
+**Direct call, not predef.** pret reaches both routines via `predef_jump` and
+each opens with `call GetPredefRegisters`. The port has no predef dispatcher
+populating `wPredefBC`, so that call would load garbage over the `b` its callers
+just set; callers jump in directly with `b` in `BH`. Same convention as
+`ReadTrainer` → `AddBCD`. faithdiff therefore reports a justified
+`- DROPPED GetPredefRegisters` on both. (While here, the stale
+`; predef … (allowlist §2.4)` note at the `PrintMoveFailureText` call site was
+repointed: `pret_label_allowlist.json` is empty in every category, so that
+citation was dangling.)
+
+**HRAM.** `hMutateWY` `$FF96` / `hMutateWX` `$FF97` and
+`wDisableVBlankWYUpdate` `$D09F` added to `gb_memmap.inc`, all three read off
+the golden ROM symbol table rather than derived from the port's HRAM (which
+root-allocates in that region). `hMutateWY/WX` share pret's own `NEXTU` lane
+with `hExperience` `$FF96-98`; that overlap is pret's union, not a collision —
+the shake and the experience math never run concurrently. `audit_memmap.py`
+reports clean: no overlaps, no strays.
+
+**Verification:** build clean; `audit_memmap.py` clean; `lint_pret_labels` 0
+violations in both modes — it caught the stale
+`extern PredefShakeScreenHorizontally ; …core_stubs.asm` comment in `core.asm`
+the moment the stub retired, which is exactly the discovery trail the stub
+convention exists for. faithdiff clean on all 15 labels apart from the two
+justified `GetPredefRegisters` drops, the `[H_SCX]`/`[H_SCY]` store artifacts
+(pret's `ldh [rWX]`/`[rWY]` are invisible to its `w`/`h`-prefixed store regex),
+and `PlayApplyingAttackAnimation`'s `- DROPPED hl (jp)` — the documented
+indirect-dispatch blind spot, since a `dd` jump table emits no call edge.
+
+**Scanner note, second instance this stage.** `AnimationShakeScreenHorizontallySlow`'s
+`jr nz, <self>` was first written as `jnz <self>` and faithdiff reported the
+self-recursion DROPPED. Two false findings in one stage is what prompted
+auditing the tool rather than the assembly; see the faithdiff entry below. Both
+routines now use the direct conditional form, which is the literal translation
+of pret's `jp z,` / `jr nz,`.
+
+## 2026-08-08 — tooling: faithdiff counted no conditional jumps on the port side
+
+`dos_port/tools/faithdiff` compared pret and port call sets with two regexes that
+disagreed about conditional branches:
+
+| side | pattern | conditional forms |
+|---|---|---|
+| pret | `^\s*(call\|jp\|jr)\s+(?:(?:nz\|z\|nc\|c)\s*,\s*)?(Name)$` | counted (`jp z, X`, `jr nz, X`, …) |
+| port (before) | `^\s*(call\|jmp)\s+…(Name)$` | **not counted** |
+
+So the faithful translation of `jp z, X` as `je X` read as nothing, and the label
+reported a false `- DROPPED X`. Fixed by widening the port alternation to
+`(call|jmp|j[a-z]{1,3})` — byte-identical to the pattern
+`tools/update_label_db`'s `PORT_CALL_RE` already used, so the two scanners now
+agree. `j[a-z]{1,3}` spans the whole x86 Jcc set (longest is `jnae`/`jnbe`/
+`jnge`/`jnle`). `loop`/`jcxz`/`jecxz` deliberately excluded — `loop` appears only
+with local `.labels` in this tree and `jcxz`/`jecxz` not at all.
+
+Local labels stay excluded structurally, not by a special case: the alternation
+is anchored `\s*$` and the target must start `[A-Za-z_]`, so neither `je .loop`
+nor the qualified `je Routine.local` matches.
+
+**Scope correction.** The defect was initially diagnosed as being in
+`update_label_db`, and it is NOT. That tool's `PORT_CALL_RE` already handled Jcc,
+and `translation.db` holds 338 conditional-jump port edges today
+(`jz` 122, `jnz` 108, `jc` 37, `jnc` 26, `je` 23, `jae` 8, `jne` 7, `jb` 7) —
+so the dependency graph never lost them. Its `CALL_RE`/`JMP_LABEL_RE` (~line
+1032) are the *fall-through boundary* model, where "`jmp` terminates a routine,
+`Jcc` does not" is correct; widening those would have broken real fall-through
+edges.
+
+**Measured effect.** DB edge counts unchanged (`7406 pret + 5743 port` before and
+after), as expected. Across all 1875 `translated` labels, port call-targets went
+**3249 → 3446 (+197)** over 117 labels; **107 labels lost a false `- DROPPED`**
+(187 findings), concentrated where pret uses `jp z,`/`jr nz,` dispatch — all 15
+`ItemUse*` routines, `BillsPCMenu`, `RedisplayStartMenu_DoNotDrawStartMenu`,
+`PlayerPCMenu`, the three stadium cups, `MainInBattleLoop`, `_Joypad`,
+`DisplayTextID`. A tree-wide rescan of new-minus-old matches returned 338 lines
+whose per-mnemonic histogram equals the DB's Jcc counts term for term.
+
+**It also exposed 11 labels with genuine divergences the blind spot was hiding** —
+real port `Jcc`s to routines pret's body does not branch to. Mostly pret pointer-
+table dispatch flattened into direct jumps (`_RunPaletteCommand` → `SetPal_*`,
+`DisplayTextID` → 12 targets) and fall-through-vs-jump restructurings in
+`core.asm`/`effects.asm`. None was touched. **`fidelity_gate` will now fail on
+those labels if a change touches one**, since it chains faithdiff; `static_gate`
+does not run faithdiff, so the pre-commit hook is unaffected. Each needs a
+per-label decision: justified entry in `tools/faithdiff_suppress.json`, or fix
+the divergence.
+
+**Remaining instance of the same asymmetry, deliberately left alone:**
+`update_label_db`'s `body_metrics` (~line 435) still uses
+`re.match(r'^(call|jmp)\s', line)` for its `has_call` column, so a routine whose
+only control transfer is a Jcc records `has_call=0`. That feeds the
+`non_ret_stub` lint class, so widening it is a separate decision with its own
+baseline.
+
+**Verification:** `lint_pret_labels` 0 in both modes; `pytest
+tools/test_label_db.py` 81 passed / 53 subtests; `static_gate` PASS 5/5;
+`faithdiff` clean on `FlashScreenUnused` and
+`AnimationShakeScreenHorizontallySlow` with their assembly reverted to the direct
+conditional form. False-positive hunt over all 338 newly matched lines found
+none: 0 targets in `.data` sections, 0 local labels (structurally impossible),
+and the 31 targets absent from `port_defs` all resolve to real column-0
+definitions in pret-unmodeled `audio/` code.

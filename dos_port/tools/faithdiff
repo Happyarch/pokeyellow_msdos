@@ -50,8 +50,24 @@ PRET_STORE_RE = re.compile(
     r'^\s*ldh?\s+\[\s*([whWH][A-Za-z0-9_]*)\s*\]\s*,')
 PRET_REG_INDIRECT = {'hl', 'hli', 'hld', 'bc', 'de', 'c', 'hLoadedROMBank'}
 
+# call / jmp / **any Jcc** to a named target. The conditional forms are not
+# optional: the pret side counts `jp z, X` and `jr nz, X` (PRET_CALL_RE's
+# `(?:nz|z|nc|c)\s*,`), so a faithful translation written as `je X` / `jnz X`
+# read as NOTHING here and the label reported a false `- DROPPED X`. The two
+# instances that surfaced this (FlashScreenUnused, and
+# AnimationShakeScreenHorizontallySlow's self-recursion, both in
+# engine/battle/animations.asm) were "fixed" by rewriting the assembly into
+# `jne .skip` + `jmp` — backwards; the tool was wrong. `j[a-z]{1,3}` is the
+# same pattern tools/update_label_db's PORT_CALL_RE already used, so the two
+# scanners now agree; it spans the whole x86 Jcc set (longest is jnae/jnbe/
+# jnge/jnle = j + 3). `loop`/`jcxz`/`jecxz` are deliberately NOT here: `loop`
+# occurs only with local `.labels` in this tree and jcxz/jecxz not at all.
+# Local labels stay excluded for free — the alternation is anchored `\s*$` and
+# the target must start `[A-Za-z_]`, so neither `je .loop` nor the qualified
+# `je Routine.local` matches at all (the explicit startswith('.') guard in
+# port_sets is belt-and-braces on the same rule).
 PORT_CALL_RE = re.compile(
-    r'^\s*(call|jmp)\s+(?:short\s+|near\s+|dword\s+)?'
+    r'^\s*(call|jmp|j[a-z]{1,3})\s+(?:short\s+|near\s+|dword\s+)?'
     r'([A-Za-z_][A-Za-z0-9_]*)\s*$')
 # mov/and/or/xor/add/sub/inc/dec … [ebp + Sym]…, i.e. any RMW/store whose
 # FIRST operand is a GB-memory reference by name
