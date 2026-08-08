@@ -6177,3 +6177,65 @@ conditional form. False-positive hunt over all 338 newly matched lines found
 none: 0 targets in `.data` sections, 0 local labels (structurally impossible),
 and the 31 targets absent from `port_defs` all resolve to real column-0
 definitions in pret-unmodeled `audio/` code.
+
+## 2026-08-08 — battle_animations Stage 3c: wavy screen (per-row displacement HAL)
+
+`AnimationWavyScreen` / `WavyScreen_SetSCX` / `WavyScreenLineOffsets` translated
+into the mirror, retiring the last Stage 3 stub. Maintainer visual sign-off given
+on the `PSYWAVE` demo.
+
+**Why this one needed a HAL.** pret drives the effect per SCANLINE: it turns the
+window off, then spins on `rSTAT & 3` waiting for H-blank and writes a fresh
+`rSCX` for every line, so each line is displaced by its own table entry. The port
+composites a whole frame in one pass and has no scanline interrupt or mid-frame
+register latch, so that structure cannot be translated literally. The renderer
+grew the minimum expression of it: one signed X offset per screen ROW
+(`g_row_xoff` / `g_row_xoff_on`, `src/ppu/ppu.asm`), filled once per frame by
+`WavyScreen_SetSCX` and applied by `render_bg`'s blit.
+
+Ownership follows the proven `g_obj_over_window` / `g_obj_clip` model: default is
+the semantic identity (flag 0, offsets ignored), and `AnimationWavyScreen` arms,
+owns and clears it.
+
+**Cost, against `docs/plans/compositor_perf.md`.** Off: one `cmp dword [mem], 0`
+plus a not-taken branch per row — 200 predictable branches per frame against a
+~16.3 ms budget. On: adds a `movsx` + `add` + sign test per row. **The per-pixel
+inner loop is not modified in either case** — this is a per-ROW cost, never a
+per-PIXEL one, which is the constraint that matters in that path. The `rep movsd`
+is untouched.
+
+**What is identical to pret:** the table (byte-for-byte, including `-1`/`-2` as
+`FF`/`FE` and the `$80` terminator, kept for cross-reference even though the port
+wraps modulo 32), the modulo-32 cycling, the one-row-per-frame phase advance, and
+the 255-frame duration. Verified by simulation that the port's
+`g_row_xoff[row] = tbl[(phase+row) % 32]` reproduces pret's per-scanline `inc hl`
+walk at phases 0, 1 and 31.
+
+**What differs:** delivery is per-frame rather than per-scanline; the `rSTAT`
+H-blank spin does not exist (so `WavyScreen_SetSCX` has no self-recursion —
+faithdiff reports a justified `- DROPPED WavyScreen_SetSCX (jr)`); the `rLY == 143`
+frame-end poll becomes `DelayFrame`; and a negative displacement CLAMPS at the
+left edge instead of wrapping. That last one is the only behavioural difference:
+on GB `rSCX` indexes a 256px torus so -1/-2 wraps to the far side of the map,
+whereas `bg_surface` is a flat 384px row with no wrap and an unclamped negative
+source X would sample the tail of the PREVIOUS row — a tear, not a wrap. The
+table reaches -2 and `bg_scx` is 0 in battle, so it is reachable on every
+negative half-cycle. Cost of the clamp is at most 2px of displacement.
+`DEVIATION{class=HAL}` on `AnimationWavyScreen` records all of it.
+
+The wave covers the whole 320x200 canvas rather than only the projected 20x18
+battle frame — consistent with the Stage 3b shake and the maintainer's
+"matte moves with the scene" directive.
+
+**Lint trap worth recording.** The first version of the clamp comment in
+`ppu.asm` ended a wrapped line with `; DEVIATION on AnimationWavyScreen in ...`.
+With no `{}` that is a LEGACY free-form annotation, and
+`lint_pret_labels --strict-claims` flagged it — correctly. A prose
+cross-reference to an annotation must not begin a line with an annotation
+keyword. Caught by a concurrent tooling agent's A/B, not by this work.
+
+**Verification:** build clean; `lint_pret_labels` 0 in both modes; `static_gate`
+PASS 5/5; faithdiff clean on `AnimationWavyScreen` (6 pret / 7 port calls, 6
+matched — the extra is the `DelayFrame` that replaces the `rLY` poll) with the
+one justified drop on `WavyScreen_SetSCX` above; maintainer visual pass on
+`dos_port/run DEBUG_ANIM_DEMO=1 ANIM=PSYWAVE /LOOP`.

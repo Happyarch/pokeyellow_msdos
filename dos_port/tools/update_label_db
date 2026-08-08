@@ -441,7 +441,7 @@ def scan_port(pret_names):
                        or DIRECTIVE_RE.match(line):
                         continue
                     n_instr += 1
-                    if re.match(r'^(call|jmp)\s', line):
+                    if re.match(r'^(call|jmp|j[a-z]{1,3})\s', line):
                         has_call = 1
                 return n_instr, has_call
 
