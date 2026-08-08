@@ -8,9 +8,17 @@
 
 Status: **Stage 2 COMPLETE, maintainer-signed-off 2026-08-08** (2a interpreter
 0b629e0a; 2b projection+BCOORD ec29c877, production wiring 1ad2fc46, demo
-harness 88d3043a, OBJ-layer fix 6d31b454; POUND demo LGTM'd). Next: Stage 3.
+harness 88d3043a, OBJ-layer fix 6d31b454; POUND demo LGTM'd). **Plus the
+measured CGB OBJ palette model landed 21412b32** (GUST demo LGTM'd:
+white/black particles per real-hardware measurement; wOnSGB=1, slot=attr&7,
+commit_palette 4-base×{OBP0,OBP1}; spec = memory
+`battle-anim-cgb-obj-palette-model` — read it before ANY Stage 3+ palette
+work). `SetAnimationPalette` is already translated (pulled forward from
+Stage 3 in 21412b32). Next: Stage 3 remainder.
 Owner: this plan.
-Two defects were root-caused on the way (both memories FIXED):
+Three defects were root-caused on the way (all memories FIXED; the third is
+the palette model itself — wOnSGB=0 routed SetAnimationPalette to the DMG
+branch, and render_sprites/commit_palette modeled OBJ slots wrong):
 `regression-battle-anim-interp-runtime-crash` — the "interpreter crash" was the
 port's `<DONE>` text sentinel at GB $C0F0/$C0F1 (= pret
 wAudioSavedROMBank/wFrequencyModifier) destroyed by GetMoveSound's first-ever
@@ -260,7 +268,10 @@ Two maintainer-confirmed decisions (AskUserQuestion, 2026-08-07):
       + `FlashScreenLong{Monochrome,SGB,Delay}`, `AnimationDarkScreenPalette`,
       `AnimationDarkenMonPalette`, `AnimationLightScreenPalette`,
       `AnimationResetScreenPalette`, `AnimationUnusedPalette1-4`,
-      `SetAnimationBGPalette`, `SetAnimationPalette`, `FlashScreenUnused`.
+      `SetAnimationBGPalette`, `FlashScreenUnused`. (`SetAnimationPalette`
+      DONE — pulled forward, 21412b32.) Colour reference for the flash cycle:
+      measured BGP sequence `6F,1B,00` ×3 then `E4`
+      (memory `battle-anim-cgb-obj-palette-model` fact 6).
 - [ ] Shake family via whole-canvas H_SCX/H_SCY: `AnimationShakeScreen`,
       `AnimationShakeScreenVertically`, `AnimationShakeScreenHorizontallyFast`,
       `AnimationShakeScreenHorizontallySlow`, `AnimationUnusedShakeScreen`,

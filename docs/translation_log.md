@@ -5948,3 +5948,31 @@ Implemented the in-memory portion of `docs/current_plan_sram_pc_storage.md`; sta
   (`ANIM_BAIL`: save esp at MoveAnimation entry, restore + jmp to the tail) —
   it turns any mid-animation point into a clean scenario completion so GBSTATE
   captures become readable even for a crashing build.
+
+## 2026-08-08 — OBJ layer + measured CGB OBJ palette model (6d31b454, 21412b32)
+
+- **6d31b454:** removed HideBattlePokeballs' port-only `and ~LCDCF_OBJ_ON` —
+  the OBJ layer stays enabled through battle (GB hiding = zeroed shadow OAM,
+  which the routine already does). It had kept render_sprites' faithful LCDC
+  gate shut for every live move animation. Memory:
+  regression-battle-anim-oam-never-composited.
+- **21412b32 — measured CGB OBJ palette model** (ground truth: mGBA + retail
+  Yellow, byte-identical to the pret build; spec in memory
+  battle-anim-cgb-obj-palette-model):
+  - `SetAnimationPalette` translated (pret animations.asm:565; Stage 3
+    pull-forward, stub retired). Its "SGB" branch is the LIVE path on colour
+    hardware: wAnimPalette=$F0, OBP1=$6C.
+  - `Init` gains the `wOnSGB=1` store (DEVIATION class=HAL): pret LoadSGB
+    sets it on CGB; the port is colour hardware. `GetAnimationSpeed`
+    (mon_icons.asm) de-hardcoded to read it faithfully.
+  - render_sprites OBJ slot = OAM attr & 7 (CGB hardware rule; replaces the
+    OAM_PAL1/OAM_HIGH_PALS two-flag approximation). commit_palette and
+    DumpPalette (LOCKSTEP pair — change both or PAL.BIN lies) expand
+    obj_slot_pal[0..3] × {OBP0, OBP1} into the 8 OBJ DAC slots.
+  - SetPal_Battle mirrors the 4 battle base palettes into obj_slot_pal
+    (pret InitCGBPalettes converts the same packet palettes into BG and OBJ).
+- **Verification:** 17/17 goldens (battle tier + party_menu/pokedex_list/
+  overworld_pallet/ledge_hop); lint 0 both modes; live mid-animation probe:
+  OBP0=$F0, particle pixels in DAC band 40-43 decoding white/black; maintainer
+  visual LGTM on the GUST demo (white tornado, black border, faithful
+  last-frame mon-tint flash).
