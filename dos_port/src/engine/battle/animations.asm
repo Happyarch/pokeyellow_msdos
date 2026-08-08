@@ -96,47 +96,14 @@ extern g_obj_clip                     ; src/ppu/ppu.asm — OBJ clip rectangle (
 extern g_row_xoff_on                  ; src/ppu/ppu.asm — wavy-screen per-row HAL enable
 extern g_row_xoff                     ; src/ppu/ppu.asm — signed per-screen-row BG X offset
 
-; --- Stage 3-5 dispatch-target stubs (src/engine/battle/core_stubs.asm) ---
-extern TossBallAnimation
-extern AnimationWaterDropletsEverywhere
-extern AnimationSlideMonUp
-extern AnimationSlideMonDown
+; --- Dispatch targets still stubbed in src/engine/battle/core_stubs.asm ---
 extern AnimationFlashMonPic
-extern AnimationSlideMonOff
-extern AnimationBlinkMon
-extern AnimationMoveMonHorizontally
-extern AnimationResetMonPosition
-extern AnimationHideMonPic
-extern AnimationSquishMonPic
-extern AnimationShootBallsUpward
-extern AnimationShootManyBallsUpward
-extern AnimationBoundUpAndDown
-extern AnimationMinimizeMon
-extern AnimationSlideMonDownAndHide
 extern AnimationTransformMon
-extern AnimationLeavesFalling
-extern AnimationPetalsFalling
-extern AnimationSlideMonHalfOff
-extern AnimationShakeEnemyHUD
-extern AnimationSpiralBallsInward
 extern AnimationFlashEnemyMonPic
-extern AnimationHideEnemyMonPic
-extern AnimationShowMonPic
-extern AnimationShowEnemyMonPic
-extern AnimationSlideEnemyMonOff
-extern AnimationShakeBackAndForth
 extern AnimationSubstitute
-extern TailWhipAnimationUnused
-extern DoGrowlSpecialEffects
-extern DoBlizzardSpecialEffects
-extern DoExplodeSpecialEffects
-extern DoRockSlideSpecialEffects
 extern TradeHidePokemon
 extern TradeShakePokeball
 extern TradeJumpPokeball
-extern DoBallTossSpecialEffects
-extern DoBallShakeSpecialEffects
-extern DoPoofSpecialEffects
 
 ; --- routines this file defines ---
 global DrawFrameBlock

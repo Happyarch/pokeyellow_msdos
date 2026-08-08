@@ -6778,3 +6778,47 @@ data-model DEVIATION above. `TossBallAnimation` and `DoPoofSpecialEffects` clean
 with per-scenario mask-hit counts byte-identical to the 5a run — including
 `ball_catch`, which does NOT yet reach any of this, because the splice has not
 landed. That is the point of splitting the increment.
+
+---
+
+## 2026-08-08 — CORRECTION to the Stage 5b entry, + extern sweep
+
+**The Stage 5b entry above (and its commit message) claimed that `ball_catch`
+"does NOT yet reach any of this, because the splice has not landed". That is
+wrong on the mechanism, and it was an assumption, not a measurement.**
+
+Measured: the `TOSS_ANIM` splice was **already present in the port** before Stage
+5b. Both pret call sites are already faithful — `ItemUseBall`
+(`src/engine/items/item_effects.asm:1962`) and `ThrowBallAtTrainerMon`
+(`:2153`) each set `wAnimationID = TOSS_ANIM` and call `PlayMoveAnimation`
+(pret's `predef MoveAnimation`) — and `MoveAnimation` itself already carried
+pret's `cmp al, TOSS_ANIM` / `jmp TossBallAnimation` branch, which sits **before**
+the `BIT_BATTLE_ANIMATION` options gate, exactly as in pret. So there was never a
+splice to restore; that plan bullet was already satisfied by earlier work, and
+Stage 5b's effect was to replace the ret-stub at the end of an existing live
+chain. `label_status --callers TossBallAnimation` confirms the single caller.
+
+**What is still NOT proven, stated precisely.** Every link in
+`UseItem -> ItemUseBall -> PlayMoveAnimation -> MoveAnimation -> TossBallAnimation`
+is verified by reading the code, so the path is **statically complete**. That is
+`statically-reached`, not `executed`. `ball_catch` cannot settle it either way:
+it is a **datastruct**-class scenario comparing WRAM regions that this path does
+not write, so it passed identically both before and after the real body landed.
+`must_hit` lists `UseItem`, which is a harness-reached symbol and not evidence
+about `TossBallAnimation` — the false-witness caveat in the `build-and-debug`
+skill applies directly. **A must-hit runtime scenario for the ball toss is owed**
+and belongs on the Stage 6 scenario list, which already names "ball (TOSS_ANIM
+entered through the item path)".
+
+**Extern sweep, same commit.** Retiring ~40 stubs across Stages 4-5 left a block
+in `animations.asm` headed "Stage 3-5 dispatch-target stubs
+(src/engine/battle/core_stubs.asm)" that still `extern`'d 33 symbols now defined
+in that same file — stub rule 5's "repoint each extern comment", accumulated over
+the session. Removed all 33; the 7 that really are still stubbed
+(`AnimationFlashMonPic`, `AnimationTransformMon`, `AnimationFlashEnemyMonPic`,
+`AnimationSubstitute`, `TradeHidePokemon`, `TradeShakePokeball`,
+`TradeJumpPokeball`) stay under a corrected heading. `label_status` now reports
+`externs (0)` for `TossBallAnimation`.
+
+**Verification:** build clean; `lint_pret_labels` 0 both modes; `pgate.sh` 17/17
+with mask-hit counts byte-identical to the 5b run.
