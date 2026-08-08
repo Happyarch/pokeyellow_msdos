@@ -6507,3 +6507,51 @@ on four labels and the two justified `PublishBattleAnimOAM` additions on the
 other two; `pgate.sh` 17/17 PASS with per-scenario mask-hit counts
 byte-identical to the Stage 4d run. Absence-of-regression only — no scenario in
 the battery plays a move whose stream dispatches to a ball particle.
+
+---
+
+## 2026-08-08 — battle animations Stage 4: RUNTIME evidence (not just goldens)
+
+Every Stage 4a-4e entry above closes with "absence-of-regression only". This is
+the measurement that fixes that, and it is stronger than a smoke test.
+
+Method: `tools/run_headless.sh "DEBUG_ANIM_DEMO=1 ANIM=<MOVE>"` for three moves
+whose REAL shipped animation streams (`data/moves/animations.asm`) dispatch to
+the new code, then a per-region diff of the resulting `GBSTATE.BIN` dumps:
+* `POUND` — baseline, touches none of the Stage 4 special effects.
+* `TELEPORT` — `SE_SQUISH_MON_PIC` + `SE_SHOOT_BALLS_UPWARD`.
+* `MINIMIZE` — `SE_SPIRAL_BALLS_INWARD` + `SE_MINIMIZE_MON`.
+
+All three exited 0 and dumped. The three states are mutually distinct (85 / 387 /
+411 differing bytes), so the moves really took different paths — but the region
+decomposition is the actual result:
+
+| pair | region | differing bytes |
+|---|---|---|
+| POUND vs TELEPORT | `wTileMap` | **49** |
+| POUND vs TELEPORT | `oam` | 36 (9 entries) |
+| POUND vs MINIMIZE | `vram_tiles` | 351 |
+| POUND vs MINIMIZE | `oam` | 36 (9 entries) |
+
+**The 49 is the finding.** Decomposed, those cells are an exact 7x7 block at
+canvas columns 11-17, rows 8-14. Back-projected through
+`BCOORD(x,y) = W_TILEMAP + (y+3)*40 + (x+10)` that is GB tiles (1,5) through
+(7,11) — **precisely `BCOORD(1, 5)`, the player mon-pic origin that
+`AnimationHideMonPic` and `GetMonSpriteTileMapPointerFromRowCount` compute, at
+exactly `PIC_WIDTH * PIC_HEIGHT` cells.** So this witnesses two things at once:
+the mon-pic tilemap helpers execute, and **the battle projection is correct** —
+a wrong `BCOORD` would have put the block at a different canvas offset, and a
+wrong stride would have made it non-rectangular.
+
+The `vram_tiles` delta on MINIMIZE is `AnimationMinimizeMon` →
+`CopyTempPicToMonPic` → `CopyVideoData` writing the mini sprite into the pic
+canvas, i.e. the relocated `wTempPic` at 0x21A00 round-trips correctly.
+
+**What this still does NOT cover, stated plainly:** the OAM deltas are only
+"different from POUND's own particles" — 9 differing entries is not by itself
+evidence that the ball pillars are *correctly placed*, and nothing here is a
+visual check. `AnimationSlideMon*`, `AnimationShakeBackAndForth` and
+`AnimationBlinkMon` were not exercised (`DOUBLE_TEAM` cannot be built as a demo
+target: the port's `gb_constants.inc` has no `DOUBLE_TEAM` equ — a pre-existing
+gap in the move-constant coverage, unrelated to this work). Maintainer visual
+sign-off on the Stage 4 representatives is still owed.

@@ -448,8 +448,27 @@ Two maintainer-confirmed decisions (AskUserQuestion, 2026-08-07):
 - [ ] HUD shake + OAM helpers: `AnimationShakeEnemyHUD`,
       `ShakeEnemyHUD_ShakeBG`, `ShakeEnemyHUD_WritePlayerMonPicOAM`,
       `BattleAnimWriteOAMEntry`, `InitMultipleObjectsOAM`, `Func_79929`.
-- [ ] Gate: faithdiff; battle tier green; demo sign-off on Razor Leaf, Surf,
+- [~] Gate: faithdiff; battle tier green; demo sign-off on Razor Leaf, Surf,
       Teleport, Minimize, Sing class representatives.
+      **Static + runtime halves MET 2026-08-08; the visual half is OWED.**
+      faithdiff justified on every Stage 4 label; lint 0 both modes; static_gate
+      PASS 5/5 per commit; pgate 17/17 at each increment with per-scenario
+      mask-hit counts byte-identical across 4a->4e.
+      **Runtime evidence exists and is decomposed** (docs/translation_log.md,
+      "Stage 4: RUNTIME evidence"): headless `DEBUG_ANIM_DEMO` runs of the REAL
+      shipped streams for `TELEPORT` (`SE_SQUISH_MON_PIC` +
+      `SE_SHOOT_BALLS_UPWARD`) and `MINIMIZE` (`SE_SPIRAL_BALLS_INWARD` +
+      `SE_MINIMIZE_MON`) against a `POUND` baseline. TELEPORT changes exactly
+      **49** `wTileMap` cells, forming a 7x7 block at canvas cols 11-17 / rows
+      8-14 = GB (1,5)-(7,11) — i.e. `BCOORD(1,5)`, the player mon-pic origin,
+      at `PIC_WIDTH * PIC_HEIGHT`. That witnesses execution AND that the
+      projection is right. MINIMIZE changes 351 `vram_tiles` bytes, so the
+      relocated `wTempPic` round-trips through `CopyTempPicToMonPic`.
+      STILL OWED: maintainer visual sign-off; ball-pillar PLACEMENT is
+      unverified (only "differs from POUND"); the slides, shake-back-and-forth
+      and blink were not exercised — `DOUBLE_TEAM` cannot be a demo target
+      because `gb_constants.inc` has no `DOUBLE_TEAM` equ (pre-existing
+      move-constant gap, unrelated to this plan).
 
 ### Stage 5 — item-path animations + substitute/transform
 
