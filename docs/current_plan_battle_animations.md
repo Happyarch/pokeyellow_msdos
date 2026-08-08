@@ -423,10 +423,20 @@ Two maintainer-confirmed decisions (AskUserQuestion, 2026-08-07):
       **The goldens prove no regression, NOT execution** — no scenario in the
       battery dispatches to these routines. Runtime evidence is owed at the
       Stage 4 sign-off box.
-- [ ] Motion: `AnimationShakeBackAndForth`, `AnimationMoveMonHorizontally`,
+- [~] Motion: `AnimationShakeBackAndForth`, `AnimationMoveMonHorizontally`,
       `AnimationResetMonPosition`, `AnimationBoundUpAndDown`,
       `AnimationSquishMonPic` + `_AnimationSquishMonPic`,
       `AnimationMinimizeMon` + `MinimizedMonSprite(End)`.
+      **Stage 4c DONE 2026-08-08 for all but `AnimationMinimizeMon`** (which
+      needs `wTempPic` + `CopyTempPicToMonPic`; Stage 4d). Five stubs retired;
+      faithdiff clean on all six labels; lint 0 both modes; pgate 17/17 with
+      mask-hit counts byte-identical to the 4b run in every scenario.
+      New WRAM `wSquishMonCurrentDirection` $D09E (pret's own $D09E union).
+      **faithdiff caught a real defect here, worth recording:** the first
+      version ended `_AnimationSquishMonPic` with `ret`. pret ends it
+      `jp Delay3` — a tail call, not a return. The `- DROPPED Delay3 (jp)`
+      finding was the tool doing exactly its job; the fix was the code, not a
+      suppression.
 - [ ] Particles: `AnimationSpiralBallsInward` + `SpiralBallAnimationCoordinates`,
       `AnimationShootBallsUpward` + `_AnimationShootBallsUpward` +
       `AnimationShootManyBallsUpward` + `UpwardBallsAnimXCoordinates*Turn`,

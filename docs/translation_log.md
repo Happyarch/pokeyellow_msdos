@@ -6367,3 +6367,46 @@ that dispatches to a slide. Runtime evidence is owed at the Stage 4 sign-off.
 (tail-calls `CopyTempPicToMonPic`, a Stage 5 label) and `SlideDownFaintedMonPic`
 (pret `core.asm`; needs `PlaceString` plus a **generated** `SevenSpacesText` —
 a rendered run of space glyphs is Tier-1 data and must not be hand-encoded).
+
+---
+
+## 2026-08-08 — battle animations Stage 4c: mon-pic motion
+
+pret `engine/battle/animations.asm`. Six labels: `AnimationShakeBackAndForth`,
+`AnimationMoveMonHorizontally`, `AnimationResetMonPosition`,
+`AnimationSquishMonPic`, `_AnimationSquishMonPic`, `AnimationBoundUpAndDown`.
+Five `core_stubs.asm` ret-stubs retired. `AnimationMinimizeMon` deliberately
+left stubbed — its body needs `wTempPic` and `CopyTempPicToMonPic`.
+
+Projection as before; new `; PROJ` sites are `BCOORD(0,5)`/`BCOORD(2,5)` and
+`BCOORD(11,0)`/`BCOORD(13,0)` (shake), `BCOORD(2,5)`/`BCOORD(11,0)` (move and
+reset — note `AnimationResetMonPosition`'s pret form is `5 * SCREEN_WIDTH + 2`,
+the coordinate (2,5), and its bare `ld a, 11` is (11,0)), and
+`BCOORD(16,0)`/`BCOORD(14,0)`, `BCOORD(5,5)`/`BCOORD(3,5)` (squish).
+
+`AnimationShakeBackAndForth`'s nine pushes are popped out of order on purpose
+and the translation keeps the exact ordering: the pic is drawn first at `hl`,
+then at `de`, and each draw is erased by a **7x9** `ClearScreenArea` anchored at
+`hl` — 9 columns wide precisely because `de` is `hl + 2`, so one clear covers
+both positions. Numbered `#1`..`#9` in the source so the pairing is checkable.
+
+New WRAM: `wSquishMonCurrentDirection` $D09E, sym-measured; pret's own $D09E
+union with `wSlideMonUpBottomRowLeftTile` / `wWhichBattleAnimTileset`.
+
+Two pret quirks kept verbatim rather than tidied: `AnimationSquishMonPic` ends
+`ld c, 2 / jp DelayFrame`, and `DelayFrame` ignores `c`; and `cp 0` before the
+direction branch is a redundant compare that we reproduce as `cmp al, 0`.
+
+**A real defect, caught by faithdiff — recorded because it is the argument for
+the gate.** The first version ended `_AnimationSquishMonPic` with `ret`. pret
+ends it `jp Delay3` — a tail call, not a return, so every squish step would have
+lost its inter-frame delay and the animation would have run at full speed. The
+`- DROPPED Delay3 (jp)` finding was the tool working; the fix was the assembly.
+This is the inverse of the Stage 3 episode where two routines were contorted to
+appease a faithdiff bug: when the gate and the code disagree, decide which is
+wrong by reading pret, not by assuming either one.
+
+**Verification:** build clean; `lint_pret_labels` 0 both modes; `audit_memmap`
+clean (1254 symbols, 78 regions); faithdiff clean on all six labels after the
+fix; `pgate.sh` 17/17 PASS with per-scenario mask-hit counts byte-identical to
+the Stage 4b run. Still absence-of-regression, not execution.

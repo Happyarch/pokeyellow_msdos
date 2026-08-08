@@ -1376,6 +1376,164 @@ SetAnimationBGPalette:
 ; ===========================================================================
 
 ; ---------------------------------------------------------------------------
+; MON-PIC MOTION — pret animations.asm (battle_animations Stage 4c). Same
+; projection rule as the slides: strides verbatim, coordinates through BCOORD.
+; ---------------------------------------------------------------------------
+global AnimationShakeBackAndForth
+AnimationShakeBackAndForth:
+; Shakes the mon's sprite back and forth rapidly. Used in Double Team. The
+; mon's sprite disappears after this animation.
+    mov al, [ebp + hWhoseTurn]
+    test al, al
+    mov esi, BCOORD(0, 5)                    ; PROJ — pret hlcoord 0, 5
+    mov edx, BCOORD(2, 5)                    ; PROJ — pret decoord 2, 5
+    jz .next
+    mov esi, BCOORD(11, 0)                   ; PROJ — pret hlcoord 11, 0
+    mov edx, BCOORD(13, 0)                   ; PROJ — pret decoord 13, 0
+.next:
+    xor al, al                               ; TILEMAP_MON_PIC
+    mov bl, 0x10
+.loop:
+; pret's nine pushes, popped out of order on purpose: the pic is drawn first at
+; hl, then at de, and each draw is erased by a 7x9 clear anchored at hl — 9 wide
+; because de is hl + 2 columns, so one clear covers both positions.
+    push eax                                 ; #1 af
+    push ebx                                 ; #2 bc
+    push edx                                 ; #3 de
+    push esi                                 ; #4 hl
+    push esi                                 ; #5 hl
+    push edx                                 ; #6 de
+    push eax                                 ; #7 af
+    push esi                                 ; #8 hl
+    push esi                                 ; #9 hl
+    call GetTileIDList
+    pop esi                                  ; #9
+    call CopyPicTiles
+    call Delay3
+    pop esi                                  ; #8
+    mov bh, 7                                ; lb bc, 7, 9
+    mov bl, 9
+    call ClearScreenArea
+    pop eax                                  ; #7
+    call GetTileIDList
+    pop esi                                  ; #6 — this is the DE position
+    call CopyPicTiles
+    call Delay3
+    pop esi                                  ; #5
+    mov bh, 7
+    mov bl, 9
+    call ClearScreenArea
+    pop esi                                  ; #4
+    pop edx                                  ; #3
+    pop ebx                                  ; #2
+    pop eax                                  ; #1
+    dec bl                                   ; 8-bit, as pret
+    jnz .loop
+    ret
+
+global AnimationMoveMonHorizontally
+AnimationMoveMonHorizontally:
+; Shifts the mon's sprite horizontally to a fixed location. Used by lots of
+; animations like Tackle/Body Slam.
+    call AnimationHideMonPic
+    mov al, [ebp + hWhoseTurn]
+    test al, al
+    mov esi, BCOORD(2, 5)                    ; PROJ — pret hlcoord 2, 5
+    jz .next
+    mov esi, BCOORD(11, 0)                   ; PROJ — pret hlcoord 11, 0
+.next:
+    xor al, al                               ; TILEMAP_MON_PIC
+    push esi
+    call GetTileIDList
+    pop esi
+    call CopyPicTiles
+    mov bl, 3
+    jmp DelayFrames
+
+global AnimationResetMonPosition
+AnimationResetMonPosition:
+; Resets the mon's sprites to be located at the normal coordinates.
+    mov al, [ebp + hWhoseTurn]
+    test al, al
+    mov esi, BCOORD(2, 5)                    ; PROJ — pret `ld a, 5 * SCREEN_WIDTH + 2`
+    jz .next
+    mov esi, BCOORD(11, 0)                   ; PROJ — pret `ld a, 11`
+.next:
+    call ClearMonPicFromTileMap
+    jmp AnimationShowMonPic
+
+global AnimationSquishMonPic
+AnimationSquishMonPic:
+; Squishes the mon's sprite horizontally making it disappear. Used by the
+; Teleport/Sky Attack animations.
+    mov bl, 4
+.loop:
+    push ebx
+    mov al, [ebp + hWhoseTurn]
+    test al, al
+    jz .playerTurn
+    mov esi, BCOORD(16, 0)                   ; PROJ — pret hlcoord 16, 0
+    mov edx, BCOORD(14, 0)                   ; PROJ — pret decoord 14, 0
+    jmp short .next
+.playerTurn:
+    mov esi, BCOORD(5, 5)                    ; PROJ — pret hlcoord 5, 5
+    mov edx, BCOORD(3, 5)                    ; PROJ — pret decoord 3, 5
+.next:
+    push edx
+    xor al, al                               ; left
+    mov [ebp + wSquishMonCurrentDirection], al
+    call _AnimationSquishMonPic
+    pop esi                                  ; pret pops de into hl
+    mov al, 1                                ; right
+    mov [ebp + wSquishMonCurrentDirection], al
+    call _AnimationSquishMonPic
+    pop ebx
+    dec bl
+    jnz .loop
+    call AnimationHideMonPic
+    mov bl, 2                                ; pret `ld c, 2` — DelayFrame ignores it
+    jmp DelayFrame
+
+global _AnimationSquishMonPic
+_AnimationSquishMonPic:
+    mov bl, 7
+.loop:
+    push ebx
+    push esi
+    mov bl, 3
+    mov al, [ebp + wSquishMonCurrentDirection]
+    cmp al, 0
+    jnz .right
+    call AnimCopyRowLeft
+    dec esi
+    jmp short .next
+.right:
+    call AnimCopyRowRight
+    inc esi
+.next:
+    mov byte [ebp + esi], TILE_BLANK         ; pret `ld [hl], ' '` — one tile, not a string
+    pop esi
+; pret loads de with the stride here, clobbering it; the port adds the constant,
+; so EDX survives — harmless, and the caller has already stacked its copy.
+    add esi, SCREEN_WIDTH                    ; stride, not a coordinate
+    pop ebx
+    dec bl
+    jnz .loop
+    jmp Delay3                               ; pret tail-calls Delay3, it does not ret
+
+global AnimationBoundUpAndDown
+AnimationBoundUpAndDown:
+; Bounces the mon's sprite up and down several times. Used by Splash.
+    mov bl, 5
+.loop:
+    push ebx
+    call AnimationSlideMonDown
+    pop ebx
+    dec bl
+    jnz .loop
+    jmp AnimationShowMonPic
+
+; ---------------------------------------------------------------------------
 ; MON-PIC SLIDES — pret animations.asm (battle_animations Stage 4b). Same
 ; projection rule as the helpers below: strides verbatim, coordinates through
 ; BCOORD. All tilemap-index writes, so no g_tilecache_dirty is owed.

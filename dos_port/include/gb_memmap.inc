@@ -566,6 +566,7 @@ wNumShootingBalls          equ 0xD089
 wSpiralBallsBaseX          equ 0xD08A   ; (= wSubAnimTransform; effects that use it do not run inside a transformed subanim)
 wNumFallingObjects         equ 0xD08A
 wSlideMonDelay             equ 0xD08A   ; golden 00:d08a — V-blanks per tile of _AnimationSlideMonOff. Same pret $D08A union as above (wSubAnimTransform / wSpiralBallsBaseX / wNumFallingObjects); pret aliases them on hardware too, so the collision is reproduced, not introduced.
+wSquishMonCurrentDirection equ 0xD09E   ; golden 00:d09e — 0 = left, 1 = right, read by _AnimationSquishMonPic. Same pret $D09E union as the two below.
 wSlideMonUpBottomRowLeftTile equ 0xD09E ; golden 00:d09e — tile id seeding _AnimationSlideMonUp's refilled bottom row. UNION with wWhichBattleAnimTileset / wOutwardSpiralCurrentDirection at 0xD09E, as in pret; the slide never calls LoadMoveAnimationTiles, so the lifetimes are disjoint.
 %ifndef wCoordAdjustmentAmount
 wCoordAdjustmentAmount     equ 0xD089   ; AdjustOAMBlock* signed delta (was locally %ifndef-defined in animations.asm/dust_smoke.asm)

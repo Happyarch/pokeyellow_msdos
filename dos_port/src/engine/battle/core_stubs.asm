@@ -183,6 +183,12 @@ AnimationFlashEnemyMonPic:
 ; RETIRED 2026-08-08 — real bodies in animations.asm (Stage 3 flash family).
 
 ; --- Stage 4: mon-pic slides + motion + OAM particles + HUD shake ---
+; AnimationShakeBackAndForth, AnimationMoveMonHorizontally,
+; AnimationResetMonPosition, AnimationSquishMonPic, AnimationBoundUpAndDown:
+; RETIRED 2026-08-08 — real bodies in animations.asm (Stage 4c motion family),
+; with _AnimationSquishMonPic. AnimationMinimizeMon stays stubbed below: its
+; body needs wTempPic + CopyTempPicToMonPic.
+
 ; AnimationSlideMonUp, AnimationSlideMonDown, AnimationSlideMonOff,
 ; AnimationSlideMonHalfOff, AnimationSlideEnemyMonOff: RETIRED 2026-08-08 —
 ; real bodies in animations.asm (Stage 4b), with _AnimationSlideMonUp and
@@ -201,34 +207,9 @@ global AnimationSlideMonDownAndHide
 AnimationSlideMonDownAndHide:
     ret
 
-; STUB{class=temporary; label=AnimationMoveMonHorizontally; pret=engine/battle/animations.asm:AnimationMoveMonHorizontally; behavior=return instead of moving the mon pic horizontally; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 motion family lands}
-global AnimationMoveMonHorizontally
-AnimationMoveMonHorizontally:
-    ret
-
-; STUB{class=temporary; label=AnimationResetMonPosition; pret=engine/battle/animations.asm:AnimationResetMonPosition; behavior=return instead of resetting the mon pic position; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 motion family lands}
-global AnimationResetMonPosition
-AnimationResetMonPosition:
-    ret
-
-; STUB{class=temporary; label=AnimationSquishMonPic; pret=engine/battle/animations.asm:AnimationSquishMonPic; behavior=return instead of squishing the mon pic; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 motion family lands}
-global AnimationSquishMonPic
-AnimationSquishMonPic:
-    ret
-
-; STUB{class=temporary; label=AnimationBoundUpAndDown; pret=engine/battle/animations.asm:AnimationBoundUpAndDown; behavior=return instead of bouncing the mon pic; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 motion family lands}
-global AnimationBoundUpAndDown
-AnimationBoundUpAndDown:
-    ret
-
 ; STUB{class=temporary; label=AnimationMinimizeMon; pret=engine/battle/animations.asm:AnimationMinimizeMon; behavior=return instead of the Minimize shrink; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 motion family lands}
 global AnimationMinimizeMon
 AnimationMinimizeMon:
-    ret
-
-; STUB{class=temporary; label=AnimationShakeBackAndForth; pret=engine/battle/animations.asm:AnimationShakeBackAndForth; behavior=return instead of shaking the mon pic back and forth; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 motion family lands}
-global AnimationShakeBackAndForth
-AnimationShakeBackAndForth:
     ret
 
 ; STUB{class=temporary; label=AnimationShootBallsUpward; pret=engine/battle/animations.asm:AnimationShootBallsUpward; behavior=return instead of the upward balls particles; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 particle family lands}
