@@ -1790,6 +1790,28 @@ GB_VRAM1_SIZE   equ 0x2000     ; 8 KB
 GB_BACKBUF      equ 0x12000
 GB_BACKBUF_SIZE equ 64000      ; RENDER_W * RENDER_H
 
+; --- VRAM sub-regions the port names explicitly (pret ram/vram.asm battle union) ---
+; vSprites $8000 (128 tiles) + vFont $8800 (128) then the two pic canvases.
+vFrontPic       equ 0x9000     ; PIC_SIZE tiles (49*16 = 784 B), ends 0x9310
+vBackPic        equ 0x9310     ; PIC_SIZE tiles, ends 0x9620
+
+; RELOCATED (port-only): pret puts wTempPic at $C6E8. It cannot live there here —
+; the port's wTileMap is 40x25 = 1000 bytes (the GB's is 20x18 = 360), so
+; W_TILEMAP spans 0xC3A0-0xC787 and SWALLOWS 0xC6E8, exactly as it swallows
+; 0xC508 (wShadowOAMBackup / wAnimatedObjectsData above). Unlike those two it does
+; NOT fit in echo RAM: 784 bytes are needed and the largest remaining echo gap is
+; 768 (0xFB00-0xFDFF, after wLYOverridesBuffer). It goes in the unused 1536-byte
+; gap between the back buffer (ends 0x21A00) and the emulated SRAM banks
+; (0x22000) instead — still inside the single DPMI allocation and still
+; EBP-relative, so FillMemory and every [ebp+esi] write address it unchanged.
+; Its only consumers are the battle-animation mon-pic routines
+; (AnimationMinimizeMon, AnimationSlideMonDownAndHide, CopyTempPicToMonPic and
+; the Stage 5 substitute/transform pair), none of which needs a GB-visible
+; address. CopyTempPicToMonPic passes `lea edx, [ebp + wTempPic]` because the
+; port's CopyVideoData takes a FLAT source by design.
+wTempPic        equ 0x21A00    ; PIC_SIZE tiles (784 B), ends 0x21D10
+wTempPic_SIZE   equ 0x310      ; 784 = PIC_SIZE * TILE_SIZE (hex so audit_memmap.py's EQU_RE picks it up)
+
 ; ---------------------------------------------------------------------------
 ; I/O register shadow offsets (EBP + IO_* = emulated register byte)
 ; Named to match constants/hardware.inc for cross-reference.

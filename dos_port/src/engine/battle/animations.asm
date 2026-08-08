@@ -83,6 +83,7 @@ extern ClearSprites                   ; src/home/clear_sprites.asm
 extern ClearScreen                    ; src/home/copy2.asm
 extern ClearScreenArea                ; src/home/copy2.asm — ESI dest, BH rows, BL cols
 extern CopyData                       ; src/home/copy.asm — ESI src, EDX dest, EBX count
+extern FillMemory                     ; src/home/copy2.asm — ESI dest, BX count, AL value
 extern IsInArray                      ; src/home/array2.asm — AL val, ESI base, EDX stride
 extern CopyVideoData                  ; src/home/copy2.asm — ESI dest VRAM, EDX flat src, BL tiles
 extern SaveScreenTilesToBuffer2       ; src/home/tilemap.asm
@@ -1374,6 +1375,90 @@ SetAnimationBGPalette:
 ; note in src/home/vblank.asm) and render_bg reads W_TILEMAP directly — so the
 ; writes cost nothing and keep the routines byte-comparable against pret.
 ; ===========================================================================
+
+; ---------------------------------------------------------------------------
+; wTempPic-backed effects — pret animations.asm (battle_animations Stage 4d).
+; `wTempPic` is RELOCATED to 0x21A00 (still EBP-relative); the reasoning lives
+; at its equ in gb_memmap.inc. `CopyTempPicToMonPic` is pulled forward from
+; Stage 5 because Minimize and the Acid-Armor slide both end in it.
+; ---------------------------------------------------------------------------
+global AnimationMinimizeMon
+AnimationMinimizeMon:
+; Changes the mon's sprite to a mini black sprite. Used by the Minimize
+; animation.
+    mov esi, wTempPic
+    push esi
+    xor al, al
+    mov ebx, wTempPic_SIZE                    ; ld bc, PIC_SIZE tiles
+    call FillMemory
+    pop esi
+    add esi, (PIC_WIDTH * 3 + 4) * TILE_SIZE + TILE_SIZE / 4
+    mov edx, MinimizedMonSprite              ; flat program-image data
+    mov bl, MinimizedMonSpriteEnd - MinimizedMonSprite
+.loop:
+    mov al, [edx]
+    mov [ebp + esi], al                      ; ld [hli], a — both 2bpp bitplanes
+    inc esi
+    mov [ebp + esi], al                      ; ld [hli], a
+    inc esi
+    inc edx
+    dec bl
+    jnz .loop
+    call CopyTempPicToMonPic
+    call Delay3
+    jmp AnimationShowMonPic
+
+; 8x5 partial tile graphic (pret writes it with `pusho b.X` binary literals; the
+; comment column is the same picture, so the bytes stay reviewable).
+MinimizedMonSprite:
+    db 0b00011000                            ; ...XX...
+    db 0b00111100                            ; ..XXXX..
+    db 0b01111110                            ; .XXXXXX.
+    db 0b00111100                            ; ..XXXX..
+    db 0b00100100                            ; ..X..X..
+MinimizedMonSpriteEnd:
+
+global AnimationSlideMonDownAndHide
+AnimationSlideMonDownAndHide:
+; Slides the mon's sprite down and disappears. Used in Acid Armor.
+    mov al, TILEMAP_SLIDE_DOWN_MON_PIC_7X5
+    mov bl, 2
+.loop:
+    push ebx
+    push eax
+    call AnimationHideMonPic
+    pop eax
+    push eax
+    call GetTileIDList
+    call GetMonSpriteTileMapPointerFromRowCount
+    call CopyPicTiles
+    mov bl, 8
+    call DelayFrames
+    pop eax
+    inc al                                   ; next TILEMAP_SLIDE_DOWN_* row
+    pop ebx
+    dec bl
+    jnz .loop
+    call AnimationHideMonPic
+    mov esi, wTempPic
+    mov ebx, wTempPic_SIZE                    ; ld bc, PIC_SIZE tiles
+    xor al, al
+    call FillMemory
+    jmp CopyTempPicToMonPic
+
+global CopyTempPicToMonPic
+CopyTempPicToMonPic:
+    mov al, [ebp + hWhoseTurn]
+    test al, al
+    mov esi, vBackPic                        ; player turn
+    jz .next
+    mov esi, vFrontPic                       ; enemy turn
+.next:
+; pret `ld de, wTempPic` is a GB address; the port's CopyVideoData takes a FLAT
+; source by design, and wTempPic is EBP-relative, so bias it here.
+    lea edx, [ebp + wTempPic]
+    mov ebx, PIC_SIZE                        ; ld bc, PIC_SIZE — BH = bank (no-op), BL = tile count
+    jmp CopyVideoData                        ; arms g_tilecache_dirty itself
 
 ; ---------------------------------------------------------------------------
 ; MON-PIC MOTION — pret animations.asm (battle_animations Stage 4c). Same

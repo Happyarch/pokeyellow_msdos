@@ -183,6 +183,10 @@ AnimationFlashEnemyMonPic:
 ; RETIRED 2026-08-08 — real bodies in animations.asm (Stage 3 flash family).
 
 ; --- Stage 4: mon-pic slides + motion + OAM particles + HUD shake ---
+; AnimationMinimizeMon, AnimationSlideMonDownAndHide: RETIRED 2026-08-08 —
+; real bodies in animations.asm (Stage 4d), with MinimizedMonSprite and
+; CopyTempPicToMonPic (pulled forward from Stage 5 because both end in it).
+
 ; AnimationShakeBackAndForth, AnimationMoveMonHorizontally,
 ; AnimationResetMonPosition, AnimationSquishMonPic, AnimationBoundUpAndDown:
 ; RETIRED 2026-08-08 — real bodies in animations.asm (Stage 4c motion family),
@@ -201,16 +205,6 @@ AnimationFlashEnemyMonPic:
 ; ClearMonPicFromTileMap, GetMonSpriteTileMapPointerFromRowCount, GetTileIDList,
 ; AnimCopyRowLeft/Right, CopyPicTiles, CopyDownscaledMonTiles,
 ; CopyTileIDs{,_NoBGTransfer} and CopyTileIDsFromList.
-
-; STUB{class=temporary; label=AnimationSlideMonDownAndHide; pret=engine/battle/animations.asm:AnimationSlideMonDownAndHide; behavior=return instead of sliding the mon pic down and hiding it; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 mon-pic slides land}
-global AnimationSlideMonDownAndHide
-AnimationSlideMonDownAndHide:
-    ret
-
-; STUB{class=temporary; label=AnimationMinimizeMon; pret=engine/battle/animations.asm:AnimationMinimizeMon; behavior=return instead of the Minimize shrink; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 motion family lands}
-global AnimationMinimizeMon
-AnimationMinimizeMon:
-    ret
 
 ; STUB{class=temporary; label=AnimationShootBallsUpward; pret=engine/battle/animations.asm:AnimationShootBallsUpward; behavior=return instead of the upward balls particles; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 particle family lands}
 global AnimationShootBallsUpward

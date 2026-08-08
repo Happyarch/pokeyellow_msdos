@@ -393,10 +393,11 @@ Two maintainer-confirmed decisions (AskUserQuestion, 2026-08-07):
       New WRAM: `wSlideMonDelay` $D08A and `wSlideMonUpBottomRowLeftTile` $D09E
       (sym-measured; both land on pret's own union bytes, reproduced not
       introduced — see the notes in `gb_memmap.inc`).
-      STILL OPEN in this box: `AnimationSlideMonDownAndHide` (its tail calls
-      `CopyTempPicToMonPic`, which Stage 5 owns) and the `SlideDownFaintedMonPic`
-      stub (pret `core.asm`; needs `PlaceString` + a generated `SevenSpacesText`,
-      since a rendered space run is Tier-1 data and must not be hand-encoded).
+      `AnimationSlideMonDownAndHide` CLOSED in Stage 4d (with `wTempPic` and
+      `CopyTempPicToMonPic`). STILL OPEN in this box: only the
+      `SlideDownFaintedMonPic` stub (pret `core.asm`; needs `PlaceString` + a
+      **generated** `SevenSpacesText`, since a rendered space run is Tier-1 data
+      and must not be hand-encoded).
 - [x] Hide/show + tilemap helpers: `AnimationHideMonPic`,
       `AnimationHideEnemyMonPic`, `AnimationShowMonPic`,
       `AnimationShowEnemyMonPic`, `ClearMonPicFromTileMap`,
@@ -423,12 +424,13 @@ Two maintainer-confirmed decisions (AskUserQuestion, 2026-08-07):
       **The goldens prove no regression, NOT execution** — no scenario in the
       battery dispatches to these routines. Runtime evidence is owed at the
       Stage 4 sign-off box.
-- [~] Motion: `AnimationShakeBackAndForth`, `AnimationMoveMonHorizontally`,
+- [x] Motion: `AnimationShakeBackAndForth`, `AnimationMoveMonHorizontally`,
       `AnimationResetMonPosition`, `AnimationBoundUpAndDown`,
       `AnimationSquishMonPic` + `_AnimationSquishMonPic`,
       `AnimationMinimizeMon` + `MinimizedMonSprite(End)`.
-      **Stage 4c DONE 2026-08-08 for all but `AnimationMinimizeMon`** (which
-      needs `wTempPic` + `CopyTempPicToMonPic`; Stage 4d). Five stubs retired;
+      **Stage 4c DONE 2026-08-08** for all but `AnimationMinimizeMon`, which
+      **Stage 4d then closed** together with `wTempPic`, `MinimizedMonSprite`
+      and `CopyTempPicToMonPic` (pulled forward from Stage 5). Five stubs retired;
       faithdiff clean on all six labels; lint 0 both modes; pgate 17/17 with
       mask-hit counts byte-identical to the 4b run in every scenario.
       New WRAM `wSquishMonCurrentDirection` $D09E (pret's own $D09E union).

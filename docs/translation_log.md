@@ -6410,3 +6410,57 @@ wrong by reading pret, not by assuming either one.
 clean (1254 symbols, 78 regions); faithdiff clean on all six labels after the
 fix; `pgate.sh` 17/17 PASS with per-scenario mask-hit counts byte-identical to
 the Stage 4b run. Still absence-of-regression, not execution.
+
+---
+
+## 2026-08-08 — battle animations Stage 4d: wTempPic-backed effects
+
+pret `engine/battle/animations.asm`. Three labels plus one data blob:
+`AnimationMinimizeMon` + `MinimizedMonSprite`/`MinimizedMonSpriteEnd`,
+`AnimationSlideMonDownAndHide`, and `CopyTempPicToMonPic` — the last **pulled
+forward from Stage 5**, because both of the others end in it. Two more stubs
+retired; the Stage 4 motion and slide boxes are now closed except
+`SlideDownFaintedMonPic`.
+
+**`wTempPic` is RELOCATED, and this is the interesting part.** pret puts it at
+$C6E8. The port cannot: `wTileMap` is 40x25 = 1000 bytes against the GB's
+20x18 = 360, so `W_TILEMAP` spans $C3A0-$C787 and **swallows $C6E8** — the same
+way it swallows $C508 for `wShadowOAMBackup` and `wAnimatedObjectsData`. Unlike
+those two the echo-RAM answer does not work either: `wTempPic` needs 784 bytes
+and the largest remaining echo gap is **768** ($FB00-$FDFF, after
+`wLYOverridesBuffer`) — 16 bytes short, measured, not estimated.
+
+It goes instead in the unused **1536-byte gap between the back buffer (ends
+$21A00) and the emulated SRAM banks ($22000)**, at `wTempPic equ 0x21A00`. That
+is still inside the single DPMI allocation (`GB_TOTAL_SIZE` = $28000) and still
+**EBP-relative**, which is what makes it the right answer rather than a flat
+`.bss` buffer: `FillMemory` and every `[ebp + esi]` store address it unchanged,
+so `AnimationMinimizeMon` and `AnimationSlideMonDownAndHide` translate literally
+instead of needing a hand-rolled fill and a `- DROPPED FillMemory` to justify.
+The one adaptation is in `CopyTempPicToMonPic`, which passes
+`lea edx, [ebp + wTempPic]` because the port's `CopyVideoData` takes a **flat**
+source by design.
+
+**A verification gap I hit and closed, worth recording.** `audit_memmap.py`
+first reported "clean" at an unchanged 78 regions after `wTempPic` landed —
+i.e. it was not checking the new buffer at all. Its `EQU_RE` only matches
+**hex** literals, so `wTempPic_SIZE equ 784` was invisible and the extent was
+never built. Written as `0x310` the count goes to 79 and the region is really
+checked (still clean). A "clean" that did not move the region count was a
+vacuous confirmation, exactly the failure the evidence policy warns about.
+
+`CopyTempPicToMonPic` routes through `CopyVideoData`, which arms
+`g_tilecache_dirty` itself — correct by construction, and required, since this
+is the one routine in Stage 4 that writes tile PATTERN bytes rather than tilemap
+indices.
+
+`MinimizedMonSprite` stays in the engine mirror (pret inlines it in
+`animations.asm`, so it is not a `data/` label and `aux_misplaced` does not
+apply). pret writes it with `pusho b.X` binary literals; the port writes
+`0b...` with the same picture in the comment column, so the bytes stay
+reviewable rather than transcribed hex.
+
+**Verification:** build clean; `lint_pret_labels` 0 both modes; `audit_memmap`
+79 regions clean (see above); faithdiff clean on all three labels; `pgate.sh`
+17/17 PASS with per-scenario mask-hit counts byte-identical to the Stage 4c run.
+Absence-of-regression only, as with 4a-4c.

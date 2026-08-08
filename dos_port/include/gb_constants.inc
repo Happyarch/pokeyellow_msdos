@@ -17,6 +17,7 @@ NUM_MOVES               equ 4       ; move slots per mon (not total moves in the
 TILE_1BPP_SIZE          equ 8       ; TILE_SIZE/2 — bytes per 1bpp 8×8 tile
 PIC_WIDTH               equ 7       ; max pic size in tiles
 PIC_HEIGHT              equ 7
+PIC_SIZE                equ PIC_WIDTH * PIC_HEIGHT ; 49 tiles (constants/gfx_constants.asm)
 SPRITEBUFFERSIZE        equ PIC_WIDTH * PIC_HEIGHT * TILE_1BPP_SIZE  ; 392 = 0x188
 NAME_LENGTH             equ 11      ; '@'-terminated fixed-width name field (mon names)
 NAME_LENGTH_JP          equ 6       ; JP name length (OT-name compare in pikachu_status)
