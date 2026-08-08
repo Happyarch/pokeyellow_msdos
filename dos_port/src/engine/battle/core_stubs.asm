@@ -107,13 +107,13 @@ PredefShakeScreenHorizontally:
     ret
 
 ; ===========================================================================
-; Move-subanimation ret-stubs — moved here from move_effect_helpers.asm (since
-; deleted, chunk 17) /
-; faint_switch.asm (2026-07-23 allowlist audit): a link-time stand-in belongs in
-; the subsystem stub file under a STUB{} annotation, not in a code file behind a
-; relocation-registry entry. The handlers still CALL each of these (correct +
-; required — pret does); the bodies are no-ops until the ANIMATION=OFF
-; subanimation layer / Substitute pic swap land.
+; Move-subanimation ret-stubs. The handlers CALL each of these (correct + required
+; — pret does); the bodies are no-ops until the in-battle animation interpreter is
+; WIRED into production. NOTE (battle_animations Stage 2b, 2026-08-08): wiring these
+; to the real MoveAnimation interpreter was attempted and REVERTED — the never-run
+; interpreter crashes when actually executed (bisected to GetMoveSound writing
+; wFrequencyModifier; repro: goldencheck battle_faint after wiring). See memory
+; regression-battle-anim-interp-runtime-crash before re-wiring.
 ; ===========================================================================
 
 ; STUB{class=temporary; label=PlayCurrentMoveAnimation; pret=engine/battle/effects.asm:PlayCurrentMoveAnimation; behavior=skip the literal move VFX stream entirely instead of loading wAnimationID and running the subanimation; evidence=no move-subanimation tile/OAM-stream engine exists yet (TODO-HW), damage shake and HP drain run separately via PlayApplyingAttackAnimation/UpdateCurMonHPBar; lifetime=until the move-subanimation engine lands}

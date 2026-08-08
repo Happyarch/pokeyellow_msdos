@@ -6,11 +6,14 @@
 > pytest resolves — allowlist is not ours to grow, behavior changes need
 > scenarios). Not duplicated here; read it there.
 
-Status: **Stage 2a landed** (interpreter core; Stages 0-1 done). Owner: this plan.
+Status: **Stage 2a landed; Stage 2b PARTIAL** (projection + BCOORD in;
+production wiring BLOCKED on an interpreter runtime crash). Owner: this plan.
 Stage 2 is split: **2a** (interpreter core + tables + stubs, LINKED but reached
-only by the deferred demo — production path unchanged) is committed; **2b** wires
-it into production + projection publication + the demo harness. See the Stage 2
-box below and memory `battle-animations-plan-created` (v3).
+only by the deferred demo — production path unchanged) is committed; **2b** adds
+projection publication (done), the BCOORD hoist (done), then wires the interpreter
+into production (BLOCKED — see the Stage 2b box) + the demo harness. See the
+Stage 2 box below and memories `battle-animations-plan-created` +
+`regression-battle-anim-interp-runtime-crash` (the wiring blocker).
 Umbrella: `docs/current_plan_battle_completion.md` Stage 6 (6a–6e) — this file
 is the dedicated detail owner for the in-battle animation engine, the same
 relationship the archived `docs/plans/battle_transitions.md` had to Stage 5.
@@ -197,23 +200,35 @@ Two maintainer-confirmed decisions (AskUserQuestion, 2026-08-07):
       (core.asm) is unchanged, so battle behavior is unchanged and the runtime
       golden tier is deferred to 2b (also: mgba absent in the 2a build env).
 
-**Stage 2b (pending — production wiring + demo + visual sign-off):**
-- [ ] Retire the 4 dispatcher stubs with real bodies in the `effects.asm`
-      mirror: `PlayCurrentMoveAnimation(2)`, `PlayBattleAnimation(2)`; reconcile
-      core.asm `PlayMoveAnimation` to call the real `MoveAnimation` (predef →
-      direct call; TOSS_ANIM pre-gate; `BIT_BATTLE_ANIMATION` option gate — the
-      current ANIMATION=OFF behavior becomes exactly the option-off route). This
-      is what wires the interpreter into the live battle.
-- [ ] Projection publication: `PublishProjectedOAM(80,24)` republished after each
-      `DrawFrameBlock` mutation + `g_obj_clip = (80,24,240,168)` during playback,
-      restored at end (HAL design items 2-3).
-- [ ] `BCOORD` hoist to `include/coords.inc`; core.asm consumes the shared
-      definition (no behavior change; faithdiff-neutral).
-- [ ] **`DEBUG_ANIM_DEMO=1` harness** (RunTransitionDemo shape: Makefile flag →
-      NASMFLAGS -D → `%ifdef` routine in `debug_dump.asm` → hook at a battle
-      entry): seeds a wild battle, cycles a curated representative anim set;
-      `ANIM=<MOVE_CONST>` make var pins one (TRACK= precedent). Loop counters
-      in MEMORY, not registers (PlayAnimation clobbers everything).
+**Stage 2b (PARTIAL — projection + BCOORD landed; wiring + demo BLOCKED):**
+
+> ⚠ **BLOCKER (2026-08-08): the interpreter crashes on first real execution.**
+> Item 1 (production wiring) was implemented and then REVERTED because every
+> scenario that plays a real move (battle_faint / battle_blackout /
+> trainer_battle_route) crashed — the Stage-2a interpreter (committed 0b629e0a)
+> had never actually executed. Bisected to `GetMoveSound`'s
+> `mov [ebp+wFrequencyModifier(0xC0F1)],al` write / subsequent control
+> derailment (original fault: *Invalid Opcode at ebp+0xC235*). Full bisection,
+> repro and next-steps: memory `regression-battle-anim-interp-runtime-crash`.
+> **Fix the interpreter crash FIRST, then re-apply the (small, pret-faithful)
+> wiring** — the crash is in the interpreter, not the wiring plumbing (proven:
+> skipping `call PlayAnimation` makes the wired battle_faint pass).
+
+- [x] Projection publication: `PublishProjectedOAM(80,24)` after each
+      `DrawFrameBlock` mutation + `g_obj_clip = (80,24,240,168)` set at
+      `MoveAnimation` entry / restored at `.animationFinished` (HAL design
+      items 2-3). DONE 2026-08-08 (unreached until wiring lands; Gate A green).
+- [x] `BCOORD` hoist to `include/coords.inc`; core.asm `%include`s it and drops
+      its local `%define` (faithdiff-neutral, no behavior change). DONE 2026-08-08.
+- [ ] **BLOCKED** — Retire the 4 dispatcher stubs with real bodies in the
+      `effects.asm` mirror: `PlayCurrentMoveAnimation(2)`, `PlayBattleAnimation(2)`;
+      reconcile core.asm `PlayMoveAnimation` to call the real `MoveAnimation`
+      (predef → direct call; the current ANIMATION=OFF behavior becomes the
+      option-off route inside MoveAnimation). Reverted; see BLOCKER above.
+- [ ] **BLOCKED** — `DEBUG_ANIM_DEMO=1` harness (also calls MoveAnimation → same
+      crash; do after the interpreter crash is fixed). RunTransitionDemo shape:
+      Makefile flag → NASMFLAGS -D → `%ifdef` routine in `debug_dump.asm` → hook
+      at a battle entry; `ANIM=<MOVE_CONST>` pins one; loop counters in MEMORY.
 - [ ] Gate: battle tier green (14/15/16/20/33/34/43/44/45/46/51); demo shows an
       OAM-particle anim (Pound/Gust class) inside the battle frame (maintainer
       visual sign-off).

@@ -145,6 +145,15 @@
     mov %1, W_OVERWORLD_MAP + ((%2) + MAP_BORDER) + (((%3) + MAP_BORDER) * ((%4) + (MAP_BORDER * 2)))
 %endmacro
 
+; BCOORD — battle-frame tile-address macro. pret hlcoords for in-battle screens
+; are projected onto the port's 40x25 canvas by the uniform battle projection
+; (X+10 col, Y+3 row) — the same transform the generated UI_* battle layout uses
+; (assets/ui_layout_battle.inc; e.g. UI_MOVE_BOX = GB(4,12) -> BCOORD(4,12)). Only
+; the coordinate VALUES move; every write through it is pret's. SCREEN_WIDTH is the
+; 40-wide canvas stride (== FW in core.asm), so this is core.asm's original formula
+; verbatim. Shared here so core.asm and animations.asm use one definition.
+%define BCOORD(X, Y) (W_TILEMAP + ((Y) + 3) * SCREEN_WIDTH + ((X) + 10))
+
 %macro hlowcoord 3
     owcoord esi, %1, %2, %3
 %endmacro

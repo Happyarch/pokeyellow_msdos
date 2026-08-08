@@ -72,6 +72,8 @@ extern CopyVideoData                  ; src/home/copy2.asm — ESI dest VRAM, ED
 extern SaveScreenTilesToBuffer2       ; src/home/tilemap.asm
 extern LoadScreenTilesFromBuffer2     ; src/home/tilemap.asm
 extern Delay3                         ; src/home/palettes.asm
+extern PublishProjectedOAM            ; src/engine/gfx/sprite_oam.asm — wShadowOAM -> canvas at (EAX,EBX)
+extern g_obj_clip                     ; src/ppu/ppu.asm — OBJ clip rectangle (x0,y0,x1,y1 dwords)
 
 ; --- Stage 3-5 dispatch-target stubs (src/engine/battle/core_stubs.asm) ---
 extern SetAnimationPalette
@@ -334,6 +336,12 @@ DrawFrameBlock:
     mov al, [ebp + wFBMode]
     cmp al, FRAMEBLOCKMODE_02
     jz .advanceFrameBlockDestAddr            ; skip delay and don't clean OAM buffer
+; DEVIATION{class=projection; pret=engine/battle/animations.asm:DrawFrameBlock; behavior=before the per-frame-block delay the port publishes wShadowOAM to the renderer at the battle-frame origin (80,24) via PublishProjectedOAM, standing in for the GB's per-vblank OAM DMA of wShadowOAM to $FE00; evidence=the port has no hardware OAM DMA so the frame-block OAM the interpreter just wrote would never reach render_sprites otherwise, and (80,24) is the battle-frame projection origin per docs-ui_projection.md with offscreen entries hidden by g_obj_clip set at the MoveAnimation entry; lifetime=permanent, part of the battle-animation projection boundary}
+    mov esi, W_SHADOW_OAM                     ; ESI = canonical OAM (GB offset)
+    mov ecx, OAM_COUNT                        ; publish all 40 (cleared/offscreen hidden by g_obj_clip)
+    mov eax, 80                               ; battle-frame origin X
+    mov ebx, 24                               ; battle-frame origin Y
+    call PublishProjectedOAM                  ; preserves EDX (the wShadowOAM cursor); all regs restored
     mov bl, [ebp + wSubAnimFrameDelay]       ; ld c,a → BL
     call DelayFrames
     mov al, [ebp + wFBMode]
@@ -527,6 +535,11 @@ MoveAnimation:
     push edx                                 ; push de
     push ebx                                 ; push bc
     push eax                                 ; push af
+; DEVIATION{class=projection; pret=engine/battle/animations.asm:MoveAnimation; behavior=on entry the port narrows the OBJ clip rectangle g_obj_clip to the battle frame (80,24)..(240,168 exclusive) and restores it to the full canvas (0,0,RENDER_W,RENDER_H) at .animationFinished before returning; evidence=DrawFrameBlock publishes wShadowOAM at battle-frame origin (80,24) via PublishProjectedOAM, and GB off-screen OAM coords (X>=168, OAM_Y>=160) project to canvas positions still visible on the 320x200 canvas, so without this clip the GB's off-screen hiding semantics are lost and stray particles paint outside the frame, the rectangle being the 160x144 GB screen at the BCOORD (+10 col,+3 row) origin; lifetime=permanent, part of the battle-animation projection boundary}
+    mov dword [g_obj_clip + 0], 10 * 8       ; x0 = 80  — battle frame origin (BCOORD +10 col)
+    mov dword [g_obj_clip + 4], 3 * 8        ; y0 = 24  — BCOORD +3 row
+    mov dword [g_obj_clip + 8], (10 + 20) * 8 ; x1 = 240 (exclusive) — +160px GB screen width
+    mov dword [g_obj_clip + 12], (3 + 18) * 8 ; y1 = 168 (exclusive) — +144px GB screen height
     call WaitForSoundToFinish
     call SetAnimationPalette
     mov al, [ebp + wAnimationID]
@@ -549,6 +562,10 @@ MoveAnimation:
 .next:
     call PlayApplyingAttackAnimation         ; shake/flash "to show damage"
 .animationFinished:
+    mov dword [g_obj_clip + 0], 0            ; restore full-canvas OBJ clip (see entry DEVIATION)
+    mov dword [g_obj_clip + 4], 0
+    mov dword [g_obj_clip + 8], RENDER_W
+    mov dword [g_obj_clip + 12], RENDER_H
     call WaitForSoundToFinish
     mov dword [wSubAnimSubEntryAddr32], 0    ; pret clears wSubAnimSubEntryAddr; reset the flat cursor
     xor al, al

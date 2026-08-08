@@ -14,6 +14,7 @@
 %include "gb_macros.inc"
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
+%include "coords.inc"          ; BCOORD (hoisted here from a local %define, battle_animations 2b)
 %include "assets/audio_constants.inc"   ; AUDIO_BANK_2 (PlayBattleVictoryMusic)
 %include "msgbox.inc"          ; the message-box projection record
 
@@ -576,8 +577,8 @@ DisplayBattleMenu:
 ; battle projection (X+10, Y+3) — the same transform the generated UI_* layout
 ; records use (assets/ui_layout_battle.inc; e.g. UI_MOVE_BOX = GB(4,12) -> ofs 614
 ; = BCOORD(4,12)). Only the coordinate VALUES move; every write is pret's.
+; BCOORD itself is now defined once in include/coords.inc (hoisted, 2b).
 ; ===========================================================================
-%define BCOORD(X, Y) (W_TILEMAP + ((Y) + 3) * FW + ((X) + 10))
 %define T_UPARROW_R   0xEC              ; '▷' unfilled cursor (charmap.asm)
 %define T_SLASH       0xF3              ; '/'
 
@@ -3321,6 +3322,11 @@ ApplyBadgeStatBoosts:
 ; PlayMoveAnimation — pret core.asm:PlayMoveAnimation → predef MoveAnimation, the
 ; ANIMATION=OFF realization. In: AL = animation id (the move number, as core.asm
 ; passes wPlayerMoveNum/wEnemyMoveNum). All registers preserved.
+; NOTE (battle_animations Stage 2b, 2026-08-08): wiring this to the real
+; MoveAnimation interpreter was attempted and REVERTED — the never-run interpreter
+; crashes when executed (bisected to GetMoveSound's wFrequencyModifier write; repro
+; goldencheck battle_faint after wiring). See memory
+; regression-battle-anim-interp-runtime-crash before re-wiring.
 ; ---------------------------------------------------------------------------
 PlayMoveAnimation:
     push eax
