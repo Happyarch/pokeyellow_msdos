@@ -6464,3 +6464,46 @@ reviewable rather than transcribed hex.
 79 regions clean (see above); faithdiff clean on all three labels; `pgate.sh`
 17/17 PASS with per-scenario mask-hit counts byte-identical to the Stage 4c run.
 Absence-of-regression only, as with 4a-4c.
+
+---
+
+## 2026-08-08 — battle animations Stage 4e: OAM helpers + ball particles
+
+pret `engine/battle/animations.asm`. Six labels plus three data tables:
+`BattleAnimWriteOAMEntry`, `InitMultipleObjectsOAM`,
+`AnimationSpiralBallsInward` + `SpiralBallAnimationCoordinates`,
+`AnimationShootBallsUpward`, `_AnimationShootBallsUpward`,
+`AnimationShootManyBallsUpward` + `UpwardBallsAnimXCoordinates{Player,Enemy}Turn`.
+Three more stubs retired. The tables stay in the engine mirror — pret inlines
+them in `animations.asm`, so they are not `data/` labels.
+
+**Two cursors, two address spaces.** These routines walk their coordinate tables
+as FLAT program-image data (pret's `hl` becomes a flat `ESI`, `mov al, [esi]`)
+while the OAM cursor stays a GB offset (`[ebp + edx]`). That split is the
+file's established flat-pointer model, and it is why `AnimationSpiralBallsInward`
+reads its table with `[esi]` and writes shadow OAM with `[ebp + edx]` in the same
+inner loop. **OAM bytes themselves stay pret's exact GB values** — the
+battle-frame projection happens only at publication, per the HAL design.
+
+**New port-only helper `PublishBattleAnimOAM`.** These routines mutate shadow OAM
+and then delay, and the port has no hardware OAM DMA, so each delay must be
+preceded by `PublishProjectedOAM(80, 24)` — the same requirement `DrawFrameBlock`
+already carries and documents. Rather than paste that five-instruction block six
+times, it is factored into one register-preserving helper. faithdiff therefore
+reports `+ ADDED PublishBattleAnimOAM (call)` on `AnimationSpiralBallsInward` and
+`_AnimationShootBallsUpward`; both carry a `DEVIATION{class=projection}` naming
+the mechanism. **The global suppression list was deliberately NOT widened** —
+this is routine-specific divergence and belongs in the report.
+
+`wSavedY` $CD3D added (sym-measured), on the existing $CD3D scratch lane shared
+with `wNumShakes` / `wWhichTownMapLocation`; only one battle animation runs at a
+time, so the lifetimes are disjoint, as in pret.
+
+pret's own note that the `UpwardBallsAnimXCoordinates*` tables are "unused in the
+game" is preserved rather than used as a reason to skip them.
+
+**Verification:** build clean; `lint_pret_labels` 0 both modes; faithdiff clean
+on four labels and the two justified `PublishBattleAnimOAM` additions on the
+other two; `pgate.sh` 17/17 PASS with per-scenario mask-hit counts
+byte-identical to the Stage 4d run. Absence-of-regression only — no scenario in
+the battery plays a move whose stream dispatches to a ball particle.

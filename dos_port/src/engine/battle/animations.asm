@@ -1376,6 +1376,296 @@ SetAnimationBGPalette:
 ; writes cost nothing and keep the routines byte-comparable against pret.
 ; ===========================================================================
 
+; ===========================================================================
+; OAM PARTICLE FAMILY — pret animations.asm (battle_animations Stage 4e).
+;
+; These write wShadowOAM directly (GB space, [ebp + …]) and walk their
+; coordinate tables as FLAT program-image data, per the flat-pointer model at
+; the top of this file: pret's `hl` cursor over SpiralBallAnimationCoordinates /
+; UpwardBallsAnimXCoordinates* is a flat ESI, while the OAM cursor stays a GB
+; offset. OAM bytes themselves are pret's exact GB values — the battle-frame
+; projection happens only at publication.
+; ===========================================================================
+
+; Writes an OAM entry. Y = DL (increased by 8 each call, before the write),
+; X = [wBaseCoordX], tile = DH, attributes vary with the coordinates.
+; ESI = shadow-OAM write cursor (GB offset), advanced by 4.
+global BattleAnimWriteOAMEntry
+BattleAnimWriteOAMEntry:
+    mov al, 1
+    mov [ebp + wdef4], al
+    mov al, dl                               ; ld a, e
+    add al, 8
+    mov dl, al                               ; ld e, a
+    mov [ebp + esi], al                      ; ld [hli], a — Y
+    inc esi
+    cmp al, 40
+    jb .yInRange
+    mov al, [ebp + wdef4]
+    inc al
+    mov [ebp + wdef4], al
+.yInRange:
+    mov al, [ebp + wBaseCoordX]
+    mov [ebp + esi], al                      ; X
+    inc esi
+    cmp al, 88
+    jb .xInRange
+    mov al, [ebp + wdef4]
+    add al, 2
+    mov [ebp + wdef4], al
+.xInRange:
+    mov al, dh                               ; ld a, d — tile
+    mov [ebp + esi], al
+    inc esi
+    mov al, [ebp + wdef4]
+    mov [ebp + esi], al                      ; attributes
+    inc esi
+    ret
+
+; Writes BL OAM entries with tile DH, Y at sequential multiples of 8 from 0,
+; X = 0. Loads animation tileset AL.
+global InitMultipleObjectsOAM
+InitMultipleObjectsOAM:
+    push ebx
+    push edx
+    mov [ebp + wWhichBattleAnimTileset], al
+    call LoadMoveAnimationTiles
+    pop edx
+    pop ebx
+    xor al, al
+    mov dl, al                               ; ld e, a
+    mov [ebp + wBaseCoordX], al
+    mov esi, W_SHADOW_OAM
+.loop:
+    call BattleAnimWriteOAMEntry
+    dec bl                                   ; 8-bit, as pret
+    jnz .loop
+    ret
+
+; DEVIATION{class=projection; pret=engine/battle/animations.asm:AnimationSpiralBallsInward; behavior=the port publishes wShadowOAM to the renderer at the battle-frame origin (80,24) via PublishProjectedOAM before each inter-frame delay; evidence=the port has no hardware OAM DMA so the particle OAM this routine writes would never reach render_sprites otherwise, exactly as DrawFrameBlock already documents, and offscreen entries stay hidden by the g_obj_clip rectangle MoveAnimation set on entry; lifetime=permanent, part of the battle-animation projection boundary}
+global AnimationSpiralBallsInward
+AnimationSpiralBallsInward:
+; Creates an effect that looks like energy balls spiralling into the player
+; mon's sprite. Used in Focus Energy, for example.
+    mov al, [ebp + hWhoseTurn]
+    test al, al
+    jz .playerTurn
+    mov al, -40
+    mov [ebp + wSpiralBallsBaseY], al
+    mov al, 80
+    mov [ebp + wSpiralBallsBaseX], al
+    jmp short .next
+.playerTurn:
+    xor al, al
+    mov [ebp + wSpiralBallsBaseY], al
+    mov [ebp + wSpiralBallsBaseX], al
+.next:
+    mov dh, 0x7A                             ; ball tile
+    mov bl, 3                                ; number of balls
+    xor al, al
+    call InitMultipleObjectsOAM
+    mov esi, SpiralBallAnimationCoordinates  ; flat table
+.loop:
+    push esi
+    mov bl, 3
+    mov edx, W_SHADOW_OAM                    ; GB-space OAM cursor
+.innerLoop:
+    mov al, [esi]                            ; flat
+    cmp al, 0xFF
+    jz .done
+    mov al, 2
+    mov [ebp + wdef4], al
+    mov al, [ebp + wSpiralBallsBaseY]
+    add al, [esi]
+    mov [ebp + edx], al                      ; Y
+    inc edx
+    inc esi
+    mov al, [ebp + wSpiralBallsBaseX]
+    add al, [esi]
+    mov [ebp + edx], al                      ; X
+    cmp al, 88
+    jb .xInRange
+    mov al, 3
+    mov [ebp + wdef4], al
+.xInRange:
+    inc esi
+    inc edx
+    inc edx
+    mov al, [ebp + edx]
+    and al, 0xF0
+    mov bh, al                               ; ld b, a
+    mov al, [ebp + wdef4]
+    or al, bh
+    mov [ebp + edx], al
+    inc edx
+    dec bl
+    jnz .innerLoop
+    call PublishBattleAnimOAM
+    mov bl, 5
+    call DelayFrames
+    pop esi
+    inc esi
+    inc esi
+    jmp .loop
+.done:
+    pop esi
+    call AnimationCleanOAM
+    jmp AnimationFlashScreen
+
+SpiralBallAnimationCoordinates:
+; y, x pairs — the sequence of screen coordinates the spiralling balls take.
+    db 0x38, 0x28
+    db 0x40, 0x18
+    db 0x50, 0x10
+    db 0x60, 0x18
+    db 0x68, 0x28
+    db 0x60, 0x38
+    db 0x50, 0x40
+    db 0x40, 0x38
+    db 0x40, 0x28
+    db 0x46, 0x1E
+    db 0x50, 0x18
+    db 0x5B, 0x1E
+    db 0x60, 0x28
+    db 0x5B, 0x32
+    db 0x50, 0x38
+    db 0x46, 0x32
+    db 0x48, 0x28
+    db 0x50, 0x20
+    db 0x58, 0x28
+    db 0x50, 0x30
+    db 0x50, 0x28
+    db -1                                    ; end
+
+global AnimationShootBallsUpward
+AnimationShootBallsUpward:
+; Shoots one pillar of "energy" balls upwards. Used in Teleport/Sky Attack.
+    mov al, [ebp + hWhoseTurn]
+    test al, al
+    jz .playerTurn
+    mov bh, 0                                ; lb bc, 0, 16 * 8
+    mov bl, 16 * 8
+    jmp short .next
+.playerTurn:
+    mov bh, 6 * 8                            ; lb bc, 6 * 8, 5 * 8
+    mov bl, 5 * 8
+.next:
+    mov al, bh
+    mov [ebp + wBaseCoordY], al
+    mov al, bl
+    mov [ebp + wBaseCoordX], al
+    mov bh, 5                                ; lb bc, 5, 1 — BH balls, BL frame delay
+    mov bl, 1
+    call _AnimationShootBallsUpward
+    jmp AnimationCleanOAM
+
+; DEVIATION{class=projection; pret=engine/battle/animations.asm:_AnimationShootBallsUpward; behavior=the port publishes wShadowOAM to the renderer at the battle-frame origin (80,24) via PublishProjectedOAM before each inter-frame delay; evidence=the port has no hardware OAM DMA so the ball OAM this routine writes would never reach render_sprites otherwise, exactly as DrawFrameBlock already documents, and offscreen entries stay hidden by the g_obj_clip rectangle MoveAnimation set on entry; lifetime=permanent, part of the battle-animation projection boundary}
+; In: BH = number of balls, BL = frame delay between steps
+global _AnimationShootBallsUpward
+_AnimationShootBallsUpward:
+    push ebx
+    xor al, al
+    mov [ebp + wWhichBattleAnimTileset], al
+    call LoadMoveAnimationTiles
+    pop ebx
+    mov dh, 0x7A                             ; ball tile
+    mov esi, W_SHADOW_OAM
+    push ebx
+    mov al, [ebp + wBaseCoordY]
+    mov dl, al                               ; ld e, a
+.initOAMLoop:
+    call BattleAnimWriteOAMEntry
+    dec bh
+    jnz .initOAMLoop
+    call PublishBattleAnimOAM
+    call DelayFrame
+    pop ebx
+    mov al, bh
+    mov [ebp + wNumShootingBalls], al
+.loop:
+    push ebx
+    mov esi, W_SHADOW_OAM
+.innerLoop:
+    mov al, [ebp + wBaseCoordY]
+    add al, 8
+    mov dl, al                               ; ld e, a
+    mov al, [ebp + esi]
+    cmp al, dl                               ; has the ball reached the top?
+    jz .reachedTop
+    add al, -4                               ; not yet — move it up 4 pixels
+    mov [ebp + esi], al
+    jmp short .nextBall
+.reachedTop:
+; remove the ball once it has reached the top
+    mov byte [ebp + esi], 0                  ; put it off-screen
+    mov al, [ebp + wNumShootingBalls]
+    dec al
+    mov [ebp + wNumShootingBalls], al
+.nextBall:
+; pret loads de with OBJ_SIZE here, clobbering e; the port adds the constant and
+; e is reloaded from wBaseCoordY at the top of the loop either way.
+    add esi, OBJ_SIZE                        ; next OAM entry
+    dec bh
+    jnz .innerLoop
+    call PublishBattleAnimOAM
+    call DelayFrames
+    pop ebx
+    mov al, [ebp + wNumShootingBalls]
+    test al, al
+    jnz .loop
+    ret
+
+global AnimationShootManyBallsUpward
+AnimationShootManyBallsUpward:
+; Shoots several pillars of "energy" balls upward.
+    mov al, [ebp + hWhoseTurn]
+    test al, al
+    mov esi, UpwardBallsAnimXCoordinatesPlayerTurn   ; flat table
+    mov al, 0x50                             ; y coordinate for the ball pillar
+    jz .player
+    mov esi, UpwardBallsAnimXCoordinatesEnemyTurn
+    mov al, 0x28
+.player:
+    mov [ebp + wSavedY], al
+.loop:
+    mov al, [ebp + wSavedY]
+    mov [ebp + wBaseCoordY], al
+    mov al, [esi]                            ; ld a, [hli] — flat
+    inc esi
+    cmp al, 0xFF
+    jz AnimationCleanOAM                     ; pret `jp z, AnimationCleanOAM`
+    mov [ebp + wBaseCoordX], al
+    mov bh, 4                                ; lb bc, 4, 1
+    mov bl, 1
+    push esi
+    call _AnimationShootBallsUpward
+    pop esi
+    jmp .loop
+
+; Lists of x coordinates for each pillar of "energy" balls in the
+; AnimationShootManyBallsUpward animation. Unused in the game (pret's note).
+UpwardBallsAnimXCoordinatesPlayerTurn:
+    db 0x10, 0x40, 0x28, 0x18, 0x38, 0x30
+    db -1                                    ; end
+
+UpwardBallsAnimXCoordinatesEnemyTurn:
+    db 0x60, 0x90, 0x78, 0x68, 0x88, 0x80
+    db -1                                    ; end
+
+; PublishBattleAnimOAM — port-only. The five-instruction PublishProjectedOAM
+; call the particle routines need before every inter-frame delay, factored out
+; so the DEVIATIONs above describe one mechanism rather than six copies. Not a
+; pret label; preserves every register.
+PublishBattleAnimOAM:
+    pushad
+    mov esi, W_SHADOW_OAM                    ; canonical OAM (GB offset)
+    mov ecx, OAM_COUNT                       ; publish all 40; offscreen hidden by g_obj_clip
+    mov eax, 80                              ; battle-frame origin X
+    mov ebx, 24                              ; battle-frame origin Y
+    call PublishProjectedOAM
+    popad
+    ret
+
 ; ---------------------------------------------------------------------------
 ; wTempPic-backed effects — pret animations.asm (battle_animations Stage 4d).
 ; `wTempPic` is RELOCATED to 0x21A00 (still EBP-relative); the reasoning lives

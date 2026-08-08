@@ -183,6 +183,11 @@ AnimationFlashEnemyMonPic:
 ; RETIRED 2026-08-08 — real bodies in animations.asm (Stage 3 flash family).
 
 ; --- Stage 4: mon-pic slides + motion + OAM particles + HUD shake ---
+; AnimationSpiralBallsInward, AnimationShootBallsUpward,
+; AnimationShootManyBallsUpward: RETIRED 2026-08-08 — real bodies in
+; animations.asm (Stage 4e ball particles), with _AnimationShootBallsUpward,
+; BattleAnimWriteOAMEntry, InitMultipleObjectsOAM and their coordinate tables.
+
 ; AnimationMinimizeMon, AnimationSlideMonDownAndHide: RETIRED 2026-08-08 —
 ; real bodies in animations.asm (Stage 4d), with MinimizedMonSprite and
 ; CopyTempPicToMonPic (pulled forward from Stage 5 because both end in it).
@@ -205,21 +210,6 @@ AnimationFlashEnemyMonPic:
 ; ClearMonPicFromTileMap, GetMonSpriteTileMapPointerFromRowCount, GetTileIDList,
 ; AnimCopyRowLeft/Right, CopyPicTiles, CopyDownscaledMonTiles,
 ; CopyTileIDs{,_NoBGTransfer} and CopyTileIDsFromList.
-
-; STUB{class=temporary; label=AnimationShootBallsUpward; pret=engine/battle/animations.asm:AnimationShootBallsUpward; behavior=return instead of the upward balls particles; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 particle family lands}
-global AnimationShootBallsUpward
-AnimationShootBallsUpward:
-    ret
-
-; STUB{class=temporary; label=AnimationShootManyBallsUpward; pret=engine/battle/animations.asm:AnimationShootManyBallsUpward; behavior=return instead of the many-balls particles; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 particle family lands}
-global AnimationShootManyBallsUpward
-AnimationShootManyBallsUpward:
-    ret
-
-; STUB{class=temporary; label=AnimationSpiralBallsInward; pret=engine/battle/animations.asm:AnimationSpiralBallsInward; behavior=return instead of the inward spiral balls particles; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 particle family lands}
-global AnimationSpiralBallsInward
-AnimationSpiralBallsInward:
-    ret
 
 ; STUB{class=temporary; label=AnimationLeavesFalling; pret=engine/battle/animations.asm:AnimationLeavesFalling; behavior=return instead of the falling leaves particles; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 particle family lands}
 global AnimationLeavesFalling

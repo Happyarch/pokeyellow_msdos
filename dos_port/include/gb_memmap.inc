@@ -556,6 +556,7 @@ wUnusedMoveAnimByte    equ 0xD09A   ; golden 00:d09a — MoveAnimation write-onl
 wFBDestAddr            equ 0xD09B   ; word: running wShadowOAM write cursor (big-endian)
 wFBMode                equ 0xD09D   ; FRAMEBLOCKMODE_* post-frame-block behavior
 wWhichBattleAnimTileset equ 0xD09E  ; 0/1/2 -> MoveAnimationTilesPointers row
+wSavedY                equ 0xCD3D   ; golden 00:cd3d — AnimationShootManyBallsUpward's per-pillar Y. Same $CD3D scratch lane as wNumShakes / wWhichTownMapLocation below; lifetimes disjoint (one battle anim at a time).
 wNumShakes             equ 0xCD3D   ; ball-shake count (low nybble of wPokeBallAnimData; transitions scratch lane union)
 wDownscaledMonSize     equ 0xCD6C   ; 0 = 5x5, 1 = 3x3 (send-out/recall downscale)
 ; per-effect scratch unions at $D089 (comment-only aliases resolve to the same byte):
