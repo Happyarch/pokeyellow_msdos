@@ -216,10 +216,13 @@ AnimatePartyMon:
 GetAnimationSpeed:
     mov bl, al                              ; ld c,a
     movzx eax, bl
-    ; a = (wOnSGB ^ 1) + PartyMonSpeeds[c]. TODO-HW: SGB detect — wOnSGB is
-    ; always 0 in the port (home/init.asm), so this is PartyMonSpeeds[c] + 1.
-    mov al, [PartyMonSpeeds + eax]          ; ld hl,PartyMonSpeeds / add hl,bc / add [hl]
-    inc al                                  ; ld a,[wOnSGB] / xor $1  → 1
+    ; a = (wOnSGB ^ 1) + PartyMonSpeeds[c]. wOnSGB is 1 in the port (colour
+    ; hardware — home/init.asm publishes LoadSGB's CGB result), so the addend is 0;
+    ; read it rather than folding the constant, so the two stay in step.
+    mov ah, [PartyMonSpeeds + eax]          ; ld hl,PartyMonSpeeds / add hl,bc / ld a,[hl]
+    mov al, [ebp + wOnSGB]                  ; ld a,[wOnSGB]
+    xor al, 0x1                             ; xor $1
+    add al, ah                              ; add [hl]
     mov bl, al                              ; ld c,a — the frame period
     add al, al                              ; add a
     mov bh, al                              ; ld b,a — the full cycle (2 × period)

@@ -108,6 +108,21 @@ SetPal_Battle:
     movzx eax, byte [ebp + wEnemyHPBarColor]
     add al, PAL_GREENBAR
     mov [bg_slot_pal + 1], al
+    ; Mirror the four battle base palettes into the OBJ slots. pret's
+    ; InitCGBPalettes converts the SAME four packet palettes into BG pals AND
+    ; OBP0/OBP1 pals (engine/gfx/palettes.asm:736 — one GetCGBBasePalAddress,
+    ; then CONVERT_BGP + CONVERT_OBP0 + CONVERT_OBP1 from it), and SetPal_Screen
+    ; here already mirrors its row into both tables. SetPal_Battle was the one
+    ; handler that filled only bg_slot_pal, so the OBJ slots kept whatever the
+    ; previous screen left — after the battle transition that is SetPal_BattleBlack's
+    ; PAL_BLACK flood, which rendered every battle-animation particle (colors 1-3
+    ; of the anim tiles) as a solid black silhouette (maintainer-observed:
+    ; black GUST tornado, black stars; production-path confirmed via
+    ; TRAINER_ROUTE_PILOT, so not a harness phantom).
+    mov esi, bg_slot_pal
+    mov edi, obj_slot_pal
+    mov ecx, 4
+    rep movsb
     mov esi, battle_tile_pal
     mov edi, tile_pal
     mov ecx, 384

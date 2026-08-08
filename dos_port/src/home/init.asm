@@ -9,7 +9,8 @@
 ;
 ;   di/ei, rIF/rIE writes        → no GB interrupt controller; shadows only
 ;   WriteDMACodeToHRAM + rROMB   → ; TODO-HW: OAM DMA + ROM banking
-;   predef LoadSGB               → ; TODO-HW: SGB detect (wOnSGB stays 0)
+;   predef LoadSGB               → wOnSGB = 1 (no packet HAL, but the port IS colour
+;                                  hardware — LoadSGB sets wOnSGB on CGB; see below)
 ;   predef PlayIntro             → call PlayIntro (Game Freak splash + Yellow intro);
 ;                                  faithful default — runs on every normal power-on,
 ;                                  skipped only under SKIP_TITLE / SKIP_INTRO (menu-intro B4)
@@ -150,7 +151,12 @@ Init:
 
     ; ei — no GB interrupt controller
 
-    ; predef LoadSGB — ; TODO-HW: SGB detection. wOnSGB stays 0 (zeroed above).
+    ; predef LoadSGB — the port has no SGB packet HAL, but it DOES have colour
+    ; hardware, and on real colour hardware LoadSGB publishes wOnSGB = 1 (measured
+    ; in mGBA on the golden ROM: hOnCGB = 1 AND wOnSGB = 1). Publish that result
+    ; directly so every wOnSGB branch takes the colour path the real game takes.
+    ; DEVIATION{class=HAL; pret=home/init.asm:Init; behavior=predef LoadSGB is not called, its observable result wOnSGB=1 is published directly and the SGB packet transfer is omitted; evidence=measured in mGBA on the golden ROM in CGB mode, LoadSGB leaves hOnCGB=1 and wOnSGB=1, and the port's VGA DAC slot palettes are the colour-hardware path; lifetime=retired if an SGB packet HAL is ever implemented}
+    mov byte [ebp + wOnSGB], 1
 
     ; DEVIATION{class=HAL; pret=home/init.asm:Init; behavior=pret's wAudioROMBank/wAudioSavedROMBank = BANK(SFX_Shooting_Star) seed is dropped; evidence=the audio engine is Phase 3 (docs/current_plan_audio.md) and the bank cells are inert until it lands; lifetime=retired by the Phase 3 audio engine wiring the boot banks}
 

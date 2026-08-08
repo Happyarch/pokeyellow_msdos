@@ -1959,8 +1959,15 @@ RunBattleTest:
     call PrepareNewGameDebug        ; the standard debug new-game seed
     ; TryDoWildEncounter's outputs, per the spec (the golden walks Route 1
     ; grass with wGrassMons forced to 10 x (L13, PIDGEY)):
+%ifdef DEBUG_ANIM_DEMO
+    ; Anim-demo reference scene (maintainer request): enemy = ZUBAT L16,
+    ; matching the real-game GUST reference frames (PIDGEOTTO vs ZUBAT).
+    mov byte [ebp + wEnemyMonSpecies2], 0x6B    ; ZUBAT (internal index)
+    mov byte [ebp + wCurEnemyLevel], 16
+%else
     mov byte [ebp + wEnemyMonSpecies2], 0x24    ; PIDGEY (internal index)
     mov byte [ebp + wCurEnemyLevel], 13
+%endif
     or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     call LoadTextBoxTilePatterns
@@ -3120,12 +3127,18 @@ DumpPalette:
     jb .bg_slot
     xor ebx, ebx
 .obj_slot:
-    movzx esi, byte [obj_slot_pal + ebx]
+    ; Same CGB OBJ expansion commit_palette (boot/video.asm) performs: eight OBJ
+    ; palettes built from the FOUR base palettes in obj_slot_pal[0..3] — pals 0-3
+    ; through rOBP0, pals 4-7 through rOBP1. Keep the two in step or PAL.BIN lies
+    ; about the DAC (the raw obj_slot_pal[8] copy below is unchanged).
+    mov eax, ebx
+    and eax, 3
+    movzx esi, byte [obj_slot_pal + eax]
     imul esi, 12
     add esi, pal_rgb_table
     movzx eax, byte [ebp + IO_OBP0]
-    test ebx, 1
-    jz .obj_reg
+    cmp ebx, 4
+    jb .obj_reg
     movzx eax, byte [ebp + IO_OBP1]
 .obj_reg:
     mov [pal_reg_tmp], eax

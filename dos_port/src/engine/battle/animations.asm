@@ -47,6 +47,8 @@ SCREEN_HEIGHT_PX         equ 144   ; constants/hardware.inc
 %ifndef wCoordAdjustmentAmount
 wCoordAdjustmentAmount   equ 0xD089 ; golden 00:d089
 %endif
+; wOnSGB now comes from gb_memmap.inc (0xCF1A); it is 1 in the port — colour
+; hardware, set at init like pret LoadSGB on CGB (memory battle-anim-cgb-obj-palette-model).
 
 ; --- Tier-1 data tables (src/data/battle_anims.asm; flat dd) ---
 extern AttackAnimationPointers
@@ -76,7 +78,6 @@ extern PublishProjectedOAM            ; src/engine/gfx/sprite_oam.asm — wShado
 extern g_obj_clip                     ; src/ppu/ppu.asm — OBJ clip rectangle (x0,y0,x1,y1 dwords)
 
 ; --- Stage 3-5 dispatch-target stubs (src/engine/battle/core_stubs.asm) ---
-extern SetAnimationPalette
 extern TossBallAnimation
 extern AnimationFlashScreen
 extern AnimationDarkScreenPalette
@@ -148,6 +149,7 @@ global AnimationDelay10
 global CallWithTurnFlipped
 global GetMoveSound
 global IsCryMove
+global SetAnimationPalette
 global PlayApplyingAttackSound
 global MoveAnimationTilesPointers
 global MoveAnimationTiles0
@@ -738,6 +740,47 @@ DoSpecialEffectByAnimationId:
 AnimationDelay10:
     mov bl, 10                               ; ld c,10 → BL
     jmp DelayFrames
+
+; ===========================================================================
+; SetAnimationPalette — pret animations.asm:565. Set the animation OBJ palettes:
+; wAnimPalette (PlayAnimation loads it into OBP0 around each subanimation) and
+; OBP1. The SGB branch is LIVE: wOnSGB=1 in the port (colour hardware, set at
+; init exactly as pret LoadSGB does on CGB), so wAnimPalette=$F0 — the measured
+; real-hardware value (memory battle-anim-cgb-obj-palette-model). pret's
+; vc_hook lines are Virtual-Console markers with no runtime effect — nothing
+; to port.
+; ===========================================================================
+SetAnimationPalette:
+    mov al, [ebp + wOnSGB]
+    and al, al
+    mov al, 0xE4                             ; ld a,$e4 (flags preserved)
+    jz .notSGB                               ; jr z
+    mov al, 0xF0
+    mov [ebp + wAnimPalette], al
+    mov bh, 0xE4                             ; ld b,$e4
+    mov al, [ebp + wAnimationID]
+    cmp al, TRADE_BALL_DROP_ANIM
+    jb .next                                 ; jr c
+    cmp al, TRADE_BALL_POOF_ANIM + 1
+    jae .next                                ; jr nc
+    mov bh, 0xF0
+.next:
+    mov al, bh                               ; ld a,b
+    mov [ebp + IO_OBP0], al                  ; ldh [rOBP0],a
+    mov al, 0x6C
+    mov [ebp + IO_OBP1], al                  ; ldh [rOBP1],a
+    call UpdateCGBPal_OBP0
+    call UpdateCGBPal_OBP1
+    ret
+.notSGB:
+    mov al, 0xE4
+    mov [ebp + wAnimPalette], al
+    mov [ebp + IO_OBP0], al                  ; ldh [rOBP0],a
+    mov al, 0x6C
+    mov [ebp + IO_OBP1], al                  ; ldh [rOBP1],a
+    call UpdateCGBPal_OBP0
+    call UpdateCGBPal_OBP1
+    ret
 
 ; ===========================================================================
 ; CallWithTurnFlipped — pret animations.asm. Call a routine with hWhoseTurn

@@ -254,15 +254,25 @@ commit_palette:
     inc ebx
     cmp ebx, 8
     jb .bg_slot
-    xor ebx, ebx                    ; OBJ slot 0..7
+    ; OBJ: eight CGB OBJ palettes built from FOUR base palettes, exactly as the
+    ; CGB game maintains its OBJ palette RAM — pals 0-3 are base palettes 0-3
+    ; remapped through rOBP0's DMG bits, pals 4-7 are the SAME four base palettes
+    ; remapped through rOBP1.  (That is all pret's UpdateCGBPal_OBP0 /
+    ; UpdateCGBPal_OBP1 do.)  So obj_slot_pal[0..3] are the meaningful base
+    ; palettes; entries [4..7] are unused/reserved and are never read here — the
+    ; array keeps its 8 bytes because other code still floods all eight.
+    ; render_sprites picks the palette with attr & 7, matching this layout.
+    xor ebx, ebx                    ; CGB OBJ palette 0..7
 .obj_slot:
-    movzx esi, byte [obj_slot_pal + ebx]
+    mov eax, ebx
+    and eax, 3                      ; base palette index = slot mod 4
+    movzx esi, byte [obj_slot_pal + eax]
     imul esi, 12
     add esi, pal_rgb_table
-    mov edi, [ebp + IO_OBP0]
-    test ebx, 1
-    jz .obj_reg
-    mov edi, [ebp + IO_OBP1]
+    movzx edi, byte [ebp + IO_OBP0]
+    cmp ebx, 4
+    jb .obj_reg
+    movzx edi, byte [ebp + IO_OBP1]
 .obj_reg:
     mov ecx, 4
 .obj_color:

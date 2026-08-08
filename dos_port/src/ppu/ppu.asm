@@ -230,7 +230,7 @@ spr_sx:      resd 1        ; sprite left screen X (signed)
 spr_sy:      resd 1        ; sprite top screen Y (signed)
 spr_tileidx: resd 1        ; sprite's tile id (= its index into tile_cache)
 spr_srcrow:  resd 1        ; tile_cache address of the current 8-px decoded row
-spr_palbase: resd 1        ; 4 (OBP0) or 8 (OBP1) — fixed per sprite
+spr_palbase: resd 1        ; 32 + (attr & 7) * 4 — CGB OBJ palette band, per sprite
 spr_clipped: resd 1        ; nonzero if g_obj_clip's X bounds are non-default
 spr_attr:    resd 1        ; OAM attribute byte
 spr_row:     resd 1        ; current sprite row 0..7
@@ -813,7 +813,7 @@ rebuild_tile_cache:
 ; In:  EBX = tile_cache row (8 raw-color bytes, leftmost pixel first)
 ;      EDI = back-buffer offset (GB-relative) of this row's pixel 0
 ;      EDX = screen X of the sprite's column 0 (signed; may be negative)
-;      [spr_palbase] = 4 or 8, [spr_attr] = OAM attributes, EBP = GB base
+;      [spr_palbase] = 32 + (attr & 7)*4, [spr_attr] = OAM attributes, EBP = GB base
 ; Both operands are assembly-time constants, so the cache fetch and the clip
 ; compare fold into displacements — no per-pixel index math and no loop.
 ; Clobbers EAX, ECX.
@@ -938,17 +938,20 @@ render_sprites:
     movzx eax, byte [ebp + esi + 3]      ; attributes
     mov [spr_attr], eax
 
-    ; Palette base: OBJ slots occupy DAC bands 32..63.  PrepareOAMData retains
-    ; the CGB high-palette marker, yielding all four currently representable slots.
-    mov ecx, 32
-    test al, OAM_PAL1
-    jz .havePal
-    add ecx, 4
-.havePal:
-    test al, OAM_HIGH_PALS
-    jz .palReady
-    add ecx, 8
-.palReady:
+    ; Palette base: OBJ slots occupy DAC bands 32..63, eight 4-entry CGB OBJ
+    ; palettes.  CGB hardware selects the palette with the low 3 bits of the OAM
+    ; attribute byte and IGNORES bit 4 (the DMG OBP-select bit), so the rule here
+    ; is simply slot = attr & 7.  Both producers already speak that language:
+    ; battle-animation frame blocks carry 2 (X < 88) or 3 (X >= 88) from
+    ; DrawFrameBlock, and PrepareOAMData ORs in OAM_HIGH_PALS (%100) alongside
+    ; OAM_PAL1 for OBP1 sprites, so overworld OBJ land on slot 0 or slot 4 exactly
+    ; as before.  commit_palette (boot/video.asm) fills slots 0-3 from the four
+    ; base OBJ palettes through rOBP0 and slots 4-7 from the same four through
+    ; rOBP1, mirroring the CGB OBJ palette RAM the game maintains.
+    movzx ecx, al
+    and ecx, 7                           ; CGB OBJ palette index (attr bits 0-2)
+    shl ecx, 2                           ; 4 DAC entries per palette
+    add ecx, 32                          ; OBJ band base
     mov [spr_palbase], ecx
 
     ; Cull sprites that fall entirely off-screen.

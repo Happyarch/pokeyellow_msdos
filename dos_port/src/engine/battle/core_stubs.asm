@@ -150,10 +150,10 @@ SlideDownFaintedMonPic:
 ; each entry here when its owning stage ports the real routine.
 ; ===========================================================================
 ; --- Stage 3: screen / palette / flash / shake / wavy ---
-; STUB{class=temporary; label=SetAnimationPalette; pret=engine/battle/animations.asm:SetAnimationPalette; behavior=return without setting the OBP0/OBP1 anim palette; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 3 palette family lands}
-global SetAnimationPalette
-SetAnimationPalette:
-    ret
+; SetAnimationPalette: RETIRED 2026-08-08 — real body in animations.asm (pulled
+; forward from Stage 3: the stub left wAnimPalette/OBP0/OBP1 uninitialized, so
+; live animation particles rendered in wrong colors — maintainer-observed on
+; the GUST demo).
 
 ; STUB{class=temporary; label=AnimationFlashScreen; pret=engine/battle/animations.asm:AnimationFlashScreen; behavior=return instead of flashing the screen palette; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 3 flash family lands}
 global AnimationFlashScreen

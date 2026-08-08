@@ -60,6 +60,15 @@ align 4
 ; Preserve today's look until a palette command chooses otherwise.
 ; DEVIATION{class=HAL; pret=home/palettes.asm:RunPaletteCommand; behavior=the palette a tile renders with is held per BG and OBJ slot as a port palette id plus a dirty flag the software renderer polls, instead of living in the Game Boy's BGP OBP0 OBP1 registers and the CGB palette RAM the hardware reads while scanning; evidence=the DOS target renders through a VGA DAC with no per-scanline palette hardware, so a palette command has to be resolved into renderer-side state and the renderer told it changed, and these three symbols have no pret counterpart because on the GB the registers themselves are the state, the pret-labelled command routines above still run unchanged; lifetime=permanent, the palette side of the software video HAL}
 bg_slot_pal: times 8 db PAL_DMG_GREEN
+; obj_slot_pal holds the FOUR BASE OBJ palettes the game maintains (entries 0-3),
+; the same four the packet/battle handlers publish into bg_slot_pal.
+; commit_palette (boot/video.asm) expands them into the eight CGB OBJ palettes the
+; renderer indexes with `attr & 7`: pals 0-3 = base 0-3 through rOBP0's DMG bits,
+; pals 4-7 = the same base 0-3 through rOBP1 (exactly what pret's
+; UpdateCGBPal_OBP0/UpdateCGBPal_OBP1 do on hardware).
+; Entries 4-7 are therefore UNUSED/RESERVED — never read. The array keeps its 8
+; bytes because several handlers still flood all eight (harmless), and other files
+; index it as an 8-byte table (src/debug/debug_dump.asm:DumpPalette).
 obj_slot_pal: times 8 db PAL_DMG_GREEN
 g_pal_dirty: db 1
 section .text
