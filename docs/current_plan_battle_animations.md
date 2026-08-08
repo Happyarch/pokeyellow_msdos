@@ -6,17 +6,17 @@
 > pytest resolves — allowlist is not ours to grow, behavior changes need
 > scenarios). Not duplicated here; read it there.
 
-Status: **Stage 2 COMPLETE except the demo harness** (2a landed; 2b projection +
-BCOORD + production wiring landed 2026-08-08 — the interpreter now RUNS in
-production and the battle tier is green). Owner: this plan.
-The 2026-08-08 "interpreter crash" blocker is FIXED: it was never in the
-interpreter — the port's `<DONE>` text sentinel lived at GB $C0F0/$C0F1
-(= pret wAudioSavedROMBank/wFrequencyModifier) and GetMoveSound's first-ever
-freq-modifier write destroyed the text terminator; the sentinel is now flat
-.data in src/home/text.asm (memory `regression-battle-anim-interp-runtime-crash`,
-FIXED). Remaining Stage 2 item: the `DEBUG_ANIM_DEMO` harness (Item 4).
-See memories `battle-animations-plan-created` +
-`regression-battle-anim-interp-runtime-crash`.
+Status: **Stage 2 COMPLETE, maintainer-signed-off 2026-08-08** (2a interpreter
+0b629e0a; 2b projection+BCOORD ec29c877, production wiring 1ad2fc46, demo
+harness 88d3043a, OBJ-layer fix 6d31b454; POUND demo LGTM'd). Next: Stage 3.
+Owner: this plan.
+Two defects were root-caused on the way (both memories FIXED):
+`regression-battle-anim-interp-runtime-crash` — the "interpreter crash" was the
+port's `<DONE>` text sentinel at GB $C0F0/$C0F1 (= pret
+wAudioSavedROMBank/wFrequencyModifier) destroyed by GetMoveSound's first-ever
+freq-modifier write; sentinel is now flat .data in src/home/text.asm.
+`regression-battle-anim-oam-never-composited` — HideBattlePokeballs' port-only
+LCDC OBJ-bit disable kept render_sprites' gate shut for the whole battle.
 Umbrella: `docs/current_plan_battle_completion.md` Stage 6 (6a–6e) — this file
 is the dedicated detail owner for the in-battle animation engine, the same
 relationship the archived `docs/plans/battle_transitions.md` had to Stage 5.
@@ -203,7 +203,7 @@ Two maintainer-confirmed decisions (AskUserQuestion, 2026-08-07):
       (core.asm) is unchanged, so battle behavior is unchanged and the runtime
       golden tier is deferred to 2b (also: mgba absent in the 2a build env).
 
-**Stage 2b (code DONE; only the maintainer's visual sign-off is open):**
+**Stage 2b (DONE — code + maintainer visual sign-off 2026-08-08):**
 
 > ✅ **The 2026-08-08 crash blocker is FIXED (root cause was NOT the
 > interpreter).** The port's `<DONE>`/`<PROMPT>` text-stream sentinel was two
@@ -241,11 +241,13 @@ Two maintainer-confirmed decisions (AskUserQuestion, 2026-08-07):
       `ANIM=GUST` differ in 9 OAM bytes (the interpreter really ran and the knob
       is live); `DEBUG_ANIM_LOOPS` 1 vs 15 = 16 s vs 36 s (the counter is
       honored). battle_faint + battle_intro still PASS; lint 0 both modes.
-- [ ] **Maintainer visual sign-off of a Pound/Gust-class animation — STILL
-      PENDING.** The harness existing is not the sign-off. Sign-off command:
-      `dos_port/run DEBUG_ANIM_DEMO=1 [ANIM=<MOVE_CONST>] /LOOP`
-      (Esc quits via the normal DelayFrame quit path). Expect OAM particle
-      frame blocks only until Stages 3-5 retire the handler stubs.
+- [x] **Maintainer visual sign-off — DONE 2026-08-08 ("LGTM"),** on the POUND
+      demo AFTER the OBJ-layer fix 6d31b454 (first viewing caught that defect:
+      memory `regression-battle-anim-oam-never-composited`). Sign-off command
+      was `dos_port/run DEBUG_ANIM_DEMO=1 /LOOP`. Known harness artifact, NOT a
+      bug: the demo starts the move before the send-out animation finishes —
+      in a real battle the move-selection menu gates that; the harness has no
+      menu. Do not "fix" this in the harness.
 - [x] Gate: battle tier green — 13 scenarios PASS 2026-08-08 with the
       interpreter live (battle_intro/menu/move_selection/damage/faint/blackout,
       trainer_battle_init/win/loss/route, ball_catch, item_potion_use,
