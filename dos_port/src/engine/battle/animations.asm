@@ -45,6 +45,9 @@ OBJ_SIZE                 equ 4     ; constants/hardware.inc — bytes per OAM en
 %ifndef SCREEN_HEIGHT_PX
 SCREEN_HEIGHT_PX         equ 144   ; constants/hardware.inc
 %endif
+; WavyScreenLineOffsets entry count (pret's table before its $80 terminator).
+; MUST be a power of two — WavyScreen_SetSCX wraps the phase with AND, not MOD.
+WAVY_SCREEN_NUM_OFFSETS  equ 32
 %ifndef wCoordAdjustmentAmount
 wCoordAdjustmentAmount   equ 0xD089 ; golden 00:d089
 %endif
@@ -80,6 +83,8 @@ extern LoadScreenTilesFromBuffer2     ; src/home/tilemap.asm
 extern Delay3                         ; src/home/palettes.asm
 extern PublishProjectedOAM            ; src/engine/gfx/sprite_oam.asm — wShadowOAM -> canvas at (EAX,EBX)
 extern g_obj_clip                     ; src/ppu/ppu.asm — OBJ clip rectangle (x0,y0,x1,y1 dwords)
+extern g_row_xoff_on                  ; src/ppu/ppu.asm — wavy-screen per-row HAL enable
+extern g_row_xoff                     ; src/ppu/ppu.asm — signed per-screen-row BG X offset
 
 ; --- Stage 3-5 dispatch-target stubs (src/engine/battle/core_stubs.asm) ---
 extern TossBallAnimation
@@ -111,7 +116,6 @@ extern AnimationShowEnemyMonPic
 extern AnimationSlideEnemyMonOff
 extern AnimationShakeBackAndForth
 extern AnimationSubstitute
-extern AnimationWavyScreen
 extern TailWhipAnimationUnused
 extern DoGrowlSpecialEffects
 extern DoBlizzardSpecialEffects
@@ -183,6 +187,9 @@ global AnimationShakeScreenHorizontallyFast
 global AnimationShakeScreenHorizontallySlow
 global AnimationUnusedShakeScreen
 global AnimationBlinkEnemyMon
+global AnimationWavyScreen
+global WavyScreen_SetSCX
+global WavyScreenLineOffsets
 
 ; --- existing globals (retained below) ---
 global PlayApplyingAttackAnimation
@@ -752,6 +759,84 @@ AnimationBlinkEnemyMon:
     jmp CallWithTurnFlipped
 
 ; ===========================================================================
+; AnimationWavyScreen — used in Psywave/Psychic/Confusion (Stage 3c).
+;
+; pret drives this per SCANLINE: it turns the window off, then spins on rSTAT
+; waiting for H-blank and writes a fresh rSCX for EVERY line, so each line is
+; displaced by its own entry from WavyScreenLineOffsets. The pattern also scrolls
+; down one line per frame (the outer loop's `inc hl`), and the whole thing runs
+; for 255 frames (`ld c, $ff`).
+;
+; The port composites a whole frame at once and has no scanline interrupt, so the
+; inner rSTAT/rLY loop cannot be translated literally. Instead the renderer grew
+; a per-row displacement table (g_row_xoff / g_row_xoff_on in src/ppu/ppu.asm)
+; and this routine fills it once per frame from the same pret data, advancing the
+; phase by one row per frame. Same visual, same duration, same source data —
+; expressed per-row instead of per-scanline.
+;
+; DEVIATION{class=HAL; pret=engine/battle/animations.asm:AnimationWavyScreen; behavior=fills a per-row displacement table consulted by the BG blit once per frame instead of writing rSCX per scanline from an rSTAT H-blank spin, and a negative displacement clamps at the left edge instead of wrapping the 256px BG torus; evidence=the software compositor builds an entire frame in one pass and has no scanline interrupt or mid-frame register latch, and bg_surface is a flat 384px row with no horizontal wrap so a negative source X would sample the previous row and tear rather than wrap; lifetime=permanent, inherent to the whole-frame software compositor}
+;
+; WavyScreenLineOffsets is pret's own inline table in its engine/ file, so it
+; stays in this mirror. It is 32 entries plus pret's $80 terminator; the port
+; indexes it modulo 32 rather than scanning for the terminator, which is the same
+; sequence — the terminator byte is retained so the data stays byte-identical to
+; pret and a reader can check it against the disassembly.
+; ===========================================================================
+AnimationWavyScreen:
+    mov esi, GB_TILEMAP0                     ; ld hl, vBGMap0
+    call BattleAnimCopyTileMapToVRAM
+    call Delay3
+    mov byte [ebp + hAutoBGTransferEnabled], 0
+    mov byte [ebp + H_WY], SCREEN_HEIGHT_PX  ; ldh [hWY],a — window off
+    mov byte [wavy_phase], 0
+    mov byte [g_row_xoff_on], 1              ; arm the per-row HAL
+    ; BL is pret's c. DelayFrame opens with pushad and WavyScreen_SetSCX touches
+    ; only EAX/ECX/EDX, so the counter survives the loop body. 8-bit dec, as on
+    ; the GB: $FF gives exactly 255 frames.
+    mov bl, 0xFF                             ; ld c,$ff
+.frameLoop:
+    call WavyScreen_SetSCX                   ; fill g_row_xoff for this frame
+    call DelayFrame
+    inc byte [wavy_phase]                    ; pret: inc hl — pattern scrolls 1 row/frame
+    dec bl                                   ; dec c
+    jnz .frameLoop
+    mov byte [g_row_xoff_on], 0              ; disarm — restore the identity fast path
+    mov byte [ebp + H_WY], 0                 ; xor a / ldh [hWY],a
+    call SaveScreenTilesToBuffer2
+    call ClearScreen
+    mov byte [ebp + hAutoBGTransferEnabled], 1
+    call Delay3
+    call LoadScreenTilesFromBuffer2
+    mov esi, GB_TILEMAP1                     ; ld hl, vBGMap1
+    jmp BattleAnimCopyTileMapToVRAM          ; call + ret
+
+; ---------------------------------------------------------------------------
+; WavyScreen_SetSCX — pret writes ONE scanline's rSCX per call, spinning on rSTAT
+; until H-blank. Here it publishes the whole frame's worth of displacements in one
+; pass: g_row_xoff[row] = WavyScreenLineOffsets[(wavy_phase + row) % 32], which is
+; the same line-to-entry mapping pret's per-scanline `inc hl` produces.
+;
+; The wave covers the WHOLE canvas, not just the projected 20x18 battle frame —
+; consistent with the Stage 3b shake, where the maintainer's directive is that the
+; matte moves with the scene rather than the frame being displaced inside a static
+; border.
+; Clobbers EAX, ECX, EDX, ESI.
+; ---------------------------------------------------------------------------
+WavyScreen_SetSCX:
+    movzx ecx, byte [wavy_phase]
+    xor edx, edx                             ; screen row
+.row:
+    mov eax, ecx
+    add eax, edx
+    and eax, WAVY_SCREEN_NUM_OFFSETS - 1     ; % 32 (power of two)
+    mov al, [WavyScreenLineOffsets + eax]
+    mov [g_row_xoff + edx], al
+    inc edx
+    cmp edx, RENDER_H
+    jb .row
+    ret
+
+; ===========================================================================
 ; Func_78e98 / WriteLowerByteOfBGMapAndEnableBGTransfer — pret animations.asm.
 ; Clear the BG tilemap, copy to VRAM via the auto-BG-transfer HRAM staging, and
 ; restore. BG-transfer boundary: these drive hAutoBGTransferEnabled/Dest, which
@@ -1271,6 +1356,15 @@ SetAnimationBGPalette:
 ; ===========================================================================
 section .data
 
+; Sequence of horizontal line pixel offsets for the wavy screen animation.
+; This sequence vaguely resembles a sine wave. pret's own inline table, so it
+; stays in this mirror; byte-identical to pret including the $80 terminator,
+; which the port keeps for cross-reference even though it indexes modulo 32.
+WavyScreenLineOffsets:
+    db 0, 0, 0, 0, 0,  1,  1,  1,  2,  2,  2,  2,  2,  1,  1,  1
+    db 0, 0, 0, 0, 0, -1, -1, -1, -2, -2, -2, -2, -2, -1, -1, -1
+    db 0x80 ; terminator
+
 ; PlayApplyingAttackAnimation's dispatch (pret animations.asm:506). pret's own
 ; inline table in its engine/ file, so it stays in this mirror; `dd` here rather
 ; than pret's `dw`, per the flat-pointer model at the top of this file.
@@ -1350,3 +1444,8 @@ align 4
 ; port-local 32-bit flat cursors — see the DEVIATION at the top of this file.
 wSubAnimAddrPtr32:      resd 1   ; &SubanimationPointers[id] (pret wSubAnimAddrPtr $D093)
 wSubAnimSubEntryAddr32: resd 1   ; current 3-byte subentry addr (pret wSubAnimSubEntryAddr $D095)
+; AnimationWavyScreen phase — the index into WavyScreenLineOffsets that screen row
+; 0 takes this frame. pret carries the same state as the live `hl` cursor it walks
+; with `inc hl`; the port needs a named slot because its loop is per-frame, not
+; per-scanline. Port-local (no GB address): pret's cursor is a register, not WRAM.
+wavy_phase:             resb 1

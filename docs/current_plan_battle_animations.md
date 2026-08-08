@@ -343,9 +343,20 @@ Two maintainer-confirmed decisions (AskUserQuestion, 2026-08-07):
       both routines reverted to the direct conditional form. Note the earlier
       diagnosis blaming `update_label_db` was wrong — that scanner already
       handled Jcc and the dependency graph never lost the edges.
-- [ ] Per-row offset HAL in ppu.asm (default-off fast path; compositor_perf
+- [x] Per-row offset HAL in ppu.asm (default-off fast path; compositor_perf
       constraints) + `AnimationWavyScreen` / `WavyScreen_SetSCX` /
-      `WavyScreenLineOffsets`.
+      `WavyScreenLineOffsets`. DONE 2026-08-08, maintainer visual pass given on
+      `ANIM=PSYWAVE` ("looks good, honestly better than the base game").
+      `g_row_xoff` / `g_row_xoff_on` follow the `g_obj_clip` ownership model:
+      default is the identity, the animation arms and clears it. Cost is
+      per-ROW, never per-pixel — the `rep movsd` is untouched.
+      The only behavioural difference is the **left-edge clamp**: GB `rSCX`
+      wraps a 256px torus, `bg_surface` is a flat 384px row, so an unclamped
+      negative source X samples the previous row and tears. Reachable on every
+      negative half-cycle (table reaches -2, `bg_scx` is 0 in battle).
+      It reads better than the original for two incidental reasons worth
+      knowing: no H-blank timing jitter (pret's per-scanline `rSCX` writes race
+      the PPU), and it covers the full 320x200 canvas rather than 160x144.
 - [ ] Gate: faithdiff; battle tier green; demo sign-off on flash (Thundershock
       class), shake, and Psychic wave.
 

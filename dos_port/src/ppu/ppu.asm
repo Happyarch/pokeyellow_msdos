@@ -177,6 +177,31 @@ g_obj_clip:
     dd RENDER_W     ; x1 (exclusive)
     dd RENDER_H     ; y1 (exclusive)
 
+; Per-row BG X offset — the "wavy screen" HAL (battle_animations Stage 3c).
+;
+; AnimationWavyScreen (Psywave / Psychic / Confusion) is a SCANLINE effect on the
+; GB: it turns the window off, then spins on rSTAT waiting for H-blank and writes
+; a fresh rSCX for every single scanline, so each line of the screen is displaced
+; horizontally by its own amount. There is no way to translate that literally —
+; the port composites a whole frame at once and has no scanline interrupt — so
+; the renderer grows the minimum HAL that expresses it: one signed X offset per
+; SCREEN ROW, applied to the BG blit.
+;
+; Ownership follows the g_obj_over_window / g_obj_clip model: default is the
+; semantic identity (g_row_xoff_on = 0, the offsets ignored entirely), only the
+; code that needs it sets, owns and restores it. AnimationWavyScreen clears it on
+; the way out, including on its early-out paths.
+;
+; COST (docs/plans/compositor_perf.md constraints). When off, the blit pays one
+; `cmp dword [mem], 0` + a not-taken branch per row — 200 predictable branches per
+; frame against a ~16.3 ms budget, i.e. nothing measurable, and the `rep movsd`
+; that dominates the loop is untouched. When on it adds a `movsx` + `add` + a
+; sign check per row. The per-pixel inner loop is not modified in either case,
+; which is the constraint that matters: this is a per-ROW cost, not a per-PIXEL
+; one.
+global g_row_xoff_on
+g_row_xoff_on: dd 0             ; 0 = off (identity fast path); nonzero = consult g_row_xoff
+
 ; --- 2bpp bitplane → 8bpp spread tables (compositor-perf Stage 4a) --------------
 ; A GB tile row is two bitplane bytes, MSB = leftmost pixel. Spreading one byte
 ; into 8 one-byte pixels is a pure function of that byte, so precompute it:
@@ -249,6 +274,12 @@ global spr_dos_sy, spr_dos_sx, spr_oam_valid
 spr_dos_sy:    resd OAM_COUNT  ; signed DOS Y for entry 0..OAM_COUNT-1
 spr_dos_sx:    resd OAM_COUNT  ; signed DOS X for entry 0..OAM_COUNT-1
 spr_oam_valid: resd 1          ; count of valid entries written this frame (set by PrepareOAMData)
+
+; Signed per-screen-row BG X displacement, consulted only when g_row_xoff_on is
+; nonzero (see the comment on that flag). One byte per back-buffer row.
+alignb 4
+global g_row_xoff
+g_row_xoff:        resb RENDER_H
 
 ; bg_surface: 384×288 raw-color mirror of wSurroundingTiles.
 bg_surface:        resb SURF_W * SURF_H_TILES * 8
@@ -491,8 +522,28 @@ render_bg:
     and eax, 255
 .no_y_wrap:
 
-    imul eax, eax, 384
+    imul eax, eax, 384                  ; eax = bg_surface offset of this source row
     mov ecx, [bg_scx]
+    ; Wavy-screen HAL: per-row horizontal displacement. Off by default, in which
+    ; case this is one predictable not-taken branch and the source X is exactly
+    ; bg_scx, byte-identical to before the feature existed.
+    cmp dword [g_row_xoff_on], 0
+    jz .no_row_xoff
+    movsx ebx, byte [g_row_xoff + edx]  ; signed offset for THIS screen row
+    add ecx, ebx
+    jns .no_row_xoff
+    ; Clamp at the left edge. On GB rSCX indexes a 256px BG torus, so a negative
+    ; displacement wraps to the far side of the map; bg_surface is a FLAT 384px
+    ; row with no wrap, and sampling at x < 0 would pull in the tail of the
+    ; PREVIOUS source row — a tear, not a wrap. WavyScreenLineOffsets reaches -2
+    ; and bg_scx is 0 in battle, so this is reachable on every negative
+    ; half-cycle. Losing up to 2px of displacement beats tearing. The structured
+    ; annotation for this lives on AnimationWavyScreen in
+    ; engine/battle/animations.asm — this is a plain cross-reference to it, and
+    ; must not begin a line with an annotation keyword or lint_pret_labels
+    ; --strict-claims reads it as a legacy free-form annotation (it did).
+    xor ecx, ecx
+.no_row_xoff:
     add eax, ecx
     lea esi, [bg_surface + eax]
     

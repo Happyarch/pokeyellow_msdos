@@ -180,10 +180,9 @@ global AnimationBlinkMon
 AnimationBlinkMon:
     ret
 
-; STUB{class=temporary; label=AnimationWavyScreen; pret=engine/battle/animations.asm:AnimationWavyScreen; behavior=return instead of the per-row wavy screen effect; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 3 wavy HAL lands}
-global AnimationWavyScreen
-AnimationWavyScreen:
-    ret
+; AnimationWavyScreen: RETIRED 2026-08-08 — real body in animations.asm, driving
+; the per-row displacement HAL (g_row_xoff / g_row_xoff_on) added to ppu.asm in
+; Stage 3c, together with WavyScreen_SetSCX and WavyScreenLineOffsets.
 
 ; FlashScreenEveryFourFrameBlocks, FlashScreenEveryEightFrameBlocks:
 ; RETIRED 2026-08-08 — real bodies in animations.asm (Stage 3 flash family).
