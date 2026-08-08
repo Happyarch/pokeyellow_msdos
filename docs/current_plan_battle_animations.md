@@ -516,11 +516,32 @@ Two maintainer-confirmed decisions (AskUserQuestion, 2026-08-07):
 
 ### Stage 5 — item-path animations + substitute/transform
 
-- [ ] Ball path: `TossBallAnimation`, `DoBallTossSpecialEffects`,
+- [x] Ball path: `TossBallAnimation`, `DoBallTossSpecialEffects`,
       `DoBallShakeSpecialEffects`, `DoPoofSpecialEffects`; restore pret's
       `ld a, TOSS_ANIM / MoveAnimation` splice in `ItemUseBall` and
       `ThrowBallAtTrainerMon` (BLOCKBALL path); verify `BallMoveDistances1/2`
       referencing (port data only if the battle path reads them).
+      **DONE 2026-08-08 (Stage 5b), with two corrections to this bullet's own
+      premises:**
+      1. **The splice needed no restoring — it was already there.** Both call
+         sites already set `wAnimationID = TOSS_ANIM` and call
+         `PlayMoveAnimation`, and `MoveAnimation` already carried pret's
+         `cmp TOSS_ANIM` / `jmp TossBallAnimation` branch (which sits *before*
+         the `BIT_BATTLE_ANIMATION` gate, as in pret). Stage 5b's real effect
+         was replacing the ret-stub at the end of an already-live chain. An
+         earlier commit message claimed the opposite; corrected in `14f57251`.
+      2. **`BallMoveDistances1/2` are NOT referenced by the in-battle path.**
+         Measured: their only readers are in the trade animation, which this
+         plan lists as out of scope. Per this bullet's own "port data only if
+         the battle path reads them", **no data is owed** and they stay
+         `missing`.
+      Four stubs retired; faithdiff clean on two labels, with two store
+      blind-spot findings and one `DEVIATION{class=data-model}` (the
+      subanim-restart rewind uses the port's 32-bit flat cursor).
+      **OWED:** a must-hit runtime scenario for the toss. `ball_catch` cannot
+      witness it — datastruct class, and it compares no WRAM this path writes,
+      which is why it passed identically before and after. Belongs on the
+      Stage 6 list, which already names it.
 - [x] Remaining per-anim hooks: `DoGrowlSpecialEffects`,
       `DoRockSlideSpecialEffects`, `DoExplodeSpecialEffects`,
       `DoBlizzardSpecialEffects`, `FlashScreenEveryFourFrameBlocks`,
