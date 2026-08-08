@@ -137,7 +137,15 @@ HideBattlePokeballs:
     xor eax, eax
     mov ecx, 40 * 4 / 4
     rep stosd
-    and byte [ebp + IO_LCDC], ~LCDCF_OBJ_ON
+    ; NOTE: this routine used to also clear LCDCF_OBJ_ON here ("battle proper
+    ; draws no OBJ"). That assumption died when the move-animation interpreter
+    ; went live (1ad2fc46): DrawFrameBlock's OAM particles are battle OBJ, and
+    ; the cleared bit kept render_sprites' LCDC gate shut for the whole battle
+    ; (measured 2026-08-08: IO_LCDC=$E1 at MoveAnimation publish, spr_oam_valid
+    ; =40 intact, zero pixels drawn). On the GB nothing clears the OBJ bit in
+    ; battle — hiding is done by the zeroed shadow OAM alone, which the
+    ; HideSprites + $FE00 clear above already reproduce. The battle-exit
+    ; re-enable in init_battle.asm (W-1 fix) is now redundant defense.
     ret
 
 ; ---------------------------------------------------------------------------
