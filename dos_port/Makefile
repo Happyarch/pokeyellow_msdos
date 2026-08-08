@@ -1952,6 +1952,7 @@ FRONTEND_SRCS := \
     src/data/battle_data.asm \
     src/data/battle_anims.asm \
     src/data/battle_anim_dispatch.asm \
+    src/data/tilemaps.asm \
     src/data/move_effect_pointers.asm \
     src/data/trainer_data.asm \
     src/data/move_grammar.asm \
@@ -2934,7 +2935,7 @@ assets/battle_anim_constants.inc assets/battle_anim_data.inc &: \
 		../data/battle_anims/subanimations.asm ../data/battle_anims/frame_blocks.asm \
 		../data/battle_anims/base_coords.asm \
 		../constants/move_constants.asm ../constants/move_animation_constants.asm \
-		../constants/battle_anim_constants.asm
+		../constants/battle_anim_constants.asm ../constants/gfx_constants.asm
 	python3 tools/generators/gen_battle_anim_data.py
 
 # Standalone memory-map blast audit (also runs at the end of `make assets`):

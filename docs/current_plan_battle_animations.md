@@ -384,13 +384,32 @@ Two maintainer-confirmed decisions (AskUserQuestion, 2026-08-07):
       `AnimationSlideEnemyMonOff`, `AnimationSlideMonDownAndHide`,
       `AnimationSlideMonHalfOff`; retire `SlideDownFaintedMonPic` stub (pret
       core.asm label — body lands per pret placement).
-- [ ] Hide/show + tilemap helpers: `AnimationHideMonPic`,
+- [x] Hide/show + tilemap helpers: `AnimationHideMonPic`,
       `AnimationHideEnemyMonPic`, `AnimationShowMonPic`,
       `AnimationShowEnemyMonPic`, `ClearMonPicFromTileMap`,
       `GetMonSpriteTileMapPointerFromRowCount`, `GetTileIDList`, `CopyTileIDs`,
       `CopyTileIDs_NoBGTransfer`, `CopyTileIDsFromList`, `CopyPicTiles`,
       `CopyDownscaledMonTiles`, `AnimCopyRowLeft`, `AnimCopyRowRight` (all
       BCOORD-projected, `; PROJ` tagged).
+      **DONE 2026-08-08 (Stage 4a).** Also retired `AnimationBlinkMon`, whose
+      stub existed only because those two callees did not — so blink now really
+      hides and shows the pic. Tier-1 carrier `dos_port/src/data/tilemaps.asm`
+      (`TileIDListPointerTable` + the ten `.tilemap` blobs, hand-written `dd`
+      table per the `MoveEffectPointerTable` precedent); `TILEMAP_*` /
+      `NUM_TILEMAPS` generated; `hBaseTileID equ 0xFF8B` added (sym-measured;
+      the $FF8B union with `hROMBankTemp` is pret's own ordering, not a clash).
+      **Row size changed** from pret's 3 bytes (`dw` + `dn`) to 5
+      (`dd` + `db (h<<4)|w`), so `GetTileIDList` indexes by 5.
+      One `DEVIATION{class=projection}`: `ClearMonPicFromTileMap` takes a full
+      address in ESI, because `BCOORD(1,5)` is `W_TILEMAP+331` and pret's 8-bit
+      `A` offset cannot reach it. Gate: build 0; lint 0 both modes; faithdiff
+      clean bar two justified `GetPredefRegisters` drops (the port's
+      direct-predef-call convention, both `DEVIATION{class=HAL}`-annotated);
+      pgate 17/17 (`battle_intro` = 360 tilemap cells / 384 VRAM slots / 40 OAM
+      entries / 13 WRAM regions OK, no mask added).
+      **The goldens prove no regression, NOT execution** — no scenario in the
+      battery dispatches to these routines. Runtime evidence is owed at the
+      Stage 4 sign-off box.
 - [ ] Motion: `AnimationShakeBackAndForth`, `AnimationMoveMonHorizontally`,
       `AnimationResetMonPosition`, `AnimationBoundUpAndDown`,
       `AnimationSquishMonPic` + `_AnimationSquishMonPic`,

@@ -36,6 +36,7 @@ bits 32
 %include "gb_macros.inc"
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
+%include "coords.inc"                    ; BCOORD — battle-frame tilemap projection (+10 col, +3 row)
 %include "data_macros.inc"               ; dc — pret macros/data.asm "crumbs" (FlashScreenLong* tables)
 %include "assets/audio_constants.inc"    ; SFX_DAMAGE / SFX_SUPER_EFFECTIVE / SFX_NOT_VERY_EFFECTIVE
 
@@ -60,6 +61,9 @@ extern SubanimationPointers
 extern FrameBlockPointers
 extern FrameBlockBaseCoords
 extern MoveSoundTable
+extern TileIDListPointerTable         ; src/data/tilemaps.asm (hand-written dd table, 5-byte rows)
+extern DownscaledMonTiles_5x5         ; src/data/tilemaps.asm
+extern DownscaledMonTiles_3x3         ; src/data/tilemaps.asm
 extern SpecialEffectPointers          ; src/data/battle_anim_dispatch.asm (hand-written dd table)
 extern AnimationIdSpecialEffects      ; src/data/battle_anim_dispatch.asm (hand-written dd table)
 
@@ -76,6 +80,7 @@ extern DelayFrames                    ; src/home/delay.asm — BL = frame count
 extern DelayFrame                     ; src/home/vblank.asm
 extern ClearSprites                   ; src/home/clear_sprites.asm
 extern ClearScreen                    ; src/home/copy2.asm
+extern ClearScreenArea                ; src/home/copy2.asm — ESI dest, BH rows, BL cols
 extern IsInArray                      ; src/home/array2.asm — AL val, ESI base, EDX stride
 extern CopyVideoData                  ; src/home/copy2.asm — ESI dest VRAM, EDX flat src, BL tiles
 extern SaveScreenTilesToBuffer2       ; src/home/tilemap.asm
@@ -1345,6 +1350,256 @@ SetAnimationBGPalette:
     mov [ebp + IO_BGP], al                   ; ldh [rBGP],a
     call UpdateCGBPal_BGP
     ret
+
+; ===========================================================================
+; MON-PIC TILEMAP HELPERS — pret animations.asm (battle_animations Stage 4).
+;
+; PROJECTION (docs/current_plan_battle_animations.md, geometry directive). These
+; routines address wTileMap, so every pret COORDINATE is re-derived through
+; BCOORD(x,y) (+10 col / +3 row) and every pret row STRIDE stays the literal
+; SCREEN_WIDTH — which is 40 here and 20 in pret, each meaning "my tilemap's
+; stride". The two roles are NOT interchangeable: pret writes the player-pic
+; origin as `5 * SCREEN_WIDTH + 1`, which is the tile COORDINATE (1,5) and
+; becomes BCOORD(1, 5); the enemy branch's bare `ld a, 12` is the coordinate
+; (12,0) and becomes BCOORD(12, 0). Sites are tagged `; PROJ`.
+;
+; These write tilemap INDICES, never tile PATTERN bytes, so no
+; g_tilecache_dirty arming is owed (contrast LoadMoveAnimationTiles, which goes
+; through CopyVideoData).
+;
+; hAutoBGTransferEnabled is written verbatim. It is INERT in this port —
+; do_bg_transfer was deleted from the DelayFrame pipeline (see the retirement
+; note in src/home/vblank.asm) and render_bg reads W_TILEMAP directly — so the
+; writes cost nothing and keep the routines byte-comparable against pret.
+; ===========================================================================
+
+; ---------------------------------------------------------------------------
+; AnimationBlinkMon / AnimationShowMonPic and the enemy-side CallWithTurnFlipped
+; wrappers — pret animations.asm.
+; ---------------------------------------------------------------------------
+global AnimationBlinkMon
+AnimationBlinkMon:
+; Make the mon's sprite blink on and off for a second or two.
+    push eax                                 ; push af
+    mov bl, 6                                ; ld c, 6 — pret leaves c = 0 on exit
+.loop:
+    push ebx
+    call AnimationHideMonPic
+    mov bl, 5
+    call DelayFrames
+    call AnimationShowMonPic
+    mov bl, 5
+    call DelayFrames
+    pop ebx
+    dec bl                                   ; 8-bit, as pret
+    jnz .loop
+    pop eax                                  ; pop af
+    ret
+
+global AnimationShowMonPic
+AnimationShowMonPic:
+    xor al, al                               ; TILEMAP_MON_PIC
+    call GetTileIDList
+    call GetMonSpriteTileMapPointerFromRowCount
+    call CopyPicTiles
+    jmp Delay3
+
+global AnimationShowEnemyMonPic
+AnimationShowEnemyMonPic:
+; Shows the enemy mon's front sprite. Used in animations like Seismic Toss to
+; make the mon's sprite reappear after it disappears offscreen.
+    mov esi, AnimationShowMonPic
+    jmp CallWithTurnFlipped
+
+global AnimationHideEnemyMonPic
+AnimationHideEnemyMonPic:
+; Hides the enemy mon's sprite
+    xor al, al
+    mov [ebp + hAutoBGTransferEnabled], al
+    mov esi, AnimationHideMonPic
+    call CallWithTurnFlipped
+    mov al, 1
+    mov [ebp + hAutoBGTransferEnabled], al
+    jmp Delay3
+
+; ---------------------------------------------------------------------------
+; AnimationHideMonPic / ClearMonPicFromTileMap — pret animations.asm.
+; DEVIATION{class=projection; pret=engine/battle/animations.asm:ClearMonPicFromTileMap; behavior=the destination is passed as a full tilemap address in ESI instead of pret's 8-bit A offset from hlcoord 0 0; evidence=under the battle projection the player-pic origin BCOORD(1,5) is W_TILEMAP+331 and every other call site (AnimationResetMonPosition BCOORD(2,5) and BCOORD(11,0), TradeHidePokemon BCOORD(7,2)) is likewise past 255, so pret's single-byte parameter cannot represent them; lifetime=permanent, a consequence of the 40x25 canvas}
+; ---------------------------------------------------------------------------
+global AnimationHideMonPic
+AnimationHideMonPic:
+; Hides the mon's sprite.
+    mov al, [ebp + hWhoseTurn]
+    test al, al
+    jz .playerTurn
+    mov esi, BCOORD(12, 0)                   ; PROJ — pret `ld a, 12`
+    jmp short ClearMonPicFromTileMap
+.playerTurn:
+    mov esi, BCOORD(1, 5)                    ; PROJ — pret `ld a, 5 * SCREEN_WIDTH + 1`
+    ; fall through
+
+; In: ESI = top-left tilemap address of the 7x7 pic (see the DEVIATION above)
+global ClearMonPicFromTileMap
+ClearMonPicFromTileMap:
+    push esi
+    push edx
+    push ebx
+    mov bh, PIC_HEIGHT                       ; lb bc, 7, 7 — b = rows
+    mov bl, PIC_WIDTH                        ;              c = cols
+    call ClearScreenArea
+    pop ebx
+    pop edx
+    pop esi
+    ret
+
+; ---------------------------------------------------------------------------
+; GetMonSpriteTileMapPointerFromRowCount — pret animations.asm.
+; Puts the tilemap destination address of a mon sprite in ESI, given the row
+; count in BH. The usual row count is 7, but it is smaller when sliding a mon
+; sprite in/out, to show only part of the pic.
+; pret brackets this with push de / pop de because it borrows de as the stride;
+; the port needs no scratch, so EDX is preserved by construction.
+; ---------------------------------------------------------------------------
+global GetMonSpriteTileMapPointerFromRowCount
+GetMonSpriteTileMapPointerFromRowCount:
+    mov al, [ebp + hWhoseTurn]
+    test al, al
+    jnz .enemyTurn
+    mov esi, BCOORD(1, 5)                    ; PROJ — pret `ld a, 5 * SCREEN_WIDTH + 1`
+    jmp short .next
+.enemyTurn:
+    mov esi, BCOORD(12, 0)                   ; PROJ — pret `ld a, 12`
+.next:
+    mov al, PIC_HEIGHT
+    sub al, bh                               ; ld a, 7 / sub b  (8-bit, as pret)
+    jz .done
+.loop:
+    add esi, SCREEN_WIDTH                    ; stride, not a coordinate — 40 here
+    dec al                                   ; 8-bit: bh > 7 wraps to <=255 passes, as on GB
+    jnz .loop
+.done:
+    ret
+
+; ---------------------------------------------------------------------------
+; GetTileIDList — pret animations.asm.
+; In:  AL  = tile ID list index (TILEMAP_*)
+; Out: EDX = flat tile ID list pointer (pret de = 16-bit ROM pointer)
+;      BH  = number of rows, BL = number of columns
+;      ESI clobbered (pret clobbers hl walking the table), AL = row count
+; Row stride is 5, not pret's 3 — see the layout note in src/data/tilemaps.asm.
+; ---------------------------------------------------------------------------
+global GetTileIDList
+GetTileIDList:
+    movzx eax, al
+    lea esi, [TileIDListPointerTable + eax * 4 + eax]   ; table + 5*index
+    mov edx, [esi]                           ; ld a,[hli] x2 -> de = list pointer
+    movzx eax, byte [esi + 4]                ; ld a,[hli] -> the dn(height,width) byte
+    add esi, 5                               ; pret leaves hl one past the row
+    mov bl, al
+    and bl, 0x0F                             ; c = number of columns (low nibble)
+    shr al, 4                                ; swap a / and $f -> row count
+    mov bh, al                               ; b = number of rows
+    ret
+
+; ---------------------------------------------------------------------------
+; AnimCopyRowLeft / AnimCopyRowRight — pret animations.asm. Shift a row of BL
+; tiles one tile left/right. ESI = row cursor (GB-space offset into W_TILEMAP).
+; ---------------------------------------------------------------------------
+global AnimCopyRowLeft
+AnimCopyRowLeft:
+; copy a row of c tiles 1 tile left
+    mov al, [ebp + esi]                      ; ld a,[hld]
+    dec esi
+    mov [ebp + esi], al                      ; ld [hli],a
+    inc esi
+    inc esi                                  ; inc hl
+    dec bl                                   ; 8-bit: c = 0 means 256 passes, as on GB
+    jnz AnimCopyRowLeft
+    ret
+
+global AnimCopyRowRight
+AnimCopyRowRight:
+; copy a row of c tiles 1 tile right
+    mov al, [ebp + esi]                      ; ld a,[hli]
+    inc esi
+    mov [ebp + esi], al                      ; ld [hld],a
+    dec esi
+    dec esi                                  ; dec hl
+    dec bl                                   ; 8-bit, as above
+    jnz AnimCopyRowRight
+    ret
+
+; ---------------------------------------------------------------------------
+; CopyPicTiles / CopyDownscaledMonTiles / CopyTileIDs{,_NoBGTransfer} /
+; CopyTileIDsFromList — pret animations.asm.
+; ---------------------------------------------------------------------------
+global CopyPicTiles
+CopyPicTiles:
+    mov al, [ebp + hWhoseTurn]
+    test al, al
+    mov al, 0x31                             ; base tile ID of player mon sprite
+    jz .next
+    xor al, al                               ; enemy turn: base tile ID 0
+.next:
+    mov [ebp + hBaseTileID], al
+    jmp short CopyTileIDs_NoBGTransfer
+
+; copy the tiles used when a mon is being sent out of or into a pokeball
+; DEVIATION{class=HAL; pret=engine/battle/animations.asm:CopyDownscaledMonTiles; behavior=the leading call GetPredefRegisters is dropped and the arguments arrive in registers from a direct call; evidence=the port has no predef dispatcher so wPredefRegisters is never staged and GetPredefRegisters would load garbage over the live registers, the same convention as ReadTrainer calling AddBCD directly; lifetime=permanent, the port calls predef targets directly}
+global CopyDownscaledMonTiles
+CopyDownscaledMonTiles:
+    mov al, [ebp + wDownscaledMonSize]
+    test al, al
+    jnz .smallerSize
+    mov edx, DownscaledMonTiles_5x5
+    jmp short CopyTileIDs_NoBGTransfer
+.smallerSize:
+    mov edx, DownscaledMonTiles_3x3
+    ; fall through
+
+global CopyTileIDs_NoBGTransfer
+CopyTileIDs_NoBGTransfer:
+    xor al, al
+    mov [ebp + hAutoBGTransferEnabled], al
+    ; fall through
+
+; In: ESI = tilemap destination, EDX = flat tile ID list, BH = rows, BL = cols
+global CopyTileIDs
+CopyTileIDs:
+    push esi
+.rowLoop:
+    push ebx
+    push esi
+    mov bh, [ebp + hBaseTileID]              ; ldh a,[hBaseTileID] / ld b,a
+.columnLoop:
+    mov al, [edx]                            ; ld a,[de] — flat, the list is program-image data
+    add al, bh                               ; add b
+    inc edx
+    mov [ebp + esi], al                      ; ld [hli],a
+    inc esi
+    dec bl                                   ; 8-bit: cols = 0 means 256, as on GB
+    jnz .columnLoop
+    pop esi
+    add esi, SCREEN_WIDTH                    ; stride, not a coordinate — 40 here
+    pop ebx
+    dec bh                                   ; 8-bit: rows = 0 means 256, as on GB
+    jnz .rowLoop
+    mov al, 1
+    mov [ebp + hAutoBGTransferEnabled], al
+    pop esi
+    ret
+
+; In: BH = tile ID list index, BL = base tile ID (pret b / c)
+; DEVIATION{class=HAL; pret=engine/battle/animations.asm:CopyTileIDsFromList; behavior=the leading call GetPredefRegisters is dropped and the arguments arrive in registers from a direct call; evidence=the port has no predef dispatcher so wPredefRegisters is never staged and GetPredefRegisters would load garbage over the live registers, the same convention as ReadTrainer calling AddBCD directly; lifetime=permanent, the port calls predef targets directly}
+global CopyTileIDsFromList
+CopyTileIDsFromList:
+    mov al, bl                               ; ld a,c
+    mov [ebp + hBaseTileID], al
+    mov al, bh                               ; ld a,b
+    push esi
+    call GetTileIDList
+    pop esi
+    jmp CopyTileIDs
 
 ; ===========================================================================
 ; DATA — move-animation tilesets (MoveAnimationTilesPointers is pret's own

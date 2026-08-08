@@ -175,11 +175,6 @@ AnimationFlashEnemyMonPic:
 ; AnimationUnusedShakeScreen, the ShakeScreen* wrappers, BlinkEnemyMonSprite and
 ; the AnimationTypePointerTable dispatch.
 
-; STUB{class=temporary; label=AnimationBlinkMon; pret=engine/battle/animations.asm:AnimationBlinkMon; behavior=return instead of blinking the player mon pic; evidence=its body is a loop over AnimationHideMonPic and AnimationShowMonPic, both of which are themselves Stage 4 mon-pic stubs, so the real body cannot land before them, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 mon-pic hide/show lands}
-global AnimationBlinkMon
-AnimationBlinkMon:
-    ret
-
 ; AnimationWavyScreen: RETIRED 2026-08-08 — real body in animations.asm, driving
 ; the per-row displacement HAL (g_row_xoff / g_row_xoff_on) added to ppu.asm in
 ; Stage 3c, together with WavyScreen_SetSCX and WavyScreenLineOffsets.
@@ -188,6 +183,13 @@ AnimationBlinkMon:
 ; RETIRED 2026-08-08 — real bodies in animations.asm (Stage 3 flash family).
 
 ; --- Stage 4: mon-pic slides + motion + OAM particles + HUD shake ---
+; AnimationHideMonPic, AnimationHideEnemyMonPic, AnimationShowMonPic,
+; AnimationShowEnemyMonPic, AnimationBlinkMon: RETIRED 2026-08-08 — real bodies
+; in animations.asm (Stage 4 mon-pic tilemap helpers), along with
+; ClearMonPicFromTileMap, GetMonSpriteTileMapPointerFromRowCount, GetTileIDList,
+; AnimCopyRowLeft/Right, CopyPicTiles, CopyDownscaledMonTiles,
+; CopyTileIDs{,_NoBGTransfer} and CopyTileIDsFromList.
+
 ; STUB{class=temporary; label=AnimationSlideMonUp; pret=engine/battle/animations.asm:AnimationSlideMonUp; behavior=return instead of sliding the mon pic up; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 mon-pic slides land}
 global AnimationSlideMonUp
 AnimationSlideMonUp:
@@ -216,26 +218,6 @@ AnimationSlideMonHalfOff:
 ; STUB{class=temporary; label=AnimationSlideEnemyMonOff; pret=engine/battle/animations.asm:AnimationSlideEnemyMonOff; behavior=return instead of sliding the enemy mon pic off; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 mon-pic slides land}
 global AnimationSlideEnemyMonOff
 AnimationSlideEnemyMonOff:
-    ret
-
-; STUB{class=temporary; label=AnimationHideMonPic; pret=engine/battle/animations.asm:AnimationHideMonPic; behavior=return instead of hiding the mon pic; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 hide/show helpers land}
-global AnimationHideMonPic
-AnimationHideMonPic:
-    ret
-
-; STUB{class=temporary; label=AnimationHideEnemyMonPic; pret=engine/battle/animations.asm:AnimationHideEnemyMonPic; behavior=return instead of hiding the enemy mon pic; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 hide/show helpers land}
-global AnimationHideEnemyMonPic
-AnimationHideEnemyMonPic:
-    ret
-
-; STUB{class=temporary; label=AnimationShowMonPic; pret=engine/battle/animations.asm:AnimationShowMonPic; behavior=return instead of showing the mon pic; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 hide/show helpers land}
-global AnimationShowMonPic
-AnimationShowMonPic:
-    ret
-
-; STUB{class=temporary; label=AnimationShowEnemyMonPic; pret=engine/battle/animations.asm:AnimationShowEnemyMonPic; behavior=return instead of showing the enemy mon pic; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 hide/show helpers land}
-global AnimationShowEnemyMonPic
-AnimationShowEnemyMonPic:
     ret
 
 ; STUB{class=temporary; label=AnimationMoveMonHorizontally; pret=engine/battle/animations.asm:AnimationMoveMonHorizontally; behavior=return instead of moving the mon pic horizontally; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 motion family lands}

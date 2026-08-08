@@ -6239,3 +6239,84 @@ PASS 5/5; faithdiff clean on `AnimationWavyScreen` (6 pret / 7 port calls, 6
 matched — the extra is the `DelayFrame` that replaces the `rLY` poll) with the
 one justified drop on `WavyScreen_SetSCX` above; maintainer visual pass on
 `dos_port/run DEBUG_ANIM_DEMO=1 ANIM=PSYWAVE /LOOP`.
+
+---
+
+## 2026-08-08 — battle animations Stage 4a: mon-pic tilemap helpers
+
+pret `engine/battle/animations.asm` + `data/tilemaps.asm`. Fourteen labels, all
+into their mirrors: `GetTileIDList`, `CopyTileIDs`, `CopyTileIDs_NoBGTransfer`,
+`CopyTileIDsFromList`, `CopyPicTiles`, `CopyDownscaledMonTiles`,
+`GetMonSpriteTileMapPointerFromRowCount`, `ClearMonPicFromTileMap`,
+`AnimCopyRowLeft`, `AnimCopyRowRight`, `AnimationHideMonPic`,
+`AnimationHideEnemyMonPic`, `AnimationShowMonPic`, `AnimationShowEnemyMonPic`,
+plus `AnimationBlinkMon`, whose stub existed only because those two callees did
+not. Fifteen stubs retired from `core_stubs.asm` (five were `global` ret-stubs;
+the rest were never stubbed, only missing).
+
+**Tier-1 data:** `TileIDListPointerTable` + the ten `.tilemap` blobs land in
+`dos_port/src/data/tilemaps.asm` (pret files them under `data/`, so
+`aux_misplaced` requires the data layer). Hand-written `dd` table, exactly the
+`MoveEffectPointerTable` / `battle_anim_dispatch` precedent — its rows are flat
+addresses of blobs `incbin`'d in the same file, which no generator can derive.
+The blob BYTES are pret's, `incbin`'d from the read-only `gfx/` tree.
+
+**Row size changes, and it is load-bearing.** pret's row is `dw <ptr>` +
+`dn <height>, <width>` = **3 bytes**; the port's is `dd <ptr>` + `db
+(height<<4)|width` = **5 bytes**, because the pointer is a 32-bit flat address.
+So `GetTileIDList` indexes by 5 (`lea esi, [table + eax*4 + eax]`), not pret's
+three `add hl, de`. The nibble packing is pret's verbatim — low = width
+(columns, pret's `c`), high = height (rows, pret's `b`). An assembly-time size
+assert against `NUM_TILEMAPS` guards the table.
+
+**`TILEMAP_*` / `NUM_TILEMAPS`** now come from the generator
+(`gen_battle_anim_data.py` also parses `constants/gfx_constants.asm` into a
+SEPARATE `ConstTable`, so nothing in that file can silently shadow a name the
+other emitters select by prefix) rather than hand `equ`s.
+
+**`hBaseTileID equ 0xFF8B`** added to `gb_memmap.inc`, measured off the golden
+sym. That address is already a union (`hMapStride` / `hPreviousTileset` /
+`hItemPrice` / `hROMBankTemp`) and pret INTENDS the last collision: `PlayAnimation`
+zeroes `hROMBankTemp` at entry, then `CopyPicTiles` writes `hBaseTileID` and
+`CopyTileIDs` reads it back — one byte, ordered, exactly as on hardware.
+
+**The `SCREEN_WIDTH` role split, which is the trap in this family.** As a row
+STRIDE (`ld bc, SCREEN_WIDTH`) the literal is correct verbatim on both sides —
+each means "my tilemap's stride", 20 in pret and 40 here. As a COORDINATE it is
+not: pret writes the player-pic origin as `5 * SCREEN_WIDTH + 1`, which is the
+tile coordinate **(1,5)** and becomes `BCOORD(1, 5)`; the enemy branch's bare
+`ld a, 12` is the coordinate **(12,0)** and becomes `BCOORD(12, 0)`. Never reuse
+the literal. Sites are `; PROJ` tagged.
+
+**One projection DEVIATION.** `ClearMonPicFromTileMap` takes its destination as
+a full tilemap address in `ESI` instead of pret's 8-bit `A` offset from
+`hlcoord 0, 0`: under the battle projection `BCOORD(1,5)` is `W_TILEMAP + 331`,
+and every other call site (`AnimationResetMonPosition`'s `BCOORD(2,5)` /
+`BCOORD(11,0)`, `TradeHidePokemon`'s `BCOORD(7,2)`) is likewise past 255, so a
+single-byte parameter cannot represent them.
+
+**No `g_tilecache_dirty` owed here** — these routines write tilemap INDICES, never
+tile PATTERN bytes. (Contrast `LoadMoveAnimationTiles`, which goes through
+`CopyVideoData`.) **`hAutoBGTransferEnabled` is written verbatim** and is inert
+in this port: `do_bg_transfer` was deleted from the `DelayFrame` pipeline and
+`render_bg` reads `W_TILEMAP` directly, so the writes cost nothing and keep the
+routines byte-comparable against pret.
+
+Counter widths: every `dec c` / `dec b` loop in this family is translated 8-bit
+(`dec bl` / `dec bh` / `dec al`), so a zero count runs 256 passes as on the GB
+rather than 4 billion.
+
+**Verification:** build clean (0); `lint_pret_labels` 0 in BOTH modes;
+`update_label_db` clean; faithdiff clean on 13 of the 15 labels, with two
+justified `- DROPPED GetPredefRegisters` (`CopyDownscaledMonTiles`,
+`CopyTileIDsFromList`) — the port has no predef dispatcher, so predef targets are
+called directly with args in registers and `GetPredefRegisters` would load
+garbage over them; same convention as `ReadTrainer` → `AddBCD`, and both carry a
+`DEVIATION{class=HAL}`. Golden gate `tools/pgate.sh`: **17/17 PASS**, e.g.
+`battle_intro` compared 360 tilemap cells / 384 VRAM slots / 40 OAM entries / 13
+WRAM regions all OK, on the pre-existing justified mask set with no mask added.
+
+**What that does NOT prove.** The goldens witness *absence of regression*, not
+execution: none of the 17 scenarios plays a move animation that dispatches to
+these routines, so nothing here has yet been observed running. Runtime evidence
+is owed at the Stage 4 sign-off (`DEBUG_ANIM_DEMO=1 ANIM=…`).

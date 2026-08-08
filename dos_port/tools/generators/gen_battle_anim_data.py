@@ -485,6 +485,16 @@ def main():
     for name in ("NUM_ATTACKS", "NUM_ATTACK_ANIMS", "NUM_SUBANIMS", "NUM_FRAMEBLOCKS",
                  "NUM_BASECOORDS"):
         lines.append(f"{name:<34} equ {v[name]}")
+    # TileIDListPointerTable row ids. Parsed into a SEPARATE table so the rest of
+    # constants/gfx_constants.asm cannot shadow a name in `v` (the emitters above
+    # select by prefix, and a silent redefinition would be invisible).
+    gfx = ConstTable().feed_file(
+        os.path.join(REPO, "constants", "gfx_constants.asm")).values
+    lines.append("\n; TileIDListPointerTable row ids (constants/gfx_constants.asm)")
+    for name, val in sorted(((n, x) for n, x in gfx.items() if n.startswith("TILEMAP_")),
+                            key=lambda p: p[1]):
+        lines.append(f"{name:<45} equ {val}")
+    lines.append(f"{'NUM_TILEMAPS':<45} equ {gfx['NUM_TILEMAPS']}")
     lines += ["", "%endif ; BATTLE_ANIM_CONSTANTS_INC", ""]
     const_text = "\n".join(lines)
 
