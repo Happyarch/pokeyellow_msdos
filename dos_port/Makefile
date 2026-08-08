@@ -1015,6 +1015,28 @@ NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_APRESS -D DEBUG_SEED_PARTY
 AUTOKEY_DUMP_FRAME ?= 999999
 NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 endif
+# DEBUG_ANIM_DEMO=1: interactive visual check of an in-battle MOVE animation
+# (battle_animations plan Stage 2b item 4 — the maintainer sign-off harness).
+# Builds the battle_faint/battle_intro golden scene (real loaders, real enemy
+# front pic + player back pic + HUDs), then calls the REAL PlayMoveAnimation ->
+# MoveAnimation interpreter on one move id, over and over, with the screen live.
+#   dos_port/run DEBUG_ANIM_DEMO=1 [ANIM=<MOVE_CONST>] /LOOP
+# ANIM= takes any move constant from include/gb_constants.inc (default POUND —
+# a plain OAM-particle move); /LOOP (the shared exe flag, g_cfg_musicloop) makes
+# the loop run forever for watching. WITHOUT /LOOP the demo is BOUNDED: it runs
+# DEBUG_ANIM_LOOPS (default 3) iterations, then dumps GBSTATE.BIN + DUMP.BIN and
+# exits, so run_headless.sh can prove the harness executed.
+# NOTE (Stages 3-5): every SE/mon-pic/palette/shake handler is still a ret-stub,
+# so what you see is OAM particle frame blocks only — that is expected today.
+ifdef DEBUG_ANIM_DEMO
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_ANIM_DEMO -D DEBUG_BATTLE_GOLDEN -D DEBUG_BATTLE -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_SEED_PARTY
+ANIM ?= POUND
+NASMFLAGS += -D DEBUG_ANIM_ID=$(ANIM)
+DEBUG_ANIM_LOOPS ?= 3
+NASMFLAGS += -D DEBUG_ANIM_LOOPS=$(DEBUG_ANIM_LOOPS)
+endif
 # Length of the AUTOKEY_APRESS button train (any AUTOKEY_APRESS gate), for a flow
 # that raises more button waits than the 300-press default covers.
 $(eval $(call value_gate,AUTOKEY_APRESS_COUNT))

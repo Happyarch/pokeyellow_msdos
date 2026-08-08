@@ -209,6 +209,12 @@ extern HandleEnemyMonFainted     ; core.asm — faint + EXP chain (FaintEnemyPok
 extern ExecuteEnemyMove          ; core.asm — the real enemy-turn/damage pipeline
 extern HandlePlayerMonFainted    ; core.asm — RemoveFaintedPlayerMon + the black-out branch
 %endif
+%ifdef DEBUG_ANIM_DEMO
+extern PlayMoveAnimation         ; core.asm — wAnimationID + Delay3 + MoveAnimation + Func_78e98
+extern DelayFrames               ; src/home/delay.asm — BL = frame count
+extern DelayFrame                ; src/home/vblank.asm
+extern g_cfg_musicloop           ; src/audio/audio_hal.asm — the shared /LOOP exe flag
+%endif
 %endif
 global RunBattleTest
 %endif
@@ -627,6 +633,11 @@ fname: db "DUMP.BIN", 0
 fbname: db "FRAME.BIN", 0
 fgbname: db "GBSTATE.BIN", 0
 fpname: db "PAL.BIN", 0
+%ifdef DEBUG_ANIM_DEMO
+; DEBUG_ANIM_DEMO's iteration counter. In MEMORY, not a register: every callee
+; under PlayMoveAnimation clobbers the general registers.
+anim_demo_count: db 0
+%endif
 %ifdef DEBUG_TEXT
 ; The text-engine oracle's probe streams (RunTextTest). Tier-1 data: generated,
 ; never hand-encoded — tools/generators/gen_text_oracle.py.
@@ -2376,8 +2387,77 @@ RunBattleTest:
 .blackoutKO:
     call HandlePlayerMonFainted         ; RemoveFaintedPlayerMon -> HandlePlayerBlackOut
     call DebugDumpMemory                ; GBSTATE.BIN + DUMP.BIN + exit
+%elifdef DEBUG_ANIM_DEMO
+    ; ------------------------------------------------------------------
+    ; DEBUG_ANIM_DEMO — the move-animation sign-off harness
+    ; (battle_animations plan Stage 2b item 4). Port-only debug glue: it
+    ; invents no pret label and changes no pret body.
+    ;
+    ; It rides the DEBUG_BATTLE_GOLDEN preamble above deliberately. The
+    ; interpreter paints wShadowOAM frame blocks projected onto the BATTLE
+    ; FRAME at (80,24) and clipped to it (the g_obj_clip projection note at
+    ; MoveAnimation in animations.asm), so it is only legible over a real
+    ; battle scene — the
+    ; golden preamble is exactly that scene, built by the real loaders:
+    ; PrepareNewGameDebug party, wild PIDGEY L13 through InitBattle ->
+    ; LoadEnemyMonData, the enemy front pic, Red's back pic, the intro box,
+    ; then the send-out (HideBattlePokeballs / LoadBattleMonFromParty /
+    ; LoadMonBackPic) in the shared %else above. Skipping that preamble is
+    ; what makes a hand-rolled animation demo render garbage.
+    ;
+    ; Then it calls the REAL production entry point, core.asm's
+    ; PlayMoveAnimation (wAnimationID / Delay3 / MoveAnimation /
+    ; Func_78e98) — the same call ExecutePlayerMove makes — so the
+    ; interpreter, the projection publication and the OBJ clip all run
+    ; exactly as in a live turn. Nothing here is a private code path.
+    ;
+    ; WHAT YOU SHOULD SEE TODAY: OAM particle frame blocks only. Every
+    ; special-effect / mon-pic / palette / screen-shake handler the
+    ; interpreter dispatches to is still a ret-stub in core_stubs.asm
+    ; (plan Stages 3-5), and PlayApplyingAttackAnimation's type dispatch is
+    ; still TODO-HW. A move whose animation is entirely those handlers will
+    ; therefore look like nothing happened; pick a particle move (the
+    ; default POUND, or GUST) for the sign-off.
+    ;
+    ; BOUNDED BY DEFAULT. Without the /LOOP exe flag the demo runs
+    ; DEBUG_ANIM_LOOPS iterations (Makefile default 3) and then dumps and
+    ; exits, so tools/run_headless.sh gets real evidence that the harness
+    ; executed instead of timing out. `dos_port/run ... /LOOP` loops
+    ; forever for the maintainer's visual pass; Esc quits through the
+    ; normal DelayFrame quit path.
+    ;
+    ; The iteration counter lives in MEMORY (anim_demo_count), not a
+    ; register: MoveAnimation and everything under it clobbers everything.
+    ; ------------------------------------------------------------------
+    call LoadScreenTilesFromBuffer1
+    call DrawHUDsAndHPBars              ; the HUD row the live battle screen has
+    ; Battle animations must be ENABLED. pret's wOptions bit
+    ; BIT_BATTLE_ANIMATION is 1 = animations OFF; MoveAnimation takes the
+    ; 30-frame .animationsDisabled delay when it is set.
+    and byte [ebp + wOptions], ~(1 << BIT_BATTLE_ANIMATION) & 0xff
+    ; Player's turn: hWhoseTurn 0 selects the player-side subanimation
+    ; transform and the attacking-mon pic in the interpreter.
+    mov byte [ebp + hWhoseTurn], 0
+    ; wAnimationType drives PlayApplyingAttackAnimation's variant (1-6).
+    ; 3 is the ordinary "attacker jumps at the defender" case. Its handlers
+    ; are Stage 3-5 stubs today; setting it keeps the demo exercising the
+    ; real dispatch rather than an unset-zero shortcut.
+    mov byte [ebp + wAnimationType], 3
+    mov byte [anim_demo_count], 0
+.animDemoLoop:
+    mov al, DEBUG_ANIM_ID               ; ANIM=<MOVE_CONST>, default POUND
+    call PlayMoveAnimation              ; the real production entry point
+    mov bl, 60                          ; ~1 s of the restored battle scene
+    call DelayFrames
+    cmp byte [g_cfg_musicloop], 0       ; /LOOP: watch it forever
+    jnz .animDemoLoop
+    inc byte [anim_demo_count]
+    cmp byte [anim_demo_count], DEBUG_ANIM_LOOPS
+    jb .animDemoLoop
+    call DelayFrame
+    call DebugDumpMemory                ; GBSTATE.BIN + DUMP.BIN + exit
 %else
-%error DEBUG_BATTLE_GOLDEN needs DEBUG_BATTLE_INTRO, DEBUG_BATTLE_MENU, DEBUG_MOVEMENU, DEBUG_ITEMBALL, DEBUG_BATTLE_FAINT or DEBUG_BATTLE_BLACKOUT
+%error DEBUG_BATTLE_GOLDEN needs DEBUG_BATTLE_INTRO, DEBUG_BATTLE_MENU, DEBUG_MOVEMENU, DEBUG_ITEMBALL, DEBUG_BATTLE_FAINT, DEBUG_BATTLE_BLACKOUT or DEBUG_ANIM_DEMO
 %endif
 %endif
 

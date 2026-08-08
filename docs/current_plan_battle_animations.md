@@ -203,7 +203,7 @@ Two maintainer-confirmed decisions (AskUserQuestion, 2026-08-07):
       (core.asm) is unchanged, so battle behavior is unchanged and the runtime
       golden tier is deferred to 2b (also: mgba absent in the 2a build env).
 
-**Stage 2b (DONE except the demo harness):**
+**Stage 2b (code DONE; only the maintainer's visual sign-off is open):**
 
 > ✅ **The 2026-08-08 crash blocker is FIXED (root cause was NOT the
 > interpreter).** The port's `<DONE>`/`<PROMPT>` text-stream sentinel was two
@@ -229,9 +229,23 @@ Two maintainer-confirmed decisions (AskUserQuestion, 2026-08-07):
       `PlayBattleAnimationGotID`); core.asm `PlayMoveAnimation` = faithful pret
       body (`wAnimationID` / Delay3 / MoveAnimation / Func_78e98). DONE
       2026-08-08 — faithdiff clean on all 6 labels, lint 0 both modes.
-- [ ] `DEBUG_ANIM_DEMO=1` harness (unblocked now). RunTransitionDemo shape:
-      Makefile flag → NASMFLAGS -D → `%ifdef` routine in `debug_dump.asm` → hook
-      at a battle entry; `ANIM=<MOVE_CONST>` pins one; loop counters in MEMORY.
+- [x] `DEBUG_ANIM_DEMO=1` harness. DONE 2026-08-08. Makefile gate → NASMFLAGS
+      `-D DEBUG_ANIM_DEMO -D DEBUG_BATTLE_GOLDEN -D DEBUG_BATTLE`; the harness
+      branch rides the DEBUG_BATTLE_GOLDEN battle scene in `debug_dump.asm`
+      (`RunBattleTest`) and calls the real `PlayMoveAnimation` in a loop.
+      `ANIM=<MOVE_CONST>` pins the move (default `POUND`); the counter lives in
+      `.data` (`anim_demo_count`), never a register. Bounded by default —
+      `DEBUG_ANIM_LOOPS` (3) iterations then `DebugDumpMemory`; the shared
+      `/LOOP` exe flag (`g_cfg_musicloop`) makes it run forever for watching.
+      Evidence: bounded headless runs dump GBSTATE+DUMP (rc 0); `ANIM=POUND` vs
+      `ANIM=GUST` differ in 9 OAM bytes (the interpreter really ran and the knob
+      is live); `DEBUG_ANIM_LOOPS` 1 vs 15 = 16 s vs 36 s (the counter is
+      honored). battle_faint + battle_intro still PASS; lint 0 both modes.
+- [ ] **Maintainer visual sign-off of a Pound/Gust-class animation — STILL
+      PENDING.** The harness existing is not the sign-off. Sign-off command:
+      `dos_port/run DEBUG_ANIM_DEMO=1 [ANIM=<MOVE_CONST>] /LOOP`
+      (Esc quits via the normal DelayFrame quit path). Expect OAM particle
+      frame blocks only until Stages 3-5 retire the handler stubs.
 - [x] Gate: battle tier green — 13 scenarios PASS 2026-08-08 with the
       interpreter live (battle_intro/menu/move_selection/damage/faint/blackout,
       trainer_battle_init/win/loss/route, ball_catch, item_potion_use,
