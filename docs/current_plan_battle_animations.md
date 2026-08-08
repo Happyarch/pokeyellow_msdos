@@ -6,15 +6,34 @@
 > pytest resolves — allowlist is not ours to grow, behavior changes need
 > scenarios). Not duplicated here; read it there.
 
-Status: **Stage 2 COMPLETE, maintainer-signed-off 2026-08-08** (2a interpreter
-0b629e0a; 2b projection+BCOORD ec29c877, production wiring 1ad2fc46, demo
-harness 88d3043a, OBJ-layer fix 6d31b454; POUND demo LGTM'd). **Plus the
-measured CGB OBJ palette model landed 21412b32** (GUST demo LGTM'd:
-white/black particles per real-hardware measurement; wOnSGB=1, slot=attr&7,
-commit_palette 4-base×{OBP0,OBP1}; spec = memory
-`battle-anim-cgb-obj-palette-model` — read it before ANY Stage 3+ palette
-work). `SetAnimationPalette` is already translated (pulled forward from
-Stage 3 in 21412b32). Next: Stage 3 remainder.
+Status: **Stages 0-3 COMPLETE and maintainer-signed-off. Stage 4 CONTENT
+COMPLETE 2026-08-08 (autonomous session), visual sign-off OWED.**
+
+Stage 4 landed in seven revertable commits — 4a `b1eff474` tilemap helpers,
+4b `3a4c921b` slides, 4c `2af716c1` motion, 4d `3c1e267c` wTempPic effects,
+4e `6409f636` OAM helpers + ball particles, 4f `37634638` falling objects +
+water droplets, 4g `fac2ceec` SlideDownFaintedMonPic and `3394160d` enemy-HUD
+shake — plus `86644db6` recording the runtime evidence. Roughly 45 pret labels;
+`core_stubs.asm` went from **119 stubs to 99**. Every commit: build clean,
+`lint_pret_labels` 0 in both modes, `static_gate` PASS 5/5, faithdiff justified,
+`pgate.sh` 17/17 with per-scenario mask-hit counts byte-identical across the
+whole series.
+
+**Two things are genuinely OWED, and neither is a formality:**
+1. **Maintainer visual sign-off on Stage 4.** Nobody has looked at any of it.
+   Suggested demo moves, all of which drive REAL shipped streams:
+   `ANIM=TELEPORT` (squish + shoot balls), `ANIM=MINIMIZE` (spiral balls +
+   minimize), `ANIM=RAZOR_LEAF` (falling leaves), `ANIM=SURF` (water droplets).
+   The enemy-HUD shake has no single-move demo and needs a real battle.
+2. **Review of the `AnimationShakeEnemyHUD` mechanism decision** (Stage 4g,
+   `3394160d`) — see that box below. It is the one place where the mechanism,
+   not just the coordinates, diverges from pret, and it was decided
+   autonomously.
+
+`SetAnimationPalette` was pulled forward from Stage 3 in 21412b32; the measured
+CGB OBJ palette model (memory `battle-anim-cgb-obj-palette-model`, GUST demo
+LGTM'd: wOnSGB=1, slot=attr&7, commit_palette 4-base x {OBP0,OBP1}) governs ALL
+palette work — read it first. Next: Stage 5.
 Owner: this plan.
 Three defects were root-caused on the way (all memories FIXED; the third is
 the palette model itself — wOnSGB=0 routed SetAnimationPalette to the DMG
